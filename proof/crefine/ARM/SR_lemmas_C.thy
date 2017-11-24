@@ -2301,6 +2301,11 @@ lemma invs_urz[elim!]:
   "invs' s \<Longrightarrow> untyped_ranges_zero' s"
   by (clarsimp simp: invs'_def valid_state'_def)
 
+lemma rf_sr_sched_action_relation:
+  "(s, s') \<in> rf_sr
+   \<Longrightarrow> cscheduler_action_relation (ksSchedulerAction s) (ksSchedulerAction_' (globals s'))"
+  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+
 end
 end
 

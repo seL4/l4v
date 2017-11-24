@@ -762,5 +762,11 @@ lemma ghost_relation_typ_at:
    apply (intro conjI impI iffI allI,simp_all)
     apply (auto elim!: allE)
    done
+
+lemma runnable_coerce_abstract:
+  "\<lbrakk> runnable' st'; thread_state_relation st st' \<rbrakk>
+    \<Longrightarrow> runnable st"
+  by (case_tac st, simp_all)
+
 end
 end

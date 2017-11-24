@@ -2003,6 +2003,18 @@ lemma pred_tcb_weakenE:
   "\<lbrakk> pred_tcb_at proj P t s; \<And>tcb . P (proj tcb) \<Longrightarrow> P' (proj tcb) \<rbrakk> \<Longrightarrow> pred_tcb_at proj P' t s"
   by (auto simp: pred_tcb_at_def elim: obj_at_weakenE)
 
+lemma pred_tcb_at_pure:
+  "pred_tcb_at g (\<lambda>a. P) (f s) s = (tcb_at (f s) s \<and> P)"
+  unfolding pred_tcb_at_def
+  apply (clarsimp simp add: obj_at_def)
+  apply (rule iffI)
+   apply clarsimp
+   apply (auto simp: is_tcb_def split: kernel_object.splits)[1]
+  apply clarsimp
+  apply (case_tac ko; simp_all)
+     apply (auto simp: is_tcb_def split: kernel_object.splits)
+  done
+
 (* sseefried:
      This lemma exists only to make existing proofs go through more easily.
      Replacing 'st_tcb_at_weakenE' with 'pred_tcb_at_weakenE' in a proof
@@ -2025,6 +2037,10 @@ lemma pred_tcb_at_tcb_at:
   by (auto simp: tcb_at_def pred_tcb_at_def obj_at_def is_tcb)
 
 lemmas st_tcb_at_tcb_at = pred_tcb_at_tcb_at[where proj=itcb_state, simplified]
+
+lemma st_tcb_at_opeqI:
+  "\<lbrakk> st_tcb_at (op= st) t s ; test st \<rbrakk> \<Longrightarrow> st_tcb_at test t s"
+  by (fastforce simp add: pred_tcb_def2)
 
 lemma cte_wp_at_weakenE:
   "\<lbrakk> cte_wp_at P t s; \<And>c. P c \<Longrightarrow> P' c \<rbrakk> \<Longrightarrow> cte_wp_at P' t s"

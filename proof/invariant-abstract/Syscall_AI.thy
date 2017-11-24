@@ -34,33 +34,61 @@ lemmas [wp] =
 lemmas [simp] =
   data_to_cptr_def
 
+crunch inv[wp]: ethread_get, ethread_get_when P
+
 lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
+  supply if_split[split del]
   apply (simp add: Schedule_A.schedule_def)
   apply (wp dmo_invs thread_get_inv gts_wp
             do_machine_op_tcb when_def hoare_vcg_all_lift
-          | wpc | clarsimp simp: guarded_switch_to_def get_tcb_def choose_thread_def
-          | wp_once hoare_drop_imps)+
+          | wpc
+          | clarsimp simp: guarded_switch_to_def get_tcb_def choose_thread_def ethread_get_def
+                           ethread_get_when_def
+          | wp_once hoare_drop_imps
+          | simp add: schedule_choose_new_thread_def if_apply_def2)+
   done
 
-
-lemma schedule_ct_activateable[wp]:
-  "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
+lemma schedule_choose_new_thread_ct_activatable[wp]:
+  "\<lbrace> invs \<rbrace> schedule_choose_new_thread \<lbrace>\<lambda>_. ct_in_state activatable \<rbrace>"
   proof -
   have P: "\<And>t s. ct_in_state activatable (cur_thread_update (\<lambda>_. t) s) = st_tcb_at activatable t s"
     by (fastforce simp: ct_in_state_def st_tcb_at_def intro: obj_at_pspaceI)
   show ?thesis
-    apply (simp add: Schedule_A.schedule_def)
-    apply (wp dmo_st_tcb gts_wp
-              stt_activatable stit_activatable hoare_vcg_all_lift
-               | simp add: P set_scheduler_action_def guarded_switch_to_def choose_thread_def
+  unfolding schedule_choose_new_thread_def choose_thread_def guarded_switch_to_def
+    apply (simp add: P set_scheduler_action_def guarded_switch_to_def choose_thread_def
                              next_domain_def Let_def tcb_sched_action_def set_tcb_queue_def
-                             get_tcb_queue_def ethread_get_def
-               | wpc | wp_once hoare_drop_imps)+
+                             get_tcb_queue_def ethread_get_def bind_assoc)
+    apply (wpsimp wp: stt_activatable stit_activatable gts_wp)+
     apply (force simp: ct_in_state_def pred_tcb_at_def obj_at_def invs_def valid_state_def
-                       valid_idle_def split: if_split_asm)
-    done
+                       valid_idle_def split: if_split_asm)+
+  done
 qed
 
+lemma guarded_switch_to_ct_in_state_activatable[wp]:
+  "\<lbrace>\<top>\<rbrace> guarded_switch_to t \<lbrace>\<lambda>a. ct_in_state activatable\<rbrace>"
+  unfolding guarded_switch_to_def
+  apply (wp stt_activatable)
+  apply (wp hoare_vcg_imp_lift gts_wp)+
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  done
+
+lemma schedule_ct_activateable[wp]:
+  "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
+  apply (simp add: Schedule_A.schedule_def)
+  apply wp
+      apply wpc
+        (* resume current thread *)
+        apply wp
+       prefer 2
+       (* choose new thread *)
+       apply wp
+      (* switch to thread *)
+      apply wpsimp
+              apply (simp add: set_scheduler_action_def)
+              apply (simp | wp gts_wp | wp_once hoare_drop_imps)+
+  apply (frule invs_valid_idle)
+  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def valid_idle_def)
+  done
 
 lemma syscall_valid:
   assumes x:
@@ -1357,11 +1385,163 @@ lemma he_invs[wp]:
     \<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
       handle_event e
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  by (case_tac e;
-      wpsimp wp: hvmf_active hr_invs hy_inv hoare_drop_imps hoare_vcg_all_lift
-           simp: valid_fault_def ct_in_state_def;
-      fastforce elim!: st_tcb_ex_cap)
+  apply (case_tac e, simp_all)
+      apply (rename_tac syscall)
+      apply (case_tac syscall, simp_all)
+      apply (((rule hoare_pre, wp hvmf_active hr_invs hy_inv ) |
+                 wpc | wp hoare_drop_imps hoare_vcg_all_lift |
+                 simp add: if_apply_def2 |
+                 fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
+                         elim!: st_tcb_ex_cap)+)
+  done
 
 end
+
+(* Lemmas related to preservation of runnability over handle_recv for woken threads
+   these are presently unused, but have proven useful in the past *)
+context notes if_cong[cong] begin
+
+lemma complete_signal_state_refs_of:
+  "\<lbrace>\<lambda>s. P (state_refs_of s) \<rbrace> complete_signal ntfnc t \<lbrace>\<lambda>rv s. P (state_refs_of s) \<rbrace>"
+  unfolding complete_signal_def
+  apply (rule hoare_pre)
+   apply (wp get_ntfn_wp | wpc | simp)+
+  apply clarsimp
+  apply (subgoal_tac " ntfn_bound_refs (ntfn_bound_tcb ntfn) = state_refs_of s ntfnc")
+   apply (clarsimp simp: if_apply_def2 split: if_splits if_split_asm)
+   subgoal by (subst eq_commute, auto cong: if_cong)
+  apply (clarsimp simp: state_refs_of_def obj_at_def)
+  done
+
+lemma do_nbrecv_failed_transfer_state_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P (state_refs_of s) \<rbrace> do_nbrecv_failed_transfer t \<lbrace>\<lambda>rv s. P (state_refs_of s) \<rbrace>"
+  unfolding do_nbrecv_failed_transfer_def
+  apply (rule hoare_pre)
+   apply (wp get_ntfn_wp | wpc | simp)+
+  done
+
+crunch st_tcb_at_runnable[wp]: do_nbrecv_failed_transfer "st_tcb_at runnable t"
+
+lemma fast_finalise_sym_refs:
+  "\<lbrace>invs\<rbrace> fast_finalise cap final \<lbrace>\<lambda>y s. sym_refs (state_refs_of s)\<rbrace>"
+  apply (cases cap; clarsimp simp: when_def)
+     apply (wp cancel_all_signals_invs cancel_all_ipc_invs unbind_maybe_notification_invs
+             | strengthen invs_sym_refs
+             | clarsimp)+
+  done
+
+crunch state_refs_of[wp]: empty_slot "\<lambda>s::det_ext state. P (state_refs_of s)"
+  (wp: crunch_wps simp: crunch_simps interrupt_update.state_refs_update)
+
+lemma delete_caller_cap_sym_refs:
+  "\<lbrace>invs\<rbrace> delete_caller_cap t \<lbrace>\<lambda>rv s::det_ext state. sym_refs (state_refs_of s) \<rbrace>"
+  apply (simp add: delete_caller_cap_def cap_delete_one_def unless_def)
+  apply (wp fast_finalise_sym_refs get_cap_wp)
+  apply fastforce
+  done
+
+lemmas sts_st_tcb_at_other = sts_st_tcb_at_neq[where proj=itcb_state]
+
+lemma send_ipc_st_tcb_at_runnable:
+  "\<lbrace>st_tcb_at runnable t and (\<lambda>s. sym_refs (state_refs_of s)) and K (t' \<noteq> t) \<rbrace>
+   send_ipc a b c d t' e
+   \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
+  unfolding send_ipc_def
+  apply (rule hoare_gen_asm)
+  apply (wpc | wp sts_st_tcb_at_other | clarsimp)+
+          apply (simp add: setup_caller_cap_def)
+          apply (wpc | wp sts_st_tcb_at_other dxo_wp_weak | clarsimp simp: if_cancel)+
+    apply (wp hoare_drop_imps)[1]
+   apply (wp set_ep_pred_tcb_at)[1]
+  apply (wp get_endpoint_wp)
+  apply clarsimp
+  apply (drule st_tcb_at_state_refs_ofD)
+  apply (drule (1) sym_refs_ko_atD)
+  apply clarsimp
+  apply (case_tac ts; clarsimp simp: obj_at_def state_refs_of_def dest!:refs_in_tcb_bound_refs)
+  done
+
+lemma receive_ipc_st_tcb_at_runnable:
+  "\<lbrace>st_tcb_at runnable t and (\<lambda>s. sym_refs (state_refs_of s)) and K (t' \<noteq> t) \<rbrace>
+   receive_ipc t' a b
+   \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
+  unfolding receive_ipc_def
+  apply (rule hoare_gen_asm)
+  apply (wpc | wp sts_st_tcb_at_other
+               | clarsimp simp: do_nbrecv_failed_transfer_def setup_caller_cap_def)+
+              apply (wp hoare_drop_imps)[1]
+             apply clarsimp
+             apply (wp hoare_drop_imps)[1]
+            apply wpc
+                   apply ((wp gts_wp gbn_wp  hoare_vcg_all_lift sts_st_tcb_at_other | wpc
+                           | simp add: do_nbrecv_failed_transfer_def | wp_once hoare_drop_imps)+)[8]
+           apply (wp gts_wp)
+          apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
+         apply ((wp sts_st_tcb_at_other get_ntfn_wp gbn_wp get_endpoint_wp | wpc)+)[8]
+  apply clarsimp
+  apply (rule conjI)
+   apply clarsimp
+   apply (rename_tac sendq)
+   apply (frule list.collapse[symmetric])
+   apply (drule st_tcb_at_state_refs_ofD)
+   apply (frule (1) sym_refs_ko_atD)
+   apply clarsimp
+   apply (drule_tac x="hd sendq" in bspec, clarsimp)
+   apply (case_tac ts; clarsimp simp: obj_at_def state_refs_of_def dest!: refs_in_tcb_bound_refs)
+  apply clarsimp
+  apply (rename_tac sendq)
+  apply (frule list.collapse[symmetric])
+  apply (drule st_tcb_at_state_refs_ofD)
+  apply (frule (1) sym_refs_ko_atD)
+  apply clarsimp
+  apply (drule_tac x="hd sendq" in bspec, clarsimp)
+  apply (case_tac ts; clarsimp simp: obj_at_def state_refs_of_def dest!: refs_in_tcb_bound_refs)
+  done
+
+lemma send_fault_ipc_st_tcb_at_runnable:
+  "\<lbrace>st_tcb_at runnable t and (\<lambda>s. sym_refs (state_refs_of s)) and tcb_at t' and K (t' \<noteq> t)\<rbrace> send_fault_ipc t' f \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
+  unfolding send_fault_ipc_def
+  apply (rule hoare_pre, wp)
+     apply (clarsimp simp: Let_def)
+     apply wpc
+                apply (wp send_ipc_st_tcb_at_runnable thread_set_no_change_tcb_state thread_set_refs_trivial
+                          hoare_vcg_all_lift_R thread_get_wp
+                        | clarsimp
+                        | wp_once hoare_drop_imps)+
+  apply (clarsimp simp:  pred_tcb_at_def obj_at_def is_tcb)
+  done
+
+lemma handle_fault_st_tcb_at_runnable:
+  "\<lbrace>st_tcb_at runnable t and invs and K (t' \<noteq> t) \<rbrace> handle_fault t' x \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (simp add: handle_fault_def handle_double_fault_def)
+  apply wp
+     apply (simp add: handle_fault_def handle_double_fault_def)
+     apply (wp sts_st_tcb_at_other send_fault_ipc_st_tcb_at_runnable | simp)+
+  apply (clarsimp dest!: get_tcb_SomeD simp: obj_at_def is_tcb)
+  done
+
+lemma delete_caller_cap_runnable[wp]:
+  "\<lbrace>st_tcb_at runnable t\<rbrace> delete_caller_cap t' \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
+  apply (simp add: delete_caller_cap_def)
+  apply (wp cap_delete_one_st_tcb_at)
+  apply simp
+  done
+
+lemma handle_recv_st_tcb_at:
+  "\<lbrace>invs and st_tcb_at runnable t and (\<lambda>s. cur_thread s \<noteq> t)\<rbrace> handle_recv True
+  \<lbrace>\<lambda>rv s::det_ext state. st_tcb_at runnable t s\<rbrace>"
+  apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper
+             cong: if_cong)
+  apply (rule hoare_pre)
+   apply (wp handle_fault_st_tcb_at_runnable receive_ipc_st_tcb_at_runnable
+             delete_caller_cap_sym_refs rai_pred_tcb_neq
+             get_ntfn_wp hoare_drop_imps hoare_vcg_all_lift_R)
+    apply clarsimp
+    apply wp+
+  apply fastforce
+  done
+
+end (* Lemmas related to preservation of runnability over handle_recv for woken threads *)
 
 end

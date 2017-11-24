@@ -19,8 +19,8 @@ end
 
 crunch_ignore (del:
   cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext tcb_sched_action
-  reschedule_required set_thread_state_ext switch_if_required_to
-  attempt_switch_to timer_tick set_priority retype_region_ext)
+  reschedule_required set_thread_state_ext
+  possible_switch_to timer_tick set_priority retype_region_ext)
 
 crunch_ignore (add: do_extended_op)
 
@@ -344,5 +344,12 @@ crunch valid_sched_action[wp]: create_cap,cap_insert valid_sched_action
 
 crunch valid_sched[wp]: create_cap,cap_insert valid_sched
   (wp: valid_sched_lift)
+
+crunch inv[wp]: get_tcb_queue "\<lambda>s. P s"
+
+lemma ethread_get_when_wp:
+  "\<lbrace>\<lambda>s. (b \<longrightarrow> etcb_at (\<lambda>t. P (f t) s) ptr s) \<and> (\<not>b \<longrightarrow> P undefined s)\<rbrace> ethread_get_when b f ptr \<lbrace>P\<rbrace>"
+  unfolding ethread_get_when_def ethread_get_def
+  by (wpsimp simp: etcb_at_def get_etcb_def)
 
 end

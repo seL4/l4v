@@ -290,52 +290,6 @@ lemma schedule_switch_thread_helper:
                   split: option.splits if_split Structures_A.kernel_object.splits Structures_A.thread_state.splits)
   done
 
-lemma schedule_switch_thread_dcorres:
-      "\<And>cur_ts. dcorres dc \<top>
-        (\<lambda>s. cur = cur_thread s \<and> st_tcb_at (op = cur_ts) cur s \<and> valid_etcbs s \<and> valid_sched s \<and> invs s \<and> scheduler_action s = switch_thread t)
-        Schedule_D.schedule
-        (do y \<leftarrow> when (runnable cur_ts) (tcb_sched_action tcb_sched_enqueue cur);
-            y \<leftarrow> guarded_switch_to t;
-            set_scheduler_action resume_cur_thread
-         od)"
-  unfolding Schedule_D.schedule_def
-  apply (rule_tac Q="\<top>" in corres_guard_imp)
-    apply (rule_tac Pa'="\<lambda>s. valid_etcbs s \<and> valid_sched s \<and> invs s \<and> scheduler_action s = switch_thread t \<and> t \<noteq> idle_thread s"
-                and Pb'="\<lambda>s. valid_etcbs s \<and> valid_sched s \<and> invs s \<and> scheduler_action s = switch_thread t \<and> t = idle_thread s"
-                in corres_either_alternate)
-     (* t \<noteq> idle_thread s *)
-     apply (rule stronger_corres_guard_imp)
-       apply (rule dcorres_symb_exec_r)
-         apply (clarsimp simp: guarded_switch_to_def bind_assoc)
-         apply (rule dcorres_symb_exec_r)
-           apply (rule dcorres_symb_exec_r)
-             apply (rule dcorres_rhs_noop_below_True[OF set_scheduler_action_dcorres])
-             apply (rule corres_symb_exec_l_Ex)
-             apply (rule corres_symb_exec_l_Ex)
-             apply (rule corres_symb_exec_l_Ex)
-             apply (rule corres_symb_exec_l_Ex)
-             apply (rule switch_to_thread_same_corres)
-            apply (wp gts_wp tcb_sched_action_transform hoare_drop_imp hoare_vcg_all_lift | clarsimp)+
-      apply (frule schedule_switch_thread_helper, simp,simp,simp)
-      apply (auto simp: select_def gets_def get_def bind_def return_def active_tcbs_in_domain_def
-                        invs_def valid_state_def valid_objs_def change_current_domain_def
-                    Schedule_D.switch_to_thread_def modify_def put_def
-                    option_map_def restrict_map_def map_add_def get_tcb_def
-                    transform_def transform_current_thread_def cur_tcb_def tcb_at_def)[1]
-     apply simp
-     apply fastforce
-    (* t = idle_thread s *)
-    apply (rule dcorres_symb_exec_r)
-      apply (clarsimp simp: guarded_switch_to_def bind_assoc)
-      apply (rule_tac Q'="\<lambda>ts s. idle ts" in dcorres_symb_exec_r)
-        apply (clarsimp simp: assert_def)
-        apply (rule conjI, clarsimp)
-         apply (fold dc_def, rule dcorres_rhs_noop_below_True[OF set_scheduler_action_dcorres])
-         apply (clarsimp simp: corres_underlying_def) (* contradiction *)
-        apply (clarsimp simp: corres_underlying_def fail_def)
-       apply (wp tcb_sched_action_transform| fastforce simp: invs_def valid_state_def)+
-  done
-
 lemma schedule_choose_new_thread_helper:
             "\<lbrakk> ready_queues s (cur_domain s) prio \<noteq> [];
                t = hd (ready_queues s (cur_domain s) prio);
@@ -404,15 +358,12 @@ lemma schedule_def_2:
   apply (subst alternative_bind_distrib_2, simp)
   done
 
-lemma schedule_choose_new_thread_dcorres_fragment:
+lemma schedule_choose_new_thread_dcorres:
   "dcorres dc \<top>
         (\<lambda>s. valid_etcbs s \<and> valid_sched_except_blocked s \<and> invs s \<and> scheduler_action s = choose_new_thread)
         Schedule_D.schedule
-        (do dom_time \<leftarrow> gets domain_time;
-            y \<leftarrow> when (dom_time = 0) next_domain;
-            y \<leftarrow> choose_thread;
-            set_scheduler_action resume_cur_thread
-         od)"
+        schedule_choose_new_thread"
+  unfolding schedule_choose_new_thread_def
   apply (clarsimp simp: guarded_switch_to_def bind_assoc choose_thread_def)
   apply (rule dcorres_symb_exec_r, rename_tac dom_t)
     apply (case_tac "dom_t \<noteq> 0")
@@ -501,20 +452,110 @@ lemma schedule_choose_new_thread_dcorres_fragment:
     apply (wp tcb_sched_action_transform | clarsimp simp: valid_sched_def)+
   done
 
-lemma schedule_choose_new_thread_dcorres:
+lemma schedule_choose_new_thread_dcorres_fragment:
   "\<And>cur_ts cur. dcorres dc \<top>
         (\<lambda>s. cur = cur_thread s \<and> st_tcb_at (op = cur_ts) cur s \<and> valid_etcbs s \<and> valid_sched s \<and> invs s \<and> scheduler_action s = choose_new_thread)
         Schedule_D.schedule
         (do y \<leftarrow> when (runnable cur_ts) (tcb_sched_action tcb_sched_enqueue cur);
-            dom_time \<leftarrow> gets domain_time;
-            y \<leftarrow> when (dom_time = 0) next_domain;
-            y \<leftarrow> choose_thread;
-            set_scheduler_action resume_cur_thread
+            schedule_choose_new_thread
          od)"
   apply (rule dcorres_symb_exec_r)
     apply (rule corres_guard_imp)
-      apply (rule schedule_choose_new_thread_dcorres_fragment)
+      apply (rule schedule_choose_new_thread_dcorres)
      apply (wp tcb_sched_action_transform| simp add: valid_sched_def st_tcb_at_def obj_at_def not_cur_thread_def| clarsimp simp: transform_def)+
+  done
+
+lemma dcorres_If_both:
+  "\<lbrakk> dcorres r P P' h m ;
+     dcorres r P Q' h n \<rbrakk>
+  \<Longrightarrow> dcorres r P (\<lambda>s. if b then P' s else Q' s) h (if b then m else n)"
+  by (case_tac b; simp)
+
+lemma set_scheduler_action_transform:
+  "\<lbrace>\<lambda>ps. transform ps = cs\<rbrace> set_scheduler_action a \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
+  by (clarsimp simp: set_scheduler_action_def etcb_at_def| wp )+
+
+(* RHS copy-pasted from schedule_dcorres switch_thread case *)
+lemma schedule_switch_thread_dcorres:
+      "dcorres dc \<top>
+        (\<lambda>s. cur = cur_thread s \<and> st_tcb_at (op = cur_ts) cur s \<and> valid_etcbs s \<and> valid_sched s
+             \<and> invs s \<and> scheduler_action s = switch_thread target)
+        Schedule_D.schedule
+        (do y <- when (runnable cur_ts) (tcb_sched_action tcb_sched_enqueue cur);
+            it <- gets idle_thread;
+            target_prio <- ethread_get tcb_priority target;
+            ct_prio <- ethread_get_when (cur \<noteq> it) tcb_priority cur;
+            fastfail <- schedule_switch_thread_fastfail cur it ct_prio target_prio;
+            cur_dom <- gets cur_domain;
+            highest <- gets (is_highest_prio cur_dom target_prio);
+            if fastfail \<and> \<not> highest then do y <- tcb_sched_action tcb_sched_enqueue target;
+                                            y <- set_scheduler_action choose_new_thread;
+                                            schedule_choose_new_thread
+                                         od
+            else if runnable cur_ts \<and> ct_prio = target_prio
+                 then do y <- tcb_sched_action tcb_sched_append target;
+                         y <- set_scheduler_action choose_new_thread;
+                         schedule_choose_new_thread
+                      od
+                 else do y <- guarded_switch_to target;
+                         set_scheduler_action resume_cur_thread
+                      od
+         od)" (is "dcorres _ _ (\<lambda>s. ?PRE s) _ _")
+  supply ethread_get_wp[wp del]
+  apply (rule dcorres_symb_exec_r)
+    apply (rule dcorres_symb_exec_r)
+      apply (rule dcorres_symb_exec_r)
+        apply (rule dcorres_symb_exec_r)
+          apply (rule dcorres_symb_exec_r)
+            apply (rule dcorres_symb_exec_r)
+              apply (rule dcorres_symb_exec_r)
+                apply (rule dcorres_If_both)
+                 apply (rule dcorres_symb_exec_r)
+                   apply (rule dcorres_symb_exec_r)
+                     apply simp
+                     apply (rule schedule_choose_new_thread_dcorres)
+                    apply (wp set_scheduler_action_transform tcb_sched_action_transform)+
+                apply (rule dcorres_If_both)
+                 apply (rule dcorres_symb_exec_r)
+                   apply (rule dcorres_symb_exec_r)
+                     apply simp
+                     apply (rule schedule_choose_new_thread_dcorres)
+                    apply (wp set_scheduler_action_transform tcb_sched_action_transform)+
+                apply (simp add: Schedule_D.schedule_def guarded_switch_to_def bind_assoc)
+                apply (rule corres_alternate1)
+                apply (rule_tac P=\<top> and P'="?PRE" in stronger_corres_guard_imp)
+                  apply (rule dcorres_symb_exec_r)
+                    apply (rule dcorres_symb_exec_r)
+                      apply (rule dcorres_rhs_noop_below_True[OF set_scheduler_action_dcorres])
+                      apply (rule corres_symb_exec_l_Ex)
+                      apply (rule corres_symb_exec_l_Ex)
+                      apply (rule corres_symb_exec_l_Ex)
+                      apply (rule corres_symb_exec_l_Ex)
+                      apply (rule switch_to_thread_same_corres)
+                     apply (wpsimp wp: gts_wp hoare_drop_imp)+
+                 apply (frule schedule_switch_thread_helper, simp,simp,simp)
+                 apply (fastforce simp: select_def gets_def get_def bind_def return_def
+                                        active_tcbs_in_domain_def invs_def valid_state_def
+                                        valid_objs_def change_current_domain_def
+                                        Schedule_D.switch_to_thread_def modify_def put_def
+                                        option_map_def restrict_map_def map_add_def get_tcb_def
+                                        transform_def transform_current_thread_def cur_tcb_def
+                                        tcb_at_def)
+                apply (clarsimp)
+                apply (frule invs_valid_idle)
+                apply (fastforce simp: pred_tcb_at_def obj_at_def valid_idle_def valid_sched_def
+                                       valid_sched_action_def weak_valid_sched_action_def)
+               apply (wp tcb_sched_action_transform
+                         hoare_drop_imp[where f="ethread_get tcb_priority x" for x]
+                         hoare_drop_imp[where f="ethread_get_when b tcb_priority t" for b t]
+                         hoare_drop_imp[where f="gets cur_domain"]
+                      | clarsimp simp add: schedule_switch_thread_fastfail_def
+                                 split del: if_split
+                      | split if_split)+
+   apply (fastforce elim: st_tcb_weakenE
+                    simp: valid_sched_def valid_blocked_def valid_blocked_except_def
+                          not_cur_thread_def valid_sched_action_def weak_valid_sched_action_def)
+  apply (wp tcb_sched_action_transform, clarsimp)
   done
 
 
@@ -544,7 +585,7 @@ lemma schedule_dcorres:
          apply (rule schedule_switch_thread_dcorres)
         (* sa = choose_new_thread *)
         apply clarsimp
-        apply (rule schedule_choose_new_thread_dcorres)
+        apply (rule schedule_choose_new_thread_dcorres_fragment)
        apply (wp gts_st_tcb | simp )+
   done
 

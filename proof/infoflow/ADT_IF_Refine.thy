@@ -762,15 +762,14 @@ lemma schedule_if_domain_time_left:
   "\<lbrace>\<lambda>s. valid_domain_list s \<and> (domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread) \<rbrace>
    schedule_if tc
    \<lbrace>\<lambda>rv s. 0 < domain_time s \<rbrace>"
-  unfolding schedule_if_def schedule_det_ext_ext_def
+  unfolding schedule_if_def schedule_det_ext_ext_def schedule_switch_thread_fastfail_def
+  supply ethread_get_wp[wp del]
+  supply if_split[split del]
   apply (rule hoare_pre)
-   apply (wp|wpc|simp)+
-    apply (rule_tac Q="\<lambda>_ s. valid_domain_list s
-                             \<and> (domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread)"
-                     in hoare_post_imp)
-     apply fastforce
-    apply wp+
-  apply simp
+   apply (wpsimp simp: ethread_get_when_def wp: gts_wp
+          | wp hoare_drop_imp[where f="ethread_get a b" for a b]
+               hoare_drop_imp[where f="tcb_sched_action a b" for a b])+
+  apply (auto split: if_split)
   done
 
 lemma scheduler'_if_ex_abs[wp]:

@@ -1267,17 +1267,36 @@ lemma switch_within_domain: "\<lbrakk>scheduler_action s = switch_thread x;valid
     apply simp+
   done
 
-lemma schedule_guarded_pas_domain: "\<lbrace>guarded_pas_domain aag and einvs and pas_refined aag\<rbrace> schedule \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
+lemma schedule_guarded_pas_domain:
+  "\<lbrace>guarded_pas_domain aag and einvs and pas_refined aag\<rbrace> schedule \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
+  supply ethread_get_wp[wp del]
   apply (simp add: schedule_def)
-  apply (wp guarded_pas_domain_lift[where f="activate_thread"]
-            guarded_pas_domain_lift[where f="set_scheduler_action f" for f]
-            guarded_switch_to_lift
-            switch_to_thread_guarded_pas_domain
-            activate_thread_cur_thread | wpc | simp)+
-        apply (rule choose_thread_guarded_pas_domain)
-       apply (wp next_domain_valid_queues gts_wp | simp | wp_once hoare_drop_imps)+
-  apply (intro impI conjI allI)
-           apply (fastforce intro: switch_within_domain simp: valid_sched_def elim!: st_tcb_weakenE)+
+  apply (wpsimp wp: guarded_pas_domain_lift[where f="activate_thread"]
+                    guarded_pas_domain_lift[where f="set_scheduler_action f" for f]
+                    guarded_switch_to_lift switch_to_thread_guarded_pas_domain
+                    next_domain_valid_queues activate_thread_cur_thread gts_wp
+          | wpc
+          | rule choose_thread_guarded_pas_domain
+          | simp add: schedule_choose_new_thread_def ethread_get_when_def split del: if_split
+          | wp_once hoare_drop_imp[where f="ethread_get t v" for t v]
+          | wp_once hoare_drop_imp[where f="schedule_switch_thread_fastfail c i cp p" for c i cp p])+
+
+
+
+apply (wp hoare_drop_imp)
+
+apply (wpsimp wp: guarded_pas_domain_lift[where f="activate_thread"]
+                    guarded_pas_domain_lift[where f="set_scheduler_action f" for f]
+                    guarded_switch_to_lift switch_to_thread_guarded_pas_domain
+                    next_domain_valid_queues activate_thread_cur_thread gts_wp
+          | wpc
+          | rule choose_thread_guarded_pas_domain
+          | simp add: schedule_choose_new_thread_def ethread_get_when_def split del: if_split
+          | wp_once hoare_drop_imp[where f="ethread_get t v" for t v]
+          | wp_once hoare_drop_imp[where f="schedule_switch_thread_fastfail c i cp p" for c i cp p])+
+
+   apply (fastforce intro: switch_within_domain switch_thread_runnable
+                    simp: valid_sched_def elim!: st_tcb_weakenE)+
   done
 
 lemma schedule_if_guarded_pas_domain[wp]: "\<lbrace>guarded_pas_domain aag and einvs and pas_refined aag\<rbrace> schedule_if tc \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
@@ -1318,9 +1337,8 @@ lemma schedule_if_scheduler_action[wp]:
    schedule_if tc
    \<lbrace>\<lambda>_ (s::det_state). scheduler_action s = resume_cur_thread\<rbrace>"
   apply(simp add: schedule_if_def | wp | wpc)+
-  apply(simp add: schedule_def | wp | wpc)+
+  apply(simp add: schedule_def schedule_choose_new_thread_def split del: if_split | wp | wpc)+
   done
-
 
 crunch valid_sched[wp]: schedule_if "valid_sched"
 
@@ -1699,19 +1717,18 @@ lemma schedule_if_domain_time_nonzero':
   "\<lbrace>valid_domain_list and (\<lambda>s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread)\<rbrace>
    schedule_if tc
    \<lbrace>(\<lambda>_ s. domain_time s > 0)\<rbrace>"
-  apply(simp add: schedule_if_def schedule_def)
+  apply (simp add: schedule_if_def schedule_def)
   apply (wp next_domain_domain_time_nonzero
         | wpc | simp add: crunch_simps guarded_switch_to_def switch_to_thread_def
                               choose_thread_def switch_to_idle_thread_def
                               arch_switch_to_idle_thread_def)+
-       apply(wp hoare_drop_imps)
-        apply(simp add: choose_thread_def switch_to_idle_thread_def arch_switch_to_idle_thread_def guarded_switch_to_def switch_to_thread_def | wp)+
-          apply(wp hoare_drop_imps)+
-       apply simp
-       apply(wp next_domain_domain_time_nonzero)+
-       apply (clarsimp simp: if_apply_def2)
-  apply(wp gts_wp)+
-  apply (auto)
+              apply(wp hoare_drop_imps)
+             apply(wp hoare_drop_imps)
+            apply wp+
+    apply (simp add: choose_thread_def switch_to_idle_thread_def arch_switch_to_idle_thread_def
+                     guarded_switch_to_def switch_to_thread_def | wp)+
+    apply (wp gts_wp)+
+  apply auto
   done
 
 lemma schedule_if_domain_time_nonzero:

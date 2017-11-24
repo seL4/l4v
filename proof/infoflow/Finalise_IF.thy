@@ -736,46 +736,38 @@ lemma reschedule_required_reads_respects[wp]:
   apply (simp add: reads_equiv_def)
   done
 
+lemma gets_cur_domain_ev:
+  "reads_equiv_valid_inv A aag \<top> (gets cur_domain)"
+  apply (rule equiv_valid_guard_imp)
+  apply wp
+  apply (simp add: reads_equiv_def)
+  done
+
 lemma possible_switch_to_reads_respects:
-  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and (\<lambda>s. is_subject aag (cur_thread s))) (possible_switch_to tptr on_same_prio)"
+  "reads_respects aag l
+    (pas_refined aag and pas_cur_domain aag and (\<lambda>s. is_subject aag (cur_thread s)))
+    (possible_switch_to tptr)"
   apply (simp add: possible_switch_to_def ethread_get_def)
   apply (case_tac "aag_can_read aag tptr \<or> aag_can_affect aag l tptr")
    apply ((wp static_imp_wp tcb_sched_action_reads_respects | wpc | simp add: fun_app_def)+)[1]
    apply (clarsimp simp: get_etcb_def)
    apply ((intro conjI impI allI | elim aag_can_read_self reads_equivE affects_equivE equiv_forE conjE disjE | force)+)[1]
   apply clarsimp
-  apply wp_once
-     apply wp_once
-       apply wp_once
-         apply (simp add: equiv_valid_def2)
-         apply (rule_tac W="\<top>\<top>" and Q="\<lambda>tcb. pas_refined aag and K (tcb_domain tcb \<noteq> rva)" in equiv_valid_rv_bind)
-           prefer 3
-           apply wp
-          apply (clarsimp simp: gets_the_def get_etcb_def equiv_valid_2_def gets_def bind_def assert_opt_def get_def fail_def return_def split: option.splits)
-         apply (rule gen_asm_ev2')
-         apply simp
-         apply (rule equiv_valid_rv_bind[where W="\<top>\<top>" and Q="\<lambda>rv. pas_refined aag"])
-           apply (clarsimp simp: gets_the_def get_etcb_def equiv_valid_2_def gets_def bind_def assert_opt_def get_def fail_def return_def split: option.splits)
-          apply (simp add: equiv_valid_def2[symmetric])
-          apply (wp tcb_sched_action_reads_respects)
-          apply (simp add: reads_equiv_def)
-         apply (wp | simp)+
-  apply (clarsimp)
-  apply (rule conjI, force simp: get_etcb_def elim: equiv_forE reads_equivE aag_can_read_self)+
+  apply (wp_once, rename_tac cur_dom)
+   apply (simp add: equiv_valid_def2)
+     apply (rule_tac W="\<top>\<top>" and Q="\<lambda>tcb. pas_refined aag and K (tcb_domain tcb \<noteq> cur_dom)" in equiv_valid_rv_bind)
+       prefer 3
+       apply wp
+      apply (clarsimp simp: gets_the_def get_etcb_def equiv_valid_2_def gets_def bind_def assert_opt_def get_def fail_def return_def split: option.splits)
+     apply (rule gen_asm_ev2')
+     apply (simp add: equiv_valid_def2[symmetric])
+     apply (wp tcb_sched_action_reads_respects)
+     apply (simp add: reads_equiv_def)
+    apply (wp gets_cur_domain_ev)+
   apply (clarsimp simp: get_etcb_def pas_refined_def tcb_domain_map_wellformed_aux_def)
-  apply (frule_tac x="(tptr, tcb_domain ya)" in bspec, force intro: domtcbs)
+  apply (frule_tac x="(tptr, tcb_domain y)" in bspec, force intro: domtcbs)
   apply (erule notE, rule aag_can_read_self)
   apply simp
-  done
-
-lemma switch_if_required_to_reads_respects:
-  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and (\<lambda>s. is_subject aag (cur_thread s))) (switch_if_required_to a)"
-  apply (simp add: switch_if_required_to_def possible_switch_to_reads_respects)
-  done
-
-lemma attempt_switch_to_reads_respects:
-  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and (\<lambda>s. is_subject aag (cur_thread s))) (attempt_switch_to a)"
-  apply (simp add: attempt_switch_to_def possible_switch_to_reads_respects)
   done
 
 crunch sched_act[wp]: set_endpoint "\<lambda>s. P (scheduler_action s)"

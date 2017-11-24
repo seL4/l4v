@@ -501,28 +501,18 @@ lemma set_scheduler_action_transform_inv:
   by (clarsimp simp: set_scheduler_action_def)
 
 lemma possible_switch_to_dcorres:
-  "dcorres dc P P' (return ()) (possible_switch_to t on_same_prio)"
+  "dcorres dc P P' (return ()) (possible_switch_to t)"
   apply (clarsimp simp: possible_switch_to_def)
   apply (rule dcorres_symb_exec_r)+
-              apply (rule corres_guard1_imp, rule corres_if_rhs)
-                apply (rule tcb_sched_action_dcorres[THEN corres_trivial])
-               apply (rule dcorres_symb_exec_r)+
-                     apply (fastforce intro!: reschedule_required_dcorres[THEN corres_trivial]
-                                      split: Deterministic_A.scheduler_action.splits )
-  (* 19 subgoals *)
-  apply (wp set_scheduler_action_transform_inv tcb_sched_action_transform_inv
-         | fastforce | rule hoare_pre)+
-  done
-
-lemma switch_if_required_to_dcorres:
-  "dcorres dc P P' (return ()) (switch_if_required_to t)"
-  apply (clarsimp simp: switch_if_required_to_def)
-  apply (rule possible_switch_to_dcorres)
-  done
-
-lemma attempt_switch_to_dcorres: "dcorres dc P P' (return ()) (attempt_switch_to y)"
-  apply (clarsimp simp: attempt_switch_to_def)
-  apply (rule possible_switch_to_dcorres)
+        apply (rule corres_guard1_imp, rule corres_if_rhs)
+          apply (rule tcb_sched_action_dcorres[THEN corres_trivial])
+         apply (rule corres_if_rhs)
+          apply (rule dcorres_symb_exec_r)+
+            apply (rule tcb_sched_action_dcorres[THEN corres_trivial])
+           apply (wp set_scheduler_action_transform_inv tcb_sched_action_transform_inv
+                 | simp add: reschedule_required_def
+                 | wpc
+                 | rule set_scheduler_action_dcorres[THEN corres_trivial])+
   done
 
 lemma corres_update_waiting_ntfn_do_notification_transfer:
@@ -543,7 +533,7 @@ lemma corres_update_waiting_ntfn_do_notification_transfer:
      apply (drule_tac t = "tcb_state tcb" in sym)
      apply (simp add:generates_pending_def)
     apply (rule corres_guard_imp)
-      apply (rule dcorres_dc_rhs_noop_below_2_True[OF allI[OF switch_if_required_to_dcorres]])
+      apply (rule dcorres_dc_rhs_noop_below_2_True[OF allI[OF possible_switch_to_dcorres]])
       apply (rule corres_split[OF _ set_thread_state_corres])
         apply (rule set_register_corres)
        apply (wp)+
@@ -711,13 +701,13 @@ lemma dcorres_dat:
            (do_notification_transfer a)
            (do y \<leftarrow> set_thread_state a Structures_A.thread_state.Running;
                y \<leftarrow> as_user a (set_register badge_register badge);
-               switch_if_required_to a
+               possible_switch_to a
             od)"
      apply (simp add: Endpoint_D.do_notification_transfer_def)
   apply (rule dcorres_expand_pfx)
   apply clarsimp
   apply (rule corres_guard_imp)
-    apply (rule dcorres_dc_rhs_noop_below_2_True[OF allI[OF switch_if_required_to_dcorres]])
+    apply (rule dcorres_dc_rhs_noop_below_2_True[OF allI[OF possible_switch_to_dcorres]])
     apply (rule corres_split[OF _ set_thread_state_corres])
       apply (rule set_register_corres)
      apply (wp)+
@@ -2316,7 +2306,7 @@ lemma do_reply_transfer_corres:
    apply (rule corres_guard_imp)
      apply (rule corres_split [OF _ corres_complete_ipc_transfer])
         apply (rule corres_split[OF _ delete_cap_simple_corres])
-          apply (rule corres_split_noop_rhs2[OF attempt_switch_to_dcorres[THEN corres_trivial]
+          apply (rule corres_split_noop_rhs2[OF possible_switch_to_dcorres[THEN corres_trivial]
                                                 set_thread_state_corres])
            apply (wp | clarsimp simp:not_idle_thread_def)+
    apply (clarsimp simp:invs_def valid_state_def valid_pspace_def not_idle_thread_def)
@@ -2337,7 +2327,7 @@ lemma do_reply_transfer_corres:
                     apply (rule corres_split_noop_rhs2)
                        apply (rule corres_trivial)
                        apply (clarsimp simp: when_def dc_def[symmetric])
-                       apply (rule attempt_switch_to_dcorres)
+                       apply (rule possible_switch_to_dcorres)
                       apply (rule corres_if_rhs)
                        apply (rule corres_alternate2)
                        apply (rule set_thread_state_corres)
@@ -2430,7 +2420,7 @@ lemma dcorres_receive_sync:
                         then setup_caller_cap sender thread
                         else set_thread_state sender Structures_A.thread_state.Inactive
                    else do set_thread_state sender Structures_A.thread_state.Running;
-                           do_extended_op (switch_if_required_to sender)
+                           do_extended_op (possible_switch_to sender)
                         od
                 od
           | Structures_A.endpoint.RecvEP queue \<Rightarrow> case is_blocking of
@@ -2508,7 +2498,7 @@ lemma dcorres_receive_sync:
                  apply (clarsimp simp:st_tcb_at_def obj_at_def generates_pending_def)
                 apply (rule corres_alternate2[OF set_thread_state_corres[unfolded tcb_slots]])
                apply (rule corres_alternate1[OF corres_alternate2])
-               apply (rule dcorres_rhs_noop_below_True[OF switch_if_required_to_dcorres])
+               apply (rule dcorres_rhs_noop_below_True[OF possible_switch_to_dcorres])
                apply (rule set_thread_state_corres[unfolded tcb_slots])
               apply clarsimp
               apply (wp hoare_drop_imps)+
@@ -2654,7 +2644,6 @@ lemma dcorres_dummy_set_pending_cap_Restart:
     split : Structures_A.thread_state.splits)
   done
 
-crunch valid_etcbs[wp]: attempt_switch_to "valid_etcbs"
 crunch pred_tcb[wp]: do_ipc_transfer "pred_tcb_at proj P t"
   (wp: crunch_wps transfer_caps_loop_pres make_fault_message_inv simp: zipWithM_x_mapM)
 
@@ -2722,7 +2711,7 @@ lemma send_sync_ipc_corres:
        apply (case_tac "recv_state"; simp add: corres_free_fail split del: if_split)
                  apply (rule corres_split[OF _ corres_complete_ipc_transfer])
                     apply (rule corres_split[OF _ set_thread_state_corres])
-                      apply (rule dcorres_rhs_noop_above[OF attempt_switch_to_dcorres])
+                      apply (rule dcorres_rhs_noop_above[OF possible_switch_to_dcorres])
                        apply (rule_tac corres_symb_exec_r)
                           apply (rule dcorres_if_rhs)
                            apply (rule dcorres_if_rhs)

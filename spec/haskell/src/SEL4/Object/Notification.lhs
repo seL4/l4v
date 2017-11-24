@@ -62,7 +62,7 @@ mark the notification object as active.
 >                         cancelIPC tcb
 >                         setThreadState Running tcb
 >                         asUser tcb $ setRegister badgeRegister badge
->                         switchIfRequiredTo tcb
+>                         possibleSwitchTo tcb
 >                       else
 >                         setNotification ntfnPtr $ nTFN { ntfnObj = ActiveNtfn badge }
 >             (IdleNtfn, Nothing) -> setNotification ntfnPtr $ nTFN { ntfnObj = ActiveNtfn badge }
@@ -77,7 +77,7 @@ If the notification object is waiting, a thread is removed from its queue and th
 >                   }
 >                 setThreadState Running dest
 >                 asUser dest $ setRegister badgeRegister badge
->                 switchIfRequiredTo dest
+>                 possibleSwitchTo dest
 >             (WaitingNtfn [], _) -> fail "WaitingNtfn Notification must have non-empty queue"
 
 If the notification object is active, new values are calculated and stored in the notification object. The calculation is done by a bitwise OR operation of the currently stored, and the newly sent values.

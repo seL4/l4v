@@ -1067,7 +1067,7 @@ lemma restart_ccorres:
       apply (ctac(no_vcg) add: setupReplyMaster_ccorres)
        apply (ctac(no_vcg))
         apply (ctac(no_vcg) add: tcbSchedEnqueue_ccorres)
-         apply ctac
+         apply (ctac add: possibleSwitchTo_ccorres)
         apply (wp weak_sch_act_wf_lift)[1]
        apply (wp sts_valid_queues setThreadState_st_tcb)[1]
       apply (simp add: valid_tcb_state'_def)

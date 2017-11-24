@@ -1430,10 +1430,10 @@ where
   "cbitmap_L1_to_H l1 \<equiv> \<lambda>d. if d \<le> maxDomain then l1.[unat d] else 0"
 
 definition
-  cbitmap_L2_to_H :: "32 word[9][16] \<Rightarrow> (8 word \<times> nat \<Rightarrow> 32 word)"
+  cbitmap_L2_to_H :: "32 word[8][16] \<Rightarrow> (8 word \<times> nat \<Rightarrow> 32 word)"
 where
   "cbitmap_L2_to_H l2 \<equiv> \<lambda>(d, i).
-    if d \<le> maxDomain \<and> i \<le> numPriorities div wordBits
+    if d \<le> maxDomain \<and> i < l2BitmapSize
     then l2.[unat d].[i] else 0"
 
 lemma cbitmap_L1_to_H_correct:

@@ -90,7 +90,7 @@ If the endpoint is receiving, then a thread is removed from its queue, and an IP
 The receiving thread has now completed its blocking operation and can run. If the receiving thread has higher priority than the current thread, the scheduler is instructed to switch to it immediately.
 
 >                 setThreadState Running dest
->                 attemptSwitchTo dest
+>                 possibleSwitchTo dest
 
 If the sender is performing a call or has faulted, set up the reply capability.
 
@@ -150,7 +150,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                 case (call, fault, canGrant) of
 >                     (False, Nothing, _) -> do
 >                         setThreadState Running sender
->                         switchIfRequiredTo sender
+>                         possibleSwitchTo sender
 >                     (_, _, True) -> setupCallerCap sender thread
 >                     _ -> setThreadState Inactive sender
 >             SendEP [] -> fail "Send endpoint queue must not be empty"

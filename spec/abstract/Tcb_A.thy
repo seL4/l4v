@@ -53,7 +53,7 @@ definition
       setup_reply_master thread;
       set_thread_state thread Restart;
       do_extended_op (tcb_sched_action (tcb_sched_enqueue) thread);
-      do_extended_op (switch_if_required_to thread)
+      do_extended_op (possible_switch_to thread)
     od
   od"
 

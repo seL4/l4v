@@ -66,7 +66,7 @@ lemma send_signal_mdb[wp]:
   apply (clarsimp simp: st_tcb_def2)
   done
 
-crunch pas_refined[wp]: attempt_switch_to, switch_if_required_to "pas_refined aag"
+crunch pas_refined[wp]: possible_switch_to "pas_refined aag"
 
 lemma update_waiting_ntfn_pas_refined:
   notes hoare_post_taut [simp del]
@@ -441,7 +441,7 @@ lemma integrity_receive_blocked_chain:
   apply simp
   done
 
-crunch integrity[wp]: attempt_switch_to, switch_if_required_to "integrity aag X st"
+crunch integrity[wp]: possible_switch_to "integrity aag X st"
   (ignore: tcb_sched_action)
 
 abbreviation
@@ -1082,7 +1082,7 @@ where
                               then setup_caller_cap sender thread
                               else set_thread_state sender Inactive
                          else do set_thread_state sender Running;
-                                 do_extended_op (switch_if_required_to sender)
+                                 do_extended_op (possible_switch_to sender)
                               od
                       od
                   | RecvEP queue \<Rightarrow> case is_blocking of

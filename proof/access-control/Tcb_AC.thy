@@ -44,7 +44,7 @@ lemma setup_reply_master_respects:
   apply simp
   done
 
-crunch eintegrity[wp]: switch_if_required_to "integrity aag X st"
+crunch eintegrity[wp]: possible_switch_to "integrity aag X st"
   (ignore: tcb_sched_action)
 
 lemma restart_integrity_autarch:
@@ -118,7 +118,7 @@ lemma setup_reply_master_pas_refined:
 
 crunch pas_refined: get_thread_state "pas_refined aag"
 
-crunch pas_refined[wp]: switch_if_required_to "pas_refined aag"
+crunch pas_refined[wp]: possible_switch_to "pas_refined aag"
 
 lemma restart_pas_refined:
   "\<lbrace>pas_refined aag and K (is_subject aag t)\<rbrace> restart t \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"

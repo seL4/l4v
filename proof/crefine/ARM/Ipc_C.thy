@@ -4511,16 +4511,18 @@ lemma doIPCTransfer_reply_or_replyslot:
   apply simp
   done
 
+crunch ksCurDomain[wp]: handleFaultReply "\<lambda>s. P (ksCurDomain s)"
+
 lemma doReplyTransfer_ccorres [corres]:
   "ccorres dc xfdc
     (invs' and st_tcb_at' (Not \<circ> isReply) sender
-        and tcb_at' receiver and sch_act_simple
+        and tcb_at' receiver and sch_act_simple and (\<lambda>s. ksCurDomain s \<le> maxDomain)
         and ((Not o real_cte_at' slot) or cte_wp_at' (\<lambda>cte. isReplyCap (cteCap cte)) slot)
         and cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap \<or> isReplyCap (cteCap cte))
          slot)
     (UNIV \<inter> \<lbrace>\<acute>sender = tcb_ptr_to_ctcb_ptr sender\<rbrace>
           \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr receiver\<rbrace>
-          \<inter> \<lbrace>\<acute>slot = Ptr slot\<rbrace>)  []
+          \<inter> \<lbrace>\<acute>slot = Ptr slot\<rbrace>)  hs
     (doReplyTransfer sender receiver slot)
     (Call doReplyTransfer_'proc)"
 proof -
@@ -4557,8 +4559,8 @@ proof -
       apply (rule ccorres_symb_exec_r)
         apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="scast cap_reply_cap"])
          apply (ctac(no_vcg) add: setThreadState_ccorres)
-          apply (ctac add: attemptSwitchTo_ccorres)
-         apply (wp sts_running_valid_queues setThreadState_st_tcb | simp)+
+          apply (ctac(no_vcg) add: possibleSwitchTo_ccorres)
+         apply (wpsimp wp: sts_running_valid_queues setThreadState_st_tcb)+
         apply (wp cteDeleteOne_sch_act_wf)
        apply vcg
       apply (rule conseqPre, vcg)
@@ -4604,17 +4606,20 @@ proof -
                apply (clarsimp simp: to_bool_def Collect_const_mem)
               apply (ctac (no_vcg))
                apply (simp only: K_bind_def)
-               apply (ctac)
+               apply (ctac add: possibleSwitchTo_ccorres)
               apply (wp sts_running_valid_queues setThreadState_st_tcb | simp)+
-             apply (fold dc_def)[1]
+            apply (fold dc_def)[1]
              apply (ctac add: setThreadState_ccorres_valid_queues'_simple)
+             apply wp
             apply ((wp threadSet_valid_queues threadSet_sch_act threadSet_valid_queues' static_imp_wp
                        threadSet_valid_objs' threadSet_weak_sch_act_wf
                          | simp add: valid_tcb_state'_def)+)[1]
            apply (clarsimp simp: guard_is_UNIV_def ThreadState_Restart_def
-                                 ThreadState_Inactive_def mask_def to_bool_def)
+                                 ThreadState_Inactive_def mask_def to_bool_def
+                                 option_to_ctcb_ptr_def)
+
           apply (rule_tac Q="\<lambda>rv. valid_queues and tcb_at' receiver and valid_queues' and
-                                valid_objs' and sch_act_simple and
+                                valid_objs' and sch_act_simple and (\<lambda>s. ksCurDomain s \<le> maxDomain) and
                                 (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)" in hoare_post_imp)
            apply (clarsimp simp: inQ_def weak_sch_act_wf_def)
           apply (wp threadSet_valid_queues threadSet_sch_act handleFaultReply_sch_act_wf)
@@ -4636,7 +4641,7 @@ proof -
                          option_to_ptr_def option_to_0_def false_def
                          ThreadState_Running_def mask_def
                          ghost_assertion_data_get_def ghost_assertion_data_set_def
-                         cap_tag_defs
+                         cap_tag_defs option_to_ctcb_ptr_def
                   split: option.splits)
   apply (clarsimp simp: pred_tcb_at' invs_valid_objs')
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def cte_wp_at_ctes_of
@@ -5261,9 +5266,6 @@ lemma sendIPC_enqueue_ccorres_helper:
   apply assumption
   done
 
-lemmas attemptSwitchTo_sch_act_not
-    = possibleSwitchTo_sch_act_not[where b=True, folded attemptSwitchTo_def]
-
 lemma sendIPC_ccorres [corres]:
   "ccorres dc xfdc (invs' and st_tcb_at' simple' thread
                           and sch_act_not thread and ep_at' epptr and
@@ -5327,7 +5329,7 @@ lemma sendIPC_ccorres [corres]:
 
           apply (ctac(no_vcg))
            apply (ctac(no_vcg))
-            apply (ctac(no_vcg))
+            apply (ctac(no_vcg) add: possibleSwitchTo_ccorres)
              apply (rule ccorres_pre_threadGet)
              apply (rename_tac fault)
              apply (clarsimp split del: if_split)
@@ -5394,14 +5396,15 @@ lemma sendIPC_ccorres [corres]:
                      in hoare_post_imp)
              apply (fastforce simp: weak_sch_act_wf_def valid_tcb_state'_def
                               elim: obj_at'_weakenE)
-            apply (wp attemptSwitchTo_sch_act_not sts_st_tcb' hoare_vcg_all_lift
-                      attemptSwitchTo_ksQ sts_valid_queues sts_ksQ')+
+            apply (wp possibleSwitchTo_sch_act_not sts_st_tcb' hoare_vcg_all_lift
+                      possibleSwitchTo_ksQ' sts_valid_queues sts_ksQ')+
           apply (clarsimp simp: valid_tcb_state'_def)
           apply (wp weak_sch_act_wf_lift_linear tcb_in_cur_domain'_lift)+
         apply (rule_tac Q="\<lambda>rv. valid_queues and valid_pspace' and valid_objs'
                             and valid_mdb' and tcb_at' dest and cur_tcb'
                             and tcb_at' thread and K (dest \<noteq> thread)
                             and sch_act_not thread and K (epptr \<noteq> 0)
+                            and (\<lambda>s. ksCurDomain s \<le> maxDomain)
                             and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
                                 (\<forall>d p. thread \<notin> set (ksReadyQueues s (d, p))))"
                      in hoare_post_imp)
@@ -6167,7 +6170,7 @@ lemma receiveIPC_ccorres [corres]:
                      apply (rule ccorres_symb_exec_r)
                        apply (rule ccorres_cond_false)
                        apply (ctac(no_vcg))
-                        apply ctac
+                        apply (ctac add: possibleSwitchTo_ccorres)
                        apply (wp sts_st_tcb' sts_valid_queues)
                       apply vcg
                      apply (rule conseqPre, vcg, clarsimp)
@@ -6191,6 +6194,7 @@ lemma receiveIPC_ccorres [corres]:
            apply (rule_tac Q="\<lambda>rv. valid_queues and valid_pspace' and valid_objs'
                                    and st_tcb_at' (op = sendState) sender
                                    and tcb_at' thread and sch_act_not sender
+                                   and (\<lambda>s. ksCurDomain s \<le> maxDomain)
                                    and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
                                     (\<forall>d p. sender \<notin> set (ksReadyQueues s (d, p))))"
                             in hoare_post_imp)
@@ -6204,8 +6208,9 @@ lemma receiveIPC_ccorres [corres]:
                             and cur_tcb' and tcb_at' sender and tcb_at' thread
                             and sch_act_not sender and K (thread \<noteq> sender)
                             and ep_at' (capEPPtr cap)
-                                and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
-                                    (\<forall>d p. sender \<notin> set (ksReadyQueues s (d, p))))"
+                            and (\<lambda>s. ksCurDomain s \<le> maxDomain)
+                            and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
+                                     (\<forall>d p. sender \<notin> set (ksReadyQueues s (d, p))))"
                          in hoare_post_imp)
              subgoal by (auto, auto simp: st_tcb_at'_def obj_at'_def)
         apply (wp hoare_vcg_all_lift set_ep_valid_objs')
@@ -6499,7 +6504,7 @@ lemma sendSignal_ccorres [corres]:
         apply (ctac(no_vcg) add: cancelIPC_ccorres1[OF cteDeleteOne_ccorres])
          apply (ctac(no_vcg) add: setThreadState_ccorres)
           apply (ctac(no_vcg) add: setRegister_ccorres)
-           apply (ctac add: switchIfRequiredTo_ccorres[unfolded dc_def])
+           apply (ctac add: possibleSwitchTo_ccorres[unfolded dc_def])
           apply (wp sts_running_valid_queues sts_st_tcb_at'_cases
                  | simp add: option_to_ctcb_ptr_def split del: if_split)+
         apply (rule_tac Q="\<lambda>_. tcb_at' (the (ntfnBoundTCB ntfn)) and invs'"
@@ -6565,7 +6570,7 @@ lemma sendSignal_ccorres [corres]:
       apply (ctac (no_vcg))
        apply (simp, fold dc_def)
        apply (ctac (no_vcg))
-        apply ctac
+        apply (ctac add: possibleSwitchTo_ccorres)
        apply (simp)
        apply (wp weak_sch_act_wf_lift_linear
          setThreadState_oa_queued

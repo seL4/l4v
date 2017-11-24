@@ -22,7 +22,7 @@ crunch arm_global_pd[wp]: set_irq_state, suspend "\<lambda>s. P (arm_global_pd (
    simp: unless_def
    ignore: empty_slot_ext reschedule_required)
 
-crunch arm_global_pd[wp]: as_user, restart "\<lambda>s. P (arm_global_pd (arch_state s))" (wp: dxo_wp_weak ignore: switch_if_required_to)
+crunch arm_global_pd[wp]: as_user, restart "\<lambda>s. P (arm_global_pd (arch_state s))" (wp: dxo_wp_weak)
 
 
 section "valid global objs"
@@ -32,7 +32,7 @@ crunch valid_global_objs[wp]: cancel_ipc "valid_global_objs"
   (wp: mapM_x_wp select_inv hoare_drop_imps hoare_vcg_if_lift2 dxo_wp_weak
    simp: unless_def
    ignore: empty_slot_ext)
-crunch valid_global_objs[wp]: restart "valid_global_objs" (wp: dxo_wp_weak ignore: switch_if_required_to)
+crunch valid_global_objs[wp]: restart "valid_global_objs" (wp: dxo_wp_weak)
 crunch valid_global_objs: cap_swap_for_delete, deleting_irq_handler, suspend "valid_global_objs"
   (wp: dxo_wp_weak)
 
@@ -72,7 +72,7 @@ crunch valid_ko_at_arm[wp]: setup_reply_master "valid_ko_at_arm"
 
 crunch globals_equiv[wp]: restart "globals_equiv st"
   (wp: cancel_ipc_valid_ko_at_arm hoare_vcg_if_lift2 dxo_wp_weak hoare_drop_imps
-   ignore: reschedule_required possible_switch_to switch_if_required_to)
+   ignore: reschedule_required possible_switch_to)
 
 lemma as_user_globals_equiv[wp]:
   "\<lbrace> globals_equiv st and valid_ko_at_arm and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
@@ -141,7 +141,7 @@ lemma finalise_cap_globals_equiv:
   done
 
 crunch valid_ko_at_arm[wp]: cap_swap_for_delete, restart "valid_ko_at_arm"
-  (wp: dxo_wp_weak ignore: cap_swap_ext switch_if_required_to)
+  (wp: dxo_wp_weak ignore: cap_swap_ext)
 
 lemma rec_del_preservation2':
   assumes finalise_cap_P: "\<And>cap final. \<lbrace>R and P\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_.P\<rbrace>"
@@ -468,43 +468,6 @@ lemma setup_reply_master_reads_respects:
 crunch states_equiv[wp]: switch_if_required_to "states_equiv_for P Q R X st"
 *)
 
-lemma possible_switch_to_reads_respects:
-  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and (\<lambda>s. is_subject aag (cur_thread s))) (possible_switch_to tptr on_same_prio)"
-  apply (simp add: possible_switch_to_def ethread_get_def)
-  apply (case_tac "aag_can_read aag tptr \<or> aag_can_affect aag l tptr")
-   apply ((wp static_imp_wp tcb_sched_action_reads_respects | wpc | simp add: fun_app_def)+)[1]
-   apply (clarsimp simp: get_etcb_def)
-   apply ((intro conjI impI allI | elim aag_can_read_self reads_equivE affects_equivE equiv_forE conjE disjE | force)+)[1]
-  apply clarsimp
-  apply wp_once
-     apply wp_once
-       apply wp_once
-         apply (simp add: equiv_valid_def2)
-         apply (rule_tac W="\<top>\<top>" and Q="\<lambda>tcb. pas_refined aag and K (tcb_domain tcb \<noteq> rva)" in equiv_valid_rv_bind)
-           prefer 3
-           apply wp
-          apply (clarsimp simp: gets_the_def get_etcb_def equiv_valid_2_def gets_def bind_def assert_opt_def get_def fail_def return_def split: option.splits)
-         apply (rule gen_asm_ev2')
-         apply simp
-         apply (rule equiv_valid_rv_bind[where W="\<top>\<top>" and Q="\<lambda>rv. pas_refined aag"])
-           apply (clarsimp simp: gets_the_def get_etcb_def equiv_valid_2_def gets_def bind_def assert_opt_def get_def fail_def return_def split: option.splits)
-          apply (simp add: equiv_valid_def2[symmetric])
-          apply (wp tcb_sched_action_reads_respects)
-          apply (simp add: reads_equiv_def)
-         apply (wp | simp)+
-  apply (clarsimp)
-  apply (rule conjI, force simp: get_etcb_def elim: equiv_forE reads_equivE aag_can_read_self)+
-  apply (clarsimp simp: get_etcb_def pas_refined_def tcb_domain_map_wellformed_aux_def)
-  apply (frule_tac x="(tptr, tcb_domain ya)" in bspec, force intro: domtcbs)
-  apply (erule notE, rule aag_can_read_self)
-  apply simp
-  done
-
-lemma switch_if_required_to_reads_respects:
-  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and (\<lambda>s. is_subject aag (cur_thread s))) (switch_if_required_to a)"
-  apply (simp add: switch_if_required_to_def possible_switch_to_reads_respects)
-  done
-
 lemmas gets_cur_thread_respects_f =
        gets_cur_thread_ev[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>],simplified,wp]
 
@@ -519,7 +482,7 @@ lemma restart_reads_respects_f:
             gets_cur_thread_ev
             set_thread_state_pas_refined
             setup_reply_master_pas_refined
-            reads_respects_f[OF switch_if_required_to_reads_respects, where Q="\<top>"]
+            reads_respects_f[OF possible_switch_to_reads_respects, where Q="\<top>"]
             reads_respects_f[OF tcb_sched_action_reads_respects, where Q="\<top>"]
             cancel_ipc_reads_respects_f setup_reply_master_silc_inv cancel_ipc_silc_inv | simp)+
 

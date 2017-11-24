@@ -86,30 +86,85 @@ definition choose_thread :: "det_ext state \<Rightarrow> (unit \<times> det_ext 
         else (guarded_switch_to (hd (max_non_empty_queue queues)))
       od"
 
+text {*
+  Determine whether given priority is highest among queued ready threads in given domain.
+  Trivially true if no threads are ready. *}
+definition
+  is_highest_prio :: "domain \<Rightarrow> priority \<Rightarrow> det_ext state \<Rightarrow> bool"
+where
+  "is_highest_prio d p s \<equiv>
+    (\<forall>prio. ready_queues s d prio = [])
+    \<or> p \<ge> Max {prio. ready_queues s d prio \<noteq> []}"
 
 instantiation  det_ext_ext :: (type) state_ext_sched
 begin
 
-definition "schedule_det_ext_ext \<equiv> do
-     cur \<leftarrow> gets cur_thread;
-     cur_ts \<leftarrow> get_thread_state cur;
+definition
+  "schedule_switch_thread_fastfail ct it ct_prio target_prio \<equiv>
+     if ct \<noteq> it
+     then return (target_prio < ct_prio)
+     else return True"
+
+definition
+  "schedule_choose_new_thread \<equiv> do
+     dom_time \<leftarrow> gets domain_time;
+     when (dom_time = 0) next_domain;
+     choose_thread;
+     set_scheduler_action resume_cur_thread
+   od"
+
+definition
+  "schedule_det_ext_ext \<equiv> do
+     ct \<leftarrow> gets cur_thread;
+     ct_st \<leftarrow> get_thread_state ct;
+     ct_runnable \<leftarrow> return $ runnable ct_st;
      action \<leftarrow> gets scheduler_action;
-     (case action of
-       resume_cur_thread \<Rightarrow> do
-                            id \<leftarrow> gets idle_thread;
-                            assert (runnable cur_ts \<or> cur = id);
-                            return ()
-                           od |
-       choose_new_thread \<Rightarrow> do
-         when (runnable cur_ts) ((tcb_sched_action tcb_sched_enqueue cur));
-         dom_time \<leftarrow> gets domain_time;
-         when (dom_time = 0) next_domain;
-         choose_thread;
-         (set_scheduler_action resume_cur_thread) od |
-       switch_thread t \<Rightarrow> do
-         when (runnable cur_ts) ((tcb_sched_action tcb_sched_enqueue cur));
-         guarded_switch_to t;
-         (set_scheduler_action resume_cur_thread) od)
+     (case action
+       of resume_cur_thread \<Rightarrow> do
+            id \<leftarrow> gets idle_thread;
+            assert (ct_runnable \<or> ct = id);
+            return ()
+         od
+       | choose_new_thread \<Rightarrow> do
+           when ct_runnable (tcb_sched_action tcb_sched_enqueue ct);
+           schedule_choose_new_thread
+         od
+       | switch_thread candidate \<Rightarrow> do
+           when ct_runnable (tcb_sched_action tcb_sched_enqueue ct);
+
+           it \<leftarrow> gets idle_thread;
+           target_prio \<leftarrow> ethread_get tcb_priority candidate;
+
+           (* Infoflow does not like asking about the idle thread's priority or domain. *)
+           ct_prio \<leftarrow> ethread_get_when (ct \<noteq> it) tcb_priority ct;
+           (* When to look at the bitmaps.
+              This optimisation used in C fast path, but there we know cur_thread is not idle. *)
+           fastfail \<leftarrow> schedule_switch_thread_fastfail ct it ct_prio target_prio;
+
+           cur_dom \<leftarrow> gets cur_domain;
+           highest \<leftarrow> gets (is_highest_prio cur_dom target_prio);
+           if (fastfail \<and> \<not>highest)
+           then do
+               (* candidate is not best candidate, choose a new thread *)
+               tcb_sched_action tcb_sched_enqueue candidate;
+               set_scheduler_action choose_new_thread;
+               schedule_choose_new_thread
+             od
+           else if (ct_runnable \<and> ct_prio = target_prio)
+           then do
+               (* current thread was runnable and candidate is not strictly better
+                  want current thread to run next, so append the candidate to end of queue
+                  and choose again *)
+               tcb_sched_action tcb_sched_append candidate;
+               set_scheduler_action choose_new_thread;
+               schedule_choose_new_thread
+             od
+           else do
+             guarded_switch_to candidate;
+             (* duplication assists in wp proof under different sched. actions *)
+             set_scheduler_action resume_cur_thread
+           od
+        od)
     od"
 
 instance ..

@@ -299,11 +299,22 @@ lemma setQueue_almost_no_orphans_enq_lift:
   apply fastforce
   done
 
-lemma tcbSchedEnqueue_no_orphans:
+lemma tcbSchedEnqueue_no_orphans[wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
    tcbSchedEnqueue tcb_ptr
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding tcbSchedEnqueue_def
+  apply (wp setQueue_no_orphans_enq threadSet_no_orphans | clarsimp simp: unless_def)+
+   apply (wp getObject_tcb_wp | clarsimp simp: threadGet_def)+
+  apply (drule obj_at_ko_at')
+  apply auto
+  done
+
+lemma tcbSchedAppend_no_orphans[wp]:
+  "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
+   tcbSchedAppend tcb_ptr
+   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
+  unfolding tcbSchedAppend_def
   apply (wp setQueue_no_orphans_enq threadSet_no_orphans | clarsimp simp: unless_def)+
    apply (wp getObject_tcb_wp | clarsimp simp: threadGet_def)+
   apply (drule obj_at_ko_at')
@@ -394,6 +405,18 @@ lemma tcbSchedEnqueue_inQueue [wp]:
    tcbSchedEnqueue tcb_ptr
    \<lbrace> \<lambda>rv s. tcb_ptr \<in> all_queued_tcb_ptrs s \<rbrace>"
   unfolding tcbSchedEnqueue_def all_queued_tcb_ptrs_def
+  apply (wp | clarsimp simp: unless_def)+
+   apply (rule_tac Q="\<lambda>rv. \<top>" in hoare_post_imp)
+    apply fastforce
+   apply (wp getObject_tcb_wp | clarsimp simp: threadGet_def)+
+  apply (fastforce simp: obj_at'_def valid_queues'_def inQ_def)
+  done
+
+lemma tcbSchedAppend_inQueue [wp]:
+  "\<lbrace> \<lambda>s. valid_queues' s \<rbrace>
+   tcbSchedAppend tcb_ptr
+   \<lbrace> \<lambda>rv s. tcb_ptr \<in> all_queued_tcb_ptrs s \<rbrace>"
+  unfolding tcbSchedAppend_def all_queued_tcb_ptrs_def
   apply (wp | clarsimp simp: unless_def)+
    apply (rule_tac Q="\<lambda>rv. \<top>" in hoare_post_imp)
     apply fastforce
@@ -692,6 +715,14 @@ lemma tcbSchedEnqueue_inQueue_eq:
   apply wp
   done
 
+lemma tcbSchedAppend_inQueue_eq:
+  "\<lbrace> valid_queues' and K (tcb_ptr = tcb_ptr') \<rbrace>
+   tcbSchedAppend tcb_ptr
+   \<lbrace> \<lambda>rv s. tcb_ptr' \<in> all_queued_tcb_ptrs s \<rbrace>"
+  apply (rule hoare_gen_asm, simp)
+  apply wp
+  done
+
 lemma findM_on_success:
   "\<lbrakk> \<And>x. \<lbrace> P x \<rbrace> f x \<lbrace> \<lambda>rv s. rv \<rbrace>; \<And>x y. \<lbrace> P x \<rbrace> f y \<lbrace> \<lambda>rv. P x \<rbrace> \<rbrakk> \<Longrightarrow>
    \<lbrace> \<lambda>s. \<exists>x \<in> set xs. P x s \<rbrace> findM f xs \<lbrace> \<lambda>rv s. \<exists> y. rv = Some y \<rbrace>"
@@ -763,10 +794,44 @@ lemma chooseThread_no_orphans [wp]:
     apply (wp assert_inv ThreadDecls_H_switchToThread_no_orphans)
     apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def
                           valid_queues_def st_tcb_at'_def)
-    apply (fold lookupBitmapPriority_def)
     apply (fastforce dest!: lookupBitmapPriority_obj_at' elim: obj_at'_weaken
                      simp: all_active_tcb_ptrs_def)
    apply (simp add: bitmap_fun_defs | wp)+
+  done
+
+lemma tcbSchedAppend_in_ksQ:
+  "\<lbrace>valid_queues' and tcb_at' t\<rbrace> tcbSchedAppend t
+   \<lbrace>\<lambda>r s. \<exists>domain priority. t \<in> set (ksReadyQueues s (domain, priority))\<rbrace>"
+  apply (rule_tac Q="\<lambda>s. \<exists>d p. valid_queues' s \<and>
+                             obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s \<and>
+                             obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s"
+           in hoare_pre_imp)
+   apply (clarsimp simp: tcb_at'_has_tcbPriority tcb_at'_has_tcbDomain)
+  including no_pre
+  apply (wp hoare_vcg_ex_lift)
+  apply (simp add: tcbSchedAppend_def unless_def)
+  apply wp
+    apply clarsimp
+    apply wp+
+    apply (rule_tac Q="\<lambda>rv s. tdom = d \<and> rv = p \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s
+                            \<and> obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s"
+             in hoare_post_imp, clarsimp)
+    apply (wp, (wp threadGet_const)+)
+  apply (rule_tac Q="\<lambda>rv s.
+             obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s \<and>
+             obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s \<and>
+             obj_at' (\<lambda>tcb. tcbQueued tcb = rv) t s \<and>
+             (rv \<longrightarrow> t \<in> set (ksReadyQueues s (d, p)))" in hoare_post_imp)
+   apply (clarsimp simp: o_def elim!: obj_at'_weakenE)
+  apply (wp threadGet_obj_at' hoare_vcg_imp_lift threadGet_const)
+     apply (case_tac "obj_at' (Not \<circ> tcbQueued) t s")
+      apply (clarsimp)
+     apply (clarsimp simp: valid_queues'_def)
+     apply (drule_tac x=d in spec)
+     apply (drule_tac x=p in spec)
+     apply (drule_tac x=t in spec)
+     apply (subgoal_tac "obj_at' (inQ d p) t s", clarsimp)
+     apply (clarsimp simp: obj_at'_def inQ_def)+
   done
 
 lemma hoare_neg_imps:
@@ -816,16 +881,225 @@ lemma all_invs_but_ct_idle_or_in_cur_domain'_strg:
   "invs' s \<longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
   by (clarsimp simp: invs'_to_invs_no_cicd'_def)
 
-lemma schedule_no_orphans [wp]:
-  "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_wf (ksSchedulerAction s) s \<rbrace>
+lemma setSchedulerAction_cnt_sch_act_not[wp]:
+  "\<lbrace> \<top> \<rbrace> setSchedulerAction ChooseNewThread \<lbrace>\<lambda>rv s. sch_act_not x s\<rbrace>"
+  by (rule hoare_pre, rule hoare_strengthen_post[OF setSchedulerAction_direct]) auto
+
+lemma obj_at'_static_fix:
+  "\<lbrakk> obj_at' (\<lambda>(ko::'a::pspace_storable). True) p s ; P \<rbrakk> \<Longrightarrow> obj_at' (\<lambda>(ko::'a::pspace_storable). P) p s"
+  by (erule obj_at'_weakenE, simp)
+
+lemma tcbSchedEnqueue_in_ksQ_aqtp[wp]:
+  "\<lbrace>valid_queues' and tcb_at' t\<rbrace> tcbSchedEnqueue t
+   \<lbrace>\<lambda>r s. t \<in> all_queued_tcb_ptrs s\<rbrace>"
+  apply (clarsimp simp: all_queued_tcb_ptrs_def)
+  apply (rule tcbSchedEnqueue_in_ksQ)
+  done
+
+crunch ksReadyQueues[wp]: threadGet "\<lambda>s. P (ksReadyQueues s)"
+
+lemma tcbSchedEnqueue_in_ksQ_already_queued:
+  "\<lbrace>\<lambda>s. valid_queues' s \<and> tcb_at' t s \<and>
+    (\<exists>domain priority. t' \<in> set (ksReadyQueues s (domain, priority))) \<rbrace>
+   tcbSchedEnqueue t
+   \<lbrace>\<lambda>r s. \<exists>domain priority. t' \<in> set (ksReadyQueues s (domain, priority))\<rbrace>"
+  apply (case_tac "t'=t", wpsimp wp: tcbSchedEnqueue_in_ksQ)
+  apply (wpsimp simp:  tcbSchedEnqueue_def unless_def)
+     apply (rule_tac Q="\<lambda>_ s. \<exists>domain priority. t' \<in> set (ksReadyQueues s (domain, priority))"
+              in hoare_post_imp)
+      apply metis
+     apply wpsimp+
+  done
+
+lemma tcbSchedAppend_in_ksQ_already_queued:
+  "\<lbrace>\<lambda>s. valid_queues' s \<and> tcb_at' t s \<and>
+    (\<exists>domain priority. t' \<in> set (ksReadyQueues s (domain, priority))) \<rbrace>
+   tcbSchedAppend t
+   \<lbrace>\<lambda>r s. \<exists>domain priority. t' \<in> set (ksReadyQueues s (domain, priority))\<rbrace>"
+  apply (case_tac "t'=t", wpsimp wp: tcbSchedAppend_in_ksQ)
+  apply (wpsimp simp:  tcbSchedAppend_def unless_def)
+     apply (rule_tac Q="\<lambda>_ s. \<exists>domain priority. t' \<in> set (ksReadyQueues s (domain, priority))"
+              in hoare_post_imp)
+      apply metis
+     apply wpsimp+
+  done
+
+lemma tcbSchedEnqueue_in_ksQ'':
+  "\<lbrace>\<lambda>s. valid_queues' s \<and> tcb_at' t s \<and>
+    (t' \<noteq> t \<longrightarrow> (\<exists>domain priority. t' \<in> set (ksReadyQueues s (domain, priority)))) \<rbrace>
+   tcbSchedEnqueue t
+   \<lbrace>\<lambda>r s. \<exists>domain priority. t' \<in> set (ksReadyQueues s (domain, priority))\<rbrace>"
+  apply (case_tac "t'=t", wpsimp wp: tcbSchedEnqueue_in_ksQ)
+  apply clarsimp
+  apply (wpsimp simp:  tcbSchedEnqueue_def unless_def)
+     apply (rule_tac Q="\<lambda>_ s. \<exists>domain priority. t' \<in> set (ksReadyQueues s (domain, priority))"
+              in hoare_post_imp)
+      apply metis
+     apply wpsimp+
+  done
+
+lemma tcbSchedAppend_in_ksQ'':
+  "\<lbrace>\<lambda>s. valid_queues' s \<and> tcb_at' t s \<and>
+    (t' \<noteq> t \<longrightarrow> (\<exists>domain priority. t' \<in> set (ksReadyQueues s (domain, priority)))) \<rbrace>
+   tcbSchedAppend t
+   \<lbrace>\<lambda>r s. \<exists>domain priority. t' \<in> set (ksReadyQueues s (domain, priority))\<rbrace>"
+  apply (case_tac "t'=t", wpsimp wp: tcbSchedAppend_in_ksQ)
+  apply clarsimp
+  apply (wpsimp simp:  tcbSchedAppend_def unless_def)
+     apply (rule_tac Q="\<lambda>_ s. \<exists>domain priority. t' \<in> set (ksReadyQueues s (domain, priority))"
+              in hoare_post_imp)
+      apply metis
+     apply wpsimp+
+  done
+
+crunch st_tcb_at': setSchedulerAction "\<lambda>s. P (st_tcb_at' Q t s)"
+
+lemmas ssa_st_tcb_at'_ksCurThread[wp] =
+  hoare_lift_Pf2[where f=ksCurThread, OF setSchedulerAction_st_tcb_at' setSchedulerAction_ct']
+
+lemma ct_active_st_tcb_at':
+  "ct_active' s = st_tcb_at' runnable' (ksCurThread s) s"
+  apply (rule iffI)
+   apply (drule ct_active_runnable')
+   apply (simp add: ct_in_state'_def)
+  apply (clarsimp simp: ct_in_state'_def)
+  apply (erule pred_tcb'_weakenE)
+  apply (case_tac st, auto)
+  done
+
+lemma tcbSchedEnqueue_in_ksQ_already_queued_aqtp:
+  "\<lbrace>\<lambda>s. valid_queues' s \<and> tcb_at' t s \<and>
+    t' \<in> all_queued_tcb_ptrs s \<rbrace> tcbSchedEnqueue t
+   \<lbrace>\<lambda>r s. t' \<in> all_queued_tcb_ptrs s \<rbrace>"
+  by (clarsimp simp: all_queued_tcb_ptrs_def tcbSchedEnqueue_in_ksQ_already_queued)
+
+(* FIXME move *)
+lemma invs_switchToThread_runnable':
+  "\<lbrakk> invs' s ; ksSchedulerAction s = SwitchToThread t \<rbrakk> \<Longrightarrow> st_tcb_at' runnable' t s"
+  by (simp add: invs'_def valid_state'_def)
+
+(* for shoving pred_tcb_at' through hoare_vcg_imp_lift for tcbs we know are there *)
+lemma not_pred_tcb_at'I:
+  "\<lbrakk> pred_tcb_at' f (Not \<circ> P) t s ; tcb_at' t s \<rbrakk> \<Longrightarrow> \<not> pred_tcb_at' f P t s"
+  by (subst (asm) pred_tcb_at'_Not, blast)
+
+lemma in_all_active_tcb_ptrsD:
+  "t \<in> all_active_tcb_ptrs s \<Longrightarrow> st_tcb_at' runnable' t s"
+  unfolding all_active_tcb_ptrs_def is_active_tcb_ptr_def
+             is_active_thread_state_def isRunning_def isRestart_def
+  apply clarsimp
+  apply (erule pred_tcb'_weakenE)
+  apply (case_tac st; clarsimp)
+  done
+
+lemma scheduleChooseNewThread_no_orphans:
+  "\<lbrace> invs' and no_orphans
+     and (\<lambda>s. ksSchedulerAction s = ChooseNewThread
+              \<and> (st_tcb_at' runnable' (ksCurThread s) s
+                 \<longrightarrow> (\<exists>d p. ksCurThread s \<in> set (ksReadyQueues s (d, p))))) \<rbrace>
+   scheduleChooseNewThread
+   \<lbrace>\<lambda>_. no_orphans \<rbrace>"
+  unfolding scheduleChooseNewThread_def
+     apply (wp add: ssa_no_orphans hoare_vcg_all_lift)
+         apply (wp hoare_disjI1 chooseThread_nosch)+
+    apply (wp nextDomain_invs_no_cicd' hoare_vcg_imp_lift
+               hoare_lift_Pf2 [OF ksQ_all_queued_tcb_ptrs_lift[OF nextDomain_ksQ]
+                                  nextDomain_ct']
+               hoare_lift_Pf2 [OF st_tcb_at'_is_active_tcb_ptr_lift[OF nextDomain_st_tcb_at']
+                                  nextDomain_ct']
+               hoare_vcg_all_lift getDomainTime_wp)[2]
+   apply (wpsimp simp: if_apply_def2 invs_invs_no_cicd' all_queued_tcb_ptrs_def
+                       is_active_tcb_ptr_runnable')+
+  done
+
+lemma schedule_no_orphans[wp]:
+  notes ssa_lift[wp del]
+  shows
+  "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
    schedule
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
+proof -
+
+  have do_switch_to:
+    "\<And>candidate.
+     \<lbrace>\<lambda>s. no_orphans s \<and> ksSchedulerAction s = SwitchToThread candidate
+          \<and> st_tcb_at' runnable' candidate s
+          \<and> (st_tcb_at' runnable' (ksCurThread s) s
+             \<longrightarrow> (\<exists>d p. ksCurThread s \<in> set (ksReadyQueues s (d, p)))) \<rbrace>
+      do ThreadDecls_H.switchToThread candidate;
+         setSchedulerAction ResumeCurrentThread
+      od
+    \<lbrace>\<lambda>rv. no_orphans\<rbrace>"
+    apply (wpsimp wp: scheduleChooseNewThread_no_orphans ssa_no_orphans
+                      hoare_vcg_all_lift ThreadDecls_H_switchToThread_no_orphans)+
+     apply (rule_tac Q="\<lambda>_ s. (t = candidate \<longrightarrow> ksCurThread s = candidate) \<and>
+                               (t \<noteq> candidate \<longrightarrow> sch_act_not t s)"
+              in hoare_post_imp)
+      apply (wpsimp wp: stt_nosch static_imp_wp)+
+    apply (fastforce dest!: in_all_active_tcb_ptrsD simp: all_queued_tcb_ptrs_def comp_def)
+    done
+
+  have abort_switch_to_enq:
+    "\<And>candidate.
+     \<lbrace>\<lambda>s. no_orphans s \<and> invs' s \<and> valid_queues' s
+          \<and> ksSchedulerAction s = SwitchToThread candidate
+          \<and> (st_tcb_at' runnable' (ksCurThread s) s
+               \<longrightarrow> (\<exists>d p. ksCurThread s \<in> set (ksReadyQueues s (d, p)))) \<rbrace>
+       do tcbSchedEnqueue candidate;
+          setSchedulerAction ChooseNewThread;
+          scheduleChooseNewThread
+       od
+     \<lbrace>\<lambda>rv. no_orphans\<rbrace>"
+     apply (rule hoare_pre)
+     apply (wp scheduleChooseNewThread_no_orphans ssa_no_orphans setSchedulerAction_direct)
+      apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_ex_lift
+                    simp: is_active_tcb_ptr_runnable' all_queued_tcb_ptrs_def
+             | rule hoare_lift_Pf2[where f=ksCurThread, OF setSchedulerAction_ksQ])+
+     apply (wp tcbSchedEnqueue_in_ksQ' tcbSchedEnqueue_no_orphans hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_disj_lift)
+      apply (wp hoare_lift_Pf2[where f=ksCurThread, OF tcbSchedEnqueue_pred_tcb_at']
+                hoare_lift_Pf2[where f=ksCurThread, OF tcbSchedEnqueue_in_ksQ_already_queued]
+                tcbSchedEnqueue_no_orphans
+             | strengthen not_pred_tcb_at'_strengthen
+             | wp_once hoare_vcg_imp_lift')+
+    apply (clarsimp)
+    apply (frule invs_sch_act_wf', clarsimp simp: pred_tcb_at')
+    apply (simp add: st_tcb_at_neg' tcb_at_invs')
+    done
+
+  have abort_switch_to_app:
+    "\<And>candidate.
+     \<lbrace>\<lambda>s. no_orphans s \<and> invs' s \<and> valid_queues' s
+          \<and> ksSchedulerAction s = SwitchToThread candidate
+          \<and> (st_tcb_at' runnable' (ksCurThread s) s
+             \<longrightarrow> (\<exists>d p. ksCurThread s \<in> set (ksReadyQueues s (d, p))) ) \<rbrace>
+       do tcbSchedAppend candidate;
+          setSchedulerAction ChooseNewThread;
+          scheduleChooseNewThread
+       od
+     \<lbrace>\<lambda>rv. no_orphans\<rbrace>"
+     apply (rule hoare_pre)
+     apply (wp scheduleChooseNewThread_no_orphans ssa_no_orphans setSchedulerAction_direct)
+      apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_ex_lift
+                    simp: is_active_tcb_ptr_runnable' all_queued_tcb_ptrs_def
+             | rule hoare_lift_Pf2[where f=ksCurThread, OF setSchedulerAction_ksQ])+
+     apply (wp tcbSchedAppend_in_ksQ'' tcbSchedAppend_no_orphans hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_disj_lift)
+      apply (wp hoare_lift_Pf2[where f=ksCurThread, OF tcbSchedAppend_pred_tcb_at']
+                hoare_lift_Pf2[where f=ksCurThread, OF tcbSchedAppend_in_ksQ_already_queued]
+                tcbSchedAppend_no_orphans
+             | strengthen not_pred_tcb_at'_strengthen
+             | wp_once hoare_vcg_imp_lift')+
+    apply (clarsimp)
+    apply (frule invs_sch_act_wf', clarsimp simp: pred_tcb_at')
+    apply (simp add: st_tcb_at_neg' tcb_at_invs')
+    done
+
+  show ?thesis
   unfolding schedule_def
   apply (wp, wpc)
        -- "action = ResumeCurrentThread"
       apply (wp)[1]
      -- "action = ChooseNewThread"
-     apply (clarsimp simp: when_def)
+     apply (clarsimp simp: when_def scheduleChooseNewThread_def)
      apply (wp ssa_no_orphans hoare_vcg_all_lift)
          apply (wp hoare_disjI1 chooseThread_nosch)
          apply (wp nextDomain_invs_no_cicd' hoare_vcg_imp_lift
@@ -840,42 +1114,32 @@ lemma schedule_no_orphans [wp]:
                   hoare_drop_imp
              | clarsimp simp: all_queued_tcb_ptrs_def
              | strengthen all_invs_but_ct_idle_or_in_cur_domain'_strg
-             | wps tcbSchedEnqueue_ct')+)[2]
+             | wps tcbSchedEnqueue_ct')+)[1]
+       apply ((wp tcbSchedEnqueue_no_orphans tcbSchedEnqueue_in_ksQ'
+                  hoare_drop_imp
+             | clarsimp simp: all_queued_tcb_ptrs_def
+             | strengthen all_invs_but_ct_idle_or_in_cur_domain'_strg
+             | wps tcbSchedEnqueue_ct')+)[1]
      apply wp[1]
-    -- "action = SwitchToThread word"
-    apply (rename_tac word)
-    apply (wp ssa_no_orphans hoare_vcg_all_lift
-              ThreadDecls_H_switchToThread_no_orphans)
-      apply (rule_tac Q="\<lambda>_ s. (t=word \<longrightarrow> ksCurThread s = word) \<and>
-                               (t\<noteq>word \<longrightarrow> sch_act_not t s)"
-             in hoare_post_imp, clarsimp)
-      apply (wp stt_nosch static_imp_wp)
-     apply (wp tcbSchedEnqueue_no_orphans hoare_drop_imp)
-      apply (rule_tac Q="\<lambda>_ s. \<exists>p. curThread \<in> set (ksReadyQueues s p)
-                               \<and> curThread = ksCurThread s"
-               in hoare_post_imp, clarsimp simp: all_queued_tcb_ptrs_def)
-      apply (wps tcbSchedEnqueue_ct')
-      apply clarsimp
-      apply (wp tcbSchedEnqueue_in_ksQ)[1]
-     apply (wp)+
-  apply (case_tac "ksSchedulerAction s")
-    apply (clarsimp)
-   apply (clarsimp simp: pred_tcb_at'_def is_active_tcb_ptr_def)
-   apply (rule conjI, clarsimp simp: invs'_def valid_state'_def cur_tcb'_def)
-   apply (clarsimp simp: is_active_thread_state_def comp_def
-                         all_invs_but_ct_idle_or_in_cur_domain'_strg)
-   apply (drule(1) obj_at_not_obj_at_conj)
-   apply (subgoal_tac "obj_at' (\<lambda>_. False) (ksCurThread s) s", clarsimp)
-   apply (erule obj_at'_weakenE)
-   apply (case_tac "tcbState k", (clarsimp simp: isRunning_def isRestart_def is_active_thread_state_def)+)
-  apply (rule conjI, clarsimp simp: invs'_def valid_state'_def cur_tcb'_def)
-  apply (clarsimp simp: pred_tcb_at'_def all_active_tcb_ptrs_def comp_def
-                        is_active_thread_state_def is_active_tcb_ptr_def)
-  apply (drule(1) obj_at_not_obj_at_conj)
-  apply (subgoal_tac "obj_at' (\<lambda>_. False) (ksCurThread s) s", clarsimp)
-  apply (erule obj_at'_weakenE)
-  apply (case_tac "tcbState k", (clarsimp simp: isRunning_def isRestart_def)+)
+    -- "action = SwitchToThread candidate"
+     apply (clarsimp)
+    apply (rename_tac candidate)
+   apply (wpsimp wp: do_switch_to abort_switch_to_enq abort_switch_to_app)
+          (* isHighestPrio *)
+          apply (wp hoare_drop_imps)
+         apply (wp add: tcbSchedEnqueue_no_orphans)+
+    apply (clarsimp simp: conj_ac cong: conj_cong imp_cong split del: if_split)
+    apply (wp hoare_lift_Pf2[where f=ksCurThread, OF tcbSchedEnqueue_pred_tcb_at']
+              hoare_lift_Pf2[where f=ksCurThread, OF tcbSchedEnqueue_in_ksQ']
+              hoare_vcg_imp_lift'
+           | strengthen not_pred_tcb_at'_strengthen)+
+
+  apply (clarsimp simp: comp_def)
+  apply (frule invs_queues)
+  apply (clarsimp simp: invs_valid_queues' tcb_at_invs' st_tcb_at_neg' is_active_tcb_ptr_runnable')
+  apply (fastforce simp: all_invs_but_ct_idle_or_in_cur_domain'_strg invs_switchToThread_runnable')
   done
+qed
 
 lemma setNotification_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
@@ -894,37 +1158,22 @@ crunch no_orphans [wp]: completeSignal "no_orphans"
 (simp: crunch_simps wp: crunch_wps)
 
 lemma possibleSwitchTo_almost_no_orphans [wp]:
-  "\<lbrace> \<lambda>s. almost_no_orphans target s \<and> valid_queues' s \<and> st_tcb_at' runnable' target s \<rbrace>
-   possibleSwitchTo target onSamePriority
+  "\<lbrace> \<lambda>s. almost_no_orphans target s \<and> valid_queues' s \<and> st_tcb_at' runnable' target s
+         \<and> weak_sch_act_wf (ksSchedulerAction s) s \<rbrace>
+   possibleSwitchTo target
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding possibleSwitchTo_def
-  apply (wp tcbSchedEnqueue_almost_no_orphans ssa_almost_no_orphans static_imp_wp | wpc | clarsimp)+
-    apply (wp hoare_drop_imps | clarsimp)+
-  done
+  by (wp rescheduleRequired_valid_queues'_weak tcbSchedEnqueue_almost_no_orphans
+         ssa_almost_no_orphans static_imp_wp
+     | wpc | clarsimp
+     | wp_once hoare_drop_imp)+
 
-lemma attemptSwitchTo_almost_no_orphans [wp]:
-  "\<lbrace> \<lambda>s. almost_no_orphans target s \<and> valid_queues' s \<and> st_tcb_at' runnable' target s \<rbrace>
-   attemptSwitchTo target
+lemma possibleSwitchTo_almost_no_orphans':
+  "\<lbrace> \<lambda>s. almost_no_orphans target s \<and> valid_queues' s \<and> st_tcb_at' runnable' target s
+         \<and> sch_act_wf (ksSchedulerAction s) s \<rbrace>
+   possibleSwitchTo target
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding attemptSwitchTo_def
-  apply wp
-  done
-
-lemma switchIfRequiredTo_schedule_no_orphans [wp]:
-  "\<lbrace> \<lambda>s. almost_no_orphans target s \<and> valid_queues' s \<and> st_tcb_at' runnable' target s \<rbrace>
-   switchIfRequiredTo target
-   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding switchIfRequiredTo_def by wp
-
-
-lemma tcbSchedAppend_no_orphans:
-  "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
-   tcbSchedAppend thread
-   \<lbrace> \<lambda>_ s. no_orphans s \<rbrace>"
-  unfolding tcbSchedAppend_def
-  apply (wp setQueue_no_orphans_enq threadSet_no_orphans weak_if_wp
-            | clarsimp simp: unless_def | simp only: subset_insertI)+
-  done
+  by wp (strengthen sch_act_wf_weak, assumption)
 
 lemma tcbSchedAppend_almost_no_orphans:
   "\<lbrace> \<lambda>s. almost_no_orphans thread s \<and> valid_queues' s \<rbrace>
@@ -1031,8 +1280,11 @@ lemma sendIPC_no_orphans [wp]:
    sendIPC blocking call badge canGrant thread epptr
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding sendIPC_def
-  apply (wp hoare_drop_imps setThreadState_not_active_no_orphans sts_st_tcb' | wpc
+  apply (wp hoare_drop_imps setThreadState_not_active_no_orphans sts_st_tcb'
+            possibleSwitchTo_almost_no_orphans'
+         | wpc
          | clarsimp simp: is_active_thread_state_def isRestart_def isRunning_def)+
+
   apply (rule_tac Q="\<lambda>rv. no_orphans and valid_queues' and valid_objs' and ko_at' rv epptr
                           and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)" in hoare_post_imp)
    apply (fastforce simp: valid_objs'_def valid_obj'_def valid_ep'_def obj_at'_def projectKOs)
@@ -1215,6 +1467,13 @@ lemma createObject_no_orphans:
                        projectKO_opt_tcb isRunning_def isRestart_def
                        APIType_capBits_def objBits_simps split: option.splits
             split del: if_split)+)[4]
+   apply ((wp createObjects'_wp_subst
+               createObjects_no_orphans[where sz = sz ] |
+       clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
+                      is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def
+                      projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
+                      APIType_capBits_def objBits_simps pteBits_def
+               split: option.splits)+)[1]
    apply ((wp createObjects'_wp_subst
                createObjects_no_orphans[where sz = sz ] |
        clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
@@ -1461,7 +1720,9 @@ lemma sendSignal_no_orphans [wp]:
    \<lbrace> \<lambda>_ s. no_orphans s \<rbrace>"
   unfolding sendSignal_def
   apply (rule hoare_pre)
-   apply (wp  sts_st_tcb' gts_wp' getNotification_wp asUser_almost_no_orphans | wpc | clarsimp)+
+   apply (wp sts_st_tcb' gts_wp' getNotification_wp asUser_almost_no_orphans
+                          cancelIPC_weak_sch_act_wf
+          | wpc | clarsimp simp: sch_act_wf_weak)+
   done
 
 lemma handleInterrupt_no_orphans [wp]:
@@ -1690,12 +1951,11 @@ lemma doReplyTransfer_no_orphans[wp]:
    doReplyTransfer sender receiver slot
    \<lbrace>\<lambda>rv. no_orphans\<rbrace>"
   unfolding doReplyTransfer_def
-  apply (rule hoare_pre)
-   apply (wp threadSet_valid_queues' threadSet_no_orphans
-             setThreadState_not_active_no_orphans sts_st_tcb'
-          | wpc | clarsimp simp: is_active_thread_state_def isRunning_def
-                                 isRestart_def
-          | strengthen invs_valid_queues')+
+  apply (wp sts_st_tcb' setThreadState_not_active_no_orphans threadSet_no_orphans
+            threadSet_valid_queues' threadSet_weak_sch_act_wf
+         | wpc | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def
+         | wp_once hoare_drop_imps
+         | strengthen sch_act_wf_weak invs_valid_queues')+
               apply (rule_tac Q="\<lambda>rv. invs' and no_orphans" in hoare_post_imp)
                apply (fastforce simp: inQ_def)
               apply (wp hoare_drop_imps | clarsimp)+
@@ -1720,7 +1980,7 @@ lemma restart_no_orphans [wp]:
    restart t
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding restart_def isBlocked_def2 including no_pre
-  apply (wp tcbSchedEnqueue_almost_no_orphans sts_st_tcb' | clarsimp
+  apply (wp tcbSchedEnqueue_almost_no_orphans sts_st_tcb' cancelIPC_weak_sch_act_wf | clarsimp
          | strengthen no_orphans_strg_almost
          | strengthen invs_valid_queues')+
   apply (rule hoare_strengthen_post, rule gts_sp')
@@ -1772,7 +2032,7 @@ lemma setPriority_no_orphans [wp]:
    setPriority tptr prio
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding setPriority_def
-  apply (wp hoare_drop_imps | clarsimp)+
+  apply (wp add: hoare_drop_imps del: tcbSchedEnqueue_no_orphans | clarsimp)+
       apply (wp hoare_drop_imps tcbSchedEnqueue_almost_no_orphans)+
    apply (rule_tac Q="\<lambda>rv s. almost_no_orphans tptr s \<and> valid_queues' s" in hoare_post_imp)
     apply (fastforce simp: is_active_tcb_ptr_runnable' pred_tcb_at'_def obj_at'_def
@@ -2103,7 +2363,8 @@ lemma receiveIPC_no_orphans [wp]:
              hoare_vcg_all_lift sts_st_tcb'
           | wpc
           | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def
-                           doNBRecvFailedTransfer_def)+
+                           doNBRecvFailedTransfer_def invs_valid_queues'
+          | strengthen sch_act_wf_weak)+
   done
 
 crunch valid_objs' [wp]: getThreadCallerSlot "valid_objs'"
@@ -2159,6 +2420,22 @@ lemma activatable_from_running':
   "ct_running' s \<Longrightarrow> ct_in_state' activatable' s"
   by (clarsimp simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
 
+(* FIXME move *)
+lemma sts_tcb_at'_preserve:
+  "\<lbrace> st_tcb_at' P t and K (P st) \<rbrace> setThreadState st t' \<lbrace>\<lambda>_. st_tcb_at' P t \<rbrace>"
+  by (wpsimp wp: sts_st_tcb')
+
+(* FIXME move *)
+(* e.g. if you set a non-runnable thread to Inactive, all runnable threads are still runnable *)
+lemma sts_tcb_at'_preserve':
+  "\<lbrace> st_tcb_at' P t and st_tcb_at' (\<lambda>st. \<not> P st) t' and K (\<not> P st) \<rbrace>
+  setThreadState st t'
+  \<lbrace>\<lambda>_. st_tcb_at' P t \<rbrace>"
+  by (wpsimp wp: sts_st_tcb' simp: st_tcb_at_neg')
+
+(* FIXME move to where disj_imp lives *)
+lemma disj_imp': "(P \<or> Q) = (\<not>Q \<longrightarrow> P)" by blast
+
 lemma handleEvent_no_orphans [wp]:
   "\<lbrace> \<lambda>s. invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and>
          (e \<noteq> Interrupt \<longrightarrow> ct_running' s) \<and>
@@ -2184,17 +2461,7 @@ theorem callKernel_no_orphans [wp]:
    callKernel e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding callKernel_def including no_pre
-  apply (wp | clarsimp)+
-    apply (rule_tac Q="\<lambda>rv s. invs' s" in hoare_post_imp)
-     apply (wp weak_if_wp schedule_invs' | clarsimp)+
-     apply (rule_tac Q="\<lambda>_. invs'" in hoare_post_imp, clarsimp)
-     apply (wp)
-    apply (rule_tac Q="\<lambda>_. invs' and no_orphans" in hoare_post_imp, clarsimp)
-    apply (wp | simp)+
-  apply (rule_tac Q="\<lambda>y s. invs' s \<and> no_orphans s" and
-                  E="\<lambda>y s. invs' s \<and> no_orphans s" in hoare_post_impErr)
-    apply (wp hoare_vcg_conj_liftE | clarsimp)+
-  done
+  by (wpsimp wp: weak_if_wp schedule_invs' hoare_vcg_conj_liftE)
 
 end
 

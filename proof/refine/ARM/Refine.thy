@@ -253,9 +253,8 @@ lemma activate_thread_sched_act:
 lemma schedule_sched_act_rct[wp]:
   "\<lbrace>\<top>\<rbrace> Schedule_A.schedule
   \<lbrace>\<lambda>rs (s::det_state). scheduler_action s = resume_cur_thread\<rbrace>"
-  apply (simp add: Schedule_A.schedule_def)
-  apply (wp | wpc | simp add: set_scheduler_action_def)+
-  done
+  unfolding Schedule_A.schedule_def
+  by (wpsimp)
 
 lemma call_kernel_sched_act_rct[wp]:
   "\<lbrace>einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)

@@ -389,18 +389,26 @@ lemma next_domain_domain_time_left[wp]:
    done
 
 context DetSchedDomainTime_AI begin
+
+lemma schedule_choose_new_thread_domain_time_left[wp]:
+  "\<lbrace> valid_domain_list \<rbrace>
+   schedule_choose_new_thread
+   \<lbrace>\<lambda>_ s. 0 < domain_time s \<rbrace>"
+  unfolding schedule_choose_new_thread_def
+  by (wpsimp simp: word_gt_0)
+
+crunch valid_domain_list: schedule_choose_new_thread valid_domain_list
+
 lemma schedule_domain_time_left:
   "\<lbrace>valid_domain_list and (\<lambda>s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread) \<rbrace>
    schedule
-   \<lbrace>\<lambda>_ s. 0 < domain_time s \<rbrace>" (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
+   \<lbrace>\<lambda>_ s. 0 < domain_time s \<rbrace>" (is "\<lbrace>?P\<rbrace> _ \<lbrace>\<lambda>_ . ?Q\<rbrace>")
   supply word_neq_0_conv[simp]
   apply (simp add: schedule_def)
   apply (wp|wpc)+
-     apply (rule_tac Q="\<lambda>_. valid_domain_list" in hoare_post_imp, fastforce)
-     apply wp+
-   apply (rule_tac Q="\<lambda>_. ?P" in hoare_post_imp, fastforce)
-   apply wp+
-  apply assumption
+           apply (wp hoare_drop_imps)[1]
+          apply (wpsimp wp: gts_wp)+
+  apply auto
   done
 end
 

@@ -74,9 +74,7 @@ lemmas ccorres_getCTE = ccorres_pre_getCTE
 
 lemma getCurThread_sp:
   "\<lbrace>P\<rbrace> getCurThread \<lbrace>\<lambda>rv s. ksCurThread s = rv \<and> P s\<rbrace>"
-  apply wp
-  apply simp
-done
+  by wpsimp
 
 lemma rf_sr_ksCurThread:
   "(s, s') \<in> rf_sr \<Longrightarrow> ksCurThread_' (globals s')
@@ -104,6 +102,33 @@ lemma ccorres_pre_getCurThread:
     apply clarsimp
    apply assumption
   apply (clarsimp simp: rf_sr_ksCurThread)
+  done
+
+lemma getSchedulerAction_sp:
+  "\<lbrace>P\<rbrace> getSchedulerAction \<lbrace>\<lambda>rv s. ksSchedulerAction s = rv \<and> P s\<rbrace>"
+  by wpsimp
+
+lemma ccorres_pre_getSchedulerAction:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>rv. ksSchedulerAction s = rv \<longrightarrow> P rv s))
+                  {s. \<forall>rv. cscheduler_action_relation rv (ksSchedulerAction_' (globals s))
+                                 \<longrightarrow> s \<in> P' rv }
+                          hs (getSchedulerAction >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (rule getSchedulerAction_sp)
+     apply simp
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply (clarsimp dest!: rf_sr_sched_action_relation)
   done
 
 lemma rf_sr_ksDomainTime:

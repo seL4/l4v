@@ -1459,16 +1459,6 @@ lemma mapM_x_and_const_wp:
   apply (wp f | assumption | simp)+
   done
 
-(* really? *)
-(* MOVE *)
-lemma get_endpoint_wp:
-  "\<lbrace>\<lambda>s. \<forall>ep. ko_at (Endpoint ep) epptr s \<longrightarrow> P ep s\<rbrace> get_endpoint epptr \<lbrace>P\<rbrace>"
-  apply (rule hoare_post_imp)
-  defer
-  apply (rule get_endpoint_sp)
-  apply clarsimp
-  done
-
 (* stronger *)
 (* FIXME: MOVE *)
 lemma ep_queued_st_tcb_at':

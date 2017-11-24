@@ -512,48 +512,86 @@ lemma tcb_sched_action_bcorres:
   by (clarsimp simp: bcorres_underlying_def s_bcorres_underlying_def return_def
               dest!: tcb_sched_action_extended.ex_st)
 
-lemma schedule_bcorres1: "BCorres2_AI TYPE(det_ext)
-    \<Longrightarrow> bcorres (schedule :: (unit,det_ext) s_monad) schedule"
+(* FIXME move if useful *)
+lemma if_s_bcorres_underlying[wp]:
+  "(P \<Longrightarrow> s_bcorres_underlying t f f' s) \<Longrightarrow> (\<not>P \<Longrightarrow> s_bcorres_underlying t g g' s)
+  \<Longrightarrow> s_bcorres_underlying t (if P then f else g) (if P then f' else g') s"
+  by (simp add: return_s_bcorres_underlying)
+
+lemma schedule_choose_new_thread_bcorres1:
+  "BCorres2_AI TYPE(det_ext) \<Longrightarrow> bcorres schedule_choose_new_thread schedule"
+  unfolding schedule_choose_new_thread_def
   apply (clarsimp simp: bcorres_underlying_def)
   apply (simp add: schedule_det_ext_ext_def s_bcorres_get_left
                    gets_def get_thread_state_def thread_get_def gets_the_def
-                   bind_assoc get_before_assert_opt)
+                   bind_assoc get_before_assert_opt ethread_get_def schedule_switch_thread_fastfail_def
+                   when_def)
+  apply (rule conjI; clarsimp)
+   apply (rule s_bcorres_underlying_split[where g'="\<lambda>_. return ()",
+                  OF _ choose_thread_bcorres, simplified]
+               s_bcorres_underlying_split[where f'="return ()", simplified]
+         | fastforce simp: s_bcorres_underlying_def set_scheduler_action_def
+                           when_def exec_gets simpler_modify_def return_def
+                           next_domain_def Let_def)+
+  done
+
+lemma schedule_bcorres1:
+  notes bsplits =
+          s_bcorres_underlying_split[where g'="\<lambda>_. return ()",
+                                     OF _ choose_thread_bcorres, simplified]
+          s_bcorres_underlying_split[where g'="\<lambda>_. return ()",
+                                     OF _ BCorres2_AI.guarded_switch_bcorres, simplified]
+          s_bcorres_underlying_split[where f'="return ()", simplified]
+  notes bdefs = schedule_det_ext_ext_def s_bcorres_get_left
+                gets_def get_thread_state_def thread_get_def gets_the_def
+                bind_assoc get_before_assert_opt ethread_get_def
+                schedule_switch_thread_fastfail_def when_def
+                tcb_sched_action_bcorres drop_sbcorres_underlying return_s_bcorres_underlying
+  notes unfolds = s_bcorres_underlying_def set_scheduler_action_def
+                   simpler_modify_def return_def
+  shows "BCorres2_AI TYPE(det_ext) \<Longrightarrow> bcorres (schedule :: (unit,det_ext) s_monad) schedule"
+  supply if_split[split del]
+  apply (clarsimp simp: bcorres_underlying_def fail_def)
+  apply (simp add: bdefs)
   apply (simp add: assert_opt_def)
-  apply (split option.split, simp, intro conjI impI)
+  apply (simp split: option.split, intro conjI impI)
    apply (simp add: s_bcorres_underlying_def fail_def)
   apply clarsimp
   apply (split scheduler_action.split, intro conjI impI)
     (* resume current *)
-    apply (clarsimp simp: s_bcorres_underlying_def schedule_def allActiveTCBs_def
-                          in_monad in_select getActiveTCB_def)
-    apply (erule disjE)
-     apply fastforce
-    apply (simp add: switch_to_idle_thread_def in_monad in_select
-                     ex_bool_eq)
+    subgoal for s
+      apply (clarsimp simp: s_bcorres_underlying_def schedule_def allActiveTCBs_def
+                            in_monad in_select getActiveTCB_def
+                       split: if_split)
+      apply (fastforce simp add: switch_to_idle_thread_def in_monad in_select ex_bool_eq)
+      done
    (* switch to *)
-   apply clarsimp
-   apply (rule s_bcorres_underlying_split[where g'="\<lambda>_. return ()",
-                OF _ BCorres2_AI.guarded_switch_bcorres, simplified]
-      s_bcorres_underlying_split[where f'="return ()", simplified])+
-     apply (simp add: s_bcorres_underlying_def set_scheduler_action_def
-                      simpler_modify_def return_def)
-    apply assumption
-   apply (clarsimp simp: when_def return_s_bcorres_underlying
-                         tcb_sched_action_bcorres drop_sbcorres_underlying)
+   subgoal for s cttcb
+     apply clarsimp
+     apply (rule bsplits)+
+      apply (simp add: bdefs)
+      apply (simp add: assert_opt_def)
+      apply (split option.split, simp, intro conjI impI)
+       apply (simp add: s_bcorres_underlying_def fail_def)
 
-  (* choose *)
-  apply simp
-  apply (rule s_bcorres_underlying_split[where g'="\<lambda>_. return ()",
-                OF _ choose_thread_bcorres, simplified]
-     s_bcorres_underlying_split[where f'="return ()", simplified]
-    | subst bind_assoc[symmetric])+
-     apply (simp add: s_bcorres_underlying_def set_scheduler_action_def
-                      simpler_modify_def return_def)
-    apply assumption
-   apply (simp add: s_bcorres_underlying_def when_def exec_gets
-                    next_domain_def Let_def simpler_modify_def return_def)
-  apply (clarsimp simp: when_def return_s_bcorres_underlying
-                        tcb_sched_action_bcorres drop_sbcorres_underlying)
+      apply (clarsimp simp: ethread_get_when_def split: if_split)
+
+      apply (rule conjI; clarsimp)
+       apply (simp add: bdefs)
+       apply (simp add: assert_opt_def)
+       apply (split option.split, simp, intro conjI impI)
+        apply (simp add: s_bcorres_underlying_def fail_def)
+
+       apply (clarsimp simp: bdefs split: if_split
+              | rule conjI
+              | rule bsplits
+              | erule drop_sbcorres_underlying[OF schedule_choose_new_thread_bcorres1]
+              | fastforce simp: unfolds)+
+     done
+  apply (clarsimp simp: bdefs split: if_split
+         | rule conjI
+         | rule bsplits
+         | erule drop_sbcorres_underlying[OF schedule_choose_new_thread_bcorres1])+
   done
 
 end

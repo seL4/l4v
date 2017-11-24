@@ -242,6 +242,14 @@ where
      return $ f tcb
    od"
 
+(* For infoflow, we want to avoid certain read actions, such as reading the priority of the
+   current thread when it could be idle. Then we need to make sure we do not rely on the result.
+   undefined is the closest we have to a result that can't be relied on *)
+definition
+  ethread_get_when :: "bool \<Rightarrow> (etcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> 'a det_ext_monad"
+where
+  "ethread_get_when b f tptr \<equiv> if b then (ethread_get f tptr) else return undefined"
+
 definition set_eobject :: "obj_ref \<Rightarrow> etcb \<Rightarrow> unit det_ext_monad"
   where
  "set_eobject ptr obj \<equiv>
@@ -320,30 +328,22 @@ definition reschedule_required :: "unit det_ext_monad" where
    od"
 
 definition
-  possible_switch_to :: "obj_ref \<Rightarrow> bool \<Rightarrow> unit det_ext_monad" where
-  "possible_switch_to target on_same_prio \<equiv> do
-     cur \<leftarrow> gets cur_thread;
+  possible_switch_to :: "obj_ref \<Rightarrow> unit det_ext_monad" where
+  "possible_switch_to target \<equiv> do
      cur_dom \<leftarrow> gets cur_domain;
-     cur_prio \<leftarrow> ethread_get tcb_priority cur;
      target_dom \<leftarrow> ethread_get tcb_domain target;
-     target_prio \<leftarrow> ethread_get tcb_priority target;
      action \<leftarrow> gets scheduler_action;
-     if (target_dom \<noteq> cur_dom) then tcb_sched_action tcb_sched_enqueue target
-     else do
-       if ((target_prio > cur_prio \<or> (target_prio = cur_prio \<and> on_same_prio))
-              \<and> action = resume_cur_thread) then set_scheduler_action $ switch_thread target
-         else tcb_sched_action tcb_sched_enqueue target;
-       case action of switch_thread _ \<Rightarrow> reschedule_required | _ \<Rightarrow> return ()
-     od
+
+     if (target_dom \<noteq> cur_dom) then
+       tcb_sched_action tcb_sched_enqueue target
+     else if (action \<noteq> resume_cur_thread) then
+       do
+         reschedule_required;
+         tcb_sched_action tcb_sched_enqueue target
+       od
+     else
+       set_scheduler_action $ switch_thread target
    od"
-
-definition
-  attempt_switch_to :: "obj_ref \<Rightarrow> unit det_ext_monad" where
-  "attempt_switch_to target \<equiv> possible_switch_to target True"
-
-definition
-  switch_if_required_to :: "obj_ref \<Rightarrow> unit det_ext_monad" where
-  "switch_if_required_to target \<equiv> possible_switch_to target False"
 
 definition
   next_domain :: "unit det_ext_monad" where

@@ -39,6 +39,8 @@ requalify_facts
   no_irq_storeWord
 end
 
+crunch inv[wp]: schedule_switch_thread_fastfail P
+
 lemma findM_inv'':
   assumes p: "suffix xs xs'"
   assumes x: "\<And>x xs. suffix (x # xs) xs' \<Longrightarrow> \<lbrace>P (x # xs)\<rbrace> m x \<lbrace>\<lambda>rv s. (rv \<longrightarrow> Q s) \<and> (\<not> rv \<longrightarrow> P xs s)\<rbrace>"

@@ -799,7 +799,7 @@ crunch domain_sep_inv[wp]: set_mrs "domain_sep_inv irqs st"
    simp: crunch_simps)
 
 
-crunch domain_sep_inv[wp]: send_signal "domain_sep_inv irqs st" (wp: dxo_wp_weak ignore:  switch_if_required_to)
+crunch domain_sep_inv[wp]: send_signal "domain_sep_inv irqs st" (wp: dxo_wp_weak ignore: possible_switch_to)
 
 crunch domain_sep_inv[wp]: copy_mrs, set_message_info, invalidate_tlb_by_asid "domain_sep_inv irqs st"
   (wp: crunch_wps)
@@ -1081,7 +1081,7 @@ lemma send_fault_ipc_domain_sep_inv:
 crunch domain_sep_inv[wp]: handle_fault "domain_sep_inv irqs st"
 
 crunch domain_sep_inv[wp]: do_reply_transfer "domain_sep_inv irqs st"
-  (wp:  dxo_wp_weak crunch_wps  ignore: set_object thread_set attempt_switch_to)
+  (wp:  dxo_wp_weak crunch_wps  ignore: set_object thread_set possible_switch_to)
 
 crunch domain_sep_inv[wp]: reply_from_kernel "domain_sep_inv irqs st"
   (wp: crunch_wps simp: crunch_simps)
@@ -1090,7 +1090,7 @@ crunch domain_sep_inv[wp]: setup_reply_master "domain_sep_inv irqs st"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch domain_sep_inv[wp]: restart "domain_sep_inv irqs st"
-  (wp: crunch_wps dxo_wp_weak simp: crunch_simps ignore: tcb_sched_action switch_if_required_to)
+  (wp: crunch_wps dxo_wp_weak simp: crunch_simps ignore: tcb_sched_action possible_switch_to)
 
 lemma thread_set_tcb_ipc_buffer_update_neg_cte_wp_at[wp]:
   "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>
@@ -1388,8 +1388,10 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma schedule_domain_sep_inv: "\<lbrace>domain_sep_inv irqs st\<rbrace> (schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
-  apply (wp alternative_wp select_wp
-            guarded_switch_to_lift | wpc | clarsimp simp: get_thread_state_def thread_get_def trans_state_update'[symmetric])+
+  apply (wp add: alternative_wp select_wp  guarded_switch_to_lift hoare_drop_imps
+            del: ethread_get_wp
+         | wpc | clarsimp simp: get_thread_state_def thread_get_def trans_state_update'[symmetric]
+                                schedule_choose_new_thread_def)+
   done
 
 lemma call_kernel_domain_sep_inv:

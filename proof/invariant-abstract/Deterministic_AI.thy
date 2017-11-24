@@ -3949,22 +3949,17 @@ lemma invoke_cnode_valid_list[wp]:
 
 end
 
-crunch valid_list[wp]: switch_if_required_to,set_priority,set_mcpriority "valid_list"
+crunch all_but_exst[wp,intro!,simp]: possible_switch_to "all_but_exst P" (simp: ethread_get_def)
+
+crunch valid_list[wp]: possible_switch_to "valid_list"
+  (simp: ethread_get_def)
+
+crunch valid_list[wp]: set_priority,set_mcpriority "valid_list"
   (wp: crunch_wps)
 
-crunch all_but_exst[wp]: switch_if_required_to "all_but_exst P" (simp: ethread_get_def)
+crunch (empty_fail)empty_fail[wp]: possible_switch_to
 
-lemma empty_fail_possible_switch_to[wp]: "empty_fail (possible_switch_to a b)"
-  apply (simp add: possible_switch_to_def)
-  apply (wp | clarsimp split: scheduler_action.splits)+
-  done
-
-crunch (empty_fail)empty_fail[wp]: switch_if_required_to
-
-global_interpretation possible_switch_to_extended: is_extended "possible_switch_to a b"
-  by (unfold_locales; wp)
-
-global_interpretation switch_if_required_to_extended: is_extended "switch_if_required_to a"
+global_interpretation possible_switch_to_extended: is_extended "possible_switch_to a"
   by (unfold_locales; wp)
 
 crunch all_but_exst[wp]: set_priority "all_but_exst P" (simp: ethread_get_def)
@@ -4012,13 +4007,6 @@ global_interpretation retype_region_ext_extended: is_extended "retype_region_ext
   by (unfold_locales; wp)
 
 crunch valid_list[wp]: invoke_irq_handler valid_list
-
-crunch valid_list[wp]: attempt_switch_to "valid_list"
-
-global_interpretation attempt_switch_to_extended: is_extended "attempt_switch_to a"
-  apply (simp add: attempt_switch_to_def)
-  apply (unfold_locales)
-  done
 
 crunch valid_list[wp]: thread_set_time_slice,timer_tick "valid_list" (simp: Let_def)
 

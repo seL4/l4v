@@ -23,7 +23,7 @@ We use the C preprocessor to select a target architecture.
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.Model SEL4.Machine SEL4.Object.Structures SEL4.Object.Instances() SEL4.API.Types #-}
-% {-# BOOT-EXPORTS: setDomain setMCPriority setPriority getThreadState setThreadState setBoundNotification getBoundNotification doIPCTransfer isRunnable restart suspend  doReplyTransfer attemptSwitchTo switchIfRequiredTo tcbSchedEnqueue tcbSchedDequeue rescheduleRequired timerTick #-}
+% {-# BOOT-EXPORTS: setDomain setMCPriority setPriority getThreadState setThreadState setBoundNotification getBoundNotification doIPCTransfer isRunnable restart suspend  doReplyTransfer tcbSchedEnqueue tcbSchedDequeue rescheduleRequired timerTick possibleSwitchTo #-}
 
 > import SEL4.Config
 > import SEL4.API.Types
@@ -139,7 +139,7 @@ The invoked thread will return to the instruction that caused it to enter the ke
 >         setupReplyMaster target
 >         setThreadState Restart target
 >         tcbSchedEnqueue target
->         switchIfRequiredTo target
+>         possibleSwitchTo target
 
 \subsection{IPC Transfers}
 
@@ -189,7 +189,7 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 >             doIPCTransfer sender Nothing 0 True receiver
 >             cteDeleteOne slot
 >             setThreadState Running receiver
->             attemptSwitchTo receiver
+>             possibleSwitchTo receiver
 >         Just f -> do
 >             cteDeleteOne slot
 >             tag <- getMessageInfo sender
@@ -200,7 +200,7 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 >             if restart
 >               then do
 >                 setThreadState Restart receiver
->                 attemptSwitchTo receiver
+>                 possibleSwitchTo receiver
 >               else setThreadState Inactive receiver
 
 \subsubsection{Ordinary IPC}
@@ -296,6 +296,23 @@ In the case of notification, the badge from the notification object's data word 
 
 The scheduler will perform one of three actions, depending on the scheduler action field of the global kernel state.
 
+This extra check matches an optimisation in the C fast path, which shortcuts
+checking the scheduler bitmaps using implicit knowledge that the current thread
+has the highest runnable priority in the system on kernel entry (unless idle).
+
+> scheduleChooseNewThread :: Kernel ()
+> scheduleChooseNewThread = do
+>     domainTime <- getDomainTime
+>     when (domainTime == 0) $ nextDomain
+>     chooseThread
+>     setSchedulerAction ResumeCurrentThread
+
+> scheduleSwitchThreadFastfail :: PPtr TCB -> PPtr TCB -> Priority -> Priority -> Kernel (Bool)
+> scheduleSwitchThreadFastfail curThread idleThread curPrio targetPrio =
+>     if curThread /= idleThread
+>     then return (targetPrio < curPrio)
+>     else return True
+
 > schedule :: Kernel ()
 > schedule = do
 >         curThread <- getCurThread
@@ -307,31 +324,52 @@ The default action is to do nothing; the current thread will resume execution.
 >             ResumeCurrentThread -> return ()
 
 An IPC operation may request that the scheduler switch to a specific thread.
+We check here that the candidate has the highest priority in the system.
 
->             SwitchToThread t -> do
->                 curRunnable <- isRunnable curThread
->                 when curRunnable $ tcbSchedEnqueue curThread
->                 switchToThread t
->                 setSchedulerAction ResumeCurrentThread
+>             SwitchToThread candidate -> do
+>                 wasRunnable <- isRunnable curThread
+>                 when wasRunnable (tcbSchedEnqueue curThread)
+>
+>                 idleThread <- getIdleThread
+>                 targetPrio <- threadGet tcbPriority candidate
+>                 curPrio <- threadGet tcbPriority curThread
+>                 fastfail <- scheduleSwitchThreadFastfail curThread idleThread curPrio targetPrio
+>
+>                 curDom <- curDomain
+>                 highest <- isHighestPrio curDom targetPrio
+>
+>                 if (fastfail && not highest)
+>                     then do
+>                         tcbSchedEnqueue candidate
+>                         setSchedulerAction ChooseNewThread
+>                         scheduleChooseNewThread
+>                     else if wasRunnable && curPrio == targetPrio
+>                             then do
+>                                 tcbSchedAppend candidate
+>                                 setSchedulerAction ChooseNewThread
+>                                 scheduleChooseNewThread
+>                             else do
+>                                 switchToThread candidate
+>                                 setSchedulerAction ResumeCurrentThread
 
 If the current thread is no longer runnable, has used its entire timeslice, an IPC cancellation has potentially woken multiple higher priority threads, or the domain timeslice is exhausted, then we scan the scheduler queues to choose a new thread. In the last case, we switch to the next domain beforehand.
 
 >             ChooseNewThread -> do
 >                 curRunnable <- isRunnable curThread
 >                 when curRunnable $ tcbSchedEnqueue curThread
->                 domainTime <- getDomainTime
->                 when (domainTime == 0) $ nextDomain
->                 chooseThread
->                 setSchedulerAction ResumeCurrentThread
+>                 scheduleChooseNewThread
 
 Threads are scheduled using a simple multiple-priority round robin algorithm.
 It checks the priority bitmaps to find the highest priority with a non-empty
 queue. It selects the first thread in that queue and makes it the current
 thread.
+
 Note that the ready queues are a separate structure in the kernel
 model. In a real implementation, to avoid requiring
 dynamically-allocated kernel memory, these queues would be linked
 lists using the TCBs themselves as nodes.
+
+Note also that the level 2 bitmap array is stored in reverse in order to get better cache locality for the more common case of higher priority threads.
 
 > countLeadingZeros :: (Bits b, FiniteBits b) => b -> Int
 > countLeadingZeros w =
@@ -340,16 +378,34 @@ lists using the TCBs themselves as nodes.
 > wordLog2 :: (Bits b, FiniteBits b) => b -> Int
 > wordLog2 w = finiteBitSize w - 1 - countLeadingZeros w
 
+> invertL1Index :: Int -> Int
+> invertL1Index i = l2BitmapSize - 1 - i
+
+> getHighestPrio :: Domain -> Kernel (Priority)
+> getHighestPrio d = do
+>     l1 <- getReadyQueuesL1Bitmap d
+>     let l1index = wordLog2 l1
+>     let l1indexInverted = invertL1Index l1index
+>     l2 <- getReadyQueuesL2Bitmap d l1indexInverted
+>     let l2index = wordLog2 l2
+>     return $ l1IndexToPrio l1index .|. fromIntegral l2index
+
+> isHighestPrio :: Domain -> Priority -> Kernel (Bool)
+> isHighestPrio d p = do
+>     l1 <- getReadyQueuesL1Bitmap d
+>     if l1 == 0
+>         then return True
+>         else do
+>             hprio <- getHighestPrio d
+>             return (p >= hprio)
+
 > chooseThread :: Kernel ()
 > chooseThread = do
 >     curdom <- if numDomains > 1 then curDomain else return 0
 >     l1 <- getReadyQueuesL1Bitmap curdom
 >     if l1 /= 0
 >         then do
->             let l1index = wordLog2 l1
->             l2 <- getReadyQueuesL2Bitmap curdom l1index
->             let l2index = wordLog2 l2
->             let prio = l1IndexToPrio l1index .|. fromIntegral l2index
+>             prio <- getHighestPrio curdom
 >             queue <- getQueue curdom prio
 >             let thread = head queue
 >             runnable <- isRunnable thread
@@ -423,38 +479,28 @@ Finally, if the thread is the current one, we run the scheduler to choose a new 
 
 \subsubsection{Switching to Woken Threads}
 
-A successful IPC transfer will normally wake a thread other than the current thread. This function conditionally switches to the woken thread; it enqueues the thread if unable to switch to it.
+A successful IPC transfer will normally wake a thread other than the current
+thread. At the point of waking we neither know whether the current thread will
+block, or whether the woken thread has the highest priority.  We note the woken
+thread as a candidate if it is a valid switch target, and examine its
+importance in the scheduler. If the woken thread is not a viable switch
+candidate, we enqueue it instead. In the case of multiple candidates, all
+candidates are enqueued.
 
-> possibleSwitchTo :: PPtr TCB -> Bool -> Kernel ()
-> possibleSwitchTo target onSamePriority = do
->     curThread <- getCurThread
+> possibleSwitchTo :: PPtr TCB -> Kernel ()
+> possibleSwitchTo target = do
 >     curDom <- curDomain
->     curPrio <- threadGet tcbPriority curThread
 >     targetDom <- threadGet tcbDomain target
->     targetPrio <- threadGet tcbPriority target
 >     action <- getSchedulerAction
 >     if (targetDom /= curDom)
 >         then tcbSchedEnqueue target
->         else do
->             if ((targetPrio > curPrio
->                  || (targetPrio == curPrio && onSamePriority))
->                 && action == ResumeCurrentThread)
->                 then setSchedulerAction $ SwitchToThread target
->                 else tcbSchedEnqueue target
->             case action of
->                 SwitchToThread _ -> rescheduleRequired
->                 _ -> return ()
+>         else if (action /= ResumeCurrentThread)
+>                 then do
+>                     rescheduleRequired
+>                     tcbSchedEnqueue target
+>              else setSchedulerAction $ SwitchToThread target
 
 In most cases, the current thread has just sent a message to the woken thread, so we switch if the woken thread has the same or higher priority than the current thread; that is, whenever the priorities permit the switch.
-
-> attemptSwitchTo :: PPtr TCB -> Kernel ()
-> attemptSwitchTo target = possibleSwitchTo target True
-
-The exception is when waking a thread that has just completed a "Send" system call. In this case, we switch only if the woken thread has a strictly higher priority; that is, when the priorities require the switch. This is done on the assumption that the recipient of a one-way message transfer is more likely to need to take action afterwards than the sender is.
-% FIXME: is this a sensible behaviour?
-
-> switchIfRequiredTo :: PPtr TCB -> Kernel ()
-> switchIfRequiredTo target = possibleSwitchTo target False
 
 \subsubsection{Cancelling Stored Scheduler Action}
 
@@ -529,19 +575,23 @@ The following two functions place a thread at the beginning or end of its priori
 > addToBitmap :: Domain -> Priority -> Kernel ()
 > addToBitmap tdom prio = do
 >     let l1index = prioToL1Index prio
+>     let l1indexInverted = invertL1Index l1index
 >     let l2bit = fromIntegral ((fromIntegral prio .&. mask wordRadix)::Word)
 >     modifyReadyQueuesL1Bitmap tdom $ \w -> w .|. bit l1index
->     modifyReadyQueuesL2Bitmap tdom l1index
+>     modifyReadyQueuesL2Bitmap tdom l1indexInverted
 >         (\w -> w .|. bit l2bit)
 
 > removeFromBitmap :: Domain -> Priority -> Kernel ()
 > removeFromBitmap tdom prio = do
 >     let l1index = prioToL1Index prio
+>     let l1indexInverted = invertL1Index l1index
 >     let l2bit = fromIntegral((fromIntegral prio .&. mask wordRadix)::Word)
->     modifyReadyQueuesL2Bitmap tdom l1index $ \w -> w .&. (complement $ bit l2bit)
->     l2 <- getReadyQueuesL2Bitmap tdom l1index
+>     modifyReadyQueuesL2Bitmap tdom l1indexInverted $
+>         (\w -> w .&. (complement $ bit l2bit))
+>     l2 <- getReadyQueuesL2Bitmap tdom l1indexInverted
 >     when (l2 == 0) $
->         modifyReadyQueuesL1Bitmap tdom $ \w -> w .&. (complement $ bit l1index)
+>         modifyReadyQueuesL1Bitmap tdom $
+>             (\w -> w .&. (complement $ bit l1index))
 
 > tcbSchedEnqueue :: PPtr TCB -> Kernel ()
 > tcbSchedEnqueue thread = do

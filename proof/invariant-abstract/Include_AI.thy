@@ -43,7 +43,7 @@ crunch_ignore (add:
 
 crunch_ignore (add:
   cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext tcb_sched_action
-  reschedule_required set_thread_state_ext switch_if_required_to
-  attempt_switch_to timer_tick set_priority retype_region_ext)
+  reschedule_required set_thread_state_ext
+  possible_switch_to timer_tick set_priority retype_region_ext)
 
 end

@@ -936,50 +936,87 @@ lemma next_domain_valid_sched:
 crunch current_ipc_buffer_register [wp]: tcb_sched_action "\<lambda>s. P (current_ipc_buffer_register s)"
    (wp: crunch_wps without_preemption_wp simp: crunch_simps current_ipc_buffer_register_def get_tcb_def)
 
+lemma valid_sched_action_switch_is_subject:
+  "\<lbrakk> scheduler_action s = switch_thread t ; valid_sched_action s ;
+     valid_etcbs s ; pas_refined aag s ; pas_cur_domain aag s \<rbrakk>
+   \<Longrightarrow> is_subject aag t"
+  apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_2_def
+                        switch_in_cur_domain_2_def in_cur_domain_2_def valid_etcbs_def
+                        etcb_at_def st_tcb_at_def obj_at_def is_etcb_at_def split: option.splits)
+   apply force
+  apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
+  apply (drule_tac x="(t, cur_domain s)" in bspec)
+   apply (force intro: domtcbs)
+  apply clarsimp
+  done
+
+
+lemma schedule_choose_new_thread_integrity:
+  "\<lbrace> invs and valid_sched and valid_list and integrity aag X st and pas_refined aag
+     and K (pasMayEditReadyQueues aag)
+     and (\<lambda>s. scheduler_action s = choose_new_thread) \<rbrace>
+   schedule_choose_new_thread
+   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+  unfolding schedule_choose_new_thread_def
+  by (wpsimp wp: choose_thread_respects_pasMayEditReadyQueues
+                 next_domain_valid_sched next_domain_valid_queues
+           simp: schedule_choose_new_thread_def valid_sched_def)
+
 lemma schedule_integrity:
   "\<lbrace>einvs and integrity aag X st and pas_refined aag and pas_cur_domain aag
           and (\<lambda>s. domain_time s \<noteq> 0) \<rbrace>
       schedule
     \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-   apply (simp add: schedule_def)
-   apply (rule hoare_pre)
-  apply (wp alternative_wp switch_to_thread_respects select_wp switch_to_idle_thread_respects
-            guarded_switch_to_lift choose_thread_respects gts_wp hoare_drop_imps
+  apply (simp add: schedule_def)
+  apply (rule hoare_pre)
+  supply ethread_get_wp[wp del]
+  apply (wp|wpc|simp only: schedule_choose_new_thread_def)+
+  apply (wpsimp wp: alternative_wp switch_to_thread_respects select_wp switch_to_idle_thread_respects
+                 guarded_switch_to_lift choose_thread_respects gts_wp hoare_drop_imps
+                 set_scheduler_action_cnt_valid_sched append_thread_queued enqueue_thread_queued
+                 tcb_sched_action_enqueue_valid_blocked_except
+            wp_del: ethread_get_wp
     | wpc
-    | simp add: allActiveTCBs_def
-    | rule hoare_pre_cont)+
-  apply (intro allI conjI impI)
-          apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_2_def
-                                switch_in_cur_domain_2_def in_cur_domain_2_def valid_etcbs_def invs_def
-                                valid_etcbs_def etcb_at_def st_tcb_at_def obj_at_def is_etcb_at_def
-                         split: option.splits)
-           apply force
-          apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
-          apply (drule_tac x="(x, cur_domain s)" in bspec)
-           apply (force intro: domtcbs)
-          apply force
-         prefer 10
-         (* direct clag *)
-         apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_2_def switch_in_cur_domain_2_def in_cur_domain_2_def valid_etcbs_def invs_def valid_etcbs_def etcb_at_def st_tcb_at_def obj_at_def is_etcb_at_def split: option.splits)
-          apply force
-         apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
-         apply (drule_tac x="(x, cur_domain s)" in bspec)
-          apply (force intro: domtcbs)
-         apply force
-        apply (auto simp: obj_at_def st_tcb_at_def not_cur_thread_2_def valid_sched_def)
+    | simp add: allActiveTCBs_def schedule_choose_new_thread_def
+    | rule hoare_pre_cont[where a=next_domain])+
+  apply (auto simp: obj_at_def st_tcb_at_def not_cur_thread_2_def valid_sched_def
+              valid_sched_action_def weak_valid_sched_action_def
+              valid_sched_action_switch_is_subject schedule_choose_new_thread_def)
   done
+
+lemma  valid_sched_valid_sched_action:
+  "valid_sched s \<Longrightarrow> valid_sched_action s"
+  by (simp add: valid_sched_def)
 
 lemma schedule_integrity_pasMayEditReadyQueues:
   "\<lbrace>einvs and integrity aag X st and pas_refined aag and guarded_pas_domain aag
           and K (pasMayEditReadyQueues aag) \<rbrace>
      schedule
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: schedule_def)
-  apply (rule hoare_pre)
-  apply (wp guarded_switch_to_lift switch_to_thread_respects_pasMayEditReadyQueues choose_thread_respects_pasMayEditReadyQueues
-            next_domain_valid_sched next_domain_valid_queues gts_wp hoare_drop_imps
-        | wpc | simp)+
-  apply (auto simp: obj_at_def st_tcb_at_def not_cur_thread_2_def valid_sched_def)
+  supply ethread_get_wp[wp del]
+  supply schedule_choose_new_thread_integrity[wp]
+  supply if_split[split del]
+  apply (simp add: schedule_def wrap_is_highest_prio_def[symmetric])
+  apply (wp, wpc)
+        (* resume current thread *)
+        apply wp
+       prefer 2
+       (* choose thread *)
+       apply wp
+      (* switch_to *)
+      apply (wpsimp wp: set_scheduler_action_cnt_valid_sched enqueue_thread_queued append_thread_queued
+                        tcb_sched_action_append_integrity_pasMayEditReadyQueues
+                        guarded_switch_to_lift switch_to_thread_respects_pasMayEditReadyQueues)+
+            (* is_highest_prio *)
+            apply (simp add: wrap_is_highest_prio_def)
+            apply ((wp_once hoare_drop_imp)+)[1]
+           apply (wpsimp wp: tcb_sched_action_enqueue_valid_blocked_except hoare_vcg_imp_lift' gts_wp)+
+  apply (clarsimp simp: if_apply_def2 cong: imp_cong conj_cong)
+
+  apply (safe ; ((solves \<open>clarsimp simp: valid_sched_def not_cur_thread_def valid_sched_action_def
+                                         weak_valid_sched_action_def\<close>
+                )?))
+   apply (clarsimp simp: obj_at_def pred_tcb_at_def)+
   done
 
 lemma pas_refined_cur_thread [iff]:
@@ -1008,8 +1045,15 @@ lemma schedule_pas_refined:
   schedule
   \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
-  apply (rule hoare_pre)
-  apply (wp alternative_wp guarded_switch_to_lift switch_to_thread_pas_refined select_wp switch_to_idle_thread_pas_refined gts_wp| wpc | simp)+
+  apply (wp add: alternative_wp guarded_switch_to_lift switch_to_thread_pas_refined select_wp
+                  switch_to_idle_thread_pas_refined gts_wp
+                  guarded_switch_to_lift switch_to_thread_respects_pasMayEditReadyQueues
+                  choose_thread_respects_pasMayEditReadyQueues
+                  next_domain_valid_sched next_domain_valid_queues gts_wp hoare_drop_imps
+                  set_scheduler_action_cnt_valid_sched enqueue_thread_queued
+                  tcb_sched_action_enqueue_valid_blocked_except
+             del: ethread_get_wp
+         | wpc | simp add: schedule_choose_new_thread_def)+
   done
 
 lemma handle_interrupt_arch_state [wp]:
@@ -1284,10 +1328,10 @@ lemma cap_revoke_current_ipc_buffer_register [wp]:
 end
 
 crunch_ignore (add:
-  cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext tcb_sched_action attempt_switch_to ethread_set
-  reschedule_required set_thread_state_ext switch_if_required_to next_domain
+  cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext tcb_sched_action ethread_set
+  reschedule_required set_thread_state_ext possible_switch_to next_domain
   set_domain
-  attempt_switch_to timer_tick set_priority retype_region_ext)
+  timer_tick set_priority retype_region_ext)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -1414,7 +1458,7 @@ crunch current_ipc_buffer_register [wp]: reply_from_kernel "\<lambda>s. P (curre
 
 crunch current_ipc_buffer_register [wp]: do_reply_transfer "\<lambda>s. P (current_ipc_buffer_register s)"
   ( wp: crunch_wps thread_set_current_ipc_buffer_register simp: crunch_simps zet_zip_contrapos
-    ignore: do_extended_op attempt_switch_to thread_set
+    ignore: do_extended_op thread_set
             tcb_fault_update)
 
 crunch current_ipc_buffer_register [wp]: invoke_domain "\<lambda>s. P (current_ipc_buffer_register s)"
@@ -1553,15 +1597,13 @@ crunch cur_thread[wp]: handle_event "\<lambda>s. P (cur_thread s)"
     simp: crunch_simps filterM_mapM unless_def
     ignore: without_preemption check_cap_at filterM getActiveIRQ resetTimer ackInterrupt )
 
-crunch pas_cur_domain[wp]: attempt_switch_to "pas_cur_domain pas"
-
 crunch pas_cur_domain[wp]: ethread_set "pas_cur_domain pas"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch pas_cur_domain[wp]: timer_tick "pas_cur_domain pas"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch pas_cur_domain[wp]: switch_if_required_to "pas_cur_domain pas"
+crunch pas_cur_domain[wp]: possible_switch_to "pas_cur_domain pas"
 
 crunch pas_cur_domain[wp]: handle_interrupt "pas_cur_domain pas"
 
@@ -1598,9 +1640,13 @@ crunch idle_thread[wp]: handle_event "\<lambda>s::det_state. P (idle_thread s)"
     ignore: without_preemption filterM rec_del check_cap_at cap_revoke resetTimer
             ackInterrupt getFAR getDFSR getIFSR getActiveIRQ )
 
-crunch cur_domain[wp]:  transfer_caps_loop, ethread_set, thread_set_priority, set_priority, set_domain, invoke_domain, cap_move_ext, timer_tick,
-   cap_move, cancel_badged_sends, attempt_switch_to, switch_if_required_to
- "\<lambda>s. P (cur_domain s)" (wp: transfer_caps_loop_pres crunch_wps simp: crunch_simps filterM_mapM unless_def ignore: without_preemption filterM const_on_failure )
+crunch cur_domain[wp]:
+  transfer_caps_loop, ethread_set, thread_set_priority, set_priority,
+  set_domain, invoke_domain, cap_move_ext, timer_tick,
+  cap_move, cancel_badged_sends, possible_switch_to
+  "\<lambda>s. P (cur_domain s)"
+  (wp: transfer_caps_loop_pres crunch_wps simp: crunch_simps filterM_mapM unless_def
+   ignore: without_preemption filterM const_on_failure)
 
 lemma invoke_cnode_cur_domain[wp]: "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (cur_domain s)\<rbrace>"
   apply (simp add: invoke_cnode_def)

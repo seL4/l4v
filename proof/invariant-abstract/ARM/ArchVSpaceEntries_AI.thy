@@ -1610,7 +1610,7 @@ lemma call_kernel_valid_pdpt[wp]:
    \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def)
       apply (rule hoare_pre)
-       apply (wp | simp | wpc
+       apply (wp | simp add: if_apply_def2 | wpc
                  | rule conjI | clarsimp simp: ct_in_state_def
                  | erule pred_tcb_weakenE
                  | wp_once hoare_drop_imps)+

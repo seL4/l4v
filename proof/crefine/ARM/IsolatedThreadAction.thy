@@ -868,39 +868,6 @@ lemma empty_fail_isRunnable:
   "empty_fail (isRunnable t)"
   by (simp add: isRunnable_def isBlocked_def)
 
-lemma setThreadState_blocked_rewrite:
-  "\<not> runnable' st \<Longrightarrow>
-   monadic_rewrite True True
-     (\<lambda>s. ksCurThread s = t \<and> ksSchedulerAction s \<noteq> ResumeCurrentThread \<and> tcb_at' t s)
-     (setThreadState st t)
-     (threadSet (tcbState_update (\<lambda>_. st)) t)"
-  apply (simp add: setThreadState_def)
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_rewrite_bind_tail)
-     apply (rule monadic_rewrite_trans)
-      apply (rule monadic_rewrite_bind_tail)+
-         apply (rule_tac P="\<not> runnable \<and> curThread = t
-                              \<and> (action \<noteq> ResumeCurrentThread)"
-                    in monadic_rewrite_gen_asm)
-         apply (simp add: when_def)
-         apply (rule monadic_rewrite_refl)
-        apply wp+
-     apply (rule monadic_rewrite_symb_exec2,
-            (wp  empty_fail_isRunnable
-               | (simp only: getCurThread_def getSchedulerAction_def
-                      , rule empty_fail_gets))+)+
-     apply (rule monadic_rewrite_refl)
-    apply (simp add: conj_comms, wp)
-    apply (rule_tac Q="\<lambda>rv s. obj_at' (Not o runnable' o tcbState) t s"
-               in hoare_post_imp)
-     apply (clarsimp simp: obj_at'_def sch_act_simple_def st_tcb_at'_def)
-    apply (wp)
-   apply simp
-   apply (rule monadic_rewrite_refl)
-  apply clarsimp
-  done
-
 lemma setupCallerCap_rewrite:
   "monadic_rewrite True True (\<lambda>s. reply_masters_rvk_fb (ctes_of s))
    (setupCallerCap send rcv)
@@ -935,42 +902,6 @@ lemma setupCallerCap_rewrite:
     apply (wp getCTE_wp' | simp add: cte_wp_at_ctes_of)+
   apply (clarsimp simp: reply_masters_rvk_fb_def)
   apply fastforce
-  done
-
-lemma attemptSwitchTo_rewrite:
-  "monadic_rewrite True True
-          (\<lambda>s. obj_at' (\<lambda>tcb. tcbPriority tcb = curPrio) thread s
-              \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = destPrio \<and> tcbDomain tcb = destDom) t s
-              \<and> destPrio \<ge> curPrio
-              \<and> ksSchedulerAction s = ResumeCurrentThread
-              \<and> ksCurThread s = thread
-              \<and> ksCurDomain s = curDom
-              \<and> destDom = curDom)
-    (attemptSwitchTo t) (setSchedulerAction (SwitchToThread t))"
-  apply (simp add: attemptSwitchTo_def possibleSwitchTo_def)
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_rewrite_bind_tail)
-     apply (rule monadic_rewrite_bind_tail)
-      apply (rule monadic_rewrite_bind_tail)
-       apply (rule monadic_rewrite_bind_tail)
-        apply (rule monadic_rewrite_bind_tail)
-         apply (rule monadic_rewrite_bind_tail)
-          apply (rule_tac P="curPrio \<le> targetPrio \<and> action = ResumeCurrentThread
-                                \<and> targetDom = curDom"
-                    in monadic_rewrite_gen_asm)
-          apply (simp add: eq_commute le_less[symmetric])
-          apply (rule monadic_rewrite_refl)
-         apply (wp threadGet_wp)+
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_rewrite_bind_tail)
-     apply (rule monadic_rewrite_symb_exec2,
-            (wp empty_fail_threadGet)+ | simp add: getSchedulerAction_def curDomain_def)+
-     apply (rule monadic_rewrite_refl)
-    apply wp
-   apply (rule monadic_rewrite_symb_exec2, simp_all add: getCurThread_def)
-   apply (rule monadic_rewrite_refl)
-  apply (auto simp: obj_at'_def)
   done
 
 lemma oblivious_getObject_ksPSpace_default:
@@ -1042,66 +973,8 @@ lemma oblivious_switchToThread_schact:
   by (safe intro!: oblivious_bind
               | simp_all add: oblivious_setVMRoot_schact)+
 
-lemma schedule_rewrite:
-  notes hoare_TrueI[simp]
-  shows "monadic_rewrite True True
-            (\<lambda>s. ksSchedulerAction s = SwitchToThread t \<and> ct_in_state' (op = Running) s)
-            (schedule)
-            (do curThread \<leftarrow> getCurThread; tcbSchedEnqueue curThread; setSchedulerAction ResumeCurrentThread; switchToThread t od)"
-  apply (simp add: schedule_def)
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_rewrite_bind_tail)
-     apply (rule monadic_rewrite_bind_tail)
-      apply (rule_tac P="action = SwitchToThread t" in monadic_rewrite_gen_asm, simp)
-      apply (rule monadic_rewrite_bind_tail)
-       apply (rule_tac P="curRunnable \<and> action = SwitchToThread t" in monadic_rewrite_gen_asm, simp)
-       apply (rule monadic_rewrite_refl)
-      apply (wp,simp,wp+)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_rewrite_bind_tail)
-     apply (rule monadic_rewrite_symb_exec2, wp | simp add: isRunnable_def getSchedulerAction_def)+
-     apply (rule monadic_rewrite_refl)
-    apply (wp)
-   apply (simp add: setSchedulerAction_def)
-   apply (subst oblivious_modify_swap[symmetric], rule oblivious_switchToThread_schact)
-   apply (rule monadic_rewrite_refl)
-  apply (clarsimp simp: st_tcb_at'_def pred_neg_def o_def obj_at'_def ct_in_state'_def)
-  done
-
 lemma empty_fail_getCurThread[iff]:
   "empty_fail getCurThread" by (simp add: getCurThread_def)
-
-lemma schedule_rewrite_ct_not_runnable':
-  "monadic_rewrite True True
-            (\<lambda>s. ksSchedulerAction s = SwitchToThread t \<and> ct_in_state' (Not \<circ> runnable') s)
-            (schedule)
-            (do setSchedulerAction ResumeCurrentThread; switchToThread t od)"
-  apply (simp add: schedule_def)
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_rewrite_bind_tail)
-     apply (rule monadic_rewrite_bind_tail)
-      apply (rule_tac P="action = SwitchToThread t" in monadic_rewrite_gen_asm, simp)
-      apply (rule monadic_rewrite_bind_tail)
-       apply (rule_tac P="\<not> curRunnable \<and> action = SwitchToThread t" in monadic_rewrite_gen_asm,simp)
-       apply (rule monadic_rewrite_refl)
-      apply (wp,simp,wp+)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_rewrite_bind_tail)
-     apply (rule monadic_rewrite_symb_exec2, wp |
-            simp add: isRunnable_def getSchedulerAction_def |
-            rule hoare_TrueI)+
-     apply (rule monadic_rewrite_refl)
-    apply (wp)
-   apply (simp add: setSchedulerAction_def)
-   apply (subst oblivious_modify_swap[symmetric], rule oblivious_switchToThread_schact)
-   apply (rule monadic_rewrite_symb_exec2)
-   apply (wp, simp, rule hoare_TrueI)
-   apply (rule monadic_rewrite_refl)
-  apply (clarsimp simp: st_tcb_at'_def pred_neg_def o_def obj_at'_def ct_in_state'_def)
-  done
-
 lemma activateThread_simple_rewrite:
   "monadic_rewrite True True (ct_in_state' (op = Running))
        (activateThread) (return ())"
@@ -1741,6 +1614,34 @@ lemma lookupIPCBuffer_isolatable:
     apply (rule thread_actions_isolatable_if)
     apply (rule thread_actions_isolatable_bind)
       apply (simp add: assert_isolatable thread_actions_isolatable_return | wp)+
+  done
+
+lemma setThreadState_rewrite_simple:
+  "monadic_rewrite True True
+     (\<lambda>s. (runnable' st \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread \<or> t \<noteq> ksCurThread s) \<and> tcb_at' t s)
+     (setThreadState st t)
+     (threadSet (tcbState_update (\<lambda>_. st)) t)"
+  apply (simp add: setThreadState_def)
+  apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_trans)
+    apply (rule monadic_rewrite_bind_tail)
+     apply (rule monadic_rewrite_trans)
+      apply (rule monadic_rewrite_bind_tail)+
+         apply (simp add: when_def)
+         apply (rule monadic_rewrite_gen_asm)
+         apply (subst if_not_P)
+          apply assumption
+         apply (rule monadic_rewrite_refl)
+        apply wp+
+     apply (rule monadic_rewrite_symb_exec2,
+            (wp  empty_fail_isRunnable
+               | (simp only: getCurThread_def getSchedulerAction_def
+                      , rule empty_fail_gets))+)+
+     apply (rule monadic_rewrite_refl)
+    apply (simp add: conj_comms, wp hoare_vcg_imp_lift threadSet_tcbState_st_tcb_at')
+     apply (clarsimp simp: obj_at'_def sch_act_simple_def st_tcb_at'_def)
+   apply (rule monadic_rewrite_refl)
+  apply clarsimp
   done
 
 end

@@ -49,6 +49,15 @@ apply (erule_tac x="(thread, tcb_domain (the (ekheap s thread)))" in ballE)
 apply (auto intro: domtcbs)
 done
 
+lemma tcb_sched_action_append_integrity_pasMayEditReadyQueues:
+  "\<lbrace>integrity aag X st and pas_refined aag and K (pasMayEditReadyQueues aag)\<rbrace>
+    tcb_sched_action tcb_sched_append thread
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  apply (simp add: tcb_sched_action_def)
+  apply wp
+  apply (clarsimp simp: integrity_def integrity_ready_queues_def split: option.splits)
+  done
+
 lemma reschedule_required_integrity[wp]:
   "\<lbrace>integrity aag X st\<rbrace> reschedule_required \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
 apply (simp add: integrity_def reschedule_required_def)

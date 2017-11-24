@@ -98,8 +98,8 @@ crunch_ignore (bcorres)
   (add: bind gets modify get put do_extended_op empty_slot_ext mapM_x "when"
         select unless mapM catch bindE liftE whenE alternative cap_swap_ext
         cap_insert_ext cap_move_ext liftM create_cap_ext
-        attempt_switch_to reschedule_required set_priority
-        switch_if_required_to set_thread_state_ext
+        possible_switch_to reschedule_required set_priority
+        set_thread_state_ext
         tcb_sched_action timer_tick
         lookup_error_on_failure getActiveIRQ
         gets_the liftME zipWithM_x unlessE mapME_x handleE)

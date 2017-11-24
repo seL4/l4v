@@ -2617,7 +2617,7 @@ lemma ri_invs':
   assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes set_notification_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> complete_signal a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes ext_Q[wp]: "\<And>a (s::'a::state_ext state). \<lbrace>Q and valid_objs\<rbrace> do_extended_op (switch_if_required_to a) \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes ext_Q[wp]: "\<And>a (s::'a::state_ext state). \<lbrace>Q and valid_objs\<rbrace> do_extended_op (possible_switch_to a) \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes scc_Q[wp]: "\<And>a b. \<lbrace>valid_mdb and Q\<rbrace> setup_caller_cap a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes dit_Q[wp]: "\<And>a b c d e. \<lbrace>valid_mdb and valid_objs and Q\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes failed_transfer_Q[wp]: "\<And>a. \<lbrace>Q\<rbrace> do_nbrecv_failed_transfer a \<lbrace>\<lambda>_. Q\<rbrace>"
@@ -2950,7 +2950,7 @@ context Ipc_AI_cont begin
 
 lemma si_invs':
   assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes ext_Q[wp]: "\<And>a. \<lbrace>Q and valid_objs\<rbrace> do_extended_op (attempt_switch_to a) \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes ext_Q[wp]: "\<And>a b. \<lbrace>Q and valid_objs\<rbrace> do_extended_op (possible_switch_to a) \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes setup_caller_cap_Q[wp]: "\<And>send receive. \<lbrace>Q and valid_mdb\<rbrace> setup_caller_cap send receive \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes do_ipc_transfer_Q[wp]: "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
@@ -3056,7 +3056,7 @@ lemma si_invs':
 lemma hf_invs':
   assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes ext_Q[wp]: "\<And>a. \<lbrace>Q and valid_objs\<rbrace> do_extended_op (attempt_switch_to a) \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes ext_Q[wp]: "\<And>a b. \<lbrace>Q and valid_objs\<rbrace> do_extended_op (possible_switch_to a) \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes setup_caller_cap_Q[wp]: "\<And>send receive. \<lbrace>Q and valid_mdb\<rbrace> setup_caller_cap send receive \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes do_ipc_transfer_Q[wp]: "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes thread_set_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> thread_set a b \<lbrace>\<lambda>_.Q\<rbrace>"

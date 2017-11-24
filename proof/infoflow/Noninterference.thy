@@ -631,27 +631,34 @@ lemma activate_thread_globals_equiv_scheduler:
 lemma schedule_cur_domain:
   "\<lbrace>\<lambda>s. P (cur_domain s) \<and> domain_time s \<noteq> 0\<rbrace>
    schedule
-  \<lbrace>\<lambda> r s. P (cur_domain s)\<rbrace>"
-  apply(simp add: schedule_def | wp | wpc)+
-       apply(rule hoare_pre_cont)
-      apply wp+
-     apply(rule_tac Q="\<lambda>rv s. P (cur_domain s) \<and> domain_time s \<noteq> 0" in hoare_strengthen_post)
-      apply(simp split del: if_split | wp gts_wp | wp_once hoare_drop_imps)+
-  apply clarsimp
+  \<lbrace>\<lambda> r s. P (cur_domain s)\<rbrace>" (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
+  supply ethread_get_wp[wp del] hoare_pre_cont[where a=next_domain, wp add]
+  supply if_split[split del]
+  apply (simp add: schedule_def schedule_choose_new_thread_def | wp | wpc)+
+               apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+                apply (simp | wp gts_wp | wp_once hoare_drop_imps)+
+               apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+                apply (simp | wp gts_wp | wp_once hoare_drop_imps)+
+      apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+       apply (simp | wp gts_wp | wp_once hoare_drop_imps)+
+  apply (clarsimp split: if_split)
   done
 
 lemma schedule_domain_fields:
   "\<lbrace>domain_fields P and (\<lambda>s. domain_time s \<noteq> 0)\<rbrace>
    schedule
-  \<lbrace>\<lambda> r. domain_fields P\<rbrace>"
-  apply(simp add: schedule_def | wp | wpc)+
-       apply(rule hoare_pre_cont)
-      apply wp+
-     apply(rule_tac Q="\<lambda>rv s. domain_fields P s \<and> domain_time s \<noteq> 0" in hoare_strengthen_post)
-      apply(simp split del: if_split | wp gts_wp | wp_once hoare_drop_imps)+
-  apply clarsimp
+  \<lbrace>\<lambda> r. domain_fields P\<rbrace>"  (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
+  supply ethread_get_wp[wp del] hoare_pre_cont[where a=next_domain, wp add]
+  supply if_split[split del]
+  apply (simp add: schedule_def schedule_choose_new_thread_def | wp | wpc)+
+               apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+                apply (simp | wp gts_wp | wp_once hoare_drop_imps)+
+               apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+                apply (simp | wp gts_wp | wp_once hoare_drop_imps)+
+      apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+       apply (simp | wp gts_wp | wp_once hoare_drop_imps)+
+  apply (clarsimp split: if_split)
   done
-
 
 lemma schedule_if_partitionIntegrity:
   "\<lbrace>partitionIntegrity aag st and guarded_pas_domain aag and pas_cur_domain aag and (\<lambda>s. domain_time s \<noteq> 0) and silc_inv aag st and einvs and pas_refined aag\<rbrace>
@@ -2191,57 +2198,118 @@ lemma gets_app_rewrite:
   apply(simp add: gets_def bind_def get_def return_def)
   done
 
-
-
-lemma schedule_def2:
-  "schedule =
-do cur \<leftarrow> gets cur_thread;
-   cur_ts \<leftarrow> get_thread_state cur;
-   gets scheduler_action >>=
-   case_scheduler_action
-    (do id \<leftarrow> gets idle_thread;
-        assert (runnable cur_ts \<or> cur = id);
-        return ()
-     od)
-    (\<lambda>t. do when (runnable cur_ts)
-             (tcb_sched_action tcb_sched_enqueue cur);
-            guarded_switch_to t;
-            set_scheduler_action resume_cur_thread
-         od)
-    (do when (runnable cur_ts)
-         (tcb_sched_action tcb_sched_enqueue cur);
-        dom_time_zero \<leftarrow> gets (\<lambda>s. domain_time s = 0);
-        when (dom_time_zero) next_domain;
-        choose_thread;
-        set_scheduler_action resume_cur_thread
-     od)
-  od"
-  apply(subst gets_app_rewrite[symmetric, where f="\<lambda>x. x = 0"])
-  apply(subst schedule_def)
-  apply(rule refl)
-  done
-
 lemma gets_domain_time_zero_ev:
   "equiv_valid_inv I A (\<lambda>s. domain_time s > 0) (gets (\<lambda>s. domain_time s = 0))"
   apply(rule gets_ev'')
   apply simp
   done
 
-lemma schedule_reads_respects_g:
-  "reads_respects_g aag l ((\<lambda>s. cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject aag (cur_thread s)) and einvs and pas_cur_domain aag and (\<lambda>s. domain_time s \<noteq> 0) and pas_refined aag) schedule"
-  apply(simp add: schedule_def2)
+lemma reads_equiv_valid_g_inv_schedule_switch_thread_fastfail:
+  "reads_equiv_valid_g_inv (affects_equiv aag l) aag
+     ((\<lambda>s. ct \<noteq> it \<longrightarrow> is_subject aag (ct)))
+     (schedule_switch_thread_fastfail ct it ct_prio target_prio)"
+  unfolding schedule_switch_thread_fastfail_def
+  by (wpsimp wp: reads_respects_g_from_inv[OF reads_respects_ethread_get])
+
+lemma gets_apply_ready_queues_reads_respects':
+  "reads_respects aag l (\<lambda>_. pasDomainAbs aag d = pasSubject aag) (gets_apply ready_queues d)"
+  apply (rule gets_apply_ev')
+  apply (fastforce elim: reads_equivE simp: equiv_for_def)
+  done
+
+lemma gets_ev_blah:
+  "\<forall> s t. I s t \<and> A s t \<and> P s \<and> P t \<longrightarrow> g (f s) = g (f t) \<Longrightarrow>
+   equiv_valid I A A P (gets (\<lambda>s. g (f s)))"
+  apply(simp add: gets_def get_def bind_def return_def)
+  apply(clarsimp simp: equiv_valid_def2 equiv_valid_2_def)
+  done
+
+lemma reads_respects_gets_ready_queues:
+  "reads_respects aag l (\<lambda>s. pasDomainAbs aag d = pasSubject aag)
+     (gets (\<lambda>s. f (ready_queues s d)))"
+  by (wp gets_ev_blah)
+     (fastforce elim: reads_equivE simp: equiv_for_def)
+
+lemma reads_respects_is_highest_prio:
+  "reads_respects aag l (\<lambda>s. pasDomainAbs aag d = pasSubject aag)
+     (gets (\<lambda>s. is_highest_prio d p s))"
+  by (fastforce simp: is_highest_prio_def intro: reads_respects_gets_ready_queues)
+
+lemma schedule_choose_new_thread_reads_respects_g:
+  "reads_respects_g aag l
+     ((\<lambda>s. domain_time s \<noteq> 0) and einvs
+        and pas_cur_domain aag and pas_refined aag
+        and (\<lambda>s. (cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject aag (cur_thread s))))
+     schedule_choose_new_thread"
+  apply (simp add: schedule_choose_new_thread_def )
+  apply (subst gets_app_rewrite[where y=domain_time and f="\<lambda>x. x = 0"])+
   apply (wp gets_domain_time_zero_ev set_scheduler_action_reads_respects_g
-            guarded_switch_to_reads_respects_g when_ev
-            tcb_sched_action_reads_respects_g
-            choose_thread_reads_respects_g
+            choose_thread_reads_respects_g when_ev
             equiv_valid_vacuous[where f=next_domain]
-            hoare_pre_cont[where a=next_domain]
-            get_thread_state_reads_respects_g
-        | wpc | simp)+
-         apply(wp_once hoare_drop_imps)
-         apply(wp get_thread_state_reads_respects_g gts_wp)+
-  apply(clarsimp simp: invs_valid_idle)
-  by(fastforce intro: requiv_g_cur_thread_eq simp: reads_equiv_g_def reads_equiv_def globals_equiv_idle_thread_ptr dest: scheduler_action_switch_thread_is_subject simp: not_cur_thread_2_def st_tcb_at_def obj_at_def valid_sched_2_def)
+            hoare_pre_cont[where a=next_domain])
+  apply (clarsimp simp: valid_sched_def)
+  done
+
+lemma reads_respects_ethread_get_when:
+  "reads_respects aag l (\<lambda>_. b \<longrightarrow> is_subject aag thread) (ethread_get_when b f thread)"
+  apply (simp add: ethread_get_when_def)
+  apply (rule conjI; clarsimp)
+   apply (rule reads_respects_ethread_get)
+  apply wp
+  done
+
+crunch globals_equiv[wp]: ethread_get_when "globals_equiv (st :: det_ext state)"
+
+lemma schedule_reads_respects_g:
+  "reads_respects_g aag l
+    ((\<lambda>s. cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject aag (cur_thread s)) and einvs
+     and pas_cur_domain aag and (\<lambda>s. domain_time s \<noteq> 0) and pas_refined aag) schedule"
+  supply ethread_get_wp[wp del]
+  supply set_scheduler_action_wp[wp del]
+  supply conj_cong[cong del] (* knowing the scheduler action messes with valid_sched_2 *)
+  apply (simp add: schedule_def)
+  apply wp
+         apply wpc
+           (* resume current thread *)
+           apply wp[1]
+          prefer 2
+          (* choose new thread *)
+          apply ((wp set_scheduler_action_reads_respects_g
+                     schedule_choose_new_thread_reads_respects_g when_ev
+                     tcb_sched_action_reads_respects_g
+                 | wpc | simp)+)[1]
+
+         (* now switch_thread case *)
+         apply (wpsimp wp: schedule_choose_new_thread_reads_respects_g enqueue_thread_queued
+                           set_scheduler_action_reads_respects_g tcb_sched_action_reads_respects_g
+                           set_scheduler_action_cnt_valid_sched)+
+                        (* tcb_sched_action tcb_sched_append *)
+                        apply (wp append_thread_queued
+                                  set_scheduler_action_reads_respects_g
+                                  guarded_switch_to_reads_respects_g
+                                  reads_respects_g_from_inv[OF reads_respects_is_highest_prio]
+                                  reads_equiv_valid_g_inv_schedule_switch_thread_fastfail)+
+                 (* fastfail calculation *)
+                 apply (wpsimp wp: reads_respects_g_from_inv[OF reads_respects_ethread_get]
+                                   reads_respects_g_from_inv[OF reads_respects_ethread_get_when]
+                                   when_ev gts_wp
+                                   tcb_sched_action_reads_respects_g
+                                   tcb_sched_action_enqueue_valid_blocked_except
+                                   get_thread_state_reads_respects_g
+                        | wp_once hoare_drop_imp)+
+
+  apply (clarsimp simp: invs_valid_idle)
+  apply (intro allI conjI impI ; (elim conjE)?
+         ; (solves \<open>clarsimp simp: valid_sched_def valid_sched_action_switch_is_subject
+                             dest!: reads_equiv_gD intro!: globals_equiv_idle_thread_ptr\<close>)?)
+                    apply (tactic {* distinct_subgoals_tac *})
+              apply (all \<open>(erule requiv_g_cur_thread_eq)?\<close>)
+             apply (simp_all add: requiv_sched_act_eq[OF reads_equiv_gD[THEN conjunct1]])
+           apply (simp_all add: requiv_cur_domain_eq[OF reads_equiv_gD[THEN conjunct1]])
+         apply (all \<open>(solves \<open>clarsimp elim!: st_tcb_weakenE\<close>)?\<close>)
+       apply (all \<open>(solves \<open>clarsimp simp: not_cur_thread_def\<close>)?\<close>)
+   apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def)+
+  done
 
 lemma schedule_if_reads_respects_g:
   "reads_respects_g aag l (einvs and pas_cur_domain aag and guarded_pas_domain aag and (\<lambda>s. domain_time s > 0) and pas_refined aag) (schedule_if tc)"

@@ -567,7 +567,7 @@ lemma restart_corres:
          apply (rule corres_split[OF _ finalise_cancel_ipc])
            apply (rule corres_split[OF _ dcorres_setup_reply_master[unfolded tcb_replycap_slot_def] ])
             apply (rule dcorres_rhs_noop_below_True[OF dcorres_rhs_noop_below_True])
-             apply (rule switch_if_required_to_dcorres)
+             apply (rule possible_switch_to_dcorres)
              apply (rule tcb_sched_action_dcorres)
              apply (rule dcorres_set_thread_state_Restart2[unfolded tcb_pending_op_slot_def])
             apply wp
@@ -739,7 +739,7 @@ lemma not_idle_after_suspend [wp]:
    apply (simp add:not_idle_thread_def invs_def valid_state_def)+
   done
 
-crunch valid_etcbs[wp]:  "switch_if_required_to", "Tcb_A.restart"  "valid_etcbs"
+crunch valid_etcbs[wp]: "Tcb_A.restart"  "valid_etcbs"
 
 (* Copy registers from one thread to another. *)
 lemma invoke_tcb_corres_copy_regs:

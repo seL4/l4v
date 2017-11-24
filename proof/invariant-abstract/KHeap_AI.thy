@@ -305,6 +305,10 @@ lemma get_endpoint_sp:
   unfolding get_endpoint_def
   by (wp|wpc)+ clarsimp
 
+lemma get_endpoint_wp:
+  "\<lbrace>\<lambda>s. \<forall>ep. ko_at (Endpoint ep) epptr s \<longrightarrow> P ep s\<rbrace> get_endpoint epptr \<lbrace>P\<rbrace>"
+  by (clarsimp intro!: hoare_post_imp[rotated, OF get_endpoint_sp])
+
 lemma set_object_ko:
   "\<lbrace>ko_at obj ptr and K (x \<noteq> ptr)\<rbrace> set_object x ko \<lbrace>\<lambda>rv. ko_at obj ptr\<rbrace>"
   by (clarsimp simp add: valid_def set_object_def in_monad obj_at_def)

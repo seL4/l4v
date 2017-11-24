@@ -20,6 +20,13 @@ declare doMachineOp_cte_wp_at'[wp]
 declare static_imp_wp[wp_split del]
 
 (* FIXME: move *)
+lemma corres_if_r':
+  "\<lbrakk> G' \<Longrightarrow> corres_underlying sr nf nf' r P P' a c; \<not>G' \<Longrightarrow> corres_underlying sr nf nf' r P Q' a d \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r (P) (if G' then P' else Q')
+                                     (a) (if G' then c  else d)"
+  by (simp)
+
+(* FIXME: move *)
 lemma corres_gets_pre_lhs:
   "(\<And>x. corres r (P x) P' (g x) g') \<Longrightarrow>
   corres r (\<lambda>s. P (f s) s) P' (gets f >>= (\<lambda>x. g x)) g'"
@@ -42,17 +49,6 @@ lemma return_wp_exs_valid [wp]: "\<lbrace> P x \<rbrace> return x \<exists>\<lbr
 (* FIXME: move to NonDetMonadVCG *)
 lemma get_exs_valid [wp]: "\<lbrace>op = s\<rbrace> get \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
   by (simp add: get_def exs_valid_def)
-
-lemma countLeadingZeros_word_clz[simp]:
-  "countLeadingZeros w = word_clz w"
-  unfolding countLeadingZeros_def word_clz_def
-  by (simp add: to_bl_upt)
-
-lemma wordLog2_word_log2[simp]:
-  "wordLog2 = word_log2"
-  apply (rule ext)
-  unfolding wordLog2_def word_log2_def
-  by (simp add: word_size wordBits_def)
 
 lemma invs_no_cicd'_queues:
   "invs_no_cicd' s \<Longrightarrow> valid_queues s"
@@ -192,27 +188,6 @@ lemma bind_select_fail_corres:
                         select_def fail_def alternative_def split_def)
   done
 
-lemma st_tcb_at_coerce_abstract:
-  assumes t: "st_tcb_at' P t c"
-  assumes sr: "(a, c) \<in> state_relation"
-  shows "st_tcb_at (\<lambda>st. \<exists>st'. thread_state_relation st st' \<and> P st') t a"
-  using assms
-  apply (clarsimp simp: state_relation_def pred_tcb_at'_def obj_at'_def
-                        projectKOs objBits_simps)
-  apply (erule(1) pspace_dom_relatedE)
-  apply (erule(1) obj_relation_cutsE, simp_all)
-  apply (clarsimp simp: st_tcb_at_def obj_at_def other_obj_relation_def
-                        tcb_relation_def
-                 split: Structures_A.kernel_object.split_asm if_split_asm
-                        ARM_A.arch_kernel_obj.split_asm)+
-  apply fastforce
-  done
-
-lemma runnable_coerce_abstract:
-  "\<lbrakk> runnable' st'; thread_state_relation st st' \<rbrakk>
-    \<Longrightarrow> runnable st"
-  by (case_tac st, simp_all)
-
 (* Levity: added (20090721 10:56:29) *)
 declare objBitsT_koTypeOf [simp]
 
@@ -234,6 +209,11 @@ lemma arch_switch_thread_corres:
    apply (erule st_tcb_at_tcb_at)
   apply (clarsimp simp: valid_pspace'_def)
   done
+
+lemma schedule_choose_new_thread_sched_act_rct[wp]:
+  "\<lbrace>\<top>\<rbrace> schedule_choose_new_thread \<lbrace>\<lambda>rs s. scheduler_action s = resume_cur_thread\<rbrace>"
+  unfolding schedule_choose_new_thread_def
+  by wp
 
 lemma tcbSchedAppend_corres:
   notes trans_state_update'[symmetric, simp del]
@@ -304,20 +284,20 @@ lemma removeFromBitmap_valid_queues_no_bitmap[wp]:
 " \<lbrace> valid_queues_no_bitmap \<rbrace>
      removeFromBitmap d p
   \<lbrace>\<lambda>_. valid_queues_no_bitmap \<rbrace>"
-  unfolding bitmapQ_defs bitmap_fun_defs valid_queues_no_bitmap_def
-  by (wp, clarsimp)
+  unfolding bitmapQ_defs valid_queues_no_bitmap_def
+  by (wp| clarsimp simp: bitmap_fun_defs comp_def pred_conj_def)+
 
 lemma removeFromBitmap_valid_queues_no_bitmap_except[wp]:
 " \<lbrace> valid_queues_no_bitmap_except t \<rbrace>
      removeFromBitmap d p
   \<lbrace>\<lambda>_. valid_queues_no_bitmap_except t \<rbrace>"
-  unfolding bitmapQ_defs bitmap_fun_defs valid_queues_no_bitmap_except_def
-  by (wp, clarsimp)
+  unfolding bitmapQ_defs valid_queues_no_bitmap_except_def
+  by (wp| clarsimp simp: bitmap_fun_defs)+
 
 lemma removeFromBitmap_bitmapQ:
   "\<lbrace> \<lambda>s. True \<rbrace> removeFromBitmap d p \<lbrace>\<lambda>_ s. \<not> bitmapQ d p s \<rbrace>"
   unfolding bitmapQ_defs bitmap_fun_defs
-  apply wp
+  apply (wp| clarsimp simp: bitmap_fun_defs)+
   apply (clarsimp simp: bitmapQ_def  ucast_and_mask[symmetric] is_up unat_ucast_upcast)
   apply (subst (asm) complement_nth_w2p, simp_all)
   apply (fastforce intro!: order_less_le_trans[OF word_unat_mask_lt] simp: word_size wordRadix_def')
@@ -489,8 +469,8 @@ crunch norq[wp]: threadSet "\<lambda>s. P (ksReadyQueues s)"
 
 lemma removeFromBitmap_valid_queues'[wp]:
   "\<lbrace> valid_queues' \<rbrace> removeFromBitmap d p \<lbrace>\<lambda>_. valid_queues' \<rbrace>"
-  unfolding valid_queues'_def bitmap_fun_defs
-  by (wp, simp)
+  unfolding valid_queues'_def
+  by (wp| simp add: bitmap_fun_defs)+
 
 lemma threadSet_valid_queues'_dequeue: (* threadSet_valid_queues' is too weak for dequeue *)
   "\<lbrace>\<lambda>s. (\<forall>d p t'. obj_at' (inQ d p) t' s \<and> t' \<noteq> t \<longrightarrow> t' \<in> set (ksReadyQueues s (d, p))) \<and>
@@ -544,12 +524,6 @@ crunch tcb_at'[wp]: tcbSchedEnqueue "tcb_at' t"
 crunch tcb_at'[wp]: tcbSchedAppend "tcb_at' t"
   (simp: unless_def)
 crunch tcb_at'[wp]: tcbSchedDequeue "tcb_at' t"
-
-crunch nosch[wp]: tcbSchedEnqueue "\<lambda>s. P (ksSchedulerAction s)"
-  (simp: unless_def)
-crunch nosch[wp]: tcbSchedAppend "\<lambda>s. P (ksSchedulerAction s)"
-  (simp: unless_def)
-crunch nosch[wp]: tcbSchedDequeue "\<lambda>s. P (ksSchedulerAction s)"
 
 crunch state_refs_of'[wp]: tcbSchedEnqueue "\<lambda>s. P (state_refs_of' s)"
   (wp: refl simp: crunch_simps unless_def)
@@ -691,9 +665,116 @@ lemma tcbSchedEnqueue_invs'[wp]:
         | auto elim!: st_tcb_ex_cap'' valid_objs'_maxDomain valid_objs'_maxPriority split: thread_state.split_asm simp: valid_pspace'_def)+
   done
 
-lemma tcb_at'_has_tcbPriority:
- "tcb_at' t s \<Longrightarrow> \<exists>p. obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s"
- by (clarsimp simp add: obj_at'_def)
+crunch ksMachine[wp]: tcbSchedAppend "\<lambda>s. P (ksMachineState s)"
+  (simp: unless_def)
+
+lemma tcbSchedAppend_vms'[wp]:
+  "\<lbrace>valid_machine_state'\<rbrace> tcbSchedAppend t \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
+  apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
+  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift tcbSchedAppend_ksMachine)
+  done
+
+crunch pspace_domain_valid[wp]: tcbSchedAppend "pspace_domain_valid"
+  (simp: unless_def)
+
+crunch ksCurDomain[wp]: tcbSchedAppend "\<lambda>s. P (ksCurDomain s)"
+(simp: unless_def)
+
+crunch ksIdleThread[wp]: tcbSchedAppend "\<lambda>s. P (ksIdleThread s)"
+(simp: unless_def)
+
+crunch ksDomSchedule[wp]: tcbSchedAppend "\<lambda>s. P (ksDomSchedule s)"
+(simp: unless_def)
+
+lemma tcbSchedAppend_tcbDomain[wp]:
+  "\<lbrace> obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>
+     tcbSchedAppend t
+   \<lbrace> \<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>"
+  apply (clarsimp simp: tcbSchedAppend_def)
+  apply (wpsimp simp: unless_def)+
+  done
+
+lemma tcbSchedAppend_tcbPriority[wp]:
+  "\<lbrace> obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace>
+     tcbSchedAppend t
+   \<lbrace> \<lambda>_. obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace>"
+  apply (clarsimp simp: tcbSchedAppend_def)
+  apply (wpsimp simp: unless_def)+
+  done
+
+lemma tcbSchedAppend_tcb_in_cur_domain'[wp]:
+  "\<lbrace>tcb_in_cur_domain' t'\<rbrace> tcbSchedAppend t \<lbrace>\<lambda>_. tcb_in_cur_domain' t' \<rbrace>"
+  apply (rule tcb_in_cur_domain'_lift)
+   apply wp+
+  done
+
+crunch ksDomScheduleIdx[wp]: tcbSchedAppend "\<lambda>s. P (ksDomScheduleIdx s)"
+  (simp: unless_def)
+
+crunch gsUntypedZeroRanges[wp]: tcbSchedAppend, tcbSchedDequeue "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (simp: unless_def)
+
+lemma tcbSchedAppend_invs_but_ct_not_inQ':
+  "\<lbrace>invs' and st_tcb_at' runnable' t and tcb_in_cur_domain' t \<rbrace>
+   tcbSchedAppend t \<lbrace>\<lambda>_. all_invs_but_ct_not_inQ'\<rbrace>"
+  apply (simp add: invs'_def valid_state'_def)
+  apply (rule hoare_pre)
+   apply (wp sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
+             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
+             untyped_ranges_zero_lift
+        | simp add: cteCaps_of_def o_def
+        | fastforce elim!: st_tcb_ex_cap'' split: thread_state.split_asm)+
+  done
+
+lemma tcbSchedAppend_sch_act_wf[wp]:
+  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace> tcbSchedAppend thread
+  \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  apply (simp add:tcbSchedAppend_def bitmap_fun_defs)
+  apply (wp hoare_unless_wp setQueue_sch_act threadGet_wp|simp)+
+  apply (fastforce simp:typ_at'_def obj_at'_def)
+  done
+
+lemma tcbSchedAppend_invs'[wp]:
+  "\<lbrace>invs'
+    and st_tcb_at' runnable' t
+    and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t)\<rbrace>
+     tcbSchedAppend t
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (simp add: invs'_def valid_state'_def)
+  apply (rule hoare_pre)
+   apply (wp tcbSchedAppend_ct_not_inQ valid_irq_node_lift irqs_masked_lift hoare_vcg_disj_lift
+             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
+             untyped_ranges_zero_lift
+        | simp add: cteCaps_of_def o_def
+        | auto elim!: st_tcb_ex_cap'' valid_objs'_maxDomain valid_objs'_maxPriority split: thread_state.split_asm simp: valid_pspace'_def)+
+  done
+
+lemma tcbSchedAppend_invs'_weak:
+  "\<lbrace>invs' and st_tcb_at' runnable' t  and (\<lambda>s. t \<noteq> ksCurThread s) \<rbrace> tcbSchedAppend t \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (simp add: invs'_def valid_state'_def)
+  apply (rule hoare_pre)
+   apply (wp tcbSchedAppend_ct_not_inQ sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
+             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
+             untyped_ranges_zero_lift
+       | simp add: cteCaps_of_def o_def
+       | fastforce elim!: st_tcb_ex_cap'' split: thread_state.split_asm)+
+  done
+
+lemma tcbSchedEnqueue_invs'_not_ResumeCurrentThread:
+  "\<lbrace>invs'
+    and st_tcb_at' runnable' t
+    and (\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread)\<rbrace>
+     tcbSchedEnqueue t
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  by wpsimp
+
+lemma tcbSchedAppend_invs'_not_ResumeCurrentThread:
+  "\<lbrace>invs'
+    and st_tcb_at' runnable' t
+    and (\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread)\<rbrace>
+     tcbSchedAppend t
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  by wpsimp
 
 lemma tcb_at'_has_tcbDomain:
  "tcb_at' t s \<Longrightarrow> \<exists>p. obj_at' (\<lambda>tcb. tcbDomain tcb = p) t s"
@@ -732,102 +813,6 @@ lemma tcbSchedEnqueue_in_ksQ:
      apply (drule_tac x=t in spec)
      apply (subgoal_tac "obj_at' (inQ d p) t s", clarsimp)
      apply (clarsimp simp: obj_at'_def inQ_def)+
-  done
-
-crunch ksMachine[wp]: tcbSchedAppend "\<lambda>s. P (ksMachineState s)"
-  (simp: unless_def)
-
-lemma tcbSchedAppend_vms'[wp]:
-  "\<lbrace>valid_machine_state'\<rbrace> tcbSchedAppend t \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift tcbSchedAppend_ksMachine)
-  done
-
-crunch pspace_domain_valid[wp]: tcbSchedAppend "pspace_domain_valid"
-  (simp: unless_def)
-
-lemma tcbSchedAppend_ct_not_inQ:
-  "\<lbrace> ct_not_inQ and (\<lambda>s. t \<noteq> ksCurThread s) \<rbrace> tcbSchedAppend t \<lbrace> \<lambda>_. ct_not_inQ \<rbrace>"
-  (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
-  proof -
-    have ts: "\<lbrace>?PRE\<rbrace> threadSet (tcbQueued_update (\<lambda>_. True)) t \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
-      apply (simp add: ct_not_inQ_def)
-      apply (rule hoare_weaken_pre)
-       apply (wps setObject_ct_inv)
-       apply (wp static_imp_wp, clarsimp simp: comp_def)
-      done
-    have sq: "\<And>p q d. \<lbrace>ct_not_inQ\<rbrace> setQueue d p q \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
-      apply (simp add: ct_not_inQ_def setQueue_def)
-      apply (wp)
-      apply (clarsimp)
-      done
-    show ?thesis
-      apply (simp add: tcbSchedAppend_def unless_def)
-      apply (wp ts sq | clarsimp)+
-       apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_post_imp, clarsimp)
-       apply (wpsimp)+
-      done
-  qed
-
-crunch ksCurDomain[wp]: tcbSchedAppend "\<lambda>s. P (ksCurDomain s)"
-(simp: unless_def)
-
-crunch ksIdleThread[wp]: tcbSchedAppend "\<lambda>s. P (ksIdleThread s)"
-(simp: unless_def)
-
-crunch ksDomSchedule[wp]: tcbSchedAppend "\<lambda>s. P (ksDomSchedule s)"
-(simp: unless_def)
-
-lemma tcbSchedAppend_tcbDomain[wp]:
-  "\<lbrace> obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>
-     tcbSchedAppend t
-   \<lbrace> \<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>"
-  apply (clarsimp simp: tcbSchedAppend_def)
-  apply (wpsimp simp: unless_def)+
-  done
-
-lemma tcbSchedAppend_tcbPriority[wp]:
-  "\<lbrace> obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace>
-     tcbSchedAppend t
-   \<lbrace> \<lambda>_. obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace>"
-  apply (clarsimp simp: tcbSchedAppend_def)
-  apply (wpsimp simp: unless_def)+
-  done
-
-lemma tcbSchedAppend_tcb_in_cur_domain'[wp]:
-  "\<lbrace>tcb_in_cur_domain' t'\<rbrace> tcbSchedAppend t \<lbrace>\<lambda>_. tcb_in_cur_domain' t' \<rbrace>"
-  apply (rule tcb_in_cur_domain'_lift)
-   apply wp+
-  done
-
-
-crunch ksDomScheduleIdx[wp]: tcbSchedAppend "\<lambda>s. P (ksDomScheduleIdx s)"
-  (simp: unless_def)
-
-crunch gsUntypedZeroRanges[wp]: tcbSchedAppend, tcbSchedDequeue "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (simp: unless_def)
-
-lemma tcbSchedAppend_invs'[wp]:
-  "\<lbrace>invs' and st_tcb_at' runnable' t  and (\<lambda>s. t \<noteq> ksCurThread s) \<rbrace> tcbSchedAppend t \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
-  apply (rule hoare_pre)
-   apply (wp tcbSchedAppend_ct_not_inQ sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
-             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
-             untyped_ranges_zero_lift
-       | simp add: cteCaps_of_def o_def
-       | fastforce elim!: st_tcb_ex_cap'' split: thread_state.split_asm)+
-  done
-
-lemma tcbSchedAppend_invs_but_ct_not_inQ':
-  "\<lbrace>invs' and st_tcb_at' runnable' t and tcb_in_cur_domain' t \<rbrace>
-   tcbSchedAppend t \<lbrace>\<lambda>_. all_invs_but_ct_not_inQ'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
-  apply (rule hoare_pre)
-   apply (wp sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
-             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
-             untyped_ranges_zero_lift
-        | simp add: cteCaps_of_def o_def
-        | fastforce elim!: st_tcb_ex_cap'' split: thread_state.split_asm)+
   done
 
 crunch ksMachine[wp]: tcbSchedDequeue "\<lambda>s. P (ksMachineState s)"
@@ -1768,75 +1753,18 @@ lemma setThreadState_rct:
 lemma switchToIdleThread_invs'[wp]:
   "\<lbrace>invs'\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp: Thread_H.switchToIdleThread_def ARM_H.switchToIdleThread_def)
-  apply (wp_trace setCurThread_invs_idle_thread)
+  apply (wp setCurThread_invs_idle_thread)
   apply clarsimp
 
   done
-
-lemma bind_dummy_ret_val:
-  "do y \<leftarrow> a;
-      b
-   od = do a; b od"
-  by simp
-
-lemma valid_bitmapQ_bitmapQ_simp:
-  "\<lbrakk> valid_bitmapQ s \<rbrakk> \<Longrightarrow>
-   bitmapQ d p s = (ksReadyQueues s (d, p) \<noteq> [])"
-   unfolding valid_bitmapQ_def
-   by simp
-
-lemma invs_bitmapQ_tcb_at_cur_domain'_hd:
-  "\<lbrakk> invs' s; bitmapQ (ksCurDomain s) p s;
-     st_tcb_at' runnable' (hd (ksReadyQueues s (ksCurDomain s, p))) s\<rbrakk>
-   \<Longrightarrow> tcb_in_cur_domain' (hd (ksReadyQueues s (ksCurDomain s, p))) s"
-  apply (rule_tac xs="tl (ksReadyQueues s (ksCurDomain s, p))"
-          in invs_queues_tcb_in_cur_domain'[rotated], assumption, rule refl)
-  apply (drule invs_queues)
-  apply (clarsimp simp: valid_queues_def)
-  apply (simp add: valid_bitmapQ_bitmapQ_simp)
-  done
-
-lemma shiftr_le_0:
-  "unat (w::'a::len word) < 2 ^ n \<Longrightarrow> w >> n = (0::'a::len word)"
-  by (rule word_unat.Rep_eqD) (simp add: shiftr_div_2n')
-
-lemma prioToL1Index_l1IndexToPrio_or_id:
-  "\<lbrakk> unat (w'::priority) < 2 ^ wordRadix ; w < size w' \<rbrakk>
-   \<Longrightarrow> prioToL1Index ((l1IndexToPrio w) || w') = w"
-  unfolding l1IndexToPrio_def prioToL1Index_def
-  apply (simp add: shiftr_over_or_dist shiftr_le_0 wordRadix_def')
-  apply (subst shiftl_shiftr_id, simp, simp add: word_size)
-   apply (rule word_of_nat_less)
-   apply simp
-  apply (subst unat_of_nat_eq, simp_all add: word_size)
-  done
-
-lemma word_exists_nth:
-  "(w::'a::len word) \<noteq> 0 \<Longrightarrow> \<exists>i. w !! i"
-  using word_log2_nth_same by blast
-
-lemma bitmapQ_no_L1_orphansD:
-  "\<lbrakk> bitmapQ_no_L1_orphans s ; ksReadyQueuesL1Bitmap s d !! i \<rbrakk>
-  \<Longrightarrow> ksReadyQueuesL2Bitmap s (d, i) \<noteq> 0 \<and> i < numPriorities div wordBits"
- unfolding bitmapQ_no_L1_orphans_def by simp
-
-lemma l1IndexToPrio_wordRadix_mask[simp]:
-  "l1IndexToPrio i && mask wordRadix = 0"
-  unfolding l1IndexToPrio_def
-  by (simp add: wordRadix_def')
-
-definition (* convenience for use with proofs, used for chooseThread proofs *)
-  "lookupBitmapPriority d s \<equiv>  l1IndexToPrio (word_log2 (ksReadyQueuesL1Bitmap s d)) ||
-          of_nat (word_log2 (ksReadyQueuesL2Bitmap s (d,
-            word_log2 (ksReadyQueuesL1Bitmap s d))))"
 
 lemma bitmapQ_lookupBitmapPriority_simp: (* neater unfold, actual unfold is really ugly *)
   "\<lbrakk> ksReadyQueuesL1Bitmap s d \<noteq> 0 ;
      valid_bitmapQ s ; bitmapQ_no_L1_orphans s \<rbrakk> \<Longrightarrow>
    bitmapQ d (lookupBitmapPriority d s) s =
     (ksReadyQueuesL1Bitmap s d !! word_log2 (ksReadyQueuesL1Bitmap s d) \<and>
-     ksReadyQueuesL2Bitmap s (d, word_log2 (ksReadyQueuesL1Bitmap s d)) !!
-       word_log2 (ksReadyQueuesL2Bitmap s (d, word_log2 (ksReadyQueuesL1Bitmap s d))))"
+     ksReadyQueuesL2Bitmap s (d, invertL1Index (word_log2 (ksReadyQueuesL1Bitmap s d))) !!
+       word_log2 (ksReadyQueuesL2Bitmap s (d, invertL1Index (word_log2 (ksReadyQueuesL1Bitmap s d)))))"
   unfolding bitmapQ_def lookupBitmapPriority_def
   apply (drule word_log2_nth_same, clarsimp)
   apply (drule (1) bitmapQ_no_L1_orphansD, clarsimp)
@@ -1845,10 +1773,10 @@ lemma bitmapQ_lookupBitmapPriority_simp: (* neater unfold, actual unfold is real
   apply (clarsimp simp: numPriorities_def wordBits_def word_size)
   apply (subst prioToL1Index_l1IndexToPrio_or_id)
     apply (simp add: wordRadix_def' unat_of_nat word_size)
-   apply (simp add: wordRadix_def' unat_of_nat word_size)
+   apply (simp add: wordRadix_def' unat_of_nat word_size l2BitmapSize_def')
   apply (subst prioToL1Index_l1IndexToPrio_or_id)
     apply (simp add: wordRadix_def' unat_of_nat word_size)
-   apply (simp add: wordRadix_def' unat_of_nat word_size)
+   apply (simp add: wordRadix_def' unat_of_nat word_size l2BitmapSize_def')
   apply (simp add: word_ao_dist)
   apply (subst less_mask_eq)
    apply (fastforce intro: word_of_nat_less simp: wordRadix_def' unat_of_nat word_size)+
@@ -1874,8 +1802,7 @@ lemma lookupBitmapPriority_obj_at':
              (hd (ksReadyQueues s (ksCurDomain s, lookupBitmapPriority (ksCurDomain s) s))) s"
   apply (drule (2) bitmapQ_from_bitmap_lookup)
   apply (simp add: valid_bitmapQ_bitmapQ_simp)
-  apply (case_tac "ksReadyQueues s (ksCurDomain s, lookupBitmapPriority (ksCurDomain s) s)") (* FIXME use a split rule?*)
-   apply simp
+  apply (case_tac "ksReadyQueues s (ksCurDomain s, lookupBitmapPriority (ksCurDomain s) s)", simp)
   apply (clarsimp, rename_tac t ts)
   apply (drule cons_set_intro)
   apply (drule (2) valid_queues_no_bitmap_objD)
@@ -1938,7 +1865,7 @@ lemma bitmapL1_highest_lookup:
      apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size wordRadix_def')
     apply (simp add: word_size)
     apply (drule (1) bitmapQ_no_L1_orphansD[where d=d and i="word_log2 _"])
-    apply (simp add: numPriorities_def wordBits_def word_size)
+    apply (simp add: numPriorities_def wordBits_def word_size l2BitmapSize_def')
    apply simp
   apply (rule prioToL1Index_le_index[rotated], simp)
   apply (frule (2) bitmapQ_from_bitmap_lookup)
@@ -1949,7 +1876,7 @@ lemma bitmapL1_highest_lookup:
      apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size)
     apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size wordRadix_def')
    apply (fastforce dest: bitmapQ_no_L1_orphansD
-                    simp: wordBits_def numPriorities_def word_size)
+                    simp: wordBits_def numPriorities_def word_size l2BitmapSize_def')
   apply (erule word_log2_highest)
   done
 
@@ -2036,8 +1963,7 @@ lemma switchToIdleThread_curr_is_idle:
 
 lemma chooseThread_it[wp]:
   "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> chooseThread \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
-  by (simp add: chooseThread_def curDomain_def numDomains_def bitmap_fun_defs)
-     (wp, clarsimp)
+  by (wp|clarsimp simp: chooseThread_def curDomain_def numDomains_def bitmap_fun_defs|assumption)+
 
 lemma valid_queues_ct_update[simp]:
   "Invariants_H.valid_queues (s\<lparr>ksCurThread := t\<rparr>) = Invariants_H.valid_queues s"
@@ -2494,7 +2420,6 @@ proof -
              "ready_queues sa (cur_domain sa) (Max {prio. ready_queues sa (cur_domain sa) prio \<noteq> []}) \<noteq> []")
      apply (fastforce elim!: setcomp_Max_has_prop)+
   apply (clarsimp dest!: invs_no_cicd'_queues)
-  apply (fold lookupBitmapPriority_def)
   apply (fastforce intro: ksReadyQueuesL1Bitmap_st_tcb_at')
   done
 qed
@@ -2613,6 +2538,12 @@ lemma nextDomain_invs_no_cicd':
                         all_invs_but_ct_idle_or_in_cur_domain'_def)
   done
 
+lemma bind_dummy_ret_val:
+  "do y \<leftarrow> a;
+      b
+   od = do a; b od"
+  by simp
+
 lemma schedule_ChooseNewThread_fragment_corres:
   "corres dc (invs and valid_sched and (\<lambda>s. scheduler_action s = choose_new_thread)) (invs' and (\<lambda>s. ksSchedulerAction s = ChooseNewThread))
      (do _ \<leftarrow> when (domainTime = 0) next_domain;
@@ -2633,58 +2564,244 @@ lemma schedule_ChooseNewThread_fragment_corres:
    apply (clarsimp simp: valid_sched_def invs'_def valid_state'_def all_invs_but_ct_idle_or_in_cur_domain'_def)+
   done
 
+lemma schedule_switch_thread_fastfail_corres:
+  "\<lbrakk> ct \<noteq> it \<longrightarrow> (tp = tp' \<and> cp = cp') ; ct = ct' ; it = it' \<rbrakk> \<Longrightarrow>
+   corres (op=) (is_etcb_at ct) (tcb_at' ct)
+     (schedule_switch_thread_fastfail ct it cp tp)
+     (scheduleSwitchThreadFastfail ct' it' cp' tp')"
+  by (clarsimp simp: schedule_switch_thread_fastfail_def scheduleSwitchThreadFastfail_def)
+
+lemma gets_is_highest_prio_expand:
+  "gets (is_highest_prio d p) \<equiv> do
+    q \<leftarrow> gets (\<lambda>s. ready_queues s d);
+    return ((\<forall>p. q p = []) \<or> Max {prio. q prio \<noteq> []} \<le> p)
+   od"
+  by (clarsimp simp: is_highest_prio_def gets_def)
+
+lemma isHighestPrio_corres:
+  assumes "d' = d"
+  assumes "p' = p"
+  shows
+    "corres (op=) \<top> valid_queues
+      (gets (is_highest_prio d p))
+      (isHighestPrio d' p')"
+  using assms
+  apply (clarsimp simp: gets_is_highest_prio_expand isHighestPrio_def)
+  apply (subst getHighestPrio_def')
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF _ corres_gets_queues_getReadyQueuesL1Bitmap])
+      apply (rule corres_if_r'[where P'="\<lambda>_. True",rotated])
+       apply (rule_tac corres_symb_exec_r)
+              apply (rule_tac
+                       P="\<lambda>s. q = ready_queues s d
+                              " and
+                       P'="\<lambda>s. valid_queues s \<and>
+                               l1 = ksReadyQueuesL1Bitmap s d \<and>
+                               l1 \<noteq> 0 \<and> hprio = lookupBitmapPriority d s" and
+                       F="hprio = Max {prio. q prio \<noteq> []}" in corres_req)
+              apply (elim conjE)
+              apply (clarsimp simp: valid_queues_def)
+              apply (subst lookupBitmapPriority_Max_eqI; blast?)
+              apply (fastforce simp: ready_queues_relation_def dest!: state_relationD)
+             apply fastforce
+         apply (wpsimp simp: if_apply_def2 wp: hoare_drop_imps ksReadyQueuesL1Bitmap_return_wp)+
+  done
+
+crunch valid_idle_etcb[wp]: set_scheduler_action valid_idle_etcb
+
+crunch inv[wp]: isHighestPrio P
+crunch inv[wp]: curDomain P
+crunch inv[wp]: schedule_switch_thread_fastfail P
+crunch inv[wp]: scheduleSwitchThreadFastfail P
+
+lemma setSchedulerAction_invs': (* not in wp set, clobbered by ssa_lift *)
+  "\<lbrace>\<lambda>s. invs' s \<rbrace> setSchedulerAction ChooseNewThread \<lbrace>\<lambda>_. invs' \<rbrace>"
+  by (wpsimp simp: invs'_def cur_tcb'_def valid_state'_def valid_irq_node'_def ct_not_inQ_def
+                   valid_queues_def valid_queues_no_bitmap_def valid_queues'_def
+                   ct_idle_or_in_cur_domain'_def)
+
+lemma thread_get_tcb_state_wp:
+  "\<lbrace>\<lambda>s. st_tcb_at (\<lambda>t. P (f t) s) ptr s\<rbrace> thread_get (\<lambda>tcb. f (tcb_state tcb)) ptr \<lbrace>P\<rbrace>"
+  unfolding ethread_get_def
+  by (wp | clarsimp simp add: thread_get_def st_tcb_at_def get_tcb_def obj_at_def)+
+
+lemma scheduleChooseNewThread_corres:
+  "corres dc
+    (\<lambda>s. invs s \<and> valid_sched s \<and> scheduler_action s = choose_new_thread)
+    (\<lambda>s. invs' s \<and> ksSchedulerAction s = ChooseNewThread)
+           schedule_choose_new_thread scheduleChooseNewThread"
+  unfolding schedule_choose_new_thread_def scheduleChooseNewThread_def
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF _ domain_time_corres], clarsimp)
+      apply (rule corres_split[OF _ schedule_ChooseNewThread_fragment_corres, simplified bind_assoc])
+        apply (rule set_sa_corres)
+        apply (wp | simp)+
+    apply (wp | simp add: getDomainTime_def)+
+   apply auto
+  done
+
+crunch static_inv[wp]: guarded_switch_to "\<lambda>_. P"
+
+(* ethread_get_when only corresponds with a non-when version if its condition holds *)
+lemma ethread_get_when_corres':
+  assumes x: "\<And>etcb tcb'. etcb_relation etcb tcb' \<Longrightarrow> r (f etcb) (f' tcb')"
+  shows      "corres r (is_etcb_at t and K b) (tcb_at' t and K b)
+                (ethread_get_when b f t) (threadGet f' t)"
+  apply (clarsimp simp: ethread_get_when_def)
+  apply (rule corres_guard_imp, rule ethreadget_corres; simp add: x)
+  done
+
+lemma ethread_get_when_corres:
+  assumes x: "\<And>etcb tcb'. etcb_relation etcb tcb' \<Longrightarrow> r (f etcb) (f' tcb')"
+  shows      "corres (\<lambda>rv rv'. b \<longrightarrow> r rv rv') (is_etcb_at t) (tcb_at' t)
+                (ethread_get_when b f t) (threadGet f' t)"
+  apply (clarsimp simp: ethread_get_when_def)
+  apply (rule conjI; clarsimp)
+  apply (rule corres_guard_imp, rule ethreadget_corres; simp add: x)
+  apply (clarsimp simp: threadGet_def)
+  apply (rule corres_noop)
+  apply wpsimp+
+  done
+
+lemma schedule_switch_thread_fastfail_wp:
+  "\<lbrace> P (ct \<noteq> it \<longrightarrow> tp < cp) \<rbrace> schedule_switch_thread_fastfail ct it cp tp \<lbrace>\<lambda>rv. P rv\<rbrace>"
+  unfolding schedule_switch_thread_fastfail_def
+  by wpsimp auto
+
 lemma schedule_corres:
   "corres dc (invs and valid_sched and valid_list) invs' (Schedule_A.schedule) ThreadDecls_H.schedule"
+  supply ethread_get_wp[wp del]
+  supply ssa_lift[wp del]
+  supply tcbSchedEnqueue_invs'[wp del]
+  supply tcbSchedEnqueue_invs'_not_ResumeCurrentThread[wp del]
+  supply setSchedulerAction_direct[wp]
+  supply if_split[split del]
+
   apply (clarsimp simp: Schedule_A.schedule_def Thread_H.schedule_def)
   apply (subst thread_get_test)
   apply (subst thread_get_comm)
   apply (subst schact_bind_inside)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ gct_corres[THEN corres_rel_imp[where r="\<lambda>x y. y = x"],simplified]])
-      apply (rule corres_guard_imp)
-        apply (rule corres_split[OF _ get_sa_corres'])
+        apply (rule corres_split[OF _ get_sa_corres])
           apply (rule corres_split_sched_act,assumption)
-            apply (rule_tac P="tcb_at cur" in corres_symb_exec_l')
-              apply (rule_tac corres_symb_exec_l')
+            apply (rule_tac P="tcb_at ct" in corres_symb_exec_l')
+              apply (rule_tac corres_symb_exec_l)
                 apply simp
                 apply (rule corres_assert_ret)
-               apply (wpsimp wp: thread_get_wp' gets_exs_valid)+
-           apply (rule corres_split[OF _ thread_get_isRunnable_corres])
-             apply (rule corres_split[OF _ corres_when])
-                 apply (rule corres_split[OF _ guarded_switch_to_corres])
-                   apply (rule set_sa_corres)
-                   apply (wp | simp)+
-               apply (rule tcbSchedEnqueue_corres)
-              apply (wpsimp wp: thread_get_wp')+
+               apply ((wpsimp wp: thread_get_wp' gets_exs_valid)+)
+         prefer 2
+         (* choose thread *)
+         apply clarsimp
           apply (rule corres_split[OF _ thread_get_isRunnable_corres])
             apply (rule corres_split[OF _ corres_when])
-                apply (rule corres_split[OF _ domain_time_corres], clarsimp, fold dc_def)
-                 apply (rule corres_split[OF _ schedule_ChooseNewThread_fragment_corres, simplified bind_assoc])
-                  apply (rule set_sa_corres)
-                  apply (wp | simp)+
-                 apply (wp | simp add: getDomainTime_def)+
+             apply (rule scheduleChooseNewThread_corres, simp)
               apply (rule tcbSchedEnqueue_corres, simp)
-             apply (simp_all only: cong: if_cong Deterministic_A.scheduler_action.case_cong
-                                           Structures_H.scheduler_action.case_cong)
-           apply ((wp thread_get_wp' hoare_vcg_conj_lift hoare_drop_imps | clarsimp)+)
-   apply (rule conjI,simp)
-   apply (clarsimp split: Deterministic_A.scheduler_action.splits
-                    simp: invs_psp_aligned invs_distinct invs_valid_objs invs_arch_state
-                          invs_vspace_objs[simplified])
-   apply (intro impI conjI allI tcb_at_invs |
-          (fastforce simp: invs_def cur_tcb_def valid_arch_caps_def valid_etcbs_def
-                           valid_sched_def valid_sched_action_def is_activatable_def
-                           st_tcb_at_def obj_at_def valid_state_def only_idle_def
-                           weak_valid_sched_action_def not_cur_thread_def tcb_at_invs))+
-    apply (cut_tac s = s in valid_blocked_valid_blocked_except)
-     prefer 2
-     apply (simp add:valid_sched_def)
-    apply (simp add:valid_sched_def)
-   apply simp
-  by (fastforce simp: invs'_def cur_tcb'_def valid_state'_def st_tcb_at'_def
-                      sch_act_wf_def  valid_pspace'_def valid_objs'_maxDomain
-                      valid_objs'_maxPriority comp_def
-               split: scheduler_action.splits)
+           apply (wp thread_get_wp' tcbSchedEnqueue_invs' hoare_vcg_conj_lift hoare_drop_imps
+                  | clarsimp)+
+        (* switch to thread *)
+        apply (rule corres_split[OF _ thread_get_isRunnable_corres],
+                rename_tac was_running wasRunning)
+          apply (rule corres_split[OF _ corres_when])
+              apply (rule corres_split[OF _ git_corres], rename_tac it it')
+                apply (rule_tac F="was_running \<longrightarrow> ct \<noteq> it" in corres_gen_asm)
+                apply (rule corres_split[OF _ ethreadget_corres[where r="op ="]],
+                       rename_tac tp tp')
+                   apply (rule corres_split[OF _ ethread_get_when_corres[where r="op ="]],
+                           rename_tac cp cp')
+                      apply (rule corres_split[OF _ schedule_switch_thread_fastfail_corres])
+                           apply (rule corres_split[OF _ curDomain_corres])
+                             apply (rule corres_split[OF _ isHighestPrio_corres]; simp only:)
+                               apply (rule corres_if, simp)
+                                apply (rule corres_split[OF _ tcbSchedEnqueue_corres])
+                                  apply (simp, fold dc_def)
+                                  apply (rule corres_split[OF _ set_sa_corres])
+                                     apply (rule scheduleChooseNewThread_corres, simp)
+
+                                   apply (wp | simp)+
+                                   apply (simp add: valid_sched_def)
+                                   apply wp
+                                   apply (rule hoare_vcg_conj_lift)
+                                    apply (rule_tac t=t in set_scheduler_action_cnt_valid_blocked')
+                                   apply (wpsimp wp: setSchedulerAction_invs')+
+                                 apply (wp tcb_sched_action_enqueue_valid_blocked hoare_vcg_all_lift enqueue_thread_queued)
+                                apply (wp tcbSchedEnqueue_invs'_not_ResumeCurrentThread)
+
+                               apply (rule corres_if, fastforce)
+
+                                apply (rule corres_split[OF _ tcbSchedAppend_corres])
+                                  apply (simp, fold dc_def)
+                                  apply (rule corres_split[OF _ set_sa_corres])
+                                     apply (rule scheduleChooseNewThread_corres, simp)
+
+                                   apply (wp | simp)+
+                                   apply (simp add: valid_sched_def)
+                                   apply wp
+                                   apply (rule hoare_vcg_conj_lift)
+                                    apply (rule_tac t=t in set_scheduler_action_cnt_valid_blocked')
+                                   apply (wpsimp wp: setSchedulerAction_invs')+
+                                 apply (wp tcb_sched_action_append_valid_blocked hoare_vcg_all_lift append_thread_queued)
+                                apply (wp tcbSchedAppend_invs'_not_ResumeCurrentThread)
+
+                               apply (rule corres_split[OF _ guarded_switch_to_corres], simp)
+                                 apply (rule set_sa_corres[simplified dc_def])
+                                 apply (wp | simp)+
+
+                             (* isHighestPrio *)
+                             apply (clarsimp simp: if_apply_def2)
+                             apply ((wp_once hoare_drop_imp)+)[1]
+
+                            apply (simp add: if_apply_def2)
+                             apply ((wp_once hoare_drop_imp)+)[1]
+                           apply wpsimp+
+                     apply (wpsimp simp: etcb_relation_def)+
+            apply (rule tcbSchedEnqueue_corres)
+           apply wpsimp+
+
+           apply (clarsimp simp: conj_ac cong: conj_cong)
+           apply wp
+           apply (rule_tac Q="\<lambda>_ s. valid_blocked_except t s \<and> scheduler_action s = switch_thread t"
+                    in hoare_post_imp, fastforce)
+           apply (wp add: tcb_sched_action_enqueue_valid_blocked_except
+                          tcbSchedEnqueue_invs'_not_ResumeCurrentThread thread_get_wp
+                     del: gets_wp)+
+       apply (clarsimp simp: conj_ac if_apply_def2 cong: imp_cong conj_cong del: hoare_gets)
+       apply (wp gets_wp)+
+
+   (* abstract final subgoal *)
+   apply clarsimp
+
+   subgoal for s
+     apply (clarsimp split: Deterministic_A.scheduler_action.splits
+                     simp: invs_psp_aligned invs_distinct invs_valid_objs invs_arch_state
+                           invs_vspace_objs[simplified] tcb_at_invs)
+     apply (rule conjI, clarsimp)
+      apply (fastforce simp: invs_def
+                            valid_sched_def valid_sched_action_def is_activatable_def
+                            st_tcb_at_def obj_at_def valid_state_def only_idle_def
+                            )
+     apply (rule conjI, clarsimp)
+      subgoal for candidate
+        apply (clarsimp simp: valid_sched_def invs_def valid_state_def cur_tcb_def
+                               valid_arch_caps_def valid_sched_action_def
+                               weak_valid_sched_action_def tcb_at_is_etcb_at
+                               tcb_at_is_etcb_at[OF st_tcb_at_tcb_at[rotated]]
+                               valid_blocked_except_def valid_blocked_def)
+        apply (clarsimp simp add: pred_tcb_at_def obj_at_def is_tcb valid_idle_def)
+        done
+     (* choose new thread case *)
+     apply (intro impI conjI allI tcb_at_invs
+            | fastforce simp: invs_def cur_tcb_def valid_etcbs_def
+                              valid_sched_def  st_tcb_at_def obj_at_def valid_state_def
+                              weak_valid_sched_action_def not_cur_thread_def)+
+     apply (simp add: valid_sched_def valid_blocked_def valid_blocked_except_def)
+     done
+
+  (* haskell final subgoal *)
+  apply (clarsimp simp: if_apply_def2 invs'_def valid_state'_def
+                  cong: imp_cong  split: scheduler_action.splits)
+  apply (fastforce simp: cur_tcb'_def valid_pspace'_def)
+  done
 
 lemma ssa_all_invs_but_ct_not_inQ':
   "\<lbrace>all_invs_but_ct_not_inQ' and sch_act_wf sa and
@@ -2907,52 +3024,39 @@ lemma chooseThread_in_cur_domain':
     apply (rule chooseThread_invs_no_cicd'_posts, simp_all)
   done
 
-lemma schedule_ChooseNewThread_fragment_invs':
+lemma scheduleChooseNewThread_invs':
   "\<lbrace> invs' and (\<lambda>s. ksSchedulerAction s = ChooseNewThread) \<rbrace>
-     do _ \<leftarrow> when (domainTime = 0) nextDomain;
-            chooseThread od
-   \<lbrace> \<lambda>_ s. invs' s \<and> ct_in_state' activatable' s \<and>
-    obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s \<and>
-    (ksCurThread s = ksIdleThread s \<or> tcb_in_cur_domain' (ksCurThread s) s) \<rbrace>"
-  apply (rule hoare_seq_ext)
-   apply (wp chooseThread_ct_not_queued_2 chooseThread_activatable_2 chooseThread_invs_no_cicd')
-   apply (wp chooseThread_in_cur_domain' nextDomain_invs_no_cicd')+
-  apply (simp add:nextDomain_def)
-  apply (clarsimp simp: invs'_def all_invs_but_ct_idle_or_in_cur_domain'_def Let_def valid_state'_def)
+   scheduleChooseNewThread
+   \<lbrace> \<lambda>_ s. invs' s \<rbrace>"
+  unfolding scheduleChooseNewThread_def
+  apply (wpsimp wp: ssa_invs' chooseThread_invs_no_cicd' chooseThread_ct_not_queued_2
+                    chooseThread_activatable_2 chooseThread_invs_no_cicd'
+                    chooseThread_in_cur_domain' nextDomain_invs_no_cicd' chooseThread_ct_not_queued_2)
+  apply (clarsimp simp: invs'_to_invs_no_cicd'_def)
   done
 
-lemma schedule_invs': "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\<lambda>rv. invs'\<rbrace>"
+lemma schedule_invs':
+  "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply ssa_lift[wp del]
   apply (simp add: schedule_def)
   apply (rule_tac hoare_seq_ext, rename_tac t)
    apply (wp, wpc)
       -- "action = ResumeCurrentThread"
       apply (wp)[1]
      -- "action = ChooseNewThread"
-     apply (rule_tac hoare_seq_ext, rename_tac r)
-      apply (rule hoare_seq_ext, simp)
-      apply (rule hoare_seq_ext)
-      apply (rule seq_ext[OF schedule_ChooseNewThread_fragment_invs' _, simplified bind_assoc])
-      apply (wp ssa_invs' chooseThread_invs_no_cicd')
-       apply clarsimp
-       apply (wp+)[3]
-    -- "action = SwitchToThread"
-    apply (rename_tac word)
-    apply (rule_tac hoare_seq_ext, rename_tac r)
-     apply (wp ssa_invs')
-      apply (clarsimp)
-      apply wp
-      apply (rule_tac Q="\<lambda>_. (\<lambda>s. tcb_in_cur_domain' (ksCurThread s) s)
-              and (\<lambda>s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s)"
-              in hoare_post_imp)
-       apply simp
-      apply (wp switchToThread_tcb_in_cur_domain' switchToThread_ct_not_queued)+
-     apply (rule_tac Q="\<lambda>_. (\<lambda>s. st_tcb_at' activatable' word s) and invs'
-              and (\<lambda>s. tcb_in_cur_domain' word s)"
-              in hoare_post_imp)
-      apply (clarsimp simp:st_tcb_at'_def valid_state'_def obj_at'_def)
-     apply (wp)+
+     apply (wp scheduleChooseNewThread_invs')
+    -- "action = SwitchToThread candidate"
+    apply (wpsimp wp: scheduleChooseNewThread_invs' ssa_invs'
+                      chooseThread_invs_no_cicd' setSchedulerAction_invs' setSchedulerAction_direct
+                      switchToThread_tcb_in_cur_domain' switchToThread_ct_not_queued_2
+           | wp hoare_disjI2[where Q="\<lambda>_ s. tcb_in_cur_domain' (ksCurThread s) s"]
+           | wp hoare_drop_imp[where f="isHighestPrio d p" for d p]
+           | simp only: obj_at'_activatable_st_tcb_at'[simplified comp_def]
+           | strengthen invs_invs_no_cicd'
+           | wp hoare_vcg_imp_lift)+
   apply (frule invs_sch_act_wf')
-  apply (auto elim!: obj_at'_weakenE simp: pred_tcb_at'_def)
+  apply (auto simp: invs_sch_act_wf' obj_at'_activatable_st_tcb_at'
+                     st_tcb_at'_runnable_is_activatable)
   done
 
 lemma setCurThread_nosch:
@@ -2994,7 +3098,7 @@ lemma chooseThread_nosch:
 
 lemma schedule_sch:
   "\<lbrace>\<top>\<rbrace> schedule \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread\<rbrace>"
-  by (wp setSchedulerAction_direct | wpc| simp add: schedule_def)+
+  by (wp setSchedulerAction_direct | wpc| simp add: schedule_def scheduleChooseNewThread_def)+
 
 lemma schedule_sch_act_simple:
   "\<lbrace>\<top>\<rbrace> schedule \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
@@ -3015,34 +3119,36 @@ proof -
     done
 qed
 
+lemma scheduleChooseNewThread_ct_activatable'[wp]:
+  "\<lbrace> invs' and (\<lambda>s. ksSchedulerAction s = ChooseNewThread) \<rbrace>
+   scheduleChooseNewThread
+   \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
+  unfolding scheduleChooseNewThread_def
+  supply ssa_lift[wp del] (* FIXME this should not be in the wp set *)
+  by (wpsimp simp: ct_in_state'_def
+                wp: ssa_invs' nextDomain_invs_no_cicd'
+                    chooseThread_activatable_2[simplified ct_in_state'_def]
+         | (rule hoare_lift_Pf[where f=ksCurThread], solves wp)
+         | strengthen invs_invs_no_cicd')+
 
-lemma schedule_ct_activatable'[wp]: "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
+lemma schedule_ct_activatable'[wp]:
+  "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
+  supply ssa_lift[wp del] (* FIXME this should not be in the wp set *)
   apply (simp add: schedule_def)
   apply (rule_tac hoare_seq_ext, rename_tac t)
    apply (wp, wpc)
       -- "action = ResumeCurrentThread"
       apply (wp)[1]
      -- "action = ChooseNewThread"
-     apply (rule_tac hoare_seq_ext, rename_tac r)
-      apply (rule hoare_seq_ext, simp)
-      apply (rule hoare_seq_ext)
-      apply (rule seq_ext[OF schedule_ChooseNewThread_fragment_invs' _, simplified bind_assoc])
-      apply (wp ssa_invs')+
-       apply (clarsimp simp: ct_in_state'_def, simp)
-       apply (wp+)[3]
+     apply wpsimp
     -- "action = SwitchToThread"
-    apply (rename_tac word)
-    apply (rule_tac hoare_seq_ext, rename_tac r)
-     apply (wp ssa_invs')
-       apply (clarsimp simp: ct_in_state'_def, simp)
-      apply (wp switchToThread_ct_not_queued sts_ct_in_state_neq')
-     apply (rule_tac Q="\<lambda>_. st_tcb_at' activatable' word and invs'"
-              in hoare_post_imp)
-      apply (fastforce simp: st_tcb_at'_def elim!: obj_at'_weakenE)
-     apply (clarsimp simp: )
-     apply (wp)+
-  apply (frule invs_sch_act_wf')
-  apply (auto elim!: obj_at'_weakenE simp: st_tcb_at'_def )
+    apply (wpsimp wp: ssa_invs' setSchedulerAction_direct ssa_ct
+           | wp hoare_drop_imp[where f="isHighestPrio d p" for d p]
+           | simp only: obj_at'_activatable_st_tcb_at'[simplified comp_def]
+           | strengthen invs_invs_no_cicd'
+           | wp hoare_vcg_imp_lift)+
+  apply (fastforce dest: invs_sch_act_wf' elim: pred_tcb'_weakenE
+                   simp: sch_act_wf obj_at'_activatable_st_tcb_at')
   done
 
 lemma threadSet_sch_act_sane:
@@ -3072,73 +3178,46 @@ lemma sbn_sch_act_sane:
   apply (simp add: setBoundNotification_def)
   apply (wp | simp add: threadSet_sch_act_sane sane_update)+
   done
+
 lemma possibleSwitchTo_corres:
   "corres dc (valid_etcbs and weak_valid_sched_action and cur_tcb and st_tcb_at runnable t)
     (Invariants_H.valid_queues and valid_queues' and
     (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and cur_tcb' and tcb_at' t and st_tcb_at' runnable' t and valid_objs')
-      (possible_switch_to t b)
-      (possibleSwitchTo t b)"
-  apply (simp add: possible_switch_to_def
-                   possibleSwitchTo_def cong: if_cong)
+      (possible_switch_to t)
+      (possibleSwitchTo t)"
+  supply ethread_get_wp[wp del]
+  apply (simp add: possible_switch_to_def possibleSwitchTo_def cong: if_cong)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ gct_corres])
-      apply simp
-      apply (rule corres_split[OF _ curDomain_corres])
+    apply (rule corres_split[OF _ curDomain_corres], simp)
       apply (rule corres_split[OF _ ethreadget_corres[where r="op ="]])
-         apply (rule corres_split[OF _ ethreadget_corres[where r="op ="]])
-          apply (rule corres_split[OF _ ethreadget_corres[where r="op ="]])
-            apply (rule corres_split[OF _ get_sa_corres])
-              apply (rule corres_if)
-               apply (simp+)[2]
-             apply (rule tcbSchedEnqueue_corres)
-              apply (rule corres_split[where r'=dc])
-                 apply (case_tac action,simp_all)[1]
-                 apply (rule rescheduleRequired_corres)
-                apply (rule corres_if)
-                  apply (case_tac action,simp_all)[1]
-                 apply (rule set_sa_corres)
-                 apply simp
-                apply (rule tcbSchedEnqueue_corres)
-               apply (wp add: set_scheduler_action_wp del: ssa_lift | simp)+
-               apply (rule_tac Q="\<lambda>r. st_tcb_at' runnable' t and tcb_in_cur_domain' t" in valid_prove_more)
-               apply (rule ssa_lift)
-               apply (clarsimp simp: valid_queues'_def weak_sch_act_wf_def Invariants_H.valid_queues_def
-                                     tcb_in_cur_domain'_def st_tcb_at'_def valid_queues_no_bitmap_def
-                                     bitmapQ_defs)
-              apply (wp threadGet_wp | simp add: etcb_relation_def curDomain_def)+
-   apply (clarsimp simp: is_etcb_at_def valid_sched_action_def weak_valid_sched_action_def)
-   apply (clarsimp simp: valid_sched_def etcb_at_def cur_tcb_def split: option.splits)
-   apply (frule st_tcb_at_tcb_at)
-   apply (frule(1) tcb_at_ekheap_dom[where x=t])
+         apply (rule corres_split[OF _ get_sa_corres])
+           apply (rule corres_if, simp)
+            apply (rule tcbSchedEnqueue_corres)
+           apply (rule corres_if, simp)
+             apply (case_tac action; simp)
+            apply (rule corres_split[OF _ rescheduleRequired_corres])
+              apply (rule tcbSchedEnqueue_corres)
+             apply (wp rescheduleRequired_valid_queues'_weak)+
+           apply (rule set_sa_corres, simp)
+          apply (wpsimp simp: etcb_relation_def if_apply_def2
+                        wp: hoare_drop_imp[where f="ethread_get a b" for a b])+
+      apply (wp hoare_drop_imps)[1]
+     apply wp+
+   apply (fastforce simp: valid_sched_def invs_def valid_state_def cur_tcb_def
+                          valid_sched_action_def weak_valid_sched_action_def
+                          tcb_at_is_etcb_at[OF st_tcb_at_tcb_at[rotated]])
+  apply (simp add: tcb_at_is_etcb_at)
+  done
+
+lemma possibleSwitchTo_corres_runnable_abs:
+  "corres dc (valid_etcbs and weak_valid_sched_action and cur_tcb and st_tcb_at runnable t)
+    (Invariants_H.valid_queues and valid_queues' and
+    (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and cur_tcb' and tcb_at' t and valid_objs')
+      (possible_switch_to t)
+      (possibleSwitchTo t)"
+  apply (rule stronger_corres_guard_imp, rule possibleSwitchTo_corres)
    apply clarsimp
-   apply (frule_tac x="cur_thread s" in tcb_at_ekheap_dom, simp)
-   apply (clarsimp simp: is_etcb_at_def valid_sched_action_def weak_valid_sched_action_def)
-  apply (clarsimp simp: cur_tcb'_def)
-  apply (frule (1) valid_objs'_maxDomain)
-  apply (frule (1) valid_objs'_maxDomain [where t=t])
-  apply (frule (1) valid_objs'_maxPriority)
-  apply (frule (1) valid_objs'_maxPriority [where t=t])
-  apply (clarsimp simp: cur_tcb'_def obj_at'_def projectKOs objBits_simps)
-  apply (rule_tac x=obje in exI)
-  apply (auto simp: tcb_in_cur_domain'_def obj_at'_def projectKOs objBits_simps)
-  done
-
-lemma attemptSwitchTo_corres:
-  "corres dc (valid_etcbs and weak_valid_sched_action and cur_tcb and st_tcb_at runnable t)
-    (Invariants_H.valid_queues and valid_queues' and
-    (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and cur_tcb' and tcb_at' t and st_tcb_at' runnable' t and valid_objs')
-     (attempt_switch_to t) (attemptSwitchTo t)"
-  using possibleSwitchTo_corres
-  apply (simp add: attempt_switch_to_def attemptSwitchTo_def)
-  done
-
-lemma switchIfRequiredTo_corres:
-  "corres dc (valid_etcbs and weak_valid_sched_action and cur_tcb and st_tcb_at runnable t)
-    (Invariants_H.valid_queues and valid_queues' and
-    (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and cur_tcb' and tcb_at' t and st_tcb_at' runnable' t and valid_objs')
-     (switch_if_required_to t) (switchIfRequiredTo t)"
-  using possibleSwitchTo_corres
-  apply (simp add: switch_if_required_to_def switchIfRequiredTo_def)
+  apply (clarsimp simp: st_tcb_at_runnable_coerce_concrete)
   done
 
 end

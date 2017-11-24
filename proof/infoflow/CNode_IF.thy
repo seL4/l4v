@@ -1134,7 +1134,7 @@ lemma select_ext_ev:
   apply (simp add: equiv_valid_def2 equiv_valid_2_def return_def fail_def)
   done
 
-crunch cur_domain[wp]: possible_switch_to, attempt_switch_to, switch_if_required_to "\<lambda>s. P (cur_domain s)"
+crunch cur_domain[wp]: possible_switch_to "\<lambda>s. P (cur_domain s)"
 
 end
 

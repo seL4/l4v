@@ -45,15 +45,13 @@ lemma invoke_cnode_domain_fields[wp]: "\<lbrace>domain_fields P\<rbrace> invoke_
                wp: get_cap_wp hoare_vcg_all_lift hoare_vcg_imp_lift
       | rule conjI)+
 
-crunch domain_fields[wp]: set_domain,set_priority,switch_if_required_to,set_extra_badge,attempt_switch_to,handle_send,handle_recv,handle_reply "domain_fields P"
+crunch domain_fields[wp]:
+  set_domain,set_priority,set_extra_badge,
+  possible_switch_to,handle_send,handle_recv,handle_reply
+  "domain_fields P"
   (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation
        transfer_caps_loop_pres mapME_x_inv_wp
  simp: crunch_simps check_cap_at_def filterM_mapM unless_def detype_def detype_ext_def mapM_x_defsym ignore: without_preemption filterM rec_del check_cap_at cap_revoke resetTimer ackInterrupt getFAR getDFSR getIFSR getActiveIRQ const_on_failure freeMemory)
-
-
-crunch cur_domain[wp]:  transfer_caps_loop, ethread_set, thread_set_priority, set_priority, set_domain, invoke_domain, cap_move_ext,timer_tick,
-   cap_move,cancel_badged_sends, attempt_switch_to, switch_if_required_to
- "\<lambda>s. P (cur_domain s)" (wp: transfer_caps_loop_pres crunch_wps simp: crunch_simps filterM_mapM unless_def ignore: without_preemption filterM const_on_failure )
 
 lemma invoke_cnode_cur_domain[wp]: "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (cur_domain s)\<rbrace>"
   apply (simp add: invoke_cnode_def)

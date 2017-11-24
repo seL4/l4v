@@ -144,7 +144,7 @@ crunch_ignore (empty_fail)
   (add: bind bindE lift liftE liftM "when" whenE unless unlessE return fail assert_opt
         mapM mapM_x sequence_x catch handleE do_extended_op
         cap_insert_ext empty_slot_ext create_cap_ext cap_swap_ext cap_move_ext
-        reschedule_required switch_if_required_to attempt_switch_to set_thread_state_ext
+        reschedule_required possible_switch_to set_thread_state_ext
         OR_choice OR_choiceE timer_tick)
 
 
@@ -429,14 +429,18 @@ end
 crunch (empty_fail) empty_fail[wp]: set_scheduler_action, next_domain, reschedule_required
   (simp: scheduler_action.split)
 
+crunch (empty_fail) empty_fail[wp, intro!, simp]: ethread_get_when
+
 locale EmptyFail_AI_schedule_det = EmptyFail_AI_schedule "TYPE(det_ext)" +
   assumes choose_thread_empty_fail[wp]: "empty_fail choose_thread"
 
 context EmptyFail_AI_schedule_det begin
 
-lemma schedule_empty_fail'[wp]:
+crunch (empty_fail) empty_fail[wp, intro!, simp]: schedule_choose_new_thread
+
+lemma schedule_empty_fail'[intro!, wp, simp]:
   "empty_fail (schedule :: (unit,det_ext) s_monad)"
-  apply (simp add: schedule_def)
+  apply (simp add: schedule_def schedule_switch_thread_fastfail_def)
   apply (wp | clarsimp split: scheduler_action.splits|
             intro impI conjI)+
   done

@@ -209,7 +209,7 @@ lemma update_waiting_ntfn_reads_respects:
   shows
   "reads_respects aag l (valid_objs and sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and ko_at (Notification ntfn) ntfnptr and (\<lambda>s. is_subject aag (cur_thread s)) and K (ntfn_obj ntfn = WaitingNtfn queue)) (update_waiting_ntfn ntfnptr queue bound_tcb badge)"
   unfolding update_waiting_ntfn_def fun_app_def
-  apply (wp assert_sp switch_if_required_to_reads_respects gets_cur_thread_ev | simp add: split_def)+
+  apply (wp assert_sp possible_switch_to_reads_respects gets_cur_thread_ev | simp add: split_def)+
   apply (wp as_user_set_register_reads_respects' set_thread_state_reads_respects
             set_notification_reads_respects set_thread_state_pas_refined
             set_ntfn_valid_objs hoare_vcg_disj_lift set_notification_pas_refined
@@ -262,20 +262,17 @@ lemma tcb_sched_action_equiv_but_for_labels:
 
 lemma possible_switch_to_equiv_but_for_labels:
   "\<lbrace>equiv_but_for_labels aag L st and (\<lambda>s. etcb_at (\<lambda>etcb. tcb_domain etcb \<noteq> cur_domain s) target s) and K (pasObjectAbs aag target \<in> L) and pas_refined aag\<rbrace>
-    possible_switch_to target on_same_prio
+    possible_switch_to target
     \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   apply (simp add: possible_switch_to_def)
   apply (wp tcb_sched_action_equiv_but_for_labels)
-          apply (rule hoare_pre_cont)
-         apply wp+
+       (* possible_switch_to does not modify scheduler action if target is in different domain *)
+       apply (rule hoare_pre_cont)
+      apply (wp tcb_sched_action_equiv_but_for_labels)
+      apply (rule hoare_pre_cont)
+     apply (wp tcb_sched_action_equiv_but_for_labels)+
   apply (clarsimp simp: etcb_at_def split: option.splits)
   done
-
-lemma switch_if_required_to_equiv_but_for_labels:
-  "\<lbrace>equiv_but_for_labels aag L st and (\<lambda>s. etcb_at (\<lambda>etcb. tcb_domain etcb \<noteq> cur_domain s) target s) and K (pasObjectAbs aag target \<in> L) and pas_refined aag\<rbrace>
-    switch_if_required_to target
-    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  by (simp only: possible_switch_to_equiv_but_for_labels switch_if_required_to_def)
 
 crunch etcb_at_cdom[wp]: set_thread_state_ext, set_thread_state, set_notification
    "\<lambda>s. etcb_at (P (cur_domain s)) t s"
@@ -297,7 +294,7 @@ lemma update_waiting_ntfn_equiv_but_for_labels:
   apply (wp static_imp_wp as_user_equiv_but_for_labels set_thread_state_runnable_equiv_but_for_labels
             set_thread_state_pas_refined set_notification_equiv_but_for_labels set_ntfn_valid_objs_at
             set_notification_pred_tcb_at set_notification_cte_wp_at set_notification_pas_refined
-            hoare_vcg_disj_lift switch_if_required_to_equiv_but_for_labels
+            hoare_vcg_disj_lift possible_switch_to_equiv_but_for_labels
         | wpc | simp add: split_def)+
   apply (clarsimp simp: conj_ac)
   apply(frule_tac P="receive_blocked_on ntfnptr" and t="hd list" in ntfn_queued_st_tcb_at')
@@ -678,7 +675,7 @@ lemma send_signal_reads_respects:
           | rule cancel_ipc_reads_respects_rewrite
           | wp_once
               set_notification_reads_respects
-              switch_if_required_to_reads_respects
+              possible_switch_to_reads_respects
               as_user_set_register_reads_respects'
               set_thread_state_pas_refined
               set_thread_state_pas_refined
@@ -741,7 +738,7 @@ lemma send_signal_reads_respects:
            | rule cancel_ipc_valid_rewrite
            | wp_once
                set_notification_equiv_but_for_labels
-               switch_if_required_to_equiv_but_for_labels
+               possible_switch_to_equiv_but_for_labels
                as_user_equiv_but_for_labels
                set_thread_state_runnable_equiv_but_for_labels
                set_thread_state_pas_refined
@@ -1735,7 +1732,7 @@ lemma receive_ipc_base_reads_respects:
   apply (intro allI impI)
   apply (wp static_imp_wp set_endpoint_reads_respects set_thread_state_reads_respects
            setup_caller_cap_reads_respects do_ipc_transfer_reads_respects
-           switch_if_required_to_reads_respects
+           possible_switch_to_reads_respects
            gets_cur_thread_ev set_thread_state_pas_refined
            | wpc
            | simp)+
@@ -1811,7 +1808,7 @@ lemma receive_ipc_reads_respects:
                   setup_caller_cap_reads_respects do_ipc_transfer_reads_respects
                   complete_signal_reads_respects thread_get_reads_respects
                   get_thread_state_reads_respects
-                  switch_if_required_to_reads_respects
+                  possible_switch_to_reads_respects
                   gets_cur_thread_ev set_thread_state_pas_refined
                   do_ipc_transfer_pas_refined
                   hoare_vcg_all_lift
@@ -1892,7 +1889,7 @@ lemma send_ipc_reads_respects:
                          set_endpoint_reads_respects
                          hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
                          get_endpoint_reads_respects get_endpoint_wp
-                         attempt_switch_to_reads_respects
+                         possible_switch_to_reads_respects
                          gets_cur_thread_ev set_thread_state_pas_refined
                          do_ipc_transfer_pas_refined
                      | wpc
@@ -2030,7 +2027,7 @@ lemma do_reply_transfer_reads_respects_f:
             get_mi_length
             cap_delete_one_silc_inv do_ipc_transfer_silc_inv
             set_thread_state_pas_refined thread_set_fault_pas_refined'
-            attempt_switch_to_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]] when_ev
+            possible_switch_to_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]] when_ev
         | wpc | simp split del: if_split | wp_once reads_respects_f[where aag=aag and st=st] | elim conjE | assumption | simp split del: if_split cong: if_cong
  | wp_once hoare_drop_imps)+
          apply(rule_tac Q="\<lambda> rv s. pas_refined aag s \<and> pas_cur_domain aag s \<and> invs s \<and> is_subject aag (cur_thread s) \<and> is_subject aag sender \<and> silc_inv aag st s \<and> is_subject aag receiver" in hoare_strengthen_post)
@@ -2360,7 +2357,7 @@ lemma cancel_ipc_blocked_globals_equiv:
   by (simp add: eq_commute)
 
 
-crunch globals_equiv[wp]: switch_if_required_to "globals_equiv (st :: det_ext state)"
+crunch globals_equiv[wp]: possible_switch_to "globals_equiv (st :: det_ext state)"
   (wp: tcb_sched_action_extended.globals_equiv reschedule_required_ext_extended.globals_equiv
        crunch_wps)
 
@@ -2371,7 +2368,7 @@ lemma send_signal_globals_equiv:
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding send_signal_def
   apply (wp set_notification_globals_equiv
-            switch_if_required_to_globals_equiv
+            possible_switch_to_globals_equiv
             set_thread_state_globals_equiv
             as_user_globals_equiv
             cancel_ipc_blocked_globals_equiv
@@ -2474,8 +2471,7 @@ lemma send_fault_ipc_valid_global_objs:
   done
 
 crunch valid_ko_at_arm[wp]: send_ipc "valid_ko_at_arm"
-  (wp: hoare_drop_imps hoare_vcg_if_lift2 dxo_wp_weak
-   ignore: switch_if_required_to)
+  (wp: hoare_drop_imps hoare_vcg_if_lift2 dxo_wp_weak)
 
 lemma send_fault_ipc_valid_ko_at_arm[wp]:
   "invariant (send_fault_ipc a b) valid_ko_at_arm"
