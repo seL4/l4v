@@ -785,9 +785,9 @@ definition
                           \<Rightarrow> ((domain \<times> nat) \<Rightarrow> machine_word) \<Rightarrow> bool"
 where
   "cbitmap_L2_relation cbitmap2 abitmap2 \<equiv>
-    \<forall>d i. ((d \<le> maxDomain \<and> i \<le> numPriorities div wordBits)
+    \<forall>d i. ((d \<le> maxDomain \<and> i < l2BitmapSize)
             \<longrightarrow> cbitmap2.[unat d].[i] = abitmap2 (d, i)) \<and>
-           ((\<not> (d \<le> maxDomain \<and> i \<le> numPriorities div wordBits))
+           ((\<not> (d \<le> maxDomain \<and> i < l2BitmapSize))
             \<longrightarrow>  abitmap2 (d, i) = 0)"
 
 end (* interpretation Arch . (*FIXME: arch_split*) *)

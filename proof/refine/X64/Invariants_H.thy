@@ -897,10 +897,12 @@ where
 
 definition
   (* for given domain and priority, the scheduler bitmap indicates a thread is in the queue *)
+  (* second level of the bitmap is stored in reverse for better cache locality in common case *)
   bitmapQ :: "domain \<Rightarrow> priority \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "bitmapQ d p s \<equiv> ksReadyQueuesL1Bitmap s d !! prioToL1Index p
-                     \<and> ksReadyQueuesL2Bitmap s (d, prioToL1Index p) !! unat (p && mask wordRadix)"
+                     \<and> ksReadyQueuesL2Bitmap s (d, invertL1Index (prioToL1Index p))
+                         !! unat (p && mask wordRadix)"
 
 definition
   valid_queues_no_bitmap :: "kernel_state \<Rightarrow> bool"
@@ -917,7 +919,8 @@ definition
   bitmapQ_no_L2_orphans :: "kernel_state \<Rightarrow> bool"
 where
   "bitmapQ_no_L2_orphans \<equiv> \<lambda>s.
-    \<forall>d i j. ksReadyQueuesL2Bitmap s (d, i) !! j \<longrightarrow> (ksReadyQueuesL1Bitmap s d !! i)"
+    \<forall>d i j. ksReadyQueuesL2Bitmap s (d, invertL1Index i) !! j \<and> i < l2BitmapSize
+            \<longrightarrow> (ksReadyQueuesL1Bitmap s d !! i)"
 
 definition
   (* If the scheduler finds a set bit in L1 of the bitmap, it must find some bit set in L2
@@ -929,8 +932,8 @@ definition
   bitmapQ_no_L1_orphans :: "kernel_state \<Rightarrow> bool"
 where
   "bitmapQ_no_L1_orphans \<equiv> \<lambda>s.
-    \<forall>d i. ksReadyQueuesL1Bitmap s d !! i \<longrightarrow> ksReadyQueuesL2Bitmap s (d, i) \<noteq> 0 \<and>
-                                             i < numPriorities div wordBits"
+    \<forall>d i. ksReadyQueuesL1Bitmap s d !! i \<longrightarrow> ksReadyQueuesL2Bitmap s (d, invertL1Index i) \<noteq> 0 \<and>
+                                             i < l2BitmapSize"
 
 definition
   valid_bitmapQ :: "kernel_state \<Rightarrow> bool"
@@ -1469,6 +1472,9 @@ lemma ntfn_splits[split]:
 -- ---------------------------------------------------------------------------
 
 section "Lemmas"
+
+schematic_goal wordBits_def': "wordBits = numeral ?n" (* arch-specific consequence *)
+  by (simp add: wordBits_def word_size)
 
 lemma valid_bound_ntfn'_None[simp]:
   "valid_bound_ntfn' None = \<top>"
@@ -3447,6 +3453,43 @@ lemma obj_at'_and:
   "obj_at' (P and P') t s = (obj_at' P t s \<and> obj_at' P' t s)"
   by (rule iffI, (clarsimp simp: obj_at'_def)+)
 
+lemma obj_at'_activatable_st_tcb_at':
+  "obj_at' (activatable' \<circ> tcbState) t = st_tcb_at' activatable' t"
+  by (rule ext, clarsimp simp: st_tcb_at'_def)
+
+lemma st_tcb_at'_runnable_is_activatable:
+  "st_tcb_at' runnable' t s \<Longrightarrow> st_tcb_at' activatable' t s"
+  by (simp add: st_tcb_at'_def)
+     (fastforce elim: obj_at'_weakenE)
+
+lemma tcb_at'_has_tcbPriority:
+ "tcb_at' t s \<Longrightarrow> \<exists>p. obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s"
+ by (clarsimp simp add: obj_at'_def)
+
+lemma pred_tcb_at'_Not:
+  "pred_tcb_at' f (Not o P) t s = (tcb_at' t s \<and> \<not> pred_tcb_at' f P t s)"
+  by (auto simp: pred_tcb_at'_def obj_at'_def)
+
+lemma obj_at'_conj_distrib:
+  "obj_at' (\<lambda>ko. P ko \<and> Q ko) p s \<Longrightarrow> obj_at' P p s \<and> obj_at' Q p s"
+  by (auto simp: obj_at'_def)
+
+lemma not_obj_at'_strengthen:
+  "obj_at' (Not \<circ> P) p s \<Longrightarrow> \<not> obj_at' P p s"
+  by (clarsimp simp: obj_at'_def)
+
+lemma not_pred_tcb_at'_strengthen:
+  "pred_tcb_at' f (Not \<circ> P) p s \<Longrightarrow> \<not> pred_tcb_at' f P p s"
+  by (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+
+lemma obj_at'_ko_at'_prop:
+  "ko_at' ko t s \<Longrightarrow> obj_at' P t s = P ko"
+  by (drule obj_at_ko_at', clarsimp simp: obj_at'_def)
+
+lemma idle_tcb_at'_split:
+  "idle_tcb_at' (\<lambda>p. P (fst p) \<and> Q (snd p)) t s \<Longrightarrow> st_tcb_at' P t s \<and> bound_tcb_at' Q t s"
+  by (clarsimp simp: pred_tcb_at'_def dest!: obj_at'_conj_distrib)
+
 lemma valid_queues_no_bitmap_def':
   "valid_queues_no_bitmap =
      (\<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)).
@@ -3554,9 +3597,37 @@ lemma invs_valid_global'[elim!]:
   "invs' s \<Longrightarrow> valid_global_refs' s"
   by (fastforce simp: invs'_def valid_state'_def)
 
+lemma invs_invs_no_cicd':
+  "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
+  by (simp add: invs'_to_invs_no_cicd'_def)
+
+lemma valid_queues_valid_bitmapQ:
+  "valid_queues s \<Longrightarrow> valid_bitmapQ s"
+  by (simp add: valid_queues_def)
+
+lemma valid_queues_valid_queues_no_bitmap:
+  "valid_queues s \<Longrightarrow> valid_queues_no_bitmap s"
+  by (simp add: valid_queues_def)
+
+lemma valid_queues_bitmapQ_no_L1_orphans:
+  "valid_queues s \<Longrightarrow> bitmapQ_no_L1_orphans s"
+  by (simp add: valid_queues_def)
+
+lemma invs'_bitmapQ_no_L1_orphans:
+  "invs' s \<Longrightarrow> bitmapQ_no_L1_orphans s"
+  by (drule invs_queues, simp add: valid_queues_def)
+
 lemma invs_ksCurDomain_maxDomain' [elim!]:
   "invs' s \<Longrightarrow> ksCurDomain s \<le> maxDomain"
   by (simp add: invs'_def valid_state'_def)
+
+lemma ksCurThread_active_not_idle':
+  "\<lbrakk> ct_active' s ; valid_idle' s \<rbrakk> \<Longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
+  apply clarsimp
+  apply (clarsimp simp: ct_in_state'_def valid_idle'_def)
+  apply (drule idle_tcb_at'_split)
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+  done
 
 lemma simple_st_tcb_at_state_refs_ofD':
   "st_tcb_at' simple' t s \<Longrightarrow> bound_tcb_at' (\<lambda>x. tcb_bound_refs' x = state_refs_of' s t) t s"
@@ -3645,6 +3716,39 @@ lemma valid_bitmap_valid_bitmapQ_exceptI[intro]:
   "valid_bitmapQ s \<Longrightarrow> valid_bitmapQ_except d p s"
   unfolding valid_bitmapQ_except_def valid_bitmapQ_def
   by simp
+
+lemma mask_wordRadix_less_wordBits:
+  assumes sz: "wordRadix \<le> size w"
+  shows "unat ((w::'a::len word) && mask wordRadix) < wordBits"
+proof -
+  note pow_num = semiring_numeral_class.power_numeral
+
+  { assume "wordRadix = size w"
+    hence ?thesis
+      by (fastforce intro!: unat_lt2p[THEN order_less_le_trans]
+                    simp: wordRadix_def wordBits_def' word_size)
+  } moreover {
+    assume "wordRadix < size w"
+    hence ?thesis unfolding wordRadix_def wordBits_def' mask_def
+    apply simp
+    apply (subst unat_less_helper, simp_all)
+    apply (rule word_and_le1[THEN order_le_less_trans])
+    apply (simp add: word_size bintrunc_mod2p)
+    apply (subst int_mod_eq', simp_all)
+     apply (rule order_le_less_trans[where y="2^wordRadix", simplified wordRadix_def], simp)
+     apply (simp del: pow_num)
+    apply (subst int_mod_eq', simp_all)
+    apply (rule order_le_less_trans[where y="2^wordRadix", simplified wordRadix_def], simp)
+    apply (simp del: pow_num)
+    done
+  }
+  ultimately show ?thesis using sz by fastforce
+qed
+
+lemma priority_mask_wordRadix_size:
+  "unat ((w::priority) && mask wordRadix) < wordBits"
+  by (rule mask_wordRadix_less_wordBits, simp add: wordRadix_def word_size)
+
 end
 (* The normalise_obj_at' tactic was designed to simplify situations similar to:
   ko_at' ko p s \<Longrightarrow>

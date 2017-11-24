@@ -326,7 +326,8 @@ global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
 context Arch begin global_naming X64
 
 lemma handle_hyp_fault_valid_sched[wp, DetSchedSchedule_AI_assms]:
-  "\<lbrace>valid_sched and invs and st_tcb_at active t and not_queued t and scheduler_act_not t\<rbrace>
+  "\<lbrace>valid_sched and invs and st_tcb_at active t and not_queued t and scheduler_act_not t
+     and (ct_active or ct_idle)\<rbrace>
    handle_hypervisor_fault t fault \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   by (cases fault; wpsimp wp: handle_fault_valid_sched simp: valid_fault_def)
 

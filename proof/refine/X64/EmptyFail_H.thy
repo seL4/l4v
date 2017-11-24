@@ -181,7 +181,7 @@ lemma ignoreFailure_empty_fail[intro!, wp, simp]:
   "empty_fail x \<Longrightarrow> empty_fail (ignoreFailure x)"
   by (simp add: ignoreFailure_def empty_fail_catch)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isBlocked, switchIfRequiredTo
+crunch (empty_fail) empty_fail[intro!, wp, simp]: cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isBlocked, possibleSwitchTo, tcbSchedAppend
 (simp: Let_def)
 
 crunch (empty_fail) "_H_empty_fail": "ThreadDecls_H.suspend"
@@ -289,12 +289,12 @@ crunch (empty_fail) empty_fail[intro!, wp, simp]: chooseThread
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]: getDomainTime
 crunch (empty_fail) empty_fail[intro!, wp, simp]: nextDomain
-
+crunch (empty_fail) empty_fail[intro!, wp, simp]: scheduleSwitchThreadFastfail, isHighestPrio
 
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   "empty_fail schedule"
   apply (simp add: schedule_def)
-  apply (simp | wp | wpc)+
+  apply (clarsimp simp: scheduleChooseNewThread_def split: if_split | wp | wpc)+
   done
 
 crunch (empty_fail) empty_fail[wp, simp]: setMRs, setMessageInfo

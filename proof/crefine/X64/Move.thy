@@ -117,5 +117,66 @@ lemma ksPSpace_update_eq_ExD:
      \<Longrightarrow> \<exists>ps. s = t \<lparr> ksPSpace := ps \<rparr>"
   by (erule exI)
 
+lemma threadGet_wp'':
+  "\<lbrace>\<lambda>s. \<forall>v. obj_at' (\<lambda>tcb. f tcb = v) thread s \<longrightarrow> P v s\<rbrace> threadGet f thread \<lbrace>P\<rbrace>"
+  apply (rule hoare_pre)
+  apply (rule threadGet_wp)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemma tcbSchedEnqueue_queued_queues_inv:
+  "\<lbrace>\<lambda>s.  obj_at' tcbQueued t s \<and> P (ksReadyQueues s) \<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
+  unfolding tcbSchedEnqueue_def unless_def
+  apply (wpsimp simp: if_apply_def2 wp: threadGet_wp)
+  apply normalise_obj_at'
+  done
+
+lemma addToBitmap_sets_L1Bitmap_same_dom:
+  "\<lbrace>\<lambda>s. p \<le> maxPriority \<and> d' = d \<rbrace> addToBitmap d' p
+       \<lbrace>\<lambda>rv s. ksReadyQueuesL1Bitmap s d \<noteq> 0 \<rbrace>"
+  unfolding addToBitmap_def bitmap_fun_defs
+  apply wpsimp
+  apply (clarsimp simp: maxPriority_def numPriorities_def word_or_zero le_def
+                        prioToL1Index_max[simplified wordRadix_def, simplified])
+  done
+
+crunch ksReadyQueuesL1Bitmap[wp]: setQueue "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+
+lemma tcb_in_cur_domain'_def':
+  "tcb_in_cur_domain' t = (\<lambda>s. obj_at' (\<lambda>tcb. tcbDomain tcb = ksCurDomain s) t s)"
+  unfolding tcb_in_cur_domain'_def
+  by (auto simp: obj_at'_def)
+
+lemma sts_running_ksReadyQueuesL1Bitmap[wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace>
+   setThreadState Structures_H.thread_state.Running t
+   \<lbrace>\<lambda>_ s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+  unfolding setThreadState_def
+  apply wp
+       apply (rule hoare_pre_cont)
+      apply (wpsimp simp: if_apply_def2
+                    wp: hoare_drop_imps hoare_vcg_disj_lift threadSet_tcbState_st_tcb_at')+
+  done
+
+lemma sts_running_ksReadyQueuesL2Bitmap[wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace>
+   setThreadState Structures_H.thread_state.Running t
+   \<lbrace>\<lambda>_ s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+  unfolding setThreadState_def
+  apply wp
+       apply (rule hoare_pre_cont)
+      apply (wpsimp simp: if_apply_def2
+                    wp: hoare_drop_imps hoare_vcg_disj_lift threadSet_tcbState_st_tcb_at')+
+  done
+
+lemma asUser_obj_at_not_queued[wp]:
+  "\<lbrace>obj_at' (\<lambda>tcb. \<not> tcbQueued tcb) p\<rbrace> asUser t m \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. \<not> tcbQueued tcb) p\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wp hoare_drop_imps | simp)+
+  done
+
+lemma ko_at'_obj_at'_field:
+  "ko_at' ko (t s) s \<Longrightarrow> obj_at' (\<lambda>ko'. f ko' = f ko) (t s) s"
+  by (erule obj_at'_weakenE, simp)
 
 end
