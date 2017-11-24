@@ -1672,12 +1672,6 @@ lemma return_modify:
   "return () = modify id"
   by (simp add: return_def simpler_modify_def)
 
-lemma hoare_vcg_imp_lift:
-  "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. P' s \<or> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>"
-  apply (simp only: imp_conv_disj)
-  apply (erule(1) hoare_vcg_disj_lift)
-  done
-
 lemma liftE_liftM_liftME:
   "liftE (liftM f m) = liftME f (liftE m)"
   by (simp add: liftE_liftM liftME_liftM liftM_def)

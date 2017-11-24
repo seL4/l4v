@@ -241,6 +241,21 @@ lemma monadic_rewrite_symb_exec_l':
   apply (rule monadic_rewrite_symb_exec_l'', assumption+)
   done
 
+(* FIXME this should replace monadic_rewrite_symb_exec_l' as it preserves names,
+   and this approach should be used everywhere else anyhow, however that breaks proofs
+   relying on arbitrarily generated names, so will be dealt with in future *)
+lemma monadic_rewrite_symb_exec_l'_preserve_names:
+  "\<lbrakk> \<And>P. \<lbrace>P\<rbrace> m \<lbrace>\<lambda>r. P\<rbrace>; empty_fail m;
+     \<not> F \<longrightarrow> no_fail P' m;
+     \<And>rv. monadic_rewrite F E (Q rv) (x rv) y;
+     \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
+      \<Longrightarrow> monadic_rewrite F E (P and P') (m >>= (\<lambda>rv. x rv)) y"
+  by (rule monadic_rewrite_symb_exec_l')
+
+(* FIXME merge into below upon change-over desribed above *)
+lemmas monadic_rewrite_symb_exec_l'_TT
+    = monadic_rewrite_symb_exec_l'_preserve_names[where P'="\<top>" and F=True, simplified]
+
 lemmas monadic_rewrite_symb_exec_l
     = monadic_rewrite_symb_exec_l''[where F=True and P'=\<top>, simplified]
       monadic_rewrite_symb_exec_l''[where F=False, simplified simp_thms]

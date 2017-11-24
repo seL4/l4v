@@ -5489,6 +5489,14 @@ proof -
   thus ?thesis by simp
 qed
 
+lemma shiftl_1_not_0:
+  "n < LENGTH('a) \<Longrightarrow> (1::'a::len word) << n \<noteq> 0"
+  by (simp add: shiftl_t2n)
+
+lemma max_word_not_0:
+  "max_word \<noteq> 0"
+  by (simp add: max_word_minus)
+
 (* Miscellaneous conditional injectivity rules. *)
 
 lemma drop_eq_mono:

@@ -448,4 +448,20 @@ lemma nat_divide_less_eq:
   shows "0 < c \<Longrightarrow> (b div c < a) = (b < a * c)"
   using td_gal_lt by blast
 
+lemma strengthen_imp_same_first_conj:
+  "(b \<and> (a \<longrightarrow> c) \<and> (a' \<longrightarrow> c')) \<Longrightarrow> ((a \<longrightarrow> b \<and> c) \<and> (a' \<longrightarrow> b \<and> c'))"
+  by blast
+
+lemma conj_impD:
+  "a \<and> b \<Longrightarrow> a \<longrightarrow> b"
+  by blast
+
+lemma set_list_mem_nonempty:
+  "x \<in> set xs \<Longrightarrow> xs \<noteq> []"
+  by auto
+
+lemma strenghten_False_imp:
+  "\<not>P \<Longrightarrow> P \<longrightarrow> Q"
+  by blast
+
 end

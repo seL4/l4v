@@ -1105,4 +1105,9 @@ lemma corres_symb_exec_catch_r:
   apply (simp add: isLeft_def split: sum.split_asm)
   done
 
+lemma corres_return_eq_same:
+  "a = b \<Longrightarrow> corres_underlying srel nf' nf op= \<top> \<top> (return a) (return b)"
+  apply (simp add: corres_underlying_def return_def)
+  done
+
 end
