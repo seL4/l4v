@@ -99,7 +99,7 @@ crunch ksDomSchedule_inv[wp]: performInvocation "\<lambda>s. P (ksDomSchedule s)
    simp: unless_def crunch_simps filterM_mapM ignore: getObject loadObject)
 
 crunch ksDomSchedule_inv[wp]: schedule "\<lambda>s. P (ksDomSchedule s)"
-  (ignore: setNextPC threadSet simp:crunch_simps wp:findM_inv)
+  (ignore: setNextPC threadSet simp:crunch_simps bitmap_fun_defs wp:findM_inv hoare_drop_imps)
 
 crunch ksDomSchedule_inv[wp]: activateThread "\<lambda>s. P (ksDomSchedule s)"
 
@@ -132,7 +132,7 @@ crunch ksDomainTime[wp]: setExtraBadge, cteInsert "\<lambda>s. P (ksDomainTime s
 
 crunch ksDomainTime[wp]: transferCapsToSlots "\<lambda>s. P (ksDomainTime s)"
 
-crunch ksDomainTime[wp]: setupCallerCap, switchIfRequiredTo, doIPCTransfer, attemptSwitchTo "\<lambda>s. P (ksDomainTime s)"
+crunch ksDomainTime[wp]: setupCallerCap, doIPCTransfer, possibleSwitchTo "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: constOnFailure)
 
 crunch ksDomainTime_inv[wp]: setEndpoint, setNotification, storePTE, storePDE
@@ -315,11 +315,11 @@ lemma schedule_domain_time_left':
      (\<lambda>s. ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread) \<rbrace>
    ThreadDecls_H.schedule
    \<lbrace>\<lambda>_ s. 0 < ksDomainTime s \<rbrace>"
-  unfolding schedule_def
+  unfolding schedule_def scheduleChooseNewThread_def
   supply word_neq_0_conv[simp]
   apply (wp | wpc)+
-      apply (rule_tac Q="\<lambda>_. valid_domain_list'" in hoare_post_imp, clarsimp)
-      apply (wp | clarsimp)+
+       apply (rule_tac Q="\<lambda>_. valid_domain_list'" in hoare_post_imp, clarsimp)
+       apply (wp | clarsimp | wp_once hoare_drop_imps)+
   done
 
 lemma handleEvent_ksDomainTime_inv:
@@ -329,7 +329,7 @@ lemma handleEvent_ksDomainTime_inv:
   apply (cases e, simp_all)
       apply (rename_tac syscall)
       apply (case_tac syscall, simp_all add: handle_send_def)
-             apply (wp |simp add: handleEvent_def |wpc)+
+             apply (wp |simp add: handleEvent_def cong: if_cong|wpc)+
   done
 
 lemma callKernel_domain_time_left:

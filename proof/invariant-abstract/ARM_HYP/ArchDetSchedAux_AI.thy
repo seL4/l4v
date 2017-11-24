@@ -46,8 +46,6 @@ crunch idle_thread[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (idl
             wrap_ext_det_ext_ext_def mapM_x_defsym
     ignore: freeMemory retype_region_ext)
 
-crunch inv[wp]: get_tcb_queue, ethread_get "\<lambda>s. P s"
-
 lemma tcb_sched_action_valid_idle_etcb:
   "\<lbrace>valid_idle_etcb\<rbrace>
      tcb_sched_action foo thread

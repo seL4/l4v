@@ -221,8 +221,8 @@ lemma restart_corres:
       apply (rule corres_split_nor [OF _ cancel_ipc_corres])
         apply (rule corres_split_nor [OF _ setup_reply_master_corres])
           apply (rule corres_split_nor [OF _ sts_corres])
-             apply (rule corres_split [OF switchIfRequiredTo_corres tcbSchedEnqueue_corres])
-              apply (wp_trace set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at' sts_valid_queues sts_st_tcb'  | clarsimp simp: valid_tcb_state'_def)+
+             apply (rule corres_split [OF possibleSwitchTo_corres tcbSchedEnqueue_corres])
+              apply (wp set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at' sts_valid_queues sts_st_tcb'  | clarsimp simp: valid_tcb_state'_def)+
        apply (rule_tac Q="\<lambda>rv. valid_sched and cur_tcb" in hoare_strengthen_post)
         apply wp
        apply (simp add: valid_sched_def valid_sched_action_def)
@@ -247,7 +247,7 @@ lemma setupReplyMaster_sch_act_simple[wp]:
 lemma restart_invs':
   "\<lbrace>invs' and ex_nonz_cap_to' t and (\<lambda>s. t \<noteq> ksIdleThread s)\<rbrace>
    ThreadDecls_H.restart t \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: restart_def isBlocked_def2 switchIfRequiredTo_def)
+  apply (simp add: restart_def isBlocked_def2)
   apply (wp setThreadState_nonqueued_state_update
             cancelIPC_simple setThreadState_st_tcb
        | wp_once sch_act_simple_lift)+

@@ -2494,6 +2494,11 @@ method solve_rf_sr_vcpu_update = solves \<open>
   , (erule (1) cmap_relation_updI; fastforce simp: cvcpu_relation_regs_def)
   \<close>
 
+lemma rf_sr_sched_action_relation:
+  "(s, s') \<in> rf_sr
+   \<Longrightarrow> cscheduler_action_relation (ksSchedulerAction s) (ksSchedulerAction_' (globals s'))"
+  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+
 end
 end
 

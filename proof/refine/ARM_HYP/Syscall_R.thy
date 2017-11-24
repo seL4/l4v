@@ -893,14 +893,6 @@ lemma isReply_awaiting_reply':
   "isReply st = awaiting_reply' st"
   by (case_tac st, (clarsimp simp add: isReply_def)+)
 
-lemma obj_at'_conj_distrib:
-  "obj_at' (\<lambda>ko. P ko \<and> Q ko) p s \<Longrightarrow> obj_at' P p s \<and> obj_at' Q p s"
-  by (auto simp: obj_at'_def)
-
-lemma idle_tcb_at'_split:
-  "idle_tcb_at' (\<lambda>p. P (fst p) \<and> Q (snd p)) t s \<Longrightarrow> st_tcb_at' P t s \<and> bound_tcb_at' Q t s"
-  by (clarsimp simp: pred_tcb_at'_def dest!: obj_at'_conj_distrib)
-
 lemma doReply_invs[wp]:
   "\<lbrace>tcb_at' t and tcb_at' t' and
     cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t False) slot and
@@ -2087,14 +2079,12 @@ crunch sane [wp]: transferCaps "sch_act_sane"
    ignore: transferCapsToSlots)
 
 lemma possibleSwitchTo_sane:
-  "\<lbrace>\<lambda>s. sch_act_sane s \<and> t \<noteq> ksCurThread s\<rbrace> possibleSwitchTo t b \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
-  apply (simp add: possibleSwitchTo_def setSchedulerAction_def curDomain_def cong: if_cong)
+  "\<lbrace>\<lambda>s. sch_act_sane s \<and> t \<noteq> ksCurThread s\<rbrace> possibleSwitchTo t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
+  apply (simp add: possibleSwitchTo_def setSchedulerAction_def curDomain_def
+              cong: if_cong)
   apply (wp hoare_drop_imps | wpc)+
   apply (simp add: sch_act_sane_def)
   done
-
-lemmas attemptSwitchTo_sane
-    = possibleSwitchTo_sane[where b=True, folded attemptSwitchTo_def]
 
 crunch sane [wp]: handleFaultReply sch_act_sane
   (  wp: threadGet_inv hoare_drop_imps crunch_wps
@@ -2110,7 +2100,7 @@ lemma doReplyTransfer_sane:
   "\<lbrace>\<lambda>s. sch_act_sane s \<and> t' \<noteq> ksCurThread s\<rbrace>
   doReplyTransfer t t' callerSlot \<lbrace>\<lambda>rv. sch_act_sane\<rbrace>"
   apply (simp add: doReplyTransfer_def liftM_def)
-  apply (wp attemptSwitchTo_sane hoare_drop_imps hoare_vcg_all_lift|wpc)+
+  apply (wp possibleSwitchTo_sane hoare_drop_imps hoare_vcg_all_lift|wpc)+
   apply simp
   done
 
@@ -2147,10 +2137,10 @@ proof -
   have astct: "\<And>t p.
        \<lbrace>(\<lambda>s. ksCurThread s \<notin> set(ksReadyQueues s p) \<and> sch_act_sane s)
              and (\<lambda>s. ksCurThread s \<noteq> t)\<rbrace>
-       attemptSwitchTo t \<lbrace>\<lambda>rv s. ksCurThread s \<notin> set(ksReadyQueues s p)\<rbrace>"
+       possibleSwitchTo t \<lbrace>\<lambda>rv s. ksCurThread s \<notin> set(ksReadyQueues s p)\<rbrace>"
     apply (rule hoare_weaken_pre)
-     apply (wps attemptSwitchTo_ct')
-     apply (wp attemptSwitchTo_ksQ)
+     apply (wps possibleSwitchTo_ct')
+     apply (wp possibleSwitchTo_ksQ')
     apply (clarsimp simp: sch_act_sane_def)
     done
   have stsct: "\<And>t st p.
@@ -2202,6 +2192,10 @@ lemma handleReply_ct_not_ksQ:
     apply (wp getSlotCap_cte_wp_at getThreadCallerSlot_inv)+
   apply (clarsimp)
   done
+
+crunch valid_etcbs[wp]: possible_switch_to  "valid_etcbs"
+crunch valid_etcbs[wp]: handle_recv "valid_etcbs"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma hrw_corres:
   "corres dc (einvs and ct_running)
@@ -2421,6 +2415,41 @@ lemma ct_active_not_idle'[simp]:
    apply (fastforce simp: invs'_def valid_state'_def ct_in_state'_def
                    elim: pred_tcb'_weakenE)+
   done
+
+lemma deleteCallerCap_st_tcb_at_runnable[wp]:
+  "\<lbrace>st_tcb_at' runnable' t\<rbrace> deleteCallerCap t' \<lbrace>\<lambda>rv. st_tcb_at' runnable' t\<rbrace>"
+  apply (simp add: deleteCallerCap_def getThreadCallerSlot_def
+                   locateSlot_conv)
+  apply (wp cteDeleteOne_tcb_at_runnable' hoare_drop_imps | simp)+
+  done
+
+lemma handleRecv_st_tcb_at':
+  "\<lbrace>invs' and st_tcb_at' runnable' t and (\<lambda>s. ksCurThread s \<noteq> t)\<rbrace>
+   handleRecv True
+   \<lbrace>\<lambda>rv. st_tcb_at' runnable' t\<rbrace>"
+  unfolding handleRecv_def
+  apply (wp hf_makes_runnable_simple' rai_makes_runnable_simple')
+  apply simp
+  apply (wp hf_makes_runnable_simple' rai_makes_runnable_simple')
+  apply (wpc ; clarsimp)
+    apply (wp rai_makes_runnable_simple' | wpc | simp)+
+apply (wp hoare_drop_imps)[1]
+    apply (wp rai_makes_runnable_simple' ri_makes_runnable_simple' | wpc | simp)+
+
+apply (wp hoare_drop_imps)[1]
+apply clarsimp
+apply wp+
+apply simp
+done
+
+crunch ksCurThread[wp]:
+  handleFault,receiveSignal,receiveIPC,asUser "\<lambda>s. P (ksCurThread s)"
+  (wp: hoare_drop_imps crunch_wps simp: crunch_simps)
+
+lemma handleRecv_ksCurThread[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurThread s) \<rbrace> handleRecv b \<lbrace>\<lambda>rv s. P (ksCurThread s) \<rbrace>"
+  unfolding handleRecv_def
+  by ((simp, wp hoare_drop_imps) | wpc | wpsimp wp: hoare_drop_imps)+
 
 lemma he_invs'[wp]:
   "\<lbrace>invs' and

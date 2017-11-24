@@ -15,17 +15,6 @@ begin
 context kernel_m
 begin
 
-lemma switchIfRequiredTo_ccorres [corres]:
-  "ccorres dc xfdc (valid_queues and valid_objs' and tcb_at' thread
-                          and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and st_tcb_at' runnable' thread)
-                   (UNIV \<inter> \<lbrace>\<acute>target = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
-           (switchIfRequiredTo thread)
-           (Call switchIfRequiredTo_'proc)"
-  apply (cinit lift: target_')
-   apply (ctac add: possibleSwitchTo_ccorres)
-  apply clarsimp
-  done
-
 declare if_split [split del]
 
 lemma empty_fail_getEndpoint:

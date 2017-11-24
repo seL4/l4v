@@ -443,15 +443,19 @@ lemma dmo_scheduler_act_sane[wp]:
   unfolding scheduler_act_sane_def
   by (rule hoare_lift_Pf[where f=cur_thread]; wp)
 
+lemma dmo_ct_idle[wp]:
+  "\<lbrace>ct_idle\<rbrace> do_machine_op f \<lbrace>\<lambda>rv. ct_idle\<rbrace>"
+  unfolding ct_in_state_def by wp
+
 lemma vgic_maintenance_irq_valid_sched[wp]:
   "\<lbrace>valid_sched and invs and scheduler_act_sane and ct_not_queued\<rbrace>
   vgic_maintenance \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   unfolding vgic_maintenance_def
             get_gic_vcpu_ctrl_misr_def get_gic_vcpu_ctrl_eisr1_def get_gic_vcpu_ctrl_eisr0_def
-  apply (wpsimp wp: handle_fault_valid_sched thread_get_wp'
+  apply (wpsimp wp: handle_fault_valid_sched thread_get_wp' hoare_vcg_disj_lift
               simp: do_machine_op_bind valid_fault_def submonad_do_machine_op.gets
          | intro conjI impI)+
-  apply (clarsimp simp: st_tcb_at_def obj_at_def runnable_eq)
+   apply (clarsimp simp: st_tcb_at_def obj_at_def runnable_eq ct_in_state_def)+
   done
 
 lemma handle_reserved_irq_valid_sched:
@@ -460,7 +464,8 @@ lemma handle_reserved_irq_valid_sched:
   unfolding handle_reserved_irq_def by (wpsimp simp: non_kernel_IRQs_def)
 
 lemma handle_hyp_fault_valid_sched[wp]:
-  "\<lbrace>valid_sched and invs and st_tcb_at active t and not_queued t and scheduler_act_not t\<rbrace>
+  "\<lbrace>valid_sched and invs and st_tcb_at active t and not_queued t and scheduler_act_not t
+      and (ct_active or ct_idle)\<rbrace>
     handle_hypervisor_fault t fault \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   by (cases fault; wpsimp wp: handle_fault_valid_sched simp: valid_fault_def)
 

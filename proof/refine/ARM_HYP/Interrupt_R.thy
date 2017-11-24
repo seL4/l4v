@@ -449,14 +449,6 @@ lemma tcbSchedAppend_valid_objs':
   apply (clarsimp simp add:obj_at'_def typ_at'_def)
   done
 
-lemma tcbSchedAppend_sch_act_wf:
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace> tcbSchedAppend thread
-  \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add:tcbSchedAppend_def bitmap_fun_defs)
-  apply (wp hoare_unless_wp setQueue_sch_act threadGet_wp|simp)+
-  apply (fastforce simp:typ_at'_def obj_at'_def)
-  done
-
 lemma valid_tcb_tcbTimeSlice_update[simp]:
   "valid_tcb' (tcbTimeSlice_update (\<lambda>_. timeSlice) tcb) s = valid_tcb' tcb s"
   by (simp add:valid_tcb'_def tcb_cte_cases_def)
@@ -959,16 +951,19 @@ lemma rescheduleRequired_valid_irq_node'[wp]:
   apply simp
   done
 
-lemma rescheduleRequired_cur_tcb'[wp]:
-  "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> rescheduleRequired
-  \<lbrace>\<lambda>rv s. cur_tcb' s \<rbrace>"
-  apply (simp add:rescheduleRequired_def)
-  apply wp
-    apply (simp add:cur_tcb'_def)
-   apply (wp|wpc)+
-  apply simp
-  done
+(* catch up tcbSchedAppend to tcbSchedEnqueue, which has these from crunches on possibleSwitchTo *)
+crunch ifunsafe[wp]: tcbSchedAppend if_unsafe_then_cap'
+crunch irq_handlers'[wp]: tcbSchedAppend valid_irq_handlers'
+  (simp: unless_def tcb_cte_cases_def wp: crunch_wps)
+crunch irq_states'[wp]: tcbSchedAppend valid_irq_states'
+crunch pde_mappigns'[wp]: tcbSchedAppend valid_pde_mappings'
+crunch irqs_masked'[wp]: tcbSchedAppend irqs_masked'
+  (simp: unless_def wp: crunch_wps)
+crunch ct[wp]: tcbSchedAppend cur_tcb'
+  (wp: cur_tcb_lift crunch_wps)
 
+crunch cur_tcb'[wp]: tcbSchedAppend cur_tcb'
+  (simp: unless_def wp: crunch_wps)
 
 lemma timerTick_invs'[wp]:
   "\<lbrace>invs'\<rbrace> timerTick \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -978,26 +973,23 @@ lemma timerTick_invs'[wp]:
             tcbSchedAppend_invs_but_ct_not_inQ'
        | simp add: tcb_cte_cases_def numDomains_def invs_ChooseNewThread
        | wpc)+
-     apply (simp add:decDomainTime_def)
-     apply wp
-    apply simp
-    apply (rule_tac Q="\<lambda>rv. invs'"
-      in hoare_post_imp)
+      apply (simp add:decDomainTime_def)
+      apply wp
+     apply simp
+     apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
      apply (clarsimp simp add:invs'_def valid_state'_def)
-    apply (wp threadGet_wp threadSet_cur threadSet_timeslice_invs
-      rescheduleRequired_all_invs_but_ct_not_inQ
-      hoare_vcg_imp_lift threadSet_ct_idle_or_in_cur_domain'
-      |wpc | simp)+
+     apply wpc
+          apply (wp add: threadGet_wp threadSet_cur threadSet_timeslice_invs
+                               rescheduleRequired_all_invs_but_ct_not_inQ
+                               hoare_vcg_imp_lift threadSet_ct_idle_or_in_cur_domain'
+                          del: tcbSchedAppend_sch_act_wf)+
              apply (rule hoare_strengthen_post[OF tcbSchedAppend_invs_but_ct_not_inQ'])
-             apply (clarsimp simp:valid_pspace'_def sch_act_wf_weak)
-            apply wp
-           apply (wp threadSet_pred_tcb_no_state threadSet_tcbDomain_triv
-             threadSet_valid_objs' threadSet_timeslice_invs
-             | simp)+
-          apply (wp threadGet_wp)
-   apply (wp gts_wp')+
-  apply (clarsimp simp:invs'_def st_tcb_at'_def obj_at'_def
-    valid_state'_def numDomains_def)
+             apply (wpsimp simp: valid_pspace'_def sch_act_wf_weak)+
+           apply (wpsimp wp: threadSet_pred_tcb_no_state threadSet_tcbDomain_triv
+                             threadSet_valid_objs' threadSet_timeslice_invs)+
+       apply (wp threadGet_wp)
+      apply (wp gts_wp')+
+  apply (clarsimp simp: invs'_def st_tcb_at'_def obj_at'_def valid_state'_def numDomains_def)
   done
 
 lemma resetTimer_invs'[wp]:

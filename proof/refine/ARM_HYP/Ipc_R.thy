@@ -2125,12 +2125,6 @@ crunch typ_at'[wp]: handleFaultReply "\<lambda>s. P (typ_at' T p s)"
 
 lemmas hfr_typ_ats[wp] = typ_at_lifts [OF handleFaultReply_typ_at']
 
-crunch tcb_at'[wp]: attemptSwitchTo "tcb_at' t"
-  (wp: crunch_wps)
-
-crunch valid_pspace'[wp]: attemptSwitchTo valid_pspace'
-  (wp: crunch_wps)
-
 lemmas getSanitiseRegisterInfo_def2 = getSanitiseRegisterInfo_def[folded archThreadGet_def]
 
 lemma getSanitiseRegisterInfo_ct'[wp]:
@@ -2147,16 +2141,13 @@ lemma doIPCTransfer_sch_act_simple [wp]:
 lemma possibleSwitchTo_invs'[wp]:
   "\<lbrace>invs' and st_tcb_at' runnable' t
           and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t)\<rbrace>
-   possibleSwitchTo t b \<lbrace>\<lambda>rv. invs'\<rbrace>"
+   possibleSwitchTo t \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: possibleSwitchTo_def curDomain_def)
-  apply (wp static_imp_wp ssa_invs' threadGet_wp | wpc | simp)+
-  apply (auto simp: obj_at'_def tcb_in_cur_domain'_def)
+  apply (wp tcbSchedEnqueue_invs' ssa_invs')
+       apply (rule hoare_post_imp[OF _ rescheduleRequired_sa_cnt])
+      apply (wpsimp wp: ssa_invs' threadGet_wp)+
+  apply (clarsimp dest!: obj_at_ko_at' simp: tcb_in_cur_domain'_def obj_at'_def)
   done
-
-crunch invs'[wp]: attemptSwitchTo "invs'"
-
-crunch cte_wp_at'[wp]: attemptSwitchTo "cte_wp_at' P p"
-  (wp: crunch_wps)
 
 crunch cur' [wp]: isFinalCapability "\<lambda>s. P (cur_tcb' s)"
   (simp: crunch_simps unless_when
@@ -2417,6 +2408,23 @@ crunch valid_objs'[wp]: archThreadGet, handleFaultReply valid_objs'
 lemma valid_tcb'_tcbFault_update[simp]: "\<And>tcb s. valid_tcb' tcb s \<Longrightarrow> valid_tcb' (tcbFault_update f tcb) s"
   by (clarsimp simp: valid_tcb'_def  tcb_cte_cases_def)
 
+lemma restart_rewrite:
+  "(if rst then
+     do y \<leftarrow> setThreadState Structures_H.Restart receiver;
+        y \<leftarrow> possibleSwitchTo receiver;
+        return (Some receiver)
+     od
+   else
+     do y \<leftarrow> setThreadState Structures_H.Inactive receiver;
+        return None
+     od) =
+  do
+   setThreadState (if rst then Structures_H.Restart else Structures_H.Inactive) receiver;
+   when rst (possibleSwitchTo receiver);
+   return (if rst then Some receiver else None)
+  od"
+  by (simp add: when_def)
+
 lemma do_reply_transfer_corres:
   "corres dc
      (einvs and tcb_at receiver and tcb_at sender
@@ -2425,7 +2433,7 @@ lemma do_reply_transfer_corres:
             and valid_pspace' and cte_at' (cte_map slot))
      (do_reply_transfer sender receiver slot)
      (doReplyTransfer sender receiver (cte_map slot))"
-  apply (simp add: do_reply_transfer_def doReplyTransfer_def)
+  apply (simp add: do_reply_transfer_def doReplyTransfer_def restart_rewrite cong: option.case_cong)
   apply (rule corres_split' [OF _ _ gts_sp gts_sp'])
    apply (rule corres_guard_imp)
      apply (rule gts_corres, (clarsimp simp add: st_tcb_at_tcb_at)+)
@@ -2459,9 +2467,10 @@ lemma do_reply_transfer_corres:
        apply (rule corres_split [OF _ dit_corres])
          apply (rule corres_split [OF _ cap_delete_one_corres])
            apply (rule corres_split [OF _ sts_corres])
-              apply (rule attemptSwitchTo_corres)
-             apply (wp set_thread_state_runnable_valid_sched set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at' sts_st_tcb' sts_valid_queues sts_valid_objs' delete_one_tcbDomain_obj_at'
-                 | simp add: valid_tcb_state'_def)+
+              apply (rule possibleSwitchTo_corres)
+             apply simp
+            apply (wp set_thread_state_runnable_valid_sched set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at' sts_st_tcb' sts_valid_queues sts_valid_objs' delete_one_tcbDomain_obj_at'
+                   | simp add: valid_tcb_state'_def)+
         apply (strengthen cte_wp_at_reply_cap_can_fast_finalise)
         apply (wp hoare_vcg_conj_lift)
          apply (rule hoare_strengthen_post [OF do_ipc_transfer_non_null_cte_wp_at])
@@ -2486,6 +2495,7 @@ lemma do_reply_transfer_corres:
     apply (clarsimp simp: invs_def valid_sched_def valid_sched_action_def)
    apply (simp)
    apply (auto simp: invs'_def valid_state'_def)[1]
+
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ cap_delete_one_corres])
       apply (rule corres_split_mapr [OF _ get_mi_corres])
@@ -2500,16 +2510,15 @@ lemma do_reply_transfer_corres:
                                            and Invariants_H.valid_queues and valid_queues' and valid_objs'"
                                    in corres_guard_imp)
                        apply (case_tac rvb, simp_all)[1]
-                        apply (fold dc_def)
                         apply (rule corres_guard_imp)
                           apply (rule corres_split [OF _ sts_corres])
-                             apply (simp add: when_def)
-                             apply (rule attemptSwitchTo_corres)
-                            apply (wp static_imp_wp static_imp_conj_wp set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at'
-                                       sts_st_tcb' sts_valid_queues | simp | force simp: valid_sched_def valid_sched_action_def valid_tcb_state'_def)+
+                      apply (fold dc_def, rule possibleSwitchTo_corres)
+                               apply simp
+                              apply (wp static_imp_wp static_imp_conj_wp set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at'
+                                        sts_st_tcb' sts_valid_queues | simp | force simp: valid_sched_def valid_sched_action_def valid_tcb_state'_def)+
                        apply (rule corres_guard_imp)
-                         apply (rule sts_corres)
-                         apply (simp_all)[20]
+                      apply (rule sts_corres)
+                      apply (simp_all)[20]
                    apply (clarsimp simp add: tcb_relation_def fault_rel_optionation_def
                                              tcb_cap_cases_def tcb_cte_cases_def exst_same_def)+
                   apply (wp threadSet_cur weak_sch_act_wf_lift_linear threadSet_pred_tcb_no_state
@@ -2660,11 +2669,11 @@ lemma setupCallerCap_weak_sch_act_from_sch_act:
   apply (clarsimp simp: weak_sch_act_wf_def)
   done
 
-lemma attemptSwitchTo_weak_sch_act_wf[wp]:
+lemma possibleSwitchTo_weak_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
-      attemptSwitchTo t \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add: attemptSwitchTo_def possibleSwitchTo_def
-                   setSchedulerAction_def threadGet_def curDomain_def)
+      possibleSwitchTo t \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  apply (simp add: possibleSwitchTo_def setSchedulerAction_def threadGet_def curDomain_def
+                   bitmap_fun_defs)
   apply (wp rescheduleRequired_weak_sch_act_wf
             weak_sch_act_wf_lift_linear[where f="tcbSchedEnqueue t"]
             getObject_tcb_wp static_imp_wp
@@ -2675,7 +2684,7 @@ lemma attemptSwitchTo_weak_sch_act_wf[wp]:
 lemmas transferCapsToSlots_pred_tcb_at' =
     transferCapsToSlots_pres1 [OF cteInsert_pred_tcb_at']
 
-crunch pred_tcb_at'[wp]: doIPCTransfer, attemptSwitchTo "pred_tcb_at' proj P t"
+crunch pred_tcb_at'[wp]: doIPCTransfer, possibleSwitchTo "pred_tcb_at' proj P t"
   (wp: mapM_wp' crunch_wps simp: zipWithM_x_mapM)
 
 
@@ -2697,15 +2706,21 @@ lemma setSchedulerAction_ct_in_domain:
   \<lbrace>\<lambda>_. ct_idle_or_in_cur_domain'\<rbrace>"
   by (simp add:setSchedulerAction_def | wp)+
 
-crunch ct_idle_or_in_cur_domain'[wp]: setupCallerCap, switchIfRequiredTo, doIPCTransfer, attemptSwitchTo ct_idle_or_in_cur_domain'
+crunch ct_idle_or_in_cur_domain'[wp]: setupCallerCap, doIPCTransfer, possibleSwitchTo ct_idle_or_in_cur_domain'
   (wp: crunch_wps setSchedulerAction_ct_in_domain simp: zipWithM_x_mapM)
-crunch ksCurDomain[wp]: setupCallerCap, switchIfRequiredTo, doIPCTransfer, attemptSwitchTo "\<lambda>s. P (ksCurDomain s)"
+crunch ksCurDomain[wp]: setupCallerCap, doIPCTransfer, possibleSwitchTo "\<lambda>s. P (ksCurDomain s)"
   (wp: crunch_wps simp: zipWithM_x_mapM)
-crunch ksDomSchedule[wp]: setupCallerCap, switchIfRequiredTo, doIPCTransfer, attemptSwitchTo "\<lambda>s. P (ksDomSchedule s)"
+crunch ksDomSchedule[wp]: setupCallerCap, doIPCTransfer, possibleSwitchTo "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps simp: zipWithM_x_mapM)
 
 crunch tcbDomain_obj_at'[wp]: doIPCTransfer "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
   (wp: crunch_wps constOnFailure_wp simp: crunch_simps)
+
+crunch tcb_at'[wp]: possibleSwitchTo "tcb_at' t"
+  (wp: crunch_wps)
+
+crunch valid_pspace'[wp]: possibleSwitchTo valid_pspace'
+  (wp: crunch_wps)
 
 lemma send_ipc_corres:
 (* call is only true if called in handleSyscall SysCall, which
@@ -2771,7 +2786,7 @@ proof -
                           simp del: dc_simp split del: if_split cong: if_cong)
               apply (rule corres_split [OF _ dit_corres])
                 apply (rule corres_split [OF _ sts_corres])
-                   apply (rule corres_split [OF _ attemptSwitchTo_corres])
+                   apply (rule corres_split [OF _ possibleSwitchTo_corres])
                      apply (rule corres_split [OF _ threadget_fault_corres])
                        apply (fold when_def)[1]
                        apply (rename_tac fault fault')
@@ -2852,7 +2867,7 @@ proof -
                         split del: if_split cong: if_cong)
              apply (rule corres_split [OF _ dit_corres])
                apply (rule corres_split [OF _ sts_corres])
-                   apply (rule corres_split [OF _ attemptSwitchTo_corres])
+                   apply (rule corres_split [OF _ possibleSwitchTo_corres])
                    apply (rule corres_split [OF _ threadget_fault_corres])
                      apply (rename_tac rv rv')
                      apply (case_tac rv)
@@ -2965,7 +2980,7 @@ lemma send_signal_corres:
            apply (rule corres_split[OF _ sts_corres])
               apply (simp add: badgeRegister_def badge_register_def)
               apply (rule corres_split[OF _ user_setreg_corres])
-                apply (rule switchIfRequiredTo_corres)
+                apply (rule possibleSwitchTo_corres)
                apply wp
              apply (clarsimp simp: thread_state_relation_def)
             apply (wp set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at'
@@ -2998,7 +3013,7 @@ lemma send_signal_corres:
          apply (rule corres_split [OF _ sts_corres])
             apply (simp add: badgeRegister_def badge_register_def)
             apply (rule corres_split [OF _ user_setreg_corres])
-              apply (rule switchIfRequiredTo_corres)
+              apply (rule possibleSwitchTo_corres)
              apply ((wp | simp)+)[1]
             apply (rule_tac Q="\<lambda>_. Invariants_H.valid_queues and valid_queues' and
                                    (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and
@@ -3029,7 +3044,7 @@ lemma send_signal_corres:
         apply (rule corres_split [OF _ sts_corres])
            apply (simp add: badgeRegister_def badge_register_def)
            apply (rule corres_split [OF _ user_setreg_corres])
-             apply (rule switchIfRequiredTo_corres)
+             apply (rule possibleSwitchTo_corres)
             apply (wp cur_tcb_lift | simp)+
          apply (wp sts_st_tcb_at' set_thread_state_runnable_weak_valid_sched_action
               | simp)+
@@ -3078,22 +3093,19 @@ crunch typ'[wp]: setMRs "\<lambda>s. P (typ_at' T p s)"
 
 lemma possibleSwitchTo_sch_act[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
-     possibleSwitchTo t b
+     possibleSwitchTo t
    \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def)
+  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs)
   apply (wp static_imp_wp threadSet_sch_act setQueue_sch_act threadGet_wp
        | simp add: unless_def | wpc)+
   apply (auto simp: obj_at'_def projectKOs tcb_in_cur_domain'_def)
   done
 
-lemmas attemptSwitchTo_sch_act[wp]
-    = possibleSwitchTo_sch_act[where b=True, folded attemptSwitchTo_def]
-
 lemma possibleSwitchTo_valid_queues[wp]:
   "\<lbrace>Invariants_H.valid_queues and valid_objs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and st_tcb_at' runnable' t\<rbrace>
-   possibleSwitchTo t b
+   possibleSwitchTo t
    \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def)
+  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs)
   apply (wp hoare_drop_imps | wpc | simp)+
   apply (auto simp: valid_tcb'_def weak_sch_act_wf_def
               dest: pred_tcb_at'
@@ -3107,72 +3119,67 @@ lemma valid_queues'_ksSchedulerAction_update[simp]:
 
 lemma possibleSwitchTo_ksQ':
   "\<lbrace>(\<lambda>s. t' \<notin> set (ksReadyQueues s p) \<and> sch_act_not t' s) and K(t' \<noteq> t)\<rbrace>
-     possibleSwitchTo t same
+     possibleSwitchTo t
    \<lbrace>\<lambda>_ s. t' \<notin> set (ksReadyQueues s p)\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def)
+  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs)
   apply (wp static_imp_wp rescheduleRequired_ksQ' tcbSchedEnqueue_ksQ threadGet_wp
          | wpc
          | simp split del: if_split)+
   apply (auto simp: obj_at'_def)
   done
 
-lemma attemptSwitchTo_ksQ:
-  "\<lbrace>(\<lambda>s. t' \<notin> set (ksReadyQueues s p) \<and> sch_act_not t' s) and K (t' \<noteq> t)\<rbrace>
-   attemptSwitchTo t \<lbrace>\<lambda>_ s. t' \<notin> set (ksReadyQueues s p)\<rbrace>"
-  by (simp add: attemptSwitchTo_def, wp possibleSwitchTo_ksQ', (fastforce)+)
-
 lemma possibleSwitchTo_valid_queues'[wp]:
   "\<lbrace>valid_queues' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
                   and st_tcb_at' runnable' t\<rbrace>
-   possibleSwitchTo t b
+   possibleSwitchTo t
    \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
   apply (simp add: possibleSwitchTo_def curDomain_def)
   apply (wp static_imp_wp threadGet_wp | wpc | simp)+
   apply (auto simp: obj_at'_def)
   done
 
-lemmas attemptSwitchTo_vq[wp]
-    = possibleSwitchTo_valid_queues[where b=True, folded attemptSwitchTo_def]
-      possibleSwitchTo_valid_queues'[where b=True, folded attemptSwitchTo_def]
-
-crunch st_refs_of'[wp]: attemptSwitchTo "\<lambda>s. P (state_refs_of' s)"
+crunch st_refs_of'[wp]: possibleSwitchTo "\<lambda>s. P (state_refs_of' s)"
   (wp: crunch_wps)
 
-crunch st_hyp_refs_of'[wp]: attemptSwitchTo "\<lambda>s. P (state_hyp_refs_of' s)"
+crunch cap_to'[wp]: possibleSwitchTo "ex_nonz_cap_to' p"
+  (wp: crunch_wps)
+crunch objs'[wp]: possibleSwitchTo valid_objs'
+  (wp: crunch_wps)
+crunch ct[wp]: possibleSwitchTo cur_tcb'
+  (wp: cur_tcb_lift crunch_wps)
+
+crunch st_hyp_refs_of'[wp]: possibleSwitchTo "\<lambda>s. P (state_hyp_refs_of' s)"
   (wp: crunch_wps)
 
 lemma possibleSwitchTo_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap' and ex_nonz_cap_to' t
            and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)\<rbrace>
-     possibleSwitchTo t b
+     possibleSwitchTo t
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def)
+  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs)
   apply (wp | wpc | simp)+
       apply (simp only: imp_conv_disj, wp hoare_vcg_all_lift hoare_vcg_disj_lift)
     apply (wp threadGet_wp)+
   apply (auto simp: obj_at'_def projectKOs)
   done
 
-lemmas attemptSwitchTo_iflive[wp]
-    = possibleSwitchTo_iflive[where b=True, folded attemptSwitchTo_def]
-
-crunch ifunsafe[wp]: attemptSwitchTo if_unsafe_then_cap'
+crunch ifunsafe[wp]: possibleSwitchTo if_unsafe_then_cap'
   (wp: crunch_wps)
-crunch idle'[wp]: attemptSwitchTo valid_idle'
+crunch idle'[wp]: possibleSwitchTo valid_idle'
   (wp: crunch_wps)
-crunch global_refs'[wp]: attemptSwitchTo valid_global_refs'
+crunch global_refs'[wp]: possibleSwitchTo valid_global_refs'
   (wp: crunch_wps)
-crunch arch_state'[wp]: attemptSwitchTo valid_arch_state'
+crunch arch_state'[wp]: possibleSwitchTo valid_arch_state'
   (wp: crunch_wps)
-crunch irq_node'[wp]: attemptSwitchTo "\<lambda>s. P (irq_node' s)"
+crunch irq_node'[wp]: possibleSwitchTo "\<lambda>s. P (irq_node' s)"
   (wp: crunch_wps)
-crunch typ_at'[wp]: attemptSwitchTo "\<lambda>s. P (typ_at' T p s)"
+crunch typ_at'[wp]: possibleSwitchTo "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
-crunch irq_handlers'[wp]: attemptSwitchTo valid_irq_handlers'
+crunch irq_handlers'[wp]: possibleSwitchTo valid_irq_handlers'
   (simp: unless_def tcb_cte_cases_def wp: crunch_wps)
-crunch irq_states'[wp]: attemptSwitchTo valid_irq_states'
+crunch irq_states'[wp]: possibleSwitchTo valid_irq_states'
   (wp: crunch_wps)
-crunch pde_mappigns'[wp]: attemptSwitchTo valid_pde_mappings'
+crunch pde_mappigns'[wp]: possibleSwitchTo valid_pde_mappings'
   (wp: crunch_wps)
 
 (* Levity: added (20090713 10:04:33) *)
@@ -3237,45 +3244,6 @@ lemma cteDeleteOne_reply_cap_to'[wp]:
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   done
 
-lemma switchIfRequiredTo_sch_act[wp]:
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
-    switchIfRequiredTo t
-   \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add: switchIfRequiredTo_def tcbSchedEnqueue_def)
-  apply wp
-  done
-
-lemmas switchIfRequiredTo_vq[wp]
-    = possibleSwitchTo_valid_queues[where b=True, folded switchIfRequiredTo_def]
-      possibleSwitchTo_valid_queues'[where b=True, folded switchIfRequiredTo_def]
-
-crunch st_refs_of'[wp]: switchIfRequiredTo "\<lambda>s. P (state_refs_of' s)"
-crunch st_refs_of'[wp]: switchIfRequiredTo "\<lambda>s. P (state_hyp_refs_of' s)"
-
-lemmas switchIfRequiredTo_iflive[wp]
-    = possibleSwitchTo_iflive[where b=False, folded switchIfRequiredTo_def]
-
-crunch ifunsafe[wp]: switchIfRequiredTo if_unsafe_then_cap'
-crunch idle'[wp]: switchIfRequiredTo valid_idle'
-crunch global_refs'[wp]: switchIfRequiredTo valid_global_refs'
-crunch arch_state'[wp]: switchIfRequiredTo valid_arch_state'
-crunch irq_node'[wp]: switchIfRequiredTo "\<lambda>s. P (irq_node' s)"
-crunch typ_at'[wp]: switchIfRequiredTo "\<lambda>s. P (typ_at' T p s)"
-crunch irq_handlers'[wp]: switchIfRequiredTo valid_irq_handlers'
-  (simp: unless_def tcb_cte_cases_def)
-crunch irq_states'[wp]: switchIfRequiredTo valid_irq_states'
-crunch pde_mappings'[wp]: switchIfRequiredTo valid_pde_mappings'
-crunch vp[wp]: switchIfRequiredTo valid_pspace'
-crunch tcb_at'[wp]: switchIfRequiredTo "tcb_at' t"
-crunch ct'[wp]: switchIfRequiredTo "\<lambda>s. P (ksCurThread s)"
-  (wp: crunch_wps)
-crunch it'[wp]: switchIfRequiredTo "\<lambda>s. P (ksIdleThread s)"
-  (wp: crunch_wps)
-crunch ct[wp]: switchIfRequiredTo cur_tcb'
-  (wp: cur_tcb_lift)
-
-find_theorems doMachineOp ksMachineState valid
-
 lemma dmo_addressTranslateS1CPR_valid_machine_state'[wp]:
   "doMachineOp (addressTranslateS1CPR pc) \<lbrace>valid_machine_state'\<rbrace>"
   by (wpsimp simp: valid_machine_state'_def
@@ -3285,7 +3253,7 @@ lemma dmo_addressTranslateS1CPR_valid_machine_state'[wp]:
                     addressTranslateS1CPR_underlying_memory
                     hoare_vcg_disj_lift)
 
-crunch vms'[wp]: setupCallerCap, switchIfRequiredTo, asUser,
+crunch vms'[wp]: setupCallerCap, possibleSwitchTo, asUser,
     doIPCTransfer "valid_machine_state'"
   (wp: crunch_wps simp: zipWithM_x_mapM_x ignore: doMachineOp)
 
@@ -3311,26 +3279,12 @@ crunch nosch[wp]: isFinalCapability "\<lambda>s. P (ksSchedulerAction s)"
   (simp: Let_def)
 
 crunch pspace_domain_valid[wp]:
-        setupCallerCap, switchIfRequiredTo, asUser, setMRs, doIPCTransfer
+        setupCallerCap, asUser, setMRs, doIPCTransfer, possibleSwitchTo
     "pspace_domain_valid"
   (wp: crunch_wps simp: zipWithM_x_mapM_x)
 
-lemma switchIfRequiredTo_valid_queues:
-  "\<lbrace>Invariants_H.valid_queues and valid_objs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and st_tcb_at' runnable' t\<rbrace>
-   switchIfRequiredTo t \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  apply (simp add: switchIfRequiredTo_def)
-  apply wp
-  done
-
-lemma switchIfRequiredTo_valid_queues':
-  "\<lbrace>valid_queues' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and st_tcb_at' runnable' t\<rbrace>
-   switchIfRequiredTo t \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  by (simp add: switchIfRequiredTo_def, wp)
-
-crunch ksDomScheduleIdx[wp]: setupCallerCap, switchIfRequiredTo, doIPCTransfer, attemptSwitchTo "\<lambda>s. P (ksDomScheduleIdx s)"
+crunch ksDomScheduleIdx[wp]: setupCallerCap, doIPCTransfer, possibleSwitchTo "\<lambda>s. P (ksDomScheduleIdx s)"
   (wp: crunch_wps simp: zipWithM_x_mapM)
-
-crunch invs'[wp]: switchIfRequiredTo "invs'"
 
 lemma setThreadState_not_rct[wp]:
   "\<lbrace>\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread \<rbrace>
@@ -3707,7 +3661,7 @@ lemma receive_ipc_corres:
                            apply simp
                           apply simp
                          apply (rule corres_split [OF _ sts_corres])
-                            apply (rule switchIfRequiredTo_corres)
+                            apply (rule possibleSwitchTo_corres)
                            apply simp
                           apply (wp sts_st_tcb_at' set_thread_state_runnable_weak_valid_sched_action
                                | simp)+
@@ -3915,7 +3869,7 @@ crunch tcb' [wp]: sendFaultIPC "tcb_at' t" (wp: crunch_wps)
 
 lemma possibleSwitchTo_weak_sch_act[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s \<and> tcb_in_cur_domain' t s\<rbrace>
-      possibleSwitchTo t b
+      possibleSwitchTo t
    \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp add: possibleSwitchTo_def setSchedulerAction_def curDomain_def)
   apply (wp static_imp_wp rescheduleRequired_weak_sch_act_wf threadGet_wp | wpc)+
@@ -4262,12 +4216,12 @@ crunch urz[wp]: doIPCTransfer "untyped_ranges_zero'"
 crunch gsUntypedZeroRanges[wp]: receiveIPC "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: crunch_wps transferCapsToSlots_pres1 simp: zipWithM_x_mapM ignore: constOnFailure)
 
-crunch ctes_of[wp]: switchIfRequiredTo "\<lambda>s. P (ctes_of s)"
+crunch ctes_of[wp]: possibleSwitchTo "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps ignore: constOnFailure)
-lemmas switchIfRequiredTo_cteCaps_of[wp]
-    = cteCaps_of_ctes_of_lift[OF switchIfRequiredTo_ctes_of]
+lemmas possibleSwitchToTo_cteCaps_of[wp]
+    = cteCaps_of_ctes_of_lift[OF possibleSwitchTo_ctes_of]
 
-crunch hyp_refs'[wp]: switchIfRequiredTo "\<lambda>s. P (state_hyp_refs_of' s)"
+crunch hyp_refs'[wp]: possibleSwitchTo "\<lambda>s. P (state_hyp_refs_of' s)"
 
 (* t = ksCurThread s *)
 lemma ri_invs' [wp]:
@@ -4347,9 +4301,9 @@ lemma ri_invs' [wp]:
    apply (rule hoare_pre)
     apply (wp valid_irq_node_lift hoare_drop_imps setEndpoint_valid_mdb'
               set_ep_valid_objs' sts_st_tcb' sts_sch_act' sts_valid_queues
-              setThreadState_ct_not_inQ switchIfRequiredTo_valid_queues
-              switchIfRequiredTo_valid_queues'
-              switchIfRequiredTo_ct_not_inQ hoare_vcg_all_lift
+              setThreadState_ct_not_inQ possibleSwitchTo_valid_queues
+              possibleSwitchTo_valid_queues'
+              possibleSwitchTo_ct_not_inQ hoare_vcg_all_lift
               setEndpoint_ksQ setEndpoint_ct'
          | simp add: valid_tcb_state'_def case_bool_If
                      case_option_If del: fun_upd_apply
@@ -4541,13 +4495,6 @@ apply (wp sch_act_wf_lift valid_queues_lift
           cur_tcb_lift tcb_in_cur_domain'_lift)+
 done
 
-crunch cap_to'[wp]: attemptSwitchTo "ex_nonz_cap_to' p"
-  (wp: crunch_wps)
-crunch objs'[wp]: attemptSwitchTo valid_objs'
-  (wp: crunch_wps)
-crunch ct[wp]: attemptSwitchTo cur_tcb'
-  (wp: cur_tcb_lift crunch_wps)
-
 lemma setupCallerCap_cap_to' [wp]:
   "\<lbrace>ex_nonz_cap_to' p\<rbrace> setupCallerCap a b \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
   apply (simp add: setupCallerCap_def getThreadCallerSlot_def getThreadReplySlot_def)
@@ -4569,22 +4516,19 @@ lemma setupCaller_pred_tcb_recv':
   done
 
 lemma possibleSwitchTo_sch_act_not:
-  "\<lbrace>sch_act_not t' and K (t \<noteq> t')\<rbrace> possibleSwitchTo t b \<lbrace>\<lambda>rv. sch_act_not t'\<rbrace>"
+  "\<lbrace>sch_act_not t' and K (t \<noteq> t')\<rbrace> possibleSwitchTo t \<lbrace>\<lambda>rv. sch_act_not t'\<rbrace>"
   apply (simp add: possibleSwitchTo_def setSchedulerAction_def curDomain_def)
   apply (wp hoare_drop_imps | wpc | simp)+
   done
 
-lemmas attemptSwitchTo_sch_act_not
-    = possibleSwitchTo_sch_act_not[where b=True, folded attemptSwitchTo_def]
+crunch vms'[wp]: possibleSwitchTo valid_machine_state'
+crunch pspace_domain_valid[wp]: possibleSwitchTo pspace_domain_valid
+crunch ct_idle_or_in_cur_domain'[wp]: possibleSwitchTo ct_idle_or_in_cur_domain'
 
-crunch vms'[wp]: attemptSwitchTo valid_machine_state'
-crunch pspace_domain_valid[wp]: attemptSwitchTo pspace_domain_valid
-crunch ct_idle_or_in_cur_domain'[wp]: attemptSwitchTo ct_idle_or_in_cur_domain'
-
-crunch ct'[wp]: attemptSwitchTo "\<lambda>s. P (ksCurThread s)"
-crunch it[wp]: attemptSwitchTo "\<lambda>s. P (ksIdleThread s)"
-crunch irqs_masked'[wp]: attemptSwitchTo "irqs_masked'"
-crunch urz[wp]: attemptSwitchTo "untyped_ranges_zero'"
+crunch ct'[wp]: possibleSwitchTo "\<lambda>s. P (ksCurThread s)"
+crunch it[wp]: possibleSwitchTo "\<lambda>s. P (ksIdleThread s)"
+crunch irqs_masked'[wp]: possibleSwitchTo "irqs_masked'"
+crunch urz[wp]: possibleSwitchTo "untyped_ranges_zero'"
   (simp: crunch_simps unless_def wp: crunch_wps)
 
 lemma si_invs'[wp]:
@@ -4607,8 +4551,8 @@ lemma si_invs'[wp]:
      apply (rule_tac P="a\<noteq>t" in hoare_gen_asm)
      apply (wp valid_irq_node_lift setupCaller_pred_tcb_recv'
                sts_valid_objs' set_ep_valid_objs' setEndpoint_valid_mdb' sts_st_tcb' sts_sch_act'
-               attemptSwitchTo_sch_act_not sts_valid_queues setThreadState_ct_not_inQ
-               attemptSwitchTo_ksQ attemptSwitchTo_ct_not_inQ hoare_vcg_all_lift sts_ksQ'
+               possibleSwitchTo_sch_act_not sts_valid_queues setThreadState_ct_not_inQ
+               possibleSwitchTo_ksQ' possibleSwitchTo_ct_not_inQ hoare_vcg_all_lift sts_ksQ'
                hoare_convert_imp [OF doIPCTransfer_nosch doIPCTransfer_ct']
                hoare_convert_imp [OF getThreadState_nosch getThreadState_ct']
                hoare_convert_imp [OF setEndpoint_nosch setEndpoint_ct']
@@ -4913,7 +4857,7 @@ lemma hf_makes_runnable_simple':
            | simp add: handleDoubleFault_def)+
   done
 
-crunch pred_tcb_at'[wp]: switchIfRequiredTo, completeSignal "pred_tcb_at' proj P t"
+crunch pred_tcb_at'[wp]: possibleSwitchTo, completeSignal "pred_tcb_at' proj P t"
 
 lemma ri_makes_runnable_simple':
   "\<lbrace>st_tcb_at' P t' and K (t \<noteq> t') and K (P = runnable' \<or> P = simple')\<rbrace>

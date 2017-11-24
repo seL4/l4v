@@ -2277,7 +2277,7 @@ lemma handleInterrupt_valid_duplicates'[wp]:
 
 crunch valid_duplicates' [wp]:
   schedule "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
-  (ignore: setNextPC clearExMonitor threadSet simp:crunch_simps wp:findM_inv)
+  (ignore: setNextPC clearExMonitor threadSet simp:crunch_simps wp:findM_inv hoare_drop_imps)
 
 lemma activate_sch_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. ct_in_state' activatable' s \<and> vs_valid_duplicates' (ksPSpace s)\<rbrace>
@@ -2359,7 +2359,7 @@ lemma handleEvent_valid_duplicates':
       apply (rename_tac syscall)
       apply (case_tac syscall)
             apply (wp handleReply_sane
-              | simp add: active_from_running' simple_sane_strg
+              | simp add: active_from_running' simple_sane_strg cong: if_cong
               | wpc)+
   done
 

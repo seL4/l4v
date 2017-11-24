@@ -128,5 +128,17 @@ lemma empty_fail_getThreadState[iff]:
 declare empty_fail_stateAssert [wp]
 declare setRegister_empty_fail [intro!, simp]
 
+lemma empty_fail_getSchedulerAction [intro!, wp, simp]:
+  "empty_fail getSchedulerAction"
+  by (simp add: getSchedulerAction_def getObject_def split_def)
+
+lemma empty_fail_scheduleSwitchThreadFastfail [intro!, wp, simp]:
+  "empty_fail (scheduleSwitchThreadFastfail a b c d)"
+  by (simp add: scheduleSwitchThreadFastfail_def split: if_splits)
+
+lemma empty_fail_curDomain [intro!, wp, simp]:
+  "empty_fail curDomain"
+  by (simp add: curDomain_def)
+
 end
 end
