@@ -238,7 +238,7 @@ lemma decode_tcb_invocation_reads_respects_f:
              check_valid_ipc_buffer_inv
              respects_f[OF decode_set_priority_rev]
              respects_f[OF decode_set_mcpriority_rev]
-             respects_f[OF get_notification_reads_respects]
+             respects_f[OF get_simple_ko_reads_respects]
              respects_f[OF get_bound_notification_reads_respects']
         | wp_once whenE_throwError_wp
         | wp_once hoare_drop_imps

@@ -36,7 +36,7 @@ lemma cancel_ipc_receive_blocked_caps_of_state:
 lemma send_signal_caps_of_state[wp]:
   "\<lbrace>\<lambda>s :: det_ext state. P (caps_of_state s) \<rbrace> send_signal ntfnptr badge \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   apply (clarsimp simp: send_signal_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp dxo_wp_weak cancel_ipc_receive_blocked_caps_of_state gts_wp static_imp_wp | wpc | simp add: update_waiting_ntfn_def)+
   apply (clarsimp simp: fun_upd_def[symmetric] st_tcb_def2)
@@ -60,7 +60,7 @@ lemma cancel_ipc_receive_blocked_mdb:
 lemma send_signal_mdb[wp]:
   "\<lbrace>\<lambda>s. P (cdt (s :: det_ext state))\<rbrace> send_signal ntfnptr badge \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"
   apply (clarsimp simp: send_signal_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp dxo_wp_weak gts_wp cancel_ipc_receive_blocked_mdb | wpc | simp)+
   apply (clarsimp simp: st_tcb_def2)
@@ -74,7 +74,7 @@ lemma update_waiting_ntfn_pas_refined:
      update_waiting_ntfn ntfnptr queue badge val
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: update_waiting_ntfn_def)
-  apply (wp set_thread_state_pas_refined set_notification_pas_refined | simp)+
+  apply (wp set_thread_state_pas_refined set_simple_ko_pas_refined | simp)+
   done
 
 
@@ -90,9 +90,9 @@ lemma cancel_ipc_receive_blocked_pas_refined:
 lemma send_signal_pas_refined:
   "\<lbrace>\<lambda>s. pas_refined aag s\<rbrace> send_signal ntfnptr badge \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: send_signal_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
-  apply (wp set_notification_pas_refined update_waiting_ntfn_pas_refined gts_wp set_thread_state_pas_refined
+  apply (wp set_simple_ko_pas_refined update_waiting_ntfn_pas_refined gts_wp set_thread_state_pas_refined
             cancel_ipc_receive_blocked_pas_refined
        | wpc
        | simp)+
@@ -106,9 +106,9 @@ lemma receive_signal_pas_refined:
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: receive_signal_def)
   apply (cases cap, simp_all)
-  apply (rule hoare_seq_ext [OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
-  by (wp set_notification_pas_refined set_thread_state_pas_refined
+  by (wp set_simple_ko_pas_refined set_thread_state_pas_refined
        | wpc | simp add: do_nbrecv_failed_transfer_def)+
 
 
@@ -271,10 +271,9 @@ lemma set_notification_respects:
   "\<lbrace>integrity aag X st and K (aag_has_auth_to aag auth epptr \<and> auth \<in> {Receive, Notify, Reset})\<rbrace>
      set_notification epptr ntfn'
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: set_notification_def set_object_def)
+  apply (simp add: set_simple_ko_def set_object_def)
   apply (wp get_object_wp)
-  apply (clarsimp simp: obj_at_def)
-  apply (case_tac ko, simp_all)
+  apply (clarsimp simp: obj_at_def partial_inv_def a_type_def)
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def tro_ntfn)
   done
@@ -287,7 +286,7 @@ lemma receive_signal_integrity_autarch:
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: receive_signal_def)
   apply (cases cap, simp_all)
-  apply (rule hoare_seq_ext [OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
   apply (wp set_notification_respects[where auth=Receive] set_thread_state_integrity_autarch as_user_integrity_autarch
        | wpc
@@ -410,17 +409,18 @@ lemma set_notification_obj_at:
   "\<lbrace>obj_at P ptr and K (ptr \<noteq> ntfnptr)\<rbrace>
      set_notification ntfnptr queue
    \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
-  apply (simp add: set_notification_def set_object_def)
+  apply (simp add: set_simple_ko_def set_object_def)
   apply (wp get_object_wp)
   apply (auto simp: obj_at_def)
   done
 
 lemma set_ntfn_valid_objs_at:
   "\<lbrace>valid_objs and (\<lambda>s. ntfn_at p s \<longrightarrow> valid_ntfn ntfn s)\<rbrace> set_notification p ntfn \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  unfolding set_notification_def
+  unfolding set_simple_ko_def
   apply (rule hoare_pre)
   apply (wp set_object_valid_objs get_object_wp)
-  apply (clarsimp simp: valid_obj_def obj_at_def is_ntfn split: Structures_A.kernel_object.splits)
+  apply (clarsimp simp: valid_obj_def obj_at_def is_ntfn partial_inv_def
+              split: Structures_A.kernel_object.splits)
   done
 
 lemma drop_Suc0_iff:
@@ -490,11 +490,11 @@ lemma cancel_ipc_receive_blocked_respects:
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (rule hoare_name_pre_state)
   apply (subgoal_tac "case state of BlockedOnReceive x \<Rightarrow> True | _ \<Rightarrow> False")
-   apply (simp add: blocked_cancel_ipc_def bind_assoc set_endpoint_def set_object_def
+   apply (simp add: blocked_cancel_ipc_def bind_assoc set_simple_ko_def set_object_def
                     get_ep_queue_def get_blocking_object_def
              split: thread_state.splits)
    apply (rule hoare_pre)
-    apply (wp set_thread_state_integrity_once_ts_upd get_object_wp get_endpoint_wp
+    apply (wp set_thread_state_integrity_once_ts_upd get_object_wp get_simple_ko_wp
         | wpc)+
    apply (clarsimp simp: st_tcb_at_def2 obj_at_def)
    apply (drule_tac t="tcb_state tcb" in sym)
@@ -518,7 +518,7 @@ lemma cancel_ipc_receive_blocked_respects:
     apply (rule disjI2)
     apply (clarsimp simp:  indirect_send_def pred_tcb_at_def obj_at_def)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (clarsimp simp: pred_tcb_at_def  obj_at_def receive_blocked_def)
+  apply (clarsimp simp: pred_tcb_at_def  obj_at_def receive_blocked_def)+
   done
 
 lemma set_thread_state_integrity':
@@ -585,7 +585,7 @@ lemma send_signal_respects:
      send_signal ntfnptr badge
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: send_signal_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_name_pre_state)
   apply (case_tac "ntfn_obj ntfn = IdleNtfn \<and> ntfn_bound_tcb ntfn \<noteq> None")
    -- "ntfn-binding case"
@@ -617,7 +617,7 @@ lemma send_signal_respects:
    apply clarsimp
    apply (wpc, clarsimp)
      apply (wp set_notification_respects[where auth=Notify] sts_st_tcb_at' as_user_set_register_respects
-               set_thread_state_pas_refined set_notification_pas_refined
+               set_thread_state_pas_refined set_simple_ko_pas_refined
                set_thread_state_respects_in_signalling [where ntfnptr = ntfnptr]
                set_notification_respects[where auth=Send]
                set_ntfn_valid_objs_at hoare_vcg_disj_lift static_imp_wp
@@ -1002,7 +1002,7 @@ lemma send_ipc_pas_refined:
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wpc | wp set_thread_state_pas_refined)+
         apply (simp add: hoare_if_r_and split del:if_split)
@@ -1018,7 +1018,7 @@ lemma send_ipc_pas_refined:
      apply (clarsimp simp: cli_no_irqs pas_refined_refl aag_cap_auth_def clas_no_asid)
     apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined static_imp_wp
             | wpc
-            | simp add: hoare_if_r_and
+            | simp add: hoare_if_r_and valid_simple_obj_def a_type_def
             | rule hoare_drop_imps)+
   apply clarsimp
   apply (rule obj_at_valid_objsE, assumption+)
@@ -1026,11 +1026,12 @@ lemma send_ipc_pas_refined:
   apply (auto dest: ep_queued_st_tcb_at [where P = \<top>] simp:  tcb_at_st_tcb_at valid_ep_def valid_obj_def obj_at_def split: list.split)
   done
 
-lemma set_endpoint_get_tcb:
-  "\<lbrace>\<lambda>s. P (get_tcb p s)\<rbrace> set_endpoint ep epptr \<lbrace>\<lambda>_ s. P (get_tcb p s) \<rbrace>"
-  unfolding set_endpoint_def set_object_def
+lemma set_simple_ko_get_tcb:
+  "\<lbrace>\<lambda>s. P (get_tcb p s)\<rbrace> set_simple_ko f ep epptr \<lbrace>\<lambda>_ s. P (get_tcb p s) \<rbrace>"
+  unfolding set_simple_ko_def set_object_def
   apply (wp get_object_wp)
-  apply (clarsimp simp: get_tcb_def obj_at_def split: Structures_A.kernel_object.splits option.splits)
+  apply (auto simp: partial_inv_def a_type_def get_tcb_def obj_at_def the_equality
+                 split: Structures_A.kernel_object.splits option.splits)
   done
 
 lemma get_tcb_is_Some_iff_typ_at:
@@ -1049,7 +1050,7 @@ lemma complete_signal_integrity:
      complete_signal ntfnptr thread
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: complete_signal_def)
-  apply (rule hoare_seq_ext [OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
   apply ((wp set_notification_respects[where auth=Receive] set_thread_state_integrity_autarch as_user_integrity_autarch
        | wpc
@@ -1101,19 +1102,19 @@ lemma receive_ipc_base_pas_refined:
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: thread_get_def cong: endpoint.case_cong)
   apply (rule hoare_pre)
-   apply (wp static_imp_wp set_thread_state_pas_refined get_endpoint_wp
+   apply (wp static_imp_wp set_thread_state_pas_refined get_simple_ko_wp
         | wpc | simp add: thread_get_def do_nbrecv_failed_transfer_def split del: if_split)+
         apply (simp add:aag_cap_auth_def clas_no_asid cli_no_irqs)
         apply (rename_tac list sss data)
         apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> (sender_can_grant data \<longrightarrow> is_subject aag (hd list))"
                    in hoare_strengthen_post[rotated])
          apply (clarsimp simp: cap_auth_conferred_def pas_refined_all_auth_is_owns pas_refined_refl)
-        apply (wp static_imp_wp do_ipc_transfer_pas_refined set_endpoint_pas_refined set_thread_state_pas_refined get_endpoint_wp
-                  hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
+        apply (wp static_imp_wp do_ipc_transfer_pas_refined set_simple_ko_pas_refined set_thread_state_pas_refined get_simple_ko_wp
+                  hoare_vcg_imp_lift [OF set_simple_ko_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
              | wpc
              | simp add: thread_get_def  get_thread_state_def)
-       apply (wp static_imp_wp do_ipc_transfer_pas_refined set_endpoint_pas_refined set_thread_state_pas_refined get_endpoint_wp
-                 hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
+       apply (wp static_imp_wp do_ipc_transfer_pas_refined set_simple_ko_pas_refined set_thread_state_pas_refined get_simple_ko_wp
+                 hoare_vcg_imp_lift [OF set_simple_ko_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
             | wpc
             | simp add: thread_get_def get_thread_state_def do_nbrecv_failed_transfer_def)+
   apply (clarsimp simp: tcb_at_def [symmetric] conj_ac tcb_at_st_tcb_at)
@@ -1130,7 +1131,7 @@ lemma receive_ipc_base_pas_refined:
       apply (drule (1) bspec [OF _ hd_in_set])
       apply (clarsimp simp: obj_at_def tcb_bound_refs_def dest!: get_tcb_SomeD split: option.splits)
      apply assumption+
-  apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def
+  apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def valid_simple_obj_def a_type_def
                          ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong)
   done
 
@@ -1139,9 +1140,9 @@ lemma complete_signal_pas_refined:
      complete_signal ntfnptr thread
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: complete_signal_def)
-  apply (rule hoare_seq_ext [OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
-  apply (wp set_notification_pas_refined set_thread_state_pas_refined
+  apply (wp set_simple_ko_pas_refined set_thread_state_pas_refined
        | wpc)+
   apply clarsimp
   done
@@ -1156,7 +1157,7 @@ lemma receive_ipc_pas_refined:
   apply (rule hoare_gen_asm)
   apply (simp add: receive_ipc_def thread_get_def  split: cap.split)
   apply clarsimp
-  apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_seq_ext[OF _ gbn_sp])
   apply (case_tac ntfnptr, simp_all)
   (* old receive_ipc stuff *)
@@ -1165,7 +1166,7 @@ lemma receive_ipc_pas_refined:
    apply clarsimp
    (* ntfn-binding case *)
   apply clarsimp
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (case_tac "isActive ntfn", simp_all)
    apply (wp complete_signal_pas_refined, clarsimp)
    (* regular case again *)
@@ -1330,11 +1331,11 @@ lemma set_thread_state_running_respects:
   done
 
 (* FIXME move *)
-lemma set_endpoint_obj_at:
+lemma set_simple_ko_obj_at:
   "\<lbrace>obj_at P ptr and K (ptr \<noteq> epptr)\<rbrace>
-     set_endpoint epptr ep
+     set_simple_ko f epptr ep
    \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
-  apply (simp add: set_endpoint_def set_object_def)
+  apply (simp add: set_simple_ko_def set_object_def)
   apply (wp get_object_wp)
   apply (auto simp: obj_at_def)
   done
@@ -1388,9 +1389,9 @@ lemma receive_ipc_base_integrity:
                             \<and> st_tcb_at (\<lambda>st. send_is_call st = sender_is_call data) (hd list) s"
                       in hoare_strengthen_post[rotated])
           apply (fastforce simp: st_tcb_at_def obj_at_def dest: get_tcb_SomeD)
-         apply (wp do_ipc_transfer_integrity_autarch do_ipc_transfer_pred_tcb set_endpoinintegrity get_endpoint_wp
+         apply (wp do_ipc_transfer_integrity_autarch do_ipc_transfer_pred_tcb set_endpoinintegrity get_simple_ko_wp
            set_thread_state_integrity_autarch[where param_a=receiver]
-           hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
+           hoare_vcg_imp_lift [OF set_simple_ko_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
            as_user_integrity_autarch
            | wpc | simp)+
   apply clarsimp
@@ -1399,7 +1400,7 @@ lemma receive_ipc_base_integrity:
    apply (fastforce simp: obj_at_def is_ep)
   apply simp
   apply (thin_tac "ep_at epptr s \<and> (\<exists>auth. aag_has_auth_to aag auth epptr \<and> (auth = Receive \<or> auth = SyncSend \<or> auth = Reset))")
-  apply (clarsimp simp: st_tcb_def2)
+  apply (clarsimp simp: st_tcb_def2 valid_simple_obj_def a_type_def)
   (* (update the) clag from _pas_refined *)
   apply safe
     apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def
@@ -1433,12 +1434,12 @@ lemma receive_ipc_integrity_autarch:
   apply (rule hoare_gen_asm)
   apply (simp add: receive_ipc_def split: cap.splits)
   apply clarsimp
-  apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_seq_ext[OF _ gbn_sp])
   apply (case_tac ntfnptr, simp_all)
   (* old receive case, not bound *)
    apply (rule hoare_pre, wp receive_ipc_base_integrity, clarsimp)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (case_tac "isActive ntfn", simp_all)
   (* new ntfn-binding case *)
    apply (rule hoare_pre, wp complete_signal_integrity, clarsimp)
@@ -1948,10 +1949,11 @@ lemma set_endpoinintegrity_in_ipc:
           and K (aag_has_auth_to aag SyncSend epptr)\<rbrace>
     set_endpoint epptr ep'
    \<lbrace>\<lambda>rv. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
-  apply (simp add: set_endpoint_def set_object_def)
+  apply (simp add: set_simple_ko_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp split: Structures_A.kernel_object.splits
-                  simp: obj_at_def is_tcb is_ep integrity_tcb_in_ipc_def)
+                  simp: obj_at_def is_tcb is_ep integrity_tcb_in_ipc_def
+                        partial_inv_def a_type_def)
   apply (intro impI conjI)
     apply (erule integrity_trans)
     apply (clarsimp simp: integrity_def)
@@ -2005,7 +2007,7 @@ lemma send_ipc_integrity_autarch:
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (case_tac ep)
     apply simp
     apply (rule hoare_pre)
@@ -2032,11 +2034,11 @@ lemma send_ipc_integrity_autarch:
                     hoare_vcg_all_lift hoare_drop_imps set_endpoinintegrity
                    | wpc | simp add: get_thread_state_def split del: if_split
                                 del: hoare_post_taut hoare_True_E_R)+
-   apply clarsimp
+   apply (clarsimp simp: a_type_def valid_simple_obj_def)
    apply (intro conjI)
      apply (fastforce simp: obj_at_def is_ep)
     apply blast
-   apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def
+   apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def valid_simple_obj_def
                           ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong)
   -- "we don't own head of queue"
   apply clarsimp
@@ -2051,7 +2053,7 @@ lemma send_ipc_integrity_autarch:
         | wpc)+
          apply (rule_tac Q="\<lambda>rv sa. integrity aag X s sa \<and> (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post[rotated])
           apply simp+
-         apply (wp thread_get_inv put_wp get_object_wp get_endpoint_wp thread_get_wp'
+         apply (wp thread_get_inv put_wp get_object_wp get_simple_ko_wp thread_get_wp'
                    set_thread_state_running_respects_in_ipc[where epptr=epptr]
                    do_ipc_transfer_respects_in_ipc set_endpoinintegrity
                    set_thread_state_integrity_autarch
@@ -2059,7 +2061,7 @@ lemma send_ipc_integrity_autarch:
                    hoare_vcg_all_lift hoare_vcg_const_imp_lift
               | wpc
               | rule hoare_drop_imps
-              | simp add: get_thread_state_def)+
+              | simp add: get_thread_state_def valid_simple_obj_def a_type_def)+
 
   apply (clarsimp simp: conj_comms)
   apply (subgoal_tac "st_tcb_at (receive_blocked_on epptr) x s")

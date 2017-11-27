@@ -60,7 +60,7 @@ crunch globals_equiv[wp]: get_notification "globals_equiv st"
 lemma cancel_signal_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace> cancel_signal a b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding cancel_signal_def
-  by (wpsimp wp: set_thread_state_globals_equiv get_notification_valid_ko_at_arm
+  by (wpsimp wp: set_thread_state_globals_equiv get_simple_ko_valid_ko_at_arm
                  set_notification_globals_equiv set_notification_valid_ko_at_arm hoare_drop_imps
            simp: crunch_simps)
 
@@ -614,8 +614,8 @@ lemma bind_notification_reads_respects:
   "reads_respects aag l (pas_refined aag and invs and K (is_subject aag t \<and> (\<forall>auth\<in>{Receive, Reset}. (pasSubject aag, auth, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag)))
        (bind_notification t ntfnptr)"
   apply (clarsimp simp: bind_notification_def)
-  apply (wp set_bound_notification_owned_reads_respects set_notification_reads_respects
-            get_notification_reads_respects get_bound_notification_reads_respects
+  apply (wp set_bound_notification_owned_reads_respects set_simple_ko_reads_respects
+            get_simple_ko_reads_respects get_bound_notification_reads_respects
             gbn_wp[unfolded get_bound_notification_def, simplified]
        | wpc
        | simp add: get_bound_notification_def)+

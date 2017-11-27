@@ -3592,7 +3592,7 @@ lemma unbind_maybe_notification_corres:
       apply (rule corres_split[OF _ set_ntfn_corres])
          apply (rule sbn_corres)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
-       apply (wp get_ntfn_wp getNotification_wp)+
+       apply (wp get_simple_ko_wp getNotification_wp)+
    apply (clarsimp elim!: obj_at_valid_objsE
                    dest!: bound_tcb_at_state_refs_ofD invs_valid_objs
                     simp: valid_obj_def is_tcb tcb_ntfn_is_bound_def

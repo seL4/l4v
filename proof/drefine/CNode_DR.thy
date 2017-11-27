@@ -1060,7 +1060,9 @@ lemma dcorres_ep_cancel_badge_sends:
        apply (clarsimp simp:get_tcb_ep_badge_def tcb_slot_defs tcb_pending_op_slot_def
                       split: option.splits cdl_cap.splits)
       apply clarsimp+
-    apply (wp get_endpoint_sp valid_ep_get_ep2 | clarsimp simp:valid_state_def)+
+    apply (wpsimp wp: get_simple_ko_sp get_simple_ko_ko_at
+                      get_simple_ko_valid[where f=Endpoint, simplified valid_ep_def2[symmetric]]
+                simp:valid_state_def)+
   done
 
 lemma neq_CPSR:

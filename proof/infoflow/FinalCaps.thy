@@ -981,11 +981,11 @@ lemma cte_wp_at_eq:
   apply(simp add: cte_wp_at_def)
   done
 
-lemma set_endpoint_silc_inv[wp]:
+lemma set_simple_ko_silc_inv[wp]:
    "\<lbrace> silc_inv aag st \<rbrace>
-    set_endpoint ptr ep
+    set_simple_ko f ptr ep
     \<lbrace> \<lambda> _. silc_inv aag st \<rbrace>"
-  unfolding set_endpoint_def
+  unfolding set_simple_ko_def
   apply(rule silc_inv_pres)
     apply(wp set_object_wp get_object_wp)
     apply (simp split: kernel_object.splits)
@@ -993,24 +993,7 @@ lemma set_endpoint_silc_inv[wp]:
     apply(fastforce simp: silc_inv_def obj_at_def is_cap_table_def)
    apply(wp set_object_wp get_object_wp | simp)+
   apply(case_tac "ptr = fst slot")
-   apply(clarsimp split: kernel_object.splits)
-   apply(fastforce elim: cte_wp_atE simp: obj_at_def)
-  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
-
-lemma set_notification_silc_inv[wp]:
-   "\<lbrace> silc_inv aag st \<rbrace>
-    set_notification ptr ntfn
-    \<lbrace> \<lambda> _. silc_inv aag st \<rbrace>"
-  unfolding set_notification_def
-  apply(rule silc_inv_pres)
-    apply(wp set_object_wp get_object_wp)
-    apply (simp split: kernel_object.splits)
-    apply(rule impI | simp)+
-    apply(fastforce simp: silc_inv_def obj_at_def is_cap_table_def)
-   apply(wp set_object_wp get_object_wp | simp)+
-  apply(case_tac "ptr = fst slot")
-   apply(clarsimp split: kernel_object.splits)
+   apply(clarsimp simp: a_type_def partial_inv_def split: kernel_object.splits)
    apply(fastforce elim: cte_wp_atE simp: obj_at_def)
   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
@@ -1190,7 +1173,7 @@ lemma cancel_ipc_silc_inv:
    cancel_ipc t
    \<lbrace> \<lambda>_. silc_inv aag st \<rbrace>"
   unfolding cancel_ipc_def
-  apply(wp get_endpoint_wp reply_cancel_ipc_silc_inv get_thread_state_inv hoare_vcg_all_lift
+  apply(wp get_simple_ko_wp reply_cancel_ipc_silc_inv get_thread_state_inv hoare_vcg_all_lift
        | wpc
        | simp(no_asm) add: blocked_cancel_ipc_def get_ep_queue_def
                             get_blocking_object_def
@@ -2294,7 +2277,7 @@ crunch silc_inv[wp]: update_waiting_ntfn, set_message_info, invalidate_tlb_by_as
 lemma send_signal_silc_inv[wp]:
   "\<lbrace>silc_inv aag st\<rbrace> send_signal param_a param_b \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding send_signal_def
-  apply (wp get_ntfn_wp gts_wp cancel_ipc_indirect_silc_inv | wpc | simp)+
+  apply (wp get_simple_ko_wp gts_wp cancel_ipc_indirect_silc_inv | wpc | simp)+
   apply (clarsimp simp: receive_blocked_def pred_tcb_at_def obj_at_def)
   done
 
@@ -2696,7 +2679,7 @@ lemma send_ipc_silc_inv:
           apply simp
           apply(wp do_ipc_transfer_silc_inv | wpc | simp)+
      apply(wp_once hoare_drop_imps)
-     apply (wp get_endpoint_wp)+
+     apply (wp get_simple_ko_wp)+
   apply clarsimp
   apply(rule conjI)
    apply(fastforce simp: obj_at_def ep_q_refs_of_def)
@@ -2717,8 +2700,8 @@ lemma receive_ipc_base_silc_inv:
           apply (rename_tac list tcb data)
           apply(rule_tac Q="\<lambda> r s. (sender_can_grant data \<longrightarrow> is_subject aag receiver \<and> is_subject aag (hd list)) \<and> silc_inv aag st s" in hoare_strengthen_post)
           apply(wp do_ipc_transfer_silc_inv hoare_vcg_all_lift | wpc | simp)+
-     apply(wp hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1]
-              hoare_vcg_all_lift get_endpoint_wp
+     apply(wp hoare_vcg_imp_lift [OF set_simple_ko_get_tcb, unfolded disj_not1]
+              hoare_vcg_all_lift get_simple_ko_wp
          | wpc)+
   apply (clarsimp simp: conj_comms)
   apply(rule conjI)
@@ -2763,12 +2746,12 @@ lemma receive_ipc_silc_inv:
   apply (rule hoare_gen_asm)
   apply (simp del: AllowSend_def split: cap.splits)
   apply clarsimp
-  apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_seq_ext[OF _ gbn_sp])
   apply (case_tac ntfnptr, simp_all)
   (* old receive case, not bound *)
    apply (rule hoare_pre, wp receive_ipc_base_silc_inv, clarsimp)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (case_tac "isActive ntfn", simp_all)
   (* new ntfn-binding case *)
    apply (rule hoare_pre, wp, clarsimp)
@@ -3033,7 +3016,7 @@ lemma handle_recv_silc_inv:
    handle_recv is_blocking
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (simp add: handle_recv_def Let_def lookup_cap_def split_def)
-  apply (wp hoare_vcg_all_lift get_ntfn_wp delete_caller_cap_silc_inv
+  apply (wp hoare_vcg_all_lift get_simple_ko_wp delete_caller_cap_silc_inv
             receive_ipc_silc_inv
             lookup_slot_for_thread_authorised
             lookup_slot_for_thread_cap_fault

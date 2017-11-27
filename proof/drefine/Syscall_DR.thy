@@ -1414,9 +1414,9 @@ lemma receive_ipc_cur_thread:
           apply (rule_tac Q="\<lambda>r s. P (cur_thread s) \<and> tcb_at (hd list) s" in hoare_strengthen_post)
            apply wp
           apply (clarsimp simp:st_tcb_at_def tcb_at_def)
-         apply (wp get_ntfn_wp gbn_wp | wpc | simp add: Ipc_A.isActive_def)+
+         apply (wp get_simple_ko_wp[where f=Notification] gbn_wp | wpc | simp add: Ipc_A.isActive_def)+
    apply (rule_tac Q="\<lambda>r s. valid_ep r s \<and> P (cur_thread s)" in hoare_strengthen_post)
-    apply (wp valid_ep_get_ep2)
+    apply (wp get_simple_ko_valid[where f=Endpoint, simplified valid_ep_def2[symmetric]])
    apply (clarsimp simp:valid_ep_def)
    apply auto[1]
   apply (rule hoare_pre)
@@ -1483,7 +1483,7 @@ lemma handle_recv_corres:
              apply (clarsimp simp: valid_cap_def)
             apply wp+
           apply (simp add:injection_handler_def)
-          apply (wp get_ntfn_wp |wpc)+
+          apply (wp get_simple_ko_wp |wpc)+
           apply (simp only: conj_ac)
           apply wp
           apply (rule hoare_vcg_E_elim)
@@ -1511,9 +1511,10 @@ lemma handle_recv_corres:
       apply wp+
     apply simp
    apply (clarsimp simp:emptyable_def not_idle_thread_def)
-  apply (clarsimp simp: liftE_bindE get_notification_def get_object_def gets_def bind_assoc)
+  apply (clarsimp simp: liftE_bindE get_simple_ko_def get_object_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
-  apply (clarsimp simp: assert_def corres_free_fail split: Structures_A.kernel_object.splits)
+  apply (clarsimp simp: assert_def corres_free_fail partial_inv_def a_type_def
+                 split: Structures_A.kernel_object.splits)
   apply safe[1]
     apply (rule corres_alternate1, clarsimp, rule corres_guard_imp[OF recv_signal_corres], (clarsimp simp: transform_cap_def)+)+
   apply (rule corres_alternate2)

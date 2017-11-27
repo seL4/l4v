@@ -669,9 +669,9 @@ lemma handle_recv_reads_respects_f:
             reads_respects_f[OF lookup_slot_for_thread_rev, where st=st and Q=\<top>]
             reads_respects_f_inv[OF get_cap_rev get_cap_silc_inv, where st=st]
             get_cap_auth_wp[where aag=aag]
-            reads_respects_f[OF get_notification_reads_respects, where st=st and Q=\<top>]
+            reads_respects_f[OF get_simple_ko_reads_respects, where st=st and Q=\<top>]
             lookup_slot_for_thread_authorised
-            get_ntfn_wp
+            get_simple_ko_wp
   shows
   "reads_respects_f aag l (silc_inv aag st and einvs and ct_active and
         pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread) (handle_recv is_blocking)"
@@ -704,7 +704,7 @@ lemma handle_recv_reads_respects_f:
              apply(rule reads_ep[where auth=Receive])
               apply(fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)+
         apply(wp reads_respects_f[OF handle_fault_reads_respects,where st=st])
-        apply (wpsimp wp: get_ntfn_wp get_cap_wp)+
+        apply (wpsimp wp: get_simple_ko_wp get_cap_wp)+
         apply(rule VSpaceEntries_AI.hoare_vcg_all_liftE)
            apply (rule_tac Q="\<lambda>r s. silc_inv aag st s \<and> einvs s \<and> pas_refined aag s \<and>
                                      tcb_at rv s \<and> pas_cur_domain aag s \<and>
@@ -722,7 +722,7 @@ lemma handle_recv_reads_respects_f:
 lemma handle_recv_globals_equiv:
   "\<lbrace>globals_equiv (st :: det_state) and invs and ct_active\<rbrace> handle_recv is_blocking \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
   unfolding handle_recv_def
-  apply (wp handle_fault_globals_equiv get_ntfn_wp
+  apply (wp handle_fault_globals_equiv get_simple_ko_wp
         | wpc | simp add: Let_def)+
       apply (rule_tac Q="\<lambda>r s. invs s \<and> globals_equiv st s" and
                       E = "\<lambda>r s. valid_fault (CapFault (of_bl ep_cptr) True r)" in hoare_post_impErr)

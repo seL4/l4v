@@ -666,10 +666,9 @@ lemma set_endpoinintegrity:
           and K (\<exists>auth. aag_has_auth_to aag auth epptr \<and> auth \<in> {Receive, SyncSend, Reset})\<rbrace>
      set_endpoint epptr ep'
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: set_endpoint_def set_object_def)
+  apply (simp add: set_simple_ko_def set_object_def)
   apply (wp get_object_wp)
-  apply (clarsimp simp: obj_at_def)
-  apply (case_tac koa, simp_all)
+  apply (clarsimp simp: obj_at_def partial_inv_def a_type_def)
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def tro_ep)
   done
@@ -733,85 +732,45 @@ lemma set_thread_state_pas_refined:
               split: if_split_asm)
   done
 
-lemma set_ep_vrefs[wp]:
-  "\<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace> set_endpoint ptr val \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
-  apply (simp add: set_endpoint_def set_object_def)
-  apply (wp get_object_wp)
+lemma set_simple_ko_vrefs[wp]:
+  "\<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace> set_simple_ko f ptr val \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
+  apply (simp add: set_simple_ko_def set_object_def)
+  apply (wp get_object_wp; clarsimp; rule conjI)
   apply (clarsimp simp: state_vrefs_def vs_refs_no_global_pts_def obj_at_def
+                        partial_inv_def a_type_def
                  elim!: rsubst[where P=P, OF _ ext]
-                 split: Structures_A.kernel_object.split_asm)
+                 split: Structures_A.kernel_object.split_asm)+
   done
 
-lemma set_ep_thread_states[wp]:
-  "\<lbrace>\<lambda>s. P (thread_states s)\<rbrace> set_endpoint ptr val \<lbrace>\<lambda>rv s. P (thread_states s)\<rbrace>"
-  apply (simp add: set_endpoint_def set_object_def)
-  apply (wp get_object_wp)
+lemma set_simple_ko_thread_states[wp]:
+  "\<lbrace>\<lambda>s. P (thread_states s)\<rbrace> set_simple_ko f ptr val \<lbrace>\<lambda>rv s. P (thread_states s)\<rbrace>"
+  apply (simp add: set_simple_ko_def set_object_def)
+  apply (wp get_object_wp; clarsimp; rule conjI)
   apply (clarsimp simp: thread_states_def obj_at_def get_tcb_def tcb_states_of_state_def
+                        partial_inv_def a_type_def
                  elim!: rsubst[where P=P, OF _ ext]
-                 split: Structures_A.kernel_object.split_asm option.split)
+                 split: Structures_A.kernel_object.split_asm option.split)+
   done
 
-lemma set_ep_thread_bound_ntfns[wp]:
-  "\<lbrace>\<lambda>s. P (thread_bound_ntfns s)\<rbrace> set_endpoint ptr val \<lbrace>\<lambda>rv s. P (thread_bound_ntfns s)\<rbrace>"
-  apply (simp add: set_endpoint_def set_object_def)
-  apply (wp get_object_wp)
+lemma set_simple_ko_thread_bound_ntfns[wp]:
+  "\<lbrace>\<lambda>s. P (thread_bound_ntfns s)\<rbrace> set_simple_ko f ptr val \<lbrace>\<lambda>rv s. P (thread_bound_ntfns s)\<rbrace>"
+  apply (simp add: set_simple_ko_def set_object_def)
+  apply (wp get_object_wp; clarsimp; rule conjI)
   apply (clarsimp simp: thread_bound_ntfns_def obj_at_def get_tcb_def tcb_states_of_state_def
+                        partial_inv_def a_type_def
                  elim!: rsubst[where P=P, OF _ ext]
-                 split: Structures_A.kernel_object.split_asm option.split)
+                 split: Structures_A.kernel_object.split_asm option.split)+
   done
 
 (* FIXME move to AInvs *)
-lemma set_endpoint_ekheap[wp]:
-  "\<lbrace>\<lambda>s. P (ekheap s)\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>rv s. P (ekheap s)\<rbrace>"
-apply (simp add: set_endpoint_def)
+lemma set_simple_ko_ekheap[wp]:
+  "\<lbrace>\<lambda>s. P (ekheap s)\<rbrace> set_simple_ko f ptr ep \<lbrace>\<lambda>rv s. P (ekheap s)\<rbrace>"
+apply (simp add: set_simple_ko_def)
 apply (wp get_object_wp | simp)+
 done
 
-lemma set_endpoint_pas_refined[wp]:
-  "\<lbrace>pas_refined aag\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply (simp add: pas_refined_def state_objs_to_policy_def)
-  apply (rule hoare_pre)
-   apply (wp tcb_domain_map_wellformed_lift | wps)+
-  apply simp
-  done
-
-lemma set_ntfn_vrefs[wp]:
-  "\<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace> set_notification ptr val \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
-  apply (simp add: set_notification_def set_object_def)
-  apply (wp get_object_wp)
-  apply (clarsimp simp: state_vrefs_def vs_refs_no_global_pts_def obj_at_def
-                 elim!: rsubst[where P=P, OF _ ext]
-                 split: Structures_A.kernel_object.split_asm)
-  done
-
-lemma set_ntfn_thread_states[wp]:
-  "\<lbrace>\<lambda>s. P (thread_states s)\<rbrace> set_notification ptr val \<lbrace>\<lambda>rv s. P (thread_states s)\<rbrace>"
-  apply (simp add: set_notification_def set_object_def)
-  apply (wp get_object_wp)
-  apply (clarsimp simp: thread_states_def obj_at_def get_tcb_def tcb_states_of_state_def
-                 elim!: rsubst[where P=P, OF _ ext]
-                 split: Structures_A.kernel_object.split_asm option.split)
-  done
-
-lemma set_ntfn_thread_bound_ntfns[wp]:
-  "\<lbrace>\<lambda>s. P (thread_bound_ntfns s)\<rbrace> set_notification ptr val \<lbrace>\<lambda>rv s. P (thread_bound_ntfns s)\<rbrace>"
-  apply (simp add: set_notification_def set_object_def)
-  apply (wp get_object_wp)
-  apply (clarsimp simp: thread_bound_ntfns_def obj_at_def get_tcb_def tcb_states_of_state_def
-                 elim!: rsubst[where P=P, OF _ ext]
-                 split: Structures_A.kernel_object.split_asm option.split)
-  done
-
-(* FIXME move to AInvs *)
-lemma set_notification_ekheap[wp]:
-  "\<lbrace>\<lambda>s. P (ekheap s)\<rbrace> set_notification ptr ntfn \<lbrace>\<lambda>rv s. P (ekheap s)\<rbrace>"
-apply (simp add: set_notification_def)
-apply (wp get_object_wp)
-apply simp
-done
-
-lemma set_notification_pas_refined:
-  "\<lbrace>pas_refined aag\<rbrace> set_notification ptr ntfn \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
+lemma set_simple_ko_pas_refined[wp]:
+  "\<lbrace>pas_refined aag\<rbrace> set_simple_ko f ptr ep \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: pas_refined_def state_objs_to_policy_def)
   apply (rule hoare_pre)
    apply (wp tcb_domain_map_wellformed_lift | wps)+
@@ -1106,10 +1065,9 @@ lemma set_ntfn_respects:
           and K (\<exists>auth. aag_has_auth_to aag auth epptr \<and> auth \<in> {Receive, Notify, Reset})\<rbrace>
      set_notification epptr ep'
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: set_notification_def set_object_def)
+  apply (simp add: set_simple_ko_def set_object_def)
   apply (wp get_object_wp)
-  apply (clarsimp simp: obj_at_def)
-  apply (case_tac ko, simp_all)
+  apply (clarsimp simp: obj_at_def partial_inv_def a_type_def)
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def tro_ntfn)
   done

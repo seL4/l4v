@@ -403,7 +403,7 @@ lemma decode_tcb_corres:
                        apply (rename_tac rva word)
                        apply ((case_tac "excaps' ! 0",clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def hd_conv_nth)
                                 | clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: if_split
-                                | wp get_ntfn_wp
+                                | wp get_simple_ko_wp
                                 | (case_tac "excaps' ! 0", rule dcorres_alternative_throw)
                                 | (case_tac "AllowRead \<in> rights", simp))+
 
@@ -1687,9 +1687,11 @@ lemma dcorres_bind_notification:
   "dcorres dc (\<lambda>_. True) (valid_etcbs and not_idle_thread t)
    (Tcb_D.bind_notification t a) (Tcb_A.bind_notification t a)"
   apply (clarsimp simp: Tcb_D.bind_notification_def Tcb_A.bind_notification_def
-                        get_notification_def get_object_def gets_def bind_assoc)
+                        get_simple_ko_def get_object_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
-  apply (clarsimp simp: assert_def corres_free_fail split: Structures_A.kernel_object.splits)
+  apply (simp split: option.splits)
+  apply (clarsimp simp: assert_def corres_free_fail partial_inv_def a_type_def
+                 split: Structures_A.kernel_object.splits)
   apply (rule corres_dummy_return_pl)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ corres_dummy_set_notification], simp)

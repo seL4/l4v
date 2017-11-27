@@ -370,7 +370,7 @@ lemma handle_recv_pas_refined:
   apply (wp handle_fault_pas_refined receive_ipc_pas_refined receive_signal_pas_refined
             get_cap_auth_wp [where aag=aag] lookup_slot_for_cnode_op_authorised
             lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault
-            hoare_vcg_all_lift_R get_ntfn_wp
+            hoare_vcg_all_lift_R get_simple_ko_wp
        | wpc | simp
        | rename_tac word1 word2 word3, rule_tac Q="\<lambda>rv s. invs s \<and> is_subject aag thread
                      \<and> (pasSubject aag, Receive, pasObjectAbs aag word1) \<in> pasPolicy aag"
@@ -394,7 +394,7 @@ lemma handle_recv_integrity:
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: handle_recv_def Let_def lookup_cap_def lookup_cap_def split_def)
   apply (wp handle_fault_integrity_autarch receive_ipc_integrity_autarch receive_signal_integrity_autarch lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault
-            get_cap_auth_wp [where aag=aag] get_ntfn_wp
+            get_cap_auth_wp [where aag=aag] get_simple_ko_wp
        | wpc | simp
        | rule_tac Q="\<lambda>rv s. invs s \<and> is_subject aag thread
                      \<and> (pasSubject aag, Receive, pasObjectAbs aag x31) \<in> pasPolicy aag"
@@ -1099,16 +1099,18 @@ lemma set_thread_state_current_ipc_buffer_register[wp]:
   apply (auto simp: current_ipc_buffer_register_def get_tcb_def)
   done
 
-lemma set_notification_current_ipc_buffer_register[wp]:
-  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_notification t b  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
-  apply (clarsimp simp: set_notification_def)
-  apply (wp dxo_wp_weak)
-   apply (clarsimp simp: get_object_def set_object_def valid_def put_def
-                         gets_def assert_def bind_def get_def return_def fail_def
-                  split: option.splits kernel_object.splits)
-   apply simp
-  apply (wp get_object_wp)+
-  apply (auto simp: current_ipc_buffer_register_def obj_at_def get_tcb_def split: kernel_object.split_asm)
+lemma set_simple_ko_current_ipc_buffer_register[wp]:
+  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_simple_ko f t ep  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  apply (clarsimp simp: set_simple_ko_def  )
+  apply (wp dxo_wp_weak | wpc)+
+     apply (clarsimp simp: set_thread_state_def get_object_def set_object_def valid_def put_def
+                           gets_def assert_def bind_def get_def return_def fail_def gets_the_def
+                           assert_opt_def
+                    split: option.splits kernel_object.splits)
+     apply simp
+    apply (wp get_object_wp | simp add: get_simple_ko_def | wpc)+
+  apply (auto simp: a_type_def partial_inv_def obj_at_def current_ipc_buffer_register_def get_tcb_def
+             split: kernel_object.split_asm)
   done
 
 crunch current_ipc_buffer_register [wp]: "set_cap" "\<lambda>s. P (current_ipc_buffer_register s)"
@@ -1133,20 +1135,7 @@ lemma unbind_maybe_notification_current_ipc_buffer_register[wp]:
      apply (erule update_tcb_current_ipc_buffer_register)
       apply assumption
      apply simp
-    apply (wp get_object_wp | simp add: get_notification_def | wpc)+
-  done
-
-lemma set_endpoint_current_ipc_buffer_register[wp]:
-  "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_endpoint t ep  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
-  apply (clarsimp simp: set_endpoint_def  )
-  apply (wp dxo_wp_weak | wpc)+
-     apply (clarsimp simp: set_thread_state_def get_object_def set_object_def valid_def put_def
-                           gets_def assert_def bind_def get_def return_def fail_def gets_the_def
-                           assert_opt_def
-                    split: option.splits kernel_object.splits)
-     apply simp
-    apply (wp get_object_wp | simp add: get_notification_def | wpc)+
-  apply (auto simp: obj_at_def current_ipc_buffer_register_def get_tcb_def split: kernel_object.split_asm)
+    apply (wp get_object_wp | simp add: get_simple_ko_def | wpc)+
   done
 
 lemma set_bounded_notification_current_ipc_buffer_register[wp]:
@@ -1158,7 +1147,7 @@ lemma set_bounded_notification_current_ipc_buffer_register[wp]:
                            assert_opt_def
                     split: option.splits kernel_object.splits)
      apply simp
-    apply (wp get_object_wp | simp add: get_notification_def | wpc)+
+    apply (wp get_object_wp | simp add: get_simple_ko_def | wpc)+
   apply (auto simp: obj_at_def current_ipc_buffer_register_def get_tcb_def split: kernel_object.split_asm)
   done
 
@@ -1171,7 +1160,7 @@ lemma set_pd_current_ipc_buffer_register[wp]:
                            assert_opt_def
                     split: option.splits kernel_object.splits)
      apply simp
-    apply (wp get_object_wp | simp add: get_notification_def | wpc)+
+    apply (wp get_object_wp | simp add: get_simple_ko_def | wpc)+
   apply (auto simp: obj_at_def current_ipc_buffer_register_def get_tcb_def split: kernel_object.split_asm)
   done
 
@@ -1184,7 +1173,7 @@ lemma set_pt_current_ipc_buffer_register[wp]:
                            assert_opt_def
                     split: option.splits kernel_object.splits)
      apply simp
-    apply (wp get_object_wp | simp add: get_notification_def | wpc)+
+    apply (wp get_object_wp | simp add: get_simple_ko_def | wpc)+
   apply (auto simp: obj_at_def current_ipc_buffer_register_def get_tcb_def split: kernel_object.split_asm)
   done
 
@@ -1265,7 +1254,7 @@ lemma retype_region_current_ipc_buffer_register:
 lemma cancel_signal_current_ipc_buffer_register[wp]:
   "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> cancel_signal a b \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
   including no_pre
-  apply (clarsimp simp: cancel_signal_def get_notification_def)
+  apply (clarsimp simp: cancel_signal_def get_simple_ko_def)
   apply (wp | wpc)+
   apply (clarsimp simp:  get_object_def set_object_def valid_def put_def
                         gets_def assert_def bind_def get_def return_def fail_def gets_the_def
@@ -1509,14 +1498,6 @@ lemma cap_swap_ct_active[wp]:
    \<lbrace>\<lambda>_. ct_active \<rbrace>"
   by (wp | simp add: cap_swap_def | wps)+
 
-lemma set_ep_ct_active[wp]:
-  "\<lbrace>ct_active\<rbrace>
-    set_endpoint a b
-   \<lbrace>\<lambda>_. ct_active \<rbrace>"
-  apply (wp set_object_wp get_object_wp| simp add: set_endpoint_def)+
-  apply (auto simp: ct_in_state_def st_tcb_at_def obj_at_def)
-  done
-
 lemma unbind_maybe_notification_ct_active[wp]:
   "\<lbrace>ct_active\<rbrace>
     unbind_maybe_notification ptr
@@ -1543,11 +1524,11 @@ lemma cancel_all_ipc_ct_active[wp]:
   "\<lbrace>ct_active\<rbrace>
     cancel_all_ipc ptr
    \<lbrace>\<lambda>_. ct_active \<rbrace>"
-  apply (wp mapM_x_wp | wps | simp add: cancel_all_ipc_def | wpc)+
+  apply (wp mapM_x_wp set_simple_ko_ct_active | wps | simp add: cancel_all_ipc_def | wpc)+
        apply force
-      apply (wp mapM_x_wp)+
+      apply (wp mapM_x_wp set_simple_ko_ct_active)+
       apply force
-     apply (wp hoare_drop_imps hoare_vcg_conj_lift hoare_vcg_all_lift)+
+     apply (wp set_simple_ko_ct_active hoare_drop_imps hoare_vcg_conj_lift hoare_vcg_all_lift)+
   apply simp
   done
 

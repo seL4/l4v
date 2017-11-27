@@ -1427,17 +1427,19 @@ lemma delete_asid_reads_respects:
 subsection "globals_equiv"
 
 
-lemma set_endpoint_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_ko_at_arm\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding set_endpoint_def
-  apply(wp set_object_globals_equiv get_object_wp | simp)+
+lemma set_simple_ko_globals_equiv:
+  "\<lbrace>globals_equiv s and valid_ko_at_arm\<rbrace> set_simple_ko f ptr ep \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding set_simple_ko_def
+  apply(wpsimp wp: set_object_globals_equiv get_object_wp
+             simp: partial_inv_def)+
   apply(fastforce simp: obj_at_def valid_ko_at_arm_def)
   done
 
 lemma set_endpoint_valid_ko_at_arm[wp]:
-  "\<lbrace>valid_ko_at_arm\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
-  unfolding set_endpoint_def set_object_def
-  apply(wp get_object_wp | clarsimp simp: obj_at_def valid_ko_at_arm_def)+
+  "\<lbrace>valid_ko_at_arm\<rbrace> set_simple_ko f ptr ep \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
+  unfolding set_simple_ko_def set_object_def
+  apply(wpsimp wp: get_object_wp
+        simp: partial_inv_def a_type_def obj_at_def valid_ko_at_arm_def)+
   done
 
 lemma set_thread_state_globals_equiv:

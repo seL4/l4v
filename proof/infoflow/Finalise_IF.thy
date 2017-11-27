@@ -259,22 +259,26 @@ lemma get_object_revrv:
   apply wp
   done
 
-lemma set_endpoint_reads_respects:
-  "reads_respects aag l \<top> (set_endpoint ptr ep)"
-  unfolding set_endpoint_def
+lemma set_simple_ko_reads_respects:
+  "reads_respects aag l \<top> (set_simple_ko f ptr ep)"
+  unfolding set_simple_ko_def
   apply(simp add: equiv_valid_def2)
   apply(rule equiv_valid_rv_bind)
     apply(rule equiv_valid_rv_guard_imp)
      apply(rule get_object_revrv)
     apply(simp, simp)
    apply(rule_tac R'="\<top>\<top>" in equiv_valid_2_bind)
-      apply(subst equiv_valid_def2[symmetric])
-      apply(rule set_object_reads_respects)
+      apply(rule_tac R'="\<top>\<top>" in equiv_valid_2_bind)
+         apply(subst equiv_valid_def2[symmetric])
+         apply(rule set_object_reads_respects)
+        apply(rule assert_ev2)
+        apply(simp)
+       apply(rule assert_inv)+
      apply(rule assert_ev2)
      apply(simp)
-    apply(rule assert_wp)+
+    apply(rule assert_inv)+
   apply(simp)
-  apply(rule get_object_inv)
+  apply(wp get_object_inv)
   done
 
 lemma get_ep_queue_reads_respects:
@@ -293,9 +297,10 @@ lemma get_object_reads_respects:
   apply (fastforce elim: reads_equivE affects_equivE equiv_forE)
   done
 
-lemma get_endpoint_reads_respects:
-  "reads_respects aag l (K (aag_can_read aag ptr \<or> aag_can_affect aag l ptr)) (get_endpoint ptr)"
-  unfolding get_endpoint_def
+lemma get_simple_ko_reads_respects:
+  "reads_respects aag l (K (aag_can_read aag ptr \<or> aag_can_affect aag l ptr))
+    (get_simple_ko f ptr)"
+  unfolding get_simple_ko_def
   apply(wp get_object_reads_respects | wpc | simp)+
   done
 
@@ -457,26 +462,35 @@ lemma ep_queues_are_invisible_or_eps_are_equal:
             apply (assumption | erule reads_equiv_sym | erule affects_equiv_sym)+
   done
 
+lemma get_simple_ko_revrv:
+  "inj C \<Longrightarrow> reads_equiv_valid_rv_inv R aag
+        (\<lambda>obj obj'. \<exists>s t. reads_equiv aag s t
+            \<and> R s t \<and> P s \<and> P t \<and> ko_at (C obj) ptr s
+            \<and> ko_at (C obj') ptr t)
+        P
+        (get_simple_ko C ptr)"
+  apply (simp add: get_simple_ko_def)
+  apply(rule_tac Q="\<lambda> rv. ko_at rv ptr and P" in equiv_valid_rv_bind)
+    apply(rule equiv_valid_rv_guard_imp[OF equiv_valid_rv_trivial])
+     apply wpsimp+
+   apply (clarsimp simp add: assert_def fail_ev2_l fail_ev2_r
+        simp del: imp_disjL split: option.split)
+   apply (rule return_ev2)
+   apply (auto simp: proj_inj)[1]
+  apply (rule hoare_strengthen_post[OF get_object_sp])
+  apply simp
+  done
+
 lemma get_endpoint_revrv:
   "reads_equiv_valid_rv_inv (affects_equiv aag l) aag
         (\<lambda>ep ep'. (\<not> ep_queue_invisible aag l ep \<or> \<not> ep_queue_invisible aag l ep') \<longrightarrow> ep = ep')
         (pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of and
          K ((pasSubject aag, Reset, pasObjectAbs aag epptr) \<in> pasPolicy aag))
         (get_endpoint epptr)"
-  unfolding get_endpoint_def
-  apply(rule_tac Q="\<lambda> rv. ko_at rv epptr and pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of and (K ((pasSubject aag, Reset, pasObjectAbs aag epptr) \<in> pasPolicy aag))" in equiv_valid_rv_bind)
-    apply(rule equiv_valid_rv_guard_imp[OF equiv_valid_rv_trivial])
-     apply wpsimp+
-   apply(case_tac "\<exists> ep. rv = Endpoint ep")
-    apply(case_tac "\<exists> ep. rv' = Endpoint ep")
-     apply (clarsimp split: kernel_object.splits)
-     apply (rule return_ev2)
-     apply (rule ep_queues_are_invisible_or_eps_are_equal[simplified])
-                apply fastforce+
-    apply(clarsimp split: kernel_object.splits simp: fail_ev2_l fail_ev2_r)
-   apply(clarsimp split: kernel_object.splits simp: fail_ev2_l fail_ev2_r)
-  apply (rule hoare_strengthen_post[OF get_object_sp])
-  by simp
+  apply (rule equiv_valid_2_rvrel_imp, rule get_simple_ko_revrv)
+   apply (simp add: inj_Endpoint)
+  apply (auto elim: ep_queues_are_invisible_or_eps_are_equal[rule_format])
+  done
 
 lemma gen_asm_ev2_r:
   "\<lbrakk>P' \<Longrightarrow> equiv_valid_2 I A B R P \<top> f f'\<rbrakk> \<Longrightarrow>
@@ -604,9 +618,9 @@ lemma set_endpoint_equiv_but_for_labels:
   "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag epptr \<in> L)\<rbrace>
    set_endpoint epptr ep
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  unfolding set_endpoint_def
+  unfolding set_simple_ko_def
   apply (wp set_object_equiv_but_for_labels get_object_wp)
-  apply (clarsimp simp: asid_pool_at_kheap split: kernel_object.splits simp: obj_at_def)
+  apply (clarsimp simp: asid_pool_at_kheap partial_inv_def split: kernel_object.splits simp: obj_at_def)
   done
 
 
@@ -770,18 +784,17 @@ lemma possible_switch_to_reads_respects:
   apply simp
   done
 
-crunch sched_act[wp]: set_endpoint "\<lambda>s. P (scheduler_action s)"
+crunch sched_act[wp]: set_simple_ko "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps)
-
-lemma set_endpoint_valid_sched_action[wp]:
-  "\<lbrace>valid_sched_action\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
-  by (wp valid_sched_action_lift)
-
 
 lemma cancel_all_ipc_reads_respects:
   "reads_respects aag l (pas_refined aag and K (is_subject aag epptr)) (cancel_all_ipc epptr)"
   unfolding cancel_all_ipc_def fun_app_def
-  apply (wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects set_thread_state_pas_refined hoare_vcg_ball_lift mapM_x_wp set_thread_state_runnable_valid_sched_action set_endpoint_reads_respects get_ep_queue_reads_respects get_epq_SendEP_ret get_epq_RecvEP_ret get_endpoint_reads_respects get_endpoint_wp | wpc | clarsimp simp: ball_conj_distrib | rule subset_refl | wp_once hoare_drop_imps | assumption)+
+  apply (wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects
+            set_thread_state_pas_refined hoare_vcg_ball_lift mapM_x_wp set_thread_state_runnable_valid_sched_action
+            set_simple_ko_reads_respects get_ep_queue_reads_respects get_epq_SendEP_ret get_epq_RecvEP_ret
+            get_simple_ko_reads_respects get_simple_ko_wp | wpc
+          | clarsimp simp: ball_conj_distrib | rule subset_refl | wp_once hoare_drop_imps | assumption)+
   done
 (*
 lemma cancel_all_ipc_reads_respects:
@@ -922,31 +935,6 @@ lemma cancel_all_ipc_reads_respects:
   done
 *)
 
-lemma set_notification_reads_respects:
-  "reads_respects aag l \<top> (set_notification ptr ntfn)"
-  unfolding set_notification_def
-  apply(simp add: equiv_valid_def2)
-  apply(rule equiv_valid_rv_bind)
-    apply(rule equiv_valid_rv_guard_imp)
-     apply(rule get_object_revrv)
-    apply(simp, simp)
-   apply(rule equiv_valid_2_bind)
-      apply(subst equiv_valid_def2[symmetric])
-      apply(rule set_object_reads_respects)
-     apply(rule assert_ev2)
-     apply(simp)
-    apply(rule assert_wp)+
-  apply(simp)
-  apply (rule get_object_inv)
-  done
-
-lemma get_notification_reads_respects:
-  "reads_respects aag l (K (aag_can_read aag ptr \<or> aag_can_affect aag l ptr)) (get_notification ptr)"
-  unfolding get_notification_def
-  apply(wp get_object_reads_respects hoare_vcg_all_lift | wpc | simp)+
-  done
-
-
 fun ntfn_queue_invisible where
   "ntfn_queue_invisible aag l (WaitingNtfn list) = labels_are_invisible aag l ((pasObjectAbs aag) ` (set list))" |
   "ntfn_queue_invisible aag l _ = True"
@@ -1002,21 +990,25 @@ lemma set_notification_equiv_but_for_labels:
   "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag ntfnptr \<in> L)\<rbrace>
    set_notification ntfnptr ntfn
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  unfolding set_notification_def
+  unfolding set_simple_ko_def
   apply (wp set_object_equiv_but_for_labels get_object_wp)
-  apply (clarsimp simp: asid_pool_at_kheap split: kernel_object.splits simp: obj_at_def)
+  apply (clarsimp simp: asid_pool_at_kheap partial_inv_def split: kernel_object.splits simp: obj_at_def)
   done
 
 lemma cancel_all_signals_reads_respects:
   "reads_respects aag l (pas_refined aag and K (is_subject aag ntfnptr)) (cancel_all_signals ntfnptr)"
   unfolding cancel_all_signals_def
-  apply ((wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects set_thread_state_pas_refined hoare_vcg_ball_lift mapM_x_wp set_thread_state_runnable_valid_sched_action set_notification_reads_respects get_ep_queue_reads_respects get_epq_SendEP_ret get_epq_RecvEP_ret get_notification_reads_respects get_endpoint_wp set_notification_pas_refined hoare_vcg_all_lift | wpc | clarsimp simp: ball_conj_distrib | rule subset_refl | wp_once hoare_drop_imps | simp)+)[1]
+  apply ((wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects
+        set_thread_state_pas_refined hoare_vcg_ball_lift mapM_x_wp set_thread_state_runnable_valid_sched_action
+        set_simple_ko_reads_respects get_epq_SendEP_ret get_epq_RecvEP_ret
+        get_simple_ko_reads_respects get_simple_ko_wp
+        | wpc | clarsimp simp: ball_conj_distrib | rule subset_refl | wp_once hoare_drop_imps | simp)+)[1]
   done
 (*
   apply (wp hoare_vcg_all_lift)
   apply(case_tac "aag_can_read aag ntfnptr \<or> aag_can_affect aag l ntfnptr")
-   apply((wp mapM_x_ev' set_thread_state_reads_respects set_notification_reads_respects
-             get_notification_reads_respects hoare_vcg_all_lift
+   apply((wp mapM_x_ev' set_thread_state_reads_respects set_simple_ko_reads_respects
+             get_simple_ko_reads_respects hoare_vcg_all_lift
 
          | wpc | simp)+)[1]
     apply (wp hoare_drop_imps)
@@ -1029,8 +1021,8 @@ lemma cancel_all_signals_reads_respects:
     apply(clarsimp)
     apply(fold equiv_valid_def2)
     apply(rule equiv_valid_guard_imp)
-     apply((wp mapM_x_ev' set_thread_state_reads_respects set_notification_reads_respects
-               get_notification_reads_respects hoare_vcg_all_lift
+     apply((wp mapM_x_ev' set_thread_state_reads_respects set_simple_ko_reads_respects
+               get_simple_ko_reads_respects hoare_vcg_all_lift
            | wpc | simp)+)[1]
     apply clarsimp+
     apply force
@@ -1169,8 +1161,8 @@ apply wp
    apply (clarsimp, wp)[1]
   -- "interesting case, ntfn is bound"
   apply (clarsimp)
-   apply ((wp set_bound_notification_none_reads_respects set_notification_reads_respects
-              get_notification_reads_respects
+   apply ((wp set_bound_notification_none_reads_respects set_simple_ko_reads_respects
+              get_simple_ko_reads_respects
           | wpc
           | simp)+)
   done
@@ -1179,8 +1171,8 @@ lemma unbind_notification_is_subj_reads_respects:
   "reads_respects aag l (pas_refined aag and invs and K (is_subject aag t))
        (unbind_notification t)"
   apply (clarsimp simp: unbind_notification_def)
-  apply (wp set_bound_notification_owned_reads_respects set_notification_reads_respects
-            get_notification_reads_respects get_bound_notification_reads_respects
+  apply (wp set_bound_notification_owned_reads_respects set_simple_ko_reads_respects
+            get_simple_ko_reads_respects get_bound_notification_reads_respects
             gbn_wp[unfolded get_bound_notification_def, simplified]
        | wpc
        | simp add: get_bound_notification_def)+
@@ -1199,7 +1191,7 @@ lemma fast_finalise_reads_respects:
            equiv_valid_guard_imp[OF cancel_all_signals_reads_respects]
            unbind_notification_is_subj_reads_respects
            unbind_maybe_notification_reads_respects
-           get_notification_reads_respects get_ntfn_wp
+           get_simple_ko_reads_respects get_simple_ko_wp
       | simp add: when_def
       | wpc
       | intro conjI impI
@@ -1275,7 +1267,9 @@ lemma blocked_cancel_ipc_reads_respects:
   "reads_respects aag l (pas_refined aag and invs and st_tcb_at (op = state) tptr and (\<lambda>_. (is_subject aag tptr)))
     (blocked_cancel_ipc state tptr)"
   unfolding blocked_cancel_ipc_def
-  apply(wp set_thread_state_owned_reads_respects set_endpoint_reads_respects get_ep_queue_reads_respects get_endpoint_reads_respects get_blocking_object_reads_respects | simp add: get_blocking_object_def | wpc)+
+  apply(wp set_thread_state_owned_reads_respects set_simple_ko_reads_respects get_ep_queue_reads_respects
+           get_simple_ko_reads_respects get_blocking_object_reads_respects
+      | simp add: get_blocking_object_def | wpc)+
   apply(fastforce intro: aag_can_read_self owns_thread_blocked_reads_endpoint simp: st_tcb_at_sym)
   done
 
@@ -1368,14 +1362,14 @@ lemma cancel_signal_reads_respects:
   "reads_respects aag l ((\<lambda>s. is_subject aag (cur_thread s)) and K (aag_can_read_label aag (pasObjectAbs aag ntfnptr) \<or>
         aag_can_affect aag l ntfnptr)) (cancel_signal threadptr ntfnptr)"
   unfolding cancel_signal_def
-  apply(wp set_thread_state_reads_respects set_notification_reads_respects get_notification_reads_respects hoare_drop_imps | wpc | simp)+
+  apply(wp set_thread_state_reads_respects set_simple_ko_reads_respects get_simple_ko_reads_respects hoare_drop_imps | wpc | simp)+
   done
 
 lemma cancel_signal_owned_reads_respects:
   "reads_respects aag l (K (is_subject aag threadptr) and K (aag_can_read_label aag (pasObjectAbs aag ntfnptr) \<or>
         aag_can_affect aag l ntfnptr)) (cancel_signal threadptr ntfnptr)"
   unfolding cancel_signal_def
-  apply(wp set_thread_state_owned_reads_respects set_notification_reads_respects get_notification_reads_respects hoare_drop_imps | wpc | simp)+
+  apply(wp set_thread_state_owned_reads_respects set_simple_ko_reads_respects get_simple_ko_reads_respects hoare_drop_imps | wpc | simp)+
   done
 
 lemma cancel_ipc_reads_respects_f:
@@ -1793,7 +1787,7 @@ lemma cancel_all_ipc_globals_equiv':
    \<lbrace> \<lambda>_. globals_equiv st and valid_ko_at_arm \<rbrace>"
   unfolding cancel_all_ipc_def
   apply(wp mapM_x_wp[OF _ subset_refl] set_thread_state_globals_equiv
-           set_endpoint_globals_equiv hoare_vcg_all_lift get_object_inv
+           set_simple_ko_globals_equiv hoare_vcg_all_lift get_object_inv
            dxo_wp_weak | wpc | simp
         | wp_once hoare_drop_imps)+
   done
@@ -1809,14 +1803,14 @@ lemma set_notification_globals_equiv:
   "\<lbrace> globals_equiv st and valid_ko_at_arm \<rbrace>
   set_notification ptr ntfn
    \<lbrace> \<lambda>_. globals_equiv st \<rbrace>"
-  unfolding set_notification_def
+  unfolding set_simple_ko_def
   apply(wp set_object_globals_equiv get_object_wp | simp)+
   apply(fastforce simp: valid_ko_at_arm_def obj_at_def)+
   done
 
 lemma set_notification_valid_ko_at_arm:
   "\<lbrace> valid_ko_at_arm \<rbrace> set_notification ptr ntfn \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
-  unfolding set_notification_def
+  unfolding set_simple_ko_def
   apply (wp get_object_wp)
   apply(fastforce simp: valid_ko_at_arm_def get_tcb_ko_at obj_at_def)
 done
@@ -1865,7 +1859,7 @@ lemma unbind_maybe_notification_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding unbind_maybe_notification_def
   by (wp gbn_wp set_bound_notification_globals_equiv set_notification_valid_ko_at_arm
-            set_notification_globals_equiv get_ntfn_wp
+            set_notification_globals_equiv get_simple_ko_wp
           | wpc
           | simp)+
 
@@ -1875,7 +1869,7 @@ lemma unbind_maybe_notification_valid_ko_at_arm[wp]:
    \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
   unfolding unbind_maybe_notification_def
   by (wp gbn_wp set_bound_notification_valid_ko_at_arm set_notification_valid_ko_at_arm
-         get_ntfn_wp
+         get_simple_ko_wp
           | wpc
           | simp)+
 

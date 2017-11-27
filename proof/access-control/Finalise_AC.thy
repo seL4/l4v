@@ -87,7 +87,7 @@ lemma cancel_badged_sends_respects[wp]:
       apply (wp sts_respects_restart_ep hoare_vcg_const_Ball_lift sts_st_tcb_at_neq|simp)+
      apply clarsimp
      apply fastforce
-    apply (wp set_endpoinintegrity hoare_vcg_const_Ball_lift get_endpoint_wp)+
+    apply (wp set_endpoinintegrity hoare_vcg_const_Ball_lift get_simple_ko_wp)+
   apply clarsimp
   apply (frule(1) sym_refs_ko_atD)
   apply (frule ko_at_state_refs_ofD)
@@ -107,12 +107,13 @@ lemma cancel_all_ipc_respects [wp]:
   apply (clarsimp simp add: cancel_all_ipc_def get_ep_queue_def cong: Structures_A.endpoint.case_cong)
   apply (wp mapM_x_inv_wp2 [where I = "integrity aag X st" and V = "\<lambda>q s. distinct q \<and> (\<forall>x \<in> set q. st_tcb_at (blocked_on epptr) x s)"]
             sts_respects_restart_ep sts_st_tcb_at_neq hoare_vcg_ball_lift set_endpoinintegrity
-            get_endpoint_wp
+            get_simple_ko_wp
         | wpc
         | clarsimp
         | blast)+
   apply (frule ko_at_state_refs_ofD)
   apply (rule obj_at_valid_objsE, assumption, assumption)
+  apply (rename_tac ep ko)
   apply (subgoal_tac "\<forall>x \<in> ep_q_refs_of ep. st_tcb_at (blocked_on epptr) (fst x) s")
    apply (fastforce simp: valid_obj_def valid_ep_def obj_at_def is_ep_def split: Structures_A.endpoint.splits)
   apply clarsimp
@@ -181,13 +182,13 @@ lemma sbn_pas_refined[wp]:
 lemma unbind_notification_pas_refined[wp]:
   "\<lbrace>pas_refined aag\<rbrace> unbind_notification t \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (clarsimp simp: unbind_notification_def)
-  apply (wp set_notification_pas_refined | wpc | simp)+
+  apply (wp set_simple_ko_pas_refined | wpc | simp)+
   done
 
 lemma unbind_maybe_notification_pas_refined[wp]:
   "\<lbrace>pas_refined aag\<rbrace> unbind_maybe_notification a \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (clarsimp simp: unbind_maybe_notification_def)
-  apply (wp set_notification_pas_refined | wpc | simp)+
+  apply (wp set_simple_ko_pas_refined | wpc | simp)+
   done
 
 crunch pas_refined[wp]: cap_delete_one "pas_refined aag"
@@ -236,7 +237,7 @@ lemma cancel_all_signals_respects [wp]:
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp add: cancel_all_signals_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp], rule hoare_pre)
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp], rule hoare_pre)
    apply (wp mapM_x_inv_wp2 [where I = "integrity aag X st" and V = "\<lambda>q s. distinct q \<and> (\<forall>x \<in> set q. st_tcb_at (blocked_on epptr) x s)"]
             sts_respects_restart_ep sts_st_tcb_at_neq hoare_vcg_ball_lift set_ntfn_respects
         | wpc
@@ -287,7 +288,7 @@ lemma unbind_notification_bound_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and (\<lambda>s. bound_tcb_at (\<lambda>a. a = Some ntfn) t s \<and>
      (pasSubject aag, Reset, pasObjectAbs aag ntfn) \<in> pasPolicy aag)\<rbrace> unbind_notification t \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (clarsimp simp: unbind_notification_def)
-  apply (wp_trace set_ntfn_respects hoare_vcg_imp_lift hoare_vcg_ex_lift gbn_wp | wpc | simp del: set_bound_notification_def)+
+  apply (wp set_ntfn_respects hoare_vcg_imp_lift hoare_vcg_ex_lift gbn_wp | wpc | simp del: set_bound_notification_def)+
    apply clarsimp
    apply (fastforce simp: pred_tcb_at_def obj_at_def)+
   done
@@ -316,7 +317,7 @@ lemma unbind_maybe_notification_respects:
      unbind_maybe_notification a \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (clarsimp simp: unbind_maybe_notification_def)
   apply (rule hoare_pre)
-   apply (wp set_ntfn_respects get_ntfn_wp hoare_vcg_ex_lift gbn_wp | wpc | simp)+
+   apply (wp set_ntfn_respects get_simple_ko_wp hoare_vcg_ex_lift gbn_wp | wpc | simp)+
   apply clarsimp
   apply (frule_tac P="\<lambda>ntfn. ntfn = Some a" in ntfn_bound_tcb_at[OF invs_sym_refs invs_valid_objs], (simp add: obj_at_def)+)
   apply (auto simp: pred_tcb_at_def obj_at_def split: option.splits)
@@ -327,7 +328,7 @@ lemma fast_finalise_respects[wp]:
       fast_finalise cap fin
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (cases cap, simp_all)
-     apply (wp unbind_maybe_notification_valid_objs get_ntfn_wp unbind_maybe_notification_respects
+     apply (wp unbind_maybe_notification_valid_objs get_simple_ko_wp unbind_maybe_notification_respects
              | wpc
              | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def when_def
                   split: if_split_asm
@@ -373,7 +374,7 @@ lemma cancel_signal_respects[wp]:
      cancel_signal t ntfnptr
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: cancel_signal_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp set_thread_state_integrity_autarch set_ntfn_respects
              | wpc | fastforce)+
@@ -386,7 +387,7 @@ lemma cancel_ipc_respects[wp]:
   apply (simp add: cancel_ipc_def)
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (rule hoare_pre)
-   apply (wp set_thread_state_integrity_autarch set_endpoinintegrity get_endpoint_wp
+   apply (wp set_thread_state_integrity_autarch set_endpoinintegrity get_simple_ko_wp
              | wpc
              | simp(no_asm) add: blocked_cancel_ipc_def get_ep_queue_def
                                  get_blocking_object_def)+
@@ -449,7 +450,7 @@ lemma finalise_cap_respects[wp]:
                 apply (wp |clarsimp simp: invs_valid_objs invs_sym_refs cap_auth_conferred_def
                                           cap_rights_to_auth_def aag_cap_auth_def)+
               (*NTFN Cap*)
-              apply ((wp unbind_maybe_notification_valid_objs get_ntfn_wp
+              apply ((wp unbind_maybe_notification_valid_objs get_simple_ko_wp
                          unbind_maybe_notification_respects
                          | wpc
                          | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def                               split: if_split_asm

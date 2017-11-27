@@ -402,9 +402,10 @@ lemma finalise_cancel_ipc:
                    apply (rule corres_split [OF _ dcorres_revoke_cap_unnecessary])
                      apply (simp add: when_def dc_def[symmetric])
                      apply (rule set_thread_state_corres)
-                    apply (wp sts_only_idle sts_st_tcb_at' valid_ep_queue_subset |  clarsimp simp:not_idle_thread_def)+
+                    apply (wp sts_only_idle sts_st_tcb_at' valid_ep_queue_subset
+                        | clarsimp simp:not_idle_thread_def valid_simple_obj_def a_type_def)+
           apply (simp add:get_blocking_object_def | wp)+
-      apply (clarsimp dest!:get_tcb_rev simp:invs_def )
+      apply (clarsimp dest!:get_tcb_rev simp:invs_def ep_at_def2[symmetric, simplified])
       apply (frule(1) valid_tcb_if_valid_state)
       apply (clarsimp simp:valid_tcb_def valid_tcb_state_def
        valid_state_def valid_pspace_def infer_tcb_pending_op_def
@@ -423,9 +424,9 @@ lemma finalise_cancel_ipc:
                     unfolding K_bind_def
                     apply (rule set_thread_state_corres)
                    apply (wp sts_only_idle sts_st_tcb_at' valid_ep_queue_subset
-                     | clarsimp simp:not_idle_thread_def)+
+                     | clarsimp simp:not_idle_thread_def valid_simple_obj_def a_type_def)+
          apply (simp add:get_blocking_object_def | wp)+
-     apply (clarsimp dest!:get_tcb_rev simp:invs_def)
+     apply (clarsimp dest!:get_tcb_rev simp:invs_def ep_at_def2[symmetric, simplified])
      apply (frule(1) valid_tcb_if_valid_state)
      apply (clarsimp simp:valid_tcb_def valid_tcb_state_def
            valid_state_def valid_pspace_def infer_tcb_pending_op_def
@@ -454,9 +455,10 @@ lemma finalise_cancel_ipc:
                unfolding K_bind_def
                apply (rule set_thread_state_corres)
               including no_pre
-              apply (wpsimp wp: set_ntfn_valid_objs simp:not_idle_thread_def)+
+              apply (wpsimp wp: set_simple_ko_valid_objs
+                  simp: valid_simple_obj_def not_idle_thread_def a_type_def)+
            apply (clarsimp simp:valid_def fail_def return_def split:Structures_A.ntfn.splits)+
-           apply (clarsimp simp:invs_def)
+           apply (clarsimp simp:invs_def ntfn_at_def2[symmetric, simplified])
            apply (frule(1) valid_tcb_if_valid_state)
            apply (clarsimp simp:valid_tcb_def tcb_at_cte_at_2
              valid_tcb_state_def invs_def valid_state_def valid_pspace_def

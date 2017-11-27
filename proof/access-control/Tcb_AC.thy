@@ -275,7 +275,7 @@ lemma invoke_tcb_tc_respects_aag:
              thread_set_ipc_tcb_cap_valid
              cap_delete_pas_refined[THEN valid_validE_E])+
         | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
-                    emptyable_def
+                    emptyable_def a_type_def partial_inv_def
                del: hoare_post_taut hoare_True_E_R
         | wpc
         | strengthen use_no_cap_to_obj_asid_strg
@@ -326,7 +326,7 @@ lemma bind_notification_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and bound_tcb_at (op = None) t and K (is_subject aag t \<and> (pasSubject aag, Receive, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag)\<rbrace> bind_notification t ntfnptr \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: bind_notification_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (wp set_ntfn_respects hoare_vcg_imp_lift sbn_bind_respects | wpc | clarsimp)+
   apply fastforce
   done
@@ -381,7 +381,7 @@ lemma hoare_st_refl: "(\<And>st. \<lbrace>P st\<rbrace> f \<lbrace>Q st\<rbrace>
 lemma bind_notification_pas_refined[wp]:
   "\<lbrace>pas_refined aag and K (\<forall>auth \<in> {Receive, Reset}. (pasObjectAbs aag t, auth, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag)\<rbrace> bind_notification t ntfnptr \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (clarsimp simp: bind_notification_def)
-  apply (wp set_notification_pas_refined | wpc | simp)+
+  apply (wp set_simple_ko_pas_refined | wpc | simp)+
   done
 
 lemma invoke_tcb_ntfn_control_pas_refined[wp]:
@@ -534,7 +534,7 @@ lemma decode_bind_notification_authorised:
    \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
   unfolding decode_bind_notification_def authorised_tcb_inv_def
   apply clarsimp
-  apply (wp gbn_wp get_ntfn_wp whenE_throwError_wp | wpc | simp add:)+
+  apply (wp gbn_wp get_simple_ko_wp whenE_throwError_wp | wpc | simp add:)+
   apply (clarsimp dest!: hd_in_set)
   apply (drule_tac x="hd excaps"  in bspec, simp)+
   apply (auto simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def AllowRecv_def)

@@ -17,7 +17,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 abbreviation
 "thread_is_running y s \<equiv> st_tcb_at (op=Structures_A.thread_state.Running) y s"
 
-lemmas [wp] = abs_typ_at_lifts[OF set_notification_typ_at]
+lemmas [wp] = abs_typ_at_lifts[OF set_simple_ko_typ_at]
 
 lemma set_object_cur_thread_idle_thread:
   "\<lbrace>\<lambda>s. P (cur_thread s) (idle_thread s)\<rbrace> KHeap_A.set_object word x
@@ -542,8 +542,8 @@ lemma corres_update_waiting_ntfn_do_notification_transfer:
      apply (clarsimp simp: pred_tcb_at_def obj_at_def generates_pending_def)
      apply (drule_tac t = "tcb_state tcb" in sym)
      apply ((clarsimp simp:pred_tcb_at_def obj_at_def not_idle_thread_def split:Structures_A.thread_state.splits)+)[3]
-  apply (wp set_ntfn_aligned set_ntfn_mdb set_ntfn_valid_objs sts_typ_ats)
-  apply (simp_all add:not_idle_thread_def)+
+  apply (wp set_simple_ko_aligned set_ep_mdb set_simple_ko_valid_objs sts_typ_ats)
+  apply (simp_all add:not_idle_thread_def valid_simple_obj_def a_type_def ntfn_at_def2[symmetric, simplified])+
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   apply (drule valid_tcb_objs,erule get_tcb_rev)
   apply (drule_tac t = "tcb_state tcb" in sym)
@@ -646,7 +646,7 @@ lemma recv_signal_corres:
        apply (rule corres_split[OF corres_dummy_set_notification set_register_corres])
         apply (wp |clarsimp)+
      apply (rule_tac Q="\<lambda>r. ko_at (kernel_object.Notification r) word1 and valid_state" in hoare_strengthen_post)
-      apply (wp get_ntfn_ko | clarsimp)+
+      apply (wp get_simple_ko_ko_at | clarsimp)+
      apply (rule valid_objs_valid_ntfn_simp)
       apply (clarsimp simp:valid_objs_valid_ntfn_simp valid_state_def valid_pspace_def)
      apply (simp add:obj_at_def)
@@ -729,12 +729,12 @@ lemma not_idle_after_blocked_cancel_ipc:
        apply (drule_tac x = obj_id' in bspec)
         apply (clarsimp simp:valid_obj_def valid_tcb_def valid_tcb_state_def)+
        apply (drule_tac t = "tcb_state tcb" in sym)
-       apply (clarsimp simp:obj_at_def)
+       apply (clarsimp simp:obj_at_def is_ep_def2)
       apply (clarsimp simp:valid_def return_def st_tcb_at_def obj_at_def valid_objs_def)
       apply (drule_tac x = obj_id' in bspec)
        apply (clarsimp simp:valid_obj_def valid_tcb_def valid_tcb_state_def)+
       apply (drule_tac t = "tcb_state tcb" in sym)
-      apply (clarsimp simp:obj_at_def)
+      apply (clarsimp simp:obj_at_def is_ep_def2)
      apply (clarsimp)+
   done
 
@@ -778,7 +778,7 @@ lemma valid_idle_cancel_all_ipc:
      apply wp
      apply (rule hoare_vcg_conj_lift)
       apply (rule hoare_Ball_helper)
-       apply (wp set_endpoint_obj_at | clarsimp simp :get_ep_queue_def not_idle_thread_def)+
+       apply (wp simple_obj_set_prop_at | clarsimp simp :get_ep_queue_def not_idle_thread_def)+
      apply (rename_tac queue list)
      apply (rule_tac I = "(\<lambda>s. (queue = list) \<and> (\<forall>a\<in> set list. tcb_at a s \<and> not_idle_thread a s))
             and ko_at (kernel_object.Endpoint Structures_A.endpoint.IdleEP) word1  and valid_idle" in mapM_x_inv_wp)
@@ -795,8 +795,8 @@ lemma valid_idle_cancel_all_ipc:
     apply wp
     apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_Ball_helper)
-      apply (wp set_endpoint_obj_at | clarsimp simp :get_ep_queue_def not_idle_thread_def)+
-  apply (rule hoare_strengthen_post[OF get_endpoint_sp])
+      apply (wp simple_obj_set_prop_at | clarsimp simp :get_ep_queue_def not_idle_thread_def)+
+  apply (rule hoare_strengthen_post[OF get_simple_ko_sp])
   apply (clarsimp  | rule conjI)+
      apply (clarsimp simp:obj_at_def valid_pspace_def valid_state_def)
      apply (drule(1) valid_objs_valid_ep_simp)
@@ -810,15 +810,6 @@ lemma valid_idle_cancel_all_ipc:
   apply (drule(1) pending_thread_in_recv_not_idle)
     apply (simp add:not_idle_thread_def obj_at_def is_ep_def)+
   done
-
-lemma set_ntfn_obj_at:
-  "\<lbrace>\<lambda>s. P (kernel_object.Notification ep)\<rbrace> set_notification ptr ep \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
-  apply (simp add:set_notification_def)
-  apply (wp obj_set_prop_at)
-  apply (simp add:get_object_def)
-  apply wp
-  apply clarsimp
-done
 
 lemma valid_idle_cancel_all_signals:
   "\<lbrace>valid_idle and valid_state :: det_state \<Rightarrow> bool\<rbrace> IpcCancel_A.cancel_all_signals word1 \<lbrace>\<lambda>a. valid_idle\<rbrace>"
@@ -840,9 +831,9 @@ lemma valid_idle_cancel_all_signals:
       apply (clarsimp simp:)+
     apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_Ball_helper)
-      apply (wp set_ntfn_tcb| clarsimp simp : not_idle_thread_def)+
-    apply (wp set_ntfn_obj_at)+
-  apply (rule hoare_strengthen_post[OF get_ntfn_sp])
+      apply (wp set_simple_ko_tcb| clarsimp simp : not_idle_thread_def)+
+    apply (wp simple_obj_set_prop_at)+
+  apply (rule hoare_strengthen_post[OF get_simple_ko_sp])
   apply (clarsimp  | rule conjI)+
     apply (clarsimp simp:obj_at_def valid_pspace_def valid_state_def)
     apply (drule(1) valid_objs_valid_ntfn_simp)
@@ -883,7 +874,7 @@ lemma not_idle_thread_cancel_signal:
   including no_pre
   apply (simp add:cancel_signal_def)
   apply (wp valid_idle_set_thread_state|wpc)+
-  apply (rule hoare_strengthen_post[OF get_ntfn_sp])
+  apply (rule hoare_strengthen_post[OF get_simple_ko_sp])
   apply (clarsimp simp:not_idle_thread_def obj_at_def is_ntfn_def)
 done
 
@@ -908,9 +899,11 @@ lemma send_signal_corres:
      (Ipc_A.send_signal epptr badge)"
   apply (unfold Endpoint_D.send_signal_def Ipc_A.send_signal_def invs_def)
   apply (rule dcorres_expand_pfx)
-  apply (clarsimp simp:get_notification_def get_object_def gets_def bind_assoc split: if_split)
+  apply (clarsimp simp:get_simple_ko_def get_object_def gets_def bind_assoc split: if_split)
   apply (rule dcorres_absorb_get_r)
-  apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits if_split )
+  apply (clarsimp simp:assert_def corres_free_fail partial_inv_def a_type_def the_equality
+                 split:Structures_A.kernel_object.splits if_split)
+  apply (rule conjI, clarsimp+)
   apply (rename_tac ntfn_ext)
   apply (case_tac "ntfn_obj ntfn_ext", clarsimp)
     apply (case_tac "ntfn_bound_tcb ntfn_ext", clarsimp)
@@ -951,7 +944,7 @@ lemma send_signal_corres:
                   apply (rule corres_split[OF dcorres_dat set_thread_state_corres])
                    apply (wp cancel_ipc_valid_idle
                         | simp add: not_idle_thread_def invs_def valid_state_def get_blocking_object_def)+
-     apply (clarsimp dest!:get_tcb_rev simp:invs_def )
+     apply (clarsimp dest!:get_tcb_rev simp:invs_def ep_at_def2[symmetric, simplified])
      apply (frule valid_tcb_if_valid_state[rotated], clarsimp simp: valid_state_def)
      apply (fastforce dest!: get_tcb_SomeD
                        simp: receive_blocked_def valid_idle_def pred_tcb_at_def obj_at_def
@@ -2364,7 +2357,7 @@ lemma set_endpoint_valid_irq_node[wp]:
   apply (clarsimp simp:valid_irq_node_def)
   apply wp
    apply simp_all
-  apply (simp add:set_endpoint_def)
+  apply (simp add:set_simple_ko_def)
   apply (wp hoare_vcg_all_lift)
      apply (rule_tac Q="\<lambda>s. \<forall>irq. cap_table_at 0 (interrupt_irq_node s irq) s \<and> ep_at w s" in hoare_vcg_precond_imp)
       apply (clarsimp simp:set_object_def get_def put_def bind_def return_def valid_def obj_at_def)
@@ -2520,8 +2513,9 @@ lemma dcorres_receive_sync:
          apply (clarsimp simp:valid_state_def st_tcb_at_def obj_at_def valid_pspace_def)
          apply (drule valid_objs_valid_ep_simp)
           apply (simp add:is_ep_def)
-         apply (clarsimp simp:valid_ep_def split:Structures_A.endpoint.splits list.splits)
-        apply (clarsimp simp:valid_state_def valid_pspace_def)+
+         apply (clarsimp simp:valid_ep_def valid_simple_obj_def a_type_def
+                     split:Structures_A.endpoint.splits list.splits)
+        apply (clarsimp simp:valid_state_def valid_pspace_def valid_simple_obj_def a_type_def)+
     apply (drule valid_objs_valid_ep_simp)
      apply (simp add:is_ep_def)
     apply (clarsimp simp:valid_ep_def split:Structures_A.endpoint.splits list.splits)
@@ -2551,9 +2545,11 @@ lemma dcorres_receive_sync:
 lemma dcorres_complete_signal:
   "dcorres dc \<top> (valid_idle and not_idle_thread thread and valid_etcbs) (corrupt_tcb_intent thread)
            (complete_signal aa thread)"
-  apply (clarsimp simp: complete_signal_def get_notification_def get_object_def gets_def bind_assoc)
+  apply (clarsimp simp: complete_signal_def get_simple_ko_def get_object_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
-  apply (clarsimp simp: assert_def corres_free_fail split: Structures_A.kernel_object.splits Structures_A.ntfn.splits)
+  apply (clarsimp split: option.splits)
+  apply (clarsimp simp: assert_def corres_free_fail partial_inv_def a_type_def
+          split: Structures_A.kernel_object.splits Structures_A.ntfn.splits)
   apply (rule corres_guard_imp)
     apply (rule corres_dummy_return_l)
     apply (rule corres_split[OF corres_dummy_set_notification set_register_corres])
@@ -2580,20 +2576,22 @@ lemma recv_sync_ipc_corres:
      -- "not bound"
       apply (rule corres_alternate2)
       apply (rule dcorres_receive_sync, simp_all)[1]
-     apply (simp add: get_notification_def gets_def get_object_def bind_assoc)
+     apply (simp add: get_simple_ko_def gets_def get_object_def bind_assoc)
      apply (rule dcorres_absorb_get_r)
      apply (frule get_tcb_SomeD)
-     apply (clarsimp simp add: valid_state_def valid_pspace_def)
+     apply (clarsimp simp add: valid_state_def valid_pspace_def
+                     split: kernel_object.splits if_splits)
      apply (rule valid_objsE, assumption, simp)
      apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_ntfn_def)
-     apply (clarsimp simp: assert_def corres_free_fail obj_at_def split: Structures_A.kernel_object.splits)
+     apply (clarsimp simp: assert_def corres_free_fail obj_at_def partial_inv_def
+                    split: Structures_A.kernel_object.splits)
      apply safe[1]
       apply (rule corres_alternate1)
       apply (rule corres_guard_imp)
         apply (rule dcorres_complete_signal, simp+)
      apply (rule corres_alternate2)
      apply (rule dcorres_receive_sync, simp_all add: obj_at_def valid_state_def valid_pspace_def)[1]
-    apply (wp | clarsimp)+
+    apply (wp get_simple_ko_ko_at | clarsimp)+
   done
 
 lemma option_select_not_empty:
@@ -2660,7 +2658,7 @@ lemma send_sync_ipc_corres:
   apply (rule dcorres_absorb_get_l)
   apply (clarsimp split del:if_splits)
   apply (rule_tac Q' = "\<lambda>r. op = s' and ko_at (kernel_object.Endpoint r) epptr" in corres_symb_exec_r[rotated])
-     apply (wp|simp split del:if_splits)+
+     apply (wp get_simple_ko_ko_at |simp split del:if_splits)+
   apply (rule dcorres_expand_pfx)
   apply (clarsimp split del:if_splits)
   apply (frule_tac get_endpoint_pick)
@@ -2746,8 +2744,8 @@ lemma send_sync_ipc_corres:
     apply (rule dcorres_to_wp[where Q=\<top> ,simplified])
     apply (rule corres_dummy_set_sync_ep)
    apply simp
-  apply (clarsimp simp:valid_state_def not_idle_thread_def
-    valid_pspace_def st_tcb_at_def obj_at_def is_ep_def)
+  apply (clarsimp simp:valid_state_def not_idle_thread_def a_type_def
+    valid_pspace_def st_tcb_at_def obj_at_def is_ep_def valid_simple_obj_def)
   apply (drule(1) valid_objs_valid_ep_simp)
   apply (clarsimp simp:valid_ep_def tcb_at_def
     valid_idle_def pred_tcb_at_def obj_at_def

@@ -211,8 +211,8 @@ lemma update_waiting_ntfn_reads_respects:
   unfolding update_waiting_ntfn_def fun_app_def
   apply (wp assert_sp possible_switch_to_reads_respects gets_cur_thread_ev | simp add: split_def)+
   apply (wp as_user_set_register_reads_respects' set_thread_state_reads_respects
-            set_notification_reads_respects set_thread_state_pas_refined
-            set_ntfn_valid_objs hoare_vcg_disj_lift set_notification_pas_refined
+            set_simple_ko_reads_respects set_thread_state_pas_refined
+            set_simple_ko_valid_objs hoare_vcg_disj_lift set_simple_ko_pas_refined
         | simp add: split_def reads_lrefl)+
   done
 
@@ -274,7 +274,7 @@ lemma possible_switch_to_equiv_but_for_labels:
   apply (clarsimp simp: etcb_at_def split: option.splits)
   done
 
-crunch etcb_at_cdom[wp]: set_thread_state_ext, set_thread_state, set_notification
+crunch etcb_at_cdom[wp]: set_thread_state_ext, set_thread_state, set_simple_ko
    "\<lambda>s. etcb_at (P (cur_domain s)) t s"
   (wp: crunch_wps)
 
@@ -292,8 +292,8 @@ lemma update_waiting_ntfn_equiv_but_for_labels:
    \<lbrace> \<lambda>_. equiv_but_for_labels aag L st \<rbrace>"
   unfolding update_waiting_ntfn_def
   apply (wp static_imp_wp as_user_equiv_but_for_labels set_thread_state_runnable_equiv_but_for_labels
-            set_thread_state_pas_refined set_notification_equiv_but_for_labels set_ntfn_valid_objs_at
-            set_notification_pred_tcb_at set_notification_cte_wp_at set_notification_pas_refined
+            set_thread_state_pas_refined set_notification_equiv_but_for_labels
+            set_simple_ko_pred_tcb_at set_simple_ko_pas_refined
             hoare_vcg_disj_lift possible_switch_to_equiv_but_for_labels
         | wpc | simp add: split_def)+
   apply (clarsimp simp: conj_ac)
@@ -586,9 +586,9 @@ lemma blocked_cancel_ipc_nosts_reads_respects:
       unfolding blocked_cancel_ipc_nosts_def get_blocking_object_def
       apply clarsimp
       apply (rule pre_ev)
-       apply ((wp set_thread_state_reads_respects set_endpoint_reads_respects get_ep_queue_reads_respects
-                  get_endpoint_reads_respects get_blocking_object_reads_respects
-                  gts_reads_respects
+       apply ((wp set_thread_state_reads_respects get_ep_queue_reads_respects
+                  get_simple_ko_reads_respects get_blocking_object_reads_respects
+                  gts_reads_respects set_simple_ko_reads_respects
                   gts_wp
                   | wpc
                   | simp add: get_blocking_object_def get_thread_state_rev)+)[2]
@@ -674,19 +674,19 @@ lemma send_signal_reads_respects:
           | rule_tac ntfnptr=ntfnptr in blocked_cancel_ipc_nosts_reads_respects
           | rule cancel_ipc_reads_respects_rewrite
           | wp_once
-              set_notification_reads_respects
+              set_simple_ko_reads_respects
               possible_switch_to_reads_respects
               as_user_set_register_reads_respects'
               set_thread_state_pas_refined
               set_thread_state_pas_refined
-              set_notification_reads_respects
+              set_simple_ko_reads_respects
               gts_reads_respects
               cancel_ipc_receive_blocked_pas_refined
               gts_wp
               hoare_vcg_imp_lift
               update_waiting_ntfn_reads_respects
-              get_ntfn_wp
-              get_notification_reads_respects
+              get_simple_ko_wp
+              get_simple_ko_reads_respects
           | wpc
           | simp )+
     apply (insert visible)
@@ -745,7 +745,7 @@ lemma send_signal_reads_respects:
                blocked_cancel_ipc_nosts_equiv_but_for_labels
                gts_wp
                update_waiting_ntfn_equiv_but_for_labels
-               get_ntfn_wp
+               get_simple_ko_wp
            | wpc
            | wps
            )+
@@ -816,8 +816,8 @@ lemma receive_signal_reads_respects:
              \<in> pasPolicy aag \<and> is_subject aag thread)))
          (receive_signal thread cap is_blocking)"
   unfolding receive_signal_def fun_app_def do_nbrecv_failed_transfer_def
-  apply(wp set_notification_reads_respects set_thread_state_reads_respects
-           as_user_set_register_reads_respects' get_notification_reads_respects hoare_vcg_all_lift
+  apply(wp set_simple_ko_reads_respects set_thread_state_reads_respects
+           as_user_set_register_reads_respects' get_simple_ko_reads_respects hoare_vcg_all_lift
        | wpc
        | wp_once hoare_drop_imps)+
   apply(force dest: reads_ep)
@@ -1221,7 +1221,7 @@ lemma load_cap_transfer_rev:
 
 lemma get_endpoint_rev:
   "reads_equiv_valid_inv A aag (K (is_subject aag ptr)) (get_endpoint ptr)"
-  unfolding get_endpoint_def
+  unfolding get_simple_ko_def
   apply(wp get_object_rev | wpc | simp)+
   done
 
@@ -1295,7 +1295,7 @@ lemma cancel_badged_sends_equiv_but_for_labels:
       apply(wp mapM_wp' set_thread_state_equiv_but_for_labels gts_wp  | simp add: filterM_mapM)+
       apply(fastforce simp: all_with_auth_to_def)
      apply simp
-    apply(wp set_endpoint_equiv_but_for_labels get_endpoint_wp | simp)+
+    apply(wp set_endpoint_equiv_but_for_labels get_simple_ko_wp | simp)+
   apply clarsimp
   apply(frule send_endpoint_threads_blocked, (simp | assumption)+)
   apply(drule send_blocked_threads_have_SyncSend_auth, (simp | assumption)+)
@@ -1313,8 +1313,8 @@ lemma cancel_badged_sends_reads_respects:
       apply (rule_tac Q="\<lambda>s.
     (case rv of SendEP list \<Rightarrow> \<forall>x\<in>set list. aag_can_read aag x \<or> aag_can_affect aag l x | _ \<Rightarrow> True)" in equiv_valid_guard_imp)
        apply (case_tac rv)
-         apply ((wp mapM_ev'' get_thread_state_reads_respects set_thread_state_reads_respects set_endpoint_reads_respects get_endpoint_reads_respects hoare_vcg_ball_lift  | wpc | simp add: filterM_mapM tcb_at_st_tcb_at[symmetric])+)
-    apply (wp get_endpoint_wp)
+         apply ((wp mapM_ev'' get_thread_state_reads_respects set_thread_state_reads_respects set_simple_ko_reads_respects get_simple_ko_reads_respects hoare_vcg_ball_lift  | wpc | simp add: filterM_mapM tcb_at_st_tcb_at[symmetric])+)
+    apply (wp get_simple_ko_wp)
    apply (intro impI allI conjI)
     apply simp
    apply (case_tac ep,simp_all)
@@ -1345,9 +1345,12 @@ lemma cancel_badged_sends_reads_respects:
   apply (rule gen_asm_ev)+
   apply(simp add: cancel_badged_sends_def fun_app_def)
   apply wp
-     apply ((wp mapM_ev'' mapM_wp get_thread_state_reads_respects set_thread_state_runnable_reads_respects set_endpoint_reads_respects get_endpoint_reads_respects hoare_vcg_ball_lift tcb_sched_action_reads_respects set_thread_state_pas_refined | wpc | simp add: filterM_mapM tcb_at_st_tcb_at[symmetric] | wp_once hoare_drop_imps | rule subset_refl | force)+)[1]
-    apply (wp get_endpoint_reads_respects)
-   apply (wp get_endpoint_wp)
+     apply ((wp mapM_ev'' mapM_wp get_thread_state_reads_respects set_thread_state_runnable_reads_respects
+                set_simple_ko_reads_respects get_simple_ko_reads_respects hoare_vcg_ball_lift
+                tcb_sched_action_reads_respects set_thread_state_pas_refined
+            | wpc | simp add: filterM_mapM tcb_at_st_tcb_at[symmetric] | wp_once hoare_drop_imps | rule subset_refl | force)+)[1]
+    apply (wp get_simple_ko_reads_respects)
+   apply (wp get_simple_ko_wp)
   apply simp
   apply (intro conjI allI impI ballI, elim conjE)
   apply (rule send_endpoint_reads_affects_queued[where epptr = epptr])
@@ -1701,8 +1704,8 @@ lemma complete_signal_reads_respects:
   "reads_respects aag l ( K(aag_can_read aag ntfnptr \<or> aag_can_affect aag l ntfnptr))
      (complete_signal ntfnptr receiver)"
   unfolding complete_signal_def
-  apply (wp set_notification_reads_respects
-            get_notification_reads_respects
+  apply (wp set_simple_ko_reads_respects
+            get_simple_ko_reads_respects
             as_user_set_register_reads_respects'
         | wpc
         | simp)+
@@ -1726,11 +1729,11 @@ lemma receive_ipc_base_reads_respects:
   apply (simp add: thread_get_def split: endpoint.split)
   apply (intro conjI impI)
     prefer 2 defer
-    apply ((wp set_thread_state_reads_respects set_endpoint_reads_respects
+    apply ((wp set_thread_state_reads_respects set_simple_ko_reads_respects
                as_user_set_register_reads_respects'
         | simp | intro allI impI | rule pre_ev, wpc)+)[2]
   apply (intro allI impI)
-  apply (wp static_imp_wp set_endpoint_reads_respects set_thread_state_reads_respects
+  apply (wp static_imp_wp set_simple_ko_reads_respects set_thread_state_reads_respects
            setup_caller_cap_reads_respects do_ipc_transfer_reads_respects
            possible_switch_to_reads_respects
            gets_cur_thread_ev set_thread_state_pas_refined
@@ -1740,11 +1743,11 @@ lemma receive_ipc_base_reads_respects:
            apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> pas_cur_domain aag s \<and> is_subject aag (cur_thread s) \<and>
                               (sender_can_grant rvd \<longrightarrow> is_subject aag (hd list))"
                   in hoare_strengthen_post)
-            apply(wp set_endpoint_reads_respects
-                     hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1]
+            apply(wp set_simple_ko_reads_respects
+                     hoare_vcg_imp_lift [OF set_simple_ko_get_tcb, unfolded disj_not1]
                      hoare_vcg_all_lift
-                     set_thread_state_reads_respects get_endpoint_reads_respects
-                     get_endpoint_wp do_ipc_transfer_pas_refined
+                     set_thread_state_reads_respects get_simple_ko_reads_respects
+                     get_simple_ko_wp do_ipc_transfer_pas_refined
                  | wpc | simp add: get_thread_state_def thread_get_def)+
   apply (clarsimp simp: conj_comms)
   apply (rename_tac x s)
@@ -1804,7 +1807,7 @@ lemma receive_ipc_reads_respects:
   apply (wp receive_ipc_base_reads_respects[simplified AllowSend_def]
             complete_signal_reads_respects
         | simp)+
-        apply (wp static_imp_wp set_endpoint_reads_respects set_thread_state_reads_respects
+        apply (wp static_imp_wp set_simple_ko_reads_respects set_thread_state_reads_respects
                   setup_caller_cap_reads_respects do_ipc_transfer_reads_respects
                   complete_signal_reads_respects thread_get_reads_respects
                   get_thread_state_reads_respects
@@ -1812,12 +1815,12 @@ lemma receive_ipc_reads_respects:
                   gets_cur_thread_ev set_thread_state_pas_refined
                   do_ipc_transfer_pas_refined
                   hoare_vcg_all_lift
-                  get_notification_reads_respects
+                  get_simple_ko_reads_respects
                   get_bound_notification_reads_respects'
                   gbn_wp
-                  get_endpoint_reads_respects
-                  get_ntfn_wp
-                  get_endpoint_wp
+                  get_simple_ko_reads_respects
+                  get_simple_ko_wp
+                  get_simple_ko_wp
               | wpc
               | simp)+
   apply (clarsimp)
@@ -1877,7 +1880,7 @@ lemma send_ipc_reads_respects:
                                       \<and> aag_has_auth_to aag Grant epptr))) and K (is_subject aag thread \<and> (pasSubject aag, SyncSend, pasObjectAbs aag epptr) \<in> pasPolicy aag)) (send_ipc block call badge can_grant thread epptr)"
   apply(rule gen_asm_ev)
   apply(simp add: send_ipc_def)
-  apply (wp set_endpoint_reads_respects set_thread_state_reads_respects
+  apply (wp set_simple_ko_reads_respects set_thread_state_reads_respects
             when_ev setup_caller_cap_reads_respects thread_get_reads_respects
         | wpc | simp split del: if_split)+
                apply(rename_tac list word list' rvb)
@@ -1886,9 +1889,9 @@ lemma send_ipc_reads_respects:
                               in hoare_strengthen_post)
                 apply(wp set_thread_state_reads_respects
                          do_ipc_transfer_reads_respects
-                         set_endpoint_reads_respects
-                         hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
-                         get_endpoint_reads_respects get_endpoint_wp
+                         set_simple_ko_reads_respects
+                         hoare_vcg_imp_lift [OF set_simple_ko_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
+                         get_simple_ko_reads_respects get_simple_ko_wp
                          possible_switch_to_reads_respects
                          gets_cur_thread_ev set_thread_state_pas_refined
                          do_ipc_transfer_pas_refined
@@ -2246,7 +2249,7 @@ lemma send_ipc_globals_equiv:
     send_ipc block call badge can_grant thread epptr
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding send_ipc_def
-  apply(wp set_endpoint_globals_equiv set_thread_state_globals_equiv
+  apply(wp set_simple_ko_globals_equiv set_thread_state_globals_equiv
            setup_caller_cap_globals_equiv | wpc)+
          apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_global_objs"
                in hoare_strengthen_post)
@@ -2257,12 +2260,12 @@ lemma send_ipc_globals_equiv:
       apply(wp do_ipc_transfer_globals_equiv)+
     apply(clarsimp)
     apply(rule hoare_drop_imps)
-    apply(wp set_endpoint_globals_equiv)+
+    apply(wp set_simple_ko_globals_equiv)+
   apply(rule_tac Q="\<lambda>ep. ko_at (Endpoint ep) epptr and globals_equiv st and valid_objs
         and valid_arch_state and valid_global_refs and pspace_distinct and pspace_aligned
         and valid_global_objs and (\<lambda>s. sym_refs (state_refs_of s)) and valid_idle"
         in hoare_strengthen_post)
-   apply(wp get_endpoint_sp)
+   apply(wp get_simple_ko_sp)
     apply(clarsimp simp: valid_arch_state_ko_at_arm)+
   apply (rule context_conjI)
    apply(rule valid_ep_recv_dequeue')
@@ -2290,18 +2293,18 @@ lemma receive_ipc_globals_equiv:
   unfolding receive_ipc_def thread_get_def including no_pre
   apply(wp)
    apply(simp add: split_def)
-   apply(wp set_endpoint_globals_equiv set_thread_state_globals_equiv
+   apply(wp set_simple_ko_globals_equiv set_thread_state_globals_equiv
              setup_caller_cap_globals_equiv dxo_wp_weak as_user_globals_equiv
        | wpc
        | simp split del: if_split)+
              apply (rule hoare_strengthen_post[where Q= "\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_global_objs"])
               apply (wp do_ipc_transfer_globals_equiv as_user_globals_equiv)
              apply clarsimp
-            apply (wp gts_wp get_endpoint_sp | wpc)+
+            apply (wp gts_wp get_simple_ko_sp | wpc)+
           apply (wp hoare_vcg_all_lift hoare_drop_imps)[1]
-           apply(wp set_endpoint_globals_equiv | wpc)+
+           apply(wp set_simple_ko_globals_equiv | wpc)+
        apply(wp set_thread_state_globals_equiv)
-      apply (wp get_ntfn_wp gbn_wp get_endpoint_wp as_user_globals_equiv | wpc | simp)+
+      apply (wp get_simple_ko_wp gbn_wp get_simple_ko_wp as_user_globals_equiv | wpc | simp)+
   apply (rule hoare_pre)
    apply(wpc)
               apply(rule fail_wp | rule return_wp)+
@@ -2339,7 +2342,7 @@ lemma
   blocked_cancel_ipc_globals_equiv[wp]:
   "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace> blocked_cancel_ipc a b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding blocked_cancel_ipc_def
-  by (wp set_thread_state_globals_equiv set_endpoint_globals_equiv | wpc | simp)+
+  by (wp set_thread_state_globals_equiv set_simple_ko_globals_equiv | wpc | simp)+
 
 
 
@@ -2373,7 +2376,7 @@ lemma send_signal_globals_equiv:
             as_user_globals_equiv
             cancel_ipc_blocked_globals_equiv
             update_waiting_ntfn_globals_equiv
-            get_ntfn_wp
+            get_simple_ko_wp
             gts_wp
        | wpc
        | simp)+
@@ -2396,7 +2399,7 @@ lemma receive_signal_globals_equiv:
   unfolding receive_signal_def fun_app_def do_nbrecv_failed_transfer_def
   apply (rule hoare_pre)
   apply(wp set_notification_globals_equiv set_thread_state_globals_equiv
-           as_user_globals_equiv get_ntfn_wp
+           as_user_globals_equiv get_simple_ko_wp
        | wpc)+
    apply(simp add: valid_arch_state_ko_at_arm)
   done
