@@ -325,6 +325,15 @@ declare invs_valid_queues'[rule_format, elim!]
 lemma einvs_valid_etcbs: "einvs s \<longrightarrow> valid_etcbs s"
   by (clarsimp simp: valid_sched_def)
 
+lemma arch_post_modify_registers_corres:
+  "corres dc \<top> (tcb_at' t)
+     (arch_post_modify_registers ct t)
+     (asUser t $ postModifyRegisters ct t)"
+  apply (simp add: arch_post_modify_registers_def postModifyRegisters_def)
+  apply (subst submonad_asUser.return)
+  apply (rule corres_stateAssert_assume)
+   by simp+
+
 lemma writereg_corres:
   "corres (intr \<oplus> op =) (einvs  and tcb_at dest and ex_nonz_cap_to dest)
         (invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest)
@@ -338,18 +347,20 @@ lemma writereg_corres:
       apply (rule corres_split [OF _ arch_tcb_sanitise_corres])
          apply (rule corres_split_nor)
             prefer 2
-            apply (rule corres_as_user)
-            apply (simp add: zipWithM_mapM getRestartPC_def setNextPC_def atcbVCPUPtr
-                       cong: register.case_cong)
-            apply (rule corres_Id, simp+)
-            apply (rule no_fail_pre, wp no_fail_mapM)
-               apply (clarsimp split del: if_split)
-               apply (wp no_fail_setRegister | simp)+
-           apply (rule corres_split_nor[OF _ corres_when[OF refl restart_corres]])
-            apply (rule corres_split_nor[OF _ corres_when[OF refl rescheduleRequired_corres]])
-              apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
-              apply simp
-             apply (wp+)[2]
+             apply (rule corres_as_user)
+             apply (simp add: zipWithM_mapM getRestartPC_def setNextPC_def atcbVCPUPtr
+                        cong: register.case_cong)
+             apply (rule corres_Id, simp+)
+             apply (rule no_fail_pre, wp no_fail_mapM)
+                apply (clarsimp split del: if_split)
+                apply (wp no_fail_setRegister | simp)+
+            apply clarsimp
+            apply (rule corres_split_nor[OF _ arch_post_modify_registers_corres[simplified]])
+              apply (rule corres_split_nor[OF _ corres_when[OF refl restart_corres]])
+                apply (rule corres_split_nor[OF _ corres_when[OF refl rescheduleRequired_corres]])
+                  apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
+                  apply simp
+                 apply (wp+)[2]
            apply ((wp static_imp_wp restart_invs'
                  | strengthen valid_sched_weak_strg einvs_valid_etcbs
                               invs_valid_queues' invs_queues invs_weak_sch_act_wf
@@ -440,10 +451,11 @@ proof -
              apply (rule corres_split_nor)
              apply (rule corres_split_nor)
                 apply (rule corres_split_eqr [OF _ gct_corres])
-                  apply (rule corres_split [OF _ corres_when[OF refl rescheduleRequired_corres]])
-                    apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
-                    apply simp
-                   apply (wp static_imp_wp)+
+                  apply (rule corres_split_nor[OF _ arch_post_modify_registers_corres[simplified]])
+                    apply (rule corres_split [OF _ corres_when[OF refl rescheduleRequired_corres]])
+                      apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
+                      apply simp
+                     apply (wp static_imp_wp)+
                apply (rule corres_when[OF refl])
                apply (rule R[unfolded S, OF refl refl])
                apply (simp add: gpRegisters_def)

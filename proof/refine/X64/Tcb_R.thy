@@ -329,6 +329,18 @@ declare invs_valid_queues'[rule_format, elim!]
 lemma einvs_valid_etcbs: "einvs s \<longrightarrow> valid_etcbs s"
   by (clarsimp simp: valid_sched_def)
 
+lemma arch_post_modify_registers_corres:
+  "corres dc (tcb_at t) (tcb_at' t and tcb_at' ct)
+     (arch_post_modify_registers ct t)
+     (asUser t $ postModifyRegisters ct t)"
+  apply (rule corres_guard_imp)
+    apply (clarsimp simp: arch_post_modify_registers_def postModifyRegisters_def when_def)
+    apply safe
+     apply (rule user_setreg_corres)
+    apply (subst submonad_asUser.return)
+    apply (rule corres_stateAssert_assume)
+     by simp+
+
 lemma writereg_corres:
   "corres (intr \<oplus> op =) (einvs  and tcb_at dest and ex_nonz_cap_to dest)
         (invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest)
@@ -352,22 +364,23 @@ lemma writereg_corres:
          apply (rule no_fail_pre, wp no_fail_mapM)
             apply (clarsimp simp: sanitiseOrFlags_def sanitiseAndFlags_def)
             apply ((safe)[1], (wp no_fail_setRegister | simp)+)
-        apply (rule corres_split_nor[OF _ corres_when[OF refl restart_corres]])
-          apply (rule corres_split_nor[OF _ corres_when[OF refl rescheduleRequired_corres]])
-            apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
-            apply simp
-           apply (wp+)[2]
-         apply ((wp static_imp_wp restart_invs'
+        apply (rule corres_split_nor[OF _ arch_post_modify_registers_corres[simplified]])
+          apply (rule corres_split_nor[OF _ corres_when[OF refl restart_corres]])
+            apply (rule corres_split_nor[OF _ corres_when[OF refl rescheduleRequired_corres]])
+              apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
+              apply simp
+             apply (wp+)[2]
+           apply ((wp static_imp_wp restart_invs'
                | strengthen valid_sched_weak_strg einvs_valid_etcbs invs_valid_queues' invs_queues
                             invs_weak_sch_act_wf
                | clarsimp simp: invs_def valid_state_def valid_sched_def invs'_def valid_state'_def
                          dest!: global'_no_ex_cap idle_no_ex_cap)+)[2]
-       apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest and ex_nonz_cap_to dest" in hoare_post_imp)
-        apply (fastforce simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def dest!: idle_no_ex_cap)
-       prefer 2
-       apply (rule_tac Q="\<lambda>_. invs' and tcb_at' dest and ex_nonz_cap_to' dest" in hoare_post_imp)
-        apply (fastforce simp: sch_act_wf_weak invs'_def valid_state'_def dest!: global'_no_ex_cap)
-       apply wpsimp+
+         apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest and ex_nonz_cap_to dest" in hoare_post_imp)
+          apply (fastforce simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def dest!: idle_no_ex_cap)
+         prefer 2
+         apply (rule_tac Q="\<lambda>_. invs' and tcb_at' dest and ex_nonz_cap_to' dest" in hoare_post_imp)
+          apply (fastforce simp: sch_act_wf_weak invs'_def valid_state'_def dest!: global'_no_ex_cap)
+         apply wpsimp+
   done
 
 crunch it[wp]: suspend "\<lambda>s. P (ksIdleThread s)"
@@ -447,10 +460,11 @@ proof -
           apply (rule corres_split_nor)
              apply (rule corres_split_nor)
                 apply (rule corres_split_eqr[OF _ gct_corres])
-                  apply (rule corres_split[OF _ corres_when[OF refl rescheduleRequired_corres]])
-                    apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
-                    apply simp
-                   apply (wp static_imp_wp)+
+                  apply (rule corres_split_nor[OF _ arch_post_modify_registers_corres[simplified]])
+                    apply (rule corres_split[OF _ corres_when[OF refl rescheduleRequired_corres]])
+                      apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
+                      apply simp
+                     apply (wp static_imp_wp)+
                apply (rule corres_when[OF refl])
                apply (rule R[unfolded S, OF refl refl])
                apply (simp add: gpRegisters_def)
@@ -458,7 +472,7 @@ proof -
                apply (clarsimp simp: invs_def valid_sched_weak_strg valid_sched_def)
               prefer 2
               apply (rule_tac Q="\<lambda>_. invs' and tcb_at' dest" in hoare_post_imp)
-               apply (clarsimp simp: invs'_def valid_state'_def invs_weak_sch_act_wf)
+               apply (clarsimp simp: invs'_def valid_state'_def invs_weak_sch_act_wf cur_tcb'_def)
               apply (wp mapM_x_wp' | simp)+
             apply (rule corres_when[OF refl])
             apply (rule corres_split_nor)

@@ -58,6 +58,8 @@ locale DetSchedDomainTime_AI =
     "\<And>P t p n s r. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> init_arch_objects t p n s r \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes arch_tcb_set_ipc_buffer_domain_list_inv'[wp]:
     "\<And>P t p. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_tcb_set_ipc_buffer t p \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+  assumes arch_post_modify_registers_domain_list_inv'[wp]:
+    "\<And>P t p. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_post_modify_registers t p \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes arch_invoke_irq_control_domain_list_inv'[wp]:
     "\<And>P i. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_invoke_irq_control i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes handle_vm_fault_domain_list_inv'[wp]:
@@ -80,6 +82,8 @@ locale DetSchedDomainTime_AI =
     "\<And>P t p n s r. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> init_arch_objects t p n s r \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes arch_tcb_set_ipc_buffer_domain_time_inv'[wp]:
     "\<And>P t p. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_tcb_set_ipc_buffer t p \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
+  assumes arch_post_modify_registers_domain_time_inv'[wp]:
+    "\<And>P t p. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_post_modify_registers t p \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes arch_invoke_irq_control_domain_time_inv'[wp]:
     "\<And>P i. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_invoke_irq_control i \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes handle_vm_fault_domain_time_inv'[wp]:

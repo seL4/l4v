@@ -632,7 +632,8 @@ lemma invoke_tcb_corres_write_regs:
   "\<lbrakk> t' = tcb_invocation.WriteRegisters obj_id resume data flags;
      t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>
    dcorres (dc \<oplus> dc) \<top> (invs and not_idle_thread obj_id and tcb_at obj_id and valid_etcbs) (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
-  apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def arch_get_sanitise_register_info_def)
+  apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def arch_get_sanitise_register_info_def
+                        arch_post_modify_registers_def)
   apply (rule corres_symb_exec_r)
      apply (rule corres_guard_imp)
        apply (rule corres_split [where r'=dc])
@@ -748,7 +749,7 @@ lemma invoke_tcb_corres_copy_regs:
    dcorres (dc \<oplus> dc) \<top>
    (invs and tcb_at obj_id' and tcb_at target_id' and Tcb_AI.tcb_inv_wf t' and not_idle_thread target_id' and not_idle_thread obj_id' and valid_etcbs)
      (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
-  apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
+  apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def arch_post_modify_registers_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [where r'=dc])
        apply (rule corres_split [where r'=dc])

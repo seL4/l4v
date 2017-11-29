@@ -766,6 +766,20 @@ locale DetSchedSchedule_AI =
     "\<And>ft. arch_get_sanitise_register_info ft \<lbrace>valid_etcbs\<rbrace>"
   assumes arch_get_sanitise_register_info_cur'[wp]:
     "\<And>f. \<lbrace>cur_tcb :: det_ext state \<Rightarrow> bool\<rbrace> arch_get_sanitise_register_info f \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
+  assumes arch_post_modify_registers_not_cur_thread[wp] :
+    "\<And>c ft t'. arch_post_modify_registers c ft \<lbrace>not_cur_thread t'\<rbrace>"
+  assumes arch_post_modify_registers_valid_sched[wp] :
+    "\<And>c ft. arch_post_modify_registers c ft \<lbrace>valid_sched\<rbrace>"
+  assumes arch_post_modify_registers_scheduler_action[wp] :
+    "\<And>P c ft. arch_post_modify_registers c ft \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+  assumes arch_post_modify_registers_ready_queues[wp] :
+    "\<And>P c ft. arch_post_modify_registers c ft \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace>"
+  assumes arch_post_modify_registers_valid_etcbs[wp] :
+    "\<And>c ft. arch_post_modify_registers c ft \<lbrace>valid_etcbs\<rbrace>"
+  assumes arch_post_modify_registers_cur'[wp]:
+    "\<And>c f. \<lbrace>cur_tcb :: det_ext state \<Rightarrow> bool\<rbrace> arch_post_modify_registers c f \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
+  assumes arch_post_modify_registers_not_idle_thread[wp]:
+    "\<And>c t. \<lbrace>\<lambda>s::det_ext state. t \<noteq> idle_thread s\<rbrace> arch_post_modify_registers c t \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
 
 
 context DetSchedSchedule_AI begin

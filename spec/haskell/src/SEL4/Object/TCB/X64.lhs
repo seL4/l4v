@@ -22,8 +22,9 @@ There are presently no x64-specific register subsets defined, but in future this
 > import SEL4.Object.Structures
 > import SEL4.API.Failures
 > import SEL4.API.Invocation.X64
-> import SEL4.Machine.RegisterSet(UserMonad, VPtr(..))
-> import SEL4.Machine.RegisterSet.X64
+> import SEL4.Machine.RegisterSet(setRegister, UserMonad, VPtr(..))
+> import qualified SEL4.Machine.RegisterSet as RegisterSet(Register(..))
+> import SEL4.Machine.RegisterSet.X64(Register(..), Word)
 > import Data.Bits
 
 > import Data.Word(Word8)
@@ -57,4 +58,10 @@ There are presently no x64-specific register subsets defined, but in future this
 
 > setTCBIPCBuffer :: VPtr -> UserMonad ()
 > setTCBIPCBuffer ptr = return ()
+
+Here, cur = ksCurThread
+
+> postModifyRegisters :: PPtr TCB -> PPtr TCB -> UserMonad ()
+> postModifyRegisters cur dest =
+>     when (dest /= cur) $ setRegister (RegisterSet.Register ErrorRegister) 0
 

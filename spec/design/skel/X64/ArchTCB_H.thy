@@ -14,7 +14,7 @@ begin
 
 context Arch begin global_naming X64_H
 
-#INCLUDE_HASKELL SEL4/Object/TCB/X64.lhs CONTEXT X64_H
+#INCLUDE_HASKELL SEL4/Object/TCB/X64.lhs RegisterSet= CONTEXT X64_H
 
 #INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= ONLY archThreadGet archThreadSet
 

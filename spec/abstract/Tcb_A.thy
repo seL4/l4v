@@ -25,6 +25,7 @@ requalify_consts
   arch_tcb_set_ipc_buffer
   sanitise_register
   arch_get_sanitise_register_info
+  arch_post_modify_registers
 
 end
 
@@ -210,6 +211,7 @@ where
                 as_user dest $ setRegister r v
         od) gpRegisters;
     cur \<leftarrow> gets cur_thread;
+    arch_post_modify_registers cur dest;
     when (dest = cur) (do_extended_op reschedule_required);
     return []
   od)"
@@ -232,6 +234,7 @@ where
         pc \<leftarrow> getRestartPC;
         setNextPC pc
     od;
+    arch_post_modify_registers self dest;
     when resume_target $ restart dest;
     when (dest = self) (do_extended_op reschedule_required);
     return []

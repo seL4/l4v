@@ -41,5 +41,10 @@ definition
 where
   "arch_get_sanitise_register_info t \<equiv> return False"
 
+definition
+  arch_post_modify_registers :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'a::state_ext) s_monad"
+where
+  "arch_post_modify_registers cur t \<equiv> return ()"
+
 end
 end

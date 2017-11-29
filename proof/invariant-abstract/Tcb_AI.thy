@@ -33,10 +33,19 @@ locale Tcb_AI_1 =
   assumes arch_get_sanitise_register_info_ex_nonz_cap_to[wp]:
   "\<And>t a. \<lbrace>\<lambda>(s::'state_ext state). ex_nonz_cap_to a s\<rbrace> arch_get_sanitise_register_info t
        \<lbrace>\<lambda>b s. ex_nonz_cap_to a s\<rbrace>"
+  assumes arch_post_modify_registers_invs[wp]:
+  "\<And>c t. \<lbrace>\<lambda>(s::'state_ext state). invs s\<rbrace> arch_post_modify_registers c t
+       \<lbrace>\<lambda>b s. invs s\<rbrace>"
+  assumes arch_post_modify_registers_tcb_at[wp]:
+  "\<And>c t a. \<lbrace>\<lambda>(s::'state_ext state). tcb_at a s\<rbrace> arch_post_modify_registers c t
+       \<lbrace>\<lambda>b s. tcb_at a s\<rbrace>"
+  assumes arch_post_modify_registers_ex_nonz_cap_to[wp]:
+  "\<And>c t a. \<lbrace>\<lambda>(s::'state_ext state). ex_nonz_cap_to a s\<rbrace> arch_post_modify_registers c t
+       \<lbrace>\<lambda>b s. ex_nonz_cap_to a s\<rbrace>"
   assumes finalise_cap_not_cte_wp_at:
   "\<And>P cap fin. P cap.NullCap \<Longrightarrow> \<lbrace>\<lambda>(s::'state_ext state). \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>
                 finalise_cap cap fin \<lbrace>\<lambda>rv s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>"
-  assumes table_cap_ref_max_free_index_upd[simp]: (* reodered to resolve dependency in tc_invs *)
+  assumes table_cap_ref_max_free_index_upd[simp]: (* reordered to resolve dependency in tc_invs *)
   "\<And>cap. table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
 
 lemma ct_in_state_weaken:
@@ -159,13 +168,13 @@ lemma (in Tcb_AI_1) writereg_invs:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp |rule conjI)+
 
-lemma copyreg_invs:
-  "\<lbrace>invs and tcb_at src and tcb_at dest and ex_nonz_cap_to dest and
+lemma (in Tcb_AI_1) copyreg_invs:
+  "\<lbrace>(invs::'state_ext::state_ext state \<Rightarrow> bool) and tcb_at src and tcb_at dest and ex_nonz_cap_to dest and
     ex_nonz_cap_to src\<rbrace>
      invoke_tcb (tcb_invocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: if_apply_def2
-            | wp mapM_x_wp' suspend_nonz_cap_to_tcb static_imp_wp)+
+  apply (wpsimp simp: if_apply_def2
+                  wp: mapM_x_wp' suspend_nonz_cap_to_tcb static_imp_wp)
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                  dest!: idle_no_ex_cap)
   done

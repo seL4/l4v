@@ -451,9 +451,14 @@ Transfer the other integer registers.
 >                 asUser dest $ setRegister r v)
 >             gpRegisters
 
-Modifying the current thread may require rescheduling because modified registers are only reloaded in Arch\_switchToThread
+
+Perform any arch-specific register cleanup or notifications
 
 >     thread <- getCurThread
+>     asUser dest $ Arch.postModifyRegisters thread dest
+
+Modifying the current thread may require rescheduling because modified registers are only reloaded in Arch\_switchToThread
+
 >     when (dest == thread) $ rescheduleRequired
 
 At this point, implementations may copy any registers indicated by the two implementation-defined transfer flags.
@@ -481,6 +486,7 @@ The "ReadRegisters" and "WriteRegisters" functions are similar to "CopyRegisters
 >             (frameRegisters ++ gpRegisters) values
 >         pc <- getRestartPC
 >         setNextPC pc
+>     asUser dest $ Arch.postModifyRegisters self dest
 >     when resumeTarget $ restart dest
 
 Modifying the current thread may require rescheduling because modified registers are only reloaded in Arch\_switchToThread

@@ -14,6 +14,8 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+declare arch_post_modify_registers_def[simp]
+
 (* FIXME: Move. *)
 lemma tcb_domain_map_wellformed_ekheap[intro!, simp]:
   "ekheap (P s) = ekheap s \<Longrightarrow> tcb_domain_map_wellformed aag (P s) = tcb_domain_map_wellformed aag s"

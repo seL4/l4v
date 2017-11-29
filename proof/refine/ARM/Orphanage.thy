@@ -2000,7 +2000,7 @@ lemma writereg_no_orphans:
        \<and> tcb_at' dest s \<and> ex_nonz_cap_to' dest s\<rbrace>
      invokeTCB (tcbinvocation.WriteRegisters dest resume values arch)
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding invokeTCB_def performTransfer_def
+  unfolding invokeTCB_def performTransfer_def postModifyRegisters_def
   apply simp
   apply (rule hoare_pre)
   by (wp hoare_vcg_if_lift hoare_vcg_conj_lift restart_invs' static_imp_wp
@@ -2012,10 +2012,11 @@ lemma copyreg_no_orphans:
          \<and> tcb_at' dest s \<and> ex_nonz_cap_to' src s \<and> ex_nonz_cap_to' dest s \<rbrace>
      invokeTCB (tcbinvocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding invokeTCB_def performTransfer_def
+  unfolding invokeTCB_def performTransfer_def postModifyRegisters_def
   apply simp
-  apply (wp hoare_vcg_imp_lift mapM_x_wp' asUser_no_orphans asUser_vq'
-         | wpc | clarsimp)+
+  apply (wp hoare_vcg_if_lift static_imp_wp)
+      apply (wp hoare_vcg_imp_lift' mapM_x_wp' asUser_no_orphans asUser_vq'
+         | wpc | clarsimp split del: if_splits)+
      apply (case_tac "dest = ksCurThread s"; simp)
     apply (wp static_imp_wp hoare_vcg_conj_lift hoare_drop_imp mapM_x_wp' restart_invs'
               restart_no_orphans asUser_no_orphans suspend_nonz_cap_to_tcb

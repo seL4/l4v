@@ -1146,6 +1146,17 @@ lemma frame_gp_registers_convs:
   apply (auto simp: less_Suc_eq fcp_beta Kernel_C.LR_def R14_def)
   done
 
+lemma postModifyRegisters_ccorres:
+  "ccorres dc xfdc \<top> UNIV hs
+      (asUser dest $ postModifyRegisters ct dest)
+      (Call Arch_postModifyRegisters_'proc)"
+  apply (cinit simp: postModifyRegisters_def)
+  apply (subst asUser_return)
+   apply (rule ccorres_stateAssert)
+   apply (rule ccorres_return_Skip)
+  apply simp
+  done
+
 lemma invokeTCB_CopyRegisters_ccorres:
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
    (invs' and sch_act_simple and tcb_at' destn and tcb_at' source
@@ -1210,44 +1221,51 @@ lemma invokeTCB_CopyRegisters_ccorres:
                   apply ((wp | ctac(no_vcg) add: getRegister_ccorres setRegister_ccorres)+)[1]
                  apply (clarsimp simp: frame_gp_registers_convs n_gpRegisters_def
                                        unat_of_nat32 word_bits_def word_of_nat_less)
-              apply (simp add: frame_gp_registers_convs n_gpRegisters_def)
-             apply (rule allI, rule conseqPre, vcg)
-             apply clarsimp
-            apply (wp | simp)+
-           apply (simp add: word_bits_def frame_gp_registers_convs n_gpRegisters_def)
-          apply simp
-         apply (rule ccorres_pre_getCurThread)
-         apply (rule ccorres_split_nothrow_novcg_dc)
-            apply (rule_tac R="\<lambda>s. rvd = ksCurThread s"
-                       in ccorres_when)
-             apply (clarsimp simp: rf_sr_ksCurThread)
-            apply clarsimp
-            apply (ctac (no_vcg) add: rescheduleRequired_ccorres)
-           apply (simp only: liftE_bindE[symmetric] return_returnOk)
-           apply (ctac(no_vcg) add: Arch_performTransfer_ccorres)
-             apply (rule ccorres_return_CE, simp+)[1]
-            apply (rule ccorres_return_C_errorE, simp+)[1]
-           apply simp
-           apply wp+
-         apply (clarsimp simp: guard_is_UNIV_def)
-        apply simp
-        apply (wp hoare_drop_imp)
-         apply (simp add: pred_conj_def guard_is_UNIV_def  cong: if_cong
-              | wp mapM_x_wp_inv hoare_drop_imp)+
-    apply clarsimp
+                apply (simp add: frame_gp_registers_convs n_gpRegisters_def)
+               apply (rule allI, rule conseqPre, vcg)
+               apply clarsimp
+              apply (wp | simp)+
+             apply (simp add: word_bits_def frame_gp_registers_convs n_gpRegisters_def)
+            apply simp
+           apply (rule ccorres_pre_getCurThread)
+           apply (ctac add: postModifyRegisters_ccorres[simplified])
+             apply (rule ccorres_split_nothrow_novcg_dc)
+                apply (rule_tac R="\<lambda>s. rvd = ksCurThread s"
+                             in ccorres_when)
+                 apply (clarsimp simp: rf_sr_ksCurThread)
+                apply clarsimp
+                apply (ctac (no_vcg) add: rescheduleRequired_ccorres)
+               apply (simp only: liftE_bindE[symmetric] return_returnOk)
+               apply (ctac(no_vcg) add: Arch_performTransfer_ccorres)
+                 apply (rule ccorres_return_CE, simp+)[1]
+                apply (rule ccorres_return_C_errorE, simp+)[1]
+               apply simp
+               apply wp+
+             apply (clarsimp simp: guard_is_UNIV_def)
+            apply simp
+            apply (wpsimp simp: postModifyRegisters_def pred_conj_def
+                          cong: if_cong
+                            wp: hoare_drop_imps)
+           apply vcg
+            apply (wp hoare_drop_imp)
+            apply (simp add: pred_conj_def guard_is_UNIV_def  cong: if_cong
+                      | wp mapM_x_wp_inv hoare_drop_imp)+
+           apply clarsimp
+      apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' destn" in hoare_strengthen_post[rotated])
+       apply (fastforce simp: sch_act_wf_weak)
+      apply (wpsimp wp: hoare_drop_imp restart_invs')+
+     apply (clarsimp simp add: guard_is_UNIV_def)
+    apply (wp hoare_drop_imp hoare_vcg_if_lift)+
+    apply simp
     apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' destn" in hoare_strengthen_post[rotated])
      apply (fastforce simp: sch_act_wf_weak)
-    apply (wpsimp wp: hoare_drop_imp restart_invs')+
+    apply (wpsimp wp: hoare_drop_imp)+
    apply (clarsimp simp add: guard_is_UNIV_def)
-  apply (wp hoare_drop_imp hoare_vcg_if_lift)+
-  apply simp
-  apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' destn" in hoare_strengthen_post[rotated])
-   apply (fastforce simp: sch_act_wf_weak)
-  apply (wpsimp wp: hoare_drop_imp)+
-  apply (clarsimp simp add: guard_is_UNIV_def)
   apply (clarsimp simp: to_bool_def invs_weak_sch_act_wf invs_valid_objs'
-    split: if_split cong: if_cong | rule conjI)+
-   apply (clarsimp dest!: global'_no_ex_cap simp: invs'_def valid_state'_def | rule conjI)+
+                 split: if_split
+                  cong: if_cong
+            | rule conjI)+
+     apply (clarsimp dest!: global'_no_ex_cap simp: invs'_def valid_state'_def | rule conjI)+
   done
 
 (* FIXME: move *)
@@ -1562,70 +1580,71 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
           apply (simp add: linorder_not_less[symmetric] n_gpRegisters_def n_frameRegisters_def)
          apply ceqv
         apply (ctac add: Arch_getSanitiseRegisterInfo_ccorres)
-           apply (simp add: zipWithM_mapM split_def zip_append1 mapM_discarded mapM_x_append
-                       del: Collect_const)
-           apply (simp add: asUser_bind_distrib getRestartPC_def setNextPC_def bind_assoc
-                       del: Collect_const)
-           apply (simp only: getRestartPC_def[symmetric] setNextPC_def[symmetric])
-           apply (simp add: asUser_mapM_x bind_assoc)
-           apply (rule ccorres_stateAssert)
-           apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
-             apply (drule_tac t="archInfo" in sym, simp only:)
-               apply (rule_tac F="\<lambda>n. sysargs_rel args buffer and sysargs_rel_n args buffer (n + 2) and
+          apply (simp add: zipWithM_mapM split_def zip_append1 mapM_discarded mapM_x_append
+                      del: Collect_const)
+          apply (simp add: asUser_bind_distrib getRestartPC_def setNextPC_def bind_assoc
+                      del: Collect_const)
+          apply (simp only: getRestartPC_def[symmetric] setNextPC_def[symmetric])
+          apply (simp add: asUser_mapM_x bind_assoc)
+          apply (rule ccorres_stateAssert)
+          apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
+              apply (drule_tac t="archInfo" in sym, simp only:)
+              apply (rule_tac F="\<lambda>n. sysargs_rel args buffer and sysargs_rel_n args buffer (n + 2) and
                                      tcb_at' dst and (\<lambda>s. dst \<noteq> ksCurThread s)"
                            and Q=UNIV in ccorres_mapM_x_whileQ)
-                   apply clarsimp
-                   apply (rule invokeTCB_WriteRegisters_ccorres_helper [where args=args])
-                   apply (simp add: unat_word_ariths frame_gp_registers_convs n_frameRegisters_def
-                                    unat_of_nat32 word_bits_def word_of_nat_less)
-                  apply (simp add: n_frameRegisters_def n_gpRegisters_def
-                                   frame_gp_registers_convs word_less_nat_alt)
-                  apply (simp add: unat_of_nat32 word_bits_def)
-                  apply arith
-                 apply clarsimp
-                 apply (vcg exspec=setRegister_modifies exspec=getSyscallArg_modifies
-                            exspec=sanitiseRegister_modifies)
-                 apply clarsimp
-                apply (simp add: sysargs_rel_n_def)
-                apply (rule hoare_pre, wp asUser_sysargs_rel asUser_setRegister_ko_at')
-                apply (clarsimp simp: n_msgRegisters_def sysargs_rel_def)
-               apply (simp add: frame_gp_registers_convs n_frameRegisters_def word_bits_def)
-              apply simp
-              apply (rule ceqv_refl)
-             apply (rule ccorres_stateAssert)
-             apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
-               apply (drule_tac t="archInfo" in sym, simp only:)
-                 apply (rule_tac F="\<lambda>n. sysargs_rel args buffer
+                  apply clarsimp
+                  apply (rule invokeTCB_WriteRegisters_ccorres_helper [where args=args])
+                  apply (simp add: unat_word_ariths frame_gp_registers_convs n_frameRegisters_def
+                                   unat_of_nat32 word_bits_def word_of_nat_less)
+                 apply (simp add: n_frameRegisters_def n_gpRegisters_def
+                                  frame_gp_registers_convs word_less_nat_alt)
+                 apply (simp add: unat_of_nat32 word_bits_def)
+                 apply arith
+                apply clarsimp
+                apply (vcg exspec=setRegister_modifies exspec=getSyscallArg_modifies
+                           exspec=sanitiseRegister_modifies)
+                apply clarsimp
+               apply (simp add: sysargs_rel_n_def)
+               apply (rule hoare_pre, wp asUser_sysargs_rel asUser_setRegister_ko_at')
+               apply (clarsimp simp: n_msgRegisters_def sysargs_rel_def)
+              apply (simp add: frame_gp_registers_convs n_frameRegisters_def word_bits_def)
+             apply simp
+             apply (rule ceqv_refl)
+            apply (rule ccorres_stateAssert)
+            apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
+                apply (drule_tac t="archInfo" in sym, simp only:)
+                apply (rule_tac F="\<lambda>n. sysargs_rel args buffer
                                      and sysargs_rel_n args buffer (n + length ARM_HYP_H.frameRegisters + 2)
                                      and tcb_at' dst and (\<lambda>s. dst \<noteq> ksCurThread s)"
                              and Q=UNIV in ccorres_mapM_x_whileQ)
-                     apply clarsimp
-                     apply (rule invokeTCB_WriteRegisters_ccorres_helper [where args=args])
-                     apply (simp add: n_gpRegisters_def unat_word_ariths
-                                      frame_gp_registers_convs unat_of_nat32
-                                      word_bits_def n_frameRegisters_def
-                                      word_of_nat_less)
-                    apply (simp add: n_frameRegisters_def n_gpRegisters_def
+                    apply clarsimp
+                    apply (rule invokeTCB_WriteRegisters_ccorres_helper [where args=args])
+                    apply (simp add: n_gpRegisters_def unat_word_ariths
                                      frame_gp_registers_convs unat_of_nat32
-                                     word_less_nat_alt word_bits_def
-                                     less_diff_conv)
-                    apply (simp add: unat_word_ariths cong: conj_cong)
-                   apply clarsimp
-                   apply (vcg exspec=setRegister_modifies exspec=getSyscallArg_modifies
-                              exspec=sanitiseRegister_modifies)
-                   apply clarsimp
-                  apply (simp add: sysargs_rel_n_def)
-                  apply (rule hoare_pre, wp asUser_sysargs_rel)
-                  apply (clarsimp simp: n_msgRegisters_def frame_gp_registers_convs
-                                        n_frameRegisters_def)
-                  apply arith
-                 apply (simp add: ARM_HYP_H.gpRegisters_def word_bits_def
-                                  ARM_HYP.gpRegisters_def)
-                apply simp
-                apply (rule ceqv_refl)
-               apply (ctac(no_vcg) add: getRestartPC_ccorres)
-                apply simp
-                apply (ctac(no_vcg) add: setNextPC_ccorres)
+                                     word_bits_def n_frameRegisters_def
+                                     word_of_nat_less)
+                   apply (simp add: n_frameRegisters_def n_gpRegisters_def
+                                    frame_gp_registers_convs unat_of_nat32
+                                    word_less_nat_alt word_bits_def
+                                    less_diff_conv)
+                   apply (simp add: unat_word_ariths cong: conj_cong)
+                  apply clarsimp
+                  apply (vcg exspec=setRegister_modifies exspec=getSyscallArg_modifies
+                             exspec=sanitiseRegister_modifies)
+                  apply clarsimp
+                 apply (simp add: sysargs_rel_n_def)
+                 apply (rule hoare_pre, wp asUser_sysargs_rel)
+                 apply (clarsimp simp: n_msgRegisters_def frame_gp_registers_convs
+                                       n_frameRegisters_def)
+                 apply arith
+                apply (simp add: ARM_HYP_H.gpRegisters_def word_bits_def
+                                 ARM_HYP.gpRegisters_def)
+               apply simp
+               apply (rule ceqv_refl)
+              apply (ctac(no_vcg) add: getRestartPC_ccorres)
+               apply simp
+               apply (ctac(no_vcg) add: setNextPC_ccorres)
+                apply (ctac (no_vcg) add: postModifyRegisters_ccorres[simplified])
                  apply (rule ccorres_split_nothrow_novcg)
                      apply (rule ccorres_when[where R=\<top>])
                       apply (simp add: from_bool_0 Collect_const_mem)
@@ -1635,32 +1654,32 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
                       apply (simp add: xfdc_def)
                      apply simp
                     apply (rule ceqv_refl)
-                  apply (rule ccorres_split_nothrow_novcg_dc)
-                     apply (rule_tac R="\<lambda>s. rv = ksCurThread s"
+                   apply (rule ccorres_split_nothrow_novcg_dc)
+                      apply (rule_tac R="\<lambda>s. rv = ksCurThread s"
                                      in ccorres_when)
                       apply (clarsimp simp: rf_sr_ksCurThread)
-                     apply clarsimp
-                     apply (ctac (no_vcg) add: rescheduleRequired_ccorres)
-                    apply (unfold return_returnOk)[1]
-                    apply (rule ccorres_return_CE, simp+)[1]
-                   apply wp
-                  apply (simp add: guard_is_UNIV_def)
-                 apply (wp hoare_drop_imp)
-                  apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' dst" in hoare_strengthen_post[rotated])
-                   apply (fastforce simp: sch_act_wf_weak)
-                  apply (wpsimp wp: restart_invs')+
-                apply (clarsimp simp add: guard_is_UNIV_def)
-               apply (wp hoare_drop_imp hoare_vcg_if_lift)+
-              apply simp
+                      apply clarsimp
+                      apply (ctac (no_vcg) add: rescheduleRequired_ccorres)
+                     apply (unfold return_returnOk)[1]
+                     apply (rule ccorres_return_CE, simp+)[1]
+                    apply wp
+                   apply (simp add: guard_is_UNIV_def)
+                  apply (wp hoare_drop_imp)
+                   apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' dst" in hoare_strengthen_post[rotated])
+                    apply (fastforce simp: sch_act_wf_weak)
+                   apply (wpsimp wp: restart_invs')+
+                 apply (clarsimp simp add: guard_is_UNIV_def)
+                apply (wp hoare_drop_imp hoare_vcg_if_lift)+
+             apply simp
              apply (rule mapM_x_wp')
              apply (wpsimp)
-             apply (simp add: guard_is_UNIV_def)
-            apply (rule hoare_drop_imps)
-            apply (simp add: sysargs_rel_n_def)
-            apply (wp mapM_x_wp')
-             apply (rule hoare_pre, wp asUser_sysargs_rel)
-             apply clarsimp
-            apply wpsimp
+            apply (simp add: guard_is_UNIV_def)
+           apply (rule hoare_drop_imps)
+           apply (simp add: sysargs_rel_n_def)
+           apply (wp mapM_x_wp')
+            apply (rule hoare_pre, wp asUser_sysargs_rel)
+            apply clarsimp
+           apply wpsimp
            apply (simp add: guard_is_UNIV_def)
           apply (wp)
         apply vcg

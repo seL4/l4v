@@ -141,9 +141,9 @@ lemma checked_insert_tcb_invs[wp]: (* arch specific *)
 crunch caps_of_state[wp]: prepare_thread_delete "\<lambda>s. P (caps_of_state s)"
   (wp: mapM_x_wp' crunch_wps)
 
-crunch tcb_at[wp, Tcb_AI_asms]: arch_get_sanitise_register_info "tcb_at a"
-crunch invs[wp, Tcb_AI_asms]: arch_get_sanitise_register_info "invs"
-crunch ex_nonz_cap_to[wp, Tcb_AI_asms]: arch_get_sanitise_register_info "ex_nonz_cap_to a"
+crunch tcb_at[wp, Tcb_AI_asms]: arch_get_sanitise_register_info, arch_post_modify_registers "tcb_at a"
+crunch invs[wp, Tcb_AI_asms]: arch_get_sanitise_register_info, arch_post_modify_registers "invs"
+crunch ex_nonz_cap_to[wp, Tcb_AI_asms]: arch_get_sanitise_register_info, arch_post_modify_registers "ex_nonz_cap_to a"
 
 lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
   assumes x: "P cap.NullCap"
