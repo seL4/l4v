@@ -62,7 +62,10 @@ definition
 (* x64 done *)
 definition
    arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad" where
-   "arch_switch_to_idle_thread \<equiv> return ()"
+   "arch_switch_to_idle_thread \<equiv> do
+     thread \<leftarrow> gets idle_thread;
+     set_vm_root thread
+   od"
 
 (* x64 done *)
 definition

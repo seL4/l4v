@@ -28,7 +28,9 @@ This module contains the architecture-specific thread switch code for X86-64bit.
 > configureIdleThread _ = error "Unimplemented. init code"
 
 > switchToIdleThread :: Kernel ()
-> switchToIdleThread = return ()
+> switchToIdleThread = do
+>     t <- getIdleThread
+>     setVMRoot t
 
 > activateIdleThread :: PPtr TCB -> Kernel ()
 > activateIdleThread _ = return ()

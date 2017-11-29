@@ -982,9 +982,16 @@ lemma typ_at'_typ_at'_mask: "\<And>s. \<lbrakk> typ_at' t (P s) s \<rbrakk> \<Lo
   done
 
 lemma arch_switch_idle_thread_corres:
-  "corres dc \<top> (valid_arch_state' and pspace_aligned') arch_switch_to_idle_thread Arch.switchToIdleThread"
+  "corres dc
+        (valid_arch_state and valid_objs and valid_asid_map and unique_table_refs \<circ> caps_of_state
+           and valid_vs_lookup and valid_global_objs and pspace_aligned and pspace_distinct
+           and valid_vspace_objs and valid_idle)
+        (valid_arch_state' and pspace_aligned' and pspace_distinct' and no_0_obj' and valid_idle')
+        arch_switch_to_idle_thread Arch.switchToIdleThread"
   apply (simp add: arch_switch_to_idle_thread_def
                 X64_H.switchToIdleThread_def)
+  apply (corressimp corres: git_corres set_vm_root_corres)
+  apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb)
   done
 
 lemma switch_idle_thread_corres:
@@ -997,6 +1004,9 @@ lemma switch_idle_thread_corres:
         apply (rule corres_trivial, rule corres_modify)
         apply (simp add: state_relation_def cdt_relation_def)
        apply (wp+, simp+)
+   apply (simp add: invs_unique_refs invs_valid_vs_lookup invs_valid_objs invs_valid_asid_map
+                    invs_arch_state invs_valid_global_objs invs_psp_aligned invs_distinct
+                    invs_valid_idle invs_vspace_objs)
   apply (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_pspace'_def)
   done
 
@@ -1870,7 +1880,8 @@ qed
 lemma switchToIdleThread_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp: Thread_H.switchToIdleThread_def X64_H.switchToIdleThread_def)
-  apply (wp setCurThread_invs_no_cicd'_idle_thread storeWordUser_invs_no_cicd')
+  apply (wp setCurThread_invs_no_cicd'_idle_thread storeWordUser_invs_no_cicd'
+            setVMRoot_invs_no_cicd')
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_idle'_def)
   done
 

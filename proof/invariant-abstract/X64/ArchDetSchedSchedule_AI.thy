@@ -67,8 +67,9 @@ crunch ct_in_cur_domain'[wp]: set_vm_root "\<lambda>s. ct_in_cur_domain_2 t (idl
 lemma switch_to_idle_thread_ct_in_cur_domain [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>"
   by (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def do_machine_op_def
-                split_def ct_in_cur_domain_def
-      | wp)+
+                split_def
+      | wp
+      | simp add: ct_in_cur_domain_def)+
 
 crunch ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_thread, arch_get_sanitise_register_info ct_not_in_q
@@ -107,6 +108,7 @@ crunch etcb_at [wp, DetSchedSchedule_AI_assms]: switch_to_thread "etcb_at P t"
 
 crunch valid_idle [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread "valid_idle :: det_ext state \<Rightarrow> bool"
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch etcb_at [wp, DetSchedSchedule_AI_assms]: arch_switch_to_idle_thread "etcb_at P t"
 
@@ -134,6 +136,10 @@ lemma switch_to_idle_thread_ct_not_queued [wp, DetSchedSchedule_AI_assms]:
                          pred_tcb_at_def obj_at_def not_queued_def)
   done
 
+crunch valid_blocked_2[wp]: set_vm_root
+        "\<lambda>s. valid_blocked_2 (ready_queues s) (kheap s) (scheduler_action s) thread"
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma switch_to_idle_thread_valid_blocked [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def do_machine_op_def | wp | wpc)+
@@ -145,12 +151,25 @@ lemma switch_to_idle_thread_valid_blocked [wp, DetSchedSchedule_AI_assms]:
 crunch exst [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread "\<lambda>s. P (exst s :: det_ext)"
   (ignore: )
 
+crunch cur_thread[wp]: arch_switch_to_idle_thread "\<lambda>s. P (cur_thread s)"
+
+crunch inv[wp]: arch_switch_to_idle_thread "\<lambda>s. P"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma astit_st_tcb_at[wp]:
+  "\<lbrace>st_tcb_at P t\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+  apply (simp add: arch_switch_to_idle_thread_def)
+  by (wpsimp)
+
 lemma stit_activatable' [DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
-  apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def do_machine_op_def split_def)
-  apply wp
+  apply (simp add: switch_to_idle_thread_def do_machine_op_def split_def ct_in_state_def)
+  apply wpsimp
   apply (clarsimp simp: valid_idle_def ct_in_state_def pred_tcb_at_def obj_at_def)
   done
+
+crunch it[wp]: set_vm_root "\<lambda>s. P (idle_thread s)"
+  (simp: crunch_simps)
 
 lemma switch_to_idle_thread_cur_thread_idle_thread [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_ s. cur_thread s = idle_thread s\<rbrace>"
