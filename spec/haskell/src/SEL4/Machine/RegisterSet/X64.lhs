@@ -37,7 +37,7 @@ This module defines the x86 64-bit register set.
 > gpRegisters = [TLS_BASE]
 > exceptionMessage = [FaultIP, RSP, FLAGS]
 
-> syscallMessage = [RAX .. RBP] ++ [NextIP, RSP, FLAGS]
+> syscallMessage = [RAX .. R15] ++ [FaultIP, RSP, FLAGS]
 
 > data GDTSlot
 >     = GDT_NULL

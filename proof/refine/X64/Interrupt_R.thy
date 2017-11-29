@@ -170,10 +170,11 @@ lemma whenE_rangeCheck_eq:
       (throwError (RangeError (fromIntegral y) (fromIntegral z))))"
   by (simp add: rangeCheck_def unlessE_whenE ucast_id linorder_not_le[symmetric])
 
+(* 125 = maxIRQ *)
 lemma unat_ucast_ucast_shenanigans[simp]:
-  "unat (yf :: machine_word) \<le> (63::nat) \<Longrightarrow> ucast ((ucast yf) :: word8) = yf"
-  apply (subgoal_tac "unat yf \<le> unat 63")
-  apply (thin_tac "unat yf \<le> 63")
+  "unat (yf :: machine_word) \<le> (125::nat) \<Longrightarrow> ucast ((ucast yf) :: word8) = yf"
+  apply (subgoal_tac "unat yf \<le> unat 125")
+  apply (thin_tac "unat yf \<le> 125")
   apply (subst (asm) word_le_nat_alt[symmetric])
   apply (simp add: ucast_ucast_mask mask_def)
    by (word_bitwise, auto)

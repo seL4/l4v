@@ -62,7 +62,7 @@ definition
 
 definition
   maxIRQ :: "irq" where
-  "maxIRQ \<equiv> 63"
+  "maxIRQ \<equiv> 125"
 
 datatype cr3 = X64CR3 word64 (*pml4*) word64 (*asid*)
 
