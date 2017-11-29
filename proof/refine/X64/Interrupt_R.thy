@@ -272,23 +272,7 @@ lemma decode_irq_control_corres:
     apply (cases caps, simp split: list.split)
     apply (case_tac "\<exists>n. length args = Suc (Suc (Suc n))")
      apply (clarsimp simp: list_all2_Cons1 Let_def split_def liftE_bindE
-                           whenE_rangeCheck_eq length_Suc_conv checkIRQ_def)
-     apply (rule corres_guard_imp)
-       apply (rule whenE_throwError_corres)
-         apply (simp add: minIRQ_def maxIRQ_def)
-        apply (simp add: minIRQ_def ucast_nat_def)
-       apply (simp add: linorder_not_less)
-       apply (simp add: maxIRQ_def word_le_nat_alt)
-       apply (simp add: ucast_nat_def)
-       apply (rule corres_split_eqr [OF _ is_irq_active_corres])
-         apply (rule whenE_throwError_corres, simp, simp)
-         apply (rule corres_splitEE [OF _ lsfc_corres])
-             apply (rule corres_splitEE [OF _ ensure_empty_corres])
-                apply (rule corres_trivial, clarsimp simp: returnOk_def)
-               apply clarsimp
-              apply (wp isIRQActive_inv | simp only: simp_thms | wp_once hoare_drop_imps)+
-      apply fastforce
-     apply fastforce
+                           length_Suc_conv checkIRQ_def)
     apply (subgoal_tac "length args \<le> 2", clarsimp split: list.split)
     apply arith
   apply (auto intro!: corres_guard_imp[OF arch_decode_irq_control_corres] dest!: not_le_imp_less simp: o_def length_Suc_conv split: list.splits)
@@ -346,7 +330,6 @@ lemma decode_irq_control_valid'[wp]:
              whenE_throwError_wp
                 | simp add: o_def | wpc
                 | wp_once hoare_drop_imps)+
-  apply (clarsimp simp: minIRQ_def maxIRQ_def word_le_nat_alt unat_of_nat)
   done
 
 lemma irq_nodes_global_refs:

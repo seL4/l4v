@@ -278,6 +278,11 @@ definition
   else if n = 5 then Some PageDirectoryObj
   else None"
 
+definition
+  arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
+where
+  "arch_check_irq irq \<equiv> whenE (irq > ucast maxIRQ) $ throwError (RangeError 0 (ucast maxIRQ))"
+
 end
 
 end

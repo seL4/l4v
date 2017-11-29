@@ -30,6 +30,7 @@ requalify_consts
   arch_decode_irq_control_invocation
   arch_data_to_obj_type
   arch_decode_invocation
+  arch_check_irq
 
 end
 
@@ -412,11 +413,6 @@ section "IRQ"
 
 text {* The following two definitions decode system calls for the
 interrupt controller and interrupt handlers *}
-
-definition
-  arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
-where
-  "arch_check_irq irq \<equiv> whenE (irq > ucast maxIRQ) $ throwError (RangeError 0 (ucast maxIRQ))"
 
 definition
   decode_irq_control_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list

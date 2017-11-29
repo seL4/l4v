@@ -115,8 +115,10 @@ This module defines the machine-specific interrupt handling routines for x64.
 
 %FIXME: separate ranges for ISA interrupts and user interrupts
 
+checkIRQ is only used for the legacy PIC interrupt so always fails with the IOAPIC of x86-64
+
 > checkIRQ :: Word -> KernelF SyscallError ()
-> checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)
+> checkIRQ irq = throw IllegalOperation
 
 %FIXME: handle VTD faults
 

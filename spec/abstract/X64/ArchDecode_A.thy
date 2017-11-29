@@ -549,6 +549,11 @@ definition
   else if n = 6 then Some PML4Obj
   else None"
 
+definition
+  arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
+where
+  "arch_check_irq irq \<equiv> throwError IllegalOperation"
+
 end (* context Arch *)
 
 end
