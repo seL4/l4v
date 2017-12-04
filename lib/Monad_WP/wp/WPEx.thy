@@ -292,7 +292,7 @@ fun wpx_tac ctxt rules
     THEN tac_with_wp_simps_strgs ctxt rules (fn (simps, strgs) =>
       REPEAT_DETERM1
         (CHANGED (full_simp_tac (put_simpset (wp_default_ss ctxt) ctxt addsimps simps) 1)
-          ORELSE Strengthen.strengthen ctxt strgs 1)
+          ORELSE Strengthen.default_strengthen ctxt strgs 1)
     ) 1;
 
 val wpx_method = Attrib.thms >> curry (fn (ts, ctxt) =>

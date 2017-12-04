@@ -18,6 +18,16 @@ locale strengthen_implementation begin
 
 definition "st P rel x y = (x = y \<or> (P \<and> rel x y) \<or> (\<not> P \<and> rel y x))"
 
+definition
+  st_prop1 :: "prop \<Rightarrow> prop \<Rightarrow> prop"
+where
+  "st_prop1 (PROP P) (PROP Q) \<equiv> (PROP Q \<Longrightarrow> PROP P)"
+
+definition
+  st_prop2 :: "prop \<Rightarrow> prop \<Rightarrow> prop"
+where
+  "st_prop2 (PROP P) (PROP Q) \<equiv> (PROP P \<Longrightarrow> PROP Q)"
+
 definition "failed == True"
 
 definition elim :: "prop \<Rightarrow> prop"
@@ -60,6 +70,12 @@ lemma strengthen_refl:
   "st P rel x x"
   by (simp add: st_def)
 
+lemma st_prop_refl:
+  "PROP (st_prop1 (PROP P) (PROP P))"
+  "PROP (st_prop2 (PROP P) (PROP P))"
+  unfolding st_prop1_def st_prop2_def
+  by safe
+
 lemma strengthenI:
   "rel x y \<Longrightarrow> st True rel x y"
   "rel y x \<Longrightarrow> st False rel x y"
@@ -72,6 +88,14 @@ lemmas ord_to_strengthen = strengthenI[where rel="op \<le>"]
 lemma use_strengthen_imp:
   "st False (op \<longrightarrow>) Q P \<Longrightarrow> P \<Longrightarrow> Q"
   by (simp add: st_def)
+
+lemma use_strengthen_prop_elim:
+  "PROP P \<Longrightarrow> PROP (st_prop2 (PROP P) (PROP Q))
+    \<Longrightarrow> (PROP Q \<Longrightarrow> PROP R) \<Longrightarrow> PROP R"
+  unfolding st_prop2_def
+  apply (drule(1) meta_mp)+
+  apply assumption
+  done
 
 lemma strengthen_Not:
   "st False rel x y \<Longrightarrow> st (\<not> True) rel x y"
@@ -112,6 +136,7 @@ fun gather_to_imp ctxt drule pattern = let
     val pattern = (if drule then "D" :: pattern else pattern)
     fun inner pat ct = case (head_of (Thm.term_of ct), pat) of
         (@{term Pure.imp}, ("E" :: pat)) => binop_conv' mk_elim (inner pat) ct
+      | (@{term Pure.imp}, ("A" :: pat)) => binop_conv' mk_elim (inner pat) ct
       | (@{term Pure.imp}, ("O" :: pat)) => binop_conv' mk_oblig (inner pat) ct
       | (@{term Pure.imp}, _) => binop_conv' (Object_Logic.atomize ctxt) (inner (drop 1 pat)) ct
       | (_, []) => Object_Logic.atomize ctxt ct
@@ -176,7 +201,7 @@ fun mk_strg_args (SOME (typ, pat)) ctxt thm = mk_strg (typ, pat) ctxt thm
   | mk_strg_args NONE ctxt thm = auto_mk ctxt thm
 
 val arg_pars = Scan.option (Scan.first (map Args.$$$ ["I", "I'", "D", "D'", "lhs", "rhs"])
-  -- Scan.repeat (Args.$$$ "E" || Args.$$$ "O" || Args.$$$ "_"))
+  -- Scan.repeat (Args.$$$ "A" || Args.$$$ "E" || Args.$$$ "O" || Args.$$$ "_"))
 
 val setup =
       Attrib.setup @{binding "mk_strg"}
@@ -242,6 +267,8 @@ fun goal_predicate t = let
     val cn = head_of #> dest_Const #> fst
   in if cn gl = @{const_name oblig} then "oblig"
     else if cn gl = @{const_name elim} then "elim"
+    else if cn gl = @{const_name st_prop1} then "st_prop1"
+    else if cn gl = @{const_name st_prop2} then "st_prop2"
     else if cn (HOLogic.dest_Trueprop gl) = @{const_name st} then "st"
     else ""
   end handle TERM _ => ""
@@ -252,6 +279,8 @@ fun do_elim ctxt = SUBGOAL (fn (t, i) => if goal_predicate t = "elim"
 fun final_oblig_strengthen ctxt = SUBGOAL (fn (t, i) => case goal_predicate t of
     "oblig" => resolve_tac ctxt @{thms intro_oblig} i
   | "st" => resolve_tac ctxt @{thms strengthen_refl} i
+  | "st_prop1" => resolve_tac ctxt @{thms st_prop_refl} i
+  | "st_prop2" => resolve_tac ctxt @{thms st_prop_refl} i
   | _ => all_tac)
 
 infix 1 THEN_TRY_ALL_NEW;
@@ -272,28 +301,84 @@ fun maybe_trace_tac false _ _ = K all_tac
     all_tac
   end)
 
-fun apply_strg ctxt trace congs rules = EVERY' [
-    maybe_trace_tac trace ctxt "apply_strg",
+fun maybe_trace_rule false _ _ rl = rl
+  | maybe_trace_rule true ctxt msg rl = let
+    val tr = Pretty.big_list msg [Syntax.pretty_term ctxt (Thm.prop_of rl)]
+  in
+    Pretty.writeln tr;
+    rl
+  end
+
+type params = {trace : bool, once : bool}
+
+fun params once ctxt = {trace = Config.get ctxt (fst tracing), once = once}
+
+fun apply_tac_as_strg ctxt (params : params) (tac : tactic)
+  = SUBGOAL (fn (t, i) => case Logic.strip_assums_concl t of
+      @{term Trueprop} $ (@{term "st False (op \<longrightarrow>)"} $ x $ _)
+      => let
+    val triv = Thm.trivial (Thm.cterm_of ctxt (HOLogic.mk_Trueprop x))
+    val trace = #trace params
+  in
+    fn thm => tac triv
+        |> Seq.map (maybe_trace_rule trace ctxt "apply_tac_as_strg: making strg")
+        |> Seq.maps (Seq.try (Make_Strengthen_Rule.auto_mk ctxt))
+        |> Seq.maps (fn str_rl => resolve_tac ctxt [str_rl] i thm)
+  end | _ => no_tac)
+
+fun opt_tac f (SOME v) = f v
+  | opt_tac _ NONE = K no_tac
+
+fun apply_strg ctxt (params : params) congs rules tac = EVERY' [
+    maybe_trace_tac (#trace params) ctxt "apply_strg",
     DETERM o TRY o resolve_tac ctxt @{thms strengthen_Not},
     DETERM o ((resolve_tac ctxt rules THEN_ALL_NEW do_elim ctxt)
+        ORELSE' (opt_tac (apply_tac_as_strg ctxt params) tac)
         ORELSE' (resolve_tac ctxt congs THEN_TRY_ALL_NEW
-            (fn i => apply_strg ctxt trace congs rules i)))
+            (fn i => apply_strg ctxt params congs rules tac i)))
 ]
 
-fun do_strg ctxt congs rules
-    = apply_strg ctxt (Config.get ctxt (fst tracing)) congs rules
-        THEN_ALL_NEW final_oblig_strengthen ctxt
-
-fun strengthen ctxt thms i st = let
+fun setup_strg ctxt params thms meths = let
     val congs = Congs.get (Proof_Context.theory_of ctxt)
     val rules = map (Make_Strengthen_Rule.auto_mk ctxt) thms
-  in (resolve0_tac @{thms use_strengthen_imp}
-    THEN' do_strg ctxt congs rules) i st end
+    val tac = case meths of [] => NONE
+      | _ => SOME (FIRST (map (fn meth => Method.NO_CONTEXT_TACTIC ctxt
+        (Method.evaluate meth ctxt [])) meths))
+  in apply_strg ctxt params congs rules tac
+        THEN_ALL_NEW final_oblig_strengthen ctxt end
+
+fun strengthen ctxt asm concl thms meths = let
+    val strg = setup_strg ctxt (params false ctxt) thms meths
+  in
+    (if not concl then K no_tac
+        else resolve_tac ctxt @{thms use_strengthen_imp} THEN' strg)
+    ORELSE' (if not asm then K no_tac
+        else eresolve_tac ctxt @{thms use_strengthen_prop_elim} THEN' strg)
+  end
+
+fun default_strengthen ctxt thms = strengthen ctxt false true thms []
 
 val strengthen_args =
   Attrib.thms >> curry (fn (rules, ctxt) =>
     Method.CONTEXT_METHOD (fn _ =>
-      Method.RUNTIME (Method.CONTEXT_TACTIC (strengthen ctxt rules 1))
+      Method.RUNTIME (Method.CONTEXT_TACTIC
+        (strengthen ctxt false true rules [] 1))
+    )
+  );
+
+val strengthen_asm_args =
+  Attrib.thms >> curry (fn (rules, ctxt) =>
+    Method.CONTEXT_METHOD (fn _ =>
+      Method.RUNTIME (Method.CONTEXT_TACTIC
+        (strengthen ctxt true false rules [] 1))
+    )
+  );
+
+val strengthen_method_args =
+  Method.text_closure >> curry (fn (meth, ctxt) =>
+    Method.CONTEXT_METHOD (fn _ =>
+      Method.RUNTIME (Method.CONTEXT_TACTIC
+        (strengthen ctxt true true [] [meth] 1))
     )
   );
 
@@ -307,6 +392,12 @@ setup "Strengthen.setup"
 
 method_setup strengthen = {* Strengthen.strengthen_args *}
   "strengthen the goal"
+
+method_setup strengthen_asm = {* Strengthen.strengthen_asm_args *}
+  "apply ''strengthen'' to weaken an assumption"
+
+method_setup strengthen_method = {* Strengthen.strengthen_method_args *}
+  "use an argument method in ''strengthen'' sites"
 
 text {* Important strengthen congruence rules. *}
 
@@ -408,12 +499,42 @@ lemma strengthen_INT[strg]:
     \<Longrightarrow> st_ord F (\<Inter>x \<in> A. B x) (\<Inter>x \<in> A'. B' x)"
   by (cases F, auto)
 
+lemma strengthen_imp_strengthen_prop[strg]:
+  "st False (op \<longrightarrow>) P Q \<Longrightarrow> PROP (st_prop1 (Trueprop P) (Trueprop Q))"
+  "st True (op \<longrightarrow>) P Q \<Longrightarrow> PROP (st_prop2 (Trueprop P) (Trueprop Q))"
+  unfolding st_prop1_def st_prop2_def
+  by auto
+
+lemma st_prop_meta_imp[strg]:
+  "PROP (st_prop2 (PROP X) (PROP X'))
+    \<Longrightarrow> PROP (st_prop1 (PROP Y) (PROP Y'))
+    \<Longrightarrow> PROP (st_prop1 (PROP X \<Longrightarrow> PROP Y) (PROP X' \<Longrightarrow> PROP Y'))"
+  "PROP (st_prop1 (PROP X) (PROP X'))
+    \<Longrightarrow> PROP (st_prop2 (PROP Y) (PROP Y'))
+    \<Longrightarrow> PROP (st_prop2 (PROP X \<Longrightarrow> PROP Y) (PROP X' \<Longrightarrow> PROP Y'))"
+  unfolding st_prop1_def st_prop2_def
+  by (erule meta_mp | assumption)+
+
+lemma st_prop_meta_all[strg]:
+  "(\<And>x. PROP (st_prop1 (PROP (X x)) (PROP (X' x))))
+    \<Longrightarrow> PROP (st_prop1 (\<And>x. PROP (X x)) (\<And>x. PROP (X' x)))"
+  "(\<And>x. PROP (st_prop2 (PROP (X x)) (PROP (X' x))))
+    \<Longrightarrow> PROP (st_prop2 (\<And>x. PROP (X x)) (\<And>x. PROP (X' x)))"
+  unfolding st_prop1_def st_prop2_def
+   apply (rule Pure.asm_rl)
+   apply (erule meta_allE, erule meta_mp)
+   apply assumption
+  apply (rule Pure.asm_rl)
+  apply (erule meta_allE, erule meta_mp)
+  apply assumption
+  done
+
 (* to think about, what more monotonic constructions can we find? *)
+
+end
 
 lemma imp_consequent:
   "P \<longrightarrow> Q \<longrightarrow> P" by simp
-
-end
 
 text {* Test cases. *}
 
@@ -445,6 +566,24 @@ lemma foo:
   using [[strengthen_trace = true]]
   apply (strengthen silly_trans[mk_strg I E])+
   apply (strengthen silly_refl)
+  apply simp
+  done
+
+lemma foo_asm:
+  "silly x y \<Longrightarrow> silly y z
+    \<Longrightarrow> (silly x z \<Longrightarrow> silly a b) \<Longrightarrow> silly z z \<Longrightarrow> silly a b"
+  apply (strengthen_asm silly_trans[mk_strg I A])
+  apply (strengthen_asm silly_trans[mk_strg I A])
+  apply simp
+  done
+
+lemma foo_method:
+  "silly x y \<Longrightarrow> silly a b \<Longrightarrow> silly b c
+    \<Longrightarrow> silly x y \<and> (\<forall>x :: nat. z \<longrightarrow> silly a c )"
+  using [[strengthen_trace = true]]
+  apply simp
+  apply (strengthen_method \<open>rule silly_trans\<close>)
+  apply (strengthen_method \<open>rule exI[where x=b]\<close>)
   apply simp
   done
 
