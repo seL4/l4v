@@ -20,6 +20,7 @@ import qualified SEL4.Machine.Hardware.GICInterface as GIC
 import qualified SEL4.Machine.Hardware.MCTInterface as MCT
 import Foreign.Ptr
 import Data.Bits
+import Data.Word(Word64)
 
 -- Following harded coded address pair are used in getKernelDevices
 -- and will get mapped into kernel address space via mapKernelFrame
@@ -104,12 +105,11 @@ timerFreq = 100
 timerLimit :: Word
 timerLimit = 1000000 `div` timerFreq
 
-configureTimer :: Ptr CallbackData -> IO IRQ
-configureTimer env = do
-    MCT.callMCTApi mctdata $ MCT.mctInit
-    return timerIRQ
-      where mctdata = MCT.MCTState { MCT.env = env,
-        MCT.mctBase = mctBase }
+setDeadline :: Ptr CallbackData -> Word64 -> IO ()
+setDeadline _ _ = undefined
+
+getCurrentTime :: Ptr CallbackData -> IO Word64
+getCurrentTime = undefined
 
 initIRQController :: Ptr CallbackData -> IO ()
 initIRQController env = callGICApi gicdata $ GIC.initIRQController

@@ -16,7 +16,7 @@ import Prelude hiding (Word)
 import SEL4.Machine.RegisterSet
 import Foreign.Ptr
 import Data.Bits
-import Data.Word(Word8)
+import Data.Word(Word8, Word64)
 import Data.Ix
 import SEL4.Machine.Hardware.ARM.Callbacks
 
@@ -102,18 +102,11 @@ timerFreq = 100
 timerLimit :: Word
 timerLimit = 1000000 `div` timerFreq
 
-configureTimer :: Ptr CallbackData -> IO IRQ
-configureTimer env = do
-    -- enabled, periodic, interrupts enabled
-    storeWordCallback env timerAddr 0
-    let timerCtrl = bit 24 .|. bit 17 .|. bit 3 .|. bit 2 .|. bit 1
-    storeWordCallback env timerAddr timerCtrl
-    storeWordCallback env (timerAddr+0x8) (100 * 1000 * 1000)
-    storeWordCallback env (timerAddr+0xc) 0
-    storeWordCallback env (timerAddr+0x4) 1
-    let timerCtrl2 = timerCtrl .|. 1
-    storeWordCallback env timerAddr timerCtrl2
-    return timerIRQ
+getCurrentTime :: Ptr CallbackData -> IO Word64
+getCurrentTime = undefined
+
+setDeadline :: Ptr CallbackData -> Word64 -> IO ()
+setDeadline _ _ = undefined
 
 initIRQController :: Ptr CallbackData -> IO ()
 initIRQController env = runDevicesCallback env

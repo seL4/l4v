@@ -26,6 +26,8 @@ The following is the definition of the five object types that are always availab
 >         | EndpointObject
 >         | NotificationObject
 >         | CapTableObject
+>         | SchedContextObject
+>         | ReplyObject
 >         deriving (Enum, Bounded, Eq, Show)
 
 > tcbBlockSizeBits :: Int
@@ -35,10 +37,18 @@ The following is the definition of the five object types that are always availab
 > epSizeBits = 4
 
 > ntfnSizeBits :: Int
-> ntfnSizeBits = wordSizeCase 4 5
+> ntfnSizeBits = wordSizeCase 5 5
+
+(ntfnSizeBits should maybe 5 6 if we are doing rt for x64)
+
+> scSizeBits :: Int
+> scSizeBits = 8
 
 > cteSizeBits :: Int
 > cteSizeBits = wordSizeCase 4 5
+
+> replySizeBits :: Int
+> replySizeBits = 4
 
 > apiGetObjectSize :: APIObjectType -> Int -> Int
 > apiGetObjectSize Untyped size = size
@@ -46,6 +56,8 @@ The following is the definition of the five object types that are always availab
 > apiGetObjectSize EndpointObject _ = epSizeBits
 > apiGetObjectSize NotificationObject _ = ntfnSizeBits
 > apiGetObjectSize CapTableObject size = cteSizeBits + size
+> apiGetObjectSize SchedContextObject _ = scSizeBits
+> apiGetObjectSize ReplyObject _ = replySizeBits
 
 
 

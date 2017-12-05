@@ -28,7 +28,6 @@ This module uses the C preprocessor to select a target architecture.
 > import SEL4.Model.PSpace
 > import SEL4.Model.StateData
 > import SEL4.Object.Instances.TARGET()
-> import SEL4.Config
 
 > import Data.Bits
 
@@ -49,12 +48,28 @@ The following are the instances of "Storable" for the four main types of kernel 
 
 \subsubsection{Notification objects}
 
-> instance PSpaceStorable Notification where
->     makeObject = NTFN IdleNtfn Nothing
+> instance PSpaceStorable Notification where 
+>     makeObject = NTFN IdleNtfn Nothing Nothing
 >     injectKO   = KONotification
 >     projectKO o = case o of
 >         KONotification e -> return e
 >         _ -> typeError "Notification" o
+
+\subsubsection{SchedContext objects}
+
+> instance PSpaceStorable SchedContext where
+>     makeObject = SchedContext 0 Nothing Nothing [Refill 0 0] 0 []
+>     injectKO   = KOSchedContext
+>     projectKO o = case o of
+>         KOSchedContext e -> return e
+>         _ -> typeError "SchedContext" o
+
+> instance PSpaceStorable Reply where
+>     makeObject = Reply Nothing Nothing
+>     injectKO   = KOReply
+>     projectKO o = case o of
+>         KOReply e -> return e
+>         _ -> typeError "Reply" o
 
 \subsubsection{Capability Table Entry}
 
@@ -87,8 +102,6 @@ As mentioned in the documentation for the type class "PSpaceStorable", there is 
 >             offsetReturn x tcb
 >                 | x == toOffset tcbVTableSlot = return $ tcbVTable tcb
 >                 | x == toOffset tcbCTableSlot = return $ tcbCTable tcb
->                 | x == toOffset tcbReplySlot = return $ tcbReply tcb
->                 | x == toOffset tcbCallerSlot = return $ tcbCaller tcb
 >                 | x == toOffset tcbIPCBufferSlot =
 >                     return $ tcbIPCBufferFrame tcb
 >                 | otherwise = fail "incorrect CTE offset into TCB"
@@ -111,10 +124,6 @@ As mentioned in the documentation for the type class "PSpaceStorable", there is 
 >                     = return $ KOTCB (tcb {tcbVTable = cte})
 >                 | x == toOffset tcbCTableSlot
 >                     = return $ KOTCB (tcb {tcbCTable = cte})
->                 | x == toOffset tcbReplySlot
->                     = return $ KOTCB (tcb { tcbReply = cte })
->                 | x == toOffset tcbCallerSlot
->                     = return $ KOTCB (tcb { tcbCaller = cte })
 >                 | x == toOffset tcbIPCBufferSlot
 >                     = return $ KOTCB (tcb { tcbIPCBufferFrame = cte })
 >                 | otherwise = fail "incorrect CTE offset into TCB"
@@ -129,8 +138,6 @@ By default, new threads are unable to change the security domains of other threa
 >     makeObject = Thread {
 >         tcbCTable = makeObject,
 >         tcbVTable = makeObject,
->         tcbReply = makeObject,
->         tcbCaller = makeObject,
 >         tcbIPCBufferFrame = makeObject,
 >         tcbDomain = minBound,
 >         tcbState = Inactive,
@@ -138,10 +145,11 @@ By default, new threads are unable to change the security domains of other threa
 >         tcbPriority = minBound,
 >         tcbQueued = False,
 >         tcbFault = Nothing,
->         tcbTimeSlice = timeSlice,
 >         tcbFaultHandler = CPtr 0,
 >         tcbIPCBuffer = VPtr 0,
 >         tcbBoundNotification = Nothing,
+>         tcbSchedContext = Nothing,
+>         tcbReply = Nothing,
 >         tcbArch = newArchTCB }
 >     injectKO   = KOTCB
 >     projectKO o = case o of

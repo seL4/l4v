@@ -23,7 +23,7 @@ We use the C preprocessor to select a target architecture.
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.Model SEL4.Machine SEL4.Object.Structures SEL4.Object.Instances() SEL4.API.Types #-}
-% {-# BOOT-EXPORTS: setDomain setMCPriority setPriority getThreadState setThreadState setBoundNotification getBoundNotification doIPCTransfer isRunnable restart suspend  doReplyTransfer tcbSchedEnqueue tcbSchedDequeue rescheduleRequired timerTick possibleSwitchTo #-}
+% {-# BOOT-EXPORTS: setDomain setMCPriority setPriority getThreadState setThreadState setBoundNotification getBoundNotification doIPCTransfer isRunnable restart suspend  doReplyTransfer tcbSchedEnqueue tcbSchedDequeue rescheduleRequired scheduleTcb isSchedulable possibleSwitchTo endTimeSlice inReleaseQueue tcbReleaseRemove tcbSchedAppend switchToThread #-}
 
 > import Prelude hiding (Word)
 > import SEL4.Config
@@ -32,6 +32,8 @@ We use the C preprocessor to select a target architecture.
 > import SEL4.Machine
 > import SEL4.Model
 > import SEL4.Object
+> import SEL4.Object.Reply
+> import SEL4.Object.SchedContext
 > import SEL4.Object.Structures
 > import SEL4.Kernel.VSpace
 > import {-# SOURCE #-} SEL4.Kernel.Init
@@ -39,6 +41,8 @@ We use the C preprocessor to select a target architecture.
 > import Data.Bits hiding (countLeadingZeros)
 > import Data.Array
 > import Data.WordLib
+> import Data.Maybe(fromJust)
+> import Data.Set(fromList, member)
 
 \end{impdetails}
 
@@ -66,7 +70,6 @@ The initial user-level thread has the right to change the security domains of ot
 > activateInitialThread threadPtr entry infoPtr = do
 >         asUser threadPtr $ setRegister capRegister $ fromVPtr infoPtr
 >         asUser threadPtr $ setNextPC $ fromVPtr entry
->         setupReplyMaster threadPtr
 >         setThreadState Running threadPtr
 >         setSchedulerAction ResumeCurrentThread
 >         idle <- getIdleThread
@@ -116,6 +119,12 @@ Note that the idle thread is not considered runnable; this is to prevent it bein
 >             Restart -> True
 >             _ -> False
 
+> isSchedulable :: PPtr TCB -> Bool -> Kernel Bool
+> isSchedulable tcbPtr inReleaseQ = do
+>     runnable <- isRunnable tcbPtr
+>     tcb <- getObject tcbPtr
+>     return $! runnable && tcbSchedContext tcb /= Nothing && not inReleaseQ
+
 \subsubsection{Suspending a Thread}
 
 When a thread is suspended, either explicitly by a TCB invocation or implicitly when it is being destroyed, any operation that it is currently performing must be cancelled.
@@ -135,12 +144,13 @@ The invoked thread will return to the instruction that caused it to enter the ke
 > restart :: PPtr TCB -> Kernel ()
 > restart target = do
 >     blocked <- isBlocked target
+>     scOpt <- threadGet tcbSchedContext target
 >     when blocked $ do
 >         cancelIPC target
->         setupReplyMaster target
 >         setThreadState Restart target
->         tcbSchedEnqueue target
->         possibleSwitchTo target
+>         assert (scOpt /= Nothing) "restart: scOpt must not be Nothing"
+>         schedContextResume (fromJust scOpt)
+>         switchIfRequiredTo target
 
 \subsection{IPC Transfers}
 
@@ -172,37 +182,29 @@ If the sent message is a fault IPC, the stored fault is transferred.
 
 Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IPC replies, or fault replies. In the former case, the transfer is the same as for an IPC send, but there is never a fault, capability grants are always allowed, the badge is always 0, and capabilities are never received with diminished rights (diminished rights are now removed).
 
-> doReplyTransfer :: PPtr TCB -> PPtr TCB -> PPtr CTE -> Kernel ()
-> doReplyTransfer sender receiver slot = do
->     state <- getThreadState receiver
->     assert (isReply state)
->         "Reply transfer to a thread that isn't listening"
->     mdbNode <- liftM cteMDBNode $ getCTE slot
->     assert (mdbPrev mdbNode /= nullPointer
->                 && mdbNext mdbNode == nullPointer)
->         "doReplyTransfer: ReplyCap not at end of MDB chain"
->     parentCap <- getSlotCap (mdbPrev mdbNode)
->     assert (isReplyCap parentCap && capReplyMaster parentCap)
->         "doReplyTransfer: ReplyCap parent not reply master"
->     fault <- threadGet tcbFault receiver
->     case fault of
->         Nothing -> do
->             doIPCTransfer sender Nothing 0 True receiver
->             cteDeleteOne slot
->             setThreadState Running receiver
->             possibleSwitchTo receiver
->         Just f -> do
->             cteDeleteOne slot
->             tag <- getMessageInfo sender
->             sendBuffer <- lookupIPCBuffer False sender
->             mrs <- getMRs sender sendBuffer tag
->             restart <- handleFaultReply f receiver (msgLabel tag) mrs
->             threadSet (\tcb -> tcb {tcbFault = Nothing}) receiver
->             if restart
->               then do
->                 setThreadState Restart receiver
->                 possibleSwitchTo receiver
->               else setThreadState Inactive receiver
+> doReplyTransfer :: PPtr TCB -> PPtr Reply -> Kernel ()
+> doReplyTransfer sender reply = do
+>     recvOpt <- getReplyCaller reply
+>     case recvOpt of
+>         Nothing -> return ()
+>         Just receiver -> do
+>             state <- getThreadState receiver
+>             assert (state == BlockedOnReply) "doReplyTransfer: thread state must be BlockedOnReply"
+>             replyRemove reply
+>             fault <- threadGet tcbFault receiver
+>             case fault of
+>                 Nothing -> do
+>                     doIPCTransfer sender Nothing 0 True receiver
+>                     setThreadState Running receiver
+>                     attemptSwitchTo receiver
+>                 Just f -> do
+>                     mi <- getMessageInfo sender
+>                     buf <- lookupIPCBuffer False sender
+>                     mrs <- getMRs sender buf mi
+>                     restart <- handleFaultReply f receiver (msgLabel mi) mrs
+>                     threadSet (\tcb -> tcb { tcbFault = Nothing }) receiver
+>                     setThreadState (if restart then Restart else Inactive) receiver
+>                     when restart $ attemptSwitchTo receiver
 
 \subsubsection{Ordinary IPC}
 
@@ -316,7 +318,11 @@ has the highest runnable priority in the system on kernel entry (unless idle).
 
 > schedule :: Kernel ()
 > schedule = do
+>         reprogram <- getReprogramTimer
+>         when reprogram awaken
 >         curThread <- getCurThread
+>         inq <- inReleaseQueue curThread
+>         curSched <- isSchedulable curThread inq
 >         action <- getSchedulerAction
 >         case action of
 
@@ -328,7 +334,7 @@ An IPC operation may request that the scheduler switch to a specific thread.
 We check here that the candidate has the highest priority in the system.
 
 >             SwitchToThread candidate -> do
->                 wasRunnable <- isRunnable curThread
+>                 wasRunnable <- isSchedulable curThread
 >                 when wasRunnable (tcbSchedEnqueue curThread)
 >
 >                 idleThread <- getIdleThread
@@ -356,9 +362,10 @@ We check here that the candidate has the highest priority in the system.
 If the current thread is no longer runnable, has used its entire timeslice, an IPC cancellation has potentially woken multiple higher priority threads, or the domain timeslice is exhausted, then we scan the scheduler queues to choose a new thread. In the last case, we switch to the next domain beforehand.
 
 >             ChooseNewThread -> do
->                 curRunnable <- isRunnable curThread
->                 when curRunnable $ tcbSchedEnqueue curThread
+>                 curSchedulable <- isSchedulable curThread
+>                 when curSchedulable $ tcbSchedEnqueue curThread
 >                 scheduleChooseNewThread
+>         scAndTimer
 
 Threads are scheduled using a simple multiple-priority round robin algorithm.
 It checks the priority bitmaps to find the highest priority with a non-empty
@@ -454,27 +461,27 @@ The following function is used to alter a thread's domain.
 
 \subsubsection{Changing a Thread's Priority}
 
+> threadSetPriority :: PPtr TCB -> Priority -> Kernel ()
+> threadSetPriority tptr prio = threadSet (\tcb -> tcb { tcbPriority = prio }) tptr
+
 The following function is used to alter the priority of a thread.
 
 > setPriority :: PPtr TCB -> Priority -> Kernel ()
 > setPriority tptr prio = do
-
-The thread must be removed from the old priority's queue, if it is queued.
-
->         tcbSchedDequeue tptr
-
-Then, the new priority can be set.
-
->         threadSet (\t -> t { tcbPriority = prio }) tptr
-
-If the thread is runnable, it is enqueued at the new priority. Furthermore,
-since the thread may now be the highest priority thread, we run the scheduler
-to choose a new thread.
-
->         runnable <- isRunnable tptr
->         when runnable $ do
->             tcbSchedEnqueue tptr
->             rescheduleRequired
+>     tcbSchedDequeue tptr
+>     threadSetPriority tptr prio
+>     ts <- getThreadState tptr
+>     runnable <- isRunnable tptr
+>     when runnable $ do
+>         tcbSchedEnqueue tptr
+>         cur <- getCurThread
+>         when (tptr == cur) rescheduleRequired
+>         case (epBlocked ts) of
+>             Just ep -> reorderEp ep
+>             _ -> return ()
+>         case (ntfnBlocked ts) of
+>             Just ntfn -> reorderNtfn ntfn
+>             _ -> return ()
 
 \subsubsection{Switching to Woken Threads}
 
@@ -486,18 +493,21 @@ importance in the scheduler. If the woken thread is not a viable switch
 candidate, we enqueue it instead. In the case of multiple candidates, all
 candidates are enqueued.
 
-> possibleSwitchTo :: PPtr TCB -> Kernel ()
-> possibleSwitchTo target = do
->     curDom <- curDomain
->     targetDom <- threadGet tcbDomain target
->     action <- getSchedulerAction
->     if (targetDom /= curDom)
->         then tcbSchedEnqueue target
->         else if (action /= ResumeCurrentThread)
->                 then do
->                     rescheduleRequired
->                     tcbSchedEnqueue target
->              else setSchedulerAction $ SwitchToThread target
+> possibleSwitchTo :: PPtr TCB -> Bool -> Kernel ()
+> possibleSwitchTo target onSamePrio = do
+>     scOpt <- threadGet tcbSchedContext target
+>     inq <- inReleaseQueue target
+>     when (scOpt /= Nothing && not inq) $ do
+>       curDom <- curDomain
+>       targetDom <- threadGet tcbDomain target
+>       action <- getSchedulerAction
+>       if (targetDom /= curDom)
+>           then tcbSchedEnqueue target
+>           else if (action /= ResumeCurrentThread)
+>                   then do
+>                       rescheduleRequired
+>                       tcbSchedEnqueue target
+>                 else setSchedulerAction $ SwitchToThread target
 
 In most cases, the current thread has just sent a message to the woken thread, so we switch if the woken thread has the same or higher priority than the current thread; that is, whenever the priorities permit the switch.
 
@@ -510,7 +520,9 @@ This function is called when the system state has changed sufficiently that the 
 >     action <- getSchedulerAction
 >     case action of
 >         SwitchToThread target -> do
->             tcbSchedEnqueue target
+>              inReleaseQ <- inReleaseQueue target
+>              sched <- isSchedulable target inReleaseQ
+>              when sched $ tcbSchedEnqueue target
 >         _ -> return ()
 >     setSchedulerAction ChooseNewThread
 
@@ -524,14 +536,13 @@ a thread.
 
 When setting the scheduler state, we check for blocking of the current thread; in that case, we tell the scheduler to choose a new thread.
 
+TODO: Just a placeholder. It'll be changed in a later version.
+
 > setThreadState :: ThreadState -> PPtr TCB -> Kernel ()
-> setThreadState st tptr = do
->         threadSet (\t -> t { tcbState = st }) tptr
->         runnable <- isRunnable tptr
->         curThread <- getCurThread
->         action <- getSchedulerAction
->         when (not runnable && curThread == tptr && action == ResumeCurrentThread) $
->             rescheduleRequired
+> setThreadState ts tptr = do
+>         tcb <- getObject tptr
+>         setObject tptr $ tcb { tcbState = ts }
+>         scheduleTCB tptr
 
 \subsubsection{Bound Notificaion objects}
 
@@ -628,42 +639,35 @@ The following function dequeues a thread, if it is queued.
 >         when (null queue') $ removeFromBitmap tdom prio
 >         threadSet (\t -> t { tcbQueued = False }) thread
 
-\subsubsection{Timer Ticks}
-
-When the kernel's timer ticks, we decrement the timeslices of both the current thread and the current domain.
-
-> timerTick :: Kernel ()
-> timerTick = do
->   thread <- getCurThread
->   state <- getThreadState thread
->   case state of
->     Running -> do
->       ts <- threadGet tcbTimeSlice thread
->       let ts' = ts - 1
->       if (ts' > 0)
->         then threadSet (\t -> t { tcbTimeSlice = ts' }) thread
->         else do
-
-If the thread timeslice has expired, we reset it, move the thread to the end of its scheduler queue, and tell the scheduler to choose a new thread.
-
->           threadSet (\t -> t { tcbTimeSlice = timeSlice }) thread
->           tcbSchedAppend thread
->           rescheduleRequired
->     _ -> return ()
-
-If there is more than one security domain and the domain timeslice has expired, we trigger the scheduler to change domain.
-
->   when (numDomains > 1) $ do
->       decDomainTime
->       domainTime <- getDomainTime
->       when (domainTime == 0) $ rescheduleRequired
-
 \section{Kernel Init}
 
 Kernel init will created a initial thread whose tcbPriority is max priority.
 
 > initTCB = (makeObject::TCB){ tcbPriority=maxBound }
 
+> endTimeSlice :: Kernel ()
+> endTimeSlice = do
+>     scPtr <- getCurSc
+>     ready <- refillReady scPtr
+>     sufficient <- refillSufficient scPtr 0
+>     if ready && sufficient
+>         then do
+>             cur <- getCurThread
+>             tcbSchedAppend cur
+>         else postpone scPtr
+
+> inReleaseQueue :: PPtr TCB -> Kernel Bool
+> inReleaseQueue tcbPtr = do
+>     releaseQueue <- getReleaseQueue
+>     return $! member tcbPtr (fromList releaseQueue)
+
+> tcbReleaseRemove :: PPtr TCB -> Kernel ()
+> tcbReleaseRemove tcbPtr = do
+>     releaseQueue <- getReleaseQueue
+>     setReleaseQueue (filter (/=tcbPtr) releaseQueue)
+
+> switchIfRequiredTo :: PPtr TCB -> Kernel ()
+> switchIfRequiredTo target = possibleSwitchTo target False
 
 %
 

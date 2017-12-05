@@ -61,7 +61,7 @@ The kernel stores a copy of the fault in the thread's TCB, and performs an IPC s
 >           withoutFailure $ do
 >             threadSet (\tcb -> tcb {tcbFault = Just fault}) tptr
 >             sendIPC True False (capEPBadge handlerCap)
->                 True tptr (capEPPtr handlerCap)
+>                 True True tptr (capEPPtr handlerCap)
 
 If there are insufficient permissions to send to the fault handler, then another fault will be generated.
 

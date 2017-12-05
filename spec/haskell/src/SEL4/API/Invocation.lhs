@@ -40,10 +40,12 @@ The following type can specify any kernel object invocation. It contains physica
 > data Invocation
 >         = InvokeUntyped UntypedInvocation
 >         | InvokeEndpoint (PPtr Endpoint) Word Bool
->         | InvokeNotification (PPtr Notification) Word
->         | InvokeReply (PPtr TCB) (PPtr CTE)
+>         | InvokeNotification (PPtr Notification) Word 
+>         | InvokeReply (PPtr Reply)
 >         | InvokeDomain (PPtr TCB) Domain
 >         | InvokeTCB TCBInvocation
+>         | InvokeSchedContext SchedContextInvocation
+>         | InvokeSchedControl SchedControlInvocation
 >         | InvokeCNode CNodeInvocation
 >         | InvokeIRQControl IRQControlInvocation
 >         | InvokeIRQHandler IRQHandlerInvocation
@@ -64,8 +66,9 @@ The following data type defines the set of possible TCB invocation operations. T
 >             tcNewMCPriority :: Maybe (Priority, PPtr TCB),
 >             tcNewPriority :: Maybe (Priority, PPtr TCB),
 >             tcNewCRoot, tcNewVRoot :: Maybe (Capability, PPtr CTE),
->             tcNewIPCBuffer :: Maybe (VPtr, Maybe (Capability, PPtr CTE)) }
->         | NotificationControl {
+>             tcNewIPCBuffer :: Maybe (VPtr, Maybe (Capability, PPtr CTE)),
+>             tcNewSc :: Maybe (Maybe (PPtr SchedContext)) }
+>         | NotificationControl { 
 >             notificationTCB :: PPtr TCB,
 >             notificationPtr :: Maybe (PPtr Notification) }
 >         | WriteRegisters {
@@ -89,6 +92,24 @@ The following data type defines the set of possible TCB invocation operations. T
 >             setTLSBaseNewBase :: Word }
 >         deriving Show
 
+> data SchedContextInvocation
+>         = InvokeSchedContextBind {
+>             bindScPtr :: PPtr SchedContext,
+>             bindCap :: Capability }
+>         | InvokeSchedContextUnbindObject {
+>             unbindObjectScPtr :: PPtr SchedContext,
+>             unbindObjectCap :: Capability }       
+>         | InvokeSchedContextUnbind { unbindScPtr :: PPtr SchedContext }
+>         deriving Show
+
+> data SchedControlInvocation
+>         = InvokeSchedControlConfigure {
+>             configureScPtr :: PPtr SchedContext,
+>             ticks1 :: Ticks,
+>             ticks2 :: Ticks,
+>             n :: Int }
+>         deriving Show
+
 \subsubsection{CNode Invocations}
 
 The following data type defines the set of possible CNode invocation operations. The operations are discussed and defined in more detail in \autoref{sec:object.cnode}.
@@ -105,8 +126,6 @@ The following data type defines the set of possible CNode invocation operations.
 >             moveCap :: Capability,
 >             sourceSlot, targetSlot :: PPtr CTE }
 >         | CancelBadgedSends { epCap :: Capability }
->         | SaveCaller {
->             targetSlot :: PPtr CTE }
 >         | Delete { targetSlot :: PPtr CTE }
 >         deriving Show
 

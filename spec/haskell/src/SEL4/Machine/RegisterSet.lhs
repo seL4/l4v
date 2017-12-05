@@ -136,6 +136,19 @@ This list may be empty, though it should contain as many registers as possible. 
 > tlsBaseRegister :: Register
 > tlsBaseRegister = Register Arch.tlsBaseRegister
 
+> replyRegister :: Register
+> replyRegister = Register Arch.replyRegister
+
+> syscallNoRegister :: Register
+> syscallNoRegister = Register Arch.syscallNoRegister
+
+> nbsendRecvDest :: Register
+> nbsendRecvDest = Register Arch.nbsendRecvDest
+
+\end{description}
+
+\subsubsection{User-level Context}
+
 \end{description}
 
 

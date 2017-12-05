@@ -31,6 +31,7 @@ modules.
 > import SEL4.Kernel.FaultHandler
 > import SEL4.Kernel.Hypervisor
 > import SEL4.Object
+> import SEL4.Object.SchedContext
 > import SEL4.Object.Structures
 > import SEL4.Model
 > import SEL4.Machine
@@ -62,12 +63,15 @@ the enumerated type "Syscall":
 > data Syscall
 >         = SysCall
 >         | SysReplyRecv
+>         | SysNBSendRecv
+>         | SysNBSendWait
 >         | SysSend
 >         | SysNBSend
 >         | SysRecv
->         | SysReply
 >         | SysYield
 >         | SysNBRecv
+>         | SysWait
+>         | SysNBWait
 >         deriving (Show, Enum, Bounded, Eq)
 
 \subsection{Handling Events}
@@ -82,17 +86,30 @@ functions to perform the appropriate actions. The parameter is the event being h
 
 System call events are dispatched here to the appropriate system call handlers, defined in the next section.
 
-> handleEvent (SyscallEvent call) = case call of
+> handleEvent (SyscallEvent call) = do
+>     withoutPreemption $ updateTimeStamp
+>     restart <- withoutPreemption $ checkBudgetRestart
+>     when restart (case call of
 >         SysSend -> handleSend True
 >         SysNBSend -> handleSend False
 >         SysCall -> handleCall
->         SysRecv -> withoutPreemption $ handleRecv True
->         SysReply -> withoutPreemption handleReply
->         SysReplyRecv -> withoutPreemption $ do
->             handleReply
->             handleRecv True
+>         SysRecv -> withoutPreemption $ handleRecv True True
 >         SysYield -> withoutPreemption handleYield
->         SysNBRecv -> withoutPreemption $ handleRecv False
+>         SysReplyRecv -> withoutPreemption $ do
+>             replyCptr <- getCapReg replyRegister
+>             return $ handleInvocation False False True replyCptr
+>             handleRecv True True
+>         SysNBSendRecv -> do
+>             dest <- withoutPreemption $ getCapReg nbsendRecvDest
+>             handleInvocation False False True dest
+>             withoutPreemption $ handleRecv True True
+>         SysNBSendWait -> do
+>             replyCptr <- withoutPreemption $ getCapReg replyRegister
+>             handleInvocation False False True replyCptr
+>             withoutPreemption $ handleRecv True False
+>         SysWait -> withoutPreemption $ handleRecv True False
+>         SysNBWait -> withoutPreemption $ handleRecv False False
+>         SysNBRecv -> withoutPreemption $ handleRecv False True )
 
 \subsubsection{Interrupts}
 
@@ -109,10 +126,11 @@ Interrupt handling is performed by "handleInterrupt", defined in \autoref{sec:ob
 An unknown system call raises an "UnknownSyscallException", which reports the system call number to the thread's fault handler. This may allow the fault handler to emulate system call interfaces other than seL4.
 
 > handleEvent (UnknownSyscall n) = withoutPreemption $ do
->     thread <- getCurThread
->     handleFault thread $
->         UnknownSyscallException $ fromIntegral n
->     return ()
+>     updateTimeStamp
+>     restart <- checkBudgetRestart
+>     when restart $ do
+>         thread <- getCurThread
+>         handleFault thread $ UnknownSyscallException $ fromIntegral n
 
 \subsubsection{Miscellaneous User-level Faults}
 
@@ -126,18 +144,22 @@ bottom 32 bits be communicated to the fault handler, for the second word
 (error code) the bottom 29 bits.
 
 > handleEvent (UserLevelFault w1 w2) = withoutPreemption $ do
->     thread <- getCurThread
->     handleFault thread $ UserException (w1 .&. mask 32) (w2 .&. mask 29)
->     return ()
+>     updateTimeStamp
+>     restart <- checkBudgetRestart
+>     when restart $ do
+>         thread <- getCurThread
+>         handleFault thread $ UserException (w1 .&. mask 32) (w2 .&. mask 29)
 
 \subsubsection{Virtual Memory Faults}
 
 If the simulator reports a VM fault, the appropriate action depends on whether the architecture has a software-loaded TLB. If so, we look up the address, and then insert it into the TLB; otherwise we simply send a fault IPC.
 
 > handleEvent (VMFaultEvent faultType) = withoutPreemption $ do
->     thread <- getCurThread
->     handleVMFault thread faultType `catchFailure` handleFault thread
->     return ()
+>     updateTimeStamp
+>     restart <- checkBudgetRestart
+>     when restart $ do
+>         thread <- getCurThread
+>         handleVMFault thread faultType `catchFailure` handleFault thread
 
 \subsubsection{Hypervisor Faults}
 
@@ -154,62 +176,42 @@ For platforms running in hypervisor mode, many fault handlers are wrapped and re
 The "Send" system call sends a message to an object. The object is specified by a pointer to a capability in the caller's capability address space. The invocation is one-way; no reply is expected. This operation requires send rights on the invoked capability.
 
 > handleSend :: Bool -> KernelP ()
-> handleSend = handleInvocation False
+> handleSend bl = do
+>     cptr <- withoutPreemption $ getCapReg capRegister
+>     handleInvocation False bl False cptr
 
 \subsubsection{Call System Call}
 
 The "Call" system call is similar to "Send", but it also requests a reply. For kernel capabilities, the kernel will provide information about the result of the operation directly. For synchronous endpoint capabilities, the receiver of the message will be provided with a single-use reply capability which it can use to send a reply and restart the caller. Notification and reply capabilities will immediately reply with a 0-length message.
 
 > handleCall :: KernelP ()
-> handleCall = handleInvocation True True
-
-\subsubsection{Reply System Call}
-
-The "Reply" system call attempts to perform an immediate IPC transfer to the thread that sent the message received by the last successful "Recv" call. If this is not possible, the reply will be silently dropped. The transfer will succeed if:
-\begin{itemize}
-  \item there has been no other "Reply" call since the last successful "Recv" call;
-  \item the sender used "Call" to generate a reply capability;
-  \item the sender has not been halted or restarted while waiting for a reply; and
-  \item the reply capability has not been moved aside.
-\end{itemize}
-
-> handleReply :: Kernel ()
-> handleReply = do
->     thread <- getCurThread
->     callerSlot <- getThreadCallerSlot thread
->     callerCap <- getSlotCap callerSlot
->     case callerCap of
->         ReplyCap caller False -> do
->             assert (caller /= thread)
->                 "handleReply: caller must not be the current thread"
->             doReplyTransfer thread caller callerSlot
->         NullCap -> return ()
->         _ -> fail "handleReply: invalid caller cap"
+> handleCall = do
+>     cptr <- withoutPreemption $ getCapReg capRegister
+>     handleInvocation True True True cptr
 
 \subsubsection{Recv System Call}
 
 The "Recv" system call blocks waiting to receive a message through a specified endpoint. It will fail if the specified capability does not refer to an endpoint object.
 
-> handleRecv :: Bool -> Kernel ()
-> handleRecv isBlocking = do
+> handleRecv :: Bool -> Bool -> Kernel ()
+> handleRecv isBlocking canReply = do
 >     thread <- getCurThread
->     epCPtr <- asUser thread $ liftM CPtr $ getRegister capRegister
->     (capFaultOnFailure epCPtr True $ do
->         epCap <- lookupCap thread epCPtr
+>     epCptr <- getCapReg capRegister
+>     (do
+>         epCap <- capFaultOnFailure epCptr True (lookupCap thread epCptr)
+>         flt <- throw $ CapFault epCptr True (MissingCapability 0)
 >         case epCap of
->             EndpointCap { capEPCanReceive = True } -> do
->                 withoutFailure $ do
->                     deleteCallerCap thread
->                     receiveIPC thread epCap isBlocking
+>             EndpointCap { capEPCanReceive = epCanReceive } -> do
+>                 when (not epCanReceive) flt
+>                 replyCap <- if canReply then lookupReply else return NullCap
+>                 withoutFailure $ receiveIPC thread epCap isBlocking replyCap
 >             NotificationCap { capNtfnCanReceive = True, capNtfnPtr = ntfnPtr } -> do
 >                 ntfn <- withoutFailure $ getNotification ntfnPtr
 >                 boundTCB <- return $ ntfnBoundTCB ntfn
 >                 if boundTCB == Just thread || boundTCB == Nothing
->                  then withoutFailure $ receiveSignal thread epCap isBlocking
->                  else throw $ MissingCapability { missingCapBitsLeft = 0 }
->             _ -> throw $ MissingCapability { missingCapBitsLeft = 0 })
->       `catchFailure` handleFault thread
->     return ()
+>                     then withoutFailure $ receiveSignal thread epCap isBlocking
+>                     else flt
+>             _ -> flt) `catchFailure` handleFault thread
 
 \subsubsection{Yield System Call}
 
@@ -217,27 +219,27 @@ The "Yield" system call is trivial; it simply moves the current thread to the en
 
 > handleYield :: Kernel ()
 > handleYield = do
->     thread <- getCurThread
->     tcbSchedDequeue thread
->     tcbSchedAppend thread
+>     curSc <- getCurSc
+>     consumed <- getConsumedTime
+>     refillBudgetCheck curSc consumed
+>     setConsumedTime 0
+>     endTimeSlice
 >     rescheduleRequired
 
 \subsection{Capability Invocations}\label{sel4:api:syscall:invoke}
 
 The following function implements the "Send" and "Call" system calls. It determines the type of invocation, based on the object type; then it calls the appropriate internal kernel function to perform the operation.
 
-> handleInvocation :: Bool -> Bool -> KernelP ()
-> handleInvocation isCall isBlocking = do
+> handleInvocation :: Bool -> Bool -> Bool -> CPtr -> KernelP ()
+> handleInvocation isCall isBlocking canDonate cptr = do
 >     thread <- withoutPreemption getCurThread
 >     info <- withoutPreemption $ getMessageInfo thread
->     ptr <- withoutPreemption $ asUser thread $ liftM CPtr $
->         getRegister capRegister
 >     syscall
 
 The destination capability's slot is located, and the capability read from it.
 
 >         (do
->             (cap, slot) <- capFaultOnFailure ptr False $ lookupCapAndSlot thread ptr
+>             (cap, slot) <- capFaultOnFailure cptr False $ lookupCapAndSlot thread cptr
 >             buffer <- withoutFailure $ lookupIPCBuffer False thread
 >             extracaps <- lookupExtraCaps thread buffer info
 >             return (slot, cap, extracaps, buffer))
@@ -251,7 +253,7 @@ If there was no fault, then the capability, message registers and message label 
 
 >         (\(slot, cap, extracaps, buffer) -> do
 >             args <- withoutFailure $ getMRs thread buffer info
->             decodeInvocation (msgLabel info) args ptr slot cap extracaps)
+>             decodeInvocation (msgLabel info) args cptr slot cap extracaps)
 
 If a system call error was encountered while decoding the operation, and the user is waiting for a reply, then generate an error message.
 
@@ -264,7 +266,7 @@ While the system call is running, the thread's state is set to "Restart", so any
 
 >         (\oper -> do
 >             withoutPreemption $ setThreadState Restart thread
->             reply <- performInvocation isBlocking isCall oper
+>             reply <- performInvocation isBlocking isCall canDonate oper
 >             withoutPreemption $ do
 >                 state <- getThreadState thread
 >                 case state of
@@ -273,4 +275,17 @@ While the system call is running, the thread's state is set to "Restart", so any
 >                         setThreadState Running thread
 >                     _ -> return ())
 
+> getCapReg :: Register -> Kernel CPtr
+> getCapReg reg = do
+>     ct <- getCurThread
+>     liftM CPtr $ asUser ct $ getRegister reg
+
+> lookupReply :: KernelF Fault Capability
+> lookupReply = do
+>     cref <- withoutFailure $ getCapReg replyRegister
+>     ct <- withoutFailure $ getCurThread
+>     cap <- capFaultOnFailure cref True $ lookupCap ct cref
+>     if isReplyCap cap
+>         then return cap
+>         else throw $ CapFault cref True (MissingCapability 0)
 

@@ -20,6 +20,7 @@ import qualified SEL4.Machine.Hardware.GICInterface as GIC
 import qualified SEL4.Machine.Hardware.MPTimerInterface as MPT
 import Foreign.Ptr
 import Data.Bits
+import Data.Word(Word64)
 
 -- Following harded coded address pair are used in getKernelDevices
 -- and will get mapped into kernel address space via mapKernelFrame
@@ -103,12 +104,11 @@ getActiveIRQ env = do
         gicDistBase = gicDistributorBase,
         gicIFBase = gicInterfaceBase }
 
-configureTimer :: Ptr CallbackData -> IO IRQ
-configureTimer env = do
-    MPT.callMPTimerApi mptdata $ MPT.mpTimerInit
-    return timerIRQ
-      where mptdata = MPT.MPTimerState { MPT.env = env,
-        MPT.mptBase = mptBase }
+getCurrentTime :: Ptr CallbackData -> IO Word64
+getCurrentTime = undefined
+
+setDeadline :: Ptr CallbackData -> Word64 -> IO ()
+setDeadline _ _ = undefined
 
 initIRQController :: Ptr CallbackData -> IO ()
 initIRQController env = callGICApi gicdata $ GIC.initIRQController

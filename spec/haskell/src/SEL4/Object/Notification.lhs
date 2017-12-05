@@ -14,23 +14,29 @@ This module specifies the behavior of notification objects.
 >         sendSignal, receiveSignal,
 >         cancelAllSignals, cancelSignal, completeSignal,
 >         getNotification, setNotification, doUnbindNotification, unbindNotification,
->         unbindMaybeNotification, bindNotification, doNBRecvFailedTransfer
+>         unbindMaybeNotification, bindNotification, doNBRecvFailedTransfer,
+>         ntfnBlocked, reorderNtfn
 >     ) where
 
 \begin{impdetails}
+
+% {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures #-}
+% {-# BOOT-EXPORTS: getNotification setNotification #-}
 
 > import Prelude hiding (Word)
 > import SEL4.Machine
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import {-# SOURCE #-} SEL4.Object.Endpoint(cancelIPC)
-> import {-# SOURCE #-} SEL4.Object.TCB(asUser)
+> import SEL4.Object.SchedContext
+> import {-# SOURCE #-} SEL4.Object.TCB
 > import SEL4.Object.Instances()
 
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 
 > import Data.Bits
 > import Data.List
+> import Data.Maybe(fromJust)
 
 \end{impdetails}
 
@@ -39,7 +45,7 @@ This module specifies the behavior of notification objects.
 > -- helper function
 > receiveBlocked :: ThreadState -> Bool
 > receiveBlocked st = case st of
->     BlockedOnReceive _ -> True
+>     BlockedOnReceive _ _ -> True
 >     _ -> False
 
 This function performs an signal operation, given a capability to a notification object, and a single machine word of message data (the badge). This operation will never block the signalling thread.
@@ -61,9 +67,10 @@ mark the notification object as active.
 >                     if (receiveBlocked state)
 >                       then do
 >                         cancelIPC tcb
+>                         maybeDonateSc tcb ntfnPtr
 >                         setThreadState Running tcb
 >                         asUser tcb $ setRegister badgeRegister badge
->                         possibleSwitchTo tcb
+>                         switchIfRequiredTo tcb
 >                       else
 >                         setNotification ntfnPtr $ nTFN { ntfnObj = ActiveNtfn badge }
 >             (IdleNtfn, Nothing) -> setNotification ntfnPtr $ nTFN { ntfnObj = ActiveNtfn badge }
@@ -74,8 +81,10 @@ If the notification object is waiting, a thread is removed from its queue and th
 >                 setNotification ntfnPtr $ nTFN {
 >                   ntfnObj = case queue of
 >                     [] -> IdleNtfn
->                     _  -> WaitingNtfn queue
+>                     _  -> WaitingNtfn queue,
+>                   ntfnSc = ntfnSc nTFN
 >                   }
+>                 maybeDonateSc dest ntfnPtr
 >                 setThreadState Running dest
 >                 asUser dest $ setRegister badgeRegister badge
 >                 possibleSwitchTo dest
@@ -112,6 +121,8 @@ If the notification object is idle, then it becomes a waiting notification objec
 >                       setThreadState (BlockedOnNotification {
 >                                          waitingOnNotification = ntfnPtr } ) thread
 >                       setNotification ntfnPtr $ ntfn {ntfnObj = WaitingNtfn ([thread]) }
+>                       maybeReturnSc ntfnPtr thread
+>                       scheduleTCB thread
 >                 False -> doNBRecvFailedTransfer thread
 
 If the notification object is already waiting, the current thread is blocked and added to the queue. Note that this case cannot occur when the notification object is bound, as only the associated thread can wait on it.
@@ -120,7 +131,10 @@ If the notification object is already waiting, the current thread is blocked and
 >                 True -> do
 >                       setThreadState (BlockedOnNotification {
 >                                          waitingOnNotification = ntfnPtr } ) thread
->                       setNotification ntfnPtr $ ntfn {ntfnObj = WaitingNtfn (queue ++ [thread]) }
+>                       qs' <- sortQueue $ queue ++ [thread]
+>                       setNotification ntfnPtr $ ntfn {ntfnObj = WaitingNtfn qs' }
+>                       maybeReturnSc ntfnPtr thread
+>                       scheduleTCB thread
 >                 False -> doNBRecvFailedTransfer thread
 
 If the notification object is active, the badge of the invoked notification object capability will be loaded to the badge of the receiving thread and the notification object will be marked as idle.
@@ -128,6 +142,7 @@ If the notification object is active, the badge of the invoked notification obje
 >             ActiveNtfn badge -> do
 >                 asUser thread $ setRegister badgeRegister badge
 >                 setNotification ntfnPtr $ ntfn {ntfnObj = IdleNtfn }
+>                 maybeDonateSc thread ntfnPtr
 
 \subsection{Delete Operation}
 
@@ -139,9 +154,9 @@ If a notification object is deleted, then pending receive operations must be can
 >         case ntfnObj ntfn of
 >             WaitingNtfn queue -> do
 >                 setNotification ntfnPtr (ntfn { ntfnObj = IdleNtfn })
->                 forM_ queue (\t -> do
+>                 mapM_ (\t -> do
 >                     setThreadState Restart t
->                     tcbSchedEnqueue t)
+>                     switchIfRequiredTo t) queue
 >                 rescheduleRequired
 >             _ -> return ()
 
@@ -152,10 +167,10 @@ The following function will remove the given thread from the queue of the notifi
 >         ntfn <- getNotification ntfnPtr
 >         assert (isWaiting (ntfnObj ntfn))
 >             "cancelSignal: notification object must be waiting"
->         let queue' = delete threadPtr $ ntfnQueue $ ntfnObj ntfn
+>         let queue' = delete threadPtr $ waitingNtfnQueue $ ntfnObj ntfn
 >         ntfn' <- case queue' of
 >             [] -> return $ IdleNtfn
->             _ -> return $ (ntfnObj ntfn) { ntfnQueue = queue' }
+>             _ -> return $ (ntfnObj ntfn) { waitingNtfnQueue = queue' }
 >         setNotification ntfnPtr (ntfn { ntfnObj = ntfn' })
 >         setThreadState Inactive threadPtr
 >     where
@@ -216,4 +231,23 @@ The following functions are specialisations of the "getObject" and "setObject" f
 >         Just t -> doUnbindNotification ntfnPtr ntfn t
 >         Nothing -> return ()
 
+> ntfnBlocked :: ThreadState -> Maybe (PPtr Notification)
+> ntfnBlocked ts = case ts of
+>     BlockedOnNotification r -> Just r
+>     _ -> Nothing
+
+> reorderNtfn :: PPtr Notification -> Kernel ()
+> reorderNtfn ntfnPtr = do
+>     ntfn <- getNotification ntfnPtr
+>     qsOpt <- return $ ntfnQueue ntfn
+>     assert (qsOpt /= Nothing) "reorder_ntfn: the notification queue must not be Nothing"
+>     qs <- return $ fromJust qsOpt
+>     qs' <- sortQueue qs
+>     setNotification ntfnPtr (ntfn { ntfnObj = WaitingNtfn qs' })
+
+> ntfnQueue :: Notification -> Maybe [PPtr TCB]
+> ntfnQueue ntfn =
+>     case ntfnObj ntfn of
+>         WaitingNtfn qs -> Just qs
+>         _ -> Nothing
 

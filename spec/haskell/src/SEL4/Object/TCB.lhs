@@ -19,45 +19,52 @@ This module uses the C preprocessor to select a target architecture.
 \end{impdetails}
 
 > module SEL4.Object.TCB (
->         threadGet, threadSet, asUser, sanitiseRegister, getSanitiseRegisterInfo,
+>         threadGet, threadGetDet, threadSet, asUser, sanitiseRegister, getSanitiseRegisterInfo,
 >         getThreadCSpaceRoot, getThreadVSpaceRoot,
 >         getThreadReplySlot, getThreadCallerSlot,
 >         getThreadBufferSlot,
->         setupCallerCap, deleteCallerCap,
 >         getMRs, setMRs, copyMRs, getMessageInfo, setMessageInfo,
->         tcbFaultHandler, tcbIPCBuffer, tcbTimeSlice,
+>         tcbFaultHandler, tcbIPCBuffer,
 >         decodeTCBInvocation, invokeTCB,
 >         getExtraCPtrs, getExtraCPtr, lookupExtraCaps, setExtraBadge,
 >         decodeDomainInvocation,
->         archThreadSet, archThreadGet
+>         archThreadSet, archThreadGet,
+>         decodeSchedContextInvocation, decodeSchedControlInvocation,
+>         checkBudget, scAndTimer,
+>         checkBudgetRestart, commitTime, awaken, sortQueue, replyUnbindCaller
 >     ) where
 
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.API.Types SEL4.API.Failures SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.API.Invocation #-}
-% {-# BOOT-EXPORTS: threadGet threadSet asUser setMRs setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB setupCallerCap getThreadCallerSlot getThreadReplySlot getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister #-}
+% {-# BOOT-EXPORTS: threadGet threadSet asUser setMRs setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister decodeSchedContextInvocation decodeSchedControlInvocation checkBudget sortQueue replyUnbindCaller #-}
 
 > import Prelude hiding (Word)
-> import SEL4.Config (numDomains)
+> import SEL4.Config (numDomains, timeArgSize)
 > import SEL4.API.Types
 > import SEL4.API.Failures
 > import SEL4.API.Invocation
 > import SEL4.API.InvocationLabels
 > import SEL4.Machine
+> import SEL4.Machine.Hardware.TARGET (usToTicks)
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.Object.Instances()
+> import {-# SOURCE #-} SEL4.Object.Interrupt
 > import SEL4.Object.CNode
 > import SEL4.Object.ObjectType
 > import SEL4.Object.Notification
+> import SEL4.Object.Reply
+> import SEL4.Object.SchedContext
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
 > import {-# SOURCE #-} SEL4.Kernel.VSpace
 
 > import Data.Bits
 > import Data.Helpers (mapMaybe)
-> import Data.List(genericTake, genericLength)
-> import Data.Maybe()
+> import Data.Function(on)
+> import Data.List(genericTake, genericLength, sortBy)
+> import Data.Maybe(fromJust)
 > import Data.WordLib
 > import Control.Monad.State(runState)
 
@@ -178,11 +185,12 @@ The "Configure" call is a batched call to "SetIPCParams" and "SetSpace".
 >         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
 > decodeTCBConfigure
 >     (faultEP:cRootData:vRootData:buffer:_)
->     cap slot (cRoot:vRoot:bufferFrame:_)
+>     cap slot ((scCap, _):cRoot:vRoot:bufferFrame:_)
 >   = do
 >     setIPCParams <- decodeSetIPCBuffer [buffer] cap slot [bufferFrame]
 >     setSpace <- decodeSetSpace [faultEP, cRootData, vRootData]
 >         cap slot [cRoot, vRoot]
+>     updateSc <- decodeUpdateSc cap slot scCap
 >     return $ ThreadControl {
 >         tcThread = capTCBPtr cap,
 >         tcThreadCapSlot = tcThreadCapSlot setSpace,
@@ -191,7 +199,8 @@ The "Configure" call is a batched call to "SetIPCParams" and "SetSpace".
 >         tcNewPriority = Nothing,
 >         tcNewCRoot = tcNewCRoot setSpace,
 >         tcNewVRoot = tcNewVRoot setSpace,
->         tcNewIPCBuffer = tcNewIPCBuffer setIPCParams }
+>         tcNewIPCBuffer = tcNewIPCBuffer setIPCParams,
+>         tcNewSc = tcNewSc updateSc }
 > decodeTCBConfigure _ _ _ _ = throw TruncatedMessage
 
 \subsubsection{Check priorities}
@@ -221,7 +230,8 @@ Setting the thread's priority is only allowed if the new priority is lower than 
 >         tcNewPriority = Just $ (fromIntegral newPrio, authTCB),
 >         tcNewCRoot = Nothing,
 >         tcNewVRoot = Nothing,
->         tcNewIPCBuffer = Nothing }
+>         tcNewIPCBuffer = Nothing,
+>         tcNewSc = Nothing }
 > decodeSetPriority _ _ _ = throw TruncatedMessage
 
 > decodeSetMCPriority :: [Word] -> Capability -> [(Capability, PPtr CTE)] ->
@@ -239,7 +249,8 @@ Setting the thread's priority is only allowed if the new priority is lower than 
 >         tcNewPriority = Nothing,
 >         tcNewCRoot = Nothing,
 >         tcNewVRoot = Nothing,
->         tcNewIPCBuffer = Nothing }
+>         tcNewIPCBuffer = Nothing,
+>         tcNewSc = Nothing }
 > decodeSetMCPriority _ _ _ = throw TruncatedMessage
 
 The "SetSchedParams" call sets both the priority and the MCP in a single call.
@@ -260,7 +271,8 @@ The "SetSchedParams" call sets both the priority and the MCP in a single call.
 >         tcNewPriority = Just $ (fromIntegral newPrio, authTCB),
 >         tcNewCRoot = Nothing,
 >         tcNewVRoot = Nothing,
->         tcNewIPCBuffer = Nothing }
+>         tcNewIPCBuffer = Nothing,
+>         tcNewSc = Nothing }
 > decodeSetSchedParams _ _ _ = throw TruncatedMessage
 
 \subsubsection{The Set IPC Buffer Call}
@@ -285,7 +297,8 @@ The two thread parameters related to IPC and system call handling are the IPC bu
 >         tcNewPriority = Nothing,
 >         tcNewCRoot = Nothing,
 >         tcNewVRoot = Nothing,
->         tcNewIPCBuffer = Just (ipcBuffer, bufferFrame) }
+>         tcNewIPCBuffer = Just (ipcBuffer, bufferFrame),
+>         tcNewSc = Nothing }
 > decodeSetIPCBuffer _ _ _ _ = throw TruncatedMessage
 
 \subsubsection{The Set Space Call}
@@ -330,8 +343,42 @@ This is to ensure that the source capability is not made invalid by the deletion
 >         tcNewPriority = Nothing,
 >         tcNewCRoot = Just cRoot,
 >         tcNewVRoot = Just vRoot,
->         tcNewIPCBuffer = Nothing }
+>         tcNewIPCBuffer = Nothing,
+>         tcNewSc = Nothing }
 > decodeSetSpace _ _ _ _ = throw TruncatedMessage
+
+> decodeUpdateSc :: Capability -> PPtr CTE -> Capability -> 
+>     KernelF SyscallError TCBInvocation
+> decodeUpdateSc cap slot scCap = 
+>     case scCap of
+>         NullCap -> return $! ThreadControl {
+>             tcThread = capTCBPtr cap,
+>             tcThreadCapSlot = slot,
+>             tcNewFaultEP = Nothing,
+>             tcNewMCPriority = Nothing,
+>             tcNewPriority = Nothing,
+>             tcNewCRoot = Nothing,
+>             tcNewVRoot = Nothing,
+>             tcNewIPCBuffer = Nothing,
+>             tcNewSc = Just Nothing }
+>         _ -> do
+>             tcbPtr <- return $! capTCBPtr cap
+>             unless (isSchedContextCap scCap) $ throw (InvalidCapability 0)
+>             scPtr <- return $! capSchedContextPtr scCap
+>             scPtr' <- withoutFailure $ threadGet tcbSchedContext tcbPtr
+>             when (scPtr' /= Nothing && scPtr' /= Just scPtr) $ throw IllegalOperation
+>             sc <- withoutFailure $ getSchedContext scPtr
+>             when (scTCB sc /= Nothing && scTCB sc /= Just tcbPtr) $ throw IllegalOperation
+>             return $! ThreadControl {
+>                 tcThread = tcbPtr,
+>                 tcThreadCapSlot = slot,
+>                 tcNewFaultEP = Nothing,
+>                 tcNewMCPriority = Nothing,
+>                 tcNewPriority = Nothing,
+>                 tcNewCRoot = Nothing,
+>                 tcNewVRoot = Nothing,
+>                 tcNewIPCBuffer = Nothing,
+>                 tcNewSc = Just (Just scPtr) }
 
 \subsubsection{Decode Bound Notification Invocations}
 
@@ -405,7 +452,7 @@ The "ThreadControl" operation is used to implement the "SetSpace", "SetPriority"
 
 The use of "checkCapAt" addresses a corner case in which the only capability to a certain thread is in its own CSpace, which is otherwise unreachable. Replacement of the CSpace root results in "cteDelete" cleaning up both CSpace and thread, after which "cteInsert" should not be called. Error reporting in this case is unimportant, as the requesting thread cannot continue to execute.
 
-> invokeTCB (ThreadControl target slot faultep mcp priority cRoot vRoot buffer)
+> invokeTCB (ThreadControl target slot faultep mcp priority cRoot vRoot buffer sc)
 >   = do
 >         let tCap = ThreadCap { capTCBPtr = target }
 >         withoutPreemption $ maybe (return ())
@@ -413,6 +460,16 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 >             faultep
 >         withoutPreemption $ maybe (return ()) (setMCPriority target) (mapMaybe fst mcp)
 >         withoutPreemption $ maybe (return ()) (setPriority target) (mapMaybe fst priority)
+>         withoutPreemption $ case sc of
+>             Nothing -> return ()
+>             Just Nothing -> do
+>                 scPtrOpt <- threadGet tcbSchedContext target
+>                 case scPtrOpt of
+>                     Nothing -> return ()
+>                     Just scPtr -> schedContextUnbindTCB scPtr
+>             Just (Just scPtr) -> do
+>                 sc' <- threadGet tcbSchedContext target
+>                 when (sc' /= Just scPtr) $ schedContextBindTCB scPtr target
 >         maybe (return ()) (\(newCap, srcSlot) -> do
 >             rootSlot <- withoutPreemption $ getThreadCSpaceRoot target
 >             cteDelete rootSlot True
@@ -569,6 +626,65 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >         ThreadCap { capTCBPtr = ptr } -> return $ (ptr, domain)
 >         _ -> throw InvalidArgument { invalidArgumentNumber = 1 }
 
+> decodeSchedContextInvocation :: Word -> PPtr SchedContext -> [Capability] ->
+>     KernelF SyscallError SchedContextInvocation
+> decodeSchedContextInvocation label scPtr excaps = do
+>     case invocationType label of
+>         SchedContextBind -> do
+>             when (length excaps == 0) $ throw TruncatedMessage
+>             cap <- return $! head excaps
+>             sc <- withoutFailure $ getSchedContext scPtr
+>             when (scTCB sc /= Nothing || scNtfn sc /= Nothing) $ throw IllegalOperation
+>             case cap of
+>                 ThreadCap tcbPtr -> do
+>                     scPtrOpt <- withoutFailure $ threadGet tcbSchedContext tcbPtr
+>                     when (scPtrOpt /= Nothing) $ throw IllegalOperation
+>                 NotificationCap ntfnPtr _ _ _ -> do
+>                     scPtrOpt <- withoutFailure $ liftM ntfnSc $ getNotification ntfnPtr
+>                     when (scPtrOpt /= Nothing) $ throw IllegalOperation
+>                 _ -> throw (InvalidCapability 1)
+>             return $ InvokeSchedContextBind scPtr cap
+>         SchedContextUnbindObject -> do
+>             when (length excaps == 0) $ throw TruncatedMessage
+>             cap <- return $! head excaps
+>             case cap of
+>                 ThreadCap tcbPtr -> do
+>                     scPtrOpt <- withoutFailure $ threadGet tcbSchedContext tcbPtr
+>                     when (scPtrOpt /= Just scPtr) $ throw IllegalOperation
+>                 NotificationCap ntfnPtr _ _ _ -> do
+>                     scPtrOpt <- withoutFailure $ liftM ntfnSc $ getNotification ntfnPtr
+>                     when (scPtrOpt /= Just scPtr) $ throw IllegalOperation
+>                 _ -> throw (InvalidCapability 1)
+>             return $ InvokeSchedContextUnbindObject scPtr cap
+>         SchedContextUnbind -> return $! InvokeSchedContextUnbind scPtr
+>         _ -> throw IllegalOperation
+
+> parseTimeArg :: Int -> [Word] -> Ticks
+> parseTimeArg i args = fromIntegral (args !! (i+1)) `shiftL` 32 + fromIntegral (args !! i)
+
+> decodeSchedControlInvocation :: Word -> [Word] -> [Capability] ->
+>         KernelF SyscallError SchedControlInvocation
+> decodeSchedControlInvocation label args excaps = do
+>     unless (invocationType label == SchedControlConfigure) $ throw IllegalOperation
+>     when (length excaps == 0) $ throw TruncatedMessage
+>     when (length args < timeArgSize * 2 + 1) $ throw TruncatedMessage
+>     budgetUs <- return $! parseTimeArg 0 args
+>     periodUs <- return $! parseTimeArg timeArgSize args
+>     mRefills <- return $! args !! (2 * timeArgSize)
+>     targetCap <- return $! head excaps
+>     when (not (isSchedContextCap targetCap)) $ throw (InvalidCapability 1)
+>     scPtr <- return $ capSchedContextPtr targetCap
+>     when (budgetUs > maxTimerUs || budgetUs < minBudgetUs) $
+>         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral maxTimerUs))
+>     when (periodUs > maxTimerUs || periodUs < minBudgetUs) $
+>         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral maxTimerUs))
+>     when (periodUs < budgetUs) $
+>         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral periodUs))
+>     when (maxRefills < fromIntegral mRefills) $
+>         throw (RangeError 0 (fromIntegral (maxRefills - minRefills - 1)))
+>     return $! InvokeSchedControlConfigure scPtr
+>         (usToTicks budgetUs) (usToTicks periodUs) (fromIntegral mRefills + minRefills)
+
 \subsection{Checks}
 
 The "checkCapAt" function ensures that a capability of the same type and object reference remains at a given slot. It is used by the "ThreadControl" invocation, defined above.
@@ -615,7 +731,7 @@ The "setMRs" function returns the number of words of message data successfully t
 >                 Just bufferPtr ->
 >                     map (\x -> bufferPtr +
 >                             PPtr (x*intSize))
->                         [fromIntegral $ length hardwareMRs+1 .. msgMaxLength]
+>                         [fromIntegral $ length hardwareMRs + 1 .. msgMaxLength]
 >                 Nothing -> []
 >         let msgLength = min
 >                 (length messageData)
@@ -635,7 +751,7 @@ The "setMRs" function returns the number of words of message data successfully t
 >             Just bufferPtr -> do
 >                 let bufferMRs = map (\x -> bufferPtr +
 >                             PPtr (x*intSize))
->                         [fromIntegral $ length hardwareMRs+1.. msgMaxLength]
+>                         [fromIntegral $ length hardwareMRs + 1 .. msgMaxLength]
 >                 mapM loadWordUser bufferMRs
 >             Nothing -> return []
 >         let values = hardwareMRValues ++ bufferMRValues
@@ -659,7 +775,7 @@ This function's first argument is the maximum number of message registers to cop
 >                 mapM (\x -> do
 >                     v <- loadWordUser (sbPtr + PPtr (x*intSize))
 >                     storeWordUser (rbPtr + PPtr (x*intSize)) v
->                 ) [fromIntegral $ length msgRegisters+1 .. n]
+>                 ) [fromIntegral $ length msgRegisters + 1 .. n]
 >             _ -> return []
 >         return $ min n $ fromIntegral $ length hardwareMRs + length bufferMRs
 
@@ -673,7 +789,7 @@ The following functions read and set the extra capability fields of the IPC buff
 >         let intSize = fromIntegral wordSize
 >         case buffer of
 >             Just bufferPtr -> do
->                 let offset = msgMaxLength+1
+>                 let offset = msgMaxLength + 1
 >                 let bufferPtrs = map (\x -> bufferPtr +
 >                         PPtr ((x+offset)*intSize)) [1, 2 .. count]
 >                 mapM (liftM CPtr . loadWordUser) bufferPtrs
@@ -713,37 +829,6 @@ Write the unwrapped badge into the IPC buffer for cap n.
 >         let intSize = fromIntegral wordSize
 >         in PPtr ((msgMaxLength+2)*intSize)
 
-\subsection{Creating and Destroying the Caller Capability}
-
-When a message is transferred after a "Call" operation or a fault, the kernel places a reply capability in a special slot in the receiver's TCB. The receiver may use the "Reply" operation to respond to the message and resume execution of the caller or faulting thread.
-
-> setupCallerCap :: PPtr TCB -> PPtr TCB -> Kernel ()
-> setupCallerCap sender receiver = do
->     setThreadState BlockedOnReply sender
->     replySlot <- getThreadReplySlot sender
->     masterCTE <- getCTE replySlot
->     let masterCap = cteCap masterCTE
->     assert (isReplyCap masterCap && capReplyMaster masterCap &&
->             capTCBPtr masterCap == sender)
->         "Sender must have a valid reply master cap"
->     assert (mdbNext (cteMDBNode masterCTE) == nullPointer)
->         "Sender must not already have reply cap issued"
->     callerSlot <- getThreadCallerSlot receiver
->     callerCap <- getSlotCap callerSlot
->     assert (isNullCap callerCap)
->         "Caller cap must not already exist"
->     cteInsert (ReplyCap sender False) replySlot callerSlot
-
-When a new "Recv" operation begins, the caller slot in the waiting thread's TCB is cleared. This removes any ambiguity about the source of the capability in the caller slot: if one is present, it was always generated by the most recent "Recv".
-
-> deleteCallerCap :: PPtr TCB -> Kernel ()
-> deleteCallerCap receiver = do
->     callerSlot <- getThreadCallerSlot receiver
->     callerCap <- getSlotCap callerSlot
->     assert (isReplyCap callerCap || isNullCap callerCap)
->         "Caller cap must be a reply cap"
->     cteDeleteOne callerSlot
-
 \subsection{TCB Accessors}
 
 \subsubsection{Address Space Accesses}
@@ -779,8 +864,13 @@ This function will return a physical pointer to a thread's IPC buffer slot, used
 The following two trivial functions will get or set a given field of a
 TCB, using a pointer to the TCB.
 
-> threadGet :: (TCB-> a) -> PPtr TCB -> Kernel a
+> threadGet :: (TCB -> a) -> PPtr TCB -> Kernel a
 > threadGet f tptr = liftM f $ getObject tptr
+
+> threadGetDet :: (TCB -> a) -> PPtr TCB -> Kernel a
+> threadGetDet f tptr = do
+>     t <- getObject tptr
+>     return $ f t
 
 > threadSet :: (TCB -> TCB) -> PPtr TCB -> Kernel ()
 > threadSet f tptr = do
@@ -825,4 +915,110 @@ On some architectures, the thread context may include registers that may be modi
 
 > getSanitiseRegisterInfo :: PPtr TCB -> Kernel Bool
 > getSanitiseRegisterInfo t = Arch.getSanitiseRegisterInfo t
+
+> checkBudget :: Kernel Bool
+> checkBudget = do
+>     ct <- getCurThread
+>     it <- getIdleThread
+>     if ct == it
+>         then return True
+>         else do
+>             csc <- getCurSc
+>             consumed <- getConsumedTime
+>             capacity <- refillCapacity csc consumed
+>             if capacity < minBudget
+>                 then do
+>                     when (capacity == 0) $ do
+>                         cs' <- refillBudgetCheck csc consumed
+>                         setConsumedTime cs'
+>                     consumed <- getConsumedTime
+>                     when (0 < consumed) $ refillSplitCheck csc consumed
+>                     setConsumedTime 0
+>                     runnable <- isRunnable ct
+>                     when runnable $ do
+>                         endTimeSlice
+>                         rescheduleRequired
+>                     return False
+>                 else do
+>                     domExp <- isCurDomainExpired
+>                     if domExp
+>                         then do
+>                             commitTime
+>                             rescheduleRequired
+>                             return False
+>                         else return True               
+
+> checkBudgetRestart :: Kernel Bool
+> checkBudgetRestart = do
+>     cont <- checkBudget
+>     when (not cont) $ do
+>         cur <- getCurThread
+
+NB: the argument order is different from the abstract spec.
+
+>         setThreadState Restart cur
+
+>     return cont
+
+> switchSchedContext :: Kernel ()
+> switchSchedContext = do
+>     curSc <- getCurSc
+>     curTh <- getCurThread
+>     scOpt <- threadGet tcbSchedContext curTh
+>     assert (scOpt /= Nothing) "switchSchedContext: schedule context must not be Nothing"
+>     sc <- return $ fromJust scOpt
+>     if (sc /= curSc)
+>         then do
+>             setReprogramTimer True
+>             commitTime
+>             refillUnblockCheck sc
+>         else rollbackTime
+>     setCurSc sc
+
+> scAndTimer :: Kernel ()
+> scAndTimer = do
+>     switchSchedContext
+>     reprogram <- getReprogramTimer
+>     when reprogram $ do
+>         setNextInterrupt
+>         setReprogramTimer False
+
+> attemptSwitchTo :: PPtr TCB -> Kernel ()
+> attemptSwitchTo target = possibleSwitchTo target True
+
+> takeWhileM :: Monad m => (a -> m Bool) -> [a] -> m [a]
+> takeWhileM _ [] = return []
+> takeWhileM p (x:xs) = do
+>     r <- p x
+>     if r
+>         then liftM (x:) (takeWhileM p xs)
+>         else return []
+
+> awaken :: Kernel ()
+> awaken = do
+>     rq <- getReleaseQueue
+>     rq1 <- takeWhileM refillReadyTCB rq
+>     setReleaseQueue rq
+>     mapM_ (\t -> do
+>         scOpt <- threadGet tcbSchedContext t
+>         assert (scOpt /= Nothing) "awaken: scOpt must not be Nothing"
+>         scPtr <- return $ fromJust scOpt
+>         refillUnblockCheck scPtr
+>         ready <- refillReady scPtr
+>         if not ready
+>             then tcbReleaseEnqueue t
+>             else do
+>                 tcbSchedAppend t
+>                 switchIfRequiredTo t) rq1
+
+> sortQueue :: [PPtr TCB] -> Kernel [PPtr TCB]
+> sortQueue qs = do
+>     prios <- mapM (threadGet tcbPriority) qs
+>     return $ map snd $ sortBy (compare `on` fst) (zip prios qs)
+
+> replyUnbindCaller :: PPtr TCB -> PPtr Reply -> Kernel ()
+> replyUnbindCaller tcbPtr replyPtr = do
+>     reply <- getReply replyPtr
+>     setReply replyPtr (reply { replyCaller = Nothing })
+>     threadSet (\tcb -> tcb { tcbReply = Nothing }) tcbPtr
 

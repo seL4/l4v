@@ -37,7 +37,7 @@ The architecture-specific definitions are imported qualified with the "Arch" pre
 > import {-# SOURCE #-} SEL4.Model.PSpace
 > import SEL4.Object.Structures
 > import SEL4.Machine
-> import SEL4.Machine.Hardware.TARGET (VMPageSize)
+> import SEL4.Machine.Hardware.TARGET (usToTicks, VMPageSize)
 
 > import Data.Array
 > import qualified Data.Set
@@ -45,6 +45,7 @@ The architecture-specific definitions are imported qualified with the "Arch" pre
 > import Data.WordLib
 > import Control.Monad
 > import Control.Monad.State
+> import Data.Word(Word64)
 
 \end{impdetails}
 
@@ -75,11 +76,13 @@ The top-level kernel state structure is called "KernelState". It contains:
 \item the active security domain and the number to ticks remaining before it changes;
 
 >         ksCurDomain :: Domain,
->         ksDomainTime :: Word,
+>         ksDomainTime :: Word64,
 
 \item an array of ready queues, indexed by thread priority and domain (see "getQueue");
 
 >         ksReadyQueues :: Array (Domain, Priority) ReadyQueue,
+
+>         ksReleaseQueue :: ReleaseQueue,
 
 \item a bitmap for each domain; each bit represents the presence of a runnable thread for a specific priority
 
@@ -93,6 +96,16 @@ The top-level kernel state structure is called "KernelState". It contains:
 \item a pointer to the idle thread's control block;
 
 >         ksIdleThread :: PPtr TCB,
+
+>         ksConsumedTime :: Time,
+
+>         ksCurTime :: Time,
+
+NB: It should have been Maybe (PPtr SchedContext) for the time being, but eventually it is PPtr SchedContext
+
+>         ksCurSc :: PPtr SchedContext,
+
+>         ksReprogramTimer :: Bool,
 
 \item the required action of the scheduler next time it runs;
 
@@ -132,6 +145,7 @@ The ready queue is simply a list of threads that are ready to
 run. Each thread in this list is at the same priority level.
 
 > type ReadyQueue = [PPtr TCB]
+> type ReleaseQueue = [PPtr TCB]
 
 This is a standard Haskell singly-linked list independent of the
 thread control block structures. However, in a real implementation, it
@@ -173,6 +187,24 @@ Similarly, these functions access the idle thread pointer, the ready queue for a
 > setQueue :: Domain -> Priority -> ReadyQueue -> Kernel ()
 > setQueue qdom prio q = modify (\ks -> ks { ksReadyQueues = (ksReadyQueues ks)//[((qdom, prio),q)] })
 
+> getReleaseQueue :: Kernel ReleaseQueue
+> getReleaseQueue = gets ksReleaseQueue
+
+> setReleaseQueue :: ReleaseQueue -> Kernel ()
+> setReleaseQueue releaseQueue = modify (\ks -> ks { ksReleaseQueue = releaseQueue })
+
+> getConsumedTime :: Kernel Time
+> getConsumedTime = gets ksConsumedTime
+
+> setConsumedTime :: Time -> Kernel ()
+> setConsumedTime consumedTime = modify (\ks -> ks { ksConsumedTime = consumedTime })
+
+> getCurSc :: Kernel (PPtr SchedContext)
+> getCurSc = gets ksCurSc
+
+> setCurSc :: PPtr SchedContext -> Kernel ()
+> setCurSc scptr = modify (\ks -> ks { ksCurSc = scptr })
+
 > getSchedulerAction :: Kernel SchedulerAction
 > getSchedulerAction = gets ksSchedulerAction
 
@@ -205,6 +237,9 @@ These functions access and modify the current domain and the number of ticks rem
 > curDomain :: Kernel Domain
 > curDomain = gets ksCurDomain
 
+> usToMs :: Word64
+> usToMs = 1000
+
 > nextDomain :: Kernel ()
 > nextDomain = modify (\ks ->
 >   let ksDomScheduleIdx' = (ksDomScheduleIdx ks + 1) `mod` length (ksDomSchedule ks) in
@@ -212,13 +247,30 @@ These functions access and modify the current domain and the number of ticks rem
 >   in ks { ksWorkUnitsCompleted = 0,
 >           ksDomScheduleIdx = ksDomScheduleIdx',
 >           ksCurDomain = dschDomain next,
->           ksDomainTime = dschLength next })
+>           ksDomainTime = usToTicks ((dschLength next) * usToMs),
+>           ksReprogramTimer = True })
 
-> getDomainTime :: Kernel Word
+> getDomainTime :: Kernel Word64
 > getDomainTime = gets ksDomainTime
+
+> setDomainTime :: Word64 -> Kernel ()
+> setDomainTime domainTime = modify (\ks -> ks { ksDomainTime = domainTime })
+
+> getCurTime :: Kernel Time
+> getCurTime = gets ksCurTime
+
+> setCurTime :: Time -> Kernel ()
+> setCurTime curTime = modify (\ks -> ks { ksCurTime = curTime })
+
+> getReprogramTimer :: Kernel Bool
+> getReprogramTimer = gets ksReprogramTimer
+
+> setReprogramTimer :: Bool -> Kernel ()
+> setReprogramTimer reprogramTimer = modify (\ks -> ks { ksReprogramTimer = reprogramTimer })
 
 > decDomainTime :: Kernel ()
 > decDomainTime = modify (\ks -> ks { ksDomainTime = ksDomainTime ks - 1 })
+
 
 \subsection{Initial Kernel State}
 
@@ -242,8 +294,13 @@ A new kernel state structure contains an empty physical address space, a set of 
 >         ksReadyQueuesL2Bitmap =
 >             funPartialArray (const 0)
 >                 ((0, 0), (fromIntegral numDomains, l2BitmapSize)),
+>         ksReleaseQueue = [],
 >         ksCurThread = error "No initial thread",
 >         ksIdleThread = error "Idle thread has not been created",
+>         ksReprogramTimer = False,
+>         ksConsumedTime = 0,
+>         ksCurTime = 0,
+>         ksCurSc = error "No initial scheduling context",
 >         ksSchedulerAction = error "scheduler action has not been set",
 >         ksInterruptState = error "Interrupt controller is uninitialised",
 >         ksWorkUnitsCompleted = 0,

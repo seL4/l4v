@@ -10,8 +10,8 @@
 
 BOOT_MODULES = Kernel/CSpace Kernel/Thread Kernel/FaultHandler \
     Kernel/VSpace Kernel/Init Model/PSpace Object/TCB Object/CNode \
-	Object/ObjectType Object/Endpoint Object/Interrupt \
-	Object/IOPort/X64
+    Object/ObjectType Object/Endpoint Object/Interrupt \
+    Object/Reply Object/Notification Object/IOPort/X64
 
 BOOT_FILES=$(BOOT_MODULES:%=src/SEL4/%.lhs-boot)
 CUSTOM_BOOT_FILES = src/SEL4/Object/Structures.lhs-boot

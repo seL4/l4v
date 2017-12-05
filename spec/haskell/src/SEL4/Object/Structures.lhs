@@ -40,6 +40,8 @@ This module uses the C preprocessor to select a target architecture.
 > import Data.Bits
 > import Data.WordLib
 
+> import Data.Word(Word64)
+
 \end{impdetails}
 
 \subsection{Capabilities}
@@ -69,8 +71,7 @@ This is the type used to represent a capability.
 >         | ArchObjectCap {
 >             capCap :: ArchCapability }
 >         | ReplyCap {
->             capTCBPtr :: PPtr TCB,
->             capReplyMaster :: Bool }
+>             capReplyPtr :: PPtr Reply }
 >         | UntypedCap {
 >             capIsDevice :: Bool,
 >             capPtr :: PPtr (),
@@ -82,6 +83,9 @@ This is the type used to represent a capability.
 >             capCNodeGuard :: Word,
 >             capCNodeGuardSize :: Int }
 >         | IRQControlCap
+>         | SchedContextCap {
+>             capSchedContextPtr :: PPtr SchedContext }
+>         | SchedControlCap
 >         deriving Show
 
 > data ZombieType = ZombieTCB | ZombieCNode { zombieCTEBits :: Int }
@@ -103,6 +107,10 @@ This is the type used to represent a capability.
 > isReplyCap (ReplyCap {}) = True
 > isReplyCap _ = False
 
+> isThreadCap :: Capability -> Bool
+> isThreadCap (ThreadCap {}) = True
+> isThreadCap _ = False
+
 > isUntypedCap :: Capability -> Bool
 > isUntypedCap (UntypedCap {}) = True
 > isUntypedCap _ = False
@@ -110,6 +118,10 @@ This is the type used to represent a capability.
 > isNotificationCap :: Capability -> Bool
 > isNotificationCap (NotificationCap {}) = True
 > isNotificationCap _ = False
+
+> isSchedContextCap :: Capability -> Bool
+> isSchedContextCap (SchedContextCap {}) = True
+> isSchedContextCap _ = False
 
 \subsection{Kernel Objects}
 
@@ -124,9 +136,11 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 >     | KOTCB       TCB
 >     | KOCTE       CTE
 >     | KOArch      ArchKernelObject
+>     | KOSchedContext SchedContext
+>     | KOReply Reply
 
 > kernelObjectTypeName :: KernelObject -> String
-> kernelObjectTypeName o =
+> kernelObjectTypeName o = 
 >     case o of
 >         KOEndpoint   _ -> "Endpoint"
 >         KONotification  _ -> "Notification"
@@ -136,6 +150,8 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 >         KOTCB        _ -> "TCB"
 >         KOCTE        _ -> "CTE"
 >         KOArch       _ -> "Arch Specific"
+>         KOSchedContext _ -> "SchedContext"
+>         KOReply _ -> "Reply"
 
 > objBitsKO :: KernelObject -> Int
 > objBitsKO (KOEndpoint _) = epSizeBits
@@ -146,6 +162,8 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 > objBitsKO (KOUserDataDevice) = pageBits
 > objBitsKO (KOKernelData) = pageBits
 > objBitsKO (KOArch a) = archObjSize a
+> objBitsKO (KOSchedContext _) = 8
+> objBitsKO (KOReply _) = 4
 
 \subsubsection{Synchronous Endpoint}
 
@@ -174,6 +192,33 @@ list of pointers to waiting threads;
 
 \end{itemize}
 
+\subsubsection{SchedContext Objects}
+
+> type Ticks = Word64
+> type Time = Word64
+
+> data Refill = Refill {
+>     rTime :: Time,
+>     rAmount :: Time }
+
+> data SchedContext = SchedContext {
+>     scPeriod :: Ticks,
+>     scTCB :: Maybe (PPtr TCB),
+>     scNtfn :: Maybe (PPtr Notification),
+>     scRefills :: [Refill],
+>     scRefillMax :: Int,
+>     scReplies :: [PPtr Reply] }
+
+> data Reply = Reply {
+>     replyCaller :: Maybe (PPtr TCB),
+>     replySc :: Maybe (PPtr SchedContext) }
+
+> minRefills :: Int
+> minRefills = 2
+
+> maxRefills :: Int
+> maxRefills = 12
+
 \subsubsection{Notification Objects}
 
 Notification objects are represented in the physical memory model
@@ -191,14 +236,15 @@ There are three possible states for a notification:
 
 >         | ActiveNtfn { ntfnMsgIdentifier :: Word }
 
-\item or waiting for one or more send operations to complete, with a list of  pointers to the waiting threads;
+\item or waiting for one or more send operations to complete, with a list of pointers to the waiting threads;
 
->         | WaitingNtfn { ntfnQueue :: [PPtr TCB] }
+>         | WaitingNtfn { waitingNtfnQueue :: [PPtr TCB] }
 >     deriving Show
 
 > data Notification = NTFN {
 >     ntfnObj :: NTFN,
->     ntfnBoundTCB :: Maybe (PPtr TCB) }
+>     ntfnBoundTCB :: Maybe (PPtr TCB),
+>     ntfnSc :: Maybe (PPtr SchedContext) }
 
 \end{itemize}
 
@@ -229,14 +275,6 @@ The TCB is used to store various data about the thread's current state:
 
 >         tcbVTable :: CTE,
 
-\item a slot containing the thread's reply capability, which is never accessed directly in this slot but is used as the MDB parent of the capability generated when this thread performs a "Call";
-
->         tcbReply :: CTE,
-
-\item a slot that may contain the reply capability of the thread that sent the most recent IPC received by this thread, and is otherwise always empty;
-
->         tcbCaller :: CTE,
-
 \item a slot that may contain a capability to the frame used for the thread's IPC buffer;
 
 >         tcbIPCBufferFrame :: CTE,
@@ -256,10 +294,6 @@ The TCB is used to store various data about the thread's current state:
 
 >         tcbFault :: Maybe Fault,
 
-\item the amount of time remaining in this thread's timeslice;
-
->         tcbTimeSlice :: Int,
-
 \item a capability pointer to the fault handler endpoint, which receives an IPC from the kernel whenever this thread generates a fault;
 
 >         tcbFaultHandler :: CPtr,
@@ -272,9 +306,16 @@ The TCB is used to store various data about the thread's current state:
 
 >         tcbBoundNotification :: Maybe (PPtr Notification),
 
-\item and any arch-specific TCB contents
+\item and the thread's schedule context object
+
+>         tcbSchedContext :: Maybe (PPtr SchedContext),
+
+>         tcbReply :: Maybe (PPtr Reply),
+
+\item any arch-specific TCB contents;
 
 >         tcbArch :: ArchTCB }
+
 >     deriving Show
 
 \end{itemize}
@@ -351,7 +392,8 @@ A user thread may be in the following states:
 \item blocked on a synchronous IPC send or receive (which require the presence of additional data about the operation);
 
 >     = BlockedOnReceive {
->         blockingObject :: PPtr Endpoint }
+>         blockingObject :: PPtr Endpoint,
+>         replyObject :: Maybe (PPtr Reply) }
 
 \item blocked waiting for a reply to a previously sent message;
 
@@ -426,18 +468,18 @@ The interrupt controller state consists of an array with one entry for each of t
 
 Each entry in the domain schedule specifies a domain and a length (a number of time slices).
 
-> type DomainSchedule = (Domain, Word)
-> dschDomain :: (Domain, Word) -> Domain
+> type DomainSchedule = (Domain, Word64)
+> dschDomain :: (Domain, Word64) -> Domain
 > dschDomain = fst
-> dschLength :: (Domain, Word) -> Word
+> dschLength :: (Domain, Word64) -> Word64
 > dschLength = snd
 
 > isReceive :: ThreadState -> Bool
-> isReceive (BlockedOnReceive _) = True
+> isReceive (BlockedOnReceive {}) = True
 > isReceive _ = False
 
 > isSend :: ThreadState -> Bool
-> isSend (BlockedOnSend _ _ _ _) = True
+> isSend (BlockedOnSend {}) = True
 > isSend _ = False
 
 > isReply :: ThreadState -> Bool
@@ -474,5 +516,6 @@ Various operations on the free index of an Untyped cap.
 >         startPtr = getFreeRef (capPtr cap) (capFreeIndex cap)
 >         endPtr = capPtr cap + PPtr (2 ^ capBlockSize cap) - 1
 > untypedZeroRange _ = Nothing
+
 
 

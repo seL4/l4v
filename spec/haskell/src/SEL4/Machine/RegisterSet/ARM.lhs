@@ -41,6 +41,9 @@ This module defines the ARM register set.
 > badgeRegister = R0
 > frameRegisters = FaultInstruction : SP : CPSR : [R0, R1] ++ [R8 .. IP]
 > gpRegisters = [R2, R3, R4, R5, R6, R7, LR]
+> replyRegister = R6
+> syscallNoRegister = R7
+> nbsendRecvDest = R8
 > exceptionMessage = [FaultInstruction, SP, CPSR]
 > syscallMessage = [R0 .. R7] ++ [FaultInstruction, SP, LR, CPSR]
 > tlsBaseRegister = TLS_BASE

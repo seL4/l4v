@@ -29,6 +29,7 @@ We use the C preprocessor to select a target architecture. Also, this file makes
 > import Control.Monad(liftM)
 
 > import Data.Ix
+> import Data.Word(Word64)
 
 \end{impdetails}
 
@@ -75,6 +76,15 @@ The maximum and minimum IRQ are given explicit constant names here. In Haskell, 
 
 > maxIRQ :: IRQ
 > maxIRQ = maxBound
+
+> deadlineIRQ :: IRQ
+
+TODO: Fix me later
+
+> deadlineIRQ = undefined
+
+> ackDeadlineIRQ :: MachineMonad ()
+> ackDeadlineIRQ = ackInterrupt deadlineIRQ
 
 \subsubsection{Virtual Memory and Hypervisor Faults}
 
@@ -172,10 +182,8 @@ This function is used to init interrupt chip
 
 \subsubsection{Timers}
 
-The timer interval is set at boot time by calling this function. It returns the IRQ that is used for timer interrupts.
-
-> configureTimer :: MachineMonad IRQ
-> configureTimer = liftM IRQ Arch.configureTimer
+> setDeadline :: Word64 -> MachineMonad ()
+> setDeadline = Arch.setDeadline
 
 The kernel calls this function after handling a timer interrupt, but before acknowledging it. It should take whatever action is necessary to clear the interrupt and reset the timer.
 
@@ -214,4 +222,19 @@ The constant "nullPointer" is a physical pointer guaranteed to be invalid.
 
 > nullPointer :: PPtr a
 > nullPointer = PPtr 0
+
+> kernelWCETUs :: Word64
+> kernelWCETTicks :: Word64
+
+> kernelWCETUs = 10
+> kernelWCETTicks = Arch.usToTicks kernelWCETUs
+
+> timerPrecision :: Word64
+> timerPrecision = Arch.timerPrecision
+
+> maxTimerUs :: Word64
+> maxTimerUs = undefined
+
+> getCurrentTime :: MachineMonad Word64
+> getCurrentTime = Arch.getCurrentTime
 

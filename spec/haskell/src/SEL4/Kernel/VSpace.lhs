@@ -34,7 +34,7 @@ We use the C preprocessor to select a target architecture.
 > import SEL4.API.Failures
 > import SEL4.API.Types
 > import {-# SOURCE #-} SEL4.Kernel.Init
-> import Data.Word(Word32)
+> import Data.Word(Word32, Word64)
 
 \end{impdetails}
 
@@ -56,7 +56,7 @@ This module defines architecture-specific virtual memory management procedures. 
 > initPlatform :: Kernel ()
 > initPlatform = do
 >   doMachineOp $ initIRQController
->   doMachineOp $ configureTimer
+>   doMachineOp $ setDeadline (maxBound :: Word64)
 >   doMachineOp $ initL2Cache
 
 > initCPU :: Kernel ()

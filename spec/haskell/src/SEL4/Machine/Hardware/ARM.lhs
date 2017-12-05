@@ -25,7 +25,7 @@ This module defines the low-level ARM hardware interface.
 
 > import Control.Monad.Reader
 > import Data.Bits
-> import Data.Word(Word8, Word32)
+> import Data.Word(Word8, Word32, Word64)
 > import Data.Ix
 
 \end{impdetails}
@@ -161,10 +161,10 @@ The following functions define the ARM-specific interface between the kernel and
 >     cbptr <- ask
 >     liftIO $ Platform.maskInterrupt cbptr maskI irq
 
-> configureTimer :: MachineMonad IRQ
-> configureTimer = do
+> setDeadline :: Word64 -> MachineMonad ()
+> setDeadline d = do
 >     cbptr <- ask
->     liftIO $ Platform.configureTimer cbptr
+>     liftIO $ Platform.setDeadline cbptr d
 
 > initIRQController :: MachineMonad ()
 > initIRQController = do
@@ -841,4 +841,17 @@ FIXME ARMHYP consider moving to platform code?
 > gicVCPUMaxNumLR = (64 :: Int)
 
 #endif
+
+TODO: Check the value later. Maybe it is 1
+
+> timerPrecision :: Word64
+> timerPrecision = usToTicks 2
+
+> usToTicks :: Word64 -> Word64
+> usToTicks _ = undefined
+
+> getCurrentTime :: MachineMonad Word64
+> getCurrentTime = do
+>     cbptr <- ask
+>     liftIO $ Platform.getCurrentTime cbptr
 

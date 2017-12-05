@@ -33,11 +33,13 @@ We use the C preprocessor to select a target architecture.
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.Object.Instances()
+> import SEL4.Object.SchedContext
 > import SEL4.Object.Untyped
-> import {-# SOURCE #-} SEL4.Object.CNode
 > import SEL4.Object.Endpoint
 > import SEL4.Object.Notification
 > import SEL4.Object.Interrupt
+> import SEL4.Object.Reply
+> import {-# SOURCE #-} SEL4.Object.CNode
 > import {-# SOURCE #-} SEL4.Object.TCB
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 
@@ -69,10 +71,6 @@ Untyped capabilities cannot be copied if they have children.
 > deriveCap slot cap@(UntypedCap {}) = do
 >     ensureNoChildren slot
 >     return cap
-
-Reply capabilities cannot be copied; to ensure that the "Reply" system call is fast, there can never be more than one reply capability for a given thread.
-
-> deriveCap _ (ReplyCap {}) = return NullCap
 
 Architecture-specific capability types are handled in the relevant module.
 
@@ -130,11 +128,14 @@ When the last capability to an endpoint is deleted, any IPC operations currently
 
 > finaliseCap (NotificationCap { capNtfnPtr = ptr }) final _ = do
 >     when final $ do
+>         schedContextMaybeUnbindNtfn ptr
 >         unbindMaybeNotification ptr
 >         cancelAllSignals ptr
 >     return (NullCap, NullCap)
 
-> finaliseCap (ReplyCap {}) _ _ = return (NullCap, NullCap)
+> finaliseCap (ReplyCap { capReplyPtr = ptr }) final _ = do
+>     when final $ replyRemove ptr
+>     return (NullCap, NullCap)
 
 No action need be taken for Null or Domain capabilities.
 
@@ -155,9 +156,21 @@ Threads are treated as special capability nodes; they also become zombies when t
 > finaliseCap (ThreadCap { capTCBPtr = tcb}) True _ = do
 >     cte_ptr <- getThreadCSpaceRoot tcb
 >     unbindNotification tcb
+>     unbindFromSc tcb
 >     suspend tcb
 >     Arch.prepareThreadDelete tcb
 >     return (Zombie cte_ptr ZombieTCB 5, NullCap)
+
+> finaliseCap (SchedContextCap { capSchedContextPtr = sc }) final _ = do
+>     when final $ do
+>         schedContextUnbindAllTCBs sc
+>     when final $ do
+>         schedContextUnbindNtfn sc
+>     when final $ do
+>         schedContextClearReplies sc
+>     return (NullCap, Nothing)
+
+> finaliseCap SchedControlCap _ _ = return (NullCap, Nothing)
 
 Zombies have already been finalised.
 
@@ -196,7 +209,6 @@ the bitmask bit that will allow the reissue of an IRQHandlerCap to this IRQ.
 >     _ -> return ()
 
 
-
 > hasCancelSendRights :: Capability -> Bool
 > hasCancelSendRights (EndpointCap { capEPCanSend = True,
 >                                 capEPCanReceive = True,
@@ -204,7 +216,6 @@ the bitmask bit that will allow the reissue of an IRQHandlerCap to this IRQ.
 > hasCancelSendRights _ = False
 
 \subsection{Comparing Capabilities}
-
 
 > sameRegionAs :: Capability -> Capability -> Bool
 
@@ -232,8 +243,13 @@ This function assumes that its arguments are in MDB order.
 > sameRegionAs (a@ThreadCap {}) (b@ThreadCap {}) =
 >     capTCBPtr a == capTCBPtr b
 
+> sameRegionAs (a@SchedContextCap {}) (b@SchedContextCap {}) =
+>     capSchedContextPtr a == capSchedContextPtr b
+
+> sameRegionAs SchedControlCap SchedControlCap = True
+
 > sameRegionAs (a@ReplyCap {}) (b@ReplyCap {}) =
->     capTCBPtr a == capTCBPtr b
+>     capReplyPtr a == capReplyPtr b
 
 > sameRegionAs DomainCap     DomainCap     = True
 
@@ -255,7 +271,7 @@ This helper function to "sameRegionAs" checks that we have a physical capability
 > isPhysicalCap IRQControlCap = False
 > isPhysicalCap DomainCap = False
 > isPhysicalCap (IRQHandlerCap {}) = False
-> isPhysicalCap (ReplyCap {}) = False
+> isPhysicalCap SchedControlCap = False
 > isPhysicalCap (ArchObjectCap a) = Arch.isPhysicalCap a
 > isPhysicalCap _ = True
 
@@ -339,6 +355,10 @@ The "maskCapRights" function restricts the operations that can be performed on a
 
 > maskCapRights _ c@(IRQHandlerCap {}) = c
 
+> maskCapRights _ c@(SchedContextCap {}) = c
+
+> maskCapRights _ c@SchedControlCap = c
+
 > maskCapRights r (ArchObjectCap {capCap = aoCap}) = Arch.maskCapRights r aoCap
 
 > maskCapRights _ c@(Zombie {}) = c
@@ -369,6 +389,12 @@ New threads are placed in the current security domain, which must be the domain 
 >         Just NotificationObject -> do
 >             placeNewObject (PPtr $ fromPPtr regionBase) (makeObject :: Notification) 0
 >             return $! NotificationCap (PPtr $ fromPPtr regionBase) 0 True True
+>         Just SchedContextObject -> do
+>             placeNewObject regionBase (makeObject :: SchedContext) 0
+>             return $! SchedContextCap (PPtr $ fromPPtr regionBase)
+>         Just ReplyObject -> do
+>             placeNewObject regionBase (makeObject :: Reply) 0
+>             return $! ReplyCap (PPtr $ fromPPtr regionBase)
 >         Just CapTableObject -> do
 >             placeNewObject (PPtr $ fromPPtr regionBase) (makeObject :: CTE) userSize
 >             modify (\ks -> ks { gsCNodes =
@@ -397,8 +423,8 @@ The "decodeInvocation" function parses the message, determines the operation tha
 > decodeInvocation _ _ _ _ cap@(NotificationCap {capNtfnCanSend=True}) _ = do
 >     return $ InvokeNotification (capNtfnPtr cap) (capNtfnBadge cap)
 >
-> decodeInvocation _ _ _ slot cap@(ReplyCap {capReplyMaster=False}) _ = do
->     return $ InvokeReply (capTCBPtr cap) slot
+> decodeInvocation _ _ _ _ (ReplyCap reply) _ = do
+>     return $ InvokeReply reply
 >
 > decodeInvocation
 >         label args _ slot cap@(ThreadCap {}) extraCaps =
@@ -406,6 +432,12 @@ The "decodeInvocation" function parses the message, determines the operation tha
 >
 > decodeInvocation label args _ _ DomainCap extraCaps =
 >     liftM (uncurry InvokeDomain) $ decodeDomainInvocation label args extraCaps
+>
+> decodeInvocation label _ _ _ (SchedContextCap {capSchedContextPtr=sc}) extraCaps =
+>     liftM InvokeSchedContext $ decodeSchedContextInvocation label sc (map fst extraCaps)
+>
+> decodeInvocation label args _ _ SchedControlCap extraCaps =
+>     liftM InvokeSchedControl $ decodeSchedControlInvocation label args (map fst extraCaps)
 >
 > decodeInvocation
 >         label args _ _ cap@(CNodeCap {}) extraCaps =
@@ -436,46 +468,56 @@ The "invoke" function performs the operation itself. It cannot throw faults, but
 
 This function just dispatches invocations to the type-specific invocation functions.
 
-> performInvocation :: Bool -> Bool -> Invocation -> KernelP [Word]
->
-> performInvocation _ _ (InvokeUntyped invok) = do
+> performInvocation :: Bool -> Bool -> Bool -> Invocation -> KernelP [Word]
+> 
+> performInvocation _ _ _ (InvokeUntyped invok) = do
 >     invokeUntyped invok
 >     return $! []
->
-> performInvocation block call (InvokeEndpoint ep badge canGrant) =
+> 
+> performInvocation block call canDonate (InvokeEndpoint ep badge canGrant) =
 >   withoutPreemption $ do
 >     thread <- getCurThread
->     sendIPC block call badge canGrant thread ep
+>     sendIPC block call badge canGrant canDonate thread ep
+>     return $! []
+> 
+> performInvocation _ _ _ (InvokeNotification ep badge) = do
+>     withoutPreemption $ sendSignal ep badge 
 >     return $! []
 >
-> performInvocation _ _ (InvokeNotification ep badge) = do
->     withoutPreemption $ sendSignal ep badge
->     return $! []
->
-> performInvocation _ _ (InvokeReply thread slot) = withoutPreemption $ do
+> performInvocation _ _ _ (InvokeReply reply) = withoutPreemption $ do
 >     sender <- getCurThread
->     doReplyTransfer sender thread slot
+>     doReplyTransfer sender reply
 >     return $! []
 >
-> performInvocation _ _ (InvokeTCB invok) = invokeTCB invok
+> performInvocation _ _ _ (InvokeTCB invok) = invokeTCB invok
 >
-> performInvocation _ _ (InvokeDomain thread domain) = withoutPreemption $ do
+> performInvocation _ _ _ (InvokeDomain thread domain) = withoutPreemption $ do
 >     setDomain thread domain
 >     return $! []
->
-> performInvocation _ _ (InvokeCNode invok) = do
+> 
+> performInvocation _ _ _ (InvokeCNode invok) = do
 >     invokeCNode invok
 >     return $! []
->
-> performInvocation _ _ (InvokeIRQControl invok) = do
+> 
+> performInvocation _ _ _ (InvokeIRQControl invok) = do
 >     performIRQControl invok
 >     return $! []
->
-> performInvocation _ _ (InvokeIRQHandler invok) = do
+> 
+> performInvocation _ _ _ (InvokeIRQHandler invok) = do
 >     withoutPreemption $ invokeIRQHandler invok
 >     return $! []
+> 
+
+> performInvocation _ _ _ (InvokeSchedContext invok) = do
+>     withoutPreemption $ ignoreFailure (invokeSchedContext invok)
+>     return $! []
 >
-> performInvocation _ _ (InvokeArchObject invok) = Arch.performInvocation invok
+
+> performInvocation _ _ _ (InvokeSchedControl invok) = do
+>     withoutPreemption $ ignoreFailure (invokeSchedControlConfigure invok)
+>     return $! []
+>
+> performInvocation _ _ _ (InvokeArchObject invok) = Arch.performInvocation invok
 
 \subsection{Helper Functions}
 
@@ -486,9 +528,11 @@ The following two functions returns the base and size of the object a capability
 > capUntypedPtr (UntypedCap { capPtr = p }) = p
 > capUntypedPtr (EndpointCap { capEPPtr = PPtr p }) = PPtr p
 > capUntypedPtr (NotificationCap { capNtfnPtr = PPtr p }) = PPtr p
-> capUntypedPtr (ReplyCap { capTCBPtr = PPtr p }) = PPtr p
+> capUntypedPtr (ReplyCap { capReplyPtr = PPtr p }) = PPtr p
 > capUntypedPtr (CNodeCap { capCNodePtr = PPtr p }) = PPtr p
 > capUntypedPtr (ThreadCap { capTCBPtr = PPtr p }) = PPtr p
+> capUntypedPtr (SchedContextCap { capSchedContextPtr = PPtr p }) = PPtr p
+> capUntypedPtr SchedControlCap = error "Schedule control has no pointer"
 > capUntypedPtr DomainCap = error "Domain control has no pointer"
 > capUntypedPtr (Zombie { capZombiePtr = PPtr p }) = PPtr p
 > capUntypedPtr IRQControlCap = error "IRQ control has no pointer"
@@ -506,6 +550,9 @@ The following two functions returns the base and size of the object a capability
 >     = 1 `shiftL` objBits (undefined::Notification)
 > capUntypedSize (ThreadCap {})
 >     = 1 `shiftL` objBits (undefined::TCB)
+> capUntypedSize (SchedContextCap {})
+>     = 1 `shiftL` objBits (undefined::SchedContext)
+> capUntypedSize SchedControlCap = 1 -- error in haskell
 > capUntypedSize (DomainCap {})
 >     = 1 -- error in haskell
 > capUntypedSize (ArchObjectCap a)
@@ -515,10 +562,9 @@ The following two functions returns the base and size of the object a capability
 > capUntypedSize (Zombie { capZombieType = ZombieCNode sz })
 >     = 1 `shiftL` (objBits (undefined::CTE) + sz)
 > capUntypedSize (ReplyCap {})
->     = 1 `shiftL` objBits (undefined::TCB) -- error in haskell
+>     = 1 `shiftL` objBits (undefined::Reply)
 > capUntypedSize (IRQControlCap {})
 >     = 1 -- error in haskell
 > capUntypedSize (IRQHandlerCap {})
 >     = 1 -- error in haskell
-
 
