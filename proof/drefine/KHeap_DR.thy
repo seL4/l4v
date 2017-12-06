@@ -552,7 +552,7 @@ lemma corres_dummy_set_notification:
   apply (rule corres_free_set_object)
   apply (clarsimp simp:transform_def transform_current_thread_def)
   apply (subst transform_objects_update_kheap_same_caps)
-     apply (simp add: a_type_def transform_objects_update_same)+
+     apply (simp add: transform_objects_update_same)+
   done
 
 lemma corres_dummy_set_sync_ep:
@@ -564,7 +564,7 @@ lemma corres_dummy_set_sync_ep:
   apply (rule corres_free_set_object)
   apply (clarsimp simp:transform_def transform_current_thread_def)
   apply (subst transform_objects_update_kheap_same_caps)
-     apply (simp add: a_type_def transform_objects_update_same)+
+     apply (simp add: transform_objects_update_same)+
   done
 
 lemma thread_set_fault_corres:

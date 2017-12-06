@@ -76,8 +76,7 @@ lemma pspace_relation_pd:
   shows "page_directory_at' p c" using assms pd_aligned [OF pa t]
   apply (clarsimp simp: obj_at_def)
   apply (drule(1) pspace_relation_absD)
-  apply (clarsimp simp: a_type_def
-                 split: Structures_A.kernel_object.split_asm
+  apply (clarsimp split: Structures_A.kernel_object.split_asm
                         if_split_asm arch_kernel_obj.split_asm)
   apply (clarsimp simp: page_directory_at'_def pdBits_def pageBits_def
                         typ_at_to_obj_at_arches pdeBits_def)

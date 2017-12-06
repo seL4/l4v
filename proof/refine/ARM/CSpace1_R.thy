@@ -1895,7 +1895,7 @@ lemma pspace_relation_update_tcbs:
         tcb_relation tcb tcb' \<rbrakk>
        \<Longrightarrow> pspace_relation (s(x \<mapsto> TCB tcb)) (s'(x \<mapsto> KOTCB tcb'))"
   apply (simp add: pspace_relation_def pspace_dom_update
-                   dom_fun_upd2 a_type_def
+                   dom_fun_upd2
               del: dom_fun_upd)
   apply (erule conjE)
   apply (rule ballI, drule(1) bspec)

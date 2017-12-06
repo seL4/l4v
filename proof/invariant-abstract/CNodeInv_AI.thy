@@ -718,13 +718,13 @@ lemma set_mrs_typ_at [wp]:
    apply wp
    apply clarsimp
    apply (drule get_tcb_SomeD)
-   apply (clarsimp simp: obj_at_def a_type_def split: if_split)
+   apply (clarsimp simp: obj_at_def)
   apply (clarsimp simp: zipWithM_x_mapM split_def
              split del: if_split)
   apply (wp mapM_wp')
   apply clarsimp
   apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: obj_at_def a_type_def split: if_split)
+  apply (clarsimp simp: obj_at_def)
   done
 
 
@@ -2489,8 +2489,7 @@ done
 lemma real_cte_at_not_tcb:
   "real_cte_at sl s \<Longrightarrow> \<not> tcb_at (fst sl) s"
   apply (simp add: tcb_at_typ obj_at_def)
-  apply (clarsimp  simp: is_cap_table_def a_type_def split: if_split_asm
-    Structures_A.kernel_object.split)[1]
+  apply (clarsimp simp: is_cap_table_def)
   done
 
 

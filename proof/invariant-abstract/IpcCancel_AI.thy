@@ -1176,7 +1176,8 @@ lemma cancel_badged_sends_filterM_helper':
   apply (clarsimp simp: filterM_append bind_assoc simp del: set_append distinct_append)
   apply (drule spec, erule hoare_seq_ext[rotated])
   apply (rule hoare_seq_ext [OF _ gts_sp])
-  apply (rule hoare_pre, wp valid_irq_node_typ sts_only_idle hoare_vcg_const_Ball_lift | simp)+
+  apply (rule hoare_pre,
+         wpsimp wp: valid_irq_node_typ sts_only_idle hoare_vcg_const_Ball_lift)
   apply (clarsimp simp: valid_tcb_state_def)
   apply (rule conjI[rotated])
    apply blast

@@ -692,12 +692,7 @@ lemma tcb_cap_valid_imp_NullCap:
   apply (clarsimp simp: ran_tcb_cap_cases valid_ipc_buffer_cap_def
                  split: Structures_A.thread_state.split_asm)
   done
-(* moved to Invariants_AI
-lemma a_type_arch_live:
-  "a_type ko = AArch tp \<Longrightarrow> \<not> live0 ko"
-  by (simp add: a_type_def
-         split: Structures_A.kernel_object.split_asm)
-*)
+
 lemma pred_tcb_at_def2:
   "pred_tcb_at proj P t \<equiv> \<lambda>s. \<exists>tcb. ko_at (TCB tcb) t s \<and> P (proj (tcb_to_itcb tcb))"
   by (rule eq_reflection, rule ext) (fastforce simp: pred_tcb_at_def obj_at_def)

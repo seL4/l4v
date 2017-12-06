@@ -122,9 +122,7 @@ lemma cte_at_same_type:
    apply (clarsimp simp: a_type_def well_formed_cnode_n_def length_set_helper
                   split: Structures_A.kernel_object.split_asm
                          if_split_asm)
-  apply (clarsimp simp: a_type_def
-                 split: Structures_A.kernel_object.split_asm
-                        if_split_asm)
+  apply clarsimp
   done
 
 
@@ -1031,7 +1029,7 @@ unfolding as_user_def
   apply wp
   apply (clarsimp simp: obj_at_def)
   apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: a_type_def)
+  apply clarsimp
   done
 
 lemma as_user_no_del_ntfn[wp]:

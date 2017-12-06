@@ -813,9 +813,7 @@ lemma detype_reads_respects_g:
 lemma a_type_small_pageD:
   "a_type ko = AArch (AUserData ARMSmallPage) \<Longrightarrow>
   ko = ArchObj (DataPage False ARMSmallPage)"
-  apply (clarsimp simp: a_type_def
-                 split: Structures_A.kernel_object.splits
-                        arch_kernel_obj.splits if_split_asm)
+  apply clarsimp
   done
 
 lemma obj_range_small_page_as_ptr_range:

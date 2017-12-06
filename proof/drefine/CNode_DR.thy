@@ -1769,9 +1769,8 @@ lemma dcorres_clear_object_caps_pt:
       apply (subst (asm) iffD2[OF mask_eq_iff_w2p],simp add:word_size)
         apply (erule le_less_trans,simp+)
       apply (simp add:invs_def valid_state_def valid_pspace_def valid_mdb_def)
-    apply (clarsimp simp:invs_def valid_state_def valid_cap_def obj_at_def a_type_def valid_pspace_def
+    apply (clarsimp simp:invs_def valid_state_def valid_cap_def obj_at_def valid_pspace_def
       dest!: cte_wp_valid_cap)
-    apply (clarsimp split:Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_splits)
 done
 
 lemma opt_object_cnode:

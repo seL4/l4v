@@ -1526,7 +1526,7 @@ lemma valid_arch_state_s0[simp]:
   "valid_arch_state s0_internal"
   apply (clarsimp simp: valid_arch_state_def s0_internal_def arch_state0_def)
   apply (intro conjI)
-      apply (clarsimp simp: obj_at_def kh0_def a_type_def)
+      apply (clarsimp simp: obj_at_def kh0_def)
      apply (simp add: valid_asid_table_def)
     apply (clarsimp simp: obj_at_def kh0_def a_type_def)
    apply (simp add: valid_global_pts_def)
@@ -1579,7 +1579,7 @@ lemma valid_arch_objs_s0[simp]:
   apply (drule kh0_SomeD)
   apply (erule disjE | clarsimp simp:  pageBits_def addrFromPPtr_def
       physMappingOffset_def kernelBase_addr_def physBase_def is_aligned_def
-      obj_at_def kh0_def kh0_obj_def a_type_def kernel_mapping_slots_def
+      obj_at_def kh0_def kh0_obj_def kernel_mapping_slots_def
       High_pt'_def Low_pt'_def High_pd'_def Low_pd'_def ptrFromPAddr_def
      | erule vs_lookupE, force simp: vs_lookup_def arch_state0_def vs_asid_refs_def)+
   done
@@ -1590,7 +1590,7 @@ lemma valid_vspace_objs_s0[simp]:
   apply (drule kh0_SomeD)
   apply (erule disjE | clarsimp simp:  pageBits_def addrFromPPtr_def
       physMappingOffset_def kernelBase_addr_def physBase_def is_aligned_def
-      obj_at_def kh0_def kh0_obj_def a_type_def kernel_mapping_slots_def
+      obj_at_def kh0_def kh0_obj_def kernel_mapping_slots_def
       High_pt'_def Low_pt'_def High_pd'_def Low_pd'_def ptrFromPAddr_def
      | erule vs_lookupE, force simp: vs_lookup_def arch_state0_def vs_asid_refs_def)+
   done
@@ -1616,7 +1616,7 @@ lemma valid_global_objs_s0[simp]:
   apply (clarsimp simp: valid_global_objs_def s0_internal_def arch_state0_def)
   by (force simp: valid_vso_at_def obj_at_def kh0_def kh0_obj_def s0_ptr_defs
                      addrFromPPtr_def physMappingOffset_def kernelBase_addr_def
-                     physBase_def is_aligned_def a_type_def pageBits_def
+                     physBase_def is_aligned_def pageBits_def
                      kernel_mapping_slots_def empty_table_def pde_ref_def
                      valid_pde_mappings_def)+
 
@@ -1756,7 +1756,7 @@ lemma respects_device_trivial:
   "pspace_respects_device_region s0_internal"
   "cap_refs_respects_device_region s0_internal"
   apply (clarsimp simp: s0_internal_def pspace_respects_device_region_def machine_state0_def device_mem_def
-                        in_device_frame_def kh0_obj_def obj_at_kh_def obj_at_def kh0_def a_type_def
+                        in_device_frame_def kh0_obj_def obj_at_kh_def obj_at_def kh0_def
                  split: if_splits)[1]
    apply fastforce
   apply (clarsimp simp: cap_refs_respects_device_region_def Invariants_AI.cte_wp_at_caps_of_state

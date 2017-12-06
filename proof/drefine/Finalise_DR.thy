@@ -642,8 +642,8 @@ done
 lemma asid_pool_not_idle:
   "\<lbrakk> valid_idle s; asid_pool_at a s \<rbrakk> \<Longrightarrow> not_idle_thread a s"
   apply (clarsimp simp:obj_at_def valid_idle_def pred_tcb_at_def)
-  apply (clarsimp simp:a_type_def not_idle_thread_def
-    split:arch_kernel_obj.splits Structures_A.kernel_object.split_asm if_splits arch_kernel_object.splits)
+  apply (clarsimp simp: not_idle_thread_def
+    split: if_splits arch_kernel_object.splits)
 done
 
 lemma opt_object_asid_pool:
@@ -846,15 +846,15 @@ lemma transform_cap_not_new_invented:
 lemma page_table_not_idle:
   "\<lbrakk>valid_idle s;page_table_at a s\<rbrakk> \<Longrightarrow> not_idle_thread a s"
   apply (clarsimp simp:obj_at_def valid_idle_def pred_tcb_at_def)
-  apply (clarsimp simp:a_type_def not_idle_thread_def
-    split:arch_kernel_obj.splits Structures_A.kernel_object.split_asm if_splits arch_kernel_object.splits)
+  apply (clarsimp simp: not_idle_thread_def
+    split: if_splits arch_kernel_object.splits)
 done
 
 lemma page_directory_not_idle:
   "\<lbrakk>valid_idle s;page_directory_at a s\<rbrakk> \<Longrightarrow> not_idle_thread a s"
   apply (clarsimp simp:obj_at_def valid_idle_def pred_tcb_at_def)
-  apply (clarsimp simp:a_type_def not_idle_thread_def
-    split:arch_kernel_obj.splits Structures_A.kernel_object.split_asm if_splits arch_kernel_object.splits)
+  apply (clarsimp simp: not_idle_thread_def
+    split: if_splits arch_kernel_object.splits)
 done
 
 lemma page_table_at_rev:
@@ -970,8 +970,7 @@ lemma slot_with_pd_pt_relation:
   apply (frule page_directory_at_rev)
   apply (frule(1) page_directory_not_idle)
   apply (clarsimp simp:transform_def slots_with_def transform_objects_def obj_at_def)
-  apply (clarsimp simp:restrict_map_def a_type_def page_table_not_idle not_idle_thread_def pt_bits_def
-    split:Structures_A.kernel_object.split_asm if_splits arch_kernel_object.splits arch_kernel_obj.splits)
+  apply (clarsimp simp:restrict_map_def page_table_not_idle not_idle_thread_def pt_bits_def)
   apply (clarsimp simp:has_slots_def object_slots_def)
   apply (clarsimp simp:transform_page_directory_contents_def transform_pde_def unat_map_def below_kernel_base)
   apply (clarsimp simp:ucast_def)
@@ -989,9 +988,8 @@ lemma slot_with_pd_section_relation:
     apply (frule page_directory_at_rev)
     apply (frule(1) page_directory_not_idle)
     apply (clarsimp simp:transform_def slots_with_def transform_objects_def obj_at_def)
-    apply (clarsimp simp:restrict_map_def a_type_def page_table_not_idle not_idle_thread_def pt_bits_def
-    split:Structures_A.kernel_object.split_asm if_splits arch_kernel_object.splits arch_kernel_obj.splits)
-     apply (clarsimp simp:has_slots_def object_slots_def)
+    apply (clarsimp simp:restrict_map_def page_table_not_idle not_idle_thread_def pt_bits_def)
+    apply (clarsimp simp:has_slots_def object_slots_def)
     apply (clarsimp simp:transform_page_directory_contents_def transform_pde_def unat_map_def below_kernel_base)
     apply (clarsimp simp:ucast_def)
     apply (simp add: word_of_int_nat[OF uint_ge_0,simplified] unat_def mask_pd_bits_less)
@@ -999,8 +997,7 @@ lemma slot_with_pd_section_relation:
   apply (frule page_directory_at_rev)
   apply (frule(1) page_directory_not_idle)
   apply (clarsimp simp:transform_def slots_with_def transform_objects_def obj_at_def)
-  apply (clarsimp simp:restrict_map_def a_type_def page_table_not_idle not_idle_thread_def pt_bits_def
-    split:Structures_A.kernel_object.split_asm if_splits arch_kernel_object.splits arch_kernel_obj.splits)
+  apply (clarsimp simp:restrict_map_def page_table_not_idle not_idle_thread_def pt_bits_def)
   apply (clarsimp simp:has_slots_def object_slots_def)
   apply (clarsimp simp:transform_page_directory_contents_def transform_pde_def unat_map_def below_kernel_base)
   apply (clarsimp simp:ucast_def)
@@ -2044,9 +2041,7 @@ lemma check_mapping_pptr_pt_relation:
   apply (simp add:check_mapping_pptr_def get_pte_def)
   apply (rule hoare_pre, wp get_pte_wp)
   apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: a_type_def pt_page_relation_def
-                 split: Structures_A.kernel_object.split_asm if_split_asm
-                        arch_kernel_obj.split_asm)
+  apply (clarsimp simp: pt_page_relation_def)
   apply (simp split: ARM_A.pte.split_asm)
   done
 
@@ -2058,10 +2053,8 @@ lemma check_mapping_pptr_section_relation:
    apply (simp add:check_mapping_pptr_def)
    apply (wp get_pde_wp)
   apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: a_type_def pd_section_relation_def pd_super_section_relation_def
-                 split: Structures_A.kernel_object.split_asm if_split_asm
-                        arch_kernel_obj.split_asm
-                        ARM_A.pde.split_asm)
+  apply (clarsimp simp: pd_section_relation_def pd_super_section_relation_def
+                 split: ARM_A.pde.split_asm)
 done
 
 lemma check_mapping_pptr_super_section_relation:
@@ -2071,10 +2064,8 @@ lemma check_mapping_pptr_super_section_relation:
    apply (simp add:check_mapping_pptr_def)
    apply (wp get_pde_wp)
   apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: a_type_def pd_section_relation_def pd_super_section_relation_def
-                 split: Structures_A.kernel_object.split_asm if_split_asm
-                        arch_kernel_obj.split_asm
-                        ARM_A.pde.split_asm)
+  apply (clarsimp simp: pd_section_relation_def pd_super_section_relation_def
+                 split: ARM_A.pde.split_asm)
 done
 
 lemma lookup_pt_slot_aligned:

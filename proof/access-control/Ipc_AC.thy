@@ -420,7 +420,7 @@ lemma set_ntfn_valid_objs_at:
   unfolding set_notification_def
   apply (rule hoare_pre)
   apply (wp set_object_valid_objs get_object_wp)
-  apply (clarsimp simp: valid_obj_def obj_at_def is_ntfn a_type_def split: Structures_A.kernel_object.splits)
+  apply (clarsimp simp: valid_obj_def obj_at_def is_ntfn split: Structures_A.kernel_object.splits)
   done
 
 lemma drop_Suc0_iff:

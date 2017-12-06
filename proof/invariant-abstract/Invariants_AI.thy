@@ -531,6 +531,8 @@ definition
 where
   "valid_objs s \<equiv> \<forall>ptr \<in> dom $ kheap s. \<exists>obj. kheap s ptr = Some obj \<and> valid_obj ptr obj s"
 
+text {* symref related definitions *}
+
 definition
   tcb_st_refs_of :: "thread_state  \<Rightarrow> (obj_ref \<times> reftype) set"
 where

@@ -115,6 +115,11 @@ where
 lemmas a_type_simps =
   a_type_def[split_simps kernel_object.split]
 
+lemma [simp]:
+  "a_type (Endpoint x) = AEndpoint"
+  "a_type (Notification v) = ANTFN"
+  by (simp_all add: a_type_def)
+
 lemma a_type_aa_type: "(a_type (ArchObj ako) = AArch T) = (aa_type ako = T)"
   by (simp add: a_type_def)
 

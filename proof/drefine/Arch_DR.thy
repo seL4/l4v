@@ -389,9 +389,7 @@ proof -
         apply (drule_tac x="ucast (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)" in bspec)
          apply simp
         apply (drule_tac t="pda v" for v in sym, simp)
-        apply (clarsimp simp: obj_at_def a_type_def del: disjCI)
-        apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm
-                               arch_kernel_obj.split_asm del: disjCI)
+        apply (clarsimp simp: obj_at_def del: disjCI)
         apply (frule_tac p="ptrFromPAddr v" for v in pspace_alignedD, simp+)
         apply (rule disjI2, rule conjI)
          apply (rule_tac x="unat (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)"
@@ -432,9 +430,7 @@ proof -
         apply (drule_tac x="ucast (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)" in bspec)
          apply simp
         apply (drule_tac t="pda v" for v in sym, simp)
-        apply (clarsimp simp: obj_at_def a_type_def del: disjCI)
-        apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm
-                               arch_kernel_obj.split_asm del: disjCI)
+        apply (clarsimp simp: obj_at_def del: disjCI)
         apply (frule_tac p="ptrFromPAddr v" for v in pspace_alignedD, simp+)
         apply (rule map_includedI)
          apply (clarsimp simp: transform_pt_slot_ref_def all_pd_pt_slots_def

@@ -2097,7 +2097,7 @@ lemma detype_valid_ko_at_arm:
       arm_global_pd (arch_state s) \<notin> {ptr..ptr + 2 ^ bits - 1})\<rbrace>
    modify (detype {ptr..ptr + 2 ^ bits - 1}) \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
   apply(wp modify_wp)
-  apply(fastforce simp: valid_ko_at_arm_def detype_def obj_at_def a_type_def)
+  apply(fastforce simp: valid_ko_at_arm_def detype_def obj_at_def)
   done
 
 lemma detype_valid_arch_state:

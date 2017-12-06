@@ -142,10 +142,7 @@ lemma mapM_x_store_pte_updates:
   apply (induct xs)
    apply (simp add: mapM_x_Nil)
    apply wp
-   apply (clarsimp simp: obj_at_def)
-   apply (simp add: a_type_def fun_upd_idem
-             split: Structures_A.kernel_object.split_asm if_split_asm
-                    arch_kernel_obj.split_asm)
+   apply (clarsimp simp: obj_at_def fun_upd_idem)
   apply (simp add: mapM_x_Cons)
   apply (rule hoare_seq_ext, assumption)
   apply (thin_tac "valid P f Q" for P f Q)
@@ -238,10 +235,7 @@ lemma mapM_x_store_pde_updates:
   apply (induct xs)
    apply (simp add: mapM_x_Nil)
    apply wp
-   apply (clarsimp simp: obj_at_def)
-   apply (simp add: a_type_def fun_upd_idem
-             split: Structures_A.kernel_object.split_asm if_split_asm
-                    arch_kernel_obj.split_asm)
+   apply (clarsimp simp: obj_at_def fun_upd_idem)
   apply (simp add: mapM_x_Cons)
   apply (rule hoare_seq_ext, assumption)
   apply (thin_tac "valid P f Q" for P f Q)

@@ -2187,7 +2187,7 @@ lemma ipc_frame_ptr_at_sz_at:
   apply (frule valid_tcb_objs)
    apply (erule get_tcb_rev)
   apply (subgoal_tac "valid_cap (tcb_ipcframe tcb) s")
-   apply (clarsimp simp: valid_cap_def obj_at_def a_type_def split: if_splits arch_kernel_obj.splits)
+   apply (clarsimp simp: valid_cap_def obj_at_def split: if_splits)
   apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def split: if_splits)
   done
 

@@ -617,7 +617,7 @@ lemma ptable_lift_data_consistant:
     apply (drule bspec)
     apply (rule Compl_iff[THEN iffD2])
     apply (rule kernel_mappings_kernel_mapping_slots[OF misc(2)])
-    apply (clarsimp simp: valid_pde_def obj_at_def a_type_def)
+    apply (clarsimp simp: valid_pde_def obj_at_def)
    apply (frule(1) valid_pdpt_align_pdD[OF _ vpdpt])
    apply (frule data_at_same_size[where sz = sz and sz' = ARMSection,rotated,simplified],
         clarsimp+)
@@ -635,7 +635,7 @@ lemma ptable_lift_data_consistant:
   apply (drule bspec)
   apply (rule Compl_iff[THEN iffD2])
   apply (rule kernel_mappings_kernel_mapping_slots[OF misc(2)])
-  apply (clarsimp simp: valid_pde_def obj_at_def a_type_def)
+  apply (clarsimp simp: valid_pde_def obj_at_def)
   apply (frule(1) valid_pdpt_align_pdD[OF _ vpdpt])
   apply (frule data_at_same_size[where sz = sz and sz' = ARMSuperSection,rotated,simplified],
         clarsimp+)
@@ -747,7 +747,7 @@ lemma ptable_rights_data_consistant:
     apply (drule bspec)
     apply (rule Compl_iff[THEN iffD2])
     apply (rule kernel_mappings_kernel_mapping_slots[OF misc(2)])
-    apply (clarsimp simp: valid_pde_def obj_at_def a_type_def)
+    apply (clarsimp simp: valid_pde_def obj_at_def)
    apply (frule(1) valid_pdpt_align_pdD[OF _ vpdpt])
    apply (frule data_at_same_size[where sz = sz and sz' = ARMSection,rotated,simplified],
         clarsimp+)
@@ -762,7 +762,7 @@ lemma ptable_rights_data_consistant:
   apply (drule bspec)
   apply (rule Compl_iff[THEN iffD2])
   apply (rule kernel_mappings_kernel_mapping_slots[OF misc(2)])
-  apply (clarsimp simp: valid_pde_def obj_at_def a_type_def)
+  apply (clarsimp simp: valid_pde_def obj_at_def)
   apply (frule(1) valid_pdpt_align_pdD[OF _ vpdpt])
   apply (frule data_at_same_size[where sz = sz and sz' = ARMSuperSection,rotated,simplified],
         clarsimp+)

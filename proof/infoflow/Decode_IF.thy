@@ -499,9 +499,7 @@ lemma lookup_pt_slot_no_fail_is_subject:
    apply assumption
   apply (simp add: aag_has_auth_to_Control_eq_owns)
   apply (drule_tac f="\<lambda>pde. valid_pde pde s" in arg_cong, simp)
-  apply (clarsimp simp: obj_at_def a_type_def kernel_base_kernel_mapping_slots)
-  apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm
-                         arch_kernel_obj.split_asm)
+  apply (clarsimp simp: obj_at_def kernel_base_kernel_mapping_slots)
   apply (erule pspace_alignedE, erule domI)
   apply (simp add: pt_bits_def pageBits_def)
   apply (subst is_aligned_add_helper, assumption)
