@@ -54,7 +54,7 @@ lemma tcbSchedEnqueue_cslift_spec:
 
 lemma setThreadState_cslift_spec:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. s \<Turnstile>\<^sub>c \<acute>tptr \<and> (\<forall>x. ksSchedulerAction_' (globals s) = tcb_Ptr x
-                 \<and> x \<noteq> 0 \<and> x \<noteq> ~~ 0
+                 \<and> x \<noteq> 0 \<and> x \<noteq> 1
               \<longrightarrow> (\<exists>d v. option_map2 tcbPriority_C (cslift s) (tcb_Ptr x) = Some v
                        \<and> v \<le> ucast maxPrio
                        \<and> option_map2 tcbDomain_C (cslift s) (tcb_Ptr x) = Some d

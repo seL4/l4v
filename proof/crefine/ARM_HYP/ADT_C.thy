@@ -283,7 +283,7 @@ lemma setUserMem_C_def_foldl:
 definition
   "cscheduler_action_to_H p \<equiv>
    if p = NULL then ResumeCurrentThread
-   else if p = Ptr (~~ 0) then ChooseNewThread
+   else if p = Ptr 1 then ChooseNewThread
    else SwitchToThread (ctcb_ptr_to_tcb_ptr p)"
 
 
@@ -310,9 +310,10 @@ lemma csch_act_rel_to_H:
                          cscheduler_action_to_H_def)
   apply safe
      apply (simp_all add: tcb_ptr_to_ctcb_ptr_def ctcb_ptr_to_tcb_ptr_def
-                          ctcb_offset_defs is_aligned_mask mask_def max_word_def
+                          ctcb_offset_defs is_aligned_mask mask_def
                           objBits_defs)
-  apply (word_bitwise, simp)
+   apply (word_bitwise, simp)
+  apply (word_bitwise, clarsimp)
   done
 
 definition

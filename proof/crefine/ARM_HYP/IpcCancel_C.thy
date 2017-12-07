@@ -2065,15 +2065,11 @@ lemma scheduler_action_case_switch_to_if:
             then f (case act of SwitchToThread t \<Rightarrow> t) else g)"
   by (simp split: scheduler_action.split)
 
-lemma tcb_at_max_word:
-  "tcb_at' t s \<Longrightarrow> tcb_ptr_to_ctcb_ptr t \<noteq> tcb_Ptr max_word"
+lemma tcb_at_1:
+  "tcb_at' t s \<Longrightarrow> tcb_ptr_to_ctcb_ptr t \<noteq> tcb_Ptr 1"
   apply (drule is_aligned_tcb_ptr_to_ctcb_ptr)
   apply (clarsimp simp add: is_aligned_def max_word_def ctcb_size_bits_def)
   done
-
-lemma scast_max_word [simp]:
-    "scast (max_word :: 32 signed word) = (max_word :: 32 word)"
-  by (clarsimp simp: max_word_def)
 
 lemma rescheduleRequired_ccorres:
   "ccorres dc xfdc (valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs')
@@ -2087,7 +2083,7 @@ lemma rescheduleRequired_ccorres:
                      in ccorres_cond)
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                   cscheduler_action_relation_def)
-            subgoal by (clarsimp simp: weak_sch_act_wf_def tcb_at_max_word tcb_at_not_NULL
+            subgoal by (clarsimp simp: weak_sch_act_wf_def tcb_at_1 tcb_at_not_NULL
                            split: scheduler_action.split_asm dest!: pred_tcb_at')
            apply (ctac add: tcbSchedEnqueue_ccorres)
           apply (rule ccorres_return_Skip)
@@ -2105,8 +2101,8 @@ lemma rescheduleRequired_ccorres:
    apply (simp add: getSchedulerAction_def)
   apply (clarsimp simp: weak_sch_act_wf_def rf_sr_def cstate_relation_def
                         Let_def cscheduler_action_relation_def)
-  by (auto simp: tcb_at_not_NULL tcb_at_max_word
-                    tcb_at_not_NULL[THEN not_sym] tcb_at_max_word[THEN not_sym]
+  by (auto simp: tcb_at_not_NULL tcb_at_1
+                    tcb_at_not_NULL[THEN not_sym] tcb_at_1[THEN not_sym]
                  split: scheduler_action.split_asm)
 
 lemma getReadyQueuesL1Bitmap_sp:
@@ -2597,7 +2593,7 @@ lemma rescheduleRequired_ccorres_valid_queues'_simple:
                      in ccorres_cond)
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                   cscheduler_action_relation_def)
-            apply (clarsimp simp: weak_sch_act_wf_def tcb_at_max_word tcb_at_not_NULL
+            apply (clarsimp simp: weak_sch_act_wf_def tcb_at_1 tcb_at_not_NULL
                            split: scheduler_action.split_asm dest!: st_tcb_strg'[rule_format])
            apply (ctac add: tcbSchedEnqueue_ccorres)
           apply (rule ccorres_return_Skip)
@@ -2615,8 +2611,8 @@ lemma rescheduleRequired_ccorres_valid_queues'_simple:
    apply (simp add: getSchedulerAction_def)
   apply (clarsimp simp: weak_sch_act_wf_def rf_sr_def cstate_relation_def
                         Let_def cscheduler_action_relation_def)
-  by (auto simp: tcb_at_not_NULL tcb_at_max_word
-                    tcb_at_not_NULL[THEN not_sym] tcb_at_max_word[THEN not_sym]
+  by (auto simp: tcb_at_not_NULL tcb_at_1
+                    tcb_at_not_NULL[THEN not_sym] tcb_at_1[THEN not_sym]
                  split: scheduler_action.split_asm)
 
 lemma scheduleTCB_ccorres_valid_queues'_pre_simple:

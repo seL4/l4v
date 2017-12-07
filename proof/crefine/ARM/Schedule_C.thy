@@ -673,7 +673,7 @@ lemma schedule_ccorres:
   apply (clarsimp dest!: rf_sr_cscheduler_relation invs_sch_act_wf'
                   simp: cscheduler_action_relation_def)
   apply (intro conjI impI allI; clarsimp simp: typ_heap_simps ctcb_relation_def to_bool_def)
-     apply (fastforce simp: tcb_at_not_NULL tcb_at_max_word dest: pred_tcb_at')+
+     apply (fastforce simp: tcb_at_not_NULL tcb_at_1 dest: pred_tcb_at')+
   done
 
 (* FIXME: move *)

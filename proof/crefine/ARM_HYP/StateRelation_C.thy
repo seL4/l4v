@@ -683,7 +683,7 @@ definition
 where
   "cscheduler_action_relation a p \<equiv> case a of
      ResumeCurrentThread \<Rightarrow> p = NULL
-   | ChooseNewThread \<Rightarrow> p = Ptr (~~ 0)
+   | ChooseNewThread \<Rightarrow> p = Ptr 1
    | SwitchToThread p' \<Rightarrow> p = tcb_ptr_to_ctcb_ptr p'"
 
 definition
