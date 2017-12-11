@@ -1797,6 +1797,13 @@ lemma sts_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)
 
+lemma
+"\<lbrace>(\<lambda>s. ex_nonz_cap_to p s)\<rbrace>
+   set_tcb_obj_ref f p new
+   \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
+  apply (simp add: set_tcb_obj_ref_def)
+
+
 lemma set_tcb_obj_ref_ex_nonz_cap_to[wp]:
   "\<lbrace>(\<lambda>s. ex_nonz_cap_to p s
       \<and> obj_at (same_caps (TCB (f (\<lambda>y. new) (the (get_tcb p s))))) p s)\<rbrace>

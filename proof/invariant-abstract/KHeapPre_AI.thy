@@ -187,4 +187,16 @@ lemma get_object_wp:
   apply (clarsimp simp: obj_at_def)
   done
 
+lemma get_tcb_rev:
+  "kheap s p = Some (TCB t)\<Longrightarrow> get_tcb p s = Some t"
+  by (clarsimp simp:get_tcb_def)
+
+lemma get_tcb_obj_atE[elim!]:
+  "\<lbrakk> get_tcb t s = Some tcb; get_tcb t s = Some tcb \<Longrightarrow> P (TCB tcb) \<rbrakk> \<Longrightarrow> obj_at P t s"
+  by (clarsimp dest!: get_tcb_SomeD simp: obj_at_def)
+
+lemma a_type_TCB[simp]:
+  "a_type (TCB x) = ATCB"
+  by (simp add: a_type_def)
+
 end

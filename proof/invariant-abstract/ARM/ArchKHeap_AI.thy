@@ -892,5 +892,9 @@ lemma valid_arch_mdb_lift:
   done
 
 
+lemma set_tcb_obj_ref_asid_map[wp]:
+  "\<lbrace>valid_asid_map\<rbrace> set_tcb_obj_ref f t ko \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
+  by (wpsimp wp: set_object_asid_map simp: set_tcb_obj_ref_def vs_refs_def)
+
 end
 end

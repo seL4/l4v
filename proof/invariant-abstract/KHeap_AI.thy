@@ -93,20 +93,6 @@ lemma get_object_inv [wp]: "\<lbrace>P\<rbrace> get_object t \<lbrace>\<lambda>r
   by wpsimp
 
 
-lemma get_tcb_rev:
-  "kheap s p = Some (TCB t)\<Longrightarrow> get_tcb p s = Some t"
-  by (clarsimp simp:get_tcb_def)
-
-lemma get_tcb_obj_atE[elim!]:
-  "\<lbrakk> get_tcb t s = Some tcb; get_tcb t s = Some tcb \<Longrightarrow> P (TCB tcb) \<rbrakk> \<Longrightarrow> obj_at P t s"
-  by (clarsimp dest!: get_tcb_SomeD simp: obj_at_def)
-
-
-lemma a_type_TCB[simp]:
-  "a_type (TCB x) = ATCB"
-  by (simp add: a_type_def)
-
-
 lemma pspace_aligned_obj_update:
   assumes obj: "obj_at P t s"
   assumes pa: "pspace_aligned s"
@@ -147,39 +133,41 @@ lemma valid_cap_same_type:
   by (intro hoare_to_pure_kheap_upd[OF valid_arch_cap_typ, simplified obj_at_def],
       assumption, auto)
 
+lemma typ_at_foldl:
+  "foldl op \<and> True (map (\<lambda>r. typ_at T r s) xs) \<Longrightarrow>
+   a_type k = a_type ko \<Longrightarrow> kheap s p = Some ko \<Longrightarrow>
+   foldl op \<and> True (map (\<lambda>r. typ_at T r (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)) xs)"
+  apply (induct xs)
+   apply (auto simp: foldl_conj_Cons typ_at_same_type
+           simp del: foldl_Cons)
+  done
 
 lemma valid_obj_same_type:
   "\<lbrakk> valid_obj p' obj s; valid_obj p k s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
    \<Longrightarrow> valid_obj p' obj (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
   apply (cases obj; simp)
-      apply (clarsimp simp add: valid_obj_def valid_cs_def)
-      apply (drule (1) bspec)
-      apply (erule (2) valid_cap_same_type)
-     apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_obj_def valid_arch_tcb_same_type)
-     apply (fastforce elim: valid_cap_same_type typ_at_same_type
-                      simp: valid_tcb_state_def ep_at_typ
-                            ntfn_at_typ tcb_at_typ sc_at_typ reply_at_typ
-                     split: Structures_A.thread_state.splits option.splits)
-    apply (clarsimp simp add: valid_obj_def valid_ep_def)
-    apply (fastforce elim: typ_at_same_type
-                    simp: tcb_at_typ
-                    split: Structures_A.endpoint.splits)
-   apply (clarsimp simp add: valid_obj_def valid_ntfn_def valid_bound_obj_def)
-   apply (auto elim: typ_at_same_type
-                   simp: tcb_at_typ sc_at_typ
-                  split: Structures_A.ntfn.splits option.splits)
-defer
-(*   apply (clarsimp simp add: valid_obj_def valid_sched_context_def valid_bound_obj_def)
-   apply (auto elim: typ_at_same_type
-                   simp: tcb_at_typ reply_at_typ sc_at_typ ntfn_at_typ
-                  split: Structures_A.ntfn.splits option.splits list.splits)*)
-   apply (clarsimp simp add: valid_obj_def valid_reply_def valid_bound_obj_def)
-   apply (auto elim: typ_at_same_type
-                   simp: tcb_at_typ reply_at_typ sc_at_typ
-                  split: Structures_A.ntfn.splits option.splits)
-  apply (clarsimp simp add: valid_obj_def)
-  apply (auto intro: arch_valid_obj_same_type)
-  sorry (* prove the sched_context case, reply queue simplification *)
+        apply (clarsimp simp add: valid_obj_def valid_cs_def)
+        apply (drule (1) bspec)
+        apply (erule (2) valid_cap_same_type)
+       apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_obj_def
+                             valid_arch_tcb_same_type)
+       apply (fastforce elim: valid_cap_same_type typ_at_same_type
+                        simp: valid_tcb_state_def ep_at_typ
+                              ntfn_at_typ tcb_at_typ sc_at_typ reply_at_typ
+                       split: Structures_A.thread_state.splits option.splits)
+      apply (simp add: valid_obj_def valid_ep_def tcb_at_typ typ_at_same_type
+                split: endpoint.splits)
+     apply (simp add: valid_obj_def valid_ntfn_def valid_bound_obj_def
+                      tcb_at_typ sc_at_typ typ_at_same_type
+               split: option.splits ntfn.splits)
+    apply (simp add: valid_obj_def valid_sched_context_def valid_bound_obj_def
+                     ntfn_at_typ tcb_at_typ reply_at_typ typ_at_same_type typ_at_foldl
+              split: option.splits)
+   apply (simp add: valid_obj_def valid_reply_def valid_bound_obj_def
+                    tcb_at_typ sc_at_typ typ_at_same_type
+             split: option.splits)
+  apply (simp add: valid_obj_def arch_valid_obj_same_type)
+  done
 
 lemma valid_vspace_obj_same_type:
   "\<lbrakk>valid_vspace_obj ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
@@ -961,8 +949,6 @@ lemma set_simple_ko_idle[wp]:
    set_simple_ko f ptr ep \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   by (set_simple_ko_method simp_thm: set_object_def obj_at_def valid_idle_def pred_tcb_at_def)
 
-
-(* FIXME-NTFN *)
 lemma ep_redux_simps:
   "valid_ep (case xs of [] \<Rightarrow> Structures_A.IdleEP | y # ys \<Rightarrow> Structures_A.SendEP (y # ys))
         = (\<lambda>s. distinct xs \<and> (\<forall>t\<in>set xs. tcb_at t s))"
@@ -972,16 +958,18 @@ lemma ep_redux_simps:
         = (\<lambda>s. distinct xs \<and> (\<forall>t\<in>set xs. tcb_at t s)
              \<and> (case ntfn_bound_tcb ntfn of
                  Some t \<Rightarrow> tcb_at t s \<and> (case xs of y # ys \<Rightarrow> xs = [t] | _ \<Rightarrow> True)
-               | _ \<Rightarrow> True))"
+               | _ \<Rightarrow> True)
+             \<and> valid_bound_tcb (ntfn_bound_tcb ntfn) s
+             \<and> valid_bound_sc (ntfn_sc ntfn) s)"
   "ep_q_refs_of (case xs of [] \<Rightarrow> Structures_A.IdleEP | y # ys \<Rightarrow> Structures_A.SendEP (y # ys))
         = (set xs \<times> {EPSend})"
   "ep_q_refs_of (case xs of [] \<Rightarrow> Structures_A.IdleEP | y # ys \<Rightarrow> Structures_A.RecvEP (y # ys))
         = (set xs \<times> {EPRecv})"
   "ntfn_q_refs_of (case xs of [] \<Rightarrow> Structures_A.IdleNtfn | y # ys \<Rightarrow> Structures_A.WaitingNtfn (y # ys))
         = (set xs \<times> {NTFNSignal})"
-sorry (*  by (fastforce split: list.splits option.splits
+  by (fastforce split: list.splits option.splits
                  simp: valid_ep_def valid_ntfn_def valid_bound_obj_def
-               intro!: ext)+*)
+               intro!: ext)+
 
 
 crunch arch[wp]: set_simple_ko "\<lambda>s. P (arch_state s)"
@@ -1368,10 +1356,6 @@ lemma set_ntfn_minor_invs:
                  intro!: ext
                   dest!: obj_at_state_refs_ofD)
   done
-
-lemma set_tcb_obj_ref_asid_map[wp]:
-  "\<lbrace>valid_asid_map\<rbrace> set_tcb_obj_ref f t new \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-   sorry
 
 lemma dmo_aligned[wp]:
   "\<lbrace>pspace_aligned\<rbrace> do_machine_op f \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"

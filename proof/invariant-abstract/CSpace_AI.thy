@@ -2280,6 +2280,11 @@ lemma cap_insert_mdb [wp]:
    apply (erule (1) valid_arch_mdb_updates)
 *)
         apply (erule(1) mdb_insert_abs.descendants_inc)
+        apply simp
+       apply (simp add: is_derived_cap_class_range is_derived_def)
+      apply (clarsimp simp: mdb_insert_abs.dest_no_parent_trancl)
+     apply (erule mdb_insert_abs.untyped_inc)
+          apply simp
          apply simp
  sorry
 (*        apply (clarsimp dest!:is_derived_cap_class_range)
@@ -2296,8 +2301,19 @@ lemma cap_insert_mdb [wp]:
    apply (clarsimp simp: is_derived_def)
 (* upto here *)
   apply (clarsimp)
+        apply (clarsimp simp: valid_cap_aligned
+                       dest!: caps_of_state_valid_cap)
+       apply simp
+      apply (simp add: is_derived_def)
+     apply (case_tac capa; clarsimp)
+     apply (simp add: cap_master_cap_simps(7))
+     apply (frule sym, frule cap_master_cap_eqDs1(10), erule exE)
+     apply simp
+    apply (clarsimp simp: ut_revocable_def is_cap_simps, simp add:revokable_def)
+   apply (simp add: irq_revocable_def)
+  apply clarsimp
   apply (intro impI conjI allI)
-                   apply (rule_tac m1 = "caps_of_state s(dest\<mapsto> cap)"
+(*                   apply (rule_tac m1 = "caps_of_state s(dest\<mapsto> cap)"
                               and src1 = src in iffD2[OF untyped_mdb_update_free_index,rotated,rotated])
                      apply (frule mdb_insert_abs_sib.untyped_mdb_sib)
                       apply (simp add:fun_upd_twist)+
@@ -2370,6 +2386,49 @@ lemma cap_insert_mdb [wp]:
    apply (clarsimp simp:reply_master_revocable_def,case_tac src,clarsimp)
   apply simp
   done*)
+             apply (rule_tac m1 = "caps_of_state s(dest\<mapsto> cap)" and src1 = src
+                             in iffD2[OF untyped_mdb_update_free_index, rotated, rotated])
+               apply (frule mdb_insert_abs_sib.untyped_mdb_sib)
+                   apply (simp add: fun_upd_twist)+
+            apply (drule_tac cs' = "caps_of_state s(src \<mapsto> max_free_index_update capa)"
+                             in descendants_inc_minor)
+              apply (clarsimp simp: cte_wp_at_caps_of_state swp_def)
+             apply clarsimp
+            apply (subst upd_commute)
+             apply simp
+            apply (erule(1) mdb_insert_abs_sib.descendants_inc)
+             apply simp
+            apply (clarsimp dest!: is_derived_cap_class_range)
+           apply (simp add: no_mloop_def)
+           apply (simp add: mdb_insert_abs_sib.parent_n_eq)
+           apply (simp add: mdb_insert_abs.dest_no_parent_trancl)
+          apply (rule_tac m = "caps_of_state s(dest\<mapsto> cap)" and src = src
+                          in untyped_inc_update_free_index)
+            apply (simp add: fun_upd_twist)+
+          apply (frule(3) mdb_insert_abs_sib.untyped_inc)
+            apply (frule_tac p = src in caps_of_state_valid, assumption)
+            apply (simp add: valid_cap_def)
+           apply (simp add: valid_cap_def, clarsimp simp: ut_revocable_def, case_tac src,
+                  clarsimp, simp)
+         apply (clarsimp simp: ut_revocable_def is_cap_simps revokable_def)
+        apply (clarsimp simp: irq_revocable_def)
+        apply (intro impI conjI)
+         apply (clarsimp simp: is_cap_simps free_index_update_def)+
+       apply (frule mdb_insert_abs_sib.untyped_mdb_sib)
+           apply (simp add: fun_upd_twist)+
+      apply (erule(1) mdb_insert_abs_sib.descendants_inc)
+       apply simp
+      apply (clarsimp dest!: is_derived_cap_class_range)
+     apply (simp add: no_mloop_def)
+     apply (simp add: mdb_insert_abs_sib.parent_n_eq)
+     apply (simp add: mdb_insert_abs.dest_no_parent_trancl)
+    apply (frule(3) mdb_insert_abs_sib.untyped_inc)
+      apply (simp add: valid_cap_def)
+     apply (case_tac src, clarsimp simp: ut_revocable_def)
+    apply simp
+   apply (clarsimp simp: ut_revocable_def is_cap_simps, simp add: revokable_def)
+  apply (clarsimp simp: irq_revocable_def)
+  done
 
 
 lemma swp_cte_at_cdt_update [iff]:
@@ -2694,8 +2753,9 @@ lemma copy_of_commute:
   apply (clarsimp simp: copy_of_def is_reply_cap_def
                       same_object_as_commute
                 split: if_splits cap.splits)
-sorry
-(*  by (simp_all add: same_object_as_def split: cap.splits)*)
+  apply (simp add: same_object_as_def split: cap.splits)
+      apply (case_tac c'; simp)+
+  done
 
 lemma weak_derived_commute:
   "weak_derived c' c = weak_derived c c'"
