@@ -163,7 +163,7 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 > objBitsKO (KOUserDataDevice) = pageBits
 > objBitsKO (KOKernelData) = pageBits
 > objBitsKO (KOArch a) = archObjSize a
-> objBitsKO (KOSchedContext _) = 8
+> objBitsKO (KOSchedContext sc) = scSize sc
 > objBitsKO (KOReply _) = 4
 
 \subsubsection{Synchronous Endpoint}
@@ -213,10 +213,11 @@ list of pointers to waiting threads;
 >     scRefillMax :: Int,
 >     scRefillHead :: Int,
 >     scRefillTail :: Int,
->     scReply :: Maybe (PPtr Reply) }
+>     scReply :: Maybe (PPtr Reply),
+>     scSize :: Int }
 
 > data Reply = Reply {
->     replyCaller :: Maybe (PPtr TCB),
+>     replyTCB :: Maybe (PPtr TCB),
 >     replyPrev :: Maybe (PPtr Reply),
 >     replyNext :: Maybe (PPtr Reply),
 >     replySc :: Maybe (PPtr SchedContext) }
@@ -317,8 +318,6 @@ The TCB is used to store various data about the thread's current state:
 
 >         tcbYieldTo :: Maybe (PPtr SchedContext),
 
->         tcbReply :: Maybe (PPtr Reply),
-
 \item any arch-specific TCB contents;
 
 >         tcbArch :: ArchTCB }
@@ -404,7 +403,8 @@ A user thread may be in the following states:
 
 \item blocked waiting for a reply to a previously sent message;
 
->     | BlockedOnReply
+>     | BlockedOnReply {
+>         replyObject :: Maybe (PPtr Reply) }
 
 \item blocked on an notification;
 
@@ -491,7 +491,7 @@ Each entry in the domain schedule specifies a domain and a length (a number of t
 > isSend _ = False
 
 > isReply :: ThreadState -> Bool
-> isReply BlockedOnReply = True
+> isReply (BlockedOnReply _) = True
 > isReply _ = False
 
 \subsubsection{User Data}

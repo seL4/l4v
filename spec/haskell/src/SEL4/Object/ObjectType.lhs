@@ -135,7 +135,9 @@ When the last capability to an endpoint is deleted, any IPC operations currently
 >     return (NullCap, NullCap)
 
 > finaliseCap (ReplyCap { capReplyPtr = ptr }) final _ = do
->     when final $ replyRemove ptr
+>     when final $ do
+>         tptrOpt <- getReplyTCB ptr
+>         when (tptrOpt /= Nothing) $ replyClear ptr
 >     return (NullCap, NullCap)
 
 No action need be taken for Null or Domain capabilities.
@@ -163,8 +165,6 @@ Threads are treated as special capability nodes; they also become zombies when t
 >         sc <- getSchedContext scPtr
 >         schedContextCompleteYieldTo $ fromJust $ scYieldFrom sc
 >         schedContextUnbindTCB scPtr
->     when (tcbReply tcb /= Nothing) $ do
->         replyRemove (fromJust $ tcbReply tcb)
 >     suspend tptr
 >     Arch.prepareThreadDelete tptr
 >     return (Zombie cte_ptr ZombieTCB 5, NullCap)
@@ -566,8 +566,8 @@ The following two functions returns the base and size of the object a capability
 >     = 1 `shiftL` objBits (undefined::Notification)
 > capUntypedSize (ThreadCap {})
 >     = 1 `shiftL` objBits (undefined::TCB)
-> capUntypedSize (SchedContextCap {})
->     = 1 `shiftL` objBits (undefined::SchedContext)
+> capUntypedSize (SchedContextCap { capSCSize = b })
+>     = 1 `shiftL` b
 > capUntypedSize SchedControlCap = 1 -- error in haskell
 > capUntypedSize (DomainCap {})
 >     = 1 -- error in haskell

@@ -112,7 +112,7 @@ The following functions are used by the scheduler to determine whether a particu
 >             BlockedOnReceive {} -> True
 >             BlockedOnSend {} -> True
 >             BlockedOnNotification {} -> True
->             BlockedOnReply -> True
+>             BlockedOnReply _ -> True
 >             _ -> False
 
 Note that the idle thread is not considered runnable; this is to prevent it being inserted in the scheduler queue.
@@ -198,42 +198,42 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 
 > doReplyTransfer :: PPtr TCB -> PPtr Reply -> Kernel ()
 > doReplyTransfer sender reply = do
->     recvOpt <- getReplyCaller reply
->     case recvOpt of
+>     receiverOpt <- getReplyTCB reply
+>     case receiverOpt of
 >         Nothing -> return ()
 >         Just receiver -> do
 >             state <- getThreadState receiver
->             assert (state == BlockedOnReply) "doReplyTransfer: thread state must be BlockedOnReply"
->             replyRemove reply
->             faultOpt <- threadGet tcbFault receiver
->             case faultOpt of
->                 Nothing -> do
->                     doIPCTransfer sender Nothing 0 True receiver
->                     setThreadState Running receiver
->                 Just fault -> do
->                     mi <- getMessageInfo sender
->                     buf <- lookupIPCBuffer False sender
->                     mrs <- getMRs sender buf mi
->                     restart <- handleFaultReply fault receiver (msgLabel mi) mrs
->                     threadSet (\tcb -> tcb { tcbFault = Nothing }) receiver
->                     setThreadState (if restart then Restart else Inactive) receiver
->                     runnable <- isRunnable receiver
->                     scPtrOpt <- threadGet tcbSchedContext receiver
->                     when (scPtrOpt /= Nothing && runnable) $ do
->                         let scPtr = fromJust scPtrOpt
->                         ready <- refillReady scPtr
->                         sufficient <- refillSufficient scPtr 0
->                         if ready && sufficient
->                             then possibleSwitchTo receiver
->                             else do
->                                 sc <- getSchedContext scPtr
->                                 isHandlerValid <- isValidTimeoutHandler receiver
->                                 if isHandlerValid
->                                     then
->                                         case fault of
->                                             Timeout _ -> postpone scPtr
+>             if (not $ isReply state)
+>                 then return ()
+>                 else do
+>                     replyRemove reply
+>                     faultOpt <- threadGet tcbFault receiver
+>                     case faultOpt of
+>                         Nothing -> do
+>                             doIPCTransfer sender Nothing 0 True receiver
+>                             setThreadState Running receiver
+>                         Just fault -> do
+>                             mi <- getMessageInfo sender
+>                             buf <- lookupIPCBuffer False sender
+>                             mrs <- getMRs sender buf mi
+>                             restart <- handleFaultReply fault receiver (msgLabel mi) mrs
+>                             threadSet (\tcb -> tcb { tcbFault = Nothing }) receiver
+>                             setThreadState (if restart then Restart else Inactive) receiver
+>                             runnable <- isRunnable receiver
+>                             scPtrOpt <- threadGet tcbSchedContext receiver
+>                             when (scPtrOpt /= Nothing && runnable) $ do
+>                                 let scPtr = fromJust scPtrOpt
+>                                 ready <- refillReady scPtr
+>                                 sufficient <- refillSufficient scPtr 0
+>                                 if ready && sufficient
+>                                     then possibleSwitchTo receiver
+>                                     else do
+>                                         sc <- getSchedContext scPtr
+>                                         isHandlerValid <- isValidTimeoutHandler receiver
+>                                         case (isHandlerValid, fault) of
+>                                             (False, _) -> postpone scPtr
+>                                             (_, Timeout _) -> postpone scPtr
 >                                             _ -> handleTimeout receiver $ Timeout $ scBadge sc
->                                     else postpone scPtr
 
 \subsubsection{Ordinary IPC}
 
