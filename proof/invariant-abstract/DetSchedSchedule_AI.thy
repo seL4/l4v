@@ -1922,12 +1922,18 @@ crunch it[wp]: suspend "\<lambda> s. P (idle_thread s)"
 
 context DetSchedSchedule_AI begin
 lemma invoke_tcb_valid_sched[wp]:
-  "\<lbrace>invs and valid_sched and simple_sched_action and tcb_inv_wf ti\<rbrace> invoke_tcb ti \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  "\<lbrace>invs and valid_sched and simple_sched_action and tcb_inv_wf ti\<rbrace>
+     invoke_tcb ti
+   \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (cases ti, simp_all only:)
-        apply (wp mapM_x_wp | simp | rule subset_refl | rule reschedule_preserves_valid_shed | clarsimp simp:invs_valid_objs invs_valid_global_refs idle_no_ex_cap | intro impI conjI)+
-   apply (rename_tac option)
-   apply (case_tac option)
-    apply (wp mapM_x_wp | simp | rule subset_refl | clarsimp simp:invs_valid_objs invs_valid_global_refs idle_no_ex_cap | intro impI conjI)+
+        apply (wp mapM_x_wp | simp | rule subset_refl | rule reschedule_preserves_valid_shed |
+               clarsimp simp:invs_valid_objs invs_valid_global_refs idle_no_ex_cap |
+               intro impI conjI)+
+    apply (rename_tac option)
+    apply (case_tac option)
+     apply (wp mapM_x_wp | simp | rule subset_refl |
+            clarsimp simp:invs_valid_objs invs_valid_global_refs idle_no_ex_cap |
+            rule reschedule_preserves_valid_shed | intro impI conjI)+
   done
 end
 

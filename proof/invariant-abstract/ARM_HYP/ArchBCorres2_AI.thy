@@ -103,8 +103,9 @@ lemma decode_cnode_invocation[wp]: "bcorres (decode_cnode_invocation a b c d) (d
   done
 
 crunch (bcorres)bcorres[wp]:
-  decode_set_ipc_buffer,decode_set_space,decode_set_priority,decode_set_mcpriority,
-  decode_set_sched_params,decode_bind_notification,decode_unbind_notification truncate_state
+  decode_set_ipc_buffer, decode_set_space, decode_set_priority,
+  decode_set_mcpriority, decode_set_sched_params, decode_bind_notification,
+  decode_unbind_notification, decode_set_tls_base truncate_state
 
 lemma decode_tcb_configure_bcorres[wp]: "bcorres (decode_tcb_configure b (cap.ThreadCap c) d e)
      (decode_tcb_configure b (cap.ThreadCap c) d e)"
