@@ -3595,7 +3595,7 @@ lemma unbind_maybe_notification_corres:
       apply (rule corres_split[OF _ set_ntfn_corres])
          apply (rule sbn_corres)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
-       apply (wp get_ntfn_wp getNotification_wp)+
+       apply (wp get_simple_ko_wp getNotification_wp)+
    apply (clarsimp elim!: obj_at_valid_objsE
                    dest!: bound_tcb_at_state_refs_ofD invs_valid_objs
                     simp: valid_obj_def is_tcb tcb_ntfn_is_bound_def
@@ -3916,7 +3916,7 @@ lemma set_thread_all_corres:
   apply (rule conjI[rotated])
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x=ptr in allE)+
-   apply (clarsimp simp: obj_at_def a_type_def
+   apply (clarsimp simp: obj_at_def
                    split: Structures_A.kernel_object.splits if_split_asm)
 
   apply (fold fun_upd_def)
@@ -3942,7 +3942,7 @@ lemma set_thread_all_corres:
   apply (clarsimp simp: obj_at'_def)
   apply (clarsimp simp: projectKOs)
   apply (insert e is_t)
-  by (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits X64_A.arch_kernel_obj.splits)
+  by (clarsimp simp: other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits X64_A.arch_kernel_obj.splits)
 
 lemma tcb_update_all_corres':
   assumes tcbs: "tcb_relation tcb tcb' \<Longrightarrow> tcb_relation tcbu tcbu'"
@@ -3964,7 +3964,7 @@ lemma tcb_update_all_corres':
            apply (rule ext)+
            apply simp
           defer
-          apply (simp add: is_other_obj_relation_type_def a_type_def
+          apply (simp add: is_other_obj_relation_type_def
                            projectKOs objBits_simps'
                            other_obj_relation_def tcbs r)+
     apply (fastforce simp: is_etcb_at_def elim!: obj_at_weakenE dest: bspec[OF tables])

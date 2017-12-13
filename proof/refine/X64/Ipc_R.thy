@@ -2745,13 +2745,14 @@ proof -
          apply (simp)
          apply (wp weak_sch_act_wf_lift_linear set_ep_valid_objs' setEndpoint_valid_mdb')+
         apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def ep_redux_simps
-                        ep_redux_simps' st_tcb_at_tcb_at valid_ep_def cong: list.case_cong)
+                        ep_redux_simps' st_tcb_at_tcb_at valid_ep_def
+                        cong: list.case_cong)
         apply (drule(1) sym_refs_obj_atD[where P="\<lambda>ob. ob = e" for e])
         apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_reply_cap_valid st_tcb_at_caller_cap_null)
         apply (fastforce simp: st_tcb_def2 valid_sched_def valid_sched_action_def)
        subgoal by (auto simp: valid_ep'_def invs'_def valid_state'_def split: list.split)
       apply wp+
-    apply (clarsimp)+
+    apply (clarsimp simp: ep_at_def2)+
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_ep_corres,
              where
@@ -2837,7 +2838,7 @@ proof -
                       split: list.split;
                   clarsimp simp: invs'_def valid_state'_def)
      apply wp+
-   apply (clarsimp)+
+   apply (clarsimp simp: ep_at_def2)+
   done
 qed
 
@@ -2882,7 +2883,7 @@ lemma send_signal_corres:
                 R' = "\<lambda>rv'. invs' and ntfn_at' ep and
                             valid_ntfn' rv' and ko_at' rv' ep"])
       defer
-      apply (wp get_ntfn_ko get_ntfn_ko')+
+      apply (wp get_simple_ko_ko_at get_ntfn_ko')+
     apply (simp add: invs_valid_objs)+
   apply (case_tac "ntfn_obj ntfn")
     -- "IdleNtfn"
@@ -2949,7 +2950,7 @@ lemma send_signal_corres:
                    setThreadState_st_tcb
               | simp)+
         apply (simp add: ntfn_relation_def)
-       apply (wp set_ntfn_valid_objs set_ntfn_aligned' set_ntfn_valid_objs'
+       apply (wp set_simple_ko_valid_objs set_ntfn_aligned' set_ntfn_valid_objs'
                  hoare_vcg_disj_lift weak_sch_act_wf_lift_linear
             | simp add: valid_tcb_state_def valid_tcb_state'_def)+
      apply (clarsimp simp: invs_def valid_state_def valid_ntfn_def
@@ -2974,7 +2975,7 @@ lemma send_signal_corres:
                   setThreadState_st_tcb
              | simp)+
        apply (simp add: ntfn_relation_def split:list.splits)
-      apply (wp set_ntfn_aligned' set_ntfn_valid_objs set_ntfn_valid_objs'
+      apply (wp set_ntfn_aligned' set_simple_ko_valid_objs set_ntfn_valid_objs'
                 hoare_vcg_disj_lift weak_sch_act_wf_lift_linear
            | simp add: valid_tcb_state_def valid_tcb_state'_def)+
     apply (clarsimp simp: invs_def valid_state_def valid_ntfn_def
@@ -3458,7 +3459,7 @@ lemma complete_signal_corres:
        apply (simp add: badgeRegister_def badge_register_def)
        apply (rule corres_split[OF set_ntfn_corres user_setreg_corres])
          apply (clarsimp simp: ntfn_relation_def)
-        apply (wp set_ntfn_valid_objs get_ntfn_wp getNotification_wp | clarsimp simp: valid_ntfn'_def)+
+        apply (wp set_simple_ko_valid_objs get_simple_ko_wp getNotification_wp | clarsimp simp: valid_ntfn'_def)+
   apply (clarsimp simp: valid_pspace'_def)
   apply (frule_tac P="(\<lambda>k. k = ntfn)" in obj_at_valid_objs', assumption)
   apply (clarsimp simp: projectKOs valid_obj'_def valid_ntfn'_def obj_at'_def)
@@ -3606,9 +3607,9 @@ lemma receive_ipc_corres:
              apply clarsimp
             apply (rule corres_trivial, simp add: ntfn_relation_def default_notification_def
                                                   default_ntfn_def)
-           apply (wp get_ntfn_wp getNotification_wp gbn_wp gbn_wp' hoare_vcg_all_lift hoare_vcg_imp_lift
-                     hoare_vcg_if_lift
-                | wpc | simp | clarsimp)+
+           apply (wp get_simple_ko_wp[where f=Notification] getNotification_wp gbn_wp gbn_wp'
+                      hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_if_lift
+                    | wpc | simp add: ep_at_def2[symmetric, simplified] | clarsimp)+
    apply (clarsimp simp: valid_cap_def invs_psp_aligned invs_valid_objs pred_tcb_at_def
                          valid_obj_def valid_tcb_def valid_bound_ntfn_def
                   dest!: invs_valid_objs
@@ -3671,7 +3672,7 @@ lemma receive_signal_corres:
                        elim!: st_tcb_weakenE)
       apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
      apply wp+
-   apply (clarsimp simp add: valid_cap_def st_tcb_at_tcb_at)
+   apply (clarsimp simp add: ntfn_at_def2 valid_cap_def st_tcb_at_tcb_at)
   apply (clarsimp simp add: valid_cap'_def)
   done
 

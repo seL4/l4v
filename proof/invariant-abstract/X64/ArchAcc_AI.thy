@@ -247,8 +247,8 @@ lemma set_asid_pool_valid_mdb [wp]:
   set_asid_pool p ap
   \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
   including unfold_objects
-  by (wpsimp wp: valid_mdb_lift get_object_wp simp: set_asid_pool_def update_object_def)
-
+  by (wpsimp wp: valid_mdb_lift get_object_wp
+           simp: set_asid_pool_def update_object_def set_object_def)
 
 
 lemma set_asid_pool_reply_masters [wp]:
@@ -481,10 +481,7 @@ lemma update_aobj_cte_wp_at:
 lemma update_object_is_original_cap[wp]:
   "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> update_object a b
   \<lbrace>\<lambda>_ s. P (is_original_cap s)\<rbrace>"
-  apply (clarsimp simp: update_object_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
+  by (wpsimp wp: get_object_wp simp: update_object_def set_object_def)
 
 lemma update_aobj_valid_mdb[wp]:
   "\<lbrace>\<lambda>s. valid_mdb s\<rbrace>

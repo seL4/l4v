@@ -78,8 +78,7 @@ lemma pspace_relation_pml4:
   using assms is_aligned_pml4 [OF t pa]
   apply (clarsimp simp: obj_at_def)
   apply (drule(1) pspace_relation_absD)
-  apply (clarsimp simp: a_type_def
-                 split: Structures_A.kernel_object.split_asm
+  apply (clarsimp split: Structures_A.kernel_object.split_asm
                         if_split_asm arch_kernel_obj.split_asm)
   apply (clarsimp simp: page_map_l4_at'_def bit_simps
                         typ_at_to_obj_at_arches)

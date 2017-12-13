@@ -896,10 +896,10 @@ lemma get_ep_corres:
      (get_endpoint ptr) (getEndpoint ptr)"
   apply (rule corres_no_failI)
    apply wp
-  apply (simp add: get_endpoint_def getEndpoint_def get_object_def
-                   getObject_def bind_assoc)
+  apply (simp add: get_simple_ko_def getEndpoint_def get_object_def
+                   getObject_def bind_assoc ep_at_def2)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
-  apply (clarsimp simp add: assert_def fail_def obj_at_def return_def is_ep)
+  apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_ep partial_inv_def)
   apply (clarsimp simp: loadObject_default_def in_monad projectKOs
                         in_magnitude_check objBits_simps')
   apply (clarsimp simp add: state_relation_def pspace_relation_def)
@@ -1078,72 +1078,27 @@ lemma set_other_obj_corres:
                           X64_A.arch_kernel_obj.splits)+
   done
 
+lemmas obj_at_simps = obj_at_def obj_at'_def projectKOs map_to_ctes_upd_other
+                      is_other_obj_relation_type_def
+                      a_type_def objBits_simps other_obj_relation_def
+                      archObjSize_def pageBits_def
 lemma set_ep_corres:
   "ep_relation e e' \<Longrightarrow>
   corres dc (ep_at ptr) (ep_at' ptr)
             (set_endpoint ptr e) (setEndpoint ptr e')"
-  apply (simp add: set_endpoint_def setEndpoint_def is_ep_def[symmetric])
-  apply (rule corres_symb_exec_l)
-     prefer 4
-     apply (rule no_fail_pre, wp)
-     apply (clarsimp simp: obj_at_def)
-    prefer 3
-    apply (rule get_object_sp)
-   apply (rule corres_symb_exec_l)
-      prefer 4
-      apply (rule no_fail_pre, wp)
-      apply (clarsimp simp: obj_at_def)
-     prefer 3
-     apply (rule assert_sp)
-    apply (rule corres_guard_imp)
-      apply (rule set_other_obj_corres [where P="\<top>"])
-            apply (rule ext)+
-            apply simp
-           apply (clarsimp simp add: obj_at'_def projectKOs map_to_ctes_upd_other)
-          apply (clarsimp simp: is_other_obj_relation_type_def a_type_def)
-         apply (simp add: objBits_simps)
-        apply simp
-       apply (simp add: objBits_simps')
-      apply (simp add: other_obj_relation_def)
-     apply (clarsimp simp: obj_at_def is_ep a_type_def)
-    apply assumption
-   apply (clarsimp simp: exs_valid_def assert_def return_def fail_def obj_at_def)
-  apply (clarsimp simp: exs_valid_def get_object_def bind_def in_monad
-                        gets_def get_def return_def assert_def fail_def obj_at_def)
-  done
+  apply (simp add: set_simple_ko_def setEndpoint_def is_ep_def[symmetric])
+    apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
+  apply (corressimp wp: get_object_ret get_object_wp)+
+  by (fastforce simp: is_ep obj_at_simps objBits_defs partial_inv_def)
 
 lemma set_ntfn_corres:
   "ntfn_relation ae ae' \<Longrightarrow>
   corres dc (ntfn_at ptr) (ntfn_at' ptr)
             (set_notification ptr ae) (setNotification ptr ae')"
-  apply (simp add: set_notification_def setNotification_def is_ntfn_def[symmetric])
-  apply (rule corres_symb_exec_l)+
-        prefer 7
-        apply (rule no_fail_pre, wp)
-        apply (clarsimp simp: obj_at_def)
-       prefer 6
-       apply (rule get_object_sp)
-      prefer 3
-      apply (rule assert_sp)
-     prefer 3
-     apply (rule no_fail_pre, wp)
-     apply (clarsimp simp: obj_at_def)
-    apply (rule corres_guard_imp)
-      apply (rule set_other_obj_corres [where P="\<top>"])
-            apply (rule ext)+
-            apply simp
-           apply (clarsimp simp add: obj_at'_def projectKOs map_to_ctes_upd_other)
-          apply (clarsimp simp: is_other_obj_relation_type_def a_type_def)
-         apply (simp add: objBits_simps)
-        apply simp
-       apply (simp add: objBits_simps')
-      apply (simp add: other_obj_relation_def)
-     apply (clarsimp simp: obj_at_def a_type_def is_ntfn)
-    apply assumption
-   apply (clarsimp simp: exs_valid_def assert_def return_def fail_def obj_at_def)
-  apply (clarsimp simp: exs_valid_def get_object_def bind_def in_monad
-                        gets_def get_def return_def assert_def fail_def obj_at_def)
-  done
+  apply (simp add: set_simple_ko_def setNotification_def is_ntfn_def[symmetric])
+       apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
+  apply (corressimp wp: get_object_ret get_object_wp)+
+  by (fastforce simp: is_ntfn obj_at_simps objBits_defs partial_inv_def)
 
 lemma no_fail_getNotification [wp]:
   "no_fail (ntfn_at' ptr) (getNotification ptr)"
@@ -1166,10 +1121,10 @@ lemma get_ntfn_corres:
      (get_notification ptr) (getNotification ptr)"
   apply (rule corres_no_failI)
    apply wp
-  apply (simp add: get_notification_def getNotification_def get_object_def
+  apply (simp add: get_simple_ko_def getNotification_def get_object_def
                    getObject_def bind_assoc)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
-  apply (clarsimp simp add: assert_def fail_def obj_at_def return_def is_ntfn)
+  apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_ntfn partial_inv_def)
   apply (clarsimp simp: loadObject_default_def in_monad projectKOs
                         in_magnitude_check objBits_simps')
   apply (clarsimp simp add: state_relation_def pspace_relation_def)

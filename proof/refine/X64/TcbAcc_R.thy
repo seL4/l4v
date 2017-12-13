@@ -369,7 +369,7 @@ lemma tcb_update_corres':
            apply (rule ext)+
            apply simp
           defer
-          apply (simp add: is_other_obj_relation_type_def a_type_def
+          apply (simp add: is_other_obj_relation_type_def
                            projectKOs objBits_simps'
                            other_obj_relation_def tcbs r)+
     apply (fastforce elim!: obj_at_weakenE dest: bspec[OF tables])
@@ -5143,7 +5143,7 @@ lemma set_eobject_corres':
   apply (clarsimp simp: obj_at'_def)
   apply (clarsimp simp: projectKOs)
   apply (insert e)
-  apply (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits X64_A.arch_kernel_obj.splits)
+  apply (clarsimp simp: other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits X64_A.arch_kernel_obj.splits)
   done
 
 lemma set_eobject_corres:

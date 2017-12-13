@@ -1691,11 +1691,11 @@ lemma hw_corres':
                     apply (rule corres_trivial)
                     apply (clarsimp simp: lookup_failure_map_def)+
                  apply (rule get_ntfn_corres)
-                apply (wp get_ntfn_wp getNotification_wp | wpcw | simp)+
+                apply (wp get_simple_ko_wp getNotification_wp | wpcw | simp)+
               apply (clarsimp simp: lookup_failure_map_def)
              apply (clarsimp simp: valid_cap_def ct_in_state_def)
             apply (clarsimp simp: valid_cap'_def capAligned_def)
-           apply (wp get_ntfn_wp | wpcw | simp)+
+           apply (wp get_simple_ko_wp | wpcw | simp)+
          apply (rule hoare_vcg_E_elim)
           apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
           apply wp
