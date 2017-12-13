@@ -936,7 +936,7 @@ lemma set_pd_valid_mdb:
   "\<lbrace>\<lambda>s. valid_mdb s\<rbrace>
   set_pd p pd
   \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
-  by (rule valid_mdb_lift; wpsimp simp: set_pd_def wp: set_pd_cdt get_object_wp)
+  by (rule valid_mdb_lift; wpsimp simp: set_pd_def set_object_def wp: set_pd_cdt get_object_wp)
 
 lemma set_pd_valid_idle:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
@@ -1120,12 +1120,7 @@ lemma set_pt_valid_mdb:
   "\<lbrace>\<lambda>s. valid_mdb s\<rbrace>
   set_pt p pt
   \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
-  apply (rule valid_mdb_lift)
-    apply (wp set_pt_cdt)+
-  apply (clarsimp simp: set_pt_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
+  by (rule valid_mdb_lift; wpsimp simp: set_pt_def set_object_def wp: set_pt_cdt get_object_wp)
 
 
 lemma set_pt_valid_idle:
@@ -1887,9 +1882,7 @@ lemma set_asid_pool_valid_mdb [wp]:
   "\<lbrace>\<lambda>s. valid_mdb s\<rbrace>
   set_asid_pool p ap
   \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
-  apply (rule valid_mdb_lift)
-    apply wp+
-  by (wpsimp simp: set_asid_pool_def wp: get_object_wp)
+  by (wpsimp simp: set_asid_pool_def set_object_def wp: valid_mdb_lift get_object_wp)
 
 
 lemma set_asid_pool_valid_idle [wp]:

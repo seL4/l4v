@@ -2639,7 +2639,7 @@ lemma other_objs_default_relation:
              | _ \<Rightarrow> False \<rbrakk> \<Longrightarrow>
     obj_relation_retype (default_object ty dev n) ko"
   apply (rule obj_relation_retype_other_obj)
-   apply (clarsimp simp: default_object_def a_type_def
+   apply (clarsimp simp: default_object_def
                          is_other_obj_relation_type_def
                   split: Structures_A.apiobject_type.split_asm)
   apply (clarsimp simp: other_obj_relation_def default_object_def

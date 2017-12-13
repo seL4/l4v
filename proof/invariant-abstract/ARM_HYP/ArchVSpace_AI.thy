@@ -2505,10 +2505,7 @@ lemma set_vcpu_valid_ioc[wp]:
           a_type_simps is_tcb is_cap_table)
 
 lemma set_vcpu_valid_mdb[wp]: "\<lbrace>valid_mdb\<rbrace> set_vcpu p v \<lbrace>\<lambda>rv. valid_mdb\<rbrace>"
-  apply (rule valid_mdb_lift)
-    apply wp
-   apply (clarsimp simp: set_vcpu_def| wp get_object_wp)+
-  done
+  by (wpsimp wp: valid_mdb_lift get_object_wp simp: set_vcpu_def set_object_def)
 
 lemma set_vcpu_zombies_final[wp]: "\<lbrace>zombies_final\<rbrace> set_vcpu p v \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (simp add: set_vcpu_def)

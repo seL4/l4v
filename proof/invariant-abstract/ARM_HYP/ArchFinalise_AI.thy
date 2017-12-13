@@ -600,10 +600,7 @@ lemma arch_thread_set_valid_ioc[wp]:
   done
 
 lemma arch_thread_set_valid_mdb[wp]: "\<lbrace>valid_mdb\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. valid_mdb\<rbrace>"
-  apply (rule valid_mdb_lift)
-    apply wp
-   apply (clarsimp simp: arch_thread_set_def| wp get_object_wp)+
-  done
+  by (wpsimp wp: valid_mdb_lift get_object_wp simp: arch_thread_set_def set_object_def)
 
 lemma arch_thread_set_zombies_final[wp]: "\<lbrace>zombies_final\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (simp add: arch_thread_set_def)
@@ -1251,7 +1248,7 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                       suspend_final_cap[where sl=sl]
                       prepare_thread_delete_unlive[unfolded o_def]
                       unbind_maybe_notification_not_bound
-                      get_ntfn_ko
+                      get_simple_ko_ko_at
                       unbind_notification_valid_objs
                    | clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
                                      ran_tcb_cap_cases is_cap_simps

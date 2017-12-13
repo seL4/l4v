@@ -2227,7 +2227,7 @@ proof -
 
   show ?thesis
     apply (simp add: cancel_all_ipc_def cancelAllIPC_def)
-    apply (rule corres_split' [OF _ _ get_endpoint_sp get_ep_sp'])
+    apply (rule corres_split' [OF _ _ get_simple_ko_sp get_ep_sp'])
      apply (rule corres_guard_imp [OF get_ep_corres], simp+)
     apply (case_tac epa, simp_all add: ep_relation_def
                                        get_ep_queue_def)
@@ -2254,7 +2254,7 @@ lemma ntfn_cancel_corres:
   "corres dc (invs and valid_sched and ntfn_at ntfn) (invs' and ntfn_at' ntfn)
              (cancel_all_signals ntfn) (cancelAllSignals ntfn)"
   apply (simp add: cancel_all_signals_def cancelAllSignals_def)
-  apply (rule corres_split' [OF _ _ get_ntfn_sp get_ntfn_sp'])
+  apply (rule corres_split' [OF _ _ get_simple_ko_sp get_ntfn_sp'])
    apply (rule corres_guard_imp [OF get_ntfn_corres])
     apply simp+
   apply (case_tac "ntfn_obj ntfna", simp_all add: ntfn_relation_def)
@@ -2869,7 +2869,7 @@ lemma cancel_badged_sends_corres:
          (cancel_badged_sends epptr bdg) (cancelBadgedSends epptr bdg)"
   apply (simp add: cancel_badged_sends_def cancelBadgedSends_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_ep_corres get_endpoint_sp get_ep_sp',
+    apply (rule corres_split [OF _ get_ep_corres get_simple_ko_sp get_ep_sp',
                                  where Q="invs and valid_sched" and Q'=invs'])
     apply simp_all
   apply (case_tac ep, simp_all add: ep_relation_def)

@@ -954,10 +954,10 @@ lemma get_ep_corres [corres]:
      (get_endpoint ptr) (getEndpoint ptr)"
   apply (rule corres_no_failI)
    apply wp
-  apply (simp add: get_endpoint_def getEndpoint_def get_object_def
-                   getObject_def bind_assoc)
+  apply (simp add: get_simple_ko_def getEndpoint_def get_object_def
+                   getObject_def bind_assoc ep_at_def2)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
-  apply (clarsimp simp add: assert_def fail_def obj_at_def return_def is_ep)
+  apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_ep partial_inv_def)
   apply (clarsimp simp: loadObject_default_def in_monad projectKOs
                         in_magnitude_check objBits_simps')
   apply (clarsimp simp add: state_relation_def pspace_relation_def)
@@ -1146,19 +1146,19 @@ lemma set_ep_corres [corres]:
   "ep_relation e e' \<Longrightarrow>
   corres dc (ep_at ptr) (ep_at' ptr)
             (set_endpoint ptr e) (setEndpoint ptr e')"
-  apply (simp add: set_endpoint_def setEndpoint_def is_ep_def[symmetric])
+  apply (simp add: set_simple_ko_def setEndpoint_def is_ep_def[symmetric])
     apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
   apply (corressimp wp: get_object_ret get_object_wp)+
-  by (clarsimp simp: is_ep obj_at_simps objBits_defs)
+  by (fastforce simp: is_ep obj_at_simps objBits_defs partial_inv_def)
 
 lemma set_ntfn_corres [corres]:
   "ntfn_relation ae ae' \<Longrightarrow>
   corres dc (ntfn_at ptr) (ntfn_at' ptr)
             (set_notification ptr ae) (setNotification ptr ae')"
-  apply (simp add: set_notification_def setNotification_def is_ntfn_def[symmetric])
+  apply (simp add: set_simple_ko_def setNotification_def is_ntfn_def[symmetric])
        apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
   apply (corressimp wp: get_object_ret get_object_wp)+
-  by (clarsimp simp: is_ntfn obj_at_simps objBits_defs)
+  by (fastforce simp: is_ntfn obj_at_simps objBits_defs partial_inv_def)
 
 lemma no_fail_getNotification [wp]:
   "no_fail (ntfn_at' ptr) (getNotification ptr)"
@@ -1181,10 +1181,10 @@ lemma get_ntfn_corres:
      (get_notification ptr) (getNotification ptr)"
   apply (rule corres_no_failI)
    apply wp
-  apply (simp add: get_notification_def getNotification_def get_object_def
+  apply (simp add: get_simple_ko_def getNotification_def get_object_def
                    getObject_def bind_assoc)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
-  apply (clarsimp simp add: assert_def fail_def obj_at_def return_def is_ntfn)
+  apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_ntfn partial_inv_def)
   apply (clarsimp simp: loadObject_default_def in_monad projectKOs
                         in_magnitude_check objBits_simps')
   apply (clarsimp simp add: state_relation_def pspace_relation_def)

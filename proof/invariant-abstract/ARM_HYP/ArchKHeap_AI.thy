@@ -537,10 +537,6 @@ lemma valid_vso_at_lift_aobj_at:
 lemmas set_object_v_ker_map
     = set_object_valid_kernel_mappings
 
-crunch v_ker_map[wp]: set_notification "valid_kernel_mappings"
-  (ignore: set_object wp: set_object_v_ker_map crunch_wps)
-
-
 lemma set_object_asid_map:
   "\<lbrace>valid_asid_map and
     obj_at (\<lambda>ko'. vs_refs ko' \<subseteq> vs_refs ko) p\<rbrace>
