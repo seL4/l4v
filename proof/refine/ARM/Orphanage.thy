@@ -1970,6 +1970,16 @@ lemma copyreg_no_orphans:
   apply (fastforce simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
   done
 
+lemma settlsbase_no_orphans:
+  "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
+     invokeTCB (tcbinvocation.SetTLSBase src dest)
+   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
+  unfolding invokeTCB_def performTransfer_def
+  apply simp
+  apply (wp hoare_vcg_if_lift static_imp_wp)
+   apply (wpsimp wp: hoare_vcg_imp_lift' mapM_x_wp' asUser_no_orphans)+
+  done
+
 lemma almost_no_orphans_no_orphans:
   "\<lbrakk> almost_no_orphans t s; \<not> is_active_tcb_ptr t s \<rbrakk> \<Longrightarrow> no_orphans s"
   by (auto simp: almost_no_orphans_def no_orphans_def all_active_tcb_ptrs_def)
@@ -2072,7 +2082,7 @@ lemma invokeTCB_no_orphans [wp]:
      apply (rename_tac option)
      apply (case_tac option)
       apply ((wp | simp add: invokeTCB_def)+)[2]
-    apply (wp writereg_no_orphans readreg_no_orphans copyreg_no_orphans | clarsimp)+
+    apply (wp writereg_no_orphans readreg_no_orphans copyreg_no_orphans settlsbase_no_orphans | clarsimp)+
   done
 
 lemma invokeCNode_no_orphans [wp]:

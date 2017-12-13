@@ -1598,6 +1598,8 @@ where
     = (x = tcbinvocation.Resume a)"
 | "tcbinv_relation (tcb_invocation.NotificationControl t ntfnptr) x
     = (x = tcbinvocation.NotificationControl t ntfnptr)"
+| "tcbinv_relation (tcb_invocation.SetTLSBase ref w) x
+    = (x = tcbinvocation.SetTLSBase ref w)"
 
 primrec
   tcb_inv_wf' :: "tcbinvocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -1635,6 +1637,8 @@ where
                                            \<and> (\<forall>q. ntfnObj ko \<noteq> WaitingNtfn q)) ntfnptr
                                           and ex_nonz_cap_to' ntfnptr
                                           and bound_tcb_at' (op = None) t) )"
+| "tcb_inv_wf' (tcbinvocation.SetTLSBase ref w)
+             = (tcb_at' ref and ex_nonz_cap_to' ref)"
 
 lemma tcbinv_corres:
  "tcbinv_relation ti ti' \<Longrightarrow>
@@ -1643,43 +1647,54 @@ lemma tcbinv_corres:
          (invs' and sch_act_simple and tcb_inv_wf' ti')
          (invoke_tcb ti) (invokeTCB ti')"
   apply (case_tac ti, simp_all only: tcbinv_relation.simps valid_tcb_invocation_def)
-        apply (rule corres_guard_imp [OF writereg_corres], simp+)[1]
-       apply (rule corres_guard_imp [OF readreg_corres], simp+)[1]
-      apply (rule corres_guard_imp [OF copyreg_corres], simp+)[1]
-     apply (clarsimp simp del: invoke_tcb.simps)
-     apply (rename_tac word one t2 mcp t3 t4 t5 t6 t7 t8 t9 t10 t11)
-     apply (rule_tac F="is_aligned word 5" in corres_req)
-      apply (clarsimp simp add: is_aligned_weaken [OF tcb_aligned])
-     apply (rule corres_guard_imp [OF tc_corres], clarsimp+)
-      subgoal
-      by (clarsimp simp: is_cnode_or_valid_arch_def
-                  split: option.split option.split_asm)
-     apply clarsimp
-     apply (auto split: option.split_asm simp: newroot_rel_def)[1]
+         apply (rule corres_guard_imp [OF writereg_corres], simp+)[1]
+        apply (rule corres_guard_imp [OF readreg_corres], simp+)[1]
+       apply (rule corres_guard_imp [OF copyreg_corres], simp+)[1]
+      apply (clarsimp simp del: invoke_tcb.simps)
+      apply (rename_tac word one t2 mcp t3 t4 t5 t6 t7 t8 t9 t10 t11)
+      apply (rule_tac F="is_aligned word 5" in corres_req)
+       apply (clarsimp simp add: is_aligned_weaken [OF tcb_aligned])
+      apply (rule corres_guard_imp [OF tc_corres], clarsimp+)
+       subgoal
+       by (clarsimp simp: is_cnode_or_valid_arch_def
+                   split: option.split option.split_asm)
+      apply clarsimp
+      apply (auto split: option.split_asm simp: newroot_rel_def)[1]
+     apply (simp add: invokeTCB_def liftM_def[symmetric]
+                      o_def dc_def[symmetric])
+     apply (rule corres_guard_imp [OF suspend_corres], simp+)
     apply (simp add: invokeTCB_def liftM_def[symmetric]
                      o_def dc_def[symmetric])
-    apply (rule corres_guard_imp [OF suspend_corres], simp+)
-   apply (simp add: invokeTCB_def liftM_def[symmetric]
-                    o_def dc_def[symmetric])
-   apply (rule corres_guard_imp [OF restart_corres], simp+)
-  apply (simp add:invokeTCB_def)
-  apply (rename_tac option)
-  apply (case_tac option)
+    apply (rule corres_guard_imp [OF restart_corres], simp+)
+   apply (simp add: invokeTCB_def)
+   apply (rename_tac option)
+   apply (case_tac option)
+    apply simp
+    apply (rule corres_guard_imp)
+      apply (rule corres_split[OF _ unbind_notification_corres])
+        apply (rule corres_trivial, simp)
+       apply wp+
+     apply clarsimp
+    apply clarsimp
    apply simp
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF _ unbind_notification_corres])
+     apply (rule corres_split[OF _ bind_notification_corres])
        apply (rule corres_trivial, simp)
       apply wp+
-    apply (clarsimp)
-   apply clarsimp
-  apply simp
+    apply clarsimp
+    apply (clarsimp simp: obj_at_def is_ntfn)
+   apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (simp add: invokeTCB_def tlsBaseRegister_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ bind_notification_corres])
-      apply (rule corres_trivial, simp)
-     apply wp+
-   apply clarsimp
-   apply (clarsimp simp: obj_at_def is_ntfn)
-  apply (clarsimp simp: obj_at'_def projectKOs)
+    apply (rule corres_split[OF _ TcbAcc_R.user_setreg_corres])
+      apply (rule corres_split[OF _ Bits_R.gct_corres])
+        apply (rule corres_split[OF _ Corres_UL.corres_when])
+            apply (rule corres_trivial, simp)
+           apply simp
+          apply (rule TcbAcc_R.rescheduleRequired_corres)
+         apply (wpsimp wp: hoare_drop_imp)+
+   apply (clarsimp simp: valid_sched_weak_strg einvs_valid_etcbs)
+  apply (clarsimp simp: Tcb_R.invs_valid_queues' Invariants_H.invs_queues)
   done
 
 lemma tcbBoundNotification_caps_safe[simp]:
@@ -1762,22 +1777,29 @@ lemma tcbntfn_invs':
    apply (wp unbindNotification_invs bindNotification_invs' | simp)+
   done
 
+lemma setTLSBase_invs'[wp]:
+  "\<lbrace>invs' and tcb_inv_wf' (tcbinvocation.SetTLSBase tcb tls_base)\<rbrace>
+       invokeTCB (tcbinvocation.SetTLSBase tcb tls_base)
+   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  by (wpsimp simp: invokeTCB_def)
+
 lemma tcbinv_invs':
   "\<lbrace>invs' and sch_act_simple and ct_in_state' runnable' and tcb_inv_wf' ti\<rbrace>
      invokeTCB ti
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (case_tac ti, simp_all only:)
+         apply (simp add: invokeTCB_def)
+         apply wp
+         apply (clarsimp simp: invs'_def valid_state'_def
+                         dest!: global'_no_ex_cap)
         apply (simp add: invokeTCB_def)
-        apply wp
+        apply (wp restart_invs')
         apply (clarsimp simp: invs'_def valid_state'_def
-                       dest!: global'_no_ex_cap)
-       apply (simp add: invokeTCB_def)
-       apply (wp restart_invs')
-       apply (clarsimp simp: invs'_def valid_state'_def
-                      dest!: global'_no_ex_cap)
-      apply (wp tc_invs')
-      apply (clarsimp split: option.split dest!: isCapDs)
-     apply (wp writereg_invs' readreg_invs' copyreg_invs' tcbntfn_invs' | simp)+
+                        dest!: global'_no_ex_cap)
+       apply (wp tc_invs')
+       apply (clarsimp split: option.split dest!: isCapDs)
+      apply (wp writereg_invs' readreg_invs' copyreg_invs' tcbntfn_invs'
+             | simp)+
   done
 
 crunch_ignore (add: setNextPC getRestartPC)
@@ -2569,6 +2591,14 @@ lemma decode_unbind_notification_corres:
    apply auto
   done
 
+lemma decode_set_tls_base_corres:
+  "corres (ser \<oplus> tcbinv_relation) (tcb_at t) (tcb_at' t)
+          (decode_set_tls_base w (cap.ThreadCap t))
+          (decodeSetTLSBase w (capability.ThreadCap t))"
+  apply (clarsimp simp: decode_set_tls_base_def decodeSetTLSBase_def returnOk_def
+                 split: list.split)
+  by (rule sym, rule ucast_id)
+
 lemma decode_tcb_inv_corres:
  "\<lbrakk> c = Structures_A.ThreadCap t; cap_relation c c';
       list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
@@ -2595,7 +2625,8 @@ lemma decode_tcb_inv_corres:
              corres_guard_imp[OF decode_set_ipc_corres]
              corres_guard_imp[OF decode_set_space_corres]
              corres_guard_imp[OF decode_bind_notification_corres]
-             corres_guard_imp[OF decode_unbind_notification_corres],
+             corres_guard_imp[OF decode_unbind_notification_corres]
+             corres_guard_imp[OF decode_set_tls_base_corres],
          simp_all add: valid_cap_simps valid_cap_simps' invs_def valid_sched_def)
   apply (auto simp: list_all2_map1 list_all2_map2
              elim!: list_all2_mono)
@@ -2637,6 +2668,14 @@ lemma decodeUnbindNotification_wf:
   apply (auto simp: obj_at'_def pred_tcb_at'_def)
   done
 
+lemma decodeSetTLSBase_wf:
+  "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace>
+     decodeSetTLSBase w (capability.ThreadCap t)
+   \<lbrace>tcb_inv_wf'\<rbrace>,-"
+  apply (simp add: decodeSetTLSBase_def
+             cong: list.case_cong)
+  by wpsimp
+
 lemma decodeTCBInv_wf:
   "\<lbrace>invs' and tcb_at' t and cte_at' slot and ex_nonz_cap_to' t
          and (\<lambda>s. \<forall>x \<in> set extras. real_cte_at' (snd x) s
@@ -2646,7 +2685,7 @@ lemma decodeTCBInv_wf:
   apply (simp add: decodeTCBInvocation_def Let_def
               cong: if_cong invocation_label.case_cong split del: if_split)
   apply (rule hoare_pre)
-   apply (wpc, (wp decodeTCBConf_wf decodeReadReg_wf decodeWriteReg_wf
+   apply (wpc, (wp decodeTCBConf_wf decodeReadReg_wf decodeWriteReg_wf decodeSetTLSBase_wf
              decodeCopyReg_wf decodeBindNotification_wf decodeUnbindNotification_wf)+)
   apply (clarsimp simp: real_cte_at')
   apply (fastforce simp: real_cte_at_not_tcb_at' objBits_defs)
@@ -2703,6 +2742,7 @@ lemma invokeTCB_makes_simple':
         apply ((wp restart_makes_simple' suspend_makes_simple'
                   mapM_x_wp'
                      | simp cong: if_cong)+)[5]
+    apply (wpsimp split: if_split)
    apply (rule hoare_pre)
     apply ((simp split del: if_split
              | wp cteDelete_makes_simple' checkCap_inv [where P="st_tcb_at' simple' t"]

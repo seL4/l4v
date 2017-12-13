@@ -771,6 +771,7 @@ where
                                                 \<and> (\<forall>q. ntfn_obj ntfn \<noteq> WaitingNtfn q)) ntfnptr
                                           and ex_nonz_cap_to ntfnptr
                                           and bound_tcb_at (op = None) t) ))"
+| "tcb_inv_wf (SetTLSBase t tls_base) = (tcb_at t and ex_nonz_cap_to t)"
 
 end
 
@@ -835,18 +836,19 @@ lemma (in Tcb_AI) tcbinv_invs:
      invoke_tcb ti
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac ti, simp_all only:)
-        apply ((wp writereg_invs readreg_invs copyreg_invs tc_invs
-             | simp
-             | clarsimp simp: invs_def valid_state_def valid_pspace_def
-                       dest!: idle_no_ex_cap
-                       split: option.split
-             | rule conjI)+)[6]
-  apply (rename_tac option)
-  apply (case_tac option, simp_all)
-   apply (rule hoare_pre)
-    apply ((wp unbind_notification_invs get_simple_ko_wp | simp)+)[2]
-  apply (wp bind_notification_invs)
-  apply clarsimp
+         apply ((wp writereg_invs readreg_invs copyreg_invs tc_invs
+              | simp
+              | clarsimp simp: invs_def valid_state_def valid_pspace_def
+                        dest!: idle_no_ex_cap
+                        split: option.split
+              | rule conjI)+)[6]
+   apply (rename_tac option)
+   apply (case_tac option, simp_all)
+    apply (rule hoare_pre)
+     apply ((wp unbind_notification_invs get_simple_ko_wp | simp)+)[2]
+   apply (wp bind_notification_invs)
+   apply clarsimp
+  apply wpsimp
   done
 
 lemma inj_ucast: "\<lbrakk> uc = ucast; is_up uc \<rbrakk> \<Longrightarrow> inj uc"
@@ -868,23 +870,31 @@ lemma decode_readreg_inv:
   "\<lbrace>P\<rbrace> decode_read_registers args (cap.ThreadCap t) \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: decode_read_registers_def whenE_def | rule conjI | clarsimp
-            | wp_once | wpcw)+
+          | wp_once | wpcw)+
   done
 
 lemma decode_writereg_inv:
   "\<lbrace>P\<rbrace> decode_write_registers args (cap.ThreadCap t) \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule hoare_pre)
-   apply (simp add: decode_write_registers_def whenE_def
-                          split del: if_split
-            | wp_once | wpcw)+
+   apply (simp   add: decode_write_registers_def whenE_def
+           split del: if_split
+          | wp_once | wpcw)+
   done
 
 lemma decode_copyreg_inv:
   "\<lbrace>P\<rbrace> decode_copy_registers args (cap.ThreadCap t) extras \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule hoare_pre)
-   apply (simp add: decode_copy_registers_def whenE_def
-                          split del: if_split
-            | wp_once | wpcw)+
+   apply (simp   add: decode_copy_registers_def whenE_def
+           split del: if_split
+          | wp_once | wpcw)+
+  done
+
+lemma decode_set_tls_base_inv:
+  "\<lbrace>P\<rbrace> decode_set_tls_base args (cap.ThreadCap t) \<lbrace>\<lambda>rv. P\<rbrace>"
+  apply (rule hoare_pre)
+   apply (simp   add: decode_set_tls_base_def whenE_def
+           split del: if_split
+          | wp_once | wpcw)+
   done
 
 lemma (in Tcb_AI) decode_readreg_wf:
@@ -920,6 +930,15 @@ lemma (in Tcb_AI) decode_copyreg_wf:
   apply (rule hoare_pre)
    apply (wp | wpc)+
   apply (clarsimp simp: valid_cap_def[where c="cap.ThreadCap t" for t])
+  done
+
+lemma (in Tcb_AI) decode_set_tls_base_wf:
+  "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace>
+     decode_set_tls_base args (cap.ThreadCap t)
+   \<lbrace>tcb_inv_wf\<rbrace>,-"
+  apply (simp add: decode_set_tls_base_def whenE_def
+             cong: list.case_cong split del: if_split)
+  apply wpsimp
   done
 
 declare alternativeE_wp[wp]
@@ -1201,17 +1220,19 @@ lemma decode_bind_notification_inv[wp]:
              split_del: if_split)
 
 lemma (in Tcb_AI) decode_tcb_inv_inv:
-  "\<lbrace>P::'state_ext state \<Rightarrow> bool\<rbrace> decode_tcb_invocation label args (cap.ThreadCap t) slot extras \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: decode_tcb_invocation_def Let_def
+  "\<lbrace>P::'state_ext state \<Rightarrow> bool\<rbrace>
+     decode_tcb_invocation label args (cap.ThreadCap t) slot extras
+   \<lbrace>\<lambda>rv. P\<rbrace>"
+  apply (simp add: decode_tcb_invocation_def Let_def decode_set_tls_base_def
              cong: if_cong
         split del: if_split)
   apply (rule hoare_pre)
    apply (wpc
         | wp decode_readreg_inv decode_writereg_inv
-             decode_copyreg_inv decode_tcb_conf_inv)+
+             decode_copyreg_inv decode_tcb_conf_inv
+             decode_set_tls_base_inv)+
   apply simp
   done
-
 
 lemma real_cte_at_not_tcb_at:
   "real_cte_at (x, y) s \<Longrightarrow> \<not> tcb_at x s"
@@ -1258,7 +1279,8 @@ lemma decode_tcb_inv_wf:
    apply wpc
    apply (wp decode_tcb_conf_wf decode_readreg_wf
              decode_writereg_wf decode_copyreg_wf
-             decode_bind_notification_wf decode_unbind_notification_wf decode_set_priority_wf)+
+             decode_bind_notification_wf decode_unbind_notification_wf
+             decode_set_priority_wf decode_set_tls_base_wf)+
   apply (clarsimp simp: real_cte_at_cte)
   apply (fastforce simp: real_cte_at_not_tcb_at)
   done

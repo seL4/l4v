@@ -51,8 +51,10 @@ lemma port_in_empty_fail[simp, intro!]:
   apply (simp add: port_in_def)
   by (wp | simp add: ef)+
 
-crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
-  decode_set_priority, decode_set_mcpriority, decode_set_sched_params
+crunch (empty_fail) empty_fail[wp]:
+  decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
+  decode_set_priority, decode_set_mcpriority, decode_set_sched_params,
+  decode_set_tls_base
   (simp: cap.splits arch_cap.splits split_def)
 
 lemma decode_tcb_invocation_empty_fail[wp]:
