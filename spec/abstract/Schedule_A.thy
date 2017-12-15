@@ -200,6 +200,7 @@ definition
 
 definition
   "schedule_det_ext_ext \<equiv> do
+     awaken;
      ct \<leftarrow> gets cur_thread;
      inq \<leftarrow> gets $ in_release_queue ct;
      ct_schedulable \<leftarrow> is_schedulable ct inq;

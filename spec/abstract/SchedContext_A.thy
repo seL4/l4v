@@ -487,7 +487,7 @@ where
      when (sc_opt = None) $
        get_ntfn_obj_ref ntfn_sc ntfn_ptr >>= maybeM (\<lambda>sc_ptr. do
          sc_tcb \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
-         when (sc_tcb = None) $ sched_context_donate sc_ptr tcb_ptr
+         when (sc_tcb = None) $ do_extended_op $ sched_context_donate sc_ptr tcb_ptr
        od)
    od"
 

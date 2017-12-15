@@ -99,11 +99,22 @@ where
 
 text \<open>Donate a scheduling context.\<close>
 definition
-  sched_context_donate :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  sched_context_donate :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, det_ext) s_monad"
 where
   "sched_context_donate sc_ptr tcb_ptr = do
     from_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
-    when (from_opt \<noteq> None) $ sched_context_unbind_tcb sc_ptr;
+    when (from_opt \<noteq> None) $ do
+      tptr \<leftarrow> assert_opt $ from_opt;
+      set_tcb_obj_ref tcb_sched_context_update tptr None;
+      cur \<leftarrow> gets $ cur_thread;
+      action \<leftarrow> gets scheduler_action;
+      flag \<leftarrow> return (case action of switch_thread p \<Rightarrow> tptr = p | _ \<Rightarrow> False);
+      if (tptr = cur \<or> flag) then do_extended_op reschedule_required
+      else do
+        st \<leftarrow> get_thread_state tptr;
+        when (runnable st) $ do_extended_op $ tcb_sched_action tcb_sched_dequeue tptr
+      od
+    od;
     set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
     set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr)
   od"
@@ -149,7 +160,7 @@ where (* must be in BlockedOnReply *)
     replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
     reply_unbind_caller caller r;
     reply_unbind_sc sc_ptr r;
-    when (hd replies = r) $ sched_context_donate sc_ptr caller;
+    when (hd replies = r) $ do_extended_op $ sched_context_donate sc_ptr caller;
     set_thread_state caller (BlockedOnReply None)
   od" (* the r.caller is in BlockedOnReply on return *)
 
@@ -243,7 +254,7 @@ where
       sc \<leftarrow> get_sched_context (the sc_caller);
       set_sched_context (the sc_caller) (sc\<lparr>sc_replies := reply_ptr#sc_replies sc\<rparr>);
       set_reply reply_ptr (reply'\<lparr>reply_sc := sc_caller\<rparr>);
-      sched_context_donate (the sc_caller) callee
+      do_extended_op $ sched_context_donate (the sc_caller) callee
     od
   od"
 

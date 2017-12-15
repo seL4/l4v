@@ -268,7 +268,7 @@ where
 definition reschedule_required :: "unit det_ext_monad" where
   "reschedule_required \<equiv> do
      action \<leftarrow> gets scheduler_action;
-     case action of 
+     case action of
        switch_thread t \<Rightarrow> do
          in_release_q \<leftarrow> gets $ in_release_queue t;
          sched \<leftarrow> is_schedulable t in_release_q;
