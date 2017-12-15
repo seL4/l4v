@@ -31,28 +31,7 @@ requalify_types
 
 end
 
-text {* Notification accessors. *}
-definition
-  get_ntfn_obj_ref :: "(notification => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
-where
-  "get_ntfn_obj_ref f ref \<equiv> do
-     ntfn \<leftarrow> get_notification ref;
-     return $ f ntfn
-   od"
-
-definition
-  set_ntfn_obj_ref :: "((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> notification \<Rightarrow> notification) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "set_ntfn_obj_ref f ref new \<equiv> do
-     ntfn \<leftarrow> get_notification ref;
-     set_object ref (Notification (f (K new) ntfn))
-   od"
-
-abbreviation
-  ntfn_set_obj :: "notification \<Rightarrow> ntfn \<Rightarrow> notification"
-where
-  "ntfn_set_obj ntfn a \<equiv> ntfn \<lparr> ntfn_obj := a \<rparr>"
-
+text {* Scheduling context accessors. *}
 definition
   sched_context_bind_ntfn :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -472,7 +451,7 @@ where
   "cancel_all_signals ntfnptr \<equiv> do
      ntfn \<leftarrow> get_notification ntfnptr;
      case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> do
-                      _ \<leftarrow> set_notification ntfnptr $ ntfn_set_obj ntfn IdleNtfn;
+                      _ \<leftarrow> set_notification ntfnptr $ ntfn_obj_update (K IdleNtfn) ntfn;
                       mapM_x (\<lambda>t. do set_thread_state t Restart;
                                      do_extended_op $ possible_switch_to t od) queue;
                       do_extended_op (reschedule_required)
@@ -637,8 +616,8 @@ where
      queue \<leftarrow> (case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> return queue
                         | _ \<Rightarrow> fail);
      queue' \<leftarrow> return $ remove1 threadptr queue;
-     newNTFN \<leftarrow> return $ ntfn_set_obj ntfn (case queue' of [] \<Rightarrow> IdleNtfn
-                                                      | _  \<Rightarrow> WaitingNtfn queue');
+     newNTFN \<leftarrow> return $ ntfn_obj_update (K (case queue' of [] \<Rightarrow> IdleNtfn
+                                                      | _  \<Rightarrow> WaitingNtfn queue')) ntfn;
      set_notification ntfnptr newNTFN;
      set_thread_state threadptr Inactive
    od"

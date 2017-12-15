@@ -224,24 +224,6 @@ abbreviation
 
 
 definition
-  get_sc_obj_ref :: "(sched_context => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
-where
-  "get_sc_obj_ref f ref \<equiv> do
-     sc \<leftarrow> get_sched_context ref;
-     return $ f sc
-   od"
-
-definition
-  set_sc_obj_ref :: "((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> sched_context \<Rightarrow> sched_context) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "set_sc_obj_ref f ref new \<equiv> do
-     sc \<leftarrow> get_sched_context ref;
-     set_object ref (SchedContext (f (K new) sc))
-   od"
-
-(****)
-
-definition
   is_schedulable :: "obj_ref \<Rightarrow> bool \<Rightarrow> ('z::state_ext state, bool) nondet_monad"
 where
   "is_schedulable tcb_ptr in_release_q \<equiv> do
@@ -429,6 +411,58 @@ definition
   get_irq_slot :: "irq \<Rightarrow> (cslot_ptr,'z::state_ext) s_monad" where
  "get_irq_slot irq \<equiv> gets (\<lambda>st. (interrupt_irq_node st irq, []))"
 
+
+text{* obj\_ref field accessor for notification, sched\_context, and reply *}
+
+
+definition
+  get_sk_obj_ref :: "('a \<Rightarrow> kernel_object) \<Rightarrow> ('a => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
+where
+  "get_sk_obj_ref C f ref \<equiv> do
+     sc \<leftarrow> get_simple_ko C ref;
+     return $ f sc
+   od"
+
+definition
+  update_sk_obj_ref :: "('a \<Rightarrow> kernel_object) \<Rightarrow> ((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "update_sk_obj_ref C f ref new \<equiv> do
+     sc \<leftarrow> get_simple_ko C ref;
+     set_simple_ko C ref (f (K new) sc)
+   od"
+
+
+abbreviation
+  get_sc_obj_ref :: "(sched_context => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
+where
+  "get_sc_obj_ref update ref \<equiv> get_sk_obj_ref SchedContext update ref"
+
+abbreviation
+  set_sc_obj_ref :: "((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> sched_context \<Rightarrow> sched_context) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "set_sc_obj_ref update ref new \<equiv> update_sk_obj_ref SchedContext update ref new"
+
+abbreviation
+  get_reply_obj_ref :: "(reply => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
+where
+  "get_reply_obj_ref update ref \<equiv> get_sk_obj_ref Reply update ref"
+
+abbreviation
+  set_reply_obj_ref :: "((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> reply \<Rightarrow> reply) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "set_reply_obj_ref update ref new \<equiv> update_sk_obj_ref Reply update ref new"
+
+abbreviation
+  get_ntfn_obj_ref :: "(notification => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
+where
+  "get_ntfn_obj_ref update ref \<equiv> get_sk_obj_ref Notification update ref"
+
+abbreviation
+  set_ntfn_obj_ref :: "((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> notification \<Rightarrow> notification) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "set_ntfn_obj_ref update ref new \<equiv> update_sk_obj_ref Notification update ref new"
+
+(****)
 
 section "User Context"
 
