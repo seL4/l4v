@@ -302,10 +302,7 @@ where
                 fault \<leftarrow> thread_get tcb_fault thread;
                 if call \<or> fault \<noteq> None then
                   if can_grant \<and> reply \<noteq> None
-                  then do
-                    reply_push thread dest (the reply) can_donate;
-                    set_thread_state thread (BlockedOnReply reply)
-                  od
+                  then reply_push thread dest (the reply) can_donate
                   else set_thread_state thread Inactive
                 else when (can_donate \<and> sc_opt = None) $ sched_context_donate (the sc_opt) dest;
 
@@ -398,8 +395,7 @@ where
                 then do
                   sender_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context sender;
                   donate \<leftarrow> return (sender_sc \<noteq> None);
-                  reply_push sender thread (the reply) donate;
-                  set_thread_state sender (BlockedOnReply reply)
+                  reply_push sender thread (the reply) donate
                 od
                 else set_thread_state sender Inactive
               else do

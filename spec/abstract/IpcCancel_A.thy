@@ -248,7 +248,7 @@ where
     reply \<leftarrow> get_reply reply_ptr;
     reply' \<leftarrow> return $ reply\<lparr>reply_tcb := Some caller\<rparr>;
     set_reply reply_ptr (reply\<lparr>reply_tcb := Some caller\<rparr>);
-    set_thread_state caller (BlockedOnReply (Some reply_ptr)); (* setting of ST is not in C yet *)
+    set_thread_state caller (BlockedOnReply (Some reply_ptr));
 
     when (sc_caller \<noteq> None \<and> can_donate) $ do
       sc \<leftarrow> get_sched_context (the sc_caller);
