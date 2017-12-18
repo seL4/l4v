@@ -1030,6 +1030,17 @@ lemma canonical_address_of_mask:
   apply (simp add: canonical_address_of_def mask_def)
   by word_bitwise
 
+lemma canonical_address_sign_extended: "canonical_address p = sign_extended 47 p"
+  apply (intro iffI;
+         simp add: canonical_address_range sign_extended_def
+                   le_mask_high_bits neg_mask_le_high_bits word_size)
+  apply fastforce
+  apply (case_tac "test_bit p 47"; intro disjI1 disjI2 ballI; case_tac "i = 47"; fastforce)
+  done
+
+lemmas canonical_address_high_bits
+  = canonical_address_sign_extended[THEN iffD1, THEN sign_extended_high_bits]
+
 
 (* FIXME: move *)
 lemma validE_R_post_conjD1:
