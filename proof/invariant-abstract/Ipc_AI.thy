@@ -1550,12 +1550,6 @@ lemma set_mrs_cur [wp]:
   by (wp set_mrs_thread_set_dmo)
 
 
-lemma set_mrs_cte_wp_at [wp]:
-  "\<lbrace>cte_wp_at P c\<rbrace> set_mrs p' b m \<lbrace>\<lambda>rv. cte_wp_at P c\<rbrace>"
-  by (wp set_mrs_thread_set_dmo thread_set_cte_wp_at_trivial
-         ball_tcb_cap_casesI | simp)+
-
-
 lemma set_mrs_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> set_mrs a b c \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)

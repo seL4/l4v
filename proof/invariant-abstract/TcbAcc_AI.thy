@@ -1297,20 +1297,6 @@ lemma set_thread_state_caps_of_state[wp]:
   apply (simp add: sts_caps_of_state)
   done
 
-lemma set_bound_notification_caps_of_state[wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_tcb_obj_ref tcb_bound_notification_update t ntfn \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  apply (simp add: set_tcb_obj_ref_thread_set)
-  apply (wp thread_set_caps_of_state_trivial, simp)
-  apply (rule ball_tcb_cap_casesI, simp_all)
-  done
-
-lemma sbsc_caps_of_state[wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_tcb_obj_ref tcb_sched_context_update t sc \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  apply (simp add: set_tcb_obj_ref_thread_set)
-  apply (wp thread_set_caps_of_state_trivial, simp)
-  apply (rule ball_tcb_cap_casesI, simp_all)
-  done
-
 lemma sts_st_tcb_at_neq:
   "\<lbrace>pred_tcb_at proj P t and K (t\<noteq>t')\<rbrace> set_thread_state t' st \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_thread_state_def set_object_def)
@@ -1485,11 +1471,11 @@ lemmas set_thread_state_valid_irq_nodes[wp]
                                   set_thread_state_interrupt_states]
 
 lemmas set_bound_notification_valid_irq_nodes[wp]
-    = valid_irq_handlers_lift [OF set_bound_notification_caps_of_state
+    = valid_irq_handlers_lift [OF set_bound_caps_of_state
                                   set_tcb_obj_ref_interrupt_states]
 
 lemmas set_tcb_sched_context_valid_irq_nodes[wp]
-    = valid_irq_handlers_lift [OF sbsc_caps_of_state
+    = valid_irq_handlers_lift [OF set_tcb_sc_caps_of_state
                                   set_tcb_obj_ref_interrupt_states]
 
 
@@ -1796,13 +1782,6 @@ lemma dom_mapM:
 lemma sts_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)
-
-lemma
-"\<lbrace>(\<lambda>s. ex_nonz_cap_to p s)\<rbrace>
-   set_tcb_obj_ref f p new
-   \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
-  apply (simp add: set_tcb_obj_ref_def)
-
 
 lemma set_tcb_obj_ref_ex_nonz_cap_to[wp]:
   "\<lbrace>(\<lambda>s. ex_nonz_cap_to p s

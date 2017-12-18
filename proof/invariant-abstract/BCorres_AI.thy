@@ -124,7 +124,7 @@ lemma get_tcb_truncate[simp]: "get_tcb a (truncate_state s) = get_tcb a s"
 crunch (bcorres)bcorres[wp]: cancel_all_ipc, bind_notification truncate_state
   (simp: gets_the_def ignore: gets_the)
 
-crunch (bcorres)bcorres[wp]: get_tcb_obj_ref, get_ntfn_obj_ref truncate_state
+crunch (bcorres)bcorres[wp]: get_tcb_obj_ref, get_sk_obj_ref truncate_state
   (simp: gets_the_def ignore: gets_the)
 
 lemma unbind_maybe_notification_bcorres[wp]:
