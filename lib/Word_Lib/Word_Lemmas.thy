@@ -5550,4 +5550,20 @@ lemma sign_extend_def':
   apply (auto dest: less_antisym simp: sign_extend_def word_size word_ops_nth_size)
   done
 
+lemma sign_extend_bitwise:
+  "i < size w \<Longrightarrow> sign_extend e w !! i \<longleftrightarrow> w !! i \<or> (w !! e \<and> e < i)"
+  by (cases "i \<le> e"; cases "i = e"; simp add: sign_extend_def neg_mask_bang word_size)
+
+definition
+  sign_extended :: "nat \<Rightarrow> 'a::len word \<Rightarrow> bool"
+where
+  "sign_extended n w \<equiv> \<forall>i. n < i \<longrightarrow> i < size w \<longrightarrow> test_bit w i = test_bit w n"
+
+lemma sign_extended_weaken: "sign_extended n w \<Longrightarrow> n \<le> m \<Longrightarrow> sign_extended m w"
+  unfolding sign_extended_def by (cases "n < m") auto
+
+lemma sign_extended_high_bits:
+  "\<lbrakk> sign_extended e p; j < size p; e \<le> i; i < j \<rbrakk> \<Longrightarrow> test_bit p i = test_bit p j"
+  by (drule (1) sign_extended_weaken; simp add: sign_extended_def)
+
 end
