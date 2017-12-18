@@ -39,7 +39,7 @@ where
           \<and> (reset \<longrightarrow> descendants_of' slot (ctes_of s) = {})
           \<and> distinct (slot # slots)
           \<and> (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0)
-          \<and> (ty = APIObjectType ArchTypes_H.Untyped \<longrightarrow> 4\<le> us \<and> us \<le> 29)
+          \<and> (ty = APIObjectType ArchTypes_H.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits)
           \<and> (\<forall>slot \<in> set slots. cte_wp_at' (\<lambda>c. cteCap c = NullCap) slot s)
           \<and> (\<forall>slot \<in> set slots. ex_cte_cap_to' slot s)
           \<and> sch_act_simple s \<and> 0 < length slots
@@ -146,7 +146,7 @@ lemma dec_untyped_inv_corres:
           and (\<lambda>s. \<forall>x \<in> set cs'. s \<turnstile>' x))
         (decode_untyped_invocation label args slot (cap.UntypedCap d w n idx) cs)
         (decodeUntypedInvocation label args (cte_map slot)
-          (capability.UntypedCap d w n idx) cs')"
+          (UntypedCap d w n idx) cs')"
 proof (cases "6 \<le> length args \<and> cs \<noteq> []
                 \<and> invocation_type label = UntypedRetype")
   case False
@@ -279,7 +279,10 @@ next
                      args cs cs' xs[symmetric] il whenE_rangeCheck_eq
                      cap_case_CNodeCap unlessE_whenE case_bool_If
                      lookup_target_slot_def lookupTargetSlot_def
-                split del: if_split cong: if_cong list.case_cong del: upt.simps)
+                     untypedBits_defs untyped_min_bits_def untyped_max_bits_def
+                del: upt.simps
+          split del: if_split
+               cong: if_cong list.case_cong)
     apply (rule corres_guard_imp)
       apply (rule corres_splitEE [OF _ Q])
         apply (rule whenE_throwError_corres)
@@ -919,7 +922,6 @@ lemma decodeUntyped_wf[wp]:
   apply (intro conjI; clarsimp)
    apply (drule_tac x=x in spec)+
    apply clarsimp
-  apply (clarsimp simp add:nullPointer_def word_size)
   done
 
 lemma getCTE_known_cap:
@@ -3548,7 +3550,7 @@ lemma createNewCaps_valid_cap':
         valid_pspace' s \<and> n \<noteq> 0 \<and>
         range_cover ptr sz (APIType_capBits ty us) n \<and>
         (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> 0 < us) \<and>
-        (ty = APIObjectType apiobject_type.Untyped \<longrightarrow> 4\<le> us \<and> us \<le> 29) \<and>
+        (ty = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits) \<and>
        ptr \<noteq> 0 \<rbrace>
     createNewCaps ty ptr n us d
   \<lbrace>\<lambda>r s. \<forall>cap\<in>set r. s \<turnstile>' cap\<rbrace>"
@@ -4034,7 +4036,7 @@ lemma updateFreeIndex_valid_pspace_no_overlap':
   "\<lbrace>\<lambda>s. valid_pspace' s \<and>
         (\<exists>ptr sz. pspace_no_overlap' ptr sz s \<and> idx \<le> 2 ^ sz \<and>
         cte_wp_at' ((\<lambda>c. isUntypedCap c \<and> capPtr c = ptr \<and> capBlockSize c = sz) o cteCap) src s)
-        \<and> is_aligned (of_nat idx :: word32) 4 \<and>
+        \<and> is_aligned (of_nat idx :: word32) minUntypedSizeBits \<and>
         descendants_of' src (ctes_of s) = {}\<rbrace>
      updateFreeIndex src idx
    \<lbrace>\<lambda>r s. valid_pspace' s\<rbrace>"
@@ -4080,7 +4082,7 @@ lemma updateFreeIndex_clear_invs':
   "\<lbrace>\<lambda>s. invs' s \<and>
         (\<exists>ptr sz. pspace_no_overlap' ptr sz s \<and> idx \<le> 2 ^ sz \<and>
         cte_wp_at' ((\<lambda>c. isUntypedCap c \<and> capPtr c = ptr \<and> capBlockSize c = sz) o cteCap) src s)
-        \<and> is_aligned (of_nat idx :: word32) 4
+        \<and> is_aligned (of_nat idx :: word32) minUntypedSizeBits
         \<and> descendants_of' src (ctes_of s) = {}\<rbrace>
    updateFreeIndex src idx
    \<lbrace>\<lambda>r s. invs' s\<rbrace>"
@@ -4845,7 +4847,7 @@ lemma reset_untyped_cap_corres:
                apply (rule is_aligned_weaken)
                 apply (rule is_aligned_mult_triv2)
                apply (simp add: reset_chunk_bits_def)
-              apply simp
+              apply (simp add: untyped_min_bits_def)
              apply (rule hoare_pre)
               apply simp
               apply (strengthen imp_consequent)
@@ -4871,7 +4873,7 @@ lemma reset_untyped_cap_corres:
             apply (clarsimp simp add: cte_wp_at_ctes_of exI isCap_simps valid_pspace'_def)
             apply (clarsimp simp: getFreeIndex_def getFreeRef_def)
             apply (subst is_aligned_weaken[OF is_aligned_mult_triv2])
-             apply (simp add: reset_chunk_bits_def)
+             apply (simp add: reset_chunk_bits_def minUntypedSizeBits_def)
             apply (subst unat_mult_simple)
              apply (clarsimp)
              apply (rule order_less_trans[rotated],
@@ -4884,7 +4886,7 @@ lemma reset_untyped_cap_corres:
             apply simp
            apply simp
           apply (clarsimp simp add: valid_cap_def cap_aligned_def)
-         apply (clarsimp simp add: valid_cap_def cap_aligned_def)
+         apply (clarsimp simp add: valid_cap_def cap_aligned_def untyped_min_bits_def)
         apply (simp add: if_apply_def2)
         apply (strengthen invs_valid_objs invs_psp_aligned invs_distinct)
         apply (wp hoare_vcg_const_imp_lift)
@@ -4911,7 +4913,7 @@ lemma reset_untyped_cap_corres:
   apply (clarsimp simp: cte_wp_at_ctes_of descendants_range'_def2
                         empty_descendants_range_in')
   apply (frule cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD], clarsimp+)
-  apply (clarsimp simp: valid_cap_simps' capAligned_def is_aligned_weaken)
+  apply (clarsimp simp: valid_cap_simps' capAligned_def is_aligned_weaken minUntypedSizeBits_def)
   apply (frule if_unsafe_then_capD'[OF ctes_of_cte_wpD], clarsimp+)
   apply (frule(1) descendants_range_ex_cte'[OF empty_descendants_range_in' _ order_refl],
     (simp add: isCap_simps)+)
@@ -5134,7 +5136,7 @@ lemma resetUntypedCap_invs_etc:
          apply (clarsimp simp: unat_of_nat valid_cap_simps')
          apply (erule order_less_le_trans[rotated], simp)
         apply simp
-       apply (auto simp: reset_chunk_bits_def)[1]
+       apply (auto simp: reset_chunk_bits_def minUntypedSizeBits_def)[1]
       apply (simp add: valid_cap_simps' reset_chunk_bits_def capAligned_def)
      apply (simp add: nth_rev)
      apply (simp add: upto_enum_step_def upto_enum_word getFreeIndex_def
@@ -5238,17 +5240,18 @@ lemma inv_untyped_corres':
           | clarsimp simp: cte_wp_at_caps_of_state)+)[5]
        apply (clarsimp simp:cte_wp_at_caps_of_state cte_wp_at_ctes_of)
        apply (drule caps_of_state_valid_cap,fastforce)
-       apply (clarsimp simp:valid_cap_def)
+       apply (clarsimp simp:valid_cap_def untyped_min_bits_def)
        done
 
     have obj_bits_low_bound[simp]:
-      "4 \<le> obj_bits_api (APIType_map2 (Inr ao')) us"
+      "minUntypedSizeBits \<le> obj_bits_api (APIType_map2 (Inr ao')) us"
       using vui
       apply clarsimp
       apply (cases ao')
-      apply (simp_all add:obj_bits_api_def slot_bits_def arch_kobj_size_def default_arch_object_def
-                          vspace_bits_defs vcpu_bits_def APIType_map2_def
-                      split: apiobject_type.splits)
+      apply (simp_all add: obj_bits_api_def slot_bits_def arch_kobj_size_def default_arch_object_def
+                           vspace_bits_defs vcpu_bits_def APIType_map2_def
+                           untyped_min_bits_def minUntypedSizeBits_def
+                    split: apiobject_type.splits)
       done
 
     have cover: "range_cover ptr sz
@@ -6115,7 +6118,7 @@ lemma invokeUntyped_invs'':
     have cover: "range_cover ptr sz (APIType_capBits tp us) (length slots)"
       and slots: "cref \<notin> set slots" "distinct slots" "slots \<noteq> []"
       and tps: "tp = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> 0 < us"
-            "tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 29"
+            "tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits"
       using vui
       by (clarsimp simp: ui cte_wp_at_ctes_of)+
 
@@ -6242,6 +6245,7 @@ lemma invokeUntyped_invs'':
     apply (intro conjI; assumption?)
           apply (erule is_aligned_weaken[OF range_cover.funky_aligned])
           apply (simp add: APIType_capBits_def objBits_simps' vcpu_bits_def pageBits_def
+                           minUntypedSizeBits_def
                     split: object_type.split apiobject_type.split)[1]
          apply (cases reset)
           apply (clarsimp simp: vcpu_bits_def vspace_bits_defs)

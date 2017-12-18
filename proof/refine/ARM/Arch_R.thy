@@ -1348,10 +1348,10 @@ lemma performASIDControlInvocation_tcb_at':
   apply (frule ctes_of_valid', clarsimp, simp,
     drule capFreeIndex_update_valid_cap'[where fb="2 ^ pageBits", rotated -1],
     simp_all)
-   apply (simp add: pageBits_def is_aligned_def)
+   apply (simp add: pageBits_def is_aligned_def minUntypedSizeBits_def)
   apply (simp add: valid_cap_simps' range_cover_def objBits_simps archObjSize_def
                    capAligned_def unat_eq_0 and_mask_eq_iff_shiftr_0[symmetric]
-                   word_bw_assocs)
+                   word_bw_assocs untypedBits_defs)
   apply clarsimp
   apply (drule(1) cte_cap_in_untyped_range,
     fastforce simp add: cte_wp_at_ctes_of, assumption, simp_all)
@@ -2159,16 +2159,16 @@ lemma performASIDControlInvocation_invs' [wp]:
        apply (strengthen invs_asid_table_strenghten')
        apply (wp cteInsert_simple_invs)
       apply (wp createObjects'_wp_subst[OF
-                createObjects_no_cte_invs [where sz = pageBits and ty="Inl (KOArch (KOASIDPool pool))"]]
+                createObjects_no_cte_invs [where sz = pageBits and ty="Inl (KOArch (KOASIDPool pool))" for pool]]
                 createObjects_orig_cte_wp_at'[where sz = pageBits]  hoare_vcg_const_imp_lift
          |simp add: makeObjectKO_def projectKOs asid_pool_typ_at_ext' valid_cap'_def cong: rev_conj_cong
          |strengthen safe_parent_strg'[where idx= "2^ pageBits"])+
       apply (rule hoare_vcg_conj_lift)
        apply (rule descendants_of'_helper)
        apply (wp createObjects_null_filter'
-                  [where sz = pageBits and ty="Inl (KOArch (KOASIDPool ap))"]
+                  [where sz = pageBits and ty="Inl (KOArch (KOASIDPool ap))" for ap]
                  createObjects_valid_pspace'
-                  [where sz = pageBits and ty="Inl (KOArch (KOASIDPool ap))"]
+                  [where sz = pageBits and ty="Inl (KOArch (KOASIDPool ap))" for ap]
           | simp add: makeObjectKO_def projectKOs asid_pool_typ_at_ext' valid_cap'_def
                 cong: rev_conj_cong)+
        apply (simp add: objBits_simps archObjSize_def valid_cap'_def capAligned_def range_cover_full)
@@ -2221,11 +2221,11 @@ lemma performASIDControlInvocation_invs' [wp]:
       apply (simp add:invs_valid_global')+
   apply (drule ex_cte_not_in_untyped_range[rotated -2])
       apply (simp add:invs_valid_global')+
-  apply (subgoal_tac "is_aligned (2 ^ pageBits) 4")
+  apply (subgoal_tac "is_aligned (2 ^ pageBits) minUntypedSizeBits")
    prefer 2
    apply (rule is_aligned_weaken)
     apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
-   apply (simp add:pageBits_def)
+   apply (simp add: pageBits_def minUntypedSizeBits_def)
   apply (frule_tac cte="CTE (capability.UntypedCap False a b c) m" for a b c m in valid_global_refsD', clarsimp)
   apply (simp add: is_aligned_neg_mask_eq Int_commute)
   by (auto simp:empty_descendants_range_in' objBits_simps max_free_index_def

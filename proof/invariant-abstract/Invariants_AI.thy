@@ -325,7 +325,7 @@ definition
 where
   "wellformed_cap c \<equiv>
   case c of
-    UntypedCap dev p sz idx \<Rightarrow> sz \<ge> 4
+    UntypedCap dev p sz idx \<Rightarrow> untyped_min_bits \<le> sz
   | NotificationCap r badge rights \<Rightarrow> AllowGrant \<notin> rights
   | CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
@@ -358,7 +358,7 @@ definition
 where
   "valid_cap c s \<equiv> cap_aligned c \<and> (case c of
     NullCap \<Rightarrow> True
-  | UntypedCap dev p b f \<Rightarrow> valid_untyped c s \<and> 4 \<le> b \<and> f \<le> 2 ^ b \<and> p \<noteq> 0
+  | UntypedCap dev p b f \<Rightarrow> valid_untyped c s \<and> untyped_min_bits \<le> b \<and> f \<le> 2 ^ b \<and> p \<noteq> 0
   | EndpointCap r badge rights \<Rightarrow> ep_at r s
   | NotificationCap r badge rights \<Rightarrow>
          ntfn_at r s \<and> AllowGrant \<notin> rights

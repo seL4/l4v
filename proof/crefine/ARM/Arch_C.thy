@@ -511,7 +511,7 @@ shows
                            and ct_active'"
                  in hoare_post_imp)
      apply (clarsimp simp: cte_wp_at_ctes_of invs_valid_objs' range_cover_full word_bits_conv
-            pageBits_def max_free_index_def asid_low_bits_def)
+                           pageBits_def max_free_index_def asid_low_bits_def untypedBits_defs)
      apply (case_tac cte,clarsimp simp:invs_valid_pspace')
      apply (frule(1) ctes_of_valid_cap'[OF _ invs_valid_objs'])
      apply (clarsimp simp:valid_cap'_def asid_low_bits_def invs_urz)
@@ -534,10 +534,10 @@ shows
               deleteObjects_ct_active'[where d=isdev and cref = parent and idx = idx])
    apply clarsimp
    apply vcg
-  apply (clarsimp simp:conj_comms invs_valid_pspace')
+  apply (clarsimp simp: conj_comms invs_valid_pspace')
   apply (frule cte_wp_at_valid_objs_valid_cap', fastforce)
-  apply (clarsimp simp:valid_cap'_def capAligned_def cte_wp_at_ctes_of
-    descendants_range'_def2 empty_descendants_range_in')
+  apply (clarsimp simp: valid_cap'_def capAligned_def cte_wp_at_ctes_of untypedBits_defs
+                        descendants_range'_def2 empty_descendants_range_in')
   apply (intro conjI; (rule refl)?)
         apply clarsimp
         apply (drule(1) cte_cap_in_untyped_range[where ptr = frame])

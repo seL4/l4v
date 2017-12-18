@@ -885,7 +885,7 @@ lemma cte_wp_at_extract':
 lemmas setCTE_valid_objs = setCTE_valid_objs'
 
 lemma capFreeIndex_update_valid_cap':
-  "\<lbrakk>fa \<le> fb; fb \<le> 2 ^ bits; is_aligned (of_nat fb :: word32) 4;
+  "\<lbrakk>fa \<le> fb; fb \<le> 2 ^ bits; is_aligned (of_nat fb :: word32) minUntypedSizeBits;
     s \<turnstile>' capability.UntypedCap d v bits fa\<rbrakk>
    \<Longrightarrow> s \<turnstile>' capability.UntypedCap d v bits fb"
   apply (clarsimp simp:valid_cap'_def capAligned_def valid_untyped'_def ko_wp_at'_def)

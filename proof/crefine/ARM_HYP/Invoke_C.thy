@@ -1527,19 +1527,21 @@ lemma updateCap_ct_active'[wp]:
 
 lemma APIType_capBits_low:
   "\<lbrakk> newType = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < us;
-     newType = APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 29\<rbrakk>
+     newType = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits\<rbrakk>
            \<Longrightarrow> 4 \<le> APIType_capBits newType us"
   apply (case_tac newType)
-  apply (clarsimp simp:invokeUntyped_proofs_def APIType_capBits_def objBits_simps' machine_bits_defs
+  apply (clarsimp simp: invokeUntyped_proofs_def APIType_capBits_def objBits_simps'
+                        machine_bits_defs untypedBits_defs
                   split: apiobject_type.splits)+
   done
 
 lemma APIType_capBits_high:
   "\<lbrakk> newType = APIObjectType apiobject_type.CapTableObject \<longrightarrow>  us < 28;
-     newType = APIObjectType apiobject_type.Untyped \<longrightarrow> us \<le> 29\<rbrakk>
+     newType = APIObjectType apiobject_type.Untyped \<longrightarrow> us \<le> maxUntypedSizeBits\<rbrakk>
            \<Longrightarrow> APIType_capBits newType us < 32"
   apply (case_tac newType)
-  apply (clarsimp simp: invokeUntyped_proofs_def APIType_capBits_def objBits_simps' machine_bits_defs
+  apply (clarsimp simp: invokeUntyped_proofs_def APIType_capBits_def objBits_simps'
+                        machine_bits_defs untypedBits_defs
                  split: apiobject_type.splits)+
   done
 
@@ -1842,13 +1844,13 @@ lemmas reset_name_seq_bound_helper2
           THEN name_seq_bound_helper]
 
 lemma reset_untyped_inner_offs_helper:
-  "\<lbrakk> cteCap cte = capability.UntypedCap dev ptr sz idx;
+  "\<lbrakk> cteCap cte = UntypedCap dev ptr sz idx;
       i \<le> unat ((of_nat idx - 1 :: addr) div 2 ^ sz2);
       sz2 \<le> sz; idx \<noteq> 0;
       valid_cap' (cteCap cte) s
     \<rbrakk>
     \<Longrightarrow> of_nat i * 2 ^ sz2 < (2 ^ sz :: addr)"
-  apply (clarsimp simp: valid_cap_simps')
+  apply (clarsimp simp: valid_cap_simps' untypedBits_defs)
   apply (rule word_less_power_trans2, simp_all)
   apply (rule word_of_nat_less)
   apply (erule order_le_less_trans)
@@ -1947,6 +1949,7 @@ lemma byte_regions_unmodified_actually_heap_list:
 
 lemma resetUntypedCap_ccorres:
   notes upt.simps[simp del] Collect_const[simp del] replicate_numeral[simp del]
+        untypedBits_defs[simp]
   shows
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
      (invs' and sch_act_simple and ct_active' and cte_wp_at' (isUntypedCap o cteCap) slot
@@ -2429,7 +2432,7 @@ lemma invokeUntyped_Retype_ccorres:
 
     have us_misc:
       "newType = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < us"
-      "newType = APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 29"
+      "newType = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits"
       using vui
       by (auto simp: cte_wp_at_ctes_of)
 
@@ -2455,8 +2458,8 @@ lemma invokeUntyped_Retype_ccorres:
       using vui
       by (clarsimp simp: cte_wp_at_ctes_of)+
 
-    have sz_bound:
-      "sz \<le> 29"
+    have sz_bound [simplified maxUntypedSizeBits_def, simplified]:
+      "sz \<le> maxUntypedSizeBits"
       using vui misc
       apply (clarsimp simp: cte_wp_at_ctes_of)
       apply (frule Finalise_R.ctes_of_valid', clarsimp)
@@ -2596,7 +2599,7 @@ lemma invokeUntyped_Retype_ccorres:
                               arg_cong[OF mask_out_sub_mask, where f="\<lambda>y. x - y" for x]
                               field_simps unat_of_nat_eq[OF range_cover.weak, OF cover]
                               if_apply_def2 invs_valid_objs' ptr_base_eq
-                              invs_urz)
+                              invs_urz untypedBits_defs)
 
         apply (intro conjI)
                  (* pspace_no_overlap *)
@@ -2851,7 +2854,7 @@ lemma valid_untyped_capBlockSize_misc:
   "\<lbrakk>s \<turnstile>' cp; isUntypedCap cp; (z::nat) \<le> capFreeIndex cp
    \<rbrakk> \<Longrightarrow> 2 ^ capBlockSize cp - z < 2 ^ word_bits
     \<and> of_nat (2^capBlockSize cp - z) = (2::word32) ^ capBlockSize cp - of_nat z"
-  apply (clarsimp simp:valid_cap'_def isCap_simps)
+  apply (clarsimp simp:valid_cap'_def isCap_simps untypedBits_defs)
   apply (rule le_less_trans[OF diff_le_self])
   apply (rule power_strict_increasing)
    apply (simp add:word_bits_def)
@@ -2885,12 +2888,12 @@ lemma toEnum_object_type_to_H:
   done
 
 lemma unat_of_nat_APIType_capBits:
-  "b \<le> 29
+  "b \<le> maxUntypedSizeBits
   \<Longrightarrow> unat (of_nat (APIType_capBits z b) ::word32) = APIType_capBits z b"
   apply (rule unat_of_nat32)
   apply (case_tac z)
   apply (clarsimp simp: invokeUntyped_proofs_def word_bits_conv APIType_capBits_def objBits_simps'
-                        machine_bits_defs
+                        machine_bits_defs untypedBits_defs
                  split: apiobject_type.splits)+
   done
 
@@ -2975,7 +2978,7 @@ lemma Arch_isFrameType_spec:
   done
 
 lemma decodeUntypedInvocation_ccorres_helper:
-notes TripleSuc[simp]
+notes TripleSuc[simp] untypedBits_defs[simp]
 notes valid_untyped_inv_wcap'.simps[simp del] tl_drop_1[simp]
 shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>

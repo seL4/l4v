@@ -476,7 +476,8 @@ lemma reset_untyped_cap_integrity:
     apply (wp hoare_vcg_const_imp_lift get_cap_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (frule caps_of_state_valid_cap, clarsimp+)
-  apply (clarsimp simp: cap_aligned_def is_cap_simps valid_cap_simps bits_of_def)
+  apply (clarsimp simp: cap_aligned_def is_cap_simps valid_cap_simps bits_of_def
+                        untyped_min_bits_def)
   apply (frule(2) cap_cur_auth_caps_of_state)
   apply (clarsimp simp: aag_cap_auth_def ptr_range_def aag_has_Control_iff_owns
                         pas_refined_refl)
@@ -1496,7 +1497,7 @@ lemma decode_untyped_invocation_authorised:
   apply(auto dest!: bang_0_in_set
               simp: valid_cap_def cap_aligned_def obj_ref_of_def is_cap_simps
                     cap_auth_conferred_def pas_refined_all_auth_is_owns
-                    aag_cap_auth_def ptr_range_def
+                    aag_cap_auth_def ptr_range_def untyped_min_bits_def
              dest: cte_wp_at_eqD2 simp: bits_of_UntypedCap)
   done
 

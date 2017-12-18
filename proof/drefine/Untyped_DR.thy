@@ -333,7 +333,7 @@ lemma delete_objects_dcorres:
                in corres_req)
    apply clarsimp
    apply (drule cte_wp_valid_cap, clarsimp)
-   apply (simp add: valid_cap_def cap_aligned_def)
+   apply (simp add: valid_cap_def cap_aligned_def untyped_min_bits_def)
   apply (rule corres_guard_imp)
   apply (rule corres_split[OF _ detype_dcorres])
     apply (rule freeMemory_dcorres, simp+)
@@ -452,19 +452,20 @@ lemma obj_bits_bound32:
   done
 
 lemma obj_bits_bound4:
-  "\<lbrakk>type = Structures_A.Untyped \<longrightarrow> 4 \<le> us\<rbrakk> \<Longrightarrow>
-    4 \<le> obj_bits_api type us"
+  "\<lbrakk>type = Structures_A.Untyped \<longrightarrow> untyped_min_bits \<le> us\<rbrakk> \<Longrightarrow>
+    untyped_min_bits \<le> obj_bits_api type us"
   apply (case_tac type)
-       apply (simp_all add:obj_bits_api_def word_bits_def slot_bits_def)
+       apply (simp_all add:obj_bits_api_def word_bits_def slot_bits_def untyped_min_bits_def)
   apply (rename_tac aobject_type)
   apply (case_tac aobject_type)
         apply (simp_all add:arch_kobj_size_def default_arch_object_def pageBits_def)
   done
 
 lemma distinct_retype_addrs:
-  "\<lbrakk>type = Structures_A.Untyped \<longrightarrow> 4 \<le> us;
+  "\<lbrakk>type = Structures_A.Untyped \<longrightarrow> untyped_min_bits \<le> us;
     range_cover ptr sz (obj_bits_api type us) n\<rbrakk>
     \<Longrightarrow> distinct (retype_addrs ptr type n us)"
+  supply untyped_min_bits_def[simp]
   apply (clarsimp simp:retype_addrs_def distinct_map ptr_add_def inj_on_def)
   apply (simp only: shiftl_t2n[symmetric, simplified field_simps, simplified])
   apply (drule shiftl_inj_if)
@@ -584,7 +585,7 @@ lemma retype_region_dcorres:
        \<top>
   (\<lambda>s. pspace_no_overlap_range_cover ptr sz s \<and> invs s
   \<and> range_cover ptr sz (obj_bits_api type us) n
-  \<and> (type = Structures_A.Untyped \<longrightarrow> 4 \<le> us)
+  \<and> (type = Structures_A.Untyped \<longrightarrow> untyped_min_bits \<le> us)
   \<and> (type = Structures_A.CapTableObject \<longrightarrow> us \<noteq> 0))
   (Untyped_D.retype_region
   us (translate_object_type type) (map (retype_transform_obj_ref type us) (retype_addrs ptr type n us)))
@@ -968,7 +969,7 @@ lemma generate_object_ids_exec:
   shows
   "dcorres r P P' (f  (map (retype_transform_obj_ref ty us) (retype_addrs ptr ty n us))) g
    \<Longrightarrow> dcorres r  P
-  (K ((ty = Structures_A.Untyped \<longrightarrow> (4 \<le> us))
+  (K ((ty = Structures_A.Untyped \<longrightarrow> (untyped_min_bits \<le> us))
    \<and> range_cover ptr sz (obj_bits_api ty us) n
    \<and> is_aligned ptr (obj_bits_api ty us)
    \<and> {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} \<subseteq> free_range )
@@ -1416,7 +1417,7 @@ lemma reset_untyped_cap_corres:
   apply (frule if_unsafe_then_capD[OF caps_of_state_cteD], clarsimp+)
   apply (frule(1) ex_cte_cap_protects[OF _ caps_of_state_cteD _ _ order_refl],
     simp add: empty_descendants_range_in, clarsimp+)
-  apply (auto simp: not_idle_thread_def
+  apply (auto simp: not_idle_thread_def untyped_min_bits_def
              dest!: valid_idle_has_null_cap[rotated -1])
   done
 
@@ -1471,7 +1472,7 @@ lemma invoke_untyped_corres:
   have cover: "range_cover ptr sz (obj_bits_api tp us) (length slots)"
    and vslot: "slots \<noteq> []" "distinct slots"
     and misc: "tp = Structures_A.apiobject_type.CapTableObject \<longrightarrow> 0 < us"
-              "tp = Structures_A.apiobject_type.Untyped \<longrightarrow> 4 \<le> us"
+              "tp = Structures_A.apiobject_type.Untyped \<longrightarrow> untyped_min_bits \<le> us"
     using vui
     by (auto simp: ui cte_wp_at_caps_of_state)
 

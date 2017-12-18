@@ -498,11 +498,11 @@ where
   new_type \<leftarrow> data_to_obj_type (args!0);
 
   user_obj_size \<leftarrow> returnOk $ data_to_nat (args!1);
-  unlessE (user_obj_size < word_bits - 2)
-    $ throwError (RangeError 0 (of_nat word_bits - 3)); (* max size of untyped = 2^30 *)
+  unlessE (user_obj_size \<le> untyped_max_bits)
+    $ throwError (RangeError 0 (of_nat untyped_max_bits));
   whenE (new_type = CapTableObject \<and> user_obj_size = 0)
     $ throwError (InvalidArgument 1);
-  whenE (new_type = Untyped \<and> user_obj_size < 4)
+  whenE (new_type = Untyped \<and> user_obj_size < untyped_min_bits)
     $ throwError (InvalidArgument 1);
   node_index \<leftarrow> returnOk $ data_to_cptr (args!2);
   node_depth \<leftarrow> returnOk $ data_to_nat (args!3);

@@ -51,6 +51,8 @@ requalify_consts
   endpoint_bits
   ntfn_bits
   aa_type
+  untyped_min_bits
+  untyped_max_bits
 end
 
 text {*

@@ -413,7 +413,7 @@ lemma cte_wp_at_delete':
   apply (drule_tac x="p - n" in spec)
   apply (clarsimp simp: ko_wp_at'_def capAligned_def
               simp del: atLeastAtMost_iff)
-   apply (thin_tac "is_aligned x 4" for x)
+   apply (thin_tac "is_aligned x minUntypedSizeBits" for x)
   apply (drule(1) aligned_ranges_subset_or_disjoint)
   apply (subgoal_tac "{p, p - n} \<subseteq> obj_range' (p - n) (KOTCB obj)")
    apply (clarsimp simp del: atLeastAtMost_iff
@@ -1724,7 +1724,7 @@ proof -
   apply clarsimp
   apply (drule invs_valid_objs')
   apply (drule (1) cte_wp_at_valid_objs_valid_cap')
-  apply (clarsimp simp add: valid_cap'_def capAligned_def)
+  apply (clarsimp simp add: valid_cap'_def capAligned_def untypedBits_defs)
   done
 qed
 
@@ -2376,7 +2376,7 @@ lemma createObject_cte_wp_at':
         | wp createObjects_orig_cte_wp_at'[where sz = "(Types_H.getObjectSize ty us)"]
              threadSet_cte_wp_at'
         | simp add: X64_H.createObject_def placeNewDataObject_def
-                    unless_def placeNewObject_def2 objBitsKO_simps range_cover_full
+                    unless_def placeNewObject_def2 objBits_simps range_cover_full
                     curDomain_def bit_simps
                     pdBits_def getObjSize_simps archObjSize_def
                     apiGetObjectSize_def tcbBlockSizeBits_def
@@ -2657,7 +2657,7 @@ lemma placeNewObject_modify_commute:
 lemma cte_update_objBits[simp]:
   "(objBitsKO (cte_update cte b src a)) = objBitsKO b"
   by (case_tac b,
-    (simp add:objBitsKO_simps cte_update_def)+)
+    (simp add:objBits_simps cte_update_def)+)
 
 lemma locateCTE_ret_neq:
   "\<lbrace>ko_wp_at' (\<lambda>x. koTypeOf x \<noteq> TCBT \<and> koTypeOf x \<noteq> CTET) ptr\<rbrace>
@@ -3158,10 +3158,10 @@ lemma cte_wp_at_modify_pde:
    apply (rule disjI1)
    apply (clarsimp simp add:ko_wp_at'_def)
    apply (intro conjI impI)
-      apply (simp add:objBitsKO_simps archObjSize_def)
+      apply (simp add:objBits_simps archObjSize_def)
      apply (clarsimp simp:projectKO_opt_cte)
     apply (simp add:ps_clear_def)+
-    apply (clarsimp simp:objBitsKO_simps archObjSize_def)
+    apply (clarsimp simp:objBits_simps archObjSize_def)
    apply (simp add:ps_clear_def)
    apply (rule ccontr)
    apply simp
@@ -3170,10 +3170,10 @@ lemma cte_wp_at_modify_pde:
   apply (rule disjI2)
   apply (clarsimp simp:ko_wp_at'_def)
   apply (intro conjI impI)
-     apply (simp add:objBitsKO_simps archObjSize_def)+
+     apply (simp add:objBits_simps archObjSize_def)+
     apply (clarsimp simp:projectKO_opt_cte projectKO_opt_tcb)
     apply (simp add:ps_clear_def)+
-   apply (clarsimp simp:objBitsKO_simps archObjSize_def)
+   apply (clarsimp simp:objBits_simps archObjSize_def)
   apply (simp add:ps_clear_def)
   apply (rule ccontr)
   apply simp
@@ -3215,7 +3215,7 @@ lemma storePDE_setCTE_commute:
      apply (clarsimp simp:simpler_modify_def valid_def typ_at'_def)
      apply (clarsimp simp:ko_wp_at'_def dest!: koTypeOf_pde)
      apply (intro conjI impI)
-        apply (clarsimp simp:objBitsKO_simps archObjSize_def)+
+        apply (clarsimp simp:objBits_simps archObjSize_def)+
       apply (simp add:ps_clear_def in_dom_eq)
      apply (simp add:ps_clear_def in_dom_eq)
     apply (clarsimp simp:simpler_modify_def valid_def)
@@ -3625,10 +3625,10 @@ lemma cte_wp_at_modify_pml4e:
    apply (rule disjI1)
    apply (clarsimp simp add:ko_wp_at'_def)
    apply (intro conjI impI)
-      apply (simp add:objBitsKO_simps archObjSize_def)
+      apply (simp add:objBits_simps archObjSize_def)
      apply (clarsimp simp:projectKO_opt_cte)
     apply (simp add:ps_clear_def)+
-    apply (clarsimp simp:objBitsKO_simps archObjSize_def)
+    apply (clarsimp simp:objBits_simps archObjSize_def)
    apply (simp add:ps_clear_def)
    apply (rule ccontr)
    apply simp
@@ -3637,10 +3637,10 @@ lemma cte_wp_at_modify_pml4e:
   apply (rule disjI2)
   apply (clarsimp simp:ko_wp_at'_def)
   apply (intro conjI impI)
-     apply (simp add:objBitsKO_simps archObjSize_def)+
+     apply (simp add:objBits_simps archObjSize_def)+
     apply (clarsimp simp:projectKO_opt_cte projectKO_opt_tcb)
     apply (simp add:ps_clear_def)+
-   apply (clarsimp simp:objBitsKO_simps archObjSize_def)
+   apply (clarsimp simp:objBits_simps archObjSize_def)
   apply (simp add:ps_clear_def)
   apply (rule ccontr)
   apply simp
@@ -3682,7 +3682,7 @@ lemma storePML4E_setCTE_commute:
      apply (clarsimp simp:simpler_modify_def valid_def typ_at'_def)
      apply (clarsimp simp:ko_wp_at'_def dest!: koTypeOf_pml4e)
      apply (intro conjI impI)
-        apply (clarsimp simp:objBitsKO_simps archObjSize_def)+
+        apply (clarsimp simp:objBits_simps archObjSize_def)+
       apply (simp add:ps_clear_def in_dom_eq)
      apply (simp add:ps_clear_def in_dom_eq)
     apply (clarsimp simp:simpler_modify_def valid_def)
@@ -3925,7 +3925,7 @@ lemma setCTE_modify_tcbDomain_commute:
     apply (rule locateCTE_commute)
          apply (wp locateCTE_cte_no_fail)+
      apply (wp threadSet_ko_wp_at2')
-     apply (clarsimp simp:objBitsKO_simps)
+     apply (clarsimp simp:objBits_simps)
     apply (wp|simp)+
    apply (wp locateCTE_inv locateCTE_ko_wp_at')
   apply clarsimp

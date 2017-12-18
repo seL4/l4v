@@ -39,7 +39,7 @@ where
           \<and> (ptr && ~~ mask sz) = ptr_base)
           \<and> (reset \<longrightarrow> descendants_of slot (cdt s) = {})
           \<and> (ty = CapTableObject \<longrightarrow> us > 0)
-          \<and> (ty = Untyped \<longrightarrow> us \<ge> 4)
+          \<and> (ty = Untyped \<longrightarrow> us \<ge> untyped_min_bits)
           \<and> distinct (slot#slots)
           \<and> (\<forall>slot\<in>set slots. cte_wp_at (op = cap.NullCap) slot s
                     \<and> ex_cte_cap_wp_to is_cnode_cap slot s \<and> real_cte_at slot s)
@@ -1344,7 +1344,7 @@ context Untyped_AI_arch begin
 lemma retype_ret_valid_caps:
   "\<lbrace>pspace_no_overlap_range_cover ptr sz
       and K (tp = Structures_A.CapTableObject \<longrightarrow> us > 0)
-      and K (tp = Untyped \<longrightarrow> us \<ge> 4)
+      and K (tp = Untyped \<longrightarrow> untyped_min_bits \<le> us)
       and K (tp \<noteq> ArchObject ASIDPoolObj)
       and K (range_cover ptr sz (obj_bits_api tp us) n \<and> ptr \<noteq> 0)\<rbrace>
         retype_region ptr n us tp dev\<lbrace>\<lambda>rv (s::'state_ext state). \<forall>y\<in>set rv. s \<turnstile> default_cap tp y us dev\<rbrace>"

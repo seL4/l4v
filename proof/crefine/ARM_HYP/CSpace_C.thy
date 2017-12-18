@@ -818,14 +818,9 @@ lemma setUntypedCapAsFull_cte_at_wp [wp]:
   apply wp
   done
 
-lemma setUntypedCapAsFull_cte_at_wp' [wp]:
-  "\<lbrace> cte_wp_at' (\<lambda>_. True) x \<rbrace> setUntypedCapAsFull rvb cap src \<lbrace> \<lambda>_. cte_wp_at' (\<lambda>_. True) x \<rbrace>"
-  apply (clarsimp simp: setUntypedCapAsFull_def)
-  apply wp
-  done
-
 lemma valid_cap_untyped_inv:
-  "valid_cap' (UntypedCap d r n f) s \<Longrightarrow> n \<ge> 4 \<and> is_aligned (of_nat f :: word32) 4 \<and> n \<le> 30 \<and> n < word_bits"
+  "valid_cap' (UntypedCap d r n f) s \<Longrightarrow> n \<ge> minUntypedSizeBits \<and> is_aligned (of_nat f :: word32) minUntypedSizeBits
+      \<and> n \<le> maxUntypedSizeBits \<and> n < word_bits"
   apply (clarsimp simp:valid_cap'_def capAligned_def)
   done
 
@@ -835,131 +830,82 @@ lemma and_and_mask_simple: "(y && mask n) = mask n \<Longrightarrow> ((x && y) &
 lemma and_and_mask_simple_not: "(y && mask n) = 0 \<Longrightarrow> ((x && y) && mask n) = 0"
   by (simp add: word_bool_alg.conj.assoc)
 
+lemma update_freeIndex':
+  assumes i'_align: "is_aligned (of_nat i' :: machine_word) minUntypedSizeBits"
+  assumes sz_bound: "sz \<le> maxUntypedSizeBits"
+  assumes i'_bound: "i' \<le> 2 ^ sz"
+  shows "ccorres dc xfdc
+           (cte_wp_at' (\<lambda>cte. \<exists>i. cteCap cte = UntypedCap d p sz i) srcSlot)
+           (UNIV \<inter> \<lbrace>\<acute>cap_ptr = cap_Ptr &(cte_Ptr srcSlot\<rightarrow>[''cap_C''])\<rbrace>
+                 \<inter> \<lbrace>\<acute>v32 = of_nat i' >> minUntypedSizeBits\<rbrace>) []
+           (updateCap srcSlot (UntypedCap d p sz i'))
+           (Call cap_untyped_cap_ptr_set_capFreeIndex_'proc)"
+  proof -
+    note i'_bound_concrete
+      = order_trans[OF i'_bound power_increasing[OF sz_bound], simplified untypedBits_defs, simplified]
+    have i'_bound_word: "(of_nat i' :: machine_word) \<le> 2 ^ maxUntypedSizeBits"
+      using order_trans[OF i'_bound power_increasing[OF sz_bound], simplified]
+      by (simp add: word_of_nat_le untypedBits_defs)
+    show ?thesis
+      apply (cinit lift: cap_ptr_' v32_')
+       apply (rule ccorres_pre_getCTE)
+       apply (rule_tac P="\<lambda>s. ctes_of s srcSlot = Some rv \<and> (\<exists>i. cteCap rv = UntypedCap d p sz i)"
+                in ccorres_from_vcg[where P' = UNIV])
+       apply (rule allI)
+       apply (rule conseqPre)
+        apply vcg
+       apply (clarsimp simp: guard_simps)
+       apply (intro conjI)
+        apply (frule (1) rf_sr_ctes_of_clift)
+        apply (clarsimp simp: typ_heap_simps)
+       apply (frule (1) rf_sr_ctes_of_clift)
+       apply (clarsimp simp: split_def)
+       apply (simp add: hrs_htd_def typ_heap_simps)
+       apply (rule fst_setCTE[OF ctes_of_cte_at], assumption)
+       apply (erule bexI[rotated], clarsimp)
+       apply (frule (1) rf_sr_ctes_of_clift)
+       apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                             cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
+       apply (simp add: cpspace_relation_def)
+       apply (clarsimp simp: typ_heap_simps')
+       apply (rule conjI)
+        apply (erule (2) cpspace_cte_relation_upd_capI)
+        apply (simp only: cte_lift_def split: option.splits; simp)
+        apply (simp add: cap_to_H_def Let_def split: cap_CL.splits if_split_asm)
+        apply (case_tac y)
+        apply (simp add: cap_lift_def Let_def split: if_split_asm)
+        apply (case_tac cte', simp)
+        apply (clarsimp simp: ccap_relation_def cap_lift_def cap_get_tag_def cap_to_H_def)
+        apply (thin_tac _)+
+        apply (simp add: mask_def to_bool_and_1 nth_shiftr word_ao_dist word_bool_alg.conj.assoc)
+        apply (rule inj_onD[OF word_unat.Abs_inj_on[where 'a=machine_word_len]], simp)
+          apply (cut_tac i'_align i'_bound_word)
+          apply (simp add: is_aligned_mask)
+          apply word_bitwise
+          subgoal by (simp add: word_size untypedBits_defs)
+         apply (cut_tac i'_bound_concrete)
+         subgoal by (simp add: unats_def)
+        subgoal by (simp add: word_unat.Rep[where 'a=machine_word_len, simplified])
+       apply (erule_tac t = s' in ssubst)
+       apply clarsimp
+       apply (rule conjI)
+        subgoal by (erule (1) setCTE_tcb_case)
+       subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def typ_heap_simps')
+      by (clarsimp simp:cte_wp_at_ctes_of)
+  qed
+
 lemma update_freeIndex:
   "ccorres dc xfdc
-           (valid_objs' and cte_wp_at' (\<lambda>cte. \<exists>i. cteCap cte = UntypedCap d p sz i) srcSlot
-           and (\<lambda>_. is_aligned (of_nat i' :: word32) 4 \<and> i' \<le> 2 ^ sz))
-           (UNIV \<inter> {s. cap_ptr_' s = Ptr &(cte_Ptr srcSlot\<rightarrow>[''cap_C''])} \<inter> {s.  v32_' s = (of_nat (i') :: word32)>> 4})
-           [] (updateCap srcSlot (UntypedCap d p sz i'))
-           (Call cap_untyped_cap_ptr_set_capFreeIndex_'proc)"
-  apply (rule ccorres_gen_asm)
-  apply (rule ccorres_guard_imp)
-     prefer 3
-     apply assumption
-    apply (rule_tac P = "sz \<le> 29" and G = "cte_wp_at' S srcSlot" for S in ccorres_gen_asm)
-   prefer 2
-   apply clarsimp
-   apply (rule conjI, assumption)
-   apply (clarsimp simp:cte_wp_at_ctes_of)
-   apply (case_tac cte,clarsimp)
-   apply (drule(1) ctes_of_valid_cap')
-    apply (simp add:valid_cap'_def)
-   apply clarify
-proof -
-  assume ialign:"is_aligned (of_nat i' :: word32) 4"
-  assume szbound:"sz\<le> 29"
-  assume ibound:"i'\<le> 2^sz"
-  note ibound_concrete = order_trans[OF ibound power_increasing[OF szbound], simplified]
-  have ibound_concrete_word:
-    "(of_nat i' :: word32) \<le> 2 ^ 29"
-    using ibound_concrete
-    by (simp add: word_of_nat_le)
-  have [simp]:"\<And>x. (x::word32) && 0xFFFFFFC0 = x && ~~ mask 6"
-    by (simp add:mask_def)
-  have [simp]:"\<And>x. ((x::word32) && ~~ mask 6) && mask 6 = 0"
-    by (simp add:is_aligned_mask[THEN iffD1,OF is_aligned_neg_mask])
-  have [simp]:"(0x3FFFFFF::word32) = mask 26"
-    by (simp add:mask_def)
-  have [simp]:"\<And>(n::word32) m. (n && mask 6 || m && ~~ mask 6 >> 6) && mask 26 = (m >> 6) && mask 26"
-    apply (rule word_eqI)
-    apply (simp add:nth_shiftr)
-    apply (simp add:neg_mask_bang word_size)
-    done
-  have terrible_word_stuff: "\<And>x1. to_bool
-            ((cap_C.words_C x1.[Suc 0] >> 5) && 1) =
-           to_bool
-            ((cap_C.words_C x1.[Suc 0] && 0x3F ||
-              (of_nat i' >> 4 << 6) && ~~ mask 6 >>
-              5) &&
-             1) \<and>
-           cap_C.words_C x1.[Suc 0] && mask 5 =
-           (cap_C.words_C x1.[Suc 0] && 0x3F ||
-            (of_nat i' >> 4 << 6) && ~~ mask 6) && mask 5
-           \<and>
-           i' =
-           unat
-            ((cap_C.words_C x1.[Suc 0] && 0x3F ||
-              (of_nat i' >> 4 << 6) && ~~ mask 6 >>
-              6) &&
-             mask 26 <<
-             4)"
-    apply (rule conjI)
-     apply (clarsimp simp: to_bool_and_1 nth_shiftr neg_mask_bang)
-    apply (clarsimp simp: word_bool_alg.conj_disj_distrib2 mask_def[where n = 5,simplified,symmetric])
-    apply (rule conjI)
-     apply (subst and_and_mask_simple)
-      apply (simp add: mask_def[where n=5, simplified])
-     apply (subst and_and_mask_simple_not)
-      apply (simp add: mask_def[where n=5, simplified] mask_def[where n=6, simplified])
-     apply simp
-    apply (rule inj_onD[OF word_unat.Abs_inj_on[where 'a=32]], simp)
-      apply (cut_tac ialign ibound_concrete_word)
-      apply (simp add: is_aligned_mask)
-      apply word_bitwise
-      apply (simp add: word_size)
-     apply (cut_tac ibound_concrete)
-     apply (simp add: unats_def)
-    apply (simp add: word_unat.Rep[where 'a=32, simplified])
-    done
-
-  note option.case_cong_weak [cong]
-  note mask_def [of "Suc 0", simp]
-
-show "ccorresG rf_sr \<Gamma> dc xfdc (cte_wp_at' (\<lambda>cte. \<exists>i. cteCap cte = capability.UntypedCap d p sz i) srcSlot)
-        (UNIV \<inter> \<lbrace>\<acute>cap_ptr = cap_Ptr &(cte_Ptr srcSlot\<rightarrow>[''cap_C''])\<rbrace> \<inter> \<lbrace>\<acute>v32 = (of_nat i' :: word32) >> 4\<rbrace>) []
-        (updateCap srcSlot (capability.UntypedCap d p sz i')) (Call cap_untyped_cap_ptr_set_capFreeIndex_'proc)"
-  apply (cinit lift: cap_ptr_' v32_')
-   apply (rule ccorres_pre_getCTE)
-   apply (rule_tac P = "\<lambda>s. ctes_of s srcSlot = Some rv \<and> (\<exists>i. cteCap rv = UntypedCap d p sz i)" in
-    ccorres_from_vcg[where P' = UNIV])
-   apply (rule allI)
-   apply (rule conseqPre)
-   apply vcg
-   apply (clarsimp simp:guard_simps)
-   apply (intro conjI)
-     apply (frule (1) rf_sr_ctes_of_clift)
-     apply (clarsimp simp:typ_heap_simps)
-   apply (frule (1) rf_sr_ctes_of_clift)
-   apply (clarsimp simp:split_def)
-   apply (simp add:hrs_htd_def typ_heap_simps)
-   apply (rule fst_setCTE [OF ctes_of_cte_at], assumption)
-   apply (erule bexI [rotated])
-   apply (clarsimp simp: cte_wp_at_ctes_of)
-   apply (frule (1) rf_sr_ctes_of_clift)
-   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def
-     cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
-   apply (simp add:cpspace_relation_def)
-   apply (clarsimp simp:typ_heap_simps')
-   apply (rule conjI)
-    apply (erule(2) cpspace_cte_relation_upd_capI)
-    apply (simp add:cte_lift_def)
-    apply (simp split:option.splits )
-    apply (simp add:cap_to_H_def Let_def split:cap_CL.splits if_split_asm)
-    apply (case_tac y)
-    apply (simp add:cap_lift_def Let_def split:if_split_asm)
-    apply (case_tac cte',simp)
-    apply (clarsimp simp:ccap_relation_def cap_lift_def
-      cap_get_tag_def cap_to_H_def)
-    subgoal by (rule terrible_word_stuff)
-   apply (erule_tac t = s' in ssubst)
-   apply clarsimp
-   apply (rule conjI)
-    apply (erule (1) setCTE_tcb_case)
-   subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
-                   typ_heap_simps')
-  apply (clarsimp simp:cte_wp_at_ctes_of)
-  done
-qed
+     (valid_objs' and cte_wp_at' (\<lambda>cte. \<exists>i. cteCap cte = UntypedCap d p sz i) srcSlot
+           and (\<lambda>_. is_aligned (of_nat i' :: word32) minUntypedSizeBits \<and> i' \<le> 2 ^ sz))
+     (UNIV \<inter> \<lbrace>\<acute>cap_ptr = cap_Ptr &(cte_Ptr srcSlot\<rightarrow>[''cap_C''])\<rbrace>
+           \<inter> \<lbrace>\<acute>v32 = of_nat i' >> minUntypedSizeBits\<rbrace>) []
+     (updateCap srcSlot (UntypedCap d p sz i'))
+     (Call cap_untyped_cap_ptr_set_capFreeIndex_'proc)"
+  apply (rule ccorres_assume_pre, rule ccorres_guard_imp)
+    apply (rule update_freeIndex'; clarsimp simp: cte_wp_at_ctes_of)
+    apply (case_tac cte; clarsimp dest!: ctes_of_valid_cap' simp: valid_cap'_def)
+   by auto
 
 (* FIXME: move *)
 lemma ccorres_cases:
@@ -1006,10 +952,13 @@ lemma setUntypedCapAsFull_ccorres [corres]:
   notes Collect_True [simp] Collect_False [simp]
   shows
   "ccorres dc xfdc
-      ((cte_wp_at' (\<lambda>c. (cteCap c) = srcCap) srcSlot) and valid_mdb' and pspace_aligned' and valid_objs'
-          and (K (isUntypedCap newCap \<longrightarrow> (4 \<le> (capBlockSize newCap))))
-          and (K (isUntypedCap srcCap \<longrightarrow> (4 \<le> capBlockSize srcCap))))
-      (UNIV \<inter>  {s. ccap_relation srcCap (srcCap_' s)} \<inter> {s. ccap_relation newCap (newCap_' s)} \<inter> {s. srcSlot_' s = Ptr srcSlot})
+      ((cte_wp_at' (\<lambda>c. (cteCap c) = srcCap) srcSlot)
+          and valid_mdb' and pspace_aligned' and valid_objs'
+          and (K (isUntypedCap newCap \<longrightarrow> (minUntypedSizeBits \<le> (capBlockSize newCap))))
+          and (K (isUntypedCap srcCap \<longrightarrow> (minUntypedSizeBits \<le> capBlockSize srcCap))))
+      (UNIV \<inter>  {s. ccap_relation srcCap (srcCap_' s)}
+            \<inter> {s. ccap_relation newCap (newCap_' s)}
+            \<inter> {s. srcSlot_' s = Ptr srcSlot})
       []
       (setUntypedCapAsFull srcCap newCap srcSlot)
       (Call setUntypedCapAsFull_'proc)"
@@ -1078,7 +1027,7 @@ lemma setUntypedCapAsFull_ccorres [corres]:
    apply (rule ccorres_return_Skip [unfolded dc_def])
   apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_UntypedCap)
   apply (frule(1) cte_wp_at_valid_objs_valid_cap')
-  apply clarsimp
+  apply (clarsimp simp: untypedBits_defs)
   apply (intro conjI impI allI)
         apply (erule cte_wp_at_weakenE')
         apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_UntypedCap split: if_split_asm)
@@ -2340,7 +2289,7 @@ lemma untypedZeroRange_idx_forward_helper:
         | _ \<Rightarrow> True)"
   apply (clarsimp split: option.split)
   apply (clarsimp simp: untypedZeroRange_def max_free_index_def Let_def
-                        isCap_simps valid_cap_simps' capAligned_def
+                        isCap_simps valid_cap_simps' capAligned_def untypedBits_defs
                  split: if_split_asm)
   apply (erule subsetD[rotated], rule intvl_both_le)
    apply (clarsimp simp: getFreeRef_def)

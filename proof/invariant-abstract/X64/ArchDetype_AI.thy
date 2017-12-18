@@ -576,7 +576,7 @@ lemma delete_objects_invs[wp]:
   apply (frule detype_invariants, clarsimp+)
   apply (drule invs_valid_objs)
   apply (drule (1) cte_wp_valid_cap)
-  apply (simp add: valid_cap_def cap_aligned_def word_size_bits_def)
+  apply (simp add: valid_cap_def cap_aligned_def word_size_bits_def untyped_min_bits_def)
   done
 end
 

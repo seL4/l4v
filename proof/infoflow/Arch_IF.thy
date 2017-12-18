@@ -2194,7 +2194,7 @@ lemma perform_asid_control_invocation_globals_equiv:
   apply (clarsimp simp: conj_comms invs_valid_ko_at_arm invs_psp_aligned invs_valid_objs valid_aci_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (frule_tac cap="UntypedCap False a b c" for a b c  in caps_of_state_valid, assumption)
-  apply (clarsimp simp: valid_cap_def cap_aligned_def)
+  apply (clarsimp simp: valid_cap_def cap_aligned_def untyped_min_bits_def)
   apply (frule_tac slot="(aa,ba)" in untyped_caps_do_not_overlap_global_refs[rotated, OF invs_valid_global_refs])
    apply (clarsimp simp: cte_wp_at_caps_of_state)
    apply ((rule conjI |rule refl | simp)+)[1]

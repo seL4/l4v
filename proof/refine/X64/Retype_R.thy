@@ -2374,7 +2374,7 @@ lemma createNewCaps_valid_cap:
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n "
   assumes not_0: "n \<noteq> 0"
   assumes ct: "ty = APIObjectType ArchTypes_H.CapTableObject \<Longrightarrow> 0 < us"
-              "ty = APIObjectType apiobject_type.Untyped \<Longrightarrow> 4 \<le> us \<and> us \<le> 61"
+              "ty = APIObjectType apiobject_type.Untyped \<Longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits"
   assumes ptr: " ptr \<noteq> 0"
   shows "\<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and> valid_pspace' s\<rbrace>
            createNewCaps ty ptr n us dev
@@ -2826,7 +2826,7 @@ lemma  makeObjectKO_user_data:
      apply (simp_all add: makeObjectKO_simps)
        apply (case_tac x1)
          apply (simp_all add: makeObjectKO_simps obj_relation_retype_def
-                              objBitsKO_simps APIType_map2_def default_object_def
+                              objBits_simps APIType_map2_def default_object_def
                               arch_kobj_size_def default_arch_object_def
                               image_Collect)
       apply (auto simp: pageBits_def)

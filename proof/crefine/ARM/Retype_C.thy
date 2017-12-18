@@ -4645,13 +4645,13 @@ lemma getObjectSize_max_size:
   done
 
 lemma getObjectSize_min_size:
-  "\<lbrakk> newType =  APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> x;
+  "\<lbrakk> newType =  APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> x;
      newType =  APIObjectType apiobject_type.CapTableObject \<longrightarrow> 2 \<le> x \<rbrakk> \<Longrightarrow>
     4 \<le> getObjectSize newType x"
   apply (clarsimp simp only: getObjectSize_def apiGetObjectSize_def word_bits_def
                   split: ARM_H.object_type.splits apiobject_type.splits)
   apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
-                        pdBits_def pageBits_def ptBits_def)
+                        pdBits_def pageBits_def ptBits_def untypedBits_defs)
   done
 
 (*
@@ -5272,9 +5272,9 @@ where
            and K(regionBase \<noteq> 0
                    \<and> ({regionBase..+2 ^ (getObjectSize newType userSize)} \<inter> kernel_data_refs = {})
                    \<and> range_cover regionBase (getObjectSize newType userSize) (getObjectSize newType userSize) (Suc 0)
-                   \<and> (newType = APIObjectType apiobject_type.Untyped \<longrightarrow> userSize \<le> 29)
+                   \<and> (newType = APIObjectType apiobject_type.Untyped \<longrightarrow> userSize \<le> maxUntypedSizeBits)
                    \<and> (newType = APIObjectType apiobject_type.CapTableObject \<longrightarrow> userSize < 28)
-                   \<and> (newType = APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> userSize)
+                   \<and> (newType = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> userSize)
                    \<and> (newType = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < userSize)
                    \<and> (d \<longrightarrow> newType = APIObjectType apiobject_type.Untyped \<or> isFrameType newType)
            ))"
@@ -5866,10 +5866,10 @@ proof -
                          split: option.splits)
           apply (subst aligned_neg_mask [OF is_aligned_weaken])
             apply (erule range_cover.aligned)
-           apply (clarsimp simp:APIType_capBits_def)
+           apply (clarsimp simp:APIType_capBits_def untypedBits_defs)
           apply (clarsimp simp: cap_untyped_cap_lift_def)
           apply (subst word_le_mask_eq, clarsimp simp: mask_def, unat_arith,
-                 auto simp: to_bool_eq_0 word_bits_conv split:if_splits)[1]
+                 auto simp: to_bool_eq_0 word_bits_conv untypedBits_defs split:if_splits)[1]
 
          (* TCB *)
          apply (clarsimp simp: Kernel_C_defs object_type_from_H_def
@@ -6946,7 +6946,7 @@ lemma createObject_valid_cap':
          is_aligned ptr (APIType_capBits ty us) \<and>
           APIType_capBits ty us < word_bits \<and>
          (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < us) \<and>
-         (ty = APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 29) \<and> ptr \<noteq> 0\<rbrace>
+         (ty = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits) \<and> ptr \<noteq> 0\<rbrace>
     createObject ty ptr us dev \<lbrace>\<lambda>r s. s \<turnstile>' r\<rbrace>"
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
@@ -7447,10 +7447,10 @@ lemma range_cover_gsMaxObjectSize:
   done
 
 lemma APIType_capBits_min:
-  "(tp = APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> userSize)
+  "(tp = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> userSize)
     \<Longrightarrow> 4 \<le> APIType_capBits tp userSize"
-  by (simp add: APIType_capBits_def objBits_simps'
-            split: object_type.split ArchTypes_H.apiobject_type.split)
+  by (simp add: APIType_capBits_def objBits_simps' untypedBits_defs
+         split: object_type.split ArchTypes_H.apiobject_type.split)
 
 end
 
@@ -7765,7 +7765,7 @@ lemma createNewCaps_valid_cap_hd:
         valid_pspace' s \<and> n \<noteq> 0 \<and>
         range_cover ptr sz (APIType_capBits ty us) n \<and>
         (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> 0 < us) \<and>
-        (ty = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> 4\<le> us \<and> us \<le> 29) \<and>
+        (ty = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits) \<and>
        ptr \<noteq> 0 \<rbrace>
     createNewCaps ty ptr n us dev
   \<lbrace>\<lambda>r s. s \<turnstile>' hd r\<rbrace>"
@@ -7802,7 +7802,7 @@ lemma createObject_untyped_region_is_zero_bytes:
       in (\<not> to_bool (deviceMemory_' s)
               \<longrightarrow> region_actually_is_zero_bytes (ptr_val (regionBase_' s)) (2 ^ sz) s)
           \<and> is_aligned (ptr_val (regionBase_' s)) sz
-          \<and> sz < 32 \<and> (tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> sz \<ge> 4)}
+          \<and> sz < 32 \<and> (tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> sz \<ge> minUntypedSizeBits)}
       Call createObject_'proc
    {t. cap_get_tag (ret__struct_cap_C_' t) = scast cap_untyped_cap
          \<longrightarrow> (case untypedZeroRange (cap_to_H (the (cap_lift (ret__struct_cap_C_' t)))) of None \<Rightarrow> True
@@ -7814,7 +7814,7 @@ lemma createObject_untyped_region_is_zero_bytes:
   apply (simp add: cap_lift_untyped_cap cap_tag_defs cap_to_H_simps
                    cap_untyped_cap_lift_def object_type_from_H_def)
   apply (simp add: untypedZeroRange_def split: if_split)
-  apply (clarsimp simp: getFreeRef_def Let_def object_type_to_H_def)
+  apply (clarsimp simp: getFreeRef_def Let_def object_type_to_H_def untypedBits_defs)
   apply (simp add: is_aligned_neg_mask_eq[OF is_aligned_weaken])
   apply (simp add:  APIType_capBits_def
                    less_mask_eq word_less_nat_alt)
@@ -7846,9 +7846,9 @@ shows  "ccorres dc xfdc
                     \<and> cnodeptr \<notin> {ptr .. ptr + (of_nat (length destSlots)<< APIType_capBits newType userSize) - 1}
                     \<and> 0 \<notin> {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
                     \<and> is_aligned ptr 4
-                    \<and> (newType = APIObjectType apiobject_type.Untyped \<longrightarrow> userSize \<le> 29)
+                    \<and> (newType = APIObjectType apiobject_type.Untyped \<longrightarrow> userSize \<le> maxUntypedSizeBits)
                     \<and> (newType = APIObjectType apiobject_type.CapTableObject \<longrightarrow> userSize < 28)
-                    \<and> (newType = APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> userSize)
+                    \<and> (newType = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> userSize)
                     \<and> (newType = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < userSize)
                     \<and> (isdev \<longrightarrow> newType = APIObjectType ArchTypes_H.apiobject_type.Untyped \<or>
                                            isFrameType newType)
@@ -7873,7 +7873,7 @@ shows  "ccorres dc xfdc
   apply (subgoal_tac "unat (of_nat (getObjectSize newType userSize)) = getObjectSize newType userSize")
    prefer 2
    apply (subst unat_of_nat32)
-    apply (rule less_le_trans [OF getObjectSize_max_size], auto simp: word_bits_def)[1]
+    apply (rule less_le_trans [OF getObjectSize_max_size], auto simp: word_bits_def untypedBits_defs)[1]
    apply simp
   apply (cinit lift: t_' parent_' slots_' regionBase_' userSize_' deviceMemory_')
    apply (rule ccorres_rhs_assoc2)+
@@ -8014,7 +8014,7 @@ shows  "ccorres dc xfdc
             apply (clarsimp simp: field_simps shiftl_t2n blah)
            apply (clarsimp simp:createObject_c_preconds_def field_simps cong:region_is_bytes_cong)
            apply vcg
-          apply (clarsimp simp: cte_C_size conj_comms)
+          apply (clarsimp simp: cte_C_size conj_comms untypedBits_defs)
           apply (simp cong: conj_cong)
           apply (intro conjI impI)
               apply (simp add: unat_eq_def)
@@ -8193,7 +8193,7 @@ shows  "ccorres dc xfdc
        apply (rule conjI)
         apply (drule_tac n = "x+1" and gbits = 4 in range_cover_not_zero_shift[OF _ range_cover_le,rotated])
            apply simp
-          subgoal by (case_tac newType; simp add: objBits_simps'
+          subgoal by (case_tac newType; simp add: objBits_simps' untypedBits_defs
                        APIType_capBits_def range_cover_def split:apiobject_type.splits)
          subgoal by simp
         subgoal by (simp add:word_of_nat_plus word_shiftl_add_distrib field_simps shiftl_t2n)

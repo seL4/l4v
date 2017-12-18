@@ -266,7 +266,7 @@ The total of the guard size and the radix of the node cannot exceed the number o
 >     Arch.updateCapData p w aoCap
 > updateCapData _ _ cap = cap
 
-The C implementation only has space for 28 bits in the badge field.
+For 32-bit platforms, the C implementation only has space for 28 bits in the badge field. 64-bit platforms can use a full word.
 
 > badgeBits :: Int
 > badgeBits = wordSizeCase 28 64

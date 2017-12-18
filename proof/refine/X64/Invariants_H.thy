@@ -418,7 +418,8 @@ where valid_cap'_def:
     Structures_H.NullCap \<Rightarrow> True
   | Structures_H.DomainCap \<Rightarrow> True
   | Structures_H.UntypedCap d r n f \<Rightarrow>
-      valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> 4 \<le> n \<and> n \<le> 61 \<and> f \<le> 2^n \<and> is_aligned (of_nat f :: machine_word) 4
+      valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> minUntypedSizeBits \<le> n \<and> n \<le> maxUntypedSizeBits
+        \<and> f \<le> 2^n \<and> is_aligned (of_nat f :: machine_word) minUntypedSizeBits
   | Structures_H.EndpointCap r badge x y z \<Rightarrow> ep_at' r s
   | Structures_H.NotificationCap r badge x y \<Rightarrow> ntfn_at' r s
   | Structures_H.CNodeCap r bits guard guard_sz \<Rightarrow>
@@ -1493,9 +1494,8 @@ lemma valid_bound_tcb'_Some[simp]:
   by (auto simp: valid_bound_tcb'_def)
 
 lemmas objBits_defs = tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
-
+lemmas untypedBits_defs = minUntypedSizeBits_def maxUntypedSizeBits_def
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def
-lemmas objBitsKO_simps = objBits_simps
 lemmas objBits_simps' = objBits_simps objBits_defs
 
 lemmas wordRadix_def' = wordRadix_def[simplified]

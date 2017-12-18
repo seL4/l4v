@@ -1074,7 +1074,7 @@ lemma reset_untyped_cap_reads_respects_g:
     erule caps_of_state_cteD)
      apply (clarsimp simp: descendants_range_def2 empty_descendants_range_in)
     apply clarsimp+
-  apply fastforce
+  apply (fastforce simp: untyped_min_bits_def)
   done
 
 lemma equiv_valid_obtain:
@@ -1306,12 +1306,10 @@ lemma reset_untyped_cap_globals_equiv:
     apply (strengthen invs_valid_global_objs)
     apply (wp delete_objects_invs_ex
        hoare_vcg_const_imp_lift get_cap_wp)+
-  apply (clarsimp simp: cte_wp_at_caps_of_state
-                        descendants_range_def2
-                        is_cap_simps bits_of_def
-       split del: if_split)
+  apply (clarsimp simp: cte_wp_at_caps_of_state descendants_range_def2 is_cap_simps bits_of_def
+             split del: if_split)
   apply (frule caps_of_state_valid_cap, clarsimp+)
-  apply (clarsimp simp: valid_cap_simps cap_aligned_def)
+  apply (clarsimp simp: valid_cap_simps cap_aligned_def untyped_min_bits_def)
   apply (frule valid_global_refsD2, clarsimp+)
   apply (clarsimp simp: ptr_range_def[symmetric] global_refs_def)
   apply (strengthen empty_descendants_range_in)

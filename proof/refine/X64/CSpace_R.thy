@@ -3395,7 +3395,7 @@ lemma usableUntypedRange_empty:
   apply (clarsimp simp: isCap_simps max_free_index_def valid_cap_simps' capAligned_def)
   apply (rule order_trans, rule word_plus_mono_right)
     apply (rule_tac x="2 ^ capBlockSize cp - 1" in word_of_nat_le)
-    apply (simp add: unat_2p_sub_1)
+    apply (simp add: unat_2p_sub_1 untypedBits_defs)
    apply (simp add: field_simps is_aligned_no_overflow)
   apply (simp add: field_simps)
   done
@@ -6509,7 +6509,7 @@ lemma usableUntypedRange_mono2:
 
 lemma updateFreeIndex_pspace':
   "\<lbrace>\<lambda>s. (capFreeIndex cap \<le> idx \<and> idx \<le> 2 ^ capBlockSize cap \<and>
-         is_aligned (of_nat idx :: machine_word) 4 \<and> isUntypedCap cap) \<and>
+         is_aligned (of_nat idx :: machine_word) minUntypedSizeBits \<and> isUntypedCap cap) \<and>
         valid_pspace' s \<and> cte_wp_at' (\<lambda>c. cteCap c = cap) src s\<rbrace>
    updateCap src (capFreeIndex_update (\<lambda>_. idx) cap)
    \<lbrace>\<lambda>r s. valid_pspace' s\<rbrace>"
@@ -6526,16 +6526,16 @@ lemma updateFreeIndex_pspace':
   apply (rename_tac capability mdbnode)
   apply (drule(1) ctes_of_valid_cap')
   apply (subgoal_tac "usableUntypedRange (capFreeIndex_update (\<lambda>_. idx) capability)
-          \<subseteq> usableUntypedRange capability")
-   apply (clarsimp simp:valid_cap'_def capAligned_def valid_untyped'_def
-          simp del:atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff usableUntypedRange.simps
-          split del:if_split)
+                        \<subseteq> usableUntypedRange capability")
+   apply (clarsimp simp: valid_cap'_def capAligned_def valid_untyped'_def
+               simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+                         Int_atLeastAtMost atLeastatMost_empty_iff usableUntypedRange.simps
+              split del: if_split)
    apply (drule_tac x = ptr' in spec)
-   apply (clarsimp simp:ko_wp_at'_def
-          simp del:atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff usableUntypedRange.simps
-          split del:if_split)
+   apply (clarsimp simp: ko_wp_at'_def
+               simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+                         Int_atLeastAtMost atLeastatMost_empty_iff usableUntypedRange.simps
+              split del: if_split)
    apply blast
   apply (rule usableUntypedRange_mono2,
     auto simp add: isCap_simps capAligned_def valid_cap_simps')
@@ -6548,7 +6548,7 @@ lemma ctes_of_cte_wpD:
 lemma updateFreeIndex_forward_valid_objs':
   "\<lbrace>\<lambda>s. valid_objs' s \<and> cte_wp_at' ((\<lambda>cap. isUntypedCap cap
           \<and> capFreeIndex cap \<le> idx \<and> idx \<le> 2 ^ capBlockSize cap
-          \<and> is_aligned (of_nat idx :: machine_word) 4) o cteCap) src s\<rbrace>
+          \<and> is_aligned (of_nat idx :: machine_word) minUntypedSizeBits) o cteCap) src s\<rbrace>
    updateFreeIndex src idx
    \<lbrace>\<lambda>r s. valid_objs' s\<rbrace>"
   apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def updateCap_def getSlotCap_def)
@@ -6587,7 +6587,7 @@ lemma updateFreeIndex_forward_valid_mdb':
 lemma updateFreeIndex_forward_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' ((\<lambda>cap. isUntypedCap cap
           \<and> capFreeIndex cap \<le> idx \<and> idx \<le> 2 ^ capBlockSize cap
-          \<and> is_aligned (of_nat idx :: machine_word) 4) o cteCap) src s\<rbrace>
+          \<and> is_aligned (of_nat idx :: machine_word) minUntypedSizeBits) o cteCap) src s\<rbrace>
    updateFreeIndex src idx
    \<lbrace>\<lambda>r s. invs' s\<rbrace>"
   apply (clarsimp simp:invs'_def valid_state'_def)

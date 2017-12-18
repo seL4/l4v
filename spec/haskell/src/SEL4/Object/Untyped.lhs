@@ -29,6 +29,7 @@ This module defines the behavior of untyped objects.
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
 
 > import Data.Bits
+> import Data.WordLib
 
 \end{impdetails}
 
@@ -48,6 +49,14 @@ We start by defining a simple function to align one value to a power-of-two boun
 > alignUp :: Word -> Int -> Word
 > alignUp baseValue alignment =
 >   (baseValue + (1 `shiftL` alignment) - 1) .&. complement (mask alignment)
+
+The range of allowable sizes for Untyped objects depends on the word size.
+
+> minUntypedSizeBits :: Int
+> minUntypedSizeBits = 4
+
+> maxUntypedSizeBits :: Int
+> maxUntypedSizeBits = wordSizeCase 29 47
 
 The expected parameters are the type of the new objects, the size of the requested objects (for those with variable size), a capability to a capability space, index and depth used to locate the destination for the new capabilities, and the maximum number of new capabilities to be created. When successful, it returns the number of new objects or regions created.
 
@@ -74,9 +83,9 @@ The value of this argument is the base 2 logarithm of the actual required size. 
 
 >     let userObjSize = fromIntegral userObjSizeW
 
-max untyped size is $2^30$
+The retype fails if the requested object size is too large.
 
->     rangeCheck userObjSize 0 $ finiteBitSize nullPointer - 3
+>     rangeCheck userObjSize 0 maxUntypedSizeBits
 
 The kernel does not allow creation of CNodes containing only one entry; this is done to avoid non-terminating loops in capability lookup. Note that it is possible for a single entry CNode to translate bits using its guard; this is not allowed, however, to avoid having to check for it during capability lookups.
 
@@ -85,7 +94,7 @@ The kernel does not allow creation of CNodes containing only one entry; this is 
 
 Because of capability size limitations, the kernel does not allow creation of objects smaller than 16 bytes.
 
->     when (newType == fromAPIType Untyped && userObjSize < 4) $
+>     when (newType == fromAPIType Untyped && userObjSize < minUntypedSizeBits) $
 >         throw $ InvalidArgument 1
 
 The node index and depth arguments, and the root capability, specify a CNode to place newly created capabilities in. This is similar to the source argument of the Insert and Move operations. However, unlike those operations, the specified slot must contain a CNode capability, and the new capabilities will be placed in \emph{that} CNode. % XXX should have either a diagram, or a more intuitive way to specify the destination.

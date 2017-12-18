@@ -227,6 +227,12 @@ definition endpoint_bits :: nat where
 definition ntfn_bits :: nat where
   "ntfn_bits \<equiv> 4"
 
+definition untyped_min_bits :: nat where
+  "untyped_min_bits \<equiv> 4"
+
+definition untyped_max_bits :: nat where
+  "untyped_max_bits \<equiv> 29"
+
 primrec
   arch_kobj_size :: "arch_kernel_obj \<Rightarrow> nat"
 where
