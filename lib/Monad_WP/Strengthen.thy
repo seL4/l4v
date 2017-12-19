@@ -12,7 +12,8 @@ theory Strengthen
 imports Main
 begin
 
-text {* Strengthen *}
+text {* Implementation of the 'strengthen' tool and the 'mk_strg'
+attribute. See the theory Strengthen_Demo for a demonstration. *}
 
 locale strengthen_implementation begin
 
@@ -203,18 +204,18 @@ fun mk_strg_args (SOME (typ, pat)) ctxt thm = mk_strg (typ, pat) ctxt thm
 val arg_pars = Scan.option (Scan.first (map Args.$$$ ["I", "I'", "D", "D'", "lhs", "rhs"])
   -- Scan.repeat (Args.$$$ "A" || Args.$$$ "E" || Args.$$$ "O" || Args.$$$ "_"))
 
-val setup =
-      Attrib.setup @{binding "mk_strg"}
-          ((Scan.lift arg_pars -- Args.context)
-              >> (fn (args, ctxt) => Thm.rule_attribute [] (K (mk_strg_args args ctxt))))
-          "put rule in 'strengthen' form"
+val attr_pars : attribute context_parser
+    = (Scan.lift arg_pars -- Args.context)
+        >> (fn (args, ctxt) => Thm.rule_attribute [] (K (mk_strg_args args ctxt)))
+
 
 end
 *}
 
 end
 
-setup Make_Strengthen_Rule.setup
+attribute_setup mk_strg = \<open>Make_Strengthen_Rule.attr_pars\<close>
+          "put rule in 'strengthen' form (see theory Strengthen_Demo)"
 
 text {* Quick test. *}
 
@@ -391,7 +392,7 @@ end
 setup "Strengthen.setup"
 
 method_setup strengthen = {* Strengthen.strengthen_args *}
-  "strengthen the goal"
+  "strengthen the goal (see theory Strengthen_Demo)"
 
 method_setup strengthen_asm = {* Strengthen.strengthen_asm_args *}
   "apply ''strengthen'' to weaken an assumption"
