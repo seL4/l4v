@@ -2227,3 +2227,43 @@ case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(NotificationCap {capNtf
         in ->12 
     else ->13
 
+case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { capNtfnPtr = ptr }), final, _) -> ((ReplyCap { capReplyPtr = ptr }), final, _) -> (NullCap, _, _) -> (DomainCap, _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tptr}), True, _) -> ((SchedContextCap { capSchedContextPtr = scPtr }), True, _) -> (SchedControlCap, _, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> ((IRQHandlerCap { capIRQ = irq }), True, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+    if isEndpointCap \v0\
+    then let ptr = capEPPtr \v0\; final = \v1\
+        in ->1
+    else if isNotificationCap \v0\
+    then let ptr = capNtfnPtr \v0\; final = \v1\
+        in ->2
+    else if isReplyCap \v0\
+    then let ptr = capReplyPtr \v0\; final = \v1\
+        in ->3
+    else if isNullCap \v0\
+    then ->4
+    else if isDomainCap \v0\
+    then ->5
+    else if \v2\
+    then ->6
+    else if isCNodeCap \v0\ \<and> \v1\
+    then let ptr = capCNodePtr \v0\; bits = capCNodeBits \v0\
+        in ->7
+    else if isThreadCap \v0\ \<and> \v1\
+    then let tptr = capTCBPtr \v0\
+        in ->8
+    else if isSchedContextCap \v0\ \<and> \v1\
+    then let scPtr = capSchedContextPtr \v0\
+        in ->9
+    else if isSchedControlCap \v0\
+    then ->10
+    else if isZombie \v0\ \<and> \v1\
+    then let z = \v0\
+        in ->11
+    else if isArchObjectCap \v0\
+    then let cap = capCap \v0\; final = \v1\
+        in ->12
+    else if isIRQHandlerCap \v0\ \<and> \v1\
+    then let irq = capIRQ \v0\
+        in ->13
+    else if isZombie \v0\ \<and> \<not> \v1\
+    then ->14
+    else ->15
+
