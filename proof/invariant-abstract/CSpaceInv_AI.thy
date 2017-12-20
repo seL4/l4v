@@ -343,9 +343,10 @@ lemma allActiveTCBs_valid_state:
   "\<lbrace>valid_state\<rbrace> allActiveTCBs \<lbrace>\<lambda>R s. valid_state s \<and> (\<forall>t \<in> R. st_tcb_at runnable t s) \<rbrace>"
   apply (simp add: allActiveTCBs_def, wp)
   apply (simp add: getActiveTCB_def pred_tcb_at_def obj_at_def get_tcb_def
-              split: option.splits if_split_asm Structures_A.kernel_object.splits)
-  sorry
-
+            split: option.splits if_split_asm Structures_A.kernel_object.splits)
+  apply (clarsimp simp: is_schedulable_opt_def get_tcb_rev
+                 split: option.splits)
+  done
 
 definition
   cap_master_cap :: "cap \<Rightarrow> cap"

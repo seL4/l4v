@@ -90,38 +90,17 @@ lemma replace_cap_invs:
   apply (rule conjI)
    apply (erule disjE)
     apply (simp add: fun_upd_def[symmetric] fun_upd_idem)
-(*    apply (simp add: fun_upd_def[symmetric] fun_upd_idem)
-   apply (clarsimp simp add: reply_mdb_def)
-   apply (thin_tac "\<forall>a b. (a, b) \<in> cte_refs cp nd \<and> Q a b\<longrightarrow> R a b" for cp nd Q R)
-   apply (thin_tac "is_pt_cap cap \<longrightarrow> P" for cap P)+
-   apply (thin_tac "is_pd_cap cap \<longrightarrow> P" for cap P)+
-   apply (rule conjI)
-    apply (unfold reply_caps_mdb_def)[1]
-    apply (erule allEI, erule allEI)
-    apply (fastforce split: if_split_asm simp: is_cap_simps)
-   apply (unfold reply_masters_mdb_def)[1]
-   apply (erule allEI, erule allEI)
-   apply (fastforce split: if_split_asm simp: is_cap_simps)
-  apply (rule conjI)
-   apply (erule disjE)
-    apply (clarsimp)
-    apply (drule caps_of_state_cteD)
-    apply (erule(1) valid_reply_capsD [OF has_reply_cap_cte_wpD])
-   apply (simp add: is_cap_simps)
-  apply (frule(1) valid_global_refsD2)
-  apply (frule(1) cap_refs_in_kernel_windowD)
-  apply (rule conjI)
-   apply (erule disjE)
-    apply (clarsimp simp: cte_wp_at_caps_of_state)
-    apply (cases p, fastforce)
-   apply (simp add: is_cap_simps)
-  apply (elim disjE)
-   apply simp
-   apply (clarsimp simp: valid_table_capsD[OF caps_of_state_cteD]
-                    valid_arch_caps_def unique_table_refs_no_cap_asidE)
-  apply simp
-  apply (rule Ball_emptyI, simp add: gen_obj_refs_subset)
-  done*) sorry
+    apply (clarsimp simp add: valid_global_refsD2)
+   apply (simp add: valid_global_refsD2)
+  apply (intro conjI)
+         apply (erule disjE, simp, clarsimp simp: gen_obj_refs_subset subsetD)
+        apply presburger
+       apply (fastforce simp: unique_table_refs_no_cap_asidE valid_arch_caps_def)
+      apply ((clarsimp simp only: valid_arch_caps_def valid_table_caps_def;
+              erule disjE, elim allE, fastforce, simp)+)[4]
+  apply (erule disjE, auto simp: cap_refs_in_kernel_windowD)
+  done
+
 end
 
 definition
