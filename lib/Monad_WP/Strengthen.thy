@@ -12,8 +12,8 @@ theory Strengthen
 imports Main
 begin
 
-text {* Implementation of the 'strengthen' tool and the 'mk_strg'
-attribute. See the theory Strengthen_Demo for a demonstration. *}
+text {* Implementation of the @{text strengthen} tool and the @{text mk_strg}
+attribute. See the theory @{text Strengthen_Demo} for a demonstration. *}
 
 locale strengthen_implementation begin
 
