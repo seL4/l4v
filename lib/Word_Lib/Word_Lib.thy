@@ -105,6 +105,18 @@ where
   "pop_count w \<equiv> length (filter id (to_bl w))"
 
 
+(* Sign extension from bit n *)
+
+definition
+  sign_extend :: "nat \<Rightarrow> 'a::len word \<Rightarrow> 'a word"
+where
+  "sign_extend n w \<equiv> if w !! n then w || ~~mask n else w && mask n"
+
+definition
+  sign_extended :: "nat \<Rightarrow> 'a::len word \<Rightarrow> bool"
+where
+  "sign_extended n w \<equiv> \<forall>i. n < i \<longrightarrow> i < size w \<longrightarrow> w !! i = w !! n"
+
 
 lemma ptr_add_0 [simp]:
   "ptr_add ref 0 = ref "

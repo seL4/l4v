@@ -5537,33 +5537,57 @@ lemma word_of_nat_inj:
   by (rule contrapos_pp[OF of_nats]; cases "x < y"; cases "y < x")
      (auto dest: bounded[THEN of_nat_mono_maybe])
 
-(* Sign-extend from bit n *)
+(* Sign extension from bit n. *)
 
-definition
-  sign_extend :: "nat \<Rightarrow> 'a::len word \<Rightarrow> 'a word"
-where
-  "sign_extend n w \<equiv> if w!!n then w || ~~mask n else w"
+lemma sign_extend_bitwise_if:
+  "i < size w \<Longrightarrow> sign_extend e w !! i \<longleftrightarrow> (if i < e then w !! i else w !! e)"
+  by (simp add: sign_extend_def neg_mask_bang word_size)
 
+lemma sign_extend_bitwise_disj:
+  "i < size w \<Longrightarrow> sign_extend e w !! i \<longleftrightarrow> i \<le> e \<and> w !! i \<or> e \<le> i \<and> w !! e"
+  by (auto simp: sign_extend_bitwise_if)
+
+lemma sign_extend_bitwise_cases:
+  "i < size w \<Longrightarrow> sign_extend e w !! i \<longleftrightarrow> (i \<le> e \<longrightarrow> w !! i) \<and> (e \<le> i \<longrightarrow> w !! e)"
+  by (auto simp: sign_extend_bitwise_if)
+
+lemmas sign_extend_bitwise_if' = sign_extend_bitwise_if[simplified word_size]
+lemmas sign_extend_bitwise_disj' = sign_extend_bitwise_disj[simplified word_size]
+lemmas sign_extend_bitwise_cases' = sign_extend_bitwise_cases[simplified word_size]
+
+(* Often, it is easier to reason about an operation which does not overwrite
+   the bit which determines which mask operation to apply. *)
 lemma sign_extend_def':
-  "sign_extend n w = (if w!!n then w || ~~mask (Suc n) else w)"
-  apply (rule word_eqI)
-  apply (auto dest: less_antisym simp: sign_extend_def word_size word_ops_nth_size)
+  "sign_extend n w = (if w !! n then w || ~~ mask (Suc n) else w && mask (Suc n))"
+  by (rule word_eqI[rule_format])
+     (auto simp: sign_extend_bitwise_if' word_size word_ops_nth_size dest: less_antisym)
+
+lemma sign_extended_sign_extend:
+  "sign_extended n (sign_extend n w)"
+  by (clarsimp simp: sign_extended_def word_size sign_extend_bitwise_if')
+
+lemma sign_extended_iff_sign_extend:
+  "sign_extended n w \<longleftrightarrow> sign_extend n w = w"
+  apply (rule iffI)
+   apply (rule word_eqI[rule_format], rename_tac i)
+   apply (case_tac "n < i"; simp add: sign_extended_def word_size sign_extend_bitwise_if')
+  apply (erule subst, rule sign_extended_sign_extend)
   done
 
-lemma sign_extend_bitwise:
-  "i < size w \<Longrightarrow> sign_extend e w !! i \<longleftrightarrow> w !! i \<or> (w !! e \<and> e < i)"
-  by (cases "i \<le> e"; cases "i = e"; simp add: sign_extend_def neg_mask_bang word_size)
-
-definition
-  sign_extended :: "nat \<Rightarrow> 'a::len word \<Rightarrow> bool"
-where
-  "sign_extended n w \<equiv> \<forall>i. n < i \<longrightarrow> i < size w \<longrightarrow> test_bit w i = test_bit w n"
-
-lemma sign_extended_weaken: "sign_extended n w \<Longrightarrow> n \<le> m \<Longrightarrow> sign_extended m w"
+lemma sign_extended_weaken:
+  "sign_extended n w \<Longrightarrow> n \<le> m \<Longrightarrow> sign_extended m w"
   unfolding sign_extended_def by (cases "n < m") auto
 
+lemma sign_extend_sign_extend_eq:
+  "sign_extend m (sign_extend n w) = sign_extend (min m n) w"
+  by (cases "m < n") (auto intro!: word_eqI simp: word_size sign_extend_bitwise_cases')
+
 lemma sign_extended_high_bits:
-  "\<lbrakk> sign_extended e p; j < size p; e \<le> i; i < j \<rbrakk> \<Longrightarrow> test_bit p i = test_bit p j"
+  "\<lbrakk> sign_extended e p; j < size p; e \<le> i; i < j \<rbrakk> \<Longrightarrow> p !! i = p !! j"
   by (drule (1) sign_extended_weaken; simp add: sign_extended_def)
+
+lemma sign_extend_eq:
+  "w && mask (Suc n) = v && mask (Suc n) \<Longrightarrow> sign_extend n w = sign_extend n v"
+  by (rule word_eqI, fastforce dest: word_eqD simp: sign_extend_bitwise_if' word_size)
 
 end
