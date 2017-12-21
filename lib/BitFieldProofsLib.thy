@@ -21,7 +21,7 @@ lemmas mask_shift_simps =
   ucast_def shift_over_ao_dists word_bw_assocs
   word_size multi_shift_simps mask_def
   word_ao_dist NOT_eq scast_id
-  word_and_max_word max_word_def
+  word_and_max_simps
 
 lemmas sep_heap_simps =
   sep_app_def hrs_mem_update_def

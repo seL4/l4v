@@ -493,6 +493,13 @@ lemma word_and_max_word:
   shows "x = max_word \<Longrightarrow> a AND x = a"
   by simp
 
+(* Simplifying with word_and_max_word and max_word_def works for arbitrary word sizes,
+   but the conditional rewrite can be slow when combined with other common rewrites on
+   word expressions. If we are willing to limit our attention to common word sizes,
+   the following will usually be much faster. *)
+lemmas word_and_max_simps[simplified max_word_def, simplified] =
+  word_and_max[where 'a=8] word_and_max[where 'a=16] word_and_max[where 'a=32] word_and_max[where 'a=64]
+
 lemma word_and_1:
   fixes x::"'a::len word"
   shows "(x AND 1) = (if x!!0 then 1 else 0)"
