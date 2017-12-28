@@ -100,12 +100,13 @@ where
 
 text \<open>Unbind a reply from the corresponding scheduling context.\<close>
 definition
-  reply_unbind_sc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  reply_unlink_sc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "reply_unbind_sc sc_ptr reply_ptr = do
+  "reply_unlink_sc sc_ptr reply_ptr = do
      sc \<leftarrow> get_sched_context sc_ptr;
      reply \<leftarrow> get_reply reply_ptr;
-     set_reply reply_ptr (reply\<lparr>reply_sc:= None\<rparr>);
+     assert (reply_sc reply = Some sc_ptr);
+     set_reply_obj_ref reply_sc_update reply_ptr None;
      set_sched_context sc_ptr (sc\<lparr>sc_replies := remove1 reply_ptr (sc_replies sc)\<rparr>)
   od"
 
@@ -119,29 +120,52 @@ where (* called from reply_remove; in BlockedOnReply *)
      set_thread_state tcb_ptr (BlockedOnReply None) (* does this make sense? *)
   od"
 
+definition reply_unlink_tcb :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "reply_unlink_tcb r = do
+     reply \<leftarrow> get_reply r;
+     tptr \<leftarrow> assert_opt $ reply_tcb reply;
+     ts \<leftarrow> get_thread_state tptr;
+     assert (case ts of BlockedOnReply r \<Rightarrow> True | BlockedOnReceive _ r \<Rightarrow> True |  _ \<Rightarrow> False);
+     set_reply_obj_ref reply_tcb_update r None;
+     set_thread_state tptr Inactive
+   od"
+
 text \<open>Unbind all replies from a scheduling context.\<close>
 definition
   sched_context_clear_replies :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_clear_replies sc_ptr = do
      replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
-     mapM_x (reply_unbind_sc sc_ptr) replies
+     mapM_x (reply_unlink_sc sc_ptr) replies
   od"
 
 text {* Remove a reply object from the call stack. *}
 definition
   reply_remove :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where (* must be in BlockedOnReply *)
+where (* reply_tcb must be in BlockedOnReply *)
   "reply_remove r = do
     reply \<leftarrow> get_reply r;
     caller \<leftarrow> assert_opt $ reply_tcb reply;
     sc_ptr \<leftarrow> assert_opt $ reply_sc reply;
     replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
-    reply_unbind_caller caller r;
-    reply_unbind_sc sc_ptr r;
-    when (hd replies = r) $ do_extended_op $ sched_context_donate sc_ptr caller;
-    set_thread_state caller (BlockedOnReply None)
-  od" (* the r.caller is in BlockedOnReply on return *)
+    reply_unlink_tcb r;
+    reply_unlink_sc sc_ptr r;
+    when (hd replies = r) $ do_extended_op $ sched_context_donate sc_ptr caller
+  od" (* the r.caller is in Inactive on return *)
+
+text {* Remove a specific tcb, and the reply it is blocking on, from the call stack. *}
+definition
+  reply_remove_tcb :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where (* tptr must be in BlockedOnReply *)
+  "reply_remove_tcb tptr = do
+    ts \<leftarrow> get_thread_state tptr;
+    case ts of
+      BlockedOnReply r \<Rightarrow> do
+        rptr \<leftarrow> assert_opt r;
+        reply_remove rptr
+      od
+    | _ \<Rightarrow> fail
+  od" (* the r.caller is in Inactive on return *)
 
 definition
   unbind_from_reply :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -158,24 +182,16 @@ where (* called from finalise_cap *)
   od" (* set_thread_state? *)
 
 definition
-  unbind_reply_tcb :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  reply_clear_tcb :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "unbind_reply_tcb rptr \<equiv> do
+  "reply_clear_tcb rptr \<equiv> do
     reply \<leftarrow> get_reply rptr;
-    tptr \<leftarrow> return (reply_tcb reply);
-    when (tptr \<noteq> None) $ do
-      st \<leftarrow> get_thread_state (the tptr);
-      case st of BlockedOnReceive x r \<Rightarrow> do
-            set_thread_state (the tptr) (BlockedOnReceive x None);
-            set_reply rptr (reply\<lparr>reply_tcb := None\<rparr>)
-                 od
-            | BlockedOnReply r \<Rightarrow> do
-            set_thread_state (the tptr) (BlockedOnReply None);
-            maybeM reply_remove r
-          od
-            | _ \<Rightarrow> return ()
-    od
-  od" (* set_thread_state? *)
+    tptr \<leftarrow> assert_opt $ (reply_tcb reply);
+    st \<leftarrow> get_thread_state tptr;
+    case st of BlockedOnReceive x r \<Rightarrow> maybeM reply_unlink_tcb r
+          | BlockedOnReply r \<Rightarrow> maybeM reply_remove r
+          | _ \<Rightarrow> fail
+  od"
 
 definition
   unbind_reply_in_ts :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -205,17 +221,11 @@ definition
 where
   "reply_push caller callee reply_ptr can_donate = do
     sc_caller \<leftarrow> get_tcb_obj_ref tcb_sched_context caller;
+
+    reply_tcb_opt \<leftarrow> get_reply_tcb reply_ptr; (* this is supposed to be None *)
+    assert (reply_tcb_opt = None);
+
     sc_callee \<leftarrow> get_tcb_obj_ref tcb_sched_context callee;
-
-    reply_tcb_opt \<leftarrow> get_reply_tcb reply_ptr;
-    when (reply_tcb_opt \<noteq> None \<and> reply_tcb_opt \<noteq> Some callee) $ do
-         ts \<leftarrow> get_thread_state (the reply_tcb_opt);
-         case ts of BlockedOnReply r \<Rightarrow> reply_remove reply_ptr (* r must be reply_ptr *)
-             (* the PR claims that reply_remove changes the TS, but it actually doesn't *)
-                  | BlockedOnReceive _ _ \<Rightarrow> return ()  (* _otherwise_ case described in the C *)
-                  | _ \<Rightarrow> fail
-    od;
-
     can_donate \<leftarrow> return (if (sc_callee = None) then can_donate else False);
 
     ts_reply \<leftarrow> no_reply_in_ts caller;
@@ -224,15 +234,16 @@ where
 
 
     (* link reply and tcb *)
-    reply \<leftarrow> get_reply reply_ptr;
-    reply' \<leftarrow> return $ reply\<lparr>reply_tcb := Some caller\<rparr>;
-    set_reply reply_ptr (reply\<lparr>reply_tcb := Some caller\<rparr>);
+    set_reply_obj_ref reply_tcb_update reply_ptr (Some caller);
     set_thread_state caller (BlockedOnReply (Some reply_ptr));
 
     when (sc_caller \<noteq> None \<and> can_donate) $ do
-      sc \<leftarrow> get_sched_context (the sc_caller);
+      sc \<leftarrow> get_sched_context (the sc_caller); (* maybe define a function to add a reply to the queue? *)
+      case sc_replies sc of
+          [] \<Rightarrow> assert True
+        | (r#_) \<Rightarrow> do reply \<leftarrow> get_reply r; assert (reply_sc reply = sc_caller) od;
       set_sched_context (the sc_caller) (sc\<lparr>sc_replies := reply_ptr#sc_replies sc\<rparr>);
-      set_reply reply_ptr (reply'\<lparr>reply_sc := sc_caller\<rparr>);
+      set_reply_obj_ref reply_sc_update reply_ptr sc_caller;
       do_extended_op $ sched_context_donate (the sc_caller) callee
     od
   od"
@@ -367,10 +378,8 @@ where
            do st \<leftarrow> get_thread_state t;
               reply_opt \<leftarrow> case st of BlockedOnReceive _ r_opt \<Rightarrow> return r_opt
                                     | _ \<Rightarrow> return None;
-              when (reply_opt \<noteq> None) $ do
-                   reply \<leftarrow> get_reply (the reply_opt);
-                   set_reply (the reply_opt) (reply\<lparr>reply_tcb := None\<rparr>)
-                 od;
+              when (reply_opt \<noteq> None) $ 
+                   reply_unlink_tcb (the reply_opt);
               set_thread_state t Restart;
               do_extended_op (possible_switch_to t)
             od) $ queue;
@@ -479,10 +488,7 @@ where
      ep' \<leftarrow> return (case queue' of [] \<Rightarrow> IdleEP
                                 |  _ \<Rightarrow> update_ep_queue ep queue');
      set_endpoint epptr ep';
-     when (reply_opt \<noteq> None) $ do
-                           reply \<leftarrow>get_reply (the reply_opt);
-                           set_reply (the reply_opt) (reply\<lparr>reply_tcb:= None\<rparr>)
-                         od;
+     when (reply_opt \<noteq> None) $ reply_unlink_tcb (the reply_opt);
      set_thread_state tptr Inactive
    od"
 
@@ -602,8 +608,7 @@ definition
 where (* called when tptr is in BlocedOnReply *)
  "reply_cancel_ipc tptr reply_opt \<equiv> do
     thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := None \<rparr>) tptr;
-    maybeM reply_remove reply_opt;
-   set_thread_state tptr Inactive
+    reply_remove_tcb tptr
   od"
 
 text {* Cancel the message receive operation of a thread queued in an

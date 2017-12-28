@@ -321,16 +321,8 @@ where
       (when final $ do
           reply \<leftarrow> get_reply r;
           tptr \<leftarrow> return (reply_tcb reply);
-          when (tptr \<noteq> None) $ do
-             ts \<leftarrow> get_thread_state (the tptr);
-             case ts of BlockedOnReply _ \<Rightarrow> reply_remove r
-                  | BlockedOnReceive n _ \<Rightarrow> do
-                         set_reply r (reply\<lparr> reply_tcb := None \<rparr>);
-                         set_thread_state (the tptr) (BlockedOnReceive n None)
-                    od
-                   | _ \<Rightarrow> return ()
-              od
-           od)"   (* case distinction on thread state *)
+          when (tptr \<noteq> None) $ reply_clear_tcb r
+           od)"
 | "fast_finalise (EndpointCap r b R)     final =
       (when final $ cancel_all_ipc r)"
 | "fast_finalise (NotificationCap r b R) final =
@@ -486,18 +478,7 @@ where
       (liftM (K (NullCap, NullCap)) $ when final $ do
          reply \<leftarrow> get_reply r;
          tptr \<leftarrow> return (reply_tcb reply);
-         when (tptr \<noteq> None) $ do
-           ts \<leftarrow> get_thread_state (the tptr);
-           case ts of BlockedOnReply rp \<Rightarrow> reply_remove r (* (r = Some reply) should hold *)
-                    | BlockedOnReceive n rp \<Rightarrow> do
-                         set_reply r (reply\<lparr> reply_tcb := None \<rparr>);
-                         set_thread_state (the tptr) (BlockedOnReceive n None)
-                        od 
-                    | _ \<Rightarrow> return ()
-         od
-           (* current PR#916 doesn't change the TS of the caller/callee thread
-              what is the TS of the caller/callee thread when its reply object is removed?
-              Or just setting it to None would do? *) (* FIXME *)
+         when (tptr \<noteq> None) $ reply_clear_tcb r
        od)"
 | "finalise_cap (EndpointCap r b R)      final =
       (liftM (K (NullCap, NullCap)) $ when final $ cancel_all_ipc r)"
@@ -513,7 +494,6 @@ where
       do (* can be in any thread state *)
          when final $ unbind_notification r;
          when final $ unbind_from_sc r;
-         when final $ unbind_from_reply r; (* this line is not in the current PR #916 *)
          when final $ suspend r; (* suspend sets the TS to Inactive *)
          when final $ prepare_thread_delete r;
          return (if final then (Zombie r None 5) else NullCap, NullCap)

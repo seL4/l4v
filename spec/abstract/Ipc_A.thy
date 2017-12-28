@@ -294,6 +294,7 @@ where
                 reply \<leftarrow> case recv_state
                   of (BlockedOnReceive _ reply) \<Rightarrow> do
                       do_ipc_transfer thread (Some epptr) badge can_grant dest;
+                      maybeM reply_unlink_tcb reply;
                       return reply
                     od
                   | _ \<Rightarrow> fail;
@@ -301,9 +302,7 @@ where
 
                 fault \<leftarrow> thread_get tcb_fault thread;
                 if call \<or> fault \<noteq> None then
-                  if can_grant \<and> reply \<noteq> None
-                  then reply_push thread dest (the reply) can_donate
-                  else set_thread_state thread Inactive
+                  when (can_grant \<and> reply \<noteq> None) $ reply_push thread dest (the reply) can_donate
                 else when (can_donate \<and> sc_opt = None) $ sched_context_donate (the sc_opt) dest;
 
                 set_thread_state dest Running;
@@ -351,7 +350,11 @@ where
                        of EndpointCap ref badge rights \<Rightarrow> return (ref,rights)
                         | _ \<Rightarrow> fail);
      reply \<leftarrow> (case reply_cap of 
-                 ReplyCap r \<Rightarrow> return (Some r)
+                 ReplyCap r \<Rightarrow> do
+                   tptr \<leftarrow> get_reply_obj_ref reply_tcb r;
+                   when (tptr \<noteq> None \<and> the tptr \<noteq> thread) $ reply_clear_tcb (the tptr);
+                   return (Some r)
+                 od 
                | NullCap \<Rightarrow> return None
                | _ \<Rightarrow> fail);
      ep \<leftarrow> get_endpoint epptr;
@@ -371,6 +374,8 @@ where
             | RecvEP queue \<Rightarrow> (case is_blocking of
               True \<Rightarrow> do
                   set_thread_state thread (BlockedOnReceive epptr reply);
+                  when (reply \<noteq> None) $ set_reply_obj_ref reply_tcb_update (the reply) (Some thread);
+                  (* schedule_tcb? *)
                   qs' \<leftarrow> sort_queue (queue @ [thread]);
                   set_endpoint epptr (RecvEP qs')
                 od
@@ -563,38 +568,40 @@ where
     recv_opt \<leftarrow> get_reply_tcb reply;
     swp maybeM recv_opt (\<lambda>receiver. do
       state \<leftarrow> get_thread_state receiver;
-      assert (state = BlockedOnReply (Some reply));
-      reply_remove reply;
-      fault \<leftarrow> thread_get tcb_fault receiver;
-      case fault of
-        None \<Rightarrow> do
-           do_ipc_transfer sender None 0 True receiver;
-           set_thread_state receiver Running
-        od
-      | Some f \<Rightarrow> do
-           mi \<leftarrow> get_message_info sender;
-           buf \<leftarrow> lookup_ipc_buffer False sender;
-           mrs \<leftarrow> get_mrs sender buf mi;
-           restart \<leftarrow> handle_fault_reply f receiver (mi_label mi) mrs;
-           thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := None \<rparr>) receiver;
-           set_thread_state receiver (if restart then Restart else Inactive);
-
-          sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
-          when (sc_opt \<noteq> None \<and> runnable state) $ do
-            sc_ptr \<leftarrow> assert_opt sc_opt;
-            refill_unblock_check sc_ptr;
-            ready \<leftarrow> refill_ready sc_ptr;
-            sufficient \<leftarrow> refill_sufficient sc_ptr 0;
-            if (ready \<and> sufficient) then do_extended_op $ possible_switch_to receiver
-            else do
-              tcb \<leftarrow> gets_the $ get_tcb receiver;
-              sc \<leftarrow> get_sched_context sc_ptr;
-              if (is_ep_cap (tcb_timeout_handler tcb) \<and> \<not> is_timeout_fault f) then
-                handle_timeout receiver (Timeout (sc_badge sc))
-              else postpone sc_ptr
-            od
+      if (state = BlockedOnReply (Some reply)) then do
+        reply_remove reply;
+        fault \<leftarrow> thread_get tcb_fault receiver;
+        case fault of
+          None \<Rightarrow> do
+             do_ipc_transfer sender None 0 True receiver;
+             set_thread_state receiver Running
           od
+        | Some f \<Rightarrow> do
+             mi \<leftarrow> get_message_info sender;
+             buf \<leftarrow> lookup_ipc_buffer False sender;
+             mrs \<leftarrow> get_mrs sender buf mi;
+             restart \<leftarrow> handle_fault_reply f receiver (mi_label mi) mrs;
+             thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := None \<rparr>) receiver;
+             set_thread_state receiver (if restart then Restart else Inactive);
+
+            sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
+            when (sc_opt \<noteq> None \<and> runnable state) $ do
+              sc_ptr \<leftarrow> assert_opt sc_opt;
+              refill_unblock_check sc_ptr;
+              ready \<leftarrow> refill_ready sc_ptr;
+              sufficient \<leftarrow> refill_sufficient sc_ptr 0;
+              if (ready \<and> sufficient) then do_extended_op $ possible_switch_to receiver
+              else do
+                tcb \<leftarrow> gets_the $ get_tcb receiver;
+                sc \<leftarrow> get_sched_context sc_ptr;
+                if (is_ep_cap (tcb_timeout_handler tcb) \<and> \<not> is_timeout_fault f) then
+                  handle_timeout receiver (Timeout (sc_badge sc))
+                else postpone sc_ptr
+              od
+            od
+         od
        od
+       else return ()
     od)
   od"
 
