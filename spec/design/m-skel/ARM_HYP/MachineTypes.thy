@@ -87,9 +87,9 @@ record
   exclusive_state :: ARM_HYP.exclusive_monitors
   machine_state_rest :: ARM_HYP.machine_state_rest
 
-consts irq_oracle :: "nat \<Rightarrow> 10 word"
-
-axiomatization irq_oracle_max_irqInst where
+axiomatization
+  irq_oracle :: "nat \<Rightarrow> 10 word"
+where
   irq_oracle_max_irq: "\<forall> n. (irq_oracle n) <= ARM_HYP.maxIRQ"
 
 end_qualify
