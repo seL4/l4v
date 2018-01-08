@@ -389,14 +389,14 @@ next
       done
 
     have cond2: "\<And>nb (radixBits :: machine_word) (guardBits :: machine_word).
-      \<lbrakk> unat nb = guard; unat radixBits = capCNodeBits cap; capCNodeBits cap < 64; capCNodeGuardSize cap < 32;
+      \<lbrakk> unat nb = guard; unat radixBits = capCNodeBits cap; capCNodeBits cap < 64; capCNodeGuardSize cap < 64;
       unat guardBits = capCNodeGuardSize cap \<rbrakk> \<Longrightarrow>
       \<forall>s s'. (s, s') \<in> rf_sr \<and> True \<and> True \<longrightarrow>
                 (guard < capCNodeBits cap + capCNodeGuardSize cap) = (s' \<in> \<lbrace>nb < radixBits + guardBits\<rbrace>)"
       by (simp add: Collect_const_mem word_less_nat_alt unat_word_ariths)
 
     have cond3: "\<And>nb (radixBits :: machine_word) (guardBits :: machine_word).
-      \<lbrakk> unat nb = guard; unat radixBits = capCNodeBits cap; capCNodeBits cap < 64; capCNodeGuardSize cap < 32;
+      \<lbrakk> unat nb = guard; unat radixBits = capCNodeBits cap; capCNodeBits cap < 64; capCNodeGuardSize cap < 64;
       unat guardBits = capCNodeGuardSize cap;
       \<not> guard < capCNodeBits cap + capCNodeGuardSize cap \<rbrakk> \<Longrightarrow>
       \<forall>s s'. (s, s') \<in> rf_sr \<and> True \<and> True \<longrightarrow>
@@ -412,24 +412,23 @@ next
     let ?p = "(capCNodePtr cap + 0x20 * ((cptr >> guard - (capCNodeBits cap + capCNodeGuardSize cap)) &&
                                             mask (capCNodeBits cap)))"
 
-    have n_bits_guard: "\<And>nb :: machine_word. \<lbrakk> guard \<le> 64; unat nb = guard \<rbrakk> \<Longrightarrow> unat (nb && mask 6) = guard"
+    have n_bits_guard: "\<And>nb :: machine_word. \<lbrakk> guard \<le> 64; unat nb = guard \<rbrakk> \<Longrightarrow> unat (nb && mask 7) = guard"
       apply (subgoal_tac "nb \<le> 64")
       apply (clarsimp)
       apply (rule less_mask_eq)
       apply (erule order_le_less_trans)
       apply simp
-      sorry (*
       apply (simp add: word_le_nat_alt)
-      done *)
+      done
 
-    have mask6_eqs:
+    have mask7_eqs:
       "\<And>cap ccap. \<lbrakk> ccap_relation cap ccap; isCNodeCap cap \<rbrakk>
-             \<Longrightarrow> (capCNodeRadix_CL (cap_cnode_cap_lift ccap) + capCNodeGuardSize_CL (cap_cnode_cap_lift ccap)) && mask 6
+             \<Longrightarrow> (capCNodeRadix_CL (cap_cnode_cap_lift ccap) + capCNodeGuardSize_CL (cap_cnode_cap_lift ccap)) && mask 7
                  = capCNodeRadix_CL (cap_cnode_cap_lift ccap) + capCNodeGuardSize_CL (cap_cnode_cap_lift ccap)"
       "\<And>cap ccap. \<lbrakk> ccap_relation cap ccap; isCNodeCap cap \<rbrakk>
-             \<Longrightarrow> capCNodeRadix_CL (cap_cnode_cap_lift ccap) && mask 6 = capCNodeRadix_CL (cap_cnode_cap_lift ccap)"
+             \<Longrightarrow> capCNodeRadix_CL (cap_cnode_cap_lift ccap) && mask 7 = capCNodeRadix_CL (cap_cnode_cap_lift ccap)"
       "\<And>cap ccap. \<lbrakk> ccap_relation cap ccap; isCNodeCap cap \<rbrakk>
-             \<Longrightarrow> capCNodeGuardSize_CL (cap_cnode_cap_lift ccap) && mask 6 = capCNodeGuardSize_CL (cap_cnode_cap_lift ccap)"
+             \<Longrightarrow> capCNodeGuardSize_CL (cap_cnode_cap_lift ccap) && mask 7 = capCNodeGuardSize_CL (cap_cnode_cap_lift ccap)"
       apply (frule(1) rxgd)
       defer
       apply (simp_all add: cap_cnode_cap_lift_def cap_get_tag_isCap[symmetric]
@@ -441,7 +440,7 @@ next
       apply (rule order_le_less_trans, rule add_le_mono)
         apply (rule word_le_nat_alt[THEN iffD1], rule word_and_le1)+
       apply simp
-      sorry
+      done
 
     have gm: "\<And>(nb :: machine_word) cap cap'. \<lbrakk> unat nb = guard; ccap_relation cap cap'; isCNodeCap cap \<rbrakk>
                 \<Longrightarrow> nb \<ge> capCNodeRadix_CL (cap_cnode_cap_lift cap') +
@@ -450,7 +449,6 @@ next
                (capCNodeRadix_CL (cap_cnode_cap_lift cap') +
                 capCNodeGuardSize_CL (cap_cnode_cap_lift cap')))
                     = guard - (capCNodeBits cap + capCNodeGuardSize cap)"
-  sorry (*
       apply (simp add: unat_sub)
       apply (subst unat_plus_simple[THEN iffD1])
        apply (subst no_olen_add_nat)
@@ -460,7 +458,7 @@ next
          apply (rule word_le_nat_alt[THEN iffD1], rule word_and_le1)+
        apply simp
       apply (simp add: cap_simps)
-      done *)
+      done
 
     note if_cong[cong]
     show ?case
@@ -494,7 +492,6 @@ next
         apply (rule ccorres_locateSlotCap_push[rotated])
          apply (rule hoare_pre, wp whenE_throwError_wp, simp)
         apply (rule ccorres_split_when_throwError_cond [OF cond2], assumption+)
-  sorry (*
           apply (rule rab_failure_case_ccorres, vcg, rule conseqPre, vcg)
           apply clarsimp
          apply (rule ccorres_Guard_Seq)+
@@ -563,19 +560,19 @@ next
           apply arith
          apply (clarsimp simp: isCap_simps cte_level_bits_def
                                option.split[where P="\<lambda>x. x"])
-        apply (clarsimp simp: isCap_simps valid_cap_simps' cte_level_bits_def
+        apply (clarsimp simp: isCap_simps valid_cap_simps' cte_level_bits_def cteSizeBits_def
                               real_cte_at')
        apply (clarsimp simp: isCap_simps valid_cap'_def)
        -- "C guard"
       apply (frule (1) cgD [OF refl], frule (1) rbD [OF refl], frule (1) gbD [OF refl])
       apply (simp add: Collect_const_mem cap_get_tag_isCap exception_defs lookup_fault_lifts
-        n_bits_guard mask6_eqs word_le_nat_alt word_less_nat_alt gm)
+        n_bits_guard mask7_eqs word_le_nat_alt word_less_nat_alt gm)
       apply (elim conjE)
       apply (frule rf_sr_cte_at_valid [where p =
-        "cte_Ptr (capCNodePtr cap + 0x10 * ((cptr >> guard - (capCNodeBits cap + capCNodeGuardSize cap)) && mask (capCNodeBits cap)))", rotated])
+        "cte_Ptr (capCNodePtr cap + 2^cteSizeBits * ((cptr >> guard - (capCNodeBits cap + capCNodeGuardSize cap)) && mask (capCNodeBits cap)))", rotated])
        apply simp
        apply (erule (1) valid_cap_cte_at')
-      apply simp
+      apply (simp add: objBits_defs)
       apply (frule(2) gm)
       apply (simp add: word_less_nat_alt word_le_nat_alt less_mask_eq)
       apply (intro impI conjI allI, simp_all)
@@ -593,13 +590,13 @@ next
        apply (clarsimp simp: linorder_not_less cap_simps)
        apply (clarsimp simp: isCap_simps valid_cap'_def)
        apply arith
-      apply (subgoal_tac "(0x1F :: machine_word) = mask 5")
-       apply (erule ssubst [where t = "0x1F"])
+      apply (subgoal_tac "(0x3F :: machine_word) = mask 6")
+       apply (erule ssubst [where t = "0x3F"])
        apply (subst word_mod_2p_is_mask [symmetric])
         apply simp
        apply (simp add: unat_word_ariths)
       apply (simp add: mask_def)
-      done *)
+      done
   qed
 qed
 
