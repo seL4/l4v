@@ -186,16 +186,6 @@ definition
 where
   "set_current_vspace_root vspace asid \<equiv> set_current_cr3 $ cr3 vspace asid"
 
-definition
-  update_asid_map :: "asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "update_asid_map asid \<equiv> do
-     vspace \<leftarrow> find_vspace_for_asid_assert asid;
-     asid_map \<leftarrow> gets (x64_asid_map \<circ> arch_state);
-     asid_map' \<leftarrow> return (asid_map (asid \<mapsto> vspace));
-     modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> x64_asid_map := asid_map' \<rparr>\<rparr>)
-   od"
-
 text {* Switch into the address space of a given thread or the global address
 space if none is correctly configured. *}
 definition
@@ -207,7 +197,6 @@ definition
        ArchObjectCap (PML4Cap pml4 (Some asid)) \<Rightarrow> doE
            pml4' \<leftarrow> find_vspace_for_asid asid;
            whenE (pml4 \<noteq> pml4') $ throwError InvalidRoot;
-           liftE $ update_asid_map asid;
            cur_cr3 \<leftarrow> liftE $ get_current_cr3;
            whenE (cur_cr3 \<noteq> cr3 (addrFromPPtr pml4) asid) $
               liftE $ set_current_cr3 $ cr3 (addrFromPPtr pml4) asid
@@ -219,23 +208,12 @@ definition
     od)
 od"
 
-text {* Remove any mapping from this virtual ASID to a hardware ASID. *}
-definition
-invalidate_asid :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"invalidate_asid asid \<equiv> do
-    asid_map \<leftarrow> gets (x64_asid_map \<circ> arch_state);
-    asid_map' \<leftarrow> return (asid_map (asid:= None));
-    modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> x64_asid_map := asid_map' \<rparr>\<rparr>)
-od"
-
 text {* Remove virtual to physical mappings in either direction involving this
 virtual ASID. *}
 definition
 invalidate_asid_entry :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"invalidate_asid_entry asid vspace \<equiv> do
-  do_machine_op $ hwASIDInvalidate vspace asid;
-  invalidate_asid asid
-od"
+"invalidate_asid_entry asid vspace \<equiv>
+  do_machine_op $ hwASIDInvalidate vspace asid"
 
 definition
 delete_asid_pool :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where

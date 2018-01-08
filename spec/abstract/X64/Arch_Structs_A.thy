@@ -307,7 +307,6 @@ record arch_state =
   x64_global_pts            :: "obj_ref list"
   x64_global_pdpts          :: "obj_ref list"
   x64_global_pds            :: "obj_ref list"
-  x64_asid_map              :: "X64_A.asid \<rightharpoonup> obj_ref" (* FIXME x64: do we need this? *)
   x64_current_cr3           :: "X64_A.cr3"
 
 (* FIXME x64-vtd:
