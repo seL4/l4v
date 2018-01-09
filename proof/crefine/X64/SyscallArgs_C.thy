@@ -629,13 +629,16 @@ lemma no_fail_getMRs:
   apply (rule det_wp_getMRs)
   done
 
-(* FIXME x64: relook after msgReg merge *)
+lemma nat_less_4_cases:
+  "(x::nat) < 4 \<Longrightarrow> x=0 \<or> x=1 \<or> x=2 \<or> x=3"
+  by clarsimp
+
 lemma msgRegisters_scast:
   "n < unat (scast n_msgRegisters :: machine_word) \<Longrightarrow>
   unat (scast (index msgRegistersC n)::machine_word) = unat (index msgRegistersC n)"
-  apply (simp add: msgRegisters_def fupdate_def update_def n_msgRegisters_def fcp_beta
-                   )
-  sorry
+  apply (simp add: kernel_all_global_addresses.msgRegisters_def fupdate_def update_def n_msgRegisters_def fcp_beta
+                   Kernel_C.R10_def Kernel_C.R8_def Kernel_C.R9_def Kernel_C.R15_def)
+  by (auto dest!: nat_less_4_cases)
 
 lemma asUser_cur_obj_at':
   assumes f: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
@@ -674,7 +677,6 @@ lemma asUser_const_rv:
   apply clarsimp
   done
 
-(* FIXME x64: relook after msgReg merge *)
 lemma getMRs_tcbContext:
   "\<lbrace>\<lambda>s. n < unat n_msgRegisters \<and> n < unat (msgLength info) \<and> thread = ksCurThread s \<and> cur_tcb' s\<rbrace>
   getMRs thread buffer info
@@ -701,7 +703,7 @@ lemma getMRs_tcbContext:
    apply (wp asUser_const_rv)
   apply (clarsimp simp: n_msgRegisters_def msgRegisters_unfold)
   apply (simp add: nth_Cons' cur_tcb'_def split: if_split)
-  sorry
+  done
 
 lemma threadGet_tcbIpcBuffer_ccorres [corres]:
   "ccorres (op =) w_bufferPtr_' (tcb_at' tptr) UNIV hs
@@ -812,174 +814,85 @@ lemma lookupIPCBuffer_ccorres[corres]:
                  del: Collect_const)
      apply ccorres_remove_UNIV_guard
      apply (rule ccorres_getSlotCap_cte_at)
-  sorry (* FIXME x64: waiting on bit size changes
      apply (rule ccorres_move_array_assertion_tcb_ctes)
      apply (ctac (no_vcg))
        apply csymbr
        apply (rule_tac b="isArchObjectCap rva \<and> isPageCap (capCap rva)" in ccorres_case_bools')
         apply simp
-        apply (rule ccorres_symb_exec_r)
-          apply (rule_tac b="capVPSize (capCap rva) \<noteq> ARMSmallPage" in ccorres_case_bools')
-           apply (rule ccorres_cond_true_seq)
+        apply (rule ccorres_cond_false_seq)
+        apply (simp(no_asm))
+        apply csymbr
+        apply (rule_tac b="isDeviceCap rva" in ccorres_case_bools')
+         apply (rule ccorres_cond_true_seq)
+         apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
+          apply vcg
+         apply (rule conseqPre, vcg,
+                clarsimp simp: isCap_simps return_def option_to_ptr_def option_to_0_def)
+        apply (rule ccorres_cond_false_seq)
+        apply simp
+        apply csymbr
+        apply (clarsimp simp: isCap_simps)
+        apply (rule ccorres_guard_imp[where A=\<top> and A'=UNIV],
+                rule ccorres_cond [where R=\<top>])
+            apply (clarsimp simp: from_bool_0 isCap_simps)
+            apply (frule cap_get_tag_isCap_unfolded_H_cap)
+            apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def elim!: ccap_relationE)
+            apply (clarsimp simp: vmrights_to_H_def)
+            apply (simp add: Kernel_C.VMReadOnly_def Kernel_C.VMKernelOnly_def
+                             Kernel_C.VMReadWrite_def
+                      split: if_split)
+           apply (frule cap_get_tag_isCap_unfolded_H_cap(18),simp)
+           apply (frule capFVMRights_range) thm pageBitsForSize_spec
+           apply (simp add: cap_frame_cap_lift)
+           apply (clarsimp simp: cap_to_H_def vmrights_to_H_def to_bool_def
+                                 word_le_make_less
+                                 Kernel_C.VMReadWrite_def Kernel_C.VMReadOnly_def
+                                 Kernel_C.VMKernelOnly_def
+                           dest: word_less_cases)
            apply (rule ccorres_rhs_assoc)+
            apply csymbr
            apply csymbr
-           apply (rule ccorres_cond_false_seq)
-           apply (simp(no_asm))
            apply csymbr
-           apply (rule_tac b="isDeviceCap rva" in ccorres_case_bools')
-            apply (rule ccorres_cond_true_seq)
-            apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
-             apply vcg
-            apply (rule conseqPre, vcg,
-                clarsimp simp: isCap_simps return_def
-                option_to_ptr_def option_to_0_def)
-           apply (rule ccorres_cond_false_seq)
+           apply csymbr
+           apply csymbr
+           apply (rule ccorres_Guard)
            apply simp
-           apply csymbr
-           apply (clarsimp simp: isCap_simps)
-           apply (rule ccorres_guard_imp[where A=\<top> and A'=UNIV],
-               rule ccorres_cond [where R=\<top>])
-               apply (clarsimp simp: from_bool_0 isCap_simps)
-               apply (frule ccap_relation_PageCap_generics)
-               apply clarsimp
-               apply (clarsimp simp: vmrights_to_H_def)
-               apply (simp add: Kernel_C.VMReadOnly_def Kernel_C.VMKernelOnly_def
-                           Kernel_C.VMReadWrite_def Kernel_C.VMNoAccess_def
-                         split: if_split)
-               apply clarsimp
-               apply (drule less_4_cases)
-               apply auto[1]
-               apply (frule cap_get_tag_isCap_unfolded_H_cap(17),simp)
-               apply (frule capFVMRights_range)
-               apply (simp add: cap_frame_cap_lift
-                               generic_frame_cap_get_capFVMRights_CL_def)
-               apply (clarsimp simp: cap_to_H_def vmrights_to_H_def to_bool_def
-                               word_le_make_less Kernel_C.VMNoAccess_def
-                               Kernel_C.VMReadWrite_def Kernel_C.VMReadOnly_def
-                               Kernel_C.VMKernelOnly_def
-                               dest: word_less_cases)
-              apply (rule ccorres_rhs_assoc)+
-              apply csymbr
-              apply csymbr
-              apply csymbr
-              apply csymbr
-              apply csymbr
-              apply (rule ccorres_Guard)
-              apply simp
-              apply (rule ccorres_assert)+
-              apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-              apply (rule allI, rule conseqPre, vcg)
-              apply (clarsimp simp: return_def option_to_ptr_def option_to_0_def isCap_simps)
-              apply (clarsimp dest!: ccap_relation_PageCap_generics simp: mask_def)
-             apply (ctac add: ccorres_return_C)
-            apply clarsimp
-           apply (clarsimp simp: if_1_0_0 Collect_const_mem isCap_simps word_less_nat_alt
-              option_to_ptr_def from_bool_0 option_to_0_def dest!:ccap_relation_frame_tags)
-          apply (rule ccorres_cond_false_seq)
-          apply (simp(no_asm))
-          apply (rule ccorres_cond_false_seq)
-          apply (simp(no_asm))
-          apply csymbr
-            apply (rule_tac b="isDeviceCap rva" in ccorres_case_bools')
-             apply (rule ccorres_cond_true_seq)
-             apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
-              apply vcg
-             apply (rule conseqPre, vcg,
-                    clarsimp simp: isCap_simps return_def
-                                   option_to_ptr_def option_to_0_def)
-            apply (rule ccorres_cond_false_seq)
-            apply simp
-            apply csymbr
-            apply (clarsimp simp: isCap_simps)
-            apply (rule ccorres_guard_imp[where A=\<top> and A'=UNIV],
-                rule ccorres_cond [where R=\<top>])
-                apply (clarsimp simp: from_bool_0 isCap_simps)
-                apply (frule ccap_relation_PageCap_generics)
-                apply clarsimp
-                apply (clarsimp simp: vmrights_to_H_def)
-                apply (simp add: Kernel_C.VMReadOnly_def Kernel_C.VMKernelOnly_def
-                                 Kernel_C.VMReadWrite_def Kernel_C.VMNoAccess_def
-                          split: if_split)
-                apply clarsimp
-                apply (drule less_4_cases)
-                apply auto[1]
-               apply (frule cap_get_tag_isCap_unfolded_H_cap(16),simp)
-               apply (frule capFVMRights_range)
-               apply (simp add: cap_frame_cap_lift
-                                generic_frame_cap_get_capFVMRights_CL_def)
-                apply (clarsimp simp: cap_to_H_def vmrights_to_H_def to_bool_def
-                                      word_le_make_less Kernel_C.VMNoAccess_def
-                                      Kernel_C.VMReadWrite_def Kernel_C.VMReadOnly_def
-                                      Kernel_C.VMKernelOnly_def
-                                dest: word_less_cases)
-               apply (rule ccorres_rhs_assoc)+
-               apply csymbr
-               apply csymbr
-               apply csymbr
-               apply csymbr
-               apply csymbr
-               apply (rule ccorres_Guard)
-               apply simp
-               apply (rule ccorres_assert)+
-               apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-               apply (rule allI, rule conseqPre, vcg)
-               apply (clarsimp simp: return_def option_to_ptr_def option_to_0_def isCap_simps)
-               apply (clarsimp dest!: ccap_relation_PageCap_generics simp: mask_def)
-              apply (ctac add: ccorres_return_C)
-             apply clarsimp
-            apply (clarsimp simp: if_1_0_0 Collect_const_mem isCap_simps word_less_nat_alt
-               option_to_ptr_def option_to_0_def dest!:ccap_relation_frame_tags)
-           apply (clarsimp simp: from_bool_0)
-           apply vcg
-          apply clarsimp
-          apply (rule conseqPre, vcg)
-          apply (clarsimp simp: from_bool_0 isCap_simps Collect_const_mem)
-       apply (simp (no_asm))
-       apply (rule ccorres_symb_exec_r)
-         apply (rule ccorres_cond_true_seq)
-         apply (rule ccorres_rhs_assoc)+
-         apply csymbr
-         apply csymbr
-         apply (rule ccorres_cond_true_seq)
-         apply simp
-         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-         apply (rule allI, rule conseqPre, vcg)
-         apply (clarsimp simp: return_def option_to_ptr_def option_to_0_def isCap_simps
-                               dumb_bool_for_all
-                        split: capability.splits arch_capability.splits bool.splits)
-
-        apply vcg
-       apply (rule conseqPre, vcg)
-       apply clarsimp
-      apply clarsimp
-      apply wp
+           apply (rule ccorres_assert)+
+           apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+           apply (rule allI, rule conseqPre, vcg)
+           apply (clarsimp simp: return_def option_to_ptr_def option_to_0_def isCap_simps)
+           apply (frule cap_get_tag_isCap_unfolded_H_cap)
+           apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def mask_def elim!: ccap_relationE)
+          apply (ctac add: ccorres_return_C)
+         apply clarsimp
+        apply (frule cap_get_tag_isCap_unfolded_H_cap)
+        apply (clarsimp simp: if_1_0_0 Collect_const_mem isCap_simps word_less_nat_alt
+                              option_to_ptr_def from_bool_0 option_to_0_def ccap_relation_def
+                              c_valid_cap_def cl_valid_cap_def cap_frame_cap_lift)
+       apply (rule ccorres_cond_true_seq)
+       apply simp
+       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+       apply (rule allI, rule conseqPre, vcg)
+       apply (clarsimp simp: return_def option_to_ptr_def option_to_0_def isCap_simps
+                             dumb_bool_for_all
+                      split: capability.splits arch_capability.splits bool.splits)
+      apply wpsimp
      apply (clarsimp simp: if_1_0_0 Collect_const_mem)
      apply (rule conjI)
       apply (clarsimp simp: isCap_simps word_less_nat_alt )
       apply (frule ccap_relation_page_is_device)
-      apply (frule ccap_relation_PageCap_generics)
       apply (frule ccap_relation_frame_tags)
       apply clarsimp
-      apply (rule conjI,clarsimp)
-       apply (simp add: to_bool_neq_0 cap_get_tag_PageCap_small_frame
-                        cap_get_tag_PageCap_frame cap_frame_cap_lift
-                 split: if_splits)
-      apply (erule disjE)
-       apply ((clarsimp simp: cap_small_frame_cap_lift cap_get_tag_PageCap_frame
-                              to_bool_neq_0 cap_get_tag_PageCap_small_frame
-                       split: if_splits)+)[2]
      apply (rule ccontr)
      apply clarsimp
-     apply (erule disjE)
-      apply ((fastforce simp: cap_get_tag_PageCap_frame
-                              cap_get_tag_PageCap_small_frame isCap_simps)+)[2]
+     apply (fastforce simp: cap_get_tag_PageCap_frame
+                            isCap_simps)
     apply wp
    apply vcg
   apply (simp add: word_sle_def Collect_const_mem
                    tcb_cnode_index_defs tcbSlots cte_level_bits_def
                    size_of_def)
-  done *)
+  done
 
 
 lemma doMachineOp_pointerInUserData:
@@ -1066,7 +979,6 @@ lemma getMRs_user_word:
     apply simp
     apply (wp asUser_const_rv)
    apply (simp add: msgRegisters_unfold n_msgRegisters_def)
-  sorry (* FIXME x64: waiting for msgReg merge
   apply (erule_tac x="unat i - unat n_msgRegisters" in allE)
   apply (erule impE)
    apply (simp add: msgRegisters_unfold
@@ -1086,7 +998,7 @@ lemma getMRs_user_word:
    apply (simp add: word_less_nat_alt word_le_nat_alt)
   apply (simp add: word_le_nat_alt add.commute add.left_commute mult.commute mult.left_commute
                    wordSize_def')
-  done *)
+  done
 
 declare if_split [split]
 
@@ -1122,10 +1034,9 @@ lemma getMRs_rel:
   apply (clarsimp simp: cur_tcb'_def)
   done
 
-(* FIXME x64: msgReg *)
 lemma length_msgRegisters:
   "length X64_H.msgRegisters = unat (scast n_msgRegisters :: machine_word)"
-  sorry (*by (simp add: msgRegisters_unfold n_msgRegisters_def) *)
+  by (simp add: msgRegisters_unfold n_msgRegisters_def)
 
 lemma getMRs_len[simplified]:
   "\<lbrace>\<top>\<rbrace> getMRs thread buffer mi \<lbrace>\<lambda>args s. length args > unat (scast n_msgRegisters :: machine_word) \<longrightarrow> buffer \<noteq> None\<rbrace>"
@@ -1173,15 +1084,14 @@ lemma getMRs_length:
   apply (simp add: msgMaxLength_def msgLengthBits_def n_msgRegisters_def)
   done
 
-(* FIXME x64: msgReg *)
 lemma index_msgRegisters_less':
-  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x13"
+  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x17"
   by (simp add: msgRegistersC_def fupdate_def Arrays.update_def
                 fcp_beta "StrictC'_register_defs")
 
 lemma index_msgRegisters_less:
-  "n < 4 \<Longrightarrow> index msgRegistersC n <s 0x13"
-  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x13"
+  "n < 4 \<Longrightarrow> index msgRegistersC n <s 0x17"
+  "n < 4 \<Longrightarrow> index msgRegistersC n < 0x17"
   using index_msgRegisters_less'
   by (simp_all add: word_sless_msb_less)
 
@@ -1289,7 +1199,6 @@ lemma getSyscallArg_ccorres_foo:
        apply (subst (asm) msgRegisters_ccorres)
         apply (clarsimp simp: n_msgRegisters_def)
        apply (simp add: n_msgRegisters_def word_less_nat_alt)
-  sorry (* FIXME x64: msgReg
        apply (simp add: index_msgRegisters_less unat_less_helper)
       apply wp[1]
      apply (wp getMRs_tcbContext)
@@ -1319,14 +1228,14 @@ lemma getSyscallArg_ccorres_foo:
     apply (clarsimp simp: msgMaxLength_def unat_less_helper)
    apply simp
   apply (clarsimp simp: sysargs_rel_def sysargs_rel_n_def)
-  apply (rule conjI, clarsimp simp: unat_of_nat32 word_bits_def)
+  apply (rule conjI, clarsimp simp: unat_of_nat64 word_bits_def)
    apply (drule equalityD2)
    apply clarsimp
    apply (drule use_valid, rule getMRs_length, assumption)
    apply (simp add: n_msgRegisters_def  split: if_split_asm)
   apply (rule conjI)
    apply (clarsimp simp: option_to_ptr_def option_to_0_def
-      word_less_nat_alt word_le_nat_alt unat_of_nat32 word_bits_def
+      word_less_nat_alt word_le_nat_alt unat_of_nat64 word_bits_def
       n_msgRegisters_def not_less msgMaxLength_def)
    apply (drule equalityD2)
    apply clarsimp
@@ -1336,7 +1245,7 @@ lemma getSyscallArg_ccorres_foo:
   apply (rule conjI, clarsimp simp: cur_tcb'_def)
   apply clarsimp
   apply (clarsimp simp: bind_def gets_def return_def split_def get_def)
-  done *)
+  done
 
 end
 
