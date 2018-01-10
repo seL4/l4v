@@ -192,11 +192,6 @@ crunch valid_arch_state'[wp]:
   (wp: crunch_wps  simp: crunch_simps unless_def
     ignore:getObject updateObject setObject)
 
-crunch ko_wp_at'[wp]:
- checkPML4NotInASIDMap "\<lambda>s. ko_wp_at' P p s"
-  (wp: crunch_wps simp: crunch_simps unless_def
-    ignore:getObject updateObject setObject)
-
 declare withoutPreemption_lift [wp del]
 
 crunch valid_cap'[wp]:

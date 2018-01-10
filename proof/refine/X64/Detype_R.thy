@@ -108,8 +108,7 @@ defs deletionIsSafe_def:
         \<longrightarrow> 6 \<le> bits)"
 
 defs ksASIDMapSafe_def:
-  "ksASIDMapSafe \<equiv> \<lambda>s. \<forall>asid pm.
-     x64KSASIDMap (ksArchState s) asid = Some (pm) \<longrightarrow> page_map_l4_at' pm s"
+  "ksASIDMapSafe \<equiv> \<lambda>s. True"
 
 defs cNodePartialOverlap_def:
   "cNodePartialOverlap \<equiv> \<lambda>cns inRange. \<exists>p n. cns p = Some n
@@ -571,31 +570,8 @@ qed
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma ksASIDMapSafeI:
-  "\<lbrakk> (s,s') \<in> state_relation; invs s; pspace_aligned' s' \<and> pspace_distinct' s' \<rbrakk>
-  \<Longrightarrow> ksASIDMapSafe s'"
-  apply (clarsimp simp: ksASIDMapSafe_def)
-  apply (subgoal_tac "valid_asid_map s")
-   prefer 2
-   apply fastforce
-  apply (clarsimp simp: valid_asid_map_def graph_of_def)
-  apply (subgoal_tac "x64_asid_map (arch_state s) asid = Some pm")
-   prefer 2
-   apply (clarsimp simp: state_relation_def arch_state_relation_def)
-  apply (erule allE)+
-  apply (erule (1) impE)
-  apply clarsimp
-  apply (drule find_vspace_for_asid_eq_helper)
-     apply fastforce
-    apply assumption
-   apply fastforce
-  apply clarsimp
-  apply (rule pspace_relation_pml4)
-      apply (fastforce simp: state_relation_def)
-     apply fastforce
-    apply assumption
-   apply assumption
-  apply simp
-  done
+  "ksASIDMapSafe s'"
+  by (clarsimp simp: ksASIDMapSafe_def)
 
 (* FIXME: generalizes lemma SubMonadLib.corres_submonad *)
 (* FIXME: generalizes lemma SubMonad_R.corres_machine_op *)
@@ -676,21 +652,7 @@ lemma detype_corres:
           simp_all add: detype_locale'_def
      detype_locale_def p_assoc_help invs_valid_pspace)[1]
    apply (simp add:valid_cap_simps)
-  apply (simp add: bind_assoc[symmetric])
-  apply (rule corres_stateAssert_implied2)
-     defer
-     apply (erule ksASIDMapSafeI, assumption, assumption)
-    apply (rule hoare_pre)
-     apply (rule delete_objects_invs)
-    apply fastforce
-   apply (simp add: doMachineOp_def split_def)
-   apply wp
-   apply (clarsimp simp: valid_pspace'_def pspace_distinct'_def
-                         pspace_aligned'_def)
-   apply (rule conjI)
-    subgoal by fastforce
-   apply (clarsimp simp add: pspace_distinct'_def ps_clear_def
-                             dom_if_None Diff_Int_distrib)
+  apply (simp add: bind_assoc[symmetric] ksASIDMapSafe_def)
   apply (simp add: delete_objects_def)
   apply (rule_tac Q="\<lambda>_ s. valid_objs s \<and> valid_list s \<and>
            (\<exists>cref. cte_wp_at (op = (cap.UntypedCap d base magnitude idx)) cref s \<and>

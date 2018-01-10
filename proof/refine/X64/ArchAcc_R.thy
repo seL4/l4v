@@ -1799,9 +1799,6 @@ find_consts "64 word \<Rightarrow> 'a state \<Rightarrow> bool" name:asid
 definition
   "vspace_at_asid_ex asid \<equiv> \<lambda>s. \<exists>pm. vspace_at_asid asid pm s"
 
-definition
-  "vspace_at_uniq_ex asid \<equiv> \<lambda>s. \<exists>pm. vspace_at_asid asid pm s \<and> vspace_at_uniq asid pm s"
-
 lemma find_vspace_for_asid_corres:
   assumes "asid' = asid"
   shows "corres (lfr \<oplus> op =)

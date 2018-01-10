@@ -2054,10 +2054,10 @@ where
 
 definition
   "absArchState s' \<equiv>
-   case s' of X64KernelState asid_tbl am gpm gpdpts gpds gpts ccr3 kvspace \<Rightarrow>
+   case s' of X64KernelState asid_tbl gpm gpdpts gpds gpts ccr3 kvspace \<Rightarrow>
      \<lparr>x64_asid_table = asid_tbl \<circ> ucast, x64_global_pml4 = gpm,
       x64_kernel_vspace = kvspace, x64_global_pts = gpts,
-      x64_global_pdpts = gpdpts, x64_global_pds = gpds, x64_asid_map = am,
+      x64_global_pdpts = gpdpts, x64_global_pds = gpds,
       x64_current_cr3 = absCR3 ccr3\<rparr>"
 
 lemma cr3_expand_unexpand[simp]: "cr3 (cr3_base_address a) (cr3_pcid a) = a"

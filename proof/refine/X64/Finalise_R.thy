@@ -2343,17 +2343,6 @@ lemma invs_asid_update_strg':
   apply (auto simp add: ran_def split: if_split_asm)
   done
 
-lemma invalidateASID'_invs' [wp]:
-  "\<lbrace>invs'\<rbrace> invalidateASID' asid \<lbrace>\<lambda>r. invs'\<rbrace>"
-  apply (simp add: invalidateASID'_def bind_assoc)
-  apply (wp  | simp)+
-  apply (auto simp: invs'_def valid_state'_def valid_global_refs'_def valid_arch_state'_def
-                        valid_asid_map'_def valid_machine_state'_def global_refs'_def
-                        ct_idle_or_in_cur_domain'_def fun_upd_def[symmetric] tcb_in_cur_domain'_def
-                        dom_def inj_on_def)
-  done
-
-
 lemma invalidateASIDEntry_invs'[wp]:
   "\<lbrace>invs'\<rbrace> invalidateASIDEntry asid vs \<lbrace>\<lambda>r. invs'\<rbrace>"
   apply (simp add: invalidateASIDEntry_def hwASIDInvalidate_def)
@@ -2369,21 +2358,10 @@ lemma deleteASIDPool_invs[wp]:
               | simp)+
   done
 
-lemma valid_asid_pool'_ASIDMap_inv[simp]:
-  "valid_asid_pool' p s \<Longrightarrow> valid_asid_pool' p (s\<lparr>ksArchState := x64KSASIDMap_update (\<lambda>_ a.
-                   if a = asid then b
-                   else x64KSASIDMap
-  (ksArchState s) a)
-               (ksArchState s)\<rparr>)"
-  by (cases p; simp)
-
 lemma invalidateASIDEntry_valid_ap' [wp]:
   "\<lbrace>valid_asid_pool' p\<rbrace> invalidateASIDEntry asid vs \<lbrace>\<lambda>r. valid_asid_pool' p\<rbrace>"
-  apply (simp add: invalidateASIDEntry_def invalidateASID'_def hwASIDInvalidate_def
-                    bind_assoc)
-  apply (wp | simp)+
-  apply (rule_tac Q="\<lambda>rv. valid_asid_pool' p" in hoare_strengthen_post)
-    by (wpsimp)+
+  apply (simp add: invalidateASIDEntry_def)
+  by wp
 
 lemma deleteASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> deleteASID asid pd \<lbrace>\<lambda>rv. invs'\<rbrace>"

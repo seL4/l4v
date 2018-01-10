@@ -478,7 +478,6 @@ where
        \<and> x64_global_pdpts s = x64KSGlobalPDPTs s'
        \<and> x64_global_pds s = x64KSGlobalPDs s'
        \<and> x64_global_pts s = x64KSGlobalPTs s'
-       \<and> x64_asid_map s = x64KSASIDMap s'
        \<and> cr3_relation (x64_current_cr3 s) (x64KSCurrentCR3 s')
        \<and> x64_kernel_vspace s = x64KSKernelVSpace s'}"
 

@@ -1079,12 +1079,6 @@ where
   "valid_global_pdpts' pdpts \<equiv> \<lambda>s. \<forall>p \<in> set pdpts. pd_pointer_table_at' p s"
 
 definition
-  valid_asid_map' :: "(asid \<rightharpoonup> machine_word) \<Rightarrow> bool"
-where
- "valid_asid_map' m \<equiv> inj_on m (dom m)
-                          \<and> dom m \<subseteq> ({0 .. mask asid_bits} - {0})"
-
-definition
   valid_arch_state' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_arch_state' \<equiv> \<lambda>s.
@@ -1092,8 +1086,7 @@ where
   page_map_l4_at' (x64KSGlobalPML4 (ksArchState s)) s \<and>
   valid_global_pds' (x64KSGlobalPDs (ksArchState s)) s \<and>
   valid_global_pdpts' (x64KSGlobalPDPTs (ksArchState s)) s \<and>
-  valid_global_pts' (x64KSGlobalPTs (ksArchState s)) s \<and>
-  valid_asid_map' (x64KSASIDMap (ksArchState s))"
+  valid_global_pts' (x64KSGlobalPTs (ksArchState s)) s"
 
 definition
   irq_issued' :: "irq \<Rightarrow> kernel_state \<Rightarrow> bool"
