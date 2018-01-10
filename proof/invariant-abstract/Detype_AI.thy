@@ -527,20 +527,18 @@ lemma non_null_caps:
 lemma valid_cap2:
     "\<And>cap'. \<lbrakk> \<exists>p. cte_wp_at ((=) cap') p s \<rbrakk>
     \<Longrightarrow> obj_reply_refs cap' \<subseteq> (UNIV - untyped_range cap)"
-    apply clarsimp
-    apply (simp add: obj_reply_refs_def, erule disjE)
-     apply (erule untyped_children_in_mdbEE [OF child cap untyped])
-      apply blast
-     apply (drule descendants_range_inD[OF drange])
-      apply (simp add:cte_wp_at_caps_of_state)
-     apply (simp add:untyped)
-    apply (clarsimp split: cap.split_asm bool.split_asm)
-    apply (drule has_reply_cap_cte_wpD)
-  sorry
-(*    apply (drule valid_reply_capsD [OF _ vreply])
-    apply (simp add: pred_tcb_at_def)
-    apply (fastforce simp: live_def dest: live_okE)
-    done*) (* RT do we need this? *)
+  apply clarsimp
+  apply (simp add: obj_reply_refs_def, erule disjE)
+   apply (erule untyped_children_in_mdbEE [OF child cap untyped])
+    apply blast
+   apply (drule descendants_range_inD[OF drange])
+    apply (simp add:cte_wp_at_caps_of_state)
+   apply (simp add:untyped)
+  apply (clarsimp split: cap.split_asm bool.split_asm)
+  apply (simp add: cte_wp_at_caps_of_state)
+  apply (rule no_obj_refs)
+    apply auto
+  done
 
 (* invariants BEGIN *)
 
@@ -561,8 +559,8 @@ lemma refs_of2: "\<And>obj p. kheap s p = Some obj
 
 lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbrakk>
                              \<Longrightarrow> valid_obj p obj (detype (untyped_range cap) s)"
-    apply (clarsimp simp: valid_obj_def
-                   split: Structures_A.kernel_object.split_asm)
+  apply (clarsimp simp: valid_obj_def
+                 split: Structures_A.kernel_object.split_asm)
         apply (clarsimp simp: valid_cs_def)
         apply (drule well_formed_cnode_valid_cs_size)
         apply (rule valid_cap)
@@ -579,16 +577,21 @@ lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbra
         apply (fastforce intro!: cte_wp_at_tcbI)
        apply (clarsimp simp: valid_tcb_state_def valid_bound_obj_def
                       split: Structures_A.thread_state.split_asm option.splits)
-(*
       apply (frule refs_of)
       apply (rename_tac endpoint)
       apply (case_tac endpoint, (fastforce simp: valid_ep_def)+)
      apply (frule refs_of)
-     apply (rename_tac notification ntfn_ext)
-     apply (case_tac "ntfn_obj ntfn_ext")
-       apply (auto simp: valid_ntfn_def ntfn_bound_refs_def split: option.splits)
-    apply (auto intro: arch_valid_obj)
-  done*) sorry
+     apply (fastforce simp: valid_ntfn_def valid_bound_obj_def
+                     split: ntfn.splits option.splits)+
+    apply (frule refs_of)
+    apply (simp add: valid_sched_context_def)
+    apply (intro conjI)
+       apply ((simp add: valid_bound_obj_def split: option.splits)+)[3]
+    apply (fastforce simp: foldl_conj_list_all list_all_def)
+   apply (frule refs_of)
+   apply (auto simp: valid_reply_def valid_bound_obj_def arch_valid_obj
+              split: option.splits)
+  done
 
 lemma valid_objs_detype[detype_invs_lemmas] : "valid_objs (detype (untyped_range cap) s)"
   using invs_valid_objs[OF invs]

@@ -1671,15 +1671,15 @@ lemma valid_objs: "valid_objs s'"
      apply (fastforce simp: valid_ntfn_def valid_bound_obj_def
                      elim!: obj_at_pres[unfolded s'_def ps_def]
                      split: Structures_A.ntfn.splits option.splits)
-sorry
-(*    apply (fastforce simp: valid_sched_context_def valid_bound_obj_def
+    apply (fastforce simp: valid_sched_context_def valid_bound_obj_def foldl_conj_list_all
+                           list_all_def
                     elim!: obj_at_pres[unfolded s'_def ps_def]
-                    split: list.splits option.splits)
-  apply (fastforce simp: valid_reply_def valid_bound_obj_def
-                  elim!: obj_at_pres[unfolded s'_def ps_def]
-                  split: option.splits)
+                    split: option.splits)
+   apply (fastforce simp: valid_reply_def valid_bound_obj_def
+                   elim!: obj_at_pres[unfolded s'_def ps_def]
+                   split: option.splits)
   apply (clarsimp simp: wellformed_default_obj[unfolded s'_def ps_def])
-  done*)
+  done
 
 end
 
