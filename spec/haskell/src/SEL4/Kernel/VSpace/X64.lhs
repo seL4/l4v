@@ -194,15 +194,7 @@ Locating the page directory for a given ASID is necessary when updating or delet
 >     assert (pm .&. mask pml4Bits == 0)
 >         "findVSpaceForASIDAssert: pml4 pointer alignment check"
 >     checkPML4At pm
->     checkPML4UniqueToASID pm asid
->     asidMap <- gets (x64KSASIDMap . ksArchState)
->     flip assert "findVSpaceForASIDAssert: pml4 map mismatch"
->         $ case asidMap ! asid of
->             Nothing -> True
->             Just pm'-> pm == pm'
 >     return pm
-
-These checks are too expensive to run in haskell. The first funcion checks that the pointer is to a page directory, which would require testing that each entry of the table is present. The second checks that the page directory appears in x64KSASIDMap only on the ASIDs specified, which would require walking all possible ASIDs to test. In the formalisation of this specification, these functions are given alternative definitions that make the appropriate checks.
 
 > -- FIXME x64: these are all now unused.
 
@@ -217,15 +209,6 @@ These checks are too expensive to run in haskell. The first funcion checks that 
 
 > checkPTAt :: PPtr PTE -> Kernel ()
 > checkPTAt _ = return ()
-
-> checkPML4ASIDMapMembership :: PPtr PML4E -> [ASID] -> Kernel ()
-> checkPML4ASIDMapMembership _ _ = return ()
-
-> checkPML4UniqueToASID :: PPtr PML4E -> ASID -> Kernel ()
-> checkPML4UniqueToASID pd asid = checkPML4ASIDMapMembership pd [asid]
-
-> checkPML4NotInASIDMap :: PPtr PML4E -> Kernel ()
-> checkPML4NotInASIDMap pd = checkPML4ASIDMapMembership pd []
 
 \subsubsection{Locating Page Table and Page Directory Slots}
 
@@ -456,15 +439,6 @@ This helper function checks that the mapping installed at a given PT or PD slot 
 > setCurrentVSpaceRoot :: PAddr -> ASID -> Kernel ()
 > setCurrentVSpaceRoot vspace asid = setCurrentCR3 $ CR3 vspace asid
 
-> updateASIDMap :: ASID -> Kernel ()
-> updateASIDMap asid = do
->     vs <- findVSpaceForASIDAssert asid
->     asidMap <- gets (x64KSASIDMap . ksArchState)
->     let asidMap' = asidMap//[(asid, Just vs)]
->     modify (\s -> s {
->         ksArchState = (ksArchState s)
->         { x64KSASIDMap = asidMap' }})
-
 > -- FIXME x64: Currently we don't have global state for the CR3 so
 > -- we can't test whether or not we should write to it. We should
 > -- add global state to remember the CR3 and actually avoid the write/flush
@@ -480,7 +454,6 @@ This helper function checks that the mapping installed at a given PT or PD slot 
 >                     capPML4BasePtr = pd }) -> do
 >                 pd' <- findVSpaceForASID asid
 >                 when (pd /= pd') $ throw InvalidRoot
->                 withoutFailure $ updateASIDMap asid
 >                 curCR3 <- withoutFailure $ getCurrentCR3
 >                 when (curCR3 /= CR3 (addrFromPPtr pd) asid) $
 >                         withoutFailure $ setCurrentCR3 $ CR3 (addrFromPPtr pd) asid
@@ -547,19 +520,9 @@ Note that implementations with separate high and low memory regions may also wis
 
 \subsection{Managing ASID Map}
 
-> invalidateASID' :: ASID -> Kernel ()
-> invalidateASID' asid = do
->     findVSpaceForASIDAssert asid
->     asidMap <- gets (x64KSASIDMap . ksArchState)
->     let asidMap' = asidMap//[(asid, Nothing)]
->     modify (\s -> s {
->         ksArchState = (ksArchState s)
->         { x64KSASIDMap = asidMap' }})
-
 > invalidateASIDEntry :: ASID -> PPtr PML4E -> Kernel ()
-> invalidateASIDEntry asid vspace = do
+> invalidateASIDEntry asid vspace =
 >     doMachineOp $ hwASIDInvalidate (fromPPtr vspace) (fromASID asid)
->     invalidateASID' asid
 
 \subsection{Decoding x64 Invocations}
 

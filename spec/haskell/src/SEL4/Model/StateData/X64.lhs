@@ -35,7 +35,6 @@ This module contains the architecture-specific kernel global data for the X86-64
 
 > data KernelState = X64KernelState {
 >     x64KSASIDTable   :: Array ASID (Maybe (PPtr ASIDPool)),
->     x64KSASIDMap     :: Array ASID (Maybe (PPtr PML4E)),
 >     x64KSGlobalPML4  :: PPtr PML4E,
 >     x64KSGlobalPDPTs :: [PPtr PDPTE],
 >     x64KSGlobalPDs   :: [PPtr PDE],
