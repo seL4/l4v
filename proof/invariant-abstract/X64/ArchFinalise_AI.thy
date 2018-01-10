@@ -75,18 +75,15 @@ lemmas nat_to_cref_unat_of_bl = nat_to_cref_unat_of_bl' [OF _ refl]
 
 lemma invs_x64_asid_table_unmap:
   "invs s \<and> is_aligned base asid_low_bits \<and> base \<le> mask asid_bits
-       \<and> (\<forall>x\<in>set [0.e.2 ^ asid_low_bits - 1]. x64_asid_map (arch_state s) (base + x) = None)
        \<and> tab = x64_asid_table (arch_state s)
      \<longrightarrow> invs (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table := tab(asid_high_bits_of base := None)\<rparr>\<rparr>)"
   apply (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)
-  apply (strengthen valid_asid_map_unmap valid_vspace_objs_unmap_strg
+  apply (strengthen valid_vspace_objs_unmap_strg
                     valid_vs_lookup_unmap_strg valid_arch_state_unmap_strg)
   apply (simp add: valid_irq_node_def valid_kernel_mappings_def
-                   valid_global_objs_arch_update)
+                   valid_global_objs_arch_update valid_asid_map_def)
   apply (simp add: valid_table_caps_def valid_machine_state_def second_level_tables_def)
   done
-
-crunch asid_map[wp]: do_machine_op "valid_asid_map"
 
 lemma delete_asid_pool_invs[wp]:
   "\<lbrace>invs and K (base \<le> mask asid_bits)\<rbrace>
@@ -94,32 +91,10 @@ lemma delete_asid_pool_invs[wp]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: delete_asid_pool_def)
   apply wp
-  apply (strengthen invs_x64_asid_table_unmap)
-  apply simp
-  apply (rule hoare_vcg_conj_lift,
-           (rule mapM_invalidate[where ptr=pptr, simplified])?,
-           ((wp mapM_wp' | simp add: if_apply_def2)+)[1])+
-    apply wp+
+      apply (strengthen invs_x64_asid_table_unmap)
+      apply (wpsimp wp: mapM_wp', simp)
+     apply (wp+)[3]
   apply (clarsimp simp: is_aligned_mask[symmetric])
-  apply (rule conjI)
-   apply (rule vs_lookupI)
-    apply (erule vs_asid_refsI)
-   apply simp
-  apply clarsimp
-  done
-
-lemma invalidate_asid_entry_invalidates:
-  "\<lbrace>valid_asid_map and valid_arch_state and K (asid \<le> mask asid_bits) and
-    (\<lambda>s. x64_asid_table (arch_state s) (asid_high_bits_of asid) = Some ap)\<rbrace>
-   invalidate_asid_entry asid pm
-   \<lbrace>\<lambda>rv s. \<forall>asida. asida \<le> mask asid_bits \<longrightarrow>
-              ucast asida = (ucast asid :: 9 word) \<longrightarrow>
-              x64_asid_table (arch_state s) (asid_high_bits_of asida) =
-                Some ap \<longrightarrow>
-              x64_asid_map (arch_state s) asida = None\<rbrace>"
-  apply (simp add: invalidate_asid_entry_def)
-  apply (wp invalidate_asid_invalidates)
-  apply clarsimp
   done
 
 lemma delete_asid_invs[wp]:
@@ -127,10 +102,7 @@ lemma delete_asid_invs[wp]:
      delete_asid asid pd
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: delete_asid_def cong: option.case_cong del: set_arch_obj_simps(5))
-  apply (wp set_asid_pool_invs_unmap | wpc)+
-     apply (wp invalidate_asid_entry_invalidates gets_wp hoare_vcg_const_imp_lift hoare_vcg_all_lift
-               hoare_vcg_imp_lift invalidate_asid_asid_map_None_inv)+
-  apply (clarsimp simp del: fun_upd_apply simp: invs_valid_asid_map)
+  apply (wpsimp wp: set_asid_pool_invs_unmap)
   done
 
 crunch vs_lookup[wp]: set_vm_root "\<lambda>s. P (vs_lookup s)"
@@ -1564,37 +1536,6 @@ lemma set_asid_pool_empty_table_lookup:
   apply (simp add: vs_cap_ref_def)
   done
 
-lemma set_asid_pool_empty_valid_asid_map:
-  "\<lbrace>\<lambda>s. valid_asid_map s \<and> asid_pool_at p s
-       \<and> (\<forall>asid'. \<not> ([VSRef asid' None] \<rhd> p) s)
-       \<and> (\<forall>p'. \<not> ([VSRef (ucast (asid_high_bits_of base)) None] \<rhd> p') s)\<rbrace>
-       set_asid_pool p empty
-   \<lbrace>\<lambda>rv s. valid_asid_map (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
-                 x64_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
-  apply (simp add: set_asid_pool_def set_object_def update_object_def)
-  apply (wp get_object_wp)
-  apply (clarsimp simp: valid_asid_map_def vspace_at_asid_def
-                 dest!: graph_ofD
-                 split: Structures_A.kernel_object.split_asm
-                        arch_kernel_obj.split_asm )
-  apply (drule bspec, erule graph_ofI)
-  apply (clarsimp dest!: vs_lookup_2ConsD vs_lookup1D)
-  apply (case_tac "p = pa")
-   apply simp
-  apply (clarsimp elim!: vs_lookup_atE)
-  apply (rule vs_lookupI[rotated])
-   apply (rule r_into_rtrancl)
-   apply (rule_tac p=pa in vs_lookup1I)
-     apply (simp add: obj_at_def)
-    apply assumption
-   apply simp
-  apply (rule vs_asid_refsI)
-  apply (clarsimp simp: a_type_simps)
-  apply (drule vs_asid_refsI)+
-  apply (drule vs_lookupI, rule rtrancl_refl)
-  apply simp
-  done
-
 lemma set_asid_pool_invs_table:
   "\<lbrace>\<lambda>s. invs s \<and> asid_pool_at p s
        \<and> (\<exists>p'. caps_of_state s p' = Some (ArchObjectCap (ASIDPoolCap p base)))
@@ -1603,28 +1544,23 @@ lemma set_asid_pool_invs_table:
        set_asid_pool p empty
   \<lbrace>\<lambda>x s. invs (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
                  x64_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
-  apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def del:set_asid_pool_simpler_def)
-  apply (rule hoare_pre)
-   apply (wp valid_irq_node_typ set_asid_pool_typ_at
-             set_asid_pool_empty_table_objs
-             valid_irq_handlers_lift set_asid_pool_empty_table_lookup
-             set_asid_pool_empty_valid_asid_map
+  apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def valid_asid_map_def
+              del: set_asid_pool_simpler_def)
+  apply (wp valid_irq_node_typ set_asid_pool_typ_at
+            set_asid_pool_empty_table_objs
+            valid_irq_handlers_lift set_asid_pool_empty_table_lookup
           | strengthen valid_arch_state_table_strg)+
-  apply (clarsimp simp: conj_comms)
-  apply (rule context_conjI)
-   apply clarsimp
-   apply (frule valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI], clarsimp)
-   apply clarsimp
-   apply (drule obj_ref_elemD)
-   apply (frule(2) unique_table_refsD,
-          unfold obj_refs.simps aobj_ref.simps option.simps,
-          assumption)
-   apply (clarsimp simp:vs_cap_ref_def table_cap_ref_def
-     split:cap.split_asm arch_cap.split_asm)
   apply clarsimp
   apply (drule vs_asid_refsI)
   apply (drule vs_lookupI, rule rtrancl_refl)
-  apply simp
+  apply (frule valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI], clarsimp)
+  apply clarsimp
+  apply (drule obj_ref_elemD)
+  apply (frule(2) unique_table_refsD,
+         unfold obj_refs.simps aobj_ref.simps option.simps,
+         assumption)
+  apply (clarsimp simp: vs_cap_ref_def table_cap_ref_def
+                 split: cap.split_asm arch_cap.split_asm)
   done
 
 lemma delete_asid_pool_unmapped2:

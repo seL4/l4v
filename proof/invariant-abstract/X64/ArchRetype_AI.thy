@@ -389,7 +389,8 @@ lemma copy_global_invs_mappings_restricted:
    apply (rule mapM_x_wp[where S="{x. get_pml4_index pptr_base \<le> x
                                        \<and> x < 2 ^ (pml4_bits - word_size_bits)}"])
     apply simp_all
-   apply (wpsimp wp: valid_irq_node_typ valid_irq_handlers_lift get_pml4e_wp simp: store_pml4e_def)
+   apply (wpsimp wp: valid_irq_node_typ valid_irq_handlers_lift get_pml4e_wp
+               simp: store_pml4e_def valid_asid_map_def)
    apply (clarsimp simp: valid_global_objs_def)
    apply (frule(1) invs_aligned_pml4D)
    apply (frule shiftl_less_t2n)
@@ -970,21 +971,6 @@ lemma valid_kernel_mappings:
                    aobject_type.split)
   done
 
-lemma valid_asid_map:
-  "valid_asid_map s \<Longrightarrow> valid_asid_map s'"
-  apply (clarsimp simp: valid_asid_map_def)
-  apply (drule bspec, blast)
-  apply (clarsimp simp: vspace_at_asid_def)
-  apply (drule vs_lookup_2ConsD)
-  apply clarsimp
-  apply (erule vs_lookup_atE)
-  apply (drule vs_lookup1D)
-  apply clarsimp
-  apply (drule obj_at_pres)
-  apply (fastforce simp: vs_asid_refs_def graph_of_def
-                  intro: vs_lookupI vs_lookup1I)
-  done
-
 lemma equal_kernel_mappings:
   "equal_kernel_mappings s \<Longrightarrow>
       if ty = ArchObject PML4Obj
@@ -1107,7 +1093,7 @@ lemma post_retype_invs:
                      valid_vspace_objs' valid_irq_handlers
                      valid_mdb_rep2 mdb_and_revokable
                      valid_pspace cur_tcb only_idle
-                     valid_kernel_mappings valid_asid_map
+                     valid_kernel_mappings valid_asid_map_def
                      valid_global_vspace_mappings valid_ioc vms
                      pspace_in_kernel_window pspace_respects_device_region
                      cap_refs_respects_device_region
@@ -1206,7 +1192,7 @@ lemma invs_irq_state_independent:
       valid_irq_node_def valid_irq_handlers_def valid_machine_state_def
       valid_arch_caps_def valid_global_objs_def
       valid_kernel_mappings_def equal_kernel_mappings_def
-      valid_asid_map_def vspace_at_asid_def
+      vspace_at_asid_def
       pspace_in_kernel_window_def cap_refs_in_kernel_window_def
       cur_tcb_def sym_refs_def state_refs_of_def
       swp_def valid_irq_states_def)

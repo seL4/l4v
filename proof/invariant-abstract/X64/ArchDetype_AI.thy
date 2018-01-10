@@ -397,16 +397,7 @@ lemma valid_kernel_mappings_detype[detype_invs_proofs]:
   qed
 
 lemma valid_asid_map_detype[detype_invs_proofs]: "valid_asid_map (detype (untyped_range cap) s)"
-proof -
-  have "valid_asid_map s"
-  using invs by (simp add: invs_def valid_state_def)
-  thus ?thesis
-  apply (clarsimp simp: valid_asid_map_def arch_state_det)
-  apply (drule bspec)
-  apply (blast)
-  apply (clarsimp simp: vspace_at_asid_def vs_lookup)
-  done
-  qed
+  by (simp add: valid_asid_map_def)
 
 lemma equal_kernel_mappings_detype[detype_invs_proofs]:
   "equal_kernel_mappings (detype (untyped_range cap) s)"

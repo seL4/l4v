@@ -1219,10 +1219,7 @@ where
 definition
   valid_asid_map :: "'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_asid_map \<equiv>
-   \<lambda>s. dom (x64_asid_map (arch_state s)) \<subseteq> {0 .. mask asid_bits} \<and>
-       (\<forall>(asid, pd) \<in> graph_of (x64_asid_map (arch_state s)).
-            vspace_at_asid asid pd s \<and> asid \<noteq> 0)"
+  "valid_asid_map \<equiv> \<lambda>s. True"
 
 
 section "Lemmas"

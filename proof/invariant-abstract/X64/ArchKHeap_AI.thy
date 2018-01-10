@@ -486,10 +486,7 @@ lemma valid_global_objs_lift_weak:
 
 lemma valid_asid_map_lift:
     "\<lbrace>valid_asid_map\<rbrace> f \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
-  apply (simp add: valid_asid_map_def)
-  apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch])
-  apply (simp add: vspace_at_asid_def)
-  by (rule vs_lookup_vspace_obj_at_lift[OF aobj_at arch])
+  by (wpsimp simp: valid_asid_map_def)
 
 lemma valid_kernel_mappings_lift:
     "\<lbrace>valid_kernel_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_kernel_mappings\<rbrace>"
@@ -616,22 +613,6 @@ lemma valid_vso_at_lift_aobj_at:
 lemmas set_object_v_ker_map
     = set_object_valid_kernel_mappings
             [unfolded valid_kernel_mappings_if_pm_def]
-
-lemma set_object_asid_map:
-  "\<lbrace>valid_asid_map and
-    obj_at (\<lambda>ko'. vs_refs ko' \<subseteq> vs_refs ko) p\<rbrace>
-  set_object p ko
-  \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-  apply (simp add: valid_asid_map_def set_object_def)
-  apply wp
-  apply (clarsimp simp: vspace_at_asid_def simp del: fun_upd_apply)
-  apply (drule bspec, blast)
-  apply clarsimp
-  apply (rule vs_lookup_stateI, assumption)
-   apply (clarsimp simp: obj_at_def)
-   apply blast
-  apply simp
-  done
 
 lemma set_object_equal_mappings:
   "\<lbrace>\<lambda>s. equal_kernel_mappings s

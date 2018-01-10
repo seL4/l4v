@@ -32,9 +32,6 @@ bundle unfold_objects_asm =
   arch_kernel_obj.split_asm[split]
 
 definition
-  "valid_asid asid s \<equiv> x64_asid_map (arch_state s) asid \<noteq> None"
-
-definition
   "update_object ptr obj = do
     kobj <- get_object ptr;
     assert (a_type kobj = a_type obj);
@@ -1549,52 +1546,6 @@ lemma image_in_rtrancl_image:
 
 definition "set_diff A B \<equiv> A - B \<union> (B - A)"
 
-lemma set_pt_asid_map [wp]:
-  "\<lbrace>valid_asid_map  and
-    (\<lambda>s. (\<forall>a aobj ptr. aa_type nobj = AASIDPool \<and> ((a, ptr) \<in> graph_of (x64_asid_map (arch_state s)) \<and> ko_at (ArchObj aobj) p s)
-      \<longrightarrow>  ([VSRef (ucast (asid_high_bits_of a)) None], p) \<in> vs_asid_refs (x64_asid_table (arch_state s))
-      \<longrightarrow>  (VSRef (a && mask asid_low_bits) (Some AASIDPool), ptr) \<notin> set_diff (vs_refs (ArchObj nobj)) (vs_refs (ArchObj aobj))))
-    \<rbrace> update_object p (ArchObj nobj) \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-  apply (simp add: valid_asid_map_def vspace_at_asid_def update_object_def set_object_def)
-  apply (wp get_object_wp)
-  apply clarsimp
-  apply (drule(1) bspec)
-  apply clarsimp
-  apply (rule decrease_predictI)
-    apply force
-   apply (simp add: vs_lookup_def)
-   apply (rule image_in_rtrancl_image)
-  apply (clarsimp simp: vs_lookup_def)
-  apply (erule vs_lookup1_wellformed.lookupE)
-   apply (clarsimp simp: vs_lookup1_def vs_asid_refs_def)
-  apply (clarsimp simp: Image_def vs_asid_refs_def dest!: vs_lookup1D)
-  apply (rule bexI[rotated])
-   apply simp
-  apply clarsimp
-  apply (case_tac "pa \<noteq> p")
-   apply (rule vs_lookup1I[rotated -1])
-     apply simp
-    apply (simp add: obj_at_def)
-   apply (clarsimp simp: lookup_leaf_def obj_at_def
-                  dest!: vs_lookup1_wellformed.lookup_rtrancl_stepD vs_lookup1D)
-  apply (clarsimp simp: lookup_leaf_def obj_at_def
-                 dest!: vs_lookup1_wellformed.lookup_rtrancl_stepD vs_lookup1D)
-  apply (clarsimp simp: vs_lookup1_def)
-  apply (drule_tac x = a in spec)
-  apply (clarsimp simp: obj_at_def dest!:a_type_is_aobj)
-  apply (rule ccontr)
-  apply (elim allE)
-  apply (erule impE)
-   apply (rule context_conjI)
-   apply (rule ccontr)
-   apply (case_tac nobj)
-        apply ((fastforce simp: aa_type_simps a_type_def vs_refs_def image_def
-                 split: kernel_object.split_asm if_split_asm arch_kernel_obj.split_asm)+)[6]
-   apply fastforce
-  apply (clarsimp simp: image_def graph_of_def)
-  apply (fastforce simp: set_diff_def image_def)
-  done
-
 declare graph_of_None_update[simp]
 declare graph_of_Some_update[simp]
 
@@ -1887,9 +1838,6 @@ lemma update_object_state_hyp_refs[wp]:
 lemma update_object_invs[wp]:
   "\<lbrace> \<lambda>s. invs s \<and> valid_table_caps_aobj (caps_of_state s) (arch_state s) (ArchObj obj) ptr
     \<and> (aa_type obj \<noteq> AASIDPool \<longrightarrow> ptr \<notin> global_refs s)
-    \<and> (\<forall>a aobj p. (aa_type obj = AASIDPool \<and> ((a, p) \<in> graph_of (x64_asid_map (arch_state s)) \<and> ko_at (ArchObj aobj) ptr s))
-      \<longrightarrow> ([VSRef (ucast (asid_high_bits_of a)) None], ptr) \<in> vs_asid_refs (x64_asid_table (arch_state s))
-      \<longrightarrow> (VSRef (a && mask asid_low_bits) (Some AASIDPool), p) \<notin> set_diff (vs_refs (ArchObj obj)) (vs_refs (ArchObj aobj)))
     \<and> obj_at (\<lambda>ko. case obj of PageMapL4 pm \<Rightarrow> \<exists>pm'. ko = ArchObj (PageMapL4 pm') \<and> (\<forall>x\<in>kernel_mapping_slots. pm x = pm' x) | _ \<Rightarrow> True) ptr s
     \<and> valid_kernel_mappings_if_pm (set (second_level_tables (arch_state s))) (ArchObj obj)
     \<and> valid_global_objs_upd ptr obj (arch_state s)
@@ -1921,8 +1869,8 @@ lemma update_object_invs[wp]:
            (\<exists>a b cap. caps_of_state s (a, b) = Some cap \<and> p \<in> obj_refs cap \<and> vs_cap_ref cap = Some rs))\<rbrace>
     update_object ptr (ArchObj obj)
   \<lbrace> \<lambda>_. invs \<rbrace>"
-  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
-  apply_trace (wp valid_irq_node_typ valid_irq_handlers_lift update_aobj_valid_global_vspace_mappings)
+  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_asid_map_def)
+  apply (wp valid_irq_node_typ valid_irq_handlers_lift update_aobj_valid_global_vspace_mappings)
   apply (clarsimp simp: valid_arch_state_def)
   done
 
@@ -2178,17 +2126,6 @@ lemma vs_lookup_pages_arch_update:
    apply (clarsimp simp: obj_at_def)
   apply simp
   done
-
-
-lemma vs_lookup_asid_map [iff]:
-  "vs_lookup (s\<lparr>arch_state := x64_asid_map_update f (arch_state s)\<rparr>) = vs_lookup s"
-  by (simp add: vs_lookup_arch_update)
-
-
-lemma vs_lookup_pages_asid_map[iff]:
-  "vs_lookup_pages (s\<lparr>arch_state := x64_asid_map_update f (arch_state s)\<rparr>) =
-   vs_lookup_pages s"
-  by (simp add: vs_lookup_pages_arch_update)
 
 lemma valid_vspace_objs_arch_update:
   "x64_asid_table (f (arch_state s)) = x64_asid_table (arch_state s) \<Longrightarrow>
@@ -2828,48 +2765,6 @@ crunch v_ker_map[wp]: set_asid_pool "valid_kernel_mappings"
   (ignore: set_object wp: set_object_v_ker_map crunch_wps)
 
 
-lemma set_asid_pool_restrict_asid_map:
-  "\<lbrace>valid_asid_map and ko_at (ArchObj (ASIDPool ap)) p and
-    (\<lambda>s. \<forall>asid. asid \<le> mask asid_bits \<longrightarrow> ucast asid \<notin> S \<longrightarrow>
-                x64_asid_table (arch_state s) (asid_high_bits_of asid) = Some p \<longrightarrow>
-                x64_asid_map (arch_state s) asid = None)\<rbrace>
-  set_asid_pool p (ap |` S) \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-  apply (simp add: set_asid_pool_def valid_asid_map_def set_object_def update_object_def)
-  apply (wp get_object_wp)
-  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits
-                  simp del: fun_upd_apply)
-  apply (drule(1) bspec)
-  apply (clarsimp simp: vspace_at_asid_def obj_at_def graph_of_def)
-  apply (drule subsetD, erule domI)
-  apply simp
-  apply (drule spec, drule(1) mp)
-  apply simp
-  apply (erule vs_lookupE)
-  apply (rule vs_lookupI, simp)
-  apply (clarsimp simp: vs_asid_refs_def graph_of_def)
-  apply (drule rtranclD)
-  apply (erule disjE, clarsimp)
-  apply clarsimp
-  apply (drule tranclD)
-  apply clarsimp
-  apply (rule r_into_rtrancl)
-  apply (drule vs_lookup1D)
-  apply clarsimp
-  apply (subst vs_lookup1_def)
-  apply (clarsimp simp: obj_at_def)
-  apply (erule rtranclE)
-   apply (clarsimp simp: vs_refs_def graph_of_def)
-   apply (rule image_eqI[where x="(_, _)"])
-    apply (simp add: split_def)
-   apply (clarsimp simp: restrict_map_def)
-   apply (drule ucast_up_inj, simp)
-   apply (simp add: mask_asid_low_bits_ucast_ucast)
-  apply clarsimp
-  apply (drule vs_lookup1_trans_is_append)
-  apply clarsimp
-  apply (drule vs_lookup1D)
-  by clarsimp
-
 lemma set_asid_pool_cur [wp]:
   "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
   unfolding set_asid_pool_def by (wpsimp wp: get_object_wp)
@@ -3006,24 +2901,18 @@ lemma set_asid_pool_zombies_state_hyp_refs [wp]:
   by (simp add: update_object_state_hyp_refs)
 
 lemma set_asid_pool_invs_restrict:
-  "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and
-    (\<lambda>s. \<forall>asid. asid \<le> mask asid_bits \<longrightarrow> ucast asid \<notin> S \<longrightarrow>
-                x64_asid_table (arch_state s) (asid_high_bits_of asid) = Some p \<longrightarrow>
-                x64_asid_map (arch_state s) asid = None)\<rbrace>
+  "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p \<rbrace>
        set_asid_pool p (ap |` S) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: invs_def valid_state_def valid_pspace_def
+  apply (simp add: invs_def valid_state_def valid_pspace_def valid_asid_map_def
                    valid_arch_caps_def del: set_asid_pool_simpler_def)
-  apply (wp valid_irq_node_typ set_asid_pool_typ_at
+  apply (wp valid_irq_node_typ
             set_asid_pool_vspace_objs_unmap  valid_irq_handlers_lift
-            set_asid_pool_vs_lookup_unmap set_asid_pool_restrict_asid_map
+            set_asid_pool_vs_lookup_unmap
          | simp del: set_asid_pool_simpler_def)+
   done
 
 lemma set_asid_pool_invs_unmap:
-  "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and
-    (\<lambda>s. \<forall>asid. asid \<le> mask asid_bits \<longrightarrow> ucast asid = x \<longrightarrow>
-                x64_asid_table (arch_state s) (asid_high_bits_of asid) = Some p \<longrightarrow>
-                x64_asid_map (arch_state s) asid = None)\<rbrace>
+  "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p\<rbrace>
        set_asid_pool p (ap(x := None)) \<lbrace>\<lambda>_. invs\<rbrace>"
   using set_asid_pool_invs_restrict[where S="- {x}"]
   by (simp add: restrict_map_def fun_upd_def if_flip)

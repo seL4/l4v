@@ -382,24 +382,7 @@ lemma valid_arch_caps:
 
 lemma valid_asid_map':
   "valid_asid_map s \<Longrightarrow> valid_asid_map s'"
-  using empty
-  apply (clarsimp simp: valid_asid_map_def s'_def)
-  apply (drule bspec, blast)
-  apply (clarsimp simp: vspace_at_asid_def)
-  apply (drule vs_lookup_2ConsD)
-  apply clarsimp
-  apply (erule vs_lookup_atE)
-  apply (drule vs_lookup1D)
-  apply clarsimp
-  apply (rule vs_lookupI[rotated])
-   apply (rule r_into_rtrancl)
-   apply (rule vs_lookup1I)
-     apply (fastforce simp: obj_at_def)
-    apply assumption
-   apply simp
-  apply (clarsimp simp: vs_asid_refs_def graph_of_def)
-  apply fastforce
-  done
+  by (clarsimp simp: valid_asid_map_def)
 
 end
 
