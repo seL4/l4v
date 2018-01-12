@@ -523,7 +523,7 @@ lemma checkCapAt_ccorres:
       apply (rule exI, rule conjI, assumption)
       apply (clarsimp simp: typ_heap_simps dest!: ccte_relation_ccap_relation)
       apply (rule exI, rule conjI, assumption)
-      subgoal sorry (*apply (auto intro: valid_capAligned dest: ctes_of_valid')[1]*)
+      apply (auto intro: valid_capAligned dest: ctes_of_valid')[1]
      apply assumption
     apply (simp only: when_def if_to_top_of_bind)
     apply (rule ccorres_if_lhs)
