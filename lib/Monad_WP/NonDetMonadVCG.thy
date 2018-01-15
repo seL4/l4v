@@ -1383,6 +1383,16 @@ lemmas hoare_wp_state_combsE =
   hoare_vcg_E_elim[OF valid_validE_E]
   hoare_vcg_E_conj[OF valid_validE_E]
 
+lemmas hoare_classic_wp_combs
+    = hoare_post_comb_imp_conj hoare_vcg_precond_imp hoare_wp_combs
+lemmas hoare_classic_wp_combsE
+    = hoare_vcg_precond_impE hoare_vcg_precond_impE_R hoare_wp_combsE
+lemmas hoare_classic_wp_state_combsE
+    = hoare_vcg_precond_impE[OF valid_validE]
+    hoare_vcg_precond_impE_R[OF valid_validE_R] hoare_wp_state_combsE
+lemmas all_classic_wp_combs =
+    hoare_classic_wp_state_combsE hoare_classic_wp_combsE hoare_classic_wp_combs
+
 lemmas hoare_wp_splits [wp_split] =
   hoare_seq_ext hoare_vcg_seqE handleE'_wp handleE_wp
   validE_validE_R [OF hoare_vcg_seqE [OF validE_R_validE]]
@@ -1488,6 +1498,9 @@ lemmas hoare_pre [wp_pre] =
 declare no_fail_pre [wp_pre]
 
 bundle no_pre = hoare_pre [wp_pre del] no_fail_pre [wp_pre del]
+
+bundle classic_wp_pre = hoare_pre [wp_pre del] no_fail_pre [wp_pre del]
+    all_classic_wp_combs[wp_comb del] all_classic_wp_combs[wp_comb]
 
 text {* Miscellaneous lemmas on hoare triples *}
 
