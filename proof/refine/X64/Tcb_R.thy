@@ -647,14 +647,15 @@ lemma sp_corres2:
     apply (rule corres_split [OF _ tcbSchedDequeue_corres])
       apply (rule corres_split [OF _ ethread_set_corres], simp_all)[1]
          apply (rule corres_split [OF _ gts_isRunnable_corres])
-           apply (rule corres_split [OF _ corres_when[OF _ tcbSchedEnqueue_corres]])
-              apply (rule corres_split [OF corres_when[OF _ rescheduleRequired_corres] gct_corres])
-                apply (wp hoare_vcg_imp_lift hoare_vcg_if_lift hoare_vcg_all_lift hoare_vcg_disj_lift
-                          gts_wp isRunnable_wp threadSet_pred_tcb_no_state threadSet_valid_queues_no_state
-                          threadSet_valid_queues'_no_state threadSet_valid_objs_tcbPriority_update threadSet_weak_sch_act_wf
-                          tcbSchedDequeue_not_in_queue threadSet_ct_in_state'[simplified ct_in_state'_def]
-                          tcbSchedDequeue_valid_queues
-                          tcbSchedDequeue_ct_in_state'[simplified ct_in_state'_def] | simp add: etcb_relation_def)+
+           apply (erule corres_when)
+           apply (rule corres_split [OF _ tcbSchedEnqueue_corres])
+             apply (rule rescheduleRequired_corres)
+            apply (wp hoare_vcg_imp_lift hoare_vcg_if_lift hoare_vcg_all_lift hoare_vcg_disj_lift
+                      gts_wp isRunnable_wp threadSet_pred_tcb_no_state threadSet_valid_queues_no_state
+                      threadSet_valid_queues'_no_state threadSet_valid_objs_tcbPriority_update threadSet_weak_sch_act_wf
+                      tcbSchedDequeue_not_in_queue threadSet_ct_in_state'[simplified ct_in_state'_def]
+                      tcbSchedDequeue_valid_queues
+                      tcbSchedDequeue_ct_in_state'[simplified ct_in_state'_def] | simp add: etcb_relation_def)+
    apply (force simp: valid_etcbs_def tcb_at_st_tcb_at[symmetric] state_relation_def
                 dest: pspace_relation_tcb_at)
   apply (force simp: state_relation_def elim: valid_objs'_maxDomain valid_objs'_maxPriority)
@@ -794,29 +795,16 @@ lemma tcbPriority_Queued_caps_safe:
 
 lemma setP_invs':
   "\<lbrace>invs' and tcb_at' t and K (p \<le> maxPriority)\<rbrace> setPriority t p \<lbrace>\<lambda>rv. invs'\<rbrace>"
-proof -
-  have enq: "\<And>s'. t \<noteq> ksCurThread s' \<Longrightarrow>
-            \<lbrace>(op = s') and invs' and st_tcb_at' runnable' t\<rbrace>
-             tcbSchedEnqueue t \<lbrace>\<lambda>_. invs'\<rbrace>"
-    by (wp, clarsimp)
-  show ?thesis
   including no_pre
   apply (rule hoare_gen_asm)
   apply (simp add: setPriority_def)
   apply (wp rescheduleRequired_all_invs_but_ct_not_inQ)
-     apply (wps tcbSchedEnqueue_ct')
-     apply (case_tac "t \<noteq> ksCurThread prev_s")
-      apply (clarsimp, erule enq)
-     apply (clarsimp simp add: invs'_def valid_state'_def)
      apply (wp valid_irq_node_lift, clarsimp+)
-         apply (erule(1) st_tcb_ex_cap'')
-         apply (case_tac st, clarsimp+)[1]
-        apply (clarsimp)+
     apply (rule_tac Q="\<lambda>r s. (r \<longrightarrow> st_tcb_at' runnable' t s) \<and> invs' s"
-             in hoare_post_imp, clarsimp simp: invs'_def valid_state'_def)
-    apply (wp)
-   apply (rule_tac Q="\<lambda>_. invs'" in hoare_post_imp,
-          clarsimp simp: pred_tcb_at'_def comp_def)
+             in hoare_post_imp)
+     apply (clarsimp simp: invs'_def valid_state'_def invs_valid_objs' elim!: st_tcb_ex_cap'')
+     apply (case_tac st; clarsimp)
+    apply (wp, simp)
    apply (wp threadSet_invs_trivial,
           simp_all add: inQ_def cong: conj_cong)
   apply (rule_tac Q="\<lambda>_. invs' and obj_at' (Not \<circ> tcbQueued) t
@@ -826,7 +814,6 @@ proof -
   apply (wp tcbSchedDequeue_not_queued)+
     apply (clarsimp)+
   done
-qed
 
 crunch typ_at'[wp]: setPriority, setMCPriority "\<lambda>s. P (typ_at' T p s)"
   (ignore: getObject simp: crunch_simps)

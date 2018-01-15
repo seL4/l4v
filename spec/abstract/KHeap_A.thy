@@ -127,9 +127,10 @@ definition
      tcb_sched_action tcb_sched_dequeue tptr;
      thread_set_priority tptr prio;
      ts \<leftarrow> get_thread_state tptr;
-     when (runnable ts) $ tcb_sched_action tcb_sched_enqueue tptr;
-     cur \<leftarrow> gets cur_thread;
-     when (tptr = cur) reschedule_required
+     when (runnable ts) $ do
+       tcb_sched_action tcb_sched_enqueue tptr;
+       reschedule_required
+     od
    od"
 
 definition

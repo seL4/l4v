@@ -430,44 +430,32 @@ lemma setPriority_ccorres:
               (simp add: typ_heap_simps')+, simp_all?)[1]
         apply (rule ball_tcb_cte_casesI, simp+)
        apply (simp add: ctcb_relation_def cast_simps)
-       apply (clarsimp simp: down_cast_same [symmetric] ucast_up_ucast is_up is_down)
       apply (ctac(no_vcg) add: isRunnable_ccorres)
-       apply (rule ccorres_split_nothrow_novcg_dc)
-          apply (simp add: when_def to_bool_def del: Collect_const)
-          apply (rule ccorres_cond2[where R=\<top>], simp add: Collect_const_mem)
-           apply (ctac add: tcbSchedEnqueue_ccorres)
-          apply (rule ccorres_return_Skip)
-         apply (rule ccorres_pre_getCurThread)
-         apply (simp add: when_def to_bool_def)
-         apply (rule_tac R="\<lambda>s. rvb = ksCurThread s"
-                    in ccorres_cond2)
-           apply (clarsimp simp: rf_sr_ksCurThread)
+       apply (simp add: when_def to_bool_def del: Collect_const)
+       apply (rule ccorres_cond2[where R=\<top>], simp add: Collect_const_mem)
+        apply (ctac add: tcbSchedEnqueue_ccorres)
           apply (ctac add: rescheduleRequired_ccorres[unfolded dc_def])
-         apply (rule ccorres_return_Skip')
-        apply simp
-        apply (wp hoare_drop_imps weak_sch_act_wf_lift_linear)
-       apply (simp add: guard_is_UNIV_def)
-      apply simp
-      apply wp
-     apply simp
-     apply (rule_tac Q="\<lambda>rv s. valid_queues s \<and> valid_objs' s \<and> tcb_at' t s
-                  \<and> weak_sch_act_wf (ksSchedulerAction s) s" in hoare_post_imp)
-      apply (clarsimp simp: st_tcb_at'_def o_def valid_objs'_maxDomain
-                            valid_objs'_maxPriority
-                     split: if_splits)
+         apply wp
+        apply vcg
+       apply (rule ccorres_return_Skip')
+      apply (wp isRunnable_wp)
+     apply clarsimp
      apply (wp hoare_drop_imps threadSet_valid_queues threadSet_valid_objs'
                weak_sch_act_wf_lift_linear threadSet_pred_tcb_at_state)
-      apply (clarsimp simp: st_tcb_at'_def o_def split: if_splits)
-     apply (wp threadSet_tcbDomain_triv)
-     apply simp
-    apply (simp add: guard_is_UNIV_def)+
-   apply (simp add: inQ_def pred_conj_def conj_comms)
-   apply (wp weak_sch_act_wf_lift_linear tcbSchedDequeue_valid_queues)
-    apply (rule hoare_strengthen_post,
-          rule tcbSchedDequeue_nonq[where t'=t])
-   apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
-   apply (fastforce simp: invs'_def valid_state'_def
-                          valid_objs'_maxDomain valid_objs'_maxPriority)
+       apply (clarsimp simp: st_tcb_at'_def o_def split: if_splits)
+      apply (wpsimp wp: threadSet_tcbDomain_triv)
+     apply (wp threadSet_valid_objs')
+    apply (simp add: guard_is_UNIV_def)
+   apply (rule hoare_strengthen_post[where Q="\<lambda>rv s.
+            obj_at' (\<lambda>_. True) t s \<and>
+            Invariants_H.valid_queues s \<and>
+            valid_objs' s \<and>
+            weak_sch_act_wf (ksSchedulerAction s) s \<and>
+            (\<forall>d p. \<not> t \<in> set (ksReadyQueues s (d, p)))"])
+    apply (wp weak_sch_act_wf_lift_linear tcbSchedDequeue_valid_queues tcbSchedDequeue_nonq)
+   apply (clarsimp simp: valid_tcb'_tcbPriority_update)
+  apply (fastforce simp: invs'_def valid_state'_def
+                         valid_objs'_maxDomain valid_objs'_maxPriority)
   done
 
 lemma setMCPriority_ccorres:

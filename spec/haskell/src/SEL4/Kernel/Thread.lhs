@@ -466,16 +466,14 @@ Then, the new priority can be set.
 
 >         threadSet (\t -> t { tcbPriority = prio }) tptr
 
-If the thread is runnable, it is enqueued at the new priority.
+If the thread is runnable, it is enqueued at the new priority. Furthermore,
+since the thread may now be the highest priority thread, we run the scheduler
+to choose a new thread.
 
 >         runnable <- isRunnable tptr
->         when runnable $ tcbSchedEnqueue tptr
-
-Finally, if the thread is the current one, we run the scheduler to choose a new thread.
-
->         curThread <- getCurThread
->         when (tptr == curThread) $ rescheduleRequired
-
+>         when runnable $ do
+>             tcbSchedEnqueue tptr
+>             rescheduleRequired
 
 \subsubsection{Switching to Woken Threads}
 
