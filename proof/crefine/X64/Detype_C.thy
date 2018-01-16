@@ -1335,75 +1335,65 @@ lemma aligned_range_offset_mem_helper:
   apply simp
   done
 
+lemma word_add_offset_pageBits_in_S:
+  assumes v: "\<And>v. v < 2 ^ pageBits \<Longrightarrow> (x + v \<in> S) = ((x :: machine_word) \<in> S)"
+  assumes n: "n < 8"
+  shows "(x + ucast (y::9 word) * 8 + n \<in> S) = (x \<in> S)"
+  apply (simp add: add.assoc)
+  apply (subst v)
+   apply (rule word_add_offset_less[where n=3 and m=9, simplified], rule n)
+      apply (rule less_le_trans, rule ucast_less; simp)
+     apply (simp add: pageBits_def)
+    apply (rule less_le_trans, rule ucast_less; simp)
+   apply (simp add: pageBits_def)
+  apply (rule refl)
+  done
+
 lemma heap_to_user_data_update_region:
   assumes foo: "\<And>x y v. \<lbrakk> map_to_user_data psp x = Some y;
                            v < 2 ^ pageBits \<rbrakk> \<Longrightarrow> (x + v \<in> S) = (x \<in> S)"
   shows
   "heap_to_user_data psp (\<lambda>x. if x \<in> S then v else f x)
-     = (\<lambda>x. if x \<in> S \<inter> dom (map_to_user_data psp) then Some (K (word_rcat [v, v, v, v,v,v,v,v]))
+     = (\<lambda>x. if x \<in> S \<inter> dom (map_to_user_data psp) then Some (K (word_rcat [v,v,v,v,v,v,v,v]))
              else heap_to_user_data psp f x)"
   apply (rule ext)
-  apply (simp add: heap_to_user_data_def Let_def
-            split: if_split)
+  apply (simp add: heap_to_user_data_def Let_def)
   apply (rule conjI)
-   apply (clarsimp simp: byte_to_word_heap_def Let_def add.assoc
-                 intro!: ext)
-  sorry (*
-   apply (subst foo, assumption+,
-          (rule word_add_offset_less[where n=3, simplified]
-                word_add_offset_less[where n=3 and y=0, simplified],
-           simp_all, rule ucast_less,
-           simp_all add: word_bits_def pageBits_def
-                         order_less_le_trans[OF ucast_less])[1])+
-   apply simp
+   apply clarsimp
+   apply (rule ext)
+   apply (clarsimp simp: byte_to_word_heap_def Let_def foo
+                         word_add_offset_pageBits_in_S
+                         word_add_offset_pageBits_in_S[where n=0, simplified])
   apply clarsimp
-  apply (case_tac "map_to_user_data psp x")
-   apply simp
-  apply (clarsimp simp: dom_def byte_to_word_heap_def Let_def add.assoc
-                intro!: ext)
-  apply (subst foo, assumption,
-         (rule word_add_offset_less[where n=2, simplified]
-               word_add_offset_less[where n=2 and y=0, simplified],
-          simp_all, rule ucast_less,
-          simp_all add: word_bits_def pageBits_def
-                        order_less_le_trans[OF ucast_less])[1])+
-  apply (simp add: field_simps)
-  done *)
+  apply (case_tac "map_to_user_data psp x"; clarsimp)
+  apply (rule ext)
+  apply (clarsimp simp: byte_to_word_heap_def Let_def foo
+                        word_add_offset_pageBits_in_S
+                        word_add_offset_pageBits_in_S[where n=0, simplified])
+  done
 
 lemma heap_to_device_data_update_region:
   assumes foo: "\<And>x y v. \<lbrakk> map_to_user_data_device psp x = Some y;
                            v < 2 ^ pageBits \<rbrakk> \<Longrightarrow> (x + v \<in> S) = (x \<in> S)"
   shows
   "heap_to_device_data psp (\<lambda>x. if x \<in> S then v else f x)
-     = (\<lambda>x. if x \<in> S \<inter> dom (map_to_user_data_device psp) then Some (K (word_rcat [v, v, v, v,v,v,v,v]))
+     = (\<lambda>x. if x \<in> S \<inter> dom (map_to_user_data_device psp) then Some (K (word_rcat [v,v,v,v,v,v,v,v]))
              else heap_to_device_data psp f x)"
   apply (rule ext)
-  apply (simp add: heap_to_device_data_def Let_def
-            split: if_split)
+  apply (simp add: heap_to_device_data_def Let_def)
   apply (rule conjI)
-   apply (clarsimp simp: byte_to_word_heap_def Let_def add.assoc
-                 intro!: ext)
-  sorry (*
-   apply (subst foo, assumption+,
-          (rule word_add_offset_less[where n=2, simplified]
-                word_add_offset_less[where n=2 and y=0, simplified],
-           simp_all, rule ucast_less,
-           simp_all add: word_bits_def pageBits_def
-                         order_less_le_trans[OF ucast_less])[1])+
-   apply simp
+   apply clarsimp
+   apply (rule ext)
+   apply (clarsimp simp: byte_to_word_heap_def Let_def foo
+                         word_add_offset_pageBits_in_S
+                         word_add_offset_pageBits_in_S[where n=0, simplified])
   apply clarsimp
-  apply (case_tac "map_to_user_data_device psp x")
-   apply simp
-  apply (clarsimp simp: dom_def byte_to_word_heap_def Let_def add.assoc
-                intro!: ext)
-  apply (subst foo, assumption,
-         (rule word_add_offset_less[where n=2, simplified]
-               word_add_offset_less[where n=2 and y=0, simplified],
-          simp_all, rule ucast_less,
-          simp_all add: word_bits_def pageBits_def
-                        order_less_le_trans[OF ucast_less])[1])+
-  apply (simp add: field_simps)
-  done *)
+  apply (case_tac "map_to_user_data_device psp x"; clarsimp)
+  apply (rule ext)
+  apply (clarsimp simp: byte_to_word_heap_def Let_def foo
+                        word_add_offset_pageBits_in_S
+                        word_add_offset_pageBits_in_S[where n=0, simplified])
+  done
 
 lemma ksPSpace_ksMSu_comm:
   "ksPSpace_update f (ksMachineState_update g s) =
@@ -1825,82 +1815,32 @@ proof -
                      [OF D.valid_untyped tat tlive rl])
     done
 
-  (*moreover
-
-  { assume asid_map:
-    "asid_map_pd_to_hwasids (armKSASIDMap (ksArchState s)) =
-       set_option \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot)"
-
-    hence asid:
-      "\<And>p pd_ptr pde. \<lbrakk> cslift s' (pde_Ptr p) = Some pde;
-                        pd_pointer_to_asid_slot pd_ptr = Some (pde_Ptr p);
-                        pde_stored_asid pde \<noteq> None \<rbrakk> \<Longrightarrow>
-      \<exists>asid. (asid, pd_ptr) \<in> ran (armKSASIDMap (ksArchState s))"
-      apply -
-      apply (drule_tac x=pd_ptr in fun_cong)
-      apply (clarsimp simp: map_comp_def)
-      apply (clarsimp simp: asid_map_pd_to_hwasids_def)
-      apply (drule equalityD2)
-      apply fastforce
-      done *)
-
-    (*from safe_asids
-    have pds:
-      "\<And>p asid pd_ptr. armKSASIDMap (ksArchState (s\<lparr>ksPSpace := ?ks\<rparr>)) p =
-                        Some (asid, pd_ptr) \<Longrightarrow>
-                        page_directory_at' pd_ptr (s\<lparr>ksPSpace := ?ks\<rparr>)"
-      by (clarsimp simp: ksASIDMapSafe_def)*)
-
-    from cs
-    have clift:
-      "\<And>p. clift (hrs_htd_update (typ_region_bytes ptr bits)
+  moreover
+  from cs have clift:
+    "\<And>p. clift (hrs_htd_update (typ_region_bytes ptr bits)
                                   (t_hrs_' (globals s'))) (p::pml4e_C ptr) =
            (if p \<in> pml4e_Ptr ` {ptr..+2 ^ bits} then None else cslift s' p)"
-      apply (subst lift_t_typ_region_bytes[OF cm_disj], simp_all)
-        apply (fastforce simp: cpspace_relation_def)
-       apply (simp add: projectKOs)
-      apply (simp add: objBits_simps archObjSize_def bit_simps)
-      done
+    apply (subst lift_t_typ_region_bytes[OF cm_disj], simp_all)
+      apply (fastforce simp: cpspace_relation_def)
+     apply (simp add: projectKOs)
+    apply (simp add: objBits_simps archObjSize_def bit_simps)
+    done
 
-    (*have "set_option \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot) =
-      set_option \<circ> (pde_stored_asid \<circ>\<^sub>m clift ?th_s \<circ>\<^sub>m
-            pd_pointer_to_asid_slot)"
-      apply -
-      apply (rule ext)
-      apply (rename_tac pd_ptr)
-      apply (clarsimp simp: map_comp_def)
-      apply (simp add: clift split: option.splits)
-      apply clarsimp
-      apply (rule ccontr)
-      apply (drule (2) asid)
-      apply (clarsimp simp: ran_def pd_pointer_to_asid_slot_def split: if_split_asm)
-      apply (subgoal_tac "armKSASIDMap (ksArchState (s\<lparr>ksPSpace := ?ks\<rparr>)) a = Some (asid, pd_ptr)")
-       prefer 2
-       apply simp
-      apply (drule pds)
-      apply (subgoal_tac "pde_at' (pd_ptr + 0x3FC0) (s\<lparr>ksPSpace := ?ks\<rparr>)")
-       apply (cut_tac p="pd_ptr + 0x3FC0" in D.typ_at' [of "ArchT PDET", simplified field_simps])
-       apply (simp add: upto_intvl_eq [OF al])
-      apply (clarsimp simp: page_directory_at'_def)
-      apply (erule_tac x="0x3FC0 >> 3" in allE)
-      apply simp
-      done
-  }*)
-  (*moreover
+  moreover
   {
-    assume "s' \<Turnstile>\<^sub>c (Ptr::(machine_word \<Rightarrow> (pml4e_C[512]) ptr)) (symbol_table ''armUSGlobalPD'')"
+    assume "s' \<Turnstile>\<^sub>c pml4_Ptr (symbol_table ''x64KSGlobalPML4'')"
     moreover
-    from sr ptr_refs have "ptr_span (pd_Ptr (symbol_table ''armUSGlobalPD''))
+    from sr ptr_refs have "ptr_span (pd_Ptr (symbol_table ''x64KSGlobalPML4''))
       \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
       by (fastforce simp: rf_sr_def cstate_relation_def Let_def)
     ultimately
     have "hrs_htd (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s')))
-      \<Turnstile>\<^sub>t (Ptr::(32 word \<Rightarrow> (pde_C[2048]) ptr)) (symbol_table ''armUSGlobalPD'')"
+      \<Turnstile>\<^sub>t pml4_Ptr (symbol_table ''x64KSGlobalPML4'')"
       using al wb
       apply (cases "t_hrs_' (globals s')")
       apply (simp add: hrs_htd_update_def hrs_htd_def h_t_valid_typ_region_bytes upto_intvl_eq)
       done
-  }*)
+  }
 
   moreover
   have h2ud_eq:
@@ -2084,12 +2024,11 @@ proof -
                (%x. ghost'state_'_update (gs_clear_region ptr bits)
                       (t_hrs_'_update ?th x)) s') \<in> rf_sr"
     using sr untyped_cap_rf_sr_ptr_bits_domain[OF cte invs sr]
-    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+    by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                        psu_restrict cpspace_relation_def
                        carch_state_relation_def cmachine_state_relation_def
                        hrs_htd_update htd_safe_typ_region_bytes
                        zero_ranges_are_zero_typ_region_bytes)
-  sorry
 qed
 
 abbreviation (input)
