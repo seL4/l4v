@@ -883,8 +883,8 @@ where
          (ptr_coerce (intStateIRQNode_' cstate) :: (cte_C[256]) ptr) \<and>
        {ptr_val (intStateIRQNode_' cstate) ..+ 2 ^ (8 + cte_level_bits)} \<subseteq> kernel_data_refs \<and>
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
-         (pd_Ptr (symbol_table ''x64KSGlobalPML4'')) \<and>
-       ptr_span (pd_Ptr (symbol_table ''x64KSGlobalPML4'')) \<subseteq> kernel_data_refs \<and>
+         (pml4_Ptr (symbol_table ''x64KSGlobalPML4'')) \<and>
+       ptr_span (pml4_Ptr (symbol_table ''x64KSGlobalPML4'')) \<subseteq> kernel_data_refs \<and>
        htd_safe domain (hrs_htd (t_hrs_' cstate)) \<and>
        kernel_data_refs = (- domain) \<and>
        globals_list_distinct (- kernel_data_refs) symbol_table globals_list \<and>

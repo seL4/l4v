@@ -6771,7 +6771,7 @@ lemma ccorres_typ_region_bytes_dummy:
   apply (frule typ_bytes_cpspace_relation_clift_devicedata)
       apply (simp add: invs_pspace_aligned')+
   apply (frule typ_bytes_cpspace_relation_clift_gptr[where
-            ptr'="pd_Ptr (symbol_table ''x64KSGlobalPML4'')"])
+            ptr'="pml4_Ptr (symbol_table ''x64KSGlobalPML4'')"])
         apply (simp add: invs_pspace_aligned')+
   apply (frule typ_bytes_cpspace_relation_clift_gptr[where
             ptr'="ptr_coerce x :: (cte_C[256]) ptr" for x])
