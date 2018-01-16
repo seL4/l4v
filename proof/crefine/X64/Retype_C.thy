@@ -43,8 +43,7 @@ lemma sint_eq_uint:
     zless_nat_eq_int_zless[symmetric])
   done
 
-(* FIXME x64: check what magic number should be
-lemma sle_positive: "\<lbrakk> b < 0x80000000; (a :: machine_word) \<le> b \<rbrakk> \<Longrightarrow> a <=s b"
+lemma sle_positive: "\<lbrakk> b < 0x8000000000000000; (a :: machine_word) \<le> b \<rbrakk> \<Longrightarrow> a <=s b"
   apply (simp add:word_sle_def)
   apply (subst sint_eq_uint)
    apply (rule unat_less_helper)
@@ -55,7 +54,7 @@ lemma sle_positive: "\<lbrakk> b < 0x80000000; (a :: machine_word) \<le> b \<rbr
   apply (clarsimp simp:word_le_def)
   done
 
-lemma sless_positive: "\<lbrakk> b < 0x80000000; (a :: machine_word) < b \<rbrakk> \<Longrightarrow> a <s b"
+lemma sless_positive: "\<lbrakk> b < 0x8000000000000000; (a :: machine_word) < b \<rbrakk> \<Longrightarrow> a <s b"
   apply (clarsimp simp: word_sless_def)
   apply (rule conjI)
    apply (erule sle_positive)
@@ -63,11 +62,11 @@ lemma sless_positive: "\<lbrakk> b < 0x80000000; (a :: machine_word) < b \<rbrak
   apply simp
   done
 
-lemma zero_le_sint: "\<lbrakk> 0 \<le> (a :: machine_word); a < 0x80000000 \<rbrakk> \<Longrightarrow> 0 \<le> sint a"
+lemma zero_le_sint: "\<lbrakk> 0 \<le> (a :: machine_word); a < 0x8000000000000000 \<rbrakk> \<Longrightarrow> 0 \<le> sint a"
   apply (subst sint_eq_uint)
    apply (simp add:unat_less_helper)
   apply simp
-  done *)
+  done
 
 lemma map_option_byte_to_word_heap:
   assumes disj: "\<And>(off :: 9 word) x. x<8 \<Longrightarrow> p + ucast off * 8 + x \<notin> S " (*9=page table index*)
@@ -251,13 +250,12 @@ lemma memzero_spec:
    apply clarsimp
    apply (case_tac s, case_tac p)
 
-   apply (subgoal_tac "4 \<le> unat na")
+   apply (subgoal_tac "8 \<le> unat na")
     apply (intro conjI)
            apply (simp add: ptr_safe_def s_footprint_def s_footprint_untyped_def
                             typ_uinfo_t_def typ_info_word)
            apply (erule order_trans[rotated])
             apply (auto intro!: intvlI)[1]
-  sorry(*
           apply (subst c_guard_machine_word, simp_all)[1]
           apply (clarsimp simp: field_simps)
           apply (metis le_minus' minus_one_helper5 olen_add_eqv diff_self word_le_0_iff word_le_less_eq)
@@ -266,7 +264,7 @@ lemma memzero_spec:
          apply clarsimp
         apply (rule word_le_imp_diff_le, auto)[1]
        apply clarsimp
-       apply (rule aligned_sub_aligned [where n=2], simp_all add: is_aligned_def word_bits_def)[1]
+       apply (rule aligned_sub_aligned [where n=3], simp_all add: is_aligned_def word_bits_def)[1]
       apply clarsimp
       apply (rule aligned_add_aligned_simple, simp_all add: is_aligned_def word_bits_def)[1]
      apply (erule order_trans[rotated])
@@ -280,10 +278,10 @@ lemma memzero_spec:
     apply (subst to_bytes_machine_word_0)
     apply (rule heap_update_list_replicate)
      apply clarsimp
-    apply (rule_tac s="unat ((n - na) + 4)" in trans)
+    apply (rule_tac s="unat ((n - na) + 8)" in trans)
      apply (simp add: field_simps)
     apply (subst Word.unat_plus_simple[THEN iffD1])
-     apply (rule is_aligned_no_overflow''[where n=2, simplified])
+     apply (rule is_aligned_no_overflow''[where n=3, simplified])
       apply (erule(1) aligned_sub_aligned, simp)
      apply (clarsimp simp: field_simps)
      apply (frule_tac x=n in is_aligned_no_overflow'', simp)
@@ -293,7 +291,7 @@ lemma memzero_spec:
     apply (simp add: is_aligned_def)
    apply (simp add: unat_eq_0[symmetric])
   apply clarsimp
-  done *)
+  done
 
 lemma is_aligned_and_2_to_k:
   assumes  mask_2_k: "(n && 2 ^ k - 1) = 0"
@@ -2192,16 +2190,16 @@ proof (intro impI allI)
   apply (insert relrl, auto)
   done
 
-  (*moreover
+  moreover
   from rf szb al
-  have "ptr_span (pd_Ptr (symbol_table ''armUSGlobalPD'')) \<inter> {ptr ..+ 2 ^ ptBits} = {}"
-    apply (clarsimp simp: valid_global_refs'_def  Let_def
+  have "ptr_span (pml4_Ptr (symbol_table ''x64KSGlobalPML4'')) \<inter> {ptr ..+ 2 ^ ptBits} = {}"
+    apply (clarsimp simp: valid_global_refs'_def  Let_def 
                           valid_refs'_def ran_def rf_sr_def cstate_relation_def)
     apply (erule disjoint_subset)
-    apply (simp add:kernel_data_refs_disj)
+    apply (simp add:kernel_data_refs_disj[simplified bit_simps_corres])
     done
 
-  ultimately *)
+  ultimately
   show ?thesis using rf empty kernel_data_refs_disj rzo
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
     apply (simp add: carch_state_relation_def cmachine_state_relation_def)
@@ -2217,10 +2215,9 @@ proof (intro impI allI)
      apply (simp add:szo cte_C_size cte_level_bits_def)
      apply (erule disjoint_subset)
      apply (simp add: bit_simps del: replicate_numeral)
-    sorry (*
     by (simp add:szo ptr_retyps_htd_safe_neg hrs_htd_def
       kernel_data_refs_domain_eq_rotate bit_simps
-      Int_ac del: replicate_numeral) *)
+      Int_ac del: replicate_numeral)
 qed
 
 lemma createObjects_ccorres_pde:
@@ -2442,7 +2439,7 @@ lemmas ccorres_liftM_getCTE_cte_at = ccorres_guard_from_wp_liftM [OF getCTE_pre_
 lemma insertNewCap_ccorres_helper:
   notes option.case_cong_weak [cong]
   shows "ccap_relation cap rv'b
-       \<Longrightarrow> ccorres dc xfdc (cte_at' slot and K (is_aligned next 3 \<and> is_aligned parent 3))
+       \<Longrightarrow> ccorres dc xfdc (cte_at' slot and K (is_aligned next 3 \<and> canonical_address next \<and> is_aligned parent 3))
            UNIV hs (setCTE slot (CTE cap (MDB next parent True True)))
            (Basic (\<lambda>s. globals_update (t_hrs_'_update (hrs_mem_update (heap_update
                                     (Ptr &(Ptr slot :: cte_C ptr\<rightarrow>[''cap_C'']) :: cap_C ptr) rv'b))) s);;
@@ -2466,10 +2463,9 @@ lemma insertNewCap_ccorres_helper:
    apply (rule conjI)
     apply (erule (2) cmap_relation_updI)
     apply (simp add: ccap_relation_def ccte_relation_def cte_lift_def)
-    subgoal apply (simp add: cte_to_H_def map_option_Some_eq2 mdb_node_to_H_def to_bool_mask_to_bool_bf is_aligned_neg_mask
-      c_valid_cte_def true_def
+    subgoal by (simp add: cte_to_H_def map_option_Some_eq2 mdb_node_to_H_def to_bool_mask_to_bool_bf is_aligned_neg_mask
+      c_valid_cte_def true_def canonical_address_sign_extended sign_extended_iff_sign_extend
       split: option.splits)
-      sorry (* FIXME x64: bitfield sign extend *)
    subgoal by simp
    apply (erule_tac t = s' in ssubst)
    apply (simp cong: lifth_update)
@@ -2621,6 +2617,7 @@ lemma byte_regions_unmodified_region_is_bytes:
   apply (drule(1) bspec, simp split: if_split_asm)
   done
 
+
 lemma insertNewCap_ccorres1:
   "ccorres dc xfdc (pspace_aligned' and valid_mdb' and valid_objs' and valid_cap' cap)
      ({s. (case untypedZeroRange cap of None \<Rightarrow> True
@@ -2658,7 +2655,7 @@ lemma insertNewCap_ccorres1:
    apply (clarsimp simp: hrs_mem_update)
    apply vcg
   apply (rule conjI)
-   apply (clarsimp simp: cte_wp_at_ctes_of is_aligned_3_next)
+   apply (clarsimp simp: cte_wp_at_ctes_of is_aligned_3_next) sorry (*
   apply (clarsimp split: option.split)
   apply (intro allI conjI impI; simp; clarsimp simp: region_actually_is_bytes)
    apply (erule trans[OF heap_list_h_eq2, rotated])
@@ -2673,7 +2670,7 @@ lemma insertNewCap_ccorres1:
         | simp
         | rule byte_regions_unmodified_hrs_mem_update
         | simp add: typ_heap_simps')+
-  done
+  done *)
 
  lemma insertNewCap_pre_cte_at:
   "\<lbrace>\<lambda>s. \<not> (cte_at' p s \<and> cte_at' p' s) \<rbrace> insertNewCap p p' cap \<lbrace> \<lambda>_ _. False \<rbrace>"
@@ -6961,7 +6958,7 @@ lemma createObject_valid_cap':
     apply assumption
    apply clarsimp
   apply (clarsimp simp add:word_bits_conv range_cover_full)
-  done
+  sorry
 
 lemma createObject_untypedRange:
   assumes split:
@@ -7750,9 +7747,9 @@ lemma createNewCaps_valid_cap_hd:
     apply (rule hoare_vcg_conj_lift)
      apply (rule createNewCaps_ret_len)
     apply (rule createNewCaps_valid_cap'[where sz=sz])
-   apply (clarsimp simp: range_cover_n_wb)
+   apply (clarsimp simp: range_cover_n_wb) sorry (*
   apply simp
-  done
+  done *)
 
 lemma insertNewCap_ccorres:
   "ccorres dc xfdc (pspace_aligned' and valid_mdb' and cte_wp_at' (\<lambda>_. True) slot
