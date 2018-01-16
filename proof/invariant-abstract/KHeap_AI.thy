@@ -160,8 +160,8 @@ lemma valid_obj_same_type:
      apply (simp add: valid_obj_def valid_ntfn_def valid_bound_obj_def
                       tcb_at_typ sc_at_typ typ_at_same_type
                split: option.splits ntfn.splits)
-    apply (simp add: valid_obj_def valid_sched_context_def valid_bound_obj_def
-                     ntfn_at_typ tcb_at_typ reply_at_typ typ_at_same_type typ_at_foldl
+    apply (simp add: valid_obj_def valid_sched_context_def valid_bound_obj_def list_all_def
+                     reply_at_typ typ_at_same_type tcb_at_typ ntfn_at_typ
               split: option.splits)
    apply (simp add: valid_obj_def valid_reply_def valid_bound_obj_def
                     tcb_at_typ sc_at_typ typ_at_same_type

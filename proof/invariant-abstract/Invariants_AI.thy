@@ -557,7 +557,7 @@ where
      valid_bound_ntfn (sc_ntfn sc) s
      \<and> valid_bound_tcb (sc_tcb sc) s
      \<and> valid_bound_tcb (sc_yield_from sc) s
-     \<and> (foldl conj True (map (\<lambda>r. reply_at r s) (sc_replies sc)))"
+     \<and> list_all (\<lambda>r. reply_at r s) (sc_replies sc)"
 
 definition
   valid_reply :: "reply \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -2408,14 +2408,12 @@ lemma valid_ntfn_typ:
   apply (rule hoare_vcg_conj_lift; simp add: P Q)
   done
 
-lemma valid_sc_typ_foldl_reply:
+lemma valid_sc_typ_list_all_reply:
   assumes r: "\<And>p. \<lbrace>typ_at AReply p\<rbrace> f \<lbrace>\<lambda>rv. typ_at AReply p\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. foldl conj True (map (\<lambda>r. reply_at r s) xs)\<rbrace> f
-              \<lbrace>\<lambda>rv s. foldl conj True (map (\<lambda>r. reply_at r s) xs)\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. list_all (\<lambda>r. reply_at r s) xs\<rbrace> f
+              \<lbrace>\<lambda>rv s. list_all (\<lambda>r. reply_at r s) xs\<rbrace>"
   by (induct xs)
-     (auto intro: hoare_vcg_conj_lift
-            simp: r[simplified reply_at_typ[symmetric]] foldl_conj_Cons wp_post_taut
-        simp del: foldl_Cons)
+     (auto simp: wp_post_taut hoare_vcg_conj_lift r[simplified reply_at_typ[symmetric]])
 
 lemma valid_sc_typ:
   (* typ_at or tcb_at, latter is more common due to being an obj_at *)
@@ -2433,7 +2431,7 @@ lemma valid_sc_typ:
   apply (rule hoare_vcg_conj_lift)
   apply (case_tac "sc_yield_from sc";
          simp add: wp_post_taut t[simplified tcb_at_typ[symmetric]])
-  apply (auto simp: valid_sc_typ_foldl_reply r)
+  apply (auto simp: valid_sc_typ_list_all_reply r)
   done
 
 lemma valid_reply_typ:
