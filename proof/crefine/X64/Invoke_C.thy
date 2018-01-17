@@ -1850,7 +1850,7 @@ lemma reset_untyped_inner_offs_helper:
       valid_cap' (cteCap cte) s
     \<rbrakk>
     \<Longrightarrow> of_nat i * 2 ^ sz2 < (2 ^ sz :: addr)"
-  apply (clarsimp simp: valid_cap_simps')
+  apply (clarsimp simp: valid_cap_simps' untypedBits_defs)
   apply (rule word_less_power_trans2, simp_all)
   apply (rule word_of_nat_less)
   apply (erule order_le_less_trans)
@@ -2142,7 +2142,7 @@ subgoal sorry
                   aligned_sub_aligned[OF _ _ order_refl]
                   aligned_intvl_offset_subset_ran
                   unat_le_helper Aligned.is_aligned_neg_mask)
-              apply (simp add: order_less_imp_le reset_chunk_bits_def)
+              apply (simp add: order_less_imp_le reset_chunk_bits_def untypedBits_defs)
 
              apply (clarsimp simp: in_set_conv_nth isCap_simps
                                    length_upto_enum_step upto_enum_step_nth
@@ -2436,7 +2436,7 @@ lemma invokeUntyped_Retype_ccorres:
       "newType = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < us"
       "newType = APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 61"
       using vui
-      by (auto simp: cte_wp_at_ctes_of)
+      by (auto simp: cte_wp_at_ctes_of untypedBits_defs)
 
     note bits_low = APIType_capBits_low[OF us_misc]
 
@@ -2465,7 +2465,7 @@ lemma invokeUntyped_Retype_ccorres:
       using vui misc
       apply (clarsimp simp: cte_wp_at_ctes_of)
       apply (frule Finalise_R.ctes_of_valid', clarsimp)
-      apply (clarsimp simp: valid_cap_simps')
+      apply (clarsimp simp: valid_cap_simps' untypedBits_defs)
       done
 
     have some_range_cover_arithmetic:
@@ -2864,7 +2864,7 @@ lemma valid_untyped_capBlockSize_misc:
   apply (rule le_less_trans[OF diff_le_self])
   apply (rule power_strict_increasing)
    apply (simp add:word_bits_def)
-  apply simp
+   apply (simp add: untypedBits_defs)+
   done
 
 lemma alternative_distrib:

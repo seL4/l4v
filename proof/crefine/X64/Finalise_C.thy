@@ -263,6 +263,7 @@ next
                            st_tcb_at'_def
                     split: scheduler_action.split_asm)
      apply (rename_tac word)
+     sorry (* FIXME X64 word is not what proof expects here
      apply (frule_tac x=word in tcbSchedEnqueue_cslift_precond_discharge)
         apply simp
        apply clarsimp
@@ -278,7 +279,7 @@ next
                 in fun_cong)+
     apply (clarsimp simp add: option_map2_def typ_heap_simps)
     apply fastforce
-    done
+    done *)
 qed
 
 lemma cancelAllIPC_ccorres:
@@ -1130,6 +1131,7 @@ lemma deleteASID_ccorres:
         apply (simp add: asid_high_bits_of_def
                          asidLowBits_def Kernel_C.asidLowBits_def
                          asid_low_bits_def unat_ucast)
+  sorry (*
         apply (rule sym, rule mod_less)
         apply (rule unat_less_power[where sz=3, simplified])
          apply (simp add: word_bits_conv)
@@ -1139,7 +1141,6 @@ lemma deleteASID_ccorres:
         apply simp
        apply (simp add: asid_high_bits_def)
       apply ceqv
-  sorry (*
      apply csymbr
      apply wpc
       apply (simp add: ccorres_cond_iffs dc_def[symmetric]

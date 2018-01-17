@@ -3149,6 +3149,7 @@ next
               apply (csymbr, rule ccorres_abstract_cleanup)
               apply (rule ccorres_symb_exec_r)
                 apply (rule ccorres_rhs_assoc2)
+  sorry (* X64
                 apply (rule Cons.hyps)
                  apply (clarsimp simp: excaps_map_def dest!: drop_n_foo)
                 apply simp
@@ -3263,7 +3264,6 @@ next
              apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
              apply (simp add: message_info_to_H_def word_ao_dist)
              apply (fold shiftl_1)[1]
-  sorry (*
              apply (subst and_mask_eq_iff_shiftr_0[THEN iffD2],
                   subst shiftl_shiftr2, simp, simp)
              apply (simp add: seL4_MessageInfo_lift_def word_bw_assocs

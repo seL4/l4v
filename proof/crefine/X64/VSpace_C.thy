@@ -55,8 +55,7 @@ lemma empty_fail_findVSpaceForASID[iff]:
 lemma empty_fail_findVSpaceForASIDAssert[iff]:
   "empty_fail (findVSpaceForASIDAssert asid)"
   apply (simp add: findVSpaceForASIDAssert_def catch_def
-                   checkPML4At_def checkPML4UniqueToASID_def
-                   checkPML4ASIDMapMembership_def)
+                   checkPML4At_def)
   apply (intro empty_fail_bind, simp_all split: sum.split)
   done
 
@@ -245,19 +244,10 @@ lemma vspace_at_asid_cross_over:
   sorry
 
 lemma findVSpaceForASIDAssert_pd_at_wp2:
-  "\<lbrace>\<lambda>s. \<forall>pd. vspace_at_asid' pd asid s
-        \<and> pd \<notin> ran (x64KSASIDMap (ksArchState s) |` (- {asid}))
-        \<and> x64KSASIDMap (ksArchState s) asid \<in> {None, Some pd}
-         \<longrightarrow> P pd s\<rbrace> findVSpaceForASIDAssert asid \<lbrace>P\<rbrace>"
-  apply (rule hoare_pre)
-   apply (simp add: findVSpaceForASIDAssert_def const_def
-                    checkPML4At_def checkPML4UniqueToASID_def
-                    checkPML4ASIDMapMembership_def)
-   apply (wp findVSpaceForASID_vs_at_wp)
-  apply clarsimp
-  apply (drule spec, erule mp)
-  apply clarsimp
-  apply (clarsimp split: option.split_asm)
+  "\<lbrace>\<lambda>s. \<forall>pd. vspace_at_asid' pd asid s \<longrightarrow> P pd s\<rbrace> findVSpaceForASIDAssert asid \<lbrace>P\<rbrace>"
+  apply (simp add: findVSpaceForASIDAssert_def const_def
+                    checkPML4At_def)
+  apply (wpsimp wp: findVSpaceForASID_vs_at_wp)
   done
 
 lemma asid_shiftr_low_bits_less:
