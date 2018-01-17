@@ -795,6 +795,7 @@ lemma ccorres_return_C_seq:
   apply simp_all
   done
 
+
 lemma ccap_relation_get_capZombiePtr_CL:
   "\<lbrakk> ccap_relation cap cap'; isZombie cap; capAligned cap \<rbrakk>
       \<Longrightarrow> get_capZombiePtr_CL (cap_zombie_cap_lift cap') = capZombiePtr cap"
@@ -964,13 +965,6 @@ lemma tcbSchedEnqueue_ep_at:
   apply (simp add: tcbSchedEnqueue_def unless_def null_def)
   apply (wp threadGet_wp, clarsimp, wp+)
   apply (clarsimp split: if_split, wp)
-  done
-
-lemma ctcb_relation_unat_tcbPriority_C:
-  "ctcb_relation tcb tcb' \<Longrightarrow> unat (tcbPriority_C tcb') = unat (tcbPriority tcb)"
-  apply (clarsimp simp: ctcb_relation_def)
-  apply (rule trans, rule arg_cong[where f=unat], erule sym)
-  apply (simp(no_asm))
   done
 
 lemma ccorres_duplicate_guard:

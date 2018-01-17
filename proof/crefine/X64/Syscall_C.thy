@@ -116,7 +116,6 @@ lemma performInvocation_Reply_ccorres:
   apply (auto simp: isReply_def elim!: pred_tcb'_weakenE)
   done
 
-
 lemma decodeInvocation_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps
   \<Longrightarrow>
@@ -1150,26 +1149,20 @@ lemma handleReply_ccorres:
             apply (rule ccorres_return_void_C)
            apply wp
           apply (vcg exspec=doReplyTransfer_modifies)
-
          apply (rule ccorres_fail)+
-
       apply simp_all
-
       apply (simp add: getSlotCap_def)
       apply (wp getCTE_wp')[1]
-
      apply vcg
-
     apply wp
-
    apply vcg
-
   apply clarsimp
   apply (intro allI conjI impI,
         simp_all add: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs)
        apply (rule tcb_aligned', rule tcb_at_invs', simp)
       apply (auto simp: cte_wp_at_ctes_of valid_cap'_def
                      dest!: ctes_of_valid')[1]
+      apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
      apply (simp add: real_cte_tcbCallerSlot[OF pred_tcb_at'])
     apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
    apply clarsimp
