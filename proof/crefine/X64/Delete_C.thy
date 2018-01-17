@@ -152,7 +152,6 @@ lemma capRemovable_spec:
   apply (clarsimp simp: cap_get_tag_isCap(1-8)[THEN trans[OF eq_commute]])
   apply (simp add: capRemovable_def from_bool_def[where b=True] true_def)
   apply (clarsimp simp: ccap_zombie_radix_less4)
-  apply (clarsimp simp: if_distrib [where f=scast])
   apply (subst eq_commute, subst from_bool_eq_if)
   apply (rule exI, rule conjI, assumption)
   apply clarsimp
@@ -171,7 +170,6 @@ lemma capCyclicZombie_spec:
   apply vcg
   apply (clarsimp simp: if_1_0_0 from_bool_0)
   apply (frule(1) cap_get_tag_isCap [THEN iffD2], simp)
-  apply (clarsimp simp: if_distrib [where f=scast])
   apply (subst eq_commute, subst from_bool_eq_if)
   apply (simp add: ccap_zombie_radix_less4)
   apply (case_tac slot, simp)
@@ -997,7 +995,6 @@ lemma cteRevoke_ccorres1:
           apply (drule(1) rf_sr_ctes_of_clift[rotated])+
           apply (clarsimp simp: ccte_relation_def)
           apply (auto intro: valid_capAligned)[1]
-          subgoal sorry
          apply ceqv
         apply csymbr
         apply (rule ccorres_cutMon)
