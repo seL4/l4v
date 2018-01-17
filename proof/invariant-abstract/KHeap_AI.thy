@@ -454,7 +454,14 @@ lemma get_sc_valid_sc[wp]:
   "\<lbrace> invs and sc_at sc \<rbrace>
    get_sched_context sc
    \<lbrace> valid_sched_context \<rbrace>"
-  by (wpsimp simp: sc_at_def2 valid_sc_def2 simp_del: valid_simple_obj_def)
+  apply (simp add: get_sched_context_def)
+  apply (rule hoare_seq_ext)
+   prefer 2
+   apply (rule hoare_pre_imp [OF _ get_object_valid])
+   apply (simp add: invs_def valid_state_def valid_pspace_def)
+  apply (case_tac kobj, simp_all)
+  apply (wp | simp add: valid_obj_def)+
+  done
 
 lemma get_reply_valid_reply[wp]:
   "\<lbrace> invs and reply_at reply \<rbrace>

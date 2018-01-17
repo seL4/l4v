@@ -465,10 +465,25 @@ lemma empty_slot_caps_of_state:
 crunch caps_of_state[wp]: cancel_all_ipc, cancel_all_signals "\<lambda>s. P (caps_of_state s)"
   (wp: mapM_x_wp' crunch_wps)
 
+crunch caps_of_state[wp]: reply_clear_tcb "\<lambda>s. P (caps_of_state s)"
+  (wp: maybeM_inv mapM_x_wp' crunch_wps)
+
+lemma set_sched_context_caps_of_state [wp]:
+  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_sched_context p pd \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  apply (simp add: set_sched_context_def get_object_def bind_assoc set_object_def)
+  apply wp
+  apply clarsimp
+  apply (subst cte_wp_caps_of_lift)
+   prefer 2
+   apply assumption
+  subgoal for _ y
+  by (cases y, auto simp: cte_wp_at_cases)
+  done
+
 crunch caps_of_state[wp]:
   unbind_notification, sched_context_unbind_ntfn, sched_context_maybe_unbind_ntfn, unbind_maybe_notification,
   sched_context_unbind_yield_from, sched_context_clear_replies, update_sk_obj_ref "\<lambda>s. P (caps_of_state s)"
-  (wp: crunch_wps maybeM_inv ignore: set_tcb_obj_ref)
+  (wp: ARM.set_object_caps_of_state crunch_wps maybeM_inv ignore: set_tcb_obj_ref)
 
 lemma sched_context_unbind_tcb_caps_of_state[wp]:
   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> sched_context_unbind_tcb scref \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
@@ -601,8 +616,14 @@ lemma set_mrs_cte_wp_at [wp]:
   by (wp set_mrs_thread_set_dmo thread_set_cte_wp_at_trivial
          ball_tcb_cap_casesI | simp)+
 
+lemma sched_context_update_consumed_cte_wp_at [wp]:
+  "\<lbrace>cte_wp_at P c\<rbrace> sched_context_update_consumed p \<lbrace>\<lambda>rv. cte_wp_at P c\<rbrace>"
+  apply (wpsimp simp: sched_context_update_consumed_def wp: thread_set_cte_wp_at_trivial
+         ball_tcb_cap_casesI | simp)
+  sorry
+
 crunch cte_wp_at[wp]: complete_yield_to "cte_wp_at P p"
-  (wp: maybeM_inv hoare_drop_imp ignore: set_tcb_obj_ref)
+  (wp: maybeM_inv hoare_drop_imp ignore: set_tcb_obj_ref get_sched_context)
 
 lemma sched_context_unbind_tcb_cte_wp_at[wp]:
   "\<lbrace>cte_wp_at P p\<rbrace> sched_context_unbind_tcb param_a \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>"
@@ -637,6 +658,9 @@ lemma is_final_cap'_objrefsE:
      \<Longrightarrow> is_final_cap' cap' s"
   by (simp add: is_final_cap'_def)
 
+crunch typ_at[wp]: get_sched_context, set_sched_context "\<lambda>s. P (typ_at T p s)"
+  (wp: maybeM_inv simp: get_object_def)
+
 lemma sched_context_unbind_tcb_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> sched_context_unbind_tcb scref \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   by (wpsimp wp: hoare_drop_imp
@@ -648,7 +672,18 @@ lemma sched_context_unbind_all_tcbs_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> sched_context_unbind_all_tcbs scref \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   by (wpsimp simp: sched_context_unbind_all_tcbs_def)
 
-crunch typ_at[wp]: sched_context_unbind_ntfn "\<lambda>s. P (typ_at T p s)"
+
+lemma reply_unlink_sc_typ_at[wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> reply_unlink_sc ref ref2 \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+  apply (wpsimp simp: reply_unlink_sc_def)
+  sorry
+
+lemma sched_context_update_consumed_typ_at[wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> sched_context_update_consumed ref \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+  apply (wpsimp simp: sched_context_update_consumed_def)
+  sorry
+
+crunch typ_at[wp]: sched_context_unbind_ntfn, sched_context_update_consumed "\<lambda>s. P (typ_at T p s)"
   (wp: maybeM_inv)
 
 crunch typ_at[wp]: fast_finalise "\<lambda>s. P (typ_at T p s)"
@@ -875,6 +910,17 @@ lemma fast_finalise_lift:
   apply (wpsimp wp: ep ntfn unbind unbind2 unbind3 unbind4 unbind5 hoare_drop_imps)+
   sorry (* might need more assumptions *)
 
+lemma reply_unlink_sc_cte_wp_at:
+  shows "\<lbrace>cte_wp_at P p\<rbrace> reply_unlink_sc ptr ptr' \<lbrace>\<lambda>rv s. cte_wp_at P p s\<rbrace>"
+  apply (simp add: reply_unlink_sc_def)
+  apply (wp cap_delete_one_caps_of_state)
+ sorry
+(*
+crunch cte_wp_at[wp]: reply_unlink_sc "cte_wp_at P p"
+  (wp: maybeM_inv hoare_drop_imp ignore: get_simple_ko)
+*)
+crunch cte_wp_at[wp]: reply_clear_tcb "cte_wp_at P p"
+  (wp: maybeM_inv hoare_drop_imp ignore: get_simple_ko)
 
 crunch cte_wp_at[wp]: fast_finalise "cte_wp_at P p"
   (rule: fast_finalise_lift wp: maybeM_inv ignore: set_tcb_obj_ref)

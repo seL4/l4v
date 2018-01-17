@@ -604,12 +604,6 @@ lemma is_ntfn_def2: "(is_ntfn ko) = bound (partial_inv Notification ko)"
 lemma ntfn_at_def2: "ntfn_at = (obj_at (\<lambda>ko. bound (partial_inv Notification ko)))"
   by (rule obj_at_eq_helper, simp add: is_ntfn_def2)
 
-lemma is_sc_def2: "(is_sc ko) = bound (partial_inv SchedContext ko)"
-  by (auto simp: is_sc_def split: kernel_object.splits)
-
-lemma sc_at_def2: "sc_at = (obj_at (\<lambda>ko. bound (partial_inv SchedContext ko)))"
-  by (rule obj_at_eq_helper, simp add: is_sc_def2)
-
 lemma is_reply_def2: "(is_reply ko) = bound (partial_inv Reply ko)"
   by (auto simp: is_reply_def split: kernel_object.splits)
 
