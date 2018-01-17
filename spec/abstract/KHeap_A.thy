@@ -118,19 +118,13 @@ lemma proj_ko_type_ntfn[simp]:
   "(\<exists>v. partial_inv Notification  ko = Some (v::notification)) = (a_type ko = ANTFN)"
   by (cases ko; auto simp: partial_inv_def a_type_def)
 
-
-lemma proj_inj_sc[simp]: "(partial_inv SchedContext ko = Some v) = (SchedContext v = ko)"
-  by (auto simp: partial_inv_def)
-lemma proj_ko_type_sc[simp]: "(\<exists>v. partial_inv SchedContext  ko = Some (v::sched_context)) = (a_type ko = ASchedContext)"
-  by (cases ko; auto simp: partial_inv_def a_type_def)
-
 lemma proj_inj_reply[simp]: "(partial_inv Reply ko = Some v) = (Reply v = ko)"
   by (auto simp: partial_inv_def)
 lemma proj_ko_type_reply[simp]: "(\<exists>v. partial_inv Reply  ko = Some (v::reply)) = (a_type ko = AReply)"
   by (cases ko; auto simp: partial_inv_def a_type_def)
 
 abbreviation
-  "is_simple_type \<equiv> (\<lambda>ob. a_type ob \<in> {AEndpoint, ANTFN, ASchedContext, AReply})"
+  "is_simple_type \<equiv> (\<lambda>ob. a_type ob \<in> {AEndpoint, ANTFN, AReply})"
 
 
 definition
@@ -214,14 +208,23 @@ abbreviation
 
 section {* Scheduling Contexts *}
 
-abbreviation
-  get_sched_context :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) s_monad" where
-  "get_sched_context \<equiv> get_simple_ko SchedContext"
+definition
+  get_sched_context :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) s_monad"
+where
+  "get_sched_context ptr \<equiv> do
+     kobj \<leftarrow> get_object ptr;
+     case kobj of SchedContext sc \<Rightarrow> return sc
+                 | _ \<Rightarrow> fail
+   od"
 
-abbreviation
-  set_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "set_sched_context \<equiv> set_simple_ko SchedContext"
-
+definition
+  set_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "set_sched_context ptr sc \<equiv> do
+     obj \<leftarrow> get_object ptr;
+     assert (case obj of SchedContext sc \<Rightarrow> True | _ \<Rightarrow> False);
+     set_object ptr (SchedContext sc)
+   od"
 
 definition
   is_schedulable :: "obj_ref \<Rightarrow> bool \<Rightarrow> ('z::state_ext state, bool) nondet_monad"
