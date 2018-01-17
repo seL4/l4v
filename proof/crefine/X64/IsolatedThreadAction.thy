@@ -736,8 +736,7 @@ lemma setVMRoot_isolatable:
                    locateSlot_conv getSlotCap_def
                    cap_case_isPML4Cap if_bool_simps
                    whenE_def liftE_def
-                   checkPML4NotInASIDMap_def stateAssert_def2
-                   checkPML4ASIDMapMembership_def
+                   stateAssert_def2
              cong: if_cong)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                thread_actions_isolatable_bindE[OF _ _ hoare_pre(1)]
@@ -745,7 +744,7 @@ lemma setVMRoot_isolatable:
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
                getCurrentCR3_isolatable setCurrentCR3_isolatable
-               gets_isolatable getCTE_isolatable updateASIDMap_isolatable
+               gets_isolatable getCTE_isolatable
                setCurrentVSpaceRoot_isolatable
                findVSpaceForASID_isolatable doMachineOp_isolatable
         | simp add: projectKO_opt_asidpool
@@ -969,12 +968,10 @@ lemma oblivious_setVMRoot_schact:
                    getSlotCap_def getCTE_def )
   by (safe intro!: oblivious_bind oblivious_bindE oblivious_catch oblivious_mapM_x
              | simp_all add: liftE_def
-                             findVSpaceForASID_def liftME_def updateASIDMap_def
+                             findVSpaceForASID_def liftME_def
                              findVSpaceForASIDAssert_def checkPML4At_def
-                             checkPML4UniqueToASID_def getCurrentCR3_def
-                             checkPML4ASIDMapMembership_def setCurrentCR3_def
+                             getCurrentCR3_def setCurrentCR3_def
                              invalidateASID_def setCurrentVSpaceRoot_def
-                             checkPML4NotInASIDMap_def
                       split: if_split capability.split arch_capability.split option.split)+
 
 
