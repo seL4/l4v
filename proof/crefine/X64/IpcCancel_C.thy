@@ -12,28 +12,20 @@ theory IpcCancel_C
 imports SyscallArgs_C
 begin
 
-(* FIXME MOVE *)
-lemma shiftr_less:
-  "(w::'a::len word) < k \<Longrightarrow> w >> n < k"
-  apply (simp add: word_less_nat_alt shiftr_div_2n')
-  apply (blast intro: div_le_dividend le_less_trans)
+lemma unat_of_nat_shiftl_or_8_64: (* FIXME generalise *)
+  "\<lbrakk> x * 2 ^ n < 256 ; y < 256 \<rbrakk>
+   \<Longrightarrow> unat (((of_nat x << n) :: 8 word)  || of_nat y :: 8 word) = unat (((of_nat x << n):: machine_word) || of_nat y :: machine_word)"
+  apply (subst unat_ucast_upcast[where 'b=8 and 'a=64,symmetric])
+   apply (simp add: is_up)
+  apply (subst ucast_or_distrib)
+  apply (subst of_nat_shiftl)
+  apply (subst ucast_of_nat_small, simp)
+  apply (subst ucast_of_nat_small, simp)
+  apply (simp add: of_nat_shiftl)
   done
-
-(* FIXME move *)
-lemma word_and_notzeroD:
-  "w && w' \<noteq> 0 \<Longrightarrow> w \<noteq> 0 \<and> w' \<noteq> 0"
-  by auto
 
 context kernel_m
 begin
-
-(* TODO: move *)
-lemma mod_lemma: "[| (0::nat) < c; r < b |] ==> b * (q mod c) + r < b * c"
-  apply (cut_tac m = q and n = c in mod_less_divisor)
-  apply (drule_tac [2] m = "q mod c" in less_imp_Suc_add, auto)
-  apply (erule_tac P = "%x. lhs < rhs x" for lhs rhs in ssubst)
-  apply (simp add: add_mult_distrib2)
-  done
 
 lemma cready_queues_index_to_C_in_range':
   assumes prems: "qdom \<le> ucast maxDom" "prio \<le> ucast maxPrio"
@@ -46,7 +38,7 @@ proof -
     using prems
     by (simp add: numDomains_def maxDom_def Suc_le_lessD unat_le_helper)
   show ?thesis
-    using mod_lemma[OF _ P, where q="unat qdom" and c=numDomains] mod_less[OF Q]
+    using mod_lemma[OF _ P, where q="unat qdom" and c=numDomains] Q
     by (clarsimp simp: cready_queues_index_to_C_def field_simps numDomains_def)
 qed
 
@@ -170,41 +162,37 @@ lemma tcbEPDequeue_spec:
   apply (frule c_guard_clift)
   apply (simp add: typ_heap_simps')
   apply (intro allI conjI impI)
-               apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
-              apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
-                              cong: if_weak_cong)
-             apply (rule ext)
-             apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
-            apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff c_guard_clift)
-           apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
-
-  sorry (* FIXME x64: next cmd hangs
-          apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
-         apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def
-                         cong: if_weak_cong)
-        apply (rule ext)
-        apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
-       apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff c_guard_clift)
-      apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff)
-     apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
-                     cong: if_weak_cong)
-    apply (rule ext)
-    apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
-   apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff c_guard_clift)
-  apply simp
-  done *)
+            apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
+           apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
+                           cong: if_weak_cong)
+          apply (rule ext)
+          apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
+         apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff c_guard_clift)
+        apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
+       apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def
+                       cong: if_weak_cong)
+      apply (rule ext)
+      apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
+     apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff c_guard_clift)
+    apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
+                    cong: if_weak_cong)
+   apply (rule ext)
+   apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
+  apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff c_guard_clift)
+  done
 
 (* FIXME x64: bitfield shenanigans *)
 lemma ntfn_ptr_set_queue_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. s \<Turnstile>\<^sub>c \<acute>ntfnPtr\<rbrace> Call ntfn_ptr_set_queue_'proc
            {t. (\<exists>ntfn'. notification_lift ntfn' =
-  (notification_lift (the (cslift s (\<^bsup>s\<^esup>ntfnPtr))))\<lparr> ntfnQueue_head_CL := ptr_val (head_C \<^bsup>s\<^esup>ntfn_queue) && ~~ mask 4,
-                                                      ntfnQueue_tail_CL := ptr_val (end_C \<^bsup>s\<^esup>ntfn_queue) && ~~ mask 4 \<rparr>
+  (notification_lift (the (cslift s (\<^bsup>s\<^esup>ntfnPtr))))\<lparr>
+    ntfnQueue_head_CL := sign_extend 47 (ptr_val (head_C \<^bsup>s\<^esup>ntfn_queue)),
+    ntfnQueue_tail_CL := sign_extend 47 (ptr_val (end_C \<^bsup>s\<^esup>ntfn_queue)) \<rparr>
             \<and> t_hrs_' (globals t) = hrs_mem_update (heap_update (\<^bsup>s\<^esup>ntfnPtr) ntfn')
                 (t_hrs_' (globals s)))}"
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: packed_heap_update_collapse_hrs typ_heap_simps')
-  oops
+  done
 
 lemma cancelSignal_ccorres_helper:
   "ccorres dc xfdc (invs' and st_tcb_at' (op = (BlockedOnNotification ntfn)) thread and ko_at' ntfn' ntfn)
@@ -311,11 +299,15 @@ lemma cancelSignal_ccorres_helper:
           apply (simp add: cnotification_relation_def Let_def isWaitingNtfn_def
                     split: ntfn.splits split del: if_split)
           apply (erule iffD1 [OF tcb_queue_relation'_cong [OF refl _ _ refl], rotated -1])
-           apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff)
-  sorry (*
-           apply (simp add: tcb_queue_relation'_next_mask_4)
-          apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff)
-          apply (simp add: tcb_queue_relation'_prev_mask_4)
+           apply (clarsimp simp add: h_t_valid_clift_Some_iff)
+
+(* FIXME X64 tcb_queue_relation'_next_mask and tcb_queue_relation_next_mask appear useless,
+the logic is somehow based on the address being canonical *)
+           (* apply (simp add: tcb_queue_relation'_next_mask) *)
+  subgoal sorry
+          (* apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff)
+          apply (simp add: tcb_queue_relation'_prev_mask) *)
+  subgoal sorry
          apply simp
         -- "queue relation"
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
@@ -324,10 +316,10 @@ lemma cancelSignal_ccorres_helper:
                         typ_heap_simps')
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: h_t_valid_clift_Some_iff)
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply (simp add: objBits_simps)
   apply assumption
-  done *)
+  done
 
 lemmas rf_sr_tcb_update_no_queue_gen
     = rf_sr_tcb_update_no_queue[where t="t''\<lparr> globals := gs \<lparr> t_hrs_' := th \<rparr>\<rparr>" for th, simplified]
@@ -858,16 +850,18 @@ lemmas queue_in_range = of_nat_mono_maybe[OF _ cready_queues_index_to_C_in_range
     of_nat_mono_maybe[OF _ cready_queues_index_to_C_in_range,
         where 'a="32 signed", unfolded cready_queues_index_to_C_def numPriorities_def,
         simplified, unfolded ucast_nat_def]
+    of_nat_mono_maybe[OF _ cready_queues_index_to_C_in_range,
+        where 'a=64, unfolded cready_queues_index_to_C_def numPriorities_def,
+        simplified, unfolded ucast_nat_def]
 
 lemma cready_queues_index_to_C_def2':
   "\<lbrakk> qdom \<le> ucast maxDom; prio \<le> ucast maxPrio \<rbrakk>
    \<Longrightarrow> cready_queues_index_to_C qdom prio
-             = unat (ucast qdom * of_nat numPriorities + ucast prio :: 32 word)"
+             = unat (ucast qdom * of_nat numPriorities + ucast prio :: machine_word)"
   apply (simp add: cready_queues_index_to_C_def numPriorities_def)
   apply (subst unat_add_lem[THEN iffD1])
    apply (frule cready_queues_index_to_C_in_range, simp)
    apply (simp add: cready_queues_index_to_C_def numPriorities_def)
-  sorry (* FIXME x64: missing simp rule
    apply (subst unat_mult_simple)
     apply (simp add: word_bits_def maxDom_def)
    apply simp
@@ -876,7 +870,7 @@ lemma cready_queues_index_to_C_def2':
    apply (subst (asm) word_le_nat_alt)
    apply simp
   apply simp
-  done *)
+  done
 
 lemmas cready_queues_index_to_C_def2
            = cready_queues_index_to_C_def2'[simplified maxDom_to_H maxPrio_to_H]
@@ -890,6 +884,13 @@ lemma prio_to_l1index_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call prio_to_l1index_'proc
        \<lbrace>\<acute>ret__unsigned_long = prio_' s >> wordRadix \<rbrace>"
   by vcg (simp add: word_sle_def wordRadix_def')
+
+lemma invert_l1index_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call invert_l1index_'proc
+       \<lbrace>\<acute>ret__unsigned_long = of_nat l2BitmapSize - 1 - l1index_' s \<rbrace>"
+  unfolding l2BitmapSize_def'
+  by vcg
+     (simp add: word_sle_def sdiv_int_def sdiv_word_def smod_word_def smod_int_def)
 
 lemma cbitmap_L1_relation_update:
   "\<lbrakk> (\<sigma>, s) \<in> rf_sr ; cbitmap_L1_relation cupd aupd \<rbrakk>
@@ -925,7 +926,7 @@ lemma machine_word_and_3F_less_40:
   by (rule word_and_less', simp)
 
 lemma prio_ucast_shiftr_wordRadix_helper: (* FIXME generalise *)
-  "(ucast (p::priority) >> wordRadix :: machine_word) < 9"
+  "(ucast (p::priority) >> wordRadix :: machine_word) < 4"
   unfolding maxPriority_def numPriorities_def wordRadix_def
   using unat_lt2p[where x=p]
   apply (clarsimp simp add: word_less_nat_alt shiftr_div_2n' unat_ucast_upcast is_up word_le_nat_alt)
@@ -933,7 +934,7 @@ lemma prio_ucast_shiftr_wordRadix_helper: (* FIXME generalise *)
   done
 
 lemma prio_ucast_shiftr_wordRadix_helper': (* FIXME generalise *)
-  "(ucast (p::priority) >> wordRadix :: machine_word) \<le> 8"
+  "(ucast (p::priority) >> wordRadix :: machine_word) \<le> 3"
   unfolding maxPriority_def numPriorities_def wordRadix_def
   using unat_lt2p[where x=p]
   apply (clarsimp simp add: word_less_nat_alt shiftr_div_2n' unat_ucast_upcast is_up word_le_nat_alt)
@@ -941,15 +942,19 @@ lemma prio_ucast_shiftr_wordRadix_helper': (* FIXME generalise *)
   done
 
 lemma prio_unat_shiftr_wordRadix_helper': (* FIXME generalise *)
-  "unat ((p::priority) >> wordRadix) \<le> 8"
+  "unat ((p::priority) >> wordRadix) \<le> 3"
   unfolding maxPriority_def numPriorities_def wordRadix_def
   using unat_lt2p[where x=p]
   apply (clarsimp simp add: word_less_nat_alt shiftr_div_2n' unat_ucast_upcast is_up word_le_nat_alt)
   apply arith
   done
 
-lemma prio_ucast_shiftr_wordRadix_helper2:
+lemma prio_ucast_shiftr_wordRadix_helper2: (* FIXME possibly unused *)
   "(ucast (p::priority) >> wordRadix :: machine_word) < 0x20"
+  by (rule order_less_trans[OF prio_ucast_shiftr_wordRadix_helper]; simp)
+
+lemma prio_ucast_shiftr_wordRadix_helper3:
+  "(ucast (p::priority) >> wordRadix :: machine_word) < 0x40"
   by (rule order_less_trans[OF prio_ucast_shiftr_wordRadix_helper]; simp)
 
 lemma dom_less_0x10_helper:
@@ -969,6 +974,7 @@ lemmas prio_and_dom_limit_helpers =
   prio_ucast_shiftr_wordRadix_helper
   prio_ucast_shiftr_wordRadix_helper'
   prio_ucast_shiftr_wordRadix_helper2
+  prio_ucast_shiftr_wordRadix_helper3
   prio_unat_shiftr_wordRadix_helper'
   dom_less_0x10_helper
   cready_queues_index_to_C_ucast_helper
@@ -984,7 +990,6 @@ lemma rf_sr_cbitmap_L1_relation[intro]:
 lemma rf_sr_cbitmap_L2_relation[intro]:
   "(\<sigma>, x) \<in> rf_sr \<Longrightarrow> cbitmap_L2_relation (ksReadyQueuesL2Bitmap_' (globals x)) (ksReadyQueuesL2Bitmap \<sigma>)"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-
 
 lemma cbitmap_L1_relation_bit_set:
   fixes p :: priority
@@ -1003,19 +1008,21 @@ lemma cbitmap_L2_relation_bit_set:
   fixes p :: priority
   fixes d :: domain
   shows "\<lbrakk> cbitmap_L2_relation (ksReadyQueuesL2Bitmap_' (globals \<sigma>')) (ksReadyQueuesL2Bitmap \<sigma>) ;
-           d \<le> maxDomain ; prioToL1Index p \<le> numPriorities div wordBits \<rbrakk>
+           d \<le> maxDomain ; b = b' \<rbrakk>
          \<Longrightarrow>
          cbitmap_L2_relation
           (Arrays.update (ksReadyQueuesL2Bitmap_' (globals \<sigma>')) (unat d)
             (Arrays.update (ksReadyQueuesL2Bitmap_' (globals \<sigma>').[unat d])
-              (unat (p >> wordRadix))
-              (ksReadyQueuesL2Bitmap_' (globals \<sigma>').[unat d].[unat (p >> wordRadix)] ||
-               2 ^ unat (p && 0x3F))))
+              (invertL1Index (prioToL1Index p))
+              (ksReadyQueuesL2Bitmap_' (globals \<sigma>').[unat d].[invertL1Index (prioToL1Index p)] ||
+               2 ^ unat (p && b))))
           ((ksReadyQueuesL2Bitmap \<sigma>)
-           ((d, prioToL1Index p) :=
-              ksReadyQueuesL2Bitmap \<sigma> (d, prioToL1Index p) || 2 ^ unat (p && mask wordRadix)))"
-  unfolding cbitmap_L2_relation_def numPriorities_def wordBits_def word_size
+           ((d, invertL1Index (prioToL1Index p)) :=
+              ksReadyQueuesL2Bitmap \<sigma> (d, invertL1Index (prioToL1Index p)) ||
+               2 ^ unat (p && b')))"
+  unfolding cbitmap_L2_relation_def numPriorities_def wordBits_def word_size l2BitmapSize_def'
   apply (clarsimp simp: word_size prioToL1Index_def wordRadix_def mask_def
+                        invertL1Index_def l2BitmapSize_def'
                         maxDomain_def numDomains_def word_le_nat_alt)
   apply (case_tac "da = d" ; clarsimp)
   done
@@ -1058,11 +1065,6 @@ lemma t_hrs_ksReadyQueues_upd_absorb:
    t_hrs_'_update f (g s \<lparr>ksReadyQueues_' := rqupd\<rparr>)"
   by simp
 
-lemma prioToL1Index_le_numPriorities_div_wordBits[simp]:
-  "prioToL1Index (tcbPriority tcb) \<le> numPriorities div wordBits"
-  unfolding prioToL1Index_def numPriorities_def wordBits_def
-  sorry (*apply (clarsimp simp: word_size intro!: prio_unat_shiftr_wordRadix_helper')*)
-
 lemma rf_sr_drop_bitmaps_enqueue_helper:
   "\<lbrakk> (\<sigma>,\<sigma>') \<in> rf_sr ;
      cbitmap_L1_relation ksqL1upd' ksqL1upd ; cbitmap_L2_relation ksqL2upd' ksqL2upd \<rbrakk>
@@ -1099,15 +1101,29 @@ lemma tcb_queue_relation'_empty_ksReadyQueues:
   apply (clarsimp simp: tcb_at_not_NULL)
   done
 
+lemma invert_prioToL1Index_c_simp:
+  "p \<le> maxPriority
+   \<Longrightarrow>
+   unat ((of_nat l2BitmapSize :: machine_word) - 1 - (ucast p >> wordRadix))
+   = invertL1Index (prioToL1Index p)"
+   unfolding maxPriority_def l2BitmapSize_def' invertL1Index_def prioToL1Index_def
+     numPriorities_def
+   by (simp add: unat_sub prio_and_dom_limit_helpers)
+
+lemma c_invert_assist: "3 - (ucast (p :: priority) >> 6 :: machine_word) < 4"
+  using prio_ucast_shiftr_wordRadix_helper'[simplified wordRadix_def]
+  by - (rule word_less_imp_diff_less, simp_all)
+
 lemma tcbSchedEnqueue_ccorres:
   "ccorres dc xfdc
            (valid_queues and tcb_at' t and valid_objs')
            (UNIV \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace>)
-           []
+           hs
            (tcbSchedEnqueue t)
            (Call tcbSchedEnqueue_'proc)"
 proof -
   note prio_and_dom_limit_helpers[simp] word_sle_def[simp] maxDom_to_H[simp] maxPrio_to_H[simp]
+  note invert_prioToL1Index_c_simp[simp]
 
   show ?thesis
   apply (cinit lift: tcb_')
@@ -1186,8 +1202,13 @@ proof -
             apply (clarsimp simp: cready_queues_index_to_C_def numPriorities_def)
             apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
              apply (simp add: t_hrs_ksReadyQueues_upd_absorb)
+
+             apply (rule conjI)
+               apply (clarsimp simp: l2BitmapSize_def' wordRadix_def c_invert_assist)
              apply (subst rf_sr_drop_bitmaps_enqueue_helper, assumption)
-               apply (fastforce intro: cbitmap_L1_relation_bit_set cbitmap_L2_relation_bit_set)+
+               apply (fastforce intro: cbitmap_L1_relation_bit_set)
+              apply (fastforce intro: cbitmap_L2_relation_bit_set simp: wordRadix_def mask_def)
+
             apply (frule_tac d="tcbDomain tcb" and p="tcbPriority tcb"
                      in rf_sr_sched_queue_relation)
               apply clarsimp
@@ -1195,7 +1216,7 @@ proof -
             apply (drule_tac qhead'="tcb_ptr_to_ctcb_ptr t" and s=\<sigma> in tcbSchedEnqueue_update,
                    simp_all add: valid_queues_valid_q)[1]
              apply (rule tcb_at_not_NULL, erule obj_at'_weakenE, simp)
-  sorry (*
+
              apply (erule(1) state_relation_queue_update_helper[where S="{t}"],
                     (simp | rule globals.equality)+,
                     simp_all add: cready_queues_index_to_C_def2 numPriorities_def
@@ -1251,12 +1272,13 @@ proof -
                apply clarsimp
                apply (drule_tac s="tcb_ptr_to_ctcb_ptr t" in sym, simp)
               apply (clarsimp simp add: fun_upd_twist)
-             prefer 4
+             apply (clarsimp simp add: fun_upd_twist)
+             prefer 3
              apply (simp add: obj_at'_weakenE[OF _ TrueI])
              apply (rule disjI1, erule valid_queues_obj_at'D)
              apply simp+
-            apply (fastforce simp: tcb_null_sched_ptrs_def)
-           apply (simp add: typ_heap_simps c_guard_clift)
+           apply (fastforce simp: tcb_null_sched_ptrs_def)
+          apply (simp add: typ_heap_simps c_guard_clift)
           apply (simp add: guard_is_UNIV_def)
          apply simp
          apply (wp threadGet_wp)
@@ -1271,7 +1293,7 @@ proof -
   apply (fastforce simp: valid_objs'_def obj_at'_def ran_def projectKOs typ_at'_def
                          valid_obj'_def inQ_def
                    dest!: valid_queues_obj_at'D)
-  done *)
+  done
 qed
 
 lemmas tcbSchedDequeue_update
@@ -1409,9 +1431,9 @@ lemma cready_queues_relation_empty_queue_helper:
   done
 
 lemma cbitmap_L2_relationD:
-  "\<lbrakk> cbitmap_L2_relation cbitmap2 abitmap2 ; d \<le> maxDomain ; i \<le> numPriorities div wordBits \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> cbitmap_L2_relation cbitmap2 abitmap2 ; d \<le> maxDomain ; i < l2BitmapSize \<rbrakk> \<Longrightarrow>
     cbitmap2.[unat d].[i] = abitmap2 (d, i)"
-  unfolding cbitmap_L2_relation_def
+  unfolding cbitmap_L2_relation_def l2BitmapSize_def'
   by clarsimp
 
 (* FIXME move *)
@@ -1428,19 +1450,21 @@ lemma cbitmap_L2_relation_bit_clear:
   fixes p :: priority
   fixes d :: domain
   shows "\<lbrakk> cbitmap_L2_relation (ksReadyQueuesL2Bitmap_' (globals \<sigma>')) (ksReadyQueuesL2Bitmap \<sigma>) ;
-           d \<le> maxDomain ; prioToL1Index p \<le> numPriorities div wordBits \<rbrakk>
+           d \<le> maxDomain \<rbrakk>
          \<Longrightarrow>
          cbitmap_L2_relation
           (Arrays.update (ksReadyQueuesL2Bitmap_' (globals \<sigma>')) (unat d)
             (Arrays.update (ksReadyQueuesL2Bitmap_' (globals \<sigma>').[unat d])
-              (unat (p >> wordRadix))
-              (ksReadyQueuesL2Bitmap_' (globals \<sigma>').[unat d].[unat (p >> wordRadix)] &&
+              (invertL1Index (prioToL1Index p))
+              (ksReadyQueuesL2Bitmap_' (globals \<sigma>').[unat d].[invertL1Index (prioToL1Index p)] &&
                 ~~ 2 ^ unat (p && 0x3F))))
           ((ksReadyQueuesL2Bitmap \<sigma>)
-           ((d, prioToL1Index p) :=
-              ksReadyQueuesL2Bitmap \<sigma> (d, prioToL1Index p) && ~~ 2 ^ unat (p && mask wordRadix)))"
-  unfolding cbitmap_L2_relation_def numPriorities_def wordBits_def word_size
+           ((d, invertL1Index (prioToL1Index p)) :=
+              ksReadyQueuesL2Bitmap \<sigma> (d, invertL1Index (prioToL1Index p)) &&
+                ~~ 2 ^ unat (p && mask wordRadix)))"
+  unfolding cbitmap_L2_relation_def numPriorities_def wordBits_def word_size l2BitmapSize_def'
   apply (clarsimp simp: word_size prioToL1Index_def wordRadix_def mask_def
+                        invertL1Index_def l2BitmapSize_def'
                         maxDomain_def numDomains_def word_le_nat_alt)
   apply (case_tac "da = d" ; clarsimp)
   done
@@ -1463,6 +1487,10 @@ proof -
                                           \<and> distinct (ksReadyQueues s (d, p)) \<Longrightarrow>
     \<forall>t\<in>set (ksReadyQueues s (d, p)). tcb_at' t s"
     by (fastforce dest: spec elim: obj_at'_weakenE)
+
+  have invert_l1_index_limit: "\<And>p. invertL1Index (prioToL1Index p) < 4"
+    unfolding invertL1Index_def l2BitmapSize_def' prioToL1Index_def
+    by simp
 
   show ?thesis
   apply (cinit lift: tcb_')
@@ -1534,17 +1562,20 @@ proof -
              apply (intro conjI ;
                      clarsimp simp: h_val_field_clift'
                                     h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)+
-  sorry (*
                apply (drule(2) filter_empty_unfiltered_contr, simp)+
              apply (rule conjI; clarsimp)
+              apply (rule conjI)
+               apply (fastforce simp: c_invert_assist l2BitmapSize_def' wordRadix_def)
               apply (rule conjI; clarsimp)
                apply (subst rf_sr_drop_bitmaps_dequeue_helper, assumption)
                  apply (fastforce intro: cbitmap_L1_relation_bit_clear)
+                apply (simp add: invert_prioToL1Index_c_simp)
                 apply (frule rf_sr_cbitmap_L2_relation)
                 apply (clarsimp simp: cbitmap_L2_relation_def
                                       word_size prioToL1Index_def wordRadix_def mask_def
                                       maxDomain_def numDomains_def word_le_nat_alt
-                                      numPriorities_def wordBits_def)
+                                      numPriorities_def wordBits_def l2BitmapSize_def'
+                                      invertL1Index_def)
                 apply (case_tac "d = tcbDomain ko" ; fastforce)
 
                apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
@@ -1565,14 +1596,17 @@ proof -
                                      cmachine_state_relation_def)
                apply (erule (2) cready_queues_relation_empty_queue_helper)
               (* impossible case, C L2 update disagrees with Haskell update *)
+              apply (simp add: invert_prioToL1Index_c_simp)
               apply (subst (asm) Arrays.index_update)
                subgoal by (simp add: maxDomain_def numDomains_def word_le_nat_alt)
               apply (subst (asm) Arrays.index_update)
-               apply (simp add: less_eq_Suc_le)
+               apply (simp add: invert_l1_index_limit)
+
               apply (frule rf_sr_cbitmap_L2_relation)
-              apply (drule_tac i="prioToL1Index (tcbPriority ko)" in cbitmap_L2_relationD, assumption)
-               subgoal by (fastforce simp: numPriorities_def wordBits_def word_size prioToL1Index_def)
-              apply (fastforce simp: prioToL1Index_def mask_def wordRadix_def)
+              apply (drule_tac i="invertL1Index (prioToL1Index (tcbPriority ko))"
+                        in cbitmap_L2_relationD, assumption)
+               apply (fastforce simp: l2BitmapSize_def' invert_l1_index_limit)
+              apply (fastforce simp: prioToL1Index_def invertL1Index_def mask_def wordRadix_def)
              (* impossible case *)
              apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
              apply (drule(2) filter_empty_unfiltered_contr, fastforce)
@@ -1607,8 +1641,10 @@ proof -
                                    cready_queues_index_to_C_def2 typ_heap_simps
                                    maxDom_to_H maxPrio_to_H
                   cong: if_cong split del: if_split)[1]
-              apply (fold_subgoals (prefix))[3]
-              subgoal premises prems using prems by (fastforce simp: tcb_null_sched_ptrs_def typ_heap_simps c_guard_clift)+
+
+(* FIXME indent *)
+              apply (fastforce simp: tcb_null_sched_ptrs_def typ_heap_simps c_guard_clift
+                                 elim: obj_at'_weaken)+
              apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
                       in state_relation_queue_update_helper',
                     (simp | rule globals.equality)+,
@@ -1622,6 +1658,8 @@ proof -
 
             apply clarsimp
             apply (rule conjI; clarsimp)
+             apply (rule conjI)
+              apply (fastforce simp: c_invert_assist l2BitmapSize_def' wordRadix_def)
              apply (rule conjI; clarsimp)
               (* invalid, missing bitmap updates on haskell side *)
               apply (fold_subgoals (prefix))[2]
@@ -1663,19 +1701,26 @@ proof -
              apply (clarsimp simp: typ_heap_simps)
              apply (rule conjI; clarsimp simp: typ_heap_simps)
              apply (drule(2) filter_empty_unfiltered_contr[simplified filter_noteq_op], simp)
+            apply (rule conjI)
+             apply (fastforce simp: c_invert_assist l2BitmapSize_def' wordRadix_def)
             apply (rule conjI; clarsimp)
              (* impossible case, C L2 update disagrees with Haskell update *)
              apply (subst (asm) Arrays.index_update)
               apply (simp add: maxDomain_def numDomains_def word_le_nat_alt)
              apply (subst (asm) Arrays.index_update)
-              apply (simp add: less_eq_Suc_le)
+              subgoal using invert_l1_index_limit
+                by (fastforce simp add: invert_prioToL1Index_c_simp intro: nat_Suc_less_le_imp)
              apply (frule rf_sr_cbitmap_L2_relation)
-             apply (drule_tac i="prioToL1Index (tcbPriority ko)" in cbitmap_L2_relationD, assumption)
-              apply (simp add: numPriorities_def wordBits_def word_size prioToL1Index_def)
-             apply (simp add: prioToL1Index_def mask_def wordRadix_def)
+             apply (simp add: invert_prioToL1Index_c_simp)
+             apply (drule_tac i="invertL1Index (prioToL1Index (tcbPriority ko))"
+                      in cbitmap_L2_relationD, assumption)
+              subgoal by (simp add: invert_l1_index_limit l2BitmapSize_def')
+             apply (fastforce simp: prioToL1Index_def invertL1Index_def mask_def wordRadix_def)
 
+            apply (simp add: invert_prioToL1Index_c_simp)
             apply (subst rf_sr_drop_bitmaps_dequeue_helper_L2, assumption)
              subgoal by (fastforce dest: rf_sr_cbitmap_L2_relation elim!: cbitmap_L2_relation_bit_clear)
+
             (* trivial case, setting queue to empty *)
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
                                   cmachine_state_relation_def)
@@ -1689,11 +1734,12 @@ proof -
              subgoal premises prems using prems by (fastforce simp: maxDom_to_H maxPrio_to_H)+
            apply (clarsimp simp: h_val_field_clift'
                                  h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
+           apply (simp add: invert_prioToL1Index_c_simp)
            apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next')
               apply (fastforce simp add: ksQ_tcb_at')+
            apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
                   simp_all add: remove1_filter ksQ_tcb_at')[1]
-           apply (clarsimp simp:  filter_noteq_op upd_unless_null_def)
+           apply (clarsimp simp: filter_noteq_op upd_unless_null_def)
            apply (rule conjI, clarsimp)
             apply (clarsimp simp: h_val_field_clift'
                                   h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
@@ -1708,7 +1754,6 @@ proof -
                              cong: if_cong split del: if_split)[1]
                 apply (fastforce simp: tcb_null_sched_ptrs_def)
                apply (clarsimp simp: typ_heap_simps)
-               apply (fastforce simp: typ_heap_simps c_guard_clift)
               apply (fastforce simp: typ_heap_simps)
              apply (fastforce simp: tcb_null_sched_ptrs_def)
             apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
@@ -1723,6 +1768,8 @@ proof -
                          by (fastforce simp: typ_heap_simps c_guard_clift tcb_null_sched_ptrs_def)+
            apply (clarsimp)
            apply (rule conjI; clarsimp simp: typ_heap_simps)
+            apply (rule conjI)
+             apply (fastforce simp: c_invert_assist l2BitmapSize_def' wordRadix_def)
             apply (rule conjI; clarsimp)
              (* invalid, missing bitmap updates on haskell side *)
              apply (drule tcb_queue_relation'_empty_ksReadyQueues)
@@ -1739,7 +1786,7 @@ proof -
                                 cready_queues_index_to_C_def2 typ_heap_simps
                                 maxDom_to_H maxPrio_to_H
                            cong: if_cong split del: if_split)[1]
-             apply (fold_subgoals (prefix))[3]
+             apply (fold_subgoals (prefix))[2]
              subgoal premises prems using prems
                        by (fastforce simp: typ_heap_simps c_guard_clift tcb_null_sched_ptrs_def)+
           apply (simp add: guard_is_UNIV_def)
@@ -1754,7 +1801,7 @@ proof -
     apply (wp threadGet_wp)
    apply vcg
   by (fastforce simp: valid_objs'_def obj_at'_def ran_def projectKOs typ_at'_def
-                         valid_obj'_def valid_tcb'_def inQ_def) *)
+                         valid_obj'_def valid_tcb'_def inQ_def)
 qed
 
 lemma tcbSchedDequeue_ccorres:
@@ -1903,18 +1950,20 @@ proof -
                    simp_all add: valid_queues_valid_q)[1]
              apply (rule tcb_at_not_NULL, erule obj_at'_weakenE, simp)
             apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
-  sorry (*
+            apply (simp add: invert_prioToL1Index_c_simp)
             apply (rule conjI; clarsimp)
+             apply (rule conjI)
+              apply (fastforce simp: c_invert_assist l2BitmapSize_def' wordRadix_def)
              apply (simp add: t_hrs_ksReadyQueues_upd_absorb)
              apply (subst rf_sr_drop_bitmaps_enqueue_helper, assumption)
-               apply (fastforce intro: cbitmap_L1_relation_bit_set cbitmap_L2_relation_bit_set)+
+               apply (fastforce intro: cbitmap_L1_relation_bit_set)
+              subgoal by (fastforce intro: cbitmap_L2_relation_bit_set simp: wordRadix_def mask_def)
              apply (erule(1) state_relation_queue_update_helper[where S="{t}"],
                     (simp | rule globals.equality)+,
                     simp_all add: cready_queues_index_to_C_def2 numPriorities_def
                                   t_hrs_ksReadyQueues_upd_absorb upd_unless_null_def
                                   typ_heap_simps)[1]
                apply (fastforce simp: tcb_null_sched_ptrs_def elim: obj_at'_weaken)
-              apply (fastforce simp: typ_heap_simps c_guard_clift)
              apply (fastforce simp: tcb_null_sched_ptrs_def elim: obj_at'_weaken)
             apply (clarsimp simp: upd_unless_null_def cready_queues_index_to_C_def numPriorities_def)
            apply (rule conjI; clarsimp simp: queue_in_range)
@@ -1957,18 +2006,17 @@ proof -
                                 cready_queues_index_to_C_def2 upd_unless_null_def
                            cong: if_cong split del: if_split
                            del: fun_upd_restrict_conv)[1]
-               apply simp
-               apply (rule conjI)
-                apply clarsimp
-                apply (drule_tac s="tcb_ptr_to_ctcb_ptr t" in sym, simp)
-               apply (clarsimp simp add: fun_upd_twist)
-              prefer 4
-              apply (simp add: obj_at'_weakenE[OF _ TrueI])
-              apply (rule disjI1, erule valid_queues_obj_at'D)
-              subgoal by simp
+              apply simp
+              apply (rule conjI)
+               apply clarsimp
+               apply (drule_tac s="tcb_ptr_to_ctcb_ptr t" in sym, simp)
+              apply (clarsimp simp add: fun_upd_twist)
+             prefer 3
+             apply (simp add: obj_at'_weakenE[OF _ TrueI])
+             apply (rule disjI1, erule valid_queues_obj_at'D)
              subgoal by simp
-            subgoal by (fastforce simp: tcb_null_sched_ptrs_def)
-           subgoal by (fastforce simp: typ_heap_simps c_guard_clift)
+            subgoal by simp
+           subgoal by (fastforce simp: tcb_null_sched_ptrs_def)
           apply (simp add: guard_is_UNIV_def)
          apply simp
          apply (wp threadGet_wp)
@@ -1982,7 +2030,7 @@ proof -
    apply vcg
   by (fastforce simp: valid_objs'_def obj_at'_def ran_def projectKOs typ_at'_def
                          valid_obj'_def inQ_def
-                   dest!: valid_queues_obj_at'D) *)
+                   dest!: valid_queues_obj_at'D)
 qed
 
 lemma true_eq_from_bool [simp]:
@@ -2027,15 +2075,11 @@ lemma scheduler_action_case_switch_to_if:
             then f (case act of SwitchToThread t \<Rightarrow> t) else g)"
   by (simp split: scheduler_action.split)
 
-lemma tcb_at_max_word:
-  "tcb_at' t s \<Longrightarrow> tcb_ptr_to_ctcb_ptr t \<noteq> tcb_Ptr max_word"
+lemma tcb_at_1:
+  "tcb_at' t s \<Longrightarrow> tcb_ptr_to_ctcb_ptr t \<noteq> tcb_Ptr 1"
   apply (drule is_aligned_tcb_ptr_to_ctcb_ptr)
   apply (clarsimp simp add: is_aligned_def max_word_def ctcb_size_bits_def)
   done
-
-lemma scast_max_word [simp]:
-    "scast (max_word :: 32 signed word) = (max_word :: 32 word)"
-  by (clarsimp simp: max_word_def)
 
 lemma rescheduleRequired_ccorres:
   "ccorres dc xfdc (valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs')
@@ -2049,8 +2093,8 @@ lemma rescheduleRequired_ccorres:
                      in ccorres_cond)
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                   cscheduler_action_relation_def)
-            subgoal sorry (*by (clarsimp simp: weak_sch_act_wf_def tcb_at_max_word tcb_at_not_NULL
-                           split: scheduler_action.split_asm dest!: pred_tcb_at') *)
+            subgoal by (clarsimp simp: weak_sch_act_wf_def tcb_at_1 tcb_at_not_NULL
+                           split: scheduler_action.split_asm dest!: pred_tcb_at')
            apply (ctac add: tcbSchedEnqueue_ccorres)
           apply (rule ccorres_return_Skip)
          apply ceqv
@@ -2067,106 +2111,370 @@ lemma rescheduleRequired_ccorres:
    apply (simp add: getSchedulerAction_def)
   apply (clarsimp simp: weak_sch_act_wf_def rf_sr_def cstate_relation_def
                         Let_def cscheduler_action_relation_def)
-  sorry (*
-  by (auto simp: tcb_at_not_NULL tcb_at_max_word
-                    tcb_at_not_NULL[THEN not_sym] tcb_at_max_word[THEN not_sym]
-                 split: scheduler_action.split_asm) *)
+  by (auto simp: tcb_at_not_NULL tcb_at_1
+                    tcb_at_not_NULL[THEN not_sym] tcb_at_1[THEN not_sym]
+                 split: scheduler_action.split_asm)
 
-lemma getCurDomain_ccorres:
-  "ccorres (op = \<circ> ucast) curDom_'
-       \<top> UNIV hs curDomain (\<acute>curDom :== \<acute>ksCurDomain)"
+lemma getReadyQueuesL1Bitmap_sp:
+  "\<lbrace>\<lambda>s. P s \<and> d \<le> maxDomain \<rbrace>
+   getReadyQueuesL1Bitmap d
+   \<lbrace>\<lambda>rv s. ksReadyQueuesL1Bitmap s d = rv \<and> d \<le> maxDomain \<and> P s\<rbrace>"
+  unfolding bitmap_fun_defs
+  by wp simp
+
+(* this doesn't actually carry over d \<le> maxDomain to the rest of the ccorres,
+   use ccorres_cross_over_guard to do that *)
+lemma ccorres_pre_getReadyQueuesL1Bitmap:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. d \<le> maxDomain \<and> (\<forall>rv. ksReadyQueuesL1Bitmap s d = rv \<longrightarrow> P rv s))
+                  {s. \<forall>rv. (ksReadyQueuesL1Bitmap_' (globals s)).[unat d] = ucast rv
+                                 \<longrightarrow> s \<in> P' rv }
+                          hs (getReadyQueuesL1Bitmap d >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+  apply (rule ccorres_symb_exec_l2)
+      defer
+      defer
+      apply (rule getReadyQueuesL1Bitmap_sp)
+     apply blast
+    apply clarsimp
+    prefer 3
+    apply (clarsimp simp: bitmap_fun_defs gets_exs_valid)
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply blast
+   apply assumption
+  apply (drule rf_sr_cbitmap_L1_relation)
+  apply (clarsimp simp: cbitmap_L1_relation_def)
+  done
+
+lemma getReadyQueuesL2Bitmap_sp:
+  "\<lbrace>\<lambda>s. P s \<and> d \<le> maxDomain \<and> i < l2BitmapSize \<rbrace>
+   getReadyQueuesL2Bitmap d i
+   \<lbrace>\<lambda>rv s. ksReadyQueuesL2Bitmap s (d, i) = rv \<and> d \<le> maxDomain \<and> i < l2BitmapSize \<and> P s\<rbrace>"
+  unfolding bitmap_fun_defs
+  by wp simp
+
+lemma ccorres_pre_getReadyQueuesL2Bitmap:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. d \<le> maxDomain \<and> i < l2BitmapSize
+                       \<and> (\<forall>rv. ksReadyQueuesL2Bitmap s (d,i) = rv \<longrightarrow> P rv s))
+                  {s. \<forall>rv. (ksReadyQueuesL2Bitmap_' (globals s)).[unat d].[i] = ucast rv
+                                 \<longrightarrow> s \<in> P' rv }
+                          hs (getReadyQueuesL2Bitmap d i >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+  apply (rule ccorres_symb_exec_l2)
+      defer
+      defer
+      apply (rule getReadyQueuesL2Bitmap_sp)
+     apply blast
+    apply clarsimp
+    prefer 3
+    apply (clarsimp simp: bitmap_fun_defs gets_exs_valid)
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply blast
+   apply assumption
+  apply (drule rf_sr_cbitmap_L2_relation)
+  apply (clarsimp simp: cbitmap_L2_relation_def)
+  done
+
+lemma rf_sr_ksReadyQueuesL1Bitmap_simp:
+  "\<lbrakk> (\<sigma>, s') \<in> rf_sr ; d \<le> maxDomain \<rbrakk>
+  \<Longrightarrow> ksReadyQueuesL1Bitmap_' (globals s').[unat d] = ksReadyQueuesL1Bitmap \<sigma> d"
+  apply (drule rf_sr_cbitmap_L1_relation)
+  apply (simp add: cbitmap_L1_relation_def)
+  done
+
+lemma cguard_UNIV:
+  "P s \<Longrightarrow> s \<in> (if P s then UNIV else {})"
+  by fastforce
+
+lemma lookupBitmapPriority_le_maxPriority:
+  "\<lbrakk> ksReadyQueuesL1Bitmap s d \<noteq> 0 ; valid_queues s \<rbrakk>
+   \<Longrightarrow> lookupBitmapPriority d s \<le> maxPriority"
+   unfolding valid_queues_def valid_queues_no_bitmap_def
+   by (fastforce dest!: bitmapQ_from_bitmap_lookup bitmapQ_ksReadyQueuesI intro: ccontr)
+
+lemma rf_sr_ksReadyQueuesL1Bitmap_not_zero:
+  "\<lbrakk> (\<sigma>, s') \<in> rf_sr ; d \<le> maxDomain ; ksReadyQueuesL1Bitmap_' (globals s').[unat d] \<noteq> 0 \<rbrakk>
+  \<Longrightarrow> ksReadyQueuesL1Bitmap \<sigma> d \<noteq> 0"
+  apply (drule rf_sr_cbitmap_L1_relation)
+  apply (simp add: cbitmap_L1_relation_def)
+  done
+
+lemma ksReadyQueuesL1Bitmap_word_log2_max:
+    "\<lbrakk>valid_queues s; ksReadyQueuesL1Bitmap s d \<noteq> 0\<rbrakk>
+    \<Longrightarrow> word_log2 (ksReadyQueuesL1Bitmap s d) < l2BitmapSize"
+    unfolding valid_queues_def
+    by (fastforce dest: word_log2_nth_same bitmapQ_no_L1_orphansD)
+
+lemma word_log2_max_word64[simp]:
+  "word_log2 (w :: 64 word) < 64"
+  using word_log2_max[where w=w]
+  by (simp add: word_size)
+
+lemma word_log2_max_word32[simp]:
+  "word_log2 (w :: 32 word) < 32"
+  using word_log2_max[where w=w]
+  by (simp add: word_size)
+
+lemma word_log2_max_word8[simp]:
+  "word_log2 (w :: 8 word) < 8"
+  using word_log2_max[where w=w]
+  by (simp add: word_size)
+
+lemma rf_sr_ksReadyQueuesL2Bitmap_simp:
+  "\<lbrakk> (\<sigma>, s') \<in> rf_sr ; d \<le> maxDomain ; valid_queues \<sigma> ; ksReadyQueuesL1Bitmap \<sigma> d \<noteq> 0 \<rbrakk>
+   \<Longrightarrow> ksReadyQueuesL2Bitmap_' (globals s').[unat d].[word_log2 (ksReadyQueuesL1Bitmap \<sigma> d)] =
+      ksReadyQueuesL2Bitmap \<sigma> (d, word_log2 (ksReadyQueuesL1Bitmap \<sigma> d))"
+  apply (frule rf_sr_cbitmap_L2_relation)
+  apply (frule (1) ksReadyQueuesL1Bitmap_word_log2_max)
+  apply (drule (3) cbitmap_L2_relationD)
+  done
+
+lemma ksReadyQueuesL2Bitmap_nonzeroI:
+  "\<lbrakk> d \<le> maxDomain ; valid_queues s ; ksReadyQueuesL1Bitmap s d \<noteq> 0 \<rbrakk>
+   \<Longrightarrow> ksReadyQueuesL2Bitmap s (d, invertL1Index (word_log2 (ksReadyQueuesL1Bitmap s d))) \<noteq> 0"
+   unfolding valid_queues_def
+   apply clarsimp
+   apply (frule bitmapQ_no_L1_orphansD)
+    apply (erule word_log2_nth_same)
+   apply clarsimp
+   done
+
+lemma clzl_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call clzl_'proc
+       \<lbrace>\<acute>ret__long = of_nat (word_clz (x_' s)) \<rbrace>"
+  apply (rule allI, rule conseqPre, vcg)
+  apply clarsimp
+  apply (rule_tac x="ret__long_'_update f x" for f in exI)
+  apply (simp add: mex_def meq_def)
+  done
+
+lemma l1index_to_prio_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call l1index_to_prio_'proc
+       \<lbrace>\<acute>ret__unsigned_long = l1index_' s << wordRadix \<rbrace>"
+  by vcg (simp add: word_sle_def wordRadix_def')
+
+lemma getHighestPrio_ccorres:
+  "ccorres (\<lambda>rv rv'. rv' = ucast rv) ret__unsigned_long_'
+    (\<lambda>s. d \<le> maxDomain \<and> ksReadyQueuesL1Bitmap s d \<noteq> 0 \<and> bitmapQ_no_L1_orphans s)
+    (UNIV \<inter> {s. dom_' s = ucast d}) hs
+    (getHighestPrio d) (Call getHighestPrio_'proc)"
+proof -
+
+  note prio_and_dom_limit_helpers [simp]
+  note Collect_const_mem [simp]
+
+  have signed_word_log2:
+  "\<And>w. w \<noteq> 0 \<Longrightarrow> (0x3F::64 signed word) - of_nat (word_clz (w::machine_word)) = (of_nat (word_log2 w))"
+  unfolding word_log2_def
+  by (clarsimp dest!: word_clz_nonzero_max simp: word_size)
+
+  have word_log2_def64:
+    "\<And>w. word_log2 (w::machine_word) = 63 - word_clz w"
+    unfolding word_log2_def by (simp add: word_size)
+
+  (* FIXME generalise *)
+  have word_clz_sint_upper[simp]:
+    "\<And>(w::machine_word). sint (of_nat (word_clz w) :: 64 signed word) \<le> 9223372036854775871"
+    apply (subst sint_eq_uint)
+     apply (rule not_msb_from_less)
+     apply simp
+     apply (rule word_of_nat_less)
+     apply simp
+     apply (rule order_le_less_trans[OF word_clz_max])
+     apply (simp add: word_size)
+    apply (subst uint_nat)
+    apply (simp add: unat_of_nat)
+    apply (subst Divides.mod_less)
+     apply (rule order_le_less_trans[OF word_clz_max])
+     apply (simp add: word_size)
+    apply (rule iffD2 [OF le_nat_iff[symmetric]])
+    apply simp
+    apply (rule order_trans[OF word_clz_max])
+    apply (simp add: word_size)
+    done
+
+  have word_clz_sint_lower[simp]:
+    "\<And>(w::machine_word). - sint (of_nat (word_clz w) :: 64 signed word) \<le> 9223372036854775744"
+    apply (subst sint_eq_uint)
+     apply (rule not_msb_from_less)
+     apply simp
+     apply (rule word_of_nat_less)
+     apply simp
+     apply (rule order_le_less_trans[OF word_clz_max])
+     apply (simp add: word_size)
+    apply (subst uint_nat)
+    apply (simp add: unat_of_nat)
+    done
+
+  have invertL1Index_unat_fold:
+    "\<And>(w::machine_word). \<lbrakk> w \<noteq> 0 ; word_log2 w < l2BitmapSize \<rbrakk> \<Longrightarrow>
+       unat (of_nat l2BitmapSize - (1::machine_word) - of_nat (word_log2 w))
+     = invertL1Index (word_log2 w)"
+    apply (subst unat_sub)
+     apply (clarsimp simp: l2BitmapSize_def')
+     apply (rule word_of_nat_le)
+     apply (drule word_log2_nth_same)
+     apply (clarsimp simp: l2BitmapSize_def')
+    apply (clarsimp simp: invertL1Index_def l2BitmapSize_def')
+    apply (simp add: unat_of_nat_eq)
+    done
+
+  show ?thesis
+  apply (cinit lift: dom_')
+   apply (clarsimp split del: if_split)
+   apply (rule ccorres_pre_getReadyQueuesL1Bitmap)
+   apply (rule ccorres_pre_getReadyQueuesL2Bitmap)
+   apply (rename_tac l2)
+   apply (rule ccorres_Guard_Seq|csymbr)+
+   apply (rule ccorres_abstract_cleanup)
+   apply (rule ccorres_Guard_Seq|csymbr)+
+   apply (rule ccorres_abstract_cleanup)
+   apply (rule ccorres_Guard_Seq|csymbr)+
+   apply (clarsimp simp: word_log2_def word_size)
+   apply (rename_tac clz_l1index clz_l2index)
+   apply (rule_tac P="\<lambda>s. l1 \<noteq> 0 \<and> l2 \<noteq> 0 \<and> word_log2 l1 < l2BitmapSize"
+            and P'="{s. clz_l1index = of_nat (word_clz l1) \<and>
+                        clz_l2index = of_nat (word_clz l2) }"
+            in ccorres_from_vcg_throws)
+   apply (rule allI, rule conseqPre, vcg)
+    subgoal for l1 l2 _ _ _
+    apply (clarsimp simp: return_def l1IndexToPrio_def)
+    apply (simp add: signed_word_log2 word_log2_def64[symmetric] ucast_or_distrib)
+    apply (rule_tac f="op ||" in arg_cong2)
+     apply (subst of_nat_shiftl)+
+     apply (subst ucast_of_nat_small, simp add: wordRadix_def l2BitmapSize_def')
+     apply (rule refl)
+    apply (subst ucast_of_nat_small, simp add: wordRadix_def)
+     apply (rule word_log2_max_word64[THEN order_less_le_trans], simp)
+    apply (rule refl)
+    done
+   apply (clarsimp simp: word_sle_def)
+
+   apply (frule rf_sr_cbitmap_L1_relation)
+   apply (subgoal_tac "ksReadyQueuesL1Bitmap_' (globals s').[unat d] \<noteq> 0")
+    prefer 2
+    subgoal by (fastforce simp: cbitmap_L1_relation_def)
+
+   apply (clarsimp simp: signed_word_log2 cbitmap_L1_relation_def)
+   apply (frule bitmapQ_no_L1_orphansD, erule word_log2_nth_same)
+   apply simp
+   apply (rule conjI, fastforce simp: invertL1Index_def l2BitmapSize_def')
+   apply (rule conjI, fastforce simp: invertL1Index_unat_fold)
+   apply (rule conjI)
+    apply (subst invertL1Index_unat_fold, assumption, fastforce)
+    apply (frule rf_sr_cbitmap_L2_relation)
+    apply (fastforce simp: cbitmap_L2_relation_def)
+   apply (clarsimp simp: l2BitmapSize_def')
+   apply (fastforce simp: word_less_nat_alt word_le_nat_alt unat_sub unat_of_nat)
+   done
+qed
+
+lemma ccorres_abstract_ksCurThread:
+  assumes ceqv: "\<And>rv' t t'. ceqv \<Gamma> (\<lambda>s. ksCurThread_' (globals s)) rv' t t' d (d' rv')"
+  and       cc: "\<And>ct. ccorres_underlying rf_sr \<Gamma> r xf arrel axf (G ct) (G' ct) hs a (d' (tcb_ptr_to_ctcb_ptr ct))"
+  shows "ccorres_underlying rf_sr \<Gamma> r xf arrel axf (\<lambda>s. G (ksCurThread s) s)
+            {s. s \<in> G' (ctcb_ptr_to_tcb_ptr (ksCurThread_' (globals s)))} hs a d"
+  apply (rule ccorres_guard_imp)
+    prefer 2
+    apply assumption
+   apply (rule ccorres_abstract[OF ceqv, where G'="\<lambda>ct. \<lbrace>ct = \<acute>ksCurThread\<rbrace> \<inter> G' (ctcb_ptr_to_tcb_ptr ct)"])
+   apply (subgoal_tac "\<exists>t. rv' = tcb_ptr_to_ctcb_ptr t")
+    apply clarsimp
+    apply (rule ccorres_guard_imp2)
+     apply (rule cc)
+    apply (clarsimp simp: rf_sr_ksCurThread)
+   apply (metis tcb_ptr_to_tcb_ptr)
+  apply simp
+  done
+
+lemma ctcb_relation_unat_tcbPriority_C:
+  "ctcb_relation tcb tcb' \<Longrightarrow> unat (tcbPriority_C tcb') = unat (tcbPriority tcb)"
+  apply (clarsimp simp: ctcb_relation_def)
+  apply (rule trans, rule arg_cong[where f=unat], erule sym)
+  apply (simp(no_asm))
+  done
+
+lemma ctcb_relation_unat_tcbDomain_C:
+  "ctcb_relation tcb tcb' \<Longrightarrow> unat (tcbDomain_C tcb') = unat (tcbDomain tcb)"
+  apply (clarsimp simp: ctcb_relation_def)
+  apply (rule trans, rule arg_cong[where f=unat], erule sym)
+  apply (simp(no_asm))
+  done
+
+lemma getCurDomain_ccorres_dom_':
+  "ccorres (\<lambda>rv rv'. rv' = ucast rv) dom_'
+       \<top> UNIV hs curDomain (\<acute>dom :== \<acute>ksCurDomain)"
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: curDomain_def simpler_gets_def
                         rf_sr_ksCurDomain)
   done
 
-lemma possibleSwitchTo_ccorres:
-  "ccorres dc xfdc
-         (valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and st_tcb_at' runnable' t
-                       and valid_objs')
-         ({s. target_' s = tcb_ptr_to_ctcb_ptr t}
-             \<inter> {s. onSamePriority_' s = from_bool b} \<inter> UNIV) []
-     (possibleSwitchTo t b)
-     (Call possibleSwitchTo_'proc)"
-  apply (cinit lift: target_' onSamePriority_')
-   apply (rule ccorres_pre_getCurThread)
-   apply (ctac(no_vcg) add: getCurDomain_ccorres)
-     apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv" and xf'=curPrio_'
-                 in ccorres_split_nothrow_novcg)
-         apply (rule_tac P="\<lambda>s. ksCurThread s = rv" in threadGet_vcg_corres_P)
-         apply (rule allI, rule conseqPre, vcg)
-         apply (clarsimp simp: rf_sr_ksCurThread obj_at'_def projectKOs
-                               typ_heap_simps' ctcb_relation_def)
-        apply ceqv
-       apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv" and xf'=targetDom_'
-                   in ccorres_split_nothrow_novcg)
-           apply (rule threadGet_vcg_corres)
-           apply (rule allI, rule conseqPre, vcg)
-           apply (clarsimp simp: rf_sr_ksCurThread obj_at'_def projectKOs
-                                 typ_heap_simps' ctcb_relation_def)
-          apply ceqv
-         apply (rule_tac r'="\<lambda>rv rv'. rv' = ucast rv" and xf'=targetPrio_'
-                      in ccorres_split_nothrow_novcg)
-             apply (rule threadGet_vcg_corres)
-             apply (rule allI, rule conseqPre, vcg)
-             apply (clarsimp simp: rf_sr_ksCurThread obj_at'_def projectKOs
-                                   typ_heap_simps' ctcb_relation_def)
-            apply ceqv
-           apply (rule_tac r'="cscheduler_action_relation"
-                      and xf'="action___ptr_to_struct_tcb_C_'"
-                       in ccorres_split_nothrow_novcg)
-               apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-               apply (rule allI, rule conseqPre, vcg)
-               apply (clarsimp simp: getSchedulerAction_def simpler_gets_def)
-               apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-              apply ceqv
-             apply (rule_tac R=\<top> in ccorres_cond)
-               apply clarsimp
-              apply (ctac add: tcbSchedEnqueue_ccorres)
-             apply (rule ccorres_split_nothrow_novcg_dc)
-                apply (rule_tac R="weak_sch_act_wf rve" in ccorres_cond)
-                  apply (clarsimp simp: from_bool_0)
-                  apply (simp add: word_less_nat_alt unat_ucast_8_64 up_ucast_inj_eq)
-                  apply (simp add: cscheduler_action_relation_def)
-                  apply (clarsimp simp: max_word_def weak_sch_act_wf_def tcb_at_not_NULL
-                             split: scheduler_action.split_asm dest!: pred_tcb_at')
-                 apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-                 apply (rule allI, rule conseqPre, vcg)
-                 apply (clarsimp simp: setSchedulerAction_def simpler_modify_def)
-                 apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                                       cscheduler_action_relation_def
-                                       carch_state_relation_def cmachine_state_relation_def)
-                apply (ctac add: tcbSchedEnqueue_ccorres)
-               apply (simp only: scheduler_action_case_switch_to_if)
-               apply (rule_tac R="weak_sch_act_wf rve" in ccorres_cond)
-                 apply (clarsimp simp del: Collect_const)
-                 apply (clarsimp simp: cscheduler_action_relation_def
-                                       weak_sch_act_wf_def
-                                       tcb_at_not_NULL tcb_at_max_word
-                            split: scheduler_action.split_asm dest!: pred_tcb_at' )
-  sorry (*
-                apply (ctac add: rescheduleRequired_ccorres)
-               apply (rule ccorres_return_Skip)
-              apply (simp split del: if_split)
-              apply wp
-               apply (simp add: weak_sch_act_wf_def)
-              apply (wp weak_sch_act_wf_lift_linear)
-             apply (simp add: guard_is_UNIV_def)
-            apply (wp static_imp_wp threadGet_wp | clarsimp simp: guard_is_UNIV_def)+
-  apply (clarsimp simp: weak_sch_act_wf_def obj_at'_weakenE[OF _ TrueI]
-                        valid_objs'_maxDomain valid_objs'_maxPriority)
-  done *)
+lemma rf_sr_cscheduler_action_relation:
+  "(s, s') \<in> rf_sr
+   \<Longrightarrow> cscheduler_action_relation (ksSchedulerAction s) (ksSchedulerAction_' (globals s'))"
+  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
 
-lemma attemptSwitchTo_ccorres [corres]:
-  "ccorres dc xfdc (valid_queues and st_tcb_at' runnable' thread and valid_objs'
-                       and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
-                   (UNIV \<inter> \<lbrace>\<acute>target = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
-           (attemptSwitchTo thread)
-           (Call attemptSwitchTo_'proc)"
+lemma threadGet_get_obj_at'_has_domain:
+  "\<lbrace> tcb_at' t \<rbrace> threadGet tcbDomain t \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. rv = tcbDomain tcb) t\<rbrace>"
+  by (wp threadGet_obj_at') (simp add: obj_at'_def)
+
+lemma possibleSwitchTo_ccorres:
+  shows
+  "ccorres dc xfdc
+         (valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
+            and st_tcb_at' runnable' t and (\<lambda>s. ksCurDomain s \<le> maxDomain)
+            and valid_objs')
+         ({s. target_' s = tcb_ptr_to_ctcb_ptr t}
+          \<inter> UNIV) []
+     (possibleSwitchTo t )
+     (Call possibleSwitchTo_'proc)"
+  supply if_split [split del]
+  supply Collect_const [simp del]
+  supply dc_simp [simp del]
+  supply prio_and_dom_limit_helpers[simp]
+  (* FIXME: these should likely be in simpset for CRefine, or even in general *)
+  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp] if_1_0_0[simp]
+         ccorres_IF_True[simp]
   apply (cinit lift: target_')
-   apply (ctac add: possibleSwitchTo_ccorres)
-  apply clarsimp
+   apply (rule ccorres_move_c_guard_tcb)
+   apply (rule ccorres_pre_curDomain, rename_tac curDom)
+   apply (rule ccorres_symb_exec_l3[OF _ threadGet_inv _ empty_fail_threadGet], rename_tac targetDom)
+    apply (rule ccorres_symb_exec_l3[OF _ gsa_wp _ empty_fail_getSchedulerAction], rename_tac sact)
+     apply (rule_tac C'="{s. targetDom \<noteq> curDom}"
+              and Q="\<lambda>s. curDom = ksCurDomain s \<and> obj_at' (\<lambda>tcb. targetDom = tcbDomain tcb) t s"
+              and Q'=UNIV in ccorres_rewrite_cond_sr)
+      subgoal
+        apply clarsimp
+        apply (drule obj_at_ko_at', clarsimp  simp: rf_sr_ksCurDomain)
+        apply (frule (1) obj_at_cslift_tcb, clarsimp simp: typ_heap_simps')
+        apply (drule ctcb_relation_unat_tcbDomain_C)
+        apply unat_arith
+        done
+     apply (rule ccorres_cond2[where R=\<top>], simp)
+      apply (ctac add: tcbSchedEnqueue_ccorres)
+     apply (rule_tac R="\<lambda>s. sact = ksSchedulerAction s \<and> weak_sch_act_wf (ksSchedulerAction s) s"
+                     in ccorres_cond)
+       apply (fastforce dest!: rf_sr_cscheduler_action_relation pred_tcb_at' tcb_at_not_NULL
+                        simp: cscheduler_action_relation_def max_word_def weak_sch_act_wf_def
+                        split: scheduler_action.splits)
+      apply (ctac add: rescheduleRequired_ccorres)
+        apply (ctac add: tcbSchedEnqueue_ccorres)
+       apply wp
+      apply (vcg exspec=rescheduleRequired_modifies)
+     apply (rule ccorres_setSchedulerAction, simp add: cscheduler_action_relation_def)
+    apply clarsimp
+    apply wp
+   apply clarsimp
+   apply (wp hoare_drop_imps threadGet_get_obj_at'_has_domain)
+  apply (clarsimp simp: pred_tcb_at')
   done
 
 lemma scheduleTCB_ccorres':
@@ -2222,8 +2530,6 @@ lemma scheduleTCB_ccorres':
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  cscheduler_action_relation_def)
           apply wp+
-        apply (simp add: getSchedulerAction_def)
-       apply wp+
      apply (simp add: isRunnable_def isBlocked_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
@@ -2280,8 +2586,6 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
            apply (clarsimp simp: rf_sr_def cstate_relation_def cscheduler_action_relation_def
                            split: scheduler_action.split_asm)
           apply wp+
-        apply (simp add: getSchedulerAction_def)
-       apply wp+
      apply (simp add: isRunnable_def isBlocked_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
@@ -2303,9 +2607,8 @@ lemma rescheduleRequired_ccorres_valid_queues'_simple:
                      in ccorres_cond)
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                   cscheduler_action_relation_def)
-            apply (clarsimp simp: weak_sch_act_wf_def tcb_at_max_word tcb_at_not_NULL
+            apply (clarsimp simp: weak_sch_act_wf_def tcb_at_1 tcb_at_not_NULL
                            split: scheduler_action.split_asm dest!: st_tcb_strg'[rule_format])
-  sorry (* FIXME x64: max_word shenanigans
            apply (ctac add: tcbSchedEnqueue_ccorres)
           apply (rule ccorres_return_Skip)
          apply ceqv
@@ -2322,9 +2625,9 @@ lemma rescheduleRequired_ccorres_valid_queues'_simple:
    apply (simp add: getSchedulerAction_def)
   apply (clarsimp simp: weak_sch_act_wf_def rf_sr_def cstate_relation_def
                         Let_def cscheduler_action_relation_def)
-  by (auto simp: tcb_at_not_NULL tcb_at_max_word
-                    tcb_at_not_NULL[THEN not_sym] tcb_at_max_word[THEN not_sym]
-                 split: scheduler_action.split_asm) *)
+  by (auto simp: tcb_at_not_NULL tcb_at_1
+                    tcb_at_not_NULL[THEN not_sym] tcb_at_1[THEN not_sym]
+                 split: scheduler_action.split_asm)
 
 lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
         "ccorresG rf_sr \<Gamma> dc xfdc (tcb_at' thread and st_tcb_at' (not runnable') thread and valid_queues' and sch_act_simple)
@@ -2374,8 +2677,6 @@ lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  cscheduler_action_relation_def)
           apply wp+
-        apply (simp add: getSchedulerAction_def)
-       apply wp+
      apply (simp add: isRunnable_def isBlocked_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
@@ -2488,12 +2789,6 @@ lemma ko_at_valid_ep':
   apply (erule (1) valid_objsE')
    apply (simp add: projectKOs valid_obj'_def)
    done
-
-lemma cmap_relation_ep:
-  "(s, s') \<in> rf_sr \<Longrightarrow>
-  cmap_relation (map_to_eps (ksPSpace s)) (cslift s') Ptr (cendpoint_relation (cslift s'))"
-  unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
-  by (simp add: Let_def)
 
 (* FIXME: MOVE *)
 lemma ccorres_pre_getEndpoint [corres_pre]:
@@ -2880,100 +3175,6 @@ lemma getThreadState_ccorres_foo:
    apply (erule ko_at_projectKO_opt)
   apply (clarsimp simp: ctcb_relation_def obj_at'_def)
   done
-
-(*
-thm cancelIPC_body_def
-lemma cancelIPC_ccorres_reply_helper:
-  assumes cteDeleteOne_ccorres:
-  "\<And>w slot. ccorres dc xfdc
-   (invs' and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
-        \<or> (\<forall>cap'. ccap_relation (cteCap ct) cap' \<longrightarrow> cap_get_tag cap' = w)) slot)
-   ({s. gs_get_assn cteDeleteOne_'proc (ghost'state_' (globals s)) = w}
-        \<inter> {s. slot_' s = Ptr slot}) []
-   (cteDeleteOne slot) (Call cteDeleteOne_'proc)"
-  shows
-  "ccorres dc xfdc (invs' and st_tcb_at' (isBlockedOnReply or isBlockedOnFault) thread)
-     UNIV hs
-     (do y \<leftarrow> threadSet (tcbFault_update empty) thread;
-         slot \<leftarrow> getThreadReplySlot thread;
-         callerCap \<leftarrow> liftM (\<lambda>x. mdbNext (cteMDBNode x)) (getCTE slot);
-         when (callerCap \<noteq> nullPointer)
-          (do y \<leftarrow> stateAssert (capHasProperty callerCap (\<lambda>cap. isReplyCap cap
-                                                        \<and> \<not> capReplyMaster cap)) [];
-              cteDeleteOne callerCap
-           od)
-      od)
-   (\<acute>ret__struct_fault_C :== CALL seL4_Fault_NullFault_new();;
-     Guard C_Guard {s. s \<Turnstile>\<^sub>c tptr_' s}
-       (Basic (\<lambda>s. s \<lparr>        (\<acute>t_hrs :== (hrs_mem_update (heap_update
-           (Ptr &(\<acute>tptr\<rightarrow>[''tcbFault_C''])) \<acute>ret__struct_fault_C)));;
-      (Guard MemorySafety
-               \<lbrace>ptr_add_assertion (cte_Ptr (ptr_val (tcb_ptr_to_ctcb_ptr thread) && 0xFFFFFE00))
-                 (sint Kernel_C.tcbReply) False (hrs_htd \<acute>t_hrs)\<rbrace>
-        (\<acute>slot :==
-         cte_Ptr
-          ((ptr_val (tcb_ptr_to_ctcb_ptr thread) && 0xFFFFFE00) +
-           of_int (sint Kernel_C.tcbReply) * of_nat (size_of TYPE(cte_C))));;
-       (Guard C_Guard {s. s \<Turnstile>\<^sub>c slot_' s}
-         (\<acute>ret__unsigned :== CALL mdb_node_get_mdbNext(h_val (hrs_mem \<acute>t_hrs)
-                  (mdb_Ptr &(\<acute>slot\<rightarrow>[''cteMDBNode_C'']))));;
-        (\<acute>callerCap___ptr_to_struct_cte_C :== cte_Ptr \<acute>ret__unsigned;;
-         IF \<acute>callerCap___ptr_to_struct_cte_C \<noteq> NULL THEN
-           Basic (globals_update (ghost'state_'_update
-              (ghost_assertion_data_set cteDeleteOne_'proc (ucast cap_reply_cap)
-                (\<lambda>x. apsnd (apsnd x)))));;
-           CALL cteDeleteOne(\<acute>callerCap___ptr_to_struct_cte_C)
-         FI))))"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_gen_asm, drule_tac thread=thread in ptr_val_tcb_ptr_mask2)
-   apply (simp add: getThreadReplySlot_def del: Collect_const)
-   apply (rule ccorres_split_nothrow_novcg_dc)
-      apply (rule_tac P=\<top> in threadSet_ccorres_lemma2)
-       apply vcg
-      apply (clarsimp simp: typ_heap_simps)
-      apply (erule(2) rf_sr_tcb_update_no_queue, simp_all add: typ_heap_simps)[1]
-       apply (rule ball_tcb_cte_casesI, simp_all)[1]
-      apply (clarsimp simp: ctcb_relation_def seL4_Fault_lift_NullFault
-                            cfault_rel_def cthread_state_relation_def)
-      apply (case_tac "tcbState tcb", simp_all add: is_cap_fault_def)[1]
-     apply ctac
-       apply (simp (no_asm) only: liftM_def bind_assoc return_bind del: Collect_const)
-       apply (rule ccorres_pre_getCTE)
-       apply (rule_tac xf'=ret__unsigned_' and val="mdbNext (cteMDBNode x)"
-                      and R="cte_wp_at' (op = x) rv and invs'"
-                       in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
-          apply vcg
-          apply (clarsimp simp: cte_wp_at_ctes_of)
-          apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
-          apply (clarsimp simp: typ_heap_simps)
-          apply (clarsimp simp: ccte_relation_def map_option_Some_eq2)
-         apply ceqv
-        apply csymbr
-        apply (rule ccorres_Cond_rhs)
-         apply (simp add: nullPointer_def when_def)
-         apply (rule ccorres_symb_exec_l[OF _ _ _ empty_fail_stateAssert])
-           apply (simp only: dc_def[symmetric])
-           apply (rule ccorres_symb_exec_r)
-             apply (ctac add: cteDeleteOne_ccorres[where w1="scast cap_reply_cap"])
-            apply vcg
-           apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
-              gs_set_assn_Delete_cstate_relation[unfolded o_def])
-          apply (wp | simp)+
-        apply (simp add: when_def nullPointer_def dc_def[symmetric])
-        apply (rule ccorres_return_Skip)
-       apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
-                        ghost_assertion_data_set_def cap_tag_defs)
-      apply (simp add: locateSlot_conv, wp)
-     apply vcg
-    apply (rule_tac Q="\<lambda>rv. tcb_at' thread and invs'" in hoare_post_imp)
-     apply (clarsimp simp: cte_wp_at_ctes_of capHasProperty_def cap_get_tag_isCap ucast_id)
-    apply (wp hoare_vcg_all_lift threadSet_invs_trivial
-               | wp_once hoare_drop_imps | simp)+
-   apply (clarsimp simp: guard_is_UNIV_def tcbReplySlot_def
-                         Kernel_C.tcbReply_def mask_def tcbCNodeEntries_def)
-  apply (fastforce simp: pred_tcb_at' inQ_def tcb_aligned'[OF pred_tcb_at'])
-  done
-*)
 
 lemma ep_blocked_in_queueD_recv:
   "\<lbrakk>st_tcb_at' (op = (Structures_H.thread_state.BlockedOnReceive x)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isRecvEP ep'"
