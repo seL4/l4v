@@ -36,6 +36,11 @@ if L4V_ARCH == "ARM":
    os.environ["L4V_ARCH_IS_ARM"]= L4V_ARCH
    print "Testing Orphanage for ARM"
 
+# X64 CRefine is still under development
+if L4V_ARCH == "X64":
+    os.environ["CREFINE_QUICK_AND_DIRTY"]="1"
+    print "Testing X64 CRefine in quick_and_dirty mode"
+
 # Check we are using a known Architecture
 if L4V_ARCH not in L4V_ARCH_LIST:
     sys.exit("Unknown architecture L4V_ARCH=%s" % L4V_ARCH)
