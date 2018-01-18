@@ -1,0 +1,29 @@
+#! /bin/bash
+#
+#
+# Copyright 2017, Data61, CSIRO
+#
+# This software may be distributed and modified according to the terms of
+# the BSD 2-Clause license. Note that NO WARRANTY is provided.
+# See "LICENSE_BSD2.txt" for details.
+#
+# @TAG(DATA61_BSD)
+#
+#
+
+OUTDIR=$(./isabelle/bin/isabelle env bash -c 'echo "$ISABELLE_OUTPUT"')
+FILE="$OUTDIR/log/$1_times.txt"
+
+if [[ -e $FILE ]]
+then
+  echo Long running tasks for "$1":
+  grep '^Long' $FILE | tail -n 10
+  echo
+  echo final timing log:
+  tail -n 10 $FILE
+  echo
+  echo "  (more information might be found in $FILE)"
+else
+  echo No timing log for "$1" was found.
+  echo "  (in $FILE)"
+fi

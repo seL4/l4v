@@ -42,6 +42,9 @@ if L4V_ARCH not in L4V_ARCH_LIST:
 
 print "Testing for L4V_ARCH=%s:" % L4V_ARCH
 
+# enable timing logs in isabelle builds and set report interval to 3 seconds
+os.environ["ISABELLE_TIMING_LOG"]="3.0s"
+
 # Enable quick_and_dirty mode for various images
 if os.environ.has_key("QUICK_AND_DIRTY"):
     os.environ["AINVS_QUICK_AND_DIRTY"]=1

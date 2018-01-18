@@ -300,6 +300,8 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None,
 
     if output is None:
         output = ""
+    if test_status[0] in [STUCK, TIMEOUT, CPU_TIMEOUT]:
+        output = output + extra_timeout_output(test.name)
     output = output.decode(encoding='utf8', errors='replace')
 
     status_queue.put({'name': test.name,
@@ -308,6 +310,17 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None,
                       'real_time': datetime.datetime.now() - start_time,
                       'cpu_time': cpu_usage,
                       'mem_usage': peak_mem_usage})
+
+# run a heuristic script for getting some output on a timeout
+def extra_timeout_output(test_name):
+    command = [os.path.join('misc', 'regression', 'timeout_output'), test_name]
+    try:
+        process = subprocess.Popen(command,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        (output, _) = process.communicate()
+    except Exception, e:
+        output = "Exception launching timeout_output: %s" % str(e)
+    return output
 
 # Print a status line.
 def print_test_line_start(test_name):
@@ -406,6 +419,9 @@ def main():
     if args.list:
         for t in tests:
             print(t.name)
+            if args.verbose:
+                print('  #> cd ' + t.cwd)
+                print('  #> ' + t.command)
         sys.exit(0)
 
     args.exclude = set(args.exclude)
