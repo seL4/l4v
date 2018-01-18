@@ -16,10 +16,6 @@ sig
 
   val debug_get: Proof.context -> wp_rules;
 
-  val derived_rule: thm -> thm -> thm list;
-  val get_combined_rules': thm list -> thm -> thm list;
-  val get_combined_rules: thm list -> thm list -> thm list;
-
   val get_rules: Proof.context -> thm list -> wp_rules;
 
   val apply_rules_tac_n: bool -> Proof.context -> thm list -> thm list Unsynchronized.ref
@@ -127,17 +123,7 @@ let
   val results = case get_key trip_conv thm of
     SOME k => Net.lookup triples (Net.key_of_term k)
   | NONE => others
-
 in exists (fn (_, thm') => Thm.eq_thm_prop (thm, thm')) results end
-
-fun derived_rule rule combinator =
-  [rule RSN (1, combinator)] handle THM _ => [];
-
-fun get_combined_rules' combs' rule =
-  rule :: (List.concat (map (derived_rule rule) combs'));
-
-fun get_combined_rules rules' combs' =
-  List.concat (map (get_combined_rules' combs') rules');
 
 fun add_rule rule rs =
     {trips = #trips rs,
