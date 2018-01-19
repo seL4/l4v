@@ -821,10 +821,11 @@ lemma state_hyp_refs_of_ntfn_update: "\<And>s ep val. typ_at ANTFN ep s \<Longri
   apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)
   done
 
-lemma state_hyp_refs_of_sc_update: "\<And>s sc val. typ_at ASchedContext sc s \<Longrightarrow>
-       state_hyp_refs_of (s\<lparr>kheap := kheap s(sc \<mapsto> SchedContext val)\<rparr>) = state_hyp_refs_of s"
+lemma state_hyp_refs_of_sc_update: "\<And>s sc val n. typ_at (ASchedContext n) sc s \<Longrightarrow>
+       state_hyp_refs_of (s\<lparr>kheap := kheap s(sc \<mapsto> SchedContext val n)\<rparr>) = state_hyp_refs_of s"
   apply (rule all_ext)
-  apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)
+  apply (clarsimp simp: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def
+                 split: kernel_object.splits)
   done
 
 lemma state_hyp_refs_of_reply_update: "\<And>s r val. typ_at AReply r s \<Longrightarrow>

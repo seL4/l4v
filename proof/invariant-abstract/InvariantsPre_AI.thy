@@ -96,7 +96,6 @@ lemmas a_type_simps =
 lemma [simp]:
   "a_type (Endpoint x) = AEndpoint"
   "a_type (Notification v) = ANTFN"
-  "a_type (SchedContext sc) = ASchedContext"
   "a_type (Reply r) = AReply"
   by (simp_all add: a_type_def)
 

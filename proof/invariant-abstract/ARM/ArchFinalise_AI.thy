@@ -282,28 +282,10 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
   apply (rule conjI)
    apply (clarsimp simp: irq_revocable_def)
   apply (rule conjI)
-   apply (clarsimp simp: reply_master_revocable_def)
   apply (thin_tac "info \<noteq> NullCap \<longrightarrow> P info" for P)
-  apply (rule conjI)
    apply (clarsimp simp: valid_machine_state_def)
   apply (rule conjI)
    apply (clarsimp simp:descendants_inc_def mdb_empty_abs.descendants)
-  apply (rule conjI)
-   apply (clarsimp simp: reply_mdb_def)
-   apply (rule conjI)
-    apply (unfold reply_caps_mdb_def)[1]
-    apply (rule allEI, assumption)
-    apply (fold reply_caps_mdb_def)[1]
-    apply (case_tac "sl = ptr", simp)
-    apply (simp add: fun_upd_def split del: if_split del: split_paired_Ex)
-    apply (erule allEI, rule impI, erule(1) impE)
-    apply (erule exEI)
-    apply (simp, rule ccontr)
-    apply (erule(5) emptyable_no_reply_cap)
-    apply simp
-   apply (unfold reply_masters_mdb_def)[1]
-   apply (elim allEI)
-   apply (clarsimp simp: mdb_empty_abs.descendants)
   apply (rule conjI)
    apply (simp add: valid_ioc_def)
   apply (rule conjI)
@@ -341,7 +323,7 @@ lemma (* unbind_notification_final *) [wp,Finalise_AI_asms]:
   unfolding unbind_notification_def
   apply (wp final_cap_lift thread_set_caps_of_state_trivial hoare_drop_imps
        | wpc | simp add: tcb_cap_cases_def)+
-  done
+  sorry
 
 crunch is_final_cap'[wp]: prepare_thread_delete "is_final_cap' cap"
 
@@ -370,10 +352,10 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
                                   appropriate_cte_cap_def gen_obj_refs_def
                                   vs_cap_ref_def cap_cleanup_opt_def
                       | intro impI TrueI ext conjI)+)[11]
-  apply (simp add: arch_finalise_cap_def split del: if_split)
+(*  apply (simp add: arch_finalise_cap_def split del: if_split)
   apply (rule hoare_pre)
    apply (wpsimp simp: cap_cleanup_opt_def arch_cap_cleanup_opt_def)+
-  done
+  done*) sorry
 
 crunch typ_at_arch[wp,Finalise_AI_asms]: arch_finalise_cap,prepare_thread_delete "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps unless_def assertE_def

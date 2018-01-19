@@ -589,7 +589,7 @@ lemma init_arch_objects_invs_from_restricted:
 
 
 lemma obj_bits_api_neq_0 [Retype_AI_assms]:
-  "ty \<noteq> Untyped \<Longrightarrow> 0 < obj_bits_api ty us"
+  "ty \<noteq> Untyped \<Longrightarrow> ty \<noteq> SchedContextObject \<Longrightarrow> 0 < obj_bits_api ty us"
   unfolding obj_bits_api_def
   by (clarsimp simp: slot_bits_def default_arch_object_def pageBits_def
                split: Structures_A.apiobject_type.splits aobject_type.splits)
@@ -1258,6 +1258,7 @@ lemma retype_region_plain_invs:
       and region_in_kernel_window {ptr .. (ptr &&~~ mask sz) + 2 ^ sz - 1}
       and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
       and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
+      and K (ty = SchedContextObject \<longrightarrow> valid_sched_context_size us)
       and K (range_cover ptr sz (obj_bits_api ty us) n)
       and K (ty \<noteq> ArchObject PageDirectoryObj)\<rbrace>
       retype_region ptr n us ty dev\<lbrace>\<lambda>rv. invs\<rbrace>"

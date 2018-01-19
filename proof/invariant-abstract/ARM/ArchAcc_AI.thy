@@ -2083,7 +2083,7 @@ lemma set_asid_pool_invs_restrict:
     (\<lambda>s. \<forall>asid. asid \<le> mask asid_bits \<longrightarrow> ucast asid \<notin> S \<longrightarrow>
                 arm_asid_table (arch_state s) (asid_high_bits_of asid) = Some p \<longrightarrow>
                 arm_asid_map (arch_state s) asid = None)\<rbrace>
-       do_extended_op (set_asid_pool p (ap |` S)) \<lbrace>\<lambda>_. invs\<rbrace>"
+        (set_asid_pool p (ap |` S)) \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def
                    valid_arch_caps_def)
   apply (wp valid_irq_node_typ set_asid_pool_typ_at
@@ -2111,7 +2111,7 @@ lemma set_asid_pool_invs_unmap:
     (\<lambda>s. \<forall>asid. asid \<le> mask asid_bits \<longrightarrow> ucast asid = x \<longrightarrow>
                 arm_asid_table (arch_state s) (asid_high_bits_of asid) = Some p \<longrightarrow>
                 arm_asid_map (arch_state s) asid = None)\<rbrace>
-       do_extended_op (set_asid_pool p (ap(x := None))) \<lbrace>\<lambda>_. invs\<rbrace>"
+        (set_asid_pool p (ap(x := None))) \<lbrace>\<lambda>_. invs\<rbrace>"
   using set_asid_pool_invs_restrict[where S="- {x}"]
   by (simp add: restrict_map_def fun_upd_def if_flip)
 

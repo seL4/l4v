@@ -1159,6 +1159,11 @@ lemma pageBits_clb_less_word_bits [simp]:
   "pageBits - cte_level_bits < word_bits"
   by (rule less_imp_diff_less, simp)
 
+
+lemma valid_sc_size_less_word_bits:
+  "valid_sched_context_size n \<Longrightarrow> n < word_bits"
+  by (simp add: valid_sched_context_size_def untyped_max_bits_def word_bits_def)
+
 end
 
 context Arch_pspace_update_eq begin
@@ -2207,7 +2212,7 @@ where
    | TCB tcb           => tcb_hyp_refs (tcb_arch tcb)
    | Endpoint ep       => {}
    | Notification ntfn => {}
-   | SchedContext sc   => {}
+   | SchedContext sc n => {}
    | Reply reply       => {}
    | ArchObj ao        => refs_of_a ao"
 
@@ -2216,7 +2221,7 @@ lemma hyp_refs_of_simps[simp]:
   "hyp_refs_of (TCB tcb) = tcb_hyp_refs (tcb_arch tcb)"
   "hyp_refs_of (Endpoint ep) = {}"
   "hyp_refs_of (Notification ntfn) = {}"
-  "hyp_refs_of (SchedContext sc) = {}"
+  "hyp_refs_of (SchedContext sc n) = {}"
   "hyp_refs_of (Reply reply) = {}"
   "hyp_refs_of (ArchObj ao) = refs_of_a ao"
   by (auto simp: hyp_refs_of_def)

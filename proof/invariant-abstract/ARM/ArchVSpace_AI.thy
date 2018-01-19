@@ -2499,10 +2499,9 @@ lemma valid_cap_obj_ref_pt_pd:
          \<and> (is_pd_cap cap \<longrightarrow> is_pd_cap cap')"
   by (auto simp: is_cap_simps valid_cap_def
                  obj_at_def is_ep is_ntfn is_cap_table
-                 is_tcb a_type_def is_sc is_reply
+                 is_tcb a_type_def is_sc_obj_def is_reply
           split: cap.split_asm if_split_asm
-                 arch_cap.split_asm option.split_asm)
-
+                 arch_cap.split_asm option.split_asm; case_tac ko; clarsimp)
 
 
 lemma is_pt_pd_cap_asid_None_table_ref:
@@ -4538,13 +4537,13 @@ lemma set_mi_invs[wp]: "\<lbrace>invs\<rbrace> set_message_info t a \<lbrace>\<l
   by (simp add: set_message_info_def, wp)
 
 lemma data_at_orth:
-  "data_at a p s \<Longrightarrow> \<not> ep_at p s \<and> \<not> reply_at p s \<and> \<not> sc_at p s
+  "data_at a p s \<Longrightarrow> \<not> ep_at p s \<and> \<not> reply_at p s \<and> \<not> sc_at p s \<and> (\<forall>n. \<not> sc_obj_at n p s)
   \<and> \<not> ntfn_at p s \<and>\<not> cap_table_at sz p s \<and> \<not> tcb_at p s \<and> \<not> asid_pool_at p s
   \<and> \<not> page_table_at p s \<and> \<not> page_directory_at p s \<and> \<not> asid_pool_at p s"
   apply (clarsimp simp: data_at_def obj_at_def a_type_def)
   apply (case_tac "kheap s p",simp)
   subgoal for ko
-   by (case_tac ko,auto simp add: is_ep_def is_ntfn_def is_reply_def is_sc_def is_cap_table_def is_tcb_def)
+   by (case_tac ko,auto simp add: is_ep_def is_ntfn_def is_reply_def is_sc_obj_def is_cap_table_def is_tcb_def)
   done
 
 lemma data_at_pg_cap:

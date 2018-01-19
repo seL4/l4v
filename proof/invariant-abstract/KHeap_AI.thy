@@ -128,7 +128,7 @@ lemma valid_cap_same_type:
   \<Longrightarrow> s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr> \<turnstile> cap"
   apply (simp add: valid_cap_def split: cap.split)
   apply (auto elim!: typ_at_same_type untyped_same_type
-               simp: ntfn_at_typ ep_at_typ sc_at_typ reply_at_typ tcb_at_typ cap_table_at_typ
+               simp: ntfn_at_typ ep_at_typ sc_obj_at_typ reply_at_typ tcb_at_typ cap_table_at_typ
               split: option.split sum.split)
   by (intro hoare_to_pure_kheap_upd[OF valid_arch_cap_typ, simplified obj_at_def],
       assumption, auto)
@@ -159,13 +159,15 @@ lemma valid_obj_same_type:
                 split: endpoint.splits)
      apply (simp add: valid_obj_def valid_ntfn_def valid_bound_obj_def
                       tcb_at_typ sc_at_typ typ_at_same_type
-               split: option.splits ntfn.splits)
+               split: option.splits ntfn.splits;
+            rule_tac x=n in exI; simp add: typ_at_same_type)
     apply (simp add: valid_obj_def valid_sched_context_def valid_bound_obj_def list_all_def
                      reply_at_typ typ_at_same_type tcb_at_typ ntfn_at_typ
               split: option.splits)
    apply (simp add: valid_obj_def valid_reply_def valid_bound_obj_def
                     tcb_at_typ sc_at_typ typ_at_same_type
-             split: option.splits)
+             split: option.splits;
+          clarsimp; rule_tac x=n in exI; simp add: typ_at_same_type)
   apply (simp add: valid_obj_def arch_valid_obj_same_type)
   done
 
@@ -244,8 +246,7 @@ lemma sts_sc_at_inv[wp]:
   "\<lbrace> sc_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. sc_at ep \<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_sc is_tcb get_tcb_def)
-  done
+  by (clarsimp simp: obj_at_def is_sc_obj_def is_tcb get_tcb_def split: kernel_object.splits)
 
 lemma sts_reply_at_inv[wp]:
   "\<lbrace> reply_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. reply_at ep \<rbrace>"
@@ -272,7 +273,7 @@ lemma set_tcb_obj_ref_sc_at_inv[wp]:
   "\<lbrace> sc_at ep \<rbrace> set_tcb_obj_ref f t ntfn \<lbrace> \<lambda>rv. sc_at ep \<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
   apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_sc is_tcb get_tcb_def)
+  apply (clarsimp simp: obj_at_def is_sc_obj_def is_tcb get_tcb_def split: kernel_object.splits)
   done
 
 lemma set_tcb_obj_ref_reply_at_inv[wp]:
@@ -451,16 +452,12 @@ lemma get_ep_valid_ep[wp]:
   by (wpsimp simp: ep_at_def2 valid_ep_def2 simp_del: valid_simple_obj_def)
 
 lemma get_sc_valid_sc[wp]:
-  "\<lbrace> invs and sc_at sc \<rbrace>
+  "\<lbrace> invs and sc_obj_at n sc \<rbrace>
    get_sched_context sc
-   \<lbrace> valid_sched_context \<rbrace>"
-  apply (simp add: get_sched_context_def)
-  apply (rule hoare_seq_ext)
-   prefer 2
-   apply (rule hoare_pre_imp [OF _ get_object_valid])
-   apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply (case_tac kobj, simp_all)
-  apply (wp | simp add: valid_obj_def)+
+   \<lbrace> \<lambda>rv. valid_sched_context rv n \<rbrace>"
+  apply (wpsimp simp: get_sched_context_def invs_def valid_state_def valid_pspace_def obj_at_def)
+  apply (auto simp: is_sc_obj_def valid_sched_context_def valid_obj_def
+             intro!: valid_objs_valid_sched_context_size[rotated])
   done
 
 lemma get_reply_valid_reply[wp]:
@@ -475,7 +472,7 @@ lemma set_simple_ko_valid_objs[wp]:
    unfolding set_simple_ko_def
    by (wpsimp wp: set_object_valid_objs
                  simp: valid_obj_def obj_at_def a_type_def partial_inv_def
-                       valid_ntfn_def2 valid_ep_def2 valid_sc_def2 valid_reply_def2
+                       valid_ntfn_def2 valid_ep_def2 valid_reply_def2
                  split: kernel_object.splits simp_del: valid_simple_obj_def)
 
 method set_simple_ko_method uses wp_thm simp_thm =
@@ -534,7 +531,6 @@ lemma set_simple_ko_hyp_refs_of[wp]:
   by (intro conjI; clarsimp elim!: rsubst[where P=P]; simp only:;
       subst state_hyp_refs_of_ep_update[of ep, symmetric]
             state_hyp_refs_of_ntfn_update[of ep, symmetric]
-            state_hyp_refs_of_sc_update[of ep, symmetric]
             state_hyp_refs_of_reply_update[of ep, symmetric],
       clarsimp simp: obj_at_def, simp add: fun_upd_def)+
 

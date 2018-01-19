@@ -1247,8 +1247,10 @@ lemma retype_addrs_mem_sz_0_is_ptr:
 
 
 locale Retype_AI_obj_bits_api_neq_0 =
-  assumes obj_bits_api_neq_0: "\<And>ty us. ty \<noteq> Untyped \<Longrightarrow> 0 < obj_bits_api ty us"
-
+  assumes obj_bits_api_neq_0:
+  "\<And>ty us. ty \<noteq> Untyped \<Longrightarrow> ty \<noteq> SchedContextObject \<Longrightarrow> 0 < obj_bits_api ty us"
+  (* for SchedContextObject, us \<ge> 8 is imposed but this cannot be shown only from
+     the definition of obj_bits_api *)
 
 lemma retype_addrs_range_subset:
   "\<lbrakk>  p \<in> set (retype_addrs ptr ty n us);
@@ -1381,6 +1383,7 @@ end
 lemma valid_obj_default_object:
   assumes tyunt: "ty \<noteq> Untyped"
   and      tyct: "ty = CapTableObject \<Longrightarrow> us < word_bits - cte_level_bits \<and> 0 < us"
+  and      tysc: "ty = SchedContextObject \<Longrightarrow> valid_sched_context_size us"
   and      arch: "valid_arch_tcb default_arch_tcb s"
   shows "valid_obj ptr (default_object ty dev us) s"
   unfolding valid_obj_def default_object_def
@@ -1400,6 +1403,7 @@ lemma valid_obj_default_object:
      apply safe
       apply (simp split: if_split_asm)
      apply (clarsimp split: if_split_asm)
+    apply (frule tysc)
     apply (simp add: valid_sched_context_def valid_bound_obj_def default_sched_context_def)
    apply (simp add: valid_reply_def valid_bound_obj_def default_reply_def)
   apply (clarsimp simp add: wellformed_arch_default)
@@ -1469,6 +1473,7 @@ locale retype_region_proofs =
       and   res: "caps_overlap_reserved {ptr..ptr + of_nat (n * 2 ^ (obj_bits_api ty us)) - 1} s"
       and tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
       and  tyct: "ty = CapTableObject \<Longrightarrow> us < word_bits - cte_level_bits \<and> 0 < us"
+      and  tysc: "ty = SchedContextObject \<Longrightarrow> valid_sched_context_size us"
       and   orth: "pspace_no_overlap_range_cover ptr sz s"
       and  mem :  "caps_no_overlap ptr sz s"
       and cover: "range_cover ptr sz (obj_bits_api ty us) n"
@@ -1646,7 +1651,7 @@ lemma valid_objs: "valid_objs s'"
   apply (clarsimp simp:valid_objs_def)
   apply (rule valid_pspaceE[OF vp])
   apply (clarsimp simp:valid_objs_def s'_def ps_def split:if_splits)
-   apply (simp add:valid_obj_default_object[OF tyunt tyct])
+   apply (simp add:valid_obj_default_object[OF tyunt tyct tysc])
   apply (simp (no_asm) add:valid_obj_def)
   apply (drule bspec)
    apply (erule domI)
@@ -1938,6 +1943,7 @@ lemma use_retype_region_proofs':
   assumes y: "\<And>x s f. Q x (trans_state f s) = Q x s"
   shows
     "\<lbrakk> ty = CapTableObject \<Longrightarrow> 0 < us;
+       ty = SchedContextObject \<Longrightarrow> valid_sched_context_size us;
          \<And>s. P s \<longrightarrow> Q (retype_addrs ptr ty n us) s \<rbrakk> \<Longrightarrow>
     \<lbrace>\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n
         \<and> caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} s
@@ -2013,7 +2019,8 @@ lemmas retype_region_caps_of = use_retype_region_proofs
 
 
 lemma retype_region_valid_cap:
-  "\<lbrakk>ty = Structures_A.apiobject_type.CapTableObject \<Longrightarrow> 0 < us\<rbrakk>
+  "\<lbrakk>ty = Structures_A.apiobject_type.CapTableObject \<Longrightarrow> 0 < us;
+    ty = SchedContextObject \<Longrightarrow> valid_sched_context_size us\<rbrakk>
    \<Longrightarrow> \<lbrace>(\<lambda>s::'state_ext state. valid_pspace s \<and> caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} s \<and>
            valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n \<and>
            caps_no_overlap ptr sz s \<and> pspace_no_overlap_range_cover ptr sz s  \<and>
@@ -2085,6 +2092,7 @@ lemma retype_region_post_retype_invs:
       and region_in_kernel_window {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}
       and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
       and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
+      and K (ty = SchedContextObject \<longrightarrow> valid_sched_context_size us)
       and K (range_cover ptr sz (obj_bits_api ty us) n) \<rbrace>
       retype_region ptr n us ty dev\<lbrace>\<lambda>rv. post_retype_invs ty rv\<rbrace>"
   apply (rule hoare_gen_asm)+

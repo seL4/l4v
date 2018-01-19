@@ -461,9 +461,9 @@ lemma no_cap_to_obj_with_diff_ref_triv:
   apply (drule(1) cte_wp_at_valid_objs_valid_cap)
   apply (clarsimp simp: table_cap_ref_def valid_cap_def
                         obj_at_def is_ep is_ntfn is_tcb is_cap_table
-                        a_type_def is_cap_simps is_sc is_reply
+                        a_type_def is_cap_simps is_sc_obj_def is_reply
                  split: cap.split_asm arch_cap.split_asm
-                        if_split_asm option.split_asm)
+                        if_split_asm option.split_asm kernel_object.split_asm)
   done
 
 

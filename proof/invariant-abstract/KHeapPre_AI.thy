@@ -20,7 +20,7 @@ where
                                          \<and> (\<forall>(getF, t) \<in> ran tcb_cap_cases. getF tcb' = getF tcb))"
 | "same_caps val (Endpoint ep)       = is_ep val"
 | "same_caps val (Notification ntfn) = is_ntfn val"
-| "same_caps val (SchedContext sc)   = is_sc val"
+| "same_caps val (SchedContext sc n) = is_sc_obj n val"
 | "same_caps val (Reply r)           = is_reply val"
 | "same_caps val (ArchObj ao)        = (\<exists>ao'. val = ArchObj ao')"
 
@@ -31,7 +31,7 @@ lemma same_caps_more_simps[simp]:
                                          \<and> (\<forall>(getF, t) \<in> ran tcb_cap_cases. getF tcb' = getF tcb))"
  "same_caps (Endpoint ep) val       = is_ep val"
  "same_caps (Notification ntfn) val = is_ntfn val"
- "same_caps (SchedContext sc) val   = is_sc val"
+ "same_caps (SchedContext sc n) val   = is_sc_obj n val"
  "same_caps (Reply r) val           = is_reply val"
  "same_caps (ArchObj ao) val        = (\<exists>ao'. val = ArchObj ao')"
  by (cases val, (fastforce simp: is_obj_defs)+)+
@@ -53,7 +53,7 @@ definition non_arch_obj :: "kernel_object \<Rightarrow> bool" where
 
 lemma non_arch_objs[intro]:
   "non_arch_obj (Endpoint ep)"
-  "non_arch_obj (SchedContext sc)"
+  "non_arch_obj (SchedContext sc n)"
   "non_arch_obj (Reply reply)"
   "non_arch_obj (CNode sz cnode_contents)"
   "non_arch_obj (TCB tcb)"

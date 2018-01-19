@@ -109,6 +109,7 @@ requalify_facts
   arch_gen_obj_refs_inD
   same_aobject_same_arch_gen_refs
   valid_arch_mdb_eqI
+  valid_sc_size_less_word_bits
 
 lemmas [simp] =
   tcb_bits_def
@@ -143,7 +144,8 @@ definition
    case ko of CNode sz cs \<Rightarrow> bits = sz \<and> well_formed_cnode_n bits cs
             | _ \<Rightarrow> False"
 definition
-  "is_sc ko \<equiv> case ko of SchedContext sc \<Rightarrow> True | _ \<Rightarrow> False"
+  "is_sc_obj n ko \<equiv> case ko of SchedContext sc n' \<Rightarrow> n = n' \<and> valid_sched_context_size n
+                        | _ \<Rightarrow> False"
 definition
   "is_reply ko \<equiv> case ko of Reply rply \<Rightarrow> True | _ \<Rightarrow> False"
 
@@ -160,7 +162,9 @@ abbreviation
 abbreviation
   "real_cte_at cref \<equiv> cap_table_at (length (snd cref)) (fst cref)"
 abbreviation
-  "sc_at \<equiv> obj_at is_sc"
+  "sc_at \<equiv> obj_at (\<lambda>ko. \<exists>n. is_sc_obj n ko)"
+abbreviation
+  "sc_obj_at n \<equiv> obj_at (is_sc_obj n)"
 abbreviation
   "reply_at \<equiv> obj_at is_reply"
 
@@ -316,7 +320,7 @@ where
 | "cap_bits (Zombie r zs n) =
     (case zs of None \<Rightarrow> obj_bits (TCB undefined)
             | Some n \<Rightarrow> cte_level_bits + n)"
-| "cap_bits (SchedContextCap r n) = obj_bits (SchedContext undefined) + n" (* RT: correct? *)
+| "cap_bits (SchedContextCap r n) = n" (* RT: correct? *)
 | "cap_bits (SchedControlCap) = 0"
 | "cap_bits (IRQControlCap) = 0"
 | "cap_bits (IRQHandlerCap irq) = 0"
@@ -354,10 +358,10 @@ where
   | NotificationCap r badge rights \<Rightarrow> AllowGrant \<notin> rights
   | CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
-  | SchedContextCap r n \<Rightarrow> n > 0  (* RT FIXME *)
   | Zombie r b n \<Rightarrow> (case b of None \<Rightarrow> n \<le> 5
                                           | Some b \<Rightarrow> n \<le> 2 ^ b \<and> b \<noteq> 0)
   | ArchObjectCap ac \<Rightarrow> wellformed_acap ac
+  | SchedContextCap scp n \<Rightarrow> valid_sched_context_size n
   | _ \<Rightarrow> True"
 
 definition
@@ -372,7 +376,7 @@ where
   | ThreadCap r \<Rightarrow> tcb_at r s
   | DomainCap \<Rightarrow> True
   | ReplyCap r \<Rightarrow> reply_at r s
-  | SchedContextCap r n \<Rightarrow> sc_at r s
+  | SchedContextCap r n \<Rightarrow> sc_obj_at n r s
   | SchedControlCap \<Rightarrow> True
   | IRQControlCap \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> True
@@ -395,7 +399,7 @@ where
   | ThreadCap r \<Rightarrow> tcb_at r s
   | DomainCap \<Rightarrow> True
   | ReplyCap r \<Rightarrow> reply_at r s
-  | SchedContextCap r n \<Rightarrow> sc_at r s \<and> n > 0 (* RT FIXME *)
+  | SchedContextCap r n \<Rightarrow> sc_obj_at n r s \<and> valid_sched_context_size n
   | SchedControlCap \<Rightarrow> True
   | IRQControlCap \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
@@ -486,9 +490,9 @@ where
 definition
   valid_bound_obj :: "(machine_word \<Rightarrow> 'z state \<Rightarrow> bool) \<Rightarrow> machine_word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_bound_obj f reply_opt s \<equiv> case reply_opt of
+  "valid_bound_obj f p_opt s \<equiv> case p_opt of
                                  None \<Rightarrow> True
-                               | Some t \<Rightarrow> f t s"
+                               | Some p \<Rightarrow> f p s"
 
 abbreviation
   "valid_bound_ntfn \<equiv> valid_bound_obj ntfn_at"
@@ -551,18 +555,19 @@ where
       (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) \<and> distinct ts)"
 
 definition
-  valid_sched_context :: "sched_context \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_sched_context :: "sched_context \<Rightarrow> nat \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_sched_context sc s \<equiv> (* RT FIXME: any conditions for period consumed refills refill_max? *)
+  "valid_sched_context sc n s \<equiv> (* RT FIXME: any conditions for period consumed refills refill_max? *)
      valid_bound_ntfn (sc_ntfn sc) s
      \<and> valid_bound_tcb (sc_tcb sc) s
      \<and> valid_bound_tcb (sc_yield_from sc) s
-     \<and> list_all (\<lambda>r. reply_at r s) (sc_replies sc)"
+     \<and> list_all (\<lambda>r. reply_at r s) (sc_replies sc)
+     \<and> valid_sched_context_size n"
 
 definition
   valid_reply :: "reply \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_reply reply s \<equiv> 
+  "valid_reply reply s \<equiv>
      valid_bound_tcb (reply_tcb reply) s
      \<and> valid_bound_sc (reply_sc reply) s"
 
@@ -575,7 +580,7 @@ where
   | Notification p \<Rightarrow> valid_ntfn p s
   | TCB t \<Rightarrow> valid_tcb ptr t s
   | CNode sz cs \<Rightarrow> valid_cs sz cs s
-  | SchedContext sc \<Rightarrow> valid_sched_context sc s
+  | SchedContext sc n \<Rightarrow> valid_sched_context sc n s
   | Reply reply \<Rightarrow> valid_reply reply s
   | ArchObj ao \<Rightarrow> arch_valid_obj ao s"
 
@@ -618,7 +623,7 @@ where
   | Notification p \<Rightarrow> valid_ntfn p s
   | TCB t \<Rightarrow> True
   | CNode sz cs \<Rightarrow> True
-  | SchedContext sc \<Rightarrow> valid_sched_context sc s
+  | SchedContext sc n \<Rightarrow> True
   | Reply reply \<Rightarrow> valid_reply reply s
   | ArchObj ao \<Rightarrow> arch_valid_obj ao s"
 
@@ -642,21 +647,18 @@ lemma valid_ep_def2: "valid_ep = (\<lambda>x s. valid_simple_obj (Endpoint x) s)
 lemma valid_ntfn_def2: "valid_ntfn = (\<lambda>x s. valid_simple_obj (Notification x) s)"
   by simp
 
-lemma valid_sc_def2: "valid_sched_context = (\<lambda>x s. valid_simple_obj (SchedContext x) s)"
-  by simp
-
 lemma valid_reply_def2: "valid_reply = (\<lambda>x s. valid_simple_obj (Reply x) s)"
   by simp
 
 lemma valid_simple_kheap:"\<lbrakk>kheap s p = Some v ;
-                 a_type v \<in> {AEndpoint, ANTFN} \<rbrakk>\<Longrightarrow> valid_obj p v s = valid_simple_obj v s"
+                 a_type v \<in> {AEndpoint, ANTFN, AReply} \<rbrakk>\<Longrightarrow> valid_obj p v s = valid_simple_obj v s"
   by (auto simp: valid_obj_imp_valid_simple valid_obj_def a_type_def
            split: kernel_object.splits if_splits)
 
 abbreviation
-  "simple_typ_at \<equiv> obj_at (\<lambda>ob. a_type ob \<in> {AEndpoint, ANTFN, ASchedContext, AReply})"
+  "simple_typ_at \<equiv> obj_at (\<lambda>ob. a_type ob \<in> {AEndpoint, ANTFN, AReply})"
 
-lemmas is_simple_ko_defs = is_ep_def is_ntfn_def is_sc_def is_reply_def
+lemmas is_simple_ko_defs = is_ep_def is_ntfn_def is_reply_def
 
 text {* symref related definitions *}
 
@@ -711,7 +713,7 @@ where
    | Notification ntfn => ntfn_q_refs_of (ntfn_obj ntfn)
                           \<union> get_refs NTFNBound (ntfn_bound_tcb ntfn)
                           \<union> get_refs NTFNSchedContext (ntfn_sc ntfn)
-   | SchedContext sc   \<Rightarrow> get_refs SCNtfn (sc_ntfn sc)
+   | SchedContext sc n \<Rightarrow> get_refs SCNtfn (sc_ntfn sc)
                           \<union> get_refs SCTcb (sc_tcb sc)
                           \<union> get_refs SCYieldFrom (sc_yield_from sc)
                           \<union> set (map (\<lambda>r. (r, SCReply)) (sc_replies sc))
@@ -748,7 +750,7 @@ where
 | "live0 (TCB tcb)           = (bound (tcb_bound_notification tcb) \<or> bound (tcb_sched_context tcb)
                                 \<or> tcb_state tcb \<noteq> Inactive \<and> tcb_state tcb \<noteq> IdleThreadState)"
 | "live0 (Endpoint ep)       = (ep \<noteq> IdleEP)"
-| "live0 (SchedContext sc)   = (bound (sc_tcb sc) \<or> bound (sc_yield_from sc) \<or> bound (sc_ntfn sc)
+| "live0 (SchedContext sc n) = (bound (sc_tcb sc) \<or> bound (sc_yield_from sc) \<or> bound (sc_ntfn sc)
                                 \<or> (sc_replies sc \<noteq> []))"
 | "live0 (Reply reply)       = (bound (reply_tcb reply) \<or> bound (reply_sc reply))"
 | "live0 (Notification ntfn) = (bound (ntfn_bound_tcb ntfn) \<or> bound (ntfn_sc ntfn)
@@ -762,14 +764,14 @@ where
    | TCB tcb           => live0 ko \<or> hyp_live ko
    | Endpoint ep       => live0 ko
    | Notification ntfn => live0 ko
-   | SchedContext sc   => live0 ko
+   | SchedContext sc n => live0 ko
    | Reply reply       => live0 ko
    | ArchObj ao        => hyp_live ko"
 
 lemma a_type_arch_live:
   "a_type ko = AArch tp \<Longrightarrow> \<not> live0 ko"
   by (simp add: a_type_def
-         split: Structures_A.kernel_object.split_asm)
+         split: Structures_A.kernel_object.split_asm if_splits)
 
 fun
   zobj_refs :: "cap \<Rightarrow> obj_ref set"
@@ -1058,7 +1060,7 @@ definition
   | ATCB \<Rightarrow> obj_bits (TCB undefined)
   | AEndpoint \<Rightarrow> obj_bits (Endpoint undefined)
   | ANTFN \<Rightarrow> obj_bits (Notification undefined)
-  | ASchedContext \<Rightarrow> obj_bits (SchedContext undefined) (* RT FIXME: check *)
+  | ASchedContext n \<Rightarrow> n
   | AReply \<Rightarrow> obj_bits (Reply undefined)
   | AArch T' \<Rightarrow> arch_obj_bits_type T'"
 
@@ -1128,10 +1130,6 @@ lemma is_tcb:
   "is_tcb ko = (\<exists>tcb. ko = TCB tcb)"
   unfolding is_tcb_def by (cases ko) auto
 
-lemma is_sc:
-  "is_sc ko = (\<exists>sc. ko = SchedContext sc)"
-  unfolding is_sc_def by (cases ko) auto
-
 lemma is_reply:
   "is_reply ko = (\<exists>reply. ko = Reply reply)"
   unfolding is_reply_def by (cases ko) auto
@@ -1141,7 +1139,7 @@ lemma is_cap_table:
   (\<exists>cs. ko = CNode bits cs \<and> well_formed_cnode_n bits cs)"
   unfolding is_cap_table_def by (cases ko) auto
 
-lemmas is_obj_defs = is_ep is_ntfn is_tcb is_sc is_reply is_cap_table
+lemmas is_obj_defs = is_ep is_ntfn is_tcb is_reply is_cap_table is_sc_obj_def
 
 \<comment> \<open>sanity check\<close>
 lemma obj_at_get_object:
@@ -1187,10 +1185,24 @@ lemma ep_at_typ:
             split: kernel_object.splits)
   done
 
-lemma sc_at_typ:
-  "sc_at = typ_at ASchedContext"
+lemma sc_obj_at_typ:
+  "sc_obj_at n = typ_at (ASchedContext n)"
   apply (rule obj_at_eq_helper)
-  apply (simp add: is_sc_def a_type_def
+  apply (auto simp add: is_sc_obj_def a_type_def
+            split: kernel_object.splits)
+  done
+
+lemma sc_at_typ:
+ "sc_at = (\<lambda>p s. \<exists>n. typ_at (ASchedContext n) p s)"
+  apply (rule ext)+
+  apply (auto simp add: obj_at_def is_sc_obj_def)
+   apply (rule_tac x=n in exI, case_tac ko; clarsimp simp: a_type_def split: if_splits)+
+  done
+
+lemma sc_at_typ2:
+ "sc_at = obj_at (\<lambda>ko. \<exists>n. a_type ko = (ASchedContext n))"
+  apply (rule obj_at_eq_helper)
+  apply (auto simp add: is_sc_obj_def a_type_def
             split: kernel_object.splits)
   done
 
@@ -1340,7 +1352,7 @@ lemma refs_of_simps[simp]:
  "refs_of (Notification ntfn) = ntfn_q_refs_of (ntfn_obj ntfn)
                                 \<union> get_refs NTFNBound (ntfn_bound_tcb ntfn)
                                 \<union> get_refs NTFNSchedContext (ntfn_sc ntfn)"
- "refs_of (SchedContext sc)   = get_refs SCNtfn (sc_ntfn sc)
+ "refs_of (SchedContext sc n)   = get_refs SCNtfn (sc_ntfn sc)
                                 \<union> get_refs SCTcb (sc_tcb sc)
                                 \<union> get_refs SCYieldFrom (sc_yield_from sc)
                                 \<union> set (map (\<lambda>r. (r, SCReply)) (sc_replies sc))"
@@ -1374,11 +1386,11 @@ lemma refs_of_rev:
  "(x, TCBReply) \<in>  refs_of ko =
     (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = BlockedOnReply (Some x) \<or> (\<exists>n. tcb_state tcb = BlockedOnReceive n (Some x))))"
  "(x, SCTcb) \<in>  refs_of ko =
-    (\<exists>sc. ko = SchedContext sc \<and> (sc_tcb sc = Some x))"
+    (\<exists>sc n. ko = SchedContext sc n \<and> (sc_tcb sc = Some x))"
  "(x, SCNtfn) \<in>  refs_of ko =
-    (\<exists>sc. ko = SchedContext sc \<and> (sc_ntfn sc = Some x))"
+    (\<exists>sc n. ko = SchedContext sc n \<and> (sc_ntfn sc = Some x))"
  "(x, SCReply) \<in>  refs_of ko =
-    (\<exists>sc. ko = SchedContext sc \<and> (x \<in> set (sc_replies sc)))"
+    (\<exists>sc n. ko = SchedContext sc n \<and> (x \<in> set (sc_replies sc)))"
  "(x, ReplyTCB) \<in>  refs_of ko =
     (\<exists>reply. ko = Reply reply \<and> (reply_tcb reply = Some x))"
  "(x, ReplySchedContext) \<in>  refs_of ko =
@@ -1386,7 +1398,7 @@ lemma refs_of_rev:
  "(x, TCBYieldTo) \<in>  refs_of ko =
     (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = YieldTo x))"
  "(x, SCYieldFrom) \<in>  refs_of ko =
-    (\<exists>sc. ko = SchedContext sc \<and> (sc_yield_from sc = Some x))"
+    (\<exists>sc n. ko = SchedContext sc n \<and> (sc_yield_from sc = Some x))"
    by (auto simp:  refs_of_def
                      tcb_st_refs_of_def
                      ep_q_refs_of_def
@@ -1976,6 +1988,45 @@ lemma valid_cs_sizeE [elim]:
   using assms
   by (auto simp: valid_cs_size_def well_formed_cnode_n_def)
 
+lemma valid_objs_valid_sched_context [dest?]:
+  assumes vp: "valid_objs s"
+  and    ran: "SchedContext sc n \<in> ran (kheap s)"
+  shows  "valid_sched_context sc n s"
+  using vp ran unfolding valid_objs_def
+  by (auto simp: valid_obj_def ran_def dom_def)
+
+lemma valid_pspace_valid_sched_context [dest?]:
+  assumes vp: "valid_pspace s"
+  and    ran: "SchedContext sc n \<in> ran (kheap s)"
+  shows  "valid_sched_context sc n s"
+  using vp
+  by (rule valid_pspaceE)
+     (simp add: valid_objs_valid_sched_context ran)
+
+lemma valid_pspace_valid_sched_context_size [intro?]:
+  assumes ran: "SchedContext sc n \<in> ran (kheap s)"
+  and      vp: "valid_pspace s"
+  shows  "valid_sched_context_size n"
+  using valid_pspace_valid_sched_context [OF vp ran]
+  unfolding valid_sched_context_def by blast
+
+lemma valid_objs_valid_sched_context_size [intro?]:
+  assumes ran: "SchedContext sc n \<in> ran (kheap s)"
+  and      vp: "valid_objs s"
+  shows  "valid_sched_context_size n"
+  using valid_objs_valid_sched_context [OF vp ran]
+  unfolding valid_sched_context_def by blast
+
+lemma valid_sched_context_size_objsI [intro?]:
+  "\<lbrakk> valid_objs s; kheap s r = Some (SchedContext sc n) \<rbrakk>
+  \<Longrightarrow> valid_sched_context_size n"
+  by (drule ranI, erule valid_objs_valid_sched_context_size)
+
+lemma valid_sched_context_sizeI [intro?]:
+  "\<lbrakk> valid_pspace s; kheap s r = Some (SchedContext sc n) \<rbrakk>
+  \<Longrightarrow> valid_sched_context_size n"
+  by (drule ranI, erule valid_pspace_valid_sched_context_size)
+
 lemma valid_obj_sizes:
   assumes vp: "valid_objs s"
   and     ko: "ko \<in> ran (kheap s)"
@@ -1984,6 +2035,10 @@ proof (cases ko)
   case CNode
   thus ?thesis using vp ko
     by (auto dest!: valid_objs_valid_cs_size)
+next
+  case SchedContext
+  thus ?thesis using vp ko
+     by (auto dest!: valid_objs_valid_sched_context_size valid_sc_size_less_word_bits)
 next
   case (ArchObj ako)
   show ?thesis using ArchObj by (simp only: valid_arch_sizes)
@@ -2237,7 +2292,7 @@ lemma cte_at_typ:
     apply (clarsimp simp add: a_type_def well_formed_cnode_n_def length_set_helper)
     apply (drule_tac m="fun" in domI)
     apply simp
-   apply (case_tac ko, simp_all)
+   apply (case_tac ko, simp_all split: if_split_asm)
    apply (simp add: well_formed_cnode_n_def length_set_helper split: if_split_asm)
   apply (case_tac ko, simp_all split: if_split_asm)
   done
@@ -2314,7 +2369,7 @@ lemma valid_cap_typ:
    apply (simp add: valid_def)
   apply (case_tac c,
          simp_all add: valid_cap_def P P[where P=id, simplified]
-                       ep_at_typ tcb_at_typ ntfn_at_typ sc_at_typ
+                       ep_at_typ tcb_at_typ ntfn_at_typ sc_obj_at_typ
                        reply_at_typ cap_table_at_typ hoare_vcg_prop)
       apply (rule hoare_vcg_conj_lift [OF valid_untyped_typ[OF P]])
       apply (simp add: valid_def)
@@ -2332,9 +2387,13 @@ lemma ntfn_at_typ_at:
   "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>ntfn_at c\<rbrace> f \<lbrace>\<lambda>rv. ntfn_at c\<rbrace>"
   by (simp add: ntfn_at_typ)
 
+lemma sc_obj_at_typ_at:
+  "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>sc_obj_at n c\<rbrace> f \<lbrace>\<lambda>rv. sc_obj_at n c\<rbrace>"
+  by (simp add: sc_obj_at_typ)
+
 lemma sc_at_typ_at:
   "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>sc_at c\<rbrace> f \<lbrace>\<lambda>rv. sc_at c\<rbrace>"
-  by (simp add: sc_at_typ)
+ by (simp add: sc_at_typ hoare_ex_wp)
 
 lemma reply_at_typ_at:
   "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>reply_at c\<rbrace> f \<lbrace>\<lambda>rv. reply_at c\<rbrace>"
@@ -2383,23 +2442,23 @@ lemma valid_ep_typ:
 
 lemma valid_ntfn_typ:
   assumes P: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
-  assumes Q: "\<And>p. \<lbrace>typ_at ASchedContext p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ASchedContext p\<rbrace>"
+  assumes Q: "\<And>p n. \<lbrace>typ_at (ASchedContext n) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (ASchedContext n) p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_ntfn ntfn s\<rbrace> f \<lbrace>\<lambda>rv s. valid_ntfn ntfn s\<rbrace>"
   apply (case_tac "ntfn_obj ntfn",
          simp_all add: valid_ntfn_def valid_bound_obj_def hoare_post_taut tcb_at_typ sc_at_typ)
     defer 2
   apply ((rule hoare_vcg_conj_lift,
          (case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_post_taut tcb_at_typ P);
-         (case_tac "ntfn_sc ntfn", simp_all add: hoare_post_taut sc_at_typ Q))+)[2]
+         (case_tac "ntfn_sc ntfn", simp_all add: hoare_post_taut hoare_ex_wp sc_at_typ Q))+)[2]
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])+
   apply (rule hoare_vcg_conj_lift)
    apply (rule hoare_vcg_const_Ball_lift [OF P])
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])
   apply ((case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_post_taut tcb_at_typ P);
-         (case_tac "ntfn_sc ntfn", simp_all add: hoare_post_taut sc_at_typ Q))
+         (case_tac "ntfn_sc ntfn", simp_all add: hoare_post_taut sc_at_typ hoare_ex_wp Q))
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop], simp add: P Q)
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])
-  apply (rule hoare_vcg_conj_lift; simp add: P Q)
+  apply (rule hoare_vcg_conj_lift; simp add: P hoare_ex_wp Q)
   done
 
 lemma valid_sc_typ_list_all_reply:
@@ -2414,7 +2473,8 @@ lemma valid_sc_typ:
   assumes t: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
   assumes n: "\<And>p. \<lbrace>typ_at ANTFN p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ANTFN p\<rbrace>"
   assumes r: "\<And>p. \<lbrace>typ_at AReply p\<rbrace> f \<lbrace>\<lambda>rv. typ_at AReply p\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_sched_context sc s\<rbrace> f \<lbrace>\<lambda>rv s. valid_sched_context sc s\<rbrace>"
+  assumes s: "\<And>n. \<lbrace>\<lambda>s. valid_sched_context_size n\<rbrace> f \<lbrace>\<lambda>s rv. valid_sched_context_size n\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. valid_sched_context sc n s\<rbrace> f \<lbrace>\<lambda>rv s. valid_sched_context sc n s\<rbrace>"
   apply (simp add: valid_sched_context_def)
   apply (rule hoare_vcg_conj_lift)
    apply (case_tac "sc_ntfn sc";
@@ -2425,26 +2485,27 @@ lemma valid_sc_typ:
   apply (rule hoare_vcg_conj_lift)
   apply (case_tac "sc_yield_from sc";
          simp add: wp_post_taut t[simplified tcb_at_typ[symmetric]])
-  apply (auto simp: valid_sc_typ_list_all_reply r)
+  apply (rule hoare_vcg_conj_lift)
+  apply (auto simp: valid_sc_typ_list_all_reply r s)
   done
 
 lemma valid_reply_typ:
   assumes t: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
-  assumes s: "\<And>p. \<lbrace>typ_at ASchedContext p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ASchedContext p\<rbrace>"
+  assumes s: "\<And>p n. \<lbrace>typ_at (ASchedContext n) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (ASchedContext n) p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_reply reply s\<rbrace> f \<lbrace>\<lambda>rv s. valid_reply reply s\<rbrace>"
   apply (simp add: valid_reply_def)
   apply (rule hoare_vcg_conj_lift)
    apply (case_tac "reply_tcb reply";
           simp add: wp_post_taut t[simplified tcb_at_typ[symmetric]])
   apply (case_tac "reply_sc reply";
-         simp add: wp_post_taut s[simplified sc_at_typ[symmetric]])
+         simp add: wp_post_taut hoare_ex_wp[OF s] sc_at_typ)
   done
 
 lemma valid_obj_typ:
   assumes P: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_obj p ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj p ob s\<rbrace>"
   apply (case_tac ob, simp_all add: valid_obj_def P P [where P=id, simplified]
-         wellformed_arch_typ valid_sc_typ valid_reply_typ
+         wellformed_arch_typ valid_sc_typ valid_reply_typ hoare_vcg_prop
          valid_cs_typ valid_tcb_typ valid_ep_typ valid_ntfn_typ)
   done
 
@@ -2527,6 +2588,7 @@ lemma typ_at_range:
       apply (auto simp: a_type_def typ_range_def  obj_bits_type_def
                         aobj_bits_T
                   dest!: is_aligned_no_overflow
+                  split: if_split_asm
                | simp)+
   done
 
@@ -2534,15 +2596,23 @@ lemma typ_at_eq_kheap_obj:
   "typ_at ATCB p s \<longleftrightarrow> (\<exists>tcb. kheap s p = Some (TCB tcb))"
   "typ_at AEndpoint p s \<longleftrightarrow> (\<exists>ep. kheap s p = Some (Endpoint ep))"
   "typ_at ANTFN p s \<longleftrightarrow> (\<exists>ntfn. kheap s p = Some (Notification ntfn))"
-  "typ_at ASchedContext p s \<longleftrightarrow> (\<exists>sc. kheap s p = Some (SchedContext sc))"
+  "typ_at (ASchedContext n) p s \<longleftrightarrow>
+   (\<exists>sc. kheap s p = Some (SchedContext sc n) \<and> valid_sched_context_size n)"
   "typ_at AReply p s \<longleftrightarrow> (\<exists>reply. kheap s p = Some (Reply reply))"
   "typ_at (ACapTable n) p s \<longleftrightarrow>
    (\<exists>cs. kheap s p = Some (CNode n cs) \<and> well_formed_cnode_n n cs)"
   "typ_at (AGarbage n) p s \<longleftrightarrow>
-   (\<exists>cs. n \<ge> cte_level_bits \<and> kheap s p = Some (CNode (n - cte_level_bits) cs) \<and> \<not> well_formed_cnode_n (n - cte_level_bits) cs)"
-  by ((clarsimp simp add: obj_at_def a_type_def; rule iffI; clarsimp),
+   (\<exists>cs. n \<ge> cte_level_bits \<and> kheap s p = Some (CNode (n - cte_level_bits) cs) \<and> \<not> well_formed_cnode_n (n - cte_level_bits) cs)
+   \<or> (\<exists>sc. \<not> valid_sched_context_size n \<and> kheap s p = Some (SchedContext sc n))"
+  apply ((clarsimp simp add: obj_at_def a_type_def; rule iffI; clarsimp),
       case_tac ko; fastforce simp: wf_unique
                              split: if_split_asm kernel_object.splits)+
+  apply (clarsimp simp add: obj_at_def a_type_def; rule iffI)
+   apply (erule exE)
+   apply (case_tac ko; fastforce simp: wf_unique
+                                split: if_split_asm kernel_object.splits)
+  apply (erule disjE; clarsimp)
+  done
 
 lemma a_type_ACapTableE:
   "\<lbrakk>a_type ko = ACapTable n;
@@ -2552,9 +2622,10 @@ lemma a_type_ACapTableE:
 
 lemma a_type_AGarbageE:
   "\<lbrakk>a_type ko = AGarbage n;
-    (!!cs. \<lbrakk>n \<ge> cte_level_bits; ko = CNode (n - cte_level_bits) cs; \<not>well_formed_cnode_n (n - cte_level_bits) cs\<rbrakk> \<Longrightarrow> R)\<rbrakk>
+    (!!cs. \<lbrakk>n \<ge> cte_level_bits; ko = CNode (n - cte_level_bits) cs; \<not>well_formed_cnode_n (n - cte_level_bits) cs\<rbrakk> \<Longrightarrow> R);
+    (!!sc. \<lbrakk>\<not>valid_sched_context_size n; ko = SchedContext sc n\<rbrakk> \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
-  by (case_tac ko, simp_all add: a_type_simps split: if_split_asm, fastforce)
+  by (case_tac ko, simp_all add: a_type_simps split: if_split_asm; fastforce)
 
 lemma a_type_ATCBE:
   "\<lbrakk>a_type ko = ATCB; (!!tcb. ko = TCB tcb \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
@@ -2569,7 +2640,7 @@ lemma a_type_ANTFNE:
   by (case_tac ko, simp_all add: a_type_simps split: if_split_asm)
 
 lemma a_type_ASchedContextE:
-  "\<lbrakk>a_type ko = ASchedContext; (!!sc. ko = SchedContext sc \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk>a_type ko = ASchedContext n; (!!sc. ko = SchedContext sc n \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: if_split_asm)
 
 lemma a_type_AReplyE:
@@ -2943,7 +3014,7 @@ lemma dom_empty_cnode: "dom (empty_cnode us) = {x. length x = us}"
 lemma obj_at_default_cap_valid:
   "\<lbrakk>obj_at (\<lambda>ko. ko = default_object ty dev us) x s;
    ty = CapTableObject \<Longrightarrow> 0 < us;
-   ty = SchedContextObject \<Longrightarrow> 0 < us; (* RT Check *)
+   ty = SchedContextObject \<Longrightarrow> valid_sched_context_size us;
    ty \<noteq> Untyped; ty \<noteq> ArchObject ASIDPoolObj;
    cap_aligned (default_cap ty x us dev)\<rbrakk>
   \<Longrightarrow> s \<turnstile> default_cap ty x us dev"
@@ -2951,8 +3022,8 @@ lemma obj_at_default_cap_valid:
   by (clarsimp elim!: obj_at_weakenE
       intro!: aobj_at_default_arch_cap_valid
       simp: default_object_def dom_empty_cnode well_formed_cnode_n_def
-            is_tcb is_ep is_ntfn is_sc is_reply is_cap_table
-            a_type_def obj_at_def
+            is_tcb is_ep is_ntfn is_reply is_cap_table
+            a_type_def obj_at_def is_sc_obj_def
      split: apiobject_type.splits
             option.splits)
 
