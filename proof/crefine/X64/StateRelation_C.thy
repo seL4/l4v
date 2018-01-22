@@ -122,7 +122,14 @@ where
   "carch_state_relation astate cstate \<equiv>
   x64KSKernelVSpace astate = x64KSKernelVSpace_C \<and>
   array_relation (op = \<circ> option_to_ptr) (2^asid_high_bits - 1) (x64KSASIDTable astate) (x86KSASIDTable_' cstate) \<and>
+(*
+  Changes to the C kernel to mitigate Meltdown have removed x64KSCurrentCR3.
+  We temporarily remove it from the C state relation to keep existing proofs working.
+  But for x64 verification, this ultimately needs to be replaced with a relation on
+  the new state that has been added, and the specs updated accordingly.
+
   ccr3_relation (x64KSCurrentCR3 astate) (x64KSCurrentCR3_' cstate) \<and>
+*)
   carch_globals astate"
 
 end
