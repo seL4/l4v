@@ -5640,4 +5640,36 @@ lemma of_nat_eq_signed_scast:
    = (of_nat x = (scast y :: 'a word))"
   by (metis scast_of_nat scast_scast_id(2))
 
+lemma sign_extended_add:
+  assumes p: "is_aligned p n"
+  assumes f: "f < 2 ^ n"
+  assumes e: "n \<le> e"
+  assumes "sign_extended e p"
+  shows "sign_extended e (p + f)"
+proof (cases "e < size p")
+  case True
+  note and_or = is_aligned_add_or[OF p f]
+  have "\<not> f !! e"
+    using True e less_2p_is_upper_bits_unset[THEN iffD1, OF f]
+    by (fastforce simp: word_size)
+  hence i: "(p + f) !! e = p !! e"
+    by (simp add: and_or)
+  have fm: "f && mask e = f"
+    by (fastforce intro: subst[where P="\<lambda>f. f && mask e = f", OF less_mask_eq[OF f]]
+                  simp: mask_twice e)
+  show ?thesis
+    using assms
+     apply (simp add: sign_extended_iff_sign_extend sign_extend_def i)
+     apply (simp add: and_or word_bw_comms[of p f])
+     apply (clarsimp simp: word_ao_dist fm word_bw_assocs split: if_splits)
+    done
+next
+  case False thus ?thesis
+    by (simp add: sign_extended_def word_size)
+qed
+
+lemma sign_extended_neq_mask:
+  "\<lbrakk>sign_extended n ptr; m \<le> n\<rbrakk> \<Longrightarrow> sign_extended n (ptr && ~~ mask m)"
+  by (fastforce simp: sign_extended_def word_size neg_mask_bang)
+
 end
