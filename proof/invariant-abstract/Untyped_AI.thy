@@ -43,6 +43,7 @@ where
           \<and> (ptr && ~~ mask sz) = ptr_base)
           \<and> (reset \<longrightarrow> descendants_of slot (cdt s) = {})
           \<and> (ty = CapTableObject \<longrightarrow> us > 0)
+          \<and> (ty = SchedContextObject \<longrightarrow> valid_sched_context_size us)
           \<and> (ty = Untyped \<longrightarrow> us \<ge> untyped_min_bits)
           \<and> distinct (slot#slots)
           \<and> (\<forall>slot\<in>set slots. cte_wp_at ((=) cap.NullCap) slot s
@@ -1401,14 +1402,14 @@ lemma retype_ret_valid_caps:
   apply wp
   apply (case_tac tp,simp_all)
    defer
+   prefer 5
    prefer 6
       apply ((clarsimp simp:valid_cap_def default_object_def cap_aligned_def
         is_obj_defs well_formed_cnode_n_def empty_cnode_def
         dom_def  ptr_add_def | rule conjI | intro conjI obj_at_foldr_intro imageI
       | rule is_aligned_add_multI[OF _ le_refl],
-        (simp add:range_cover_def word_bits_def obj_bits_api_def)+)+)[4]
+        (simp add:range_cover_def word_bits_def obj_bits_api_def)+)+)[5]
     apply (rule_tac ptr=ptr and sz=sz in retype_ret_valid_caps_captable; simp)
-defer
    apply (rule_tac ptr=ptr and sz=sz in retype_ret_valid_caps_aobj; simp)
   apply (clarsimp simp:valid_cap_def default_object_def cap_aligned_def
         is_obj_defs well_formed_cnode_n_def empty_cnode_def
@@ -1428,7 +1429,7 @@ defer
            Int_atLeastAtMost atLeastatMost_empty_iff)
    apply blast
   apply (erule(2) range_cover_no_0)
- sorry (* SchedContextObject case, fix valid_sched_context *)
+  done
 end
 
 (* FIXME: move to Lib *)
@@ -1532,12 +1533,17 @@ lemma retype_region_ranges':
    apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
      apply (fastforce simp: range_cover_def)
     apply (rule is_aligned_mult_triv2)
-   apply (simp add: range_cover_def)
-  sorry (* sched context and reply cases *)
-(*  apply (simp add: p_assoc_help)
+     apply (simp add: range_cover_def)
+    apply (simp add: p_assoc_help)
+    apply (rule is_aligned_no_wrap'[OF is_aligned_add_multI[OF _ le_refl refl]])
+     apply (simp add: range_cover_def)+
+   apply (subst add.commute, rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
+     apply (fastforce simp: range_cover_def)
+    apply (simp add: word_bits_def is_aligned_mult_triv2[where n=endpoint_bits, simplified])+
+  apply (simp add: p_assoc_help)
   apply (rule is_aligned_no_wrap'[OF is_aligned_add_multI[OF _ le_refl refl]])
    apply (simp add: range_cover_def)+
-  done*)
+  done
 
 lemma retype_region_ranges:
   "\<lbrace>cte_wp_at (\<lambda>c. is_untyped_cap c \<and> cap_bits c = sz
@@ -3829,7 +3835,7 @@ lemma invoke_untyp_invs':
       apply (simp_all add: field_simps ui)
 
       apply (intro conjI)
-(*
+
             (* slots not in retype_addrs *)
             apply (clarsimp dest!:retype_addrs_subset_ptr_bits)
             apply (drule(1) invoke_untyped_proofs.slots_invD)
@@ -3862,7 +3868,7 @@ lemma invoke_untyp_invs':
       apply (frule untyped_mdb_descendants_range, clarsimp+,
         erule invoke_untyped_proofs.descendants_range, simp_all+)[1]
       apply (simp add: untyped_range_def atLeastatMost_subset_iff word_and_le2)
-      done*) sorry
+      done
 qed
 
 lemmas invoke_untyp_invs[wp] =
