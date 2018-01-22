@@ -2278,6 +2278,8 @@ lemma setCTE_no_0_obj' [wp]:
   "\<lbrace>no_0_obj'\<rbrace> setCTE p c \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
   by (simp add: setCTE_def) wp
 
+crunch pspace_canonical'[wp]: setCTE "pspace_canonical'"
+
 lemma insertInitCap_valid_pspace:
   "\<lbrace>valid_pspace' and valid_cap' cap and
     (\<lambda>s. caps_no_overlap' (ctes_of s) (capRange cap))
@@ -2293,7 +2295,7 @@ lemma insertInitCap_valid_pspace:
   apply (wp setCTE_map_to_ctes getCTE_ctes_wp
             | simp add: updateMDB_def split del: if_split)+
        apply (rule hoare_post_imp)
-        apply (erule_tac P="pspace_aligned' s \<and> pspace_distinct' s
+        apply (erule_tac P="pspace_aligned' s \<and> pspace_canonical' s \<and> pspace_distinct' s
           \<and> no_0_obj' s" in conjunct2)
        apply (simp cong: conj_cong)
        apply (wp setCTE_map_to_ctes getCTE_ctes_wp)+

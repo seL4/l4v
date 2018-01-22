@@ -2446,6 +2446,9 @@ crunch gsMaxObjectSize[wp]: storePTE, storePDE, storePDPTE, storePML4E "\<lambda
 crunch gsUntypedZeroRanges[wp]: storePTE, storePDE, storePDPTE, storePML4E "\<lambda>s. P (gsUntypedZeroRanges s)"
 (ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
 
+crunch pspace_canonical'[wp]: storePTE, storePDE, storePDPTE, storePML4E "pspace_canonical'"
+  (ignore: getObject setObject)
+
 lemma storePDE_invs[wp]:
   "\<lbrace>invs' and valid_pde' pde\<rbrace>
       storePDE p pde

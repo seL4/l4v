@@ -25,6 +25,7 @@ lemma case_Null_If:
   by (case_tac c, simp_all)
 
 crunch aligned'[wp]: emptySlot pspace_aligned' (simp: case_Null_If)
+crunch pspace_canonical'[wp]: emptySlot pspace_canonical' (simp: case_Null_If)
 crunch distinct'[wp]: emptySlot pspace_distinct' (simp: case_Null_If)
 
 lemma updateCap_cte_wp_at_cases:
@@ -1722,7 +1723,7 @@ lemma empty_slot_corres:
        defer
        apply (wp get_cap_wp getCTE_wp')+
      apply (simp add: cte_wp_at_ctes_of)
-     apply (wp hoare_vcg_imp_lift clearUntypedFreeIndex_valid_pspace')
+     apply (wp hoare_vcg_imp_lift' clearUntypedFreeIndex_valid_pspace')
     apply fastforce
    apply (fastforce simp: cte_wp_at_ctes_of)
   apply simp
