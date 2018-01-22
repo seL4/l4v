@@ -1036,6 +1036,15 @@ lemma canonical_address_sign_extended: "canonical_address p = sign_extended 47 p
 lemmas canonical_address_high_bits
   = canonical_address_sign_extended[THEN iffD1, THEN sign_extended_high_bits]
 
+lemma canonical_address_add:
+  assumes "is_aligned p n"
+  assumes "f < 2 ^ n"
+  assumes "n \<le> 47"
+  assumes "canonical_address p"
+  shows "canonical_address (p + f)"
+  using assms sign_extended_add
+  unfolding canonical_address_sign_extended
+  by auto
 
 (* FIXME: move *)
 lemma validE_R_post_conjD1:

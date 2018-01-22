@@ -1203,7 +1203,6 @@ lemma retype_region_plain_invs:
   apply (simp add: post_retype_invs_def)
   done
 
-
 lemma storeWord_um_eq_0:
   "\<lbrace>\<lambda>m. underlying_memory m p = 0\<rbrace>
     storeWord x 0
