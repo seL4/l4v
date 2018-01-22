@@ -12,6 +12,7 @@ theory Corres_UL
 imports
   Crunch
   "Monad_WP/wp/WPEx"
+  "Monad_WP/wp/WPFix"
   HaskellLemmaBucket
 begin
 
@@ -1109,5 +1110,18 @@ lemma corres_return_eq_same:
   "a = b \<Longrightarrow> corres_underlying srel nf' nf op= \<top> \<top> (return a) (return b)"
   apply (simp add: corres_underlying_def return_def)
   done
+
+text {* Some setup of specialised methods. *}
+
+lemma (in strengthen_implementation) wpfix_strengthen_corres_guard_imp:
+  "(\<And>s. st (\<not> F) (op \<longrightarrow>) (P s) (Q s))
+    \<Longrightarrow> (\<And>s. st (\<not> F) (op \<longrightarrow>) (P' s) (Q' s))
+    \<Longrightarrow> st F (op \<longrightarrow>)
+        (corres_underlying sr nf nf' r P P' f g)
+        (corres_underlying sr nf nf' r Q Q' f g)"
+  by (cases F; auto elim: corres_guard_imp)
+
+lemmas wpfix_strengthen_corres_guard_imp[wp_fix_strgs]
+    = strengthen_implementation.wpfix_strengthen_corres_guard_imp
 
 end

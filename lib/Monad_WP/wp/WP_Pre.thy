@@ -37,7 +37,8 @@ val method
 end
 *}
 
-method_setup wp_pre = \<open>WP_Pre.method\<close>
+method_setup wp_pre0 = \<open>WP_Pre.method\<close>
+method wp_pre = wp_pre0?
 
 definition
   test_wp_pre :: "bool \<Rightarrow> bool \<Rightarrow> bool"
@@ -51,8 +52,8 @@ lemma test_wp_pre_pre[wp_pre]:
 
 lemma demo:
   "test_wp_pre P P"
-  (* note that wp_pre applies, but only once *)
-  apply wp_pre+
+  (* note that wp_pre0 applies, but only once *)
+  apply wp_pre0+
    apply (simp add: test_wp_pre_def, rule imp_refl)
   apply simp
   done

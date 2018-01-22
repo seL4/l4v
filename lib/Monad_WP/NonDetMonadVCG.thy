@@ -13,12 +13,13 @@ imports
   NonDetMonadLemmas
   "wp/WP"
   "wp/WPC"
+  "wp/WPFix"
   "Strengthen"
 begin
 
 (* Wrap up the standard usage pattern of wp/wpc/simp into its own command: *)
 method wpsimp uses wp wp_del simp simp_del split split_del cong =
-  ((determ \<open>wp add: wp del: wp_del | wpc |
+  ((determ \<open>wpfix | wp add: wp del: wp_del | wpc |
             clarsimp simp: simp simp del: simp_del split: split split del: split_del cong: cong\<close>)+)[1]
 
 declare K_def [simp]
@@ -1331,7 +1332,12 @@ lemma validE_R_validE: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrighta
 
 lemma hoare_post_imp_R: "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>,-; \<And>r s. Q' r s \<Longrightarrow> Q r s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-"
   apply (unfold validE_R_def)
-  apply (rule hoare_post_impErr, simp+)
+  apply (erule hoare_post_impErr, simp+)
+  done
+
+lemma hoare_post_imp_E: "\<lbrakk> \<lbrace>P\<rbrace> f -,\<lbrace>Q'\<rbrace>; \<And>r s. Q' r s \<Longrightarrow> Q r s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f -,\<lbrace>Q\<rbrace>"
+  apply (unfold validE_E_def)
+  apply (erule hoare_post_impErr, simp+)
   done
 
 lemma hoare_post_comb_imp_conj:
@@ -2155,6 +2161,46 @@ lemma strengthen_validE_E_cong[strg]:
     \<Longrightarrow> st F (op \<longrightarrow>) (\<lbrace>P\<rbrace> f -, \<lbrace>S\<rbrace>) (\<lbrace>P\<rbrace> f -, \<lbrace>T\<rbrace>)"
   by (cases F, auto elim: hoare_post_impErr simp: validE_E_def)
 
+lemma wpfix_strengthen_hoare:
+  "(\<And>s. st (\<not> F) (op \<longrightarrow>) (P s) (P' s))
+    \<Longrightarrow> (\<And>r s. st F (op \<longrightarrow>) (Q r s) (Q' r s))
+    \<Longrightarrow> st F (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>) (\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>)"
+  by (cases F, auto elim: hoare_chain)
+
+lemma wpfix_strengthen_validE_R_cong:
+  "(\<And>s. st (\<not> F) (op \<longrightarrow>) (P s) (P' s))
+    \<Longrightarrow> (\<And>r s. st F (op \<longrightarrow>) (Q r s) (Q' r s))
+    \<Longrightarrow> st F (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -) (\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>, -)"
+  by (cases F, auto elim: hoare_chainE simp: validE_R_def)
+
+lemma wpfix_strengthen_validE_cong:
+  "(\<And>s. st (\<not> F) (op \<longrightarrow>) (P s) (P' s))
+    \<Longrightarrow> (\<And>r s. st F (op \<longrightarrow>) (Q r s) (R r s))
+    \<Longrightarrow> (\<And>r s. st F (op \<longrightarrow>) (S r s) (T r s))
+    \<Longrightarrow> st F (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>S\<rbrace>) (\<lbrace>P'\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>T\<rbrace>)"
+  by (cases F, auto elim: hoare_chainE)
+
+lemma wpfix_strengthen_validE_E_cong:
+  "(\<And>s. st (\<not> F) (op \<longrightarrow>) (P s) (P' s))
+    \<Longrightarrow> (\<And>r s. st F (op \<longrightarrow>) (S r s) (T r s))
+    \<Longrightarrow> st F (op \<longrightarrow>) (\<lbrace>P\<rbrace> f -, \<lbrace>S\<rbrace>) (\<lbrace>P'\<rbrace> f -, \<lbrace>T\<rbrace>)"
+  by (cases F, auto elim: hoare_chainE simp: validE_E_def)
+
+lemma wpfix_no_fail_cong:
+  "(\<And>s. st (\<not> F) (op \<longrightarrow>) (P s) (P' s))
+    \<Longrightarrow> st F (op \<longrightarrow>) (no_fail P f) (no_fail P' f)"
+  by (cases F, auto elim: no_fail_pre)
+
+lemmas nondet_wpfix_strgs =
+    wpfix_strengthen_validE_R_cong
+    wpfix_strengthen_validE_E_cong
+    wpfix_strengthen_validE_cong
+    wpfix_strengthen_hoare
+    wpfix_no_fail_cong
+
 end
+
+lemmas nondet_wpfix_strgs[wp_fix_strgs]
+    = strengthen_implementation.nondet_wpfix_strgs
 
 end

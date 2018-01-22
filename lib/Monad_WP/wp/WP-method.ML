@@ -294,6 +294,7 @@ let
   val used_rules = Unsynchronized.ref [] : thm list Unsynchronized.ref
   val wp_pre_tac = Method.NO_CONTEXT_TACTIC ctxt
                       (Method_Closure.apply_method ctxt @{method wp_pre} [] [] [] ctxt [])
+  val wp_fix_tac = TRY (WPFix.both_tac ctxt 1)
   val cleanup_tac = TRY (REPEAT
                       (resolve_tac ctxt [@{thm TrueI}, @{thm conj_TrueI}, @{thm conj_TrueI2}] 1
                        ORELSE assume_tac ctxt 1))
@@ -303,7 +304,7 @@ in
   SELECT_GOAL (
   (fn t => Seq.map (fn thm => (warn_unused_thms ctxt extras extras_ref used_rules;
                                trace_used_thms trace used_rules ctxt; thm))
-    ((wp_pre_tac THEN steps_tac) t)) THEN_ELSE
+    ((wp_pre_tac THEN wp_fix_tac THEN steps_tac) t)) THEN_ELSE
   (fn t => (warn_unsafe_thms (#unsafe_rules rules) 1 ctxt t; all_tac t),
   fn t => (warn_unsafe_thms (#unsafe_rules rules) 1 ctxt t; no_tac t))) n
 end

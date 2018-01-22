@@ -578,6 +578,8 @@ fun crunch cfg pre extra stack const' thms =
                 TRY (resolve_tac ctxt''' Instance.pre_thms n)
                 THEN
                 REPEAT_DETERM (
+                  WPFix.tac ctxt n
+                  ORELSE
                   wp goals' n
                   ORELSE
                   CHANGED (clarsimp_tac ctxt''' n)
