@@ -6898,14 +6898,17 @@ lemma createObject_invs':
           \<and> caps_no_overlap'' ptr (APIType_capBits ty us) s \<and> ptr \<noteq> 0 \<and>
           caps_overlap_reserved' {ptr..ptr + 2 ^ APIType_capBits ty us - 1} s \<and>
           (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < us) \<and>
-          is_aligned ptr (APIType_capBits ty us) \<and> APIType_capBits ty us < word_bits \<and>
+          is_aligned ptr (APIType_capBits ty us) \<and> APIType_capBits ty us \<le> maxUntypedSizeBits \<and>
+          canonical_address ptr \<and>
           {ptr..ptr + 2 ^ APIType_capBits ty us - 1} \<inter> kernel_data_refs = {} \<and>
           0 < gsMaxObjectSize s
     \<rbrace> createObject ty ptr us dev\<lbrace>\<lambda>r s. invs' s \<rbrace>"
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
   apply (wp createNewCaps_invs'[where sz = "APIType_capBits ty us"])
-  apply (clarsimp simp:range_cover_full)
+  apply (subgoal_tac "APIType_capBits ty us < word_bits")
+   apply (fastforce simp: range_cover_full)
+  apply (fastforce simp: untypedBits_defs word_bits_def)
   done
 
 lemma createObject_sch_act_simple[wp]:
@@ -7793,6 +7796,13 @@ lemma createObject_untyped_region_is_zero_bytes:
                    less_mask_eq word_less_nat_alt)
   done *)
 
+(* FIXME move to Invariants_H *)
+lemma invs_pspace_canonical'[elim!]:
+  "invs' s \<Longrightarrow> pspace_canonical' s"
+  by (simp add: invs'_def valid_state'_def valid_pspace'_def)
+
+find_theorems valid_cap' cte_wp_at' -NonDetMonad.valid -validE -validE_R
+
 lemma createNewObjects_ccorres:
 notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
       Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
@@ -7814,6 +7824,9 @@ shows  "ccorres dc xfdc
                     \<and> destSlots \<noteq> []
                     \<and> range_cover ptr sz (getObjectSize newType userSize) (length destSlots )
                     \<and> ptr \<noteq> 0
+                    \<and> sz \<le> maxUntypedSizeBits
+                    \<and> APIType_capBits newType userSize \<le> maxUntypedSizeBits
+                    \<and> canonical_address (ptr && ~~ mask sz)
                     \<and> {ptr .. ptr + of_nat (length destSlots) * 2^ (getObjectSize newType userSize) - 1}
                       \<inter> kernel_data_refs = {}
                     \<and> cnodeptr \<notin> {ptr .. ptr + (of_nat (length destSlots)<< APIType_capBits newType userSize) - 1}
@@ -7936,7 +7949,7 @@ shows  "ccorres dc xfdc
              apply wp
             apply (clarsimp simp:createObject_hs_preconds_def field_simps conj_comms
                    invs_valid_pspace' invs_pspace_distinct' invs_pspace_aligned'
-                   invs_ksCurDomain_maxDomain')
+                   invs_pspace_canonical' invs_ksCurDomain_maxDomain')
             apply (subst intvl_range_conv)
               apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
                subgoal by (simp add:is_aligned_shiftl_self)
@@ -7946,11 +7959,16 @@ shows  "ccorres dc xfdc
                                    word_bits_def range_cover_def)+
             apply (simp add: range_cover_not_in_neqD)
             apply (intro conjI)
-                  apply (drule_tac p = n in range_cover_no_0)
-                    apply (simp add:shiftl_t2n field_simps)+
-                 apply (cut_tac x=num in unat_lt2p, simp)
-                 apply (simp add: unat_arith_simps unat_of_nat, simp split: if_split)
-                 apply (intro impI, erule order_trans[rotated], simp)
+                   apply (drule_tac p = n in range_cover_no_0)
+                     apply (simp add:shiftl_t2n field_simps)+
+                  apply (cut_tac x=num in unat_lt2p, simp)
+                  apply (simp add: unat_arith_simps unat_of_nat, simp split: if_split)
+                  apply (intro impI, erule order_trans[rotated], simp)
+                 subgoal (* canonical_address *)
+                   apply (simp add: shiftl_t2n field_simps)
+                   apply (rule canonical_address_neq_mask ; simp?)
+                   apply (erule range_cover_canonical_address ; blast)
+                   done
                 apply (erule pspace_no_overlap'_le)
                  apply (fold_subgoals (prefix))[2]
                  subgoal premises prems using prems
@@ -8089,9 +8107,13 @@ shows  "ccorres dc xfdc
        apply clarsimp
        apply (simp add: range_cover_not_in_neqD)
        apply (intro conjI)
-                          subgoal by (simp add: word_bits_def range_cover_def)
-                         subgoal by (clarsimp simp: cte_wp_at_ctes_of invs'_def valid_state'_def
-                                               valid_global_refs'_def cte_at_valid_cap_sizes_0)
+                           subgoal by (simp add: word_bits_def range_cover_def)
+                          subgoal by (clarsimp simp: cte_wp_at_ctes_of invs'_def valid_state'_def
+                                                      valid_global_refs'_def cte_at_valid_cap_sizes_0)
+                         subgoal (* canonical_address *)
+                           apply (simp add: shiftl_t2n field_simps)
+                           apply (erule range_cover_canonical_address ; simp)
+                           done
                         apply (erule range_cover_le,simp)
                        apply (drule_tac p = "n" in range_cover_no_0)
                          apply (simp add:field_simps shiftl_t2n)+
