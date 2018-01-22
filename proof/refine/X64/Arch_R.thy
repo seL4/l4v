@@ -202,8 +202,9 @@ lemma pac_corres:
              apply (simp cong: conj_cong)
              apply (wp createObjects_valid_pspace'
                        [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
-                apply (simp add: makeObjectKO_def)+
-               apply (simp add:objBits_simps archObjSize_def range_cover_full)+
+                  apply (simp add: makeObjectKO_def)+
+                apply (simp add:objBits_simps archObjSize_def range_cover_full valid_cap'_def)+
+              apply (fastforce elim!: canonical_address_neq_mask)
              apply (clarsimp simp:valid_cap'_def)
              apply (wp createObject_typ_at'
                        createObjects_orig_cte_wp_at'[where sz = pageBits])
@@ -2407,6 +2408,7 @@ lemma performASIDControlInvocation_invs' [wp]:
                  hoare_vcg_const_imp_lift
          |simp add: makeObjectKO_def projectKOs asid_pool_typ_at_ext' valid_cap'_def
                     not_ioport_cap_safe_ioport_insert' isCap_simps
+                    canonical_address_neq_mask
                cong: rev_conj_cong
          |strengthen safe_parent_strg'[where idx = "2^ pageBits"])+
      apply (simp add:asid_pool_typ_at_ext'[symmetric])

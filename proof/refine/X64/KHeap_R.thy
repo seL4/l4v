@@ -608,6 +608,17 @@ lemma setObject_aligned[wp]:
   apply (fastforce dest: bspec[OF _ domI])
   done
 
+lemma setObject_canonical[wp]:
+  shows     "\<lbrace>pspace_canonical'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_canonical'\<rbrace>"
+  apply (clarsimp simp: setObject_def split_def valid_def in_monad
+                        projectKOs pspace_canonical'_def ps_clear_upd'
+                        objBits_def[symmetric] lookupAround2_char1
+                 split: if_split_asm
+                 dest!: updateObject_objBitsKO)
+   apply (fastforce dest: bspec[OF _ domI])
+  apply (fastforce dest: bspec[OF _ domI])
+  done
+
 lemma set_ep_aligned' [wp]:
   "\<lbrace>pspace_aligned'\<rbrace> setEndpoint ep v  \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   unfolding setEndpoint_def by wp
@@ -616,6 +627,7 @@ lemma set_ep_distinct' [wp]:
   "\<lbrace>pspace_distinct'\<rbrace> setEndpoint ep v  \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
   unfolding setEndpoint_def by wp
 
+crunch pspace_canonical'[wp]: setEndpoint, getEndpoint "pspace_canonical'"
 
 lemma setEndpoint_cte_wp_at':
   "\<lbrace>cte_wp_at' P p\<rbrace> setEndpoint ptr v \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
@@ -724,6 +736,22 @@ lemma cte_wp_at_ctes_of:
   apply (clarsimp simp: ps_clear_def3[where na=11] is_aligned_mask
                         word_bw_assocs)
   done
+
+lemma ctes_of_canonical:
+  assumes canonical: "pspace_canonical' s"
+  assumes ctes_of: "ctes_of s p = Some cte"
+  shows "canonical_address p"
+proof -
+  from ctes_of have "cte_wp_at' (op = cte) p s"
+    by (simp add: cte_wp_at_ctes_of)
+  thus ?thesis using canonical
+    apply (simp add: pspace_canonical'_def)
+    apply (erule cte_wp_atE')
+     apply fastforce
+    by (fastforce simp: tcb_cte_cases_def field_simps objBits_defs
+                split: if_split_asm
+                 elim: canonical_address_add)
+qed
 
 lemma tcb_cte_cases_small:
   "\<lbrakk> tcb_cte_cases v = Some (getF, setF) \<rbrakk>

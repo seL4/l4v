@@ -2791,6 +2791,9 @@ crunch state_refs_of'[wp]: cteInsert "\<lambda>s. P (state_refs_of' s)"
 crunch aligned'[wp]: cteInsert pspace_aligned'
   (wp: crunch_wps)
 
+crunch pspace_canonical'[wp]: cteInsert pspace_canonical'
+  (wp: crunch_wps)
+
 crunch distinct'[wp]: cteInsert pspace_distinct'
   (wp: crunch_wps)
 
@@ -3646,6 +3649,9 @@ lemma cteInsert_untyped_ranges_zero[wp]:
   apply blast
   done
 
+crunch pspace_canonical'[wp]: cteInsert "pspace_canonical'"
+  (wp: crunch_wps)
+
 lemma cteInsert_invs:
  "\<lbrace>invs' and cte_wp_at' (\<lambda>c. cteCap c=NullCap) dest and valid_cap' cap and
   (\<lambda>s. src \<noteq> dest) and (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s)
@@ -4440,6 +4446,8 @@ lemma setupReplyMaster_wps[wp]:
 
 crunch no_0_obj'[wp]: setupReplyMaster no_0_obj'
   (wp: crunch_wps simp: crunch_simps)
+
+crunch pspace_canonical'[wp]: setupReplyMaster "pspace_canonical'"
 
 lemma setupReplyMaster_valid_pspace':
   "\<lbrace>valid_pspace' and tcb_at' t\<rbrace>
@@ -6845,6 +6853,8 @@ lemma updateFreeIndex_forward_valid_mdb':
   apply (rule usableUntypedRange_mono2,
     auto simp add: isCap_simps valid_cap_simps' capAligned_def)
   done
+
+crunch pspace_canonical'[wp]: updateFreeIndex "pspace_canonical'"
 
 lemma updateFreeIndex_forward_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' ((\<lambda>cap. isUntypedCap cap

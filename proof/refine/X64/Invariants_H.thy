@@ -421,6 +421,7 @@ where valid_cap'_def:
   | Structures_H.UntypedCap d r n f \<Rightarrow>
       valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> minUntypedSizeBits \<le> n \<and> n \<le> maxUntypedSizeBits
         \<and> f \<le> 2^n \<and> is_aligned (of_nat f :: machine_word) minUntypedSizeBits
+        \<and> canonical_address r
   | Structures_H.EndpointCap r badge x y z \<Rightarrow> ep_at' r s
   | Structures_H.NotificationCap r badge x y \<Rightarrow> ntfn_at' r s
   | Structures_H.CNodeCap r bits guard guard_sz \<Rightarrow>
@@ -601,6 +602,11 @@ definition
 where
  "pspace_aligned' s \<equiv>
   \<forall>x \<in> dom (ksPSpace s). is_aligned x (objBitsKO (the (ksPSpace s x)))"
+
+definition
+  pspace_canonical' :: "kernel_state \<Rightarrow> bool"
+where
+ "pspace_canonical' s \<equiv> \<forall>p \<in> dom (ksPSpace s). canonical_address p"
 
 definition
   pspace_distinct' :: "kernel_state \<Rightarrow> bool"
@@ -885,6 +891,7 @@ definition
 where
   "valid_pspace' \<equiv> valid_objs' and
                    pspace_aligned' and
+                   pspace_canonical' and
                    pspace_distinct' and
                    no_0_obj' and
                    valid_mdb'"
@@ -1915,8 +1922,10 @@ lemma objBits_cte_conv: "objBits (cte :: cte) = cteSizeBits"
 lemmas valid_irq_states'_def = valid_irq_masks'_def
 
 lemma valid_pspaceI' [intro]:
-  "\<lbrakk>valid_objs' s; pspace_aligned' s; pspace_distinct' s; valid_mdb' s; no_0_obj' s\<rbrakk>
-  \<Longrightarrow> valid_pspace' s"  unfolding valid_pspace'_def by simp
+  "\<lbrakk>valid_objs' s; pspace_aligned' s; pspace_canonical' s; pspace_distinct' s;
+    valid_mdb' s; no_0_obj' s\<rbrakk>
+   \<Longrightarrow> valid_pspace' s"
+  unfolding valid_pspace'_def by simp
 
 lemma valid_pspaceE' [elim]:
   "\<lbrakk>valid_pspace' s;
@@ -2062,7 +2071,7 @@ lemma no_0_obj_pspaceI:
 
 lemma valid_pspace':
   "valid_pspace' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_pspace' s'"
-  by  (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def
+  by  (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def pspace_canonical'_def
                      pspace_distinct'_def ps_clear_def no_0_obj'_def ko_wp_at'_def
                      typ_at'_def
            intro: valid_obj'_pspaceI valid_mdb'_pspaceI)
@@ -2998,6 +3007,10 @@ lemma pspace_aligned_update [iff]:
   "pspace_aligned' (f s) = pspace_aligned' s"
   by (simp add: pspace pspace_aligned'_def)
 
+lemma pspace_canonical_update [iff]:
+  "pspace_canonical' (f s) = pspace_canonical' s"
+  by (simp add: pspace pspace_canonical'_def)
+
 lemma pspace_distinct_update [iff]:
   "pspace_distinct' (f s) = pspace_distinct' s"
   by (simp add: pspace pspace_distinct'_def ps_clear_def)
@@ -3806,6 +3819,24 @@ lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"
   by (rule mask_wordRadix_less_wordBits, simp add: wordRadix_def word_size)
 
+lemma range_cover_canonical_address:
+  "\<lbrakk> range_cover ptr sz us n ; p < n ;
+     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
+  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
+  apply (subst add.commute)
+  apply (subst add.assoc)
+  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
+  apply (drule (1) range_cover.range_cover_compare)
+  apply (clarsimp simp: word_less_nat_alt)
+  apply unat_arith
+  done
+
+lemma canonical_address_neq_mask:
+  "\<lbrakk> canonical_address ptr ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr && ~~ mask sz)"
+  by (simp add: canonical_address_sign_extended untypedBits_defs sign_extended_neq_mask)
+
 end
 (* The normalise_obj_at' tactic was designed to simplify situations similar to:
   ko_at' ko p s \<Longrightarrow>
@@ -3851,5 +3882,6 @@ add_upd_simps "invs' (gsUntypedZeroRanges_update f s)
     \<and> valid_queues (gsUntypedZeroRanges_update f s)"
   (obj_at'_real_def)
 declare upd_simps[simp]
+
 end
 

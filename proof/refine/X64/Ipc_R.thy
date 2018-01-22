@@ -771,17 +771,9 @@ lemmas transferCapsToSlots_pres2
     = transferCapsToSlots_presM[where vo=False and emx=True
                                   and drv=False and pad=False, simplified]
 
-lemma transferCapsToSlots_aligned'[wp]:
-  "\<lbrace>pspace_aligned'\<rbrace>
-     transferCapsToSlots ep buffer n caps slots mi
-   \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
-  by (wp transferCapsToSlots_pres1)
-
-lemma transferCapsToSlots_distinct'[wp]:
-  "\<lbrace>pspace_distinct'\<rbrace>
-     transferCapsToSlots ep buffer n caps slots mi
-   \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
-  by (wp transferCapsToSlots_pres1)
+crunch pspace_aligned'[wp]: transferCapsToSlots pspace_aligned'
+crunch pspace_canonical'[wp]: transferCapsToSlots pspace_canonical'
+crunch pspace_distinct'[wp]: transferCapsToSlots pspace_distinct'
 
 lemma transferCapsToSlots_typ_at'[wp]:
    "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace>
@@ -1200,7 +1192,7 @@ lemma tc_corres:
     and (\<lambda>s. valid_message_info info)
     and transfer_caps_srcs caps)
    (tcb_at' receiver and valid_objs' and
-    pspace_aligned' and pspace_distinct' and no_0_obj' and valid_mdb'
+    pspace_aligned' and pspace_distinct' and pspace_canonical' and no_0_obj' and valid_mdb'
     and (\<lambda>s. case ep of Some x \<Rightarrow> ep_at' x s | _ \<Rightarrow> True)
     and case_option \<top> valid_ipc_buffer_ptr' recv_buf
     and transferCaps_srcs caps'
@@ -1441,6 +1433,8 @@ crunch distinct'[wp]: setMRs pspace_distinct'
   (wp: crunch_wps simp: crunch_simps ignore: getObject)
 crunch aligned'[wp]: copyMRs pspace_aligned'
   (wp: crunch_wps simp: crunch_simps ignore: getObject wp: crunch_wps)
+crunch pspace_canonical'[wp]: copyMRs pspace_canonical'
+  (wp: crunch_wps simp: crunch_simps ignore: getObject wp: crunch_wps)
 crunch distinct'[wp]: copyMRs pspace_distinct'
   (wp: crunch_wps simp: crunch_simps ignore: getObject wp: crunch_wps)
 crunch aligned'[wp]: setMessageInfo pspace_aligned'
@@ -1652,7 +1646,7 @@ lemma do_normal_transfer_corres:
    and case_option \<top> in_user_frame send_buf
    and case_option \<top> in_user_frame recv_buf)
   (tcb_at' sender and tcb_at' receiver and valid_objs'
-   and pspace_aligned' and pspace_distinct' and cur_tcb'
+   and pspace_aligned' and pspace_distinct' and pspace_canonical' and cur_tcb'
    and valid_mdb' and no_0_obj'
    and (\<lambda>s. case ep of Some x \<Rightarrow> ep_at' x s | _ \<Rightarrow> True)
    and case_option \<top> valid_ipc_buffer_ptr' send_buf
