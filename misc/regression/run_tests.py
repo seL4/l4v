@@ -318,7 +318,7 @@ def extra_timeout_output(test_name):
         process = subprocess.Popen(command,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (output, _) = process.communicate()
-    except Exception, e:
+    except Exception as e:
         output = "Exception launching timeout_output: %s" % str(e)
     return output
 
