@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 #
 #
 # Copyright 2017, Data61, CSIRO
@@ -11,7 +11,8 @@
 #
 #
 
-OUTDIR=$(./isabelle/bin/isabelle env bash -c 'echo "$ISABELLE_OUTPUT"')
+L4VBASE=$(dirname "$0")/../..
+OUTDIR=$($L4VBASE/isabelle/bin/isabelle env bash -c 'echo "$ISABELLE_OUTPUT"')
 FILE="$OUTDIR/log/$1_times.txt"
 
 if [[ -e $FILE ]]

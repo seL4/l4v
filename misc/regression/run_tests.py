@@ -300,9 +300,9 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None,
 
     if output is None:
         output = ""
+    output = output.decode(encoding='utf8', errors='replace')
     if test_status[0] in [STUCK, TIMEOUT, CPU_TIMEOUT]:
         output = output + extra_timeout_output(test.name)
-    output = output.decode(encoding='utf8', errors='replace')
 
     status_queue.put({'name': test.name,
                       'status': test_status[0],
@@ -313,14 +313,16 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None,
 
 # run a heuristic script for getting some output on a timeout
 def extra_timeout_output(test_name):
-    command = [os.path.join('misc', 'regression', 'timeout_output'), test_name]
+    # we expect the script to be in the same directory as run_tests.py
+    here = os.path.dirname(os.path.abspath(__file__))
+    command = [os.path.join(here, 'timeout_output'), test_name]
     try:
         process = subprocess.Popen(command,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (output, _) = process.communicate()
+        return output.decode('utf8')
     except Exception as e:
-        output = "Exception launching timeout_output: %s" % str(e)
-    return output
+        return ("Exception launching timeout_output: %s" % str(e))
 
 # Print a status line.
 def print_test_line_start(test_name):
