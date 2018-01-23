@@ -626,11 +626,11 @@ decodes the bit-length of cnode indices into the relevant kernel objects.
 *}
 definition
   zombie_cte_bits :: "nat option \<Rightarrow> nat" where
- "zombie_cte_bits N \<equiv> case N of Some n \<Rightarrow> n | None \<Rightarrow> 2"
+ "zombie_cte_bits N \<equiv> case N of Some n \<Rightarrow> n | None \<Rightarrow> 3"
 
 lemma zombie_cte_bits_simps[simp]:
  "zombie_cte_bits (Some n) = n"
- "zombie_cte_bits None     = 2"
+ "zombie_cte_bits None     = 3"
   by (simp add: zombie_cte_bits_def)+
 
 text {* The first capability slot of the relevant kernel object. *}
