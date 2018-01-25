@@ -450,7 +450,7 @@ definition "MIN_BUDGET = 2 * kernelWCET_ticks"
 definition "MIN_BUDGET_US = 2 * kernelWCET_us"
 
 definition "min_sched_context_bits = 8"
-definition "core_sched_context_bytes = (8 * 32 + (5 * 8))" (* RT *)
+definition "core_sched_context_bytes = (10 * 4 + (6 * 8))" (* RT *)
 definition "refill_size_bytes = 2 * 8"
 definition "max_extra_refills sz = ((1 << sz) - core_sched_context_bytes) / refill_size_bytes"
 
