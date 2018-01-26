@@ -9,6 +9,7 @@
 #
 
 SHELL=bash
+SEL4_VERSION=../../seL4/VERSION
 
 # default to primary verification platform
 L4V_ARCH?=ARM
@@ -34,7 +35,19 @@ CKernel CSpec: c-kernel design-spec
 
 # NOTE: The abstract spec imports Events from Haskell hence the dependency
 
-ExecSpec ASpec DSpec : design-spec
+ExecSpec DSpec : design-spec
+
+ASpec: design-spec abstract/document/VERSION \
+       abstract/document/git-id abstract/document/ARCH
+
+abstract/document/VERSION: $(SEL4_VERSION)
+	cp $< $@
+
+abstract/document/git-id: .FORCE
+	git rev-parse HEAD | cut -c -15 > $@
+
+abstract/document/ARCH: .FORCE
+	echo $(L4V_ARCH) | perl -pe "s/\\_/\\\\_/g" > $@
 
 # NOTE: the install_C_file in Kernel_C.thy invocation generates a spurious
 #       umm_types.txt file in this folder. This file is never used nor
@@ -49,7 +62,6 @@ c-kernel: c-parser .FORCE
 design-spec: .FORCE
 	cd design/ && L4V_REPO_PATH=$(L4V_REPO_PATH) $(MAKE) design
 .PHONY: design-spec
-
 
 # Sets up the c-parser grammar files
 c-parser: .FORCE

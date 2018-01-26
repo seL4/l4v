@@ -46,6 +46,7 @@
 \usepackage{graphicx}
 \usepackage[draft]{fixme}
 \usepackage{cite}
+\usepackage{xspace}
 
 % this should be the last package used
 \usepackage{color}
@@ -56,10 +57,14 @@
 \urlstyle{rm}
 \isabellestyle{tt}
 
+\newcommand{\version}{\input{VERSION}\xspace}
+\newcommand{\arch}{\input{ARCH}\xspace}
+\newcommand{\gitid}{\input{git-id}\xspace}
+
 \hypersetup
 {
-    pdfauthor={NICTA SSRG Research Group},
-    pdftitle={Abstract Formal Specification of the seL4/ARMv6 API}
+    pdfauthor={Trustworthy Systems, Data61},
+    pdftitle={Abstract Formal Specification of the seL4/\arch API}
 }
 
 \renewcommand{\isamarkupchapter}[1]{\chapter{#1}}
@@ -86,11 +91,9 @@
 \newcommand{\meth}[1]{\texttt{#1()}}
 \newcommand{\obj}[1]{\textsf{\small #1}}
 
-\newcommand{\version}{\input{VERSION}}
-
 \begin{document}
 
-\title{Abstract Formal Specification of the seL4/ARMv6 API}
+\title{Abstract Formal Specification of the seL4/\arch API}
 
 \date{Version \version}
 
@@ -119,13 +122,19 @@ Simon Winwood
 
 \textsc{All rights reserved}.
 
+\bigskip
+
+Architecture: \arch\\
+Document build date: \today\\
+Produced from git change set: \gitid
+
 \clearpage
 
 \chapter*{Abstract}
 This document is the text version of the abstract, formal
 Isabelle/HOL specification of the seL4 microkernel. It is
 intended to give a precise, operational definition of the
-seL4 microkernel on the ARMv6 architecture.
+seL4 microkernel on the \arch architecture.
 The document contains a short overview, followed by
 text generated from the formal Isabelle/HOL definitions.
 
