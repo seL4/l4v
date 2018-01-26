@@ -45,6 +45,9 @@ abstract/document/VERSION: $(SEL4_VERSION)
 
 abstract/document/git-id: .FORCE
 	git rev-parse HEAD | cut -c -15 > $@
+	git diff --no-ext-diff --quiet || echo "*" >> $@
+	git diff --no-ext-diff --cached --quiet || echo "+" >> $@
+	perl -pi -e "s/\n//" $@
 
 abstract/document/ARCH: .FORCE
 	echo $(L4V_ARCH) | perl -pe "s/\\_/\\\\_/g" > $@
