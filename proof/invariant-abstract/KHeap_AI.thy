@@ -534,6 +534,7 @@ lemma set_simple_ko_hyp_refs_of[wp]:
             state_hyp_refs_of_reply_update[of ep, symmetric],
       clarsimp simp: obj_at_def, simp add: fun_upd_def)+
 
+
 lemma pspace_distinct_same_type:
   "\<lbrakk> kheap s t = Some ko; a_type ko = a_type ko';  pspace_distinct s\<rbrakk>
     \<Longrightarrow> pspace_distinct (s\<lparr>kheap := kheap s(t \<mapsto> ko')\<rparr>)"
@@ -1543,150 +1544,183 @@ crunch inv[wp]: get_irq_slot "P"
 
 text {* some invariants on sched_context *}
 
-lemma set_sched_context_aligned[wp]:
- "\<lbrace>pspace_aligned\<rbrace> set_sched_context ptr v n \<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
-(*  by (wpsimp simp: set_sched_context_def wp: set_object_aligned)*) sorry
 
-lemma set_sched_context_typ_at [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_sched_context  ptr val n \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-(*  by (wpsimp simp: set_sched_context_def wp: set_object_typ_at) *) sorry
+lemma update_sched_context_aligned [wp]:
+ "\<lbrace>pspace_aligned\<rbrace> update_sched_context ptr v \<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
+  by (wpsimp simp: update_sched_context_def get_object_def obj_at_def a_type_def
+               wp: set_object_aligned)
 
-lemma set_sched_context_cte_wp_at [wp]:
-  "\<lbrace>cte_wp_at P p\<rbrace> set_sched_context  ptr val n \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
-(*  by (wpsimp simp: set_sched_context_def set_object_def cte_wp_at_cases) *) sorry
+lemma update_sched_context_typ_at [wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def get_object_def wp: set_object_typ_at)
+  apply (simp add: obj_at_def a_type_def)
+  done
 
-lemma set_sched_context_refs_of[wp]:
- "\<lbrace>\<lambda>s. P ((state_refs_of s) (p := refs_of (f val)))\<rbrace>
+lemma update_sched_context_cte_wp_at [wp]:
+  "\<lbrace>cte_wp_at P p\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
+  by (wpsimp simp: update_sched_context_def set_object_def cte_wp_at_cases get_object_def)
+
+lemma update_sched_context_refs_of [wp]:
+ "\<lbrace>\<lambda>s. P ((state_refs_of s) (p := refs_of (SchedContext val n))) \<and> valid_sched_context_size n\<rbrace>
+    update_sched_context p val
+  \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def set_object_def get_object_def)
+  apply (clarsimp simp: state_refs_of_def ext elim!: rsubst[where P = P])
+  done
+
+lemma set_sched_context_refs_of [wp]:
+ "\<lbrace>\<lambda>s. P ((state_refs_of s) (p := refs_of (SchedContext val n))) \<and> valid_sched_context_size n\<rbrace>
     set_sched_context p val n
   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: set_sched_context_def set_object_def)
-(*  by (clarsimp simp: state_refs_of_def elim!: rsubst[where P=P])*) sorry
+  apply (wpsimp simp: set_sched_context_def set_object_def get_object_def)
+  apply (clarsimp simp: state_refs_of_def ext elim!: rsubst[where P = P])
+  done
 
-lemma set_sched_context_hyp_refs_of[wp]:
- "\<lbrace>\<lambda>s. P ((state_hyp_refs_of s))\<rbrace>
-    set_sched_context ptr val n
+lemma update_sched_context_hyp_refs_of [wp]:
+ "\<lbrace>\<lambda>s. sc_at ptr s \<and> P ((state_hyp_refs_of s))\<rbrace>
+    update_sched_context ptr val
   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wpsimp simp: set_sched_context_def set_object_def)
-(*  by (intro conjI; clarsimp elim!: rsubst[where P=P]; simp only:;
-      subst state_hyp_refs_of_ep_update[of ep, symmetric]
-            state_hyp_refs_of_ntfn_update[of ep, symmetric]
-            state_hyp_refs_of_reply_update[of ep, symmetric],
-      clarsimp simp: obj_at_def, simp add: fun_upd_def)+*) sorry
+  apply (wpsimp simp: update_sched_context_def set_object_def get_object_def)
+  apply (clarsimp elim!: rsubst[where P=P])
+  apply (subst state_hyp_refs_of_sc_update[symmetric])
+   apply (auto simp: fun_upd_def obj_at_def is_sc_obj_def a_type_def)
+  done
 
-lemma set_sched_context_distinct[wp]:
-  "\<lbrace>pspace_distinct\<rbrace> set_sched_context ptr val n \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
-(*  by (wpsimp simp: set_sched_context_def wp: set_object_distinct)*)
-sorry
+lemma update_sched_context_distinct [wp]:
+  "\<lbrace>pspace_distinct\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
+  by (wpsimp simp: update_sched_context_def get_object_def a_type_simps obj_at_def
+               wp: set_object_distinct)
 
-lemma set_sched_context_cur_tcb[wp]:
-  "\<lbrace>cur_tcb\<rbrace> set_sched_context ptr val n \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
-(*  by (wpsimp simp: set_sched_context_def set_object_def cur_tcb_def is_tcb is_ep; fastforce)*)
-sorry
+lemma update_sched_context_cur_tcb [wp]:
+  "\<lbrace>cur_tcb\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
+  by (wpsimp simp: update_sched_context_def set_object_def get_object_def cur_tcb_def tcb_at_def
+                   get_tcb_def)
 
-lemma set_sched_context_kernel_window[wp]:
-  "\<lbrace>pspace_in_kernel_window\<rbrace> set_sched_context ptr val n \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
-(*  by (wpsimp simp: set_sched_context_def wp : set_object_pspace_in_kernel_window)*)
-sorry
+lemma update_sched_context_kernel_window [wp]:
+  "\<lbrace>pspace_in_kernel_window\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
+  by (wpsimp simp: update_sched_context_def get_object_def a_type_simps obj_at_def
+               wp: set_object_pspace_in_kernel_window)
 
-lemma set_sched_context_respect_device_region[wp]:
-  "\<lbrace>pspace_respects_device_region\<rbrace> set_sched_context ptr val nl \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
-(*  by (wpsimp simp: set_sched_context_def wp: set_object_pspace_respects_device_region)*)
-sorry
+lemma update_sched_context_respect_device_region [wp]:
+  "\<lbrace>pspace_respects_device_region\<rbrace> update_sched_context ptr val
+   \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
+  by (wpsimp simp: update_sched_context_def get_object_def obj_at_def a_type_def
+               wp: set_object_pspace_respects_device_region)
+
+lemma update_sched_context_caps_of_state [wp]:
+  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def get_object_def set_object_def)
+  apply (subst cte_wp_caps_of_lift; auto simp: cte_wp_at_cases)
+  done
 
 lemma set_sched_context_caps_of_state [wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_sched_context ptr val n \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
-  apply (wpsimp simp: set_sched_context_def get_object_def bind_assoc set_object_def)
-(*  apply (intro conjI; clarsimp split: if_splits; subst cte_wp_caps_of_lift; assumption?)
-   apply (auto simp: cte_wp_at_cases)
-  done*) sorry
+  "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> valid_sched_context_size n\<rbrace> set_sched_context ptr val n
+   \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
+  apply (wpsimp simp: set_sched_context_def get_object_def set_object_def)
+  apply (subst cte_wp_caps_of_lift; auto simp: cte_wp_at_cases)
+  done
+
+lemma update_sched_context_revokable [wp]:
+  "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>r s. P (is_original_cap s)\<rbrace>"
+  by (wpsimp simp: update_sched_context_def set_object_def get_object_def)
 
 lemma set_sched_context_revokable [wp]:
-  "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> set_sched_context ptr val n \<lbrace>\<lambda>r s. P (is_original_cap s)\<rbrace>"
-(*  by (wpsimp simp: set_sched_context_def set_object_def) *) sorry
+  "\<lbrace>\<lambda>s. P (is_original_cap s) \<and> valid_sched_context_size n\<rbrace> set_sched_context ptr val n
+   \<lbrace>\<lambda>r s. P (is_original_cap s)\<rbrace>"
+  by (wpsimp simp: set_sched_context_def set_object_def get_object_def)
 
-lemma set_sched_context_mdb [wp]:
-  "\<lbrace>valid_mdb\<rbrace> set_sched_context ptr val n \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
-(*  by (wp valid_mdb_lift) *) sorry
+lemma update_sched_context_mdb [wp]:
+  "\<lbrace>valid_mdb\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
+  by (wpsimp simp: update_sched_context_def get_object_def wp: valid_mdb_lift)
 
-lemma set_sched_context_iflive[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (live (SchedContext val n) \<longrightarrow> ex_nonz_cap_to p s)\<rbrace>
-     set_sched_context ptr val n \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  apply (wpsimp simp: set_sched_context_def wp: set_object_iflive)
-(*  apply (intro conjI; clarsimp elim!: obj_at_weakenE
-                  split: Structures_A.kernel_object.splits
-                  simp: is_simple_ko_defs)
-  done*) sorry
+lemma update_sched_context_iflive [wp]:
+  "\<lbrace>\<lambda>s. valid_objs s \<and> if_live_then_nonz_cap s \<and>
+        (live (SchedContext val n) \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
+     update_sched_context ptr val \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  by (wpsimp simp: update_sched_context_def get_object_def live_def obj_at_def is_sc_obj_def
+                   valid_sched_context_size_objsI)
 
-lemma set_sched_context_ifunsafe[wp]:
-  "\<lbrace>if_unsafe_then_cap\<rbrace> set_sched_context ptr val n \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
-  apply (wpsimp simp: set_sched_context_def)
-(*  by (clarsimp elim!: obj_at_weakenE simp: is_simple_ko_defs)*)
-sorry
+lemma update_sched_context_ifunsafe [wp]:
+  "\<lbrace>valid_objs and if_unsafe_then_cap\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
+  by (wpsimp simp: update_sched_context_def get_object_def obj_at_def is_sc_obj_def
+                   valid_sched_context_size_objsI)
 
-lemma set_sched_context_zombies[wp]:
-  "\<lbrace>zombies_final\<rbrace> set_sched_context ptr val n \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
-  apply (wpsimp simp: set_sched_context_def)
-(*  by (clarsimp elim!: obj_at_weakenE simp: is_simple_ko_defs)*) sorry
+lemma update_sched_context_zombies [wp]:
+  "\<lbrace>valid_objs and zombies_final\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
+  by (wpsimp simp: update_sched_context_def get_object_def obj_at_def is_sc_obj_def
+                   valid_sched_context_size_objsI)
 
-lemma set_sched_context_tcb[wp]:
+lemma update_sched_context_tcb [wp]:
   "\<lbrace> tcb_at t \<rbrace>
-   set_sched_context ptr val n
+   update_sched_context ptr val
    \<lbrace> \<lambda>rv. tcb_at t \<rbrace>"
   by (simp add: tcb_at_typ) wp
 
-lemma set_sched_context_pred_tcb_at [wp]:
+lemma update_sched_context_pred_tcb_at [wp]:
   "\<lbrace> pred_tcb_at proj f t \<rbrace>
-   set_sched_context ptr val n
+   update_sched_context ptr val
    \<lbrace> \<lambda>rv. pred_tcb_at proj f t \<rbrace>"
-(*  by(wpsimp simp: set_sched_context_def wp: set_object_at_obj2 pred_tcb_at_def) *) sorry
+  by (wpsimp simp: update_sched_context_def set_object_def get_object_def pred_tcb_at_def
+                   obj_at_def)
 
-lemma set_sc_sc_obj_at[wp]:
+lemma set_sched_context_pred_tcb_at [wp]:
+  "\<lbrace>\<lambda>s. pred_tcb_at proj f t s \<and> valid_sched_context_size n\<rbrace>
+   set_sched_context ptr val n
+   \<lbrace>\<lambda>rv. pred_tcb_at proj f t\<rbrace>"
+  by (wpsimp simp: set_sched_context_def set_object_def get_object_def pred_tcb_at_def
+                   obj_at_def)
+
+lemma set_sc_sc_obj_at [wp]:
   "\<lbrace>sc_obj_at n ptr'\<rbrace> set_sched_context ptr val n  \<lbrace>\<lambda>rv. sc_obj_at n ptr'\<rbrace>"
-  sorry
+  apply (wpsimp simp: set_sched_context_def set_object_def get_object_def obj_at_def is_sc_obj_def)
+  apply (case_tac ko; auto)
+  done
 
-lemma set_sc_sc_at[wp]:
-  "\<lbrace>sc_at ptr'\<rbrace> set_sched_context ptr val n  \<lbrace>\<lambda>rv. sc_at ptr'\<rbrace>"
-  sorry
+lemma update_sc_sc_at [wp]:
+  "\<lbrace>sc_at ptr'\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>rv. sc_at ptr'\<rbrace>"
+  by (wpsimp simp: update_sched_context_def set_object_def get_object_def obj_at_def is_sc_obj_def)
 
-
-lemma set_sched_context_ex_cap[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> set_sched_context ptr val n \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
+lemma update_sched_context_ex_cap [wp]:
+  "\<lbrace>ex_nonz_cap_to p\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)
 
 crunch it[wp]: set_sched_context "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma set_sched_context_idle[wp]:
-  "\<lbrace>obj_at (\<lambda>ko. partial_inv f ko \<noteq> None) ptr and valid_idle\<rbrace> (* RT fix precondition *)
+lemma set_sched_context_idle [wp]:
+  "\<lbrace>\<lambda>s. valid_idle s \<and> valid_sched_context_size n\<rbrace>
    set_sched_context ptr val n \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-(*  by (wpsimp simp: set_sched_context_def set_object_def obj_at_def valid_idle_def pred_tcb_at_def)*)
-sorry
+  by (wpsimp simp: set_sched_context_def set_object_def get_object_def obj_at_def valid_idle_def
+                   pred_tcb_at_def)
 
-lemma set_sched_context_global_refs [wp]:
-  "\<lbrace>valid_global_refs\<rbrace> set_sched_context ptr val n \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
-(*  by (rule valid_global_refs_cte_lift; wpsimp) *) sorry
+lemma update_sched_context_global_refs [wp]:
+  "\<lbrace>valid_global_refs\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
+  by (wpsimp simp: update_sched_context_def get_object_def wp: valid_global_refs_cte_lift)
 
-lemma set_sched_context_only_idle [wp]:
-  "\<lbrace>only_idle\<rbrace> set_sched_context f p ntfn \<lbrace>\<lambda>_. only_idle\<rbrace>"
-  by (wp only_idle_lift)
+lemma update_sched_context_only_idle [wp]:
+  "\<lbrace>only_idle\<rbrace> update_sched_context f p \<lbrace>\<lambda>_. only_idle\<rbrace>"
+  by (wpsimp simp: update_sched_context_def get_object_def wp: only_idle_lift)
 
-lemma set_sched_context_cap_refs_kernel_window[wp]:
-  "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_sched_context ptr val n \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
-(*  by (wpsimp simp: set_sched_context_def wp: set_object_cap_refs_in_kernel_window get_object_wp) *)
-sorry
+lemma update_sched_context_cap_refs_kernel_window [wp]:
+  "\<lbrace>valid_objs and cap_refs_in_kernel_window\<rbrace> update_sched_context ptr val
+   \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
+  by (wpsimp simp: update_sched_context_def obj_at_def is_sc_obj_def valid_sched_context_size_objsI
+               wp: set_object_cap_refs_in_kernel_window get_object_wp)
 
-lemma set_sched_context_cap_refs_respects_device_region[wp]:
-  "\<lbrace>cap_refs_respects_device_region\<rbrace> set_sched_context ptr val n \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
-(*  by (wpsimp simp: set_sched_context_def wp: set_object_cap_refs_respects_device_region get_object_wp)*)
-sorry
+lemma update_sched_context_cap_refs_respects_device_region [wp]:
+  "\<lbrace>valid_objs and cap_refs_respects_device_region\<rbrace> update_sched_context ptr val
+   \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  by (wpsimp simp: update_sched_context_def get_object_def obj_at_def is_sc_obj_def
+                   valid_sched_context_size_objsI
+               wp: set_object_cap_refs_respects_device_region)
 
 crunch v_ker_map[wp]: set_sched_context "valid_kernel_mappings"
   (ignore: set_object wp: set_object_v_ker_map crunch_wps simp: set_sched_context_def)
 
-lemma set_sched_context_valid_ioc[wp]:
-  "\<lbrace>valid_ioc\<rbrace> set_sched_context ptr val n \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
-(*  by (wpsimp simp: set_sched_context_def is_tcb_def is_cap_table_def
-               wp: set_object_valid_ioc_no_caps get_object_wp)*) sorry
+lemma update_sched_context_valid_ioc [wp]:
+  "\<lbrace>valid_ioc\<rbrace> update_sched_context ptr val \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
+  by (wpsimp simp: update_sched_context_def obj_at_def a_type_def is_tcb is_cap_table
+               wp: set_object_valid_ioc_no_caps get_object_wp)
 
 crunch no_cdt[wp]: set_sched_context "\<lambda>s. P (cdt s)"
   (wp: crunch_wps)
