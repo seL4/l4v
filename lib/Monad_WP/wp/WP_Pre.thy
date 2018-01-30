@@ -14,23 +14,47 @@ imports
   "~~/src/HOL/Eisbach/Eisbach_Tools"
 begin
 
-(* Succeed if a predicate P holds on the head goal *)
-ML \<open>
-  fun cond_method P =
-    Scan.succeed (fn _ => SIMPLE_METHOD
-      (SUBGOAL (fn (t,_) => COND (fn _ => P t) all_tac no_tac) 1))
-\<close>
-
-(* Succeed if the conclusion of the head goal has schematic variables *)
-method_setup concl_has_vars =
-  \<open>cond_method (fn t => Term.exists_subterm Term.is_Var (Logic.strip_imp_concl t))\<close>
-
 named_theorems wp_pre
 
-(* Use safe thm to make sure wp_pre is not empty *)
-declare TrueI [wp_pre]
+ML {*
+structure WP_Pre = struct
 
-(* Apply wp_pre if conclusion of head goal has no schematic variables *)
-method wp_pre = (concl_has_vars | (rule wp_pre)?)
+fun pre_tac ctxt pre_rules i t = let
+    val t2 = resolve_tac ctxt pre_rules i t |> Seq.hd
+    val etac = TRY o eresolve_tac ctxt [@{thm FalseE}]
+    fun dummy_t2 _ _ = Seq.single t2
+    val t3 = (dummy_t2 THEN_ALL_NEW etac) i t |> Seq.hd
+  in if Thm.nprems_of t3 <> Thm.nprems_of t2
+    then Seq.empty else Seq.single t2 end
+    handle Option => Seq.empty
+
+fun tac ctxt = let
+    val pres = Named_Theorems.get ctxt @{named_theorems wp_pre}
+  in pre_tac ctxt pres end
+
+val method
+    = Args.context >> (fn _ => fn ctxt => Method.SIMPLE_METHOD' (tac ctxt));
+end
+*}
+
+method_setup wp_pre = \<open>WP_Pre.method\<close>
+
+definition
+  test_wp_pre :: "bool \<Rightarrow> bool \<Rightarrow> bool"
+where
+  "test_wp_pre P Q = (P \<longrightarrow> Q)"
+
+lemma test_wp_pre_pre[wp_pre]:
+  "test_wp_pre P' Q \<Longrightarrow> (P \<Longrightarrow> P')
+    \<Longrightarrow> test_wp_pre P Q"
+  by (simp add: test_wp_pre_def)
+
+lemma demo:
+  "test_wp_pre P P"
+  (* note that wp_pre applies, but only once *)
+  apply wp_pre+
+   apply (simp add: test_wp_pre_def, rule imp_refl)
+  apply simp
+  done
 
 end
