@@ -568,6 +568,31 @@ lemma threadSet_ipcbuffer_invs:
   apply (wp threadSet_invs_trivial, simp_all add: inQ_def cong: conj_cong)
   done
 
+lemma canonical_address_tcb_ptr:
+  "\<lbrakk>canonical_address t; is_aligned t tcbBlockSizeBits\<rbrakk> \<Longrightarrow>
+     canonical_address (ptr_val (tcb_ptr_to_ctcb_ptr t))"
+  apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def)
+  apply (erule canonical_address_add)
+    apply (clarsimp simp: objBits_simps' ctcb_offset_defs)+
+  done
+
+lemma canonical_address_bitfield_extract_tcb:
+  "\<lbrakk>canonical_address t; is_aligned t tcbBlockSizeBits\<rbrakk> \<Longrightarrow>
+     t = ctcb_ptr_to_tcb_ptr (tcb_Ptr (sign_extend 47 (ptr_val (tcb_ptr_to_ctcb_ptr t))))"
+  apply (drule (1) canonical_address_tcb_ptr)
+  by (fastforce simp: sign_extended_iff_sign_extend canonical_address_sign_extended)
+
+(* FIXME x64: duplicated *)
+lemma invs_pspace_canonical':
+  "invs' s \<Longrightarrow> pspace_canonical' s"
+  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
+
+(* FIXME x64: move to refine *)
+lemma obj_at'_is_canonical:
+  "\<lbrakk>pspace_canonical' s; obj_at' P t s\<rbrakk> \<Longrightarrow> canonical_address t"
+  apply (clarsimp simp: obj_at'_def pspace_canonical'_def projectKOs)
+  by (drule_tac x=t in bspec) clarsimp+
+
 lemma invokeTCB_ThreadControl_ccorres:
   notes prod.case_cong_weak[cong]
   shows
@@ -607,7 +632,8 @@ lemma invokeTCB_ThreadControl_ccorres:
                del: Collect_const cong add: call_ignore_cong if_cong)
    apply (rule_tac P="ptr_val (tcb_ptr_to_ctcb_ptr target) && ~~ mask 5
                           = ptr_val (tcb_ptr_to_ctcb_ptr target)
-                        \<and> ptr_val (tcb_ptr_to_ctcb_ptr target) && ~~ mask tcbBlockSizeBits = target"
+                        \<and> ptr_val (tcb_ptr_to_ctcb_ptr target) && ~~ mask tcbBlockSizeBits = target
+                        \<and> canonical_address target \<and> is_aligned target tcbBlockSizeBits"
                 in ccorres_gen_asm)
    apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
        apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
@@ -681,13 +707,15 @@ lemma invokeTCB_ThreadControl_ccorres:
                    apply (simp add: case_option_If2 if_n_0_0 split_def
                                del: Collect_const)
                    apply (rule checkCapAt_ccorres)
+
                       apply ceqv
+
                      apply csymbr
                      apply (simp add: if_1_0_0 true_def Collect_True
                                  del: Collect_const)
                      apply (rule ccorres_rhs_assoc)+
                      apply (rule checkCapAt_ccorres)
-                        apply ceqv
+                        apply ceqv using [[goals_limit=10]]
                        apply csymbr
                        apply (simp add: if_1_0_0 true_def Collect_True
                                    del: Collect_const)
@@ -746,8 +774,8 @@ lemma invokeTCB_ThreadControl_ccorres:
                   apply (clarsimp simp: guard_is_UNIV_def)
                  apply (simp add: guard_is_UNIV_def if_1_0_0 false_def
                                   Collect_const_mem)
-                 apply (clarsimp simp: ccap_relation_def cap_thread_cap_lift cap_to_H_def)
-subgoal sorry (* FIXME x64: sign extend *)
+                 apply (clarsimp simp: ccap_relation_def cap_thread_cap_lift cap_to_H_def
+                                       canonical_address_bitfield_extract_tcb)
                 (* \<not>P *)
                 apply simp
                   apply (rule ccorres_cond_false_seq, simp)
@@ -875,9 +903,10 @@ subgoal sorry (* FIXME x64: sign extend *)
                           del: Collect_const)
               apply (rule ccorres_cond_false)
               apply (rule ccorres_return_Skip[unfolded dc_def])
-             subgoal sorry (*apply (clarsimp simp: guard_is_UNIV_def false_def
+             apply (clarsimp simp: guard_is_UNIV_def false_def
                                    ccap_relation_def cap_thread_cap_lift
-                                   cap_to_H_def)*) (* FIXME x64: sign extend *)
+                                   cap_to_H_def if_1_0_0
+                                   Collect_const_mem canonical_address_bitfield_extract_tcb)
             apply simp
             apply (rule ccorres_split_throws, rule ccorres_return_C_errorE, simp+)
             apply vcg
@@ -950,9 +979,10 @@ subgoal sorry (* FIXME x64: sign extend *)
                          del: Collect_const)
              apply (rule ccorres_cond_false)
              apply (rule ccorres_return_Skip[unfolded dc_def])
-            subgoal sorry (*apply (clarsimp simp: guard_is_UNIV_def false_def
+            apply (clarsimp simp: guard_is_UNIV_def false_def
                                   ccap_relation_def cap_thread_cap_lift
-                                  cap_to_H_def)*) (* FIXME x64: sign extend *)
+                                  cap_to_H_def if_1_0_0
+                                  Collect_const_mem canonical_address_bitfield_extract_tcb)
            apply simp
            apply (rule ccorres_split_throws, rule ccorres_return_C_errorE, simp+)
            apply vcg
@@ -989,9 +1019,9 @@ subgoal sorry (* FIXME x64: sign extend *)
   apply (subgoal_tac "s \<turnstile>' capability.ThreadCap target")
    apply (clarsimp simp: cte_level_bits_def Kernel_C.tcbCTable_def Kernel_C.tcbVTable_def
                          tcbCTableSlot_def tcbVTableSlot_def size_of_def
-                         tcb_cte_cases_def isCap_simps
+                         tcb_cte_cases_def isCap_simps tcb_aligned' obj_at'_is_canonical
                   split: option.split_asm
-                  dest!: isValidVTableRootD)
+                  dest!: isValidVTableRootD invs_pspace_canonical')
   apply (clarsimp simp: valid_cap'_def capAligned_def word_bits_conv
                         obj_at'_def objBits_simps' projectKOs)
   done
@@ -3603,6 +3633,15 @@ lemma bindNTFN_alignment_junk:
    apply (erule is_aligned_weaken[rotated])
    by (auto simp add: is_aligned_def objBits_defs ctcb_offset_defs)
 
+lemma option_to_ctcb_ptr_canonical:
+  "\<lbrakk>pspace_canonical' s; tcb_at' tcb s\<rbrakk> \<Longrightarrow>
+     option_to_ctcb_ptr (Some tcb) = tcb_Ptr (sign_extend 47 (ptr_val (tcb_ptr_to_ctcb_ptr tcb)))"
+  apply (clarsimp simp: option_to_ctcb_ptr_def)
+  apply (frule (1) obj_at'_is_canonical)
+  by (fastforce dest: canonical_address_tcb_ptr
+                simp: obj_at'_def objBits_simps' projectKOs canonical_address_sign_extended
+                      sign_extended_iff_sign_extend)
+
 lemma bindNotification_ccorres:
   "ccorres dc xfdc (invs' and tcb_at' tcb)
     (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr tcb}
@@ -3632,11 +3671,9 @@ lemma bindNotification_ccorres:
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
                apply (case_tac "ntfnObj rv")
-                 apply (auto simp: option_to_ctcb_ptr_def obj_at'_def objBits_simps' projectKOs
-                                   bindNTFN_alignment_junk)[4]
-subgoal sorry (* FIXME x64: sign_extend *)
-subgoal sorry (* FIXME x64: sign_extend *)
-subgoal sorry (* FIXME x64: sign_extend *)
+                 apply ((clarsimp simp: option_to_ctcb_ptr_canonical[OF invs_pspace_canonical'])+)[3]
+              apply (auto simp: option_to_ctcb_ptr_def objBits_simps'
+                                bindNTFN_alignment_junk)[1]
              apply (simp add: carch_state_relation_def typ_heap_simps')
             apply (simp add: cmachine_state_relation_def)
            apply (simp add: h_t_valid_clift_Some_iff)
