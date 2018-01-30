@@ -1011,7 +1011,7 @@ lemma set_cap_page_inv_entries_safe:
     Let_def split:if_splits option.splits)
   done
 
-crunch valid_pdpt[wp]: pte_check_if_mapped, pde_check_if_mapped "valid_pdpt_objects"
+crunch inv[wp]: pte_check_if_mapped, pde_check_if_mapped "\<lambda>s. P s"
 
 lemma perform_page_valid_pdpt[wp]:
   "\<lbrace>valid_pdpt_objs and valid_page_inv pinv and page_inv_duplicates_valid pinv\<rbrace>
