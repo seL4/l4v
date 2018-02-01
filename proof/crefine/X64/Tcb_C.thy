@@ -582,17 +582,6 @@ lemma canonical_address_bitfield_extract_tcb:
   apply (drule (1) canonical_address_tcb_ptr)
   by (fastforce simp: sign_extended_iff_sign_extend canonical_address_sign_extended)
 
-(* FIXME x64: duplicated *)
-lemma invs_pspace_canonical':
-  "invs' s \<Longrightarrow> pspace_canonical' s"
-  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
-
-(* FIXME x64: move to refine *)
-lemma obj_at'_is_canonical:
-  "\<lbrakk>pspace_canonical' s; obj_at' P t s\<rbrakk> \<Longrightarrow> canonical_address t"
-  apply (clarsimp simp: obj_at'_def pspace_canonical'_def projectKOs)
-  by (drule_tac x=t in bspec) clarsimp+
-
 lemma invokeTCB_ThreadControl_ccorres:
   notes prod.case_cong_weak[cong]
   shows

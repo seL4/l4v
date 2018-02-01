@@ -3837,6 +3837,10 @@ lemma canonical_address_neq_mask:
    \<Longrightarrow> canonical_address (ptr && ~~ mask sz)"
   by (simp add: canonical_address_sign_extended untypedBits_defs sign_extended_neq_mask)
 
+lemma invs_pspace_canonical'[elim!]:
+  "invs' s \<Longrightarrow> pspace_canonical' s"
+  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
+
 end
 (* The normalise_obj_at' tactic was designed to simplify situations similar to:
   ko_at' ko p s \<Longrightarrow>

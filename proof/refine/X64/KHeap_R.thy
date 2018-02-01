@@ -2316,5 +2316,10 @@ lemma setEndpoint_ct':
 lemmas setEndpoint_valid_globals[wp]
     = valid_global_refs_lift' [OF set_ep_ctes_of set_ep_arch'
                                   setEndpoint_it setEndpoint_ksInterruptState]
+lemma obj_at'_is_canonical:
+  "\<lbrakk>pspace_canonical' s; obj_at' P t s\<rbrakk> \<Longrightarrow> canonical_address t"
+  apply (clarsimp simp: obj_at'_def pspace_canonical'_def projectKOs)
+  by (drule_tac x=t in bspec) clarsimp+
+
 end
 end
