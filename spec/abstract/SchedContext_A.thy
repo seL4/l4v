@@ -420,22 +420,21 @@ where
     od"
 
 text {* yield\_to related functions *}
-
+term maybeM
 definition
   complete_yield_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "complete_yield_to tcb_ptr \<equiv> do
-     st \<leftarrow> get_thread_state tcb_ptr;
-     case st of
-       YieldTo sc_ptr \<Rightarrow> do
+     yt_opt \<leftarrow> get_tcb_obj_ref tcb_yield_to tcb_ptr;
+     maybeM (\<lambda>sc_ptr. do
          args \<leftarrow> lookup_ipc_buffer True tcb_ptr;
          buf \<leftarrow> assert_opt args;
          set_consumed sc_ptr [buf];
          sc \<leftarrow> get_sched_context sc_ptr;
          set_sc_obj_ref sc_yield_from_update sc_ptr None;
+         set_tcb_obj_ref tcb_yield_to_update tcb_ptr None;
          set_thread_state tcb_ptr Running
-       od
-      | _ \<Rightarrow> return ()
+       od) yt_opt
     od"
 
 definition
@@ -551,12 +550,12 @@ definition
 where
   "suspend thread \<equiv> do
      cancel_ipc thread;
-     st \<leftarrow> get_thread_state thread;
-     case st of YieldTo sc_ptr \<Rightarrow> do
+     yt_opt \<leftarrow> get_tcb_obj_ref tcb_yield_to thread;
+     maybeM (\<lambda>sc_ptr. do
        sc \<leftarrow> get_sched_context sc_ptr;
-       set_sc_obj_ref sc_yield_from_update sc_ptr None
-     od
-    | _ \<Rightarrow> return ();
+       set_sc_obj_ref sc_yield_from_update sc_ptr None;
+       set_tcb_obj_ref tcb_yield_to_update thread None
+     od) yt_opt;
      set_thread_state thread Inactive;
      do_extended_op (tcb_sched_action (tcb_sched_dequeue) thread)
    od"

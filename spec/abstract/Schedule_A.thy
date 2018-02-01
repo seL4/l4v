@@ -330,8 +330,8 @@ where
       else do
         flag \<leftarrow> return False;
         set_sc_obj_ref sc_yield_from_update sc_ptr (Some ct_ptr);
-        possible_switch_to ct_ptr;
-        set_thread_state ct_ptr (YieldTo sc_ptr)
+        set_tcb_obj_ref tcb_yield_to_update ct_ptr (Some sc_ptr);
+        possible_switch_to ct_ptr
       od
     od;
     when flag $ set_consumed sc_ptr args

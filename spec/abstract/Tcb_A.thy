@@ -56,10 +56,11 @@ definition
   activate_thread :: "(unit, 'z::state_ext) s_monad" where
   "activate_thread \<equiv> do
      thread \<leftarrow> gets cur_thread;
+     yt_opt \<leftarrow> get_tcb_obj_ref tcb_yield_to thread;
+     when (yt_opt\<noteq>None) $ complete_yield_to thread;
      state \<leftarrow> get_thread_state thread;
      (case state
        of Running \<Rightarrow> return ()
-        | YieldTo _ \<Rightarrow> complete_yield_to thread
         | Restart \<Rightarrow> (do
             pc \<leftarrow> as_user thread getRestartPC;
             as_user thread $ setNextPC pc;
