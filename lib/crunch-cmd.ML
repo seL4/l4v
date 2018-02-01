@@ -16,7 +16,7 @@ we want to prove. However f is defined in terms of subfunctions g etc.
 To prove P \<turnstile> f, we will first show many lemmas P \<turnstile> g, which crunch lets us
 do easily.
 
-As a first step, crunch must discover "cruch rules" which structure the proof.
+As a first step, crunch must discover "crunch rules" which structure the proof.
 For instance, if f is a constant with a definition, crunch may discover the
 definition "f == f_body" and derive the crunch rule "P \<turnstile> f_body \<Longrightarrow> P \<turnstile> f".
 A crunch rule will be used if all its premises are either proofs of the
@@ -38,10 +38,21 @@ sections.
 *)
 
 (* Tracing debug. *)
-val should_debug = Unsynchronized.ref false
+val crunch_debug = Unsynchronized.ref false
+fun debug_trace_pf pref f =
+  if (!crunch_debug) then
+    tracing (pref ^ f ())
+  else
+    ()
 fun debug_trace s =
-  if (!should_debug) then
+  if (!crunch_debug) then
     tracing s
+  else
+    ()
+fun debug_trace_bl bl =
+  if (!crunch_debug) then
+    tracing (Pretty.string_of (Pretty.block
+        (map (fn f => f ()) bl)))
   else
     ()
 
@@ -104,7 +115,7 @@ sig
     had already been proven). *)
     val crunch :
        crunch_cfg -> term -> extra -> string list -> string
-         -> (string * thm) list ->  (thm option * (string * thm) list);
+         -> (string * thm) list -> (thm option * (string * thm) list);
 
     val crunch_x : Token.src list -> string -> string -> (string * xstring) list
          -> string list -> local_theory -> local_theory;
@@ -199,9 +210,6 @@ fun thy_maybe_thms thy name = Global_Theory.get_thms thy name handle ERROR _ => 
 fun add_thm thm atts name ctxt =
   Local_Theory.notes [((Binding.name name, atts), [([thm], atts)])] ctxt |> #2
 
-fun get_thm_name_bluh (cfg: crunch_cfg) const_name
-  = Long_Name.base_name const_name ^ "_" ^ (#prp_name cfg)
-
 fun get_thm_name (cfg : crunch_cfg) const_name
   = if read_const (#ctxt cfg) (Long_Name.base_name const_name)
          = read_const (#ctxt cfg) const_name
@@ -209,11 +217,6 @@ fun get_thm_name (cfg : crunch_cfg) const_name
       else space_implode "_" (space_explode "." const_name @ [#prp_name cfg])
 
 fun get_stored cfg n = get_thm (#ctxt cfg) (get_thm_name cfg n)
-
-fun get_stored_bluh cfg n =
-  let val r = (maybe_thms (#ctxt cfg) (get_thm_name cfg n)) @ (maybe_thms (#ctxt cfg) (get_thm_name_bluh cfg n));
-      in (case r of [] => error ("") | _ => (hd r))
-  end
 
 fun mapM _ [] y = y
   | mapM f (x::xs) y = mapM f xs (f x y)
@@ -255,13 +258,12 @@ fun def_from_ctxt ctxt const =
     val crunch_defs = Named_Theorems.get ctxt @{named_theorems crunch_def}
     val abs_def = Local_Defs.meta_rewrite_rule ctxt #> Drule.abs_def;
     fun do_filter thm =
-    let
-      val (Const (nm, _), _) = Logic.dest_equals (Thm.prop_of (abs_def thm));
-    in nm = const end
+      try (abs_def #> Thm.prop_of #> Logic.dest_equals #> fst #> dest_Const #> fst) thm
+        = SOME const
   in
    case crunch_defs |> filter do_filter of
-     [x] => [x]
-   | [] => []
+     [x] => SOME x
+   | [] => NONE
    | _ => raise Fail ("Multiple definitions declared for:" ^ const)
   end
 
@@ -272,12 +274,15 @@ fun unfold ctxt const triple nmspce =
       val const_defn = const |> Long_Name.base_name |> def_of;
       val const_def = deep_search_thms ctxt const_defn const_term nmspce
                         |> hd |> Simpdata.safe_mk_meta_eq;
-      val _ = Pretty.writeln (Pretty.block [Pretty.str ("const_def: " ^ @{make_string} const_defn), Thm.pretty_thm ctxt const_def])
+      val _ = debug_trace_bl [K (Pretty.str "const_def:"),
+        fn () => Pretty.str (@{make_string} const_defn), fn () => Thm.pretty_thm ctxt const_def]
       val trivial_rule = Thm.trivial triple
-      val _ = Pretty.writeln (Pretty.block [Pretty.str "trivial_rule: ", Thm.pretty_thm ctxt trivial_rule])
+      val _ = debug_trace_bl [K (Pretty.str "trivial_rule :"),
+        fn () => Thm.pretty_thm ctxt trivial_rule]
       val unfold_rule = trivial_rule
         |> Simplifier.rewrite_goals_rule ctxt [const_def];
-      val _ = Pretty.writeln (Pretty.block [Pretty.str "unfold_rule: ", Thm.pretty_thm ctxt unfold_rule])
+      val _ = debug_trace_bl [K (Pretty.str "unfold_rule :"),
+        fn () => Thm.pretty_thm ctxt unfold_rule]
       val ms = unfold_rule
         |> Simplifier.rewrite_goals_rule ctxt unfold_get_params
         |> Thm.prems_of |> maps (monads_of ctxt);
@@ -319,9 +324,9 @@ fun induct_inst ctxt const goal nmspce =
     let
       val _ = debug_trace "induct_inst"
       val base_const = Long_Name.base_name const;
-      val _ = debug_trace ("base_const: " ^ @{make_string} base_const)
+      val _ = debug_trace_pf "base_const: " (fn () => @{make_string} base_const)
       val induct_thm = base_const |> induct_of |> get_thm ctxt;
-      val _ = debug_trace ("induct_thm: " ^ @{make_string} induct_thm)
+      val _ = debug_trace_pf "induct_thm: "  (fn () => @{make_string} induct_thm)
       val const_term = read_const ctxt const |> map_unvarifyT;
       val n = const_term |> fastype_of |> num_args;
       val t = mk_abs (Instance.magic $ mk_apps const_term n 0) n
@@ -330,7 +335,7 @@ fun induct_inst ctxt const goal nmspce =
       val trivial_rule = Thm.trivial goal;
       val induct_inst = Thm.instantiate ([], [(P, t)]) induct_thm
                         RS trivial_rule;
-      val _ = debug_trace ("induct_inst" ^ Syntax.string_of_term ctxt (Thm.prop_of induct_inst));
+      val _ = debug_trace_pf "induct_inst: " (fn () => Syntax.string_of_term ctxt (Thm.prop_of induct_inst))
       val simp_thms = deep_search_thms ctxt (base_const |> simps_of) const_term nmspce;
       val induct_inst_simplified = induct_inst
         |> Simplifier.rewrite_goals_rule ctxt (map Simpdata.safe_mk_meta_eq simp_thms);
@@ -340,11 +345,11 @@ fun induct_inst ctxt const goal nmspce =
        then error ("Unfold rule generated for " ^ const ^ " does not apply")
        else (ms', induct_inst) end
 
-fun unfold_data ctxt constn goal nmspce nil = (
+fun unfold_data ctxt constn goal nmspce NONE = (
     induct_inst ctxt constn goal nmspce handle exn => handle_int exn
     unfold ctxt constn goal nmspce handle exn => handle_int exn
     error ("unfold_data: couldn't find defn or induct rule for " ^ constn))
-  | unfold_data ctxt constn goal _ [(_, thm)] =
+  | unfold_data ctxt constn goal _ (SOME thm) =
     let
       val trivial_rule = Thm.trivial goal
       val unfold_rule = Simplifier.rewrite_goals_rule ctxt [safe_mk_meta_eq thm] trivial_rule;
@@ -354,9 +359,9 @@ fun unfold_data ctxt constn goal nmspce nil = (
     in if Thm.eq_thm_prop (trivial_rule, unfold_rule)
        then error ("Unfold rule given for " ^ constn ^ " does not apply")
        else (ms, unfold_rule) end
-  | unfold_data _ constn _ _ _ = error ("Multiple unfolds are given for " ^ constn)
 
-
+fun get_unfold_rule ctxt const cgoal namespace = let
+  in unfold_data ctxt const cgoal namespace (def_from_ctxt ctxt const) end
 
 val split_if = @{thm "if_split"}
 
@@ -402,9 +407,8 @@ val precond_implication_term
 
 fun precond_needed ctxt pre css pre' = let
     val imp = Syntax.check_term ctxt (precond_implication_term $ pre $ pre');
-  in Goal.prove ctxt [] [] imp
-       (fn _ => clarsimp_tac css 1); false end
-     handle exn => handle_int exn true;
+  in not (can (Goal.prove ctxt [] [] imp)
+       (fn _ => clarsimp_tac css 1)) end
 
 fun combine_preconds ctxt pre pres = let
     val pres' = maps (split_precond o Envir.beta_eta_contract) pres
@@ -479,18 +483,18 @@ fun crunch_rule cfg const goal extra thms =
     val base_rule = Thm.trivial cgoal
     fun app_rew r t = Seq.single (Simplifier.rewrite_goals_rule ctxt [r] t)
       |> Seq.filter (fn t' => not (Thm.eq_thm_prop (t, t')))
-    val supplied_seq = Seq.of_list (#rules cfg)
-      |> Seq.maps (fn r => Seq.append
-        (resolve_tac ctxt [r] 1 base_rule) (app_rew r base_rule))
-      |> Seq.map (pair NONE)
+    val supplied_apps = Seq.of_list (#rules cfg)
+        |> Seq.maps (fn r => resolve_tac ctxt [r] 1 base_rule)
+    val supplied_app_rews = Seq.of_list (#rules cfg)
+        |> Seq.maps (fn r => app_rew r base_rule)
+    val supplied_seq = Seq.append supplied_apps supplied_app_rews
+        |> Seq.map (pair NONE)
 
     (* third option: builtins *)
-    val unfolds' = (map (pair "") (def_from_ctxt ctxt const))
-    val unf_seq = Seq.map (unfold_data ctxt' const cgoal (#nmspce cfg))
-          (Seq.single unfolds')
-      |> Seq.map (apfst SOME)
+    val builtin_seq = seq_try_apply (get_unfold_rule ctxt' const cgoal) (#nmspce cfg)
+        |> Seq.map (apfst SOME)
 
-    val seq = foldr1 (uncurry Seq.append) [wp_seq, supplied_seq, unf_seq]
+    val seq = foldr1 (uncurry Seq.append) [wp_seq, supplied_seq, builtin_seq]
 
     fun fail_tac t _ _ = (writeln "discarding crunch rule, unsolved premise:";
       Syntax.pretty_term ctxt t |> Pretty.writeln;
@@ -509,8 +513,7 @@ fun crunch_rule cfg const goal extra thms =
     val (ms, thm) = case Seq.pull seq of SOME ((ms, thm), _) => (ms, thm)
       | NONE => error ("could not find crunch rule for " ^ const)
 
-    val _ = Pretty.writeln (Pretty.block
-        [Pretty.str "crunch rule: ", Thm.pretty_thm ctxt thm])
+    val _ = debug_trace_bl [K (Pretty.str "crunch rule: "), fn () => Thm.pretty_thm ctxt thm]
 
     val ms = case ms of SOME ms => ms
         | NONE => Thm.prems_of thm |> maps (monads_of ctxt)
