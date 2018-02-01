@@ -4892,7 +4892,7 @@ lemma setupCallerCap_ccorres [corres]:
                        tcb_cnode_index_defs)
      apply simp
      apply (rule_tac Q="\<lambda>rv. valid_pspace' and tcb_at' receiver" in hoare_post_imp)
-      apply (auto simp: cte_wp_at_ctes_of isCap_simps
+      apply (auto simp: cte_wp_at_ctes_of isCap_simps valid_pspace'_def
                         tcbSlots Kernel_C.tcbCaller_def size_of_def
                         cte_level_bits_def)[1]
       apply (case_tac cte,clarsimp)
@@ -4911,7 +4911,7 @@ lemma setupCallerCap_ccorres [corres]:
                         valid_tcb_state'_def Collect_const_mem
                         tcb_cnode_index_defs)
   done
-thm sendIPC_body_def
+
 lemma sendIPC_dequeue_ccorres_helper:
   "ep_ptr = Ptr ep ==>
   ccorres (\<lambda>rv rv'. rv' = tcb_ptr_to_ctcb_ptr dest) dest___ptr_to_struct_tcb_C_'

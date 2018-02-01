@@ -1264,20 +1264,6 @@ lemma invs'_invs_no_cicd:
   "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
 by (clarsimp simp add: invs'_def all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def newKernelState_def)
 
-(* FIXME: move to StateRelation_C *)
-definition
-  "framesize_from_H sz \<equiv> case sz of
-    X64.X64SmallPage \<Rightarrow> (scast Kernel_C.X86_SmallPage :: machine_word)
-  | X64.X64LargePage \<Rightarrow> scast Kernel_C.X86_LargePage
-  | X64.X64HugePage \<Rightarrow> scast Kernel_C.X64_HugePage"
-
-lemma framesize_from_to_H:
-  "framesize_to_H (framesize_from_H sz) = sz"
-  by (simp add: framesize_to_H_def framesize_from_H_def
-                Kernel_C.X86_SmallPage_def Kernel_C.X86_LargePage_def
-                Kernel_C.X64_HugePage_def
-           split: if_split vmpage_size.splits)
-
 lemma ccorres_seq_IF_False:
   "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (IF False THEN x ELSE y FI ;; c) = ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (y ;; c)"
   by simp

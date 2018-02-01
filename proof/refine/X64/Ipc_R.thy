@@ -2524,22 +2524,19 @@ lemma do_reply_transfer_corres:
 lemma valid_pspace'_splits[elim!]:
   "valid_pspace' s \<Longrightarrow> valid_objs' s"
   "valid_pspace' s \<Longrightarrow> pspace_aligned' s"
+  "valid_pspace' s \<Longrightarrow> pspace_canonical' s"
   "valid_pspace' s \<Longrightarrow> pspace_distinct' s"
   "valid_pspace' s \<Longrightarrow> valid_mdb' s"
   "valid_pspace' s \<Longrightarrow> no_0_obj' s"
   by (simp add: valid_pspace'_def)+
 
 lemma sts_valid_pspace_hangers:
-  "\<lbrace>valid_pspace' and tcb_at' t and
-   valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
-  "\<lbrace>valid_pspace' and tcb_at' t and
-   valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
-  "\<lbrace>valid_pspace' and tcb_at' t and
-   valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
-  "\<lbrace>valid_pspace' and tcb_at' t and
-   valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
-  "\<lbrace>valid_pspace' and tcb_at' t and
-   valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. no_0_obj'\<rbrace>"
+  "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
+  "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
+  "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
+  "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. pspace_canonical'\<rbrace>"
+  "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
+  "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. no_0_obj'\<rbrace>"
   by (safe intro!: hoare_strengthen_post [OF sts'_valid_pspace'_inv])
 
 declare no_fail_getSlotCap [wp]

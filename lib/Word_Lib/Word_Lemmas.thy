@@ -3753,6 +3753,11 @@ lemma ucast_mono_le:
   apply (simp add: word_le_nat_alt)
   done
 
+lemma ucast_mono_le':
+  "\<lbrakk> unat y < 2 ^ LENGTH('b); LENGTH('b::len) < LENGTH('a::len); x \<le> y \<rbrakk>
+   \<Longrightarrow> UCAST('a \<rightarrow> 'b) x \<le> UCAST('a \<rightarrow> 'b) y"
+  by (auto simp: word_less_nat_alt intro: ucast_mono_le)
+
 lemma zero_sle_ucast_up:
   "\<not> is_down (ucast :: 'a word \<Rightarrow> 'b signed word) \<Longrightarrow>
           (0 <=s ((ucast (b::('a::len) word)) :: ('b::len) signed word))"
@@ -5416,6 +5421,22 @@ lemma ucast_le_ucast:
   apply (subst mod_less)
    apply(rule less_le_trans[OF unat_lt2p], simp)
   apply simp
+  done
+
+lemma ucast_le_ucast_eq:
+  fixes x y :: "'a::len word"
+  assumes x: "x < 2 ^ n"
+  assumes y: "y < 2 ^ n"
+  assumes n: "n = LENGTH('b::len)"
+  shows "(UCAST('a \<rightarrow> 'b) x \<le> UCAST('a \<rightarrow> 'b) y) = (x \<le> y)"
+  apply (rule iffI)
+   apply (cases "LENGTH('b) < LENGTH('a)")
+    apply (subst less_mask_eq[OF x, symmetric])
+    apply (subst less_mask_eq[OF y, symmetric])
+    apply (unfold n)
+    apply (subst ucast_ucast_mask[symmetric])+
+    apply (simp add: ucast_le_ucast)+
+  apply (erule ucast_mono_le[OF _ y[unfolded n]])
   done
 
 (* High bits w.r.t. mask operations. *)

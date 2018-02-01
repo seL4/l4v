@@ -57,7 +57,7 @@ lemma cte_at_irq_node':
     cte_at' (irq_node' s + 2 ^ cte_level_bits * ucast (irq :: 8 word)) s"
   by (clarsimp simp: invs'_def valid_state'_def valid_irq_node'_def
                      cte_level_bits_def real_cte_at')
-thm Collect_const
+
 lemma invokeIRQHandler_SetIRQHandler_ccorres:
   "ccorres dc xfdc
           (invs' and sch_act_simple
@@ -79,8 +79,8 @@ proof -
        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
         apply (ctac(no_vcg) add: cteInsert_ccorres)
        apply (simp add: pred_conj_def)
-       apply (strengthen ntfn_badge_derived_enough_strg[unfolded o_def]
-                         invs_mdb_strengthen' valid_objs_invs'_strg)
+       apply (strengthen invs_mdb_strengthen' valid_objs_invs'_strg
+                         invs_pspace_canonical' invs_pspace_aligned')
        apply (wp cteDeleteOne_other_cap[unfolded o_def])[1]
       apply vcg
      apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
@@ -90,7 +90,7 @@ proof -
    apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
                     ghost_assertion_data_set_def)
   apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
-  apply (clarsimp simp: invs_pspace_aligned' cte_wp_at_ctes_of badge_derived'_def
+  apply (clarsimp simp: cte_wp_at_ctes_of badge_derived'_def
                         Collect_const_mem unat_gt_0 valid_cap_simps' X64.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
   apply (clarsimp simp:uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])

@@ -745,12 +745,9 @@ proof -
   from ctes_of have "cte_wp_at' (op = cte) p s"
     by (simp add: cte_wp_at_ctes_of)
   thus ?thesis using canonical
-    apply (simp add: pspace_canonical'_def)
-    apply (erule cte_wp_atE')
-     apply fastforce
-    by (fastforce simp: tcb_cte_cases_def field_simps objBits_defs
-                split: if_split_asm
-                 elim: canonical_address_add)
+    by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def field_simps objBits_defs
+                 split: if_splits
+                  elim: cte_wp_atE' canonical_address_add)
 qed
 
 lemma tcb_cte_cases_small:

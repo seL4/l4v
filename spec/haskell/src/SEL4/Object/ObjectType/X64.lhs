@@ -65,7 +65,7 @@ ASID capabilities can be copied without modification, as can IOPort and IOSpace 
 > deriveCap _ IOPortControlCap = return NullCap
 > -- deriveCap _ (c@IOSpaceCap {}) = return c
 
-IOPTs
+% IOPTs
 
 > -- deriveCap _ (c@IOPageTableCap { capIOPTMappedAddress = Just _ }) = return c
 > -- deriveCap _ (IOPageTableCap { capIOPTMappedAddress = Nothing })
@@ -90,13 +90,11 @@ IOPTs
 >-- ioSpaceGetPCIDevice :: Word -> Maybe IOASID
 >-- ioSpaceGetPCIDevice _ = error "Not implemented"
 
-> -- FIXME x64: io_port_capdata_get_firstPort
-> ioPortGetFirstPort :: Word -> Word16
-> ioPortGetFirstPort _ = error "Not implemented"
+>-- ioPortGetFirstPort :: Word -> Word16
+>-- ioPortGetFirstPort capdata = fromIntegral (shiftR capdata 16)
 
-> -- FIXME x64: io_port_capdata_get_lastPort
-> ioPortGetLastPort :: Word -> Word16
-> ioPortGetLastPort _ = error "Not implemented"
+>-- ioPortGetLastPort :: Word -> Word16
+>-- ioPortGetLastPort capdata = fromIntegral capdata
 
 > updateCapData :: Bool -> Word -> ArchCapability -> Capability
 >-- updateCapData preserve newData (c@IOSpaceCap {}) =
@@ -110,19 +108,17 @@ IOPTs
 >--                     && domID /= 0 && domID <= mask domIDBits)
 >--                then (ArchObjectCap (IOSpaceCap domID pciDevice))
 >--                else NullCap -}
->-- updateCapData _ newData (c@IOPortCap {}) =
+>-- updateCapData preserve newData (c@IOPortCap {}) =
 >--     let
 >--         firstPort = ioPortGetFirstPort newData;
 >--         lastPort = ioPortGetLastPort newData;
->--         oldLast = capIOPortLastPort c;
->--         oldFirst = capIOPortFirstPort c
+>--         oldFirst = capIOPortFirstPort c;
+>--         oldLast = capIOPortLastPort c
 >--     in
->--     if (oldFirst <= oldLast) then
->--         if (firstPort <= lastPort && firstPort >= capIOPortFirstPort c
->--                       && lastPort <= oldLast)
->--           then (ArchObjectCap (IOPortCap firstPort lastPort))
->--           else NullCap
->--     else error "first port must be less than last"
+>--     if (not preserve && firstPort <= lastPort
+>--             && firstPort >= oldFirst && lastPort <= oldLast)
+>--         then (ArchObjectCap (IOPortCap firstPort lastPort))
+>--         else NullCap
 > updateCapData _ _ c = ArchObjectCap c
 
 CNodes have differing numbers of guard bits and rights bits
@@ -262,7 +258,6 @@ Deletion of a final capability to a page table that has been mapped requires tha
 >         lB = capIOPortLastPort b
 > sameRegionAs IOPortControlCap IOPortControlCap = True
 > sameRegionAs IOPortControlCap (IOPortCap {}) = True
-
 > --sameRegionAs (a@IOSpaceCap {}) (b@IOSpaceCap {}) =
 > --    capIOPCIDevice a == capIOPCIDevice b
 > --sameRegionAs (a@IOPageTableCap {}) (b@IOPageTableCap {}) =

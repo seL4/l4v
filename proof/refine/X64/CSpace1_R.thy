@@ -123,9 +123,7 @@ lemma same_arch_region_as_relation:
   "\<lbrakk>acap_relation c d; acap_relation c' d'\<rbrakk> \<Longrightarrow>
   arch_same_region_as c c' =
   sameRegionAs (ArchObjectCap d) (ArchObjectCap d')"
-  apply (cases c)
-  by (((cases c', auto simp: X64_H.sameRegionAs_def sameRegionAs_def Let_def isCap_simps)[1])+)
-
+  by (cases c; cases c') (auto simp: X64_H.sameRegionAs_def sameRegionAs_def Let_def isCap_simps)
 
 lemma is_phyiscal_relation:
   "cap_relation c c' \<Longrightarrow> is_physical c = isPhysicalCap c'"

@@ -402,12 +402,11 @@ where
    | IOPortCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)
    | IOPortControlCap \<Rightarrow> returnOk NullCap"
 
-(* FIXME: update when IOSpace comes through, first/last ports may be wrong order *)
 text {* No user-modifiable data is stored in x64-specific capabilities. *}
 definition
-  arch_update_cap_data :: "data \<Rightarrow> arch_cap \<Rightarrow> cap"
+  arch_update_cap_data :: "bool \<Rightarrow> data \<Rightarrow> arch_cap \<Rightarrow> cap"
 where
-  "arch_update_cap_data data c \<equiv> ArchObjectCap c"
+  "arch_update_cap_data preserve data c \<equiv> ArchObjectCap c"
 
 
 text {* Actions that must be taken on finalisation of x64-specific

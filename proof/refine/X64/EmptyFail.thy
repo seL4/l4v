@@ -58,6 +58,10 @@ lemma empty_fail_setCTE [intro!, wp, simp]:
   unfolding setCTE_def
   by (simp add: setObject_def split_def)
 
+lemma empty_fail_updateCap [intro!, wp, simp]:
+  "empty_fail (updateCap p f)"
+  unfolding updateCap_def by auto
+
 lemma empty_fail_updateMDB [intro!, wp, simp]:
   "empty_fail (updateMDB a b)"
   unfolding updateMDB_def Let_def by auto
