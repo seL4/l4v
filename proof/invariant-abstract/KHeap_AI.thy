@@ -1138,6 +1138,8 @@ lemma shows
     "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_tcb_obj_ref tcb_bound_notification_update t e \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
   set_tcb_sc_caps_of_state[wp]:
     "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_tcb_obj_ref tcb_sched_context_update t sc \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
+  set_tcb_yt_caps_of_state[wp]:
+    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_tcb_obj_ref tcb_yield_to_update t sc \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
   as_user_caps_of_state[wp]:
     "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> as_user p f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
 
@@ -1167,6 +1169,7 @@ interpretation
   as_user: non_aobj_non_cap_non_mem_op "as_user p g" +
   thread_set: non_aobj_non_mem_op "thread_set f p" +
   set_sched_context: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_sched_context_update p sc" +
+  set_yield_to: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_yield_to_update p sc" +
   set_cap: non_aobj_non_mem_op "set_cap cap p'"
   apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
   unfolding set_simple_ko_def set_thread_state_def

@@ -74,7 +74,7 @@ lemma set_thread_state_ct_st:
 lemma (in Tcb_AI_1) activate_invs:
   "\<lbrace>(invs::'state_ext::state_ext state \<Rightarrow> bool)\<rbrace> activate_thread \<lbrace>\<lambda>rv s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   apply (unfold activate_thread_def)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
+(*  apply (rule hoare_seq_ext [OF _ gets_sp])
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (case_tac state, simp_all)
     apply wp
@@ -93,7 +93,7 @@ lemma (in Tcb_AI_1) activate_invs:
                elim: st_tcb_ex_cap pred_tcb_weakenE,
           auto simp: st_tcb_def2 pred_tcb_at_def obj_at_def)[1]
   apply (rule_tac Q="\<lambda>rv. invs and ct_idle" in hoare_post_imp, simp)
-(*  apply (wp activate_idle_invs hoare_post_imp [OF disjI2])
+  apply (wp activate_idle_invs hoare_post_imp [OF disjI2])
   apply (clarsimp simp: ct_in_state_def elim!: pred_tcb_weakenE)
   done*) sorry
 
@@ -159,6 +159,7 @@ lemma out_invs_trivialT:
   assumes z: "\<And>tcb v. tcb_state  (fn v tcb) = tcb_state  tcb"
   assumes z': "\<And>tcb v. tcb_bound_notification (fn v tcb) = tcb_bound_notification tcb"
   assumes y: "\<And>tcb v. tcb_sched_context (fn v tcb) = tcb_sched_context tcb"
+  assumes y': "\<And>tcb v. tcb_yield_to (fn v tcb) = tcb_yield_to tcb"
   assumes w: "\<And>tcb v. tcb_ipc_buffer (fn v tcb) = tcb_ipc_buffer tcb
                           \<or> tcb_ipc_buffer (fn v tcb) = 0"
   assumes a: "\<And>tcb v. tcb_fault (fn v tcb) \<noteq> tcb_fault tcb
@@ -166,7 +167,7 @@ lemma out_invs_trivialT:
                                                    | Some f \<Rightarrow> valid_fault f)"
   shows      "\<lbrace>invs\<rbrace> option_update_thread t fn v \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac v, simp_all add: option_update_thread_def)
-  apply (rule thread_set_invs_trivial [OF x z z' y w a r])
+  apply (rule thread_set_invs_trivial [OF x z z' y y' w a r])
   done
 
 lemmas out_invs_trivial = out_invs_trivialT [OF ball_tcb_cap_casesI]
@@ -758,8 +759,14 @@ lemma sbn_has_reply[wp]:
   apply (wp)
   done
 
-lemma sbsc_has_reply[wp]:
+lemma ssc_has_reply[wp]:
   "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> set_tcb_obj_ref tcb_sched_context_update tcb scptr \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
+  apply (simp add: has_reply_cap_def cte_wp_at_caps_of_state)
+  apply (wp)
+  done
+
+lemma syt_has_reply[wp]:
+  "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> set_tcb_obj_ref tcb_yield_to_update tcb scptr \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
   apply (simp add: has_reply_cap_def cte_wp_at_caps_of_state)
   apply (wp)
   done

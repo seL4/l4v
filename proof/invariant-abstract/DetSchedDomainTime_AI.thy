@@ -422,7 +422,7 @@ lemma set_mrs_domain_time_inv[wp]:
   sorry
 
 crunch domain_time_inv[wp]: complete_yield_to "(\<lambda>s. P (domain_time s))"
-  (wp: crunch_wps)
+  (wp: crunch_wps maybeM_inv)
 
 context DetSchedDomainTime_AI begin
 

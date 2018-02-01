@@ -814,8 +814,8 @@ lemma suspend_unlive:
   apply (simp add: suspend_def set_thread_state_def set_object_def)
   apply (wp | simp only: obj_at_exst_update)+
   apply (simp add: obj_at_def)
-  apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
-(*  apply wp
+(*  apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
+  apply wp
   apply (auto simp: pred_tcb_def2 dest: refs_of_live)
   done *) sorry
 

@@ -2343,6 +2343,10 @@ lemma tcb_arch_ref_sched_context_update: "\<And>tcb.
        tcb_arch_ref (tcb_sched_context_update f tcb) = tcb_arch_ref tcb"
   by (simp add: tcb_arch_ref_def)
 
+lemma tcb_arch_ref_yield_to_update: "\<And>tcb.
+       tcb_arch_ref (tcb_yield_to_update f tcb) = tcb_arch_ref tcb"
+  by (simp add: tcb_arch_ref_def)
+
 lemma tcb_arch_ref_timeout_handler_update: "\<And>tcb.
        tcb_arch_ref (tcb_timeout_handler_update f tcb) = tcb_arch_ref tcb"
   by (simp add: tcb_arch_ref_def)
@@ -2369,8 +2373,8 @@ lemma tcb_arch_ref_bound_notification_update: "\<And>tcb.
 
 
 lemmas tcb_arch_ref_simps[simp] = tcb_arch_ref_ipc_buffer_update tcb_arch_ref_mcpriority_update
-  tcb_arch_ref_ctable_update tcb_arch_ref_vtable_update
-  tcb_arch_ref_sched_context_update tcb_arch_ref_ipcframe_update tcb_arch_ref_state_update
+  tcb_arch_ref_ctable_update tcb_arch_ref_vtable_update tcb_arch_ref_sched_context_update
+  tcb_arch_ref_yield_to_update tcb_arch_ref_ipcframe_update tcb_arch_ref_state_update
   tcb_arch_ref_fault_handler_update tcb_arch_ref_fault_update tcb_arch_ref_bound_notification_update
   tcb_arch_ref_context_update tcb_arch_ref_set_registers
   tcb_arch_ref_timeout_handler_update
@@ -2386,6 +2390,7 @@ lemma hyp_live_tcb_simps[simp]:
 "\<And>tcb f. hyp_live (TCB (tcb_ipcframe_update f tcb)) = hyp_live (TCB tcb)"
 "\<And>tcb f. hyp_live (TCB (tcb_state_update f tcb)) = hyp_live (TCB tcb)"
 "\<And>tcb f. hyp_live (TCB (tcb_sched_context_update f tcb)) = hyp_live (TCB tcb)"
+"\<And>tcb f. hyp_live (TCB (tcb_yield_to_update f tcb)) = hyp_live (TCB tcb)"
 "\<And>tcb f. hyp_live (TCB (tcb_fault_handler_update f tcb)) = hyp_live (TCB tcb)"
 "\<And>tcb f. hyp_live (TCB (tcb_timeout_handler_update f tcb)) = hyp_live (TCB tcb)"
 "\<And>tcb f. hyp_live (TCB (tcb_fault_update f tcb)) = hyp_live (TCB tcb)"

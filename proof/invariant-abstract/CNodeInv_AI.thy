@@ -2444,7 +2444,7 @@ crunch rvk_prog: cancel_all_signals "\<lambda>s. revoke_progress_ord m (\<lambda
 
 crunch rvk_prog: suspend "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def
-     wp: crunch_wps empty_slot_rvk_prog' select_wp)
+     wp: crunch_wps empty_slot_rvk_prog' select_wp maybeM_inv ignore: set_tcb_obj_ref)
 
 crunch rvk_prog: deleting_irq_handler "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def

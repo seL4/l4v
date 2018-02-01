@@ -3890,6 +3890,10 @@ lemma update_sched_context_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> update_sched_context ptr sc \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (valid_list_unfold simp: update_sched_context_def)
 
+lemma set_tcb_obj_ref_valid_list[wp]:
+  "\<lbrace>valid_list\<rbrace> set_tcb_obj_ref f r v \<lbrace>\<lambda>_.valid_list\<rbrace>"
+  by (valid_list_unfold simp: set_tcb_obj_ref_def)
+
 lemma reply_unlink_tcb_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> reply_unlink_tcb r \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (valid_list_unfold simp:reply_unlink_tcb_def)

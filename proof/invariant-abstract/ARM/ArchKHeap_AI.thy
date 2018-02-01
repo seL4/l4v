@@ -850,6 +850,14 @@ lemma state_hyp_refs_of_tcb_sched_context_update:
   apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
+lemma state_hyp_refs_of_tcb_yield_to_update:
+       "kheap s t = Some (TCB tcb) \<Longrightarrow>
+          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_yield_to := sc\<rparr>))\<rparr>)
+            = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def split: option.splits)
+  done
+
 lemma state_hyp_refs_of_tcb_state_update:
        "kheap s t = Some (TCB tcb) \<Longrightarrow>
           state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_state := ts\<rparr>))\<rparr>)
