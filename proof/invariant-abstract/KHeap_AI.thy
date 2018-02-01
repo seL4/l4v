@@ -480,7 +480,7 @@ lemma get_sc_valid_sc[wp]:
   done
 
 lemma get_reply_valid_reply[wp]:
-  "\<lbrace> invs and reply_at reply \<rbrace>
+  "\<lbrace> valid_objs and reply_at reply \<rbrace>
    get_reply reply
    \<lbrace> valid_reply \<rbrace>"
   by (wpsimp simp: reply_at_def2 valid_reply_def2 simp_del: valid_simple_obj_def)

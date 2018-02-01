@@ -1455,7 +1455,8 @@ lemma receive_ipc_st_tcb_at_runnable:
   unfolding receive_ipc_def
   apply (rule hoare_gen_asm)
   apply (wpc | wp sts_st_tcb_at_other
-               | clarsimp simp: do_nbrecv_failed_transfer_def)+
+      | clarsimp simp: do_nbrecv_failed_transfer_def)+
+(*
               apply (wp hoare_drop_imps)[1]
              apply clarsimp
              apply (wp hoare_drop_imps)[1]
@@ -1465,7 +1466,7 @@ lemma receive_ipc_st_tcb_at_runnable:
            apply (wp gts_wp)
           apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
          apply ((wp sts_st_tcb_at_other get_simple_ko_wp gbn_wp get_simple_ko_wp | wpc)+)[8]
-(*  apply clarsimp
+  apply clarsimp
   apply (rule conjI)
    apply clarsimp
    apply (rename_tac sendq)
