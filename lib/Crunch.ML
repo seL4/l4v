@@ -139,25 +139,6 @@ struct
 
 local structure P = Parse and K = Keyword in
 
-(* FIXME: Slightly outdated: *)
-(*
- example: crunch inv[wp]: f P (wp: h_P simp: .. ignore: ..)
-
- where: crunch = command keyword
-        inv    = lemma name pattern
-        [wp]   = optional list of attributes for all proved thms
-        f      = constant under investigation
-        P      = property to be shown
-        h_P    = wp lemma to use (h will not be unfolded)
-        simp: ..   = simp lemmas to use
-        ignore: .. = constants to ignore for unfolding
-
- will prove:
- "{P and X} f {%_. P}" and any lemmas of this form for constituents of f,
-     for additional preconditions X propagated upwards from additional
-     preconditions in preexisting lemmas for constituents of f.
-*)
-
 (* Read a list of names, up to the next section identifier *)
 fun read_thm_list sections =
     let val match_section_name = Scan.first (map P.reserved sections)
@@ -171,22 +152,70 @@ fun read_section all_sections section =
 fun read_sections sections =
     Scan.repeat (Scan.first (map (read_section sections) sections)) >> List.concat
 
+val crunch_parser =
+    (((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
+     -- Parse.opt_attribs --| P.$$$ ":") -- P.list1 P.name -- Scan.optional P.term ""
+     -- Scan.optional
+       (P.$$$ "(" |-- read_sections [wp_sect,wp_del_sect,ignore_sect,simp_sect,simp_del_sect,rule_sect,rule_del_sect,ignore_del_sect] --| P.$$$ ")")
+       []
+    )
+    >> (fn (((((crunch_instance, prp_name), att_srcs), consts), extra), wpigs) =>
+           (fn lthy =>
+             (case get_crunch_instance crunch_instance (Proof_Context.theory_of lthy) of
+                 NONE => error ("Crunch has not been defined for " ^ crunch_instance)
+               | SOME (crunch_x, _) =>
+                   crunch_x att_srcs extra prp_name wpigs consts lthy))));
+
+val crunches_parser =
+    (((P.list1 P.name --| P.$$$ "for")
+     -- P.and_list1 ((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
+         -- Parse.opt_attribs) -- Scan.optional (P.$$$ ":" |-- P.term) "")
+     -- Scan.optional
+       (P.$$$ "(" |-- read_sections [wp_sect,wp_del_sect,ignore_sect,simp_sect,simp_del_sect,rule_sect,rule_del_sect,ignore_del_sect] --| P.$$$ ")")
+       []
+    )
+    >> (fn ((consts, confs), wpigs) =>
+           fold (fn (((crunch_instance, prp_name), att_srcs), extra) => fn lthy =>
+             (case get_crunch_instance crunch_instance (Proof_Context.theory_of lthy) of
+                 NONE => error ("Crunch has not been defined for " ^ crunch_instance)
+               | SOME (crunch_x, _) =>
+                   crunch_x att_srcs extra prp_name wpigs consts lthy)) confs));
+
+(*
+ example: crunch(kind) inv[wp]: f,g  P  (wp: h_P simp: .. ignore: ..)
+
+ or: crunches f,g for (kind)inv: P and (kind2)inv2: Q (wp: etc)
+
+ where: crunch = command keyword
+        kind   = instance of crunch, e.g. valid, no_fail
+        inv    = lemma name pattern
+        [wp]   = optional list of attributes for all proved thms
+        f,g    = constants under investigation
+        P,Q    = property to be shown (not required for no_fail/empty_fail instance)
+        h_P    = wp lemma to use (h will not be unfolded)
+        simp: ..   = simp lemmas to use
+        ignore: .. = constants to ignore for unfolding
+
+ will prove lemmas for f and for any constituents required.
+ for the default crunch instance "valid", lemmas of the form
+    "{P and X} f {%_. P}" will be proven.
+ the additional preconditions X are propagated upwards from similar
+    preconditions in preexisting lemmas.
+
+ There is a longer description of what each crunch does in crunch-cmd.ML
+*)
+
 val crunchP =
     Outer_Syntax.local_theory
         @{command_keyword "crunch"}
         "crunch through monadic definitions with a given property"
-        (((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
-         -- Parse.opt_attribs --| P.$$$ ":") -- P.list1 P.name -- Scan.optional P.term ""
-         -- Scan.optional
-           (P.$$$ "(" |-- read_sections [wp_sect,wp_del_sect,ignore_sect,simp_sect,simp_del_sect,rule_sect,rule_del_sect,ignore_del_sect] --| P.$$$ ")")
-           []
-        )
-        >> (fn (((((crunch_instance, prp_name), att_srcs), consts), extra), wpigs) =>
-               (fn lthy =>
-                 (case get_crunch_instance crunch_instance (Proof_Context.theory_of lthy) of
-                     NONE => error ("Crunch has not been defined for " ^ crunch_instance)
-                   | SOME (crunch_x, _) =>
-                       crunch_x att_srcs extra prp_name wpigs consts lthy))));
+        crunch_parser
+
+val crunchesP =
+    Outer_Syntax.local_theory
+        @{command_keyword "crunches"}
+        "crunch through monadic definitions with multiple properties"
+        crunches_parser
 
 val add_sect = "add";
 val del_sect = "del";

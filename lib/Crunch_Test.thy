@@ -184,4 +184,10 @@ defs foo_const_def: "foo_const \<equiv> Crunch_Test_Qualified.foo_const"
 
 crunch test: foo_const P
 
+(* check that the grid-style crunch is working *)
+
+crunches crunch_foo3, crunch_foo4, crunch_foo5
+  for silly: "\<lambda>s. True \<noteq> False" and (no_fail)nf and (empty_fail)ef
+  (ignore: modify bind rule: crunch_foo4_alt)
+
 end

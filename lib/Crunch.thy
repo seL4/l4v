@@ -10,7 +10,7 @@
 
 theory Crunch
 imports "Monad_WP/NonDetMonadVCG"
-keywords "crunch" "crunch_ignore" :: thy_decl
+keywords "crunch" "crunch_ignore" "crunches" :: thy_decl
 begin
 
 named_theorems "crunch_def"

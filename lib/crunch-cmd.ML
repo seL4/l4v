@@ -657,6 +657,7 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
 
         val nmspce = get_locale_origins full_const_names ctxt;
         val (pre', extra') = Instance.parse_extra ctxt extra
+            handle ERROR s => error ("parsing parameters for " ^ prp_name ^ ": " ^ s)
 
         (* check that the given constants match the type of the given property*)
         val const_terms = map (read_const ctxt) full_const_names;
