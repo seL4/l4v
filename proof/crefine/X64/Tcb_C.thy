@@ -784,30 +784,22 @@ lemma invokeTCB_ThreadControl_ccorres:
                  apply simp
                  apply (rule hoare_strengthen_post[where
                   Q="\<lambda>a b. ((case snd (the buf) of None \<Rightarrow> 0 | Some x \<Rightarrow> snd x) \<noteq> 0 \<longrightarrow>
-                    valid_cap' (fst (the (snd (the buf)))) b \<and>
-                    invs' b \<and>
-                    valid_cap' (capability.ThreadCap target) b \<and>
-                    (cte_wp_at'
-                      (\<lambda>a. is_derived' (ctes_of b) (snd (the (snd (the buf)))) (fst (the (snd (the buf)))) (cteCap a))
-                      (snd (the (snd (the buf)))) b \<longrightarrow>
-                     cte_wp_at'
-                      (\<lambda>scte. capMasterCap (cteCap scte) = capMasterCap (fst (the (snd (the buf)))) \<or>
-                               is_simple_cap' (fst (the (snd (the buf)))))
-                      (snd (the (snd (the buf)))) b \<and>
-                     valid_mdb' b \<and>
-                     valid_objs' b \<and>
-                     pspace_aligned' b \<and>
-                     cte_wp_at' (\<lambda>c. True) (snd (the (snd (the buf)))) b \<and>
-                     Invariants_H.valid_queues b \<and>
-                     sch_act_wf (ksSchedulerAction b) b)) \<and>
-                    (target = ksCurThread b \<longrightarrow>
-                     Invariants_H.valid_queues b \<and> weak_sch_act_wf (ksSchedulerAction b) b \<and> valid_objs' b)"])
+                             valid_cap' (fst (the (snd (the buf)))) b \<and>
+                             invs' b \<and>
+                             valid_cap' (capability.ThreadCap target) b \<and>
+                             (cte_wp_at'
+                               (\<lambda>a. is_derived' (ctes_of b) (snd (the (snd (the buf)))) (fst (the (snd (the buf)))) (cteCap a))
+                               (snd (the (snd (the buf)))) b \<longrightarrow>
+                              cte_wp_at'
+                               (\<lambda>scte. capMasterCap (cteCap scte) = capMasterCap (fst (the (snd (the buf)))) \<or>
+                                        is_simple_cap' (fst (the (snd (the buf)))))
+                               (snd (the (snd (the buf)))) b \<and>
+                              cte_wp_at' (\<lambda>c. True) (snd (the (snd (the buf)))) b)) \<and>
+                            (target = ksCurThread b \<longrightarrow>
+                             Invariants_H.valid_queues b \<and> weak_sch_act_wf (ksSchedulerAction b) b \<and> valid_objs' b)"])
                   prefer 2 subgoal by auto
                  apply (wp hoare_vcg_conj_lift)
-                  apply (strengthen cte_is_derived_capMasterCap_strg
-                             invs_queues invs_weak_sch_act_wf
-                             invs_valid_objs' invs_mdb' invs_pspace_aligned',
-                         simp add: o_def)
+                  apply (strengthen cte_is_derived_capMasterCap_strg, simp add: o_def)
                   apply (wp static_imp_wp )
                   apply (wp hoare_drop_imp)
                   apply (wp hoare_drop_imp)

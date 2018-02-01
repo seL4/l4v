@@ -260,17 +260,20 @@ lemma updateMDB_pre_cte_at:
 
 lemma getSlotCap_pre_cte_at:
   "\<lbrace>\<lambda>s. \<not> cte_at' p s \<rbrace> getSlotCap p \<lbrace> \<lambda>_ _. False \<rbrace>"
-  unfolding getSlotCap_def
-  apply simp
-  apply (wp getCTE_wp)
-  apply clarsimp
-  done
+  unfolding getSlotCap_def by (wpsimp wp: getCTE_wp)
+
+lemma updateCap_pre_cte_at:
+  "\<lbrace>\<lambda>s. \<not> cte_at' p s \<rbrace> updateCap p f \<lbrace> \<lambda>_ _. False \<rbrace>"
+  unfolding updateCap_def by (wpsimp wp: getCTE_wp)
 
 lemmas ccorres_updateMDB_cte_at = ccorres_guard_from_wp [OF updateMDB_pre_cte_at empty_fail_updateMDB]
   ccorres_guard_from_wp_bind [OF updateMDB_pre_cte_at empty_fail_updateMDB]
 
 lemmas ccorres_getSlotCap_cte_at = ccorres_guard_from_wp [OF getSlotCap_pre_cte_at empty_fail_getSlotCap]
   ccorres_guard_from_wp_bind [OF getSlotCap_pre_cte_at empty_fail_getSlotCap]
+
+lemmas ccorres_updateCap_cte_at = ccorres_guard_from_wp [OF updateCap_pre_cte_at empty_fail_updateCap]
+  ccorres_guard_from_wp_bind [OF updateCap_pre_cte_at empty_fail_updateCap]
 
 lemma wordFromRights_spec:
   defines "crl s \<equiv> (seL4_CapRights_lift \<^bsup>s\<^esup>seL4_CapRights)"

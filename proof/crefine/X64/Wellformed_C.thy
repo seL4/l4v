@@ -221,6 +221,27 @@ where
     else X64HugePage"
 
 definition
+  framesize_from_H :: "vmpage_size \<Rightarrow> machine_word"
+where
+  "framesize_from_H sz \<equiv>
+    case sz of
+         X64SmallPage \<Rightarrow> scast Kernel_C.X86_SmallPage
+       | X64LargePage \<Rightarrow> scast Kernel_C.X86_LargePage
+       | X64HugePage \<Rightarrow> scast Kernel_C.X64_HugePage"
+
+lemma framesize_from_to_H:
+  "framesize_to_H (framesize_from_H sz) = sz"
+  by (simp add: framesize_to_H_def framesize_from_H_def
+                Kernel_C.X86_SmallPage_def Kernel_C.X86_LargePage_def
+                Kernel_C.X64_HugePage_def
+           split: if_split vmpage_size.splits)
+
+lemma framesize_from_H_eq:
+  "(framesize_from_H sz = framesize_from_H sz') = (sz = sz')"
+  by (cases sz; cases sz';
+      simp add: framesize_from_H_def X86_SmallPage_def X86_LargePage_def X64_HugePage_def)
+
+definition
   maptype_to_H :: "machine_word \<Rightarrow> vmmap_type"
 where
   "maptype_to_H c \<equiv>

@@ -299,7 +299,8 @@ lemma invokeCNodeCancelBadgedSends_ccorres:
 lemma invokeCNodeInsert_ccorres:
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (cte_wp_at' (\<lambda>scte. capMasterCap (cteCap scte) = capMasterCap cap) src
-                     and valid_mdb' and pspace_aligned' and valid_objs' and valid_cap' cap)
+                     and valid_mdb' and pspace_aligned' and pspace_canonical'
+                     and valid_objs' and valid_cap' cap)
        (UNIV \<inter> {s. destSlot_' s = Ptr dest} \<inter>
                {s. srcSlot_' s = Ptr src} \<inter>
                {s. ccap_relation cap (cap_' s)}) []
@@ -312,9 +313,7 @@ lemma invokeCNodeInsert_ccorres:
   apply (rule allI, rule conseqPre,vcg) apply clarsimp  apply (simp add: return_def)
   apply wp
   apply (clarsimp simp: cte_wp_at_ctes_of)
-done
-
-
+  done
 
 
 (************************************************************************)
@@ -325,7 +324,7 @@ done
 
 lemma invokeCNodeMove_ccorres:
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (valid_mdb' and pspace_aligned' )
+       (valid_mdb' and pspace_aligned' and pspace_canonical')
        (UNIV \<inter> {s. destSlot_' s = Ptr dest} \<inter>
                {s. srcSlot_' s = Ptr src} \<inter>
                {s. ccap_relation cap (cap_' s)}) []
@@ -338,11 +337,7 @@ lemma invokeCNodeMove_ccorres:
   apply (rule allI, rule conseqPre,vcg) apply clarsimp  apply (simp add: return_def)
   apply wp
   apply clarsimp
-done
-
-
-
-
+  done
 
 
 (************************************************************************)
@@ -350,8 +345,6 @@ done
 (* invokeCNodeRotate_ccorres  *******************************************)
 (*                                                                      *)
 (************************************************************************)
-
-
 
 lemma invokeCNodeRotate_ccorres:
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -404,7 +397,7 @@ lemma invokeCNodeRotate_ccorres:
 
 lemma invokeCNodeSaveCaller_ccorres:
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (valid_mdb' and pspace_aligned' and cur_tcb')
+       (valid_mdb' and pspace_aligned' and pspace_canonical' and cur_tcb')
        (UNIV \<inter> {s. destSlot_' s = Ptr destSlot}) []
        (invokeCNode (SaveCaller destSlot))
   (Call invokeCNodeSaveCaller_'proc)"
@@ -468,9 +461,6 @@ lemma invokeCNodeSaveCaller_ccorres:
   apply (simp add: tcb_cnode_index_defs array_assertion_shrink_right
                    rf_sr_ksCurThread)
   done
-
-
-
 
 
 (************************************************************************)

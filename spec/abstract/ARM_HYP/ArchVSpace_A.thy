@@ -841,9 +841,9 @@ where
 
 text {* No user-modifiable data is stored in ARM-specific capabilities. *}
 definition
-  arch_update_cap_data :: "data \<Rightarrow> arch_cap \<Rightarrow> cap"
+  arch_update_cap_data :: "bool \<Rightarrow> data \<Rightarrow> arch_cap \<Rightarrow> cap"
 where
-  "arch_update_cap_data data c \<equiv> ArchObjectCap c"
+  "arch_update_cap_data preserve data c \<equiv> ArchObjectCap c"
 
 
 text {* Actions that must be taken on finalisation of AR\_MHYP-specific

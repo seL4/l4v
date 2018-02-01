@@ -649,30 +649,30 @@ lemma capMasterCap_simps[simp]:
   "capMasterCap (NotificationCap ref bdg s r) = NotificationCap ref 0 True True"
   "capMasterCap (CNodeCap ref bits gd gs) = CNodeCap ref bits 0 0"
   "capMasterCap (ThreadCap ref) = ThreadCap ref"
-  "capMasterCap capability.NullCap = capability.NullCap"
-  "capMasterCap capability.DomainCap = capability.DomainCap"
-  "capMasterCap (capability.IRQHandlerCap irq) = capability.IRQHandlerCap irq"
-  "capMasterCap (capability.Zombie word zombie_type n) = capability.Zombie word zombie_type n"
-  "capMasterCap (capability.ArchObjectCap (arch_capability.ASIDPoolCap word1 word2)) =
-            capability.ArchObjectCap (arch_capability.ASIDPoolCap word1 0)"
-  "capMasterCap (capability.ArchObjectCap arch_capability.ASIDControlCap) =
-         capability.ArchObjectCap arch_capability.ASIDControlCap"
-  "capMasterCap (capability.ArchObjectCap (arch_capability.PageCap word vmrights mt vmpage_size d pdata)) =
-            capability.ArchObjectCap (arch_capability.PageCap word VMReadWrite VMNoMap vmpage_size d None)"
-  "capMasterCap (capability.ArchObjectCap (arch_capability.PageTableCap word ptdata)) =
-            capability.ArchObjectCap (arch_capability.PageTableCap word None)"
-  "capMasterCap (capability.ArchObjectCap (arch_capability.PageDirectoryCap word pddata)) =
-            capability.ArchObjectCap (arch_capability.PageDirectoryCap word None)"
-  "capMasterCap (capability.ArchObjectCap (arch_capability.PDPointerTableCap word pdptdata)) =
-            capability.ArchObjectCap (arch_capability.PDPointerTableCap word None)"
-  "capMasterCap (capability.ArchObjectCap (arch_capability.PML4Cap word pml4data)) =
-            capability.ArchObjectCap (arch_capability.PML4Cap word None)"
-  "capMasterCap (capability.ArchObjectCap (arch_capability.IOPortCap ft lt)) =
-            capability.ArchObjectCap (arch_capability.IOPortCap ft lt)"
+  "capMasterCap NullCap = NullCap"
+  "capMasterCap DomainCap = DomainCap"
+  "capMasterCap (IRQHandlerCap irq) = IRQHandlerCap irq"
+  "capMasterCap (Zombie word zombie_type n) = Zombie word zombie_type n"
+  "capMasterCap (ArchObjectCap (ASIDPoolCap word1 word2)) =
+            ArchObjectCap (ASIDPoolCap word1 0)"
+  "capMasterCap (ArchObjectCap ASIDControlCap) =
+            ArchObjectCap ASIDControlCap"
+  "capMasterCap (ArchObjectCap (PageCap word vmrights mt vmpage_size d pdata)) =
+            ArchObjectCap (PageCap word VMReadWrite VMNoMap vmpage_size d None)"
+  "capMasterCap (ArchObjectCap (PageTableCap word ptdata)) =
+            ArchObjectCap (PageTableCap word None)"
+  "capMasterCap (ArchObjectCap (PageDirectoryCap word pddata)) =
+            ArchObjectCap (PageDirectoryCap word None)"
+  "capMasterCap (ArchObjectCap (PDPointerTableCap word pdptdata)) =
+            ArchObjectCap (PDPointerTableCap word None)"
+  "capMasterCap (ArchObjectCap (PML4Cap word pml4data)) =
+            ArchObjectCap (PML4Cap word None)"
+  "capMasterCap (ArchObjectCap (IOPortCap ft lt)) =
+            ArchObjectCap (IOPortCap ft lt)"
   "capMasterCap (ArchObjectCap IOPortControlCap) = ArchObjectCap IOPortControlCap"
-  "capMasterCap (capability.UntypedCap d word n f) = capability.UntypedCap d word n 0"
-  "capMasterCap capability.IRQControlCap = capability.IRQControlCap"
-  "capMasterCap (capability.ReplyCap word m) = capability.ReplyCap word True"
+  "capMasterCap (UntypedCap d word n f) = UntypedCap d word n 0"
+  "capMasterCap IRQControlCap = IRQControlCap"
+  "capMasterCap (ReplyCap word m) = ReplyCap word True"
   by (simp_all add: capMasterCap_def)
 
 lemma capMasterCap_eqDs1:
@@ -715,8 +715,8 @@ lemma capMasterCap_eqDs1:
      \<Longrightarrow> data3 = None \<and> (\<exists>data3. cap = ArchObjectCap (PDPointerTableCap ptr data3))"
   "capMasterCap cap = ArchObjectCap (PML4Cap ptr data4)
      \<Longrightarrow> data4 = None \<and> (\<exists>data4. cap = ArchObjectCap (PML4Cap ptr data4))"
-  "capMasterCap cap = ArchObjectCap (IOPortCap f span)
-     \<Longrightarrow> cap = ArchObjectCap (IOPortCap f span)"
+  "capMasterCap cap = ArchObjectCap (IOPortCap first_port last_port)
+     \<Longrightarrow> cap = ArchObjectCap (IOPortCap first_port last_port)"
   "capMasterCap cap = ArchObjectCap IOPortControlCap
      \<Longrightarrow> cap = ArchObjectCap IOPortControlCap"
   by (clarsimp simp: capMasterCap_def
@@ -788,6 +788,18 @@ lemma capUntypedSize_capBits:
   apply fastforce
   done
 
+
+definition
+  "portSubRange r r' \<equiv>
+    case (r, r') of
+         (Some (f, l), Some (f', l')) \<Rightarrow> f \<le> f' \<and> l' \<le> l
+       | _ \<Rightarrow> False"
+
+lemmas portRange_defs = portSubRange_def portRange_def
+lemma portSubRange_eq [simp]:
+  "portSubRange (portRange cap) (portRange cap) = isArchIOPortCap cap"
+  by (auto simp: portRange_defs isCap_simps
+          split: capability.splits arch_capability.splits)
 lemma sameRegionAs_def2:
  "sameRegionAs cap cap' = (\<lambda>cap cap'.
      (cap = cap'
@@ -810,7 +822,7 @@ lemma sameRegionAs_def2:
     apply (clarsimp del: subsetI intro!: range_subsetI)
    apply clarsimp
   apply (simp cong: conj_cong)
-  apply (simp     add: capMasterCap_def sameRegionAs_def isArchPageCap_def isArchIOPortCap_def
+  apply (simp     add: capMasterCap_def sameRegionAs_def isArchPageCap_def
                 split: capability.split
             split del: if_split cong: if_cong)
   apply (simp    add: X64_H.sameRegionAs_def isCap_simps
@@ -825,22 +837,20 @@ lemma sameRegionAs_def2:
 lemma sameObjectAs_def2:
  "sameObjectAs cap cap' = (\<lambda>cap cap'.
      (cap = cap'
-          \<and> (\<not> isNullCap cap \<and> \<not> isZombie cap
-              \<and> \<not> isUntypedCap cap)
-          \<and> (\<not> isNullCap cap' \<and> \<not> isZombie cap'
-              \<and> \<not> isUntypedCap cap')
+          \<and> (\<not> isNullCap cap \<and> \<not> isZombie cap \<and> \<not> isUntypedCap cap)
+          \<and> (\<not> isNullCap cap' \<and> \<not> isZombie cap' \<and> \<not> isUntypedCap cap')
           \<and> (isArchPageCap cap \<longrightarrow> capRange cap \<noteq> {})
           \<and> (isArchPageCap cap' \<longrightarrow> capRange cap' \<noteq> {})))
-           (capMasterCap cap) (capMasterCap cap')"
+        (capMasterCap cap) (capMasterCap cap')"
   apply (simp add: sameObjectAs_def sameRegionAs_def2
                    isCap_simps capMasterCap_def
             split: capability.split)
   apply (clarsimp simp: X64_H.sameObjectAs_def isCap_simps
                  split: arch_capability.split cong: if_cong)
   apply (clarsimp simp: X64_H.sameRegionAs_def isCap_simps
-             split del: if_split cong: if_cong)
+                  split del: if_split cong: if_cong)
   apply (simp add: capRange_def isCap_simps
-        split del: if_split)
+              split del: if_split)
   apply fastforce
   done
 

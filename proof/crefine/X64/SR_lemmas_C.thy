@@ -959,7 +959,7 @@ lemma cte_bits_le_3 [simp]: "3 \<le> cte_level_bits"
 lemma cte_bits_le_tcb_bits: "cte_level_bits \<le> tcbBlockSizeBits"
   by (simp add: cte_level_bits_def objBits_defs)
 
-lemma ctes_of_aligned_bits [simp]:
+lemma ctes_of_aligned_bits:
   assumes pa: "pspace_aligned' s"
   and    cof: "ctes_of s p = Some cte"
   and   bits: "bits \<le> cte_level_bits"
@@ -982,21 +982,12 @@ qed
 lemma mdbNext_not_zero_eq:
   "cmdbnode_relation n n' \<Longrightarrow> \<forall>s s'. (s, s') \<in> rf_sr (*ja \<and> (is_aligned (mdbNext n) 3)*)
   \<longrightarrow> (mdbNext n \<noteq> 0) = (s' \<in> {_. mdbNext_CL (mdb_node_lift n') \<noteq> 0})"
-  apply clarsimp
-  apply (erule cmdbnode_relationE)
-  apply (fastforce simp: mdbNext_to_H)
-  done
+  by (fastforce elim: cmdbnode_relationE)
 
 lemma mdbPrev_not_zero_eq:
   "cmdbnode_relation n n' \<Longrightarrow> \<forall>s s'. (s, s') \<in> rf_sr (*ja\<and> (is_aligned (mdbPrev n) 3)*)
   \<longrightarrow> (mdbPrev n \<noteq> 0) = (s' \<in> {_. mdbPrev_CL (mdb_node_lift n') \<noteq> 0})"
-  apply clarsimp
-  apply (erule cmdbnode_relationE)
-  apply (unfold mdb_node_to_H_def)
-  apply (fastforce)
-  done
-
-declare is_aligned_0 [simp]
+  by (fastforce elim: cmdbnode_relationE)
 
 abbreviation
   "nullCapPointers cte \<equiv> cteCap cte = NullCap \<and> mdbNext (cteMDBNode cte) = nullPointer \<and> mdbPrev (cteMDBNode cte) = nullPointer"
@@ -2198,6 +2189,72 @@ lemma cap_get_tag_isCap_ArchObject2:
   by (rule cap_get_tag_isCap_ArchObject2_worker [OF _ cr],
       simp add: cap_get_tag_isCap_ArchObject,
       simp add: isArchCap_tag_def2 cap_tag_defs)+
+
+schematic_goal cap_io_port_cap_lift_def':
+  "cap_get_tag cap = SCAST(32 signed \<rightarrow> 64) cap_io_port_cap
+    \<Longrightarrow> cap_io_port_cap_lift cap =
+          \<lparr> capIOPortFirstPort_CL = ?first,
+            capIOPortLastPort_CL = ?last \<rparr>"
+  by (simp add: cap_io_port_cap_lift_def cap_lift_def cap_tag_defs)
+
+schematic_goal cap_frame_cap_lift_def':
+  "cap_get_tag cap = SCAST(32 signed \<rightarrow> 64) cap_frame_cap
+    \<Longrightarrow> cap_frame_cap_lift cap =
+          \<lparr> capFMappedASID_CL = ?mapped_asid,
+            capFBasePtr_CL = ?base_ptr,
+            capFSize_CL = ?frame_size,
+            capFMapType_CL = ?map_type,
+            capFMappedAddress_CL = ?mapped_address,
+            capFVMRights_CL = ?vm_rights,
+            capFIsDevice_CL = ?is_device \<rparr>"
+  by (simp add: cap_frame_cap_lift_def cap_lift_def cap_tag_defs)
+
+lemmas ccap_rel_cap_get_tag_cases_generic =
+  cap_get_tag_isCap_unfolded_H_cap(1-11)
+    [OF back_subst[of "\<lambda>cap. ccap_relation cap cap'" for cap']]
+
+lemmas ccap_rel_cap_get_tag_cases_arch =
+  cap_get_tag_isCap_unfolded_H_cap(12-19)
+    [OF back_subst[of "\<lambda>cap. ccap_relation (ArchObjectCap cap) cap'" for cap'],
+     OF back_subst[of "\<lambda>cap. ccap_relation cap cap'" for cap']]
+
+lemmas ccap_rel_cap_get_tag_cases_arch' =
+  ccap_rel_cap_get_tag_cases_arch[OF _ refl]
+
+lemmas cap_lift_defs =
+       cap_untyped_cap_lift_def
+       cap_endpoint_cap_lift_def
+       cap_notification_cap_lift_def
+       cap_reply_cap_lift_def
+       cap_cnode_cap_lift_def
+       cap_thread_cap_lift_def
+       cap_irq_handler_cap_lift_def
+       cap_zombie_cap_lift_def
+       cap_frame_cap_lift_def
+       cap_page_table_cap_lift_def
+       cap_page_directory_cap_lift_def
+       cap_pdpt_cap_lift_def
+       cap_pml4_cap_lift_def
+       cap_asid_pool_cap_lift_def
+       cap_io_port_cap_lift_def
+
+lemma cap_lift_Some_CapD:
+  "\<And>c'. cap_lift c = Some (Cap_untyped_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_untyped_cap"
+  "\<And>c'. cap_lift c = Some (Cap_endpoint_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_endpoint_cap"
+  "\<And>c'. cap_lift c = Some (Cap_notification_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_notification_cap"
+  "\<And>c'. cap_lift c = Some (Cap_reply_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_reply_cap"
+  "\<And>c'. cap_lift c = Some (Cap_cnode_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_cnode_cap"
+  "\<And>c'. cap_lift c = Some (Cap_thread_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_thread_cap"
+  "\<And>c'. cap_lift c = Some (Cap_irq_handler_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_irq_handler_cap"
+  "\<And>c'. cap_lift c = Some (Cap_zombie_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_zombie_cap"
+  "\<And>c'. cap_lift c = Some (Cap_frame_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_frame_cap"
+  "\<And>c'. cap_lift c = Some (Cap_page_table_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_page_table_cap"
+  "\<And>c'. cap_lift c = Some (Cap_page_directory_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_page_directory_cap"
+  "\<And>c'. cap_lift c = Some (Cap_pdpt_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_pdpt_cap"
+  "\<And>c'. cap_lift c = Some (Cap_pml4_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_pml4_cap"
+  "\<And>c'. cap_lift c = Some (Cap_asid_pool_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_asid_pool_cap"
+  "\<And>c'. cap_lift c = Some (Cap_io_port_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_io_port_cap"
+  by (auto simp: cap_lifts cap_lift_defs)
 
 lemma rf_sr_x64KSGlobalPML4:
   "(s, s') \<in> rf_sr
