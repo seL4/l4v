@@ -7796,13 +7796,6 @@ lemma createObject_untyped_region_is_zero_bytes:
                    less_mask_eq word_less_nat_alt)
   done *)
 
-(* FIXME move to Invariants_H *)
-lemma invs_pspace_canonical'[elim!]:
-  "invs' s \<Longrightarrow> pspace_canonical' s"
-  by (simp add: invs'_def valid_state'_def valid_pspace'_def)
-
-find_theorems valid_cap' cte_wp_at' -NonDetMonad.valid -validE -validE_R
-
 lemma createNewObjects_ccorres:
 notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
       Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
