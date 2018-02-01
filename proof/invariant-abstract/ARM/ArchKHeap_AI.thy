@@ -45,6 +45,7 @@ lemma non_vspace_objs[intro]:
   "non_vspace_obj (CNode sz cnode_contents)"
   "non_vspace_obj (TCB tcb)"
   "non_vspace_obj (Notification notification)"
+  "non_vspace_obj (SchedContext sc n)"
   by (auto)
 
 definition vspace_obj_pred :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool" where

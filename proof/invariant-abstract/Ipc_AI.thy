@@ -1775,8 +1775,13 @@ crunch cap_refs_in_kernel_window[wp]: do_ipc_transfer "cap_refs_in_kernel_window
   (wp: crunch_wps hoare_vcg_const_Ball_lift ball_tcb_cap_casesI
      simp: zipWithM_x_mapM crunch_simps ball_conj_distrib ignore: update_sched_context)
 
+(*
 crunch valid_objs[wp]: do_ipc_transfer "valid_objs :: 'state_ext state \<Rightarrow> bool"
   (wp: hoare_vcg_const_Ball_lift simp:ball_conj_distrib )
+*)
+
+lemma "\<lbrace>valid_objs\<rbrace> do_ipc_transfer sender ep badge grant receiver \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  sorry
 
 end
 
