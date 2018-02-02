@@ -61,11 +61,15 @@ definition
      \<forall>t. obj = TCB t \<longrightarrow>
            ARM_A.tcb_vcpu (tcb_arch t) = cur_vcpu_to_tcb_vcpu (ARM_A.arm_current_vcpu as)"
 
-
 definition
   arch_vcpu_tcb_valid :: "'z::state_ext state \<Rightarrow> bool" where
   "arch_vcpu_tcb_valid s \<equiv>
     obj_at (arch_vcpu_tcb_valid_obj (arch_state s)) (cur_thread s) s"
+
+definition
+ valid_arch_idle :: "'z::state_ext state \<Rightarrow> bool" where
+ "valid_arch_idle s \<equiv>
+    obj_at (\<lambda>obj. \<forall>t. obj = TCB t \<longrightarrow> ARM_A.tcb_vcpu (tcb_arch t) = None) (idle_thread s) s"
 
 lemmas arch_vcpu_tcb_valid_kheap_unfold =
          arch_vcpu_tcb_valid_def
@@ -98,7 +102,6 @@ lemma lift_arch_vcpu_tcb_valid:
   apply (drule_tac x="op = (kheap s (cur_thread s))" in meta_spec)
   apply fastforce
  done
-
 
 lemma set_object_not_cur_thread_arch_vcpu_tcb_valid:
   "\<lbrace>arch_vcpu_tcb_valid and (op \<noteq> addr) \<circ> cur_thread\<rbrace> set_object addr obj \<lbrace>\<lambda>_. arch_vcpu_tcb_valid\<rbrace>"
@@ -420,12 +423,30 @@ lemma get_the_tcb_vcpu_tcb_valid:
    \<lbrace>\<lambda>a. obj_at (\<lambda>obj. \<forall>t. obj = TCB t \<longrightarrow> tcb_vcpu (tcb_arch t) = tcb_vcpu (tcb_arch a)) v\<rbrace>"
   by (wpsimp)
 
+lemma arch_vcpu_tcb_valid_machine_state[simp]:
+  "arch_vcpu_tcb_valid s \<Longrightarrow> arch_vcpu_tcb_valid (s\<lparr>machine_state := xb\<rparr>)"
+ by (clarsimp simp: arch_vcpu_tcb_valid_def)
+
+lemma hoare_validE_disjI1:
+ "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<or> R r s\<rbrace>,\<lbrace>E\<rbrace>"
+  by (fastforce simp: validE_def valid_def split: sum.splits)
+
+lemma hoare_validE_disjI2:
+ "\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<or> R r s\<rbrace>,\<lbrace>E\<rbrace>"
+  by (fastforce simp: validE_def valid_def split: sum.splits)
+
+text \<open> We need to know that the vcpu of the idle thread is always None.
+For an example of arch-specific invariants see
+    definitions: valid_tcb, valid_arch_tcb
+    lemmas: valid_arch_tcb_lift, valid_tcb_lift
+ \<close>
 lemma set_vm_root_idle_vcpu_tcb_valid:
  "\<And>v. \<lbrace>\<lambda>s. x = idle_thread s \<and> tcb_at x s \<and> v = (idle_thread s) \<and>
-            (*obj_at (\<lambda>obj. \<forall>t. obj = TCB t \<longrightarrow> ARM_A.tcb_vcpu (tcb_arch t) = None) v s \<and> *)
+            arch_vcpu_tcb_valid s \<and>
+            valid_arch_idle s \<and>
             cur_vcpu_to_tcb_vcpu (arm_current_vcpu (arch_state s)) = None \<rbrace>
     set_vm_root x
-  \<lbrace>\<lambda>x s. obj_at (arch_vcpu_tcb_valid_obj (arch_state s)) v s\<rbrace>"
+  \<lbrace>\<lambda>x s. obj_at (arch_vcpu_tcb_valid_obj (arch_state s)) v s \<rbrace>"
   apply (simp add: set_vm_root_def)
   apply wpsimp
   apply (wpsimp wp: vcpu_switch_obj_at_arch_vcpu_tcb_valid_obj )
@@ -463,18 +484,12 @@ lemma set_vm_root_idle_vcpu_tcb_valid:
   apply assumption
   apply simp
   apply (clarsimp simp: )
- apply (rule conjI)
-  -- \<open> This looks like the case where set_vm_root throws an exception and doesn't switch to the
-       idle VCPU. We need to change the post condition or weaken the lemma\<close>
-  apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: arch_vcpu_tcb_valid_obj_def)
-
- apply (rule conjI) 
- apply clarsimp
-  apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: arch_vcpu_tcb_valid_obj_def)
-done
-
+  apply (rule conjI)
+   apply (clarsimp simp: obj_at_def valid_arch_idle_def arch_vcpu_tcb_valid_obj_def)
+  apply (rule conjI) 
+   apply clarsimp
+  apply (clarsimp simp: obj_at_def valid_arch_idle_def arch_vcpu_tcb_valid_obj_def)
+  done
  
 lemma vcpu_switch_tcb_at:
 "\<lbrace>\<lambda>s. (tcb_at t s)\<rbrace> vcpu_switch x \<lbrace>\<lambda>_ s. (tcb_at t s)\<rbrace>"
