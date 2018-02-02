@@ -554,10 +554,6 @@ lemma hoare_gen_asm_lk:
   "(P \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>K P and P'\<rbrace> f \<lbrace>Q\<rbrace>"
   by (fastforce simp add: valid_def)
 
-lemma hoare_when_wp [wp]:
- "\<lbrakk> P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>if P then Q else R ()\<rbrace> when P f \<lbrace>R\<rbrace>"
-  by (clarsimp simp: when_def valid_def return_def)
-
 lemma hoare_conjI:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> R r s\<rbrace>"
   unfolding valid_def by blast
@@ -1330,6 +1326,12 @@ lemma validE_validE_R: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>\<top
 lemma validE_R_validE: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
   by (simp add: validE_R_def)
 
+lemma validE_validE_E: "\<lbrace>P\<rbrace> f \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f -,\<lbrace>E\<rbrace>"
+  by (simp add: validE_E_def)
+
+lemma validE_E_validE: "\<lbrace>P\<rbrace> f -,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>E\<rbrace>"
+  by (simp add: validE_E_def)
+
 lemma hoare_post_imp_R: "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>,-; \<And>r s. Q' r s \<Longrightarrow> Q r s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-"
   apply (unfold validE_R_def)
   apply (erule hoare_post_impErr, simp+)
@@ -1535,10 +1537,6 @@ lemma hoare_add_post:
   apply simp
   done
 
-lemma hoare_whenE_wp:
-  "(P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>) \<Longrightarrow> \<lbrace>if P then Q else R ()\<rbrace> whenE P f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>"
-  unfolding whenE_def by clarsimp wp
-
 lemma hoare_gen_asmE:
   "(P \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>,-) \<Longrightarrow> \<lbrace>P' and K P\<rbrace> f \<lbrace>Q\<rbrace>, -"
   by (simp add: validE_R_def validE_def valid_def) blast
@@ -1555,9 +1553,27 @@ lemma hoare_list_case:
   apply simp
   done
 
-lemma hoare_unless_wp:
+lemma hoare_when_wp [wp_split]:
+ "\<lbrakk> P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>if P then Q else R ()\<rbrace> when P f \<lbrace>R\<rbrace>"
+  by (clarsimp simp: when_def valid_def return_def)
+
+lemma hoare_unless_wp[wp_split]:
   "(\<not>P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>) \<Longrightarrow> \<lbrace>if P then R () else Q\<rbrace> unless P f \<lbrace>R\<rbrace>"
   unfolding unless_def by wp auto
+
+lemma hoare_whenE_wp:
+  "(P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>) \<Longrightarrow> \<lbrace>if P then Q else R ()\<rbrace> whenE P f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>"
+  unfolding whenE_def by clarsimp wp
+
+lemmas hoare_whenE_wps[wp_split]
+    = hoare_whenE_wp hoare_whenE_wp[THEN validE_validE_R] hoare_whenE_wp[THEN validE_validE_E]
+
+lemma hoare_unlessE_wp:
+  "(\<not> P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>) \<Longrightarrow> \<lbrace>if P then R () else Q\<rbrace> unlessE P f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>"
+  unfolding unlessE_def by wp auto
+
+lemmas hoare_unlessE_wps[wp_split]
+    = hoare_unlessE_wp hoare_unlessE_wp[THEN validE_validE_R] hoare_unlessE_wp[THEN validE_validE_E]
 
 lemma hoare_use_eq:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (f s)\<rbrace> m \<lbrace>\<lambda>rv s. P (f s)\<rbrace>"
@@ -1652,21 +1668,13 @@ lemma hoare_validE_conj:
   "\<lbrakk> \<lbrace>P\<rbrace>f\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>P\<rbrace>f\<lbrace>R\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> R r s\<rbrace>,\<lbrace>E\<rbrace>"
   unfolding valid_def validE_def by (simp add: split_def split: sum.splits)
 
-lemma hoare_valid_validE:
-  "\<lbrace>P\<rbrace>f\<lbrace>\<lambda>r. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>f\<lbrace>\<lambda>r. Q\<rbrace>,\<lbrace>\<lambda>r. Q\<rbrace>"
-  unfolding valid_def validE_def by (simp add: split_def split: sum.splits)
+lemmas hoare_valid_validE = valid_validE
 
 lemma liftE_validE_E [wp]:
   "\<lbrace>\<top>\<rbrace> liftE f -, \<lbrace>Q\<rbrace>"
   by (clarsimp simp: validE_E_def valid_def)
 
-lemma validE_validE_E [wp_comb]:
-  "\<lbrace>P\<rbrace> f \<lbrace>\<top>\<top>\<rbrace>, \<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f -, \<lbrace>E\<rbrace>"
-  by (simp add: validE_E_def)
-
-lemma validE_E_validE:
-  "\<lbrace>P\<rbrace> f -, \<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<top>\<top>\<rbrace>, \<lbrace>E\<rbrace>"
-  by (simp add: validE_E_def)
+declare validE_validE_E[wp_comb]
 
 (*
  * if_validE_E:
@@ -2084,10 +2092,10 @@ lemma validNF_nobindE [wp]:
    \<lbrace>A\<rbrace> doE f; g odE \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace>!"
   by clarsimp wp
 
-(*
- * Setup triple rules for validE_NF so that we can use the
- * "wp_comb" attribute.
- *)
+text {*
+Setup triple rules for validE_NF so that we can use the
+"wp_comb" attribute.
+*}
 
 definition "validE_NF_property Q E s b \<equiv> \<not> snd (b s)
        \<and> (\<forall>(r', s') \<in> fst (b s). case r' of Inl x \<Rightarrow> E x s' | Inr x \<Rightarrow> Q x s')"

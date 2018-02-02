@@ -2079,13 +2079,6 @@ lemma distinct_tuple_helper:
   apply (simp add: map_fst_zip_prefix)
   done
 
-lemma hoare_whenE_wp:
-  "(P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>) \<Longrightarrow> \<lbrace>if P then Q else R ()\<rbrace> whenE P f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>"
-  unfolding whenE_def
-  apply clarsimp
-  apply wp
-  done
-
 lemma list_case_throw_validE_R:
   "\<lbrakk> \<And>y ys. xs = y # ys \<Longrightarrow> \<lbrace>P\<rbrace> f y ys \<lbrace>Q\<rbrace>,- \<rbrakk> \<Longrightarrow>
    \<lbrace>P\<rbrace> case xs of [] \<Rightarrow> throwError e | x # xs \<Rightarrow> f x xs \<lbrace>Q\<rbrace>,-"
