@@ -312,6 +312,7 @@ definition
     | TCBResume \<Rightarrow> Some (TcbIntent TcbResumeIntent)
     | TCBBindNotification \<Rightarrow> Some (TcbIntent TcbBindNTFNIntent)
     | TCBUnbindNotification \<Rightarrow> Some (TcbIntent TcbUnbindNTFNIntent)
+    | TCBSetTLSBase \<Rightarrow> Some (TcbIntent TcbSetTLSBaseIntent)
     | CNodeRevoke \<Rightarrow>
           map_option CNodeIntent
                    (transform_cnode_index_and_depth CNodeRevokeIntent args)
@@ -397,7 +398,8 @@ lemma transform_tcb_intent_invocation:
    ((label = TCBSuspend) = (ti = TcbSuspendIntent)) \<and>
    ((label = TCBResume) = (ti = TcbResumeIntent)) \<and>
    ((label = TCBBindNotification) = (ti = TcbBindNTFNIntent)) \<and>
-   ((label = TCBUnbindNotification) = (ti = TcbUnbindNTFNIntent))
+   ((label = TCBUnbindNotification) = (ti = TcbUnbindNTFNIntent)) \<and>
+   ((label = TCBSetTLSBase) = (ti = TcbSetTLSBaseIntent))
    ) \<and>
    (
     label \<noteq> InvalidInvocation \<and>
@@ -525,7 +527,8 @@ lemma transform_intent_isnot_TcbIntent:
           (label \<noteq> TCBSuspend) \<and>
           (label \<noteq> TCBResume) \<and>
           (label \<noteq> TCBBindNotification) \<and>
-          (label \<noteq> TCBUnbindNotification))"
+          (label \<noteq> TCBUnbindNotification) \<and>
+          (label \<noteq> TCBSetTLSBase))"
   apply(rule iffI)
    apply(erule contrapos_np)
    apply(clarsimp simp: transform_intent_def)

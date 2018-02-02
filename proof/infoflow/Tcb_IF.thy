@@ -629,37 +629,42 @@ lemma invoke_tcb_reads_respects_f:
   "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and pas_refined aag and pas_cur_domain aag and Tcb_AI.tcb_inv_wf ti and (\<lambda>s. is_subject aag (cur_thread s)) and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti)) (invoke_tcb ti)"
   including no_pre
   apply(case_tac ti)
-        apply(wpsimp wp: thread_get_reads_respects_f when_ev restart_reads_respects_f
-                         reschedule_required_reads_respects_f as_user_reads_respects_f
-                         static_imp_wp thread_get_wp' restart_silc_inv restart_pas_refined
-                         hoare_vcg_if_lift)+
-        apply(auto intro: requiv_cur_thread_eq
-                  intro!: det_zipWithM
-                    simp: det_setRegister det_getRestartPC det_setNextPC authorised_tcb_inv_def reads_equiv_f_def)[1]
-       apply(wp as_user_reads_respects_f suspend_silc_inv when_ev suspend_reads_respects_f[where st=st]
-                | simp | elim conjE, assumption)+
-       apply(auto simp: authorised_tcb_inv_def  det_getRegister reads_equiv_f_def
-                intro!: det_mapM[OF _ subset_refl])[1]
-      apply(wp when_ev mapM_x_ev'' reschedule_required_reads_respects_f[where st=st]
-               as_user_reads_respects_f[where st=st] hoare_vcg_ball_lift mapM_x_wp'
-               restart_reads_respects_f restart_silc_inv hoare_vcg_if_lift
-               suspend_reads_respects_f suspend_silc_inv hoare_drop_imp
-               restart_silc_inv restart_pas_refined
-           | simp split del: if_split add: det_setRegister det_setNextPC)+
-      apply(auto simp: authorised_tcb_inv_def
-                       idle_no_ex_cap[OF invs_valid_global_refs invs_valid_objs] det_getRestartPC
-                       det_getRegister)[1]
-     defer
-     apply((wp suspend_reads_respects_f[where st=st] restart_reads_respects_f[where st=st]
-             | simp add: authorised_tcb_inv_def )+)[2]
+         apply(wpsimp wp: thread_get_reads_respects_f when_ev restart_reads_respects_f
+                          reschedule_required_reads_respects_f as_user_reads_respects_f
+                          static_imp_wp thread_get_wp' restart_silc_inv restart_pas_refined
+                          hoare_vcg_if_lift)+
+         apply(auto intro: requiv_cur_thread_eq
+                   intro!: det_zipWithM
+                     simp: det_setRegister det_getRestartPC det_setNextPC authorised_tcb_inv_def reads_equiv_f_def)[1]
+        apply(wp as_user_reads_respects_f suspend_silc_inv when_ev suspend_reads_respects_f[where st=st]
+                 | simp | elim conjE, assumption)+
+        apply(auto simp: authorised_tcb_inv_def  det_getRegister reads_equiv_f_def
+                 intro!: det_mapM[OF _ subset_refl])[1]
+       apply(wp when_ev mapM_x_ev'' reschedule_required_reads_respects_f[where st=st]
+                as_user_reads_respects_f[where st=st] hoare_vcg_ball_lift mapM_x_wp'
+                restart_reads_respects_f restart_silc_inv hoare_vcg_if_lift
+                suspend_reads_respects_f suspend_silc_inv hoare_drop_imp
+                restart_silc_inv restart_pas_refined
+            | simp split del: if_split add: det_setRegister det_setNextPC)+
+       apply(auto simp: authorised_tcb_inv_def
+                        idle_no_ex_cap[OF invs_valid_global_refs invs_valid_objs] det_getRestartPC
+                        det_getRegister)[1]
+      defer
+      apply((wp suspend_reads_respects_f[where st=st] restart_reads_respects_f[where st=st]
+              | simp add: authorised_tcb_inv_def )+)[2]
     -- "NotificationControl"
-   apply (rename_tac option)
-   apply (case_tac option, simp_all)[1]
-    apply ((wp unbind_notification_is_subj_reads_respects unbind_notification_silc_inv
-          bind_notification_reads_respects
-        | clarsimp simp: authorised_tcb_inv_def
-        | rule_tac Q=\<top> and st=st in reads_respects_f)+)[2]
--- "ThreadControl"
+    apply (rename_tac option)
+    apply (case_tac option, simp_all)[1]
+     apply ((wp unbind_notification_is_subj_reads_respects unbind_notification_silc_inv
+           bind_notification_reads_respects
+         | clarsimp simp: authorised_tcb_inv_def
+         | rule_tac Q=\<top> and st=st in reads_respects_f)+)[2]
+   -- "SetTLSBase"
+   apply (rename_tac tcb tls_base)
+   apply(wpsimp wp: when_ev reschedule_required_reads_respects_f
+                    as_user_reads_respects_f hoare_drop_imps)+
+        apply(auto simp: det_setRegister authorised_tcb_inv_def)[1]
+  -- "ThreadControl"
   apply (simp add: split_def cong: option.case_cong)
   apply (wpsimp wp: hoare_vcg_const_imp_lift_R simp: when_def | wpc)+
                       apply (rule conjI)
@@ -759,6 +764,7 @@ lemma decode_tcb_invocation_authorised_extra:
                               decode_set_ipc_buffer_def
                               decode_bind_notification_def
                               decode_unbind_notification_def
+                              decode_set_tls_base_def
                               split_def decode_set_space_def
                    split del: if_split)+
   done

@@ -242,6 +242,7 @@ lemma decode_tcb_invocation_reads_respects_f:
   decode_write_registers_def decode_copy_registers_def
   decode_tcb_configure_def decode_set_space_def decode_bind_notification_def
   decode_set_ipc_buffer_def fun_app_def decode_unbind_notification_def
+  decode_set_tls_base_def
   apply (simp add: unlessE_def[symmetric] unlessE_whenE
         split del: if_split
              cong: invocation_label.case_cong)

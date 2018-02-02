@@ -1822,7 +1822,7 @@ lemma length_of_msgRegisters:
 
 (* FIXME: move *)
 lemma register_from_H_bound[simp]:
-  "unat (register_from_H v) < 19"
+  "unat (register_from_H v) < 20"
   by (cases v, simp_all add: "StrictC'_register_defs")
 
 (* FIXME: move *)
@@ -1896,11 +1896,6 @@ lemma wordFromMessageInfo_ccorres [corres]:
     Types_H.msgLengthBits_def Types_H.msgExtraCapBits_def
     Types_H.msgMaxExtraCaps_def shiftL_nat word_bw_assocs word_bw_comms word_bw_lcs)
   done
-
-(* FIXME move *)
-lemma unat_register_from_H_range:
-  "unat (register_from_H r) < 19"
-  by (case_tac r, simp_all add: C_register_defs)
 
 (* FIXME move *)
 lemma register_from_H_eq:
