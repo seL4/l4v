@@ -568,14 +568,6 @@ lemma threadSet_ipcbuffer_invs:
   apply (wp threadSet_invs_trivial, simp_all add: inQ_def cong: conj_cong)
   done
 
-lemma canonical_address_tcb_ptr:
-  "\<lbrakk>canonical_address t; is_aligned t tcbBlockSizeBits\<rbrakk> \<Longrightarrow>
-     canonical_address (ptr_val (tcb_ptr_to_ctcb_ptr t))"
-  apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def)
-  apply (erule canonical_address_add)
-    apply (clarsimp simp: objBits_simps' ctcb_offset_defs)+
-  done
-
 lemma canonical_address_bitfield_extract_tcb:
   "\<lbrakk>canonical_address t; is_aligned t tcbBlockSizeBits\<rbrakk> \<Longrightarrow>
      t = ctcb_ptr_to_tcb_ptr (tcb_Ptr (sign_extend 47 (ptr_val (tcb_ptr_to_ctcb_ptr t))))"
