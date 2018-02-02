@@ -658,7 +658,7 @@ where
     od
     else refill_budget_check csc_ptr consumed capacity;
     csc \<leftarrow> get_sched_context csc_ptr;
-    set_sched_context csc_ptr (csc\<lparr>sc_consumed := (sc_consumed csc) + consumed \<rparr>);
+    update_sched_context csc_ptr (csc\<lparr>sc_consumed := (sc_consumed csc) + consumed \<rparr>);
     modify $ consumed_time_update (K 0);
     ct \<leftarrow> gets cur_thread;
     st \<leftarrow> get_thread_state ct;
@@ -712,7 +712,7 @@ where
   "invoke_sched_control_configure iv \<equiv>
   case iv of InvokeSchedControlConfigure sc_ptr budget period mrefills badge \<Rightarrow> liftE $ do
     sc \<leftarrow> get_sched_context sc_ptr;
-    set_sched_context sc_ptr (sc\<lparr>sc_badge:= badge\<rparr>);
+    update_sched_context sc_ptr (sc\<lparr>sc_badge:= badge\<rparr>);
     period \<leftarrow> return (if budget = period then 0 else period);
     mrefills \<leftarrow> return (if budget = period then MIN_REFILLS else mrefills);
     when (sc_tcb sc \<noteq> None) $ do

@@ -82,7 +82,7 @@ definition
   \<rparr>,
   init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage), (* FIXME: same reason as why we kept the definition of init_globals_frame *)
   init_global_pd \<mapsto> ArchObj (PageDirectory global_pd),
-  idle_sc_ptr \<mapsto> SchedContext (default_sched_context\<lparr>sc_tcb := Some idle_thread_ptr\<rparr>)
+  idle_sc_ptr \<mapsto> SchedContext (default_sched_context\<lparr>sc_tcb := Some idle_thread_ptr\<rparr>) min_sched_context_bits
   )"
 
 definition

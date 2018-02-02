@@ -94,38 +94,8 @@ where
      set_object ref (TCB (f (K new) tcb))
    od"
 
-
-section "simple kernel objects"
-(* to be used for abstraction unifying kernel objects other than TCB and CNode *)
-
-definition
-  partial_inv :: "('a \<Rightarrow> 'b) \<Rightarrow> ('b \<Rightarrow> 'a option)"
-where
-  "partial_inv f x = (if \<exists>!y. f y = x then Some (THE y. f y = x) else None)"
-
-lemma proj_inj: "inj f \<Longrightarrow> (partial_inv f ko = Some v) = (f v = ko)"
-  by (auto simp: partial_inv_def the_equality injD)
-
-lemma inj_Endpoint: "inj Endpoint" by (auto intro: injI)
-lemma inj_Notification: "inj Notification"  by (auto intro: injI)
-
-lemmas proj_inj_ep[simp] = proj_inj[OF inj_Endpoint]
-lemma proj_ko_type_ep[simp]: "(\<exists>v. partial_inv Endpoint  ko = Some (v::endpoint)) = (a_type ko = AEndpoint)"
-  by (cases ko; auto simp: partial_inv_def a_type_def)
-
-lemmas proj_inj_ntfn[simp] = proj_inj[OF inj_Notification]
-lemma proj_ko_type_ntfn[simp]:
-  "(\<exists>v. partial_inv Notification  ko = Some (v::notification)) = (a_type ko = ANTFN)"
-  by (cases ko; auto simp: partial_inv_def a_type_def)
-
-lemma proj_inj_reply[simp]: "(partial_inv Reply ko = Some v) = (Reply v = ko)"
-  by (auto simp: partial_inv_def)
-lemma proj_ko_type_reply[simp]: "(\<exists>v. partial_inv Reply  ko = Some (v::reply)) = (a_type ko = AReply)"
-  by (cases ko; auto simp: partial_inv_def a_type_def)
-
-abbreviation
-  "is_simple_type \<equiv> (\<lambda>ob. a_type ob \<in> {AEndpoint, ANTFN, AReply})"
-
+section "getters/setters for simple kernel objects"
+(* to be used for abstraction unifying kernel objects other than TCB, CNode, and SchedContext *)
 
 definition
   get_simple_ko :: "('a \<Rightarrow> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) s_monad"
@@ -213,17 +183,41 @@ definition
 where
   "get_sched_context ptr \<equiv> do
      kobj \<leftarrow> get_object ptr;
-     case kobj of SchedContext sc \<Rightarrow> return sc
+     case kobj of SchedContext sc n \<Rightarrow> return sc
                  | _ \<Rightarrow> fail
    od"
 
 definition
-  set_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> (unit,'z::state_ext) s_monad"
+  set_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "set_sched_context ptr sc \<equiv> do
+  "set_sched_context ptr sc n  \<equiv> do
      obj \<leftarrow> get_object ptr;
-     assert (case obj of SchedContext sc \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (SchedContext sc)
+     assert (case obj of SchedContext sc n \<Rightarrow> True | _ \<Rightarrow> False);
+     set_object ptr (SchedContext sc n)
+   od"
+
+abbreviation
+  get_sc_obj_ref :: "(sched_context => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
+where
+  "get_sc_obj_ref f ref \<equiv> do
+     sc \<leftarrow> get_sched_context ref;
+     return $ f sc
+   od"
+
+definition (* update only the schedcontext, keeping the size *)
+  update_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "update_sched_context ptr sc  \<equiv> do
+     obj \<leftarrow> get_object ptr;
+     case obj of SchedContext sc' n \<Rightarrow> set_object ptr (SchedContext sc n) | _ \<Rightarrow> fail
+   od"
+
+abbreviation
+  set_sc_obj_ref :: "((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> sched_context \<Rightarrow> sched_context) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "set_sc_obj_ref f ref new \<equiv> do
+     sc \<leftarrow> get_sched_context ref;
+     update_sched_context ref (f (K new) sc)
    od"
 
 definition
@@ -433,17 +427,6 @@ where
      sc \<leftarrow> get_simple_ko C ref;
      set_simple_ko C ref (f (K new) sc)
    od"
-
-
-abbreviation
-  get_sc_obj_ref :: "(sched_context => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
-where
-  "get_sc_obj_ref update ref \<equiv> get_sk_obj_ref SchedContext update ref"
-
-abbreviation
-  set_sc_obj_ref :: "((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> sched_context \<Rightarrow> sched_context) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "set_sc_obj_ref update ref new \<equiv> update_sk_obj_ref SchedContext update ref new"
 
 abbreviation
   get_reply_obj_ref :: "(reply => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"

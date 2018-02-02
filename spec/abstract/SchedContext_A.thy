@@ -16,14 +16,6 @@ begin
 
 text \<open> This theory contains operations on scheduling contexts and scheduling control. \<close>
 
-definition "MIN_BUDGET = 2 * kernelWCET_ticks"
-definition "MIN_BUDGET_US = 2 * kernelWCET_us"
-
-definition "min_sched_context_bits = 8"
-definition "core_sched_context_bytes = (8 * 32 + (5 * 8))" (* RT *)
-definition "refill_size_bytes = 2 * 8"
-definition "max_extra_refills sz = return (((1 << sz) - core_sched_context_bytes) / refill_size_bytes)"
-
 definition
   is_cur_domain_expired :: "det_ext state \<Rightarrow> bool"
 where
@@ -170,7 +162,7 @@ definition
 where
   "set_refills sc_ptr refills = do
     sc \<leftarrow> get_sched_context sc_ptr;
-    set_sched_context sc_ptr (sc\<lparr>sc_refills:= refills\<rparr>)
+    update_sched_context sc_ptr (sc\<lparr>sc_refills:= refills\<rparr>)
   od"
 
 definition
@@ -214,7 +206,7 @@ where
     cur_time \<leftarrow> gets cur_time;
     refill \<leftarrow> return \<lparr> r_time = cur_time, r_amount = budget \<rparr>;
     sc' \<leftarrow> return $ sc\<lparr> sc_period := period, sc_refills := [refill], sc_refill_max := max_refills \<rparr>;
-    set_sched_context sc_ptr sc';
+    update_sched_context sc_ptr sc';
     maybe_add_empty_tail sc_ptr
   od"
 
@@ -412,7 +404,7 @@ definition
   sched_context_update_consumed :: "obj_ref \<Rightarrow> (time,'z::state_ext) s_monad" where
   "sched_context_update_consumed sc_ptr \<equiv> do
     sc \<leftarrow> get_sched_context sc_ptr;
-    set_sched_context sc_ptr (sc\<lparr>sc_consumed := 0 \<rparr>);
+    update_sched_context sc_ptr (sc\<lparr>sc_consumed := 0 \<rparr>);
     return (sc_consumed sc)
    od"
 
@@ -523,7 +515,7 @@ where
       else refill_split_check csc consumed
     od;
     do_extended_op $ commit_domain_time; (***)
-    set_sched_context csc (sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);
+    update_sched_context csc (sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);
     modify (\<lambda>s. s\<lparr>consumed_time := 0\<rparr> )
   od"
 

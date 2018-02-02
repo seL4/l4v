@@ -79,7 +79,7 @@ definition
          | TCBObject \<Rightarrow> TCB default_tcb
          | EndpointObject \<Rightarrow> Endpoint default_ep
          | NotificationObject \<Rightarrow> Notification default_notification
-         | SchedContextObject \<Rightarrow> SchedContext default_sched_context
+         | SchedContextObject \<Rightarrow> SchedContext default_sched_context n
          | ReplyObject \<Rightarrow> Reply default_reply
          | ArchObject aobj \<Rightarrow> ArchObj (default_arch_object aobj dev n)"
 
@@ -93,7 +93,7 @@ definition
          | TCBObject \<Rightarrow> obj_bits (TCB default_tcb)
          | EndpointObject \<Rightarrow> obj_bits (Endpoint undefined)
          | NotificationObject \<Rightarrow> obj_bits (Notification undefined)
-         | SchedContextObject \<Rightarrow> obj_bits (SchedContext undefined)
+         | SchedContextObject \<Rightarrow> obj_size_bits
          | ReplyObject \<Rightarrow> obj_bits (Reply default_reply)
          | ArchObject aobj \<Rightarrow> obj_bits $ ArchObj $ default_arch_object aobj False obj_size_bits"
 

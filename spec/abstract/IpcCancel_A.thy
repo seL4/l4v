@@ -107,7 +107,7 @@ where
      reply \<leftarrow> get_reply reply_ptr;
      assert (reply_sc reply = Some sc_ptr);
      set_reply_obj_ref reply_sc_update reply_ptr None;
-     set_sched_context sc_ptr (sc\<lparr>sc_replies := remove1 reply_ptr (sc_replies sc)\<rparr>)
+     update_sched_context sc_ptr (sc\<lparr>sc_replies := remove1 reply_ptr (sc_replies sc)\<rparr>)
   od"
 
 text \<open>Unbind a reply from the corresponding TCB.\<close>
@@ -242,7 +242,7 @@ where
       case sc_replies sc of
           [] \<Rightarrow> assert True
         | (r#_) \<Rightarrow> do reply \<leftarrow> get_reply r; assert (reply_sc reply = sc_caller) od;
-      set_sched_context (the sc_caller) (sc\<lparr>sc_replies := reply_ptr#sc_replies sc\<rparr>);
+      update_sched_context (the sc_caller) (sc\<lparr>sc_replies := reply_ptr#sc_replies sc\<rparr>);
       set_reply_obj_ref reply_sc_update reply_ptr sc_caller;
       do_extended_op $ sched_context_donate (the sc_caller) callee
     od
