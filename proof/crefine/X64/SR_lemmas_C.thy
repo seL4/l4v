@@ -2491,5 +2491,37 @@ lemma rf_sr_sched_action_relation:
    \<Longrightarrow> cscheduler_action_relation (ksSchedulerAction s) (ksSchedulerAction_' (globals s'))"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
 
+lemma canonical_address_tcb_ptr:
+  "\<lbrakk>canonical_address t; is_aligned t tcbBlockSizeBits\<rbrakk> \<Longrightarrow>
+     canonical_address (ptr_val (tcb_ptr_to_ctcb_ptr t))"
+  apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def)
+  apply (erule canonical_address_add)
+    apply (clarsimp simp: objBits_simps' ctcb_offset_defs)+
+  done
+
+lemma tcb_and_not_mask_canonical:
+  "\<lbrakk>pspace_canonical' s; tcb_at' t s; n < tcbBlockSizeBits\<rbrakk> \<Longrightarrow>
+    tcb_Ptr (sign_extend 47 (ptr_val (tcb_ptr_to_ctcb_ptr t) && ~~ mask n)) =
+        tcb_ptr_to_ctcb_ptr t"
+  apply (frule (1) obj_at'_is_canonical)
+  apply (drule canonical_address_tcb_ptr)
+   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps' split: if_splits)
+  apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend)
+  apply (subgoal_tac "ptr_val (tcb_ptr_to_ctcb_ptr t) && ~~ mask n = ptr_val (tcb_ptr_to_ctcb_ptr t)")
+   prefer 2
+   apply (simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_defs)
+   apply (rule is_aligned_neg_mask_eq)
+   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps')
+   apply (rule is_aligned_add)
+    apply (erule is_aligned_weaken, simp)
+   apply (rule is_aligned_weaken[where x="tcbBlockSizeBits - 1"])
+    apply (simp add: is_aligned_def objBits_simps')
+   apply (simp add: objBits_simps')
+  apply simp
+  done
+
+lemmas tcb_ptr_sign_extend_canonical =
+      tcb_and_not_mask_canonical[where n=0, simplified mask_def objBits_simps', simplified]
+
 end
 end
