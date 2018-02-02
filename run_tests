@@ -45,11 +45,16 @@ print "Testing for L4V_ARCH=%s:" % L4V_ARCH
 # enable timing logs in isabelle builds and set report interval to 3 seconds
 os.environ["ISABELLE_TIMING_LOG"]="3.0s"
 
+# For the time being, we allow sorries in invariant proofs:
+os.environ["AINVS_QUICK_AND_DIRTY"]="1"
+print "Testing with QUICK_AND_DIRTY for AINVS"
+
+
 # Enable quick_and_dirty mode for various images
 if os.environ.has_key("QUICK_AND_DIRTY"):
-    os.environ["AINVS_QUICK_AND_DIRTY"]=1
-    os.environ["REFINE_QUICK_AND_DIRTY"]=1
-    os.environ["CREFINE_QUICK_AND_DIRTY"]=1
+    os.environ["AINVS_QUICK_AND_DIRTY"]="1"
+    os.environ["REFINE_QUICK_AND_DIRTY"]="1"
+    os.environ["CREFINE_QUICK_AND_DIRTY"]="1"
     print "Testing with QUICK_AND_DIRTY"
 
 # Lists of excluded tests for diferent archs
@@ -101,8 +106,10 @@ os.chdir(DIR)
 # Arguments:
 args  = ['./misc/regression/run_tests.py']                 # Script name
 args += [r for t in EXCLUDE[L4V_ARCH] for r in ['-r', t]]  # Exclusion list
-args += ["ASpec", "HaskellKernel"]                         # run these tests only for RT
+args += ["ASpec", "HaskellKernel", "AInvs"]                # run these tests only for RT
 args += sys.argv[1:]                                       # Other arguments
 
 # Run the thing!!
 os.execvp('./misc/regression/run_tests.py',args)
+
+    
