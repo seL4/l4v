@@ -30,7 +30,8 @@ where
    | tcb_invocation.ReadRegisters src susp n arch \<Rightarrow> is_subject aag src
    | tcb_invocation.WriteRegisters dest res values arch \<Rightarrow> is_subject aag dest
    | tcb_invocation.CopyRegisters dest src susp res frame int_regs arch \<Rightarrow>
-         is_subject aag src \<and> is_subject aag dest"
+         is_subject aag src \<and> is_subject aag dest
+   | tcb_invocation.SetTLSBase tcb tls_base \<Rightarrow> is_subject aag tcb"
 
 subsection{* invoke *}
 
@@ -78,7 +79,8 @@ lemma invoke_tcb_cases:
    | tcb_invocation.NotificationControl t ntfn \<Rightarrow> invoke_tcb (tcb_invocation.NotificationControl t ntfn)
    | tcb_invocation.ReadRegisters src susp n arch \<Rightarrow> invoke_tcb (tcb_invocation.ReadRegisters src susp n arch)
    | tcb_invocation.WriteRegisters dest res values arch \<Rightarrow> invoke_tcb (tcb_invocation.WriteRegisters dest res values arch)
-   | tcb_invocation.CopyRegisters dest src susp res frame int_regs arch \<Rightarrow> invoke_tcb (tcb_invocation.CopyRegisters dest src susp res frame int_regs arch))"
+   | tcb_invocation.CopyRegisters dest src susp res frame int_regs arch \<Rightarrow> invoke_tcb (tcb_invocation.CopyRegisters dest src susp res frame int_regs arch)
+   | tcb_invocation.SetTLSBase tcb tls_base \<Rightarrow> invoke_tcb (tcb_invocation.SetTLSBase tcb tls_base))"
   by (cases ti, simp_all)
 
 lemmas itr_wps = restart_integrity_autarch as_user_integrity_autarch thread_set_integrity_autarch
@@ -518,6 +520,15 @@ lemma decode_bind_notification_authorised:
   apply (auto simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def AllowRecv_def)
   done
 
+lemma decode_set_tls_base_authorised:
+  "\<lbrace>K (is_subject aag t)\<rbrace>
+    decode_set_tls_base msg (cap.ThreadCap t)
+   \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
+  unfolding decode_set_tls_base_def authorised_tcb_inv_def
+  apply clarsimp
+  apply (wpsimp wp: gbn_wp)
+  done
+
 lemma decode_tcb_invocation_authorised:
   "\<lbrace>invs and pas_refined aag and K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
                                   \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x)))\<rbrace>
@@ -531,7 +542,8 @@ lemma decode_tcb_invocation_authorised:
             decode_set_sched_params_authorised
             decode_set_ipc_buffer_authorised decode_set_space_authorised
             decode_bind_notification_authorised
-            decode_unbind_notification_authorised)+
+            decode_unbind_notification_authorised
+            decode_set_tls_base_authorised)+
   by (auto iff: authorised_tcb_inv_def)
 
 text{*
