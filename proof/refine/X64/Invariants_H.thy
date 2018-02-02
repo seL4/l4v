@@ -3841,6 +3841,10 @@ lemma invs_pspace_canonical'[elim!]:
   "invs' s \<Longrightarrow> pspace_canonical' s"
   by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
 
+lemma valid_pspace_canonical'[elim!]:
+  "valid_pspace' s \<Longrightarrow> pspace_canonical' s"
+  by (clarsimp simp: valid_pspace'_def)
+
 end
 (* The normalise_obj_at' tactic was designed to simplify situations similar to:
   ko_at' ko p s \<Longrightarrow>
