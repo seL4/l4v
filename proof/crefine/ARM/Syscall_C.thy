@@ -433,14 +433,9 @@ lemma messageInfoFromWord_spec:
   apply (rule allI, rule conseqPost, rule messageInfoFromWord_spec[rule_format])
    apply simp_all
   apply (clarsimp simp: seL4_MessageInfo_lift_def mi_from_H_def
-                        messageInfoFromWord_def Let_def
+                        messageInfoFromWord_def Let_def msgLabelBits_def
                         Types_H.msgLengthBits_def Types_H.msgExtraCapBits_def
                         Types_H.msgMaxExtraCaps_def shiftL_nat)
-  apply (fold mask_def[where n=20, simplified])
-  apply (rule less_mask_eq)
-  apply (rule shiftr_less_t2n')
-   apply simp
-  apply simp
   done
 
 lemma threadGet_tcbIpcBuffer_ccorres [corres]:

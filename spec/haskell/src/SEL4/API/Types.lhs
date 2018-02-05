@@ -157,7 +157,7 @@ The first word of a message contains information about the contents and type of 
 >             (bit msgExtraCapBits - 1),
 >         msgCapsUnwrapped = w `shiftR` (msgLengthBits + msgExtraCapBits) .&.
 >             (bit msgMaxExtraCaps - 1),
->         msgLabel = w `shiftR` otherBits }
+>         msgLabel = w `shiftR` otherBits .&. (bit msgLabelBits - 1) }
 >         where otherBits = msgLengthBits + msgExtraCapBits + msgMaxExtraCaps
 >               msgLen    = w .&. (bit msgLengthBits - 1)
 
@@ -188,6 +188,9 @@ The maximum number of capabilities passed as arguments to a method invocation. T
 
 > msgAlignBits :: Int
 > msgAlignBits = wordSizeCase 9 10
+
+> msgLabelBits :: Int
+> msgLabelBits = 20
 
 \subsection{Capability Transfers}
 

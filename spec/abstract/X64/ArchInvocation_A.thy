@@ -38,7 +38,7 @@ definition
 where
   "data_to_message_info w \<equiv>
    MI (let v = w && ((1 << 7) - 1) in if v > 120 then 120 else v) ((w >> 7) && ((1 << 2) - 1))
-      ((w >> 9) && ((1 << 3) - 1)) (w >> 12)"
+      ((w >> 9) && ((1 << 3) - 1)) ((w >> 12) && ((1 << 20) - 1))"
 
 text {* These datatypes encode the arguments to the various possible
 x64-specific system calls. Selectors are defined for various fields

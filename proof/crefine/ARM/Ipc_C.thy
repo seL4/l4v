@@ -1067,9 +1067,7 @@ lemma messageInfoFromWord_ccorres [corres]:
    apply simp
   apply (simp add: return_def messageInfoFromWord_def Let_def message_info_to_H_def
     Types_H.msgLengthBits_def Types_H.msgExtraCapBits_def msgMaxExtraCaps_def
-    shiftL_nat msgMaxLength_def)
-  apply (rule shiftr_mask_eq' [symmetric, where m = 20, simplified mask_def, simplified])
-  apply (simp add: word_size)
+    shiftL_nat msgMaxLength_def msgLabelBits_def)
   done
 
 lemma getMessageInfo_ccorres:

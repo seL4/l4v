@@ -1076,7 +1076,7 @@ lemma reply_from_kernel_error:
      apply (subst shiftl_shiftr_id)
        apply (simp add:word_bits_def mask_def le_mask_iff[symmetric])+
       apply unat_arith
-     apply simp
+     apply (word_bitwise, simp)
     apply (wp hoare_drop_imp hoare_vcg_all_lift)+
   apply clarsimp
   apply (rule conjI)

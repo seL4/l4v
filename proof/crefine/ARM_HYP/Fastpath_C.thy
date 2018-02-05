@@ -1458,13 +1458,11 @@ lemma mi_check_messageInfo_raw:
         = mi_from_H (messageInfoFromWord mi)"
   apply (simp add: messageInfoFromWord_def Let_def mi_from_H_def
                    seL4_MessageInfo_lift_def fcp_beta msgLengthBits_def msgExtraCapBits_def
-                   msgMaxExtraCaps_def shiftL_nat mask_def)
+                   msgMaxExtraCaps_def shiftL_nat mask_def msgLabelBits_def)
   apply (subst if_not_P)
    apply (simp add: linorder_not_less msgMaxLength_def n_msgRegisters_def)
    apply (erule order_trans, simp)
   apply simp
-  apply (thin_tac "P" for P)
-  apply word_bitwise
   done
 
 lemma fastpath_mi_check_spec:

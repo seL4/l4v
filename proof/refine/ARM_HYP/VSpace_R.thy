@@ -2690,7 +2690,7 @@ lemma message_info_from_data_eqv:
   "message_info_map (data_to_message_info rv) = messageInfoFromWord rv"
   apply (auto simp add: data_to_message_info_def messageInfoFromWord_def
     msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def
-    shiftL_nat Let_def not_less msgMaxLength_def)
+    shiftL_nat Let_def not_less msgMaxLength_def msgLabelBits_def)
   done
 
 lemma set_mi_corres:
