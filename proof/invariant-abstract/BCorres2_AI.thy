@@ -112,7 +112,7 @@ lemma valid_ntfn_trans_state[simp]: "valid_ntfn a (trans_state g s) = valid_ntfn
   apply (simp add: valid_ntfn_def split: ntfn.splits)
   done
 
-lemma valid_sc_trans_state[simp]: "valid_sched_context n a (trans_state g s) = valid_sched_context n a s"
+lemma valid_sc_trans_state[simp]: "valid_sched_context a (trans_state g s) = valid_sched_context a s"
   apply (simp add: valid_sched_context_def)
   done
 

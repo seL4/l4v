@@ -2308,7 +2308,7 @@ lemma same_caps_simps[simp]:
  "same_caps (Endpoint ep)  = (\<lambda>val. is_ep val)"
  "same_caps (Notification ntfn) = (\<lambda>val. is_ntfn val)"
  "same_caps (Reply rply)  = (\<lambda>val. is_reply val)"
- "same_caps (SchedContext sc n)  = (\<lambda>val. is_sc_obj n val)"
+ "same_caps (SchedContext sc n)  = (\<lambda>val. \<exists>sc'. val = SchedContext sc' n)"
  "same_caps (ArchObj ao)   = (\<lambda>val. (\<exists>ao'. val = ArchObj ao'))"
  apply (rule ext)
  apply (case_tac val, (fastforce simp: is_obj_defs)+)+

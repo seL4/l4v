@@ -425,7 +425,7 @@ context EmptyFail_AI_schedule_unit begin
 lemma schedule_empty_fail[wp]:
   "empty_fail (schedule :: (unit,unit) s_monad)"
   apply (simp add: schedule_def)
-  apply (wp disjI2)
+  apply (wp disjI2 sc_and_timer_empty_fail)
   done
 
 end

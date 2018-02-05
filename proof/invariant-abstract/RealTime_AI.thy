@@ -355,9 +355,9 @@ crunch typ_at[wp]: postpone, sched_context_bind_tcb "\<lambda>(s::det_ext state)
        wp: hoare_drop_imps mapM_x_wp' maybeM_inv select_wp
      simp: crunch_simps)
 *)
-lemma sc_and_timer_empty_fail[wp]:
+lemma sc_and_timer_empty_fail:
   "empty_fail sc_and_timer"
-  sorry 
+  sorry
 
 (* FIXME: move *)
 lemma tcb_at_typ_at:

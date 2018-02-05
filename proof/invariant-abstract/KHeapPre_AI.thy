@@ -20,7 +20,7 @@ where
                                          \<and> (\<forall>(getF, t) \<in> ran tcb_cap_cases. getF tcb' = getF tcb))"
 | "same_caps val (Endpoint ep)       = is_ep val"
 | "same_caps val (Notification ntfn) = is_ntfn val"
-| "same_caps val (SchedContext sc n) = is_sc_obj n val"
+| "same_caps val (SchedContext sc n) = (\<exists>sc'. val = SchedContext sc' n)"
 | "same_caps val (Reply r)           = is_reply val"
 | "same_caps val (ArchObj ao)        = (\<exists>ao'. val = ArchObj ao')"
 
@@ -31,7 +31,7 @@ lemma same_caps_more_simps[simp]:
                                          \<and> (\<forall>(getF, t) \<in> ran tcb_cap_cases. getF tcb' = getF tcb))"
  "same_caps (Endpoint ep) val       = is_ep val"
  "same_caps (Notification ntfn) val = is_ntfn val"
- "same_caps (SchedContext sc n) val   = is_sc_obj n val"
+ "same_caps (SchedContext sc n) val   = (\<exists>sc'. val = SchedContext sc' n)"
  "same_caps (Reply r) val           = is_reply val"
  "same_caps (ArchObj ao) val        = (\<exists>ao'. val = ArchObj ao')"
  by (cases val, (fastforce simp: is_obj_defs)+)+

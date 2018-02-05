@@ -454,7 +454,6 @@ where
   | BlockedOnSend ref sp \<Rightarrow> ep_at ref s
   | BlockedOnNotification ref \<Rightarrow> ntfn_at ref s
   | BlockedOnReply r \<Rightarrow> (case r of Some r' \<Rightarrow> reply_at r' s | _ \<Rightarrow> True)
-(*  | YieldTo t \<Rightarrow> tcb_at t s*)
   | _ \<Rightarrow> True"
 
 abbreviation
@@ -557,14 +556,15 @@ where
       (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) \<and> distinct ts)"
 
 definition
-  valid_sched_context :: "sched_context \<Rightarrow> nat \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_sched_context :: "sched_context \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_sched_context sc n s \<equiv> (* RT FIXME: any conditions for period consumed refills refill_max? *)
+  "valid_sched_context sc s \<equiv> (* RT FIXME: any conditions for period consumed refills refill_max? *)
      valid_bound_ntfn (sc_ntfn sc) s
      \<and> valid_bound_tcb (sc_tcb sc) s
      \<and> valid_bound_tcb (sc_yield_from sc) s
      \<and> list_all (\<lambda>r. reply_at r s) (sc_replies sc)
-     \<and> valid_sched_context_size n"
+     \<and> length (sc_refills sc) \<ge> 1
+     (* \<and> length (sc_replies sc) \<le> sc_refill_max sc *)"
 
 definition
   valid_reply :: "reply \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -582,7 +582,7 @@ where
   | Notification p \<Rightarrow> valid_ntfn p s
   | TCB t \<Rightarrow> valid_tcb ptr t s
   | CNode sz cs \<Rightarrow> valid_cs sz cs s
-  | SchedContext sc n \<Rightarrow> valid_sched_context sc n s
+  | SchedContext sc n \<Rightarrow> valid_sched_context sc s \<and> valid_sched_context_size n
   | Reply reply \<Rightarrow> valid_reply reply s
   | ArchObj ao \<Rightarrow> arch_valid_obj ao s"
 
@@ -670,7 +670,6 @@ where
   "tcb_st_refs_of z \<equiv> case z of (Running)               => {}
   | (Inactive)              => {}
   | (Restart)               => {}
-(*  | (YieldTo t)             => {(t, TCBYieldTo)}*)
   | (BlockedOnReply r)        => if bound r then {(the r, TCBReply)} else {}
   | (IdleThreadState)       => {}
   | (BlockedOnReceive x r)  => if bound r then {(x, TCBBlockedRecv), (the r, TCBReply)}
@@ -704,24 +703,46 @@ where
    | None \<Rightarrow> {}"
 
 definition
+  refs_of_tcb :: "tcb \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "refs_of_tcb tcb \<equiv> tcb_st_refs_of (tcb_state tcb)
+                          \<union> get_refs TCBBound (tcb_bound_notification tcb)
+                          \<union> get_refs TCBSchedContext (tcb_sched_context tcb)
+                          \<union> get_refs TCBYieldTo (tcb_yield_to tcb)"
+
+definition
+  refs_of_ntfn :: "notification \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "refs_of_ntfn ntfn \<equiv> ntfn_q_refs_of (ntfn_obj ntfn)
+                          \<union> get_refs NTFNBound (ntfn_bound_tcb ntfn)
+                          \<union> get_refs NTFNSchedContext (ntfn_sc ntfn)"
+
+definition
+  refs_of_sc :: "sched_context \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "refs_of_sc sc \<equiv> get_refs SCNtfn (sc_ntfn sc)
+                          \<union> get_refs SCTcb (sc_tcb sc)
+                          \<union> get_refs SCYieldFrom (sc_yield_from sc)
+                          \<union> set (map (\<lambda>r. (r, SCReply)) (sc_replies sc))"
+
+definition
+  refs_of_reply :: "reply \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "refs_of_reply r \<equiv> get_refs ReplySchedContext (reply_sc r)
+                          \<union> get_refs ReplyTCB (reply_tcb r)"
+
+lemmas refs_of_defs[simp] = refs_of_tcb_def refs_of_ntfn_def refs_of_sc_def refs_of_reply_def
+
+definition
   refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype) set"
 where
   "refs_of x \<equiv> case x of
      CNode sz fun      => {}
-   | TCB tcb           => tcb_st_refs_of (tcb_state tcb)
-                          \<union> get_refs TCBBound (tcb_bound_notification tcb)
-                          \<union> get_refs TCBSchedContext (tcb_sched_context tcb)
-                          \<union> get_refs TCBYieldTo (tcb_yield_to tcb)
+   | TCB tcb           => refs_of_tcb tcb
    | Endpoint ep       => ep_q_refs_of ep
-   | Notification ntfn => ntfn_q_refs_of (ntfn_obj ntfn)
-                          \<union> get_refs NTFNBound (ntfn_bound_tcb ntfn)
-                          \<union> get_refs NTFNSchedContext (ntfn_sc ntfn)
-   | SchedContext sc n \<Rightarrow> get_refs SCNtfn (sc_ntfn sc)
-                          \<union> get_refs SCTcb (sc_tcb sc)
-                          \<union> get_refs SCYieldFrom (sc_yield_from sc)
-                          \<union> set (map (\<lambda>r. (r, SCReply)) (sc_replies sc))
-   | Reply r           \<Rightarrow> get_refs ReplySchedContext (reply_sc r)
-                          \<union> get_refs ReplyTCB (reply_tcb r)
+   | Notification ntfn => refs_of_ntfn ntfn
+   | SchedContext sc n \<Rightarrow> refs_of_sc sc
+   | Reply r           \<Rightarrow> refs_of_reply r
    | ArchObj ao        => {}"
 
 definition
@@ -771,6 +792,11 @@ where
    | SchedContext sc n => live0 ko
    | Reply reply       => live0 ko
    | ArchObj ao        => hyp_live ko"
+
+definition live_sc :: "sched_context \<Rightarrow> bool"
+where
+  "live_sc sc \<equiv> (bound (sc_tcb sc) \<or> bound (sc_yield_from sc) \<or> bound (sc_ntfn sc)
+                                \<or> (sc_replies sc \<noteq> []))"
 
 lemma a_type_arch_live:
   "a_type ko = AArch tp \<Longrightarrow> \<not> live0 ko"
@@ -2005,31 +2031,43 @@ lemma valid_cs_sizeE [elim]:
 lemma valid_objs_valid_sched_context [dest?]:
   assumes vp: "valid_objs s"
   and    ran: "SchedContext sc n \<in> ran (kheap s)"
-  shows  "valid_sched_context sc n s"
+  shows  "valid_sched_context sc s"
+  using vp ran unfolding valid_objs_def
+  by (auto simp: valid_obj_def ran_def dom_def)
+
+lemma valid_objs_valid_sched_context_size [dest?]:
+  assumes vp: "valid_objs s"
+  and    ran: "SchedContext sc n \<in> ran (kheap s)"
+  shows  "valid_sched_context_size n"
   using vp ran unfolding valid_objs_def
   by (auto simp: valid_obj_def ran_def dom_def)
 
 lemma valid_pspace_valid_sched_context [dest?]:
   assumes vp: "valid_pspace s"
   and    ran: "SchedContext sc n \<in> ran (kheap s)"
-  shows  "valid_sched_context sc n s"
+  shows  "valid_sched_context sc s"
   using vp
   by (rule valid_pspaceE)
-     (simp add: valid_objs_valid_sched_context ran)
+     (drule valid_objs_valid_sched_context, rule ran, simp)
 
 lemma valid_pspace_valid_sched_context_size [intro?]:
   assumes ran: "SchedContext sc n \<in> ran (kheap s)"
   and      vp: "valid_pspace s"
   shows  "valid_sched_context_size n"
-  using valid_pspace_valid_sched_context [OF vp ran]
-  unfolding valid_sched_context_def by blast
+  using vp
+  by (rule valid_pspaceE)
+     (drule valid_objs_valid_sched_context_size, rule ran, simp)
 
-lemma valid_objs_valid_sched_context_size [intro?]:
-  assumes ran: "SchedContext sc n \<in> ran (kheap s)"
-  and      vp: "valid_objs s"
-  shows  "valid_sched_context_size n"
-  using valid_objs_valid_sched_context [OF vp ran]
-  unfolding valid_sched_context_def by blast
+
+lemma valid_sched_context_objsI [intro?]:
+  "\<lbrakk> valid_objs s; kheap s r = Some (SchedContext sc n) \<rbrakk>
+  \<Longrightarrow> valid_sched_context sc s"
+  by (drule ranI, erule valid_objs_valid_sched_context)
+
+lemma valid_sched_contextI [intro?]:
+  "\<lbrakk> valid_pspace s; kheap s r = Some (SchedContext sc n) \<rbrakk>
+  \<Longrightarrow> valid_sched_context sc s"
+  by (drule ranI, erule valid_pspace_valid_sched_context)
 
 lemma valid_sched_context_size_objsI [intro?]:
   "\<lbrakk> valid_objs s; kheap s r = Some (SchedContext sc n) \<rbrakk>
@@ -2487,8 +2525,7 @@ lemma valid_sc_typ:
   assumes t: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
   assumes n: "\<And>p. \<lbrace>typ_at ANTFN p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ANTFN p\<rbrace>"
   assumes r: "\<And>p. \<lbrace>typ_at AReply p\<rbrace> f \<lbrace>\<lambda>rv. typ_at AReply p\<rbrace>"
-  assumes s: "\<And>n. \<lbrace>\<lambda>s. valid_sched_context_size n\<rbrace> f \<lbrace>\<lambda>s rv. valid_sched_context_size n\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_sched_context sc n s\<rbrace> f \<lbrace>\<lambda>rv s. valid_sched_context sc n s\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. valid_sched_context sc s\<rbrace> f \<lbrace>\<lambda>rv s. valid_sched_context sc s\<rbrace>"
   apply (simp add: valid_sched_context_def)
   apply (rule hoare_vcg_conj_lift)
    apply (case_tac "sc_ntfn sc";
@@ -2500,7 +2537,7 @@ lemma valid_sc_typ:
   apply (case_tac "sc_yield_from sc";
          simp add: wp_post_taut t[simplified tcb_at_typ[symmetric]])
   apply (rule hoare_vcg_conj_lift)
-  apply (auto simp: valid_sc_typ_list_all_reply r s)
+   apply (auto simp: valid_sc_typ_list_all_reply r, wpsimp)
   done
 
 lemma valid_reply_typ:
@@ -2520,7 +2557,7 @@ lemma valid_obj_typ:
   shows      "\<lbrace>\<lambda>s. valid_obj p ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj p ob s\<rbrace>"
   apply (case_tac ob, simp_all add: valid_obj_def P P [where P=id, simplified]
          wellformed_arch_typ valid_sc_typ valid_reply_typ hoare_vcg_prop
-         valid_cs_typ valid_tcb_typ valid_ep_typ valid_ntfn_typ)
+         valid_cs_typ valid_tcb_typ valid_ep_typ valid_ntfn_typ hoare_vcg_conj_lift)
   done
 
 lemma valid_irq_node_typ:
@@ -2720,7 +2757,6 @@ lemma valid_mdb_def2:
                     no_mloop (cdt s) \<and> untyped_inc (cdt s) (caps_of_state s) \<and>
                     ut_revocable (is_original_cap s) (caps_of_state s) \<and>
                     irq_revocable (is_original_cap s) (caps_of_state s) (*\<and>
-                    reply_mdb (cdt s) (caps_of_state s)*) \<and>
                     valid_arch_mdb (is_original_cap s) (caps_of_state s))"
   by (auto simp add: valid_mdb_def swp_cte_at_caps_of)
 
@@ -2938,6 +2974,30 @@ interpretation interrupt_update:
 
 sublocale Arch \<subseteq> interrupt_update: Arch_p_arch_idle_update_eq "interrupt_states_update f" ..
 
+interpretation consumed_time_update_arch:
+  p_arch_idle_update_int_eq "consumed_time_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> consumed_time_update_arch: Arch_p_arch_idle_update_int_eq "consumed_time_update f" ..
+
+interpretation cur_time_update_arch:
+  p_arch_idle_update_int_eq "cur_time_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> cur_time_update_arch: Arch_p_arch_idle_update_int_eq "cur_time_update f" ..
+
+interpretation cur_sc_update_arch:
+  p_arch_idle_update_int_eq "cur_sc_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> cur_sc_update_arch: Arch_p_arch_idle_update_int_eq "cur_sc_update f" ..
+
+interpretation reprogram_timer_update_arch:
+  p_arch_idle_update_int_eq "reprogram_timer_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> reprogram_timer_update_arch: Arch_p_arch_idle_update_int_eq "reprogram_timer_update f" ..
+
 interpretation irq_node_update:
   pspace_int_update_eq "interrupt_irq_node_update f"
   by unfold_locales auto
@@ -2977,6 +3037,22 @@ lemma valid_mdb_more_update [iff]:
 lemma valid_mdb_machine [iff]:
   "valid_mdb (machine_state_update f s) = valid_mdb s"
   by (auto elim: valid_mdb_eqI)
+
+lemma valid_mdb_consumed_time_update [iff]:
+  "valid_mdb (consumed_time_update f s) = valid_mdb s"
+  by (simp add: valid_mdb_def swp_def)
+
+lemma valid_mdb_cur_time_update [iff]:
+  "valid_mdb (cur_time_update f s) = valid_mdb s"
+  by (simp add: valid_mdb_def swp_def)
+
+lemma valid_mdb_cur_sc_update [iff]:
+  "valid_mdb (cur_sc_update f s) = valid_mdb s"
+  by (simp add: valid_mdb_def swp_def)
+
+lemma valid_mdb_reprogram_timer_update [iff]:
+  "valid_mdb (reprogram_timer_update f s) = valid_mdb s"
+  by (simp add: valid_mdb_def swp_def)
 
 lemma valid_refs_cte:
   assumes "\<And>P p. cte_wp_at P p s = cte_wp_at P p s'"
@@ -3236,6 +3312,22 @@ lemma zombies_final_more_update [iff]:
   "zombies_final (trans_state f s) = zombies_final s"
   by (simp add: zombies_final_def is_final_cap'_def)
 
+lemma zombies_final_consumed_time_update[simp]:
+  "zombies_final (consumed_time_update f s) = zombies_final s"
+  by (fastforce elim!: zombies_final_pspaceI)
+
+lemma zombies_final_cur_time_update[simp]:
+  "zombies_final (cur_time_update f s) = zombies_final s"
+  by (fastforce elim!: zombies_final_pspaceI)
+
+lemma zombies_final_cur_sc_update[simp]:
+  "zombies_final (cur_sc_update f s) = zombies_final s"
+  by (fastforce elim!: zombies_final_pspaceI)
+
+lemma zombies_final_reprogram_timer_update[simp]:
+  "zombies_final (reprogram_timer_update f s) = zombies_final s"
+  by (fastforce elim!: zombies_final_pspaceI)
+
 lemmas state_refs_arch_update [iff] = arch_update.state_refs_update
 
 lemmas state_hyp_refs_arch_update [iff] = arch_update.state_hyp_refs_update
@@ -3256,6 +3348,20 @@ lemma valid_ioc_machine_state_update[iff]:
   by (simp add: valid_ioc_def)
 lemma valid_ioc_cur_thread_update[iff]:
   "valid_ioc (cur_thread_update f s) = valid_ioc s"
+  by (simp add: valid_ioc_def)
+
+lemma valid_ioc_consumed_time_update[iff]:
+  "valid_ioc (consumed_time_update f s) = valid_ioc s"
+  by (simp add: valid_ioc_def)
+
+lemma valid_ioc_cur_time_update[iff]:
+  "valid_ioc (cur_time_update f s) = valid_ioc s"
+  by (simp add: valid_ioc_def)
+lemma valid_ioc_cur_sc_update[iff]:
+  "valid_ioc (cur_sc_update f s) = valid_ioc s"
+  by (simp add: valid_ioc_def)
+lemma valid_ioc_reprogram_timer_update[iff]:
+  "valid_ioc (reprogram_timer_update f s) = valid_ioc s"
   by (simp add: valid_ioc_def)
 
 lemma vms_ioc_update[iff]:
