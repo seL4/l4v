@@ -1608,6 +1608,13 @@ in
     mod3 = []}}
 end
 
+fun treat_as_emb_fcall env (NONE,fn_e,args) = false
+  | treat_as_emb_fcall env (SOME lv,fn_e,args) = let
+    val (callee, (rettyp, _)) = fndes_callinfo env fn_e
+    val lvtyp = cse_typing env lv
+    val lv_plain = case enode lv of Var _ => true | _ => false
+  in not lv_plain orelse lvtyp <> rettyp end
+
 fun process_blockitem fname e bi = let
 in
   case bi of
@@ -1711,7 +1718,12 @@ in
     in
       (prechaos grs [stmt], e)
     end
-  | AssignFnCall(eopt,fn_e,args) => let
+  | AssignFnCall(eopt,fn_e,args) => if treat_as_emb_fcall e (eopt,fn_e,args)
+    then let
+      val lv = case eopt of SOME lv => lv
+        | NONE => raise Fail "Trying to embed fcall without lval."
+    in pst e (w (Assign(lv,ebogwrap (EFnCall(fn_e,args))))) end
+    else let
       val (callee, _) = fndes_callinfo e fn_e
       (* the arguments need to be considered as being part of one big
          expression (rather than independently) in order for the

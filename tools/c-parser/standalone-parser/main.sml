@@ -393,6 +393,24 @@ in
   app (print_lines o lines_serial o serial_defn) ast
 end
 
+fun adjusted_complex_fncalls cse ast = let
+  open Absyn_Serial
+
+  fun is_adjusted s = case snode s of
+      (Assign(_,e)) => (case enode e of EFnCall _ => true | _ => false)
+    | _ => false
+  fun note_adjusteds s = if is_adjusted s
+    then print ("adjusted fncall at: " ^
+              SourcePos.toString (sleft s) ^ " " ^
+              SourcePos.toString (sright s)^"\n")
+    else app note_adjusteds (sub_stmts s)
+  fun note_bi (BI_Stmt s) = note_adjusteds s
+    | note_bi _ = ()
+  fun note_defn (FnDefn (_,_,_,body))
+    = app note_bi (node body)
+    | note_defn _ = ()
+in app note_defn ast end
+
 fun unhandled_asm cse ast = let
   open Absyn
   fun warn_asm asm = K () (ProgramAnalysis.split_asm_stmt asm)
@@ -471,6 +489,7 @@ in
    cse_analysis "uncalledfns" print_uncalledfns,
    cse_analysis "unmodifiedglobs" print_unmodified_globals,
    ast_analysis "ast" print_ast,
+   ast_analysis "adjusted_complex_fncalls" adjusted_complex_fncalls,
    ast_analysis "unhandled_asm" unhandled_asm
   ]
 end
