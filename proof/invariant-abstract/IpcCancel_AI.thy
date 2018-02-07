@@ -12,6 +12,15 @@ theory IpcCancel_AI
 imports "./$L4V_ARCH/ArchSchedule_AI"
 begin
 
+context begin interpretation Arch .
+
+requalify_facts
+  arch_post_cap_deletion_pred_tcb_at
+
+end
+
+declare arch_post_cap_deletion_pred_tcb_at[wp]
+
 lemma blocked_cancel_ipc_simple:
   "\<lbrace>tcb_at t\<rbrace> blocked_cancel_ipc ts t \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
   by (simp add: blocked_cancel_ipc_def | wp sts_st_tcb_at')+
@@ -168,11 +177,16 @@ lemma fast_finalise_misc[wp]:
   apply (wp|clarsimp)+
   done
 
+locale IpcCancel_AI =
+    fixes state_ext :: "('a::state_ext) itself"
+    assumes arch_post_cap_deletion_typ_at[wp]:
+      "\<And>P T p. \<lbrace>\<lambda>(s :: 'a state). P (typ_at T p s)\<rbrace> arch_post_cap_deletion acap \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+    assumes arch_post_cap_deletion_idle_thread[wp]:
+      "\<And>P. \<lbrace>\<lambda>(s :: 'a state). P (idle_thread s)\<rbrace> arch_post_cap_deletion acap \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
 
 crunch st_tcb_at_simple[wp]: reply_cancel_ipc "st_tcb_at simple t"
   (wp: crunch_wps select_wp sts_st_tcb_at_cases thread_set_no_change_tcb_state
    simp: crunch_simps unless_def fast_finalise.simps)
-
 
 lemma cancel_ipc_simple [wp]:
   "\<lbrace>\<top>\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
@@ -188,7 +202,6 @@ lemma cancel_ipc_simple [wp]:
                         | clarsimp elim!: pred_tcb_weakenE pred_tcb_at_tcb_at)+
   done
 
-
 lemma blocked_cancel_ipc_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> blocked_cancel_ipc st t \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   apply (simp add: blocked_cancel_ipc_def get_blocking_object_def get_ep_queue_def
@@ -202,16 +215,18 @@ lemma blocked_cancel_ipc_tcb_at [wp]:
   "\<lbrace>tcb_at t\<rbrace> blocked_cancel_ipc st t' \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
   by (simp add: tcb_at_typ) wp
 
+context IpcCancel_AI begin
 
 crunch typ_at[wp]: cancel_ipc, reply_cancel_ipc, unbind_maybe_notification
-                   "\<lambda>s. P (typ_at T p s)"
+                   "\<lambda>(s :: 'a state). P (typ_at T p s)"
   (wp: crunch_wps hoare_vcg_if_splitE select_wp
      simp: crunch_simps unless_def)
 
 lemma cancel_ipc_tcb [wp]:
-  "\<lbrace>tcb_at t\<rbrace> cancel_ipc t' \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
+  "\<lbrace>tcb_at t\<rbrace> cancel_ipc t' \<lbrace>\<lambda>rv. (tcb_at t) :: 'a state \<Rightarrow> bool\<rbrace>"
   by (simp add: tcb_at_typ) wp
 
+end
 
 lemma gbep_ret:
   "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr \<or>
@@ -234,8 +249,8 @@ definition
  "emptyable \<equiv> \<lambda>p s. (tcb_at (fst p) s \<and> snd p = tcb_cnode_index 2) \<longrightarrow>
                           st_tcb_at halted (fst p) s"
 
-locale delete_one_abs =
-  fixes state_ext_type :: "('a :: state_ext) itself"
+locale delete_one_abs = IpcCancel_AI state_ext
+  for state_ext :: "('a :: state_ext) itself" +
   assumes delete_one_invs:
     "\<And>p. \<lbrace>invs and emptyable p\<rbrace> (cap_delete_one p :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
 
@@ -432,15 +447,18 @@ lemma (in delete_one_abs) cancel_ipc_invs[wp]:
                      elim!: pred_tcb_weakenE)
   done
 
+context IpcCancel_AI begin
 
 lemma cancel_ipc_valid_cap:
-  "\<lbrace>valid_cap c\<rbrace> cancel_ipc p \<lbrace>\<lambda>_. valid_cap c\<rbrace>"
+  "\<lbrace>valid_cap c\<rbrace> cancel_ipc p \<lbrace>\<lambda>_. (valid_cap c) :: 'a state \<Rightarrow> bool\<rbrace>"
   by (wp valid_cap_typ)
 
 
 lemma cancel_ipc_cte_at[wp]:
-  "\<lbrace>cte_at p\<rbrace> cancel_ipc t \<lbrace>\<lambda>_. cte_at p\<rbrace>"
+  "\<lbrace>cte_at p\<rbrace> cancel_ipc t \<lbrace>\<lambda>_. (cte_at p) :: 'a state \<Rightarrow> bool\<rbrace>"
   by (wp valid_cte_at_typ)
+
+end
 
 lemma valid_ep_queue_subset:
   "\<lbrace>\<lambda>s. valid_ep ep s\<rbrace>
@@ -503,11 +521,14 @@ crunch it[wp]: cancel_all_ipc "\<lambda>s. P (idle_thread s)"
 crunch it[wp]: cancel_all_signals, fast_finalise, unbind_notification "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps select_wp simp: unless_def crunch_simps)
 
-crunch it[wp]: reply_cancel_ipc  "\<lambda>s. P (idle_thread s)"
+context IpcCancel_AI begin
+
+crunch it[wp]: reply_cancel_ipc  "\<lambda>(s::'a state). P (idle_thread s)"
   (wp: crunch_wps select_wp simp: unless_def crunch_simps)
 
-crunch it[wp]: cancel_ipc "\<lambda>s. P (idle_thread s)"
+crunch it[wp]: cancel_ipc "\<lambda>(s :: 'a state). P (idle_thread s)"
 
+end
 
 lemma reply_cap_descends_from_master:
   "\<lbrakk> invs s; tcb_at t s \<rbrakk> \<Longrightarrow>
@@ -575,21 +596,23 @@ lemma (in delete_one_abs) suspend_invs[wp]:
        | strengthen no_refs_simple_strg | simp)+
   done
 
+context IpcCancel_AI begin
 
 lemma suspend_typ_at [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> suspend t \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  "\<lbrace>\<lambda>(s::'a state). P (typ_at T p s)\<rbrace> suspend t \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   by (simp add: suspend_def | wp)+
 
 
 lemma suspend_valid_cap:
-  "\<lbrace>valid_cap c\<rbrace> suspend tcb \<lbrace>\<lambda>_. valid_cap c\<rbrace>"
+  "\<lbrace>valid_cap c\<rbrace> suspend tcb \<lbrace>\<lambda>_. (valid_cap c) :: 'a state \<Rightarrow> bool\<rbrace>"
   by (wp valid_cap_typ)
 
 
 lemma suspend_tcb[wp]:
-  "\<lbrace>tcb_at t'\<rbrace> suspend t \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
+  "\<lbrace>tcb_at t'\<rbrace> suspend t \<lbrace>\<lambda>rv. (tcb_at t')  :: 'a state \<Rightarrow> bool\<rbrace>"
   by (simp add: tcb_at_typ) wp
 
+end
 
 declare if_cong [cong del]
 
@@ -644,7 +667,6 @@ lemma set_thread_state_bound_tcb_at[wp]:
   unfolding set_thread_state_def set_object_def
   by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
 
-
 crunch bound_tcb_at[wp]: cancel_all_ipc, empty_slot, is_final_cap, get_cap "bound_tcb_at P t"
   (wp: mapM_x_wp_inv)
 
@@ -660,7 +682,9 @@ lemma get_cap_reply_cap_helper:
 
 
 lemma cap_delete_one_bound_tcb_at:
-  "\<lbrace>\<lambda>s. bound_tcb_at P t s \<and> (\<exists>t b. caps_of_state s c = Some (ReplyCap t b)) \<rbrace> cap_delete_one c \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
+  "\<lbrace>\<lambda>s. bound_tcb_at P t s \<and> (\<exists>t b. caps_of_state s c = Some (ReplyCap t b)) \<rbrace>
+     cap_delete_one c
+   \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   apply (clarsimp simp: unless_def cap_delete_one_def)
   apply (wp fast_finalise_bound_tcb_at)
   apply (wp hoare_vcg_if_lift2, simp)
@@ -700,7 +724,6 @@ lemma descendants_of_nullcap:
    apply (clarsimp simp: valid_mdb_def2)+
   done
 
-
 lemma reply_cancel_ipc_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t and valid_mdb and valid_objs and tcb_at p \<rbrace>
     reply_cancel_ipc p
@@ -732,10 +755,8 @@ lemma reply_cancel_ipc_bound_tcb_at[wp]:
   apply simp
   done
 
-
 crunch bound_tcb_at[wp]: cancel_ipc "bound_tcb_at P t"
 (ignore: set_object thread_set wp: mapM_x_wp_inv)
-
 
 lemma suspend_unlive:
   "\<lbrace>bound_tcb_at (op = None) t and valid_mdb and valid_objs and tcb_at t \<rbrace>
@@ -748,7 +769,6 @@ lemma suspend_unlive:
   apply wp
   apply (auto simp: pred_tcb_def2 dest: refs_of_live)
   done
-
 
 definition bound_refs_of_tcb :: "'a state \<Rightarrow> machine_word \<Rightarrow> (machine_word \<times> reftype) set"
 where

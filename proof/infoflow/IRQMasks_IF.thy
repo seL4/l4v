@@ -65,7 +65,7 @@ lemma invoke_irq_handler_irq_masks:
 
 
 lemma empty_slot_irq_masks:
-  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and K (irq_opt = None)\<rbrace>
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and K (irq_opt = NullCap)\<rbrace>
    empty_slot slot irq_opt
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   apply(rule hoare_gen_asm)
@@ -114,7 +114,7 @@ lemma rec_del_irq_masks':
   shows
   "s \<turnstile> \<lbrace> (\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
      (rec_del call)
-   \<lbrace>\<lambda> a s. (case call of (FinaliseSlotCall x y) \<Rightarrow> y \<or> fst a \<longrightarrow> snd a = None | _ \<Rightarrow> True) \<and> domain_sep_inv False st s \<and> P (irq_masks_of_state s)\<rbrace>,\<lbrace>\<lambda>_. domain_sep_inv False st and (\<lambda>s. P (irq_masks_of_state s))\<rbrace>"
+   \<lbrace>\<lambda> a s. (case call of (FinaliseSlotCall x y) \<Rightarrow> y \<or> fst a \<longrightarrow> snd a = NullCap | _ \<Rightarrow> True) \<and> domain_sep_inv False st s \<and> P (irq_masks_of_state s)\<rbrace>,\<lbrace>\<lambda>_. domain_sep_inv False st and (\<lambda>s. P (irq_masks_of_state s))\<rbrace>"
   proof (induct s arbitrary: rule: rec_del.induct, simp_all only: rec_del_fails hoare_fail_any)
   case (1 slot exposed s) show ?case
     apply(simp add: split_def rec_del.simps)
@@ -135,7 +135,7 @@ lemma rec_del_irq_masks':
          apply(rule spec_strengthen_postE)
           apply(rule "2.hyps"[simplified], fastforce+)
          apply(wp  finalise_cap_domain_sep_inv_cap get_cap_wp
-                   finalise_cap_returns_None[where irqs=False, simplified]
+                   finalise_cap_returns_NullCap[where irqs=False, simplified]
                    drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
                |simp split del: if_split
                |wp_once hoare_drop_imps)+

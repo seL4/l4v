@@ -1178,7 +1178,7 @@ case \x of ((Zombie { capZombieNumber = 0 }), _) -> ((Zombie { capZombiePtr = pt
         in ->3
     else ->4
 
-case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { capNtfnPtr = ptr }), final, _) -> ((ReplyCap {}), _, _) -> (NullCap, _, _) -> (DomainCap, _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tcb}), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> ((IRQHandlerCap { capIRQ = irq }), True, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { capNtfnPtr = ptr }), final, _) -> ((ReplyCap {}), _, _) -> (NullCap, _, _) -> (DomainCap, _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tcb}), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> (cap@(IRQHandlerCap { capIRQ = irq }), True, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
     if isEndpointCap \v0\
     then let ptr = capEPPtr \v0\; final = \v1\
         in ->1
@@ -1206,7 +1206,7 @@ case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { c
     then let cap = capCap \v0\; final = \v1\
         in ->10
     else if isIRQHandlerCap \v0\ \<and> \v1\
-    then let irq = capIRQ \v0\
+    then let irq = capIRQ \v0\; cap = \v0\
         in ->11
     else if isZombie \v0\ \<and> \<not> \v1\
     then ->12

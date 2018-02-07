@@ -36,7 +36,7 @@ lemma updateCap_cte_wp_at_cases:
   apply (clarsimp simp: cte_wp_at_ctes_of modify_map_def)
   done
 
-crunch cte_wp_at'[wp]: deletedIRQHandler, updateTrackedFreeIndex "cte_wp_at' P p"
+crunch cte_wp_at'[wp]: postCapDeletion, updateTrackedFreeIndex "cte_wp_at' P p"
 
 lemma updateFreeIndex_cte_wp_at:
   "\<lbrace>\<lambda>s. cte_at' p s \<and> P (cte_wp_at' (if p = p' then P'
@@ -69,7 +69,7 @@ crunch typ_at'[wp]: emptySlot "\<lambda>s. P (typ_at' T p s)"
 lemmas clearUntypedFreeIndex_typ_ats[wp]
     = typ_at_lifts[OF clearUntypedFreeIndex_typ_at']
 
-crunch tcb_at'[wp]: deletedIRQHandler "tcb_at' t"
+crunch tcb_at'[wp]: postCapDeletion "tcb_at' t"
 crunch ct[wp]: emptySlot "\<lambda>s. P (ksCurThread s)"
 crunch cur_tcb'[wp]: clearUntypedFreeIndex "cur_tcb'"
   (ignore: setObject wp: cur_tcb_lift)
@@ -77,12 +77,12 @@ crunch cur_tcb'[wp]: clearUntypedFreeIndex "cur_tcb'"
 crunch ksRQ[wp]: emptySlot "\<lambda>s. P (ksReadyQueues s)"
 crunch ksRQL1[wp]: emptySlot "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
 crunch ksRQL2[wp]: emptySlot "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-crunch obj_at'[wp]: deletedIRQHandler "obj_at' P p"
+crunch obj_at'[wp]: postCapDeletion "obj_at' P p"
 
-lemmas deletedIRQHandler_valid_queues[wp] =
-    valid_queues_lift [OF deletedIRQHandler_obj_at'
-                          deletedIRQHandler_pred_tcb_at'
-                          deletedIRQHandler_ksRQ]
+lemmas postCapDeletion_valid_queues[wp] =
+    valid_queues_lift [OF postCapDeletion_obj_at'
+                          postCapDeletion_pred_tcb_at'
+                          postCapDeletion_ksRQ]
 
 crunch inQ[wp]: clearUntypedFreeIndex "\<lambda>s. P (obj_at' (inQ d p) t s)"
 crunch tcbDomain[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
@@ -91,7 +91,7 @@ crunch tcbPriority[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbPrio
 lemma emptySlot_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> emptySlot sl opt \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
   unfolding emptySlot_def
-  by (wp opt_return_pres_lift | wpcw | wp valid_queues_lift | simp)+
+  by (wp | wpcw | wp valid_queues_lift | simp)+
 
 crunch nosch[wp]: emptySlot "\<lambda>s. P (ksSchedulerAction s)"
 crunch ksCurDomain[wp]: emptySlot "\<lambda>s. P (ksCurDomain s)"
@@ -1094,7 +1094,8 @@ lemma vmdb_n: "valid_mdb_ctes n"
 
 end
 
-crunch ctes_of[wp]: deletedIRQHandler, clearUntypedFreeIndex "\<lambda>s. P (ctes_of s)"
+context begin interpretation Arch .
+crunch ctes_of[wp]: postCapDeletion, clearUntypedFreeIndex "\<lambda>s. P (ctes_of s)"
 
 lemma emptySlot_mdb [wp]:
   "\<lbrace>valid_mdb'\<rbrace>
@@ -1119,6 +1120,7 @@ lemma emptySlot_mdb [wp]:
   apply (rule conjI, clarsimp simp: valid_mdb_ctes_def)
   apply (erule mdb_empty.vmdb_n[unfolded const_def])
   done
+end
 
 lemma if_live_then_nonz_cap'_def2:
   "if_live_then_nonz_cap' = (\<lambda>s. \<forall>ptr. ko_wp_at' live' ptr s
@@ -1193,9 +1195,11 @@ lemma not_Final_removeable:
   apply fastforce
   done
 
-crunch ko_wp_at'[wp]: deletedIRQHandler "\<lambda>s. P (ko_wp_at' P' p s)"
-crunch cteCaps_of[wp]: deletedIRQHandler "\<lambda>s. P (cteCaps_of s)"
+context begin interpretation Arch .
+crunch ko_wp_at'[wp]: postCapDeletion "\<lambda>s. P (ko_wp_at' P' p s)"
+crunch cteCaps_of[wp]: postCapDeletion "\<lambda>s. P (cteCaps_of s)"
   (simp: cteCaps_of_def o_def)
+end
 
 crunch ko_at_live[wp]: clearUntypedFreeIndex "\<lambda>s. P (ko_wp_at' live' ptr s)"
 
@@ -1243,7 +1247,9 @@ lemma setIRQState_irq_node'[wp]:
   apply simp
   done
 
+context begin interpretation Arch .
 crunch irq_node'[wp]: emptySlot "\<lambda>s. P (irq_node' s)"
+end
 
 lemma emptySlot_ifunsafe'[wp]:
   "\<lbrace>\<lambda>s. if_unsafe_then_cap' s \<and> cte_wp_at' (\<lambda>cte. removeable' sl s (cteCap cte)) sl s\<rbrace>
@@ -1284,15 +1290,18 @@ lemma ctes_of_valid'[elim]:
   "\<lbrakk>ctes_of s p = Some cte; valid_objs' s\<rbrakk> \<Longrightarrow> s \<turnstile>' cteCap cte"
   by (cases cte, simp) (rule ctes_of_valid_cap')
 
-crunch ksrq[wp]: deletedIRQHandler "\<lambda>s. P (ksReadyQueues s)"
+crunch ksrq[wp]: postCapDeletion "\<lambda>s. P (ksReadyQueues s)"
 
 crunch valid_idle'[wp]: setInterruptState "valid_idle'"
   (simp: valid_idle'_def)
+
+context begin interpretation Arch .
 crunch valid_idle'[wp]: emptySlot "valid_idle'"
 
 crunch ksArch[wp]: emptySlot "\<lambda>s. P (ksArchState s)"
 crunch ksIdle[wp]: emptySlot "\<lambda>s. P (ksIdleThread s)"
 crunch gsMaxObjectSize[wp]: emptySlot "\<lambda>s. P (gsMaxObjectSize s)"
+end
 
 lemma emptySlot_cteCaps_of:
   "\<lbrace>\<lambda>s. P (cteCaps_of s(p \<mapsto> NullCap))\<rbrace>
@@ -1339,12 +1348,22 @@ lemma deletedIRQHandler_irq_handlers'[wp]:
   apply (clarsimp simp: valid_irq_handlers'_def irq_issued'_def ran_def cteCaps_of_def)
   done
 
+context begin interpretation Arch .
+
+lemma postCapDeletion_irq_handlers'[wp]:
+  "\<lbrace>\<lambda>s. valid_irq_handlers' s \<and> (cap \<noteq> NullCap \<longrightarrow> cap \<notin> ran (cteCaps_of s))\<rbrace>
+       postCapDeletion cap
+   \<lbrace>\<lambda>rv. valid_irq_handlers'\<rbrace>"
+  by (wpsimp simp: Retype_H.postCapDeletion_def ARM_HYP_H.postCapDeletion_def)
+
+end
+
 crunch ksInterruptState[wp]: clearUntypedFreeIndex "\<lambda>s. P (ksInterruptState s)"
 
 lemma emptySlot_valid_irq_handlers'[wp]:
   "\<lbrace>\<lambda>s. valid_irq_handlers' s
-          \<and> (\<forall>irq sl'. opt = Some irq \<longrightarrow> sl' \<noteq> sl \<longrightarrow> cteCaps_of s sl' \<noteq> Some (IRQHandlerCap irq))\<rbrace>
-     emptySlot sl opt
+          \<and> (\<forall>sl'. info \<noteq> NullCap \<longrightarrow> sl' \<noteq> sl \<longrightarrow> cteCaps_of s sl' \<noteq> Some info)\<rbrace>
+     emptySlot sl info
    \<lbrace>\<lambda>rv. valid_irq_handlers'\<rbrace>"
   apply (simp add: emptySlot_def case_Null_If)
   apply (wp | wpc)+
@@ -1358,6 +1377,7 @@ lemma emptySlot_valid_irq_handlers'[wp]:
 
 declare setIRQState_irq_states' [wp]
 
+context begin interpretation Arch .
 crunch irq_states' [wp]: emptySlot valid_irq_states'
 
 crunch no_0_obj' [wp]: emptySlot no_0_obj'
@@ -1369,6 +1389,7 @@ crunch valid_queues'[wp]: setInterruptState "valid_queues'"
 crunch valid_queues'[wp]: emptySlot "valid_queues'"
 
 crunch pde_mappings'[wp]: emptySlot "valid_pde_mappings'"
+end
 
 lemma deletedIRQHandler_irqs_masked'[wp]:
   "\<lbrace>irqs_masked'\<rbrace> deletedIRQHandler irq \<lbrace>\<lambda>_. irqs_masked'\<rbrace>"
@@ -1377,9 +1398,9 @@ lemma deletedIRQHandler_irqs_masked'[wp]:
   apply (simp add: irqs_masked'_def)
   done
 
+context begin interpretation Arch . (*FIXME: arch_split*)
 crunch irqs_masked'[wp]: emptySlot "irqs_masked'"
 
-context begin interpretation Arch . (*FIXME: arch_split*)
 lemma setIRQState_umm:
  "\<lbrace>\<lambda>s. P (underlying_memory (ksMachineState s))\<rbrace>
    setIRQState irqState irq
@@ -1427,7 +1448,7 @@ lemma emptySlot_ct_idle_or_in_cur_domain'[wp]:
 apply (wp ct_idle_or_in_cur_domain'_lift2 tcb_in_cur_domain'_lift | simp)+
 done
 
-crunch gsUntypedZeroRanges[wp]: deletedIRQHandler "\<lambda>s. P (gsUntypedZeroRanges s)"
+crunch gsUntypedZeroRanges[wp]: postCapDeletion "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma untypedZeroRange_modify_map_isUntypedCap:
@@ -1466,23 +1487,32 @@ crunch valid_arch'[wp]: emptySlot valid_arch_state'
 
 lemma emptySlot_invs'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' (\<lambda>cte. removeable' sl s (cteCap cte)) sl s
-            \<and> (\<forall>irq sl'. opt = Some irq \<longrightarrow> sl' \<noteq> sl \<longrightarrow> cteCaps_of s sl' \<noteq> Some (IRQHandlerCap irq))\<rbrace>
-     emptySlot sl opt
+            \<and> (\<forall>sl'. info \<noteq> NullCap \<longrightarrow> sl' \<noteq> sl \<longrightarrow> cteCaps_of s sl' \<noteq> Some info)\<rbrace>
+     emptySlot sl info
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (wp valid_irq_node_lift cur_tcb_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
-lemma opt_deleted_irq_corres:
+lemma deleted_irq_corres:
   "corres dc \<top> \<top>
-    (case opt of None \<Rightarrow> return () | Some irq \<Rightarrow> deleted_irq_handler irq)
-    (case opt of None \<Rightarrow> return () | Some irq \<Rightarrow> deletedIRQHandler irq)"
-  apply (cases opt, simp_all)
+    (deleted_irq_handler irq)
+    (deletedIRQHandler irq)"
   apply (simp add: deleted_irq_handler_def deletedIRQHandler_def)
   apply (rule set_irq_state_corres)
   apply (simp add: irq_state_relation_def)
   done
+
+lemma arch_post_cap_deletion_corres:
+  "acap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (arch_post_cap_deletion cap) (ARM_HYP_H.postCapDeletion cap')"
+  by (corressimp simp: arch_post_cap_deletion_def ARM_HYP_H.postCapDeletion_def)
+
+lemma post_cap_deletion_corres:
+  "cap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (post_cap_deletion cap) (postCapDeletion cap')"
+  apply (cases cap; clarsimp simp: post_cap_deletion_def Retype_H.postCapDeletion_def)
+   apply (corressimp corres: deleted_irq_corres)
+  by (corressimp corres: arch_post_cap_deletion_corres)
 
 lemma exec_update_cdt_list:
   "\<lbrakk>\<exists>x\<in>fst (g r (s\<lparr>cdt_list := (f (cdt_list s))\<rparr>)). P x\<rbrakk>
@@ -1525,8 +1555,8 @@ lemma clearUntypedFreeIndex_valid_pspace'[wp]:
   done
 
 lemma empty_slot_corres:
-  "corres dc (einvs and cte_at slot) (invs' and cte_at' (cte_map slot))
-             (empty_slot slot opt) (emptySlot (cte_map slot) opt)"
+  "cap_relation info info' \<Longrightarrow> corres dc (einvs and cte_at slot) (invs' and cte_at' (cte_map slot))
+             (empty_slot slot info) (emptySlot (cte_map slot) info')"
   unfolding emptySlot_def empty_slot_def
   apply (simp add: case_Null_If)
   apply (rule corres_guard_imp)
@@ -1547,9 +1577,9 @@ lemma empty_slot_corres:
   apply (rule conjI, clarsimp)
   apply clarsimp
   apply (simp only: bind_assoc[symmetric])
-  apply (rule corres_split'[where r'=dc, OF _ opt_deleted_irq_corres])
+  apply (rule corres_split'[where r'=dc, OF _ post_cap_deletion_corres])
     defer
-    apply wp+
+    apply wpsimp+
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp static_imp_wp)
    apply (clarsimp simp: cte_wp_at_ctes_of valid_pspace'_def)
@@ -2089,16 +2119,16 @@ lemma final_cap_corres':
   apply (rule iffI)
    apply (simp add: is_final_cap'_def2 isFinal_def)
    apply clarsimp
-   apply (subgoal_tac "obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {}")
+   apply (subgoal_tac "obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {} \<or> arch_gen_refs cap \<noteq> {}")
     prefer 2
     apply (erule_tac x=a in allE)
     apply (erule_tac x=b in allE)
-    apply (clarsimp simp: cte_wp_at_def obj_irq_refs_Int)
+    apply (clarsimp simp: cte_wp_at_def gen_obj_refs_Int)
    apply (subgoal_tac "ptr = (a,b)")
     prefer 2
     apply (erule_tac x="fst ptr" in allE)
     apply (erule_tac x="snd ptr" in allE)
-    apply (clarsimp simp: cte_wp_at_def obj_irq_refs_Int)
+    apply (clarsimp simp: cte_wp_at_def gen_obj_refs_Int)
    apply clarsimp
    apply (rule context_conjI)
     apply (clarsimp simp: isCap_simps)
@@ -2111,13 +2141,15 @@ lemma final_cap_corres':
    apply (erule_tac x=ba in allE)
    apply (clarsimp simp: cte_wp_at_caps_of_state)
    apply (clarsimp simp: sameObjectAs_def3 obj_refs_Master cap_irqs_relation_Master
-                         obj_irq_refs_Int cong: if_cong)
+                         arch_gen_refs_relation_Master gen_obj_refs_Int
+                   cong: if_cong
+                  split: capability.split_asm)
   apply (clarsimp simp: isFinal_def is_final_cap'_def3)
   apply (rule_tac x="fst ptr" in exI)
   apply (rule_tac x="snd ptr" in exI)
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_def final_matters'_def
-                         obj_irq_refs_Int
+                         gen_obj_refs_Int
                   split: cap_relation_split_asm arch_cap.split_asm)
   apply clarsimp
   apply (drule_tac p="(a,b)" in cte_wp_at_eqD)
@@ -2137,7 +2169,7 @@ lemma final_cap_corres':
     apply (erule invs_distinct)
    apply simp
   apply (frule_tac p=ptr in cte_wp_valid_cap, fastforce)
-  apply (clarsimp simp: cte_wp_at_def obj_irq_refs_Int)
+  apply (clarsimp simp: cte_wp_at_def gen_obj_refs_Int)
   apply (rule conjI)
    apply (rule classical)
    apply (frule(1) zombies_finalD2[OF _ _ _ invs_zombies],
@@ -2148,7 +2180,7 @@ lemma final_cap_corres':
                          option.split_asm if_split_asm,
           simp_all add: is_cap_defs)
   apply (rule classical)
-  by (clarsimp simp: cap_irqs_def cap_irq_opt_def sameObjectAs_def3 isCap_simps
+  by (clarsimp simp: cap_irqs_def cap_irq_opt_def sameObjectAs_def3 isCap_simps arch_gen_obj_refs_def
                  split: cap.split_asm)
 
 lemma final_cap_corres:
@@ -2200,12 +2232,27 @@ lemmas cancelAllIPC_typs[wp] = typ_at_lifts [OF cancelAllIPC_typ_at']
 lemmas cancelAllSignals_typs[wp] = typ_at_lifts [OF cancelAllSignals_typ_at']
 lemmas suspend_typs[wp] = typ_at_lifts [OF suspend_typ_at']
 
+definition
+  arch_cap_has_cleanup' :: "arch_capability \<Rightarrow> bool"
+where
+  "arch_cap_has_cleanup' acap \<equiv> False"
+
+definition
+  cap_has_cleanup' :: "capability \<Rightarrow> bool"
+where
+  "cap_has_cleanup' cap \<equiv> case cap of
+     IRQHandlerCap _ \<Rightarrow> True
+   | ArchObjectCap acap \<Rightarrow> arch_cap_has_cleanup' acap
+   | _ \<Rightarrow> False"
+
+lemmas cap_has_cleanup'_simps[simp] = cap_has_cleanup'_def[split_simps capability.split]
+
 lemma finaliseCap_cases[wp]:
   "\<lbrace>\<top>\<rbrace>
      finaliseCap cap final flag
-   \<lbrace>\<lambda>rv s. fst rv = NullCap \<and> (\<forall>irq. snd rv = Some irq \<longrightarrow> final \<and> cap = IRQHandlerCap irq)
+   \<lbrace>\<lambda>rv s. fst rv = NullCap \<and> (snd rv \<noteq> NullCap \<longrightarrow> final \<and> cap_has_cleanup' cap \<and> snd rv = cap)
      \<or>
-       isZombie (fst rv) \<and> final \<and> \<not> flag \<and> snd rv = None
+       isZombie (fst rv) \<and> final \<and> \<not> flag \<and> snd rv = NullCap
         \<and> capUntypedPtr (fst rv) = capUntypedPtr cap
         \<and> (isThreadCap cap \<or> isCNodeCap cap \<or> isZombie cap)\<rbrace>"
   apply (simp add: finaliseCap_def ARM_HYP_H.finaliseCap_def Let_def
@@ -2218,7 +2265,7 @@ lemma finaliseCap_cases[wp]:
   apply (simp only: simp_thms fst_conv snd_conv option.simps if_cancel
                     o_def)
   apply (intro allI impI conjI TrueI)
-  apply (auto simp add: isCap_simps)
+  apply (auto simp add: isCap_simps cap_has_cleanup'_def)
   done
 
 
@@ -2780,7 +2827,7 @@ lemma arch_finaliseCap_removeable[wp]:
        \<and> (final_matters' (ArchObjectCap cap)
                \<longrightarrow> (final = isFinal (ArchObjectCap cap) slot (cteCaps_of s))) \<rbrace>
      Arch.finaliseCap cap final
-   \<lbrace>\<lambda>rv s. isNullCap rv \<and> removeable' slot s (ArchObjectCap cap)\<rbrace>"
+   \<lbrace>\<lambda>rv s. isNullCap (fst rv) \<and> removeable' slot s (ArchObjectCap cap) \<and> isNullCap (snd rv)\<rbrace>"
   unfolding ARM_HYP_H.finaliseCap_def
   including no_pre
   apply (case_tac cap; clarsimp)
@@ -3236,10 +3283,10 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
        \<and> weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
      finaliseCap cap final flag
    \<lbrace>\<lambda>rv s. (isNullCap (fst rv) \<and> removeable' slot s cap
-                \<and> (\<forall>irq. snd rv = Some irq \<longrightarrow> cap = IRQHandlerCap irq
+                \<and> (snd rv \<noteq> NullCap \<longrightarrow> snd rv = cap \<and> cap_has_cleanup' cap
                                       \<and> isFinal cap slot (cteCaps_of s)))
         \<or>
-          (isZombie (fst rv) \<and> snd rv = None
+          (isZombie (fst rv) \<and> snd rv = NullCap
             \<and> isFinal cap slot (cteCaps_of s)
             \<and> capClass cap = capClass (fst rv)
             \<and> capUntypedPtr (fst rv) = capUntypedPtr cap
@@ -3287,7 +3334,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
     apply ((clarsimp simp: obj_at'_def | rule conjI)+)[2]
   apply (rule impI)
   apply (case_tac "cteCap cte",
-         simp_all add: isCap_simps capRange_def
+         simp_all add: isCap_simps capRange_def cap_has_cleanup'_def
                        final_matters'_def objBits_simps
                        not_Final_removeable finaliseCap_def,
          simp_all add: removeable'_def)
@@ -3990,7 +4037,7 @@ lemma vcpuFinalise_corres [corres]:
 
 lemma arch_finalise_cap_corres:
   "\<lbrakk> final_matters' (ArchObjectCap cap') \<Longrightarrow> final = final'; acap_relation cap cap' \<rbrakk>
-     \<Longrightarrow> corres cap_relation
+     \<Longrightarrow> corres (\<lambda>r r'. cap_relation (fst r) (fst r') \<and> cap_relation (snd r) (snd r'))
            (\<lambda>s. invs s \<and> valid_etcbs s
                        \<and> s \<turnstile> cap.ArchObjectCap cap
                        \<and> (final_matters (cap.ArchObjectCap cap)
@@ -4093,7 +4140,7 @@ lemma fast_finalise_corres:
            (fast_finalise cap final)
            (do
                p \<leftarrow> finaliseCap cap' final' True;
-               assert (capRemovable (fst p) (cte_map ptr) \<and> snd p = None)
+               assert (capRemovable (fst p) (cte_map ptr) \<and> snd p = NullCap)
             od)"
   apply (cases cap, simp_all add: finaliseCap_def isCap_simps
                                   corres_liftM2_simp[unfolded liftM_def]
@@ -4171,7 +4218,7 @@ lemma corres_add_guard:
 lemma finalise_cap_corres:
   "\<lbrakk> final_matters' cap' \<Longrightarrow> final = final'; cap_relation cap cap';
           flag \<longrightarrow> can_fast_finalise cap \<rbrakk>
-     \<Longrightarrow> corres (\<lambda>x y. cap_relation (fst x) (fst y) \<and> snd x = snd y)
+     \<Longrightarrow> corres (\<lambda>x y. cap_relation (fst x) (fst y) \<and> cap_relation (snd x) (snd y))
            (\<lambda>s. einvs s \<and> s \<turnstile> cap \<and> (final_matters cap \<longrightarrow> final = is_final_cap' cap s)
                        \<and> cte_wp_at (op = cap) sl s)
            (\<lambda>s. invs' s \<and> s \<turnstile>' cap' \<and> sch_act_simple s \<and>

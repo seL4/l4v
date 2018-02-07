@@ -1471,7 +1471,7 @@ lemma arch_update_cap_invs_unmap_page_table:
    apply (drule valid_global_refsD2, clarsimp)
    apply (simp add: cap_range_def)
   apply (frule(1) cap_refs_in_kernel_windowD)
-  apply (simp add: cap_range_def obj_irq_refs_def image_def)
+  apply (simp add: cap_range_def gen_obj_refs_def image_def)
   apply (intro conjI)
     apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
                           cte_wp_at_caps_of_state)
@@ -1515,7 +1515,7 @@ lemma arch_update_cap_invs_unmap_page_directory:
    apply (drule valid_global_refsD2, clarsimp)
    apply (simp add: cap_range_def)
   apply (frule(1) cap_refs_in_kernel_windowD)
-  apply (simp add: cap_range_def obj_irq_refs_def image_def)
+  apply (simp add: cap_range_def gen_obj_refs_def image_def)
   apply (intro conjI)
     apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
                           cte_wp_at_caps_of_state)
@@ -1559,7 +1559,7 @@ lemma arch_update_cap_invs_unmap_pd_pointer_table:
    apply (drule valid_global_refsD2, clarsimp)
    apply (simp add: cap_range_def)
   apply (frule(1) cap_refs_in_kernel_windowD)
-  apply (simp add: cap_range_def obj_irq_refs_def image_def)
+  apply (simp add: cap_range_def gen_obj_refs_def image_def)
   apply (intro conjI)
     apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
                           cte_wp_at_caps_of_state)
@@ -1603,7 +1603,7 @@ lemma arch_update_cap_invs_unmap_page_map_l4:
    apply (drule valid_global_refsD2, clarsimp)
    apply (simp add: cap_range_def)
   apply (frule(1) cap_refs_in_kernel_windowD)
-  apply (simp add: cap_range_def obj_irq_refs_def image_def)
+  apply (simp add: cap_range_def gen_obj_refs_def image_def)
   apply (intro conjI)
     apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
                           cte_wp_at_caps_of_state)
@@ -2768,8 +2768,8 @@ lemma pte_ref_pages_invalid_None[simp]:
 
 lemma is_final_cap_caps_of_state_2D:
   "\<lbrakk> caps_of_state s p = Some cap; caps_of_state s p' = Some cap';
-     is_final_cap' cap'' s; obj_irq_refs cap \<inter> obj_irq_refs cap'' \<noteq> {};
-     obj_irq_refs cap' \<inter> obj_irq_refs cap'' \<noteq> {} \<rbrakk>
+     is_final_cap' cap'' s; gen_obj_refs cap \<inter> gen_obj_refs cap'' \<noteq> {};
+     gen_obj_refs cap' \<inter> gen_obj_refs cap'' \<noteq> {} \<rbrakk>
        \<Longrightarrow> p = p'"
   apply (clarsimp simp: is_final_cap'_def3)
   apply (frule_tac x="fst p" in spec)
@@ -3101,7 +3101,7 @@ lemma perform_page_directory_invocation_invs[wp]:
                          acap_rights_update_def
                   split: cap.split_asm arch_cap.split_asm)
    apply (wp unmap_pd_vs_lookup_pages)
-  apply (clarsimp simp: is_final_cap'_def2 obj_irq_refs_def acap_rights_update_def cte_wp_at_caps_of_state
+  apply (clarsimp simp: is_final_cap'_def2 gen_obj_refs_def acap_rights_update_def cte_wp_at_caps_of_state
                         is_arch_diminished_def diminished_def mask_cap_def
                   del: )
   apply (clarsimp simp: cap_rights_update_def acap_rights_update_def is_arch_update_def is_cap_simps
@@ -3189,7 +3189,7 @@ lemma perform_page_table_invocation_invs[wp]:
                          acap_rights_update_def
                   split: cap.split_asm arch_cap.split_asm)
    apply (wp unmap_pt_vs_lookup_pages unmap_page_table_caps_of_state)
-  apply (clarsimp simp: is_final_cap'_def2 obj_irq_refs_def acap_rights_update_def cte_wp_at_caps_of_state
+  apply (clarsimp simp: is_final_cap'_def2 gen_obj_refs_def acap_rights_update_def cte_wp_at_caps_of_state
                         is_arch_diminished_def diminished_def mask_cap_def
                   del: )
   apply (clarsimp simp: cap_rights_update_def acap_rights_update_def is_arch_update_def is_cap_simps
@@ -3308,7 +3308,7 @@ lemma perform_pdpt_invocation_invs[wp]:
                          acap_rights_update_def
                   split: cap.split_asm arch_cap.split_asm)
    apply (wp unmap_pdpt_vs_lookup_pages)
-  apply (clarsimp simp: is_final_cap'_def2 obj_irq_refs_def acap_rights_update_def cte_wp_at_caps_of_state
+  apply (clarsimp simp: is_final_cap'_def2 gen_obj_refs_Int acap_rights_update_def cte_wp_at_caps_of_state
                         is_arch_diminished_def diminished_def mask_cap_def
                   del: )
   apply (clarsimp simp: cap_rights_update_def acap_rights_update_def is_arch_update_def is_cap_simps

@@ -16,8 +16,20 @@ chapter "IPC Cancelling"
 
 
 theory IpcCancel_A
-imports CSpaceAcc_A
+imports "./$L4V_ARCH/ArchIpcCancel_A"
 begin
+
+context begin interpretation Arch .
+
+requalify_consts
+  arch_post_cap_deletion
+  arch_gen_obj_refs
+  arch_cap_cleanup_opt
+
+requalify_types
+  arch_gen_obj_ref
+
+end
 
 text {* Getting and setting endpoint queues. *}
 definition
@@ -208,6 +220,42 @@ definition
   cap_irqs :: "cap \<Rightarrow> irq set" where
  "cap_irqs cap \<equiv> set_option (cap_irq_opt cap)"
 
+text {* A generic reference to an object. Used for the purposes of finalisation,
+where we want to be able to compare caps to decide if they refer to the "same object",
+which can be determined in several ways *}
+datatype gen_obj_ref =
+    ObjRef obj_ref
+  | IRQRef irq
+  | ArchRef arch_gen_obj_ref
+
+definition
+  arch_cap_set_map :: "(arch_cap \<Rightarrow> 'a set) \<Rightarrow> cap \<Rightarrow> 'a set"
+where
+  "arch_cap_set_map f cap \<equiv> case cap of
+       ArchObjectCap acap \<Rightarrow> f acap
+     | _ \<Rightarrow> {}"
+
+abbreviation
+  arch_gen_refs :: "cap \<Rightarrow> arch_gen_obj_ref set"
+where
+  "arch_gen_refs \<equiv> arch_cap_set_map arch_gen_obj_refs"
+
+definition
+  gen_obj_refs :: "cap \<Rightarrow> gen_obj_ref set"
+where
+  "gen_obj_refs c \<equiv> ObjRef ` (obj_refs c)
+                      \<union> IRQRef ` (cap_irqs c)
+                      \<union> ArchRef ` (arch_gen_refs c)"
+
+definition
+  cap_cleanup_opt :: "cap \<Rightarrow> cap"
+where
+  "cap_cleanup_opt c \<equiv> case c of
+      IRQHandlerCap _ \<Rightarrow> c
+    | ArchObjectCap acap \<Rightarrow> arch_cap_cleanup_opt acap
+    | _ \<Rightarrow> NullCap"
+
+
 text {* Detect whether a capability is the final capability to a given object
 remaining in the system. Finalisation actions need to be taken when the final
 capability to the object is deleted. *}
@@ -215,8 +263,7 @@ definition
   is_final_cap' :: "cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
  "is_final_cap' cap s \<equiv>
     \<exists>cref. {cref. \<exists>cap'. fst (get_cap cref s) = {(cap', s)}
-                       \<and> (obj_refs cap \<inter> obj_refs cap' \<noteq> {}
-                               \<or> cap_irqs cap \<inter> cap_irqs cap' \<noteq> {})}
+                       \<and> (gen_obj_refs cap \<inter> gen_obj_refs cap' \<noteq> {})}
          = {cref}"
 
 definition
@@ -229,14 +276,22 @@ definition
 where
  "deleted_irq_handler irq \<equiv> set_irq_state IRQInactive irq"
 
+text {* Actions to be taken after a cap is deleted *}
+definition
+  post_cap_deletion :: "cap \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "post_cap_deletion cap \<equiv> case cap of
+       IRQHandlerCap irq \<Rightarrow> deleted_irq_handler irq
+     | ArchObjectCap acap \<Rightarrow> arch_post_cap_deletion acap
+     | _ \<Rightarrow> return ()"
+
 text {* Empty a capability slot assuming that the capability in it has been
 finalised already. *}
 
-
 definition
-  empty_slot :: "cslot_ptr \<Rightarrow> irq option \<Rightarrow> (unit,'z::state_ext) s_monad"
+  empty_slot :: "cslot_ptr \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
- "empty_slot slot free_irq \<equiv> do
+ "empty_slot slot cleanup_info \<equiv> do
       cap \<leftarrow> get_cap slot;
       if cap = NullCap then
         return ()
@@ -251,8 +306,7 @@ where
         set_original slot False;
         set_cap NullCap slot;
 
-        case free_irq of Some irq \<Rightarrow> deleted_irq_handler irq
-           | None \<Rightarrow> return ()
+        post_cap_deletion cleanup_info
       od
   od"
 
@@ -265,7 +319,7 @@ definition
     unless (cap = NullCap) $ do
       final \<leftarrow> is_final_cap cap;
       fast_finalise cap final;
-      empty_slot slot None
+      empty_slot slot NullCap
     od
   od"
 

@@ -307,7 +307,7 @@ locale EmptyFail_AI_rec_del = EmptyFail_AI_derive_cap state_ext_t
   assumes empty_slot_empty_fail[wp]:
     "\<And>slot irq. empty_fail (empty_slot slot irq :: (unit, 'state_ext) s_monad)"
   assumes finalise_cap_empty_fail[wp]:
-    "\<And>cap final. empty_fail (finalise_cap cap final :: (cap \<times> irq option, 'state_ext) s_monad)"
+    "\<And>cap final. empty_fail (finalise_cap cap final :: (cap \<times> cap, 'state_ext) s_monad)"
   assumes preemption_point_empty_fail[wp]:
     "empty_fail (preemption_point :: (unit, 'state_ext) p_monad)"
 
@@ -365,7 +365,7 @@ next
 qed
 
 lemma rec_del_empty_fail[wp]:
-  "empty_fail (rec_del call :: (bool * irq option, 'state_ext) p_monad)"
+  "empty_fail (rec_del call :: (bool * cap, 'state_ext) p_monad)"
   apply (simp add: empty_fail_def)
   apply (rule allI)
   apply (rule rec_del_spec_empty_fail[simplified spec_empty_fail_def])

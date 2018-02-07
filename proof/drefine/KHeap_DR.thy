@@ -14,6 +14,9 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+declare arch_post_cap_deletion_def[simp]
+lemmas post_cap_deletion_simps[simp] = post_cap_deletion_def[simplified arch_post_cap_deletion_def]
+
 lemma nat_bl_to_bin_surj:
   "\<exists>bl. n = nat (bl_to_bin bl)"
   using n_less_equal_power_2[where n=n, folded of_nat_less_iff, simplified]
@@ -464,7 +467,7 @@ lemma final_cap_set_map:
   "\<lbrakk>valid_idle s'; valid_irq_node s';valid_objs s';if_unsafe_then_cap s'; valid_global_refs s'; cap_counts (transform_cap cap); valid_etcbs s'\<rbrakk>
     \<Longrightarrow> {cref. opt_cap_wp_at (\<lambda>cap'. cap_object (transform_cap cap) = cap_object cap'
                                     \<and> cdl_cap_irq (transform_cap cap) = cdl_cap_irq cap' \<and> cap_counts cap') cref (transform s')}
-    = transform_cslot_ptr ` {cref. cte_wp_at (\<lambda>cap'. obj_refs cap \<inter> obj_refs cap' = {} \<longrightarrow> cap_irqs cap \<inter> cap_irqs cap' \<noteq> {}) cref s'}"
+    = transform_cslot_ptr ` {cref. cte_wp_at (\<lambda>cap'. cap_irqs cap \<inter> cap_irqs cap' = {} \<longrightarrow> obj_refs cap \<inter> obj_refs cap' = {} \<longrightarrow> arch_gen_refs cap \<inter> arch_gen_refs cap' \<noteq> {}) cref s'}"
   apply (rule set_eqI)
   apply (rule iffI)
    apply (clarsimp simp: image_def)
@@ -512,18 +515,18 @@ lemma is_final_cap_corres:
     apply (clarsimp)
     apply (subst(asm) transform_cslot_ptr_inj, (erule cte_wp_at_cte_at)+)
     apply simp
-   apply (clarsimp)
+   apply (clarsimp simp: gen_obj_refs_Int)
   apply (rule context_conjI[rotated])
    apply clarsimp
    apply (drule final_cap_set_map)
          apply (simp+)[6] (* sseefried: Brittle proof! May need to change number there *)
    apply (drule eq_singleton_set)
-    apply (clarsimp)
-   apply clarsimp
+    apply (clarsimp simp: gen_obj_refs_Int)
+   apply (clarsimp simp: gen_obj_refs_Int)
   apply (clarsimp|drule_tac x = "(a,b)" in eqset_imp_iff)+
   apply (clarsimp simp:cte_wp_at_cases)
   apply (case_tac cap)
-             apply (clarsimp simp:cap_counts_def transform_cap_def)+
+             apply (clarsimp simp:cap_counts_def transform_cap_def gen_obj_refs_Int)+
   apply (clarsimp split:arch_cap.splits cap.splits)
   done
 
@@ -1344,6 +1347,9 @@ lemma empty_slot_ext_dcorres: "dcorres dc P P' (return ()) (empty_slot_ext slot 
                         modify_def bind_def put_def gets_def get_def return_def  split: option.splits if_split)
   done
 
+lemma cap_case_irq_handler_not[simp]: "\<forall>irq. v \<noteq> cap.IRQHandlerCap irq \<Longrightarrow> (case v of cap.IRQHandlerCap irq \<Rightarrow> f irq | _ \<Rightarrow> g) = g"
+  by (case_tac v; simp)
+
 lemma empty_slot_corres:
   "dcorres dc \<top>
            (weak_valid_mdb and valid_idle and not_idle_thread (fst slot) and valid_etcbs)
@@ -1370,13 +1376,13 @@ lemma empty_slot_corres:
              apply (rule corres_dummy_return_pl)
              apply (rule corres_split [OF _ set_original_dummy_corres])
               apply (rule corres_dummy_return_l)
-              apply (rule corres_split)
-                 apply (cases v, simp)
+              apply (rule corres_split[where r'=dc])
+                 apply (case_tac "\<exists>irq. v = cap.IRQHandlerCap irq"; clarsimp)
                  apply (clarsimp simp: deleted_irq_handler_def)
                  apply (fold dc_def)
                  apply (rule set_irq_state_dcorres)
-                apply clarsimp
-                apply (rule set_cap_corres, simp, rule refl)
+                apply simp
+                apply (rule set_cap_corres)
                apply (wp | simp del: fun_upd_apply)+
           apply (rule remove_parent_corres)
          apply (wp|simp add: set_cdt_def dc_def)+
@@ -2891,7 +2897,7 @@ lemma always_empty_slot_NullCap_corres:
 
 lemma always_empty_slot_corres:
   "dcorres dc \<top> (weak_valid_mdb and valid_idle and not_idle_thread (fst slot) and valid_etcbs)
-   (always_empty_slot (transform_cslot_ptr slot)) (IpcCancel_A.empty_slot slot None)"
+   (always_empty_slot (transform_cslot_ptr slot)) (IpcCancel_A.empty_slot slot cap.NullCap)"
   apply (clarsimp simp: always_empty_slot_def IpcCancel_A.empty_slot_def)
   apply (rule corres_symb_exec_r)
      apply (rule corres_guard_imp)

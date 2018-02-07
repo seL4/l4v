@@ -20,7 +20,7 @@ begin
 
 context Arch begin
 requalify_consts
-  deriveCap finaliseCap
+  deriveCap finaliseCap postCapDeletion
   hasCancelSendRights sameRegionAs isPhysicalCap
   sameObjectAs updateCapData maskCapRights
   createObject capUntypedPtr capUntypedSize
@@ -30,7 +30,7 @@ requalify_consts
 context begin global_naming global
 
 requalify_consts
-  RetypeDecls_H.deriveCap RetypeDecls_H.finaliseCap
+  RetypeDecls_H.deriveCap RetypeDecls_H.finaliseCap RetypeDecls_H.postCapDeletion
   RetypeDecls_H.hasCancelSendRights RetypeDecls_H.sameRegionAs RetypeDecls_H.isPhysicalCap
   RetypeDecls_H.sameObjectAs RetypeDecls_H.updateCapData RetypeDecls_H.maskCapRights
   RetypeDecls_H.createObject RetypeDecls_H.capUntypedPtr RetypeDecls_H.capUntypedSize

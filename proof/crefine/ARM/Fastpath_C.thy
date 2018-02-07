@@ -4222,7 +4222,7 @@ lemma cteDeleteOne_replycap_rewrite:
   "monadic_rewrite True False
      (cte_wp_at' (\<lambda>cte. isReplyCap (cteCap cte)) slot)
      (cteDeleteOne slot)
-     (emptySlot slot None)"
+     (emptySlot slot NullCap)"
   apply (simp add: cteDeleteOne_def)
   apply (rule monadic_rewrite_imp)
    apply (rule monadic_rewrite_symb_exec_l, (wp empty_fail_getCTE)+)
@@ -4273,7 +4273,7 @@ end
 
 lemma emptySlot_cnode_caps:
   "\<lbrace>\<lambda>s. P (only_cnode_caps (ctes_of s)) \<and> cte_wp_at' (\<lambda>cte. \<not> isCNodeCap (cteCap cte)) slot s\<rbrace>
-     emptySlot slot None
+     emptySlot slot NullCap
    \<lbrace>\<lambda>rv s. P (only_cnode_caps (ctes_of s))\<rbrace>"
   apply (simp add: only_cnode_caps_def map_option_comp2
                    o_assoc[symmetric] cteCaps_of_def[symmetric])
@@ -4325,8 +4325,10 @@ crunch obj_at_ep[wp]: emptySlot "obj_at' (P :: endpoint \<Rightarrow> bool) p"
 
 crunch nosch[wp]: emptySlot "\<lambda>s. P (ksSchedulerAction s)"
 
+context begin interpretation Arch .
 crunch gsCNodes[wp]: emptySlot, asUser "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps)
+end
 
 crunch cte_wp_at'[wp]: possibleSwitchTo "cte_wp_at' P p"
   (wp: hoare_drop_imps)
@@ -4553,14 +4555,14 @@ lemma setEndpoint_clearUntypedFreeIndex_pivot[unfolded K_bind_def]:
                  bind_apply_cong[OF refl])+
 
 lemma emptySlot_setEndpoint_pivot[unfolded K_bind_def]:
-  "(do emptySlot slot None; setEndpoint p val; f od) =
-      (do setEndpoint p val; emptySlot slot None; f od)"
+  "(do emptySlot slot NullCap; setEndpoint p val; f od) =
+      (do setEndpoint p val; emptySlot slot NullCap; f od)"
   apply (rule ext)
   apply (simp add: emptySlot_def bind_assoc
                    setEndpoint_getCTE_pivot
                    setEndpoint_updateCap_pivot
                    setEndpoint_updateMDB_pivot
-                   case_Null_If
+                   case_Null_If Retype_H.postCapDeletion_def
                    setEndpoint_clearUntypedFreeIndex_pivot
             split: if_split
               | rule bind_apply_cong[OF refl])+
@@ -4663,7 +4665,7 @@ lemma emptySlot_replymaster_rewrite[OF refl]:
                     (mdbPrev mdbn)
            and (\<lambda>s. reply_masters_rvk_fb (ctes_of s))
            and (\<lambda>s. no_0 (ctes_of s)))))
-     (emptySlot slot None)
+     (emptySlot slot NullCap)
      (do updateMDB (mdbPrev mdbn) (mdbNext_update (K 0) o mdbFirstBadged_update (K True)
                                               o mdbRevocable_update (K True));
          setCTE slot makeObject
@@ -4685,6 +4687,7 @@ lemma emptySlot_replymaster_rewrite[OF refl]:
        apply (rule monadic_rewrite_refl2)
        apply (case_tac ctea, rename_tac mdbnode, case_tac mdbnode)
        apply simp
+      apply (simp add: Retype_H.postCapDeletion_def)
       apply (rule monadic_rewrite_refl)
      apply (wp getCTE_wp')+
   apply (clarsimp simp: cte_wp_at_ctes_of reply_masters_rvk_fb_def)

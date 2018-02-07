@@ -258,11 +258,11 @@ lemma unique_table_caps_upd_eqD:
 (* FIXME: unused *)
 lemma set_untyped_cap_as_full_not_final_not_pg_cap:
   "\<lbrace>\<lambda>s. (\<exists>a b. (a, b) \<noteq> dest \<and> \<not> is_pg_cap cap'
-            \<and> cte_wp_at (\<lambda>cap. obj_irq_refs cap = obj_irq_refs cap' \<and> \<not> is_pg_cap cap) (a, b) s)
+            \<and> cte_wp_at (\<lambda>cap. gen_obj_refs cap = gen_obj_refs cap' \<and> \<not> is_pg_cap cap) (a, b) s)
       \<and> cte_wp_at (op = src_cap) src s\<rbrace>
   set_untyped_cap_as_full src_cap cap src
   \<lbrace>\<lambda>_ s.(\<exists>a b. (a, b) \<noteq> dest \<and> \<not> is_pg_cap cap'
-            \<and> cte_wp_at (\<lambda>cap. obj_irq_refs cap = obj_irq_refs cap' \<and> \<not> is_pg_cap cap) (a, b) s)\<rbrace>"
+            \<and> cte_wp_at (\<lambda>cap. gen_obj_refs cap = gen_obj_refs cap' \<and> \<not> is_pg_cap cap) (a, b) s)\<rbrace>"
   apply (rule hoare_pre)
   apply (wp hoare_vcg_ex_lift)
    apply (rule_tac Q = "cte_wp_at Q slot"

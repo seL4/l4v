@@ -1534,4 +1534,6 @@ lemma thread_get_wp':
 
 crunch valid_ioc[wp]: do_machine_op valid_ioc
 
+crunch inv[wp]: get_irq_slot "P"
+
 end

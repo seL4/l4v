@@ -34,7 +34,7 @@ where
 | "sethelper False s = s"
 
 function
-  finaliseSlot' :: "machine_word \<Rightarrow> bool \<Rightarrow> (bool * irq option) kernel_p"
+  finaliseSlot' :: "machine_word \<Rightarrow> bool \<Rightarrow> (bool * capability) kernel_p"
 where
  "finaliseSlot' x b s =
 (\<lambda> finaliseSlot.

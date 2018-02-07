@@ -451,10 +451,10 @@ next
      apply clarsimp
     apply (clarsimp simp: is_cap_simps ball_ran_eq)
     apply (subgoal_tac "P rv")
-     apply (case_tac rv, simp_all add: fst_cte_ptrs_def)[1]
+     apply (case_tac rv, simp_all add: fst_cte_ptrs_def gen_obj_refs_eq)[1]
        apply (simp add: z)
       apply (simp add: y)
-     apply (simp split: option.split_asm, simp_all add: w)[1]
+     apply (simp split: option.split_asm, simp_all add: w gen_obj_refs_eq)[1]
     apply (cases slot, fastforce)
    apply (simp add: is_final_cap_def)
    apply (wp get_cap_wp)+

@@ -318,7 +318,7 @@ lemma deleted_irq_handler_domain_sep_inv:
   done
 
 lemma empty_slot_domain_sep_inv:
-  "\<lbrace>\<lambda>s. domain_sep_inv irqs st s \<and> (\<not> irqs \<longrightarrow> b = None)\<rbrace>
+  "\<lbrace>\<lambda>s. domain_sep_inv irqs st s \<and> (\<not> irqs \<longrightarrow> b = NullCap)\<rbrace>
    empty_slot a b
    \<lbrace>\<lambda>_ s. domain_sep_inv irqs st s\<rbrace>"
   unfolding empty_slot_def
@@ -490,13 +490,12 @@ lemma get_cap_domain_sep_inv_cap:
 crunch domain_sep_inv[wp]: cap_swap_for_delete "domain_sep_inv irqs st"
   (wp: get_cap_domain_sep_inv_cap dxo_wp_weak simp: crunch_simps ignore: cap_swap_ext)
 
-lemma finalise_cap_returns_None:
+lemma finalise_cap_returns_NullCap:
   "\<lbrace>\<lambda>s. domain_sep_inv_cap irqs cap\<rbrace>
    finalise_cap cap b
-   \<lbrace>\<lambda>rv s. \<not> irqs \<longrightarrow> snd rv = None\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<not> irqs \<longrightarrow> snd rv = NullCap\<rbrace>"
   apply(case_tac cap)
-  apply(simp add: o_def split del: if_split | wp | fastforce simp: domain_sep_inv_cap_def | rule hoare_pre)+
-  done
+  by (wpsimp simp: o_def split_del: if_split | clarsimp simp: domain_sep_inv_cap_def arch_finalise_cap_def)+
 
 lemma rec_del_domain_sep_inv':
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del]
@@ -504,7 +503,7 @@ lemma rec_del_domain_sep_inv':
   shows
   "s \<turnstile> \<lbrace> domain_sep_inv irqs st\<rbrace>
      (rec_del call)
-   \<lbrace>\<lambda> a s. (case call of (FinaliseSlotCall x y) \<Rightarrow> (y \<or> fst a) \<longrightarrow> \<not> irqs \<longrightarrow> snd a = None | _ \<Rightarrow> True) \<and> domain_sep_inv irqs st s\<rbrace>,\<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
+   \<lbrace>\<lambda> a s. (case call of (FinaliseSlotCall x y) \<Rightarrow> (y \<or> fst a) \<longrightarrow> \<not> irqs \<longrightarrow> snd a = NullCap | _ \<Rightarrow> True) \<and> domain_sep_inv irqs st s\<rbrace>,\<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   proof (induct s arbitrary: rule: rec_del.induct, simp_all only: rec_del_fails hoare_fail_any)
   case (1 slot exposed s) show ?case
     apply(simp add: split_def rec_del.simps)
@@ -525,7 +524,7 @@ lemma rec_del_domain_sep_inv':
          apply(rule spec_strengthen_postE)
           apply(rule "2.hyps", fastforce+)
          apply(wp  finalise_cap_domain_sep_inv_cap get_cap_wp
-                   finalise_cap_returns_None
+                   finalise_cap_returns_NullCap
                    drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
                |simp add: without_preemption_def split del: if_split
                |wp_once hoare_drop_imps)+

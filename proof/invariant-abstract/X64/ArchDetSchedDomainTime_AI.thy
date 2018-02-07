@@ -29,7 +29,7 @@ crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects, arch_tcb_set_ipc_buffer,
   arch_invoke_irq_control, handle_vm_fault, arch_post_modify_registers,
-  prepare_thread_delete, handle_hypervisor_fault,
+  prepare_thread_delete, handle_hypervisor_fault, arch_post_cap_deletion,
   make_arch_fault_msg, arch_get_sanitise_register_info, handle_reserved_irq
   "\<lambda>s. P (domain_list s)"
 
@@ -40,7 +40,7 @@ crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects, arch_tcb_set_ipc_buffer,
   arch_invoke_irq_control, handle_vm_fault, arch_post_modify_registers,
-  prepare_thread_delete, handle_hypervisor_fault,
+  prepare_thread_delete, handle_hypervisor_fault, arch_post_cap_deletion,
   make_arch_fault_msg, arch_get_sanitise_register_info, handle_reserved_irq
   "\<lambda>s. P (domain_time s)"
 

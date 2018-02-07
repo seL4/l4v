@@ -542,7 +542,7 @@ lemma cap_delete_one_sep [wp]:
   unfolding cap_delete_one_def
   apply (simp add: unless_when)
   apply (wp get_cap_wp')
-     apply (simp add: empty_slot_def)
+     apply (simp add: empty_slot_def post_cap_deletion_def)
      apply (wp | simp)+
      (* ugh *)
        apply (rule separate_state_pres)

@@ -4215,7 +4215,7 @@ lemma arch_update_cap_invs_unmap_page_table:
    apply (drule valid_global_refsD2, clarsimp)
    apply (simp add: cap_range_def)
   apply (frule(1) cap_refs_in_kernel_windowD)
-  apply (simp add: cap_range_def obj_irq_refs_def image_def)
+  apply (simp add: cap_range_def gen_obj_refs_def image_def)
   apply (intro conjI)
     apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
                           cte_wp_at_caps_of_state)
@@ -4674,8 +4674,8 @@ lemma unmap_page_table_unmapped3:
 
 lemma is_final_cap_caps_of_state_2D:
   "\<lbrakk> caps_of_state s p = Some cap; caps_of_state s p' = Some cap';
-     is_final_cap' cap'' s; obj_irq_refs cap \<inter> obj_irq_refs cap'' \<noteq> {};
-     obj_irq_refs cap' \<inter> obj_irq_refs cap'' \<noteq> {} \<rbrakk>
+     is_final_cap' cap'' s; gen_obj_refs cap \<inter> gen_obj_refs cap'' \<noteq> {};
+     gen_obj_refs cap' \<inter> gen_obj_refs cap'' \<noteq> {} \<rbrakk>
        \<Longrightarrow> p = p'"
   apply (clarsimp simp: is_final_cap'_def3)
   apply (frule_tac x="fst p" in spec)

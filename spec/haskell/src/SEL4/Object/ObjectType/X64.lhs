@@ -130,13 +130,16 @@ Page capabilities have read and write permission bits, which are used to restric
 
 \subsection{Deleting Capabilities}
 
-> finaliseCap :: ArchCapability -> Bool -> Kernel Capability
+> postCapDeletion :: ArchCapability -> Kernel ()
+> postCapDeletion _ = return ()
+
+> finaliseCap :: ArchCapability -> Bool -> Kernel (Capability, Capability)
 
 Deletion of a final capability to an ASID pool requires that the pool is removed from the global ASID table.
 
 > finaliseCap (ASIDPoolCap { capASIDBase = b, capASIDPool = ptr }) True = do
 >     deleteASIDPool b ptr
->     return NullCap
+>     return (NullCap, NullCap)
 
 Delete a PML4
 
@@ -144,7 +147,7 @@ Delete a PML4
 >         capPML4MappedASID = Just a,
 >         capPML4BasePtr = ptr }) True = do
 >     deleteASID a ptr
->     return NullCap
+>     return (NullCap, NullCap)
 
 Delete a PDPT
 
@@ -152,7 +155,7 @@ Delete a PDPT
 >         capPDPTMappedAddress = Just (a, v),
 >         capPDPTBasePtr = ptr }) True = do
 >     unmapPDPT a v ptr
->     return NullCap
+>     return (NullCap, NullCap)
 
 
 Deletion of a final capability to a page directory with an assigned ASID requires the ASID assignment to be removed, and the ASID flushed from the caches.
@@ -161,7 +164,7 @@ Deletion of a final capability to a page directory with an assigned ASID require
 >         capPDMappedAddress = Just (a, v),
 >         capPDBasePtr = ptr }) True = do
 >     unmapPageDirectory a v ptr
->     return NullCap
+>     return (NullCap, NullCap)
 
 Deletion of a final capability to a page table that has been mapped requires that the mapping be removed from the page directory, and the corresponding addresses flushed from the caches.
 
@@ -169,18 +172,18 @@ Deletion of a final capability to a page table that has been mapped requires tha
 >         capPTMappedAddress = Just (a, v),
 >         capPTBasePtr = ptr }) True = do
 >     unmapPageTable a v ptr
->     return NullCap
+>     return (NullCap, NullCap)
 
-> --finaliseCap (IOSpaceCap {}) True = return NullCap -- FIXME x64: not yet implemented in C
+> --finaliseCap (IOSpaceCap {}) True = return (NullCap, NullCap) -- FIXME x64: not yet implemented in C
 
 > finaliseCap (PageCap {
 >         capVPMappedAddress = Just (a, v),
 >         capVPSize = s,
 >         capVPBasePtr = ptr }) _ = do
 >     unmapPage s a v ptr
->     return NullCap
+>     return (NullCap, NullCap)
 
-> finaliseCap _ _ = return NullCap
+> finaliseCap _ _ = return (NullCap, NullCap)
 
 %Note: limitations in Haskell translator caseconvs makes this horrible
 

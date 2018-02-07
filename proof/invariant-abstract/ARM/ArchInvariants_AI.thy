@@ -2372,6 +2372,31 @@ lemma valid_arch_tcb_lift:
   unfolding valid_arch_tcb_def
   by (wp hoare_vcg_all_lift hoare_vcg_imp_lift; simp)
 
+
+lemma arch_gen_obj_refs_inD:
+  "x \<in> arch_gen_obj_refs cap \<Longrightarrow> arch_gen_obj_refs cap = {x}"
+  by (simp add: arch_gen_obj_refs_def)
+
+lemma obj_ref_not_arch_gen_ref:
+  "x \<in> obj_refs cap \<Longrightarrow> arch_gen_refs cap = {}"
+  by (cases cap; simp add: arch_gen_obj_refs_def)
+
+lemma arch_gen_ref_not_obj_ref:
+  "x \<in> arch_gen_refs cap \<Longrightarrow> obj_refs cap = {}"
+  by (cases cap; simp add: arch_gen_obj_refs_def)
+
+lemma arch_gen_obj_refs_simps[simp]:
+  "arch_gen_obj_refs (ASIDPoolCap a b) = {}"
+  "arch_gen_obj_refs (PageTableCap c d) = {}"
+  "arch_gen_obj_refs (PageDirectoryCap e f) = {}"
+  "arch_gen_obj_refs (ASIDControlCap) = {}"
+  "arch_gen_obj_refs (PageCap x1 x2 x3 x4 x5) = {}"
+  by (simp add: arch_gen_obj_refs_def)+
+
+lemma same_aobject_same_arch_gen_refs:
+  "same_aobject_as ac ac' \<Longrightarrow> arch_gen_obj_refs ac = arch_gen_obj_refs ac'"
+  by (clarsimp simp: arch_gen_obj_refs_def split: arch_cap.split_asm)
+
 end
 
 setup {* Add_Locale_Code_Defs.setup "ARM" *}

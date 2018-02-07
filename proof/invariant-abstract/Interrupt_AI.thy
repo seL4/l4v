@@ -20,6 +20,9 @@ begin
 context begin interpretation Arch .
 requalify_consts
   maxIRQ
+
+requalify_facts
+  arch_post_cap_deletion_mdb_inv
 end
 
 definition
@@ -161,6 +164,9 @@ crunch mdb_inv[wp]: fast_finalise "\<lambda>s. P (cdt s)"
   (wp: fast_finalise_lift crunch_wps)
 
 crunch mdb_inv[wp]: set_cap "\<lambda>s. P (cdt s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunch mdb_inv[wp]: post_cap_deletion "\<lambda>s. P (cdt s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma cap_delete_one_still_derived:

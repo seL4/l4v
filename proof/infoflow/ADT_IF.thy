@@ -2695,7 +2695,7 @@ lemma rec_del_irq_state_inv':
   "s \<turnstile> \<lbrace>irq_state_inv st and domain_sep_inv False sta and K (irq_is_recurring irq st)\<rbrace>
         rec_del call
         \<lbrace>\<lambda>a s. (case call of
-             FinaliseSlotCall x y \<Rightarrow> y \<or> fst a \<longrightarrow> snd a = None
+             FinaliseSlotCall x y \<Rightarrow> y \<or> fst a \<longrightarrow> snd a = NullCap
           | _ \<Rightarrow> True) \<and>
          domain_sep_inv False sta s \<and> irq_state_inv st s\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   proof (induct s arbitrary: rule: rec_del.induct, simp_all only: rec_del_fails hoare_fail_any)
@@ -2721,7 +2721,7 @@ lemma rec_del_irq_state_inv':
          apply(rule spec_strengthen_postE)
           apply(rule "2.hyps"[simplified], fastforce+)
          apply(wp  finalise_cap_domain_sep_inv_cap get_cap_wp
-                   finalise_cap_returns_None[where irqs=False, simplified]
+                   finalise_cap_returns_NullCap[where irqs=False, simplified]
                    drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
                |simp add: without_preemption_def split del: if_split
                |wp_once hoare_drop_imps

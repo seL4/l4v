@@ -19,6 +19,7 @@ requalify_facts
   get_cap_kheap
   set_domain_empty_fail
   thread_set_domain_empty_fail
+  arch_post_cap_deletion_valid_list
 end
 
 lemmas [wp] =
@@ -3121,7 +3122,7 @@ lemma (in mdb_empty_abs') next_slot:
   apply(fastforce split: if_split_asm)
   done
 
-crunch valid_list[wp]: deleted_irq_handler,set_cap valid_list
+crunch valid_list[wp]: post_cap_deletion,set_cap valid_list
 
 crunch all_but_exst[wp]: empty_slot_ext "all_but_exst P"
 

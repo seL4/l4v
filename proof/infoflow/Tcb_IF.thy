@@ -214,7 +214,7 @@ next
          apply (erule disjE)
          apply clarsimp
       apply (clarsimp simp: is_cap_simps cap_auth_conferred_def clas_no_asid aag_cap_auth_def
-                            pas_refined_all_auth_is_owns cli_no_irqs)
+                            pas_refined_all_auth_is_owns cli_no_irqs gen_obj_refs_eq)
       apply (drule appropriate_Zombie[symmetric, THEN trans, symmetric])
       apply clarsimp
       apply (erule_tac s = "{r}" in subst)

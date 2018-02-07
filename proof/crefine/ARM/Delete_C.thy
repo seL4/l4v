@@ -186,8 +186,8 @@ lemma case_assertE_to_assert:
 
 lemma cteDelete_ccorres1:
   assumes fs_cc:
-    "ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> irq_opt_relation irqopt irq'))
-     (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.irq_C v))
+    "ccorres (cintr \<currency> (\<lambda>(success, cap) (success', cap'). success' = from_bool success \<and> ccap_relation cap cap' \<and> cleanup_info_wf' cap))
+     (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.cleanupInfo_C v))
                    ret__struct_finaliseSlot_ret_C_')
      (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (expo \<or> ex_cte_cap_to' slot s))
      (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool expo}) []
@@ -226,7 +226,8 @@ lemma cteDelete_ccorres1:
    apply wp
    apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp_R)
     apply (wp cutMon_validE_drop finaliseSlot_invs)
-   apply (auto simp: cintr_def)
+   apply fastforce
+  apply (auto simp: cintr_def)
   done
 
 lemma zombie_rf_sr_helperE:
@@ -411,8 +412,8 @@ lemma reduceZombie_ccorres1:
     "\<And>slot. \<lbrakk> capZombieNumber cap \<noteq> 0; expo;
                (slot, s) \<in> fst (locateSlotCap cap
                                (fromIntegral (capZombieNumber cap - 1)) s) \<rbrakk> \<Longrightarrow>
-     ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> irq_opt_relation irqopt irq'))
-     (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.irq_C v))
+     ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> ccap_relation irqopt irq' \<and> cleanup_info_wf' irqopt))
+     (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.cleanupInfo_C v))
                    ret__struct_finaliseSlot_ret_C_')
      (\<lambda>s. invs' s \<and> sch_act_simple s \<and> ex_cte_cap_to' slot s)
      (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool False}) []
@@ -669,8 +670,8 @@ lemma induction_setup_helper:
 
 schematic_goal finaliseSlot_ccorres_induction_helper:
   "\<And>s slot exposed. ?P s slot exposed
-        \<Longrightarrow> ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> irq_opt_relation irqopt irq'))
-     (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.irq_C v))
+        \<Longrightarrow> ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> ccap_relation irqopt irq' \<and> cleanup_info_wf' irqopt))
+     (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.cleanupInfo_C v))
                    ret__struct_finaliseSlot_ret_C_')
      (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (exposed \<or> ex_cte_cap_to' slot s))
      (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool exposed}) []
@@ -693,8 +694,8 @@ schematic_goal finaliseSlot_ccorres_induction_helper:
 lemma finaliseSlot_ccorres:
   notes from_bool_neq_0 [simp del]
   shows
-  "ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> irq_opt_relation irqopt irq'))
-     (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.irq_C v))
+  "ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> ccap_relation irqopt irq' \<and> cleanup_info_wf' irqopt))
+     (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.cleanupInfo_C v))
                    ret__struct_finaliseSlot_ret_C_')
      (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (exposed \<or> ex_cte_cap_to' slot s))
      (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool exposed}) []
@@ -726,7 +727,7 @@ lemma finaliseSlot_ccorres:
         apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
         apply (rule allI, rule conseqPre, vcg)
         apply (clarsimp simp: returnOk_def return_def
-                              from_bool_def true_def irq_opt_relation_def)
+                              from_bool_def true_def ccap_relation_NullCap_iff)
        apply (simp add: Collect_True liftE_bindE split_def
                         ccorres_cond_iffs cutMon_walk_bind
                    del: Collect_const cong: call_ignore_cong)
@@ -760,13 +761,15 @@ lemma finaliseSlot_ccorres:
              apply simp
              apply (rule ccorres_drop_cutMon,
                     rule ccorres_split_throws)
-              apply (rule_tac P="\<lambda>s. case (snd rvb) of None \<Rightarrow> True
-                                  | Some v \<Rightarrow> ucast v \<le> Kernel_C.maxIRQ"
-                        in ccorres_from_vcg_throws[where P'=UNIV])
+              apply (rule_tac P="\<lambda>s. case (snd rvb) of
+                                        IRQHandlerCap irq \<Rightarrow> UCAST(10\<rightarrow>16) irq \<le> SCAST (32 signed\<rightarrow>16)Kernel_C.maxIRQ
+                                      | _ \<Rightarrow> True"
+                              in ccorres_from_vcg_throws[where P'=UNIV])
               apply (rule allI, rule conseqPre, vcg)
               apply (clarsimp simp: returnOk_def return_def
                                     from_bool_def true_def)
-              apply (clarsimp simp: irq_opt_relation_def split: if_split)
+              apply (clarsimp simp: cleanup_info_wf'_def arch_cleanup_info_wf'_def
+                             split: if_split capability.splits)
              apply vcg
             apply (simp only: cutMon_walk_if Collect_False ccorres_seq_cond_empty
                               ccorres_seq_skip)
@@ -890,8 +893,8 @@ lemma finaliseSlot_ccorres:
           apply (rule finaliseCap_replaceable[where slot=slot'])
          apply (clarsimp simp: cte_wp_at_ctes_of)
          apply (erule disjE[where P="F \<and> G" for F G])
-          apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of
-                         split: option.split)
+          apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of cap_has_cleanup'_def
+                         split: option.split capability.splits)
           apply (auto dest!: ctes_of_valid'
                        simp: valid_cap'_def Kernel_C.maxIRQ_def ARM.maxIRQ_def
                              unat_ucast word_le_nat_alt)[1]

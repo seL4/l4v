@@ -2788,7 +2788,7 @@ lemma zombies_final_ccontr:
     apply (drule_tac a = "(aa,ba)" and b = p' in singleton_set_eq)
       apply (clarsimp dest!:caps_of_state_cteD simp:cte_wp_at_def)
       apply (drule IntI)
-        apply simp+
+        apply (simp add: gen_obj_refs_Int)+
   apply (drule_tac a = "(aa,ba)" and b = "(a,b)" in singleton_set_eq)
     apply clarsimp
   apply clarsimp
@@ -3122,7 +3122,7 @@ lemma set_cap_noop_dcorres3:
 
 lemma finalise_zombie:
   "is_zombie cap \<Longrightarrow> finalise_cap cap final
-        = do assert final; return (cap, None) od"
+        = do assert final; return (cap, cap.NullCap) od"
   by (clarsimp simp add: is_cap_simps)
 
 lemma corres_assert_rhs:
@@ -3143,7 +3143,7 @@ lemmas monadic_rewrite_select_pick_x
 lemma finalise_cap_zombie':
   "(case cap of ZombieCap _ \<Rightarrow> True | _ \<Rightarrow> False)
      \<Longrightarrow> CSpace_D.finalise_cap cap fin =
-              do assert fin; return (cap, None) od"
+              do assert fin; return (cap, cdl_cap.NullCap) od"
   by (simp split: cdl_cap.split_asm)
 
 lemma corres_use_cutMon:

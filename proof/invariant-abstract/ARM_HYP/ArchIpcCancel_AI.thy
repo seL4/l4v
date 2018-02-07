@@ -1,26 +1,20 @@
 (*
- * Copyright 2014, General Dynamics C4 Systems
+ * Copyright 2018, Data61, CSIRO
  *
  * This software may be distributed and modified according to the terms of
  * the GNU General Public License version 2. Note that NO WARRANTY is provided.
  * See "LICENSE_GPLv2.txt" for details.
  *
- * @TAG(GD_GPL)
+ * @TAG(DATA61_GPL)
  *)
 
 theory ArchIpcCancel_AI
 imports "../IpcCancel_AI"
 begin
 
-context Arch begin global_naming X64
+context Arch begin global_naming ARM
 
 named_theorems IpcCancel_AI_asms
-
-crunch v_ker_map[wp,IpcCancel_AI_asms]: set_endpoint "valid_kernel_mappings"
-  (ignore: set_object wp: set_object_v_ker_map crunch_wps)
-
-crunch eq_ker_map[wp,IpcCancel_AI_asms]: set_endpoint "equal_kernel_mappings"
-  (ignore: set_object wp: set_object_equal_mappings crunch_wps)
 
 crunches arch_post_cap_deletion
   for typ_at[wp, IpcCancel_AI_asms]: "\<lambda>s. P (typ_at T p s)"
@@ -31,7 +25,9 @@ end
 interpretation IpcCancel_AI?: IpcCancel_AI
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact IpcCancel_AI_asms)?)
+  case 1 show ?case
+  by (intro_locales; (unfold_locales; fact IpcCancel_AI_asms)?)
   qed
+
 
 end

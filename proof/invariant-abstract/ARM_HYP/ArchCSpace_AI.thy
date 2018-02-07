@@ -596,6 +596,18 @@ lemma cap_insert_simple_invs:
 
 lemmas is_derived_def = is_derived_def[simplified is_derived_arch_def]
 
+crunches arch_post_cap_deletion
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
+  and valid_objs[wp]: valid_objs
+  and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
+  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
+  and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and invs[wp]: invs
+  and cur_thread[wp]:  "\<lambda>s. P (cur_thread s)"
+  and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
+  and mdb_inv[wp]: "\<lambda>s. P (cdt s)"
+  and valid_list[wp]: valid_list
+
 end
 
 (* is this the right way? we need this fact globally but it's proven with

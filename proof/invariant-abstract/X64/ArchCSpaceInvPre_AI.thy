@@ -165,8 +165,8 @@ lemma set_cap_valid_vs_lookup:
      apply fastforce
     apply clarsimp
     apply (drule (1) not_final_another_caps)
-     apply (erule obj_ref_is_obj_irq_ref)
-    apply (simp, elim exEI, clarsimp simp: obj_irq_refs_eq)
+     apply (erule obj_ref_is_gen_obj_ref)
+    apply (simp, elim exEI, clarsimp simp: gen_obj_refs_eq)
     apply (rule conjI, clarsimp)
     apply (drule(3) unique_table_refsD)
     apply (clarsimp simp: reachable_pg_cap_def is_pg_cap_def)

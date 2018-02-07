@@ -405,7 +405,7 @@ done
 
 lemma finalise_is_fast_finalise:
   "can_fast_finalise cap \<Longrightarrow>
-    finalise_cap cap fin = do fast_finalise cap fin; return (cap.NullCap, None) od"
+    finalise_cap cap fin = do fast_finalise cap fin; return (cap.NullCap, cap.NullCap) od"
   by (cases cap, simp_all add: can_fast_finalise_def liftM_def)
 
 lemma get_irq_slot_owns [wp]:
@@ -594,7 +594,7 @@ lemma rec_del_respects'_pre':
                   and K (is_subject aag (fst (slot_rdcall call)))
                   and K (case call of ReduceZombieCall cap sl _ \<Rightarrow> \<forall>x \<in> obj_refs cap. is_subject aag x | _ \<Rightarrow> True)\<rbrace>
      rec_del call
-   \<lbrace>\<lambda>rv. (\<lambda>s. trp \<longrightarrow> (case call of FinaliseSlotCall sl _ \<Rightarrow> (\<forall> irq. snd rv = Some irq \<longrightarrow> is_subject_irq aag irq) | _ \<Rightarrow> True) \<and> integrity aag X st s) and pas_refined aag\<rbrace>,\<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"
+   \<lbrace>\<lambda>rv. (\<lambda>s. trp \<longrightarrow> (case call of FinaliseSlotCall sl _ \<Rightarrow> (cleanup_info_wf (snd rv) aag) | _ \<Rightarrow> True) \<and> integrity aag X st s) and pas_refined aag\<rbrace>,\<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"
 proof (induct arbitrary: st rule: rec_del.induct,
        simp_all only: rec_del_fails)
      case (1 slot exposed s)
@@ -655,12 +655,12 @@ next
         apply (rule finalise_cap_cases[where slot=slot])
        apply (clarsimp simp: cte_wp_at_caps_of_state)
        apply (erule disjE)
-        apply clarsimp
+        apply (clarsimp split: cap.split_asm)
         apply(fastforce intro: owns_slot_owns_irq)
        apply (clarsimp simp: is_cap_simps cap_auth_conferred_def clas_no_asid aag_cap_auth_def
                              pas_refined_all_auth_is_owns cli_no_irqs)
        apply (drule appropriate_Zombie[symmetric, THEN trans, symmetric])
-       apply clarsimp
+       apply (clarsimp simp: gen_obj_refs_eq)
        apply (erule_tac s = "{r}" in subst)
        apply simp
       apply (simp add: is_final_cap_def)

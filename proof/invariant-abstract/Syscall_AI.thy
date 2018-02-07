@@ -25,6 +25,8 @@ requalify_facts
   arch_decode_invocation_inv
   lookup_cap_and_slot_inv
   data_to_cptr_def
+  arch_post_cap_deletion_cur_thread
+  arch_post_cap_deletion_state_refs_of
 end
 
 lemmas [wp] =

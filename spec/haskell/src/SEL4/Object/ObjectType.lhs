@@ -91,26 +91,26 @@ The "finaliseCap" operation takes any finalisation actions that need to be taken
 
 During the unbounded capability clearing operation, the capability to the slots is replaced by a "Zombie" capability which records which slots remain to be cleared but cannot be invoked, traversed or copied. This case is handled here by returning the "Zombie" which will be inserted. The "Zombie" finalisation process is handled elsewhere (see "finaliseSlot", \autoref{sec:object.cnode.ops.delete}).
 
-> finaliseCap :: Capability -> Bool -> Bool -> Kernel (Capability, Maybe IRQ)
+> finaliseCap :: Capability -> Bool -> Bool -> Kernel (Capability, Capability)
 
 When the last capability to an endpoint is deleted, any IPC operations currently using it are aborted.
 
 > finaliseCap (EndpointCap { capEPPtr = ptr }) final _ = do
 >     when final $ cancelAllIPC ptr
->     return (NullCap, Nothing)
+>     return (NullCap, NullCap)
 
 > finaliseCap (NotificationCap { capNtfnPtr = ptr }) final _ = do
 >     when final $ do
 >         unbindMaybeNotification ptr
 >         cancelAllSignals ptr
->     return (NullCap, Nothing)
+>     return (NullCap, NullCap)
 
-> finaliseCap (ReplyCap {}) _ _ = return (NullCap, Nothing)
+> finaliseCap (ReplyCap {}) _ _ = return (NullCap, NullCap)
 
 No action need be taken for Null or Domain capabilities.
 
-> finaliseCap NullCap _ _ = return (NullCap, Nothing)
-> finaliseCap DomainCap _ _ = return (NullCap, Nothing)
+> finaliseCap NullCap _ _ = return (NullCap, NullCap)
+> finaliseCap DomainCap _ _ = return (NullCap, NullCap)
 
 Capabilities other than the above should never be passed with the second boolean flag set.
 
@@ -119,7 +119,7 @@ Capabilities other than the above should never be passed with the second boolean
 A "CNodeCap" is replaced with the appropriate "Zombie". No other action is needed.
 
 > finaliseCap (CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }) True _ =
->     return (Zombie ptr (ZombieCNode bits) (bit bits), Nothing)
+>     return (Zombie ptr (ZombieCNode bits) (bit bits), NullCap)
 
 Threads are treated as special capability nodes; they also become zombies when their final capabilities are deleted, but they must first be suspended to prevent them being scheduled during deletion.
 
@@ -128,23 +128,23 @@ Threads are treated as special capability nodes; they also become zombies when t
 >     unbindNotification tcb
 >     suspend tcb
 >     Arch.prepareThreadDelete tcb
->     return (Zombie cte_ptr ZombieTCB 5, Nothing)
+>     return (Zombie cte_ptr ZombieTCB 5, NullCap)
 
 Zombies have already been finalised.
 
 > finaliseCap z@(Zombie {}) True _ =
->     return (z, Nothing)
+>     return (z, NullCap)
 
 Deletion of architecture-specific capabilities are handled in the architecture module.
 
 > finaliseCap (ArchObjectCap { capCap = cap }) final _ =
->     liftM (\cap -> (cap, Nothing)) $ Arch.finaliseCap cap final
+>     Arch.finaliseCap cap final
 
 When a final IRQ handler cap is finalised, the interrupt controller is notified. It will mask the IRQ, delete any internal references to the notification endpoint, and allow future "IRQControl" calls to create caps for this IRQ.
 
-> finaliseCap (IRQHandlerCap { capIRQ = irq }) True _ = do
+> finaliseCap cap@(IRQHandlerCap { capIRQ = irq }) True _ = do
 >     deletingIRQHandler irq
->     return (NullCap, Just irq)
+>     return (NullCap, cap)
 
 Zombie capabilities are always final.
 
@@ -152,8 +152,19 @@ Zombie capabilities are always final.
 
 For any other capability, no special action is required.
 
-> finaliseCap _ _ _ = return (NullCap, Nothing)
+> finaliseCap _ _ _ = return (NullCap, NullCap)
 
+Some caps require deletion operations to occur after the slot has been emptied.
+
+The deletion of the final IRQHandlerCap to any IRQ should be followed by
+certain operations handled by deletedIRQHandler, including the clearing of
+the bitmask bit that will allow the reissue of an IRQHandlerCap to this IRQ.
+
+> postCapDeletion :: Capability -> Kernel ()
+> postCapDeletion info = case info of
+>     IRQHandlerCap irq -> deletedIRQHandler irq
+>     ArchObjectCap c -> Arch.postCapDeletion c
+>     _ -> return ()
 
 
 

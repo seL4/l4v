@@ -573,26 +573,26 @@ where
 text {* Actions that must be taken on finalisation of ARM-specific
 capabilities. *}
 definition
-  arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap,'z::state_ext) s_monad"
+  arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap \<times> cap,'z::state_ext) s_monad"
 where
   "arch_finalise_cap c x \<equiv> case (c, x) of
     (ASIDPoolCap ptr b, True) \<Rightarrow>  do
     delete_asid_pool b ptr;
-    return NullCap
+    return (NullCap, NullCap)
     od
   | (PageDirectoryCap ptr (Some a), True) \<Rightarrow> do
     delete_asid a ptr;
-    return NullCap
+    return (NullCap, NullCap)
   od
   | (PageTableCap ptr (Some (a, v)), True) \<Rightarrow> do
     unmap_page_table a v ptr;
-    return NullCap
+    return (NullCap, NullCap)
   od
   | (PageCap _ ptr _ s (Some (a, v)), _) \<Rightarrow> do
      unmap_page s a v ptr;
-     return NullCap
+     return (NullCap, NullCap)
   od
-  | _ \<Rightarrow> return NullCap"
+  | _ \<Rightarrow> return (NullCap, NullCap)"
 
 
 definition (* prepares a thread for deletion; nothing to do for ARM *)

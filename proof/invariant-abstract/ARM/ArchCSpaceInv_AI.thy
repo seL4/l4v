@@ -41,14 +41,14 @@ lemma replace_cap_invs:
    apply (erule_tac P="\<lambda>cps. mdb_cte_at cps (cdt s)" in rsubst)
    apply (rule ext)
    apply (safe del: disjE)[1]
-    apply (simp add: obj_irq_refs_empty final_NullCap)+
+    apply (simp add: gen_obj_refs_empty final_NullCap)+
   apply (rule conjI)
    apply (simp add: untyped_mdb_def is_cap_simps)
    apply (erule disjE)
     apply (clarsimp, rule conjI, clarsimp+)[1]
    apply (erule allEI, erule allEI)
    apply (drule_tac x="fst p" in spec, drule_tac x="snd p" in spec)
-   apply (clarsimp simp: obj_irq_refs_subset)
+   apply (clarsimp simp: gen_obj_refs_subset)
    apply (drule(1) disjoint_subset, simp)
   apply (rule conjI)
    apply (erule descendants_inc_minor)
@@ -105,7 +105,7 @@ lemma replace_cap_invs:
    apply (clarsimp simp: valid_table_capsD[OF caps_of_state_cteD]
                     valid_arch_caps_def unique_table_refs_no_cap_asidE)
   apply simp
-  apply (rule Ball_emptyI, simp add: obj_irq_refs_subset)
+  apply (rule Ball_emptyI, simp add: gen_obj_refs_subset)
   done
 end
 

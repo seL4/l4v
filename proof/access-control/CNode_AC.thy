@@ -15,6 +15,12 @@ begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare arch_post_modify_registers_def[simp]
+declare arch_post_cap_deletion_def[simp]
+declare arch_cap_cleanup_opt_def[simp]
+
+(* FIXME: arch-split *)
+lemmas post_cap_deletion_simps[simp] = post_cap_deletion_def[simplified arch_post_cap_deletion_def]
+                                       cap_cleanup_opt_def[simplified arch_cap_cleanup_opt_def]
 
 (* FIXME: Move. *)
 lemma tcb_domain_map_wellformed_ekheap[intro!, simp]:
@@ -448,13 +454,17 @@ crunch respects[wp]: deleted_irq_handler "integrity aag X st"
 lemmas cases_simp_options
     = cases_simp_option cases_simp_option[where 'a="'b \<times> 'c", simplified]
 
+abbreviation
+  cleanup_info_wf :: "cap \<Rightarrow> 'a PAS \<Rightarrow> bool"
+where
+  "cleanup_info_wf c aag \<equiv> c \<noteq> NullCap \<longrightarrow> (\<exists>irq. c = (IRQHandlerCap irq) \<and> is_subject_irq aag irq)"
+
 lemma empty_slointegrity_spec:
   notes split_paired_All[simp del]
   shows
   "s \<turnstile> \<lbrace>integrity aag X st and pas_refined aag and valid_list and
-             K (is_subject aag (fst slot) \<and>
-                (\<forall>irq. free_irq = Some irq \<longrightarrow> is_subject_irq aag irq))\<rbrace>
-        empty_slot slot free_irq \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+             K (is_subject aag (fst slot) \<and> (cleanup_info_wf cleanup_info aag))\<rbrace>
+        empty_slot slot cleanup_info \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
    apply (simp add: spec_valid_def)
   apply (simp add: empty_slot_def)
   apply (wp get_cap_wp set_cap_integrity_autarch set_original_integrity_autarch
@@ -463,16 +473,17 @@ lemma empty_slointegrity_spec:
          simp add: set_cdt_def |
          wpc)+
   apply (clarsimp simp: pas_refined_all_children)
-  apply (simp add: integrity_def |
-        (clarsimp simp: integrity_cdt_def) |
-        (drule(1) pas_refined_mem[OF sta_cdt], simp) |
-        (drule(1) pas_refined_Control,simp))+
+  apply safe
+   apply (simp add: integrity_def |
+         (clarsimp simp: integrity_cdt_def) |
+         (drule(1) pas_refined_mem[OF sta_cdt], simp) |
+         (drule(1) pas_refined_Control,simp))+
   done
 
 
 lemma empty_slointegrity[wp]:
-  "\<lbrace>integrity aag X st and pas_refined aag and valid_list and K (is_subject aag (fst slot) \<and> (\<forall> irq. free_irq = Some irq \<longrightarrow> is_subject_irq aag irq))\<rbrace>
-       empty_slot slot free_irq \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+  "\<lbrace>integrity aag X st and pas_refined aag and valid_list and K (is_subject aag (fst slot) \<and> cleanup_info_wf c aag)\<rbrace>
+       empty_slot slot c \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (rule use_spec)
   apply (rule empty_slointegrity_spec)
   done
@@ -618,7 +629,7 @@ lemma cap_move_pas_refined[wp]:
 lemma empty_slot_pas_refined[wp]:
   "\<lbrace>pas_refined aag and K (is_subject aag (fst slot))\<rbrace> empty_slot slot irqopt \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: empty_slot_def)
-  apply (wp get_cap_wp set_cdt_pas_refined tcb_domain_map_wellformed_lift | simp | wpc)+
+  apply (wp get_cap_wp set_cdt_pas_refined tcb_domain_map_wellformed_lift hoare_drop_imps | simp | wpc)+
   apply (clarsimp simp: imp_disjL[symmetric] simp del: imp_disjL)
   apply (fastforce dest: pas_refined_mem[OF sta_cdt] pas_refined_Control)
   done
@@ -1168,6 +1179,12 @@ crunch integrity_autarch: set_asid_pool "integrity aag X st"
 lemma a_type_arch_object_not_tcb[simp]:
   "a_type (ArchObj arch_kernel_obj) \<noteq> ATCB"
   by auto
+
+crunch cur_domain[wp]: deleted_irq_handler "\<lambda>s. P (cur_domain s)"
+
+lemma post_cap_deletion_cur_domain[wp]:
+  "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> post_cap_deletion c \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
+  by (wpsimp)
 
 crunch cur_domain[wp]: cap_swap_for_delete, empty_slot, finalise_cap  "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps select_wp hoare_vcg_if_lift2 simp: unless_def)

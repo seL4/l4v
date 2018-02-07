@@ -15,7 +15,7 @@ imports "../../refine/$L4V_ARCH/Refine"
 begin
 
 lemma finaliseCap_Reply:
-  "\<lbrace>Q (NullCap,None) and K (isReplyCap cap)\<rbrace> finaliseCapTrue_standin cap fin \<lbrace>Q\<rbrace>"
+  "\<lbrace>Q (NullCap,NullCap) and K (isReplyCap cap)\<rbrace> finaliseCapTrue_standin cap fin \<lbrace>Q\<rbrace>"
   apply (rule NonDetMonadVCG.hoare_gen_asm)
   apply (clarsimp simp: finaliseCapTrue_standin_def isCap_simps)
   apply wp

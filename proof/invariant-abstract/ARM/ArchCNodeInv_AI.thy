@@ -563,8 +563,8 @@ lemma rec_del_invs'':
        \<lbrace>\<lambda>rv s. Q s \<and> invs s \<and>
                (case call of FinaliseSlotCall sl x \<Rightarrow>
                              ((fst rv \<or> x) \<longrightarrow> cte_wp_at (replaceable s sl cap.NullCap) sl s)
-                             \<and> (\<forall>irq. snd rv = Some irq \<longrightarrow>
-                                   cap.IRQHandlerCap irq \<notin> ran ((caps_of_state s) (sl \<mapsto> cap.NullCap)))
+                             \<and> (snd rv \<noteq> NullCap \<longrightarrow>
+                                   snd rv \<notin> ran ((caps_of_state s) (sl \<mapsto> cap.NullCap)))
                           | ReduceZombieCall cap sl x \<Rightarrow>
                              (\<not> x \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) sl s)
                           | _ \<Rightarrow> True) \<and>
@@ -625,17 +625,19 @@ next
       apply (clarsimp simp: cte_wp_at_caps_of_state)
       apply (erule disjE)
        apply clarsimp
-       apply (clarsimp simp: cap_irq_opt_def cte_wp_at_def
+       apply (clarsimp simp: cap_cleanup_opt_def cte_wp_at_def
                       split: cap.split_asm if_split_asm
                       elim!: ranE dest!: caps_of_state_cteD)
-       apply (drule(2) final_cap_duplicate_irq)
-         apply simp+
+        apply (drule(2) final_cap_duplicate_irq)
+          apply simp+
+       apply (drule(2) final_cap_duplicate_arch_refs)
+         apply (simp add: arch_cap_cleanup_opt_def)+
       apply clarsimp
       apply (rule conjI)
        apply clarsimp
        apply (subst replaceable_def)
        apply (clarsimp simp: is_cap_simps tcb_cap_valid_NullCapD
-                             no_cap_to_obj_with_diff_ref_Null
+                             no_cap_to_obj_with_diff_ref_Null gen_obj_refs_eq
                         del: disjCI)
        apply (thin_tac "appropriate_cte_cap a = appropriate_cte_cap b" for a b)
        apply (rule conjI)
@@ -651,7 +653,7 @@ next
         apply (drule zombie_cte_bits_less, simp add: word_bits_def)
        apply (clarsimp simp: cte_wp_at_caps_of_state)
       apply (drule_tac s="appropriate_cte_cap c" for c in sym)
-      apply (clarsimp simp: is_cap_simps appropriate_Zombie)
+      apply (clarsimp simp: is_cap_simps appropriate_Zombie gen_obj_refs_eq)
      apply (simp add: is_final_cap_def)
      apply wp
     apply (clarsimp simp: cte_wp_at_eq_simp)
@@ -726,7 +728,7 @@ next
         apply (clarsimp simp: cte_wp_at_caps_of_state)
         apply (erule disjE[where P="val = cap.NullCap" for val])
          apply (clarsimp simp: replaceable_def cap_range_def is_cap_simps
-                               obj_irq_refs_subset vs_cap_ref_def)
+                               gen_obj_refs_subset vs_cap_ref_def)
          apply (rule conjI[rotated])
           apply (rule conjI)
            apply (rule mp [OF tcb_cap_valid_imp'])
@@ -757,7 +759,7 @@ next
         apply (frule_tac x=slot in spec)
         apply (drule_tac x="(ptr, nat_to_cref (zombie_cte_bits bits) n)" in spec)
         apply (clarsimp simp: cte_wp_at_caps_of_state fst_cte_ptrs_def
-                              obj_irq_refs_Int)
+                              gen_obj_refs_Int)
         apply (drule(1) nat_to_cref_replicate_Zombie[OF sym])
          apply simp
         apply simp
@@ -858,7 +860,7 @@ next
        apply (case_tac "is_zombie rv")
         apply (clarsimp simp: cap_to_rpo_def is_cap_simps fst_cte_ptrs_def)
         apply (simp add: is_final_cap'_def)
-       apply (case_tac rv, simp_all add: cap_to_rpo_def is_cap_simps)[1]
+       apply (case_tac rv, simp_all add: cap_to_rpo_def is_cap_simps gen_obj_refs_eq)[1]
        apply (rename_tac arch_cap)
        apply (case_tac arch_cap, simp_all)[1]
       apply (simp add: is_final_cap_def, wp)

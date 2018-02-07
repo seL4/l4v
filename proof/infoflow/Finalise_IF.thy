@@ -1623,7 +1623,7 @@ next
           apply(rule finalise_cap_cases[where slot=slot])
          apply (clarsimp simp: cte_wp_at_caps_of_state)
          apply (erule disjE)
-          apply (clarsimp simp: cap_irq_opt_def cte_wp_at_def is_zombie_def
+          apply (clarsimp simp: cap_irq_opt_def cte_wp_at_def is_zombie_def gen_obj_refs_eq
                          split: cap.split_asm if_split_asm
                          elim!: ranE dest!: caps_of_state_cteD)
           apply(clarsimp cong: conj_cong simp: conj_comms)

@@ -44,55 +44,67 @@ lemma set_cap_caps_of_state[wp]:
              auto simp: tcb_cap_cases_def split: if_split_asm)
   done
 
-lemmas obj_irq_refs_Int_not =
-    arg_cong [where f=Not, OF obj_irq_refs_Int, simplified, symmetric]
+lemmas gen_obj_refs_Int_not =
+    arg_cong [where f=Not, OF gen_obj_refs_Int, simplified, symmetric]
 
-lemma obj_irq_refs_inD:
-  "x \<in> obj_irq_refs cap \<Longrightarrow> obj_irq_refs cap = {x}"
-  apply (case_tac cap, simp_all add: obj_irq_refs_def cap_irqs_def
-                                     cap_irq_opt_def split: sum.split_asm)
-  apply clarsimp
+
+lemma ObjRef_nonempty_ArchRef_empty:
+  "x \<in> ObjRef ` (obj_refs c) \<Longrightarrow> ArchRef ` arch_gen_refs c = {}"
+  by (clarsimp simp: obj_ref_not_arch_gen_ref)
+
+lemma ArchRef_nonempty_ObjRef_empty:
+  "x \<in> ArchRef ` arch_gen_refs c \<Longrightarrow> ObjRef ` (obj_refs c) = {}"
+  by (clarsimp simp: arch_gen_ref_not_obj_ref)
+
+lemmas gen_obj_ref_arch_cap_simps =
+            ObjRef_nonempty_ArchRef_empty[where c="ArchObjectCap ac" for ac, simplified]
+            ArchRef_nonempty_ObjRef_empty[where c="ArchObjectCap ac" for ac, simplified]
+            obj_ref_not_arch_gen_ref[where cap="ArchObjectCap ac" for ac, simplified]
+            arch_gen_ref_not_obj_ref[where cap="ArchObjectCap ac" for ac, simplified]
+
+lemma gen_obj_refs_inD:
+  "x \<in> gen_obj_refs cap \<Longrightarrow> gen_obj_refs cap = {x}"
+  apply (case_tac cap; clarsimp simp: gen_obj_refs_def dest!:arch_gen_obj_refs_inD)
+  apply (auto dest: gen_obj_ref_arch_cap_simps simp: arch_gen_obj_refs_inD)
   done
 
-lemma objirqrefs_distinct_or_equal:
-  "\<lbrakk> obj_irq_refs cap \<inter> obj_irq_refs cap' \<noteq> {} \<rbrakk>
-     \<Longrightarrow> obj_irq_refs cap = obj_irq_refs cap'"
-  by (clarsimp elim!: nonemptyE dest!: obj_irq_refs_inD)
+lemma gen_obj_refs_distinct_or_equal:
+  "\<lbrakk> gen_obj_refs cap \<inter> gen_obj_refs cap' \<noteq> {} \<rbrakk>
+     \<Longrightarrow> gen_obj_refs cap = gen_obj_refs cap'"
+  by (clarsimp elim!: nonemptyE dest!: gen_obj_refs_inD)
 
-lemma obj_ref_is_obj_irq_ref:
-  "x \<in> obj_refs cap \<Longrightarrow> Inl x \<in> obj_irq_refs cap"
-  by (simp add: obj_irq_refs_def)
+lemma obj_ref_is_gen_obj_ref:
+  "x \<in> obj_refs cap \<Longrightarrow> ObjRef x \<in> gen_obj_refs cap"
+  by (simp add: gen_obj_refs_def)
 
-lemma obj_irq_refs_eq:
-  "(obj_irq_refs cap = obj_irq_refs cap')
-      = (obj_refs cap = obj_refs cap' \<and> cap_irqs cap = cap_irqs cap')"
-  apply (simp add: obj_irq_refs_def)
-  apply (subgoal_tac "\<forall>x y. Inl x \<noteq> Inr y")
-   apply blast
-  apply simp
-  done
+lemma gen_obj_refs_eq:
+  "(gen_obj_refs cap = gen_obj_refs cap')
+      = (obj_refs cap = obj_refs cap' \<and> cap_irqs cap = cap_irqs cap'
+         \<and> arch_gen_refs cap = arch_gen_refs cap')"
+  apply (simp add: gen_obj_refs_def image_Un[symmetric])
+  by auto
 
 lemma not_final_another':
   "\<lbrakk> \<not> is_final_cap' cap s; fst (get_cap p s) = {(cap, s)};
-       obj_irq_refs cap \<noteq> {} \<rbrakk>
+       gen_obj_refs cap \<noteq> {} \<rbrakk>
       \<Longrightarrow> \<exists>p' cap'. p' \<noteq> p \<and> fst (get_cap p' s) = {(cap', s)}
-                         \<and> obj_irq_refs cap' = obj_irq_refs cap
+                         \<and> gen_obj_refs cap' = gen_obj_refs cap
                          \<and> \<not> is_final_cap' cap' s"
-  apply (simp add: is_final_cap'_def obj_irq_refs_Int_not cong: conj_cong
+  apply (simp add: is_final_cap'_def gen_obj_refs_Int_not cong: conj_cong
               del: split_paired_Ex split_paired_All)
   apply (erule not_singleton_oneE[where p=p])
    apply simp
   apply (rule_tac x=p' in exI)
   apply clarsimp
-  apply (drule objirqrefs_distinct_or_equal)
+  apply (drule gen_obj_refs_distinct_or_equal)
   apply simp
   done
 
 lemma not_final_another_caps:
   "\<lbrakk> \<not> is_final_cap' cap s; caps_of_state s p = Some cap;
-       r \<in> obj_irq_refs cap \<rbrakk>
+       r \<in> gen_obj_refs cap \<rbrakk>
       \<Longrightarrow> \<exists>p' cap'. p' \<noteq> p \<and> caps_of_state s p' = Some cap'
-                         \<and> obj_irq_refs cap' = obj_irq_refs cap
+                         \<and> gen_obj_refs cap' = gen_obj_refs cap
                          \<and> \<not> is_final_cap' cap' s"
   apply (clarsimp dest!: caps_of_state_cteD
                    simp: cte_wp_at_def)
@@ -139,13 +151,13 @@ lemma empty_table_caps_of:
 context begin interpretation Arch .
 lemma free_index_update_test_function_stuff[simp]:
   "cap_asid (src_cap\<lparr>free_index := a\<rparr>) = cap_asid src_cap"
-  "obj_irq_refs (src_cap\<lparr>free_index := a\<rparr>) = obj_irq_refs src_cap"
+  "gen_obj_refs (src_cap\<lparr>free_index := a\<rparr>) = gen_obj_refs src_cap"
   "vs_cap_ref (src_cap\<lparr>free_index := a\<rparr>) = vs_cap_ref src_cap"
   "untyped_range (cap \<lparr>free_index :=a \<rparr>) = untyped_range cap"
   "zobj_refs (c\<lparr>free_index:=a\<rparr>) =  zobj_refs c"
   "obj_refs (c\<lparr>free_index:=a\<rparr>) = obj_refs c"
   by (auto simp: cap_asid_def free_index_update_def vs_cap_ref_def
-                 is_cap_simps obj_irq_refs_def
+                 is_cap_simps gen_obj_refs_def
           split: cap.splits arch_cap.splits)
 end
 

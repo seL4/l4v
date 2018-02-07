@@ -2230,22 +2230,24 @@ proof -
     done
   have irq: "cap_irqs c = cap_irqs c'" using reg fm fm'
     by (simp add: final_matters_def split: cap.split_asm)
+  have arch_ref: "arch_gen_refs c = arch_gen_refs c'" using fm reg
+    by (clarsimp simp: final_matters_def is_cap_simps arch_gen_obj_refs_def
+                   split: cap.split_asm arch_cap.split_asm)
 
-  from final have refs_non_empty: "obj_refs c \<noteq> {} \<or> cap_irqs c \<noteq> {}"
-    by (clarsimp simp add: is_final_cap'_def)
+  from final have refs_non_empty: "obj_refs c \<noteq> {} \<or> cap_irqs c \<noteq> {} \<or> arch_gen_refs c \<noteq> {}"
+    by (clarsimp simp add: is_final_cap'_def gen_obj_refs_def)
 
   def S \<equiv> "{cref. \<exists>cap'. fst (get_cap cref s) = {(cap', s)} \<and>
-                      (obj_refs c \<inter> obj_refs cap' \<noteq> {}
-                         \<or> cap_irqs c \<inter> cap_irqs cap' \<noteq> {})}"
+                      (gen_obj_refs c \<inter> gen_obj_refs cap' \<noteq> {})}"
 
   have "is_final_cap' c s = (\<exists>cref. S = {cref})"
     by (simp add: is_final_cap'_def S_def)
   moreover
   from c refs_non_empty
-  have "slot \<in> S" by (simp add: S_def cte_wp_at_def)
+  have "slot \<in> S" by (simp add: S_def cte_wp_at_def gen_obj_refs_def)
   moreover
-  from c' refs_non_empty ref irq
-  have "slot' \<in> S" by (simp add: S_def cte_wp_at_def)
+  from c' refs_non_empty ref irq arch_ref
+  have "slot' \<in> S" by (simp add: S_def cte_wp_at_def gen_obj_refs_def)
   ultimately
   show False using s final by auto
 qed
@@ -2265,6 +2267,11 @@ lemma cap_irqs_relation_Master:
    cap_irqs cap = (case capMasterCap cap' of IRQHandlerCap irq \<Rightarrow> {irq} | _ \<Rightarrow> {})"
   apply (simp split: cap_relation_split_asm arch_cap.split_asm)
   done
+
+lemma arch_gen_refs_relation_Master:
+  "cap_relation cap cap' \<Longrightarrow>
+   arch_gen_refs cap = {}"
+  by (simp split: cap_relation_split_asm arch_cap.split_asm)
 
 lemma is_final_cap_unique_sym:
   assumes cte: "ctes_of s' (cte_map slot) = Some cte"
@@ -2297,22 +2304,24 @@ proof -
   have ref: "obj_refs c = obj_refs c'"
   using master cr cr'
   by (simp add: obj_refs_relation_Master)
+  have arch_ref: "arch_gen_refs c = arch_gen_refs c'"
+  using master cr cr'
+  by (clarsimp simp: arch_gen_refs_relation_Master)
 
-  from final have refs_non_empty: "obj_refs c \<noteq> {} \<or> cap_irqs c \<noteq> {}"
-    by (clarsimp simp add: is_final_cap'_def)
+  from final have refs_non_empty: "obj_refs c \<noteq> {} \<or> cap_irqs c \<noteq> {} \<or> arch_gen_refs c \<noteq> {}"
+    by (clarsimp simp add: is_final_cap'_def gen_obj_refs_def)
 
   def S \<equiv> "{cref. \<exists>cap'. fst (get_cap cref s) = {(cap', s)} \<and>
-                      (obj_refs c \<inter> obj_refs cap' \<noteq> {}
-                         \<or> cap_irqs c \<inter> cap_irqs cap' \<noteq> {})}"
+                      (gen_obj_refs c \<inter> gen_obj_refs cap' \<noteq> {})}"
 
   have "is_final_cap' c s = (\<exists>cref. S = {cref})"
     by (simp add: is_final_cap'_def S_def)
   moreover
   from c refs_non_empty
-  have "slot \<in> S" by (simp add: S_def cte_wp_at_def)
+  have "slot \<in> S" by (simp add: S_def cte_wp_at_def gen_obj_refs_def)
   moreover
-  from c' refs_non_empty ref irq
-  have "slot' \<in> S" by (simp add: S_def cte_wp_at_def)
+  from c' refs_non_empty ref irq arch_ref
+  have "slot' \<in> S" by (simp add: S_def cte_wp_at_def gen_obj_refs_def)
   ultimately
   show False using s final by auto
 qed
@@ -2741,13 +2750,13 @@ lemma is_final_untyped_ptrs:
   apply (drule_tac s=s in cte_map_inj_eq,
           (clarsimp elim!: cte_wp_at_weakenE[OF _ TrueI])+)
   apply (clarsimp simp: cte_wp_at_def)
-  apply (erule(3) final_cap_duplicate [where r="Inl (capUntypedPtr (cteCap cte))",
+  apply (erule(3) final_cap_duplicate [where r="ObjRef (capUntypedPtr (cteCap cte))",
                                        OF _ _ distinct_lemma[where f=cte_map]])
-    apply (rule obj_ref_is_obj_irq_ref)
+    apply (rule obj_ref_is_gen_obj_ref)
     apply (erule(1) obj_refs_cap_relation_untyped_ptr)
-   apply (rule obj_ref_is_obj_irq_ref)
+   apply (rule obj_ref_is_gen_obj_ref)
    apply (erule(1) obj_refs_cap_relation_untyped_ptr)
-  apply (rule obj_ref_is_obj_irq_ref)
+  apply (rule obj_ref_is_gen_obj_ref)
   apply (drule(2) cap_relation_untyped_ptr_obj_refs)+
   apply simp
   done

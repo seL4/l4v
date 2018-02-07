@@ -99,6 +99,10 @@ requalify_facts
   valid_arch_tcb_pspaceI
   valid_arch_tcb_lift
   cte_level_bits_def
+  arch_gen_obj_refs_inD
+  obj_ref_not_arch_gen_ref
+  arch_gen_ref_not_obj_ref
+  same_aobject_same_arch_gen_refs
 
 lemmas [simp] =
   tcb_bits_def
@@ -1001,12 +1005,6 @@ definition
   obj_ref_of c' + obj_size c' - 1 \<in> untyped_range c"
 
 definition
-  obj_irq_refs :: "cap \<Rightarrow> (machine_word + irq) set"
-where
- "obj_irq_refs cap \<equiv> (Inl ` obj_refs cap) \<union> (Inr ` cap_irqs cap)"
-
-
-definition
   "obj_bits_type T \<equiv> case T of
     ACapTable n \<Rightarrow> cte_level_bits + n
   | AGarbage n \<Rightarrow> n
@@ -1721,18 +1719,18 @@ lemma valid_idle_pspaceI:
   unfolding valid_idle_def pred_tcb_at_def
   by (fastforce elim!: obj_at_pspaceI cte_wp_at_pspaceI)
 
-lemma obj_irq_refs_Int:
-  "(obj_irq_refs cap \<inter> obj_irq_refs cap' = {})
+lemma gen_obj_refs_Int:
+  "(gen_obj_refs cap \<inter> gen_obj_refs cap' = {})
      = (obj_refs cap \<inter> obj_refs cap' = {}
-            \<and> cap_irqs cap \<inter> cap_irqs cap' = {})"
-  by (simp add: obj_irq_refs_def Int_Un_distrib Int_Un_distrib2
-                image_Int[symmetric] Int_image_empty)
+            \<and> cap_irqs cap \<inter> cap_irqs cap' = {}
+            \<and> arch_gen_refs cap \<inter> arch_gen_refs cap' = {})"
+  by (simp add: gen_obj_refs_def Int_Un_distrib Int_Un_distrib2
+                image_Int[symmetric] Int_image_empty image_Int[symmetric])
 
 lemma is_final_cap'_def2:
   "is_final_cap' cap =
-    (\<lambda>s. \<exists>cref. \<forall>cref'. cte_wp_at (\<lambda>c. obj_irq_refs cap \<inter> obj_irq_refs c \<noteq> {}) cref' s
+    (\<lambda>s. \<exists>cref. \<forall>cref'. cte_wp_at (\<lambda>c. gen_obj_refs cap \<inter> gen_obj_refs c \<noteq> {}) cref' s
                   = (cref' = cref))"
-  unfolding obj_irq_refs_Int
   apply (rule ext)
   apply (auto simp: is_final_cap'_def cte_wp_at_def
                     set_eq_iff)

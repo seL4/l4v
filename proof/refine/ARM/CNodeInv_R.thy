@@ -6503,7 +6503,7 @@ lemma reduceZombie_invs'':
                          finaliseSlot rv False
                 \<lbrace>\<lambda>rva s. no_cte_prop Q s \<and> invs' s \<and> sch_act_simple s
                             \<and> (fst rva \<longrightarrow> cte_wp_at' (\<lambda>cte. removeable' rv s (cteCap cte)) rv s)
-                            \<and> (\<forall>irq sl'. snd rva = Some irq \<longrightarrow> sl' \<noteq> rv \<longrightarrow> cteCaps_of s sl' \<noteq> Some (IRQHandlerCap irq))\<rbrace>,
+                            \<and> (\<forall>sl'. snd rva \<noteq> NullCap \<longrightarrow> sl' \<noteq> rv \<longrightarrow> cteCaps_of s sl' \<noteq> Some (snd rva))\<rbrace>,
                 \<lbrace>\<lambda>rv s. no_cte_prop Q s \<and> invs' s \<and> sch_act_simple s\<rbrace>"
   assumes stuff:
     "finalise_prop_stuff Q"
@@ -6610,7 +6610,7 @@ lemma finaliseSlot_invs':
                                   \<or> (\<exists>zb n cp. cteCap cte = Zombie p zb n
                                        \<and> P cp \<and> (isZombie cp \<longrightarrow> capZombiePtr cp \<noteq> p))) p s)
               \<and> (fst rv \<longrightarrow> cte_wp_at' (\<lambda>cte. removeable' slot s (cteCap cte)) slot s)
-              \<and> (\<forall>irq sl'. snd rv = Some irq \<longrightarrow> sl' \<noteq> slot \<longrightarrow> cteCaps_of s sl' \<noteq> Some (IRQHandlerCap irq))\<rbrace>,
+              \<and> (\<forall>sl'. snd rv \<noteq> NullCap \<longrightarrow> sl' \<noteq> slot \<longrightarrow> cteCaps_of s sl' \<noteq> Some (snd rv))\<rbrace>,
    \<lbrace>\<lambda>rv s. no_cte_prop Pr s \<and> invs' s \<and> sch_act_simple s\<rbrace>"
 proof (induct arbitrary: P p rule: finalise_spec_induct2)
   case (1 sl exp s Q q)
@@ -6690,6 +6690,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
        apply (erule disjE[where P="F \<and> G" for F G])
         apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of)
         apply (rule conjI, clarsimp)
+        apply (case_tac b; case_tac "cteCap rv"; simp add: arch_cap_has_cleanup'_def)
         apply (clarsimp simp: final_IRQHandler_no_copy)
        apply (clarsimp dest!: isCapDs)
        apply (rule conjI)
@@ -6741,7 +6742,7 @@ lemma finaliseSlot_invs'':
   "\<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s \<and> (\<not> exposed \<longrightarrow> ex_cte_cap_to' slot s)\<rbrace>
      finaliseSlot slot exposed
    \<lbrace>\<lambda>rv s. invs' s \<and> sch_act_simple s \<and> (fst rv \<longrightarrow> cte_wp_at' (\<lambda>cte. removeable' slot s (cteCap cte)) slot s)
-                 \<and> (\<forall>irq sl'. snd rv = Some irq \<longrightarrow> sl' \<noteq> slot \<longrightarrow> cteCaps_of s sl' \<noteq> Some (capability.IRQHandlerCap irq))\<rbrace>,
+                 \<and> (\<forall>sl'. snd rv \<noteq> NullCap \<longrightarrow> sl' \<noteq> slot \<longrightarrow> cteCaps_of s sl' \<noteq> Some (snd rv))\<rbrace>,
    \<lbrace>\<lambda>rv s. invs' s \<and> sch_act_simple s\<rbrace>"
   unfolding finaliseSlot_def
   apply (rule hoare_pre, rule hoare_post_impErr, rule use_spec)
@@ -6778,7 +6779,7 @@ lemma finaliseSlot_removeable:
 lemma finaliseSlot_irqs:
   "\<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s \<and> (\<not> e \<longrightarrow> ex_cte_cap_to' slot s)\<rbrace>
      finaliseSlot slot e
-   \<lbrace>\<lambda>rv s. \<forall>irq sl'. snd rv = Some irq \<longrightarrow> sl' \<noteq> slot \<longrightarrow> cteCaps_of s sl' \<noteq> Some (capability.IRQHandlerCap irq)\<rbrace>,-"
+   \<lbrace>\<lambda>rv s. \<forall>sl'. snd rv \<noteq> NullCap \<longrightarrow> sl' \<noteq> slot \<longrightarrow> cteCaps_of s sl' \<noteq> Some (snd rv)\<rbrace>,-"
   apply (rule validE_validE_R, rule hoare_post_impErr)
     apply (rule finaliseSlot_invs'')
    apply simp+
@@ -6917,8 +6918,8 @@ lemma cteDelete_cte_wp_at_invs:
                    (fst rv \<longrightarrow>
                        cte_wp_at' (\<lambda>cte. removeable' slot s (cteCap cte)) slot s) \<and>
                    (fst rv \<longrightarrow>
-                       (\<forall>irq sl'. snd rv = Some irq \<longrightarrow> sl' \<noteq> slot \<longrightarrow>
-                                  cteCaps_of s sl' \<noteq> Some (IRQHandlerCap irq))) \<and>
+                       (\<forall>sl'. snd rv \<noteq> NullCap \<longrightarrow> sl' \<noteq> slot \<longrightarrow>
+                                  cteCaps_of s sl' \<noteq> Some (snd rv))) \<and>
                    (\<not> fst rv \<longrightarrow>
                        cte_wp_at' (\<lambda>cte. P (cteCap cte) \<or>
                                          cteCap cte = NullCap \<or>
@@ -6939,8 +6940,8 @@ lemma cteDelete_cte_wp_at_invs:
                   (fst rv \<longrightarrow>
                       cte_wp_at' (\<lambda>cte. removeable' slot s (cteCap cte)) slot s) \<and>
                   (fst rv \<longrightarrow>
-                      (\<forall>irq sl'. snd rv = Some irq \<longrightarrow> sl' \<noteq> slot \<longrightarrow>
-                                 cteCaps_of s sl' \<noteq> Some (IRQHandlerCap irq))) \<and>
+                      (\<forall>sl'. snd rv \<noteq> NullCap \<longrightarrow> sl' \<noteq> slot \<longrightarrow>
+                                 cteCaps_of s sl' \<noteq> Some (snd rv))) \<and>
                   cte_wp_at' (\<lambda>cte. P (cteCap cte) \<or>
                                     cteCap cte = NullCap \<or>
                                     (\<exists>zb n. cteCap cte = Zombie p zb n) \<and>
@@ -7376,15 +7377,15 @@ lemma zombie_alignment_oddity:
   done
 
 primrec
-  rec_del_concrete :: "rec_del_call \<Rightarrow> (bool \<times> irq option) kernel_p set"
+  rec_del_concrete :: "rec_del_call \<Rightarrow> (bool \<times> capability) kernel_p set"
 where
   "rec_del_concrete (CTEDeleteCall ptr ex)
-     = {liftME (\<lambda>x. (True, None)) (cteDelete (cte_map ptr) ex)}"
+     = {liftME (\<lambda>x. (True, NullCap)) (cteDelete (cte_map ptr) ex)}"
 | "rec_del_concrete (FinaliseSlotCall ptr ex)
      = {finaliseSlot (cte_map ptr) ex}"
 | "rec_del_concrete (ReduceZombieCall cap slot ex)
      = (if red_zombie_will_fail cap then {} else
-       (\<lambda>cap. liftME (\<lambda>x. (True, None)) (reduceZombie cap (cte_map slot) ex)) ` {cap'. cap_relation cap cap'})"
+       (\<lambda>cap. liftME (\<lambda>x. (True, NullCap)) (reduceZombie cap (cte_map slot) ex)) ` {cap'. cap_relation cap cap'})"
 
 lemma rec_del_concrete_empty:
   "red_zombie_will_fail cap \<Longrightarrow> rec_del_concrete (ReduceZombieCall cap slot ex) = {}"
@@ -7467,7 +7468,10 @@ lemmas rec_del_valid_list_irq_state_independent[wp] =
 
 lemma rec_del_corres:
   "\<forall>C \<in> rec_del_concrete args.
-   spec_corres s (intr \<oplus> (case args of FinaliseSlotCall _ _ \<Rightarrow> op = | _ \<Rightarrow> dc))
+   spec_corres s (intr \<oplus> (case args of
+                            FinaliseSlotCall _ _ \<Rightarrow> (\<lambda>r r'. fst r = fst r'
+                                                           \<and> cap_relation (snd r) (snd r') )
+                          | _ \<Rightarrow> dc))
       (einvs and simple_sched_action
             and valid_rec_del_call args
             and cte_at (slot_rdcall args)
@@ -7556,7 +7560,7 @@ next
                 apply (rule cap_update_corres, erule conjunct1)
                 apply (case_tac "fst rvb", auto simp: isCap_simps is_cap_simps)[1]
                apply (rule spec_corres_splitE)
-                  apply (rule iffD1 [OF spec_corres_liftME2[where fn="\<lambda>v. (True, None)"]])
+                  apply (rule iffD1 [OF spec_corres_liftME2[where fn="\<lambda>v. (True, NullCap)"]])
                   apply (rule bspec [OF "2.hyps"(1), unfolded fun_app_def], assumption+)
                   apply (case_tac "fst rvb", simp_all add: isCap_simps is_cap_simps)[1]
                    apply (rename_tac nat)

@@ -812,7 +812,7 @@ lemma finaliseCap_True_cases_ccorres:
   "\<And>final. isEndpointCap cap \<or> isNotificationCap cap
              \<or> isReplyCap cap \<or> isDomainCap cap \<or> cap = NullCap \<Longrightarrow>
    ccorres (\<lambda>rv rv'. ccap_relation (fst rv) (finaliseCap_ret_C.remainder_C rv')
-                   \<and> irq_opt_relation (snd rv) (finaliseCap_ret_C.irq_C rv'))
+                   \<and> ccap_relation (snd rv) (finaliseCap_ret_C.cleanupInfo_C rv'))
    ret__struct_finaliseCap_ret_C_'
    (invs') (UNIV \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. final_' s = from_bool final}
                         \<inter> {s. exposed_' s = from_bool flag (* dave has name wrong *)}) []
@@ -929,7 +929,7 @@ lemma finaliseCap_True_cases_ccorres:
 lemma finaliseCap_True_standin_ccorres:
   "\<And>final.
    ccorres (\<lambda>rv rv'. ccap_relation (fst rv) (finaliseCap_ret_C.remainder_C rv')
-                   \<and> irq_opt_relation (snd rv) (finaliseCap_ret_C.irq_C rv'))
+                   \<and> ccap_relation (snd rv) (finaliseCap_ret_C.cleanupInfo_C rv'))
    ret__struct_finaliseCap_ret_C_'
    (invs') (UNIV \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. final_' s = from_bool final}
                         \<inter> {s. exposed_' s = from_bool True (* dave has name wrong *)}) []
@@ -1460,10 +1460,16 @@ lemma capFSize_eq: "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capab
   apply (clarsimp simp: c_valid_cap_def cl_valid_cap_def)
   done
 
+method return_NullCap_pair_ccorres =
+   solves \<open>((rule ccorres_rhs_assoc2)+), (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV]),
+          (rule allI, rule conseqPre, vcg), (clarsimp simp: return_def ccap_relation_NullCap_iff)\<close>
+
 lemma Arch_finaliseCap_ccorres:
   notes dc_simp[simp del] Collect_const[simp del]
   shows
-  "ccorres ccap_relation ret__struct_cap_C_'
+  "ccorres (\<lambda>rv rv'. ccap_relation (fst rv) (remainder_C rv') \<and>
+                     ccap_relation (snd rv) (finaliseCap_ret_C.cleanupInfo_C rv'))
+      ret__struct_finaliseCap_ret_C_'
    (invs' and valid_cap' (ArchObjectCap cp)
        and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s))
    (UNIV \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
@@ -1480,19 +1486,21 @@ lemma Arch_finaliseCap_ccorres:
       prefer 2
       apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
       apply (cases cp; ccorres_rewrite C_simp_simps: isCap_simps)
-          apply (rule return_Null_ccorres)+
-        apply (subst ccorres_cond_seq2_seq[symmetric])
-        apply (rule ccorres_guard_imp)
+          apply return_NullCap_pair_ccorres
+         apply return_NullCap_pair_ccorres
+        apply return_NullCap_pair_ccorres
+       apply (subst ccorres_cond_seq2_seq[symmetric])
+       apply (rule ccorres_guard_imp)
           apply (rule ccorres_rhs_assoc)
           apply csymbr
           apply ccorres_rewrite
-          apply (rule return_Null_ccorres, simp+)
+          apply (return_NullCap_pair_ccorres, simp+)
        apply (subst ccorres_cond_seq2_seq[symmetric])
        apply (rule ccorres_guard_imp)
          apply (rule ccorres_rhs_assoc)
          apply csymbr
          apply ccorres_rewrite
-         apply (rule return_Null_ccorres, simp+)
+         apply (return_NullCap_pair_ccorres, simp+)
      apply ccorres_rewrite
      apply (rule ccorres_Cond_rhs_Seq)
       apply (subgoal_tac "isPageCap cp \<longrightarrow> \<not> isPageDirectoryCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isPageTableCap cp")
@@ -1515,7 +1523,7 @@ lemma Arch_finaliseCap_ccorres:
         apply csymbr
         apply csymbr
         apply (ctac (no_vcg) add:  unmapPage_ccorres)
-         apply (rule return_Null_ccorres)
+         apply return_NullCap_pair_ccorres
         apply (rule wp_post_taut)
        apply (subgoal_tac "capVPMappedAddress cp = None")
         prefer 2
@@ -1526,7 +1534,7 @@ lemma Arch_finaliseCap_ccorres:
                               case_option_over_if
                         elim!: ccap_relationE simp del: Collect_const)
        apply (simp add: split_def)
-       apply (rule return_Null_ccorres)
+       apply return_NullCap_pair_ccorres
       apply (clarsimp simp: isCap_simps)
      apply (rule ccorres_Cond_rhs_Seq)
       apply (subgoal_tac "isPageCap cp \<longrightarrow> \<not> isPageDirectoryCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isPageTableCap cp")
@@ -1550,7 +1558,7 @@ lemma Arch_finaliseCap_ccorres:
         apply csymbr
         apply csymbr
         apply (ctac (no_vcg) add:  unmapPage_ccorres)
-         apply (rule return_Null_ccorres)
+         apply return_NullCap_pair_ccorres
         apply (rule wp_post_taut)
        apply (subgoal_tac "capVPMappedAddress cp = None")
         prefer 2
@@ -1561,7 +1569,7 @@ lemma Arch_finaliseCap_ccorres:
                               case_option_over_if
                     elim!: ccap_relationE simp del: Collect_const)
        apply clarsimp
-       apply (rule return_Null_ccorres)
+       apply return_NullCap_pair_ccorres
       apply (clarsimp simp: isCap_simps)
      apply (clarsimp simp: isCap_simps)
     apply (clarsimp simp: isCap_simps)
@@ -1571,7 +1579,7 @@ lemma Arch_finaliseCap_ccorres:
     apply csymbr
     apply csymbr
   apply (ctac (no_vcg) add: deleteASIDPool_ccorres)
-  apply (rule return_Null_ccorres)
+  apply return_NullCap_pair_ccorres
     apply (rule wp_post_taut)
    apply (rule ccorres_Cond_rhs_Seq; clarsimp)
   apply (rule ccorres_rhs_assoc)+
@@ -1599,7 +1607,7 @@ lemma Arch_finaliseCap_ccorres:
       apply csymbr
       apply csymbr
       apply (ctac (no_vcg) add: deleteASID_ccorres)
-       apply (rule return_Null_ccorres)
+       apply return_NullCap_pair_ccorres
       apply (rule wp_post_taut)
      apply (subgoal_tac "capPDMappedASID cp = None")
       prefer 2
@@ -1611,7 +1619,7 @@ lemma Arch_finaliseCap_ccorres:
                             asid_bits_def
                       split: if_split_asm)
      apply simp
-     apply (rule return_Null_ccorres)
+     apply return_NullCap_pair_ccorres
     apply (clarsimp simp add: isCap_simps)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (subgoal_tac "isPageTableCap cp \<longrightarrow> \<not> isPageDirectoryCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isPageCap cp")
@@ -1641,7 +1649,7 @@ lemma Arch_finaliseCap_ccorres:
       apply csymbr
       apply (simp add: split_def)
       apply (ctac (no_vcg) add: unmapPageTable_ccorres)
-       apply (rule return_Null_ccorres)
+       apply return_NullCap_pair_ccorres
       apply (rule wp_post_taut)
      apply clarsimp
      apply (subgoal_tac "capPTMappedAddress cp = None")
@@ -1654,7 +1662,7 @@ lemma Arch_finaliseCap_ccorres:
                             asid_bits_def
                       split: if_split_asm)
      apply simp
-     apply (rule return_Null_ccorres)
+     apply return_NullCap_pair_ccorres
     apply (clarsimp simp: isCap_simps)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (subgoal_tac "isPageCap cp \<longrightarrow> \<not> isPageDirectoryCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isPageTableCap cp")
@@ -1677,7 +1685,7 @@ lemma Arch_finaliseCap_ccorres:
       apply csymbr
       apply csymbr
       apply (ctac (no_vcg) add:  unmapPage_ccorres)
-       apply (rule return_Null_ccorres)
+       apply return_NullCap_pair_ccorres
       apply (rule wp_post_taut)
      apply (subgoal_tac "capVPMappedAddress cp = None")
       prefer 2
@@ -1688,7 +1696,7 @@ lemma Arch_finaliseCap_ccorres:
                             case_option_over_if
                      elim!: ccap_relationE simp del: Collect_const)
      apply (simp add: split_def)
-     apply (rule return_Null_ccorres)
+     apply return_NullCap_pair_ccorres
     apply (clarsimp simp: isCap_simps)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (subgoal_tac "isPageCap cp \<longrightarrow> \<not> isPageDirectoryCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isPageTableCap cp")
@@ -1712,7 +1720,7 @@ lemma Arch_finaliseCap_ccorres:
       apply csymbr
       apply csymbr
       apply (ctac (no_vcg) add:  unmapPage_ccorres)
-       apply (rule return_Null_ccorres)
+       apply return_NullCap_pair_ccorres
       apply (rule wp_post_taut)
      apply (subgoal_tac "capVPMappedAddress cp = None")
       prefer 2
@@ -1723,10 +1731,10 @@ lemma Arch_finaliseCap_ccorres:
                             case_option_over_if
                       elim!: ccap_relationE simp del: Collect_const)
      apply clarsimp
-     apply (rule return_Null_ccorres)
+     apply return_NullCap_pair_ccorres
     apply (clarsimp simp: isCap_simps)
      apply clarsimp
-   apply (rule return_Null_ccorres)
+   apply return_NullCap_pair_ccorres
   apply (cases cp ; clarsimp simp: isCap_simps)
       apply (cases is_final; clarsimp simp: isCap_simps)
       apply (frule cap_get_tag_isCap_unfolded_H_cap)
@@ -1911,6 +1919,8 @@ lemma isFinalCapability_ccorres:
          auto dest!: ctes_of_valid' [OF _ invs_valid_objs']
               elim!: valid_capAligned)
 
+lemmas cleanup_info_wf'_simps[simp] = cleanup_info_wf'_def[split_simps capability.split]
+
 lemma cteDeleteOne_ccorres:
   "ccorres dc xfdc
    (invs' and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
@@ -1946,6 +1956,7 @@ lemma cteDeleteOne_ccorres:
         apply (ctac(no_vcg) add: finaliseCap_True_standin_ccorres)
          apply (rule ccorres_assert)
          apply (simp add: dc_def[symmetric])
+         apply csymbr
          apply (ctac add: emptySlot_ccorres)
         apply (simp add: pred_conj_def finaliseCapTrue_standin_simple_def)
         apply (strengthen invs_mdb_strengthen' invs_urz)
@@ -1954,7 +1965,7 @@ lemma cteDeleteOne_ccorres:
        apply (clarsimp simp: from_bool_def true_def irq_opt_relation_def
                              invs_pspace_aligned' cte_wp_at_ctes_of)
        apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
-       apply (clarsimp simp: typ_heap_simps ccte_relation_ccap_relation)
+       apply (clarsimp simp: typ_heap_simps ccte_relation_ccap_relation ccap_relation_NullCap_iff)
       apply (wp isFinalCapability_inv)
      apply simp
     apply (simp del: Collect_const add: false_def)
@@ -2100,7 +2111,7 @@ lemma prepare_thread_delete_ccorres:
 lemma finaliseCap_ccorres:
   "\<And>final.
    ccorres (\<lambda>rv rv'. ccap_relation (fst rv) (finaliseCap_ret_C.remainder_C rv')
-                   \<and> irq_opt_relation (snd rv) (finaliseCap_ret_C.irq_C rv'))
+                   \<and> ccap_relation (snd rv) (finaliseCap_ret_C.cleanupInfo_C rv'))
    ret__struct_finaliseCap_ret_C_'
    (invs' and sch_act_simple and valid_cap' cap and (\<lambda>s. ksIdleThread s \<notin> capRange cap)
           and (\<lambda>s. 2 ^ capBits cap \<le> gsMaxObjectSize s))
@@ -2126,19 +2137,14 @@ lemma finaliseCap_ccorres:
      apply (rule ccorres_fail)
     apply (simp add: liftM_def del: Collect_const)
     apply (rule ccorres_rhs_assoc)+
-    apply (rule ccorres_split_nothrow_novcg)
-        apply (rule ccorres_call[where xf'="finaliseCap_ret_C.remainder_C \<circ> fc_ret_'"],
-               rule Arch_finaliseCap_ccorres)
-          apply simp+
-       apply (rule ceqv_refl)
-      apply (rule ccorres_rhs_assoc2, rule ccorres_split_throws)
-       apply (rule_tac P'="{s. rv' = finaliseCap_ret_C.remainder_C (fc_ret_' s)}"
-                  in ccorres_from_vcg_throws[where P=\<top>])
+    apply (rule ccorres_add_return2)
+    apply (ccorres_rewrite)
+    apply (ctac add: Arch_finaliseCap_ccorres)
+       apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
        apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: return_def Collect_const_mem irq_opt_relation_def)
-      apply vcg
+       apply (clarsimp simp: return_def Collect_const_mem)
      apply wp
-    apply (simp add: guard_is_UNIV_def Collect_const_mem)
+    apply (vcg exspec=Arch_finaliseCap_modifies)
    apply (simp add: cap_get_tag_isCap Collect_False
                del: Collect_const)
    apply csymbr
@@ -2159,7 +2165,7 @@ lemma finaliseCap_ccorres:
                           return_def word_mod_less_divisor
                           less_imp_neq [OF word_mod_less_divisor])
     apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
-    apply (clarsimp simp: isCap_simps capAligned_def
+    apply (clarsimp simp: isCap_simps capAligned_def ccap_relation_NullCap_iff
                           objBits_simps' word_bits_conv
                           signed_shift_guard_simpler_32)
     apply (rule conjI)
@@ -2179,7 +2185,7 @@ lemma finaliseCap_ccorres:
       apply (simp add: word_size word_ops_nth_size nth_w2p
                        less_Suc_eq_le is_aligned_nth)
       apply (safe, simp_all)[1]
-     apply (simp add: shiftL_nat irq_opt_relation_def)
+     apply (simp add: shiftL_nat ccap_relation_NullCap_iff)
      apply (rule trans, rule unat_power_lower32[symmetric])
       apply (simp add: word_bits_conv)
      apply (rule unat_cong, rule word_eqI)
@@ -2207,7 +2213,7 @@ lemma finaliseCap_ccorres:
       apply (clarsimp simp: word_sle_def return_def)
       apply (subgoal_tac "cap_get_tag capa = scast cap_thread_cap")
        apply (drule(1) cap_get_tag_to_H)
-       apply (clarsimp simp: isCap_simps capAligned_def)
+       apply (clarsimp simp: isCap_simps capAligned_def ccap_relation_NullCap_iff)
        apply (simp add: ccap_relation_def cap_zombie_cap_lift)
        apply (simp add: cap_to_H_def isZombieTCB_C_def ZombieTCB_C_def
                         mask_def)
@@ -2225,7 +2231,7 @@ lemma finaliseCap_ccorres:
     apply (simp add: Let_def)
     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
     apply (rule allI, rule conseqPre, vcg)
-    apply (clarsimp simp: return_def irq_opt_relation_def)
+    apply (clarsimp simp: return_def ccap_relation_NullCap_iff)
    apply (simp add: isArchCap_T_isArchObjectCap[symmetric]
                del: Collect_const)
    apply (rule ccorres_if_lhs)
@@ -2242,9 +2248,6 @@ lemma finaliseCap_ccorres:
        apply (clarsimp simp: return_def)
        apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
        apply (simp add: ccap_relation_NullCap_iff split: if_split)
-       apply (frule(1) ccap_relation_IRQHandler_mask)
-       apply (erule irq_opt_relation_Some_ucast)
-       apply (simp add: ARM.maxIRQ_def Kernel_C.maxIRQ_def)
       apply wp
      apply vcg
     apply (rule conseqPre,vcg)

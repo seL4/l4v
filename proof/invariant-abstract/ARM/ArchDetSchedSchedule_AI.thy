@@ -282,6 +282,17 @@ lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:
   "\<lbrace>\<lambda>s::det_ext state. t \<noteq> idle_thread s\<rbrace> arch_post_modify_registers c t \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
   by (wpsimp simp: arch_post_modify_registers_def)
 
+crunches arch_post_cap_deletion
+  for valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
+  and valid_etcbs[wp, DetSchedSchedule_AI_assms]: valid_etcbs
+  and ct_not_in_q[wp, DetSchedSchedule_AI_assms]: ct_not_in_q
+  and simple_sched_action[wp, DetSchedSchedule_AI_assms]: simple_sched_action
+  and not_cur_thread[wp, DetSchedSchedule_AI_assms]: "not_cur_thread t"
+  and is_etcb_at[wp, DetSchedSchedule_AI_assms]: "is_etcb_at t"
+  and not_queued[wp, DetSchedSchedule_AI_assms]: "not_queued t"
+  and sched_act_not[wp, DetSchedSchedule_AI_assms]: "scheduler_act_not t"
+  and weak_valid_sched_action[wp, DetSchedSchedule_AI_assms]: weak_valid_sched_action
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI

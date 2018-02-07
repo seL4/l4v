@@ -129,12 +129,12 @@ lemma set_free_index_final_cap:
   apply (drule set_cap_caps_of_state_monad)
   apply (erule subst[rotated])
   apply (rule_tac f = P in arg_cong)
-  apply (subgoal_tac "\<And>slot. (cte_wp_at (\<lambda>c. obj_irq_refs cap \<inter> obj_irq_refs c \<noteq> {}) slot s
-          = cte_wp_at (\<lambda>c. obj_irq_refs cap \<inter> obj_irq_refs c \<noteq> {}) slot b)")
+  apply (subgoal_tac "\<And>slot. (cte_wp_at (\<lambda>c. gen_obj_refs cap \<inter> gen_obj_refs c \<noteq> {}) slot s
+          = cte_wp_at (\<lambda>c. gen_obj_refs cap \<inter> gen_obj_refs c \<noteq> {}) slot b)")
    apply simp
   apply (clarsimp split:cap.splits
          simp:cte_wp_at_caps_of_state free_index_update_def
-              obj_irq_refs_def)
+              gen_obj_refs_def)
   done
 
 lemma set_cap_orth:

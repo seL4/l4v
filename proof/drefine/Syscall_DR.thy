@@ -1427,7 +1427,7 @@ lemma cap_delete_one_st_tcb_at_and_valid_etcbs:
   "\<lbrace>st_tcb_at P t and K (\<forall>st. active st \<longrightarrow> P st) and valid_etcbs\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv s. st_tcb_at P t s \<and> valid_etcbs s\<rbrace>"
  by (wp cap_delete_one_st_tcb_at cap_delete_one_valid_etcbs | simp)+
 
-crunch ct_it[wp]: cap_delete_one "\<lambda>s. P (cur_thread s) (idle_thread s)"
+crunch ct_it[wp]: deleted_irq_handler, cap_delete_one "\<lambda>s. P (cur_thread s) (idle_thread s)"
      (wp: crunch_wps set_thread_state_ext_extended.all_but_exst dxo_wp_weak
     simp: crunch_simps unless_def)
 

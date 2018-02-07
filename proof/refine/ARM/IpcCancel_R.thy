@@ -125,7 +125,9 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at':
   apply (auto simp: cte_wp_at_ctes_of isCap_simps)
   done
 
+context begin interpretation Arch .
 crunch typ_at'[wp]: emptySlot "\<lambda>s. P (typ_at' T p s)"
+end
 
 crunch tcb_at'[wp]: cancelSignal "tcb_at' t"
   (wp: crunch_wps simp: crunch_simps)

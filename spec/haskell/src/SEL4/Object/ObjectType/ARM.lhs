@@ -95,13 +95,16 @@ Page capabilities have read and write permission bits, which are used to restric
 
 \subsection{Deleting Capabilities}
 
-> finaliseCap :: ArchCapability -> Bool -> Kernel Capability
+> postCapDeletion :: ArchCapability -> Kernel ()
+> postCapDeletion _ = return ()
+
+> finaliseCap :: ArchCapability -> Bool -> Kernel (Capability, Capability)
 
 Deletion of a final capability to an ASID pool requires that the pool is removed from the global ASID table.
 
 > finaliseCap (ASIDPoolCap { capASIDBase = b, capASIDPool = ptr }) True = do
 >     deleteASIDPool b ptr
->     return NullCap
+>     return (NullCap, NullCap)
 
 Deletion of a final capability to a page directory with an assigned ASID requires the ASID assignment to be removed, and the ASID flushed from the caches.
 
@@ -109,7 +112,7 @@ Deletion of a final capability to a page directory with an assigned ASID require
 >         capPDMappedASID = Just a,
 >         capPDBasePtr = ptr }) True = do
 >     deleteASID a ptr
->     return NullCap
+>     return (NullCap, NullCap)
 
 Deletion of a final capability to a page table that has been mapped requires that the mapping be removed from the page directory, and the corresponding addresses flushed from the caches.
 
@@ -117,7 +120,7 @@ Deletion of a final capability to a page table that has been mapped requires tha
 >         capPTMappedAddress = Just (a, v),
 >         capPTBasePtr = ptr }) True = do
 >     unmapPageTable a v ptr
->     return NullCap
+>     return (NullCap, NullCap)
 
 Deletion of any mapped frame capability requires the page table slot to be located and cleared, and the unmapped address to be flushed from the caches.
 
@@ -130,12 +133,12 @@ Deletion of any mapped frame capability requires the page table slot to be locat
 #endif
 >            do
 >               unmapPage s a v ptr
->               return NullCap
+>               return (NullCap, NullCap)
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > finaliseCap (VCPUCap { capVCPUPtr = vcpu }) True = do
 >     vcpuFinalise vcpu
->     return NullCap
+>     return (NullCap, NullCap)
 #endif
 
 #ifdef CONFIG_ARM_SMMU
@@ -145,7 +148,7 @@ Deletion of any mapped frame capability requires the page table slot to be locat
 
 All other capabilities need no finalisation action.
 
-> finaliseCap _ _ = return NullCap
+> finaliseCap _ _ = return (NullCap, NullCap)
 
 
 \subsection{Identifying Capabilities}

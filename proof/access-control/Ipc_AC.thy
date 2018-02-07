@@ -20,7 +20,9 @@ subsection{* @{term "pas_refined"} *}
 
 crunch thread_bound_ntfns[wp]: do_machine_op "\<lambda>s. P (thread_bound_ntfns s)"
 
-crunch state_vrefs[wp]: send_signal "\<lambda>s. P (state_vrefs (s :: det_ext state))" (wp: crunch_wps hoare_unless_wp select_wp dxo_wp_weak simp: crunch_simps)
+crunches deleted_irq_handler, send_signal
+  for state_vrefs[wp]: "\<lambda>s. P (state_vrefs (s :: det_ext state))"
+  (wp: crunch_wps hoare_unless_wp select_wp dxo_wp_weak simp: crunch_simps)
 
 lemma cancel_ipc_receive_blocked_caps_of_state:
   "\<lbrace>\<lambda>s. P (caps_of_state (s :: det_ext state)) \<and> st_tcb_at receive_blocked t s\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
@@ -42,7 +44,9 @@ lemma send_signal_caps_of_state[wp]:
   apply (clarsimp simp: fun_upd_def[symmetric] st_tcb_def2)
   done
 
-crunch arch_state[wp]: send_signal "\<lambda>s. P (arch_state (s :: det_ext state))" (wp: crunch_wps hoare_unless_wp select_wp dxo_wp_weak simp: crunch_simps)
+crunches deleted_irq_handler, send_signal
+  for arch_state[wp]: "\<lambda>s. P (arch_state (s :: det_ext state))"
+  (wp: crunch_wps hoare_unless_wp select_wp dxo_wp_weak simp: crunch_simps)
 
 crunch mdb[wp]: blocked_cancel_ipc, update_waiting_ntfn "\<lambda>s. P (cdt (s :: det_ext state))" (wp: crunch_wps hoare_unless_wp select_wp dxo_wp_weak simp: crunch_simps)
 

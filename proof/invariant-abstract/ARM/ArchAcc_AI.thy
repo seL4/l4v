@@ -160,8 +160,6 @@ lemma lookup_pt_slot_inv_any:
 
 crunch cte_wp_at[wp]: set_irq_state "\<lambda>s. P (cte_wp_at P' p s)"
 
-crunch inv[wp]: get_irq_slot "P"
-
 lemma set_pt_cte_wp_at:
   "\<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>
      set_pt ptr val

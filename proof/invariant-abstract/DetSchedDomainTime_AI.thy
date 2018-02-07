@@ -36,11 +36,6 @@ lemma ethread_get_wp[wp]:
   unfolding ethread_get_def
   by (wp | clarsimp simp add: get_etcb_def etcb_at'_def is_etcb_at'_def)+
 
-crunch domain_list_inv[wp]:
-  cap_swap_for_delete, empty_slot, get_object, get_cap, tcb_sched_action
-  "\<lambda>s. P (domain_list s)"
-
-
 locale DetSchedDomainTime_AI =
   assumes finalise_cap_domain_list_inv'[wp]:
     "\<And>P cap fin. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_finalise_cap cap fin \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
@@ -94,6 +89,10 @@ locale DetSchedDomainTime_AI =
     "\<And>P ft t. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> make_arch_fault_msg ft t \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes make_arch_fault_msg_domain_list_inv'[wp]:
     "\<And>P ft t. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> make_arch_fault_msg ft t \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+  assumes arch_post_cap_deletion_domain_time_inv'[wp]:
+    "\<And>P ft. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_post_cap_deletion ft \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
+  assumes arch_post_cap_deletion_domain_list_inv'[wp]:
+    "\<And>P ft. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_post_cap_deletion ft \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
 
 locale DetSchedDomainTime_AI_2 = DetSchedDomainTime_AI +
   assumes handle_hypervisor_fault_domain_list_inv'[wp]:
@@ -115,6 +114,10 @@ locale DetSchedDomainTime_AI_2 = DetSchedDomainTime_AI +
     "\<And>P irq. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
 
 context DetSchedDomainTime_AI begin
+
+crunch domain_list_inv[wp]:
+  cap_swap_for_delete, empty_slot, get_object, get_cap, tcb_sched_action
+  "\<lambda>s. P (domain_list s)"
 
 crunch domain_list_inv[wp]: finalise_cap "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps hoare_unless_wp select_inv simp: crunch_simps)
@@ -257,7 +260,6 @@ crunch domain_time_inv[wp]: guarded_switch_to "\<lambda>s. P (domain_time s)"
 
 crunch domain_time_inv[wp]: choose_thread "\<lambda>s. P (domain_time s)"
 
-end
 
 crunch domain_time_inv[wp]: send_signal "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps mapM_x_wp_inv select_wp simp: crunch_simps unless_def)
@@ -265,8 +267,6 @@ crunch domain_time_inv[wp]: send_signal "\<lambda>s. P (domain_time s)"
 crunch domain_time_inv[wp]:
   cap_swap_for_delete, empty_slot, get_object, get_cap, tcb_sched_action
   "\<lambda>s. P (domain_time s)"
-
-context DetSchedDomainTime_AI begin
 
 crunch domain_time_inv[wp]: finalise_cap "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps hoare_drop_imps hoare_unless_wp select_inv mapM_wp

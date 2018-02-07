@@ -435,43 +435,49 @@ where
     cap_delete_one slot
   od"
 
-text {* Actions that must be taken when a capability is deleted. Returns a
-Zombie capability if deletion requires a long-running operation and also a
-possible IRQ to be cleared. *}
+text {* Actions that must be taken when a capability is deleted. Returns two
+capabilities: The first is a capability to be re-inserted into the slot in place
+of the deleted capability; in particular, this will be a Zombie if the deletion
+requires a long-running operation. The second represents some further
+post-deletion action to be performed after the slot is cleared. For example,
+an IRQHandlerCap indicates an IRQ to be cleared. Arch capabilities may also be
+associated with arch-specific post-deletion actions. For most cases, however,
+NullCap is used to indicate that no post-deletion action is required. *}
+
 fun
-  finalise_cap :: "cap \<Rightarrow> bool \<Rightarrow> (cap \<times> irq option,'z::state_ext) s_monad"
+  finalise_cap :: "cap \<Rightarrow> bool \<Rightarrow> (cap \<times> cap,'z::state_ext) s_monad"
 where
-  "finalise_cap NullCap                  final = return (NullCap, None)"
-| "finalise_cap (UntypedCap dev r bits f)    final = return (NullCap, None)"
-| "finalise_cap (ReplyCap r m)           final = return (NullCap, None)"
+  "finalise_cap NullCap                  final = return (NullCap, NullCap)"
+| "finalise_cap (UntypedCap dev r bits f)    final = return (NullCap, NullCap)"
+| "finalise_cap (ReplyCap r m)           final = return (NullCap, NullCap)"
 | "finalise_cap (EndpointCap r b R)      final =
-      (liftM (K (NullCap, None)) $ when final $ cancel_all_ipc r)"
+      (liftM (K (NullCap, NullCap)) $ when final $ cancel_all_ipc r)"
 | "finalise_cap (NotificationCap r b R) final =
-      (liftM (K (NullCap, None)) $ when final $ do
+      (liftM (K (NullCap, NullCap)) $ when final $ do
           unbind_maybe_notification r;
           cancel_all_signals r
         od)"
 | "finalise_cap (CNodeCap r bits g)  final =
-      return (if final then Zombie r (Some bits) (2 ^ bits) else NullCap, None)"
+      return (if final then Zombie r (Some bits) (2 ^ bits) else NullCap, NullCap)"
 | "finalise_cap (ThreadCap r)            final =
       do
          when final $ unbind_notification r;
          when final $ suspend r;
          when final $ prepare_thread_delete r;
-         return (if final then (Zombie r None 5) else NullCap, None)
+         return (if final then (Zombie r None 5) else NullCap, NullCap)
       od"
-| "finalise_cap DomainCap                final = return (NullCap, None)"
+| "finalise_cap DomainCap                final = return (NullCap, NullCap)"
 | "finalise_cap (Zombie r b n)           final =
-      do assert final; return (Zombie r b n, None) od"
-| "finalise_cap IRQControlCap            final = return (NullCap, None)"
+      do assert final; return (Zombie r b n, NullCap) od"
+| "finalise_cap IRQControlCap            final = return (NullCap, NullCap)"
 | "finalise_cap (IRQHandlerCap irq)      final = (
        if final then do
          deleting_irq_handler irq;
-         return (NullCap, Some irq)
+         return (NullCap, (IRQHandlerCap irq))
        od
-       else return (NullCap, None))"
+       else return (NullCap, NullCap))"
 | "finalise_cap (ArchObjectCap a)        final =
-      (liftM (\<lambda>x. (x, None)) $ arch_finalise_cap a final)"
+      (arch_finalise_cap a final)"
 
 definition
   can_fast_finalise :: "cap \<Rightarrow> bool" where
@@ -492,7 +498,7 @@ lemma fast_finalise_def2:
   "fast_finalise cap final = do
      assert (can_fast_finalise cap);
      result \<leftarrow> finalise_cap cap final;
-     assert (result = (NullCap, None))
+     assert (result = (NullCap, NullCap))
    od"
   by (cases cap, simp_all add: liftM_def K_def assert_def can_fast_finalise_def)
 
@@ -516,12 +522,12 @@ definition
 
 text {* The complete recursive delete operation. *}
 function (sequential)
-  rec_del :: "rec_del_call \<Rightarrow> (bool * irq option,'z::state_ext) p_monad"
+  rec_del :: "rec_del_call \<Rightarrow> (bool * cap,'z::state_ext) p_monad"
 where
   "rec_del (CTEDeleteCall slot exposed) s =
  (doE
-    (success, irq_freed) \<leftarrow> rec_del (FinaliseSlotCall slot exposed);
-    without_preemption $ when (exposed \<or> success) $ empty_slot slot irq_freed;
+    (success, cleanup_info) \<leftarrow> rec_del (FinaliseSlotCall slot exposed);
+    without_preemption $ when (exposed \<or> success) $ empty_slot slot cleanup_info;
     returnOk undefined
   odE) s"
 |
@@ -529,16 +535,16 @@ where
  (doE
     cap \<leftarrow> without_preemption $ get_cap slot;
     if (cap = NullCap)
-    then returnOk (True, None)
+    then returnOk (True, NullCap)
     else (doE
       is_final \<leftarrow> without_preemption $ is_final_cap cap;
-      (remainder, irqopt) \<leftarrow> without_preemption $ finalise_cap cap is_final;
+      (remainder, cleanup_info) \<leftarrow> without_preemption $ finalise_cap cap is_final;
       if (cap_removeable remainder slot)
-      then returnOk (True, irqopt)
+      then returnOk (True, cleanup_info)
       else if (cap_cyclic_zombie remainder slot \<and> \<not> exposed)
       then doE
         without_preemption $ set_cap remainder slot;
-        returnOk (False, None)
+        returnOk (False, NullCap)
       odE
       else doE
         without_preemption $ set_cap remainder slot;
@@ -595,7 +601,7 @@ definition
 
 text {* Prepare the capability in a slot for deletion but do not delete it. *}
 definition
-  finalise_slot :: "cslot_ptr \<Rightarrow> bool \<Rightarrow> (bool * irq option,'z::state_ext) p_monad"
+  finalise_slot :: "cslot_ptr \<Rightarrow> bool \<Rightarrow> (bool * cap,'z::state_ext) p_monad"
 where
   "finalise_slot p e \<equiv> rec_del (FinaliseSlotCall p e)"
 

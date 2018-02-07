@@ -2214,27 +2214,6 @@ lemma deletedIRQHandler_ccorres:
   apply clarsimp
 done
 
-lemma deletedIRQHandler_opt_ccorres:
-  "irq_opt_relation irq cirq \<Longrightarrow>
-    ccorres dc xfdc \<top> UNIV [SKIP]
-     (case irq of None \<Rightarrow> return () | Some a \<Rightarrow> deletedIRQHandler a)
-     (IF ucast cirq \<noteq> irqInvalid THEN CALL deletedIRQHandler (cirq)  FI) "
-  apply (simp only: irq_opt_relation_def)
-  apply (cases irq)
-   apply (clarsimp simp:irqInvalid_def)
-   apply (simp add: ccorres_cond_iffs)
-   apply (rule ccorres_return_Skip )
-  apply clarsimp
-  apply (subgoal_tac " ucast cirq \<noteq> irqInvalid")
-   prefer 2
-   apply (clarsimp simp: irqInvalid_def Kernel_C.maxIRQ_def)
-   apply (word_bitwise,simp) (* So annoy that signed word ucast mixed with word ucast *)
-  apply (simp add: ccorres_cond_iffs)
-  apply (rule ccorres_guard_imp2)
-   apply (ctac add: deletedIRQHandler_ccorres)
-  apply simp
-done
-
 (* for long printing: switch off printing of abbreviation :
 
 ML {*fun show_abbrevs true = (PrintMode.print_mode := List.filter
@@ -2465,16 +2444,84 @@ lemma clearUntypedFreeIndex_noop_ccorres:
   apply simp
   done
 
+lemma Arch_postCapDeletion_ccorres:
+  "ccorres dc xfdc \<top>
+    (UNIV \<inter> {s. ccap_relation (ArchObjectCap acap) (cap_' s)}) hs
+    (ARM_H.postCapDeletion acap)
+    (Call Arch_postCapDeletion_'proc)"
+  apply (cinit lift: cap_')
+   apply (rule ccorres_return_Skip)
+  by simp
+
+lemma not_irq_or_arch_cap_case:
+  "\<lbrakk>\<not>isIRQHandlerCap cap; \<not> isArchCap \<top> cap\<rbrakk> \<Longrightarrow>
+   (case cap of IRQHandlerCap irq \<Rightarrow> f irq | ArchObjectCap acap \<Rightarrow> g acap | _ \<Rightarrow> h) = h"
+  by (case_tac cap; clarsimp simp: isCap_simps)
+
+definition
+  arch_cleanup_info_wf' :: "arch_capability \<Rightarrow> bool"
+where
+  "arch_cleanup_info_wf' acap \<equiv> True"
+
+definition
+  cleanup_info_wf' :: "capability \<Rightarrow> bool"
+where
+  "cleanup_info_wf' cap \<equiv> case cap of IRQHandlerCap irq \<Rightarrow>
+      UCAST(10\<rightarrow>16) irq \<le> SCAST(32 signed\<rightarrow>16) Kernel_C.maxIRQ | ArchObjectCap acap \<Rightarrow> arch_cleanup_info_wf' acap | _ \<Rightarrow> True"
+
+lemma postCapDeletion_ccorres:
+  "cleanup_info_wf' cap \<Longrightarrow>
+   ccorres dc xfdc
+      \<top> (UNIV \<inter> {s. ccap_relation cap (cap_' s)}) hs
+      (postCapDeletion cap)
+      (Call postCapDeletion_'proc)"
+  supply Collect_const[simp del]
+  apply (cinit lift: cap_' simp: Retype_H.postCapDeletion_def)
+   apply csymbr
+   apply (clarsimp simp: cap_get_tag_isCap)
+   apply (rule ccorres_Cond_rhs)
+    apply (clarsimp simp: isCap_simps )
+    apply (rule ccorres_symb_exec_r)
+      apply (rule_tac xf'=irq_' in ccorres_abstract, ceqv)
+      apply (rule_tac P="rv' = ucast (capIRQ cap)" in ccorres_gen_asm2)
+      apply (fold dc_def)
+      apply (frule cap_get_tag_to_H, solves \<open>clarsimp simp: cap_get_tag_isCap_unfolded_H_cap\<close>)
+      apply (clarsimp simp: cap_irq_handler_cap_lift)
+      apply (ctac(no_vcg) add: deletedIRQHandler_ccorres)
+     apply vcg
+    apply (rule conseqPre, vcg)
+    apply clarsimp
+   apply csymbr
+   apply (clarsimp simp: cap_get_tag_isCap)
+   apply (rule ccorres_Cond_rhs)
+    apply (wpc; clarsimp simp: isCap_simps)
+    apply (ctac(no_vcg) add: Arch_postCapDeletion_ccorres[unfolded dc_def])
+   apply (simp add: not_irq_or_arch_cap_case)
+   apply (rule ccorres_return_Skip[unfolded dc_def])+
+  apply clarsimp
+  apply (rule conjI, clarsimp simp: isCap_simps  Kernel_C.maxIRQ_def)
+   apply (frule cap_get_tag_isCap_unfolded_H_cap(5))
+   apply (clarsimp simp: cap_irq_handler_cap_lift ccap_relation_def cap_to_H_def
+                         cleanup_info_wf'_def maxIRQ_def Kernel_C.maxIRQ_def)
+  apply (rule conjI, clarsimp simp: isCap_simps)
+  apply (rule conjI[rotated], clarsimp simp: isCap_simps)
+  apply (clarsimp simp: isCap_simps)
+  apply (frule cap_get_tag_isCap_unfolded_H_cap(5))
+  apply (clarsimp simp: cap_irq_handler_cap_lift ccap_relation_def cap_to_H_def
+                        cleanup_info_wf'_def c_valid_cap_def cl_valid_cap_def mask_def)
+  apply (clarsimp simp: word_size Kernel_C.maxIRQ_def maxIRQ_def)
+  by (word_bitwise, clarsimp)
+
 lemma emptySlot_ccorres:
   "ccorres dc xfdc
           (valid_mdb' and valid_objs' and pspace_aligned'
                       and untyped_ranges_zero')
           (UNIV \<inter> {s. slot_' s = Ptr slot}
-                \<inter> {s. irq_opt_relation irq (irq_' s)}  )
+                \<inter> {s. ccap_relation info (cleanupInfo_' s) \<and> cleanup_info_wf' info}  )
           []
-          (emptySlot slot irq)
+          (emptySlot slot info)
           (Call emptySlot_'proc)"
-  apply (cinit lift: slot_' irq_' simp: case_Null_If)
+  apply (cinit lift: slot_' cleanupInfo_' simp: case_Null_If)
 
   -- "--- handle the clearUntypedFreeIndex"
    apply (rule ccorres_split_noop_lhs, rule clearUntypedFreeIndex_noop_ccorres)
@@ -2541,9 +2588,9 @@ lemma emptySlot_ccorres:
                 apply (ctac (no_vcg) pre: ccorres_move_guard_ptr_safe
                   add: ccorres_updateMDB_const [unfolded const_def])
 
-                  -- "the case irq "
+                  -- "the post_cap_deletion case "
 
-                  apply (erule deletedIRQHandler_opt_ccorres [unfolded dc_def])
+                  apply (ctac(no_vcg) add: postCapDeletion_ccorres [unfolded dc_def])
 
                 -- "Haskell pre/post for y \<leftarrow> updateMDB slot (\<lambda>a. nullMDBNode);"
                  apply wp

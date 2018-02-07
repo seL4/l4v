@@ -14,6 +14,8 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+declare arch_gen_obj_refs_def[simp]
+
 definition cap_points_to_label where
   "cap_points_to_label aag cap l \<equiv>
          (\<forall> x \<in> Structures_A.obj_refs cap. (pasObjectAbs aag x = l))
@@ -29,7 +31,8 @@ where
   "slots_holding_overlapping_caps cap s \<equiv>
    {cref. \<exists>cap'. fst (get_cap cref s) = {(cap', s)} \<and>
                  (Structures_A.obj_refs cap \<inter> Structures_A.obj_refs cap' \<noteq> {} \<or>
-                 cap_irqs cap \<inter> cap_irqs cap' \<noteq> {})}"
+                 cap_irqs cap \<inter> cap_irqs cap' \<noteq> {} \<or>
+                 arch_gen_refs cap \<inter> arch_gen_refs cap' \<noteq> {})}"
 
 
 (* we introduce a new label. The name 'silc' here stands for 'safe inter-label caps',
@@ -98,7 +101,7 @@ lemma silc_invD:
 lemma is_final_cap'_def4:
   "is_final_cap' cap s \<equiv>
    \<exists> a b. slots_holding_overlapping_caps cap s = {(a,b)}"
-  apply(simp add: is_final_cap'_def slots_holding_overlapping_caps_def)
+  apply(simp add: is_final_cap'_def slots_holding_overlapping_caps_def gen_obj_refs_Int)
   done
 
 
@@ -141,7 +144,7 @@ lemma cte_wp_at_intra_label_cap:
 
 lemma not_is_final_cap_cte_wp_at:
   "\<lbrakk>\<not> is_final_cap' cap s; cte_wp_at (op = cap) slot s;
-        Structures_A.obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {}\<rbrakk> \<Longrightarrow>
+        Structures_A.obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {} \<or> arch_gen_refs cap \<noteq> {}\<rbrakk> \<Longrightarrow>
    \<exists> slot'.  slot' \<noteq> slot \<and> slot' \<in> slots_holding_overlapping_caps cap s"
   apply(simp add: is_final_cap'_def4)
   apply(subgoal_tac "slot \<in> slots_holding_overlapping_caps cap s")
@@ -154,8 +157,8 @@ lemma not_is_final_cap_cte_wp_at:
 
 lemma is_final_then_nonempty_refs:
   "is_final_cap' cap s \<Longrightarrow>
-   Structures_A.obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {}"
-  apply(auto simp add: is_final_cap'_def)
+   Structures_A.obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {} \<or> arch_gen_refs cap \<noteq> {}"
+  apply(auto simp add: is_final_cap'_def gen_obj_refs_def)
   done
 
 lemma caps_ref_single_objects:
@@ -174,35 +177,45 @@ lemma caps_ref_single_irqs:
   apply(simp_all)
   done
 
+lemma caps_ref_single_arch_gen_refs:
+  "\<lbrakk>x \<in> arch_gen_refs cap; y \<in> arch_gen_refs cap\<rbrakk> \<Longrightarrow> x = y"
+  apply (case_tac cap)
+  apply simp_all
+  done
+
 lemma not_is_final_cap:
   "\<lbrakk>slot' \<noteq> slot; cte_wp_at (op = cap) slot t;
         cte_wp_at (op = cap') slot' t;
         Structures_A.obj_refs cap \<inter> Structures_A.obj_refs cap' =
-        {} \<longrightarrow>
-        cap_irqs cap \<inter> cap_irqs cap' \<noteq> {}\<rbrakk> \<Longrightarrow>
+        {} \<longrightarrow> cap_irqs cap \<inter> cap_irqs cap' = {} \<longrightarrow>
+         arch_gen_refs cap \<inter> arch_gen_refs cap' \<noteq> {}\<rbrakk> \<Longrightarrow>
    \<not> is_final_cap' cap t"
   apply(rule ccontr)
-  apply(clarsimp simp: is_final_cap'_def get_cap_cte_wp_at')
+  apply(clarsimp simp: is_final_cap'_def get_cap_cte_wp_at' gen_obj_refs_def)
   apply(erule_tac B="{(a,b)}" in equalityE)
    apply(frule_tac c=slot in subsetD)
     apply fastforce
   apply(drule_tac c=slot' in subsetD)
-   apply fastforce
-  apply fastforce
-  done
+   subgoal by fastforce
+  by fastforce
 
 lemma caps_ref_either_an_object_or_irq:
    "ref \<in> Structures_A.obj_refs cap' \<Longrightarrow>
-       (cap_irqs cap' = {})"
+       (cap_irqs cap' = {} \<and> arch_gen_refs cap' = {})"
   apply(case_tac cap', simp_all)
   done
 
 lemma caps_ref_either_an_object_or_irq':
    "ref \<in> cap_irqs cap' \<Longrightarrow>
-       (Structures_A.obj_refs cap' = {})"
+       (Structures_A.obj_refs cap' = {} \<and> arch_gen_refs cap' = {})"
   apply(case_tac cap', simp_all)
   done
 
+lemma caps_ref_either_an_object_or_irq'':
+   "ref \<in> arch_gen_refs cap' \<Longrightarrow>
+       (Structures_A.obj_refs cap' = {} \<and> cap_irqs cap' = {})"
+  apply(case_tac cap', simp_all)
+  done
 
 definition reads_equiv_f where
   "reads_equiv_f aag s s' \<equiv> reads_equiv aag s s' \<and> silc_dom_equiv aag s s'"
@@ -222,6 +235,10 @@ lemma is_subject_kheap_eq:
   apply(erule states_equiv_forE_kheap)
   apply(blast intro: aag_can_read_self)
   done
+
+lemma arch_gen_refs_no_intersection[simp]:
+  "arch_gen_refs c \<inter> arch_gen_refs c' = {}"
+  by (cases c; auto)
 
 lemma is_final_cap_reads_respects_helper:
   "\<lbrakk>silc_inv aag st s; cte_wp_at (op = cap) slot s;
@@ -258,7 +275,7 @@ lemma is_final_cap_reads_respects_helper:
       apply assumption
      apply assumption
     apply simp
-   apply assumption
+   apply clarsimp
    (* on the other hand, the new cap in t is now clearly not
       intra_label. So SilcLabel must have an overlapping cap.
       This overlapping cap will overlap the original one,
@@ -312,7 +329,7 @@ lemma is_final_cap_reads_respects_helper:
      apply(rule sym)
      apply(fastforce elim: is_subject_kheap_eq)
     apply assumption
-   apply assumption
+   apply clarsimp
   apply(case_tac "\<exists> ref. ref \<in> Structures_A.obj_refs cap'")
    apply(erule exE, frule caps_ref_either_an_object_or_irq)
    apply(elim conjE)
@@ -324,7 +341,7 @@ lemma is_final_cap_reads_respects_helper:
     apply(blast dest: caps_ref_single_objects)
    apply fastforce
   apply(subgoal_tac "\<exists> ref. ref \<in> cap_irqs cap'")
-   apply clarsimp
+   apply (clarsimp simp: arch_gen_obj_refs_def)
    apply(drule_tac x=ref in bspec, assumption)
    apply(drule_tac s=t in intra_label_capD)
     apply assumption
@@ -361,7 +378,7 @@ definition ctes_wp_at where
 
 
 lemma slots_holding_overlapping_caps_def2:
-  "slots_holding_overlapping_caps cap s = ctes_wp_at (\<lambda> c. (Structures_A.obj_refs cap \<inter> Structures_A.obj_refs c \<noteq> {}) \<or> (cap_irqs cap \<inter> cap_irqs c \<noteq> {})) s"
+  "slots_holding_overlapping_caps cap s = ctes_wp_at (\<lambda> c. (Structures_A.obj_refs cap \<inter> Structures_A.obj_refs c \<noteq> {}) \<or> (cap_irqs cap \<inter> cap_irqs c \<noteq> {}) \<or> (arch_gen_refs cap \<inter> arch_gen_refs c \<noteq> {})) s"
   apply(simp add: slots_holding_overlapping_caps_def ctes_wp_at_def cte_wp_at_def)
   done
 
@@ -1106,7 +1123,7 @@ lemma empty_slot_silc_inv:
   unfolding empty_slot_def
   apply(wp set_cap_silc_inv hoare_vcg_all_lift hoare_vcg_ex_lift
            slots_holding_overlapping_caps_lift get_cap_wp
-           set_cdt_silc_inv dxo_wp_weak
+           set_cdt_silc_inv dxo_wp_weak hoare_drop_imps
        | wpc | simp del: empty_slot_extended.dxo_eq)+
   apply(clarsimp simp: cap_points_to_label_def)
   apply (drule silc_inv_all_children)
@@ -1404,7 +1421,7 @@ lemma finalise_cap_ret_is_silc:
   done
 
 lemma arch_finalise_cap_ret:
-  "(rv, s') \<in> fst (arch_finalise_cap arch_cap final s) \<Longrightarrow> rv = NullCap"
+  "(rv, s') \<in> fst (arch_finalise_cap arch_cap final s) \<Longrightarrow> rv = (NullCap, NullCap)"
   apply(erule use_valid)
   unfolding arch_finalise_cap_def
   apply(wp | wpc | simp)+
@@ -1414,7 +1431,6 @@ lemma finalise_cap_ret:
   "(rv, s') \<in> fst (finalise_cap cap final s) \<Longrightarrow> case (fst rv) of NullCap \<Rightarrow> True | Zombie ptr bits n \<Rightarrow> True | _ \<Rightarrow> False"
   apply(case_tac cap, simp_all add: return_def)
        apply(fastforce simp: liftM_def when_def bind_def return_def split: if_split_asm)+
-  apply(clarsimp simp: bind_def liftM_def return_def)
   apply(drule arch_finalise_cap_ret)
   apply(simp)
   done
@@ -2556,6 +2572,9 @@ lemma new_irq_handler_caps_are_intra_label:
   apply(clarsimp simp: aag_cap_auth_def cap_links_irq_def)
   apply(blast intro: aag_Control_into_owns_irq)
   done
+
+crunch silc_inv[wp]: set_irq_state "silc_inv aag st"
+  (wp: silc_inv_triv)
 
 lemma invoke_irq_control_silc_inv:
   "\<lbrace>silc_inv aag st and pas_refined aag and irq_control_inv_valid blah and K (authorised_irq_ctl_inv aag blah) \<rbrace> invoke_irq_control blah \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"

@@ -80,7 +80,7 @@ lemma masked_as_full_simps[simp]:
   by (simp add:masked_as_full_def)+
 
 lemma maksed_as_full_test_function_stuff[simp]:
-  "obj_irq_refs (masked_as_full a cap) = obj_irq_refs a"
+  "gen_obj_refs (masked_as_full a cap) = gen_obj_refs a"
   "cap_asid (masked_as_full a cap ) = cap_asid a"
   "obj_refs (masked_as_full a cap ) = obj_refs a"
   "is_zombie (masked_as_full a cap ) = is_zombie a"

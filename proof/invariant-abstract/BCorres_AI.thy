@@ -109,6 +109,15 @@ lemma bcorres_select_ext[wp]: "bcorres (select_ext a A) (select_ext a A)"
                    select_switch_unit_def get_def bcorres_underlying_def s_bcorres_underlying_def fail_def)
   done
 
+context Arch begin
+
+crunch (bcorres)bcorres[wp]: arch_post_cap_deletion truncate_state
+
+end
+
+requalify_facts
+  Arch.arch_post_cap_deletion_bcorres
+
 crunch (bcorres)bcorres[wp]: set_original,set_object,set_cap,set_irq_state,
                         deleted_irq_handler,get_cap,set_cdt,empty_slot
 truncate_state (ignore: maskInterrupt)
