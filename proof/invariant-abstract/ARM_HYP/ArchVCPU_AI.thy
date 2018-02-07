@@ -152,7 +152,13 @@ lemma activate_thread_arch_vcpu_tcb_valid[wp]:
 
 lemma do_machine_op_lift:
   "(\<And>s x. P s \<Longrightarrow> P (s\<lparr>machine_state := x\<rparr>)) \<Longrightarrow>
-  \<lbrace>\<lambda>s. P s \<rbrace> do_machine_op f \<lbrace>\<lambda>_ s. P s\<rbrace>"
+    \<lbrace>\<lambda>s. P s \<rbrace> do_machine_op f \<lbrace>\<lambda>r s. P s\<rbrace>"
+  unfolding do_machine_op_def
+  by (wpsimp simp: arch_vcpu_tcb_valid_kheap_unfold)
+
+lemma do_machine_op_lift':
+  "\<And>r. (\<And>r r' s x. P r s \<Longrightarrow> P r' (s\<lparr>machine_state := x\<rparr>)) \<Longrightarrow>
+    \<lbrace>\<lambda>s. P r s \<rbrace> do_machine_op f \<lbrace>\<lambda>r s. P r s\<rbrace>"
   unfolding do_machine_op_def
   by (wpsimp simp: arch_vcpu_tcb_valid_kheap_unfold)
 
@@ -283,11 +289,40 @@ lemma vcpu_switch_valid_arch_idle_wp:
    \<lbrace>\<lambda>r s. valid_arch_idle s\<rbrace>"
  apply (wpsimp simp: vcpu_switch_def vcpu_disable_def cur_vcpu_to_tcb_vcpu_def )
   apply (rule do_machine_op_lift; clarsimp simp: valid_arch_idle_def)
+  apply (rename_tac obj_ref x2 y)
   apply wpsimp
   apply (rule do_machine_op_lift; clarsimp simp: valid_arch_idle_def)
   apply (wpsimp wp: set_vcpu_wp)
- apply (clarsimp simp: valid_arch_idle_def)
- sorry
+  apply (rule do_machine_op_lift'; clarsimp simp: valid_arch_idle_def)
+  apply ( case_tac "idle_thread s = obj_ref"; simp add: obj_at_def)
+  apply (rule do_machine_op_lift'; clarsimp simp: valid_arch_idle_def)
+  apply (case_tac "idle_thread s = obj_ref"; simp add: obj_at_def)
+  apply (wpsimp wp: get_vcpu_wp)
+  apply (rename_tac obj_ref x2)
+  apply (rule do_machine_op_lift; clarsimp simp: valid_arch_idle_def)
+  apply (case_tac "idle_thread s = obj_ref"; simp add: obj_at_def)
+  apply (wpsimp wp: gets_wp)
+  apply (wpsimp wp: gets_wp)
+  apply (simp add: valid_arch_idle_def)
+  apply wps
+  apply (wpsimp wp: vcpu_restore_obj_at[where P="\<lambda>x. x"])
+  apply wpsimp
+  apply (simp add: valid_arch_idle_def)
+  apply wps
+  apply (wpsimp wp: vcpu_restore_obj_at[where P="\<lambda>x. x"])
+  apply wps
+  apply (wpsimp wp: vcpu_save_obj_at_tcb_arch)
+
+  apply (wpsimp wp: )
+   apply (simp add: valid_arch_idle_def)
+    apply wps
+    apply (wpsimp wp: vcpu_enable_obj_at)
+  apply (rule do_machine_op_lift; clarsimp)
+  apply (wpsimp wp:gets_wp)
+  apply (case_tac vcpu; clarsimp simp: valid_arch_idle_def)
+  apply (rename_tac s a v)
+  apply (case_tac "idle_thread s = a"; clarsimp simp: obj_at_def)
+ done
 
 lemma store_hw_asid_lift:
   assumes aam: "(\<And>s x. P s \<Longrightarrow> P (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_map:= x\<rparr>\<rparr>))"
@@ -303,7 +338,7 @@ lemma store_hw_asid_lift:
 
 lemma invalidate_asid_lift:
  "(\<And>s x. P s \<Longrightarrow> P (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_map:= x\<rparr>\<rparr>)) \<Longrightarrow>
-  \<lbrace>\<lambda>s. P s \<rbrace> invalidate_asid x \<lbrace>\<lambda>r s. P s\<rbrace>"
+  \<lbrace>\<lambda>s. P s \<rbrace> invalidate_asid asid \<lbrace>\<lambda>r s. P s\<rbrace>"
   by (wpsimp simp: invalidate_asid_def )
 
 lemma find_free_hw_asid_lift:
@@ -339,7 +374,7 @@ lemma get_hw_asid_lift:
   and     aht: "(\<And>s x. P s \<Longrightarrow> P (s\<lparr>arch_state := arch_state s\<lparr>arm_hwasid_table:= x\<rparr>\<rparr>))"
   and     ana: "(\<And>s x. P s \<Longrightarrow> P (s\<lparr>arch_state := arch_state s\<lparr>arm_next_asid:= x\<rparr>\<rparr>))"
   shows"
-  \<lbrace>\<lambda>s. P s \<rbrace> get_hw_asid a \<lbrace>\<lambda>_ s. P s\<rbrace>"
+  \<lbrace>\<lambda>s. P s \<rbrace> get_hw_asid asid \<lbrace>\<lambda>_ s. P s\<rbrace>"
   unfolding get_hw_asid_def
   apply (wpsimp simp: arch_vcpu_tcb_valid_kheap_unfold wp: store_hw_asid_lift)
        apply (simp add: aam )
@@ -357,7 +392,7 @@ lemma  arm_context_switch_lift:
   and     aam: "(\<And>s x. P s \<Longrightarrow> P (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_map:= x\<rparr>\<rparr>))"
   and     aht: "(\<And>s x. P s \<Longrightarrow> P (s\<lparr>arch_state := arch_state s\<lparr>arm_hwasid_table:= x\<rparr>\<rparr>))"
   and     ana: "(\<And>s x. P s \<Longrightarrow> P (s\<lparr>arch_state := arch_state s\<lparr>arm_next_asid:= x\<rparr>\<rparr>))"
-  shows "\<lbrace>P\<rbrace> arm_context_switch x51 x2 \<lbrace>\<lambda>xb s. P s\<rbrace>"
+  shows "\<lbrace>P\<rbrace> arm_context_switch pd asid \<lbrace>\<lambda>xb s. P s\<rbrace>"
   apply (wpsimp simp: arm_context_switch_def)
   apply (rule do_machine_op_lift)
   apply (erule ms)
