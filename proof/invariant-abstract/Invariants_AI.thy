@@ -766,6 +766,15 @@ where
  "pspace_respects_device_region \<equiv> \<lambda>s. (dom (user_mem s)) \<subseteq> - (device_region s)
  \<and> (dom (device_mem s)) \<subseteq> (device_region s)"
 
+definition live_sc :: "sched_context \<Rightarrow> bool"
+where
+  "live_sc sc \<equiv> (bound (sc_tcb sc) \<or> bound (sc_yield_from sc) \<or> bound (sc_ntfn sc)
+                                \<or> (sc_replies sc \<noteq> []))"
+
+definition live_ntfn :: "notification \<Rightarrow> bool"
+where
+  "live_ntfn ntfn \<equiv> (bound (ntfn_bound_tcb ntfn) \<or> bound (ntfn_sc ntfn)
+                                \<or> (\<exists>ts. ntfn_obj ntfn = WaitingNtfn ts))"
 
 primrec
   live0 :: "kernel_object \<Rightarrow> bool"
@@ -775,11 +784,9 @@ where
                                 \<or> bound (tcb_yield_to tcb)
                                 \<or> tcb_state tcb \<noteq> Inactive \<and> tcb_state tcb \<noteq> IdleThreadState)"
 | "live0 (Endpoint ep)       = (ep \<noteq> IdleEP)"
-| "live0 (SchedContext sc n) = (bound (sc_tcb sc) \<or> bound (sc_yield_from sc) \<or> bound (sc_ntfn sc)
-                                \<or> (sc_replies sc \<noteq> []))"
+| "live0 (SchedContext sc n) = live_sc sc"
 | "live0 (Reply reply)       = (bound (reply_tcb reply) \<or> bound (reply_sc reply))"
-| "live0 (Notification ntfn) = (bound (ntfn_bound_tcb ntfn) \<or> bound (ntfn_sc ntfn)
-                                \<or> (\<exists>ts. ntfn_obj ntfn = WaitingNtfn ts))"
+| "live0 (Notification ntfn) = live_ntfn ntfn"
 | "live0 (ArchObj ao)        = False"
 
 definition live :: "kernel_object \<Rightarrow> bool"
@@ -792,11 +799,6 @@ where
    | SchedContext sc n => live0 ko
    | Reply reply       => live0 ko
    | ArchObj ao        => hyp_live ko"
-
-definition live_sc :: "sched_context \<Rightarrow> bool"
-where
-  "live_sc sc \<equiv> (bound (sc_tcb sc) \<or> bound (sc_yield_from sc) \<or> bound (sc_ntfn sc)
-                                \<or> (sc_replies sc \<noteq> []))"
 
 lemma a_type_arch_live:
   "a_type ko = AArch tp \<Longrightarrow> \<not> live0 ko"
@@ -1562,8 +1564,8 @@ lemma refs_of_live:
      apply (case_tac "tcb_state tcb_ext", simp_all add: live_def)
     apply (fastforce simp: get_refs_def)+
   apply (rename_tac notification)
-  apply (case_tac "ntfn_obj notification", simp_all)
-   apply (fastforce simp: get_refs_def)+
+  apply (case_tac "ntfn_obj notification", simp_all add: live_ntfn_def)
+   apply (fastforce simp: get_refs_def live_sc_def)+
   done
 
 lemma hyp_refs_of_live:

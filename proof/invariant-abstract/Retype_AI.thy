@@ -1722,7 +1722,7 @@ lemma iflive_s: "if_live_then_nonz_cap s" by (rule valid_pspaceE [OF vp])
 
 lemma default_object_not_live: "\<not> live (default_object ty dev us)"
   apply (cases ty, simp_all add: tyunt default_object_def default_tcb_not_live default_arch_object_not_live)
-  apply (simp add: live_def default_ep_def default_notification_def
+  apply (simp add: live_def live_ntfn_def live_sc_def default_ep_def default_notification_def
                    default_ntfn_def default_sched_context_def default_reply_def)+
   done
 

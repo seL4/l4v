@@ -316,59 +316,15 @@ lemma reply_remove_[wp]:
 
 text {* invs *} (* most of these below will probably require a bunch more of lemmas *)
 
-lemma set_sched_context_invs[wp]:
-  "\<lbrace> invs and sc_at sc_ptr \<rbrace>
-      update_sched_context sc_ptr sc \<lbrace> \<lambda>_. invs \<rbrace>"  (* need to tweak the precondition *)
-  apply (wpsimp simp: set_object_def update_sched_context_def)
-  sorry
+crunches update_sched_context
+  for valid_irq_states[wp]: valid_irq_states
 
-lemma set_reply_invs[wp]:
-  "\<lbrace> invs and reply_at rptr \<rbrace>
-      set_reply rptr reply \<lbrace> \<lambda>_. invs \<rbrace>"
-  apply (simp add: set_simple_ko_def)
-  sorry
-
-lemma reply_unbind_tcb_invs:
-  "\<lbrace> invs and sc_at sc_ptr and reply_at rptr \<rbrace>
-      reply_unlink_tcb rptr \<lbrace> \<lambda>_. invs \<rbrace>"
-  apply (wpsimp simp: reply_unlink_tcb_def)
-  sorry
-
-lemma reply_unbind_sc_invs:
-  "\<lbrace> invs and sc_at sc_ptr and reply_at rptr \<rbrace>
-      reply_unlink_sc sc_ptr rptr \<lbrace> \<lambda>_. invs \<rbrace>"
-  apply (wpsimp simp: reply_unlink_sc_def)
-  sorry
-
-lemma sched_context_unbind_tcb_invs:
-  "\<lbrace> invs and sc_at sc_ptr \<rbrace>
-      sched_context_unbind_tcb sc_ptr \<lbrace> \<lambda>_. invs \<rbrace>"
-  apply (simp add: sched_context_unbind_tcb_def)
-  sorry
-
-lemma sched_context_donate_invs:
-  "\<lbrace> invs and sc_at sc_ptr and tcb_at tptr \<rbrace>
-      sched_context_donate sc_ptr tptr \<lbrace> \<lambda>_. invs \<rbrace>"
-  apply (simp add: sched_context_donate_def)
-  sorry
-
-lemma reply_unbind_caller_invs[wp]:
-  "\<lbrace> invs and tcb_at tptr and reply_at rptr \<rbrace>
-      reply_unbind_caller tptr tptr \<lbrace> \<lambda>_. invs \<rbrace>"
-  apply (wpsimp simp: reply_unbind_caller_def)
-  sorry
-
-lemma reply_remove_invs:
-  "\<lbrace> invs and reply_at r \<rbrace> reply_remove r \<lbrace> \<lambda>_. invs \<rbrace>"
-  apply (wpsimp simp: reply_remove_def | wpc)+
-  sorry
-
-
-lemma reply_push_invs:
-  "\<lbrace> invs and reply_at r and tcb_at caller and tcb_at callee\<rbrace>
-      reply_push caller callee rptr b \<lbrace> \<lambda>_. invs \<rbrace>"
-  apply (wpsimp simp: reply_push_def)
-  sorry
+lemma state_hyp_refs_of_sc_update: "\<And>s sc val n. typ_at (ASchedContext n) sc s \<Longrightarrow>
+       state_hyp_refs_of (s\<lparr>kheap := kheap s(sc \<mapsto> SchedContext val n)\<rparr>) = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def
+                 split: kernel_object.splits)
+  done
 
 (*
 crunch typ_at[wp]: postpone, sched_context_bind_tcb "\<lambda>(s::det_ext state). P (typ_at T p s)"
