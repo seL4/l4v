@@ -1291,4 +1291,18 @@ lemma ccorres_split_nothrow_case_sum:
 
 end
 
+text \<open>@{method ccorres_rewrite} support for discarding everything after @{term creturn}.\<close>
+
+lemma never_continues_creturn [C_simp_throws]:
+  "never_continues \<Gamma> (creturn rtu xfu v)"
+  by (auto simp: never_continues_def creturn_def elim: exec_elim_cases)
+
+lemma
+  "ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H
+      (c1 ;; (c2 ;; c3 ;; (creturn rtu xfu v ;; c4 ;; c5) ;; c6 ;; c7))"
+  apply ccorres_rewrite
+  apply (match conclusion in "ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H
+                               (c1 ;; (c2 ;; c3 ;; creturn rtu xfu v))" \<Rightarrow> \<open>-\<close>)
+  oops
+
 end
