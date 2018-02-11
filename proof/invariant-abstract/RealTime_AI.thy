@@ -76,6 +76,7 @@ crunches set_sc_obj_ref,get_sc_obj_ref
  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
+ and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
  and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
  and valid_global_objs[wp]: "valid_global_objs"
  and valid_global_vspace_mappings[wp]: "valid_global_vspace_mappings"
@@ -96,10 +97,12 @@ crunches set_sc_obj_ref,get_sc_obj_ref
  and pspace_respects_device_region[wp]: "pspace_respects_device_region"
  and cur_tcb[wp]: "cur_tcb"
  and valid_ioc[wp]: "valid_ioc"
+ and it[wp]: "\<lambda>s. P (idle_thread s)"
  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
  and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
  and valid_irq_handlers[wp]: "valid_irq_handlers"
  and valid_mdb[wp]: valid_mdb
+ and valid_idle[wp]: valid_idle
  and zombies[wp]: zombies_final
   (simp: Let_def wp: hoare_drop_imps)
 
@@ -132,25 +135,6 @@ lemma set_sc_yf_iflive[wp]:
   apply (clarsimp simp: if_live_then_nonz_cap_def, drule_tac x=t in spec)
   apply (fastforce simp: obj_at_def live_def live_sc_def)
   done
-
-lemma set_sc_ntfn_valid_idle [wp]:
-  "\<lbrace>valid_idle and
-     (\<lambda>s. t = idle_thread s \<longrightarrow> \<not> bound ntfn)\<rbrace>
-   set_sc_obj_ref sc_ntfn_update t ntfn
-   \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def set_object_def wp: get_sched_context_wp)
-
-lemma set_sc_tcb_valid_idle [wp]:
-  "\<lbrace>valid_idle and (\<lambda>s. t \<noteq> idle_thread s)\<rbrace>
-   set_sc_obj_ref sc_tcb_update t sc
-   \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def set_object_def wp: get_sched_context_wp)
-
-lemma set_sc_yf_valid_idle [wp]:
-  "\<lbrace>valid_idle and (\<lambda>s. t \<noteq> idle_thread s)\<rbrace>
-   set_sc_obj_ref sc_yield_from_update t sc
-   \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def set_object_def wp: get_sched_context_wp)
 
 lemma set_sc_ntfn_valid_objs[wp]:
   "\<lbrace>valid_objs and valid_bound_ntfn ntfn\<rbrace> set_sc_obj_ref sc_ntfn_update t ntfn \<lbrace>\<lambda>_. valid_objs\<rbrace>"
