@@ -3904,7 +3904,7 @@ lemma reply_unlink_sc_valid_list[wp]:
 
 lemma sched_context_donate_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> sched_context_donate sc_ptr tcb_ptr\<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (valid_list_unfold simp: sched_context_donate_def set_tcb_obj_ref_def)
+  by (valid_list_unfold simp: sched_context_donate_def set_tcb_obj_ref_def set_sc_obj_ref_def get_sc_obj_ref_def)
 
 lemma reply_remove_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> reply_remove r \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -3943,7 +3943,7 @@ lemma sched_context_clear_replies_valid_list[wp]:
 
 lemma sched_context_unbind_ntfn_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> sched_context_unbind_ntfn r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (valid_list_unfold simp: sched_context_unbind_ntfn_def)
+  by (valid_list_unfold simp: sched_context_unbind_ntfn_def set_sc_obj_ref_def get_sc_obj_ref_def)
 
 lemma sched_context_maybe_unbind_ntfn_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> sched_context_maybe_unbind_ntfn r \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -3955,7 +3955,7 @@ lemma set_consumed_valid_list[wp]:
 
 lemma complete_yield_to_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> complete_yield_to r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (valid_list_unfold simp: complete_yield_to_def)
+  by (valid_list_unfold simp: complete_yield_to_def set_sc_obj_ref_def)
 
 lemma sched_context_unbind_yield_from_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> sched_context_unbind_yield_from r \<lbrace>\<lambda>_.valid_list\<rbrace>"

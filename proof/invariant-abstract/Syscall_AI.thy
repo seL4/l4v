@@ -1394,7 +1394,7 @@ lemma sc_unbind_ntfn_invs[wp]:
 (*RT FIXME: move *)
 lemma sc_maybe_unbind_ntfn_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_maybe_unbind_ntfn ptr \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (wpsimp simp: sched_context_maybe_unbind_ntfn_def wp: get_sc_obj_ref_inv)
+  by (wpsimp simp: sched_context_maybe_unbind_ntfn_def get_sk_obj_ref_def wp: get_sc_obj_ref_inv)
 
 (*RT FIXME: move *)
 lemma reply_clear_tcb_invs[wp]:

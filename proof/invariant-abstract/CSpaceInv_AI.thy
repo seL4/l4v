@@ -70,7 +70,7 @@ lemma get_tcb_obj_ref_inv[simp]:
   apply (wp, simp)
   done
 
-lemma get_sc_obj_ref_inv[simp]:
+lemma get_sk_obj_ref_inv[simp]:
   "\<lbrace>P\<rbrace> get_sk_obj_ref f update t \<lbrace>\<lambda>r. P\<rbrace>"
   apply (simp add: get_sk_obj_ref_def get_simple_ko_def get_object_def)
   apply wpsimp

@@ -283,6 +283,26 @@ lemma set_tcb_obj_ref_reply_at_inv[wp]:
   apply (clarsimp simp: obj_at_def is_reply is_tcb get_tcb_def)
   done
 
+lemma set_sc_obj_ref_ep_at_inv[wp]:
+  "\<lbrace> ep_at ep \<rbrace> set_sc_obj_ref f t ntfn \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
+  by (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
+                   set_object_def get_sched_context_def obj_at_def is_ep)
+
+lemma set_sc_obj_ref_ntfn_at_inv[wp]:
+  "\<lbrace> ntfn_at ep \<rbrace> set_sc_obj_ref f t ntfn \<lbrace> \<lambda>rv. ntfn_at ep \<rbrace>"
+  by (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
+                   set_object_def get_sched_context_def obj_at_def is_ntfn)
+
+lemma set_sc_obj_ref_sc_at_inv[wp]:
+  "\<lbrace> sc_at ep \<rbrace> set_sc_obj_ref f t ntfn \<lbrace> \<lambda>rv. sc_at ep \<rbrace>"
+  by (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
+                   set_object_def get_sched_context_def obj_at_def is_sc_obj_def)
+
+lemma set_sc_obj_ref_reply_at_inv[wp]:
+  "\<lbrace> reply_at ep \<rbrace> set_sc_obj_ref f t ntfn \<lbrace> \<lambda>rv. reply_at ep \<rbrace>"
+  by (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
+                   set_object_def get_sched_context_def obj_at_def is_reply)
+
 lemma prefix_to_eq:
   "\<lbrakk> take n xs \<le> ys; length xs = length ys; drop n xs = drop n ys \<rbrakk>
      \<Longrightarrow> xs = ys"
@@ -1185,6 +1205,10 @@ lemma
   apply (safe; erule rsubst[where P=P], rule cte_wp_caps_of_lift)
   by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def dest!: get_tcb_SomeD)
 
+lemma set_sc_obj_ref_caps_of_state [wp]:
+  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_sc_obj_ref f ptr val \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
+  by (wpsimp simp: set_sc_obj_ref_def get_sched_context_def get_object_def set_object_def)
+
 interpretation
   set_simple_ko: non_aobj_non_cap_non_mem_op "set_simple_ko c p ep" +
   sts: non_aobj_non_cap_non_mem_op "set_thread_state p st" +
@@ -1193,10 +1217,10 @@ interpretation
   thread_set: non_aobj_non_mem_op "thread_set f p" +
   set_tcb_sched_context: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_sched_context_update p sc" +
   update_sched_context: non_aobj_non_cap_non_mem_op "update_sched_context p sc'" +
-  set_yield_to: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_yield_to_update p sc" +
+  set_tcb_yt: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_yield_to_update p sc" +
   set_cap: non_aobj_non_mem_op "set_cap cap p'"
   apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
-  unfolding set_simple_ko_def set_thread_state_def
+  unfolding set_simple_ko_def set_thread_state_def set_sc_obj_ref_def
             set_tcb_obj_ref_def thread_set_def set_cap_def[simplified split_def]
             as_user_def set_mrs_def update_sched_context_def set_sched_context_def
   apply -
@@ -1207,6 +1231,19 @@ interpretation
                split: Structures_A.kernel_object.splits option.splits)+)
 
 lemmas set_cap_arch[wp] = set_cap.arch_state
+
+interpretation
+  set_sc_tcb: non_aobj_non_cap_non_mem_op "set_sc_obj_ref sc_tcb_update p sco" +
+  set_sc_ntfn: non_aobj_non_cap_non_mem_op "set_sc_obj_ref sc_ntfn_update p sco" +
+  set_sc_yf: non_aobj_non_cap_non_mem_op "set_sc_obj_ref sc_yield_from_update p sco"
+  apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
+  unfolding set_simple_ko_def set_thread_state_def set_sc_obj_ref_def
+            set_tcb_obj_ref_def thread_set_def set_cap_def[simplified split_def]
+            as_user_def set_mrs_def update_sched_context_def get_sched_context_def
+  apply -
+  apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp split del: if_split)+\<close>)
+  by ((fastforce simp: obj_at_def[abs_def] a_type_def
+               split: Structures_A.kernel_object.splits option.splits)+)
 
 interpretation
   store_word_offs: non_aobj_non_cap_op "store_word_offs a b c"
@@ -1366,6 +1403,8 @@ lemma set_thread_state_valid_irq_states[wp]:
   done
 
 crunch valid_irq_states[wp]: set_tcb_obj_ref "valid_irq_states"
+  (wp: crunch_wps simp: crunch_simps)
+crunch valid_irq_states[wp]: set_sc_obj_ref "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 crunch valid_irq_states[wp]: set_sched_context,set_reply "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
