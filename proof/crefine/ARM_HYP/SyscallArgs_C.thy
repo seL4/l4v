@@ -868,6 +868,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
               apply csymbr
               apply csymbr
               apply csymbr
+              apply csymbr
               apply (rule ccorres_Guard)
               apply simp
               apply (rule ccorres_assert)+
@@ -917,6 +918,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
                                       Kernel_C.VMKernelOnly_def
                                 dest: word_less_cases)
                apply (rule ccorres_rhs_assoc)+
+               apply csymbr
                apply csymbr
                apply csymbr
                apply csymbr

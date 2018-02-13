@@ -1038,8 +1038,9 @@ lemma switchToThread_fp_ccorres:
    apply (simp add: getThreadVSpaceRoot_def locateSlot_conv getSlotCap_def
                del: Collect_const cong: call_ignore_cong)
    apply (simp only: )
-   apply (rule ccorres_symb_exec_r, rule_tac xf'="hw_asid_'" in ccorres_abstract,
-          ceqv, rename_tac "hw_asid")
+   apply (rule ccorres_rhs_assoc2)
+   apply (rule ccorres_symb_exec_r, rule_tac xf'="ret__unsigned_'" in ccorres_abstract,
+          ceqv, rename_tac "hw_asid_ret")
      apply (rule ccorres_getCTE, rename_tac cte)
      apply (rule_tac P="isValidVTableRoot (cteCap cte)
                         \<and> capPDBasePtr (capCap (cteCap cte)) = pd" in ccorres_gen_asm)
@@ -2205,8 +2206,9 @@ proof -
        apply (simp del: Collect_const cong: call_ignore_cong)
        apply (simp only: )
        apply (csymbr, csymbr)
+       apply (rule ccorres_rhs_assoc2)
        apply (rule_tac r'="\<lambda>ft ft'. (ft' = scast seL4_Fault_NullFault) = (ft = None)"
-                 and xf'="fault_type_'" in ccorres_split_nothrow)
+                 and xf'="ret__unsigned_'" in ccorres_split_nothrow)
            apply (rule_tac P="cur_tcb' and (\<lambda>s. curThread = ksCurThread s)"
                      in ccorres_from_vcg[where P'=UNIV])
            apply (rule allI, rule conseqPre, vcg)
@@ -2216,6 +2218,7 @@ proof -
            apply (rule rev_bexI, erule threadGet_eq)
            apply (clarsimp simp: seL4_Fault_lift_def Let_def split: if_split_asm)
           apply ceqv
+         apply csymbr
          apply csymbr
          apply (simp del: Collect_const cong: call_ignore_cong)
        apply (rule ccorres_Cond_rhs_Seq)
@@ -2485,6 +2488,7 @@ proof -
                         apply (rule fastpath_dequeue_ccorres)
                         apply simp
                        apply ceqv
+                      apply csymbr
                       apply csymbr
                       apply (rule_tac xf'=xfdc and r'=dc in ccorres_split_nothrow)
                           apply (rule_tac P="cur_tcb' and (\<lambda>s. ksCurThread s = curThread)"
@@ -2956,8 +2960,9 @@ lemma fastpath_reply_recv_ccorres:
        apply (simp del: Collect_const cong: call_ignore_cong)
        apply (simp only:)
        apply (csymbr, csymbr)
+       apply (rule ccorres_rhs_assoc2)
        apply (rule_tac r'="\<lambda>ft ft'. (ft' = scast seL4_Fault_NullFault) = (ft = None)"
-                 and xf'="fault_type_'" in ccorres_split_nothrow)
+                 and xf'="ret__unsigned_'" in ccorres_split_nothrow)
            apply (rule_tac P="cur_tcb' and (\<lambda>s. curThread = ksCurThread s)"
                      in ccorres_from_vcg[where P'=UNIV])
            apply (rule allI, rule conseqPre, vcg)
@@ -2967,6 +2972,7 @@ lemma fastpath_reply_recv_ccorres:
            apply (rule rev_bexI, erule threadGet_eq)
            apply (clarsimp simp: seL4_Fault_lift_def Let_def split: if_split_asm)
           apply ceqv
+         apply csymbr
          apply csymbr
        apply (simp only:)
        apply (rule ccorres_Cond_rhs_Seq)
@@ -3118,7 +3124,7 @@ lemma fastpath_reply_recv_ccorres:
                apply (simp del: Collect_const cong: call_ignore_cong)
                apply (csymbr, csymbr)
                apply (rule_tac r'="\<lambda>ft ft'. (ft' = scast seL4_Fault_NullFault) = (ft = None)"
-                        and xf'="fault_type_'" in ccorres_split_nothrow)
+                        and xf'="ret__unsigned_'" in ccorres_split_nothrow)
                    apply (rule threadGet_vcg_corres)
                    apply (rule allI, rule conseqPre, vcg)
                    apply (clarsimp simp: obj_at_tcbs_of)
@@ -3126,6 +3132,7 @@ lemma fastpath_reply_recv_ccorres:
                                          ccap_relation_reply_helper)
                    apply (clarsimp simp: seL4_Fault_lift_def Let_def split: if_split_asm)
                   apply ceqv
+                 apply csymbr
                  apply (simp del: Collect_const not_None_eq cong: call_ignore_cong)
                  apply (rule ccorres_Cond_rhs_Seq)
                   apply (simp del: Collect_const not_None_eq)

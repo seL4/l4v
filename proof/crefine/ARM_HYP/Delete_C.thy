@@ -451,7 +451,7 @@ lemma reduceZombie_ccorres1:
        apply fastforce
       apply ceqv
      apply (rule ccorres_move_c_guard_cte)
-     apply (rule_tac xf'=type_'
+     apply (rule_tac xf'=ret__unsigned_'
                  and val="case_zombie_type ZombieTCB_C of_nat (capZombieType cap)"
                  and R="cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot and invs'"
               in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
@@ -461,6 +461,7 @@ lemma reduceZombie_ccorres1:
          apply simp
         apply clarsimp
        apply ceqv
+      apply csymbr
       apply (simp add: reduceZombie_def del: Collect_const)
       apply (simp only: cutMon_walk_if)
       apply (rule ccorres_if_lhs)

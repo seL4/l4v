@@ -866,6 +866,7 @@ lemma handleInvocation_ccorres:
                                 ccorres_cond_iffs ts_Restart_case_helper'
                            del: Collect_const cong: bind_cong)
                apply (rule ccorres_rhs_assoc2,
+                      rule ccorres_rhs_assoc2,
                       rule_tac xf'="length___unsigned_long_'"
                             and r'="\<lambda>rv rv'. unat rv' = length rv"
                             in ccorres_split_nothrow)
@@ -2097,6 +2098,8 @@ lemma  ccorres_vgicMaintenance:
           apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift)+
          apply vcg
         apply ccorres_rewrite
+        apply (rule ccorres_rhs_assoc)
+        apply csymbr
         apply csymbr
         apply simp
         apply (subgoal_tac "of_nat (word_ctz eisr0) \<noteq> (- 1 :: 32 signed word)")

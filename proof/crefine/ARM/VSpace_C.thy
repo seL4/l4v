@@ -1513,6 +1513,7 @@ lemma setVMRoot_ccorres:
      apply csymbr
      apply csymbr
      apply csymbr
+     apply csymbr
      apply (simp add: liftE_bindE)
      apply (simp add: bindE_bind_linearise bind_assoc liftE_def)
 

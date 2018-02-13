@@ -842,6 +842,7 @@ lemma finaliseCap_True_cases_ccorres:
         apply (simp add: return_def, vcg)
        apply (rule ceqv_refl)
       apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
+             rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
              rule ccorres_split_throws)
        apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
        apply (rule allI, rule conseqPre, vcg)
@@ -876,6 +877,7 @@ lemma finaliseCap_True_cases_ccorres:
         apply (rule ccorres_return_Skip')
        apply (rule ceqv_refl)
       apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
+             rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
              rule ccorres_split_throws)
        apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
        apply (rule allI, rule conseqPre, vcg)

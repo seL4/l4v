@@ -2806,7 +2806,8 @@ lemma checkFreeIndex_ccorres:
   (liftE $ constOnFailure False (doE y \<leftarrow> ensureNoChildren slot; returnOk True odE))
   (\<acute>status :== CALL ensureNoChildren(cte_Ptr slot);;
   (Cond \<lbrace>\<acute>status \<noteq> scast EXCEPTION_NONE\<rbrace>
-    (\<acute>freeIndex :== CALL cap_untyped_cap_get_capFreeIndex(cap)
+    (\<acute>ret__unsigned :== CALL cap_untyped_cap_get_capFreeIndex(cap)
+        ;; \<acute>freeIndex :== \<acute>ret__unsigned
         ;; \<acute>reset :== scast false)
     (\<acute>freeIndex :== 0
         ;; \<acute>reset :== scast true)))"
@@ -3327,7 +3328,7 @@ shows
                         apply (rename_tac reset' fi', rule_tac P="reset_fi_tup = (fi', reset')"
                             in ccorres_gen_asm2)
                         apply csymbr
-                        apply csymbr+
+                        apply csymbr+ (* slow *)
                         apply (rule ccorres_Guard_Seq)+
                         apply csymbr
                         apply csymbr
@@ -3347,6 +3348,7 @@ shows
                           apply (case_tac reset; clarsimp simp: syscall_error_rel_def
                             ccap_relation_untyped_CL_simps shiftL_nat
                             syscall_error_to_H_cases valid_untyped_capBlockSize_misc)
+                         apply csymbr
                          apply csymbr
                          apply csymbr
                          apply (rule ccorres_symb_exec_r)

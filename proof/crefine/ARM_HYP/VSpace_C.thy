@@ -2250,6 +2250,7 @@ lemma setVMRoot_ccorres:
      apply csymbr
      apply csymbr
      apply csymbr
+     apply csymbr
      apply (simp add: liftE_bindE)
      apply (simp add: bindE_bind_linearise bind_assoc liftE_def)
      apply (rule_tac f'=lookup_failure_rel and r'="\<lambda>pdeptrc pdeptr. pdeptr = pde_Ptr pdeptrc"

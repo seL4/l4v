@@ -56,6 +56,7 @@ lemma lookupCap_ccorres':
      apply (rule ccorres_rhs_assoc)+
      apply csymbr
      apply csymbr -- "call cap_null_cap_new_'proc"
+     apply csymbr
      apply (rule ccorres_return_C_errorE, simp+)[1]
     apply vcg
    apply (wp | simp)+

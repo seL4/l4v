@@ -764,6 +764,7 @@ lemma decodeARMPageTableInvocation_ccorres:
          apply csymbr
          apply csymbr
          apply csymbr
+         apply csymbr
          apply (simp add: if_to_top_of_bind del: Collect_const)
          apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
             apply vcg
@@ -1076,6 +1077,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
    apply (rule ccorres_Cond_rhs)
     apply (simp del: Collect_const)
     apply (rule ccorres_rhs_assoc)+
+    apply (rule ccorres_rhs_assoc2)
     apply (rule ccorres_symb_exec_r)
       apply (rule ccorres_Guard_Seq)+
       apply csymbr
@@ -1087,6 +1089,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
       apply (simp add:ARMSuperSectionBits_def word_0_sle_from_less
          ARMSectionBits_def)
       apply (ccorres_remove_UNIV_guard)
+      apply csymbr
       apply (rule ccorres_rhs_assoc2,rule ccorres_splitE)
           apply (simp only:whileAnno_def)
           apply (ccorres_remove_UNIV_guard)
@@ -1267,6 +1270,7 @@ lemma createSafeMappingEntries_PTE_ccorres:
     apply csymbr
     apply csymbr
     apply csymbr
+    apply (rule ccorres_rhs_assoc2)
     apply (rule ccorres_symb_exec_r)
       apply (simp only: lookupError_injection)
       apply (ctac add: ccorres_injection_handler_csum1
@@ -1331,6 +1335,7 @@ lemma createSafeMappingEntries_PTE_ccorres:
     apply csymbr
     apply csymbr
 
+    apply (rule ccorres_rhs_assoc2)
     apply (rule ccorres_symb_exec_r)
       apply (ctac add: ccorres_injection_handler_csum1
                              [OF lookupPTSlot_ccorres])
@@ -3099,6 +3104,7 @@ lemma decodeARMFrameInvocation_ccorres:
            apply csymbr
            apply csymbr
            apply csymbr
+           apply csymbr
            apply (simp add: createSafeMappingEntries_fold
                       cong: if_cong del: Collect_const)
            apply (simp add: lookupError_injection invocationCatch_use_injection_handler
@@ -3556,6 +3562,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
          apply (simp add:injection_handler_throwError)
          apply (rule syscall_error_throwError_ccorres_n)
          apply (simp add:syscall_error_to_H_cases)
+        apply csymbr
         apply csymbr
         apply csymbr
         apply csymbr
@@ -4225,6 +4232,7 @@ lemma Arch_decodeInvocation_ccorres:
           apply (simp add: throwError_bind invocationCatch_def)
           apply (rule syscall_error_throwError_ccorres_n)
           apply (simp add: syscall_error_to_H_cases)
+         apply csymbr
          apply csymbr
          apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
                 rule ccorres_rhs_assoc2)
