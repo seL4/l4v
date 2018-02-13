@@ -57,7 +57,7 @@ where
 definition
   arch_post_modify_registers :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'a::state_ext) s_monad"
 where
-  "arch_post_modify_registers cur t \<equiv> when (t \<noteq> cur) $ as_user t $ set_register ErrorRegister 0"
+  "arch_post_modify_registers cur t \<equiv> when (t \<noteq> cur) $ as_user t $ setRegister ErrorRegister 0"
 
 end
 end

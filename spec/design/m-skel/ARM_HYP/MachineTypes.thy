@@ -27,7 +27,7 @@ text {*
 
 section "Types"
 
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM_HYP decls_only
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM_HYP decls_only NOT UserContext UserMonad getRegister setRegister newContext
 (*<*)
 
 type_synonym machine_word_len = 32
@@ -48,7 +48,7 @@ context Arch begin global_naming ARM_HYP
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM_HYP instanceproofs
 (*>*)
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM_HYP bodies_only
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM_HYP bodies_only NOT getRegister setRegister newContext
 
 section "Machine State"
 

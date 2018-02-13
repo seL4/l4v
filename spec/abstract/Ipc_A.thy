@@ -32,7 +32,7 @@ definition
   get_message_info :: "obj_ref \<Rightarrow> (message_info,'z::state_ext) s_monad"
 where
   "get_message_info thread \<equiv> do
-     x \<leftarrow> as_user thread $ get_register msg_info_register;
+     x \<leftarrow> as_user thread $ getRegister msg_info_register;
      return $ data_to_message_info x
    od"
 
@@ -173,14 +173,14 @@ where
 | "handle_fault_reply (UnknownSyscallException n) thread label msg = do
      t \<leftarrow> arch_get_sanitise_register_info thread;
      as_user thread $ zipWithM_x
-         (\<lambda>r v. set_register r $ sanitise_register t r v)
+         (\<lambda>r v. setRegister r $ sanitise_register t r v)
          syscallMessage msg;
      return (label = 0)
    od"
 | "handle_fault_reply (UserException exception code) thread label msg = do
      t \<leftarrow> arch_get_sanitise_register_info thread;
      as_user thread $ zipWithM_x
-         (\<lambda>r v. set_register r $ sanitise_register t r v)
+         (\<lambda>r v. setRegister r $ sanitise_register t r v)
          exceptionMessage msg;
      return (label = 0)
    od"
@@ -200,7 +200,7 @@ where
     (label, msg) \<leftarrow> make_fault_msg f sender;
     sent \<leftarrow> set_mrs receiver buf msg;
     set_message_info receiver $ MI sent 0 0 label;
-    as_user receiver $ set_register badge_register badge
+    as_user receiver $ setRegister badge_register badge
   od"
 
 section {* Synchronous Message Transfers *}
@@ -222,7 +222,7 @@ where
     mi' \<leftarrow> transfer_caps mi caps endpoint receiver rbuf;
     set_message_info receiver $ MI mrs_transferred (mi_extra_caps mi')
                                    (mi_caps_unwrapped mi') (mi_label mi);
-    as_user receiver $ set_register badge_register badge
+    as_user receiver $ setRegister badge_register badge
   od"
 
 text {* Transfer a message either involving a fault or not. *}
@@ -281,7 +281,7 @@ where
  "reply_from_kernel thread x \<equiv> do
     (label, msg) \<leftarrow> return x;
     buf \<leftarrow> lookup_ipc_buffer True thread;
-    as_user thread $ set_register badge_register 0;
+    as_user thread $ setRegister badge_register 0;
     len \<leftarrow> set_mrs thread buf msg;
     set_message_info thread $ MI len 0 0 label
   od"
@@ -363,7 +363,7 @@ where
      ntfn \<leftarrow> get_notification ntfnptr;
      case ntfn_obj ntfn of
        ActiveNtfn badge \<Rightarrow> do
-           as_user tcb $ set_register badge_register badge;
+           as_user tcb $ setRegister badge_register badge;
            set_notification ntfnptr $ ntfn_set_obj ntfn IdleNtfn
          od
      | _ \<Rightarrow> fail
@@ -372,7 +372,7 @@ where
 definition
   do_nbrecv_failed_transfer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "do_nbrecv_failed_transfer thread = do as_user thread $ set_register badge_register 0; return () od"
+  "do_nbrecv_failed_transfer thread = do as_user thread $ setRegister badge_register 0; return () od"
 
 definition
   receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
@@ -442,7 +442,7 @@ where
          ntfn_obj = (case rest of [] \<Rightarrow> IdleNtfn | _ \<Rightarrow> WaitingNtfn rest),
          ntfn_bound_tcb = bound_tcb \<rparr>;
      set_thread_state dest Running;
-     as_user dest $ set_register badge_register badge;
+     as_user dest $ setRegister badge_register badge;
      do_extended_op (possible_switch_to dest)
 
    od"
@@ -471,7 +471,7 @@ where
                   then do
                       cancel_ipc tcb;
                       set_thread_state tcb Running;
-                      as_user tcb $ set_register badge_register badge;
+                      as_user tcb $ setRegister badge_register badge;
                       do_extended_op (possible_switch_to tcb)
                     od
                   else set_notification ntfnptr $ ntfn_set_obj ntfn (ActiveNtfn badge)
@@ -512,7 +512,7 @@ where
                         od
                    | False \<Rightarrow> do_nbrecv_failed_transfer thread)
        | ActiveNtfn badge \<Rightarrow> do
-                     as_user thread $ set_register badge_register badge;
+                     as_user thread $ setRegister badge_register badge;
                      set_notification ntfnptr $ ntfn_set_obj ntfn IdleNtfn
                    od
     od"

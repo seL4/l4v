@@ -22,6 +22,7 @@ context begin interpretation Arch .
 
 requalify_types
   user_context
+  user_monad
   register
   data
   obj_ref
@@ -56,23 +57,10 @@ requalify_consts
   data_offset_to_nat
   combine_ntfn_badges
 
-
 end
 
-
-type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"
-
-definition
-  get_register :: "register \<Rightarrow> data user_monad" where
-  "get_register r \<equiv> gets (\<lambda>uc. uc r)"
-
-definition
-  set_registers :: "(register \<Rightarrow> data) \<Rightarrow> unit user_monad" where
-  "set_registers \<equiv> put"
-
-definition
-  set_register :: "register \<Rightarrow> data \<Rightarrow> unit user_monad" where
-  "set_register r v \<equiv> modify (\<lambda>uc. uc (r := v))"
-
+(* Needs to be done here after plain type names are exported *)
+translations
+  (type) "'a user_monad" <= (type) "user_context \<Rightarrow> ('a \<times> user_context) set \<times> bool"
 
 end

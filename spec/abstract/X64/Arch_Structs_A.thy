@@ -401,9 +401,9 @@ section "Arch-specific TCB"
 
 qualify X64_A (in Arch)
 
-(* arch specific part of tcb: this must have a field for user context *)
+text \<open> Arch-specific part of a TCB: this must have at least a field for user context. \<close>
 record arch_tcb =
-  tcb_context       :: user_context
+  tcb_context :: user_context
 
 end_qualify
 
@@ -413,7 +413,9 @@ definition
   default_arch_tcb :: arch_tcb where
   "default_arch_tcb \<equiv> \<lparr>tcb_context = new_context\<rparr>"
 
-text {* accesors for @{text "tcb_context"} inside @{text "arch_tcb"} *}
+text \<open> Accessors for @{text "tcb_context"} inside @{text "arch_tcb"}.
+  These are later used to implement @{text as_user}, i.e.\ need to be
+  compatible with @{text user_monad}.\<close>
 definition
   arch_tcb_context_set :: "user_context \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
 where
@@ -423,6 +425,23 @@ definition
   arch_tcb_context_get :: "arch_tcb \<Rightarrow> user_context"
 where
   "arch_tcb_context_get a_tcb \<equiv> tcb_context a_tcb"
+
+(* FIXME: the following means that we break the set/getRegister abstraction
+          and should move some of this into the machine interface *)
+text \<open>
+ Accessors for the user register part of the @{text "arch_tcb"}.
+ (Because @{typ "register \<Rightarrow> machine_word"} may not be equal to @{typ user_context}).
+\<close>
+definition
+  arch_tcb_set_registers :: "(register \<Rightarrow> machine_word) \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
+where
+  "arch_tcb_set_registers regs a_tcb \<equiv>
+    a_tcb \<lparr> tcb_context := UserContext (fpu_state (tcb_context a_tcb)) regs \<rparr>"
+
+definition
+  arch_tcb_get_registers :: "arch_tcb \<Rightarrow> register \<Rightarrow> machine_word"
+where
+  "arch_tcb_get_registers a_tcb \<equiv> user_regs (tcb_context a_tcb)"
 
 end
 

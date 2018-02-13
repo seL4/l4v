@@ -30,7 +30,7 @@ text {*
   references, user pointers, word-based data, cap references, and so
   on. This theory provides an instantiation of these names to concrete
   types for the x64 architecture. Other architectures may have slightly
-  different instantations.
+  different instantiations.
 *}
 type_synonym obj_ref            = machine_word
 type_synonym vspace_ref         = machine_word
@@ -106,11 +106,9 @@ definition
   slot_bits :: nat where
   "slot_bits \<equiv> 5"
 
-type_synonym user_context = "register \<Rightarrow> data"
-
 definition
   new_context :: "user_context" where
-  "new_context \<equiv> (\<lambda>r. 0) aLU initContext"
+  "new_context \<equiv> UserContext (\<lambda>r. 0) ((\<lambda>r. 0)(CS := selCS3, SS := selDS3, FLAGS := 0x202))"
 
 definition
   pptr_base :: "machine_word" where

@@ -22,6 +22,8 @@ This module defines the ARM register set.
 
 > import qualified Data.Word
 > import Data.Array
+> import Data.Helpers
+> import Control.Monad.State(State, gets, modify)
 
 \end{impdetails}
 
@@ -69,4 +71,22 @@ This module defines the ARM register set.
 
 > initContext :: [(Register, Word)]
 > initContext = [(CPSR,0x150)] -- User mode
+
+\subsubsection{User-level Context}
+
+The representation of the user-level context of a thread is an array of machine words, indexed by register name.
+
+> newtype UserContext = UC { fromUC :: Array Register Word }
+>         deriving Show
+
+A new user-level context is a list of values for the machine's registers. Registers are generally initialised to 0, but there may be machine-specific initial values for certain registers.
+
+> newContext :: UserContext
+> newContext = UC $ (funArray $ const 0)//initContext
+
+Functions are provided to get and set a single register.
+
+> getRegister r = gets $ (!r) . fromUC
+
+> setRegister r v = modify $ UC . (//[(r, v)]) . fromUC
 

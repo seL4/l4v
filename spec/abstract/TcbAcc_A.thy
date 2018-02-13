@@ -40,7 +40,7 @@ definition
   set_message_info :: "obj_ref \<Rightarrow> message_info \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_message_info thread info \<equiv>
-     as_user thread $ set_register msg_info_register $
+     as_user thread $ setRegister msg_info_register $
                       message_info_to_data info"
 
 
@@ -49,11 +49,11 @@ definition
   "set_mrs thread buf msgs \<equiv>
    do
      tcb \<leftarrow> gets_the $ get_tcb thread;
-     context \<leftarrow> return (arch_tcb_context_get (tcb_arch tcb));
+     context \<leftarrow> return (arch_tcb_get_registers (tcb_arch tcb));
      new_regs \<leftarrow> return (\<lambda>reg. if reg \<in> set (take (length msgs) msg_registers)
                               then msgs ! (the_index msg_registers reg)
                               else context reg);
-     set_object thread (TCB (tcb \<lparr> tcb_arch := arch_tcb_context_set new_regs (tcb_arch tcb) \<rparr>));
+     set_object thread (TCB (tcb \<lparr> tcb_arch := arch_tcb_set_registers new_regs (tcb_arch tcb) \<rparr>));
      remaining_msgs \<leftarrow> return (drop (length msg_registers) msgs);
      case buf of
      None      \<Rightarrow> return $ nat_to_len (min (length msg_registers) (length msgs))

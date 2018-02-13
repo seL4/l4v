@@ -27,7 +27,7 @@ We use the C preprocessor to select a target architecture. Also, this file makes
 > import Data.Helpers
 > import Foreign.Storable
 
-> import Control.Monad.State(State, gets, modify)
+> import Control.Monad.State(State,liftM)
 
 \end{impdetails}
 
@@ -76,17 +76,11 @@ The types defined here are used for kernel and user pointers. Depending on the a
 > newtype VPtr = VPtr { fromVPtr :: Word }
 >         deriving (Show, Eq, Num, Bits, FiniteBits, Ord, Enum, Bounded)
 
-\subsubsection{User-level Context}
-
-The representation of the user-level context of a thread is an array of machine words, indexed by register name.
-
-> newtype UserContext = UC { fromUC :: Array Register Word }
->         deriving Show
-
 \subsection{Monads}
 
 "UserMonad" is a specialisation of "Control.Monad.State", used to execute functions that have access only to the user-level context of a single thread.
 
+> type UserContext = Arch.UserContext
 > type UserMonad = State UserContext
 
 \subsection{Functions and Constants}
@@ -140,21 +134,20 @@ This list may be empty, though it should contain as many registers as possible. 
 
 \end{description}
 
-\subsubsection{User-level Context}
 
-A new user-level context is a list of values for the machine's registers. Registers are generally initialised to 0, but there may be machine-specific initial values for certain registers.
-
-> newContext :: UserContext
-> newContext = UC $ (funArray $ const 0)//initContext
->     where initContext = map (\(r,v) -> (Register r, Word v)) Arch.initContext
-
-Functions are provided to get and set a single register.
+Functions for getting and setting registers.
 
 > getRegister :: Register -> UserMonad Word
-> getRegister r = gets $ (!r) . fromUC
+> getRegister (Register r) = do
+>    w <- Arch.getRegister r
+>    return (Word w)
 
 > setRegister :: Register -> Word -> UserMonad ()
-> setRegister r v = modify $ UC . (//[(r, v)]) . fromUC
+> setRegister (Register r) (Word v)= Arch.setRegister r v
+
+> newContext :: UserContext
+> newContext = Arch.newContext
+
 
 \subsubsection{Miscellaneous}
 

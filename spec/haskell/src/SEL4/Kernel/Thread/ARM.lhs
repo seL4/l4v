@@ -21,7 +21,7 @@ This module contains the architecture-specific thread switch code for the ARM.
 \begin{impdetails}
 
 > import SEL4.Machine
-> import SEL4.Machine.RegisterSet.ARM
+> import SEL4.Machine.RegisterSet.ARM (Register(..))
 > import SEL4.Model.StateData
 > import SEL4.Object.Structures
 > import SEL4.Object.TCB

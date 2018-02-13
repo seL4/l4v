@@ -16,9 +16,7 @@ chapter "Machine State"
 
 theory State_H
 imports
-  "../../../lib/HaskellLib_H"
   RegisterSet_H
-  "../../machine/X64/MachineOps"
 begin
 context Arch begin global_naming X64_H
 

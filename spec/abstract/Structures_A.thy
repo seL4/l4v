@@ -46,6 +46,8 @@ requalify_consts
   default_arch_tcb
   arch_tcb_context_get
   arch_tcb_context_set
+  arch_tcb_set_registers
+  arch_tcb_get_registers
   cte_level_bits
   tcb_bits
   endpoint_bits

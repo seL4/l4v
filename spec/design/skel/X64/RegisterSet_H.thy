@@ -13,14 +13,14 @@ chapter "Register Set"
 theory RegisterSet_H
 imports
   "../../../lib/HaskellLib_H"
-  "../../machine/X64/MachineTypes"
+  "../../machine/X64/MachineOps"
 begin
 context Arch begin global_naming X64_H
 
 definition
-  newContext :: "register => machine_word"
+  newContext :: "user_context"
 where
- "newContext \<equiv> (K 0) aLU initContext"
+ "newContext \<equiv> UserContext (\<lambda>w. 0) ((K 0) aLU initContext)"
 
 end
 end

@@ -410,6 +410,16 @@ definition
 where
   "arch_tcb_context_get a_tcb \<equiv> tcb_context a_tcb"
 
+definition
+  arch_tcb_set_registers :: "(register \<Rightarrow> machine_word) \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
+where
+  "arch_tcb_set_registers \<equiv> arch_tcb_context_set"
+
+definition
+  arch_tcb_get_registers :: "arch_tcb \<Rightarrow> register \<Rightarrow> machine_word"
+where
+  "arch_tcb_get_registers \<equiv> arch_tcb_context_get"
+
 end
 
 

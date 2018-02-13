@@ -26,7 +26,7 @@ text {*
 
 section "Types"
 
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM decls_only
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM decls_only NOT UserContext UserMonad getRegister setRegister newContext
 (*<*)
 
 section "Machine Words"
@@ -48,7 +48,7 @@ context Arch begin global_naming ARM
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM instanceproofs
 (*>*)
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM bodies_only
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM bodies_only NOT getRegister setRegister newContext
 
 section "Machine State"
 

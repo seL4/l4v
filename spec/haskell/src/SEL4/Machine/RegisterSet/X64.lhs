@@ -16,6 +16,9 @@ This module defines the x86 64-bit register set.
 > import qualified Data.Word
 > import Data.Array
 > import Data.Bits
+> import Data.Helpers
+
+> import Control.Monad.State(State, gets, modify)
 
 \end{impdetails}
 
@@ -70,4 +73,31 @@ This module defines the x86 64-bit register set.
 >               , (SS, selDS3)
 >               , (FLAGS, bit 9 .|. bit 1) -- User mode
 >               ]
+
+\subsubsection{User-level Context}
+
+On X64 the representation of the user-level context of a thread is an array
+of machine words, indexed by register name for the user registers, plus the
+state of the FPU, which we represent as a function from machine word to bytes
+with the convention that all unused entries map to 0. There are no operations
+on the FPU state apart from save and restore at kernel entry and exit.
+
+> data UserContext = UC { fromUC :: Array Register Word,
+>                         fpuState :: Array Word Data.Word.Word8 }
+>   deriving Show
+
+
+A new user-level context is a list of values for the machine's registers.
+Registers are generally initialised to 0, but there may be machine-specific
+initial values for certain registers. The FPU state contains 576 bytes,
+initialised to 0.
+
+> newContext :: UserContext
+> newContext = UC ((funArray $ const 0)//initContext) (funPartialArray (const 0) (0,575))
+
+Functions are provided to get and set a single register.
+
+> getRegister r = gets $ (!r) . fromUC
+
+> setRegister r v = modify (\ uc -> UC (fromUC uc //[(r, v)]) (fpuState uc))
 

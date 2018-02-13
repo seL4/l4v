@@ -28,7 +28,7 @@ text {*
 
 section "Types"
 
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/X64.lhs CONTEXT X64 decls_only
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/X64.lhs CONTEXT X64 decls_only NOT UserContext UserMonad getRegister setRegister newContext
 (*<*)
 
 section "Machine Words"
@@ -50,7 +50,7 @@ context Arch begin global_naming X64
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/X64.lhs CONTEXT X64 instanceproofs
 (*>*)
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/X64.lhs CONTEXT X64 bodies_only
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/X64.lhs CONTEXT X64 bodies_only NOT getRegister setRegister newContext
 
 section "Machine State"
 
