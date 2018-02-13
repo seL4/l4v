@@ -88,8 +88,8 @@ context Arch begin global_naming X64
 
 crunch (bcorres)bcorres[wp]: send_ipc,send_signal,do_reply_transfer,arch_perform_invocation truncate_state
   (simp: gets_the_def swp_def update_object_def
- ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
-         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME )
+ ignore: freeMemory clearMemory loadWord cap_fault_on_failure
+         storeWord lookup_error_on_failure getRestartPC getRegister mapME )
 
 lemma perform_invocation_bcorres[wp]: "bcorres (perform_invocation a b c) (perform_invocation a b c)"
   apply (cases c)
@@ -123,7 +123,9 @@ lemma ensure_safe_mapping_bcorres[wp]: "bcorres (ensure_safe_mapping a) (ensure_
   apply (wp | wpc | simp)+
   done
 
-crunch (bcorres)bcorres[wp]: handle_invocation truncate_state (simp:  Syscall_A.syscall_def Let_def gets_the_def ignore: get_register Syscall_A.syscall cap_fault_on_failure set_register without_preemption const_on_failure)
+crunch (bcorres) bcorres[wp]: handle_invocation truncate_state
+  (simp:  Syscall_A.syscall_def Let_def gets_the_def
+   ignore: Syscall_A.syscall cap_fault_on_failure without_preemption const_on_failure)
 
 crunch (bcorres)bcorres[wp]: receive_ipc,receive_signal,delete_caller_cap truncate_state
 

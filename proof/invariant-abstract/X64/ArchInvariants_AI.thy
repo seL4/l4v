@@ -3165,6 +3165,14 @@ lemma tcb_arch_ref_context_update:
   "tcb_arch_ref (t\<lparr>tcb_arch := (arch_tcb_context_set a (tcb_arch t))\<rparr>) = tcb_arch_ref t"
   by (simp add: tcb_arch_ref_def arch_tcb_context_set_def)
 
+lemma tcb_arch_ref_set_registers:
+  "tcb_arch_ref (tcb\<lparr>tcb_arch := arch_tcb_set_registers regs (tcb_arch tcb)\<rparr>) = tcb_arch_ref tcb"
+  by (simp add: tcb_arch_ref_def arch_tcb_set_registers_def)
+
+lemma valid_arch_arch_tcb_set_registers[simp]:
+  "valid_arch_tcb (arch_tcb_set_registers a t) = valid_arch_tcb t"
+  by (simp add: arch_tcb_set_registers_def)
+
 lemma tcb_arch_ref_ipc_buffer_update: "\<And>tcb.
        tcb_arch_ref (tcb_ipc_buffer_update f tcb) = tcb_arch_ref tcb"
   by (simp add: tcb_arch_ref_def)
@@ -3214,7 +3222,7 @@ lemmas tcb_arch_ref_simps[simp] = tcb_arch_ref_ipc_buffer_update tcb_arch_ref_mc
   tcb_arch_ref_ctable_update tcb_arch_ref_vtable_update tcb_arch_ref_reply_update
   tcb_arch_ref_caller_update tcb_arch_ref_ipcframe_update tcb_arch_ref_state_update
   tcb_arch_ref_fault_handler_update tcb_arch_ref_fault_update tcb_arch_ref_bound_notification_update
-  tcb_arch_ref_context_update
+  tcb_arch_ref_context_update tcb_arch_ref_set_registers
 
 lemma hyp_live_tcb_def: "hyp_live (TCB tcb) = bound (tcb_arch_ref tcb)"
   by (clarsimp simp: hyp_live_def tcb_arch_ref_def)

@@ -39,7 +39,7 @@ crunch_ignore (add: cap_fault_on_failure lookup_error_on_failure
 
 crunch_ignore (add:
   storeWord storeWordVM loadWord setRegister getRegister getRestartPC
-  set_register get_register setNextPC maskInterrupt)
+  setNextPC maskInterrupt)
 
 crunch_ignore (add:
   cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext tcb_sched_action

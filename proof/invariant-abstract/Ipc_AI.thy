@@ -19,6 +19,7 @@ requalify_facts
   lookup_ipc_buffer_inv
   set_mi_invs
   as_user_hyp_refs_of
+  valid_arch_arch_tcb_set_registers
 end
 
 declare lookup_ipc_buffer_inv[wp]
@@ -1349,12 +1350,12 @@ lemma set_mrs_valid_objs [wp]:
    apply (simp add: set_mrs_redux)
    apply (wp thread_set_valid_objs_triv)
        apply (auto simp: tcb_cap_cases_def)[1]
-      apply (simp add: valid_arch_arch_tcb_context_set)+
+      apply (simp add: valid_arch_arch_tcb_set_registers)+
   apply (simp add: set_mrs_redux zipWithM_x_mapM split_def
                    store_word_offs_def
             split del: if_split)
   apply (wp mapM_wp' thread_set_valid_objs_triv | simp)+
-      apply (auto simp: tcb_cap_cases_def valid_arch_arch_tcb_context_set)
+      apply (auto simp: tcb_cap_cases_def valid_arch_arch_tcb_set_registers)
   done
 
 
@@ -1820,10 +1821,10 @@ lemma as_user_machine_state[wp]:
 lemma set_mrs_def2:
   "set_mrs thread buf msgs \<equiv>
    do thread_set
-        (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set
+        (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_set_registers
                      (\<lambda>reg. if reg \<in> set (take (length msgs) msg_registers)
                            then msgs ! the_index msg_registers reg
-                           else (arch_tcb_context_get o tcb_arch) tcb reg) (tcb_arch tcb)\<rparr>)
+                           else (arch_tcb_get_registers o tcb_arch) tcb reg) (tcb_arch tcb)\<rparr>)
         thread;
       remaining_msgs \<leftarrow> return (drop (length msg_registers) msgs);
       case buf of

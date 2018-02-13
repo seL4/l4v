@@ -3108,6 +3108,35 @@ lemma machine_op_lift_device_state[wp]:
                      select_def ignore_failure_def select_f_def
               split: if_splits)
 
+lemma as_user_inv:
+  assumes x: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>x. P\<rbrace>"
+  shows      "\<lbrace>P\<rbrace> as_user t f \<lbrace>\<lambda>x. P\<rbrace>"
+  proof -
+  have P: "\<And>a b input. (a, b) \<in> fst (f input) \<Longrightarrow> b = input"
+    by (rule use_valid [OF _ x], assumption, rule refl)
+  have Q: "\<And>s ps. ps (kheap s) = kheap s \<Longrightarrow> kheap_update ps s = s"
+    by simp
+  show ?thesis
+    apply (simp add: as_user_def gets_the_def assert_opt_def set_object_def split_def)
+    apply wp
+    apply (clarsimp dest!: P)
+    apply (subst Q)
+     prefer 2
+     apply assumption
+    apply (rule ext)
+    apply (simp add: get_tcb_def)
+    apply (case_tac "kheap s t"; simp)
+    apply (case_tac a; simp)
+    apply (clarsimp simp: arch_tcb_context_set_def arch_tcb_context_get_def)
+    done
+qed
+
+lemma user_getreg_inv[wp]:
+  "\<lbrace>P\<rbrace> as_user t (getRegister r) \<lbrace>\<lambda>x. P\<rbrace>"
+  apply (rule as_user_inv)
+  apply (simp add: getRegister_def)
+  done
+
 end
 
 end

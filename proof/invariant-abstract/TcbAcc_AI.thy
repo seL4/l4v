@@ -16,6 +16,10 @@ context begin interpretation Arch .
 
 requalify_facts
   valid_arch_arch_tcb_context_set
+  as_user_inv
+  user_getreg_inv
+
+declare user_getreg_inv[wp]
 
 end
 
@@ -529,27 +533,6 @@ lemma thread_set_cte_wp_at_trivial:
   by (auto simp: cte_wp_at_caps_of_state
           intro: thread_set_caps_of_state_trivial [OF x])
 
-lemma (in TcbAcc_AI_arch_tcb_context_set_eq) as_user_inv:
-  assumes x: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>x. P\<rbrace>"
-  shows      "\<lbrace>P\<rbrace> as_user t f \<lbrace>\<lambda>x. P\<rbrace>"
-  proof -
-  have P: "\<And>a b input. (a, b) \<in> fst (f input) \<Longrightarrow> b = input"
-    by (rule use_valid [OF _ x], assumption, rule refl)
-  have Q: "\<And>s ps. ps (kheap s) = kheap s \<Longrightarrow> kheap_update ps s = s"
-    by simp
-  show ?thesis
-  apply (simp add: as_user_def gets_the_def
-                assert_opt_def set_object_def split_def)
-  apply wp
-  apply (clarsimp dest!: P)
-  apply (subst Q, simp_all)
-  apply (rule ext)
-  apply (simp add: get_tcb_def)
-  apply (case_tac "kheap s t", simp_all)
-  apply (case_tac a, simp_all)
-  done
-qed
-
 
 lemma det_query_twice:
   assumes x: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>x. P\<rbrace>"
@@ -568,13 +551,6 @@ lemma det_query_twice:
   apply (rule sym)
   apply (rule state_unchanged [OF x])
   apply simp
-  done
-
-
-lemma (in TcbAcc_AI_arch_tcb_context_set_eq) user_getreg_inv[wp]:
-  "\<lbrace>P\<rbrace> as_user t (get_register r) \<lbrace>\<lambda>x. P\<rbrace>"
-  apply (rule as_user_inv)
-  apply (simp add: get_register_def)
   done
 
 lemma as_user_wp_thread_set_helper:
@@ -1854,7 +1830,7 @@ end
 
 
 lemma set_mrs_thread_set_dmo:
-  assumes ts: "\<And>c. \<lbrace>P\<rbrace> thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch :=arch_tcb_context_set (c tcb) (tcb_arch tcb)\<rparr>) r \<lbrace>\<lambda>rv. Q\<rbrace>"
+  assumes ts: "\<And>c. \<lbrace>P\<rbrace> thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_set_registers (c tcb) (tcb_arch tcb)\<rparr>) r \<lbrace>\<lambda>rv. Q\<rbrace>"
   assumes dmo: "\<And>x y. \<lbrace>Q\<rbrace> do_machine_op (storeWord x y) \<lbrace>\<lambda>rv. Q\<rbrace>"
   shows "\<lbrace>P\<rbrace> set_mrs r t mrs \<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (simp add: set_mrs_redux)

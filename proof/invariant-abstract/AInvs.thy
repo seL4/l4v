@@ -65,7 +65,7 @@ lemma thread_set_ct_in_state:
 
 lemma kernel_entry_invs:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
-  (kernel_entry e us) :: (register \<Rightarrow> machine_word,unit) s_monad
+  (kernel_entry e us) :: (user_context,unit) s_monad
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
   apply (simp add: kernel_entry_def)
   apply (wp akernel_invs thread_set_invs_trivial thread_set_ct_in_state select_wp
