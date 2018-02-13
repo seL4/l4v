@@ -196,7 +196,7 @@ where
      set_object ptr (SchedContext sc n)
    od"
 
-abbreviation
+definition
   get_sc_obj_ref :: "(sched_context => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
 where
   "get_sc_obj_ref f ref \<equiv> do
@@ -212,7 +212,7 @@ where
      case obj of SchedContext sc' n \<Rightarrow> set_object ptr (SchedContext sc n) | _ \<Rightarrow> fail
    od"
 
-abbreviation
+definition
   set_sc_obj_ref :: "((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> sched_context \<Rightarrow> sched_context) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "set_sc_obj_ref f ref new \<equiv> do

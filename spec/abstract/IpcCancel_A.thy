@@ -46,8 +46,8 @@ where
   "sched_context_unbind_ntfn sc_ptr = do
     ntfn_opt \<leftarrow> get_sc_obj_ref sc_ntfn sc_ptr;
     maybeM (\<lambda>ntfn. do
-      set_sc_obj_ref sc_ntfn_update sc_ptr None;
-      set_ntfn_obj_ref ntfn_sc_update ntfn None
+      set_ntfn_obj_ref ntfn_sc_update ntfn None;
+      set_sc_obj_ref sc_ntfn_update sc_ptr None
     od) ntfn_opt
   od"
 
