@@ -588,6 +588,8 @@ space if none is correctly configured.\<close>
 definition
   set_vm_root :: "word32 \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "set_vm_root tcb \<equiv> do
+    t' \<leftarrow> gets_the $ get_tcb tcb;
+    vcpu_switch $ tcb_vcpu $ tcb_arch t';
     thread_root_slot \<leftarrow> return (tcb, tcb_cnode_index 1);
     thread_root \<leftarrow> get_cap thread_root_slot;
     (case thread_root of

@@ -364,6 +364,15 @@ lemma arch_vcpu_tcb_valid_machine_state[simp]:
   "arch_vcpu_tcb_valid s \<Longrightarrow> arch_vcpu_tcb_valid (s\<lparr>machine_state := xb\<rparr>)"
  by (clarsimp simp: arch_vcpu_tcb_valid_def)
 
+lemma obj_at_vcpu_tcb_valid_arch_st_upd[simp]:
+  "\<And>x. obj_at (arch_vcpu_tcb_valid_obj (arch_state s)) cur s \<Longrightarrow>
+     obj_at (arch_vcpu_tcb_valid_obj (arch_state s\<lparr>arm_asid_map := x\<rparr>)) cur s"
+  "\<And>x. obj_at (arch_vcpu_tcb_valid_obj (arch_state s)) cur s \<Longrightarrow>
+     obj_at (arch_vcpu_tcb_valid_obj (arch_state s\<lparr>arm_hwasid_table := x\<rparr>)) cur s"
+  "\<And>x. obj_at (arch_vcpu_tcb_valid_obj (arch_state s)) cur s \<Longrightarrow>
+     obj_at (arch_vcpu_tcb_valid_obj (arch_state s\<lparr>arm_next_asid := x\<rparr>)) cur s"
+  by (clarsimp simp: obj_at_def arch_vcpu_tcb_valid_obj_def)+
+
 lemma set_vm_root_idle_vcpu_tcb_valid:
  "\<And>v. \<lbrace>\<lambda>s. x = idle_thread s \<and> tcb_at x s \<and> v = (idle_thread s) \<and>
             valid_arch_idle s \<and>
@@ -373,19 +382,19 @@ lemma set_vm_root_idle_vcpu_tcb_valid:
   apply (simp add: set_vm_root_def)
   apply (wpsimp wp: vcpu_switch_obj_at_arch_vcpu_tcb_valid_obj )
         apply (rule arm_context_switch_lift; clarsimp)
-       apply wpsimp
-         apply (rule vcpu_switch_obj_at_arch_vcpu_tcb_valid_obj)
-        apply wpsimp
+      apply wpsimp
        apply (rule arm_context_switch_lift; clarsimp)
       apply (wpsimp wp: hoare_whenE_throwError_wp)
-     apply clarsimp
      apply (rule find_pd_for_asid_lift ; clarsimp)
-    apply wpsimp
-   apply (wpsimp wp: get_cap_wp)
+      apply wpsimp
+      apply wps
+   apply (rule hoare_conjI, rule hoare_drop_imp, wpsimp)+
+  apply wpsimp
   apply (wpsimp wp: get_cap_wp)
-  apply (fastforce simp: valid_arch_idle_def obj_at_def
-                         arch_vcpu_tcb_valid_obj_def cur_vcpu_to_tcb_vcpu_def)
-  done
+         apply (rule vcpu_switch_obj_at_arch_vcpu_tcb_valid_obj)
+  apply wpsimp
+  apply clarsimp
+ done
 
 lemma vcpu_switch_tcb_at:
 "\<lbrace>\<lambda>s. (tcb_at t s)\<rbrace> vcpu_switch x \<lbrace>\<lambda>_ s. (tcb_at t s)\<rbrace>"
@@ -428,83 +437,34 @@ lemma idle_thread_tcb_at_invs:
   apply (clarsimp simp add:  valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
-(* <WIP> *)
-
-(*
-thm  ArchVCPU_AI.as_user_arch_vcpu
- crunch arch_vcpu[wp]:  as_user "arch_vcpu_tcb_valid"
-  (ignore:
-   wp: set_object_arch_vcpu_tcb_valid
-   simp: obj_at_def  arch_vcpu_tcb_valid_def ARM_A.arch_tcb_context_set_def
-   is_tcb_def get_tcb_def)
-thm  ArchVCPU_AI.as_user_arch_vcpu
-*)
-
-lemma vcpu_switch_arch_vcpu_tcb_valid:
- "\<lbrace>\<lambda>s. \<exists>obj. arch_vcpu_tcb_valid_obj (arch_state s) (TCB xd) \<and> ko_at obj cur s\<rbrace>
-   vcpu_switch (ARM_A.tcb_vcpu (tcb_arch xd))
-  \<lbrace>\<lambda>xa s. arch_vcpu_tcb_valid (s\<lparr>cur_thread := cur\<rparr>)\<rbrace>"
-  apply (clarsimp simp add: vcpu_switch_def split: option.splits)
-  apply (rule conjI; clarsimp)
-  apply (wpsimp simp: ARM_A.vcpu_disable_def)
-       apply (wpsimp wp: do_machine_op_arch_vcpu_tcb_valid)+
-sorry
-
-lemma validE_disjI1:
-  "\<lbrace>R\<rbrace> f \<lbrace>Q'\<rbrace>,\<lbrace>P\<rbrace> \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>Q'\<rbrace>,\<lbrace>\<lambda>r s. P r s \<or> Q r s\<rbrace>"
-  using hoare_disjI1
-  by (fastforce simp: validE_def valid_def split: sum.splits)
-
-lemma validE_disjI2:
-  "\<lbrace>R\<rbrace> f \<lbrace>Q'\<rbrace>,\<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>Q'\<rbrace>,\<lbrace>\<lambda>r s. P r s \<or> Q r s\<rbrace>"
-  using hoare_disjI2
-  by (fastforce simp: validE_def valid_def split: sum.splits)
-
-lemmas validE_E_disjI1 = validE_disjI1[where Q'="\<top>\<top>", folded validE_E_def]
-lemmas validE_E_disjI2 = validE_disjI2[where Q'="\<top>\<top>", folded validE_E_def]
-
-text {*
-When @{term set_vm_root} throws an exception the VCPU isn't changed and we just show
-that the invariant is preserved.
-
-FIXME: Need to write two difference lemma to work nicely in WP framework.
-*}
 lemma set_vm_root_vcpu_tcb_valid:
  "\<lbrace>\<lambda>s. tcb_at cur s \<and> arch_vcpu_tcb_valid s \<rbrace>
     set_vm_root cur
-  \<lbrace>\<lambda>x s. obj_at (arch_vcpu_tcb_valid_obj (arch_state s)) cur s \<or> arch_vcpu_tcb_valid s \<rbrace>"
+  \<lbrace>\<lambda>x s. obj_at (arch_vcpu_tcb_valid_obj (arch_state s)) cur s\<rbrace>"
  unfolding set_vm_root_def
-  apply (wpsimp wp: vcpu_switch_obj_at_arch_vcpu_tcb_valid_obj )
-      apply (rule do_machine_op_lift ; clarsimp)
-     apply wpsimp
-    apply wpsimp
-          apply (rule hoare_disjI1)
-          apply (rule vcpu_switch_obj_at_arch_vcpu_tcb_valid_obj)
-         apply wpsimp
-          apply (rule arm_context_switch_lift; clarsimp)
-         apply wpsimp
-         apply (rule hoare_disjI1)
-         apply (rule vcpu_switch_obj_at_arch_vcpu_tcb_valid_obj)
-        apply wpsimp
-          apply (rule arm_context_switch_lift; clarsimp)
-      apply wpsimp
-       apply (rule validE_E_disjI2)
-       apply (wpsimp wp: hoare_whenE_throwError_wp)
+  apply (wpsimp wp: vcpu_switch_obj_at_arch_vcpu_tcb_valid_obj)
+            apply (rule arm_context_switch_lift; clarsimp)
+           apply wpsimp
+           apply (rule arm_context_switch_lift; clarsimp)
+          apply wpsimp
+         apply (wpsimp wp: hoare_whenE_throwError_wp)
         apply (wpsimp wp: hoare_whenE_throwError_wp)
        apply (rule find_pd_for_asid_lift ; clarsimp)
-    apply wpsimp
+      apply wpsimp
      apply (wpsimp wp: get_cap_wp)
     apply wpsimp
-    apply clarsimp
+   apply clarsimp
+   apply (wpsimp wp: hoare_allI hoare_drop_imp vcpu_switch_obj_at_arch_vcpu_tcb_valid_obj)
+  apply (wpsimp)
+  apply (clarsimp simp add: arch_vcpu_tcb_valid_def arch_vcpu_tcb_valid_obj_def tcb_at_def)
   done
 
 lemma arch_switch_to_thread_vcpu_tcb_valid:
  "\<lbrace>\<lambda>s. tcb_at cur s \<and> arch_vcpu_tcb_valid s\<rbrace>
     arch_switch_to_thread cur
-  \<lbrace>\<lambda>x s. obj_at (arch_vcpu_tcb_valid_obj (arch_state s)) cur s \<or> arch_vcpu_tcb_valid s\<rbrace>"
+  \<lbrace>\<lambda>x s. obj_at (arch_vcpu_tcb_valid_obj (arch_state s)) cur s\<rbrace>"
  unfolding arch_switch_to_thread_def
- apply (wpsimp wp: )
-   apply (rule do_machine_op_lift; clarsimp)
+  apply (wpsimp wp: )
    apply (wpsimp wp: set_vm_root_vcpu_tcb_valid)
   apply assumption
  done
@@ -518,14 +478,6 @@ lemma switch_to_thread_arch_vcpu_tcb_valid:
     apply (wpsimp wp: arch_switch_to_thread_vcpu_tcb_valid)
    apply (wpsimp wp: arch_switch_to_thread_vcpu_tcb_valid dxo_wp_weak assert_wp get_wp)+
   done
-
-(*
-crunch blah[wp]: call_kernel arch_vcpu_tcb_valid
- (simp: get_tcb_ex_invs arch_vcpu_tcb_valid_def)
-*)
-
-(* </WIP> *)
-
 
 lemma schedule_arch_vcpu_tcb_valid:
   "\<lbrace>(\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and arch_vcpu_tcb_valid and valid_arch_idle and invs\<rbrace>
@@ -550,6 +502,7 @@ theorem akernel_arch_vcpu_tcb_valid_inv:
   \<lbrace>\<lambda>rv. arch_vcpu_tcb_valid \<rbrace>"
   unfolding call_kernel_def
   apply (wpsimp wp: schedule_arch_vcpu_tcb_valid activate_invs simp: active_from_running )
+  apply wpsimp
 oops
 
 end
