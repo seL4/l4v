@@ -62,7 +62,8 @@ lemma refs_in_get_refs:
 crunch irq_node[wp]: set_reply "\<lambda>s. P (interrupt_irq_node s)"
   (simp: get_object_def)
 
-text {* set_sc_obj_ref *}
+text {* set_sc_obj_ref/get_sc_obj_ref *}
+
 lemma get_sc_obj_ref_inv[simp]:
   "\<lbrace>P\<rbrace> get_sc_obj_ref f t \<lbrace>\<lambda>r. P\<rbrace>"
   by (wpsimp simp: get_sc_obj_ref_def get_sched_context_def get_object_def)
@@ -163,6 +164,223 @@ lemma set_sc_yf_valid_objs[wp]:
 lemma set_sc_obj_ref_tcb[wp]:
   "\<lbrace>tcb_at t\<rbrace> set_sc_obj_ref f t' ntfn \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
   by (simp add: tcb_at_typ, wp)
+
+lemma set_sc_ntfn_refs_of_Some[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= insert (ntfn, SCNtfn)
+          {x \<in> state_refs_of s t. snd x = SCTcb \<or> snd x = SCYieldFrom \<or> snd x = SCReply}))\<rbrace>
+   set_sc_obj_ref sc_ntfn_update t (Some ntfn)
+   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp simp: set_sc_obj_ref_def set_object_def wp: get_sched_context_wp)
+  apply (fastforce elim!: rsubst[where P=P]
+      simp: insert_iff state_refs_of_def obj_at_def refs_of_sc_def Un_def
+      split_def  Collect_eq get_refs_def2
+      intro!: ext split: option.splits if_splits)
+  done
+
+lemma set_sc_tcb_refs_of_Some[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= insert (tcb, SCTcb)
+          {x \<in> state_refs_of s t. snd x = SCNtfn \<or> snd x = SCYieldFrom \<or> snd x = SCReply}))\<rbrace>
+   set_sc_obj_ref sc_tcb_update t (Some tcb)
+   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp simp: set_sc_obj_ref_def set_object_def wp: get_sched_context_wp)
+  apply (fastforce elim!: rsubst[where P=P]
+      simp: state_refs_of_def obj_at_def Un_def
+      split_def  Collect_eq get_refs_def2
+      intro!: ext split: option.splits if_splits)
+  done
+
+lemma set_sc_yf_refs_of_Some[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= insert (tcb, SCYieldFrom)
+          {x \<in> state_refs_of s t. snd x = SCNtfn \<or> snd x = SCTcb \<or> snd x = SCReply}))\<rbrace>
+   set_sc_obj_ref sc_yield_from_update t (Some tcb)
+   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp simp: set_sc_obj_ref_def set_object_def wp: get_sched_context_wp)
+  apply (fastforce elim!: rsubst[where P=P]
+      simp: state_refs_of_def obj_at_def Un_def
+      split_def  Collect_eq get_refs_def2
+      intro!: ext split: option.splits if_splits)
+  done
+
+lemma set_sc_ntfn_refs_of_None[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= state_refs_of s t - {x \<in> state_refs_of s t. snd x = SCNtfn}))\<rbrace>
+   set_sc_obj_ref sc_ntfn_update t None
+   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp simp: set_sc_obj_ref_def set_object_def wp: get_sched_context_wp)
+  apply (fastforce elim!: rsubst[where P=P]
+      simp: state_refs_of_def obj_at_def Un_def
+      split_def  Collect_eq get_refs_def2
+      intro!: ext split: option.splits if_splits)
+  done
+
+lemma set_sc_tcb_refs_of_None[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:=
+          {x \<in> state_refs_of s t. snd x = SCNtfn \<or> snd x = SCYieldFrom \<or> snd x = SCReply}))\<rbrace>
+   set_sc_obj_ref sc_tcb_update t None
+   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp simp: set_sc_obj_ref_def set_object_def wp: get_sched_context_wp)
+  apply (fastforce elim!: rsubst[where P=P]
+      simp: insert_iff state_refs_of_def obj_at_def refs_of_sc_def Un_def
+      split_def  Collect_eq get_refs_def2
+      intro!: ext split: option.splits if_splits)
+  done
+
+lemma set_sc_yf_refs_of_None[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:=
+          {x \<in> state_refs_of s t. snd x = SCNtfn \<or> snd x = SCTcb \<or> snd x = SCReply}))\<rbrace>
+   set_sc_obj_ref sc_yield_from_update t None
+   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp simp: set_sc_obj_ref_def set_object_def wp: get_sched_context_wp)
+  apply (fastforce elim!: rsubst[where P=P]
+      simp: state_refs_of_def obj_at_def Un_def
+      split_def  Collect_eq get_refs_def2
+      intro!: ext split: option.splits if_splits)
+  done
+
+(* RT FIXME: Move to Invariants_AI?  *)
+definition
+  sc_ntfn_sc_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "sc_ntfn_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_ntfn sc))"
+
+definition
+  sc_tcb_sc_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "sc_tcb_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_tcb sc))"
+
+definition
+  sc_yf_sc_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "sc_yf_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_yield_from sc))"
+
+definition
+  sc_replies_sc_at :: "(obj_ref list \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "sc_replies_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_replies sc))"
+(* end: move to invariant_AI *)
+
+lemma gscn_sc_ntfn_sc_at:
+  "\<lbrace>\<top>\<rbrace> get_sc_obj_ref sc_ntfn t \<lbrace>\<lambda>rv. sc_ntfn_sc_at (\<lambda>ntfn. rv = ntfn) t\<rbrace>"
+  by (wpsimp simp: get_sc_obj_ref_def sc_ntfn_sc_at_def obj_at_def wp: get_sched_context_wp)
+
+lemma gsct_sc_ntfn_sc_at:
+  "\<lbrace>\<top>\<rbrace> get_sc_obj_ref sc_tcb t \<lbrace>\<lambda>rv. sc_tcb_sc_at (\<lambda>ntfn. rv = ntfn) t\<rbrace>"
+  by (wpsimp simp: get_sc_obj_ref_def sc_tcb_sc_at_def obj_at_def wp: get_sched_context_wp)
+
+lemma gscyf_sc_ntfn_sc_at:
+  "\<lbrace>\<top>\<rbrace> get_sc_obj_ref sc_yield_from t \<lbrace>\<lambda>rv. sc_yf_sc_at (\<lambda>ntfn. rv = ntfn) t\<rbrace>"
+  by (wpsimp simp: get_sc_obj_ref_def sc_yf_sc_at_def obj_at_def wp: get_sched_context_wp)
+
+lemma gscn_sp:
+  "\<lbrace>P\<rbrace> get_sc_obj_ref sc_ntfn t \<lbrace>\<lambda>rv. sc_ntfn_sc_at (\<lambda>ntfn. rv = ntfn) t and P\<rbrace>"
+  by (wpsimp simp: get_sc_obj_ref_def sc_ntfn_sc_at_def obj_at_def wp: get_sched_context_wp)
+
+lemma gsct_sp:
+  "\<lbrace>P\<rbrace> get_sc_obj_ref sc_tcb t \<lbrace>\<lambda>rv. sc_tcb_sc_at (\<lambda>ntfn. rv = ntfn) t and P\<rbrace>"
+  by (wpsimp simp: get_sc_obj_ref_def sc_tcb_sc_at_def obj_at_def wp: get_sched_context_wp)
+
+lemma gscyf_sp:
+  "\<lbrace>P\<rbrace> get_sc_obj_ref sc_yield_from t \<lbrace>\<lambda>rv. sc_yf_sc_at (\<lambda>ntfn. rv = ntfn) t and P\<rbrace>"
+  by (wpsimp simp: get_sc_obj_ref_def sc_yf_sc_at_def obj_at_def wp: get_sched_context_wp)
+
+
+text {* set_tcb_obj_ref/get_tcb_obj_ref *}
+
+crunches set_tcb_obj_ref,get_tcb_obj_ref
+ for aligned[wp]: pspace_aligned
+ and distinct[wp]: pspace_distinct
+ and sc_at[wp]: "sc_at sc_ptr"
+ and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+ and no_cdt[wp]: "\<lambda>s. P (cdt s)"
+ and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
+ and valid_irq_states[wp]: "valid_irq_states"
+ and pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
+ and pspace_respects_device_region[wp]: "pspace_respects_device_region"
+ and cur_tcb[wp]: "cur_tcb"
+ and it[wp]: "\<lambda>s. P (idle_thread s)"
+ and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+ and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
+  (simp: Let_def wp: hoare_drop_imps)
+
+crunches get_tcb_obj_ref
+ for valid_objs[wp]: valid_objs
+ and iflive[wp]: "if_live_then_nonz_cap"
+ and valid_mdb[wp]: valid_mdb
+ and zombies[wp]: zombies_final
+ and valid_irq_handlers[wp]: "valid_irq_handlers"
+ and valid_ioc[wp]: "valid_ioc"
+ and valid_idle[wp]: valid_idle
+ and cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
+ and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
+ and valid_arch[wp]: "valid_arch_state"
+ and ifunsafe[wp]: "if_unsafe_then_cap"
+ and only_idle[wp]: "only_idle"
+ and valid_global_objs[wp]: "valid_global_objs"
+ and valid_global_vspace_mappings[wp]: "valid_global_vspace_mappings"
+ and valid_arch_caps[wp]: "valid_arch_caps"
+ and v_ker_map[wp]: "valid_kernel_mappings"
+ and equal_mappings[wp]: "equal_kernel_mappings"
+ and vms[wp]: "valid_machine_state"
+ and valid_vspace_objs[wp]: "valid_vspace_objs"
+ and valid_global_refs[wp]: "valid_global_refs"
+ and valid_asid_map[wp]: "valid_asid_map"
+ and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+ and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
+ and cte_wp_at[wp]: "cte_wp_at P c"
+ and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
+
+text {* possible_switch_to invariants *}
+
+crunches tcb_sched_action,reschedule_required,possible_switch_to,tcb_release_enqueue
+ for aligned[wp]: pspace_aligned
+ and it[wp]: "\<lambda>s. P (idle_thread s)"
+ and distinct[wp]: pspace_distinct
+ and sc_at[wp]: "sc_at sc_ptr"
+ and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+ and no_cdt[wp]: "\<lambda>s. P (cdt s)"
+ and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
+ and valid_irq_states[wp]: "valid_irq_states"
+ and pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
+ and pspace_respects_device_region[wp]: "pspace_respects_device_region"
+ and cur_tcb[wp]: "cur_tcb"
+ and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+ and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
+ and valid_objs[wp]: valid_objs
+ and iflive[wp]: "if_live_then_nonz_cap"
+ and valid_mdb[wp]: valid_mdb
+ and zombies[wp]: zombies_final
+ and valid_irq_handlers[wp]: "valid_irq_handlers"
+ and valid_ioc[wp]: "valid_ioc"
+ and valid_idle[wp]: valid_idle
+ and cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
+ and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
+ and valid_arch[wp]: "valid_arch_state"
+ and ifunsafe[wp]: "if_unsafe_then_cap"
+ and only_idle[wp]: "only_idle"
+ and valid_global_objs[wp]: "valid_global_objs"
+ and valid_global_vspace_mappings[wp]: "valid_global_vspace_mappings"
+ and valid_arch_caps[wp]: "valid_arch_caps"
+ and v_ker_map[wp]: "valid_kernel_mappings"
+ and equal_mappings[wp]: "equal_kernel_mappings"
+ and vms[wp]: "valid_machine_state"
+ and valid_vspace_objs[wp]: "valid_vspace_objs"
+ and valid_global_refs[wp]: "valid_global_refs"
+ and valid_asid_map[wp]: "valid_asid_map"
+ and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+ and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
+ and cte_wp_at[wp]: "cte_wp_at P c"
+ and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
+ and aligned[wp]: pspace_aligned
+ and distinct[wp]: pspace_distinct
+ and valid_objs[wp]: valid_objs
+ and sc_at[wp]: "sc_at sc_ptr"
+ and cte_wp_at[wp]: "cte_wp_at P c"
+ and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+ and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
+ and no_cdt[wp]: "\<lambda>s. P (cdt s)"
+  (simp: Let_def wp: hoare_drop_imps hoare_vcg_if_lift2 mapM_wp
+   ignore: set_tcb_obj_ref get_tcb_obj_ref)
+
+
 
 text {* sched\_context\_donate and others *}
 
@@ -267,13 +485,13 @@ lemma sched_context_donate_cur_tcb [wp]:
   by (wpsimp simp: sched_context_donate_def get_sched_context_def get_object_def get_sc_obj_ref_def
      wp: hoare_drop_imp)
 
-lemma sched_context_donate_ifunsafe[wp]: (* delete valid_objs? *)
-  "\<lbrace>valid_objs and if_unsafe_then_cap\<rbrace> sched_context_donate scp tcbp \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
+lemma sched_context_donate_ifunsafe[wp]:
+  "\<lbrace>if_unsafe_then_cap\<rbrace> sched_context_donate scp tcbp \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
   by (wpsimp simp: sched_context_donate_def get_sched_context_def get_object_def get_sc_obj_ref_def
       wp: hoare_drop_imp)
 
-lemma sched_context_donate_zombies[wp]: (* delete valid_objs? *)
-  "\<lbrace>valid_objs and zombies_final\<rbrace> sched_context_donate scp tcbp \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
+lemma sched_context_donate_zombies[wp]:
+  "\<lbrace>zombies_final\<rbrace> sched_context_donate scp tcbp \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   by (wpsimp simp: sched_context_donate_def get_sched_context_def get_object_def get_sc_obj_ref_def
     wp: hoare_drop_imp)
 
