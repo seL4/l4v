@@ -341,7 +341,7 @@ where
        else (usage, refills));
 
     refills'' \<leftarrow> return (if capacity = 0 \<and> 0 < usage' then
-      let r1 = hd refills'; 
+      let r1 = hd refills';
           r1' = r1 \<lparr>r_time := r_time r1 + usage\<rparr>;
           rs = tl refills'
       in if rs \<noteq> [] \<and> can_merge_refill r1' (hd rs)

@@ -353,7 +353,8 @@ where
     | _ \<Rightarrow> fail)
   | InvokeSchedContextUnbind sc_ptr \<Rightarrow> do
       sched_context_unbind_all_tcbs sc_ptr;
-      sched_context_unbind_ntfn sc_ptr
+      sched_context_unbind_ntfn sc_ptr;
+      sched_context_unbind_reply sc_ptr
     od
   | InvokeSchedContextYieldTo sc_ptr args \<Rightarrow>
       do_extended_op $ sched_context_yield_to sc_ptr args"

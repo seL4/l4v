@@ -52,6 +52,15 @@ where
   od"
 
 definition
+  sched_context_unbind_reply :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "sched_context_unbind_reply sc_ptr = do
+    sc \<leftarrow> get_sched_context sc_ptr;
+    mapM (\<lambda>r. set_reply_obj_ref reply_sc_update r None) (sc_replies sc);
+    update_sched_context sc_ptr (sc\<lparr>sc_replies := [] \<rparr>)
+  od"
+
+definition
   sched_context_maybe_unbind_ntfn :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_maybe_unbind_ntfn ntfn_ptr = do
@@ -69,11 +78,12 @@ where
   "sched_context_unbind_tcb sc_ptr = do
      sc \<leftarrow> get_sched_context sc_ptr;
      tptr \<leftarrow> assert_opt $ sc_tcb sc;
+     cur \<leftarrow> gets $ cur_thread;
+     when (tptr = cur) $ do_extended_op reschedule_required;
      do_extended_op $ tcb_sched_action tcb_sched_dequeue tptr;
      do_extended_op $ tcb_release_remove tptr;
      set_tcb_obj_ref tcb_sched_context_update tptr None;
-     cur \<leftarrow> gets $ cur_thread;
-     when (tptr = cur) $ do_extended_op reschedule_required
+     set_sc_obj_ref sc_tcb_update sc_ptr None
   od"
 
 text \<open>Donate a scheduling context.\<close>
@@ -83,16 +93,13 @@ where
   "sched_context_donate sc_ptr tcb_ptr = do
     from_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
     when (from_opt \<noteq> None) $ do
-      tptr \<leftarrow> assert_opt $ from_opt;
-      set_tcb_obj_ref tcb_sched_context_update tptr None;
+      from_tptr \<leftarrow> assert_opt $ from_opt;
+      do_extended_op $ tcb_sched_action tcb_sched_dequeue from_tptr;
+      set_tcb_obj_ref tcb_sched_context_update from_tptr None;
       cur \<leftarrow> gets $ cur_thread;
       action \<leftarrow> gets scheduler_action;
-      flag \<leftarrow> return (case action of switch_thread p \<Rightarrow> tptr = p | _ \<Rightarrow> False);
-      if (tptr = cur \<or> flag) then do_extended_op reschedule_required
-      else do
-        st \<leftarrow> get_thread_state tptr;
-        when (runnable st) $ do_extended_op $ tcb_sched_action tcb_sched_dequeue tptr
-      od
+      flag \<leftarrow> return (case action of switch_thread p \<Rightarrow> from_tptr = p | _ \<Rightarrow> False);
+      when (from_tptr = cur \<or> flag) $ do_extended_op reschedule_required
     od;
     set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
     set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr)
