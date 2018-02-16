@@ -465,13 +465,13 @@ lemma decode_set_space_authorised:
   done
 
 (* grot: this is from the bowels of decode_tcb_configure_authorised. *)
-lemma decode_set_space_authorised':
+lemma decode_tcb_configure_authorised_helper:
   "\<lbrace>K True and K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
                       \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x))
                       \<and> authorised_tcb_inv aag set_param \<and> is_thread_control set_param)\<rbrace>
      decode_set_space ws (cap.ThreadCap t) slot excaps
    \<lbrace>\<lambda>rv s. authorised_tcb_inv aag (tcb_invocation.ThreadControl t slot (tc_new_fault_ep rv)
-                                    (tc_new_mcpriority mcp) (tc_new_priority prio) (tc_new_croot rv)
+                                    None None (tc_new_croot rv)
                                     (tc_new_vroot rv) (tc_new_buffer set_param))\<rbrace>, -"
   apply (rule hoare_gen_asmE)
   apply (cases set_param)
@@ -494,29 +494,29 @@ lemma decode_tcb_configure_authorised:
                       \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x))) \<rbrace>
     decode_tcb_configure msg (cap.ThreadCap t) slot excaps
    \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
-  apply (rule hoare_pre)
-  apply (simp add: decode_tcb_configure_def cong: list.case_cong)
-  apply (wp decode_set_space_authorised' decode_set_ipc_buffer_authorised whenE_throwError_wp | simp)+
-  apply (auto dest: in_set_takeD simp: not_less all_set_conv_all_nth Suc_le_eq eval_nat_numeral)
+  apply (wpsimp simp: decode_tcb_configure_def
+                wp: whenE_throwError_wp decode_tcb_configure_authorised_helper
+                    decode_set_ipc_buffer_authorised)
+  apply (auto dest: in_set_takeD)
   done
 
 lemma decode_set_priority_authorised:
   "\<lbrace>K (is_subject aag t)\<rbrace>
-    decode_set_priority msg (ThreadCap t) slot
+    decode_set_priority msg (ThreadCap t) slot excs
    \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
-  unfolding decode_set_priority_def check_prio_def authorised_tcb_inv_def
-  apply (cases msg; simp add: Let_def)
-   apply (wp validE_validE_R[OF throwError_wp])+
-  by simp
+  by (wpsimp simp: decode_set_priority_def check_prio_def authorised_tcb_inv_def)
 
 lemma decode_set_mcpriority_authorised:
   "\<lbrace>K (is_subject aag t)\<rbrace>
-    decode_set_mcpriority msg (ThreadCap t) slot
+    decode_set_mcpriority msg (ThreadCap t) slot excs
    \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
-  unfolding decode_set_mcpriority_def check_prio_def authorised_tcb_inv_def
-  apply (cases msg; simp)
-   apply (wp validE_validE_R[OF throwError_wp])+
-  by simp
+  by (wpsimp simp: decode_set_mcpriority_def check_prio_def authorised_tcb_inv_def)
+
+lemma decode_set_sched_params_authorised:
+  "\<lbrace>K (is_subject aag t)\<rbrace>
+    decode_set_sched_params msg (ThreadCap t) slot excs
+   \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
+  by (wpsimp simp: decode_set_sched_params_def check_prio_def authorised_tcb_inv_def)
 
 lemma decode_unbind_notification_authorised:
   "\<lbrace>K (is_subject aag t)\<rbrace>
@@ -550,6 +550,7 @@ lemma decode_tcb_invocation_authorised:
    apply wpc
   apply (wp decode_registers_authorised decode_tcb_configure_authorised
             decode_set_priority_authorised decode_set_mcpriority_authorised
+            decode_set_sched_params_authorised
             decode_set_ipc_buffer_authorised decode_set_space_authorised
             decode_bind_notification_authorised
             decode_unbind_notification_authorised)+

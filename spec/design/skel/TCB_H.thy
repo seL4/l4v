@@ -38,6 +38,8 @@ requalify_consts
   postModifyRegisters
 end
 
+abbreviation "mapMaybe \<equiv> option_map"
+
 #INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= bodies_only NOT liftFnMaybe assertDerived archThreadGet archThreadSet asUser sanitiseRegister getSanitiseRegisterInfo
 
 defs asUser_def:

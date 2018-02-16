@@ -2340,8 +2340,8 @@ lemma tc_valid_duplicates':
     case_option \<top> (valid_cap' o fst) f' and
     K (case_option True (isValidVTableRoot o fst) f') and
     case_option \<top> (valid_cap') (case_option None (case_option None (Some o fst) o snd) g) and
-    K (case_option True (\<lambda>x. x \<le> maxPriority) d) and
-    K (case_option True (\<lambda>x. x \<le> maxPriority) mcp) and
+    K (valid_option_prio d) and
+    K (valid_option_prio mcp) and
     K (case_option True isArchObjectCap (case_option None (case_option None (Some o fst) o snd) g))
     and K (case_option True (swp is_aligned msg_align_bits o fst) g)\<rbrace>
       invokeTCB (tcbinvocation.ThreadControl a sl b' mcp d e' f' g)

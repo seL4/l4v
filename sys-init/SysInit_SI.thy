@@ -211,7 +211,7 @@ where
     sel4_cspace_root_data \<leftarrow> return $ guard_as_rawdata cdl_cspace_root;
     sel4_vspace_root_data \<leftarrow> return 0;
 
-    fail \<leftarrow> seL4_TCB_Configure sel4_tcb sel4_fault_ep priority
+    fail \<leftarrow> seL4_TCB_Configure sel4_tcb sel4_fault_ep
                                   sel4_cspace_root sel4_cspace_root_data
                                   sel4_vspace_root sel4_vspace_root_data
                                   ipcbuf_addr sel4_ipcbuffer;

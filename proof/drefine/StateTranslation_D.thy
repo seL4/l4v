@@ -109,11 +109,6 @@ where
  * are ever added to the capDL spec.
  *)
 definition
-  unpack_priorities :: "word32 \<Rightarrow> word8 \<times> word8"
-where
-  "unpack_priorities _ = (0, 0)"
-
-definition
   prio_from_arg :: "word32 \<Rightarrow> word8"
 where
   "prio_from_arg _ = 0"
@@ -122,8 +117,8 @@ definition
   transform_intent_tcb_configure :: "word32 list \<Rightarrow> cdl_tcb_intent option"
 where
   "transform_intent_tcb_configure args =
-  (case args of fault_ep#prioProps#croot_data#vroot_data#buffer#_ \<Rightarrow>
-    Some (TcbConfigureIntent fault_ep (unpack_priorities prioProps)
+  (case args of fault_ep#croot_data#vroot_data#buffer#_ \<Rightarrow>
+    Some (TcbConfigureIntent fault_ep
                              croot_data vroot_data buffer)
    | _ \<Rightarrow> None)"
 
@@ -141,6 +136,14 @@ where
   "transform_intent_tcb_set_mcpriority args =
   (case args of mcp#_ \<Rightarrow>
     Some (TcbSetMCPriorityIntent (prio_from_arg mcp))
+   | _ \<Rightarrow> None)"
+
+definition
+  transform_intent_tcb_set_sched_params :: "word32 list \<Rightarrow> cdl_tcb_intent option"
+where
+  "transform_intent_tcb_set_sched_params args =
+  (case args of mcp#priority#_ \<Rightarrow>
+    Some (TcbSetSchedParamsIntent (prio_from_arg mcp) (prio_from_arg priority))
    | _ \<Rightarrow> None)"
 
 definition
@@ -296,6 +299,9 @@ definition
     | TCBSetMCPriority \<Rightarrow>
          map_option TcbIntent
                    (transform_intent_tcb_set_mcpriority args)
+    | TCBSetSchedParams \<Rightarrow>
+         map_option TcbIntent
+                   (transform_intent_tcb_set_sched_params args)
     | TCBSetIPCBuffer \<Rightarrow>
           map_option TcbIntent
                    (transform_intent_tcb_set_ipc_buffer args)
@@ -372,6 +378,7 @@ lemmas transform_intent_tcb_defs =
   transform_intent_tcb_configure_def
   transform_intent_tcb_set_priority_def
   transform_intent_tcb_set_mcpriority_def
+  transform_intent_tcb_set_sched_params_def
   transform_intent_tcb_set_ipc_buffer_def
   transform_intent_tcb_set_space_def
 
@@ -382,9 +389,10 @@ lemma transform_tcb_intent_invocation:
    ((label = TCBReadRegisters) = (ti = (TcbReadRegistersIntent ((args ! 0)!!0) 0 (args ! 1)) \<and> length args \<ge> 2)) \<and>
    ((label = TCBWriteRegisters) = (ti = (TcbWriteRegistersIntent ((args ! 0)!!0) 0 (args ! 1) (drop 2 args)) \<and> length args \<ge> 2)) \<and>
    ((label = TCBCopyRegisters) = (ti = (TcbCopyRegistersIntent ((args ! 0)!!0) ((args ! 0)!!1) ((args ! 0)!!2) ((args ! 0)!!3) 0) \<and> length args \<ge> 1)) \<and>
-   ((label = TCBConfigure) = (ti = (TcbConfigureIntent (args ! 0) (unpack_priorities (args ! 1)) (args ! 2) (args ! 3) (args ! 4)) \<and> length args \<ge> 5)) \<and>
+   ((label = TCBConfigure) = (ti = (TcbConfigureIntent (args ! 0) (args ! 1) (args ! 2) (args ! 3)) \<and> length args \<ge> 4)) \<and>
    ((label = TCBSetPriority) = (ti = (TcbSetPriorityIntent (prio_from_arg (args ! 0))) \<and> length args \<ge> 1)) \<and>
    ((label = TCBSetMCPriority) = (ti = (TcbSetMCPriorityIntent (prio_from_arg (args ! 0))) \<and> length args \<ge> 1)) \<and>
+   ((label = TCBSetSchedParams) = (ti = (TcbSetSchedParamsIntent (prio_from_arg (args ! 0)) (prio_from_arg (args ! 1))) \<and> length args \<ge> 2)) \<and>
    ((label = TCBSetSpace) = (ti = (TcbSetSpaceIntent (args ! 0) (args ! 1) (args ! 2)) \<and> length args \<ge> 3)) \<and>
    ((label = TCBSuspend) = (ti = TcbSuspendIntent)) \<and>
    ((label = TCBResume) = (ti = TcbResumeIntent)) \<and>
@@ -508,9 +516,10 @@ lemma transform_intent_isnot_TcbIntent:
        = ((label = TCBReadRegisters \<longrightarrow> length args < 2) \<and>
           (label = TCBWriteRegisters \<longrightarrow> length args < 2) \<and>
           (label = TCBCopyRegisters \<longrightarrow> length args < 1) \<and>
-          (label = TCBConfigure \<longrightarrow> length args < 5) \<and>
+          (label = TCBConfigure \<longrightarrow> length args < 4) \<and>
           (label = TCBSetPriority \<longrightarrow> length args < 1) \<and>
           (label = TCBSetMCPriority \<longrightarrow> length args < 1) \<and>
+          (label = TCBSetSchedParams \<longrightarrow> length args < 2) \<and>
           (label = TCBSetIPCBuffer \<longrightarrow> length args < 1) \<and>
           (label = TCBSetSpace \<longrightarrow> length args < 3) \<and>
           (label \<noteq> TCBSuspend) \<and>

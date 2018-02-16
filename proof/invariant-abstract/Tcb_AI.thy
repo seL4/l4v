@@ -513,8 +513,19 @@ locale Tcb_AI = Tcb_AI_1 state_ext_t is_cnode_or_valid_arch
         and (case_option \<top> (no_cap_to_obj_dr_emp o fst) e)
         and (case_option \<top> (no_cap_to_obj_dr_emp o fst) f)
         and (case_option \<top> (case_option \<top> (no_cap_to_obj_dr_emp o fst) o snd) g)
-        and (\<lambda>s. case_option True (\<lambda>pr. mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) (cur_thread s) s) pr)
-        and (\<lambda>s. case_option True (\<lambda>mcp. mcpriority_tcb_at (\<lambda>m. mcp \<le> m) (cur_thread s) s) mcp)
+        (* NOTE: The auth TCB does not really belong in the tcb_invocation type, and
+          is only included so that we can assert here that the priority we are setting is
+          bounded by the MCP of some auth TCB. Unfortunately, current proofs about the
+          decode functions throw away the knowledge that the auth TCB actually came from
+          the current thread's c-space, so this is not as strong an assertion as we would
+          like. Ideally, we would assert that there is some cap in the current thread's
+          c-space that is to a TCB whose MCP validates the priority we are setting. We
+          don't care which TCB is used as the auth TCB; we only care that there exists
+          some auth TCB accessible from the current thread's c-space. Phrased that way,
+          we could drop the auth TCB from tcb_invocation. For now, we leave this as
+          future work.*)
+        and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) auth s) pr)
+        and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp)
         and K (case_option True (is_cnode_cap o fst) e)
         and K (case_option True (is_valid_vtable_root o fst) f)
         and K (case_option True (\<lambda>v. case_option True
@@ -734,8 +745,8 @@ where
                         and (\<lambda>s. {croot, vroot, option_map undefined buf} \<noteq> {None}
                                     \<longrightarrow> cte_at sl s \<and> ex_cte_cap_to sl s)
                         and K (case_option True (\<lambda>bl. length bl = word_bits) fe)
-                        and (\<lambda>s. case_option True (\<lambda>pr. mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) (cur_thread s) s) pr)
-                        and (\<lambda>s. case_option True (\<lambda>mcp. mcpriority_tcb_at (\<lambda>m. mcp \<le> m) (cur_thread s) s) mcp)
+                        and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) auth s) pr)
+                        and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp)
                         and ex_nonz_cap_to t)"
 | "tcb_inv_wf (tcb_invocation.ReadRegisters src susp n arch)
              = (tcb_at src and ex_nonz_cap_to src)"
@@ -937,39 +948,46 @@ lemmas get_mcpriority_wp =
 lemmas get_mcpriority_get =
   thread_get_ret[where proj=itcb_mcpriority, simplified comp_def, simplified]
 
-lemma check_prio_inv: "\<lbrace>P\<rbrace> check_prio a \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: check_prio_def)
-  apply (wp whenE_inv, simp)
+crunch inv: check_prio "P"
+  (simp: crunch_simps)
+
+lemma check_prio_wp:
+  "\<lbrace>\<lambda>s. mcpriority_tcb_at (\<lambda>mcp. prio \<le> ucast mcp) auth s \<longrightarrow> Q s\<rbrace> check_prio prio auth \<lbrace>\<lambda>_. Q\<rbrace>, -"
+  apply (clarsimp simp: check_prio_def)
+  apply (wp get_mcpriority_wp whenE_throwError_wp)
+  apply (intro allI impI, elim mp pred_tcb_weakenE)
+  apply fastforce
+  done
+
+lemma check_prio_wp_weak:
+  "\<lbrace>\<lambda>s. mcpriority_tcb_at (\<lambda>mcp. ucast prio \<le> mcp) auth s \<longrightarrow> Q s\<rbrace> check_prio prio auth \<lbrace>\<lambda>_. Q\<rbrace>, -"
+  apply (wp check_prio_wp)
+  apply (intro allI impI, elim mp pred_tcb_weakenE)
+  apply (simp add: le_ucast_ucast_le)
   done
 
 lemma check_prio_lt_ct:
-  "\<lbrace>\<top>\<rbrace> check_prio prio \<lbrace>\<lambda>rv s. mcpriority_tcb_at (\<lambda>mcp. prio \<le> ucast mcp) (cur_thread s) s\<rbrace>, -"
-  apply (clarsimp simp: check_prio_def)
-  apply (rule hoare_pre)
-  apply (wp get_mcpriority_wp whenE_throwError_wp)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  by simp
+  "\<lbrace>\<top>\<rbrace> check_prio prio auth \<lbrace>\<lambda>rv s. mcpriority_tcb_at (\<lambda>mcp. prio \<le> ucast mcp) auth s\<rbrace>, -"
+  by (wpsimp wp: check_prio_wp)
 
 lemma check_prio_lt_ct_weak:
-  "\<lbrace>\<top>\<rbrace> check_prio prio \<lbrace>\<lambda>rv s. mcpriority_tcb_at (\<lambda>mcp. ucast prio \<le> mcp) (cur_thread s) s\<rbrace>, -"
-  apply (rule hoare_post_imp_R)
-  apply (rule check_prio_lt_ct)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  by (rule le_ucast_ucast_le) simp
+  "\<lbrace>\<top>\<rbrace> check_prio prio auth \<lbrace>\<lambda>rv s. mcpriority_tcb_at (\<lambda>mcp. ucast prio \<le> mcp) auth s\<rbrace>, -"
+  by (wpsimp wp: check_prio_wp_weak)
 
 lemma (in Tcb_AI) decode_set_priority_wf[wp]:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace>
-        decode_set_priority args (ThreadCap t) slot \<lbrace>tcb_inv_wf\<rbrace>,-"
-  apply (simp add: decode_set_priority_def split del: if_split)
-  apply (rule hoare_pre)
-   by (wp check_prio_lt_ct_weak | simp | wp_once check_prio_inv)+
+        decode_set_priority args (ThreadCap t) slot excs \<lbrace>tcb_inv_wf\<rbrace>, -"
+  by (wpsimp simp: decode_set_priority_def wp: check_prio_wp_weak whenE_throwError_wp)
 
 lemma (in Tcb_AI) decode_set_mcpriority_wf[wp]:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace>
-        decode_set_mcpriority args (ThreadCap t) slot \<lbrace>tcb_inv_wf\<rbrace>,-"
-  apply (simp add: decode_set_mcpriority_def Let_def  split del: if_split)
-  apply (rule hoare_pre)
-   by (wp check_prio_lt_ct_weak | simp | wp_once check_prio_inv)+
+        decode_set_mcpriority args (ThreadCap t) slot excs \<lbrace>tcb_inv_wf\<rbrace>, -"
+  by (wpsimp simp: decode_set_mcpriority_def wp: check_prio_wp_weak whenE_throwError_wp)
+
+lemma (in Tcb_AI) decode_set_sched_params_wf[wp]:
+  "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace>
+        decode_set_sched_params args (ThreadCap t) slot excs \<lbrace>tcb_inv_wf\<rbrace>, -"
+  by (wpsimp simp: decode_set_sched_params_def wp: check_prio_wp_weak whenE_throwError_wp)
 
 definition
   is_thread_control :: "tcb_invocation \<Rightarrow> bool"
@@ -993,30 +1011,20 @@ lemma is_thread_control_def2:
   by (cases tinv, simp_all add: is_thread_control_def)
 
 lemma decode_set_priority_is_tc[wp]:
-  "\<lbrace>\<top>\<rbrace> decode_set_priority args cap slot \<lbrace>\<lambda>rv s. is_thread_control rv\<rbrace>,-"
-  apply (rule hoare_pre)
-  apply (simp    add: decode_set_priority_def Let_def check_prio_def
-           split del: if_split
-            | wp whenE_inv hoare_seq_ext)+
-  done
-
+  "\<lbrace>\<top>\<rbrace> decode_set_priority args cap slot excs \<lbrace>\<lambda>rv s. is_thread_control rv\<rbrace>,-"
+  by (wpsimp simp: decode_set_priority_def)
 
 lemma decode_set_priority_inv[wp]:
-  "\<lbrace>P\<rbrace> decode_set_priority args cap slot \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: decode_set_priority_def  Let_def split del: if_split)
-  apply (rule hoare_pre)
-  apply (wp check_prio_inv)
-  apply simp
-  done
+  "\<lbrace>P\<rbrace> decode_set_priority args cap slot excs \<lbrace>\<lambda>rv. P\<rbrace>"
+  by (wpsimp simp: decode_set_priority_def wp: check_prio_inv whenE_inv)
 
 lemma decode_set_mcpriority_inv[wp]:
-  "\<lbrace>P\<rbrace> decode_set_mcpriority args cap slot \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: decode_set_mcpriority_def Let_def   split del: if_split)
-  apply (rule hoare_pre)
-  apply (wp check_prio_inv)
-  apply simp
-  done
+  "\<lbrace>P\<rbrace> decode_set_mcpriority args cap slot excs \<lbrace>\<lambda>rv. P\<rbrace>"
+  by (wpsimp simp: decode_set_mcpriority_def wp: check_prio_inv whenE_inv)
 
+lemma decode_set_sched_params_inv[wp]:
+  "\<lbrace>P\<rbrace> decode_set_sched_params args cap slot excs \<lbrace>\<lambda>rv. P\<rbrace>"
+  by (wpsimp simp: decode_set_sched_params_def wp: check_prio_inv whenE_inv)
 
 lemma derive_is_arch[wp]:
   "\<lbrace>\<lambda>s. is_arch_cap c\<rbrace> derive_cap slot c \<lbrace>\<lambda>rv s. is_arch_cap rv\<rbrace>,-"
@@ -1111,12 +1119,8 @@ lemma decode_set_space_is_tc[wp]:
   done
 
 lemma decode_set_mcpriority_is_tc[wp]:
-  "\<lbrace>\<top>\<rbrace> decode_set_mcpriority args cap slot \<lbrace>\<lambda>rv s. is_thread_control rv\<rbrace>,-"
-  apply (rule hoare_pre)
-   apply (simp   add: decode_set_mcpriority_def whenE_def unlessE_def Let_def
-           split del: if_split)
-   apply (wp | simp add: is_thread_control_true)+
-  done
+  "\<lbrace>\<top>\<rbrace> decode_set_mcpriority args cap slot excs \<lbrace>\<lambda>rv s. is_thread_control rv\<rbrace>,-"
+  by (wpsimp simp: decode_set_mcpriority_def)
 
 lemma decode_set_space_target[wp]:
   "\<lbrace>\<lambda>s. P (obj_ref_of cap)\<rbrace> decode_set_space args cap slot extras \<lbrace>\<lambda>rv s. P (thread_control_target rv)\<rbrace>,-"
@@ -1133,7 +1137,7 @@ lemma boring_simp[simp]:
 
 lemma (in Tcb_AI) decode_tcb_conf_wf[wp]:
   "\<lbrace>(invs::('state_ext::state_ext) state\<Rightarrow>bool)
-  and tcb_at t and cte_at slot and ex_cte_cap_to slot
+         and tcb_at t and cte_at slot and ex_cte_cap_to slot
          and ex_nonz_cap_to t
          and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> fst x \<and> cte_at (snd x) s
                                  \<and> ex_cte_cap_to (snd x) s
@@ -1145,9 +1149,7 @@ lemma (in Tcb_AI) decode_tcb_conf_wf[wp]:
   apply (rule hoare_pre)
    apply wp
        apply (rule_tac Q'="\<lambda>set_space s. tcb_inv_wf set_space s \<and> tcb_inv_wf set_params s
-                               \<and> tcb_inv_wf set_prio s \<and> tcb_inv_wf set_mcp s
                                \<and> is_thread_control set_space \<and> is_thread_control set_params
-                               \<and> is_thread_control set_prio \<and> is_thread_control set_mcp
                                \<and> thread_control_target set_space = t
                                \<and> cte_at slot s \<and> ex_cte_cap_to slot s"
                   in hoare_post_imp_R)
@@ -1187,11 +1189,9 @@ crunch inv[wp]:  decode_unbind_notification P
 lemma decode_bind_notification_inv[wp]:
   "\<lbrace>P\<rbrace> decode_bind_notification cap excaps \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding decode_bind_notification_def
-  by (rule hoare_pre)
-     (wp get_simple_ko_wp gbn_wp
-       | wpc
-       | clarsimp simp: whenE_def split del: if_split)+
-
+  by (wpsimp wp: get_simple_ko_wp gbn_wp
+             simp: whenE_def
+             split_del: if_split)
 
 lemma (in Tcb_AI) decode_tcb_inv_inv:
   "\<lbrace>P::'state_ext state \<Rightarrow> bool\<rbrace> decode_tcb_invocation label args (cap.ThreadCap t) slot extras \<lbrace>\<lambda>rv. P\<rbrace>"

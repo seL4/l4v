@@ -419,7 +419,8 @@ lemma transform_intent_thread_cap_None:
     apply wp+
     apply (clarsimp simp: transform_intent_def decode_read_registers_def decode_write_registers_def
                           decode_copy_registers_def decode_tcb_configure_def decode_set_priority_def
-                          decode_set_mcpriority_def decode_set_ipc_buffer_def transform_intent_tcb_defs
+                          decode_set_mcpriority_def decode_set_sched_params_def
+                          decode_set_ipc_buffer_def transform_intent_tcb_defs
                    split: list.split_asm
           | wp+)+
     apply (clarsimp simp: transform_intent_def decode_set_space_def decode_bind_notification_def

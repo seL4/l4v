@@ -760,6 +760,7 @@ lemma decode_tcb_invocation_authorised_extra:
                               decode_tcb_configure_def
                               decode_set_priority_def
                               decode_set_mcpriority_def
+                              decode_set_sched_params_def
                               decode_set_ipc_buffer_def
                               decode_bind_notification_def
                               decode_unbind_notification_def

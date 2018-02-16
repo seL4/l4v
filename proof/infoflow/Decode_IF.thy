@@ -199,21 +199,36 @@ lemma OR_choice_def2: "(\<And>P. \<lbrace>P\<rbrace> (c :: bool det_ext_monad) \
   by (subst no_state_changes[where f=c],simp,fastforce simp: bind_assoc split_def)
 
 lemma check_prio_rev:
-  "reads_respects aag l (is_subject aag \<circ> cur_thread) (check_prio prio)"
-  apply (clarsimp simp: check_prio_def)
-  apply (wp thread_get_reads_respects hoare_drop_imps)
-  by (clarsimp simp: reads_equiv_def)
+  "reads_respects aag l (\<lambda>s. is_subject aag auth) (check_prio prio auth)"
+  by (wpsimp simp: check_prio_def wp: thread_get_reads_respects hoare_drop_imps)
+
 
 lemma decode_set_priority_rev:
-  "reads_respects aag l (is_subject aag \<circ> cur_thread) (decode_set_priority args cap slot)"
-  apply (clarsimp simp: decode_set_priority_def wp_ev)
-  by (wp check_prio_rev)
+  "reads_respects aag l (K(\<forall>x \<in> set excs. pas_cap_cur_auth aag (fst x)) and (pas_refined aag))
+      (decode_set_priority args (ThreadCap t) slot excs)"
+  apply (wpsimp simp: decode_set_priority_def aag_cap_auth_Thread[symmetric]
+                wp: check_prio_rev whenE_throwError_wp)
+  apply (case_tac excs; simp)
+  done
 
 
 lemma decode_set_mcpriority_rev:
-  "reads_respects aag l (is_subject aag \<circ> cur_thread) (decode_set_mcpriority args cap slot)"
-  apply (clarsimp simp: decode_set_mcpriority_def wp_ev)
-  by (wp check_prio_rev)+
+  "reads_respects aag l (K(\<forall>x \<in> set excs. pas_cap_cur_auth aag (fst x)) and (pas_refined aag))
+    (decode_set_mcpriority args cap slot excs)"
+  apply (wpsimp simp: decode_set_mcpriority_def aag_cap_auth_Thread[symmetric]
+                wp: check_prio_rev whenE_throwError_wp)
+  apply (case_tac excs; simp)
+  done
+
+
+lemma decode_set_sched_params_rev:
+  "reads_respects aag l (K(\<forall>x \<in> set excs. pas_cap_cur_auth aag (fst x)) and (pas_refined aag))
+    (decode_set_sched_params args cap slot excs)"
+  apply (wpsimp simp: decode_set_sched_params_def aag_cap_auth_Thread[symmetric]
+                wp: check_prio_rev whenE_throwError_wp)
+  apply (case_tac excs; clarsimp)
+  done
+
 
 lemma decode_tcb_invocation_reads_respects_f:
   notes respects_f = reads_respects_f[where st=st and Q=\<top>]
@@ -221,7 +236,7 @@ lemma decode_tcb_invocation_reads_respects_f:
   "reads_respects_f aag l (silc_inv aag st and pas_refined aag and is_subject aag \<circ> cur_thread and
                            valid_objs and zombies_final and (K (is_subject aag t \<and>
                            (\<forall>x \<in> set excaps. is_subject aag (fst (snd x))) \<and>
-                           (\<forall>x\<in>set excaps. pas_cap_cur_auth aag (fst x)))))
+                           (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x)))))
                            (decode_tcb_invocation label args (ThreadCap t) slot excaps)"
   unfolding decode_tcb_invocation_def decode_read_registers_def
   decode_write_registers_def decode_copy_registers_def
@@ -238,6 +253,7 @@ lemma decode_tcb_invocation_reads_respects_f:
              check_valid_ipc_buffer_inv
              respects_f[OF decode_set_priority_rev]
              respects_f[OF decode_set_mcpriority_rev]
+             respects_f[OF decode_set_sched_params_rev]
              respects_f[OF get_simple_ko_reads_respects]
              respects_f[OF get_bound_notification_reads_respects']
         | wp_once whenE_throwError_wp
@@ -255,6 +271,7 @@ lemma decode_tcb_invocation_reads_respects_f:
   apply (rule reads_ep[where auth="Receive",simplified])
   apply (cases excaps;simp)
   by (fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)
+
 
 lemma get_irq_state_rev:
   "reads_equiv_valid_inv A aag (K (is_subject_irq aag irq)) (get_irq_state irq)"

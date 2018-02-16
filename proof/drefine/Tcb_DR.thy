@@ -211,7 +211,7 @@ lemma decode_tcb_cap_label_not_match:
     apply (simp_all split:List.list.split list.split_asm option.splits)
       apply (simp add: decode_read_registers_def decode_write_registers_def decode_set_ipc_buffer_def
                        decode_copy_registers_def decode_set_space_def decode_tcb_configure_def
-                       decode_set_priority_def decode_set_mcpriority_def
+                       decode_set_priority_def decode_set_mcpriority_def decode_set_sched_params_def
             | wp)+
   done
 
@@ -234,24 +234,6 @@ lemma update_cnode_cap_data:
   apply (clarsimp simp:cdl_update_cnode_cap_data_def word_bits_def of_drop_to_bl
     word_size mask_twice dest!:leI)
 done
-
-lemma
-  assumes "1 \<le> length args'"
-  shows decode_set_priority_dcorres:
-    "dcorres (dc \<oplus> (\<lambda>x y. x = translate_tcb_invocation y)) \<top> \<top>
-      (returnOk (cdl_tcb_invocation.ThreadControl t (transform_cslot_ptr slot') None None None None)
-        \<sqinter> Monads_D.throw)
-      (decode_set_priority args' (cap.ThreadCap t) slot')"
-  and decode_set_mcpriority_dcorres:
-    "dcorres (dc \<oplus> (\<lambda>x y. x = translate_tcb_invocation y)) \<top> \<top>
-      (returnOk (cdl_tcb_invocation.ThreadControl t (transform_cslot_ptr slot') None None None None)
-        \<sqinter> Monads_D.throw)
-      (decode_set_mcpriority args' (cap.ThreadCap t) slot')"
-  using assms
-  by (auto simp: decode_set_priority_def decode_set_mcpriority_def
-                 corres_throw_skip_r corres_alternate1 dcorres_returnOk
-                 translate_tcb_invocation_thread_ctrl_buffer_def
-                 translate_tcb_invocation_def check_prio_inv)
 
 lemma decode_tcb_corres:
   "\<lbrakk> Some (TcbIntent ui) = transform_intent (invocation_type label') args';
@@ -316,37 +298,55 @@ lemma decode_tcb_corres:
                  apply (rule corres_alternate1)
                  apply (clarsimp simp:returnOk_def corres_underlying_def translate_tcb_invocation_def return_def)
                 apply ((clarsimp simp:throw_on_none_def get_index_def dcorres_alternative_throw split:option.splits)+)[5]
-              (* TCBConfigures *)
-           apply (clarsimp simp:decode_tcb_configure_def dcorres_alternative_throw whenE_def)
-           apply (rule split_return_throw_thingy[where rvP=\<top>]; simp)
-            apply (rule hoare_weaken_preE)
-             apply (wp decode_set_priority_inv)
-            apply simp
-           apply (rule split_return_throw_thingy[where rvP=\<top>]; simp)
-            apply (rule hoare_weaken_preE)
-             apply (wp decode_set_mcpriority_inv)
-            apply simp
-            apply (case_tac "excaps' ! 2")
-            apply (case_tac "excaps' ! Suc 0")
-            apply (case_tac "excaps' ! 0")
-            apply clarsimp
-            apply (rule split_return_throw_thingy)
-              apply (rule_tac a = a and b = b and c = c in decode_set_ipc_buffer_translate_tcb_invocation)
-               apply simp+
+             (* TCBConfigures *)
+             apply (clarsimp simp: decode_tcb_configure_def dcorres_alternative_throw whenE_def)
+             apply (case_tac "excaps' ! 2")
+             apply (case_tac "excaps' ! Suc 0")
+             apply (case_tac "excaps' ! 0")
              apply (rule split_return_throw_thingy)
-               apply (rule decode_set_space_translate_tcb_invocation)
-              apply (clarsimp simp:throw_on_none_def get_index_def)
-              apply (rule conjI | clarsimp)+
+               apply (rule_tac a = a and b = b and c = c in decode_set_ipc_buffer_translate_tcb_invocation)
+                apply simp+
+              apply (rule split_return_throw_thingy)
+                apply (rule decode_set_space_translate_tcb_invocation)
+               apply (clarsimp simp: get_index_def throw_on_none_def)
+               apply (rule conjI | clarsimp)+
+                 apply (rule corres_alternate1,rule dcorres_returnOk)
+                 apply (clarsimp simp: translate_tcb_invocation_def update_cnode_cap_data)
+                apply clarsimp
+               apply (clarsimp | rule conjI)+
                 apply (rule corres_alternate1,rule dcorres_returnOk)
-                apply (clarsimp simp:translate_tcb_invocation_def update_cnode_cap_data)
-               apply (clarsimp simp:| rule conjI)+
-               apply (rule corres_alternate1,rule dcorres_returnOk)
-               apply (clarsimp simp:translate_tcb_invocation_def update_cnode_cap_data)
-              apply (clarsimp simp:no_fail_def)+
-           (* TCBSetPriority *)
-           subgoal by (rule decode_set_priority_dcorres; simp)
-          (* TCBSetMCPriority *)
-          subgoal by (rule decode_set_mcpriority_dcorres; simp)
+                apply (clarsimp simp: translate_tcb_invocation_def update_cnode_cap_data)
+               apply clarsimp+
+            (* TCBSetPriority *)
+            apply (clarsimp simp: decode_set_priority_def throw_on_none_def get_index_def dcorres_alternative_throw whenE_def)
+            apply (case_tac "fst (excaps' ! 0)"; simp add: dcorres_alternative_throw)
+            apply (rule corres_throw_skip_r)
+              apply (rule corres_alternate1)
+              apply (rule dcorres_returnOk)
+              apply (clarsimp simp: translate_tcb_invocation_def translate_tcb_invocation_thread_ctrl_buffer_def)
+             apply (rule check_prio_inv)
+            apply fastforce
+           (* TCBSetMCPriority *)
+           apply (clarsimp simp: decode_set_mcpriority_def throw_on_none_def get_index_def dcorres_alternative_throw whenE_def)
+           apply (case_tac "fst (excaps' ! 0)"; simp add: dcorres_alternative_throw)
+           apply (rule corres_throw_skip_r)
+             apply (rule corres_alternate1)
+             apply (rule dcorres_returnOk)
+             apply (clarsimp simp: translate_tcb_invocation_def translate_tcb_invocation_thread_ctrl_buffer_def)
+            apply (rule check_prio_inv)
+           apply fastforce
+          (* TCBSetSchedParams *)
+          apply (clarsimp simp: decode_set_sched_params_def throw_on_none_def get_index_def dcorres_alternative_throw whenE_def)
+          apply (case_tac "fst (excaps' ! 0)"; simp add: dcorres_alternative_throw)
+          apply (rule corres_throw_skip_r)+
+              apply (rule corres_alternate1)
+              apply (rule dcorres_returnOk)
+              apply (clarsimp simp: translate_tcb_invocation_def translate_tcb_invocation_thread_ctrl_buffer_def)
+             apply (rule check_prio_inv)
+            apply fastforce
+           apply (rule check_prio_inv)
+          apply fastforce
+
          (* TCBSetIPCBuffer *)
          apply (clarsimp simp:transform_intent_def transform_intent_tcb_set_ipc_buffer_def)
          apply (case_tac args')
@@ -1418,7 +1418,7 @@ lemma thread_set_priority_transform: "\<lbrace>\<lambda>ps. transform ps = cs\<r
 lemma option_set_priority_corres:
   "dcorres (dc \<oplus> dc) \<top> \<top>
         (returnOk ())
-        (liftE (case prio' of None \<Rightarrow> return () | Some prio \<Rightarrow> do_extended_op (set_priority obj_id' prio)))"
+        (liftE (case prio' of None \<Rightarrow> return () | Some (prio, auth) \<Rightarrow> do_extended_op (set_priority obj_id' prio)))"
   apply (clarsimp)
   apply (case_tac prio')
    apply (clarsimp simp: liftE_def set_priority_def returnOk_def bind_assoc)+
@@ -1448,7 +1448,7 @@ lemma set_mcpriority_transform:
 lemma option_set_mcpriority_corres:
   "dcorres (dc \<oplus> dc) \<top> valid_etcbs
     (returnOk ())
-    (liftE (case mcp' of None \<Rightarrow> return () | Some mcp \<Rightarrow> set_mcpriority t mcp))"
+    (liftE (case mcp' of None \<Rightarrow> return () | Some (mcp, auth) \<Rightarrow> set_mcpriority t mcp))"
   apply (cases mcp'; simp add: liftE_def returnOk_def)
   apply (rule corres_noop; clarsimp)
   apply (wp set_mcpriority_transform)

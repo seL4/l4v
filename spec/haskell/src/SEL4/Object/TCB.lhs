@@ -54,6 +54,7 @@ This module uses the C preprocessor to select a target architecture.
 > import {-# SOURCE #-} SEL4.Kernel.VSpace
 
 > import Data.Bits
+> import Data.Helpers (mapMaybe)
 > import Data.List(genericTake, genericLength)
 > import Data.Maybe()
 > import Data.WordLib
@@ -79,8 +80,9 @@ There are eleven types of invocation for a thread control block. All require wri
 >         TCBSuspend -> return $! Suspend (capTCBPtr cap)
 >         TCBResume -> return $! Resume (capTCBPtr cap)
 >         TCBConfigure -> decodeTCBConfigure args cap slot extraCaps
->         TCBSetPriority -> decodeSetPriority args cap
->         TCBSetMCPriority -> decodeSetMCPriority args cap
+>         TCBSetPriority -> decodeSetPriority args cap extraCaps
+>         TCBSetMCPriority -> decodeSetMCPriority args cap extraCaps
+>         TCBSetSchedParams -> decodeSetSchedParams args cap extraCaps
 >         TCBSetIPCBuffer -> decodeSetIPCBuffer args cap slot extraCaps
 >         TCBSetSpace -> decodeSetSpace args cap slot extraCaps
 >         TCBBindNotification -> decodeBindNotification cap extraCaps
@@ -168,18 +170,14 @@ For both of these operations, the first argument is a flags field. The lowest bi
 
 \subsubsection{The Configure Call}
 
-The "Configure" call is a batched call to "SetPriority", "SetIPCParams" and "SetSpace".
+The "Configure" call is a batched call to "SetIPCParams" and "SetSpace".
 
 > decodeTCBConfigure :: [Word] -> Capability -> PPtr CTE ->
 >         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
 > decodeTCBConfigure
->     (faultEP:packedPrioProps:cRootData:vRootData:buffer:_)
+>     (faultEP:cRootData:vRootData:buffer:_)
 >     cap slot (cRoot:vRoot:bufferFrame:_)
 >   = do
->     let prio = packedPrioProps .&. mask priorityBits
->     let mcp = (packedPrioProps `shiftR` priorityBits) .&. mask priorityBits
->     setPriority <- decodeSetPriority [prio] cap
->     setMCP <- decodeSetMCPriority [mcp] cap
 >     setIPCParams <- decodeSetIPCBuffer [buffer] cap slot [bufferFrame]
 >     setSpace <- decodeSetSpace [faultEP, cRootData, vRootData]
 >         cap slot [cRoot, vRoot]
@@ -187,8 +185,8 @@ The "Configure" call is a batched call to "SetPriority", "SetIPCParams" and "Set
 >         tcThread = capTCBPtr cap,
 >         tcThreadCapSlot = tcThreadCapSlot setSpace,
 >         tcNewFaultEP = tcNewFaultEP setSpace,
->         tcNewMCPriority = tcNewMCPriority setMCP,
->         tcNewPriority = tcNewPriority setPriority,
+>         tcNewMCPriority = Nothing,
+>         tcNewPriority = Nothing,
 >         tcNewCRoot = tcNewCRoot setSpace,
 >         tcNewVRoot = tcNewVRoot setSpace,
 >         tcNewIPCBuffer = tcNewIPCBuffer setIPCParams }
@@ -196,46 +194,72 @@ The "Configure" call is a batched call to "SetPriority", "SetIPCParams" and "Set
 
 \subsubsection{Check priorities}
 
-> checkPrio :: Word -> KernelF SyscallError ()
-> checkPrio prio = do
->     ct <- withoutFailure $ getCurThread
->     mcp <- withoutFailure $ threadGet tcbMCP ct
+> checkPrio :: Word -> PPtr TCB -> KernelF SyscallError ()
+> checkPrio prio auth = do
+>     mcp <- withoutFailure $ threadGet tcbMCP auth
 >     when (prio > fromIntegral mcp) $ throw (RangeError (fromIntegral minPriority) (fromIntegral mcp))
 
 \subsubsection{The Set Priority Call}
 
 Setting the thread's priority is only allowed if the new priority is lower than or equal to the current thread's. This prevents untrusted clients that hold untyped or TCB capabilities from performing denial of service attacks by creating new maximum-priority threads. This is a temporary solution; there may be significant changes to the scheduler in future versions to provide better partitioning of CPU time.
 
-> decodeSetPriority :: [Word] -> Capability ->
+> decodeSetPriority :: [Word] -> Capability -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError TCBInvocation
-> decodeSetPriority (newPrio:_) cap = do
->     checkPrio newPrio
+> decodeSetPriority (newPrio:_) cap ((authCap, _):_) = do
+>     authTCB <- case authCap of
+>         ThreadCap { capTCBPtr = tcbPtr } -> return tcbPtr
+>         _ -> throw $ InvalidCapability 1
+>     checkPrio newPrio authTCB
 >     return $! ThreadControl {
 >         tcThread = capTCBPtr cap,
 >--       tcThreadCapSlot = error "tcThreadCapSlot unused", In theory tcThreadCapSlot should never been evaluated by lazy evaluation. However, it was evaluated when running sel4 haskell kernel. So it is wired. Thus I change this to 0. I hope this can be changed back once we find out why this is evaluated. (by Xin)
 >         tcThreadCapSlot = 0,
 >         tcNewFaultEP = Nothing,
 >         tcNewMCPriority = Nothing,
->         tcNewPriority = Just $ fromIntegral newPrio,
+>         tcNewPriority = Just $ (fromIntegral newPrio, authTCB),
 >         tcNewCRoot = Nothing,
 >         tcNewVRoot = Nothing,
 >         tcNewIPCBuffer = Nothing }
-> decodeSetPriority _ _ = throw TruncatedMessage
+> decodeSetPriority _ _ _ = throw TruncatedMessage
 
-> decodeSetMCPriority :: [Word] -> Capability ->
+> decodeSetMCPriority :: [Word] -> Capability -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError TCBInvocation
-> decodeSetMCPriority (newMCP:_) cap = do
->     checkPrio newMCP
+> decodeSetMCPriority (newMCP:_) cap ((authCap, _):_) = do
+>     authTCB <- case authCap of
+>         ThreadCap { capTCBPtr = tcbPtr } -> return tcbPtr
+>         _ -> throw $ InvalidCapability 1
+>     checkPrio newMCP authTCB
 >     return $! ThreadControl {
 >         tcThread = capTCBPtr cap,
 >         tcThreadCapSlot = 0,
 >         tcNewFaultEP = Nothing,
->         tcNewMCPriority = Just $ fromIntegral newMCP,
+>         tcNewMCPriority = Just $ (fromIntegral newMCP, authTCB),
 >         tcNewPriority = Nothing,
 >         tcNewCRoot = Nothing,
 >         tcNewVRoot = Nothing,
 >         tcNewIPCBuffer = Nothing }
-> decodeSetMCPriority _ _ = throw TruncatedMessage
+> decodeSetMCPriority _ _ _ = throw TruncatedMessage
+
+The "SetSchedParams" call sets both the priority and the MCP in a single call.
+
+> decodeSetSchedParams :: [Word] -> Capability -> [(Capability, PPtr CTE)] ->
+>         KernelF SyscallError TCBInvocation
+> decodeSetSchedParams (newMCP:newPrio:_) cap ((authCap, _):_) = do
+>     authTCB <- case authCap of
+>         ThreadCap { capTCBPtr = tcbPtr } -> return tcbPtr
+>         _ -> throw $ InvalidCapability 1
+>     checkPrio newMCP authTCB
+>     checkPrio newPrio authTCB
+>     return $! ThreadControl {
+>         tcThread = capTCBPtr cap,
+>         tcThreadCapSlot = 0,
+>         tcNewFaultEP = Nothing,
+>         tcNewMCPriority = Just $ (fromIntegral newMCP, authTCB),
+>         tcNewPriority = Just $ (fromIntegral newPrio, authTCB),
+>         tcNewCRoot = Nothing,
+>         tcNewVRoot = Nothing,
+>         tcNewIPCBuffer = Nothing }
+> decodeSetSchedParams _ _ _ = throw TruncatedMessage
 
 \subsubsection{The Set IPC Buffer Call}
 
@@ -377,8 +401,8 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 >         withoutPreemption $ maybe (return ())
 >             (\ep -> threadSet (\t -> t {tcbFaultHandler = ep}) target)
 >             faultep
->         withoutPreemption $ maybe (return ()) (setMCPriority target) mcp
->         withoutPreemption $ maybe (return ()) (setPriority target) priority
+>         withoutPreemption $ maybe (return ()) (setMCPriority target) (mapMaybe fst mcp)
+>         withoutPreemption $ maybe (return ()) (setPriority target) (mapMaybe fst priority)
 >         maybe (return ()) (\(newCap, srcSlot) -> do
 >             rootSlot <- withoutPreemption $ getThreadCSpaceRoot target
 >             cteDelete rootSlot True

@@ -359,7 +359,7 @@ done
 
 lemma decode_tcb_invocation_wp[wp]:
 "\<lbrace>P\<rbrace>
-decode_tcb_invocation cap cap_ref caps (TcbConfigureIntent fault_ep priority cspace_root_data vspace_root_data buffer)
+decode_tcb_invocation cap cap_ref caps (TcbConfigureIntent fault_ep cspace_root_data vspace_root_data buffer)
 \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
   apply (clarsimp simp: decode_tcb_invocation_def)
   apply (wp alternative_wp)
@@ -385,7 +385,7 @@ lemma decode_invocation_tcb_rv':
         (Some ((reset_mem_mapping ipcbuff_cap),ipcbuff_slot))) s \<and>
    caps = [(croot_cap,croot_slot), (vroot_cap,vroot_slot), (ipcbuff_cap, ipcbuff_slot)]@xs \<and>
    cap_has_object cap \<and> buffer \<noteq> 0 \<rbrace>
-decode_tcb_invocation cap cap_ref caps (TcbConfigureIntent fault_ep priority cspace_root_data vspace_root_data buffer)
+decode_tcb_invocation cap cap_ref caps (TcbConfigureIntent fault_ep cspace_root_data vspace_root_data buffer)
 \<lbrace>P\<rbrace>, -"
   apply (clarsimp simp: decode_tcb_invocation_def)
   apply (wp alternativeE_R_wp)
@@ -417,7 +417,7 @@ lemma decode_invocation_tcb_rv'':
         (Some (cdl_update_cnode_cap_data (croot_cap) cspace_root_data, croot_slot))
         (Some (vroot_cap, vroot_slot))
         (Some ((reset_mem_mapping ipcbuff_cap),ipcbuff_slot))) s\<rbrace>
-  decode_invocation cap cap_ref caps (TcbIntent $ TcbConfigureIntent fault_ep priority cspace_root_data vspace_root_data buffer)
+  decode_invocation cap cap_ref caps (TcbIntent $ TcbConfigureIntent fault_ep cspace_root_data vspace_root_data buffer)
   \<lbrace>P\<rbrace>, -"
   apply (clarsimp)
   apply (unfold validE_def validE_R_def)
@@ -704,7 +704,7 @@ done
 lemma decode_tcb_invocation_current_thread_inv[wp]:
   "\<lbrace>\<lambda>s. P (cdl_current_thread s)\<rbrace>
   decode_tcb_invocation (TcbCap x) (a, b) cs
-  (TcbConfigureIntent fault_ep priority cspace_root_data vspace_root_data buffer_addr)
+  (TcbConfigureIntent fault_ep cspace_root_data vspace_root_data buffer_addr)
   \<lbrace>\<lambda>_ s. P (cdl_current_thread s)\<rbrace>"
   apply (clarsimp simp: decode_tcb_invocation_def)
   apply (wp alternative_wp)
@@ -715,7 +715,7 @@ done
 lemma decode_invocation_tcb_current_thread_inv[wp]:
  "\<lbrace>\<lambda>s. is_tcb_cap c \<and> P (cdl_current_thread s)\<rbrace>
        decode_invocation c (a, b) cs
-        (TcbIntent (TcbConfigureIntent fault_ep priority cspace_root_data vspace_root_data buffer_addr))
+        (TcbIntent (TcbConfigureIntent fault_ep cspace_root_data vspace_root_data buffer_addr))
   \<lbrace>\<lambda>_ s. P (cdl_current_thread s) \<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp: decode_tcb_invocation_simps)
@@ -780,7 +780,7 @@ lemma decode_invocation_tcb_configure_wp:
  "is_tcb_cap c \<Longrightarrow>
    \<lbrace>\<lambda>s. P s\<rbrace>
        decode_invocation c (a, b) cs
-        (TcbIntent (TcbConfigureIntent fault_ep priority cspace_root_data vspace_root_data buffer_addr))
+        (TcbIntent (TcbConfigureIntent fault_ep cspace_root_data vspace_root_data buffer_addr))
   \<lbrace>\<lambda>_ s. P s\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp: decode_tcb_invocation_simps)
@@ -1025,7 +1025,7 @@ shows
       cspace_slot = offset cspace_root root_size \<and>
       vspace_slot = offset vspace_root root_size \<and>
       buffer_frame_slot = offset buffer_frame_root root_size \<rbrace>
-  seL4_TCB_Configure tcb_root fault_ep priority
+  seL4_TCB_Configure tcb_root fault_ep
                      cspace_root cspace_root_data
                      vspace_root vspace_root_data
                      buffer_addr buffer_frame_root

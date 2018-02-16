@@ -514,7 +514,9 @@ lemma handle_invocation_reads_respects_g:
   notes gts_st_tcb[wp del] gts_st_tcb_at[wp del]
   notes get_message_info_reads_respects_g = reads_respects_g_from_inv[OF get_message_info_rev get_mi_inv]
   shows "reads_respects_f_g aag l
-           (silc_inv aag st and only_timer_irq_inv irq st' and einvs and schact_is_rct and ct_active and pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread and K (\<not> pasMaySendIrqs aag))
+           (silc_inv aag st and only_timer_irq_inv irq st' and einvs and schact_is_rct and ct_active and
+            pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread and
+            K (\<not> pasMaySendIrqs aag))
            (handle_invocation calling blocking)"
   apply (rule gen_asm_ev)
   apply (simp add: handle_invocation_def fun_app_def split_def)

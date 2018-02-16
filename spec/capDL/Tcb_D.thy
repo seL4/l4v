@@ -79,7 +79,7 @@ where
          returnOk (Resume (cap_object target)) \<sqinter> throw
 
        (* Configure: target, fault_ep, mcp, priority, cspace_root_data, vspace_root_data, buffer *)
-     | TcbConfigureIntent fault_ep (mcp, priority) cspace_root_data vspace_root_data buffer \<Rightarrow>
+     | TcbConfigureIntent fault_ep cspace_root_data vspace_root_data buffer \<Rightarrow>
          doE
            cspace_root \<leftarrow> throw_on_none $ get_index caps 0;
            vspace_root \<leftarrow> throw_on_none $ get_index caps 1;
@@ -93,11 +93,24 @@ where
 
        (* Modify a thread's maximum control priority. *)
      | TcbSetMCPriorityIntent mcp \<Rightarrow>
-         returnOk (ThreadControl (cap_object target) slot None None None None) \<sqinter> throw
+         doE
+           auth_cap \<leftarrow> throw_on_none $ get_index caps 0;
+           returnOk (ThreadControl (cap_object target) slot None None None None)
+         odE \<sqinter> throw
 
        (* Modify a thread's priority. *)
      | TcbSetPriorityIntent priority \<Rightarrow>
-         returnOk (ThreadControl (cap_object target) slot None None None None) \<sqinter> throw
+         doE
+           auth_cap \<leftarrow> throw_on_none $ get_index caps 0;
+           returnOk (ThreadControl (cap_object target) slot None None None None)
+         odE \<sqinter> throw
+
+       (* Modify a thread's mcp and priority at the same time. *)
+     | TcbSetSchedParamsIntent mcp priority \<Rightarrow>
+         doE
+           auth_cap \<leftarrow> throw_on_none $ get_index caps 0;
+           returnOk (ThreadControl (cap_object target) slot None None None None)
+         odE \<sqinter> throw
 
        (* Modify a thread's IPC buffer. *)
      | TcbSetIPCBufferIntent buffer \<Rightarrow>

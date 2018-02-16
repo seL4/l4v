@@ -568,7 +568,7 @@ lemma seL4_TCB_Configure_sep:
      (tcb_id, tcb_vspace_slot) \<mapsto>c NullCap \<and>*
      (tcb_id, tcb_ipcbuffer_slot) \<mapsto>c NullCap \<and>*
       R\<guillemotright> s\<rbrace>
-  seL4_TCB_Configure tcb_root fault_ep priority
+  seL4_TCB_Configure tcb_root fault_ep
                      cspace_root cspace_root_data
                      vspace_root vspace_root_data
                      buffer_addr buffer_frame_root
@@ -671,7 +671,7 @@ lemma seL4_TCB_Configure_object_initialised_sep_helper:
      si_cap_at t orig_caps spec False vspace_id \<and>*
      si_cap_at t orig_caps spec False buffer_frame_id \<and>*
      si_objects \<and>* R\<guillemotright>\<rbrace>
-  seL4_TCB_Configure tcb_index fault_ep priority
+  seL4_TCB_Configure tcb_index fault_ep
                      cspace_index cspace_root_data
                      vspace_index vspace_root_data
                      buffer_addr buffer_frame_index
@@ -747,7 +747,7 @@ lemma seL4_TCB_Configure_object_initialised_sep:
          si_cap_at t orig_caps spec False vspace_id \<and>*
          si_cap_at t orig_caps spec False buffer_frame_id \<and>*
          si_objects \<and>* R\<guillemotright> s\<rbrace>
-  seL4_TCB_Configure tcb_index fault_ep priority
+  seL4_TCB_Configure tcb_index fault_ep
                      cspace_index cspace_root_data
                      vspace_index vspace_root_data
                      buffer_addr buffer_frame_index

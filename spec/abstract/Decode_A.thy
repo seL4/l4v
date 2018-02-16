@@ -207,35 +207,60 @@ where
 
 
 definition
-  check_prio :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
+  check_prio :: "data \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) se_monad"
 where
-  "check_prio new_prio \<equiv>
+  "check_prio new_prio auth_tcb \<equiv>
     doE
-      cur \<leftarrow> liftE $ gets cur_thread;
-      mcp \<leftarrow> liftE $ thread_get tcb_mcpriority cur;
+      mcp \<leftarrow> liftE $ thread_get tcb_mcpriority auth_tcb;
       whenE (new_prio > ucast mcp) $ throwError (RangeError 0 (ucast mcp))
     odE"
 
-definition
-  decode_set_priority :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
-where
-  "decode_set_priority args cap slot \<equiv>
-     if length args = 0 then throwError TruncatedMessage
-     else let prio = ucast (args ! 0) in doE
-       check_prio (args ! 0);
-       returnOk (ThreadControl (obj_ref_of cap) slot None
-             None (Some prio) None None None)
-    odE"
 
 definition
-  decode_set_mcpriority :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
+  decode_set_priority :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
-  "decode_set_mcpriority args cap slot \<equiv>
-     if length args = 0 then throwError TruncatedMessage
-     else let new_mcp = ucast $ args ! 0 in doE
-       check_prio (args ! 0);
-       returnOk (ThreadControl (obj_ref_of cap) slot None
-             (Some new_mcp) None None None None)
+  "decode_set_priority args cap slot extra_caps \<equiv> doE
+     whenE (length args = 0 \<or> length extra_caps = 0) $ throwError TruncatedMessage;
+     prio \<leftarrow> returnOk $ ucast (args ! 0);
+     auth_tcb \<leftarrow> case fst (extra_caps ! 0) of
+         ThreadCap tcb_ptr \<Rightarrow> returnOk tcb_ptr
+       | _ \<Rightarrow> throwError (InvalidCapability 1);
+     check_prio (args ! 0) auth_tcb;
+     returnOk (ThreadControl (obj_ref_of cap) slot None None
+                             (Some (prio, auth_tcb)) None None None)
+     odE"
+
+
+definition
+  decode_set_mcpriority :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
+where
+  "decode_set_mcpriority args cap slot extra_caps \<equiv> doE
+     whenE (length args = 0 \<or> length extra_caps = 0) $ throwError TruncatedMessage;
+     new_mcp \<leftarrow> returnOk $ ucast $ args ! 0;
+     auth_tcb \<leftarrow> case fst (extra_caps ! 0) of
+         ThreadCap tcb_ptr \<Rightarrow> returnOk tcb_ptr
+       | _ \<Rightarrow> throwError (InvalidCapability 1);
+     check_prio (args ! 0) auth_tcb;
+     returnOk (ThreadControl (obj_ref_of cap) slot None (Some (new_mcp, auth_tcb))
+                             None None None None)
+     odE"
+
+
+definition
+  decode_set_sched_params :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
+where
+  "decode_set_sched_params args cap slot extra_caps \<equiv> doE
+     whenE (length args < 2) $ throwError TruncatedMessage;
+     whenE (length extra_caps = 0) $ throwError TruncatedMessage;
+     new_mcp \<leftarrow> returnOk $ ucast $ args ! 0;
+     new_prio \<leftarrow> returnOk $ ucast $ args ! 1;
+     auth_tcb \<leftarrow> case fst (extra_caps ! 0) of
+         ThreadCap tcb_ptr \<Rightarrow> returnOk tcb_ptr
+       | _ \<Rightarrow> throwError (InvalidCapability 1);
+     check_prio (args ! 0) auth_tcb;
+     check_prio (args ! 1) auth_tcb;
+     returnOk (ThreadControl (obj_ref_of cap) slot None
+                             (Some (new_mcp, auth_tcb)) (Some (new_prio, auth_tcb)) None None None)
      odE"
 
 
@@ -298,36 +323,22 @@ where
 
 
 definition
-  prio_from_word :: "data \<Rightarrow> data"
-where
-  "prio_from_word w \<equiv> w && mask 8"
-
-definition
-  mcp_from_word :: "data \<Rightarrow> data"
-where
-  "mcp_from_word w \<equiv> (w >> 8) && mask 8"
-
-
-definition
   decode_tcb_configure ::
   "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
   "decode_tcb_configure args cap slot extra_caps \<equiv> doE
-     whenE (length args < 5) $ throwError TruncatedMessage;
+     whenE (length args < 4) $ throwError TruncatedMessage;
      whenE (length extra_caps < 3) $ throwError TruncatedMessage;
      fault_ep \<leftarrow> returnOk $ args ! 0;
-     prioProps  \<leftarrow> returnOk $ args ! 1;
-     croot_data \<leftarrow> returnOk $ args ! 2;
-     vroot_data \<leftarrow> returnOk $ args ! 3;
+     croot_data \<leftarrow> returnOk $ args ! 1;
+     vroot_data \<leftarrow> returnOk $ args ! 2;
      crootvroot \<leftarrow> returnOk $ take 2 extra_caps;
      buffer_cap \<leftarrow> returnOk $ extra_caps ! 2;
-     buffer \<leftarrow> returnOk $ args ! 4;
-     set_prio \<leftarrow> decode_set_priority [prio_from_word prioProps] cap slot;
-     set_mcp \<leftarrow> decode_set_mcpriority [mcp_from_word prioProps] cap slot;
+     buffer \<leftarrow> returnOk $ args ! 3;
      set_params \<leftarrow> decode_set_ipc_buffer [buffer] cap slot [buffer_cap];
      set_space \<leftarrow> decode_set_space [fault_ep, croot_data, vroot_data] cap slot crootvroot;
      returnOk $ ThreadControl (obj_ref_of cap) slot (tc_new_fault_ep set_space)
-                              (tc_new_mcpriority set_mcp) (tc_new_priority set_prio)
+                              None None
                               (tc_new_croot set_space) (tc_new_vroot set_space)
                               (tc_new_buffer set_params)
    odE"
@@ -383,8 +394,9 @@ where
     | TCBSuspend \<Rightarrow> returnOk $ Suspend $ obj_ref_of cap
     | TCBResume \<Rightarrow> returnOk $ Resume $ obj_ref_of cap
     | TCBConfigure \<Rightarrow> decode_tcb_configure args cap slot excs
-    | TCBSetPriority \<Rightarrow> decode_set_priority args cap slot
-    | TCBSetMCPriority \<Rightarrow> decode_set_mcpriority args cap slot
+    | TCBSetPriority \<Rightarrow> decode_set_priority args cap slot excs
+    | TCBSetMCPriority \<Rightarrow> decode_set_mcpriority args cap slot excs
+    | TCBSetSchedParams \<Rightarrow> decode_set_sched_params args cap slot excs
     | TCBSetIPCBuffer \<Rightarrow> decode_set_ipc_buffer args cap slot excs
     | TCBSetSpace \<Rightarrow> decode_set_space args cap slot excs
     | TCBBindNotification \<Rightarrow> decode_bind_notification cap excs
