@@ -58,13 +58,11 @@
 \isabellestyle{tt}
 
 \newcommand{\version}{\input{VERSION}\xspace}
-\newcommand{\arch}{\input{ARCH}\xspace}
-\newcommand{\gitid}{\input{git-id}\xspace}
 
 \hypersetup
 {
     pdfauthor={Trustworthy Systems, Data61},
-    pdftitle={Abstract Formal Specification of the seL4/\arch API}
+    pdftitle={Abstract Formal Specification of the seL4 API}
 }
 
 \renewcommand{\isamarkupchapter}[1]{\chapter{#1}}
@@ -93,7 +91,7 @@
 
 \begin{document}
 
-\title{Abstract Formal Specification of the seL4/\arch API}
+\title{Abstract Formal Specification of the seL4 API}
 
 \date{Version \version}
 
@@ -132,9 +130,7 @@ Simon Winwood
 
 \bigskip
 
-Architecture: \arch\\
-Document build date: \today\\
-Produced from git change set: \gitid
+Document build date: \today
 
 \clearpage
 
@@ -142,7 +138,7 @@ Produced from git change set: \gitid
 This document is the text version of the abstract, formal
 Isabelle/HOL specification of the seL4 microkernel. It is
 intended to give a precise, operational definition of the
-seL4 microkernel on the \arch architecture.
+seL4 microkernel.
 The document contains a short overview, followed by
 text generated from the formal Isabelle/HOL definitions.
 

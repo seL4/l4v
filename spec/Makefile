@@ -37,20 +37,10 @@ CKernel CSpec: c-kernel design-spec
 
 ExecSpec DSpec : design-spec
 
-ASpec: design-spec abstract/document/VERSION \
-       abstract/document/git-id abstract/document/ARCH
+ASpec: design-spec abstract/document/VERSION
 
 abstract/document/VERSION: $(SEL4_VERSION)
 	cp $< $@
-
-abstract/document/git-id: .FORCE
-	git rev-parse HEAD | cut -c -15 > $@
-	git diff --no-ext-diff --quiet || echo "*" >> $@
-	git diff --no-ext-diff --cached --quiet || echo "+" >> $@
-	perl -pi -e "s/\n//" $@
-
-abstract/document/ARCH: .FORCE
-	echo $(L4V_ARCH) | perl -pe "s/\\_/\\\\_/g" > $@
 
 # NOTE: the install_C_file in Kernel_C.thy invocation generates a spurious
 #       umm_types.txt file in this folder. This file is never used nor
