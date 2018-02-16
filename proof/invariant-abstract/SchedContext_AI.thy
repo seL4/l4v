@@ -506,7 +506,8 @@ lemma invoke_sched_context_typ_at[wp]:
      invoke_sched_context i
    \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   by (cases i;
-      wpsimp wp: dxo_wp_weak simp: invoke_sched_context_def sched_context_bind_ntfn_def)
+      wpsimp wp: dxo_wp_weak mapM_wp'
+       simp: invoke_sched_context_def sched_context_bind_ntfn_def sched_context_unbind_reply_def)
 
 crunch inv[wp]: refill_capacity,refill_sufficient,refill_ready "\<lambda>s. P s"
 
