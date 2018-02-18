@@ -55,9 +55,9 @@ definition
   sched_context_unbind_reply :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_unbind_reply sc_ptr = do
-    sc \<leftarrow> get_sched_context sc_ptr;
-    mapM (\<lambda>r. set_reply_obj_ref reply_sc_update r None) (sc_replies sc);
-    update_sched_context sc_ptr (sc\<lparr>sc_replies := [] \<rparr>)
+    replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
+    mapM (\<lambda>r. set_reply_obj_ref reply_sc_update r None) replies;
+    set_sc_obj_ref sc_replies_update sc_ptr []
   od"
 
 definition
@@ -110,11 +110,11 @@ definition
   reply_unlink_sc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "reply_unlink_sc sc_ptr reply_ptr = do
-     sc \<leftarrow> get_sched_context sc_ptr;
+     sc_replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
      reply \<leftarrow> get_reply reply_ptr;
      assert (reply_sc reply = Some sc_ptr);
      set_reply_obj_ref reply_sc_update reply_ptr None;
-     update_sched_context sc_ptr (sc\<lparr>sc_replies := remove1 reply_ptr (sc_replies sc)\<rparr>)
+     set_sc_obj_ref sc_replies_update sc_ptr (remove1 reply_ptr sc_replies)
   od"
 
 text \<open>Unbind a reply from the corresponding TCB.\<close>
@@ -245,11 +245,11 @@ where
     set_thread_state caller (BlockedOnReply (Some reply_ptr));
 
     when (sc_caller \<noteq> None \<and> can_donate) $ do
-      sc \<leftarrow> get_sched_context (the sc_caller); (* maybe define a function to add a reply to the queue? *)
-      case sc_replies sc of
+      sc_replies \<leftarrow> liftM sc_replies $ get_sched_context (the sc_caller); (* maybe define a function to add a reply to the queue? *)
+      case sc_replies of
           [] \<Rightarrow> assert True
         | (r#_) \<Rightarrow> do reply \<leftarrow> get_reply r; assert (reply_sc reply = sc_caller) od;
-      update_sched_context (the sc_caller) (sc\<lparr>sc_replies := reply_ptr#sc_replies sc\<rparr>);
+      set_sc_obj_ref sc_replies_update (the sc_caller) (reply_ptr#sc_replies);
       set_reply_obj_ref reply_sc_update reply_ptr sc_caller;
       do_extended_op $ sched_context_donate (the sc_caller) callee
     od

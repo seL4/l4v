@@ -213,7 +213,7 @@ where
    od"
 
 definition
-  set_sc_obj_ref :: "((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> sched_context \<Rightarrow> sched_context) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  set_sc_obj_ref :: "(('a \<Rightarrow> 'a) \<Rightarrow> sched_context \<Rightarrow> sched_context) \<Rightarrow> obj_ref \<Rightarrow> 'a \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "set_sc_obj_ref f ref new \<equiv> do
      sc \<leftarrow> get_sched_context ref;
