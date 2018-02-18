@@ -776,6 +776,10 @@ where
   "live_ntfn ntfn \<equiv> (bound (ntfn_bound_tcb ntfn) \<or> bound (ntfn_sc ntfn)
                                 \<or> (\<exists>ts. ntfn_obj ntfn = WaitingNtfn ts))"
 
+definition live_reply :: "reply \<Rightarrow> bool"
+where
+  "live_reply reply \<equiv> (bound (reply_tcb reply) \<or> bound (reply_sc reply))"
+
 primrec
   live0 :: "kernel_object \<Rightarrow> bool"
 where
@@ -785,7 +789,7 @@ where
                                 \<or> tcb_state tcb \<noteq> Inactive \<and> tcb_state tcb \<noteq> IdleThreadState)"
 | "live0 (Endpoint ep)       = (ep \<noteq> IdleEP)"
 | "live0 (SchedContext sc n) = live_sc sc"
-| "live0 (Reply reply)       = (bound (reply_tcb reply) \<or> bound (reply_sc reply))"
+| "live0 (Reply reply)       = live_reply reply"
 | "live0 (Notification ntfn) = live_ntfn ntfn"
 | "live0 (ArchObj ao)        = False"
 
@@ -1565,7 +1569,7 @@ lemma refs_of_live:
     apply (fastforce simp: get_refs_def)+
   apply (rename_tac notification)
   apply (case_tac "ntfn_obj notification", simp_all add: live_ntfn_def)
-   apply (fastforce simp: get_refs_def live_sc_def)+
+   apply (fastforce simp: get_refs_def live_sc_def live_reply_def)+
   done
 
 lemma hyp_refs_of_live:
