@@ -2085,7 +2085,6 @@ lemma vcpu_switch_ccorres_None:
              (vcpuSwitch None) (Call vcpu_switch_'proc)"
   apply (cinit lift: new_')
   (* v = None *)
-   apply simp
    apply ccorres_rewrite
    apply (simp add: when_def)
    apply (rule ccorres_pre_getCurVCPU)

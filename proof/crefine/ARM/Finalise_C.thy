@@ -1479,20 +1479,18 @@ lemma Arch_finaliseCap_ccorres:
      apply (rule ccorres_cases[where P="isPageCap cp"]; clarsimp)
       prefer 2
       apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
-      apply (cases cp; clarsimp simp: isCap_simps; ccorres_rewrite)
+      apply (cases cp; ccorres_rewrite C_simp_simps: isCap_simps)
           apply (rule return_Null_ccorres)+
         apply (subst ccorres_cond_seq2_seq[symmetric])
         apply (rule ccorres_guard_imp)
           apply (rule ccorres_rhs_assoc)
           apply csymbr
-          apply clarsimp
           apply ccorres_rewrite
           apply (rule return_Null_ccorres, simp+)
        apply (subst ccorres_cond_seq2_seq[symmetric])
        apply (rule ccorres_guard_imp)
          apply (rule ccorres_rhs_assoc)
          apply csymbr
-         apply clarsimp
          apply ccorres_rewrite
          apply (rule return_Null_ccorres, simp+)
      apply ccorres_rewrite
@@ -1620,7 +1618,6 @@ lemma Arch_finaliseCap_ccorres:
      apply clarsimp
      apply (rule ccorres_rhs_assoc)+
      apply csymbr
-     apply simp
      apply ccorres_rewrite
      apply (rule ccorres_rhs_assoc)+
      apply csymbr
