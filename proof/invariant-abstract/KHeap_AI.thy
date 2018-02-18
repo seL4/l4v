@@ -1235,6 +1235,7 @@ lemmas set_cap_arch[wp] = set_cap.arch_state
 interpretation
   set_sc_tcb: non_aobj_non_cap_non_mem_op "set_sc_obj_ref sc_tcb_update p sco" +
   set_sc_ntfn: non_aobj_non_cap_non_mem_op "set_sc_obj_ref sc_ntfn_update p sco" +
+  set_sc_replies: non_aobj_non_cap_non_mem_op "set_sc_obj_ref sc_replies_update p scos" +
   set_sc_yf: non_aobj_non_cap_non_mem_op "set_sc_obj_ref sc_yield_from_update p sco"
   apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
   unfolding set_simple_ko_def set_thread_state_def set_sc_obj_ref_def

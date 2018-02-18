@@ -3900,7 +3900,7 @@ lemma reply_unlink_tcb_valid_list[wp]:
 
 lemma reply_unlink_sc_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> reply_unlink_sc sc r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (valid_list_unfold simp:reply_unlink_sc_def)
+  by (valid_list_unfold simp:reply_unlink_sc_def set_sc_obj_ref_def)
 
 lemma sched_context_donate_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> sched_context_donate sc_ptr tcb_ptr\<lbrace>\<lambda>_.valid_list\<rbrace>"

@@ -138,7 +138,7 @@ lemma refill_split_check_valid_objs[wp]:
   apply (wpsimp wp: get_sched_context_wp get_refills_sp set_refills_valid_objs
       hoare_vcg_conj_lift hoare_drop_imp hoare_vcg_if_lift2
       simp: pred_conj_def refill_split_check_def obj_at_def is_sc_obj_def Let_def
-      split: kernel_object.splits split_del: if_splits)
+      split: kernel_object.splits split_del: if_split)
   apply (frule_tac sc=sca in valid_sc_valid_refills[rotated], simp)
   apply (case_tac "sc_refills sca", simp)
   apply (auto simp: refills_merge_valid[simplified])
@@ -587,7 +587,7 @@ lemma sched_context_update_consumed_invs[wp]:
 crunch interrupt_states[wp]: update_sched_context "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma update_sched_context_minor_invs:
+lemma update_sched_context_minor_invs: (* minor? *)
   "\<lbrace>invs and obj_at (\<lambda>ko. refs_of ko = refs_of_sc val) ptr
          and valid_sched_context val
          and (\<lambda>s. live_sc val \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
@@ -597,12 +597,19 @@ lemma update_sched_context_minor_invs:
           wp: valid_irq_node_typ simp_del: fun_upd_apply)
   apply (clarsimp simp: state_refs_of_def obj_at_def ext elim!: rsubst[where P = sym_refs])
   done
-
+(*
 lemma set_nofiticaion_invs:
   "\<lbrace>invs and valid_ntfn ntfn and (\<lambda>s. live_ntfn ntfn \<longrightarrow> ex_nonz_cap_to p s)
      and (\<lambda>s. sym_refs ((state_refs_of s)(p := refs_of_ntfn ntfn)))\<rbrace>
       set_notification p ntfn \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: invs_def valid_state_def valid_pspace_def live_def
+      wp: valid_irq_node_typ simp_del: fun_upd_apply)
+
+lemma set_reply_invs:
+  "\<lbrace>invs and valid_reply reply and (\<lambda>s. live_reply reply \<longrightarrow> ex_nonz_cap_to p s)
+     and (\<lambda>s. sym_refs ((state_refs_of s)(p := refs_of_reply reply)))\<rbrace>
+      set_reply p reply \<lbrace>\<lambda>rv. invs\<rbrace>"
+  by (wpsimp simp: invs_def valid_state_def valid_pspace_def live_def refs_of_reply_def
       wp: valid_irq_node_typ simp_del: fun_upd_apply)
 
 lemma valid_sc_sc_ntfn_update:
@@ -621,9 +628,9 @@ lemma iflive_kheap_update:
    apply (clarsimp simp add: obj_at_def elim!: ex_cap_to_after_update
                    split: if_split_asm | (erule notE, erule ex_cap_to_after_update))+
   done
+*)
 
-
-(* RT FIXME: Move to Kheap? *)
+(* RT FIXME: Move to Kheap?
 lemma set_simple_k_sc_at[wp]:
   "\<lbrace> sc_at p \<rbrace> set_simple_ko f p' v \<lbrace>\<lambda>rv. sc_at p\<rbrace>"
   by (wpsimp simp: sc_at_typ wp: hoare_vcg_ex_lift set_simple_ko_typ_at)
@@ -632,7 +639,7 @@ lemma set_sk_sc_ntfn_sc_at[wp]:
   "\<lbrace> sc_ntfn_sc_at P p \<rbrace> set_simple_ko f p' v \<lbrace>\<lambda>rv. sc_ntfn_sc_at P p\<rbrace>"
   by (wpsimp simp: sc_ntfn_sc_at_def obj_at_def set_simple_ko_def set_object_def a_type_def
        wp: get_object_wp)
-
+*)
 lemma ssc_refs_of_Some[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= insert (sc, TCBSchedContext)
           {x \<in> state_refs_of s t. snd x \<noteq> TCBSchedContext}))\<rbrace>
