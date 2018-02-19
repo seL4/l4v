@@ -27,7 +27,7 @@ report-regression:
 #
 
 # Spec heaps.
-HEAPS += ASpec ExecSpec DSpec CKernel CSpec TakeGrant ASepSpec
+HEAPS += ASpec ASpecDoc ExecSpec DSpec CKernel CSpec TakeGrant ASepSpec
 
 # Additional dependencies
 
@@ -35,12 +35,21 @@ CKernel CSpec: c-kernel design-spec
 
 # NOTE: The abstract spec imports Events from Haskell hence the dependency
 
-ExecSpec DSpec : design-spec
+ASpec ExecSpec DSpec : design-spec
 
-ASpec: design-spec abstract/document/VERSION
+ASPEC_DOC_GITREV_FILE=abstract/document/gitrev.tex
+ASPEC_DOC_VERSION_FILE=abstract/document/VERSION
 
-abstract/document/VERSION: $(SEL4_VERSION)
+ASpecDoc: design-spec $(ASPEC_DOC_VERSION_FILE) $(ASPEC_DOC_GITREV_FILE)
+
+$(ASPEC_DOC_VERSION_FILE): $(SEL4_VERSION)
 	cp $< $@
+
+$(ASPEC_DOC_GITREV_FILE): .FORCE
+	git rev-parse --short=15 HEAD > $@ || echo unknown > $@
+	git diff --no-ext-diff --quiet || echo "*" >> $@
+	git diff --no-ext-diff --quiet --cached || echo "+" >> $@
+	perl -p -i -e "s/\n//" $@
 
 # NOTE: the install_C_file in Kernel_C.thy invocation generates a spurious
 #       umm_types.txt file in this folder. This file is never used nor

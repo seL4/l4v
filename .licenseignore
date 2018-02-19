@@ -48,6 +48,8 @@ internal/*
 **/licenses
 **/CONTRIBUTORS
 
+spec/abstract/document/*/ARCH.tex
+spec/abstract/document/gitrev.tex
 
 spec/haskell/cabal.sandbox.config
 spec/haskell/.cabal-sandbox/*
