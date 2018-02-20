@@ -2965,11 +2965,11 @@ lemma decodeTCBConfigure_ccorres:
                    apply (rule ccorres_split_nothrowE)
                         apply (ctac add: ccorres_injection_handler_csum1[OF checkPrio_ccorres])
                        apply ceqv
-                      apply (simp del: Collect_const; ccorres_rewrite)
+                      apply ccorres_rewrite
                       apply (rule ccorres_split_nothrowE)
                            apply (ctac add: ccorres_injection_handler_csum1[OF checkPrio_ccorres])
                           apply ceqv
-                         apply (simp del: Collect_const; ccorres_rewrite)
+                         apply ccorres_rewrite
                          apply (simp add: decodeSetIPCBuffer_def split_def
                                           injection_handler_If injection_handler_returnOk
                                           injection_bindE [OF refl refl] bindE_assoc
