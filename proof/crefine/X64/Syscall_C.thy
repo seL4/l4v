@@ -434,13 +434,8 @@ lemma messageInfoFromWord_spec:
    apply simp_all
   apply (clarsimp simp: seL4_MessageInfo_lift_def mi_from_H_def
                         messageInfoFromWord_def Let_def
-                        Types_H.msgLengthBits_def Types_H.msgExtraCapBits_def
-                        Types_H.msgMaxExtraCaps_def shiftL_nat)
-  apply (fold mask_def[where n=20, simplified])
-  apply (rule less_mask_eq)
-  apply (rule shiftr_less_t2n')
-   apply simp subgoal sorry (* FIXME x64: 32 bits of padding *)
-  apply simp
+                        msgLengthBits_def msgExtraCapBits_def
+                        msgMaxExtraCaps_def msgLabelBits_def shiftL_nat)
   done
 
 lemma threadGet_tcbIpcBuffer_ccorres [corres]:
