@@ -395,12 +395,13 @@ This module uses the C preprocessor to select a target architecture.
 >     let tptrOpt = scTCB sc
 >     assert (tptrOpt /= Nothing) "schedContextUnbind: option of TCB pointer must not be Nothing"
 >     let tptr = fromJust tptrOpt
+>     cur <- getCurThread
+>     when (tptr == cur) $ rescheduleRequired
 >     tcbSchedDequeue tptr
 >     tcbReleaseRemove tptr
 >     threadSet (\tcb -> tcb { tcbSchedContext = Nothing }) tptr
 >     setSchedContext scPtr $ sc { scTCB = Nothing }
->     cur <- getCurThread
->     when (tptr == cur) $ rescheduleRequired
+
 
 > schedContextDonate :: PPtr SchedContext -> PPtr TCB -> Kernel ()
 > schedContextDonate scPtr tcbPtr = do
@@ -408,15 +409,13 @@ This module uses the C preprocessor to select a target architecture.
 >     fromOpt <- return $ scTCB sc
 >     when (fromOpt /= Nothing) $ do
 >         from <- return $ fromJust fromOpt
+>         tcbSchedDequeue from
 >         threadSet (\tcb -> tcb { tcbSchedContext = Nothing }) from
 >         cur <- getCurThread
 >         action <- getSchedulerAction
 >         case action of
 >             SwitchToThread candidate | candidate == from -> rescheduleRequired
->             _ | from == cur -> rescheduleRequired
->             _ -> do
->                 runnable <- isRunnable from
->                 when runnable $ tcbSchedDequeue from
+>             _ -> when (from == cur) rescheduleRequired
 >     setSchedContext scPtr (sc { scTCB = Just tcbPtr })
 >     threadSet (\tcb -> tcb { tcbSchedContext = Just scPtr }) tcbPtr
 
@@ -476,6 +475,13 @@ This module uses the C preprocessor to select a target architecture.
 >     InvokeSchedContextUnbind scPtr -> do
 >         schedContextUnbindAllTCBs scPtr
 >         schedContextUnbindNtfn scPtr
+>         sc <- getSchedContext scPtr
+>         let replyPtrOpt = scReply sc
+>         when (replyPtrOpt /= Nothing) $ do
+>             let replyPtr = fromJust replyPtrOpt
+>             reply <- getReply replyPtr
+>             setReply replyPtr reply { replySc = Nothing }
+>             setSchedContext scPtr $ sc { scReply = Nothing }
 >     InvokeSchedContextYieldTo scPtr buffer -> do
 >         schedContextYieldTo scPtr buffer
 
