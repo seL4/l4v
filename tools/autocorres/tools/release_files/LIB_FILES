@@ -61,6 +61,7 @@ NICTATools.thy:
 Apply_Debug.thy:
 Apply_Trace.thy:
 Apply_Trace_Cmd.thy:
+Find_Names.thy:
 AutoLevity_Base.thy:
 AutoLevity_Hooks.thy:
 Insulin.thy:

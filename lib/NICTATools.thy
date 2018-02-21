@@ -13,6 +13,7 @@ theory NICTATools
 imports
   Apply_Trace_Cmd
   Apply_Debug
+  Find_Names
   (* Solves_Tac *)
   Rule_By_Method
   Eisbach_Methods
