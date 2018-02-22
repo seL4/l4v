@@ -38,6 +38,6 @@ crunch_ignore (add:
 
 crunch_ignore (add:
   cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext tcb_sched_action
-  reschedule_required possible_switch_to set_priority retype_region_ext)
+  reschedule_required schedule_tcb possible_switch_to set_priority retype_region_ext)
 
 end

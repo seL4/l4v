@@ -191,12 +191,12 @@ proof -
   from p have "ko_at ko p s" by (simp add: obj_at_def)
   with v show Q by (auto elim: obj_at_valid_objsE simp: Q)
 qed
-(* RT: there is no set_thread_state_ext
+
 lemma thread_set_split_out_set_thread_state:
   assumes f: "\<forall>tcb. (tcb_state_update (\<lambda>_. tcb_state (f undefined)) (f tcb))
                         = f tcb"
   shows "(do y \<leftarrow> thread_set f t;
-             do_extended_op (set_thread_state_ext t)
+             do_extended_op (schedule_tcb t)
           od)
       = (do thread_set (\<lambda>tcb. (f tcb) \<lparr> tcb_state := tcb_state tcb \<rparr>) t;
             set_thread_state t (tcb_state (f undefined))
@@ -208,7 +208,7 @@ lemma thread_set_split_out_set_thread_state:
                         assert_opt_def fail_def return_def
                  split: option.split)
   apply (auto dest!: get_tcb_SomeD, auto simp: get_tcb_def f)
-  done*)
+  done
 
 lemma thread_set_split_out_sset_tcb_obj_ref:
   assumes f: "\<forall>tcb. (tcb_bound_notification_update (\<lambda>_. tcb_bound_notification (f arbitrary)) (f tcb))
@@ -1288,7 +1288,8 @@ lemma sts_refs_of_helper: "
           get_refs TCBBound ntfnptr \<union>
           get_refs TCBSchedContext sc \<union>
           get_refs TCBYieldTo yt"
-  by (auto simp: tcb_st_refs_of_def get_refs_def split: thread_state.splits option.splits)
+  by (auto simp: tcb_st_refs_of_def get_refs_def
+          split: thread_state.splits option.splits)
 
 lemma sts_refs_of[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s) (t := tcb_st_refs_of st
@@ -1399,13 +1400,13 @@ lemma syt_hyp_refs_of[wp]:
                   intro!: ext)
   apply (subst state_hyp_refs_of_tcb_yield_to_update; auto simp: get_tcb_def)
   done
-(* no set_thread_state_ext in RT
+
 lemma set_thread_state_thread_set:
   "set_thread_state p st = (do thread_set (tcb_state_update (\<lambda>_. st)) p;
-                               do_extended_op (set_thread_state_ext p)
+                               do_extended_op (schedule_tcb p)
                             od)"
   by (simp add: set_thread_state_def thread_set_def bind_assoc)
-*)
+
 lemma set_tcb_obj_ref_thread_set:
   "set_tcb_obj_ref f p sc = thread_set (f (\<lambda>_. sc)) p"
   by (simp add: set_tcb_obj_ref_def thread_set_def bind_assoc)

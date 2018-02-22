@@ -56,7 +56,7 @@ definition
 where
   "sched_context_unbind_reply sc_ptr = do
     replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
-    mapM (\<lambda>r. set_reply_obj_ref reply_sc_update r None) replies;
+    mapM_x (\<lambda>r. set_reply_obj_ref reply_sc_update r None) replies;
     set_sc_obj_ref sc_replies_update sc_ptr []
   od"
 

@@ -12,6 +12,11 @@ theory RealTime_AI
 imports VSpace_AI
 begin
 
+(* FIXME - Move Invariants_AI *)
+lemma invs_exst [iff]:
+  "invs (trans_state f s) = invs s"
+  by (simp add: invs_def valid_state_def)
+
 lemma maybeM_inv[wp]:
   "\<forall>a. \<lbrace>P\<rbrace> f a \<lbrace>\<lambda>_. P\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> maybeM f opt \<lbrace>\<lambda>_. P\<rbrace>"
   by (wpsimp simp: maybeM_def; fastforce)
@@ -220,13 +225,14 @@ lemma set_sc_yf_refs_of[wp]:
   done
 
 lemma set_sc_replies_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= state_refs_of s t - {x \<in> state_refs_of s t. snd x = SCReply}
-                               \<union> set (map (\<lambda>r. (r, SCReply)) replies)))\<rbrace>
+  "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= (case replies of [] \<Rightarrow> {}
+                                    | _ \<Rightarrow> set (map (\<lambda>r. (r, SCReply)) replies)) \<union>
+                         (state_refs_of s t - {x \<in> state_refs_of s t. snd x = SCReply})))\<rbrace>
    set_sc_obj_ref sc_replies_update t replies
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (wpsimp simp: set_sc_obj_ref_def set_object_def wp: get_sched_context_wp)
   apply (fastforce elim!: rsubst[where P=P] intro!: ext
-                  dest!: ko_at_state_refs_ofD
+                  dest!: ko_at_state_refs_ofD split: list.splits
                   simp: get_refs_def2 Un_def image_iff conj_disj_distribR Collect_eq)
   done
 
@@ -848,7 +854,9 @@ lemma sched_context_unbind_tcb_typ_at[wp]:
   by (wpsimp wp: hoare_drop_imp
            simp: sched_context_unbind_tcb_def)
 
-crunch typ_at[wp]: unbind_from_sc, sched_context_maybe_unbind_ntfn, reply_unlink_sc, sched_context_clear_replies, sched_context_unbind_yield_from "\<lambda>s. P (typ_at T p s)"
+crunch typ_at[wp]: unbind_from_sc, sched_context_maybe_unbind_ntfn, reply_unlink_sc,
+ sched_context_clear_replies, sched_context_unbind_yield_from, sched_context_unbind_reply
+ "\<lambda>s. P (typ_at T p s)"
   (wp: maybeM_inv crunch_wps simp: get_tcb_obj_ref_def ignore: get_ntfn_obj_ref)
 
 lemma schedule_tcb_typ_at[wp]:

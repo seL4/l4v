@@ -56,7 +56,7 @@ crunch_ignore (bcorres)
         select unless mapM catch bindE liftE whenE alternative cap_swap_ext
         cap_insert_ext cap_move_ext liftM create_cap_ext
         possible_switch_to reschedule_required set_priority
-        tcb_sched_action
+        tcb_sched_action schedule_tcb
         lookup_error_on_failure getActiveIRQ
         gets_the liftME zipWithM_x unlessE mapME_x handleE forM_x)
 

@@ -497,12 +497,12 @@ where
       cap \<leftarrow> returnOk $ hd excaps;
       case cap of
         ThreadCap tcb_ptr \<Rightarrow> doE
-          sc_ptr_opt \<leftarrow> liftE $ get_tcb_obj_ref tcb_sched_context tcb_ptr;
-          whenE (sc_ptr_opt \<noteq> Some sc_ptr) $ throwError IllegalOperation
+          sc_tcb_opt \<leftarrow> liftE $ get_sc_obj_ref sc_tcb sc_ptr;
+          whenE (sc_tcb_opt \<noteq> Some tcb_ptr) $ throwError IllegalOperation
         odE
       | NotificationCap ntfn_ptr _ _ \<Rightarrow> doE
-          sc_ptr_opt \<leftarrow> liftE $ get_ntfn_obj_ref ntfn_sc ntfn_ptr;
-          whenE (sc_ptr_opt \<noteq> Some sc_ptr) $ throwError IllegalOperation
+          sc_ntfn_opt \<leftarrow> liftE $ get_sc_obj_ref sc_ntfn sc_ptr;
+          whenE (sc_ntfn_opt \<noteq> Some ntfn_ptr) $ throwError IllegalOperation
         odE
       | _ \<Rightarrow> throwError (InvalidCapability 1);
       returnOk $ InvokeSchedContextUnbindObject sc_ptr cap
