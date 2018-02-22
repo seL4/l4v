@@ -2005,8 +2005,10 @@ crunch nosch[wp]: doIPCTransfer "\<lambda>s. P (ksSchedulerAction s)"
    simp: split_def zipWithM_x_mapM)
 
 lemma sanitise_register_corres:
-  "foldl (\<lambda>s (a, b). s ( a := sanitise_register t' a b)) s (zip msg_template msg) =
-   foldl (\<lambda>s (a, b). s ( a := sanitiseRegister t'a a b)) s (zip msg_template msg)"
+  "foldl (\<lambda>s (a, b). UserContext (fpu_state s) ((user_regs s)(a := sanitise_register x a b))) s
+          (zip msg_template msg) =
+   foldl (\<lambda>s (a, b). UserContext (fpu_state s) ((user_regs s)(a := sanitiseRegister y a b))) s
+          (zip msg_template msg)"
   apply (rule foldl_cong)
     apply simp
    apply simp
@@ -2021,7 +2023,7 @@ lemma handle_fault_reply_registers_corres:
            (do t' \<leftarrow> arch_get_sanitise_register_info t;
                y \<leftarrow> as_user t
                 (zipWithM_x
-                  (\<lambda>r v. set_register r
+                  (\<lambda>r v. setRegister r
                           (sanitise_register t' r v))
                   msg_template msg);
                return (label = 0)
@@ -2038,7 +2040,7 @@ lemma handle_fault_reply_registers_corres:
        apply (rule corres_split)
        apply (rule corres_trivial, simp)
       apply (rule corres_as_user')
-      apply(simp add: set_register_def setRegister_def syscallMessage_def)
+      apply(simp add: setRegister_def syscallMessage_def)
       apply(subst zipWithM_x_modify)+
       apply(rule corres_modify')
        apply (clarsimp simp: sanitise_register_corres|wp)+

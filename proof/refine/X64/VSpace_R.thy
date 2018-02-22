@@ -275,7 +275,7 @@ lemma hv_corres:
        apply (rule corres_split_eqrE)
           apply (cases fault; simp)
          apply simp
-         apply (rule user_getreg_corres[simplified get_register_eq[symmetric]])
+         apply (rule user_getreg_corres)
         apply (simp, wp as_user_tcb_at)
        apply (simp, wp asUser_typ_ats)
       apply simp
