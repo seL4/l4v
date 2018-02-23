@@ -86,8 +86,8 @@ lemmas schedule_bcorres[wp] = schedule_bcorres1[OF BCorres2_AI_axioms]
 context Arch begin global_naming ARM
 
 crunch (bcorres)bcorres[wp]: send_ipc,send_signal,do_reply_transfer,arch_perform_invocation truncate_state
-  (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
-         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME)
+  (simp: gets_the_def swp_def ignore: freeMemory clearMemory loadWord cap_fault_on_failure
+         storeWord lookup_error_on_failure getRestartPC getRegister mapME)
 
 lemma perform_invocation_bcorres[wp]: "bcorres (perform_invocation a b c) (perform_invocation a b c)"
   apply (cases c)
@@ -124,8 +124,8 @@ lemma ensure_safe_mapping_bcorres[wp]: "bcorres (ensure_safe_mapping a) (ensure_
   done
 
 crunch (bcorres)bcorres[wp]: handle_invocation truncate_state
-  (simp: syscall_def Let_def gets_the_def ignore: get_register syscall cap_fault_on_failure
-         set_register without_preemption const_on_failure)
+  (simp: syscall_def Let_def gets_the_def ignore: syscall cap_fault_on_failure
+         without_preemption const_on_failure)
 
 crunch (bcorres)bcorres[wp]: receive_ipc,receive_signal,delete_caller_cap truncate_state
 
