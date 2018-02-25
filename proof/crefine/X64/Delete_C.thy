@@ -457,6 +457,7 @@ lemma reduceZombie_ccorres1:
        apply fastforce
       apply ceqv
      apply (rule ccorres_move_c_guard_cte)
+     apply (rule ccorres_rhs_assoc2)
      apply (rule_tac xf'=type_'
                  and val="case_zombie_type ZombieTCB_C of_nat (capZombieType cap)"
                  and R="cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot and invs'"

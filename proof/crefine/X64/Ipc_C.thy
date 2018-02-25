@@ -3609,6 +3609,7 @@ proof -
    apply (simp add: id_def[symmetric] del: Collect_const)
    apply (rule ccorres_symb_exec_r)
      apply csymbr
+     apply csymbr
      apply (rename_tac "lngth")
      apply (simp add: mi_from_H_def mapME_def del: Collect_const cong: bind_apply_cong)
      apply (rule ccorres_symb_exec_l)
@@ -3945,11 +3946,12 @@ lemma doIPCTransfer_ccorres [corres]:
     (doIPCTransfer sender endpoint badge canGrant receiver)
     (Call doIPCTransfer_'proc)"
   apply (cinit lift: sender_' receiver_' grant_' badge_' endpoint_')
-   apply (rule_tac xf'="\<lambda>s. ptr_coerce (receiveBuffer___ptr_to_void_' s)"
+   apply (rule_tac xf'="ret__ptr_to_unsigned_long_'"
                 in ccorres_split_nothrow_call_novcg)
          apply (rule lookupIPCBuffer_ccorres)
         apply simp_all[3]
      apply ceqv
+    apply csymbr
     apply (rule ccorres_pre_threadGet)
     apply (rename_tac fault)
     apply (rule ccorres_move_c_guard_tcb)
@@ -3965,11 +3967,13 @@ lemma doIPCTransfer_ccorres [corres]:
       apply ceqv
      apply wpc
       apply (clarsimp simp: seL4_Fault_NullFault_def ccorres_cond_univ_iff)
-      apply (rule_tac xf'="ptr_coerce \<circ> sendBuffer___ptr_to_void_'"
+      apply (rule ccorres_rhs_assoc)
+      apply (rule_tac xf'="ret__ptr_to_unsigned_long_'"
                    in ccorres_split_nothrow_call_novcg)
             apply (rule lookupIPCBuffer_ccorres)
            apply simp_all[3]
         apply ceqv
+       apply csymbr
        apply (fold dc_def)[1]
        apply ctac
       apply (wp lookupIPCBuffer_not_Some_0 lookupIPCBuffer_aligned)
@@ -6069,6 +6073,7 @@ lemma completeSignal_ccorres:
      apply (clarsimp, csymbr, rule ccorres_cond_true)
      apply (rule ccorres_rhs_assoc)+
      apply (rename_tac word)
+     apply (rule ccorres_rhs_assoc2)
      apply (rule_tac val=word and xf'=badge_' and R="ko_at' ntfn ntfnptr"
                    in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
         apply (vcg, clarsimp)
@@ -6282,6 +6287,7 @@ lemma receiveIPC_ccorres [corres]:
              apply (rule getThreadState_ccorres_foo)
              apply (rename_tac sendState)
              apply (rule ccorres_assert)
+             apply (rule ccorres_rhs_assoc2)
              apply (rule_tac val="blockingIPCBadge sendState"
                          and xf'=badge_'
                          and R="\<lambda>s. \<exists>t. ko_at' t sender s \<and> tcbState t = sendState"
@@ -6295,6 +6301,7 @@ lemma receiveIPC_ccorres [corres]:
                apply ceqv
               apply (simp split del: if_split)
               apply (rule ccorres_move_c_guard_tcb)
+              apply (rule ccorres_rhs_assoc2)
               apply (rule_tac val="from_bool (blockingIPCCanGrant sendState)"
                           and xf'=canGrant_'
                           and R="\<lambda>s. \<exists>t. ko_at' t sender s \<and> tcbState t = sendState"
@@ -6308,6 +6315,7 @@ lemma receiveIPC_ccorres [corres]:
                 apply ceqv
                apply (ctac(no_vcg))
                 apply (rule ccorres_move_c_guard_tcb)
+                apply (rule ccorres_rhs_assoc2)
                 apply (rule_tac val="from_bool (blockingIPCIsCall sendState)"
                             and xf'=do_call_'
                             and R="\<lambda>s. \<exists>t. ko_at' t sender s \<and> tcbState t = sendState"
