@@ -864,7 +864,7 @@ lemma handleInvocation_ccorres:
                                 Collect_False
                                 ccorres_cond_iffs ts_Restart_case_helper'
                            del: Collect_const cong: bind_cong)
-               apply (rule ccorres_rhs_assoc2,
+               apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
                       rule_tac xf'="length___unsigned_long_'"
                             and r'="\<lambda>rv rv'. unat rv' = length rv"
                             in ccorres_split_nothrow)

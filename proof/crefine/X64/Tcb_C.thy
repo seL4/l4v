@@ -3313,6 +3313,8 @@ lemma decodeTCBConfigure_ccorres:
                    apply (rule ccorres_assert2)
                    apply csymbr
                    apply csymbr
+                   apply csymbr
+                   apply csymbr
                    apply (simp add: decodeSetPriority_def decodeSetMCPriority_def priorityBits_def
                                     bindE_assoc invocationCatch_use_injection_handler
                                     injection_bindE[OF refl refl] injection_handler_returnOk

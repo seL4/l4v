@@ -831,6 +831,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
         apply (rule ccorres_cond_false_seq)
         apply simp
         apply csymbr
+        apply csymbr
         apply (clarsimp simp: isCap_simps)
         apply (rule ccorres_guard_imp[where A=\<top> and A'=UNIV],
                 rule ccorres_cond [where R=\<top>])
@@ -850,6 +851,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
                                  Kernel_C.VMKernelOnly_def
                            dest: word_less_cases)
            apply (rule ccorres_rhs_assoc)+
+           apply csymbr
            apply csymbr
            apply csymbr
            apply csymbr

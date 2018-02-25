@@ -1277,10 +1277,11 @@ lemma cteMove_ccorres:
   apply (cinit (no_ignore_call) lift: destSlot_' srcSlot_' newCap_' simp del: return_bind)
    apply (ctac pre: ccorres_pre_getCTE ccorres_assert)
      apply (ctac+, csymbr+)+
-             apply (erule_tac t=prev_ptr in ssubst)
+             apply (erule_tac t=ret__unsigned_longlong in ssubst)
              apply (ctac add: updateMDB_mdbPrev_set_mdbNext)
                apply csymbr
-               apply (erule_tac t=next_ptr in ssubst)
+               apply csymbr
+               apply (erule_tac t=ret__unsigned_longlong in ssubst)
                apply (rule updateMDB_mdbNext_set_mdbPrev)
                 apply simp+
               apply (wp, vcg)+
@@ -1464,20 +1465,24 @@ lemma cteSwap_ccorres:
      apply (rule ccorres_updateCap_cte_at)
      apply (ctac (no_vcg) add: ccorres_return_cte_mdbnode_safer [where ptr=slot1])+
          apply csymbr
-         apply (erule_tac t=prev_ptr in ssubst)
+         apply csymbr
+         apply (erule_tac t=ret__unsigned_longlong in ssubst)
          apply (ctac (no_vcg) add: updateMDB_mdbPrev_set_mdbNext)
            apply csymbr
-           apply (erule_tac t=next_ptr in ssubst)
+           apply csymbr
+           apply (erule_tac t=ret__unsigned_longlong in ssubst)
            apply (ctac (no_vcg) add: updateMDB_mdbNext_set_mdbPrev)
              apply (rule ccorres_move_c_guard_cte)
              apply (ctac (no_vcg) pre: ccorres_getCTE ccorres_move_guard_ptr_safe
                                   add: ccorres_return_cte_mdbnode[where ptr=slot2]
                                        ccorres_move_guard_ptr_safe)+
                    apply csymbr
-                   apply (erule_tac t=prev_ptr in ssubst)
+                   apply csymbr
+                   apply (erule_tac t=ret__unsigned_longlong in ssubst)
                    apply (ctac (no_vcg) add: updateMDB_mdbPrev_set_mdbNext)
                      apply csymbr
-                     apply (erule_tac t=next_ptr in ssubst)
+                     apply csymbr
+                     apply (erule_tac t=ret__unsigned_longlong in ssubst)
                      apply (ctac (no_vcg) add: updateMDB_mdbNext_set_mdbPrev)
                     apply wp
                    apply simp
@@ -3412,19 +3417,17 @@ lemma deriveCap_ccorres':
     apply (rule ccorres_rhs_assoc)+
     apply ctac_print_xf
     apply (rule ccorres_split_nothrow_call_novcgE
-                   [where xf'="deriveCap_ret_C.status_C o ret___struct_deriveCap_ret_C_'"])
+                   [where xf'="ret__unsigned_long_'"])
            apply (rule ensureNoChildren_ccorres)
           apply simp+
        apply ceqv
       apply simp
-      apply (rule_tac P'="\<lbrace>deriveCap_ret_C.status_C \<acute>ret___struct_deriveCap_ret_C
-                              = scast EXCEPTION_NONE\<rbrace>"
+      apply (rule_tac P'="\<lbrace>\<acute>ret__unsigned_long = scast EXCEPTION_NONE\<rbrace>"
                  in ccorres_from_vcg_throws[where P=\<top>])
       apply (rule allI, rule conseqPre, vcg)
       apply (clarsimp simp: return_def returnOk_def)
      apply simp
-     apply (rule_tac P'="{s. deriveCap_ret_C.status_C (ret___struct_deriveCap_ret_C_' s)
-                             = rv' \<and> errstate s = err'}"
+     apply (rule_tac P'="{s. ret__unsigned_long_' s = rv' \<and> errstate s = err'}"
                 in ccorres_from_vcg_throws[where P=\<top>])
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: throwError_def return_def
