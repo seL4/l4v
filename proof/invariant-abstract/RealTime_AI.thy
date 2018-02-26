@@ -149,11 +149,16 @@ lemma set_reply_invs[wp]:
   apply (simp add: set_simple_ko_def)
   sorry
 
+lemma reply_unbind_tcb_invs:
+  "\<lbrace> invs and sc_at sc_ptr and reply_at rptr \<rbrace>
+      reply_unlink_tcb rptr \<lbrace> \<lambda>_. invs \<rbrace>"
+  apply (wpsimp simp: reply_unlink_tcb_def)
+  sorry
 
 lemma reply_unbind_sc_invs:
   "\<lbrace> invs and sc_at sc_ptr and reply_at rptr \<rbrace>
-      reply_unbind_sc sc_ptr rptr \<lbrace> \<lambda>_. invs \<rbrace>"
-  apply (wpsimp simp: reply_unbind_sc_def)
+      reply_unlink_sc sc_ptr rptr \<lbrace> \<lambda>_. invs \<rbrace>"
+  apply (wpsimp simp: reply_unlink_sc_def)
   sorry
 
 lemma sched_context_unbind_tcb_invs:

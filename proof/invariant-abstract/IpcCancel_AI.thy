@@ -166,6 +166,10 @@ lemma reply_remove_st_tcb_at[wp]:
   "\<lbrace>st_tcb_at P t\<rbrace> reply_remove rptr \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   sorry  (* RT: check the precondition; might need to change the lemma below *)
 
+lemma reply_unlink_tcb_st_tcb_at[wp]:
+  "\<lbrace>st_tcb_at P t\<rbrace> reply_unlink_tcb rptr \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+  sorry  (* RT: check the precondition; might need to change the lemma below *)
+
 lemma blocked_ipc_st_tcb_at_general:
   "\<lbrace>st_tcb_at P t' and K (t = t' \<longrightarrow> P Structures_A.Inactive)\<rbrace>
      blocked_cancel_ipc st t r
@@ -248,7 +252,6 @@ lemma blocked_cancel_ipc_typ_at[wp]:
   apply (simp add: blocked_cancel_ipc_def get_blocking_object_def get_ep_queue_def
                    get_simple_ko_def set_simple_ko_def partial_inv_def)
   apply (wpsimp wp: get_object_wp simp: set_object_def partial_inv_def)+
-  apply simp
   sorry
 
 
@@ -306,19 +309,20 @@ definition
  "emptyable \<equiv> \<lambda>p s. (tcb_at (fst p) s \<and> snd p = tcb_cnode_index 2) \<longrightarrow>
                           st_tcb_at halted (fst p) s"
 
+
 locale delete_one_abs =
+  fixes state_ext_type :: "('a :: state_ext) itself"
   assumes delete_one_invs:
-    "\<And>p. \<lbrace>invs and emptyable p\<rbrace> (cap_delete_one p :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
+    "\<And>p. \<lbrace>invs and emptyable p\<rbrace> (cap_delete_one p :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
 
   assumes delete_one_deletes:
-    "\<lbrace>\<top>\<rbrace> (cap_delete_one sl :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) sl\<rbrace>"
+    "\<lbrace>\<top>\<rbrace> (cap_delete_one sl :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) sl\<rbrace>"
 
   assumes delete_one_caps_of_state:
     "\<And>P p. \<lbrace>\<lambda>s. cte_wp_at can_fast_finalise p s
                   \<longrightarrow> P ((caps_of_state s) (p \<mapsto> cap.NullCap))\<rbrace>
-             (cap_delete_one p :: (unit, det_ext) s_monad)
+             (cap_delete_one p :: (unit,'a) s_monad)
             \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-
 
 lemma ep_redux_simps2:
   "ep \<noteq> Structures_A.IdleEP \<Longrightarrow>
@@ -360,9 +364,9 @@ lemma blocked_cancel_ipc_invs:
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre, wp valid_irq_node_typ sts_only_idle)
    apply (clarsimp simp add: valid_tcb_state_def)
-   apply wpsimp
   sorry
-(*   apply (strengthen reply_cap_doesnt_exist_strg)
+(*   apply wpsimp
+   apply (strengthen reply_cap_doesnt_exist_strg)
    apply simp
    apply (wp valid_irq_node_typ valid_ioports_lift)
   apply (subgoal_tac "ep \<noteq> Structures_A.IdleEP")
@@ -432,7 +436,7 @@ sorry (*
 
 
 lemma (in delete_one_abs) cancel_ipc_invs[wp]:
-  "\<lbrace>invs\<rbrace> (cancel_ipc t :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs\<rbrace> (cancel_ipc t :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cancel_ipc_def)
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (case_tac state, simp_all)
@@ -442,7 +446,7 @@ lemma (in delete_one_abs) cancel_ipc_invs[wp]:
                             hoare_weaken_pre [OF reply_cancel_ipc_invs]
                             delete_one_invs
                      elim!: pred_tcb_weakenE)
-  done
+  sorry
 
 context IpcCancel_AI begin
 
@@ -647,6 +651,9 @@ crunch cte_wp_at[wp]: blocked_cancel_ipc "cte_wp_at P p"
 crunch cte_wp_at[wp]: cancel_signal "cte_wp_at P p"
   (wp: crunch_wps)
 
+crunch cte_wp_at[wp]: reply_remove_tcb "cte_wp_at P p"
+  (wp: crunch_wps)
+
 locale delete_one_pre =
   assumes delete_one_cte_wp_at_preserved:
     "(\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap) \<Longrightarrow>
@@ -702,6 +709,12 @@ lemma set_thread_state_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   unfolding set_thread_state_def set_object_def
   by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
+
+
+lemma reply_unlink_tcb_bound_tcb_at[wp]:
+  "\<lbrace>bound_tcb_at P t\<rbrace> reply_unlink_tcb rptr \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
+  unfolding set_thread_state_def set_object_def
+  sorry
 
 crunch bound_tcb_at[wp]: cancel_all_ipc, empty_slot, is_final_cap, get_cap "bound_tcb_at P t"
   (wp: mapM_x_wp_inv)
