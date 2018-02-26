@@ -96,6 +96,7 @@ lemma monad_equiv_gets [L2flow]:
         (\<lambda>r s. P s \<and> r = v' s) (\<lambda>_ _. False)"
   apply rule
    apply (clarsimp simp: L2_defs simp_expr_def)+
+  apply wpsimp
   done
 
 lemma monad_equiv_throw [L2flow]:
@@ -165,6 +166,7 @@ lemma monad_equiv_modify [L2flow]:
   apply rule
    apply (clarsimp simp: L2_defs simp_expr_def liftE_def modify_def put_def get_def bind_def)
   apply (clarsimp simp: L2_defs simp_expr_def)
+  apply wp
   apply force
   done
 

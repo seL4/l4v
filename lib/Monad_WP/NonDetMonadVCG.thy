@@ -281,11 +281,11 @@ lemma hoare_True_E_R [simp]:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. True\<rbrace>, -"
   by (auto simp add: validE_R_def validE_def valid_def split: sum.splits)
 
-lemma hoare_post_conj [intro!]:
+lemma hoare_post_conj [intro]:
   "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> Q \<rbrace>; \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> a \<lbrace> Q And R \<rbrace>"
   by (fastforce simp: valid_def split_def bipred_conj_def)
 
-lemma hoare_pre_disj [intro!]:
+lemma hoare_pre_disj [intro]:
   "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace>; \<lbrace> Q \<rbrace> a \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P or Q \<rbrace> a \<lbrace> R \<rbrace>"
   by (simp add:valid_def pred_disj_def)
 
@@ -336,14 +336,14 @@ lemma hoare_gets_sp:
 lemma hoare_return_drop_var [iff]: "\<lbrace> Q \<rbrace> return x \<lbrace> \<lambda>r. Q \<rbrace>"
   by (simp add:valid_def return_def)
 
-lemma hoare_gets [intro!]: "\<lbrakk> \<And>s. P s \<Longrightarrow> Q (f s) s \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> gets f \<lbrace> Q \<rbrace>"
+lemma hoare_gets [intro]: "\<lbrakk> \<And>s. P s \<Longrightarrow> Q (f s) s \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> gets f \<lbrace> Q \<rbrace>"
   by (simp add:valid_def gets_def get_def bind_def return_def)
 
-lemma hoare_modifyE_var [intro!]:
+lemma hoare_modifyE_var:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> Q (f s) \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> modify f \<lbrace> \<lambda>r s. Q s \<rbrace>"
   by(simp add: valid_def modify_def put_def get_def bind_def)
 
-lemma hoare_if [intro!]:
+lemma hoare_if:
   "\<lbrakk> P \<Longrightarrow> \<lbrace> Q \<rbrace> a \<lbrace> R \<rbrace>; \<not> P \<Longrightarrow> \<lbrace> Q \<rbrace> b \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow>
    \<lbrace> Q \<rbrace> if P then a else b \<lbrace> R \<rbrace>"
   by (simp add:valid_def)
@@ -1848,7 +1848,7 @@ lemma validNF_prop [wp_unsafe]:
 
 lemma validNF_post_conj [intro!]:
   "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> Q \<rbrace>!; \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace>! \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> a \<lbrace> Q And R \<rbrace>!"
-  by (clarsimp simp: validNF_def)
+  by (auto simp: validNF_def)
 
 lemma no_fail_or:
   "\<lbrakk>no_fail P a; no_fail Q a\<rbrakk> \<Longrightarrow> no_fail (P or Q) a"
@@ -2093,8 +2093,8 @@ lemma validNF_nobindE [wp]:
   by clarsimp wp
 
 text {*
-Setup triple rules for validE_NF so that we can use the
-"wp_comb" attribute.
+Setup triple rules for @{term validE_NF} so that we can use
+wp combinator rules.
 *}
 
 definition "validE_NF_property Q E s b \<equiv> \<not> snd (b s)

@@ -295,7 +295,7 @@ lemma exec_abstract_return_wp_nf [wp]:
 lemma exec_abstract_fail_wp_nf [wp]:
     "\<lbrace> \<lambda>s. False \<rbrace> exec_abstract st fail \<lbrace> P \<rbrace>!"
   apply wp
-  apply clarsimp
+  apply clarsimp?
   done
 
 lemma exec_abstract_fail_wp [wp]:

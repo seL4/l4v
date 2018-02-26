@@ -75,10 +75,10 @@ FIXME: Move this change into AutoCorres itself, or the underlying VCG library.
 
 lemmas [wp del] =
   NonDetMonadEx.validE_whenE
-  NonDetMonadLemmaBucket.hoare_whenE_wp
+  NonDetMonadVCG.hoare_whenE_wps
 
 lemmas hoare_whenE_wp2 [wp] =
-  NonDetMonadLemmaBucket.hoare_whenE_wp[simplified if_apply_def2]
+  NonDetMonadVCG.hoare_whenE_wps[simplified if_apply_def2]
 
 section \<open>Rules for proving @{term ccorres_underlying} goals\<close>
 

@@ -210,7 +210,7 @@ lemma guardE_inv[valid_inv]:
 lemma whenE_inv[valid_inv]:
   "\<lbrace>I\<rbrace> f \<lbrace>\<lambda>_. I\<rbrace> \<Longrightarrow> \<lbrace>I\<rbrace> whenE c f \<lbrace>\<lambda>_. I\<rbrace>"
   apply (unfold whenE_def)
-  apply (blast intro: returnOk_inv)
+  apply (auto intro: returnOk_inv)
   done
 
 lemma unless_inv[valid_inv]:
@@ -221,7 +221,7 @@ lemma unless_inv[valid_inv]:
 lemma unlessE_inv[valid_inv]:
   "\<lbrace>I\<rbrace> f \<lbrace>\<lambda>_. I\<rbrace> \<Longrightarrow> \<lbrace>I\<rbrace> unlessE c f \<lbrace>\<lambda>_. I\<rbrace>"
   apply (unfold unlessE_def)
-  by (blast intro: returnOk_inv)
+  by (auto intro: returnOk_inv)
 
 lemma handleE'_inv[valid_inv]:
   "\<lbrakk> \<lbrace>I\<rbrace> f \<lbrace>\<lambda>_. I\<rbrace>; \<And>e. \<lbrace>I\<rbrace> h e \<lbrace>\<lambda>_. I\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>I\<rbrace> handleE' f h \<lbrace>\<lambda>_. I\<rbrace>"
