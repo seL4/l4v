@@ -47,13 +47,14 @@ requalify_facts
   valid_arch_mdb_same_master_cap
   valid_arch_mdb_null_filter
   valid_arch_mdb_untypeds
-
+  lookup_ipc_buffer_inv
 end
 
 declare set_cap_update_free_index_valid_arch_mdb[wp]
 
 (* Proofs don't want to see these details. *)
 declare update_cnode_cap_data_def [simp]
+declare lookup_ipc_buffer_inv[wp]
 
 lemma capBadge_ordefield_simps[simp]:
   "(None, y) \<in> capBadge_ordering fb"

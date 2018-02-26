@@ -250,16 +250,16 @@ lemma sts_ntfn_at_inv[wp]:
   apply (clarsimp simp: obj_at_def is_ntfn is_tcb get_tcb_def)
   done
 
-lemma sbn_ep_at_inv[wp]:
-  "\<lbrace> ep_at ep \<rbrace> set_bound_notification t ntfn \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
-  apply (simp add: set_bound_notification_def)
+lemma set_tcb_obj_ref_ep_at_inv[wp]:
+  "\<lbrace> ep_at ep \<rbrace> set_tcb_obj_ref f t ntfn \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
+  apply (simp add: set_tcb_obj_ref_def)
   apply (wp | simp add: set_object_def)+
   apply (clarsimp simp: obj_at_def is_ep is_tcb get_tcb_def)
   done
 
-lemma sbn_ntfn_at_inv[wp]:
-  "\<lbrace> ntfn_at ep \<rbrace> set_bound_notification t ntfn \<lbrace> \<lambda>rv. ntfn_at ep \<rbrace>"
-  apply (simp add: set_bound_notification_def)
+lemma set_tcb_obj_ref_ntfn_at_inv[wp]:
+  "\<lbrace> ntfn_at ep \<rbrace> set_tcb_obj_ref f t ntfn \<lbrace> \<lambda>rv. ntfn_at ep \<rbrace>"
+  apply (simp add: set_tcb_obj_ref_def)
   apply (wp | simp add: set_object_def)+
   apply (clarsimp simp: obj_at_def is_ntfn is_tcb get_tcb_def)
   done
@@ -1111,11 +1111,15 @@ lemma shows
   sts_caps_of_state[wp]:
     "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_thread_state t st \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
   set_bound_caps_of_state[wp]:
-    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_bound_notification t e \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
+    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_tcb_obj_ref tcb_bound_notification_update t e \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
+  set_tcb_sc_caps_of_state[wp]:
+    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_tcb_obj_ref tcb_sched_context_update t sc \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
+  set_tcb_reply_caps_of_state[wp]:
+    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_tcb_obj_ref tcb_reply_update t sc \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
   as_user_caps_of_state[wp]:
     "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> as_user p f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
 
-  unfolding set_thread_state_def set_bound_notification_def as_user_def set_object_def
+  unfolding set_thread_state_def set_tcb_obj_ref_def as_user_def set_object_def
             set_mrs_def
   apply (all \<open>(wp | wpc | simp)+ ; clarsimp, erule rsubst[where P=P], rule cte_wp_caps_of_lift\<close>)
   by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def dest!: get_tcb_SomeD)
@@ -1137,20 +1141,22 @@ lemma
 interpretation
   set_simple_ko: non_aobj_non_cap_non_mem_op "set_simple_ko c p ep" +
   sts: non_aobj_non_cap_non_mem_op "set_thread_state p st" +
-  sbn: non_aobj_non_cap_non_mem_op "set_bound_notification p b" +
+  sbn: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_bound_notification_update p b" +
   as_user: non_aobj_non_cap_non_mem_op "as_user p g" +
   thread_set: non_aobj_non_mem_op "thread_set f p" +
+  set_sched_context: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_sched_context_update p sc" +
+  set_reply: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_reply_update p reply" +
   set_cap: non_aobj_non_mem_op "set_cap cap p'"
   apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
-  unfolding set_simple_ko_def set_thread_state_def
-            set_bound_notification_def thread_set_def set_cap_def[simplified split_def]
+  unfolding set_endpoint_def set_notification_def set_thread_state_def
+            set_tcb_obj_ref_def thread_set_def set_cap_def[simplified split_def]
             as_user_def set_mrs_def
   apply -
   apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp split del: if_split)+\<close>)
   apply (auto simp: obj_at_def[abs_def] partial_inv_def the_equality
                split: Structures_A.kernel_object.splits)[1]
   by (fastforce simp: obj_at_def[abs_def] a_type_def
-               split: Structures_A.kernel_object.splits)+
+               split: Structures_A.kernel_object.splits option.splits)+
 
 lemmas set_cap_arch[wp] = set_cap.arch_state
 
@@ -1304,14 +1310,18 @@ crunch valid_irq_states[wp]: thread_set "valid_irq_states"
 (* RT: crunch?
 crunch valid_irq_states[wp]: set_thread_state "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps) *)
-lemma set_thread_state_valid_irq_states[wp]: "\<lbrace>valid_irq_states and valid_irq_states\<rbrace>
-            set_thread_state param_a param_b 
-            \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
+lemma set_thread_state_valid_irq_states[wp]:
+     "\<lbrace>valid_irq_states\<rbrace>
+            set_thread_state t st \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (wp | simp add: set_object_def)+
   done
 
-crunch valid_irq_states[wp]: set_bound_notification "valid_irq_states"
+crunch valid_irq_states[wp]: set_tcb_obj_ref "valid_irq_states"
+  (wp: crunch_wps simp: crunch_simps)
+crunch valid_irq_states[wp]: set_sched_context,set_reply "valid_irq_states"
+  (wp: crunch_wps simp: crunch_simps)
+crunch valid_irq_states[wp]: set_sched_context,set_reply "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_ntfn_minor_invs:
@@ -1333,7 +1343,9 @@ lemma set_ntfn_minor_invs:
                   dest!: obj_at_state_refs_ofD)
   done
 
-crunch asid_map[wp]: set_bound_notification "valid_asid_map"
+lemma set_tcb_obj_ref_asid_map[wp]:
+  "\<lbrace>valid_asid_map\<rbrace> set_tcb_obj_ref f t new \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
+   sorry
 
 lemma dmo_aligned[wp]:
   "\<lbrace>pspace_aligned\<rbrace> do_machine_op f \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"

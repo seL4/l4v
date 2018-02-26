@@ -23,6 +23,7 @@ requalify_facts
   cur_tcb_more_update
 end
 
+declare cur_tcb_more_update[iff]
 
 lemma set_cap_caps_of_state[wp]:
   "\<lbrace>\<lambda>s. P ((caps_of_state s) (ptr \<mapsto> cap))\<rbrace> set_cap cap ptr \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"

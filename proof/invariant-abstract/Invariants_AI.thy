@@ -242,6 +242,7 @@ where
 
 abbreviation "st_tcb_at \<equiv> pred_tcb_at itcb_state"
 abbreviation "bound_tcb_at \<equiv> pred_tcb_at itcb_bound_notification"
+abbreviation "bound_sc_tcb_at \<equiv> pred_tcb_at itcb_sched_context"
 abbreviation "mcpriority_tcb_at \<equiv> pred_tcb_at itcb_mcpriority"
 
 (* sseefried: 'st_tcb_at_def' only exists to make existing proofs go through. Use 'pred_tcb_at_def' from now on. *)
@@ -1056,7 +1057,7 @@ abbreviation (* RT: should YieldTo be added here? *)
 abbreviation (* RT: should YieldTo be added here? probably no *)
   "simple st \<equiv> st = Inactive \<or>
                  st = Running \<or>
-                 st = Restart \<or>
+                 st = Restart \<or> (\<exists>t. st = YieldTo t) \<or>
                  idle st \<or> awaiting_reply st"
 abbreviation
   "ct_active \<equiv> ct_in_state active"
@@ -2910,6 +2911,7 @@ lemma dom_empty_cnode: "dom (empty_cnode us) = {x. length x = us}"
 lemma obj_at_default_cap_valid:
   "\<lbrakk>obj_at (\<lambda>ko. ko = default_object ty dev us) x s;
    ty = CapTableObject \<Longrightarrow> 0 < us;
+   ty = SchedContextObject \<Longrightarrow> 0 < us; (* RT Check *)
    ty \<noteq> Untyped; ty \<noteq> ArchObject ASIDPoolObj;
    cap_aligned (default_cap ty x us dev)\<rbrakk>
   \<Longrightarrow> s \<turnstile> default_cap ty x us dev"

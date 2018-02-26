@@ -531,7 +531,7 @@ lemma set_bound_notification_cur_ct_in_cur_domain[wp]:
         wp set_scheduler_action_wp gbn_wp)+
   done
 
-crunch etcb_at[wp]: set_thread_state, set_bound_notification, get_bound_notification "etcb_at P t"
+crunch etcb_at[wp]: set_thread_state, set_tcb_obj_ref, get_tcb_obj_ref "etcb_at P t"
 
 lemma set_thread_state_runnable_valid_sched_except_blocked:
   "\<lbrace>valid_sched and (\<lambda>s. runnable ts)\<rbrace> set_thread_state ref ts \<lbrace>\<lambda>_. valid_sched_except_blocked\<rbrace>"

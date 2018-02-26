@@ -1394,12 +1394,14 @@ lemma retype_ret_valid_caps:
   apply wp
   apply (case_tac tp,simp_all)
    defer
+   prefer 6
       apply ((clarsimp simp:valid_cap_def default_object_def cap_aligned_def
         is_obj_defs well_formed_cnode_n_def empty_cnode_def
         dom_def  ptr_add_def | rule conjI | intro conjI obj_at_foldr_intro imageI
       | rule is_aligned_add_multI[OF _ le_refl],
-        (simp add:range_cover_def word_bits_def obj_bits_api_def)+)+)[3]
+        (simp add:range_cover_def word_bits_def obj_bits_api_def)+)+)[4]
     apply (rule_tac ptr=ptr and sz=sz in retype_ret_valid_caps_captable; simp)
+defer
    apply (rule_tac ptr=ptr and sz=sz in retype_ret_valid_caps_aobj; simp)
   apply (clarsimp simp:valid_cap_def default_object_def cap_aligned_def
         is_obj_defs well_formed_cnode_n_def empty_cnode_def
@@ -1419,7 +1421,7 @@ lemma retype_ret_valid_caps:
            Int_atLeastAtMost atLeastatMost_empty_iff)
    apply blast
   apply (erule(2) range_cover_no_0)
- done
+ sorry (* SchedContextObject case, fix valid_sched_context *)
 end
 
 (* FIXME: move to Lib *)
@@ -1524,10 +1526,11 @@ lemma retype_region_ranges':
      apply (fastforce simp: range_cover_def)
     apply (rule is_aligned_mult_triv2)
    apply (simp add: range_cover_def)
-  apply (simp add: p_assoc_help)
+  sorry (* sched context and reply cases *)
+(*  apply (simp add: p_assoc_help)
   apply (rule is_aligned_no_wrap'[OF is_aligned_add_multI[OF _ le_refl refl]])
    apply (simp add: range_cover_def)+
-  done
+  done*)
 
 lemma retype_region_ranges:
   "\<lbrace>cte_wp_at (\<lambda>c. is_untyped_cap c \<and> cap_bits c = sz

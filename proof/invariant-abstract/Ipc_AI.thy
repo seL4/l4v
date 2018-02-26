@@ -17,7 +17,6 @@ context begin interpretation Arch .
 requalify_consts
   in_device_frame
 requalify_facts
-  lookup_ipc_buffer_inv
   set_mi_invs
   as_user_hyp_refs_of
   valid_arch_arch_tcb_set_registers
@@ -33,7 +32,6 @@ requalify_facts
 
 end
 
-declare lookup_ipc_buffer_inv[wp]
 declare set_mi_invs[wp]
 declare as_user_hyp_refs_of[wp]
 declare setup_caller_cap_ioports[wp]

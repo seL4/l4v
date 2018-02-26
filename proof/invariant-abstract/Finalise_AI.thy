@@ -1193,8 +1193,8 @@ lemma gts_wp:
   done
 
 lemma gbn_wp:
-  "\<lbrace>\<lambda>s. \<forall>ntfn. bound_tcb_at ((=) ntfn) t s \<longrightarrow> P ntfn s\<rbrace> get_bound_notification t \<lbrace>P\<rbrace>"
-  unfolding get_bound_notification_def
+  "\<lbrace>\<lambda>s. \<forall>ntfn. bound_tcb_at ((=) ntfn) t s \<longrightarrow> P ntfn s\<rbrace> get_tcb_obj_ref tcb_bound_notification t \<lbrace>P\<rbrace>"
+  unfolding get_tcb_obj_ref_def
   apply (wp thread_get_wp')
   apply (clarsimp)
   apply (drule spec, erule mp)

@@ -779,11 +779,16 @@ end
 crunch ex_nonz_cap_to[wp]: unbind_notification "ex_nonz_cap_to t"
 
 lemma sbn_has_reply[wp]:
-  "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> set_bound_notification tcb ntfnptr \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> set_tcb_obj_ref tcb_bound_notification_update tcb ntfnptr \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
   apply (simp add: has_reply_cap_def cte_wp_at_caps_of_state)
   apply (wp)
   done
 
+lemma sbsc_has_reply[wp]:
+  "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> set_tcb_obj_ref tcb_sched_context tcb scptr \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
+  apply (simp add: has_reply_cap_def cte_wp_at_caps_of_state)
+  apply (wp)
+  done
 
 lemma set_set_simple_ko_has_reply[wp]:
   "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> set_simple_ko f ntfnptr ntfn \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"

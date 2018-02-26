@@ -64,11 +64,25 @@ lemma get_thread_state_inv [simp]:
   apply simp
   done
 
-lemma get_bound_notification_inv[simp]:
-  "\<lbrace>P\<rbrace> get_bound_notification t \<lbrace>\<lambda>r. P\<rbrace>"
-  apply (simp add: get_bound_notification_def thread_get_def gets_the_def)
+lemma get_tcb_obj_ref_inv[simp]:
+  "\<lbrace>P\<rbrace> get_tcb_obj_ref f t \<lbrace>\<lambda>r. P\<rbrace>"
+  apply (simp add: get_tcb_obj_ref_def thread_get_def gets_the_def)
   apply (wp, simp)
   done
+
+lemma get_sched_context_inv[simp]:
+  "\<lbrace>P\<rbrace> get_sched_context t \<lbrace>\<lambda>r. P\<rbrace>"
+  by (wpsimp simp: get_sched_context_def get_object_def)
+
+lemma get_sc_obj_ref_inv[simp]:
+  "\<lbrace>P\<rbrace> get_sc_obj_ref f t \<lbrace>\<lambda>r. P\<rbrace>"
+  apply (simp add: get_sc_obj_ref_def get_sched_context_def get_object_def)
+  apply wpsimp
+  done
+
+lemma get_reply_inv[simp]:
+  "\<lbrace>P\<rbrace> get_reply t \<lbrace>\<lambda>r. P\<rbrace>"
+  by (wpsimp simp: get_reply_def get_object_def)
 
 lemma assert_get_tcb_sp:
   assumes "\<And>s. Q s \<Longrightarrow> valid_objs s"
@@ -252,7 +266,7 @@ lemma tcb_state_same_refs:
 lemma valid_idle_tcb_update:
   "\<lbrakk>valid_idle s; ko_at (TCB t) p s;
     tcb_state t = tcb_state t'; tcb_bound_notification t = tcb_bound_notification t';
-    tcb_sched_context t = tcb_sched_context t'; tcb_yield_to t = tcb_yield_to t';
+    tcb_sched_context t = tcb_sched_context t';
     tcb_reply t = tcb_reply t'; valid_tcb p t' s \<rbrakk>
    \<Longrightarrow> valid_idle (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
   by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
@@ -321,8 +335,15 @@ lemma gts_st_tcb:
   done
 
 lemma gbn_bound_tcb:
-  "\<lbrace>\<top>\<rbrace> get_bound_notification t \<lbrace>\<lambda>rv. bound_tcb_at (\<lambda>ntfn. rv = ntfn) t\<rbrace>"
-  apply (simp add: get_bound_notification_def thread_get_def)
+  "\<lbrace>\<top>\<rbrace> get_tcb_obj_ref tcb_bound_notification t \<lbrace>\<lambda>rv. bound_tcb_at (\<lambda>ntfn. rv = ntfn) t\<rbrace>"
+  apply (simp add: get_tcb_obj_ref_def thread_get_def)
+  apply wp
+  apply (clarsimp simp: pred_tcb_at_def)
+  done
+
+lemma gbsc_bound_tcb:
+  "\<lbrace>\<top>\<rbrace> get_tcb_obj_ref tcb_sched_context t \<lbrace>\<lambda>rv. bound_sc_tcb_at (\<lambda>sc. rv = sc) t\<rbrace>"
+  apply (simp add: get_tcb_obj_ref_def thread_get_def)
   apply wp
   apply (clarsimp simp: pred_tcb_at_def)
   done
@@ -1263,7 +1284,7 @@ lemma set_object_idle [wp]:
      (\<lambda>s. ko_at ko p s \<and> (\<not>is_tcb ko \<or>
                    (ko = (TCB t) \<and> ko' = (TCB t') \<and>
                     tcb_state t = tcb_state t' \<and> tcb_bound_notification t = tcb_bound_notification t'
-                    \<and> tcb_sched_context t = tcb_sched_context t' \<and> tcb_yield_to t = tcb_yield_to t'
+                    \<and> tcb_sched_context t = tcb_sched_context t'
                     \<and> tcb_reply t = tcb_reply t')))\<rbrace>
    set_object p ko'
    \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
@@ -1694,7 +1715,7 @@ lemma cur_mdb [simp]:
   "cur_tcb (cdt_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
 
-crunch cur[wp]: cap_insert cur_tcb (wp: hoare_drop_imps simp: cur_tcb_more_update)
+crunch cur[wp]: cap_insert cur_tcb (wp: hoare_drop_imps)
 
 
 lemma update_cdt_ifunsafe[wp]:

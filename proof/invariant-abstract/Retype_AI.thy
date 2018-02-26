@@ -2068,14 +2068,14 @@ crunch interrupt_states[wp]: retype_region "\<lambda>s. P (interrupt_states s)"
 
 lemma invs_trans_state[simp]:
   "invs (trans_state f s) = invs s"
-  apply (simp add: invs_def valid_state_def cur_tcb_more_update)
+  apply (simp add: invs_def valid_state_def)
   done
 
 
 lemma post_retype_invs_trans_state[simp]:
   "post_retype_invs ty refs (trans_state f s) = post_retype_invs ty refs s"
   apply (simp add: post_retype_invs_def')
-  apply (simp add: trans_state_update[symmetric] cur_tcb_more_update del: trans_state_update)
+  apply (simp add: trans_state_update[symmetric] del: trans_state_update)
   done
 
 
