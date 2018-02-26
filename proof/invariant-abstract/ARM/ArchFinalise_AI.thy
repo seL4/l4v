@@ -533,13 +533,10 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
   apply (cases "is_arch_cap cap")
    apply (clarsimp simp: is_cap_simps)
    apply wp
-    apply (rule hoare_strengthen_post)
-     apply (rule arch_finalise_cap_replaceable[where sl=sl])
-    apply simp
    apply (clarsimp simp: replaceable_def reachable_pg_cap_def
                          o_def cap_range_def valid_arch_state_def
                          ran_tcb_cap_cases is_cap_simps
-                         obj_irq_refs_subset vs_cap_ref_def)+
+                         gen_obj_refs_subset vs_cap_ref_def)
   apply ((cases cap;
       simp add: replaceable_def reachable_pg_cap_def
                        split del: if_split;
@@ -742,8 +739,8 @@ lemma mapM_x_store_pte_valid_vspace_objs:
     (\<forall>x \<in> set pteptrs. x && ~~ mask pt_bits \<in> obj_refs cap)) \<rbrace>
     mapM_x (\<lambda>p. store_pte p InvalidPTE) pteptrs
    \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
-  apply (rule hoare_strengthen_post)
-   apply (wp  mapM_x_wp')+
+  apply (rule hoare_strengthen_post, rule mapM_x_wp')
+   apply wp+
     apply (fastforce simp: is_pt_cap_def)+
   done
 

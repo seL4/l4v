@@ -2273,7 +2273,7 @@ lemmas finaliseCap_typ_ats[wp] = typ_at_lifts[OF finaliseCap_typ_at']
 crunch it'[wp]: finaliseCap "\<lambda>s. P (ksIdleThread s)"
   (ignore: getObject setObject forM ignoreFailure maskInterrupt
    wp: mapM_x_wp_inv mapM_wp' hoare_drop_imps getObject_inv loadObject_default_inv
-   simp: whenE_def crunch_simps unless_def)
+   simp: crunch_simps)
 
 
 

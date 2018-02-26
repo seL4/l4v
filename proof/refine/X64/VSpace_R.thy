@@ -626,7 +626,7 @@ lemma delete_asid_pool_corres:
          apply (strengthen valid_arch_state_unmap_strg
                            valid_vspace_objs_unmap_strg
                            valid_vs_lookup_unmap_strg)
-         apply (wp mapM_wp')
+         apply (wp mapM_wp')+
          apply simp
         apply (rule_tac R="\<lambda>_ s. rv' = x64KSASIDTable (ksArchState s)"
                  in hoare_post_add)
@@ -634,7 +634,7 @@ lemma delete_asid_pool_corres:
         apply simp
         apply (strengthen valid_arch_state_unmap_strg')
         apply (fold cur_tcb'_def)
-        apply (wp mapM_wp')
+        apply (wp mapM_wp')+
         apply (clarsimp simp: cur_tcb'_def)
        apply (simp add: o_def pred_conj_def)
        apply wp
@@ -999,7 +999,7 @@ lemma unmap_page_corres:
                    apply simp
                    apply (rule store_pte_corres')
                    apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pte_wp getPTE_wp lookup_pt_slot_wp
-                                  simp: page_entry_map_def unlessE_def is_aligned_pml4
+                                  simp: page_entry_map_def unlessE_def is_aligned_pml4 if_apply_def2
                              split_del: if_split
                               simp_del: dc_simp)+
                            | wp_once hoare_drop_imps)+)[10]
@@ -1011,7 +1011,7 @@ lemma unmap_page_corres:
                   apply simp
                   apply (rule store_pde_corres')
                   apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pde_wp getPDE_wp lookup_pd_slot_wp
-                                 simp: page_entry_map_def unlessE_def is_aligned_pml4
+                                 simp: page_entry_map_def unlessE_def is_aligned_pml4 if_apply_def2
                             split_del: if_split
                              simp_del: dc_simp)+
                          | wp_once hoare_drop_imps)+)[10]
@@ -1024,7 +1024,7 @@ lemma unmap_page_corres:
                  apply (rule store_pdpte_corres')
                  apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pdpte_wp getPDPTE_wp
                                       lookup_pdpt_slot_wp
-                                simp: page_entry_map_def unlessE_def is_aligned_pml4
+                                simp: page_entry_map_def unlessE_def is_aligned_pml4 if_apply_def2
                            split_del: if_split
                             simp_del: dc_simp)+
                          | wp_once hoare_drop_imps)+)

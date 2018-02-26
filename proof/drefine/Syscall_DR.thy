@@ -381,7 +381,7 @@ lemma transform_intent_cnode_cap_None:
     clarsimp simp: transform_intent_def transform_cnode_index_and_depth_def
                    transform_intent_cnode_copy_def
                    transform_intent_cnode_mint_def transform_intent_cnode_move_def
-                   transform_intent_cnode_mutate_def transform_intent_cnode_rotate_def 
+                   transform_intent_cnode_mutate_def transform_intent_cnode_rotate_def
       split: list.split_asm;
     (solves \<open>wpsimp\<close>)?)
   done
@@ -1639,7 +1639,7 @@ lemma handle_event_corres:
     apply (frule (1) ct_running_not_idle_etc)
     apply (clarsimp simp:invs_def valid_state_def st_tcb_at_def generates_pending_def obj_at_def)
    apply (wp|simp)+
-    apply (rule corres_symb_exec_r[OF handle_hypervisor_fault_corres[simplified]], wp+)
+    apply (rule corres_symb_exec_r[OF handle_hypervisor_fault_corres[simplified]], wpsimp+)
   done
 
 end

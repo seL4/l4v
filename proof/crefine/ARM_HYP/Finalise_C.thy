@@ -1962,15 +1962,9 @@ lemma vcpuInvalidateActive_ccorres:
       apply ceqv
      apply clarsimp
      apply (rule armHSCurVCPU_update_curv_Null_ccorres)
-    apply (wpsimp simp: modifyArchState_def)
-     apply (clarsimp split: bool.splits option.splits)
-    apply (wpc | wp)+
-     apply wpsimp
-    apply wp
+    apply (wpsimp simp: modifyArchState_def if_apply_def2)
    apply (vcg exspec=vcpu_disable_modifies)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-  apply safe
-  apply simp
   apply (rule UNIV_I)
   done
 

@@ -983,7 +983,6 @@ lemma armv_contextSwitch_HWASID_fp_rewrite:
   apply (rule monadic_rewrite_imp)
    apply (rule monadic_rewrite_gets_l)
    apply (rule monadic_rewrite_symb_exec_l)
-      including no_pre
       apply (wpsimp)+
      apply (simp add: empty_fail_findPDForASID empty_fail_catch)
     apply (rule monadic_rewrite_assert monadic_rewrite_gets_l)+
@@ -5005,7 +5004,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                          apply (rule monadic_rewrite_weaken[where E=True and F=True], simp)
                          apply (rule activateThread_simple_rewrite)
                         apply wp
-                          apply (simp add: ct_in_state'_def)
+                         apply (simp add: ct_in_state'_def, simp add: ct_in_state'_def[symmetric])
                          apply ((wp setCurThread_ct_in_state[folded st_tcb_at'_def]
                                     Arch_switchToThread_pred_tcb')+)[2]
                        apply (simp add: catch_liftE)

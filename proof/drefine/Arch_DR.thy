@@ -528,6 +528,72 @@ lemma shiftl_mod:
   apply (simp add:power_add[symmetric])
   done
 
+definition
+  select_ret_or_throw :: "'a set \<Rightarrow> 'x set \<Rightarrow> ('s, ('x + 'a)) nondet_monad"
+where
+  "select_ret_or_throw S X = alternative (select S >>= returnOk) (select X >>= throwError)"
+
+lemma to_select_ret_or_throw:
+  "returnOk x = select_ret_or_throw {x} {}"
+  "throwError e = select_ret_or_throw {} {e}"
+  "alternative (select_ret_or_throw S X) (select_ret_or_throw S' X')
+    = select_ret_or_throw (S \<union> S') (X \<union> X')"
+  apply (simp_all add: select_ret_or_throw_def alternative_def returnOk_def return_def
+                       select_def bind_def throwError_def)
+  apply (simp add: Sigma_def return_def Un_ac)
+  done
+
+lemma whenE_to_select_ret_or_throw:
+  "whenE P (select_ret_or_throw S X)
+    = select_ret_or_throw ({x. P \<longrightarrow> x \<in> S}) ({x. P \<and> x \<in> X})"
+  apply (simp add: whenE_def to_select_ret_or_throw UNIV_unit)
+  apply (strengthen arg_cong2[where f=select_ret_or_throw])
+  apply (simp add: set_eq_iff)
+  done
+
+lemma select_ret_or_throw_twice:
+  "(do _ \<leftarrow> select_ret_or_throw S X; select_ret_or_throw S X od)
+    = select_ret_or_throw S X"
+  apply (simp add: select_ret_or_throw_def alternative_def returnOk_def return_def
+                       select_def bind_def throwError_def Sigma_def)
+  apply (rule ext, auto)
+  done
+
+lemma select_ret_or_throw_twiceE:
+  "(doE _ \<leftarrow> select_ret_or_throw S X; select_ret_or_throw S X odE)
+    = select_ret_or_throw S X"
+  apply (simp add: select_ret_or_throw_def alternative_def returnOk_def return_def
+                       select_def bind_def throwError_def Sigma_def
+                       bindE_def)
+  apply (rule ext, auto simp: throwError_def return_def)
+  done
+
+crunch inv[wp]: select_ret_or_throw "P"
+  (wp: select_wp)
+
+lemma corres_initial_bindE_rdonly_select_ret_or_throw:
+  assumes y: "\<And>rv'. corres_underlying sr nf nf' (e \<oplus> r) P P' (select_ret_or_throw S X) (d rv')"
+  assumes x: "corres_underlying sr nf nf' (e \<oplus> dc) P P' (select_ret_or_throw S X) c"
+  assumes z: "\<lbrace>P'\<rbrace> c \<lbrace>\<lambda>_. P'\<rbrace>,-"
+  shows      "corres_underlying sr nf nf' (e \<oplus> r) P P' (select_ret_or_throw S X) (c >>=E (\<lambda>rv'. d rv'))"
+  apply (subst select_ret_or_throw_twiceE[symmetric])
+  apply (rule corres_initial_splitE[OF x y])
+   apply wp
+  apply (wp z)
+  done
+
+lemma corres_select_ret_or_throw:
+  "\<forall>v \<in> S'. \<exists>v' \<in> S. r v' v
+    \<Longrightarrow> \<forall>x \<in> X'. \<exists>x' \<in> X. e x' x
+    \<Longrightarrow> corres_underlying sr nf nf' (e \<oplus> r) \<top> \<top>
+        (select_ret_or_throw S X) (select_ret_or_throw S' X')"
+  apply (simp add: select_ret_or_throw_def)
+  apply (rule corres_alternate_match)
+   apply (simp add: returnOk_def liftM_def[symmetric] o_def)
+   apply (rule corres_select, simp)
+  apply (simp add: throwError_def liftM_def[symmetric] o_def)
+  apply (rule corres_select, simp)
+  done
 
 (*
  * Decoding Arch invocations is equivalent.
@@ -889,8 +955,6 @@ next
                          le_shiftr linorder_not_le cap_object_simps)
        apply (rule hoare_pre, wp, auto)[1]
       apply (wp | simp)+
-     apply (simp add: whenE_def split del: if_split)
-     apply (rule hoare_pre, wp, simp)
     apply (clarsimp simp: is_final_cap'_def
       is_final_cap_def split:list.splits)
     apply (simp add: liftE_bindE is_final_cap_def corres_symb_exec_in_gets
@@ -913,165 +977,30 @@ next
            map_option_Some_eq2 throw_opt_def decode_page_directory_invocation_def
     split: label_split_asm  cdl_intent.splits
            InvocationLabels_H.invocation_label.splits arch_invocation_label.splits)
-     apply (clarsimp simp: neq_Nil_conv valid_cap_simps obj_at_def
-     Let_unfold opt_object_page_directory invs_valid_idle label_to_flush_type_def isPDFlushLabel_def isPageFlushLabel_def
-     dest!: a_type_pdD)+
-     apply (safe)
-         apply (simp_all add: Let_unfold)
-         apply (rule corres_from_rdonly)
-            apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
-          apply (rule validE_cases_valid, rule hoare_pre, wp)
-             apply (clarsimp split: option.splits, safe)
-              apply (wp)
-             apply (clarsimp simp: whenE_def)
-             apply (intro conjI impI)
-              apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-              in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-              apply (rule_tac x="Inl undefined" in exI)
-              apply (wp resolve_vaddr_inv |  simp add: flush_type_map_def transform_page_dir_inv_def
-                Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-                in_monad conj_disj_distribR[symmetric]
-                split: option.splits | rule impI conjI)+
-         apply (rule validE_cases_valid, rule hoare_pre, wp)
-            apply (clarsimp split: option.splits, safe)
-             apply (wp)
-            apply (clarsimp simp: whenE_def)
-            apply (intro conjI impI)
-             apply (wp resolve_vaddr_inv
-               |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def
-               translate_arch_invocation_def in_monad
-               conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-             apply (rule_tac x="Inl undefined" in exI)
-                apply (wp resolve_vaddr_inv |  simp add: flush_type_map_def transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-         in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-         apply (rule_tac x="Inl undefined" in exI)
-         apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-         in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-         apply (rule corres_from_rdonly)
-            apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
-         apply (rule validE_cases_valid, rule hoare_pre, wp)
-         apply (clarsimp simp: whenE_def)
+     apply (simp_all add: Let_def)
+     apply (all \<open>(intro conjI impI allI)\<close>)
+         apply (all \<open>(simp add: to_select_ret_or_throw whenE_to_select_ret_or_throw split_def
+                           del: Collect_const;
+            intro corres_initial_bindE_rdonly_select_ret_or_throw
+                  corres_select_ret_or_throw[THEN corres_guard_imp];
+            (wpsimp simp: if_apply_def2 ex_disj_distrib)?)?\<close>)
 
-         apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-         in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-         apply (rule_tac x="Inl undefined" in exI)
+  (* 20-odd subgoals, not going to indent *)
 
-         apply (wp resolve_vaddr_inv |  simp add: flush_type_map_def transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-          in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-        apply (rule corres_from_rdonly)
-           apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
-        apply (rule validE_cases_valid, rule hoare_pre, wp)
-        apply (clarsimp simp: whenE_def)
+    apply (all \<open>(simp split: option.split)?;
+        (intro conjI impI allI corres_initial_bindE_rdonly_select_ret_or_throw
+                  corres_select_ret_or_throw[THEN corres_guard_imp])?;
+        (wpsimp simp: arch_invocation_relation_def translate_arch_invocation_def
+                  transform_page_dir_inv_def flush_type_map_def
+                  label_to_flush_type_def
+                  ex_disj_distrib)?\<close>)
 
-        apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-        in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-        apply (rule_tac x="Inl undefined" in exI)
+           apply ((rule corres_from_rdonly; wpsimp?),
+              rule validE_cases_valid, wpsimp,
+              simp add: ex_disj_distrib split_sum_ex
+                        select_ret_or_throw_def in_monad in_select)+
+    done
 
-        apply (wp resolve_vaddr_inv |  simp add: flush_type_map_def transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-        in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-
-       apply (rule corres_from_rdonly)
-          apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
-       apply (rule validE_cases_valid, rule hoare_pre, wp)
-          apply (clarsimp split: option.splits, safe)
-           apply (wp)
-          apply (clarsimp simp: whenE_def)
-          apply (intro conjI impI)
-
-           apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-           in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-           apply (rule_tac x="Inl undefined" in exI)
-
-           apply (wp resolve_vaddr_inv |  simp add: flush_type_map_def transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-           in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-      apply (rule corres_from_rdonly)
-         apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
-      apply (rule validE_cases_valid, rule hoare_pre, wp)
-
-      apply (wp resolve_vaddr_inv |  clarsimp simp: flush_type_map_def transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-      in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-        apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
-         apply (rule_tac x="Inl undefined" in exI)
-         apply (wp resolve_vaddr_inv |  simp add: flush_type_map_def transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-        in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-        apply (clarsimp split: ARM_A.flush_type.splits)
-       apply (wp resolve_vaddr_inv |  simp add: flush_type_map_def transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-         in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-     apply (rule_tac x="Inl undefined" in exI)
-     apply (wp resolve_vaddr_inv |  simp add: flush_type_map_def transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-    in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-    apply (rule corres_from_rdonly)
-       apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
-    apply (rule validE_cases_valid, rule hoare_pre, wp)
-    apply (clarsimp simp: whenE_def)
-    apply (wp resolve_vaddr_inv |  simp add: flush_type_map_def transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-    in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-    apply (rule_tac x="Inl undefined" in exI)
-    apply (wp resolve_vaddr_inv |  simp add: flush_type_map_def transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-    in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-   apply (rule corres_from_rdonly)
-      apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
-   apply (rule validE_cases_valid, rule hoare_pre, wp)
-      apply (clarsimp split: option.splits, safe)
-       apply (wp)
-      apply (clarsimp simp: whenE_def)
-      apply (intro conjI impI)
-       apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-       in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-       apply (rule_tac x="Inl undefined" in exI)
-       apply (wp resolve_vaddr_inv |  simp add: flush_type_map_def transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-       in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
-  apply (rule corres_from_rdonly)
-     apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
-  apply (rule validE_cases_valid, rule hoare_pre, wp)
-  apply (clarsimp simp: whenE_def)
-  apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-  in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI allI)+
-          apply (clarsimp split: ARM_A.flush_type.splits)
-apply (metis flush.exhaust)
-
-  apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-  in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI allI)+
-  apply (rule_tac x="Inl undefined" in exI)
-
-  apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-  in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI allI)+
-  apply (rule corres_from_rdonly)
-     apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
-  apply (rule validE_cases_valid, rule hoare_pre, wp)
-  apply (clarsimp simp: whenE_def)
-  apply (rule_tac x="Inl undefined" in exI)
-  apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-  in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI allI)+
-  apply (rule corres_from_rdonly)
-     apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
-  apply (rule validE_cases_valid, rule hoare_pre, wp)
-  apply (clarsimp simp: whenE_def)
-  apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-  in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI allI)+
-  apply (rule_tac x="Inl undefined" in exI)
-  apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-  in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI allI)+
-  apply (rule corres_from_rdonly)
-     apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
-  apply (rule validE_cases_valid, rule hoare_pre, wp)
-  apply (clarsimp simp: whenE_def)
-  apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-  in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI allI)+
-  apply (metis flush.exhaust)
-  apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-  in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI allI)+
-  apply (rule_tac x="Inl undefined" in exI)
-  apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-  in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI allI)+
-   apply (rule corres_from_rdonly)
-     apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
-  apply (rule validE_cases_valid, rule hoare_pre, wp)
-  apply (clarsimp simp: whenE_def)
-  apply (rule_tac x="Inl undefined" in exI)
-  apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-  in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI allI)+
-done
 qed
 
 
@@ -1183,11 +1112,10 @@ lemma set_cap_opt_cap':
   apply (cases slot)
   apply (clarsimp simp add:KHeap_D.set_cap_def split_def)
   apply (rule hoare_seq_ext [OF _ dget_object_sp])
-  apply (case_tac obj, simp_all add:KHeap_D.set_object_def has_slots_def
+  apply (case_tac obj; simp add: KHeap_D.set_object_def has_slots_def
                                     update_slots_def object_slots_def
-                          split del:if_split cong: if_cong bind_cong)
-       apply (rule hoare_pre, wp select_wp)
-       apply (clarsimp simp:fun_upd_def[symmetric])
+                          split del:if_split cong: if_cong bind_cong;
+    wpsimp wp: select_wp)
        apply (safe elim!:rsubst[where P=P] intro!: ext)
        apply (clarsimp simp:opt_cap_def slots_of_def opt_object_def object_slots_def)+
   done

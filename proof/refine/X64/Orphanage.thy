@@ -1019,7 +1019,7 @@ lemma scheduleChooseNewThread_no_orphans:
   done
 
 lemma schedule_no_orphans[wp]:
-  notes ssa_lift[wp del]
+  notes ssa_wp[wp del]
   shows
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
    schedule

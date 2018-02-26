@@ -2288,7 +2288,7 @@ lemma findPDForASID_page_directory_at'_simple[wp]:
     \<lbrace>\<lambda>rv s. page_directory_at' rv s\<rbrace>,-"
   apply (simp add:findPDForASID_def)
    apply (wp getASID_wp|simp add:checkPDAt_def | wpc)+
-  apply auto
+  apply auto?
   done
 
 lemma array_assertion_abs_pte_16:

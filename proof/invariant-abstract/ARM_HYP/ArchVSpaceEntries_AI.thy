@@ -1454,7 +1454,7 @@ lemma decode_mmu_invocation_valid_pdpt[wp]:
              | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
                          pti_duplicates_valid_def page_inv_duplicates_valid_def
                          mask_lower_twice vspace_bits_defs bitwise
-                         not_le sz
+                         not_le sz if_apply_def2
                     del: hoare_True_E_R
                      split del: if_split
              | simp only: obj_at_def)+)
@@ -1474,7 +1474,7 @@ lemma decode_mmu_invocation_valid_pdpt[wp]:
              | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
                          pti_duplicates_valid_def page_inv_duplicates_valid_def
                          mask_lower_twice pd_bits_def bitwise pageBits_def
-                         not_le sz
+                         not_le sz if_apply_def2
                     del: hoare_True_E_R
                      split del: if_split
              | simp only: obj_at_def)+)
@@ -1495,7 +1495,7 @@ lemma decode_mmu_invocation_valid_pdpt[wp]:
              | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
                          pti_duplicates_valid_def page_inv_duplicates_valid_def
                          mask_lower_twice pd_bits_def bitwise pageBits_def
-                         not_le sz
+                         not_le sz if_apply_def2
                     del: hoare_True_E_R
                      split del: if_split
              | simp only: obj_at_def)+)
@@ -1507,6 +1507,7 @@ lemma decode_mmu_invocation_valid_pdpt[wp]:
              | wpc
              | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
                          pti_duplicates_valid_def page_inv_duplicates_valid_def
+                         if_apply_def2
                      del: hoare_True_E_R
                      split del: if_split
              | simp only: obj_at_def)+)
@@ -1524,17 +1525,11 @@ lemma decode_vcpu_invocation_valid_pdpt[wp]:
      decode_vcpu_invocation label args vcap excaps
    \<lbrace>invocation_duplicates_valid o Invocations_A.InvokeArchObject\<rbrace>, -"
   apply (simp add: decode_vcpu_invocation_def)
-  apply (cases vcap;
-         cases " invocation_type label";
-         wpsimp;
-         rename_tac arch_label;
-         case_tac arch_label;
-         wpsimp)
-     apply ((fold bindE_assoc, rule returnOk_lift) | wp | wpc | intro conjI
-            | clarsimp simp: invocation_duplicates_valid_def decode_vcpu_set_tcb_def
-                             decode_vcpu_inject_irq_def decode_vcpu_read_register_def
-                             decode_vcpu_write_register_def
-                       split: list.split cap.split)+
+  apply (wpsimp simp: decode_vcpu_set_tcb_def
+                      decode_vcpu_inject_irq_def decode_vcpu_read_register_def
+                      decode_vcpu_write_register_def
+                      if_apply_def2
+    | simp add: invocation_duplicates_valid_def)+
   done
 
 lemma arch_decode_invocation_valid_pdpt[wp]:

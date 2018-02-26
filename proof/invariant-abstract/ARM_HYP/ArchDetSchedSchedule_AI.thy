@@ -25,7 +25,7 @@ lemma vcpu_switch_exst[wp]:
   unfolding vcpu_switch_def by (rule hoare_pre) wpsimp+
 
 crunch exst[wp]: switch_to_idle_thread,set_vm_root "\<lambda>s. P (exst s)"
-  (simp: whenE_def ignore: set_object do_machine_op wp: crunch_wps)
+  (simp: crunch_simps ignore: set_object do_machine_op wp: crunch_wps)
 
 lemma set_vcpu_etcbs [wp]:
   "\<lbrace>valid_etcbs\<rbrace> set_vcpu a b \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
@@ -38,7 +38,7 @@ lemma vcpu_switch_valid_etcbs[wp]:
 crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread, arch_switch_to_thread, vcpu_disable, vcpu_restore, vcpu_save, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers
   valid_etcbs
-  (simp: whenE_def ignore: clearExMonitor set_object do_machine_op wp: crunch_wps)
+  (simp: crunch_simps ignore: clearExMonitor set_object do_machine_op wp: crunch_wps)
 
 lemma pred_tcb_atP[wp]:
   "\<lbrace>\<lambda>s. P (pred_tcb_at proj Q t s)\<rbrace> set_vcpu prt vcpu \<lbrace>\<lambda>_ s. P (pred_tcb_at proj Q t s)\<rbrace>"
@@ -69,7 +69,7 @@ lemma vcpu_switch_valid_queues[wp]:
 crunch valid_queues[wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread, arch_switch_to_thread, vcpu_disable, vcpu_restore, vcpu_save, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers
   valid_queues
-  (simp: whenE_def ignore: set_tcb_queue tcb_sched_action clearExMonitor wp: crunch_wps)
+  (simp: crunch_simps ignore: set_tcb_queue tcb_sched_action clearExMonitor wp: crunch_wps)
 
 lemma set_vcpu_weak_valid_sched_action[wp]:
   "\<lbrace>weak_valid_sched_action\<rbrace> set_vcpu ptr vcpu \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
@@ -82,7 +82,7 @@ lemma vcpu_switch_weak_valid_sched_action[wp]:
 crunch weak_valid_sched_action[wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread, arch_switch_to_thread, vcpu_disable, vcpu_restore, vcpu_save, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers
   weak_valid_sched_action
-  (simp: whenE_def wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch cur_thread[wp]: set_vcpu, vcpu_disable, vcpu_restore, vcpu_save "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps)

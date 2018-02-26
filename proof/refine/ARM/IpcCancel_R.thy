@@ -1005,9 +1005,7 @@ crunch pred_tcb_at'[wp]: isFinalCapability "pred_tcb_at' proj st t"
 lemma (in delete_one_conc_pre) cteDeleteOne_tcb_at_runnable':
   "\<lbrace>st_tcb_at' runnable' t\<rbrace> cteDeleteOne callerCap \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_def)
-  apply (wp | clarsimp)+
-     apply (assumption)
-    apply (wp finaliseCap_tcb_at_runnable' | clarsimp)+
+  apply (wp finaliseCap_tcb_at_runnable' | clarsimp | wp_once hoare_drop_imps)+
   done
 
 crunch pred_tcb_at'[wp]: getThreadReplySlot, getEndpoint "pred_tcb_at' proj st t"
@@ -1353,10 +1351,14 @@ lemma tcbSchedDequeue_valid_inQ_queues[wp]:
                | fastforce simp: valid_inQ_queues_def inQ_def obj_at'_def)+
   done
 
+lemma valid_inQ_queues_ksSchedulerAction_update[simp]:
+  "valid_inQ_queues (ksSchedulerAction_update f s) = valid_inQ_queues s"
+  by (simp add: valid_inQ_queues_def)
+
 lemma rescheduleRequired_valid_inQ_queues[wp]:
   "\<lbrace>valid_inQ_queues\<rbrace> rescheduleRequired \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
   apply (simp add: rescheduleRequired_def)
-  apply (wp | wpc | simp | clarsimp simp: valid_inQ_queues_def)+
+  apply wpsimp
   done
 
 lemma sts_valid_inQ_queues[wp]:
@@ -1606,14 +1608,12 @@ lemma tcbSchedDequeue_valid_queues_partial:
           in hoare_post_imp)
        apply (fastforce simp: Invariants_H.valid_queues_def valid_queues_no_bitmap_def
                               pred_tcb_at'_def obj_at'_def inQ_def)
-      including no_pre
-      apply (wp hoare_vcg_all_lift hoare_vcg_conj_lift)
+      apply (rule hoare_vcg_all_lift hoare_vcg_conj_lift)+
        apply (case_tac "t'=t")
         apply (clarsimp)
         apply (rule_tac Q="\<lambda>_ s. t \<notin> set (ksReadyQueues s (d, p))" in hoare_post_imp)
          apply (clarsimp)
         apply (rule tcbSchedDequeue_t_notksQ)
-       apply (clarsimp)
        apply (wp hoare_convert_imp tcbSchedDequeue_oa_queued tcbSchedDequeue_notksQ
             | clarsimp)+
        apply (simp add: tcbSchedDequeue_def removeFromBitmap_conceal_def[symmetric])
@@ -2322,7 +2322,7 @@ crunch valid_pspace'[wp]: rescheduleRequired "valid_pspace'"
 crunch valid_global_refs'[wp]: rescheduleRequired "valid_global_refs'"
 crunch valid_machine_state'[wp]: rescheduleRequired "valid_machine_state'"
 
-lemma sch_act_wf_weak:
+lemma sch_act_wf_weak[elim!]:
   "sch_act_wf sa s \<Longrightarrow> weak_sch_act_wf sa s"
   by (case_tac sa, (simp add: weak_sch_act_wf_def)+)
 

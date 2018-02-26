@@ -344,19 +344,17 @@ lemma tcbSchedEnqueue_almost_no_orphans:
    tcbSchedEnqueue tcb_ptr
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding tcbSchedEnqueue_def
+  apply simp
   apply (wp setQueue_almost_no_orphans_enq[where tcb_ptr=tcb_ptr] threadSet_no_orphans
-            | clarsimp simp: unless_def)+
+            | clarsimp)+
    apply (wp getObject_tcb_wp | clarsimp simp: threadGet_def)+
-  apply (drule obj_at_ko_at')
-  apply clarsimp
+  apply normalise_obj_at'
   apply (rule_tac x=ko in exI)
-  apply clarsimp
-  apply (rule conjI)
-   apply fastforce
+  apply (clarsimp simp: subset_insertI)
   apply (unfold no_orphans_def almost_no_orphans_def)
   apply clarsimp
-  apply (drule queued_in_queue)
-    apply (fastforce simp: all_queued_tcb_ptrs_def)+
+  apply (drule(2) queued_in_queue)
+  apply (fastforce simp: all_queued_tcb_ptrs_def)
   done
 
 lemma tcbSchedEnqueue_almost_no_orphans_lift:
@@ -1005,7 +1003,7 @@ lemma scheduleChooseNewThread_no_orphans:
   done
 
 lemma schedule_no_orphans[wp]:
-  notes ssa_lift[wp del]
+  notes ssa_wp[wp del]
   shows
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
    schedule
@@ -1120,7 +1118,7 @@ proof -
           (* isHighestPrio *)
           apply (wp hoare_drop_imps)
          apply (wp add: tcbSchedEnqueue_no_orphans)+
-    apply (clarsimp simp: conj_ac cong: conj_cong imp_cong split del: if_split)
+    apply (clarsimp simp: conj_comms cong: conj_cong imp_cong split del: if_split)
     apply (wp hoare_lift_Pf2[where f=ksCurThread, OF tcbSchedEnqueue_pred_tcb_at']
               hoare_lift_Pf2[where f=ksCurThread, OF tcbSchedEnqueue_in_ksQ']
               hoare_vcg_imp_lift'
@@ -1201,7 +1199,8 @@ lemma timerTick_no_orphans [wp]:
    apply (wp hoare_drop_imps | clarsimp)+
    apply (wp threadSet_valid_queues' tcbSchedAppend_almost_no_orphans
              threadSet_almost_no_orphans threadSet_no_orphans tcbSchedAppend_sch_act_wf
-             | wpc | clarsimp)+
+             | wpc | clarsimp
+             | strengthen sch_act_wf_weak)+
          apply (rule_tac Q="\<lambda>rv s. no_orphans s \<and> valid_queues' s \<and> tcb_at' thread s
                                  \<and> sch_act_wf  (ksSchedulerAction s) s" in hoare_post_imp)
           apply (clarsimp simp: inQ_def)
@@ -2282,7 +2281,7 @@ lemma handleInvocation_no_orphans [wp]:
                    setThreadState_current_no_orphans sts_invs_minor'
                    ct_in_state'_set setThreadState_st_tcb
                  | simp add: split_def split del: if_split)+
-  apply (clarsimp)
+  apply (clarsimp simp: if_apply_def2)
   apply (frule(1) ct_not_ksQ)
   by (auto simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def invs'_def
                     cur_tcb'_def valid_state'_def valid_idle'_def)
@@ -2394,11 +2393,6 @@ lemma handleEvent_no_orphans [wp]:
   apply (auto simp: activatable_from_running' active_from_running')
   done
 
-(* FIXME: move? *)
-lemma hoare_vcg_conj_liftE:
-  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>Q'\<rbrace>; \<lbrace>P'\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> R r s\<rbrace>, \<lbrace>\<lambda>r s. Q' r s \<and> E r s\<rbrace>"
-  by (fastforce simp: validE_def valid_def split: sum.splits)
-
 theorem callKernel_no_orphans [wp]:
   "\<lbrace> \<lambda>s. invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and>
           (e \<noteq> Interrupt \<longrightarrow> ct_running' s) \<and>
@@ -2406,7 +2400,7 @@ theorem callKernel_no_orphans [wp]:
    callKernel e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding callKernel_def
-  by (wpsimp wp: weak_if_wp schedule_invs' hoare_vcg_conj_liftE)
+  by (wpsimp wp: weak_if_wp schedule_invs')
 
 end
 

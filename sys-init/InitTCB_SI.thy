@@ -604,7 +604,7 @@ lemma seL4_TCB_Configure_sep:
        R\<guillemotright>\<rbrace>"
   apply (subst (asm) update_cap_data_det_cnode, assumption)
   apply (rule hoare_chain)
-    apply (wp TCB_Configure_wp [where
+    apply (rule TCB_Configure_wp [where
               cnode_id=cnode_id and
               cnode_cap=cnode_cap and
               tcb_id=tcb_id and

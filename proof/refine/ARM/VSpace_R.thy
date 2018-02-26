@@ -757,10 +757,8 @@ proof -
                   apply simp
                  apply simp
                  apply (rule arm_context_switch_corres)
-                apply (wp | simp | wp_once hoare_drop_imps)+
-               apply (simp add: whenE_def split del: if_split, wp)[1]
-              apply (rule find_pd_for_asid_pd_at_asid_again)
-             apply wp
+                apply ((wp find_pd_for_asid_pd_at_asid_again
+                  | simp add: if_apply_def2 | wp_once hoare_drop_imps)+)
             apply clarsimp
             apply (frule page_directory_cap_pd_at_uniq, simp+)
             apply (frule(1) cte_wp_at_valid_objs_valid_cap)
@@ -1078,7 +1076,7 @@ lemma delete_asid_pool_corres:
         apply simp
         apply (strengthen valid_arch_state_unmap_strg')
         apply (fold cur_tcb'_def)
-        apply (wp mapM_wp')
+        apply (wp mapM_wp')+
        apply (clarsimp simp: cur_tcb'_def)
       apply (simp add: o_def pred_conj_def)
       apply wp
@@ -1468,7 +1466,7 @@ crunch typ_at' [wp]: flushPage "\<lambda>s. P (typ_at' T p s)"
 lemmas flushPage_typ_ats' [wp] = typ_at_lifts [OF flushPage_typ_at']
 
 crunch valid_objs' [wp]: flushPage "valid_objs'"
-  (wp: crunch_wps hoare_drop_imps simp: whenE_def crunch_simps)
+  (wp: crunch_wps hoare_drop_imps simp: crunch_simps)
 
 crunch inv: lookupPTSlot "P"
   (wp: loadObject_default_inv)
@@ -2794,8 +2792,9 @@ lemma no_irq_armv_contextSwitch_HWASID:
 lemma armv_contextSwitch_invs [wp]:
   "\<lbrace>invs'\<rbrace> armv_contextSwitch pd asid \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: armv_contextSwitch_def)
-  apply (wp dmo_invs' no_irq_armv_contextSwitch_HWASID no_irq)
-  apply (rule hoare_post_imp[rotated], wp)
+  apply (wp dmo_invs' no_irq_armv_contextSwitch_HWASID no_irq
+      hoare_vcg_all_lift)
+  apply (rule hoare_post_imp[rotated], rule hoare_vcg_prop[where P=True])
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
@@ -2807,7 +2806,7 @@ lemma armv_contextSwitch_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> armv_contextSwitch pd asid \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (simp add: armv_contextSwitch_def armv_contextSwitch_HWASID_def)
   apply (wp dmo_invs_no_cicd' no_irq_setHardwareASID no_irq_setCurrentPD no_irq)
-  apply (rule hoare_post_imp[rotated], wp getHWASID_invs_no_cicd')
+  apply (rule hoare_post_imp[rotated], rule getHWASID_invs_no_cicd')
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
@@ -2834,23 +2833,11 @@ lemma dmo_setCurrentPD_invs_no_cicd':
                         machine_rest_lift_def split_def | wp)+
   done
 
-lemma setVMRoot_invs [wp]:
-  "\<lbrace>invs'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps | wpcw
-          | simp add: whenE_def checkPDNotInASIDMap_def split del: if_split)+
-  done
+crunch invs[wp]: setVMRoot "invs'"
+  (wp: crunch_wps simp: crunch_simps ignore: doMachineOp)
 
-lemma setVMRoot_invs_no_cicd':
-  "\<lbrace>invs_no_cicd'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps armv_contextSwitch_invs_no_cicd' getHWASID_invs_no_cicd'
-             dmo_setCurrentPD_invs_no_cicd'
-          | wpcw
-          | simp add: whenE_def checkPDNotInASIDMap_def split del: if_split)+
-  done
+crunch invs_no_cicd': setVMRoot "invs_no_cicd'"
+  (wp: crunch_wps dmo_setCurrentPD_invs_no_cicd' simp: crunch_simps ignore: doMachineOp)
 
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps
@@ -3499,8 +3486,6 @@ lemmas storePDE_Invalid_invs = storePDE_invs[where pde=InvalidPDE, simplified]
 
 lemma setVMRootForFlush_invs'[wp]: "\<lbrace>invs'\<rbrace> setVMRootForFlush a b \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: setVMRootForFlush_def)
-  apply (wp storePDE_Invalid_invs mapM_wp' crunch_wps | simp add: crunch_simps)+
-  apply (simp add: getThreadVSpaceRoot_def)
   apply (wp storePDE_Invalid_invs mapM_wp' crunch_wps | simp add: crunch_simps)+
   done
 

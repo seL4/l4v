@@ -3787,10 +3787,8 @@ lemma createObjects_orig_obj_at':
      apply (rule range_cover_not_zero_shift)
      apply simp+
     apply (wp|simp add:split_def cong: if_cong del: data_map_insert_def fun_upd_apply)+
-   apply (wpc|wp)+
-   apply (clarsimp simp del:fun_upd_apply)
-   apply (wp hoare_unless_wp)
-     apply (simp add:range_cover_def is_aligned_mask)
+   apply (wpc|wp|simp del: fun_upd_apply data_map_insert_def)+
+   apply (simp only: alignError_def, wp)
   apply (subst data_map_insert_def[symmetric])+
   apply clarsimp
   apply (subgoal_tac "range_cover ptr sz (objBitsKO val) (unat (of_nat n << gbits))")
@@ -3810,7 +3808,6 @@ lemma createObjects_orig_obj_at':
    apply (drule_tac x = p in orthD1)
    apply (clarsimp simp:ptr_add_def p_assoc_help)
    apply (simp add:dom_def obj_at'_real_def ko_wp_at'_def)
-  apply simp+
   apply (rule range_cover_rel)
      apply (simp)+
   apply (subst mult.commute)

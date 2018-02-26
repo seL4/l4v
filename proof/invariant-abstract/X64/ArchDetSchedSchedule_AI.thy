@@ -18,15 +18,15 @@ named_theorems DetSchedSchedule_AI_assms
 
 crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread, arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_etcbs
-  (simp: whenE_def ignore: )
+  (simp: crunch_simps ignore: )
 
 crunch valid_queues [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_queues
-  (simp: whenE_def ignore: set_tcb_queue tcb_sched_action )
+  (simp: crunch_simps ignore: set_tcb_queue tcb_sched_action )
 
 crunch weak_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers "weak_valid_sched_action"
-  (simp: whenE_def ignore: )
+  (simp: crunch_simps ignore: )
 
 crunch ct_not_in_q[wp]: set_vm_root "ct_not_in_q"
   (wp: crunch_wps simp: crunch_simps)
@@ -73,19 +73,19 @@ lemma switch_to_idle_thread_ct_in_cur_domain [wp, DetSchedSchedule_AI_assms]:
 
 crunch ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_thread, arch_get_sanitise_register_info ct_not_in_q
-  (simp: whenE_def ignore: )
+  (simp: crunch_simps ignore: )
 
 crunch is_activatable [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_thread, arch_get_sanitise_register_info "is_activatable t"
-  (simp: whenE_def ignore: )
+  (simp: crunch_simps ignore: )
 
 crunch valid_sched_action [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_sched_action
-  (simp: whenE_def ignore: )
+  (simp: crunch_simps ignore: )
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_sched
-  (simp: whenE_def ignore: )
+  (simp: crunch_simps ignore: )
 
 crunch exst[wp]: set_vm_root "\<lambda>s. P (exst s)"
   (wp: crunch_wps hoare_whenE_wp simp: crunch_simps)

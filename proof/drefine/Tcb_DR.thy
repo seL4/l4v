@@ -69,7 +69,6 @@ lemma decode_set_ipc_buffer_translate_tcb_invocation:
   apply (wp | clarsimp | rule conjI)+
    apply (simp add:check_valid_ipc_buffer_def)
    apply (wpc|wp)+
-      apply (wp hoare_whenE_wp)+
    apply (simp add:derive_cap_def split del:if_split)
    apply (wpsimp simp: o_def arch_derive_cap_def split_del:if_split)
   apply clarsimp
@@ -601,7 +600,7 @@ lemma invoke_tcb_corres_read_regs:
         apply (rule corres_symb_exec_r)
            apply (rule dcorres_idempotent_as_user)
            apply (rule hoare_mapM_idempotent)
-           apply wp+
+           apply wpsimp+
        apply (rule suspend_corres, simp)
       apply wp
     apply simp
@@ -700,8 +699,7 @@ lemma not_idle_after_restart [wp]:
                                                   and not_idle_thread obj_id' and invs"])
     apply (wp gts_sp)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def not_idle_thread_def | rule conjI)+
-  apply (rule hoare_strengthen_post)
-   apply (wp gts_inv)
+  apply (rule hoare_strengthen_post, rule gts_inv)
   apply (clarsimp)
   done
 
@@ -736,12 +734,12 @@ lemma invoke_tcb_corres_copy_regs:
                     apply simp
                     apply (clarsimp simp: when_def)
                    apply (rule reschedule_required_dcorres[THEN corres_trivial])
-              apply wp+
+              apply wpsimp+
                apply (rule corres_cases [where R="d"])
                apply (clarsimp simp: when_def)
-              apply (rule invoke_tcb_corres_copy_regs_loop)
+              apply (rule invoke_tcb_corres_copy_regs_loop[unfolded dc_def])
               apply (clarsimp simp: when_def)
-             apply (rule dummy_corrupt_tcb_intent_corres)
+             apply (rule dummy_corrupt_tcb_intent_corres[unfolded dc_def])
            apply wp+
            apply (rule corres_cases [where R="c"])
             apply (clarsimp simp: when_def)
@@ -818,11 +816,10 @@ lemma get_cap_ex_cte_cap_wp_to:
    apply simp
   apply (clarsimp simp:is_cap_simps)
   done
-find_theorems name: dxo valid
+
 crunch idle[wp] : cap_delete "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps ignore: wrap_ext_bool OR_choiceE)
-term Deterministic_A.state_ext_class.wrap_ext_bool 
-find_theorems preemption_point name: idle
+
 lemma imp_strengthen:
   "R \<and> (P x \<longrightarrow> Q x) \<Longrightarrow> P x \<longrightarrow> (Q x \<and> R) "
  by simp

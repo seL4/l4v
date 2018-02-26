@@ -225,8 +225,7 @@ lemma delete_cap_one_shrink_descendants:
            apply (clarsimp simp:set_cdt_def get_def put_def bind_def valid_def mdb_cte_at_def)
           apply (assumption)
          apply clarsimp+
-       apply (assumption)
-      apply wp
+       apply wp+
      apply (rule hoare_vcg_conj_lift[where P="\<lambda>s. cdt s = cdt pres \<and> mdb_cte_at (swp (cte_wp_at (op\<noteq>cap.NullCap)) s) (cdt s)"])
       prefer 2
       apply (rule hoare_drop_imp)
@@ -579,10 +578,6 @@ lemma invalidate_asid_entry_dwp[wp]:
      apply wp+
     apply (clarsimp simp:invalidate_hw_asid_entry_def)
     apply wp+
-    apply (subgoal_tac "transform s = cs")
-     prefer 2
-     apply (assumption)
-    apply (clarsimp simp:transform_def transform_objects_def2 transform_current_thread_def transform_cdt_def transform_asid_table_def)
    apply (clarsimp simp:load_hw_asid_def)
    apply wp
   apply (clarsimp simp:transform_def transform_objects_def2 transform_current_thread_def transform_cdt_def transform_asid_table_def)
@@ -2102,8 +2097,6 @@ lemma pd_pt_relation_page_table_mapped_wp:
    apply (simp add:validE_def)
    apply (rule hoare_strengthen_post[where Q="\<lambda>rv. page_table_at w"])
     apply wp
-   apply (clarsimp,rule conjI)
-    apply fastforce
    apply (clarsimp simp:pd_pt_relation_def obj_at_def)+
  done
 
@@ -2364,7 +2357,7 @@ lemma find_pd_for_asid_kernel_mapping_help:
    \<lbrace>\<lambda>rv s. ucast (lookup_pd_slot rv v && mask pd_bits >> 2) \<notin> kernel_mapping_slots \<rbrace>,-"
   apply (rule hoare_gen_asmE)
   apply (rule hoare_post_imp_R)
-   apply (wp find_pd_for_asid_aligned_pd_bits)
+   apply (rule find_pd_for_asid_aligned_pd_bits)
    apply simp
   apply (rule less_kernel_base_mapping_slots)
   apply simp+

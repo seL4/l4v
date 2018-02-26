@@ -542,7 +542,6 @@ lemma mark_tcb_intent_error_has_children[wp]:
   apply (simp add:has_children_def is_cdt_parent_def
     mark_tcb_intent_error_def update_thread_def
     set_object_def | wp | wpc)+
-  apply fastforce
   done
 
 crunch cdt[wp]: corrupt_frame "\<lambda>s. P (cdl_cdt s)"
@@ -904,7 +903,6 @@ lemma update_thread_no_pending:
     update_thread thread_ptr t \<lbrace>\<lambda>rv. no_pending\<rbrace>"
   apply (simp add: update_thread_def set_object_def | (wp modify_wp)+ | wpc)+
   apply (clarsimp simp: no_pending_def)
-  apply (intro conjI impI allI, simp_all)
   apply (drule_tac x = oid in spec)
   apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def
                         object_slots_def
@@ -1119,7 +1117,8 @@ lemma default_object_no_pending_cap:
 
 lemma create_objects_no_pending[wp]:
   "\<lbrace>no_pending\<rbrace> create_objects a (default_object b c d) \<lbrace>\<lambda>rv. no_pending\<rbrace>"
-  apply (clarsimp simp: create_objects_def no_pending_def)
+  apply (simp add: create_objects_def, wp)
+  apply (clarsimp simp: no_pending_def)
   apply (drule_tac x = oid in spec)
   apply (clarsimp simp: opt_cap_def default_object_no_pending_cap
                         slots_of_def opt_object_def
@@ -1188,7 +1187,7 @@ lemma set_cap_opt_cap_sep_imp:
   apply (clarsimp dest!: asid)
   done
 
-lemma set_cap_not_pending_ugh:
+lemma set_cap_no_pending_asm_in_pre:
   "\<lbrace>no_pending and K (snd slot = tcb_pending_op_slot \<longrightarrow> \<not> is_pending_cap cap)\<rbrace>
     set_cap slot cap \<lbrace>\<lambda>rv s. no_pending s\<rbrace>"
   by (rule hoare_gen_asm, wp)
@@ -1214,12 +1213,11 @@ lemma invoke_untyped_no_pending[wp]:
   invoke_untyped (Retype ref a b c d e)
   \<lbrace>\<lambda>rv. no_pending\<rbrace>"
   apply (simp add: invoke_untyped_def create_cap_def)
-  apply (wpsimp wp: mapM_x_wp' set_cap_not_pending_ugh get_cap_wp select_wp
+  apply (wpsimp wp: mapM_x_wp' set_cap_no_pending_asm_in_pre get_cap_wp select_wp
         simp: update_available_range_def
     )+
      apply (wp_once hoare_drop_imps)
      apply (wpsimp  split_del: if_split)+
-   apply (wp unlessE_wp | simp)+
    apply (rule_tac Q' = "\<lambda>r s. no_pending s \<and> ((\<exists>y. opt_cap ref s = Some y) \<longrightarrow>
                         \<not> is_pending_cap (the (opt_cap ref s)))" in hoare_post_imp_R)
     apply (wp reset_untyped_cap_no_pending)

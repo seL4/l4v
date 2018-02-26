@@ -1431,8 +1431,7 @@ lemma dmo_loadWord_rev:
        apply(clarsimp simp: equiv_valid_2_def in_monad for_each_byte_of_word_def)
        apply(erule equiv_forD)
        apply fastforce
-      apply(clarsimp simp: ptr_range_def add.commute)
-     apply (wp wp_post_taut loadWord_inv | simp)+
+      apply (wp wp_post_taut loadWord_inv | simp)+
   done
 
 lemma for_each_byte_of_word_imp:

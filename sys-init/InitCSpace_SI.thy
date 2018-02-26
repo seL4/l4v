@@ -1650,7 +1650,7 @@ lemma init_cspace_copy_sep:
                xs="cnode_list",
                simplified sep_conj_assoc], simp+)
     apply (rule hoare_chain)
-    apply (wp init_cnode_copy_sep [where t=t and cnodes="set cnode_list" and dev = dev],simp+)
+    apply (rule init_cnode_copy_sep [where t=t and cnodes="set cnode_list" and dev = dev],simp+)
     apply sep_solve
    apply clarsimp
    apply sep_solve

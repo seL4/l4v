@@ -2992,7 +2992,7 @@ crunch inQ[wp]: cteInsert "\<lambda>s. P (obj_at' (inQ d p) t s)"
 lemma setCTE_it'[wp]:
   "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> setCTE c p \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
   apply (simp add: setCTE_def setObject_def split_def updateObject_cte)
-  apply (wp|wpc|simp add: unless_def)+
+  apply (wp|wpc|simp del: hoare_fail_any)+
   done
 
 lemma setCTE_idle [wp]:
@@ -3038,7 +3038,7 @@ lemma cteInsert_idle'[wp]:
 lemma setCTE_arch [wp]:
   "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setCTE p c \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
   apply (simp add: setCTE_def setObject_def split_def updateObject_cte)
-  apply (wp|wpc|simp add: unless_def)+
+  apply (wp|wpc|simp del: hoare_fail_any)+
   done
 
 lemma setCTE_valid_arch[wp]:
@@ -3048,13 +3048,13 @@ lemma setCTE_valid_arch[wp]:
 lemma setCTE_global_refs[wp]:
   "\<lbrace>\<lambda>s. P (global_refs' s)\<rbrace> setCTE p c \<lbrace>\<lambda>_ s. P (global_refs' s)\<rbrace>"
   apply (simp add: setCTE_def setObject_def split_def updateObject_cte global_refs'_def)
-  apply (wp|wpc|simp add: unless_def)+
+  apply (wp|wpc|simp del: hoare_fail_any)+
   done
 
 lemma setCTE_gsMaxObjectSize[wp]:
   "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> setCTE p c \<lbrace>\<lambda>_ s. P (gsMaxObjectSize s)\<rbrace>"
   apply (simp add: setCTE_def setObject_def split_def updateObject_cte)
-  apply (wp|wpc|simp add: unless_def)+
+  apply (wp|wpc|simp del: hoare_fail_any)+
   done
 
 lemma setCTE_valid_globals[wp]:

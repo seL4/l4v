@@ -2188,14 +2188,16 @@ lemma dcorres_store_word_conservative:
      (corrupt_frame obuf) (do_machine_op (storeWord ptr b))"
   apply (rule dcorres_expand_pfx,clarsimp)
   apply (case_tac "\<forall>buf. (\<exists>thread. ipc_frame_ptr_at buf thread s') \<longrightarrow> buf \<noteq> obuf")
-   apply (rule corres_dummy_return_pl)
+   apply (rule corres_dummy_return_pl[where b="()"])
    apply (rule corres_dummy_return_r)
-   apply (rule corres_underlying_split)
-      apply (rule corres_guard_imp[OF dcorres_store_word_safe])
-        apply simp+
-     apply (rule hoare_TrueI)[1]
-    apply (wp do_machine_op_valid_etcbs, simp)
-   apply (clarsimp simp:dcorres_dummy_corrupt_frame)
+   apply (rule corres_guard_imp)
+     apply (rule corres_split[where r'=dc])
+        apply simp
+        apply (rule dcorres_dummy_corrupt_frame)
+       apply (erule dcorres_store_word_safe)
+      apply wp+
+    apply simp
+   apply simp
   apply (clarsimp)
   apply (frule ipc_frame_ptr_at_sz_at,simp+)
   apply (rule corres_guard_imp[OF store_word_corres])

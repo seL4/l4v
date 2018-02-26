@@ -274,7 +274,7 @@ lemma lookup_slot_real_cte_at_wp [wp]:
 
 lemma lookup_slot_cte_at_wp[wp]:
   "\<lbrace> valid_objs \<rbrace> lookup_slot_for_thread t addr \<lbrace>\<lambda>rv. cte_at (fst rv)\<rbrace>,-"
-  by (rule hoare_post_imp_R, wp, erule real_cte_at_cte)
+  by (strengthen real_cte_at_cte, wp)
 
 lemma get_cap_success:
   fixes s cap ptr offset
@@ -4964,7 +4964,6 @@ lemma lookup_cnode_slot_real_cte [wp]:
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps resolve_address_bits_real_cte_at whenE_throwError_wp
           |wpc|simp)+
-  apply fastforce
   done
 
 

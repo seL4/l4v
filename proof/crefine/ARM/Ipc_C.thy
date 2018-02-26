@@ -234,13 +234,9 @@ lemma tcbFault_submonad_args:
 
 lemma threadGet_stateAssert_gets:
   "threadGet ext t = do stateAssert (tcb_at' t) []; gets (thread_fetch ext t) od"
-  including no_pre
   apply (rule is_stateAssert_gets [OF _ _ empty_fail_threadGet no_fail_threadGet])
-    apply (clarsimp simp: threadGet_def liftM_def, wp+)[1]
-   apply (simp add: threadGet_def liftM_def, (wp getObject_tcb_at')+)
-  apply (simp add: threadGet_def liftM_def, wp+)
-  apply (rule hoare_strengthen_post, (wp getObject_obj_at')+)
-     apply (simp add: objBits_simps')+
+    apply (clarsimp intro!: obj_at_ko_at'[where P="\<lambda>tcb :: tcb. True", simplified]
+        | wp threadGet_wp)+
   apply (clarsimp simp: obj_at'_def thread_fetch_def projectKOs)
   done
 

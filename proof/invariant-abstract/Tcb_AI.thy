@@ -1056,7 +1056,7 @@ lemma decode_set_ipc_is_tc[wp]:
   apply (simp    add: decode_set_ipc_buffer_def split_def
            split del: if_split
             | wp)+
-  apply fastforce
+  apply fastforce?
   done
 
 
@@ -1188,7 +1188,7 @@ lemma decode_bind_notification_inv[wp]:
   "\<lbrace>P\<rbrace> decode_bind_notification cap excaps \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding decode_bind_notification_def
   by (wpsimp wp: get_simple_ko_wp gbn_wp
-             simp: whenE_def
+             simp: whenE_def if_apply_def2
              split_del: if_split)
 
 lemma (in Tcb_AI) decode_tcb_inv_inv:

@@ -653,7 +653,6 @@ lemma checkFreeIndex_wp:
   "\<lbrace>\<lambda>s. if descendants_of' slot (ctes_of s) = {} then Q y s else Q x s\<rbrace>
    constOnFailure x (doE z \<leftarrow> ensureNoChildren slot; returnOk y odE)
    \<lbrace>Q\<rbrace>"
-  including no_pre
   apply (clarsimp simp:constOnFailure_def const_def)
   apply (wp ensureNoChildren_wp)
   apply simp
@@ -1498,7 +1497,7 @@ shows
                                               prefer 3
                                               apply wp+
                                                  apply (rule hoare_post_imp, simp)
-                                                 apply wp+
+                                                 apply (wp | assumption)+
                                              defer
                                              apply ((wp | simp)+)[1]
                                             apply (simp add: create_cap_ext_def set_cdt_list_def update_cdt_list_def bind_assoc)
@@ -3412,8 +3411,8 @@ lemma createNewCaps_not_parents:
    apply (clarsimp simp: tree_cte_cteCap_eq)
    apply (erule_tac x=x in allE)
    apply simp
-  including no_pre
   apply (wp createNewCaps_children hoare_vcg_all_lift createNewCaps_cte_wp_at2)
+  apply (rule conjI[rotated])
    apply (clarsimp simp: tree_cte_cteCap_eq simp del: o_apply)
    apply (rule conjI)
     apply (clarsimp split: option.splits)
@@ -5508,17 +5507,18 @@ lemma inv_untyped_corres':
                invs_valid_pspace' invs_arch_state'
                imp_consequent[where Q = "(\<exists>x. x \<in> cte_map ` set slots)"]
              | clarsimp simp: conj_comms simp del: capFreeIndex_update.simps)+
-          apply (wp updateFreeIndex_forward_invs' updateFreeIndex_caps_overlap_reserved
+          apply ((wp updateFreeIndex_forward_invs' updateFreeIndex_caps_overlap_reserved
              updateFreeIndex_caps_no_overlap'' updateFreeIndex_pspace_no_overlap'
              hoare_vcg_const_Ball_lift updateFreeIndex_cte_wp_at
-             updateFreeIndex_descendants_range_in')+
+             updateFreeIndex_descendants_range_in')+)[1]
          apply clarsimp
          apply (clarsimp simp:conj_comms)
          apply (strengthen invs_mdb invs_valid_objs
                 invs_valid_pspace invs_arch_state invs_psp_aligned
                 invs_distinct)
          apply (clarsimp simp:conj_comms ball_conj_distrib ex_in_conv)
-         apply (rule_tac Q'="\<lambda>_ s. valid_etcbs s \<and> valid_list s \<and> invs s \<and> ct_active s
+         apply ((rule validE_R_validE)?,
+            rule_tac Q'="\<lambda>_ s. valid_etcbs s \<and> valid_list s \<and> invs s \<and> ct_active s
           \<and> valid_untyped_inv_wcap ui
             (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1} s)
@@ -5565,8 +5565,7 @@ lemma inv_untyped_corres':
          apply (drule invoke_untyped_proofs.usable_range_disjoint)
          apply (clarsimp simp: field_simps mask_out_sub_mask shiftl_t2n)
 
-        apply wp
-        apply (rule validE_validE_R, rule hoare_post_impErr,
+        apply ((rule validE_validE_R)?, rule hoare_post_impErr,
                rule whenE_reset_resetUntypedCap_invs_etc[where ptr="ptr && ~~ mask sz"
                    and ptr'=ptr and sz=sz and idx=idx and ui=ui' and dev=dev])
 

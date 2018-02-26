@@ -3003,7 +3003,7 @@ crunch inQ[wp]: cteInsert "\<lambda>s. P (obj_at' (inQ d p) t s)"
 lemma setCTE_it'[wp]:
   "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> setCTE c p \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
   apply (simp add: setCTE_def setObject_def split_def updateObject_cte)
-  apply (wp|wpc|simp add: unless_def)+
+  apply (wp|wpc|simp del: hoare_fail_any)+
   done
 
 lemma setCTE_idle [wp]:
@@ -3049,7 +3049,7 @@ lemma cteInsert_idle'[wp]:
 lemma setCTE_arch [wp]:
   "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setCTE p c \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
   apply (simp add: setCTE_def setObject_def split_def updateObject_cte)
-  apply (wp|wpc|simp add: unless_def)+
+  apply (wp|wpc|simp del: hoare_fail_any)+
   done
 
 lemma setCTE_valid_arch[wp]:
@@ -3068,13 +3068,13 @@ lemma setCTE_valid_arch[wp]:
 lemma setCTE_global_refs[wp]:
   "\<lbrace>\<lambda>s. P (global_refs' s)\<rbrace> setCTE p c \<lbrace>\<lambda>_ s. P (global_refs' s)\<rbrace>"
   apply (simp add: setCTE_def setObject_def split_def updateObject_cte global_refs'_def)
-  apply (wp|wpc|simp add: unless_def)+
+  apply (wp|wpc|simp del: hoare_fail_any)+
   done
 
 lemma setCTE_gsMaxObjectSize[wp]:
   "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> setCTE p c \<lbrace>\<lambda>_ s. P (gsMaxObjectSize s)\<rbrace>"
   apply (simp add: setCTE_def setObject_def split_def updateObject_cte)
-  apply (wp|wpc|simp add: unless_def)+
+  apply (wp|wpc|simp del: hoare_fail_any)+
   done
 
 lemma setCTE_valid_globals[wp]:
@@ -3756,12 +3756,11 @@ lemma deriveCap_derived:
   deriveCap slot c'
   \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow>
           cte_wp_at' (is_derived' (ctes_of s) slot rv \<circ> cteCap) slot s\<rbrace>, -"
-  including no_pre
   unfolding deriveCap_def badge_derived'_def
-  apply (cases c'; (wp ensureNoChildren_wp | simp add: isCap_simps Let_def
+  apply (cases c'; (solves \<open>(wp ensureNoChildren_wp | simp add: isCap_simps Let_def
         | clarsimp simp: badge_derived'_def vsCapRef_def
         | erule cte_wp_at_weakenE' disjE
-        | rule is_derived'_def[THEN meta_eq_to_obj_eq, THEN iffD2])+)
+        | rule is_derived'_def[THEN meta_eq_to_obj_eq, THEN iffD2])+\<close>)?)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability;
          simp add: ARM_HYP_H.deriveCap_def Let_def isCap_simps

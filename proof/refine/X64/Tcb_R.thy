@@ -477,9 +477,7 @@ proof -
                apply (rule Q[OF refl refl])
               apply (rule R[OF refl refl])
               apply (simp add: frame_registers_def frameRegisters_def)
-             apply ((wp mapM_x_wp' static_imp_wp, simp+)+)[2]
-           apply (wp mapM_x_wp' static_imp_wp, simp+)
-             apply ((wp mapM_x_wp' static_imp_wp | simp)+)[4]
+             apply ((wp mapM_x_wp' static_imp_wp | simp+)+)[4]
          apply ((wp static_imp_wp restart_invs' | wpc | clarsimp simp: if_apply_def2)+)[2]
        apply (wp suspend_nonz_cap_to_tcb static_imp_wp | simp add: if_apply_def2)+
    apply (fastforce simp: invs_def valid_state_def valid_pspace_def
@@ -743,15 +741,18 @@ lemma valid_queues_ksSchedulerAction_update [simp]:
   by (simp add: valid_queues'_def)
 
 lemma setP_vq'[wp]:
-  "\<lbrace>\<lambda>s. valid_queues' s \<and> tcb_at' t s \<and> sch_act_wf (ksSchedulerAction s) s \<and> p \<le> maxPriority\<rbrace>
+  "\<lbrace>\<lambda>s. valid_queues' s \<and> tcb_at' t s \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> p \<le> maxPriority\<rbrace>
      setPriority t p
    \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  apply (rule hoare_strengthen_post[where Q="\<lambda>rv s. valid_queues' s \<and>  sch_act_wf (ksSchedulerAction s) s"])
   apply (simp add: setPriority_def)
-  apply (wp | clarsimp simp: pred_tcb_at'_def o_def)+
-   apply(rule_tac Q="\<lambda>s. valid_queues' s \<and> sch_act_wf (ksSchedulerAction s) s \<and> obj_at' (Not \<circ> tcbQueued) t s" in hoare_pre_imp, assumption)
-   apply ((wp_trace threadSet_valid_queues' threadSet_sch_act | clarsimp simp: projectKOs inQ_def obj_at'_def)+)[1]
-  apply (wp tcbSchedDequeue_sch_act_wf tcbSchedDequeue_valid_queues' tcbSchedDequeue_not_queued | simp) +
+  apply (wpsimp wp: threadSet_valid_queues' hoare_drop_imps
+                    threadSet_weak_sch_act_wf)
+   apply (rule_tac Q="\<lambda>_ s. valid_queues' s \<and> obj_at' (Not \<circ> tcbQueued) t s
+              \<and> weak_sch_act_wf (ksSchedulerAction s) s" in hoare_strengthen_post,
+    wp tcbSchedDequeue_valid_queues' tcbSchedDequeue_not_queued)
+   apply (clarsimp simp: inQ_def)
+   apply normalise_obj_at'
+  apply simp
   done
 
 lemma setQueue_invs_bits[wp]:
@@ -792,24 +793,24 @@ lemma tcbPriority_Queued_caps_safe:
 
 lemma setP_invs':
   "\<lbrace>invs' and tcb_at' t and K (p \<le> maxPriority)\<rbrace> setPriority t p \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  including no_pre
   apply (rule hoare_gen_asm)
   apply (simp add: setPriority_def)
-  apply (wp rescheduleRequired_all_invs_but_ct_not_inQ)
-     apply (wp valid_irq_node_lift, clarsimp+)
-    apply (rule_tac Q="\<lambda>r s. (r \<longrightarrow> st_tcb_at' runnable' t s) \<and> invs' s"
-             in hoare_post_imp)
-     apply (clarsimp simp: invs'_def valid_state'_def invs_valid_objs' elim!: st_tcb_ex_cap'')
-     apply (case_tac st; clarsimp)
-    apply (wp, simp)
-   apply (wp threadSet_invs_trivial,
-          simp_all add: inQ_def cong: conj_cong)
-  apply (rule_tac Q="\<lambda>_. invs' and obj_at' (Not \<circ> tcbQueued) t
+  apply (wp rescheduleRequired_all_invs_but_ct_not_inQ
+        | simp add: if_apply_def2)+
+      apply (wp hoare_vcg_imp_lift valid_irq_node_lift)+
+    apply (simp add: if_apply_def2)
+    apply (rule_tac Q="\<lambda>_. invs'" in hoare_post_imp)
+     apply clarsimp
+     apply (auto simp: invs'_def valid_state'_def
+                 elim!: st_tcb_ex_cap'')[1]
+   apply (wpsimp wp: threadSet_invs_trivial
+          simp: inQ_def)+
+   apply (rule_tac Q="\<lambda>_. invs' and obj_at' (Not \<circ> tcbQueued) t
                                and (\<lambda>s. \<forall>d p. t \<notin> set (ksReadyQueues s (d,p)))"
            in hoare_post_imp)
-   apply (clarsimp dest: obj_at_ko_at' simp: obj_at'_def)
-  apply (wp tcbSchedDequeue_not_queued)+
-    apply (clarsimp)+
+    apply (clarsimp dest: obj_at_ko_at' simp: obj_at'_def)
+   apply (wp tcbSchedDequeue_not_queued)+
+  apply (clarsimp)+
   done
 
 crunch typ_at'[wp]: setPriority, setMCPriority "\<lambda>s. P (typ_at' T p s)"

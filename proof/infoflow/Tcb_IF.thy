@@ -689,7 +689,9 @@ lemma invoke_tcb_reads_respects_f:
                             |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
                                        tcb_at_st_tcb_at when_def
                             |strengthen use_no_cap_to_obj_asid_strg)+)[9]
-     apply(wp reads_respects_f[OF cap_insert_reads_respects, where st=st]
+     apply (
+        ((simp add: conj_comms, strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
+          | wp reads_respects_f[OF cap_insert_reads_respects, where st=st]
             reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
             set_priority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
             set_mcpriority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
@@ -713,6 +715,7 @@ lemma invoke_tcb_reads_respects_f:
        |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
                   tcb_at_st_tcb_at when_def
        |strengthen use_no_cap_to_obj_asid_strg)+
+)
     apply(simp add: option_update_thread_def tcb_cap_cases_def
          | wp static_imp_wp static_imp_conj_wp reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
               thread_set_pas_refined | wpc)+
@@ -728,8 +731,6 @@ lemma invoke_tcb_reads_respects_f:
                      det_setRegister
                    | intro impI
                    | rule conjI)+
-  (*Extra slow*)
-
 
 lemma invoke_tcb_reads_respects_f_g:
 "reads_respects_f_g aag l (silc_inv aag st and only_timer_irq_inv irq st' and pas_refined aag and pas_cur_domain aag and einvs and simple_sched_action and Tcb_AI.tcb_inv_wf ti and (\<lambda>s. is_subject aag (cur_thread s)) and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))

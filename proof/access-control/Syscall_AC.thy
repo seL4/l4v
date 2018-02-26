@@ -1177,7 +1177,7 @@ lemma set_pt_current_ipc_buffer_register[wp]:
   apply (auto simp: obj_at_def current_ipc_buffer_register_def get_tcb_def split: kernel_object.split_asm)
   done
 
-crunch current_ipc_buffer_register [wp]: cap_delete_one "\<lambda>s. P (current_ipc_buffer_register s)"
+crunch current_ipc_buffer_register [wp]: post_cap_deletion, cap_delete_one "\<lambda>s. P (current_ipc_buffer_register s)"
   (wp: crunch_wps without_preemption_wp syscall_valid do_machine_op_arch
        hoare_unless_wp dxo_wp_weak
    simp: crunch_simps mapM_x_wp
@@ -1533,7 +1533,7 @@ crunch ct_active [wp]: cap_swap_for_delete "ct_active"
   ( wp: crunch_wps filterM_preserved hoare_unless_wp
     simp: crunch_simps ignore: do_extended_op)
 
-crunch ct_active [wp]: empty_slot "ct_active"
+crunch ct_active [wp]: post_cap_deletion, empty_slot "ct_active"
   ( wp: crunch_wps filterM_preserved hoare_unless_wp
     simp: crunch_simps ignore: do_extended_op)
 

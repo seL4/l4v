@@ -151,7 +151,7 @@ crunch ksDomainTime_inv[wp]: sendSignal "\<lambda>s. P (ksDomainTime s)"
 crunch ksDomainTime_inv[wp]: deleteASID "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only getObject_inv loadObject_default_inv
        updateObject_default_inv
-   ignore: setObject getObject simp: whenE_def)
+   ignore: setObject getObject simp: crunch_simps)
 
 crunch ksDomainTime_inv[wp]: finaliseCap "\<lambda>s. P (ksDomainTime s)"
   (simp: crunch_simps assertE_def unless_def
@@ -162,10 +162,10 @@ crunch ksDomainTime_inv[wp]: cancelBadgedSends "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only getObject_inv loadObject_default_inv
        updateObject_default_inv hoare_unless_wp
    ignore: setObject getObject filterM
-   simp: whenE_def filterM_mapM crunch_simps)
+   simp: filterM_mapM crunch_simps)
 
 crunch ksDomainTime_inv[wp]: capSwapForDelete "\<lambda>s. P (ksDomainTime s)"
-  (simp: crunch_simps simp: unless_def)
+  (simp: crunch_simps)
 
 lemma finaliseSlot_ksDomainTime_inv[wp]:
   "\<lbrace>\<lambda>s. P (ksDomainTime s) \<rbrace> finaliseSlot param_a param_b \<lbrace>\<lambda>_ s. P (ksDomainTime s)\<rbrace>"
@@ -209,7 +209,7 @@ crunch ksDomainTime_inv[wp]: preemptionPoint "\<lambda>s. P (ksDomainTime s)"
 
 crunch ksDomainTime_inv[wp]: performInvocation "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps zipWithM_x_inv cteRevoke_preservation mapME_x_inv_wp
-   simp: unless_def crunch_simps filterM_mapM)
+   simp: crunch_simps filterM_mapM)
 
 crunch ksDomainTime_inv[wp]: activateThread "\<lambda>s. P (ksDomainTime s)"
 
@@ -240,7 +240,7 @@ crunch ksDomainTime_inv[wp]: handleInvocation "(\<lambda>s. P (ksDomainTime s))"
 
 crunch ksDomainTime_inv[wp]: handleCall "(\<lambda>s. P (ksDomainTime s))"
   (wp: crunch_wps setObject_ksPSpace_only updateObject_default_inv cteRevoke_preservation
-   simp: crunch_simps unless_def
+   simp: crunch_simps
    ignore: syscall setObject loadObject getObject constOnFailure )
 
 crunch domain_time'_inv[wp]: activateThread,handleHypervisorFault "\<lambda>s. P (ksDomainTime s)"
@@ -252,6 +252,8 @@ lemma nextDomain_domain_time_left'[wp]:
    \<lbrace>\<lambda>_ s. 0 < ksDomainTime s \<rbrace>"
    unfolding nextDomain_def Let_def
    apply (clarsimp simp: valid_domain_list'_def dschLength_def)
+   apply wp
+   apply clarsimp
    apply (simp only: all_set_conv_all_nth)
    apply (erule_tac x="Suc (ksDomScheduleIdx s) mod length (ksDomSchedule s)" in allE)
    apply fastforce

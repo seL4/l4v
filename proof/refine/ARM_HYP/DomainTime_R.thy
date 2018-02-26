@@ -151,10 +151,10 @@ crunch ksDomainTime_inv[wp]: sendSignal "\<lambda>s. P (ksDomainTime s)"
 crunch ksDomainTime_inv[wp]: deleteASID, dissociateVCPUTCB "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only getObject_inv loadObject_default_inv
        updateObject_default_inv FalseI getVCPU_wp hoare_vcg_all_lift hoare_vcg_if_lift3
-   ignore: setObject getObject simp: whenE_def)
+   ignore: setObject getObject simp: crunch_simps)
 
 crunch ksDomainTime_inv[wp]: finaliseCap "\<lambda>s. P (ksDomainTime s)"
-  (simp: crunch_simps assertE_def unless_def
+  (simp: crunch_simps assertE_def
  ignore: getObject setObject forM ignoreFailure
      wp: setObject_ksPSpace_only getObject_inv loadObject_default_inv crunch_wps)
 
@@ -162,7 +162,7 @@ crunch ksDomainTime_inv[wp]: cancelBadgedSends "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only getObject_inv loadObject_default_inv
        updateObject_default_inv hoare_unless_wp
    ignore: setObject getObject filterM
-   simp: whenE_def filterM_mapM crunch_simps)
+   simp: filterM_mapM crunch_simps)
 
 crunch ksDomainTime_inv[wp]: capSwapForDelete "\<lambda>s. P (ksDomainTime s)"
   (simp: crunch_simps simp: unless_def)
@@ -256,6 +256,7 @@ lemma nextDomain_domain_time_left'[wp]:
    nextDomain
    \<lbrace>\<lambda>_ s. 0 < ksDomainTime s \<rbrace>"
    unfolding nextDomain_def Let_def
+   apply wp
    apply (clarsimp simp: valid_domain_list'_def dschLength_def)
    apply (simp only: all_set_conv_all_nth)
    apply (erule_tac x="Suc (ksDomScheduleIdx s) mod length (ksDomSchedule s)" in allE)

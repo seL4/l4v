@@ -1579,8 +1579,8 @@ lemma invoke_untyped_corres:
       apply (simp split del: if_split)
       apply (wp get_cap_wp)+
      apply (wp_once hoare_drop_imps)
-     apply wp+
-    apply (rule validE_validE_R, rule_tac E="\<top>\<top>" and Q="\<lambda>_. valid_etcbs and invs
+     apply wp
+    apply ((rule validE_validE_R)?, rule_tac E="\<top>\<top>" and Q="\<lambda>_. valid_etcbs and invs
         and valid_untyped_inv_wcap untyped_invocation
           (Some (cap.UntypedCap dev ptr' sz (if reset then 0 else idx))) and ct_active
         and (\<lambda>s. reset \<longrightarrow> pspace_no_overlap {ptr' .. ptr' + 2 ^ sz - 1} s)"
@@ -1852,9 +1852,7 @@ lemma decode_untyped_corres:
           apply wp+
          apply (clarsimp simp:conj_comms)
          apply (wp mapME_x_inv_wp[OF hoare_pre(2)] | simp split del: if_split)+
-        apply (wp hoare_whenE_wp)+
-       apply (simp split del: if_split)
-       apply fastforce
+       apply (simp split del: if_split add: if_apply_def2)
       apply (rule corres_alternate1)
       apply (rule corres_guard_imp)
         apply (rule_tac F="cap_aligned cnode_cap' \<and> is_cnode_cap cnode_cap'" in corres_gen_asm2)
@@ -1899,7 +1897,7 @@ lemma decode_untyped_corres:
     apply (rule ccontr)
     apply (clarsimp simp:valid_cap_simps cap_aligned_def)
    apply (rule hoare_pre,wp,simp)
-  apply (wp hoare_drop_imp mapME_x_inv_wp2 | simp add:whenE_def split del:if_split)+
+  apply (wp hoare_drop_imp mapME_x_inv_wp2 | simp add:if_apply_def2 split del:if_split)+
   done
 
 lemma decode_untyped_label_not_match:

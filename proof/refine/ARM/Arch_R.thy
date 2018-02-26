@@ -75,9 +75,7 @@ lemma createObject_typ_at':
    createObjects' ptr (Suc 0) ty 0
    \<lbrace>\<lambda>rv s. typ_at' otype ptr s\<rbrace>"
   apply (clarsimp simp:createObjects'_def alignError_def split_def | wp hoare_unless_wp | wpc )+
-    apply (simp add:obj_at'_def)+
-   apply (wp hoare_unless_wp)+
-  apply (clarsimp simp:ko_wp_at'_def typ_at'_def pspace_distinct'_def)+
+  apply (clarsimp simp:obj_at'_def ko_wp_at'_def typ_at'_def pspace_distinct'_def)+
   apply (subgoal_tac "ps_clear ptr (objBitsKO ty)
     (s\<lparr>ksPSpace := \<lambda>a. if a = ptr then Some ty else ksPSpace s a\<rparr>)")
   apply (simp add:ps_clear_def)+
@@ -1600,7 +1598,8 @@ lemma ensureSafeMapping_valid_slots_duplicated':
   apply (case_tac entries)
    apply (case_tac a)
    apply (case_tac aa)
-     apply (simp add:slots_duplicated_ensured_def | wp)+
+     apply (rule hoare_pre)
+      apply (simp add:slots_duplicated_ensured_def | wp)+
     apply (rule hoare_pre)
      apply (wp mapME_x_inv_wp getPTE_wp| wpc)+
      apply clarsimp
@@ -1624,7 +1623,8 @@ lemma ensureSafeMapping_valid_slots_duplicated':
    apply clarsimp
   apply (case_tac b)
   apply (case_tac a)
-   apply (simp add:slots_duplicated_ensured_def | wp)+
+    apply (rule hoare_pre)
+    apply (simp add:slots_duplicated_ensured_def | wp)+
    apply (rule hoare_pre)
     apply (rule_tac P = "\<exists>p. ba = [p]" and
       P' = "\<lambda>s. \<exists>p. ba = [p] \<and> page_directory_at' (p && ~~ mask pdBits) s" in hoare_gen_asmE)
@@ -1735,7 +1735,7 @@ lemma arch_decodeARMPageFlush_wf:
        \<lbrace>valid_arch_inv'\<rbrace>, -"
   apply (simp add: decodeARMPageFlush_def)
   apply (rule hoare_pre)
-   apply (wp throwE_R whenE_throwError_wp | wpc | clarsimp)+
+   apply (wp throwE_R whenE_throwError_wp | wpc | clarsimp simp: if_apply_def2)+
    apply (simp add: valid_arch_inv'_def valid_page_inv'_def)
   apply fastforce
   done
@@ -1756,7 +1756,8 @@ lemma arch_decodeInvocation_wf[wp]:
        apply ((wp whenE_throwError_wp getASID_wp|
                wpc|
                simp add: valid_arch_inv'_def valid_apinv'_def)+)[1]
-      apply (clarsimp simp: word_neq_0_conv valid_cap'_def)
+      apply (clarsimp simp: word_neq_0_conv valid_cap'_def
+                            valid_arch_inv'_def valid_apinv'_def)
       apply (rule conjI)
        apply (erule cte_wp_at_weakenE')
        apply (clarsimp simp: diminished_isPDCap)
@@ -1917,7 +1918,7 @@ lemma arch_decodeInvocation_wf[wp]:
                split:Structures_H.kernel_object.splits
                arch_kernel_object.splits)
             apply ((wp whenE_throwError_wp isFinalCapability_inv
-                | wpc |simp add: valid_arch_inv'_def valid_pti'_def unlessE_whenE |
+                | wpc |simp add: valid_arch_inv'_def valid_pti'_def if_apply_def2 |
                   rule hoare_drop_imp)+)[14]
    apply (clarsimp simp: linorder_not_le isCap_simps
                          cte_wp_at_ctes_of diminished_arch_update')

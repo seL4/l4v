@@ -2409,11 +2409,9 @@ lemma sbn_valid_objs':
      apply (simp add: valid_tcb'_def tcb_cte_cases_def)
   done
 
-
-lemma ssa_lift[wp]:
-  "(\<And>s. P s \<longrightarrow> P (s \<lparr>ksSchedulerAction := sa\<rparr>)) \<Longrightarrow>
-   \<lbrace>P\<rbrace> setSchedulerAction sa \<lbrace>\<lambda>_. P\<rbrace>"
-  by (simp add: setSchedulerAction_def | wp)+
+lemma ssa_wp[wp]:
+  "\<lbrace>\<lambda>s. P (s \<lparr>ksSchedulerAction := sa\<rparr>)\<rbrace> setSchedulerAction sa \<lbrace>\<lambda>_. P\<rbrace>"
+  by (wpsimp simp: setSchedulerAction_def)
 
 crunch aligned'[wp]: rescheduleRequired "pspace_aligned'"
   (simp: unless_def)
@@ -3253,7 +3251,7 @@ lemma tcbSchedAppend_valid_queues[wp]:
    by (fastforce intro:  tcbSchedEnqueueOrAppend_valid_queues)
 
 lemma valid_queues_ksSchedulerAction_update[simp]:
-  "Invariants_H.valid_queues (s\<lparr>ksSchedulerAction := sa\<rparr>) = Invariants_H.valid_queues s"
+  "Invariants_H.valid_queues (ksSchedulerAction_update f s) = Invariants_H.valid_queues s"
  unfolding Invariants_H.valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs
  by simp
 
@@ -3431,21 +3429,16 @@ lemma tcbSchedEnqueue_valid_queues'[wp]:
   apply (clarsimp simp: obj_at'_def)
   done
 
-lemma rescheduleRequired_valid_queues'[wp]:
-  "\<lbrace>\<lambda>s. valid_queues' s \<and> sch_act_wf (ksSchedulerAction s) s\<rbrace>
-    rescheduleRequired
-   \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  apply (simp add: rescheduleRequired_def)
-  apply (wp | wpc | simp | fastforce simp: valid_queues'_def)+
-  done
+lemma valid_queues'_ksSchedulerAction_update[simp]:
+  "Invariants_H.valid_queues' (ksSchedulerAction_update f s) = Invariants_H.valid_queues' s"
+  by (simp add: valid_queues'_def)
 
-(* weaker precondition than rescheduleRequired_valid_queues', which is sometimes too strong *)
-lemma rescheduleRequired_valid_queues'_weak:
+lemma rescheduleRequired_valid_queues'_weak[wp]:
   "\<lbrace>\<lambda>s. valid_queues' s \<and> weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
     rescheduleRequired
    \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
   apply (simp add: rescheduleRequired_def)
-  apply (wp | wpc | simp | fastforce simp: valid_queues'_def)+
+  apply wpsimp
   apply (clarsimp simp: weak_sch_act_wf_def)
   done
 
@@ -4623,7 +4616,7 @@ lemma invs'_update_stt:
 
 lemma setSchedulerAction_direct:
   "\<lbrace>\<top>\<rbrace> setSchedulerAction sa \<lbrace>\<lambda>_ s. ksSchedulerAction s = sa\<rbrace>"
-  by (clarsimp simp: setSchedulerAction_def)
+  by (wpsimp simp: setSchedulerAction_def)
 
 lemma rescheduleRequired_ct_not_inQ:
   "\<lbrace>\<top>\<rbrace> rescheduleRequired \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"

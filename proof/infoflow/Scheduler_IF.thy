@@ -1512,13 +1512,11 @@ lemma reads_respects_scheduler_invisible_domain_switch:
      apply (force+)[2]
    apply wp
   apply clarsimp
-  apply (intro impI conjI allI)
-      apply force
-     apply force
-    apply (simp add: guarded_pas_domain_def)
-    apply (subgoal_tac "cur_thread s \<noteq> idle_thread s")
-     apply simp
-    apply (clarsimp simp add: pred_tcb_at_def obj_at_def valid_state_def
+  apply (intro impI conjI allI; (rule TrueI refl)?)
+   apply (simp add: guarded_pas_domain_def)
+   apply (subgoal_tac "cur_thread s \<noteq> idle_thread s")
+    apply simp
+   apply (clarsimp simp add: pred_tcb_at_def obj_at_def valid_state_def
                               valid_idle_def invs_def)+
   done
 

@@ -1214,12 +1214,10 @@ lemma cte_wp_at_page_cap_weaken:
 lemma find_vspace_for_asid_lookup_vspace_wp:
   "\<lbrace> \<lambda>s. valid_vspace_objs s \<and> (\<forall>pm. vspace_at_asid asid pm s \<and> page_map_l4_at pm s
     \<and> (\<exists>\<rhd> pm) s \<longrightarrow> Q pm s) \<rbrace> find_vspace_for_asid asid \<lbrace> Q \<rbrace>, -"
-  apply (rule hoare_post_imp_R)
-   apply (rule hoare_vcg_conj_lift_R[OF find_vspace_for_asid_page_map_l4])
-   apply (rule hoare_vcg_conj_lift_R[OF find_vspace_for_asid_lookup, simplified])
-   apply (rule hoare_vcg_conj_lift_R[OF find_vspace_for_asid_vspace_at_asid, simplified])
-   apply (wp find_vspace_for_asid_inv)
-  apply auto
+  (is "\<lbrace> \<lambda>s. ?v s \<and> (\<forall>pm. ?vpm pm s \<longrightarrow> Q pm s) \<rbrace> ?f \<lbrace> Q \<rbrace>, -")
+  apply (rule_tac Q'="\<lambda>rv s. ?vpm rv s \<and> (\<forall>pm. ?vpm pm s \<longrightarrow> Q pm s)" in hoare_post_imp_R)
+   apply wpsimp
+  apply simp
   done
 
 lemma aligned_sum_less_kernel_base:
@@ -1358,7 +1356,8 @@ lemma decode_page_table_invocation_wf[wp]:
   apply ((wp whenE_throwError_wp lookup_pd_slot_wp find_vspace_for_asid_lookup_vspace_wp
              get_pde_wp
            | wpc
-           | simp add: valid_arch_inv_def valid_pti_def unlessE_whenE vs_cap_ref_def)+)[1]
+           | simp add: valid_arch_inv_def valid_pti_def unlessE_whenE vs_cap_ref_def
+                 split del: if_split)+)[1]
   apply (rule conjI; clarsimp simp: is_arch_diminished_def is_cap_simps
                                 elim!: cte_wp_at_weakenE)
   apply (rule conjI; clarsimp)
@@ -1393,7 +1392,8 @@ lemma decode_page_directory_invocation_wf[wp]:
                    Let_def split_def is_final_cap_def
              cong: if_cong split del: if_split)
   apply ((wp whenE_throwError_wp lookup_pdpt_slot_wp find_vspace_for_asid_lookup_vspace_wp get_pdpte_wp
-            | wpc | simp add: valid_arch_inv_def valid_pdi_def unlessE_whenE vs_cap_ref_def)+)[1]
+            | wpc | simp add: valid_arch_inv_def valid_pdi_def unlessE_whenE vs_cap_ref_def
+                             split del: if_split)+)[1]
   apply (rule conjI; clarsimp simp: is_arch_diminished_def is_cap_simps
                                elim!: cte_wp_at_weakenE)
   apply (rule conjI; clarsimp)
@@ -1429,7 +1429,8 @@ lemma decode_pdpt_invocation_wf[wp]:
                    Let_def split_def is_final_cap_def lookup_pml4_slot_def
               cong: if_cong split del: if_split)
   apply ((wp whenE_throwError_wp find_vspace_for_asid_lookup_vspace_wp get_pml4e_wp
-           | wpc | simp add: valid_arch_inv_def valid_pdpti_def unlessE_whenE vs_cap_ref_def)+)[1]
+           | wpc | simp add: valid_arch_inv_def valid_pdpti_def unlessE_whenE vs_cap_ref_def
+                     split del: if_split)+)[1]
   apply (rule conjI; clarsimp simp: is_arch_diminished_def is_cap_simps
                              elim!: cte_wp_at_weakenE)
   apply (rule conjI; clarsimp)

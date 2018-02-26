@@ -1153,7 +1153,7 @@ lemma
   store_word_offs_caps_of_state[wp]:
    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> store_word_offs a b c \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   unfolding store_word_offs_def do_machine_op_def[abs_def]
-  by (wp modify_wp | fastforce)+
+  by wpsimp
 
 lemma
   set_mrs_caps_of_state[wp]:
@@ -1185,7 +1185,7 @@ interpretation
   store_word_offs: non_aobj_non_cap_op "store_word_offs a b c"
   apply unfold_locales
   unfolding store_word_offs_def do_machine_op_def[abs_def]
-  by (wp modify_wp | fastforce)+
+  by wpsimp+
 
 lemma store_word_offs_obj_at_P[wp]:
   "\<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> store_word_offs a b c \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>"

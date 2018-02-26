@@ -54,7 +54,7 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
   apply (frule (1) well_formed_size_irq_node)
   apply (frule (2) well_formed_irq_ntfn_cap)
   apply (rule hoare_chain)
-    apply (wp seL4_IRQHandler_SetEndpoint_wp [where
+    apply (rule seL4_IRQHandler_SetEndpoint_wp [where
               root_tcb = root_tcb
            and cnode_cap = si_cspace_cap
            and cnode_id = si_cnode_id

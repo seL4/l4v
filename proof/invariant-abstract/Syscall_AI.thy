@@ -1126,10 +1126,9 @@ lemma delete_caller_deletes_caller[wp]:
   apply (rule_tac Q="\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) (t, tcb_cnode_index 3)"
                in hoare_post_imp,
          clarsimp elim!: cte_wp_at_weakenE)
-  apply (simp add: delete_caller_cap_def cap_delete_one_def, wp)
-   apply (clarsimp simp add: if_split unless_def when_def)
-   apply (rule conjI [rotated], clarsimp, wp)
-   apply (clarsimp elim!: cte_wp_at_weakenE | wp get_cap_wp)+
+  apply (simp add: delete_caller_cap_def cap_delete_one_def unless_def, wp)
+   apply (simp add: if_apply_def2, wp get_cap_wp)
+  apply (clarsimp elim!: cte_wp_at_weakenE)
   done
 
 lemma delete_caller_cap_deleted[wp]:

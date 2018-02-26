@@ -1269,7 +1269,7 @@ lemma find_pd_for_asid_lookup_pd_wp:
    apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_page_directory])
    apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_lookup, simplified])
    apply (rule hoare_vcg_conj_lift_R[OF find_pd_for_asid_pd_at_asid, simplified])
-   apply (wp find_pd_for_asid_inv)
+   apply (wp_once find_pd_for_asid_inv)
   apply auto
   done
 
@@ -1498,9 +1498,9 @@ lemma arch_decode_inv_wf[wp]:
                     find_pd_for_asid_inv|
                  wpc|
                  simp add: valid_arch_inv_def valid_pti_def unlessE_whenE empty_pde_atI
-                           vs_cap_ref_def|
+                           vs_cap_ref_def if_apply_def2|
                  wp_once hoare_drop_imps hoare_vcg_ex_lift_R)+)[6]
-   apply (clarsimp simp: is_cap_simps)
+   apply (clarsimp simp: is_cap_simps if_apply_def2)
    apply (rule conjI)
     apply clarsimp
     apply (rule conjI, fastforce)
@@ -1541,6 +1541,7 @@ lemma arch_decode_inv_wf[wp]:
     apply (simp add: linorder_not_le, drule minus_one_helper3)
     apply (drule le_shiftr[where n=20], drule(1) order_trans)
     apply (simp add: kernel_base_def)
+   apply (simp add: valid_arch_inv_def valid_pti_def)
    apply (clarsimp simp: cte_wp_at_def is_arch_diminished_def is_cap_simps)
   apply (simp add: arch_decode_invocation_def Let_def  split del: if_split)
   apply (cases "isPDFlushLabel (invocation_type label)")

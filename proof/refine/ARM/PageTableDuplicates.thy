@@ -1471,6 +1471,7 @@ lemma new_CapTable_bound:
   done
 
 lemma invokeUntyped_valid_duplicates[wp]:
+  notes hoare_whenE_wps[wp_split del] shows
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))
          and valid_untyped_inv' ui and ct_active'\<rbrace>
      invokeUntyped ui
@@ -1483,7 +1484,7 @@ lemma invokeUntyped_valid_duplicates[wp]:
   apply (frule(2) invokeUntyped_proofs.intro)
   apply (rule hoare_pre)
    apply simp
-   apply (wp updateFreeIndex_pspace_no_overlap')
+   apply (wp add: updateFreeIndex_pspace_no_overlap')
    apply (rule hoare_post_impErr)
      apply (rule combine_validE)
       apply (rule_tac ui=ui in whenE_reset_resetUntypedCap_invs_etc)

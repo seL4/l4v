@@ -885,16 +885,11 @@ lemma finalise_cap_caps_of_state_nullinv:
   "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> (\<forall>p. P (caps_of_state s(p \<mapsto> cap.NullCap)))\<rbrace>
   finalise_cap cap final
   \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  including no_pre
-  apply (cases cap, simp_all split del: if_split)
-             apply (wp suspend_caps_of_state unbind_notification_caps_of_state
-                       unbind_notification_cte_wp_at
-                       hoare_vcg_all_lift hoare_drop_imps
-                    | simp split del: if_split
-                    | fastforce simp: fun_upd_def )+
-    apply (rule hoare_pre)
-     apply (wp deleting_irq_handler_caps_of_state_nullinv | clarsimp split del: if_split | fastforce simp: fun_upd_def)+
-  done
+  by (cases cap; wpsimp wp: suspend_caps_of_state unbind_notification_caps_of_state
+                            unbind_notification_cte_wp_at
+                            hoare_vcg_all_lift hoare_drop_imps
+                            deleting_irq_handler_caps_of_state_nullinv
+        simp: fun_upd_def[symmetric] if_apply_def2 split_del: if_split)
 
 lemma finalise_cap_cte_wp_at_nullinv:
   "\<lbrace>\<lambda>s. P cap.NullCap \<and> cte_wp_at P p s\<rbrace>

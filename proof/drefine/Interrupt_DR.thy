@@ -414,7 +414,7 @@ lemma op_eq_simp: "(op = y) = (\<lambda>x. x = y)" by auto
 
 lemma get_irq_slot_not_idle_wp:
   "\<lbrace>valid_idle and valid_irq_node \<rbrace> KHeap_A.get_irq_slot word \<lbrace>\<lambda>rv. not_idle_thread (fst rv)\<rbrace>"
-  apply (clarsimp simp:get_irq_slot_def)
+  apply (wpsimp simp:get_irq_slot_def)
   apply (rule irq_node_image_not_idle)
    apply simp+
   done
@@ -422,7 +422,7 @@ lemma get_irq_slot_not_idle_wp:
 lemma get_irq_slot_ex_cte_cap_wp_to:
   "\<lbrace>\<lambda>s. valid_irq_node s \<and> (\<exists>slot. cte_wp_at (op = (cap.IRQHandlerCap w)) slot s)\<rbrace> KHeap_A.get_irq_slot w
            \<lbrace>\<lambda>rv s. (ex_cte_cap_wp_to (\<lambda>a. True) rv s) \<rbrace>"
-  apply (clarsimp simp:get_irq_slot_def)
+  apply (wpsimp simp:get_irq_slot_def)
   apply (clarsimp simp:ex_cte_cap_wp_to_def valid_irq_node_def)
   apply (rule exI)+
   apply (erule cte_wp_at_weakenE)

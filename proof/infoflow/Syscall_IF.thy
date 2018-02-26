@@ -33,7 +33,7 @@ lemma globals_equiv_irq_state_update[simp]:
 
 lemma cap_revoke_globals_equiv:
   "\<lbrace>globals_equiv st and invs\<rbrace> cap_revoke slot \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (rule hoare_strengthen_post, rule validE_valid, 
+  apply (rule hoare_strengthen_post, rule validE_valid,
     rule cap_revoke_preservation_desc_of[where Q="\<lambda>_. emptyable"])
      apply (wp cap_delete_globals_equiv preemption_point_inv | simp
         | (auto simp: emptyable_def dest: reply_slot_not_descendant)[1])+
@@ -522,11 +522,12 @@ lemma handle_invocation_reads_respects_g:
            (handle_invocation calling blocking)"
   apply (rule gen_asm_ev)
   apply (simp add: handle_invocation_def fun_app_def split_def)
-  apply (wpc | simp add: when_def tcb_at_st_tcb_at[symmetric]
-            | intro impI conjI | erule conjE
+  apply (wpc | simp add: tcb_at_st_tcb_at[symmetric] split del: if_split
+            | intro impI | erule conjE
             | rule doesnt_touch_globalsI |
 
             (wp syscall_requiv_f_g gts_inv
+            when_ev
             reads_respects_f_g'[OF lookup_extra_caps_reads_respects_g, where Q="\<top>" and st=st]
             reads_respects_f_g'[OF lookup_ipc_buffer_reads_respects_g, where Q="\<top>" and st=st]
             reads_respects_f_g'[OF cap_fault_on_failure_rev_g, where Q="\<top>" and st=st]
@@ -552,19 +553,21 @@ lemma handle_invocation_reads_respects_g:
             set_thread_state_globals_equiv
             reply_from_kernel_globals_equiv)+ | (rule hoare_drop_imps)
         )+
+
                apply (rule_tac Q'="\<lambda>r s. silc_inv aag st s \<and> invs s \<and> is_subject aag rv \<and> is_subject aag (cur_thread s) \<and> rv \<noteq> idle_thread s" in hoare_post_imp_R)
                 apply (wp pinv_invs perform_invocation_silc_inv)
                apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_state_ko_at_arm)
               apply(wp reads_respects_f_g'[OF set_thread_state_reads_respects_g, where Q="\<top>" and st=st] | simp)+
 
-             apply (simp |
-                    (wp set_thread_state_only_timer_irq_inv[where st=st']
+             apply (simp add: o_def|
+                    wp when_ev
+                       set_thread_state_only_timer_irq_inv[where st=st']
                        set_thread_state_reads_respects_g
                        set_thread_state_globals_equiv
                        sts_Restart_invs
                        set_thread_state_pas_refined
                        set_thread_state_ct_st
-                      set_thread_state_runnable_valid_sched
+                       set_thread_state_runnable_valid_sched
                        sts_authorised_for_globals_inv
                        sts_schact_is_rct_runnable
                        decode_invocation_reads_respects_f_g
@@ -576,22 +579,20 @@ lemma handle_invocation_reads_respects_g:
                        lec_valid_fault
                        lookup_extra_caps_authorised
                        lookup_extra_caps_auth
-                       lookup_ipc_buffer_has_read_auth')+
-                    |  (rule hoare_vcg_conj_liftE_R, rule hoare_drop_impE_R)
-                   )+
-         apply (rule hoare_pre) (*Weird schematic in precondition necessary*)
-          apply (simp add: o_def|
-                 wp lookup_cap_and_slot_valid_fault3
-                    lookup_cap_and_slot_authorised
-                    lookup_cap_and_slot_cur_auth
-                    reads_respects_f_g'[OF reads_respects_g[OF as_user_reads_respects], where Q="\<top>" and st=st] as_user_silc_inv
-                    as_user_globals_equiv
-                    user_getreg_inv
-                    reads_respects_f_g'[OF get_message_info_reads_respects_g, where Q="\<top>" and st=st]
-                    get_mi_inv
-                    get_mi_length
-                    get_mi_length' |
-                rule doesnt_touch_globalsI | (clarify,assumption)
+                       lookup_ipc_buffer_has_read_auth'
+                       lookup_cap_and_slot_valid_fault3
+                       lookup_cap_and_slot_authorised
+                       lookup_cap_and_slot_cur_auth
+                       reads_respects_f_g'[OF reads_respects_g[OF as_user_reads_respects], where Q="\<top>" and st=st] as_user_silc_inv
+                       as_user_globals_equiv
+                       user_getreg_inv
+                       reads_respects_f_g'[OF get_message_info_reads_respects_g, where Q="\<top>" and st=st]
+                       get_mi_inv
+                       get_mi_length
+                       get_mi_length'
+              | rule doesnt_touch_globalsI
+              | (clarify,assumption)
+              | wp_once hoare_drop_imps
           )+
   apply (rule conjI)
    apply (clarsimp simp: requiv_g_cur_thread_eq simp: reads_equiv_f_g_conj)

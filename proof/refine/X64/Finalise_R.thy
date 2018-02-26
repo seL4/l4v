@@ -2274,7 +2274,7 @@ lemmas finaliseCap_typ_ats[wp] = typ_at_lifts[OF finaliseCap_typ_at']
 crunch it'[wp]: finaliseCap "\<lambda>s. P (ksIdleThread s)"
   (ignore: getObject setObject forM ignoreFailure maskInterrupt
    wp: mapM_x_wp_inv mapM_wp' hoare_drop_imps getObject_inv loadObject_default_inv
-   simp: whenE_def crunch_simps unless_def)
+   simp: crunch_simps)
 
 
 
@@ -2536,15 +2536,10 @@ lemma cteDeleteOne_deletes[wp]:
   apply clarsimp
   done
 
-lemma flushTable_irq_node'[wp]:
-  "\<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> flushTable a b c d \<lbrace>\<lambda>rv s. P (irq_node' s)\<rbrace>"
-  apply (clarsimp simp: flushTable_def)
-  by (wpsimp wp: mapM_x_wp' | wp_once hoare_drop_imps)+
-
 crunch irq_node'[wp]: finaliseCap "\<lambda>s. P (irq_node' s)"
-  (wp: mapM_x_wp crunch_wps getObject_inv loadObject_default_inv
-       updateObject_default_inv setObject_ksInterrupt mapM_x_wp'
-       ignore: getObject setObject simp: crunch_simps unless_def)
+  (wp: crunch_wps getObject_inv loadObject_default_inv
+       updateObject_default_inv setObject_ksInterrupt
+       ignore: getObject setObject simp: crunch_simps)
 
 lemma deletingIRQHandler_removeable':
   "\<lbrace>invs' and (\<lambda>s. isFinal (IRQHandlerCap irq) slot (cteCaps_of s))

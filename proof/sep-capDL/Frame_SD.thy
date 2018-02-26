@@ -56,6 +56,7 @@ lemma set_object_wp:
    set_object obj_id obj
    \<lbrace>\<lambda>rv. <obj_id \<mapsto>o obj \<and>* R>\<rbrace>"
   apply (clarsimp simp: set_object_def sep_state_projection_def)
+  apply wp
   apply (clarsimp simp: sep_conj_def)
   apply (simp add:sep_map_o_def sep_map_general_def)
   apply (rule_tac x = "SepState (object_to_sep_state obj_id obj UNIV) empty" in exI)
@@ -209,6 +210,7 @@ lemma set_object_slot_wp_helper:
   set_object obj_id (update_slots (object_slots obj' (slot \<mapsto> cap)) obj')
   \<lbrace>\<lambda>rv. <(obj_id, slot) \<mapsto>c cap \<and>* R>\<rbrace>"
   apply (clarsimp simp: set_object_def sep_any_def)
+  apply wp
   apply (clarsimp simp: sep_map_c_conj sep_conj_exists Let_def)
   apply (clarsimp simp: lift_def sep_state_projection_def
     sep_conj_def object_project_slot object_slots_object_clean)
@@ -221,6 +223,7 @@ lemma set_object_slot_wp_helper:
    apply (clarsimp split: if_splits option.splits)
    apply (clarsimp simp: object_project_def object_wipe_slots_def
                          object_slots_object_clean object_clean_update_slots_single
+                         fun_upd_def[symmetric]
                   split: cdl_component_id.splits if_splits)
   apply (frule object_clean_has_slots)
   apply (clarsimp simp: has_slots_def object_clean_update_slots_single
@@ -290,6 +293,7 @@ lemma set_object_cdl_field_wp:
   set_object obj_id obj_n
   \<lbrace>\<lambda>rv. <obj_id \<mapsto>f obj_np \<and>* R>\<rbrace>"
   apply (clarsimp simp: set_object_def)
+  apply wp
   apply (clarsimp simp: sep_state_projection_def sep_map_f_conj)
   apply (rule conjI)
    apply (simp add:object_project_def)

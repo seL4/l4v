@@ -517,7 +517,7 @@ lemma timerTick_corres:
                         apply (rule rescheduleRequired_corres)
                        apply (wp)[1]
                       apply (rule hoare_strengthen_post)
-                       apply (wp tcbSchedAppend_invs_but_ct_not_inQ', clarsimp simp: sch_act_wf_weak)
+                       apply (rule tcbSchedAppend_invs_but_ct_not_inQ', clarsimp simp: sch_act_wf_weak)
                      apply (simp add: sch_act_wf_weak etcb_relation_def
                        time_slice_def timeSlice_def pred_conj_def)+
                  apply (wp threadSet_timeslice_invs threadSet_valid_queues

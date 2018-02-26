@@ -75,7 +75,7 @@ lemma threadGet_stateAssert_gets_asUser:
     apply (clarsimp simp: threadGet_def liftM_def, wp)
    apply (simp add: threadGet_def liftM_def, wp getObject_tcb_at')
   apply (simp add: threadGet_def liftM_def, wp)
-   apply (rule hoare_strengthen_post, wp getObject_obj_at')
+   apply (rule hoare_strengthen_post, rule getObject_obj_at')
      apply (simp add: objBits_simps')+
    apply (clarsimp simp: obj_at'_def asUser_fetch_def projectKOs atcbContextGet_def)+
   done

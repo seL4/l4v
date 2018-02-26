@@ -1484,7 +1484,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
              | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
                          pti_duplicates_valid_def page_inv_duplicates_valid_def
                          mask_lower_twice pd_bits_def bitwise pageBits_def
-                         not_le sz
+                         not_le sz if_apply_def2
                     del: hoare_True_E_R
                      split del: if_split
              | simp only: obj_at_def)+)
@@ -1504,7 +1504,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
              | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
                          pti_duplicates_valid_def page_inv_duplicates_valid_def
                          mask_lower_twice pd_bits_def bitwise pageBits_def
-                         not_le sz
+                         not_le sz if_apply_def2
                     del: hoare_True_E_R
                      split del: if_split
              | simp only: obj_at_def)+)
@@ -1525,7 +1525,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
              | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
                          pti_duplicates_valid_def page_inv_duplicates_valid_def
                          mask_lower_twice pd_bits_def bitwise pageBits_def
-                         not_le sz
+                         not_le sz if_apply_def2
                     del: hoare_True_E_R
                      split del: if_split
              | simp only: obj_at_def)+)
@@ -1536,6 +1536,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
              | wpc
              | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
                          pti_duplicates_valid_def page_inv_duplicates_valid_def
+                         if_apply_def2
                      del: hoare_True_E_R
                      split del: if_split
              | simp only: obj_at_def)+)

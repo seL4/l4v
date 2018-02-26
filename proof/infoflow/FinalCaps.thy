@@ -2050,7 +2050,7 @@ lemma reset_untyped_cap_silc_inv:
      apply simp
     apply (wp hoare_vcg_const_imp_lift delete_objects_silc_inv get_cap_wp
               set_cap_silc_inv_simple
-       | simp)+
+       | simp add: if_apply_def2)+
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
   apply (frule(1) cap_auth_caps_of_state)
   apply (clarsimp simp: aag_cap_auth_def aag_has_Control_iff_owns
@@ -2076,7 +2076,8 @@ lemma reset_untyped_cap_untyped_cap:
            \<and> P True (untyped_range cp)) slot"
        in hoare_strengthen_post)
      apply (wp mapME_x_inv_wp preemption_point_inv set_cap_cte_wp_at
-       | simp | clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def
+       | simp add: if_apply_def2
+       | clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def
                                ptr_range_def[symmetric])+
    apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps ptr_range_def[symmetric])

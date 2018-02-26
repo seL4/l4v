@@ -75,9 +75,7 @@ lemma createObject_typ_at':
    createObjects' ptr (Suc 0) ty 0
    \<lbrace>\<lambda>rv s. typ_at' otype ptr s\<rbrace>"
   apply (clarsimp simp:createObjects'_def alignError_def split_def | wp hoare_unless_wp | wpc )+
-    apply (simp add:obj_at'_def)+
-   apply (wp hoare_unless_wp)+
-  apply (clarsimp simp:ko_wp_at'_def typ_at'_def pspace_distinct'_def)+
+  apply (clarsimp simp:obj_at'_def ko_wp_at'_def typ_at'_def pspace_distinct'_def)+
   apply (subgoal_tac "ps_clear ptr (objBitsKO ty)
     (s\<lparr>ksPSpace := \<lambda>a. if a = ptr then Some ty else ksPSpace s a\<rparr>)")
   apply (simp add:ps_clear_def)+
@@ -586,6 +584,8 @@ lemma find_vspace_for_asid_lookup_slot [wp]:
     apply (auto simp: bit_simps)
   done
 
+lemmas vmsz_aligned_imp_aligned
+    = vmsz_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN is_aligned_weaken]
 
 lemma decode_page_inv_corres:
   "\<lbrakk>cap = arch_cap.PageCap d p R mt sz opt; acap_relation cap cap';
@@ -721,19 +721,16 @@ lemma decode_page_inv_corres:
              apply (rule corres_trivial)
              apply (rule corres_returnOk)
              apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
-            apply (wp)+
-          apply (subgoal_tac "valid_vspace_objs s \<and> pspace_aligned s \<and>
+            apply (wp | simp)+
+          apply (rule_tac Q'="\<lambda>rv s. valid_vspace_objs s \<and> pspace_aligned s \<and>
                                 (snd v') < pptr_base \<and> canonical_address (snd v') \<and>
                                 equal_kernel_mappings s \<and> valid_global_objs s \<and> valid_arch_state s \<and>
                                 (*(\<exists>\<rhd> (lookup_pml4_slot (fst pa) (snd v') && ~~ mask pml4_bits)) s \<and>*)
-                                page_map_l4_at (fst pa) s \<and> (\<exists>\<rhd> (fst pa)) s")
-           prefer 2
-           apply (case_tac v'; simp only: split_def)
-          apply clarsimp
-          apply (frule_tac pm = aa and vptr = bc in page_map_l4_pml4e_at_lookupI,assumption)
-          apply (clarsimp simp: vmsz_aligned_def pageBitsForSize_def is_aligned_pml4
-                         split: vmpage_size.splits)
-         apply wp
+                                page_map_l4_at rv s \<and> (\<exists>\<rhd> rv) s"
+              in hoare_post_imp_R, wp)
+           apply (clarsimp simp: page_directory_at_aligned_pd_bits valid_global_objs_def)
+           apply (auto intro!: page_directory_pde_at_lookupI elim!: is_aligned_pml4)[1]
+          apply wp
         apply (wpc | wp throwE_R | wp_once hoare_drop_imps)+
     apply clarsimp
     apply (drule bspec [where x = "excaps ! 0"])
@@ -1213,7 +1210,7 @@ shows
                 apply (simp add: returnOk_liftE[symmetric])
                 apply (rule corres_returnOk)
                 apply (simp add: archinv_relation_def asid_pool_invocation_map_def)
-               apply (wp hoare_whenE_wp)
+               apply (rule hoare_pre, wp hoare_whenE_wp)
                apply (clarsimp simp: ucast_fst_hd_assocs)
               apply (wp hoareE_TrueI hoare_whenE_wp getASID_wp | simp)+
            apply ((clarsimp simp: p2_low_bits_max | rule TrueI impI)+)[2]
@@ -1749,7 +1746,7 @@ lemma decode_page_table_inv_wf[wp]:
   apply (rule hoare_pre)
    apply ((wp whenE_throwError_wp isFinalCapability_inv getPDE_wp
         | wpc
-        | simp add: valid_arch_inv'_def valid_pti'_def unlessE_whenE
+        | simp add: valid_arch_inv'_def valid_pti'_def if_apply_def2
         | wp_once hoare_drop_imps)+)
   apply (clarsimp simp: linorder_not_le isCap_simps
                         cte_wp_at_ctes_of diminished_arch_update')
@@ -1781,7 +1778,7 @@ lemma decode_page_directory_inv_wf[wp]:
   apply (rule hoare_pre)
    apply ((wp whenE_throwError_wp isFinalCapability_inv getPDPTE_wp
         | wpc
-        | simp add: valid_arch_inv'_def valid_pdi'_def unlessE_whenE
+        | simp add: valid_arch_inv'_def valid_pdi'_def if_apply_def2
         | wp_once hoare_drop_imps)+)
   apply (clarsimp simp: linorder_not_le isCap_simps
                         cte_wp_at_ctes_of diminished_arch_update')
@@ -1813,7 +1810,7 @@ lemma decode_pdpt_inv_wf[wp]:
   apply (rule hoare_pre)
    apply ((wp whenE_throwError_wp isFinalCapability_inv getPML4E_wp
         | wpc
-        | simp add: valid_arch_inv'_def valid_pdpti'_def unlessE_whenE
+        | simp add: valid_arch_inv'_def valid_pdpti'_def if_apply_def2
         | wp_once hoare_drop_imps)+)
   apply (clarsimp simp: linorder_not_le isCap_simps
                         cte_wp_at_ctes_of diminished_arch_update')
@@ -1858,7 +1855,7 @@ lemma arch_decodeInvocation_wf[wp]:
        apply ((wp whenE_throwError_wp getASID_wp|
                wpc|
                simp add: valid_arch_inv'_def valid_apinv'_def)+)[1]
-      apply (clarsimp simp: word_neq_0_conv valid_cap'_def)
+      apply (clarsimp simp: word_neq_0_conv valid_cap'_def valid_arch_inv'_def valid_apinv'_def)
       apply (rule conjI)
        apply (erule cte_wp_at_weakenE')
        apply (clarsimp simp: diminished_isPML4Cap')

@@ -1065,8 +1065,7 @@ lemma rescheduleRequired_all_invs_but_extra:
     rescheduleRequired_valid_queues_but_ct_domain
     rescheduleRequired_valid_queues'_but_ct_domain
     valid_irq_node_lift valid_irq_handlers_lift''
-    irqs_masked_lift cur_tcb_lift
-    del:rescheduleRequired_valid_queues')
+    irqs_masked_lift cur_tcb_lift)
   apply auto
   done
 
@@ -1610,7 +1609,8 @@ lemma cteDeleteOne_reply_cap_to''[wp]:
   apply (rule hoare_assume_pre)
   apply (subgoal_tac "isReplyCap (cteCap cte) \<or> isNullCap (cteCap cte)")
    apply (wp hoare_vcg_ex_lift emptySlot_cte_wp_cap_other isFinalCapability_inv
-        | clarsimp simp: finaliseCap_def isCap_simps | simp)+
+        | clarsimp simp: finaliseCap_def isCap_simps | simp
+        | wp_once hoare_drop_imps)+
    apply (fastforce simp: cte_wp_at_ctes_of)
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   done

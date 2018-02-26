@@ -3981,56 +3981,55 @@ proof -
      apply (drule_tac gbits = us in range_cover_not_zero_shift[rotated])
        apply simp+
      apply (simp add:word_le_sub1)
-    apply (wp haskell_assert_wp hoare_unless_wp | wpc |simp add:alignError_def del:fun_upd_apply)+
-    apply (rule conjI)
-     apply (rule impI)
-     apply (subgoal_tac
-       "pspace_no_overlap' (ptr + (1 + of_nat n << objBitsKO val + us))
-        (objBitsKO val + us)
-        (s\<lparr>ksPSpace := foldr (\<lambda>addr map. map(addr \<mapsto> val))
-                       (new_cap_addrs (unat (1 + of_nat n << us)) ptr val) (ksPSpace s)\<rparr>)")
-      apply (intro conjI impI allI)
-       apply assumption+
-     apply (subst pspace_no_overlap'_def)
-     apply (intro allI impI)
-     apply (subst (asm) foldr_upd_app_if)
-     apply (subst is_aligned_neg_mask_eq)
-      apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
-       apply (rule is_aligned_shiftl_self)
-      apply (simp add:range_cover_def)
-     apply simp
-     apply (clarsimp split:if_splits)
-      apply (drule obj_range'_subset_strong[rotated])
-       apply (rule range_cover_rel[OF range_cover_le[where n = "Suc n"]],assumption)
-         apply simp
+    apply (wp haskell_assert_wp hoare_unless_wp | wpc
+        | simp add:alignError_def if_apply_def2 del: fun_upd_apply hoare_fail_any)+
+    apply (rule impI)
+    apply (subgoal_tac
+      "pspace_no_overlap' (ptr + (1 + of_nat n << objBitsKO val + us))
+       (objBitsKO val + us)
+       (s\<lparr>ksPSpace := foldr (\<lambda>addr map. map(addr \<mapsto> val))
+                      (new_cap_addrs (unat (1 + of_nat n << us)) ptr val) (ksPSpace s)\<rparr>)")
+     apply (intro conjI impI allI)
+      apply assumption+
+    apply (subst pspace_no_overlap'_def)
+    apply (intro allI impI)
+    apply (subst (asm) foldr_upd_app_if)
+    apply (subst is_aligned_neg_mask_eq)
+     apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
+      apply (rule is_aligned_shiftl_self)
+     apply (simp add:range_cover_def)
+    apply simp
+    apply (clarsimp split:if_splits)
+     apply (drule obj_range'_subset_strong[rotated])
+      apply (rule range_cover_rel[OF range_cover_le[where n = "Suc n"]],assumption)
         apply simp
-       apply (drule range_cover.unat_of_nat_n_shift
-         [OF range_cover_le[where n = "Suc n"],where gbits = us])
-         apply simp
-        apply (simp add:shiftl_t2n field_simps)+
-      apply (simp add:obj_range'_def)
-      apply (erule disjoint_subset)
-      apply (clarsimp simp: simps)
-      apply (thin_tac "x \<le> y" for x y)
-      apply (subst (asm) le_m1_iff_lt[THEN iffD1])
-       apply (drule_tac range_cover_no_0[rotated,where p = "Suc n"])
-         apply simp
-         apply simp
-        apply (simp add:field_simps)
-       apply (simp add: power_add[symmetric])
-       apply (simp add: word_neq_0_conv)
-      apply (simp add: power_add[symmetric] field_simps)
-     apply (frule range_cover_subset[where p = "Suc n"])
        apply simp
-       apply simp
-      apply (drule(1) pspace_no_overlapD')
-     apply (subst (asm) is_aligned_neg_mask_eq)
-      apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
-       apply (rule is_aligned_shiftl_self)
-      apply (simp add:range_cover_def)
-     apply simp
-     apply (simp add:word_le_sub1 shiftl_t2n field_simps)
-    apply auto
+      apply (drule range_cover.unat_of_nat_n_shift
+        [OF range_cover_le[where n = "Suc n"],where gbits = us])
+        apply simp
+       apply (simp add:shiftl_t2n field_simps)+
+     apply (simp add:obj_range'_def)
+     apply (erule disjoint_subset)
+     apply (clarsimp simp: simps)
+     apply (thin_tac "x \<le> y" for x y)
+     apply (subst (asm) le_m1_iff_lt[THEN iffD1])
+      apply (drule_tac range_cover_no_0[rotated,where p = "Suc n"])
+        apply simp
+        apply simp
+       apply (simp add:field_simps)
+      apply (simp add: power_add[symmetric])
+      apply (simp add: word_neq_0_conv)
+     apply (simp add: power_add[symmetric] field_simps)
+    apply (frule range_cover_subset[where p = "Suc n"])
+      apply simp
+      apply simp
+     apply (drule(1) pspace_no_overlapD')
+    apply (subst (asm) is_aligned_neg_mask_eq)
+     apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
+      apply (rule is_aligned_shiftl_self)
+     apply (simp add:range_cover_def)
+    apply simp
+    apply (simp add:word_le_sub1 shiftl_t2n field_simps)
     done
 qed
 
@@ -4072,7 +4071,7 @@ lemma createObjects'_psp_distinct:
      apply simp+
    apply unat_arith
   apply (rule hoare_pre)
-   apply (wpc|wp|simp add: unless_def alignError_def del: fun_upd_apply)+
+   apply (wpc|wp|simp add: unless_def alignError_def del: hoare_fail_any fun_upd_apply)+
   apply clarsimp
   apply (subst data_map_insert_def[symmetric])+
   apply (simp add: range_cover.unat_of_nat_n_shift)
@@ -4097,7 +4096,7 @@ lemma createObjects'_psp_aligned:
      apply simp+
    apply unat_arith
   apply (rule hoare_pre)
-   apply (wpc|wp|simp add: unless_def alignError_def del: fun_upd_apply)+
+   apply (wpc|wp|simp add: unless_def alignError_def del: hoare_fail_any fun_upd_apply)+
   apply clarsimp
   apply (frule(2) retype_aligned_distinct'(2)[where ko = ko and n= "n*2^us" ])
    apply (erule range_cover_rel)

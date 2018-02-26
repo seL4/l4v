@@ -305,8 +305,7 @@ lemma decode_invocation_nonep:
    decode_invocation cap cap_ref extra_caps intent
    \<lbrace>\<lambda>rv s. nonep_invocation rv\<rbrace>, -"
   apply (simp add: decode_invocation_def)
-  apply (wpsimp 
-      simp: o_def nonep_invocation_def simp_del: hoare_True_E_R)
+  apply (wpsimp simp: o_def nonep_invocation_def simp_del: hoare_True_E_R)
   apply (auto simp: ep_related_cap_def)
   done
 

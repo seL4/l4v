@@ -129,6 +129,7 @@ lemma set_original_reads_respects:
     apply(erule equiv_for_id_update)
    apply(erule affects_equiv_is_original_cap_update)
    apply(erule equiv_for_id_update)
+  apply wp
   done
 
 

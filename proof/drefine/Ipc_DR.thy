@@ -498,7 +498,7 @@ lemma tcb_sched_action_transform_inv: "\<lbrace>\<lambda>ps. transform ps = cs\<
 
 lemma set_scheduler_action_transform_inv:
   "\<lbrace>\<lambda>ps. transform ps = cs\<rbrace> set_scheduler_action act \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
-  by (clarsimp simp: set_scheduler_action_def)
+  by (wpsimp simp: set_scheduler_action_def)
 
 lemma possible_switch_to_dcorres:
   "dcorres dc P P' (return ()) (possible_switch_to t)"
@@ -845,28 +845,15 @@ lemma valid_idle_cancel_all_signals:
 lemma not_idle_after_reply_cancel_ipc:
   "\<lbrace>not_idle_thread obj_id' and invs :: det_state \<Rightarrow> bool \<rbrace> reply_cancel_ipc obj_id'
    \<lbrace>\<lambda>y. valid_idle\<rbrace>"
-  including no_pre
   apply (simp add:reply_cancel_ipc_def)
   apply wp
        apply (simp add:cap_delete_one_def unless_def)
        apply wp+
           apply (simp add:IpcCancel_A.empty_slot_def)
-          apply (wp set_cap_idle)+
-          apply simp
-          apply (rule hoare_strengthen_post[OF get_cap_idle])
-          apply simp
-         apply (case_tac capa)
-                    apply (simp_all add:fast_finalise.simps)
-           apply (clarsimp simp:when_def | rule conjI)+
-            apply (wp valid_idle_cancel_all_ipc valid_idle_cancel_all_signals
-                   | clarsimp simp: unbind_maybe_notification_def | wpc)+
-       apply (rule hoare_strengthen_post[where Q="\<lambda>r. valid_state and valid_idle"])
-        apply (wp select_inv|simp)+
-  apply (rule hoare_strengthen_post[where Q="\<lambda>r. valid_state and valid_idle"])
-   apply wp+
-   apply (rule hoare_strengthen_post)
-    apply (rule hoare_vcg_precond_imp[OF thread_set_invs_trivial])
-          apply (simp add:tcb_cap_cases_def invs_def valid_state_def)+
+          apply (wp set_cap_idle get_cap_idle select_wp | simp add: if_apply_def2 imp_conjR
+            | strengthen imp_consequent[where P="invs s" for s] imp_consequent[where P="valid_idle s" for s])+
+   apply (strengthen invs_valid_idle)
+   apply (wp thread_set_invs_trivial | simp add: ran_tcb_cap_cases)+
   done
 
 lemma not_idle_thread_cancel_signal:
@@ -1409,11 +1396,9 @@ next
              apply (rule cap_insert_weak_cte_wp_at_not_null)
              apply clarsimp+
            apply (wp cap_insert_idle valid_irq_node_typ hoare_vcg_ball_lift cap_insert_cte_wp_at)+
-        apply (rule validE_validE_R)
-        apply (wp whenE_throwError_wp)[1]
+       apply (simp add: if_apply_def2)
        apply wp
-        apply (clarsimp)
-       apply (rule hoareE_TrueI)
+      apply (simp add: if_apply_def2)
       apply (rule validE_R_validE)
       apply (simp add:conj_comms ball_conj_distrib split del:if_split)
       apply (rule_tac Q' ="\<lambda>cap' s. (cap'\<noteq> cap.NullCap \<longrightarrow>(
@@ -1823,7 +1808,7 @@ lemma dcorres_copy_mrs':
       apply (clarsimp simp:not_idle_thread_def tcb_at_def opt_cap_tcb get_tcb_def)+
     apply (simp split:cdl_cap.splits)
    apply (rule hoare_pre, wp hoare_vcg_prop[where P=True]  cdl_get_ipc_buffer_Some)
-        apply (fastforce simp:cte_wp_at_def)  
+        apply (fastforce simp:cte_wp_at_def)
        apply clarsimp+
 done
 
@@ -2062,9 +2047,6 @@ lemma corres_complete_ipc_transfer:
              apply (rule corrupt_tcb_intent_as_user_corres)
            apply (wp|clarsimp simp:not_idle_thread_def)+
           apply wpsimp+
-         apply (rule hoare_pre)
-         apply (wpc, wp+)
-        apply clarsimp+
        apply (rule hoare_allI[OF hoare_drop_imp])
     apply (wp|clarsimp)+
     apply (rule conjI,simp)

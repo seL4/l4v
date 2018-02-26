@@ -267,7 +267,7 @@ lemma dmo_pd_at_asid [wp]:
 
 
 crunch inv: find_pd_for_asid "P"
-  (simp: assertE_def whenE_def wp: crunch_wps)
+  (simp: assertE_def crunch_simps wp: crunch_wps)
 
 
 lemma find_pd_for_asid_pd_at_asid [wp]:
@@ -1041,7 +1041,7 @@ crunch vspace_objs [wp]: set_vm_root_for_flush valid_vspace_objs
   (simp: valid_vspace_objs_arch_update)
 
 crunch typ_at [wp]: flush_table "\<lambda>s. P (typ_at T p s)"
-  (simp: assertE_def whenE_def when_def wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 
 
 lemmas flush_table_typ_ats [wp] = abs_typ_at_lifts [OF flush_table_typ_at]
@@ -1049,7 +1049,7 @@ lemmas flush_table_typ_ats [wp] = abs_typ_at_lifts [OF flush_table_typ_at]
 lemmas find_pd_for_asid_typ_ats [wp] = abs_typ_at_lifts [OF find_pd_for_asid_typ_at]
 
 crunch aligned [wp]: flush_table pspace_aligned
-  (simp: crunch_simps whenE_def when_def wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 
 
 lemma find_pd_for_asid_page_directory [wp]:
@@ -1108,7 +1108,7 @@ qed
 
 
 crunch valid_objs [wp]: flush_page "valid_objs"
-  (wp: crunch_wps hoare_drop_imps simp: whenE_def crunch_simps)
+  (wp: crunch_wps hoare_drop_imps simp: crunch_simps)
 
 
 crunch valid_arch [wp]: store_pde "valid_arch_state"
@@ -1705,20 +1705,8 @@ lemma svr_invs [wp]:
   apply(simp add: invs_valid_objs)
   done
 
-crunch pred_tcb_at[wp]: arm_context_switch "pred_tcb_at proj P t"
-
-lemma svr_pred_st_tcb[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_vm_root t \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
-  apply (simp add: set_vm_root_def)
-  apply wp
-   apply (rename_tac cap, case_tac cap, (simp add: throwError_def | wp)+)
-   apply (rename_tac arch_cap)
-   apply (case_tac arch_cap, (simp add: throwError_def | wp)+)
-   apply (rename_tac word mapped)
-   apply (case_tac mapped, (simp add: throwError_def | wp)+)
-    apply(case_tac "word \<noteq> pd'")
-     apply (simp add: whenE_def | wp find_pd_for_asid_pred_tcb_at)+
-  done
+crunch pred_tcb_at[wp]: set_vm_root "pred_tcb_at proj P t"
+  (simp: crunch_simps)
 
 crunch typ_at [wp]: set_vm_root "\<lambda>s. P (typ_at T p s)"
   (simp: crunch_simps)

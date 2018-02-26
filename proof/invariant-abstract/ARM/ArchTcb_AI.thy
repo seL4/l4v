@@ -289,7 +289,7 @@ lemma check_valid_ipc_buffer_inv:
              cong: cap.case_cong arch_cap.case_cong
              split del: if_split)
   apply (rule hoare_pre)
-   apply (wp | simp add: whenE_def split del: if_split | wpcw)+
+   apply (wp | simp add: whenE_def if_apply_def2 | wpcw)+
   done
 
 lemma check_valid_ipc_buffer_wp[Tcb_AI_asms]:

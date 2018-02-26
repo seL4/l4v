@@ -2846,7 +2846,7 @@ lemma reset_untyped_cap_invs_etc:
     ?f \<lbrace>\<lambda>_. invs and ?vu2 and ct_active and ?psp\<rbrace>, \<lbrace>\<lambda>_. invs\<rbrace>")
   apply (simp add: reset_untyped_cap_def)
   apply (rule hoare_vcg_seqE[rotated])
-   apply (wp get_cap_sp)[1]
+   apply ((wp_once get_cap_sp)+)[1]
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp: cte_wp_at_caps_of_state bits_of_def split del: if_split)
   apply (subgoal_tac "is_aligned ptr sz")

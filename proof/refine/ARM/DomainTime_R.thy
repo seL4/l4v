@@ -151,10 +151,10 @@ crunch ksDomainTime_inv[wp]: sendSignal "\<lambda>s. P (ksDomainTime s)"
 crunch ksDomainTime_inv[wp]: deleteASID "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only getObject_inv loadObject_default_inv
        updateObject_default_inv
-   ignore: setObject getObject simp: whenE_def)
+   ignore: setObject getObject simp: crunch_simps)
 
 crunch ksDomainTime_inv[wp]: finaliseCap "\<lambda>s. P (ksDomainTime s)"
-  (simp: crunch_simps assertE_def unless_def
+  (simp: crunch_simps assertE_def
  ignore: getObject setObject forM ignoreFailure
      wp: setObject_ksPSpace_only getObject_inv loadObject_default_inv crunch_wps)
 
@@ -162,10 +162,10 @@ crunch ksDomainTime_inv[wp]: cancelBadgedSends "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only getObject_inv loadObject_default_inv
        updateObject_default_inv hoare_unless_wp
    ignore: setObject getObject filterM
-   simp: whenE_def filterM_mapM crunch_simps)
+   simp: filterM_mapM crunch_simps)
 
 crunch ksDomainTime_inv[wp]: capSwapForDelete "\<lambda>s. P (ksDomainTime s)"
-  (simp: crunch_simps simp: unless_def)
+  (simp: crunch_simps)
 
 lemma finaliseSlot_ksDomainTime_inv[wp]:
   "\<lbrace>\<lambda>s. P (ksDomainTime s) \<rbrace> finaliseSlot param_a param_b \<lbrace>\<lambda>_ s. P (ksDomainTime s)\<rbrace>"
@@ -177,7 +177,7 @@ crunch ksDomainTime_inv[wp]: invokeTCB "\<lambda>s. P (ksDomainTime s)"
 crunch ksDomainTime_inv[wp]: doReplyTransfer "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
        setObject_ntfn_ct
-        simp: unless_def crunch_simps
+        simp: crunch_simps
       ignore: transferCapsToSlots setObject getObject)
 
 lemma cteRevoke_ksDomainTime_inv[wp]:
@@ -251,7 +251,7 @@ lemma nextDomain_domain_time_left'[wp]:
    nextDomain
    \<lbrace>\<lambda>_ s. 0 < ksDomainTime s \<rbrace>"
    unfolding nextDomain_def Let_def
-   apply (clarsimp simp: valid_domain_list'_def dschLength_def)
+   apply (wpsimp simp: valid_domain_list'_def dschLength_def)
    apply (simp only: all_set_conv_all_nth)
    apply (erule_tac x="Suc (ksDomScheduleIdx s) mod length (ksDomSchedule s)" in allE)
    apply fastforce

@@ -1071,8 +1071,7 @@ lemma rescheduleRequired_all_invs_but_extra:
     rescheduleRequired_valid_queues_but_ct_domain
     rescheduleRequired_valid_queues'_but_ct_domain
     valid_irq_node_lift valid_irq_handlers_lift''
-    irqs_masked_lift cur_tcb_lift
-    del:rescheduleRequired_valid_queues')
+    irqs_masked_lift cur_tcb_lift)
   apply auto
   done
 
@@ -1504,9 +1503,8 @@ lemma hinv_invs'[wp]:
                    ts_Restart_case_helper')
   apply (wp syscall_valid' setThreadState_nonqueued_state_update rfk_invs'
             hoare_vcg_all_lift static_imp_wp)
-         apply simp
-         apply (intro conjI impI)
-          apply (wp gts_imp' | simp)+
+         apply (simp add: if_apply_def2)
+         apply (wp gts_imp' | simp)+
         apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp_R[rotated])
          apply clarsimp
          apply (subgoal_tac "thread \<noteq> ksIdleThread s", simp_all)[1]
@@ -1514,17 +1512,13 @@ lemma hinv_invs'[wp]:
          apply (clarsimp simp: valid_idle'_def valid_state'_def
                                invs'_def pred_tcb_at'_def obj_at'_def)
         apply wp+
-       apply (rule_tac Q="\<lambda>rv'. invs' and valid_invocation' rv
-                                and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
-                                and (\<lambda>s. ksCurThread s = thread)
-                                and st_tcb_at' active' thread"
-                  in hoare_post_imp)
-        apply (clarsimp simp: ct_in_state'_def)
-        apply (frule(1) ct_not_ksQ)
-        apply (clarsimp)
-       apply (wp sts_invs_minor' setThreadState_st_tcb setThreadState_rct | simp)+
-    apply (clarsimp)
+       apply (wp sts_invs_minor' setThreadState_st_tcb setThreadState_rct
+                 ct_in_state_thread_state_lift' sts_st_tcb_at'_cases
+        | clarsimp
+        | strengthen ct_not_ksQ[rule_format]
+        )+
     apply (frule(1) ct_not_ksQ)
+    apply (simp add: conj_comms)
     apply (fastforce simp add: tcb_at_invs' ct_in_state'_def
                               simple_sane_strg
                               sch_act_simple_def
@@ -1655,7 +1649,8 @@ lemma cteDeleteOne_reply_cap_to''[wp]:
   apply (rule hoare_assume_pre)
   apply (subgoal_tac "isReplyCap (cteCap cte) \<or> isNullCap (cteCap cte)")
    apply (wp hoare_vcg_ex_lift emptySlot_cte_wp_cap_other isFinalCapability_inv
-        | clarsimp simp: finaliseCap_def isCap_simps | simp)+
+        | clarsimp simp: finaliseCap_def isCap_simps | simp
+        | wp_once hoare_drop_imps)+
    apply (fastforce simp: cte_wp_at_ctes_of)
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   done

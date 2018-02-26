@@ -1483,7 +1483,7 @@ shows
                                               prefer 3
                                               apply wp+
                                                  apply (rule hoare_post_imp, simp)
-                                                 apply wp+
+                                                 apply (wp | assumption)+
                                              defer
                                              apply ((wp | simp)+)[1]
                                             apply (simp add: create_cap_ext_def set_cdt_list_def update_cdt_list_def bind_assoc)
@@ -5493,22 +5493,22 @@ lemma inv_untyped_corres':
                invs_valid_pspace' invs_arch_state'
                imp_consequent[where Q = "(\<exists>x. x \<in> cte_map ` set slots)"]
              | clarsimp simp: conj_comms simp del: capFreeIndex_update.simps)+
-          apply (wp updateFreeIndex_forward_invs' updateFreeIndex_caps_overlap_reserved
+          apply ((wp updateFreeIndex_forward_invs' updateFreeIndex_caps_overlap_reserved
              updateFreeIndex_caps_no_overlap'' updateFreeIndex_pspace_no_overlap'
              hoare_vcg_const_Ball_lift updateFreeIndex_cte_wp_at
-             updateFreeIndex_descendants_range_in')+
+             updateFreeIndex_descendants_range_in')+)[1]
          apply clarsimp
          apply (clarsimp simp:conj_comms)
          apply (strengthen invs_mdb invs_valid_objs
                 invs_valid_pspace invs_arch_state invs_psp_aligned
                 invs_distinct)
          apply (clarsimp simp:conj_comms ball_conj_distrib ex_in_conv)
-         apply (rule_tac Q'="\<lambda>_ s. valid_etcbs s \<and> valid_list s \<and> invs s \<and> ct_active s
+         apply (rule validE_R_validE, rule_tac Q'="\<lambda>_ s. valid_etcbs s \<and> valid_list s \<and> invs s \<and> ct_active s
           \<and> valid_untyped_inv_wcap ui
             (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1} s)
           " in hoare_post_imp_R)
-          apply (simp add: whenE_def split del: if_split, wp)
+          apply (simp add: whenE_def, wp)
            apply (rule validE_validE_R, rule hoare_post_impErr, rule reset_untyped_cap_invs_etc, auto)[1]
           apply wp
          apply (clarsimp simp: ui cte_wp_at_caps_of_state
@@ -5550,8 +5550,7 @@ lemma inv_untyped_corres':
          apply (drule invoke_untyped_proofs.usable_range_disjoint)
          apply (clarsimp simp: field_simps mask_out_sub_mask shiftl_t2n)
 
-        apply wp
-        apply (rule validE_validE_R, rule hoare_post_impErr,
+        apply (rule hoare_post_impErr,
                rule whenE_reset_resetUntypedCap_invs_etc[where ptr="ptr && ~~ mask sz"
                    and ptr'=ptr and sz=sz and idx=idx and ui=ui' and dev=dev])
 
@@ -5589,7 +5588,7 @@ lemma inv_untyped_corres':
              erule order_trans, simp add: blah word_and_le2)
         apply (auto split: if_split)[1]
        apply (drule invokeUntyped_proofs.usableRange_disjoint, simp)
-      apply (clarsimp simp only: pred_conj_def invs ui)
+      apply (clarsimp simp only: pred_conj_def invs ui if_apply_def2)
       apply (strengthen vui)
       apply (cut_tac vui invs invs')
       apply (clarsimp simp: cte_wp_at_caps_of_state valid_sched_etcbs)

@@ -213,7 +213,6 @@ lemma no_fail_getCTE [wp]:
              split del: if_split)
        apply simp+
   done
-find_theorems cte_level_bits name:simps
 
 lemma tcb_cases_related:
   "tcb_cap_cases ref = Some (getF, setF, restr) \<Longrightarrow>
@@ -4211,12 +4210,7 @@ lemma updateMDB_cte_at' [wp]:
  "\<lbrace>cte_at' p\<rbrace>
   updateMDB x y
   \<lbrace>\<lambda>uu. cte_at' p\<rbrace>"
-  unfolding updateMDB_def
-  apply simp
-  apply safe
-  apply (wp setCTE_weak_cte_wp_at)
-  apply (simp split: if_split)
-  done
+  by (wpsimp wp: updateMDB_weak_cte_wp_at)
 
 lemma updateCap_cte_at' [wp]:
  "\<lbrace>cte_at' p\<rbrace> updateCap c p' \<lbrace>\<lambda>_. cte_at' p\<rbrace>"

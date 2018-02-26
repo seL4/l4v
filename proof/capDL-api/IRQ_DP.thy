@@ -36,9 +36,8 @@ lemma invoke_irq_handler_clear_handler_wp:
   "\<lbrace>< irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c cap \<and>* R> and K (\<not> ep_related_cap cap)\<rbrace>
       invoke_irq_handler (ClearIrqHandler irq)
    \<lbrace>\<lambda>_. < irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c NullCap \<and>* R> \<rbrace>"
-  including no_pre
   apply (clarsimp simp: invoke_irq_handler_def, wp)
-   apply (sep_wp delete_cap_simple_format[where cap=cap])
+   apply (sep_wp delete_cap_simple_format[where cap=cap])+
   apply (safe)
    apply (frule sep_map_i_cdl_irq, clarsimp simp: get_irq_slot_def)
    apply (sep_solve)
@@ -50,11 +49,10 @@ lemma invoke_irq_handler_set_handler_wp:
          K (\<not> ep_related_cap cap' \<and> \<not> is_untyped_cap cap)\<rbrace>
         invoke_irq_handler (SetIrqHandler irq cap slot)
        \<lbrace>\<lambda>_. < irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c cap \<and>* R> \<rbrace>"
-  including no_pre
   apply (clarsimp simp: invoke_irq_handler_def, wp)
-    apply (wp alternative_wp)
-     apply (wp sep_wp: insert_cap_child_wp insert_cap_sibling_wp)+
-   apply (sep_wp delete_cap_simple_format[where cap=cap'])
+     apply (wp alternative_wp)
+      apply (wp sep_wp: insert_cap_child_wp insert_cap_sibling_wp)+
+    apply (sep_wp delete_cap_simple_format[where cap=cap'])+
   apply (safe)
    apply (clarsimp)
    apply (frule sep_map_i_cdl_irq, clarsimp simp: get_irq_slot_def)

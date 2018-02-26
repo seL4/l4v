@@ -265,9 +265,7 @@ lemma retype_untyped_wp_success:
     (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>* R \<guillemotright> s) \<and>
    has_children (si_cnode_id,unat untyped_cptr) (kernel_state s) \<and>
      list_all (\<lambda>index. has_children (si_cnode_id, untyped_slots ! index) (kernel_state s)) indices\<rbrace>"
-  apply (rule hoare_strengthen_post)
-   apply (wp retype_untyped_wp [where R=R], simp+)
-  done
+  by (rule hoare_strengthen_post, rule retype_untyped_wp [where R=R], simp+)
 
 lemma retype_untyped_wp_fail:
   "\<lbrakk>default_object type sz minBound = Some new_object;
@@ -299,9 +297,7 @@ lemma retype_untyped_wp_fail:
     (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>* R \<guillemotright> s \<and>
    (\<not>has_children (si_cnode_id,unat untyped_cptr) (kernel_state s) \<longrightarrow> cover_ids = available_ids) \<and>
      list_all (\<lambda>index. has_children (si_cnode_id, untyped_slots ! index) (kernel_state s)) indices\<rbrace>"
-  apply (rule hoare_strengthen_post)
-   apply (wp retype_untyped_wp [where R=R], simp+)
-  done
+  by (rule hoare_strengthen_post, rule retype_untyped_wp [where R=R], simp+)
 
 lemma retype_untyped_bij_success:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some spec_object;
@@ -1402,7 +1398,7 @@ lemma create_objects_sep:
   apply (clarsimp simp: si_objects_def si_objects_extra_caps'_def)
   apply (rule hoare_assume_pre)
   apply (rule hoare_chain)
-    apply (wp retype_untypeds_wp_helper
+    apply (wp_once retype_untypeds_wp_helper
       [where R="(si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>* si_asid \<and>* R"
          and untyped_slots = "map unat untyped_cptrs" and dev = dev
          and free_slots    = "map unat free_cptrs"],

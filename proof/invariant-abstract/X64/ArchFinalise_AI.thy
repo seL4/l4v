@@ -506,46 +506,47 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                                valid_arch_state s)\<rbrace>
      finalise_cap cap x
    \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
-  apply (cases cap, simp_all add: replaceable_def reachable_pg_cap_def
-                       split del: if_split)
-            prefer 10
-            (* TS: this seems to be necessary for deleting_irq_handler,
-                   kind of nasty, not sure how to sidestep *)
-            apply (rule hoare_pre)
-            apply ((wp suspend_unlive'[unfolded o_def]
-                      suspend_final_cap[where sl=sl]
-                      unbind_maybe_notification_not_bound
-                      get_simple_ko_ko_at hoare_vcg_conj_lift
-                      unbind_notification_valid_objs
-                   | clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
-                                     ran_tcb_cap_cases is_cap_simps
-                                     cap_range_def prepare_thread_delete_def
-                                     can_fast_finalise_def
-                                     gen_obj_refs_subset
-                                     vs_cap_ref_def unat_of_bl_length
-                                     valid_ipc_buffer_cap_def
-                              dest!: tcb_cap_valid_NullCapD
-                              split: Structures_A.thread_state.split_asm
-                   | simp cong: conj_cong
-                   | simp cong: rev_conj_cong add: no_cap_to_obj_with_diff_ref_Null
-                   | (strengthen tcb_cap_valid_imp_NullCap tcb_cap_valid_imp', wp)
-                   | rule conjI
-                   | erule cte_wp_at_weakenE tcb_cap_valid_imp'[rule_format, rotated -1]
-                   | erule(1) no_cap_to_obj_with_diff_ref_finalI_ARCH
-                   | (wp_once hoare_drop_imps,
-                       wp_once cancel_all_ipc_unlive[unfolded o_def]
-                           cancel_all_signals_unlive[unfolded o_def])
-                   | ((wp_once hoare_drop_imps)?,
-                      (wp_once hoare_drop_imps)?,
-                      wp_once deleting_irq_handler_empty)
-                   | wpc
-                   | simp add: valid_cap_simps is_nondevice_page_cap_simps)+)
-   apply (rule hoare_strengthen_post, rule arch_finalise_cap_replaceable[where sl=sl])
+  apply (cases "is_arch_cap cap")
+   apply (clarsimp simp: is_cap_simps)
+   apply wp
    apply (clarsimp simp: replaceable_def reachable_pg_cap_def
-                         o_def cap_range_def valid_arch_state_def
-                         ran_tcb_cap_cases is_cap_simps
-                         gen_obj_refs_subset vs_cap_ref_def
-                         all_bool_eq)+
+            o_def cap_range_def valid_arch_state_def
+            ran_tcb_cap_cases is_cap_simps
+            gen_obj_refs_subset vs_cap_ref_def
+            all_bool_eq)
+  apply ((cases cap;
+      simp add: replaceable_def reachable_pg_cap_def
+                       split del: if_split;
+      rule hoare_pre),
+
+    (wp suspend_unlive'[unfolded o_def]
+        suspend_final_cap[where sl=sl]
+        unbind_maybe_notification_not_bound
+        get_simple_ko_ko_at hoare_vcg_conj_lift
+        unbind_notification_valid_objs
+      | clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
+                        ran_tcb_cap_cases is_cap_simps
+                        cap_range_def prepare_thread_delete_def
+                        can_fast_finalise_def
+                        gen_obj_refs_subset
+                        vs_cap_ref_def unat_of_bl_length
+                        valid_ipc_buffer_cap_def
+                 dest!: tcb_cap_valid_NullCapD
+                 split: Structures_A.thread_state.split_asm
+      | simp cong: conj_cong
+      | simp cong: rev_conj_cong add: no_cap_to_obj_with_diff_ref_Null
+      | (strengthen tcb_cap_valid_imp_NullCap tcb_cap_valid_imp', wp)
+      | rule conjI
+      | erule cte_wp_at_weakenE tcb_cap_valid_imp'[rule_format, rotated -1]
+      | erule(1) no_cap_to_obj_with_diff_ref_finalI_ARCH
+      | (wp_once hoare_drop_imps,
+          wp_once cancel_all_ipc_unlive[unfolded o_def]
+              cancel_all_signals_unlive[unfolded o_def])
+      | ((wp_once hoare_drop_imps)?,
+         (wp_once hoare_drop_imps)?,
+         wp_once deleting_irq_handler_empty)
+      | wpc
+      | simp add: valid_cap_simps is_nondevice_page_cap_simps)+)
   done
 
 lemma (* deleting_irq_handler_cte_preserved *)[Finalise_AI_asms]:

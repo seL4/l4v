@@ -1812,12 +1812,11 @@ lemma tc_valid_sched[wp]:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace>
       invoke_tcb (ThreadControl a sl b mcp pr e f g)
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  including no_pre
-  apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
-  apply (rule hoare_vcg_precond_imp)
-   by (wp check_cap_inv thread_set_not_state_valid_sched hoare_vcg_all_lift gts_wp static_imp_wp
-         | wpc | simp add: option_update_thread_def | rule reschedule_preserves_valid_shed
-         | wp_once hoare_drop_imps )+
+  unfolding split_def set_mcpriority_def
+  by ((simp add: conj_comms, strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
+          | wp check_cap_inv thread_set_not_state_valid_sched hoare_vcg_all_lift gts_wp static_imp_wp
+          | wpc | simp add: option_update_thread_def | rule reschedule_preserves_valid_shed
+          | wp_once hoare_drop_imps )+
 
 end
 

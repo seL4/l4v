@@ -550,11 +550,9 @@ lemma doUserOp_invs':
         (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and
         (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
-  apply (wp device_update_invs')
-             apply (wp dmo_invs' doMachineOp_ct_running')+
-             apply (clarsimp simp add: no_irq_modify device_memory_update_def
-                                       user_memory_update_def)
-            apply (wp doMachineOp_ct_running' doMachineOp_sch_act select_wp)+
+  apply (wp device_update_invs' doMachineOp_ct_running' select_wp
+    | (wp_once dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
+                                       user_memory_update_def))+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def
                  split: option.splits)

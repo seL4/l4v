@@ -37,8 +37,11 @@ lemma transfer_caps_loop_irq_state[wp]:
   apply(wp transfer_caps_loop_pres)
   done
 
+crunch irq_state_of_state[wp]: set_mrs "\<lambda>s. P (irq_state_of_state s)"
+  (wp: crunch_wps dmo_wp simp: crunch_simps maskInterrupt_def store_word_offs_def storeWord_def ignore: const_on_failure)
+
 crunch irq_state_of_state[wp]: handle_recv "\<lambda>s. P (irq_state_of_state s)"
-  (wp: crunch_wps dmo_wp simp: crunch_simps maskInterrupt_def unless_def store_word_offs_def storeWord_def ignore: const_on_failure)
+  (wp: crunch_wps dmo_wp simp: crunch_simps maskInterrupt_def store_word_offs_def storeWord_def ignore: const_on_failure)
 
 crunch irq_state_of_state[wp]: handle_reply "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: crunch_simps maskInterrupt_def unless_def store_word_offs_def storeWord_def ignore: const_on_failure)
@@ -305,18 +308,11 @@ lemma find_pd_for_asid_assert_reads_respects:
   "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs and
     K (is_subject_asid aag asid))
   (find_pd_for_asid_assert asid)"
-  unfolding find_pd_for_asid_assert_def catch_def
+  unfolding find_pd_for_asid_assert_def
   apply(wp get_pde_rev find_pd_for_asid_reads_respects hoare_vcg_all_lift
        | wpc | simp)+
-    (* need to be careful -- wp gets stuck if we put the drop_imps in above *)
-    apply(rule hoare_drop_imps)
-   apply(rule hoare_vcg_all_lift)
-   apply(rule hoare_post_taut)
-   apply(rule validE_cases_valid)
-   apply(simp)
-   apply(rule validE_R_validE)
    apply(rule_tac Q'="\<lambda>rv s. is_subject aag (lookup_pd_slot rv 0 && ~~ mask pd_bits)" in hoare_post_imp_R)
-    apply(rule find_pd_for_asid_pd_slot_authorised)
+   apply(rule find_pd_for_asid_pd_slot_authorised)
    apply(subgoal_tac "lookup_pd_slot r 0 = r")
     apply(fastforce)
    apply(simp add: lookup_pd_slot_def)
@@ -621,13 +617,8 @@ lemma set_vm_root_states_equiv_for:
   "invariant (set_vm_root thread) (states_equiv_for P Q R S st)"
   unfolding set_vm_root_def catch_def fun_app_def setCurrentPD_def isb_def dsb_def writeTTBR0_def
   apply (wp_once hoare_drop_imps
-        |wp do_machine_op_mol_states_equiv_for hoare_vcg_all_lift arm_context_switch_states_equiv_for hoare_whenE_wp | wpc | simp add: dmo_bind_valid)+
-     apply(rule hoare_post_imp_R)
-      apply(rule valid_validE_R)
-      apply(wp find_pd_for_asid_states_equiv_for hoare_drop_imps arm_context_switch_states_equiv_for do_machine_op_mol_states_equiv_for hoare_whenE_wp | simp | wpc)+
-    apply(rule hoare_post_imp_R)
-     apply(rule valid_validE_R)
-     apply(wp find_pd_for_asid_states_equiv_for get_cap_wp | simp)+
+        |wp do_machine_op_mol_states_equiv_for hoare_vcg_all_lift arm_context_switch_states_equiv_for hoare_whenE_wp
+        | wpc | simp add: dmo_bind_valid if_apply_def2)+
   done
 
 crunch cur_thread: set_vm_root "\<lambda> s. P (cur_thread s)"
@@ -1158,7 +1149,7 @@ lemma set_asid_pool_reads_respects:
       apply(rule set_object_reads_respects)
      apply(rule assert_ev2, rule refl)
     apply (wp get_object_wp)+
-  apply(clarsimp, rule impI, rule TrueI)
+  apply clarsimp
   done
 
 lemma perform_asid_pool_invocation_reads_respects:
@@ -1413,7 +1404,7 @@ lemma delete_asid_reads_respects:
    apply(erule_tac x="pasASIDAbs aag asid" in ballE)
     apply(clarsimp)
    apply(drule aag_can_read_own_asids)
-   apply(clarsimp)+
+   apply(clarsimp | wpsimp)+
    done
 
 
@@ -1766,30 +1757,11 @@ lemma valid_ko_at_arm_arch[simp]:
    valid_ko_at_arm (s\<lparr>arch_state := A\<rparr>) = valid_ko_at_arm s"
   by (simp add: valid_ko_at_arm_def)
 
-crunch valid_ko_at_arm[wp]: arm_context_switch "valid_ko_at_arm"
-  (wp: find_pd_for_asid_assert_wp)
-
-lemma set_vm_root_valid_ko_at_arm[wp]:
-  "\<lbrace>valid_ko_at_arm\<rbrace> set_vm_root tcb \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
-  unfolding set_vm_root_def
-  apply(wp | wpc)+
-      apply(simp add: whenE_def throwError_def returnOk_def)
-      apply(rule conjI)
-       apply(clarsimp | wp whenE_throwError_wp)+
-    apply(rule hoare_drop_imps)
-    apply(wp)
-   apply(rule_tac Q="\<lambda>_. valid_ko_at_arm" in hoare_strengthen_post)
-    apply(wp | fastforce)+
-    done
-
-lemma set_pd_valid_ko_at_armp[wp]:
-  "\<lbrace>valid_ko_at_arm\<rbrace> set_pd ptr pd \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
-  unfolding set_pd_def
-  apply(wp get_object_wp, fastforce simp: a_type_def)
-  done
+crunch valid_ko_at_arm[wp]: arm_context_switch, set_vm_root, set_pd "valid_ko_at_arm"
+  (wp: find_pd_for_asid_assert_wp crunch_wps simp: crunch_simps)
 
 crunch valid_ko_at_arm[wp]: unmap_page_table "valid_ko_at_arm"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps a_type_simps)
 
 definition authorised_for_globals_page_table_inv ::
     "page_table_invocation \<Rightarrow> 'z state \<Rightarrow> bool" where

@@ -378,6 +378,7 @@ lemma doUserOp_if_invs'[wp]:
   apply (simp add: doUserOp_if_def split_def ex_abs_def)
   apply (wp device_update_invs' dmo_setExMonitor_wp' dmo_invs' | simp)+
          apply (clarsimp simp add: no_irq_modify user_memory_update_def)
+         apply wpsimp
         apply (wp doMachineOp_ct_running' doMachineOp_sch_act select_wp)+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def
@@ -1232,7 +1233,6 @@ lemma haskell_invs:
   "global_automaton_invs checkActiveIRQ_H_if (doUserOp_H_if uop)
                          kernelCall_H_if handlePreemption_H_if
                          schedule'_H_if kernelExit_H_if full_invs_if' (ADT_H_if uop) UNIV"
-  including no_pre
   supply conj_cong[cong]
   apply (unfold_locales)
                apply (simp add: ADT_H_if_def)
@@ -1240,18 +1240,10 @@ lemma haskell_invs:
               apply (simp_all add: checkActiveIRQ_H_if_def doUserOp_H_if_def
                                     kernelCall_H_if_def handlePreemption_H_if_def
                                     schedule'_H_if_def kernelExit_H_if_def split del: if_split)[12]
-              apply (rule preserves_lifts | wp | simp add: full_invs_if'_def)+
-            apply (wp_once hoare_disjI1)
-             apply (rule preserves_lifts | wp | simp add: full_invs_if'_def)+
-           apply (wp_once hoare_disjI2)
-            apply (rule preserves_lifts | wp | simp add: full_invs_if'_def)+
-              apply (rule hoare_pre)
-               apply (rule hoare_vcg_conj_lift)
-                apply (rule hoare_drop_imps)
-                apply wp
-               apply (wp_once hoare_disjI1)
-                apply wp+
-              apply (clarsimp simp: active_from_running')+
+              apply (rule preserves_lifts | wp | simp add: full_invs_if'_def
+                  | wp_once hoare_vcg_disj_lift)+
+          apply (wp | wp_once hoare_vcg_disj_lift hoare_drop_imps)+
+         apply simp
         apply (rule preserves_lifts)
         apply (simp add: full_invs_if'_def)
         apply (wp kernelEntry_if_ksDomainTime_inv ; simp)

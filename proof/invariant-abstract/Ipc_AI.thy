@@ -420,7 +420,7 @@ lemma derive_cap_is_derived_foo:
   apply (erule allE)
   apply (erule impEM)
    apply (frule use_validE_R[OF _ cap_derive_not_null_helper, OF _ _ imp_refl])
-    apply (wp derive_cap_inv)
+    apply (rule derive_cap_inv[THEN valid_validE_R])
     apply (intro conjI)
      apply (clarsimp simp:cte_wp_at_caps_of_state)+
      apply (erule(1) use_validE_R[OF _ derive_cap_valid_cap])
@@ -1794,16 +1794,10 @@ lemma set_mrs_valid_ioc[wp]:
   apply (simp add: set_mrs_def)
   apply (wp | wpc)+
      apply (simp only: zipWithM_x_mapM_x split_def)
-     apply (wp mapM_x_wp[where S="UNIV", simplified] set_object_valid_ioc_caps static_imp_wp)+
-    apply (rule hoare_strengthen_post, wp set_object_valid_ioc_caps, simp)
-   apply wp
+     apply (wp mapM_x_wp' set_object_valid_ioc_caps static_imp_wp
+        | simp)+
   apply (clarsimp simp: obj_at_def get_tcb_def valid_ioc_def
                   split: option.splits Structures_A.kernel_object.splits)
-  apply (intro conjI impI allI)
-   apply (drule spec, drule spec, erule impE, assumption)
-   apply (clarsimp simp: cap_of_def tcb_cnode_map_tcb_cap_cases
-                         cte_wp_at_cases null_filter_def)
-   apply (simp add: tcb_cap_cases_def split: if_split_asm)
   apply (drule spec, drule spec, erule impE, assumption)
   apply (clarsimp simp: cap_of_def tcb_cnode_map_tcb_cap_cases
                         cte_wp_at_cases null_filter_def)

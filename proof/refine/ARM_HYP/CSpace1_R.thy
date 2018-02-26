@@ -4220,12 +4220,7 @@ lemma updateMDB_cte_at' [wp]:
  "\<lbrace>cte_at' p\<rbrace>
   updateMDB x y
   \<lbrace>\<lambda>uu. cte_at' p\<rbrace>"
-  unfolding updateMDB_def
-  apply simp
-  apply safe
-  apply (wp setCTE_weak_cte_wp_at)
-  apply (simp split: if_split)
-  done
+  by (wpsimp wp: updateMDB_weak_cte_wp_at)
 
 lemma updateCap_cte_at' [wp]:
  "\<lbrace>cte_at' p\<rbrace> updateCap c p' \<lbrace>\<lambda>_. cte_at' p\<rbrace>"

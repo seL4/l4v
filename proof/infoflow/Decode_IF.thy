@@ -259,7 +259,7 @@ lemma decode_tcb_invocation_reads_respects_f:
         | wp_once whenE_throwError_wp
         | wp_once hoare_drop_imps
         | wpc
-        | simp add: unlessE_whenE split del: if_split add: o_def split_def)+
+        | simp add: if_apply_def2 split del: if_split add: o_def split_def)+
   unfolding get_tcb_ctable_ptr_def get_tcb_vtable_ptr_def
   apply (subgoal_tac "\<not>length excaps < 3 \<longrightarrow> is_subject aag (fst (snd (excaps ! 2)))")
    prefer 2
@@ -528,7 +528,7 @@ lemma lookup_pt_slot_no_fail_is_subject:
 
 lemma arch_decode_invocation_reads_respects_f:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
-
+  notes hoare_whenE_wps[wp_split del]
   shows
   "reads_respects_f aag l (silc_inv aag st and invs and pas_refined aag
         and cte_wp_at (diminished (cap.ArchObjectCap cap)) slot

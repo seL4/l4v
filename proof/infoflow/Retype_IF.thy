@@ -1050,8 +1050,9 @@ lemma reset_untyped_cap_reads_respects_g:
                               free_index_of_def)
        apply (wp | simp)+
        apply (wp delete_objects_reads_respects_g)
-       apply (strengthen invs_valid_global_objs)
-       apply (wp add: delete_objects_invs_ex
+      apply (simp add: if_apply_def2)
+      apply (strengthen invs_valid_global_objs)
+      apply (wp add: delete_objects_invs_ex
                       hoare_vcg_const_imp_lift delete_objects_pspace_no_overlap_again
                       only_timer_irq_inv_pres[where P=\<top> and Q=\<top>]
                  del: Untyped_AI.delete_objects_pspace_no_overlap
@@ -1178,10 +1179,8 @@ lemma invoke_untyped_reads_respects_g_wcap:
                delete_objects_caps_no_overlap
                region_in_kernel_window_preserved
                get_cap_reads_respects_g get_cap_wp
-               reset_untyped_cap_reads_respects_g[where irq=irq and st=st]
-           |strengthen invs_valid_global_objs_strg
            |simp split del: if_split)+
-  apply (clarsimp simp only: )
+    apply (rule reset_untyped_cap_reads_respects_g[where irq=irq and st=st])
   apply (rule_tac P="authorised_untyped_inv aag ui
         \<and> (\<forall>p \<in> ptr_range ptr sz. is_subject aag p)" in hoare_gen_asmE)
   apply (rule validE_validE_R, rule_tac E="\<top>\<top>" and Q="\<lambda>_. invs and valid_untyped_inv_wcap ui
@@ -1192,7 +1191,7 @@ lemma invoke_untyped_reads_respects_g_wcap:
       apply (rule validE_validE_R, rule hoare_post_impErr, rule reset_untyped_cap_invs_etc)
        apply (clarsimp simp only: if_True simp_thms, intro conjI, assumption+)
       apply simp
-     apply (auto simp del: valid_untyped_inv_wcap.simps)[1]
+     apply assumption
     apply (clarsimp simp only: )
     apply (frule(2) invoke_untyped_proofs.intro)
     apply (clarsimp simp: cte_wp_at_caps_of_state bits_of_def
@@ -1201,6 +1200,7 @@ lemma invoke_untyped_reads_respects_g_wcap:
                split del: if_split)
     apply (frule(1) valid_global_refsD2[OF _ invs_valid_global_refs])
     apply (strengthen refl)
+    apply (strengthen invs_valid_global_objs_strg)
     apply (clarsimp simp: authorised_untyped_inv_def conj_comms
                           invoke_untyped_proofs.simps)
     apply (simp add: arg_cong[OF mask_out_sub_mask, where f="\<lambda>y. x - y" for x]
@@ -1268,8 +1268,6 @@ lemma invoke_untyped_reads_respects_g:
   apply (cases ui, clarsimp simp: valid_untyped_inv_wcap cte_wp_at_caps_of_state)
   done
 
-declare modify_wp [wp del]
-
 lemma delete_objects_globals_equiv[wp]:
   "\<lbrace>globals_equiv st and
     (\<lambda>s. is_aligned p b \<and> 2 \<le> b \<and> b < word_bits \<and>
@@ -1298,7 +1296,7 @@ lemma reset_untyped_cap_globals_equiv:
       apply (rule validE_valid, rule mapME_x_wp')
       apply (rule hoare_pre)
        apply (wp set_cap_globals_equiv dmo_clearMemory_globals_equiv
-                 preemption_point_inv | simp)+
+                 preemption_point_inv | simp add: if_apply_def2)+
       apply (clarsimp simp: is_cap_simps ptr_range_def[symmetric]
                             cap_aligned_def bits_of_def
                             free_index_of_def)

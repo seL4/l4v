@@ -903,10 +903,8 @@ lemma deriveCap_not_idle [wp]:
    deriveCap slot cap
    \<lbrace>\<lambda>rv s. ksIdleThread s \<notin> capRange rv\<rbrace>, -"
   unfolding deriveCap_def badge_derived'_def
-  including no_pre
-  apply (cases cap, simp_all add: isCap_simps Let_def)
-            defer 8 (* arch *)
-            apply (wp ensureNoChildren_wp | clarsimp simp: capRange_def)+
+  apply (cases cap; simp add: isCap_simps Let_def;
+      (solves \<open>wp ensureNoChildren_wp; clarsimp\<close>)?)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
          simp_all add: X64_H.deriveCap_def Let_def isCap_simps
@@ -2293,7 +2291,8 @@ crunch sch_act_wf[wp]: unbindNotification "\<lambda>s. sch_act_wf (ksSchedulerAc
 
 crunch valid_queues'[wp]: cteDeleteOne valid_queues'
   (simp: crunch_simps unless_def inQ_def
-     wp: crunch_wps sts_st_tcb' getObject_inv loadObject_default_inv threadSet_valid_queues'
+     wp: crunch_wps sts_st_tcb' getObject_inv loadObject_default_inv
+         threadSet_valid_queues' rescheduleRequired_valid_queues'_weak
  ignore: getObject)
 
 lemma cancelSignal_valid_queues'[wp]:
@@ -2655,8 +2654,6 @@ lemma send_ipc_corres:
              (invs' and  sch_act_not t and tcb_at' t and ep_at' ep)
              (send_ipc bl call bg cg t ep) (sendIPC bl call bg cg t ep)"
 proof -
-  have weak_sch_act_wf: "\<And>sa s. sch_act_wf sa s \<longrightarrow> weak_sch_act_wf sa s"
-    by (clarsimp, erule sch_act_wf_weak)
   show ?thesis
   apply (insert assms)
   apply (unfold send_ipc_def sendIPC_def Let_def)
@@ -2737,7 +2734,7 @@ proof -
                apply ((wp hoare_drop_imps do_ipc_transfer_tcb_caps weak_valid_sched_action_lift
                     | clarsimp simp: is_cap_simps)+)[1]
               apply (simp add: pred_conj_def)
-              apply (strengthen weak_sch_act_wf)
+              apply (strengthen sch_act_wf_weak)
               apply (simp add: valid_tcb_state'_def)
               apply (wp weak_sch_act_wf_lift_linear tcb_in_cur_domain'_lift hoare_drop_imps)[1]
              apply (wp gts_st_tcb_at)+
@@ -2819,7 +2816,7 @@ proof -
               apply ((wp hoare_drop_imps do_ipc_transfer_tcb_caps  weak_valid_sched_action_lift
                      | clarsimp simp:is_cap_simps)+)[1]
              apply (simp add: valid_tcb_state'_def pred_conj_def)
-             apply (strengthen weak_sch_act_wf)
+             apply (strengthen sch_act_wf_weak)
              apply (wp weak_sch_act_wf_lift_linear hoare_drop_imps)
             apply (wp gts_st_tcb_at)+
           apply (simp add: ep_relation_def split: list.split)
@@ -3153,7 +3150,8 @@ lemma cteDeleteOne_reply_cap_to'[wp]:
   apply (rule hoare_assume_pre)
   apply (subgoal_tac "isReplyCap (cteCap cte)")
    apply (wp hoare_vcg_ex_lift emptySlot_cte_wp_cap_other isFinalCapability_inv
-        | clarsimp simp: finaliseCap_def isCap_simps | simp)+
+        | clarsimp simp: finaliseCap_def isCap_simps
+        | wp_once hoare_drop_imps)+
    apply (fastforce simp: cte_wp_at_ctes_of)
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   done
@@ -3308,7 +3306,6 @@ lemma sai_invs'[wp]:
   "\<lbrace>invs' and ex_nonz_cap_to' ntfnptr\<rbrace>
      sendSignal ntfnptr badge \<lbrace>\<lambda>y. invs'\<rbrace>"
   unfolding sendSignal_def
-  including no_pre
   apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
   apply (case_tac "ntfnObj nTFN", simp_all)
     prefer 3
@@ -3324,49 +3321,43 @@ lemma sai_invs'[wp]:
                sts_valid_queues [where st="Structures_H.thread_state.Running", simplified]
                set_ntfn_valid_objs' cur_tcb_lift sts_st_tcb'
                hoare_convert_imp [OF setNotification_nosch]
-           | simp)+
-                                   apply (rule impI)
-                                   apply (simp add: invs'_def valid_state'_def)
-                                   apply (elim conjE)
-                                   apply (drule(1) ct_not_in_ntfnQueue)
-                                     apply (simp)+
-                                  apply (simp_all add: invs'_def valid_state'_def
-                                             split del: if_split)[23]
-               apply (clarsimp simp: valid_pspace'_def)
-               apply (frule(1) ko_at_valid_objs')
-                apply (simp add: projectKOs)
-               apply (clarsimp simp: valid_obj'_def valid_ntfn'_def
-                          split: list.splits)
-              apply clarsimp+
-             apply (clarsimp simp: st_tcb_at_refs_of_rev' valid_idle'_def pred_tcb_at'_def
-                            dest!: sym_refs_ko_atD' sym_refs_st_tcb_atD' sym_refs_obj_atD'
-                           split: list.splits)
-            apply (clarsimp simp: valid_pspace'_def)
-            apply (frule(1) ko_at_valid_objs')
-             apply (simp add: projectKOs)
-            apply (clarsimp simp: valid_obj'_def valid_ntfn'_def
-                        split: list.splits option.splits)
-           apply clarsimp
-          apply (clarsimp elim!: if_live_then_nonz_capE' simp:invs'_def valid_state'_def)
-          apply (drule(1) sym_refs_ko_atD')
-          apply (clarsimp elim!: ko_wp_at'_weakenE
-                      intro!: refs_of_live')
-         apply (clarsimp split del: if_split)+
-        apply (frule ko_at_valid_objs')
-          apply (clarsimp simp: valid_pspace'_def)
+           | simp split del: if_split)+
+
+    apply (intro conjI[rotated];
+      (solves \<open>clarsimp simp: invs'_def valid_state'_def valid_pspace'_def\<close>)?)
+           apply (clarsimp simp: invs'_def valid_state'_def split del: if_split)
+           apply (drule(1) ct_not_in_ntfnQueue, simp+)
+          apply clarsimp
+          apply (frule ko_at_valid_objs', clarsimp)
+           apply (simp add: projectKOs)
+          apply (clarsimp simp: valid_obj'_def valid_ntfn'_def
+                         split: list.splits)
+         apply (clarsimp simp: invs'_def valid_state'_def)
+         apply (clarsimp simp: st_tcb_at_refs_of_rev' valid_idle'_def pred_tcb_at'_def
+                        dest!: sym_refs_ko_atD' sym_refs_st_tcb_atD' sym_refs_obj_atD'
+                        split: list.splits)
+        apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
+        apply (frule(1) ko_at_valid_objs')
          apply (simp add: projectKOs)
-        apply (clarsimp simp: valid_obj'_def valid_ntfn'_def split del: if_split)
-        apply (frule invs_sym')
-        apply (drule(1) sym_refs_obj_atD')
-        apply (clarsimp split del: if_split cong: if_cong
-                           simp: st_tcb_at_refs_of_rev' ep_redux_simps' ntfn_bound_refs'_def)
-        apply (frule st_tcb_at_state_refs_ofD')
-        apply (erule delta_sym_refs)
-         apply (fastforce simp: ntfn_q_refs_no_TCBBound' split: if_split_asm)
-        apply (fastforce simp: tcb_bound_refs'_def set_eq_subset symreftype_inverse'
-                        split: if_split_asm)
-       apply (clarsimp simp: valid_pspace'_def)
-      apply clarsimp
+        apply (clarsimp simp: valid_obj'_def valid_ntfn'_def
+                    split: list.splits option.splits)
+       apply (clarsimp elim!: if_live_then_nonz_capE' simp:invs'_def valid_state'_def)
+       apply (drule(1) sym_refs_ko_atD')
+       apply (clarsimp elim!: ko_wp_at'_weakenE
+                   intro!: refs_of_live')
+      apply (clarsimp split del: if_split)+
+      apply (frule ko_at_valid_objs', clarsimp)
+       apply (simp add: projectKOs)
+      apply (clarsimp simp: valid_obj'_def valid_ntfn'_def split del: if_split)
+      apply (frule invs_sym')
+      apply (drule(1) sym_refs_obj_atD')
+      apply (clarsimp split del: if_split cong: if_cong
+                         simp: st_tcb_at_refs_of_rev' ep_redux_simps' ntfn_bound_refs'_def)
+      apply (frule st_tcb_at_state_refs_ofD')
+      apply (erule delta_sym_refs)
+       apply (fastforce simp: ntfn_q_refs_no_TCBBound' split: if_split_asm)
+      apply (fastforce simp: tcb_bound_refs'_def set_eq_subset symreftype_inverse'
+                      split: if_split_asm)
      apply (clarsimp simp:invs'_def)
      apply (frule ko_at_valid_objs')
        apply (clarsimp simp: valid_pspace'_def valid_state'_def)

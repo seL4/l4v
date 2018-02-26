@@ -75,9 +75,7 @@ lemma createObject_typ_at':
    createObjects' ptr (Suc 0) ty 0
    \<lbrace>\<lambda>rv s. typ_at' otype ptr s\<rbrace>"
   apply (clarsimp simp:createObjects'_def alignError_def split_def | wp hoare_unless_wp | wpc )+
-    apply (simp add:obj_at'_def)+
-   apply (wp hoare_unless_wp)+
-  apply (clarsimp simp:ko_wp_at'_def typ_at'_def pspace_distinct'_def)+
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def typ_at'_def pspace_distinct'_def)+
   apply (subgoal_tac "ps_clear ptr (objBitsKO ty)
     (s\<lparr>ksPSpace := \<lambda>a. if a = ptr then Some ty else ksPSpace s a\<rparr>)")
   apply (simp add:ps_clear_def)+
@@ -926,6 +924,9 @@ lemma dec_vcpu_inv_corres:
   apply (simp add: archinv_relation_def vcpu_invocation_map_def ucast_id)
   done
 
+lemmas vmsz_aligned_imp_aligned
+    = vmsz_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN is_aligned_weaken]
+
 lemma dec_arch_inv_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp] [[goals_limit = 1]]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
@@ -996,7 +997,7 @@ shows
                 apply (simp add: returnOk_liftE[symmetric])
                 apply (rule corres_returnOk)
                 apply (simp add: archinv_relation_def asid_pool_invocation_map_def)
-               apply (wp hoare_whenE_wp)
+               apply (rule hoare_pre, wp hoare_whenE_wp)
                apply (clarsimp simp: ucast_fst_hd_assocs)
               apply (wp hoareE_TrueI hoare_whenE_wp getASID_wp | simp)+
            apply ((clarsimp simp: p2_low_bits_max | rule TrueI impI)+)[2]
@@ -1215,21 +1216,18 @@ shows
                  apply (rule corres_trivial)
                  apply (rule corres_returnOk)
                  apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
-                apply wp+
-            apply (subgoal_tac "valid_vspace_objs s \<and> pspace_aligned s \<and>
+                apply (wp | simp)+
+
+          apply (rule_tac Q'="\<lambda>rv s. valid_vspace_objs s \<and> pspace_aligned s \<and>
                                 (snd v')  < kernel_base \<and>
                                 equal_kernel_mappings s \<and> valid_arch_state s \<and>
-                                (\<exists>\<rhd> (lookup_pd_slot (fst pa) (snd v') && ~~ mask pd_bits)) s \<and>
-                                page_directory_at (fst pa) s \<and> (\<exists>\<rhd> (fst pa)) s")
-             prefer 2
-             apply assumption
-            apply clarsimp
-            apply (frule_tac pd = aa and vptr = bc in page_directory_pde_at_lookupI,assumption)
-            apply (clarsimp simp: vmsz_aligned_def pageBitsForSize_def valid_global_objs_def
-              page_directory_at_aligned_pd_bits split:vmpage_size.splits)
-           apply wp
-          apply (wpc | wp throwE_R | wp_once hoare_drop_imps)+
-      apply clarsimp
+                                (\<exists>\<rhd> (lookup_pd_slot rv (snd v') && ~~ mask pd_bits)) s \<and>
+                                page_directory_at (fst pa) s \<and> (\<exists>\<rhd> rv) s"
+              in hoare_post_imp_R, wp)
+          apply (clarsimp simp: page_directory_at_aligned_pd_bits valid_global_objs_def)
+          apply (auto intro!: page_directory_pde_at_lookupI elim!: vmsz_aligned_imp_aligned)[1]
+         apply ((wpsimp | wpc | wp_once hoare_drop_imps)+)
+      apply clarsimp?
       apply (drule bspec [where x = "excaps ! 0"])
        apply simp
       apply (clarsimp simp: valid_cap_def mask_def split: option.split)
@@ -1494,7 +1492,7 @@ lemma associate_vcpu_tcb_corres:
       apply (rule conjI)
        apply (frule (1) sym_refs_vcpu_tcb, fastforce)
        apply (clarsimp simp: obj_at_def)+
-     apply (wpsimp)
+     apply (wpsimp)+
      apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t" in hoare_strengthen_post)
       apply wpsimp
      apply clarsimp
@@ -1506,13 +1504,11 @@ lemma associate_vcpu_tcb_corres:
      apply (clarsimp simp: typ_at_to_obj_at_arches obj_at'_def)
     apply (corressimp wp: arch_thread_get_wp getObject_tcb_wp
                     simp: archThreadGet_def)+
-  apply (rule conjI)
-   apply clarsimp
-   apply (rule conjI)
-    apply clarsimp
+  apply (simp add: vcpu_relation_def)
+  apply (intro allI conjI impI;
+    (solves \<open>clarsimp simp: obj_at_def\<close>)?)
     apply (frule (1) sym_refs_tcb_vcpu, fastforce)
     apply (clarsimp simp: obj_at_def)
-   apply (clarsimp simp: vcpu_relation_def)
    apply (frule (1) sym_refs_vcpu_tcb, fastforce)
    apply (clarsimp simp: obj_at_def)
   apply normalise_obj_at'
@@ -1846,7 +1842,7 @@ lemma ensureSafeMapping_valid_slots_duplicated':
   apply (case_tac entries)
    apply (case_tac a)
    apply (case_tac aa)
-     apply (simp add:slots_duplicated_ensured_def | wp)+
+     apply (simp add:slots_duplicated_ensured_def hoare_FalseE_R)+
     apply (rule hoare_pre)
      apply (wp mapME_x_inv_wp getPTE_wp| wpc)+
      apply clarsimp
@@ -1870,12 +1866,12 @@ lemma ensureSafeMapping_valid_slots_duplicated':
    apply (clarsimp simp add: vspace_bits_defs)
   apply (case_tac b)
   apply (case_tac a)
-   apply (simp add:slots_duplicated_ensured_def | wp)+
+   apply (simp add:slots_duplicated_ensured_def hoare_FalseE_R | wp)+
    apply (rule hoare_pre)
     apply (rule_tac P = "\<exists>p. ba = [p]" and
       P' = "\<lambda>s. \<exists>p. ba = [p] \<and> page_directory_at' (p && ~~ mask pdBits) s" in hoare_gen_asmE)
     apply (clarsimp simp:mapME_singleton)
-    apply (wp getPDE_wp|wpc)+
+    apply (wp getPDE_wp|wpc|clarsimp)+
     apply (clarsimp simp:valid_slots_duplicated'_def obj_at'_real_def split:option.splits)
     apply (intro impI conjI)
      apply (erule ko_wp_at'_weakenE)
@@ -1980,7 +1976,7 @@ lemma arch_decodeARMPageFlush_wf:
        \<lbrace>valid_arch_inv'\<rbrace>, -"
   supply hoare_True_E_R [simp del]
   apply (simp add: decodeARMPageFlush_def)
-  apply (wpsimp wp: whenE_throwError_wp simp: valid_arch_inv'_def valid_page_inv'_def)
+  apply (wpsimp wp: whenE_throwError_wp simp: valid_arch_inv'_def valid_page_inv'_def if_apply_def2)
   done
 
 lemma zobj_refs_maksCapRights[simp]:
@@ -2006,8 +2002,9 @@ lemma arch_decodeInvocation_wf[wp]:
       apply (rule hoare_pre)
        apply ((wp whenE_throwError_wp getASID_wp|
                wpc|
-               simp add: valid_arch_inv'_def valid_apinv'_def)+)[1]
-      apply (clarsimp simp: word_neq_0_conv valid_cap'_def)
+               simp)+)[1]
+      apply (clarsimp simp: word_neq_0_conv valid_cap'_def
+                            valid_arch_inv'_def valid_apinv'_def)
       apply (rule conjI)
        apply (erule cte_wp_at_weakenE')
        apply (clarsimp simp: diminished_isPDCap)
@@ -2167,7 +2164,7 @@ lemma arch_decodeInvocation_wf[wp]:
                split:Structures_H.kernel_object.splits
                arch_kernel_object.splits)
             apply ((wp whenE_throwError_wp isFinalCapability_inv
-                | wpc |simp add: valid_arch_inv'_def valid_pti'_def unlessE_whenE |
+                | wpc |simp add: valid_arch_inv'_def valid_pti'_def if_apply_def2 |
                   rule hoare_drop_imp)+)[14]
    apply (clarsimp simp: linorder_not_le isCap_simps
                          cte_wp_at_ctes_of diminished_arch_update')

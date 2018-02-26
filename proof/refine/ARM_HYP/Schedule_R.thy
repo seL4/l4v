@@ -797,12 +797,9 @@ lemma tcbSchedEnqueue_in_ksQ:
                              obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s"
            in hoare_pre_imp)
    apply (clarsimp simp: tcb_at'_has_tcbPriority tcb_at'_has_tcbDomain)
-  including no_pre
-  apply (wp hoare_vcg_ex_lift)
+  apply (rule hoare_vcg_ex_lift)+
   apply (simp add: tcbSchedEnqueue_def unless_def)
-  apply wp
-    apply clarsimp
-    apply wp+
+  apply wpsimp
     apply (rule_tac Q="\<lambda>rv s. tdom = d \<and> rv = p \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s
                             \<and> obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s"
              in hoare_post_imp, clarsimp)
@@ -814,14 +811,12 @@ lemma tcbSchedEnqueue_in_ksQ:
              (rv \<longrightarrow> t \<in> set (ksReadyQueues s (d, p)))" in hoare_post_imp)
    apply (clarsimp simp: o_def elim!: obj_at'_weakenE)
   apply (wp threadGet_obj_at' hoare_vcg_imp_lift threadGet_const)
-     apply (case_tac "obj_at' (Not \<circ> tcbQueued) t s")
-      apply (clarsimp)
-     apply (clarsimp simp: valid_queues'_def)
-     apply (drule_tac x=d in spec)
-     apply (drule_tac x=p in spec)
-     apply (drule_tac x=t in spec)
-     apply (subgoal_tac "obj_at' (inQ d p) t s", clarsimp)
-     apply (clarsimp simp: obj_at'_def inQ_def)+
+  apply (clarsimp simp: valid_queues'_def)
+  apply (drule_tac x=d in spec)
+  apply (drule_tac x=p in spec)
+  apply (drule_tac x=t in spec)
+  apply normalise_obj_at'
+  apply (clarsimp simp: inQ_def)
   done
 
 crunch ksMachine[wp]: tcbSchedDequeue "\<lambda>s. P (ksMachineState s)"
@@ -1310,7 +1305,7 @@ lemma Arch_switchToThread_tcb'[wp]:
   done
 
 crunch ksCurDomain[wp]: "Arch.switchToThread" "\<lambda>s. P (ksCurDomain s)"
-(simp: whenE_def ignore: getObject updateObject)
+(simp: crunch_simps ignore: getObject updateObject)
 
 lemma Arch_swichToThread_tcbDomain_triv[wp]:
   "\<lbrace> obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace> Arch.switchToThread t \<lbrace> \<lambda>_. obj_at'  (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>"
@@ -1386,10 +1381,7 @@ lemma asUser_valid_irq_node'[wp]:
           \<lbrace>\<lambda>_ s. valid_irq_node' (irq_node' s) s\<rbrace>"
   apply (rule_tac valid_irq_node_lift)
    apply (simp add: asUser_def)
-  apply (rule hoare_seq_ext)
-    defer
-    apply (wp threadGet_irq_node'|wpc)+
-  apply clarsimp
+   apply (wpsimp wp: crunch_wps)+
   done
 
 crunch irq_masked'_helper: asUser "\<lambda>s. P (intStateIRQTable (ksInterruptState s))"
@@ -1402,22 +1394,31 @@ lemma asUser_irq_masked'[wp]:
   apply (rule asUser_irq_masked'_helper)
   done
 
+lemma dom_asUser_replace:
+  "dom (ksPSpace (asUser_replace t x s)) = dom (ksPSpace s)"
+  by (auto simp add: asUser_replace_def
+        split: option.split Structures_H.kernel_object.split)
+
+lemma obj_at_asUser_replace_tcb:
+  "obj_at' P t' s
+    \<Longrightarrow> \<forall>tcb. t = t' \<longrightarrow> ko_at' tcb t' s \<longrightarrow> P tcb
+        \<longrightarrow> P (tcbArch_update (\<lambda>_. atcbContextSet x (tcbArch tcb)) tcb)
+    \<Longrightarrow> obj_at' P t' (asUser_replace t x s)"
+  apply (clarsimp simp: obj_at'_def projectKOs ps_clear_def dom_asUser_replace)
+  apply (simp add: asUser_replace_def)
+  apply (cases "t = t'"; simp)
+  apply (clarsimp simp: ps_clear_def objBits_simps)
+  done
+
 lemma asUser_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace> asUser t (setRegister f r)
           \<lbrace>\<lambda>_ . ct_not_inQ\<rbrace>"
   apply (clarsimp simp: submonad_asUser.fn_is_sm submonad_fn_def)
-  apply (rule hoare_seq_ext)+
-     prefer 4
-     apply (rule stateAssert_sp)
-    prefer 3
-    apply (rule gets_inv)
-   defer
-   apply (rule select_f_inv)
-   apply (case_tac x; simp)
-  apply (clarsimp simp: projectKOs asUser_replace_def obj_at'_def fun_upd_def
-          split: option.split kernel_object.split)
-  apply (clarsimp simp: ct_not_inQ_def obj_at'_def projectKOs objBitsKO_def  ps_clear_def dom_def)
-  apply (rule conjI; clarsimp; blast)
+  apply wpsimp
+  apply (clarsimp simp: ct_not_inQ_def)
+  apply (rule obj_at_asUser_replace_tcb)
+   apply (simp add: asUser_replace_def)
+  apply clarsimp
   done
 
 crunch valid_pde_mappings'[wp]: asUser "valid_pde_mappings'"
@@ -2688,7 +2689,7 @@ crunch inv[wp]: curDomain P
 crunch inv[wp]: schedule_switch_thread_fastfail P
 crunch inv[wp]: scheduleSwitchThreadFastfail P
 
-lemma setSchedulerAction_invs': (* not in wp set, clobbered by ssa_lift *)
+lemma setSchedulerAction_invs': (* not in wp set, clobbered by ssa_wp *)
   "\<lbrace>\<lambda>s. invs' s \<rbrace> setSchedulerAction ChooseNewThread \<lbrace>\<lambda>_. invs' \<rbrace>"
   by (wpsimp simp: invs'_def cur_tcb'_def valid_state'_def valid_irq_node'_def ct_not_inQ_def
                    valid_queues_def valid_queues_no_bitmap_def valid_queues'_def
@@ -2745,7 +2746,6 @@ lemma schedule_switch_thread_fastfail_wp:
 lemma schedule_corres:
   "corres dc (invs and valid_sched and valid_list) invs' (Schedule_A.schedule) ThreadDecls_H.schedule"
   supply ethread_get_wp[wp del]
-  supply ssa_lift[wp del]
   supply tcbSchedEnqueue_invs'[wp del]
   supply tcbSchedEnqueue_invs'_not_ResumeCurrentThread[wp del]
   supply setSchedulerAction_direct[wp]
@@ -3111,7 +3111,7 @@ lemma scheduleChooseNewThread_invs':
 
 lemma schedule_invs':
   "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  supply ssa_lift[wp del]
+  supply ssa_wp[wp del]
   apply (simp add: schedule_def)
   apply (rule_tac hoare_seq_ext, rename_tac t)
    apply (wp, wpc)
@@ -3198,7 +3198,7 @@ lemma scheduleChooseNewThread_ct_activatable'[wp]:
    scheduleChooseNewThread
    \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
   unfolding scheduleChooseNewThread_def
-  supply ssa_lift[wp del] (* FIXME this should not be in the wp set *)
+  supply ssa_wp[wp del]
   by (wpsimp simp: ct_in_state'_def
                 wp: ssa_invs' nextDomain_invs_no_cicd'
                     chooseThread_activatable_2[simplified ct_in_state'_def]
@@ -3207,7 +3207,7 @@ lemma scheduleChooseNewThread_ct_activatable'[wp]:
 
 lemma schedule_ct_activatable'[wp]:
   "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
-  supply ssa_lift[wp del] (* FIXME this should not be in the wp set *)
+  supply ssa_wp[wp del]
   apply (simp add: schedule_def)
   apply (rule_tac hoare_seq_ext, rename_tac t)
    apply (wp, wpc)

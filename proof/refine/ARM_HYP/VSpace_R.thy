@@ -1198,10 +1198,10 @@ proof -
                        apply (fastforce intro: valid_tcb_vcpu[OF valid_objs_valid_tcb] valid_arch_state_curr_vcpu)
                       apply (assumption)
                      apply (clarsimp simp add: tcb_relation_def arch_tcb_relation_def)
-                 apply (wpsimp simp: armv_contextSwitch_def wp: assert_get_tcb_ko' | rule hoare_drop_impE_R)+
-               apply (simp add: whenE_def split del: if_split, wp)[1]
-              apply (rule find_pd_for_asid_pd_at_asid_again)
-             apply wp
+                 apply (wpsimp simp: armv_contextSwitch_def if_apply_def2 wp: assert_get_tcb_ko')+
+            apply ((wp find_pd_for_asid_pd_at_asid_again
+                  | simp add: if_apply_def2 | wp_once hoare_drop_imps)+)
+
             apply clarsimp
             apply (frule page_directory_cap_pd_at_uniq, simp+)
             apply (frule(1) cte_wp_at_valid_objs_valid_cap)
@@ -1530,7 +1530,7 @@ lemma delete_asid_pool_corres:
         apply simp
         apply (strengthen valid_arch_state_unmap_strg')
         apply (fold cur_tcb'_def)
-        apply (wp mapM_wp')
+        apply (wp mapM_wp')+
        apply (clarsimp simp: cur_tcb'_def)
       apply (simp add: o_def pred_conj_def)
       apply wp
@@ -2021,7 +2021,7 @@ lemma vcpuSwitch_valid_objs'[wp]: "\<lbrace>valid_objs'\<rbrace> vcpuSwitch vcpu
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 crunch valid_objs' [wp]: flushPage "valid_objs'"
-  (wp: crunch_wps hoare_drop_imps simp: whenE_def crunch_simps ignore: getObject)
+  (wp: crunch_wps hoare_drop_imps simp: crunch_simps ignore: getObject)
 
 crunch inv: lookupPTSlot "P"
   (wp: loadObject_default_inv)
@@ -3464,7 +3464,7 @@ lemma armv_contextSwitch_invs [wp]:
   "\<lbrace>invs'\<rbrace> armv_contextSwitch pd asid \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: armv_contextSwitch_def)
   apply (wp dmo_invs' no_irq_armv_contextSwitch_HWASID no_irq)
-  apply (rule hoare_post_imp[rotated], wp)
+  apply (rule hoare_post_imp[rotated], rule getHWASID_invs)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
@@ -3476,7 +3476,7 @@ lemma armv_contextSwitch_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> armv_contextSwitch pd asid \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (simp add: armv_contextSwitch_def armv_contextSwitch_HWASID_def)
   apply (wp dmo_invs_no_cicd' no_irq_writeContextIDAndPD no_irq)
-  apply (rule hoare_post_imp[rotated], wp getHWASID_invs_no_cicd')
+  apply (rule hoare_post_imp[rotated], rule getHWASID_invs_no_cicd')
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
@@ -3577,7 +3577,7 @@ lemma setVMRoot_ksQ[wp]:
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps | wpcw
-          | simp add: whenE_def checkPDNotInASIDMap_def split del: if_split)+
+          | simp add: if_apply_def2 checkPDNotInASIDMap_def split del: if_split)+
   done
 
 crunch ksIdleThread[wp]: storeWordUser "\<lambda>s. P (ksIdleThread s)"
@@ -4262,7 +4262,6 @@ lemma vcpuSave_invs_no_cicd'[wp]:
           simp: get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_vmcr_def getACTLR_def
                 get_gic_vcpu_ctrl_hcr_def getSCTLR_def
                 vcpuSaveRegister_def vgicUpdate_def vcpuUpdate_def)+
-  apply (rule conjI; wpsimp)+
   done
 
 lemma valid_arch_state'_armHSCurVCPU_update[simp]:
@@ -4357,7 +4356,8 @@ lemma vcpuSwitch_valid_arch_state'[wp]:
    "\<lbrace>valid_arch_state' and (case v of None \<Rightarrow> \<top> | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x)\<rbrace>
        vcpuSwitch v \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   apply (wpsimp simp: vcpuSwitch_def modifyArchState_def
-         wp: vcpuDisable_hyp[simplified pred_conj_def] dmo_vcpu_hyp vcpuSave_valid_arch_state'
+         wp: vcpuDisable_hyp[simplified pred_conj_def] vcpuSave_hyp[unfolded pred_conj_def]
+             dmo_vcpu_hyp vcpuSave_valid_arch_state'
         | strengthen valid_arch_state'_armHSCurVCPU_update | simp)+
   apply (auto simp: valid_arch_state'_def pred_conj_def)
   done
@@ -4694,7 +4694,8 @@ lemma vcpuSwitch_invs'[wp]:
   "\<lbrace>invs' and (case v of None \<Rightarrow> \<top> | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x)\<rbrace>
        vcpuSwitch v \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wpsimp simp: vcpuSwitch_def modifyArchState_def
-         wp: vcpuDisable_hyp[simplified pred_conj_def] dmo_isb_invs' dmo_vcpu_hyp vcpuSave_invs'
+         wp: vcpuDisable_hyp[simplified pred_conj_def] vcpuSave_hyp[unfolded pred_conj_def]
+             dmo_isb_invs' dmo_vcpu_hyp vcpuSave_invs'
         | strengthen invs'_armHSCurVCPU_update | simp)+
   apply (auto simp: invs'_def valid_state'_def valid_arch_state'_def pred_conj_def)
   done
@@ -4703,7 +4704,8 @@ lemma vcpuSwitch_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd' and (case v of None \<Rightarrow> \<top> | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x)\<rbrace>
        vcpuSwitch v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
   apply (wpsimp simp: vcpuSwitch_def modifyArchState_def
-                  wp: vcpuDisable_hyp[simplified pred_conj_def] gets_wp vcpuSave_invs_no_cicd'
+                  wp: vcpuDisable_hyp[simplified pred_conj_def] vcpuSave_hyp[unfolded pred_conj_def]
+                       gets_wp vcpuSave_invs_no_cicd'
                        dmo_isb_invs' dmo_vcpu_hyp
         | strengthen invs_no_cicd'_armHSCurVCPU_update | simp)+
   apply (auto simp: invs_no_cicd'_def valid_state'_def valid_arch_state'_def pred_conj_def)
@@ -4730,20 +4732,12 @@ lemma setVMRoot_valid_arch_state'[wp]:
      setVMRoot p
    \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
-  apply ((wpsimp wp: hoare_vcg_imp_lift hoare_vcg_ex_lift
+  apply ((wpsimp wp: hoare_vcg_ex_lift hoare_drop_imps
                     getObject_tcb_wp valid_case_option_post_wp'
-                    whenE_inv locateSlotTCB_inv)+
-        , rule_tac x=x in exI
-        , subst simp_thms
-        , clarsimp)+
-  apply wpsimp+
-  apply (rule_tac Q="\<lambda>_. valid_arch_state' and live_vcpu_at_tcb p"
-                  in hoare_post_imp)
-    apply clarsimp
-    apply fastforce
-    apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_ex_lift
-                      getObject_tcb_wp valid_case_option_post_wp'
-                      whenE_inv locateSlotTCB_inv)+
+               simp: if_apply_def2
+    | wp hoare_vcg_all_lift)+)
+
+  apply (simp add: exI cong: option.case_cong)
   done
 
 lemma getObject_tcb_hyp_invs': "\<lbrace>invs'\<rbrace> getObject p
@@ -4772,7 +4766,7 @@ lemma setVMRoot_invs'[wp]:
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
    apply (wp hoare_drop_imps getObject_tcb_hyp_invs'
           | wpcw
-          | simp add: whenE_def checkPDNotInASIDMap_def split del: if_split)+
+          | simp add: if_apply_def2 checkPDNotInASIDMap_def split del: if_split)+
   done
 
 lemma getObject_tcb_hyp_invs_no_cicd': "\<lbrace>invs_no_cicd'\<rbrace> getObject p
@@ -4804,7 +4798,7 @@ lemma setVMRoot_invs_no_cicd'[wp]:
              armv_contextSwitch_invs_no_cicd' getHWASID_invs_no_cicd'
              dmo_setCurrentPD_invs_no_cicd'
           | wpcw
-          | simp add: whenE_def checkPDNotInASIDMap_def split del: if_split)+
+          | simp add: if_apply_def2 checkPDNotInASIDMap_def split del: if_split)+
   done
 
 

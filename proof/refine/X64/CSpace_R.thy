@@ -3715,12 +3715,11 @@ lemma deriveCap_derived:
   deriveCap slot c'
   \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow>
           cte_wp_at' (is_derived' (ctes_of s) slot rv \<circ> cteCap) slot s\<rbrace>, -"
-  including no_pre
   unfolding deriveCap_def badge_derived'_def
-  apply (cases c'; (wp ensureNoChildren_wp | simp add: isCap_simps Let_def
+  apply (cases c'; (solves \<open>(wp ensureNoChildren_wp | simp add: isCap_simps Let_def
         | clarsimp simp: badge_derived'_def vsCapRef_def
         | erule cte_wp_at_weakenE' disjE
-        | rule is_derived'_def[THEN meta_eq_to_obj_eq, THEN iffD2])+)
+        | rule is_derived'_def[THEN meta_eq_to_obj_eq, THEN iffD2])+\<close>)?)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability;
          simp add: X64_H.deriveCap_def Let_def isCap_simps

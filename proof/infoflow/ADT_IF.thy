@@ -816,12 +816,12 @@ crunch valid_sched[wp]: do_user_op_if "valid_sched"
 
 lemma no_irq_user_memory_update[simp]:
   "no_irq (user_memory_update a)"
-  apply(clarsimp simp: no_irq_def user_memory_update_def)
+  apply(wpsimp simp: no_irq_def user_memory_update_def)
   done
 
 lemma no_irq_device_memory_update[simp]:
   "no_irq (device_memory_update a)"
-  apply(clarsimp simp: no_irq_def device_memory_update_def)
+  apply(wpsimp simp: no_irq_def device_memory_update_def)
   done
 
 crunch irq_masks[wp]: do_user_op_if "\<lambda>s. P (irq_masks_of_state s)"
@@ -1040,7 +1040,7 @@ lemma kernel_entry_silc_inv[wp]: "\<lbrace>silc_inv aag st and einvs and simple_
   apply (wpsimp simp: tcb_cap_cases_def arch_tcb_update_aux2
                   wp: static_imp_wp handle_event_silc_inv thread_set_silc_inv_trivial
              thread_set_invs_trivial thread_set_not_state_valid_sched thread_set_pas_refined
-         | rule hoare_vcg_conj_lift hoare_convert_imp)+
+           | wp_once hoare_vcg_imp_lift)+
   apply force
   done
 
@@ -3070,7 +3070,7 @@ lemma kernel_entry_if_next_irq_state_of_state:
   apply(erule use_validE_R)
    apply(rule_tac Q'="\<lambda>_. irq_state_inv i_s" in hoare_post_imp_R)
    apply (rule validE_validE_R')
-    apply(wp handle_event_irq_state_inv[where sta=st and irq=irq] | simp)+
+    apply(rule handle_event_irq_state_inv[where sta=st and irq=irq] | simp)+
    apply(clarsimp simp: irq_state_inv_def)
   apply (simp add: arch_tcb_update_aux2)
   apply(erule_tac f="thread_set (tcb_arch_update (arch_tcb_context_set uc)) t" in use_valid)
@@ -3101,7 +3101,6 @@ lemma kernel_entry_if_next_irq_state_of_state_next:
   apply(simp add: irq_state_inv_def)
   done
 
-thm irq_measure_if_inv
 lemma kernel_entry_if_irq_measure:
   "\<lbrakk>event \<noteq> Interrupt; invs i_s; domain_sep_inv False st i_s; irq_is_recurring irq i_s\<rbrakk>
    \<Longrightarrow> ((Inr (), a), b) \<in> fst (kernel_entry_if event uc i_s)

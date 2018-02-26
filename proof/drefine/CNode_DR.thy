@@ -2176,7 +2176,7 @@ lemma dcorres_ensure_empty:
         apply (rule corres_whenE)
           apply (simp add:transform_cap_def split:cap.splits arch_cap.splits)
           apply (rule dcorres_free_throw)
-  apply (wp|clarsimp)+
+  apply (wp|clarsimp|wpfix)+
   done
 
 lemma ensure_no_children_dummy:

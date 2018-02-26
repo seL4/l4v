@@ -222,26 +222,25 @@ crunch integrity_autarch: set_mcpriority "integrity aag X st"
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma invoke_tcb_tc_respects_aag:
-
   "\<lbrace> integrity aag X st and pas_refined aag
          and einvs and simple_sched_action and tcb_inv_wf (ThreadControl t sl ep mcp priority croot vroot buf)
          and K (authorised_tcb_inv aag (ThreadControl t sl ep mcp priority croot vroot buf))\<rbrace>
      invoke_tcb (ThreadControl t sl ep mcp priority croot vroot buf)
    \<lbrace>\<lambda>rv. integrity aag X st and pas_refined aag\<rbrace>"
-  including no_pre
   apply (rule hoare_gen_asm)+
   apply (subst invoke_tcb.simps)
   apply (subst set_priority_extended.dxo_eq)
   apply (rule hoare_vcg_precond_imp)
-  apply (rule_tac P="case ep of Some v \<Rightarrow> length v = word_bits | _ \<Rightarrow> True"
-                in hoare_gen_asm)
-  apply wp
-      apply ((((simp add: conj_comms(1, 2) del: hoare_post_taut hoare_True_E_R
+   apply (rule_tac P="case ep of Some v \<Rightarrow> length v = word_bits | _ \<Rightarrow> True"
+                 in hoare_gen_asm)
+   apply (simp only: split_def)
+   apply ((simp add: conj_comms del: hoare_True_E_R,
+                  strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
         | rule wp_split_const_if wp_split_const_if_R
                    hoare_vcg_all_lift_R
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
                    hoare_vcg_R_conj
-        | (wp
+        | wp
              restart_integrity_autarch set_mcpriority_integrity_autarch
              as_user_integrity_autarch thread_set_integrity_autarch
              option_update_thread_integrity_autarch thread_set_pas_refined_triv
@@ -273,16 +272,15 @@ lemma invoke_tcb_tc_respects_aag:
              checked_insert_no_cap_to
              out_no_cap_to_trivial[OF ball_tcb_cap_casesI]
              thread_set_ipc_tcb_cap_valid
-             cap_delete_pas_refined[THEN valid_validE_E])+
+             cap_delete_pas_refined[THEN valid_validE_E]
         | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
                     emptyable_def a_type_def partial_inv_def
-               del: hoare_post_taut hoare_True_E_R
+               del: hoare_True_E_R
         | wpc
         | strengthen use_no_cap_to_obj_asid_strg
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"]
-        )+)[1]),(rule_tac x="\<lambda>_. invs and valid_list and valid_sched and integrity aag X st and pas_refined aag and simple_sched_action" in simplify_post,simp,erule use_safe_id)?)+
-  (* clocked at around 3min 20secs on my home machine - TS *)
+        )+
   apply (clarsimp simp: authorised_tcb_inv_def )
   by (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
                         is_cap_simps is_valid_vtable_root_def
@@ -291,8 +289,7 @@ lemma invoke_tcb_tc_respects_aag:
                         cap_asid_def vs_cap_ref_def
                         clas_no_asid cli_no_irqs
                         emptyable_def
-                 split: option.split_asm
-       | rule conjI | erule pas_refined_refl)+ (*takes a while*)
+       | rule conjI | erule pas_refined_refl)+
 
 lemma invoke_tcb_unbind_notification_respects:
   "\<lbrace>integrity aag X st and pas_refined aag

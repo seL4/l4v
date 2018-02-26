@@ -121,12 +121,7 @@ lemma tcb_empty_thread_slot_wpE:
   "\<lbrace><(target_tcb,slot) \<mapsto>c NullCap \<and>* R>\<rbrace>
   tcb_empty_thread_slot target_tcb slot
   \<lbrace>\<lambda>_. <(target_tcb,slot) \<mapsto>c NullCap \<and>* R>\<rbrace>, \<lbrace>E\<rbrace>"
-  apply (clarsimp simp: tcb_empty_thread_slot_def | wp)+
-    apply (rule hoare_whenE_wp)
-    apply (simp add:validE_def)
-    apply (rule hoare_pre_cont)
-   apply simp
-   apply wp
+  apply (clarsimp simp: tcb_empty_thread_slot_def | wp hoare_FalseE[where f="delete_cap x" for x])+
   apply (clarsimp dest!:opt_cap_sep_imp simp:reset_cap_asid_simps2)
   done
 

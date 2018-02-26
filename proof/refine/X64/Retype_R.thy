@@ -2388,10 +2388,8 @@ proof -
   show ?thesis
   proof(cases "Types_H.toAPIType ty")
     case None thus ?thesis
-      including no_pre
       using not_0
       apply (clarsimp simp: createNewCaps_def Arch_createNewCaps_def)
-      apply wp
       using cover
       apply (simp add: range_cover_def)
       using cover
@@ -2422,64 +2420,68 @@ proof -
 
          -- "PageTableObject"
          apply wp
+          apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
+          apply (simp only: imp_conv_disj page_table_at'_def typ_at_to_obj_at_arches)
+          apply (rule hoare_chain)
+            apply (rule hoare_vcg_conj_lift)
+             apply (rule createObjects_aligned[OF _ range_cover.range_cover_n_less(1)
+                                                      [where 'a=64, unfolded word_bits_len_of, OF cover]
+                                                  not_0];
+                    simp add: objBits_simps archObjSize_def bit_simps word_bits_def)
+            apply (rule createObjects_obj_at[where 'a=pte, OF _ not_0];
+                   simp add: objBits_simps archObjSize_def bit_simps projectKOs)
+           apply simp
+          apply (clarsimp simp: objBits_simps archObjSize_def bit_simps)
+         apply clarsimp
+
+        -- "PageDirectoryObject"
+        apply wp
          apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
-         apply (simp only: imp_conv_disj page_table_at'_def typ_at_to_obj_at_arches)
+         apply (simp only: imp_conv_disj page_directory_at'_def typ_at_to_obj_at_arches)
          apply (rule hoare_chain)
            apply (rule hoare_vcg_conj_lift)
             apply (rule createObjects_aligned[OF _ range_cover.range_cover_n_less(1)
                                                      [where 'a=64, unfolded word_bits_len_of, OF cover]
                                                  not_0];
                    simp add: objBits_simps archObjSize_def bit_simps word_bits_def)
-           apply (rule createObjects_obj_at[where 'a=pte, OF _ not_0];
+           apply (rule createObjects_obj_at[where 'a=pde, OF _ not_0];
                   simp add: objBits_simps archObjSize_def bit_simps projectKOs)
           apply simp
          apply (clarsimp simp: objBits_simps archObjSize_def bit_simps)
+        apply simp
 
-        -- "PageDirectoryObject"
-        apply wp
+       -- "PDPointerTableObject"
+       apply wp
         apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
-        apply (simp only: imp_conv_disj page_directory_at'_def typ_at_to_obj_at_arches)
+        apply (simp only: imp_conv_disj pd_pointer_table_at'_def typ_at_to_obj_at_arches)
         apply (rule hoare_chain)
           apply (rule hoare_vcg_conj_lift)
            apply (rule createObjects_aligned[OF _ range_cover.range_cover_n_less(1)
                                                     [where 'a=64, unfolded word_bits_len_of, OF cover]
                                                 not_0];
                   simp add: objBits_simps archObjSize_def bit_simps word_bits_def)
-          apply (rule createObjects_obj_at[where 'a=pde, OF _ not_0];
+          apply (rule createObjects_obj_at[where 'a=pdpte, OF _ not_0];
                  simp add: objBits_simps archObjSize_def bit_simps projectKOs)
          apply simp
         apply (clarsimp simp: objBits_simps archObjSize_def bit_simps)
-
-       -- "PDPointerTableObject"
-       apply wp
-       apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
-       apply (simp only: imp_conv_disj pd_pointer_table_at'_def typ_at_to_obj_at_arches)
-       apply (rule hoare_chain)
-         apply (rule hoare_vcg_conj_lift)
-          apply (rule createObjects_aligned[OF _ range_cover.range_cover_n_less(1)
-                                                   [where 'a=64, unfolded word_bits_len_of, OF cover]
-                                               not_0];
-                 simp add: objBits_simps archObjSize_def bit_simps word_bits_def)
-         apply (rule createObjects_obj_at[where 'a=pdpte, OF _ not_0];
-                simp add: objBits_simps archObjSize_def bit_simps projectKOs)
-        apply simp
-       apply (clarsimp simp: objBits_simps archObjSize_def bit_simps)
+       apply simp
 
       -- "PML4Object"
       apply (wp hoare_vcg_const_Ball_lift)
-       apply (wp mapM_x_wp' )
-      apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
-      apply (simp only: imp_conv_disj page_map_l4_at'_def typ_at_to_obj_at_arches)
-      apply (rule hoare_chain)
-        apply (rule hoare_vcg_conj_lift)
-         apply (rule createObjects_aligned [OF _ range_cover.range_cover_n_less(1)
-                                                   [where 'a=64, unfolded word_bits_len_of, OF cover]
-                                               not_0];
-                simp add: objBits_simps archObjSize_def bit_simps word_bits_def)
-        apply (rule createObjects_obj_at [where 'a=pml4e, OF _  not_0];
-               simp add: objBits_simps archObjSize_def bit_simps projectKOs)
-       apply simp
-      apply (clarsimp simp: objBits_simps archObjSize_def bit_simps)
+        apply (wp mapM_x_wp' )
+       apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
+       apply (simp only: imp_conv_disj page_map_l4_at'_def typ_at_to_obj_at_arches)
+       apply (rule hoare_chain)
+         apply (rule hoare_vcg_conj_lift)
+          apply (rule createObjects_aligned [OF _ range_cover.range_cover_n_less(1)
+                                                    [where 'a=64, unfolded word_bits_len_of, OF cover]
+                                                not_0];
+                 simp add: objBits_simps archObjSize_def bit_simps word_bits_def)
+         apply (rule createObjects_obj_at [where 'a=pml4e, OF _  not_0];
+                simp add: objBits_simps archObjSize_def bit_simps projectKOs)
+        apply simp
+       apply (clarsimp simp: objBits_simps archObjSize_def bit_simps)
+      apply simp
    done
   next
     case (Some a) thus ?thesis
@@ -4256,7 +4258,8 @@ lemma mapM_x_threadSet_createNewCaps_futz:
    \<lbrace>\<lambda>_ s. P (ko_wp_at' P' p s)\<rbrace>" (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>\<lambda>_. ?POST\<rbrace>")
 apply (rule mapM_x_inv_wp[where P="?PRE"])
   apply simp
- apply (wp hoare_vcg_ball_lift threadSet_ko_wp_at2'[where P="id", simplified]
+ apply (rule hoare_pre)
+  apply (wp hoare_vcg_ball_lift threadSet_ko_wp_at2'[where P="id", simplified]
       | wp_once threadSet_ko_wp_at2'_futz[where Q="\<lambda>tcb. \<not>tcbQueued tcb \<and> tcbState tcb = Inactive"]
       | simp)+
 done
@@ -4299,7 +4302,6 @@ lemma createNewCaps_ko_wp_atQ':
                    \<longrightarrow> P' v \<longrightarrow> P True)\<rbrace>
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv s. P (ko_wp_at' P' p s)\<rbrace>"
-  including no_pre
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp: createNewCaps_def X64_H.toAPIType_def
              split del: if_split)
@@ -4315,7 +4317,9 @@ lemma createNewCaps_ko_wp_atQ':
                      copyGlobalMappings_ko_wp_at[where v="\<forall>pml4e :: pml4e. P' (injectKO pml4e)"]
                    | simp add: makeObjectKO_def objBitsKO_def archObjSize_def APIType_capBits_def
                                objBits_def curDomain_def bit_simps
-                   | intro conjI impI | fastforce)+
+                            split del: if_split
+                   | intro conjI impI | fastforce
+                   | split if_split_asm)+
   done
 
 lemmas createNewCaps_ko_wp_at'

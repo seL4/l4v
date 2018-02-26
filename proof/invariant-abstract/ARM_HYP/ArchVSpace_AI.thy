@@ -72,7 +72,7 @@ lemma set_vcpu_typ_at[wp]:
 
 lemma modify_obj_at : "\<lbrakk>\<forall>s. kheap s p = kheap (f s) p\<rbrakk> \<Longrightarrow>
   \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> modify f \<lbrace> \<lambda>rv s. P (obj_at P' p s)\<rbrace>"
-  by (clarsimp simp: obj_at_def)
+  by (wpsimp simp: obj_at_def)
 
 sublocale
   vcpu_disable: non_vspace_non_cap_op "vcpu_disable vcpu" +
@@ -88,16 +88,16 @@ sublocale
   done
 
 crunch typ_at [wp]: vcpu_disable "\<lambda>s. P (typ_at T p s)"
-  (simp: assertE_def whenE_def when_def wp: crunch_wps ignore: do_machine_op)
+  (simp: assertE_def crunch_simps wp: crunch_wps ignore: do_machine_op)
 
 crunch typ_at [wp]: vcpu_save "\<lambda>s. P (typ_at T p s)"
-  (simp: assertE_def whenE_def when_def wp: crunch_wps ignore: do_machine_op)
+  (simp: assertE_def crunch_simps wp: crunch_wps ignore: do_machine_op)
 
 crunch typ_at [wp]: vcpu_enable "\<lambda>s. P (typ_at T p s)"
-  (simp: assertE_def whenE_def when_def wp: crunch_wps ignore: do_machine_op)
+  (simp: assertE_def crunch_simps wp: crunch_wps ignore: do_machine_op)
 
 crunch typ_at [wp]: vcpu_restore "\<lambda>s. P (typ_at T p s)"
-  (simp: assertE_def whenE_def when_def wp: crunch_wps ignore: do_machine_op)
+  (simp: assertE_def crunch_simps wp: crunch_wps ignore: do_machine_op)
 
 (* FIXME: move to Invariant_AI *)
 definition
@@ -378,7 +378,7 @@ lemma dmo_pd_at_asid [wp]:
 
 
 crunch inv: find_pd_for_asid "P"
-  (simp: assertE_def whenE_def wp: crunch_wps)
+  (simp: assertE_def crunch_simps wp: crunch_wps)
 
 
 lemma find_pd_for_asid_pd_at_asid [wp]:
@@ -1144,10 +1144,10 @@ crunch typ_at [wp]: do_machine_op "\<lambda>s. P (typ_at T p s)"
 
 
 crunch typ_at [wp]: set_vm_root "\<lambda>s. P (typ_at T p s)"
-  (simp: assertE_def whenE_def when_def wp: crunch_wps ignore: do_machine_op)
+  (simp: assertE_def crunch_simps wp: crunch_wps ignore: do_machine_op)
 
 crunch typ_at [wp]: flush_table "\<lambda>s. P (typ_at T p s)"
-  (simp: assertE_def whenE_def when_def wp: crunch_wps ignore:)
+  (simp: assertE_def crunch_simps wp: crunch_wps ignore:)
 
 
 lemmas flush_table_typ_ats [wp] = abs_typ_at_lifts [OF flush_table_typ_at]
@@ -1165,16 +1165,16 @@ lemma set_vcpu_pspace_aligned[wp]:
   done
 
 crunch aligned [wp]: vcpu_save pspace_aligned
-  (simp: crunch_simps whenE_def when_def wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch aligned [wp]: vcpu_disable pspace_aligned
-  (simp: crunch_simps whenE_def when_def wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch aligned [wp]: set_vm_root pspace_aligned
-  (simp: crunch_simps whenE_def when_def wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch aligned [wp]: flush_table pspace_aligned
-  (simp: crunch_simps whenE_def when_def wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma find_pd_for_asid_page_directory [wp]:
   "\<lbrace>valid_vspace_objs\<rbrace>
@@ -1292,7 +1292,7 @@ lemma vcpu_disable_valid_objs[wp] : "\<lbrace>valid_objs\<rbrace> vcpu_disable p
   done
 
 crunch valid_objs [wp]: vcpu_restore "valid_objs"
-  (wp: crunch_wps hoare_drop_imps simp: Metis.not_atomize whenE_def crunch_simps)
+  (wp: crunch_wps hoare_drop_imps simp: Metis.not_atomize crunch_simps)
 
 lemma vcpu_actlr_update_valid_objs[wp] :
  "\<lbrace>valid_objs\<rbrace> vcpu_update vr (vcpu_actlr_update (\<lambda>_. a)) \<lbrace>\<lambda>_. valid_objs\<rbrace>"
@@ -1324,10 +1324,10 @@ lemma vcpu_save_valid_objs[wp] : "\<lbrace>valid_objs\<rbrace> vcpu_save v \<lbr
   done
 
 crunch valid_objs [wp]: vcpu_switch "valid_objs"
-  (wp: crunch_wps hoare_drop_imps simp: Metis.not_atomize whenE_def crunch_simps when_def)
+  (wp: crunch_wps hoare_drop_imps simp: Metis.not_atomize crunch_simps)
 
 crunch valid_objs [wp]: flush_page "valid_objs"
-  (wp: crunch_wps hoare_drop_imps simp: whenE_def crunch_simps)
+  (wp: crunch_wps hoare_drop_imps simp: crunch_simps)
 
 lemma arch_thread_set_is_thread_set:
   "arch_thread_set f t = thread_set (tcb_arch_update f) t"
@@ -2871,32 +2871,8 @@ crunch pred_tcb_at[wp]: vcpu_update, vcpu_save_register, vgic_update "pred_tcb_a
 
 crunch pred_tcb_at[wp]: vcpu_disable, vcpu_enable, vcpu_restore "pred_tcb_at proj P t"
 
-lemma vcpu_save_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> vcpu_save vcpu \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
-  unfolding vcpu_save_def
-  apply (cases vcpu; simp)
-  apply (case_tac a; simp)
-  apply (wp | wpc | clarsimp | rule_tac S="set [0..<num_list_regs]" in mapM_wp)+
-  done
-
-lemma vcpu_switch_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> vcpu_switch vcpu \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
-  unfolding vcpu_switch_def by (cases vcpu; wpsimp)
-
-crunch pred_tcb_at[wp]: gets_the "pred_tcb_at proj P (gets_tcb t)"
-
-lemma svr_pred_st_tcb[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_vm_root t \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
-  apply (simp add: set_vm_root_def)
-  apply wp
-   apply (rename_tac cap, case_tac cap, (simp add: throwError_def | wp)+)
-   apply (rename_tac arch_cap)
-   apply (case_tac arch_cap, (simp add: throwError_def | wp)+)
-   apply (rename_tac word mapped)
-   apply (case_tac mapped, (simp add: throwError_def | wp)+)
-    apply(case_tac "word \<noteq> pd'")
-     apply (simp add: whenE_def | wp find_pd_for_asid_pred_tcb_at)+
-  done
+crunch pred_tcb_at[wp]: set_vm_root "pred_tcb_at proj P t"
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch typ_at [wp]: set_vm_root "\<lambda>s. P (typ_at T p s)"
   (simp: crunch_simps)

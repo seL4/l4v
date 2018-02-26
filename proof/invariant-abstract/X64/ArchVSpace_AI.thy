@@ -165,7 +165,7 @@ lemma dmo_vspace_at_asid [wp]:
   done
 
 crunch inv: find_vspace_for_asid "P"
-  (simp: assertE_def whenE_def wp: crunch_wps)
+  (simp: assertE_def crunch_simps wp: crunch_wps)
 
 
 lemma find_vspace_for_asid_vspace_at_asid [wp]:
@@ -935,10 +935,8 @@ lemma svr_invs [wp]:
 
 crunch pred_tcb_at[wp]: set_current_vspace_root "pred_tcb_at proj P t"
 
-lemma svr_pred_st_tcb[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_vm_root t \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
-  apply (simp add: set_vm_root_def )
-  by (wp get_cap_wp | wpc | simp add: whenE_def split del: if_split)+
+crunch pred_tcb_at[wp]: set_vm_root "pred_tcb_at proj P t"
+  (simp: crunch_simps)
 
 crunch typ_at [wp]: get_current_cr3, set_vm_root "\<lambda>s. P (typ_at T p s)"
   (simp: crunch_simps)

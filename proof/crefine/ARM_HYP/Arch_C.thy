@@ -1834,13 +1834,13 @@ lemma performPageInvocationMapPTE_ccorres:
     apply (wp valid_pte_slots_lift2 hoare_drop_imps hoare_vcg_all_lift)
    apply (vcg)
   apply simp
+  apply (strengthen refl[where t=True] UNIV_I, simp)?
   apply (rule conjI, fastforce)
   apply (rule conjI)
    apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def unat_1_0
                          valid_pte_slots'2_def isLeft_def last_map hd_map
                          ptr_add_def)
    apply (auto elim!: order_trans[rotated] simp: unat_word_ariths unat_arith_simps)[1]
-  apply (rule conjI, fastforce)
   apply (clarsimp simp: isLeft_def valid_pte_slots'2_def)
   apply (rule conjI, fastforce)
   apply (rule conjI, fastforce)
@@ -2265,7 +2265,7 @@ lemma performPageInvocationMapPDE_ccorres:
     apply (wp valid_pde_slots_lift2 hoare_drop_imps hoare_vcg_all_lift)
    apply (vcg)
   apply simp
-  apply (rule conjI, fastforce)
+  apply (strengthen refl[where t=True] UNIV_I, simp)?
   apply (rule conjI, fastforce)
   apply (rule conjI)
    apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def unat_1_0

@@ -2281,8 +2281,9 @@ crunch sch_act_wf[wp]: unbindNotification "\<lambda>s. sch_act_wf (ksSchedulerAc
 (wp: sbn_sch_act')
 
 crunch valid_queues'[wp]: cteDeleteOne valid_queues'
-  (simp: crunch_simps unless_def inQ_def
-     wp: crunch_wps sts_st_tcb' getObject_inv loadObject_default_inv threadSet_valid_queues'
+  (simp: crunch_simps inQ_def
+     wp: crunch_wps sts_st_tcb' getObject_inv loadObject_default_inv
+         threadSet_valid_queues' rescheduleRequired_valid_queues'_weak
  ignore: getObject)
 
 lemma cancelSignal_valid_queues'[wp]:
@@ -2644,8 +2645,6 @@ lemma send_ipc_corres:
              (invs' and  sch_act_not t and tcb_at' t and ep_at' ep)
              (send_ipc bl call bg cg t ep) (sendIPC bl call bg cg t ep)"
 proof -
-  have weak_sch_act_wf: "\<And>sa s. sch_act_wf sa s \<longrightarrow> weak_sch_act_wf sa s"
-    by (clarsimp, erule sch_act_wf_weak)
   show ?thesis
   apply (insert assms)
   apply (unfold send_ipc_def sendIPC_def Let_def)
@@ -2726,7 +2725,7 @@ proof -
                apply ((wp hoare_drop_imps do_ipc_transfer_tcb_caps weak_valid_sched_action_lift
                     | clarsimp simp: is_cap_simps)+)[1]
               apply (simp add: pred_conj_def)
-              apply (strengthen weak_sch_act_wf)
+              apply (strengthen sch_act_wf_weak)
               apply (simp add: valid_tcb_state'_def)
               apply (wp weak_sch_act_wf_lift_linear tcb_in_cur_domain'_lift hoare_drop_imps)[1]
              apply (wp gts_st_tcb_at)+
@@ -2808,7 +2807,7 @@ proof -
               apply ((wp hoare_drop_imps do_ipc_transfer_tcb_caps  weak_valid_sched_action_lift
                      | clarsimp simp:is_cap_simps)+)[1]
              apply (simp add: valid_tcb_state'_def pred_conj_def)
-             apply (strengthen weak_sch_act_wf)
+             apply (strengthen sch_act_wf_weak)
              apply (wp weak_sch_act_wf_lift_linear hoare_drop_imps)
             apply (wp gts_st_tcb_at)+
           apply (simp add: ep_relation_def split: list.split)
@@ -3144,7 +3143,8 @@ lemma cteDeleteOne_reply_cap_to'[wp]:
   apply (rule hoare_assume_pre)
   apply (subgoal_tac "isReplyCap (cteCap cte)")
    apply (wp hoare_vcg_ex_lift emptySlot_cte_wp_cap_other isFinalCapability_inv
-        | clarsimp simp: finaliseCap_def isCap_simps | simp)+
+        | clarsimp simp: finaliseCap_def isCap_simps | simp
+        | wp_once hoare_drop_imps)+
    apply (fastforce simp: cte_wp_at_ctes_of)
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   done

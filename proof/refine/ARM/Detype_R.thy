@@ -4039,7 +4039,7 @@ lemma createObjects'_psp_distinct:
      apply simp+
    apply unat_arith
   apply (rule hoare_pre)
-   apply (wpc|wp|simp add: unless_def alignError_def del: fun_upd_apply)+
+   apply (wpc|wp|simp add: unless_def alignError_def del: hoare_fail_any fun_upd_apply)+
   apply clarsimp
   apply (subst data_map_insert_def[symmetric])+
   apply (simp add: range_cover.unat_of_nat_n_shift)
@@ -4064,7 +4064,7 @@ lemma createObjects'_psp_aligned:
      apply simp+
    apply unat_arith
   apply (rule hoare_pre)
-   apply (wpc|wp|simp add: unless_def alignError_def del: fun_upd_apply)+
+   apply (wpc|wp|simp add: unless_def alignError_def del: fun_upd_apply hoare_fail_any)+
   apply clarsimp
   apply (frule(2) retype_aligned_distinct'(2)[where ko = ko and n= "n*2^us" ])
    apply (erule range_cover_rel)
@@ -5367,8 +5367,6 @@ proof -
                apply (rule placeNewObject_copyGlobalMapping_commute)
               apply (rule hoare_pre)
                apply (wp copyGlobalMappings_pspace_no_overlap' mapM_x_wp'| clarsimp simp: pdeBits_def)+
-             apply (rule hoare_pre)
-              apply (wp copyGlobalMappings_pspace_no_overlap' mapM_x_wp'| clarsimp simp: pdeBits_def)+
             apply (clarsimp simp:objBits_simps archObjSize_def pdBits_def pageBits_def word_bits_conv)
             apply assumption (* resolve assumption , yuck *)
            apply (simp add:append mapM_x_append bind_assoc pdeBits_def)

@@ -18,15 +18,15 @@ named_theorems DetSchedSchedule_AI_assms
 
 crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread, arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_etcbs
-  (simp: whenE_def ignore: clearExMonitor)
+  (simp: crunch_simps ignore: clearExMonitor)
 
 crunch valid_queues [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers valid_queues
-  (simp: whenE_def ignore: set_tcb_queue tcb_sched_action clearExMonitor)
+  (simp: crunch_simps ignore: set_tcb_queue tcb_sched_action clearExMonitor)
 
 crunch weak_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers "weak_valid_sched_action"
-  (simp: whenE_def ignore: clearExMonitor)
+  (simp: crunch_simps ignore: clearExMonitor)
 
 crunch ct_not_in_q[wp]: set_vm_root "ct_not_in_q"
   (wp: crunch_wps simp: crunch_simps)
@@ -72,27 +72,27 @@ lemma switch_to_idle_thread_ct_in_cur_domain [wp, DetSchedSchedule_AI_assms]:
       | simp add: ct_in_cur_domain_def)+
 
 crunch ct_not_in_q [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers ct_not_in_q
-  (simp: whenE_def ignore: clearExMonitor)
+  (simp: crunch_simps ignore: clearExMonitor)
 
 crunch is_activatable [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers "is_activatable t"
-  (simp: whenE_def ignore: clearExMonitor)
+  (simp: crunch_simps ignore: clearExMonitor)
 
 crunch valid_sched_action [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_sched_action
-  (simp: whenE_def ignore: clearExMonitor)
+  (simp: crunch_simps ignore: clearExMonitor)
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_sched
-  (simp: whenE_def ignore: clearExMonitor)
+  (simp: crunch_simps ignore: clearExMonitor)
 
 crunch exst[wp]: set_vm_root "\<lambda>s. P (exst s)"
   (wp: crunch_wps hoare_whenE_wp simp: crunch_simps)
 
 crunch ct_in_cur_domain_2[wp]: set_vm_root
   "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)"
-  (simp: whenE_def)
+  (simp: crunch_simps)
 
 crunch ct_in_cur_domain_2 [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread
   "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)"
-  (simp: whenE_def)
+  (simp: crunch_simps)
 
 crunch valid_blocked[wp]: set_vm_root valid_blocked
   (simp: crunch_simps)
