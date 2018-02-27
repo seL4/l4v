@@ -795,11 +795,11 @@ lemma as_user_set_register_respects_indirect:
     K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at receive_blocked thread st
            \<and> bound_tcb_at (op = (Some ntfnptr)) thread st)
         \<and> (aag_has_auth_to aag Notify ntfnptr)) \<rbrace>
-   as_user thread (set_register r v)
+   as_user thread (setRegister r v)
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: as_user_def split_def set_object_def)
   apply wp
-  apply (clarsimp simp: in_monad set_register_def)
+  apply (clarsimp simp: in_monad setRegister_def)
   apply (cases "is_subject aag thread")
    apply (erule (1) integrity_update_autarch [unfolded fun_upd_def])
   apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
@@ -1361,10 +1361,10 @@ lemma as_user_current_ipc_buffer_register[wp]:
   done
 
 lemma set_register_tpidrurw_inv[wp]:
-  "r \<noteq> TPIDRURW \<Longrightarrow> \<lbrace>\<lambda>s. P (s TPIDRURW)\<rbrace> set_register r v\<lbrace>\<lambda>r s. P (s TPIDRURW)\<rbrace>"
-  by (simp add: set_register_def simpler_modify_def valid_def)
+  "r \<noteq> TPIDRURW \<Longrightarrow> \<lbrace>\<lambda>s. P (s TPIDRURW)\<rbrace> setRegister r v\<lbrace>\<lambda>r s. P (s TPIDRURW)\<rbrace>"
+  by (simp add: setRegister_def simpler_modify_def valid_def)
 
-crunch tpidrurw_inv [wp]: get_register "\<lambda>s. P (s TPIDRURW)"
+crunch tpidrurw_inv [wp]: getRegister "\<lambda>s. P (s TPIDRURW)"
 
 crunch current_ipc_buffer_register [wp]: handle_interrupt "\<lambda>s. P (current_ipc_buffer_register s)"
   (wp: crunch_wps simp: badge_register_def badgeRegister_def )
@@ -1385,10 +1385,6 @@ lemma TPIDRURW_notin_msg_registers[simp]:
               dest!: toEnum_eq_to_fromEnum_eq[THEN iffD1,rotated,OF sym])
   done
 
-lemma setRegister_is_set_register:
-  "setRegister = set_register"
-  by (rule ext, auto simp: setRegister_def set_register_def)
-
 lemma zet_zip_contrapos:
   "fst t \<notin> set xs  \<Longrightarrow> t \<notin> set (zip xs ys)"
   apply (rule ccontr)
@@ -1403,7 +1399,8 @@ lemma set_mrs_current_ipc_buffer_register:
   apply (wp mapM_x_wp[where S = UNIV] | wpc | simp)+
       apply (rule hoare_pre)
        apply (wp set_object_wp | wpc | simp)+
-  apply (auto simp: current_ipc_buffer_register_def get_tcb_def)
+  apply (auto simp: current_ipc_buffer_register_def arch_tcb_set_registers_def
+                    arch_tcb_get_registers_def get_tcb_def)
   done
 
 lemma thread_set_current_ipc_buffer_register:

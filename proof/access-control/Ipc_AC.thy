@@ -343,13 +343,13 @@ lemma set_mrs_respects_in_signalling':
   apply (rule impI)
   apply (subgoal_tac "\<forall>c'. integrity aag X st
           (s\<lparr>kheap := kheap s(thread \<mapsto>
-               TCB ((the (get_tcb thread s))\<lparr>tcb_arch :=  arch_tcb_context_set c' (tcb_arch (the (get_tcb thread s))) \<rparr>))\<rparr>)")
+               TCB ((the (get_tcb thread s))\<lparr>tcb_arch :=  arch_tcb_set_registers c' (tcb_arch (the (get_tcb thread s))) \<rparr>))\<rparr>)")
    apply (clarsimp simp: fun_upd_def st_tcb_at_nostate_upd [unfolded fun_upd_def])
   apply (rule allI)
   apply clarsimp
   apply (cases "is_subject aag thread")
    apply (erule (1) integrity_update_autarch)
-  apply (clarsimp simp: st_tcb_def2)
+  apply (clarsimp simp: st_tcb_def2 arch_tcb_set_registers_def)
   apply (rule send_upd_ctxintegrity[OF disjI1], auto simp: st_tcb_def2 direct_send_def)
   done
 
@@ -360,7 +360,7 @@ lemma as_user_set_register_respects:
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: as_user_def split_def set_object_def)
   apply wp
-  apply (clarsimp simp: in_monad set_register_def)
+  apply (clarsimp simp: in_monad setRegister_def)
   apply (cases "is_subject aag thread")
    apply (erule (1) integrity_update_autarch [unfolded fun_upd_def])
   apply (clarsimp simp: st_tcb_def2)
@@ -542,7 +542,7 @@ lemma as_user_set_register_respects_indirect:
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: as_user_def split_def set_object_def)
   apply wp
-  apply (clarsimp simp: in_monad set_register_def)
+  apply (clarsimp simp: in_monad setRegister_def)
   apply (cases "is_subject aag thread")
    apply (erule (1) integrity_update_autarch [unfolded fun_upd_def])
   apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
@@ -1852,8 +1852,8 @@ lemma set_mrs_respects_in_ipc:
    apply arith
    apply simp
    apply wp+
-  apply (fastforce intro: update_tcb_context_in_ipc [unfolded fun_upd_def])
-  done
+  apply (clarsimp simp: arch_tcb_set_registers_def)
+  by (rule update_tcb_context_in_ipc [unfolded fun_upd_def]; fastforce)
 
 lemma do_fault_transfer_respects_in_ipc:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and
