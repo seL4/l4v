@@ -84,7 +84,7 @@ where
     thread \<leftarrow> liftE $ gets cur_thread;
     info \<leftarrow> without_preemption $ get_message_info thread;
     ptr \<leftarrow> without_preemption $ liftM data_to_cptr $
-          as_user thread $ get_register cap_register;
+          as_user thread $ getRegister cap_register;
     syscall
       (doE
          (cap, slot) \<leftarrow> cap_fault_on_failure (of_bl ptr) False $ lookup_cap_and_slot thread ptr;
@@ -147,7 +147,7 @@ definition
      thread \<leftarrow> gets cur_thread;
 
      ep_cptr \<leftarrow> liftM data_to_cptr $ as_user thread $
-                 get_register cap_register;
+                 getRegister cap_register;
 
      (cap_fault_on_failure (of_bl ep_cptr) True $ doE
         ep_cap \<leftarrow> lookup_cap thread ep_cptr;

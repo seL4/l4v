@@ -640,59 +640,59 @@ lemma handle_event_bisim:
                              handle_reply_def
                         cong: syscall.case_cong)
 
-      apply (rename_tac syscall)
-      apply (case_tac syscall, simp_all)[1]
+       apply (rename_tac syscall)
+       apply (case_tac syscall, simp_all)[1]
 
-             apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
-            apply (rule bisim_guard_imp_both)
-             apply (rule bisim_symb_exec_r_bs)
-              apply (rule handle_reply_bisim)
-             apply (rule handle_recv_bisim)
-            apply simp
+              apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
+             apply (rule bisim_guard_imp_both)
+              apply (rule bisim_symb_exec_r_bs)
+               apply (rule handle_reply_bisim)
+              apply (rule handle_recv_bisim)
+             apply simp
 
+            apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
            apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
-          apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
-         apply (rule bisim_guard_imp_both, rule handle_recv_bisim, simp)
-        apply (rule bisim_guard_imp_both, rule handle_reply_bisim, simp)
+          apply (rule bisim_guard_imp_both, rule handle_recv_bisim, simp)
+         apply (rule bisim_guard_imp_both, rule handle_reply_bisim, simp)
 
-       apply (simp add: handle_yield_def Syscall_A.handle_yield_def)
-       apply (rule bisim_guard_imp_both, rule bisim_refl', simp)
+        apply (simp add: handle_yield_def Syscall_A.handle_yield_def)
+        apply (rule bisim_guard_imp_both, rule bisim_refl', simp)
 
-      apply (rule bisim_guard_imp_both, rule handle_recv_bisim, simp)
+       apply (rule bisim_guard_imp_both, rule handle_recv_bisim, simp)
+
+      apply (rule bisim_split_refl)
+        apply (rule handle_fault_bisim)
+       apply wp+
+      apply (simp add: cur_tcb_def)
 
      apply (rule bisim_split_refl)
        apply (rule handle_fault_bisim)
       apply wp+
      apply (simp add: cur_tcb_def)
 
+    apply (rule bisim_refl)
+    apply simp
+
+   apply (rename_tac vmfault_type)
+   apply (rule bisim_guard_imp_both)
     apply (rule bisim_split_refl)
-      apply (rule handle_fault_bisim)
-     apply wp+
-    apply (simp add: cur_tcb_def)
+      apply (rule bisim_split_catch_req)
+        apply (rule bisim_reflE)
+       apply (rule handle_fault_bisim)
+      apply wp
+      apply (case_tac vmfault_type, simp_all)[1]
+       apply (wp separate_state_pres)
+         apply (rule hoare_pre, wps, wp, simp)
+        apply wp
+         apply (rule hoare_pre, wps, wp, simp)
+        apply simp
 
-   apply (rule bisim_refl)
-   apply simp
-
-  apply (rename_tac vmfault_type)
-  apply (rule bisim_guard_imp_both)
-   apply (rule bisim_split_refl)
-     apply (rule bisim_split_catch_req)
-       apply (rule bisim_reflE)
-      apply (rule handle_fault_bisim)
-     apply wp
-     apply (case_tac vmfault_type, simp_all)[1]
-      apply (wp separate_state_pres)
-        apply (rule hoare_pre, wps, wp, simp)
-       apply wp
-        apply (rule hoare_pre, wps, wp, simp)
-       apply simp
-
-      apply (wp separate_state_pres)+
-       apply (rule hoare_pre, wps, wp+, simp)
-      apply wpsimp+
+       apply (wp separate_state_pres)+
+         apply (rule hoare_pre, wps, wp+, simp)
+        apply wpsimp+
    apply (simp add: cur_tcb_def)
 
-   apply (rule bisim_refl, simp)
+  apply (rule bisim_refl, simp)
   done
 
 lemma call_kernel_bisim:
