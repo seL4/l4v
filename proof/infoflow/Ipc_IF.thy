@@ -1428,11 +1428,6 @@ lemma aag_has_auth_to_read_mrs:
   done
 
 
-lemma get_register_det:
-  "det (get_register x)"
-  apply(clarsimp simp: get_register_def)
-  done
-
 abbreviation aag_can_read_or_affect where
   "aag_can_read_or_affect aag l x \<equiv>
     aag_can_read aag x \<or> aag_can_affect aag l x"
@@ -1482,7 +1477,7 @@ lemma copy_mrs_reads_respects:
            load_word_offs_reads_respects as_user_set_register_reads_respects'
            as_user_reads_respects
        | wpc
-       | simp add: set_register_det get_register_det split del: if_split)+
+       | simp add: det_setRegister det_getRegister split del: if_split)+
   apply clarsimp
   apply(rename_tac n')
   apply(subgoal_tac " ptr_range (x + of_nat n' * of_nat word_size) 2
@@ -1539,7 +1534,7 @@ lemma ev_irrelevant_bind:
 lemma get_message_info_reads_respects:
   "reads_respects aag l (K (aag_can_read_or_affect aag l ptr)) (get_message_info ptr)"
   apply (simp add: get_message_info_def)
-  apply (wp as_user_reads_respects | clarsimp simp: get_register_def)+
+  apply (wp as_user_reads_respects | clarsimp simp: getRegister_def)+
   done
 
 lemma do_normal_transfer_reads_respects:
@@ -1559,7 +1554,7 @@ lemma do_normal_transfer_reads_respects:
             lookup_extra_caps_auth get_message_info_rev
             get_mi_length' get_mi_length validE_E_wp_post_taut
         | wpc
-        | simp add: set_register_det ball_conj_distrib)+
+        | simp add: det_setRegister ball_conj_distrib)+
    apply (fastforce intro: aag_has_read_auth_can_read_or_affect_ipc_buffer)
   apply(rule gen_asm_ev)
   apply(simp add: do_normal_transfer_def transfer_caps_def)
@@ -1646,7 +1641,11 @@ lemma do_fault_transfer_reads_respects:
   "reads_respects aag l (K (aag_can_read_or_affect aag l sender \<and> ipc_buffer_has_auth aag receiver buf \<and>
     (case buf of None \<Rightarrow> True | Some buf' \<Rightarrow> is_aligned buf' msg_align_bits))) (do_fault_transfer badge sender receiver buf)"
   unfolding do_fault_transfer_def
-  apply (wp as_user_set_register_reads_respects' as_user_reads_respects set_message_info_reads_respects set_mrs_reads_respects' make_fault_msg_reads_respects thread_get_reads_respects | wpc | simp add: split_def set_register_det | wp_once hoare_drop_imps)+
+  apply (wp as_user_set_register_reads_respects' as_user_reads_respects set_message_info_reads_respects
+            set_mrs_reads_respects' make_fault_msg_reads_respects thread_get_reads_respects
+         | wpc
+         | simp add: split_def det_setRegister
+         | wp_once hoare_drop_imps)+
   done
 
 
@@ -2001,7 +2000,7 @@ lemma handle_fault_reply_reads_respects:
   apply(case_tac fault)
      apply (wp as_user_reads_respects thread_get_reads_respects
                thread_get_wp' handle_arch_fault_reply_reads_respects[simplified K_def]
-          | simp add: reads_lrefl det_zipWithM_x set_register_det)+
+          | simp add: reads_lrefl det_zipWithM_x det_setRegister)+
   done
 
 lemma lookup_ipc_buffer_has_read_auth':
@@ -2075,7 +2074,7 @@ lemma reply_from_kernel_reads_respects:
   unfolding reply_from_kernel_def fun_app_def
   apply (wp set_message_info_reads_respects set_mrs_reads_respects
             as_user_reads_respects lookup_ipc_buffer_reads_respects
-        | simp add: split_def reads_lrefl set_register_det)+
+        | simp add: split_def reads_lrefl det_setRegister)+
   done
 
 

@@ -593,7 +593,7 @@ lemma handle_invocation_reads_respects_g:
           )+
   apply (rule conjI)
    apply (clarsimp simp: requiv_g_cur_thread_eq simp: reads_equiv_f_g_conj)
-  apply (clarsimp simp: get_register_def invs_sym_refs invs_def valid_state_def valid_arch_state_ko_at_arm valid_pspace_vo valid_pspace_distinct)
+  apply (clarsimp simp: getRegister_def invs_sym_refs invs_def valid_state_def valid_arch_state_ko_at_arm valid_pspace_vo valid_pspace_distinct)
   apply (rule context_conjI)
    apply (simp add: ct_active_not_idle')
   apply (clarsimp simp: valid_pspace_def ct_in_state_def)
@@ -718,7 +718,7 @@ lemma handle_recv_reads_respects_f:
       apply (wp reads_respects_f[OF as_user_reads_respects,where st=st and Q=\<top>])
       apply simp
      apply (wp as_user_silc_inv[where st=st] | simp)+
-  apply (simp add: get_register_det invs_valid_objs tcb_at_invs)
+  apply (simp add: det_getRegister invs_valid_objs tcb_at_invs)
   done
 
 lemma handle_recv_globals_equiv:

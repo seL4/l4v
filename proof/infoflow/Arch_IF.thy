@@ -930,13 +930,6 @@ lemma modify_det:
   apply(clarsimp simp: det_def modify_def get_def put_def bind_def)
   done
 
-lemma set_register_det:
-  "det (set_register a b)"
-  unfolding set_register_def
-  apply(rule modify_det)
-  done
-
-
 lemma dummy_kheap_update:
   "st = st\<lparr> kheap := kheap st \<rparr>"
   by simp
@@ -966,7 +959,7 @@ lemma get_tcb_not_asid_pool_at:
 
 lemma as_user_set_register_ev2:
   "labels_are_invisible aag l (pasObjectAbs aag ` {thread,thread'}) \<Longrightarrow>
-   equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (op =) \<top> \<top> (as_user thread (set_register x y)) (as_user thread' (set_register a b))"
+   equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (op =) \<top> \<top> (as_user thread (setRegister x y)) (as_user thread' (setRegister a b))"
   apply(simp add: as_user_def)
   apply(rule equiv_valid_2_guard_imp)
    apply(rule_tac L="{pasObjectAbs aag thread}" and L'="{pasObjectAbs aag thread'}" and Q="\<top>" and Q'="\<top>" in ev2_invisible)
@@ -993,12 +986,12 @@ lemma reads_affects_equiv_get_tcb_eq:
   done
 
 lemma as_user_set_register_reads_respects':
-  "reads_respects aag l \<top> (as_user thread (set_register x y))"
+  "reads_respects aag l \<top> (as_user thread (setRegister x y))"
   apply (case_tac "aag_can_read aag thread \<or> aag_can_affect aag l thread")
    apply (simp add: as_user_def fun_app_def split_def)
    apply (rule gen_asm_ev)
    apply (wp set_object_reads_respects select_f_ev gets_the_ev)
-   apply (auto intro: reads_affects_equiv_get_tcb_eq set_register_det)[1]
+   apply (auto intro: reads_affects_equiv_get_tcb_eq det_setRegister)[1]
   apply(simp add: equiv_valid_def2)
   apply(rule as_user_set_register_ev2)
   apply(simp add: labels_are_invisible_def)

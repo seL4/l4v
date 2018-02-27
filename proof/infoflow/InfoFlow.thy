@@ -1248,7 +1248,7 @@ lemma as_user_reads_respects:
 lemma get_message_info_rev:
   "reads_equiv_valid_inv A aag (K (is_subject aag ptr)) (get_message_info ptr)"
   apply (simp add: get_message_info_def)
-  apply (wp as_user_rev | clarsimp simp: get_register_def)+
+  apply (wp as_user_rev | clarsimp simp: getRegister_def)+
   done
 
 lemma syscall_rev:

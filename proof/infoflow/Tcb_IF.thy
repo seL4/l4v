@@ -74,15 +74,7 @@ crunch globals_equiv[wp]: restart "globals_equiv st"
   (wp: cancel_ipc_valid_ko_at_arm hoare_vcg_if_lift2 dxo_wp_weak hoare_drop_imps
    ignore: reschedule_required possible_switch_to)
 
-lemma as_user_globals_equiv[wp]:
-  "\<lbrace> globals_equiv st and valid_ko_at_arm and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
-   as_user thread f
-   \<lbrace> \<lambda>_. globals_equiv st \<rbrace>"
-  unfolding as_user_def fun_app_def
-  apply (wp set_object_globals_equiv | simp add: split_def)+
-  apply (simp add: valid_ko_at_arm_def)
-  apply (clarsimp simp: get_tcb_def obj_at_def)
-  done
+declare as_user_globals_equiv[wp]
 
 lemma cap_ne_global_pd : "ex_nonz_cap_to word s \<Longrightarrow> valid_global_refs s \<Longrightarrow> word \<noteq> arm_global_pd (arch_state s)"
   unfolding ex_nonz_cap_to_def
@@ -330,7 +322,7 @@ lemma invoke_tcb_thread_preservation:
   assumes thread_set_P: "\<And>f ptr. \<lbrace>invs and P\<rbrace> thread_set (tcb_ipc_buffer_update f) ptr \<lbrace>\<lambda>_.P\<rbrace>"
   assumes thread_set_P': "\<And>f ptr. \<lbrace>invs and P\<rbrace> thread_set (tcb_fault_handler_update f) ptr \<lbrace>\<lambda>_.P\<rbrace>"
   assumes set_mcpriority_P: "\<And>mcp ptr. \<lbrace>invs and P\<rbrace> set_mcpriority ptr mcp \<lbrace>\<lambda>_.P\<rbrace>"
-  assumes set_register_P[wp]: "\<And>d. \<lbrace>P and invs and (\<lambda>s. t \<noteq> idle_thread s)\<rbrace> as_user t (set_register TPIDRURW d) \<lbrace>\<lambda>_. P\<rbrace>"
+  assumes set_register_P[wp]: "\<And>d. \<lbrace>P and invs and (\<lambda>s. t \<noteq> idle_thread s)\<rbrace> as_user t (setRegister TPIDRURW d) \<lbrace>\<lambda>_. P\<rbrace>"
   assumes P_trans[simp]: "\<And>f s. P (trans_state f s) = P s"
 shows "
    \<lbrace>P and invs and Tcb_AI.tcb_inv_wf (tcb_invocation.ThreadControl t sl ep mcp prio croot vroot buf)\<rbrace>
@@ -730,7 +722,7 @@ lemma invoke_tcb_reads_respects_f:
         | simp add: tcb_cap_cases_def | wpc)+
   apply (clarsimp simp: authorised_tcb_inv_def  authorised_tcb_inv_extra_def emptyable_def)
   by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
-                     set_register_det
+                     det_setRegister
                    | intro impI
                    | rule conjI)+
   (*Extra slow*)
