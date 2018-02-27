@@ -1583,8 +1583,8 @@ lemma clearUntypedFreeIndex_isolatable:
   done
 
 lemma emptySlot_isolatable:
-  "thread_actions_isolatable idx (emptySlot slot None)"
-  apply (simp add: emptySlot_def updateCap_def case_Null_If
+  "thread_actions_isolatable idx (emptySlot slot NullCap)"
+  apply (simp add: emptySlot_def updateCap_def case_Null_If Retype_H.postCapDeletion_def
              cong: if_cong)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                clearUntypedFreeIndex_isolatable
