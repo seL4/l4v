@@ -1576,9 +1576,9 @@ qed
 
 lemma user_getreg_corres:
  "corres op = (tcb_at t) (tcb_at' t)
-        (as_user t (get_register r)) (asUser t (getRegister r))"
+        (as_user t (getRegister r)) (asUser t (getRegister r))"
   apply (rule corres_as_user')
-  apply (clarsimp simp: get_register_def getRegister_def)
+  apply (clarsimp simp: getRegister_def)
   done
 
 lemma user_getreg_inv'[wp]:
@@ -1741,9 +1741,9 @@ lemma no_fail_asUser [wp]:
 lemma user_setreg_corres:
   "corres dc (tcb_at t)
              (tcb_at' t)
-             (as_user t (set_register r v))
+             (as_user t (setRegister r v))
              (asUser t (setRegister r v))"
-  apply (simp add: set_register_def setRegister_def)
+  apply (simp add: setRegister_def)
   apply (rule corres_as_user')
   apply (rule corres_modify'; simp)
   done
@@ -3708,7 +3708,8 @@ lemma get_mrs_corres:
   have S: "get = gets id"
     by (simp add: gets_def)
   have T: "corres (\<lambda>con regs. regs = map con msg_registers) (tcb_at t) (tcb_at' t)
-     (thread_get (arch_tcb_context_get o tcb_arch) t) (asUser t (mapM getRegister ARM_H.msgRegisters))"
+     (thread_get (arch_tcb_get_registers o tcb_arch) t) (asUser t (mapM getRegister ARM_H.msgRegisters))"
+    unfolding arch_tcb_get_registers_def
     apply (subst thread_get_as_user)
     apply (rule corres_as_user')
     apply (subst mapM_gets)
@@ -3827,7 +3828,7 @@ proof -
 
   show ?thesis using m
     unfolding setMRs_def set_mrs_def
-    apply (clarsimp  cong: option.case_cong split del: if_split)
+    apply (clarsimp simp: arch_tcb_set_registers_def arch_tcb_get_registers_def cong: option.case_cong split del: if_split)
     apply (subst bind_assoc[symmetric])
     apply (fold thread_set_def[simplified])
     apply (subst thread_set_as_user[where f="\<lambda>context. \<lambda>reg.
@@ -3886,8 +3887,8 @@ proof -
   have as_user_bit:
     "\<And>v :: word32. corres dc (tcb_at s and tcb_at r) (tcb_at' s and tcb_at' r)
            (mapM
-             (\<lambda>ra. do v \<leftarrow> as_user s (get_register ra);
-                      as_user r (set_register ra v)
+             (\<lambda>ra. do v \<leftarrow> as_user s (getRegister ra);
+                      as_user r (setRegister ra v)
                    od)
              (take (unat n) msg_registers))
            (mapM
