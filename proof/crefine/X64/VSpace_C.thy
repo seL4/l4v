@@ -789,6 +789,29 @@ lemma ccorres_pre_gets_x86KSASIDTable_ksArchState:
   apply clarsimp
   done
 
+(* FIXME: MOVE to CSpaceAcc_C *)
+lemma ccorres_pre_gets_x86KSASIDTable_ksArchState':
+  assumes cc: "\<And>rv. ccorres r xf (P and (\<lambda>s. rv = (x64KSASIDTable \<circ> ksArchState) s)) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  P
+                  {s. \<forall>rv. s \<in> P' rv }
+                          hs (gets (x64KSASIDTable \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (rule gets_sp)
+     apply (clarsimp simp: empty_fail_def simpler_gets_def)
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply clarsimp
+  done
+
 abbreviation
   "findVSpaceForASID_xf \<equiv> liftxf errstate findVSpaceForASID_ret_C.status_C findVSpaceForASID_ret_C.vspace_root_C ret__struct_findVSpaceForASID_ret_C_'"
 
@@ -843,123 +866,72 @@ lemma findVSpaceForASID_ccorres:
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_')
    apply (rule ccorres_assertE)+
-  sorry (* FIXME x64: decouple asid_map stuff? put it in haskell?
-   apply (rule ccorres_Guard_Seq)
-   apply (rule ccorres_Guard_Seq)
-   apply (rule ccorres_assertE)
-   apply (rule ccorres_assertE)
    apply (rule ccorres_liftE_Seq)
-   apply (rule_tac  r'="\<lambda>asidTable rv'. rv' = option_to_ptr (asidTable (ucast (asid_high_bits_of asid)))"
-               and xf'=poolPtr_' in ccorres_split_nothrow)
-       apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-       apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: simpler_gets_def Kernel_C.asidLowBits_def)
-       apply (simp add: ucast_asid_high_bits_is_shift)
-       apply (erule rf_sr_x86KSASIDTable)
-       apply (drule leq_asid_bits_shift)
-       apply (simp add: asid_high_bits_def mask_def)
-      apply ceqv
-     apply (simp add: liftME_def)
-     apply (simp add: bindE_assoc)
-     apply (rename_tac asidTable poolPtr)
-
-     apply (subgoal_tac "(doE x \<leftarrow> case asidTable (ucast (asid_high_bits_of asid)) of
-                                     None \<Rightarrow> throw Fault_H.lookup_failure.InvalidRoot
-                                  |  Some ptr \<Rightarrow> withoutFailure $ getObject ptr;
-                              (case inv asidpool.ASIDPool x (asid && mask asid_low_bits) of
-                                     None \<Rightarrow> throw Fault_H.lookup_failure.InvalidRoot
-                                   | Some ptr \<Rightarrow> doE haskell_assertE (ptr \<noteq> 0) [];
-                                                     withoutFailure $ checkPML4At ptr;
-                                                     returnOk ptr
-                                                 odE)
-                           odE) =
-                          (if ( asidTable (ucast (asid_high_bits_of asid))=None)
-                             then (doE x\<leftarrow> throw Fault_H.lookup_failure.InvalidRoot;
-                                       (case inv asidpool.ASIDPool x (asid && mask asid_low_bits) of
-                                     None \<Rightarrow> throw Fault_H.lookup_failure.InvalidRoot
-                                   | Some ptr \<Rightarrow> doE haskell_assertE (ptr \<noteq> 0) [];
-                                                     withoutFailure $ checkPML4At ptr;
-                                                     returnOk ptr
-                                                 odE)
-                                  odE)
-                             else (doE x\<leftarrow> withoutFailure $ getObject (the (asidTable (ucast (asid_high_bits_of asid))));
-                                      (case inv asidpool.ASIDPool x (asid && mask asid_low_bits) of
-                                     None \<Rightarrow> throw Fault_H.lookup_failure.InvalidRoot
-                                   | Some ptr \<Rightarrow> doE haskell_assertE (ptr \<noteq> 0) [];
-                                                     withoutFailure $ checkPML4At ptr;
-                                                     returnOk ptr
-                                                 odE)
-                                  odE))")
-
+   apply (simp add: liftME_def bindE_assoc)
+   apply (rule ccorres_pre_gets_x86KSASIDTable_ksArchState')
+   apply (case_tac "asidTable (ucast (asid_high_bits_of asid))")
+    (* Case where the first look-up fails *)
+    apply clarsimp
+    apply (rule_tac P="valid_arch_state' and _" and P'=UNIV in ccorres_from_vcg_throws)
+    apply (rule allI, rule conseqPre, vcg)
+    apply (clarsimp simp: throwError_def return_def bindE_def NonDetMonad.lift_def
+                          EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def lookup_fault_lift_invalid_root)
+    apply (frule rf_sr_asidTable_None[THEN iffD2],
+                 fastforce intro: le_mask_imp_and_mask, assumption, assumption)
+    apply (fastforce simp: asid_map_asid_map_none_def asid_map_asid_map_vspace_def
+                           Kernel_C.asidLowBits_def asid_shiftr_low_bits_less)
+  (* Case where the first look-up succeeds *)
+  apply clarsimp
+  apply (rule ccorres_liftE_Seq)
+  apply (rule ccorres_guard_imp)
+     apply (rule ccorres_pre_getObject_asidpool)
+     apply (rename_tac asidPool)
+     apply (case_tac "inv ASIDPool asidPool (asid && mask asid_low_bits) = Some 0")
+      apply (fastforce simp: ccorres_fail')
+     apply (rule_tac P="\<lambda>s. asidTable=x64KSASIDTable (ksArchState s) \<and>
+                            valid_arch_state' s \<and> (asid \<le> mask asid_bits)"
+                 and P'="{s'. (\<exists>ap'. cslift s' (ap_Ptr (the (asidTable (ucast (asid_high_bits_of asid)))))
+                                               = Some ap' \<and> casid_pool_relation asidPool ap')}"
+                  in ccorres_from_vcg_throws_nofail)
+     apply (rule allI, rule conseqPre, vcg)
+     apply (clarsimp simp: ucast_asid_high_bits_is_shift)
+     apply (frule_tac idx="(asid >> asid_low_bits)" in rf_asidTable, assumption,
+                      simp add: leq_asid_bits_shift)
+     apply (clarsimp simp: typ_heap_simps)
+     apply (case_tac asidPool, clarsimp simp: inv_def)
+     apply (simp add: casid_pool_relation_def)
+     apply (case_tac ap', simp)
+     apply (simp add: array_relation_def)
+     apply (erule_tac x="(asid && 2 ^ asid_low_bits - 1)" in allE)
+     apply (simp add: word_and_le1 mask_def option_to_ptr_def option_to_0_def asid_shiftr_low_bits_less)
+     apply (rename_tac "fun" array)
+     apply (case_tac "fun (asid && 2 ^ asid_low_bits - 1)", clarsimp)
+      apply (clarsimp simp: throwError_def return_def EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def)
+      apply (simp add: lookup_fault_lift_invalid_root Kernel_C.asidLowBits_def)
+      apply (rule conjI)
+       apply (simp add: asid_low_bits_def asid_bits_def)
+       apply word_bitwise
+      apply (fastforce simp: asid_map_relation_def asid_map_lift_def
+                             asid_map_asid_map_none_def asid_map_asid_map_vspace_def)
+     apply (clarsimp simp: Kernel_C.asidLowBits_def)
+     apply (rule conjI)
+      apply (simp add: asid_low_bits_def asid_bits_def)
+      apply word_bitwise
+     apply clarsimp
+     apply (subgoal_tac "asid_map_get_tag (array.[unat (asid && 2 ^ asid_low_bits - 1)]) =
+                         SCAST(32 signed \<rightarrow> 64) asid_map_asid_map_vspace")
       prefer 2
-      apply (case_tac "asidTable (ucast (asid_high_bits_of asid))", clarsimp, clarsimp)
-
-     apply simp
-     apply (thin_tac "a = (if b then c else d)" for a b c d)
-
-     apply (rule_tac Q="\<lambda>s. asidTable = (x86KSASIDTable (ksArchState s))\<and> valid_arch_state' s \<and> no_0_obj' s \<and> (asid \<le> mask asid_bits) "
-                 and Q'="\<lambda>s'. option_to_ptr (asidTable (ucast (asid_high_bits_of asid))) =
-                              index (x86KSASIDTable_' (globals s')) (unat (asid >> asid_low_bits))"
-                 in ccorres_if_cond_throws)
-        apply clarsimp
-        apply (subgoal_tac "asid && mask asid_bits = asid")
-         prefer 2
-         apply (rule less_mask_eq)
-         apply (simp add: mask_def)
-        apply (simp add: rf_sr_asidTable_None [symmetric] Collect_const_mem)
-
-       apply (rule_tac P=\<top> and P' =UNIV in ccorres_from_vcg_throws)
-       apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: throwError_def return_def bindE_def bind_def NonDetMonad.lift_def)
-       apply (clarsimp simp: EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def)
-       apply (simp add: lookup_fault_lift_invalid_root)
-
-      apply (simp add: Collect_const[symmetric] del: Collect_const)
-      apply (rule ccorres_liftE_Seq)
-      apply (rule ccorres_pre_getObject_asidpool)
-      apply (rule ccorres_Guard_Seq)+
-
-(*Note for Tom: apply wpc breaks here - blocks everything, cannot be interrupted *)
-      apply (case_tac "inv ASIDPool rv (asid && mask asid_low_bits) = Some 0")
-       apply simp
-       apply (rule ccorres_fail')
-      apply (rule_tac P="\<lambda>s. asidTable=x86KSASIDTable (ksArchState s) \<and>
-                              valid_arch_state' s \<and>  (asid \<le> mask asid_bits) "
-                   and P'= "{s'. (\<exists>  ap'. cslift s' (ap_Ptr (the (asidTable (ucast (asid_high_bits_of asid)))))
-                                             = Some ap' \<and> casid_pool_relation rv ap')}"
-                   in ccorres_from_vcg_throws_nofail)
-      apply (rule allI, rule conseqPre, vcg)
-      apply (clarsimp simp: ucast_asid_high_bits_is_shift)
-      apply (frule_tac idx="(asid >> asid_low_bits)" in rf_asidTable, assumption,
-                        simp add:  leq_asid_bits_shift)
-      apply (clarsimp simp: option_to_ptr_def option_to_0_def)
-      apply (clarsimp simp: typ_heap_simps)
-      apply (case_tac rv, clarsimp simp: inv_def)
-      apply (simp add:casid_pool_relation_def)
-      apply (case_tac ap', simp)
-      apply (simp add: array_relation_def)
-      apply (erule_tac x="(asid && 2 ^ asid_low_bits - 1)" in allE)
-      apply (simp add: word_and_le1 mask_def option_to_ptr_def option_to_0_def)
-      apply (rename_tac "fun" array)
-      apply (case_tac "fun (asid && 2 ^ asid_low_bits - 1)", clarsimp)
-       apply (clarsimp simp: throwError_def  return_def )
-       apply (clarsimp simp: EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def)
-       apply (simp add: lookup_fault_lift_invalid_root)
-      apply (clarsimp simp: returnOk_def return_def
-        checkPML4At_def in_monad stateAssert_def liftE_bindE
-        get_def bind_def assert_def fail_def
-        split:if_splits)
-     apply vcg
-    apply simp
-    apply wp
-   apply vcg
-  apply (clarsimp simp: Collect_const_mem)
-  apply (simp add: Kernel_C.asidLowBits_def word_sle_def
-                   asid_shiftr_low_bits_less order_le_less_trans[OF word_and_le1]
-                   arg_cong[where f="\<lambda>x. 2 ^ x", OF meta_eq_to_obj_eq, OF asid_low_bits_def])
-  apply (clarsimp simp: option_to_0_def option_to_ptr_def)
-  apply (clarsimp simp: typ_heap_simps split: option.split_asm)
-done *)
+      apply (rule classical)
+      apply (fastforce simp: asid_map_relation_def asid_map_lift_def split: if_splits)
+     apply (fastforce simp: returnOk_def return_def
+                            checkPML4At_def in_monad stateAssert_def liftE_bindE
+                            get_def bind_def assert_def fail_def
+                            asid_map_relation_def asid_map_lift_def
+                            asid_map_asid_map_none_def asid_map_asid_map_vspace_def
+                            asid_map_asid_map_vspace_lift_def
+                      split: if_splits)
+    apply simp+
+  done
 
 (* FIXME x64: there is no USGlobalPML4 in x64, do we need this?
 lemma ccorres_pre_gets_armUSGlobalPD_ksArchState:
@@ -1329,7 +1301,7 @@ lemma msgRegisters_ccorres:
   register_from_H (X64_H.msgRegisters ! n) = (index kernel_all_substitute.msgRegisters n)"
   apply (simp add: kernel_all_substitute.msgRegisters_def msgRegisters_unfold fupdate_def)
   apply (simp add: Arrays.update_def n_msgRegisters_def fcp_beta nth_Cons' split: if_split)
-  sorry
+  done
 
 (* usually when we call setMR directly, we mean to only set a registers, which will
    fit in actual registers *)
@@ -1456,7 +1428,7 @@ lemma performPageGetAddress_ccorres:
                     word_sle_def word_sless_def Kernel_C.RDI_def
                     kernel_all_global_addresses.msgRegisters_def fupdate_def Arrays.update_def
                     fcp_beta)
-  sorry
+  done
 
 lemma ignoreFailure_liftM:
   "ignoreFailure = liftM (\<lambda>v. ())"
@@ -2591,6 +2563,18 @@ lemma getObject_ko_at_ap [wp]:
   "\<lbrace>\<top>\<rbrace> getObject p \<lbrace>\<lambda>rv::asidpool. ko_at' rv p\<rbrace>"
   by (rule getObject_ko_at | simp add: objBits_simps archObjSize_def bit_simps)+
 
+lemma canonical_address_page_map_l4_at':
+  "\<lbrakk>page_map_l4_at' p s; pspace_canonical' s\<rbrakk> \<Longrightarrow>
+     canonical_address p"
+  apply (clarsimp simp: page_map_l4_at'_def)
+  apply (drule_tac x=0 in spec, clarsimp simp: bit_simps typ_at_to_obj_at_arches)
+  apply (erule (1) obj_at'_is_canonical)
+  done
+
+lemma sign_extend_canonical_address:
+  "(x = sign_extend 47 x) = canonical_address x"
+  by (fastforce simp: sign_extended_iff_sign_extend canonical_address_sign_extended)
+
 lemma performASIDPoolInvocation_ccorres:
   notes option.case_cong_weak [cong]
   shows
@@ -2604,66 +2588,66 @@ lemma performASIDPoolInvocation_ccorres:
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (cinit lift: poolPtr_' asid_' vspaceCapSlot_')
    apply (rule ccorres_symb_exec_l)
-         apply (rule ccorres_rhs_assoc2)
-         apply (rule_tac ccorres_split_nothrow [where r'=dc and xf'=xfdc])
-             apply (simp add: updateCap_def)
-             apply (rule_tac A="cte_wp_at' (op = rv o cteCap) ctSlot
-                                and K (isPML4Cap' rv \<and> asid \<le> mask asid_bits)"
-                         and A'=UNIV in ccorres_guard_imp2)
-              apply (rule ccorres_pre_getCTE)
-              apply (rule_tac P="cte_wp_at' (op = rv o cteCap) ctSlot
-                                 and K (isPML4Cap' rv \<and> asid \<le> mask asid_bits)
-                                 and cte_wp_at' (op = rva) ctSlot"
-                          and P'=UNIV in ccorres_from_vcg)
-              apply (rule allI, rule conseqPre, vcg)
-              apply (clarsimp simp: cte_wp_at_ctes_of)
-              apply (erule (1) rf_sr_ctes_of_cliftE)
-              apply (clarsimp simp: typ_heap_simps)
-              apply (rule conjI)
-               apply (clarsimp simp: isPML4Cap'_def)
-               apply (drule cap_CL_lift)
-               apply (drule (1) cap_to_H_PML4Cap_tag)
-               apply simp
-              apply (clarsimp simp: typ_heap_simps' isPML4Cap'_def)
-              apply (rule fst_setCTE [OF ctes_of_cte_at], assumption)
-              apply (erule bexI [rotated])
-              apply clarsimp
-              apply (frule (1) rf_sr_ctes_of_clift)
-              apply clarsimp
-              apply (clarsimp simp: rf_sr_def cstate_relation_def typ_heap_simps
-                              Let_def cpspace_relation_def)
-              apply (rule conjI)
-               apply (erule (2) cmap_relation_updI)
-                apply (clarsimp simp: ccte_relation_def)
-                apply (clarsimp simp: cte_lift_def)
-                apply (simp split: option.splits)
-                apply clarsimp
-                apply (case_tac cte')
-                apply clarsimp
-                apply (rule conjI)
-                 apply (clarsimp simp: cap_lift_def Let_def cap_tag_defs)
-                apply clarsimp
-                apply (simp add: cte_to_H_def c_valid_cte_def)
-                apply (simp add: cap_pml4_cap_lift)
-                apply (simp (no_asm) add: cap_to_H_def)
-                apply (simp add: to_bool_def asid_bits_def le_mask_imp_and_mask word_bits_def)
-                apply (erule (1) cap_lift_PML4Cap_Base)
-               apply simp
-              apply (erule_tac t = s' in ssubst)
-              apply (simp add: heap_to_user_data_def)
-              apply (rule conjI)
-               apply (erule (1) setCTE_tcb_case)
-              apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                               typ_heap_simps h_t_valid_clift_Some_iff
-                               cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
-             apply (clarsimp simp: cte_wp_at_ctes_of)
-            apply ceqv
-      apply (rule ccorres_symb_exec_l)
-         apply (rule_tac P="ko_at' (ASIDPool pool) poolPtr" in ccorres_cross_over_guard)
+      apply (rule ccorres_rhs_assoc2)
+      apply (rule_tac ccorres_split_nothrow [where r'=dc and xf'=xfdc])
+          apply (simp add: updateCap_def)
+          apply (rule_tac A="cte_wp_at' (op = rv o cteCap) ctSlot
+                             and K (isPML4Cap' rv \<and> asid \<le> mask asid_bits)"
+                      and A'=UNIV in ccorres_guard_imp2)
+           apply (rule ccorres_pre_getCTE)
+           apply (rule_tac P="cte_wp_at' (op = rv o cteCap) ctSlot
+                              and K (isPML4Cap' rv \<and> asid \<le> mask asid_bits)
+                              and cte_wp_at' (op = rva) ctSlot"
+                       and P'=UNIV in ccorres_from_vcg)
+           apply (rule allI, rule conseqPre, vcg)
+           apply (clarsimp simp: cte_wp_at_ctes_of)
+           apply (erule (1) rf_sr_ctes_of_cliftE)
+           apply (clarsimp simp: typ_heap_simps)
+           apply (rule conjI)
+            apply (clarsimp simp: isPML4Cap'_def)
+            apply (drule cap_CL_lift)
+            apply (drule (1) cap_to_H_PML4Cap_tag)
+            apply simp
+           apply (clarsimp simp: typ_heap_simps' isPML4Cap'_def)
+           apply (rule fst_setCTE [OF ctes_of_cte_at], assumption)
+           apply (erule bexI [rotated])
+           apply clarsimp
+           apply (frule (1) rf_sr_ctes_of_clift)
+           apply clarsimp
+           apply (clarsimp simp: rf_sr_def cstate_relation_def typ_heap_simps
+                                 Let_def cpspace_relation_def)
+           apply (rule conjI)
+            apply (erule (2) cmap_relation_updI)
+             apply (clarsimp simp: ccte_relation_def)
+             apply (clarsimp simp: cte_lift_def)
+             apply (simp split: option.splits)
+             apply clarsimp
+             apply (case_tac cte')
+             apply clarsimp
+             apply (rule conjI)
+              apply (clarsimp simp: cap_lift_def Let_def cap_tag_defs)
+             apply clarsimp
+             apply (simp add: cte_to_H_def c_valid_cte_def)
+             apply (simp add: cap_pml4_cap_lift)
+             apply (simp (no_asm) add: cap_to_H_def)
+             apply (simp add: to_bool_def asid_bits_def le_mask_imp_and_mask word_bits_def)
+             apply (erule (1) cap_lift_PML4Cap_Base)
+            apply simp
+           apply (erule_tac t = s' in ssubst)
+           apply (simp add: heap_to_user_data_def)
+           apply (rule conjI)
+            apply (erule (1) setCTE_tcb_case)
+           apply (simp add: carch_state_relation_def cmachine_state_relation_def
+                            typ_heap_simps h_t_valid_clift_Some_iff
+                            cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
+          apply (clarsimp simp: cte_wp_at_ctes_of)
+         apply ceqv
+        apply (rule ccorres_symb_exec_l)
+           apply (rule_tac P="ko_at' (ASIDPool pool) poolPtr" in ccorres_cross_over_guard)
            apply (rule ccorres_move_c_guard_cte)
            apply (rule ccorres_symb_exec_r)
-apply csymbr
-apply (rule ccorres_abstract_cleanup)
+             apply csymbr
+             apply (rule ccorres_abstract_cleanup)
              apply (rule ccorres_Guard_Seq[where F=ArrayBounds])?
              apply (rule ccorres_move_c_guard_ap)
              apply (simp only: Kernel_C.asidLowBits_def word_sle_def)
@@ -2680,30 +2664,21 @@ apply (rule ccorres_abstract_cleanup)
             apply (vcg)
            apply (rule conseqPre, vcg)
            apply clarsimp
-apply (clarsimp simp: o_def inv_def)
           apply (wpsimp wp: liftM_wp)
-apply (wpsimp wp: udpateCap_asidpool' getASID_wp)
-apply clarsimp
-sorry (* FIXME x64: we moved getObject below updateCap and now it is complicated
-apply (wpsimp wp: udpateCap_asidpool' hoare_vcg_all_lift)
-         apply vcg
-        apply (wp getASID_wp)
-        apply simp
-       apply wp
-       apply (simp add: o_def inv_def)
-       apply (wp getASID_wp)
-      apply simp
-      apply (rule empty_fail_getObject)
-      apply simp
+         apply (wpsimp wp: getASID_wp simp: o_def inv_def)
+        apply (clarsimp simp: empty_fail_getObject)
+       apply (wpsimp wp: udpateCap_asidpool' hoare_vcg_all_lift hoare_vcg_imp_lift')
+      apply vcg
      apply wp
+     apply simp
     apply (wp getSlotCap_wp')
    apply simp
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (rule conjI)
-   apply (clarsimp dest!: asid_pool_at_ko simp: obj_at'_def)
+   apply (clarsimp dest!: asid_pool_at_ko simp: obj_at'_def inv_def)
   apply (rule cmap_relationE1[OF cmap_relation_cte], assumption+)
   apply (clarsimp simp: typ_heap_simps cap_get_tag_isCap_ArchObject2
-                        isPDCap_def isCap_simps
+                        isPML4Cap'_def isCap_simps
                         order_le_less_trans[OF word_and_le1] asid_low_bits_def
                  dest!: ccte_relation_ccap_relation)
   apply (simp add: casid_pool_relation_def mask_def)
@@ -2713,11 +2688,20 @@ apply (wpsimp wp: udpateCap_asidpool' hoare_vcg_all_lift)
      apply (case_tac pool')
      apply (simp add: casid_pool_relation_def)
     apply simp
-   apply (simp add: option_to_ptr_def option_to_0_def)
-   apply (erule(1) rf_sr_ctes_of_cliftE, simp(no_asm_simp))
-   apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 cap_lift_PDCap_Base)
+   apply (clarsimp simp: asid_map_relation_def asid_map_asid_map_vspace_lift
+                         asid_map_asid_map_none_def asid_map_asid_map_vspace_def
+                         asid_map_lifts[simplified asid_map_asid_map_vspace_def, simplified]
+                         cap_pml4_cap_lift
+                   split: if_splits)
+   apply (drule_tac s=sa in cmap_relation_cte)
+   apply (erule_tac y=ctea in cmap_relationE1, assumption)
+   apply (clarsimp simp: ccte_relation_def ccap_relation_def map_option_Some_eq2)
+   apply (clarsimp simp: cap_pml4_cap_lift_def dest!: cap_to_H_PML4Cap)
+   apply (simp add: sign_extend_canonical_address)
+   apply (drule_tac cte=cte in ctes_of_valid'[OF _ invs_valid_objs'], assumption)
+   apply (clarsimp simp: valid_cap'_def canonical_address_page_map_l4_at'[OF _ invs_pspace_canonical'])
   apply (simp add: asid_low_bits_def)
-  done *)
+  done
 
 lemma pte_case_isInvalidPTE:
   "(case pte of InvalidPTE \<Rightarrow> P | _ \<Rightarrow> Q)
