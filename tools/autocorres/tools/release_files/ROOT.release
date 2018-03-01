@@ -13,6 +13,8 @@ session AutoCorres = CParser +
     "AutoCorres"
 
 session AutoCorresTest = AutoCorres +
+  sessions
+    "HOL-Number_Theory"
   theories
     "tests/AutoCorresTest"
 

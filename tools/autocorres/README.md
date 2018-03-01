@@ -29,7 +29,7 @@ Contents of this README
 Installation
 ------------
 
-AutoCorres is packaged as a theory for Isabelle2016-1:
+AutoCorres is packaged as a theory for Isabelle2017:
 
     https://isabelle.in.tum.de
 
@@ -49,20 +49,20 @@ For X64:
 To build or use AutoCorres, you must set the L4V_ARCH environment variable
 according to your choice of platform.
 
-To build AutoCorres for ARM, type the following in tools/autocorres:
+To build AutoCorres for ARM, run the following in the L4.verified directory:
 
-    L4V_ARCH=ARM isabelle build -d . AutoCorres
+    L4V_ARCH=ARM misc/regression/run_tests.py AutoCorres
 
 This builds the C parser and AutoCorres itself.
 
 To build AutoCorres for X64:
 
-    L4V_ARCH=X64 isabelle build -d . AutoCorres
+    L4V_ARCH=X64 misc/regression/run_tests.py AutoCorres
 
 There is also a test suite, which can be run using:
 
-    L4V_ARCH=ARM make AutoCorresTest
-    L4V_ARCH=X64 make AutoCorresTest
+    L4V_ARCH=ARM misc/regression/run_tests.py AutoCorresTest
+    L4V_ARCH=X64 misc/regression/run_tests.py AutoCorresTest
 
 
 
@@ -79,7 +79,7 @@ Development and reporting bugs
 ------------------------------
 
 AutoCorres is currently maintained by
-Matthew Brecknell <Matthew.Brecknell@data61.csiro.au>
+Matthew Brecknell <Matthew.Brecknell@data61.csiro.au>.
 
 Additionally, the latest development version is available on GitHub
 as part of the L4.verified project:

@@ -3,7 +3,7 @@ Core Development Team
 
     David Greenaway (inactive)
 
-    Japheth Lim <japheth.lim@nicta.com.au>
+    Japheth Lim <Japheth.Lim@data61.csiro.au>
 
 Contributions
 -------------
@@ -13,7 +13,11 @@ Contributions
         "owhile" definitions and related rules, as well as many other
         contributions to the proof libraries.
 
-    Matthew Fernandez <matthew.fernandez@nicta.com.au>
+    Matthew Brecknell <Matthew.Brecknell@data61.csiro.au>
+
+        Maintenance; integration with seL4's C refinement framework.
+
+    Matthew Fernandez (inactive)
 
         Proofs for a memcpy implementation.
         See autocorres/tests/examples/Memcpy.thy.

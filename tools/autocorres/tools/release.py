@@ -249,6 +249,8 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
     for f in rglob(os.path.join(target_dir, "lib"), "*.thy"):
         inplace_replace_string(f, "../tools/c-parser/", "../c-parser/")
 
+    # The l4v tests already check license headers, so these are no longer needed
+
     ## Check licenses
     #print "Checking licenses..."
     #subprocess.check_call([
@@ -268,6 +270,10 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
     # We want to mix the C parser directory structure around a little.
     with TempDir() as c_parser_working_dir:
         subprocess.check_call(["tar", "-xz", "-C", c_parser_working_dir, "--strip-components=1", "-f", args.cparser_tar])
+        # The C parser uses mllex and mlyacc to generate its grammar. We build
+        # the grammar files so that our release won't have a dependency on mlton.
+        print "Generating C parser grammar files..."
+        subprocess.check_call(['make', 'c-parser-deps'], cwd=os.path.join(c_parser_working_dir, "src", "c-parser"))
         shutil.move(os.path.join(c_parser_working_dir, "src", "c-parser"), os.path.join(target_dir, "c-parser"))
         shutil.move(os.path.join(c_parser_working_dir, "README"), os.path.join(target_dir, "c-parser", "README"))
         shutil.move(os.path.join(c_parser_working_dir, "doc", "ctranslation.pdf"), os.path.join(target_dir, "c-parser", "doc", "ctranslation.pdf"))

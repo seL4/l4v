@@ -31,6 +31,7 @@ Word_Lib/Signed_Words.thy:
 Word_Lib/Word_Lemmas.thy:
 Word_Lib/Word_Lemmas_32.thy:
 Word_Lib/Word_Lemmas_64.thy:
+Word_Lib/Word_Type_Syntax.thy:
     Lemmas and definitions relating to Words.
 
 Monad_WP/OptionMonad.thy:
@@ -75,6 +76,10 @@ Rule_By_Method.thy:
 Eisbach_Methods.thy:
 ml-helpers/TermPatternAntiquote.thy:
 Monad_WP/Strengthen.thy:
+Eval_Bool.thy:
+Extract_Conjunct.thy:
+Try_Methods.thy:
+Value_Abbreviation.thy:
     Compatibility libraries for NICTA developments.
 
 set.ML:
