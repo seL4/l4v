@@ -1,3 +1,8 @@
+[![DOI][0]](http://dx.doi.org/10.5281/zenodo.591732)
+
+  [0]: https://zenodo.org/badge/doi/10.5281/zenodo.591732.svg
+
+
 [The L4.verified Proofs][1]
 ===========================
 
@@ -8,13 +13,9 @@ Most proofs in this repository are conducted in the interactive proof
 assistant [Isabelle/HOL][2]. For an introduction to Isabelle, see its
 [official website][2] and [documentation][3].
 
-DOIs for citing recent releases of this repository:
-  * [![DOI][4]](http://dx.doi.org/10.5281/zenodo.591732)
-
   [1]: https://github.com/seL4/l4v                   "L4.verified Repository"
   [2]: http://isabelle.in.tum.de                     "Isabelle Website"
   [3]: http://isabelle.in.tum.de/documentation.html  "Isabelle Documentation"
-  [4]: https://zenodo.org/badge/doi/10.5281/zenodo.591732.png
 
 Repository Setup
 ----------------
