@@ -10,7 +10,7 @@ abstracts the result to produce a result that is (hopefully)
 more pleasant to reason about.
 
   [1]: https://www.cl.cam.ac.uk/research/hvg/Isabelle/
-  [2]: https://ssrg.nicta.com.au/software/TS/c-parser/
+  [2]: https://ts.data61.csiro.au/software/TS/c-parser/
 
 
 
@@ -288,7 +288,7 @@ L1 (SimplConv), L2 (LocalVarExtract) and TS (TypeStrengthen) were described in
     David Greenaway, June Andronick, Gerwin Klein
     Proceedings of the Third International
             Conference on Interactive Theorem Proving (ITP), August 2012.
-    https://ssrg.nicta.com.au/publications/nictaabstracts/5662.pdf
+    https://ts.data61.csiro.au/publications/nicta_full_text/5662.pdf
 
 HL (heap abstraction) and WA (word abstraction) were described in
 
@@ -297,11 +297,11 @@ HL (heap abstraction) and WA (word abstraction) were described in
     David Greenaway, Japheth Lim, June Andronick, Gerwin Klein
     Proceedings of the 35th ACM SIGPLAN Conference on
             Programming Language Design and Implementation. ACM, June 2014.
-    https://ssrg.nicta.com.au/publications/nictaabstracts/7629.pdf
+    https://ts.data61.csiro.au/publications/nicta_full_text/7629.pdf
 
 A more comprehensive source is
 
     "Automated proof-producing abstraction of C code"
     David Greenaway
     PhD thesis, March 2015.
-    https://ssrg.nicta.com.au/publications/nictaabstracts/8758.pdf
+    https://ts.data61.csiro.au/publications/nicta_full_text/8758.pdf
