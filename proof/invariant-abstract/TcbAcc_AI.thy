@@ -33,6 +33,10 @@ locale TcbAcc_AI_storeWord_invs =
         do_machine_op (storeWord p w)
       \<lbrace>\<lambda>rv. invs\<rbrace>"
 
+(* FIXME: move to Invariatns? *)
+lemma symreftype_inverse':
+  "symreftype ref = ref' \<Longrightarrow> ref = symreftype ref'"
+  by (cases ref) simp_all
 
 lemmas gts_inv[wp] = get_thread_state_inv
 
@@ -1329,17 +1333,14 @@ lemma sbn_refs_of_helper:
   by (auto simp add: tcb_st_refs_of_def get_refs_def split: thread_state.splits option.splits)
 
 lemma sbn_refs_of[wp]:
-  "\<lbrace>(\<lambda>s. P (state_refs_of s))
-      and bound_tcb_at (\<lambda>ntfn'. get_refs TCBBound ntfn' = get_refs TCBBound ntfn) t\<rbrace>
+  "\<lbrace>(\<lambda>s. P ((state_refs_of s)(t:= (case ntfn of None \<Rightarrow> {} | Some new \<Rightarrow> {(new, TCBBound)}) \<union>
+          (state_refs_of s t - {x \<in> state_refs_of s t. snd x = TCBBound}))))\<rbrace>
    set_tcb_obj_ref tcb_bound_notification_update t ntfn
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (simp add: set_tcb_obj_ref_def set_object_def)
-  apply wp
-  apply (clarsimp elim!: rsubst[where P=P]
-                  dest!: get_tcb_SomeD
-                   simp: state_refs_of_def
-                 intro!: ext)
-  apply (simp add: get_tcb_rev pred_tcb_def2)
+  apply (wpsimp simp: set_tcb_obj_ref_def set_object_def)
+  apply (fastforce elim!: rsubst[where P=P] dest!: get_tcb_SomeD
+         simp: state_refs_of_def get_refs_def2 tcb_st_refs_of_def get_tcb_rev
+         intro!: ext split: option.splits if_splits thread_state.split)
   done
 
 lemma sbn_hyp_refs_of[wp]:
@@ -1354,16 +1355,14 @@ lemma sbn_hyp_refs_of[wp]:
   done
 
 lemma ssc_refs_of[wp]:
-  "\<lbrace>(\<lambda>s. P (state_refs_of s))
-      and bound_sc_tcb_at (\<lambda>sc'. get_refs TCBSchedContext sc' = get_refs TCBSchedContext sc) t\<rbrace>
+  "\<lbrace>(\<lambda>s. P ((state_refs_of s)(t:= (case sc of None \<Rightarrow> {} | Some new \<Rightarrow> {(new, TCBSchedContext)}) \<union>
+          (state_refs_of s t - {x \<in> state_refs_of s t. snd x = TCBSchedContext}))))\<rbrace>
    set_tcb_obj_ref tcb_sched_context_update t sc
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (simp add: set_tcb_obj_ref_def set_object_def)
-  apply wp
-  apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD
-                   simp: state_refs_of_def
-                 intro!: ext)
-  apply (simp add: get_tcb_rev pred_tcb_def2)
+  apply (wpsimp simp: set_tcb_obj_ref_def set_object_def)
+  apply (fastforce elim!: rsubst[where P=P] dest!: get_tcb_SomeD
+         simp: state_refs_of_def get_refs_def2 tcb_st_refs_of_def get_tcb_rev
+         intro!: ext split: option.splits if_splits thread_state.split)
   done
 
 lemma ssc_hyp_refs_of[wp]:
@@ -1378,16 +1377,14 @@ lemma ssc_hyp_refs_of[wp]:
   done
 
 lemma syt_refs_of[wp]:
-  "\<lbrace>(\<lambda>s. P (state_refs_of s))
-      and bound_yt_tcb_at (\<lambda>sc'. get_refs TCBYieldTo sc' = get_refs TCBYieldTo sc) t\<rbrace>
+  "\<lbrace>(\<lambda>s. P ((state_refs_of s)(t:= (case sc of None \<Rightarrow> {} | Some new \<Rightarrow> {(new, TCBYieldTo)}) \<union>
+          (state_refs_of s t - {x \<in> state_refs_of s t. snd x = TCBYieldTo}))))\<rbrace>
    set_tcb_obj_ref tcb_yield_to_update t sc
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (simp add: set_tcb_obj_ref_def set_object_def)
-  apply wp
-  apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD
-                   simp: state_refs_of_def
-                 intro!: ext)
-  apply (simp add: get_tcb_rev pred_tcb_def2)
+  apply (wpsimp simp: set_tcb_obj_ref_def set_object_def)
+  apply (fastforce elim!: rsubst[where P=P] dest!: get_tcb_SomeD
+         simp: state_refs_of_def get_refs_def2 tcb_st_refs_of_def get_tcb_rev
+         intro!: ext split: option.splits if_splits thread_state.split)
   done
 
 lemma syt_hyp_refs_of[wp]:
@@ -1882,8 +1879,14 @@ lemma sbn_invs_minor:
   apply (wp valid_irq_node_typ sts_only_idle)
   apply clarsimp
   apply (simp add: pred_tcb_at_def, erule(1) obj_at_valid_objsE)
-  apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_obj_def
-                 split: thread_state.splits option.splits)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_obj_def
+                 split: option.splits)
+  apply (erule delta_sym_refs)
+   apply (clarsimp split: if_split_asm option.splits simp: state_refs_of_def)
+   apply (clarsimp split: if_split_asm option.splits thread_state.split_asm
+            simp: obj_at_def get_refs_def2 tcb_st_refs_of_def
+            dest!: state_refs_of_elemD)
   done
 
 lemma ssc_invs_minor:
@@ -1896,8 +1899,14 @@ lemma ssc_invs_minor:
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (wp valid_irq_node_typ)
   apply (clarsimp simp: pred_tcb_at_def, erule(1) obj_at_valid_objsE)
-  apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_obj_def
-                 split: thread_state.splits option.splits)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_obj_def
+                 split: option.splits)
+  apply (erule delta_sym_refs)
+   apply (clarsimp split: if_split_asm option.splits simp: state_refs_of_def)
+   apply (clarsimp split: if_split_asm option.splits thread_state.split_asm
+            simp: obj_at_def get_refs_def2 tcb_st_refs_of_def
+            dest!: state_refs_of_elemD)
   done
 
 lemma syt_invs_minor:
@@ -1910,8 +1919,14 @@ lemma syt_invs_minor:
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (wp valid_irq_node_typ)
   apply (clarsimp simp: pred_tcb_at_def, erule(1) obj_at_valid_objsE)
-  apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_obj_def
-                 split: thread_state.splits option.splits)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_obj_def
+                 split: option.splits)
+  apply (erule delta_sym_refs)
+   apply (clarsimp split: if_split_asm option.splits simp: state_refs_of_def)
+   apply (clarsimp split: if_split_asm option.splits thread_state.split_asm
+            simp: obj_at_def get_refs_def2 tcb_st_refs_of_def
+            dest!: state_refs_of_elemD)
   done
 
 lemma thread_set_valid_cap:
