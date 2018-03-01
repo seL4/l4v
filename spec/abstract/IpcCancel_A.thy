@@ -87,8 +87,19 @@ where
   od"
 
 text \<open>Donate a scheduling context.\<close>
+
 definition
-  sched_context_donate :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, det_ext) s_monad"
+  test_reschedule :: "obj_ref \<Rightarrow> (unit, det_ext) s_monad"
+where
+  "test_reschedule from_tptr = do
+    cur \<leftarrow> gets $ cur_thread;
+    action \<leftarrow> gets scheduler_action;
+    flag \<leftarrow> return (case action of switch_thread p \<Rightarrow> from_tptr = p | _ \<Rightarrow> False);
+    when (from_tptr = cur \<or> flag) $ reschedule_required
+  od"
+
+definition
+  sched_context_donate :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_donate sc_ptr tcb_ptr = do
     from_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
@@ -96,10 +107,7 @@ where
       from_tptr \<leftarrow> assert_opt $ from_opt;
       do_extended_op $ tcb_sched_action tcb_sched_dequeue from_tptr;
       set_tcb_obj_ref tcb_sched_context_update from_tptr None;
-      cur \<leftarrow> gets $ cur_thread;
-      action \<leftarrow> gets scheduler_action;
-      flag \<leftarrow> return (case action of switch_thread p \<Rightarrow> from_tptr = p | _ \<Rightarrow> False);
-      when (from_tptr = cur \<or> flag) $ do_extended_op reschedule_required
+      do_extended_op $ test_reschedule from_tptr
     od;
     set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
     set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr)
@@ -157,7 +165,7 @@ where (* reply_tcb must be in BlockedOnReply *)
     replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
     reply_unlink_tcb r;
     reply_unlink_sc sc_ptr r;
-    when (hd replies = r) $ do_extended_op $ sched_context_donate sc_ptr caller
+    when (hd replies = r) $ sched_context_donate sc_ptr caller
   od" (* the r.caller is in Inactive on return *)
 
 text {* Remove a specific tcb, and the reply it is blocking on, from the call stack. *}
@@ -251,7 +259,7 @@ where
         | (r#_) \<Rightarrow> do reply \<leftarrow> get_reply r; assert (reply_sc reply = sc_caller) od;
       set_sc_obj_ref sc_replies_update (the sc_caller) (reply_ptr#sc_replies);
       set_reply_obj_ref reply_sc_update reply_ptr sc_caller;
-      do_extended_op $ sched_context_donate (the sc_caller) callee
+      sched_context_donate (the sc_caller) callee
     od
   od"
 
@@ -332,18 +340,18 @@ where
 
 text {* Set new priority for a TCB *}
 definition
-  set_priority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  set_priority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, det_ext) s_monad" where
   "set_priority tptr prio \<equiv> do
-     do_extended_op $ tcb_sched_action tcb_sched_dequeue tptr;
-     do_extended_op $ thread_set_priority tptr prio;
+     tcb_sched_action tcb_sched_dequeue tptr;
+     thread_set_priority tptr prio;
      ts \<leftarrow> get_thread_state tptr;
      when (runnable ts) $ do
-       do_extended_op $ tcb_sched_action tcb_sched_enqueue tptr;
+       tcb_sched_action tcb_sched_enqueue tptr;
        cur \<leftarrow> gets cur_thread;
-       when (tptr = cur) (do_extended_op reschedule_required)
+       when (tptr = cur) $ reschedule_required
      od;
-     maybeM (do_extended_op o reorder_ep) (ep_blocked ts);
-     maybeM (do_extended_op o reorder_ntfn) (ntfn_blocked ts)
+     maybeM (reorder_ep) (ep_blocked ts);
+     maybeM (reorder_ntfn) (ntfn_blocked ts)
    od"
 
 definition

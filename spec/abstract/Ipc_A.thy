@@ -306,7 +306,7 @@ where
                 else when (can_donate \<and> sc_opt = None) $ sched_context_donate (the sc_opt) dest;
 
                 set_thread_state dest Running;
-                do_extended_op $ possible_switch_to dest
+                possible_switch_to dest
               od
        | (RecvEP [], _) \<Rightarrow> fail
    od"
@@ -405,7 +405,7 @@ where
                 else set_thread_state sender Inactive
               else do
                 set_thread_state sender Running;
-                do_extended_op (possible_switch_to sender)
+                possible_switch_to sender
               od
             od
    od"
@@ -512,7 +512,7 @@ section {* Sending Fault Messages *}
 text {* When a thread encounters a fault, retreive its fault handler capability
 and send a fault message. *}
 definition
-  send_fault_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> fault \<Rightarrow> bool \<Rightarrow> (bool, 'z::state_ext) f_monad"
+  send_fault_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> fault \<Rightarrow> bool \<Rightarrow> (bool, det_ext) f_monad"
 where
   "send_fault_ipc tptr handler_cap fault can_donate \<equiv>
      (case handler_cap
@@ -520,7 +520,7 @@ where
            if AllowSend \<in> rights \<and> AllowGrant \<in> rights
            then liftE $ (do
                thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := Some fault \<rparr>) tptr;
-               do_extended_op $ send_ipc True False (cap_ep_badge handler_cap)
+               send_ipc True False (cap_ep_badge handler_cap)
                         True can_donate tptr (cap_ep_ptr handler_cap);
                return True
              od)
@@ -529,7 +529,7 @@ where
         | _ \<Rightarrow> fail)"
 
 text {* timeout fault *}
-definition handle_timeout :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit, 'z::state_ext) s_monad"
+definition handle_timeout :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit, det_ext) s_monad"
 where
   "handle_timeout tptr ex \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb tptr;
@@ -546,7 +546,7 @@ where
 
 text {* Handle a thread fault by sending a fault message if possible. *}
 definition
-  handle_fault :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  handle_fault :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit, det_ext) s_monad"
 where
   "handle_fault thread ex \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb thread;
@@ -562,7 +562,7 @@ definition is_timeout_fault :: "fault \<Rightarrow> bool" where
     (case f of Timeout _ \<Rightarrow> True | _ \<Rightarrow> False)"
 
 definition
-  do_reply_transfer :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  do_reply_transfer :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, det_ext) s_monad"
 where
  "do_reply_transfer sender reply \<equiv> do
     recv_opt \<leftarrow> get_reply_tcb reply;
@@ -590,7 +590,7 @@ where
               refill_unblock_check sc_ptr;
               ready \<leftarrow> refill_ready sc_ptr;
               sufficient \<leftarrow> refill_sufficient sc_ptr 0;
-              if (ready \<and> sufficient) then do_extended_op $ possible_switch_to receiver
+              if (ready \<and> sufficient) then possible_switch_to receiver
               else do
                 tcb \<leftarrow> gets_the $ get_tcb receiver;
                 sc \<leftarrow> get_sched_context sc_ptr;
@@ -622,7 +622,7 @@ where
 (* below are moved from Schedule_A, due to a dependency issue *)
 
 definition
-  end_timeslice :: "bool \<Rightarrow> (unit,'z::state_ext) s_monad"
+  end_timeslice :: "bool \<Rightarrow> (unit,det_ext) s_monad"
 where
   "end_timeslice canTimeout = do
      ct \<leftarrow> gets cur_thread;
@@ -634,10 +634,10 @@ where
        sufficient \<leftarrow> refill_sufficient sc_ptr 0;
        tcb \<leftarrow> gets_the $ get_tcb ct;
        if canTimeout \<and> (is_ep_cap (tcb_timeout_handler tcb)) then
-         do_extended_op $ handle_timeout ct (Timeout (sc_badge csc))
+         handle_timeout ct (Timeout (sc_badge csc))
        else if ready \<and> sufficient then do
          cur \<leftarrow> gets cur_thread;
-         do_extended_op $ tcb_sched_action tcb_sched_append cur
+         tcb_sched_action tcb_sched_append cur
        od
        else
          postpone sc_ptr
@@ -645,7 +645,7 @@ where
   od"
 
 definition
-  charge_budget :: "ticks \<Rightarrow> ticks \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  charge_budget :: "ticks \<Rightarrow> ticks \<Rightarrow> bool \<Rightarrow> (unit, det_ext) s_monad"
 where
   "charge_budget capacity consumed canTimeout = do
     csc_ptr \<leftarrow> gets cur_sc;
@@ -664,7 +664,7 @@ where
     st \<leftarrow> get_thread_state ct;
     when (runnable st) $ do
       end_timeslice canTimeout;
-      do_extended_op $ reschedule_required;
+      reschedule_required;
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>)
     od
   od"

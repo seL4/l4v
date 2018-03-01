@@ -33,7 +33,7 @@ section "Activating Threads"
 
 text {* Reactivate a thread if it is not already running. *}
 definition
-  restart :: "obj_ref \<Rightarrow> unit det_ext_monad" where
+  restart :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
  "restart thread \<equiv> do
     state \<leftarrow> get_thread_state thread;
     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context thread;
@@ -41,10 +41,8 @@ definition
       cancel_ipc thread;
       set_thread_state thread Restart;
       sc_ptr \<leftarrow> assert_opt sc_opt;
-      do_extended_op (sched_context_resume sc_ptr);
-      in_release_q \<leftarrow> gets $ in_release_queue thread;
-      schedulable \<leftarrow> is_schedulable thread in_release_q;
-      when schedulable $ possible_switch_to thread
+      sched_context_resume sc_ptr;
+      do_extended_op $ test_possible_switch_to thread
     od
   od"
 
@@ -153,17 +151,17 @@ request to yield its timeslice to another, to suspend or resume another, to
 reconfigure another thread, or to copy register sets into, out of or between
 other threads. *}
 fun
-  invoke_tcb :: "tcb_invocation \<Rightarrow> (data list, 'z::state_ext) p_monad"
+  invoke_tcb :: "tcb_invocation \<Rightarrow> (data list, det_ext) p_monad"
 where
   "invoke_tcb (Suspend thread) = liftE (do suspend thread; return [] od)"
-| "invoke_tcb (Resume thread) = liftE (do do_extended_op $ restart thread; return [] od)"
+| "invoke_tcb (Resume thread) = liftE (do restart thread; return [] od)"
 
 | "invoke_tcb (ThreadControl target slot fault_handler timeout_handler mcp priority croot vroot buffer sc)
    = doE
     liftE $  case mcp of None \<Rightarrow> return()
      | Some (newmcp, _) \<Rightarrow> set_mcpriority target newmcp;
     liftE $ case priority of None \<Rightarrow> return()
-     | Some (prio, _) \<Rightarrow> do_extended_op (set_priority target prio);
+     | Some (prio, _) \<Rightarrow> set_priority target prio;
     liftE $ case sc of None \<Rightarrow> return ()
      | Some None \<Rightarrow> do
        sc_ptr_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context target;
@@ -171,7 +169,7 @@ where
      od
      | Some (Some sc_ptr) \<Rightarrow> do
         sc' \<leftarrow> get_tcb_obj_ref tcb_sched_context target;
-        when (sc' \<noteq> Some sc_ptr) $ do_extended_op $ sched_context_bind_tcb sc_ptr target
+        when (sc' \<noteq> Some sc_ptr) $ sched_context_bind_tcb sc_ptr target
      od;
     install_tcb_cap target (ThreadCap target) slot 0 croot;
     install_tcb_cap target (ThreadCap target) slot 1 vroot;
@@ -188,7 +186,7 @@ where
           $ check_cap_at (ThreadCap target) slot
           $ cap_insert new_cap src_slot (target, tcb_cnode_index 2);
       cur \<leftarrow> liftE $ gets cur_thread;
-      liftE $ when (target = cur) (do_extended_op reschedule_required)
+      liftE $ when (target = cur) reschedule_required
     odE);
     returnOk []
   odE"
@@ -196,7 +194,7 @@ where
 | "invoke_tcb (CopyRegisters dest src suspend_source resume_target transfer_frame transfer_integer transfer_arch) =
   (liftE $ do
     when suspend_source $ suspend src;
-    when resume_target $ do_extended_op $ restart dest;
+    when resume_target $ restart dest;
     when transfer_frame $ do
         mapM_x (\<lambda>r. do
                 v \<leftarrow> as_user src $ getRegister r;
@@ -212,7 +210,7 @@ where
         od) gpRegisters;
     cur \<leftarrow> gets cur_thread;
     arch_post_modify_registers cur dest;
-    when (dest = cur) (do_extended_op reschedule_required);
+    when (dest = cur) reschedule_required;
     return []
   od)"
 
@@ -235,8 +233,8 @@ where
         setNextPC pc
     od;
     arch_post_modify_registers self dest;
-    when resume_target $ do_extended_op $ restart dest;
-    when (dest = self) (do_extended_op reschedule_required);
+    when resume_target $ restart dest;
+    when (dest = self) reschedule_required;
     return []
   od)"
 
@@ -274,7 +272,7 @@ definition
 definition invoke_domain:: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad"
 where
   "invoke_domain thread domain \<equiv>
-     liftE (do do_extended_op (set_domain thread domain); return [] od)"
+     liftE (do set_domain thread domain; return [] od)"
 
 text {* Get all of the message registers, both from the sending thread's current
 register file and its IPC buffer. *}

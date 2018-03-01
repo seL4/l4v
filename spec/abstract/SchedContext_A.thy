@@ -446,16 +446,24 @@ where
 od"
 
 text \<open>  Bind a TCB to a scheduling context. \<close>
+
 definition
-  sched_context_bind_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> unit det_ext_monad"
+  test_possible_switch_to :: "obj_ref \<Rightarrow> unit det_ext_monad"
+where
+  "test_possible_switch_to tcb_ptr = do
+    inq \<leftarrow> gets $ in_release_queue tcb_ptr;
+    sched \<leftarrow> is_schedulable tcb_ptr inq;
+    when sched $ possible_switch_to tcb_ptr
+  od"
+
+definition
+  sched_context_bind_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_bind_tcb sc_ptr tcb_ptr = do
     set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
     set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr);
     sched_context_resume sc_ptr;
-    inq \<leftarrow> gets $ in_release_queue tcb_ptr;
-    sched \<leftarrow> is_schedulable tcb_ptr inq;
-    when sched $ possible_switch_to tcb_ptr
+    do_extended_op $ test_possible_switch_to tcb_ptr
   od"
 
 text \<open> Unbind TCB from its scheduling context, if there is one bound. \<close>
@@ -478,7 +486,7 @@ where
      when (sc_opt = None) $
        get_ntfn_obj_ref ntfn_sc ntfn_ptr >>= maybeM (\<lambda>sc_ptr. do
          sc_tcb \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
-         when (sc_tcb = None) $ do_extended_op $ sched_context_donate sc_ptr tcb_ptr
+         when (sc_tcb = None) $ sched_context_donate sc_ptr tcb_ptr
        od)
    od"
 

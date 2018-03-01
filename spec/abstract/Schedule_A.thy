@@ -339,12 +339,12 @@ where
 
 
 definition
-  invoke_sched_context :: "sched_context_invocation \<Rightarrow> (unit, 'z::state_ext) se_monad"
+  invoke_sched_context :: "sched_context_invocation \<Rightarrow> (unit, det_ext) se_monad"
 where
   "invoke_sched_context iv \<equiv> liftE $ case iv of
     InvokeSchedContextConsumed sc_ptr args \<Rightarrow> set_consumed sc_ptr args
   | InvokeSchedContextBind sc_ptr cap \<Rightarrow> (case cap of
-      ThreadCap tcb_ptr \<Rightarrow> do_extended_op $ sched_context_bind_tcb sc_ptr tcb_ptr
+      ThreadCap tcb_ptr \<Rightarrow> sched_context_bind_tcb sc_ptr tcb_ptr
     | NotificationCap ntfn _ _ \<Rightarrow> sched_context_bind_ntfn sc_ptr ntfn
     | _ \<Rightarrow> fail)
   | InvokeSchedContextUnbindObject sc_ptr cap \<Rightarrow> (case cap of
@@ -357,7 +357,7 @@ where
       sched_context_unbind_reply sc_ptr
     od
   | InvokeSchedContextYieldTo sc_ptr args \<Rightarrow>
-      do_extended_op $ sched_context_yield_to sc_ptr args"
+      sched_context_yield_to sc_ptr args"
 
 
 
