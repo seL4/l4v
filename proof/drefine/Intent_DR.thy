@@ -341,7 +341,7 @@ lemma set_message_info_corres:
   "dcorres dc \<top> (valid_idle and not_idle_thread y and valid_etcbs) (corrupt_tcb_intent y)
              (set_message_info y m)"
   apply (clarsimp simp:set_message_info_def)
-  apply (clarsimp simp:as_user_def set_register_def)
+  apply (clarsimp simp:as_user_def setRegister_def)
   apply (rule dcorres_absorb_gets_the)
   apply (clarsimp simp:get_tcb_def opt_object_def split:option.splits Structures_A.kernel_object.splits)
   apply (subst modify_def[unfolded bind_def]|clarsimp simp:get_def put_def)+
@@ -373,19 +373,7 @@ lemma corrupt_tcb_intent_as_user_corres:
    apply (wp | simp)+
 done
 
-lemma set_register_corres:
-  "dcorres dc \<top> (valid_idle and not_idle_thread y and valid_etcbs) (corrupt_tcb_intent y)
-      (as_user y (set_register r v))"
-  apply (clarsimp simp:as_user_def set_register_def arch_tcb_update_aux3)
-  apply (rule dcorres_absorb_gets_the)
-  apply (clarsimp simp:get_tcb_def opt_object_def split:option.splits Structures_A.kernel_object.splits)
-  apply (subst modify_def[unfolded bind_def]|clarsimp simp:get_def put_def)+
-  apply (clarsimp simp:select_f_def bind_def)
-   apply (drule(1) valid_etcbs_tcb_etcb)
-   apply (rule corres_guard_imp,erule set_cxt_none_det_intent_corres)
-   apply (clarsimp simp :opt_object_def valid_def get_tcb_def not_idle_thread_def lift_simp transform_tcb_def
-                        split:option.splits Structures_A.kernel_object.splits)+
-done
+lemmas set_register_corres = corrupt_tcb_intent_as_user_corres
 
 lemma dummy_corrupt_tcb_intent_corres:
   "dcorres dc \<top> (tcb_at y and valid_idle and not_idle_thread y and valid_etcbs)
@@ -429,8 +417,8 @@ lemma not_idle_thread[wp]:
 lemma set_registers_corres:
   "dcorres dc \<top> (tcb_at y and valid_idle and not_idle_thread y and valid_etcbs)
   (corrupt_tcb_intent y)
-  (mapM (%r. do v \<leftarrow> as_user thread (get_register r);
-                as_user y (set_register r v)
+  (mapM (%r. do v \<leftarrow> as_user thread (getRegister r);
+                as_user y (setRegister r v)
              od) (x)
   )"
 apply (induct_tac "x")
@@ -455,7 +443,7 @@ done
 
 lemma set_mrs_corres_no_recv_buffer:
   "dcorres dc \<top> (valid_idle and not_idle_thread y and valid_etcbs) (corrupt_tcb_intent y) (set_mrs y None msg)"
-  apply (clarsimp simp:set_mrs_def get_thread_def arch_tcb_update_aux3)
+  apply (clarsimp simp:set_mrs_def get_thread_def arch_tcb_update_aux3 arch_tcb_set_registers_def)
   apply (rule dcorres_absorb_gets_the, clarsimp)
   apply (drule(1) valid_etcbs_get_tcb_get_etcb)
   apply (rule corres_dummy_return_l)
@@ -1104,8 +1092,8 @@ lemma get_tcb_mrs_wp:
     apply (clarsimp simp:get_tcb_mrs_def Let_def)
     apply (clarsimp simp:Suc_leI[OF msg_registers_lt_msg_max_length] split del:if_split)
     apply (clarsimp simp:get_tcb_message_info_def get_ipc_buffer_words_empty)
-    apply (clarsimp dest!:get_tcb_SomeD simp:obj_at_def)
-  apply (clarsimp simp:get_mrs_def thread_get_def gets_the_def)
+    apply (clarsimp dest!:get_tcb_SomeD simp:obj_at_def arch_tcb_get_registers_def)
+  apply (clarsimp simp:get_mrs_def thread_get_def gets_the_def arch_tcb_get_registers_def)
   apply (clarsimp simp:Suc_leI[OF msg_registers_lt_msg_max_length] split del:if_split)
   apply (wp|wpc)+
   apply (rule_tac P = "tcb = obj" in hoare_gen_asm)
@@ -1654,10 +1642,10 @@ lemma select_f_store_word:
   done
 
 lemma select_f_get_register:
-  "(as_user thread (get_register register)) =
+  "(as_user thread (getRegister register)) =
     (do tcb\<leftarrow>gets_the (get_tcb thread);return (arch_tcb_context_get (tcb_arch tcb) register) od)"
   apply (simp add: assert_opt_def as_user_def set_object_def gets_the_def
-                   put_def select_f_def get_register_def gets_def get_def return_def bind_def)
+                   put_def select_f_def getRegister_def gets_def get_def return_def bind_def)
   apply (rule ext)
   apply (case_tac "get_tcb thread s")
     apply (clarsimp simp:fail_def return_def)+
@@ -1986,7 +1974,7 @@ lemma set_mrs_corres:
      and ipc_frame_ptr_at buf y and ipc_frame_sz_at sz y and ipc_buffer_wp_at bptr y and valid_etcbs)
    (do corrupt_tcb_intent y;corrupt_frame buf od)
              (set_mrs y (Some (buf + (bptr && mask (pageBitsForSize sz)))) b)"
-  apply (simp add:set_mrs_def arch_tcb_update_aux3 del:upt.simps)
+  apply (simp add:set_mrs_def arch_tcb_update_aux3 arch_tcb_set_registers_def del:upt.simps)
   apply (rule dcorres_absorb_gets_the)
   apply (rule corres_guard_imp)
     apply (rule corres_split [where r'=dc])
@@ -2007,24 +1995,24 @@ lemma set_mrs_corres:
   done
 
 lemma set_registers_ipc_frame_ptr_at[wp]:
-  "\<lbrace>ipc_frame_wp_at buf y\<rbrace>as_user thread (set_register r rv) \<lbrace>%x. ipc_frame_wp_at buf y\<rbrace>"
+  "\<lbrace>ipc_frame_wp_at buf y\<rbrace>as_user thread (setRegister r rv) \<lbrace>%x. ipc_frame_wp_at buf y\<rbrace>"
   apply (clarsimp simp: as_user_def select_f_def
                         arch_tcb_update_aux3
-                        set_register_def simpler_modify_def)
+                        setRegister_def simpler_modify_def)
   apply wp
-    apply clarsimp
-    apply wp
-   apply (clarsimp simp:valid_def)
-   apply (assumption)
-  apply wp
+     apply clarsimp
+     apply wp
+    apply (clarsimp simp:valid_def)
+    apply (assumption)
+   apply wp
   apply clarsimp
   done
 
 lemma set_registers_ipc_buffer_ptr_at[wp]:
-  "\<lbrace>ipc_buffer_wp_at buf y\<rbrace>as_user thread (set_register r rv) \<lbrace>%x. ipc_buffer_wp_at buf y\<rbrace>"
+  "\<lbrace>ipc_buffer_wp_at buf y\<rbrace>as_user thread (setRegister r rv) \<lbrace>%x. ipc_buffer_wp_at buf y\<rbrace>"
   apply (clarsimp simp: as_user_def
                         select_f_def
-                        set_register_def
+                        setRegister_def
                         arch_tcb_update_aux3
                         simpler_modify_def)
   apply wp

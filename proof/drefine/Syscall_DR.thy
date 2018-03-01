@@ -835,13 +835,13 @@ lemma get_tcb_mrs_wp:
     get_mrs thread (op_buf) (data_to_message_info (arch_tcb_context_get (tcb_arch obj) msg_info_register))
             \<lbrace>\<lambda>rv s. rv = get_tcb_mrs (machine_state sa) obj\<rbrace>"
   apply (case_tac op_buf)
-    apply (clarsimp simp:get_mrs_def thread_get_def gets_the_def)
+    apply (clarsimp simp:get_mrs_def thread_get_def gets_the_def arch_tcb_get_registers_def)
     apply (wp|wpc)+
     apply (clarsimp simp:get_tcb_mrs_def Let_def)
     apply (clarsimp simp:Suc_leI[OF msg_registers_lt_msg_max_length] split del:if_splits)
     apply (clarsimp simp:get_tcb_message_info_def get_ipc_buffer_words_empty)
     apply (clarsimp dest!:get_tcb_SomeD simp:obj_at_def)
-  apply (clarsimp simp:get_mrs_def thread_get_def gets_the_def)
+  apply (clarsimp simp:get_mrs_def thread_get_def gets_the_def arch_tcb_get_registers_def)
   apply (clarsimp simp:Suc_leI[OF msg_registers_lt_msg_max_length] split del:if_splits)
   apply (wp|wpc)+
   apply (rule_tac P = "tcb = obj" in hoare_gen_asm)
@@ -1067,7 +1067,7 @@ lemma reply_from_kernel_error:
      apply (rule hoare_strengthen_post[where Q = "\<lambda>x s. x \<le> mask 12"])
       apply (simp add:set_mrs_def)
       apply (wp|wpc)+
-     apply (clarsimp simp:set_register_def simpler_modify_def)
+     apply (clarsimp simp:setRegister_def simpler_modify_def)
      apply (drule get_tcb_SomeD)
      apply (rule exI)
      apply (rule conjI[rotated])

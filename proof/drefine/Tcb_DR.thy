@@ -681,20 +681,6 @@ lemma corres_mapM_x_rhs_induct:
  * copys from A to B merely results in a corruption of B's
  * registers.
  *)
-lemma get_register_rewrite:
-  "getRegister = get_register"
-  apply (rule ext)
-  apply (unfold getRegister_def get_register_def)
-  apply simp
-done
-
-lemma set_register_rewrite:
-  "setRegister = set_register"
-  apply (rule ext)+
-  apply (unfold setRegister_def set_register_def)
-  apply simp
-done
-
 lemma invoke_tcb_corres_copy_regs_loop:
   "dcorres dc \<top>
      (tcb_at target_id and tcb_at obj_id' and valid_idle and not_idle_thread target_id and not_idle_thread obj_id' and valid_etcbs)
@@ -703,7 +689,7 @@ lemma invoke_tcb_corres_copy_regs_loop:
         (\<lambda>r. do v \<leftarrow> as_user obj_id' (getRegister r);
                      as_user target_id (setRegister r v)
              od) x)"
-   apply (clarsimp simp:get_register_rewrite set_register_rewrite mapM_x_mapM)
+   apply (clarsimp simp: mapM_x_mapM)
    apply (rule corres_guard_imp)
    apply (rule corres_dummy_return_l)
      apply (rule corres_split[OF corres_free_return[where P=\<top> and P'= \<top>] Intent_DR.set_registers_corres])
@@ -776,7 +762,7 @@ lemma invoke_tcb_corres_copy_regs:
             apply (rule corres_split [where r'=dc])
                apply (unfold K_bind_def)
                apply (rule corres_symb_exec_r)
-                  apply (simp add:setNextPC_def set_register_rewrite)
+                  apply (simp add:setNextPC_def)
                   apply (rule Intent_DR.set_register_corres[unfolded dc_def], simp)
                  apply (wp | clarsimp simp:getRestartPC_def)+
               apply (rule invoke_tcb_corres_copy_regs_loop, simp)
@@ -1016,9 +1002,9 @@ lemma as_user_valid_irq_node[wp]:
 
 lemma set_register_TPIDRURW_tcb_abstract_inv[wp]:
   "\<lbrace>\<lambda>cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_arch := arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>) etcb)\<rbrace>
-     set_register TPIDRURW a
+     setRegister TPIDRURW a
    \<lbrace>\<lambda>_ cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_arch := arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>) etcb)\<rbrace>"
-  by (simp add: set_register_def simpler_modify_def valid_def transform_tcb_def)
+  by (simp add: setRegister_def simpler_modify_def valid_def transform_tcb_def)
 
 lemma dcorres_tcb_update_ipc_buffer:
   "dcorres (dc \<oplus> dc) (\<top>) (invs and valid_etcbs and tcb_at obj_id' and not_idle_thread obj_id'
