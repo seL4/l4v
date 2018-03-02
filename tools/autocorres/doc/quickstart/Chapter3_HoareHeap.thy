@@ -71,9 +71,9 @@ text {*
 
   We saw a monadic program in the previous section, but here
   the monad is actually being used to carry the program heap.
-
-  \emph{(Something about heap syntax here.)}
 *}
+
+(* FIXME: something about heap syntax here. *)
 
 text {*
   Now we prove that \texttt{swap} is correct. We use @{term x}

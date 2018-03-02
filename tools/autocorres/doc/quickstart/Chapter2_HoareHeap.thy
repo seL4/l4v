@@ -75,8 +75,9 @@ text {*
   more than one (or possibly zero) results\footnote{Non-determinism
   becomes useful when modelling hardware, for example, where the exact
   results of the hardware cannot be determined ahead of time.}.
-
+*}
   (* FIXME : probably describe below in further detail. *)
+text {*
   The bulk of @{term "mult_by_add'"} is wrapped inside the @{term
   "whileLoop"} \emph{monad combinator}, which is really just a fancy way
   of describing the method used by AutoCorres to encode (potentially
