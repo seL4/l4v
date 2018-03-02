@@ -11,22 +11,19 @@
 #
 # Installation Instructions for the C-Parser
 
-This code requires Isabelle2014.
+This code requires Isabelle2017 and the MLton SML compiler.
 
 To build the main heap CParser, use the following command in this directory (src/c-parser).
 
-    isabelle build -d . -b CParser
-
-Add a -v option if you want to see reassuring progress messages.
+    isabelle env make -f IsaMakefile CParser
 
 You can also build a regression test with the command
 
-    isabelle build -d . -d testfiles -b CParserTest
+    isabelle env make -f IsaMakefile CParserTest
 
 ## Other Tools
 
-There are two executables that can be built in the standalone-parser directory.
-These require the mlton SML compiler and can be built with calls to make in that directory:
+There are two executables that can be built in the standalone-parser directory:
 
     make standalone-cparser
     make standalone-tokenizer
