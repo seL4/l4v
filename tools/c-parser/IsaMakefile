@@ -30,9 +30,12 @@ cparser_tools: stp_all
 # Setup heaps we use.
 HEAPS += Simpl-VCG CParser
 
+# l4v root dir. Will be "." if this is a separate C parser release.
+L4V_ROOT_DIR = ../..
+
 # Setup rules for the heaps.
 $(HEAPS): .FORCE
-	$(ISABELLE_TOOL) build -d ../.. -b -v $@
+	$(ISABELLE_TOOL) build -d $(L4V_ROOT_DIR) -b -v $@
 .PHONY: $(HEAPS)
 
 #
@@ -42,8 +45,8 @@ $(HEAPS): .FORCE
 # We dynamically generate a ROOT file containing all the test files, and
 # then build it using Isabelle.
 #
-cparser_test: testfiles/$(L4V_ARCH)/ROOT .FORCE
-	$(ISABELLE_TOOL) build -d ../.. -d testfiles/$(L4V_ARCH) -b -v CParserTest
+cparser_test: c-parser-deps testfiles/$(L4V_ARCH)/ROOT .FORCE
+	$(ISABELLE_TOOL) build -d $(L4V_ROOT_DIR) -d testfiles/$(L4V_ARCH) -b -v CParserTest
 testfiles/$(L4V_ARCH)/ROOT: testfiles testfiles/*.c testfiles/*.thy ../../misc/scripts/gen_isabelle_root.py
 	python ../../misc/scripts/gen_isabelle_root.py -i testfiles -i testfiles/$(L4V_ARCH) -o testfiles/$(L4V_ARCH)/ROOT -s CParserTest -b CParser
 all_tests_$(L4V_ARCH).thy: testfiles testfiles/*.c ../../misc/scripts/gen_isabelle_root.py
