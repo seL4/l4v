@@ -21,7 +21,7 @@ text {*
   Here, we use AutoCorres to verify a C program that reads and writes to the heap.
   Our C function, \texttt{swap}, swaps two words in memory:
 
-\lstinputlisting[language=C, firstline=5]{../../swap.c}
+\lstinputlisting[language=C, firstline=15]{../../swap.c}
 
   Again, we translate the program using the C parser and AutoCorres.
 *}

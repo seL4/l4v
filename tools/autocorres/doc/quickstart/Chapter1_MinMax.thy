@@ -58,7 +58,7 @@ text {*
   which (we expect) return the minimum and maximum respectively of two unsigned
   integers.
 
-  \lstinputlisting[language=C, firstline=7]{../../minmax.c}
+  \lstinputlisting[language=C, firstline=17]{../../minmax.c}
 
   It is easy to see that \texttt{min} is correct, but perhaps less obvious why
   \texttt{max} is correct. AutoCorres will hopefully allow us to prove these
