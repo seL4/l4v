@@ -3904,7 +3904,9 @@ lemma reply_unlink_sc_valid_list[wp]:
 
 lemma sched_context_donate_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> sched_context_donate sc_ptr tcb_ptr\<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (valid_list_unfold simp: sched_context_donate_def set_tcb_obj_ref_def set_sc_obj_ref_def get_sc_obj_ref_def)
+  apply (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def set_sc_obj_ref_def
+      wp: get_sc_obj_ref_inv hoare_drop_imp)
+  sorry
 
 lemma reply_remove_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> reply_remove r \<lbrace>\<lambda>_.valid_list\<rbrace>"

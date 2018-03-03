@@ -137,13 +137,14 @@ lemma readreg_invs:
 sorry
 
 lemma (in Tcb_AI_1) writereg_invs:
-  "\<lbrace>(invs::'state_ext::state_ext state \<Rightarrow> bool) and tcb_at dest and ex_nonz_cap_to dest\<rbrace>
+  "\<lbrace>(invs::det_ext state \<Rightarrow> bool) and tcb_at dest and ex_nonz_cap_to dest\<rbrace>
      invoke_tcb (tcb_invocation.WriteRegisters dest resume values arch)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp |rule conjI)+
+  apply (wpsimp |rule conjI)+
+  sorry
 
 lemma (in Tcb_AI_1) copyreg_invs:
-  "\<lbrace>(invs::'state_ext::state_ext state \<Rightarrow> bool) and tcb_at src and tcb_at dest and ex_nonz_cap_to dest and
+  "\<lbrace>(invs::det_ext state \<Rightarrow> bool) and tcb_at src and tcb_at dest and ex_nonz_cap_to dest and
     ex_nonz_cap_to src\<rbrace>
      invoke_tcb (tcb_invocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -476,7 +477,7 @@ locale Tcb_AI = Tcb_AI_1 state_ext_t is_cnode_or_valid_arch
    \<lbrace>\<lambda>rv. no_cap_to_obj_dr_emp cap\<rbrace>"
   assumes tc_invs:
   "\<And>a e f g fh th mcp sl pr sc.
-    \<lbrace>(invs::'state_ext state \<Rightarrow> bool) and tcb_at a
+    \<lbrace>(invs::det_ext state \<Rightarrow> bool) and tcb_at a
         and (case_option \<top> (valid_cap o fst) e)
         and (case_option \<top> (valid_cap o fst) f)
         and (case_option \<top> (valid_cap o fst) fh)
@@ -840,7 +841,7 @@ lemma bind_notification_invs:
   done*) sorry
 
 lemma (in Tcb_AI) tcbinv_invs:
-  "\<lbrace>(invs::('state_ext::state_ext) state\<Rightarrow>bool) and tcb_inv_wf ti\<rbrace>
+  "\<lbrace>(invs::det_ext state\<Rightarrow>bool) and tcb_inv_wf ti\<rbrace>
      invoke_tcb ti
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac ti, simp_all only:)
@@ -1315,11 +1316,23 @@ lemma pred_tcb_at_arch_state[simp]:
   "pred_tcb_at proj P t (arch_state_update f s) = pred_tcb_at proj P t s"
   by (simp add: pred_tcb_at_def obj_at_def)
 
+lemma set_domain_invs[wp]:
+  "\<lbrace>invs\<rbrace>
+     set_domain t d
+   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  by (simp add: set_domain_def | wp)+
+
 lemma invoke_domain_invs:
   "\<lbrace>invs\<rbrace>
      invoke_domain t d
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (simp add: invoke_domain_def | wp)+
+
+lemma set_domain_typ_at[wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
+     set_domain t d
+   \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  by (simp add: set_domain_def | wp)+
 
 lemma invoke_domain_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>

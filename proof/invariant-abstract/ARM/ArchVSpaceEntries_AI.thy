@@ -652,7 +652,7 @@ lemma invoke_tcb_valid_pdpt_objs[wp]:
 
 lemma invoke_domain_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> invoke_domain t d \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  by (simp add: invoke_domain_def | wp)+
+  by (simp add: invoke_domain_def set_domain_def | wp)+
 
 lemma invoke_sched_control_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> invoke_sched_control i \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"

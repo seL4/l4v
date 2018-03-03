@@ -155,9 +155,10 @@ lemma is_up_8_32: "is_up (ucast :: word8 \<Rightarrow> word32)"
 
 
 crunches
-  schedule_tcb, cancel_all_ipc, cancel_all_signals, fast_finalise, set_cap, post_cap_deletion, sched_context_unbind_tcb
+  schedule_tcb, cancel_all_ipc, cancel_all_signals, fast_finalise, set_cap, post_cap_deletion, sched_context_unbind_tcb,
+  sched_context_donate
   for mdb_inv[wp]: "\<lambda>s. P (cdt s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps ignore: tcb_release_remove test_reschedule)
 
 lemma cap_delete_one_still_derived:
   "\<lbrace>\<lambda>s. cte_wp_at (is_derived (cdt s) p' cap) p' s \<and> p \<noteq> p' \<and> valid_mdb s\<rbrace>

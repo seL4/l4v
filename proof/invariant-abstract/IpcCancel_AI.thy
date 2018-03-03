@@ -382,10 +382,6 @@ lemma blocked_cancel_ipc_invs:
   apply fastforce
   done*)
 
-lemma symreftype_inverse':
-  "symreftype ref = ref' \<Longrightarrow> ref = symreftype ref'"
-  by (cases ref) simp_all
-
 lemma cancel_signal_invs:
   "\<lbrace>invs and st_tcb_at ((=) (Structures_A.BlockedOnNotification ntfn)) t\<rbrace>
   cancel_signal t ntfn

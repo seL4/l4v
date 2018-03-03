@@ -377,9 +377,10 @@ lemma update_cap_valid[Tcb_AI_asms]:
 crunch pred_tcb_at: switch_to_thread "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
+crunch typ_at[wp]: set_priority "\<lambda>(s::det_ext state). P (typ_at T p s)"
+  (wp: maybeM_inv hoare_drop_imps)
 crunch typ_at[wp]: invoke_tcb "\<lambda>(s::det_ext state). P (typ_at T p s)"
-  (ignore: check_cap_at setNextPC zipWithM postpone sched_context_resume sched_context_bind_tcb
-       wp: hoare_drop_imps mapM_x_wp' check_cap_inv maybeM_inv
+  (wp: hoare_drop_imps mapM_x_wp' check_cap_inv maybeM_inv
      simp: crunch_simps)
 
 end

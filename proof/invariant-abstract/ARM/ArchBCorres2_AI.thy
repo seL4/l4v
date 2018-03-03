@@ -25,9 +25,12 @@ crunch (bcorres)bcorres[wp]: create_cap,init_arch_objects,retype_region,delete_o
 
 crunch (bcorres)bcorres[wp]: set_extra_badge,derive_cap truncate_state (ignore: storeWord)
 
-crunch (bcorres)bcorres[wp]: invoke_untyped, invoke_sched_context truncate_state
+crunch (bcorres)bcorres[wp]: invoke_untyped truncate_state
   (ignore: sequence_x)
-
+(*
+crunch (bcorres)bcorres[wp]: invoke_sched_context truncate_state
+  (ignore: sequence_x)
+*)
 crunch (bcorres)bcorres[wp, BCorres2_AI_assms]: set_mcpriority,arch_tcb_set_ipc_buffer,
           arch_get_sanitise_register_info, arch_post_modify_registers truncate_state
 
@@ -36,7 +39,7 @@ lemma invoke_sched_control_configure_bcorres[wp]:
   shows "bcorres (invoke_sched_control_configure a) (invoke_sched_control_configure a)"
   apply (cases a; wpsimp)
   sorry
-
+(*
 lemma invoke_tcb_bcorres[wp]:
   fixes a
   shows "bcorres (invoke_tcb a) (invoke_tcb a)"
@@ -44,7 +47,7 @@ lemma invoke_tcb_bcorres[wp]:
   apply (rename_tac option)
   apply (case_tac option)
    apply wpsimp+
-  done
+  done*)
 
 lemma transfer_caps_loop_bcorres[wp]:
  "bcorres (transfer_caps_loop ep buffer n caps slots mi) (transfer_caps_loop ep buffer n caps slots mi)"
@@ -98,9 +101,9 @@ lemmas schedule_bcorres[wp] = schedule_bcorres1[OF BCorres2_AI_axioms]
 
 context Arch begin global_naming ARM
 
-crunch (bcorres)bcorres[wp]: send_ipc,send_signal,do_reply_transfer,arch_perform_invocation truncate_state
-  (simp: gets_the_def swp_def ignore: freeMemory clearMemory loadWord cap_fault_on_failure
-         storeWord lookup_error_on_failure getRestartPC getRegister mapME)
+crunch (bcorres)bcorres[wp]: send_signal,arch_perform_invocation truncate_state
+  (simp: gets_the_def swp_def ignore: freeMemory clearMemory getRegister loadWord cap_fault_on_failure
+         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME)
 (*
 lemma perform_invocation_bcorres[wp]:
   "bcorres (send_ipc a b c d e g f) (send_ipc a b c d e g f)"
@@ -111,11 +114,11 @@ crunch (bcorres)bcorres[wp]: send_ipc truncate_state
   (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
          set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME)
 RT ?? *)
-
+(*
 lemma perform_invocation_bcorres[wp]: "bcorres (perform_invocation a b c d) (perform_invocation a b c d)"
   apply (cases d)
   apply (wp | wpc | simp)+
-  done
+  done*)
 
 lemma decode_cnode_invocation[wp]: "bcorres (decode_cnode_invocation a b c d) (decode_cnode_invocation a b c d)"
   apply (simp add: decode_cnode_invocation_def)

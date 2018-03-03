@@ -372,7 +372,7 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
   "\<lbrace>tcb_at t and reply_at r and (* RT might need more precondition *)
     invs\<rbrace>
      do_reply_transfer t r
-   \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+   \<lbrace>\<lambda>rv. invs :: det_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wp | wpc |simp)+
 (*        apply (wp sts_invs_minor)
@@ -459,7 +459,7 @@ lemmas si_invs[wp] = si_invs'[where Q=\<top>,OF hoare_TrueI hoare_TrueI hoare_Tr
 
 lemma (in Systemcall_AI_Pre2) pinv_invs[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i\<rbrace>
-    perform_invocation blocking call can_donate i \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+    perform_invocation blocking call can_donate i \<lbrace>\<lambda>rv. invs :: det_ext state \<Rightarrow> _\<rbrace>"
   apply (case_tac i, simp_all)
        apply (wp tcbinv_invs send_signal_interrupt_states invoke_domain_invs
          | clarsimp simp:ct_in_state_def
@@ -1287,7 +1287,7 @@ lemma drop_when_dxo_wp: "(\<And>f s. P (trans_state f s) = P s ) \<Longrightarro
 context Syscall_AI begin
 
 lemma do_reply_transfer_nonz_cap:
-  "\<lbrace>\<lambda>s :: 'state_ext state. ex_nonz_cap_to p s \<and> valid_objs s \<and> tcb_at p s \<and> valid_mdb s
+  "\<lbrace>\<lambda>s :: det_ext state. ex_nonz_cap_to p s \<and> valid_objs s \<and> tcb_at p s \<and> valid_mdb s
             \<and> reply_at reply s\<rbrace>
      do_reply_transfer sender reply
    \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
@@ -1317,7 +1317,7 @@ lemma do_reply_transfer_st_tcb_at_active:
   "\<lbrace>valid_objs and st_tcb_at active t and (*st_tcb_at awaiting_reply t' and ? *)
     reply_at r\<rbrace>
     do_reply_transfer t r
-   \<lbrace>\<lambda>rv. st_tcb_at active t :: 'state_ext state \<Rightarrow> _\<rbrace>"
+   \<lbrace>\<lambda>rv. st_tcb_at active t :: det_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wpsimp wp: drop_when_dxo_wp sts_st_tcb_at'
             hoare_drop_imps thread_set_no_change_tcb_state

@@ -368,6 +368,9 @@ lemma check_cap_at_bcorres[wp]: "bcorres f f' \<Longrightarrow> bcorres (check_c
 lemma maybeM_bcorres[wp]: "\<forall>x. bcorres (f x) (f' x) \<Longrightarrow> bcorres (maybeM f opt) (maybeM f' opt)"
   by (wpsimp simp: maybeM_def split: option.splits)
 
+lemma iset_domain_bcorres[wp]: "bcorres (set_domain t d) (set_domain t d)"
+  by (wpsimp simp: set_domain_def)
+
 lemma invoke_domain_bcorres[wp]: "bcorres (invoke_domain t d) (invoke_domain t d)"
   by (simp add: invoke_domain_def, wp)
 

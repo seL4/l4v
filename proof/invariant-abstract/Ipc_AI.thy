@@ -2231,14 +2231,14 @@ crunch typ_at[wp]: handle_fault "\<lambda>s::'state_ext state. P (typ_at T p s)"
 
 lemma hf_tcb_at [wp]:
   "\<And>t' t x.
-    \<lbrace>tcb_at t' :: 'state_ext state \<Rightarrow> bool\<rbrace>
+    \<lbrace>tcb_at t' :: det_ext state \<Rightarrow> bool\<rbrace>
       handle_fault t x
     \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
   by (simp add: tcb_at_typ, wp)
 
 lemma sfi_tcb_at [wp]:
   "\<And>t tptr handler_cap fault can_donate.
-    \<lbrace>tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>
+    \<lbrace>tcb_at t :: det_ext state \<Rightarrow> bool\<rbrace>
       send_fault_ipc tptr handler_cap fault can_donate
     \<lbrace>\<lambda>_. tcb_at t\<rbrace>"
 (*  by (simp add: tcb_at_typ, wp) *) sorry
@@ -3024,7 +3024,7 @@ lemma sfi_makes_simple:
   sorry
 
 lemma hf_makes_simple:
-  "\<lbrace>st_tcb_at simple t' and K (t \<noteq> t') :: 'state_ext state \<Rightarrow> bool\<rbrace>
+  "\<lbrace>st_tcb_at simple t' and K (t \<noteq> t') :: det_ext state \<Rightarrow> bool\<rbrace>
      handle_fault t ft
    \<lbrace>\<lambda>rv. st_tcb_at simple t'\<rbrace>"
   unfolding handle_fault_def

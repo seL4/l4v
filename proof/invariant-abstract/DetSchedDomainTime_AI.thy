@@ -200,8 +200,9 @@ crunch domain_list_inv[wp]: do_ipc_transfer "\<lambda>s. P (domain_list s)"
 
 crunch domain_list_inv[wp]: copy_mrs "\<lambda>s. P (domain_list s)"
 
-crunch domain_list_inv[wp]: sched_context_donate "\<lambda>s. P (domain_list s)"
-  (wp: maybeM_inv mapM_wp dxo_wp_weak hoare_drop_imp)
+lemma sched_context_donate_domain_list_inv[wp]:
+  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> sched_context_donate param_a param_b \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+  sorry
 
 lemma reply_push_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> reply_push param_a param_b param_c param_d \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
@@ -268,6 +269,14 @@ lemma end_timeslice_domain_list_inv[wp]:
 
 lemma postpone_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> postpone scsptr \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+  sorry
+
+lemma possible_switch_to_domain_list_inv[wp]:
+  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> possible_switch_to scsptr \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+  sorry
+
+lemma sched_context_bind_tcb_domain_list_inv[wp]:
+  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> sched_context_bind_tcb scptr tptr \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   sorry
 
 crunch domain_list_inv[wp]:
@@ -435,6 +444,9 @@ crunch domain_time_inv[wp]: guarded_switch_to "\<lambda>s. P (domain_time s)"
 
 crunch domain_time_inv[wp]: choose_thread "\<lambda>s. P (domain_time s)"
 
+lemma sched_context_donate_domain_time_inv[wp]:
+  "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace> sched_context_donate param_a param_b \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
+  sorry
 
 lemma reply_remove_domain_time_inv[wp]:
   "\<lbrace>(\<lambda>s :: det_ext state. P (domain_time s))\<rbrace>
@@ -495,7 +507,7 @@ crunch domain_time_inv[wp]: do_ipc_transfer "\<lambda>s. P (domain_time s)"
 crunch domain_time_inv[wp]: copy_mrs "\<lambda>s. P (domain_time s)"
 
 crunch domain_time_inv[wp]: send_ipc "\<lambda>s. P (domain_time s)"
-  (wp: mapM_wp hoare_drop_imps maybeM_inv simp: crunch_simps ignore:copy_mrs)
+  (wp: mapM_wp hoare_drop_imps maybeM_inv simp: crunch_simps ignore:copy_mrs sched_context_donate)
 
 
 lemma send_fault_ipc_domain_time[wp]:
@@ -546,8 +558,12 @@ lemma end_timeslice_domain_time_inv[wp]:
   "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace> end_timeslice canTimeout \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   sorry
 
+lemma sched_context_bind_tcb_domain_time_inv[wp]:
+  "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace> sched_context_bind_tcb sc_ptr tcb_ptr \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
+  sorry
+
 crunch domain_time_inv[wp]:
-  sched_context_bind_tcb,refill_budget_check,charge_budget
+  refill_budget_check,charge_budget
   "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps check_cap_inv maybeM_inv simp: Let_def)
 
