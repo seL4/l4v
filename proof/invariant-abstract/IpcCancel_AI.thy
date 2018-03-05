@@ -62,10 +62,6 @@ lemma cancel_all_ipc_valid_objs:
         | clarsimp simp: ep_queued_st_tcb_at obj_at_def valid_ep_def)+
   sorry
 
-lemma possible_switch_to_to_typ_at:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> possible_switch_to param_a \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  sorry
-
 (*
 lemma unbind_notification_valid_objs_helper:
   "valid_ntfn ntfn s \<longrightarrow> valid_ntfn (set_ntfn_obj_ref ntfn_bound_tcb_update ntfn None) s "
