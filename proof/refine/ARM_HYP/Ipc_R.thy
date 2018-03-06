@@ -2084,7 +2084,7 @@ lemma handle_fault_reply_registers_corres:
            (do t' \<leftarrow> arch_get_sanitise_register_info t;
                y \<leftarrow> as_user t
                 (zipWithM_x
-                  (\<lambda>r v. set_register r
+                  (\<lambda>r v. setRegister r
                           (sanitise_register t' r v))
                   msg_template msg);
                return (label = 0)
@@ -2102,7 +2102,7 @@ lemma handle_fault_reply_registers_corres:
        apply (rule corres_split)
        apply (rule corres_trivial, simp)
       apply (rule corres_as_user')
-      apply(simp add: set_register_def setRegister_def sanitise_register_def atcbVCPUPtr
+      apply(simp add: setRegister_def sanitise_register_def atcbVCPUPtr
                       sanitiseRegister_def syscallMessage_def Let_def cong: register.case_cong)
       apply(subst zipWithM_x_modify)+
       apply(rule corres_modify')

@@ -400,8 +400,8 @@ proof -
   have Q: "\<And>src src' des des' r r'. \<lbrakk> src = src'; des = des' \<rbrakk> \<Longrightarrow>
            corres dc (tcb_at src and tcb_at des and invs)
                      (tcb_at' src' and tcb_at' des' and invs')
-           (do v \<leftarrow> as_user src (get_register r);
-               as_user des (set_register r' v)
+           (do v \<leftarrow> as_user src (getRegister r);
+               as_user des (setRegister r' v)
             od)
            (do v \<leftarrow> asUser src' (getRegister r);
                asUser des' (setRegister r' v)
@@ -409,7 +409,7 @@ proof -
     apply clarsimp
     apply (rule corres_guard_imp)
       apply (rule corres_split_eqr)
-        apply (simp add: set_register_def setRegister_def)
+        apply (simp add: setRegister_def)
         apply (rule corres_as_user)
         apply (rule corres_modify')
          apply simp
@@ -420,8 +420,8 @@ proof -
   have R: "\<And>src src' des des' xs ys. \<lbrakk> src = src'; des = des'; xs = ys \<rbrakk> \<Longrightarrow>
            corres dc (tcb_at src and tcb_at des and invs)
                      (tcb_at' src' and tcb_at' des' and invs')
-           (mapM_x (\<lambda>r. do v \<leftarrow> as_user src (get_register r);
-               as_user des (set_register r v)
+           (mapM_x (\<lambda>r. do v \<leftarrow> as_user src (getRegister r);
+               as_user des (setRegister r v)
             od) xs)
            (mapM_x (\<lambda>r'. do v \<leftarrow> asUser src' (getRegister r');
                asUser des' (setRegister r' v)
@@ -431,9 +431,6 @@ proof -
         apply (rule Q)
           apply (clarsimp simp: set_zip_same | wp)+
     done
-  have S: "get_register = getRegister" "set_register = setRegister"
-    by (rule ext | simp add: get_register_def getRegister_def
-                             set_register_def setRegister_def)+
   have U: "\<And>t. corres dc (tcb_at t and invs) (tcb_at' t and invs')
                 (do pc \<leftarrow> as_user t getRestartPC; as_user t (setNextPC pc) od)
                 (do pc \<leftarrow> asUser t getRestartPC; asUser t (setNextPC pc) od)"
@@ -457,7 +454,7 @@ proof -
                       apply simp
                      apply (wp static_imp_wp)+
                apply (rule corres_when[OF refl])
-               apply (rule R[unfolded S, OF refl refl])
+               apply (rule R[OF refl refl])
                apply (simp add: gpRegisters_def)
               apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest" in hoare_strengthen_post[rotated])
                apply (clarsimp simp: invs_def valid_sched_weak_strg valid_sched_def)
@@ -468,8 +465,8 @@ proof -
             apply (rule corres_when[OF refl])
             apply (rule corres_split_nor)
                apply (simp add: getRestartPC_def setNextPC_def dc_def[symmetric])
-               apply (rule Q[unfolded S, OF refl refl])
-              apply (rule R[unfolded S, OF refl refl])
+               apply (rule Q[OF refl refl])
+              apply (rule R[OF refl refl])
               apply (simp add: frame_registers_def frameRegisters_def)
              apply ((wp mapM_x_wp' static_imp_wp, simp+)+)[2]
             apply (wp mapM_x_wp' static_imp_wp, simp+)

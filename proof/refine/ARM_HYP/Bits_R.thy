@@ -48,8 +48,7 @@ end
 
 crunch_ignore (add:
   storeWordVM loadWord setRegister getRegister getRestartPC
-  debugPrint set_register get_register
-  setNextPC maskInterrupt clearMemory throw_on_false)
+  debugPrint setNextPC maskInterrupt clearMemory throw_on_false)
 
 crunch_ignore (add: unifyFailure ignoreFailure)
 
