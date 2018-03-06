@@ -257,13 +257,8 @@ lemma copy_mrs_in_user_frame[wp, Ipc_AI_assms]:
   "\<lbrace>in_user_frame p\<rbrace> copy_mrs t buf t' buf' n \<lbrace>\<lambda>rv. in_user_frame p\<rbrace>"
   by (simp add: in_user_frame_def) (wp hoare_vcg_ex_lift)
 
-lemma get_register_eq : "getRegister r = get_register r"
-  apply (simp add: getRegister_def get_register_def)
-  done
-
 lemma as_user_getRestart_invs[wp]: "\<lbrace>P\<rbrace> as_user t getRestartPC \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: get_register_eq getRestartPC_def ; rule user_getreg_inv)
-  done
+  by (simp add: getRestartPC_def, rule user_getreg_inv)
 
 lemma make_arch_fault_msg_invs[wp, Ipc_AI_assms]: "make_arch_fault_msg f t \<lbrace>invs\<rbrace>"
   apply (cases f)
