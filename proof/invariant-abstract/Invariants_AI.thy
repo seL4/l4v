@@ -358,7 +358,7 @@ where
   | NotificationCap r badge rights \<Rightarrow> AllowGrant \<notin> rights
   | CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
-  | Zombie r b n \<Rightarrow> (case b of None \<Rightarrow> n \<le> 5
+  | Zombie r b n \<Rightarrow> (case b of None \<Rightarrow> n \<le> 5 (* RT? *)
                                           | Some b \<Rightarrow> n \<le> 2 ^ b \<and> b \<noteq> 0)
   | ArchObjectCap ac \<Rightarrow> wellformed_acap ac
   | SchedContextCap scp n \<Rightarrow> valid_sched_context_size n
@@ -404,7 +404,7 @@ where
   | IRQControlCap \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
   | Zombie r b n \<Rightarrow>
-         (case b of None \<Rightarrow> tcb_at r s \<and> n \<le> 5
+         (case b of None \<Rightarrow> tcb_at r s \<and> n \<le> 5 (* RT check *)
                   | Some b \<Rightarrow> cap_table_at b r s \<and> n \<le> 2 ^ b \<and> b \<noteq> 0)
   | ArchObjectCap ac \<Rightarrow> valid_arch_cap ac s)"
 

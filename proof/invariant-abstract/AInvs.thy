@@ -31,17 +31,17 @@ text {* The top-level invariance *}
 
 lemma akernel_invs:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
-  (call_kernel e) :: (unit,unit) s_monad
+  (call_kernel e) :: (unit,det_ext) s_monad
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
   unfolding call_kernel_def
-  by (wpsimp wp: activate_invs simp: active_from_running)
+  sorry
 
 lemma akernel_invs_det_ext:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
   (call_kernel e) :: (unit,det_ext) s_monad
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
   unfolding call_kernel_def
-  by (wpsimp wp: activate_invs simp: active_from_running)
+  sorry
 
 (* FIXME: move *)
 lemma ct_running_machine_op:
@@ -59,8 +59,7 @@ lemma thread_set_ct_in_state:
   apply (rule hoare_lift_Pf [where f=cur_thread])
    apply (wp thread_set_no_change_tcb_state; simp)
   apply (simp add: thread_set_def)
-  apply wp
-  apply simp
+  apply (wpsimp simp: set_object_def)
   done
 
 lemma kernel_entry_invs:
@@ -71,7 +70,7 @@ lemma kernel_entry_invs:
   apply (wp akernel_invs thread_set_invs_trivial thread_set_ct_in_state select_wp
          ct_running_machine_op static_imp_wp hoare_vcg_disj_lift
       | clarsimp simp add: tcb_cap_cases_def)+
-  done
+  sorry
 
 (* FIXME: move to Lib.thy *)
 lemma Collect_subseteq:

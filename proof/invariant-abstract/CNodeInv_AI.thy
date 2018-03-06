@@ -59,9 +59,9 @@ where
     cte_wp_at ((\<noteq>) NullCap) pivot and K (src \<noteq> pivot \<and> pivot \<noteq> dest) and
     (\<lambda>s. src \<noteq> dest \<longrightarrow> cte_wp_at (\<lambda>c. c = NullCap) dest s) and
     ex_cte_cap_wp_to is_cnode_cap pivot and ex_cte_cap_wp_to is_cnode_cap dest)"
-| "valid_cnode_inv (SaveCall ptr) =
+(*| "valid_cnode_inv (SaveCall ptr) =
    (ex_cte_cap_wp_to is_cnode_cap ptr and
-    cte_wp_at (\<lambda>c. c = NullCap) ptr and real_cte_at ptr)"
+    cte_wp_at (\<lambda>c. c = NullCap) ptr and real_cte_at ptr)"*)
 | "valid_cnode_inv (CancelBadgedSendsCall cap) =
    (valid_cap cap and K (has_cancel_send_rights cap))"
 
@@ -209,10 +209,6 @@ locale CNodeInv_AI =
       \<lbrace>emptyable sl :: 'state_ext state \<Rightarrow> bool\<rbrace>
         arch_finalise_cap c f
       \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  assumes finalise_cap_not_reply_master_unlifted:
-    "\<And>rv s' cap sl (s::'state_ext state).
-      (rv, s') \<in> fst (finalise_cap cap sl s) \<Longrightarrow>
-        \<not> is_master_reply_cap (fst rv)"
   assumes nat_to_cref_0_replicate:
     "\<And>n. n < word_bits \<Longrightarrow> nat_to_cref n 0 = replicate n False"
   assumes prepare_thread_delete_thread_cap:
@@ -250,24 +246,20 @@ lemma decode_cnode_cases2:
                     \<lbrakk> args = index # bits # src_index # src_depth # args';
                       exs = src_root_cap # exs';
                       invocation_type label \<in> set [CNodeCopy .e. CNodeMutate];
-                      invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
+                      invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
                       invocation_type label \<notin> {CNodeRevoke, CNodeDelete,
-                      CNodeCancelBadgedSends, CNodeRotate, CNodeSaveCaller} \<rbrakk> \<Longrightarrow> P"
+                      CNodeCancelBadgedSends, CNodeRotate} \<rbrakk> \<Longrightarrow> P"
   assumes rvk: "\<And>index bits args'. \<lbrakk> args = index # bits # args';
                           invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
-                          invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
+                          invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
                           invocation_type label = CNodeRevoke \<rbrakk> \<Longrightarrow> P"
   assumes dlt: "\<And>index bits args'. \<lbrakk> args = index # bits # args';
                           invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
-                          invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
+                          invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
                           invocation_type label = CNodeDelete \<rbrakk> \<Longrightarrow> P"
-  assumes svc: "\<And>index bits args'. \<lbrakk> args = index # bits # args';
-                          invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
-                          invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
-                          invocation_type label = CNodeSaveCaller \<rbrakk> \<Longrightarrow> P"
   assumes rcy: "\<And>index bits args'. \<lbrakk> args = index # bits # args';
                           invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
-                          invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
+                          invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
                           invocation_type label = CNodeCancelBadgedSends \<rbrakk> \<Longrightarrow> P"
   assumes rot: "\<And>index bits pivot_new_data pivot_index pivot_depth src_new_data
                   src_index src_depth args' pivot_root_cap src_root_cap exs'.
@@ -275,15 +267,15 @@ lemma decode_cnode_cases2:
                                  # src_new_data # src_index # src_depth # args';
                        exs = pivot_root_cap # src_root_cap # exs';
                        invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate];
-                       invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller];
+                       invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate];
                        invocation_type label = CNodeRotate \<rbrakk> \<Longrightarrow> P"
   assumes errs:
-      "\<lbrakk> invocation_type label \<notin> set [CNodeRevoke .e. CNodeSaveCaller] \<or>
+      "\<lbrakk> invocation_type label \<notin> set [CNodeRevoke .e. CNodeRotate] \<or>
          args = [] \<or> (\<exists>x. args = [x]) \<or> (\<exists>index bits args'. args = index # bits # args' \<and>
-                             invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller] \<and>
+                             invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate] \<and>
                              (invocation_type label \<in> set [CNodeCopy .e. CNodeMutate]
                                         \<and> invocation_type label \<notin> {CNodeRevoke, CNodeDelete,
-                                             CNodeCancelBadgedSends, CNodeRotate, CNodeSaveCaller}
+                                             CNodeCancelBadgedSends, CNodeRotate}
                                         \<and> (case (args', exs) of (src_index # src_depth # args'',
                                                     src_root_cap # exs') \<Rightarrow> False | _ \<Rightarrow> True) \<or>
                               invocation_type label \<notin> set [CNodeCopy .e. CNodeMutate] \<and>
@@ -294,9 +286,9 @@ lemma decode_cnode_cases2:
                                          | _ \<Rightarrow> True))) \<rbrakk> \<Longrightarrow> P"
   shows "P"
 proof -
-  have simps: "[CNodeRevoke .e. CNodeSaveCaller]
+  have simps: "[CNodeRevoke .e. CNodeRotate]
                      = [CNodeRevoke, CNodeDelete, CNodeCancelBadgedSends, CNodeCopy, CNodeMint,
-                        CNodeMove, CNodeMutate, CNodeRotate, CNodeSaveCaller]"
+                        CNodeMove, CNodeMutate, CNodeRotate]"
               "[CNodeCopy .e. CNodeMutate] = [CNodeCopy, CNodeMint,
                         CNodeMove, CNodeMutate]"
     by (simp_all add: upto_enum_def fromEnum_def toEnum_def enum_invocation_label)
@@ -314,9 +306,9 @@ proof -
       apply auto[1]
      apply (simp split: prod.split_asm list.split_asm)
      apply (erule(2) mvins, auto simp: simps)[1]
-    apply (case_tac "invocation_type label \<in> set [CNodeRevoke .e. CNodeSaveCaller]")
+    apply (case_tac "invocation_type label \<in> set [CNodeRevoke .e. CNodeRotate]")
      apply (simp_all add: errs)
-    apply (insert rvk dlt svc rcy rot)
+    apply (insert rvk dlt rcy rot)
     apply (simp add: simps)
     apply atomize
     apply (elim disjE, simp_all)
@@ -487,15 +479,6 @@ lemma decode_cnode_inv_wf[wp]:
       apply (wp lsfco_cte_at hoare_drop_imps whenE_throwError_wp
                  | simp add: split_beta validE_R_def[symmetric])+
       apply clarsimp
-     \<comment> \<open>Save\<close>
-     apply (simp add: decode_cnode_invocation_def unlessE_whenE cong: if_cong)
-     apply (rule hoare_pre)
-      apply (wp ensure_empty_stronger whenE_throwError_wp
-                lsfco_cte_at lookup_slot_for_cnode_op_cap_to
-                hoare_vcg_const_imp_lift
-                | simp add: split_beta
-                | wp_once hoare_drop_imps)+
-     apply clarsimp
     \<comment> \<open>CancelBadgedSends\<close>
     apply (simp add: decode_cnode_invocation_def
                      unlessE_def whenE_def
@@ -769,7 +752,7 @@ lemma prepare_thread_delete_not_recursive:
 
 lemma suspend_not_recursive:
   "\<lbrace>\<lambda>s. P (not_recursive_cspaces s)\<rbrace>
-     IpcCancel_A.suspend t
+     SchedContext_A.suspend t
    \<lbrace>\<lambda>rv s. P (not_recursive_cspaces s)\<rbrace>"
   apply (simp add: not_recursive_cspaces_def cte_wp_at_caps_of_state)
   apply (wp suspend_caps_of_state)
@@ -884,14 +867,14 @@ lemma final_cap_still_at:
 
 lemma suspend_thread_cap:
   "\<lbrace>\<lambda>s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>
-     IpcCancel_A.suspend t
+     SchedContext_A.suspend t
    \<lbrace>\<lambda>rv s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>"
   apply (rule hoare_chain)
-    apply (rule suspend_cte_wp_at_preserved
+(*    apply (rule suspend_cte_wp_at_preserved
                   [where p=x and P="(=) (cap.ThreadCap p)"])
     apply (clarsimp simp add: can_fast_finalise_def)
    apply (simp add: cte_wp_at_caps_of_state)+
-  done
+  done*) sorry
 
 
 lemma emptyable_irq_state_independent[intro!, simp]:
@@ -958,7 +941,7 @@ lemma rec_del_termination:
    apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
                          fst_cte_ptrs_def
                   split: if_split_asm)
-   apply (frule(1) use_valid [OF _ unbind_notification_caps_of_state],
+(*   apply (frule(1) use_valid [OF _ unbind_notification_caps_of_state],
           frule(1) use_valid [OF _ suspend_thread_cap],
           frule(1) use_valid [OF _ prepare_thread_delete_thread_cap])
    apply clarsimp
@@ -966,11 +949,11 @@ lemma rec_del_termination:
    apply (erule use_valid [OF _ suspend_not_recursive])
    apply (erule use_valid [OF _ unbind_notification_not_recursive])
    apply simp
-  apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
+  apply (clarsi mp simp: in_monad cte_wp_at_caps_of_state
                         fst_cte_ptrs_def zombie_cte_bits_def
                         tcb_cnode_index_def
                  split: option.split_asm)
-  done
+  done *) sorry
 
 lemma rec_del_dom: "\<And> (p :: rec_del_call \<times> 'state_ext state). rec_del_dom p"
   using rec_del_termination by blast
@@ -1102,7 +1085,7 @@ lemma cnode_to_zombie_valid:
 
 lemma tcb_to_zombie_valid:
   "\<lbrakk> s \<turnstile> cap.ThreadCap t \<rbrakk>
-    \<Longrightarrow> s \<turnstile> cap.Zombie t None 5"
+    \<Longrightarrow> s \<turnstile> cap.Zombie t None 5"  (* RT? *)
   apply (simp add: valid_cap_def)
   apply (simp add: cap_aligned_def)
   done
@@ -1139,14 +1122,14 @@ lemma obj_ref_untyped_empty [simp]:
   "obj_refs c \<inter> untyped_range c = {}"
   by (cases c, auto)
 
-
+(*
 lemma weak_derived_Reply_eq:
   "\<lbrakk> weak_derived c c'; c = ReplyCap t m \<rbrakk> \<Longrightarrow> c' = ReplyCap t m"
   "\<lbrakk> weak_derived c c'; c' = ReplyCap t m \<rbrakk> \<Longrightarrow> c = ReplyCap t m"
   by (auto simp: weak_derived_def copy_of_def
                  same_object_as_def is_cap_simps
           split: if_split_asm cap.split_asm)
-
+*)
 
 context mdb_swap_abs_invs begin
 
@@ -1169,13 +1152,7 @@ proof -
   apply (clarsimp simp add: mdb_cte_at_def)
   apply (cases src, cases dest)
   apply (simp add: n_def n'_def cs'_def split: if_split_asm)
-        apply fastforce
-       apply fastforce
-      apply fastforce
-     apply fastforce
-    apply fastforce
-   apply fastforce
-  apply fastforce
+        apply fastforce+
   done
 qed
 
@@ -1263,83 +1240,6 @@ lemmas src_replies[simp] = weak_derived_replies [OF sder]
 
 lemmas dest_replies[simp] = weak_derived_replies [OF dder]
 
-
-lemma reply_caps_mdb_n:
-  "reply_caps_mdb n cs'"
-proof -
-  from valid_mdb
-  have "reply_caps_mdb m cs"
-    by (simp add: cs_def m valid_mdb_def2 reply_mdb_def)
-  thus ?thesis using cap cap' unfolding reply_caps_mdb_def cs'_def n_def n'_def
-    apply (intro allI impI)
-    apply (simp split: if_split_asm del: split_paired_All split_paired_Ex)
-      apply (elim allE)
-      apply (drule weak_derived_Reply_eq(1) [OF sder], simp del: split_paired_Ex)
-      apply (erule(1) impE)
-      apply (intro conjI impI)
-       apply (clarsimp elim!: weak_derived_Reply_eq(2) [OF dder])
-      apply (erule exEI, clarsimp)
-     apply (elim allE)
-     apply (drule weak_derived_Reply_eq(1) [OF dder], simp del: split_paired_Ex)
-     apply (erule(1) impE)
-     apply (intro conjI impI)
-      apply (clarsimp elim!: weak_derived_Reply_eq(2) [OF sder])
-     apply (erule exEI, clarsimp)
-    apply (erule_tac x=ptr in allE, erule_tac x=t in allE)
-    apply (erule(1) impE)
-    apply (intro conjI impI)
-      apply (clarsimp elim!: weak_derived_Reply_eq(2) [OF dder])
-     apply (clarsimp elim!: weak_derived_Reply_eq(2) [OF sder])
-    apply fastforce
-    done
-qed
-
-
-lemma reply_masters_mdb_n:
-  "reply_masters_mdb n cs'"
-proof -
-  from valid_mdb
-  have r: "reply_masters_mdb m cs"
-    by (simp add: cs_def m valid_mdb_def2 reply_mdb_def)
-  have n_None:
-    "\<And>t. scap = cap.ReplyCap t True \<Longrightarrow> n dest = None"
-    "\<And>t. dcap = cap.ReplyCap t True \<Longrightarrow> n src = None"
-    using r cap cap' unfolding reply_masters_mdb_def n_def
-     by (drule_tac weak_derived_Reply_eq(1) [OF sder]
-                   weak_derived_Reply_eq(1) [OF dder],
-         fastforce simp: n'_def simp del: split_paired_All)+
-  show ?thesis unfolding reply_masters_mdb_def cs'_def using cap cap' r
-    apply (intro allI impI)
-    apply (simp add: n_None descendants s_d_swap_def
-              split: if_split_asm del: split_paired_All)
-      apply (unfold reply_masters_mdb_def)[1]
-      apply (drule weak_derived_Reply_eq(1) [OF sder], simp del: split_paired_All)
-      apply (elim allE, erule(1) impE, elim conjE)
-      apply (intro impI conjI)
-       apply (drule(1) bspec, rule weak_derived_Reply_eq(2) [OF dder], simp)
-      apply fastforce
-     apply (unfold reply_masters_mdb_def)[1]
-     apply (drule weak_derived_Reply_eq(1) [OF dder], simp del: split_paired_All)
-     apply (elim allE, erule(1) impE, elim conjE)
-     apply (intro impI conjI)
-      apply (drule(1) bspec, rule weak_derived_Reply_eq(2) [OF sder], simp)
-     apply fastforce
-    apply (unfold reply_masters_mdb_def)[1]
-    apply (erule_tac x=ptr in allE, erule_tac x=t in allE)
-    apply (erule(1) impE, erule conjE, simp add: n_def n'_def)
-    apply (intro impI conjI)
-        apply (rule weak_derived_Reply_eq(2) [OF dder]
-                    weak_derived_Reply_eq(2) [OF sder],
-               simp)+
-    apply fastforce
-    done
-qed
-
-
-lemma reply_mdb_n:
-  "reply_mdb n cs'"
-  by (simp add: reply_mdb_def reply_masters_mdb_n reply_caps_mdb_n)
-
 end
 
 
@@ -1376,7 +1276,6 @@ lemma cap_swap_mdb [wp]:
   apply (simp add: mdb_swap_abs_invs.no_mloop_n
                    mdb_swap_abs_invs.untyped_mdb_n
                    mdb_swap_abs_invs.mdb_cte_n
-                   mdb_swap_abs_invs.reply_mdb_n
               del: fun_upd_apply
               split del: if_split)
   apply (rule conjI)
@@ -1386,13 +1285,10 @@ lemma cap_swap_mdb [wp]:
     apply (clarsimp simp:cte_wp_at_caps_of_state)+
   apply (rule conjI)
    apply (simp add: ut_revocable_def weak_derived_ranges del: split_paired_All)
-  apply (rule conjI)
    apply (simp add: irq_revocable_def del: split_paired_All)
    apply (intro conjI impI allI)
     apply (simp del: split_paired_All)
    apply (simp del: split_paired_All)
-  apply (simp add: reply_master_revocable_def weak_derived_replies
-              del: split_paired_All)
   apply (clarsimp simp: valid_arch_mdb_cap_swap)
   done
 
@@ -1593,149 +1489,6 @@ lemma cap_swap_pred_tcb_at[wp]:
   unfolding cap_swap_def by (wp | simp)+
 
 
-lemma unique_reply_caps_cap_swap:
-  assumes u: "unique_reply_caps cs"
-  and     c: "cs p = Some cap"
-  and    c': "cs p' = Some cap'"
-  and    wd: "weak_derived c cap"
-  and   wd': "weak_derived c' cap'"
-  and  pneq: "p \<noteq> p'"
-  shows "unique_reply_caps (cs (p \<mapsto> c', p' \<mapsto> c))"
-proof -
-  have new_cap_is_unique[elim]:
-    "\<And>p'' c''.
-     \<lbrakk> is_reply_cap c''; p'' \<noteq> p; p'' \<noteq> p'; cs p'' = Some c''; c'' = c \<or> c'' = c' \<rbrakk>
-     \<Longrightarrow> False"
-    using u unfolding unique_reply_caps_def
-    apply (erule_tac disjE)
-     apply (elim allE)
-     apply (erule (1) impE, erule (1) impE)
-     apply (erule impE, rule c)
-     apply (simp add: weak_derived_reply_eq[OF wd])
-    apply (elim allE)
-    apply (erule (1) impE, erule (1) impE)
-    apply (erule impE, rule c')
-    apply (simp add: weak_derived_reply_eq[OF wd'])
-    done
-  have old_caps_differ:
-    "\<And>cap''.
-     \<lbrakk> is_reply_cap cap; is_reply_cap cap'; cap = cap''; cap' = cap'' \<rbrakk>
-     \<Longrightarrow> False"
-    using u unfolding unique_reply_caps_def
-    apply (elim allE)
-    apply (erule impE, rule c)
-    apply (erule impE, simp)
-    apply (erule impE, rule c')
-    apply (simp add: pneq)
-    done
-  have new_caps_differ:
-    "\<And>c''. \<lbrakk> is_reply_cap c''; c = c''; c' = c'' \<rbrakk> \<Longrightarrow> False"
-    apply (subgoal_tac "is_reply_cap c", subgoal_tac "is_reply_cap c'")
-      apply (subst(asm) weak_derived_replies [OF wd])
-      apply (subst(asm) weak_derived_replies [OF wd'])
-      apply (frule(1) old_caps_differ)
-          apply (simp add: weak_derived_reply_eq [OF wd])
-         apply (simp add: weak_derived_reply_eq [OF wd'])
-        apply simp+
-    done
-  show ?thesis
-    using u unfolding unique_reply_caps_def
-    apply (intro allI impI)
-    apply (simp split: if_split_asm del: split_paired_All)
-         apply (erule(2) new_caps_differ | fastforce)+
-    done
-qed
-
-
-lemma cap_swap_no_reply_caps:
-  assumes cap: "cs p = Some cap"
-  and    cap': "cs p' = Some cap'"
-  and      wd: "weak_derived c cap"
-  and     wd': "weak_derived c' cap'"
-  and      nr: "\<forall>sl. cs sl \<noteq> Some (cap.ReplyCap t False)"
-  shows        "\<forall>sl. (cs(p \<mapsto> c', p' \<mapsto> c)) sl \<noteq> Some (cap.ReplyCap t False)"
-proof -
-  have
-    "cap \<noteq> cap.ReplyCap t False"
-    "cap' \<noteq> cap.ReplyCap t False"
-    using cap cap' nr by clarsimp+
-  hence
-    "c \<noteq> cap.ReplyCap t False"
-    "c' \<noteq> cap.ReplyCap t False"
-    by (rule_tac ccontr, simp,
-        drule_tac weak_derived_Reply_eq [OF wd]
-                  weak_derived_Reply_eq [OF wd'],
-        simp)+
-  thus ?thesis
-    using nr unfolding fun_upd_def
-    by (clarsimp split: if_split_asm)
-qed
-
-
-lemma cap_swap_has_reply_cap_neg:
-  "\<lbrace>\<lambda>s. \<not> has_reply_cap t s \<and>
-    cte_wp_at (weak_derived c) p s \<and>
-    cte_wp_at (weak_derived c') p' s \<and>
-    p \<noteq> p'\<rbrace>
-   cap_swap c p c' p' \<lbrace>\<lambda>rv s. \<not> has_reply_cap t s\<rbrace>"
-  apply (simp add: has_reply_cap_def cte_wp_at_caps_of_state
-              del: split_paired_All split_paired_Ex)
-  apply (wp cap_swap_caps_of_state)
-  apply (elim conjE exE)
-  apply (erule(4) cap_swap_no_reply_caps)
-  done
-
-
-lemma cap_swap_replies:
-  "\<lbrace>\<lambda>s. valid_reply_caps s
-       \<and> cte_wp_at (weak_derived c) p s
-       \<and> cte_wp_at (weak_derived c') p' s
-       \<and> p \<noteq> p'\<rbrace>
-     cap_swap c p c' p'
-   \<lbrace>\<lambda>rv s. valid_reply_caps s\<rbrace>"
-  apply (simp add: valid_reply_caps_def)
-  apply (rule hoare_pre)
-   apply (simp only: imp_conv_disj)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift cap_swap_has_reply_cap_neg)
-  apply (clarsimp simp: fun_upd_def cte_wp_at_caps_of_state
-                        unique_reply_caps_cap_swap [simplified fun_upd_def])
-  done
-
-
-lemma cap_swap_fd_replies[wp]:
-  "\<lbrace>\<lambda>s. valid_reply_caps s\<rbrace>
-     cap_swap_for_delete p p'
-   \<lbrace>\<lambda>rv s. valid_reply_caps s\<rbrace>"
-  apply (simp add: cap_swap_for_delete_def)
-  apply (wp cap_swap_replies get_cap_wp)
-  apply (fastforce elim: cte_wp_at_weakenE)
-  done
-
-
-lemma cap_swap_reply_masters:
-  "\<lbrace>valid_reply_masters and K(\<not> is_master_reply_cap c \<and> \<not> is_master_reply_cap c')\<rbrace>
-   cap_swap c p c' p' \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
-  apply (simp add: valid_reply_masters_def cte_wp_at_caps_of_state)
-  apply (rule hoare_pre)
-  apply (simp only: imp_conv_disj)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift cap_swap_caps_of_state
-             cap_swap_typ_at tcb_at_typ_at)
-  apply (auto simp: is_cap_simps)
-  done
-
-
-lemma cap_swap_fd_reply_masters[wp]:
-  "\<lbrace>valid_reply_masters and
-        cte_wp_at (\<lambda>c. \<not> is_master_reply_cap c) p and
-        cte_wp_at (\<lambda>c. \<not> is_master_reply_cap c) p'\<rbrace>
-     cap_swap_for_delete p p'
-   \<lbrace>\<lambda>rv. valid_reply_masters\<rbrace>"
-  apply (simp add: cap_swap_for_delete_def)
-  apply (wp cap_swap_reply_masters get_cap_wp)
-  apply (clarsimp simp: cte_wp_at_def)
-  done
-
-
 crunch refs_of[wp]: cap_swap "\<lambda>s. P (state_refs_of s)"
   (ignore: set_cap simp: state_refs_of_pspaceI)
 
@@ -1761,12 +1514,6 @@ lemma copy_of_is_zombie:
        apply (clarsimp simp: is_cap_simps bits_of_def
                       split: cap.split_asm)+
   done
-
-
-lemma copy_of_reply_cap:
-  "copy_of (ReplyCap t False) cap \<Longrightarrow> cap = ReplyCap t False"
-  apply (clarsimp simp: copy_of_def is_cap_simps)
-  by (cases cap, simp_all add: same_object_as_def)
 
 
 lemma copy_of_cap_irqs:
@@ -1803,13 +1550,6 @@ lemma cap_swap_global_refs[wp]:
 crunch arch[wp]: cap_swap "\<lambda>s. P (arch_state s)"
 
 crunch irq_node[wp]: cap_swap "\<lambda>s. P (interrupt_irq_node s)"
-
-
-lemma valid_reply_caps_of_stateD:
-  "\<And>p t s. \<lbrakk> valid_reply_caps s; caps_of_state s p = Some (cap.ReplyCap t False) \<rbrakk>
-   \<Longrightarrow> st_tcb_at awaiting_reply t s"
-  by (auto simp: valid_reply_caps_def has_reply_cap_def cte_wp_at_caps_of_state)
-
 
 crunch interrupt_states[wp]: cap_swap "\<lambda>s. P (interrupt_states s)"
 
@@ -1941,11 +1681,10 @@ lemma cap_swap_invs[wp]:
     cte_wp_at (weak_derived c) a and
     cte_wp_at (\<lambda>cc. is_untyped_cap cc \<longrightarrow> cc = c) a and
     cte_wp_at (weak_derived c') b and
-    cte_wp_at (\<lambda>cc. is_untyped_cap cc \<longrightarrow> cc = c') b and
-    K (a \<noteq> b \<and> \<not> is_master_reply_cap c \<and> \<not> is_master_reply_cap c')\<rbrace>
+    cte_wp_at (\<lambda>cc. is_untyped_cap cc \<longrightarrow> cc = c') b\<rbrace>
    cap_swap c a c' b \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
-  apply (wp cap_swap_replies cap_swap_reply_masters valid_arch_state_lift_aobj_at
+  apply (wp valid_arch_state_lift_aobj_at
             cap_swap_typ_at valid_irq_node_typ cap_swap_aobj_at
          | simp
          | erule disjE
@@ -1956,26 +1695,23 @@ lemma cap_swap_invs[wp]:
                           cte_wp_at_caps_of_state
                 simp del: split_paired_Ex split_paired_All
          | rule conjI
-         | clarsimp dest!: valid_reply_caps_of_stateD)+
-  done
+         | clarsimp dest!: )+
+  sorry
 
 lemma cap_swap_fd_invs[wp]:
   "\<And>a b.
   \<lbrace>invs and ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) a
         and ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) b
         and (\<lambda>s. \<forall>c. tcb_cap_valid c a s)
-        and (\<lambda>s. \<forall>c. tcb_cap_valid c b s)
-        and cte_wp_at (\<lambda>c. \<not> is_master_reply_cap c) a
-        and cte_wp_at (\<lambda>c. \<not> is_master_reply_cap c) b\<rbrace>
+        and (\<lambda>s. \<forall>c. tcb_cap_valid c b s)\<rbrace>
    cap_swap_for_delete a b \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: cap_swap_for_delete_def)
   apply (wp get_cap_wp)
   apply (clarsimp)
-  apply (strengthen cap_irqs_appropriate_strengthen, simp)
-  apply (rule conjI, fastforce dest: cte_wp_at_valid_objs_valid_cap)
+(*  apply (rule conjI, fastforce dest: cte_wp_at_valid_objs_valid_cap)
   apply (rule conjI, fastforce dest: cte_wp_at_valid_objs_valid_cap)
   apply (clarsimp simp: cte_wp_at_caps_of_state weak_derived_def)
-  done
+  done*) sorry
 
 end
 
@@ -2225,7 +1961,7 @@ lemma final_zombie_not_live:
 
 
 lemma suspend_ex_cte_cap[wp]:
-  "\<lbrace>ex_cte_cap_wp_to P p\<rbrace> IpcCancel_A.suspend t \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
+  "\<lbrace>ex_cte_cap_wp_to P p\<rbrace> SchedContext_A.suspend t \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
   apply (simp add: ex_cte_cap_wp_to_def cte_wp_at_caps_of_state
               del: split_paired_Ex)
   apply (wp hoare_use_eq_irq_node [OF suspend_irq_node suspend_caps_of_state])
@@ -2325,7 +2061,7 @@ lemma replicate_False_tcb_valid[simp]:
    apply (frule tcb_cap_cases_length[OF domI])
    apply (clarsimp simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1)
   apply (cases n, simp_all add: tcb_cnode_index_def)
-  done
+  sorry
 
 
 lemma tcb_valid_nonspecial_cap:
@@ -2348,8 +2084,8 @@ lemma tcb_valid_nonspecial_cap:
 
 
 lemma suspend_makes_halted[wp]:
-  "\<lbrace>valid_objs\<rbrace> IpcCancel_A.suspend thread \<lbrace>\<lambda>_. st_tcb_at halted thread\<rbrace>"
-  unfolding IpcCancel_A.suspend_def
+  "\<lbrace>valid_objs\<rbrace> SchedContext_A.suspend thread \<lbrace>\<lambda>_. st_tcb_at halted thread\<rbrace>"
+  unfolding SchedContext_A.suspend_def
   by (wp hoare_strengthen_post [OF sts_st_tcb_at]
     | clarsimp elim!: pred_tcb_weakenE)+
 
@@ -2364,9 +2100,18 @@ lemma empty_slot_emptyable[wp]:
   apply (simp add: is_cap_simps emptyable_def tcb_at_typ)
   done
 
-
-crunch emptyable[wp]: blocked_cancel_ipc "emptyable sl"
+(* might need this as a lemma
+crunch emptyable[wp]: reply_unlink_tcb "emptyable sl"
   (ignore: set_thread_state wp: emptyable_lift sts_st_tcb_at_cases static_imp_wp)
+*)
+
+lemma blocked_cancel_ipc_emptyable[wp]:
+"\<lbrace>emptyable sl\<rbrace> blocked_cancel_ipc param_a param_b param_c 
+\<lbrace>\<lambda>_. emptyable sl\<rbrace>"
+  sorry
+(*crunch emptyable[wp]: blocked_cancel_ipc "emptyable sl"
+  (ignore: set_thread_state wp: emptyable_lift sts_st_tcb_at_cases static_imp_wp)
+*)
 
 crunch emptyable[wp]: cancel_signal "emptyable sl"
   (ignore: set_thread_state wp: emptyable_lift sts_st_tcb_at_cases static_imp_wp)
@@ -2387,24 +2132,24 @@ declare thread_set_Pmdb [wp]
 
 
 lemma reply_cancel_ipc_emptyable[wp]:
-  "\<lbrace>invs and emptyable sl and valid_mdb\<rbrace> reply_cancel_ipc ptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
+  "\<lbrace>invs and emptyable sl and valid_mdb\<rbrace> reply_cancel_ipc ptr rptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
   apply (wp select_wp select_inv hoare_drop_imps | simp add: Ball_def)+
-    apply (wp hoare_vcg_all_lift hoare_convert_imp thread_set_Pmdb
+(*    apply (wp hoare_vcg_all_lift hoare_convert_imp thread_set_Pmdb
               thread_set_invs_trivial thread_set_emptyable thread_set_cte_at
          | simp add: tcb_cap_cases_def descendants_of_cte_at)+
-  done
+  done *) sorry (* need reply_remove_emptyable *)
 
 crunch emptyable[wp]: cancel_ipc "emptyable sl"
 
 lemma suspend_emptyable[wp]:
-  "\<lbrace>invs and emptyable sl and valid_mdb\<rbrace> IpcCancel_A.suspend l \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  apply (simp add: IpcCancel_A.suspend_def)
+  "\<lbrace>invs and emptyable sl and valid_mdb\<rbrace> SchedContext_A.suspend l \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
+  apply (simp add: SchedContext_A.suspend_def)
   apply (wp|simp)+
     apply (wp emptyable_lift sts_st_tcb_at_cases)+
     apply simp
    apply (wp set_thread_state_cte_wp_at | simp)+
-  done
+  sorry
 
 
 crunch emptyable[wp]: do_machine_op "emptyable sl"
@@ -2425,22 +2170,11 @@ lemma cap_swap_for_delete_emptyable[wp]:
    apply (wp hoare_vcg_disj_lift set_cdt_typ_at set_cap_typ_at | simp split del: if_split)+
   done
 
-
-context CNodeInv_AI begin
-
-lemma finalise_cap_not_reply_master:
-  "\<And>rv s' cap sl (s::'state_ext state).
-    (Inr rv, s') \<in> fst (liftE (finalise_cap cap sl) s) \<Longrightarrow> \<not> is_master_reply_cap (fst rv)"
-  by (simp add: Inr_in_liftE_simp finalise_cap_not_reply_master_unlifted)
-
-end
-
-
 crunch cte_at_pres[wp]: empty_slot "cte_at sl"
 
 
 lemma cte_wp_at_emptyableD:
-  "\<And>P. \<lbrakk> cte_wp_at (\<lambda>c. c = cap) p s; valid_objs s; \<And>cap. P cap \<Longrightarrow> \<not> is_master_reply_cap cap \<rbrakk> \<Longrightarrow>
+  "\<And>P. \<lbrakk> cte_wp_at (\<lambda>c. c = cap) p s; valid_objs s (*; \<And>cap. P cap \<Longrightarrow> \<not> is_master_reply_cap cap*) \<rbrakk> \<Longrightarrow>
    P cap \<longrightarrow> emptyable p s"
   apply (simp add: emptyable_def)
   apply (clarsimp simp add: obj_at_def is_tcb)
@@ -2448,16 +2182,7 @@ lemma cte_wp_at_emptyableD:
   apply (clarsimp simp: cte_wp_at_cases valid_obj_def valid_tcb_def
                         tcb_cap_cases_def pred_tcb_at_def obj_at_def
                  split: Structures_A.thread_state.splits)
-  done
-
-
-lemma cte_wp_at_not_reply_master:
-  "\<And>a b s. \<lbrakk> tcb_at a s \<longrightarrow> b \<noteq> tcb_cnode_index 2; cte_at (a, b) s;
-              valid_objs s; valid_reply_masters s \<rbrakk>
-   \<Longrightarrow> cte_wp_at (\<lambda>c. \<not> is_master_reply_cap c) (a, b) s"
-  by (fastforce simp: valid_reply_masters_def cte_wp_at_caps_of_state
-                     is_cap_simps valid_cap_def
-               dest: caps_of_state_valid_cap)
+  sorry
 
 
 declare finalise_cap_cte_cap_to [wp]
@@ -2801,7 +2526,7 @@ function(sequential) red_zombie_will_fail :: "cap \<Rightarrow> bool"
 | "red_zombie_will_fail cap = True"
   apply simp_all
   apply (case_tac x)
-            prefer 11
+            prefer 13
             apply (rename_tac nat)
             apply (case_tac nat, simp_all)[1]
              apply fastforce+
@@ -2858,7 +2583,7 @@ lemma cte_at_replicate_zbits:
     \<lbrakk> s \<turnstile> cap.Zombie oref zb n \<rbrakk> \<Longrightarrow> cte_at (oref, replicate (zombie_cte_bits zb) False) s"
   apply (clarsimp simp: valid_cap_def obj_at_def is_tcb is_cap_table
                  split: option.split_asm)
-   apply (rule cte_wp_at_tcbI, simp)
+(*   apply (rule cte_wp_at_tcbI, simp)
     apply (fastforce simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1)
    apply simp
   apply (subgoal_tac "replicate x2 False \<in> dom cs")
@@ -2868,7 +2593,7 @@ lemma cte_at_replicate_zbits:
     apply simp
    apply simp
   apply (clarsimp simp: well_formed_cnode_n_def)
-  done
+  done*) sorry
 
 
 lemma reduce_zombie_cap_somewhere:
@@ -3034,10 +2759,10 @@ lemma cap_revoke_typ_at:
 lemma cap_revoke_invs:
   "\<And>ptr. \<lbrace>\<lambda>s::'state_ext state. invs s\<rbrace> cap_revoke ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wp cap_revoke_preservation_desc_of)
-   apply (fastforce simp: emptyable_def dest: reply_slot_not_descendant)
+(*   apply (fastforce simp: emptyable_def dest: reply_slot_not_descendant)
   apply (wp preemption_point_inv)
    apply simp+
-  done
+  done*) sorry
 
 end
 
@@ -3311,7 +3036,7 @@ lemma cap_move_irq_handlers[wp]:
    apply auto
   done
 
-
+(*
 lemma cap_move_has_reply_cap_neg:
   "\<lbrace>\<lambda>s. \<not> has_reply_cap t s \<and>
     cte_wp_at (weak_derived c) p s \<and>
@@ -3323,32 +3048,7 @@ lemma cap_move_has_reply_cap_neg:
   apply (wp cap_move_caps_of_state)
   apply (elim conjE exE)
   apply (erule(1) cap_swap_no_reply_caps, clarsimp+)
-  done
-
-
-lemma cap_move_replies:
-  "\<lbrace>\<lambda>s. valid_reply_caps s
-       \<and> cte_wp_at (weak_derived c) p s
-       \<and> cte_wp_at ((=) cap.NullCap) p' s
-       \<and> p \<noteq> p'\<rbrace>
-     cap_move c p p'
-   \<lbrace>\<lambda>rv s. valid_reply_caps s\<rbrace>"
-  apply (simp add: valid_reply_caps_def)
-  apply (rule hoare_pre)
-   apply (simp only: imp_conv_disj)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift cap_move_has_reply_cap_neg)
-    apply (simp add: cap_move_def, (wp|simp)+)
-   apply (rule cap_move_caps_of_state)
-  apply (clarsimp simp: fun_upd_def cte_wp_at_caps_of_state
-                        unique_reply_caps_cap_swap [simplified fun_upd_def])
-  done
-
-
-lemma copy_of_reply_master:
-  "copy_of cap cap' \<Longrightarrow> is_master_reply_cap cap = is_master_reply_cap cap'"
-  apply (clarsimp simp: copy_of_def is_cap_simps)
-  apply (clarsimp simp: same_object_as_def split: cap.splits)
-  done
+  done*)
 
 
 context CNodeInv_AI_4 begin
@@ -3467,32 +3167,6 @@ lemma is_final_cap_is_final[wp]:
 
 end
 
-lemma real_cte_not_reply_masterD:
-  "\<And>P ptr.
-   \<lbrakk> real_cte_at ptr s; valid_reply_masters s; valid_objs s \<rbrakk> \<Longrightarrow>
-   cte_wp_at (\<lambda>cap. \<not> is_master_reply_cap cap) ptr s"
-  apply clarsimp
-  apply (subgoal_tac "\<not> tcb_at a s")
-   apply (clarsimp simp: cap_table_at_cte_at cte_wp_at_not_reply_master)
-  apply (clarsimp simp: obj_at_def is_tcb is_cap_table)
-  done
-
-lemma real_cte_weak_derived_not_reply_masterD:
-  "\<And>cap ptr.
-   \<lbrakk> cte_wp_at (weak_derived cap) ptr s; real_cte_at ptr s;
-     valid_reply_masters s; valid_objs s \<rbrakk> \<Longrightarrow>
-   \<not> is_master_reply_cap cap"
-  by (fastforce simp: cte_wp_at_caps_of_state weak_derived_replies
-              dest!: real_cte_not_reply_masterD)
-
-lemma real_cte_is_derived_not_replyD:
-  "\<And>m p cap ptr.
-   \<lbrakk> cte_wp_at (is_derived m p cap) ptr s; real_cte_at ptr s;
-     valid_reply_masters s; valid_objs s \<rbrakk> \<Longrightarrow>
-   \<not> is_reply_cap cap"
-  by (fastforce simp: cte_wp_at_caps_of_state is_derived_def
-              dest!: real_cte_not_reply_masterD)
-
 
 lemma cap_irqs_is_derived:
   "is_derived m ptr cap cap' \<Longrightarrow> cap_irqs cap = cap_irqs cap'"
@@ -3525,7 +3199,7 @@ lemma invoke_cnode_invs[wp]:
                          real_cte_tcb_valid)
         apply (rule conjI)
          apply (clarsimp simp: cte_wp_at_caps_of_state dest!: cap_irqs_is_derived)
-        apply (rule conjI)
+(*        apply (rule conjI)
           apply (elim conjE)
            apply (drule real_cte_is_derived_not_replyD)
            apply (simp add:invs_valid_objs invs_valid_reply_masters)+
@@ -3570,7 +3244,7 @@ lemma invoke_cnode_invs[wp]:
    apply (clarsimp simp: real_cte_tcb_valid cte_wp_at_caps_of_state
                          is_cap_simps ex_cte_cap_to_cnode_always_appropriate_strg)
   apply (wpsimp)
-  done
+  done*) sorry
 
 end
 

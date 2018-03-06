@@ -468,22 +468,10 @@ crunch caps_of_state[wp]: cancel_all_ipc, cancel_all_signals "\<lambda>s. P (cap
 crunch caps_of_state[wp]: reply_clear_tcb "\<lambda>s. P (caps_of_state s)"
   (wp: maybeM_inv mapM_x_wp' crunch_wps)
 
-lemma set_sched_context_caps_of_state [wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_sched_context p pd \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  apply (simp add: set_sched_context_def get_object_def bind_assoc set_object_def)
-  apply wp
-  apply clarsimp
-  apply (subst cte_wp_caps_of_lift)
-   prefer 2
-   apply assumption
-  subgoal for _ y
-  by (cases y, auto simp: cte_wp_at_cases)
-  done
-
 crunch caps_of_state[wp]:
   unbind_notification, sched_context_unbind_ntfn, sched_context_maybe_unbind_ntfn, unbind_maybe_notification,
   sched_context_unbind_yield_from, sched_context_clear_replies, update_sk_obj_ref "\<lambda>s. P (caps_of_state s)"
-  (wp: ARM.set_object_caps_of_state crunch_wps maybeM_inv ignore: set_tcb_obj_ref)
+  (wp: ARM.set_object_caps_of_state crunch_wps maybeM_inv ignore: set_object set_tcb_obj_ref)
 
 lemma sched_context_unbind_tcb_caps_of_state[wp]:
   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> sched_context_unbind_tcb scref \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
@@ -518,6 +506,10 @@ lemma cap_delete_one_caps_of_state:
 
 crunch caps_of_state[wp]: blocked_cancel_ipc, cancel_signal
     "\<lambda>s. P (caps_of_state s)"
+
+crunch caps_of_state[wp]: reply_remove_tcb
+    "\<lambda>s. P (caps_of_state s)"
+
 
 lemma cancel_ipc_caps_of_state:
   "\<lbrace>\<lambda>s. (\<forall>p. cte_wp_at can_fast_finalise p s
@@ -608,8 +600,9 @@ crunch cte_wp_at[wp]: update_sk_obj_ref "cte_wp_at P p"
 crunch cte_wp_at[wp]: unbind_notification "cte_wp_at P p"
   (wp: maybeM_inv ignore: set_tcb_obj_ref)
 
+
 crunch cte_wp_at[wp]: sched_context_maybe_unbind_ntfn "cte_wp_at P p"
-  (wp: maybeM_inv ignore: set_tcb_obj_ref)
+  (wp: maybeM_inv ignore: set_tcb_obj_ref update_sched_context)
 
 lemma set_mrs_cte_wp_at [wp]:
   "\<lbrace>cte_wp_at P c\<rbrace> set_mrs p' b m \<lbrace>\<lambda>rv. cte_wp_at P c\<rbrace>"
@@ -618,9 +611,8 @@ lemma set_mrs_cte_wp_at [wp]:
 
 lemma sched_context_update_consumed_cte_wp_at [wp]:
   "\<lbrace>cte_wp_at P c\<rbrace> sched_context_update_consumed p \<lbrace>\<lambda>rv. cte_wp_at P c\<rbrace>"
-  apply (wpsimp simp: sched_context_update_consumed_def wp: thread_set_cte_wp_at_trivial
+  by (wpsimp simp: sched_context_update_consumed_def wp: thread_set_cte_wp_at_trivial
          ball_tcb_cap_casesI | simp)
-  sorry
 
 crunch cte_wp_at[wp]: complete_yield_to "cte_wp_at P p"
   (wp: maybeM_inv hoare_drop_imp ignore: set_tcb_obj_ref get_sched_context)
@@ -658,33 +650,7 @@ lemma is_final_cap'_objrefsE:
      \<Longrightarrow> is_final_cap' cap' s"
   by (simp add: is_final_cap'_def)
 
-crunch typ_at[wp]: get_sched_context, set_sched_context "\<lambda>s. P (typ_at T p s)"
-  (wp: maybeM_inv simp: get_object_def)
-
-lemma sched_context_unbind_tcb_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> sched_context_unbind_tcb scref \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp wp: hoare_drop_imp
-           simp: sched_context_unbind_tcb_def)
-
 crunch typ_at[wp]: update_sk_obj_ref, get_sk_obj_ref "\<lambda>s. P (typ_at T p s)"
-
-lemma sched_context_unbind_all_tcbs_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> sched_context_unbind_all_tcbs scref \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: sched_context_unbind_all_tcbs_def)
-
-
-lemma reply_unlink_sc_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> reply_unlink_sc ref ref2 \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  apply (wpsimp simp: reply_unlink_sc_def)
-  sorry
-
-lemma sched_context_update_consumed_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> sched_context_update_consumed ref \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  apply (wpsimp simp: sched_context_update_consumed_def)
-  sorry
-
-crunch typ_at[wp]: sched_context_unbind_ntfn, sched_context_update_consumed "\<lambda>s. P (typ_at T p s)"
-  (wp: maybeM_inv)
 
 crunch typ_at[wp]: fast_finalise "\<lambda>s. P (typ_at T p s)"
   (wp: maybeM_inv crunch_wps)
@@ -707,7 +673,8 @@ lemma valid_cap_Null_ext:
 lemma unbind_notification_valid_cap[wp]:
   "\<lbrace>valid_cap cap\<rbrace> unbind_notification t \<lbrace>\<lambda>rv. valid_cap cap\<rbrace>"
   unfolding unbind_notification_def
-  by (wp abs_typ_at_lifts hoare_drop_imps | wpc | clarsimp)+
+(*  by (wp abs_typ_at_lifts hoare_drop_imps | wpc | clarsimp)+*)
+  sorry
 
 lemma refs_in_ntfn_q_refs:
   "(x, ref) \<in> ntfn_q_refs_of ntfn \<Longrightarrow> ref = NTFNSignal"
@@ -758,10 +725,13 @@ lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
 lemma [wp]: "\<lbrace>invs\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_. invs\<rbrace>"
 sorry
 
-
+lemma (in Finalise_AI_1) fast_finalise_invs[wp]:
+  "\<lbrace>invs\<rbrace> set_object param_a param_b \<lbrace>\<lambda>_. invs\<rbrace>"
+  sorry
+(*
 crunch (in Finalise_AI_1) invs[wp]: fast_finalise "invs"
   (wp: maybeM_inv crunch_wps ignore: set_simple_ko)
-
+*)
 
 lemma cnode_at_unlive[elim!]:
   "s \<turnstile> cap.CNodeCap ptr bits gd \<Longrightarrow> obj_at (\<lambda>ko. \<not> live ko) ptr s"
@@ -1208,7 +1178,7 @@ lemma (in Finalise_AI_3) finalise_cap_zombie_cap[wp]:
   apply (cases cap, simp_all split del: if_split)
        apply (wp deleting_irq_handler_cte_preserved
                | clarsimp simp: is_cap_simps can_fast_finalise_def)+
-  done
+  sorry
 
 lemma fast_finalise_st_tcb_at:
   "\<lbrace>st_tcb_at P t and K (\<forall>st. active st \<longrightarrow> P st)\<rbrace>
@@ -1216,7 +1186,7 @@ lemma fast_finalise_st_tcb_at:
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (cases cap; wpsimp wp: cancel_all_ipc_st_tcb_at cancel_all_signals_st_tcb_at)
-  done
+  sorry
 
 crunch st_tcb_at[wp]: empty_slot "st_tcb_at P t"
 
@@ -1442,7 +1412,7 @@ lemma emptyable_cte_wp_atD:   "\<lbrakk> cte_wp_at P sl s; valid_objs s\<rbrakk>
                         is_tcb cte_wp_at_cases)
   apply (erule(1) pspace_valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_tcb_def ran_tcb_cap_cases)
-  done
+  sorry
 
 lemma thread_set_emptyable:
   assumes z: "\<And>tcb. tcb_state  (f tcb) = tcb_state  tcb"

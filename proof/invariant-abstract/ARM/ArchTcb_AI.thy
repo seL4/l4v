@@ -153,10 +153,10 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
             | rule impI
             | rule hoare_drop_imps)+
      apply (clarsimp simp: ball_ran_eq x)
-    apply (wp delete_one_caps_of_state
+(*    apply (wp delete_one_caps_of_state
          | rule impI
          | simp add: deleting_irq_handler_def get_irq_slot_def x ball_ran_eq)+
-    done
+    done*) sorry
 
 
 lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_asms]:
@@ -203,9 +203,9 @@ lemma as_user_valid_cap[wp]:
   by (wp valid_cap_typ)
 
 lemma as_user_ipc_tcb_cap_valid4[wp]:
-  "\<lbrace>\<lambda>s. tcb_cap_valid cap (t, tcb_cnode_index 4) s\<rbrace>
+  "\<lbrace>\<lambda>s. tcb_cap_valid cap (t, tcb_cnode_index 2) s\<rbrace>
     as_user a b
-   \<lbrace>\<lambda>rv. tcb_cap_valid cap (t, tcb_cnode_index 4)\<rbrace>"
+   \<lbrace>\<lambda>rv. tcb_cap_valid cap (t, tcb_cnode_index 2)\<rbrace>"
   apply (simp add: as_user_def set_object_def)
   apply (wp | wpc | simp)+
   apply (clarsimp simp: tcb_cap_valid_def obj_at_def
@@ -218,9 +218,13 @@ lemma tc_invs[Tcb_AI_asms]:
   "\<lbrace>invs and tcb_at a
        and (case_option \<top> (valid_cap o fst) e)
        and (case_option \<top> (valid_cap o fst) f)
+       and (case_option \<top> (valid_cap o fst) fh)
+       and (case_option \<top> (valid_cap o fst) th)
        and (case_option \<top> (case_option \<top> (valid_cap o fst) o snd) g)
        and (case_option \<top> (cte_at o snd) e)
        and (case_option \<top> (cte_at o snd) f)
+       and (case_option \<top> (cte_at o snd) fh)
+       and (case_option \<top> (cte_at o snd) th)
        and (case_option \<top> (case_option \<top> (cte_at o snd) o snd) g)
        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) e)
        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) f)
@@ -234,9 +238,8 @@ lemma tc_invs[Tcb_AI_asms]:
        and K (case_option True (\<lambda>v. case_option True
                           ((swp valid_ipc_buffer_cap (fst v)
                              and is_arch_cap and is_cnode_or_valid_arch)
-                                o fst) (snd v)) g)
-       and K (case_option True (\<lambda>bl. length bl = word_bits) b)\<rbrace>
-      invoke_tcb (ThreadControl a sl b mcp pr e f g)
+                                o fst) (snd v)) g)\<rbrace>
+      invoke_tcb (ThreadControl a sl fh th mcp pr e f g sc)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
@@ -277,10 +280,10 @@ lemma tc_invs[Tcb_AI_asms]:
                         is_cnode_or_valid_arch_def tcb_cap_valid_def
                         invs_valid_objs cap_asid_def vs_cap_ref_def
                  split: option.split_asm )+
-      apply (simp add: case_bool_If valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
+(*      apply (simp add: case_bool_If valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
                        is_nondevice_page_cap_arch_def
                 split: arch_cap.splits if_splits)+
-  done
+  done*) sorry
 
 
 lemma check_valid_ipc_buffer_inv:
@@ -374,9 +377,9 @@ lemma update_cap_valid[Tcb_AI_asms]:
 crunch pred_tcb_at: switch_to_thread "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch typ_at[wp]: invoke_tcb "\<lambda>s. P (typ_at T p s)"
-  (ignore: check_cap_at setNextPC zipWithM
-       wp: hoare_drop_imps mapM_x_wp' check_cap_inv
+crunch typ_at[wp]: invoke_tcb "\<lambda>(s::det_ext state). P (typ_at T p s)"
+  (ignore: check_cap_at setNextPC zipWithM postpone sched_context_resume sched_context_bind_tcb
+       wp: hoare_drop_imps mapM_x_wp' check_cap_inv maybeM_inv
      simp: crunch_simps)
 
 end

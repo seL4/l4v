@@ -69,7 +69,7 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
       apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
       apply wp+
      apply simp (* dxo_eq *)
-     apply (clarsimp simp: timer_tick_def num_domains_def)
+     apply (clarsimp simp: num_domains_def)
      apply (wp reschedule_required_valid_domain_time
            | simp add: handle_reserved_irq_def
            | wp_once hoare_drop_imp)+

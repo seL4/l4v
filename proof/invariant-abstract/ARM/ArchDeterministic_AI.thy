@@ -19,7 +19,7 @@ named_theorems Deterministic_AI_assms
 crunch valid_list[wp, Deterministic_AI_assms]:
   cap_swap_for_delete,set_cap,finalise_cap,arch_tcb_set_ipc_buffer,arch_get_sanitise_register_info,
   arch_post_modify_registers valid_list
-  (wp: crunch_wps simp: unless_def crunch_simps)
+  (wp: crunch_wps maybeM_inv simp: unless_def crunch_simps)
 declare get_cap_inv[Deterministic_AI_assms]
 
 end
@@ -55,15 +55,41 @@ lemma perform_page_invocation_valid_list[wp]:
   apply (wp mapM_x_wp' mapM_wp' crunch_wps | intro impI conjI allI | wpc | simp add: set_message_info_def set_mrs_def split: cap.splits arch_cap.splits option.splits sum.splits)+
   done
 
-crunch valid_list[wp]: perform_invocation valid_list
-  (wp: crunch_wps simp: crunch_simps ignore: without_preemption)
+lemma send_fault_ipc_valid_list[wp]:
+  "\<lbrace>valid_list\<rbrace> send_fault_ipc param_a param_b param_c param_d \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  sorry
+
+lemma send_ipc_valid_list[wp]:
+  "\<lbrace>valid_list\<rbrace> send_ipc param_a param_b param_c param_d param_e param_f param_g \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  sorry
+
+lemma send_signal_valid_list[wp]: "\<lbrace>valid_list\<rbrace> send_signal param_a param_b \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  sorry
+
+lemma perform_invocation_valid_list[wp]:
+  "\<lbrace>valid_list\<rbrace> perform_invocation param_a param_b param_c param_d \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  sorry
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_invocation valid_list
   (wp: crunch_wps syscall_valid simp: crunch_simps
    ignore: without_preemption syscall)
 
-crunch valid_list[wp, Deterministic_AI_assms]: handle_recv, handle_yield, handle_call valid_list
-  (wp: crunch_wps simp: crunch_simps)
+lemma receive_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> receive_ipc param_a param_b param_c param_d \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  sorry
+
+lemma end_timeslice_valid_list[wp]: "\<lbrace>valid_list\<rbrace> end_timeslice param_a \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  sorry
+
+lemma handle_fault_valid_list[wp, Deterministic_AI_assms]:
+  "\<lbrace>valid_list\<rbrace> handle_fault param_a param_b \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  sorry
+
+lemma handle_recv_valid_list[wp, Deterministic_AI_assms]:
+  "\<lbrace>valid_list\<rbrace> handle_recv param_a param_b \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  sorry
+
+crunch valid_list[wp, Deterministic_AI_assms]: handle_yield, handle_call valid_list
+  (wp: crunch_wps dxo_wp_weak simp: crunch_simps)
 
 lemma handle_vm_fault_valid_list[wp, Deterministic_AI_assms]:
 "\<lbrace>valid_list\<rbrace> handle_vm_fault thread fault \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -79,7 +105,7 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
        | wpc | simp add: get_irq_slot_def handle_reserved_irq_def
        | wp_once hoare_drop_imps)+
 
-crunch valid_list[wp, Deterministic_AI_assms]: handle_send,handle_reply valid_list
+crunch valid_list[wp, Deterministic_AI_assms]: handle_send valid_list
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_hypervisor_fault valid_list
 

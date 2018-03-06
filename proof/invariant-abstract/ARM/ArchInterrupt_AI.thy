@@ -112,7 +112,8 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
   "\<lbrace>invs and ex_inv and irq_handler_inv_valid i\<rbrace> invoke_irq_handler i \<lbrace>\<lambda>rv s. invs s \<and> ex_inv s\<rbrace>"
  proof -
    have
-   cap_insert_invs_ex_invs[wp]: "\<And>cap src dest. \<lbrace>ex_inv and (invs  and cte_wp_at (\<lambda>c. c = NullCap) dest and valid_cap cap and
+   cap_insert_invs_ex_invs[wp]: "\<And>cap src dest. \<lbrace>ex_inv and
+   (invs  and cte_wp_at (\<lambda>c. c = NullCap) dest and valid_cap cap and
    tcb_cap_valid cap dest and
    ex_cte_cap_wp_to (appropriate_cte_cap cap) dest and
    (\<lambda>s. \<forall>r\<in>obj_refs cap.
@@ -121,9 +122,8 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
    (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s) and
    (\<lambda>s. cte_wp_at (\<lambda>cap'. \<forall>irq\<in>cap_irqs cap - cap_irqs cap'. irq_issued irq s)
          src s) and
-   (\<lambda>s. \<forall>t. cap = ReplyCap t False \<longrightarrow>
-            st_tcb_at awaiting_reply t s \<and> \<not> has_reply_cap t s) and
-   K (\<not> is_master_reply_cap cap))\<rbrace>
+   (\<lambda>s. \<forall>t. cap = ReplyCap t \<longrightarrow>
+            st_tcb_at awaiting_reply t s \<and> \<not> has_reply_cap t s))\<rbrace>
   cap_insert cap src dest \<lbrace>\<lambda>rv s. invs s \<and> ex_inv s\<rbrace>"
    apply wp
    apply (auto simp: cte_wp_at_caps_of_state)
@@ -213,7 +213,7 @@ lemma (* handle_interrupt_invs *) [Interrupt_AI_asms]:
      apply (clarsimp simp: is_cap_simps)
     apply (wp hoare_drop_imps resetTimer_invs_ARCH
            | simp add: get_irq_state_def handle_reserved_irq_def)+
- done
+ sorry
 
 lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_asms]:
   "\<lbrace>arch_irq_control_inv_valid i\<rbrace>

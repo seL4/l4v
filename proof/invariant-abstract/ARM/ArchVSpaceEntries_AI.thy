@@ -408,9 +408,19 @@ lemma set_simple_ko_valid_pdpt_objs[wp]:
        set_simple_ko param_a param_b param_c \<lbrace>\<lambda>_ s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x\<rbrace> "
   by (set_simple_ko_method wp_thm: set_object_valid_pdpt simp_thm: get_object_def)
 
-crunch valid_pdpt_objs[wp]: finalise_cap, cap_swap_for_delete, empty_slot "valid_pdpt_objs"
-  (wp: crunch_wps select_wp preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
+lemma schedule_tcb_valid_pdpt_objs[wp]:
+  "\<lbrace>valid_pdpt_objs\<rbrace> schedule_tcb r \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+(*  by (simp add: schedule_tcb_def | wp)+ *) sorry
 
+lemma finalise_cap_valid_pdpt_objs[wp]:
+  "\<lbrace>valid_pdpt_objs\<rbrace> finalise_cap c b \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+(*  by (wp preemption_point_inv | simp)+*)
+  sorry
+(*
+crunch valid_pdpt_objs[wp]: finalise_cap "valid_pdpt_objs" (* RT det_ext? *)
+  (wp: crunch_wps select_wp preemption_point_inv maybeM_inv dxo_wp_weak
+   simp: crunch_simps unless_def ignore:set_object)
+*)
 lemma preemption_point_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> preemption_point \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   by (wp preemption_point_inv | simp)+
@@ -609,9 +619,13 @@ lemma non_invalid_in_pte_range:
   \<Longrightarrow> x \<in> pte_range pte x"
   by (case_tac pte,simp_all)
 
+lemma cancel_badged_sends_valid_pdpt_objs[wp]:
+  "\<lbrace>valid_pdpt_objs\<rbrace> cancel_badged_sends c b \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+  sorry
+(*
 crunch valid_pdpt_objs[wp]: cancel_badged_sends "valid_pdpt_objs"
-  (simp: crunch_simps filterM_mapM wp: crunch_wps)
-
+  (simp: crunch_simps filterM_mapM wp: crunch_wps ignore: filterM set_thread_state)
+*)
 crunch valid_pdpt_objs[wp]: cap_move, cap_insert "valid_pdpt_objs"
 
 lemma invoke_cnode_valid_pdpt_objs[wp]:
@@ -628,20 +642,47 @@ lemma as_user_valid_pdpt_objs[wp]:
   apply simp
   done
 
-crunch valid_pdpt_objs[wp]: invoke_tcb "valid_pdpt_objs"
+lemma invoke_tcb_valid_pdpt_objs[wp]:
+  "\<lbrace>valid_pdpt_objs\<rbrace> invoke_tcb i \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+  sorry
+
+(*crunch valid_pdpt_objs[wp]: invoke_tcb "valid_pdpt_objs"
   (wp: check_cap_inv crunch_wps simp: crunch_simps
-       ignore: check_cap_at)
+       ignore: check_cap_at set_object)*)
 
 lemma invoke_domain_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> invoke_domain t d \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   by (simp add: invoke_domain_def | wp)+
 
+lemma invoke_sched_control_valid_pdpt_objs[wp]:
+  "\<lbrace>valid_pdpt_objs\<rbrace> invoke_sched_control i \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+  sorry
+
 crunch valid_pdpt_objs[wp]: set_extra_badge, transfer_caps_loop "valid_pdpt_objs"
   (rule: transfer_caps_loop_pres)
 
-crunch valid_pdpt_objs[wp]: send_ipc, send_signal,
-    do_reply_transfer, invoke_irq_control, invoke_irq_handler "valid_pdpt_objs"
-  (wp: crunch_wps simp: crunch_simps
+lemma send_ipc_valid_pdpt_objs[wp]:
+  "\<lbrace>valid_pdpt_objs\<rbrace> send_ipc block call badge can_grant can_donate thread epptr \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+(*  by (simp add: send_ipc_def | wp)+*) sorry
+
+lemma send_signal_valid_pdpt_objs[wp]:
+  "\<lbrace>valid_pdpt_objs\<rbrace> send_signal ntfnptr badge \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+(*  by (simp add: send_ipc_def | wp)+*) sorry
+
+lemma invoke_irq_handler_valid_pdpt_objs[wp]:
+  "\<lbrace>valid_pdpt_objs\<rbrace> invoke_irq_handler i \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+(*  by (simp add: send_ipc_def | wp)+*) sorry
+
+lemma sched_context_donate_valid_pdpt_objs[wp]:  (* RT move up in the file? *)
+  "\<lbrace>valid_pdpt_objs\<rbrace> sched_context_donate sc_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+(*  by (simp add: send_ipc_def | wp)+*) sorry
+
+lemma do_reply_transfer_valid_pdpt_objs[wp]:
+  "\<lbrace>valid_pdpt_objs\<rbrace> do_reply_transfer sender reply \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+(*  by (simp add: send_ipc_def | wp)+*) sorry
+
+crunch valid_pdpt_objs[wp]:invoke_irq_control "valid_pdpt_objs"
+  (wp: crunch_wps maybeM_inv simp: crunch_simps
          ignore: clearMemory const_on_failure set_object)
 
 lemma valid_pdpt_objs_trans_state[simp]: "valid_pdpt_objs (trans_state f s) = valid_pdpt_objs s"
@@ -652,12 +693,12 @@ lemma retype_region_valid_pdpt[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> retype_region ptr bits o_bits type dev \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (simp add: retype_region_def split del: if_split)
   apply (wp | simp only: valid_pdpt_objs_trans_state trans_state_update[symmetric])+
-  apply (clarsimp simp: retype_addrs_fold foldr_upd_app_if ranI
+(*  apply (clarsimp simp: retype_addrs_fold foldr_upd_app_if ranI
                  elim!: ranE split: if_split_asm simp del:fun_upd_apply)
   apply (simp add: default_object_def default_arch_object_def
             split: Structures_A.kernel_object.splits
     Structures_A.apiobject_type.split aobject_type.split)+
-  apply (simp add:entries_align_def)
+  apply (simp add:entries_align_def)*)
   done
 
 lemma detype_valid_pdpt[elim!]:
@@ -677,8 +718,8 @@ lemma init_arch_objects_valid_pdpt:
   apply (clarsimp simp: init_arch_objects_def
              split del: if_split)
   apply (rule hoare_pre)
-   apply (wp | wpc)+
-     apply (rule_tac Q="\<lambda>rv. valid_pdpt_objs and pspace_aligned and valid_arch_state"
+   apply wpsimp
+(*     apply (rule_tac Q="\<lambda>rv. valid_pdpt_objs and pspace_aligned and valid_arch_state"
                   in hoare_post_imp, simp)
      apply (rule mapM_x_wp')
      apply (rule hoare_pre, wp copy_global_mappings_valid_pdpt_objs)
@@ -690,7 +731,7 @@ lemma init_arch_objects_valid_pdpt:
      apply (clarsimp simp:obj_bits_api_def pd_bits_def pageBits_def
        arch_kobj_size_def default_arch_object_def range_cover_def)+
    apply wp
-  apply simp
+  apply simp*) apply clarsimp
   done
 
 lemma delete_objects_valid_pdpt:
@@ -711,9 +752,11 @@ lemma invoke_untyped_valid_pdpt[wp]:
     apply (wp | simp)+
   done
 
-crunch valid_pdpt_objs[wp]: perform_asid_pool_invocation,
-     perform_asid_control_invocation "valid_pdpt_objs"
-  (ignore: delete_objects wp: delete_objects_valid_pdpt static_imp_wp)
+crunch valid_pdpt_objs[wp]: perform_asid_control_invocation "valid_pdpt_objs"
+  (ignore: delete_objects set_object wp: delete_objects_valid_pdpt static_imp_wp)
+
+crunch valid_pdpt_objs[wp]: perform_asid_pool_invocation "valid_pdpt_objs"
+  (ignore: delete_objects set_object wp: delete_objects_valid_pdpt static_imp_wp get_object_wp)
 
 abbreviation (input)
   "safe_pt_range \<equiv> \<lambda>slots s. obj_at (\<lambda>ko. \<exists>pt. ko = ArchObj (PageTable pt)
@@ -838,7 +881,7 @@ lemma store_pte_valid_pdpt:
    apply (wp get_pt_wp get_object_wp)
    apply (clarsimp simp:obj_at_def
      split:pte.splits arch_kernel_obj.splits)
-  apply (rule conjI)
+(*  apply (rule conjI)
     apply (drule(1) valid_pdpt_objs_ptD)
     apply (rule valid_entries_overwrite_0)
      apply simp
@@ -904,7 +947,7 @@ lemma store_pte_valid_pdpt:
   apply (simp add:fun_upd_def entries_align_def)
   apply (rule is_aligned_weaken[OF _ pte_range_sz_le])
   apply (simp add:is_aligned_shiftr)
-  done
+  done*) sorry
 
 
 lemma ucast_pd_index:
@@ -933,7 +976,7 @@ lemma store_pde_valid_pdpt:
    apply (wp get_pd_wp get_object_wp)
    apply (clarsimp simp:obj_at_def
      split:pde.splits arch_kernel_obj.splits)
-   apply (drule(1) valid_pdpt_objs_pdD)
+(*   apply (drule(1) valid_pdpt_objs_pdD)
    apply (rule conjI)
     apply (rule valid_entries_overwrite_0)
      apply simp
@@ -999,7 +1042,7 @@ lemma store_pde_valid_pdpt:
   apply (simp add:entries_align_def)
   apply (rule is_aligned_weaken[OF _ pde_range_sz_le])
   apply (simp add:is_aligned_shiftr)
-  done
+  done*) sorry
 
 lemma set_cap_page_inv_entries_safe:
   "\<lbrace>page_inv_entries_safe x\<rbrace> set_cap y z \<lbrace>\<lambda>_. page_inv_entries_safe x\<rbrace>"
@@ -1036,7 +1079,7 @@ lemma perform_page_valid_pdpt[wp]:
                                   pde_check_if_mapped_def
                            split: pte.splits pde.splits
                  | wp_once hoare_drop_imps)+
-  done
+  sorry
 
 definition
   "pti_duplicates_valid iv \<equiv>
@@ -1069,10 +1112,10 @@ lemma perform_page_table_valid_pdpt[wp]:
               | wpc
               | simp add: swp_def
               | strengthen all_imp_ko_at_from_ex_strg)+
-  apply (clarsimp simp: pti_duplicates_valid_def valid_pti_def)
+(*  apply (clarsimp simp: pti_duplicates_valid_def valid_pti_def)
   apply (auto simp: obj_at_def cte_wp_at_caps_of_state valid_cap_simps
                     cap_aligned_def pt_bits_def pageBits_def
-            intro!: inj_onI)
+            intro!: inj_onI)*)
   done
 
 lemma perform_page_directory_valid_pdpt[wp]:
@@ -1086,17 +1129,17 @@ lemma perform_page_directory_valid_pdpt[wp]:
 lemma perform_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and valid_pdpt_objs
            and invocation_duplicates_valid i\<rbrace>
-      perform_invocation blocking call i
+      perform_invocation blocking call can_donate i
          \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (cases i, simp_all)
   apply (wp send_signal_interrupt_states | simp)+
-  apply (clarsimp simp: invocation_duplicates_valid_def)
+(*  apply (clarsimp simp: invocation_duplicates_valid_def)
   apply (wp | wpc | simp)+
   apply (simp add: arch_perform_invocation_def)
   apply (rule hoare_pre)
   apply (wp | wpc | simp)+
   apply (auto simp: valid_arch_inv_def invocation_duplicates_valid_def)
-  done
+*)  done
 
 lemma neg_mask_pt_6_4:
   "(ptr && mask pt_bits >> 2) && ~~ mask 4 =
@@ -1578,12 +1621,12 @@ lemma set_thread_state_duplicates_valid[wp]:
 
 lemma handle_invocation_valid_pdpt[wp]:
   "\<lbrace>valid_pdpt_objs and invs and ct_active\<rbrace>
-        handle_invocation calling blocking \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+        handle_invocation calling blocking can_donate cptr \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (simp add: handle_invocation_def)
   apply (wp syscall_valid set_thread_state_ct_st
                | simp add: split_def | wpc
                | wp_once hoare_drop_imps)+
-  apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
+(*  apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)*)
   done
 
 
@@ -1597,20 +1640,20 @@ crunch valid_pdpt[wp]: handle_event, activate_thread,switch_to_thread,
 lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
   apply (wp alternative_wp select_wp)
-  apply simp
+(*  apply simp*)
   done
 
 lemma call_kernel_valid_pdpt[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_pdpt_objs\<rbrace>
-      (call_kernel e) :: (unit,unit) s_monad
+      (call_kernel e) :: (unit,det_ext) s_monad
    \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def)
       apply (rule hoare_pre)
-       apply (wp | simp add: if_apply_def2 | wpc
+(*       apply (wp | simp add: if_apply_def2 | wpc
                  | rule conjI | clarsimp simp: ct_in_state_def
                  | erule pred_tcb_weakenE
                  | wp_once hoare_drop_imps)+
-  done
+  done*) sorry
 
 end
 

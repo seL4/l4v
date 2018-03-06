@@ -117,7 +117,7 @@ lemma obj_bits_data_at:
   apply (clarsimp simp add: obj_at_def a_type_def data_at_def
                      split: kernel_object.splits arch_kernel_obj.split_asm if_splits)
   apply (case_tac ko,simp_all)
-   apply fastforce
+   apply (fastforce+)[2]
   subgoal for ko archko
    by (case_tac archko,fastforce+)
   done

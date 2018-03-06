@@ -221,4 +221,109 @@ lemma (in Schedule_AI_U) schedule_ct_activateable[wp]:
     done*) sorry
 qed
 
+text {* invocation related lemmas *}
+(* RT FIXME: maybe move? *)
+
+primrec
+  valid_sched_context_inv :: "sched_context_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+    "valid_sched_context_inv (InvokeSchedContextConsumed scptr args)
+     = (\<lambda>s. sc_at scptr s \<and> length args \<ge> 1)"
+  | "valid_sched_context_inv (InvokeSchedContextBind scptr cap)
+     = (\<lambda>s. sc_at scptr s \<and> valid_cap cap s)"
+  | "valid_sched_context_inv (InvokeSchedContextUnbindObject scptr cap)
+     = (\<lambda>s. sc_at scptr s \<and> valid_cap cap s)"
+  | "valid_sched_context_inv (InvokeSchedContextUnbind scptr) = sc_at scptr"
+  | "valid_sched_context_inv (InvokeSchedContextYieldTo scptr args)
+     = (\<lambda>s. sc_at scptr s \<and> length args \<ge> 1)"
+(*
+definition
+  valid_max_refills :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_max_refills ptr s \<equiv> )"
+*)
+primrec
+  valid_sched_control_inv :: "sched_control_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+    "valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)
+     = (\<lambda>s. sc_at scptr s
+        (* probably also need something like \<and> mrefills \<le> max_extra_refills *))"
+
+
+lemma invoke_sched_context_typ_at[wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
+     invoke_sched_context i
+   \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+(*  by (wpsimp simp: invoke_sched_context_def split: sched_context_invocation.splits)*)
+  sorry
+
+
+lemma invoke_sched_control_typ_at[wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
+     invoke_sched_control_configure i
+   \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+(*  by (wpsimp simp: invoke_sched_control_configure_def split: sched_control_invocation.splits)*)
+  sorry
+
+lemma invoke_sched_context_tcb[wp]:
+  "\<lbrace>tcb_at tptr\<rbrace> invoke_sched_context i \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
+  by (simp add: tcb_at_typ invoke_sched_context_typ_at [where P=id, simplified])
+
+lemma invoke_sched_control_tcb[wp]:
+  "\<lbrace>tcb_at tptr\<rbrace> invoke_sched_control_configure i \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
+  by (simp add: tcb_at_typ invoke_sched_control_typ_at [where P=id, simplified])
+
+
+lemma invoke_sched_context_invs[wp]:
+  "\<lbrace>invs and valid_sched_context_inv i\<rbrace> invoke_sched_context i \<lbrace>\<lambda>rv. invs\<rbrace>"
+  sorry
+
+
+lemma invoke_sched_control_configure_invs[wp]:
+  "\<lbrace>invs and valid_sched_control_inv i\<rbrace> invoke_sched_control_configure i \<lbrace>\<lambda>rv. invs\<rbrace>"
+  sorry
+
+
+lemma sts_valid_sched_context_inv:
+  "\<lbrace>valid_sched_context_inv ai\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_sched_context_inv ai\<rbrace>"
+  sorry
+
+
+lemma sts_valid_sched_control_inv:
+  "\<lbrace>valid_sched_control_inv ai\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_sched_control_inv ai\<rbrace>"
+  sorry
+
+
+lemma decode_sched_context_inv_inv:
+  "\<lbrace>P\<rbrace>
+     decode_sched_context_invocation label sc_ptr excaps args
+   \<lbrace>\<lambda>rv. P\<rbrace>"
+  sorry
+
+
+lemma decode_sched_control_inv_inv:
+  "\<lbrace>P\<rbrace>
+     decode_sched_control_invocation label args excaps
+   \<lbrace>\<lambda>rv. P\<rbrace>"
+  sorry
+
+
+lemma decode_sched_context_inv_wf:
+  "\<lbrace>invs and sc_at sc_ptr and
+     (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x) and
+     (\<lambda>s. \<forall>x\<in>set excaps. \<forall>r\<in>zobj_refs x. ex_nonz_cap_to r s)\<rbrace>
+     decode_sched_context_invocation label sc_ptr excaps args
+   \<lbrace>valid_sched_context_inv\<rbrace>, -"
+  sorry
+
+
+lemma decode_sched_control_inv_wf:
+  "\<lbrace>invs and
+     (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x) and
+     (\<lambda>s. \<forall>x\<in>set excaps. \<forall>r\<in>zobj_refs x. ex_nonz_cap_to r s)\<rbrace>
+     decode_sched_control_invocation label args excaps
+   \<lbrace>valid_sched_control_inv\<rbrace>, -"
+  sorry
+
+
 end

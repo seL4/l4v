@@ -257,7 +257,7 @@ definition
   "kernel_entry e tc \<equiv> do
     t \<leftarrow> gets cur_thread;
     thread_set (\<lambda>tcb. tcb \<lparr> tcb_arch := arch_tcb_context_set tc (tcb_arch tcb) \<rparr>) t;
-    call_kernel e;
+    do_extended_op $ call_kernel e;
     t' \<leftarrow> gets cur_thread;
     thread_get (arch_tcb_context_get o tcb_arch) t'
   od"

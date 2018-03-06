@@ -155,7 +155,7 @@ lemma is_up_8_32: "is_up (ucast :: word8 \<Rightarrow> word32)"
 
 
 crunches
-  cancel_all_ipc, cancel_all_signals, fast_finalise, set_cap, post_cap_deletion
+  schedule_tcb, cancel_all_ipc, cancel_all_signals, fast_finalise, set_cap, post_cap_deletion, sched_context_unbind_tcb
   for mdb_inv[wp]: "\<lambda>s. P (cdt s)"
   (wp: crunch_wps)
 
@@ -173,7 +173,7 @@ lemma cap_delete_one_still_derived:
                             cdt_update.caps_of_state_update
                             revokable_update.caps_of_state_update
                | simp)+
-     apply (simp add: is_final_cap_def | wp)+
+(*     apply (simp add: is_final_cap_def | wp)+
    apply (rule get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state if_apply_def2
              split del: if_split)
@@ -187,7 +187,7 @@ lemma cap_delete_one_still_derived:
     apply simp
    apply simp
   apply auto
-  done
+  done*) sorry
 
 
 lemma cap_delete_one_cte_cap_to[wp]:
@@ -245,10 +245,15 @@ lemmas (in Interrupt_AI)
                                                              , simplified
                                                         ]
 
-crunch interrupt_states[wp]: update_waiting_ntfn, cancel_signal, blocked_cancel_ipc "\<lambda>s. P (interrupt_states s)" (wp: mapM_x_wp_inv)
+crunch interrupt_states[wp]: sched_context_donate, reply_unlink_tcb "\<lambda>s. P (interrupt_states s)" 
+  (wp: mapM_x_wp_inv maybeM_inv hoare_drop_imp hoare_vcg_if_lift2)
+
+crunch interrupt_states[wp]: update_waiting_ntfn, cancel_signal, blocked_cancel_ipc "\<lambda>s. P (interrupt_states s)" 
+  (wp: mapM_x_wp_inv maybeM_inv ignore: sched_context_donate)
 
 lemma cancel_ipc_noreply_interrupt_states:
-  "\<lbrace>\<lambda>s. st_tcb_at (\<lambda>st. st \<noteq> BlockedOnReply) t s \<and> P (interrupt_states s) \<rbrace> cancel_ipc t \<lbrace> \<lambda>_ s. P (interrupt_states s) \<rbrace>"
+  "\<lbrace>\<lambda>s. st_tcb_at (\<lambda>st. \<forall>r. st \<noteq> BlockedOnReply r) t s \<and> P (interrupt_states s) \<rbrace>
+         cancel_ipc t \<lbrace> \<lambda>_ s. P (interrupt_states s) \<rbrace>"
   apply (simp add: cancel_ipc_def)
   apply wpsimp
      apply (rule hoare_pre_cont)
@@ -262,13 +267,13 @@ lemma send_signal_interrupt_states[wp_unsafe]:
   apply (simp add: send_signal_def)
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
-  apply (wp cancel_ipc_noreply_interrupt_states gts_wp hoare_vcg_all_lift thread_get_wp | wpc | simp)+
-  apply (clarsimp)
+  apply (wp gts_wp hoare_vcg_all_lift thread_get_wp | wpc | simp)+
+(*  apply (clarsimp)
   apply (erule (1) obj_at_valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def is_tcb_def)
   apply (case_tac ko, simp_all)
   apply (auto simp: pred_tcb_at_def obj_at_def receive_blocked_def)
-  done
+  done*) sorry
 
 
 end

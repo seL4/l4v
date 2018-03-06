@@ -178,10 +178,6 @@ lemma blocked_ipc_st_tcb_at_general:
   apply (wpsimp wp: sts_st_tcb_at_cases static_imp_wp)
   done
 
-lemma maybeM_inv[wp]:
-  "\<forall>a. \<lbrace>P\<rbrace> f a \<lbrace>\<lambda>_. P\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> maybeM f opt \<lbrace>\<lambda>_. P\<rbrace>"
-  by (wpsimp simp: maybeM_def; fastforce)
-
 lemma cancel_signal_st_tcb_at_general:
   "\<lbrace>st_tcb_at P t' and K (t = t' \<longrightarrow> (P Structures_A.Running \<and> P Structures_A.Inactive))\<rbrace>
      cancel_signal t ntfn

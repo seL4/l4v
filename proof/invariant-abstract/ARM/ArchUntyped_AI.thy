@@ -135,6 +135,15 @@ proof -
       apply (erule range_cover.sz)
      apply (simp add:range_cover_def)
     apply (clarsimp simp:get_free_ref_def is_aligned_neg_mask_eq empty_descendants_range_in)
+      apply (rule conjI)
+       apply (intro impI)
+       apply (frule range_cover_stuff[where w=w and rv = 0 and sz = sz], simp_all)[1]
+       apply (clarsimp simp: valid_cap_simps cap_aligned_def)+
+       apply (frule alignUp_idem[OF is_aligned_weaken,where a = w])
+         apply (erule range_cover.sz)
+        apply (simp add:range_cover_def)
+       apply (clarsimp simp:get_free_ref_def is_aligned_neg_mask_eq empty_descendants_range_in
+        valid_sched_context_size_def min_sched_context_bits_def word_bits_def untyped_max_bits_def)
     apply (rule conjI[rotated], blast, clarsimp)
     apply (drule_tac x = "(obj_ref_of node_cap,nat_to_cref (bits_of node_cap) slota)" in bspec)
      apply (clarsimp simp:is_cap_simps nat_to_cref_def word_bits_def
@@ -147,14 +156,14 @@ proof -
    apply (erule disjE)
     apply (drule_tac x= "cs!0" in bspec)
      subgoal by clarsimp
-    subgoal by simp
+(*    subgoal by simp
    apply (clarsimp simp: cte_wp_at_caps_of_state ex_cte_cap_wp_to_def)
    apply (rule_tac x=aa in exI,rule exI,rule exI)
    apply (rule conjI, assumption)
     apply (clarsimp simp: diminished_def is_cap_simps mask_cap_def
                           cap_rights_update_def,
               simp split: cap.splits )
-   done
+   done*) sorry
 qed
 
 lemma asid_bits_ge_0:

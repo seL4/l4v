@@ -474,6 +474,7 @@ lemma retype_region_no_cap_to_obj:
              and no_cap_to_obj_with_diff_ref cap S
              and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
              and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
+             and K (ty = Structures_A.SchedContextObject \<longrightarrow> valid_sched_context_size us)
              and K (range_cover ptr sz (obj_bits_api ty us) 1) \<rbrace>
      retype_region ptr 1 us ty dev
    \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref cap S\<rbrace>"
@@ -1103,7 +1104,7 @@ lemma vs_lookup_and_unique_refs:
    apply (case_tac capa, simp_all)
         apply ((case_tac cap, simp_all)+)[6]
      apply (clarsimp simp add: table_cap_ref_def vs_cap_ref_def split: cap.splits arch_cap.splits option.splits)
-  done
+  sorry
 
 
 lemma valid_global_ptsD2:

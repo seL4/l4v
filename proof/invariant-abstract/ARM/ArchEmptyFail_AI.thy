@@ -155,6 +155,9 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
+(* RT FIXME: Move to EmptyFail *)
+crunch (empty_fail) empty_fail[wp]: possible_switch_to
+
 context Arch begin global_naming ARM
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_thread
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
