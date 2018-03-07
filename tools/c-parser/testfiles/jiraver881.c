@@ -8,26 +8,40 @@
  * @TAG(DATA61_BSD)
  */
 
-int f (void);
-
+int f(void);
 
 struct two_int {
-  int first; int second;
+    int first, second;
 };
 
-void
-g (void) {
+void baseline1(void) {
+    int x;
+    x = f();
+}
 
-  int x;
-  unsigned int y;
-  struct two_int t;
-  int z[2];
+int baseline2(void) {
+    return f();
+}
 
-  x = f ();
+void test1(void) {
+    unsigned y;
+    y = f();
+}
 
-  y = f ();
+void test2(void) {
+    struct two_int t;
+    t.first = f();
+}
 
-  t.first = f ();
+void test3(void) {
+    int z[2];
+    z[0] = f();
+}
 
-  z[0] = f ();
+unsigned test4(void) {
+    return f();
+}
+
+struct two_int test5(void) {
+    return (struct two_int) { .first = f() };
 }
