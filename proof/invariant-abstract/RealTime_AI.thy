@@ -733,7 +733,7 @@ lemma reply_unlink_sc_tcb_at [wp]:
 lemma reply_unlink_tcb_valid_objs [wp]:
   "\<lbrace>valid_objs\<rbrace> reply_unlink_tcb rp \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def get_simple_ko_def get_object_def
-                      get_thread_state_def thread_get_def)+
+                      get_thread_state_def thread_get_def)
   apply (auto simp: valid_obj_def valid_reply_def)
   done
 

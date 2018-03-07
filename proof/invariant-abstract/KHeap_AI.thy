@@ -480,10 +480,12 @@ lemma get_sc_valid_sc[wp]:
   done
 
 lemma get_reply_valid_reply[wp]:
-  "\<lbrace> valid_objs and reply_at reply \<rbrace>
+  "\<lbrace> valid_objs \<rbrace>
    get_reply reply
    \<lbrace> valid_reply \<rbrace>"
-  by (wpsimp simp: reply_at_def2 valid_reply_def2 simp_del: valid_simple_obj_def)
+  apply (wpsimp simp: get_simple_ko_def get_object_def)
+  apply (auto simp: valid_obj_def)
+  done
 
 lemma set_simple_ko_valid_objs[wp]:
   "\<lbrace> valid_objs
