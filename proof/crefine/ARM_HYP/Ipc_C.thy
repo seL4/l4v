@@ -628,7 +628,7 @@ lemma handleArchFaultReply':
 lemmas lookup_uset_getreg_swap = bind_inv_inv_comm[OF lookupIPCBuffer_inv'
                                  user_getreg_inv'
                                  empty_fail_lookupIPCBuffer
-                                 empty_fail_asUser[OF getRegister_empty_fail]]
+                                 empty_fail_asUser[OF empty_fail_getRegister]]
 
 end
 
@@ -815,7 +815,7 @@ lemma handleFaultReply':
                  | wp asUser_tcb_at' lookupIPCBuffer_inv' )+)+))
       apply wp
      (* capFault *)
-     apply (rule monadic_rewrite_symb_exec_l, (wp empty_fail_asUser)+)+
+     apply (rule monadic_rewrite_symb_exec_l, (wp empty_fail_asUser empty_fail_getRegister)+)+
           apply(case_tac rv)
           apply (clarsimp
                 | rule monadic_rewrite_bind_tail monadic_rewrite_refl
