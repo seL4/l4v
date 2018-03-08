@@ -1292,6 +1292,24 @@ fun process_initializer fname (env : csenv) (i : initializer) : csenv =
                (inits_to_elist I i [])
 
 
+fun fcall_retty_disagrees env fn_e lvtyp = let
+    val (_, (retty, _)) = fndes_callinfo env fn_e
+  in lvtyp <> retty end
+
+(* treat some problematic function calls as embedded. this detects whether the
+   lvar is compound or type promotion would be required. either case would
+   result in a nonstandard CALL element once translated. tweaking the function
+   call into an embedded EFnCall causes it to be separated into an additional
+   standard CALL statement later. *)
+fun treat_as_emb_fcall env (NONE,fn_e,args) = false
+  | treat_as_emb_fcall env (SOME lv,fn_e,args) = let
+    val lvtyp = cse_typing env lv
+    val lv_plain = case enode lv of Var _ => true | _ => false
+  in not lv_plain orelse fcall_retty_disagrees env fn_e lvtyp end
+
+fun treat_ret_as_emb_fcall env (NONE,fn_e,args) = false
+  | treat_ret_as_emb_fcall env (SOME retty,fn_e,args)
+    = fcall_retty_disagrees env fn_e retty
 
 fun fold_pipe (f : 'env -> 'a -> 'b * 'env) (env0 : 'env) (items : 'a list) =
     let
@@ -1606,20 +1624,6 @@ in
     mod3 = []}}
 end
 
-fun fcall_retty_disagrees env fn_e lvtyp = let
-    val (_, (retty, _)) = fndes_callinfo env fn_e
-  in lvtyp <> retty end
-
-fun treat_as_emb_fcall env (NONE,fn_e,args) = false
-  | treat_as_emb_fcall env (SOME lv,fn_e,args) = let
-    val lvtyp = cse_typing env lv
-    val lv_plain = case enode lv of Var _ => true | _ => false
-  in not lv_plain orelse fcall_retty_disagrees env fn_e lvtyp end
-
-fun treat_ret_as_emb_fcall env (NONE,fn_e,args) = false
-  | treat_ret_as_emb_fcall env (SOME retty,fn_e,args)
-    = fcall_retty_disagrees env fn_e retty
-
 fun process_blockitem fname e bi = let
 in
   case bi of
@@ -1627,9 +1631,14 @@ in
   | BI_Decl d =>
     let
       val ({decl,localinits,globalinits}, e') = process_decl (SOME fname) d e
+      (* process the new local inits in the process_stmt sense.
+         process_decl already did most of the work, but this is the best
+         opportunity to treat problematic function calls as embedded
+         (see treat_as_emb_fcall) *)
+      val (stmts, e'') = fold_pipe (process_stmt fname) e' localinits
     in
       (* throw away globalinits for the moment *)
-      (BI_Decl decl :: map BI_Stmt localinits, e')
+      (BI_Decl decl :: map BI_Stmt (List.concat stmts), e'')
     end
 end
 and process_stmt fname e (stmt : statement) = let
@@ -1723,7 +1732,12 @@ in
     in
       (prechaos grs [stmt], e)
     end
-  | AssignFnCall(eopt,fn_e,args) => let
+  | AssignFnCall(eopt,fn_e,args) => if treat_as_emb_fcall e (eopt,fn_e,args)
+    then let
+      val lv = case eopt of SOME lv => lv
+        | NONE => raise Fail "Trying to embed fcall without lval."
+    in pst e (w (Assign(lv,ebogwrap (EFnCall(fn_e,args))))) end
+    else let
       val (callee, _) = fndes_callinfo e fn_e
       (* the arguments need to be considered as being part of one big
          expression (rather than independently) in order for the
@@ -1774,7 +1788,9 @@ in
                              tyname ty^")")
         end
     end
-  | ReturnFnCall(fn_e, args) => let
+  | ReturnFnCall(fn_e, args) => if treat_ret_as_emb_fcall e (retty,fn_e,args)
+    then pst e (w (Return (SOME (ebogwrap (EFnCall(fn_e,args))))))
+    else let
       val (callee, _) = fndes_callinfo e fn_e
       val e = new_call {caller = fname, callee = callee} e
       val (e,grs) = pex e (foldl (fn (e,acc) => ebogwrap(BinOp(Plus,e,acc)))
@@ -1802,35 +1818,6 @@ in
 end
 and process_blockitems (fname : string) (env : csenv) bis =
     apfst List.concat (fold_pipe (process_blockitem fname) env bis)
-
-fun postprocess_blockitem fname env (BI_Stmt s)
-    = BI_Stmt (postprocess_stmt fname env s)
-  | postprocess_blockitem fname env (BI_Decl d)
-    = BI_Decl d
-and postprocess_stmt fname env stmt = let
-  fun w s0 = swrap(s0, sleft stmt, sright stmt)
-  val p = postprocess_stmt fname env
-  val pb = map (postprocess_blockitem fname env)
-  val sstmt = snode stmt
-  val retty = get_rettype fname env
-  in w (case sstmt of
-    While(g, i, s) => While(g, i, p s)
-  | Trap(traptype, s) => Trap(traptype, p s)
-  | IfStmt(g,s1,s2) => IfStmt(g, p s1, p s2)
-  | Block b => Block (pb b)
-  | Switch(g,cases) => Switch(g, map (apsnd pb) cases)
-  | AssignFnCall(eopt,fn_e,args) => if treat_as_emb_fcall env (eopt,fn_e,args)
-    then let
-      val lv = case eopt of SOME lv => lv
-        | NONE => raise Fail "Trying to embed fcall without lval."
-    in Assign(lv,ebogwrap (EFnCall(fn_e,args))) end
-    else sstmt
-  | ReturnFnCall(fn_e, args) => if treat_ret_as_emb_fcall env (retty,fn_e,args)
-    then Return(SOME (ebogwrap (EFnCall(fn_e,args))))
-    else sstmt
-  | _ => sstmt
-  )
-end
 
 fun delete_earlier_fvars fname env = let
   fun vitest (VI vinfo) =
@@ -1921,8 +1908,7 @@ fun process_one_extdecl (env0 : csenv) edec =
         val env = if rettype <> Void then #2 (insert_var (retvar, env))
                   else env
         val (body0, env) = process_blockitems (node s) env (node body)
-        val body1 = map (postprocess_blockitem (node s) env) body0
-        val body' = wrap (body1, left body, right body)
+        val body' = wrap (body0, left body, right body)
         val env = (* add fnspecs *) let
           val U = merge_specs
         in
