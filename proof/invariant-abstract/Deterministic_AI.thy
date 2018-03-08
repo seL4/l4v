@@ -4325,11 +4325,6 @@ crunch valid_list[wp]: update_time_stamp "valid_list"
 crunch valid_list[wp]: reply_from_kernel "valid_list"
   (simp: ethread_get_def unless_def wp: get_object_wp)
 
-lemma handle_invocation_valid_list:
-  "\<lbrace>valid_list\<rbrace> handle_invocation calling blocking can_donate cptr \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  apply (wpsimp simp: handle_invocation_def syscall_def wp: hoare_drop_imp)
-  sorry
-
 crunch valid_list[wp]: sched_context_resume "valid_list"
   (simp: ethread_get_def wp: get_object_wp hoare_drop_imp)
 
@@ -4374,8 +4369,6 @@ locale Deterministic_AI_2 = Deterministic_AI_1 +
     "\<And>irq. \<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"
   assumes handle_call_valid_list[wp]:
     "\<lbrace>valid_list\<rbrace> handle_call \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  assumes handle_fault_valid_list[wp]:
-    "\<And>param_a param_b. \<lbrace>valid_list\<rbrace> handle_fault param_a param_b \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes handle_recv_valid_list[wp]:
     "\<And>param_a can_reply. \<lbrace>valid_list\<rbrace> handle_recv param_a can_reply \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes handle_send_valid_list[wp]:
@@ -4386,13 +4379,15 @@ locale Deterministic_AI_2 = Deterministic_AI_1 +
     "\<lbrace>valid_list\<rbrace> handle_yield \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes handle_hypervisor_fault_valid_list[wp]:
     "\<And>thread fault. \<lbrace>valid_list\<rbrace> handle_hypervisor_fault thread fault \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  assumes handle_invocation_valid_list[wp]:
+    "\<And>calling blocking can_donate cptr. \<lbrace>valid_list\<rbrace> handle_invocation calling blocking can_donate cptr \<lbrace>\<lambda>_. valid_list\<rbrace>"
 
 
 context Deterministic_AI_2 begin
 
 lemma handle_event_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> handle_event e \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (case_tac e; wpsimp simp: wp: hoare_drop_imps whenE_inv handle_invocation_valid_list)
+  by (case_tac e; wpsimp simp: wp: hoare_drop_imps whenE_inv)
 
 end
 (**)
