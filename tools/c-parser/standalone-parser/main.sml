@@ -397,7 +397,8 @@ fun adjusted_complex_fncalls cse ast = let
   open Absyn_Serial
 
   fun is_adjusted s = case snode s of
-      (Assign(_,e)) => (case enode e of EFnCall _ => true | _ => false)
+      Assign(_,e) => (case enode e of EFnCall _ => true | _ => false)
+    | Return(SOME e) => (case enode e of EFnCall _ => true | _ => false)
     | _ => false
   fun note_adjusteds s = if is_adjusted s
     then print ("adjusted fncall at: " ^
