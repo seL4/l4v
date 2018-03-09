@@ -117,13 +117,13 @@ where
   od"
 
 definition
-  sc_and_timer :: "(unit, 'z::state_ext) s_monad"
+  sc_and_timer :: "(unit, det_ext) s_monad"
 where
   "sc_and_timer = do
     switch_sched_context;
     reprogram \<leftarrow> gets reprogram_timer;
     when reprogram $ do
-      do_extended_op set_next_interrupt;
+      set_next_interrupt;
       modify (\<lambda>s. s\<lparr>reprogram_timer:= False\<rparr>)
     od
   od"
@@ -270,6 +270,7 @@ text {*
   may omit the call to @{const switch_to_idle_thread} if the
   idle thread is the current thread.
 *}
+(*
 definition schedule_unit :: "(unit,unit) s_monad" where
 "schedule_unit \<equiv> do
  (do
@@ -290,12 +291,12 @@ definition schedule_unit :: "(unit,unit) s_monad" where
   od);
   sc_and_timer
   od"
-
+*)
 instance ..
 end
 
 
-lemmas schedule_def = schedule_det_ext_ext_def schedule_unit_def
+lemmas schedule_def = schedule_det_ext_ext_def
 
 text {* Scheduling context invocation function *}
 
