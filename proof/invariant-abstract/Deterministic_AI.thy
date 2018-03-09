@@ -4315,7 +4315,7 @@ lemma cancel_ipc_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> cancel_ipc tp \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: cancel_ipc_def wp: hoare_drop_imp get_sched_context_wp)
 
-lemma restart_valid_list:
+lemma restart_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> restart t \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: restart_def wp: hoare_drop_imp)
 
@@ -4325,14 +4325,12 @@ crunch valid_list[wp]: update_time_stamp "valid_list"
 crunch valid_list[wp]: reply_from_kernel "valid_list"
   (simp: ethread_get_def unless_def wp: get_object_wp)
 
-crunch valid_list[wp]: sched_context_resume "valid_list"
-  (simp: ethread_get_def wp: get_object_wp hoare_drop_imp)
+crunch valid_list[wp]: sched_context_resume,suspend "valid_list"
+  (simp: ethread_get_def wp: get_object_wp hoare_drop_imp maybeM_inv)
 
 context Deterministic_AI_1 begin
-lemma invoke_tcb_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> invoke_tcb r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  apply (cases r; wpsimp)
-  sorry
+crunch valid_list[wp]: invoke_tcb "valid_list"
+ (wp: maybeM_inv hoare_drop_imp check_cap_inv mapM_x_wp')
 
 lemma invoke_sched_context_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> invoke_sched_context i \<lbrace>\<lambda>_. valid_list\<rbrace>"

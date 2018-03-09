@@ -277,22 +277,16 @@ crunch domain_list_inv[wp]: invoke_untyped "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps
     simp: crunch_simps mapM_x_defsym)
 
-lemma invoke_tcb_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> invoke_tcb i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  apply (cases i; wpsimp wp: mapM_x_wp' )
-  sorry
+crunch domain_list_inv[wp]: invoke_tcb "\<lambda>s. P (domain_list s)"
+ (wp: maybeM_inv hoare_drop_imp check_cap_inv mapM_x_wp')
 
 crunch domain_list_inv[wp]:
   invoke_domain, invoke_irq_control, invoke_irq_handler
   "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv maybeM_inv)
 
-lemma invoke_sched_control_configure_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> invoke_sched_control_configure i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  apply (cases i; wpsimp simp: invoke_sched_control_configure_def refill_update_def refill_new_def
-          maybe_add_empty_tail_def refill_add_tail_def is_round_robin_def
-         split_del: if_split wp: get_sched_context_wp hoare_vcg_if_lift2 hoare_drop_imp hoare_vcg_all_lift)
-  sorry
+crunch domain_list_inv[wp]: invoke_sched_control_configure "\<lambda>s. P (domain_list s)"
+  (wp: hoare_drop_imp)
 
 lemma invoke_sched_context_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> invoke_sched_context i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
