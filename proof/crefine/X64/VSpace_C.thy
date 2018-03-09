@@ -1286,7 +1286,7 @@ lemma setRegister_ccorres:
    apply (erule(1) rf_sr_tcb_update_no_queue2,
                (simp add: typ_heap_simps')+)
     apply (rule ball_tcb_cte_casesI, simp+)
-   apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
+   apply (clarsimp simp: ctcb_relation_def ccontext_relation_def cregs_relation_def
                          atcbContextSet_def atcbContextGet_def
                          carch_tcb_relation_def
                   split: if_split)

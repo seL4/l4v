@@ -2193,7 +2193,7 @@ proof (intro impI allI)
   moreover
   from rf szb al
   have "ptr_span (pml4_Ptr (symbol_table ''x64KSGlobalPML4'')) \<inter> {ptr ..+ 2 ^ ptBits} = {}"
-    apply (clarsimp simp: valid_global_refs'_def  Let_def 
+    apply (clarsimp simp: valid_global_refs'_def  Let_def
                           valid_refs'_def ran_def rf_sr_def cstate_relation_def)
     apply (erule disjoint_subset)
     apply (simp add:kernel_data_refs_disj[simplified bit_simps_corres])
@@ -2971,31 +2971,28 @@ lemma update_ti_t_array_rep_word0:
 
 lemma selCS3_eq:
   "selCS3 = 0x2B"
-  apply (simp add: selCS3_def gdtToSel_masked_def gdtToSel_def)
-  sorry
+  by (simp add: selCS3_def gdtToSel_masked_def gdtToSel_def fromEnum_def enum_gdtslot)
 
 lemma selDS3_eq:
   "selDS3 = 0x33"
-  sorry
+  by (simp add: selDS3_def gdtToSel_masked_def gdtToSel_def fromEnum_def enum_gdtslot)
 
 lemma FLAGS_default_eq:
   "(((1 << 9) || bit 1) :: machine_word) = 0x202"
   by (word_bitwise, clarsimp)
 
 lemma newContext_def2:
-  "newContext \<equiv> (\<lambda>x. if x = register.CS then 0x2B else
-                       if x = register.SS then 0x33 else
-                        if x = register.FLAGS then 0x202 else 0)"
+  "newContext \<equiv> UserContext (\<lambda>_. 0) (\<lambda>x. if x = CS then 0x2B
+                                         else if x = SS then 0x33
+                                         else if x = FLAGS then 0x202
+                                         else 0)"
+  (is "_ \<equiv> ?UC")
 proof -
-  have "newContext = (\<lambda>x. if x = register.CS then 0x2B else
-                       if x = register.SS then 0x33 else
-                        if x = register.FLAGS then 0x202 else 0)"
+  have "newContext = ?UC"
     apply (simp add: newContext_def initContext_def selCS3_eq selDS3_eq fun_upd_def)
     apply (rule ext, simp split: if_splits)
     done
-  thus "newContext \<equiv> (\<lambda>x. if x = register.CS then 0x2B else
-                       if x = register.SS then 0x33 else
-                        if x = register.FLAGS then 0x202 else 0)" by simp
+  thus "newContext \<equiv> ?UC" by simp
 qed
 
 lemma tcb_queue_update_other:
@@ -3085,6 +3082,13 @@ lemma region_is_typeless_weaken:
 lemmas ptr_retyp_htd_safe_neg
     = ptr_retyps_htd_safe_neg[where n="Suc 0" and arr=False,
     unfolded ptr_retyps_gen_def, simplified]
+
+lemma array_upd_const:
+  fixes a :: "'a['b::finite]"
+  shows "\<lbrakk> r < n; r < CARD('b) \<rbrakk> \<Longrightarrow> (foldr (\<lambda>n arr. Arrays.update arr n c) [0..<n] a).[r] = c"
+  apply (induct n arbitrary: a; simp)
+  apply (case_tac "r < n"; clarsimp simp: not_less_less_Suc_eq index_foldr_update2)
+  done
 
 (* FIXME x64: this needs more array updates from initContext *)
 lemma cnc_tcb_helper:
@@ -3421,7 +3425,10 @@ proof -
       \<lparr>tcbContext_C := tcbContext_C (tcbArch_C undefined)
          \<lparr>registers_C :=
            foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<23]
-             (registers_C (tcbContext_C (tcbArch_C undefined)))
+             (registers_C (tcbContext_C (tcbArch_C undefined))),
+          fpuState_C :=
+           user_fpu_state_C (foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<576]
+             (state_C (fpuState_C (tcbContext_C (tcbArch_C undefined)))))
          \<rparr>\<rparr>,
        tcbState_C :=
          thread_state_C.words_C_update
@@ -3446,9 +3453,10 @@ proof -
   have fbtcb: "from_bytes (replicate (size_of TYPE(tcb_C)) 0) = ?tcb"
     apply (simp add: from_bytes_def)
     apply (simp add: typ_info_simps tcb_C_tag_def)
+  sorry (*
     apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
       final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)(* takes ages *)
-  sorry (* FIXME x64: hangs
+    FIXME x64: hangs
     apply (simp add: update_ti_adjust_ti update_ti_t_machine_word_0s
       typ_info_simps
       user_context_C_tag_def thread_state_C_tag_def seL4_Fault_C_tag_def
@@ -3469,18 +3477,18 @@ proof -
         apply (simp add: cthread_state_relation_def thread_state_lift_def
                          eval_nat_numeral ThreadState_Inactive_def)
        apply (clarsimp simp: ccontext_relation_def newContext_def2 carch_tcb_relation_def
-                             newArchTCB_def)
-       apply (case_tac r,
-              simp_all add: "StrictC'_register_defs" eval_nat_numeral
-                            atcbContext_def newArchTCB_def newContext_def
-                            initContext_def)[1] -- "takes ages"
-                         apply (simp add: thread_state_lift_def eval_nat_numeral atcbContextGet_def
-                                          selCS3_eq selDS3_eq)+
+                             newArchTCB_def cregs_relation_def atcbContextGet_def)
+       apply (rule conjI, clarsimp)
+        apply (case_tac r; simp add: "StrictC'_register_defs" array_upd_const
+                                     atcbContext_def newArchTCB_def newContext_def
+                                     initContext_def selCS3_eq selDS3_eq)
+       apply (simp add: fpu_relation_def array_upd_const)
+      apply (simp add: thread_state_lift_def array_upd_const atcbContextGet_def)
      apply (simp add: timeSlice_def)
     apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
-        lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
-        eval_nat_numeral seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def
-        split: if_split)+
+                     lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
+                     array_upd_const seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def
+                split: if_split)+
     done
 
   have pks: "ks (ctcb_ptr_to_tcb_ptr p) = None"
