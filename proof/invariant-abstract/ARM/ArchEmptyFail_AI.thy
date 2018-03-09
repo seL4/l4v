@@ -26,7 +26,7 @@ crunch_ignore (empty_fail)
         writeTTBR0_impl cacheRangeOp setIRQTrigger_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
-  loadWord, load_word_offs, storeWord, getRestartPC, get_mrs
+  loadWord, load_word_offs, store_word_offs, storeWord, getRestartPC, get_mrs
 
 end
 
@@ -108,8 +108,8 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDPoolAssign_empty_fail\<close>\<close>)
   apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]
   including no_pre
-  by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | (wp+) | intro conjI impI allI)+)
-
+  by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits
+     | (wp+) | intro conjI impI allI)+)
 end
 
 global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
@@ -141,13 +141,13 @@ context Arch begin global_naming ARM
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
   cap_delete, choose_thread
 end
-
+(*
 global_interpretation EmptyFail_AI_schedule_unit?: EmptyFail_AI_schedule_unit
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
-
+*)
 global_interpretation EmptyFail_AI_schedule_det?: EmptyFail_AI_schedule_det
   proof goal_cases
   interpret Arch .
@@ -174,13 +174,13 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_t
          flush_type.splits page_directory_invocation.splits
    ignore: resetTimer_impl ackInterrupt_impl)
 end
-
+(*
 global_interpretation EmptyFail_AI_call_kernel_unit?: EmptyFail_AI_call_kernel_unit
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
-
+*)
 global_interpretation EmptyFail_AI_call_kernel_det?: EmptyFail_AI_call_kernel_det
   proof goal_cases
   interpret Arch .

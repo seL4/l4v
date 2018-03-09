@@ -42,9 +42,8 @@ declare ethread_get_inv[wp del, wp]
 crunch domain_list_inv[wp]:
   empty_slot_ext, cap_swap_ext "\<lambda>s. P (domain_list s)"
 
-lemma set_thread_state_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> set_thread_state p st \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  sorry
+crunch domain_list_inv[wp]:
+  schedule_tcb, set_thread_state "\<lambda>s. P (domain_list s)"
 
 
 locale DetSchedDomainTime_AI =
@@ -124,6 +123,20 @@ locale DetSchedDomainTime_AI_2 = DetSchedDomainTime_AI +
   assumes handle_reserved_irq_domain_list_inv'[wp]:
     "\<And>P irq. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
 
+crunch all_but_exst[wp]: commit_domain_time "all_but_exst P"
+
+crunch (empty_fail) empty_fail[wp]: commit_domain_time
+
+global_interpretation commit_domain_time_extended: is_extended "commit_domain_time"
+  by (unfold_locales; wp)
+
+crunch all_but_exst[wp]: commit_domain_time "all_but_exst P"
+
+crunch (empty_fail) empty_fail[wp]: commit_domain_time
+
+global_interpretation commit_domain_time_extended: is_extended "commit_domain_time"
+  by (unfold_locales; wp)
+
 context DetSchedDomainTime_AI begin
 
 crunch domain_list_inv[wp]:
@@ -136,21 +149,11 @@ crunch domain_list_inv[wp]: reschedule_required,schedule_tcb "\<lambda>s. P (dom
 crunch domain_list_inv[wp]: reply_unlink_tcb, reply_unlink_sc, tcb_sched_action "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps hoare_unless_wp maybeM_inv select_inv gets_the_inv simp: crunch_simps set_object_def)
 
-lemma reply_remove_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> reply_remove r \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  sorry
+crunch domain_list_inv[wp]: reply_remove, sched_context_unbind_tcb "\<lambda>s. P (domain_list s)"
+  (wp: hoare_drop_imps get_simple_ko_wp)
 
-lemma sched_context_unbind_tcb_list_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> sched_context_unbind_tcb r \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  sorry
-
-lemma cancel_all_ipc_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> cancel_all_ipc r \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  sorry
-
-lemma cancel_all_signals_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> cancel_all_signals r \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  sorry
+crunch domain_list_inv[wp]: cancel_all_ipc, cancel_all_signals "\<lambda>s. P (domain_list s)"
+  (wp: hoare_drop_imps mapM_x_wp')
 
 crunch domain_list_inv[wp]: finalise_cap "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps hoare_unless_wp maybeM_inv dxo_wp_weak select_inv simp: crunch_simps)
@@ -167,13 +170,20 @@ crunch domain_list_inv[wp]: possible_switch_to "\<lambda>s. P (domain_list s)"
 crunch domain_list_inv[wp]: awaken "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imp dxo_wp_weak mapM_x_wp simp: Let_def)
 
-lemma commit_time_domain_list[wp]:
-  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> commit_time \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
-  sorry
+crunch domain_list_inv[wp]: commit_time "\<lambda>s. P (domain_list s)"
+  (simp: Let_def wp: get_sched_context_wp)
+
+crunch domain_list_inv[wp]: set_next_interrupt "\<lambda>s. P (domain_list s)"
+  (simp: Let_def wp: get_sched_context_wp hoare_drop_imps)
 
 lemma sc_and_timer_domain_list[wp]:
   "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> sc_and_timer \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
+  apply (wpsimp simp: sc_and_timer_def Let_def wp: get_sched_context_wp)
+
   sorry
+crunch domain_list_inv[wp]: sc_and_timer "\<lambda>s. P (domain_list s)"
+    (simp: Let_def wp: get_sched_context_wp ignore: do_machine_op set_next_interrupt)
+
 
 crunch domain_list_inv[wp]: schedule "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imp dxo_wp_weak simp: Let_def)
@@ -199,10 +209,6 @@ crunch domain_list_inv[wp]: do_ipc_transfer "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps simp: zipWithM_x_mapM rule: transfer_caps_loop_pres)
 
 crunch domain_list_inv[wp]: copy_mrs "\<lambda>s. P (domain_list s)"
-
-lemma sched_context_donate_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> sched_context_donate param_a param_b \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  sorry
 
 lemma reply_push_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> reply_push param_a param_b param_c param_d \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"

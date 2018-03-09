@@ -170,7 +170,7 @@ lemma OR_choice_weak_wp:
                     select_f_def gets_def return_def get_def
           split: option.splits if_split_asm)
   done
-
+(*
 locale Schedule_AI_U = Schedule_AI "TYPE(unit)"
 
 lemma (in Schedule_AI_U) schedule_invs[wp]:
@@ -206,6 +206,6 @@ lemma (in Schedule_AI_U) schedule_ct_activateable[wp]:
     apply (clarsimp simp: pred_tcb_at_def obj_at_def split: if_split_asm option.split_asm)
   done
 qed
-
+*)
 
 end

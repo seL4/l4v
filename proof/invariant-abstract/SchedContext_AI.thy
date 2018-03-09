@@ -459,6 +459,10 @@ lemma switch_sched_context_invs[wp]:
          wp: hoare_if gbn_inv commit_time_invs refill_unblock_check_invs
              hoare_drop_imp hoare_vcg_if_lift2)
 
+lemma set_next_interrupt_invs[wp]: "\<lbrace>invs\<rbrace> set_next_interrupt \<lbrace>\<lambda>rv. invs\<rbrace>"
+  by (wpsimp simp: set_next_interrupt_def
+       wp: hoare_drop_imp get_sched_context_wp set_next_timer_interrupt_invs)
+
 lemma sc_and_timer_invs: "\<lbrace>invs\<rbrace> sc_and_timer \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: sc_and_timer_def)
 
@@ -518,9 +522,30 @@ lemma switch_sched_context_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> switch_sched_context \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
   by (wpsimp simp: switch_sched_context_def wp: hoare_drop_imp hoare_vcg_if_lift2)
 
-lemma sc_and_timer_activatable: "\<lbrace>ct_in_state activatable\<rbrace> sc_and_timer \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
+(* FIXME Move *)
+context Arch begin global_naming ARM
+
+lemma set_next_interrupt_activatable:
+  "\<lbrace>ct_in_state activatable\<rbrace> set_next_timer_interrupt t \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
+  apply (clarsimp simp: set_next_timer_interrupt_def)
+  apply (wpsimp simp: ct_in_state_def wp: ct_in_state_thread_state_lift)
+  done
+
+end
+
+lemma set_next_interrupt_activatable:
+  "\<lbrace>ct_in_state activatable\<rbrace> set_next_interrupt \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
+  apply (clarsimp simp: set_next_interrupt_def set_next_timer_interrupt_def)
+  apply (wpsimp simp: ct_in_state_def
+      wp: hoare_drop_imp ct_in_state_thread_state_lift
+         ARM.set_next_interrupt_activatable[simplified ARM.set_next_interrupt_activatable, simplified])
+  done
+
+
+lemma sc_and_timer_activatable:
+  "\<lbrace>ct_in_state activatable\<rbrace> sc_and_timer \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
   apply (wpsimp simp: sc_and_timer_def switch_sched_context_def
-           wp: hoare_drop_imp modify_wp hoare_vcg_if_lift2)
+           wp: hoare_drop_imp modify_wp hoare_vcg_if_lift2 set_next_interrupt_activatable)
   done
 
 crunch inv[wp]: refill_capacity,refill_sufficient,refill_ready "\<lambda>s. P s"

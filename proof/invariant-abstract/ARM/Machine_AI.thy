@@ -340,7 +340,8 @@ lemma no_fail_ackInterrupt[wp]: "no_fail \<top> (ackInterrupt irq)"
 lemma no_fail_maskInterrupt[wp]: "no_fail \<top> (maskInterrupt irq bool)"
   by (simp add: maskInterrupt_def)
 
-
+lemma no_fail_setDeadline: "no_fail \<top>(setDeadline t)"
+  by (simp add: setDeadline_def)
 
 lemma no_irq_use:
   "\<lbrakk> no_irq f; (rv,s') \<in> fst (f s) \<rbrakk> \<Longrightarrow> irq_masks s' = irq_masks s"
@@ -455,6 +456,9 @@ lemma no_irq_resetTimer: "no_irq resetTimer"
 
 lemma no_irq_debugPrint: "no_irq (debugPrint $ xs)"
   by (simp add: no_irq_def)
+
+lemma no_irq_setDeadline: "no_irq (setDeadline t)"
+  by (wpsimp simp: setDeadline_def)
 
 context notes no_irq[wp] begin
 
@@ -710,8 +714,6 @@ lemma empty_fail_flushBTAC: "empty_fail  flushBTAC"
 
 lemma empty_fail_writeContextID: "empty_fail  writeContextID"
   by (simp add: writeContextID_def)
-
-
 
 lemma empty_fail_cacheRangeOp [simp, intro!]:
   assumes ef: "\<And>a b. empty_fail (oper a b)"

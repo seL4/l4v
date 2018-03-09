@@ -113,14 +113,14 @@ lemma stt_invs [wp,Schedule_AI_asms]:
   apply (simp add: is_tcb_def)
   done
 end
-
+(*
 interpretation Schedule_AI_U?: Schedule_AI_U
   proof goal_cases
   interpret Arch .
   case 1 show ?case
   by (intro_locales; (unfold_locales; fact Schedule_AI_asms)?)
   qed
-
+*)
 interpretation Schedule_AI?: Schedule_AI
   proof goal_cases
   interpret Arch .

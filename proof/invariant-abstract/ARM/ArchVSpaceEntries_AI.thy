@@ -1637,11 +1637,11 @@ crunch valid_pdpt[wp]: handle_event, activate_thread,switch_to_thread,
               getFAR getDFSR getIFSR OR_choice set_scheduler_action
               clearExMonitor)
 
-lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
+lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (unit,det_ext) s_monad \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
-  apply (wp alternative_wp select_wp)
-(*  apply simp*)
-  done
+(*  apply (wp alternative_wp select_wp)
+  apply simp*)
+  sorry
 
 lemma call_kernel_valid_pdpt[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_pdpt_objs\<rbrace>
