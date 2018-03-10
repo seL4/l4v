@@ -33,6 +33,9 @@ where
   in \<exists>tcb. hp ct = Some tcb \<and>
            tsType_CL (thread_state_lift (tcbState_C tcb)) = scast ThreadState_Running"
 
+definition
+  "handleHypervisorEvent_C = (CALL schedule();; CALL activateThread())"
+
 context kernel_m
 begin
 
@@ -43,7 +46,7 @@ definition
   | UserLevelFault w1 w2 \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleUserLevelFault(w1,w2))
   | Interrupt \<Rightarrow> exec_C \<Gamma> (Call handleInterruptEntry_'proc)
   | VMFaultEvent t \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleVMFaultEvent(vm_fault_type_from_H t))
-  | HypervisorEvent t \<Rightarrow> exec_C \<Gamma> SKIP"
+  | HypervisorEvent t \<Rightarrow> exec_C \<Gamma> handleHypervisorEvent_C"
 
 definition
   "callKernel_withFastpath_C e \<equiv>
@@ -190,7 +193,7 @@ definition
   where
   "checkActiveIRQ_C \<equiv>
    do getActiveIRQ_C;
-      irq \<leftarrow> gets ret__unsigned_short_';
+      irq \<leftarrow> gets ret__unsigned_char_';
       return (irq \<noteq> scast irqInvalid)
    od"
 
@@ -322,11 +325,10 @@ lemma cint_rel_to_H:
                         X64.maxIRQ_def Kernel_C.maxIRQ_def)
   apply (rule ext)
   apply clarsimp
-  sorry (* FIXME x64: maxIRQ wrong in haskell
   apply (drule spec, erule impE, assumption)
   apply (drule_tac s="irqstate_to_C (fun i)" in sym,
          simp add: cirqstate_cancel[THEN fun_cong, simplified])
-  done *)
+  done
 
 definition
   "cstate_to_machine_H s \<equiv>
@@ -343,19 +345,18 @@ lemma ucast_ucast_mask_pageBits_shift:
   done
 
 definition
-"processMemory s \<equiv> (ksMachineState s) \<lparr>underlying_memory := option_to_0 \<circ> (user_mem' s)\<rparr>"
-
+  "processMemory s \<equiv> (ksMachineState s) \<lparr>underlying_memory := option_to_0 \<circ> (user_mem' s)\<rparr>"
 
 lemma unat_ucast_mask_pageBits_shift:
   "unat (ucast (p && mask pageBits >> 3) :: 9 word) = unat ((p::word64) && mask pageBits >> 3)"
-  apply (simp only: unat_ucast) sorry (*
-  apply (rule mod_less)
+  apply (simp only: unat_ucast)
+  apply (rule Divides.mod_less)
   apply (rule unat_less_power)
    apply (simp add: word_bits_def)
   apply (rule shiftr_less_t2n)
   apply (rule order_le_less_trans [OF word_and_le1])
   apply (simp add: pageBits_def mask_def)
-  done *)
+  done
 
 lemma mask_pageBits_shift_sum:
   "unat n = unat (p && mask 3) \<Longrightarrow>
@@ -420,20 +421,27 @@ lemma user_mem_C_relation:
   apply (simp add: word_rsplit_rcat_size word_size word_size_bits_def)
   apply (case_tac "unat (p && mask 3)")
    apply (simp add: mask_pageBits_shift_sum [where n=0, simplified])
-sorry (*
   apply (case_tac "nat")
    apply (simp add: mask_pageBits_shift_sum [where n=1, simplified])
   apply (case_tac "nata")
    apply (simp add: mask_pageBits_shift_sum [where n=2, simplified])
   apply (case_tac "natb")
    apply (simp add: mask_pageBits_shift_sum [where n=3, simplified])
+  apply (case_tac "natc")
+   apply (simp add: mask_pageBits_shift_sum [where n=4, simplified])
+  apply (case_tac "natd")
+   apply (simp add: mask_pageBits_shift_sum [where n=5, simplified])
+  apply (case_tac "nate")
+   apply (simp add: mask_pageBits_shift_sum [where n=6, simplified])
+  apply (case_tac "natf")
+   apply (simp add: mask_pageBits_shift_sum [where n=7, simplified])
   apply clarsimp
-  apply (subgoal_tac "unat (p && mask 2) < unat (2^2::word32)")
+  apply (subgoal_tac "unat (p && mask 3) < unat (2^3::machine_word)")
    apply simp
   apply (fold word_less_nat_alt)
   apply (rule and_mask_less_size)
   apply (clarsimp simp: word_size)
-  done *)
+  done
 
 
 lemma device_mem_C_relation:
@@ -1002,6 +1010,26 @@ lemma super_writeable_rights_inj:
    r = r'"
   by (simp add: writable_from_vm_rights_def superuser_from_vm_rights_def split: vmrights.splits)
 
+lemma cpspace_pml4e_relation_unique:
+  assumes "cpspace_pml4e_relation ah ch" "cpspace_pml4e_relation ah' ch"
+  assumes "\<forall>x \<in> ran (map_to_pml4es ah). valid_pml4e' x s"
+  assumes "\<forall>x \<in> ran (map_to_pml4es ah'). valid_pml4e' x s'"
+  shows   "map_to_pml4es ah' = map_to_pml4es ah"
+  apply (rule cmap_relation_unique'[OF inj_Ptr _ assms])
+  apply (auto simp: cpml4e_relation_def Let_def split: pml4e.splits bool.splits
+              dest: super_writeable_rights_inj)
+  done
+
+lemma cpspace_pdpte_relation_unique:
+  assumes "cpspace_pdpte_relation ah ch" "cpspace_pdpte_relation ah' ch"
+  assumes "\<forall>x \<in> ran (map_to_pdptes ah). valid_pdpte' x s"
+  assumes "\<forall>x \<in> ran (map_to_pdptes ah'). valid_pdpte' x s'"
+  shows   "map_to_pdptes ah' = map_to_pdptes ah"
+  apply (rule cmap_relation_unique'[OF inj_Ptr _ assms])
+  apply (auto simp: cpdpte_relation_def Let_def split: pdpte.splits bool.splits
+              dest: super_writeable_rights_inj)
+  done
+
 lemma cpspace_pde_relation_unique:
   assumes "cpspace_pde_relation ah ch" "cpspace_pde_relation ah' ch"
   assumes "\<forall>x \<in> ran (map_to_pdes ah). valid_pde' x s"
@@ -1137,8 +1165,9 @@ lemma cpspace_device_data_relation_unique:
   done
 
 lemmas projectKO_opts = projectKO_opt_ep projectKO_opt_ntfn projectKO_opt_tcb
-                        projectKO_opt_pte projectKO_opt_pde projectKO_opt_cte
-                        projectKO_opt_asidpool
+                        projectKO_opt_pml4e projectKO_opt_pdpte
+                        projectKO_opt_pte projectKO_opt_pde
+                        projectKO_opt_asidpool projectKO_opt_cte
                         projectKO_opt_user_data projectKO_opt_user_data_device
 
 (* Following from the definition of map_to_ctes,
@@ -1230,6 +1259,26 @@ lemma map_to_cnes_eq:
   apply (clarsimp simp: projectKO_opt_cte split: kernel_object.splits)
   done
 
+lemma valid_objs'_valid_pml4'_ran:
+  "valid_objs' s \<Longrightarrow> \<forall>x\<in>ran (map_to_pml4es (ksPSpace s)). valid_pml4e' x s"
+  apply (clarsimp simp: valid_objs'_def ran_def)
+  apply (case_tac "ksPSpace s a", simp+)
+  apply (rename_tac y, drule_tac x=y in spec)
+  apply (case_tac y, simp_all add: projectKOs)
+  apply (clarsimp simp: valid_obj'_def
+                 split: arch_kernel_object.splits)
+  done
+
+lemma valid_objs'_valid_pdpt'_ran:
+  "valid_objs' s \<Longrightarrow> \<forall>x\<in>ran (map_to_pdptes (ksPSpace s)). valid_pdpte' x s"
+  apply (clarsimp simp: valid_objs'_def ran_def)
+  apply (case_tac "ksPSpace s a", simp+)
+  apply (rename_tac y, drule_tac x=y in spec)
+  apply (case_tac y, simp_all add: projectKOs)
+  apply (clarsimp simp: valid_obj'_def
+                 split: arch_kernel_object.splits)
+  done
+
 lemma valid_objs'_valid_pde'_ran:
   "valid_objs' s \<Longrightarrow> \<forall>x\<in>ran (map_to_pdes (ksPSpace s)). valid_pde' x s"
   apply (clarsimp simp: valid_objs'_def ran_def)
@@ -1275,6 +1324,12 @@ proof -
     apply (drule (1) cpspace_ntfn_relation_unique)
       apply (fastforce intro: valid_pspaces)
      apply (fastforce intro: valid_pspaces)
+    apply (drule (1) cpspace_pml4e_relation_unique)
+      apply (rule valid_objs'_valid_pml4'_ran [OF valid_objs])
+     apply (rule valid_objs'_valid_pml4'_ran [OF valid_objs'])
+    apply (drule (1) cpspace_pdpte_relation_unique)
+      apply (rule valid_objs'_valid_pdpt'_ran [OF valid_objs])
+     apply (rule valid_objs'_valid_pdpt'_ran [OF valid_objs'])
     apply (drule (1) cpspace_pde_relation_unique)
       apply (rule valid_objs'_valid_pde'_ran [OF valid_objs])
      apply (rule valid_objs'_valid_pde'_ran [OF valid_objs'])
@@ -1302,10 +1357,9 @@ proof -
      apply (case_tac "ksPSpace s' x", simp)
      apply (case_tac a, simp_all add: projectKO_opts
                                split: arch_kernel_object.splits)
-  sorry (*
     by (clarsimp simp: projectKO_opts map_comp_def
                 split: kernel_object.splits arch_kernel_object.splits
-                       option.splits) *)
+                       option.splits)
 qed
 (*<<< end showing that cpspace_relation is actually unique *)
 
@@ -1497,7 +1551,7 @@ where
     gsUserPages = fst (ghost'state_' s), gsCNodes = fst (snd (ghost'state_' s)),
     gsUntypedZeroRanges = mk_gsUntypedZeroRanges s,
     gsMaxObjectSize = (let v = unat (gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' s))
-        in if v = 0 then card (UNIV :: word32 set) else v),
+        in if v = 0 then card (UNIV :: machine_word set) else v),
     ksDomScheduleIdx = unat (ksDomScheduleIdx_' s),
     ksDomSchedule = cDomSchedule_to_H kernel_all_global_addresses.ksDomSchedule,
     ksCurDomain = ucast (ksCurDomain_' s),
@@ -1539,10 +1593,11 @@ lemma cstate_to_H_correct:
                   using cstate_rel
                   apply (clarsimp simp: cstate_relation_def cpspace_relation_def  Let_def prod_eq_iff)
                  using valid cstate_rel
-                 apply (rule mk_gsUntypedZeroRanges_correct) sorry (*
+                 apply (rule mk_gsUntypedZeroRanges_correct)
+                subgoal
                 using cstate_rel
-                apply (fastforce simp: cstate_relation_def cpspace_relation_def
-                  Let_def ghost_size_rel_def unat_eq_0
+                by (fastforce simp: cstate_relation_def cpspace_relation_def
+                                    Let_def ghost_size_rel_def unat_eq_0
                             split: if_split)
                using valid cstate_rel
                apply (rule cDomScheduleIdx_to_H_correct)
@@ -1578,8 +1633,9 @@ lemma cstate_to_H_correct:
       apply (rule csch_act_rel_to_H[THEN iffD1])
        apply (case_tac "ksSchedulerAction as", simp+)
        using valid
-       apply (clarsimp simp: valid_state'_def st_tcb_at'_def
-                             obj_at'_real_def ko_wp_at'_def objBitsKO_def projectKO_opt_tcb
+       subgoal
+       by (clarsimp simp: valid_state'_def st_tcb_at'_def
+                          obj_at'_real_def ko_wp_at'_def objBitsKO_def projectKO_opt_tcb
                        split: kernel_object.splits)
       using cstate_rel
       apply (clarsimp simp: cstate_relation_def Let_def)
@@ -1610,7 +1666,7 @@ lemma cstate_to_H_correct:
    apply (simp add: cstate_relation_def Let_def cpspace_relation_def)
   using valid
   apply (clarsimp simp add: valid_state'_def)
-  done *)
+  done
 
 end
 
@@ -1686,7 +1742,7 @@ definition
   | UserLevelFault w1 w2 \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleUserLevelFault(w1,w2))
   | Interrupt \<Rightarrow> exec_C \<Gamma> (Call handleInterruptEntry_'proc)
   | VMFaultEvent t \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleVMFaultEvent(kernel_m.vm_fault_type_from_H t))
-  | HypervisorEvent t \<Rightarrow> exec_C \<Gamma> SKIP"
+  | HypervisorEvent t \<Rightarrow> exec_C \<Gamma> handleHypervisorEvent_C"
 
 definition
   "callKernel_withFastpath_C e \<equiv>
@@ -1725,7 +1781,7 @@ definition
 definition
   "checkActiveIRQ_C \<equiv>
    do getActiveIRQ_C;
-      irq \<leftarrow> gets ret__unsigned_short_';
+      irq \<leftarrow> gets ret__unsigned_char_';
       return (irq \<noteq> scast irqInvalid)
    od"
 
