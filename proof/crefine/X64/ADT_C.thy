@@ -42,7 +42,8 @@ definition
   | UnknownSyscall n \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleUnknownSyscall(of_nat n))
   | UserLevelFault w1 w2 \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleUserLevelFault(w1,w2))
   | Interrupt \<Rightarrow> exec_C \<Gamma> (Call handleInterruptEntry_'proc)
-  | VMFaultEvent t \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleVMFaultEvent(vm_fault_type_from_H t))"
+  | VMFaultEvent t \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleVMFaultEvent(vm_fault_type_from_H t))
+  | HypervisorEvent t \<Rightarrow> exec_C \<Gamma> SKIP"
 
 definition
   "callKernel_withFastpath_C e \<equiv>
@@ -122,27 +123,26 @@ end
 definition
   "register_to_H \<equiv> inv register_from_H"
 
-definition
+definition (in state_rel)
   to_user_context_C :: "user_context \<Rightarrow> user_context_C"
 where
-  "to_user_context_C uc \<equiv> user_context_C (FCP (\<lambda>r. uc (register_to_H (of_nat r))))"
+  "to_user_context_C uc \<equiv>
+  user_context_C (user_fpu_state_C (ARRAY r. fpu_state uc (finite_index r)))
+                 (ARRAY r. user_regs uc (register_to_H (of_nat r)))"
 
-
-context kernel_m begin
-
-lemma ccontext_rel_to_C:
+lemma (in kernel_m) ccontext_rel_to_C:
   "ccontext_relation uc (to_user_context_C uc)"
-  apply (clarsimp simp: ccontext_relation_def to_user_context_C_def fcp_beta)
-  apply (rule arg_cong [where f=uc])
-  apply (simp add: register_to_H_def inv_def)
-  done
+  unfolding ccontext_relation_def to_user_context_C_def cregs_relation_def fpu_relation_def
+  by (clarsimp simp: register_to_H_def inv_def)
 
-end
+context state_rel begin
 
 definition
   from_user_context_C :: "user_context_C \<Rightarrow> user_context"
 where
-  "from_user_context_C uc \<equiv> \<lambda>r. index (registers_C uc) (unat (register_from_H r))"
+  "from_user_context_C uc \<equiv>
+  UserContext (Rep_array (state_C (fpuState_C uc)))
+              (\<lambda>r. (registers_C uc).[unat (register_from_H r)])"
 
 definition
   getContext_C :: "tcb_C ptr \<Rightarrow> cstate \<Rightarrow> user_context"
@@ -150,9 +150,17 @@ where
   "getContext_C thread \<equiv>
    \<lambda>s. from_user_context_C (tcbContext_C (the (clift (t_hrs_' (globals s)) (Ptr &(thread\<rightarrow>[''tcbArch_C''])))))"
 
+lemma fpu_relation_Rep:
+  "fpu_relation fH fC \<Longrightarrow> Rep_array (state_C fC) = fH"
+  unfolding fpu_relation_def index_def
+  by (subst (asm) forall_finite_index[symmetric]) auto
+
 lemma from_user_context_C:
   "ccontext_relation uc uc' \<Longrightarrow> from_user_context_C uc' = uc"
-  by (auto simp: ccontext_relation_def from_user_context_C_def intro: ext)
+  unfolding ccontext_relation_def cregs_relation_def
+  by (cases uc) (auto simp: from_user_context_C_def fpu_relation_Rep)
+
+end
 
 context kernel_m begin
 
@@ -260,24 +268,11 @@ lemma setUserMem_C_def_foldl:
 definition
   "cscheduler_action_to_H p \<equiv>
    if p = NULL then ResumeCurrentThread
-   else if p = Ptr (~~ 0) then ChooseNewThread
+   else if p = Ptr 1 then ChooseNewThread
    else SwitchToThread (ctcb_ptr_to_tcb_ptr p)"
 
 
-
-(* FIXME: move *)
-lemma not_neq:
-  "(\<not> a \<noteq> b) = (a = b)"
-  by simp
-
-lemma max_word_neq_0[simp]: "max_word \<noteq> 0"
-  apply (rule ccontr)
-  apply (cut_tac max_word_minus[where 'a = 'a])
-  apply (case_tac "len_of TYPE('a)")
-   apply clarsimp
-  apply (subst(asm) not_neq)
-  apply (metis eq_iff_diff_eq_0 max_word_def max_word_eq word_pow_0 zero_neq_one)
-  done
+declare max_word_not_0[simp]
 
 lemma csch_act_rel_to_H:
   "(\<forall>t. a = SwitchToThread t \<longrightarrow> is_aligned t tcbBlockSizeBits) \<Longrightarrow>
@@ -289,8 +284,8 @@ lemma csch_act_rel_to_H:
      apply (simp_all add: tcb_ptr_to_ctcb_ptr_def ctcb_ptr_to_tcb_ptr_def
                           ctcb_offset_defs is_aligned_mask mask_def max_word_def
                           objBits_defs)
-  apply (word_bitwise, simp)
-  done
+  subgoal by word_bitwise simp
+  by word_bitwise simp
 
 definition
   cirqstate_to_H :: "machine_word \<Rightarrow> irqstate"
@@ -352,25 +347,20 @@ definition
 
 
 lemma unat_ucast_mask_pageBits_shift:
-  "unat (ucast (p && mask pageBits >> 3) :: 9 word) = unat ((p::word32) && mask pageBits >> 3)"
-  apply (simp only: unat_ucast)
+  "unat (ucast (p && mask pageBits >> 3) :: 9 word) = unat ((p::word64) && mask pageBits >> 3)"
+  apply (simp only: unat_ucast) sorry (*
   apply (rule mod_less)
   apply (rule unat_less_power)
    apply (simp add: word_bits_def)
   apply (rule shiftr_less_t2n)
   apply (rule order_le_less_trans [OF word_and_le1])
   apply (simp add: pageBits_def mask_def)
-  done
-
-(* FIXME x64: copied from SR_Lemmas_C, move to WordLemmas *)
-lemma word_shift_by_3:
-  "x * 8 = (x::'a::len word) << 3"
-  by (simp add: shiftl_t2n)
+  done *)
 
 lemma mask_pageBits_shift_sum:
   "unat n = unat (p && mask 3) \<Longrightarrow>
   (p && ~~ mask pageBits) + (p && mask pageBits >> 3) * 8 + n = (p::machine_word)"
-  apply (clarsimp simp: word_shift_by_3)
+  apply (clarsimp simp: kernel.word_shift_by_3)
   apply (subst word_plus_and_or_coroll)
    apply (rule word_eqI)
    apply (clarsimp simp: word_size pageBits_def nth_shiftl nth_shiftr word_ops_nth_size)
@@ -591,19 +581,11 @@ lemma assumes A: "is_inv f g" shows the_inv_map_eq: "the_inv_map f = g"
  by (simp add: is_inv_unique[OF A A[THEN is_inv_inj, THEN is_inv_the_inv_map]])
 (*<<<*)
 
-
-(* FIXME: move *)
-lemma word_le_p2m1:
-  "(w::'a::len word) <= 2 ^ len_of TYPE('a) - 1" by (simp add: p2len)
+lemmas word_le_p2m1 = word_up_bound[of w for w]
 
 (* FIXME: move *)
 lemma ran_map_comp_subset: "ran (map_comp f g) <= (ran f)"
   by (fastforce simp: map_comp_def ran_def split: option.splits)
-
-(* FIXME: move *)(* NOTE: unused. *)
-lemma inj_on_option_map:
- "inj_on (map_option f o m) (dom m) \<Longrightarrow> inj_on m (dom m)"
-  by (auto simp add: inj_on_def map_option_def dom_def)
 
 lemma eq_option_to_0_rev:
   "Some 0 ~: A \<Longrightarrow> \<forall>x. \<forall>y\<in>A.
@@ -612,55 +594,57 @@ lemma eq_option_to_0_rev:
 
 end
 
-definition (in state_rel)
+context state_rel begin
+
+definition
   "carch_state_to_H cstate \<equiv>
    X64KernelState
-     (array_map_conv (\<lambda>x. if x=NULL then None else Some (ptr_val x))
-                     (2^asid_high_bits - 1) (armKSASIDTable_' cstate))
-     (array_map_conv (\<lambda>x. if x=0 then None else Some x) 0xFF
-                     (armKSHWASIDTable_' cstate))
-     (armKSNextASID_' cstate)
-     (casid_map_to_H (armKSHWASIDTable_' cstate) (clift (t_hrs_' cstate)))
-     (ccur_vcpu_to_H (armHSCurVCPU_' cstate) (armHSVCPUActive_' cstate))
-     (unat (gic_vcpu_num_list_regs_' cstate))
-     (symbol_table ''armUSGlobalPD'')
-     armKSKernelVSpace_C"
+      (array_map_conv (\<lambda>x. if x=NULL then None else Some (ptr_val x))
+                     (2^asid_high_bits - 1) (x86KSASIDTable_' cstate))
+      (symbol_table ''x64KSKernelPML4'')
+      [symbol_table ''x64KSKernelPDPT'']
+      [symbol_table ''x64KSKernelPD'']
+      [symbol_table ''x64KSKernelPT'']
+      (CR3 (x64KSCurrentUserCR3_' cstate) undefined (*FIXME*))
+      x64KSKernelVSpace_C"
+
 
 lemma eq_option_to_ptr_rev:
   "Some 0 \<notin> A \<Longrightarrow>
    \<forall>x. \<forall>y\<in>A. (op = \<circ> option_to_ptr) y x \<longrightarrow>
               (if x=NULL then None else Some (ptr_val x)) = y"
-  apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
-  apply (auto intro: word_gt_0[THEN iffD2])
-  done
+  by (force simp: option_to_ptr_def option_to_0_def split: option.splits)
 
-lemma (in kernel_m)  carch_state_to_H_correct:
+lemma carch_state_to_H_correct:
   assumes valid:  "valid_arch_state' astate"
   assumes rel:    "carch_state_relation (ksArchState astate) (cstate)"
   shows           "carch_state_to_H cstate = ksArchState astate"
   apply (case_tac "ksArchState astate", simp)
-  apply (rename_tac v1 v2 v3 v4 v5 v6 v7 v8)
+  apply (rename_tac v1 v2 v3 v4 v5 v6 v7)
   using rel[simplified carch_state_relation_def carch_globals_def]
-  apply (clarsimp simp: carch_state_to_H_def
-                        casid_map_to_H_correct[OF valid rel])
+  apply (clarsimp simp: carch_state_to_H_def)
+  (*
   apply (rule conjI[rotated])
    apply (rule conjI[rotated])
     subgoal using valid rel
-      by (clarsimp simp: ccur_vcpu_to_H_correct[OF _ rel] unat_of_nat_eq valid_arch_state'_def
-                         max_armKSGICVCPUNumListRegs_def)
+      by (clarsimp simp: unat_of_nat_eq valid_arch_state'_def)
    apply (rule array_relation_map_conv2[OF _ eq_option_to_0_rev])
      apply assumption
     using valid[simplified valid_arch_state'_def]
     subgoal by (fastforce simp: is_inv_def valid_asid_map'_def)
    apply clarsimp
    apply (cut_tac w=i in word_le_p2m1, simp add: minus_one_norm)
+  *)
+  apply (rule conjI)
   apply (rule array_relation_map_conv2[OF _ eq_option_to_ptr_rev])
     apply assumption
    using valid[simplified valid_arch_state'_def]
    apply (fastforce simp: valid_asid_table'_def)
   using valid[simplified valid_arch_state'_def]
   apply (fastforce simp: valid_asid_table'_def)
-  done
+  sorry (* FIXME: arch state needs more definitions *)
+
+end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -687,7 +671,7 @@ lemma tcb_queue_rel'_unique:
 
 definition
   cready_queues_to_H
-  :: "(tcb_C ptr \<rightharpoonup> tcb_C) \<Rightarrow> (tcb_queue_C[4096]) \<Rightarrow> word8 \<times> word8 \<Rightarrow> word32 list"
+  :: "(tcb_C ptr \<rightharpoonup> tcb_C) \<Rightarrow> (tcb_queue_C[4096]) \<Rightarrow> word8 \<times> word8 \<Rightarrow> machine_word list"
   where
   "cready_queues_to_H h_tcb cs \<equiv> \<lambda>(qdom, prio). if ucast minDom \<le> qdom \<and> qdom \<le> ucast maxDom
               \<and> ucast seL4_MinPrio \<le> prio \<and> prio \<le> ucast seL4_MaxPrio
@@ -770,11 +754,23 @@ lemma cpspace_cte_relation_unique:
   by (clarsimp simp: ccte_relation_def Some_the[symmetric]) (drule sym, simp)
 
 lemma inj_tcb_ptr_to_ctcb_ptr: "inj tcb_ptr_to_ctcb_ptr"
-  by (simp add: inj_on_def tcb_ptr_to_ctcb_ptr_def)
+  by (rule kernel.inj_tcb_ptr_to_ctcb_ptr)
+
+lemma cregs_relation_imp_eq:
+  "cregs_relation f x \<Longrightarrow> cregs_relation g x \<Longrightarrow> f=g"
+  by (auto simp: cregs_relation_def)
+
+lemma fpu_relation_imp_eq:
+  "fpu_relation f x \<Longrightarrow> fpu_relation g x \<Longrightarrow> f=g"
+  unfolding fpu_relation_def index_def
+  by (subst (asm) forall_finite_index[symmetric])+ auto
 
 lemma ccontext_relation_imp_eq:
   "ccontext_relation f x \<Longrightarrow> ccontext_relation g x \<Longrightarrow> f=g"
-  by (rule ext) (simp add: ccontext_relation_def)
+  unfolding ccontext_relation_def
+  apply (cases f, cases g)
+  apply (auto dest: fpu_relation_imp_eq cregs_relation_imp_eq)
+  done
 
 (* FIXME: move *)
 lemma ran_tcb_cte_cases:
@@ -799,8 +795,8 @@ lemma ps_clear_is_aligned_ksPSpace_None:
    apply (simp add: mask_2pm1)
    apply (erule is_aligned_no_overflow')
   apply (drule mp)
-   apply (case_tac "(0::word32)<2^n")
-    apply (frule le_m1_iff_lt[of "(2::word32)^n" d, THEN iffD1])
+   apply (case_tac "(0::machine_word)<2^n")
+    apply (frule le_m1_iff_lt[of "(2::machine_word)^n" d, THEN iffD1])
     apply (simp add: mask_2pm1[symmetric])
     apply (erule (1) is_aligned_no_wrap')
    apply (simp add: is_aligned_mask mask_2pm1 not_less word_bits_def
@@ -836,42 +832,42 @@ lemma map_to_ctes_tcb_ctes:
    apply (drule_tac x=p in spec, simp)
   apply (rule conjI)
    apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
-   apply (drule_tac x="p+0x10" in spec, simp add: objBitsKO_def)
-   apply (frule_tac s1=s in ps_clear_def3[THEN iffD1,rotated 2],
-          assumption, simp add: objBits_simps')
-   apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
-          assumption, simp add: objBits_simps')
-   apply (drule (1) ps_clear_16)+
-   apply (simp add: is_aligned_add_helper[of _ 9 "0x10", simplified]
-                    split_def objBits_simps')
-  apply (rule conjI)
-   apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
    apply (drule_tac x="p+0x20" in spec, simp add: objBitsKO_def)
    apply (frule_tac s1=s in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
-   apply (drule (1) ps_clear_is_aligned_ctes_None(1))+
-   apply (simp add: is_aligned_add_helper[of _ 9 "0x20", simplified]
+   apply (drule (1) ps_clear_32)+
+   apply (simp add: is_aligned_add_helper[of _ 11 "0x20", simplified]
                     split_def objBits_simps')
   apply (rule conjI)
    apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
-   apply (drule_tac x="p+0x30" in spec, simp add: objBitsKO_def)
+   apply (drule_tac x="p+0x40" in spec, simp add: objBitsKO_def)
+   apply (frule_tac s1=s in ps_clear_def3[THEN iffD1,rotated 2],
+          assumption, simp add: objBits_simps')
+   apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
+          assumption, simp add: objBits_simps')
+   apply (drule (1) ps_clear_is_aligned_ctes_None(1))+
+   apply (simp add: is_aligned_add_helper[of _ 11 "0x40", simplified]
+                    split_def objBits_simps')
+  apply (rule conjI)
+   apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
+   apply (drule_tac x="p+0x60" in spec, simp add: objBitsKO_def)
    apply (frule_tac s1=s in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
    apply (drule (1) ps_clear_is_aligned_ctes_None(2))+
-   apply (simp add: is_aligned_add_helper[of _ 9 "0x30", simplified]
+   apply (simp add: is_aligned_add_helper[of _ 11 "0x60", simplified]
                     split_def objBits_simps')
   apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
-  apply (drule_tac x="p+0x40" in spec, simp add: objBitsKO_def)
+  apply (drule_tac x="p+0x80" in spec, simp add: objBitsKO_def)
   apply (frule_tac s1=s in ps_clear_def3[THEN iffD1,rotated 2],
          assumption, simp add: objBits_simps')
   apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
          assumption, simp add: objBits_simps')
   apply (drule (1) ps_clear_is_aligned_ctes_None(3))+
-  apply (simp add: is_aligned_add_helper[of _ 9 "0x40", simplified]
+  apply (simp add: is_aligned_add_helper[of _ 11 "0x80", simplified]
                    split_def objBits_simps')
   done
 
@@ -899,32 +895,13 @@ lemma ksPSpace_valid_objs_tcbBoundNotification_nonzero:
   apply (clarsimp simp: projectKOs valid_obj'_def valid_tcb'_def)
   done
 
-lemma ksPSpace_valid_objs_atcbVCPUPtr_nonzero:
-  "\<exists>s. ksPSpace s = ah \<and> no_0_obj' s \<and> valid_objs' s
-     \<Longrightarrow> map_to_tcbs ah p = Some tcb \<Longrightarrow> atcbVCPUPtr (tcbArch tcb) \<noteq> Some 0"
-  apply (clarsimp simp: map_comp_def split: option.splits)
-  apply (erule(1) valid_objsE')
-  apply (clarsimp simp: projectKOs valid_obj'_def valid_tcb'_def valid_arch_tcb'_def)
-  done
+lemma atcbContextGet_inj[simp]:
+  "(atcbContextGet t = atcbContextGet t') = (t = t')"
+  by (cases t, cases t') (simp add: atcbContextGet_def)
 
-lemma carch_tcb_relation_imp_eq:
-  "atcbVCPUPtr f \<noteq> Some 0 \<Longrightarrow> atcbVCPUPtr g \<noteq> Some 0
-   \<Longrightarrow> carch_tcb_relation f x \<Longrightarrow> carch_tcb_relation g x \<Longrightarrow> f = g"
-  apply (cases f)
-  apply (rename_tac tc1 vcpuptr1)
-  apply (cases g)
-  apply (rename_tac tc2 vcpuptr2)
-  apply clarsimp
-  apply (clarsimp simp add: carch_tcb_relation_def)
-  apply (rule context_conjI)
-   subgoal by (clarsimp simp add: ccontext_relation_imp_eq atcbContextGet_def)
-  apply (clarsimp)
-  apply (case_tac "tcbVCPU_C x = NULL")
-   apply (fastforce dest!: option_to_ptr_NULL_eq)
-  apply (cases "tcbVCPU_C x")
-  apply (case_tac vcpuptr1 ; simp)
-  apply (case_tac vcpuptr2 ; simp)
-  done
+lemma ccontext_relation_imp_eq2:
+  "\<lbrakk>ccontext_relation (atcbContextGet t) x; ccontext_relation (atcbContextGet t') x\<rbrakk> \<Longrightarrow> t = t'"
+  by (auto dest: ccontext_relation_imp_eq)
 
 lemma cpspace_tcb_relation_unique:
   assumes tcbs: "cpspace_tcb_relation ah ch" "cpspace_tcb_relation ah' ch"
@@ -948,14 +925,12 @@ lemma cpspace_tcb_relation_unique:
    apply (drule_tac x=x in spec, drule_tac x=y in spec, erule impE, fastforce)
    apply (frule ksPSpace_valid_objs_tcbBoundNotification_nonzero[OF vs])
    apply (frule ksPSpace_valid_objs_tcbBoundNotification_nonzero[OF vs'])
-   apply (frule ksPSpace_valid_objs_atcbVCPUPtr_nonzero[OF vs])
-   apply (frule ksPSpace_valid_objs_atcbVCPUPtr_nonzero[OF vs'])
    apply (thin_tac "map_to_tcbs x y = Some z" for x y z)+
-   apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x100)))")
+   apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x400)))")
    apply (clarsimp simp: ctcb_relation_def ran_tcb_cte_cases)
    apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
-   apply (auto simp: cfault_rel_imp_eq cthread_state_rel_imp_eq carch_tcb_relation_imp_eq
-                     ccontext_relation_imp_eq up_ucast_inj_eq ctcb_size_bits_def)
+   apply (auto simp: cfault_rel_imp_eq cthread_state_rel_imp_eq carch_tcb_relation_def
+                     ccontext_relation_imp_eq2 up_ucast_inj_eq ctcb_size_bits_def)
   done
 
 lemma tcb_queue_rel_clift_unique:
@@ -1019,19 +994,13 @@ lemma cpspace_ntfn_relation_unique:
                      kernel.tcb_at_not_NULL tcb_ptr_to_ctcb_ptr_inj
               split: ntfn.splits option.splits) (* long *)
 
-(* FIXME: move *)
-lemma of_bool_inject[simp]: "of_bool a = of_bool b \<longleftrightarrow> a=b"
-  by (cases a) (cases b, simp_all)+
+declare of_bool_eq_iff[simp]
 
-(* FIXME: move *)
-lemma hap_from_vm_rights_inject[simp]:
-  "\<lbrakk> a \<noteq> VMNoAccess; b \<noteq> VMNoAccess \<rbrakk> \<Longrightarrow> (hap_from_vm_rights a::word32) = hap_from_vm_rights b \<longleftrightarrow> a=b"
-  unfolding hap_from_vm_rights_def
-  by (simp add: hap_from_vm_rights_def split: vmrights.splits)
-
-lemma memattr_from_cacheable_inject[simp]:
-  "(memattr_from_cacheable a :: 32 word) = memattr_from_cacheable b \<longleftrightarrow> a = b"
-  by (simp add: memattr_from_cacheable_def split: bool.splits)
+lemma super_writeable_rights_inj:
+  "\<lbrakk> superuser_from_vm_rights r = (superuser_from_vm_rights r' :: machine_word);
+     writable_from_vm_rights r = (writable_from_vm_rights r' :: machine_word) \<rbrakk> \<Longrightarrow>
+   r = r'"
+  by (simp add: writable_from_vm_rights_def superuser_from_vm_rights_def split: vmrights.splits)
 
 lemma cpspace_pde_relation_unique:
   assumes "cpspace_pde_relation ah ch" "cpspace_pde_relation ah' ch"
@@ -1039,7 +1008,8 @@ lemma cpspace_pde_relation_unique:
   assumes "\<forall>x \<in> ran (map_to_pdes ah'). valid_pde' x s'"
   shows   "map_to_pdes ah' = map_to_pdes ah"
   apply (rule cmap_relation_unique'[OF inj_Ptr _ assms])
-  apply (simp add: cpde_relation_def Let_def split: pde.splits bool.splits)
+  apply (auto simp: cpde_relation_def Let_def split: pde.splits bool.splits
+              dest: super_writeable_rights_inj)
   done
 
 lemma cpspace_pte_relation_unique:
@@ -1048,7 +1018,8 @@ lemma cpspace_pte_relation_unique:
   assumes "\<forall>x \<in> ran (map_to_ptes ah'). valid_pte' x s'"
   shows   "map_to_ptes ah' = map_to_ptes ah"
   apply (rule cmap_relation_unique'[OF inj_Ptr _ assms])
-  apply (simp add: cpte_relation_def Let_def split: pte.splits bool.splits)
+  apply (auto simp: cpte_relation_def Let_def split: pte.splits bool.splits
+              dest: super_writeable_rights_inj)
   done
 
 lemma is_aligned_no_overflow_0:
@@ -1069,26 +1040,6 @@ lemma option_to_ctcb_ptr_inj:
   apply (erule is_aligned_no_overflow_0; simp)
   done
 
-lemma cpspace_vcpu_relation_unique:
-  assumes "cpspace_vcpu_relation ah ch" "cpspace_vcpu_relation ah' ch"
-  assumes "\<forall>x \<in> ran (map_to_vcpus ah). is_aligned_opt (vcpuTCBPtr x) tcbBlockSizeBits"
-  assumes "\<forall>x \<in> ran (map_to_vcpus ah'). is_aligned_opt (vcpuTCBPtr x) tcbBlockSizeBits"
-  shows   "map_to_vcpus ah' = map_to_vcpus ah"
-  apply (rule cmap_relation_unique' [OF inj_Ptr _ assms])
-  apply (simp add: cvcpu_relation_def Let_def cvgic_relation_def split: vcpu.splits)
-  apply (case_tac x, case_tac y)
-  apply (clarsimp simp: cvcpu_regs_relation_def vcpuSCTLR_def option_to_ctcb_ptr_inj)
-  apply (rename_tac vgic regs p vgic' regs')
-  apply (rule conjI)
-   apply (case_tac vgic, case_tac vgic')
-   apply clarsimp
-   apply (rule ext)
-   apply (rename_tac r)
-   apply (case_tac "64 \<le> r"; simp)
-  apply (rule ext)
-  apply (rename_tac r)
-  by (case_tac r; simp)
-
 (* FIXME: move *)
 lemma Collect_mono2: "Collect P \<subseteq> Collect Q \<longleftrightarrow> (\<forall>x. P x \<longrightarrow> Q x)" by auto
 
@@ -1098,11 +1049,12 @@ primrec
 where
   "wf_asid_pool' (ASIDPool pool) =
    (dom pool \<subseteq> {0 .. 2^asid_low_bits - 1} \<and>
-    0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pdBits))"
+    0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pml4_bits))"
 
 lemma valid_eq_wf_asid_pool'[simp]:
   "valid_asid_pool' pool = (\<lambda>s. wf_asid_pool' pool)"
   by (case_tac pool) simp
+
 declare valid_asid_pool'.simps[simp del]
 (*<<<*)
 
@@ -1131,9 +1083,7 @@ lemma cpspace_asidpool_relation_unique:
    apply (drule_tac x=y in spec)+
    apply clarsimp
    apply (case_tac "y\<le>2^asid_low_bits - 1", simp)
-    apply (drule_tac s="option_to_ptr (fun y)" in sym)
-    apply (simp add: option_to_ptr_def option_to_0_def ran_def
-              split: option.splits)
+    apply (simp add: asid_map_relation_def split: option.splits asid_map_CL.splits)
    apply (simp add: atLeastAtMost_def atLeast_def atMost_def dom_def
                     Collect_mono2)
    apply (drule_tac x=y in spec)+
@@ -1188,7 +1138,7 @@ lemma cpspace_device_data_relation_unique:
 
 lemmas projectKO_opts = projectKO_opt_ep projectKO_opt_ntfn projectKO_opt_tcb
                         projectKO_opt_pte projectKO_opt_pde projectKO_opt_cte
-                        projectKO_opt_asidpool projectKO_opt_vcpu
+                        projectKO_opt_asidpool
                         projectKO_opt_user_data projectKO_opt_user_data_device
 
 (* Following from the definition of map_to_ctes,
@@ -1300,17 +1250,6 @@ lemma valid_objs'_valid_pte'_ran:
                  split: arch_kernel_object.splits)
   done
 
-lemma valid_objs'_aligned_vcpuTCB:
-  "valid_objs' s \<Longrightarrow> \<forall>x\<in>ran (map_to_vcpus (ksPSpace s)). is_aligned_opt (vcpuTCBPtr x) tcbBlockSizeBits"
-  apply (clarsimp simp: valid_objs'_def ran_def pspace_aligned'_def)
-  apply (case_tac "ksPSpace s a"; simp)
-  apply (rename_tac y, drule_tac x=y in spec)
-  apply (case_tac y; clarsimp simp: projectKOs)
-  apply (erule impE, fastforce)
-  apply (clarsimp simp: valid_obj'_def valid_vcpu'_def split: option.splits)
-  apply (clarsimp simp: typ_at_tcb' obj_at'_def projectKOs objBits_simps)
-  done
-
 lemma cpspace_relation_unique:
   assumes valid_pspaces: "valid_pspace' s" "valid_pspace' s'"
   shows "cpspace_relation (ksPSpace s) bh ch \<Longrightarrow>
@@ -1342,9 +1281,6 @@ proof -
     apply (drule (1) cpspace_pte_relation_unique)
       apply (rule valid_objs'_valid_pte'_ran [OF valid_objs])
      apply (rule valid_objs'_valid_pte'_ran [OF valid_objs'])
-    apply (drule (1) cpspace_vcpu_relation_unique)
-      apply (rule valid_objs'_aligned_vcpuTCB [OF valid_objs])
-     apply (rule valid_objs'_aligned_vcpuTCB [OF valid_objs'])
     apply (drule (1) cpspace_asidpool_relation_unique[
                        OF valid_objs'_imp_wf_asid_pool'[OF valid_objs]
                           valid_objs'_imp_wf_asid_pool'[OF valid_objs']])
@@ -1366,9 +1302,10 @@ proof -
      apply (case_tac "ksPSpace s' x", simp)
      apply (case_tac a, simp_all add: projectKO_opts
                                split: arch_kernel_object.splits)
+  sorry (*
     by (clarsimp simp: projectKO_opts map_comp_def
                 split: kernel_object.splits arch_kernel_object.splits
-                       option.splits)
+                       option.splits) *)
 qed
 (*<<< end showing that cpspace_relation is actually unique *)
 
@@ -1390,7 +1327,7 @@ lemma ksPSpace_eq_imp_valid_cap'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_cap' c s' = valid_cap' c s"
   by (auto simp: valid_cap'_def page_table_at'_def page_directory_at'_def
-                 valid_untyped'_def
+                 valid_untyped'_def pd_pointer_table_at'_def page_map_l4_at'_def
                  ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
                  ksPSpace_eq_imp_typ_at'_eq[OF ksPSpace]
                  ksPSpace_eq_imp_ko_wp_at'_eq[OF ksPSpace]
@@ -1402,24 +1339,14 @@ lemma ksPSpace_eq_imp_valid_tcb'_eq:
   by (auto simp: ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
                  ksPSpace_eq_imp_valid_cap'_eq[OF ksPSpace]
                  ksPSpace_eq_imp_typ_at'_eq[OF ksPSpace]
-                 valid_tcb'_def valid_tcb_state'_def valid_bound_ntfn'_def valid_arch_tcb'_def
+                 valid_tcb'_def valid_tcb_state'_def valid_bound_ntfn'_def
           split: thread_state.splits option.splits)
-
-lemma ksPSpace_eq_imp_valid_vcpu'_eq:
-  assumes ksPSpace: "ksPSpace s' = ksPSpace s"
-  shows "valid_vcpu' vcpu s' = valid_vcpu' vcpu s"
-  by (auto simp: valid_vcpu'_def ksPSpace_eq_imp_typ_at'_eq[OF ksPSpace] split: option.splits)
 
 lemma ksPSpace_eq_imp_valid_arch_obj'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_arch_obj' ao s' = valid_arch_obj' ao s"
   apply (case_tac ao, simp)
-    apply (rename_tac pte)
-    apply (case_tac pte, simp_all add: valid_mapping'_def)
-   apply (rename_tac pde)
-   apply (case_tac pde, simp_all add: valid_mapping'_def)
-  apply (rename_tac vcpu)
-  apply (rule ksPSpace_eq_imp_valid_vcpu'_eq[OF ksPSpace])
+     apply (rename_tac obj, case_tac obj; simp add: valid_mapping'_def)+
   done
 
 lemma ksPSpace_eq_imp_valid_objs'_eq:
@@ -1440,12 +1367,13 @@ lemma ksPSpace_eq_imp_valid_pspace'_eq:
   using assms
   by (clarsimp simp: valid_pspace'_def pspace_aligned'_def
         pspace_distinct'_def ps_clear_def no_0_obj'_def valid_mdb'_def
+        pspace_canonical'_def
         ksPSpace_eq_imp_valid_objs'_eq[OF ksPSpace])
 
 (* The awkwardness of this definition is only caused by the fact
    that valid_pspace' is defined over the complete state. *)
 definition
-  cstate_to_pspace_H :: "globals \<Rightarrow> word32 \<rightharpoonup> kernel_object"
+  cstate_to_pspace_H :: "globals \<Rightarrow> machine_word \<rightharpoonup> kernel_object"
 where
   "cstate_to_pspace_H c \<equiv>
    THE h. valid_pspace' (undefined\<lparr>ksPSpace := h\<rparr>) \<and>
@@ -1466,20 +1394,24 @@ lemma cstate_to_pspace_H_correct:
 
 end
 
-lemma (in kernel_m) cDomScheduleIdx_to_H_correct:
+context state_rel begin
+
+lemma cDomScheduleIdx_to_H_correct:
   assumes valid: "valid_state' as"
   assumes cstate_rel: "cstate_relation as cs"
   assumes ms: "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)"
   shows "unat (ksDomScheduleIdx_' cs) = ksDomScheduleIdx as"
-using assms
-by (clarsimp simp: cstate_relation_def Let_def observable_memory_def
-  valid_state'_def newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
+  using assms
+  by (clarsimp simp: cstate_relation_def Let_def observable_memory_def valid_state'_def
+                     newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
 
-definition cDomSchedule_to_H :: "(dschedule_C['b :: finite]) \<Rightarrow> (8 word \<times> 32 word) list" where
+definition
+  cDomSchedule_to_H :: "(dschedule_C['b :: finite]) \<Rightarrow> (8 word \<times> machine_word) list"
+where
   "cDomSchedule_to_H cs \<equiv> THE as. cdom_schedule_relation as cs"
 
 (* FIXME: The assumption of this is unnecessarily strong *)
-lemma (in kernel_m) cDomSchedule_to_H_correct:
+lemma cDomSchedule_to_H_correct:
   assumes valid: "valid_state' as"
   assumes cstate_rel: "cstate_relation as cs"
   assumes ms: "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)"
@@ -1492,17 +1424,17 @@ lemma (in kernel_m) cDomSchedule_to_H_correct:
   apply (clarsimp simp: dom_schedule_entry_relation_def)
   apply (drule_tac x=i in spec)+
   apply (rule prod_eqI)
-   apply (subst up_ucast_inj_eq[where 'b=32, symmetric])
+   apply (subst up_ucast_inj_eq[where 'b=64, symmetric])
     apply auto
   done
 
 definition
-  cbitmap_L1_to_H :: "32 word[16] \<Rightarrow> (8 word \<Rightarrow> 32 word)"
+  cbitmap_L1_to_H :: "machine_word[16] \<Rightarrow> (8 word \<Rightarrow> machine_word)"
 where
   "cbitmap_L1_to_H l1 \<equiv> \<lambda>d. if d \<le> maxDomain then l1.[unat d] else 0"
 
 definition
-  cbitmap_L2_to_H :: "32 word[8][16] \<Rightarrow> (8 word \<times> nat \<Rightarrow> 32 word)"
+  cbitmap_L2_to_H :: "machine_word[4][16] \<Rightarrow> (8 word \<times> nat \<Rightarrow> machine_word)"
 where
   "cbitmap_L2_to_H l2 \<equiv> \<lambda>(d, i).
     if d \<le> maxDomain \<and> i < l2BitmapSize
@@ -1513,7 +1445,7 @@ lemma cbitmap_L1_to_H_correct:
    cbitmap_L1_to_H cs = as"
    unfolding cbitmap_L1_to_H_def cbitmap_L1_relation_def
    apply (rule ext)
-   apply clarsimp
+   apply (clarsimp split: if_split)
    done
 
 lemma cbitmap_L2_to_H_correct:
@@ -1521,7 +1453,7 @@ lemma cbitmap_L2_to_H_correct:
    cbitmap_L2_to_H cs = as"
    unfolding cbitmap_L2_to_H_def cbitmap_L2_relation_def
    apply (rule ext)
-   apply clarsimp
+   apply (clarsimp split: if_split)
    done
 
 definition
@@ -1542,7 +1474,7 @@ lemma cpspace_device_data_relation_user_mem'[simp]:
   apply (rule_tac arg_cong[where  f = "%x. x = y" for y])
   by auto
 
-lemma (in kernel)  mk_gsUntypedZeroRanges_correct:
+lemma mk_gsUntypedZeroRanges_correct:
   assumes valid: "valid_state' as"
   assumes cstate_rel: "cstate_relation as cs"
   shows "mk_gsUntypedZeroRanges cs = gsUntypedZeroRanges as"
@@ -1556,7 +1488,8 @@ lemma (in kernel)  mk_gsUntypedZeroRanges_correct:
   apply (clarsimp simp: observable_memory_def valid_pspace'_def)
   done
 
-definition (in state_rel)
+
+definition
   cstate_to_H :: "globals \<Rightarrow> kernel_state"
 where
   "cstate_to_H s \<equiv>
@@ -1581,11 +1514,14 @@ where
     ksArchState = carch_state_to_H s,
     ksMachineState = cstate_to_machine_H s\<rparr>"
 
+end
+
+context kernel_m begin
 
 lemma trivial_eq_conj: "B = C \<Longrightarrow> (A \<and> B) = (A \<and> C)"
   by simp
 
-lemma (in kernel_m) cstate_to_H_correct:
+lemma cstate_to_H_correct:
   assumes valid: "valid_state' as"
   assumes cstate_rel: "cstate_relation as cs"
   shows "cstate_to_H cs = as \<lparr>ksMachineState:=  observable_memory (ksMachineState as) (user_mem' as)\<rparr>"
@@ -1603,7 +1539,7 @@ lemma (in kernel_m) cstate_to_H_correct:
                   using cstate_rel
                   apply (clarsimp simp: cstate_relation_def cpspace_relation_def  Let_def prod_eq_iff)
                  using valid cstate_rel
-                 apply (rule mk_gsUntypedZeroRanges_correct)
+                 apply (rule mk_gsUntypedZeroRanges_correct) sorry (*
                 using cstate_rel
                 apply (fastforce simp: cstate_relation_def cpspace_relation_def
                   Let_def ghost_size_rel_def unat_eq_0
@@ -1674,16 +1610,21 @@ lemma (in kernel_m) cstate_to_H_correct:
    apply (simp add: cstate_relation_def Let_def cpspace_relation_def)
   using valid
   apply (clarsimp simp add: valid_state'_def)
-  done
+  done *)
 
-definition (in state_rel)
+end
+
+context state_rel begin
+
+definition
   cstate_to_A :: "cstate \<Rightarrow> det_state"
-  where
+where
   "cstate_to_A \<equiv> absKState \<circ> cstate_to_H \<circ> globals"
-definition (in state_rel)
+
+definition
   "Fin_C \<equiv> \<lambda>((tc,s),m,e). ((tc, cstate_to_A s),m,e)"
 
-definition (in state_rel)
+definition
   doUserOp_C
     :: "user_transition \<Rightarrow> user_context \<Rightarrow>
         (cstate, event option \<times> user_context) nondet_monad"
@@ -1710,15 +1651,15 @@ definition (in state_rel)
       return (e,tc')
    od"
 
-definition (in state_rel)
-  do_user_op_C
-    :: "user_transition \<Rightarrow>
-        ((user_context \<times> cstate) \<times> (event option \<times> user_context \<times> cstate)) set"
-  where
+definition
+  do_user_op_C :: "user_transition \<Rightarrow>
+                    ((user_context \<times> cstate) \<times> (event option \<times> user_context \<times> cstate)) set"
+where
   "do_user_op_C uop \<equiv> monad_to_transition (doUserOp_C uop)"
 
-context kernel_m
-begin
+end
+
+context kernel_m begin
 
 definition
   ADT_C :: "user_transition \<Rightarrow> (cstate global_state, det_ext observable, unit) data_type"
@@ -1735,16 +1676,8 @@ where
 end
 
 locale kernel_global = state_rel + kernel_all_global_addresses
-(* note we're in the c-parser's locale now, not the substitute *)
+(* repeating ADT definitions in the c-parser's locale now (not the substitute) *)
 begin
-
-(* FIXME ARMHYP why is this function being repeated? *)
-(* currently hypervisor events redirect directly to handleVCPUFault *)
-definition
-  handleHypervisorEvent_C :: "hyp_fault_type \<Rightarrow> (globals myvars, int, strictc_errortype) com"
-where
-  "handleHypervisorEvent_C t = (case t
-    of hyp_fault_type.ARMVCPUFault hsr \<Rightarrow> (CALL handleVCPUFault(hsr)))"
 
 definition
   "callKernel_C e \<equiv> case e of
@@ -1753,7 +1686,7 @@ definition
   | UserLevelFault w1 w2 \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleUserLevelFault(w1,w2))
   | Interrupt \<Rightarrow> exec_C \<Gamma> (Call handleInterruptEntry_'proc)
   | VMFaultEvent t \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleVMFaultEvent(kernel_m.vm_fault_type_from_H t))
-  | HypervisorEvent t \<Rightarrow> exec_C \<Gamma> (handleHypervisorEvent_C t)"
+  | HypervisorEvent t \<Rightarrow> exec_C \<Gamma> SKIP"
 
 definition
   "callKernel_withFastpath_C e \<equiv>
@@ -1765,9 +1698,6 @@ definition
                    ELSE CALL fastpath_reply_recv(\<acute>cptr, \<acute>msgInfo) FI)
    else callKernel_C e"
 
-(* FIXME ARMHYP: why is this duplicated here, we've already seen setTCBContext_C before in this file!
-   same was the case before when it was called setTCBArch since obviously arch_tcb only contained
-   the context *)
 definition
   setTCBContext_C :: "user_context_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
 where
