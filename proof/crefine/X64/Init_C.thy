@@ -1,18 +1,24 @@
 (*
- * Copyright 2017, Data61, CSIRO
+ * Copyright 2014, General Dynamics C4 Systems
  *
  * This software may be distributed and modified according to the terms of
  * the GNU General Public License version 2. Note that NO WARRANTY is provided.
  * See "LICENSE_GPLv2.txt" for details.
  *
- * @TAG(DATA61_GPL)
+ * @TAG(GD_GPL)
  *)
 
 chapter "Toplevel Refinement Statement"
 
-(* In progress c refinement *)
-
-theory Refine_C
-imports Init_C TcbQueue_C PSpace_C TcbAcc_C CSpace_C Syscall_C
+theory Init_C
+imports ADT_C
 begin
+
+text {*
+  Currently, we assume correctness of the init code.
+*}
+
+axiomatization where init_refinement_C:
+  "Init_C s \<subseteq> lift_state_relation rf_sr `` Init_H"
+
 end
