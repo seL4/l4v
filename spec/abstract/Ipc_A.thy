@@ -707,7 +707,7 @@ where
 
 text \<open> The Scheduling Control invocation configures the budget of a scheduling context. \<close>
 definition
-  invoke_sched_control_configure :: "sched_control_invocation \<Rightarrow> (unit, 'z::state_ext) se_monad"
+  invoke_sched_control_configure :: "sched_control_invocation \<Rightarrow> (unit, det_ext) se_monad"
 where
   "invoke_sched_control_configure iv \<equiv>
   case iv of InvokeSchedControlConfigure sc_ptr budget period mrefills badge \<Rightarrow> liftE $ do
@@ -717,10 +717,10 @@ where
     mrefills \<leftarrow> return (if budget = period then MIN_REFILLS else mrefills);
     when (sc_tcb sc \<noteq> None) $ do
       tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
-      do_extended_op $ tcb_release_remove tcb_ptr;
-      do_extended_op $ tcb_sched_action tcb_sched_dequeue tcb_ptr;
+      tcb_release_remove tcb_ptr;
+      tcb_sched_action tcb_sched_dequeue tcb_ptr;
       cur_sc \<leftarrow> gets cur_sc;
-      do_extended_op $ when (cur_sc = sc_ptr) $ do
+      when (cur_sc = sc_ptr) $ do
         consumed \<leftarrow> gets consumed_time;
         capacity \<leftarrow> refill_capacity sc_ptr consumed;
         result \<leftarrow> check_budget;
@@ -731,8 +731,8 @@ where
         when (runnable st) $ refill_update sc_ptr period budget mrefills;
         sched_context_resume sc_ptr;
         ct \<leftarrow> gets cur_thread;
-        if (tcb_ptr = ct) then do_extended_op $ reschedule_required
-        else when (runnable st) $ do_extended_op $ possible_switch_to tcb_ptr
+        if (tcb_ptr = ct) then reschedule_required
+        else when (runnable st) $ possible_switch_to tcb_ptr
       od
       else
         refill_new sc_ptr mrefills budget period
