@@ -34,12 +34,13 @@ crunch (bcorres)bcorres[wp]: invoke_sched_context truncate_state
 crunch (bcorres)bcorres[wp, BCorres2_AI_assms]: set_mcpriority,arch_tcb_set_ipc_buffer,
           arch_get_sanitise_register_info, arch_post_modify_registers truncate_state
 
+(*
 lemma invoke_sched_control_configure_bcorres[wp]:
   fixes a
   shows "bcorres (invoke_sched_control_configure a) (invoke_sched_control_configure a)"
   apply (cases a; wpsimp)
-  sorry
-(*
+  now in det_ext
+
 lemma invoke_tcb_bcorres[wp]:
   fixes a
   shows "bcorres (invoke_tcb a) (invoke_tcb a)"
