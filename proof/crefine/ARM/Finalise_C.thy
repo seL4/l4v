@@ -1937,8 +1937,9 @@ lemma cteDeleteOne_ccorres:
    apply (rule ccorres_move_c_guard_cte)
    apply csymbr
    apply (rule ccorres_abstract_cleanup)
+   apply csymbr
    apply (rule ccorres_gen_asm2,
-          erule_tac t="cap_type = scast cap_null_cap"
+          erule_tac t="ret__unsigned = scast cap_null_cap"
                 and s="cteCap cte = NullCap"
                  in ssubst)
    apply (clarsimp simp only: when_def unless_def dc_def[symmetric])
@@ -2241,19 +2242,17 @@ lemma finaliseCap_ccorres:
                 del: Collect_const)
     apply (rule_tac P="(capIRQ cap) \<le>  ARM.maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
-    apply (rule ccorres_symb_exec_r)
-      apply (rule_tac xf'=irq_' in ccorres_abstract,ceqv)
-      apply (rule_tac P="rv' = ucast (capIRQ cap)" in ccorres_gen_asm2)
-      apply (ctac(no_vcg) add: deletingIRQHandler_ccorres)
-       apply (rule ccorres_from_vcg_throws[where P=\<top> ])
-       apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: return_def)
-       apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
-       apply (simp add: ccap_relation_NullCap_iff split: if_split)
-      apply wp
-     apply vcg
-    apply (rule conseqPre,vcg)
-    apply clarsimp
+    apply csymbr
+    apply csymbr
+    apply (rule_tac xf'=irq_' in ccorres_abstract,ceqv)
+    apply (rule_tac P="rv' = ucast (capIRQ cap)" in ccorres_gen_asm2)
+    apply (ctac(no_vcg) add: deletingIRQHandler_ccorres)
+     apply (rule ccorres_from_vcg_throws[where P=\<top> ])
+     apply (rule allI, rule conseqPre, vcg)
+     apply (clarsimp simp: return_def)
+     apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
+     apply (simp add: ccap_relation_NullCap_iff split: if_split)
+    apply wp
    apply (rule ccorres_if_lhs)
     apply simp
     apply (rule ccorres_fail)

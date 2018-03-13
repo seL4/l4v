@@ -1070,6 +1070,7 @@ lemma cancelBadgedSends_ccorres:
            apply (rule ccorres_move_c_guard_tcb)
            apply csymbr
            apply (rule ccorres_abstract_cleanup)
+           apply csymbr
            apply (rule ccorres_move_c_guard_tcb)
            apply (rule_tac P=\<top>
                       and P'="{s. ep_queue_relation' (cslift s) (x @ a # lista)
@@ -1086,7 +1087,7 @@ lemma cancelBadgedSends_ccorres:
               subgoal by (simp add: rf_sr_def)
              apply simp
             apply ceqv
-           apply (rule_tac P="b=blockingIPCBadge rva" in ccorres_gen_asm2)
+           apply (rule_tac P="ret__unsigned=blockingIPCBadge rva" in ccorres_gen_asm2)
            apply (rule ccorres_if_bind, rule ccorres_if_lhs)
             apply (simp add: bind_assoc dc_def[symmetric])
             apply (rule ccorres_rhs_assoc)+

@@ -1666,11 +1666,12 @@ lemma performPageInvocationMapPTE_ccorres:
        apply (rule ccorres_basic_srnoop2, simp)
        apply csymbr
        apply (rule ccorres_abstract_cleanup)
+       apply csymbr
        apply (rule ccorres_rhs_assoc2)
        apply (rule ccorres_split_nothrow_novcg)
            apply (rule_tac F="\<lambda>_. valid_pte_slots'2 mapping" and
                            Q="\<lbrace> cpte_relation (addPTEOffset (fst h_pte_slots) (if \<acute>i = 0 then 0 else \<acute>i - 1)) \<acute>pte \<and>
-                                pteFrame (fst h_pte_slots) = base_address  \<rbrace>"
+                                pteFrame (fst h_pte_slots) = ret__unsigned  \<rbrace>"
                    in ccorres_mapM_x_whileQ)
                apply (intro allI impI, simp add: split_def)
                apply (rule ccorres_rhs_assoc)+
@@ -2083,11 +2084,12 @@ lemma performPageInvocationMapPDE_ccorres:
        apply (rule ccorres_basic_srnoop2, simp)
        apply csymbr
        apply (rule ccorres_abstract_cleanup)
+       apply csymbr
        apply (rule ccorres_rhs_assoc2)
        apply (rule ccorres_split_nothrow_novcg)
            apply (rule_tac F="\<lambda>_. valid_pde_slots'2 mapping" and
                            Q="\<lbrace> cpde_relation (addPDEOffset (fst h_pde_slots) (if \<acute>i = 0 then 0 else \<acute>i - 1)) \<acute>pde \<and>
-                                pdeFrame (fst h_pde_slots) = base_address  \<rbrace>"
+                                pdeFrame (fst h_pde_slots) = ret__unsigned \<rbrace>"
                    in ccorres_mapM_x_whileQ)
                apply (intro allI impI, simp add: split_def)
                apply (rule ccorres_rhs_assoc)+
@@ -2315,11 +2317,12 @@ lemma performPageInvocationRemapPDE_ccorres:
      apply (rule ccorres_basic_srnoop2, simp)
      apply csymbr
      apply (rule ccorres_abstract_cleanup)
+     apply csymbr
      apply (rule ccorres_rhs_assoc2)
      apply (rule ccorres_split_nothrow_novcg)
          apply (rule_tac F="\<lambda>_. valid_pde_slots'2 mapping" and
                          Q="\<lbrace> cpde_relation (addPDEOffset (fst h_pde_slots) (if \<acute>i = 0 then 0 else \<acute>i - 1)) \<acute>pde \<and>
-                              pdeFrame (fst h_pde_slots) = base_address  \<rbrace>"
+                              pdeFrame (fst h_pde_slots) = ret__unsigned \<rbrace>"
                          in ccorres_mapM_x_whileQ)
              apply (intro allI impI, simp add: split_def)
              apply (rule ccorres_rhs_assoc)+
@@ -2547,11 +2550,12 @@ lemma performPageInvocationRemapPTE_ccorres:
      apply (rule ccorres_basic_srnoop2, simp)
      apply csymbr
      apply (rule ccorres_abstract_cleanup)
+     apply csymbr
      apply (rule ccorres_rhs_assoc2)
      apply (rule ccorres_split_nothrow_novcg)
          apply (rule_tac F="\<lambda>_. valid_pte_slots'2 mapping" and
                          Q="\<lbrace> cpte_relation (addPTEOffset (fst h_pte_slots) (if \<acute>i = 0 then 0 else \<acute>i - 1)) \<acute>pte \<and>
-                              pteFrame (fst h_pte_slots) = base_address  \<rbrace>"
+                              pteFrame (fst h_pte_slots) = ret__unsigned \<rbrace>"
                    in ccorres_mapM_x_whileQ)
              apply (intro allI impI, simp add: split_def)
              apply (rule ccorres_rhs_assoc)+
@@ -3089,7 +3093,7 @@ lemma resolveVAddr_ccorres:
     apply (rule ccorres_stateAssert)
     apply clarsimp
     apply (rule_tac val="Ptr (ptrFromPAddr word1)" and R=\<top>
-                  in ccorres_symb_exec_r_known_rv_UNIV[where xf'=pt_' and R'=UNIV])
+                  in ccorres_symb_exec_r_known_rv_UNIV[where xf'=ret__ptr_to_void_' and R'=UNIV])
        apply (vcg, clarsimp)
       apply ceqv
      apply (rule ccorres_pre_getObject_pte)

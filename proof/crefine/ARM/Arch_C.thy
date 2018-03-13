@@ -2541,7 +2541,7 @@ lemma resolveVAddr_ccorres:
     apply (rule_tac P="(ret__unsigned = word1)" in ccorres_gen_asm2)
     apply (rule ccorres_stateAssert)
     apply (rule_tac val="Ptr (ptrFromPAddr word1)" and R=\<top>
-                  in ccorres_symb_exec_r_known_rv_UNIV[where xf'=pt_' and R'=UNIV])
+                  in ccorres_symb_exec_r_known_rv_UNIV[where xf'=ret__ptr_to_void_' and R'=UNIV])
        apply (vcg, clarsimp)
       apply ceqv
      apply (rule ccorres_pre_getObject_pte)

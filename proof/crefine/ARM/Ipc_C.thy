@@ -1248,6 +1248,7 @@ lemma setMRs_lookup_failure_ccorres:
   apply (rule ccorres_gen_asm)+
   apply (cinit' lift: receiver_' receiveIPCBuffer_' luf_' offset_')
    apply csymbr
+   apply csymbr
    apply (rule_tac P="valid_pspace'
                   and (case buf of None \<Rightarrow> \<top> | Some x \<Rightarrow> valid_ipc_buffer_ptr' x)" and P'=UNIV
                 in ccorres_inst)
@@ -4245,6 +4246,8 @@ lemma handleFaultReply_ccorres [corres]:
    apply (clarsimp simp del: dc_simp)
    apply (ctac(c_lines 2) add: getMessageInfo_ccorres')
      apply (rename_tac tag tag')
+     apply csymbr
+     apply csymbr
      apply csymbr
      apply csymbr
      apply (rule ccorres_move_c_guard_tcb)
