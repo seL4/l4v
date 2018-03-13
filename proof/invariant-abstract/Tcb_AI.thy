@@ -643,7 +643,7 @@ lemma thread_set_ipc_tcb_cap_valid:
   "\<lbrace>\<lambda>s. is_nondevice_page_cap cap
            \<and> (\<forall>ptr. valid_ipc_buffer_cap cap (f ptr))\<rbrace>
      thread_set (tcb_ipc_buffer_update f) t
-   \<lbrace>\<lambda>rv. tcb_cap_valid cap (t, tcb_cnode_index 4)\<rbrace>"
+   \<lbrace>\<lambda>rv. tcb_cap_valid cap (t, tcb_cnode_index 2)\<rbrace>"
   apply (simp add: thread_set_def set_object_def)
   apply wp
   apply (clarsimp simp: tcb_cap_valid_def obj_at_def

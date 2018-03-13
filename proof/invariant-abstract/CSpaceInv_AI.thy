@@ -580,7 +580,7 @@ lemma set_cap_valid_objs:
   apply (erule(1) valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_tcb_def
                         ran_tcb_cap_cases)
-  apply (simp_all add: pred_tcb_at_def obj_at_def)
+  apply (fastforce simp: pred_tcb_at_def obj_at_def split: cap.splits)
   done
 
 

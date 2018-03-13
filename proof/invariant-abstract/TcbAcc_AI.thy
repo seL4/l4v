@@ -121,8 +121,8 @@ lemma ball_tcb_cap_casesI:
   "\<lbrakk> P (tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>));
      P (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. \<top>));
      P (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or ((=) cap.NullCap)));
-     P (tcb_fault_handler, tcb_fault_handler_update, (\<lambda>_ _. \<top>));
-     P (tcb_timeout_handler, tcb_timeout_handler_update, (\<lambda>_ _. \<top>)) \<rbrakk>
+     P (tcb_fault_handler, tcb_fault_handler_update, (\<lambda>_ _. is_ep_cap or ((=) NullCap)));
+     P (tcb_timeout_handler, tcb_timeout_handler_update, (\<lambda>_ _. is_ep_cap or ((=) NullCap))) \<rbrakk>
     \<Longrightarrow> \<forall>x \<in> ran tcb_cap_cases. P x"
   by (simp add: tcb_cap_cases_def)
 
