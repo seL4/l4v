@@ -372,6 +372,17 @@ def rglob(base_dir, pattern):
     matches.extend([f for e in extras for f in rglob(e, pattern)])
     return sorted(set(matches))
 
+# Print info about tests.
+def print_tests(msg, tests, verbose):
+    if verbose:
+        print('%d tests %s:' % (len(tests), msg))
+    for t in tests:
+        print(t.name)
+        if verbose:
+            print('  #> cd ' + t.cwd)
+            print('  #> ' + t.command)
+            print('  -- depends: %s' % list(t.depends))
+
 #
 # Run tests.
 #
@@ -389,7 +400,9 @@ def main():
     parser.add_argument("-j", "--jobs", type=int, default=1,
             help="Number of tests to run in parallel")
     parser.add_argument("-l", "--list", action="store_true",
-            help="list known tests")
+            help="list all known tests (-v for details)")
+    parser.add_argument("-L", "--dry-run", action="store_true",
+            help="list tests to be run (-v for details)")
     parser.add_argument("--no-dependencies", action="store_true",
             help="don't check for dependencies when running specific tests")
     parser.add_argument("-x", "--exclude", action="append", metavar="TEST", default=[],
@@ -397,7 +410,7 @@ def main():
     parser.add_argument("-r", "--remove", action="append", metavar="TEST", default=[],
                         help="remove tests from the default set (when no implicit goal is given)")
     parser.add_argument("-v", "--verbose", action="store_true",
-            help="print test output")
+            help="print test output or list more details")
     parser.add_argument("--junit-report", metavar="FILE",
             help="write JUnit-style test report")
     parser.add_argument("--stuck-timeout", type=int, default=600, metavar='N',
@@ -419,11 +432,7 @@ def main():
 
     # List test names if requested.
     if args.list:
-        for t in tests:
-            print(t.name)
-            if args.verbose:
-                print('  #> cd ' + t.cwd)
-                print('  #> ' + t.command)
+        print_tests('total', tests, args.verbose)
         sys.exit(0)
 
     args.exclude = set(args.exclude)
@@ -455,6 +464,10 @@ def main():
     if bad_names:
         print("[Warning] Unknown test names: %s" % (", ".join(sorted(bad_names))))
     tests_to_run = [t for t in tests_to_run if t.name not in args.exclude]
+
+    if args.dry_run:
+        print_tests('selected', tests_to_run, args.verbose)
+        sys.exit(0)
 
     # Run the tests.
     print("Running %d test(s)..." % len(tests_to_run))
