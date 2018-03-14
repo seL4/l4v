@@ -41,8 +41,13 @@ definition
   "crunch_always_true (x :: nat) \<equiv> \<lambda>y :: nat. True"
 
 lemma crunch_foo1_at_2:
-  "\<lbrace>crunch_always_true 2 and crunch_always_true 3\<rbrace>
+  "True \<Longrightarrow> \<lbrace>crunch_always_true 3 and crunch_always_true 2\<rbrace>
       crunch_foo1 x \<lbrace>\<lambda>rv. crunch_always_true 2\<rbrace>"
+  by (simp add: crunch_always_true_def, wp)
+
+lemma crunch_foo1_at_2':
+  "True \<Longrightarrow> \<lbrace>crunch_always_true 3 and crunch_always_true 2\<rbrace>
+      crunch_foo1 x \<lbrace>\<lambda>rv. crunch_always_true 3\<rbrace>"
   by (simp add: crunch_always_true_def, wp)
 
 lemma crunch_foo1_at_3[wp]:
@@ -50,16 +55,16 @@ lemma crunch_foo1_at_3[wp]:
   by (simp add: crunch_always_true_def, wp)
 
 lemma crunch_foo1_no_fail:
-  "no_fail (crunch_always_true 2 and crunch_always_true 3) (crunch_foo1 x)"
+  "True \<Longrightarrow> no_fail (crunch_always_true 2 and crunch_always_true 3) (crunch_foo1 x)"
   apply (simp add:crunch_always_true_def crunch_foo1_def)
   apply (rule no_fail_pre)
    apply (wp, simp)
   done
 
 crunch (no_fail) no_fail: crunch_foo2
-(ignore: modify bind wp: crunch_foo1_at_2)
+  (ignore: modify bind wp: crunch_foo1_at_2)
 
-crunch (valid) at_2: crunch_foo2 "crunch_always_true 2"
+crunch (valid) at_2': crunch_foo2 "crunch_always_true 2"
   (ignore: modify bind wp: crunch_foo1_at_2)
 
 fun crunch_foo3 :: "nat => nat => 'a => (nat,unit) nondet_monad" where
@@ -106,8 +111,6 @@ crunch gt4: crunch_foo5 "\<lambda>x. x > y"
 
 (* Test cases for crunch in locales *)
 
-crunch_ignore (add: bind)
-
 definition
   "crunch_foo6 \<equiv> return () >>= (\<lambda>_. return ())"
 
@@ -121,9 +124,11 @@ definition
 
 (* crunch works on a global constant within a locale *)
 crunch test[wp]: crunch_foo6 P
+(ignore: bind)
 
 (* crunch works on a locale constant *)
 crunch test[wp]: crunch_foo7 P
+(ignore: bind)
 
 definition
   "crunch_foo8 \<equiv> fixed_return_unit >>= (\<lambda>_. fixed_return_unit)"
@@ -134,7 +139,7 @@ definition
     modify (op + x)
   od"
 
-crunch test[wp]: crunch_foo9 "\<lambda>x. x > y" (ignore: modify)
+crunch test: crunch_foo9 "\<lambda>x. x > y" (ignore: bind)
 
 definition
   "crunch_foo10 (x :: nat) \<equiv> do
@@ -152,9 +157,9 @@ lemma crunch_foo10_def2[crunch_def]:
 crunch test[wp]: crunch_foo10 "\<lambda>x. x > y"
 
 (* crunch_ignore works within a locale *)
-crunch_ignore (add: modify)
+crunch_ignore (add: bind)
 
-crunch test[wp]: crunch_foo9 "\<lambda>x. x > y"
+crunch test': crunch_foo9 "\<lambda>x. x > y"
 
 end
 
