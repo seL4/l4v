@@ -28,12 +28,25 @@ as introduction rules. Crunch also has a number of builtin strategies
 for finding definitional rules in the context.
 
 Once a crunch rule for P \<turnstile> f is found, crunch will recursively apply to
-all monadic constants in all the premises. (The exploration terminates
-where crunch rules can be found without premises.) Crunch will obtain
-proofs e.g. P \<turnstile> g for all f's dependencies, then finally try to prove
-P \<turnstile> f using the crunch rule, wp (with the given dependencies) and simp.
-Additional wp and simp rules can also be given with the wp: and simp:
-sections.
+almost all monadic constants in all of the premises. (The exploration
+terminates where crunch rules can be found without premises.) Crunch
+will obtain proofs e.g. P \<turnstile> g for all f's dependencies, then finally
+try to prove P \<turnstile> f using the crunch rule, wp (with the given dependencies)
+and simp. Additional wp and simp rules can also be given with the wp: and
+simp: sections.
+
+When obtaining proofs for f's dependencies, crunch will first determine
+whether a rule already exists for that goal (P \<turnstile> g). It does this by
+checking whether a) crunch has already proven a rule for that constant,
+b) a rule in the wp set can be used to solve the goal, or c) a rule
+already exists with the name that crunch would use. In the case of c),
+crunch will fail if the found rule cannot be used to solve the goal.
+
+There are some monadic constants that it does not make sense to apply
+crunch to. These are added to a crunch_ignore set, and are removed from
+f's dependencies if they are ever found. The command crunch_ignore (add: )
+can be used to add new constants, along with the ignore: section of a
+specific crunch invocation.
 
 *)
 
@@ -104,7 +117,8 @@ end
 signature CRUNCH =
 sig
     type extra;
-    (* Crunch configuration: theory, naming scheme, lifting rules, wp rules *)
+    (* Crunch configuration: theory, naming scheme, name space, wp rules,
+    constants to ignore, simp rules, constants to not ignore, unfold rules*)
     type crunch_cfg = {ctxt: local_theory, prp_name: string, nmspce: string option,
         wps: (string * thm) list, igs: string list, simps: thm list, ig_dels: string list,
         rules: thm list};
@@ -134,7 +148,7 @@ type crunch_cfg = {ctxt: local_theory, prp_name: string, nmspce: string option,
     wps: (string * thm) list, igs: string list, simps: thm list, ig_dels: string list,
     rules: thm list};
 
-structure CrunchIgnore = Generic_Data
+structure CrunchIgnore = Theory_Data
 (struct
     type T = string list
     val empty = []
@@ -143,13 +157,13 @@ structure CrunchIgnore = Generic_Data
 end);
 
 fun crunch_ignore_add thms thy =
-  Context.theory_map (CrunchIgnore.map (curry (Library.merge (op =)) thms)) thy
+  CrunchIgnore.map (curry (Library.merge (op =)) thms) thy
 
 fun crunch_ignore_del thms thy =
-  Context.theory_map (CrunchIgnore.map (Library.subtract (op =) thms)) thy
+  CrunchIgnore.map (Library.subtract (op =) thms) thy
 
-fun crunch_ignore_add_del adds dels thy =
-  thy |> crunch_ignore_add adds |> crunch_ignore_del dels
+fun crunch_ignore_add_del adds dels =
+  crunch_ignore_add adds #> crunch_ignore_del dels
 
 val def_sfx = "_def";
 val induct_sfx = ".induct";
@@ -360,8 +374,8 @@ fun unfold_data ctxt constn goal nmspce NONE = (
        then error ("Unfold rule given for " ^ constn ^ " does not apply")
        else (ms, unfold_rule) end
 
-fun get_unfold_rule ctxt const cgoal namespace = let
-  in unfold_data ctxt const cgoal namespace (def_from_ctxt ctxt const) end
+fun get_unfold_rule ctxt const cgoal namespace =
+  unfold_data ctxt const cgoal namespace (def_from_ctxt ctxt const)
 
 val split_if = @{thm "if_split"}
 
@@ -444,36 +458,103 @@ fun make_goal const_term const pre extra ctxt =
       val body = parse (String.concat (separate " " (const :: nns)));
   in check (Instance.mk_term pre body extra) end;
 
-fun seq_try_apply f x = Seq.map_filter (try f) (Seq.single x)
+fun unify_helper rs n t =
+  case
+    Thm.cprem_of t n |> Thm.term_of |> snd (#trips rs) (Thm.theory_of_thm t)
+        |> Envir.beta_eta_contract |> Logic.strip_assums_concl
+     handle THM _ => @{const True}
+  of
+    Const (@{const_name Trueprop}, _) $
+      (Const (@{const_name triple_judgement}, _) $ _ $ f $ _) => SOME f
+  | _ => NONE
 
-fun crunch_known_rule cfg const const_long_name thms goal_prop =
+fun get_wp_rules ctxt n goal =
   let
-    val thms_proof = Seq.filter (is_proof_of cfg const) (Seq.of_list thms)
-    val stored = seq_try_apply (get_stored cfg) const
+    val wp_data = WeakestPre.debug_get ctxt
+    val f = unify_helper wp_data n goal
+  in case f of
+    SOME f => Net.unify_term (#1 (#rules wp_data)) f |> order_list |> rev
+  | NONE => map snd (#3 (#rules wp_data)) end
+
+fun pretty_thm ctxt thm =
+  let val name = Thm.get_name_hint thm
+  in Find_Theorems.pretty_thm ctxt (Facts.named name, thm) end
+
+(*rule can either solve thm or can be applied and refers to the same const*)
+fun can_solve_or_apply ctxt goal thm rule =
+  let
+    fun body term = term |> Instance.dest_term
+      |> Option.map (Term.term_name o Term.head_of o #2)
+    val const' = rule |> Thm.concl_of |> HOLogic.dest_Trueprop |> body
+      handle TERM _ => NONE
+    val thm' = SINGLE (resolve_tac ctxt [rule] 1) thm
+    fun changed st' = not (Thm.eq_thm (thm, st'));
+    fun solved st' = Thm.nprems_of st' < Thm.nprems_of thm
+  in if is_some thm'
+    then solved (the thm') orelse
+         (body goal = const' andalso changed (the thm'))
+    else false end
+
+fun test_thm_applies _ _ NONE = (false, false, "")
+  | test_thm_applies ctxt goal (SOME thm) =
+      if (is_some o SINGLE (CHANGED (resolve_tac ctxt [thm] 1))) goal
+      then (true, false, "")
+      else (false, true, ("the generated goal does not match the existing rule\n"
+                           ^ Pretty.string_of (pretty_thm ctxt thm)))
+
+fun crunch_known_rule cfg const thms goal =
+  let
     val ctxt = #ctxt cfg
-    val cgoal_in = Goal.init (Thm.cterm_of ctxt goal_prop)
-    val empty_ref = Unsynchronized.ref []
-    val wps = Seq.filter (fn (s, t) => s = const_long_name andalso
-                    (is_some o SINGLE (WeakestPre.apply_rules_tac_n false ctxt [t] empty_ref 1)) cgoal_in)
-           (Seq.of_list (#wps cfg))
-    val seq = Seq.append (Seq.map snd thms_proof) (Seq.append stored (Seq.map snd wps))
-  in Seq.pull seq |> Option.map fst end
+    val vgoal_prop = goal |> var_precond |> HOLogic.mk_Trueprop
+    val cgoal_in = Goal.init (Thm.cterm_of ctxt vgoal_prop)
+
+    (*first option: previously crunched thm*)
+    val thms_proof = Seq.filter (is_proof_of cfg const) (Seq.of_list thms)
+
+    fun used_rule thm =
+      (writeln ("found a rule for this constant:\n"
+                ^ Pretty.string_of (pretty_thm ctxt thm)); thm)
+
+    (*second option: thm with same name*)
+    val stored_rule = try (get_stored cfg) const
+    val (stored_rule_applies, error', error_msg) =
+      test_thm_applies ctxt cgoal_in stored_rule
+    val stored =
+      if stored_rule_applies
+      then (Seq.single (the stored_rule)) |> Seq.map used_rule
+      else Seq.empty
+
+    (*third option: thm in wp set*)
+    val wp_rules = get_wp_rules ctxt 1 cgoal_in
+    val rules = map snd (thms @ #wps cfg) @ wp_rules
+    val wps = filter (can_solve_or_apply ctxt goal cgoal_in) rules
+    val wps' = Seq.map used_rule (Seq.of_list wps)
+
+    (*error if no thm found and thm with same name does not apply*)
+    fun error'' (SOME opt) = SOME opt
+      | error'' NONE = if error' then error error_msg else NONE
+
+    val seq = Seq.append (Seq.map snd thms_proof) (Seq.append stored wps')
+  in Seq.pull seq |> Option.map fst |> error'' end
 
 val mism_term_trace = Unsynchronized.ref []
+
+fun seq_try_apply f x = Seq.map_filter (try f) (Seq.single x)
+
+fun wp ctxt rules =
+  WeakestPre.apply_rules_tac_n false ctxt rules (Unsynchronized.ref [])
 
 fun crunch_rule cfg const goal extra thms =
   let
     (* first option: produce a terminal rule via wp *)
     val ctxt = #ctxt cfg
-    val empty_ref = Unsynchronized.ref []
-    fun wp rules = WeakestPre.apply_rules_tac_n false ctxt
-        (map snd (thms @ #wps cfg) @ rules) empty_ref
+    fun wp' rules = wp ctxt (map snd (thms @ #wps cfg) @ rules)
     val vgoal_prop = goal |> var_precond |> HOLogic.mk_Trueprop
     val goal_prop = goal |> HOLogic.mk_Trueprop
     val ctxt' = Variable.auto_fixes goal_prop
         (Variable.auto_fixes vgoal_prop ctxt)
-    val wp_seq = seq_try_apply (Goal.prove ctxt' [] [] goal_prop) (fn _ =>
-                                  TRY (wp [] 1))
+    val wp_seq = seq_try_apply (Goal.prove ctxt' [] [] goal_prop)
+                               (fn _ => TRY (wp' [] 1))
       |> Seq.map (singleton (Proof_Context.export ctxt' ctxt))
       |> Seq.map (pair NONE)
 
@@ -506,7 +587,7 @@ fun crunch_rule cfg const goal extra thms =
                 #> Instance.dest_term #> the #> #3 #> curry Instance.eq_extra goal_extra)
             t = SOME true
           then all_tac
-          else DETERM (((wp [] ORELSE' simp_tac ctxt) THEN_ALL_NEW fail_tac t) i)))
+          else DETERM (((wp' [] ORELSE' simp_tac ctxt) THEN_ALL_NEW fail_tac t) i)))
 
     val seq = Seq.maps (fn (ms, t) => Seq.map (pair ms) (finalise t)) seq
 
@@ -519,22 +600,29 @@ fun crunch_rule cfg const goal extra thms =
         | NONE => Thm.prems_of thm |> maps (monads_of ctxt)
   in (ms, thm) end
 
+fun warn_helper_thms ctxt n t =
+  let val simp_thms = maybe_thms ctxt "crunch_simps"
+      val ctxt' = ctxt addsimps simp_thms
+      val wp_thms = maybe_thms ctxt "crunch_wps"
+      val can_simp = (is_some o SINGLE (CHANGED (clarsimp_tac ctxt' n))) t
+      val can_wp = (is_some o SINGLE (CHANGED (wp ctxt' wp_thms n))) t
+  in if can_simp orelse can_wp
+     then warning "Using crunch_simps and crunch_wps makes more progress"
+     else () end;
+
 fun crunch cfg pre extra stack const' thms =
   let
     val ctxt = #ctxt cfg |> Context_Position.set_visible false;
     val const = real_const_from_name const' (#nmspce cfg) ctxt;
-    val empty_ref = Unsynchronized.ref [] : thm list Unsynchronized.ref (* FIXME: avoid refs *)
   in
     let
       val _ = "crunching constant: " ^ const |> writeln;
       val const_term = read_const ctxt const;
-      val real_const_term = resolve_abbreviated ctxt const_term;
       val goal = make_goal const_term const pre extra ctxt
                  handle exn => handle_int exn (raise WrongType);
       val goal_prop = HOLogic.mk_Trueprop goal;
-      val const_long_name = real_const_term |> dest_Const |> fst;
     in (* first check: has this constant already been done or supplied? *)
-      case crunch_known_rule cfg const const_long_name thms goal_prop
+      case crunch_known_rule cfg const thms goal
         of SOME thm => (SOME thm, [])
           | NONE => let (* not already known, find a crunch rule. *)
           val (ms, rule) = crunch_rule cfg const goal extra thms
@@ -543,7 +631,7 @@ fun crunch cfg pre extra stack const' thms =
           val ms = ms
             |> map (fn t => (real_const_from_name (fst (dest_Const (head_of t))) (#nmspce cfg) ctxt', t))
             |> subtract (fn (a, b) => a = (fst b))
-                      (subtract (op =) (#ig_dels cfg) (#igs cfg @ CrunchIgnore.get (Context.Proof ctxt')))
+                      (subtract (op =) (#ig_dels cfg) (#igs cfg @ CrunchIgnore.get (Proof_Context.theory_of ctxt')))
             |> filter_out (fn (s, _) => s = const');
           val stack' = const :: stack;
           val _ = if (length stack' > 20) then
@@ -565,8 +653,7 @@ fun crunch cfg pre extra stack const' thms =
           val ctxt''' = ctxt'' |> Variable.auto_fixes goal_prop2
           val _ = writeln ("attempting: " ^ Syntax.string_of_term ctxt''' goal_prop2);
 
-          fun wp rules = WeakestPre.apply_rules_tac_n false ctxt
-              (map snd (thms @ #wps cfg) @ rules) empty_ref
+          fun wp' rules = wp ctxt (map snd (thms @ #wps cfg) @ rules)
 
           val thm = Goal.prove_future ctxt''' [] [] goal_prop2
               ( (*DupSkip.goal_prove_wrapper *) (fn _ =>
@@ -580,7 +667,7 @@ fun crunch cfg pre extra stack const' thms =
                 REPEAT_DETERM (
                   WPFix.tac ctxt n
                   ORELSE
-                  wp goals' n
+                  wp' goals' n
                   ORELSE
                   CHANGED (clarsimp_tac ctxt''' n)
                   ORELSE
@@ -591,7 +678,9 @@ fun crunch cfg pre extra stack const' thms =
                   safe_tac ctxt'''
                   ORELSE
                   CHANGED (simp_tac ctxt''' n)
-              )))) |> singleton (Proof_Context.export ctxt''' ctxt)
+                  ORELSE
+                  (fn t => (warn_helper_thms ctxt''' n t; no_tac t)))
+              ))) |> singleton (Proof_Context.export ctxt''' ctxt)
               handle e =>
                      (writeln "Crunch call stack:";
                       map writeln (const::stack);
@@ -691,6 +780,3 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
     end
 
 end
-(*
-structure Crunch_Crunches : CRUNCH = Crunch;
-*)

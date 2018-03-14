@@ -9,13 +9,15 @@
  *)
 
 structure CrunchTheoryData = Theory_Data
-(struct
-    type T = ((Token.src list -> string -> string -> (string * xstring) list
-         -> string list -> local_theory -> local_theory) * (string list -> string list -> theory -> theory)) Symtab.table
-    val empty = Symtab.empty
-    val extend = I
-    val merge = Symtab.merge (fn _ => true);
-end);
+  (struct
+     type T =
+       ((Token.src list -> string -> string -> (string * xstring) list
+         -> string list -> local_theory -> local_theory)
+        * (string list -> string list -> theory -> theory)) Symtab.table
+     val empty = Symtab.empty
+     val extend = I
+     val merge = Symtab.merge (fn _ => true);
+   end);
 
 fun get_crunch_instance name lthy =
   CrunchTheoryData.get lthy
@@ -239,7 +241,6 @@ val crunch_ignoreP =
                    | SOME x => snd x);
                in
                   Local_Theory.raw_theory (crunch_ignore_add_del add del) lthy
-                  (* |> (fn lthy => Named_Target.reinit lthy lthy) *)
                end));
 
 end;
