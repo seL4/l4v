@@ -585,7 +585,7 @@ lemma switchToIdleThread_no_orphans' [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding switchToIdleThread_def setCurThread_def ARM_H.switchToIdleThread_def
   apply (simp add: no_orphans_disj all_queued_tcb_ptrs_def)
-  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_disj_lift storeWordUser_typ'
+  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_disj_lift
        | clarsimp)+
   apply (auto simp: no_orphans_disj all_queued_tcb_ptrs_def is_active_tcb_ptr_def
                     st_tcb_at_neg' tcb_at_typ_at')
@@ -958,10 +958,13 @@ lemma tcbSchedAppend_in_ksQ'':
      apply wpsimp+
   done
 
-crunch st_tcb_at': setSchedulerAction "\<lambda>s. P (st_tcb_at' Q t s)"
+crunches setSchedulerAction
+  for pred_tcb_at': "\<lambda>s. P (pred_tcb_at' proj Q t s)"
+  and ct': "\<lambda>s. P (ksCurThread s)"
+  (wp_del: ssa_wp)
 
 lemmas ssa_st_tcb_at'_ksCurThread[wp] =
-  hoare_lift_Pf2[where f=ksCurThread, OF setSchedulerAction_st_tcb_at' setSchedulerAction_ct']
+  hoare_lift_Pf2[where f=ksCurThread, OF setSchedulerAction_pred_tcb_at' setSchedulerAction_ct']
 
 lemma ct_active_st_tcb_at':
   "ct_active' s = st_tcb_at' runnable' (ksCurThread s) s"
@@ -1977,6 +1980,7 @@ lemma cancelSignal_valid_queues' [wp]:
   done
 
 crunch no_orphans [wp]: setupReplyMaster "no_orphans"
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch valid_queues' [wp]: setupReplyMaster "valid_queues'"
 

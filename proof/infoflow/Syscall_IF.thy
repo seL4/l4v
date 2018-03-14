@@ -410,7 +410,6 @@ lemma lookup_cap_and_slot_reads_respects_g':
   apply simp
 done
 
-
 lemma sts_authorised_for_globals_inv: "\<lbrace>authorised_for_globals_inv oper\<rbrace> set_thread_state d f \<lbrace>\<lambda>r. authorised_for_globals_inv oper\<rbrace>"
   unfolding authorised_for_globals_inv_def
             authorised_for_globals_arch_inv_def
@@ -423,17 +422,11 @@ lemma sts_authorised_for_globals_inv: "\<lbrace>authorised_for_globals_inv oper\
       apply simp
       apply (rename_tac page_table_invocation)
       apply (case_tac page_table_invocation)
-       apply simp+
-       apply (wp set_thread_state_arm_global_pd)+
-     apply simp
-     apply wp
-    apply simp
+       apply wpsimp+
     apply (rename_tac page_invocation)
     apply (case_tac page_invocation)
         apply (simp | wp hoare_ex_wp)+
   done
-
-
 
 lemma authorised_for_globals_triv:
   "\<forall> x y. f x \<noteq> InvokeArchObject y \<Longrightarrow>
@@ -672,7 +665,7 @@ lemma handle_recv_reads_respects_f:
             delete_caller_cap_silc_inv[where st=st]
             reads_respects_f_inv[OF receive_signal_reads_respects receive_signal_silc_inv, where st=st]
             reads_respects_f[OF lookup_slot_for_thread_rev, where st=st and Q=\<top>]
-            reads_respects_f_inv[OF get_cap_rev get_cap_silc_inv, where st=st]
+            reads_respects_f_inv[OF get_cap_rev get_cap_inv, where st=st]
             get_cap_auth_wp[where aag=aag]
             reads_respects_f[OF get_simple_ko_reads_respects, where st=st and Q=\<top>]
             lookup_slot_for_thread_authorised

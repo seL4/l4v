@@ -3308,11 +3308,10 @@ shows
                            apply (rule conseqPre, vcg exspec=ensureEmptySlot_modifies)
                            apply clarsimp
                           apply simp
-                          apply (wp injection_wp_E[OF refl])
+                          apply (wpsimp wp: injection_wp_E[OF refl])
                          apply (simp only: word_bits_def[symmetric])
                          apply clarsimp
-                         apply (simp add: upto_enum_word numeral_eqs[symmetric]
-                                          Suc_unat_diff_1
+                         apply (simp add: Suc_unat_diff_1
                                      del: upt.simps)
                          apply (subst(asm) olen_add_eqv[symmetric])
                          apply (simp add: iffD1 [OF unat_plus_simple])
@@ -3592,7 +3591,6 @@ shows
   apply (drule(1) cap_get_tag_to_H)+
   apply (clarsimp simp: isCap_simps capAligned_def[unfolded capUntypedPtr_def, split_simps capability.split]
                         objBits_simps' word_bits_def)
-
   done
 
 lemma decodeUntypedInvocation_ccorres:

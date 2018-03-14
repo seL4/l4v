@@ -154,20 +154,10 @@ lemma is_up_8_32: "is_up (ucast :: word8 \<Rightarrow> word32)"
   by (simp add: is_up_def source_size_def target_size_def word_size)
 
 
-crunch mdb_inv[wp]: cancel_all_ipc "\<lambda>s. P (cdt s)"
-  (wp: fast_finalise_lift crunch_wps)
-
-crunch mdb_inv[wp]: cancel_all_signals "\<lambda>s. P (cdt s)"
-  (wp: fast_finalise_lift crunch_wps)
-
-crunch mdb_inv[wp]: fast_finalise "\<lambda>s. P (cdt s)"
-  (wp: fast_finalise_lift crunch_wps)
-
-crunch mdb_inv[wp]: set_cap "\<lambda>s. P (cdt s)"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch mdb_inv[wp]: post_cap_deletion "\<lambda>s. P (cdt s)"
-  (wp: crunch_wps simp: crunch_simps)
+crunches
+  cancel_all_ipc, cancel_all_signals, fast_finalise, set_cap, post_cap_deletion
+  for mdb_inv[wp]: "\<lambda>s. P (cdt s)"
+  (wp: crunch_wps)
 
 lemma cap_delete_one_still_derived:
   "\<lbrace>\<lambda>s. cte_wp_at (is_derived (cdt s) p' cap) p' s \<and> p \<noteq> p' \<and> valid_mdb s\<rbrace>

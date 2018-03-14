@@ -2814,7 +2814,7 @@ lemma set_untyped_cap_invs_simple:
      set_cap_idle update_cap_ifunsafe set_cap_valid_arch_caps_simple)
    apply (simp add:valid_irq_node_def)
    apply wps
-   apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_vspace_objs
+   apply (wp hoare_vcg_all_lift set_cap_irq_handlers
      set_cap_irq_handlers cap_table_at_lift_valid
      set_cap_typ_at set_cap_valid_arch_caps_simple set_cap_kernel_window_simple
      set_cap_cap_refs_respects_device_region)

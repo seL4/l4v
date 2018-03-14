@@ -3376,7 +3376,7 @@ lemma not_idle_thread_resolve_address_bits:
    apply (rule_tac Q="\<lambda>r. valid_etcbs and valid_global_refs and valid_objs and valid_idle and
                           valid_irq_node and ex_cte_cap_to (fst r)"
           in hoare_post_impErr[where E="\<lambda>x y. True"])
-     apply (wp resolve_address_bits_valid_etcbs rab_cte_cap_to)
+     apply (wp rab_cte_cap_to)
     apply (auto intro: ex_cte_cap_wp_to_not_idle)[2]
   apply (clarsimp simp:ex_cte_cap_to_def)
   apply (rule_tac x = thread in exI,rule_tac x = "tcb_cnode_index 0" in exI)

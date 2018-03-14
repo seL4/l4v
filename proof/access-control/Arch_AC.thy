@@ -172,7 +172,7 @@ lemma perform_page_table_invocation_respects:
              cong: page_table_invocation.case_cong option.case_cong prod.case_cong
                    cap.case_cong arch_cap.case_cong)
   apply (rule hoare_pre)
-  apply (wp store_pde_respects get_cap_integrity_autarch set_cap_integrity_autarch store_pte_respects unmap_page_table_respects mapM_wp'
+  apply (wp store_pde_respects set_cap_integrity_autarch store_pte_respects unmap_page_table_respects mapM_wp'
        | wpc
        | simp add: mapM_x_mapM authorised_page_table_inv_def cleanByVA_PoU_def)+
   apply (auto simp: cap_auth_conferred_def is_page_cap_def
@@ -938,7 +938,7 @@ lemma perform_asid_pool_invocation_respects:
    \<lbrace>\<lambda>s. integrity aag X st\<rbrace>"
   apply (simp add: perform_asid_pool_invocation_def)
   apply (rule hoare_pre)
-  apply (wp set_asid_pool_respects get_cap_wp get_cap_integrity_autarch set_cap_integrity_autarch
+  apply (wp set_asid_pool_respects get_cap_wp set_cap_integrity_autarch
        | wpc
        | simp)+
   apply (auto iff: authorised_asid_pool_inv_def)

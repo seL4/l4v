@@ -1181,6 +1181,8 @@ interpretation
   by (fastforce simp: obj_at_def[abs_def] a_type_def
                split: Structures_A.kernel_object.splits)+
 
+lemmas set_cap_arch[wp] = set_cap.arch_state
+
 interpretation
   store_word_offs: non_aobj_non_cap_op "store_word_offs a b c"
   apply unfold_locales
@@ -1319,11 +1321,8 @@ lemma valid_irq_states_triv:
    apply assumption
   by blast
 
-crunch valid_irq_states[wp]: set_object "valid_irq_states"
-  (wp: valid_irq_states_triv)
-
 crunch valid_irq_states[wp]: set_simple_ko "valid_irq_states"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps rule: valid_irq_states_triv)
 
 crunch valid_irq_states[wp]: set_cap "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)

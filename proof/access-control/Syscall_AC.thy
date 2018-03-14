@@ -459,6 +459,7 @@ lemma dec_domain_time_pas_refined[wp]:
   done
 
 crunch pas_refined[wp]: timer_tick "pas_refined aag"
+  (wp_del: timer_tick_extended.pas_refined_tcb_domain_map_wellformed)
 
 lemma handle_interrupt_pas_refined:
   "\<lbrace>pas_refined aag\<rbrace>
@@ -720,7 +721,7 @@ lemma activate_thread_pas_refined:
             get_thread_state_def thread_get_def
   apply (rule hoare_pre)
   apply (wp set_thread_state_pas_refined hoare_drop_imps
-             | wpc | simp del: hoare_post_taut)+
+             | wpc | simp)+
   done
 
 definition "current_ipc_buffer_register s \<equiv> arch_tcb_context_get (tcb_arch (the (get_tcb (cur_thread s) s))) TPIDRURW"
@@ -1567,23 +1568,17 @@ crunch cur_thread[wp]: cancel_badged_sends "\<lambda>s. P (cur_thread s)" (wp: c
 lemma invoke_cnode_cur_thread[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
-  apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: without_preemption_def split del: if_split)+
+  apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp split del: if_split)+
   done
 
 crunch cur_thread[wp]: handle_event "\<lambda>s. P (cur_thread s)"
-  ( wp: syscall_valid select_wp crunch_wps check_cap_inv cap_revoke_preservation dxo_wp_weak
-    simp: crunch_simps filterM_mapM unless_def
-    ignore: without_preemption check_cap_at filterM getActiveIRQ resetTimer ackInterrupt )
+  (wp: syscall_valid crunch_wps check_cap_inv dxo_wp_weak
+   simp: crunch_simps filterM_mapM
+   ignore: syscall)
 
-crunch pas_cur_domain[wp]: ethread_set "pas_cur_domain pas"
+crunches ethread_set, timer_tick, possible_switch_to, handle_interrupt
+  for pas_cur_domain[wp]: "pas_cur_domain pas"
   (wp: crunch_wps simp: crunch_simps)
-
-crunch pas_cur_domain[wp]: timer_tick "pas_cur_domain pas"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch pas_cur_domain[wp]: possible_switch_to "pas_cur_domain pas"
-
-crunch pas_cur_domain[wp]: handle_interrupt "pas_cur_domain pas"
 
 lemma dxo_idle_thread[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s) \<rbrace> do_extended_op f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
@@ -1609,31 +1604,32 @@ lemma cap_revoke_idle_thread[wp]:"\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace
 lemma invoke_cnode_idle_thread[wp]: "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
-    apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: without_preemption_def split del: if_split)+
+    apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp split del: if_split)+
   done
 
 crunch idle_thread[wp]: handle_event "\<lambda>s::det_state. P (idle_thread s)"
-  ( wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation dxo_wp_weak
-    simp: crunch_simps check_cap_at_def filterM_mapM unless_def
-    ignore: without_preemption filterM rec_del check_cap_at cap_revoke resetTimer
-            ackInterrupt getFAR getDFSR getIFSR getActiveIRQ )
+  (wp: syscall_valid crunch_wps
+   simp: crunch_simps check_cap_at_def
+   ignore: check_cap_at syscall)
 
 crunch cur_domain[wp]:
   transfer_caps_loop, ethread_set, thread_set_priority, set_priority,
   set_domain, invoke_domain, cap_move_ext, timer_tick,
   cap_move, cancel_badged_sends, possible_switch_to
   "\<lambda>s. P (cur_domain s)"
-  (wp: transfer_caps_loop_pres crunch_wps simp: crunch_simps filterM_mapM unless_def
-   ignore: without_preemption filterM const_on_failure)
+  (wp: crunch_wps simp: crunch_simps filterM_mapM
+   rule: transfer_caps_loop_pres)
 
 lemma invoke_cnode_cur_domain[wp]: "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (cur_domain s)\<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
-   apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: without_preemption_def split del: if_split)+
+   apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp split del: if_split)+
   done
 
-crunch cur_domain[wp]: handle_event "\<lambda>s. P (cur_domain s)" (wp: syscall_valid select_wp crunch_wps check_cap_inv cap_revoke_preservation simp: crunch_simps filterM_mapM unless_def ignore: without_preemption check_cap_at filterM  getActiveIRQ resetTimer ackInterrupt const_on_failure getFAR getDFSR getIFSR)
-
+crunch cur_domain[wp]: handle_event "\<lambda>s. P (cur_domain s)"
+  (wp: syscall_valid crunch_wps check_cap_inv
+   simp: crunch_simps
+   ignore: check_cap_at syscall)
 
 lemma handle_event_guarded_pas_domain[wp]:
   "\<lbrace>guarded_pas_domain aag\<rbrace> handle_event e \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"

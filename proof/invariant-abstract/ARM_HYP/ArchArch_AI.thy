@@ -287,7 +287,7 @@ lemma invoke_arch_tcb:
      apply (simp add: vspace_bits_defs field_simps del: atLeastAtMost_iff)
     apply (metis (no_types) orthD1 x_power_minus_1)
    apply simp
-  apply (wp perform_vcpu_invocation_tcb_at)
+  apply wp
   apply (clarsimp simp: st_tcb_at_def tcb_at_def obj_at_def is_tcb_def)
   done
 

@@ -3804,8 +3804,6 @@ lemma createObjects_orig_obj_at':
   apply simp
   done
 
-crunch ko_wp_at'[wp]: doMachineOp "\<lambda>s. P (ko_wp_at' P' p s)"
-
 lemma createObjects_orig_cte_wp_at':
   "\<lbrace>\<lambda>s. range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0
       \<and> pspace_aligned' s \<and> pspace_distinct' s
@@ -4567,8 +4565,6 @@ lemma createNewCaps_global_refs':
                         makeObject_cte)
   apply (auto simp: linorder_not_less ball_ran_eq)
   done
-
-crunch ksArchState[wp]: createNewCaps "\<lambda>s. P (ksArchState s)"
 
 lemma koTypeOf_eq_KernelDataT:
   "(koTypeOf ko = KernelDataT)

@@ -62,8 +62,7 @@ lemma dcorres_call_kernel:
        apply (rule he_invs)
       apply (rule handle_event_valid_sched)
      apply (fastforce intro: active_from_running)+
-
-done
+  done
 
 end
 

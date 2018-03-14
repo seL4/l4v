@@ -687,7 +687,7 @@ lemma set_cap_silc_inv:
    apply(rule_tac x=bb in exI)
    apply(erule use_valid[OF _ set_cap_slots_holding_overlapping_caps_other[where aag=aag]])
    apply fastforce
-   apply (erule use_valid[OF _ set_cap_mdb_inv],simp)
+   apply (erule use_valid[OF _ set_cap_rvk_cdt_ct_ms(4)],simp)
   apply(simp add: silc_dom_equiv_def)
   apply(rule equiv_forI)
   apply(erule use_valid)
@@ -961,29 +961,6 @@ lemma cap_insert_silc_inv:
   apply (drule silc_inv_all_children)
   apply (rule conjI)
   apply (fastforce simp: all_children_def simp del: split_paired_All)+
-  done
-
-lemma cap_move_cte_wp_at_other:
-  "\<lbrace> cte_wp_at P slot and K (slot \<noteq> dest_slot \<and> slot \<noteq> src_slot) \<rbrace>
-   cap_move cap src_slot dest_slot
-   \<lbrace> \<lambda>_. cte_wp_at P slot \<rbrace>"
-  unfolding cap_move_def
-  apply (rule hoare_pre)
-   apply (wp set_cdt_cte_wp_at set_cap_cte_wp_at' dxo_wp_weak static_imp_wp | simp)+
-  done
-
-
-lemma cte_wp_at_weak_derived_ReplyCap:
-  "cte_wp_at (op = (ReplyCap x False)) slot s
-       \<Longrightarrow> cte_wp_at (weak_derived (ReplyCap x False)) slot s"
-  apply(erule cte_wp_atE)
-   apply(rule cte_wp_at_cteI)
-      apply assumption
-     apply assumption
-    apply assumption
-   apply simp
-  apply(rule cte_wp_at_tcbI)
-  apply auto
   done
 
 lemma cte_wp_at_eq:
@@ -1792,6 +1769,7 @@ lemma cap_delete_silc_inv:
 crunch_ignore (valid) (add: getActiveIRQ)
 crunch silc_inv[wp]: preemption_point "silc_inv aag st"
   (ignore: wrap_ext_bool OR_choiceE simp: OR_choiceE_def crunch_simps wp: crunch_wps)
+crunch tcb_domain_map_wellformed[wp]: update_work_units, reset_work_units "tcb_domain_map_wellformed aag"
 crunch pas_refined[wp]: preemption_point "pas_refined aag"
   (ignore: wrap_ext_bool OR_choiceE simp: OR_choiceE_def crunch_simps wp: crunch_wps)
 
@@ -2321,19 +2299,11 @@ lemma perform_page_invocation_silc_inv:
   apply(fastforce dest: is_arch_diminished_pg_is_pt_or_pg_cap simp: silc_inv_def)
   done
 
-lemma blah: "\<lbrace>\<lambda>s. P ((cdt s)(x := (f (cdt s))))\<rbrace>
-       set_cap cap dest
-       \<lbrace>\<lambda>rv s.
-           P ((cdt s)(x := (f (cdt s))))\<rbrace>"
-  apply (rule set_cap_mdb_inv)
-  done
-
 lemma cap_insert_silc_inv':
   "\<lbrace>silc_inv aag st and K (is_subject aag (fst dest) \<and> is_subject aag (fst src) \<and> cap_points_to_label aag cap (pasSubject aag))\<rbrace>
        cap_insert cap src dest
        \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding cap_insert_def
-
   apply (wp set_cap_silc_inv hoare_vcg_ex_lift set_untyped_cap_as_full_slots_holding_overlapping_caps_other[where aag=aag] get_cap_wp update_cdt_silc_inv set_cap_caps_of_state2 set_untyped_cap_as_full_cdt_is_original_cap static_imp_wp | simp split del: if_split)+
   apply (intro allI impI conjI)
     apply clarsimp

@@ -326,11 +326,10 @@ lemma get_mi_valid[wp]:
 end
 
 crunch inv[wp]: get_extra_cptr P (wp: dmo_inv loadWord_inv)
-crunch pspace_respects_device_region[wp]: set_extra_badge "pspace_respects_device_region"
-  (wp: crunch_wps pspace_respects_device_region_dmo)
-
-crunch cap_refs_respects_device_region[wp]: set_extra_badge "cap_refs_respects_device_region"
-  (wp: crunch_wps cap_refs_respects_device_region_dmo)
+crunches set_extra_badge
+  for pspace_respects_device_region[wp]: "pspace_respects_device_region"
+  and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
+  (wp: crunch_wps pspace_respects_device_region_dmo cap_refs_respects_device_region_dmo)
 
 lemma get_extra_cptrs_inv[wp]:
   "\<lbrace>P\<rbrace> get_extra_cptrs buf mi \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -1754,12 +1753,13 @@ lemma as_user_cap_refs_respects_device_region[wp]:
 
 lemmas set_mrs_cap_refs_in_kernel_window[wp]
     = set_mrs_thread_set_dmo[OF thread_set_cap_refs_in_kernel_window
-                                do_machine_op_cap_refs_in_kernel_window]
-
+                                do_machine_op_cap_refs_in_kernel_window,
+                                simplified tcb_cap_cases_def, simplified]
 
 lemmas set_mrs_cap_refs_respects_device_region[wp]
     = set_mrs_thread_set_dmo[OF thread_set_cap_refs_respects_device_region
-                                VSpace_AI.cap_refs_respects_device_region_dmo[OF storeWord_device_state_inv]]
+                                VSpace_AI.cap_refs_respects_device_region_dmo[OF storeWord_device_state_inv],
+                                simplified tcb_cap_cases_def, simplified]
 
 context Ipc_AI begin
 
@@ -2530,16 +2530,7 @@ context Ipc_AI begin
 crunch valid_irq_states[wp]: do_ipc_transfer "valid_irq_states :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps  simp: crunch_simps)
 
-crunch cap_refs_in_kernel_window[wp]: do_ipc_transfer "cap_refs_in_kernel_window"
-  (wp: crunch_wps hoare_vcg_const_Ball_lift ball_tcb_cap_casesI
-     simp: zipWithM_x_mapM crunch_simps ball_conj_distrib )
-
 crunch cap_refs_respects_device_region[wp]: do_fault_transfer "cap_refs_respects_device_region :: 'state_ext state \<Rightarrow> bool"
-  (wp: crunch_wps hoare_vcg_const_Ball_lift
-    VSpace_AI.cap_refs_respects_device_region_dmo ball_tcb_cap_casesI
-    const_on_failure_wp simp: crunch_simps zipWithM_x_mapM ball_conj_distrib)
-
-crunch cap_refs_respects_device_region[wp]: do_fault_transfer "cap_refs_respects_device_region"
   (wp: crunch_wps hoare_vcg_const_Ball_lift
     VSpace_AI.cap_refs_respects_device_region_dmo ball_tcb_cap_casesI
     const_on_failure_wp simp: crunch_simps zipWithM_x_mapM ball_conj_distrib)
@@ -2779,15 +2770,14 @@ lemma valid_bound_tcb_exst[iff]:
 
 (* FIXME: move *)
 lemma valid_bound_tcb_typ_at:
-  "\<forall>p. \<lbrace>\<lambda>s. typ_at ATCB p s\<rbrace> f \<lbrace>\<lambda>_ s. typ_at ATCB p s\<rbrace>
+  "(\<And>p. \<lbrace>\<lambda>s. typ_at ATCB p s\<rbrace> f \<lbrace>\<lambda>_ s. typ_at ATCB p s\<rbrace>)
    \<Longrightarrow> \<lbrace>\<lambda>s. valid_bound_tcb tcb s\<rbrace> f \<lbrace>\<lambda>_ s. valid_bound_tcb tcb s\<rbrace>"
   apply (clarsimp simp: valid_bound_tcb_def split: option.splits)
   apply (wpsimp wp: hoare_vcg_all_lift tcb_at_typ_at static_imp_wp)
   done
 
-crunch bound_tcb[wp]: set_thread_state, set_message_info, set_mrs "valid_bound_tcb t"
-(wp: valid_bound_tcb_typ_at set_object_typ_at mapM_wp ignore: set_object as_user
- simp: zipWithM_x_mapM)
+crunch bound_tcb[wp]: set_thread_state, set_message_info, set_mrs, as_user "valid_bound_tcb t"
+  (rule: valid_bound_tcb_typ_at)
 
 context Ipc_AI begin
 
@@ -2866,7 +2856,7 @@ lemma rai_invs':
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
    apply (wp set_simple_ko_valid_objs hoare_vcg_const_Ball_lift
-             as_user_ntfn_at[simplified ntfn_at_def2, simplified]
+             as_user_no_del_ntfn[simplified ntfn_at_def2, simplified]
              valid_irq_node_typ ball_tcb_cap_casesI static_imp_wp
              valid_bound_tcb_typ_at[rule_format]
              | simp add: valid_ntfn_def)+
@@ -3106,7 +3096,7 @@ lemma rai_pred_tcb_neq:
 
 context Ipc_AI begin
 crunch ct[wp]: set_mrs "\<lambda>s::'state_ext state. P (cur_thread s)"
-  (wp: case_option_wp mapM_wp)
+  (wp: case_option_wp mapM_wp simp: crunch_simps)
 end
 
 context Ipc_AI begin
@@ -3252,6 +3242,6 @@ lemma rai_makes_simple:
 
 lemma thread_set_Pmdb:
   "\<lbrace>\<lambda>s. P (cdt s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"
-  unfolding thread_set_def by (wpsimp wp: set_object_Pmdb)
+  unfolding thread_set_def by wpsimp
 
 end

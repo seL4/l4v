@@ -41,27 +41,17 @@ lemma cap_revoke_domain_fields[wp]:"\<lbrace>domain_fields P\<rbrace> cap_revoke
 
 lemma invoke_cnode_domain_fields[wp]: "\<lbrace>domain_fields P\<rbrace> invoke_cnode a \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
   unfolding invoke_cnode_def
-  by (wpsimp simp: without_preemption_def crunch_simps
-               wp: get_cap_wp hoare_vcg_all_lift hoare_vcg_imp_lift
+  by (wpsimp wp: get_cap_wp hoare_vcg_all_lift hoare_vcg_imp_lift
       | rule conjI)+
 
 crunch domain_fields[wp]:
   set_domain,set_priority,set_extra_badge,
   possible_switch_to,handle_send,handle_recv,handle_reply
   "domain_fields P"
-  (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation
-       transfer_caps_loop_pres mapME_x_inv_wp
- simp: crunch_simps check_cap_at_def filterM_mapM unless_def detype_def detype_ext_def mapM_x_defsym ignore: without_preemption filterM rec_del check_cap_at cap_revoke resetTimer ackInterrupt getFAR getDFSR getIFSR getActiveIRQ const_on_failure freeMemory)
-
-lemma invoke_cnode_cur_domain[wp]: "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (cur_domain s)\<rbrace>"
-  apply (simp add: invoke_cnode_def)
-  apply (rule hoare_pre)
-  apply (wp | wpc | clarsimp | intro impI conjI | wp_once crunch_wps hoare_vcg_all_lift )+
-  done
-
-crunch cur_domain[wp]: handle_event "\<lambda>s. P (cur_domain s)" (wp: syscall_valid select_wp crunch_wps check_cap_inv cap_revoke_preservation simp: crunch_simps filterM_mapM unless_def ignore: without_preemption check_cap_at filterM getActiveIRQ resetTimer ackInterrupt const_on_failure getFAR getDFSR getIFSR)
-
-
+  (wp: syscall_valid crunch_wps mapME_x_inv_wp
+   simp: crunch_simps check_cap_at_def detype_def detype_ext_def mapM_x_defsym
+   ignore: check_cap_at syscall
+   rule: transfer_caps_loop_pres)
 
 definition pas_wellformed_noninterference where
   "pas_wellformed_noninterference aag \<equiv>

@@ -231,22 +231,21 @@ lemma set_pd_globals_equiv: "\<lbrace>globals_equiv st and (\<lambda>s. a \<note
 crunch globals_equiv: set_pd "globals_equiv s"
   (simp: crunch_simps wp: crunch_wps set_object_globals_equiv)
 
-lemma globals_equiv_cdt_update:
-  "globals_equiv s s' \<Longrightarrow> globals_equiv s (s'\<lparr> cdt := x \<rparr>)"
+lemma globals_equiv_cdt_update[simp]:
+  "globals_equiv s (s'\<lparr> cdt := x \<rparr>) = globals_equiv s s'"
   by(fastforce simp: globals_equiv_def idle_equiv_def)
 
-lemma globals_equiv_is_original_cap_update:
-  "globals_equiv s s' \<Longrightarrow> globals_equiv s (s'\<lparr> is_original_cap := x \<rparr>)"
+lemma globals_equiv_is_original_cap_update[simp]:
+  "globals_equiv s (s'\<lparr> is_original_cap := x \<rparr>) = globals_equiv s s'"
   by(fastforce simp: globals_equiv_def idle_equiv_def)
-
 
 lemma create_cap_globals_equiv:
   "\<lbrace> globals_equiv s and valid_global_objs \<rbrace> create_cap type bits untyped dev slot
    \<lbrace> \<lambda>_. globals_equiv s \<rbrace>"
-  apply(simp add: create_cap_def split_def)
-  apply (wp set_cap_globals_equiv set_original_globals_equiv set_cdt_globals_equiv set_cdt_valid_global_objs dxo_wp_weak| simp)+
+  apply (simp add: create_cap_def split_def)
+  apply (wp set_cap_globals_equiv set_original_globals_equiv set_cdt_globals_equiv
+            set_cdt_valid_global_objs dxo_wp_weak set_original_wp | simp)+
   done
-
 
 (* could remove the precondition here and replace with \<top> if we wanted the trouble *)
 lemma set_pd_reads_respects:
@@ -326,13 +325,13 @@ lemma get_pde_rev:
   "reads_equiv_valid_inv A aag (K (is_subject aag (ptr && ~~ mask pd_bits)))
                                  (get_pde ptr)"
   unfolding get_pde_def fun_app_def
-  by (wp get_pd_rev)
+  by (wpsimp wp: get_pd_rev)
 
 lemma get_pde_revg:
   "reads_equiv_valid_g_inv A aag (\<lambda> s. (ptr && ~~ mask pd_bits) = arm_global_pd (arch_state s))
                                  (get_pde ptr)"
   unfolding get_pde_def fun_app_def
-  by (wp get_pd_revg)
+  by (wpsimp wp: get_pd_revg)
 
 lemma copy_global_mappings_reads_respects_g:
   "is_aligned x pd_bits \<Longrightarrow>
@@ -347,7 +346,7 @@ lemma copy_global_mappings_reads_respects_g:
     apply(wp mapM_x_ev store_pde_reads_respects_g get_pde_revg)
      apply(drule subsetD[OF copy_global_mappings_index_subset])
      apply(clarsimp simp: pd_shifting' invs_aligned_pdD)
-    apply(wp get_pde_inv store_pde_arm_global_pd store_pde_aligned store_pde_valid_arch | simp | fastforce)+
+    apply(wp get_pde_inv store_pde_aligned store_pde_valid_arch | simp | fastforce)+
   apply(fastforce dest: reads_equiv_gD simp: globals_equiv_def)
   done
 
@@ -548,12 +547,15 @@ lemma init_arch_objects_reads_respects_g:
                             \<longrightarrow> is_aligned x pd_bits) and
           K ((0::word32) < of_nat num_objects))
         (init_arch_objects new_type ptr num_objects obj_sz refs)"
-  apply(unfold init_arch_objects_def fun_app_def)
-  apply(rule gen_asm_ev)+
-  apply(subst do_machine_op_mapM_x[OF empty_fail_cleanCacheRange_PoU])+
-  apply(rule equiv_valid_guard_imp)
-  apply(wp dmo_cleanCacheRange_reads_respects_g mapM_x_ev'' equiv_valid_guard_imp[OF copy_global_mappings_reads_respects_g] copy_global_mappings_valid_arch_state copy_global_mappings_pspace_aligned copy_global_mappings_arm_global_pd hoare_vcg_ball_lift | wpc | simp)+
-  apply(fastforce simp: word_object_size_def)
+  apply (unfold init_arch_objects_def fun_app_def)
+  apply (rule gen_asm_ev)+
+  apply (subst do_machine_op_mapM_x[OF empty_fail_cleanCacheRange_PoU])+
+  apply (rule equiv_valid_guard_imp)
+  apply (wp dmo_cleanCacheRange_reads_respects_g mapM_x_ev''
+         equiv_valid_guard_imp[OF copy_global_mappings_reads_respects_g]
+         copy_global_mappings_valid_arch_state copy_global_mappings_pspace_aligned
+         hoare_vcg_ball_lift | wpc | simp)+
+  apply (fastforce simp: word_object_size_def)
   done
 
 lemma copy_global_mappings_globals_equiv:
@@ -583,7 +585,6 @@ lemma init_arch_objects_globals_equiv:
   apply(wpc | wp mapM_x_wp[OF dmo_cleanCacheRange_PoU_globals_equiv subset_refl])+
   apply(rule_tac Q="\<lambda>_. globals_equiv s and (\<lambda> s. arm_global_pd (arch_state s) \<notin> set refs)" in hoare_strengthen_post)
       apply(wp mapM_x_wp[OF _ subset_refl] copy_global_mappings_globals_equiv
-               copy_global_mappings_arm_global_pd
                dmo_cleanCacheRange_PoU_globals_equiv
             | simp add: obj_bits_api_def default_arch_object_def
                         pd_bits_def pageBits_def | blast)+
@@ -1140,7 +1141,7 @@ lemma invoke_untyped_reads_respects_g_wcap:
    apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply(simp add: invoke_untyped_def mapM_x_def[symmetric])
   apply(wp mapM_x_ev'' create_cap_reads_respects_g hoare_vcg_ball_lift
-           create_cap_valid_global_objs init_arch_objects_reads_respects_g
+           init_arch_objects_reads_respects_g
         | simp)+
            apply(rule_tac Q="\<lambda>_. invs" in hoare_strengthen_post)
             apply(wp init_arch_objects_invs_from_restricted)

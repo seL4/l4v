@@ -1852,7 +1852,7 @@ lemma setEndpoint_idle'[wp]:
   done
 
 crunch it[wp]: setEndpoint "\<lambda>s. P (ksIdleThread s)"
-  (simp: updateObject_default_inv ignore: getObject)
+  (simp: updateObject_default_inv)
 
 lemma setObject_ksPSpace_only:
   "\<lbrakk> \<And>p q n ko. \<lbrace>P\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv. P \<rbrace>;
@@ -1883,16 +1883,12 @@ lemma valid_irq_handlers_lift':
 lemmas valid_irq_handlers_lift'' = valid_irq_handlers_lift' [unfolded cteCaps_of_def]
 
 crunch ksInterruptState[wp]: setEndpoint "\<lambda>s. P (ksInterruptState s)"
-  (ignore: setObject wp: setObject_ksInterrupt updateObject_default_inv)
+  (wp: setObject_ksInterrupt updateObject_default_inv)
 
 lemmas setEndpoint_irq_handlers[wp]
     = valid_irq_handlers_lift'' [OF set_ep_ctes_of setEndpoint_ksInterruptState]
 
 declare set_ep_arch' [wp]
-
-lemma set_ep_irq_node' [wp]:
-  "\<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv s. P (irq_node' s)\<rbrace>"
-  by (simp add: setEndpoint_def | wp setObject_ksInterrupt updateObject_default_inv)+
 
 lemma set_ep_maxObj [wp]:
   "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv s. P (gsMaxObjectSize s)\<rbrace>"
@@ -2127,7 +2123,7 @@ lemma setNotification_ct_idle_or_in_cur_domain'[wp]:
   done
 
 crunch gsUntypedZeroRanges[wp]: setNotification "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (wp: setObject_ksPSpace_only updateObject_default_inv ignore: setObject)
+  (wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemma set_ntfn_minor_invs':
   "\<lbrace>invs' and obj_at' (\<lambda>ntfn. ntfn_q_refs_of' (ntfnObj ntfn) = ntfn_q_refs_of' (ntfnObj val)
@@ -2258,14 +2254,6 @@ lemma setEndpoint_ksMachine:
   "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
   by (simp add: setEndpoint_def | wp setObject_ksMachine updateObject_default_inv)+
 
-lemma setEndpoint_ksArch:
-  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace>
-     setEndpoint ep_ptr val
-   \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
-  apply (simp add: setEndpoint_def setObject_def split_def)
-  apply (wp updateObject_default_inv | simp)+
-  done
-
 lemmas setEndpoint_valid_irq_states'  =
   valid_irq_states_lift' [OF setEndpoint_ksInterruptState setEndpoint_ksMachine]
 
@@ -2283,11 +2271,8 @@ lemma setEndpoint_ct':
   apply (wp updateObject_default_inv | simp)+
   done
 
-crunch ksArchState[wp]: setEndpoint "\<lambda>s. P (ksArchState s)"
-  (ignore: setObject wp: updateObject_default_inv)
-
 lemmas setEndpoint_valid_globals[wp]
-    = valid_global_refs_lift' [OF set_ep_ctes_of setEndpoint_ksArchState
+    = valid_global_refs_lift' [OF set_ep_ctes_of set_ep_arch'
                                   setEndpoint_it setEndpoint_ksInterruptState]
 end
 end

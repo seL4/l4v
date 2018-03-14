@@ -1283,40 +1283,28 @@ lemma set_object_idle [wp]:
   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def is_tcb_def)
   done
 
-
-lemma set_cap_idle:
+lemma set_cap_idle[wp]:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
    set_cap cap p
   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: valid_idle_def set_cap_def set_object_def split_def)
   apply (wp get_object_wp|wpc)+
   apply (auto simp: pred_tcb_at_def obj_at_def is_tcb_def)
-  (*
-  apply (simp add: valid_idle_def)
-  apply (simp add: set_cap_def set_object_def split_def)
-  apply wp
-   prefer 2
-   apply (rule get_object_sp)
-  apply (case_tac obj, simp_all split del: if_split)
-  apply ((clarsimp simp: pred_tcb_at_def obj_at_def is_tcb_def|rule conjI|wp)+)[2]
-  *)
   done
 
-
-lemma set_cap_cte_at_neg:
+lemma set_cap_cte_at_neg[wp]:
   "\<lbrace>\<lambda>s. \<not> cte_at sl s\<rbrace> set_cap cap sl' \<lbrace>\<lambda>rv s. \<not> cte_at sl s\<rbrace>"
   apply (simp add: cte_at_typ)
   apply (wpx set_cap_typ_at)
   done
 
-
 lemma set_cap_cte_wp_at_neg:
-  "\<lbrace>\<lambda>s. cte_at sl' s \<and> (if sl = sl' then \<not> P cap else \<not> cte_wp_at P sl s)\<rbrace> set_cap cap sl' \<lbrace>\<lambda>rv s. \<not> cte_wp_at P sl s\<rbrace>"
+  "\<lbrace>\<lambda>s. cte_at sl' s \<and> (if sl = sl' then \<not> P cap else \<not> cte_wp_at P sl s)\<rbrace>
+     set_cap cap sl'
+   \<lbrace>\<lambda>rv s. \<not> cte_wp_at P sl s\<rbrace>"
   apply (simp add: cte_wp_at_caps_of_state)
-  apply wp
-  apply simp
+  apply wpsimp
   done
-
 
 lemma set_cap_reply [wp]:
   "\<lbrace>valid_reply_caps and cte_at dest and

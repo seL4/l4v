@@ -36,6 +36,9 @@ lemma ethread_get_wp[wp]:
   unfolding ethread_get_def
   by (wp | clarsimp simp add: get_etcb_def etcb_at'_def is_etcb_at'_def)+
 
+(* We want wp to use ethread_get_inv before ethread_get_wp *)
+declare ethread_get_inv[wp del, wp]
+
 locale DetSchedDomainTime_AI =
   assumes finalise_cap_domain_list_inv'[wp]:
     "\<And>P cap fin. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_finalise_cap cap fin \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
@@ -141,7 +144,7 @@ crunch domain_list_inv[wp]:
 
 context DetSchedDomainTime_AI begin
 crunch domain_list_inv[wp]: do_ipc_transfer "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps transfer_caps_loop_pres simp: zipWithM_x_mapM ignore: transfer_caps_loop)
+  (wp: crunch_wps simp: zipWithM_x_mapM rule: transfer_caps_loop_pres)
 
 crunch domain_list_inv[wp]: copy_mrs "\<lambda>s. P (domain_list s)"
 
@@ -179,7 +182,6 @@ crunch domain_list_inv[wp]:
   invoke_tcb, invoke_domain, invoke_irq_control, invoke_irq_handler
   "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
-
 end
 
 crunch (in DetSchedDomainTime_AI_2) domain_list_inv[wp]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
@@ -213,7 +215,7 @@ lemma invoke_cnode_domain_list_inv[wp]:
   done
 
 crunch domain_list_inv[wp]: perform_invocation, handle_invocation "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps syscall_valid simp: crunch_simps ignore: without_preemption)
+  (wp: crunch_wps syscall_valid simp: crunch_simps ignore: syscall)
 
 crunch domain_list_inv[wp]:
   handle_recv, handle_yield, handle_call, handle_reply, handle_vm_fault, handle_hypervisor_fault
@@ -290,7 +292,7 @@ crunch domain_time_inv[wp]: set_extra_badge "\<lambda>s. P (domain_time s)"
 context DetSchedDomainTime_AI begin
 
 crunch domain_time_inv[wp]: do_ipc_transfer "\<lambda>s. P (domain_time s)"
-  (wp: crunch_wps transfer_caps_loop_pres simp: zipWithM_x_mapM ignore: transfer_caps_loop)
+  (wp: crunch_wps simp: zipWithM_x_mapM rule: transfer_caps_loop_pres)
 
 crunch domain_time_inv[wp]: copy_mrs "\<lambda>s. P (domain_time s)"
 
@@ -359,7 +361,7 @@ lemma invoke_cnode_domain_time_inv[wp]:
   done
 
 crunch domain_time_inv[wp]: perform_invocation, handle_invocation "\<lambda>s. P (domain_time s)"
-  (wp: crunch_wps syscall_valid simp: crunch_simps ignore: without_preemption)
+  (wp: crunch_wps syscall_valid simp: crunch_simps ignore: syscall)
 
 crunch domain_time_inv[wp]:
   handle_recv, handle_yield, handle_call, handle_reply, handle_vm_fault, handle_hypervisor_fault
@@ -403,6 +405,8 @@ lemma schedule_choose_new_thread_domain_time_left[wp]:
 
 crunch valid_domain_list: schedule_choose_new_thread valid_domain_list
 
+crunch etcb_at[wp]: tcb_sched_action "etcb_at P t"
+
 lemma schedule_domain_time_left:
   "\<lbrace>valid_domain_list and (\<lambda>s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread) \<rbrace>
    schedule
@@ -410,8 +414,8 @@ lemma schedule_domain_time_left:
   supply word_neq_0_conv[simp]
   apply (simp add: schedule_def)
   apply (wp|wpc)+
-           apply (wp hoare_drop_imps)[1]
-          apply (wpsimp wp: gts_wp)+
+           apply (wp hoare_drop_imp)[1]
+          apply (wpsimp wp: gts_wp ethread_get_inv)+
   apply auto
   done
 end

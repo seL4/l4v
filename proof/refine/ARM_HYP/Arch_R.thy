@@ -1076,7 +1076,7 @@ shows
                  apply (clarsimp simp add: ucast_assocs[unfolded o_def] split_def
                                            filter_map asid_high_bits_def)
                  apply (simp add: ord_le_eq_trans [OF word_n1_ge])
-                apply wp+
+                apply (wp hoare_drop_imps)+
           apply (simp add: o_def validE_R_def)
           apply (wp hoare_whenE_wp)+
       apply fastforce
@@ -1598,6 +1598,7 @@ lemma performASIDControlInvocation_tcb_at':
   done
 
 crunch tcb_at'[wp]: performARMVCPUInvocation "tcb_at' p"
+  (ignore: getObject)
 
 lemma invokeArch_tcb_at':
   "\<lbrace>invs' and valid_arch_inv' ai and ct_active' and st_tcb_at' active' p\<rbrace>

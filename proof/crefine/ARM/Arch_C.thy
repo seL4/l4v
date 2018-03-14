@@ -4070,7 +4070,7 @@ lemma Arch_decodeInvocation_ccorres:
                        apply (rule ccorres_split_throws)
                         apply (rule ccorres_return_C_errorE, simp+)
                        apply vcg
-                      apply (wp injection_wp[OF refl])
+                      apply (wp injection_wp[OF refl] hoare_drop_imps)
                      apply (simp add: split_def all_ex_eq_helper)
                      apply (vcg exspec=lookupTargetSlot_modifies)
                     apply simp
@@ -4413,7 +4413,8 @@ lemma Arch_decodeInvocation_ccorres:
            apply (simp add: valid_tcb_state'_def)
           apply (fastforce elim!: pred_tcb'_weakenE dest!:st_tcb_at_idle_thread')
          apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
-         apply (case_tac "tcbState obja", (simp add: runnable'_def)+)[1]
+         apply (rename_tac obj)
+         apply (case_tac "tcbState obj", (simp add: runnable'_def)+)[1]
         apply simp
        apply (simp add: objBits_simps archObjSize_def)
       apply fastforce

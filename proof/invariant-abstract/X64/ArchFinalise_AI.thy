@@ -195,7 +195,7 @@ lemma set_pml4_tcb_at_arch[simplified, wp]:
                      set_object_def in_monad a_type_simps)
 
 crunch tcb_at_arch: unmap_page "\<lambda>s. P (ko_at (TCB tcb) t s)"
-    (simp: crunch_simps wp: crunch_wps ignore: set_object)
+    (simp: crunch_simps wp: crunch_wps ignore: set_pt set_pd set_pdpt)
 
 lemmas unmap_page_tcb_at = unmap_page_tcb_at_arch
 
@@ -1567,7 +1567,7 @@ lemma delete_asid_pool_unmapped2:
       apply (wp mapM_wp')+
       apply clarsimp
      apply wp+
-  apply clarsimp
+  apply fastforce
   done
 
 crunch x64_global_pml4[wp]: invalidate_asid_entry, invalidate_local_page_structure_cache_asid

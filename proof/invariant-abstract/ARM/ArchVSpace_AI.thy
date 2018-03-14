@@ -578,18 +578,15 @@ lemma clean_D_PoU_underlying_memory[wp]:
   by (clarsimp simp: clean_D_PoU_def machine_op_lift_def
                      machine_rest_lift_def split_def | wp)+
 
-crunch device_state_inv[wp]: invalidate_I_PoU, clean_D_PoU, cleanCaches_PoU
-  "\<lambda>ms. P (device_state ms)"
-crunch underlying_memory_inv[wp]: dsb, invalidate_I_PoU, clean_D_PoU, cleanCaches_PoU
-  "\<lambda>ms. P (underlying_memory ms)"
-
-crunch underlying_memory_inv_eq[wp]: cleanCaches_PoU "\<lambda>ms. (underlying_memory ms) = v"
+crunches dsb, invalidate_I_PoU, clean_D_PoU, cleanCaches_PoU
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
+  and underlying_memory_inv[wp]: "\<lambda>ms. P (underlying_memory ms)"
 
 lemma dmo_cleanCaches_PoU_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op cleanCaches_PoU \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)
   apply clarsimp
   apply safe
-   apply (simp add: use_valid[OF _ cleanCaches_PoU_underlying_memory_inv_eq])
+  apply (simp add: use_valid[OF _ cleanCaches_PoU_underlying_memory_inv[where P="\<lambda>x. x = v" for v]])
   apply(erule(1) use_valid[OF _ cleanCaches_PoU_irq_masks])
   done
 
@@ -877,20 +874,13 @@ lemma hw_asid_Some [wp]:
   \<lbrace>\<lambda>rv s. \<exists>y. rv = Some y\<rbrace>"
   by (simp add: load_hw_asid_def, wp) (simp add: valid_asid_def)
 
-
-crunch typ_at [wp]: set_vm_root_for_flush "\<lambda>s. P (typ_at T p s)"
-
+crunches set_vm_root_for_flush
+  for typ_at [wp]: "\<lambda>s. P (typ_at T p s)"
+  and cur [wp]: cur_tcb
+  and valid_objs [wp]: valid_objs
+  and aligned [wp]: pspace_aligned
 
 lemmas set_vm_root_for_flush_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_for_flush_typ_at]
-
-
-crunch aligned [wp]: set_vm_root_for_flush pspace_aligned
-
-
-crunch cur [wp]: set_vm_root_for_flush cur_tcb
-
-crunch valid_objs [wp]: set_vm_root_for_flush valid_objs
-
 
 lemma store_hw_asid_valid_arch:
   notes hoare_pre [wp_pre del]
@@ -1021,9 +1011,7 @@ lemma set_vm_root_for_flush_asid_map [wp]:
 
 crunch "distinct" [wp]: set_vm_root_for_flush pspace_distinct
 
-
 crunch caps_of_state[wp]: set_vm_root_for_flush "\<lambda>s. P (caps_of_state s)"
-
 
 lemma valid_vs_lookup_arch_update:
   "arm_asid_table (f (arch_state s)) = arm_asid_table (arch_state s)
@@ -1046,7 +1034,7 @@ crunch typ_at [wp]: flush_table "\<lambda>s. P (typ_at T p s)"
 
 lemmas flush_table_typ_ats [wp] = abs_typ_at_lifts [OF flush_table_typ_at]
 
-lemmas find_pd_for_asid_typ_ats [wp] = abs_typ_at_lifts [OF find_pd_for_asid_typ_at]
+lemmas find_pd_for_asid_typ_ats [wp] = abs_typ_at_lifts [OF find_pd_for_asid_inv]
 
 crunch aligned [wp]: flush_table pspace_aligned
   (simp: crunch_simps wp: crunch_wps)
@@ -1706,9 +1694,6 @@ lemma svr_invs [wp]:
   done
 
 crunch pred_tcb_at[wp]: set_vm_root "pred_tcb_at proj P t"
-  (simp: crunch_simps)
-
-crunch typ_at [wp]: set_vm_root "\<lambda>s. P (typ_at T p s)"
   (simp: crunch_simps)
 
 lemmas set_vm_root_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_typ_at]
@@ -3497,14 +3482,12 @@ crunch underlying_memory[wp]: cleanCacheRange_PoC, cleanL2Range, invalidateL2Ran
                               cleanInvalidateL2Range, cleanInvalByVA, invalidateCacheRange_I,
                               branchFlushRange, ackInterrupt
                            "\<lambda>m'. underlying_memory m' p = um"
-  (wp: cacheRangeOp_lift simp: cache_machine_op_defs machine_op_lift_def machine_rest_lift_def split_def
-   ignore: ignore_failure)
+  (simp: cache_machine_op_defs machine_op_lift_def machine_rest_lift_def split_def)
 
 crunch underlying_memory[wp]: cleanCacheRange_RAM, invalidateCacheRange_RAM,
                               cleanInvalidateCacheRange_RAM, do_flush
                 "\<lambda>m'. underlying_memory m' p = um"
-  (wp: cacheRangeOp_lift simp: crunch_simps)
-
+  (simp: crunch_simps)
 
 lemma no_irq_do_flush:
   "no_irq (do_flush a b c d)"
@@ -3527,58 +3510,19 @@ lemma cacheRangeOp_respects_device_region[wp]:
   apply (wp mapM_x_wp valid_f |  wpc | clarsimp | assumption)+
   done
 
-
-lemma machine_op_lift_device_state[wp]:
-  "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> machine_op_lift f \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
-  by (clarsimp simp: machine_op_lift_def NonDetMonad.valid_def bind_def
-                     machine_rest_lift_def gets_def simpler_modify_def get_def return_def
-                     select_def ignore_failure_def select_f_def split: if_splits)
-
-
-crunch device_state_inv[wp]: cleanByVA "\<lambda>ms. P (device_state ms)"
-  (wp: cacheRangeOp_respects_device_region)
-
-crunch device_state_inv[wp]: cleanCacheRange_PoC "\<lambda>ms. P (device_state ms)"
-  (wp: cacheRangeOp_respects_device_region)
-
-crunch device_state_inv[wp]: cleanCacheRange_RAM "\<lambda>ms. P (device_state ms)"
-  (wp: cacheRangeOp_respects_device_region)
-
-crunch device_state_inv[wp]: cleanInvalByVA "\<lambda>ms. P (device_state ms)"
-  (wp: cacheRangeOp_respects_device_region)
-
-crunch device_state_inv[wp]: invalidateByVA "\<lambda>ms. P (device_state ms)"
-  (wp: cacheRangeOp_respects_device_region)
-
-crunch device_state_inv[wp]: invalidateL2Range "\<lambda>ms. P (device_state ms)"
-  (wp: cacheRangeOp_respects_device_region)
-
-crunch device_state_inv[wp]: invalidateCacheRange_RAM "\<lambda>ms. P (device_state ms)"
-  (wp: cacheRangeOp_respects_device_region simp:crunch_simps)
-
-crunch device_state_inv[wp]: branchFlush "\<lambda>ms. P (device_state ms)"
-  (wp: cacheRangeOp_respects_device_region)
-
-crunch device_state_inv[wp]: branchFlushRange "\<lambda>ms. P (device_state ms)"
-  (wp: cacheRangeOp_respects_device_region)
-
-crunch device_state_inv[wp]: invalidateByVA_I "\<lambda>ms. P (device_state ms)"
-  (wp: cacheRangeOp_respects_device_region)
-
-crunch device_state_inv[wp]: cleanInvalidateL2Range "\<lambda>ms. P (device_state ms)"
-  (wp: cacheRangeOp_respects_device_region)
-
-crunch device_state_inv[wp]: do_flush "\<lambda>ms. P (device_state ms)"
-  (wp: cacheRangeOp_respects_device_region)
-
-crunch device_state_inv[wp]: storeWord "\<lambda>ms. P (device_state ms)"
+crunches cleanByVA, cleanCacheRange_PoC, cleanCacheRange_RAM,
+  cleanInvalByVA, invalidateByVA, invalidateL2Range,
+  invalidateCacheRange_RAM, branchFlush, branchFlushRange,
+  invalidateByVA_I, cleanInvalidateL2Range, do_flush, storeWord
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
+  (wp: cacheRangeOp_respects_device_region simp: crunch_simps)
 
 crunch pspace_in_kernel_window[wp]: perform_page_invocation "pspace_in_kernel_window"
   (simp: crunch_simps wp: crunch_wps)
 
 crunch pspace_respects_device_region[wp]: perform_page_invocation "pspace_respects_device_region"
-  (simp: crunch_simps wp: crunch_wps set_object_pspace_respects_device_region pspace_respects_device_region_dmo)
-
+  (simp: crunch_simps wp: crunch_wps set_object_pspace_respects_device_region
+         pspace_respects_device_region_dmo)
 
 lemma perform_page_directory_invocation_invs[wp]:
   "\<lbrace>invs and valid_pdi pdi\<rbrace>
@@ -4071,19 +4015,21 @@ lemma unmap_page_invs:
   apply (simp add: unmap_page_def)
   apply (rule hoare_pre)
    apply (wp flush_page_invs hoare_vcg_const_imp_lift)
-   apply (wp hoare_drop_imp[where f="check_mapping_pptr a b c" for a b c]
-             lookup_pt_slot_inv lookup_pt_slot_cap_to2'
-             lookup_pt_slot_cap_to_multiple2
-             store_pde_invs_unmap mapM_swp_store_pde_invs_unmap
-             mapM_swp_store_pte_invs
-          | wpc | simp)+
+    apply (wp hoare_drop_imp[where f="check_mapping_pptr a b c" for a b c]
+              hoare_drop_impE_R[where R="\<lambda>x y. x && mask b = c" for b c]
+              lookup_pt_slot_inv lookup_pt_slot_cap_to2'
+              lookup_pt_slot_cap_to_multiple2
+              store_pde_invs_unmap mapM_swp_store_pde_invs_unmap
+              mapM_swp_store_pte_invs
+           | wpc | simp)+
    apply (strengthen lookup_pd_slot_kernel_mappings_strg
                      lookup_pd_slot_kernel_mappings_set_strg
                      not_in_global_refs_vs_lookup
                      page_directory_at_lookup_mask_aligned_strg
                      page_directory_at_lookup_mask_add_aligned_strg)+
    apply (wp find_pd_for_asid_page_directory
-             hoare_vcg_const_imp_lift_R hoare_vcg_const_Ball_lift_R)
+             hoare_vcg_const_imp_lift_R hoare_vcg_const_Ball_lift_R
+          | wp_once hoare_drop_imps)+
   apply (auto simp: vmsz_aligned_def)
   done
 
@@ -4340,7 +4286,7 @@ lemma unmap_page_no_lookup_pages:
   apply (rule hoare_pre)
   apply (wp store_pte_no_lookup_pages hoare_drop_imps lookup_pt_slot_inv_validE
          mapM_UNIV_wp store_pde_no_lookup_pages
-      | wpc | simp add: unmap_page_def swp_def )+
+      | wpc | simp add: unmap_page_def swp_def | strengthen imp_consequent)+
   done
 
 lemma vs_refs_pages_inj:
@@ -5075,7 +5021,6 @@ lemma perform_asid_pool_invs [wp]:
   apply (clarsimp simp: cap_asid_def split: option.splits)
   apply (rule conjI)
    apply (clarsimp simp: vs_cap_ref_def)
-  apply clarsimp
   apply (rule conjI)
    apply (erule vs_lookup_atE)
    apply clarsimp

@@ -168,7 +168,7 @@ context DetSchedAux_AI_det_ext begin
 
 crunch valid_etcbs[wp]: invoke_untyped "valid_etcbs"
   (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps whenE_inv
-     simp: mapM_x_defsym crunch_simps unless_def)
+   simp: mapM_x_defsym crunch_simps unless_def)
 
 end
 
@@ -209,7 +209,7 @@ context DetSchedAux_AI_det_ext begin
 
 crunch valid_blocked[wp]: invoke_untyped "valid_blocked"
   (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps whenE_inv
-     simp: mapM_x_defsym crunch_simps unless_def)
+   simp: mapM_x_defsym crunch_simps unless_def)
 
 end
 

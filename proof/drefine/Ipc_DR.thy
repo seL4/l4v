@@ -850,7 +850,7 @@ lemma not_idle_after_reply_cancel_ipc:
        apply (simp add:cap_delete_one_def unless_def)
        apply wp+
           apply (simp add:IpcCancel_A.empty_slot_def)
-          apply (wp set_cap_idle get_cap_idle select_wp | simp add: if_apply_def2 imp_conjR
+          apply (wp set_cap_idle select_wp | simp add: if_apply_def2 imp_conjR
             | strengthen imp_consequent[where P="invs s" for s] imp_consequent[where P="valid_idle s" for s])+
    apply (strengthen invs_valid_idle)
    apply (wp thread_set_invs_trivial | simp add: ran_tcb_cap_cases)+
@@ -2003,7 +2003,7 @@ lemma corres_complete_ipc_transfer:
              apply (rule hoare_post_imp_R)
              apply (rule validE_validE_R)
              apply (rule hoare_vcg_conj_liftE1[OF lookup_extra_caps_srcs])
-             apply (rule hoare_post_imp_dc2_actual[OF lookup_extra_caps_valid_objs])
+             apply (rule hoare_post_imp_dc2_actual[OF lookup_extra_caps_inv[where P=valid_objs]])
             apply clarsimp
             apply (drule(1) bspec)
             apply (clarsimp simp:cte_wp_at_caps_of_state)
@@ -2696,7 +2696,7 @@ lemma send_sync_ipc_corres:
                            " in hoare_strengthen_post[rotated])
                           apply (clarsimp simp:pred_tcb_at_def obj_at_def,
                              simp split:Structures_A.thread_state.splits, fastforce)
-                         apply ((wp thread_get_valid_etcbs sts_st_tcb_at' sts_st_tcb_at_neq |clarsimp simp add:not_idle_thread_def)+)
+                         apply ((wp sts_st_tcb_at' sts_st_tcb_at_neq |clarsimp simp add:not_idle_thread_def)+)
             apply (wp hoare_vcg_conj_lift)
              apply (rule hoare_disjI1)
              apply (wp do_ipc_transfer_pred_tcb | wpc | simp)+
@@ -2712,8 +2712,8 @@ lemma send_sync_ipc_corres:
     apply (rule dcorres_to_wp[where Q=\<top> ,simplified])
     apply (rule corres_dummy_set_sync_ep)
    apply simp
-  apply (clarsimp simp:valid_state_def not_idle_thread_def a_type_def
-    valid_pspace_def st_tcb_at_def obj_at_def is_ep_def valid_simple_obj_def)
+  apply (clarsimp simp:valid_state_def not_idle_thread_def
+                       valid_pspace_def st_tcb_at_def obj_at_def is_ep_def)
   apply (drule(1) valid_objs_valid_ep_simp)
   apply (clarsimp simp:valid_ep_def tcb_at_def
     valid_idle_def pred_tcb_at_def obj_at_def

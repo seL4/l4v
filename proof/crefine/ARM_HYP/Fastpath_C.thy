@@ -4948,7 +4948,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                       apply (wp mapM_x_wp' getObject_inv | wpc | simp add:
                         | wp_once hoare_drop_imps )+
                       apply (rule_tac v=ipcBuffer in  monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+
-                      apply (wp setCTE_obj_at'_tcbIPCBuffer assert_inv getCTE_obj_at'_tcbIPCBuffer mapM_x_wp' getObject_inv | wpc | simp add:
+                      apply (wp setCTE_obj_at'_tcbIPCBuffer assert_inv mapM_x_wp' getObject_inv | wpc | simp
                         | wp_once hoare_drop_imps )+
 
                    apply (rule monadic_rewrite_trans)
@@ -5074,7 +5074,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                 | simp del: comp_apply
                                 | clarsimp simp: obj_at'_weakenE[OF _ TrueI]
                                 | solves \<open>
-                                    rule hoare_lift_Pf2[where f=ksCurThread, OF _ emptySlot_ct']
+                                    rule hoare_lift_Pf2[where f=ksCurThread, OF _ emptySlot_ct]
                                          hoare_lift_Pf2[where f=ksCurThread, OF _ asUser_ct],
                                     wp fastpathBestSwitchCandidate_lift[where f="emptySlot a b" for a b]
                                        fastpathBestSwitchCandidate_lift[where f="asUser a b" for a b]
@@ -5086,10 +5086,10 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                     apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
 
                       apply (rule_tac v=ipcBuffer in monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+
-                      apply (wp mapM_x_wp' handleFault_obj_at'_tcbIPCBuffer getObject_inv | wpc | simp add:
+                      apply (wp mapM_x_wp' handleFault_obj_at'_tcbIPCBuffer getObject_inv | wpc | simp
                         | wp_once hoare_drop_imps )+
                       apply (rule_tac v=ipcBuffer in  monadic_rewrite_threadGet_tcbIPCBuffer | rule monadic_rewrite_bind monadic_rewrite_refl)+
-                      apply (wp setCTE_obj_at'_tcbIPCBuffer assert_inv getCTE_obj_at'_tcbIPCBuffer mapM_x_wp' getObject_inv | wpc | simp add:
+                      apply (wp setCTE_obj_at'_tcbIPCBuffer assert_inv mapM_x_wp' getObject_inv | wpc | simp
                         | wp_once hoare_drop_imps )+
 
                    apply (simp add: bind_assoc catch_liftE

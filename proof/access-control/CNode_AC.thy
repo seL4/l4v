@@ -120,12 +120,13 @@ end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunch ekheap[wp]: cap_insert_ext,cap_swap_ext,cap_move_ext,empty_slot_ext,create_cap_ext "\<lambda>s. P (ekheap s)"
+crunch ekheap[wp]: cap_swap_ext,cap_move_ext,empty_slot_ext "\<lambda>s. P (ekheap s)"
 
-crunch ready_queues[wp]: cap_insert_ext,cap_swap_ext,cap_move_ext,empty_slot_ext,create_cap_ext "\<lambda>s. P (ready_queues s)"
+crunch ready_queues[wp]: cap_swap_ext,cap_move_ext,empty_slot_ext "\<lambda>s. P (ready_queues s)"
 
 crunch integrity_autarch: cap_insert "integrity aag X st"
-  (simp: crunch_simps wp: crunch_wps update_cdt_fun_upd_integrity_autarch cap_insert_ext_extended.list_integ_lift cap_insert_list_integrity ignore:update_cdt cap_insert_ext)
+  (simp: crunch_simps wp: crunch_wps update_cdt_fun_upd_integrity_autarch cap_insert_ext_extended.list_integ_lift cap_insert_list_integrity
+   ignore:update_cdt)
 
 text{*
 
@@ -816,7 +817,7 @@ lemma thread_set_thread_bound_ntfns_trivT:
                  split: Structures_A.kernel_object.split_asm)
   done
 
-lemma thread_set_pas_refined_trivT:
+lemma thread_set_pas_refined_triv:
   assumes cps: "\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb"
        and st: "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
       and ntfn: "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
@@ -830,7 +831,7 @@ lemma thread_set_pas_refined_trivT:
         | simp)+
   done
 
-lemmas thread_set_pas_refined_triv = thread_set_pas_refined_trivT[OF ball_tcb_cap_casesI]
+lemmas thread_set_pas_refined = thread_set_pas_refined_triv[OF ball_tcb_cap_casesI]
 
 lemma aag_owned_cdt_link:
   "\<lbrakk> cdt s x = Some y; is_subject aag (fst y); pas_refined aag s \<rbrakk> \<Longrightarrow> is_subject aag (fst x)"

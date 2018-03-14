@@ -803,8 +803,7 @@ lemma finalise_cap_rvk_prog [CNodeInv_AI_assms]:
    finalise_cap a b
    \<lbrace>\<lambda>_ s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>"
   apply (case_tac a,simp_all add:liftM_def)
-    apply (wp cancel_all_ipc_rvk_prog cancel_all_signals_rvk_prog
-      suspend_rvk_prog deleting_irq_handler_rvk_prog
+    apply (wp suspend_rvk_prog deleting_irq_handler_rvk_prog
       | clarsimp simp:is_final_cap_def comp_def)+
   done
 

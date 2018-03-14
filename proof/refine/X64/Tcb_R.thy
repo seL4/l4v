@@ -182,7 +182,7 @@ lemma idle_tsr:
   by (case_tac ts, auto)
 
 crunch cur [wp]: cancelIPC cur_tcb'
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps o_def)
 
 crunch cur [wp]: setupReplyMaster cur_tcb'
   (wp: crunch_wps simp: crunch_simps)
@@ -207,8 +207,10 @@ lemma setupReplyMaster_weak_sch_act_wf[wp]:
   apply assumption
   done
 
-crunch valid_queues[wp]: setupReplyMaster "Invariants_H.valid_queues"
-crunch valid_queues'[wp]: setupReplyMaster "valid_queues'"
+crunches setupReplyMaster
+  for valid_queues[wp]: "Invariants_H.valid_queues"
+  and valid_queues'[wp]: "valid_queues'"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma restart_corres:
   "corres dc (einvs  and tcb_at t) (invs' and tcb_at' t)
@@ -1373,7 +1375,7 @@ proof -
             apply (wp threadcontrol_corres_helper2 | wpc | simp)+
            apply (rule cap_delete_corres)
           apply wp
-         apply (wp cteDelete_invs' hoare_vcg_conj_lift)
+         apply (wpsimp wp: cteDelete_invs' hoare_vcg_conj_lift)
         apply (fastforce simp: emptyable_def)
        apply fastforce
       apply clarsimp

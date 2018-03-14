@@ -315,7 +315,7 @@ lemma unmap_page_table_valid_vspace_objs'[wp]:
   done
 
 crunch valid_vspace_objs'[wp]: set_simple_ko "valid_vspace_objs'"
-  (wp: crunch_wps set_object_def)
+  (wp: crunch_wps)
 
 crunch valid_vspace_objs'[wp]: finalise_cap, cap_swap_for_delete, empty_slot "valid_vspace_objs'"
   (wp: crunch_wps select_wp preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
@@ -332,7 +332,7 @@ lemmas rec_del_preservation_valid_vspace_objs = rec_del_preservation[OF _ _ _ _,
                                                     where P=valid_vspace_objs', simplified]
 
 crunch valid_vspace_objs'[wp]: cap_delete, cap_revoke "valid_vspace_objs'"
-  (wp: rec_del_preservation_valid_vspace_objs cap_revoke_preservation_valid_vspace_objs)
+  (rule: cap_revoke_preservation_valid_vspace_objs)
 
 lemma mapM_x_copy_pml4e_updates:
   "\<lbrakk> \<forall>x \<in> set xs. f x && ~~ mask pml4_bits = 0; is_aligned p pml4_bits;
@@ -490,7 +490,7 @@ lemma invoke_domain_valid_vspace_objs'[wp]:
   by (simp add: invoke_domain_def | wp)+
 
 crunch valid_vspace_objs'[wp]: set_extra_badge, transfer_caps_loop "valid_vspace_objs'"
-  (wp: transfer_caps_loop_pres)
+  (rule: transfer_caps_loop_pres)
 
 crunch valid_vspace_objs'[wp]: send_ipc, send_signal,
     do_reply_transfer, invoke_irq_control, invoke_irq_handler "valid_vspace_objs'"

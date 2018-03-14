@@ -119,7 +119,7 @@ lemma asUser_mapM_x:
   apply (rule ext)
   apply (rule bind_apply_cong [OF refl])+
   apply (clarsimp simp: in_monad dest!: fst_stateAssertD)
-  apply (drule use_valid, rule mapM_wp', rule asUser_tcb_at', assumption)
+  apply (drule use_valid, rule mapM_wp', rule asUser_typ_ats, assumption)
   apply (simp add: stateAssert_def get_def NonDetMonad.bind_def)
   done
 

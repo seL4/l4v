@@ -747,8 +747,7 @@ lemma dcorres_delete_asid_pool:
      apply clarsimp
      apply wp
     apply fastforce
-   apply wp+
-  apply simp
+   apply wpsimp+
 done
 
 lemma descendants_of_page:

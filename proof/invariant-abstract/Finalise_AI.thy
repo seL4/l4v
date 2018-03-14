@@ -801,7 +801,7 @@ lemma fast_finalise_lift:
 
 
 crunch cte_wp_at[wp]: fast_finalise "cte_wp_at P p"
-  (wp:fast_finalise_lift)
+  (rule: fast_finalise_lift)
 
 lemma cap_delete_one_cte_wp_at_preserved:
   assumes x: "\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap"
@@ -842,8 +842,7 @@ lemma emptyable_lift:
 
 
 crunch emptyable[wp]: set_simple_ko "emptyable sl"
-  (wp: emptyable_lift)
-
+  (rule: emptyable_lift)
 
 lemma sts_emptyable:
   "\<lbrace>emptyable sl and st_tcb_at (\<lambda>st. \<not> halted st) t\<rbrace>

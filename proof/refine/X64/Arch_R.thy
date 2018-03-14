@@ -1292,7 +1292,7 @@ shows
                  apply (clarsimp simp add: ucast_assocs[unfolded o_def] split_def
                                            filter_map asid_high_bits_def)
                  apply (simp add: ord_le_eq_trans [OF word_n1_ge])
-                apply wp+
+                apply (wp hoare_drop_imps)+
           apply (simp add: o_def validE_R_def)
           apply (wp hoare_whenE_wp)+
       apply fastforce

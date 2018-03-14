@@ -552,9 +552,10 @@ lemma rec_del_domain_sep_inv':
 lemma rec_del_domain_sep_inv:
   "\<lbrace> domain_sep_inv irqs st\<rbrace>
      (rec_del call)
-   \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>,\<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply(rule use_spec)
-  apply(rule spec_strengthen_postE[OF rec_del_domain_sep_inv'])
+   \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
+  apply (rule validE_valid)
+  apply (rule use_spec)
+  apply (rule spec_strengthen_postE[OF rec_del_domain_sep_inv'])
   by fastforce
 
 crunch domain_sep_inv[wp]: cap_delete "domain_sep_inv irqs st"
@@ -586,17 +587,16 @@ lemma cap_revoke_domain_sep_inv':
 
 lemmas cap_revoke_domain_sep_inv[wp] = use_spec(2)[OF cap_revoke_domain_sep_inv']
 
-(* FIXME: clagged from FinalCaps *)
 lemma cap_move_cte_wp_at_other:
   "\<lbrace> cte_wp_at P slot and K (slot \<noteq> dest_slot \<and> slot \<noteq> src_slot) \<rbrace>
    cap_move cap src_slot dest_slot
    \<lbrace> \<lambda>_. cte_wp_at P slot \<rbrace>"
   unfolding cap_move_def
   apply (rule hoare_pre)
-   apply (wp set_cdt_cte_wp_at set_cap_cte_wp_at' dxo_wp_weak static_imp_wp | simp)+
+   apply (wp set_cdt_cte_wp_at set_cap_cte_wp_at' dxo_wp_weak static_imp_wp
+             set_original_wp | simp)+
   done
 
-(* FIXME: clagged from FinalCaps *)
 lemma cte_wp_at_weak_derived_ReplyCap:
   "cte_wp_at (op = (ReplyCap x False)) slot s
        \<Longrightarrow> cte_wp_at (weak_derived (ReplyCap x False)) slot s"

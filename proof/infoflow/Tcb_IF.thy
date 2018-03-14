@@ -60,8 +60,8 @@ crunch globals_equiv[wp]: get_notification "globals_equiv st"
 lemma cancel_signal_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace> cancel_signal a b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding cancel_signal_def
-  by (wpsimp wp: set_thread_state_globals_equiv get_simple_ko_valid_ko_at_arm
-                 set_notification_globals_equiv set_notification_valid_ko_at_arm hoare_drop_imps
+  by (wpsimp wp: set_thread_state_globals_equiv set_notification_globals_equiv
+                 set_notification_valid_ko_at_arm hoare_drop_imps
            simp: crunch_simps)
 
 crunch globals_equiv[wp]: cancel_ipc "globals_equiv st"
@@ -617,10 +617,9 @@ lemma bind_notification_reads_respects:
   apply (clarsimp dest!: reads_ep)
   done
 
-lemmas thread_get_reads_respects_f = reads_respects_f[OF thread_get_reads_respects, where Q="\<top>", simplified, OF thread_get_silc_inv]
+lemmas thread_get_reads_respects_f = reads_respects_f[OF thread_get_reads_respects, where Q="\<top>", simplified, OF thread_get_inv]
 
-crunch silc_inv[wp]: reschedule_required, restart "silc_inv aag st"
-lemmas reschedule_required_reads_respects_f = reads_respects_f[OF reschedule_required_reads_respects, where Q="\<top>", simplified, OF reschedule_required_silc_inv]
+lemmas reschedule_required_reads_respects_f = reads_respects_f[OF reschedule_required_reads_respects, where Q="\<top>", simplified, OF reschedule_required_ext_extended.silc_inv]
 crunch pas_refined[wp]: restart "pas_refined aag"
 
 lemma invoke_tcb_reads_respects_f:
@@ -671,7 +670,7 @@ lemma invoke_tcb_reads_respects_f:
                              set_mcpriority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
                              check_cap_inv[OF check_cap_inv[OF cap_insert_valid_list]]
                              check_cap_inv[OF check_cap_inv[OF cap_insert_valid_sched]]
-                             check_cap_inv[OF check_cap_inv[OF cap_insert_simple_sched_action]]
+                             check_cap_inv[OF check_cap_inv[OF cap_insert_schedact]]
                              get_thread_state_rev[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
                              hoare_vcg_all_lift_R hoare_vcg_all_lift
                              cap_delete_reads_respects[where st=st] itr_wps(19) cap_insert_pas_refined
@@ -697,7 +696,7 @@ lemma invoke_tcb_reads_respects_f:
             set_mcpriority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
             check_cap_inv[OF check_cap_inv[OF cap_insert_valid_list]]
             check_cap_inv[OF check_cap_inv[OF cap_insert_valid_sched]]
-            check_cap_inv[OF check_cap_inv[OF cap_insert_simple_sched_action]]
+            check_cap_inv[OF check_cap_inv[OF cap_insert_schedact]]
             get_thread_state_rev[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
             hoare_vcg_all_lift_R hoare_vcg_all_lift
             cap_delete_reads_respects[where st=st] itr_wps(19) cap_insert_pas_refined

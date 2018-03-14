@@ -12,18 +12,10 @@ theory EmptyFail_H
 imports Refine
 begin
 
-lemma wpc_helper_empty_fail:
-  "empty_fail f \<Longrightarrow> wpc_helper (P, P') (Q, Q') (empty_fail f)"
-  by (clarsimp simp: wpc_helper_def)
-
-wpc_setup "\<lambda>m. empty_fail m" wpc_helper_empty_fail
-
 crunch_ignore (empty_fail)
   (add: handleE' getCTE getObject updateObject
         CSpaceDecls_H.resolveAddressBits
-        doMachineOp
-        suspend restart
-        schedule)
+        doMachineOp suspend restart schedule)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -284,12 +276,9 @@ next
   show ?case by (simp add: m)
 qed
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: chooseThread
-(wp: empty_fail_catch simp: const_def Let_def)
-
-crunch (empty_fail) empty_fail[intro!, wp, simp]: getDomainTime
-crunch (empty_fail) empty_fail[intro!, wp, simp]: nextDomain
-crunch (empty_fail) empty_fail[intro!, wp, simp]: scheduleSwitchThreadFastfail, isHighestPrio
+crunch (empty_fail) empty_fail[intro!, wp, simp]:
+  chooseThread, getDomainTime, nextDomain, isHighestPrio
+  (wp: empty_fail_catch)
 
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   "empty_fail schedule"
@@ -308,14 +297,11 @@ lemma empty_fail_portOut[intro!, wp, simp]:
   "empty_fail (w a) \<Longrightarrow> empty_fail (portOut w a)"
   by (simp add: portOut_def)
 
-lemma empty_fail_resetTimer[wp]: "empty_fail resetTimer"
-  by (simp add: resetTimer_def)
-
 crunch (empty_fail) empty_fail: callKernel
-(wp: empty_fail_catch simp: const_def Let_def ignore: portIn portOut)
+  (wp: empty_fail_catch)
 
 lemma call_kernel_serial:
-  " \<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
+  "\<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
               (\<lambda>s. scheduler_action s = resume_cur_thread)) s;
        \<exists>s'. (s, s') \<in> state_relation \<and>
             (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and

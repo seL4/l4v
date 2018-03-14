@@ -517,8 +517,7 @@ lemma find_free_hw_asid_revrv:
   apply(rule equiv_valid_2_unobservable)
      apply (wp modify_wp invalidate_hw_asid_entry_states_equiv_for
                do_machine_op_mol_states_equiv_for
-               invalidate_asid_states_equiv_for
-               invalidate_hw_asid_entry_cur_thread invalidate_asid_cur_thread dmo_wp
+               invalidate_asid_states_equiv_for dmo_wp
            | wpc
            | simp add: states_equiv_for_arm_asid_map_update
                        states_equiv_for_arm_hwasid_table_update
@@ -601,7 +600,7 @@ lemma arm_context_switch_reads_respects:
   unfolding arm_context_switch_def
   apply(rule equiv_valid_guard_imp)
   apply(rule reads_respects_unobservable_unit_return)
-    apply (wp do_machine_op_mol_states_equiv_for get_hw_asid_states_equiv_for get_hw_asid_cur_thread
+    apply (wp do_machine_op_mol_states_equiv_for get_hw_asid_states_equiv_for
      | simp add: setCurrentPD_def dsb_def isb_def writeTTBR0_def dmo_bind_valid setHardwareASID_def)+
   done
 
@@ -613,7 +612,7 @@ lemma arm_context_switch_states_equiv_for:
 
 crunch states_equiv_for: find_pd_for_asid "states_equiv_for P Q R S st"
 
-lemma set_vm_root_states_equiv_for:
+lemma set_vm_root_states_equiv_for[wp]:
   "invariant (set_vm_root thread) (states_equiv_for P Q R S st)"
   unfolding set_vm_root_def catch_def fun_app_def setCurrentPD_def isb_def dsb_def writeTTBR0_def
   apply (wp_once hoare_drop_imps
@@ -621,30 +620,14 @@ lemma set_vm_root_states_equiv_for:
         | wpc | simp add: dmo_bind_valid if_apply_def2)+
   done
 
-crunch cur_thread: set_vm_root "\<lambda> s. P (cur_thread s)"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch sched_act: set_vm_root "\<lambda> s. P (scheduler_action s)"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch wuc: set_vm_root "\<lambda> s. P (work_units_completed s)"
-  (wp: crunch_wps simp: crunch_simps)
-
 lemma set_vm_root_reads_respects:
   "reads_respects aag l \<top> (set_vm_root tcb)"
-  apply(rule reads_respects_unobservable_unit_return)
-       apply(rule set_vm_root_states_equiv_for)
-      apply(rule set_vm_root_cur_thread)
-     apply(rule set_vm_root_cur_domain)
-    apply(rule set_vm_root_sched_act)
-   apply(rule set_vm_root_wuc)
-  apply wp
-  done
+  by (rule reads_respects_unobservable_unit_return) wp+
 
 lemma get_pte_reads_respects:
   "reads_respects aag l (K (is_subject aag (ptr && ~~ mask pt_bits))) (get_pte ptr)"
   unfolding get_pte_def fun_app_def
-  by (wp get_pt_reads_respects)
+  by (wpsimp wp: get_pt_reads_respects)
 
 lemma gets_cur_thread_revrv:
   "reads_equiv_valid_rv_inv (affects_equiv aag l) aag op = \<top> (gets cur_thread)"
@@ -1253,7 +1236,7 @@ lemma delete_asid_pool_reads_respects:
           apply(rule equiv_valid_2_bind)
              apply(rule equiv_valid_2_bind)
                 apply(rule equiv_valid_2_unobservable)
-                           apply(wp set_vm_root_states_equiv_for set_vm_root_cur_thread)+
+                           apply(wp set_vm_root_states_equiv_for)+
                apply(rule arm_asid_table_delete_ev2)
               apply(wp)+
             apply(rule equiv_valid_2_unobservable)
@@ -1382,7 +1365,7 @@ lemma delete_asid_reads_respects:
               apply(rule_tac R'="\<top>\<top>" in equiv_valid_2_bind)
                  apply(subst equiv_valid_def2[symmetric])
                  apply(rule reads_respects_unobservable_unit_return)
-                  apply(wp set_vm_root_states_equiv_for set_vm_root_cur_thread)+
+                  apply(wp set_vm_root_states_equiv_for)+
                 apply(rule set_asid_pool_delete_ev2)
                apply(wp)+
              apply(rule equiv_valid_2_unobservable)

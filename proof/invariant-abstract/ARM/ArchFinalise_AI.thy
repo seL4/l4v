@@ -891,7 +891,7 @@ lemma replaceable_reset_pd:
   done
 
 crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
-   (wp: crunch_wps)
+   (wp: crunch_wps simp: crunch_simps)
 
 crunch obj_at[wp]: set_vm_root, invalidate_tlb_by_asid "\<lambda>s. P' (obj_at P p s)"
   (wp: hoare_whenE_wp simp: crunch_simps)
@@ -1619,7 +1619,7 @@ lemma delete_asid_pool_unmapped2:
       apply (wp mapM_wp')+
       apply clarsimp
      apply wp+
-  apply clarsimp
+  apply fastforce
   done
 
 lemma page_table_mapped_wp_weak:
@@ -1666,7 +1666,7 @@ crunch valid_cap [wp]: unmap_page_table, invalidate_tlb_by_asid,
   page_table_mapped, store_pte, delete_asid_pool, copy_global_mappings,
   arch_finalise_cap
   "valid_cap c"
-  (wp: mapM_wp_inv mapM_x_wp')
+  (wp: mapM_wp_inv mapM_x_wp' simp: crunch_simps)
 
 global_naming Arch
 

@@ -1272,21 +1272,16 @@ lemma blocked_cancel_ipc_reads_respects:
   apply(fastforce intro: aag_can_read_self owns_thread_blocked_reads_endpoint simp: st_tcb_at_sym)
   done
 
-
-
-
-
 lemma select_singleton_ev:
   "equiv_valid_inv I B (K (\<exists>a. A = {a})) (select A)"
   apply(fastforce simp: equiv_valid_def2 equiv_valid_2_def select_def)
   done
 
-
 lemma thread_set_fault_pas_refined':
   "\<lbrace>pas_refined aag\<rbrace>
      thread_set (tcb_fault_update fault) thread
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply(wp thread_set_pas_refined_triv | simp)+
+  apply(wp thread_set_pas_refined | simp)+
   done
 
 lemma thread_set_fault_empty_invs:
