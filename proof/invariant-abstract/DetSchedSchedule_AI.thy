@@ -858,7 +858,7 @@ lemma switch_to_thread_ct_not_queued[wp]:
     prefer 3
     apply (rule assert_inv)
    prefer 2
-   apply (rule arch_switch_to_thread_valid_queues)
+   apply (rule arch_switch_to_thread_valid_queues')
   apply (simp add: tcb_sched_action_def
                    tcb_sched_dequeue_def | wp)+
   apply (clarsimp simp add: valid_queues_def etcb_at_def not_queued_def
@@ -2539,12 +2539,12 @@ crunch scheduler_act[wp]: set_extra_badge,cap_insert "\<lambda>s :: det_state. P
 context DetSchedSchedule_AI begin
 
 crunch scheduler_act[wp]: do_ipc_transfer "\<lambda>s :: det_state. P (scheduler_action s)"
-  (wp: crunch_wps transfer_caps_loop_pres ignore: const_on_failure)
+  (wp: crunch_wps ignore: const_on_failure rule: transfer_caps_loop_pres)
 
 crunch ready_queues[wp]: cap_insert_ext "\<lambda>s :: det_ext state. P (ready_queues s)"
 
 crunch ready_queues[wp]: cap_insert,set_extra_badge,do_ipc_transfer, set_simple_ko, thread_set, setup_caller_cap "\<lambda>s :: det_state. P (ready_queues s)"
-  (wp: crunch_wps transfer_caps_loop_pres ignore: const_on_failure)
+  (wp: crunch_wps ignore: const_on_failure rule: transfer_caps_loop_pres)
 
 end
 
@@ -3239,7 +3239,8 @@ crunch not_queued[wp]: handle_fault_reply "not_queued t"
 crunch sched_act_not[wp]: handle_fault_reply "scheduler_act_not t"
 
 crunch valid_etcbs[wp]: set_extra_badge, do_ipc_transfer valid_etcbs
-  (wp: transfer_caps_loop_pres crunch_wps const_on_failure_wp simp: crunch_simps)
+  (wp: crunch_wps const_on_failure_wp simp: crunch_simps
+   rule: transfer_caps_loop_pres)
 
 crunch cur[wp]: handle_fault_reply "cur_tcb :: det_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: cur_tcb_def unless_def)

@@ -111,7 +111,7 @@ lemma set_free_index_invs [CSpace_AI_assms]:
   apply (simp add:valid_irq_node_def)
   apply wps
 
-  apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_vspace_objs set_cap_valid_arch_caps
+  apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_valid_arch_caps
     set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at
     set_cap_cap_refs_respects_device_region_spec[where ptr = cref])
   apply (clarsimp simp:cte_wp_at_caps_of_state)

@@ -14,9 +14,6 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
- (* FIXME REMOVE and rename other uses, also there is a duplicate of this in KHeap_R too *)
-declare doMachineOp_cte_wp_at'[wp]
-
 declare static_imp_wp[wp_split del]
 
 (* FIXME: move *)
@@ -1739,7 +1736,7 @@ lemma setThreadState_rct:
   apply (rule hoare_seq_ext [OF _ isRunnable_inv])
   apply (rule hoare_seq_ext [OF _
                 hoare_vcg_conj_lift
-                  [OF gct_wp getCurThread_nosch]])
+                  [OF gct_wp gct_wp]])
   apply (rename_tac ct)
   apply (case_tac "ct\<noteq>t")
    apply (clarsimp simp: when_def)

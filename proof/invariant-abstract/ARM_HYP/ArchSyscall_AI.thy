@@ -22,9 +22,10 @@ context Arch begin global_naming ARM
 named_theorems Syscall_AI_assms
 
 declare arch_get_sanitise_register_info_invs[Syscall_AI_assms]
+        arch_get_sanitise_register_info_ex_nonz_cap_to[Syscall_AI_assms]
 crunch pred_tcb_at[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "pred_tcb_at proj P t"
 crunch invs[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "invs"
-crunch cap_to[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "ex_nonz_cap_to c"
+crunch cap_to[wp,Syscall_AI_assms]: handle_arch_fault_reply "ex_nonz_cap_to c"
 crunch it[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (idle_thread s)"
 crunch caps[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (caps_of_state s)"
 crunch cur_thread[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (cur_thread s)"

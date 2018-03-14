@@ -5076,7 +5076,6 @@ lemma resetUntypedCap_invs_etc:
               sch_act_simple_lift
               pspace_no_overlap'_lift
               doMachineOp_psp_no_overlap
-              doMachineOp_cte_wp_at'
               updateFreeIndex_ctes_of
               updateFreeIndex_cte_wp_at
             | simp | wps | wp_once ex_cte_cap_to'_pres)+
@@ -5728,14 +5727,11 @@ lemma insertNewCap_cte_wp_at'':
 
 lemmas insertNewCap_cte_wp_at' = insertNewCap_cte_wp_at''[unfolded o_def]
 
-crunch irq_node'[wp]: insertNewCap "\<lambda>s. P (irq_node' s)"
-  (wp: crunch_wps)
-
 lemma insertNewCap_cap_to'[wp]:
   "\<lbrace>ex_cte_cap_to' p\<rbrace> insertNewCap parent slot cap \<lbrace>\<lambda>rv. ex_cte_cap_to' p\<rbrace>"
   apply (simp add: ex_cte_cap_to'_def)
   apply (rule hoare_pre)
-   apply (rule hoare_use_eq_irq_node'[OF insertNewCap_irq_node'])
+   apply (rule hoare_use_eq_irq_node'[OF insertNewCap_ksInterrupt])
    apply (wp hoare_vcg_ex_lift insertNewCap_cte_wp_at')
   apply clarsimp
   done

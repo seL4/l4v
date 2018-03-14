@@ -776,15 +776,13 @@ lemma separate_state_machine_state:
   "separate_state (s\<lparr>machine_state := ms\<rparr>) = separate_state s"
   unfolding separate_state_def by simp
 
-crunch separate_state [wp]: set_thread_state "separate_state"
-   (wp: separate_state_pres' crunch_wps simp: crunch_simps)
-
-crunch separate_state [wp]: set_simple_ko "separate_state"
+crunch separate_state [wp]: set_thread_state, set_simple_ko "separate_state"
    (wp: separate_state_pres' crunch_wps simp: crunch_simps)
 
 crunch separate_state [wp]: "Syscall_SA.handle_event" "separate_state"
-   (wp: crunch_wps without_preemption_wp syscall_valid simp: crunch_simps separate_state_machine_state ignore: set_thread_state do_machine_op)
-
+   (wp: crunch_wps syscall_valid
+    simp: crunch_simps separate_state_machine_state
+    ignore: syscall)
 
 lemma call_kernel_separate_state:
   "\<lbrace>separate_state and cur_tcb and valid_objs\<rbrace> Syscall_A.call_kernel ev :: (unit,unit) s_monad \<lbrace>\<lambda>_. separate_state\<rbrace>"

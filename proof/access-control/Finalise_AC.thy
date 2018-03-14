@@ -191,12 +191,9 @@ lemma unbind_maybe_notification_pas_refined[wp]:
   apply (wp set_simple_ko_pas_refined | wpc | simp)+
   done
 
-crunch pas_refined[wp]: cap_delete_one "pas_refined aag"
-  (wp: crunch_wps thread_set_pas_refined_triv select_wp set_thread_state_pas_refined
-     ignore: tcb_sched_action
-       simp: crunch_simps unless_def)
+crunch tcb_domain_map_wellformed[wp]: reschedule_required "tcb_domain_map_wellformed aag"
 
-crunch pas_refined[wp]: set_vm_root "pas_refined aag"
+crunch pas_refined[wp]: cap_delete_one, set_vm_root "pas_refined aag"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma reply_cancel_ipc_pas_refined[wp]:
@@ -205,7 +202,7 @@ lemma reply_cancel_ipc_pas_refined[wp]:
   apply (rule hoare_gen_asm)
   apply (simp add: reply_cancel_ipc_def)
   apply (wp select_wp)
-  apply (rule hoare_strengthen_post, rule thread_set_pas_refined_triv, simp+)
+  apply (rule hoare_strengthen_post, rule thread_set_pas_refined, simp+)
   apply clarsimp
   apply (drule descendants_of_owned[rotated 1, OF singleton_eqD], simp+)
   done
@@ -362,7 +359,7 @@ lemma reply_cancel_ipc_respects[wp]:
    apply (wp hoare_vcg_const_Ball_lift thread_set_integrity_autarch
              thread_set_invs_trivial[OF ball_tcb_cap_casesI]
              thread_set_not_state_valid_sched static_imp_wp
-             thread_set_pas_refined_triv | simp)+
+             thread_set_pas_refined | simp)+
   apply clarsimp
   apply (frule(1) descendants_of_owned[OF _ singleton_eqD])
    apply simp+
@@ -725,20 +722,8 @@ lemma store_pde_respects:
   apply simp
   done
 
-lemma store_pte_respects:
-  "\<lbrace>integrity aag X st and K (is_subject aag (p && ~~ mask pt_bits)) \<rbrace>
-     store_pte p pte
-   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: store_pte_def set_pt_def)
-  apply (wp get_object_wp set_object_integrity_autarch)
-  apply simp
-  done
-
-
-crunch pas_refined[wp]: invalidate_tlb_by_asid "pas_refined aag"
-
 (* FIXME: CLAG *)
-lemmas dmo_valid_cap[wp] = valid_cap_typ [OF do_machine_op_typ_at]
+lemmas dmo_valid_cap[wp] = valid_cap_typ [OF do_machine_op_obj_at]
 
 lemma integrity_eupdate_autarch:
   "\<lbrakk> integrity aag X st s; is_subject aag ptr \<rbrakk> \<Longrightarrow> integrity aag X st (s\<lparr>ekheap := ekheap s(ptr \<mapsto> obj)\<rparr>)"

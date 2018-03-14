@@ -445,7 +445,7 @@ lemmas rec_del_preservation_valid_pdpt_objs = rec_del_preservation[OF _ _ _ _,
                                                     where P=valid_pdpt_objs, simplified]
 
 crunch valid_pdpt_objs[wp]: cap_delete, cap_revoke "valid_pdpt_objs"
-  (wp: rec_del_preservation_valid_pdpt_objs cap_revoke_preservation_valid_pdpt_objs)
+  (rule: cap_revoke_preservation_valid_pdpt_objs)
 
 crunch valid_pdpt_objs[wp]: invalidate_tlb_by_asid, page_table_mapped
    "valid_pdpt_objs"
@@ -576,7 +576,7 @@ lemma invoke_domain_valid_pdpt_objs[wp]:
   by (simp add: invoke_domain_def | wp)+
 
 crunch valid_pdpt_objs[wp]: set_extra_badge, transfer_caps_loop "valid_pdpt_objs"
-  (wp: transfer_caps_loop_pres)
+  (rule: transfer_caps_loop_pres)
 
 crunch valid_pdpt_objs[wp]: send_ipc, send_signal,
     do_reply_transfer, invoke_irq_control, invoke_irq_handler "valid_pdpt_objs"
@@ -1419,8 +1419,6 @@ lemma create_mapping_entries_safe[wp]:
   done
 
 lemma decode_mmu_invocation_valid_pdpt[wp]:
-  notes find_pd_for_asid_inv[wp del]
-  shows
   "\<lbrace>invs and valid_cap (cap.ArchObjectCap cap) and valid_pdpt_objs \<rbrace>
      decode_mmu_invocation label args cap_index slot cap excaps
    \<lbrace>invocation_duplicates_valid o Invocations_A.InvokeArchObject\<rbrace>, -"
@@ -1463,7 +1461,7 @@ lemma decode_mmu_invocation_valid_pdpt[wp]:
                      valid_vspace_objs and pspace_aligned and valid_pdpt_objs"
                      and f="find_pd_for_asid p" for p
                     in hoare_post_imp_R)
-          apply (wp| simp)+
+          apply (wp | simp)+
           apply (fastforce  simp:pd_bits_def pageBits_def pde_bits_def)
         apply ((wp get_pde_wp
              ensure_safe_mapping_ensures[THEN hoare_post_imp_R]

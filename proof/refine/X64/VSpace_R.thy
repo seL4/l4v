@@ -276,7 +276,7 @@ lemma hv_corres:
           apply (cases fault; simp)
          apply simp
          apply (rule user_getreg_corres)
-        apply (simp, wp as_user_tcb_at)
+        apply (simp, wp as_user_typ_at)
        apply (simp, wp asUser_typ_ats)
       apply simp
       apply (rule corres_machine_op [where r="op ="])
@@ -456,8 +456,7 @@ lemma invalidateASID_valid_arch_state [wp]:
   by wpsimp
 
 crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
-  (ignore: getObject simp: crunch_simps
-       wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
 
 (* FIXME x64: move *)
 lemma set_asid_pool_vspace_objs_unmap_single:
@@ -661,7 +660,7 @@ lemma findVSpaceForASID_inv2:
   done
 
 crunch no_0_obj'[wp]: flushTable "no_0_obj'"
-  (ignore: getObject wp: crunch_wps simp: crunch_simps loadObject_default_inv)
+  (wp: crunch_wps simp: crunch_simps ignore: getObject)
 
 lemma get_pt_sp: "\<lbrace>P\<rbrace> get_pt p \<lbrace>\<lambda>rv. P and ako_at (PageTable rv) p\<rbrace>"
   by (rule hoare_weaken_pre[OF get_pt_wp]) simp
@@ -818,7 +817,7 @@ crunch typ_at' [wp]: flushTable "\<lambda>s. P (typ_at' T p s)"
 
 lemmas flushTable_typ_ats' [wp] = typ_at_lifts [OF flushTable_typ_at']
 
-lemmas findVSpaceForASID_typ_ats' [wp] = typ_at_lifts [OF findVSpaceForASID_typ_at']
+lemmas findVSpaceForASID_typ_ats' [wp] = typ_at_lifts [OF findVSpaceForASID_inv]
 
 crunch inv [wp]: findVSpaceForASID P
   (simp: assertE_def whenE_def loadObject_default_def
@@ -948,7 +947,7 @@ lemma set_pt_vs_lookup [wp]:
 lemma store_pte_vspace_at_asid[wp]:
   "\<lbrace>vspace_at_asid asid pm\<rbrace> store_pte p pte \<lbrace>\<lambda>_. vspace_at_asid asid pm\<rbrace>"
   apply (simp only: store_pte_def vspace_at_asid_def)
-  apply wp
+  apply wpsimp
   done
 
 (* FIXME x64: move *)
@@ -1204,7 +1203,7 @@ proof -
                    apply (rule invalidate_local_page_structure_cache_asid_corres)
                   apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
                   apply (case_tac m; clarsimp)
-                  apply (rule corres_fail)
+                  apply (rule corres_fail[where P=\<top> and P'=\<top>])
                   apply (simp add: same_refs_def)
                  apply (wpsimp simp: invs_psp_aligned)+
           apply (frule (1) mapping_map_pde, clarsimp)
@@ -1218,7 +1217,7 @@ proof -
                   apply (rule invalidate_local_page_structure_cache_asid_corres)
                  apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
                  apply (case_tac m; clarsimp)
-                 apply (rule corres_fail)
+                 apply (rule corres_fail[where P=\<top> and P'=\<top>])
                  apply (simp add: same_refs_def)
                 apply (wpsimp simp: invs_psp_aligned)+
          apply (frule (1) mapping_map_pdpte, clarsimp)
@@ -1232,7 +1231,7 @@ proof -
                  apply (rule invalidate_local_page_structure_cache_asid_corres)
                 apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
                 apply (case_tac m; clarsimp)
-                apply (rule corres_fail)
+                apply (rule corres_fail[where P=\<top> and P'=\<top>])
                 apply (simp add: same_refs_def)
                apply (wpsimp simp: invs_psp_aligned)+
         apply (wp_trace arch_update_cap_invs_map set_cap_valid_page_map_inv)
@@ -1836,7 +1835,7 @@ lemma pap_corres:
              apply (rule ext; clarsimp simp: inv_def mask_asid_low_bits_ucast_ucast)
             apply (wp getASID_wp)+
           apply simp
-         apply (wp set_cap_typ_at)
+         apply (wpsimp wp: set_cap_typ_at hoare_drop_imps)
         apply (wpsimp wp: hoare_drop_imps)
        by (auto simp: valid_apinv_def cte_wp_at_def is_pml4_cap_def
                       is_cap_simps cap_master_cap_def obj_at_def a_type_simps

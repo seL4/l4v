@@ -993,7 +993,7 @@ lemma setExtraBadge_irq_states'[wp]:
   "\<lbrace>valid_irq_states'\<rbrace> setExtraBadge buffer b n \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (wp valid_irq_states_lift')
    apply (simp add: setExtraBadge_def storeWordUser_def)
-   apply (wp no_irq dmo_lift' no_irq_storeWord)
+   apply (wpsimp wp: no_irq dmo_lift' no_irq_storeWord)
   apply assumption
   done
 
@@ -3085,17 +3085,15 @@ crunch irq_states'[wp]: possibleSwitchTo valid_irq_states'
   (wp: crunch_wps)
 crunch pde_mappigns'[wp]: possibleSwitchTo valid_pde_mappings'
   (wp: crunch_wps)
-
-(* Levity: added (20090713 10:04:33) *)
-declare setNotification_ct' [wp]
-
 crunch ct'[wp]: sendSignal "\<lambda>s. P (ksCurThread s)"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps o_def)
 crunch it'[wp]: sendSignal "\<lambda>s. P (ksIdleThread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch irqs_masked'[wp]: sendSignal "irqs_masked'"
-  (wp: crunch_wps getObject_inv loadObject_default_inv simp: crunch_simps unless_def rule: irqs_masked_lift ignore: getObject)
+  (wp: crunch_wps getObject_inv loadObject_default_inv
+   simp: crunch_simps unless_def o_def
+   rule: irqs_masked_lift ignore: getObject)
 
 lemma sts_running_valid_queues:
   "runnable' st \<Longrightarrow> \<lbrace> Invariants_H.valid_queues \<rbrace> setThreadState st t \<lbrace>\<lambda>_. Invariants_H.valid_queues \<rbrace>"
@@ -3309,7 +3307,7 @@ lemma sai_invs'[wp]:
                           add: setMessageInfo_def)[1]
     apply (rule hoare_pre)
      apply (wp hoare_convert_imp [OF asUser_nosch]
-               hoare_convert_imp [OF setMRs_nosch])+
+               hoare_convert_imp [OF setMRs_sch_act])+
      apply (clarsimp simp:conj_comms)
      apply (simp add: invs'_def valid_state'_def)
      apply ((wp valid_irq_node_lift sts_valid_objs' setThreadState_ct_not_inQ
@@ -3370,7 +3368,7 @@ lemma sai_invs'[wp]:
                     elim!: obj_at'_weakenE
                     dest!: global'_no_ex_cap)
    apply (wp add: hoare_convert_imp [OF asUser_nosch]
-             hoare_convert_imp [OF setMRs_nosch]
+             hoare_convert_imp [OF setMRs_sch_act]
              setThreadState_nonqueued_state_update sts_st_tcb'
              del: cancelIPC_simple)
      apply (clarsimp | wp cancelIPC_ct')+
@@ -4430,8 +4428,7 @@ lemma si_invs'[wp]:
                sts_valid_objs' set_ep_valid_objs' setEndpoint_valid_mdb' sts_st_tcb' sts_sch_act'
                possibleSwitchTo_sch_act_not sts_valid_queues setThreadState_ct_not_inQ
                possibleSwitchTo_ksQ' possibleSwitchTo_ct_not_inQ hoare_vcg_all_lift sts_ksQ'
-               hoare_convert_imp [OF doIPCTransfer_nosch doIPCTransfer_ct']
-               hoare_convert_imp [OF getThreadState_nosch getThreadState_ct']
+               hoare_convert_imp [OF doIPCTransfer_sch_act doIPCTransfer_ct']
                hoare_convert_imp [OF setEndpoint_nosch setEndpoint_ct']
                hoare_drop_imp [where f="threadGet tcbFault t"]
              | rule_tac f="getThreadState a" in hoare_drop_imp
@@ -4692,7 +4689,7 @@ lemma si_blk_makes_runnable':
      apply (wp sts_st_tcb_at'_cases setupCallerCap_pred_tcb_unchanged
                hoare_vcg_const_imp_lift hoare_drop_imps
               | simp)+
-    apply (clarsimp del: disjCI simp: pred_tcb_at')
+    apply (clarsimp del: disjCI simp: pred_tcb_at' elim!: pred_tcb'_weakenE)
    apply (wp sts_st_tcb_at'_cases)
    apply clarsimp
   apply (wp sts_st_tcb_at'_cases)
@@ -4759,7 +4756,6 @@ lemma ri_makes_runnable_simple':
        apply (wp threadGet_inv static_imp_wp)+
      apply (simp, simp only: imp_conv_disj)
      apply (wp hoare_vcg_disj_lift)+
-   apply clarsimp
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
    apply (fastforce simp: pred_tcb_at'_def obj_at'_def isSend_def
                   split: Structures_H.thread_state.split_asm)

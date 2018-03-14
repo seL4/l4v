@@ -1958,7 +1958,7 @@ lemma ipc_buffer_set_cxt_mrs[wp]:
   by (clarsimp simp: KHeap_A.set_object_def get_def put_def bind_def valid_def
                        return_def obj_at_def ipc_buffer_wp_at_def)
 
-lemmas [wp] =  abs_typ_at_lifts[OF do_machine_op_typ_at]
+lemmas [wp] =  abs_typ_at_lifts[OF do_machine_op_obj_at]
 
 lemma set_object_valid_etcbs: "\<lbrace>valid_etcbs and (\<lambda>s. kheap s ptr = Some (TCB tcba))\<rbrace>
                 KHeap_A.set_object ptr (TCB tcbb)

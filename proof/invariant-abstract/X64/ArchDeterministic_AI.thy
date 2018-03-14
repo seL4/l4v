@@ -26,6 +26,7 @@ crunch valid_list[wp, Deterministic_AI_assms]:
   cap_swap_for_delete,set_cap,finalise_cap,arch_tcb_set_ipc_buffer,arch_get_sanitise_register_info, arch_post_modify_registers
   valid_list
   (wp: crunch_wps simp: unless_def crunch_simps)
+declare get_cap_inv[Deterministic_AI_assms]
 
 end
 
@@ -39,8 +40,7 @@ context Arch begin global_naming X64
 
 crunch valid_list[wp]: invoke_untyped valid_list
   (wp: crunch_wps preemption_point_inv' hoare_unless_wp mapME_x_wp'
-    simp: mapM_x_def_bak crunch_simps
-    ignore: Deterministic_A.OR_choiceE)
+   simp: mapM_x_def_bak crunch_simps)
 
 crunch valid_list[wp]: invoke_irq_control, store_pde, store_pte, store_pdpte, store_pml4e, perform_io_port_invocation valid_list
   (wp: crunch_wps simp: crunch_simps)
@@ -92,7 +92,8 @@ crunch valid_list[wp]: perform_invocation valid_list
   (wp: crunch_wps simp: crunch_simps ignore: without_preemption)
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_invocation valid_list
-  (wp: crunch_wps syscall_valid simp: crunch_simps ignore: without_preemption)
+  (wp: crunch_wps syscall_valid simp: crunch_simps
+   ignore: without_preemption syscall)
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_recv, handle_yield, handle_call,
                                                handle_hypervisor_fault valid_list

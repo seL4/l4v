@@ -425,8 +425,8 @@ crunch not_cur_thread [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch
 crunch valid_sched    [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg valid_sched
 crunch ready_queues   [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, arch_post_modify_registers "\<lambda>s. P (ready_queues s)"
 crunch valid_etcbs    [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg valid_etcbs
-
 crunch scheduler_action [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, arch_post_modify_registers "\<lambda>s. P (scheduler_action s)"
+declare arch_switch_to_idle_thread_exst[DetSchedSchedule_AI_assms]
 
 lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:
   "\<lbrace>\<lambda>s::det_ext state. t \<noteq> idle_thread s\<rbrace> arch_post_modify_registers c t \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"

@@ -7145,14 +7145,6 @@ lemma insertNewCap_sch_act_simple[wp]:
  "\<lbrace>sch_act_simple\<rbrace>insertNewCap a b c\<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
   by (simp add:sch_act_simple_def,wp)
 
-lemma insertNewCap_ct_active'[wp]:
- "\<lbrace>ct_active'\<rbrace>insertNewCap a b c\<lbrace>\<lambda>_. ct_active'\<rbrace>"
-  apply (simp add:ct_in_state'_def)
-  apply (rule hoare_pre)
-  apply wps
-  apply (wp insertNewCap_ct | simp)+
-  done
-
 lemma updateMDB_ctes_of_cap:
   "\<lbrace>\<lambda>s. (\<forall>x\<in>ran(ctes_of s). P (cteCap x)) \<and> no_0 (ctes_of s)\<rbrace>
     updateMDB srcSlot t

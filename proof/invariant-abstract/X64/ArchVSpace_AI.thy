@@ -68,7 +68,7 @@ crunch pspace_in_kernel_window[wp]: unmap_page, perform_page_invocation "pspace_
   (simp: crunch_simps wp: crunch_wps)
 
 crunch inv[wp]: find_vspace_for_asid_assert "P"
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma asid_word_bits [simp]: "asid_bits < word_bits"
   by (simp add: asid_bits_def word_bits_def)
@@ -420,9 +420,7 @@ lemma valid_vs_lookup_arch_update:
      \<Longrightarrow> valid_vs_lookup (arch_state_update f s) = valid_vs_lookup s"
   by (simp add: valid_vs_lookup_def vs_lookup_pages_arch_update)
 
-crunch typ_at [wp]: find_vspace_for_asid "\<lambda>s. P (typ_at T p s)"
-
-lemmas find_vspace_for_asid_typ_ats [wp] = abs_typ_at_lifts [OF find_vspace_for_asid_typ_at]
+lemmas find_vspace_for_asid_typ_ats [wp] = abs_typ_at_lifts [OF find_vspace_for_asid_inv]
 
 lemma find_vspace_for_asid_page_map_l4 [wp]:
   "\<lbrace>valid_vspace_objs\<rbrace>

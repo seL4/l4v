@@ -99,10 +99,9 @@ crunch_ignore (bcorres)
         select unless mapM catch bindE liftE whenE alternative cap_swap_ext
         cap_insert_ext cap_move_ext liftM create_cap_ext
         possible_switch_to reschedule_required set_priority
-        set_thread_state_ext
-        tcb_sched_action timer_tick
+        set_thread_state_ext tcb_sched_action timer_tick
         lookup_error_on_failure getActiveIRQ
-        gets_the liftME zipWithM_x unlessE mapME_x handleE)
+        gets_the liftME zipWithM_x unlessE mapME_x handleE forM_x)
 
 lemma bcorres_select_ext[wp]: "bcorres (select_ext a A) (select_ext a A)"
   apply (clarsimp simp add: select_ext_def bind_def gets_def return_def select_def assert_def
@@ -219,9 +218,11 @@ lemma gets_the_get_tcb_bcorres[wp]: "bcorres (gets_the (get_tcb a)) (gets_the (g
 done
 
 
-crunch (bcorres)bcorres[wp]: arch_finalise_cap truncate_state (simp: swp_def ignore: forM_x) (* FIXME ARMHYP *)
+crunch (bcorres)bcorres[wp]: arch_finalise_cap truncate_state
+(simp: swp_def) (* FIXME ARMHYP *)
 
-crunch (bcorres)bcorres[wp]: prepare_thread_delete truncate_state (simp: swp_def)
+crunch (bcorres)bcorres[wp]: prepare_thread_delete truncate_state
+(simp: swp_def)
 
 end
 
@@ -230,7 +231,8 @@ requalify_facts Arch.arch_finalise_cap_bcorres Arch.prepare_thread_delete_bcorre
 declare arch_finalise_cap_bcorres[wp] prepare_thread_delete_bcorres[wp]
 
 
-crunch (bcorres)bcorres[wp]: "IpcCancel_A.suspend",deleting_irq_handler truncate_state (simp: gets_the_def swp_def ignore: gets_the ignore: throw_on_false)
+crunch (bcorres)bcorres[wp]: "IpcCancel_A.suspend",deleting_irq_handler truncate_state
+  (simp: gets_the_def swp_def)
 
 lemma finalise_cap_bcorres[wp]: "bcorres (finalise_cap a b) (finalise_cap a b)"
   apply (cases a)

@@ -41,7 +41,7 @@ crunch ksDomSchedule_inv[wp]: setDomain "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps simp: if_apply_def2)
 
 crunch ksDomSchedule_inv[wp]: sendSignal "\<lambda>s. P (ksDomSchedule s)"
-  (wp: crunch_wps simp: crunch_simps simp: unless_def)
+  (wp: crunch_wps simp: crunch_simps simp: unless_def o_def)
 
 crunch ksDomSchedule_inv[wp]: vcpuSwitch, dissociateVCPUTCB "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps setObject_ksDomSchedule_inv FalseI simp: crunch_simps
@@ -96,7 +96,8 @@ crunch ksDomSchedule_inv[wp]: performARMMMUInvocation "\<lambda>s. P (ksDomSched
 
 crunch ksDomSchedule_inv[wp]: performInvocation "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps zipWithM_x_inv cteRevoke_preservation mapME_x_inv_wp
-   simp: unless_def crunch_simps filterM_mapM ignore: getObject loadObject)
+   simp: unless_def crunch_simps filterM_mapM
+   ignore: getObject setObject)
 
 crunch ksDomSchedule_inv[wp]: schedule "\<lambda>s. P (ksDomSchedule s)"
   (ignore: setNextPC threadSet simp:crunch_simps bitmap_fun_defs wp:findM_inv hoare_drop_imps)
@@ -114,9 +115,8 @@ lemma handleRecv_ksDomSchedule_inv[wp]:
      (wp hoare_drop_imps | simp add: crunch_simps | wpc)+
 
 crunch ksDomSchedule_inv[wp]: handleEvent "\<lambda>s. P (ksDomSchedule s)"
-  (wp: hoare_drop_imps syscall_valid' throwError_wp withoutPreemption_lift hoare_vcg_if_lift3
-   simp: runErrorT_def
-   ignore: setThreadState)
+  (wp: hoare_drop_imps syscall_valid' hoare_vcg_if_lift3
+   ignore: syscall)
 
 lemma callKernel_ksDomSchedule_inv[wp]:
   "\<lbrace>\<lambda>s. P (ksDomSchedule s) \<rbrace> callKernel e \<lbrace>\<lambda>_ s. P (ksDomSchedule s) \<rbrace>"
@@ -146,7 +146,7 @@ crunch ksDomainTime_inv[wp]: setDomain "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps simp: if_apply_def2)
 
 crunch ksDomainTime_inv[wp]: sendSignal "\<lambda>s. P (ksDomainTime s)"
-  (wp: crunch_wps simp: crunch_simps simp: unless_def)
+  (wp: crunch_wps simp: crunch_simps simp: unless_def o_def)
 
 crunch ksDomainTime_inv[wp]: deleteASID, dissociateVCPUTCB "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only getObject_inv loadObject_default_inv
@@ -234,14 +234,8 @@ crunch ksDomainTime_inv[wp]: doUserOp "(\<lambda>s. P (ksDomainTime s))"
 crunch ksDomainTime_inv[wp]: getIRQState, chooseThread, handleYield "(\<lambda>s. P (ksDomainTime s))"
 
 crunch ksDomainTime_inv[wp]: handleSend, handleReply "(\<lambda>s. P (ksDomainTime s))"
-  (wp: hoare_drop_imps syscall_valid' throwError_wp withoutPreemption_lift
-   simp: runErrorT_def
-   ignore: setThreadState)
-
-crunch ksDomainTime_inv[wp]: handleInvocation "(\<lambda>s. P (ksDomainTime s))"
-  (wp: hoare_drop_imps syscall_valid' throwError_wp withoutPreemption_lift
-   simp: runErrorT_def
-   ignore: setThreadState)
+  (wp: hoare_drop_imps syscall_valid'
+   ignore: syscall)
 
 crunch ksDomainTime_inv[wp]: handleCall "(\<lambda>s. P (ksDomainTime s))"
   (wp: crunch_wps setObject_ksPSpace_only updateObject_default_inv cteRevoke_preservation
@@ -318,7 +312,7 @@ lemma schedule_domain_time_left':
    \<lbrace>\<lambda>_ s. 0 < ksDomainTime s \<rbrace>"
   unfolding schedule_def scheduleChooseNewThread_def
   supply word_neq_0_conv[simp]
-  apply (wp | wpc)+
+  apply wpsimp+
        apply (rule_tac Q="\<lambda>_. valid_domain_list'" in hoare_post_imp, clarsimp)
        apply (wp | clarsimp | wp_once hoare_drop_imps)+
   done

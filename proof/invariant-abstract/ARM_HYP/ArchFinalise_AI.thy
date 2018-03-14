@@ -414,6 +414,7 @@ crunch typ_at[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (typ_at T p
 crunch typ_at[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (typ_at T p s)"
 
 crunch tcb_at[wp]: arch_thread_set "\<lambda>s. tcb_at p s"
+  (ignore: set_object)
 
 crunch tcb_at[wp]: arch_thread_get "\<lambda>s. tcb_at p s"
 
@@ -514,7 +515,7 @@ lemmas arch_thread_set_valid_irq_handlers[wp] = valid_irq_handlers_lift[OF arch_
 crunch interrupt_irq_node[wp]: arch_thread_set "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps)
 
-lemmas arch_thread_set_valid_irq_node[wp] = valid_irq_node_typ[OF arch_thread_set_typ_at arch_thread_set_interrupt_irq_node]
+lemmas arch_thread_set_valid_irq_node[wp] = valid_irq_node_typ[OF arch_thread_set_typ_at_arch arch_thread_set_interrupt_irq_node]
 
 crunch idle_thread[wp]: arch_thread_set "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -813,7 +814,7 @@ lemma o_def_not: "obj_at (\<lambda>a. \<not> P a) t s =  obj_at (Not o P) t s"
   by (simp add: obj_at_def)
 
 crunch unlive0: dissociate_vcpu_tcb "obj_at (Not \<circ> live0) t"
-  (wp: crunch_wps simp: o_def_not)
+  (wp: crunch_wps simp: o_def_not ignore: arch_thread_set)
 
 lemma arch_thread_set_if_live_then_nonz_cap':
   "\<forall>y. hyp_live (TCB (y\<lparr>tcb_arch := p (tcb_arch y)\<rparr>)) \<longrightarrow> hyp_live (TCB y) \<Longrightarrow>
@@ -1454,7 +1455,7 @@ lemma flush_table_empty:
     flush_table ac aa b word
    \<lbrace>\<lambda>rv s. obj_at (empty_table {}) word s\<rbrace>"
   apply (clarsimp simp: flush_table_def set_vm_root_def)
-  apply (wp do_machine_op_obj_at arm_context_switch_empty hoare_whenE_wp hoare_drop_imp
+  apply (wp do_machine_op_obj_at arm_context_switch_P_obj_at hoare_whenE_wp hoare_drop_imp
     | wpc
     | simp
     | wps)+
@@ -1648,10 +1649,10 @@ lemma replaceable_reset_pd:
   done
 
 crunch caps_of_state [wp]: vcpu_finalise "\<lambda>s. P (caps_of_state s)"
-   (wp: crunch_wps ignore: arch_thread_set)
+   (wp: crunch_wps)
 
 crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
-   (wp: crunch_wps ignore: arch_thread_set)
+   (wp: crunch_wps simp: crunch_simps)
 
 (* FIXME: MOVE *)
 lemma hoare_validE_R_conjI:
@@ -1994,8 +1995,6 @@ lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
      apply (wp deleting_irq_handler_invs  | simp | intro conjI impI)+
   apply (auto dest: cte_wp_at_valid_objs_valid_cap)
   done
-
-crunch irq_node[wp]: prepare_thread_delete "P (interrupt_irq_node s)"
 
 lemma (* finalise_cap_irq_node *)[Finalise_AI_asms]:
 "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> finalise_cap a b \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
@@ -2356,7 +2355,7 @@ lemma delete_asid_pool_unmapped2:
      apply (wp mapM_wp')+
      apply clarsimp
     apply wp+
-  apply clarsimp
+  apply fastforce
   done
 
 lemma page_table_mapped_wp_weak:
@@ -2392,7 +2391,7 @@ crunch valid_arch_state[wp]: invalidate_tlb_by_asid "valid_arch_state"
 crunch valid_cap [wp]: unmap_page_table, invalidate_tlb_by_asid,
   page_table_mapped, store_pte, delete_asid_pool, copy_global_mappings
   "valid_cap c"
-  (wp: mapM_wp_inv mapM_x_wp')
+  (wp: mapM_wp_inv mapM_x_wp' simp: crunch_simps)
 
 lemmas vcpu_finalise_typ_ats [wp] = abs_typ_at_lifts [OF vcpu_finalise_typ_at]
 lemmas delete_asid_typ_ats [wp] = abs_typ_at_lifts [OF delete_asid_typ_at]

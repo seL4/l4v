@@ -2155,7 +2155,7 @@ proof -
                       hoare_lift_Pf2 [OF cteDeleteOne_sch_act_not cteDeleteOne_ct']
                       hoare_lift_Pf2 [OF doIPCTransfer_pred_tcb_at' doIPCTransfer_ct']
                       hoare_lift_Pf2 [OF doIPCTransfer_ksQ doIPCTransfer_ct']
-                      hoare_lift_Pf2 [OF threadSet_ksQ threadSet_ct']
+                      hoare_lift_Pf2 [OF threadSet_ksQ threadSet_ct]
                       hoare_lift_Pf2 [OF handleFaultReply_ksQ handleFaultReply_ct']
                    | simp add: ct_in_state'_def)+
      apply (fastforce simp: sch_act_simple_def sch_act_sane_def ct_in_state'_def)+

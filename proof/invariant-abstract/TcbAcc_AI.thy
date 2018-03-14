@@ -409,7 +409,7 @@ lemmas thread_set_arch_caps_trivial
   = valid_arch_caps_lift_weak[OF thread_set_arch thread_set.aobj_at
                                  thread_set_caps_of_state_trivial, simplified] *)
 lemmas thread_set_arch_caps_trivial
-  = valid_arch_caps_lift_weak[OF thread_set_arch thread_set.vsobj_at
+  = valid_arch_caps_lift_weak[OF thread_set.arch_state thread_set.vsobj_at
                                  thread_set_caps_of_state_trivial, simplified]
 
 lemma thread_set_only_idle:

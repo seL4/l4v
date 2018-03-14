@@ -127,8 +127,9 @@ lemma ensure_safe_mapping_bcorres[wp]: "bcorres (ensure_safe_mapping a) (ensure_
   done
 
 crunch (bcorres)bcorres[wp]: handle_invocation truncate_state
-  (simp: syscall_def Let_def gets_the_def ignore: syscall cap_fault_on_failure
-         without_preemption const_on_failure)
+  (simp: syscall_def Let_def gets_the_def
+   ignore: syscall cap_fault_on_failure without_preemption
+           const_on_failure decode_tcb_invocation)
 
 crunch (bcorres)bcorres[wp]: receive_ipc,receive_signal,delete_caller_cap truncate_state
 

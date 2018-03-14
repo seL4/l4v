@@ -294,7 +294,7 @@ lemma decode_invocation_inv[wp]:
   done
 
 crunch inv[wp]: lookup_extra_caps P
-  (wp:crunch_wps mapME_wp' resolve_address_bits_wp)
+  (wp:crunch_wps mapME_wp' resolve_address_bits_wp ignore: mapME)
 
 lemma nonep_invocation_simps:
   "nonep_invocation (InvokeUntyped a) = True"

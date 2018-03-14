@@ -477,9 +477,7 @@ lemma kernelEntry_invs':
   apply (simp add: kernelEntry_def)
   apply (wp ckernel_invs callKernel_valid_duplicates' callKernel_domain_time_left
             threadSet_invs_trivial threadSet_ct_running' select_wp
-            VSpace_R.doMachineOp_cur_tcb' TcbAcc_R.dmo_invs'
-            doMachineOp_ct_running' doMachineOp_sch_act_simple
-            callKernel_domain_time_left
+            TcbAcc_R.dmo_invs' callKernel_domain_time_left
             static_imp_wp
          | clarsimp simp: user_memory_update_def no_irq_def tcb_at_invs' atcbContextSet_def
                           valid_domain_list'_def)+

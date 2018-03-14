@@ -6239,13 +6239,13 @@ lemma cteDeleteOne_cap_to'[wp]:
   done
 
 lemmas setNotification_cap_to'[wp]
-    = ex_cte_cap_to'_pres [OF setNotification_cte_wp_at' setNotification_irq_node']
+    = ex_cte_cap_to'_pres [OF setNotification_cte_wp_at' set_ntfn_ksInterrupt]
 
 lemmas setEndpoint_cap_to'[wp]
-    = ex_cte_cap_to'_pres [OF setEndpoint_cte_wp_at' setEndpoint_irq_node']
+    = ex_cte_cap_to'_pres [OF setEndpoint_cte_wp_at' setEndpoint_ksInterruptState]
 
 lemmas setThreadState_cap_to'[wp]
-    = ex_cte_cap_to'_pres [OF setThreadState_cte_wp_at' setThreadState_irq_node']
+    = ex_cte_cap_to'_pres [OF setThreadState_cte_wp_at' setThreadState_ksInterruptState]
 
 crunch cap_to'[wp]: cancelSignal "ex_cte_cap_wp_to' P p"
   (simp: crunch_simps wp: crunch_wps)
@@ -7079,8 +7079,8 @@ lemma capSwap_rvk_prog:
 lemmas setObject_ASID_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setObject_ASID_ctes_of']
 lemmas cancelAllIPC_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllIPC_ctes_of]
 lemmas cancelAllSignals_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllSignals_ctes_of]
-lemmas setEndpoint_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setEndpoint_ctes_of]
-lemmas setNotification_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setNotification_ctes_of]
+lemmas setEndpoint_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF set_ep_ctes_of]
+lemmas setNotification_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF set_ntfn_ctes_of]
 
 lemmas emptySlot_rvk_prog' = emptySlot_rvk_prog[unfolded o_def]
 lemmas threadSet_ctesCaps_of = ctes_of_cteCaps_of_lift[OF threadSet_ctes_of]
@@ -7096,8 +7096,8 @@ crunch rvk_prog': finaliseCap
     "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of
        getObject_inv loadObject_default_inv
-        simp: crunch_simps unless_def setBoundNotification_def
-      ignore: getObject setObject setCTE)
+   simp: crunch_simps unless_def o_def
+   ignore: setObject setCTE threadSet)
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]
@@ -8366,9 +8366,9 @@ lemmas cteRevoke_st_tcb_at_simplish
 
 lemmas finaliseSlot_st_tcb_at'
     = finaliseSlot_preservation [OF finaliseCap2_st_tcb_at'
-                                    emptySlot_st_tcb_at'
+                                    emptySlot_pred_tcb_at'
                                     capSwapForDelete_st_tcb_at'
-                                    updateCap_st_tcb_at']
+                                    updateCap_pred_tcb_at']
 lemmas finaliseSlot_st_tcb_at_simplish
     = finaliseSlot_st_tcb_at'[where P="\<lambda>st. Q st \<or> simple' st",
                               simplified] for Q
@@ -9184,7 +9184,7 @@ lemma cteMove_invs' [wp]:
    apply ((rule hoare_vcg_conj_lift, (wp cteMove_ifunsafe')[1])
                   | rule hoare_vcg_conj_lift[rotated])+
       apply (unfold cteMove_def)
-      apply (wp cur_tcb_lift valid_queues_lift
+      apply (wp cur_tcb_lift valid_queues_lift haskell_assert_inv
                 sch_act_wf_lift ct_idle_or_in_cur_domain'_lift2 tcb_in_cur_domain'_lift)+
   apply clarsimp
   done
@@ -9471,7 +9471,7 @@ lemma updateCap_noop_irq_handlers:
    \<lbrace>\<lambda>rv. valid_irq_handlers'\<rbrace>"
   apply (simp add: valid_irq_handlers'_def irq_issued'_def)
   apply (rule hoare_pre)
-   apply (rule hoare_use_eq[where f=ksInterruptState, OF updateCap_ksInterrupt])
+   apply (rule hoare_use_eq[where f=ksInterruptState, OF updateCap_ksInterruptState])
    apply wp
   apply (simp, subst(asm) tree_cte_cteCap_eq[unfolded o_def])
   apply (simp split: option.split_asm
@@ -9547,12 +9547,11 @@ declare withoutPreemption_lift [wp]
 
 crunch irq_states' [wp]: capSwapForDelete valid_irq_states'
 
-
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
        no_irq_hwASIDInvalidate no_irq_writeCR3
-        no_irq_invalidateASID
-   simp: crunch_simps ignore: getObject setObject)
+       no_irq_invalidateASID
+   simp: crunch_simps o_def ignore: getObject setObject)
 
 lemma finaliseSlot_IRQInactive':
   "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> finaliseSlot' a b

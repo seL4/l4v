@@ -379,7 +379,7 @@ lemma doUserOp_if_invs'[wp]:
   apply (wp device_update_invs' dmo_setExMonitor_wp' dmo_invs' | simp)+
          apply (clarsimp simp add: no_irq_modify user_memory_update_def)
          apply wpsimp
-        apply (wp doMachineOp_ct_running' doMachineOp_sch_act select_wp)+
+        apply (wp doMachineOp_ct_running' select_wp)+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def
                   split: option.splits)
@@ -574,7 +574,7 @@ lemma check_active_irq_if_corres:
   apply (simp add: checkActiveIRQ_if_def check_active_irq_if_def)
   apply (rule corres_underlying_split[where r'="op ="])
   apply (rule dmo_getActiveIRQ_corres)
-  apply (wp del: dmo_silc_dom add: do_machine_op_domain_list)+
+  apply wp+
   apply clarsimp
   done
 

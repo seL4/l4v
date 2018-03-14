@@ -782,10 +782,11 @@ lemma invalidateTLBByASID_invs'[wp]:
                           machine_rest_lift_def split_def | wp)+
   done
 
-crunch aligned' [wp]: flushSpace pspace_aligned' (ignore: getObject wp: getASID_wp)
-crunch distinct' [wp]: flushSpace pspace_distinct' (ignore: getObject wp: getASID_wp)
-crunch valid_arch' [wp]: flushSpace valid_arch_state' (ignore: getObject wp: getASID_wp)
-crunch cur_tcb' [wp]: flushSpace cur_tcb' (ignore: getObject wp: getASID_wp)
+crunches flushSpace
+  for aligned' [wp]: pspace_aligned'
+  and distinct' [wp]: pspace_distinct'
+  and valid_arch' [wp]: valid_arch_state'
+  and cur_tcb' [wp]: cur_tcb'
 
 lemma get_asid_pool_corres_inv':
   "corres (\<lambda>p. (\<lambda>p'. p = p' o ucast) \<circ> inv ASIDPool)
@@ -854,8 +855,7 @@ lemma invalidateASID_valid_arch_state [wp]:
   done
 
 crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
-  (ignore: getObject simp: crunch_simps
-       wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
 
 lemma delete_asid_corres:
   "corres dc
@@ -1153,15 +1153,12 @@ qed
 crunch typ_at' [wp]: armv_contextSwitch "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps)
 
-crunch typ_at' [wp]: findPDForASID "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps getObject_inv simp: crunch_simps loadObject_default_def ignore: getObject)
-
 crunch typ_at' [wp]: setVMRoot "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps)
 
 lemmas setVMRoot_typ_ats [wp] = typ_at_lifts [OF setVMRoot_typ_at']
 
-lemmas loadHWASID_typ_ats [wp] = typ_at_lifts [OF loadHWASID_typ_at']
+lemmas loadHWASID_typ_ats [wp] = typ_at_lifts [OF loadHWASID_inv]
 
 crunch typ_at' [wp]: setVMRootForFlush "\<lambda>s. P (typ_at' T p s)"
   (wp: hoare_drop_imps)
@@ -1303,7 +1300,7 @@ lemma load_hw_asid_corres2:
   done
 
 crunch no_0_obj'[wp]: flushTable "no_0_obj'"
-  (ignore: getObject wp: crunch_wps simp: crunch_simps loadObject_default_inv)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma flush_table_corres:
   "corres dc
@@ -1376,22 +1373,18 @@ lemma flush_page_corres:
   done
 
 crunch typ_at' [wp]: flushTable "\<lambda>s. P (typ_at' T p s)"
-  (simp: assertE_def when_def wp: crunch_wps ignore: getObject)
+  (wp: crunch_wps)
 
 lemmas flushTable_typ_ats' [wp] = typ_at_lifts [OF flushTable_typ_at']
 
-lemmas findPDForASID_typ_ats' [wp] = typ_at_lifts [OF findPDForASID_typ_at']
-
-crunch inv [wp]: findPDForASID P
-  (simp: assertE_def whenE_def loadObject_default_def
-   wp: crunch_wps getObject_inv ignore: getObject)
+lemmas findPDForASID_typ_ats' [wp] = typ_at_lifts [OF findPDForASID_inv]
 
 crunch aligned'[wp]: unmapPageTable "pspace_aligned'"
-  (ignore: getObject simp: crunch_simps
-       wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps
+   wp: crunch_wps getObject_inv loadObject_default_inv)
 crunch distinct'[wp]: unmapPageTable "pspace_distinct'"
-  (ignore: getObject simp: crunch_simps
-       wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps
+   wp: crunch_wps getObject_inv loadObject_default_inv)
 
 lemma page_table_mapped_corres:
   "corres (op =) (valid_arch_state and valid_vspace_objs and pspace_aligned
@@ -1418,13 +1411,11 @@ lemma page_table_mapped_corres:
 crunch inv[wp]: pageTableMapped "P"
   (wp: loadObject_default_inv)
 
-crunch no_0_obj'[wp]: storePDE, storePTE no_0_obj'
-
-crunch valid_arch'[wp]: storePDE, storePTE valid_arch_state'
-(ignore: setObject)
-
-crunch cur_tcb'[wp]: storePDE, storePTE cur_tcb'
-(ignore: setObject)
+crunches storePDE, storePTE
+  for no_0_obj'[wp]: no_0_obj'
+  and valid_arch'[wp]: valid_arch_state'
+  and cur_tcb'[wp]: cur_tcb'
+  (ignore: setObject)
 
 lemma unmap_page_table_corres:
   "corres dc
@@ -2094,11 +2085,9 @@ lemma setCTE_valid_duplicates'[wp]:
     split:if_splits option.splits Structures_H.kernel_object.splits)
      apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
   done
-crunch valid_duplicates'[wp]: updateCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps
-   simp: crunch_simps unless_def
-   ignore: getObject setObject)
 
+crunch valid_duplicates'[wp]: updateCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma message_info_to_data_eqv:
   "wordFromMessageInfo (message_info_map mi) = message_info_to_data mi"

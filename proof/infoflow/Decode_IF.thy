@@ -738,7 +738,7 @@ crunch globals_equiv: decode_invocation "globals_equiv st"
 
 lemmas decode_invocation_reads_respects_f_g =
        reads_respects_f_g[OF decode_invocation_reads_respects_f doesnt_touch_globalsI,
-                          where Q="\<top>", simplified, OF decode_invocation_globals_equiv]
+                          where Q="\<top>", simplified, OF decode_inv_inv]
 
 end
 

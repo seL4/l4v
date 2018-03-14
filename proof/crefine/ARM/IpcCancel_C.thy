@@ -2737,7 +2737,7 @@ lemma cancelSignal_ccorres [corres]:
    apply (rule ccorres_rhs_assoc2)
    apply (ctac (no_vcg) add: cancelSignal_ccorres_helper)
      apply (ctac add: setThreadState_ccorres_valid_queues')
-    apply ((wp setNotification_sch_act_not setNotification_ksQ hoare_vcg_all_lift set_ntfn_valid_objs' | simp add: valid_tcb_state'_def split del: if_split)+)[1]
+    apply ((wp setNotification_ksQ hoare_vcg_all_lift set_ntfn_valid_objs' | simp add: valid_tcb_state'_def split del: if_split)+)[1]
    apply (simp add: "StrictC'_thread_state_defs")
   apply (rule conjI, clarsimp, rule conjI, clarsimp)
     apply (frule (1) ko_at_valid_ntfn'[OF _ invs_valid_objs'])

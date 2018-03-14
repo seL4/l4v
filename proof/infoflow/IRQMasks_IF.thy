@@ -53,7 +53,7 @@ crunch irq_masks[wp]: set_extra_badge "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps dmo_wp)
 
 crunch irq_masks[wp]: send_ipc "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: crunch_wps simp: crunch_simps ignore: const_on_failure wp: transfer_caps_loop_pres)
+  (wp: crunch_wps simp: crunch_simps ignore: const_on_failure rule: transfer_caps_loop_pres)
 
 lemma invoke_irq_handler_irq_masks:
   shows

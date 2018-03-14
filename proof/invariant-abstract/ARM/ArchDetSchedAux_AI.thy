@@ -16,35 +16,37 @@ context Arch begin global_naming ARM
 
 named_theorems DetSchedAux_AI_assms
 
-crunch exst[wp]: init_arch_objects "\<lambda>s. P (exst s)" (wp: crunch_wps hoare_unless_wp)
-crunch ct[wp]: init_arch_objects "\<lambda>s. P (cur_thread s)" (wp: crunch_wps hoare_unless_wp)
-crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at Q t" (wp: mapM_x_wp' hoare_unless_wp)
-crunch valid_etcbs[wp, DetSchedAux_AI_assms]: init_arch_objects valid_etcbs (wp: valid_etcbs_lift)
+crunches init_arch_objects
+  for exst[wp]: "\<lambda>s. P (exst s)"
+  and ct[wp]: "\<lambda>s. P (cur_thread s)"
+  and st_tcb_at[wp]: "st_tcb_at Q t"
+  and valid_etcbs[wp, DetSchedAux_AI_assms]: valid_etcbs
+  (wp: crunch_wps hoare_unless_wp valid_etcbs_lift)
 
 crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps dxo_wp_weak preemption_point_inv mapME_x_inv_wp
-    simp: crunch_simps do_machine_op_def detype_def mapM_x_defsym unless_def
-    ignore: freeMemory ignore: retype_region_ext)
+   simp: crunch_simps do_machine_op_def detype_def mapM_x_defsym unless_def
+   ignore: freeMemory retype_region_ext)
 crunch ready_queues[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (ready_queues s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
-    simp: detype_def detype_ext_def crunch_simps
+   simp: detype_def detype_ext_def crunch_simps
           wrap_ext_det_ext_ext_def mapM_x_defsym
-  ignore: freeMemory)
+   ignore: freeMemory)
 crunch scheduler_action[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
-      simp: detype_def detype_ext_def crunch_simps
-            wrap_ext_det_ext_ext_def mapM_x_defsym
-    ignore: freeMemory)
+   simp: detype_def detype_ext_def crunch_simps
+         wrap_ext_det_ext_ext_def mapM_x_defsym
+   ignore: freeMemory)
 crunch cur_domain[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
-      simp: detype_def detype_ext_def crunch_simps
-            wrap_ext_det_ext_ext_def mapM_x_defsym
-    ignore: freeMemory)
+   simp: detype_def detype_ext_def crunch_simps
+         wrap_ext_det_ext_ext_def mapM_x_defsym
+   ignore: freeMemory)
 crunch idle_thread[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv dxo_wp_weak
-      simp: detype_def detype_ext_def crunch_simps
-            wrap_ext_det_ext_ext_def mapM_x_defsym
-    ignore: freeMemory retype_region_ext)
+   simp: detype_def detype_ext_def crunch_simps
+         wrap_ext_det_ext_ext_def mapM_x_defsym
+   ignore: freeMemory retype_region_ext)
 
 lemma tcb_sched_action_valid_idle_etcb:
   "\<lbrace>valid_idle_etcb\<rbrace>

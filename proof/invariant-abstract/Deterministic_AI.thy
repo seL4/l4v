@@ -16,7 +16,6 @@ context begin interpretation Arch .
 requalify_facts
   update_work_units_empty_fail
   reset_work_units_empty_fail
-  get_cap_kheap
   set_domain_empty_fail
   thread_set_domain_empty_fail
   arch_post_cap_deletion_valid_list
@@ -25,7 +24,6 @@ end
 lemmas [wp] =
   update_work_units_empty_fail
   reset_work_units_empty_fail
-  get_cap_kheap
   set_domain_empty_fail
   thread_set_domain_empty_fail
 

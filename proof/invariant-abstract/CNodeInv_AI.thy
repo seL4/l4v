@@ -2390,9 +2390,7 @@ lemma reply_cancel_ipc_emptyable[wp]:
          | simp add: tcb_cap_cases_def descendants_of_cte_at)+
   done
 
-
 crunch emptyable[wp]: cancel_ipc "emptyable sl"
-
 
 lemma suspend_emptyable[wp]:
   "\<lbrace>invs and emptyable sl and valid_mdb\<rbrace> IpcCancel_A.suspend l \<lbrace>\<lambda>_. emptyable sl\<rbrace>"

@@ -878,7 +878,7 @@ where
   od"
 
 crunch cur_domain[wp]: kernel_entry_if "\<lambda>s. P (cur_domain s)"
-crunch idle_thread[wp]: kernel_entry_if "\<lambda>s. P (idle_thread s)"
+crunch idle_thread[wp]: kernel_entry_if "\<lambda>s::det_state. P (idle_thread s)"
 crunch cur_thread [wp]: kernel_entry_if "\<lambda>s. P (cur_thread s)"
 
 lemma thread_set_tcb_context_update_ct_active[wp]:
@@ -1144,7 +1144,7 @@ lemma handle_preemption_if_pas_refined[wp]: "\<lbrace>pas_refined aag\<rbrace> h
 
 crunch cur_thread[wp]: handle_preemption_if "\<lambda>s. P (cur_thread s)"
 crunch cur_domain[wp]: handle_preemption_if " \<lambda>s. P (cur_domain s)"
-crunch idle_thread[wp]: handle_preemption_if "\<lambda>s. P (idle_thread s)"
+crunch idle_thread[wp]: handle_preemption_if "\<lambda>s::det_state. P (idle_thread s)"
 
 lemma handle_preemption_if_guarded_pas_domain[wp]: "\<lbrace>guarded_pas_domain aag\<rbrace> handle_preemption_if tc \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
   by (rule guarded_pas_domain_lift; wp)
@@ -1204,7 +1204,7 @@ crunch pas_refined[wp]: schedule_if "pas_refined aag"
 
 crunch silc_inv[wp]: schedule_if "silc_inv aag st"
 
-crunch domain_sep_inv[wp]: schedule_if "domain_sep_inv irqs st"
+crunch domain_sep_inv[wp]: schedule_if "\<lambda>s::det_state. domain_sep_inv irqs st s"
 
 crunch cur_thread[wp]: activate_thread "\<lambda>s. P (cur_thread s)"
 crunch cur_domain[wp]: activate_thread "\<lambda>s. P (cur_domain s)"
@@ -1712,7 +1712,6 @@ lemma nonzero_gt_zero[simp]:
   apply(simp add: unat_gt_0)
   done
 
-
 lemma schedule_if_domain_time_nonzero':
   "\<lbrace>valid_domain_list and (\<lambda>s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread)\<rbrace>
    schedule_if tc
@@ -2135,7 +2134,7 @@ lemma schedule_if_valid_pdpt_objs[wp]:
 
 lemma do_user_op_if_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> do_user_op_if a b \<lbrace>\<lambda>rv s. valid_pdpt_objs s\<rbrace>"
-  by (simp add: do_user_op_if_def | wp do_machine_op_valid_pdpt select_wp | wpc)+
+  by (simp add: do_user_op_if_def | wp select_wp | wpc)+
 
 lemma invs_if_Step_ADT_A_if:
   notes active_from_running[simp]
@@ -2270,7 +2269,7 @@ lemma invs_if_Step_ADT_A_if:
                  domain_sep_inv False s0_internal b \<and>
                  valid_domain_list b \<and> 0 < domain_time b \<and>
                  scheduler_action b = resume_cur_thread)" in hoare_strengthen_post)
-       apply((wp do_user_op_if_invs | simp | clarsimp simp: ct_active_not_idle' active_from_running)+)[2]
+       apply((wp do_user_op_if_invs | simp | clarsimp simp: ct_active_not_idle')+)[2]
      apply(erule use_valid[OF _ check_active_irq_if_wp])
      apply(simp add: ct_in_state_def)
     apply(simp add: check_active_irq_A_if_def | elim exE conjE)+
@@ -2837,12 +2836,10 @@ lemma irq_state_inv_invoke_domain[wp]: "\<lbrace>irq_state_inv st\<rbrace> invok
    apply (wp | clarsimp)+
   done
 
-
-crunch irq_masks_of_state: bind_notification "\<lambda>s. P (irq_masks_of_state s)"
 crunch irq_state_of_state: bind_notification "\<lambda>s. P (irq_state_of_state s)"
 
 lemmas bind_notification_irq_state_inv[wp] =
-  irq_state_inv_triv[OF bind_notification_irq_state_of_state bind_notification_irq_masks_of_state]
+  irq_state_inv_triv[OF bind_notification_irq_state_of_state bind_notification_irq_masks]
 
 crunch machine_state[wp]: set_mcpriority "\<lambda>s. P (machine_state s)"
 

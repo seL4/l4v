@@ -1161,7 +1161,7 @@ lemmas cap_revoke_preservation_flat = cap_revoke_preservation[THEN validE_valid]
 
 crunch idle[wp] : invoke_tcb, cap_move, cap_swap, cap_revoke "\<lambda>s. P (idle_thread s)"
   (rule: cap_revoke_preservation_flat wp: crunch_wps check_cap_at_idle dxo_wp_weak
-    simp: crunch_simps ignore:clearMemory)
+    simp: crunch_simps ignore: check_cap_at)
 
 lemma invoke_cnode_idle:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> invoke_cnode pa \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
@@ -1171,7 +1171,7 @@ lemma invoke_cnode_idle:
   done
 
 crunch idle[wp] : arch_perform_invocation "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps simp: crunch_simps Retype_A.detype_def ignore:clearMemory)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma invoke_domain_idle:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> invoke_domain t d  \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"

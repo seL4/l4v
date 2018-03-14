@@ -102,7 +102,7 @@ lemma (in delete_one_conc_pre) cancelIPC_simple[wp]:
                 hoare_vcg_const_imp_lift delete_one_st_tcb_at
                 threadSet_pred_tcb_no_state
                 hoare_strengthen_post [OF cancelSignal_simple]
-           | simp
+           | simp add: o_def if_fun_split
            | rule hoare_drop_imps
            | clarsimp elim!: pred_tcb'_weakenE)+
   apply (auto simp: pred_tcb_at'
@@ -737,9 +737,7 @@ lemma cancelSignal_invs':
   qed
 
 lemmas setEndpoint_valid_arch[wp]
-    = valid_arch_state_lift' [OF setEndpoint_typ_at' setEndpoint_ksArchState]
-
-declare setEndpoint_ksArch [wp]
+    = valid_arch_state_lift' [OF setEndpoint_typ_at' set_ep_arch']
 
 lemma ep_redux_simps3:
   "ep_q_refs_of' (case xs of [] \<Rightarrow> IdleEP | y # ys \<Rightarrow> RecvEP (y # ys))
@@ -941,8 +939,7 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at:
          apply (wp sts_st_tcb_at'_cases delete_one_st_tcb_at
                    threadSet_pred_tcb_no_state
                    cancelSignal_st_tcb_at hoare_drop_imps
-                | clarsimp
-                )+
+                | clarsimp simp: o_def if_fun_split)+
   done
 
 lemma weak_sch_act_wf_lift_linear:
@@ -1016,13 +1013,8 @@ lemma (in delete_one_conc_pre) cancelIPC_tcb_at_runnable':
            apply (wp cteDeleteOne_tcb_at_runnable'
                     threadSet_pred_tcb_no_state
                     cancelSignal_tcb_at_runnable'
-                    sts_pred_tcb_neq'
-                  | wpc | simp)+
-     apply (rule_tac Q="\<lambda>rv. ?PRE" in hoare_post_imp, fastforce)
-     apply wp+
-   apply (rule_tac Q="\<lambda>rv. ?PRE" in hoare_post_imp, fastforce)
-   apply wp
-  apply assumption
+                    sts_pred_tcb_neq' hoare_drop_imps
+                  | wpc | simp add: o_def if_fun_split)+
   done
 
 crunch ksCurDomain[wp]: cancelSignal "\<lambda>s. P (ksCurDomain s)"
@@ -1034,7 +1026,7 @@ apply (simp add: cancelIPC_def Let_def)
 apply (wp hoare_vcg_conj_lift delete_one_ksCurDomain
      | wpc
      | rule hoare_drop_imps
-     | simp add: getThreadReplySlot_def)+
+     | simp add: getThreadReplySlot_def o_def if_fun_split)+
 done
 
 (* FIXME move *)
@@ -1104,7 +1096,7 @@ apply (wp hoare_vcg_conj_lift
           setThreadState_not_st delete_one_tcbDomain_obj_at' cancelSignal_tcb_obj_at'
      | wpc
      | rule hoare_drop_imps
-     | simp add: getThreadReplySlot_def)+
+     | simp add: getThreadReplySlot_def o_def if_fun_split)+
 done
 
 lemma (in delete_one_conc_pre) cancelIPC_tcb_in_cur_domain':
@@ -1448,7 +1440,7 @@ lemma threadGet_ksQ_oa:
     threadGet f t
    \<lbrace>\<lambda>rv s. P (g rv (ksReadyQueues s rv) s)\<rbrace>"
   apply (rule hoare_weaken_pre)
-   apply (wps threadGet_ksQ)
+   apply (wps threadGet_inv)
   apply (wp threadGet_const)
   apply (clarsimp elim!:obj_at'_weakenE)
   done
@@ -2138,7 +2130,7 @@ proof -
   apply (wpsimp wp: hoare_vcg_imp_lift [OF nrct])
    apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_post_imp)
     apply (clarsimp)
-   apply (rule hoare_convert_imp [OF threadSet_no_sa threadSet_ct])
+   apply (rule hoare_convert_imp [OF threadSet_nosch threadSet_ct])
   apply assumption
   done
 qed

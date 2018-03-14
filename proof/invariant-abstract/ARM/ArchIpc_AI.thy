@@ -495,7 +495,7 @@ crunch valid_ioc                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid
 crunch pred_tcb                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "pred_tcb_at proj P t"
 crunch cap_to                    [wp, Ipc_AI_assms]:  make_arch_fault_msg "ex_nonz_cap_to p"
 crunch pred_tcb                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "pred_tcb_at proj P t"
-crunch invs                      [wp, Ipc_AI_assms]:  make_arch_fault_msg "invs"
+declare make_arch_fault_msg_inv[Ipc_AI_assms]
 
 crunch obj_at[wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (obj_at P' pd s)"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def)

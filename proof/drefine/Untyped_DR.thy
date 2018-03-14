@@ -756,8 +756,6 @@ lemma monad_commute_set_cap_assert:
    apply (simp add:KHeap_D.set_object_def)
    done
 
-crunch cdl_cdt_inv: "KHeap_D.set_cap" "\<lambda>s. P (cdl_cdt s)"
-
 lemma monad_commute_set_cap_gets_cdt:
   "monad_commute \<top> (KHeap_D.set_cap ptr cap) (gets cdl_cdt)"
    apply (simp add: monad_commute_def gets_def get_def
@@ -767,14 +765,14 @@ lemma monad_commute_set_cap_gets_cdt:
      apply simp
     apply simp
     apply (drule use_valid)
-      apply (rule KHeap_D_set_cap_cdl_cdt_inv)
+      apply (rule KHeap_D_set_cap_cdl_cdt)
      prefer 2
      apply (fastforce +)[2]
    apply (rule bexI[rotated])
      apply simp
     apply simp
     apply (drule use_valid)
-      apply (rule KHeap_D_set_cap_cdl_cdt_inv)
+      apply (rule KHeap_D_set_cap_cdl_cdt)
      prefer 2
      apply (fastforce +)[2]
    done

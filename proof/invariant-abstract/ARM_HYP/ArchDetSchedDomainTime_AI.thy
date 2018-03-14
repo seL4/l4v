@@ -73,6 +73,7 @@ crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   prepare_thread_delete, arch_post_modify_registers, arch_post_cap_deletion
   "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps)
+declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap, arch_get_sanitise_register_info "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)

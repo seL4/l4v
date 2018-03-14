@@ -54,7 +54,7 @@ crunch valid_duplicates' [wp]: cteInsert "(\<lambda>s. vs_valid_duplicates' (ksP
   (wp: crunch_wps)
 
 crunch valid_duplicates'[wp]: setupReplyMaster "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 
 (* we need the following lemma in Syscall_R *)
@@ -1058,10 +1058,10 @@ lemma set_asid_pool_valid_duplicates'[wp]:
 
 crunch valid_duplicates'[wp]:
   suspend "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps simp: crunch_simps unless_def)
+  (wp: crunch_wps simp: crunch_simps unless_def o_def)
 
 crunch valid_duplicates'[wp]:
-deletingIRQHandler  "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  deletingIRQHandler "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
 lemma storePDE_no_duplicates':

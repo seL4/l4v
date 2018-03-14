@@ -139,14 +139,16 @@ lemma put_empty_fail[wp]:
   "empty_fail (put f)"
   by (simp add: put_def empty_fail_def)
 
-
 crunch_ignore (empty_fail)
-  (add: bind bindE lift liftE liftM "when" whenE unless unlessE return fail assert_opt
-        mapM mapM_x sequence_x catch handleE do_extended_op
+  (add: bind bindE lift liftE liftM "when" whenE unless unlessE return fail
+        assert_opt mapM mapM_x sequence_x catch handleE do_extended_op
         cap_insert_ext empty_slot_ext create_cap_ext cap_swap_ext cap_move_ext
         reschedule_required possible_switch_to set_thread_state_ext
-        OR_choice OR_choiceE timer_tick getRegister)
-
+        OR_choice OR_choiceE timer_tick getRegister lookup_error_on_failure
+        mapME_x const_on_failure liftME mapME do_machine_op select
+        empty_on_failure unify_failure zipWithM_x throw_on_false
+        decode_tcb_invocation without_preemption as_user syscall
+        cap_fault_on_failure check_cap_at zipWithM filterM)
 
 crunch (empty_fail) empty_fail[wp]: set_object, gets_the, get_cap
   (simp: split_def kernel_object.splits)
@@ -242,7 +244,6 @@ crunch (empty_fail) empty_fail[wp]:
   lookup_slot_for_cnode_op, decode_untyped_invocation, range_check,
   lookup_source_slot, lookup_pivot_slot, cap_swap_for_delete, is_final_cap, set_cap,
   allActiveTCBs
-
 
 locale EmptyFail_AI_load_word =
   fixes state_ext_t :: "'state_ext::state_ext itself"

@@ -781,13 +781,6 @@ crunch cdt_inc[wp]: mark_tcb_intent_error "\<lambda>s. P (cdl_cdt s)"
 (wp:hoare_vcg_conj_lift hoare_drop_impE_R
   simp:crunch_simps)
 
-crunch cdt_inv[wp]: set_cap "\<lambda>s. P (cdl_cdt s)"
-(wp:hoare_vcg_conj_lift hoare_drop_impE_R
-  simp:crunch_simps)
-
-crunch cdt_inc[wp]: handle_pending_interrupts "\<lambda>s. P (cdl_cdt s)"
-(wp:select_wp alternative_wp simp:crunch_simps)
-
 lemma unify_failure_valid:
   "\<lbrace>\<lambda>s. P s\<rbrace> f \<lbrace>\<lambda>r s. P s\<rbrace>
   \<Longrightarrow> \<lbrace>\<lambda>s. P s\<rbrace> unify_failure f \<lbrace>\<lambda>r s. P s\<rbrace>"

@@ -21,7 +21,7 @@ crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<l
 
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
-  handle_arch_fault_reply, init_arch_objects, arch_tcb_set_ipc_buffer,
+  handle_arch_fault_reply, arch_tcb_set_ipc_buffer,
   arch_invoke_irq_control, handle_vm_fault, arch_get_sanitise_register_info,
   prepare_thread_delete, handle_hypervisor_fault, make_arch_fault_msg,
   arch_post_modify_registers, arch_post_cap_deletion
@@ -34,9 +34,11 @@ crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects, arch_tcb_set_ipc_buffer,
   arch_invoke_irq_control, handle_vm_fault, arch_get_sanitise_register_info,
-  prepare_thread_delete, handle_hypervisor_fault, make_arch_fault_msg,
+  prepare_thread_delete, handle_hypervisor_fault,
   arch_post_modify_registers, arch_post_cap_deletion
   "\<lambda>s. P (domain_time s)"
+declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
+        make_arch_fault_msg_inv[DetSchedDomainTime_AI_assms]
 
 end
 
@@ -75,10 +77,10 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
    done
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: handle_reserved_irq "\<lambda>s. P (domain_time s)"
-  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
+  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
 
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: handle_reserved_irq "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
+  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps)
 
 end
 

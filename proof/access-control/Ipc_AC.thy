@@ -70,7 +70,9 @@ lemma send_signal_mdb[wp]:
   apply (clarsimp simp: st_tcb_def2)
   done
 
-crunch pas_refined[wp]: possible_switch_to "pas_refined aag"
+crunches possible_switch_to
+  for tcb_domain_map_wellformed[wp]: "tcb_domain_map_wellformed aag"
+  and pas_refined[wp]: "pas_refined aag"
 
 lemma update_waiting_ntfn_pas_refined:
   notes hoare_post_taut [simp del]
@@ -80,7 +82,6 @@ lemma update_waiting_ntfn_pas_refined:
   apply (simp add: update_waiting_ntfn_def)
   apply (wp set_thread_state_pas_refined set_simple_ko_pas_refined | simp)+
   done
-
 
 lemma cancel_ipc_receive_blocked_pas_refined:
   "\<lbrace>pas_refined aag and st_tcb_at receive_blocked t\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
@@ -2095,8 +2096,7 @@ lemma thread_set_fault_pas_refined:
   "\<lbrace>pas_refined aag\<rbrace>
      thread_set (tcb_fault_update (\<lambda>_. Some fault)) thread
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply (wp send_ipc_pas_refined
-            thread_set_pas_refined_triv
+  apply (wp send_ipc_pas_refined thread_set_pas_refined
             thread_set_refs_trivial thread_set_obj_at_impossible
        | simp)+
   done
@@ -2276,7 +2276,7 @@ lemma do_reply_transfer_pas_refined:
   apply (simp add: do_reply_transfer_def)
   apply (rule hoare_pre)
   apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined
-            thread_set_pas_refined_triv K_valid
+            thread_set_pas_refined K_valid
        | wpc
        | simp add: thread_get_def split del: if_split)+
   (* otherwise simp does too much *)

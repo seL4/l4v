@@ -75,7 +75,7 @@ lemma domain_fields_equiv_sym:
   done
 
 lemma sameFor_sym: "sym (sameFor g ab irqab asidab domainab d)"
-  apply(fastforce intro: symI simp: sameFor_def sameFor_subject_def sameFor_scheduler_def split: partition.splits intro: states_equiv_for_sym globals_equiv_sym globals_equiv_scheduler_sym  equiv_for_sym domain_fields_equiv_sym)
+  apply(fastforce intro: symI simp: sameFor_def sameFor_subject_def sameFor_scheduler_def split: partition.splits intro: states_equiv_for_sym globals_equiv_sym equiv_for_sym domain_fields_equiv_sym)
   done
 
 lemma domain_fields_equiv_trans:
@@ -85,10 +85,8 @@ lemma domain_fields_equiv_trans:
 
 lemma sameFor_trans: "trans (sameFor g ab irqab asidab domainab d)"
   apply (rule transI)
-  apply(auto simp: sameFor_def sameFor_subject_def sameFor_scheduler_def split: partition.splits intro: states_equiv_for_trans globals_equiv_trans globals_equiv_scheduler_trans equiv_for_trans domain_fields_equiv_trans)
+  apply(auto simp: sameFor_def sameFor_subject_def sameFor_scheduler_def split: partition.splits intro: states_equiv_for_trans globals_equiv_trans equiv_for_trans domain_fields_equiv_trans)
   done
-
-
 
 fun label_of where
   "label_of (OrdinaryLabel l) = l"

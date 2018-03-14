@@ -452,7 +452,7 @@ lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
         | assumption | simp split del: if_split)+
   done
 
-crunch inv[Ipc_AI_assms]: make_arch_fault_msg "P"
+declare make_arch_fault_msg_invs[Ipc_AI_assms]
 crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "P (typ_at T p s)"
 
 end

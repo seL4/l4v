@@ -1278,20 +1278,13 @@ lemma setCTE_norqL2 [wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReadyQueuesL2Bitmap s) \<rbrace>"
   by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
 
-crunch nosch[wp]: cteInsert "\<lambda>s. P (ksSchedulerAction s)"
-  (wp: updateObject_cte_inv hoare_drop_imps)
-
-crunch norq[wp]: cteInsert "\<lambda>s. P (ksReadyQueues s)"
-  (wp: updateObject_cte_inv hoare_drop_imps)
-
-crunch norqL1[wp]: cteInsert "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-  (wp: updateObject_cte_inv hoare_drop_imps)
-
-crunch norqL2[wp]: cteInsert "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-  (wp: updateObject_cte_inv hoare_drop_imps)
-
-crunch typ_at'[wp]: cteInsert "\<lambda>s. P (typ_at' T p s)"
-  (wp: hoare_drop_imps setCTE_typ_at')
+crunches cteInsert
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  and norq[wp]:  "\<lambda>s. P (ksReadyQueues s)"
+  and norqL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  and norqL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  (wp: updateObject_cte_inv crunch_wps)
 
 lemmas updateMDB_typ_ats [wp] = typ_at_lifts [OF updateMDB_typ_at']
 lemmas updateCap_typ_ats [wp] = typ_at_lifts [OF updateCap_typ_at']
@@ -2919,7 +2912,7 @@ lemma setCTE_ksInterruptState[wp]:
   by (wp setObject_ksInterrupt updateObject_cte_inv | simp add: setCTE_def)+
 
 crunch ksInterruptState[wp]: cteInsert "\<lambda>s. P (ksInterruptState s)"
-  (ignore: setObject wp: crunch_wps)
+  (wp: crunch_wps)
 
 lemmas updateMDB_cteCaps_of_ksInt[wp]
     = hoare_use_eq [where f=ksInterruptState, OF updateMDB_ksInterruptState updateMDB_cteCaps_of]
@@ -3194,7 +3187,7 @@ crunch irq_node'[wp]: setupReplyMaster "\<lambda>s. P (irq_node' s)"
   (ignore: updateObject)
 
 lemmas setCTE_cteCap_wp_irq[wp] =
-    hoare_use_eq_irq_node' [OF setCTE_irq_node' setCTE_cteCaps_of]
+    hoare_use_eq_irq_node' [OF setCTE_ksInterruptState setCTE_cteCaps_of]
 
 crunch global_refs'[wp]: setUntypedCapAsFull "\<lambda>s. P (global_refs' s) "
   (simp: crunch_simps)
@@ -3372,8 +3365,7 @@ crunch ksDomScheduleIdx[wp]: cteInsert "\<lambda>s. P (ksDomScheduleIdx s)"
   (wp: setObject_cte_domIdx hoare_drop_imps ignore: setObject)
 
 crunch gsUntypedZeroRanges[wp]: cteInsert "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (wp: setObject_ksPSpace_only updateObject_cte_inv crunch_wps
-     ignore: setObject)
+  (wp: setObject_ksPSpace_only updateObject_cte_inv crunch_wps)
 
 definition
   "untyped_derived_eq cap cap'
@@ -4310,7 +4302,7 @@ lemma setupReplyMaster_wps[wp]:
   done
 
 crunch no_0_obj'[wp]: setupReplyMaster no_0_obj'
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma setupReplyMaster_valid_pspace':
   "\<lbrace>valid_pspace' and tcb_at' t\<rbrace>
@@ -4366,6 +4358,8 @@ lemma setupReplyMaster_global_refs[wp]:
   done
 
 crunch valid_arch'[wp]: setupReplyMaster "valid_arch_state'"
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma ex_nonz_tcb_cte_caps':
   "\<lbrakk>ex_nonz_cap_to' t s; tcb_at' t s; valid_objs' s; sl \<in> dom tcb_cte_cases\<rbrakk> \<Longrightarrow>
    ex_cte_cap_to' (t + sl) s"
@@ -4397,7 +4391,7 @@ lemma ex_nonz_cap_not_global':
   done
 
 crunch typ_at'[wp]: setupReplyMaster "\<lambda>s. P (typ_at' T p s)"
-  (wp: hoare_drop_imps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma setCTE_irq_handlers':
   "\<lbrace>\<lambda>s. valid_irq_handlers' s \<and> (\<forall>irq. cteCap cte = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)\<rbrace>
@@ -4415,14 +4409,28 @@ lemma setupReplyMaster_irq_handlers'[wp]:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
-crunch irq_states' [wp]: setupReplyMaster valid_irq_states'
-crunch irqs_makes' [wp]: setupReplyMaster irqs_masked'
-  (rule: irqs_masked_lift)
-crunch pde_mappings' [wp]: setupReplyMaster valid_pde_mappings'
-
-crunch pred_tcb_at' [wp]: setupReplyMaster "pred_tcb_at' proj P t"
-
-crunch ksMachine[wp]: setupReplyMaster "\<lambda>s. P (ksMachineState s)"
+crunches setupReplyMaster
+  for irq_states'[wp]: valid_irq_states'
+  and irqs_masked' [wp]: irqs_masked'
+  and pde_mappings' [wp]: valid_pde_mappings'
+  and pred_tcb_at' [wp]: "pred_tcb_at' proj P t"
+  and ksMachine[wp]: "\<lambda>s. P (ksMachineState s)"
+  and pspace_domain_valid[wp]: "pspace_domain_valid"
+  and ct_not_inQ[wp]: "ct_not_inQ"
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  and ksIdlethread[wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
+  and scheduler_action[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  and obj_at'_inQ[wp]: "obj_at' (inQ d p) t"
+  and tcbDomain_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
+  and tcbPriority_inv[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
+  and ready_queues[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and ready_queuesL1[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  and ready_queuesL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (wp: crunch_wps simp: crunch_simps rule: irqs_masked_lift)
 
 lemma setupReplyMaster_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setupReplyMaster t \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
@@ -4430,23 +4438,6 @@ lemma setupReplyMaster_vms'[wp]:
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift)
   apply wp+
   done
-
-crunch pspace_domain_valid[wp]: setupReplyMaster "pspace_domain_valid"
-crunch ct_not_inQ[wp]: setupReplyMaster "ct_not_inQ"
-crunch ksCurDomain[wp]: setupReplyMaster "\<lambda>s. P (ksCurDomain s)"
-crunch ksCurThread[wp]: setupReplyMaster "\<lambda>s. P (ksCurThread s)"
-crunch ksIdlethread[wp]: setupReplyMaster "\<lambda>s. P (ksIdleThread s)"
-crunch ksDomSchedule[wp]: setupReplyMaster "\<lambda>s. P (ksDomSchedule s)"
-crunch scheduler_action[wp]: setupReplyMaster "\<lambda>s. P (ksSchedulerAction s)"
-crunch obj_at'_inQ[wp]: setupReplyMaster "obj_at' (inQ d p) t"
-crunch tcbDomain_inv[wp]: setupReplyMaster "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
-crunch tcbPriority_inv[wp]: setupReplyMaster "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
-crunch ready_queues[wp]: setupReplyMaster "\<lambda>s. P (ksReadyQueues s)"
-crunch ready_queuesL1[wp]: setupReplyMaster "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
-crunch ready_queuesL2[wp]: setupReplyMaster "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
-
-crunch ksDomScheduleIdx[wp]: setupReplyMaster "\<lambda>s. P (ksDomScheduleIdx s)"
-crunch gsUntypedZeroRanges[wp]: setupReplyMaster "\<lambda>s. P (gsUntypedZeroRanges s)"
 
 lemma setupReplyMaster_urz[wp]:
   "\<lbrace>untyped_ranges_zero' and valid_mdb' and valid_objs'\<rbrace>
@@ -6316,7 +6307,7 @@ lemma getSlotCap_wp:
 
 lemma storeWordUser_typ_at' :
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> storeWordUser v w \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  unfolding storeWordUser_def by wp
+  unfolding storeWordUser_def by wpsimp
 
 lemma arch_update_updateCap_invs:
   "\<lbrace>cte_wp_at' (is_arch_update' cap) p and invs' and valid_cap' cap\<rbrace>

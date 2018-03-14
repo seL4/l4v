@@ -542,7 +542,7 @@ lemma decodeIRQControlInvocation_ccorres:
                     apply (rule ccorres_return_C_errorE, simp+)[1]
                    apply vcg
                   apply simp
-                  apply (wp injection_wp_E[OF refl])
+                  apply (wp injection_wp_E[OF refl] hoare_drop_imps)
                  apply (simp add: Collect_const_mem all_ex_eq_helper)
                  apply (vcg exspec=lookupTargetSlot_modifies)
                 apply simp
@@ -580,13 +580,11 @@ lemma decodeIRQControlInvocation_ccorres:
     apply wp
    apply vcg
   apply (simp add: syscall_error_to_H_cases)
-  apply (clarsimp simp: if_1_0_0 interpret_excaps_test_null excaps_map_def
+  apply (clarsimp simp: interpret_excaps_test_null excaps_map_def
                         Collect_const_mem word_sless_def word_sle_def
-                        ThreadState_Restart_def unat_of_nat mask_def
-                  cong: if_cong)
+                        ThreadState_Restart_def unat_of_nat mask_def)
   apply (rule conjI)
-   apply (simp add: toEnum_of_nat Kernel_C.maxIRQ_def
-                    word_le_nat_alt ucast_nat_def
+   apply (simp add: Kernel_C.maxIRQ_def word_le_nat_alt ucast_nat_def
                     unat_ucast)
    apply (cut_tac unat_lt2p[where x="args ! 2"])
    apply clarsimp
@@ -596,7 +594,7 @@ lemma decodeIRQControlInvocation_ccorres:
                      excaps_in_mem_def slotcap_in_mem_def
                      cte_wp_at_ctes_of numeral_eqs[symmetric]
                      valid_tcb_state'_def
-              elim!: pred_tcb'_weakenE cte_wp_at_weakenE'
+              elim!: pred_tcb'_weakenE
               dest!: st_tcb_at_idle_thread' interpret_excaps_eq)[1]
   apply (clarsimp simp: neq_Nil_conv numeral_eqs[symmetric]
                         word_sle_def word_sless_def)

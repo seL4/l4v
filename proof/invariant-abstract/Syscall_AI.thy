@@ -1228,9 +1228,8 @@ lemma (in Syscall_AI) hr_invs[wp]:
 crunch cur_thread[wp]: set_extra_badge "\<lambda>s. P (cur_thread s)"
 
 crunch (in Syscall_AI) cur_thread[wp]: handle_reply "\<lambda>s :: 'state_ext state. P (cur_thread s)"
-  (wp: crunch_wps transfer_caps_loop_pres
-        simp: unless_def crunch_simps
-      ignore: transfer_caps_loop make_fault_msg)
+  (wp: crunch_wps simp: unless_def crunch_simps
+   ignore: make_fault_msg rule: transfer_caps_loop_pres)
 
 lemmas cap_delete_one_st_tcb_at_simple[wp] =
     cap_delete_one_st_tcb_at[where P=simple, simplified]
@@ -1243,7 +1242,6 @@ crunch (in Syscall_AI) st_tcb_at_simple[wp]: handle_reply "st_tcb_at simple t' :
   (wp: hoare_post_taut crunch_wps sts_st_tcb_at_cases
        thread_set_no_change_tcb_state
      ignore: set_thread_state simp: simple_if_Restart_Inactive)
-
 
 lemmas (in Syscall_AI) hr_ct_in_state_simple[wp]
     = ct_in_state_thread_state_lift [OF handle_reply_cur_thread

@@ -602,8 +602,7 @@ lemma copy_global_mappings_pas_refined:
     apply (rule hoare_seq_ext)
      apply(unfold o_def)
      (* Use [1] so wp doesn't filter out the global_pd condition *)
-     apply(wp store_pde_pas_refined store_pde_arm_global_pd
-              store_pde_valid_kernel_mappings_map_global)[1]
+     apply(wp store_pde_pas_refined store_pde_valid_kernel_mappings_map_global)[1]
      apply(frule subsetD[OF copy_global_mappings_index_subset])
      apply(rule hoare_gen_asm[simplified K_def pred_conj_def conj_commute])
      apply(simp add: get_pde_def)
@@ -621,8 +620,6 @@ lemma copy_global_mappings_pas_refined:
    apply(rule gets_wp)
   apply(simp, blast intro: invs_aligned_pdD)
   done
-
-
 
 lemma copy_global_invs_mappings_restricted':
   "pd \<in> S \<Longrightarrow>

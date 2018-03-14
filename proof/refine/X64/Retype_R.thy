@@ -4507,8 +4507,6 @@ lemma createNewCaps_global_refs':
   apply (auto simp: linorder_not_less ball_ran_eq)
   done
 
-crunch ksArchState[wp]: createNewCaps "\<lambda>s. P (ksArchState s)"
-
 lemma koTypeOf_eq_KernelDataT:
   "(koTypeOf ko = KernelDataT)
         = (ko = KOKernelData)"
@@ -4533,7 +4531,7 @@ lemma createNewCaps_valid_arch_state:
                    vspace_table_at'_defs
                    typ_at_to_obj_at_arches)
   apply (rule hoare_pre)
-   apply (rule hoare_use_eq [where f=ksArchState, OF createNewCaps_ksArchState])
+   apply (rule hoare_use_eq [where f=ksArchState, OF createNewCaps_ksArch])
    apply (wp hoare_vcg_const_Ball_lift
              hoare_vcg_prop
              createNewCaps_obj_at''

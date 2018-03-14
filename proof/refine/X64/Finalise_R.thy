@@ -1329,7 +1329,7 @@ lemma emptySlot_valid_global_refs[wp]:
   done
 
 lemmas doMachineOp_irq_handlers[wp]
-    = valid_irq_handlers_lift'' [OF doMachineOp_ctes_of doMachineOp_ksInterruptState]
+    = valid_irq_handlers_lift'' [OF doMachineOp_ctes doMachineOp_ksInterruptState]
 
 lemma deletedIRQHandler_irq_handlers'[wp]:
   "\<lbrace>\<lambda>s. valid_irq_handlers' s \<and> (IRQHandlerCap irq \<notin> ran (cteCaps_of s))\<rbrace>
@@ -2211,7 +2211,8 @@ lemmas cteDeleteOne_def
 
 crunch typ_at'[wp]: cteDeleteOne, suspend, prepareThreadDelete "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv
-   simp: crunch_simps unless_def ignore: getObject)
+   simp: crunch_simps unless_def o_def
+   ignore: getObject)
 
 end
 
@@ -2255,15 +2256,14 @@ lemma finaliseCap_cases[wp]:
   apply (auto simp add: isCap_simps cap_has_cleanup'_def)
   done
 
-
 crunch aligned'[wp]: finaliseCap "pspace_aligned'"
-  (simp: crunch_simps assertE_def unless_def
+  (simp: crunch_simps assertE_def unless_def o_def
  ignore: getObject setObject forM ignoreFailure
      wp: getObject_inv loadObject_default_inv crunch_wps)
 
 crunch distinct'[wp]: finaliseCap "pspace_distinct'"
   (ignore: getObject setObject forM ignoreFailure
-     simp: crunch_simps assertE_def unless_def
+     simp: crunch_simps assertE_def unless_def o_def
        wp: getObject_inv loadObject_default_inv crunch_wps)
 
 crunch typ_at'[wp]: finaliseCap "\<lambda>s. P (typ_at' T p s)"
@@ -2274,9 +2274,7 @@ lemmas finaliseCap_typ_ats[wp] = typ_at_lifts[OF finaliseCap_typ_at']
 crunch it'[wp]: finaliseCap "\<lambda>s. P (ksIdleThread s)"
   (ignore: getObject setObject forM ignoreFailure maskInterrupt
    wp: mapM_x_wp_inv mapM_wp' hoare_drop_imps getObject_inv loadObject_default_inv
-   simp: crunch_simps)
-
-
+   simp: crunch_simps o_def)
 
 declare doUnbindNotification_def[simp]
 
@@ -2508,18 +2506,15 @@ lemma cteDeleteOne_isFinal:
   apply (clarsimp simp: isFinal_def sameObjectAs_def2)
   done
 
-lemmas setEndpoint_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setEndpoint_ctes_of]
-lemmas setNotification_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setNotification_ctes_of]
+lemmas setEndpoint_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF set_ep_ctes_of]
+lemmas setNotification_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF set_ntfn_ctes_of]
 lemmas setQueue_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setQueue_ctes_of]
 lemmas threadSet_cteCaps_of = ctes_of_cteCaps_of_lift [OF threadSet_ctes_of]
-
-crunch isFinal: setSchedulerAction "\<lambda>s. isFinal cap slot (cteCaps_of s)"
-  (simp: cteCaps_of_def)
 
 crunch isFinal: suspend, prepareThreadDelete "\<lambda>s. isFinal cap slot (cteCaps_of s)"
   (ignore: setObject getObject threadSet
        wp: threadSet_cteCaps_of crunch_wps
-     simp: crunch_simps unless_def)
+     simp: crunch_simps unless_def o_def)
 
 lemma isThreadCap_threadCapRefs_tcbptr:
   "isThreadCap cap \<Longrightarrow> threadCapRefs cap = {capTCBPtr cap}"
@@ -2539,7 +2534,8 @@ lemma cteDeleteOne_deletes[wp]:
 crunch irq_node'[wp]: finaliseCap "\<lambda>s. P (irq_node' s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv
        updateObject_default_inv setObject_ksInterrupt
-       ignore: getObject setObject simp: crunch_simps)
+   ignore: getObject setObject
+   simp: crunch_simps o_def)
 
 lemma deletingIRQHandler_removeable':
   "\<lbrace>invs' and (\<lambda>s. isFinal (IRQHandlerCap irq) slot (cteCaps_of s))
@@ -2775,7 +2771,7 @@ lemma unbindMaybeNotification_bound_tcb_at':
   apply (simp add: unbindMaybeNotification_def)
   apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
   apply (case_tac "ntfnBoundTCB ntfn")
-   apply (((wp threadSet_pred_tcb_at_state setNotification_bound_tcb_at' static_imp_wp hoare_drop_imps
+   apply (((wp threadSet_pred_tcb_at_state static_imp_wp hoare_drop_imps
             | clarsimp simp: setBoundNotification_def)+,
            drule (1) sym_refs_bound_tcb_atD',
            auto simp: tcb_ntfn_is_bound'_def obj_at'_def projectKOs ko_wp_at'_def
@@ -2861,8 +2857,6 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
      apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
     apply (clarsimp simp: obj_at'_def | rule conjI)+
   done
-
-crunch cte_wp_at'[wp]: setQueue "\<lambda>s. P (cte_wp_at' P' p s)"
 
 lemma cteDeleteOne_cte_wp_at_preserved:
   assumes x: "\<And>cap final. P cap \<Longrightarrow> finaliseCap cap final True = fail"
@@ -4149,8 +4143,8 @@ lemma cancelAllSignals_ct_not_ksQ:
       apply (wp rescheduleRequired_ksQ')
      apply clarsimp
      apply (wp cancelAll_ct_not_ksQ_helper mapM_x_wp_inv)
-    apply (wp hoare_lift_Pf2 [OF setNotification_ksQ setNotification_ct'])
-    apply (wps setNotification_ct', wp)
+    apply (wp hoare_lift_Pf2 [OF setNotification_ksQ setNotification_ksCurThread])
+    apply (wps setNotification_ksCurThread, wp)
    prefer 2
    apply assumption
   apply (rule_tac Q="\<lambda>ep. ?PRE and ko_at' ep ntfnptr" in hoare_post_imp)
@@ -4173,7 +4167,7 @@ lemma unbindNotification_ct_not_ksQ:
    apply (wp)
     apply (wps setBoundNotification_ct')
     apply (wp sbn_ksQ)
-   apply (wps setNotification_ct', wp)
+   apply (wps setNotification_ksCurThread, wp)
   apply clarsimp
   done
 
@@ -4189,7 +4183,7 @@ lemma unbindMaybeNotification_ct_not_ksQ:
     apply wp
     apply (wps setBoundNotification_ct')
     apply (wp sbn_ksQ)
-   apply (wps setNotification_ct', wp)
+   apply (wps setNotification_ksCurThread, wp)
   apply clarsimp
   done
 
@@ -4205,7 +4199,7 @@ lemma set_ntfn_ct_in_state'[wp]:
   "\<lbrace>ct_in_state' P\<rbrace> setNotification a ntfn \<lbrace>\<lambda>_. ct_in_state' P\<rbrace>"
   apply (simp add: ct_in_state'_def)
   apply (rule hoare_pre)
-   apply (wps setNotification_ct', wp, clarsimp)
+   apply (wps setNotification_ksCurThread, wp, clarsimp)
   done
 
 lemma unbindNotification_ct_in_state'[wp]:
@@ -4261,7 +4255,7 @@ lemma cteDeleteOne_ct_not_ksQ:
    apply (simp add: finaliseCapTrue_standin_simple_def)
    apply wp
    apply (clarsimp)
-  apply (wp emptySlot_cteCaps_of hoare_lift_Pf2 [OF emptySlot_ksQ emptySlot_ct])
+  apply (wp emptySlot_cteCaps_of hoare_lift_Pf2 [OF emptySlot_ksRQ emptySlot_ct])
     apply (simp add: cteCaps_of_def)
     apply (wp_once hoare_drop_imps)
     apply (wp finaliseCapTrue_standin_ct_not_ksQ isFinalCapability_inv)+

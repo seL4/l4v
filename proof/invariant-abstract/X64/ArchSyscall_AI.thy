@@ -96,10 +96,10 @@ lemma hvmf_ex_cap[wp, Syscall_AI_assms]:
 
 crunch pred_tcb_at[wp,Syscall_AI_assms]: handle_arch_fault_reply "pred_tcb_at proj P t"
 crunch invs[wp,Syscall_AI_assms]: handle_arch_fault_reply "invs"
-crunch cap_to[wp,Syscall_AI_assms]: handle_arch_fault_reply "ex_nonz_cap_to c"
+declare arch_get_sanitise_register_info_ex_nonz_cap_to[Syscall_AI_assms]
 crunch it[wp,Syscall_AI_assms]: handle_arch_fault_reply "\<lambda>s. P (idle_thread s)"
 crunch caps[wp,Syscall_AI_assms]: handle_arch_fault_reply "\<lambda>s. P (caps_of_state s)"
-crunch cur_thread[wp,Syscall_AI_assms]: handle_arch_fault_reply "\<lambda>s. P (cur_thread s)"
+declare make_fault_message_inv[Syscall_AI_assms]
 crunch valid_objs[wp,Syscall_AI_assms]: handle_arch_fault_reply "valid_objs"
 crunch cte_wp_at[wp,Syscall_AI_assms]: handle_arch_fault_reply "\<lambda>s. P (cte_wp_at P' p s)"
 

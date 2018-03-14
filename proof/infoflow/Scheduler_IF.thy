@@ -614,8 +614,7 @@ lemma dmo_mol_exclusive_state[wp]:
 crunch exclusive_state[wp]: set_vm_root "\<lambda>s. P (exclusive_state (machine_state s))"
   (ignore: do_machine_op simp: invalidateLocalTLB_ASID_def setHardwareASID_def setCurrentPD_def dsb_def isb_def writeTTBR0_def dmo_bind_valid crunch_simps)
 
-lemmas set_vm_root_scheduler_affects_equiv[wp] = scheduler_affects_equiv_unobservable[OF set_vm_root_states_equiv_for set_vm_root_cur_domain _ _ _ set_vm_root_idle_thread set_vm_root_exclusive_state]
-
+lemmas set_vm_root_scheduler_affects_equiv[wp] = scheduler_affects_equiv_unobservable[OF set_vm_root_states_equiv_for set_vm_root_exst _ _ _ set_vm_root_it set_vm_root_exclusive_state]
 
 lemma set_vm_root_reads_respects_scheduler[wp]:
   "reads_respects_scheduler aag l \<top> (set_vm_root thread)"
