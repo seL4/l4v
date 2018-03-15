@@ -457,6 +457,7 @@ lemma fib'_call:
   done
 
 lemma "\<lbrace> P \<rbrace> call_fib' \<lbrace> \<lambda>_. P \<rbrace>!"
+  including nf_no_pre
   apply (unfold call_fib'_def)
   apply wp
    apply (blast intro: fib'_call)

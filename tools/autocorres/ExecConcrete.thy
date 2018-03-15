@@ -68,30 +68,28 @@ lemmas exec_transformed_wp_nf [wp] =
 
 lemma exec_transformed_return_wp [wp]:
     "\<lbrace> \<lambda>s. \<forall>s''. (\<exists>s'. (s, s') \<in> sr \<and> (s'', s') \<in> sr) \<longrightarrow> P a s'' \<rbrace> exec_transformed sr (return a) \<lbrace> P \<rbrace>"
-  including no_pre
-  apply wp
+  apply (rule exec_transformed_wp, wp)
   apply clarsimp
   apply force
   done
 
 lemma exec_transformed_returnOk_wp [wp]:
     "\<lbrace> \<lambda>s. \<forall>s''. (\<exists>s'. (s, s') \<in> sr \<and> (s'', s') \<in> sr) \<longrightarrow> P a s'' \<rbrace> exec_transformed sr (returnOk a) \<lbrace> P \<rbrace>,\<lbrace> E \<rbrace>"
-  including no_pre
-  apply wp
+  apply (rule exec_transformedE_wp, wp)
   apply clarsimp
   apply force
   done
 
 lemma exec_transformed_fail_wp_nf [wp]:
     "\<lbrace> \<lambda>s. \<not> (\<exists>s'. (s, s') \<in> sr) \<rbrace> exec_transformed sr fail \<lbrace> P \<rbrace>!"
-  apply wp
+  apply (rule exec_transformed_wp_nf, wp)
   apply (clarsimp simp: fail_def no_fail_def)
   apply force
   done
 
 lemma exec_transformed_fail_wp [wp]:
     "\<lbrace> \<lambda>_. True \<rbrace> exec_transformed st fail \<lbrace> P \<rbrace>"
-  including no_pre by wp
+  by (rule exec_transformed_wp, wp)
 
 (*
  * Execute the given monad with a concrete state.

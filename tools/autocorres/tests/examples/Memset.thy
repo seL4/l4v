@@ -132,6 +132,7 @@ lemma (in memset) is_valid_node_C_non_NULL [simp]:
 
 lemma (in memset) zero_node:
   "\<forall>s\<^sub>0. \<lbrace> \<lambda>s. is_valid_node_C s p \<and> s = s\<^sub>0\<rbrace> zero_node' p \<lbrace> \<lambda>rv s. s = s\<^sub>0[p := (node_C NULL 0) ] \<rbrace>! "
+  including nf_no_pre
   apply (clarsimp simp: zero_node'_def)
   apply (wp add: memset [THEN validNF_make_schematic_post, simplified])
   apply (fastforce dest: simple_lift_c_guard is_valid_node_C_non_NULL

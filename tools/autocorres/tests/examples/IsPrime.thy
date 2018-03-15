@@ -11,7 +11,7 @@
 theory IsPrime
 imports
   "../../AutoCorres"
-  "~~/src/HOL/Number_Theory/Number_Theory"
+  "~~/src/HOL/Computational_Algebra/Primes"
 begin
 
 (* Parse the input file. *)

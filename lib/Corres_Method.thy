@@ -1019,8 +1019,6 @@ lemmas [correswp_wp_comb_del] =
   hoare_vcg_precond_imp
   hoare_vcg_precond_impE
   hoare_vcg_precond_impE_R
-  hoare_wp_state_combsE(1)
-  hoare_wp_state_combsE(2)
 
 lemma corres_inst_conj_lift[correswp_wp_comb]:
   "\<lbrakk>\<lbrace>R\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>; \<And>s. corres_inst_eq (R s) (P s)\<rbrakk> \<Longrightarrow>

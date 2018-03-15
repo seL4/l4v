@@ -29,7 +29,7 @@ lemma hoare_spec_gen_asm:
 
 lemma spec_validE_fail:
   "s \<turnstile> \<lbrace>P\<rbrace> fail \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  by wp
+  by wp+
 
 lemma mresults_fail: "mresults fail = {}"
   by (simp add: mresults_def fail_def)

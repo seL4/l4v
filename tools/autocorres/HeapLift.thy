@@ -282,8 +282,8 @@ lemma L2Tcorres_exec_concrete [heap_abs]:
   apply (rule corresXF_exec_concrete)
   apply (rule corresXF_except)
      apply assumption
-    apply (rule corresXF_fail)
-   including no_pre apply wp
+    apply (rule corresXF_fail[where P="\<top>"])
+   apply wp
   apply simp
   done
 
@@ -302,8 +302,8 @@ lemma L2Tcorres_exec_abstract [heap_abs]:
   apply (rule corresXF_exec_abstract)
   apply (rule corresXF_except)
      apply assumption
-    apply (rule corresXF_fail)
-   including no_pre apply wp
+    apply (rule corresXF_fail[where P="\<top>"])
+   apply wp
   apply simp
   done
 

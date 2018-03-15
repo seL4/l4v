@@ -2014,11 +2014,8 @@ next
   have minvp: "\<And>x. \<lbrace>R and P x\<rbrace> mapME f ys \<lbrace>\<lambda>_. P x\<rbrace>, -"
     apply (rule hoare_pre)
      apply (rule_tac Q' = "\<lambda>_ s. R s \<and> P x s" in hoare_post_imp_R)
-      apply (wp mapME_wp)
-       apply (fold validE_R_def)
-       apply (wp hoare_vcg_R_conj [OF invr invp])
-       apply simp
-      apply (rule subset_refl)
+      apply (wp mapME_wp' invr invp)+
+      apply simp
      apply simp
     apply simp
     done
@@ -2594,13 +2591,14 @@ lemma no_throw_bindE_simple: "\<lbrakk> no_throw \<top> L; \<And>x. no_throw \<t
   done
 
 lemma no_throw_handleE_simple:
-  notes hoare_pre [wp_pre del]
+  notes hoare_vcg_prop[wp del]
   shows "\<lbrakk> \<And>x. no_throw \<top> L \<or> no_throw \<top> (R x) \<rbrakk> \<Longrightarrow> no_throw \<top> (L <handle> R)"
   apply (clarsimp simp: no_throw_def)
   apply atomize
   apply clarsimp
   apply (erule disjE)
-   apply wp
+   apply (wpsimp wp: hoare_vcg_prop[where f="R x" for x])
+    apply assumption
    apply simp
   apply (rule handleE_wp)
    apply (erule_tac x=x in allE)
@@ -2879,10 +2877,6 @@ lemma validE_pre_satisfies_post:
 lemma snd_gets_the  [monad_eq]:
   "snd (gets_the X s) = (X s = None)"
   by (monad_eq simp: gets_the_def gets_def get_def)
-
-lemma validE_K_bind [wp_comb]:
-  "\<lbrace> P \<rbrace> x \<lbrace> Q \<rbrace>, \<lbrace> E \<rbrace> \<Longrightarrow> \<lbrace> P \<rbrace> K_bind x f \<lbrace> Q \<rbrace>, \<lbrace> E \<rbrace>"
-  by simp
 
 lemma liftE_K_bind: "liftE ((K_bind (\<lambda>s. A s)) x) = K_bind (liftE (\<lambda>s. A s)) x"
   by clarsimp

@@ -478,7 +478,7 @@ lemma exs_valid_is_triple:
 
 lemmas [wp_trip] = exs_valid_is_triple
 
-lemma exs_valid_weaken_pre [wp_comb]:
+lemma exs_valid_weaken_pre[wp_pre]:
   "\<lbrakk> \<lbrace> P' \<rbrace> f \<exists>\<lbrace> Q \<rbrace>; \<And>s. P s \<Longrightarrow> P' s \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> f \<exists>\<lbrace> Q \<rbrace>"
   apply atomize
   apply (clarsimp simp: exs_valid_def)
@@ -1369,20 +1369,15 @@ lemma validE_E_is_triple:
      (postcondition E (\<lambda>s f. {(rv, s'). (Inl rv, s') \<in> fst (f s)}))"
   by (simp add: validE_E_def validE_is_triple postconditions_def postcondition_def)
 
-lemmas hoare_wp_combs =
-  hoare_post_comb_imp_conj hoare_vcg_precond_imp hoare_vcg_conj_lift
+lemmas hoare_wp_combs = hoare_vcg_conj_lift
 
 lemmas hoare_wp_combsE =
-  hoare_vcg_precond_impE
-  hoare_vcg_precond_impE_R
   validE_validE_R
   hoare_vcg_R_conj
   hoare_vcg_E_elim
   hoare_vcg_E_conj
 
 lemmas hoare_wp_state_combsE =
-  hoare_vcg_precond_impE[OF valid_validE]
-  hoare_vcg_precond_impE_R[OF valid_validE_R]
   valid_validE_R
   hoare_vcg_R_conj[OF valid_validE_R]
   hoare_vcg_E_elim[OF valid_validE_E]
@@ -1417,6 +1412,10 @@ lemmas [wp] = hoare_vcg_prop
 
 lemmas [wp_trip] = valid_is_triple validE_is_triple validE_E_is_triple validE_R_is_triple
 
+lemmas validE_E_combs[wp_comb] =
+    hoare_vcg_E_conj[where Q'="\<top>\<top>", folded validE_E_def]
+    valid_validE_E
+    hoare_vcg_E_conj[where Q'="\<top>\<top>", folded validE_E_def, OF valid_validE_E]
 
 text {* Simplifications on conjunction *}
 
@@ -1563,8 +1562,12 @@ lemma hoare_FalseE [simp]:
   "\<lbrace>\<lambda>s. False\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   by (simp add: valid_def validE_def)
 
-lemma hoare_K_bind [wp]:
+lemma hoare_K_bind [wp_split]:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> K_bind f x \<lbrace>Q\<rbrace>"
+  by simp
+
+lemma validE_K_bind [wp_split]:
+  "\<lbrace> P \<rbrace> x \<lbrace> Q \<rbrace>, \<lbrace> E \<rbrace> \<Longrightarrow> \<lbrace> P \<rbrace> K_bind x f \<lbrace> Q \<rbrace>, \<lbrace> E \<rbrace>"
   by simp
 
 text {* Setting up the precondition case splitter. *}
@@ -1596,7 +1599,7 @@ lemma wpc_helper_empty_fail_final:
 lemma wpc_helper_validNF:
   "\<lbrace>Q\<rbrace> g \<lbrace>S\<rbrace>! \<Longrightarrow> wpc_helper (P, P') (Q, Q') \<lbrace>P\<rbrace> g \<lbrace>S\<rbrace>!"
   apply (clarsimp simp: wpc_helper_def)
-  by (metis hoare_wp_combs(2) no_fail_pre validNF_def)
+  by (metis hoare_vcg_precond_imp no_fail_pre validNF_def)
 
 wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>" wpc_helper_valid
 wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>" wpc_helper_validE
@@ -1841,7 +1844,7 @@ lemma validNF_is_triple [wp_trip]:
   apply (auto simp: no_fail_def valid_def)
   done
 
-lemma validNF_weaken_pre [wp_comb]:
+lemma validNF_weaken_pre[wp_pre]:
   "\<lbrakk>\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>!; \<And>s. P s \<Longrightarrow> Q s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> a \<lbrace>R\<rbrace>!"
   by (metis hoare_pre_imp no_fail_pre validNF_def)
 
@@ -1990,7 +1993,7 @@ lemma validE_NF_no_fail:
   apply (clarsimp simp: validE_NF_def)
   done
 
-lemma validE_NF_weaken_pre [wp_comb]:
+lemma validE_NF_weaken_pre[wp_pre]:
    "\<lbrakk>\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>,\<lbrace>E\<rbrace>!; \<And>s. P s \<Longrightarrow> Q s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> a \<lbrace>R\<rbrace>,\<lbrace>E\<rbrace>!"
   apply (clarsimp simp: validE_NF_alt_def)
   apply (erule validNF_weaken_pre)
@@ -2076,8 +2079,6 @@ lemma validE_NF_is_triple [wp_trip]:
            validE_NF_property_def split: sum.splits)
   apply blast
   done
-
-lemmas [wp_comb] = validE_NF_weaken_pre
 
 lemma validNF_cong:
    "\<lbrakk> \<And>s. P s = P' s; \<And>s. P s \<Longrightarrow> m s = m' s;

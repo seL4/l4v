@@ -37,14 +37,22 @@ declare word_neq_0_conv [simp del]
 declare neq0_conv [simp del]
 declare fun_upd_apply[simp del]
 
-declare hoare_wp_combsE(4) [wp del, wp_comb del]
-declare hoare_wp_combsE(5) [wp del, wp_comb del]
-declare hoare_wp_combsE(6) [wp del, wp_comb del]
+(* Remove wp combinators which are problematic for AutoCorres
+   and restore some prior configuration. *)
+declare hoare_wp_combsE [wp del, wp_comb del]
+declare hoare_wp_combs [wp del, wp_comb del]
+declare hoare_wp_state_combsE [wp del, wp_comb del]
 
-lemmas [wp del, wp_comb del] = hoare_wp_state_combsE
+lemmas hoare_wp_combsE_autocorres [wp_comb]
+    = hoare_vcg_precond_impE hoare_vcg_precond_impE_R validE_validE_R
+lemmas hoare_wp_combs_autocorres [wp_comb]
+    = hoare_vcg_precond_imp
+declare validNF_weaken_pre[wp_comb]
+declare validE_NF_weaken_pre[wp_comb]
+bundle nf_no_pre
+    = validNF_weaken_pre[wp_pre del] validE_NF_weaken_pre[wp_pre del]
 
-declare hoare_wp_combs(1)  [wp del, wp_comb del]
-declare hoare_wp_combs(3)  [wp del, wp_comb del]
+
 
 (* Machinery for generating final corres thm *)
 lemma corresTA_trivial: "corresTA (\<lambda>_. True) (\<lambda>x. x) (\<lambda>x. x) A A"

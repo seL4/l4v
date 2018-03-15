@@ -117,13 +117,12 @@ next
       apply (case_tac rv)
        apply (clarsimp simp: throwError_def)
        apply clarsimp
-        apply (rule corres_underlying_split [OF Q])
-          prefer 3
-          apply clarsimp
-         apply (case_tac rv)
-         apply (clarsimp simp add: lift_def throwError_def)
-        apply (clarsimp simp add: y lift_def returnOk_def throwError_def)
-       apply (rule w P | simp | wp_once)+
+        apply (rule corres_split[OF _ Q])
+          apply (rule corres_trivial)
+          apply (case_tac rv)
+           apply (clarsimp simp add: lift_def throwError_def)
+          apply (clarsimp simp add: y lift_def returnOk_def throwError_def)
+         apply (wpsimp wp: w P)+
   done
 qed
 

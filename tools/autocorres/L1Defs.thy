@@ -324,8 +324,7 @@ lemma L1corres_prepend_unknown_var':
    apply (monad_eq simp: Bex_def)
    apply metis
   apply (subst L1_init_def)
-  including no_pre apply (wp select_wp)
-  apply fastforce
+  apply (wp del: hoare_vcg_prop)
   done
 
 lemma L1_catch_seq_join: "no_throw \<top> A \<Longrightarrow> L1_seq A (L1_catch B C) = (L1_catch (L1_seq A B) C)"
