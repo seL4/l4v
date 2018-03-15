@@ -1462,19 +1462,16 @@ lemma replace_cap_ifunsafe:
      set_cap cap p
    \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
   apply (simp only: replaceable_def cte_wp_at_disj conj_disj_distribR)
-  apply (rule hoare_strengthen_post)
-   apply (rule hoare_vcg_disj_lift)
-    apply (rule hoare_pre, rule set_cap_ifunsafe)
+  apply (intro hoare_vcg_disj_lift[where Q=Q and Q'=Q for Q, simplified])
+    apply (wp set_cap_ifunsafe)
     apply (clarsimp simp: cte_wp_at_caps_of_state)
-   apply (rule hoare_vcg_disj_lift)
-    apply (cases "cap = cap.NullCap")
-     apply simp
-     apply (rule hoare_pre, rule delete_duplicate_ifunsafe)
-     apply (clarsimp simp: cte_wp_at_caps_of_state)
-    apply (simp add: cte_wp_at_caps_of_state)
-   apply (wp set_cap_ifunsafe)
-   apply (clarsimp simp: cte_wp_at_caps_of_state)
-  apply simp
+   apply (cases "cap = cap.NullCap")
+    apply simp
+    apply (wp delete_duplicate_ifunsafe)
+    apply (clarsimp simp: cte_wp_at_caps_of_state)
+   apply (simp add: cte_wp_at_caps_of_state)
+  apply (wp set_cap_ifunsafe)
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
 
 lemma thread_set_mdb:

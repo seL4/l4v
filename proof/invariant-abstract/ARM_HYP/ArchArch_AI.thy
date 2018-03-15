@@ -650,23 +650,21 @@ lemma perform_asid_control_invocation_st_tcb_at:
     and ct_active and invs and valid_aci aci\<rbrace>
     perform_asid_control_invocation aci
   \<lbrace>\<lambda>y. st_tcb_at P t\<rbrace>"
-  including no_pre
   apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
   apply (rename_tac word1 a b aa ba word2)
+  apply (rule hoare_name_pre_state)
+  apply (subgoal_tac "is_aligned word1 page_bits")
+   prefer 2
+   apply (clarsimp simp: valid_aci_def cte_wp_at_caps_of_state)
+   apply (drule(1) caps_of_state_valid[rotated])+
+   apply (simp add:valid_cap_simps cap_aligned_def page_bits_def)
+  apply (subst delete_objects_rewrite)
+     apply (simp add:page_bits_def word_bits_def word_size_bits_def pageBits_def)+
+   apply (simp add:is_aligned_neg_mask_eq)
   apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at set_cap_no_overlap|simp)+
     apply (strengthen invs_valid_objs invs_psp_aligned)
     apply (clarsimp simp:conj_comms)
     apply (wp max_index_upd_invs_simple get_cap_wp)+
-   apply (rule hoare_name_pre_state)
-   apply (subgoal_tac "is_aligned word1 page_bits")
-   prefer 2
-    apply (clarsimp simp: valid_aci_def cte_wp_at_caps_of_state)
-    apply (drule(1) caps_of_state_valid[rotated])+
-    apply (simp add:valid_cap_simps cap_aligned_def page_bits_def)
-   apply (subst delete_objects_rewrite)
-      apply (simp add:page_bits_def word_bits_def word_size_bits_def pageBits_def)+
-    apply (simp add:is_aligned_neg_mask_eq)
-   apply wp
   apply (clarsimp simp: valid_aci_def)
   apply (frule intvl_range_conv)
    apply (simp add:word_bits_def page_bits_def pageBits_def)
@@ -1114,23 +1112,8 @@ lemma sts_valid_arch_inv:
   apply (clarsimp simp: is_tcb_def, wp sts_valid_vcpu_invocation_inv)
   done
 
-
-lemma ensure_safe_mapping_inv [wp]:
-  "\<lbrace>P\<rbrace> ensure_safe_mapping m \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (cases m, simp_all)
-   apply (case_tac a, simp)
-   apply (case_tac aa, simp_all)[1]
-     including no_pre apply (wpsimp wp: mapME_x_inv_wp hoare_drop_imps get_pte_wp)+
-  apply (case_tac a, simp_all)
-  apply (wpsimp wp: mapME_x_inv_wp hoare_drop_imps get_pde_wp)+
-  done
-
-
-(* the induct rule matches the wrong parameters first -> crunch blows up *)
-lemma create_mapping_entries_inv [wp]:
-  "\<lbrace>P\<rbrace> create_mapping_entries base vptr vmsz R A pd \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (induct vmsz)
-     by (wpsimp wp: lookup_pt_slot_inv)+
+crunch inv[wp]: ensure_safe_mapping, create_mapping_entries "P"
+  (wp: crunch_wps mapME_x_inv_wp)
 
 crunch_ignore (add: select_ext)
 

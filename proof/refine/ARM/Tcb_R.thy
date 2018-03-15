@@ -470,9 +470,8 @@ proof -
                apply (rule Q[OF refl refl])
               apply (rule R[OF refl refl])
               apply (simp add: frame_registers_def frameRegisters_def)
-             apply ((wp mapM_x_wp' static_imp_wp, simp+)+)[2]
-            apply (wp mapM_x_wp' static_imp_wp, simp+)
-           apply ((wp mapM_x_wp' static_imp_wp | simp)+)[4]
+             apply ((wp mapM_x_wp' static_imp_wp | simp)+)[2]
+            apply (wp mapM_x_wp' static_imp_wp | simp)+
          apply ((wp static_imp_wp restart_invs' | wpc | clarsimp simp add: if_apply_def2)+)[2]
        apply (wp suspend_nonz_cap_to_tcb static_imp_wp | simp add: if_apply_def2)+
      apply (fastforce simp: invs_def valid_state_def valid_pspace_def
@@ -789,24 +788,24 @@ lemma tcbPriority_Queued_caps_safe:
 
 lemma setP_invs':
   "\<lbrace>invs' and tcb_at' t and K (p \<le> maxPriority)\<rbrace> setPriority t p \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  including no_pre
+  using [[goals_limit = 10]]
   apply (rule hoare_gen_asm)
   apply (simp add: setPriority_def)
   apply (wp rescheduleRequired_all_invs_but_ct_not_inQ)
-     apply (wp valid_irq_node_lift, clarsimp+)
-    apply (rule_tac Q="\<lambda>r s. (r \<longrightarrow> st_tcb_at' runnable' t s) \<and> invs' s"
+      apply (wp valid_irq_node_lift, clarsimp+)
+     apply (rule_tac Q="\<lambda>r s. (r \<longrightarrow> st_tcb_at' runnable' t s) \<and> invs' s"
              in hoare_post_imp)
      apply (clarsimp simp: invs'_def valid_state'_def invs_valid_objs' elim!: st_tcb_ex_cap'')
      apply (case_tac st; clarsimp)
     apply (wp, simp)
-   apply (wp threadSet_invs_trivial,
-          simp_all add: inQ_def cong: conj_cong)
-  apply (rule_tac Q="\<lambda>_. invs' and obj_at' (Not \<circ> tcbQueued) t
-                               and (\<lambda>s. \<forall>d p. t \<notin> set (ksReadyQueues s (d,p)))"
-           in hoare_post_imp)
-   apply (clarsimp dest: obj_at_ko_at' simp: obj_at'_def)
-  apply (wp tcbSchedDequeue_not_queued)+
-    apply (clarsimp)+
+    apply (wp threadSet_invs_trivial,
+           simp_all add: inQ_def cong: conj_cong)[1]
+   apply (rule_tac Q="\<lambda>_. invs' and obj_at' (Not \<circ> tcbQueued) t
+                                and (\<lambda>s. \<forall>d p. t \<notin> set (ksReadyQueues s (d,p)))"
+            in hoare_post_imp)
+    apply (clarsimp simp: obj_at'_def inQ_def)
+   apply (wp tcbSchedDequeue_not_queued)+
+  apply clarsimp
   done
 
 crunch typ_at'[wp]: setPriority, setMCPriority "\<lambda>s. P (typ_at' T p s)"

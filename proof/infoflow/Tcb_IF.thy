@@ -424,25 +424,28 @@ lemma invoke_tcb_globals_equiv:
   "\<lbrace> invs and globals_equiv st and Tcb_AI.tcb_inv_wf ti\<rbrace>
    invoke_tcb ti
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  including no_pre
-  apply(case_tac ti)
-       prefer 4
-       apply (simp del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps )
-       apply (wp invoke_tcb_thread_preservation cap_delete_globals_equiv
-                 cap_insert_globals_equiv'' thread_set_globals_equiv
-                 set_mcpriority_globals_equiv
-              | clarsimp simp add: invs_valid_ko_at_arm split del: if_split)+
-       apply (simp_all del: Tcb_AI.tcb_inv_wf.simps split del: if_split)
-       apply (wp | clarsimp simp: invs_valid_ko_at_arm no_cap_to_idle_thread
-                 | intro conjI impI)+
-       apply (rename_tac word1 word2 bool1 bool2 bool3 bool4 arm_copy_register_sets)
-       apply (rule_tac Q="\<lambda>_. valid_ko_at_arm and globals_equiv st and (\<lambda>s. word1 \<noteq> idle_thread s)
-                              and (\<lambda>s. word2 \<noteq> idle_thread s)" in hoare_strengthen_post)
-        apply (wp mapM_x_wp' as_user_globals_equiv invoke_tcb_NotificationControl_globals_equiv
+  apply(case_tac ti;
+    (solves \<open>
+        (wp mapM_x_wp' as_user_globals_equiv invoke_tcb_NotificationControl_globals_equiv
                | simp add: invs_valid_ko_at_arm
                | intro conjI impI
                | clarsimp simp: no_cap_to_idle_thread)+
-       done
+    \<close>)?)
+   defer
+   apply (simp del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps )
+   apply ((wp invoke_tcb_thread_preservation cap_delete_globals_equiv
+             cap_insert_globals_equiv'' thread_set_globals_equiv
+             set_mcpriority_globals_equiv
+          | clarsimp simp add: invs_valid_ko_at_arm split del: if_split)+)[1]
+  apply wpsimp
+      apply (rename_tac word1 word2 bool1 bool2 bool3 bool4 arm_copy_register_sets)
+      apply (rule_tac Q="\<lambda>_. valid_ko_at_arm and globals_equiv st and (\<lambda>s. word1 \<noteq> idle_thread s)
+                         and (\<lambda>s. word2 \<noteq> idle_thread s)" in hoare_strengthen_post)
+       apply (wp mapM_x_wp' as_user_globals_equiv invoke_tcb_NotificationControl_globals_equiv
+               | simp add: invs_valid_ko_at_arm
+               | intro conjI impI
+               | clarsimp simp: no_cap_to_idle_thread)+
+  done
 
 
 section "reads respects"

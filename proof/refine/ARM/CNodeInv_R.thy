@@ -912,12 +912,11 @@ lemma cteDelete_preservation:
   assumes irq: "irq_state_independent_H P"
   shows
     "\<lbrace>P\<rbrace> cteDelete p e \<lbrace>\<lambda>rv. P\<rbrace>"
-  including no_pre
   apply (simp add: cteDelete_def whenE_def split_def)
   apply (wp wp)
   apply (simp only: simp_thms cases_simp)
-  apply (wp finaliseSlot_preservation wp)
-  apply (simp add: irq)+
+  apply (wp finaliseSlot_preservation wp irq)
+  apply simp
   done
 
 crunch aligned'[wp]: capSwapForDelete pspace_aligned'
@@ -5832,7 +5831,6 @@ lemma make_zombie_invs':
                              \<and> (\<forall>pr. p \<notin> set (ksReadyQueues s pr)))) sl s\<rbrace>
     updateCap sl cap
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  including no_pre
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
                    valid_irq_handlers'_def irq_issued'_def)
   apply (wp updateCap_ctes_of_wp sch_act_wf_lift valid_queues_lift cur_tcb_lift
@@ -5840,24 +5838,30 @@ lemma make_zombie_invs':
             valid_arch_state_lift' valid_irq_node_lift ct_idle_or_in_cur_domain'_lift2
             updateCap_untyped_ranges_zero_simple
        | simp)+
-  apply simp_all
+  apply clarsimp
+  apply (intro conjI[rotated])
         apply (clarsimp simp: cte_wp_at_ctes_of)
         apply (auto simp: untypedZeroRange_def isCap_simps)[1]
-       apply clarsimp
       apply (clarsimp simp: modify_map_def ran_def split del: if_split
                      split: if_split_asm)
        apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of isCap_simps)
       apply auto[1]
 
-     apply (clarsimp simp: disj_ac cte_wp_at_ctes_of
+     apply (clarsimp simp: disj_comms cte_wp_at_ctes_of
                     dest!: ztc_phys capBits_capUntyped_capRange)
      apply (frule(1) capBits_capUntyped_capRange, simp)
      apply (clarsimp dest!: valid_global_refsD_with_objSize)
-    apply safe[1]
+
+     apply (clarsimp simp: disj_comms cte_wp_at_ctes_of
+                    dest!: ztc_phys capBits_capUntyped_capRange)
+     apply (frule(1) capBits_capUntyped_capRange, simp)
+     apply (clarsimp dest!: valid_global_refsD_with_objSize)
+
+    apply (auto elim: if_unsafe_then_capD' simp: isCap_simps)[1]
+
      apply (clarsimp simp: cte_wp_at_ctes_of)
      apply (drule bspec[where x=sl], simp)
      apply (clarsimp simp: isCap_simps)
-    apply (auto elim: if_unsafe_then_capD' simp: isCap_simps)[1]
    apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (subgoal_tac "st_tcb_at' (op = Inactive) p' s
                                \<and> obj_at' (Not \<circ> tcbQueued) p' s
@@ -7579,17 +7583,22 @@ next
                 apply (wp rec_del_invs rec_del_cte_at reduce_zombie_cap_somewhere
                           rec_del_ReduceZombie_emptyable
                           reduceZombie_invs reduce_zombie_cap_to | simp)+
-               apply (wp reduceZombie_cap_to reduceZombie_sch_act_simple)
+               apply (wp reduceZombie_cap_to reduceZombie_sch_act_simple)+
               apply simp
-              apply (wp replace_cap_invs final_cap_same_objrefs
+              apply ((wp replace_cap_invs final_cap_same_objrefs
                         set_cap_cte_wp_at set_cap_cte_cap_wp_to
                         hoare_vcg_const_Ball_lift static_imp_wp
                          | simp add: conj_comms
-                         | erule finalise_cap_not_reply_master [simplified])+
+                         | erule finalise_cap_not_reply_master [simplified])+)[1]
+                 apply (simp(no_asm_use))
              apply (wp make_zombie_invs' updateCap_cap_to'
                         updateCap_cte_wp_at_cases
-                        hoare_vcg_ex_lift static_imp_wp)
-             apply (clarsimp simp: cte_wp_at_ctes_of)
+                        static_imp_wp)+
+             apply (elim conjE, strengthen  subst[where P="cap_relation cap" for cap, mk_strg I _ E])
+             apply simp
+             apply (wp make_zombie_invs' updateCap_cap_to'
+                        updateCap_cte_wp_at_cases
+                        static_imp_wp)+
             apply clarsimp
             apply (drule_tac cap=a in cap_relation_removables,
                       clarsimp, assumption+)
@@ -7937,15 +7946,13 @@ lemma cteRevoke_typ_at':
 lemma cteRevoke_invs':
   "\<lbrace>invs' and sch_act_simple\<rbrace> cteRevoke ptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (rule_tac Q="\<lambda>rv. invs' and sch_act_simple" in hoare_strengthen_post)
-  apply (wp cteRevoke_preservation cteDelete_invs' cteDelete_sch_act_simple)
-    apply simp_all
+  apply (wpsimp wp: cteRevoke_preservation cteDelete_invs' cteDelete_sch_act_simple)+
   done
 
 lemma cteRevoke_sch_act_simple:
   "\<lbrace>invs' and sch_act_simple\<rbrace> cteRevoke ptr \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
   apply (rule_tac Q="\<lambda>rv. invs' and sch_act_simple" in hoare_strengthen_post)
-  apply (wp cteRevoke_preservation cteDelete_invs' cteDelete_sch_act_simple)
-    apply simp_all
+  apply (wpsimp wp: cteRevoke_preservation cteDelete_invs' cteDelete_sch_act_simple)+
   done
 
 declare cteRevoke.simps[simp del]
@@ -9498,37 +9505,19 @@ lemma invokeCNode_invs' [wp]:
   "\<lbrace>invs' and sch_act_simple and valid_cnode_inv' cinv\<rbrace>
     invokeCNode cinv \<lbrace>\<lambda>y. invs'\<rbrace>"
   unfolding invokeCNode_def
-  including no_pre
-  apply (cases cinv)
-        apply (wp cteRevoke_invs' cteInsert_invs | simp split del: if_split)+
-        apply (clarsimp simp: cte_wp_at_ctes_of is_derived'_def isCap_simps badge_derived'_def)
-        apply (erule(1) valid_irq_handlers_ctes_ofD)
-        apply (clarsimp simp: invs'_def valid_state'_def)
-       defer
-       apply (wp cteRevoke_invs' | simp)+
-      apply (clarsimp simp:cte_wp_at_ctes_of)
-      apply (erule weak_derived_sym')
-     defer
-     apply (simp add: getSlotCap_def getThreadCallerSlot_def locateSlot_conv)
-     apply (rule hoare_pre)
-      apply (wp haskell_fail_wp getCTE_wp|wpc)+
-     apply (clarsimp simp: cte_wp_at_ctes_of)
-     apply (case_tac ctea)
-     apply clarsimp
-     apply (erule ctes_of_valid_cap')
-     apply fastforce
-    apply (wp cteDelete_invs'|simp)+
-   apply (intro impI conjI)
-    apply (rule hoare_pre)
-     apply wp+
-    apply (clarsimp simp: cte_wp_at_ctes_of weak_derived'_def)
-   apply (rule hoare_pre)
-    apply (wp cteMove_ex cteMove_cte_wp_at)+
-   apply (clarsimp simp:cte_wp_at_ctes_of)
-   apply (fastforce simp: isCap_simps weak_derived'_def)
-  apply (rule hoare_pre)
-   apply simp
-   apply (wp | wpc | simp add: unless_def)+
+  apply (wpsimp wp: cteRevoke_invs' cteInsert_invs cteMove_ex cteMove_cte_wp_at
+getCTE_wp cteDelete_invs'
+            simp: unless_def getSlotCap_def getThreadCallerSlot_def locateSlot_conv
+         split_del: if_split)
+  apply (cases cinv; clarsimp)
+     apply (clarsimp simp: cte_wp_at_ctes_of is_derived'_def isCap_simps badge_derived'_def)
+     apply (erule(1) valid_irq_handlers_ctes_ofD)
+     apply (clarsimp simp: invs'_def valid_state'_def)
+    apply (clarsimp simp: cte_wp_at_ctes_of)
+    apply (intro conjI impI; clarsimp elim!: weak_derived_sym')
+   apply (clarsimp simp: cte_wp_at_ctes_of elim!: weak_derived_sym')
+  apply (clarsimp simp: cte_wp_at_ctes_of elim!: weak_derived_sym')
+  apply (fastforce dest: ctes_of_valid')
   done
 
 declare withoutPreemption_lift [wp]

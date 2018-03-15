@@ -125,9 +125,8 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
    done
   show ?thesis
   apply (cases i, simp_all)
-    including no_pre apply (wp maskInterrupt_invs_ARCH)
-     apply simp
-    apply simp
+    apply (wp maskInterrupt_invs_ARCH)
+    apply simp+
    apply (rename_tac irq cap prod)
    apply (rule hoare_pre)
     apply (wp valid_cap_typ [OF cap_delete_one_typ_at])

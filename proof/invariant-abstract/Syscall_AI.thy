@@ -508,26 +508,11 @@ lemma pinv_tcb[wp]:
     \<lbrace>invs and st_tcb_at active tptr and ct_active and valid_invocation i\<rbrace>
       perform_invocation blocking call i
     \<lbrace>\<lambda>rv. tcb_at tptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  apply (case_tac i, simp_all split:option.splits)
-           apply (wp | simp)+
-          apply (clarsimp simp: st_tcb_at_tcb_at)
-         apply (wp tcb_at_typ_at)
-         apply simp
-         apply (clarsimp simp: st_tcb_at_tcb_at)
-        apply (wp tcb_at_typ_at)
-        apply (clarsimp simp: st_tcb_at_tcb_at)
-       apply (rule hoare_pre, wp)
-       apply (clarsimp simp: st_tcb_at_tcb_at)
-      apply (rule hoare_pre, wp)
-      apply (clarsimp simp: st_tcb_at_tcb_at)
-     apply (rule hoare_pre, wp)
-     apply (clarsimp simp: st_tcb_at_tcb_at)
-    apply (simp add: tcb_at_typ, rule hoare_pre, wp)
-    apply (clarsimp simp: st_tcb_at_tcb_at tcb_at_typ[symmetric])
-   apply (simp add: tcb_at_typ, rule hoare_pre, wp)
-   apply (clarsimp simp: st_tcb_at_tcb_at tcb_at_typ[symmetric])
-  apply (wp invoke_arch_tcb)
-  apply (clarsimp simp: st_tcb_at_tcb_at)
+  apply (case_tac i, simp_all split:option.splits,
+    (wp invoke_arch_tcb
+              | simp | clarsimp elim!: st_tcb_at_tcb_at
+              | wp_once tcb_at_typ_at)+
+    )
   done
 
 end
@@ -553,13 +538,13 @@ lemma sts_cte_wp_cdt [wp]:
   by (rule cte_wp_cdt_lift; wp)
 
 lemma sts_nasty_bit:
-  notes hoare_pre [wp_pre del]
   shows
   "\<lbrace>\<lambda>s. \<forall>r\<in>obj_refs cap. \<forall>a b. ptr' \<noteq> (a, b) \<and> cte_wp_at (\<lambda>cap'. r \<in> obj_refs cap') (a, b) s
               \<longrightarrow> cte_wp_at (Not \<circ> is_zombie) (a, b) s \<and> \<not> is_zombie cap\<rbrace>
      set_thread_state t st
    \<lbrace>\<lambda>rv s. \<forall>r\<in>obj_refs cap. \<forall>a b. ptr' \<noteq> (a, b) \<and> cte_wp_at (\<lambda>cap'. r \<in> obj_refs cap') (a, b) s
               \<longrightarrow> cte_wp_at (Not \<circ> is_zombie) (a, b) s \<and> \<not> is_zombie cap\<rbrace>"
+  apply (intro hoare_vcg_const_Ball_lift hoare_vcg_all_lift)
   apply (wpsimp wp: hoare_vcg_const_Ball_lift hoare_vcg_all_lift
             hoare_vcg_imp_lift hoare_vcg_disj_lift valid_cte_at_neg_typ
           | simp add: cte_wp_at_neg2[where P="\<lambda>c. x \<in> obj_refs c" for x])+
@@ -620,14 +605,12 @@ lemma sts_Restart_stay_simple:
   apply simp
   done
 
-
 lemma decode_inv_inv[wp]:
-  notes hoare_pre [wp_pre del]
+  notes if_split [split del]
   shows
   "\<lbrace>P\<rbrace> decode_invocation label args cap_index slot cap excaps \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (case_tac cap, simp_all add: decode_invocation_def)
-          apply (wp decode_tcb_inv_inv decode_domain_inv_inv | rule conjI | clarsimp
-                      | simp split: bool.split)+
+  apply (case_tac cap, simp_all add: decode_invocation_def,
+    (wpsimp wp: decode_tcb_inv_inv decode_domain_inv_inv)+)
   done
 
 lemma diminished_Untyped [simp]:
@@ -1006,13 +989,6 @@ lemma hoare_vcg_const_imp_lift_E[wp]:
   apply wp
   done
 
-(* FIXME: move *)
-lemmas validE_E_combs[wp_comb] =
-    hoare_vcg_E_conj[where Q'="\<top>\<top>", folded validE_E_def]
-    valid_validE_E
-    hoare_vcg_E_conj[where Q'="\<top>\<top>", folded validE_E_def, OF valid_validE_E]
-
-
 context Syscall_AI begin
 
 lemma hinv_invs':
@@ -1364,7 +1340,7 @@ lemma hr_ct_active[wp]:
   "\<lbrace>invs and ct_active\<rbrace> handle_reply \<lbrace>\<lambda>rv. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: handle_reply_def)
   apply (rule hoare_seq_ext)
-   apply (rule ct_in_state_decomp)
+   apply (rule_tac t=thread in ct_in_state_decomp)
     apply ((wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp)+)[1]
    apply (wp hoare_vcg_all_lift get_cap_wp do_reply_transfer_st_tcb_at_active
         | wpc | simp)+

@@ -5365,6 +5365,9 @@ proof -
                apply (rule placeNewObject_doMachineOp_commute)
               apply (rule mapM_x_commute[where f = id])
                apply (rule placeNewObject_copyGlobalMapping_commute)
+              apply (rule hoare_pre)
+               apply (wp copyGlobalMappings_pspace_no_overlap' mapM_x_wp'| clarsimp simp: pdeBits_def)+
+             apply (rule hoare_pre)
               apply (wp copyGlobalMappings_pspace_no_overlap' mapM_x_wp'| clarsimp simp: pdeBits_def)+
             apply (clarsimp simp:objBits_simps archObjSize_def pdBits_def pageBits_def word_bits_conv)
             apply assumption (* resolve assumption , yuck *)

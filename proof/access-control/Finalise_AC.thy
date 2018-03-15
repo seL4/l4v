@@ -446,42 +446,36 @@ lemma finalise_cap_respects[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and valid_cap cap
     and K (pas_cap_cur_auth aag cap)\<rbrace>
        finalise_cap cap final \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (cases cap, simp_all, safe)
-                apply (wp |clarsimp simp: invs_valid_objs invs_sym_refs cap_auth_conferred_def
-                                          cap_rights_to_auth_def aag_cap_auth_def)+
-              (*NTFN Cap*)
-              apply ((wp unbind_maybe_notification_valid_objs get_simple_ko_wp
-                         unbind_maybe_notification_respects
-                         | wpc
-                         | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def                               split: if_split_asm
-                         | fastforce)+)[3]
-                apply (clarsimp simp: obj_at_def valid_cap_def is_ntfn invs_def
-                                      valid_state_def valid_pspace_def
-                                     split: option.splits)+
-                              (*other caps*)
-            apply ((wp unbind_notification_invs
-                   | fastforce simp: cap_auth_conferred_def cap_rights_to_auth_def
-                                         aag_cap_auth_def unbind_maybe_notification_def
-                              elim!: pas_refined_Control[symmetric])+)[3]
-            (* tcb cap *)
-         including no_pre
-         apply (wp unbind_notification_respects unbind_notification_invs
-                 | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def
-                                  unbind_maybe_notification_def
-                           elim!: pas_refined_Control[symmetric]
-                 | simp add: if_apply_def2 split del: if_split )+
-         apply (clarsimp simp: valid_cap_def pred_tcb_at_def obj_at_def is_tcb
-                        dest!: tcb_at_ko_at)
-         apply (clarsimp split: option.splits elim!: pas_refined_Control[symmetric])
-         apply (frule bound_tcb_at_implies_reset, fastforce simp add: pred_tcb_at_def obj_at_def)
-         apply (drule pas_refined_Control, simp, simp)
-         (* other caps *)
-        apply (wp | simp add: if_apply_def2 split del: if_split
+  apply (cases cap; simp; safe?;
+     (solves \<open>(wp | simp add: if_apply_def2 split del: if_split
                   | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def is_cap_simps
                                    pas_refined_all_auth_is_owns aag_cap_auth_def
                                    deleting_irq_handler_def cap_links_irq_def invs_valid_objs
                         split del: if_split
-                            elim!: pas_refined_Control [symmetric])+
+                            elim!: pas_refined_Control [symmetric])+\<close>)?
+  )
+
+   (*NTFN Cap*)
+   apply ((wp unbind_maybe_notification_valid_objs get_simple_ko_wp
+              unbind_maybe_notification_respects
+              | wpc
+              | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def                               split: if_split_asm
+              | fastforce)+;
+        (clarsimp simp: obj_at_def valid_cap_def is_ntfn invs_def
+                            valid_state_def valid_pspace_def
+                            split: option.splits)+)
+  (* tcb cap *)
+  apply (wp unbind_notification_respects unbind_notification_invs
+          | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def
+                           unbind_maybe_notification_def
+                    elim!: pas_refined_Control[symmetric]
+          | simp add: if_apply_def2 split del: if_split )+
+  apply (clarsimp simp: valid_cap_def pred_tcb_at_def obj_at_def is_tcb
+                 dest!: tcb_at_ko_at)
+  apply (clarsimp split: option.splits elim!: pas_refined_Control[symmetric])
+  apply (frule pas_refined_Control, simp+)
+  apply (fastforce dest: bound_tcb_at_implies_reset
+               simp add: pred_tcb_at_def obj_at_def)
   done
 
 lemma finalise_cap_auth:
@@ -973,7 +967,7 @@ next
   case 3
   show ?case
     apply (simp add: cte_wp_at_caps_of_state)
-    apply wp
+    apply wp+
     apply clarsimp
     apply (simp add: P_Zombie is_cap_simps)
     done
@@ -993,7 +987,7 @@ next
      apply simp
      apply (clarsimp simp: cte_wp_at_caps_of_state)
      apply (auto simp: is_cap_simps P_Zombie P_Null)[1]
-    apply wp
+    apply wp+
     apply (clarsimp simp: cte_wp_at_caps_of_state P_Zombie is_cap_simps)
     done
 qed

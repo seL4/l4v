@@ -362,11 +362,9 @@ lemma retype_untyped_bij_success:
                                     Some new_object")
     apply (erule exE)
     apply (rule hoare_assume_pre)
-    apply (rule hoare_strengthen_post)
-     apply (frule offset_slot' [where slot=free_cptr, symmetric])
-     apply (frule offset_slot' [where slot=untyped_cptr, symmetric])
-     apply simp
-     apply (wp retype_untyped_wp_success [where available_ids=available_ids and
+    apply (frule offset_slot' [where slot=free_cptr, symmetric])
+    apply (frule offset_slot' [where slot=untyped_cptr, symmetric])
+    apply (rule hoare_chain, rule retype_untyped_wp_success [where available_ids=available_ids and
                                         all_available_ids=all_available_ids and
                                         cover_ids=cover_ids and R=R],
             (assumption|simp|clarsimp|blast)+)

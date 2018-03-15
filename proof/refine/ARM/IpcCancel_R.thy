@@ -1945,7 +1945,7 @@ lemma suspend_makes_inactive:
 
 declare threadSet_sch_act_sane [wp]
 declare sane_update [simp]
-declare sts_sch_act_sane [wp]
+declare setThreadState_sch_act_sane [wp]
 
 lemma tcbSchedEnqueue_ksQset_weak:
   "\<lbrace>\<lambda>s. t' \<in> set (ksReadyQueues s p)\<rbrace>
@@ -2579,16 +2579,16 @@ lemma cancelAllSignals_unlive:
    apply (fastforce simp: obj_at'_real_def projectKOs
                     dest: obj_at_conj'
                     elim: ko_wp_at'_weakenE)
-  including no_pre
   apply (wp rescheduleRequired_unlive)
    apply (wp cancelAll_unlive_helper)
    apply ((wp mapM_x_wp' setObject_ko_wp_at' hoare_vcg_const_Ball_lift)+,
           simp_all add: objBits_simps', simp_all)
-    apply (fold setNotification_def, wp)
-    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
-   apply (simp add: projectKOs projectKO_opt_tcb)
-  apply (fastforce simp: ko_wp_at'_def valid_obj'_def valid_ntfn'_def
-                        obj_at'_def projectKOs)+
+   apply (fold setNotification_def, wp)
+  apply (intro conjI[rotated])
+     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
+    apply (clarsimp simp: projectKOs projectKO_opt_tcb)
+   apply (fastforce simp: ko_wp_at'_def valid_obj'_def valid_ntfn'_def
+                         obj_at'_def projectKOs)+
   done
 
 crunch ep_at'[wp]: tcbSchedEnqueue "ep_at' epptr"

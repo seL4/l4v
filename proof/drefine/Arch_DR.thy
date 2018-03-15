@@ -688,7 +688,6 @@ next
 next
   case (PageCap dev base rights pgsz asid)
   thus ?case
-    including no_pre
     apply (simp add: Decode_D.decode_invocation_def
                      decode_invocation_def arch_decode_invocation_def
                split del: if_split)
@@ -743,10 +742,9 @@ next
                                update_mapping_cap_status_def Types_D.cap_rights_def
                                mask_vm_rights_def transform_mapping_def)
              apply wp+
-          apply (rule hoare_pre, wp, simp)
+          apply (simp)
          apply (rule hoare_pre, wp, auto)[1]
         apply (wp | simp add: whenE_def split del: if_split)+
-       apply (rule hoare_pre, wp, simp)
       apply clarsimp
       apply (clarsimp simp: gets_bind_alternative
                             gets_the_def bind_assoc corres_symb_exec_in_gets
@@ -788,17 +786,16 @@ next
                               update_mapping_cap_status_def Types_D.cap_rights_def
                               mask_vm_rights_def)
             apply wp+
-         apply (rule hoare_pre, wp, simp)
+         apply (simp)
         apply (rule hoare_pre, wp, auto)[1]
        apply (wp | simp add: whenE_def split del: if_split)+
-      apply (rule hoare_pre, wp, simp)
      apply (rule corres_alternate1)
      apply (simp add: returnOk_def arch_invocation_relation_def cap_object_simps
                       translate_arch_invocation_def transform_page_inv_def)
     apply (clarsimp)
     apply (rule corres_from_rdonly)
     apply (wp, clarsimp)
-    apply (simp only: Let_unfold, wp+, clarsimp, rule valid_validE, (wp whenE_inv)+, clarsimp, wp+)
+    apply (simp only: Let_unfold, (wp whenE_inv)+, clarsimp)
     apply (rule validE_cases_valid, rule hoare_pre)
      apply (wp | simp add: Let_unfold arch_invocation_relation_def translate_arch_invocation_def
                             transform_page_inv_def)+
@@ -808,7 +805,7 @@ next
     apply (metis flush.exhaust)
     apply (rule corres_from_rdonly)
     apply (wp, clarsimp)
-    apply (simp only: Let_unfold, wp+, clarsimp, rule valid_validE, (wp whenE_inv)+, clarsimp, wp+)
+    apply (simp only: Let_unfold, (wp whenE_inv)+, clarsimp)
     apply (rule validE_cases_valid, rule hoare_pre)
      apply (wp | simp add: Let_unfold arch_invocation_relation_def translate_arch_invocation_def
                             transform_page_inv_def)+
@@ -818,7 +815,7 @@ next
     apply (metis flush.exhaust)
     apply (rule corres_from_rdonly)
     apply (wp, clarsimp)
-    apply (simp only: Let_unfold, wp, clarsimp, rule valid_validE, (wp whenE_inv)+, clarsimp, wp+)
+    apply (simp only: Let_unfold, (wp whenE_inv)+, clarsimp)
     apply (rule validE_cases_valid, rule hoare_pre)
      apply (wp | simp add: Let_unfold arch_invocation_relation_def translate_arch_invocation_def
                             transform_page_inv_def)+
@@ -828,7 +825,7 @@ next
     apply (metis flush.exhaust)
     apply (rule corres_from_rdonly)
     apply (wp, clarsimp)
-    apply (simp only: Let_unfold, wp, clarsimp, rule valid_validE, (wp whenE_inv)+, clarsimp, wp)
+    apply (simp only: Let_unfold, (wp whenE_inv)+, clarsimp)
     apply (rule validE_cases_valid, rule hoare_pre)
      apply (wp | simp add: Let_unfold arch_invocation_relation_def translate_arch_invocation_def
                             transform_page_inv_def)+
@@ -991,14 +988,9 @@ next
          apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
       apply (rule validE_cases_valid, rule hoare_pre, wp)
 
-      including no_pre
       apply (wp resolve_vaddr_inv |  clarsimp simp: flush_type_map_def transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
       in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
         apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
-        apply (clarsimp simp: whenE_def)
-        apply (intro conjI impI)
-         apply (wp resolve_vaddr_inv |  simp add: transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
-         in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
          apply (rule_tac x="Inl undefined" in exI)
          apply (wp resolve_vaddr_inv |  simp add: flush_type_map_def transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
         in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+

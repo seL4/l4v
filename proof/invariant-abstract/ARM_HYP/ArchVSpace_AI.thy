@@ -63,11 +63,11 @@ crunch inv [wp]: get_vcpu "P"
 lemma set_vcpu_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_vcpu t vcpu \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   apply (simp add: set_vcpu_def)
-  including no_pre apply (wpsimp wp: set_object_typ_at)
-  apply (clarsimp simp: obj_at_def get_object_def)
-  apply wp+
-  apply (clarsimp split: kernel_object.split arch_kernel_obj.split)
-  apply (simp add: a_type_def)
+  apply (wpsimp wp: set_object_typ_at)
+   apply (clarsimp simp: obj_at_def get_object_def)
+   apply wp+
+  apply (clarsimp simp: a_type_simps split: kernel_object.split arch_kernel_obj.split)
+  apply (simp add: obj_at_def)
   done
 
 lemma modify_obj_at : "\<lbrakk>\<forall>s. kheap s p = kheap (f s) p\<rbrakk> \<Longrightarrow>
@@ -130,7 +130,8 @@ lemma pspace_in_kernel_window_set_vcpu[wp]:
   by (rule pspace_in_kernel_window_atyp_lift, wp+)
 
 crunch pspace_in_kernel_window[wp]: vcpu_switch "pspace_in_kernel_window"
-  (simp: Metis.not_atomize crunch_simps a_type_def wp: crunch_wps ignore: do_machine_op)
+  (simp: Metis.not_atomize crunch_simps a_type_def when_def
+     wp: crunch_wps ignore: do_machine_op)
 
 lemma find_free_hw_asid_pspace_in_kernel_window[wp]:
    "\<lbrace>pspace_in_kernel_window\<rbrace> find_free_hw_asid
@@ -1323,18 +1324,18 @@ lemma vcpu_save_valid_objs[wp] : "\<lbrace>valid_objs\<rbrace> vcpu_save v \<lbr
   done
 
 crunch valid_objs [wp]: vcpu_switch "valid_objs"
-  (wp: crunch_wps hoare_drop_imps simp: Metis.not_atomize whenE_def crunch_simps)
+  (wp: crunch_wps hoare_drop_imps simp: Metis.not_atomize whenE_def crunch_simps when_def)
 
 crunch valid_objs [wp]: flush_page "valid_objs"
   (wp: crunch_wps hoare_drop_imps simp: whenE_def crunch_simps)
 
+lemma arch_thread_set_is_thread_set:
+  "arch_thread_set f t = thread_set (tcb_arch_update f) t"
+  by (simp add: thread_set_def arch_thread_set_def cong: tcb.fold_congs)
+
 lemma arch_thread_set_caps_of_state [wp]:
   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> arch_thread_set f t \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  unfolding arch_thread_set_def set_object_def
-  apply wp
-  apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD)
-  apply (clarsimp simp: caps_of_state_after_update obj_at_def get_tcb_def tcb_cap_cases_def)
-  done
+  by (wpsimp wp: thread_set_caps_of_state_trivial2 simp: arch_thread_set_is_thread_set)
 
 lemma arch_thread_set_wp:
   "\<lbrace>\<lambda>s. get_tcb p s \<noteq> None \<longrightarrow> Q (s\<lparr>kheap := kheap s(p \<mapsto> TCB (the (get_tcb p s)\<lparr>tcb_arch := f (tcb_arch (the (get_tcb p s)))\<rparr>))\<rparr>) \<rbrace>
@@ -1466,14 +1467,9 @@ lemma vcpu_save_valid_arch_state[wp]:
 
 lemma get_vcpu_typ_at'[wp]:
   "\<lbrace>\<top>\<rbrace> get_vcpu vcpu \<lbrace>\<lambda>_. typ_at (AArch AVCPU) vcpu\<rbrace>"
-  apply (simp add: get_vcpu_def)
-  including no_pre apply wp
-  apply (rule_tac P="ko_at kobj vcpu" in hoare_triv)
-  apply (simp add: obj_at_def[abs_def])
-  apply (case_tac kobj; simp)
-  apply (case_tac x5; simp)
-   apply (wpsimp simp: a_type_def)
-  apply (wp get_object_sp[of \<top>, simplified])
+  apply (simp add: get_vcpu_def get_object_def)
+  apply (wpsimp wp: )
+  apply (simp add: obj_at_def)
   done
 
 lemma vcpu_restore_typ_at'[wp]:
@@ -1536,7 +1532,8 @@ lemma set_vm_root_valid_arch[wp]:
   unfolding set_vm_root_def
   apply (wpsimp wp: gets_the_get_tcb_wp get_hw_asid_valid_arch
                     hoare_vcg_imp_lift hoare_vcg_all_lift hoare_whenE_wp
-                    hoare_drop_imps get_cap_wp)
+                    hoare_drop_imps get_cap_wp
+              simp: if_apply_def2)
   apply (drule (2) sym_refs_VCPU_hyp_live, simp)
   done
 
@@ -2859,7 +2856,8 @@ lemma svr_invs [wp]:
   "\<lbrace>invs\<rbrace> set_vm_root t' \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding set_vm_root_def
   apply (wpsimp wp: gets_the_get_tcb_wp hoare_vcg_all_lift hoare_vcg_imp_lift hoare_whenE_wp
-                    hoare_vcg_disj_lift hoare_drop_imps get_cap_wp)
+                    hoare_vcg_disj_lift hoare_drop_imps get_cap_wp
+              simp: if_apply_def2)
   apply (thin_tac "cte_wp_at (op = x) t s" for t)
   apply (drule cte_wp_at_valid_objs_valid_cap, fastforce)
   apply (clarsimp simp: valid_cap_def mask_def)
@@ -4848,7 +4846,7 @@ crunch pspace_respects_device_region[wp]: vcpu_disable, vcpu_restore, vcpu_enabl
      wp: crunch_wps set_object_pspace_respects_device_region pspace_respects_device_region_dmo)
 
 crunch pspace_respects_device_region[wp]: perform_page_invocation "pspace_respects_device_region"
-  (simp: crunch_simps respects_device_region_vcpu_helper vcpuregs_sets vcpuregs_gets
+  (simp: crunch_simps respects_device_region_vcpu_helper vcpuregs_sets vcpuregs_gets when_def
      wp: crunch_wps set_object_pspace_respects_device_region pspace_respects_device_region_dmo)
 
 (* FIXME move to WordLemma *)
@@ -4885,7 +4883,7 @@ lemma perform_page_table_invocation_invs[wp]:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (cases pti)
    apply (clarsimp simp: valid_pti_def perform_page_table_invocation_def)
-   including no_pre apply (wp dmo_invs)
+   apply (wp dmo_invs)
     apply (rule_tac Q="\<lambda>_. invs" in hoare_post_imp)
      apply safe
      apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p =
@@ -4901,26 +4899,24 @@ lemma perform_page_table_invocation_invs[wp]:
              set_cap_irq_handlers set_cap_empty_pde
              hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift
              set_cap_arch_obj set_cap_obj_at_impossible set_cap_valid_arch_caps)+
-         apply (clarsimp simp: cte_wp_at_caps_of_state)
-         apply (rule exI, rule conjI, assumption)
-         apply (clarsimp simp: is_pt_cap_def is_arch_update_def
-                    cap_master_cap_def cap_asid_def vs_cap_ref_simps
-                    is_arch_cap_def pde_ref_def pde_ref_pages_def
+    apply (simp; intro conjI; clarsimp simp: cte_wp_at_caps_of_state kernel_vsrefs_def)
+     apply (clarsimp simp: is_pt_cap_def is_arch_update_def cap_master_cap_def
+                           vs_cap_ref_simps
+                    split: cap.splits arch_cap.splits option.splits)
+    apply fastforce
+   apply (rule exI, rule conjI, assumption)
+   apply (clarsimp simp: is_pt_cap_def is_arch_update_def
+                         cap_master_cap_def cap_asid_def vs_cap_ref_simps
+                         is_arch_cap_def pde_ref_def pde_ref_pages_def
                   split: cap.splits arch_cap.splits option.splits
-                    pde.splits)
-         apply (intro allI impI conjI, fastforce simp: vspace_bits_defs)
-         apply (clarsimp simp: caps_of_def cap_of_def vspace_bits_defs)
-         apply (rule notnotD, simp only: not_ex)
-         apply (subst de_Morgan_conj, rule notI, clarsimp)
-         apply (frule invs_pd_caps)
-         apply (drule (1) empty_table_pt_capI)
-         apply (clarsimp simp: obj_at_def empty_table_def pte_ref_pages_def)
-        apply (fastforce simp: kernel_vsrefs_def cte_wp_at_caps_of_state vspace_bits_defs)+
-    apply (clarsimp simp: cte_wp_at_caps_of_state)
-    apply (clarsimp simp: is_pt_cap_def is_arch_update_def cap_master_cap_def
-                      vs_cap_ref_simps
-               split: cap.splits arch_cap.splits option.splits)
-   apply clarsimp
+                         pde.splits)
+   apply (intro allI impI conjI)
+    apply (clarsimp simp: pde_bits_def)
+    apply fastforce
+   apply (clarsimp simp: caps_of_def cap_of_def)
+   apply (frule invs_pd_caps)
+   apply (drule (1) empty_table_pt_capI)
+   apply (clarsimp simp: obj_at_def empty_table_def pte_ref_pages_def)
   apply (clarsimp simp: perform_page_table_invocation_def
                  split: cap.split arch_cap.split)
   apply (rename_tac word option)
@@ -5479,7 +5475,7 @@ lemma set_vcpu_pd_at:
   by (wp set_vcpu_nonvcpu_at; auto)
 
 crunch pd_at: vcpu_switch "\<lambda>s. P (ko_at (ArchObj (PageDirectory pd)) x s)"
-  (wp: crunch_wps simp: ko_at_vcpu_helper crunch_simps)
+  (wp: crunch_wps simp: ko_at_vcpu_helper crunch_simps when_def)
 
 crunch pd_at: flush_page "\<lambda>s. P (ko_at (ArchObj (PageDirectory pd)) x s)"
   (wp: crunch_wps ko_at_vcpu_helper simp: crunch_simps)
@@ -5491,7 +5487,7 @@ lemma set_vcpu_pt_at:
   by (wp set_vcpu_nonvcpu_at; auto)
 
 crunch pt_at: vcpu_switch "\<lambda>s. P (ko_at (ArchObj (PageTable pt)) x s)"
-  (wp: crunch_wps simp: ko_at_vcpu_helper crunch_simps)
+  (wp: crunch_wps simp: ko_at_vcpu_helper crunch_simps when_def)
 
 crunch pt_at: flush_page "\<lambda>s. P (ko_at (ArchObj (PageTable pt)) x s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -6410,7 +6406,7 @@ lemma perform_asid_pool_invs [wp]:
   "\<lbrace>invs and valid_apinv api\<rbrace> perform_asid_pool_invocation api \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (clarsimp simp: perform_asid_pool_invocation_def split: asid_pool_invocation.splits)
   apply (wp arch_update_cap_invs_map set_asid_pool_invs_map
-            get_cap_wp set_cap_typ_at empty_table_lift
+            get_cap_wp set_cap_typ_at empty_table_lift[OF _ hoare_weaken_pre]
             set_cap_obj_at_other
                |wpc|simp|wp_once hoare_vcg_ex_lift)+
   apply (clarsimp simp: valid_apinv_def cte_wp_at_caps_of_state is_arch_update_def is_cap_simps cap_master_cap_simps)

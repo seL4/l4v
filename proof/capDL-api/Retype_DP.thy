@@ -331,7 +331,7 @@ lemma invoke_untyped_wp:
         apply (simp add:create_cap_def split_def)
         apply (wp hoare_vcg_ex_lift)
         apply (rule cdl.mapM_x_sep')
-        apply (wp set_parent_wp set_cap_wp)
+        apply (rule hoare_pre, wp set_parent_wp set_cap_wp)
         apply fastforce
        apply (rule_tac P = "untyped_cap = UntypedCap dev obj_range free_range
          \<and> length new_obj_refs = length slots
@@ -671,7 +671,7 @@ lemma seL4_Untyped_Retype_sep:
        apply wp[1]
       apply (rule lookup_cap_and_slot_rvu[where r = root_size
        and  cap' = "root_cnode_cap"])
-     apply (wp lookup_cap_and_slot_rvu[where r = root_size
+     apply (rule hoare_pre, wp lookup_cap_and_slot_rvu[where r = root_size
        and cap' = "UntypedCap dev obj_range free_range"])[1]
      apply clarsimp
      apply (intro conjI allI)
@@ -1188,6 +1188,11 @@ lemma set_cap_opt_cap_sep_imp:
   apply (clarsimp dest!: asid)
   done
 
+lemma set_cap_not_pending_ugh:
+  "\<lbrace>no_pending and K (snd slot = tcb_pending_op_slot \<longrightarrow> \<not> is_pending_cap cap)\<rbrace>
+    set_cap slot cap \<lbrace>\<lambda>rv s. no_pending s\<rbrace>"
+  by (rule hoare_gen_asm, wp)
+
 lemma reset_untyped_cap_not_pending_cap[wp]:
   "\<lbrace>\<lambda>s. \<not> is_pending_cap (the (opt_cap cref s))\<rbrace>
   reset_untyped_cap cref
@@ -1195,7 +1200,7 @@ lemma reset_untyped_cap_not_pending_cap[wp]:
   apply (simp add: reset_untyped_cap_def)
   apply (wp hoare_whenE_wp)
      apply (rule_tac P = " \<not> is_pending_cap cap" in hoare_gen_asmEx)
-     apply (wp mapME_x_inv_wp alternativeE_wp set_cap_opt_cap)
+     apply (wp mapME_x_inv_wp alternativeE_wp set_cap_opt_cap)+
      apply simp
     apply (wp select_wp)+
   apply (clarsimp simp: detype_no_pending)
@@ -1209,19 +1214,14 @@ lemma invoke_untyped_no_pending[wp]:
   invoke_untyped (Retype ref a b c d e)
   \<lbrace>\<lambda>rv. no_pending\<rbrace>"
   apply (simp add: invoke_untyped_def create_cap_def)
-  apply (rule hoare_pre)
-  apply (wp mapM_x_wp | wpc | simp add:update_available_range_def )+
-          apply (case_tac x)
-          apply (simp | wp)+
-         apply force
-        apply wp
-       apply (simp add: update_available_range_def)
-       apply (rule_tac P = "snd ref = tcb_pending_op_slot \<longrightarrow> \<not> is_pending_cap untyped_cap" in hoare_gen_asm)
-       apply (wp | simp)+
-       apply (wp select_wp hoare_drop_imps | simp)+
-    apply (wp unlessE_wp | simp)+
-    apply (rule_tac Q' = "\<lambda>r s. no_pending s \<and> ((\<exists>y. opt_cap ref s = Some y) \<longrightarrow>
-                         \<not> is_pending_cap (the (opt_cap ref s)))" in hoare_post_imp_R)
+  apply (wpsimp wp: mapM_x_wp' set_cap_not_pending_ugh get_cap_wp select_wp
+        simp: update_available_range_def
+    )+
+     apply (wp_once hoare_drop_imps)
+     apply (wpsimp  split_del: if_split)+
+   apply (wp unlessE_wp | simp)+
+   apply (rule_tac Q' = "\<lambda>r s. no_pending s \<and> ((\<exists>y. opt_cap ref s = Some y) \<longrightarrow>
+                        \<not> is_pending_cap (the (opt_cap ref s)))" in hoare_post_imp_R)
     apply (wp reset_untyped_cap_no_pending)
    apply simp
   apply auto

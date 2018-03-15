@@ -159,7 +159,7 @@ unfolding resolve_address_bits_def
 proof (induct arbitrary: s rule: resolve_address_bits'.induct)
   case (1 z cap' cref' s')
   have P: "\<And>s f P Q. s \<turnstile> \<lbrace>P\<rbrace> throwError f \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv s. True\<rbrace>"
-    by wp
+    by wp+
   show ?case
     apply (subst resolve_address_bits'.simps)
     apply (cases cap', simp_all add: P split del: if_split)

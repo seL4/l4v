@@ -4255,18 +4255,7 @@ lemma setNotification_sch_act_sane:
   "\<lbrace>sch_act_sane\<rbrace> setNotification a ntfn \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
   by (wp sch_act_sane_lift)
 
-
-lemma unbindNotification_sch_act_sane[wp]:
-  "\<lbrace>sch_act_sane\<rbrace> unbindNotification t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
-  apply (simp add: unbindNotification_def)
-  apply (wp setNotification_sch_act_sane sbn_sch_act_sane | wpc | clarsimp)+
-  done
-
-lemma unbindMaybeNotification_sch_act_sane[wp]:
-  "\<lbrace>sch_act_sane\<rbrace> unbindMaybeNotification t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
-  apply (simp add: unbindMaybeNotification_def)
-  apply (wp setNotification_sch_act_sane sbn_sch_act_sane | wpc | clarsimp)+
-  done
+crunch sch_act_sane[wp]: unbindNotification, unbindMaybeNotification "sch_act_sane"
 
 lemma finaliseCapTrue_standin_ct_not_ksQ:
   "\<lbrace>invs' and ct_in_state' simple' and sch_act_sane

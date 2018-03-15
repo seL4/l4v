@@ -2026,7 +2026,7 @@ lemma hr_ct_active'[wp]:
   apply (simp add: handleReply_def getSlotCap_def getCurThread_def
                    getThreadCallerSlot_def locateSlot_conv)
   apply (rule hoare_seq_ext)
-   apply (rule ct_in_state'_decomp)
+   apply (rule_tac t=thread in ct_in_state'_decomp)
     apply ((wp hoare_drop_imps | wpc | simp)+)[1]
    apply (subst haskell_assert_def)
    apply (wp hoare_vcg_all_lift getCTE_wp doReplyTransfer_st_tcb_at_active

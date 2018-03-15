@@ -684,7 +684,7 @@ next
   case (3 ptr bits n slot s)
   show ?case
     apply simp
-    apply wp
+    apply wp+
     apply clarsimp
     apply (rule context_conjI')
      apply (rule context_conjI')
@@ -953,19 +953,16 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
          and K (\<not> is_master_reply_cap cap)\<rbrace>
      cap_move cap ptr ptr'
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  including no_pre
   unfolding invs_def valid_state_def valid_pspace_def
   apply (simp add: pred_conj_def conj_comms [where Q = "valid_mdb S" for S])
   apply wp
-   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_zombies_final)
-   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_if_live)
-   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_if_unsafe)
-   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_irq_handlers)
-   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_replies)
-   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_valid_arch_caps)
-   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_valid_ioc)
-   apply clarsimp
-   apply (rule hoare_drop_imps)+
+   apply (wpe cap_move_zombies_final)
+   apply (wpe cap_move_if_live)
+   apply (wpe cap_move_if_unsafe)
+   apply (wpe cap_move_irq_handlers)
+   apply (wpe cap_move_replies)
+   apply (wpe cap_move_valid_arch_caps)
+   apply (wpe cap_move_valid_ioc)
    apply (simp add: cap_move_def set_cdt_def)
    apply (rule hoare_pre)
     apply (wp set_cap_valid_objs set_cap_idle set_cap_typ_at
@@ -988,8 +985,7 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
    apply (rule tcb_cap_valid_NullCapD)
     apply (erule(1) tcb_cap_valid_caps_of_stateD)
    apply (simp add: is_cap_simps)
-  apply (clarsimp simp: cte_wp_at_caps_of_state)
-  done
+   done
 
 end
 

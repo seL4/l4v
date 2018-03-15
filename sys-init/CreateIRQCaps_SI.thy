@@ -189,17 +189,16 @@ lemma create_irq_caps_sep_helper:
     and K ((map_of (zip (used_irq_list spec) free_cptrs), drop (card (used_irqs spec)) free_cptrs) = rv \<and>
     inj_on t' (used_irq_nodes spec) \<and>
     dom t' = used_irq_nodes spec)\<guillemotright> s\<rbrace>"
-  including no_pre
   apply clarsimp
   apply (rule hoare_gen_asm_conj)
   apply (clarsimp simp: create_irq_caps_def si_irq_nodes_def2 sep_conj_exists)
-  apply wp
-  apply simp
   apply (rule hoare_grab_exs2)
-  apply (rule_tac x="(\<lambda>obj_id. Some ((k_irq_table \<circ> inv (cdl_irq_node spec)) obj_id))
-                     |` used_irq_nodes spec" in hoare_exI)
+  apply wp
+   apply simp
+   apply (rule_tac x="(\<lambda>obj_id. Some ((k_irq_table \<circ> inv (cdl_irq_node spec)) obj_id))
+                      |` used_irq_nodes spec" in hoare_exI)
 
-  apply (rule_tac P1 = "\<lambda>(irq,free_cptr). (si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>*
+   apply (rule_tac P1 = "\<lambda>(irq,free_cptr). (si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>*
                                            irq \<mapsto>irq k_irq_table irq \<and>*
                                            k_irq_table irq \<mapsto>o IRQNode empty_irq_node" and
                   Q1 = "\<lambda>(irq,free_cptr). irq_empty spec ((\<lambda>obj_id. Some ((k_irq_table \<circ> inv (cdl_irq_node spec)) obj_id))
@@ -208,19 +207,20 @@ lemma create_irq_caps_sep_helper:
                   I1 = "si_objects" and
                   R1 = "si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
                         R" in hoare_chain [OF mapM_x_set_sep])
-     apply (metis distinct_zipI2)
-    apply (clarsimp split:prod.splits)
-    apply (clarsimp simp: sep_conj_assoc)
-    apply (wp sep_wp: create_irq_cap_sep, simp+)
-    apply (rule conjI)
-     apply (clarsimp simp: sep_conj_assoc sep_conj_exists)
-     apply sep_solve
-    apply (frule well_formed_inj_cdl_irq_node)
-    apply (frule set_zip_leftD)
-    apply (frule in_set_zip2)
-    apply (simp add: map_of_zip_tuple_in list_all_iff unat_less_2_si_cnode_size
-                     restrict_map_def used_irq_nodes_def)
-
+      apply (metis distinct_zipI2)
+     apply (clarsimp split:prod.splits)
+     apply (clarsimp simp: sep_conj_assoc)
+     apply (wp sep_wp: create_irq_cap_sep, simp+)
+     apply (rule conjI)
+      apply (clarsimp simp: sep_conj_assoc sep_conj_exists)
+      apply sep_solve
+     apply (frule well_formed_inj_cdl_irq_node)
+     apply (frule set_zip_leftD)
+     apply (frule in_set_zip2)
+     apply (simp add: map_of_zip_tuple_in list_all_iff unat_less_2_si_cnode_size
+                      restrict_map_def used_irq_nodes_def)
+    apply assumption
+   defer
    apply (subst sep_list_conj_sep_map_set_conj [symmetric], erule distinct_zipI2)
    apply (subst (asm) sep_list_conj_sep_map_set_conj [symmetric, where xs = "used_irq_list spec", simplified])
    apply (subst split_beta')

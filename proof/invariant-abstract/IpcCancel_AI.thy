@@ -552,24 +552,24 @@ lemma reply_cap_descends_from_master:
 
 
 lemma (in delete_one_abs) reply_cancel_ipc_no_reply_cap[wp]:
-  notes hoare_pre [wp_pre del]
+  notes hoare_pre
   shows "\<lbrace>invs and tcb_at t\<rbrace> (reply_cancel_ipc t :: (unit,'a) s_monad) \<lbrace>\<lambda>rv s. \<not> has_reply_cap t s\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
   apply wp
-     apply (rule_tac Q="\<lambda>rvp s. cte_wp_at (\<lambda>c. c = cap.NullCap) x s \<and>
+        apply (rule_tac Q="\<lambda>rvp s. cte_wp_at (\<lambda>c. c = cap.NullCap) x s \<and>
                                 (\<forall>sl. sl \<noteq> x \<longrightarrow>
                                   caps_of_state s sl \<noteq> Some (cap.ReplyCap t False))"
                   in hoare_strengthen_post)
-      apply (wp hoare_vcg_conj_lift hoare_vcg_all_lift
-                delete_one_deletes delete_one_caps_of_state)
-     apply (clarsimp simp: has_reply_cap_def cte_wp_at_caps_of_state)
-     apply (case_tac "(aa, ba) = (a, b)", simp_all)[1]
-    apply (wp hoare_vcg_all_lift select_wp | simp del: split_paired_All)+
-  apply (rule_tac Q="\<lambda>_ s. invs s \<and> tcb_at t s" in hoare_post_imp)
-   apply (erule conjE)
-   apply (frule(1) reply_cap_descends_from_master)
-   apply (auto dest: reply_master_no_descendants_no_reply[rotated -1])
-  apply (wp thread_set_invs_trivial | clarsimp simp: tcb_cap_cases_def)+
+         apply (wp hoare_vcg_conj_lift hoare_vcg_all_lift
+                   delete_one_deletes delete_one_caps_of_state)
+        apply (clarsimp simp: has_reply_cap_def cte_wp_at_caps_of_state)
+        apply (case_tac "(aa, ba) = (a, b)", simp_all)[1]
+       apply (wp hoare_vcg_all_lift select_wp | simp del: split_paired_All)+
+   apply (rule_tac Q="\<lambda>_ s. invs s \<and> tcb_at t s" in hoare_post_imp)
+    apply (erule conjE)
+    apply (frule(1) reply_cap_descends_from_master)
+    apply (auto dest: reply_master_no_descendants_no_reply[rotated -1])[1]
+   apply (wp thread_set_invs_trivial | clarsimp simp: tcb_cap_cases_def)+
   done
 
 
@@ -952,7 +952,6 @@ lemma bound_tcb_bound_notification_at:
   done
 
 lemma unbind_notification_invs:
-  notes hoare_pre [wp_pre del]
   shows "\<lbrace>invs\<rbrace> unbind_notification t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: unbind_notification_def invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_seq_ext [OF _ gbn_sp])
@@ -960,10 +959,12 @@ lemma unbind_notification_invs:
   apply clarsimp
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (wp valid_irq_node_typ set_simple_ko_valid_objs
-       | clarsimp)+
-          defer 5
-          apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
-                       simp: live_def valid_ntfn_set_bound_None is_ntfn valid_obj_def)[9]
+       | clarsimp split del: if_split)+
+  apply (intro conjI impI;
+    (match conclusion in "sym_refs r" for r \<Rightarrow> \<open>-\<close>
+        | auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
+                       simp: live_def valid_ntfn_set_bound_None is_ntfn valid_obj_def
+    )?)
   apply (clarsimp simp: if_split)
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def is_tcb
@@ -982,7 +983,6 @@ lemma unbind_notification_invs:
                   dest!: bound_tcb_bound_notification_at refs_in_ntfn_bound_refs symreftype_inverse'
                   split: option.splits)
   done
-
 
 crunch bound_tcb_at[wp]: cancel_all_signals "bound_tcb_at P t"
   (wp: mapM_x_wp_inv)

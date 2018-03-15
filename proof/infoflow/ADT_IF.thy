@@ -2956,32 +2956,22 @@ lemma perform_invocation_irq_state_inv:
      domain_sep_inv False sta and
      valid_invocation oper and K (irq_is_recurring irq st)\<rbrace>
    perform_invocation x y oper \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
-  including no_pre
-  apply(case_tac oper)
-          apply(simp | wp)+
-          apply((wp invoke_untyped_irq_state_inv[where irq=irq] irq_state_inv_triv | simp)+)[4]
-      apply((wp invoke_tcb_irq_state_inv invoke_cnode_irq_state_inv[simplified validE_R_def] | simp add: invoke_domain_def |blast)+)[5]
-      apply (rule hoare_validE_cases)
-    apply(rule hoare_post_impErr[OF valid_validE])
-      apply(rule hoare_pre, rule irq_state_inv_triv')
-        apply(wp invoke_irq_control_irq_masks | simp)+
-       apply(elim conjE, assumption)
-      apply blast
-     apply simp+
-   apply (rule validE_E_validE)
-   apply (rule hoare_pre)
-   apply (wp | simp)+
-
-   apply(wp irq_state_inv_triv' | simp)+
-     apply(wp invoke_irq_handler_irq_masks | simp)+
-     apply(elim conjE, assumption)
-    apply blast+
-  apply((wp irq_state_inv_triv | simp)+)[1]
-  apply (rule hoare_pre)
-  apply (rule irq_state_inv_trivE'[where Q=\<top>])
-  apply (wp | simp)+
+  apply(case_tac oper; simp;
+    (solves \<open>(wp invoke_untyped_irq_state_inv[where irq=irq]
+                 invoke_tcb_irq_state_inv invoke_cnode_irq_state_inv[simplified validE_R_def]
+                 irq_state_inv_triv
+               | simp | clarsimp
+               | simp add: invoke_domain_def)+\<close>)?)
+   apply wp
+    apply (wp irq_state_inv_triv' invoke_irq_control_irq_masks)
+    apply clarsimp
+    apply assumption
+   apply auto[1]
+  apply wp
+   apply(wp irq_state_inv_triv' invoke_irq_handler_irq_masks | clarsimp)+
+   apply assumption
+  apply auto[1]
   done
-
 
 
 lemma hoare_drop_impE:
@@ -3006,19 +2996,15 @@ lemma handle_event_irq_state_inv:
   "event \<noteq> Interrupt \<Longrightarrow>
    \<lbrace>irq_state_inv st and invs and domain_sep_inv False sta and K (irq_is_recurring irq st)\<rbrace>
    handle_event event \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
-  apply(rule hoare_pre)
-  apply(case_tac event)
-      apply simp
+  apply(case_tac event; simp)
       apply(rename_tac syscall)
       apply(case_tac syscall)
+      apply simp_all
              apply ((simp add: handle_send_def handle_call_def
-               | wp handle_invocation_irq_state_inv)+)[1]
-            apply((simp | wp add: irq_state_inv_triv hy_inv
-             | blast | (elim conjE, (intro conjI | assumption)+))+)[1]
-           apply ((simp add: handle_send_def handle_call_def
-               | wp handle_invocation_irq_state_inv)+)[2]
-  apply ((simp | wp add: irq_state_inv_triv hy_inv
-    | blast | (elim conjE, (intro conjI | assumption)+))+)
+                    | wp handle_invocation_irq_state_inv[where sta=sta and irq=irq]
+                         irq_state_inv_triv[OF handle_recv_irq_state_of_state]
+                         irq_state_inv_triv[OF handle_reply_irq_state_of_state])+)
+       apply (wp irq_state_inv_triv hy_inv | simp)+
   done
 
 lemma schedule_if_irq_state_inv:
@@ -3028,31 +3014,44 @@ lemma schedule_if_irq_state_inv:
 
 lemma irq_measure_if_inv:
   assumes irq_state:
+    "\<And> st. \<lbrace>P st\<rbrace> f \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>,-"
+  shows
+    "\<lbrace>\<lambda>s. irq_measure_if_inv st s \<and> (irq_state_inv s s \<longrightarrow> P s s)\<rbrace> f \<lbrace>\<lambda>_. irq_measure_if_inv st\<rbrace>,-"
+  apply (clarsimp simp: valid_def validE_R_def validE_def)
+  apply (simp add: irq_measure_if_inv_def)
+  apply (erule order_trans[rotated])
+  apply (simp add: irq_state_inv_refl)
+  apply (drule use_validE_R, rule irq_state, assumption)
+  apply (simp add: irq_state_inv_def irq_measure_if_inv_def Let_def
+                   irq_measure_if_def)
+  apply auto
+  done
+
+lemma irq_measure_if_inv_old:
+  assumes irq_state:
     "\<And> st. \<lbrace>irq_state_inv st and Q\<rbrace> f \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>,-"
   shows
     "\<lbrace>irq_measure_if_inv st and Q\<rbrace> f \<lbrace>\<lambda>_. irq_measure_if_inv st\<rbrace>,-"
-  apply(clarsimp simp: validE_R_def validE_def valid_def irq_measure_if_inv_def)
+  by (wpsimp wp: irq_measure_if_inv irq_state)
+
+lemma irq_measure_if_inv':
+  assumes irq_state:
+    "\<And> st. \<lbrace>P st\<rbrace> f \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"
+  shows
+    "\<lbrace>\<lambda>s. irq_measure_if_inv st s \<and> (irq_state_inv s s \<longrightarrow> P s s)\<rbrace> f \<lbrace>\<lambda>_. irq_measure_if_inv st\<rbrace>"
+  apply(clarsimp simp: valid_def irq_measure_if_inv_def irq_state_inv_refl)
   apply(erule le_trans[rotated])
-  apply(drule use_validE_R[OF _ irq_state])
-   apply(simp)
-   apply(rule irq_state_inv_refl)
+  apply(drule(1) use_valid[OF _ irq_state])
   apply(clarsimp simp: irq_measure_if_def Let_def irq_state_inv_def)
   apply auto
   done
 
-lemma irq_measure_if_inv':
+lemma irq_measure_if_inv_old':
   assumes irq_state:
     "\<And> st. \<lbrace>irq_state_inv st and Q\<rbrace> f \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"
   shows
     "\<lbrace>irq_measure_if_inv st and Q\<rbrace> f \<lbrace>\<lambda>_. irq_measure_if_inv st\<rbrace>"
-  apply(clarsimp simp: valid_def irq_measure_if_inv_def)
-  apply(erule le_trans[rotated])
-  apply(drule use_valid[OF _ irq_state])
-   apply(simp)
-   apply(rule irq_state_inv_refl)
-  apply(clarsimp simp: irq_measure_if_def Let_def irq_state_inv_def)
-  apply auto
-  done
+  by (wpsimp wp: irq_measure_if_inv' irq_state)
 
 lemma irq_state_inv_irq_is_recurring:
   "irq_state_inv sta s \<Longrightarrow>
@@ -3075,7 +3074,7 @@ lemma kernel_entry_if_next_irq_state_of_state:
    apply(clarsimp simp: irq_state_inv_def)
   apply (simp add: arch_tcb_update_aux2)
   apply(erule_tac f="thread_set (tcb_arch_update (arch_tcb_context_set uc)) t" in use_valid)
-   apply(wpsimp wp: irq_measure_if_inv'[where Q="\<top>"] irq_state_inv_triv thread_set_invs_trivial irq_is_recurring_triv[where Q="\<top>"]
+   apply(wpsimp wp: irq_measure_if_inv' irq_state_inv_triv thread_set_invs_trivial irq_is_recurring_triv[where Q="\<top>"]
               simp: tcb_cap_cases_def tcb_arch_ref_def)+
   apply(erule use_valid)
    apply (wp | simp )+
@@ -3094,7 +3093,7 @@ lemma kernel_entry_if_next_irq_state_of_state_next:
    apply (simp add: irq_state_next_def)
   apply (simp add: arch_tcb_update_aux2)
   apply(erule_tac f="thread_set (tcb_arch_update (arch_tcb_context_set uc)) t" in use_valid)
-   apply(wpsimp wp: irq_measure_if_inv'[where Q="\<top>"] irq_state_inv_triv
+   apply(wpsimp wp: irq_measure_if_inv' irq_state_inv_triv
                     thread_set_invs_trivial irq_is_recurring_triv[where Q="\<top>"]
               simp: tcb_cap_cases_def tcb_arch_ref_def)+
   apply(erule use_valid)
@@ -3102,23 +3101,23 @@ lemma kernel_entry_if_next_irq_state_of_state_next:
   apply(simp add: irq_state_inv_def)
   done
 
+thm irq_measure_if_inv
 lemma kernel_entry_if_irq_measure:
-  "\<lbrakk>event \<noteq> Interrupt; invs i_s; domain_sep_inv False st i_s; irq_is_recurring irq i_s\<rbrakk> \<Longrightarrow> ((Inr (), a), b) \<in> fst (kernel_entry_if event uc i_s)
+  "\<lbrakk>event \<noteq> Interrupt; invs i_s; domain_sep_inv False st i_s; irq_is_recurring irq i_s\<rbrakk>
+   \<Longrightarrow> ((Inr (), a), b) \<in> fst (kernel_entry_if event uc i_s)
   \<Longrightarrow> irq_measure_if b \<le> irq_measure_if i_s"
-  apply(fold irq_measure_if_inv_def)
-  apply(simp add: kernel_entry_if_def in_bind in_return | elim conjE exE)+
-  apply(erule use_validE_R[OF _ irq_measure_if_inv])
-  apply (rule validE_validE_R')
-   apply(wp handle_event_irq_state_inv[where sta=st and irq=irq] | simp)+
-   apply(subst irq_state_inv_irq_is_recurring, (elim conjE, assumption))
-   apply simp
-  apply (simp add: arch_tcb_update_aux2)
-  apply(erule_tac f="thread_set (tcb_arch_update (arch_tcb_context_set uc)) t" in use_valid)
-   apply(wpsimp wp: irq_measure_if_inv'[where Q="\<top>"] irq_state_inv_triv
+ apply (fold irq_measure_if_inv_def)
+  apply (rule mp)
+   apply (erule_tac P="op = i_s" and Q="\<lambda>rv s. (isRight (fst rv)) \<longrightarrow> Q s" for Q in use_valid)
+    apply (simp_all add: isRight_def)
+  apply (simp add: kernel_entry_if_def)
+  apply (rule hoare_pre, wp)
+     apply (rule validE_cases_valid, simp)
+     apply (wp irq_measure_if_inv handle_event_irq_state_inv[THEN validE_validE_R'])+
+    apply(wpsimp wp: irq_measure_if_inv' irq_state_inv_triv
                     thread_set_invs_trivial irq_is_recurring_triv[where Q="\<top>"]
-              simp: tcb_cap_cases_def arch_tcb_update_aux2 tcb_arch_ref_def)+
-  apply(erule use_valid)
-   apply (wp | simp )+
+              simp: tcb_cap_cases_def arch_tcb_update_aux2 tcb_arch_ref_def
+                    irq_state_inv_refl)+
   apply(simp add: irq_measure_if_inv_def)
   done
 
@@ -3127,7 +3126,7 @@ lemma schedule_if_irq_measure_if:
   "(r, b) \<in> fst (schedule_if uc i_s)
   \<Longrightarrow> irq_measure_if b \<le> irq_measure_if i_s"
   apply(fold irq_measure_if_inv_def)
-  apply(erule use_valid[OF _ irq_measure_if_inv'[where Q="\<top>"]] | wp schedule_if_irq_state_inv | simp)+
+  apply(erule use_valid[OF _ irq_measure_if_inv'] | wp schedule_if_irq_state_inv | simp)+
   apply(simp add: irq_measure_if_inv_def)
   done
 

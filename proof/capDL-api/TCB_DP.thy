@@ -197,29 +197,14 @@ lemma tcb_update_vspace_root_wp':
 \<lbrace>\<lambda>_. < (target_tcb, tcb_vspace_slot) \<mapsto>c vrt_cap \<and>* tcb_cap_slot \<mapsto>c (TcbCap target_tcb) \<and>* (vrt_slot) \<mapsto>c cap \<and>* R>\<rbrace>, \<lbrace>E\<rbrace>"
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp: tcb_update_vspace_root_def sep_any_All)
-  including no_pre
-  apply (wp hoare_whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE'] get_cap_rv)
-  apply (intro validE_allI hoare_validE_conj validE_impI)
-
+  apply (wp hoare_whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE'] get_cap_rv)+
+   apply (wp hoare_vcg_conj_liftE1)
     apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE], (clarsimp simp: sep_conj_assoc | sep_solve) +)
    apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE], (clarsimp simp: sep_conj_assoc | sep_solve) +)
-  apply (intro validE_allI hoare_validE_conj validE_impI)
-
-        apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE], (clarsimp simp: sep_conj_assoc | sep_solve) +)
-
-       apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE], (clarsimp simp: sep_conj_assoc | sep_solve) +)
-
-      apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE], (clarsimp simp: sep_conj_assoc | sep_solve) +)
-
-     apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE], (clarsimp simp: sep_conj_assoc | sep_solve) +)
-     apply (clarsimp simp: sep_conj_assoc | sep_cancel+)+
-     apply (drule reset_cap_asid_cap_type)+
-     apply (clarsimp simp: cap_type_def split: cdl_cap.splits )
-
-    apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE], (clarsimp simp: sep_conj_assoc | sep_solve) +)
-
-   apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE], (clarsimp simp: sep_conj_assoc | sep_solve) +)
-
+  apply (repeat_new \<open>rule conjI | clarsimp simp: sep_conj_assoc | sep_cancel\<close>)
+   apply (drule reset_cap_asid_cap_type)+
+   apply (clarsimp simp: cap_type_def split: cdl_cap.splits )
+  apply (clarsimp simp: sep_conj_assoc | sep_cancel+)+
   apply (clarsimp simp: cdl_same_arch_obj_as_def cap_type_def split: cdl_cap.splits dest!:reset_cap_asid_cap_type)
 done
 
@@ -240,26 +225,20 @@ lemma tcb_update_cspace_root_wp:
    and  K (\<not> is_untyped_cap (crt_cap) \<and> is_cnode_cap cap \<and> cap_object cap = cap_object crt_cap)\<rbrace>
  tcb_update_cspace_root target_tcb tcb_cap_slot (crt_cap, crt_slot)
 \<lbrace>\<lambda>_. < (target_tcb, tcb_cspace_slot) \<mapsto>c crt_cap \<and>* tcb_cap_slot \<mapsto>c (TcbCap target_tcb) \<and>* (crt_slot) \<mapsto>c cap \<and>* R>\<rbrace>, \<lbrace>E\<rbrace>"
-  including no_pre
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp: tcb_update_cspace_root_def sep_any_All_side cong:cap_type_bad_cong)
-  apply (wp hoare_whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE] get_cap_rv )
-   apply (wp get_cap_rv)
-  apply (intro hoare_validE_conj)
+  apply (wpsimp wp: hoare_whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE] get_cap_rv
+                    hoare_vcg_conj_liftE1)
     apply (wpsimp wp: tcb_empty_thread_slot_wpE[sep_wand_wpE] simp: sep_conj_assoc)
-    apply (sep_cancel+, simp)
-    apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE])+
-   apply (clarsimp, sep_cancel+)
-  apply (rule validE_allI)
-  apply (rule validE_impI)
-   apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE])
-   apply (clarsimp)
-   apply (sep_solve)
+   apply (wpsimp wp: hoare_vcg_all_lift_R[THEN hoare_vcg_E_elim[rotated]]
+                     hoare_vcg_const_imp_lift_R
+                     tcb_empty_thread_slot_wpE[sep_wand_wpE]
+          split_del: if_split simp: if_apply_def2)
+  apply (clarsimp)
+  apply (repeat_new \<open>rule conjI | clarsimp simp: sep_conj_assoc | sep_cancel\<close>)
   apply (drule not_memory_cap_reset_asid')
    apply (erule is_cnode_cap_not_memory_cap)
   apply clarsimp
-  apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE])
-  apply (clarsimp simp: sep_conj_assoc pred_conj_def | sep_solve)+
   done
 
 lemma invoke_tcb_threadcontrol_wp:
@@ -336,22 +315,20 @@ lemma invoke_tcb_threadcontrol_wp':
        (target_tcb, tcb_cspace_slot) \<mapsto>c crt_cap    \<and>*
        (crt_slot) \<mapsto>c crt_cap' \<and>*
        target_tcb \<mapsto>f Tcb (tcb\<lparr>cdl_tcb_fault_endpoint := fltep\<rparr>) \<and>* R >\<rbrace>, \<lbrace>E\<rbrace>"
-  including no_pre
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp: invoke_tcb_def)
   apply (wp set_cdl_tcb_fault_endpoint_wp[sep_wand_wp] tcb_update_ipc_buffer_wp'[sep_wand_side_wpE]
     tcb_update_vspace_root_wp'[sep_wand_side_wpE] tcb_update_cspace_root_wp[where cap = crt_cap',sep_wand_side_wpE]
      | clarsimp | fastforce)+
-   apply (clarsimp cong:cap_type_bad_cong)
+    apply (clarsimp cong:cap_type_bad_cong)
+   apply wp
+   apply (wp set_cdl_tcb_fault_endpoint_wp[sep_wand_wp] tcb_update_ipc_buffer_wp'[sep_wand_side_wpE]
+     tcb_update_vspace_root_wp'[sep_wand_side_wpE] tcb_update_cspace_root_wp[where cap = crt_cap,sep_wand_side_wpE]
+      | clarsimp | fastforce)+
   apply (frule sep_map_c_asid_reset[where ptr=vrt_slot and cap=vrt_cap])
   apply (frule sep_map_c_asid_reset[where ptr="(target_tcb, tcb_vspace_slot)" and cap=vrt_cap])
-   apply (frule sep_map_c_asid_reset[where ptr="(target_tcb,tcb_ipcbuffer_slot)" and cap=ipcbuff_cap])
-   apply (clarsimp simp: sep_conj_assoc pred_conj_def cong:cap_type_bad_cong
-     | sep_cancel add: | safe)+
-  apply (wp set_cdl_tcb_fault_endpoint_wp[sep_wand_wp] tcb_update_ipc_buffer_wp'[sep_wand_side_wpE]
-    tcb_update_vspace_root_wp'[sep_wand_side_wpE] tcb_update_cspace_root_wp[where cap = crt_cap,sep_wand_side_wpE]
-     | clarsimp | fastforce)+
-   apply (clarsimp simp: sep_conj_assoc pred_conj_def cong:cap_type_bad_cong
+  apply (frule sep_map_c_asid_reset[where ptr="(target_tcb,tcb_ipcbuffer_slot)" and cap=ipcbuff_cap])
+  apply (clarsimp simp: sep_conj_assoc pred_conj_def cong:cap_type_bad_cong
      | sep_cancel add: | safe)+
   apply (frule sep_map_c_asid_reset[where ptr="(target_tcb,tcb_cspace_slot)" and cap=crt_cap])
   apply simp
@@ -505,18 +482,11 @@ lemma tcb_update_vspace_root_inv:
 "\<lbrace>\<lambda>s.  <(a, tcb_vspace_slot) \<mapsto>c NullCap \<and>* R> s \<and> P (cdl_current_thread s)\<rbrace>
    tcb_update_vspace_root a b c
  \<lbrace>\<lambda>_ s. P (cdl_current_thread s)\<rbrace>"
-  including no_pre
   apply (clarsimp simp: tcb_update_vspace_root_def)
   apply (wp hoare_drop_imps hoare_whenE_wp alternative_wp
        | simp add: tcb_update_vspace_root_def tcb_update_thread_slot_def)+
-  apply (intro hoare_drop_impE hoare_validE_conj)
    apply (wp tcb_empty_thread_slot_wp_inv)
-   apply (clarsimp)
-   defer
-   apply (wp tcb_empty_thread_slot_wp_inv)
-   apply (clarsimp)
-   apply (sep_solve)
-  apply (sep_solve)
+  apply auto
   done
 
 
@@ -524,30 +494,22 @@ lemma tcb_update_cspace_root_inv:
 "\<lbrace>\<lambda>s.  <(a, tcb_cspace_slot) \<mapsto>c NullCap \<and>* R> s \<and> P (cdl_current_thread s)\<rbrace>
    tcb_update_cspace_root a b c
  \<lbrace>\<lambda>_ s. P (cdl_current_thread s)\<rbrace>"
-   including no_pre
   apply (clarsimp simp: tcb_update_cspace_root_def)
   apply (wp hoare_drop_imps hoare_whenE_wp alternative_wp
        | simp add: tcb_update_vspace_root_def tcb_update_thread_slot_def)+
-  apply (intro hoare_drop_impE hoare_validE_conj)
    apply (wp tcb_empty_thread_slot_wp_inv)
-   apply (clarsimp)
-   apply (sep_solve)
-  apply (wp tcb_empty_thread_slot_wp_inv)
-  apply (clarsimp)
-  apply (sep_solve)
+  apply auto
   done
 
 lemma tcb_update_ipc_buffer_inv:
 "\<lbrace>\<lambda>s.  <(a, tcb_ipcbuffer_slot) \<mapsto>c NullCap \<and>* R> s \<and> P (cdl_current_thread s)\<rbrace>
    tcb_update_ipc_buffer a b c
  \<lbrace>\<lambda>_ s. P (cdl_current_thread s)\<rbrace>"
-  including no_pre
   apply (clarsimp simp: tcb_update_ipc_buffer_def)
   apply (wp hoare_drop_imps hoare_whenE_wp alternative_wp
        | simp add: tcb_update_vspace_root_def tcb_update_thread_slot_def)+
    apply (wp tcb_empty_thread_slot_wp_inv)
-  apply (clarsimp)
-  apply (sep_solve)
+  apply auto
   done
 
 
@@ -1211,38 +1173,34 @@ crunch idle_thread[wp]: set_cap "\<lambda>s. P (cdl_current_thread s)"
 crunch current_domain[wp]: set_cap "\<lambda>s. P (cdl_current_domain s)"
   (wp: crunch_wps)
 
+lemma reset_cap_asid_pending:
+  "reset_cap_asid cap' = reset_cap_asid cap
+    \<Longrightarrow> is_pending_cap cap' = is_pending_cap cap"
+  by (simp add: reset_cap_asid_def is_pending_cap_def split: cdl_cap.split_asm)
 
 lemma restart_cdl_current_domain:
   "\<lbrace>\<lambda>s. <(ptr,tcb_pending_op_slot) \<mapsto>c cap \<and>* \<top> > s \<and> \<not> is_pending_cap cap
       \<and> P (cdl_current_domain s)\<rbrace> restart ptr \<lbrace>\<lambda>r s. P (cdl_current_domain s)\<rbrace>"
-  including no_pre
   apply (simp add:restart_def)
   apply (wp alternative_wp)
-   apply (simp add:cancel_ipc_def)
-   apply wp
-    apply (rule_tac P ="\<not> is_pending_cap capa" in hoare_gen_asm)
-    apply (wpc,simp_all add:is_pending_cap_def,wp+)
-  apply clarsimp
+    apply (simp add:cancel_ipc_def)
+    apply (wpsimp wp: hoare_pre_cont[where a="revoke_cap_simple sl" for sl])+
   apply (drule opt_cap_sep_imp)
-  apply auto[1]
-  apply (simp add:reset_cap_asid_def split:cdl_cap.splits)
+  apply (clarsimp dest!: reset_cap_asid_pending)
+  apply (auto simp add: is_pending_cap_def)
   done
 
 
 lemma restart_cdl_current_thread:
   "\<lbrace>\<lambda>s. <(ptr,tcb_pending_op_slot) \<mapsto>c cap \<and>* \<top> > s \<and> \<not> is_pending_cap cap
       \<and> P (cdl_current_thread s)\<rbrace> restart ptr \<lbrace>\<lambda>r s. P (cdl_current_thread s)\<rbrace>"
-  including no_pre
   apply (simp add:restart_def)
   apply (wp alternative_wp)
-   apply (simp add:cancel_ipc_def)
-   apply wp
-    apply (rule_tac P ="\<not> is_pending_cap capa" in hoare_gen_asm)
-    apply (wpc,simp_all add:is_pending_cap_def,wp+)
-  apply clarsimp
+    apply (simp add:cancel_ipc_def)
+    apply (wpsimp wp: hoare_pre_cont[where a="revoke_cap_simple sl" for sl])+
   apply (drule opt_cap_sep_imp)
-  apply auto[1]
-  apply (simp add:reset_cap_asid_def split:cdl_cap.splits)
+  apply (clarsimp dest!: reset_cap_asid_pending)
+  apply (auto simp add: is_pending_cap_def)
   done
 
 lemma seL4_TCB_WriteRegisters_wp:

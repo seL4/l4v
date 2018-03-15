@@ -528,7 +528,6 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
   "\<lbrace>cap_refs_respects_device_region and tcb_at t and  valid_objs and valid_mdb\<rbrace>
    do_ipc_transfer t ep bg grt r
    \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
-  including no_pre
   apply (wpsimp simp: do_ipc_transfer_def do_normal_transfer_def transfer_caps_def bind_assoc
                   wp: hoare_vcg_all_lift hoare_drop_imps)+
          apply (subst ball_conj_distrib)

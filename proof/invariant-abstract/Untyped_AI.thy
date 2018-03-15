@@ -174,9 +174,9 @@ lemma dui_inv[wp]:
               | wp_once mapME_x_inv_wp hoare_drop_imps const_on_failure_wp
               | assumption
               | simp add: lookup_target_slot_def
-              | wpcw)+
+              | wpcw
+              | wp)+
   done
-
 
 lemma map_ensure_empty_cte_wp_at:
   "\<lbrace>cte_wp_at P p\<rbrace> mapME_x ensure_empty xs \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>,-"

@@ -3449,18 +3449,14 @@ lemma set_cdt_iflive[wp]:
 
 
 lemma set_untyped_cap_as_full_cap_to:
-  notes hoare_pre [wp_pre del]
   shows
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> cte_wp_at (op = src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. if_live_then_nonz_cap s\<rbrace>"
-  apply (clarsimp simp:if_live_then_nonz_cap_def set_untyped_cap_as_full_def | rule conjI | wp hoare_allI)+
-   apply (wp hoare_vcg_imp_lift set_cap_cap_to)+
-   apply clarsimp
-   apply (elim allE impE)
-    apply simp
-   apply (simp add:cte_wp_at_caps_of_state)
-  apply (clarsimp|wp)+
+  apply (clarsimp simp:if_live_then_nonz_cap_def set_untyped_cap_as_full_def
+             split del: if_split)
+  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift set_cap_cap_to)+
+  apply (auto simp add:cte_wp_at_caps_of_state)
   done
 
 

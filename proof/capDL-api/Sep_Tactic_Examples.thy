@@ -185,6 +185,16 @@ thm sep_mp[no_vars] sep_curry[rotated, no_vars]
 
 (* sep_wand approach *)
 
+method_setup debug = {*
+  Attrib.thms >> (fn _ => fn ctxt => 
+   let
+     val wp_pre_tac = SELECT_GOAL (Method.NO_CONTEXT_TACTIC ctxt
+                      (Method_Closure.apply_method ctxt @{method wp_pre} [] [] [] ctxt []))
+   in
+     SIMPLE_METHOD' (CHANGED o wp_pre_tac)
+   end
+)
+*}
 
 lemma move_cap_wp2:
  "\<lbrace><dest \<mapsto>c - \<and>* src \<mapsto>c cap \<and>* R>\<rbrace>

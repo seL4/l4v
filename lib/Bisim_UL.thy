@@ -362,7 +362,7 @@ lemma bisim_symb_exec_r_det_on:
   apply (rule bisim_guard_imp)
     apply (subst gets_bind_ign [symmetric], rule bisim_split)
       apply (rule bisim_noop_det_on [OF _ x det_on_gets])
-      apply wp
+      apply (rule hoare_pre, wp)
       apply fastforce
      apply (rule nf)
     apply (rule z)
@@ -468,7 +468,7 @@ lemma bisim_symb_exec_r:
   apply (rule bisim_guard_imp)
     apply (subst gets_bind_ign [symmetric], rule bisim_split)
       apply (rule bisim_noop [OF _ x not_empty_gets])
-      apply wp
+      apply (rule hoare_pre, wp)
       apply fastforce
      apply (rule ne)
     apply (rule z)

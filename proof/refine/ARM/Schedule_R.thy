@@ -645,9 +645,7 @@ lemma ct_idle_or_in_cur_domain'_lift2:
   apply (unfold ct_idle_or_in_cur_domain'_def)
   apply (rule hoare_lift_Pf2[where f=ksCurThread])
   apply (rule hoare_lift_Pf2[where f=ksSchedulerAction])
-  including no_pre
-  apply (wp static_imp_wp hoare_vcg_disj_lift)
-  apply simp+
+  apply (wp static_imp_wp hoare_vcg_disj_lift | assumption)+
   done
 
 lemma tcbSchedEnqueue_invs'[wp]:
@@ -780,6 +778,15 @@ lemma tcb_at'_has_tcbDomain:
  "tcb_at' t s \<Longrightarrow> \<exists>p. obj_at' (\<lambda>tcb. tcbDomain tcb = p) t s"
  by (clarsimp simp add: obj_at'_def)
 
+lemma valid_queues'_ko_atD:
+  "valid_queues' s \<Longrightarrow> ko_at' tcb t s \<Longrightarrow> tcbQueued tcb
+    \<Longrightarrow> t \<in> set (ksReadyQueues s (tcbDomain tcb, tcbPriority tcb))"
+  apply (simp add: valid_queues'_def)
+  apply (elim allE, erule mp)
+  apply normalise_obj_at'
+  apply (simp add: inQ_def)
+  done
+
 lemma tcbSchedEnqueue_in_ksQ:
   "\<lbrace>valid_queues' and tcb_at' t\<rbrace> tcbSchedEnqueue t
    \<lbrace>\<lambda>r s. \<exists>domain priority. t \<in> set (ksReadyQueues s (domain, priority))\<rbrace>"
@@ -788,31 +795,23 @@ lemma tcbSchedEnqueue_in_ksQ:
                              obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s"
            in hoare_pre_imp)
    apply (clarsimp simp: tcb_at'_has_tcbPriority tcb_at'_has_tcbDomain)
-  including no_pre
-  apply (wp hoare_vcg_ex_lift)
+  apply (rule hoare_vcg_ex_lift)+
   apply (simp add: tcbSchedEnqueue_def unless_def)
-  apply wp
-    apply clarsimp
-    apply wp+
-    apply (rule_tac Q="\<lambda>rv s. tdom = d \<and> rv = p \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s
-                            \<and> obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s"
-             in hoare_post_imp, clarsimp)
-    apply (wp, (wp threadGet_const)+)
-  apply (rule_tac Q="\<lambda>rv s.
-             obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s \<and>
-             obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s \<and>
-             obj_at' (\<lambda>tcb. tcbQueued tcb = rv) t s \<and>
-             (rv \<longrightarrow> t \<in> set (ksReadyQueues s (d, p)))" in hoare_post_imp)
-   apply (clarsimp simp: o_def elim!: obj_at'_weakenE)
-  apply (wp threadGet_obj_at' hoare_vcg_imp_lift threadGet_const)
-     apply (case_tac "obj_at' (Not \<circ> tcbQueued) t s")
-      apply (clarsimp)
-     apply (clarsimp simp: valid_queues'_def)
-     apply (drule_tac x=d in spec)
-     apply (drule_tac x=p in spec)
-     apply (drule_tac x=t in spec)
-     apply (subgoal_tac "obj_at' (inQ d p) t s", clarsimp)
-     apply (clarsimp simp: obj_at'_def inQ_def)+
+  apply (wpsimp simp: if_apply_def2)
+     apply (rule_tac Q="\<lambda>rv s. tdom = d \<and> rv = p \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s
+                             \<and> obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s"
+              in hoare_post_imp, clarsimp)
+     apply (wp, (wp threadGet_const)+)
+   apply (rule_tac Q="\<lambda>rv s.
+              obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s \<and>
+              obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s \<and>
+              obj_at' (\<lambda>tcb. tcbQueued tcb = rv) t s \<and>
+              (rv \<longrightarrow> t \<in> set (ksReadyQueues s (d, p)))" in hoare_post_imp)
+    apply (clarsimp simp: o_def elim!: obj_at'_weakenE)
+   apply (wp threadGet_obj_at' hoare_vcg_imp_lift threadGet_const)
+  apply clarsimp
+  apply normalise_obj_at'
+  apply (frule(1) valid_queues'_ko_atD, simp+)
   done
 
 crunch ksMachine[wp]: tcbSchedDequeue "\<lambda>s. P (ksMachineState s)"
@@ -3165,19 +3164,8 @@ lemma tcbSchedDequeue_sch_act_sane[wp]:
   "\<lbrace>sch_act_sane\<rbrace> tcbSchedDequeue t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
   by (wp sch_act_sane_lift)
 
-lemma sts_sch_act_sane:
-  "\<lbrace>sch_act_sane\<rbrace> setThreadState st t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
-  apply (simp add: setThreadState_def)
-  including no_pre
-  apply (wp hoare_drop_imps
-           | simp add: threadSet_sch_act_sane sane_update)+
-  done
-
-lemma sbn_sch_act_sane:
-  "\<lbrace>sch_act_sane\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
-  apply (simp add: setBoundNotification_def)
-  apply (wp | simp add: threadSet_sch_act_sane sane_update)+
-  done
+crunch sch_act_sane: setThreadState, setBoundNotification "sch_act_sane"
+  (simp: crunch_simps sane_update wp: crunch_wps)
 
 lemma possibleSwitchTo_corres:
   "corres dc (valid_etcbs and weak_valid_sched_action and cur_tcb and st_tcb_at runnable t)

@@ -373,39 +373,18 @@ lemma transform_intent_untyped_cap_None:
 lemma transform_intent_cnode_cap_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.CNodeCap w n list\<rbrakk>
    \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. op = s\<rbrace>"
-  including no_pre
   apply (clarsimp simp:Decode_A.decode_invocation_def)
-   apply wp+
-  apply (case_tac "invocation_type label")
-   apply (simp add:Decode_A.decode_cnode_invocation_def unlessE_def upto_enum_def fromEnum_def toEnum_def enum_invocation_label,wp+)+
-   apply (simp add:transform_intent_def transform_cnode_index_and_depth_def whenE_def split:list.split_asm)
-     apply wp+
-   apply (simp add:transform_intent_def transform_cnode_index_and_depth_def
-     Decode_A.decode_cnode_invocation_def unlessE_def whenE_def split del:if_splits split:list.split_asm)
-     apply (wp|clarsimp|rule conjI)+
-   apply (simp add:transform_intent_def transform_cnode_index_and_depth_def
-     Decode_A.decode_cnode_invocation_def unlessE_def whenE_def split del:if_splits split:list.split_asm)
-     apply (wp|clarsimp|rule conjI)+
-   apply (simp add:transform_intent_def transform_intent_cnode_copy_def
-     Decode_A.decode_cnode_invocation_def unlessE_def whenE_def split del:if_splits split:list.split_asm)
-     apply (wp|clarsimp|rule conjI)+
-   apply (simp add:transform_intent_def transform_intent_cnode_mint_def
-     Decode_A.decode_cnode_invocation_def unlessE_def whenE_def split del:if_splits split:list.split_asm)
-     apply (wp|clarsimp|rule conjI)+
-   apply (simp add:transform_intent_def transform_intent_cnode_move_def
-     Decode_A.decode_cnode_invocation_def unlessE_def whenE_def split del:if_splits split:list.split_asm)
-     apply (wp|clarsimp|rule conjI)+
-   apply (simp add:transform_intent_def transform_intent_cnode_mutate_def
-     Decode_A.decode_cnode_invocation_def unlessE_def whenE_def split del:if_splits split:list.split_asm)
-     apply (wp|clarsimp|rule conjI)+
-   apply (simp add:transform_intent_def transform_intent_cnode_rotate_def
-     Decode_A.decode_cnode_invocation_def unlessE_def whenE_def split del:if_splits split:list.split_asm)
-     apply (wp|clarsimp|rule conjI)+
-   apply (simp add:transform_intent_def transform_cnode_index_and_depth_def
-     Decode_A.decode_cnode_invocation_def unlessE_def whenE_def split del:if_splits split:list.split_asm)
-     apply (wp|clarsimp|rule conjI)+
-   apply (simp add:Decode_A.decode_cnode_invocation_def unlessE_def upto_enum_def fromEnum_def toEnum_def enum_invocation_label,wp)+
-done
+  apply (simp add: Decode_A.decode_cnode_invocation_def unlessE_def upto_enum_def
+                   fromEnum_def toEnum_def enum_invocation_label
+                   whenE_def)
+  apply (intro conjI impI;
+    clarsimp simp: transform_intent_def transform_cnode_index_and_depth_def
+                   transform_intent_cnode_copy_def
+                   transform_intent_cnode_mint_def transform_intent_cnode_move_def
+                   transform_intent_cnode_mutate_def transform_intent_cnode_rotate_def 
+      split: list.split_asm;
+    (solves \<open>wpsimp\<close>)?)
+  done
 
 lemma transform_intent_thread_cap_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.ThreadCap w\<rbrakk>
@@ -469,10 +448,10 @@ lemma transform_intent_domain_cap_None:
   apply (case_tac excaps, simp_all)
    apply (clarsimp simp: decode_domain_invocation_def)
    apply (case_tac args, simp_all)
-    apply (wp whenE_inv | simp)+
+    apply (wp whenE_inv whenE_inv[THEN valid_validE] | simp)+
   apply (clarsimp simp: decode_domain_invocation_def)
    apply (case_tac args, simp_all)
-    apply ((wp whenE_inv | simp)+)[1]
+    apply ((wp whenE_inv whenE_inv[THEN valid_validE] | simp)+)[1]
   apply (case_tac "invocation_type label \<noteq> DomainSetSet", simp_all)
    apply wp
   apply (clarsimp simp: transform_intent_def transform_intent_domain_def)
@@ -894,7 +873,9 @@ lemma dcorres_reply_from_kernel:
               apply (wp | clarsimp simp:not_idle_thread_def)+
         apply (wp get_ipc_buffer_noop, clarsimp)
         apply (fastforce simp: not_idle_thread_def)
-       apply (wp cdl_get_ipc_buffer_None | simp)+
+       apply (simp add: pred_conj_def)
+       apply (strengthen refl[where t=True])
+       apply (wp cdl_get_ipc_buffer_None  | simp)+
      apply clarsimp
      apply (drule lookup_ipc_buffer_SomeB_evalMonad)
      apply clarsimp
@@ -1176,29 +1157,17 @@ lemma check_cap_at_idle:
   apply wp
 done
 
-crunch idle[wp] : invoke_tcb "\<lambda>s. P (idle_thread (s :: det_ext state))"
-  (wp: crunch_wps check_cap_at_idle simp: crunch_simps ignore:clearMemory)
+lemmas cap_revoke_preservation_flat = cap_revoke_preservation[THEN validE_valid]
 
-lemma without_preemption_idle:
- "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> g \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>
-  \<Longrightarrow> \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> without_preemption g \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
-  by (clarsimp simp:without_preemption_def liftE_def | wp)+
+crunch idle[wp] : invoke_tcb, cap_move, cap_swap, cap_revoke "\<lambda>s. P (idle_thread s)"
+  (rule: cap_revoke_preservation_flat wp: crunch_wps check_cap_at_idle dxo_wp_weak
+    simp: crunch_simps ignore:clearMemory)
 
 lemma invoke_cnode_idle:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> invoke_cnode pa \<lbrace>\<lambda>r s. P (idle_thread (s :: det_ext state))\<rbrace>"
-  including no_pre
+  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> invoke_cnode pa \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   apply (cases pa)
-        apply (clarsimp simp:invoke_cnode_def|wp)+
-      apply (rule cap_revoke_preservation)
-       apply (wp cap_move_idle_thread|clarsimp simp:invoke_cnode_def)+
-    apply (intro conjI)
-     apply (clarsimp simp:invoke_cnode_def|wp)+
-     apply (wpc|wp)+
-    apply (rule_tac Q="\<lambda>x s. P (idle_thread s)" in hoare_strengthen_post)
-     apply wp+
-    apply clarsimp+
-  apply (clarsimp simp:invoke_cnode_def)
-  apply (wp | wpc | simp | rule hoare_pre)+
+        apply (clarsimp simp:invoke_cnode_def
+            | wpsimp wp: crunch_wps hoare_vcg_all_lift | rule conjI)+
   done
 
 crunch idle[wp] : arch_perform_invocation "\<lambda>s. P (idle_thread s)"
@@ -1208,21 +1177,7 @@ lemma invoke_domain_idle:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> invoke_domain t d  \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   by  (clarsimp simp: Tcb_A.invoke_domain_def trans_state_def | wp dxo_wp_weak)+
 
-lemma perform_invocation_idle[wp]:
-  "\<lbrace>not_idle_thread x :: det_ext state \<Rightarrow> bool\<rbrace> Syscall_A.perform_invocation blocking call i \<lbrace>\<lambda>rv. not_idle_thread x\<rbrace>"
-  including no_pre
-  apply (case_tac i)
-           apply (simp_all add:not_idle_thread_def)
-           apply (wp invoke_cnode_idle invoke_domain_idle |clarsimp)+
-    apply (rename_tac irq_control_invocation)
-    apply (case_tac irq_control_invocation)
-     apply (simp_all | wp)+
-    apply (simp add: arch_invoke_irq_control_def)
-   apply (rename_tac irq_handler_invocation)
-   apply (case_tac irq_handler_invocation)
-     apply simp_all
-     apply (wp|simp)+
-  done
+crunch idle[wp]: "Syscall_A.perform_invocation" "\<lambda>s. P (idle_thread s)"
 
 lemma msg_from_syscall_error_simp:
   "fst (msg_from_syscall_error rv) \<le> mask 19"
@@ -1351,11 +1306,8 @@ lemma handle_invocation_corres:
              apply (rule dcorres_reply_from_syscall)
             apply (rule perform_invocation_corres,simp)
            apply wp+
-          apply (rule validE_validE_R)
-          apply (clarsimp simp:validE_def)
-          apply (rule hoare_drop_imp)
-          apply (wp hoare_vcg_conj_lift hoare_strengthen_post[OF pinv_invs])
-           apply (clarsimp simp:invs_def valid_state_def)
+          apply (simp add: not_idle_thread_def)
+          apply (strengthen invs_valid_idle)
           apply wp+
         apply (simp add:conj_comms not_idle_thread_def split_def)
         apply (wp sts_Restart_invs set_thread_state_ct_active)+

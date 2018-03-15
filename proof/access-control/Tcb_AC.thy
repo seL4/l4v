@@ -480,10 +480,11 @@ lemma decode_tcb_configure_authorised_helper:
                 split: prod.split_asm split del: if_split)
   apply (cases "excaps!0")
   apply (cases "excaps!Suc 0")
-  apply (clarsimp simp: ball_Un split del: if_split split: prod.split
-       | strengthen stupid_strg
-       | wp_once derive_cap_obj_refs_auth derive_cap_untyped_range_subset derive_cap_clas derive_cap_cli
-                 hoare_vcg_all_lift_R whenE_throwError_wp slot_long_running_inv)+
+  apply (rule hoare_pre)
+   apply (clarsimp simp: ball_Un split del: if_split split: prod.split
+        | strengthen stupid_strg
+        | wp_once derive_cap_obj_refs_auth derive_cap_untyped_range_subset derive_cap_clas derive_cap_cli
+                  hoare_vcg_all_lift_R whenE_throwError_wp slot_long_running_inv)+
   apply (clarsimp cong: list.case_cong option.case_cong prod.case_cong split: prod.split_asm)
   apply (clarsimp simp: not_less all_set_conv_all_nth dest!: P_0_1_spec)
   apply (auto simp: aag_cap_auth_def update_cap_cli intro: update_cap_untyped_range_subset update_cap_obj_refs_subset dest!: update_cap_cap_auth_conferred_subset elim: bspec)

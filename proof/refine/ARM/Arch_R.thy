@@ -882,7 +882,7 @@ shows
                 apply (simp add: returnOk_liftE[symmetric])
                 apply (rule corres_returnOk)
                 apply (simp add: archinv_relation_def asid_pool_invocation_map_def)
-               apply (wp hoare_whenE_wp)
+               apply (rule hoare_pre, wp hoare_whenE_wp)
                apply (clarsimp simp: ucast_fst_hd_assocs)
               apply (wp hoareE_TrueI hoare_whenE_wp getASID_wp | simp)+
            apply ((clarsimp simp: p2_low_bits_max | rule TrueI impI)+)[2]
@@ -1101,13 +1101,12 @@ shows
                  apply (rule corres_returnOk)
                  apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
                 apply wp+
-            apply (subgoal_tac "valid_vspace_objs s \<and> pspace_aligned s \<and>
+            apply (rule_tac P="\<lambda>s. valid_vspace_objs s \<and> pspace_aligned s \<and>
                                 (snd v')  < kernel_base \<and>
                                 equal_kernel_mappings s \<and> valid_global_objs s \<and> valid_arch_state s \<and>
                                 (\<exists>\<rhd> (lookup_pd_slot (fst pa) (snd v') && ~~ mask pd_bits)) s \<and>
-                                page_directory_at (fst pa) s \<and> (\<exists>\<rhd> (fst pa)) s")
-             prefer 2
-             apply assumption
+                                page_directory_at (fst pa) s \<and> (\<exists>\<rhd> (fst pa)) s" in hoare_pre(3))
+             apply wp
             apply clarsimp
             apply (frule_tac pd = aa and vptr = bc in page_directory_pde_at_lookupI,assumption)
             apply (clarsimp simp: vmsz_aligned_def pageBitsForSize_def
@@ -1265,10 +1264,8 @@ shows
         apply (drule(1) valid_global_refsD_with_objSize)
         subgoal by (clarsimp simp: is_page_cap_def split: cap.split_asm)
        apply (wp hoare_drop_imps)+
-    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_cap_simps mask_2pm1
-                          valid_arch_state_def valid_arch_caps_def linorder_not_le
-                          invs_vspace_objs[simplified]
-                   split: option.splits)
+    apply (clarsimp simp: valid_cap_simps mask_2pm1 linorder_not_le split: option.split)
+    apply (intro conjI; (clarsimp)?)
    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                   split: option.splits)
   apply clarsimp

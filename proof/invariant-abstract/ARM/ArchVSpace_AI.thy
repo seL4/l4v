@@ -902,7 +902,7 @@ lemma store_hw_asid_valid_arch:
   apply (simp add: store_hw_asid_def)
   apply wp
   apply (simp add: valid_arch_state_def fun_upd_def[symmetric] comp_upd_simp)
-  apply wp
+  apply (rule hoare_pre, wp)
   apply clarsimp
   apply (frule is_inv_NoneD[rotated])
    apply simp
@@ -3631,30 +3631,28 @@ lemma perform_page_table_invocation_invs[wp]:
      apply(erule use_valid, wp no_irq_cleanByVA_PoU no_irq, assumption)
     apply (wp store_pde_map_invs)[1]
    apply simp
-   apply (wp arch_update_cap_invs_map arch_update_cap_pspace
+   apply (rule hoare_pre, wp arch_update_cap_invs_map arch_update_cap_pspace
              arch_update_cap_valid_mdb set_cap_idle update_cap_ifunsafe
              valid_irq_node_typ valid_pde_lift set_cap_typ_at
              set_cap_irq_handlers set_cap_empty_pde
              hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift
-             set_cap_arch_obj set_cap_obj_at_impossible set_cap_valid_arch_caps)+
-         apply (clarsimp simp: cte_wp_at_caps_of_state)
-         apply (rule exI, rule conjI, assumption)
-         apply (clarsimp simp: is_pt_cap_def is_arch_update_def
-                    cap_master_cap_def cap_asid_def vs_cap_ref_simps
-                    is_arch_cap_def pde_ref_def pde_ref_pages_def
+             set_cap_arch_obj set_cap_obj_at_impossible set_cap_valid_arch_caps)
+   apply (simp; intro conjI; clarsimp simp: cte_wp_at_caps_of_state)
+     apply (clarsimp simp: is_pt_cap_def is_arch_update_def cap_master_cap_def
+                           vs_cap_ref_simps
+                    split: cap.splits arch_cap.splits option.splits)
+    apply fastforce
+   apply (rule exI, rule conjI, assumption)
+   apply (clarsimp simp: is_pt_cap_def is_arch_update_def
+                         cap_master_cap_def cap_asid_def vs_cap_ref_simps
+                         is_arch_cap_def pde_ref_def pde_ref_pages_def
                   split: cap.splits arch_cap.splits option.splits
-                    pde.splits)
-         apply (intro allI impI conjI, fastforce)
-         apply (clarsimp simp: caps_of_def cap_of_def)
-         apply (frule invs_pd_caps)
-         apply (drule (1) empty_table_pt_capI)
-         apply (clarsimp simp: obj_at_def empty_table_def pte_ref_pages_def)
-        apply (fastforce simp: cte_wp_at_caps_of_state)+
-    apply (clarsimp simp: cte_wp_at_caps_of_state)
-    apply (clarsimp simp: is_pt_cap_def is_arch_update_def cap_master_cap_def
-                      vs_cap_ref_simps
-               split: cap.splits arch_cap.splits option.splits)
-   apply clarsimp
+                         pde.splits)
+   apply (intro allI impI conjI, fastforce)
+   apply (clarsimp simp: caps_of_def cap_of_def)
+   apply (frule invs_pd_caps)
+   apply (drule (1) empty_table_pt_capI)
+   apply (clarsimp simp: obj_at_def empty_table_def pte_ref_pages_def)
   apply (clarsimp simp: perform_page_table_invocation_def
                  split: cap.split arch_cap.split)
   apply (rename_tac word option)
@@ -5078,7 +5076,8 @@ lemma perform_asid_pool_invs [wp]:
   "\<lbrace>invs and valid_apinv api\<rbrace> perform_asid_pool_invocation api \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (clarsimp simp: perform_asid_pool_invocation_def split: asid_pool_invocation.splits)
   apply (wp arch_update_cap_invs_map set_asid_pool_invs_map
-            get_cap_wp set_cap_typ_at empty_table_lift
+            get_cap_wp set_cap_typ_at
+            empty_table_lift[unfolded pred_conj_def, OF _ set_cap_obj_at_other]
             set_cap_obj_at_other
                |wpc|simp|wp_once hoare_vcg_ex_lift)+
   apply (clarsimp simp: valid_apinv_def cte_wp_at_caps_of_state is_arch_update_def is_cap_simps cap_master_cap_simps)

@@ -1658,15 +1658,10 @@ lemma find_pd_for_asid_not_arm_global_pd:
   and valid_global_refs and valid_arch_state\<rbrace>
   find_pd_for_asid asid
   \<lbrace>\<lambda>rv s. lookup_pd_slot rv vptr && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state s)\<rbrace>, -"
-  apply (rule hoare_add_postE)
-   apply (wp find_pd_for_asid_aligned_pd_bits)
-   apply clarsimp
-  apply (rule hoare_pre)
-   apply(wp find_pd_for_asid_lots)
-  apply(simp)
-  apply clarify
-  apply (frule lookup_pd_slot_pd[where vptr=vptr])
-  apply simp+
+  apply (wp find_pd_for_asid_lots)
+  apply clarsimp
+  apply (subst(asm) lookup_pd_slot_pd)
+   apply (erule page_directory_at_aligned_pd_bits, simp+)
   apply (frule (4) not_in_global_refs_vs_lookup2)
    apply (auto simp: global_refs_def)
 done
@@ -1679,36 +1674,27 @@ lemma find_pd_for_asid_not_arm_global_pd_large_page:
   (lookup_pd_slot rv vptr && mask 6 = 0) \<longrightarrow>
   (\<forall> x \<in> set [0 , 4 .e. 0x3C].
   x + lookup_pd_slot rv vptr && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state s))\<rbrace>, -"
-  apply (rule hoare_add_postE)
-   apply (wp find_pd_for_asid_aligned_pd_bits)
-   apply clarsimp
-  apply (rule hoare_pre)
-   apply(wp find_pd_for_asid_lots)
-  apply(simp)
-  apply clarify
+  apply (wp find_pd_for_asid_lots)
+  apply clarsimp
   apply (subst (asm) is_aligned_mask[symmetric])
   apply (frule is_aligned_6_masks[where bits=pd_bits])
   apply simp+
-  apply (frule lookup_pd_slot_pd[where vptr=vptr])
+  apply (subst(asm) lookup_pd_slot_eq)
+   apply (erule page_directory_at_aligned_pd_bits, simp+)
   apply (frule (4) not_in_global_refs_vs_lookup2)
    apply (auto simp: global_refs_def)
-done
+  done
 
 declare dmo_mol_globals_equiv[wp]
 
 lemma unmap_page_table_globals_equiv:
   "\<lbrace>pspace_aligned and valid_vspace_objs and valid_global_objs and valid_vs_lookup
   and valid_global_refs and valid_arch_state and globals_equiv st\<rbrace> unmap_page_table asid vaddr pt \<lbrace>\<lambda>rv. globals_equiv st\<rbrace>"
-  unfolding unmap_page_table_def page_table_mapped_def including no_pre
+  unfolding unmap_page_table_def page_table_mapped_def
   apply(wp store_pde_globals_equiv | wpc | simp add: cleanByVA_PoU_def)+
     apply(rule_tac Q="\<lambda>_. globals_equiv st and (\<lambda>sa. lookup_pd_slot pd vaddr && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state sa))" in hoare_strengthen_post)
-     apply(wp | simp)+
-  apply(rule hoare_validE_conj)
-   apply(wp | simp)+
-  apply(rule hoare_validE_cases)
-   apply(rule validE_R_validE)
-   apply(wp find_pd_for_asid_not_arm_global_pd hoare_post_imp_dc2E_actual | simp)+
-   done
+     apply(wp find_pd_for_asid_not_arm_global_pd hoare_post_imp_dc2E_actual | simp)+
+  done
 
 lemma set_pt_valid_ko_at_arm[wp]:
   "\<lbrace>valid_ko_at_arm\<rbrace> set_pt ptr pt \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"

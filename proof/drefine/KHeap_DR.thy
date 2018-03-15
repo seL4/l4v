@@ -2036,9 +2036,7 @@ lemma tcb_at_set_thread_state_wp:
   set_thread_state a Structures_A.thread_state.Restart
   \<lbrace>\<lambda>x s. (\<forall>x\<in>set list. tcb_at x s \<and> not_idle_thread x s)\<rbrace>"
   apply (rule hoare_Ball_helper)
-   including no_pre apply wp
-   apply (simp add:not_idle_thread_def)
-   apply wp+
+   apply (wpsimp simp:not_idle_thread_def)+
  done
 
 lemma invalid_cte_wp_at_pending_slot:
@@ -2587,18 +2585,18 @@ lemma dcorres_unbind_maybe_notification:
 
 lemma unbind_notification_valid_state[wp]:
   "\<lbrace>valid_state\<rbrace> IpcCancel_A.unbind_notification t \<lbrace>\<lambda>rv. valid_state\<rbrace>"
-  including no_pre
   apply (simp add: unbind_notification_def valid_state_def valid_pspace_def)
   apply (rule hoare_seq_ext [OF _ gbn_sp])
   apply (case_tac ntfnptr, clarsimp, wp, simp)
   apply clarsimp
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (wp valid_irq_node_typ set_simple_ko_valid_objs
-       | clarsimp)+
-          defer 4
-          apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
-                       simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def valid_simple_obj_def
-                             live_def hyp_live_def a_type_def)[8]
+       | clarsimp split del: if_split)+
+  apply (intro conjI impI;
+    (match conclusion in "sym_refs r" for r \<Rightarrow> \<open>-\<close>
+      | auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
+                       simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def
+                             live_def hyp_live_def a_type_def))
   apply (clarsimp simp: if_split)
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def is_tcb
@@ -2620,16 +2618,16 @@ lemma unbind_notification_valid_state[wp]:
 
 lemma unbind_maybe_notification_valid_state[wp]:
   "\<lbrace>valid_state\<rbrace> IpcCancel_A.unbind_maybe_notification a \<lbrace>\<lambda>rv. valid_state\<rbrace>"
-  including no_pre
   apply (simp add: unbind_maybe_notification_def valid_state_def valid_pspace_def)
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_bound_tcb ntfn", clarsimp, wp, simp+)
   apply (wp valid_irq_node_typ set_simple_ko_valid_objs
-       | clarsimp)+
-          defer 4
-          apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
-                       simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def valid_simple_obj_def
-                             live_def hyp_live_def a_type_def)[8]
+       | clarsimp split del: if_split)+
+  apply (intro conjI impI;
+    (match conclusion in "sym_refs r" for r \<Rightarrow> \<open>-\<close>
+      | auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
+                       simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def
+                             live_def hyp_live_def a_type_def))
   apply (clarsimp simp: if_split)
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def is_tcb
@@ -2749,10 +2747,7 @@ lemma get_tcb_reply_cap_wp_cte_at:
    apply (frule cte_wp_tcb_cap_valid)
     apply simp+
    apply (clarsimp simp :cte_wp_at_def tcb_cap_valid_def st_tcb_at_def obj_at_def is_master_reply_cap_def split:cap.splits)
-  including no_pre
   apply (wp get_cap_cte_wp_at_rv)
-     apply (rule tcb_cap_wp_at)
-        apply (simp add:dom_tcb_cap_cases)+
   apply (clarsimp simp:cte_wp_at_def)
   done
 

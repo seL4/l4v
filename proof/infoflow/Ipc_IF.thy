@@ -2227,17 +2227,17 @@ lemma do_ipc_transfer_globals_equiv:
     and pspace_distinct and pspace_aligned and valid_global_objs and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
     do_ipc_transfer sender ep badge grant receiver
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding do_ipc_transfer_def including no_pre
+  unfolding do_ipc_transfer_def
   apply(wp do_normal_transfer_globals_equiv do_fault_transfer_globals_equiv | wpc)+
-   apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_global_objs and
+    apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_global_objs and
            (\<lambda>sa. receiver \<noteq> idle_thread sa) and
            (\<lambda>sa. (\<forall>rb. recv_buffer = Some rb \<longrightarrow>
            auth_ipc_buffers sa receiver = ptr_range rb msg_align_bits) \<and>
            (\<forall>rb. recv_buffer = Some rb \<longrightarrow> is_aligned rb msg_align_bits))"
            in hoare_strengthen_post)
-    apply(wp)
-   apply(clarsimp | rule conjI)+
-  apply(wp hoare_vcg_all_lift lookup_ipc_buffer_ptr_range' lookup_ipc_buffer_aligned' | fastforce)+
+     apply(wp)
+    apply(clarsimp | rule conjI)+
+   apply(wp hoare_vcg_all_lift lookup_ipc_buffer_ptr_range' lookup_ipc_buffer_aligned' | fastforce)+
   done
 
 crunch valid_ko_at_arm[wp]: do_ipc_transfer "valid_ko_at_arm"

@@ -275,7 +275,6 @@ lemma timer_tick_dcorres: "dcorres dc P P' (return ()) timer_tick"
 
 lemma handle_interrupt_corres:
   "dcorres dc \<top> (invs and valid_etcbs) (Interrupt_D.handle_interrupt x) (Interrupt_A.handle_interrupt x)"
-  including no_pre
   apply (clarsimp simp:Interrupt_A.handle_interrupt_def)
   apply (clarsimp simp:get_irq_state_def gets_def bind_assoc)
   apply (rule conjI; rule impI)
@@ -304,10 +303,9 @@ lemma handle_interrupt_corres:
        apply (clarsimp simp:transform_cap_def when_def is_ntfn_cap_def
                    split:arch_cap.splits)+
            apply (simp add: corres_guard_imp[OF handle_interrupt_corres_branch])+
-      apply (wp valid_state_get_cap_wp|simp add:get_irq_slot_def)+
-    apply (clarsimp simp:invs_def )
-    apply (rule irq_node_image_not_idle,simp_all add:valid_state_def)
-   apply (simp add:invs_def valid_state_def)
+      apply (wp hoare_vcg_prop[where P=True] valid_state_get_cap_wp|simp add:get_irq_slot_def)+
+   apply (clarsimp simp:invs_def )
+   apply (strengthen irq_node_image_not_idle,simp add:valid_state_def)
   apply (clarsimp simp:Interrupt_D.handle_interrupt_def gets_def)
   apply (rule conjI; rule impI)
    apply (rule dcorres_absorb_get_l)+

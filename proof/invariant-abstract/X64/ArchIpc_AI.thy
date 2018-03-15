@@ -474,7 +474,6 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
   "\<lbrace>cap_refs_respects_device_region and tcb_at t and  valid_objs and valid_mdb\<rbrace>
    do_ipc_transfer t ep bg grt r
    \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
-  including no_pre
   apply (simp add: do_ipc_transfer_def)
   apply (wp|wpc)+
       apply (simp add: do_normal_transfer_def transfer_caps_def bind_assoc)
@@ -488,9 +487,9 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
   apply (rule hoare_strengthen_post[where Q = "\<lambda>r s. cap_refs_respects_device_region s
           \<and> valid_objs s \<and> valid_mdb s \<and> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb) t s"])
    apply wp
-   apply (clarsimp simp: obj_at_def is_tcb_def)
-   apply (simp split: kernel_object.split_asm)
-  apply auto
+   apply auto[1]
+  apply (clarsimp simp: obj_at_def is_tcb_def)
+  apply (simp split: kernel_object.split_asm)
   done
 
 lemma set_mrs_state_hyp_refs_of[wp]:

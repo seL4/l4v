@@ -10,6 +10,7 @@
 
 theory Ipc_AI
 imports "./$L4V_ARCH/ArchFinalise_AI"
+  "../../lib/Monad_WP/wp/WPBang"
 begin
 
 context begin interpretation Arch .
@@ -951,7 +952,7 @@ lemma transfer_caps_loop_valid_arch_caps[wp]:
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>rv. valid_arch_caps :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (wp transfer_caps_loop_presM[where vo=True and em=False and ex=False]
-            cap_insert_valid_arch_caps)
+            cap_insert_valid_arch_caps)+
      apply simp
     apply wp
    apply (clarsimp simp:cte_wp_at_caps_of_state|intro conjI)+
@@ -2791,7 +2792,7 @@ lemma valid_bound_tcb_typ_at:
   done
 
 crunch bound_tcb[wp]: set_thread_state, set_message_info, set_mrs "valid_bound_tcb t"
-(wp: valid_bound_tcb_typ_at set_object_typ_at mapM_wp ignore: set_object
+(wp: valid_bound_tcb_typ_at set_object_typ_at mapM_wp ignore: set_object as_user
  simp: zipWithM_x_mapM)
 
 context Ipc_AI begin
@@ -2873,6 +2874,7 @@ lemma rai_invs':
    apply (wp set_simple_ko_valid_objs hoare_vcg_const_Ball_lift
              as_user_ntfn_at[simplified ntfn_at_def2, simplified]
              valid_irq_node_typ ball_tcb_cap_casesI static_imp_wp
+             valid_bound_tcb_typ_at[rule_format]
              | simp add: valid_ntfn_def)+
   apply clarsimp
   apply (rule conjI, clarsimp simp: valid_bound_tcb_def obj_at_def pred_tcb_at_def2 is_tcb
@@ -3070,42 +3072,28 @@ lemma hf_invs':
   "\<lbrace>invs and Q and st_tcb_at active t and ex_nonz_cap_to t and (\<lambda>_. valid_fault f)\<rbrace>
    handle_fault t f
    \<lbrace>\<lambda>r (s::'state_ext state). invs s \<and> Q s\<rbrace>"
-  including no_pre
+  apply (cases "valid_fault f"; clarsimp)
   apply (simp add: handle_fault_def)
   apply wp
-    apply (simp add: handle_double_fault_def)
-    apply (wp sts_invs_minor)
+     apply (simp add: handle_double_fault_def)
+     apply (wp sts_invs_minor)
    apply (simp add: send_fault_ipc_def Let_def)
-   apply wp
-     apply (rule_tac P="invs and Q and st_tcb_at active t and ex_nonz_cap_to t and
-                        (\<lambda>_. valid_fault f) and (\<lambda>s. t \<noteq> idle_thread s) and
-                        (\<lambda>s. \<forall>r \<in> zobj_refs handler_cap. ex_nonz_cap_to r s)"
-                   in hoare_trivE)
-     apply (case_tac handler_cap)
-               apply (strengthen reply_cap_doesnt_exist_strg
-            | clarsimp simp: tcb_cap_cases_def
-            | rule conjI
-            | wp hoare_drop_imps
-                 thread_set_no_change_tcb_state ex_nonz_cap_to_pres
-                 thread_set_cte_wp_at_trivial
-            | fastforce elim!: pred_tcb_weakenE
-                       simp: invs_def valid_state_def valid_idle_def st_tcb_def2
-                    split: Structures_A.thread_state.splits)+
-              apply (rule hoare_pre_imp[rotated])
-               apply (rule_tac P="valid_fault f" in hoare_gen_asm)
-               apply (wp thread_set_invs_trivial)
-                     apply (strengthen reply_cap_doesnt_exist_strg
-             | clarsimp simp: tcb_cap_cases_def
-             | rule conjI
-             | wp hoare_drop_imps
-                  thread_set_no_change_tcb_state ex_nonz_cap_to_pres
-                  thread_set_cte_wp_at_trivial
-             | fastforce elim!: pred_tcb_weakenE
-                        simp: invs_def valid_state_def valid_idle_def pred_tcb_def2
-                              valid_pspace_def idle_no_ex_cap
-                     split: Structures_A.thread_state.splits)+
+   apply (wpsimp wp: thread_set_invs_trivial
+                     thread_set_no_change_tcb_state ex_nonz_cap_to_pres
+                     thread_set_cte_wp_at_trivial
+                     hoare_vcg_all_lift_R
+          | clarsimp simp: tcb_cap_cases_def
+          | erule disjE)+
+     apply (wpe lookup_cap_ex_cap)
+     apply (wpsimp wp: hoare_vcg_all_lift_R
+        | strengthen reply_cap_doesnt_exist_strg
+        | wp_once hoare_drop_imps)+
+  apply (simp add: conj_comms)
+  apply (fastforce elim!: pred_tcb_weakenE
+               simp: invs_def valid_state_def valid_idle_def st_tcb_def2
+                     idle_no_ex_cap pred_tcb_def2
+              split: Structures_A.thread_state.splits)
   done
-
 
 lemmas hf_invs[wp] = hf_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI TrueI,simplified]
 

@@ -760,13 +760,9 @@ crunch preserve [wp]:  decode_cnode_invocation "P"
 lemma decode_invocation_wp:
   "\<lbrace>P\<rbrace> decode_invocation (CNodeCap x y z sz) ref caps (CNodeIntent intent) \<lbrace>\<lambda>_. P\<rbrace>, -"
   apply (clarsimp simp: decode_invocation_def)
-  including no_pre
   apply (wp)
-   apply (clarsimp simp: comp_def)
-   apply (wp)
-  apply (clarsimp simp: throw_opt_def)
-  apply (clarsimp split:option.splits)
-  apply (safe|clarsimp|wp)+
+    apply (clarsimp simp: comp_def)
+    apply (wpsimp simp: throw_opt_def)+
 done
 
 lemma lookup_slot_wp:
@@ -838,7 +834,7 @@ lemma lookup_slot_rvu:
   apply (rule hoare_vcg_seqE)+
     apply (rule returnOk_wp)
    apply (rule resolve_cap_u_nf [where r=r])
-  apply (wp)
+  apply (rule hoare_pre, wp)
   apply (clarsimp simp: mapu_dest_opt_cap)
   apply (sep_frule (direct) opt_cap_sep_imp )
   apply (sep_frule (direct) user_pointer_at_cnode_cap)
@@ -854,7 +850,7 @@ lemma lookup_cap_rvu :
      lookup_cap thread cap_ptr
    \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>_ _. False\<rbrace>"
   apply (clarsimp simp: lookup_cap_def)
-  including no_pre
+  using hoare_vcg_prop[wp del]
   apply (wp lookup_slot_rvu [where cnode_cap=cnode_cap] get_cap_rv)
   apply (clarsimp)
   apply safe
@@ -887,7 +883,7 @@ lemma lookup_cap_and_slot_rvu:
   apply (rule hoare_vcg_seqE)+
     apply (rule returnOk_wp)
    apply (wp get_cap_rv)
-  apply (wp lookup_slot_rvu)
+  apply (rule hoare_pre, wp lookup_slot_rvu)
   apply (safe)
     apply (clarsimp simp: user_pointer_at_def Let_unfold sep.mult_assoc)
     apply sep_solve

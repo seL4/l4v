@@ -639,7 +639,6 @@ lemma checkFreeIndex_wp:
   "\<lbrace>\<lambda>s. if descendants_of' slot (ctes_of s) = {} then Q y s else Q x s\<rbrace>
    constOnFailure x (doE z \<leftarrow> ensureNoChildren slot; returnOk y odE)
    \<lbrace>Q\<rbrace>"
-  including no_pre
   apply (clarsimp simp:constOnFailure_def const_def)
   apply (wp ensureNoChildren_wp)
   apply simp
@@ -3399,14 +3398,13 @@ lemma createNewCaps_not_parents:
    apply (clarsimp simp: tree_cte_cteCap_eq)
    apply (erule_tac x=x in allE)
    apply simp
-  including no_pre
   apply (wp createNewCaps_children hoare_vcg_all_lift createNewCaps_cte_wp_at2)
-   apply (clarsimp simp: tree_cte_cteCap_eq simp del: o_apply)
-   apply (rule conjI)
-    apply (clarsimp split: option.splits)
-    apply (erule notE[rotated], erule bspec, erule ranI)
-   apply (simp add: makeObject_cte)
-  apply fastforce
+  apply (rule conjI, fastforce)
+  apply (clarsimp simp: tree_cte_cteCap_eq simp del: o_apply)
+  apply (rule conjI)
+   apply (clarsimp split: option.splits)
+   apply (erule notE[rotated], erule bspec, erule ranI)
+  apply (simp add: makeObject_cte)
   done
 
 lemma createObjects_distinct:

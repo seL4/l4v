@@ -687,7 +687,7 @@ lemma set_pt_global_objs [wp]:
       apply (clarsimp dest!: a_type_is_aobj aa_type_pml4D
                      simp: valid_arch_state_def aa_type_simps
                            valid_global_objs_upd_def obj_at_def)
-      apply (rule update_object_is_kheap_upd[OF valid_pml4e_lift2])
+      apply (rule update_object_is_kheap_upd[OF valid_pml4e_lift])
          apply (wp | clarsimp | rule conjI | assumption)+
         apply (drule_tac x = x in bspec, simp+)
         apply (simp add: empty_table_def)
@@ -2663,8 +2663,8 @@ lemma store_pte_invs:
     and (\<lambda>s. p && ~~ mask pt_bits \<notin> global_refs s \<and> wellformed_pte pte)\<rbrace>
   store_pte p pte \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: store_pte_def)
-  apply_trace (wp)
-  apply_trace (intro impI allI conjI valid_table_caps_aobj_upd_invalid_pte invs_valid_table_caps,
+  apply (wp)
+  apply (intro impI allI conjI valid_table_caps_aobj_upd_invalid_pte invs_valid_table_caps,
          simp_all add: obj_at_def)
             apply (clarsimp simp: obj_at_def aa_type_simps aobj_upd_invalid_slots_simps ucast_ucast_mask
                            split: if_split_asm option.split_asm

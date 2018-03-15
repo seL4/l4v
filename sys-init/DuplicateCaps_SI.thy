@@ -109,7 +109,6 @@ lemma duplicate_cap_sep_helper:
    \<guillemotleft>si_cap_at t (map_of (zip [obj\<leftarrow>obj_ids. cnode_or_tcb_at obj spec] free_cptrs))
                 spec dev obj_id \<and>*
     si_cap_at t orig_caps spec dev obj_id \<and>* si_objects \<and>* R\<guillemotright> s\<rbrace>"
-  including no_pre
   apply (rule hoare_assume_pre)
   apply (clarsimp simp: duplicate_cap_def si_cap_at_def sep_conj_exists)
   apply (rule_tac x=free_cptr in hoare_exI)
@@ -123,15 +122,17 @@ lemma duplicate_cap_sep_helper:
    apply (wp hoare_drop_imps)
     apply (rule hoare_chain)
       apply (rule_tac free_cptr=free_cptr and cap_ptr=cap_ptr and dev = dev and
-             R="(si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>* si_asid \<and>* R" in
-             seL4_CNode_Copy_sep_helper)
+              R="(si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>* si_asid \<and>* R" in
+              seL4_CNode_Copy_sep_helper)
         apply (rule unat_less_2_si_cnode_size, simp)
        apply simp
       apply (erule(1) cnode_or_tcb_at_wfc)
-      apply (frule (1) well_formed_object_size_bits_word_bits, simp add: word_bits_def)
+       apply (frule (1) well_formed_object_size_bits_word_bits, simp add: word_bits_def)
+      apply sep_solve
      apply sep_solve
-    apply sep_solve
-   apply (rule unat_less_2_si_cnode_size, simp)
+   apply (rule conjI)
+    apply (rule unat_less_2_si_cnode_size, simp)
+   apply sep_solve
   apply clarsimp
   done
 
@@ -183,12 +184,11 @@ lemma duplicate_caps_sep_helper:
   \<lbrace>\<lambda>dup_caps.
     \<guillemotleft>si_caps_at t dup_caps spec dev {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
-  including no_pre
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: duplicate_caps_def si_caps_at_def)
   apply (wp)
-  apply (rule hoare_chain)
-    apply (rule mapM_x_set_sep [where
+   apply (rule hoare_chain)
+     apply (rule mapM_x_set_sep [where
            f="duplicate_cap spec orig_caps" and
            xs="zip [obj\<leftarrow>obj_ids . cnode_or_tcb_at obj spec] free_cptrs" and
            P="\<lambda>(obj_id,free_cptr). (si_cnode_id, unat free_cptr) \<mapsto>c NullCap" and
@@ -197,16 +197,17 @@ lemma duplicate_caps_sep_helper:
                 spec dev obj_id)" and
            I="si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>* si_objects" and
            R=R])
-     apply (rule distinct_zipI1, simp)
-    apply (clarsimp simp: sep_conj_assoc)
-    apply (rename_tac obj_id free_cptr)
-    apply (wp sep_wp: duplicate_cap_sep [where obj_ids=obj_ids and free_cptrs=free_cptrs and t=t])
-    apply clarsimp
+      apply (rule distinct_zipI1, simp)
+     apply (clarsimp simp: sep_conj_assoc)
+     apply (rename_tac obj_id free_cptr)
+     apply (wp sep_wp: duplicate_cap_sep [where obj_ids=obj_ids and free_cptrs=free_cptrs and t=t])
+     apply clarsimp
+     apply sep_solve
+    apply (clarsimp simp: sep_conj_assoc si_caps_at_def)
     apply sep_solve
+   apply (subst (asm) sep_map_zip_fst, simp+)
    apply (clarsimp simp: sep_conj_assoc si_caps_at_def)
-   apply sep_solve
-  apply (subst (asm) sep_map_zip_fst, simp+)
-  apply (clarsimp simp: sep_conj_assoc si_caps_at_def)
+  apply sep_solve
   done
 
 (* FIXME, move higher *)

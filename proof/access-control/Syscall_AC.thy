@@ -1653,22 +1653,20 @@ lemma call_kernel_integrity':
                     and K (pasMayActivate aag \<and> pasMayEditReadyQueues aag)\<rbrace>
                call_kernel ev
              \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  including no_pre
   apply (simp add: call_kernel_def getActiveIRQ_def )
   apply (simp add: spec_valid_def)
   apply (wp activate_thread_respects schedule_integrity_pasMayEditReadyQueues
             handle_interrupt_integrity handle_interrupt_current_ipc_buffer_register
             dmo_wp alternative_wp select_wp handle_interrupt_pas_refined
          | simp add: current_ipc_buffer_register_irq_state_update)+
-  apply (rule hoare_post_impErr,
-         rule_tac Q = "integrity aag X st and pas_refined aag and einvs and guarded_pas_domain aag and domain_sep_inv (pasMaySendIrqs aag) st'
+   apply (rule hoare_post_impErr,
+          rule_tac Q = "integrity aag X st and pas_refined aag and einvs and guarded_pas_domain aag and domain_sep_inv (pasMaySendIrqs aag) st'
                         and is_subject aag \<circ> cur_thread
                         and (\<lambda>_. pasMayActivate aag \<and> pasMayEditReadyQueues aag)" in valid_validE)
-    apply (wp handle_event_integrity he_invs handle_event_pas_refined
+     apply (wp handle_event_integrity he_invs handle_event_pas_refined
               handle_event_cur_thread handle_event_cur_domain
               handle_event_domain_sep_inv handle_event_valid_sched | simp)+
-      apply (fastforce simp:  domain_sep_inv_def)+
-  apply(fastforce simp: domain_sep_inv_def guarded_pas_domain_def)
+    apply(fastforce simp: domain_sep_inv_def guarded_pas_domain_def)+
   done
 
 

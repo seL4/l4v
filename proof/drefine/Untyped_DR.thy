@@ -1781,7 +1781,6 @@ lemma decode_untyped_corres:
            and (\<lambda>s. \<forall>x \<in> set excaps'. cte_wp_at (diminished (fst x)) (snd x) s) and valid_etcbs)
      (Untyped_D.decode_untyped_invocation cap slot excaps ui)
      (Decode_A.decode_untyped_invocation label' args' slot' cap' (map fst excaps'))"
-  including no_pre
   apply (simp add: transform_intent_def map_option_Some_eq2
                    transform_intent_untyped_retype_def
             split: invocation_label.split_asm arch_invocation_label.split_asm list.split_asm
@@ -1854,11 +1853,8 @@ lemma decode_untyped_corres:
          apply (clarsimp simp:conj_comms)
          apply (wp mapME_x_inv_wp[OF hoare_pre(2)] | simp split del: if_split)+
         apply (wp hoare_whenE_wp)+
-       apply (simp add:validE_def split del:if_splits)
-       apply (rule_tac Q = "\<lambda>r. op = s" in hoare_strengthen_post)
-        apply wp+
-        apply fastforce
-       apply (case_tac r,clarsimp+)
+       apply (simp split del: if_split)
+       apply fastforce
       apply (rule corres_alternate1)
       apply (rule corres_guard_imp)
         apply (rule_tac F="cap_aligned cnode_cap' \<and> is_cnode_cap cnode_cap'" in corres_gen_asm2)
@@ -1904,7 +1900,6 @@ lemma decode_untyped_corres:
     apply (clarsimp simp:valid_cap_simps cap_aligned_def)
    apply (rule hoare_pre,wp,simp)
   apply (wp hoare_drop_imp mapME_x_inv_wp2 | simp add:whenE_def split del:if_split)+
-  apply (rule hoare_pre,wp,simp)
   done
 
 lemma decode_untyped_label_not_match:

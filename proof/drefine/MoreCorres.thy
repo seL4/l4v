@@ -100,11 +100,9 @@ lemma corres_return_dc_rhs:
 
 (* If our return relation doesn't matter, return statements are meaningless. *)
 lemma corres_return_dc_lhs:
-  "corres_underlying sr nf nf' dc G G' P P' \<Longrightarrow> corres_underlying sr nf nf' dc G G' (do P; return a od) P'"
-  apply (case_tac nf)
-   apply (clarsimp simp: corres_underlying_def dc_def return_def bind_def, force)
-  apply (clarsimp simp: corres_underlying_def dc_def return_def bind_def, force) (* slow 10s *)
-  done
+  "corres_underlying sr nf nf' dc G G' P P'
+    \<Longrightarrow> corres_underlying sr nf nf' dc G G' (do P; return a od) P'"
+  by (simp add: liftM_def[symmetric])
 
 (* liftE distributes inside bind. *)
 lemma liftE_distrib: "(liftE (A >>= (\<lambda>_. B))) = ((liftE A) >>=E (\<lambda>x. (liftE B)))"

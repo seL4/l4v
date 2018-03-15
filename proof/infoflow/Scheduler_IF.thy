@@ -475,14 +475,9 @@ lemma clearExMonitor_globals_equiv_scheduler[wp]: "\<lbrace> globals_equiv_sched
 lemma arch_switch_to_thread_globals_equiv_scheduler:
   "\<lbrace>invs and globals_equiv_scheduler sta\<rbrace> arch_switch_to_thread thread
        \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
-  unfolding arch_switch_to_thread_def storeWord_def including no_pre
-  apply (wp clearExMonitor_globals_equiv_scheduler dmo_wp modify_wp thread_get_wp')
-  apply (rule_tac Q="\<lambda>r s. invs s \<and> globals_equiv_scheduler sta s" in hoare_strengthen_post)
-   apply wp
-    apply (rule globals_equiv_scheduler_inv')
-    apply (wp set_vm_root_globals_equiv)
-    apply clarsimp+
-  done
+  unfolding arch_switch_to_thread_def storeWord_def
+  by (wpsimp wp: clearExMonitor_globals_equiv_scheduler dmo_wp modify_wp thread_get_wp'
+           | wp_once globals_equiv_scheduler_inv'[where P="\<top>"])+
 
 lemma dmo_storeWord_reads_respects_scheduler[wp]:
   "reads_respects_scheduler aag l \<top> (do_machine_op (storeWord rva rvb))"
@@ -846,13 +841,7 @@ lemma arch_switch_to_thread_globals_equiv_scheduler':
   "\<lbrace>invs and globals_equiv_scheduler sta\<rbrace>
         set_vm_root t
        \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
-  including no_pre
-  apply (rule_tac Q="\<lambda>r s. invs s \<and> globals_equiv_scheduler sta s" in hoare_strengthen_post)
-   apply wp
-    apply (rule globals_equiv_scheduler_inv')
-    apply (wp set_vm_root_globals_equiv)+
-    apply clarsimp+
-  done
+  by (rule globals_equiv_scheduler_inv', wpsimp)
 
 lemma arch_switch_to_thread_reads_respects_scheduler[wp]: "reads_respects_scheduler aag l ((\<lambda>s. pasObjectAbs aag t = pasDomainAbs aag (cur_domain s)) and invs) (arch_switch_to_thread t)"
   apply (rule reads_respects_scheduler_cases)

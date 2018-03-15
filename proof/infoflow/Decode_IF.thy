@@ -708,7 +708,8 @@ lemma decode_invocation_reads_respects_f:
             reads_respects_f[OF decode_irq_handler_invocation_rev, where Q="\<top>"]
             arch_decode_invocation_reads_respects_f
        | wpc
-       | simp)+
+       | simp
+       | (rule hoare_pre, wp_once))+
   apply (clarsimp simp: aag_has_Control_iff_owns split_def aag_cap_auth_def)
   apply (cases cap, simp_all)
   apply ((clarsimp simp: valid_cap_def cte_wp_at_eq_simp

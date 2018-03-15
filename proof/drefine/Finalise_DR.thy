@@ -2396,7 +2396,6 @@ lemma dcorres_unmap_page:
                   valid_cap (cap.ArchObjectCap (arch_cap.PageCap dev pg fun vmpage_size (Some (a, v)))))
               (PageTableUnmap_D.unmap_page (transform_asid a,v) pg (pageBitsForSize vmpage_size))
               (ARM_A.unmap_page vmpage_size a v pg)"
-  including no_pre
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:valid_cap_def)
   apply (case_tac vmpage_size)
@@ -2425,11 +2424,9 @@ prefer 2
          apply (simp add: imp_conjR)
          apply ((wp check_mapping_pptr_pt_relation | wp_once hoare_drop_imps)+)[1]
         apply (simp | wp lookup_pt_slot_inv)+
-     apply (simp
+     apply (simp add: dc_def
        | wp lookup_pt_slot_inv find_pd_for_asid_kernel_mapping_help
-       | safe)+
-     apply ((simp add:dc_def,wp)+)[3]
-  apply (simp add:dc_def,wp+)
+       | rule conjI | clarify)+
 
 -- ARMLargePage
 
@@ -2454,7 +2451,7 @@ prefer 2
                  apply (erule dcorres_unmap_large_page[where pg_id = pg])
                 apply (simp add:liftE_distrib[symmetric] returnOk_liftE)
                 apply (rule dcorres_symb_exec_r)
-                  apply (rule dcorres_flush_page)
+                  apply (rule dcorres_flush_page[unfolded dc_def])
                  apply (wp do_machine_op_wp | clarsimp)+
          apply (simp add: imp_conjR is_aligned_mask)
          apply (rule hoare_vcg_conj_lift)
@@ -2464,12 +2461,10 @@ prefer 2
          apply (rule hoare_strengthen_post[OF check_mapping_pptr_pt_relation])
           apply fastforce
         apply (simp | wp lookup_pt_slot_inv)+
-       apply (simp
+       apply (simp add: dc_def
          | wp lookup_pt_slot_inv hoare_drop_imps
            find_pd_for_asid_kernel_mapping_help
          | safe)+
-     apply ((simp add:dc_def,wp)+)[3]
-  apply (simp add:dc_def,wp)
 
 -- Section
   apply (simp add:ARM_A.unmap_page_def bindE_assoc mapM_x_singleton
@@ -2490,16 +2485,14 @@ prefer 2
              apply (rule dcorres_delete_cap_simple_section[where oid = pg])
             apply (simp add:liftE_distrib[symmetric] returnOk_liftE)
             apply (rule dcorres_symb_exec_r)
-              apply (rule dcorres_flush_page)
+              apply (rule dcorres_flush_page[unfolded dc_def])
              apply (wp do_machine_op_wp | clarsimp)+
          apply (simp add: imp_conjR)
          apply ((wp check_mapping_pptr_section_relation | wp_once hoare_drop_imps)+)[1]
         apply (simp | wp lookup_pt_slot_inv)+
-     apply (simp
+     apply (simp add: dc_def
        | wp lookup_pt_slot_inv find_pd_for_asid_kernel_mapping_help
        | safe)+
-     apply ((simp add:dc_def,wp)+)[2]
-  apply (simp add:dc_def,wp)
 
 -- SuperSection
 
@@ -2523,7 +2516,7 @@ prefer 2
                  apply (erule(2) dcorres_unmap_large_section[where pg_id = pg])
                 apply (simp add:liftE_distrib[symmetric] returnOk_liftE)
                 apply (rule dcorres_symb_exec_r)
-                  apply (rule dcorres_flush_page)
+                  apply (rule dcorres_flush_page[unfolded dc_def])
                  apply (wp do_machine_op_wp | clarsimp)+
          apply (simp add: imp_conjR is_aligned_mask)
          apply (rule hoare_vcg_conj_lift)
@@ -2533,12 +2526,10 @@ prefer 2
          apply (rule hoare_vcg_conj_lift)
           apply (rule hoare_strengthen_post[OF check_mapping_pptr_super_section_relation])
           apply clarsimp
-       apply (simp add:is_aligned_mask[symmetric]
+       apply (simp add:is_aligned_mask[symmetric] dc_def
          | wp lookup_pt_slot_inv hoare_drop_imps
            find_pd_for_asid_kernel_mapping_help
          | safe)+
-     apply ((simp add:dc_def,wp)+)[2]
-  apply (simp add:dc_def,wp)
 done
 
 
@@ -2592,8 +2583,8 @@ lemma dcorres_delete_asid:
             apply (wp | clarsimp)+
          apply simp
         apply (wp | clarsimp)+
-       apply (subgoal_tac "valid_idle s \<and> ko_at (ArchObj (arch_kernel_obj.ASIDPool rv)) x2 s")
-        apply simp+
+      apply (rule hoare_pre, wp)
+      apply simp
      apply (wp | clarsimp)+
     apply (rule corres_alternate2)
     apply simp
@@ -3296,19 +3287,13 @@ crunch idle_thread [wp]: cap_swap_for_delete "\<lambda>s. P (idle_thread s)"
 crunch idle_thread [wp]: finalise_cap "\<lambda>s. P (idle_thread s)"
  (wp: crunch_wps simp: crunch_simps)
 
-lemma preemption_point_idle_thread[wp]: "\<lbrace> \<lambda>s. P (idle_thread s) \<rbrace> preemption_point \<lbrace> \<lambda>_ s. P (idle_thread (s :: det_state)) \<rbrace>"
-  apply (clarsimp simp: preemption_point_def)
-  apply (auto simp: valid_def o_def gets_def liftE_def whenE_def getActiveIRQ_def
-                    corres_underlying_def select_def bind_def get_def bindE_def select_f_def modify_def
-                    alternative_def throwError_def returnOk_def return_def lift_def
-                    put_def do_machine_op_def
-                    update_work_units_def wrap_ext_bool_det_ext_ext_def work_units_limit_def
-                    work_units_limit_reached_def OR_choiceE_def reset_work_units_def mk_ef_def
-           split: option.splits kernel_object.splits)
+lemma preemption_point_idle_thread[wp]: "\<lbrace> \<lambda>s. P (idle_thread s) \<rbrace> preemption_point \<lbrace> \<lambda>_ s. P (idle_thread s) \<rbrace>"
+  apply (simp add: preemption_point_def OR_choiceE_def)
+  apply (wpsimp wp: hoare_drop_imps dxo_wp_weak[where P="\<lambda>s. P (idle_thread s)"])
   done
 
 lemma rec_del_idle_thread[wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> rec_del args \<lbrace>\<lambda>rv s. P (idle_thread (s :: det_state))\<rbrace>"
+  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> rec_del args \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
   by (wp rec_del_preservation | simp)+
 
 lemma gets_constant:

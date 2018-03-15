@@ -431,7 +431,6 @@ lemma decode_cnode_inv_wf[wp]:
                  (\<forall>r\<in>cte_refs cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s)) \<rbrace>
       decode_cnode_invocation mi args cap cs
     \<lbrace>valid_cnode_inv\<rbrace>,-"
-  including no_pre
   apply (rule decode_cnode_cases2[where args=args and exs=cs and label=mi])
          -- "Move/Insert"
         apply (simp add: decode_cnode_invocation_def unlessE_whenE
@@ -439,41 +438,39 @@ lemma decode_cnode_inv_wf[wp]:
         apply (wp lsfco_cte_at ensure_no_children_wp whenE_throwError_wp
           | simp add: split_beta split del: if_split
           | (fold validE_R_def)[1])+
-              apply (rule cap_derive_not_null_helper2)
-              apply (simp only: imp_conjR)
-              apply ((wp derive_cap_is_derived
-                         derive_cap_valid_cap
-                         derive_cap_zobjrefs derive_cap_objrefs_iszombie
-                           | wp_once hoare_drop_imps)+ )[1]
-             apply (wp whenE_throwError_wp | wpcw)+
-           apply simp
-           apply (rule_tac Q="\<lambda>src_cap. valid_cap src_cap and ex_cte_cap_wp_to is_cnode_cap x
-                                      and zombies_final and valid_objs
-                                      and real_cte_at src_slot and real_cte_at x
-                                      and cte_wp_at (\<lambda>c. c = src_cap) src_slot
-                                      and cte_wp_at (op = cap.NullCap) x"
-                      in hoare_post_imp)
-            apply (clarsimp simp: cte_wp_at_caps_of_state all_rights_def)
-            apply (simp add: cap_master_update_cap_data weak_derived_update_cap_data
-                             cap_asid_update_cap_data
-                             update_cap_data_validI update_cap_objrefs)
-            apply (strengthen cap_badge_update_cap_data)
+               apply (rule cap_derive_not_null_helper2)
+               apply (simp only: imp_conjR)
+               apply ((wp derive_cap_is_derived
+                          derive_cap_valid_cap
+                          derive_cap_zobjrefs derive_cap_objrefs_iszombie
+                            | wp_once hoare_drop_imps)+ )[1]
+              apply (wp whenE_throwError_wp | wpcw)+
             apply simp
-            apply (frule (1) caps_of_state_valid_cap)
-            apply (case_tac "is_zombie r")
-             apply (clarsimp simp add: valid_cap_def2 update_cap_data_def
-                                       is_cap_simps
-                             split: if_split_asm)
-            apply (frule(2) zombies_final_helper [OF caps_of_state_cteD[simplified cte_wp_at_eq_simp]])
-            apply (clarsimp simp: valid_cap_def2 cte_wp_at_caps_of_state)
-            apply (rule conjI, clarsimp+)+
+            apply (rule_tac Q="\<lambda>src_cap. valid_cap src_cap and ex_cte_cap_wp_to is_cnode_cap x
+                                       and zombies_final and valid_objs
+                                       and real_cte_at src_slot and real_cte_at x
+                                       and cte_wp_at (\<lambda>c. c = src_cap) src_slot
+                                       and cte_wp_at (op = cap.NullCap) x"
+                       in hoare_post_imp)
+             apply (clarsimp simp: cte_wp_at_caps_of_state all_rights_def)
+             apply (simp add: cap_master_update_cap_data weak_derived_update_cap_data
+                              cap_asid_update_cap_data
+                              update_cap_data_validI update_cap_objrefs)
+             apply (strengthen cap_badge_update_cap_data)
+             apply simp
+             apply (frule (1) caps_of_state_valid_cap)
+             apply (case_tac "is_zombie r")
+              apply (clarsimp simp add: valid_cap_def2 update_cap_data_def
+                                        is_cap_simps
+                              split: if_split_asm)
+             apply (frule(2) zombies_final_helper [OF caps_of_state_cteD[simplified cte_wp_at_eq_simp]])
+             apply (clarsimp simp: valid_cap_def2 cte_wp_at_caps_of_state)
+             apply (rule conjI, clarsimp+)+
 
-            apply (fastforce simp: is_untyped_update_cap_data
-                                   weak_derived_update_cap_data[OF _ weak_derived_refl])
-           apply (wp get_cap_cte_wp_at ensure_empty_cte_wp_at)+
+             apply (fastforce simp: is_untyped_update_cap_data
+                                    weak_derived_update_cap_data[OF _ weak_derived_refl])
+            apply (wp get_cap_cte_wp_at ensure_empty_cte_wp_at)+
         apply simp
-        apply (fold validE_R_def)
-        apply (rule hoare_pre, wp lookup_slot_for_cnode_op_cap_to)
         apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
        -- "Revoke"
        apply (simp add: decode_cnode_invocation_def unlessE_whenE cong: if_cong)
@@ -498,10 +495,9 @@ lemma decode_cnode_inv_wf[wp]:
     apply (simp add: decode_cnode_invocation_def
                      unlessE_def whenE_def
                split del: if_split)
-    apply (wp get_cap_wp hoare_vcg_all_lift | simp add: )+
-    apply (fold validE_R_def)
-    apply (rule_tac Q'="\<lambda>rv. invs and cte_wp_at (\<lambda>_. True) rv" in hoare_post_imp_R)
-     apply (rule hoare_pre, wp lsfco_cte_at)
+    apply (wp get_cap_wp hoare_vcg_all_lift_R | simp add: )+
+     apply (rule_tac Q'="\<lambda>rv. invs and cte_wp_at (\<lambda>_. True) rv" in hoare_post_imp_R)
+      apply (wp lsfco_cte_at)
      apply (clarsimp simp: cte_wp_valid_cap invs_valid_objs has_cancel_send_rights_ep_cap)+
    -- "Rotate"
    apply (simp add: decode_cnode_invocation_def split_def
@@ -2402,7 +2398,7 @@ lemma suspend_emptyable[wp]:
   "\<lbrace>invs and emptyable sl and valid_mdb\<rbrace> IpcCancel_A.suspend l \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
   apply (simp add: IpcCancel_A.suspend_def)
   apply (wp|simp)+
-  apply (wp emptyable_lift sts_st_tcb_at_cases)
+    apply (wp emptyable_lift sts_st_tcb_at_cases)+
     apply simp
    apply (wp set_thread_state_cte_wp_at | simp)+
   done
@@ -2757,7 +2753,7 @@ lemma cap_delete_rvk_prog:
   apply wpsimp
   apply (unfold validE_R_def)
   apply (rule use_spec)
-   apply (rule rec_del_rvk_prog)
+   apply (rule rec_del_rvk_prog rec_del_rvk_prog[unfolded o_def])
   apply (simp add: o_def)
   done
 

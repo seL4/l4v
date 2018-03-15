@@ -1580,10 +1580,6 @@ next
           apply(drule finalise_cap_ret)
           apply(case_tac "fst (a,b)")
                     apply(simp add: is_zombie_def)+
-         apply(clarsimp)
-         apply(drule finalise_cap_ret)
-         apply(case_tac "fst (a,b)")
-                   apply(simp add: is_zombie_def)+
        apply(wp drop_spec_validE)
        apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> is_subject aag (fst slot) \<and> (case (fst rv) of Zombie ptr bits n \<Rightarrow> is_subject aag (obj_ref_of (fst rv)) | _ \<Rightarrow> True) \<and> pas_cap_cur_auth aag (fst rv) \<and> (is_zombie (fst rv) \<or> fst rv = NullCap)" in hoare_strengthen_post)
         apply(wp finalise_cap_ret_is_subject)
@@ -1620,7 +1616,7 @@ next
 next
   case (3 ptr bits n slot s) show ?case
     apply(simp add: rec_del.simps)
-    apply(wp drop_spec_validE)
+    apply(wp drop_spec_validE)+
     apply(clarsimp)
     done
 next
@@ -2914,7 +2910,6 @@ lemma invoke_tcb_silc_inv:
     Tcb_AI.tcb_inv_wf tinv and K (authorised_tcb_inv aag tinv)\<rbrace>
    invoke_tcb tinv
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  including no_pre
   apply(case_tac tinv)
         apply((wp restart_silc_inv hoare_vcg_if_lift suspend_silc_inv mapM_x_wp[OF _ subset_refl] static_imp_wp
             | wpc
@@ -2959,7 +2954,6 @@ lemma perform_invocation_silc_inv:
     and pas_refined aag and is_subject aag \<circ> cur_thread\<rbrace>
    perform_invocation block call iv
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  including no_pre
   apply(case_tac iv)
           apply(wp invoke_untyped_silc_inv send_ipc_silc_inv
                    invoke_tcb_silc_inv invoke_cnode_silc_inv
@@ -2968,7 +2962,7 @@ lemma perform_invocation_silc_inv:
                    arch_perform_invocation_silc_inv
                | simp add: authorised_invocation_def invs_valid_objs
                            invs_mdb invs_sym_refs
-                           split_def
+                           split_def invoke_domain_def
                | blast)+
   done
 

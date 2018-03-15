@@ -2188,36 +2188,36 @@ lemma unmap_page_vs_lookup_pages_pre:
   proof -
   note ref_simps[simp] = vs_cap_ref_simps vs_ref_pages_simps
   note ucast_simps[simp] = up_ucast_inj_eq ucast_up_ucast mask_asid_low_bits_ucast_ucast ucast_ucast_id get_index_neq
+  note [wp_comb del] = hoare_vcg_conj_lift
+  note [wp_comb] = hoare_post_comb_imp_conj hoare_vcg_precond_imp hoare_vcg_conj_lift
+    hoare_vcg_precond_impE[OF valid_validE]
+    hoare_vcg_precond_impE_R[OF valid_validE_R]
+    hoare_vcg_precond_impE
+    hoare_vcg_precond_impE_R
+
   show ?thesis
     apply (clarsimp simp: unmap_page_def vs_cap_ref_simps)
     apply (wp | wpc)+
-
 (* X64SmallPage *)
-      apply (clarsimp simp: unmap_page_table_def vs_cap_ref_simps store_pte_def)
+      apply (clarsimp simp: store_pte_def)
     apply wp
           apply (rule update_aobj_not_reachable[where b = "[b,c,d,e,f]" for b c d e f,simplified])
     apply (strengthen lookup_refs_pt_shrink_strg valid_arch_state_asid_table_strg not_in_vs_refs_pages_strg
            | clarsimp )+
-        apply (strengthen | wp hoare_vcg_imp_lift hoare_vcg_all_lift  | clarsimp simp: conj_ac)+
-      apply (clarsimp simp: unmap_page_table_def vs_cap_ref_simps store_pte_def)
-    apply wp
-          apply (rule update_aobj_not_reachable[where b = "[b,c,d,e,f]" for b c d e f,simplified])
-    apply (strengthen lookup_refs_pt_shrink_strg valid_arch_state_asid_table_strg not_in_vs_refs_pages_strg
-           | clarsimp )+
-        apply (strengthen | wp hoare_vcg_imp_lift hoare_vcg_all_lift unlessE_wp | clarsimp simp: conj_ac)+
+       apply (wpsimp simp: unlessE_def split_del: if_split)+
       apply (wpc | wp get_pte_wp get_pml4e_wp get_pde_wp get_pdpte_wp)+
     apply ((simp add: lookup_pt_slot_def lookup_pd_slot_def lookup_pdpt_slot_def | wp get_pdpte_wp get_pml4e_wp get_pde_wp | wpc)+)[1]
 (* X64LargePage *)
-      apply (clarsimp simp: unmap_page_table_def vs_cap_ref_simps store_pde_def)
+      apply (clarsimp simp: store_pde_def)
     apply wp
           apply (rule update_aobj_not_reachable[where b = "[b,c,d,e]" for b c d e,simplified])
     apply (strengthen lookup_refs_pd_shrink_strg valid_arch_state_asid_table_strg not_in_vs_refs_pages_strg
            | clarsimp )+
-        apply (strengthen | wp hoare_vcg_imp_lift hoare_vcg_all_lift unlessE_wp  | clarsimp simp: conj_ac)+
+        apply (strengthen | wp hoare_vcg_imp_lift hoare_vcg_all_lift unlessE_wp  | clarsimp simp: conj_comms)+
       apply (wpc | wp get_pte_wp get_pml4e_wp get_pde_wp get_pdpte_wp)+
     apply ((simp add: lookup_pt_slot_def lookup_pd_slot_def lookup_pdpt_slot_def | wp get_pdpte_wp get_pml4e_wp get_pde_wp | wpc)+)[1]
 (* X64HugePage *)
- apply (clarsimp simp: unmap_page_table_def vs_cap_ref_simps store_pdpte_def)
+ apply (clarsimp simp: store_pdpte_def)
     apply wp
           apply (rule update_aobj_not_reachable[where b = "[b,c,d]" for b c d,simplified])
     apply (strengthen lookup_refs_pdpt_shrink_strg valid_arch_state_asid_table_strg not_in_vs_refs_pages_strg
@@ -3418,18 +3418,13 @@ lemma unmap_page_invs[wp]:
    apply (wpc | wp | strengthen imp_consequent)+
    apply ((wp store_pde_invs store_pte_invs unlessE_wp do_machine_op_global_refs_inv get_pde_wp
              hoare_vcg_all_lift find_vspace_for_asid_lots get_pte_wp store_pdpte_invs get_pdpte_wp
-        | wpc | simp add: flush_all_def pdpte_ref_pages_def
-        | strengthen imp_consequent
-                     not_in_global_refs_vs_lookup
+             hoare_vcg_all_lift_R
+        | wpc | simp add: flush_all_def pdpte_ref_pages_def if_apply_def2
+        | strengthen not_in_global_refs_vs_lookup
                      not_in_global_refs_vs_lookup invs_valid_vs_lookup
                       invs_valid_global_refs
-           invs_arch_state invs_valid_global_objs | clarsimp simp: conj_ac)+)[7]
-   apply (strengthen imp_consequent
-                     not_in_global_refs_vs_lookup
-                     not_in_global_refs_vs_lookup invs_valid_vs_lookup
-                      invs_valid_global_refs
-           invs_arch_state invs_valid_global_objs | clarsimp simp: conj_ac)+
-   apply wp
+           invs_arch_state invs_valid_global_objs | clarsimp simp: conj_comms
+        | wp_once hoare_drop_imps)+)
   apply (auto simp: vspace_at_asid_def is_aligned_pml4[simplified] invs_vspace_objs
                     invs_psp_aligned lookup_pml4_slot_eq pml4e_ref_def)
   done
@@ -3803,7 +3798,7 @@ lemma perform_asid_pool_invs [wp]:
   "\<lbrace>invs and valid_apinv api\<rbrace> perform_asid_pool_invocation api \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (clarsimp simp: perform_asid_pool_invocation_def split: asid_pool_invocation.splits)
   apply (wp arch_update_cap_invs_map store_asid_pool_entry_invs
-            get_cap_wp set_cap_typ_at empty_table_lift
+            get_cap_wp set_cap_typ_at empty_table_lift[OF _ hoare_weaken_pre]
             set_cap_obj_at_other hoare_vcg_all_lift set_cap_cte_wp_at_ex
          | wpc | simp del: split_paired_Ex)+
   apply (rename_tac asid pml4base a b s)

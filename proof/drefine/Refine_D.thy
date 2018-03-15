@@ -28,7 +28,7 @@ lemma handle_event_invs_and_valid_sched:
   "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
       and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace> Syscall_A.handle_event e
   \<lbrace>\<lambda>rv. invs and valid_sched\<rbrace>"
-  including no_pre by ((wp he_invs handle_event_valid_sched), simp)
+  by ((wp he_invs handle_event_valid_sched), clarsimp)
 
 lemma dcorres_call_kernel:
   "dcorres dc \<top>

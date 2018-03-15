@@ -1975,19 +1975,10 @@ lemma valid_pde_lift2:
 lemma valid_vspace_obj_typ2:
   assumes P: "\<And>P p T. \<lbrace>\<lambda>s. Q s \<and> P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. Q s \<and> valid_vspace_obj ob s \<rbrace> f \<lbrace>\<lambda>rv s. valid_vspace_obj ob s\<rbrace>"
-  apply (cases ob, simp_all add: aa_type_def)
-    apply (wp hoare_vcg_const_Ball_lift [OF P], simp)
-   apply (rule hoare_pre, wp hoare_vcg_all_lift valid_pte_lift2 P)
-    apply clarsimp
-    apply assumption
-   apply clarsimp
-  apply (wp hoare_vcg_all_lift valid_pde_lift2 P)
-    apply clarsimp
-    apply assumption
-   apply clarsimp
-  apply wp+
-  done
-
+  by (cases ob; wpsimp wp: hoare_vcg_const_Ball_lift [OF P]
+    hoare_vcg_all_lift valid_pte_lift2[unfolded pred_conj_def, OF P]
+    P valid_pde_lift2[unfolded pred_conj_def, OF P]
+  )
 
 lemma valid_vspace_objsI [intro?]:
   "(\<And>p ao. \<lbrakk> (\<exists>\<rhd> p) s; ko_at (ArchObj ao) p s \<rbrakk> \<Longrightarrow> valid_vspace_obj ao s) \<Longrightarrow> valid_vspace_objs s"

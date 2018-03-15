@@ -294,7 +294,7 @@ lemma decode_invocation_inv[wp]:
   done
 
 crunch inv[wp]: lookup_extra_caps P
-  (wp:crunch_wps mapME_wp resolve_address_bits_wp)
+  (wp:crunch_wps mapME_wp' resolve_address_bits_wp)
 
 lemma nonep_invocation_simps:
   "nonep_invocation (InvokeUntyped a) = True"
@@ -304,29 +304,10 @@ lemma decode_invocation_nonep:
   "\<lbrace>\<lambda>s. \<not> ep_related_cap cap \<rbrace>
    decode_invocation cap cap_ref extra_caps intent
    \<lbrace>\<lambda>rv s. nonep_invocation rv\<rbrace>, -"
-  including no_pre
-  apply (case_tac cap,simp_all add:ep_related_cap_def decode_invocation_def)
-                          apply wp[1]
-                         apply wp
-                          apply (rule hoare_post_imp_R[OF validE_validE_R,OF hoareE_TrueI])
-                          apply (simp add:nonep_invocation_def)
-                         apply wp
-                        apply (intro conjI impI)
-                         apply (wp hoare_FalseE)+
-                       apply (intro conjI impI,(wp hoare_FalseE)+)[2]
-                     apply wp
-                    apply wp
-                     apply (rule hoare_post_imp_R[OF validE_validE_R,OF hoareE_TrueI])
-                     apply (simp add:nonep_invocation_def)
-                    apply wp
-                   apply (wp,rule hoare_post_imp_R[OF validE_validE_R,OF hoareE_TrueI],
-                     simp add:nonep_invocation_def,wp+)+
-              apply (rule hoare_post_imp_R[OF validE_validE_R,OF hoareE_TrueI])
-              apply (simp add:nonep_invocation_def)
-             apply wp
-            apply (wp+, rule hoare_post_imp_R[OF validE_validE_R,OF hoareE_TrueI],
-              simp add:nonep_invocation_def)+
-       apply wp+
+  apply (simp add: decode_invocation_def)
+  apply (wpsimp 
+      simp: o_def nonep_invocation_def simp_del: hoare_True_E_R)
+  apply (auto simp: ep_related_cap_def)
   done
 
 lemma ep_related_cap_reset_simp[simp]:

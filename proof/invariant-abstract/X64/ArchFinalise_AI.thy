@@ -506,7 +506,6 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                                valid_arch_state s)\<rbrace>
      finalise_cap cap x
    \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
-  including no_pre
   apply (cases cap, simp_all add: replaceable_def reachable_pg_cap_def
                        split del: if_split)
             prefer 10
@@ -541,13 +540,12 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                       wp_once deleting_irq_handler_empty)
                    | wpc
                    | simp add: valid_cap_simps is_nondevice_page_cap_simps)+)
-  apply (rule hoare_chain)
-    apply (rule arch_finalise_cap_replaceable[where sl=sl])
+   apply (rule hoare_strengthen_post, rule arch_finalise_cap_replaceable[where sl=sl])
    apply (clarsimp simp: replaceable_def reachable_pg_cap_def
                          o_def cap_range_def valid_arch_state_def
                          ran_tcb_cap_cases is_cap_simps
-                         gen_obj_refs_subset vs_cap_ref_def)+
-  apply (fastforce split: option.splits vmpage_size.splits)
+                         gen_obj_refs_subset vs_cap_ref_def
+                         all_bool_eq)+
   done
 
 lemma (* deleting_irq_handler_cte_preserved *)[Finalise_AI_asms]:
@@ -1560,14 +1558,14 @@ lemma delete_asid_pool_unmapped2:
    apply (wp delete_asid_pool_unmapped)
   apply (simp add: delete_asid_pool_def)
   apply wp
-     apply (rule_tac Q="\<lambda>rv s. ?Q s \<and> asid_table = x64_asid_table (arch_state s)"
-                in hoare_post_imp)
-      apply (clarsimp simp: fun_upd_def[symmetric])
-      apply (drule vs_lookup_clear_asid_table[rule_format])
-      apply simp
-     apply (wp mapM_wp')
-     apply clarsimp
-    apply wp+
+      apply (rule_tac Q="\<lambda>rv s. ?Q s \<and> asid_table = x64_asid_table (arch_state s)"
+                 in hoare_post_imp)
+       apply (clarsimp simp: fun_upd_def[symmetric])
+       apply (drule vs_lookup_clear_asid_table[rule_format])
+       apply simp
+      apply (wp mapM_wp')+
+      apply clarsimp
+     apply wp+
   apply clarsimp
   done
 

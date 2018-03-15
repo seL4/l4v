@@ -308,9 +308,9 @@ lemma sys_init:
   apply (subst ex_conj_increase)+
   apply (rule hoare_ex_pre)+
   apply (rule hoare_grab_asm)+
-  apply (rule hoare_strengthen_post)
-  apply (wp small_one [where obj_ids=obj_ids and R=R],
-        (assumption|simp add: unat_less_2_si_cnode_size')+)
+  apply (rule hoare_chain)
+   apply (rule small_one [where obj_ids=obj_ids and R=R],
+         (assumption|simp add: unat_less_2_si_cnode_size')+)
 
   apply clarsimp
   apply (rule_tac x=t in exI)

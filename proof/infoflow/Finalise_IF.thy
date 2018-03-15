@@ -1523,8 +1523,9 @@ lemma rec_del_only_timer_irq:
   apply (simp add: only_timer_irq_inv_def)
   apply (rule hoare_pre, rule only_timer_irq_pres)
     apply (rule hoare_pre, wp rec_del_irq_masks)
-    apply (wp rec_del_domain_sep_inv | force)+
-    done
+    apply (wp rec_del_domain_sep_inv | force
+      | (rule hoare_pre, wp_once rec_del_domain_sep_inv))+
+  done
 
 lemma rec_del_only_timer_irq_inv:
   "\<lbrace>only_timer_irq_inv irq (st::det_ext state)\<rbrace> rec_del call \<lbrace>\<lambda>_. only_timer_irq_inv irq st\<rbrace>"

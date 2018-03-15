@@ -33,8 +33,10 @@ lemma globals_equiv_irq_state_update[simp]:
 
 lemma cap_revoke_globals_equiv:
   "\<lbrace>globals_equiv st and invs\<rbrace> cap_revoke slot \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply(rule_tac Q="\<lambda>_. globals_equiv st and invs" in hoare_strengthen_post)
-   apply(wp cap_revoke_preservation_desc_of cap_delete_globals_equiv preemption_point_inv | auto simp: emptyable_def dest: reply_slot_not_descendant)+
+  apply (rule hoare_strengthen_post, rule validE_valid, 
+    rule cap_revoke_preservation_desc_of[where Q="\<lambda>_. emptyable"])
+     apply (wp cap_delete_globals_equiv preemption_point_inv | simp
+        | (auto simp: emptyable_def dest: reply_slot_not_descendant)[1])+
   done
 
 lemma tcb_context_merge[simp]: "arch_tcb_context_get (tcb_arch (tcb_registers_caps_merge tcb tcb'))
@@ -182,8 +184,8 @@ lemma cap_revoke_only_timer_irq_inv:
   apply (simp add: only_timer_irq_inv_def)
   apply (rule hoare_wp_simps)
   apply (rule hoare_conjI)
-   apply (wp only_timer_irq_pres cap_revoke_irq_masks | force simp: only_timer_irq_inv_def)+
-   done
+   apply (wp only_timer_irq_pres[where P="\<top>"] cap_revoke_irq_masks | force simp: only_timer_irq_inv_def)+
+  done
 
 lemma invoke_cnode_reads_respects_f:
   "reads_respects_f aag l

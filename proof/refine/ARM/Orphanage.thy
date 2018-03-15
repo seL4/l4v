@@ -807,31 +807,23 @@ lemma tcbSchedAppend_in_ksQ:
                              obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s"
            in hoare_pre_imp)
    apply (clarsimp simp: tcb_at'_has_tcbPriority tcb_at'_has_tcbDomain)
-  including no_pre
-  apply (wp hoare_vcg_ex_lift)
+  apply (rule hoare_vcg_ex_lift)+
   apply (simp add: tcbSchedAppend_def unless_def)
-  apply wp
-    apply clarsimp
-    apply wp+
-    apply (rule_tac Q="\<lambda>rv s. tdom = d \<and> rv = p \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s
+  apply wpsimp
+     apply (rule_tac Q="\<lambda>rv s. tdom = d \<and> rv = p \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s
                             \<and> obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s"
              in hoare_post_imp, clarsimp)
-    apply (wp, (wp threadGet_const)+)
-  apply (rule_tac Q="\<lambda>rv s.
+     apply (wp, (wp threadGet_const)+)
+   apply (rule_tac Q="\<lambda>rv s.
              obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s \<and>
              obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s \<and>
              obj_at' (\<lambda>tcb. tcbQueued tcb = rv) t s \<and>
              (rv \<longrightarrow> t \<in> set (ksReadyQueues s (d, p)))" in hoare_post_imp)
    apply (clarsimp simp: o_def elim!: obj_at'_weakenE)
-  apply (wp threadGet_obj_at' hoare_vcg_imp_lift threadGet_const)
-     apply (case_tac "obj_at' (Not \<circ> tcbQueued) t s")
-      apply (clarsimp)
-     apply (clarsimp simp: valid_queues'_def)
-     apply (drule_tac x=d in spec)
-     apply (drule_tac x=p in spec)
-     apply (drule_tac x=t in spec)
-     apply (subgoal_tac "obj_at' (inQ d p) t s", clarsimp)
-     apply (clarsimp simp: obj_at'_def inQ_def)+
+   apply (wp threadGet_obj_at' hoare_vcg_imp_lift threadGet_const)
+  apply clarsimp
+  apply normalise_obj_at'
+  apply (drule(1) valid_queues'_ko_atD, simp+)
   done
 
 lemma hoare_neg_imps:
@@ -1426,68 +1418,19 @@ lemma createObject_no_orphans:
     K (range_cover ptr sz (APIType_capBits tp us) (Suc 0)) and no_orphans\<rbrace>
    RetypeDecls_H.createObject tp ptr us d
    \<lbrace>\<lambda>xa. no_orphans\<rbrace>"
-  including no_pre
-  apply (case_tac tp)
-        apply (simp_all add: createObject_def ARM_H.createObject_def split del: if_split)
-        apply (rename_tac apiobject_type)
-        apply (case_tac apiobject_type)
-            apply (simp_all add: ARM_H.createObject_def placeNewObject_def2
-              toAPIType_def split del: if_split)+
-            apply (wp threadSet_no_orphans | clarsimp)+
-           apply ((wp createObjects'_wp_subst
-                  createObjects_no_orphans[where sz = sz] |
-             clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-             is_active_thread_state_def makeObject_tcb
-             projectKO_opt_tcb isRunning_def isRestart_def
-             APIType_capBits_def objBits_simps split:option.splits)+)[1]
-          apply ((wp createObjects'_wp_subst
-                  createObjects_no_orphans[where sz = sz] |
-          clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-          is_active_thread_state_def makeObject_tcb
-          projectKO_opt_tcb isRunning_def isRestart_def
-          APIType_capBits_def objBits_simps split:option.splits)+)[1]
-         apply ((wp createObjects'_wp_subst
-                  createObjects_no_orphans[where sz = sz] |
-          clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-          is_active_thread_state_def makeObject_tcb
-          projectKO_opt_tcb isRunning_def isRestart_def
-          APIType_capBits_def objBits_simps split:option.splits)+)[1]
-        apply ((wp createObjects'_wp_subst
-                   createObjects_no_orphans[where sz = sz] |
-         clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-                        is_active_thread_state_def makeObject_tcb
-                        projectKO_opt_tcb isRunning_def isRestart_def
-                        APIType_capBits_def objBits_simps
-                 split: option.splits split del: if_split)+)[1]
-       apply ((wp createObjects'_wp_subst hoare_if
-                createObjects_no_orphans[where sz = sz] |
-        clarsimp simp: placeNewObject_def2 placeNewDataObject_def
+  apply (simp only: createObject_def ARM_H.createObject_def placeNewObject_def2)
+  apply (wpsimp wp: createObjects'_wp_subst threadSet_no_orphans
+                  createObjects_no_orphans[where sz = sz]
+    simp: placeNewObject_def2 placeNewDataObject_def
                        projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
                        is_active_thread_state_def makeObject_tcb pageBits_def unless_def
                        projectKO_opt_tcb isRunning_def isRestart_def
-                       APIType_capBits_def objBits_simps split: option.splits
-            split del: if_split)+)[4]
-   apply ((wp createObjects'_wp_subst
-               createObjects_no_orphans[where sz = sz ] |
-       clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-                      is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def
-                      projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
-                      APIType_capBits_def objBits_simps pteBits_def
-               split: option.splits)+)[1]
-   apply ((wp createObjects'_wp_subst
-               createObjects_no_orphans[where sz = sz ] |
-       clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-                      is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def
-                      projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
-                      APIType_capBits_def objBits_simps pteBits_def
-               split: option.splits)+)[1]
-  apply ((wp createObjects'_wp_subst
-              createObjects_no_orphans[where sz = sz] |
-      clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-                     is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def pdBits_def
-                     projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
-                     APIType_capBits_def objBits_simps pdeBits_def
-              split: option.splits))+
+                       APIType_capBits_def objBits_simps
+    split_del: if_split)
+  apply (clarsimp simp: toAPIType_def APIType_capBits_def objBits_simps
+                        archObjSize_def pteBits_def ptBits_def
+                        pdeBits_def pdBits_def
+      split: object_type.split_asm apiobject_type.split_asm)
   done
 
 lemma createNewObjects_no_orphans:
@@ -1740,12 +1683,12 @@ lemma suspend_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> tcb_at' t s \<rbrace>
    suspend t
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding suspend_def including no_pre
+  unfolding suspend_def
   apply (wp | clarsimp simp: unless_def | rule conjI)+
     apply (clarsimp simp: is_active_tcb_ptr_def is_active_thread_state_def st_tcb_at_neg2)
     apply (wp setThreadState_not_active_no_orphans hoare_disjI1 setThreadState_st_tcb
            | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def)+
-   apply (wp | strengthen invs_valid_queues' | clarsimp)+
+  apply auto
   done
 
 lemma storeHWASID_no_orphans [wp]:
@@ -1925,7 +1868,7 @@ lemma cteRevoke_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (rule_tac Q="\<lambda>rv s. no_orphans s \<and> invs' s \<and> sch_act_simple s"
                       in hoare_strengthen_post)
-   apply (wp cteRevoke_preservation cteDelete_invs' cteDelete_sch_act_simple)
+   apply (wp cteRevoke_preservation cteDelete_invs' cteDelete_sch_act_simple)+
       apply auto
   done
 
@@ -1979,11 +1922,12 @@ lemma restart_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> tcb_at' t s \<rbrace>
    restart t
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding restart_def isBlocked_def2 including no_pre
-  apply (wp tcbSchedEnqueue_almost_no_orphans sts_st_tcb' cancelIPC_weak_sch_act_wf | clarsimp
+  unfolding restart_def isBlocked_def2
+  apply (wp tcbSchedEnqueue_almost_no_orphans sts_st_tcb' cancelIPC_weak_sch_act_wf
+         | clarsimp simp: o_def if_apply_def2
          | strengthen no_orphans_strg_almost
-         | strengthen invs_valid_queues')+
-  apply (rule hoare_strengthen_post, rule gts_sp')
+         | strengthen invs_valid_queues'
+         | wp_once hoare_drop_imps)+
   apply auto
   done
 
@@ -2461,7 +2405,7 @@ theorem callKernel_no_orphans [wp]:
           ksSchedulerAction s = ResumeCurrentThread \<and> no_orphans s \<rbrace>
    callKernel e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding callKernel_def including no_pre
+  unfolding callKernel_def
   by (wpsimp wp: weak_if_wp schedule_invs' hoare_vcg_conj_liftE)
 
 end

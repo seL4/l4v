@@ -464,7 +464,7 @@ next
   case (3 ptr bits n slot s')
   show ?case
     apply simp
-    apply wp
+    apply wp+
     apply (cases slot)
     apply (clarsimp del: ballI simp: ball_ran_eq)
     done
@@ -792,7 +792,6 @@ lemma unbind_notification_has_reply[wp]:
 
 
 lemma bind_notification_invs:
-  notes hoare_pre [wp_pre del]
   shows
   "\<lbrace>bound_tcb_at (op = None) tcbptr
     and obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> (ntfn_bound_tcb ntfn = None)
@@ -805,23 +804,22 @@ lemma bind_notification_invs:
   apply (simp add: bind_notification_def invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (wp valid_irq_node_typ set_simple_ko_valid_objs simple_obj_set_prop_at
-         | clarsimp simp:idle_no_ex_cap)+
-            apply (clarsimp simp: obj_at_def is_ntfn)
-           apply (wp | clarsimp)+
-         apply (rule conjI, rule impI)
-          apply (clarsimp simp: obj_at_def pred_tcb_at_def2)
-         apply (rule impI, erule delta_sym_refs)
-          apply (fastforce dest!: symreftype_inverse'
-                            simp: ntfn_q_refs_of_def obj_at_def
-                           split: ntfn.splits if_split_asm)
-         apply (fastforce simp: state_refs_of_def pred_tcb_at_def2 obj_at_def
-                               tcb_st_refs_of_def
-                        split: thread_state.splits if_split_asm)
-        apply (wp | clarsimp simp: is_ntfn)+
-  apply (erule (1) obj_at_valid_objsE)
-  apply (clarsimp simp: valid_obj_def valid_ntfn_def pred_tcb_at_tcb_at
-                 elim!: obj_atE
-                 split: ntfn.splits)
+         | clarsimp simp:idle_no_ex_cap split del: if_split)+
+  apply (intro conjI;
+    (clarsimp simp: is_ntfn idle_no_ex_cap elim!: obj_at_weakenE)?)
+   apply (erule (1) obj_at_valid_objsE)
+   apply (clarsimp simp: valid_obj_def valid_ntfn_def pred_tcb_at_tcb_at
+                  elim!: obj_atE
+                  split: ntfn.splits)
+  apply (rule conjI)
+   apply (clarsimp simp: obj_at_def pred_tcb_at_def2)
+  apply (rule impI, erule delta_sym_refs)
+   apply (fastforce dest!: symreftype_inverse'
+                     simp: ntfn_q_refs_of_def obj_at_def
+                    split: ntfn.splits if_split_asm)
+  apply (fastforce simp: state_refs_of_def pred_tcb_at_def2 obj_at_def
+                         tcb_st_refs_of_def
+                  split: thread_state.splits if_split_asm)
   done
 
 

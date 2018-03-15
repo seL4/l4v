@@ -625,30 +625,29 @@ lemma perform_asid_control_invocation_st_tcb_at:
     and ct_active and invs and valid_aci aci\<rbrace>
     perform_asid_control_invocation aci
   \<lbrace>\<lambda>y. st_tcb_at P t\<rbrace>"
-  including no_pre
   apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
   apply (rename_tac word1 a b aa ba word2)
-  apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at set_cap_no_overlap|simp)+
-    apply (strengthen invs_valid_objs invs_psp_aligned)
-    apply (clarsimp simp:conj_comms)
-    apply (wp max_index_upd_invs_simple get_cap_wp)+
-   apply (rule hoare_name_pre_state)
-   apply (subgoal_tac "is_aligned word1 page_bits")
+  apply (rule hoare_name_pre_state)
+  apply (subgoal_tac "is_aligned word1 page_bits")
    prefer 2
-    apply (clarsimp simp: valid_aci_def cte_wp_at_caps_of_state)
-    apply (drule(1) caps_of_state_valid[rotated])+
-    apply (simp add:valid_cap_simps cap_aligned_def page_bits_def)
-   apply (subst delete_objects_rewrite)
-      apply (simp add:page_bits_def word_bits_def pageBits_def word_size_bits_def)+
-    apply (simp add:is_aligned_neg_mask_eq)
-   apply wp
+   apply (clarsimp simp: valid_aci_def cte_wp_at_caps_of_state)
+   apply (drule(1) caps_of_state_valid[rotated])+
+   apply (simp add:valid_cap_simps cap_aligned_def page_bits_def)
+  apply (subst delete_objects_rewrite)
+     apply (simp add:page_bits_def word_bits_def pageBits_def word_size_bits_def)+
+   apply (simp add:is_aligned_neg_mask_eq)
+  apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at[where sz=page_bits] set_cap_no_overlap|simp)+
+     apply (strengthen invs_valid_objs invs_psp_aligned)
+     apply (clarsimp simp:conj_comms)
+     apply (wp max_index_upd_invs_simple get_cap_wp)+
   apply (clarsimp simp: valid_aci_def)
   apply (frule intvl_range_conv)
    apply (simp add:word_bits_def page_bits_def pageBits_def)
   apply (clarsimp simp:detype_clear_um_independent page_bits_def is_aligned_neg_mask_eq)
   apply (rule conjI)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
-   apply (rule pspace_no_overlap_detype)
+   apply (simp only: field_simps)
+   apply (rule pspace_no_overlap_detype')
      apply (rule caps_of_state_valid_cap)
       apply (simp add:page_bits_def)+
     apply (simp add:invs_valid_objs invs_psp_aligned)+

@@ -1839,11 +1839,7 @@ lemma set_mrs_thread_set_dmo:
    apply (wp ts)
   apply (simp add: zipWithM_x_mapM store_word_offs_def split_def
               split del: if_split)
-  apply (wp mapM_wp dmo)
-     apply simp
-    apply blast
-   apply (rule ts)
-  apply assumption
+  apply (wpsimp wp: ts mapM_wp' dmo)
   done
 
 lemma set_mrs_st_tcb [wp]:

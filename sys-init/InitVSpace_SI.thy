@@ -575,7 +575,6 @@ lemma set_asid_wp:
     set_asid spec orig_caps obj_id
     \<lbrace>\<lambda>rv. \<guillemotleft>si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
            si_objects \<and>* R\<guillemotright>\<rbrace>"
-  including no_pre
   apply (rule hoare_gen_asm, clarsimp)
   apply (frule (1) object_at_real_object_at)
   apply (rule valid_si_caps_at_si_cap_at [where obj_id=obj_id], clarsimp+)
@@ -584,11 +583,11 @@ lemma set_asid_wp:
   apply (rule hoare_ex_wp)+
   apply (rename_tac kobj_id)
   apply (rule hoare_grab_asm)+
-  apply (wp, simp_all)
-  apply (clarsimp simp: set_asid_def)
-  apply (subst set_asid_rewrite, assumption+)
-  apply (clarsimp simp: sep_conj_assoc)
-  apply (wp add: hoare_drop_imps
+  apply wpsimp
+   apply (clarsimp simp: set_asid_def)
+   apply (subst set_asid_rewrite, assumption+)
+   apply (clarsimp simp: sep_conj_assoc)
+   apply (wp add: hoare_drop_imps
             sep_wp: seL4_ASIDPool_Assign_wp [where
                     cnode_cap = si_cspace_cap and
                     cnode_id = si_cnode_id and
