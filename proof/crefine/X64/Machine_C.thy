@@ -57,6 +57,11 @@ assumes maskInterrupt_ccorres:
            (doMachineOp (maskInterrupt m irq))
            (Call maskInterrupt_'proc)"
 
+assumes invalidateTranslationSingleASID_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>asid = asid\<rbrace> \<inter> \<lbrace>\<acute>vptr = vptr\<rbrace>) []
+           (doMachineOp (invalidateTranslationSingleASID vptr asid))
+           (Call invalidateTranslationSingleASID_'proc)"
+
 (* The following are fastpath specific assumptions.
    We might want to move them somewhere else. *)
 
