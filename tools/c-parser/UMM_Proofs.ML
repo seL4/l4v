@@ -203,14 +203,26 @@ fun phase st recname s =
                         LargeInt.toString (Time.toMilliseconds tm))
     end
 
+(* Combinator which saves the goal (after it was proved, before being
+unified with subgoal). *)
+fun MEMO_GOAL ctxt f tac i = let
+  open Goal
+  (* goal may contain schematics *)
+  fun inner_tac (goal, i') = let
+      val thm = Goal.prove ctxt [] [] goal (fn { context, ... } => tac context i')
+    in
+      (* This calls f eagerly, which may not be what we want (although it is protected by SUBGOAL) *)
+      (f thm; resolve_tac ctxt [thm] i')
+    end
+  in
+    SUBGOAL inner_tac i handle ERROR _ => no_tac
+  end
+
+
 val size_td_simps_arr =
     @{thms "size_td_simps"} @
     [@{thm "typ_info_array"}, @{thm "array_tag_def"},
      @{thm "align_td_array_tag"}]
-
-val size_td_simps_arr_fl =
-    @{thms "size_td_simps"} @
-    [@{thm "size_td_array"}, @{thm "align_td_array"}, @{thm "max_def"}]
 
 fun umm_mem_type recname recty typtag_thm tag_def_thm thy = let
   val _ = Feedback.informStr (0, "Proving UMM inversion for type "^recname^"... ")
@@ -438,22 +450,42 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
   val _ = phase "SIZE"
   val _ = trac "About to size/align..."
 
-  val size_td_thm =
-      Simplifier.asm_full_rewrite
-          ((thy2ctxt thy) addsimps (size_td_simps_arr @ [tag_def_thm, typtag_thm]))
-          (Thm.cterm_of (thy2ctxt thy) (mk_sizetd typ_info_TYPE))
-  val (st,thy) = calculate_record_size recname (st,thy) [size_td_thm] recty
+  val (size_align_td_thm, partial_size_align_tds) = let
+    val acc = Unsynchronized.ref ([] : thm list)
+    fun upd_acc thm = Unsynchronized.change acc (fn thms => thm :: thms)
 
+    val ctxt = thy2ctxt thy
+    (* probably not required if we are using thy2ctxt *)
+    val idx = Variable.maxidx_of ctxt
+    val tm  = mk_size_aligntd typ_info_TYPE (Var (("s", idx + 1), nat)) (Var (("a", idx + 2), nat))
+    val ctxt' = Variable.declare_maxidx (idx + 2) ctxt
+    val cterm = Thm.cterm_of ctxt' (HOLogic.mk_Trueprop tm)
+    val sa_ss = ctxt' addsimps @{thms typ_info_array array_tag_def align_td_array_tag max_def padup_def}
+    val tac = let
+      fun rectac ctxt   = MEMO_GOAL ctxt upd_acc doit
+      and doit ctxt  i  =
+          DETERM (FIRST' [ resolve_tac ctxt @{thms size_align_td_empty_typ_infoI} (* No subgoals *)
+                         , EVERY' [ resolve_tac ctxt @{thms size_align_td_ti_typ_pad_combineI size_align_td_ti_final_padI}
+                                  , rectac ctxt
+                                  , resolve_tac ctxt @{thms aggregate_ti_typ_pad_combine aggregate_empty_typ_info}
+                                  , simp_tac sa_ss
+                                  , simp_tac sa_ss
+                                  ]
+                         ] i)
+    in doit end (* we don't memo the top-level *)
+
+    val thm = Goal.prove_internal ctxt' [] cterm (fn _ => unfold_tac ctxt' [typtag_thm, tag_def_thm] THEN tac ctxt' 1)
+  in
+    (thm, Unsynchronized.! acc)
+  end
+
+  val size_td_thm = @{thm size_align_td_size_td} OF [ size_align_td_thm ]
+  val (st,thy) = calculate_record_size recname (st,thy) [size_td_thm] recty
 
   val _ = phase "ALIGN"
   val _ = trac "About to size/align 1..."
 
-  val align_td_thm =
-      Simplifier.asm_full_rewrite
-          ((thy2ctxt thy) addsimps (size_td_simps_arr
-                                    @ [tag_def_thm, typtag_thm, @{thm "align_of_def"}]))
-          (Thm.cterm_of (thy2ctxt thy) (mk_aligntd typ_info_TYPE))
-
+  val align_td_thm = @{thm size_align_td_align_td} OF [ size_align_td_thm ]
   val (recthms,thy) =
       Global_Theory.add_thms [((Binding.name(recname^"_size_of"),size_td_thm),[]),
                               ((Binding.name(recname^"_align_of"),align_td_thm),[])]
@@ -478,11 +510,35 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
   val _ = trac "About to type/field fl..."
 
   val flthms = let
-    val fl_simps = size_td_simps_arr_fl @ @{thms "fl_simps"} @
-      [tag_def_thm, typtag_thm]
-    fun fl_thm f = ((Binding.name(recname^"_"^(#1 f) ^"_fl"), Drule.export_without_context (
-      Simplifier.asm_full_rewrite ((thy2ctxt thy) addsimps fl_simps)
-      (Thm.cterm_of (thy2ctxt thy) (mk_field_lookup (recty,#1 f))))),[])
+    val ctxt = thy2ctxt thy
+    (* This will keep adding new subgoals to the end, then start solving in a LIFO fashion.
+       We want LIFO as we want to simplify the arithmetic from the inside out.
+     *)
+    val ss = ctxt addsimps (@{thms padup_def max_def align_of_def align_td_array'} @ partial_size_align_tds)
+    fun tac ctxt =
+        rewrite_goal_tac ctxt [typtag_thm, tag_def_thm] 1
+          THEN
+          REPEAT_DETERM
+          (FIRST'
+             [ resolve_tac ctxt (@{thms field_lookup_ti_intros
+                                        aggregate_ti_typ_pad_combine aggregate_empty_typ_info
+                                        notin_field_names_list_ti_typ_pad_combine notin_field_names_list_empty_typ_info
+                                  } @ partial_size_align_tds)
+              , (* Remainder are solved by simp (eq and non-eq over chars and strings *)
+                SOLVED' (simp_tac ss)
+             ] 1)
+
+    fun fl_thm f = let
+      val thmname = Binding.name(recname^"_"^(#1 f) ^"_fl")
+      val idx = Variable.maxidx_of ctxt + 1
+      val tm  = HOLogic.mk_eq (mk_field_lookup_nofs (recty, #1 f),
+                               (Var (("x", idx), mk_option_ty (mk_prod_ty (mk_tag_type recty, nat)))))
+      val ctxt' = Variable.declare_maxidx idx ctxt
+      val cterm = Thm.cterm_of ctxt' (HOLogic.mk_Trueprop tm)
+      val thm = Goal.prove_internal ctxt' [] cterm (fn _ => tac ctxt')
+    in
+      ((thmname, thm), [])
+    end
   in
     map fl_thm flds
   end;
@@ -503,6 +559,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
 
   val _ = phase "PACKEDTYPE"
   val thy = umm_packed_type recname recty typtag_thm tag_def_thm fgthms thy
+
 
   val _ = phase "FLSOME"
   val _ = trac "About to type/field fl_Some ..."

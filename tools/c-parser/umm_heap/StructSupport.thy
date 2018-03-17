@@ -595,4 +595,73 @@ lemma typ_name_array [simp]:
     typ_name (typ_info_t TYPE('a)) @ ''_array_'' @ nat_to_bin_string (card (UNIV :: 'b set))"
   by (simp add: typ_info_array array_tag_def typ_name_array_tag_n)
 
+(* Support for UMM_Proofs.ML. We assume that struct support requires only ti_typ_pad_combine, final_pad, and empty_typ_info *)
+definition  
+  size_align_td :: "'a typ_desc \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool"
+  where
+  "size_align_td t s a \<equiv> size_td t = s \<and> align_td t = a"
+
+lemma size_align_td_size_td:
+  "size_align_td t s a \<Longrightarrow> size_td t = s"
+  unfolding size_align_td_def by simp
+  
+lemma size_align_td_align_td:
+  "size_align_td t s a \<Longrightarrow> align_td t = a"
+  unfolding size_align_td_def by simp
+
+lemma size_align_td_empty_typ_infoI:
+   "size_align_td (empty_typ_info l) 0 0"
+  unfolding size_align_td_def by simp
+  
+lemma size_align_td_ti_typ_pad_combineI:
+  fixes t :: "('a :: c_type) itself"
+  shows "\<lbrakk> size_align_td t' s' a'; aggregate t'
+         ; s' + size_td (typ_info_t TYPE('a)) + padup (2 ^ align_td (typ_info_t TYPE('a))) s' = s
+         ; max a' (align_td (typ_info_t TYPE('a))) = a
+         \<rbrakk>
+   \<Longrightarrow> size_align_td (ti_typ_pad_combine t fa fu nm t') s a"
+  unfolding size_align_td_def 
+  by (simp add: size_td_lt_ti_typ_pad_combine)
+
+lemma size_align_td_ti_final_padI:
+  fixes t :: "('a :: c_type) field_desc typ_desc"
+  shows "\<lbrakk> size_align_td t' s' a'; aggregate t'; s' + padup (2 ^ a') s' = s; a' = a \<rbrakk>
+        \<Longrightarrow> size_align_td (final_pad t') s a"
+  unfolding size_align_td_def 
+  by (simp add: size_td_lt_final_pad align_of_final_pad)
+
+lemma field_lookup_empty_typ_infoI:
+  "field_lookup (empty_typ_info l) [fld] m = None"
+  unfolding empty_typ_info_def
+  by simp
+
+lemma field_lookup_ti_typ_pad_combine_matchI:
+  "\<lbrakk>  n # nm \<notin> set (CompoundCTypes.field_names_list t'); aggregate t'; size_align_td t' s a 
+   ; padup (align_of TYPE('b)) s + s = m';  n \<noteq> CHR ''!'' \<rbrakk>
+  \<Longrightarrow> field_lookup (ti_typ_pad_combine (t :: 'b itself) fa fu (n#nm) t') [(n#nm)] 0 = Some (adjust_ti (typ_info_t TYPE('b :: c_type)) fa fu, m')"
+  by (simp add: fl_simps size_align_td_def)
+
+lemma field_lookup_ti_typ_pad_combine_nomatchI:
+  "\<lbrakk> aggregate t'; f \<noteq> CHR ''!''; f # fld \<noteq> nm ; field_lookup t' [f # fld] 0 = R \<rbrakk> 
+  \<Longrightarrow> field_lookup (ti_typ_pad_combine t fa fu nm t') [f # fld] 0 = R"
+  by (simp add: fl_simps)
+
+lemma field_lookup_final_padI:
+  "\<lbrakk> aggregate t'; f \<noteq> CHR ''!''; field_lookup t' [f # fld] 0 = R \<rbrakk> \<Longrightarrow> field_lookup (final_pad t') [f # fld] 0 = R"
+  by (simp add: fl_simps)
+
+(* Order is important here *)
+lemmas field_lookup_ti_intros = 
+  field_lookup_ti_typ_pad_combine_matchI field_lookup_ti_typ_pad_combine_nomatchI
+  field_lookup_final_padI field_lookup_empty_typ_infoI
+
+lemma notin_field_names_list_empty_typ_info:
+  "fld \<notin> set (CompoundCTypes.field_names_list (empty_typ_info l))"
+  by simp
+
+lemma notin_field_names_list_ti_typ_pad_combine:
+  "\<lbrakk> f#fld \<notin> set (CompoundCTypes.field_names_list t'); f#fld \<noteq> nm; f \<noteq> CHR ''!'' \<rbrakk>
+  \<Longrightarrow> f#fld \<notin> set (CompoundCTypes.field_names_list (ti_typ_pad_combine t fa fu nm t'))"
+  by simp
+
 end
