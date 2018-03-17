@@ -35,6 +35,8 @@ sig
 
   val mk_sizetd : term -> term
   val mk_aligntd : term -> term
+  val mk_size_aligntd : term -> term -> term -> term
+                                             
   val mk_typ_info_tm : typ -> term
   val mk_typ_info_of : typ -> term
   val mk_typ_name_of : typ -> term
@@ -148,6 +150,12 @@ fun mk_aligntd tm = let
   val ty = type_of tm
 in
   Const(@{const_name "align_td"}, ty --> nat) $ tm
+end
+
+fun mk_size_aligntd tm s a = let
+  val ty = type_of tm
+in
+  Const(@{const_name "size_align_td"}, ty --> nat --> nat --> bool) $ tm $ s $ a
 end
 
 fun mk_typ_info_tm ty =
