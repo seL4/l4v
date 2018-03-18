@@ -16,6 +16,7 @@ This module contains operations on machine-specific object types for x64.
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.Hardware.X64
 > import SEL4.Model
+> import SEL4.Model.StateData.X64
 > import SEL4.API.Types
 > import SEL4.API.Failures
 > import SEL4.API.Invocation.X64 as ArchInv
@@ -25,6 +26,7 @@ This module contains operations on machine-specific object types for x64.
 
 > import Data.Bits
 > import Data.Word(Word16)
+> import Data.Array
 
 \end{impdetails}
 
@@ -34,32 +36,33 @@ The x64-specific types and structures are qualified with the "Arch.Types" and "A
 
 \subsection{Copying and Mutating Capabilities}
 
-> deriveCap :: PPtr CTE -> ArchCapability -> KernelF SyscallError ArchCapability
+> deriveCap :: PPtr CTE -> ArchCapability -> KernelF SyscallError Capability
 
 It is not possible to copy a page table or page directory capability unless it has been mapped.
 
-> deriveCap _ (c@PageTableCap { capPTMappedAddress = Just _ }) = return c
+> deriveCap _ (c@PageTableCap { capPTMappedAddress = Just _ }) = return $ ArchObjectCap c
 > deriveCap _ (PageTableCap { capPTMappedAddress = Nothing })
 >     = throw IllegalOperation
-> deriveCap _ (c@PageDirectoryCap { capPDMappedAddress = Just _ }) = return c
+> deriveCap _ (c@PageDirectoryCap { capPDMappedAddress = Just _ }) = return $ ArchObjectCap c
 > deriveCap _ (PageDirectoryCap { capPDMappedAddress = Nothing })
 >     = throw IllegalOperation
-> deriveCap _ (c@PDPointerTableCap { capPDPTMappedAddress = Just _ }) = return c
+> deriveCap _ (c@PDPointerTableCap { capPDPTMappedAddress = Just _ }) = return $ ArchObjectCap c
 > deriveCap _ (PDPointerTableCap { capPDPTMappedAddress = Nothing })
 >     = throw IllegalOperation
-> deriveCap _ (c@PML4Cap { capPML4MappedASID = Just _ }) = return c
+> deriveCap _ (c@PML4Cap { capPML4MappedASID = Just _ }) = return $ ArchObjectCap c
 > deriveCap _ (PML4Cap { capPML4MappedASID = Nothing })
 >     = throw IllegalOperation
 
 Page capabilities are copied without their mapping information, to allow them to be mapped in multiple locations.
 
-> deriveCap _ (c@PageCap {}) = return $ c { capVPMappedAddress = Nothing, capVPMapType = VMNoMap }
+> deriveCap _ (c@PageCap {}) = return $ ArchObjectCap $ c { capVPMappedAddress = Nothing, capVPMapType = VMNoMap }
 
 ASID capabilities can be copied without modification, as can IOPort and IOSpace caps.
 
-> deriveCap _ c@ASIDControlCap = return c
-> deriveCap _ (c@ASIDPoolCap {}) = return c
-> deriveCap _ (c@IOPortCap {}) = return c
+> deriveCap _ c@ASIDControlCap = return $ ArchObjectCap c
+> deriveCap _ (c@ASIDPoolCap {}) = return $ ArchObjectCap c
+> deriveCap _ (c@IOPortCap {}) = return $ ArchObjectCap c
+> deriveCap _ IOPortControlCap = return NullCap
 > -- deriveCap _ (c@IOSpaceCap {}) = return c
 
 IOPTs
@@ -68,7 +71,16 @@ IOPTs
 > -- deriveCap _ (IOPageTableCap { capIOPTMappedAddress = Nothing })
 > --    = throw IllegalOperation -}
 
-X64 has two writable user data caps
+> isIOPortControlCap' :: Capability -> Bool
+> isIOPortControlCap' (ArchObjectCap IOPortControlCap) = True
+> isIOPortControlCap' _ = False
+
+> isCapRevocable :: Capability -> Capability -> Bool
+> isCapRevocable newCap srcCap = case newCap of
+>     ArchObjectCap (IOPortCap {}) -> isIOPortControlCap' srcCap
+>     _ -> False
+
+% X64 has two writable user data caps
 
 > -- FIXME x64: io_space_capdata_get_domainID
 >-- ioSpaceGetDomainID :: Word -> Word16
@@ -130,8 +142,20 @@ Page capabilities have read and write permission bits, which are used to restric
 
 \subsection{Deleting Capabilities}
 
+> setIOPortMask :: IOPort -> IOPort -> Bool -> Kernel ()
+> setIOPortMask f l val = do
+>     ports <- gets (x64KSAllocatedIOPorts . ksArchState)
+>     ports' <- return $ ports//[(i,val) | i <- [f..l]]
+>     modify (\s -> s {
+>         ksArchState = (ksArchState s) { x64KSAllocatedIOPorts = ports' }})
+
+> freeIOPortRange :: IOPort -> IOPort -> Kernel ()
+> freeIOPortRange f l = setIOPortMask f l False
+
 > postCapDeletion :: ArchCapability -> Kernel ()
-> postCapDeletion _ = return ()
+> postCapDeletion c = case c of
+>     IOPortCap f l -> freeIOPortRange f l
+>     _ -> return ()
 
 > finaliseCap :: ArchCapability -> Bool -> Kernel (Capability, Capability)
 
@@ -183,6 +207,8 @@ Deletion of a final capability to a page table that has been mapped requires tha
 >     unmapPage s a v ptr
 >     return (NullCap, NullCap)
 
+> finaliseCap (IOPortCap f l) True = return (NullCap, (ArchObjectCap (IOPortCap f l)))
+
 > finaliseCap _ _ = return (NullCap, NullCap)
 
 %Note: limitations in Haskell translator caseconvs makes this horrible
@@ -228,12 +254,14 @@ Deletion of a final capability to a page table that has been mapped requires tha
 > sameRegionAs (a@ASIDPoolCap {}) (b@ASIDPoolCap {}) =
 >     capASIDPool a == capASIDPool b
 > sameRegionAs (a@IOPortCap {}) (b@IOPortCap {}) =
->     (fA <= fB) && (lB <= lA) && (fB <= lB)
+>     (fA == fB) && (lB == lA)
 >     where
 >         fA = capIOPortFirstPort a
 >         fB = capIOPortFirstPort b
 >         lA = capIOPortLastPort a
 >         lB = capIOPortLastPort b
+> sameRegionAs IOPortControlCap IOPortControlCap = True
+> sameRegionAs IOPortControlCap (IOPortCap {}) = True
 
 > --sameRegionAs (a@IOSpaceCap {}) (b@IOSpaceCap {}) =
 > --    capIOPCIDevice a == capIOPCIDevice b
@@ -244,6 +272,7 @@ Deletion of a final capability to a page table that has been mapped requires tha
 > isPhysicalCap :: ArchCapability -> Bool
 > isPhysicalCap ASIDControlCap = False
 > isPhysicalCap (IOPortCap _ _) = False
+> isPhysicalCap IOPortControlCap = False
 > isPhysicalCap _ = True
 
 > sameObjectAs :: ArchCapability -> ArchCapability -> Bool
@@ -251,9 +280,7 @@ Deletion of a final capability to a page table that has been mapped requires tha
 >     (ptrA == capVPBasePtr b) && (capVPSize a == capVPSize b)
 >         && (ptrA <= ptrA + bit (pageBitsForSize $ capVPSize a) - 1)
 >         && (capVPIsDevice a == capVPIsDevice b)
-> sameObjectAs (a@IOPortCap { capIOPortFirstPort = fA }) (b@IOPortCap {}) =
->     (fA == capIOPortFirstPort b) && (capIOPortLastPort a == capIOPortLastPort b)
->         && (fA <= capIOPortLastPort a)
+> sameObjectAs IOPortControlCap (IOPortCap {}) = False
 > sameObjectAs a b = sameRegionAs a b
 
 \subsection{Creating New Capabilities}
@@ -318,6 +345,7 @@ Create an architecture-specific object.
 > isIOCap :: ArchCapability -> Bool
 > isIOCap c = case c of
 >          (IOPortCap {}) -> True
+>          IOPortControlCap -> True
 > --         (IOSpaceCap {}) -> True
 >          _ -> False
 
@@ -326,11 +354,12 @@ Create an architecture-specific object.
 >         KernelF SyscallError ArchInv.Invocation
 > decodeInvocation label args capIndex slot cap extraCaps =
 >     if isIOCap cap
->      then decodeX64PortInvocation label args cap
+>      then decodeX64PortInvocation label args slot cap $ map fst extraCaps
 >      else decodeX64MMUInvocation label args capIndex slot cap extraCaps
 
 > performInvocation :: ArchInv.Invocation -> KernelP [Word]
 > performInvocation (oper@(InvokeIOPort _)) = performX64PortInvocation oper
+> performInvocation (oper@(InvokeIOPortControl _)) = performX64PortInvocation oper
 > performInvocation oper = performX64MMUInvocation oper
 
 \subsection{Helper Functions}
@@ -344,6 +373,7 @@ Create an architecture-specific object.
 > capUntypedPtr ASIDControlCap = error "ASID control has no pointer"
 > capUntypedPtr (ASIDPoolCap { capASIDPool = PPtr p }) = PPtr p
 > capUntypedPtr (IOPortCap {}) = error "IOPortCap has no pointer"
+> capUntypedPtr IOPortControlCap = error "IOPortControlCaps have no pointer"
 > --capUntypedPtr (IOSpaceCap {}) = error "IOSpaceCap has no pointer"
 > --capUntypedPtr (IOPageTableCap { capIOPTBasePtr = PPtr p }) = PPtr p
 
@@ -357,6 +387,7 @@ Create an architecture-specific object.
 > capUntypedSize (ASIDControlCap {}) = 0
 > capUntypedSize (ASIDPoolCap {}) = 1 `shiftL` (asidLowBits + 3)
 > capUntypedSize (IOPortCap {}) = 0
+> capUntypedSize IOPortControlCap = 0
 > --capUntypedSize (IOSpaceCap {}) = 0
 > --capUntypedSize (IOPageTableCap {}) = 1 `shiftL` 12
 

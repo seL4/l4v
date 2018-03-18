@@ -380,26 +380,27 @@ have a virtual ASID and location assigned. This is because they
 cannot have multiple current virtual ASIDs and cannot be shared
 between address spaces or virtual locations. *}
 definition
-  arch_derive_cap :: "arch_cap \<Rightarrow> (arch_cap,'z::state_ext) se_monad"
+  arch_derive_cap :: "arch_cap \<Rightarrow> (cap,'z::state_ext) se_monad"
 where
   "arch_derive_cap c \<equiv> case c of
-     PageTableCap _ (Some x) \<Rightarrow> returnOk c
+     PageTableCap _ (Some x) \<Rightarrow> returnOk (ArchObjectCap c)
    | PageTableCap _ None \<Rightarrow> throwError IllegalOperation
-   | PageDirectoryCap _ (Some x) \<Rightarrow> returnOk c
+   | PageDirectoryCap _ (Some x) \<Rightarrow> returnOk (ArchObjectCap c)
    | PageDirectoryCap _ None \<Rightarrow> throwError IllegalOperation
-   | PDPointerTableCap _ (Some x) \<Rightarrow> returnOk c
+   | PDPointerTableCap _ (Some x) \<Rightarrow> returnOk (ArchObjectCap c)
    | PDPointerTableCap _ None \<Rightarrow> throwError IllegalOperation
-   | PML4Cap _ (Some x) \<Rightarrow> returnOk c
+   | PML4Cap _ (Some x) \<Rightarrow> returnOk (ArchObjectCap c)
    | PML4Cap _ None \<Rightarrow> throwError IllegalOperation
-   | PageCap dev r R mt pgs x \<Rightarrow> returnOk (PageCap dev r R VMNoMap pgs None)
-   | ASIDControlCap \<Rightarrow> returnOk c
-   | ASIDPoolCap _ _ \<Rightarrow> returnOk c
+   | PageCap dev r R mt pgs x \<Rightarrow> returnOk $ ArchObjectCap (PageCap dev r R VMNoMap pgs None)
+   | ASIDControlCap \<Rightarrow> returnOk (ArchObjectCap c)
+   | ASIDPoolCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)
 (* FIXME x64-vtd: *)
 (*
    | IOSpaceCap _ _ \<Rightarrow> returnOk c
    | IOPageTableCap _ _ _ \<Rightarrow> returnOk c
 *)
-   | IOPortCap _ _ \<Rightarrow> returnOk c"
+   | IOPortCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)
+   | IOPortControlCap \<Rightarrow> returnOk NullCap"
 
 (* FIXME: update when IOSpace comes through, first/last ports may be wrong order *)
 text {* No user-modifiable data is stored in x64-specific capabilities. *}
@@ -439,6 +440,7 @@ where
      unmap_page s a v ptr;
      return (NullCap, NullCap)
   od
+  | (IOPortCap f l, True) \<Rightarrow> return (NullCap, (ArchObjectCap (IOPortCap f l)))
   (* FIXME: IOSpaceCap and IOPageTableCap *)
   | _ \<Rightarrow> return (NullCap, NullCap)"
 

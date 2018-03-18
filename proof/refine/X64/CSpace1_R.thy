@@ -1032,14 +1032,6 @@ lemma updateMDB_no_0 [wp]:
   \<lbrace>\<lambda>rv s. no_0 (ctes_of s)\<rbrace>"
   by wp simp
 
-definition
-  "revokable' srcCap cap \<equiv>
-  if isEndpointCap cap then capEPBadge cap \<noteq> capEPBadge srcCap
-  else if isNotificationCap cap then capNtfnBadge cap \<noteq> capNtfnBadge srcCap
-  else if isUntypedCap cap then True
-  else if isIRQHandlerCap cap then isIRQControlCap srcCap
-  else False"
-
 lemma isMDBParentOf_next_update [simp]:
   "isMDBParentOf (cteMDBNode_update (mdbNext_update f) cte) cte' =
    isMDBParentOf cte cte'"
@@ -2287,7 +2279,7 @@ lemma cap_irqs_relation_Master:
 
 lemma arch_gen_refs_relation_Master:
   "cap_relation cap cap' \<Longrightarrow>
-   arch_gen_refs cap = {}"
+   arch_gen_refs cap = (case capMasterCap cap' of ArchObjectCap (IOPortCap f l) \<Rightarrow> {IOPortRef f} | _ \<Rightarrow> {})"
   by (simp split: cap_relation_split_asm arch_cap.split_asm)
 
 lemma is_final_cap_unique_sym:
@@ -3010,15 +3002,14 @@ using assms
   apply simp
   done
 
-lemma revokable_eq:
+lemma is_cap_revocable_eq:
   "\<lbrakk> cap_relation c c'; cap_relation src_cap src_cap'; sameRegionAs src_cap' c';
      is_untyped_cap src_cap \<longrightarrow> \<not> is_ep_cap c \<and> \<not> is_ntfn_cap c\<rbrakk>
-  \<Longrightarrow> revokable src_cap c = revokable' src_cap' c'"
-  apply (clarsimp simp: isCap_simps objBits_simps bit_simps
-                        bits_of_def revokable_def revokable'_def
-                        sameRegionAs_def3
+  \<Longrightarrow> is_cap_revocable c src_cap = isCapRevocable c' src_cap'"
+  apply (clarsimp simp: isCap_simps objBits_simps bit_simps arch_is_cap_revocable_def
+                        bits_of_def is_cap_revocable_def Retype_H.isCapRevocable_def
+                        sameRegionAs_def3 isCapRevocable_def
                  split: cap_relation_split_asm arch_cap.split_asm)
-    apply auto
   done
 
 lemma isMDBParentOf_prev_update [simp]:
@@ -3214,6 +3205,7 @@ definition
   cap' \<noteq> NullCap \<and>
   \<not> isZombie cap \<and>
   \<not> isIRQControlCap cap' \<and>
+  \<not> isIOPortControlCap' cap' \<and>
   badge_derived' cap' cap \<and>
   (isUntypedCap cap \<longrightarrow> descendants_of' p m = {}) \<and>
   (isReplyCap cap = isReplyCap cap') \<and>
@@ -3287,6 +3279,11 @@ lemma isIRQControlCap_relation:
   "cap_relation c c' \<Longrightarrow> isIRQControlCap c' = (c = cap.IRQControlCap)"
   by (cases c) (auto simp: isCap_simps)
 
+lemma isIOPortControlCap_relation:
+  "cap_relation c c' \<Longrightarrow> isIOPortControlCap' c' = (c = cap.ArchObjectCap arch_cap.IOPortControlCap)"
+  apply (cases c; clarsimp simp: isCap_simps)
+  by (case_tac x12; clarsimp simp: isCap_simps)
+
 lemma isArchCapE[elim!]:
   "\<lbrakk> isArchCap P cap; \<And>arch_cap. cap = ArchObjectCap arch_cap \<Longrightarrow> P arch_cap \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   by (cases cap, simp_all)
@@ -3316,14 +3313,18 @@ lemma is_derived_eq:
    apply (clarsimp simp: isCap_simps cap_master_cap_def
                          is_zombie_def is_reply_cap_def is_master_reply_cap_def
                   split: cap_relation_split_asm arch_cap.split_asm)[1]
+  apply (case_tac "isIOPortControlCap' d'")
+   apply (frule(1) master_cap_relation)
+   apply (clarsimp simp: isCap_simps cap_master_cap_def is_cap_simps is_zombie_def
+                  split: cap_relation_split_asm arch_cap.split_asm)
   apply (frule(1) master_cap_relation)
   apply (frule(1) cap_badge_relation)
   apply (frule cap_asid_cap_relation)
   apply (frule(1) capBadge_ordering_relation)
   apply (case_tac d)
    apply (simp_all add: isCap_simps is_cap_simps cap_master_cap_def
-     vs_cap_ref_def vsCapRef_def capMasterCap_def
-     split: cap_relation_split_asm arch_cap.split_asm)
+                        vs_cap_ref_def vsCapRef_def capMasterCap_def
+                 split: cap_relation_split_asm arch_cap.split_asm)
    apply fastforce
   apply ((auto split:arch_cap.splits arch_capability.splits option.splits)[7])
   apply (clarsimp split:option.splits arch_cap.splits arch_capability.splits)
@@ -3354,6 +3355,11 @@ lemma isArchPageCap [simp]:
 lemma isArchIOPortCap [simp]:
   "isArchIOPortCap cap' = isArchIOPortCap cap" using master
   by (simp add: capMasterCap_def isArchIOPortCap_def
+           split: capability.splits arch_capability.splits)
+
+lemma isIOPortControlCap' [simp]:
+  "isIOPortControlCap' cap' = isIOPortControlCap' cap" using master
+  by (simp add: capMasterCap_def isCap_simps
            split: capability.splits arch_capability.splits)
 
 lemma isIRQHandlerCap [simp]:
@@ -3387,10 +3393,6 @@ lemma isDomainCap [simp]:
 lemma capRange [simp]:
   "capRange cap' = capRange cap" using master
   by (simp add: capRange_def capMasterCap_def split: capability.splits arch_capability.splits)
-
-lemma portRange [simp]:
-  "portRange cap' = portRange cap" using master
-  by (simp add: portRange_def capMasterCap_def isCap_simps split: capability.splits arch_capability.splits)
 
 lemma isDomain1:
   "(cap' = DomainCap) = (cap = DomainCap)" using master
@@ -3682,8 +3684,8 @@ locale mdb_insert =
                (modify_map m dest (cteCap_update (\<lambda>_. c')))
                dest
                (cteMDBNode_update
-                 (\<lambda>m. mdbFirstBadged_update (\<lambda>a. revokable' src_cap c')
-                     (mdbRevocable_update (\<lambda>a. revokable' src_cap c')
+                 (\<lambda>m. mdbFirstBadged_update (\<lambda>a. isCapRevocable c' src_cap)
+                     (mdbRevocable_update (\<lambda>a. isCapRevocable c' src_cap)
                      (mdbPrev_update (\<lambda>a. src) src_node)))))
              src
              (cteMDBNode_update (mdbNext_update (\<lambda>a. dest)))"
@@ -3707,8 +3709,8 @@ lemmas n_0_simps [iff] = no_0_simps [OF no_0_n]
 lemmas neqs [simp] = neq neq [symmetric]
 
 definition
-  "new_dest \<equiv> CTE c' (mdbFirstBadged_update (\<lambda>a. revokable' src_cap c')
-                     (mdbRevocable_update (\<lambda>a. revokable' src_cap c')
+  "new_dest \<equiv> CTE c' (mdbFirstBadged_update (\<lambda>a. isCapRevocable c' src_cap)
+                     (mdbRevocable_update (\<lambda>a. isCapRevocable c' src_cap)
                      (mdbPrev_update (\<lambda>a. src) src_node)))"
 
 definition
@@ -3833,10 +3835,12 @@ lemma n_dest:
 end
 
 lemma revokable_plus_orderD:
-  "\<lbrakk> revokable' old new; (capBadge old, capBadge new) \<in> capBadge_ordering P;
+  "\<lbrakk> isCapRevocable new old; (capBadge old, capBadge new) \<in> capBadge_ordering P;
        capMasterCap old = capMasterCap new \<rbrakk>
       \<Longrightarrow> (isUntypedCap new \<or> (\<exists>x. capBadge old = Some 0 \<and> capBadge new = Some x \<and> x \<noteq> 0))"
-  by (clarsimp simp: revokable'_def isCap_simps split: if_split_asm)
+  by (clarsimp simp: Retype_H.isCapRevocable_def X64_H.isCapRevocable_def isCap_simps
+                        X64_H.arch_capability.simps
+              split: if_split_asm capability.split_asm X64_H.arch_capability.split_asm)
 
 lemma valid_badges_def2:
   "valid_badges m =
@@ -3886,7 +3890,8 @@ lemma (in mdb_insert_der) dest_no_parent_n:
    apply (simp add: src)
   apply (case_tac "isUntypedCap src_cap")
   apply (clarsimp simp: isCap_simps isMDBParentOf_CTE is_derived'_def
-    badge_derived'_def freeIndex_update_def capMasterCap_def split:capability.splits)
+                        badge_derived'_def freeIndex_update_def capMasterCap_def
+                 split: capability.splits)
    apply (simp add: ut_revocable'_def)
    apply (drule spec[where x=src], simp add: isCap_simps)
    apply (simp add: descendants_of'_def)
@@ -3894,9 +3899,9 @@ lemma (in mdb_insert_der) dest_no_parent_n:
    apply (erule notE, rule direct_parent)
      apply (simp add: mdb_next_unfold)
     apply simp
-   apply (simp add: parentOf_def src isMDBParentOf_CTE isCap_simps cong:sameRegionAs_update_untyped)
-  apply (clarsimp simp: isMDBParentOf_CTE is_derived'_def
-    badge_derived'_def)
+   apply (simp add: parentOf_def src isMDBParentOf_CTE isCap_simps
+              cong: sameRegionAs_update_untyped)
+  apply (clarsimp simp: isMDBParentOf_CTE is_derived'_def badge_derived'_def)
   apply (drule(2) revokable_plus_orderD)
   apply (erule sameRegionAsE, simp_all)
      apply (simp add: valid_badges_def2)
@@ -3914,8 +3919,8 @@ locale mdb_insert_child = mdb_insert_der +
   assumes child:
   "isMDBParentOf
    (CTE src_cap src_node)
-   (CTE c' (mdbFirstBadged_update (\<lambda>a. revokable' src_cap c')
-           (mdbRevocable_update (\<lambda>a. revokable' src_cap c')
+   (CTE c' (mdbFirstBadged_update (\<lambda>a. isCapRevocable c' src_cap)
+           (mdbRevocable_update (\<lambda>a. isCapRevocable c' src_cap)
            (mdbPrev_update (\<lambda>a. src) src_node))))"
 
 context mdb_insert_child
@@ -4047,8 +4052,8 @@ locale mdb_insert_sib = mdb_insert_der +
   assumes no_child:
   "\<not>isMDBParentOf
    (CTE src_cap src_node)
-   (CTE c' (mdbFirstBadged_update (\<lambda>a. revokable' src_cap c')
-           (mdbRevocable_update (\<lambda>a. revokable' src_cap c')
+   (CTE c' (mdbFirstBadged_update (\<lambda>a. isCapRevocable c' src_cap)
+           (mdbRevocable_update (\<lambda>a. isCapRevocable c' src_cap)
            (mdbPrev_update (\<lambda>a. src) src_node))))"
 begin
 interpretation Arch . (*FIXME: arch_split*)
@@ -4064,8 +4069,9 @@ lemma src_no_mdb_parent:
   apply (clarsimp simp: isMDBParentOf_CTE is_derived'_def badge_derived'_def)
   apply (erule sameRegionAsE)
      apply (clarsimp simp add: sameRegionAs_def3)
-     subgoal by (cases src_cap,auto simp:capMasterCap_def revokable'_def vsCapRef_def freeIndex_update_def
-         isCap_simps split:capability.splits arch_capability.splits)[1] (* long *)
+     subgoal by (cases src_cap; auto simp: capMasterCap_def Retype_H.isCapRevocable_def X64_H.isCapRevocable_def
+                                     vsCapRef_def freeIndex_update_def isCap_simps
+                                       split: capability.split_asm arch_capability.split_asm) (* long *)
     apply (clarsimp simp: isCap_simps sameRegionAs_def3 capMasterCap_def freeIndex_update_def
        split:capability.splits arch_capability.splits)
    apply (clarsimp simp: isCap_simps sameRegionAs_def3 freeIndex_update_def
@@ -4093,7 +4099,7 @@ lemma parent_preserved:
   apply (clarsimp simp: is_derived'_def badge_derived'_def)
   apply (rule conjI)
    apply (simp add: sameRegionAs_def2)
-  apply (cases "revokable' src_cap c'")
+  apply (cases "isCapRevocable c' src_cap")
    apply simp
    apply (drule(2) revokable_plus_orderD)
    apply (erule disjE)
@@ -4226,13 +4232,13 @@ lemma derived_sameRegionAs:
    apply (erule disjE)
     apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
                           is_aligned_no_overflow capRange_def
-          split:capability.splits arch_capability.splits option.splits)
-    apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
-                          is_aligned_no_overflow capRange_def
-          split:capability.splits arch_capability.splits option.splits)
-    apply (clarsimp simp: isCap_simps valid_cap'_def portRange_def
-                          is_aligned_no_overflow capRange_def
-          split:capability.splits arch_capability.splits option.splits)
+                   split: capability.splits arch_capability.splits option.splits)
+   apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
+                         is_aligned_no_overflow capRange_def
+                  split: capability.splits arch_capability.splits option.splits)
+  apply (clarsimp simp: isCap_simps valid_cap'_def
+                        is_aligned_no_overflow capRange_def
+                 split: capability.splits arch_capability.splits option.splits)
   done
 
 lemma no_fail_updateMDB [wp]:
@@ -4259,12 +4265,14 @@ lemma nullMDBNode_pointers[simp]:
 
 (* Arguments to capability_case need to be in the same order as the constructors in 'capabilility' data type *)
 lemma revokable'_fold:
-  "revokable' srcCap cap =
+  "isCapRevocable cap srcCap =
   (case cap of capability.NotificationCap _ _ _ _ \<Rightarrow> capNtfnBadge cap \<noteq> capNtfnBadge srcCap
      | capability.IRQHandlerCap _ \<Rightarrow> isIRQControlCap srcCap
      | capability.EndpointCap _ _ _ _ _ \<Rightarrow> capEPBadge cap \<noteq> capEPBadge srcCap
-     | capability.UntypedCap _ _ _ _ \<Rightarrow> True | _ \<Rightarrow> False)"
-  by (simp add: revokable'_def isCap_simps split: capability.splits)
+     | capability.UntypedCap _ _ _ _ \<Rightarrow> True
+     | capability.ArchObjectCap (arch_capability.IOPortCap _ _) \<Rightarrow> isIOPortControlCap' srcCap | _ \<Rightarrow> False)"
+  by (simp add: Retype_H.isCapRevocable_def X64_H.isCapRevocable_def isCap_simps
+         split: capability.splits arch_capability.splits)
 
 lemma cap_relation_untyped_free_index_update:
   "\<lbrakk>cap_relation cap cap';isUntypedCap cap'\<or> is_untyped_cap cap;a = a'\<rbrakk>
@@ -4303,13 +4311,13 @@ done
 
 lemma maskedAsFull_revokable:
   "is_derived' x y c' src_cap' \<Longrightarrow>
-   revokable' (maskedAsFull src_cap' a) c' = revokable' src_cap' c'"
+   isCapRevocable c' (maskedAsFull src_cap' a) = isCapRevocable c' src_cap'"
   apply (case_tac src_cap')
     apply (simp_all add:maskedAsFull_def isCap_simps)
   apply (case_tac c')
     apply (simp_all add:maskedAsFull_def is_derived'_def isCap_simps vsCapRef_def)
     apply (simp_all add:badge_derived'_def capMasterCap_simps split:arch_capability.splits)
-  apply (clarsimp split:if_splits simp:revokable'_def isCap_simps)
+  apply (clarsimp split:if_splits simp:Retype_H.isCapRevocable_def X64_H.isCapRevocable_def isCap_simps)
   done
 
 lemma parentOf_preserve_oneway:
@@ -4906,7 +4914,7 @@ lemma valid_badges_preserve_oneway:
    apply (drule fun_cong)+
    apply fastforce
   apply (drule(1) misc)+
-  apply (clarsimp simp:isCap_simps sameRegionAs_def portRange_def split:if_splits)
+  apply (clarsimp simp:isCap_simps sameRegionAs_def split:if_splits)
   done
 
 lemma valid_badges_preserve:
@@ -5094,6 +5102,44 @@ lemma irq_control_preserve:
   apply (rule irq_control_preserve_oneway)
   apply (simp add:dom misc)+
   done
+
+lemma ioport_control_preserve_oneway:
+  assumes dom: "\<And>x. (x \<in> dom m) = (x \<in> dom m')"
+  assumes misc:
+  "\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
+      isIOPortControlCap' (cteCap cte) = isIOPortControlCap' (cteCap cte') \<and>
+      cteMDBNode cte = cteMDBNode cte'"
+  shows "ioport_control m \<Longrightarrow> ioport_control m'"
+  apply (clarsimp simp:ioport_control_def)
+    apply (frule iffD2[OF dom,OF domI])
+    apply clarsimp
+    apply (frule(1) misc)
+    apply (clarsimp simp:isCap_simps)
+    apply (case_tac y)
+    apply (elim allE impE)
+      apply fastforce
+    apply clarsimp
+    apply (drule_tac x = p' in spec)
+    apply (erule impE)
+    apply (frule_tac x1 = p' in iffD2[OF dom,OF domI])
+    apply clarsimp
+    apply (drule(1) misc)+
+    apply (case_tac y)
+    apply (simp add:isCap_simps)+
+  done
+
+lemma ioport_control_preserve:
+  assumes dom: "\<And>x. (x \<in> dom m) = (x \<in> dom m')"
+  assumes misc:
+  "\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
+      isIOPortControlCap' (cteCap cte) = isIOPortControlCap' (cteCap cte') \<and>
+      cteMDBNode cte = cteMDBNode cte'"
+  shows "ioport_control m = ioport_control m'"
+  apply (rule iffI[OF ioport_control_preserve_oneway[OF dom misc]])
+    apply (assumption)+
+  apply (rule ioport_control_preserve_oneway)
+  apply (simp add:dom misc)+
+  done
 end
 locale mdb_inv_preserve =
   fixes m m'
@@ -5115,6 +5161,7 @@ locale mdb_inv_preserve =
   \<and> RetypeDecls_H.capUntypedPtr (cteCap cte) = RetypeDecls_H.capUntypedPtr (cteCap cte')
   \<and> capRange (cteCap cte) = capRange (cteCap cte')
   \<and> isIRQControlCap (cteCap cte) = isIRQControlCap (cteCap cte')
+  \<and> X64_H.isIOPortControlCap' (cteCap cte) = X64_H.isIOPortControlCap' (cteCap cte')
   \<and> cteMDBNode cte = cteMDBNode cte'"
   assumes sameRegion:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
      sameRegionAs (cteCap cte) = sameRegionAs (cteCap cte')
@@ -5131,7 +5178,8 @@ lemma preserve_stuff:
  \<and> mdb_chunked m = mdb_chunked m'
  \<and> valid_badges m = valid_badges m'
  \<and> untyped_mdb' m = untyped_mdb' m'
- \<and> irq_control m = irq_control m'"
+ \<and> irq_control m = irq_control m'
+ \<and> ioport_control m = ioport_control m'"
   apply (intro conjI)
     apply (rule valid_dlist_preserve)
       apply (simp add:mdb_inv_preserve_def dom misc sameRegion mdb_next)+
@@ -5150,6 +5198,8 @@ lemma preserve_stuff:
     apply (rule untyped_mdb'_preserve)
       apply (simp add:mdb_inv_preserve_def dom misc sameRegion mdb_next)+
     apply (rule irq_control_preserve)
+      apply (simp add:mdb_inv_preserve_def dom misc sameRegion mdb_next)+
+    apply (rule ioport_control_preserve)
       apply (simp add:mdb_inv_preserve_def dom misc sameRegion mdb_next)+
   done
 
@@ -5486,6 +5536,22 @@ lemma updateCapFreeIndex_irq_control:
     apply (clarsimp simp:cte_wp_at_ctes_of)+
 done
 
+lemma updateCapFreeIndex_ioport_control:
+  assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
+  shows
+ "\<lbrace>\<lambda>s. P (ioport_control (Q (ctes_of s))) \<and> cte_wp_at' (\<lambda>c. c = srcCTE \<and> isUntypedCap (cteCap c)) src s\<rbrace>
+    updateCap src (capFreeIndex_update (\<lambda>_. index) (cteCap srcCTE))
+  \<lbrace>\<lambda>r s. P (ioport_control (Q (ctes_of s)))\<rbrace>"
+  apply (wp updateCap_ctes_of_wp)
+  apply (subgoal_tac "mdb_inv_preserve (Q (ctes_of s)) (Q (modify_map (ctes_of s) src
+              (cteCap_update (\<lambda>_. capFreeIndex_update (\<lambda>_. index) (cteCap srcCTE)))))")
+   apply (drule mdb_inv_preserve.preserve_stuff)
+   apply simp
+  apply (rule preserve)
+  apply (rule mdb_inv_preserve_updateCap)
+   apply (clarsimp simp:cte_wp_at_ctes_of)+
+  done
+
 lemma setUntypedCapAsFull_mdb_chunked:
   assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
   shows
@@ -5537,6 +5603,19 @@ setUntypedCapAsFull (cteCap srcCTE) cap src
   apply wp
   apply clarsimp
 done
+
+lemma setUntypedCapAsFull_ioport_control:
+  assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
+  shows
+  "\<lbrace>\<lambda>s. P (ioport_control (Q (ctes_of s))) \<and> cte_wp_at' (\<lambda>c. c = srcCTE) src s\<rbrace>
+     setUntypedCapAsFull (cteCap srcCTE) cap src
+   \<lbrace>\<lambda>r s. P (ioport_control (Q (ctes_of s)))\<rbrace>"
+  apply (clarsimp simp:setUntypedCapAsFull_def split:if_splits,intro conjI impI)
+   apply (wp updateCapFreeIndex_ioport_control)
+    apply (clarsimp simp:cte_wp_at_ctes_of preserve)+
+  apply wp
+  apply clarsimp
+  done
 
 lemma setUntypedCapAsFull_valid_badges:
   assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
@@ -5821,7 +5900,6 @@ lemma cins_corres:
   (is "corres _ (?P and (\<lambda>s. cte_wp_at _ _ s)) (?P' and cte_wp_at' _ _) _ _")
   using assms
   unfolding cap_insert_def cteInsert_def
-  apply (fold revokable_def revokable'_fold)
   apply simp
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_cap_corres])
@@ -6070,7 +6148,7 @@ lemma cins_corres:
                   apply simp
                  apply simp
                 apply simp
-                apply (subst (asm) revokable_eq, assumption, assumption)
+                apply (subst (asm) is_cap_revocable_eq, assumption, assumption)
                   apply (rule derived_sameRegionAs)
                    apply (subst is_derived_eq[symmetric], assumption,
                   assumption, assumption, assumption, assumption)
@@ -6199,12 +6277,12 @@ lemma cins_corres:
               apply (clarsimp simp: revokable_relation_def  split: if_split)
               apply (rule conjI)
               apply clarsimp
-               apply (subgoal_tac "mdbRevocable node = revokable' (cteCap srcCTE) c'")
+               apply (subgoal_tac "mdbRevocable node = isCapRevocable c' (cteCap srcCTE)")
                 prefer 2
                 apply (case_tac rv')
                 subgoal by (clarsimp simp add: const_def modify_map_def split: if_split_asm)
                apply simp
-               apply (rule revokable_eq, assumption, assumption)
+               apply (rule is_cap_revocable_eq, assumption, assumption)
                 apply (rule derived_sameRegionAs)
                  apply (drule(3) is_derived_eq[THEN iffD1,rotated -1])
                   subgoal by (simp add: cte_wp_at_def)
@@ -6311,7 +6389,7 @@ lemma cins_corres:
        apply (simp+)[3]
       apply simp
      apply simp
-    apply (subst (asm) revokable_eq, assumption, assumption)
+    apply (subst (asm) is_cap_revocable_eq, assumption, assumption)
       apply (rule derived_sameRegionAs)
        apply (subst is_derived_eq[symmetric], assumption, assumption,
                     assumption, assumption, assumption)
@@ -6353,7 +6431,7 @@ lemma cins_corres:
      apply simp
     apply simp
    apply simp
-   apply (subst (asm) revokable_eq, assumption, assumption)
+   apply (subst (asm) is_cap_revocable_eq, assumption, assumption)
      apply (rule derived_sameRegionAs)
       apply (subst is_derived_eq[symmetric], assumption, assumption,
                    assumption, assumption, assumption)

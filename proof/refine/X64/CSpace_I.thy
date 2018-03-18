@@ -669,6 +669,7 @@ lemma capMasterCap_simps[simp]:
             capability.ArchObjectCap (arch_capability.PML4Cap word None)"
   "capMasterCap (capability.ArchObjectCap (arch_capability.IOPortCap ft lt)) =
             capability.ArchObjectCap (arch_capability.IOPortCap ft lt)"
+  "capMasterCap (ArchObjectCap IOPortControlCap) = ArchObjectCap IOPortControlCap"
   "capMasterCap (capability.UntypedCap d word n f) = capability.UntypedCap d word n 0"
   "capMasterCap capability.IRQControlCap = capability.IRQControlCap"
   "capMasterCap (capability.ReplyCap word m) = capability.ReplyCap word True"
@@ -716,6 +717,8 @@ lemma capMasterCap_eqDs1:
      \<Longrightarrow> data4 = None \<and> (\<exists>data4. cap = ArchObjectCap (PML4Cap ptr data4))"
   "capMasterCap cap = ArchObjectCap (IOPortCap f span)
      \<Longrightarrow> cap = ArchObjectCap (IOPortCap f span)"
+  "capMasterCap cap = ArchObjectCap IOPortControlCap
+     \<Longrightarrow> cap = ArchObjectCap IOPortControlCap"
   by (clarsimp simp: capMasterCap_def
               split: capability.split_asm arch_capability.split_asm)+
 
@@ -772,6 +775,7 @@ lemma isCap_Master:
   "isDomainCap (capMasterCap cap) = isDomainCap cap"
   "isArchPageCap (capMasterCap cap) = isArchPageCap cap"
   "isArchIOPortCap (capMasterCap cap) = isArchIOPortCap cap"
+  "isIOPortControlCap' (capMasterCap cap) = isIOPortControlCap' cap"
   by (simp add: isCap_simps capMasterCap_def
          split: capability.split arch_capability.split)+
 
@@ -784,34 +788,24 @@ lemma capUntypedSize_capBits:
   apply fastforce
   done
 
-definition
-  "portRange c \<equiv> if isArchIOPortCap c then
-                   {(capIOPortFirstPort (capCap c)) .. (capIOPortLastPort (capCap c))}
-                 else {}"
-
-lemma portRange_Master:
-  "portRange (capMasterCap cap) = portRange cap"
-  by (simp add: capMasterCap_def split: capability.split arch_capability.split,
-      simp add: portRange_def isCap_simps)
-
 lemma sameRegionAs_def2:
  "sameRegionAs cap cap' = (\<lambda>cap cap'.
      (cap = cap'
           \<and> (\<not> isNullCap cap \<and> \<not> isZombie cap
-              \<and> \<not> isUntypedCap cap \<and> \<not> isArchPageCap cap \<and> \<not> isArchIOPortCap cap)
+              \<and> \<not> isUntypedCap cap \<and> \<not> isArchPageCap cap)
           \<and> (\<not> isNullCap cap' \<and> \<not> isZombie cap'
-              \<and> \<not> isUntypedCap cap' \<and> \<not> isArchPageCap cap' \<and> \<not> isArchIOPortCap cap'))
+              \<and> \<not> isUntypedCap cap' \<and> \<not> isArchPageCap cap'))
       \<or> (capRange cap' \<noteq> {} \<and> capRange cap' \<subseteq> capRange cap
                  \<and> (isUntypedCap cap \<or> (isArchPageCap cap \<and> isArchPageCap cap')))
-      \<or> (portRange cap' \<noteq> {} \<and> portRange cap' \<subseteq> portRange cap \<and> isArchIOPortCap cap \<and> isArchIOPortCap cap')
-      \<or> (isIRQControlCap cap \<and> isIRQHandlerCap cap'))
+      \<or> (isIRQControlCap cap \<and> isIRQHandlerCap cap')
+      \<or> (isIOPortControlCap' cap \<and> isArchIOPortCap cap'))
            (capMasterCap cap) (capMasterCap cap')"
   apply (cases "isUntypedCap cap")
    apply (clarsimp simp: sameRegionAs_def Let_def
                          isCap_Master capRange_Master capClass_Master)
    apply (clarsimp simp: isCap_simps
                          capMasterCap_def[where cap="UntypedCap d p n f" for d p n f])
-   apply (simp add: capRange_def capUntypedSize_capBits portRange_def)
+   apply (simp add: capRange_def capUntypedSize_capBits)
    apply (intro impI iffI)
     apply (clarsimp del: subsetI intro!: range_subsetI)
    apply clarsimp
@@ -822,9 +816,10 @@ lemma sameRegionAs_def2:
   apply (simp    add: X64_H.sameRegionAs_def isCap_simps
                split: arch_capability.split
            split del: if_split cong: if_cong)
-  apply (clarsimp simp: capRange_def Let_def portRange_def isCap_simps)
+  apply (clarsimp simp: capRange_def Let_def isCap_simps)
   apply (simp add: range_subset_eq2 cong: conj_cong)
   apply (simp add: conj_comms)
+  apply fastforce
   done
 
 lemma sameObjectAs_def2:
@@ -835,9 +830,7 @@ lemma sameObjectAs_def2:
           \<and> (\<not> isNullCap cap' \<and> \<not> isZombie cap'
               \<and> \<not> isUntypedCap cap')
           \<and> (isArchPageCap cap \<longrightarrow> capRange cap \<noteq> {})
-          \<and> (isArchPageCap cap' \<longrightarrow> capRange cap' \<noteq> {})
-          \<and> (isArchIOPortCap cap \<longrightarrow> portRange cap \<noteq> {})
-          \<and> (isArchIOPortCap cap' \<longrightarrow> portRange cap' \<noteq> {})))
+          \<and> (isArchPageCap cap' \<longrightarrow> capRange cap' \<noteq> {})))
            (capMasterCap cap) (capMasterCap cap')"
   apply (simp add: sameObjectAs_def sameRegionAs_def2
                    isCap_simps capMasterCap_def
@@ -846,27 +839,26 @@ lemma sameObjectAs_def2:
                  split: arch_capability.split cong: if_cong)
   apply (clarsimp simp: X64_H.sameRegionAs_def isCap_simps
              split del: if_split cong: if_cong)
-  apply (simp add: capRange_def interval_empty portRange_def isCap_simps
+  apply (simp add: capRange_def isCap_simps
         split del: if_split)
   apply fastforce
   done
 
 lemmas sameRegionAs_def3 =
-  sameRegionAs_def2 [simplified capClass_Master capRange_Master isCap_Master portRange_Master]
+  sameRegionAs_def2 [simplified capClass_Master capRange_Master isCap_Master]
 
 lemmas sameObjectAs_def3 =
-  sameObjectAs_def2 [simplified capClass_Master capRange_Master isCap_Master portRange_Master]
+  sameObjectAs_def2 [simplified capClass_Master capRange_Master isCap_Master]
 
 lemma sameRegionAsE:
   "\<lbrakk> sameRegionAs cap cap';
      \<lbrakk> capMasterCap cap = capMasterCap cap'; \<not> isNullCap cap; \<not> isZombie cap;
-         \<not> isUntypedCap cap; \<not> isArchPageCap cap; \<not> isArchIOPortCap cap\<rbrakk> \<Longrightarrow> R;
+         \<not> isUntypedCap cap; \<not> isArchPageCap cap\<rbrakk> \<Longrightarrow> R;
      \<lbrakk> capRange cap' \<noteq> {}; capRange cap' \<subseteq> capRange cap; isUntypedCap cap \<rbrakk> \<Longrightarrow> R;
      \<lbrakk> capRange cap' \<noteq> {}; capRange cap' \<subseteq> capRange cap; isArchPageCap cap;
           isArchPageCap cap' \<rbrakk> \<Longrightarrow> R;
-     \<lbrakk> portRange cap' \<noteq> {}; portRange cap' \<subseteq> portRange cap; isArchIOPortCap cap; isArchIOPortCap cap'\<rbrakk>
-          \<Longrightarrow> R;
-     \<lbrakk> isIRQControlCap cap; isIRQHandlerCap cap' \<rbrakk> \<Longrightarrow> R
+     \<lbrakk> isIRQControlCap cap; isIRQHandlerCap cap' \<rbrakk> \<Longrightarrow> R;
+     \<lbrakk> isIOPortControlCap' cap; isArchIOPortCap cap' \<rbrakk> \<Longrightarrow> R
       \<rbrakk> \<Longrightarrow> R"
    by  (simp add: sameRegionAs_def3, fastforce)
 
@@ -874,13 +866,12 @@ lemma sameObjectAsE:
   "\<lbrakk> sameObjectAs cap cap';
      \<lbrakk> capMasterCap cap = capMasterCap cap'; \<not> isNullCap cap; \<not> isZombie cap;
          \<not> isUntypedCap cap;
-         isArchPageCap cap \<Longrightarrow> capRange cap \<noteq> {};
-         isArchIOPortCap cap \<Longrightarrow> portRange cap \<noteq> {} \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+         isArchPageCap cap \<Longrightarrow> capRange cap \<noteq> {} \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   by (clarsimp simp add: sameObjectAs_def3)
 
 lemma sameObjectAs_sameRegionAs:
   "sameObjectAs cap cap' \<Longrightarrow> sameRegionAs cap cap'"
-  by (clarsimp simp add: sameObjectAs_def2 sameRegionAs_def2 portRange_def isCap_simps)
+  by (clarsimp simp add: sameObjectAs_def2 sameRegionAs_def2 isCap_simps)
 
 lemma sameObjectAs_sym:
   "sameObjectAs c d = sameObjectAs d c"
@@ -905,12 +896,6 @@ lemma sameObject_untypedCap:
 lemma sameObject_capRange:
   "sameObjectAs cap cap' \<Longrightarrow> capRange cap' = capRange cap"
   apply (rule master_eqI, rule capRange_Master)
-  apply (clarsimp simp: sameObjectAs_def2)
-  done
-
-lemma sameObject_portRange:
-  "sameObjectAs cap cap' \<Longrightarrow> portRange cap' = portRange cap"
-  apply (rule master_eqI, rule portRange_Master)
   apply (clarsimp simp: sameObjectAs_def2)
   done
 
@@ -955,8 +940,7 @@ lemma sameRegionAs_capRange:
       \<Longrightarrow> capRange cap = capRange cap'"
   apply (rule master_eqI, rule capRange_Master)
   apply (erule sameRegionAsE, simp_all)
-  apply (clarsimp simp: isCap_simps)
-  apply (simp add: capRange_def capMasterCap_def)
+   apply (clarsimp simp: isCap_simps capRange_def capMasterCap_def)+
   done
 
 lemma capAligned_capUntypedPtr:
@@ -983,7 +967,7 @@ lemma sameRegionAs_capRange_Int:
 lemma sameRegionAs_trans:
   "\<lbrakk> sameRegionAs a b; sameRegionAs b c \<rbrakk> \<Longrightarrow> sameRegionAs a c"
   apply (simp add: sameRegionAs_def2, elim conjE disjE, simp_all)
-                by (auto simp: isCap_simps capRange_def portRange_def) (* long *)
+                by (auto simp: isCap_simps capRange_def) (* long *)
 
 lemma capMasterCap_maskCapRights[simp]:
   "capMasterCap (maskCapRights msk cap)
@@ -1547,7 +1531,8 @@ lemma
   untyped_mdb: "untyped_mdb' m" and
   untyped_inc: "untyped_inc' m" and
   class_links: "class_links m" and
-  irq_control: "irq_control m"
+  irq_control: "irq_control m" and
+  ioport_control: "ioport_control m"
   using valid by (simp add: valid_mdb_ctes_def)+
 
 lemma zero_next [simp]:
@@ -2114,12 +2099,42 @@ lemma irq_control_init:
   apply (erule (1) irq_controlD, rule ctrl)
   done
 
+definition
+  "no_ioport' m \<equiv> \<forall>p cte. m p = Some cte \<longrightarrow> cteCap cte \<noteq> (ArchObjectCap IOPortControlCap)"
+
+lemma no_ioportD':
+  "\<lbrakk> m p = Some (CTE (ArchObjectCap IOPortControlCap) n); no_ioport' m \<rbrakk> \<Longrightarrow> False"
+  unfolding no_ioport'_def
+  apply (erule allE, erule allE, erule (1) impE)
+  apply auto
+  done
+
+lemma ioport_control_init:
+  assumes no_ioport: "cap = (ArchObjectCap IOPortControlCap) \<longrightarrow> no_ioport' m"
+  assumes ctrl: "ioport_control m"
+  shows "ioport_control (m(p \<mapsto> CTE cap initMDBNode))"
+  using no_ioport
+  apply (clarsimp simp: ioport_control_def)
+  apply (rule conjI)
+   apply (clarsimp simp: initMDBNode_def)
+   apply (erule (1) no_ioportD')
+  apply clarsimp
+  apply (frule ioport_revocable, rule ctrl)
+  apply clarsimp
+  apply (rule conjI)
+   apply clarsimp
+   apply (erule (1) no_ioportD')
+  apply clarsimp
+  apply (erule (1) ioport_controlD, rule ctrl)
+  done
+
 lemma valid_mdb_ctes_init:
   "\<lbrakk> valid_mdb_ctes m; m p = Some cte; no_mdb cte;
      caps_no_overlap' m (capRange cap); s \<turnstile>' cap;
      valid_objs' s; m = ctes_of s; cap \<noteq> NullCap;
      fresh_virt_cap_class (capClass cap) (ctes_of s);
-     cap = capability.IRQControlCap \<longrightarrow> no_irq' (ctes_of s) \<rbrakk> \<Longrightarrow>
+     cap = capability.IRQControlCap \<longrightarrow> no_irq' (ctes_of s);
+     cap = capability.ArchObjectCap IOPortControlCap \<longrightarrow> no_ioport' (ctes_of s) \<rbrakk> \<Longrightarrow>
   valid_mdb_ctes (m (p \<mapsto> CTE cap initMDBNode))"
   apply (simp add: valid_mdb_ctes_def)
   apply (rule conjI, rule valid_dlist_init, simp+)
@@ -2147,8 +2162,10 @@ lemma valid_mdb_ctes_init:
    apply (rule valid_capAligned, erule(1) ctes_of_valid_cap')
   apply (rule conjI)
    apply (erule (1) irq_control_init)
-  apply (simp add: ran_def reply_masters_rvk_fb_def)
-  apply (auto simp: initMDBNode_def)[1]
+  apply (rule conjI)
+   apply (simp add: ran_def reply_masters_rvk_fb_def)
+   apply (auto simp: initMDBNode_def)[1]
+  apply (erule (1) ioport_control_init)
   done
 
 lemma setCTE_state_refs_of'[wp]:
@@ -2168,13 +2185,14 @@ lemma setCTE_valid_mdb:
         s \<turnstile>' cap \<and> valid_objs' s \<and> cap \<noteq> NullCap \<and>
         caps_no_overlap' (ctes_of s) (capRange cap) \<and>
         fresh_virt_cap_class (capClass cap) (ctes_of s) \<and>
-        (cap = capability.IRQControlCap \<longrightarrow> no_irq' (ctes_of s))\<rbrace>
+        (cap = capability.IRQControlCap \<longrightarrow> no_irq' (ctes_of s)) \<and>
+        (cap = capability.ArchObjectCap IOPortControlCap \<longrightarrow> no_ioport' (ctes_of s))\<rbrace>
   setCTE ptr cte
   \<lbrace>\<lambda>r. valid_mdb'\<rbrace>"
   apply (simp add: valid_mdb'_def setCTE_def cte_def cte_wp_at_ctes_of)
   apply (wp ctes_of_setObject_cte)
   apply (clarsimp simp del: fun_upd_apply)
-  apply (erule(8) valid_mdb_ctes_init [OF _ _ _ _ _ _ refl])
+  apply (erule(9) valid_mdb_ctes_init [OF _ _ _ _ _ _ refl])
   done
 
 lemma setCTE_valid_objs'[wp]:
@@ -2197,7 +2215,8 @@ lemma setCTE_valid_pspace:
   "\<lbrace>\<lambda>s. valid_pspace' s \<and> s \<turnstile>' cap \<and> cte_wp_at' no_mdb ptr s \<and>
         caps_no_overlap' (ctes_of s) (capRange cap) \<and>
         cap \<noteq> NullCap \<and> fresh_virt_cap_class (capClass cap) (ctes_of s) \<and>
-        (cap = capability.IRQControlCap \<longrightarrow> no_irq' (ctes_of s))\<rbrace>
+        (cap = capability.IRQControlCap \<longrightarrow> no_irq' (ctes_of s)) \<and>
+        (cap = capability.ArchObjectCap IOPortControlCap \<longrightarrow> no_ioport' (ctes_of s))\<rbrace>
   setCTE ptr cte
   \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
   apply (simp add: valid_pspace'_def setCTE_def cte_def)
@@ -2263,7 +2282,8 @@ lemma insertInitCap_valid_pspace:
   "\<lbrace>valid_pspace' and valid_cap' cap and
     (\<lambda>s. caps_no_overlap' (ctes_of s) (capRange cap))
     and (\<lambda>s. fresh_virt_cap_class (capClass cap) (ctes_of s)) and
-    (\<lambda>s. cap = capability.IRQControlCap \<longrightarrow> no_irq' (ctes_of s))\<rbrace>
+    (\<lambda>s. cap = capability.IRQControlCap \<longrightarrow> no_irq' (ctes_of s)) and
+    (\<lambda>s. cap = capability.ArchObjectCap IOPortControlCap \<longrightarrow> no_ioport' (ctes_of s))\<rbrace>
   insertInitCap ptr cap
   \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
   unfolding insertInitCap_def

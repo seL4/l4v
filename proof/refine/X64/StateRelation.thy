@@ -94,6 +94,7 @@ where
         arch_capability.PML4Cap word data)"
 | "acap_relation (arch_cap.IOPortCap f l) c = (c =
         arch_capability.IOPortCap f l)"
+| "acap_relation (arch_cap.IOPortControlCap) c = (c = arch_capability.IOPortControlCap)"
 
 primrec
   cap_relation :: "cap \<Rightarrow> capability \<Rightarrow> bool"
@@ -479,8 +480,8 @@ where
        \<and> x64_global_pds s = x64KSGlobalPDs s'
        \<and> x64_global_pts s = x64KSGlobalPTs s'
        \<and> cr3_relation (x64_current_cr3 s) (x64KSCurrentCR3 s')
-       \<and> x64_kernel_vspace s = x64KSKernelVSpace s'}"
-
+       \<and> x64_kernel_vspace s = x64KSKernelVSpace s'
+       \<and> x64_allocated_io_ports s = x64KSAllocatedIOPorts s'}"
 
 definition
   (* NOTE: this map discards the Ident right, needed on endpoints only *)
@@ -723,7 +724,8 @@ lemmas isCap_defs =
   isPageCap_def isPageTableCap_def isPageDirectoryCap_def
   isPDPointerTableCap_def isPML4Cap_def isIOPortCap_def
   isASIDControlCap_def isASIDPoolCap_def isArchPageCap_def
-  isDomainCap_def isArchIOPortCap_def
+  isDomainCap_def isArchIOPortCap_def isIOPortControlCap_def
+  isIOPortControlCap'_def
 
 lemma isCNodeCap_cap_map [simp]:
   "cap_relation c c' \<Longrightarrow> isCNodeCap c' = is_cnode_cap c"

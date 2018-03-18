@@ -1652,6 +1652,7 @@ lemma sts_invs_minor'_no_valid_queues:
          valid_irq_node' (irq_node' s) s \<and>
          valid_irq_handlers' s \<and>
          valid_irq_states' s \<and>
+         valid_ioports' s \<and>
          valid_machine_state' s \<and>
          irqs_masked' s \<and>
          valid_queues' s \<and>
@@ -1723,6 +1724,7 @@ lemma tcbSchedDequeue_invs'_no_valid_queues:
          valid_irq_node' (irq_node' s) s \<and>
          valid_irq_handlers' s \<and>
          valid_irq_states' s \<and>
+         valid_ioports' s \<and>
          valid_machine_state' s \<and>
          irqs_masked' s \<and>
          valid_queues' s \<and>
@@ -2148,7 +2150,7 @@ lemma cancel_all_invs'_helper:
   apply (rule mapM_x_inv_wp2)
    apply clarsimp
   apply (rule hoare_pre)
-   apply (wp valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
+   apply (wp valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift valid_ioports_lift''
              hoare_vcg_const_Ball_lift untyped_ranges_zero_lift
              sts_valid_queues sts_st_tcb' setThreadState_not_st
         | simp add: cteCaps_of_def o_def)+
@@ -2618,7 +2620,7 @@ lemma cancelBadgedSends_filterM_helper':
   apply (rule hoare_pre)
    apply (wp valid_irq_node_lift hoare_vcg_const_Ball_lift sts_sch_act'
              sch_act_wf_lift valid_irq_handlers_lift'' cur_tcb_lift irqs_masked_lift
-             sts_st_tcb' sts_valid_queues setThreadState_not_st
+             sts_st_tcb' sts_valid_queues setThreadState_not_st valid_ioports_lift''
              tcbSchedEnqueue_not_st
              untyped_ranges_zero_lift
         | clarsimp simp: cteCaps_of_def o_def)+

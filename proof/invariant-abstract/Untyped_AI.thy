@@ -21,10 +21,14 @@ requalify_consts
   region_in_kernel_window
   arch_default_cap
   second_level_tables
+  safe_ioport_insert
 
 requalify_facts
   set_cap_valid_arch_caps_simple
   set_cap_kernel_window_simple
+  set_cap_ioports'
+  safe_ioport_insert_triv
+
 end
 
 primrec
@@ -1119,7 +1123,6 @@ lemma untyped_incD2:
     apply clarsimp+
   done
 
-
 lemma create_cap_mdb[wp]:
   "\<lbrace>valid_mdb
       and valid_objs
@@ -1143,72 +1146,73 @@ lemma create_cap_mdb[wp]:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (fold fun_upd_def)
   apply (intro conjI)
-          apply (rule mdb_cte_atI)
-          apply (simp add: is_cap_simps split: if_split_asm)
-           apply (drule(1) mdb_cte_atD,clarsimp)+
-         apply (simp add: untyped_mdb_def descendants_of_def mdb_insert_abs.parency
-                del: split_paired_All)
-         apply (intro allI conjI impI)
+           apply (rule mdb_cte_atI)
+           apply (simp add: is_cap_simps split: if_split_asm)
+            apply (drule(1) mdb_cte_atD,clarsimp)+
+          apply (simp add: untyped_mdb_def descendants_of_def mdb_insert_abs.parency
+                      del: split_paired_All)
+          apply (intro allI conjI impI)
+               apply (clarsimp simp: is_cap_simps)
               apply (clarsimp simp: is_cap_simps)
-             apply (clarsimp simp: is_cap_simps)
-            apply (erule_tac x=p in allE)
-            apply (erule_tac x=ptr' in allE)
+             apply (erule_tac x=p in allE)
+             apply (erule_tac x=ptr' in allE)
+             apply (simp del: split_paired_All)
+             apply (erule impE, blast)
+             apply (erule (1) trancl_trans)
             apply (simp del: split_paired_All)
-            apply (erule impE, blast)
-            apply (erule (1) trancl_trans)
+           apply (erule_tac x=p in allE)
+           apply (erule_tac x=ptr' in allE)
            apply (simp del: split_paired_All)
-          apply (erule_tac x=p in allE)
-          apply (erule_tac x=ptr' in allE)
+           apply (erule impE, blast)
+           apply (drule(1) descendants_rangeD)
+           apply (simp del: split_paired_All add: cap_range_def)
+           apply blast
+          apply (drule_tac x=ptr in spec)
+          apply (drule_tac x=cref in spec)
           apply (simp del: split_paired_All)
-          apply (erule impE, blast)
+          apply (frule(1) inter_non_emptyD[rotated])
+          apply (drule_tac c = cap and c' = capa in untyped_incD2)
+              apply simp+
+          apply (clarsimp simp add: descendants_of_def simp del: split_paired_All)
           apply (drule(1) descendants_rangeD)
-          apply (simp del: split_paired_All add: cap_range_def)
+          apply (clarsimp simp del: split_paired_All simp: cap_range_def)
           apply blast
-         apply (drule_tac x=ptr in spec)
-         apply (drule_tac x=cref in spec)
-         apply (simp del: split_paired_All)
-         apply (frule(1) inter_non_emptyD[rotated])
-         apply (drule_tac c = cap and c' = capa in untyped_incD2)
-             apply simp+
-         apply (clarsimp simp add: descendants_of_def simp del: split_paired_All)
-         apply (drule(1) descendants_rangeD)
-         apply (clarsimp simp del: split_paired_All simp: cap_range_def)
-         apply blast
-        apply (erule(1) mdb_insert_abs.descendants_inc)
-         apply simp
-        apply (clarsimp simp: is_cap_simps cap_range_def cap_class_default_cap)
-       apply (clarsimp simp: no_mloop_def)
-       apply (frule_tac p = "(a,b)" and p'="(a,b)" in mdb_insert_abs.parency)
-       apply (simp split: if_split_asm)
-       apply (erule disjE)
-        apply (drule_tac m = "cdt s" in mdb_cte_at_Null_descendants)
-         apply (clarsimp simp: untyped_mdb_def)
-        apply (clarsimp simp: descendants_of_def simp del: split_paired_All)
-       apply clarsimp
-      apply (rule mdb_create_cap.untyped_inc')
-           apply (rule mdb_create_cap.intro)
-             apply (rule vo_abs.intro)
-              apply (rule vmdb_abs.intro)
-              apply (simp add: valid_mdb_def swp_def cte_wp_at_caps_of_state)
-             apply (erule vo_abs_axioms.intro)
-            apply assumption
-           apply (erule (2) mdb_create_cap_axioms.intro)
-          apply assumption+
-     apply (simp add: ut_revocable_def del: split_paired_All)
-    apply (simp add: irq_revocable_def del: split_paired_All)
-   apply (simp add: reply_master_revocable_def del: split_paired_All)
-  apply (simp add: reply_mdb_def)
-  apply (subgoal_tac "\<And>t m. default_cap tp oref sz dev \<noteq> cap.ReplyCap t m")
-   apply (rule conjI)
-    apply (fastforce simp: reply_caps_mdb_def descendants_of_def
-                          mdb_insert_abs.parency
-                simp del: split_paired_All split_paired_Ex
-                   elim!: allEI exEI)
-   apply (fastforce simp: reply_masters_mdb_def descendants_of_def
-                         mdb_insert_abs.parency
-               simp del: split_paired_All split_paired_Ex
-                  elim!: allEI)
-  apply (cases tp, simp_all)[1]
+         apply (erule(1) mdb_insert_abs.descendants_inc)
+          apply simp
+         apply (clarsimp simp: is_cap_simps cap_range_def cap_class_default_cap)
+        apply (clarsimp simp: no_mloop_def)
+        apply (frule_tac p = "(a,b)" and p'="(a,b)" in mdb_insert_abs.parency)
+        apply (simp split: if_split_asm)
+        apply (erule disjE)
+         apply (drule_tac m = "cdt s" in mdb_cte_at_Null_descendants)
+          apply (clarsimp simp: untyped_mdb_def)
+         apply (clarsimp simp: descendants_of_def simp del: split_paired_All)
+        apply clarsimp
+       apply (rule mdb_create_cap.untyped_inc')
+            apply (rule mdb_create_cap.intro)
+              apply (rule vo_abs.intro)
+               apply (rule vmdb_abs.intro)
+               apply (simp add: valid_mdb_def swp_def cte_wp_at_caps_of_state)
+              apply (erule vo_abs_axioms.intro)
+             apply assumption
+            apply (erule (2) mdb_create_cap_axioms.intro)
+           apply assumption+
+      apply (simp add: ut_revocable_def del: split_paired_All)
+     apply (simp add: irq_revocable_def del: split_paired_All)
+    apply (simp add: reply_master_revocable_def del: split_paired_All)
+   apply (simp add: reply_mdb_def)
+   apply (subgoal_tac "\<And>t m. default_cap tp oref sz dev \<noteq> cap.ReplyCap t m")
+    apply (rule conjI)
+     apply (fastforce simp: reply_caps_mdb_def descendants_of_def
+                            mdb_insert_abs.parency
+                  simp del: split_paired_All split_paired_Ex
+                     elim!: allEI exEI)
+    apply (fastforce simp: reply_masters_mdb_def descendants_of_def
+                           mdb_insert_abs.parency
+                 simp del: split_paired_All split_paired_Ex
+                    elim!: allEI)
+   apply (cases tp, simp_all)[1]
+  apply (erule valid_arch_mdb_untypeds)
   done
 
 lemma create_cap_descendants_range[wp]:
@@ -1739,7 +1743,6 @@ lemma caps_overlap_reserved_def2:
   apply simp
   done
 
-
 lemma set_cap_valid_mdb_simple:
   "\<lbrace>\<lambda>s. valid_objs s \<and> valid_mdb s \<and> descendants_range_in {ptr .. ptr+2^sz - 1} cref s
    \<and> cte_wp_at (\<lambda>c. is_untyped_cap c \<and> cap_bits c = sz \<and> obj_ref_of c = ptr \<and> cap_is_device c = dev) cref s\<rbrace>
@@ -1842,6 +1845,10 @@ lemma set_cap_valid_mdb_simple:
   thus "ut_revocable (is_original_cap s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
   using cstate
   by (fastforce simp: ut_revocable_def)
+  assume "valid_arch_mdb (is_original_cap s) (caps_of_state s)"
+  thus "valid_arch_mdb (is_original_cap s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
+  using cstate
+  by (fastforce elim!: valid_arch_mdb_untypeds)
   assume "reply_caps_mdb (cdt s) (caps_of_state s)"
   thus "reply_caps_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
   using cstate
@@ -2800,6 +2807,7 @@ lemma caps_of_state_pspace_no_overlapD:
   apply simp
   done
 
+
 lemma set_untyped_cap_invs_simple:
   "\<lbrace>\<lambda>s. descendants_range_in {ptr .. ptr+2^sz - 1} cref s
   \<and> pspace_no_overlap_range_cover ptr sz s \<and> invs s
@@ -2815,22 +2823,23 @@ lemma set_untyped_cap_invs_simple:
    apply (simp add:valid_irq_node_def)
    apply wps
    apply (wp hoare_vcg_all_lift set_cap_irq_handlers
-     set_cap_irq_handlers cap_table_at_lift_valid
+     set_cap_irq_handlers cap_table_at_lift_valid set_cap_ioports'
      set_cap_typ_at set_cap_valid_arch_caps_simple set_cap_kernel_window_simple
      set_cap_cap_refs_respects_device_region)
   apply (clarsimp simp del: split_paired_Ex)
   apply (strengthen exI[where x=cref])
   apply (clarsimp simp:cte_wp_at_caps_of_state is_cap_simps valid_pspace_def)
   apply (intro conjI; clarsimp?)
-       apply (clarsimp simp: fun_eq_iff)
-      apply (clarsimp split:cap.splits simp:is_cap_simps appropriate_cte_cap_def)
-     apply (drule(1) if_unsafe_then_capD[OF caps_of_state_cteD])
-      apply clarsimp
-     apply (clarsimp simp: is_cap_simps ex_cte_cap_wp_to_def appropriate_cte_cap_def
-                           cte_wp_at_caps_of_state)
-    apply (clarsimp dest!:valid_global_refsD2 simp:cap_range_def)
-   apply (simp add:valid_irq_node_def)
-  apply (clarsimp simp:valid_irq_node_def)
+        apply (clarsimp simp: fun_eq_iff)
+       apply (clarsimp split:cap.splits simp:is_cap_simps appropriate_cte_cap_def)
+      apply (drule(1) if_unsafe_then_capD[OF caps_of_state_cteD])
+       apply clarsimp
+      apply (clarsimp simp: is_cap_simps ex_cte_cap_wp_to_def appropriate_cte_cap_def
+                            cte_wp_at_caps_of_state)
+     apply (clarsimp dest!:valid_global_refsD2 simp:cap_range_def)
+    apply (simp add:valid_irq_node_def)
+   apply (clarsimp simp:valid_irq_node_def)
+  apply (clarsimp intro!: safe_ioport_insert_triv simp: is_cap_simps)
   done
 
 lemma reset_untyped_cap_invs_etc:
@@ -3139,6 +3148,9 @@ locale Untyped_AI_nonempty_table =
     K (\<forall>ref\<in>set refs. is_aligned ref (obj_bits_api tp us))\<rbrace>
         init_arch_objects tp ptr bits us refs
    \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
+  assumes create_cap_ioports[wp]:
+  "\<And>tp oref sz dev cref p. \<lbrace>valid_ioports and cte_wp_at (\<lambda>_. True) cref\<rbrace>
+        create_cap tp sz p dev (cref,oref) \<lbrace>\<lambda>rv (s::'state_ext state). valid_ioports s\<rbrace>"
 
 
 crunch v_ker_map[wp]: create_cap "valid_kernel_mappings"
@@ -3195,7 +3207,6 @@ lemma create_cap_refs_respects_device:
   apply (erule cte_wp_at_weakenE)
   apply (fastforce simp: is_cap_simps)
   done
-
 
 lemma (in Untyped_AI_nonempty_table) create_cap_invs[wp]:
   "\<lbrace>invs

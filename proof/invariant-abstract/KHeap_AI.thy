@@ -29,6 +29,7 @@ requalify_facts
   valid_arch_caps_lift_weak
   valid_global_objs_lift_weak
   valid_asid_map_lift
+  valid_ioports_lift
   valid_kernel_mappings_lift
   equal_kernel_mappings_lift
   valid_global_vspace_mappings_lift
@@ -67,6 +68,7 @@ requalify_facts
   valid_arch_tcb_same_type
   valid_arch_tcb_typ_at
   valid_tcb_arch_ref_lift
+
 end
 
 lemmas cap_is_device_obj_is_device[simp] = cap_is_device_obj_is_device
@@ -585,7 +587,7 @@ lemma valid_mdb_lift:
    apply (erule use_valid [OF _ c [THEN hoare_cte_wp_caps_of_state_lift]])
    apply simp
   apply (rule use_valid [OF _ c], assumption+)
-  apply (erule use_valid [OF _ r])
+  apply (rule use_valid [OF _ r], assumption)
   apply simp
   done
 
@@ -836,9 +838,9 @@ lemma dmo_invs1:
    apply wp
 
    apply (clarsimp simp: invs_def cur_tcb_def valid_state_def
-                          valid_machine_state_def
-                    intro!: valid_irq_states_machine_state_updateI
-                    elim:  valid_irq_statesE)
+                         valid_machine_state_def
+                   intro!: valid_irq_states_machine_state_updateI
+                   elim: valid_irq_statesE)
    apply (frule_tac P1 = "op = (device_state (machine_state s))" in use_valid[OF _ valid_mf])
     apply simp
    apply clarsimp
@@ -847,7 +849,7 @@ lemma dmo_invs1:
                            valid_machine_state_def
                     intro: valid_irq_states_machine_state_updateI
                      elim: valid_irq_statesE)
-   apply (fastforce)
+   apply fastforce
    done
 
 lemma dmo_invs:
@@ -1343,7 +1345,7 @@ lemma set_ntfn_minor_invs:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (wp set_simple_ko_valid_objs valid_irq_node_typ
-                    valid_irq_handlers_lift)
+                    valid_irq_handlers_lift valid_ioports_lift)
   apply (clarsimp simp: ntfn_at_def2
                   elim!: rsubst[where P=sym_refs]
                  intro!: ext

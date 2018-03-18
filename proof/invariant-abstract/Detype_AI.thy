@@ -12,6 +12,13 @@ theory Detype_AI
 imports "./$L4V_ARCH/ArchRetype_AI"
 begin
 
+context begin interpretation Arch .
+
+requalify_facts
+  valid_arch_mdb_detype
+
+end
+
 locale Detype_AI =
   fixes state_ext_type :: "'a :: state_ext itself"
   assumes valid_globals_irq_node:
@@ -29,7 +36,8 @@ locale Detype_AI =
                 (\<lambda>m x. if \<exists>k. x = ptr + of_nat k \<and> k < n * word_size then 0 else m x))"
   assumes empty_fail_freeMemory:
     "empty_fail (freeMemory ptr bits)"
-
+  assumes valid_ioports_detype:
+    "valid_ioports (s::'a state) \<Longrightarrow> valid_ioports (detype (untyped_range cap) s)"
 
 lemma obj_at_detype[simp]:
   "obj_at P p (detype S s) = (p \<notin> S \<and> obj_at P p s)"
@@ -665,22 +673,32 @@ lemma reply_mdb : "\<And>m. reply_mdb m (caps_of_state s)
                   \<Longrightarrow> reply_mdb m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
   by (simp add: reply_mdb_def reply_caps_mdb reply_masters_mdb)
 
+end
+
+context detype_locale_gen_1 begin
+
 lemma valid_mdb_detype[detype_invs_lemmas]: "valid_mdb (detype (untyped_range cap) s)"
   apply (insert invs, drule invs_mdb)
   apply (simp add: valid_mdb_def)
   apply (rule context_conjI)
    apply (safe intro!: mdb_cte_atI elim!: untyped_mdb untyped_inc reply_mdb)
+        apply (drule(1) mdb_cte_atD)
+        apply (clarsimp dest!: non_null_present)
        apply (drule(1) mdb_cte_atD)
        apply (clarsimp dest!: non_null_present)
-      apply (drule(1) mdb_cte_atD)
-      apply (clarsimp dest!: non_null_present)
-     apply (erule descendants_inc_empty_slot)
-      apply (clarsimp simp:cte_wp_at_caps_of_state swp_def)
-     apply clarsimp
-    apply (simp add: ut_revocable_def detype_def del: split_paired_All)
-   apply (simp add: irq_revocable_def detype_def del: split_paired_All)
-  apply (simp add: reply_master_revocable_def detype_def del: split_paired_All)
+      apply (erule descendants_inc_empty_slot)
+       apply (clarsimp simp:cte_wp_at_caps_of_state swp_def)
+      apply clarsimp
+     apply (simp add: ut_revocable_def detype_def del: split_paired_All)
+    apply (simp add: irq_revocable_def detype_def del: split_paired_All)
+   apply (simp add: reply_master_revocable_def detype_def del: split_paired_All)
+  apply (simp add: valid_arch_mdb_detype)
   done
+
+lemma valid_ioports_detype[detype_invs_lemmas]:
+  "valid_ioports (detype (untyped_range cap) s)"
+  apply (insert invs, drule invs_valid_ioports)
+  by (clarsimp simp: valid_ioports_detype)
 
 lemma untype_children_detype[detype_invs_lemmas]: "untyped_children_in_mdb (detype (untyped_range cap) s)"
   apply (insert child)

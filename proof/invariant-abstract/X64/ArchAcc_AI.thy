@@ -742,7 +742,7 @@ lemmas undefined_validE_R = hoare_FalseE_R[where f=undefined]
 lemma arch_derive_cap_valid_cap:
   "\<lbrace>valid_cap (cap.ArchObjectCap arch_cap)\<rbrace>
   arch_derive_cap arch_cap
-  \<lbrace>valid_cap \<circ> cap.ArchObjectCap\<rbrace>, -"
+  \<lbrace>valid_cap\<rbrace>, -"
   apply(simp add: arch_derive_cap_def)
   apply(cases arch_cap, simp_all add: arch_derive_cap_def o_def)
       apply(rule hoare_pre, wpc?, wp+,
@@ -1868,7 +1868,7 @@ lemma update_object_invs[wp]:
     update_object ptr (ArchObj obj)
   \<lbrace> \<lambda>_. invs \<rbrace>"
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_asid_map_def)
-  apply (wp valid_irq_node_typ valid_irq_handlers_lift update_aobj_valid_global_vspace_mappings)
+  apply (wp valid_irq_node_typ valid_irq_handlers_lift valid_ioports_lift update_aobj_valid_global_vspace_mappings)
   apply (clarsimp simp: valid_arch_state_def)
   done
 
@@ -2905,7 +2905,7 @@ lemma set_asid_pool_invs_restrict:
                    valid_arch_caps_def del: set_asid_pool_simpler_def)
   apply (wp valid_irq_node_typ
             set_asid_pool_vspace_objs_unmap  valid_irq_handlers_lift
-            set_asid_pool_vs_lookup_unmap
+            set_asid_pool_vs_lookup_unmap valid_ioports_lift
          | simp del: set_asid_pool_simpler_def)+
   done
 

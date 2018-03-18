@@ -40,6 +40,7 @@ requalify_consts
   update_cnode_cap_data
   cnode_padding_bits
   cnode_guard_size_bits
+  arch_is_cap_revocable
 
 end
 
@@ -113,7 +114,7 @@ definition
 derive_cap :: "cslot_ptr \<Rightarrow> cap \<Rightarrow> (cap,'z::state_ext) se_monad" where
 "derive_cap slot cap \<equiv>
  case cap of
-    ArchObjectCap c \<Rightarrow> liftME ArchObjectCap $ arch_derive_cap c
+    ArchObjectCap c \<Rightarrow> arch_derive_cap c
     | UntypedCap dev ptr sz f \<Rightarrow> doE ensure_no_children slot; returnOk cap odE
     | Zombie ptr n sz \<Rightarrow> returnOk NullCap
     | ReplyCap ptr m \<Rightarrow> returnOk NullCap
@@ -759,6 +760,21 @@ definition
     | NotificationCap ref badge R \<Rightarrow> badge \<noteq> 0 \<longrightarrow> cap_ep_badge c' = badge \<and> \<not>original'
     | _ \<Rightarrow> True)"
 
+text {* This helper function determines if the new capability
+should be counted as the original capability to the object. This test
+is usually false, apart from the exceptions listed (newly badged
+endpoint capabilities, irq handlers, untyped caps, and possibly some
+arch caps). *}
+definition
+  is_cap_revocable :: "cap \<Rightarrow> cap \<Rightarrow> bool"
+where
+  "is_cap_revocable new_cap src_cap \<equiv> case new_cap of
+      ArchObjectCap acap \<Rightarrow> arch_is_cap_revocable new_cap src_cap
+    | EndpointCap _ _ _ \<Rightarrow> cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap
+    | NotificationCap _ _ _ \<Rightarrow> cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap
+    | IRQHandlerCap _ \<Rightarrow> src_cap = IRQControlCap
+    | UntypedCap _ _ _ _ \<Rightarrow> True
+    | _ \<Rightarrow> False"
 
 text {* Insert a new capability as either a sibling or child of an
 existing capability. The function @{const should_be_parent_of}
@@ -776,13 +792,7 @@ definition
   "cap_insert new_cap src_slot dest_slot \<equiv> do
     src_cap \<leftarrow> get_cap src_slot;
 
-    dest_original \<leftarrow> return (if is_ep_cap new_cap then
-                                cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap
-                             else if is_ntfn_cap new_cap then
-                                cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap
-                             else if \<exists>irq. new_cap = IRQHandlerCap irq then
-                                src_cap = IRQControlCap
-                             else is_untyped_cap new_cap);
+    dest_original \<leftarrow> return $ is_cap_revocable new_cap src_cap;
 
     old_cap \<leftarrow> get_cap dest_slot;
     assert (old_cap = NullCap);

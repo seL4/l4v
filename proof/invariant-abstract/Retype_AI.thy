@@ -1125,7 +1125,7 @@ abbreviation(input)
        and valid_asid_map and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
-       and cur_tcb and valid_ioc and valid_machine_state"
+       and cur_tcb and valid_ioc and valid_machine_state and valid_ioports"
 
 
 lemma all_invs_but_equal_kernel_mappings_restricted_eq:
@@ -1305,11 +1305,10 @@ where
                \<longrightarrow> obj_refs c' \<inter> untyped_range c \<noteq> {} \<longrightarrow> p' \<in> descendants_of p m)
    \<and> descendants_inc m cps
    \<and> (\<forall>p. \<not> m \<Turnstile> p \<rightarrow> p) \<and> untyped_inc m cps \<and> ut_revocable r cps
-   \<and> irq_revocable r cps \<and> reply_master_revocable r cps \<and> reply_mdb m cps"
+   \<and> irq_revocable r cps \<and> reply_master_revocable r cps \<and> reply_mdb m cps \<and> valid_arch_mdb r cps"
 
 
 lemma conj_cong2: "\<lbrakk>P = P'; P \<Longrightarrow> Q = Q'\<rbrakk> \<Longrightarrow> (P \<and> Q) = (P' \<and> Q')" by auto
-
 
 lemma valid_mdb_rep2:
   "valid_mdb = (\<lambda>s. valid_mdb2 (null_filter (caps_of_state s)) (cdt s) (is_original_cap s))"
@@ -1346,8 +1345,10 @@ lemma valid_mdb_rep2:
                 del: split_paired_Ex split_paired_All)
     apply (fastforce intro!: iffI elim!: allEI exEI
                   simp del: split_paired_Ex split_paired_All)
-   apply (fastforce simp: reply_masters_mdb_def intro!: iffI elim!: allEI
-               simp del: split_paired_All split: if_split_asm)
+   apply (rule arg_cong2 [where f="op \<and>"])
+    apply (fastforce simp: reply_masters_mdb_def intro!: iffI elim!: allEI
+                 simp del: split_paired_All split: if_split_asm)
+   apply (fastforce simp: valid_arch_mdb_null_filter[simplified null_filter_def])
   apply (rule arg_cong[where f=All, OF ext])+
   apply ((clarsimp simp: cte_wp_at_caps_of_state null_filter_def
                | rule conjI iffI

@@ -207,7 +207,8 @@ lemma arch_update_cap_valid_mdb:
    apply (clarsimp simp: reply_caps_mdb_def is_cap_simps cap_master_cap_def
                simp del: split_paired_Ex split_paired_All)
    apply (fastforce elim!: exEI)
-  by (clarsimp simp: is_cap_simps cap_master_cap_def reply_masters_mdb_def)
+  apply (rule conjI, clarsimp simp: is_cap_simps cap_master_cap_def reply_masters_mdb_def)
+  by (erule (2) valid_arch_mdb_same_master_cap[simplified fun_upd_def])
 
 lemma set_cap_arch_obj:
   "\<lbrace>ko_at (ArchObj ao) p and cte_at p'\<rbrace> set_cap cap p' \<lbrace>\<lambda>_. ko_at (ArchObj ao) p\<rbrace>"

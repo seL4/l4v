@@ -76,11 +76,39 @@ Reply capabilities cannot be copied; to ensure that the "Reply" system call is f
 Architecture-specific capability types are handled in the relevant module.
 
 > deriveCap slot (ArchObjectCap cap) =
->     liftM ArchObjectCap $ Arch.deriveCap slot cap
+>     Arch.deriveCap slot cap
 
 Other capabilities do not require modification.
 
 > deriveCap _ cap = return cap
+
+The conditions required for a capability to be marked as "revocable"
+
+> isCapRevocable :: Capability -> Capability -> Bool
+> isCapRevocable newCap srcCap = case newCap of
+
+Some arch capabilities can be marked revocable.
+
+>     ArchObjectCap {} -> Arch.isCapRevocable newCap srcCap
+
+If the new capability is an endpoint capability, then it can be an MDB parent if and only if its badge is being changed by this operation.
+
+>     EndpointCap {} -> capEPBadge newCap /= capEPBadge srcCap
+>     NotificationCap {} -> capNtfnBadge newCap /= capNtfnBadge srcCap
+
+If the new capability is the first IRQ handler for a given IRQ, then it can be an MDB parent.
+
+>     IRQHandlerCap {} -> isIRQControlCap srcCap
+
+Untyped capabilities can always be MDB parents.
+
+>     UntypedCap {} -> True
+
+Any other capability created by this function is a leaf of the derivation tree, and cannot be used to revoke other capabilities.
+
+>     _ -> False
+
+
 
 \subsection{Finalising Capabilities}
 \label{sec:object.objecttype.finalise}

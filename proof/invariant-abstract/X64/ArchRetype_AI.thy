@@ -372,6 +372,18 @@ lemma in_kernel_mapping_slotsI:
   apply auto
   done
 
+lemma set_object_ioports[wp]:
+  "\<lbrace>valid_ioports and obj_at (same_caps obj) ptr\<rbrace> set_object ptr obj \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  by (wpsimp simp: set_object_def valid_ioports_def caps_of_state_after_update)
+
+lemma update_aobj_ioports[wp]:
+  "\<lbrace>valid_ioports\<rbrace> update_object ptr (ArchObj obj) \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  apply (clarsimp simp: update_object_def)
+  apply (wpsimp wp: get_object_wp)
+  by (clarsimp simp: obj_at_def a_type_def
+              split: kernel_object.split_asm if_splits
+                     arch_kernel_obj.split_asm)
+
 lemma copy_global_invs_mappings_restricted:
   "\<lbrace>(\<lambda>s. all_invs_but_equal_kernel_mappings_restricted (insert pm S) s)
           and (\<lambda>s. insert pm S \<inter> global_refs s = {})
@@ -814,7 +826,6 @@ lemma valid_vs_lookup_def2:
   apply (auto simp: null_filter_def)
   done
 
-
 lemma unique_table_caps_null:
   "unique_table_caps (null_filter s)
        = unique_table_caps s"
@@ -834,6 +845,21 @@ lemma unique_table_refs_null:
                simp: table_cap_ref_def)
   done
 
+
+lemma all_ioports_issued_null:
+  "all_ioports_issued (null_filter s) = all_ioports_issued s"
+  apply (clarsimp simp: all_ioports_issued_def ran_null_filter)
+  apply (rule ext)
+  by (auto simp: cap_ioports_def split: cap.splits arch_cap.splits)
+
+lemma ioports_no_overlap_null:
+  "ioports_no_overlap (null_filter s) = ioports_no_overlap s"
+  apply (clarsimp simp: ioports_no_overlap_def)
+  apply (intro iffI; clarsimp)
+   apply (case_tac cap; clarsimp simp: ran_null_filter)
+   apply (drule_tac x="ArchObjectCap x12" in bspec, clarsimp)
+   apply (case_tac cap'; clarsimp)
+  by (case_tac cap; clarsimp simp: ran_null_filter)
 
 lemma pspace_respects_device_regionI:
   assumes uat: "\<And>ptr sz. kheap s ptr = Some (ArchObj (DataPage False sz))
@@ -950,6 +976,18 @@ lemma valid_arch_caps:
                          unique_table_caps_eq
                          unique_table_refs_eq
                          valid_table_caps)
+
+lemmas all_ioports_issued_eq
+    = arg_cong[where f=all_ioports_issued, OF null_filter,
+               simplified all_ioports_issued_null]
+
+lemmas ioports_no_overlap_eq
+    = arg_cong[where f=ioports_no_overlap, OF null_filter,
+               simplified ioports_no_overlap_null]
+
+lemma valid_ioports:
+  "valid_ioports s \<Longrightarrow> valid_ioports s'"
+  by (clarsimp simp: valid_ioports_def ioports_no_overlap_eq all_ioports_issued_eq)
 
 lemma valid_global_objs:
   "valid_global_objs s \<Longrightarrow> valid_global_objs s'"
@@ -1092,7 +1130,7 @@ lemma post_retype_invs:
                      valid_arch_caps valid_global_objs
                      valid_vspace_objs' valid_irq_handlers
                      valid_mdb_rep2 mdb_and_revokable
-                     valid_pspace cur_tcb only_idle
+                     valid_pspace cur_tcb only_idle valid_ioports
                      valid_kernel_mappings valid_asid_map_def
                      valid_global_vspace_mappings valid_ioc vms
                      pspace_in_kernel_window pspace_respects_device_region
@@ -1235,6 +1273,12 @@ lemma init_arch_objects_excap[wp]:
 
 crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at P t"
   (wp: crunch_wps ignore: update_object set_pml4)
+
+lemma valid_arch_mdb_detype:
+  "valid_arch_mdb (is_original_cap s) (caps_of_state s) \<Longrightarrow>
+            valid_arch_mdb (is_original_cap (detype (untyped_range cap) s))
+         (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
+  by (simp add: valid_arch_mdb_def ioport_revocable_def detype_def)
 
 end
 

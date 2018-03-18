@@ -111,6 +111,14 @@ lemma state_hyp_refs_of_detype:
   "state_hyp_refs_of (detype S s) = (\<lambda>x. if x \<in> S then {} else state_hyp_refs_of s x)"
   by (rule ext, simp add: state_hyp_refs_of_def detype_def)
 
+lemma valid_ioports_detype[Detype_AI_asms]:
+  "valid_ioports s \<Longrightarrow> valid_ioports (detype (untyped_range cap) s)"
+  apply (clarsimp simp: valid_ioports_def all_ioports_issued_def ioports_no_overlap_def issued_ioports_def more_update.caps_of_state_update)
+  apply (clarsimp simp: detype_def cap_ioports_def ran_def elim!: ranE split: if_splits cap.splits arch_cap.splits)
+  apply (rule conjI)
+   apply (force simp: ran_def)
+  by (metis (full_types) ranI)
+
 end
 
 interpretation Detype_AI?: Detype_AI

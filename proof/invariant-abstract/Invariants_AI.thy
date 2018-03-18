@@ -43,6 +43,7 @@ requalify_consts
   valid_vspace_objs
   valid_arch_caps
   valid_global_objs
+  valid_ioports
   valid_kernel_mappings
   equal_kernel_mappings
   valid_global_vspace_mappings
@@ -61,6 +62,8 @@ requalify_consts
   device_mem
   device_region
   tcb_arch_ref
+
+  valid_arch_mdb
 
 requalify_facts
   valid_arch_sizes
@@ -99,10 +102,11 @@ requalify_facts
   valid_arch_tcb_pspaceI
   valid_arch_tcb_lift
   cte_level_bits_def
-  arch_gen_obj_refs_inD
   obj_ref_not_arch_gen_ref
   arch_gen_ref_not_obj_ref
+  arch_gen_obj_refs_inD
   same_aobject_same_arch_gen_refs
+  valid_arch_mdb_eqI
 
 lemmas [simp] =
   tcb_bits_def
@@ -866,7 +870,8 @@ definition
                    ut_revocable (is_original_cap s) (caps_of_state s) \<and>
                    irq_revocable (is_original_cap s) (caps_of_state s) \<and>
                    reply_master_revocable (is_original_cap s) (caps_of_state s) \<and>
-                   reply_mdb (cdt s) (caps_of_state s)"
+                   reply_mdb (cdt s) (caps_of_state s) \<and>
+                   valid_arch_mdb (is_original_cap s) (caps_of_state s)"
 
 abbreviation "idle_tcb_at \<equiv> pred_tcb_at (\<lambda>t. (itcb_state t, itcb_bound_notification t))"
 
@@ -962,6 +967,7 @@ where
                   and valid_irq_node
                   and valid_irq_handlers
                   and valid_irq_states
+                  and valid_ioports
                   and valid_machine_state
                   and valid_vspace_objs
                   and valid_arch_caps
@@ -1042,7 +1048,7 @@ abbreviation(input)
        and valid_arch_state and valid_machine_state and valid_irq_states
        and valid_irq_node and valid_irq_handlers and valid_vspace_objs
        and valid_arch_caps and valid_global_objs and valid_kernel_mappings
-       and equal_kernel_mappings and valid_asid_map
+       and equal_kernel_mappings and valid_asid_map and valid_ioports
        and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
@@ -1783,7 +1789,7 @@ lemma valid_mdb_eqI:
   apply (simp add: valid_mdb_def)
    apply (rule conjI)
    apply (force simp add: valid_mdb_def swp_def mdb_cte_at_def)
-  apply (clarsimp simp add: cte_wp_caps_of_lift [OF c])
+  apply (clarsimp simp add: cte_wp_caps_of_lift [OF c] valid_arch_mdb_eqI)
   done
 
 lemma set_object_at_obj:
@@ -2490,7 +2496,8 @@ lemma valid_mdb_def2:
                     ut_revocable (is_original_cap s) (caps_of_state s) \<and>
                     irq_revocable (is_original_cap s) (caps_of_state s) \<and>
                     reply_master_revocable (is_original_cap s) (caps_of_state s) \<and>
-                    reply_mdb (cdt s) (caps_of_state s))"
+                    reply_mdb (cdt s) (caps_of_state s) \<and>
+                    valid_arch_mdb (is_original_cap s) (caps_of_state s))"
   by (auto simp add: valid_mdb_def swp_cte_at_caps_of)
 
 lemma cte_wp_valid_cap:
@@ -2621,6 +2628,10 @@ lemma cap_refs_in_kernel_window_update [iff]:
   "cap_refs_in_kernel_window (f s) = cap_refs_in_kernel_window s"
   by (simp add: cap_refs_in_kernel_window_def arch pspace)
 
+lemma valid_ioports_update[iff]:
+  "valid_ioports (f s) = valid_ioports s"
+  by (simp add: valid_ioports_def arch)
+
 end
 
 
@@ -2742,11 +2753,11 @@ lemma untyped_range_non_empty:
 
 lemma valid_mdb_cur [iff]:
   "valid_mdb (cur_thread_update f s) = valid_mdb s"
-  by (simp add: valid_mdb_def swp_def)
+  by (auto elim!: valid_mdb_eqI)
 
 lemma valid_mdb_more_update [iff]:
   "valid_mdb (trans_state f s) = valid_mdb s"
-  by (simp add: valid_mdb_def swp_def)
+  by (auto elim!: valid_mdb_eqI)
 
 lemma valid_mdb_machine [iff]:
   "valid_mdb (machine_state_update f s) = valid_mdb s"
@@ -2958,7 +2969,7 @@ lemma cte_wp_at_norm:
 
 lemma valid_mdb_arch_state [simp]:
   "valid_mdb (arch_state_update f s) = valid_mdb s"
-  by (simp add: valid_mdb_def swp_def)
+  by (auto elim!: valid_mdb_eqI)
 
 lemma valid_idle_arch_state [simp]:
   "valid_idle (arch_state_update f s) = valid_idle s"
@@ -3275,9 +3286,12 @@ lemma all_invs_but_sym_refs_check:
                 o_def pred_conj_def conj_comms)
 
 
-
 lemma invs_valid_asid_map[elim!]:
   "invs s \<Longrightarrow> valid_asid_map s"
+  by (simp add: invs_def valid_state_def)
+
+lemma invs_valid_ioports[elim!]:
+  "invs s \<Longrightarrow> valid_ioports s"
   by (simp add: invs_def valid_state_def)
 
 lemma invs_equal_kernel_mappings[elim!]:

@@ -41,6 +41,7 @@ datatype arch_cap =
    ASIDPoolCap (acap_asid_pool : obj_ref) (acap_asid_base : asid)
  | ASIDControlCap
  | IOPortCap (acap_io_port_first_port : io_port) (acap_io_port_last_port : io_port)
+ | IOPortControlCap
 (* FIXME x64-vtd:
  | IOSpaceCap (cap_io_domain_id : "16 word") (cap_io_pci_device : "io_asid option")
  | IOPageTableCap (cap_iopt_base_ptr : obj_ref) (cap_io_pt_level : nat) (cap_iopt_mapped_address : "(io_asid * vspace_ref) option")
@@ -175,6 +176,7 @@ where
   "arch_obj_size (ASIDPoolCap _ _) = pageBits"
 | "arch_obj_size ASIDControlCap = 0"
 | "arch_obj_size (IOPortCap _ _) = 0"
+| "arch_obj_size IOPortControlCap = 0"
 (* FIXME x64-vtd:
 | "arch_obj_size (IOSpaceCap _ _) = 0"
 | "arch_obj_size (IOPageTableCap _ _ _) = iotable_size" (* FIXME: check *) *)
@@ -190,6 +192,7 @@ where
   "arch_cap_is_device (ASIDPoolCap _ _) = False"
 | "arch_cap_is_device ASIDControlCap = False"
 | "arch_cap_is_device (IOPortCap _ _) = False"
+| "arch_cap_is_device IOPortControlCap = False"
 (* FIXME x64-vtd:
 | "arch_cap_is_device (IOSpaceCap _ _) = False"
 | "arch_cap_is_device (IOPageTableCap _ _ _) = False" (* FIXME: check *) *)
@@ -230,6 +233,7 @@ where
   "aobj_ref (ASIDPoolCap x _) = Some x"
 | "aobj_ref ASIDControlCap = None"
 | "aobj_ref (IOPortCap _ _) = None"
+| "aobj_ref IOPortControlCap = None"
 (* FIXME x64-vtd:
 | "aobj_ref (IOSpaceCap _ _) = None"
 | "aobj_ref (IOPageTableCap x _ _) = Some x" *)
@@ -308,6 +312,7 @@ record arch_state =
   x64_global_pdpts          :: "obj_ref list"
   x64_global_pds            :: "obj_ref list"
   x64_current_cr3           :: "X64_A.cr3"
+  x64_allocated_io_ports    :: "X64_A.io_port \<Rightarrow> bool"
 
 (* FIXME x64-vtd:
   x64_num_io_domain_bits    :: "16 word"

@@ -42,6 +42,7 @@ This module makes use of the GHC extension allowing declaration of types with no
 >     | IOPortCap {
 >         capIOPortFirstPort :: IOPort,
 >         capIOPortLastPort :: IOPort }
+>     | IOPortControlCap
 >--     | IOSpaceCap {
 >--         capIODomainID :: Word16,
 >--         capIOPCIDevice :: Maybe IOASID }
@@ -146,6 +147,5 @@ ASIDs are mapped to address space roots by a global two-level table. The actual 
 >     cr3BaseAddress :: PAddr,
 >     cr3pcid :: ASID }
 >     deriving (Show, Eq)
-
 
 

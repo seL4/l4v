@@ -20,7 +20,10 @@ begin
 
 context begin interpretation Arch .
 requalify_facts
-  set_cap_arch cte_at_length_limit
+  set_cap_arch
+  cte_at_length_limit
+  arch_derive_cap_untyped
+  valid_arch_mdb_cap_swap
 end
 
 declare set_cap_arch[wp]
@@ -175,6 +178,10 @@ locale CNodeInv_AI =
       \<lbrace>cap_refs_in_kernel_window and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
         cap_swap c a c' b
       \<lbrace>\<lambda>rv. cap_refs_in_kernel_window :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes cap_swap_ioports[wp]:
+  "\<lbrace>valid_ioports and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
+     cap_swap c a c' b
+   \<lbrace>\<lambda>rv (s::'state_ext state). valid_ioports s\<rbrace>"
   assumes cap_swap_vms[wp]:
     "\<And>c a c' b.
       \<lbrace>valid_machine_state :: 'state_ext state \<Rightarrow> bool\<rbrace>
@@ -227,7 +234,7 @@ locale CNodeInv_AI_2 = CNodeInv_AI state_ext_t
           \<lbrace>\<lambda>rv s. invs s \<and>
               (case call of CTEDeleteCall _ bool \<Rightarrow> True
                 | FinaliseSlotCall sl x \<Rightarrow> (fst rv \<or> x \<longrightarrow> cte_wp_at (replaceable s sl NullCap) sl s) \<and>
-                    (snd rv \<noteq> NullCap \<longrightarrow> snd rv \<notin> ran (caps_of_state s(sl \<mapsto> NullCap)))
+                    (snd rv \<noteq> NullCap \<longrightarrow> post_cap_delete_pre (snd rv) ((caps_of_state s) (sl \<mapsto> cap.NullCap)))
                 | ReduceZombieCall cap sl x \<Rightarrow> \<not> x \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) sl s) \<and>
                     emptyable (slot_rdcall call) s\<rbrace>,
           \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -343,12 +350,10 @@ lemma mask_cap_hoare_helper:
    \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap (mask_cap (M rv s) (C rv s)) s\<rbrace>"
   by (fastforce simp add: valid_def)
 
-
 lemma derive_cap_untyped:
   "\<lbrace>\<lambda>s. P (untyped_range cap)\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow> P (untyped_range rv)\<rbrace>,-"
   unfolding derive_cap_def is_zombie_def
-  by (cases cap; (wp ensure_no_children_inv | simp add: o_def)+)
-
+  by (cases cap; (wp ensure_no_children_inv arch_derive_cap_untyped | simp add: o_def)+)
 
 lemma zombies_final_helper:
   "\<lbrakk> cte_wp_at (\<lambda>c. c = cap) p s; \<not> is_zombie cap; zombies_final s \<rbrakk>
@@ -1345,7 +1350,6 @@ definition
                 else m n) in
            n' (src := n' dest, dest := n' src)"
 
-
 lemma cap_swap_mdb [wp]:
   "\<lbrace>valid_mdb and
   cte_wp_at (weak_derived c) a and
@@ -1389,6 +1393,7 @@ lemma cap_swap_mdb [wp]:
    apply (simp del: split_paired_All)
   apply (simp add: reply_master_revocable_def weak_derived_replies
               del: split_paired_All)
+  apply (clarsimp simp: valid_arch_mdb_cap_swap)
   done
 
 

@@ -21,11 +21,22 @@ requalify_facts
   set_mi_invs
   as_user_hyp_refs_of
   valid_arch_arch_tcb_set_registers
+  setup_caller_cap_ioports
+  set_mrs_ioports
+  as_user_ioports
+  set_message_info_ioports
+  copy_mrs_ioports
+  store_word_offs_ioports
+  make_arch_fault_msg_ioports
+  arch_derive_cap_notzombie
+  arch_derive_cap_notIRQ
+
 end
 
 declare lookup_ipc_buffer_inv[wp]
 declare set_mi_invs[wp]
 declare as_user_hyp_refs_of[wp]
+declare setup_caller_cap_ioports[wp]
 
 declare if_cong[cong del]
 
@@ -164,7 +175,7 @@ locale Ipc_AI =
     "\<And>P cap.
       \<lbrace>\<lambda>s::'state_ext state. P (set_option (aobj_ref cap)) False s\<rbrace>
         arch_derive_cap cap
-      \<lbrace>\<lambda>rv s. P (set_option (aobj_ref rv)) False s\<rbrace>,-"
+      \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> P (obj_refs rv) (is_zombie rv) s\<rbrace>,-"
   assumes obj_refs_remove_rights[simp]:
     "\<And>rs cap. obj_refs (remove_rights rs cap) = obj_refs cap"
   assumes store_word_offs_vms[wp]:
@@ -762,10 +773,8 @@ lemma (in Ipc_AI) derive_cap_objrefs_iszombie:
     \<lbrace>\<lambda>s::'state_ext state. \<not> is_zombie cap \<longrightarrow> P (obj_refs cap) False s\<rbrace>
       derive_cap slot cap
     \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow> P (obj_refs rv) (is_zombie rv) s\<rbrace>,-"
-  including no_pre
   apply (case_tac cap, simp_all add: derive_cap_def is_zombie_def)
-          apply (rule hoare_pre,
-                 (wp | simp add: o_def arch_derive_cap_objrefs_iszombie)+)+
+   apply ((wpsimp wp: arch_derive_cap_objrefs_iszombie[simplified is_zombie_def] | rule validE_R_validE)+)
   done
 
 lemma is_zombie_rights[simp]:
@@ -942,6 +951,25 @@ lemma transfer_caps_loop_irq_handlers[wp]:
 
 crunch valid_arch_caps [wp]: set_extra_badge valid_arch_caps
 
+lemma transfer_caps_loop_ioports[wp]:
+  "\<And>slots caps ep buffer n mi.
+    \<lbrace>valid_ioports and valid_objs and valid_mdb and K (distinct slots)
+         and (\<lambda>s. \<forall>x \<in> set slots. real_cte_at x s \<and> cte_wp_at (\<lambda>cap. cap = cap.NullCap) x s)
+         and transfer_caps_srcs caps\<rbrace>
+      transfer_caps_loop ep buffer n caps slots mi
+    \<lbrace>\<lambda>rv. valid_ioports :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  apply (rule hoare_pre)
+   apply (rule transfer_caps_loop_presM[where vo=True and em=False and ex=False])
+     apply (wp cap_insert_derived_ioports)
+     apply (clarsimp simp: cte_wp_at_caps_of_state)
+    apply (wp valid_ioports_lift)
+   apply (clarsimp simp:cte_wp_at_caps_of_state|intro conjI ballI)+
+   apply (drule(1) bspec,clarsimp)
+   apply (frule(1) caps_of_state_valid)
+   apply (fastforce simp:valid_cap_def)
+  apply (drule(1) bspec)
+  apply clarsimp
+  done
 
 lemma transfer_caps_loop_valid_arch_caps[wp]:
   "\<And>slots caps ep buffer n mi.
@@ -1089,7 +1117,6 @@ lemma transfer_caps_loop_vms[wp]:
 crunch valid_irq_states[wp]: set_extra_badge "valid_irq_states"
   (ignore: do_machine_op)
 
-
 lemma transfer_caps_loop_valid_irq_states[wp]:
   "\<And>ep buffer n caps slots mi.
     \<lbrace>\<lambda>s::'state_ext state. valid_irq_states s\<rbrace>
@@ -1235,15 +1262,15 @@ lemma get_rs_cap_to[wp]:
    apply (wp | simp | rule hoare_drop_imps)+
   done
 
-
 lemma derive_cap_notzombie[wp]:
   "\<lbrace>\<top>\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. \<not> is_zombie rv\<rbrace>,-"
-  by (cases cap; wpsimp simp: derive_cap_def is_zombie_def o_def)
+  apply (cases cap; clarsimp simp: derive_cap_def)
+             by (wpsimp wp: arch_derive_cap_notzombie simp: is_zombie_def)+
 
 
 lemma derive_cap_notIRQ[wp]:
   "\<lbrace>\<top>\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. rv \<noteq> cap.IRQControlCap\<rbrace>,-"
-  by (cases cap; wpsimp simp: derive_cap_def o_def)
+  by (cases cap; wpsimp wp: arch_derive_cap_notIRQ simp: derive_cap_def o_def)
 
 
 lemma get_cap_zombies_helper:
@@ -1698,6 +1725,10 @@ crunch arch_caps[wp]: do_ipc_transfer "valid_arch_caps :: 'state_ext state \<Rig
   (wp: crunch_wps hoare_vcg_const_Ball_lift transfer_caps_loop_valid_arch_caps
    simp: zipWithM_x_mapM crunch_simps ball_conj_distrib )
 
+crunch ioports[wp]: do_ipc_transfer "valid_ioports :: 'state_ext state \<Rightarrow> bool"
+  (wp: crunch_wps hoare_vcg_const_Ball_lift transfer_caps_loop_ioports
+   simp: zipWithM_x_mapM crunch_simps ball_conj_distrib )
+
 crunch v_ker_map[wp]: do_ipc_transfer "valid_kernel_mappings :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
 
@@ -2007,7 +2038,7 @@ lemma update_waiting_invs:
    apply (simp add: cte_wp_at_caps_of_state)
 
    apply (wp set_simple_ko_valid_objs hoare_post_imp [OF disjI1]
-             valid_irq_node_typ | assumption | simp |
+             valid_irq_node_typ valid_ioports_lift | assumption | simp |
              strengthen reply_cap_doesnt_exist_strg)+
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                         ep_redux_simps neq_Nil_conv
@@ -2623,7 +2654,7 @@ lemma ri_invs':
    apply (case_tac x)
     apply (wp | rule hoare_pre, wpc | simp)+
      apply (simp add: invs_def valid_state_def valid_pspace_def)
-     apply (rule hoare_pre, wp valid_irq_node_typ)
+     apply (rule hoare_pre, wp valid_irq_node_typ valid_ioports_lift)
       apply (simp add: valid_ep_def)
       apply (wp valid_irq_node_typ sts_only_idle sts_ep_at_inv[simplified ep_at_def2, simplified]
                 failed_transfer_Q[simplified do_nbrecv_failed_transfer_def, simplified]
@@ -2649,7 +2680,8 @@ lemma ri_invs':
               sts_only_idle
          | simp add: valid_tcb_state_def cap_range_def
          | strengthen reply_cap_doesnt_exist_strg | wpc
-         | (wp hoare_vcg_conj_lift | wp dxo_wp_weak | simp)+)+
+         | (wp hoare_vcg_conj_lift | wp dxo_wp_weak | simp)+
+         | wp valid_ioports_lift)+
     apply (clarsimp simp: st_tcb_at_tcb_at neq_Nil_conv)
     apply (frule(1) sym_refs_obj_atD)
     apply (frule(1) hyp_sym_refs_obj_atD)
@@ -2685,7 +2717,7 @@ lemma ri_invs':
    apply (simp add: invs_def valid_state_def valid_pspace_def)
    apply (rule hoare_pre)
     apply (wp hoare_vcg_const_Ball_lift valid_irq_node_typ sts_only_idle
-              sts_ep_at_inv[simplified ep_at_def2, simplified]
+              sts_ep_at_inv[simplified ep_at_def2, simplified] valid_ioports_lift
               failed_transfer_Q[unfolded do_nbrecv_failed_transfer_def, simplified]
               | simp add: live_def valid_ep_def do_nbrecv_failed_transfer_def
               | wpc)+
@@ -2802,7 +2834,7 @@ lemma rai_invs':
   apply (case_tac "ntfn_obj x")
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (rule hoare_pre)
-     apply (wp set_simple_ko_valid_objs valid_irq_node_typ sts_only_idle
+     apply (wp set_simple_ko_valid_objs valid_irq_node_typ sts_only_idle valid_ioports_lift
               sts_ntfn_at_inv[simplified ntfn_at_def2, simplified] | wpc
           | simp add: live_def valid_ntfn_def do_nbrecv_failed_transfer_def)+
     apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
@@ -2827,8 +2859,8 @@ lemma rai_invs':
                     simp: st_tcb_at_reply_cap_valid st_tcb_def2)
    apply (simp add: invs_def valid_state_def valid_pspace_def)
    apply (rule hoare_pre)
-    apply (wpsimp wp: set_simple_ko_valid_objs hoare_vcg_const_Ball_lift sts_only_idle
-              valid_irq_node_typ sts_ntfn_at_inv[simplified ntfn_at_def2, simplified]
+    apply (wpsimp wp: set_simple_ko_valid_objs hoare_vcg_const_Ball_lift sts_only_idle valid_ioports_lift
+                      valid_irq_node_typ sts_ntfn_at_inv[simplified ntfn_at_def2, simplified]
                simp: live_def valid_ntfn_def do_nbrecv_failed_transfer_def)
    apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
    apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ntfn_def)
@@ -2855,7 +2887,7 @@ lemma rai_invs':
                   split: option.splits)
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
-   apply (wp set_simple_ko_valid_objs hoare_vcg_const_Ball_lift
+   apply (wp set_simple_ko_valid_objs hoare_vcg_const_Ball_lift valid_ioports_lift
              as_user_no_del_ntfn[simplified ntfn_at_def2, simplified]
              valid_irq_node_typ ball_tcb_cap_casesI static_imp_wp
              valid_bound_tcb_typ_at[rule_format]
@@ -2954,7 +2986,7 @@ lemma si_invs':
   apply (case_tac epa, simp_all)
     apply (cases bl, simp_all)[1]
      apply (simp add: invs_def valid_state_def valid_pspace_def)
-     apply (wpsimp wp: valid_irq_node_typ)
+     apply (wpsimp wp: valid_irq_node_typ valid_ioports_lift)
      apply (simp add: live_def valid_ep_def)
      apply (wp valid_irq_node_typ sts_only_idle sts_ep_at_inv[simplified ep_at_def2, simplified])
      apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
@@ -2975,7 +3007,7 @@ lemma si_invs':
    apply (rename_tac list)
    apply (cases bl, simp_all)[1]
     apply (simp add: invs_def valid_state_def valid_pspace_def)
-    apply (wpsimp wp: valid_irq_node_typ)
+    apply (wpsimp wp: valid_irq_node_typ valid_ioports_lift)
     apply (simp add: live_def valid_ep_def)
     apply (wp hoare_vcg_const_Ball_lift valid_irq_node_typ sts_only_idle
               sts_ep_at_inv[simplified ep_at_def2, simplified])
@@ -3009,7 +3041,8 @@ lemma si_invs':
                | clarsimp simp:is_cap_simps | wpc
                | strengthen reply_cap_doesnt_exist_strg
                             disjI2_strg[where Q="cte_wp_at (\<lambda>cp. is_master_reply_cap cp \<and> R cp) p s"]
-               | (wp hoare_vcg_conj_lift static_imp_wp | wp dxo_wp_weak | simp)+)+
+               | (wp hoare_vcg_conj_lift static_imp_wp | wp dxo_wp_weak | simp)+
+               | wp valid_ioports_lift)+
   apply (clarsimp simp: ep_redux_simps conj_ac cong: list.case_cong if_cong)
   apply (frule(1) sym_refs_ko_atD)
   apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_tcb_at ep_at_def2)

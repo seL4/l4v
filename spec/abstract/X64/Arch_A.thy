@@ -275,6 +275,16 @@ definition
     )
     )"
 
+definition
+  perform_ioport_control_invocation :: "io_port_control_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "perform_ioport_control_invocation i \<equiv>
+    case i of (IOPortControlInvocation f l dest_slot control_slot) \<Rightarrow> do
+      set_ioport_mask f l True;
+      c \<leftarrow> return $ ArchObjectCap $ IOPortCap f l;
+      cap_insert (ArchObjectCap (IOPortCap f l)) control_slot dest_slot
+    od"
+
 text {* Top level system call despatcher for all x64-specific system calls. *}
 definition
   arch_perform_invocation :: "arch_invocation \<Rightarrow> (data list,'z::state_ext) p_monad" where
@@ -286,7 +296,8 @@ definition
         | InvokePage oper \<Rightarrow> perform_page_invocation oper
         | InvokeASIDControl oper \<Rightarrow> perform_asid_control_invocation oper
         | InvokeASIDPool oper \<Rightarrow> perform_asid_pool_invocation oper
-        | InvokeIOPort oper \<Rightarrow> perform_io_port_invocation oper;
+        | InvokeIOPort oper \<Rightarrow> perform_io_port_invocation oper
+        | InvokeIOPortControl oper \<Rightarrow> perform_ioport_control_invocation oper;
     return $ []
 od"
 

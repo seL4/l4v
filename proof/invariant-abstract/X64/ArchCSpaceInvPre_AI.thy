@@ -118,7 +118,10 @@ where
                      \<and> (same_vspace_table_cap_type newcap cap')
                      \<and> (cap_asid newcap = None \<or> cap_asid cap' = None)) sl' s \<longrightarrow> sl' = sl))
   (* Don't replace with an ASID pool. *)
-  \<and> \<not>is_ap_cap newcap"
+  \<and> \<not>is_ap_cap newcap
+  (* or an IOPortControlCap *)
+  \<and> \<not>is_ioport_control_cap newcap
+  \<and> (cap_ioports newcap = cap_ioports cap \<or> cap_ioports newcap = {})"
 
 definition
   replaceable_non_final_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"

@@ -65,7 +65,7 @@ lemma arch_derive_cap_is_derived:
                           cap_asid cap = cap_asid (ArchObjectCap c') \<and>
                           vs_cap_ref cap = vs_cap_ref (ArchObjectCap c')) p s\<rbrace>
      arch_derive_cap c'
-   \<lbrace>\<lambda>rv s. cte_wp_at (is_derived (cdt s) p (ArchObjectCap rv)) p s\<rbrace>, -"
+   \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> cte_wp_at (is_derived (cdt s) p rv) p s\<rbrace>, -"
   unfolding arch_derive_cap_def
   apply(cases c', simp_all add: is_cap_simps cap_master_cap_def)
       apply((wp throwError_validE_R
@@ -97,8 +97,7 @@ lemma derive_cap_is_derived [Ipc_AI_assms]:
                     | fold validE_R_def
                     | erule cte_wp_at_weakenE
                     | simp split: cap.split_asm)+)[11]
-  apply(wp, simp add: o_def)
-  apply(wp hoare_drop_imps arch_derive_cap_is_derived)
+  apply(wp arch_derive_cap_is_derived)
   apply(clarify, drule cte_wp_at_eqD, clarify)
   apply(frule(1) cte_wp_at_valid_objs_valid_cap)
   apply(erule cte_wp_at_weakenE)
@@ -183,7 +182,7 @@ lemma derive_cap_idle[wp, Ipc_AI_assms]:
 lemma arch_derive_cap_objrefs_iszombie [Ipc_AI_assms]:
   "\<lbrace>\<lambda>s . P (set_option (aobj_ref cap)) False s\<rbrace>
      arch_derive_cap cap
-   \<lbrace>\<lambda>rv s. P (set_option (aobj_ref rv)) False s\<rbrace>,-"
+   \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> P (obj_refs rv) (is_zombie rv) s\<rbrace>,-"
   apply(cases cap, simp_all add: is_zombie_def arch_derive_cap_def)
       apply(rule hoare_pre, wpc?, wp+, simp)+
   done
@@ -498,6 +497,26 @@ lemma set_mrs_state_hyp_refs_of[wp]:
 
 crunch state_hyp_refs_of[wp, Ipc_AI_cont_assms]: do_ipc_transfer "\<lambda> s. P (state_hyp_refs_of s)"
   (wp: crunch_wps simp: zipWithM_x_mapM)
+
+lemma arch_derive_cap_untyped:
+  "\<lbrace>\<lambda>s. P (untyped_range (ArchObjectCap cap))\<rbrace> arch_derive_cap cap \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow> P (untyped_range rv)\<rbrace>,-"
+  by (wpsimp simp: arch_derive_cap_def)
+
+lemma valid_arch_mdb_cap_swap:
+  "\<And>s cap capb.
+       \<lbrakk>valid_arch_mdb (is_original_cap s) (caps_of_state s);
+        weak_derived c cap; caps_of_state s a = Some cap;
+        is_untyped_cap cap \<longrightarrow> cap = c; a \<noteq> b;
+        weak_derived c' capb; caps_of_state s b = Some capb\<rbrakk>
+       \<Longrightarrow> valid_arch_mdb
+            ((is_original_cap s)
+             (a := is_original_cap s b, b := is_original_cap s a))
+            (caps_of_state s(a \<mapsto> c', b \<mapsto> c))"
+  apply (clarsimp simp: valid_arch_mdb_def ioport_revocable_def simp del: split_paired_All)
+  apply (intro conjI impI allI)
+   apply (simp del: split_paired_All)
+  apply (simp del: split_paired_All)
+  done
 
 end
 

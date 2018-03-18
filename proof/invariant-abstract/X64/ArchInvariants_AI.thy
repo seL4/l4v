@@ -42,7 +42,8 @@ lemma arch_cap_fun_lift_expand[simp]:
                               | PageDirectoryCap obj_ref vr \<Rightarrow> P_PageDirectoryCap obj_ref vr
                               | PDPointerTableCap obj_ref vr \<Rightarrow> P_PDPointerTableCap obj_ref vr
                               | PML4Cap obj_ref asid \<Rightarrow> P_PML4Cap obj_ref asid
-                              | IOPortCap first lst \<Rightarrow> P_IOPortCap first lst)
+                              | IOPortCap first lst \<Rightarrow> P_IOPortCap first lst
+                              | IOPortControlCap \<Rightarrow> P_IOPortControlCap)
                               (* FIXME x64-vtd:
                               | IOSpaceCap domn pci \<Rightarrow> P_IOSpaceCap domn pci
                               | IOPageTableCap obj_ref lvl vr \<Rightarrow> P_IOPageTableCap obj_ref lvl vr)
@@ -57,6 +58,7 @@ lemma arch_cap_fun_lift_expand[simp]:
     | ArchObjectCap (PDPointerTableCap obj_ref vr) \<Rightarrow> P_PDPointerTableCap obj_ref vr
     | ArchObjectCap (PML4Cap obj_ref asid) \<Rightarrow> P_PML4Cap obj_ref asid
     | ArchObjectCap (IOPortCap first lst) \<Rightarrow> P_IOPortCap first lst
+    | ArchObjectCap (IOPortControlCap) \<Rightarrow> P_IOPortControlCap
 (* FIXME x64-vtd:
     | ArchObjectCap (IOSpaceCap domn pci) \<Rightarrow> P_IOSpaceCap domn pci
     | ArchObjectCap (IOPageTableCap obj_ref lvl vr) \<Rightarrow> P_IOPageTableCap obj_ref lvl vr
@@ -212,7 +214,8 @@ where
   | PageTableCap r mapdata \<Rightarrow> typ_at (AArch APageTable) r s
   | PageDirectoryCap r mapdata\<Rightarrow> typ_at (AArch APageDirectory) r s
   | PDPointerTableCap r mapdata \<Rightarrow> typ_at (AArch APDPointerTable) r s
-  | PML4Cap r mapdata \<Rightarrow> typ_at (AArch APageMapL4) r s)"
+  | PML4Cap r mapdata \<Rightarrow> typ_at (AArch APageMapL4) r s
+  | IOPortControlCap \<Rightarrow> True)"
 
 lemmas valid_arch_cap_ref_simps =
   valid_arch_cap_ref_def[split_simps arch_cap.split]
@@ -251,7 +254,8 @@ where
                                 \<and> is_aligned vref (pml4_shift_bits))
   | PML4Cap r mapdata \<Rightarrow>
     typ_at (AArch APageMapL4) r s \<and>
-    case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata)"
+    case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata
+  | IOPortControlCap \<Rightarrow> True)"
 
 lemmas valid_arch_cap_simps =
   valid_arch_cap_def[split_simps arch_cap.split]
@@ -282,6 +286,7 @@ where
 | "acap_class (PDPointerTableCap x y) = PhysicalClass"
 | "acap_class (PML4Cap x y)           = PhysicalClass"
 | "acap_class (IOPortCap x y)         = IOPortClass"
+| "acap_class (IOPortControlCap)      = IOPortClass"
 
 definition
   valid_ipc_buffer_cap_arch :: "arch_cap \<Rightarrow> machine_word \<Rightarrow> bool"
@@ -981,6 +986,33 @@ where
   "hyp_live ko \<equiv> False"
 
 definition
+  issued_ioports :: "arch_state \<Rightarrow> io_port set"
+where
+  "issued_ioports \<equiv> \<lambda>s. Collect (x64_allocated_io_ports s)"
+
+definition
+  cap_ioports :: "cap \<Rightarrow> io_port set"
+where
+  "cap_ioports c \<equiv> case c of ArchObjectCap (IOPortCap f l) \<Rightarrow> {f..l} | _ \<Rightarrow> {}"
+
+definition
+  all_ioports_issued :: "(cslot_ptr \<Rightarrow> cap option) \<Rightarrow> arch_state \<Rightarrow> bool"
+where
+  "all_ioports_issued \<equiv> \<lambda>cs as. \<forall>cap \<in> ran cs. cap_ioports cap \<subseteq> issued_ioports as"
+
+definition
+  ioports_no_overlap :: "(cslot_ptr \<Rightarrow> cap option) \<Rightarrow> bool"
+where
+  "ioports_no_overlap \<equiv> \<lambda>cs. \<forall>cap\<in>ran cs. \<forall>cap' \<in> ran cs.
+     cap_ioports cap \<inter> cap_ioports cap' \<noteq> {} \<longrightarrow> cap_ioports cap = cap_ioports cap'"
+
+definition
+  valid_ioports :: "'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_ioports \<equiv> \<lambda>s. all_ioports_issued (caps_of_state s) (arch_state s) \<and>
+                      ioports_no_overlap (caps_of_state s)"
+
+definition
   valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_arch_state \<equiv> \<lambda>s.
@@ -1063,10 +1095,16 @@ abbreviation
 definition
   "is_asid_pool_cap c \<equiv> \<exists>ptr asid. c = ArchObjectCap (ASIDPoolCap ptr asid)"
 
+definition
+  "is_ioport_control_cap cap \<equiv> cap = ArchObjectCap IOPortControlCap"
+
+definition
+  "is_ioport_cap cap \<equiv> \<exists>f l. cap = ArchObjectCap (IOPortCap f l)"
+
 
 lemmas is_arch_cap_simps [simplified atomize_eq] =
   is_pg_cap_def is_pd_cap_def is_pt_cap_def is_pdpt_cap_def is_pml4_cap_def is_asid_pool_cap_def
-  is_nondevice_page_cap
+  is_nondevice_page_cap is_ioport_control_cap_def is_ioport_cap_def
 
 
 definition
@@ -1221,6 +1259,12 @@ definition
   valid_asid_map :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_asid_map \<equiv> \<lambda>s. True"
+
+definition
+  "ioport_revocable r cs \<equiv> \<forall>p. cs p = Some (ArchObjectCap IOPortControlCap) \<longrightarrow> r p"
+
+definition
+  "valid_arch_mdb r cs \<equiv> ioport_revocable r cs"
 
 
 section "Lemmas"
@@ -1646,6 +1690,10 @@ lemma valid_vs_lookup_update [iff]:
 lemma valid_table_caps_update [iff]:
   "valid_table_caps (f s) = valid_table_caps s"
   by (simp add: valid_table_caps_def arch)
+
+lemma valid_ioports_update[iff]:
+  "valid_ioports (f s) = valid_ioports s"
+  by (clarsimp simp: valid_ioports_def arch)
 
 end
 
@@ -3256,33 +3304,33 @@ lemma valid_arch_tcb_lift:
   unfolding valid_arch_tcb_def
   by (wp hoare_vcg_all_lift hoare_vcg_imp_lift; simp)
 
-
 lemma arch_gen_obj_refs_inD:
   "x \<in> arch_gen_obj_refs cap \<Longrightarrow> arch_gen_obj_refs cap = {x}"
-  by (simp add: arch_gen_obj_refs_def)
+  by (simp add: arch_gen_obj_refs_def split: arch_cap.splits)
 
 lemma obj_ref_not_arch_gen_ref:
   "x \<in> obj_refs cap \<Longrightarrow> arch_gen_refs cap = {}"
-  by (cases cap; simp add: arch_gen_obj_refs_def)
-
-lemma arch_gen_ref_not_obj_ref:
-  "x \<in> arch_gen_refs cap \<Longrightarrow> obj_refs cap = {}"
-  by (cases cap; simp add: arch_gen_obj_refs_def)
-
-lemma arch_gen_obj_refs_simps[simp]:
-  "arch_gen_obj_refs (ASIDPoolCap a b) = {}"
-  "arch_gen_obj_refs (PageTableCap c d) = {}"
-  "arch_gen_obj_refs (PageDirectoryCap e f) = {}"
-  "arch_gen_obj_refs (PDPointerTableCap g h) = {}"
-  "arch_gen_obj_refs (PML4Cap i j) = {}"
-  "arch_gen_obj_refs (ASIDControlCap) = {}"
-  "arch_gen_obj_refs (PageCap x1 x2 x3 x4 x5 x6) = {}"
-  "arch_gen_obj_refs (IOPortCap x y) = {}"
-  by (simp add: arch_gen_obj_refs_def)+
+  apply (cases cap; simp add: arch_gen_obj_refs_def split: arch_cap.splits)
+  by (rename_tac ac, case_tac ac; clarsimp)
 
 lemma same_aobject_same_arch_gen_refs:
   "same_aobject_as ac ac' \<Longrightarrow> arch_gen_obj_refs ac = arch_gen_obj_refs ac'"
   by (clarsimp simp: arch_gen_obj_refs_def split: arch_cap.split_asm)
+
+lemma arch_gen_ref_not_obj_ref:
+  "x \<in> arch_gen_refs cap \<Longrightarrow> obj_refs cap = {}"
+  by (cases cap; simp add: arch_gen_obj_refs_def split: arch_cap.splits)
+
+lemmas arch_gen_obj_refs_simps[simp] = arch_gen_obj_refs_def[split_simps arch_cap.split]
+
+lemma valid_arch_mdb_eqI:
+  assumes "valid_arch_mdb (is_original_cap s) (caps_of_state s)"
+  assumes "caps_of_state s = caps_of_state s'"
+  assumes "is_original_cap s = is_original_cap s'"
+  shows "valid_arch_mdb (is_original_cap s') (caps_of_state s')" using assms
+  by (clarsimp simp: valid_arch_mdb_def)
+
+
 
 end
 

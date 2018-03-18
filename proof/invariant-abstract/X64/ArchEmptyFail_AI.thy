@@ -61,9 +61,9 @@ lemma decode_tcb_invocation_empty_fail[wp]:
 
 crunch (empty_fail) empty_fail[wp]: find_vspace_for_asid, check_vp_alignment,
                    ensure_safe_mapping, get_asid_pool, lookup_pt_slot,
-                   decode_port_invocation
+                   decode_port_invocation, decode_ioport_control_invocation
   (simp: kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits
-         pdpte.splits pml4e.splits vmpage_size.splits)
+         pdpte.splits pml4e.splits vmpage_size.splits Let_def)
 
 lemma create_mapping_entries_empty_fail[wp]:
   "empty_fail (create_mapping_entries a b c d e f)"
@@ -85,7 +85,8 @@ lemma arch_decode_X64ASIDControlMakePool_empty_fail:
                                 returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: if_split_asm)
   apply (simp add: Let_def split: cap.splits arch_cap.splits option.splits bool.splits | wp | intro conjI impI allI)+
   by (clarsimp simp add: decode_page_invocation_def decode_page_table_invocation_def
-                         decode_page_directory_invocation_def decode_pdpt_invocation_def split: arch_cap.splits | wp)+
+                         decode_page_directory_invocation_def decode_pdpt_invocation_def
+                  split: arch_cap.splits | wp | intro conjI)+
 
 
 lemma arch_decode_X64ASIDPoolAssign_empty_fail:
@@ -110,7 +111,7 @@ lemma arch_decode_X64ASIDPoolAssign_empty_fail:
                                bind_def return_def returnOk_def lift_def liftE_def select_ext_def
                                gets_def get_def assert_def fail_def)
   apply (clarsimp simp: decode_page_invocation_def decode_page_table_invocation_def
-                         decode_page_directory_invocation_def decode_pdpt_invocation_def | wp)+
+                         decode_page_directory_invocation_def decode_pdpt_invocation_def | wp | intro conjI)+
   done
 
 lemma arch_decode_invocation_empty_fail[wp]:

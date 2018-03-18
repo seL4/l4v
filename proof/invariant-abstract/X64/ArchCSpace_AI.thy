@@ -86,15 +86,19 @@ lemma weak_derived_cap_class[simp, CSpace_AI_assms]:
 
 lemma weak_derived_obj_refs [CSpace_AI_assms]:
   "weak_derived dcap cap \<Longrightarrow> obj_refs dcap = obj_refs cap"
-  by (cases dcap, auto simp: is_cap_simps weak_derived_def copy_of_def
+  apply (cases dcap)
+  by (clarsimp simp: is_cap_simps weak_derived_def copy_of_def
                              same_object_as_def aobj_ref_cases
-                       split: if_split_asm cap.splits arch_cap.splits)
+                 split: if_split_asm cap.splits
+      | auto split: arch_cap.splits)+
 
 lemma weak_derived_obj_ref_of [CSpace_AI_assms]:
   "weak_derived dcap cap \<Longrightarrow> obj_ref_of dcap = obj_ref_of cap"
-  by (cases dcap, auto simp: is_cap_simps weak_derived_def copy_of_def
+  apply (cases dcap)
+  by (clarsimp simp: is_cap_simps weak_derived_def copy_of_def
                              same_object_as_def aobj_ref_cases
-                       split: if_split_asm cap.splits arch_cap.splits)
+                 split: if_split_asm cap.splits
+      | auto split: arch_cap.splits)+
 
 lemma set_free_index_invs [CSpace_AI_assms]:
   "\<lbrace>\<lambda>s. (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and> idx \<le> 2^cap_bits cap) \<and>
@@ -110,7 +114,7 @@ lemma set_free_index_invs [CSpace_AI_assms]:
   apply wps
   apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap.valid_vspace_obj set_cap_valid_arch_caps
             set_cap.valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at
-            set_cap_cap_refs_respects_device_region_spec[where ptr = cref])
+            set_cap_cap_refs_respects_device_region_spec[where ptr = cref] set_cap_ioports_no_new_ioports)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (rule conjI,simp add:valid_pspace_def)
   apply (rule conjI,clarsimp simp:is_cap_simps)
@@ -377,6 +381,64 @@ lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
   apply (auto simp:cte_wp_at_caps_of_state)
   done
 
+crunches update_cdt
+  for valid_ioports[wp]: "valid_ioports"
+
+lemma set_untyped_cap_as_full_ioports:
+  "\<lbrace>valid_ioports and (\<lambda>s. cte_wp_at (op = src_cap) src s)\<rbrace>
+     set_untyped_cap_as_full src_cap cap src
+   \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  apply (simp add: set_untyped_cap_as_full_def split del: if_splits)
+  apply (wpsimp wp: set_cap_ioports_no_new_ioports)
+  by (auto simp: cte_wp_at_caps_of_state cap_ioports_def is_cap_simps)
+
+lemma cap_ioports_masked_as_full[simp]:
+  "cap_ioports (masked_as_full c c') = cap_ioports c"
+  by (clarsimp simp: masked_as_full_def cap_ioports_def split: cap.splits)
+
+lemmas cap_ioports_simps[simp] = cap_ioports_def[split_simps cap.split arch_cap.split]
+
+lemma set_untyped_cap_as_full_gross_ioports:
+   "\<lbrace>\<lambda>s. cte_wp_at (\<lambda>cap'. safe_ioport_insert cap cap' s) dest s\<rbrace>
+            set_untyped_cap_as_full src_cap cap src
+    \<lbrace>\<lambda>rv s. cte_wp_at (\<lambda>cap'. safe_ioport_insert cap cap' s) dest s\<rbrace>"
+  apply (case_tac cap; simp add: set_untyped_cap_as_full_def safe_ioport_insert_def)
+  by (wpsimp)
+
+lemma valid_ioports_issuedD:
+  "\<lbrakk>valid_ioports s; caps_of_state s src = Some cap\<rbrakk>
+       \<Longrightarrow> cap_ioports cap \<subseteq> issued_ioports (arch_state s)"
+  by (auto simp: valid_ioports_def all_ioports_issued_def)
+
+lemma cap_insert_derived_ioports[CSpace_AI_assms]:
+  "\<lbrace>valid_ioports and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
+     cap_insert cap src dest
+   \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  apply (simp add: cap_insert_def)
+  apply (wp get_cap_wp set_cap_ioports' set_untyped_cap_as_full_ioports
+            set_untyped_cap_as_full_gross_ioports
+         | wpc | simp split del: if_splits)+
+  apply (rule impI, erule exE, rule impI)
+  apply (clarsimp simp: cte_wp_at_caps_of_state is_derived_def is_derived_arch_def
+                        cap_master_cap_def is_cap_simps safe_ioport_insert_def
+                 split: cap.splits arch_cap.splits if_split_asm)
+  apply (rule conjI)
+   apply clarsimp
+   apply (drule_tac cap'=cap'' and cap=cap in valid_ioportsD, simp+)
+  apply (drule_tac cap=cap in valid_ioports_issuedD, simp+)
+  done
+
+lemma cap_insert_simple_ioports:
+  "\<lbrace>valid_ioports and (\<lambda>s. cte_wp_at (\<lambda>cap'. safe_ioport_insert cap cap' s) dest s) and
+        K (is_simple_cap cap \<and> \<not>is_ap_cap cap)\<rbrace>
+     cap_insert cap src dest
+   \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  apply (simp add: cap_insert_def)
+  apply (wp get_cap_wp set_cap_ioports' set_untyped_cap_as_full_ioports
+            set_untyped_cap_as_full_gross_ioports
+         | wpc | simp split del: if_splits)+
+  done
+
 end
 
 
@@ -560,6 +622,11 @@ lemma cap_insert_simple_arch_caps_no_ap:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   by (auto simp: is_simple_cap_def[simplified is_simple_cap_arch_def] is_cap_simps)
 
+lemma setup_reply_master_ioports[wp, CSpace_AI_assms]:
+  "\<lbrace>valid_ioports\<rbrace> setup_reply_master c \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  apply (wpsimp simp: setup_reply_master_def wp: set_cap_ioports_no_new_ioports get_cap_wp)
+  by (clarsimp simp: cte_wp_at_caps_of_state)
+
 end
 
 
@@ -579,12 +646,13 @@ lemma cap_insert_simple_invs:
     cte_wp_at (\<lambda>c. c = cap.NullCap) dest and
     no_cap_to_obj_with_diff_ref cap {dest} and
     (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src cap) src s) and
-    K (is_simple_cap cap \<and> \<not>is_ap_cap cap) and (\<lambda>s. \<forall>irq \<in> cap_irqs cap. irq_issued irq s)\<rbrace>
+    K (is_simple_cap cap \<and> \<not>is_ap_cap cap) and (\<lambda>s. \<forall>irq \<in> cap_irqs cap. irq_issued irq s)
+    and (\<lambda>s. cte_wp_at (\<lambda>c. safe_ioport_insert cap c s) dest s)\<rbrace>
   cap_insert cap src dest \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
-   apply (wp cap_insert_simple_mdb cap_insert_iflive
-             cap_insert_zombies cap_insert_ifunsafe
+   apply (wp_trace cap_insert_simple_mdb cap_insert_iflive
+             cap_insert_zombies cap_insert_ifunsafe cap_insert_simple_ioports
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_no_ap)
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state)
@@ -617,11 +685,51 @@ crunches arch_post_cap_deletion
   and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
-  and invs[wp]: invs
   and cur_thread[wp]:  "\<lambda>s. P (cur_thread s)"
   and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   and mdb_inv[wp]: "\<lambda>s. P (cdt s)"
   and valid_list[wp]: valid_list
+
+lemma valid_vspace_objs_io_ports_update_inv[iff]:
+    "valid_vspace_objs (s\<lparr>arch_state := x64_allocated_io_ports_update f (arch_state s)\<rparr>) = valid_vspace_objs s"
+  by (clarsimp simp: valid_vspace_objs_def vs_lookup_def vs_lookup1_def)
+
+lemma valid_vs_lookup_io_ports_update_inv[iff]:
+    "valid_vs_lookup (s\<lparr>arch_state := x64_allocated_io_ports_update f (arch_state s)\<rparr>) = valid_vs_lookup s"
+  by (clarsimp simp: valid_vs_lookup_def vs_lookup_pages_def vs_lookup_pages1_def)
+
+lemma valid_table_caps_io_ports_update_inv[iff]:
+    "valid_table_caps (s\<lparr>arch_state := x64_allocated_io_ports_update f (arch_state s)\<rparr>) = valid_table_caps s"
+  by (clarsimp simp: valid_table_caps_def second_level_tables_def )
+
+definition
+  "clearable_ioport_range cap cs \<equiv> (\<forall>cap' \<in> ran cs. cap_ioports cap \<inter> cap_ioports cap' = {})"
+
+lemma set_ioport_mask_invs:
+  "\<lbrace>invs and (\<lambda>s. \<not>b \<longrightarrow> clearable_ioport_range (ArchObjectCap (IOPortCap f l)) (caps_of_state s))\<rbrace>
+     set_ioport_mask f l b
+   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (clarsimp simp: set_ioport_mask_def)
+  apply wpsimp
+  apply (clarsimp simp: invs_def valid_state_def valid_global_refs_def global_refs_def valid_arch_state_def
+                        valid_irq_node_def valid_irq_states_def valid_machine_state_def valid_arch_caps_def
+                         valid_global_objs_def valid_asid_map_def valid_kernel_mappings_def
+                        second_level_tables_def)
+  apply (clarsimp simp: valid_ioports_def all_ioports_issued_def)
+  apply (drule_tac x=cap in bspec, assumption)
+  apply (clarsimp simp: subset_eq issued_ioports_def clearable_ioport_range_def)
+  apply (case_tac b; simp)
+  apply (erule ranE)
+  apply (drule_tac x=cap in bspec, fastforce simp: ran_def)
+  by auto
+
+definition
+  "arch_post_cap_delete_pre \<equiv> clearable_ioport_range"
+
+lemma arch_post_cap_deletion_invs:
+  "\<lbrace>invs and (\<lambda>s. arch_post_cap_delete_pre (ArchObjectCap c) (caps_of_state s))\<rbrace> arch_post_cap_deletion c \<lbrace>\<lambda>rv. invs\<rbrace>"
+  by (wpsimp simp: arch_post_cap_deletion_def free_ioport_range_def arch_post_cap_delete_pre_def
+               wp: set_ioport_mask_invs)
 
 end
 

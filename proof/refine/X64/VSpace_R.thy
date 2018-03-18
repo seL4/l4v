@@ -1286,7 +1286,7 @@ proof -
      apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_diminished_def)
      apply (drule (2) diminished_is_update')+
      apply (clarsimp simp: cap_rights_update_def acap_rights_update_def update_map_data_def is_cap_simps)
-     apply auto[1]
+     apply (auto simp: valid_cap_def)[1]
     apply (auto simp: cte_wp_at_ctes_of)[1]
    apply clarsimp
    apply (rule corres_guard_imp)
@@ -1854,11 +1854,13 @@ lemmas getCurrentCR3_obj_at [wp]
 crunch obj_at[wp]: setVMRoot "\<lambda>s. P (obj_at' P' t s)"
   (simp: crunch_simps)
 
-crunch it[wp]: doMachineOp "\<lambda>s. P (ksIdleThread s)"
-crunch arch[wp]: doMachineOp "\<lambda>s. P (ksArchState s)"
-crunch irq_node'[wp]: doMachineOp "\<lambda>s. P (irq_node' s)"
-crunch gsMaxObjectSize[wp]: doMachineOp "\<lambda>s. P (gsMaxObjectSize s)"
-crunch ksInterruptState[wp]: doMachineOp "\<lambda>s. P (ksInterruptState s)"
+crunches doMachineOp
+  for it[wp]:  "\<lambda>s. P (ksIdleThread s)"
+  and arch[wp]: "\<lambda>s. P (ksArchState s)"
+  and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
+  and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+  and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
+  and ioports'[wp]: valid_ioports'
 
 lemma dmo_writeCR3_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (writeCR3 a b) \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -1880,12 +1882,16 @@ lemma dmo_writeCR3_invs_no_cicd'[wp]:
                         machine_rest_lift_def split_def | wp)+
   done
 
+lemma valid_ioports_cr3_update[elim!]:
+  "valid_ioports' s \<Longrightarrow> valid_ioports' (s\<lparr>ksArchState := x64KSCurrentCR3_update (\<lambda>_. c) (ksArchState s)\<rparr>)"
+  by (clarsimp simp: valid_ioports'_simps)
+
 lemma setCurrentCR3_invs' [wp]: "\<lbrace>invs'\<rbrace> setCurrentCR3 c \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding setCurrentCR3_def
   apply (wpsimp wp:)
   by (clarsimp simp: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def
-                   valid_arch_state'_def valid_machine_state'_def ct_not_inQ_def
-                   ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+                     valid_arch_state'_def valid_machine_state'_def ct_not_inQ_def
+                     ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
 
 lemma getCurrentCR3_invs' [wp]: "\<lbrace>invs'\<rbrace> getCurrentCR3 \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding getCurrentCR3_def
@@ -2449,7 +2455,7 @@ lemma storePDE_invs[wp]:
    apply (wp sch_act_wf_lift valid_global_refs_lift'
              irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift
-             cur_tcb_lift valid_irq_handlers_lift''
+             cur_tcb_lift valid_irq_handlers_lift'' valid_ioports_lift''
              untyped_ranges_zero_lift
            | simp add: cteCaps_of_def o_def)+
   apply clarsimp
@@ -2464,7 +2470,7 @@ lemma storePDPTE_invs[wp]:
    apply (wp sch_act_wf_lift valid_global_refs_lift'
              irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift
-             cur_tcb_lift valid_irq_handlers_lift''
+             cur_tcb_lift valid_irq_handlers_lift'' valid_ioports_lift''
              untyped_ranges_zero_lift
            | simp add: cteCaps_of_def o_def)+
   apply clarsimp
@@ -2479,7 +2485,7 @@ lemma storePML4E_invs[wp]:
    apply (wp sch_act_wf_lift valid_global_refs_lift'
              irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift
-             cur_tcb_lift valid_irq_handlers_lift''
+             cur_tcb_lift valid_irq_handlers_lift'' valid_ioports_lift''
              untyped_ranges_zero_lift
            | simp add: cteCaps_of_def o_def)+
   apply clarsimp
@@ -2636,7 +2642,7 @@ lemma storePTE_invs [wp]:
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift
-             cur_tcb_lift valid_irq_handlers_lift''
+             cur_tcb_lift valid_irq_handlers_lift'' valid_ioports_lift''
              untyped_ranges_zero_lift
            | simp add: cteCaps_of_def o_def)+
   apply clarsimp
@@ -2804,7 +2810,7 @@ lemma setASIDPool_invs [wp]:
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift
-             cur_tcb_lift valid_irq_handlers_lift''
+             cur_tcb_lift valid_irq_handlers_lift'' valid_ioports_lift''
              untyped_ranges_zero_lift
              updateObject_default_inv
            | simp add: cteCaps_of_def

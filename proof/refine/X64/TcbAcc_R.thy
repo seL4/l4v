@@ -1113,6 +1113,9 @@ crunch valid_arch' [wp]: setThreadState, setBoundNotification valid_arch_state'
 crunch ksInterrupt'[wp]: threadSet "\<lambda>s. P (ksInterruptState s)"
   (ignore: getObject wp: setObject_ksInterrupt updateObject_default_inv)
 
+crunch ksArchState[wp]: threadSet "\<lambda>s. P (ksArchState s)"
+  (ignore: getObject setObject)
+
 lemma threadSet_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> threadSet t F \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   by (simp add: threadSet_def, wp setObject_typ_at')
@@ -1434,7 +1437,7 @@ proof -
               threadSet_global_refsT
               irqs_masked_lift
               valid_irq_node_lift
-              valid_irq_handlers_lift''
+              valid_irq_handlers_lift'' valid_ioports_lift''
               threadSet_ctes_ofT
               threadSet_not_inQ
               threadSet_ct_idle_or_in_cur_domain'
@@ -4808,6 +4811,9 @@ lemma setBoundNotification_ksDomSchedule[wp]:
 crunches rescheduleRequired, setBoundNotification, setThreadState
   for ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
+
+crunch ioports'[wp]: setThreadState, setBoundNotification, rescheduleRequired valid_ioports'
+  (ignore: setObject getObject wp: valid_ioports_lift'')
 
 lemma sts_utr[wp]:
   "\<lbrace>untyped_ranges_zero'\<rbrace> setThreadState st t \<lbrace>\<lambda>_. untyped_ranges_zero'\<rbrace>"

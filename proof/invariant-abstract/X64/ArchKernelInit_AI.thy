@@ -268,7 +268,7 @@ lemma invs_A:
                          untyped_inc_def ut_revocable_def
                          irq_revocable_def reply_master_revocable_def
                          reply_mdb_def reply_caps_mdb_def
-                         reply_masters_mdb_def)
+                         reply_masters_mdb_def valid_arch_mdb_def ioport_revocable_def)
    apply (simp add:descendants_inc_def)
   apply (rule conjI)
    apply (simp add: valid_ioc_def init_A_st_def init_ioc_def cte_wp_at_cases2)
@@ -307,6 +307,10 @@ lemma invs_A:
   apply (rule conjI)
    apply (clarsimp simp: valid_irq_states_def state_defs init_machine_state_def
                          valid_irq_masks_def init_irq_masks_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_ioports_def caps_of_state_init_A_st_Null all_ioports_issued_def ran_def
+                         issued_ioports_def ioports_no_overlap_def
+                   cong: rev_conj_cong)
   apply (rule conjI)
    apply (clarsimp simp: valid_machine_state_def state_defs
                          init_machine_state_def init_underlying_memory_def)
