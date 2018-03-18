@@ -46,6 +46,7 @@ definition
   "arch_is_physical cap \<equiv> case cap of
                             ASIDControlCap \<Rightarrow> False
                           | IOPortCap _ _ \<Rightarrow> False
+                          | IOPortControlCap \<Rightarrow> False
                           | _ \<Rightarrow> True"
 
 text {* Check whether the second capability is to the same object or an object
@@ -72,7 +73,8 @@ where
   --"FIXME: should this also check domain id equality? C kernel does not"
 *)
 | "arch_same_region_as (IOPortCap frst lst) c' =
-   (\<exists>frst' lst'. c' = IOPortCap frst' lst' \<and> frst \<le> frst' \<and> lst' \<le> lst \<and> frst' \<le> lst')"
+   (\<exists>frst' lst'. c' = IOPortCap frst' lst' \<and> frst' = frst \<and> lst' = lst)"
+| "arch_same_region_as IOPortControlCap c' = (c' = IOPortControlCap \<or> (\<exists>f l. c' = IOPortCap f l))"
 
 text {* Check whether two arch capabilities are to the same object. *}
 definition
@@ -82,12 +84,19 @@ definition
       (PageCap dev ref _ _ pgsz _, PageCap dev' ref' _ _ pgsz' _)
           \<Rightarrow> (dev, ref, pgsz) = (dev', ref', pgsz')
               \<and> ref \<le> ref + 2 ^ pageBitsForSize pgsz - 1
-    | (IOPortCap f l, IOPortCap f' l') \<Rightarrow>
-             (f,l) = (f',l') \<and> (f \<le> l)
+    | (IOPortControlCap, IOPortCap f' l') \<Rightarrow> False
     | _ \<Rightarrow> arch_same_region_as cp cp')"
 
 (* Proofs don't want to see this definition *)
 declare same_aobject_as_def[simp]
+
+definition
+  arch_is_cap_revocable :: "cap \<Rightarrow> cap \<Rightarrow> bool"
+where
+  "arch_is_cap_revocable new_cap src_cap \<equiv>
+           if \<exists>f l. new_cap = ArchObjectCap (IOPortCap f l)
+             then src_cap = ArchObjectCap IOPortControlCap
+             else False"
 
 end
 end

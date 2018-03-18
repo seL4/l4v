@@ -1063,6 +1063,19 @@ lemma irq_control_n [simp]: "irq_control n"
   apply (erule (1) irq_controlD, rule irq_control)
   done
 
+lemma ioport_control_n [simp]: "ioport_control n"
+  using slot
+  apply (clarsimp simp: ioport_control_def)
+  apply (frule n_revokable)
+  apply (drule n_cap)
+  apply (clarsimp split: if_split_asm)
+  apply (frule ioport_revocable, rule ioport_control)
+  apply clarsimp
+  apply (drule n_cap)
+  apply (clarsimp simp: if_split_asm)
+  apply (erule (1) ioport_controlD, rule ioport_control)
+  done
+
 lemma reply_masters_rvk_fb_m: "reply_masters_rvk_fb m"
   using valid by auto
 
@@ -1293,8 +1306,7 @@ crunch valid_idle'[wp]: setInterruptState "valid_idle'"
 
 context begin interpretation Arch .
 crunch valid_idle'[wp]: emptySlot "valid_idle'"
-
-crunch ksArch[wp]: emptySlot "\<lambda>s. P (ksArchState s)"
+crunch ksArch[wp]: deletedIRQHandler, getSlotCap, clearUntypedFreeIndex, updateMDB, getCTE, updateCap "\<lambda>s. P (ksArchState s)"
 crunch ksIdle[wp]: emptySlot "\<lambda>s. P (ksIdleThread s)"
 crunch gsMaxObjectSize[wp]: emptySlot "\<lambda>s. P (gsMaxObjectSize s)"
 end
@@ -1313,20 +1325,52 @@ lemma emptySlot_cteCaps_of:
               split: option.splits)
   done
 
+context begin interpretation Arch .
+lemma freeIOPortRange_valid_global_refs[wp]:
+  "\<lbrace>valid_global_refs'\<rbrace> freeIOPortRange f l \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
+  apply (clarsimp simp: freeIOPortRange_def setIOPortMask_def)
+  apply wpsimp
+  by (clarsimp simp: valid_global_refs'_def global_refs'_def table_refs'_def bit_simps)
+
+lemma deletedIRQHandler_valid_global_refs[wp]:
+  "\<lbrace>valid_global_refs'\<rbrace> deletedIRQHandler irq \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
+  apply (clarsimp simp: valid_global_refs'_def global_refs'_def)
+  apply (rule hoare_pre)
+   apply (rule hoare_use_eq_irq_node' [OF deletedIRQHandler_irq_node'])
+   apply (rule hoare_use_eq [where f=ksIdleThread, OF deletedIRQHandler_ksIdle])
+   apply (rule hoare_use_eq [where f=ksArchState, OF deletedIRQHandler_ksArch])
+   apply (rule hoare_use_eq[where f="gsMaxObjectSize"], wp)
+   apply (simp add: valid_refs'_cteCaps valid_cap_sizes_cteCaps)
+   apply (rule deletedIRQHandler_cteCaps_of)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (clarsimp simp: valid_refs'_cteCaps valid_cap_sizes_cteCaps ball_ran_eq)
+  done
+
+lemma clearUntypedFreeIndex_valid_global_refs[wp]:
+  "\<lbrace>valid_global_refs'\<rbrace> clearUntypedFreeIndex irq \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
+  apply (clarsimp simp: valid_global_refs'_def global_refs'_def)
+  apply (rule hoare_pre)
+   apply (rule hoare_use_eq_irq_node' [OF clearUntypedFreeIndex_irq_node'])
+   apply (rule hoare_use_eq [where f=ksIdleThread, OF clearUntypedFreeIndex_ksIdle])
+   apply (rule hoare_use_eq [where f=ksArchState, OF clearUntypedFreeIndex_ksArch])
+   apply (rule hoare_use_eq[where f="gsMaxObjectSize"], wp)
+   apply (simp add: valid_refs'_cteCaps valid_cap_sizes_cteCaps)
+   apply (rule clearUntypedFreeIndex_cteCaps_of)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (clarsimp simp: valid_refs'_cteCaps valid_cap_sizes_cteCaps ball_ran_eq)
+  done
+
+crunch valid_global_refs[wp]: global.postCapDeletion "valid_global_refs'"
+
 lemma emptySlot_valid_global_refs[wp]:
   "\<lbrace>valid_global_refs' and cte_at' sl\<rbrace> emptySlot sl opt \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
-  apply (simp add: valid_global_refs'_def global_refs'_def)
-  apply (rule hoare_pre)
-   apply (rule hoare_use_eq_irq_node' [OF emptySlot_irq_node'])
-   apply (rule hoare_use_eq [where f=ksArchState, OF emptySlot_ksArch])
-   apply (rule hoare_use_eq [where f=ksIdleThread, OF emptySlot_ksIdle])
-   apply (rule hoare_use_eq [where f=gsMaxObjectSize], wp)
-   apply (simp add: valid_refs'_cteCaps valid_cap_sizes_cteCaps)
-   apply (rule emptySlot_cteCaps_of)
-  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (clarsimp simp: emptySlot_def)
+  apply (wpsimp wp: getCTE_wp hoare_drop_imps hoare_vcg_ex_lift simp: cte_wp_at_ctes_of)
+  apply (clarsimp simp: valid_global_refs'_def global_refs'_def)
   apply (frule(1) cte_at_valid_cap_sizes_0)
   apply (clarsimp simp: valid_refs'_cteCaps valid_cap_sizes_cteCaps ball_ran_eq)
   done
+end
 
 lemmas doMachineOp_irq_handlers[wp]
     = valid_irq_handlers_lift'' [OF doMachineOp_ctes doMachineOp_ksInterruptState]
@@ -1342,11 +1386,49 @@ lemma deletedIRQHandler_irq_handlers'[wp]:
 
 context begin interpretation Arch .
 
+crunches freeIOPortRange
+  for valid_irq_handlers'[wp]: "valid_irq_handlers'"
+
 lemma postCapDeletion_irq_handlers'[wp]:
   "\<lbrace>\<lambda>s. valid_irq_handlers' s \<and> (cap \<noteq> NullCap \<longrightarrow> cap \<notin> ran (cteCaps_of s))\<rbrace>
        postCapDeletion cap
    \<lbrace>\<lambda>rv. valid_irq_handlers'\<rbrace>"
   by (wpsimp simp: Retype_H.postCapDeletion_def X64_H.postCapDeletion_def)
+
+crunches deletedIRQHandler
+  for ioports'[wp]: valid_ioports'
+  (wp: valid_ioports_lift'')
+
+definition
+  "post_cap_delete_pre' cap sl cs \<equiv> case cap of
+     IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ \<and> (\<forall>sl'. sl \<noteq> sl' \<longrightarrow> cs sl' \<noteq> Some cap)
+   | ArchObjectCap (IOPortCap f l) \<Rightarrow> f \<le> l \<and> (\<forall>sl'. sl \<noteq> sl' \<longrightarrow> (\<forall>cap'. cs sl' = Some cap' \<longrightarrow> cap_ioports' cap \<inter> cap_ioports' cap' = {}))
+   | _ \<Rightarrow> False"
+
+lemma setIOPortMask_ioports':
+  "\<lbrace>valid_ioports' and (\<lambda>s. \<not> b \<longrightarrow> (\<forall>cap' \<in> ran (cteCaps_of s). cap_ioports' cap' \<inter> {f..l} = {}))\<rbrace>
+     setIOPortMask f l b
+   \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
+  supply fun_upd_apply[simp del]
+  apply (clarsimp simp: setIOPortMask_def)
+  apply wpsimp
+  apply (clarsimp simp: valid_ioports'_simps foldl_map)
+  apply (case_tac b; clarsimp simp: foldl_fun_upd_value)
+   apply (drule_tac x=cap in bspec, assumption)
+   apply (clarsimp simp: subset_eq)
+  apply (drule_tac x=cap in bspec, assumption)
+  by auto
+
+lemma postCapDeletion_ioports':
+  "\<lbrace>valid_ioports' and cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) sl and (\<lambda>s. c \<noteq> NullCap \<longrightarrow> post_cap_delete_pre' c sl (cteCaps_of s))\<rbrace>
+     global.postCapDeletion c
+   \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
+  apply (clarsimp simp: Retype_H.postCapDeletion_def)
+  apply (wpsimp simp: freeIOPortRange_def X64_H.postCapDeletion_def wp: setIOPortMask_ioports')
+  apply (clarsimp simp: post_cap_delete_pre'_def cte_wp_at_ctes_of elim!: ranE)
+  apply (drule_tac x=x in spec)
+  apply (clarsimp simp: valid_ioports'_simps cteCaps_of_def)
+  by (auto simp: ran_def split: if_split_asm)
 
 end
 
@@ -1366,6 +1448,49 @@ lemma emptySlot_valid_irq_handlers'[wp]:
                  split: option.split)
   apply auto
   done
+
+lemma updateMDB_safe_ioport_insert'[wp]:
+  "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. safe_ioport_insert' c (cteCap cte) s) sl s\<rbrace>
+     updateMDB a b
+   \<lbrace>\<lambda>rv s. cte_wp_at' (\<lambda>cte. safe_ioport_insert' c (cteCap cte) s) sl s\<rbrace>"
+  apply (clarsimp simp: safe_ioport_insert'_def)
+  apply (rule hoare_pre)
+   apply wps
+   apply (wpsimp wp: updateMDB_weak_cte_wp_at)
+  by (clarsimp simp: cte_wp_at_ctes_of)
+
+lemma clearUntypedFreeIndex_ioports'[wp]:
+  "\<lbrace>valid_ioports'\<rbrace> clearUntypedFreeIndex f \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
+  by (wpsimp wp: valid_ioports_lift')
+
+lemma clearUntypedFreeIndex_safe_ioport_insert'[wp]:
+  "\<lbrace>safe_ioport_insert' c c'\<rbrace> clearUntypedFreeIndex f \<lbrace>\<lambda>rv. safe_ioport_insert' c c'\<rbrace>"
+  apply (clarsimp simp: safe_ioport_insert'_def)
+  apply (rule hoare_pre)
+   apply wps
+  by wpsimp+
+
+context begin interpretation Arch .
+lemma emptySlot_ioports'[wp]:
+  "\<lbrace>\<lambda>s. valid_ioports' s \<and> cte_at' sl s
+          \<and> (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre' info sl (cteCaps_of s))\<rbrace>
+     emptySlot sl info
+   \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
+  apply (simp add: emptySlot_def case_Null_If)
+  apply (rule hoare_pre)
+   apply (wpsimp wp: postCapDeletion_ioports'[where sl=sl] updateCap_ioports' updateCap_no_0
+                     updateMDB_weak_cte_wp_at hoare_vcg_const_imp_lift updateCap_cte_wp_at' getCTE_wp
+                     hoare_vcg_ex_lift
+               simp: cte_wp_at_ctes_of
+              | wp_once hoare_drop_imps)+
+  apply (clarsimp simp: valid_ioports'_simps)
+  apply (rule conjI)
+   apply (clarsimp simp: safe_ioport_insert'_def)
+  apply (clarsimp simp: post_cap_delete_pre'_def split: capability.splits arch_capability.splits)
+   apply (auto simp: modify_map_def ran_def capAligned_def word_bits_def
+              split: if_split_asm)
+  done
+end
 
 declare setIRQState_irq_states' [wp]
 
@@ -1430,6 +1555,10 @@ lemma deletedIRQHandler_ct_not_inQ[wp]:
   apply (simp add: comp_def)
   done
 
+lemma setIOPortMask_ct_not_inQ[wp]:
+  "\<lbrace>ct_not_inQ\<rbrace> setIOPortMask f l b \<lbrace>\<lambda>rv. ct_not_inQ\<rbrace>"
+  by (wpsimp simp: ct_not_inQ_def setIOPortMask_def)
+
 crunch ct_not_inQ[wp]: emptySlot "ct_not_inQ"
 
 crunch tcbDomain[wp]: emptySlot "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
@@ -1469,16 +1598,34 @@ lemma emptySlot_untyped_ranges[wp]:
   apply (simp add: untypedZeroRange_def isCap_simps)
   done
 
+lemma setIOPortMask_valid_arch'[wp]:
+  "\<lbrace>valid_arch_state'\<rbrace> setIOPortMask f l b \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
+  by (wpsimp simp: valid_arch_state'_def setIOPortMask_def)
+
+crunches deletedIRQHandler, updateMDB, updateCap, clearUntypedFreeIndex
+  for valid_arch'[wp]: valid_arch_state'
+  (wp: valid_arch_state_lift')
+
+crunches global.postCapDeletion
+  for valid_arch'[wp]: valid_arch_state'
+
+lemma emptySlot_valid_arch'[wp]:
+  "\<lbrace>valid_arch_state' and cte_at' sl\<rbrace> emptySlot sl info \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
+  by (wpsimp simp: emptySlot_def cte_wp_at_ctes_of
+               wp: getCTE_wp hoare_drop_imps hoare_vcg_ex_lift)
+
 lemma emptySlot_invs'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' (\<lambda>cte. removeable' sl s (cteCap cte)) sl s
-            \<and> (\<forall>sl'. info \<noteq> NullCap \<longrightarrow> sl' \<noteq> sl \<longrightarrow> cteCaps_of s sl' \<noteq> Some info)\<rbrace>
+            \<and> (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre' info sl (cteCaps_of s) )\<rbrace>
      emptySlot sl info
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
-   apply (wp valid_arch_state_lift' valid_irq_node_lift cur_tcb_lift)
+   apply (wp valid_irq_node_lift cur_tcb_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  done
+  apply (clarsimp simp: post_cap_delete_pre'_def cteCaps_of_def
+                 split: capability.split_asm arch_capability.split_asm)
+  by auto
 
 lemma deleted_irq_corres:
   "corres dc \<top> \<top>
@@ -1489,9 +1636,32 @@ lemma deleted_irq_corres:
   apply (simp add: irq_state_relation_def)
   done
 
+lemma corres_gets_allocated_io_ports [corres]:
+  "corres (op =) \<top> \<top>
+        (gets (x64_allocated_io_ports \<circ> arch_state))
+        (gets (x64KSAllocatedIOPorts \<circ> ksArchState))"
+  by (simp add: state_relation_def arch_state_relation_def)
+
+lemma set_ioport_mask_corres[corres]:
+  "corres dc \<top> \<top>
+     (set_ioport_mask f l b)
+     (setIOPortMask f l b)"
+  apply (clarsimp simp: set_ioport_mask_def setIOPortMask_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_eqr[OF _ corres_gets_allocated_io_ports])
+      apply (rule corres_modify)
+      apply (clarsimp simp: state_relation_def arch_state_relation_def foldl_map
+                            foldl_fun_upd)
+     by wpsimp+
+
 lemma arch_post_cap_deletion_corres:
   "acap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (arch_post_cap_deletion cap) (X64_H.postCapDeletion cap')"
-  by (corressimp simp: arch_post_cap_deletion_def X64_H.postCapDeletion_def)
+  apply (clarsimp simp: arch_post_cap_deletion_def X64_H.postCapDeletion_def)
+  apply (rule corres_guard_imp)
+    apply (case_tac cap; clarsimp simp: acap_relation_def)
+    apply (clarsimp simp: free_ioport_range_def freeIOPortRange_def)
+    apply (rule set_ioport_mask_corres)
+   by clarsimp+
 
 lemma post_cap_deletion_corres:
   "cap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (post_cap_deletion cap) (postCapDeletion cap')"
@@ -1803,7 +1973,7 @@ where
   | ArchObjectCap acap \<Rightarrow> (case acap of
     PageCap ref rghts mt sz d mapdata \<Rightarrow> False
   | ASIDControlCap \<Rightarrow> False
-  | IOPortCap f l \<Rightarrow> False
+  | IOPortControlCap \<Rightarrow> False
   | _ \<Rightarrow> True)
   | _ \<Rightarrow> False"
 
@@ -1822,7 +1992,7 @@ lemma final_matters_sameRegion_sameObject:
   done
 
 lemma final_matters_sameRegion_sameObject2:
-  "\<lbrakk> final_matters' cap'; \<not> isUntypedCap cap; \<not> isIRQHandlerCap cap' \<rbrakk>
+  "\<lbrakk> final_matters' cap'; \<not> isUntypedCap cap; \<not> isIRQHandlerCap cap'; \<not> isArchIOPortCap cap' \<rbrakk>
      \<Longrightarrow> sameRegionAs cap cap' = sameObjectAs cap cap'"
   apply (rule iffI)
    apply (erule sameRegionAsE)
@@ -1994,7 +2164,7 @@ lemma isFinal_no_descendants:
 
 lemma (in vmdb) isFinal_untypedParent:
   assumes x: "m slot = Some cte" "isFinal (cteCap cte) slot (option_map cteCap o m)"
-             "final_matters' (cteCap cte) \<and> \<not> isIRQHandlerCap (cteCap cte)"
+             "final_matters' (cteCap cte) \<and> \<not> isIRQHandlerCap (cteCap cte) \<and> \<not> isArchIOPortCap (cteCap cte)"
   shows
   "m \<turnstile> x \<rightarrow> slot \<Longrightarrow>
   (\<exists>cte'. m x = Some cte' \<and> isUntypedCap (cteCap cte') \<and> RetypeDecls_H.sameRegionAs (cteCap cte') (cteCap cte))"
@@ -2167,8 +2337,15 @@ lemma final_cap_corres':
                          option.split_asm if_split_asm,
           simp_all add: is_cap_defs)
   apply (rule classical)
-  by (clarsimp simp: cap_irqs_def cap_irq_opt_def sameObjectAs_def3 isCap_simps arch_gen_obj_refs_def
-                 split: cap.split_asm)
+  apply (clarsimp simp: cap_irqs_def cap_irq_opt_def sameObjectAs_def3 isCap_simps arch_gen_obj_refs_def
+                        acap_relation_def
+                 split: cap.split_asm arch_cap.split_asm)
+  apply (case_tac cap; clarsimp simp: arch_gen_obj_refs_def)
+  apply (case_tac x12; clarsimp simp: get_cap_caps_of_state)
+  apply (drule invs_valid_ioports, clarsimp simp: valid_ioports_def ioports_no_overlap_def)
+  apply (drule_tac x="cap.ArchObjectCap (arch_cap.IOPortCap x31a x32)" in bspec, fastforce)
+  apply (drule_tac x="cap.ArchObjectCap (arch_cap.IOPortCap x31a x32a)" in bspec, fastforce)
+  by (clarsimp simp: cap_ioports_def valid_cap_def)
 
 lemma final_cap_corres:
   "corres (\<lambda>rv rv'. final_matters' (cteCap cte) \<longrightarrow> rv = rv')
@@ -2223,7 +2400,7 @@ lemmas suspend_typs[wp] = typ_at_lifts [OF suspend_typ_at']
 definition
   arch_cap_has_cleanup' :: "arch_capability \<Rightarrow> bool"
 where
-  "arch_cap_has_cleanup' acap \<equiv> False"
+  "arch_cap_has_cleanup' acap \<equiv> isIOPortCap acap"
 
 definition
   cap_has_cleanup' :: "capability \<Rightarrow> bool"
@@ -2253,7 +2430,7 @@ lemma finaliseCap_cases[wp]:
   apply (simp only: simp_thms fst_conv snd_conv option.simps if_cancel
                     o_def)
   apply (intro allI impI conjI TrueI)
-  apply (auto simp add: isCap_simps cap_has_cleanup'_def)
+  apply (auto simp add: isCap_simps cap_has_cleanup'_def arch_cap_has_cleanup'_def)
   done
 
 crunch aligned'[wp]: finaliseCap "pspace_aligned'"
@@ -2385,7 +2562,9 @@ lemma invs_asid_update_strg':
             (\<lambda>_. tab (asid := None)) (ksArchState s)\<rparr>)"
   apply (simp add: invs'_def)
   apply (simp add: valid_state'_def)
-  apply (simp add: valid_global_refs'_def global_refs'_def valid_arch_state'_def valid_asid_table'_def valid_machine_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+  apply (simp add: valid_global_refs'_def global_refs'_def valid_arch_state'_def
+                   valid_asid_table'_def valid_machine_state'_def ct_idle_or_in_cur_domain'_def
+                   tcb_in_cur_domain'_def valid_ioports'_simps)
   apply (auto simp add: ran_def split: if_split_asm)
   done
 
@@ -2440,17 +2619,33 @@ lemma arch_finaliseCap_invs[wp]:
   apply clarsimp
   done
 
+lemma ctes_of_cteCaps_of_lift:
+  "\<lbrakk> \<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace> \<rbrakk>
+     \<Longrightarrow> \<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
+  by (wp | simp add: cteCaps_of_def)+
+
+crunches deleteASIDPool, unmapPageTable, unmapPageDirectory, unmapPDPT
+  for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
+  (wp: crunch_wps getObject_inv loadObject_default_inv getASID_wp simp: crunch_simps ignore: getObject)
+
+lemma deleteASID_ctes_of[wp]:
+  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> deleteASID a ptr \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
+  apply (clarsimp simp: deleteASID_def)
+  by (wpsimp wp: getASID_wp)
+
 lemma arch_finaliseCap_removeable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile>' ArchObjectCap cap \<and> invs' s
        \<and> (final \<and> final_matters' (ArchObjectCap cap)
             \<longrightarrow> isFinal (ArchObjectCap cap) slot (cteCaps_of s))\<rbrace>
      Arch.finaliseCap cap final
-   \<lbrace>\<lambda>rv s. isNullCap (fst rv) \<and> removeable' slot s (ArchObjectCap cap) \<and> isNullCap (snd rv)\<rbrace>"
+   \<lbrace>\<lambda>rv s. isNullCap (fst rv) \<and> removeable' slot s (ArchObjectCap cap)
+          \<and> (snd rv \<noteq> NullCap \<longrightarrow> snd rv = (ArchObjectCap cap) \<and> cap_has_cleanup' (ArchObjectCap cap)
+                                      \<and> isFinal (ArchObjectCap cap) slot (cteCaps_of s))\<rbrace>"
   apply (simp add: X64_H.finaliseCap_def
                    removeable'_def)
   apply (rule hoare_pre)
-   apply (wp | wpc)+
-  apply simp
+   apply (wp ctes_of_cteCaps_of_lift | wpc | wp_once hoare_drop_imps)+
+  apply (clarsimp simp: arch_cap_has_cleanup'_def isCap_simps final_matters'_def)
   done
 
 lemma isZombie_Null:
@@ -2467,11 +2662,6 @@ lemma prepares_delete_helper'':
   apply (rule hoare_strengthen_post [OF x])
   apply (clarsimp simp: removeable'_def)
   done
-
-lemma ctes_of_cteCaps_of_lift:
-  "\<lbrakk> \<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
-  by (wp | simp add: cteCaps_of_def)+
 
 crunch ctes_of[wp]: finaliseCapTrue_standin, unbindNotification "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv simp: crunch_simps ignore: getObject)
@@ -3794,7 +3984,7 @@ lemma copyGlobalMappings_invs'[wp]:
   apply (rule hoare_pre)
    apply (wp valid_irq_node_lift_asm valid_global_refs_lift' sch_act_wf_lift
              valid_irq_handlers_lift'' cur_tcb_lift typ_at_lifts irqs_masked_lift
-             untyped_ranges_zero_lift
+             untyped_ranges_zero_lift valid_ioports_lift''
         | clarsimp simp: cteCaps_of_def o_def)+
   done
 
@@ -3864,9 +4054,7 @@ lemma isFinal_lift:
             valid_cte_at_neg_typ' [OF y])
   done
 
-lemma cteCaps_of_ctes_of_lift:
-  "(\<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. P (cteCaps_of s) \<rbrace> f \<lbrace>\<lambda>_ s. P (cteCaps_of s)\<rbrace>"
-  unfolding cteCaps_of_def .
+lemmas cteCaps_of_ctes_of_lift = ctes_of_cteCaps_of_lift
 
 lemmas final_matters'_simps = final_matters'_def [split_simps capability.split arch_capability.split]
 

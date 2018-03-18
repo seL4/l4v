@@ -43,6 +43,7 @@ ASID pool structures, and on IO ports.
 >     | InvokeASIDControl ASIDControlInvocation
 >     | InvokeASIDPool ASIDPoolInvocation
 >     | InvokeIOPort IOPortInvocation
+>     | InvokeIOPortControl IOPortControlInvocation
 >     deriving Show
 
 > data PDPTInvocation
@@ -151,6 +152,14 @@ point to the invoked IO page table.
 >     deriving Show
 
 > data IOPortInvocation = IOPortInvocation IOPort IOPortInvocationData
+>     deriving Show
+
+> data IOPortControlInvocation
+>     = IOPortControlIssue {
+>         issueFirst :: IOPort,
+>         issueLast :: IOPort,
+>         issueDestSlot,
+>         issueControlSlot :: PPtr CTE }
 >     deriving Show
 
 \subsection{Interrupt Control}

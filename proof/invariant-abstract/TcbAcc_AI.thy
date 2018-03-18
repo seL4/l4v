@@ -461,6 +461,13 @@ lemma thread_set_cap_refs_respects_device_region:
   apply (erule sym)
   done
 
+lemma thread_set_ioports:
+  assumes y: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
+                  getF (f tcb) = getF tcb"
+  shows
+  "\<lbrace>valid_ioports\<rbrace> thread_set f t \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  by (wpsimp wp: valid_ioports_lift thread_set_caps_of_state_trivial simp: y)
+
 (* NOTE: The function "thread_set f p" updates a TCB at p using function f.
    It should not be used to change capabilities, though. *)
 lemma thread_set_valid_ioc_trivial:
@@ -499,7 +506,7 @@ lemma thread_set_invs_trivial:
   shows      "\<lbrace>invs::'state_ext state \<Rightarrow> bool\<rbrace> thread_set f t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_weaken_pre)
-   apply (wp thread_set_valid_objs_triv
+   apply (wp thread_set_valid_objs_triv thread_set_ioports
              thread_set_refs_trivial
              thread_set_hyp_refs_trivial
              thread_set_iflive_trivial
@@ -1527,6 +1534,10 @@ lemma set_bound_notification_valid_ioc[wp]:
                  split: option.splits Structures_A.kernel_object.splits
                         if_split_asm)
   done
+
+crunches set_thread_state, set_bound_notification
+  for valid_ioports[wp]: valid_ioports
+  (wp: valid_ioports_lift)
 
 lemma sts_invs_minor:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st) t

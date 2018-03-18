@@ -2051,6 +2051,19 @@ lemmas set_ntfn_irq_handlers'[wp] = valid_irq_handlers_lift'' [OF set_ntfn_ctes_
 
 lemmas set_ntfn_irq_states' [wp] = valid_irq_states_lift' [OF set_ntfn_ksInterrupt set_ntfn_ksMachine]
 
+lemma valid_ioports_lift':
+  assumes x: "\<And>P. \<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
+  assumes y: "\<And>P. \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ksArchState s)\<rbrace>"
+  shows      "\<lbrace>valid_ioports'\<rbrace> f \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
+  apply (clarsimp simp: valid_ioports'_def)
+  apply (rule hoare_use_eq [where f="\<lambda>s. ksArchState s"], rule y)
+  apply (rule hoare_use_eq [where f="\<lambda>s. cteCaps_of s"], rule x)
+  apply wp
+  done
+
+lemmas valid_ioports_lift'' = valid_ioports_lift'[unfolded cteCaps_of_def]
+lemmas set_ntfn_ioports'[wp] = valid_ioports_lift''[OF set_ntfn_ctes_of set_ntfn_arch']
+
 lemma set_ntfn_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
   apply (simp add: setNotification_def valid_machine_state'_def pointerInDeviceData_def pointerInUserData_def)
@@ -2256,6 +2269,7 @@ lemma setEndpoint_ksMachine:
 
 lemmas setEndpoint_valid_irq_states'  =
   valid_irq_states_lift' [OF setEndpoint_ksInterruptState setEndpoint_ksMachine]
+lemmas setEndpoint_ioports'[wp] = valid_ioports_lift''[OF set_ep_ctes_of set_ep_arch']
 
 (* analagous to ex_cte_cap_to'_cteCap, elsewhere *)
 lemma ex_cte_cap_wp_to'_cteCap:

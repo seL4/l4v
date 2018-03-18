@@ -688,7 +688,7 @@ lemma perform_pdpt_valid_vspace_objs'[wp]:
               | wp_once hoare_drop_imps)+
   done
 
-crunch valid_vspace_objs'[wp]: perform_io_port_invocation valid_vspace_objs'
+crunch valid_vspace_objs'[wp]: perform_io_port_invocation, perform_ioport_control_invocation valid_vspace_objs'
 
 lemma perform_invocation_valid_vspace_objs'[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and valid_vspace_objs'\<rbrace>

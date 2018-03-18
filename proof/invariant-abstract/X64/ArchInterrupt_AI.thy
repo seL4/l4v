@@ -238,6 +238,7 @@ lemma arch_invoke_irq_control_invs[wp]:
   apply (rule hoare_pre)
    apply (wp cap_insert_simple_invs | wpc
          | simp add: IRQHandler_valid is_cap_simps no_cap_to_obj_with_diff_IRQHandler_ARCH
+                     is_cap_simps safe_ioport_insert_triv
          | strengthen real_cte_tcb_valid)+
   by (auto simp: cte_wp_at_caps_of_state IRQ_def arch_irq_control_inv_valid_def
                         is_simple_cap_def is_cap_simps is_pt_cap_def
@@ -250,6 +251,7 @@ lemma (* invoke_irq_control_invs *) [Interrupt_AI_asms]:
   apply (rule hoare_pre)
    apply (wp cap_insert_simple_invs
              | simp add: IRQHandler_valid is_cap_simps  no_cap_to_obj_with_diff_IRQHandler_ARCH
+                         is_cap_simps safe_ioport_insert_triv
              | strengthen real_cte_tcb_valid)+
    apply (clarsimp simp: cte_wp_at_caps_of_state
                          is_simple_cap_def is_cap_simps is_pt_cap_def

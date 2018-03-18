@@ -322,6 +322,7 @@ where
 | "acapBits (PDPointerTableCap x y) = table_size"
 | "acapBits (PML4Cap x y) = table_size"
 | "acapBits (IOPortCap f l) = 0"
+| "acapBits IOPortControlCap = 0"
 
 end
 
@@ -440,8 +441,8 @@ where valid_cap'_def:
   | PageCap ref rghts t sz d mapdata \<Rightarrow> ref \<noteq> 0 \<and>
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' (if d then UserDataDeviceT else UserDataT)
     (ref + p * 2 ^ pageBits) s) \<and>
-    (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
-            0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < pptrBase)
+    (case mapdata of None \<Rightarrow> (t=VMNoMap) | Some (asid, ref) \<Rightarrow>
+            0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < pptrBase \<and> t \<noteq> VMNoMap)
   | PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
@@ -455,7 +456,8 @@ where valid_cap'_def:
   | PML4Cap ref mapdata \<Rightarrow>
     page_map_l4_at' ref s \<and>
     case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata
-  | IOPortCap first l \<Rightarrow> first \<le> l))"
+  | IOPortCap first l \<Rightarrow> first \<le> l
+  | IOPortControlCap \<Rightarrow> True))"
 
 abbreviation (input)
   valid_cap'_syn :: "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>' _" [60, 60] 61)
@@ -692,6 +694,7 @@ where
 | "acapClass (PDPointerTableCap x y) = PhysicalClass"
 | "acapClass (PML4Cap x y) = PhysicalClass"
 | "acapClass (IOPortCap x y) = IOPortClass"
+| "acapClass IOPortControlCap = IOPortClass"
 
 
 primrec
@@ -822,6 +825,13 @@ definition
         mdbRevocable n \<and>
         (\<forall>p' n'. m p' = Some (CTE IRQControlCap n') \<longrightarrow> p' = p)"
 
+(* IOPortControl caps are unique and always revocable *)
+definition
+  "ioport_control m \<equiv>
+  \<forall>p n. m p = Some (CTE (ArchObjectCap IOPortControlCap) n) \<longrightarrow>
+        mdbRevocable n \<and>
+        (\<forall>p' n'. m p' = Some (CTE (ArchObjectCap IOPortControlCap) n') \<longrightarrow> p' = p)"
+
 definition
   isArchPageCap :: "capability \<Rightarrow> bool"
 where
@@ -860,7 +870,7 @@ where
                         mdb_chunked m \<and> untyped_mdb' m \<and>
                         untyped_inc' m \<and> valid_nullcaps m \<and>
                         ut_revocable' m \<and> class_links m \<and> distinct_zombies m
-                        \<and> irq_control m \<and> reply_masters_rvk_fb m"
+                        \<and> irq_control m \<and> reply_masters_rvk_fb m \<and> ioport_control m"
 
 definition
   valid_mdb' :: "kernel_state \<Rightarrow> bool"
@@ -1105,6 +1115,39 @@ where
                                  cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s"
 
 definition
+  cap_ioports' :: "capability \<Rightarrow> ioport set"
+where
+  "cap_ioports' c \<equiv> case c of
+    ArchObjectCap (IOPortCap f l) \<Rightarrow> {f..l}
+  | _ \<Rightarrow> {}"
+
+definition
+  issued_ioports' :: "Arch.kernel_state \<Rightarrow> ioport set"
+where
+  "issued_ioports' \<equiv> \<lambda>as. Collect (x64KSAllocatedIOPorts as)"
+
+definition
+  all_ioports_issued' :: "(machine_word \<Rightarrow> capability option) \<Rightarrow> Arch.kernel_state \<Rightarrow> bool"
+where
+  "all_ioports_issued' \<equiv> \<lambda>cs as. \<forall>cap \<in> ran cs. cap_ioports' cap \<subseteq> issued_ioports' as"
+
+definition
+  ioports_no_overlap' :: "(machine_word \<Rightarrow> capability option) \<Rightarrow> bool"
+where
+  "ioports_no_overlap' \<equiv> \<lambda>cs. \<forall>cap \<in> ran cs. \<forall>cap' \<in> ran cs.
+                                 cap_ioports' cap \<inter> cap_ioports' cap' \<noteq> {} \<longrightarrow>
+                                        cap_ioports' cap = cap_ioports' cap'"
+
+definition
+  valid_ioports' :: "kernel_state \<Rightarrow> bool"
+where
+  "valid_ioports' \<equiv> \<lambda>s. all_ioports_issued' (cteCaps_of s) (ksArchState s)
+                      \<and> ioports_no_overlap' (cteCaps_of s)"
+
+lemmas valid_ioports'_simps = valid_ioports'_def all_ioports_issued'_def ioports_no_overlap'_def
+                              issued_ioports'_def
+
+definition
   "irqs_masked' \<equiv> \<lambda>s. \<forall>irq > maxIRQ. intStateIRQTable (ksInterruptState s) irq = IRQInactive"
 
 definition
@@ -1155,6 +1198,7 @@ where
                       \<and> valid_irq_states' s
                       \<and> valid_machine_state' s
                       \<and> irqs_masked' s
+                      \<and> valid_ioports' s
                       \<and> valid_queues' s
                       \<and> ct_not_inQ s
                       \<and> ct_idle_or_in_cur_domain' s
@@ -1228,7 +1272,7 @@ abbreviation(input)
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
            \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
            \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_idle_or_in_cur_domain' s
-           \<and> pspace_domain_valid s
+           \<and> pspace_domain_valid s \<and> valid_ioports' s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
@@ -1241,7 +1285,7 @@ abbreviation(input)
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
            \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
            \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_idle_or_in_cur_domain' s
-           \<and> pspace_domain_valid s
+           \<and> pspace_domain_valid s \<and> valid_ioports' s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
@@ -1262,7 +1306,7 @@ definition
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
            \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
            \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_not_inQ s
-           \<and> pspace_domain_valid s
+           \<and> pspace_domain_valid s \<and> valid_ioports' s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
@@ -1857,6 +1901,7 @@ lemma
              | ReplyCap r m                    \<Rightarrow> False
              | ArchObjectCap ASIDControlCap    \<Rightarrow> False
              | ArchObjectCap (IOPortCap _ _)   \<Rightarrow> False
+             | ArchObjectCap IOPortControlCap  \<Rightarrow> False
              | _                               \<Rightarrow> True)"
   by (simp split: capability.splits arch_capability.splits zombie_type.splits)
 
@@ -2892,7 +2937,7 @@ lemma valid_mdb_ctesE [elim]:
       caps_contained' m; mdb_chunked m; untyped_mdb' m;
       untyped_inc' m; valid_nullcaps m; ut_revocable' m;
       class_links m; distinct_zombies m; irq_control m;
-      reply_masters_rvk_fb m \<rbrakk>
+      reply_masters_rvk_fb m; ioport_control m \<rbrakk>
           \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   unfolding valid_mdb_ctes_def by auto
 
@@ -2901,7 +2946,7 @@ lemma valid_mdb_ctesI [intro]:
     caps_contained' m; mdb_chunked m; untyped_mdb' m;
     untyped_inc' m; valid_nullcaps m; ut_revocable' m;
     class_links m; distinct_zombies m; irq_control m;
-    reply_masters_rvk_fb m \<rbrakk>
+    reply_masters_rvk_fb m; ioport_control m \<rbrakk>
   \<Longrightarrow> valid_mdb_ctes m"
   unfolding valid_mdb_ctes_def by auto
 
@@ -3095,8 +3140,14 @@ end
 locale P_Int_Cur_update_eq =
           P_Int_update_eq + P_Cur_update_eq
 
-locale P_Arch_Idle_Int_update_eq =
-          P_Arch_Idle_update_eq + P_Int_update_eq
+locale P_Arch_Idle_Int_update_eq = P_Arch_Idle_update_eq + P_Int_update_eq
+begin
+
+lemma valid_ioports_update'[iff]:
+  "valid_ioports' (f s) = valid_ioports' s"
+  by (simp add: valid_ioports'_def cteCaps_of_def pspace arch)
+
+end
 
 locale P_Arch_Idle_Int_Cur_update_eq =
           P_Arch_Idle_Int_update_eq + P_Cur_update_eq
@@ -3295,6 +3346,15 @@ lemma irq_controlD:
 lemma irq_revocable:
   "\<lbrakk> m p = Some (CTE IRQControlCap n); irq_control m \<rbrakk> \<Longrightarrow> mdbRevocable n"
   unfolding irq_control_def by blast
+
+lemma ioport_controlD:
+  "\<lbrakk> m p = Some (CTE (ArchObjectCap IOPortControlCap) n); m p' = Some (CTE (ArchObjectCap IOPortControlCap) n');
+    ioport_control m \<rbrakk> \<Longrightarrow> p' = p"
+  unfolding ioport_control_def by blast
+
+lemma ioport_revocable:
+  "\<lbrakk> m p = Some (CTE (ArchObjectCap IOPortControlCap) n); ioport_control m \<rbrakk> \<Longrightarrow> mdbRevocable n"
+  unfolding ioport_control_def by blast
 
 lemma sch_act_wf_arch [simp]:
   "sch_act_wf sa (ksArchState_update f s) = sch_act_wf sa s"
@@ -3544,6 +3604,10 @@ lemma invs_arch_state' [elim!]:
   "invs' s \<Longrightarrow> valid_arch_state' s"
   by (simp add: invs'_def valid_state'_def)
 
+lemma invs_valid_ioports' [elim!]:
+  "invs' s \<Longrightarrow> valid_ioports' s"
+  by (simp add: invs'_def valid_state'_def)
+
 lemma invs_cur' [elim!]:
   "invs' s \<Longrightarrow> cur_tcb' s"
   by (simp add: invs'_def)
@@ -3650,7 +3714,7 @@ lemma invs'_gsCNodes_update[simp]:
   "invs' (gsCNodes_update f s') = invs' s'"
   apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
              bitmapQ_defs
-             valid_queues'_def valid_irq_node'_def valid_irq_handlers'_def
+             valid_queues'_def valid_irq_node'_def valid_irq_handlers'_def valid_ioports'_def
              irq_issued'_def irqs_masked'_def valid_machine_state'_def
              cur_tcb'_def)
   apply (cases "ksSchedulerAction s'")
@@ -3661,7 +3725,7 @@ lemma invs'_gsUserPages_update[simp]:
   "invs' (gsUserPages_update f s') = invs' s'"
   apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
              bitmapQ_defs
-             valid_queues'_def valid_irq_node'_def valid_irq_handlers'_def
+             valid_queues'_def valid_irq_node'_def valid_irq_handlers'_def valid_ioports'_def
              irq_issued'_def irqs_masked'_def valid_machine_state'_def
              cur_tcb'_def)
   apply (cases "ksSchedulerAction s'")

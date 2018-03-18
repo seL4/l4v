@@ -793,6 +793,9 @@ lemma tcbPriority_Queued_caps_safe:
   "\<forall>tcb. \<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF (tcbPriority_update f (tcbQueued_update g tcb)) = getF tcb) x"
   by (rule all_tcbI, rule ball_tcb_cte_casesI, simp+)
 
+crunch ioports'[wp]: tcbSchedEnqueue valid_ioports'
+  (wp: crunch_wps valid_ioports_lift'' simp: crunch_simps ignore: getObject setObject)
+
 lemma setP_invs':
   "\<lbrace>invs' and tcb_at' t and K (p \<le> maxPriority)\<rbrace> setPriority t p \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (rule hoare_gen_asm)
@@ -1004,6 +1007,17 @@ lemma untyped_derived_eq_from_sameObjectAs:
 lemmas vspace_asid'_simps [simp] =
   vspace_asid'_def [split_simps capability.split arch_capability.split option.split prod.split]
 
+lemma badge_derived_safe_ioport_insert':
+  "\<lbrakk>valid_ioports' s; cteCaps_of s src_slot = Some c; badge_derived' new_cap c\<rbrakk>
+       \<Longrightarrow> safe_ioport_insert' new_cap capability.NullCap s"
+  apply (case_tac new_cap; clarsimp simp: isCap_simps)
+  apply (rename_tac ac, case_tac ac; clarsimp simp: isCap_simps)
+  apply (clarsimp simp: badge_derived'_def)
+  apply (clarsimp simp: safe_ioport_insert'_def valid_ioports'_def)
+  apply (rule conjI, clarsimp elim!: ranE simp: ioports_no_overlap'_def)
+   apply(force simp: ran_def cteCaps_of_def)
+  by (force simp: all_ioports_issued'_def ran_def cteCaps_of_def)
+
 lemma checked_insert_tcb_invs'[wp]:
   "\<lbrace>invs' and cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) slot
          and valid_cap' new_cap
@@ -1024,6 +1038,7 @@ lemma checked_insert_tcb_invs'[wp]:
                         is_derived'_def untyped_derived_eq_from_sameObjectAs
                         ex_cte_cap_to'_cteCap)
   apply (erule sameObjectAsE)+
+  apply (clarsimp simp: badge_derived_safe_ioport_insert'[OF invs_valid_ioports'])
   apply (clarsimp simp: badge_derived'_def)
   apply (frule capBadgeNone_masters, simp)
   apply (rule conjI)
@@ -1159,7 +1174,8 @@ lemma threadcontrol_corres_helper3:
 
 lemma threadcontrol_corres_helper4:
   "isArchObjectCap ac \<Longrightarrow>
-  \<lbrace>invs' and cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) (cte_map (a, tcb_cnode_index 4)) and valid_cap' ac \<rbrace>
+  \<lbrace>invs' and cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) (cte_map (a, tcb_cnode_index 4))
+         and valid_cap' ac \<rbrace>
     checkCapAt ac (cte_map (ab, ba))
       (checkCapAt (capability.ThreadCap a) (cte_map slot)
          (assertDerived (cte_map (ab, ba)) ac (cteInsert ac (cte_map (ab, ba)) (cte_map (a, tcb_cnode_index 4)))))
@@ -1168,8 +1184,7 @@ lemma threadcontrol_corres_helper4:
        | strengthen  invs_valid_queues' invs_queues invs_weak_sch_act_wf
        | clarsimp simp: )+
   by (case_tac ac;
-      clarsimp simp: capBadge_def isArchObjectCap_def isNotificationCap_def isEndpointCap_def
-                     isReplyCap_def isIRQControlCap_def tcb_cnode_index_def cte_map_def cte_wp_at'_def
+      clarsimp simp: capBadge_def isCap_simps tcb_cnode_index_def cte_map_def cte_wp_at'_def
                      cte_level_bits_def)
 
 crunch valid_etcbs[wp]: arch_tcb_set_ipc_buffer valid_etcbs

@@ -170,6 +170,36 @@ where
       returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortOut32 output_data
       odE
   | _ \<Rightarrow> throwError IllegalOperation"
+
+definition
+  is_ioport_range_free :: "io_port \<Rightarrow> io_port \<Rightarrow> (bool,'z::state_ext) s_monad"
+where
+  "is_ioport_range_free f l \<equiv> do
+     alloc_ports \<leftarrow> gets (x64_allocated_io_ports \<circ> arch_state);
+     return $ {f..l} \<inter> (Collect alloc_ports) = {}
+  od"
+
+definition
+  decode_ioport_control_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow>
+                                    cap list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
+where
+  "decode_ioport_control_invocation label args slot cap extra_caps \<equiv>
+    if invocation_type label = ArchInvocationLabel X64IOPortControlIssue then
+      if length args \<ge> 4 \<and> length extra_caps \<ge> 1 then
+        let first_port = ucast (args ! 0); last_port = ucast (args ! 1);
+            index = args ! 2; depth = args ! 3; cnode = extra_caps ! 0
+        in doE
+          whenE (first_port > last_port) $ throwError $ InvalidArgument 1;
+          check \<leftarrow> liftE $ is_ioport_range_free first_port last_port;
+          whenE (\<not>check) $ throwError RevokeFirst;
+
+          dest_slot \<leftarrow> lookup_target_slot cnode (data_to_cptr index) (unat depth);
+          ensure_empty dest_slot;
+          returnOk $ InvokeIOPortControl $ IOPortControlInvocation first_port last_port dest_slot slot
+        odE
+      else throwError TruncatedMessage
+    else throwError IllegalOperation"
+
 (*X64STUB*)
 definition
   decode_io_unmap_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow>
@@ -535,6 +565,7 @@ where
       else throwError IllegalOperation
 
   | IOPortCap f l \<Rightarrow> decode_port_invocation label args (IOPortCap f l)
+  | IOPortControlCap \<Rightarrow> decode_ioport_control_invocation label args cte cap (map fst extra_caps)
   | PML4Cap a b \<Rightarrow> throwError IllegalOperation"
 
 definition

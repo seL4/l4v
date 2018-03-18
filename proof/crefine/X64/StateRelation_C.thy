@@ -130,6 +130,7 @@ where
 
   ccr3_relation (x64KSCurrentCR3 astate) (x64KSCurrentCR3_' cstate) \<and>
 *)
+(* FIXME x64: Still needed: relation for IOPort bitmap *)
   carch_globals astate"
 
 end

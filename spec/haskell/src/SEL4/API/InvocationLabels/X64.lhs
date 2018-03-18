@@ -45,6 +45,7 @@ This module makes use of the GHC extension allowing data types with no construct
 >         | X64PageGetAddress
 >         | X64ASIDControlMakePool
 >         | X64ASIDPoolAssign
+>         | X64IOPortControlIssue
 >         | X64IOPortIn8
 >         | X64IOPortIn16
 >         | X64IOPortIn32

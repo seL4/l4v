@@ -26,7 +26,7 @@ locale vspace_only_obj_pred = Arch +
 sublocale vspace_only_obj_pred < arch_only_obj_pred
   using vspace_only[unfolded vspace_obj_pred_def] by unfold_locales
 
-context Arch begin global_naming ARM
+context Arch begin global_naming X64
 
 sublocale empty_table: vspace_only_obj_pred "empty_table S" for S
   by unfold_locales (simp add: vspace_obj_pred_def empty_table_def del: arch_obj_fun_lift_expand)
@@ -890,6 +890,24 @@ lemma valid_arch_tcb_same_type:
   "\<lbrakk> valid_arch_tcb t s; valid_obj p k s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
    \<Longrightarrow> valid_arch_tcb t (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
   by (auto simp: valid_arch_tcb_def obj_at_def)
+
+lemma valid_ioports_lift:
+  assumes x: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
+  assumes y: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (arch_state s)\<rbrace>"
+  shows      "\<lbrace>valid_ioports\<rbrace> f \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  apply (simp add: valid_ioports_def)
+  apply (rule hoare_use_eq [where f=caps_of_state, OF x y])
+  done
+
+lemma valid_arch_mdb_lift:
+  assumes c: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
+  assumes r: "\<And>P. \<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> f \<lbrace>\<lambda>r s. P (is_original_cap s)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>r s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>"
+  apply (clarsimp simp: valid_arch_mdb_def valid_def)
+  apply (frule_tac P1="op = (caps_of_state s)" in use_valid [OF _  c], rule refl)
+  apply (frule_tac P1="op = (is_original_cap s)" in use_valid [OF _  r], rule refl)
+  apply clarsimp
+  done
 
 end
 end

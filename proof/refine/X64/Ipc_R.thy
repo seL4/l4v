@@ -993,6 +993,38 @@ lemma transferCapsToSlots_irq_handlers[wp]:
   apply (fastforce simp:valid_cap'_def)
   done
 
+crunch ioports'[wp]: setExtraBadge valid_ioports'
+
+lemma valid_ioports'_derivedD:
+  "\<lbrakk>valid_ioports' s; cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s\<rbrakk> \<Longrightarrow>
+     safe_ioport_insert' cap NullCap s"
+  apply (clarsimp simp: is_derived'_def cte_wp_at_ctes_of safe_ioport_insert'_def badge_derived'_def)
+  apply (case_tac cap; clarsimp)
+  apply (rename_tac acap, case_tac acap; clarsimp simp: isCap_simps)
+  apply (clarsimp simp: valid_ioports'_def cteCaps_of_def
+                 elim!: ranE
+                 split: capability.splits arch_capability.splits)
+  apply (rule conjI, force simp: ioports_no_overlap'_def ran_def split: if_splits)
+  apply (force simp: ran_def issued_ioports'_def all_ioports_issued'_def split: if_splits)
+  done
+
+lemma transferCapsToSlots_ioports'[wp]:
+  "\<lbrace>valid_ioports' and valid_objs' and valid_mdb' and pspace_distinct' and pspace_aligned'
+         and K(distinct slots \<and> length slots \<le> 1)
+         and (\<lambda>s. \<forall>x \<in> set slots. real_cte_at' x s \<and> cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) x s)
+         and transferCaps_srcs caps\<rbrace>
+     transferCapsToSlots ep buffer n caps slots mi
+  \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
+  apply (wp transferCapsToSlots_presM[where vo=True and emx=False and drv=True and pad=False])
+     apply (clarsimp simp: valid_ioports'_derivedD)
+    apply wp
+  apply (clarsimp simp:cte_wp_at_ctes_of | intro ballI conjI)+
+  apply (drule(1) bspec,clarsimp)
+  apply (case_tac cte,clarsimp)
+  apply (frule(1) CSpace_I.ctes_of_valid_cap')
+  apply (fastforce simp:valid_cap'_def)
+  done
+
 crunch irq_state' [wp]: setExtraBadge "\<lambda>s. P (ksInterruptState s)"
 
 lemma setExtraBadge_irq_states'[wp]:
@@ -1243,6 +1275,16 @@ lemma isIRQControlCap_mask [simp]:
                                 maskCapRights_def Let_def)+
   done
 
+lemma isIOPortControlCap'_mask [simp]:
+  "isIOPortControlCap' (maskCapRights R c) = isIOPortControlCap' c"
+  apply (case_tac c)
+            apply (clarsimp simp: isCap_simps maskCapRights_def Let_def)+
+      apply (rename_tac arch_capability)
+      apply (case_tac arch_capability)
+          apply (clarsimp simp: isCap_simps X64_H.maskCapRights_def
+                                maskCapRights_def Let_def)+
+  done
+
 lemma isPageCap_maskCapRights[simp]:
 " isArchCap isPageCap (RetypeDecls_H.maskCapRights R c) = isArchCap isPageCap c"
   apply (case_tac c; simp add: isCap_simps isArchCap_def maskCapRights_def)
@@ -1294,6 +1336,14 @@ lemma updateCapDataIRQ:
                            split: if_split_asm)
   done
 
+lemma updateCapDataIOPortC:
+  "updateCapData p d cap \<noteq> NullCap \<Longrightarrow>
+  isIOPortControlCap' (updateCapData p d cap) = isIOPortControlCap' cap"
+  apply (cases cap, simp_all add: updateCapData_def isCap_simps Let_def
+                                  X64_H.updateCapData_def
+                           split: if_split_asm)
+  done
+
 lemma updateCapData_vsCapRef[simp]:
   "vsCapRef (updateCapData pr D c) = vsCapRef c"
   by (rule ccontr,
@@ -1315,7 +1365,7 @@ lemma updateCapData_derived:
   "\<lbrakk> updateCapData pr D c \<noteq> NullCap; is_derived' m p c c' \<rbrakk> \<Longrightarrow>
   is_derived' m p (updateCapData pr D c) c'"
   apply (frule updateCapData_Master,
-         clarsimp simp add: is_derived'_def badge_derived'_def updateCapDataIRQ)
+         clarsimp simp add: is_derived'_def badge_derived'_def updateCapDataIRQ updateCapDataIOPortC)
   apply (rule conjI, erule(1) updateCapData_ordering)
   apply (clarsimp simp add: isCap_simps updateCapData_capReplyMaster)
   by ((rule conjI)?, clarsimp)+
@@ -1982,6 +2032,10 @@ crunch irq_handlers'[wp]: doIPCTransfer "valid_irq_handlers'"
   (wp: crunch_wps hoare_vcg_const_Ball_lift threadSet_irq_handlers'
        transferCapsToSlots_irq_handlers
        simp: zipWithM_x_mapM ball_conj_distrib )
+
+crunch ioports'[wp]: doIPCTransfer "valid_ioports'"
+  (wp: crunch_wps hoare_vcg_const_Ball_lift
+       simp: zipWithM_x_mapM ball_conj_distrib)
 
 crunch irq_states'[wp]: doIPCTransfer "valid_irq_states'"
   (wp: crunch_wps no_irq no_irq_mapM no_irq_storeWord no_irq_loadWord
@@ -3939,6 +3993,18 @@ lemma setupCallerCap_irq_handlers'[wp]:
             getThreadReplySlot_def locateSlot_conv
   by (wp hoare_drop_imps | simp)+
 
+lemma safe_ioport_insert'_not_ioport:
+  "\<not>isArchIOPortCap cap \<Longrightarrow> safe_ioport_insert' cap cap' s"
+  by (clarsimp simp:)
+
+lemma setupCallerCap_ioports'[wp]:
+  "\<lbrace>valid_ioports'\<rbrace>
+   setupCallerCap sender rcvr
+   \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
+  unfolding setupCallerCap_def getThreadCallerSlot_def
+            getThreadReplySlot_def locateSlot_conv
+  by (wp hoare_drop_imps | simp add: safe_ioport_insert'_not_ioport isCap_simps)+
+
 lemma cteInsert_cap_to':
   "\<lbrace>ex_nonz_cap_to' p and cte_wp_at' (\<lambda>c. cteCap c = NullCap) dest\<rbrace>
      cteInsert cap src dest
@@ -4100,8 +4166,14 @@ crunch gsUntypedZeroRanges[wp]: receiveIPC "\<lambda>s. P (gsUntypedZeroRanges s
 
 crunch ctes_of[wp]: possibleSwitchTo "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps ignore: constOnFailure)
+
 lemmas possibleSwitchToTo_cteCaps_of[wp]
     = cteCaps_of_ctes_of_lift[OF possibleSwitchTo_ctes_of]
+
+crunches possibleSwitchTo
+   for ksArch[wp]: "\<lambda>s. P (ksArchState s)"
+   and ioports'[wp]: valid_ioports'
+  (wp: valid_ioports_lift' possibleSwitchTo_ctes_of crunch_wps ignore: constOnFailure)
 
 (* t = ksCurThread s *)
 lemma ri_invs' [wp]:

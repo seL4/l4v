@@ -57,7 +57,8 @@ definition
     x64_global_pts = [],
     x64_global_pdpts = [init_global_pdpt],
     x64_global_pds = [init_global_pd],
-    x64_current_cr3 = cr3 0 0
+    x64_current_cr3 = cr3 0 0,
+    x64_allocated_io_ports = \<lambda>_. False
    \<rparr>"
 
 definition [simp]:

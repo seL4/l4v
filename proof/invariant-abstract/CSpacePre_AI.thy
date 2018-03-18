@@ -19,6 +19,11 @@ begin
 context begin interpretation Arch .
 requalify_consts
   cap_asid
+  is_simple_cap_arch
+  is_derived_arch
+  safe_parent_for_arch
+  cap_asid_base
+  cap_vptr
 end
 
 lemma fun_upd_Some:
@@ -142,5 +147,62 @@ lemma set_cap_def2:
   done
 
 lemmas cap_insert_typ_ats [wp] = abs_typ_at_lifts [OF cap_insert_typ_at]
+
+definition
+  "is_simple_cap cap \<equiv>
+    cap \<noteq> cap.NullCap \<and> cap \<noteq> cap.IRQControlCap \<and> \<not>is_untyped_cap cap \<and>
+    \<not>is_master_reply_cap cap \<and> \<not>is_reply_cap cap \<and>
+    \<not>is_ep_cap cap \<and> \<not>is_ntfn_cap cap \<and>
+    \<not>is_thread_cap cap \<and> \<not>is_cnode_cap cap \<and> \<not>is_zombie cap \<and>
+    is_simple_cap_arch cap"
+
+definition
+  "safe_parent_for m p cap parent \<equiv>
+   cap_is_device cap = cap_is_device parent \<and>
+   same_region_as parent cap \<and>
+   ((\<exists>irq. cap = cap.IRQHandlerCap irq) \<and> parent = cap.IRQControlCap \<or>
+    is_untyped_cap parent \<and> descendants_of p m = {} \<or> safe_parent_for_arch cap parent)"
+
+definition
+  capBadge_ordering :: "bool \<Rightarrow> (badge option \<times> badge option) set"
+where
+ "capBadge_ordering firstBadged \<equiv>
+    (if firstBadged then {(None, None)} else Id) \<union> ({None, Some 0} \<times> range Some)"
+
+(* True if cap' is derived from cap. *)
+definition
+  is_derived :: "cdt \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
+where
+  "is_derived m p cap' cap \<equiv>
+  cap' \<noteq> cap.NullCap \<and>
+  \<not> is_zombie cap \<and>
+  cap' \<noteq> cap.IRQControlCap \<and>
+  (if is_untyped_cap cap
+  then
+    cap_master_cap cap = cap_master_cap cap' \<and> descendants_of p m = {}
+  else
+    (cap_master_cap cap = cap_master_cap cap') \<and>
+    (cap_badge cap, cap_badge cap') \<in> capBadge_ordering False) \<and>
+    (is_master_reply_cap cap = is_reply_cap cap') \<and>
+    is_derived_arch cap' cap \<and>
+    \<not> is_reply_cap cap \<and> \<not> is_master_reply_cap cap'"
+
+
+(* FIXME: remove copy_of and use cap_master_cap with weak_derived directly *)
+definition
+  copy_of :: "cap \<Rightarrow> cap \<Rightarrow> bool"
+where
+  "copy_of cap' cap \<equiv>
+  if (is_untyped_cap cap \<or> is_reply_cap cap \<or> is_master_reply_cap cap)
+     then cap = cap' else same_object_as cap cap'"
+
+definition
+  "weak_derived cap cap' \<equiv>
+  (copy_of cap cap' \<and>
+   cap_asid cap = cap_asid cap' \<and>
+   cap_asid_base cap = cap_asid_base cap' \<and>
+   cap_vptr cap = cap_vptr cap') \<or>
+   cap' = cap"
+
 
 end

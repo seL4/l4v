@@ -906,10 +906,15 @@ lemma arch_state_update_invs:
   assumes "valid_global_vspace_mappings s \<Longrightarrow> valid_global_vspace_mappings (arch_state_update f s)"
   assumes "pspace_in_kernel_window s \<Longrightarrow> pspace_in_kernel_window (arch_state_update f s)"
   assumes "cap_refs_in_kernel_window s \<Longrightarrow> cap_refs_in_kernel_window (arch_state_update f s)"
+  assumes "valid_ioports s \<Longrightarrow> valid_ioports (arch_state_update f s)"
   shows "invs (arch_state_update f s)"
   using assms by (simp add: invs_def valid_state_def valid_irq_node_def valid_irq_states_def
                             valid_machine_state_def valid_arch_caps_def valid_asid_map_def
                             valid_vspace_objs_arch_update valid_vs_lookup_arch_update)
+
+lemma valid_ioports_cr3_update[iff]:
+  "valid_ioports (s\<lparr>arch_state := arch_state s\<lparr>x64_current_cr3 := c\<rparr>\<rparr>) = valid_ioports s"
+  by (clarsimp simp: valid_ioports_def all_ioports_issued_def issued_ioports_def)
 
 lemma set_current_cr3_invs[wp]:
   "\<lbrace>invs\<rbrace> set_current_cr3 c \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -1334,7 +1339,7 @@ lemma arch_update_cap_invs_map:
   apply (rule hoare_pre)
    apply (wp arch_update_cap_pspace arch_update_cap_valid_mdb set_cap_idle
              update_cap_ifunsafe valid_irq_node_typ set_cap_typ_at
-             set_cap_irq_handlers set_cap_valid_arch_caps
+             set_cap_irq_handlers set_cap_valid_arch_caps set_cap_ioports_no_new_ioports
              set_cap_cap_refs_respects_device_region_spec[where ptr = p])
   apply (clarsimp simp: cte_wp_at_caps_of_state
               simp del: imp_disjL)
@@ -1359,7 +1364,8 @@ lemma arch_update_cap_invs_map:
                   split: cap.split_asm)
   apply (rule conjI)
    apply (frule master_cap_obj_refs)
-   apply simp
+   apply (clarsimp simp: cap_ioports_def cap_master_cap_def split: arch_cap.splits cap.splits)
+  apply (rule conjI, frule master_cap_obj_refs, simp)
   apply (rule conjI)
    apply (frule master_cap_obj_refs)
    apply (case_tac "table_cap_ref capa =
@@ -1410,7 +1416,7 @@ lemma arch_update_cap_invs_unmap_page:
   apply (rule hoare_pre)
    apply (wp arch_update_cap_pspace arch_update_cap_valid_mdb set_cap_idle
              update_cap_ifunsafe valid_irq_node_typ set_cap_typ_at
-             set_cap_irq_handlers set_cap_valid_arch_caps
+             set_cap_irq_handlers set_cap_valid_arch_caps set_cap_ioports_no_new_ioports
              set_cap_cap_refs_respects_device_region_spec[where ptr = p])
   apply clarsimp
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
@@ -1449,7 +1455,7 @@ lemma arch_update_cap_invs_unmap_page_table:
   apply (rule hoare_pre)
    apply (wp arch_update_cap_pspace arch_update_cap_valid_mdb set_cap_idle
              update_cap_ifunsafe valid_irq_node_typ set_cap_typ_at
-             set_cap_irq_handlers set_cap_valid_arch_caps
+             set_cap_irq_handlers set_cap_valid_arch_caps set_cap_ioports_no_new_ioports
              set_cap_cap_refs_respects_device_region_spec[where ptr = p])
   apply (simp add: final_cap_at_eq)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
@@ -1493,7 +1499,7 @@ lemma arch_update_cap_invs_unmap_page_directory:
   apply (rule hoare_pre)
    apply (wp arch_update_cap_pspace arch_update_cap_valid_mdb set_cap_idle
              update_cap_ifunsafe valid_irq_node_typ set_cap_typ_at
-             set_cap_irq_handlers set_cap_valid_arch_caps
+             set_cap_irq_handlers set_cap_valid_arch_caps set_cap_ioports_no_new_ioports
              set_cap_cap_refs_respects_device_region_spec[where ptr = p])
   apply (simp add: final_cap_at_eq)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
@@ -1537,7 +1543,7 @@ lemma arch_update_cap_invs_unmap_pd_pointer_table:
   apply (rule hoare_pre)
    apply (wp arch_update_cap_pspace arch_update_cap_valid_mdb set_cap_idle
              update_cap_ifunsafe valid_irq_node_typ set_cap_typ_at
-             set_cap_irq_handlers set_cap_valid_arch_caps
+             set_cap_irq_handlers set_cap_valid_arch_caps set_cap_ioports_no_new_ioports
              set_cap_cap_refs_respects_device_region_spec[where ptr = p])
   apply (simp add: final_cap_at_eq)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
@@ -1581,7 +1587,7 @@ lemma arch_update_cap_invs_unmap_page_map_l4:
   apply (rule hoare_pre)
    apply (wp arch_update_cap_pspace arch_update_cap_valid_mdb set_cap_idle
              update_cap_ifunsafe valid_irq_node_typ set_cap_typ_at
-             set_cap_irq_handlers set_cap_valid_arch_caps
+             set_cap_irq_handlers set_cap_valid_arch_caps set_cap_ioports_no_new_ioports
              set_cap_cap_refs_respects_device_region_spec[where ptr = p])
   apply (simp add: final_cap_at_eq)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def

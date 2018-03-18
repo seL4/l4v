@@ -30,6 +30,7 @@ requalify_consts
   vs_cap_ref
   unmap_page
   clearMemory
+  arch_post_cap_delete_pre
 
 requalify_facts
   final_cap_lift
@@ -44,6 +45,12 @@ requalify_facts
 
 end
 
+definition
+  "post_cap_delete_pre cap cs \<equiv> case cap of
+     IRQHandlerCap irq \<Rightarrow> cap \<notin> ran cs
+   | ArchObjectCap acap \<Rightarrow> arch_post_cap_delete_pre cap cs
+   | _ \<Rightarrow> False"
+
 locale Finalise_AI_1 =
   fixes state_ext_type1 :: "('a :: state_ext) itself"
   fixes state_ext_type2 :: "('b :: state_ext) itself"
@@ -57,7 +64,7 @@ locale Finalise_AI_1 =
   assumes obj_ref_ofI: "\<And> cap x. obj_refs cap = {x} \<Longrightarrow> obj_ref_of cap = x"
   assumes empty_slot_invs:
     "\<And>sl info. \<lbrace>\<lambda> (s :: 'a state). invs s \<and> cte_wp_at (replaceable s sl cap.NullCap) sl s \<and>
-          emptyable sl s \<and> (info \<noteq> NullCap \<longrightarrow> info \<notin> ran ((caps_of_state s) (sl \<mapsto> NullCap)))\<rbrace>
+          emptyable sl s \<and> (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre info ((caps_of_state s) (sl \<mapsto> NullCap)))\<rbrace>
      empty_slot sl info
      \<lbrace>\<lambda>rv. invs\<rbrace>"
   assumes dom_tcb_cap_cases_lt:
@@ -340,14 +347,15 @@ lemma zombies_final_cdt_update[simp]:
   "zombies_final (cdt_update f s) = zombies_final s"
   by (fastforce elim!: zombies_final_pspaceI)
 
+
 lemma post_cap_deletion_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> (info \<noteq> NullCap \<longrightarrow> info \<notin> ran (caps_of_state s))\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre info (caps_of_state s))\<rbrace>
      post_cap_deletion info
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding post_cap_deletion_def deleted_irq_handler_def
   apply (rule hoare_pre)
    apply (wp arch_post_cap_deletion_invs | wpc)+
-  apply clarsimp
+  apply (clarsimp simp: post_cap_delete_pre_def split: cap.splits)
   done
 
 lemma emptyable_no_reply_cap:
@@ -631,7 +639,7 @@ lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
   apply (simp add: unbind_maybe_notification_def invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
-   apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs)
+   apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs valid_ioports_lift)
   apply simp
   apply safe
   defer 3 defer 6

@@ -283,7 +283,8 @@ lemma store_asid_pool_entry_valid_sched[wp]:
 
 crunch valid_sched[wp]:
   perform_page_invocation, perform_page_table_invocation, perform_asid_pool_invocation,
-  perform_page_directory_invocation, perform_io_port_invocation, perform_pdpt_invocation
+  perform_page_directory_invocation, perform_io_port_invocation, perform_pdpt_invocation,
+  perform_ioport_control_invocation
   valid_sched
   (wp: mapM_x_wp' mapM_wp')
 

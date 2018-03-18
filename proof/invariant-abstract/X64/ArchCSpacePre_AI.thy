@@ -22,54 +22,18 @@ lemmas typ_at_eq_kheap_obj = typ_at_eq_kheap_obj atyp_at_eq_kheap_obj
 
 lemmas set_cap_atyp_ats[wp] = abs_atyp_at_lifts[OF set_cap_typ_at]
 
-lemmas cap_master_cap_def = cap_master_cap_def[simplified cap_master_arch_cap_def]
-
 definition
   "final_matters_arch ac \<equiv>
      (case ac of
          ASIDPoolCap r as \<Rightarrow> True
        | ASIDControlCap \<Rightarrow> False
        | IOPortCap first_port last_port \<Rightarrow> True (* FIXME: stab in the dark. *)
+       | IOPortControlCap \<Rightarrow> False
        | PageCap dev r rghts maptype sz mapdata \<Rightarrow> False
        | PageTableCap r mapdata \<Rightarrow> True
        | PageDirectoryCap r mapdata \<Rightarrow> True
        | PDPointerTableCap r mapdata \<Rightarrow> True
        | PML4Cap r mapdata \<Rightarrow> True)"
-
-definition
-  "cap_vptr_arch acap \<equiv> case acap of
-     (PageCap _ _ _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
-  |  (PageTableCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
-  |  (PageDirectoryCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
-  |  (PDPointerTableCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
-  | _ \<Rightarrow> None"
-
-definition
-  "cap_vptr cap \<equiv> arch_cap_fun_lift cap_vptr_arch None cap"
-
-declare cap_vptr_arch_def[abs_def, simp]
-
-lemmas cap_vptr_simps [simp] =
-  cap_vptr_def [simplified, split_simps cap.split arch_cap.split option.split prod.split]
-
-(* True when cap' is derived from cap. *)
-definition
-  "is_derived_arch cap' cap \<equiv>
-    (is_vspace_table_cap cap' \<longrightarrow> cap_asid cap = cap_asid cap' \<and> cap_asid cap' \<noteq> None) \<and>
-    (vs_cap_ref cap = vs_cap_ref cap' \<or> is_pg_cap cap)"
-
-lemma is_derived_arch_non_arch:
-  "\<not> is_arch_cap cap \<Longrightarrow> \<not> is_arch_cap cap' \<Longrightarrow> is_derived_arch cap cap'"
-  unfolding is_derived_arch_def vs_cap_ref_def is_arch_cap_def
-            is_pg_cap_def is_pt_cap_def is_pd_cap_def is_pdpt_cap_def is_pml4_cap_def
-  by (auto split: cap.splits)
-
-lemma is_derived_cap_arch_asid:
-  "is_derived_arch cap cap' \<Longrightarrow> cap_master_cap cap = cap_master_cap cap'
-    \<Longrightarrow> is_vspace_table_cap cap' \<Longrightarrow> cap_asid cap = cap_asid cap'"
-  unfolding is_derived_arch_def
-  apply (cases cap; cases cap'; simp)
-  by (auto simp: is_cap_simps cap_master_cap_def split: arch_cap.splits)
 
 lemma is_page_cap_PageCap[simp]:
   "is_page_cap (PageCap dev ref rghts maptype pgsiz mapdata)"
@@ -79,25 +43,10 @@ lemma pageBitsForSize_eq[simp]:
   "(pageBitsForSize sz = pageBitsForSize sz') = (sz = sz')"
   by (cases sz; cases sz'; simp add: pageBits_def ptTranslationBits_def)
 
-
-lemma
-  cap_master_cap_arch_simps:
-  "cap_master_arch_cap (ASIDPoolCap pool asid) = ASIDPoolCap pool 0"
-  "cap_master_arch_cap ASIDControlCap = ASIDControlCap"
-  "cap_master_arch_cap (IOPortCap f l) = IOPortCap f l"
-  "cap_master_arch_cap (PageCap dev ref rghts maptype sz mapdata)
-      = PageCap dev ref UNIV VMNoMap sz None"
-  "cap_master_arch_cap (PageTableCap ptr x) = PageTableCap ptr None"
-  "cap_master_arch_cap (PageDirectoryCap ptr x) = PageDirectoryCap ptr None"
-  "cap_master_arch_cap (PDPointerTableCap ptr x) = PDPointerTableCap ptr None"
-  "cap_master_arch_cap (PML4Cap ptr y) = PML4Cap ptr None"
-  by (simp add: cap_master_arch_cap_def)+
-
 lemma aobj_ref_cases':
   "aobj_ref acap = (case acap of ASIDControlCap \<Rightarrow> aobj_ref acap
                                 | _ \<Rightarrow> aobj_ref acap)"
   by (simp split: arch_cap.split)
-
 
 lemma aobj_ref_cases:
   "aobj_ref acap =
@@ -109,23 +58,11 @@ lemma aobj_ref_cases:
   | PageTableCap w opt \<Rightarrow> Some w
   | PageDirectoryCap w opt \<Rightarrow> Some w
   | PDPointerTableCap w opt \<Rightarrow> Some w
-  | PML4Cap w opt \<Rightarrow> Some w)"
+  | PML4Cap w opt \<Rightarrow> Some w
+  | IOPortControlCap \<Rightarrow> None)"
   apply (subst aobj_ref_cases')
   apply (clarsimp cong: arch_cap.case_cong)
   done
-
-definition
-  "cap_asid_base_arch cap \<equiv> case cap of
-     ASIDPoolCap _ asid \<Rightarrow> Some asid
-  | _ \<Rightarrow> None"
-
-declare cap_asid_base_arch_def[abs_def, simp]
-
-definition cap_asid_base :: "cap \<Rightarrow> asid option" where
-  "cap_asid_base cap \<equiv> arch_cap_fun_lift cap_asid_base_arch None cap"
-
-lemmas cap_asid_base_simps [simp] =
-  cap_asid_base_def [simplified, split_simps cap.split arch_cap.split]
 
 definition
   "ups_of_heap h \<equiv> \<lambda>p.
@@ -155,18 +92,7 @@ lemma ups_of_heap_non_arch_upd:
   "h x = Some ko \<Longrightarrow> non_arch_obj ko \<Longrightarrow> non_arch_obj ko' \<Longrightarrow> ups_of_heap (h(x \<mapsto> ko')) = ups_of_heap h"
   by (rule ext) (auto simp add: ups_of_heap_def non_arch_obj_def split: kernel_object.splits)
 
-definition
-  "is_simple_cap_arch cap \<equiv> \<not>is_pt_cap cap \<and> \<not> is_pd_cap cap
-                          \<and> \<not> is_pdpt_cap cap \<and> \<not> is_pml4_cap cap"
-
-declare is_simple_cap_arch_def[simp]
-
-lemma is_simple_cap_arch:
-  "\<not>is_arch_cap cap \<Longrightarrow> is_simple_cap_arch cap"
-  by (simp add: is_cap_simps)
-
 crunch inv[wp]: lookup_ipc_buffer "I"
-
 
 lemma vs_cap_ref_to_table_cap_ref:
   "\<not> is_pg_cap cap \<Longrightarrow> vs_cap_ref cap = table_cap_ref cap"
@@ -209,22 +135,6 @@ lemma same_aobject_as_commute:
 
 lemmas wellformed_cap_simps = wellformed_cap_def
   [simplified wellformed_acap_def, split_simps cap.split arch_cap.split]
-
-lemma same_master_cap_same_types:
-  "cap_master_cap cap = cap_master_cap cap' \<Longrightarrow>
-    (is_pt_cap cap = is_pt_cap cap') \<and> (is_pd_cap cap = is_pd_cap cap') \<and>
-    (is_pdpt_cap cap = is_pdpt_cap cap') \<and> (is_pml4_cap cap = is_pml4_cap cap')"
-  by (clarsimp simp: cap_master_cap_def is_cap_simps
-                  split: cap.splits arch_cap.splits)
-
-lemma is_derived_cap_arch_asid_issues:
-  "is_derived_arch cap cap' \<Longrightarrow>
-    cap_master_cap cap = cap_master_cap cap'
-      \<Longrightarrow> (is_vspace_table_cap cap \<longrightarrow> cap_asid cap \<noteq> None)
-             \<and> (is_pg_cap cap \<or> (vs_cap_ref cap = vs_cap_ref cap'))"
-  apply (simp add: is_derived_arch_def)
-  by (auto simp: cap_master_cap_def is_cap_simps cap_asid_def
-          split: cap.splits arch_cap.splits option.splits)
 
 lemma is_vspace_table_Null[simp]:
   "\<not> is_pt_cap NullCap \<and> \<not> is_pd_cap NullCap \<and> \<not> is_pdpt_cap NullCap \<and> \<not> is_pml4_cap NullCap"
@@ -282,6 +192,148 @@ lemma arch_derived_is_device:
     cap_range_def is_cap_simps cap_master_cap_def cap_master_arch_cap_def
               split: if_split_asm cap.splits arch_cap.splits)+
   done
+
+lemma valid_arch_mdb_simple:
+  "\<And>s capa. \<lbrakk>valid_arch_mdb (is_original_cap s) (caps_of_state s);
+              is_simple_cap cap; caps_of_state s src = Some capa\<rbrakk> \<Longrightarrow>
+         valid_arch_mdb ((is_original_cap s) (dest := is_cap_revocable cap capa))
+                       (caps_of_state s(dest \<mapsto> cap))"
+  by (auto simp: valid_arch_mdb_def ioport_revocable_def is_cap_revocable_def arch_is_cap_revocable_def
+                 is_simple_cap_def safe_parent_for_def is_cap_simps)
+
+lemma free_index_update_irq_revocable[simp]:
+  "ms src = Some src_cap \<Longrightarrow>
+   ioport_revocable P (ms(src \<mapsto> src_cap\<lparr>free_index:=a\<rparr>)) = ioport_revocable P ms"
+  unfolding ioport_revocable_def
+  apply (rule iffI)
+    apply clarify
+    apply (drule_tac x = p in spec)
+      apply (case_tac "p = src")
+       apply (clarsimp simp:free_index_update_def)+
+  apply (simp add: free_index_update_def split:cap.splits)
+  done
+
+lemma valid_arch_mdb_free_index_update:
+  "\<lbrakk>m src = Some capa;m' = m (src\<mapsto> capa\<lparr>free_index :=x\<rparr>) \<rbrakk> \<Longrightarrow>
+   valid_arch_mdb c (m') = valid_arch_mdb c (m)"
+  by (clarsimp simp:valid_arch_mdb_def)
+
+lemma set_cap_update_free_index_valid_arch_mdb:
+  "\<lbrace>\<lambda>s. valid_arch_mdb (is_original_cap s) (caps_of_state s) \<and> is_untyped_cap src_cap\<rbrace>
+         set_cap (free_index_update f src_cap) src
+   \<lbrace>\<lambda>rv s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>"
+  apply (clarsimp simp: valid_arch_mdb_def)
+  apply (rule hoare_pre)
+   apply (wps set_cap_rvk_cdt_ct_ms)
+  apply wpsimp
+  by (clarsimp simp: ioport_revocable_def is_cap_simps free_index_update_def
+                 split: cap.splits)
+
+lemma set_untyped_cap_as_full_valid_arch_mdb:
+  "\<lbrace>\<lambda>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>
+            set_untyped_cap_as_full src_cap c src
+   \<lbrace>\<lambda>rv s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>"
+  by (wpsimp wp: set_cap_update_free_index_valid_arch_mdb
+           simp: set_untyped_cap_as_full_def)
+
+lemma valid_arch_mdb_not_arch_cap_update:
+     "\<And>s cap capa. \<lbrakk>\<not>is_arch_cap cap; valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrakk>
+       \<Longrightarrow> valid_arch_mdb ((is_original_cap s)(dest := True))
+            (caps_of_state s(src \<mapsto> cap, dest\<mapsto>capa))"
+  by (auto simp: valid_arch_mdb_def ioport_revocable_def is_cap_simps)
+
+lemma valid_arch_mdb_derived_cap_update:
+  "\<And>s capa. \<lbrakk>valid_arch_mdb (is_original_cap s) (caps_of_state s);
+             is_derived (cdt s) src cap capa\<rbrakk> \<Longrightarrow>
+           valid_arch_mdb ((is_original_cap s)(dest := is_cap_revocable cap capa))
+                           (caps_of_state s(dest \<mapsto> cap))"
+  apply (clarsimp simp: valid_arch_mdb_def ioport_revocable_def is_cap_simps is_cap_revocable_def
+                        arch_is_cap_revocable_def)
+  by (clarsimp simp: is_derived_def is_cap_simps is_derived_arch_def split: if_split_asm)
+
+lemma valid_arch_mdb_free_index_update':
+  "\<And>s capa. \<lbrakk>valid_arch_mdb (is_original_cap s) (caps_of_state s); caps_of_state s src = Some capa;
+                   is_untyped_cap cap\<rbrakk> \<Longrightarrow>
+           valid_arch_mdb ((is_original_cap s) (dest := is_cap_revocable cap capa))
+            (caps_of_state s(dest \<mapsto> cap, src \<mapsto> max_free_index_update capa))"
+  by (auto simp: valid_arch_mdb_def ioport_revocable_def is_cap_simps is_cap_revocable_def
+                        arch_is_cap_revocable_def free_index_update_def split: cap.splits)
+
+lemma weak_derived_IOPortControl[simp]:
+  "weak_derived (ArchObjectCap IOPortControlCap) cap \<Longrightarrow>
+         cap = ArchObjectCap IOPortControlCap"
+  by (clarsimp simp: weak_derived_def copy_of_def same_object_as_def is_cap_simps
+              split: if_split_asm cap.splits arch_cap.splits)
+
+lemma valid_arch_mdb_weak_derived_update:
+  "\<And>s capa. \<lbrakk>valid_arch_mdb (is_original_cap s) (caps_of_state s);
+                      caps_of_state s src = Some capa; weak_derived cap capa\<rbrakk> \<Longrightarrow>
+        valid_arch_mdb ((is_original_cap s) (dest := is_original_cap s src, src := False))
+            (caps_of_state s(dest \<mapsto> cap, src \<mapsto> NullCap))"
+  by (auto simp: valid_arch_mdb_def ioport_revocable_def
+          split: if_split_asm
+       simp del: split_paired_All)
+
+lemma valid_arch_mdb_tcb_cnode_update:
+  "valid_arch_mdb (is_original_cap s) (caps_of_state s) \<Longrightarrow>
+           valid_arch_mdb ((is_original_cap s) ((t, tcb_cnode_index 2) := True))
+              (caps_of_state s((t, tcb_cnode_index 2) \<mapsto> ReplyCap t True))"
+  by (clarsimp simp: valid_arch_mdb_def ioport_revocable_def)
+
+lemmas valid_arch_mdb_updates = valid_arch_mdb_free_index_update valid_arch_mdb_not_arch_cap_update
+                                valid_arch_mdb_derived_cap_update valid_arch_mdb_free_index_update'
+                                valid_arch_mdb_weak_derived_update valid_arch_mdb_tcb_cnode_update
+
+lemma safe_parent_for_arch_not_arch':
+  "\<not>is_arch_cap cap \<Longrightarrow> \<not>safe_parent_for_arch c cap"
+  by (clarsimp simp: safe_parent_for_arch_def is_cap_simps)
+
+lemma ioport_revocableD:
+  "\<lbrakk> cs p = Some (ArchObjectCap IOPortControlCap); ioport_revocable (is_original_cap s) cs \<rbrakk> \<Longrightarrow> is_original_cap s p"
+  by (fastforce simp add: ioport_revocable_def simp del: split_paired_All)
+
+lemma safe_parent_arch_is_parent:
+  "\<lbrakk>safe_parent_for_arch cap pcap; caps_of_state s p = Some pcap;
+      valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrakk> \<Longrightarrow>
+    should_be_parent_of pcap (is_original_cap s p) cap f"
+  apply (clarsimp simp: should_be_parent_of_def safe_parent_for_arch_def valid_arch_mdb_def)
+  by (erule (1) ioport_revocableD)
+
+lemma safe_parent_for_arch_no_obj_refs:
+  "safe_parent_for_arch cap c \<Longrightarrow> obj_refs cap = {}"
+  by (clarsimp simp: safe_parent_for_arch_def)
+
+lemma valid_arch_mdb_same_master_cap:
+  "\<lbrakk>valid_arch_mdb ioc cs; cs sl = Some cap; cap_master_cap cap' = cap_master_cap cap\<rbrakk> \<Longrightarrow>
+  valid_arch_mdb ioc (cs(sl\<mapsto>cap'))"
+  by (clarsimp simp: valid_arch_mdb_def ioport_revocable_def cap_master_cap_def
+              split: cap.split_asm arch_cap.split_asm)
+
+lemma valid_arch_mdb_null_filter:
+  "valid_arch_mdb (is_original_cap s) (null_filter (caps_of_state s)) = valid_arch_mdb (is_original_cap s) (caps_of_state s)"
+  apply (clarsimp simp: null_filter_def valid_arch_mdb_def ioport_revocable_def)
+  by auto
+
+lemma valid_arch_mdb_untypeds:
+  "\<And>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)
+       \<Longrightarrow> valid_arch_mdb (\<lambda>x. x \<noteq> cref \<longrightarrow> is_original_cap s x)
+            (caps_of_state s(cref \<mapsto> default_cap tp oref sz dev))"
+  "\<And>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)
+       \<Longrightarrow> valid_arch_mdb (is_original_cap s)
+            (caps_of_state s(cref \<mapsto> UntypedCap dev ptr sz idx))"
+  by (clarsimp simp: valid_arch_mdb_def ioport_revocable_def)+
+
+lemma same_object_as_ioports:
+  "same_object_as c c' \<Longrightarrow> cap_ioports c = cap_ioports c'"
+  by (clarsimp simp: same_object_as_def is_cap_simps cap_ioports_def split: cap.splits arch_cap.splits)
+
+lemma copy_of_ioports:
+  "copy_of c c' \<Longrightarrow> cap_ioports c = cap_ioports c'"
+  by (clarsimp simp: copy_of_def same_object_as_ioports split: if_split_asm)
+
+lemma weak_derived_cap_ioports:
+  "weak_derived c c' \<Longrightarrow> cap_ioports c = cap_ioports c'"
+  by (auto simp : weak_derived_def copy_of_ioports)
 
 end
 end

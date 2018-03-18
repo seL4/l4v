@@ -418,6 +418,10 @@ lemma isnt_irq_handler_strg:
   "(\<not> isIRQHandlerCap cap) \<longrightarrow> (\<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> P irq)"
   by (clarsimp simp: isCap_simps)
 
+lemma safe_ioport_insert'_ntfn_strg:
+  "isNotificationCap cap \<longrightarrow> safe_ioport_insert' cap cap' s"
+  by (clarsimp simp: safe_ioport_insert'_not_ioport isCap_simps)
+
 lemma ct_in_current_domain_ksMachineState:
   "ct_idle_or_in_cur_domain' (ksMachineState_update p s) = ct_idle_or_in_cur_domain' s"
   apply (simp add:ct_idle_or_in_cur_domain'_def)
@@ -433,7 +437,7 @@ lemma invoke_irq_handler_invs'[wp]:
       valid_machine_state'_def ct_not_inQ_def
       ct_in_current_domain_ksMachineState)
    apply (wp cteInsert_invs)+
-   apply (strengthen ntfn_badge_derived_enough_strg isnt_irq_handler_strg)
+   apply (strengthen ntfn_badge_derived_enough_strg isnt_irq_handler_strg safe_ioport_insert'_ntfn_strg)
    apply (wp cteDeleteOne_other_cap cteDeleteOne_other_cap[unfolded o_def])
   apply (rename_tac word1 cap word2)
   apply (simp add: getInterruptState_def getIRQSlot_def locateSlot_conv)
@@ -587,7 +591,9 @@ lemma arch_invoke_irq_control_invs'[wp]:
   "\<lbrace>invs' and arch_irq_control_inv_valid' i\<rbrace> X64_H.performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: X64_H.performIRQControl_def)
   apply (rule hoare_pre)
-   apply (wp cteInsert_simple_invs | simp add: cte_wp_at_ctes_of | wpc)+
+   apply (wp cteInsert_simple_invs
+            | simp add: cte_wp_at_ctes_of safe_ioport_insert'_not_ioport isCap_simps
+            | wpc)+
   apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid'
                         is_simple_cap'_def isCap_simps
                         safe_parent_for'_def sameRegionAs_def3)
@@ -605,7 +611,8 @@ lemma invoke_irq_control_invs'[wp]:
   "\<lbrace>invs' and irq_control_inv_valid' i\<rbrace> performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (cases i, simp_all add: performIRQControl_def)
   apply (rule hoare_pre)
-   apply (wp cteInsert_simple_invs | simp add: cte_wp_at_ctes_of)+
+   apply (wp cteInsert_simple_invs
+           | simp add: cte_wp_at_ctes_of safe_ioport_insert'_not_ioport isCap_simps)+
   apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid'
                         is_simple_cap'_def isCap_simps
                         safe_parent_for'_def sameRegionAs_def3)

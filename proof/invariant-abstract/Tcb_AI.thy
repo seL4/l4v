@@ -12,6 +12,13 @@ theory Tcb_AI
 imports "./$L4V_ARCH/ArchCNodeInv_AI"
 begin
 
+context begin interpretation Arch .
+
+requalify_facts
+  arch_derive_is_arch
+
+end
+
 locale Tcb_AI_1 =
   fixes state_ext_t :: "('state_ext::state_ext) itself"
   fixes is_cnode_or_valid_arch :: "cap \<Rightarrow> bool"
@@ -618,7 +625,7 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
              thread_set_valid_reply_caps_trivial
              thread_set_valid_reply_masters_trivial
              valid_irq_node_typ valid_irq_handlers_lift
-             thread_set_caps_of_state_trivial
+             thread_set_caps_of_state_trivial valid_ioports_lift
              thread_set_arch_caps_trivial
              thread_set_only_idle
              thread_set_cap_refs_in_kernel_window
@@ -709,7 +716,7 @@ lemma set_mcpriority_invs[wp]:
              thread_set_arch_caps_trivial
              thread_set_only_idle
              thread_set_cap_refs_in_kernel_window
-             thread_set_valid_ioc_trivial
+             thread_set_valid_ioc_trivial valid_ioports_lift
              thread_set_cap_refs_respects_device_region
               | simp add: ran_tcb_cap_cases invs_def valid_state_def valid_pspace_def
               | rule conjI | erule disjE)+
@@ -803,7 +810,7 @@ lemma bind_notification_invs:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: bind_notification_def invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (wp valid_irq_node_typ set_simple_ko_valid_objs simple_obj_set_prop_at
+  apply (wp valid_irq_node_typ set_simple_ko_valid_objs simple_obj_set_prop_at valid_ioports_lift
          | clarsimp simp:idle_no_ex_cap split del: if_split)+
   apply (intro conjI;
     (clarsimp simp: is_ntfn idle_no_ex_cap elim!: obj_at_weakenE)?)
@@ -1025,10 +1032,10 @@ lemma decode_set_sched_params_inv[wp]:
   by (wpsimp simp: decode_set_sched_params_def wp: check_prio_inv whenE_inv)
 
 lemma derive_is_arch[wp]:
-  "\<lbrace>\<lambda>s. is_arch_cap c\<rbrace> derive_cap slot c \<lbrace>\<lambda>rv s. is_arch_cap rv\<rbrace>,-"
+  "\<lbrace>\<lambda>s. is_arch_cap c\<rbrace> derive_cap slot c \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> is_arch_cap rv\<rbrace>,-"
   apply (simp add: derive_cap_def cong: cap.case_cong)
   apply (rule hoare_pre)
-   apply (wp | wpc | simp only: o_def is_arch_cap_def cap.simps)+
+   apply (wp arch_derive_is_arch | wpc | simp only: o_def is_arch_cap_def cap.simps)+
   apply fastforce
   done
 
@@ -1178,6 +1185,8 @@ lemma derived_cap_cnode_valid:
                                validE_def valid_def returnOk_def)
    apply (clarsimp simp: in_monad)
   apply (clarsimp simp add: liftME_def in_monad)
+  apply (frule use_valid[OF _ arch_derive_is_arch[simplified validE_def validE_R_def]], simp)
+  apply (clarsimp simp: is_cap_simps)
   done
 
 

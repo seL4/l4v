@@ -787,6 +787,7 @@ lemma valid_objs: "valid_objs' s"
   and    ut_rev: "ut_revocable' (ctes_of s)"
   and    dist_z: "distinct_zombies (ctes_of s)"
   and  irq_ctrl: "irq_control (ctes_of s)"
+  and ioport_ctrl: "ioport_control (ctes_of s)"
   and    clinks: "class_links (ctes_of s)"
   and  rep_r_fb: "reply_masters_rvk_fb (ctes_of s)"
   and      idle: "valid_idle' s"
@@ -794,6 +795,7 @@ lemma valid_objs: "valid_objs' s"
   and      arch: "valid_arch_state' s"
   and      virq: "valid_irq_node' (irq_node' s) s"
   and     virqh: "valid_irq_handlers' s"
+  and  vioports: "valid_ioports' s"
   and     virqs: "valid_irq_states' s"
   and no_0_objs: "no_0_obj' s"
   and  ctnotinQ: "ct_not_inQ s"
@@ -1245,6 +1247,10 @@ lemma exists_disj:
    = (\<exists>a. P a \<and> (Q a \<or> Q' a))"
    by auto
 
+lemma valid_ioports'_ksMachine[iff]:
+  "valid_ioports' s \<Longrightarrow> valid_ioports' (ksMachineState_update upd s)"
+  by (clarsimp simp: valid_ioports'_simps)
+
 lemma (in delete_locale) delete_invs':
   "invs' (ksMachineState_update
            (\<lambda>ms. underlying_memory_update
@@ -1449,9 +1455,20 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     apply (clarsimp simp: ran_def)
     done
 
+  show "valid_ioports' ?s" using vioports
+    apply (simp add: valid_ioports'_simps Ball_def cteCaps_of_def, clarsimp)
+    apply (rule conjI, rule allEI, assumption, (auto simp: ran_def)[1])
+    apply (erule allEI)
+    apply (auto simp: ran_def)
+    done
+
   from irq_ctrl
   show "irq_control ?ctes'"
     by (clarsimp simp: irq_control_def)
+
+  from ioport_ctrl
+  show "ioport_control ?ctes'"
+    by (clarsimp simp: ioport_control_def)
 
   from dist_z
   show "distinct_zombies ?ctes'"

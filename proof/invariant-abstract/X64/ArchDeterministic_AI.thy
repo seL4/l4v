@@ -42,7 +42,8 @@ crunch valid_list[wp]: invoke_untyped valid_list
   (wp: crunch_wps preemption_point_inv' hoare_unless_wp mapME_x_wp'
    simp: mapM_x_def_bak crunch_simps)
 
-crunch valid_list[wp]: invoke_irq_control, store_pde, store_pte, store_pdpte, store_pml4e, perform_io_port_invocation valid_list
+crunch valid_list[wp]: invoke_irq_control, store_pde, store_pte, store_pdpte, store_pml4e,
+                       perform_io_port_invocation, perform_ioport_control_invocation valid_list
   (wp: crunch_wps simp: crunch_simps)
 
 lemma perform_pdpt_invocation_valid_list[wp]:

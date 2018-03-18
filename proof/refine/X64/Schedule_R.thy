@@ -647,7 +647,7 @@ lemma tcbSchedEnqueue_invs'[wp]:
   apply (rule hoare_pre)
    apply (wp tcbSchedEnqueue_ct_not_inQ valid_irq_node_lift irqs_masked_lift hoare_vcg_disj_lift
              valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
-             untyped_ranges_zero_lift
+             untyped_ranges_zero_lift valid_ioports_lift'
         | simp add: cteCaps_of_def o_def
         | auto elim!: st_tcb_ex_cap'' valid_objs'_maxDomain valid_objs'_maxPriority split: thread_state.split_asm simp: valid_pspace'_def)+
   done
@@ -700,6 +700,11 @@ crunch ksDomScheduleIdx[wp]: tcbSchedAppend "\<lambda>s. P (ksDomScheduleIdx s)"
 
 crunch gsUntypedZeroRanges[wp]: tcbSchedAppend, tcbSchedDequeue "\<lambda>s. P (gsUntypedZeroRanges s)"
   (simp: unless_def)
+
+crunches tcbSchedDequeue, tcbSchedAppend
+  for arch'[wp]: "\<lambda>s. P (ksArchState s)"
+  and ioports'[wp]: valid_ioports'
+  (wp: valid_ioports_lift'')
 
 lemma tcbSchedAppend_invs_but_ct_not_inQ':
   "\<lbrace>invs' and st_tcb_at' runnable' t and tcb_in_cur_domain' t \<rbrace>
@@ -1347,6 +1352,12 @@ lemma asUser_utr[wp]:
   apply (simp add: o_def)
   done
 
+lemma asUser_ioports'[wp]:
+  "\<lbrace>valid_ioports'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_ioports'\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wpsimp wp: valid_ioports_lift'' select_f_inv threadSet_ctes_of)
+  done
+
 lemma asUser_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> asUser t (setRegister f r) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (simp add: invs_no_cicd'_def)
@@ -1365,7 +1376,6 @@ lemma Arch_switchToThread_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (simp add: X64_H.switchToThread_def)
   by (wp|rule setVMRoot_invs_no_cicd')+
-
 
 lemma tcbSchedDequeue_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd' and tcb_at' t\<rbrace>

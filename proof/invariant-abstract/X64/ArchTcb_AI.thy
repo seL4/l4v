@@ -59,7 +59,8 @@ where
           \<and> (is_pt_cap cap \<longrightarrow> cap_asid cap \<noteq> None)
           \<and> (is_pd_cap cap \<longrightarrow> cap_asid cap \<noteq> None)
           \<and> (is_pdpt_cap cap \<longrightarrow> cap_asid cap \<noteq> None)
-          \<and> (is_pml4_cap cap \<longrightarrow> cap_asid cap \<noteq> None))"
+          \<and> (is_pml4_cap cap \<longrightarrow> cap_asid cap \<noteq> None)
+          \<and> \<not> is_ioport_control_cap cap)"
 
 
 definition (* arch specific *)

@@ -366,6 +366,7 @@ where
                                            then Some (cap_pml4_cap_CL.capPML4MappedASID_CL pdf)
                                            else None))
  | Cap_domain_cap \<Rightarrow> DomainCap
+ | Cap_io_port_control_cap \<Rightarrow> ArchObjectCap IOPortControlCap
  | Cap_io_port_cap ioc \<Rightarrow> ArchObjectCap (IOPortCap (ucast(capIOPortFirstPort_CL ioc)) (ucast(capIOPortLastPort_CL ioc)))"
 
 lemmas cap_to_H_simps = cap_to_H_def[split_simps cap_CL.split]

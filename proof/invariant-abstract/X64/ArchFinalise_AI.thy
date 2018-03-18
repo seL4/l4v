@@ -83,6 +83,7 @@ lemma invs_x64_asid_table_unmap:
   apply (simp add: valid_irq_node_def valid_kernel_mappings_def
                    valid_global_objs_arch_update valid_asid_map_def)
   apply (simp add: valid_table_caps_def valid_machine_state_def second_level_tables_def)
+  apply (simp add: valid_ioports_def all_ioports_issued_def issued_ioports_def)
   done
 
 lemma delete_asid_pool_invs[wp]:
@@ -229,7 +230,7 @@ lemma (* obj_ref_ofI *) [Finalise_AI_asms]: "obj_refs cap = {x} \<Longrightarrow
 lemma (* empty_slot_invs *) [Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s sl cap.NullCap) sl s \<and>
         emptyable sl s \<and>
-        (info \<noteq> NullCap \<longrightarrow> info \<notin> ran ((caps_of_state s) (sl \<mapsto> NullCap)))\<rbrace>
+        (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre info ((caps_of_state s) (sl \<mapsto> NullCap)))\<rbrace>
      empty_slot sl info
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: empty_slot_def set_cdt_def bind_assoc cong: if_cong)
@@ -240,6 +241,7 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
                   set_cap_idle valid_irq_node_typ set_cap_typ_at
                   set_cap_irq_handlers set_cap_valid_arch_caps
                   set_cap_cap_refs_respects_device_region_NullCap
+                  set_cap_ioports_no_new_ioports
       | simp add: trans_state_update[symmetric]
              del: trans_state_update fun_upd_apply
        split del: if_split )+
@@ -257,6 +259,8 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
                    no_cap_to_obj_with_diff_ref_Null)
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_cte_at)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_arch_mdb_def ioport_revocable_def)
   apply (rule conjI)
    apply (clarsimp simp: irq_revocable_def)
   apply (rule conjI)
@@ -1521,6 +1525,13 @@ lemma set_asid_pool_empty_table_lookup:
   apply (simp add: vs_cap_ref_def)
   done
 
+lemma valid_ioports_asid_table_upd[iff]:
+  "valid_ioports
+         (s\<lparr>arch_state := arch_state s
+              \<lparr>x64_asid_table := x64_asid_table (arch_state s)
+                 (asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>) = valid_ioports s"
+  by (clarsimp simp: valid_ioports_def all_ioports_issued_def issued_ioports_def)
+
 lemma set_asid_pool_invs_table:
   "\<lbrace>\<lambda>s. invs s \<and> asid_pool_at p s
        \<and> (\<exists>p'. caps_of_state s p' = Some (ArchObjectCap (ASIDPoolCap p base)))
@@ -1532,7 +1543,7 @@ lemma set_asid_pool_invs_table:
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def valid_asid_map_def
               del: set_asid_pool_simpler_def)
   apply (wp valid_irq_node_typ set_asid_pool_typ_at
-            set_asid_pool_empty_table_objs
+            set_asid_pool_empty_table_objs valid_ioports_lift
             valid_irq_handlers_lift set_asid_pool_empty_table_lookup
           | strengthen valid_arch_state_table_strg)+
   apply clarsimp
@@ -1622,6 +1633,40 @@ lemma (* zombie_cap_two_nonidles *)[Finalise_AI_asms]:
   apply (simp add: cap_range_def global_refs_def)
   apply (cases ptr, auto dest: valid_idle_has_null_cap_ARCH[rotated -1])[1]
   done
+
+lemma safe_ioport_insert_not_ioport:
+  "\<not>is_ioport_cap cap \<Longrightarrow> safe_ioport_insert cap cap' s"
+  by (clarsimp simp: is_cap_simps safe_ioport_insert_def cap_ioports_def split: cap.splits arch_cap.splits)
+
+lemmas safe_ioport_insert_simps[simp] = safe_ioport_insert_not_ioport[where cap="ReplyCap a False" for a, simplified is_cap_simps, simplified]
+
+lemma cap_insert_ioports_not:
+  "\<lbrace>valid_ioports and K (\<not> is_ioport_cap cap \<and> dest \<noteq> src)\<rbrace>
+     cap_insert cap src dest
+   \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  apply (simp add: cap_insert_def)
+  apply (wp get_cap_wp set_cap_ioports_no_new_ioports set_untyped_cap_as_full_ioports
+            set_untyped_cap_as_full_cte_wp_at
+         | wpc | simp split del: if_splits)+
+  apply (case_tac cap; clarsimp simp: is_cap_simps cte_wp_at_caps_of_state)
+  apply (case_tac x12; clarsimp)
+  done
+
+lemma setup_caller_cap_ioports:
+  "\<lbrace>valid_ioports\<rbrace> setup_caller_cap a b \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  by (wpsimp simp: setup_caller_cap_def is_cap_simps wp: cap_insert_ioports_not)
+
+crunches set_mrs, as_user, set_message_info, copy_mrs, make_arch_fault_msg
+  for ioports[wp]: valid_ioports
+  (wp: crunch_wps valid_ioports_lift simp: crunch_simps ignore: set_object)
+
+lemma arch_derive_cap_notzombie[wp]:
+  "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv s. \<not> is_zombie rv\<rbrace>, -"
+  by (cases acap; wpsimp simp: arch_derive_cap_def is_zombie_def o_def)
+
+lemma arch_derive_cap_notIRQ[wp]:
+  "\<lbrace>\<top>\<rbrace> arch_derive_cap cap \<lbrace>\<lambda>rv s. rv \<noteq> cap.IRQControlCap\<rbrace>,-"
+  by (cases cap; wpsimp simp: arch_derive_cap_def o_def)
 
 end
 

@@ -427,6 +427,7 @@ lemma threadSet_tcbDomain_update_invs':
                irqs_masked_lift
                valid_irq_node_lift
                valid_irq_handlers_lift''
+               valid_ioports_lift''
                threadSet_ctes_ofT
                threadSet_tcbDomain_update_ct_not_inQ
                threadSet_valid_dom_schedule'
@@ -1047,6 +1048,7 @@ abbreviation (input) "all_invs_but_sch_extra \<equiv>
     valid_irq_handlers' s \<and>
     valid_irq_states' s \<and>
     irqs_masked' s \<and>
+    valid_ioports' s \<and>
     valid_machine_state' s \<and>
     cur_tcb' s \<and>
     untyped_ranges_zero' s \<and>
@@ -1064,7 +1066,7 @@ lemma rescheduleRequired_all_invs_but_extra:
     rescheduleRequired_sch_act'
     rescheduleRequired_valid_queues_but_ct_domain
     rescheduleRequired_valid_queues'_but_ct_domain
-    valid_irq_node_lift valid_irq_handlers_lift''
+    valid_irq_node_lift valid_irq_handlers_lift'' valid_ioports_lift''
     irqs_masked_lift cur_tcb_lift)
   apply auto
   done
@@ -1088,6 +1090,7 @@ lemma threadSet_all_invs_but_sch_extra:
      irqs_masked_lift
      valid_irq_node_lift
      valid_irq_handlers_lift''
+     valid_ioports_lift''
      threadSet_ctes_ofT
      threadSet_not_inQ
      threadSet_valid_queues'_no_state

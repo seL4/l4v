@@ -253,26 +253,7 @@ First, fetch the capability table entry for the source.
 
 If the newly created capability is allowed to become a parent of other capabilities in the MDB, it must be marked \emph{revocable}.
 
->         let newCapIsRevocable = case newCap of
-
-If the new capability is an endpoint capability, then it can be an MDB parent if and only if its badge is being changed by this operation.
-
->                 EndpointCap {} ->
->                     capEPBadge newCap /= capEPBadge srcCap
->                 NotificationCap {} ->
->                     capNtfnBadge newCap /= capNtfnBadge srcCap
-
-If the new capability is the first IRQ handler for a given IRQ, then it can be an MDB parent.
-
->                 IRQHandlerCap {} -> isIRQControlCap srcCap
-
-Untyped capabilities can always be MDB parents.
-
->                 UntypedCap {} -> True
-
-Any other capability created by this function is a leaf of the derivation tree, and cannot be used to revoke other capabilities.
-
->                 _ -> False
+>         let newCapIsRevocable = isCapRevocable newCap srcCap
 
 Create the new capability table entry. Its "MDBNode" is inserted in the mapping database immediately after the existing capability.
 

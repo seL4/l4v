@@ -419,6 +419,8 @@ fun
 | "CapabilityMap (capability.ArchObjectCap
                     (arch_capability.IOPortCap f l)) =
   cap.ArchObjectCap (arch_cap.IOPortCap f l)"
+| "CapabilityMap (capability.ArchObjectCap arch_capability.IOPortControlCap) =
+  cap.ArchObjectCap arch_cap.IOPortControlCap"
 
 lemma cap_relation_CapabilityMap:
   "\<lbrakk>\<forall>ref n L l. c = capability.CNodeCap ref n L l \<longrightarrow>
@@ -2054,11 +2056,11 @@ where
 
 definition
   "absArchState s' \<equiv>
-   case s' of X64KernelState asid_tbl gpm gpdpts gpds gpts ccr3 kvspace \<Rightarrow>
+   case s' of X64KernelState asid_tbl gpm gpdpts gpds gpts ccr3 kvspace kports \<Rightarrow>
      \<lparr>x64_asid_table = asid_tbl \<circ> ucast, x64_global_pml4 = gpm,
       x64_kernel_vspace = kvspace, x64_global_pts = gpts,
       x64_global_pdpts = gpdpts, x64_global_pds = gpds,
-      x64_current_cr3 = absCR3 ccr3\<rparr>"
+      x64_current_cr3 = absCR3 ccr3, x64_allocated_io_ports = kports\<rparr>"
 
 lemma cr3_expand_unexpand[simp]: "cr3 (cr3_base_address a) (cr3_pcid a) = a"
   by (cases a, simp)

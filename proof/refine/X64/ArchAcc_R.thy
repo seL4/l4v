@@ -1579,19 +1579,18 @@ lemma arch_deriveCap_inv:
 lemma arch_deriveCap_valid:
   "\<lbrace>valid_cap' (ArchObjectCap arch_cap)\<rbrace>
      Arch.deriveCap u arch_cap
-   \<lbrace>\<lambda>rv. valid_cap' (ArchObjectCap rv)\<rbrace>,-"
+   \<lbrace>\<lambda>rv. valid_cap' rv\<rbrace>,-"
   apply (simp      add: X64_H.deriveCap_def
                   cong: if_cong
              split del: if_split)
   apply (rule hoare_pre, wp undefined_validE_R)
   apply (cases arch_cap, simp_all add: isCap_defs)
-  apply (simp add: valid_cap'_def capAligned_def
-                   capUntypedPtr_def X64_H.capUntypedPtr_def)
+   apply (simp add: valid_cap'_def capAligned_def capUntypedPtr_def X64_H.capUntypedPtr_def)+
   done
 
 lemma arch_derive_corres:
  "cap_relation (cap.ArchObjectCap c) (ArchObjectCap c') \<Longrightarrow>
-  corres (ser \<oplus> (\<lambda>c c'. cap_relation (cap.ArchObjectCap c) (ArchObjectCap c')))
+  corres (ser \<oplus> (\<lambda>c c'. cap_relation c c'))
          \<top> \<top>
          (arch_derive_cap c)
          (Arch.deriveCap slot c')"
