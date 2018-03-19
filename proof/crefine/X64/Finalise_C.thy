@@ -1458,8 +1458,9 @@ lemma cteDeleteOne_ccorres:
    apply (rule ccorres_move_c_guard_cte)
    apply csymbr
    apply (rule ccorres_abstract_cleanup)
+   apply csymbr
    apply (rule ccorres_gen_asm2,
-          erule_tac t="cap_type = scast cap_null_cap"
+          erule_tac t="ret__unsigned_longlong = scast cap_null_cap"
                 and s="cteCap cte = NullCap"
                  in ssubst)
    apply (clarsimp simp only: when_def unless_def dc_def[symmetric])

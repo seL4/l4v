@@ -270,6 +270,7 @@ lemma invokeCNodeCancelBadgedSends_ccorres:
    apply (frule cap_get_tag_isCap_unfolded_H_cap)
    apply (simp add: cap_get_tag_EndpointCap del: Collect_const)
    apply csymbr
+   apply csymbr
    apply (simp add: unless_def liftE_def when_def Collect_True del: Collect_const)
    apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
        apply (rule_tac R=\<top> in ccorres_cond2)
