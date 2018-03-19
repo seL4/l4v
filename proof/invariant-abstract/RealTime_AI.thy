@@ -996,7 +996,7 @@ lemma sort_queue_notin_inv: "\<lbrace>K (t \<notin> set ls) and P t\<rbrace> sor
   done
 
 lemma sched_context_donate_st_tcb_at[wp]:
-  "\<lbrace>st_tcb_at P t and K (t \<noteq> tcb_ptr)\<rbrace> sched_context_donate sc_ptr tcb_ptr \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+  "\<lbrace>st_tcb_at P t\<rbrace> sched_context_donate sc_ptr tcb_ptr \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   by (wpsimp simp: sched_context_donate_def set_sc_obj_ref_def get_sc_obj_ref_def
                wp: weak_if_wp hoare_drop_imp)
 

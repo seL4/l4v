@@ -2294,7 +2294,7 @@ end
 lemma schedule_tcb_Pmdb[wp]: "\<lbrace>\<lambda>s. P (cdt s)\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_ s. P (cdt s)\<rbrace>"
   sorry
 
-crunch Pmdb[wp]: set_thread_state "\<lambda>(s::det_ext state). P (cdt s)"
+crunch Pmdb[wp]: set_thread_state "\<lambda>s. P (cdt s)"
 
 crunch irq_handlers[wp]: set_simple_ko "valid_irq_handlers"
   (wp: crunch_wps)

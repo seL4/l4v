@@ -121,7 +121,7 @@ lemma refill_unblock_check_valid_objs[wp]:
 lemma refill_split_check_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> refill_split_check sc_ptr usage \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (wpsimp wp: get_sched_context_wp get_refills_sp set_refills_valid_objs
-      hoare_vcg_conj_lift hoare_drop_imp hoare_vcg_if_lift2
+      hoare_vcg_conj_lift hoare_drop_imp hoare_vcg_if_lift2 get_refills_wp
       simp: pred_conj_def refill_split_check_def obj_at_def is_sc_obj_def Let_def
       split: kernel_object.splits split_del: if_split)
   apply (frule_tac sc=sc in valid_sc_valid_refills[rotated], simp)
@@ -364,7 +364,7 @@ lemma refill_split_check_refs_of[wp]:
 
 lemma refill_split_check_invs[wp]: "\<lbrace>invs\<rbrace> refill_split_check p u \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: refill_split_check_def Let_def split_del: if_splits
-             wp: hoare_drop_imp get_sched_context_wp)
+             wp: hoare_drop_imp get_sched_context_wp get_refills_wp)
   apply simp
   done
 
@@ -486,7 +486,7 @@ lemma set_refills_pred_tcb_at[wp]:
 
 lemma refill_split_check_pred_tcb_at[wp]:
   "\<lbrace> pred_tcb_at proj f t \<rbrace> refill_split_check p u \<lbrace> \<lambda>rv. pred_tcb_at proj f t \<rbrace>"
-  by (wpsimp wp: get_sched_context_wp simp: refill_split_check_def Let_def split_del: if_splits)
+  by (wpsimp wp: get_sched_context_wp get_refills_wp simp: refill_split_check_def Let_def split_del: if_splits)
 
 lemma commit_time_pred_tcb_at[wp]:
   "\<lbrace> pred_tcb_at proj f t \<rbrace> commit_time \<lbrace> \<lambda>rv. pred_tcb_at proj f t \<rbrace>"
@@ -503,7 +503,8 @@ lemma set_refills_ct_in_state[wp]:
 
 lemma refill_split_check_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> refill_split_check csc consumed \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
-  by (wpsimp simp: refill_split_check_def Let_def split_del: if_splits wp: get_sched_context_wp)
+  by (wpsimp simp: refill_split_check_def Let_def split_del: if_splits
+             wp: get_sched_context_wp get_refills_wp)
 
 lemma commit_time_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> commit_time \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
@@ -552,7 +553,7 @@ crunch inv[wp]: refill_capacity,refill_sufficient,refill_ready "\<lambda>s. P s"
 
 lemma refill_add_tail_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> refill_add_tail sc_ptr rfl \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: refill_add_tail_def wp: get_sched_context_wp)
+  by (wpsimp simp: refill_add_tail_def wp: get_sched_context_wp get_refills_wp)
 
 lemma maybe_add_empty_tail_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> maybe_add_empty_tail sc_ptr \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
@@ -1061,7 +1062,7 @@ lemma sched_context_resume_invs[wp]:
 
 lemma refill_add_tail_invs[wp]:
   "\<lbrace>invs\<rbrace> refill_add_tail sc_ptr refills \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp simp: refill_add_tail_def wp: get_sched_context_wp)
+  by (wpsimp simp: refill_add_tail_def wp: get_sched_context_wp get_refills_wp)
 
 lemma maybe_add_empty_tail_invs[wp]:
   "\<lbrace>invs\<rbrace> maybe_add_empty_tail sc_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"

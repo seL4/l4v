@@ -40,6 +40,9 @@ crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
 declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
         make_arch_fault_msg_inv[DetSchedDomainTime_AI_assms]
 
+crunch domain_consumed_time_inv [wp, DetSchedDomainTime_AI_assms]: make_arch_fault_msg
+  "\<lambda>s. P (domain_time s)(consumed_time s)"
+
 end
 
 global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI

@@ -99,6 +99,9 @@ locale DetSchedDomainTime_AI =
     "\<And>P ft t. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> make_arch_fault_msg ft t \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes make_arch_fault_msg_domain_list_inv'[wp]:
     "\<And>P ft t. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> make_arch_fault_msg ft t \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+  assumes make_arch_fault_msg_domain_consumed_inv'[wp]:
+    "\<And>P ft t. \<lbrace>\<lambda>s. P (domain_time s)(consumed_time s)\<rbrace>
+             make_arch_fault_msg ft t \<lbrace>\<lambda>_ s. P (domain_time s)(consumed_time s)\<rbrace>"
   assumes arch_post_cap_deletion_domain_time_inv'[wp]:
     "\<And>P ft. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_post_cap_deletion ft \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes arch_post_cap_deletion_domain_list_inv'[wp]:
@@ -171,7 +174,7 @@ crunch domain_list_inv[wp]: awaken "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imp dxo_wp_weak mapM_x_wp simp: Let_def)
 
 crunch domain_list_inv[wp]: commit_time "\<lambda>s. P (domain_list s)"
-  (simp: Let_def wp: get_sched_context_wp)
+  (simp: Let_def wp: get_sched_context_wp get_refills_wp)
 
 crunch domain_list_inv[wp]: set_next_interrupt, switch_sched_context"\<lambda>s. P (domain_list s)"
   (simp: Let_def wp: get_sched_context_wp hoare_drop_imps)
@@ -263,7 +266,11 @@ crunch domain_list_inv[wp]: reset_untyped_cap "\<lambda>s. P (domain_list s)"
 
 crunch domain_list_inv[wp]: set_priority "\<lambda>s. P (domain_list s)" (wp: maybeM_inv hoare_drop_imps)
 crunch domain_list_inv[wp]: restart "\<lambda>s. P (domain_list s)" (wp: hoare_drop_imps)
-crunch domain_list_inv[wp]: sched_context_bind_tcb "\<lambda>s. P (domain_list s)" (wp: hoare_drop_imps)
+crunch domain_list_inv[wp]: sched_context_bind_tcb,sched_context_bind_ntfn "\<lambda>s. P (domain_list s)" (wp: hoare_drop_imps)
+crunch domain_list_inv[wp]: sched_context_unbind_reply "\<lambda>s. P (domain_list s)"
+ (wp: hoare_drop_imps mapM_x_wp')
+crunch domain_list_inv[wp]: sched_context_yield_to "\<lambda>s. P (domain_list s)"
+  (wp: hoare_drop_imps mapM_wp' simp: zipWithM_x_mapM)
 
 
 context DetSchedDomainTime_AI begin
@@ -290,7 +297,7 @@ crunch domain_list_inv[wp]: invoke_sched_control_configure "\<lambda>s. P (domai
 
 lemma invoke_sched_context_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> invoke_sched_context i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  sorry
+  by (wpsimp simp: invoke_sched_context_def)
 
 end
 
@@ -488,6 +495,8 @@ crunch domain_time_inv[wp]: reset_untyped_cap "\<lambda>s. P (domain_time s)"
 
 crunch domain_time_inv[wp]: sched_context_bind_tcb "\<lambda>s. P (domain_time s)" (wp: hoare_drop_imp)
 
+crunch domain_time_inv[wp]: restart "\<lambda>s. P (domain_time s)" (wp: hoare_drop_imp)
+
 context DetSchedDomainTime_AI begin
 
 crunch domain_time_inv[wp]:
@@ -499,22 +508,48 @@ crunch domain_time_inv[wp]: invoke_untyped "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps
     simp: crunch_simps mapM_x_defsym)
 
-lemma invoke_tcb_domain_time_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace> invoke_tcb i \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
-  sorry
+crunch domain_time_inv[wp]: invoke_tcb "\<lambda>s. P (domain_time s)"
+  (wp: crunch_wps check_cap_inv maybeM_inv
+    simp: crunch_simps)
 
 crunch domain_time_inv[wp]:
   invoke_domain, invoke_irq_control,invoke_irq_handler
   "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps check_cap_inv maybeM_inv)
 
-lemma invoke_sched_control_configure_domain_time_inv[wp]:
+
+crunch domain_time_inv[wp]: invoke_sched_context "\<lambda>s. P (domain_time s)"
+  (wp: crunch_wps check_cap_inv maybeM_inv
+    simp: crunch_simps)
+
+lemma commit_domain_time_domain_time[wp]:
+  "\<lbrace>\<lambda>s. P (if domain_time s < consumed_time s then 0 else domain_time s - consumed_time s)\<rbrace> commit_domain_time \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
+  by (wpsimp simp: commit_domain_time_def)
+
+crunch consumed_time_inv[wp]: set_thread_state,store_word_offs "(\<lambda>s. P (consumed_time s))"
+  (wp: crunch_wps dxo_wp_weak)
+
+crunch domain_consumed_time_inv[wp]: schedule_tcb "(\<lambda>s. P (domain_time s)(consumed_time s))"
+  (wp: crunch_wps)
+
+crunch domain_consumed_time_inv[wp]: set_thread_state,store_word_offs "(\<lambda>s. P (domain_time s)(consumed_time s))"
+  (wp: crunch_wps dxo_wp_weak)
+
+crunch domain_time_consumed_time[wp]:
+  refill_budget_check
+  "\<lambda>s. P (domain_time s)(consumed_time s)"
+  (wp: crunch_wps check_cap_inv maybeM_inv dxo_wp_weak simp: zipWithM_x_mapM Let_def)
+
+crunch domain_time_consumed_time_diff[wp]:
+  refill_budget_check
+  "\<lambda>s. P (domain_time s - consumed_time s)"
+  (wp: crunch_wps check_cap_inv maybeM_inv simp: Let_def)
+
+
+lemma invoke_sched_control_configure_domain_time_inv:
   "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace> invoke_sched_control_configure i \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   sorry
 
-lemma invoke_sched_context_domain_time_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace> invoke_sched_context i \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
-  sorry
 
 end
 
@@ -547,10 +582,11 @@ lemma invoke_cnode_domain_time_inv[wp]:
           | wpc | simp add: invoke_cnode_def crunch_simps split del: if_split)+
   done
 
-lemma perform_invocation_domain_time_inv[wp]:
+lemma perform_invocation_domain_time_inv:
   "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace>
   perform_invocation block call can_donate i \<lbrace>\<lambda>rv s. P (domain_time s)\<rbrace>"
-  by (cases i; wpsimp)
+  apply (cases i; wpsimp)
+oops
 
 crunch domain_time_inv[wp]: handle_invocation "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps syscall_valid simp: crunch_simps ignore: without_preemption)
@@ -583,11 +619,6 @@ lemma handle_event_domain_time_inv:
       apply (case_tac syscall, simp_all add: handle_send_def whenE_def)
              apply (wp|simp|wpc)+
   done
-
-lemma commit_domain_time_domain_time[wp]:
-  "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace> commit_domain_time \<lbrace>\<lambda>rv s. P (domain_time s)\<rbrace>"
-  apply (wpsimp simp: commit_domain_time_def split_del: if_split)
-  sorry
 
 end
 
@@ -633,7 +664,7 @@ lemma check_budget_domain_time_left[wp]:
 
 lemma sc_and_timer_domain_time_left[wp]:
   "\<lbrace> valid_domain_list \<rbrace> sc_and_timer \<lbrace>\<lambda>_ s. 0 < domain_time s \<rbrace>"
-  apply (wpsimp simp: sc_and_timer_def Let_def)
+  apply_trace (wpsimp simp: sc_and_timer_def Let_def)
 (*
   apply (rule hoare_pre)
    apply (simp add: sc_and_timer_def Let_def)
