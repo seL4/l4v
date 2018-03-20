@@ -180,7 +180,7 @@ definition
 where
   "refill_add_tail sc_ptr rfl = do
     sc \<leftarrow> get_sched_context sc_ptr;
-    refills \<leftarrow> return $ sc_refills sc;
+    refills \<leftarrow> get_refills sc_ptr;
     assert (size refills < sc_refill_max sc);
     set_refills sc_ptr (refills @ [rfl])
   od"
@@ -279,7 +279,7 @@ where
   "refill_split_check sc_ptr usage = do
     ct \<leftarrow> gets cur_time;
     sc \<leftarrow> get_sched_context sc_ptr;
-    refills \<leftarrow> return $ sc_refills sc;
+    refills \<leftarrow> get_refills sc_ptr;
     rfhd \<leftarrow> return $ hd refills;
     assert (0 < usage \<and> usage \<le> r_amount rfhd);
     assert (r_time rfhd \<le> ct);
@@ -333,7 +333,7 @@ where
     assert (capacity < MIN_BUDGET \<or> full);
     period \<leftarrow> return $ sc_period sc;
     assert (period > 0);
-    refills \<leftarrow> return $ sc_refills sc;
+    refills \<leftarrow> get_refills sc_ptr;
     rfhd \<leftarrow> return $ hd refills;
 
     (usage', refills') \<leftarrow> return (if (capacity = 0) then
