@@ -1706,8 +1706,7 @@ lemma findVSpaceForASID_page_map_l4_at'_simple[wp]:
   shows "\<lbrace>\<top>\<rbrace> findVSpaceForASID asiv
     \<lbrace>\<lambda>rv s. page_map_l4_at' rv s\<rbrace>,-"
   apply (simp add:findVSpaceForASID_def)
-   apply (wp getASID_wp|simp add:checkPML4At_def | wpc)+
-  apply auto
+   apply (wpsimp wp:getASID_wp simp:checkPML4At_def)
   done
 
 (* FIXME x64: redo as required

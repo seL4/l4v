@@ -579,7 +579,7 @@ lemma schedule_ccorres:
                     apply (ctac(no_simp) add: ccorres_setSchedulerAction)
                     apply (wpsimp simp: cscheduler_action_relation_def)+
                   apply (vcg exspec=scheduleChooseNewThread_modifies)
-                 apply (wp add: setSchedulerAction_invs' setSchedulerAction_direct del: ssa_lift)
+                 apply (wp add: setSchedulerAction_invs' setSchedulerAction_direct del: ssa_wp)
                 apply (clarsimp | vcg exspec=tcbSchedEnqueue_modifies | wp wp_post_taut)+
              (* secondary check, when on equal prio and ct was running, prefer ct *)
              apply (rule ccorres_rhs_assoc)
@@ -615,7 +615,7 @@ lemma schedule_ccorres:
                      apply (ctac(no_simp) add: ccorres_setSchedulerAction)
                      apply (wpsimp simp: cscheduler_action_relation_def)+
                    apply (vcg exspec=scheduleChooseNewThread_modifies)
-                  apply (wp add: setSchedulerAction_invs' setSchedulerAction_direct del: ssa_lift)
+                  apply (wp add: setSchedulerAction_invs' setSchedulerAction_direct del: ssa_wp)
                  apply (clarsimp | vcg exspec=tcbSchedEnqueue_modifies | wp wp_post_taut)+
               (* candidate is best, switch to it *)
               apply (ctac add: switchToThread_ccorres)
