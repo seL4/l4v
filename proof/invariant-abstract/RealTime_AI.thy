@@ -809,13 +809,9 @@ lemma reply_unlink_sc_iflive[wp]:
                      wp: hoare_drop_imp)
 
 lemma reply_unlink_tcb_iflive[wp]:
-  "\<lbrace>if_live_then_nonz_cap
-    and (\<lambda>s. reply_tcb_reply_at (\<lambda>p. \<exists>t. p = (Some t) \<and> ex_nonz_cap_to t s) reply_ptr s)\<rbrace>
-  reply_unlink_tcb reply_ptr
-  \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
-  apply (simp add: reply_unlink_tcb_def)
-  by (wpsimp simp: reply_unlink_tcb_def reply_tcb_reply_at_def obj_at_def
-                     wp: hoare_drop_imp get_simple_ko_wp)
+  "\<lbrace>if_live_then_nonz_cap\<rbrace> reply_unlink_tcb reply_ptr \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
+  by (wpsimp simp: reply_unlink_tcb_def get_thread_state_def thread_get_def get_simple_ko_def
+                   get_object_def)
 
 crunch ex_nonz_cap_to[wp]: reply_unlink_tcb, reply_unlink_sc "ex_nonz_cap_to t"
   (wp: hoare_drop_imps)
