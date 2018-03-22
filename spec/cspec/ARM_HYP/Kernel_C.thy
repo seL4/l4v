@@ -77,6 +77,18 @@ requalify_consts ARMSmallPage ARMLargePage ARMSection ARMSuperSection
 
 end
 
+definition
+  ctcb_size_bits :: nat
+where
+  "ctcb_size_bits \<equiv> 8"
+
+definition
+  ctcb_offset :: "32 word"
+where
+  "ctcb_offset \<equiv> 2 ^ ctcb_size_bits"
+
+lemmas ctcb_offset_defs = ctcb_offset_def ctcb_size_bits_def
+
 install_C_file "../c/build/$L4V_ARCH/kernel_all.c_pp"
   [machinety=machine_state, ghostty=cghost_state]
 

@@ -117,18 +117,6 @@ definition
   "cte_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: cte_C typ_heap)"
 
 definition
-  ctcb_size_bits :: nat
-  where
-  "ctcb_size_bits \<equiv> 8"
-
-definition
-  ctcb_offset :: word32
-  where
-  "ctcb_offset \<equiv> 2 ^ ctcb_size_bits"
-
-lemmas ctcb_offset_defs = ctcb_offset_def ctcb_size_bits_def
-
-definition
   ctcb_ptr_to_tcb_ptr :: "tcb_C ptr \<Rightarrow> word32"
   where
   "ctcb_ptr_to_tcb_ptr p \<equiv> ptr_val p - ctcb_offset"
