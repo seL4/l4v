@@ -125,8 +125,7 @@ definition
 where
   "refill_full sc_ptr = do
     sc \<leftarrow> get_sched_context sc_ptr;
-    sz \<leftarrow> refill_size sc_ptr;
-    return (sz = sc_refill_max sc)
+    return (size (sc_refills sc) = sc_refill_max sc)
   od"
 
 definition
@@ -140,7 +139,7 @@ where
 definition
   refills_sum :: "refill list \<Rightarrow> time"
 where
-  "refills_sum rf = \<Sum> (set (map r_amount rf))"
+  "refills_sum rf = sum_list (map r_amount rf)"
 
 definition
   refill_sum :: "obj_ref \<Rightarrow> (time, 'z::state_ext) s_monad"
@@ -180,7 +179,7 @@ definition
 where
   "refill_add_tail sc_ptr rfl = do
     sc \<leftarrow> get_sched_context sc_ptr;
-    refills \<leftarrow> get_refills sc_ptr;
+    refills \<leftarrow> return (sc_refills sc);
     assert (size refills < sc_refill_max sc);
     set_refills sc_ptr (refills @ [rfl])
   od"
@@ -279,7 +278,7 @@ where
   "refill_split_check sc_ptr usage = do
     ct \<leftarrow> gets cur_time;
     sc \<leftarrow> get_sched_context sc_ptr;
-    refills \<leftarrow> get_refills sc_ptr;
+    refills \<leftarrow> return (sc_refills sc);
     rfhd \<leftarrow> return $ hd refills;
     assert (0 < usage \<and> usage \<le> r_amount rfhd);
     assert (r_time rfhd \<le> ct);
@@ -329,12 +328,11 @@ definition
 where
   "refill_budget_check sc_ptr usage capacity = do
     sc \<leftarrow> get_sched_context sc_ptr;
-    full \<leftarrow>refill_full sc_ptr;
+    full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc); (* = refill_full sc_ptr *)
     assert (capacity < MIN_BUDGET \<or> full);
     period \<leftarrow> return $ sc_period sc;
     assert (period > 0);
-    refills \<leftarrow> get_refills sc_ptr;
-    rfhd \<leftarrow> return $ hd refills;
+    refills \<leftarrow> return (sc_refills sc);
 
     (usage', refills') \<leftarrow> return (if (capacity = 0) then
        refills_budget_check period usage refills
@@ -351,8 +349,12 @@ where
 
     set_refills sc_ptr refills'';
 
-    capacity \<leftarrow> refill_capacity sc_ptr usage';
-    ready \<leftarrow> refill_ready sc_ptr;
+    capacity \<leftarrow> return $ refills_capacity usage' refills''; (* = refill_capacity sc_ptr usage'*)
+
+    cur_time \<leftarrow> gets cur_time;  (* refill_ready sc_ptr *)
+    sc_time \<leftarrow> return $ r_time (hd refills'');
+    ready \<leftarrow> return $ sc_time \<le> cur_time + kernelWCET_ticks;
+
     when (capacity > 0 \<and> ready) $ refill_split_check sc_ptr usage';
     full \<leftarrow> refill_full sc_ptr;
     set_refills sc_ptr (min_budget_merge full (sc_refills sc))
@@ -361,10 +363,23 @@ where
 definition
   refill_update :: "obj_ref \<Rightarrow> ticks \<Rightarrow> ticks \<Rightarrow> nat \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "refill_update sc_ptr new_period new_budget new_max_refills =
-    refill_new sc_ptr new_max_refills new_budget new_period
-    (* RT: may need to tweak this in the future *)
-  "
+  "refill_update sc_ptr new_period new_budget new_max_refills = do
+     sc \<leftarrow> get_sched_context sc_ptr;
+     current \<leftarrow> gets cur_time;
+     ready \<leftarrow> refill_ready sc_ptr;
+     refill_hd \<leftarrow> return $ hd (sc_refills sc);
+     new_time \<leftarrow> return $ if ready then current else (r_time refill_hd);
+     if (r_amount refill_hd \<ge> new_budget)
+     then do
+       update_sched_context sc_ptr (sc\<lparr>sc_period := new_period, sc_refill_max := new_max_refills,
+                                     sc_refills:=[\<lparr> r_time = new_time, r_amount = new_budget\<rparr>]\<rparr>);
+       maybe_add_empty_tail sc_ptr
+    od
+    else
+      update_sched_context sc_ptr (sc\<lparr>sc_period := new_period, sc_refill_max := new_max_refills,
+         sc_refills:=[\<lparr> r_time = new_time, r_amount = r_amount refill_hd\<rparr>,
+               \<lparr>r_time = new_time + new_period, r_amount = new_budget - (r_amount refill_hd)\<rparr>]\<rparr>)
+od"
 
 definition
   postpone :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -509,8 +524,6 @@ definition
 where
   "commit_time = do
     consumed \<leftarrow> gets consumed_time;
-    ct \<leftarrow> gets cur_thread;
-    it \<leftarrow> gets idle_thread;
     csc \<leftarrow> gets cur_sc;
     sc \<leftarrow> get_sched_context csc;
     when (0 < consumed) $ do

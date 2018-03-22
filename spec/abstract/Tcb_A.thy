@@ -55,17 +55,19 @@ definition
   "activate_thread \<equiv> do
      thread \<leftarrow> gets cur_thread;
      yt_opt \<leftarrow> get_tcb_obj_ref tcb_yield_to thread;
-     when (yt_opt\<noteq>None) $ complete_yield_to thread;
-     state \<leftarrow> get_thread_state thread;
-     (case state
-       of Running \<Rightarrow> return ()
-        | Restart \<Rightarrow> (do
-            pc \<leftarrow> as_user thread getRestartPC;
-            as_user thread $ setNextPC pc;
-            set_thread_state thread Running
-          od)
-        | IdleThreadState \<Rightarrow> arch_activate_idle_thread thread
-        | _ \<Rightarrow> fail)
+     if (yt_opt\<noteq>None) then complete_yield_to thread
+     else do
+       state \<leftarrow> get_thread_state thread;
+       (case state
+         of Running \<Rightarrow> return ()
+          | Restart \<Rightarrow> (do
+              pc \<leftarrow> as_user thread getRestartPC;
+              as_user thread $ setNextPC pc;
+              set_thread_state thread Running
+            od)
+          | IdleThreadState \<Rightarrow> arch_activate_idle_thread thread
+          | _ \<Rightarrow> fail)
+     od
    od"
 
 section "Thread Message Formats"

@@ -713,8 +713,8 @@ where
   case iv of InvokeSchedControlConfigure sc_ptr budget period mrefills badge \<Rightarrow> liftE $ do
     sc \<leftarrow> get_sched_context sc_ptr;
     update_sched_context sc_ptr (sc\<lparr>sc_badge:= badge\<rparr>);
-    period \<leftarrow> return (if budget = period then 0 else period);
-    mrefills \<leftarrow> return (if budget = period then MIN_REFILLS else mrefills);
+    (period,mrefills) \<leftarrow> return (if budget = period then (0,MIN_REFILLS) else (period,mrefills));
+         (* true in the above means we have round robin *)
     when (sc_tcb sc \<noteq> None) $ do
       tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
       tcb_release_remove tcb_ptr;
