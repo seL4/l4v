@@ -2918,6 +2918,22 @@ lemma ccap_relation_PageCap_Size:
   apply (word_bitwise, simp)
   done
 
+lemma ccap_relation_PageCap_MappedASID:
+  "ccap_relation (ArchObjectCap (PageCap p r t s d (Some (a, b)))) ccap
+    \<Longrightarrow> capFMappedASID_CL (cap_frame_cap_lift ccap) = a"
+  apply (frule cap_get_tag_isCap_unfolded_H_cap)
+  apply (frule cap_get_tag_PageCap_frame)
+  apply (clarsimp split: if_split_asm)
+  done
+
+lemma ccap_relation_PageCap_MappedAddress:
+  "ccap_relation (ArchObjectCap (PageCap p r t s d (Some (a, b)))) ccap
+    \<Longrightarrow> capFMappedAddress_CL (cap_frame_cap_lift ccap) = b"
+  apply (frule cap_get_tag_isCap_unfolded_H_cap)
+  apply (frule cap_get_tag_PageCap_frame)
+  apply (clarsimp split: if_split_asm)
+  done
+
 lemmas ccap_relation_PageCap_fields =
   ccap_relation_PageCap_BasePtr ccap_relation_PageCap_IsDevice ccap_relation_PageCap_Size
 
