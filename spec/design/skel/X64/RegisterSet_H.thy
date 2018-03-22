@@ -20,7 +20,7 @@ context Arch begin global_naming X64_H
 definition
   newContext :: "user_context"
 where
- "newContext \<equiv> UserContext (\<lambda>w. 0) ((K 0) aLU initContext)"
+ "newContext \<equiv> UserContext FPUNullState ((K 0) aLU initContext)"
 
 end
 end
