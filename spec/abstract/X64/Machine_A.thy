@@ -108,7 +108,7 @@ definition
 
 definition
   new_context :: "user_context" where
-  "new_context \<equiv> UserContext (\<lambda>r. 0) ((\<lambda>r. 0)(CS := selCS3, SS := selDS3, FLAGS := 0x202))"
+  "new_context \<equiv> UserContext FPUNullState ((\<lambda>r. 0)(CS := selCS3, SS := selDS3, FLAGS := 0x202))"
 
 definition
   pptr_base :: "machine_word" where

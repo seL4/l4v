@@ -265,6 +265,9 @@ definition
 where
   "setFPUState fc \<equiv> modify (\<lambda>s. UserContext fc (user_regs s))"
 
+(* The FPU state is opaque; the null state is a constant snapshot taken after initialisation *)
+consts'
+  FPUNullState :: fpu_state
 
 consts'
   initL2Cache_impl :: "unit machine_rest_monad"
