@@ -4891,7 +4891,7 @@ lemma ccorres_placeNewObject_tcb:
     hs
    (placeNewObject regionBase (makeObject :: tcb) 0)
    (\<acute>tcb :== tcb_Ptr (regionBase + 0x100);;
-        (global_htd_update (\<lambda>s. ptr_retyp (Ptr (ptr_val (tcb_' s) - 0x100) :: (cte_C[5]) ptr)
+        (global_htd_update (\<lambda>s. ptr_retyp (Ptr (ptr_val (tcb_' s) - ctcb_offset) :: (cte_C[5]) ptr)
             \<circ> ptr_retyp (tcb_' s)));;
         (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>tcb\<rbrace>
            (call (\<lambda>s. s\<lparr>context_' := Ptr &((Ptr &(tcb_' s\<rightarrow>[''tcbArch_C'']) :: arch_tcb_C ptr)\<rightarrow>[''tcbContext_C''])\<rparr>) Arch_initContext_'proc (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>s' s''. Basic (\<lambda>s. s))));;
@@ -4902,7 +4902,7 @@ lemma ccorres_placeNewObject_tcb:
   apply clarsimp
   apply (rule conseqPre)
    apply vcg
-  apply (clarsimp simp: rf_sr_htd_safe)
+  apply (clarsimp simp: rf_sr_htd_safe ctcb_offset_defs)
   apply (subgoal_tac "c_guard (tcb_Ptr (regionBase + 0x100))")
    apply (subgoal_tac "hrs_htd (hrs_htd_update (ptr_retyp (Ptr regionBase :: (cte_C[5]) ptr)
                                  \<circ> ptr_retyp (tcb_Ptr (regionBase + 0x100)))
@@ -7660,7 +7660,7 @@ lemma createObject_preserves_bytes:
   apply (safe intro!: ptr_retyp_d ptr_retyps_out trans[OF ptr_retyp_d ptr_retyp_d]
                       ptr_arr_retyps_eq_outside_dom)
   apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_def
-                       objBits_simps' cte_C_size power_add
+                       objBits_simps' cte_C_size power_add ctcb_offset_defs
     split: object_type.split_asm ArchTypes_H.apiobject_type.split_asm)
    apply (erule notE, erule subsetD[rotated],
      rule intvl_start_le intvl_sub_offset, simp)+
