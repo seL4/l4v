@@ -40,6 +40,8 @@ lemma clzl_body_refines:
   apply (clarsimp simp: bv_clz_def meq_def)
   done
 
+declare ctcb_offset_defs[simp]
+
 ML {*
   emit_C_everything_relative @{context} (csenv ()) "CFunDump.txt";
 *}
