@@ -294,16 +294,18 @@ in
     prim_trace_tac' (#trace_xpres trace) depth "XP" ctxt ((fn n => DETERM (resolve_tac ctxt (xpres_thms ctxt) n)) THEN_ALL_NEW rest_tac) n
 end;
 
+fun FOCUS_PREMS_ctxt tac = Subgoal.FOCUS_PREMS (fn focus => tac (#context focus) (#prems focus))
+
 fun corres_ceqv_tac trace depth ctxt n = let
     val depth' = depth + 1
 
     (* This ugliness is so we can do this very quickly --- the
     simplifier was just taking too long. It seems that the refl rule
     produces multiple results, hence the DETERM *)
-    fun tac [p] = (rewrite_goals_tac ctxt [p RS @{thm "eq_reflection"}])
+    fun tac ctxt [p] = (rewrite_goals_tac ctxt [p RS @{thm "eq_reflection"}])
                       THEN ((DETERM (resolve_tac ctxt [refl] 1)))
-      | tac _   = let val _ = tracing "WARNING: ceqv non-singleton case" in no_tac end;
-    val my_eq_tac = prim_trace_tac' (#trace_ceqv trace) depth' "CEQV xfI" ctxt (Subgoal.FOCUS_PREMS (tac o #prems) ctxt)
+      | tac _    _   = let val _ = tracing "WARNING: ceqv non-singleton case" in no_tac end;
+    val my_eq_tac = prim_trace_tac' (#trace_ceqv trace) depth' "CEQV xfI" ctxt (FOCUS_PREMS_ctxt tac ctxt)
 
     (* This ugliness makes back-tracking more efficient, I hope *)
     val rest_tac = FIRST_COMMIT' [(resolve_tac ctxt @{thms "match_ceqv"}, corres_ceqv_tac trace depth' ctxt),
@@ -392,8 +394,6 @@ fun ceqv_restore_args_tac ctxt = SUBGOAL (fn (t, n) => case
       val new_upds = map (snd #> suffix Record.updateN #> Syntax.read_term ctxt
               #> dest_Const #> fst) params
           |> filter_out (member (op =) cnames)
-
-      val thy = Proof_Context.theory_of ctxt
 
       fun add_upd upd f = let
         val updC = Syntax.parse_term ctxt upd
@@ -875,9 +875,9 @@ fun substutite_asm_eqs ctxt f = let
 
     fun mk_meta_eq p = p RS @{thm "eq_reflection"}
 
-    fun tac ps = rewrite_goals_tac ctxt (map mk_meta_eq (filter (f o concl) ps))
+    fun tac ctxt ps = rewrite_goals_tac ctxt (map mk_meta_eq (filter (f o concl) ps))
 in
-    Subgoal.FOCUS_PREMS (tac o #prems) ctxt
+    FOCUS_PREMS_ctxt tac ctxt
 end;
 
 (* tactical which solves the current subgoal and all subsequent subgoals using the same tac --- like
