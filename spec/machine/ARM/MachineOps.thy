@@ -107,7 +107,22 @@ definition
 consts' kernelWCET_us :: "64 word"
 consts' maxTimer_us :: "64 word"
 consts' timerPrecision :: "64 word"
+(*
 consts' us_to_ticks :: "64 word \<Rightarrow> 64 word"
+*)
+end
+
+qualify ARM (in Arch)
+
+axiomatization
+  us_to_ticks :: "64 word \<Rightarrow> 64 word"
+where
+  us_to_ticks_mono[intro!]: "\<forall> x y. x \<le> y \<longrightarrow> us_to_ticks x \<le> us_to_ticks y"
+
+end_qualify
+
+context Arch begin global_naming ARM
+
 definition
   "kernelWCET_ticks = us_to_ticks (kernelWCET_us)"
 
