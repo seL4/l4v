@@ -269,20 +269,12 @@ crunch all_but_exst[wp]: set_scheduler_action,tcb_sched_action,
                          cap_move_ext "all_but_exst P"
   (simp: Let_def)
 
-lemma next_domain_all_but_exst[wp]: "\<lbrace>all_but_exst P\<rbrace> next_domain \<lbrace>\<lambda>_. all_but_exst P\<rbrace>"
-  sorry
-(*crunch all_but_exst[wp]: next_domain "all_but_exst P"
-  (simp: Let_def)*)
-
 crunch (empty_fail) empty_fail[wp]: cap_move_ext
 
 global_interpretation set_scheduler_action_extended: is_extended "set_scheduler_action a"
   by (unfold_locales; wp)
 
 global_interpretation tcb_sched_action_extended: is_extended "tcb_sched_action a b"
-  by (unfold_locales; wp)
-
-global_interpretation next_domain_extended: is_extended "next_domain"
   by (unfold_locales; wp)
 
 global_interpretation cap_move_ext: is_extended "cap_move_ext a b c d"

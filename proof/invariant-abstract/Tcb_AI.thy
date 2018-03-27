@@ -70,12 +70,12 @@ lemma set_thread_state_ct_st:
   apply (wp|simp)+
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
-
+(*
 crunches complete_yield_to
  for invs[wp]: invs
  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: maybeM_inv hoare_drop_imp mapM_wp' simp: zipWithM_x_mapM)
-
+*)
 lemma (in Tcb_AI_1) activate_invs:
   "\<lbrace>(invs::'state_ext::state_ext state \<Rightarrow> bool)\<rbrace> activate_thread \<lbrace>\<lambda>rv s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   apply (unfold activate_thread_def)

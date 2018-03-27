@@ -619,7 +619,8 @@ crunch cte_wp_at[wp]: complete_yield_to "cte_wp_at P p"
 
 lemma sched_context_unbind_tcb_cte_wp_at[wp]:
   "\<lbrace>cte_wp_at P p\<rbrace> sched_context_unbind_tcb param_a \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>"
-  sorry
+  by (wpsimp simp: sched_context_unbind_tcb_def wp: get_sched_context_wp
+         ball_tcb_cap_casesI | simp)
 
 lemma (in Finalise_AI_1) finalise_cap_cases:
   "\<lbrace>\<lambda>(s :: 'a state). final \<longrightarrow> is_final_cap' cap s
@@ -673,8 +674,7 @@ lemma valid_cap_Null_ext:
 lemma unbind_notification_valid_cap[wp]:
   "\<lbrace>valid_cap cap\<rbrace> unbind_notification t \<lbrace>\<lambda>rv. valid_cap cap\<rbrace>"
   unfolding unbind_notification_def
-(*  by (wp abs_typ_at_lifts hoare_drop_imps | wpc | clarsimp)+*)
-  sorry
+  by (wp abs_typ_at_lifts hoare_drop_imps | wpc | clarsimp)+
 
 lemma refs_in_ntfn_q_refs:
   "(x, ref) \<in> ntfn_q_refs_of ntfn \<Longrightarrow> ref = NTFNSignal"
@@ -690,17 +690,22 @@ lemma tcb_st_refs_no_TCBBound:
 
 lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
   "\<lbrace>invs\<rbrace> unbind_maybe_notification ntfnptr \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: unbind_maybe_notification_def invs_def valid_state_def valid_pspace_def)
-(*  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (simp add: unbind_maybe_notification_def invs_def valid_state_def valid_pspace_def
+                   get_sk_obj_ref_def update_sk_obj_ref_def maybeM_def)
+  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
-   apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs valid_ioports_lift)
+   apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs hoare_drop_imp get_simple_ko_wp valid_ioports_lift)
   apply simp
   apply safe
   defer 3 defer 6
+  prefer 2 prefer 4
        apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
-                   simp: live_def valid_ntfn_set_bound_None is_ntfn valid_obj_def)[6]
-  apply (rule delta_sym_refs, assumption)
-   apply (faastforce simp: obj_at_def is_tcb
+                   simp: live_def live_ntfn_def)[2]
+       apply (auto elim!: obj_at_valid_objsE simp: is_ntfn valid_obj_def,
+              auto simp: valid_ntfn_def valid_bound_obj_def split: ntfn.splits)[2]
+  apply (erule delta_sym_refs)
+    apply (clarsimp simp: if_split_asm)
+(*   apply (fa stforce simp: obj_at_def is_tcb
                    dest!: pred_tcb_at_tcb_at ko_at_state_refs_ofD
                    split: if_split_asm)
   apply (clarsimp split: if_split_asm)
@@ -714,7 +719,7 @@ lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
    apply (fastforce)
   apply (clarsimp split: if_split_asm)
    apply (frule_tac P="(=) (Some ntfnptr)" in ntfn_bound_tcb_at, simp_all add: obj_at_def)[1]
-   apply (fastforce simp: ntfn_q_refs_no_NTFNBound tcb_at_no_ntfn_bound tcb_ntfn_is_bound_def
+   apply (f astforce simp: ntfn_q_refs_no_NTFNBound tcb_at_no_ntfn_bound tcb_ntfn_is_bound_def
                           obj_at_def tcb_st_refs_no_TCBBound
                    dest!: pred_tcb_at_tcb_at bound_tcb_at_state_refs_ofD)
   apply (subst (asm) ko_at_state_refs_ofD, assumption)
@@ -722,11 +727,11 @@ lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
                  dest!: refs_in_ntfn_q_refs)
   done*) sorry
 
-lemma [wp]: "\<lbrace>invs\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_. invs\<rbrace>"
-sorry
+lemma schedule_tcb_invs[wp]: "\<lbrace>invs\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (wpsimp simp: schedule_tcb_def)
 
 lemma (in Finalise_AI_1) fast_finalise_invs[wp]:
-  "\<lbrace>invs\<rbrace> set_object param_a param_b \<lbrace>\<lambda>_. invs\<rbrace>"
+  "\<lbrace>invs\<rbrace> fast_finalise param_a param_b \<lbrace>\<lambda>_. invs\<rbrace>"
   sorry
 (*
 crunch (in Finalise_AI_1) invs[wp]: fast_finalise "invs"
@@ -784,7 +789,7 @@ crunch irq_node[wp]: cancel_all_ipc "\<lambda>s. P (interrupt_irq_node s)"
 lemma sched_context_unbind_tcb_irq_node[wp]:
   "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace>
      sched_context_unbind_tcb param_a \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
- sorry
+  by (wpsimp simp: sched_context_unbind_tcb_def wp: get_sched_context_wp)
 
 crunch irq_node[wp]: cancel_all_signals, fast_finalise "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps maybeM_inv simp: crunch_simps unless_def)
@@ -838,12 +843,12 @@ lemma unbind_notification_not_bound:
 
 lemma unbind_notification_bound_tcb_at[wp]:
   "\<lbrace>\<top>\<rbrace> unbind_notification tcbptr \<lbrace>\<lambda>_. bound_tcb_at ((=) None) tcbptr\<rbrace>"
-  apply (simp add: unbind_notification_def)
+  apply (simp add: unbind_notification_def maybeM_def)
   apply (wpsimp wp: sbn_bound_tcb_at')
-(*   apply (rule gbn_bound_tcb[THEN hoare_strengthen_post])
+   apply (rule gbn_bound_tcb[THEN hoare_strengthen_post])
    apply clarsimp
   apply assumption
-  done*) sorry
+  done
 
 crunch valid_mdb[wp]: unbind_notification "valid_mdb"
   (wp: maybeM_inv ignore: set_tcb_obj_ref)
