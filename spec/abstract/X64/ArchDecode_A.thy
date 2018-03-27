@@ -321,7 +321,7 @@ where
                                                (attribs_from_word attr) vspace;
              ensure_safe_mapping entries;
              returnOk $ InvokePage $ PageMap
-                       (ArchObjectCap $ PageCap dev p R map_type pgsz (Some (asid,vaddr))) cte entries vspace
+                       (ArchObjectCap $ PageCap dev p R VMVSpaceMap pgsz (Some (asid,vaddr))) cte entries vspace
           odE
     else throwError TruncatedMessage
     else if invocation_type label = ArchInvocationLabel X64PageRemap then

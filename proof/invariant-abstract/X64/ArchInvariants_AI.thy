@@ -122,7 +122,7 @@ where
      ASIDPoolCap r as
        \<Rightarrow> is_aligned as asid_low_bits \<and> as \<le> 2^asid_bits - 1
    | PageCap dev r rghts maptyp sz mapdata \<Rightarrow> rghts \<in> valid_vm_rights \<and>
-     case_option True (wellformed_mapdata sz) mapdata
+     case_option (maptyp=VMNoMap) (wellformed_mapdata sz and (\<lambda>_. maptyp\<noteq>VMNoMap)) mapdata
    | PageTableCap r (Some mapdata) \<Rightarrow>
      wellformed_mapdata X64LargePage mapdata
    | PageDirectoryCap r (Some mapdata) \<Rightarrow>
@@ -230,8 +230,9 @@ where
     (if dev then (typ_at (AArch (ADeviceData sz)) r s)
             else (typ_at (AArch (AUserData sz)) r s)) \<and>
     (rghts \<in> valid_vm_rights) \<and>
-    (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le> 2^asid_bits - 1
-                                             \<and> vmsz_aligned ref sz \<and> ref < pptr_base \<and> canonical_address ref)
+    (case mapdata of None \<Rightarrow> maptyp = VMNoMap | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le> 2^asid_bits - 1
+                                             \<and> vmsz_aligned ref sz \<and> ref < pptr_base \<and> canonical_address ref
+                                             \<and> maptyp \<noteq> VMNoMap)
   | PageTableCap r mapdata \<Rightarrow>
     typ_at (AArch APageTable) r s \<and>
     (case mapdata of None \<Rightarrow> True

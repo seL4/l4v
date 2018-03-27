@@ -3077,7 +3077,7 @@ lemma perform_page_directory_invocation_invs[wp]:
     apply (rule_tac P = "is_pd_cap cap" in hoare_gen_asm)
     apply (rule_tac Q = "\<lambda>r. cte_wp_at (op = cap) (a,b) and invs and is_final_cap' cap
                              and (\<lambda>s. (the (vs_cap_ref (ArchObjectCap (PageDirectoryCap p (Some (x1, x2a))))), p) \<notin> vs_lookup_pages s)
-                             and obj_at (empty_table {}) (the (aobj_ref (update_map_data (Structures_A.the_arch_cap cap) None)))"
+                             and obj_at (empty_table {}) (the (aobj_ref (update_map_data (Structures_A.the_arch_cap cap) None None)))"
                              in hoare_post_imp)
      apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps update_map_data_def
                            is_arch_update_def cap_master_cap_simps)
@@ -3165,7 +3165,7 @@ lemma perform_page_table_invocation_invs[wp]:
     apply (rule_tac P = "is_pt_cap cap" in hoare_gen_asm)
     apply (rule_tac Q = "\<lambda>r. cte_wp_at (op = cap) (a,b) and invs and is_final_cap' cap
                              and (\<lambda>s. (the (vs_cap_ref (ArchObjectCap (PageTableCap p (Some (x1, x2a))))), p) \<notin> vs_lookup_pages s)
-                             and obj_at (empty_table {}) (the (aobj_ref (update_map_data (Structures_A.the_arch_cap cap) None)))"
+                             and obj_at (empty_table {}) (the (aobj_ref (update_map_data (Structures_A.the_arch_cap cap) None None)))"
                              in hoare_post_imp)
      apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps update_map_data_def
                            is_arch_update_def cap_master_cap_simps)
@@ -3284,7 +3284,7 @@ lemma perform_pdpt_invocation_invs[wp]:
     apply (rule_tac P = "is_pdpt_cap cap" in hoare_gen_asm)
     apply (rule_tac Q = "\<lambda>r. cte_wp_at (op = cap) (a,b) and invs and is_final_cap' cap
                              and (\<lambda>s. (the (vs_cap_ref (ArchObjectCap (PDPointerTableCap p (Some (x1, x2a))))), p) \<notin> vs_lookup_pages s)
-                             and obj_at (empty_table {}) (the (aobj_ref (update_map_data (Structures_A.the_arch_cap cap) None)))"
+                             and obj_at (empty_table {}) (the (aobj_ref (update_map_data (Structures_A.the_arch_cap cap) None None)))"
                              in hoare_post_imp)
      apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps update_map_data_def
                            is_arch_update_def cap_master_cap_simps)

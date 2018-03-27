@@ -566,7 +566,7 @@ Note that implementations with separate high and low memory regions may also wis
 >                 (attribsFromWord attr) vspace
 >             ensureSafeMapping entries
 >             return $ InvokePage $ PageMap {
->                 pageMapCap = ArchObjectCap $ cap { capVPMappedAddress = Just (asid, VPtr vaddr') },
+>                 pageMapCap = ArchObjectCap $ cap { capVPMapType = VMVSpaceMap, capVPMappedAddress = Just (asid, VPtr vaddr') },
 >                 pageMapCTSlot = cte,
 >                 pageMapEntries = entries,
 >                 pageMapVSpace = vspace }
@@ -1203,7 +1203,8 @@ Checking virtual address for page size dependent alignment:
 >         _ -> return ()
 >     ArchObjectCap cap <- getSlotCap ctSlot
 >     updateCap ctSlot (ArchObjectCap $
->                           cap { capVPMappedAddress = Nothing })
+>                           cap { capVPMappedAddress = Nothing,
+>                                 capVPMapType = VMNoMap })
 >
 >-- performPageInvocation (PageIOMap cap cptr vtdpte slot) = do
 >--     updateCap cptr cap
