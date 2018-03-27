@@ -166,6 +166,7 @@ lemma rec_del_domain_list[wp]:
   by (wp rec_del_preservation preemption_point_inv' | simp)+
 
 crunch domain_list_inv[wp]: cap_delete, activate_thread "\<lambda>s. P (domain_list s)"
+  (wp: hoare_drop_imp)
 
 crunch domain_list_inv[wp]: possible_switch_to "\<lambda>s. P (domain_list s)"
   (simp: get_tcb_obj_ref_def wp: hoare_vcg_if_lift2 hoare_drop_imp)
@@ -417,7 +418,7 @@ context DetSchedDomainTime_AI begin
 
 crunch domain_time_inv[wp]:
   get_cap, activate_thread, set_scheduler_action, tcb_sched_action
-  "\<lambda>s. P (domain_time s)"
+  "\<lambda>s. P (domain_time s)" (wp: hoare_drop_imp)
 
 crunch domain_time_inv[wp]: guarded_switch_to "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imp whenE_inv)

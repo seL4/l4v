@@ -792,9 +792,7 @@ lemma idle_thread_idle[wp]:
 
 lemma set_thread_state_valid_objs[wp]:
  "\<lbrace>valid_objs and valid_tcb_state st and
-   (\<lambda>s. (\<forall>a. st = Structures_A.BlockedOnReceive a r \<longrightarrow>
-              cte_wp_at ((=) cap.NullCap) (thread, tcb_cnode_index 3) s) \<and>
-        (st_tcb_at (\<lambda>st. \<not> halted st) thread s \<or> halted st))\<rbrace>
+   (\<lambda>s. (st_tcb_at (\<lambda>st. \<not> halted st) thread s \<or> halted st))\<rbrace>
   set_thread_state thread st
   \<lbrace>\<lambda>r. valid_objs\<rbrace>"
   apply (simp add: set_thread_state_def)
@@ -1823,12 +1821,9 @@ lemma set_tcb_yield_to_valid_ioc[wp]:
 lemma sts_invs_minor:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st) t
      and (\<lambda>s. \<not> halted st \<longrightarrow> ex_nonz_cap_to t s)
-     and (\<lambda>s. \<forall>a. st = Structures_A.BlockedOnReceive a r \<longrightarrow>
-                    cte_wp_at ((=) cap.NullCap) (t, tcb_cnode_index 3) s) (* wrong *)
      and (\<lambda>s. t \<noteq> idle_thread s)
      and (\<lambda>s. st_tcb_at (\<lambda>st. \<not> halted st) t s \<or> halted st)
      and (\<lambda>s. \<forall>typ. (idle_thread s, typ) \<notin> tcb_st_refs_of st)
-     and (\<lambda>s. \<not> awaiting_reply st \<longrightarrow> \<not> has_reply_cap t s)
      and K (\<not>idle st)
      and invs\<rbrace>
      set_thread_state t st
@@ -1839,7 +1834,6 @@ lemma sts_invs_minor:
   apply (rule conjI, simp add: pred_tcb_at_def, erule(1) obj_at_valid_objsE)
    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_tcb_state_def doubleton_eq_iff
                   split: thread_state.splits if_split_asm)
-  apply (rule conjI, simp)
   apply (clarsimp elim!: rsubst[where P=sym_refs]
                  intro!: ext
                   dest!: st_tcb_at_state_refs_ofD)
@@ -1850,8 +1844,6 @@ lemma sts_invs_minor2:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st \<and> \<not> awaiting_reply st') t
      and invs and ex_nonz_cap_to t and (\<lambda>s. t \<noteq> idle_thread s)
      and K (\<not> awaiting_reply st \<and> \<not>idle st)
-     and (\<lambda>s. \<forall>a. st = Structures_A.BlockedOnReceive a r \<longrightarrow>
-                    cte_wp_at ((=) cap.NullCap) (t, tcb_cnode_index 3) s) (* wrong *)
      and (\<lambda>s. st_tcb_at (\<lambda>st. \<not> halted st) t s \<or> halted st)\<rbrace>
      set_thread_state t st
    \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -1861,7 +1853,6 @@ lemma sts_invs_minor2:
   apply (rule conjI, simp add: pred_tcb_at_def, erule(1) obj_at_valid_objsE)
    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_tcb_state_def doubleton_eq_iff
                   split: thread_state.splits if_split_asm)
-  apply (rule conjI, simp)
   apply (clarsimp elim!: rsubst[where P=sym_refs]
                  intro!: ext
                   dest!: st_tcb_at_state_refs_ofD)

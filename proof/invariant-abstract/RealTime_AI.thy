@@ -864,20 +864,6 @@ lemma do_extended_op_empty_fail [simp]: (* move it elsewhere? *)
   by (fastforce simp: do_extended_op_def empty_fail_get mk_ef_def
                intro: empty_fail_bind empty_fail_select_f)
 
-lemma set_next_interrupt_empty_fail [simp]:
-  "empty_fail set_next_interrupt"
-  apply (wpsimp simp: set_next_interrupt_def set_next_timer_interrupt_def
-              do_machine_op_def )
-sorry
-
-lemma sc_and_timer_empty_fail [simp]:
-  "empty_fail sc_and_timer"
-  by (auto simp: sc_and_timer_def switch_sched_context_def get_tcb_obj_ref_def thread_get_def
-                 gets_the_def refill_unblock_check_def get_refills_def rollback_time_def
-                 commit_time_def is_round_robin_def refill_split_check_def get_sched_context_def
-                 Let_def update_sched_context_def get_object_def set_object_is_modify
-          split: kernel_object.splits)
-
 (* FIXME: move *)
 lemma tcb_at_typ_at:
   "\<lbrace>typ_at ATCB t\<rbrace> f \<lbrace>\<lambda>_. typ_at ATCB t\<rbrace> \<Longrightarrow> \<lbrace>tcb_at t\<rbrace> f \<lbrace>\<lambda>_. tcb_at t\<rbrace>"

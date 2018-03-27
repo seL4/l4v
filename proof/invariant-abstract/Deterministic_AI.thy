@@ -4328,17 +4328,30 @@ crunch valid_list[wp]: reply_from_kernel "valid_list"
 crunch valid_list[wp]: sched_context_resume,suspend "valid_list"
   (simp: ethread_get_def wp: get_object_wp hoare_drop_imp maybeM_inv)
 
+crunch valid_list[wp]: sched_context_bind_ntfn valid_list
+crunch valid_list[wp]: sched_context_unbind_reply valid_list (wp: mapM_x_wp')
+crunch valid_list[wp]: sched_context_yield_to valid_list (wp: hoare_drop_imp)
+crunch valid_list[wp]: invoke_sched_context valid_list
+
+crunch valid_list[wp]: refill_update,refill_new valid_list (wp: hoare_drop_imp)
+
+crunch all_but_exst[wp]: commit_domain_time "all_but_exst P"
+
+crunch (empty_fail) empty_fail[wp]: commit_domain_time
+
+interpretation commit_domain_time_extended: is_extended "commit_domain_time"
+  by (unfold_locales; wp)
+
+crunch valid_list[wp]: commit_time valid_list
+
 context Deterministic_AI_1 begin
 crunch valid_list[wp]: invoke_tcb "valid_list"
  (wp: maybeM_inv hoare_drop_imp check_cap_inv mapM_x_wp')
 
-lemma invoke_sched_context_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> invoke_sched_context i \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  sorry
-
 lemma invoke_sched_control_configure_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> invoke_sched_control_configure i \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  sorry
+  by (cases i; wpsimp simp: invoke_sched_control_configure_def
+    wp: hoare_drop_imp split_del: if_split)
 
 end
 

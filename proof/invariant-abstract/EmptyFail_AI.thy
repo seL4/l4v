@@ -15,6 +15,7 @@ begin
 context begin interpretation Arch .
 requalify_facts
   ef_machine_op_lift
+  empty_fail_setDeadline
 end
 
 lemmas [wp] = empty_fail_bind empty_fail_bindE empty_fail_get empty_fail_modify
@@ -453,6 +454,9 @@ crunch (empty_fail) empty_fail[wp, intro!, simp]: schedule_switch_thread_fastfai
 context EmptyFail_AI_schedule_det begin
 
 crunch (empty_fail) empty_fail[wp, intro!, simp]: schedule_choose_new_thread
+
+crunch (empty_fail) empty_fail[wp, intro!, simp]: sc_and_timer
+  (wp: empty_fail_setDeadline simp: Let_def)
 
 lemma schedule_empty_fail'[intro!, wp, simp]:
   "empty_fail (schedule :: (unit,det_ext) s_monad)"

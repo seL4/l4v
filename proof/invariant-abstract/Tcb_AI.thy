@@ -71,11 +71,21 @@ lemma set_thread_state_ct_st:
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
+crunches complete_yield_to
+ for invs[wp]: invs
+ and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  (wp: maybeM_inv hoare_drop_imp mapM_wp' simp: zipWithM_x_mapM)
+
 lemma (in Tcb_AI_1) activate_invs:
   "\<lbrace>(invs::'state_ext::state_ext state \<Rightarrow> bool)\<rbrace> activate_thread \<lbrace>\<lambda>rv s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   apply (unfold activate_thread_def)
-(*  apply (rule hoare_seq_ext [OF _ gets_sp])
+  apply (rule hoare_seq_ext [OF _ gets_sp])
+  apply (rule hoare_seq_ext [OF _ _])
+  apply wp
+(*  apply (wp complete_yield_to_invs)
   apply (rule hoare_seq_ext [OF _ gts_sp])
+  apply (rule_tac Q="st_tcb_at (op = x) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
+  apply (rename_tac state)
   apply (case_tac state, simp_all)
     apply wp
     apply (clarsimp elim!: pred_tcb_weakenE
@@ -102,7 +112,7 @@ lemma restart_invs[wp]:
   apply (simp add: restart_def)
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (wp sts_invs_minor cancel_ipc_ex_nonz_cap_to_tcb
-            hoare_vcg_disj_lift cancel_ipc_simple2
+            hoare_vcg_disj_lift cancel_ipc_simple2 hoare_drop_imp
        | simp add: if_apply_def2
        | strengthen invs_valid_objs2)+
   apply (auto dest!: idle_no_ex_cap simp: invs_def valid_state_def valid_pspace_def)

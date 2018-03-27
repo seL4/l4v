@@ -211,9 +211,9 @@ lemma (* handle_interrupt_invs *) [Interrupt_AI_asms]:
      apply (clarsimp simp: ex_nonz_cap_to_def invs_valid_objs)
      apply (intro allI exI, erule cte_wp_at_weakenE)
      apply (clarsimp simp: is_cap_simps)
-    apply (wp hoare_drop_imps resetTimer_invs_ARCH
-           | simp add: get_irq_state_def handle_reserved_irq_def)+
- sorry
+    apply (wp hoare_drop_imps resetTimer_invs_ARCH dmo_ackInterrupt
+           | simp add: get_irq_state_def ackDeadlineIRQ_def handle_reserved_irq_def)+
+ done
 
 lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_asms]:
   "\<lbrace>arch_irq_control_inv_valid i\<rbrace>

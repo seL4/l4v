@@ -3499,7 +3499,7 @@ lemma handle_event_valid_sched:
               fastforce simp: valid_fault_def)+
   sorry
 
-crunch valid_list[wp]: activate_thread valid_list
+crunch valid_list[wp]: activate_thread valid_list (wp: hoare_drop_imp)
 crunch valid_list[wp]: guarded_switch_to, switch_to_idle_thread, choose_thread valid_list
   (wp: crunch_wps)
 

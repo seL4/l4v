@@ -343,6 +343,9 @@ lemma no_fail_maskInterrupt[wp]: "no_fail \<top> (maskInterrupt irq bool)"
 lemma no_fail_setDeadline: "no_fail \<top>(setDeadline t)"
   by (simp add: setDeadline_def)
 
+lemma empty_fail_setDeadline: "empty_fail (setDeadline t)"
+  by (simp add: setDeadline_def)
+
 lemma no_irq_use:
   "\<lbrakk> no_irq f; (rv,s') \<in> fst (f s) \<rbrakk> \<Longrightarrow> irq_masks s' = irq_masks s"
   apply (simp add: no_irq_def valid_def)
