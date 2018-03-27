@@ -159,7 +159,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
             case mapped of Some (asid, vaddr) \<Rightarrow> unmap_page sz asid vaddr base
                           | None \<Rightarrow> return ();
             cap \<leftarrow> liftM the_arch_cap $ get_cap ct_slot;
-            set_cap (ArchObjectCap $ update_map_data cap None) ct_slot
+            set_cap (ArchObjectCap $ update_map_data cap None (Some VMNoMap)) ct_slot
           od
       | _ \<Rightarrow> fail)
 (*  | PageIOMap asid cap ct_slot entries \<Rightarrow> undefined (* FIXME unimplemented *)*)
@@ -191,7 +191,7 @@ case iv of PageTableMap cap ct_slot pde pd_slot vspace \<Rightarrow> do
       mapM_x (swp store_pte InvalidPTE) slots
     od | None \<Rightarrow> return ();
     cap \<leftarrow> liftM the_arch_cap $ get_cap ct_slot;
-    set_cap (ArchObjectCap $ update_map_data cap None) ct_slot
+    set_cap (ArchObjectCap $ update_map_data cap None None) ct_slot
   od
   | _ \<Rightarrow> fail"
 
@@ -215,7 +215,7 @@ case iv of PageDirectoryMap cap ct_slot pdpte pdpt_slot vspace \<Rightarrow> do
       mapM_x (swp store_pde InvalidPDE) slots
     od | None \<Rightarrow> return ();
     cap \<leftarrow> liftM the_arch_cap $ get_cap ct_slot;
-    set_cap (ArchObjectCap $ update_map_data cap None) ct_slot
+    set_cap (ArchObjectCap $ update_map_data cap None None) ct_slot
   od
   | _ \<Rightarrow> fail"
 
@@ -239,7 +239,7 @@ case iv of PDPTMap cap ct_slot pml4e pml4_slot vspace \<Rightarrow> do
       mapM_x (swp store_pdpte InvalidPDPTE) slots
     od | None \<Rightarrow> return ();
     cap \<leftarrow> liftM the_arch_cap $ get_cap ct_slot;
-    set_cap (ArchObjectCap $ update_map_data cap None) ct_slot
+    set_cap (ArchObjectCap $ update_map_data cap None None) ct_slot
   od
   | _ \<Rightarrow> fail"
 

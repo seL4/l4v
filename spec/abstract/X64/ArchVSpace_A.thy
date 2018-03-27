@@ -517,9 +517,9 @@ attribs_from_word :: "machine_word \<Rightarrow> frame_attrs" where
 
 text {* Update the mapping data saved in a page or page table capability. *}
 definition
-  update_map_data :: "arch_cap \<Rightarrow> (asid \<times> vspace_ref) option \<Rightarrow> arch_cap" where
-  "update_map_data cap m \<equiv> case cap of
-     PageCap dev p R mt sz _ \<Rightarrow> PageCap dev p R mt sz m
+  update_map_data :: "arch_cap \<Rightarrow> (asid \<times> vspace_ref) option \<Rightarrow> vmmap_type option \<Rightarrow> arch_cap" where
+  "update_map_data cap m mt \<equiv> case cap of
+     PageCap dev p R _ sz _ \<Rightarrow> PageCap dev p R (the mt) sz m
    | PageTableCap p _ \<Rightarrow> PageTableCap p m
    | PageDirectoryCap p _ \<Rightarrow> PageDirectoryCap p m
    | PDPointerTableCap p _ \<Rightarrow> PDPointerTableCap p m"
