@@ -156,7 +156,7 @@ where
    case ac of
      ASIDPoolCap r as \<Rightarrow> is_aligned as asid_low_bits \<and> asid_wf as
    | PageCap dev r rghts maptyp sz mapdata \<Rightarrow> rghts \<in> valid_vm_rights \<and>
-     case_option True (wellformed_mapdata (pageBitsForSize sz)) mapdata
+     case_option (maptyp=VMNoMap) (wellformed_mapdata (pageBitsForSize sz) and (\<lambda>_. maptyp\<noteq>VMNoMap)) mapdata
    | PageTableCap r (Some mapdata) \<Rightarrow>
      wellformed_mapdata pd_shift_bits mapdata
    | PageDirectoryCap r (Some mapdata) \<Rightarrow>
@@ -262,7 +262,7 @@ where
     (if dev then (typ_at (AArch (ADeviceData sz)) r s)
             else (typ_at (AArch (AUserData sz)) r s)) \<and>
     (rghts \<in> valid_vm_rights) \<and>
-    case_option True (wellformed_mapdata (pageBitsForSize sz)) mapdata
+    (case_option (maptyp=VMNoMap) (wellformed_mapdata (pageBitsForSize sz) and (\<lambda>_. maptyp\<noteq>VMNoMap)) mapdata)
                                              \<and> maptyp \<noteq> VMNoMap)
   | PageTableCap r mapdata \<Rightarrow>
     typ_at (AArch APageTable) r s \<and>
