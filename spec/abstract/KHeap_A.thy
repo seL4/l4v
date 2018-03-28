@@ -188,9 +188,9 @@ where
    od"
 
 definition
-  set_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) s_monad"
+  set_sched_context_obj :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "set_sched_context ptr sc n  \<equiv> do
+  "set_sched_context_obj ptr sc n  \<equiv> do
      obj \<leftarrow> get_object ptr;
      assert (case obj of SchedContext sc n \<Rightarrow> True | _ \<Rightarrow> False);
      set_object ptr (SchedContext sc n)
@@ -204,21 +204,26 @@ where
      return $ f sc
    od"
 
-definition (* update only the schedcontext, keeping the size *)
-  update_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> (unit,'z::state_ext) s_monad"
+definition (* set only the schedcontext, keeping the size *)
+  set_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "update_sched_context ptr sc  \<equiv> do
+  "set_sched_context ptr sc  \<equiv> do
      obj \<leftarrow> get_object ptr;
      case obj of SchedContext sc' n \<Rightarrow> set_object ptr (SchedContext sc n) | _ \<Rightarrow> fail
+   od"
+
+definition (* update only the schedcontext in place, keeping the size *)
+  update_sched_context :: "obj_ref \<Rightarrow> (sched_context \<Rightarrow> sched_context) \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "update_sched_context ptr f  \<equiv> do
+     obj \<leftarrow> get_object ptr;
+     case obj of SchedContext sc n \<Rightarrow> set_object ptr (SchedContext (f sc) n) | _ \<Rightarrow> fail
    od"
 
 definition
   set_sc_obj_ref :: "(('a \<Rightarrow> 'a) \<Rightarrow> sched_context \<Rightarrow> sched_context) \<Rightarrow> obj_ref \<Rightarrow> 'a \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "set_sc_obj_ref f ref new \<equiv> do
-     sc \<leftarrow> get_sched_context ref;
-     update_sched_context ref (f (K new) sc)
-   od"
+  "set_sc_obj_ref f ref new \<equiv> update_sched_context ref (f (K new))"
 
 definition
   is_schedulable :: "obj_ref \<Rightarrow> bool \<Rightarrow> ('z::state_ext state, bool) nondet_monad"

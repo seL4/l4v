@@ -588,12 +588,16 @@ where
             when (sc_opt \<noteq> None \<and> runnable state) $ do
               sc_ptr \<leftarrow> assert_opt sc_opt;
               refill_unblock_check sc_ptr;
-              ready \<leftarrow> refill_ready sc_ptr;
-              sufficient \<leftarrow> refill_sufficient sc_ptr 0;
+              sc \<leftarrow> get_sched_context sc_ptr;
+
+              cur_time \<leftarrow> gets cur_time;
+              ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr *)
+
+              sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
+
               if (ready \<and> sufficient) then possible_switch_to receiver
               else do
                 tcb \<leftarrow> gets_the $ get_tcb receiver;
-                sc \<leftarrow> get_sched_context sc_ptr;
                 if (is_ep_cap (tcb_timeout_handler tcb) \<and> \<not> is_timeout_fault f) then
                   handle_timeout receiver (Timeout (sc_badge sc))
                 else postpone sc_ptr
@@ -630,8 +634,12 @@ where
      when (ct \<noteq> it) $ do
        sc_ptr \<leftarrow> gets cur_sc;
        csc \<leftarrow> get_sched_context sc_ptr;
-       ready \<leftarrow> refill_ready sc_ptr;
-       sufficient \<leftarrow> refill_sufficient sc_ptr 0;
+
+       cur_time \<leftarrow> gets cur_time;
+       ready \<leftarrow> return $ (r_time (refill_hd csc)) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr *)
+
+       sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills csc); (* refill_sufficient sc_ptr 0 *)
+
        tcb \<leftarrow> gets_the $ get_tcb ct;
        if canTimeout \<and> (is_ep_cap (tcb_timeout_handler tcb)) then
          handle_timeout ct (Timeout (sc_badge csc))
@@ -657,8 +665,7 @@ where
           (rfhd \<lparr> r_amount := r_amount rfhd + r_amount rftl \<rparr> # rf_body @ [rftl \<lparr> r_amount := 0 \<rparr>])
     od
     else refill_budget_check csc_ptr consumed capacity;
-    csc \<leftarrow> get_sched_context csc_ptr;
-    update_sched_context csc_ptr (csc\<lparr>sc_consumed := (sc_consumed csc) + consumed \<rparr>);
+    update_sched_context csc_ptr (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);
     modify $ consumed_time_update (K 0);
     ct \<leftarrow> gets cur_thread;
     st \<leftarrow> get_thread_state ct;
@@ -676,8 +683,12 @@ where
      csc \<leftarrow> gets cur_sc;
      consumed \<leftarrow> gets consumed_time;
      capacity \<leftarrow> refill_capacity csc consumed;
-     full \<leftarrow> refill_full csc;
-     robin \<leftarrow> is_round_robin csc;
+
+     sc \<leftarrow> get_sched_context csc;
+     full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc); (* = refill_full csc *)
+
+     robin \<leftarrow> return (sc_period sc = 0); (* is_round_robin csc;*)
+
      if (capacity \<ge> MIN_BUDGET \<and> (robin \<or> \<not>full)) then do
        dom_exp \<leftarrow> gets is_cur_domain_expired;
        if dom_exp then do
@@ -712,7 +723,7 @@ where
   "invoke_sched_control_configure iv \<equiv>
   case iv of InvokeSchedControlConfigure sc_ptr budget period mrefills badge \<Rightarrow> liftE $ do
     sc \<leftarrow> get_sched_context sc_ptr;
-    update_sched_context sc_ptr (sc\<lparr>sc_badge:= badge\<rparr>);
+    set_sched_context sc_ptr (sc\<lparr>sc_badge:= badge\<rparr>);
     (period,mrefills) \<leftarrow> return (if budget = period then (0,MIN_REFILLS) else (period,mrefills));
          (* true in the above means we have round robin *)
     when (sc_tcb sc \<noteq> None) $ do

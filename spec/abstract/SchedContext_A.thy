@@ -159,10 +159,7 @@ where
 definition
   set_refills :: "obj_ref \<Rightarrow> refill list \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "set_refills sc_ptr refills = do
-    sc \<leftarrow> get_sched_context sc_ptr;
-    update_sched_context sc_ptr (sc\<lparr>sc_refills:= refills\<rparr>)
-  od"
+  "set_refills sc_ptr refills = update_sched_context sc_ptr (\<lambda>sc. sc\<lparr>sc_refills:= refills\<rparr>)"
 
 definition
   refill_pop_head :: "obj_ref \<Rightarrow> (refill, 'z::state_ext) s_monad"
@@ -200,12 +197,11 @@ definition
   refill_new :: "obj_ref \<Rightarrow> nat \<Rightarrow> ticks \<Rightarrow> ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "refill_new sc_ptr max_refills budget period = do
-    sc \<leftarrow> get_sched_context sc_ptr;
     assert (MIN_BUDGET < budget);
     cur_time \<leftarrow> gets cur_time;
     refill \<leftarrow> return \<lparr> r_time = cur_time, r_amount = budget \<rparr>;
-    sc' \<leftarrow> return $ sc\<lparr> sc_period := period, sc_refills := [refill], sc_refill_max := max_refills \<rparr>;
-    update_sched_context sc_ptr sc';
+    update_sched_context sc_ptr
+            (\<lambda>sc. sc\<lparr> sc_period := period, sc_refills := [refill], sc_refill_max := max_refills \<rparr>);
     maybe_add_empty_tail sc_ptr
   od"
 
@@ -331,7 +327,7 @@ where
     full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc); (* = refill_full sc_ptr *)
     assert (capacity < MIN_BUDGET \<or> full);
     period \<leftarrow> return $ sc_period sc;
-    assert (period > 0);
+    assert (period > 0); (* not round robin *)
     refills \<leftarrow> return (sc_refills sc);
 
     (usage', refills') \<leftarrow> return (if (capacity = 0) then
@@ -352,8 +348,7 @@ where
     capacity \<leftarrow> return $ refills_capacity usage' refills''; (* = refill_capacity sc_ptr usage'*)
 
     cur_time \<leftarrow> gets cur_time;  (* refill_ready sc_ptr *)
-    sc_time \<leftarrow> return $ r_time (hd refills'');
-    ready \<leftarrow> return $ sc_time \<le> cur_time + kernelWCET_ticks;
+    ready \<leftarrow> return $ (r_time (hd refills'')) \<le> cur_time + kernelWCET_ticks;
 
     when (capacity > 0 \<and> ready) $ refill_split_check sc_ptr usage';
     full \<leftarrow> refill_full sc_ptr;
@@ -366,17 +361,20 @@ where
   "refill_update sc_ptr new_period new_budget new_max_refills = do
      sc \<leftarrow> get_sched_context sc_ptr;
      current \<leftarrow> gets cur_time;
-     ready \<leftarrow> refill_ready sc_ptr;
      refill_hd \<leftarrow> return $ hd (sc_refills sc);
+
+     cur_time \<leftarrow> gets cur_time;
+     ready \<leftarrow> return $ (r_time refill_hd) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr; *)
+
      new_time \<leftarrow> return $ if ready then current else (r_time refill_hd);
      if (r_amount refill_hd \<ge> new_budget)
      then do
-       update_sched_context sc_ptr (sc\<lparr>sc_period := new_period, sc_refill_max := new_max_refills,
+       set_sched_context sc_ptr (sc\<lparr>sc_period := new_period, sc_refill_max := new_max_refills,
                                      sc_refills:=[\<lparr> r_time = new_time, r_amount = new_budget\<rparr>]\<rparr>);
        maybe_add_empty_tail sc_ptr
     od
     else
-      update_sched_context sc_ptr (sc\<lparr>sc_period := new_period, sc_refill_max := new_max_refills,
+      set_sched_context sc_ptr (sc\<lparr>sc_period := new_period, sc_refill_max := new_max_refills,
          sc_refills:=[\<lparr> r_time = new_time, r_amount = r_amount refill_hd\<rparr>,
                \<lparr>r_time = new_time + new_period, r_amount = new_budget - (r_amount refill_hd)\<rparr>]\<rparr>)
 od"
@@ -406,8 +404,12 @@ where
      sched \<leftarrow> is_schedulable tptr in_release_q;
      when sched $ do
        ts \<leftarrow> thread_get tcb_state tptr;
-       ready \<leftarrow> refill_ready sc_ptr;
-       sufficient \<leftarrow> refill_sufficient sc_ptr 0;
+
+       cur_time \<leftarrow> gets cur_time;
+       ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr *)
+
+       sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
+
        when (runnable ts \<and> 0 < sc_refill_max sc \<and> \<not>(ready \<and> sufficient)) $ postpone sc_ptr
      od
    od"
@@ -419,7 +421,7 @@ definition
   sched_context_update_consumed :: "obj_ref \<Rightarrow> (time,'z::state_ext) s_monad" where
   "sched_context_update_consumed sc_ptr \<equiv> do
     sc \<leftarrow> get_sched_context sc_ptr;
-    update_sched_context sc_ptr (sc\<lparr>sc_consumed := 0 \<rparr>);
+    set_sched_context sc_ptr (sc\<lparr>sc_consumed := 0 \<rparr>);
     return (sc_consumed sc)
    od"
 
@@ -445,7 +447,6 @@ where
          args \<leftarrow> lookup_ipc_buffer True tcb_ptr;
          buf \<leftarrow> assert_opt args;
          set_consumed sc_ptr [buf];
-         sc \<leftarrow> get_sched_context sc_ptr;
          set_sc_obj_ref sc_yield_from_update sc_ptr None;
          set_tcb_obj_ref tcb_yield_to_update tcb_ptr None;
          set_thread_state tcb_ptr Running
@@ -527,7 +528,7 @@ where
     csc \<leftarrow> gets cur_sc;
     sc \<leftarrow> get_sched_context csc;
     when (0 < consumed) $ do
-      robin \<leftarrow> is_round_robin csc;
+      robin \<leftarrow> return (sc_period sc = 0); (* is_round_robin csc;*)
       if robin then
         let new_hd = ((refill_hd sc) \<lparr> r_time := r_time (refill_hd sc) - consumed \<rparr>);
             new_tl = ((refill_tl sc) \<lparr> r_time := r_time (refill_tl sc) + consumed \<rparr>) in
@@ -535,7 +536,7 @@ where
       else refill_split_check csc consumed
     od;
     do_extended_op $ commit_domain_time; (***)
-    update_sched_context csc (sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);
+    update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);
     modify (\<lambda>s. s\<lparr>consumed_time := 0\<rparr> )
   od"
 
@@ -573,7 +574,6 @@ where
      cancel_ipc thread;
      yt_opt \<leftarrow> get_tcb_obj_ref tcb_yield_to thread;
      maybeM (\<lambda>sc_ptr. do
-       sc \<leftarrow> get_sched_context sc_ptr;
        set_sc_obj_ref sc_yield_from_update sc_ptr None;
        set_tcb_obj_ref tcb_yield_to_update thread None
      od) yt_opt;

@@ -87,10 +87,10 @@ where
      new_thread_time \<leftarrow> return $ cur_tm + r_amount (refill_hd sc);
      rq \<leftarrow> gets release_queue;
      new_thread_time \<leftarrow> if rq = [] then return new_thread_time else do
-       sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context (hd rq);
-       sc_ptr \<leftarrow> assert_opt sc_opt;
-       sc \<leftarrow> get_sched_context sc_ptr;
-       return $ min (r_time (refill_hd sc)) new_thread_time
+       rqsc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context (hd rq);
+       rqsc_ptr \<leftarrow> assert_opt rqsc_opt;
+       rqsc \<leftarrow> get_sched_context rqsc_ptr;
+       return $ min (r_time (refill_hd rqsc)) new_thread_time
      od;
      set_next_timer_interrupt new_thread_time
   od"
@@ -313,12 +313,17 @@ where
   "sched_context_yield_to sc_ptr args \<equiv> do
     flag \<leftarrow> return True;
     refill_unblock_check sc_ptr;
-    sc_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
-    tcb_ptr \<leftarrow> assert_opt sc_opt;
+    sc_tcb_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
+    tcb_ptr \<leftarrow> assert_opt sc_tcb_opt;
     schedulable \<leftarrow> is_schedulable tcb_ptr False;
     when (schedulable) $ do
-      sufficient \<leftarrow> refill_sufficient sc_ptr 0;
-      ready \<leftarrow> refill_ready sc_ptr;
+
+      sc \<leftarrow> get_sched_context sc_ptr;
+      cur_time \<leftarrow> gets cur_time;
+      ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr *)
+
+      sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
+
       assert (sufficient \<and> ready);
       ct_ptr \<leftarrow> gets cur_thread;
       prios \<leftarrow> ethread_get tcb_priority tcb_ptr;
