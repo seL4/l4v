@@ -1773,7 +1773,7 @@ lemma make_fault_msg_cap_refs_in_kernel_window[wp]:
 
 crunch cap_refs_in_kernel_window[wp]: do_ipc_transfer "cap_refs_in_kernel_window :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift ball_tcb_cap_casesI
-     simp: zipWithM_x_mapM crunch_simps ball_conj_distrib ignore: update_sched_context)
+     simp: zipWithM_x_mapM crunch_simps ball_conj_distrib)
 
 (*
 crunch valid_objs[wp]: do_ipc_transfer "valid_objs :: 'state_ext state \<Rightarrow> bool"
@@ -2139,19 +2139,8 @@ lemma sai_invs[wp]:
   apply (clarsimp simp: valid_obj_def valid_ntfn_def)
   done*) sorry
 
-lemma update_sched_context_ex_nonz_cap_to[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> update_sched_context ref ref2 \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
-  apply (wpsimp simp: update_sched_context_def get_object_def bind_assoc set_object_def)
- sorry
-
-lemma update_sched_context_cap_refs_respects_device_region[wp]:
-  "\<lbrace>cap_refs_respects_device_region\<rbrace> update_sched_context ref ref2 \<lbrace>\<lambda>_. cap_refs_respects_device_region\<rbrace>"
-  apply (wpsimp simp: update_sched_context_def get_object_def bind_assoc set_object_def)
- sorry
-
 crunch typ_at[wp]: send_signal "\<lambda>(s::det_ext state). P (typ_at T t s)"
 (wp: hoare_drop_imps maybeM_inv)
-
 
 lemma ncof_invs [wp]:
   "\<lbrace>invs\<rbrace> null_cap_on_failure (lookup_cap t ref) \<lbrace>\<lambda>rv. invs\<rbrace>"

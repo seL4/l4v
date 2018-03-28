@@ -3348,8 +3348,8 @@ crunch ct_sched_act_not[wp]: set_thread_state "\<lambda>s. scheduler_act_not (cu
    simp: crunch_simps
    ignore: set_scheduler_action)
 *)
-lemma update_sched_context_valid_etcbs[wp]:
-  "\<lbrace>valid_etcbs\<rbrace> update_sched_context param_a param_b \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
+lemma set_sched_context_valid_etcbs[wp]:
+  "\<lbrace>valid_etcbs\<rbrace> set_sched_context param_a param_b \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   sorry
 
 context DetSchedSchedule_AI begin

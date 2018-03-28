@@ -135,7 +135,7 @@ lemma unbind_notification_bcorres[wp]:
   "bcorres (unbind_notification a) (unbind_notification a)"
   by (wpsimp simp: unbind_notification_def maybeM_def)
 
-crunch (bcorres)bcorres[wp]: set_sched_context,set_reply truncate_state (simp: gets_the_def ignore: gets_the)
+crunch (bcorres)bcorres[wp]: set_reply truncate_state (simp: gets_the_def ignore: gets_the)
 (*
 lemma fast_finalise_bcorres[wp]:
   "bcorres (fast_finalise a b) (fast_finalise a b)"
