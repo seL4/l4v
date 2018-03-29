@@ -51,17 +51,18 @@ lemma invs_no_cicd'_valid_idle':
   "invs_no_cicd' s \<Longrightarrow> valid_idle' s"
   by (simp add: invs_no_cicd'_def)
 
-(* FIXME x64: specs need updating *)
 lemma Arch_switchToIdleThread_ccorres:
   "ccorres dc xfdc invs_no_cicd' UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
   apply (cinit simp: X64_H.switchToIdleThread_def)
-  sorry (*
-    apply (rule ccorres_pre_getIdleThread)
-    apply (ctac (no_vcg) add: setVMRoot_ccorres)
-   apply (wp hoare_vcg_all_lift vcpuSwitch_invs_no_cicd' hoare_vcg_imp_lift vcpuSwitch_it')
+   apply (rule ccorres_pre_getIdleThread)
+   apply (rule ccorres_symb_exec_r)
+     apply (ctac (no_vcg) add: setVMRoot_ccorres)
+    apply vcg
+   apply (rule conseqPre, vcg)
+   apply clarsimp
   apply (clarsimp simp: invs_no_cicd'_def valid_pspace'_def valid_idle'_tcb_at'_ksIdleThread)
-  done *)
+  done
 
 (* FIXME: move *)
 lemma empty_fail_getIdleThread [simp,intro!]:
