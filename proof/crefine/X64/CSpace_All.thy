@@ -147,7 +147,13 @@ lemma lookup_failure_rel_fault_lift:
       lookup_failure_rel err st (errstate t)\<rbrakk>
      \<Longrightarrow> \<exists>v. lookup_fault_lift (current_lookup_fault_' (globals t)) = Some v \<and> lookup_fault_to_H v = err"
   apply (case_tac err, clarsimp+)
-done
+  done
+
+lemma le_64_mask_eq:
+  "(bits::machine_word) \<le> 64 \<Longrightarrow> bits && mask 7 = bits"
+  apply (rule less_mask_eq, simp)
+  apply (erule le_less_trans, simp)
+  done
 
 lemma lookupSlotForCNodeOp_ccorres':
   "ccorres
@@ -183,7 +189,7 @@ lemma lookupSlotForCNodeOp_ccorres':
     apply (rule ccorres_Cond_rhs_Seq)
      apply (rule_tac P="depth < 2 ^ word_bits" in ccorres_gen_asm)
      apply (drule unat_of_nat64)
-     apply (simp add: if_1_0_0 unlessE_def fromIntegral_def integral_inv)
+     apply (simp add: unlessE_def fromIntegral_def integral_inv)
      apply (rule ccorres_cond_true_seq)
      apply (rule ccorres_split_throws)
       apply (rule_tac P= \<top> and P' =UNIV in ccorres_from_vcg_throws)
@@ -195,8 +201,7 @@ lemma lookupSlotForCNodeOp_ccorres':
     apply csymbr
     apply (rule_tac Q="\<lambda>s. depth < 2 ^ word_bits" and Q'=\<top> in ccorres_split_unless_throwError_cond)
        -- "correspondance of Haskell and C conditions"
-       apply (clarsimp simp: Collect_const_mem fromIntegral_def integral_inv
-                             if_1_0_0)
+       apply (clarsimp simp: Collect_const_mem fromIntegral_def integral_inv)
        apply (simp add: word_size unat_of_nat64 word_less_nat_alt
                         word_less_1[symmetric] linorder_not_le)
 
@@ -228,7 +233,7 @@ lemma lookupSlotForCNodeOp_ccorres':
          apply (clarsimp simp: EXCEPTION_NONE_def EXCEPTION_SYSCALL_ERROR_def)
          apply (subst syscall_error_to_H_cases(6), simp+)[1]
            apply (simp add: lookup_fault_depth_mismatch_lift)
-           subgoal sorry (*apply (erule le_32_mask_eq) *)
+           apply (erule le_64_mask_eq)
 
           -- " case where *no* bits are remaining"
           apply csymbr -- "slot_C_update"
