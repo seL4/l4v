@@ -563,13 +563,15 @@ lemma reduceZombie_ccorres1:
               apply (simp only: if_1_0_0 simp_thms)
               apply (rule ccorres_Cond_rhs_Seq[rotated])
                apply (rule_tac P="\<exists>s. s \<turnstile>' cteCap rv \<and> s \<turnstile>' cap" in ccorres_gen_asm)
-               apply (clarsimp simp: word_unat.Abs_inject valid_cap_capZombieNumber_unats)
+               apply clarsimp
+               apply (subst (asm) word_unat.Abs_inject)
+                 apply (rule valid_cap_capZombieNumber_unats[unfolded word_bits_def]; simp)
+                apply (rule valid_cap_capZombieNumber_unats[unfolded word_bits_def]; simp)
                apply (simp add: assertE_def)
-  sorry (*
                apply (rule ccorres_fail)
               apply (rule ccorres_rhs_assoc)+
               apply (rule ccorres_move_c_guard_cte)
-              apply (rule_tac xf'=ret__unsigned_'
+              apply (rule_tac xf'=ret__unsigned_longlong_'
                           and val="case_zombie_type ZombieTCB_C of_nat (capZombieType (cteCap rv))"
                           and R="cte_wp_at' (op = rv) slot and invs'"
                        in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
@@ -585,7 +587,11 @@ lemma reduceZombie_ccorres1:
                 apply (rule_tac P="\<exists>s. s \<turnstile>' cap \<and> s \<turnstile>' cteCap rv" in ccorres_gen_asm)
                 apply (subgoal_tac "P" for P, subst if_P, assumption)
                  prefer 2
-                 apply (clarsimp simp: word_unat.Abs_inject valid_cap_capZombieNumber_unats)
+                 apply clarsimp
+                 apply (subst (asm) word_unat.Abs_inject)
+                   apply (rule valid_cap_capZombieNumber_unats[unfolded word_bits_def]; simp)
+                  apply (rule valid_cap_capZombieNumber_unats[unfolded word_bits_def]; simp)
+                 apply clarsimp
                  apply (drule valid_capAligned)+
                  apply (drule(4) case_zombie_type_map_inj)
                  apply simp
@@ -607,7 +613,7 @@ lemma reduceZombie_ccorres1:
                     apply (rule ssubst, rule unat_minus_one)
                      apply (erule of_nat_neq_0)
                      apply (drule(1) valid_cap_capZombieNumber_unats)
-                     subgoal by (simp add: unats_def)
+                     subgoal by (simp add: unats_def word_bits_def)
                     apply (rule conjI)
                      apply (clarsimp simp: isCap_simps valid_cap'_def)
                      apply (erule order_trans[rotated])
@@ -617,7 +623,7 @@ lemma reduceZombie_ccorres1:
                     apply (erule_tac P="\<lambda>cap. ccap_relation cap cap'" for cap' in rsubst)
                     apply (clarsimp simp: isCap_simps capAligned_def)
                     apply (drule valid_cap_capZombieNumber_unats | simp)+
-                    apply (simp add: word_unat.Abs_inverse)
+                    apply (simp add: word_unat.Abs_inverse word_bits_def)
                    apply ceqv
                   apply (rule ccorres_move_c_guard_cte)
                   apply (ctac(no_vcg) add: ccorres_updateCap)
@@ -666,8 +672,8 @@ lemma reduceZombie_ccorres1:
   apply (frule_tac n=0 in valid_Zombie_cte_at')
    apply (fastforce simp: valid_cap'_def)
   apply (clarsimp simp: cte_wp_at_ctes_of size_of_def)
-  apply auto
-  done *)
+  apply (auto simp: cteSizeBits_def)
+  done
 
 lemma induction_setup_helper:
   "\<lbrakk> \<And>s slot exposed. P s slot exposed \<Longrightarrow> Q s slot exposed;
@@ -759,7 +765,7 @@ lemma finaliseSlot_ccorres:
                            in ccorres_from_vcg[where P'=UNIV])
               apply (rule allI, rule conseqPre, vcg)
               apply (clarsimp simp: return_def)
-              subgoal sorry (*apply auto[1]*)
+              apply auto[1]
              apply ceqv
             apply (rule ccorres_cutMon)
             apply (simp add: cutMon_walk_if from_bool_0
