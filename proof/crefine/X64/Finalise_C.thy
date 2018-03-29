@@ -54,7 +54,7 @@ lemma tcbSchedEnqueue_cslift_spec:
 
 lemma setThreadState_cslift_spec:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. s \<Turnstile>\<^sub>c \<acute>tptr \<and> (\<forall>x. ksSchedulerAction_' (globals s) = tcb_Ptr x
-                 \<and> x \<noteq> 0 \<and> x \<noteq> ~~ 0
+                 \<and> x \<noteq> 0 \<and> x \<noteq> 1
               \<longrightarrow> (\<exists>d v. option_map2 tcbPriority_C (cslift s) (tcb_Ptr x) = Some v
                        \<and> v \<le> ucast maxPrio
                        \<and> option_map2 tcbDomain_C (cslift s) (tcb_Ptr x) = Some d
@@ -91,7 +91,7 @@ lemma setThreadState_cslift_spec:
       apply vcg
      apply vcg_step+
   apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
-                        fun_eq_iff option_map2_def if_1_0_0)
+                        fun_eq_iff option_map2_def)
   by (simp split: if_split)
 
 lemma ep_queue_relation_shift:
@@ -183,7 +183,7 @@ lemma tcbSchedEnqueue_cslift_precond_discharge:
   apply (frule(1) tcb_queue_relation_qhead_valid')
    apply (simp add: valid_queues_valid_q)
   apply (clarsimp simp: h_t_valid_clift_Some_iff)
-  sorry
+  done
 
 lemma cancel_all_ccorres_helper:
   "ccorres dc xfdc
@@ -263,7 +263,6 @@ next
                            st_tcb_at'_def
                     split: scheduler_action.split_asm)
      apply (rename_tac word)
-     sorry (* FIXME X64 word is not what proof expects here
      apply (frule_tac x=word in tcbSchedEnqueue_cslift_precond_discharge)
         apply simp
        apply clarsimp
@@ -279,7 +278,7 @@ next
                 in fun_cong)+
     apply (clarsimp simp add: option_map2_def typ_heap_simps)
     apply fastforce
-    done *)
+    done
 qed
 
 lemma cancelAllIPC_ccorres:
