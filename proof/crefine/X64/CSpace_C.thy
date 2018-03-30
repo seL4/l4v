@@ -1262,10 +1262,6 @@ lemma is_aligned_3_next:
   apply (clarsimp simp: cte_wp_at_ctes_of cteSizeBits_eq ctes_of_aligned_bits)
   done
 
-lemma sign_extend_0[simp]:
-  "sign_extend a 0 = 0"
-  by (simp add: sign_extend_def)
-
 lemma cteMove_ccorres:
   "ccorres dc xfdc
        (valid_mdb' and pspace_aligned' and pspace_canonical')
