@@ -61,8 +61,7 @@ lemma performInvocation_Endpoint_ccorres:
              \<inter> {s. call_' s = from_bool do_call}
              \<inter> {s. badge_' s = badge}
              \<inter> {s. canGrant_' s = from_bool canGrant}
-             \<inter> {s. ep_' s = ep_Ptr epptr}
-             \<inter> \<lbrace>badge && mask 28 = badge\<rbrace>) []
+             \<inter> {s. ep_' s = ep_Ptr epptr}) []
      (liftE (sendIPC blocking do_call badge canGrant thread epptr))
      (Call performInvocation_Endpoint_'proc)"
   apply cinit
@@ -152,8 +151,7 @@ lemma decodeInvocation_ccorres:
                del: Collect_const)
    apply (cut_tac cap=cp in cap_cases_one_on_true_sum)
    apply (rule ccorres_Cond_rhs_Seq)
-    apply (simp add: Let_def isArchCap_T_isArchObjectCap
-                     liftME_invocationCatch from_bool_neq_0)
+    apply (simp add: Let_def isArchCap_T_isArchObjectCap liftME_invocationCatch)
     apply (rule ccorres_split_throws)
      apply (rule ccorres_trim_returnE)
        apply simp
@@ -178,7 +176,7 @@ lemma decodeInvocation_ccorres:
     apply (rule ccorres_rhs_assoc)+
     apply csymbr
     apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
-       apply (clarsimp simp: isCap_simps Collect_const_mem)
+       apply (clarsimp simp: isCap_simps)
        apply (frule cap_get_tag_isCap_unfolded_H_cap)
        apply (drule(1) cap_get_tag_to_H)
        apply (clarsimp simp: to_bool_def)
@@ -213,7 +211,7 @@ lemma decodeInvocation_ccorres:
     apply (simp add: if_to_top_of_bind Collect_const[symmetric]
                 del: Collect_const)
     apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
-       apply (clarsimp simp:  isCap_simps Collect_const_mem)
+       apply (clarsimp simp:  isCap_simps)
        apply (frule cap_get_tag_isCap_unfolded_H_cap)
        apply (drule(1) cap_get_tag_to_H)
        apply (clarsimp simp: to_bool_def)
@@ -241,7 +239,7 @@ lemma decodeInvocation_ccorres:
     apply (rule ccorres_rhs_assoc)+
     apply csymbr
     apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
-       apply (clarsimp simp: isCap_simps Collect_const_mem)
+       apply (clarsimp simp: isCap_simps)
        apply (frule cap_get_tag_isCap_unfolded_H_cap)
        apply (clarsimp simp: cap_get_tag_ReplyCap to_bool_def)
       apply (simp add: throwError_bind invocationCatch_def)
@@ -312,32 +310,23 @@ lemma decodeInvocation_ccorres:
   apply (rule conjI)
    apply (clarsimp simp: tcb_at_invs' ct_in_state'_def
                          simple_sane_strg)
-   apply (clarsimp simp: cte_wp_at_ctes_of valid_cap'_def isCap_simps from_bool_neq_0
+   apply (clarsimp simp: cte_wp_at_ctes_of valid_cap'_def isCap_simps
                          unat_eq_0 sysargs_rel_n_def n_msgRegisters_def valid_tcb_state'_def
              | rule conjI | erule pred_tcb'_weakenE disjE
              | drule st_tcb_at_idle_thread')+
    apply fastforce
   apply (simp add: cap_lift_capEPBadge_mask_eq)
-  apply (clarsimp simp: rf_sr_ksCurThread Collect_const_mem
-                        cap_get_tag_isCap "StrictC'_thread_state_defs")
+  apply (clarsimp simp: rf_sr_ksCurThread cap_get_tag_isCap "StrictC'_thread_state_defs")
   apply (frule word_unat.Rep_inverse')
   apply (simp add: cap_get_tag_isCap[symmetric] cap_get_tag_ReplyCap)
   apply (rule conjI)
    apply (simp add: cap_get_tag_isCap)
-   apply (clarsimp simp: isCap_simps cap_get_tag_to_H from_bool_neq_0)
+   apply (clarsimp simp: isCap_simps cap_get_tag_to_H)
   apply (insert ccap_relation_IRQHandler_mask, elim meta_allE, drule(1) meta_mp)
-  apply (rule conjI | clarsimp
-              | drule(1) cap_get_tag_to_H
-              | simp add: cap_endpoint_cap_lift_def
-                          cap_notification_cap_lift_def
-                          cap_reply_cap_lift_def cap_lift_endpoint_cap
-                          cap_lift_notification_cap cap_lift_reply_cap
-                          from_bool_to_bool_and_1 word_size
-                          order_le_less_trans[OF word_and_le1]
-                          mask_eq_iff_w2p word_size ucast_ucast_mask
-                          isCap_simps mask_eq_ucast_eq
-                          mask_eq_iff_w2p[THEN trans[OF eq_commute]])+
-  sorry
+  apply (simp add: mask_def [of 4])
+  apply (intro conjI impI; drule(1) cap_get_tag_to_H; clarsimp)
+  apply (simp add: cap_lift_endpoint_cap cap_endpoint_cap_lift_def word_size)
+  done
 
 lemma ccorres_Call_Seq:
   "\<lbrakk> \<Gamma> f = Some v; ccorres r xf P P' hs a (v ;; c) \<rbrakk>
@@ -419,8 +408,7 @@ lemma getMessageInfo_ccorres:
        (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}
              \<inter> {s. reg_' s = register_from_H X64_H.msgInfoRegister}) []
        (getMessageInfo thread) (Call getRegister_'proc)"
-  apply (simp add: getMessageInfo_def liftM_def[symmetric]
-                   ccorres_liftM_simp)
+  apply (simp add: getMessageInfo_def liftM_def[symmetric])
   apply (rule ccorres_rel_imp, rule ccorres_guard_imp2, rule getRegister_ccorres)
    apply simp
   apply simp
@@ -628,7 +616,7 @@ lemma sendFaultIPC_ccorres:
               apply (frule cap_get_tag_isCap(4)[symmetric],
                      clarsimp simp: cap_get_tag_EndpointCap to_bool_def
                      split:if_splits)
-             sorry (* FIXME X64
+              apply auto[1]
              apply (rule ccorres_rhs_assoc)
              apply (rule ccorres_rhs_assoc)
              apply (rule ccorres_rhs_assoc)
@@ -681,7 +669,7 @@ lemma sendFaultIPC_ccorres:
             apply (rule_tac P=\<top> and P'=UNIV
                       in ccorres_from_vcg_throws)
             apply clarsimp
-            apply (clarsimp simp add: throwError_def throw_def return_def)
+            apply (clarsimp simp add: throwError_def return_def)
             apply (rule conseqPre, vcg)
             apply (clarsimp simp: EXCEPTION_FAULT_def EXCEPTION_NONE_def)
             apply (simp add: cfault_rel2_def cfault_rel_def EXCEPTION_FAULT_def)
@@ -690,7 +678,7 @@ lemma sendFaultIPC_ccorres:
 
            apply vcg
 
-          apply (clarsimp simp: if_1_0_0)
+          apply (clarsimp)
           apply (rule conseqPre, vcg)
           apply clarsimp
 
@@ -699,7 +687,7 @@ lemma sendFaultIPC_ccorres:
           apply (rule_tac P=\<top> and P'="{x. errstate x= err'}"
                     in ccorres_from_vcg_throws)
           apply clarsimp
-          apply (clarsimp simp add: throwError_def throw_def return_def)
+          apply (clarsimp simp add: throwError_def return_def)
           apply (rule conseqPre, vcg)
           apply (clarsimp simp: EXCEPTION_FAULT_def EXCEPTION_NONE_def)
           apply (simp add: cfault_rel2_def cfault_rel_def EXCEPTION_FAULT_def)
@@ -719,19 +707,19 @@ lemma sendFaultIPC_ccorres:
          apply (clarsimp simp: valid_cap'_def pred_tcb_at')
         apply simp
 
-       apply (clarsimp simp: if_1_0_0)
+       apply (clarsimp)
        apply (vcg exspec=lookupCap_modifies)
        apply clarsimp
       apply wp
-     apply (clarsimp simp: if_1_0_0)
+     apply (clarsimp)
      apply (vcg)
 
     apply (clarsimp, vcg)
    apply (rule conseqPre, vcg)
    apply clarsimp
-  apply (clarsimp simp: if_1_0_0)
+  apply (clarsimp)
   apply fastforce
-  done *)
+  done
 
 lemma handleFault_ccorres:
   "ccorres dc xfdc (invs' and st_tcb_at' simple' t and
@@ -1725,26 +1713,25 @@ lemma sint_uucast_uint_uucast_pred:
   apply (simp add: assms uint_is_up_compose_pred)
  done
 
-(* FIXME x64: probably wrong *)
-lemma scast_maxIRQ_is_less:
-  fixes uc :: "irq \<Rightarrow> 16 word"
-  and uc' :: "8 word\<Rightarrow> 64 sword"
-  and b :: irq
-  shows
-  "(Kernel_C.maxIRQ) <s (ucast b) \<Longrightarrow> scast Kernel_C.maxIRQ < b"
-  apply (simp add: Kernel_C.maxIRQ_def word_sless_def word_sle_def, uint_arith, clarify,simp)
-  apply (subgoal_tac "sint (ucast Kernel_C.maxIRQ :: 64 sword) \<le> uint b"; (simp only: Kernel_C.maxIRQ_def)?)
-   apply (subgoal_tac "sint (ucast Kernel_C.maxIRQ :: 64 sword) \<noteq> uint b"; (simp only: Kernel_C.maxIRQ_def)?)
-    apply (simp )
-  sorry
+lemma scast_maxIRQ_less_eq:
+  fixes b :: irq
+  shows "(Kernel_C.maxIRQ <s ucast b) = (scast Kernel_C.maxIRQ < b)"
+  apply (clarsimp simp: Kernel_C.maxIRQ_def word_sless_def word_sle_def)
+  apply (simp add: sint_ucast_eq_uint is_down_def target_size_def source_size_def word_size)
+  apply uint_arith
+  apply (auto simp: uint_up_ucast is_up_def target_size_def source_size_def word_size)
+  done
+
+lemmas scast_maxIRQ_is_less = scast_maxIRQ_less_eq [THEN iffD1]
 
 lemma validIRQcastingLess:
-  "Kernel_C.maxIRQ <s (ucast b) \<Longrightarrow> X64.maxIRQ < b"
+  "Kernel_C.maxIRQ <s ucast b \<Longrightarrow> X64.maxIRQ < b"
   by (simp add: Platform_maxIRQ scast_maxIRQ_is_less is_up_def target_size source_size)
 
 lemma scast_maxIRQ_is_not_less:
-  "(\<not> (Kernel_C.maxIRQ) <s ucast b)  \<Longrightarrow> \<not> (scast Kernel_C.maxIRQ < b)"
-  sorry
+  fixes b :: irq
+  shows "\<not> Kernel_C.maxIRQ <s ucast b \<Longrightarrow> \<not> (scast Kernel_C.maxIRQ < b)"
+  by (simp add: scast_maxIRQ_less_eq)
 
 (* FIXME ARMHYP: move *)
 lemma ctzl_spec:
@@ -1986,7 +1973,7 @@ lemma handleInterrupt_ccorres:
                         sint_ucast_eq_uint is_down is_up word_0_sle_from_less)
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_ctes_of non_kernel_IRQs_def)
-  apply (clarsimp simp add: if_1_0_0 Collect_const_mem )
+  apply (clarsimp)
   apply (clarsimp simp: Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def
         cte_wp_at_ctes_of ucast_ucast_b is_up)
   apply (intro conjI impI)
@@ -2009,5 +1996,6 @@ lemma handleInterrupt_ccorres:
    apply (clarsimp simp: IRQReserved_def)+
   done
 end
+
 end
 
