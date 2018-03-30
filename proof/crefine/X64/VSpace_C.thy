@@ -2525,10 +2525,6 @@ lemma canonical_address_page_map_l4_at':
   apply (erule (1) obj_at'_is_canonical)
   done
 
-lemma sign_extend_canonical_address:
-  "(x = sign_extend 47 x) = canonical_address x"
-  by (fastforce simp: sign_extended_iff_sign_extend canonical_address_sign_extended)
-
 lemma performASIDPoolInvocation_ccorres:
   notes option.case_cong_weak [cong]
   shows

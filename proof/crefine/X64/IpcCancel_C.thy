@@ -194,6 +194,7 @@ lemma ntfn_ptr_set_queue_spec:
   apply (clarsimp simp: packed_heap_update_collapse_hrs typ_heap_simps')
   done
 
+
 lemma cancelSignal_ccorres_helper:
   "ccorres dc xfdc (invs' and st_tcb_at' (op = (BlockedOnNotification ntfn)) thread and ko_at' ntfn' ntfn)
         UNIV
@@ -300,14 +301,13 @@ lemma cancelSignal_ccorres_helper:
                     split: ntfn.splits split del: if_split)
           apply (erule iffD1 [OF tcb_queue_relation'_cong [OF refl _ _ refl], rotated -1])
            apply (clarsimp simp add: h_t_valid_clift_Some_iff)
-
-(* FIXME X64 tcb_queue_relation'_next_mask and tcb_queue_relation_next_mask appear useless,
-the logic is somehow based on the address being canonical *)
-           (* apply (simp add: tcb_queue_relation'_next_mask) *)
-  subgoal sorry
-          (* apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff)
-          apply (simp add: tcb_queue_relation'_prev_mask) *)
-  subgoal sorry
+           apply (subst tcb_queue_relation'_next_sign; assumption?)
+            apply fastforce
+           apply (simp add: notification_lift_def sign_extend_sign_extend_eq)
+          apply (clarsimp simp: h_t_valid_clift_Some_iff notification_lift_def sign_extend_sign_extend_eq)
+          apply (subst tcb_queue_relation'_prev_sign; assumption?)
+           apply fastforce
+          apply simp
          apply simp
         -- "queue relation"
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
@@ -3020,17 +3020,20 @@ proof -
     done
 qed
 
-(* FIXME x64: bitfield *)
-lemma epQueue_head_mask_4 [simp]:
-  "epQueue_head_CL (endpoint_lift ko') && ~~ mask 4 = epQueue_head_CL (endpoint_lift ko')"
+(* FIXME: x64 can be removed? *)
+lemma epQueue_head_mask_2 [simp]:
+  "epQueue_head_CL (endpoint_lift ko') && ~~ mask 2 = epQueue_head_CL (endpoint_lift ko')"
   unfolding endpoint_lift_def
   oops (*by (clarsimp simp: mask_def word_bw_assocs) *)
 
-(* FIXME x64: bitfield *)
-lemma epQueue_tail_mask_4 [simp]:
-  "epQueue_tail_CL (endpoint_lift ko') && ~~ mask 4 = epQueue_tail_CL (endpoint_lift ko')"
+lemma epQueue_tail_mask_2 [simp]:
+  "epQueue_tail_CL (endpoint_lift ko') && ~~ mask 2 = epQueue_tail_CL (endpoint_lift ko')"
   unfolding endpoint_lift_def
-  oops (*by (clarsimp simp: mask_def word_bw_assocs)*)
+  by (clarsimp simp: mask_def word_bw_assocs sign_extend_def) word_bitwise
+
+lemma epQueue_tail_sign[simp]:
+  "sign_extend 47 (epQueue_tail_CL (endpoint_lift ko)) = epQueue_tail_CL (endpoint_lift ko)"
+  by (simp add: endpoint_lift_def sign_extend_sign_extend_eq)
 
 (* Clag from cancelSignal_ccorres_helper *)
 
@@ -3131,13 +3134,23 @@ lemma cancelIPC_ccorres_helper:
           apply (rule cpspace_relation_ep_update_ep, assumption+)
            apply (simp add: cendpoint_relation_def Let_def isSendEP_def isRecvEP_def split: endpoint.splits split del: if_split)
            -- "recv case"
-            apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff
-              tcb_queue_relation'_next_mask tcb_queue_relation'_prev_mask cong: tcb_queue_relation'_cong)
-            subgoal sorry (*by (intro impI conjI; simp)*)
+            apply (subgoal_tac "pspace_canonical' \<sigma>")
+             prefer 2
+             apply fastforce
+            apply (clarsimp simp add:  h_t_valid_clift_Some_iff ctcb_offset_defs
+              tcb_queue_relation'_next_mask tcb_queue_relation'_prev_mask
+              tcb_queue_relation'_next_sign tcb_queue_relation'_prev_sign
+              cong: tcb_queue_relation'_cong)
+            subgoal by (intro impI conjI; simp)
            -- "send case"
-           apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff
-             tcb_queue_relation'_next_mask tcb_queue_relation'_prev_mask cong: tcb_queue_relation'_cong)
-           subgoal sorry (*by (intro impI conjI; simp)*)
+            apply (subgoal_tac "pspace_canonical' \<sigma>")
+             prefer 2
+             apply fastforce
+           apply (clarsimp simp add: h_t_valid_clift_Some_iff ctcb_offset_defs
+             tcb_queue_relation'_next_mask tcb_queue_relation'_prev_mask
+             tcb_queue_relation'_next_sign tcb_queue_relation'_prev_sign
+             cong: tcb_queue_relation'_cong)
+           subgoal by (intro impI conjI; simp)
           subgoal by simp
                 -- "ntfn relation"
          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
@@ -3155,7 +3168,7 @@ lemma cancelIPC_ccorres_helper:
     subgoal by (simp add: objBits_simps')
    subgoal by (simp add: objBits_simps)
   apply assumption
-   done
+  done
 
 declare empty_fail_get[iff]
 
@@ -3260,7 +3273,6 @@ lemma cancelIPC_ccorres1:
                apply (case_tac "tcbState tcb", simp_all add: is_cap_fault_def)[1]
               apply ceqv
              apply ccorres_remove_UNIV_guard
-  sorry (* FIXME x64: cte guards
              apply (rule ccorres_move_array_assertion_tcb_ctes)
              apply (rule_tac P="tcb_at' thread" in ccorres_cross_over_guard)
              apply (simp add: getThreadReplySlot_def)
@@ -3269,7 +3281,7 @@ lemma cancelIPC_ccorres1:
                apply (rule ccorres_pre_getCTE)
                apply (rename_tac slot slot' cte)
                apply (rule ccorres_move_c_guard_cte)
-               apply (rule_tac xf'=ret__unsigned_' and val="mdbNext (cteMDBNode cte)"
+               apply (rule_tac xf'=ret__unsigned_longlong_' and val="mdbNext (cteMDBNode cte)"
                          and R="cte_wp_at' (op = cte) slot and invs'"
                           in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
                   apply vcg
@@ -3397,7 +3409,7 @@ lemma cancelIPC_ccorres1:
   apply (auto simp: isTS_defs cthread_state_relation_def typ_heap_simps weak_sch_act_wf_def)
   apply (case_tac ts,
            auto simp: isTS_defs cthread_state_relation_def typ_heap_simps)
-  done *)
+  done
 
 end
 end

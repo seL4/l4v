@@ -14,7 +14,17 @@ imports
   "../../refine/$L4V_ARCH/Invariants_H"
 begin
 
+(* FIXME: move to Word_Lib *)
+lemma sign_extend_0[simp]:
+  "sign_extend a 0 = 0"
+  by (simp add: sign_extend_def)
+
 context begin interpretation Arch . (*FIXME: arch_split*)
+
+(* FIXME: move to ainvs? *)
+lemma sign_extend_canonical_address:
+  "(x = sign_extend 47 x) = canonical_address x"
+  by (fastforce simp: sign_extended_iff_sign_extend canonical_address_sign_extended)
 
 section "ctes"
 
@@ -2498,6 +2508,18 @@ lemma canonical_address_tcb_ptr:
   apply (erule canonical_address_add)
     apply (clarsimp simp: objBits_simps' ctcb_offset_defs)+
   done
+
+lemma canonical_address_ctcb_ptr:
+  assumes "canonical_address (ctcb_ptr_to_tcb_ptr t)" "is_aligned (ctcb_ptr_to_tcb_ptr t) tcbBlockSizeBits"
+  shows "canonical_address (ptr_val t)"
+proof -
+  from assms(2)[unfolded ctcb_ptr_to_tcb_ptr_def]
+  have "canonical_address ((ptr_val t - ctcb_offset) + ctcb_offset)"
+    apply (rule canonical_address_add; simp add: objBits_simps' ctcb_offset_defs)
+    using assms(1)
+    by (simp add: ctcb_ptr_to_tcb_ptr_def ctcb_offset_defs)
+  thus ?thesis by simp
+qed
 
 lemma tcb_and_not_mask_canonical:
   "\<lbrakk>pspace_canonical' s; tcb_at' t s; n < tcbBlockSizeBits\<rbrakk> \<Longrightarrow>
