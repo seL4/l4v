@@ -1408,7 +1408,7 @@ lemma decodeCNodeInvocation_ccorres:
                              mdbRevocable_CL_cte_to_H false_def true_def
             | clarsimp simp: typ_heap_simps'
             | frule length_ineq_not_Nil)+)
-  sorry
+  done
 
 end
 
@@ -1708,7 +1708,7 @@ lemma clearMemory_untyped_ccorres:
                   \<and> {ptr ..+ 2 ^ sz} \<subseteq> untypedRange cap
                   \<and> pspace_no_overlap' (capPtr cap) (capBlockSize cap) s)
               \<and> 2 ^ sz \<le> gsMaxObjectSize s)
-          and (\<lambda>_. is_aligned ptr sz \<and> sz \<ge> 2 \<and> sz \<le> reset_chunk_bits))
+          and (\<lambda>_. is_aligned ptr sz \<and> sz \<ge> 3 \<and> sz \<le> reset_chunk_bits))
       ({s. region_actually_is_bytes ptr (2 ^ sz) s}
             \<inter> {s. bits_' s = of_nat sz}
             \<inter> {s. ptr___ptr_to_void_' s = Ptr ptr})
@@ -1717,54 +1717,40 @@ lemma clearMemory_untyped_ccorres:
   (is "ccorres dc xfdc ?P ?P' [] ?m ?c")
   apply (rule ccorres_gen_asm)
   apply (cinit' lift: bits_' ptr___ptr_to_void_')
-   apply (rule_tac P="ptr \<noteq> 0 \<and> sz < word_bits"
-                in ccorres_gen_asm)
-  sorry (*
-   apply (rule ccorres_Guard_Seq)
+   apply (rule_tac P="ptr \<noteq> 0 \<and> sz < word_bits" in ccorres_gen_asm)
    apply (simp add: clearMemory_def)
-   apply (simp add: doMachineOp_bind ef_storeWord)
-   apply (rule ccorres_split_nothrow_novcg_dc)
-      apply (rule_tac P="?P" and P'="{s. region_actually_is_bytes ptr (2 ^ sz) s}"
-         in ccorres_from_vcg)
-      apply (rule allI, rule conseqPre, vcg)
-      apply clarsimp
-      apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
-                            is_aligned_no_wrap'[OF _ word32_power_less_1]
-                            unat_of_nat_eq word_bits_def)
-      apply (simp add: is_aligned_weaken is_aligned_triv[THEN is_aligned_weaken])
-      apply (clarsimp simp: ghost_assertion_size_logic[unfolded o_def]
-                            region_actually_is_bytes_dom_s)
-      apply (clarsimp simp: field_simps word_size_def mapM_x_storeWord_step
-                            word_bits_def cte_wp_at_ctes_of)
-      apply (frule ctes_of_valid', clarify+)
-      apply (simp add: doMachineOp_def split_def exec_gets)
-      apply (simp add: select_f_def simpler_modify_def bind_def
-                       valid_cap_simps' capAligned_def)
-      apply (subst pspace_no_overlap_underlying_zero_update, simp+)
-       apply (case_tac sz, simp_all)[1]
-       apply (case_tac nat, simp_all)[1]
-      apply (clarsimp dest!: region_actually_is_bytes)
-      apply (drule(1) rf_sr_rep0)
-      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                            carch_state_relation_def cmachine_state_relation_def)
-
-     apply csymbr
-     apply (ctac add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
-    apply wp
-   apply (simp add: guard_is_UNIV_def unat_of_nat
-                    word_bits_def capAligned_def word_of_nat_less)
+   apply (rule_tac P="?P" and P'="{s. region_actually_is_bytes ptr (2 ^ sz) s}" in ccorres_from_vcg)
+   apply (rule allI, rule conseqPre, vcg)
+   apply clarsimp
+   apply (rule conjI; clarsimp)
+    apply (simp add: word_less_nat_alt unat_of_nat word_bits_def)
+   apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
+                         is_aligned_no_wrap'[OF _ word64_power_less_1]
+                         unat_of_nat_eq word_bits_def)
+   apply (simp add: is_aligned_weaken is_aligned_triv[THEN is_aligned_weaken])
+   apply (clarsimp simp: ghost_assertion_size_logic[unfolded o_def] region_actually_is_bytes_dom_s)
+   apply (clarsimp simp: field_simps word_size_def mapM_x_storeWord_step
+                         word_bits_def cte_wp_at_ctes_of)
+   apply (frule ctes_of_valid', clarify+)
+   apply (simp add: doMachineOp_def split_def exec_gets)
+   apply (simp add: select_f_def simpler_modify_def bind_def valid_cap_simps' capAligned_def)
+   apply (subst pspace_no_overlap_underlying_zero_update; simp?)
+    apply (case_tac sz, simp_all)[1]
+    apply (case_tac nat, simp_all)[1]
+    apply (case_tac nata, simp_all)[1]
+   apply (clarsimp dest!: region_actually_is_bytes)
+   apply (drule(1) rf_sr_rep0)
+   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                         carch_state_relation_def cmachine_state_relation_def)
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (frule ctes_of_valid', clarify+)
+  apply (frule ctes_of_valid'; clarify?)
   apply (clarsimp simp: isCap_simps valid_cap_simps' capAligned_def
                         word_of_nat_less reset_chunk_bits_def
                         word_bits_def unat_2p_sub_1)
-  apply (strengthen is_aligned_no_wrap'[where sz=sz] is_aligned_addrFromPPtr_n)+
-  apply (simp add: addrFromPPtr_mask)
-  apply (cases "ptr = 0")
-   apply (drule subsetD, rule intvl_self, simp)
-   apply (simp split: if_split_asm)
+  apply (cases "ptr = 0"; simp)
+  apply (drule subsetD, rule intvl_self, simp)
   apply simp
-  done *)
+  done
 
 lemma t_hrs_update_use_t_hrs:
   "t_hrs_'_update f s
@@ -1938,6 +1924,10 @@ lemma byte_regions_unmodified_actually_heap_list:
   apply (clarsimp split: if_split_asm)
   done
 
+lemma ucast_64_32[simp]:
+  "UCAST(64 \<rightarrow> 32) (of_nat x) = of_nat x"
+  by (simp add: ucast_of_nat is_down_def source_size_def target_size_def word_size)
+
 lemma resetUntypedCap_ccorres:
   notes upt.simps[simp del] Collect_const[simp del] replicate_numeral[simp del]
   shows
@@ -2093,9 +2083,7 @@ lemma resetUntypedCap_ccorres:
                                           is_aligned_mask_out_add_eq_sub[OF is_aligned_weaken])
                     apply (rule less_mask_eq, rule shiftr_less_t2n,
                       erule order_less_le_trans, rule two_power_increasing,
-                      simp_all)[1]
-subgoal sorry
-
+                      simp_all add: maxUntypedSizeBits_def)[1]
                    apply ceqv
                   apply (rule ccorres_add_returnOk)
                   apply (ctac add: preemptionPoint_ccorres)
@@ -2169,25 +2157,29 @@ subgoal sorry
                               unat_of_nat64[OF order_le_less_trans, rotated,
                                 OF power_strict_increasing])
              apply (case_tac idx')
-              (* must be contradictory *)
               apply clarsimp
-              apply (simp add: is_aligned_def addr_card_def card_word
-                               reset_chunk_bits_def)
-subgoal sorry
-              apply clarsimp
-              apply (simp add: is_aligned_def addr_card_def card_word
+              apply (simp add: addr_card_def card_word reset_chunk_bits_def mask_def)
+              apply (rule conjI)
+               apply (rule is_aligned_add)
+                apply (erule is_aligned_weaken, simp add: minUntypedSizeBits_def)
+               apply (simp add: is_aligned_def)
+              apply (simp add: is_aligned_def)
+             apply clarsimp
+             apply (simp add:  addr_card_def card_word is_aligned_def[of "0x100"]
                                reset_chunk_bits_def)
              apply (simp add: unat_of_nat64[OF order_le_less_trans, rotated,
                                 OF power_strict_increasing])
              apply (simp add: word_mod_2p_is_mask[symmetric] reset_chunk_bits_def
                               unat_mod unat_of_nat mod_mod_cancel)
              apply (strengthen nat_le_Suc_less_imp[OF mod_less_divisor, THEN order_trans])
-             apply (simp add: is_aligned_def addr_card_def card_word)
-sorry (*
-             apply clarsimp
-
-            apply (rule conseqPre, vcg exspec=cleanCacheRange_PoU_preserves_bytes
-              exspec=preemptionPoint_modifies)
+             apply simp
+             apply (rule is_aligned_add)
+              apply (erule is_aligned_weaken, simp add: minUntypedSizeBits_def)
+             apply (drule sym[of "a * b" for a b], simp)
+             apply (cut_tac is_aligned_mult_triv2[of _ 8, simplified])
+             apply (erule is_aligned_weaken, simp)
+            apply clarsimp
+            apply (rule conseqPre, vcg exspec=preemptionPoint_modifies)
             apply (clarsimp simp: in_set_conv_nth isCap_simps
                                   length_upto_enum_step upto_enum_step_nth
                                   less_Suc_eq_le getFreeRef_def
@@ -2208,8 +2200,11 @@ sorry (*
                                   aligned_offset_non_zero
                                   is_aligned_add_multI conj_comms
                                   region_actually_is_bytes_def)
-            apply (simp add: reset_chunk_bits_def is_aligned_def)
-
+            apply (simp add: reset_chunk_bits_def is_aligned_def[of "0x100"])
+            apply (rule is_aligned_add)
+             apply (erule is_aligned_weaken, simp add: minUntypedSizeBits_def)
+            apply (cut_tac is_aligned_mult_triv2[of _ 8, simplified])
+            apply (erule is_aligned_weaken, simp)
            apply (rule hoare_pre)
             apply (wp updateFreeIndex_cte_wp_at updateFreeIndex_clear_invs'
                       updateFreeIndex_pspace_no_overlap'
@@ -2232,12 +2227,12 @@ sorry (*
                                  is_aligned_mask_out_add_eq_sub[OF is_aligned_weaken])
            apply (simp add: field_simps)
            apply (strengthen Aligned.is_aligned_neg_mask unat_le_helper)
-           apply (simp add: reset_chunk_bits_def[THEN arg_cong[where f="\<lambda>x. n \<le> x" for n]])
+           apply (simp add: minUntypedSizeBits_def reset_chunk_bits_def[THEN arg_cong[where f="\<lambda>x. n \<le> x" for n]])
            apply (rule order_less_imp_le, erule order_le_less_trans[rotated],
              rule olen_add_eqv[THEN iffD2])
            apply (rule order_trans, rule word_mult_le_mono1, rule word_of_nat_le,
              erule order_trans[rotated], simp, simp add: reset_chunk_bits_def)
-            apply (simp only: unat_power_lower32 shiftr_div_2n_w[symmetric]
+            apply (simp only: unat_power_lower64 shiftr_div_2n_w[symmetric]
                               word_size word_bits_def[symmetric])
             apply (rule nat_less_power_trans2)
              apply (rule order_less_le_trans[OF word_shiftr_lt])
@@ -2283,7 +2278,7 @@ sorry (*
      order_trans[rotated, where z="gsMaxObjectSize s" for s, mk_strg I E])
    apply (strengthen power_strict_increasing
             | simp)+
-   apply (clarsimp simp: word_bits_def)
+   apply (clarsimp simp: word_bits_def maxUntypedSizeBits_def minUntypedSizeBits_def)
    apply (subgoal_tac "capPtr (cteCap cte) \<le> getFreeRef (capPtr (cteCap cte))
        (capFreeIndex (cteCap cte)) - 1")
     apply (case_tac "the (ctes_of s slot)", simp)
@@ -2295,12 +2290,10 @@ sorry (*
                      is_aligned_mask_out_add_eq_sub[OF is_aligned_weaken])
     apply (simp add: neg_mask_is_div' reset_chunk_bits_def word_size)
     apply (safe, simp_all)[1]
-
    apply (simp add: getFreeRef_def)
    apply (strengthen is_aligned_no_wrap'[where off="a - b" for a b,
        simplified field_simps, mk_strg I E])
    apply (simp add: word_of_nat_le)
-
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (frule(1) rf_sr_ctes_of_clift, clarsimp)
   apply (frule(2) rf_sr_cte_relation)
@@ -2325,10 +2318,12 @@ sorry (*
                     typ_region_bytes_actually_is_bytes[OF refl]
                     region_actually_is_bytes_subset[OF typ_region_bytes_actually_is_bytes[OF refl]]
     | simp add: unat_of_nat imp_conjL hrs_mem_update hrs_htd_update)+
-  apply (clarsimp simp: order_trans[OF power_increasing[where a=2]]
-                        addr_card_def card_word
-                        is_aligned_weaken from_bool_0)
-  done *)
+  apply (simp add: maxUntypedSizeBits_def minUntypedSizeBits_def)
+  apply (rule conjI; clarsimp)
+  apply (rule conjI, erule is_aligned_weaken, simp)
+  by (clarsimp simp: order_trans[OF power_increasing[where a=2]]
+                     addr_card_def card_word
+                     is_aligned_weaken from_bool_0)
 
 lemma ccorres_cross_retype_zero_bytes_over_guard:
   "range_cover ptr sz (APIType_capBits newType userSize) num_ret
@@ -2451,17 +2446,28 @@ lemma invokeUntyped_Retype_ccorres:
       using vui
       by (clarsimp simp: cte_wp_at_ctes_of)+
 
+    have canonical_ptr:
+      "canonical_address (ptr && ~~ mask sz)"
+      using vui misc
+      apply (clarsimp simp: cte_wp_at_ctes_of)
+      apply (frule Finalise_R.ctes_of_valid', clarsimp)
+      apply (clarsimp simp: valid_cap_simps')
+      done
+
     have sz_bound:
-      "sz \<le> 61"
+      "sz \<le> 47"
       using vui misc
       apply (clarsimp simp: cte_wp_at_ctes_of)
       apply (frule Finalise_R.ctes_of_valid', clarsimp)
       apply (clarsimp simp: valid_cap_simps' untypedBits_defs)
       done
 
+    have APIType_capBits_max:
+      "APIType_capBits newType us \<le> maxUntypedSizeBits"  sorry
+
     have some_range_cover_arithmetic:
       "(ptr + (of_nat (length destSlots) << unat (of_nat (APIType_capBits newType us) :: addr))
-          - ptr_base >> 4) && mask 58
+          - ptr_base >> 4) && mask 48
       = of_nat (getFreeIndex ptr_base
           (ptr + of_nat (shiftL (length destSlots)
               (APIType_capBits newType us)))) >> 4"
@@ -2514,7 +2520,6 @@ lemma invokeUntyped_Retype_ccorres:
            apply (rule ccorres_returnOk_skip)
           apply ceqv
          apply (simp add: liftE_def bind_assoc)
-  sorry (* FIXME x64: getObjectSize_spec not picked up, might be wrong
          apply csymbr
          apply (rule ccorres_Guard_Seq)
          apply csymbr
@@ -2592,17 +2597,20 @@ lemma invokeUntyped_Retype_ccorres:
                               invs_valid_pspace' isCap_simps
                               arg_cong[OF mask_out_sub_mask, where f="\<lambda>y. x - y" for x]
                               field_simps unat_of_nat_eq[OF range_cover.weak, OF cover]
-                              if_apply_def2 invs_valid_objs' ptr_base_eq
-                              invs_urz)
+                              if_apply_def2 invs_valid_objs' ptr_base_eq sz_bound canonical_ptr
+                              invs_urz untypedBits_defs)
 
         apply (intro conjI)
-                 (* pspace_no_overlap *)
-                 apply (cases reset, simp_all)[1]
-                (* is_aligned 4 *)
-                apply (erule is_aligned_weaken[OF range_cover.aligned])
-                apply (clarsimp simp: APIType_capBits_low)
+                  (* pspace_no_overlap *)
+                  apply (cases reset, simp_all)[1]
+                 (* is_aligned 4 *)
+                 apply (erule is_aligned_weaken[OF range_cover.aligned])
+                 apply (clarsimp simp: APIType_capBits_low)
                (* new idx le *)
-               apply (clarsimp split: if_split)
+                apply (clarsimp split: if_split)
+              (* APIType \<le> maxUntypedSizeBits *)
+              apply (cut_tac APIType_capBits_max)
+              apply (simp add: untypedBits_defs)
               (* cnodeptr not in area *)
               apply (rule contra_subsetD[rotated],
                 rule invokeUntyped_proofs.ex_cte_no_overlap'[OF proofs], rule misc)
@@ -2674,7 +2682,7 @@ lemma invokeUntyped_Retype_ccorres:
       apply (frule(1) cap_get_tag_to_H)
       apply (simp add: cap_lift_untyped_cap)
       apply clarsimp
-      done *)
+      done
 qed
 
 lemma ccorres_returnOk_Basic:
@@ -2704,7 +2712,7 @@ lemma fromEnum_object_type_to_H:
                    seL4_X64_PML4Object_def
             split: if_split)
   apply (auto simp: "api_object_defs")
-  sorry (* FIXME x64: something going wrong here *)
+  sorry (* FIXME x64: something going wrong here (order of datatype does not match enum) *)
 
 lemma injection_handler_sequenceE:
   "injection_handler injf (sequenceE xs)
@@ -2880,7 +2888,7 @@ lemma toEnum_object_type_to_H:
   \<Longrightarrow> toEnum (unat v) = (object_type_to_H (v::machine_word))"
   apply (simp add:enum_object_type enum_apiobject_type object_type_to_H_def toEnum_def
                   maxBound_less_length)
-  sorry (*
+  sorry (* order of APIObjectTypes
   apply (clarsimp simp: Kernel_C_defs split:if_splits)
   apply unat_arith
   done *)
@@ -3085,12 +3093,12 @@ shows
                   apply vcg
                  apply (clarsimp simp: word_size Collect_const_mem
                                        fromIntegral_def integral_inv
-                                       hd_drop_conv_nth2 word_le_nat_alt)
-  sorry (*
+                                       hd_drop_conv_nth2 word_le_nat_alt
+                                       maxUntypedSizeBits_def)
                  apply arith
                 apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                 apply (rule allI, rule conseqPre, vcg)
-                apply (clarsimp simp: throwError_def return_def
+                apply (clarsimp simp: throwError_def return_def maxUntypedSizeBits_def
                                       syscall_error_rel_def exception_defs
                                       syscall_error_to_H_cases)
                 apply (simp add: word_size word_sle_def)
@@ -3117,7 +3125,7 @@ shows
                                        hd_conv_nth length_ineq_not_Nil
                                        toEnum_eq_to_fromEnum_eq)
                  apply (simp add: fromEnum_object_type_to_H
-                                  object_type_from_H_def
+                                  object_type_from_H_def untypedBits_defs
                                   fromAPIType_def X64_H.fromAPIType_def)
                 apply (rule syscall_error_throwError_ccorres_n)
                 apply (simp add: syscall_error_to_H_cases)
@@ -3187,7 +3195,7 @@ shows
                                           syscall_error_to_H_cases)
                     apply (simp add: lookup_fault_missing_capability_lift
                                      hd_drop_conv_nth2 numeral_eqs[symmetric])
-                    apply (rule le_32_mask_eq)
+                    apply (rule le_64_mask_eq)
                     apply (simp add: word_bits_def word_le_nat_alt)
                    apply simp
                    apply csymbr
@@ -3199,6 +3207,7 @@ shows
                      apply (clarsimp simp: Collect_const_mem cap_get_tag_isCap[symmetric])
                      apply (drule(1) cap_get_tag_to_H)
                      apply (clarsimp simp: linorder_not_le)
+   sorry (* signed upcast of 2^stuff *) (*
                     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                     apply (rule allI, rule conseqPre, vcg)
                     apply (clarsimp simp: throwError_def return_def
