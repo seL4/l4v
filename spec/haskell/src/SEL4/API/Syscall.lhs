@@ -120,12 +120,13 @@ level code. This might be, for example, an illegal instruction, or a
 floating point exception. A real kernel implementation should provide
 the handler with more information about the nature of the fault than
 the following function does; the nature of that information is specific
-to each architecture. In the second word, only the bottom 29 bits will
-be communicated to the fault handler.
+to each architecture. For the first word (exception number), only the
+bottom 32 bits be communicated to the fault handler, for the second word
+(error code) the bottom 29 bits.
 
 > handleEvent (UserLevelFault w1 w2) = withoutPreemption $ do
 >     thread <- getCurThread
->     handleFault thread $ UserException w1 (w2 .&. mask 29)
+>     handleFault thread $ UserException (w1 .&. mask 32) (w2 .&. mask 29)
 >     return ()
 
 \subsubsection{Virtual Memory Faults}
