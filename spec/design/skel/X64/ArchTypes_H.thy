@@ -38,13 +38,13 @@ interpretation Arch .
 definition
   enum_object_type: "enum_class.enum \<equiv>
     map APIObjectType (enum_class.enum :: apiobject_type list) @
-     [SmallPageObject,
-      LargePageObject,
+     [PDPointerTableObject,
+      PML4Object,
       HugePageObject,
+      SmallPageObject,
+      LargePageObject,
       PageTableObject,
-      PageDirectoryObject,
-      PDPointerTableObject,
-      PML4Object
+      PageDirectoryObject
     ]"
 
 definition
