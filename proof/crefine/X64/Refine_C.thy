@@ -42,26 +42,16 @@ apply (rule hoare_post_imp)
 apply (rule schedule_invs')
 done
 
-(* FIXME: This is cheating since ucast from 10 to 16 will never give us 0xFFFF.
-          However type of 10 word is from irq oracle so it is the oracle that matters not this lemma.
-   (Xin) *)
-lemma ucast_not_helper_cheating:
-  fixes a:: "10 word"
-  assumes a: "ucast a \<noteq> (0xFFFF :: word16)"
-  shows "ucast a \<noteq> (0xFFFF::32 signed word)"
-  by (word_bitwise,simp)
-
 lemma ucast_8_32_neq:
   "x \<noteq> 0xFF \<Longrightarrow> UCAST(8 \<rightarrow> 32 signed) x \<noteq> 0xFF"
   by uint_arith (clarsimp simp: uint_up_ucast is_up)
 
 lemma Arch_finaliseInterrupt_ccorres:
   "ccorres dc xfdc \<top> UNIV [] (return a) (Call Arch_finaliseInterrupt_'proc)"
-  apply (cinit')
-  sorry (* FIXME: define in abstract and Haskell
-   apply (rule ccorres_return_Skip)
-  apply clarsimp
-  done *)
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (simp add: return_def)
+  done
 
 lemma handleInterruptEntry_ccorres:
   "ccorres dc xfdc
