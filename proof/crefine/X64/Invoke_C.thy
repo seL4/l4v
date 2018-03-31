@@ -2700,7 +2700,6 @@ lemma injection_handler_whenE:
     = whenE P (injection_handler injf f)"
   by (simp add: whenE_def injection_handler_returnOk split: if_split)
 
-thm "api_object_defs" "StrictC'_object_defs"
 lemma fromEnum_object_type_to_H:
   "fromEnum x = unat (object_type_from_H x)"
   apply (cut_tac eqset_imp_iff[where x=x, OF enum_surj])
@@ -2712,7 +2711,7 @@ lemma fromEnum_object_type_to_H:
                    seL4_X64_PML4Object_def
             split: if_split)
   apply (auto simp: "api_object_defs")
-  sorry (* FIXME x64: something going wrong here (order of datatype does not match enum) *)
+  done
 
 lemma injection_handler_sequenceE:
   "injection_handler injf (sequenceE xs)
@@ -2815,8 +2814,9 @@ lemma checkFreeIndex_ccorres:
   (liftE $ constOnFailure False (doE y \<leftarrow> ensureNoChildren slot; returnOk True odE))
   (\<acute>status :== CALL ensureNoChildren(cte_Ptr slot);;
   (Cond \<lbrace>\<acute>status \<noteq> scast EXCEPTION_NONE\<rbrace>
-    (\<acute>freeIndex :== CALL cap_untyped_cap_get_capFreeIndex(cap)
-        ;; \<acute>reset :== scast false)
+    ( \<acute>ret__unsigned_longlong :== CALL cap_untyped_cap_get_capFreeIndex(cap);;
+      \<acute>freeIndex :== \<acute>ret__unsigned_longlong;;
+      \<acute>reset :== scast false)
     (\<acute>freeIndex :== 0
         ;; \<acute>reset :== scast true)))"
   apply (simp add: constOnFailure_def catch_def liftE_def bindE_bind_linearise bind_assoc case_sum_distrib)
@@ -2888,10 +2888,9 @@ lemma toEnum_object_type_to_H:
   \<Longrightarrow> toEnum (unat v) = (object_type_to_H (v::machine_word))"
   apply (simp add:enum_object_type enum_apiobject_type object_type_to_H_def toEnum_def
                   maxBound_less_length)
-  sorry (* order of APIObjectTypes
   apply (clarsimp simp: Kernel_C_defs split:if_splits)
   apply unat_arith
-  done *)
+  done
 
 lemma unat_of_nat_APIType_capBits:
   "b \<le> 61
@@ -2982,6 +2981,7 @@ lemma Arch_isFrameType_spec:
              split: if_splits object_type.splits)
   apply (auto simp: object_type_from_H_def )
   done
+
 
 lemma decodeUntypedInvocation_ccorres_helper:
 notes TripleSuc[simp]
@@ -3207,7 +3207,7 @@ shows
                      apply (clarsimp simp: Collect_const_mem cap_get_tag_isCap[symmetric])
                      apply (drule(1) cap_get_tag_to_H)
                      apply (clarsimp simp: linorder_not_le)
-   sorry (* signed upcast of 2^stuff *) (*
+  sorry (* overflow bug: need 1ul in nodeSize = 1 << cap_cnode_cap_get_capCNodeRadix(nodeCap)
                     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                     apply (rule allI, rule conseqPre, vcg)
                     apply (clarsimp simp: throwError_def return_def
@@ -3216,6 +3216,7 @@ shows
                     apply (simp add: cap_get_tag_isCap[symmetric])
                     apply (drule(1) cap_get_tag_to_H)
                     apply clarsimp
+  subgoal (* same overflow bug *)
                    apply (rule ccorres_split_when_throwError_cond
                                    [where Q=\<top> and Q'=\<top>, rotated -1])
                       apply vcg
@@ -3237,6 +3238,7 @@ shows
                                            cap_get_tag_isCap[symmetric])
                      apply (drule(1) cap_get_tag_to_H)
                      apply clarsimp
+  subgoal (* same overflow bug *)
                     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                     apply (rule allI, rule conseqPre, vcg)
                     apply (clarsimp simp: throwError_def return_def
@@ -3245,6 +3247,7 @@ shows
                     apply (simp add: cap_get_tag_isCap[symmetric])
                     apply (drule(1) cap_get_tag_to_H)
                     apply (clarsimp)
+  subgoal (* same overflow bug *)
                    apply csymbr
                    apply csymbr
                    apply csymbr
@@ -3357,12 +3360,13 @@ shows
                               valid_untyped_capBlockSize_misc
                               valid_untyped_capBlockSize_misc[where z=0, simplified]
                               of_nat_shiftR)
+  (*
                              apply (clarsimp simp:toEnum_object_type_to_H
                                unat_of_nat_APIType_capBits word_size hd_conv_nth length_ineq_not_Nil
                                split:if_splits)
                             apply (clarsimp simp:toEnum_object_type_to_H
                               unat_of_nat_APIType_capBits word_size hd_conv_nth length_ineq_not_Nil
-                              split:if_splits)
+                              split:if_splits) *)
                           apply (rule syscall_error_throwError_ccorres_n)
                           apply (case_tac reset; clarsimp simp: syscall_error_rel_def
                             ccap_relation_untyped_CL_simps shiftL_nat
@@ -3370,6 +3374,7 @@ shows
                          apply csymbr
                          apply csymbr
                          apply (rule ccorres_symb_exec_r)
+                           apply (rule ccorres_symb_exec_r)
 
                            apply (rule_tac xf'=ret__int_' in ccorres_abstract, ceqv)
                            apply (rule_tac P = "rv'c = from_bool (capIsDevice cp \<and>
@@ -3415,6 +3420,8 @@ shows
                                apply (simp add: field_simps Suc_unat_diff_1)
                                apply (rule conjI)
                                 apply (clarsimp split: bool.split_asm)
+                                apply (simp add: unat_of_nat_APIType_capBits maxUntypedSizeBits_def)
+                               apply (simp add: unat_of_nat_APIType_capBits maxUntypedSizeBits_def)
                                apply (frule iffD2[OF olen_add_eqv])
                                apply (frule(1) isUntypedCap_ccap_relation_helper)
                                apply (clarsimp simp: unat_plus_simple[THEN iffD1])
@@ -3440,9 +3447,11 @@ shows
                           apply (rule conseqPre,vcg,clarsimp)
                          apply vcg
                          apply (clarsimp simp: if_1_0_0 ccap_relation_isDeviceCap)
-                        apply vcg
+                        apply (rule conseqPre,vcg,clarsimp)
+                       apply vcg
                        apply (clarsimp simp: if_1_0_0 from_bool_neq_0 from_bool_0
                         ccap_relation_isDeviceCap[unfolded to_bool_neq_0])
+                    apply vcg
                       apply (rule conseqPre,vcg,clarsimp)
                      apply (rule ccorres_guard_imp
                          [where Q =\<top> and Q' = UNIV,rotated],assumption+)
@@ -3466,7 +3475,11 @@ shows
                     apply (clarsimp simp: StrictC'_thread_state_defs mask_def true_def false_def
                                           from_bool_0 ccap_relation_isDeviceCap2
                                    split: if_split)
-                    apply (intro conjI impI; clarsimp simp:not_less shiftr_overflow)
+                    apply (clarsimp simp: not_less shiftr_overflow maxUntypedSizeBits_def
+                                          unat_of_nat_APIType_capBits)
+                    apply (intro conjI impI;
+                           clarsimp simp: not_less shiftr_overflow maxUntypedSizeBits_def
+                                          unat_of_nat_APIType_capBits)
                    apply simp
                   apply simp
                   apply (rule_tac Q'="\<lambda>r. cte_wp_at' (\<lambda>cte. cteCap cte = cp) slot
@@ -3577,7 +3590,7 @@ shows
    apply (subgoal_tac "unat (args ! Suc 0) < word_bits")
     prefer 2
     apply (erule le_less_trans)
-    apply (simp add: word_size fromIntegral_def fromInteger_nat toInteger_nat word_bits_def)
+    apply (simp add: word_size fromIntegral_def fromInteger_nat toInteger_nat word_bits_def maxUntypedSizeBits_def)
    apply (clarsimp simp: excaps_map_def neq_Nil_conv excaps_in_mem_def
                          slotcap_in_mem_def cte_wp_at_ctes_of
                          valid_capAligned[OF ctes_of_valid'] invs_valid_objs'
@@ -3590,26 +3603,27 @@ shows
                         ccap_rights_relation_def word_sle_def
                         rightsFromWord_wordFromRights
                         excaps_in_mem_def slotcap_in_mem_def
-                        signed_shift_guard_simpler_32
+                        signed_shift_guard_simpler_64
                         extra_sle_sless_unfolds
                  elim!: inl_inrE
               simp del: rf_sr_upd_safe imp_disjL)
   apply (clarsimp simp:cap_get_tag_isCap[symmetric])
   apply (rule conjI)
    apply (clarsimp simp: cap_get_tag_isCap[symmetric]
-     capCNodeRadix_CL_less_32s rf_sr_ksCurThread not_le
+     capCNodeRadix_CL_less_64s rf_sr_ksCurThread not_le
                   elim!: inl_inrE)
    apply (drule(1) cap_get_tag_to_H)+
    apply (clarsimp simp: isCap_simps capAligned_def[unfolded capUntypedPtr_def, split_simps capability.split]
                          objBits_simps' word_bits_def)
+  subgoal (* same overflow bug *)
 
   apply (clarsimp simp: cap_get_tag_isCap[symmetric]
-    capCNodeRadix_CL_less_32s rf_sr_ksCurThread not_le
+    capCNodeRadix_CL_less_64s rf_sr_ksCurThread not_le
                  elim!: inl_inrE)
   apply (drule(1) cap_get_tag_to_H)+
   apply (clarsimp simp: isCap_simps capAligned_def[unfolded capUntypedPtr_def, split_simps capability.split]
                         objBits_simps' word_bits_def)
-
+  subgoal (* same overflow bug *)
   done *)
 
 lemma decodeUntypedInvocation_ccorres:
