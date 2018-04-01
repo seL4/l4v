@@ -21,7 +21,7 @@ MACHINE_PATH  := ${L4V_REPO_PATH}/spec/machine
 
 SKEL_FILES    := $(shell find ${SKEL_PATH} -name "*.thy")
 MSKEL_FILES   := $(shell find ${MSKEL_PATH} -name "*.thy")
-HASKELL_FILES := $(shell find ${HASKELL_PATH} -regex ".*\.l?hs") # FIXME: add .hs
+HASKELL_FILES := $(shell find ${HASKELL_PATH} -name "*hs")
 HASKELL_TRANS := ${L4V_REPO_PATH}/tools/haskell-translator/make_spec.sh
 ARCH_DIRS     += ARM ARM_HYP RISCV64 X64
 MACHINE_FILES += ${MACHINE_PATH}/ARM/MachineTypes.thy \
