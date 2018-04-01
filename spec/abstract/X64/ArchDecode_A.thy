@@ -571,13 +571,13 @@ where
 definition
   arch_data_to_obj_type :: "nat \<Rightarrow> aobject_type option" where
  "arch_data_to_obj_type n \<equiv>
-  if      n = 0 then Some SmallPageObj
-  else if n = 1 then Some LargePageObj
+  if      n = 0 then Some PDPTObj
+  else if n = 1 then Some PML4Obj
   else if n = 2 then Some HugePageObj
-  else if n = 3 then Some PageTableObj
-  else if n = 4 then Some PageDirectoryObj
-  else if n = 5 then Some PDPTObj
-  else if n = 6 then Some PML4Obj
+  else if n = 3 then Some SmallPageObj
+  else if n = 4 then Some LargePageObj
+  else if n = 5 then Some PageTableObj
+  else if n = 6 then Some PageDirectoryObj
   else None"
 
 definition
