@@ -220,7 +220,7 @@ lemma handleUserLevelFault_ccorres:
    apply simp
   apply (clarsimp simp: cfault_rel_def seL4_Fault_UserException_lift)
   apply (simp add: is_cap_fault_def)
-  sorry (* FIXME: fault word1 should be 32 bit? *)
+  done
 
 lemmas syscall_defs =
   Kernel_C.SysSend_def Kernel_C.SysNBSend_def
