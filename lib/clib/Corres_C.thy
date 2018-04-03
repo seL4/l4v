@@ -398,6 +398,21 @@ where
                   errlookup_fault = lookup_fault_lift (current_lookup_fault_' (globals s)),
                   errsyscall = current_syscall_error_' (globals s) \<rparr>"
 
+lemma errlookup_fault_errstate [simp]:
+  "errlookup_fault (errstate s) = lookup_fault_lift (current_lookup_fault_' (globals s))"
+  unfolding errstate_def
+  by simp
+
+lemma errfault_errstate [simp]:
+  "errfault (errstate s) = seL4_Fault_lift (current_fault_' (globals s))"
+  unfolding errstate_def
+  by simp
+
+lemma errsyscall_errstate [simp]:
+  "errsyscall (errstate s) = (current_syscall_error_' (globals s))"
+  unfolding errstate_def
+  by simp
+
 lemma errstate_state_update [simp]:
   assumes f: "\<And>s. current_fault_' (globals (g s)) = current_fault_' (globals s)"
   and    lf: "\<And>s. current_lookup_fault_' (globals (g s)) = current_lookup_fault_' (globals s)"

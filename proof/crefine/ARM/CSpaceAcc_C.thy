@@ -291,21 +291,6 @@ lemma wordFromRights_spec:
   apply (simp add: word_ao_dist2[symmetric])
   done
 
-lemma errlookup_fault_errstate [simp]:
-  "errlookup_fault (errstate s) = lookup_fault_lift (current_lookup_fault_' (globals s))"
-  unfolding errstate_def
-  by simp
-
-lemma errfault_errstate [simp]:
-  "errfault (errstate s) = seL4_Fault_lift (current_fault_' (globals s))"
-  unfolding errstate_def
-  by simp
-
-lemma errsyscall_errstate [simp]:
-  "errsyscall (errstate s) = (current_syscall_error_' (globals s))"
-  unfolding errstate_def
-  by simp
-
 lemma array_assertion_abs_cnode_ctes:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> (\<exists>n. gsCNodes s p = Some n \<and> n' \<le> 2 ^ n) \<and> True
     \<longrightarrow> (x s' = 0 \<or> array_assertion (cte_Ptr p) n' (hrs_htd (t_hrs_' (globals s'))))"
