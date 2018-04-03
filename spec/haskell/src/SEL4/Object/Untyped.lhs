@@ -82,10 +82,13 @@ The second argument specifies the size of the object, for the types for which th
 The value of this argument is the base 2 logarithm of the actual required size. The unit depends on the object type: one byte for untyped memory objects, the architecture's minimum page size for data frames, and one capability slot for CNodes.
 
 >     let userObjSize = fromIntegral userObjSizeW
+>     let objectSize = getObjectSize newType userObjSize
 
 The retype fails if the requested object size is too large.
 
->     rangeCheck userObjSize 0 maxUntypedSizeBits
+>     unless (userObjSize < wordBits) $
+>         throw $ RangeError 0 $ fromIntegral maxUntypedSizeBits
+>     rangeCheck objectSize 0 maxUntypedSizeBits
 
 The kernel does not allow creation of CNodes containing only one entry; this is done to avoid non-terminating loops in capability lookup. Note that it is possible for a single entry CNode to translate bits using its guard; this is not allowed, however, to avoid having to check for it during capability lookups.
 
@@ -143,7 +146,6 @@ The memory free for use begins at the current free pointer, unless we are perfor
 
 Ensure that sufficient space is available in the region of memory.
 
->     let objectSize = getObjectSize newType userObjSize
 >     let untypedFreeBytes = (bit (capBlockSize cap)) - freeIndex
 >     let maxCount = untypedFreeBytes `shiftR` objectSize
 >     when (fromIntegral maxCount < nodeWindow) $
