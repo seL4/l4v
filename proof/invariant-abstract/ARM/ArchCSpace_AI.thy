@@ -531,8 +531,17 @@ lemma cap_insert_simple_arch_caps_no_ap:
   apply (intro conjI impI allI)
   by (auto simp:is_simple_cap_def[simplified is_simple_cap_arch_def] is_cap_simps)
 
-end
+lemma setup_reply_master_ioports[wp, CSpace_AI_assms]:
+  "\<lbrace>valid_ioports\<rbrace> setup_reply_master c \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  by wpsimp
 
+lemma cap_insert_derived_ioports[CSpace_AI_assms]:
+  "\<lbrace>valid_ioports and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
+     cap_insert cap src dest
+   \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  by wpsimp
+
+end
 
 global_interpretation CSpace_AI?: CSpace_AI
   proof goal_cases
@@ -595,11 +604,18 @@ crunches arch_post_cap_deletion
   and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
-  and invs[wp]: invs
+  and invs_no_pre[wp]: invs
   and cur_thread[wp]:  "\<lambda>s. P (cur_thread s)"
   and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   and mdb_inv[wp]: "\<lambda>s. P (cdt s)"
   and valid_list[wp]: valid_list
+
+definition
+  "arch_post_cap_delete_pre \<equiv> \<lambda>_ _. True"
+
+lemma arch_post_cap_deletion_invs:
+  "\<lbrace>invs and (\<lambda>s. arch_post_cap_delete_pre (ArchObjectCap c) (caps_of_state s))\<rbrace> arch_post_cap_deletion c \<lbrace>\<lambda>rv. invs\<rbrace>"
+  by (wpsimp simp: arch_post_cap_delete_pre_def)
 
 end
 

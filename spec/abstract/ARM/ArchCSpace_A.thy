@@ -75,5 +75,10 @@ definition
 (* Proofs don't want to see this definition *)
 declare same_aobject_as_def[simp]
 
+definition
+  arch_is_cap_revocable :: "cap \<Rightarrow> cap \<Rightarrow> bool"
+where
+  "arch_is_cap_revocable c c' \<equiv> False"
+
 end
 end

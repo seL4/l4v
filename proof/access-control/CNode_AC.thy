@@ -1297,7 +1297,7 @@ lemma derive_cap_clas:
 lemma arch_derive_cap_obj_refs_auth:
   "\<lbrace>K (\<forall>r\<in>obj_refs (cap.ArchObjectCap cap). \<forall>auth\<in>cap_auth_conferred (cap.ArchObjectCap cap). aag_has_auth_to aag auth r)\<rbrace>
   arch_derive_cap cap
-  \<lbrace>(\<lambda>x s. \<forall>r\<in>obj_refs x. \<forall>auth\<in>cap_auth_conferred x. aag_has_auth_to aag auth r) \<circ> cap.ArchObjectCap\<rbrace>, -"
+  \<lbrace>(\<lambda>x s. \<forall>r\<in>obj_refs x. \<forall>auth\<in>cap_auth_conferred x. aag_has_auth_to aag auth r)\<rbrace>, -"
   unfolding arch_derive_cap_def
   apply (rule hoare_pre)
   apply (wp | wpc)+
@@ -1313,13 +1313,19 @@ lemma derive_cap_obj_refs_auth:
   apply (wp arch_derive_cap_obj_refs_auth | wpc | simp)+
   done
 
+lemma arch_derive_cap_cli:
+  "\<lbrace>K (cap_links_irq aag l (ArchObjectCap ac))\<rbrace>
+   arch_derive_cap ac
+   \<lbrace>\<lambda>x s. cap_links_irq aag l x\<rbrace>, -"
+  by (wpsimp simp: arch_derive_cap_def comp_def cli_no_irqs)
+
 lemma derive_cap_cli:
   "\<lbrace>K (cap_links_irq aag l cap)\<rbrace>
   derive_cap slot cap
   \<lbrace>\<lambda>x s. cap_links_irq aag l x \<rbrace>, -"
   unfolding derive_cap_def
   apply (rule hoare_pre)
-  apply (wp  | wpc | simp add: comp_def cli_no_irqs)+
+  apply (wp arch_derive_cap_cli | wpc | simp add: comp_def cli_no_irqs)+
   apply fastforce
   done
 
