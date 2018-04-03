@@ -298,7 +298,7 @@ lemma flush_table_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> flush_table a b c d \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   by (wp mapM_x_wp' | wpc | simp add: flush_table_def | rule hoare_pre)+
 
-crunch valid_vspace_objs'[wp]: invalidate_local_page_structure_cache_asid valid_vspace_objs'
+crunch valid_vspace_objs'[wp]: invalidate_page_structure_cache_asid valid_vspace_objs'
 
 crunch kheap[wp]: get_cap "\<lambda>s. P (kheap s)"
   (wp: crunch_wps simp: crunch_simps)

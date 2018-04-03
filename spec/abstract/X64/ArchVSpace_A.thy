@@ -157,21 +157,14 @@ where
 definition
   set_current_cr3 :: "cr3 \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "set_current_cr3 c \<equiv> do
-     modify (\<lambda>s. s \<lparr>arch_state := (arch_state s) \<lparr>x64_current_cr3 := c\<rparr>\<rparr>);
-     do_machine_op $ writeCR3 (cr3_base_address c) (cr3_pcid c)
-   od"
+  "set_current_cr3 c \<equiv>
+     modify (\<lambda>s. s \<lparr>arch_state := (arch_state s) \<lparr>x64_current_cr3 := c\<rparr>\<rparr>)"
 
 definition
-  invalidate_local_page_structure_cache_asid :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  invalidate_page_structure_cache_asid :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "invalidate_local_page_structure_cache_asid vspace asid \<equiv> do
-     cur_cr3 \<leftarrow> get_current_cr3;
-     set_current_cr3 (cr3 vspace asid);
-     set_current_cr3 cur_cr3
-   od"
-
-abbreviation "invalidate_page_structure_cache_asid \<equiv> invalidate_local_page_structure_cache_asid"
+  "invalidate_page_structure_cache_asid vspace asid \<equiv>
+     do_machine_op $ invalidateLocalPageStructureCacheASID vspace (ucast asid)"
 
 definition
   getCurrentVSpaceRoot :: "(obj_ref, 'z::state_ext) s_monad"
@@ -182,9 +175,17 @@ where
    od"
 
 definition
+  "cr3_addr_mask \<equiv> mask pml4_shift_bits << asid_bits"
+
+definition
+  make_cr3 :: "obj_ref \<Rightarrow> asid \<Rightarrow> cr3"
+where
+  "make_cr3 vspace asid \<equiv> cr3 (vspace && cr3_addr_mask) asid"
+
+definition
   set_current_vspace_root :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "set_current_vspace_root vspace asid \<equiv> set_current_cr3 $ cr3 vspace asid"
+  "set_current_vspace_root vspace asid \<equiv> set_current_cr3 $ make_cr3 vspace asid"
 
 text {* Switch into the address space of a given thread or the global address
 space if none is correctly configured. *}
@@ -198,8 +199,8 @@ definition
            pml4' \<leftarrow> find_vspace_for_asid asid;
            whenE (pml4 \<noteq> pml4') $ throwError InvalidRoot;
            cur_cr3 \<leftarrow> liftE $ get_current_cr3;
-           whenE (cur_cr3 \<noteq> cr3 (addrFromPPtr pml4) asid) $
-              liftE $ set_current_cr3 $ cr3 (addrFromPPtr pml4) asid
+           whenE (cur_cr3 \<noteq> make_cr3 (addrFromPPtr pml4) asid) $
+              liftE $ set_current_cr3 $ make_cr3 (addrFromPPtr pml4) asid
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     (\<lambda>_. do

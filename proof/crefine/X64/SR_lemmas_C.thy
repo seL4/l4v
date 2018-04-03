@@ -1149,7 +1149,7 @@ lemma cstate_relation_only_t_hrs:
   intStateIRQNode_' s = intStateIRQNode_' t;
   intStateIRQTable_' s = intStateIRQTable_' t;
   x86KSASIDTable_' s = x86KSASIDTable_' t;
-  x64KSCurrentCR3_' s = x64KSCurrentCR3_' t;
+  x64KSCurrentUserCR3_' s = x64KSCurrentUserCR3_' t;
   phantom_machine_state_' s = phantom_machine_state_' t;
   ghost'state_' s = ghost'state_' t;
   ksDomScheduleIdx_' s = ksDomScheduleIdx_' t;
@@ -1173,7 +1173,7 @@ lemma rf_sr_upd:
     "intStateIRQNode_'(globals x) = intStateIRQNode_' (globals y)"
     "intStateIRQTable_'(globals x) = intStateIRQTable_' (globals y)"
     "x86KSASIDTable_' (globals x) = x86KSASIDTable_' (globals y)"
-    "x64KSCurrentCR3_' (globals x) = x64KSCurrentCR3_' (globals y)"
+    "x64KSCurrentUserCR3_' (globals x) = x64KSCurrentUserCR3_' (globals y)"
     "phantom_machine_state_' (globals x) = phantom_machine_state_' (globals y)"
     "ghost'state_' (globals x) = ghost'state_' (globals y)"
     "ksDomScheduleIdx_' (globals x) = ksDomScheduleIdx_' (globals y)"
@@ -1198,7 +1198,7 @@ lemma rf_sr_upd_safe[simp]:
   and     dt: "ksDomainTime_' (globals (g y)) = ksDomainTime_' (globals y)"
   and arch:
     "x86KSASIDTable_' (globals (g y)) = x86KSASIDTable_' (globals y)"
-    "x64KSCurrentCR3_' (globals (g y)) = x64KSCurrentCR3_' (globals y)"
+    "x64KSCurrentUserCR3_' (globals (g y)) = x64KSCurrentUserCR3_' (globals y)"
     "phantom_machine_state_' (globals (g y)) = phantom_machine_state_' (globals y)"
   and    gs: "ghost'state_' (globals (g y)) = ghost'state_' (globals y)"
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
@@ -2266,10 +2266,8 @@ lemma cap_lift_Some_CapD:
   "\<And>c'. cap_lift c = Some (Cap_io_port_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_io_port_cap"
   by (auto simp: cap_lifts cap_lift_defs)
 
-lemma rf_sr_x64KSGlobalPML4:
-  "(s, s') \<in> rf_sr
-   \<Longrightarrow> x64KSGlobalPML4 (ksArchState s)
-         = symbol_table ''x64KSGlobalPML4''"
+lemma rf_sr_x64KSSKIMPML4:
+  "(s, s') \<in> rf_sr \<Longrightarrow> x64KSSKIMPML4 (ksArchState s) = symbol_table ''x64KSSKIMPML4''"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
 
 lemma ghost_assertion_size_logic':

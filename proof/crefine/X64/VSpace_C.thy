@@ -931,16 +931,15 @@ lemma findVSpaceForASID_ccorres:
                             asid_map_asid_map_none_def asid_map_asid_map_vspace_def
                             asid_map_asid_map_vspace_lift_def
                       split: if_splits)
-    apply simp+
+    apply (simp add: mask_2pm1)+
   done
 
-(* FIXME x64: there is no USGlobalPML4 in x64, do we need this?
-lemma ccorres_pre_gets_armUSGlobalPD_ksArchState:
+lemma ccorres_pre_gets_x64KSSKIMPML4_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. armUSGlobalPD (ksArchState s) = rv  \<longrightarrow> P rv s))
-                  (P' (ptr_val ((Ptr ::(32 word \<Rightarrow> (pde_C[2048]) ptr)) (symbol_table ''armUSGlobalPD''))))
-                          hs (gets (armUSGlobalPD \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+                  (\<lambda>s. (\<forall>rv. x64KSSKIMPML4 (ksArchState s) = rv  \<longrightarrow> P rv s))
+                  (P' (ptr_val (pml4_Ptr (symbol_table ''x64KSSKIMPML4''))))
+                          hs (gets (x64KSSKIMPML4 \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_symb_exec_l)
        defer
@@ -954,9 +953,9 @@ lemma ccorres_pre_gets_armUSGlobalPD_ksArchState:
      apply (rule cc)
     apply clarsimp
    apply assumption
-  apply (drule rf_sr_armUSGlobalPD)
+  apply (drule rf_sr_x64KSSKIMPML4)
   apply simp
-  done *)
+  done
 
 (* FIXME move *)
 lemma ccorres_from_vcg_might_throw:
@@ -994,27 +993,24 @@ end
 
 context kernel_m begin
 
-
 (* FIXME: move *)
-(* FIXME x64: needed?
-lemma ccorres_h_t_valid_armUSGlobalPD:
+lemma ccorres_h_t_valid_x64KSSKIMPML4:
   "ccorres r xf P P' hs f (f' ;; g') \<Longrightarrow>
    ccorres r xf P P' hs f
-    (Guard C_Guard {s'. s' \<Turnstile>\<^sub>c (Ptr::(32 word \<Rightarrow> (pde_C[2048]) ptr)) (symbol_table ''armUSGlobalPD'')} f';;
-    g')"
+    (Guard C_Guard {s'. s' \<Turnstile>\<^sub>c pml4_Ptr (symbol_table ''x64KSSKIMPML4'')} f';; g')"
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_move_c_guards[where P = \<top>])
     apply clarsimp
     apply assumption
    apply simp
-  by (simp add:rf_sr_def cstate_relation_def Let_def) *)
+  by (clarsimp simp add: rf_sr_def cstate_relation_def Let_def)
 
-lemma ccorres_pre_gets_x64KSCurrentCR3_ksArchState:
+lemma ccorres_pre_gets_x64KSCurrentUserCR3_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. x64KSCurrentCR3 (ksArchState s) = rv  \<longrightarrow> P rv s))
+                  (\<lambda>s. (\<forall>rv. x64KSCurrentUserCR3 (ksArchState s) = rv  \<longrightarrow> P rv s))
                   {s. \<forall>rv. s \<in> P' rv }
-                          hs (gets (x64KSCurrentCR3 \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+                          hs (gets (x64KSCurrentUserCR3 \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_symb_exec_l)
        defer
@@ -1093,149 +1089,232 @@ lemma ccorres_name_pre_C:
   apply simp
   done
 
+lemma kpptr_to_paddr_spec:
+  "\<forall>s. \<Gamma> \<turnstile>  {s}
+  Call kpptr_to_paddr_'proc
+  \<lbrace> \<acute>ret__unsigned_long = X64_H.addrFromKPPtr (ptr_val (pptr_' s)) \<rbrace>"
+  apply vcg
+  apply (simp add: X64_H.addrFromKPPtr_def X64.addrFromKPPtr_def X64.kpptrBase_def)
+  done
+
+(* A version of ccr3_relation in which the most significant bit is cleared.
+   This reflects the behaviour of getCurrentUserCR3, which clears that bit. *)
+definition
+  ccr3_relation'' :: "machine_word \<Rightarrow> machine_word \<Rightarrow> cr3_C \<Rightarrow> bool"
+where
+  "ccr3_relation'' addr pcid ccr3 \<equiv>
+     let ccr3' = cr3_C.words_C ccr3.[0] in
+       addr = ccr3' && (mask 39 << 12)
+         \<and> pcid = ccr3' && mask 12
+         \<and> ccr3' && (~~ mask 51) = 0"
+
+definition
+  ccr3_relation' :: "X64_H.cr3 \<Rightarrow> cr3_C \<Rightarrow> bool"
+where
+  "ccr3_relation' hcr3 \<equiv> case hcr3 of CR3 addr pcid \<Rightarrow> ccr3_relation'' addr pcid"
+
+lemmas ccr3_relation_defs =
+  ccr3_relation_def ccr3_relation'_def ccr3_relation''_def
+
+(* The C kernel performs some operations on CR3s as words rather than bitfields.
+   When we need to reason about the bits that the bitfield-generated specs ignore,
+   we'll use the following stronger specs for cr3_new and makeCR3. *)
+lemma cr3_new_spec':
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call cr3_new_'proc
+       {t. globals t = globals s \<and> ccr3_relation''
+                                     (pml4_base_address_' s && (mask 39 << 12))
+                                     (pcid_' s && mask 12)
+                                     (ret__struct_cr3_C_' t) }"
+  apply (hoare_rule HoarePartial.ProcNoRec1)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: mask_def ccr3_relation''_def Let_def word_ao_dist word_bw_assocs)
+  done
+
+lemma makeCR3_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call makeCR3_'proc
+       {t. globals t = globals s \<and> ccr3_relation''
+                                     (addr_' s && (mask 39 << 12))
+                                     (pcid___unsigned_long_' s && mask 12)
+                                     (ret__struct_cr3_C_' t) }"
+  apply (rule allI, rule conseqPre, vcg exspec=cr3_new_spec')
+  apply clarsimp
+  done
+
+lemma getCurrentUserCR3_ccorres:
+  "ccorres ccr3_relation' ret__struct_cr3_C_' \<top> UNIV hs
+           getCurrentUserCR3 (Call getCurrentUserCR3_'proc)"
+  apply (rule ccorres_from_vcg, rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: gets_def get_def return_def bind_def getCurrentUserCR3_def)
+  apply (clarsimp simp: ccr3_relation_defs Let_def cr3_lift_def
+                        rf_sr_def cstate_relation_def carch_state_relation_def
+                 split: X64_H.cr3.splits)
+  apply (drule_tac x="x64KSCurrentUserCR3_' (globals x) && ~~ mask 51"
+               and f="\<lambda>x. x && mask 63" in arg_cong)
+  apply (simp add: mask_def word_bw_assocs word_ao_dist)
+  done
+
+lemma setCurrentUserCR3_ccorres:
+  "ccorres dc xfdc
+           \<top> (UNIV \<inter> \<lbrace>ccr3_relation'' addr asid \<acute>cr3\<rbrace>)
+           hs
+           (setCurrentUserCR3 (CR3 addr asid))
+           (Call setCurrentUserCR3_'proc)"
+  (is "ccorres _ _ _ (UNIV \<inter> ?P') _ _ _")
+  apply cinit
+   apply (rule ccorres_from_vcg[where P=\<top> and P'="?P'"])
+   apply (rule allI, rule conseqPre, vcg)
+   apply (clarsimp simp: modify_def bind_def get_def put_def)
+   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+   apply (clarsimp simp: carch_state_relation_def carch_globals_def cmachine_state_relation_def)
+   apply (clarsimp simp: ccr3_relation_defs Let_def word_ao_dist mask_def)
+  apply simp
+  done
+
+lemma setCurrentUserVSpaceRoot_ccorres:
+  "ccorres dc xfdc (K (asid_wf asid)) (UNIV \<inter> \<lbrace>\<acute>addr = addr\<rbrace> \<inter> \<lbrace>\<acute>pcid___unsigned_long = asid\<rbrace>) hs
+           (setCurrentUserVSpaceRoot addr asid)
+           (Call setCurrentUserVSpaceRoot_'proc)"
+  apply cinit
+   apply (simp add: makeCR3_def)
+   apply (rule ccorres_symb_exec_r)
+     apply (ctac add: setCurrentUserCR3_ccorres)
+    apply vcg
+   apply (rule conseqPre, vcg)
+   apply clarsimp
+  apply (simp add: asid_wf_def, drule less_mask_eq)
+  apply (clarsimp simp: ccr3_relation_defs Let_def mask_def bit_simps asid_bits_def)
+  done
+
+(* FIXME: move *)
+lemma invs_cicd_valid_objs' [elim!]:
+  "all_invs_but_ct_idle_or_in_cur_domain' s \<Longrightarrow> valid_objs' s"
+  by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_pspace'_def)
+
 lemma setVMRoot_ccorres:
   "ccorres dc xfdc
       (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' thread)
-      (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr thread}) []
-        (setVMRoot thread) (Call setVMRoot_'proc)"
+      (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr thread}) hs
+      (setVMRoot thread) (Call setVMRoot_'proc)"
+  supply Collect_const[simp del]
   apply (cinit lift: tcb_')
-  sorry (* FIXME x64: waiting for bit size changes, and subsequent changes to Ctac_lemmas_C
    apply (rule ccorres_move_array_assertion_tcb_ctes)
    apply (rule ccorres_move_c_guard_tcb_ctes)
-   apply (simp add: getThreadVSpaceRoot_def locateSlot_conv)
-   apply (ctac)
+   apply (simp add: getThreadVSpaceRoot_def locateSlot_conv cap_case_isPML4Cap
+                    makeCR3_def bit_simps asid_bits_def)
+   apply (ctac, rename_tac vRootCap vRootCap')
+     apply (csymbr, rename_tac vRootTag)
      apply csymbr
-     apply csymbr
-     apply (simp add: if_1_0_0 cap_get_tag_isCap_ArchObject2 del: Collect_const)
+     apply (simp add: cap_get_tag_isCap_ArchObject2)
      apply (rule ccorres_Cond_rhs_Seq)
-      apply (simp add: cap_case_isPageDirectoryCap cong: if_cong)
-      apply (rule ccorres_cond_true_seq)
-      apply (rule ccorres_rhs_assoc)
       apply (simp add: throwError_def catch_def dc_def[symmetric])
-      apply (rule ccorres_rhs_assoc)+
-      apply (rule ccorres_h_t_valid_armUSGlobalPD)
+      apply (rule ccorres_cond_true_seq, ccorres_rewrite)
+      apply (rule ccorres_rhs_assoc)
+      apply (rule ccorres_h_t_valid_x64KSSKIMPML4)
       apply csymbr
-      apply (rule ccorres_pre_gets_armUSGlobalPD_ksArchState[unfolded comp_def])
+      apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState[unfolded comp_def])
       apply (rule ccorres_add_return2)
-      apply (ctac (no_vcg) add: setCurrentPD_ccorres)
-       apply (rule ccorres_split_throws)
-        apply (rule ccorres_return_void_C)
-       apply vcg
-      apply wp
-     apply (rule ccorres_rhs_assoc)+
+      apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
+       apply (rule ccorres_return_void_C)
+      apply (rule hoare_post_taut[where P=\<top>])
+     apply (rule ccorres_rhs_assoc)
+     apply (csymbr, rename_tac is_mapped)
      apply csymbr
-     apply csymbr
-     apply (rule_tac P="to_bool (capPDIsMapped_CL (cap_page_directory_cap_lift threadRoot))
-                              = (capPDMappedASID (capCap rv) \<noteq> None)"
-                   in ccorres_gen_asm2)
-     apply (simp add: if_1_0_0 to_bool_def del: Collect_const)
+     apply (rule_tac P="to_bool (capPML4IsMapped_CL (cap_pml4_cap_lift vRootCap'))
+                              = (capPML4MappedASID (capCap vRootCap) \<noteq> None)"
+                  in ccorres_gen_asm2)
+     apply (clarsimp simp: to_bool_def dc_def[symmetric])
      apply (rule ccorres_Cond_rhs_Seq)
-      apply (simp add: cap_case_isPageDirectoryCap cong: if_cong)
-      apply (simp add: throwError_def catch_def)
-      apply (rule ccorres_rhs_assoc)+
-      apply (rule ccorres_h_t_valid_armUSGlobalPD)
+      apply (simp add: throwError_def catch_def dc_def[symmetric], ccorres_rewrite)
+      apply (rule ccorres_rhs_assoc)
+      apply (rule ccorres_h_t_valid_x64KSSKIMPML4)
       apply csymbr
-      apply (rule ccorres_pre_gets_armUSGlobalPD_ksArchState[unfolded comp_def])
+      apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState[unfolded comp_def])
       apply (rule ccorres_add_return2)
-      apply (ctac (no_vcg) add: setCurrentPD_ccorres)
-       apply (rule ccorres_split_throws)
-        apply (rule ccorres_return_void_C [unfolded dc_def])
-       apply vcg
-      apply wp
-     apply (simp add: cap_case_isPageDirectoryCap)
-     apply (simp add: catch_def)
-     apply csymbr
-     apply csymbr
-     apply csymbr
-     apply (simp add: liftE_bindE)
-     apply (simp add: bindE_bind_linearise bind_assoc liftE_def)
-     apply (rule_tac f'=lookup_failure_rel and r'="\<lambda>pdeptrc pdeptr. pdeptr = pde_Ptr pdeptrc"
+      apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
+       apply (rule ccorres_return_void_C)
+      apply (rule hoare_post_taut[where P=\<top>])
+     apply (simp add: catch_def bindE_bind_linearise bind_assoc liftE_def)
+     apply (csymbr, rename_tac pml4_ptr, csymbr)
+     apply (csymbr, rename_tac asid', csymbr)
+     apply (rule_tac f'=lookup_failure_rel
+                 and r'="\<lambda>pml4_ptr pml4_ptr'. pml4_ptr' = pml4e_Ptr pml4_ptr"
                  and xf'=find_ret_'
-                 in ccorres_split_nothrow_case_sum)
+              in ccorres_split_nothrow_case_sum)
           apply (ctac add: findVSpaceForASID_ccorres)
          apply ceqv
-        apply (rule_tac P="capPDBasePtr_CL (cap_page_directory_cap_lift threadRoot)
-                              = capPDBasePtr (capCap rv)"
+        apply (rename_tac vspace vspace')
+        apply (rule_tac P="capPML4BasePtr_CL (cap_pml4_cap_lift vRootCap')
+                              = capPML4BasePtr (capCap vRootCap)"
                      in ccorres_gen_asm2)
-        apply (simp del: Collect_const)
+        apply simp
         apply (rule ccorres_Cond_rhs_Seq)
-         apply (simp add: whenE_def throwError_def
-                          checkPML4NotInASIDMap_def checkPML4ASIDMapMembership_def)
-         apply (rule ccorres_stateAssert)
-         apply (rule ccorres_pre_gets_armUSGlobalPD_ksArchState[unfolded o_def])
-         apply (rule ccorres_rhs_assoc)+
-         apply (rule ccorres_h_t_valid_armUSGlobalPD)
+         apply (simp add: whenE_def throwError_def dc_def[symmetric], ccorres_rewrite)
+         apply (rule ccorres_rhs_assoc)
+         apply (rule ccorres_h_t_valid_x64KSSKIMPML4)
          apply csymbr
+         apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState[unfolded comp_def])
          apply (rule ccorres_add_return2)
-         apply (ctac(no_vcg) add: setCurrentPD_ccorres)
-          apply (rule ccorres_split_throws)
-           apply (rule ccorres_return_void_C[unfolded dc_def])
-          apply vcg
-         apply wp
+         apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
+          apply (rule ccorres_return_void_C)
+         apply (rule hoare_post_taut[where P=\<top>])
         apply (simp add: whenE_def returnOk_def)
-        apply (ctac (no_vcg) add: armv_contextSwitch_ccorres[unfolded dc_def])
-         apply (rule ccorres_move_c_guard_tcb)
-         apply (rule ccorres_symb_exec_l3)
-            apply (rename_tac tcb)
-            apply (rule_tac P="ko_at' tcb thread" in ccorres_cross_over_guard)
-            apply (ctac add: vcpu_switch_ccorres[unfolded dc_def]) (* c *)
-           apply wp
-          apply (wp getObject_tcb_wp)
-         apply simp
-        apply clarsimp
-        apply (wp hoare_drop_imp hoare_vcg_ex_lift armv_contextSwitch_invs_no_cicd' valid_case_option_post_wp')
-       apply (simp add: checkPML4NotInASIDMap_def checkPML4ASIDMapMembership_def)
-       apply (rule ccorres_stateAssert)
-       apply (rule ccorres_rhs_assoc)+
-       apply (rule ccorres_pre_gets_armUSGlobalPD_ksArchState[unfolded o_def])
-       apply (rule ccorres_h_t_valid_armUSGlobalPD)
+        apply (csymbr, rename_tac base_addr)
+        apply (rule ccorres_symb_exec_r)
+          apply (ctac add: getCurrentUserCR3_ccorres, rename_tac currentCR3 currentCR3')
+            apply (rule ccorres_if_bind, rule ccorres_if_lhs; simp add: dc_def[symmetric])
+             apply (rule ccorres_cond_true)
+             apply (ctac add: setCurrentUserCR3_ccorres)
+            apply (rule ccorres_cond_false)
+            apply (rule ccorres_return_Skip)
+           apply (simp, rule hoare_post_taut[where P=\<top>])
+          apply vcg
+         apply vcg
+        apply (rule conseqPre, vcg, clarsimp)
+       apply (rule ccorres_cond_true_seq, simp add: dc_def[symmetric], ccorres_rewrite)
+       apply (rule ccorres_rhs_assoc)
+       apply (rule ccorres_h_t_valid_x64KSSKIMPML4)
        apply csymbr
+       apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState[unfolded comp_def])
        apply (rule ccorres_add_return2)
-       apply (ctac(no_vcg) add: setCurrentPD_ccorres)
-        apply (rule ccorres_split_throws)
-         apply (rule ccorres_return_void_C[unfolded dc_def])
-        apply vcg
-       apply wp
-      apply simp
-      apply (wp hoare_drop_imps)[1]
-     apply (simp add: Collect_const_mem)
+       apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
+        apply (rule ccorres_return_void_C)
+       apply (rule hoare_post_taut[where P=\<top>])
+      apply (simp add: asid_wf_0, rule wp_post_tautE)
      apply (vcg exspec=findVSpaceForASID_modifies)
-    apply (simp add: getSlotCap_def)
-    apply (wp getCTE_wp')
-   apply (clarsimp simp add:  if_1_0_0 simp del: Collect_const)
+    apply (wpsimp wp: getSlotCap_wp)
    apply vcg
-  apply (clarsimp simp: Collect_const_mem word_sle_def)
+  apply (clarsimp simp: Collect_const_mem)
   apply (rule conjI)
-   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
-   apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
-   apply (auto simp: isCap_simps valid_cap'_def mask_def dest!: tcb_ko_at')[1]
-   apply (rule_tac x=ta in exI, auto split: option.splits)[1]
-   apply (frule (2) sym_refs_tcb_vcpu', clarsimp)
-   apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def projectKOs)
-  apply (clarsimp simp: ptr_val_tcb_ptr_mask'
-                        size_of_def cte_level_bits_def
-                        tcbVTableSlot_def tcb_cnode_index_defs
-                        ccap_rights_relation_def cap_rights_to_H_def
-                        to_bool_def true_def allRights_def
-                        mask_def[where n="Suc 0"]
-                        cte_at_tcb_at_16' addrFromPPtr_def)
+   apply (frule cte_at_tcb_at_32', drule cte_at_cte_wp_atD)
+   apply (clarsimp simp: cte_level_bits_def tcbVTableSlot_def)
+   apply (rule_tac x="cteCap cte" in exI)
+   apply (rule conjI, erule cte_wp_at_weakenE', simp)
+   apply (clarsimp simp: invs_cicd_no_0_obj' invs_cicd_arch_state')
+   apply (frule cte_wp_at_valid_objs_valid_cap'; clarsimp simp: invs_cicd_valid_objs')
+   apply (clarsimp simp: isCap_simps valid_cap'_def mask_def asid_wf_def)
+  apply (clarsimp simp: tcb_cnode_index_defs cte_level_bits_def tcbVTableSlot_def
+                        cte_at_tcb_at_32' to_bool_def)
   apply (clarsimp simp: cap_get_tag_isCap_ArchObject2
                  dest!: isCapDs)
   apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric]
-                        cap_lift_page_directory_cap cap_to_H_def
-                        cap_page_directory_cap_lift_def
-                        to_bool_def
-                 elim!: ccap_relationE split: if_split_asm)
-  apply (rename_tac s'')
-  apply (drule_tac s=s'' in obj_at_cslift_tcb, assumption)
-  apply (clarsimp simp: typ_heap_simps)
-  apply (clarsimp simp: ctcb_relation_def carch_tcb_relation_def)
-  done *)
+                        cap_lift_pml4_cap cap_to_H_def
+                        cap_pml4_cap_lift_def
+                        to_bool_def mask_def
+                        ccr3_relation_defs Let_def
+                        cr3_lift_def word_bw_assocs
+                 elim!: ccap_relationE
+                 split: if_split_asm X64_H.cr3.splits)
+  apply (rename_tac t t')
+  apply (rule conjI; clarsimp)
+   apply (drule_tac t="cr3_C.words_C (ret__struct_cr3_C_' t').[0]" in sym)
+   apply (simp add: word_bw_assocs)
+  apply (frule (1) word_combine_masks[where m="0x7FFFFFFFFF000" and m'="0xFFF"]; simp add: word_ao_dist2[symmetric])
+  apply (frule (1) word_combine_masks[where m="0x7FFFFFFFFFFFF" and m'="0x7FF8000000000000"]; simp)
+  apply (match premises in H: \<open>cr3_C.words_C _.[0] && _ = 0\<close> \<Rightarrow> \<open>insert H; word_bitwise\<close>)
+  done
 
-(* FIXME: move *)
-lemma invs'_invs_no_cicd:
-  "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
-by (clarsimp simp add: invs'_def all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def newKernelState_def)
+(* FIXME: remove *)
+lemmas invs'_invs_no_cicd = invs_invs_no_cicd'
 
 lemma ccorres_seq_IF_False:
   "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (IF False THEN x ELSE y FI ;; c) = ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (y ;; c)"

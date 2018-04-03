@@ -21,9 +21,18 @@ crunch ksCurDomain[wp]: switchToIdleThread "\<lambda>s. P (ksCurDomain s)"
 crunch valid_pspace'[wp]: switchToIdleThread, switchToThread valid_pspace'
   (simp: whenE_def ignore: getObject)
 
-lemma valid_arch_state'_currentCR3_inv[simp]: "valid_arch_state' s \<Longrightarrow>
-         valid_arch_state' (s\<lparr>ksArchState := x64KSCurrentCR3_update (\<lambda>_. param_a) (ksArchState s)\<rparr>)"
-  by (clarsimp simp: valid_arch_state'_def)
+lemma setCurrentUserCR3_valid_arch_state'[wp]:
+  "\<lbrace>valid_arch_state' and K (valid_cr3' c)\<rbrace> setCurrentUserCR3 c \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  by (wpsimp simp: setCurrentUserCR3_def valid_arch_state'_def)
+
+lemma setVMRoot_valid_arch_state':
+  "\<lbrace>valid_arch_state'\<rbrace> setVMRoot t \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setCurrentUserVSpaceRoot_def)
+  apply (wp hoare_whenE_wp getCurrentUserCR3_wp findVSpaceForASID_vs_at_wp
+         | wpcw
+         | clarsimp simp: if_apply_def2 asid_wf_0
+         | strengthen valid_cr3'_makeCR3)+
+  done
 
 crunch valid_arch_state'[wp]: switchToThread valid_arch_state'
   (wp: crunch_wps simp: crunch_simps)

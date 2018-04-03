@@ -18,11 +18,15 @@ named_theorems EmptyFail_AI_assms
 
 crunch_ignore (empty_fail)
   (add: invalidateTLBEntry_impl invalidateTranslationSingleASID_impl
-        resetCR3_impl invalidateASID_impl ioapicMapPinToVector_impl updateIRQState_impl
+        invalidateASID_impl ioapicMapPinToVector_impl updateIRQState_impl
         in8_impl in16_impl in32_impl out8_impl out16_impl out32_impl)
 
+lemma invalidateLocalPageStructureCacheASID_ef[simp,wp]:
+  "empty_fail (invalidateLocalPageStructureCacheASID vs asid)"
+  by (simp add: invalidateLocalPageStructureCacheASID_def)
+
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
-  loadWord, load_word_offs, storeWord, getRestartPC, get_mrs, invalidate_local_page_structure_cache_asid
+  loadWord, load_word_offs, storeWord, getRestartPC, get_mrs, invalidate_page_structure_cache_asid
 
 end
 

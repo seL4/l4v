@@ -293,22 +293,16 @@ lemma no_fail_writeCR3[wp]: "no_fail \<top> (writeCR3 a b)"
   by (simp add: writeCR3_def)
 
 lemma set_current_cr3_corres [corres]:
-  "cr3_relation c c' \<Longrightarrow> corres dc \<top> \<top> (set_current_cr3 c) (setCurrentCR3 c')"
-  apply (clarsimp simp add: set_current_cr3_def setCurrentCR3_def cr3_relation_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_nor)
-       apply (rule corres_machine_op)
-       apply (rule corres_Id, rule refl, simp)
-       apply (rule no_fail_writeCR3)
-      apply (rule corres_modify')
-       apply (clarsimp simp: state_relation_def arch_state_relation_def cr3_relation_def)
-      apply (simp add: dc_def)
-     apply wpsimp+
+  "cr3_relation c c' \<Longrightarrow> corres dc \<top> \<top> (set_current_cr3 c) (setCurrentUserCR3 c')"
+  apply (clarsimp simp add: set_current_cr3_def setCurrentUserCR3_def cr3_relation_def)
+  apply (rule corres_modify')
+   apply (clarsimp simp: state_relation_def arch_state_relation_def cr3_relation_def)
+  apply simp
   done
 
 lemma get_current_cr3_corres [corres]:
-  "corres cr3_relation \<top> \<top> (get_current_cr3) (getCurrentCR3)"
-  apply (simp add: getCurrentCR3_def get_current_cr3_def)
+  "corres cr3_relation \<top> \<top> (get_current_cr3) (getCurrentUserCR3)"
+  apply (simp add: getCurrentUserCR3_def get_current_cr3_def)
   by (clarsimp simp: state_relation_def arch_state_relation_def)
 
 lemma set_vm_root_corres [corres]:
@@ -325,13 +319,15 @@ proof -
         (do global_pml4 \<leftarrow> gets (x64_global_pml4 \<circ> arch_state);
             set_current_vspace_root (X64.addrFromKPPtr global_pml4) 0
          od)
-        (do globalPML4 \<leftarrow> gets (x64KSGlobalPML4 \<circ> ksArchState);
-            X64_H.setCurrentVSpaceRoot (addrFromKPPtr globalPML4) 0
+        (do globalPML4 \<leftarrow> gets (x64KSSKIMPML4 \<circ> ksArchState);
+            X64_H.setCurrentUserVSpaceRoot (addrFromKPPtr globalPML4) 0
          od)"
-    apply (simp add: X64_H.setCurrentVSpaceRoot_def set_current_vspace_root_def)
+    apply (simp add: X64_H.setCurrentUserVSpaceRoot_def set_current_vspace_root_def
+                     make_cr3_def makeCR3_def)
     apply (rule corres_guard_imp)
       apply (rule corres_split_eqr)
-         apply (rule set_current_cr3_corres, simp add: cr3_relation_def addrFromKPPtr_def)
+         apply (rule set_current_cr3_corres,
+                simp add: cr3_relation_def cr3_addr_mask_def addrFromKPPtr_def bit_simps)
         apply (subst corres_gets)
         apply (clarsimp simp: state_relation_def arch_state_relation_def)
        apply (wp | simp)+
@@ -342,8 +338,8 @@ proof -
                   set_current_vspace_root (X64.addrFromKPPtr global_pml4) 0
                od))
         (throwError Fault_H.lookup_failure.InvalidRoot <catch>
-         (\<lambda>_ . do globalPML4 \<leftarrow> gets (x64KSGlobalPML4 \<circ> ksArchState);
-                  setCurrentVSpaceRoot (addrFromKPPtr globalPML4) 0
+         (\<lambda>_ . do globalPML4 \<leftarrow> gets (x64KSSKIMPML4 \<circ> ksArchState);
+                  setCurrentUserVSpaceRoot (addrFromKPPtr globalPML4) 0
                od))"
     apply (rule corres_guard_imp)
       apply (rule corres_split_catch [where f=lfr])
@@ -354,6 +350,7 @@ proof -
   show ?thesis
     unfolding set_vm_root_def setVMRoot_def getThreadVSpaceRoot_def locateSlot_conv
               catchFailure_def withoutFailure_def throw_def
+              make_cr3_def makeCR3_def
     apply (rule corres_guard_imp)
       apply (rule corres_split' [where r'="op = \<circ> cte_map"])
          apply (simp add: tcbVTableSlot_def cte_map_def objBits_def cte_level_bits_def
@@ -379,9 +376,9 @@ proof -
                apply (simp only: liftE_bindE)
                apply (rule corres_split'[OF get_current_cr3_corres])
                  apply (rule corres_whenE[OF _ _ dc_simp])
-                  apply (case_tac cur_cr3; case_tac curCR3; clarsimp simp: cr3_relation_def)
+                  apply (case_tac cur_cr3; case_tac curCR3; clarsimp simp: cr3_relation_def cr3_addr_mask_def)
                  apply (rule iffD2[OF corres_liftE_rel_sum, OF set_current_cr3_corres])
-                 apply (simp add: cr3_relation_def)
+                 apply (simp add: cr3_relation_def cr3_addr_mask_def)
                 apply wp
                apply wpsimp
               apply simp
@@ -840,22 +837,24 @@ crunch valid_arch'[wp]: storePDE, storePTE, storePDPTE, storePML4E valid_arch_st
 crunch cur_tcb'[wp]: storePDE, storePTE, storePDPTE, storePML4E cur_tcb'
 (ignore: setObject)
 
-lemma getCurrentCR3_inv: "\<lbrace>P\<rbrace> getCurrentCR3 \<lbrace>\<lambda>_. P\<rbrace>"
-  by (simp add: getCurrentCR3_def)
+lemma getCurrentUserCR3_inv[wp]: "\<lbrace>P\<rbrace> getCurrentUserCR3 \<lbrace>\<lambda>_. P\<rbrace>"
+  by (simp add: getCurrentUserCR3_def)
 
-lemma invalidate_local_page_structure_cache_asid_corres:
+lemma invalidatePageStructureCacheASID_corres' [corres]:
+  assumes "vspace' = vspace" "asid' = asid"
   shows
   "corres dc \<top> \<top>
-     (invalidate_local_page_structure_cache_asid a b)
-     (X64_H.invalidateLocalPageStructureCacheASID a b)"
-  apply (simp add: invalidate_local_page_structure_cache_asid_def
-                   X64_H.invalidateLocalPageStructureCacheASID_def)
-  by (corressimp corres: get_current_cr3_corres set_current_cr3_corres
-                        wp: get_current_cr3_inv getCurrentCR3_inv
-                      simp: cr3_relation_def)
+     (invalidate_page_structure_cache_asid vspace asid)
+     (X64_H.invalidatePageStructureCacheASID vspace' asid')"
+  by (corressimp simp: invalidate_page_structure_cache_asid_def
+                       X64_H.invalidatePageStructureCacheASID_def
+                       invalidateLocalPageStructureCacheASID_def
+                       assms ucast_id
+               corres: corres_machine_op
+                   wp: no_fail_machine_op_lift)
 
-lemmas invalidatePageStructureCacheASID_corres = invalidate_local_page_structure_cache_asid_corres
-                      [folded invalidatePageStructureCacheASID_def]
+lemmas invalidatePageStructureCacheASID_corres =
+  invalidatePageStructureCacheASID_corres'[OF refl refl]
 
 (* FIXME x64: move *)
 lemma flush_table_pde_at[wp]: "\<lbrace>pde_at p\<rbrace> flush_table a b c d \<lbrace>\<lambda>_. pde_at p\<rbrace>"
@@ -1201,7 +1200,7 @@ proof -
              apply (rule corres_split[OF _ store_pte_corres'])
                 apply (rule corres_split[where r'="op ="])
                    apply simp
-                   apply (rule invalidate_local_page_structure_cache_asid_corres)
+                   apply (rule invalidatePageStructureCacheASID_corres)
                   apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
                   apply (case_tac m; clarsimp)
                   apply (rule corres_fail[where P=\<top> and P'=\<top>])
@@ -1215,7 +1214,7 @@ proof -
             apply (rule corres_split[OF _ store_pde_corres'])
                apply (rule corres_split[where r'="op ="])
                   apply simp
-                  apply (rule invalidate_local_page_structure_cache_asid_corres)
+                  apply (rule invalidatePageStructureCacheASID_corres)
                  apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
                  apply (case_tac m; clarsimp)
                  apply (rule corres_fail[where P=\<top> and P'=\<top>])
@@ -1229,7 +1228,7 @@ proof -
                 apply (rule corres_split[OF _ store_pdpte_corres'])
               apply (rule corres_split[where r'="op ="])
                  apply simp
-                 apply (rule invalidate_local_page_structure_cache_asid_corres)
+                 apply (rule invalidatePageStructureCacheASID_corres)
                 apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
                 apply (case_tac m; clarsimp)
                 apply (rule corres_fail[where P=\<top> and P'=\<top>])
@@ -1252,19 +1251,19 @@ proof -
       apply (clarsimp simp: mapping_map_simps)
       apply (rule corres_guard_imp)
         apply (rule corres_split[OF _ store_pte_corres'])
-           apply (rule invalidate_local_page_structure_cache_asid_corres)
+           apply (rule invalidatePageStructureCacheASID_corres)
           apply (wpsimp simp: invs_pspace_aligned')+
      apply (frule (1) mapping_map_pde, clarsimp)
      apply (clarsimp simp: mapping_map_simps)
      apply (rule corres_guard_imp)
        apply (rule corres_split[OF _ store_pde_corres'])
-          apply (rule invalidate_local_page_structure_cache_asid_corres)
+          apply (rule invalidatePageStructureCacheASID_corres)
          apply (wpsimp simp: invs_pspace_aligned')+
     apply (frule (1) mapping_map_pdpte, clarsimp)
     apply (clarsimp simp: mapping_map_simps)
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF _ store_pdpte_corres'])
-         apply (rule invalidate_local_page_structure_cache_asid_corres)
+         apply (rule invalidatePageStructureCacheASID_corres)
         apply (wpsimp simp: invs_pspace_aligned')+
      -- "PageUnmap"
    apply (clarsimp simp: performPageInvocation_def perform_page_invocation_def
@@ -1549,13 +1548,12 @@ lemma unmap_pd_corres:
   notes liftE_get_pdpte_corres = get_pdpte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
   shows "corres dc
           (invs and valid_etcbs and page_directory_at pd and
-           K (0 < asid \<and> is_aligned vptr pdpt_shift_bits \<and> vptr < pptr_base \<and> canonical_address vptr \<and> asid \<le> mask asid_bits))
+           K (0 < asid \<and> is_aligned vptr pdpt_shift_bits \<and> vptr < pptr_base \<and> canonical_address vptr \<and> asid_wf asid))
           (valid_arch_state' and pspace_aligned' and pspace_distinct'
             and no_0_obj' and cur_tcb' and valid_objs')
           (unmap_pd asid vptr pd)
           (unmapPageDirectory asid' vptr' pd')"
   apply (clarsimp simp: assms unmap_pd_def unmapPageDirectory_def flushPD_def
-                        invalidatePageStructureCacheASID_def
                         ignoreFailure_def const_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>"], simp)
@@ -1570,7 +1568,7 @@ lemma unmap_pd_corres:
                                 split: X64_A.pdpte.splits)
               apply simp
               apply (rule corres_split_nor[OF _ flush_all_corres[OF refl refl]])
-                apply (rule corres_split[OF invalidate_local_page_structure_cache_asid_corres
+                apply (rule corres_split[OF invalidatePageStructureCacheASID_corres
                                             store_pdpte_corres'])
                   apply ((wpsimp wp: get_pdpte_wp simp: pdpte_at_def)+)[8]
           apply (wpsimp wp: hoare_drop_imps)
@@ -1844,14 +1842,14 @@ lemma pap_corres:
                       valid_apinv'_def cte_wp_at'_def)
   qed
 
-lemma setCurrentCR3_obj_at [wp]:
-  "\<lbrace>\<lambda>s. P (obj_at' P' t s)\<rbrace> setCurrentCR3 c \<lbrace>\<lambda>rv s. P (obj_at' P' t s)\<rbrace>"
-  apply (simp add: setCurrentCR3_def)
+lemma setCurrentUserCR3_obj_at [wp]:
+  "\<lbrace>\<lambda>s. P (obj_at' P' t s)\<rbrace> setCurrentUserCR3 c \<lbrace>\<lambda>rv s. P (obj_at' P' t s)\<rbrace>"
+  apply (simp add: setCurrentUserCR3_def)
   apply (wp doMachineOp_obj_at|wpc|simp)+
   done
 
-lemmas getCurrentCR3_obj_at [wp]
-  = getCurrentCR3_inv[of "\<lambda>s. P (obj_at' P' t s)" for P P' t]
+lemmas getCurrentUserCR3_obj_at [wp]
+  = getCurrentUserCR3_inv[of "\<lambda>s. P (obj_at' P' t s)" for P P' t]
 
 crunch obj_at[wp]: setVMRoot "\<lambda>s. P (obj_at' P' t s)"
   (simp: crunch_simps)
@@ -1888,45 +1886,51 @@ lemma valid_ioports_cr3_update[elim!]:
   "valid_ioports' s \<Longrightarrow> valid_ioports' (s\<lparr>ksArchState := x64KSCurrentCR3_update (\<lambda>_. c) (ksArchState s)\<rparr>)"
   by (clarsimp simp: valid_ioports'_simps)
 
-lemma setCurrentCR3_invs' [wp]: "\<lbrace>invs'\<rbrace> setCurrentCR3 c \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  unfolding setCurrentCR3_def
-  apply (wpsimp wp:)
+lemma setCurrentUserCR3_invs' [wp]:
+  "\<lbrace>invs' and K (valid_cr3' c)\<rbrace> setCurrentUserCR3 c \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  unfolding setCurrentUserCR3_def
+  apply wpsimp
   by (clarsimp simp: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def
                      valid_arch_state'_def valid_machine_state'_def ct_not_inQ_def
                      ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
 
-lemma getCurrentCR3_invs' [wp]: "\<lbrace>invs'\<rbrace> getCurrentCR3 \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  unfolding getCurrentCR3_def
-  by (wpsimp)
+lemma setCurrentUserCR3_invs_no_cicd' [wp]:
+  "\<lbrace>invs_no_cicd' and K (valid_cr3' c)\<rbrace> setCurrentUserCR3 c \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  unfolding setCurrentUserCR3_def
+  apply wpsimp
+  by (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def
+                     valid_global_refs'_def global_refs'_def
+                     valid_arch_state'_def valid_machine_state'_def ct_not_inQ_def
+                     ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
 
-lemma setCurrentCR3_invs_no_cicd' [wp]: "\<lbrace>invs_no_cicd'\<rbrace> setCurrentCR3 c \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  unfolding setCurrentCR3_def
-  apply (wpsimp wp:)
-  by (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_global_refs'_def global_refs'_def
-                   valid_arch_state'_def valid_machine_state'_def ct_not_inQ_def
-                   ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+lemma valid_cr3'_makeCR3:
+  "asid_wf asid \<Longrightarrow> valid_cr3' (makeCR3 addr asid)"
+  apply (clarsimp simp: valid_cr3'_def makeCR3_def bit_simps
+                        is_aligned_andI2[OF is_aligned_shift])
+  apply (rule order.trans[OF word_and_le1])
+  apply (simp add: mask_def asid_bits_def)
+  done
 
-lemma getCurrentCR3_invs_no_cicd' [wp]: "\<lbrace>invs_no_cicd'\<rbrace> getCurrentCR3 \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  unfolding getCurrentCR3_def
-  by (wpsimp)
-
+lemma getCurrentUserCR3_wp:
+  "\<lbrace> \<lambda>s. Q (x64KSCurrentUserCR3 (ksArchState s)) s \<rbrace> getCurrentUserCR3 \<lbrace> Q \<rbrace>"
+  by (wpsimp simp: getCurrentUserCR3_def)
 
 lemma setVMRoot_invs [wp]:
   "\<lbrace>invs'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setCurrentVSpaceRoot_def )
-  apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp | wpcw | clarsimp cong: if_cong)+
-         apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp_R)
-          apply (wpsimp)+
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setCurrentUserVSpaceRoot_def)
+  apply (wp hoare_whenE_wp getCurrentUserCR3_wp findVSpaceForASID_vs_at_wp
+         | wpcw
+         | clarsimp simp: if_apply_def2 asid_wf_0
+         | strengthen valid_cr3'_makeCR3)+
   done
 
 lemma setVMRoot_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setCurrentVSpaceRoot_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp | wpcw | clarsimp cong: if_cong)+
-         apply (rule_tac Q'="\<lambda>rv. invs_no_cicd'" in hoare_post_imp_R)
-          apply (wpsimp)+
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setCurrentUserVSpaceRoot_def)
+  apply (wp hoare_whenE_wp getCurrentUserCR3_wp findVSpaceForASID_vs_at_wp
+         | wpcw
+         | clarsimp simp: if_apply_def2 asid_wf_0
+         | strengthen valid_cr3'_makeCR3)+
   done
 
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
@@ -2861,11 +2865,14 @@ lemma dmo_invalidateASID_invs'[wp]:
                      machine_rest_lift_def split_def | wp)+
   done
 
-lemma x64KSCurrentCR3_update_inv[simp]:
-  "invs' s \<Longrightarrow> invs' (s\<lparr>ksArchState := x64KSCurrentCR3_update (\<lambda>_. c) (ksArchState s)\<rparr>)"
-  by (clarsimp simp: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def
-                        valid_arch_state'_def valid_machine_state'_def ct_not_inQ_def
-                        ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+lemma dmo_invalidateLocalPageStructureCacheASID_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (invalidateLocalPageStructureCacheASID vspace asid) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (wpsimp wp: dmo_invs' invalidateLocalPageStructureCacheASID_irq_masks)
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid[where P=P and Q="\<lambda>_. P" for P])
+    apply (simp add: invalidateLocalPageStructureCacheASID_def machine_op_lift_def
+                     machine_rest_lift_def split_def | wp)+
+  done
 
 crunch invs'[wp]: unmapPageTable, unmapPageDirectory, unmapPDPT "invs'"
   (ignore: getObject setObject storePDE storePDPTE storePML4E doMachineOp

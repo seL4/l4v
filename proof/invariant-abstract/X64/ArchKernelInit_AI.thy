@@ -132,20 +132,20 @@ lemma init_irq_ptrs_eq:
   done
 
 lemma in_kernel_base:
-  "\<lbrakk>m < 0x3FFFFFFF; n \<le> 0x3FFFFFFF\<rbrakk>
+  "\<lbrakk>m < 0x7FFFFFFF; n \<le> 0x7FFFFFFF\<rbrakk>
     \<Longrightarrow> (\<forall>y\<in>{kernel_base + m .. n + kernel_base}.
-           kernel_base \<le> y \<and> y \<le> kernel_base + 0x3FFFFFFF)"
+           kernel_base \<le> y \<and> y \<le> kernel_base + 0x7FFFFFFF)"
   apply (clarsimp)
   apply (intro conjI)
-   apply (rule ccontr,simp add:not_le)
+   apply (rule ccontr, simp add:not_le)
    apply (drule(1) le_less_trans)
-   apply (cut_tac is_aligned_no_wrap'[where ptr=kernel_base and off=m and sz=30, simplified])
+   apply (cut_tac is_aligned_no_wrap'[where ptr=kernel_base and off=m and sz=31, simplified])
      apply (drule less_le_trans[of _ kernel_base kernel_base])
       apply (simp add: pptr_base_def pptrBase_def kernel_base_def)
      apply simp
     apply (simp add:kernel_base_def is_aligned_def)
    apply (rule ccontr, simp add:not_less)
-   apply (drule less_le_trans[where z = "0x40000000"])
+   apply (drule less_le_trans[where z = "0x80000000"])
     apply simp
    apply simp
   apply (erule order_trans)
@@ -156,7 +156,7 @@ lemma in_kernel_base:
   done
 
 lemma in_kernel_base_in_pptr_base:
-  "\<lbrakk>m < 0x3FFFFFFF; n \<le> 0x3FFFFFFF\<rbrakk>
+  "\<lbrakk>m < 0x7FFFFFFF; n \<le> 0x7FFFFFFF\<rbrakk>
     \<Longrightarrow> (\<forall>y\<in>{kernel_base + m .. n + kernel_base}.
            pptr_base \<le> y \<and> y \<le> pptr_base + 0x7FFFFFFFFF)"
   apply (frule (1) in_kernel_base; erule ballEI; clarsimp)
@@ -292,7 +292,8 @@ lemma invs_A:
    apply (rule conjI)
     apply (clarsimp simp: valid_asid_table_def state_defs)
    apply (simp add: valid_global_pts_def valid_global_pds_def valid_global_pdpts_def
-                    valid_arch_state_def state_defs obj_at_def a_type_def)
+                    valid_arch_state_def state_defs obj_at_def a_type_def
+                    valid_cr3_def asid_wf_0)
   apply (rule conjI)
    apply (clarsimp simp: valid_irq_node_def obj_at_def state_defs
                          is_cap_table_def wf_empty_bits

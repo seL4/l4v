@@ -121,13 +121,13 @@ definition
 (* Virtual address space available to users. *)
 definition
   user_vtop :: "machine_word" where
-  "user_vtop = 0x00007fffffffffff"
+  "user_vtop = Platform.X64.pptrUserTop"
 
 text {* The lowest virtual address in the kernel window. The kernel reserves the
 virtual addresses from here up in every virtual address space. *}
 definition
   kernel_base :: "vspace_ref" where
-  "kernel_base \<equiv> 0xffffffffc0000000"
+  "kernel_base \<equiv> 0xffffffff80000000"
 
 definition
   idle_thread_ptr :: vspace_ref where

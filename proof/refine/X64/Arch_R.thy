@@ -587,7 +587,7 @@ lemma vs_refs_pages_pml4I:
   done
 
 lemma userVTop_conv[simp]: "userVTop = user_vtop"
-  by (simp add: userVTop_def user_vtop_def)
+  by (simp add: userVTop_def user_vtop_def X64.pptrUserTop_def)
 
 lemma find_vspace_for_asid_lookup_slot [wp]:
   "\<lbrace>pspace_aligned and valid_vspace_objs\<rbrace>
@@ -1881,7 +1881,7 @@ lemma decode_page_inv_wf[wp]:
                     dest!: diminished_capMaster)
    apply (rule conjI)
     apply (erule is_aligned_addrFromPPtr_n, case_tac vmpage_size, simp_all add: bit_simps)[1]
-   apply (simp add: user_vtop_def X64.pptrBase_def)
+   apply (simp add: user_vtop_def X64.pptrBase_def X64.pptrUserTop_def)
    apply (word_bitwise)
   apply (cases "invocation_type label = ArchInvocationLabel X64PageRemap")
    apply (simp add: split_def invs_valid_objs' split del: if_split
@@ -1940,7 +1940,7 @@ lemma decode_page_table_inv_wf[wp]:
   apply (clarsimp simp: diminished_valid' [symmetric])
   apply (clarsimp simp: valid_cap'_def bit_simps is_aligned_addrFromPPtr_n
                         invs_valid_objs' and_not_mask[symmetric])
-  apply (clarsimp simp: mask_def X64.pptrBase_def user_vtop_def)
+  apply (clarsimp simp: mask_def X64.pptrBase_def X64.pptrUserTop_def user_vtop_def)
   apply word_bitwise
   apply auto
   done
@@ -1972,7 +1972,7 @@ lemma decode_page_directory_inv_wf[wp]:
   apply (clarsimp simp: diminished_valid' [symmetric])
   apply (clarsimp simp: valid_cap'_def bit_simps is_aligned_addrFromPPtr_n
                         invs_valid_objs' and_not_mask[symmetric])
-  apply (clarsimp simp: mask_def X64.pptrBase_def user_vtop_def)
+  apply (clarsimp simp: mask_def X64.pptrBase_def X64.pptrUserTop_def user_vtop_def)
   apply word_bitwise
   apply auto
   done
@@ -2004,7 +2004,7 @@ lemma decode_pdpt_inv_wf[wp]:
   apply (clarsimp simp: diminished_valid' [symmetric])
   apply (clarsimp simp: valid_cap'_def bit_simps is_aligned_addrFromPPtr_n
                         invs_valid_objs' and_not_mask[symmetric])
-  apply (clarsimp simp: mask_def X64.pptrBase_def user_vtop_def)
+  apply (clarsimp simp: mask_def X64.pptrBase_def X64.pptrUserTop_def user_vtop_def)
   apply word_bitwise
   apply auto
   done

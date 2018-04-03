@@ -920,18 +920,22 @@ lemma arch_state_update_invs:
 
 lemma valid_ioports_cr3_update[iff]:
   "valid_ioports (s\<lparr>arch_state := arch_state s\<lparr>x64_current_cr3 := c\<rparr>\<rparr>) = valid_ioports s"
+crunch global_pml4[wp]: set_current_cr3 "\<lambda>s. P (x64_global_pml4 (arch_state s))"
+
   by (clarsimp simp: valid_ioports_def all_ioports_issued_def issued_ioports_def)
 
 lemma set_current_cr3_invs[wp]:
-  "\<lbrace>invs\<rbrace> set_current_cr3 c \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs and K (valid_cr3 c)\<rbrace> set_current_cr3 c \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: set_current_cr3_def; erule arch_state_update_invs)
   by (auto simp: valid_global_refs_def global_refs_def valid_arch_state_def valid_table_caps_def
                  valid_global_objs_def valid_kernel_mappings_def second_level_tables_def)
 
-lemma set_current_vspace_root_invs[wp]:
-  "\<lbrace>invs\<rbrace> set_current_vspace_root vspace asid \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: set_current_vspace_root_def)
-  apply (wp)
+lemma valid_cr3_make_cr3:
+  "asid_wf asid \<Longrightarrow> valid_cr3 (make_cr3 addr asid)"
+  apply (clarsimp simp: valid_cr3_def make_cr3_def cr3_addr_mask_def bit_simps
+                        is_aligned_andI2[OF is_aligned_shift])
+  apply (rule order.trans[OF word_and_le1])
+  apply (simp add: mask_def asid_bits_def)
   done
 
 lemma set_current_vspace_root_invs[wp]:
@@ -949,9 +953,14 @@ lemma asid_wf_0:
 lemma svr_invs [wp]:
   "\<lbrace>invs\<rbrace> set_vm_root t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: set_vm_root_def)
-  apply (wp hoare_whenE_wp get_cap_wp
-             | wpc
-             | simp add: split_def if_apply_def2 cong: if_cong)+
+  apply (wp hoare_whenE_wp
+         | wpc
+         | simp add: split_def if_apply_def2 cong: conj_cong if_cong
+         | strengthen valid_cr3_make_cr3)+
+    apply (strengthen drop_imp)
+    apply (wpsimp wp: get_cap_wp simp: asid_wf_0)+
+  apply (drule (1) cte_wp_valid_cap[OF _ invs_valid_objs])
+  apply (simp add: valid_cap_def)
   done
 
 crunch pred_tcb_at[wp]: set_current_vspace_root "pred_tcb_at proj P t"
@@ -1692,11 +1701,7 @@ lemma not_in_global_refs_vs_lookup:
   apply blast
   done
 
-crunch device_state_inv[wp]: invalidateASID,resetCR3 "\<lambda>s. P (device_state s)"
-
-lemma resetCR3_underlying_memory[wp]:
-  "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> resetCR3 \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (simp add: resetCR3_def machine_op_lift_underlying_memory)
+crunch device_state_inv[wp]: invalidateASID "\<lambda>s. P (device_state s)"
 
 lemma invalidateASID_underlying_memory[wp]:
   "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> invalidateASID vspace asid \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
@@ -1705,7 +1710,6 @@ lemma invalidateASID_underlying_memory[wp]:
 lemma no_irq_invalidateASID: "no_irq (invalidateASID vpsace asid)"
   by (clarsimp simp: invalidateASID_def)
 
-lemmas resetCR3_irq_masks = no_irq[OF no_irq_resetCR3]
 lemmas invalidateASID_irq_masks = no_irq[OF no_irq_invalidateASID]
 
 lemma flush_all_invs[wp]:
@@ -1812,7 +1816,7 @@ lemma vs_lookup_pages_current_cr3[iff]:
    vs_lookup_pages s"
   by (simp add: vs_lookup_pages_arch_update)
 
-crunch vs_lookup_pages[wp]: invalidate_local_page_structure_cache_asid "\<lambda>s. P (vs_lookup_pages s)"
+crunch vs_lookup_pages[wp]: invalidate_page_structure_cache_asid "\<lambda>s. P (vs_lookup_pages s)"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma vs_ref_pages_simps:
@@ -2568,7 +2572,13 @@ lemma vs_lookup1_archD:
                           \<and> ko_at (ArchObj ko) p s \<and> (r,p') \<in> vs_refs_arch ko"
   by (clarsimp dest!: vs_lookup1D simp: obj_at_def vs_refs_def split: kernel_object.splits)
 
-crunch invs[wp]: invalidate_local_page_structure_cache_asid invs
+lemma dmo_invalidateLocalPageStructureCacheASID[wp]:
+  "\<lbrace>invs\<rbrace> do_machine_op (invalidateLocalPageStructureCacheASID vs asid) \<lbrace>\<lambda>rv. invs\<rbrace>"
+  by (simp add: invalidateLocalPageStructureCacheASID_def do_machine_op_lift_invs)
+
+lemma invalidate_page_structure_cache_asid_invs[wp]:
+  "\<lbrace>invs\<rbrace> invalidate_page_structure_cache_asid vs asid \<lbrace>\<lambda>rv. invs\<rbrace>"
+  by (wpsimp simp: invalidate_page_structure_cache_asid_def)
 
 lemma unmap_pd_invs[wp]:
   "\<lbrace>invs and K (vaddr < pptr_base \<and> canonical_address vaddr)\<rbrace>
@@ -3931,7 +3941,7 @@ lemma perform_io_port_invocation_invs[wp]:
   done
 
 lemma user_vtop_mask: "user_vtop = mask 47"
-  by (simp add: user_vtop_def mask_def)
+  by (simp add: user_vtop_def pptrUserTop_def mask_def)
 
 lemma user_vtop_le: "p && user_vtop \<le> mask 47"
   by (simp add: user_vtop_mask word_and_le1)

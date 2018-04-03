@@ -62,6 +62,10 @@ assumes invalidateTranslationSingleASID_ccorres:
            (doMachineOp (invalidateTranslationSingleASID vptr asid))
            (Call invalidateTranslationSingleASID_'proc)"
 
+assumes invalidateASID_ccorres:
+  "ccorres dc xfdc \<top> (UNIV \<inter> \<lbrace>\<acute>vspace = pml4e_Ptr vspace\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace>) []
+           (doMachineOp (invalidateASID vspace asid)) (Call invalidateASID_'proc)"
+
 (* The following are fastpath specific assumptions.
    We might want to move them somewhere else. *)
 

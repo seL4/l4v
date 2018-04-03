@@ -2195,7 +2195,7 @@ proof (intro impI allI)
 
   moreover
   from rf szb al
-  have "ptr_span (pml4_Ptr (symbol_table ''x64KSGlobalPML4'')) \<inter> {ptr ..+ 2 ^ ptBits} = {}"
+  have "ptr_span (pml4_Ptr (symbol_table ''x64KSSKIMPML4'')) \<inter> {ptr ..+ 2 ^ ptBits} = {}"
     apply (clarsimp simp: valid_global_refs'_def  Let_def
                           valid_refs'_def ran_def rf_sr_def cstate_relation_def)
     apply (erule disjoint_subset)
@@ -2375,7 +2375,7 @@ proof (intro impI allI)
 
   moreover
   from rf szb al
-  have "ptr_span (pml4_Ptr (symbol_table ''x64KSGlobalPML4'')) \<inter> {ptr ..+ 2 ^ pdBits} = {}"
+  have "ptr_span (pml4_Ptr (symbol_table ''x64KSSKIMPML4'')) \<inter> {ptr ..+ 2 ^ pdBits} = {}"
     apply (clarsimp simp: valid_global_refs'_def  Let_def
                           valid_refs'_def ran_def rf_sr_def cstate_relation_def)
     apply (erule disjoint_subset)
@@ -2555,7 +2555,7 @@ proof (intro impI allI)
 
   moreover
   from rf szb al
-  have "ptr_span (pml4_Ptr (symbol_table ''x64KSGlobalPML4'')) \<inter> {ptr ..+ 2 ^ pdptBits} = {}"
+  have "ptr_span (pml4_Ptr (symbol_table ''x64KSSKIMPML4'')) \<inter> {ptr ..+ 2 ^ pdptBits} = {}"
     apply (clarsimp simp: valid_global_refs'_def  Let_def
                           valid_refs'_def ran_def rf_sr_def cstate_relation_def)
     apply (erule disjoint_subset)
@@ -2735,7 +2735,7 @@ proof (intro impI allI)
 
   moreover
   from rf szb al
-  have "ptr_span (pml4_Ptr (symbol_table ''x64KSGlobalPML4'')) \<inter> {ptr ..+ 2 ^ pml4Bits} = {}"
+  have "ptr_span (pml4_Ptr (symbol_table ''x64KSSKIMPML4'')) \<inter> {ptr ..+ 2 ^ pml4Bits} = {}"
     apply (clarsimp simp: valid_global_refs'_def  Let_def
                           valid_refs'_def ran_def rf_sr_def cstate_relation_def)
     apply (erule disjoint_subset)
@@ -7265,7 +7265,7 @@ lemma ccorres_typ_region_bytes_dummy:
   apply (frule typ_bytes_cpspace_relation_clift_devicedata)
       apply (simp add: invs_pspace_aligned')+
   apply (frule typ_bytes_cpspace_relation_clift_gptr[where
-            ptr'="pml4_Ptr (symbol_table ''x64KSGlobalPML4'')"])
+            ptr'="pml4_Ptr (symbol_table ''x64KSSKIMPML4'')"])
         apply (simp add: invs_pspace_aligned')+
   apply (frule typ_bytes_cpspace_relation_clift_gptr[where
             ptr'="ptr_coerce x :: (cte_C[256]) ptr" for x])

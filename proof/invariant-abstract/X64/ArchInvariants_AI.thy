@@ -994,6 +994,13 @@ where
   "valid_global_pdpts \<equiv> \<lambda>s.
    \<forall>p \<in> set (x64_global_pdpts (arch_state s)). typ_at (AArch APDPointerTable) p s"
 
+definition
+  valid_cr3 :: "cr3 \<Rightarrow> bool"
+where
+  "valid_cr3 r \<equiv> is_aligned (cr3_base_address r) asid_bits
+                   \<and> cr3_base_address r \<le> mask (pml4_shift_bits + asid_bits)
+                   \<and> asid_wf (cr3_pcid r)"
+
 (* arch_live/hyp_live stub *)
 
 definition
@@ -1037,9 +1044,12 @@ definition
   valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_arch_state \<equiv> \<lambda>s.
-  valid_asid_table (x64_asid_table (arch_state s)) s \<and>
-  page_map_l4_at (x64_global_pml4 (arch_state s)) s \<and>
-  valid_global_pts s \<and> valid_global_pds s \<and> valid_global_pdpts s"
+    valid_asid_table (x64_asid_table (arch_state s)) s
+      \<and> page_map_l4_at (x64_global_pml4 (arch_state s)) s
+      \<and> valid_global_pts s
+      \<and> valid_global_pds s
+      \<and> valid_global_pdpts s
+      \<and> valid_cr3 (x64_current_cr3 (arch_state s))"
 
 definition
   vs_cap_ref_arch :: "arch_cap \<Rightarrow> vs_ref list option"

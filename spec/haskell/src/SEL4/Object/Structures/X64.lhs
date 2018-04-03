@@ -151,4 +151,8 @@ ASIDs are mapped to address space roots by a global two-level table. The actual 
 >     cr3pcid :: ASID }
 >     deriving (Show, Eq)
 
+> makeCR3 :: PAddr -> ASID -> CR3
+> makeCR3 vspace asid = CR3 vspace' asid
+>     where
+>         vspace' = vspace .&. (mask pml4ShiftBits `shiftL` asidBits)
 

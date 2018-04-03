@@ -317,9 +317,6 @@ lemma no_irq_modify:
 lemma no_irq_invalidateTLBEntry: "no_irq (invalidateTLBEntry a)"
   by (clarsimp simp: invalidateTLBEntry_def)
 
-lemma no_irq_resetCR3: "no_irq resetCR3"
-  by (clarsimp simp: resetCR3_def)
-
 lemma no_irq_storeWord: "no_irq (storeWord w p)"
   apply (simp add: storeWord_def)
   apply (wp no_irq_modify)
@@ -352,6 +349,13 @@ lemma no_irq_out16: "no_irq (out16 irq b)"
 
 lemma no_irq_out32: "no_irq (out32 irq b)"
   by (wp | clarsimp simp: out32_def)+
+
+lemma no_irq_invalidateLocalPageStructureCacheASID:
+  "no_irq (invalidateLocalPageStructureCacheASID vspace asid)"
+  by (wpsimp simp: invalidateLocalPageStructureCacheASID_def)
+
+lemmas invalidateLocalPageStructureCacheASID_irq_masks =
+  no_irq[OF no_irq_invalidateLocalPageStructureCacheASID]
 
 lemma getActiveIRQ_le_maxIRQ':
   "\<lbrace>\<lambda>s. \<forall>irq > maxIRQ. irq_masks s irq\<rbrace>
@@ -422,10 +426,6 @@ lemma hwASIDInvalidate_ef[simp,wp]: "empty_fail (hwASIDInvalidate b a)"
 (* FIXME x64: move *)
 lemma updateIRQState_ef[simp,wp]: "empty_fail (updateIRQState b c)"
   by (simp add: updateIRQState_def)
-
-(* FIXME x64: move *)
-lemma resetCR3_ef[simp,wp]: "empty_fail (resetCR3)"
-  by (simp add: resetCR3_def)
 
 (* FIXME x64: move *)
 lemma writeCR3_ef[simp,wp]: "empty_fail (writeCR3 a b)"

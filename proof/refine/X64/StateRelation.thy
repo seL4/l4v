@@ -475,11 +475,11 @@ definition
 where
   "arch_state_relation \<equiv> {(s, s') .
          x64_asid_table s = x64KSASIDTable s' o ucast
-       \<and> x64_global_pml4 s = x64KSGlobalPML4 s'
-       \<and> x64_global_pdpts s = x64KSGlobalPDPTs s'
-       \<and> x64_global_pds s = x64KSGlobalPDs s'
-       \<and> x64_global_pts s = x64KSGlobalPTs s'
-       \<and> cr3_relation (x64_current_cr3 s) (x64KSCurrentCR3 s')
+       \<and> x64_global_pml4 s = x64KSSKIMPML4 s'
+       \<and> x64_global_pdpts s = x64KSSKIMPDPTs s'
+       \<and> x64_global_pds s = x64KSSKIMPDs s'
+       \<and> x64_global_pts s = x64KSSKIMPTs s'
+       \<and> cr3_relation (x64_current_cr3 s) (x64KSCurrentUserCR3 s')
        \<and> x64_kernel_vspace s = x64KSKernelVSpace s'
        \<and> x64_allocated_io_ports s = x64KSAllocatedIOPorts s'}"
 

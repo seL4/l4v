@@ -214,10 +214,6 @@ definition
 
 section "Basic Operations"
 
-text {* The kernel window is mapped into every virtual address space from the
-@{term kernel_base} pointer upwards. This function copies the mappings which
-create the kernel window into a new page directory object. *}
-
 definition
 get_pt_index :: "vspace_ref \<Rightarrow> machine_word" where
 "get_pt_index vptr \<equiv> (vptr >> pt_shift_bits) && mask ptTranslationBits"
@@ -233,6 +229,10 @@ get_pdpt_index :: "vspace_ref \<Rightarrow> machine_word" where
 definition
 get_pml4_index :: "vspace_ref \<Rightarrow> machine_word" where
 "get_pml4_index vptr \<equiv> (vptr >> pml4_shift_bits) && mask ptTranslationBits"
+
+text {* The kernel window is mapped into every virtual address space from the
+@{term pptr_base} pointer upwards. This function copies the mappings which
+create the kernel window into a new page directory object. *}
 
 definition
 copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where

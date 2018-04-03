@@ -52,17 +52,15 @@ datatype arch_cap =
 (* cr3 Stuff *)
 datatype cr3 = cr3 obj_ref asid
 
-primrec cr3_base_address where
-"cr3_base_address (cr3 v0 _) = v0"
+primrec
+  cr3_base_address :: "cr3 \<Rightarrow> obj_ref"
+where
+  "cr3_base_address (cr3 addr _) = addr"
 
-primrec cr3_base_address_update where
-"cr3_base_address_update f (cr3 v0 v1) = (cr3 (f v0) v1)"
-
-primrec cr3_pcid where
-"cr3_pcid (cr3 _ v1) = v1"
-
-primrec cr3_pcid_update where
-"cr3_pcid_update f (cr3 v0 v1) = (cr3 v0 (f v1))"
+primrec
+  cr3_pcid :: "cr3 \<Rightarrow> asid"
+where
+  "cr3_pcid (cr3 _ pcid) = pcid"
 
 section {* Architecture-specific objects *}
 

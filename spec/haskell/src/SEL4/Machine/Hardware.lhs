@@ -214,8 +214,3 @@ The constant "nullPointer" is a physical pointer guaranteed to be invalid.
 > nullPointer :: PPtr a
 > nullPointer = PPtr 0
 
-
-> physBase :: PAddr
-> physBase = Arch.physBase
-
-
