@@ -5558,6 +5558,18 @@ lemma max_word_not_0:
   "max_word \<noteq> 0"
   by (simp add: max_word_minus)
 
+lemma ucast_zero_is_aligned:
+  "UCAST('a::len \<rightarrow> 'b::len) w = 0 \<Longrightarrow> n \<le> LENGTH('b) \<Longrightarrow> is_aligned w n"
+  by (clarsimp simp: is_aligned_mask word_eq_iff word_size nth_ucast)
+
+lemma unat_ucast_eq_unat_and_mask:
+  "unat (UCAST('b::len \<rightarrow> 'a::len) w) = unat (w && mask LENGTH('a))"
+  proof -
+    have "unat (UCAST('b \<rightarrow> 'a) w) = unat (UCAST('a \<rightarrow> 'b) (UCAST('b \<rightarrow> 'a) w))"
+      by (cases "LENGTH('a) < LENGTH('b)"; simp add: is_down ucast_ucast_a unat_ucast_up_simp)
+    thus ?thesis using ucast_ucast_mask by simp
+  qed
+
 (* Miscellaneous conditional injectivity rules. *)
 
 lemma drop_eq_mono:

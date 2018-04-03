@@ -131,13 +131,6 @@ lemma shiftl_power:
 
 lemmas of_bl_reasoning = to_bl_use_of_bl of_bl_append
 
-(*TODO: delete, this will be in the Isabelle main distribution in future*)
-lemma bl_to_bin_lt2p_drop: "bl_to_bin bs < 2 ^ length (dropWhile Not bs)"
-  unfolding bl_to_bin_def
-proof(induction bs)
-  case(Cons b bs) with bl_to_bin_lt2p_aux[where w=1] show ?case by simp
-qed simp
-
 lemma uint_of_bl_is_bl_to_bin_drop:
   "length (dropWhile Not l) \<le> len_of TYPE('a) \<Longrightarrow> uint (of_bl l :: 'a::len word) = bl_to_bin l"
   apply (simp add: of_bl_def)
@@ -190,6 +183,10 @@ lemma and_mask:
 lemma AND_twice [simp]:
   "(w && m) && m = w && m"
   by (simp add: word_eqI)
+
+lemma word_combine_masks:
+  "w && m = z \<Longrightarrow> w && m' = z' \<Longrightarrow> w && (m || m') = (z || z')"
+  by (auto simp: word_eq_iff)
 
 lemma nth_w2p_same:
   "(2^n :: 'a :: len word) !! n = (n < len_of TYPE('a))"
@@ -257,6 +254,9 @@ lemma and_mask_arith:
 
 lemma mask_2pm1: "mask n = 2 ^ n - 1"
   by (simp add : mask_def)
+
+lemma word_and_mask_le_2pm1: "w && mask n \<le> 2 ^ n - 1"
+  by (simp add: mask_2pm1[symmetric] word_and_le1)
 
 lemma is_aligned_AND_less_0:
   "u && mask n = 0 \<Longrightarrow> v < 2^n \<Longrightarrow> u && v = 0"
