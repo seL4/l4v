@@ -510,7 +510,8 @@ where
   new_type \<leftarrow> data_to_obj_type (args!0);
 
   user_obj_size \<leftarrow> returnOk $ data_to_nat (args!1);
-  unlessE (user_obj_size \<le> untyped_max_bits)
+  object_size \<leftarrow> returnOk (obj_bits_api new_type user_obj_size);
+  unlessE (user_obj_size < word_bits \<and> object_size \<le> untyped_max_bits)
     $ throwError (RangeError 0 (of_nat untyped_max_bits));
   whenE (new_type = CapTableObject \<and> user_obj_size = 0)
     $ throwError (InvalidArgument 1);
@@ -558,7 +559,6 @@ where
 
   free_index \<leftarrow> returnOk (if reset then 0 else free_index_of cap);
   free_ref \<leftarrow> returnOk (get_free_ref (obj_ref_of cap) free_index);
-  object_size \<leftarrow> returnOk (obj_bits_api new_type user_obj_size);
   aligned_free_ref \<leftarrow> returnOk (alignUp free_ref object_size);
   untyped_free_bytes \<leftarrow> returnOk (obj_size cap - of_nat (free_index));
 
