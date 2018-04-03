@@ -86,9 +86,35 @@ text \<open>
 Following are rules for converting a @{term ccorresG} goal to a @{term corres_underlying}
 goal, by making use of an automatically generated @{term ac_corres} fact about the procedure.
 
-For the first of these, the user is expected to specify the return-value relation for the resulting
-@{term corres_underlying} goal, and will be required to prove that it implies the return-value
-relation of the original @{term ccorresG} goal.
+For the first two of these, the user is expected to specify the return-value relation for the
+resulting @{term corres_underlying} goal, and will be required to prove that it implies the
+return-value relation of the original @{term ccorresG} goal.
+
+In the general case, the C can return some extra information via global variables.
+\<close>
+
+(* FIXME: provide a way to use this rule, and its rv_spec version, in ac_init. *)
+lemma corres_to_ccorres_extra_globals:
+  assumes rf_sr_def: "rf_sr \<equiv> {(s,s'). cstate_relation s (globals s')}"
+  assumes acc: "ac_corres globals check_term \<Gamma> ret_xf G (liftE ac) c"
+  assumes cac: "corres_underlying {(s,s'). cstate_relation s s'} True True
+                                  R P Q a (do x \<leftarrow> ac; y \<leftarrow> gets g; return (x,y) od)"
+  assumes pre: "\<And>s s'. cstate_relation s (globals s') \<Longrightarrow> P' s \<and> s' \<in> Q' \<Longrightarrow> P s \<and> Q (globals s')"
+  assumes p_g: "\<And>s s'. cstate_relation s (globals s') \<Longrightarrow> P' s \<and> s' \<in> Q' \<Longrightarrow> G s'"
+  assumes ret: "\<And>r s'. R r (ret_xf s', g (globals s')) \<longrightarrow> R' r (ret_xf' s')"
+  shows "ccorresG rf_sr \<Gamma> R' ret_xf' P' Q' [] a c"
+  unfolding rf_sr_def using ac_corres_ccorres_underlying[OF acc]
+  apply (clarsimp intro!: ccorresI')
+  apply (frule corres_underlyingD[OF cac, simplified], (simp add: pre)+)
+  apply (clarsimp simp: bind_def return_def simpler_gets_def)
+  apply (erule ccorresE, simp+, erule p_g, simp+)
+    apply (simp add: liftE_def)
+   apply assumption
+  apply (fastforce simp: unif_rrel_def dest: mp[OF ret] split: xstate.splits)
+  done
+
+text \<open>
+In the case where there is no extra information returned via global variables, the rule is simpler.
 \<close>
 
 lemma corres_to_ccorres:
@@ -99,17 +125,29 @@ lemma corres_to_ccorres:
   assumes p_g: "\<And>s s'. cstate_relation s (globals s') \<Longrightarrow> P' s \<and> s' \<in> Q' \<Longrightarrow> G s'"
   assumes ret: "\<And>r s'. R r (ret_xf s') \<longrightarrow> R' r (ret_xf' s')"
   shows "ccorresG rf_sr \<Gamma> R' ret_xf' P' Q' [] a c"
-  unfolding rf_sr_def using ac_corres_ccorres_underlying[OF acc] cac pre p_g
-  by (fastforce simp: ccorres_underlying_def corres_underlying_def unif_rrel_def
-                      liftE_def in_liftE[simplified liftE_def]
-                dest: mp[OF ret]
-               split: xstate.splits)
+  apply (rule corres_to_ccorres_extra_globals[OF rf_sr_def acc, where g="K ()" and R="\<lambda>v. R v o fst"])
+     apply (simp add: liftM_def[symmetric])
+     apply (rule corres_rel_imp, rule cac)
+     apply (auto simp: pre p_g ret)
+  done
 
 text \<open>
-In the following rule, the return-value relation for the resulting @{term corres_underlying}
-goal is fixed to a reasonably general relation. In cases where this return-value relation is
-good enough, it saves the effort of explicitly specifying a return-value relation.
+In the following versions of the above rules, the return-value relation for the resulting
+@{term corres_underlying} goal is fixed to a reasonably general relation. In cases where this
+return-value relation is good enough, it saves the effort of explicitly specifying a return-value
+relation.
 \<close>
+
+lemma corres_to_ccorres_extra_globals_rv_spec:
+  assumes "rf_sr \<equiv> {(s,s'). cstate_relation s (globals s')}"
+  assumes "ac_corres globals check_term \<Gamma> ret_xf G (liftE ac) c"
+  assumes "corres_underlying {(s,s'). cstate_relation s s'} True True
+                             (\<lambda>r (x,y). \<forall>s'. x = ret_xf s' \<and> y = g (globals s') \<longrightarrow> R' r (ret_xf' s'))
+                             P Q a (do x \<leftarrow> ac; y \<leftarrow> gets g; return (x, y) od)"
+  assumes "\<And>s s'. cstate_relation s (globals s') \<Longrightarrow> P' s \<and> s' \<in> Q' \<Longrightarrow> P s \<and> Q (globals s')"
+  assumes "\<And>s s'. cstate_relation s (globals s') \<Longrightarrow> P' s \<and> s' \<in> Q' \<Longrightarrow> G s'"
+  shows "ccorresG rf_sr \<Gamma> R' ret_xf' P' Q' [] a c"
+  using assms by (auto intro: corres_to_ccorres_extra_globals)
 
 lemma corres_to_ccorres_rv_spec:
   assumes "rf_sr \<equiv> {(s,s'). cstate_relation s (globals s')}"
@@ -710,26 +748,29 @@ text \<open>
 
 named_theorems terminates_trivial
 
-ML \<open>
-local
-  fun terminates_intros ctxt =
-    REPEAT_ALL_NEW (resolve_tac ctxt (Proof_Context.get_thms ctxt "terminates_trivial"));
-in
-fun terminates_trivial_tac ctxt n st =
-  case Logic.concl_of_goal (Thm.prop_of st) n of
-      @{term_pat "Trueprop (_ \<turnstile> Call ?f_'proc \<down> _)"} => let
-        val f = dest_Const f_'proc |> fst |> Long_Name.base_name |> unsuffix "_'proc";
-        val impl = Proof_Context.get_thm ctxt (f ^ "_impl");
-        val body = Proof_Context.get_thm ctxt (f ^ "_body_def");
-        in st |>
-           (resolve_tac ctxt @{thms terminates.Call} n
-             THEN resolve_tac ctxt [impl] n
-            THEN simp_tac (put_simpset HOL_ss ctxt addsimps
-                             (body :: @{thms return_C_def lvar_nondet_init_def})) n
-            THEN terminates_intros ctxt n) end
-    | _ => terminates_intros ctxt n st
-end
+method_setup terminates_setup = \<open>
+  let
+    fun tac ctxt goal_t =
+        case Logic.strip_assums_concl goal_t of
+             @{term_pat "Trueprop (_ \<turnstile> Call ?f_'proc \<down> _)"} =>
+               let
+                 val f = dest_Const f_'proc |> fst |> Long_Name.base_name |> unsuffix "_'proc";
+                 val impl = Proof_Context.get_thm ctxt (f ^ "_impl");
+                 val body = Proof_Context.get_thm ctxt (f ^ "_body_def");
+               in
+                 EVERY [
+                   resolve_tac ctxt @{thms terminates.Call} 1,
+                   resolve_tac ctxt [impl] 1,
+                   simp_tac (ctxt addsimps (body :: @{thms return_C_def lvar_nondet_init_def})) 1
+                 ]
+               end
+  in
+    Scan.succeed (fn ctxt => Method.SIMPLE_METHOD (SUBGOAL (tac ctxt o #1) 1))
+  end
 \<close>
+
+method terminates_trivial declares terminates_trivial =
+  (terminates_setup; intro terminates_trivial)
 
 lemma [terminates_trivial]:
   "\<lbrakk> \<And>s. \<Gamma> \<turnstile> c \<down> Normal s \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> Guard F G c \<down> Normal s"
@@ -764,5 +805,250 @@ lemmas [terminates_trivial] =
   terminates.Skip
   terminates.Spec
 
+section \<open>Additional infrastructure\<close>
+
+(* FIXME: Needs reorganisation. Much of the following should be moved elsewhere. *)
+
+context kernel begin
+
+lemma wpc_helper_corres_final:
+  "corres_underlying sr nf nf' rv Q Q' f f'
+   \<Longrightarrow> wpc_helper (P, P') (Q, {s. Q' s}) (corres_underlying sr nf nf' rv P (\<lambda>s. s \<in> P') f f')"
+  apply (clarsimp simp: wpc_helper_def)
+  apply (erule corres_guard_imp)
+   apply auto
+  done
+
+wpc_setup "\<lambda>m. corres_underlying sr nf nf' rv P P' m f'" wpc_helper_corres_final
+wpc_setup "\<lambda>m. corres_underlying sr nf nf' rv P P' (m >>= f) f'" wpc_helper_corres_final
+
+lemma condition_const: "condition (\<lambda>_. P) L R = (if P then L else R)"
+  by (simp add: condition_def split: if_splits)
+
+definition
+  errglobals :: "globals \<Rightarrow> errtype"
+where
+  "errglobals s \<equiv> \<lparr> errfault = seL4_Fault_lift (current_fault_' s),
+                    errlookup_fault = lookup_fault_lift (current_lookup_fault_' s),
+                    errsyscall = current_syscall_error_' s \<rparr>"
+
+lemma errstate_errglobals:
+  "errstate s' = errglobals (globals s')"
+  by (auto simp: errstate_def errglobals_def)
+
+lemma errglobals_simps [simp]:
+  "errfault (errglobals s) = seL4_Fault_lift (current_fault_' s)"
+  "errlookup_fault (errglobals s) = lookup_fault_lift (current_lookup_fault_' s)"
+  "errsyscall (errglobals s) = current_syscall_error_' s"
+  by (auto simp: errglobals_def)
+
+definition
+  "lift_rv ef vf elf R E \<equiv>
+    \<lambda>r (r',e'). (case r of Inl e \<Rightarrow> ef r' \<noteq> scast EXCEPTION_NONE \<and> E e (ef r') (elf e')
+                         | Inr v \<Rightarrow> ef r' = scast EXCEPTION_NONE \<and> R v (vf r'))"
+
+(* FIXME: provide a way to use this rule (and derived versions below) in ac_init. *)
+lemma corres_to_ccorres_rv_spec_liftxf:
+  assumes ac: "ac_corres globals check_term \<Gamma> ret_xf G (liftE ac) c"
+  assumes cu:
+    "corres_underlying
+      {(s,s'). cstate_relation s s'} True True (lift_rv ef vf elf R' E)
+      P Q a (do r' \<leftarrow> ac; e' \<leftarrow> gets exf; return (r',e') od)"
+  assumes "\<And>s'. esf (errstate s') = elf (exf (globals s'))"
+  assumes "\<And>e f e'. E' e f e' = E e f (esf e')"
+  assumes "\<And>s s'. cstate_relation s (globals s') \<Longrightarrow> P' s \<and> s' \<in> Q' \<Longrightarrow> P s \<and> Q (globals s')"
+  assumes "\<And>s s'. cstate_relation s (globals s') \<Longrightarrow> P' s \<and> s' \<in> Q' \<Longrightarrow> G s'"
+  shows "ccorres (E' \<currency> R') (liftxf errstate ef vf ret_xf) P' Q' [] a c"
+  apply (rule corres_to_ccorres_extra_globals_rv_spec[OF _ _ corres_rel_imp, OF rf_sr_def ac cu])
+  apply (all \<open>clarsimp simp: assms(5-6) liftxf_def\<close>)
+  apply (clarsimp simp: lift_rv_def liftxf_def assms(3-4) split: sum.splits)
+  done
+
+lemmas corres_to_ccorres_rv_spec_errglobals =
+  corres_to_ccorres_rv_spec_liftxf
+    [where elf="\<lambda>e. e" and esf="\<lambda>e. e" and E=E' for E', OF _ _ errstate_errglobals]
+
+lemmas corres_to_ccorres_rv_spec_current_fault =
+  corres_to_ccorres_rv_spec_liftxf
+    [where elf=seL4_Fault_lift and esf=errfault, OF _ _ errfault_errstate]
+
+lemmas corres_to_ccorres_rv_spec_current_lookup_fault =
+  corres_to_ccorres_rv_spec_liftxf
+    [where elf=lookup_fault_lift and esf=errlookup_fault, OF _ _ errlookup_fault_errstate]
+
+lemmas corres_to_ccorres_rv_spec_current_syscall_error =
+  corres_to_ccorres_rv_spec_liftxf
+    [where elf="\<lambda>e. e" and esf=errsyscall, OF _ _ errsyscall_errstate]
+
+lemma lift_rv_returnOk:
+  assumes "ef r = scast EXCEPTION_NONE"
+  assumes "R rv (vf r)"
+  shows "corres_underlying
+           {(x, y). cstate_relation x y} True True (lift_rv ef vf elf R E) \<top> \<top>
+           (returnOk rv)
+           (do e' \<leftarrow> gets exf; return (r, e') od)"
+  apply (clarsimp simp: corres_underlying_def snd_bind snd_modify snd_gets in_monad)
+  apply (rule bexI[of _ "(Inr rv, s)" for s]; simp add: in_monad lift_rv_def assms)
+  done
+
+lemma lift_rv_throwError':
+  assumes "\<And>s s'. cstate_relation s s' \<longrightarrow> cstate_relation s (esu s')"
+  assumes "ef r \<noteq> scast EXCEPTION_NONE"
+  assumes "\<And>err'. E err (ef r) (elf (exf (esu err')))"
+  shows "corres_underlying
+           {(x, y). cstate_relation x y} True True (lift_rv ef vf elf R E) \<top> \<top>
+           (throwError err)
+           (do _ \<leftarrow> modify esu; e' \<leftarrow> gets exf; return (r, e') od)"
+  apply (clarsimp simp: corres_underlying_def snd_bind snd_modify snd_gets in_monad)
+  apply (rule bexI[of _ "(Inl err, s)" for s]; simp add: in_monad lift_rv_def assms)
+  done
+
+lemma cstate_relation_errglobals_updates:
+  "cstate_relation s s' \<longrightarrow> cstate_relation s (current_fault_'_update f s')"
+  "cstate_relation s s' \<longrightarrow> cstate_relation s (current_lookup_fault_'_update lf s')"
+  "cstate_relation s s' \<longrightarrow> cstate_relation s (current_syscall_error_'_update sce s')"
+  by (auto simp: cstate_relation_def carch_state_relation_def cmachine_state_relation_def)
+
+lemmas lift_rv_throwError =
+  cstate_relation_errglobals_updates[THEN lift_rv_throwError']
+
+lemma valid_spec_to_wp:
+  assumes "\<And>\<sigma>. \<lbrace> \<lambda>s. s = \<sigma> \<and> P s \<rbrace> f \<lbrace> \<lambda>r s. s = \<sigma> \<and> R r s \<rbrace>"
+  shows "\<lbrace> \<lambda>s. P s \<and> (\<forall>r. R r s \<longrightarrow> Q r s) \<rbrace> f \<lbrace> Q \<rbrace>"
+  using assms by (fastforce simp: valid_def)
+
+lemmas valid_spec_to_wp' = valid_spec_to_wp[where P=\<top>, simplified]
+
+lemma spec_result_Normal:
+  fixes \<Gamma>
+  assumes p_spec: "\<forall>s. \<Gamma>,{} \<turnstile> {s'. s = s' \<and> P s s'} p (Q s)"
+  shows "\<forall>s t. P s s \<longrightarrow> \<Gamma> \<turnstile> \<langle>p, Normal s\<rangle> \<Rightarrow> t \<longrightarrow> t \<in> range Normal"
+  by (rule all_forward[OF p_spec], drule hoare_sound)
+     (auto simp: cvalid_def HoarePartialDef.valid_def image_def)
+
+lemma terminates_spec_no_fail:
+  fixes \<Gamma>
+  assumes ac: "ac \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl check_termination \<Gamma> f_'proc)"
+  assumes p_spec: "\<forall>s. \<Gamma>,{} \<turnstile> {s'. s = s' \<and> P s s'} (Call f_'proc) (Q s)"
+  assumes terminates: "\<forall>s. P s s \<longrightarrow> \<Gamma> \<turnstile> Call f_'proc \<down> Normal s"
+  assumes nf_pre: "\<And>s. N (globals s) \<Longrightarrow> arg_rel s \<Longrightarrow> P s s"
+  shows "no_fail N ac"
+  proof -
+    have normal: "\<forall>s t. P s s \<longrightarrow> \<Gamma> \<turnstile> \<langle>Call f_'proc, Normal s\<rangle> \<Rightarrow> t \<longrightarrow> t \<in> range Normal"
+      using spec_result_Normal p_spec by simp
+    have L1_call_simpl_no_fail:
+      "no_fail (\<lambda>s. P s s) (L1_call_simpl check_termination \<Gamma> f_'proc)"
+      apply (wpsimp simp: L1_call_simpl_def wp: non_fail_select select_wp)
+      using terminates normal by auto
+    have select_f_L1_call_simpl_no_fail:
+      "\<And>s. no_fail (\<lambda>_. P s s) (select_f (L1_call_simpl check_termination \<Gamma> f_'proc s))"
+      using L1_call_simpl_no_fail[unfolded no_fail_def]
+      by wpsimp
+    have select_f_L1_call_simpl_rv:
+      "\<And>s. \<lbrace>\<lambda>_. P s s\<rbrace> select_f (L1_call_simpl check_termination \<Gamma> f_'proc s) \<lbrace>\<lambda>r s. fst r = Inr ()\<rbrace>"
+      apply (wp, clarsimp simp: L1_call_simpl_def in_monad in_select split: xstate.splits)
+      apply (match premises in "s \<noteq> Stuck" for s \<Rightarrow> \<open>cases s\<close>)
+      using normal by auto
+    show ?thesis
+      apply (clarsimp simp: ac AC_call_L1_def L2_call_L1_def)
+      apply (wpsimp wp: select_f_L1_call_simpl_no_fail non_fail_select
+                wp_del: select_f_wp)
+      apply (rule hoare_strengthen_post[OF select_f_L1_call_simpl_rv], fastforce)
+      apply (wpsimp wp: select_wp nf_pre)+
+      done
+  qed
+
+lemmas terminates_spec_no_fail' =
+  terminates_spec_no_fail[where P="\<top>\<top>", simplified]
+
+lemma valid_spec_to_corres_symb_exec_r:
+  assumes spec': "\<And>\<sigma>. \<lbrace> \<lambda>s. s = \<sigma> \<and> P' s \<rbrace> f \<lbrace> \<lambda>r s. s = \<sigma> \<and> Q' r s \<rbrace>"
+  assumes nf: "nf' \<Longrightarrow> no_fail N' f"
+  assumes corres_rv: "\<And>rv'. corres_underlying sr nf nf' r P (R' rv') a (c rv')"
+  shows "corres_underlying sr nf nf' r P (\<lambda>s. N' s \<and> P' s \<and> (\<forall>r. Q' r s \<longrightarrow> R' r s)) a (f >>= c)"
+  by (rule corres_symb_exec_r[OF corres_rv])
+     (wpsimp wp: valid_spec_to_wp[OF spec'] nf)+
+
+lemma valid_spec_to_corres_gen_symb_exec_r:
+  assumes spec': "\<And>\<sigma>. \<lbrace> \<lambda>s. s = \<sigma> \<and> P' s \<rbrace> f \<lbrace> \<lambda>r s. s = \<sigma> \<and> Q' r \<rbrace>"
+  assumes nf: "nf' \<Longrightarrow> no_fail N' f"
+  assumes corres_rv: "\<And>rv'. Q' rv' \<Longrightarrow> corres_underlying sr nf nf' r P (R' rv') a (c rv')"
+  shows "corres_underlying sr nf nf' r P (\<lambda>s. N' s \<and> P' s \<and> (\<forall>r. Q' r \<longrightarrow> R' r s)) a (f >>= c)"
+  by (rule corres_symb_exec_r, rule_tac F="Q' rv" in corres_gen_asm2, erule corres_rv)
+     (wpsimp wp: valid_spec_to_wp[OF spec'] nf)+
+
+lemmas valid_spec_to_corres_symb_exec_r' =
+  valid_spec_to_corres_symb_exec_r[where P'=\<top>, simplified]
+
+lemmas valid_spec_to_corres_gen_symb_exec_r' =
+  valid_spec_to_corres_gen_symb_exec_r[where P'=\<top>, simplified]
+
+abbreviation
+  "gslift (s :: globals) \<equiv> clift (t_hrs_' s)"
+
+abbreviation
+  "c_h_t_g_valid" :: "globals \<Rightarrow> 'a::c_type ptr \<Rightarrow> bool"  ("_ \<Turnstile>\<^sub>g _" [99,99] 100)
+where
+  "s \<Turnstile>\<^sub>g p == hrs_htd (t_hrs_' s),c_guard \<Turnstile>\<^sub>t p"
+
+(* Mirrors ccorres_symb_exec_l, to get access to what's known about the abstract return value
+   in the concrete precondition. Not sure if this is necessary, or even a good idea. *)
+lemma corres_symb_exec_l'':
+  assumes corres: "\<And>rv. corres_underlying sr nf nf' r (R rv) (R' rv) (x rv) y"
+  assumes no_upd: "\<And>s. P s \<Longrightarrow> \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>"
+  assumes result: "\<lbrace>Q\<rbrace> m \<lbrace>R\<rbrace>"
+  assumes nofail: "\<not> nf \<longrightarrow> no_fail P m"
+  assumes mtfail: "empty_fail m"
+  shows "corres_underlying sr nf nf' r
+                           (P and Q) (\<lambda>s'. \<forall>rv s. (s,s') \<in> sr \<and> R rv s \<longrightarrow> R' rv s')
+                           (m >>= (\<lambda>rv. x rv)) y"
+  using corres unfolding corres_underlying_def
+  apply (clarsimp; rename_tac s s')
+  apply (subgoal_tac "\<not> snd (m s)")
+   prefer 2
+   using nofail
+   apply (cases nf; clarsimp simp: no_fail_def elim!: not_snd_bindI1)
+  apply (erule empty_fail_not_snd [OF _ mtfail, THEN exE]; clarsimp; rename_tac rv t)
+  apply (subgoal_tac "t = s")
+   prefer 2
+   apply (frule use_valid, rule no_upd, simp+)
+  apply clarsimp
+  apply (drule_tac x=rv in spec, drule_tac x=rv in meta_spec, drule (1) bspec, simp)
+  apply (frule use_valid, rule result, assumption)
+  apply (drule mp, rule_tac x=s in exI, simp_all)
+  apply (subgoal_tac "nf \<longrightarrow> \<not> snd (x rv s)")
+   prefer 2
+   apply (cases nf; clarsimp simp: no_fail_def elim!: not_snd_bindI2)
+  apply (clarsimp; rename_tac fv' t')
+  apply (drule (1) bspec; clarsimp; rename_tac fv t)
+  apply (rule_tac x="(fv,t)" in bexI; clarsimp simp: bind_def)
+  apply (rule bexI[rotated], assumption, simp)
+  done
+
+lemma corres_stateAssert_l:
+  assumes "corres_underlying sr nf nf' r P P' (a ()) c"
+  shows "corres_underlying sr nf nf' r
+                           (\<lambda>s. (\<not> nf \<longrightarrow> Q s) \<and> (Q s \<longrightarrow> P s)) P'
+                           (stateAssert Q bs >>= a) c"
+  apply (rule corres_guard_imp[OF corres_symb_exec_l''[where P="\<lambda>s. nf \<or> Q s"]])
+        using assms apply simp
+       apply (wpsimp simp: stateAssert_def)+
+  done
+
+lemma corres_guard_r:
+  assumes "corres_underlying sr nf nf' r P P' a (c ())"
+  shows "corres_underlying sr nf nf' r P (\<lambda>s. (nf' \<longrightarrow> f s) \<and> (f s \<longrightarrow> P' s))
+                           a (guard f >>= c)"
+  apply (rule corres_guard_imp[OF corres_symb_exec_r'[where R'="\<lambda>s. nf' \<longrightarrow> f s"]])
+       using assms apply simp
+      apply wpsimp+
+  done
+
+lemma corres_cross_over_guard:
+  assumes "corres_underlying sr nf nf' r P P' a c"
+  shows "corres_underlying sr nf nf' r (P and Q) (\<lambda>s'. \<forall>s. (s,s') \<in> sr \<and> Q s \<longrightarrow> P' s') a c"
+  by (rule stronger_corres_guard_imp[OF assms]) auto
+
+end
 
 end
