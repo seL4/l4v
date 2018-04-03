@@ -1297,6 +1297,10 @@ lemma never_continues_creturn [C_simp_throws]:
   "never_continues \<Gamma> (creturn rtu xfu v)"
   by (auto simp: never_continues_def creturn_def elim: exec_elim_cases)
 
+lemma never_continues_creturn_void [C_simp_throws]:
+  "never_continues \<Gamma> (creturn_void rtu)"
+  by (auto simp: never_continues_def creturn_void_def elim: exec_elim_cases)
+
 lemma
   "ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H
       (c1 ;; (c2 ;; c3 ;; (creturn rtu xfu v ;; c4 ;; c5) ;; c6 ;; c7))"
