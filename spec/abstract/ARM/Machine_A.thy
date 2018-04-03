@@ -31,13 +31,22 @@ text {*
 *}
 type_synonym obj_ref            = machine_word
 type_synonym vspace_ref         = machine_word
-type_synonym data_offset        = "12 word"
 
 type_synonym data               = machine_word
 type_synonym cap_ref            = "bool list"
 type_synonym length_type        = machine_word
-type_synonym asid_pool_index    = "10 word"
-type_synonym asid_index         = "7 word" (* FIXME: better name? *)
+
+type_synonym asid_low_len       = 10
+type_synonym asid_low_index    = "asid_low_len word"
+
+type_synonym asid_high_len      = 7
+type_synonym asid_high_index    = "asid_high_len word"
+
+(* It might be nice if asid was "17 word", but Refine is easier if it is a machine_word.  *)
+(* Making asid a machine_word means that we need invariants that the extra bits are zero. *)
+type_synonym asid_len           = 17
+type_synonym asid_rep_len       = machine_word_len
+type_synonym asid               = "asid_rep_len word"
 
 text {* With the definitions above, most conversions between abstract
 type names boil down to just the identity function, some convert from
@@ -76,10 +85,6 @@ definition
   "data_to_cptr \<equiv> to_bl"
 
 definition
-  data_offset_to_nat :: "data_offset \<Rightarrow> nat" where
-  "data_offset_to_nat \<equiv> unat"
-
-definition
   combine_ntfn_badges :: "data \<Rightarrow> data \<Rightarrow> data" where
   "combine_ntfn_badges \<equiv> bitOR"
 
@@ -92,7 +97,6 @@ text {* These definitions will be unfolded automatically in proofs. *}
 lemmas data_convs [simp] =
   oref_to_data_def data_to_oref_def vref_to_data_def data_to_vref_def
   nat_to_len_def data_to_nat_def data_to_16_def data_to_cptr_def
-  data_offset_to_nat_def
 
 
 text {* The following definitions provide architecture-dependent sizes

@@ -31,16 +31,23 @@ section "Encodings"
 
 text {* The high bits of a virtual ASID. *}
 definition
-  asid_high_bits_of :: "asid \<Rightarrow> 3 word" where
+  asid_high_bits_of :: "asid \<Rightarrow> asid_high_index" where
   "asid_high_bits_of asid \<equiv> ucast (asid >> asid_low_bits)"
 
+text {* The low bits of a virtual ASID. *}
+definition
+  asid_low_bits_of :: "asid \<Rightarrow> asid_low_index" where
+  "asid_low_bits_of asid \<equiv> ucast asid"
+
+lemmas asid_bits_of_defs =
+  asid_high_bits_of_def asid_low_bits_of_def
 
 section "Kernel Heap Accessors"
 
 text {* Manipulate ASID pools, page directories and page tables in the kernel
 heap. *}
 definition
-  get_asid_pool :: "obj_ref \<Rightarrow> (asid_pool_index \<rightharpoonup> obj_ref,'z::state_ext) s_monad" where
+  get_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref, 'z::state_ext) s_monad" where
   "get_asid_pool ptr \<equiv> do
      kobj \<leftarrow> get_object ptr;
      (case kobj of ArchObj (ASIDPool pool) \<Rightarrow> return pool
@@ -48,7 +55,7 @@ definition
    od"
 
 definition
-  set_asid_pool :: "obj_ref \<Rightarrow> (asid_pool_index \<rightharpoonup> obj_ref) \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  set_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref) \<Rightarrow> (unit, 'z::state_ext) s_monad" where
  "set_asid_pool ptr pool \<equiv> do
     v \<leftarrow> get_object ptr;
     assert (case v of ArchObj (arch_kernel_obj.ASIDPool p) \<Rightarrow> True | _ \<Rightarrow> False);

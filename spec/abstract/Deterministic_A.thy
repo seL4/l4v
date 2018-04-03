@@ -505,16 +505,15 @@ definition next_revoke_cap where
 "next_revoke_cap \<equiv> (\<lambda>slot ext. the (next_child slot (cdt_list ext)))"
 
 definition
-  free_asid_select :: "(asid_index \<rightharpoonup> machine_word) \<Rightarrow> asid_index"
+  free_asid_select :: "(asid_high_index \<rightharpoonup> 'a) \<Rightarrow> asid_high_index"
 where
-  "free_asid_select \<equiv> (\<lambda>asid_table.
-     fst (hd ((filter (\<lambda> (x,y). x \<le> 2 ^ asid_high_bits - 1 \<and> y = None) (assocs asid_table)))))"
+  "free_asid_select \<equiv> \<lambda>asid_table. fst (hd (filter (\<lambda>(x,y). x \<le> 2 ^ asid_high_bits - 1 \<and> y = None) (assocs asid_table)))"
 
 definition
-  free_asid_pool_select :: "(asid_pool_index \<rightharpoonup> machine_word) \<Rightarrow> machine_word \<Rightarrow> asid_pool_index"
+  free_asid_pool_select :: "(asid_low_index \<rightharpoonup> 'a) \<Rightarrow> asid \<Rightarrow> asid_low_index"
 where
   "free_asid_pool_select \<equiv> (\<lambda>pool base.
-     fst (hd ((filter (\<lambda> (x,y). x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + base \<noteq> 0 \<and> y = None) (assocs pool)))))"
+     fst (hd ((filter (\<lambda> (x,y). ucast x + base \<noteq> 0 \<and> y = None) (assocs pool)))))"
 
 definition update_work_units where
   "update_work_units \<equiv>

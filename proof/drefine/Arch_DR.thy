@@ -647,7 +647,7 @@ proof (induct x)
             apply (elim conjE)
             apply (rule le_p2_minus_1)
             apply (rule unat_le_helper)
-            apply simp
+            apply (simp add: p2_low_bits_max)
            apply (rule corres_returnOk[where P=\<top> and P'="\<lambda>rv. is_aligned asid asid_low_bits"])
            apply (clarsimp simp:arch_invocation_relation_def translate_arch_invocation_def
                                 transform_asid_def asid_high_bits_of_def cap_object_simps

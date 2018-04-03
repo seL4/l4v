@@ -12,10 +12,12 @@ theory DetSchedSchedule_AI
 imports "$L4V_ARCH/ArchDetSchedDomainTime_AI"
 begin
 
+crunch ct_not_in_q[wp]: do_machine_op "ct_not_in_q"
+
 lemma set_tcb_queue_wp[wp]: "\<lbrace>\<lambda>s. P (ready_queues_update (\<lambda>_ t' p. if t' = t \<and> p = prio then queue else ready_queues s t' p) s)\<rbrace> set_tcb_queue t prio queue \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: set_tcb_queue_def)
   apply wp
-done
+  done
 
 lemma get_tcb_queue_wp[wp]: "\<lbrace>\<lambda>s. P (ready_queues s t p) s\<rbrace> get_tcb_queue t p \<lbrace>P\<rbrace>"
   apply (simp add: get_tcb_queue_def)

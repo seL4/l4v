@@ -75,7 +75,7 @@ definition
 definition
   "store_asid_pool_entry pool_ptr asid pml4base \<equiv> do
     pool \<leftarrow> get_asid_pool pool_ptr;
-    pool' \<leftarrow> return (pool(ucast asid := pml4base));
+    pool' \<leftarrow> return (pool(asid_low_bits_of asid := pml4base));
     set_asid_pool pool_ptr pool'
   od"
 
@@ -91,7 +91,7 @@ perform_asid_control_invocation :: "asid_control_invocation \<Rightarrow> (unit,
     set_cap (max_free_index_update pcap) parent;
     retype_region frame 1 0 (ArchObject ASIDPoolObj) False;
     cap_insert (ArchObjectCap $ ASIDPoolCap frame base) parent slot;
-    assert (base && mask asid_low_bits = 0);
+    assert (asid_low_bits_of base = 0);
     asid_table \<leftarrow> gets (x64_asid_table \<circ> arch_state);
     asid_table' \<leftarrow> return (asid_table (asid_high_bits_of base \<mapsto> frame));
     modify (\<lambda>s. s \<lparr>arch_state := (arch_state s) \<lparr>x64_asid_table := asid_table'\<rparr>\<rparr>)

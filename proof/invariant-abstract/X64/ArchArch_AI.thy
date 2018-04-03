@@ -21,7 +21,7 @@ definition
   slot \<noteq> parent \<and>
   cte_wp_at (\<lambda>cap. \<exists>idx. cap = UntypedCap False frame pageBits idx) parent s \<and>
   descendants_of parent (cdt s) = {} \<and>
-  is_aligned base asid_low_bits \<and> base \<le> 2^asid_bits - 1 \<and>
+  is_aligned base asid_low_bits \<and> asid_wf base \<and>
   x64_asid_table (arch_state s) (asid_high_bits_of base) = None"
 
 definition
@@ -92,7 +92,7 @@ lemma p2_low_bits_max:
 
 
 lemma dom_ucast_eq:
-  "(- dom (\<lambda>a::9 word. p (ucast a::machine_word)) \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + y \<noteq> 0} = {}) =
+  "(- dom (\<lambda>a::9 word. p (ucast a::machine_word)) \<inter> {x. ucast x + y \<noteq> 0} = {}) =
    (- dom p \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> x + y \<noteq> 0} = {})"
   apply safe
    apply clarsimp
@@ -131,7 +131,7 @@ lemma asid_high_bits_max_word:
 
 
 lemma dom_ucast_eq_8:
-  "(- dom (\<lambda>a::3 word. p (ucast a::machine_word)) \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} = {}) =
+  "(- dom (\<lambda>a::3 word. p (ucast a::machine_word)) = {}) =
    (- dom p \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} = {})"
   apply safe
    apply clarsimp
@@ -158,7 +158,7 @@ lemma dom_ucast_eq_8:
 
 
 lemma ucast_fst_hd_assocs:
-  "- dom (\<lambda>x. pool (ucast (x::9 word)::machine_word)) \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + (w::machine_word) \<noteq> 0} \<noteq> {}
+  "- dom (\<lambda>x. pool (ucast (x::9 word)::machine_word)) \<inter> {x. ucast x + (w::machine_word) \<noteq> 0} \<noteq> {}
   \<Longrightarrow>
   fst (hd [(x, y)\<leftarrow>assocs pool . x \<le> 2 ^ asid_low_bits - 1 \<and> x + w \<noteq> 0 \<and> y = None]) =
   ucast (fst (hd [(x, y)\<leftarrow>assocs (\<lambda>a::9 word. pool (ucast a)) .
@@ -1133,8 +1133,8 @@ lemma create_mapping_entries_parent_for_refs:
 
 lemma find_vspace_for_asid_ref_offset_voodoo:
   "\<lbrace>pspace_aligned and valid_vspace_objs and
-         K (ref = [VSRef (asid && mask asid_low_bits) (Some AASIDPool),
-                  VSRef (ucast (asid_high_bits_of asid)) None])\<rbrace>
+         K (ref = [VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
+                   VSRef (ucast (asid_high_bits_of asid)) None])\<rbrace>
       find_vspace_for_asid asid
    \<lbrace>\<lambda>rv. (ref \<rhd> (rv + (get_pml4_index v  << word_size_bits) && ~~ mask pml4_bits))\<rbrace>,-"
   apply (rule hoare_gen_asmE)
@@ -1373,12 +1373,13 @@ lemma decode_page_invocation_wf[wp]:
                              linorder_not_le aligned_sum_less_kernel_base
                   dest!: diminished_pm_capD)
    apply (clarsimp simp: cap_rights_update_def acap_rights_update_def
-                      split: cap.splits arch_cap.splits)
+                  split: cap.splits arch_cap.splits)
    apply (auto,
               auto simp: cte_wp_at_caps_of_state invs_def valid_state_def
                          valid_cap_simps is_arch_update_def
                          is_arch_cap_def cap_master_cap_simps
                          vs_cap_ref_def cap_aligned_def bit_simps data_at_def
+                         vmsz_aligned_def
                   split: vmpage_size.split if_splits,
               (fastforce intro: diminished_pm_self)+)[1]
   apply (cases "invocation_type label = ArchInvocationLabel X64PageRemap")
@@ -1391,7 +1392,7 @@ lemma decode_page_invocation_wf[wp]:
                 | simp add: valid_arch_inv_def valid_page_inv_def
                 | (simp add: cte_wp_at_caps_of_state,
                    wp create_mapping_entries_same_refs_ex hoare_vcg_ex_lift_R))+)[1]
-   apply (clarsimp simp: valid_cap_def cap_aligned_def neq_Nil_conv)
+   apply (clarsimp simp: valid_cap_simps cap_aligned_def neq_Nil_conv)
    apply (frule diminished_cte_wp_at_valid_cap[where p="(a, b)" for a b], clarsimp)
    apply (clarsimp simp: cte_wp_at_caps_of_state mask_cap_def
                          diminished_def[where cap="ArchObjectCap (PageCap d x y t z w)" for d x y t z w])
@@ -1411,9 +1412,8 @@ lemma decode_page_invocation_wf[wp]:
    apply (thin_tac "Ball S P" for S P)
    apply (rule conjI)
     apply (clarsimp split: option.split)
-    apply (clarsimp simp: valid_cap_def cap_aligned_def)
+    apply (clarsimp simp: valid_cap_simps cap_aligned_def)
     apply (simp add: valid_unmap_def)
-    apply (fastforce simp: vmsz_aligned_def)
    apply (erule cte_wp_at_weakenE)
    apply (clarsimp simp: is_arch_diminished_def is_cap_simps)
   apply (cases "invocation_type label = ArchInvocationLabel X64PageGetAddress";
@@ -1449,7 +1449,7 @@ lemma decode_page_table_invocation_wf[wp]:
                            is_arch_update_def cap_master_cap_def is_cap_simps)
   apply (rule conjI)
    apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce,
-             clarsimp simp: valid_cap_def cap_aligned_def order_le_less_trans[OF word_and_le2])
+          clarsimp simp: valid_cap_simps cap_aligned_def order_le_less_trans[OF word_and_le2])
    apply (fastforce intro!: is_aligned_andI2 simp: bit_simps is_aligned_mask)
   apply (frule empty_table_pt_capI; clarsimp)
   apply (clarsimp simp: vspace_at_asid_def; drule (2) vs_lookup_invs_ref_is_unique; clarsimp)
@@ -1521,7 +1521,7 @@ lemma decode_pdpt_invocation_wf[wp]:
                          is_arch_update_def cap_master_cap_def is_cap_simps)
   apply (rule conjI)
    apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce,
-               clarsimp simp: valid_cap_def cap_aligned_def order_le_less_trans[OF word_and_le2])
+          clarsimp simp: valid_cap_simps cap_aligned_def order_le_less_trans[OF word_and_le2])
    apply (fastforce intro!: is_aligned_andI2 simp: bit_simps is_aligned_mask)
   apply (frule valid_table_caps_pdptD; clarsimp)
   apply (clarsimp simp: vspace_at_asid_def; drule (2) vs_lookup_invs_ref_is_unique; clarsimp)
@@ -1530,6 +1530,23 @@ lemma decode_pdpt_invocation_wf[wp]:
   apply (rule context_conjI, fastforce simp: get_pml4_index_def bit_simps, simp)
   apply (clarsimp simp: kernel_vsrefs_kernel_mapping_slots' and_not_mask_pml4_not_kernel_mapping_slots)
   done
+
+lemma asid_wf_low_add:
+  fixes b :: asid_low_index
+  shows "asid_wf a \<Longrightarrow> is_aligned a asid_low_bits \<Longrightarrow> asid_wf (ucast b + a)"
+  apply (clarsimp simp: asid_wf_def field_simps)
+  apply (erule is_aligned_add_less_t2n)
+    apply (simp add: asid_low_bits_def)
+    apply (rule ucast_less[where 'b=asid_low_len, simplified], simp)
+   by (auto simp: asid_bits_defs)
+
+lemma asid_wf_high:
+  fixes a :: asid_high_index
+  shows "asid_wf (ucast a << asid_low_bits)"
+  apply (clarsimp simp: asid_wf_def)
+  apply (rule shiftl_less_t2n)
+    apply (rule order_less_le_trans, rule ucast_less, simp)
+   by (auto simp: asid_bits_defs)
 
 lemma cte_wp_at_eq_simp:
   "cte_wp_at (op = cap) = cte_wp_at (\<lambda>c. c = cap)"
@@ -1593,9 +1610,8 @@ lemma arch_decode_inv_wf[wp]:
           apply (clarsimp simp: valid_cap_def)
           apply (rule conjI)
            apply (clarsimp simp: obj_at_def)
-           apply (subgoal_tac "ucast (ucast xa + word2) = xa")
+          apply (subgoal_tac "asid_low_bits_of (ucast xa + word2) = xa")
             apply simp
-           apply (simp add: p2_low_bits_max)
            apply (simp add: is_aligned_nth)
            apply (subst word_plus_and_or_coroll)
             apply (rule word_eqI)
@@ -1603,24 +1619,16 @@ lemma arch_decode_inv_wf[wp]:
             apply (drule test_bit_size)
             apply (simp add: word_size asid_low_bits_def)
            apply (rule word_eqI)
-           apply (clarsimp simp: word_size word_bits_def nth_ucast)
-           apply (auto simp: asid_low_bits_def)[1]
+          apply (clarsimp simp: asid_bits_of_defs asid_bits_defs word_size word_bits_def nth_ucast)
           apply (rule conjI)
            apply (clarsimp simp add: cte_wp_at_caps_of_state)
            apply (rename_tac c c')
            apply (frule_tac cap=c' in caps_of_state_valid, assumption)
            apply (drule (1) diminished_is_update)
            apply (clarsimp simp: is_pml4_cap_def cap_rights_update_def acap_rights_update_def)
-          apply (clarsimp simp: word_neq_0_conv)
-          apply (rule conjI)
-           apply (subst field_simps, erule is_aligned_add_less_t2n)
-             apply (simp add: asid_low_bits_def)
-             apply (rule ucast_less[where 'b=9, simplified], simp)
-            apply (simp add: asid_low_bits_def asid_bits_def)
-           apply (simp add: asid_bits_def)
-          apply (drule vs_lookup_atI)
-          apply (subst asid_high_bits_of_add_ucast, assumption)
-          apply assumption
+         apply (clarsimp simp: word_neq_0_conv asid_high_bits_of_def asid_wf_low_add)
+         apply (drule vs_lookup_atI, erule_tac s="word2 >> asid_low_bits" in rsubst)
+         apply (simp add: asid_bits_defs aligned_shift[OF ucast_less[where 'b=9], simplified])
         (* ASIDControlCap \<rightarrow> X64ASIDControlMakePool *)
          apply (simp add: arch_decode_invocation_def Let_def split_def
                    cong: if_cong split del: if_split)
@@ -1635,7 +1643,7 @@ lemma arch_decode_inv_wf[wp]:
                          in hoare_post_imp_R)
                   apply (simp add: lookup_target_slot_def)
                   apply wp
-                 apply (clarsimp simp: cte_wp_at_def)
+                 apply (clarsimp simp: cte_wp_at_def asid_wf_high)
                  apply (rule conjI, clarsimp)
                  apply (rule shiftl_less_t2n)
                   apply (rule order_less_le_trans, rule ucast_less, simp)

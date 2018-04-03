@@ -3156,40 +3156,40 @@ where
    ArchObjectCap (ASIDPoolCap _ asid) \<Rightarrow>
      Some [VSRef (ucast (asid_high_bits_of asid)) None]
  | ArchObjectCap (PML4Cap _ (Some asid)) \<Rightarrow>
-     Some [VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+     Some [VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | ArchObjectCap (PDPointerTableCap _ (Some (asid, vptr))) \<Rightarrow>
      Some [VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | ArchObjectCap (PageDirectoryCap _ (Some (asid, vptr))) \<Rightarrow>
      Some [VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
            VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | ArchObjectCap (PageTableCap _ (Some (asid, vptr))) \<Rightarrow>
      Some [VSRef ((vptr >> 21) && mask 9) (Some APageDirectory),
            VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
            VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | ArchObjectCap (PageCap _ _ _ X64SmallPage _ (Some (asid, vptr))) \<Rightarrow>
      Some [VSRef ((vptr >> 12) && mask 9) (Some APageTable),
            VSRef ((vptr >> 21) && mask 9) (Some APageDirectory),
            VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
            VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | ArchObjectCap (PageCap _ _ _ X64LargePage _ (Some (asid, vptr))) \<Rightarrow>
      Some [VSRef ((vptr >> 21) && mask 9) (Some APageDirectory),
            VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
            VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | ArchObjectCap (PageCap _ _ _ X64HugePage _ (Some (asid, vptr))) \<Rightarrow>
      Some [VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
            VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | _ \<Rightarrow> None"
 

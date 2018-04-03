@@ -119,7 +119,7 @@ find_vspace_for_asid :: "asid \<Rightarrow> (obj_ref,'z::state_ext) lf_monad" wh
     pool \<leftarrow> (case pool_ptr of
                Some ptr \<Rightarrow> liftE $ get_asid_pool ptr
              | None \<Rightarrow> throwError InvalidRoot);
-    pml4 \<leftarrow> returnOk (pool (ucast asid));
+    pml4 \<leftarrow> returnOk (pool (asid_low_bits_of asid));
     (case pml4 of
           Some ptr \<Rightarrow> returnOk ptr
         | None \<Rightarrow> throwError InvalidRoot)
@@ -213,12 +213,12 @@ virtual ASID. *}
 definition
 invalidate_asid_entry :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "invalidate_asid_entry asid vspace \<equiv>
-  do_machine_op $ hwASIDInvalidate vspace asid"
+  do_machine_op $ hwASIDInvalidate vspace (ucast asid)"
 
 definition
 delete_asid_pool :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "delete_asid_pool base ptr \<equiv> do
-  assert (base && mask asid_low_bits = 0);
+  assert (asid_low_bits_of base = 0);
   asid_table \<leftarrow> gets (x64_asid_table \<circ> arch_state);
   when (asid_table (asid_high_bits_of base) = Some ptr) $ do
     pool \<leftarrow> get_asid_pool ptr;
@@ -242,9 +242,9 @@ delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_
     None \<Rightarrow> return ()
   | Some pool_ptr \<Rightarrow>  do
      pool \<leftarrow> get_asid_pool pool_ptr;
-     when (pool (ucast asid) = Some pml4) $ do
+     when (pool (asid_low_bits_of asid) = Some pml4) $ do
                 invalidate_asid_entry asid pml4;
-                pool' \<leftarrow> return (pool (ucast asid := None));
+                pool' \<leftarrow> return (pool (asid_low_bits_of asid := None));
                 set_asid_pool pool_ptr pool';
                 tcb \<leftarrow> gets cur_thread;
                 set_vm_root tcb
@@ -254,7 +254,7 @@ od"
 
 definition
   flush_all :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "flush_all vspace asid \<equiv> do_machine_op $ invalidateASID vspace asid "
+  "flush_all vspace asid \<equiv> do_machine_op $ invalidateASID vspace (ucast asid)"
 
 abbreviation
   flush_pdpt :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
@@ -274,7 +274,7 @@ flush_table :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightar
              pte \<leftarrow> return $ pt index;
              case pte of
                InvalidPTE \<Rightarrow> return ()
-             | _ \<Rightarrow> do_machine_op $ invalidateTranslationSingleASID (vptr + (ucast index << pageBits)) asid
+             | _ \<Rightarrow> do_machine_op $ invalidateTranslationSingleASID (vptr + (ucast index << pageBits)) (ucast asid)
            od)
 od"
 
@@ -371,7 +371,7 @@ unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightar
             unlessE (check_mapping_pptr pptr (VMPDPTE pdpte)) $ throwError InvalidRoot;
             liftE $ store_pdpte pdpt_slot InvalidPDPTE
           odE;
-    liftE $ do_machine_op $ invalidateTranslationSingleASID vptr asid
+    liftE $ do_machine_op $ invalidateTranslationSingleASID vptr (ucast asid)
 odE <catch> (K $ return ())"
 
 

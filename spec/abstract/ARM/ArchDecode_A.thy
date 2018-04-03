@@ -250,8 +250,7 @@ where
             whenE (pool_ptr = None) $ throwError $ FailedLookup False InvalidRoot;
             whenE (p \<noteq> the pool_ptr) $ throwError $ InvalidCapability 0;
             pool \<leftarrow> liftE $ get_asid_pool p;
-            free_set \<leftarrow> returnOk
-                   (- dom pool \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + base \<noteq> 0});
+            free_set \<leftarrow> returnOk (- dom pool \<inter> {x. ucast x + base \<noteq> 0});
             whenE (free_set = {}) $ throwError DeleteFirst;
             offset \<leftarrow> liftE $ select_ext (\<lambda>_. free_asid_pool_select pool base) free_set;
             returnOk $ InvokeASIDPool $ Assign (ucast offset + base) p pd_cap_slot

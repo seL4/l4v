@@ -179,7 +179,7 @@ Locating the page directory for a given ASID is necessary when updating or delet
 >     ASIDPool pool <- case poolPtr of
 >         Just ptr -> withoutFailure $ getObject ptr
 >         Nothing -> throw InvalidRoot
->     let pm = pool!(asid .&. mask asidLowBits)
+>     let pm = pool!(asidLowBitsOf asid)
 >     case pm of
 >         Just ptr -> do
 >             assert (ptr /= 0) "findVSpaceForASID: found null PD"
@@ -293,7 +293,7 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 
 > deleteASIDPool :: ASID -> PPtr ASIDPool -> Kernel ()
 > deleteASIDPool base ptr = do
->     assert (base .&. mask asidLowBits == 0)
+>     assert (asidLowBitsOf base == 0)
 >         "ASID pool's base must be aligned"
 >     asidTable <- gets (x64KSASIDTable . ksArchState)
 >     when (asidTable!(asidHighBitsOf base) == Just ptr) $ do
@@ -315,9 +315,9 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >         Nothing -> return ()
 >         Just poolPtr -> do
 >             ASIDPool pool <- getObject poolPtr
->             when (pool!(asid .&. mask asidLowBits) == Just pm) $ do
+>             when (pool!(asidLowBitsOf asid) == Just pm) $ do
 >                 invalidateASIDEntry asid pm
->                 let pool' = pool//[(asid .&. mask asidLowBits, Nothing)]
+>                 let pool' = pool//[(asidLowBitsOf asid, Nothing)]
 >                 setObject poolPtr $ ASIDPool pool'
 >                 tcb <- getCurThread
 >                 setVMRoot tcb
@@ -1240,7 +1240,7 @@ Checking virtual address for page size dependent alignment:
 >     placeNewObject frame (makeObject :: ASIDPool) 0
 >     let poolPtr = PPtr $ fromPPtr frame
 >     cteInsert (ArchObjectCap $ ASIDPoolCap poolPtr base) parent slot
->     assert (base .&. mask asidLowBits == 0)
+>     assert (asidLowBitsOf base == 0)
 >         "ASID pool's base must be aligned"
 >     asidTable <- gets (x64KSASIDTable . ksArchState)
 >     let asidTable' = asidTable//[(asidHighBitsOf base, Just poolPtr)]
@@ -1254,7 +1254,7 @@ Checking virtual address for page size dependent alignment:
 >     let ArchObjectCap cap = oldcap
 >     updateCap ctSlot (ArchObjectCap $ cap { capPML4MappedASID = Just asid })
 >     ASIDPool pool <- getObject poolPtr
->     let pool' = pool//[(asid .&. mask asidLowBits, Just $ capPML4BasePtr cap)]
+>     let pool' = pool//[(asidLowBitsOf asid, Just $ capPML4BasePtr cap)]
 >     setObject poolPtr $ ASIDPool pool'
 
 \subsection{Simulator Support}

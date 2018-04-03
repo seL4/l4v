@@ -990,7 +990,7 @@ shows
                   apply (rule corres_trivial)
                   apply simp
                  apply simp
-                apply (rule_tac F="- dom pool \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + word2 \<noteq> 0} \<noteq> {}" in corres_gen_asm)
+                apply (rule_tac F="- dom pool \<inter> {x. ucast x + word2 \<noteq> 0} \<noteq> {}" in corres_gen_asm)
                 apply (frule dom_hd_assocsD)
                 apply (simp add: select_ext_fap[simplified free_asid_pool_select_def]
                                  free_asid_pool_select_def)
