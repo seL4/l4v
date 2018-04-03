@@ -615,6 +615,10 @@ lemma obj_is_device_vui_eq[Untyped_AI_assms]:
   apply (auto simp: arch_is_frame_type_def)
   done
 
+lemma create_cap_ioports[wp, Untyped_AI_assms]:
+  "\<lbrace>valid_ioports and cte_wp_at (\<lambda>_. True) cref\<rbrace> create_cap tp sz p dev (cref,oref) \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  by wpsimp
+
 end
 
 global_interpretation Untyped_AI? : Untyped_AI

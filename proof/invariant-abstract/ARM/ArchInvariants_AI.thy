@@ -892,7 +892,15 @@ where
        (\<forall>(asid, hwasid, pd) \<in> graph_of (arm_asid_map (arch_state s)).
             vspace_at_asid asid pd s \<and> asid \<noteq> 0)"
 
+definition
+  valid_ioports :: "'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_ioports \<equiv> \<lambda>s. True"
 
+definition
+  "valid_arch_mdb r cs \<equiv> True"
+
+declare valid_ioports_def[simp] valid_arch_mdb_def[simp]
 
 section "Lemmas"
 
@@ -2394,6 +2402,13 @@ lemma arch_gen_obj_refs_simps[simp]:
 lemma same_aobject_same_arch_gen_refs:
   "same_aobject_as ac ac' \<Longrightarrow> arch_gen_obj_refs ac = arch_gen_obj_refs ac'"
   by (clarsimp simp: arch_gen_obj_refs_def split: arch_cap.split_asm)
+
+lemma valid_arch_mdb_eqI:
+  assumes "valid_arch_mdb (is_original_cap s) (caps_of_state s)"
+  assumes "caps_of_state s = caps_of_state s'"
+  assumes "is_original_cap s = is_original_cap s'"
+  shows "valid_arch_mdb (is original_cap s') (caps_of_state s')"
+  by (clarsimp simp: valid_arch_mdb_def)
 
 end
 

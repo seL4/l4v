@@ -1826,7 +1826,6 @@ lemma cteInsert_mdb_chain_0:
   cteInsert cap src dest
   \<lbrace>\<lambda>_ s. mdb_chain_0 (ctes_of s)\<rbrace>"
   apply (unfold cteInsert_def updateCap_def)
-  apply (fold revokable'_fold)
   apply (simp add: valid_mdb'_def split del: if_split)
   apply (wp updateMDB_ctes_of_no_0 getCTE_wp')
   apply (clarsimp simp: cte_wp_at_ctes_of simp del: fun_upd_apply)
@@ -1865,7 +1864,6 @@ lemma cteInsert_mdb_chunked:
   cteInsert cap src dest
   \<lbrace>\<lambda>_ s. mdb_chunked (ctes_of s)\<rbrace>"
   apply (unfold cteInsert_def updateCap_def)
-  apply (fold revokable'_fold)
   apply (simp add: valid_mdb'_def split del: if_split)
   apply (wp updateMDB_ctes_of_no_0 getCTE_wp')
   apply (clarsimp simp: cte_wp_at_ctes_of simp del: fun_upd_apply)
@@ -1904,7 +1902,6 @@ lemma cteInsert_untyped_mdb:
   \<lbrace>\<lambda>_ s. untyped_mdb' (ctes_of s)\<rbrace>"
   apply (unfold cteInsert_def updateCap_def)
   apply (simp add: valid_mdb'_def split del: if_split)
-  apply (fold revokable'_fold)
   apply (wp updateMDB_ctes_of_no_0 getCTE_wp')
   apply (clarsimp simp: cte_wp_at_ctes_of simp del: fun_upd_apply)
   apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setUntypedCapAsFull_ctes_of
@@ -2017,7 +2014,6 @@ lemma cteInsert_untyped_inc':
   \<lbrace>\<lambda>_ s. untyped_inc' (ctes_of s)\<rbrace>"
   apply (unfold cteInsert_def updateCap_def)
   apply (simp add: valid_mdb'_def split del: if_split)
-  apply (fold revokable'_fold)
   apply (wp updateMDB_ctes_of_no_0 getCTE_wp')
   apply (clarsimp simp: cte_wp_at_ctes_of simp del: fun_upd_apply)
   apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setUntypedCapAsFull_ctes_of
@@ -2115,7 +2111,6 @@ lemma cteInsert_irq_control:
   \<lbrace>\<lambda>_ s. irq_control (ctes_of s)\<rbrace>"
   apply (unfold cteInsert_def updateCap_def)
   apply (simp add: valid_mdb'_def split del: if_split)
-  apply (fold revokable'_fold)
   apply (wp updateMDB_ctes_of_no_0 getCTE_wp')
   apply (clarsimp simp: cte_wp_at_ctes_of simp del: fun_upd_apply)
   apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setUntypedCapAsFull_ctes_of
@@ -2290,7 +2285,6 @@ lemma cteInsert_no_0:
   apply clarsimp
   apply (unfold cteInsert_def updateCap_def)
   apply (simp add: valid_mdb'_def split del: if_split)
-  apply (fold revokable'_fold)
   apply (wp updateMDB_ctes_of_no_0 getCTE_wp')
       apply (clarsimp simp: cte_wp_at_ctes_of simp del: fun_upd_apply)
       apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setUntypedCapAsFull_ctes_of
@@ -2311,7 +2305,6 @@ lemma cteInsert_valid_dlist:
   apply clarsimp
   apply (unfold cteInsert_def updateCap_def)
   apply (simp add: valid_mdb'_def split del: if_split)
-  apply (fold revokable'_fold)
   apply (wp updateMDB_ctes_of_no_0 getCTE_wp')
       apply (clarsimp simp: cte_wp_at_ctes_of simp del: fun_upd_apply)
       apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setUntypedCapAsFull_ctes_of
@@ -2370,7 +2363,7 @@ lemma cteInsert_mdb' [wp]:
    (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s) \<rbrace>
   cteInsert cap src dest
   \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
-  apply (simp add:valid_mdb'_def valid_mdb_ctes_def revokable'_fold[symmetric])
+  apply (simp add:valid_mdb'_def valid_mdb_ctes_def)
   apply (rule_tac Q = "\<lambda>r s. valid_dlist (ctes_of s) \<and> irq_control (ctes_of s) \<and>
                no_0 (ctes_of s) \<and> mdb_chain_0 (ctes_of s) \<and>
                mdb_chunked (ctes_of s) \<and> untyped_mdb' (ctes_of s) \<and> untyped_inc' (ctes_of s) \<and>
@@ -2385,7 +2378,6 @@ lemma cteInsert_mdb' [wp]:
   apply (unfold cteInsert_def)
   apply (unfold cteInsert_def updateCap_def)
   apply (simp add: valid_mdb'_def split del: if_split)
-  apply (fold revokable'_fold)
   apply (wp updateMDB_ctes_of_no_0 getCTE_wp')
       apply (clarsimp simp: cte_wp_at_ctes_of simp del: fun_upd_apply)
       apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setUntypedCapAsFull_ctes_of
@@ -3737,6 +3729,15 @@ lemma untyped_derived_eq_ArchObjectCap:
   "untyped_derived_eq (capability.ArchObjectCap cap) = \<top>"
   by (rule ext, simp add: untyped_derived_eq_def isCap_simps)
 
+lemma arch_deriveCap_untyped_derived[wp]:
+  "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. untyped_derived_eq c' (cteCap cte)) slot s\<rbrace>
+     ARM_H.deriveCap slot (capCap c')
+   \<lbrace>\<lambda>rv s. cte_wp_at' (untyped_derived_eq rv o cteCap) slot s\<rbrace>, -"
+  apply (wpsimp simp: ARM_H.deriveCap_def Let_def untyped_derived_eq_ArchObjectCap split_del: if_split
+                  wp: undefined_validE_R)
+  apply(clarsimp simp: cte_wp_at_ctes_of isCap_simps untyped_derived_eq_def)
+  by (case_tac "capCap c'"; fastforce)
+
 lemma deriveCap_untyped_derived:
   "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. untyped_derived_eq c' (cteCap cte)) slot s\<rbrace>
   deriveCap slot c'
@@ -4917,7 +4918,7 @@ lemma maskedAsFull_revokable_safe_parent:
   "\<lbrakk>is_simple_cap' c'; safe_parent_for' m p c'; m p = Some cte;
     cteCap cte = (maskedAsFull src_cap' a)\<rbrakk>
    \<Longrightarrow> revokable' (maskedAsFull src_cap' a) c' = revokable' src_cap' c'"
-   apply (clarsimp simp:revokable'_def maskedAsFull_def split:if_splits)
+   apply (clarsimp simp:revokable'_def maskedAsFull_def split:if_splits capability.splits)
    apply (intro allI impI conjI)
      apply (clarsimp simp:isCap_simps is_simple_cap'_def)+
 done
@@ -4944,7 +4945,6 @@ lemma cins_corres_simple:
   (is "corres _ (?P and (\<lambda>s. cte_wp_at _ _ s)) (?P' and cte_wp_at' _ _ and _) _ _")
   using assms
   unfolding cap_insert_def cteInsert_def
-  apply (fold revokable_def revokable'_fold)
   apply simp
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_cap_corres])
@@ -6079,7 +6079,6 @@ lemma cteInsert_simple_mdb':
   cteInsert cap src dest
   \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
   unfolding cteInsert_def valid_mdb'_def
-  apply (fold revokable'_fold)
   apply simp
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)

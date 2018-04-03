@@ -44,34 +44,37 @@ The ARM-specific types and structures are qualified with the "Arch.Types" and "A
 
 \subsection{Copying and Mutating Capabilities}
 
-> deriveCap :: PPtr CTE -> ArchCapability -> KernelF SyscallError ArchCapability
+> deriveCap :: PPtr CTE -> ArchCapability -> KernelF SyscallError Capability
 
 It is not possible to copy a page table or page directory capability unless it has been mapped.
 
-> deriveCap _ (c@PageTableCap { capPTMappedAddress = Just _ }) = return c
+> deriveCap _ (c@PageTableCap { capPTMappedAddress = Just _ }) = return $ ArchObjectCap c
 > deriveCap _ (PageTableCap { capPTMappedAddress = Nothing })
 >     = throw IllegalOperation
-> deriveCap _ (c@PageDirectoryCap { capPDMappedASID = Just _ }) = return c
+> deriveCap _ (c@PageDirectoryCap { capPDMappedASID = Just _ }) = return $ ArchObjectCap c
 > deriveCap _ (PageDirectoryCap { capPDMappedASID = Nothing })
 >     = throw IllegalOperation
 
 Page capabilities are copied without their mapping information, to allow them to be mapped in multiple locations.
 
-> deriveCap _ (c@PageCap {}) = return $ c { capVPMappedAddress = Nothing }
+> deriveCap _ (c@PageCap {}) = return $ ArchObjectCap $ c  { capVPMappedAddress = Nothing }
 
 ASID capabilities can be copied without modification.
 
-> deriveCap _ c@ASIDControlCap = return c
-> deriveCap _ (c@ASIDPoolCap {}) = return c
+> deriveCap _ c@ASIDControlCap = return $ ArchObjectCap c
+> deriveCap _ (c@ASIDPoolCap {}) = return $ ArchObjectCap c
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-> deriveCap _ (c@VCPUCap {}) = return c
+> deriveCap _ (c@VCPUCap {}) = return $ ArchObjectCap c
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 
 #ifdef CONFIG_ARM_SMMU
-> deriveCap _ (c@IOSpaceCap {}) = return c
+> deriveCap _ (c@IOSpaceCap {}) = return $ ArchObjectCap c
 > deriveCap _ (c@IOPageTableCap {}) = error "FIXME ARMHYP TODO IO"
 #endif /* CONFIG_ARM_SMMU */
+
+> isCapRevocable :: Capability -> Capability -> Bool
+> isCapRevocable _ _ = False
 
 None of the ARM-specific capabilities have a user writeable data word.
 

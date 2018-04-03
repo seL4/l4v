@@ -163,6 +163,10 @@ lemma dcorres_set_parent_helper:
   apply simp
   done
 
+lemma revokable_cap_insert_dest_original:
+  "revokable cap capa = cap_insert_dest_original capa cap"
+  by (clarsimp simp: revokable_def cap_insert_dest_original_def split: cap.splits)
+
 lemma insert_cap_sibling_corres:
   "dcorres dc \<top>
         (\<lambda>s. cte_wp_at (\<lambda>cap'. \<not> should_be_parent_of cap' (is_original_cap s src)
@@ -252,7 +256,7 @@ lemma insert_cap_sibling_corres:
   apply (clarsimp simp: valid_mdb_def cte_wp_at_cases dest!:invs_mdb)
   apply (case_tac "cdt s' sibling", safe intro!: mdb_cte_atI)
                                apply (auto dest: mdb_cte_atD is_untyped_cap_eqD
-                                           simp: valid_mdb_def swp_def cte_wp_at_caps_of_state not_idle_thread_def)
+                                           simp: revokable_cap_insert_dest_original valid_mdb_def swp_def cte_wp_at_caps_of_state not_idle_thread_def)
   done
 
 lemma insert_cap_child_corres:
@@ -263,6 +267,7 @@ lemma insert_cap_child_corres:
               \<and> valid_mdb s \<and> not_idle_thread (fst src) s \<and> valid_objs s \<and> cap_aligned cap)
         (insert_cap_child (transform_cap cap) (transform_cslot_ptr src) (transform_cslot_ptr child))
         (cap_insert cap src child)"
+  supply revokable_cap_insert_dest_original[simp]
   apply (simp add: cap_insert_def[folded cap_insert_dest_original_def])
   apply (simp add: insert_cap_child_def insert_cap_orphan_def bind_assoc
                    option_return_modify_modify
@@ -2199,7 +2204,6 @@ lemma derive_cap_dummy:
       apply wp+
     apply simp
    apply simp
-  apply (simp add: liftME_def)
   apply (clarsimp simp: arch_derive_cap_def)
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all split: option.splits)
