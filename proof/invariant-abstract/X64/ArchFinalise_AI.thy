@@ -721,7 +721,7 @@ lemma flush_table_empty:
     | rule hoare_pre)+
   done
 
-crunch empty[wp]: flush_all, invalidate_local_page_structure_cache_asid, lookup_pt_slot, set_vm_root,
+crunch empty[wp]: flush_all, invalidate_page_structure_cache_asid, lookup_pt_slot, set_vm_root,
                   invalidate_asid_entry
   "\<lambda>s. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) word s"
   (wp: crunch_wps simp: crunch_simps)
@@ -1002,10 +1002,12 @@ lemma replaceable_reset_pml4:
 crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
    (wp: crunch_wps simp: crunch_simps)
 
-crunch obj_at[wp]: invalidate_local_page_structure_cache_asid, invalidate_asid_entry "\<lambda>s. P' (obj_at P p s)"
+crunch obj_at[wp]: invalidate_page_structure_cache_asid, invalidate_asid_entry
+  "\<lambda>s. P' (obj_at P p s)"
   (wp: hoare_whenE_wp simp: crunch_simps)
 
-crunch x64_global_pdpts[wp]: invalidate_local_page_structure_cache_asid, invalidate_asid_entry "\<lambda>s. P' (x64_global_pdpts (arch_state s))"
+crunch x64_global_pdpts[wp]: invalidate_page_structure_cache_asid, invalidate_asid_entry
+  "\<lambda>s. P' (x64_global_pdpts (arch_state s))"
   (wp: hoare_whenE_wp simp: crunch_simps)
 
 lemma delete_asid_empty_table_pml4:
@@ -1230,8 +1232,8 @@ lemma replaceable_or_arch_update_pg:
   apply (auto simp: is_cap_simps is_arch_update_def cap_master_cap_simps)
   done
 
-crunch valid_cap: invalidate_local_page_structure_cache_asid, invalidate_asid_entry "valid_cap cap"
-crunch valid_objs[wp]: invalidate_local_page_structure_cache_asid, invalidate_asid_entry "valid_objs"
+crunch valid_cap: invalidate_page_structure_cache_asid, invalidate_asid_entry "valid_cap cap"
+crunch valid_objs[wp]: invalidate_page_structure_cache_asid, invalidate_asid_entry "valid_objs"
 crunch valid_asid_table[wp]: do_machine_op
   "\<lambda>s. valid_asid_table (x64_asid_table (arch_state s)) s"
 
@@ -1577,10 +1579,10 @@ lemma delete_asid_pool_unmapped2:
   apply fastforce
   done
 
-crunch x64_global_pml4[wp]: invalidate_asid_entry, invalidate_local_page_structure_cache_asid
+crunch x64_global_pml4[wp]: invalidate_asid_entry, invalidate_page_structure_cache_asid
            "\<lambda>s. P (x64_global_pml4(arch_state s))"
 
-crunch global_refs_invs[wp]: invalidate_local_page_structure_cache_asid
+crunch global_refs_invs[wp]: invalidate_page_structure_cache_asid
            "\<lambda>s. P (global_refs s)"
 
 lemma page_table_pte_atE:

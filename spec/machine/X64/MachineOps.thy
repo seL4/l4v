@@ -314,11 +314,13 @@ where
   "invalidateASID vspace asid \<equiv> machine_op_lift (invalidateASID_impl vspace asid)"
 
 consts'
-  resetCR3_impl :: "unit machine_rest_monad"
+  invalidateLocalPageStructureCacheASID_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 
 definition
-  resetCR3 :: "unit machine_monad" where
-  "resetCR3 \<equiv> machine_op_lift resetCR3_impl "
+  invalidateLocalPageStructureCacheASID :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+where
+  "invalidateLocalPageStructureCacheASID vspace asid \<equiv>
+     machine_op_lift (invalidateLocalPageStructureCacheASID_impl vspace asid)"
 
 (* FIXME x64: VT-d
 definition

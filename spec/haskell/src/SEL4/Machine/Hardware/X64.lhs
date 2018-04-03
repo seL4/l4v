@@ -254,9 +254,6 @@ caches must be done separately.
 > writeCR3 :: PAddr -> Word64 -> MachineMonad ()
 > writeCR3 vspace asid  = Platform.writeCR3 vspace asid
 
-> resetCR3 :: MachineMonad ()
-> resetCR3 = Platform.resetCR3
-
 \subsubsection{Memory Barriers}
 
 > mfence :: MachineMonad ()
@@ -278,6 +275,9 @@ caches must be done separately.
 
 > invalidateTranslationSingleASID :: VPtr -> Word64 -> MachineMonad ()
 > invalidateTranslationSingleASID vspace asid = Platform.invalidateTranslationSingleASID vspace asid
+
+> invalidateLocalPageStructureCacheASID :: PAddr -> Word64 -> MachineMonad ()
+> invalidateLocalPageStructureCacheASID paddr asid = liftIO $ Platform.invalidateLocalPageStructureCacheASID paddr asid
 
 \subsubsection{Page Table Structure}
 
@@ -559,10 +559,13 @@ Page entries -- any of PTEs, PDEs or PDPTEs.
 >     x64WriteThrough, x64PAT, x64CacheDisabled :: Bool }
 
 > pptrBase :: VPtr
-> pptrBase = Platform.pptrBase
+> pptrBase = VPtr Platform.pptrBase
 
-> physBase :: PAddr
-> physBase = toPAddr Platform.physBase
+> kpptrBase :: VPtr
+> kpptrBase = VPtr Platform.kpptrBase
+
+> pptrUserTop :: VPtr
+> pptrUserTop = Platform.pptrUserTop
 
 > -- This firstValidIODomain and numIODomainBits calculated as part of the boot code.
 > -- Right now, for simplicity, we assume it is constant
@@ -574,7 +577,6 @@ Page entries -- any of PTEs, PDEs or PDPTEs.
 
 > hwASIDInvalidate :: Word -> Word64 -> MachineMonad ()
 > hwASIDInvalidate = invalidateASID
-
 
 > getFaultAddress :: MachineMonad VPtr
 > getFaultAddress = do

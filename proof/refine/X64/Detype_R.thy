@@ -3218,7 +3218,7 @@ lemma storePDE_setCTE_commute:
 lemma setCTE_gets_globalPML4_commute:
   "monad_commute
      (cte_wp_at' (\<lambda>_. True) src and pspace_distinct' and pspace_aligned')
-     (setCTE src cte) (gets (x64KSGlobalPML4 \<circ> ksArchState))"
+     (setCTE src cte) (gets (x64KSSKIMPML4 \<circ> ksArchState))"
   apply (simp add:setCTE_def2)
   apply (rule monad_commute_guard_imp)
    apply (rule commute_commute[OF monad_commute_split[where Q = "\<lambda>r. \<top>"]])
@@ -3235,7 +3235,7 @@ lemma placeNewObject_gets_globalPML4_commute:
      (pspace_distinct' and pspace_aligned' and
       K (us < word_bits \<and> is_aligned ptr (objBitsKO (injectKOS val) + us)) and
       pspace_no_overlap' ptr (objBitsKO (injectKOS val) + us) )
-     (placeNewObject ptr val us) (gets (x64KSGlobalPML4 \<circ> ksArchState))"
+     (placeNewObject ptr val us) (gets (x64KSSKIMPML4 \<circ> ksArchState))"
   apply (rule commute_name_pre_state)
   apply (rule monad_commute_guard_imp)
   apply (rule_tac commute_rewrite[where Q = "\<lambda>s.

@@ -1050,10 +1050,10 @@ definition
 where
   "global_refs' \<equiv> \<lambda>s.
   {ksIdleThread s} \<union>
-   table_refs' (x64KSGlobalPML4 (ksArchState s)) \<union>
-   (\<Union>pt \<in> set (x64KSGlobalPDs (ksArchState s)). table_refs' pt) \<union>
-   (\<Union>pt \<in> set (x64KSGlobalPTs (ksArchState s)). table_refs' pt) \<union>
-   (\<Union>pt \<in> set (x64KSGlobalPDPTs (ksArchState s)). table_refs' pt) \<union>
+   table_refs' (x64KSSKIMPML4 (ksArchState s)) \<union>
+   (\<Union>pt \<in> set (x64KSSKIMPDs (ksArchState s)). table_refs' pt) \<union>
+   (\<Union>pt \<in> set (x64KSSKIMPTs (ksArchState s)). table_refs' pt) \<union>
+   (\<Union>pt \<in> set (x64KSSKIMPDPTs (ksArchState s)). table_refs' pt) \<union>
    range (\<lambda>irq :: irq. irq_node' s + 32 * ucast irq)"
 
 definition
@@ -1080,6 +1080,13 @@ where
   "valid_asid_table' table \<equiv> \<lambda>s. dom table \<subseteq> {0 .. 2^asid_high_bits - 1}
                                   \<and> 0 \<notin> ran table"
 
+primrec
+  valid_cr3' :: "cr3 \<Rightarrow> bool"
+where
+  "valid_cr3' (CR3 addr pcid) = (is_aligned addr asid_bits
+                                   \<and> addr \<le> mask (pml4ShiftBits + asid_bits)
+                                   \<and> asid_wf pcid)"
+
 definition
   valid_global_pts' :: "machine_word list \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
@@ -1100,10 +1107,11 @@ definition
 where
   "valid_arch_state' \<equiv> \<lambda>s.
   valid_asid_table' (x64KSASIDTable (ksArchState s)) s \<and>
-  page_map_l4_at' (x64KSGlobalPML4 (ksArchState s)) s \<and>
-  valid_global_pds' (x64KSGlobalPDs (ksArchState s)) s \<and>
-  valid_global_pdpts' (x64KSGlobalPDPTs (ksArchState s)) s \<and>
-  valid_global_pts' (x64KSGlobalPTs (ksArchState s)) s"
+  valid_cr3' (x64KSCurrentUserCR3 (ksArchState s)) \<and>
+  page_map_l4_at' (x64KSSKIMPML4 (ksArchState s)) s \<and>
+  valid_global_pds' (x64KSSKIMPDs (ksArchState s)) s \<and>
+  valid_global_pdpts' (x64KSSKIMPDPTs (ksArchState s)) s \<and>
+  valid_global_pts' (x64KSSKIMPTs (ksArchState s)) s"
 
 definition
   irq_issued' :: "irq \<Rightarrow> kernel_state \<Rightarrow> bool"

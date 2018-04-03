@@ -95,7 +95,7 @@ begin
 (* relates fixed adresses *)
 definition
   "carch_globals s \<equiv>
-    (x64KSGlobalPML4 s = symbol_table ''x64KSGlobalPML4'')"
+    (x64KSSKIMPML4 s = symbol_table ''x64KSSKIMPML4'')"
 
 (* FIXME x64: DON'T DELETE!
     keep this for a rainy day, if we find out that leaving the asid map out of the state relation
@@ -108,13 +108,17 @@ where
        Some asidpoolptr \<Rightarrow> case (ksPSpace s) asidpoolptr of None \<Rightarrow> None |
           Some (KOArch (KOASIDPool (ASIDPool pool))) \<Rightarrow> pool (asid && mask asidLowBits)"
 
+(* The C kernel stores and performs operations on the current CR3 as a word.
+   This means that we need to reason about bits which the bitfield generator ignores.
+   We therefore encode an invariant about those extra bits here. *)
 definition
-  ccr3_relation :: "X64_H.cr3 \<Rightarrow> cr3_C \<Rightarrow> bool"
+  ccr3_relation :: "X64_H.cr3 \<Rightarrow> machine_word \<Rightarrow> bool"
 where
-  "ccr3_relation c ccr3 \<equiv>
-     let ccr3' = cr3_lift ccr3 in
-     case c of
-       CR3 pad as \<Rightarrow> pad = (pml4_base_address_CL ccr3') \<and> as = (pcid_CL ccr3')"
+  "ccr3_relation hcr3 ccr3 \<equiv>
+     case hcr3 of
+       CR3 addr pcid \<Rightarrow> addr = ccr3 && (mask 39 << 12)
+                         \<and> pcid = ccr3 && mask 12
+                         \<and> 1 << 63 = ccr3 && (~~ mask 51)"
 
 definition
   carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
@@ -122,14 +126,7 @@ where
   "carch_state_relation astate cstate \<equiv>
   x64KSKernelVSpace astate = x64KSKernelVSpace_C \<and>
   array_relation (op = \<circ> option_to_ptr) (2^asid_high_bits - 1) (x64KSASIDTable astate) (x86KSASIDTable_' cstate) \<and>
-(*
-  Changes to the C kernel to mitigate Meltdown have removed x64KSCurrentCR3.
-  We temporarily remove it from the C state relation to keep existing proofs working.
-  But for x64 verification, this ultimately needs to be replaced with a relation on
-  the new state that has been added, and the specs updated accordingly.
-
-  ccr3_relation (x64KSCurrentCR3 astate) (x64KSCurrentCR3_' cstate) \<and>
-*)
+  ccr3_relation (x64KSCurrentUserCR3 astate) (x64KSCurrentUserCR3_' cstate) \<and>
 (* FIXME x64: Still needed: relation for IOPort bitmap *)
   carch_globals astate"
 
@@ -882,9 +879,8 @@ where
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
          (ptr_coerce (intStateIRQNode_' cstate) :: (cte_C[256]) ptr) \<and>
        {ptr_val (intStateIRQNode_' cstate) ..+ 2 ^ (8 + cte_level_bits)} \<subseteq> kernel_data_refs \<and>
-       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
-         (pml4_Ptr (symbol_table ''x64KSGlobalPML4'')) \<and>
-       ptr_span (pml4_Ptr (symbol_table ''x64KSGlobalPML4'')) \<subseteq> kernel_data_refs \<and>
+       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard (pml4_Ptr (symbol_table ''x64KSSKIMPML4'')) \<and>
+       ptr_span (pml4_Ptr (symbol_table ''x64KSSKIMPML4'')) \<subseteq> kernel_data_refs \<and>
        htd_safe domain (hrs_htd (t_hrs_' cstate)) \<and>
        kernel_data_refs = (- domain) \<and>
        globals_list_distinct (- kernel_data_refs) symbol_table globals_list \<and>

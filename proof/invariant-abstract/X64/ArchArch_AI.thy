@@ -1324,16 +1324,16 @@ lemma pml4e_at_shifting_magic:
 
 lemma le_user_vtop_less_pptr_base[simp]:
   "x \<le> user_vtop \<Longrightarrow> x < pptr_base"
-  apply (clarsimp simp: user_vtop_def pptr_base_def pptrBase_def)
+  apply (clarsimp simp: user_vtop_def pptrUserTop_def pptr_base_def pptrBase_def)
   by (word_bitwise; simp)
 
 lemma le_user_vtop_canonical_address[simp]:
   "x \<le> user_vtop \<Longrightarrow> canonical_address x"
-  by (clarsimp simp: user_vtop_def canonical_address_range mask_def)
+  by (clarsimp simp: user_vtop_def pptrUserTop_def canonical_address_range mask_def)
 
 lemma le_user_vtop_and_user_vtop_eq:
   "x && ~~ mask pml4_shift_bits \<le> user_vtop \<Longrightarrow> x && user_vtop = x"
-  apply (clarsimp simp add: user_vtop_def bit_simps)
+  apply (clarsimp simp add: user_vtop_def pptrUserTop_def bit_simps)
   by (word_bitwise; simp)
 
 lemma and_not_mask_pml4_not_kernel_mapping_slots:

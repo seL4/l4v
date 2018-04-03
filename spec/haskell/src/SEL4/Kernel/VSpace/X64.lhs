@@ -64,13 +64,13 @@ When a new page directory is created, the kernel copies all of the global mappin
 
 > copyGlobalMappings :: PPtr PML4E -> Kernel ()
 > copyGlobalMappings newPM = do
->     globalPM <- gets (x64KSGlobalPML4 . ksArchState)
+>     skimPM <- gets (x64KSSKIMPML4 . ksArchState)
 >     let base = getPML4Index pptrBase
 >     let pml4eBits = objBits (undefined :: PML4E) -- = 3, size of word
 >     let pmSize = 1 `shiftL` ptTranslationBits -- 512 entries in table
 >     forM_ [base .. pmSize - 1] $ \index -> do
 >         let offset = PPtr index `shiftL` pml4eBits
->         pml4e <- getObject $ globalPM + offset
+>         pml4e <- getObject $ skimPM + offset
 >         storePML4E (newPM + offset) pml4e
 
 > createMappingEntries :: PAddr -> VPtr ->
@@ -414,35 +414,19 @@ This helper function checks that the mapping installed at a given PT or PD slot 
 
 \subsection{Address Space Switching}
 
-> getCurrentCR3 :: Kernel CR3
-> getCurrentCR3 = gets (x64KSCurrentCR3 . ksArchState)
+> getCurrentUserCR3 :: Kernel CR3
+> getCurrentUserCR3 = gets (x64KSCurrentUserCR3 . ksArchState)
 
-> setCurrentCR3 :: CR3 -> Kernel ()
-> setCurrentCR3 cr3 = do
->     modify (\s -> s { ksArchState = (ksArchState s) { x64KSCurrentCR3 = cr3 }})
->     doMachineOp $ writeCR3 (cr3BaseAddress cr3) $ fromASID $ cr3pcid cr3
-
-> invalidateLocalPageStructureCacheASID :: PAddr -> ASID -> Kernel ()
-> invalidateLocalPageStructureCacheASID ptr asid = do
->     curCR3 <- getCurrentCR3
->     setCurrentCR3 (CR3 ptr asid)
->     setCurrentCR3 curCR3
+> setCurrentUserCR3 :: CR3 -> Kernel ()
+> setCurrentUserCR3 cr3 =
+>     modify (\s -> s { ksArchState = (ksArchState s) { x64KSCurrentUserCR3 = cr3 }})
 
 > invalidatePageStructureCacheASID :: PAddr -> ASID -> Kernel ()
-> invalidatePageStructureCacheASID p a = invalidateLocalPageStructureCacheASID p a
+> invalidatePageStructureCacheASID p a = doMachineOp $ invalidateLocalPageStructureCacheASID p (fromASID a)
 
-> getCurrentVSpaceRoot :: Kernel PAddr
-> getCurrentVSpaceRoot = do
->     cur <- getCurrentCR3
->     return $ cr3BaseAddress cur
+> setCurrentUserVSpaceRoot :: PAddr -> ASID -> Kernel ()
+> setCurrentUserVSpaceRoot vspace asid = setCurrentUserCR3 $ makeCR3 vspace asid
 
-> setCurrentVSpaceRoot :: PAddr -> ASID -> Kernel ()
-> setCurrentVSpaceRoot vspace asid = setCurrentCR3 $ CR3 vspace asid
-
-> -- FIXME x64: Currently we don't have global state for the CR3 so
-> -- we can't test whether or not we should write to it. We should
-> -- add global state to remember the CR3 and actually avoid the write/flush
-> -- when we can.
 > setVMRoot :: PPtr TCB -> Kernel ()
 > setVMRoot tcb = do
 >     threadRootSlot <- getThreadVSpaceRoot tcb
@@ -451,16 +435,16 @@ This helper function checks that the mapping installed at a given PT or PD slot 
 >         (case threadRoot of
 >             ArchObjectCap (PML4Cap {
 >                     capPML4MappedASID = Just asid,
->                     capPML4BasePtr = pd }) -> do
->                 pd' <- findVSpaceForASID asid
->                 when (pd /= pd') $ throw InvalidRoot
->                 curCR3 <- withoutFailure $ getCurrentCR3
->                 when (curCR3 /= CR3 (addrFromPPtr pd) asid) $
->                         withoutFailure $ setCurrentCR3 $ CR3 (addrFromPPtr pd) asid
+>                     capPML4BasePtr = pml4 }) -> do
+>                 pml4' <- findVSpaceForASID asid
+>                 when (pml4 /= pml4') $ throw InvalidRoot
+>                 curCR3 <- withoutFailure $ getCurrentUserCR3
+>                 when (curCR3 /= makeCR3 (addrFromPPtr pml4) asid) $
+>                         withoutFailure $ setCurrentUserCR3 $ makeCR3 (addrFromPPtr pml4) asid
 >             _ -> throw InvalidRoot)
 >         (\_ -> do
->             globalPML4 <- gets (x64KSGlobalPML4 . ksArchState)
->             setCurrentVSpaceRoot (addrFromKPPtr globalPML4) 0)
+>             skimPML4 <- gets (x64KSSKIMPML4 . ksArchState)
+>             setCurrentUserVSpaceRoot (addrFromKPPtr skimPML4) 0)
 
 \subsection{Helper Functions}
 
@@ -1186,7 +1170,7 @@ Checking virtual address for page size dependent alignment:
 >     asid <- case cap of
 >         ArchObjectCap (PageCap _ _ _ _ _ (Just (as, _))) -> return as
 >         _ -> fail "impossible"
->     invalidateLocalPageStructureCacheASID (addrFromPPtr vspace) asid
+>     invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
 >
 > performPageInvocation (PageRemap entries asid vspace) = do
 >     case entries of
@@ -1194,7 +1178,7 @@ Checking virtual address for page size dependent alignment:
 >         (VMPDE pde, VMPDEPtr slot) -> storePDE slot pde
 >         (VMPDPTE pdpte, VMPDPTEPtr slot) -> storePDPTE slot pdpte
 >         _ -> fail "impossible"
->     invalidateLocalPageStructureCacheASID (addrFromPPtr vspace) asid
+>     invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
 >
 > performPageInvocation (PageUnmap cap ctSlot) = do
 >     case capVPMappedAddress cap of

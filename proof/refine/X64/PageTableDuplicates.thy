@@ -154,7 +154,7 @@ lemma none_in_new_cap_addrs:
    apply simp+
   done
 
-crunch arch_inv[wp]: createNewObjects "\<lambda>s. P (x64KSGlobalPML4 (ksArchState s))"
+crunch arch_inv[wp]: createNewObjects "\<lambda>s. P (x64KSSKIMPML4 (ksArchState s))"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps hoare_unless_wp)
 
 crunch arch_inv[wp]: resetUntypedCap "\<lambda>s. P (ksArchState s)"
@@ -165,7 +165,7 @@ crunch arch_inv[wp]: resetUntypedCap "\<lambda>s. P (ksArchState s)"
 
 lemma is_aligned_x64KSGlobalPD:
   "valid_arch_state' s
-    \<Longrightarrow> is_aligned (x64KSGlobalPML4 (ksArchState s)) pml4Bits"
+    \<Longrightarrow> is_aligned (x64KSSKIMPML4 (ksArchState s)) pml4Bits"
   by (clarsimp simp: valid_arch_state'_def page_map_l4_at'_def)
 
 lemma new_CapTable_bound:

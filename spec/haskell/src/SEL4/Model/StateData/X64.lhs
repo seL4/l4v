@@ -34,12 +34,12 @@ This module contains the architecture-specific kernel global data for the X86-64
 > gdteBits = 3
 
 > data KernelState = X64KernelState {
->     x64KSASIDTable   :: Array ASID (Maybe (PPtr ASIDPool)),
->     x64KSGlobalPML4  :: PPtr PML4E,
->     x64KSGlobalPDPTs :: [PPtr PDPTE],
->     x64KSGlobalPDs   :: [PPtr PDE],
->     x64KSGlobalPTs   :: [PPtr PTE],
->     x64KSCurrentCR3  :: CR3,
+>     x64KSASIDTable      :: Array ASID (Maybe (PPtr ASIDPool)),
+>     x64KSSKIMPML4       :: PPtr PML4E,
+>     x64KSSKIMPDPTs      :: [PPtr PDPTE],
+>     x64KSSKIMPDs        :: [PPtr PDE],
+>     x64KSSKIMPTs        :: [PPtr PTE],
+>     x64KSCurrentUserCR3 :: CR3,
 >     x64KSKernelVSpace :: PPtr Word -> X64VSpaceRegionUse,
 >     x64KSAllocatedIOPorts :: Array IOPort Bool}
 

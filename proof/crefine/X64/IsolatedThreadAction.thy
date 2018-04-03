@@ -728,21 +728,21 @@ lemma liftM_getObject_return_tcb:
   "ko_at' v p s \<Longrightarrow> liftM f (getObject p) s = return (f (v::tcb)) s"
   by (simp add: liftM_def bind_def getObject_return_tcb return_def objBits_defs)
 
-lemma getCurrentCR3_isolatable:
-  "thread_actions_isolatable idx (getCurrentCR3)"
-  by (clarsimp simp: getCurrentCR3_def gets_isolatable)
+lemma getCurrentUserCR3_isolatable:
+  "thread_actions_isolatable idx (getCurrentUserCR3)"
+  by (clarsimp simp: getCurrentUserCR3_def gets_isolatable)
 
-lemma setCurrentCR3_isolatable:
-  "thread_actions_isolatable idx (setCurrentCR3 f)"
-  apply (clarsimp simp: setCurrentCR3_def)
+lemma setCurrentUserCR3_isolatable:
+  "thread_actions_isolatable idx (setCurrentUserCR3 f)"
+  apply (clarsimp simp: setCurrentUserCR3_def)
   apply (intro modify_isolatable doMachineOp_isolatable
                thread_actions_isolatable_bind[OF _ _ hoare_pre(1)])
     apply wpsimp+
   done
 
-lemma setCurrentVSpaceRoot_isolatable:
-  "thread_actions_isolatable idx (setCurrentVSpaceRoot a f)"
-  by (clarsimp simp: setCurrentVSpaceRoot_def setCurrentCR3_isolatable)
+lemma setCurrentUserVSpaceRoot_isolatable:
+  "thread_actions_isolatable idx (setCurrentUserVSpaceRoot a f)"
+  by (clarsimp simp: setCurrentUserVSpaceRoot_def setCurrentUserCR3_isolatable)
 
 lemma setVMRoot_isolatable:
   "thread_actions_isolatable idx (setVMRoot t)"
@@ -757,9 +757,9 @@ lemma setVMRoot_isolatable:
                thread_actions_isolatable_catch[OF _ _ hoare_pre(1)]
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
-               getCurrentCR3_isolatable setCurrentCR3_isolatable
+               getCurrentUserCR3_isolatable setCurrentUserCR3_isolatable
                gets_isolatable getCTE_isolatable
-               setCurrentVSpaceRoot_isolatable
+               setCurrentUserVSpaceRoot_isolatable
                findVSpaceForASID_isolatable doMachineOp_isolatable
         | simp add: projectKO_opt_asidpool
            | wp getASID_wp typ_at_lifts)+
@@ -979,13 +979,13 @@ lemma oblivious_modifyArchState_schact[simp]:
 lemma oblivious_setVMRoot_schact:
   "oblivious (ksSchedulerAction_update f) (setVMRoot t)"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def locateSlot_conv
-                   getSlotCap_def getCTE_def )
+                   getSlotCap_def getCTE_def)
   by (safe intro!: oblivious_bind oblivious_bindE oblivious_catch oblivious_mapM_x
              | simp_all add: liftE_def
                              findVSpaceForASID_def liftME_def
                              findVSpaceForASIDAssert_def checkPML4At_def
-                             getCurrentCR3_def setCurrentCR3_def
-                             invalidateASID_def setCurrentVSpaceRoot_def
+                             getCurrentUserCR3_def setCurrentUserCR3_def
+                             invalidateASID_def setCurrentUserVSpaceRoot_def
                       split: if_split capability.split arch_capability.split option.split)+
 
 

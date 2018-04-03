@@ -1535,7 +1535,7 @@ crunch typ_at'[wp]: copyGlobalMappings "\<lambda>s. P (typ_at' T p s)"
 lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']
 
 lemma corres_gets_global_pml4 [corres]:
-  "corres (op =) \<top> \<top> (gets (x64_global_pml4 \<circ> arch_state)) (gets (x64KSGlobalPML4 \<circ> ksArchState))"
+  "corres (op =) \<top> \<top> (gets (x64_global_pml4 \<circ> arch_state)) (gets (x64KSSKIMPML4 \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
 
 lemma copy_global_mappings_corres [@lift_corres_args, corres]:
@@ -1547,7 +1547,7 @@ lemma copy_global_mappings_corres [@lift_corres_args, corres]:
   apply (fold word_size_bits_def)
   apply corressimp
       apply (rule_tac P="page_map_l4_at global_pm and ?apre" and
-                     P'="page_map_l4_at' globalPM and page_map_l4_at' pm"
+                     P'="page_map_l4_at' skimPM and page_map_l4_at' pm"
                 in corresK_mapM_x[OF order_refl])
         apply (corressimp simp: objBits_def mask_def wp: get_pde_wp getPDE_wp)+
   apply(rule conjI)
