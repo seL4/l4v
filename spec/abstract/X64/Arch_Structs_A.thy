@@ -26,9 +26,6 @@ including architecture-specific capabilities and objects.
 
 section {* Architecture-specific virtual memory *}
 
-text {* An ASID is simply a word. *}
-type_synonym asid = "machine_word"
-
 type_synonym io_port = "16 word"
 type_synonym io_asid = "16 word"
 
@@ -51,16 +48,6 @@ datatype arch_cap =
  | PageDirectoryCap obj_ref "(asid * vspace_ref) option"
  | PDPointerTableCap obj_ref "(asid * vspace_ref) option"
  | PML4Cap obj_ref "asid option"
-
-definition
-  asid_high_bits :: nat where
-  "asid_high_bits \<equiv> 3"
-definition
-  asid_low_bits :: nat where
-  "asid_low_bits \<equiv> 9 :: nat"
-definition
-  asid_bits :: nat where
-  "asid_bits \<equiv> 12 :: nat"
 
 (* cr3 Stuff *)
 datatype cr3 = cr3 obj_ref asid

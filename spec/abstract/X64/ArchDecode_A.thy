@@ -524,7 +524,7 @@ where
                root = fst (extra_caps ! 1)
       in doE
                asid_table \<leftarrow> liftE $ gets (x64_asid_table \<circ> arch_state);
-               free_set \<leftarrow> returnOk (- dom asid_table \<inter> {x. x \<le> 2 ^ asid_high_bits - 1});
+               free_set \<leftarrow> returnOk (- dom asid_table);
                whenE (free_set = {}) $ throwError DeleteFirst;
                free \<leftarrow> liftE $ select_ext (\<lambda>_. free_asid_select asid_table) free_set;
                base \<leftarrow> returnOk (ucast free << asid_low_bits);
@@ -554,8 +554,7 @@ where
                   whenE (pool_ptr = None) $ throwError $ FailedLookup False InvalidRoot;
                   whenE (p \<noteq> the pool_ptr) $ throwError $ InvalidCapability 0;
                   pool \<leftarrow> liftE $ get_asid_pool p;
-                  free_set \<leftarrow> returnOk
-                    (- dom pool \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + base \<noteq> 0});
+                  free_set \<leftarrow> returnOk (- dom pool \<inter> {x. ucast x + base \<noteq> 0});
                   whenE (free_set = {}) $ throwError DeleteFirst;
                   offset \<leftarrow> liftE $ select_ext (\<lambda>_. free_asid_pool_select pool base) free_set;
                   returnOk $ InvokeASIDPool $ Assign (ucast offset + base) p pd_cap_slot

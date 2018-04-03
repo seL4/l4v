@@ -2217,10 +2217,10 @@ lemma shiftr_asid_low_bits_mask_eq_0:
   apply (rule iffI[rotated])
    apply simp
   apply (rule asid_low_high_bits)
-     apply simp
+     apply (rule upcast_ucast_id[where 'b=machine_word_len]; simp add: asid_low_bits_of_mask_eq)
     apply (simp add: ucast_asid_high_bits_is_shift)
-   apply (simp add: mask_def)
-  apply simp
+   apply (simp add: asid_wf_def mask_def)
+  apply (rule asid_wf_0)
   done
 
 lemma slotcap_in_mem_valid:

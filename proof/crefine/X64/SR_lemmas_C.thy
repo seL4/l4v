@@ -2180,8 +2180,8 @@ lemma cap_get_tag_isCap_ArchObject2_worker:
 
 lemma cap_get_tag_isCap_ArchObject2:
   assumes cr: "ccap_relation cap cap'"
-  shows "(cap_get_tag cap' = scast cap_page_directory_cap)
-           = (isArchObjectCap cap \<and> isPageDirectoryCap (capCap cap))"
+  shows "(cap_get_tag cap' = scast cap_asid_control_cap)
+           = (isArchObjectCap cap \<and> isASIDControlCap (capCap cap))"
   and   "(cap_get_tag cap' = scast cap_asid_pool_cap)
            = (isArchObjectCap cap \<and> isASIDPoolCap (capCap cap))"
   and   "(cap_get_tag cap' = scast cap_page_table_cap)

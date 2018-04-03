@@ -33,16 +33,18 @@ crunch_ignore (add: throw_on_false)
 definition
   "vspace_at_asid' vs asid \<equiv> \<lambda>s. \<exists>ap pool.
              x64KSASIDTable (ksArchState s) (ucast (asid_high_bits_of asid)) = Some ap \<and>
-             ko_at' (ASIDPool pool) ap s \<and> pool (asid && mask asid_low_bits) = Some vs \<and>
+             ko_at' (ASIDPool pool) ap s \<and> pool (asidLowBitsOf asid) = Some vs \<and>
              page_map_l4_at' vs s"
 
 crunch inv[wp]:checkPDAt P
 
 lemma findVSpaceForASID_vs_at_wp:
-  "\<lbrace>\<lambda>s. \<forall>pm. (page_map_l4_at' pm s \<longrightarrow> vspace_at_asid' pm asid s) \<longrightarrow> P pm s\<rbrace>
+  "\<lbrace>\<lambda>s. \<forall>pm. asid \<noteq> 0 \<and> asid_wf asid \<and> (page_map_l4_at' pm s \<longrightarrow> vspace_at_asid' pm asid s) \<longrightarrow> P pm s\<rbrace>
     findVSpaceForASID asid
    \<lbrace>P\<rbrace>,-"
   apply (simp add: findVSpaceForASID_def assertE_def checkPML4At_def
+                   asidRange_def mask_2pm1[symmetric]
+                   le_mask_asidBits_asid_wf
              cong: option.case_cong split del: if_split)
   apply (wpsimp wp: getASID_wp)
   apply (erule allE; erule mp; clarsimp simp: vspace_at_asid'_def page_map_l4_at'_def)
@@ -117,7 +119,6 @@ lemma find_vspace_for_asid_eq_helper:
                    word_neq_0_conv[symmetric] liftE_bindE)
   apply (simp add: exec_gets liftE_bindE bind_assoc
                    get_asid_pool_def get_object_def)
-  apply (simp add: mask_asid_low_bits_ucast_ucast)
   apply (clarsimp simp: returnOk_def get_pml4e_def
                         get_pml4_def get_object_def
                         bind_assoc)
@@ -200,7 +201,7 @@ lemma asidBits_asid_bits[simp]:
 lemma find_vspace_for_asid_assert_corres [corres]:
   assumes "asid' = asid"
   shows "corres (op =)
-                (K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits) and vspace_at_asid_ex asid
+                (K (asid \<noteq> 0 \<and> asid_wf asid) and vspace_at_asid_ex asid
                     and pspace_aligned and pspace_distinct and valid_vspace_objs)
                 (pspace_aligned' and pspace_distinct' and no_0_obj')
                 (find_vspace_for_asid_assert asid)
@@ -389,6 +390,7 @@ proof -
              apply wp
             apply clarsimp
             apply (frule (1) cte_wp_at_valid_objs_valid_cap)
+            apply (clarsimp simp: valid_cap_def mask_def word_neq_0_conv asid_wf_def asid_bits_def)
             apply (fastforce simp: valid_cap_def mask_def word_neq_0_conv)
            apply simp
           apply wpsimp
@@ -430,7 +432,7 @@ lemma invalidate_asid_entry_corres:
   using assms
   apply (simp add: invalidate_asid_entry_def invalidateASIDEntry_def)
   apply (rule corres_machine_op)
-  apply (rule corres_Id, rule refl, simp)
+  apply (rule corres_Id; simp add: ucast_id)
   apply wp
   done
 
@@ -478,7 +480,7 @@ lemma delete_asid_corres [corres]:
   assumes "asid' = asid" "pm' = pm"
   notes set_asid_pool_simpler_def[simp del]
   shows "corres dc
-          (invs and valid_etcbs and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0))
+          (invs and valid_etcbs and K (asid_wf asid \<and> asid \<noteq> 0))
           (pspace_aligned' and pspace_distinct' and no_0_obj'
               and valid_arch_state' and cur_tcb')
           (delete_asid asid pm) (deleteASID asid' pm')"
@@ -491,13 +493,13 @@ lemma delete_asid_corres [corres]:
       apply (rule_tac P="\<lambda>s. asid_high_bits_of asid \<in> dom (asidTable o ucast) \<longrightarrow>
                              asid_pool_at (the ((asidTable o ucast) (asid_high_bits_of asid))) s" and
                       P'="pspace_aligned' and pspace_distinct'" and
-                      Q="invs and valid_etcbs and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0) and
+                      Q="invs and valid_etcbs and K (asid_wf asid \<and> asid \<noteq> 0) and
                          (\<lambda>s. x64_asid_table (arch_state s) = asidTable \<circ> ucast)" in
                       corres_split)
          prefer 2
          apply (simp add: dom_def)
          apply (rule get_asid_pool_corres_inv'[OF refl])
-        apply (rule corres_when, simp add: mask_asid_low_bits_ucast_ucast)
+        apply (rule corres_when, simp add: mask_asid_low_bits_ucast_ucast asid_low_bits_of_def)
         apply (rule corres_split [OF _ invalidate_asid_entry_corres[where pm=pm]])
             apply (rule_tac P="asid_pool_at (the (asidTable (ucast (asid_high_bits_of asid))))
                                and valid_etcbs"
@@ -562,15 +564,14 @@ crunch x64KSASIDTable_inv[wp]: invalidateASIDEntry
 
 lemma delete_asid_pool_corres:
   assumes "base' = base" "ptr' = ptr"
-  shows "corres dc (invs and K (is_aligned base asid_low_bits
-                                  \<and> base \<le> mask asid_bits)
+  shows "corres dc (invs and K (is_aligned base asid_low_bits)
                          and asid_pool_at ptr)
                    (pspace_aligned' and pspace_distinct' and no_0_obj'
                          and valid_arch_state' and cur_tcb')
                    (delete_asid_pool base ptr) (deleteASIDPool base ptr)"
   using assms
   apply (simp add: delete_asid_pool_def deleteASIDPool_def)
-  apply (rule corres_assume_pre, simp add: is_aligned_mask cong: corres_weak_cong)
+  apply (rule corres_assume_pre, simp add: is_aligned_asid_low_bits_of_zero cong: corres_weak_cong)
   apply (thin_tac P for P)+
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ corres_gets_asid])
@@ -585,7 +586,7 @@ lemma delete_asid_pool_corres:
                apply (rule order_refl)
               apply (rule_tac P="invs and ko_at (ArchObj (arch_kernel_obj.ASIDPool pool)) ptr
                                       and [VSRef (ucast (asid_high_bits_of base)) None] \<rhd> ptr
-                                      and K (is_aligned base asid_low_bits \<and> base \<le> mask asid_bits)"
+                                      and K (is_aligned base asid_low_bits)"
                           and P'="pspace_aligned' and pspace_distinct' and no_0_obj'"
                        in corres_guard_imp)
                 apply (rule corres_when)
@@ -773,7 +774,7 @@ lemma flush_table_corres:
                       and valid_vspace_objs and pspace_aligned and pspace_distinct
                       and valid_vs_lookup and valid_global_objs
                       and unique_table_refs o caps_of_state and page_table_at pt
-                      and K (is_aligned vptr pd_shift_bits \<and> asid \<le> mask asid_bits \<and> asid \<noteq> 0))
+                      and K (is_aligned vptr pd_shift_bits \<and> asid \<noteq> 0))
                    (pspace_aligned' and pspace_distinct' and no_0_obj'
                       and valid_arch_state' and cur_tcb')
                    (flush_table pm vptr pt asid)
@@ -797,7 +798,7 @@ lemma flush_table_corres:
           apply (simp add: upto_enum_def bit_simps ucast_of_nat_small)
          apply (rule corres_guard_imp)
            apply (rule corres_split[OF _ get_pte_corres''])
-              apply (case_tac rv; case_tac rv'; simp)
+              apply (case_tac rv; case_tac rv'; simp add: ucast_id)
               apply (rule corres_machine_op)
               apply (subgoal_tac "ucast x = y"; simp)
               apply (rule corres_rel_imp[OF corres_underlying_trivial]; simp)
@@ -868,7 +869,7 @@ lemma unmap_page_table_corres:
   notes liftE_get_pde_corres = get_pde_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
   shows "corres dc
           (invs and valid_etcbs and page_table_at pt and
-           K (0 < asid \<and> is_aligned vptr pd_shift_bits \<and> vptr < pptr_base \<and> canonical_address vptr \<and> asid \<le> mask asid_bits))
+           K (0 < asid \<and> is_aligned vptr pd_shift_bits \<and> vptr < pptr_base \<and> canonical_address vptr \<and> asid_wf asid))
           (valid_arch_state' and pspace_aligned' and pspace_distinct'
             and no_0_obj' and cur_tcb' and valid_objs')
           (unmap_page_table asid vptr pt)
@@ -962,7 +963,7 @@ lemmas liftE_get_pdpte_corres = get_pdpte_corres'[THEN corres_liftE_rel_sum[THEN
 lemma unmap_page_corres:
   assumes "sz' = sz" "asid' = asid" "vptr' = vptr" "pptr' = pptr"
   shows "corres dc (invs and valid_etcbs and
-                     K (valid_unmap sz (asid,vptr) \<and> vptr < pptr_base \<and> asid \<le> mask asid_bits
+                     K (valid_unmap sz (asid,vptr) \<and> vptr < pptr_base \<and> asid_wf asid
                           \<and> canonical_address vptr))
                    (valid_objs' and valid_arch_state' and pspace_aligned' and
                      pspace_distinct' and no_0_obj' and cur_tcb')
@@ -974,7 +975,7 @@ lemma unmap_page_corres:
       apply (rule corres_split_strengthen_ftE[where ftr'=dc])
          apply (rule find_vspace_for_asid_corres[OF refl])
         apply (rule corres_splitEE)
-           apply clarsimp
+           apply (clarsimp simp: ucast_id)
            apply (rule corres_machine_op, rule corres_Id, rule refl, simp)
            apply (rule no_fail_invalidateTranslationSingleASID)
           apply (rule_tac F = "vptr < pptr_base" in corres_gen_asm)
@@ -1312,7 +1313,7 @@ proof -
     apply (clarsimp simp: is_arch_diminished_def is_cap_simps split: cap.splits arch_cap.splits)
     apply (drule (2) diminished_is_update')+
     apply (clarsimp simp: cap_rights_update_def is_page_cap_def cap_master_cap_simps update_map_data_def acap_rights_update_def)
-    apply (clarsimp simp add: valid_cap_def mask_def)
+    apply (clarsimp simp add: wellformed_mapdata_def valid_cap_def mask_def)
     apply auto[1]
    apply (auto simp: cte_wp_at_ctes_of)[1]
     -- "PageGetAddr"
@@ -1519,6 +1520,7 @@ lemma perform_page_table_corres:
    apply (frule (2) diminished_is_update')
    apply (auto simp: valid_cap_def mask_def cap_master_cap_def
                      cap_rights_update_def acap_rights_update_def
+                     wellformed_mapdata_def
               split: option.split_asm)[1]
    apply (auto simp: valid_pti'_def cte_wp_at_ctes_of bit_simps)
   done
@@ -1536,7 +1538,7 @@ definition
 lemma flush_all_corres [corres]:
   assumes "vspace' = vspace" "asid' = asid"
   shows "corres dc \<top> \<top> (flush_all vspace asid) (flushAll vspace' asid')"
-  apply (simp add: assms flush_all_def flushAll_def)
+  apply (simp add: assms flush_all_def flushAll_def ucast_id)
   apply (rule corres_rel_imp[OF _ dc_simp])
   apply (rule corres_machine_op)
   apply (rule corres_underlying_trivial[OF no_fail_invalidateASID])
@@ -1671,7 +1673,7 @@ lemma unmap_pdpt_corres:
   notes liftE_get_pml4e_corres = get_pml4e_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
   shows "corres dc
           (invs and valid_etcbs and pd_pointer_table_at pd and
-           K (0 < asid \<and> is_aligned vptr pml4_shift_bits \<and> vptr < pptr_base \<and> canonical_address vptr \<and> asid \<le> mask asid_bits))
+           K (0 < asid \<and> is_aligned vptr pml4_shift_bits \<and> vptr < pptr_base \<and> canonical_address vptr \<and> asid_wf asid))
           (valid_arch_state' and pspace_aligned' and pspace_distinct'
             and no_0_obj' and cur_tcb' and valid_objs')
           (unmap_pdpt asid vptr pd)
@@ -1794,8 +1796,8 @@ definition
 
 definition
   "valid_apinv' ap \<equiv> case ap of Assign asid p slot \<Rightarrow>
-  asid_pool_at' p and cte_wp_at' (isPML4Cap' o cteCap) slot and K
-  (0 < asid \<and> asid \<le> 2^asid_bits - 1)"
+    asid_pool_at' p and cte_wp_at' (isPML4Cap' o cteCap) slot and K
+    (0 < asid \<and> asid_wf asid)"
 
 lemma pap_corres:
   assumes "ap' = asid_pool_invocation_map ap"
@@ -3078,7 +3080,7 @@ lemma perform_aci_invs [wp]:
                  split: if_split_asm)
   apply (case_tac x, clarsimp simp: inv_def)
   apply (clarsimp simp: page_map_l4_at'_def, drule_tac x=0 in spec)
-  apply (auto simp: bit_simps )
+  apply (auto simp: bit_simps asid_bits_defs asid_bits_of_defs ucast_ucast_mask mask_def word_and_le1)
   done
 
 lemma capMaster_isPML4Cap':

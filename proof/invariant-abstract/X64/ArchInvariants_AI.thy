@@ -127,31 +127,43 @@ definition canonical_address :: "obj_ref \<Rightarrow> bool"
 where
   "canonical_address x \<equiv> canonical_address_of (ucast x) = x"
 
+text \<open>An ASID is well-formed if it is within @{term "mask asid_bits"}.\<close>
 definition
-  "wellformed_mapdata sz \<equiv>
-   \<lambda>(asid, vref). 0 < asid \<and> asid \<le> 2^asid_bits - 1
-                \<and> vmsz_aligned vref sz
-                \<and> vref < pptr_base
-                \<and> canonical_address vref"
+  asid_wf :: "asid \<Rightarrow> bool"
+where
+  "asid_wf a \<equiv> a \<le> 2 ^ asid_bits - 1"
+
+(* Alternative definitions for compatibilty with older proofs. *)
+lemma asid_wf_def2:
+  "asid_wf asid \<equiv> asid \<le> mask asid_bits"
+  by (simp add: asid_wf_def mask_def)
+
+lemma asid_wf_def3:
+  "asid_wf asid \<equiv> asid && mask asid_bits = asid"
+  by (simp add: asid_wf_def2 and_mask_eq_iff_le_mask)
+
+definition
+  "wellformed_mapdata size_bits \<equiv>
+   \<lambda>(asid, vref). 0 < asid \<and> asid_wf asid
+                    \<and> is_aligned vref size_bits
+                    \<and> vref < pptr_base
+                    \<and> canonical_address vref"
 
 definition
   wellformed_acap :: "arch_cap \<Rightarrow> bool"
 where
   "wellformed_acap ac \<equiv>
    case ac of
-     ASIDPoolCap r as
-       \<Rightarrow> is_aligned as asid_low_bits \<and> as \<le> 2^asid_bits - 1
+     ASIDPoolCap r as \<Rightarrow> is_aligned as asid_low_bits \<and> asid_wf as
    | PageCap dev r rghts maptyp sz mapdata \<Rightarrow> rghts \<in> valid_vm_rights \<and>
-     case_option (maptyp=VMNoMap) (wellformed_mapdata sz and (\<lambda>_. maptyp\<noteq>VMNoMap)) mapdata
+     case_option True (wellformed_mapdata (pageBitsForSize sz)) mapdata
    | PageTableCap r (Some mapdata) \<Rightarrow>
-     wellformed_mapdata X64LargePage mapdata
+     wellformed_mapdata pd_shift_bits mapdata
    | PageDirectoryCap r (Some mapdata) \<Rightarrow>
-     wellformed_mapdata X64HugePage mapdata
-   | PDPointerTableCap r (Some (asid,vref)) \<Rightarrow>
-     0 < asid \<and> asid \<le> 2^asid_bits - 1
-     \<and> is_aligned vref pml4_shift_bits \<and> vref < pptr_base \<and> canonical_address vref
-   | PML4Cap r (Some asid) \<Rightarrow>
-     0 < asid \<and> asid \<le> 2^asid_bits - 1
+     wellformed_mapdata pdpt_shift_bits mapdata
+   | PDPointerTableCap r (Some mapdata) \<Rightarrow>
+     wellformed_mapdata pml4_shift_bits mapdata
+   | PML4Cap r (Some asid) \<Rightarrow> 0 < asid \<and> asid_wf asid
    | IOPortCap f l \<Rightarrow> f \<le> l
    | _ \<Rightarrow> True"
 
@@ -243,36 +255,27 @@ definition
 where
   "valid_arch_cap ac s \<equiv> (case ac of
     ASIDPoolCap r as \<Rightarrow>
-         typ_at (AArch AASIDPool) r s \<and> is_aligned as asid_low_bits
-           \<and> as \<le> 2^asid_bits - 1
+    typ_at (AArch AASIDPool) r s \<and> is_aligned as asid_low_bits \<and> asid_wf as
   | ASIDControlCap \<Rightarrow> True
   | IOPortCap first_port last_port \<Rightarrow> first_port \<le> last_port
   | PageCap dev r rghts maptyp sz mapdata \<Rightarrow>
     (if dev then (typ_at (AArch (ADeviceData sz)) r s)
             else (typ_at (AArch (AUserData sz)) r s)) \<and>
     (rghts \<in> valid_vm_rights) \<and>
-    (case mapdata of None \<Rightarrow> maptyp = VMNoMap | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le> 2^asid_bits - 1
-                                             \<and> vmsz_aligned ref sz \<and> ref < pptr_base \<and> canonical_address ref
+    case_option True (wellformed_mapdata (pageBitsForSize sz)) mapdata
                                              \<and> maptyp \<noteq> VMNoMap)
   | PageTableCap r mapdata \<Rightarrow>
     typ_at (AArch APageTable) r s \<and>
-    (case mapdata of None \<Rightarrow> True
-       | Some (asid, vref) \<Rightarrow> 0 < asid \<and> asid \<le> 2 ^ asid_bits - 1
-                                \<and> vref < pptr_base \<and> canonical_address vref
-                                \<and> is_aligned vref (pageBitsForSize X64LargePage))
+    case_option True (wellformed_mapdata pd_shift_bits) mapdata
   | PageDirectoryCap r mapdata \<Rightarrow>
     typ_at (AArch APageDirectory) r s \<and>
-    (case mapdata of None \<Rightarrow> True
-      | Some mapdata' \<Rightarrow> wellformed_mapdata X64HugePage mapdata')
+    case_option True (wellformed_mapdata pdpt_shift_bits) mapdata
   | PDPointerTableCap r mapdata \<Rightarrow>
     typ_at (AArch APDPointerTable) r s \<and>
-    (case mapdata of None \<Rightarrow> True
-       | Some (asid, vref) \<Rightarrow> 0 < asid \<and> asid \<le> 2 ^ asid_bits - 1
-                                \<and> vref < pptr_base \<and> canonical_address vref
-                                \<and> is_aligned vref (pml4_shift_bits))
+    case_option True (wellformed_mapdata pml4_shift_bits) mapdata
   | PML4Cap r mapdata \<Rightarrow>
     typ_at (AArch APageMapL4) r s \<and>
-    case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata
+    case_option True (\<lambda>asid. 0 < asid \<and> asid_wf asid) mapdata)"
   | IOPortControlCap \<Rightarrow> True)"
 
 lemmas valid_arch_cap_simps =
@@ -1045,40 +1048,40 @@ where
    ASIDPoolCap _ asid \<Rightarrow>
      Some [VSRef (ucast (asid_high_bits_of asid)) None]
  | PML4Cap _ (Some asid) \<Rightarrow>
-     Some [VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+     Some [VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | PDPointerTableCap _ (Some (asid, vptr)) \<Rightarrow>
      Some [VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | PageDirectoryCap _ (Some (asid, vptr)) \<Rightarrow>
      Some [VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
            VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | PageTableCap _ (Some (asid, vptr)) \<Rightarrow>
      Some [VSRef ((vptr >> 21) && mask 9) (Some APageDirectory),
            VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
            VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | PageCap dev word rights typ X64SmallPage (Some (asid, vptr)) \<Rightarrow>
      Some [VSRef ((vptr >> 12) && mask 9) (Some APageTable),
            VSRef ((vptr >> 21) && mask 9) (Some APageDirectory),
            VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
            VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | PageCap dev word rights typ X64LargePage  (Some (asid, vptr)) \<Rightarrow>
      Some [VSRef ((vptr >> 21) && mask 9) (Some APageDirectory),
            VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
            VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | PageCap dev word rights typ X64HugePage (Some (asid, vptr)) \<Rightarrow>
      Some [VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
            VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | _ \<Rightarrow> None"
 
@@ -1198,22 +1201,22 @@ where
      ASIDPoolCap _ asid \<Rightarrow>
        Some [VSRef (ucast (asid_high_bits_of asid)) None]
  | PML4Cap _ (Some asid) \<Rightarrow>
-     Some [VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+     Some [VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | PDPointerTableCap _ (Some (asid, vptr)) \<Rightarrow>
      Some [VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | PageDirectoryCap _ (Some (asid, vptr)) \<Rightarrow>
      Some [VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
            VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | PageTableCap _ (Some (asid, vptr)) \<Rightarrow>
      Some [VSRef ((vptr >> 21) && mask 9) (Some APageDirectory),
            VSRef ((vptr >> 30) && mask 9) (Some APDPointerTable),
            VSRef ((vptr >> 39) && mask 9) (Some APageMapL4),
-           VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+           VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
    | _ \<Rightarrow> None"
 
@@ -1269,7 +1272,7 @@ definition
   vspace_at_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "vspace_at_asid asid pm \<equiv> \<lambda>s.
-         ([VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+         ([VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> pm) s"
 
 
@@ -1296,7 +1299,7 @@ lemma valid_arch_cap_def2:
   apply (rule eq_reflection)
   apply (cases c)
     by (auto simp add: wellformed_acap_simps valid_arch_cap_simps
-                       valid_arch_cap_ref_simps vmsz_aligned_X64LargePage
+                       valid_arch_cap_ref_simps
                 split: option.splits)
 
 lemmas vs_ref_aatype_simps[simp] = vs_ref_aatype_def[split_simps vs_ref.split]
@@ -3349,6 +3352,13 @@ lemma valid_arch_mdb_eqI:
   by (clarsimp simp: valid_arch_mdb_def)
 
 
+
+lemma asid_low_bits_of_mask_eq:
+  "ucast (asid_low_bits_of asid) = asid && mask asid_low_bits"
+  by (simp add: asid_bits_defs asid_bits_of_defs ucast_ucast_mask)
+
+lemmas asid_low_bits_of_p2m1_eq =
+  asid_low_bits_of_mask_eq[simplified mask_2pm1]
 
 end
 

@@ -143,6 +143,9 @@ ASIDs are mapped to address space roots by a global two-level table. The actual 
 > asidHighBitsOf :: ASID -> ASID
 > asidHighBitsOf asid = (asid `shiftR` asidLowBits) .&. mask asidHighBits
 
+> asidLowBitsOf :: ASID -> ASID
+> asidLowBitsOf asid = asid .&. mask asidLowBits
+
 > data CR3 = CR3 {
 >     cr3BaseAddress :: PAddr,
 >     cr3pcid :: ASID }

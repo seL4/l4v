@@ -34,7 +34,7 @@ definition
       slot \<noteq> parent \<and>
       ex_cte_cap_to' slot s \<and>
       sch_act_simple s \<and>
-      is_aligned base asid_low_bits \<and> base \<le> 2^asid_bits - 1"
+      is_aligned base asid_low_bits \<and> asid_wf base"
 
 lemma vp_strgs':
   "valid_pspace' s \<longrightarrow> pspace_distinct' s"
@@ -158,7 +158,7 @@ lemma pac_corres:
              apply (rule corres_split)
                 prefer 2
                 apply (simp add: retype_region2_ext_retype_region_ArchObject )
-                apply (rule corres_retype [where ty="Inl (KOArch (KOASIDPool F))",
+                apply (rule corres_retype [where ty="Inl (KOArch (KOASIDPool F))" for F,
                                            unfolded APIType_map2_def makeObjectKO_def,
                                            THEN createObjects_corres',simplified,
                                            where val = "makeObject::asidpool"])
@@ -174,7 +174,7 @@ lemma pac_corres:
                apply (rule corres_split)
                   prefer 2
                   apply (rule cins_corres_simple, simp, rule refl, rule refl)
-                 apply (rule_tac F="is_aligned word2 asid_low_bits" in corres_gen_asm)
+                 apply (rule_tac F="asid_low_bits_of word2 = 0" in corres_gen_asm)
                  apply (simp add: is_aligned_mask dc_def[symmetric])
                  apply (rule corres_split [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
                     prefer 2
@@ -293,7 +293,7 @@ lemma pac_corres:
                          invs_psp_aligned invs_distinct cap_master_cap_simps is_cap_simps
                          is_simple_cap_def)
    apply (clarsimp simp: conj_comms)
-   apply (rule conjI,clarsimp)
+   apply (rule conjI, clarsimp simp: is_aligned_asid_low_bits_of_zero)
    apply (frule ex_cte_cap_protects)
         apply (simp add:cte_wp_at_caps_of_state)
        apply (simp add:empty_descendants_range_in)
@@ -301,7 +301,8 @@ lemma pac_corres:
      apply (rule subset_refl)
     apply fastforce
    apply clarsimp
-   apply (rule conjI,clarsimp simp:clear_um_def)
+   apply (rule conjI, clarsimp)
+   apply (rule conjI, clarsimp simp: clear_um_def)
    apply (simp add:detype_clear_um_independent)
    apply (rule conjI,erule caps_no_overlap_detype[OF descendants_range_caps_no_overlapI])
      apply (clarsimp simp:is_aligned_neg_mask_eq cte_wp_at_caps_of_state)
@@ -646,8 +647,7 @@ lemma decode_page_inv_corres:
                      in corres_guard_imp)
           apply (rule find_vspace_for_asid_corres[OF refl])
          apply (clarsimp simp: valid_cap_def)
-         apply (simp add: mask_def)
-        apply assumption
+        apply simp
        apply (rule whenE_throwError_corres, simp, simp)
        apply (rule_tac R="\<lambda>_ s. valid_vspace_objs s \<and> pspace_aligned s
                                   \<and> (hd args && user_vtop) + (2 ^ pageBitsForSize sz - 1) \<le> user_vtop \<and>
@@ -755,7 +755,7 @@ lemma decode_page_inv_corres:
     apply clarsimp
     apply (drule bspec [where x = "excaps ! 0"])
      apply simp
-    apply (clarsimp simp: valid_cap_def split: option.split)
+    apply (clarsimp simp: valid_cap_def wellformed_mapdata_def split: option.split)
     apply (fastforce simp: invs_def valid_state_def valid_pspace_def mask_def)
    apply (clarsimp split: option.split)
    apply fastforce
@@ -1236,7 +1236,7 @@ lemma decode_ioport_control_inv_corres:
   done
 
 lemma dec_arch_inv_corres:
-notes check_vp_inv[wp del] check_vp_wpR[wp] [[goals_limit = 1]]
+notes check_vp_inv[wp del] check_vp_wpR[wp]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)
 shows
@@ -1302,7 +1302,7 @@ shows
                   apply (rule corres_trivial)
                   apply simp
                  apply simp
-                apply (rule_tac F="- dom pool \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + word2 \<noteq> 0} \<noteq> {}" in corres_gen_asm)
+                apply (rule_tac F="- dom pool \<inter> {x. ucast x + word2 \<noteq> 0} \<noteq> {}" in corres_gen_asm)
                 apply (frule dom_hd_assocsD)
                 apply (simp add: select_ext_fap[simplified free_asid_pool_select_def]
                                  free_asid_pool_select_def)
@@ -1348,7 +1348,6 @@ shows
           prefer 2
           apply (rule corres_trivial)
           apply (clarsimp simp: state_relation_def arch_state_relation_def)
-         apply (simp only: bindE_assoc)
          apply (rule corres_splitEE)
             prefer 2
             apply (rule corres_whenE)
@@ -1377,7 +1376,6 @@ shows
                                  objBits_simps archObjSize_def bindE_assoc split_def)
            apply (rule corres_splitEE)
               prefer 2
-              apply (fold ser_def)
               apply (rule ensure_no_children_corres, rule refl)
              apply (rule corres_splitEE)
                 prefer 2
@@ -1393,8 +1391,7 @@ shows
                  apply (simp add: ord_le_eq_trans [OF word_n1_ge])
                 apply (wp hoare_drop_imps)+
           apply (simp add: o_def validE_R_def)
-          apply (wp hoare_whenE_wp)+
-      apply fastforce
+      apply (fastforce simp: asid_high_bits_def)
      apply clarsimp
      apply (simp add: null_def split_def asid_high_bits_def
                       word_le_make_less)
@@ -2078,7 +2075,7 @@ lemma arch_decodeInvocation_wf[wp]:
       apply (subst (asm) conj_assoc [symmetric])
       apply (subst (asm) assocs_empty_dom_comp [symmetric])
       apply (drule dom_hd_assocsD)
-      apply (simp add: capAligned_def)
+      apply (simp add: capAligned_def asid_wf_def)
       apply (elim conjE)
       apply (subst field_simps, erule is_aligned_add_less_t2n)
         apply assumption
@@ -2105,7 +2102,7 @@ lemma arch_decodeInvocation_wf[wp]:
                             in hoare_post_imp_R)
            apply (simp add: lookupTargetSlot_def)
            apply wp
-          apply (clarsimp simp: cte_wp_at_ctes_of)
+          apply (clarsimp simp: cte_wp_at_ctes_of asid_wf_def)
          apply (simp split del: if_split)
          apply (wp ensureNoChildren_sp whenE_throwError_wp|wpc)+
      apply clarsimp

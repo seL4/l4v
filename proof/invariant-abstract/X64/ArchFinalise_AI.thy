@@ -74,7 +74,7 @@ lemma nat_to_cref_unat_of_bl':
 lemmas nat_to_cref_unat_of_bl = nat_to_cref_unat_of_bl' [OF _ refl]
 
 lemma invs_x64_asid_table_unmap:
-  "invs s \<and> is_aligned base asid_low_bits \<and> base \<le> mask asid_bits
+  "invs s \<and> is_aligned base asid_low_bits
        \<and> tab = x64_asid_table (arch_state s)
      \<longrightarrow> invs (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table := tab(asid_high_bits_of base := None)\<rparr>\<rparr>)"
   apply (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)
@@ -87,21 +87,17 @@ lemma invs_x64_asid_table_unmap:
   done
 
 lemma delete_asid_pool_invs[wp]:
-  "\<lbrace>invs and K (base \<le> mask asid_bits)\<rbrace>
-     delete_asid_pool base pptr
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs\<rbrace> delete_asid_pool base pptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: delete_asid_pool_def)
   apply wp
       apply (strengthen invs_x64_asid_table_unmap)
       apply (wpsimp wp: mapM_wp', simp)
      apply (wp+)[3]
-  apply (clarsimp simp: is_aligned_mask[symmetric])
+  apply (clarsimp simp: ucast_zero_is_aligned asid_bits_of_defs asid_bits_defs)
   done
 
 lemma delete_asid_invs[wp]:
-  "\<lbrace>invs and K (asid \<le> mask asid_bits)\<rbrace>
-     delete_asid asid pd
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs\<rbrace> delete_asid asid pd \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: delete_asid_def cong: option.case_cong del: set_arch_obj_simps(5))
   apply (wpsimp wp: set_asid_pool_invs_unmap)
   done
@@ -154,7 +150,7 @@ lemma set_asid_pool_unmap:
 lemma delete_asid_unmapped[wp]:
   "\<lbrace>\<top>\<rbrace>
       delete_asid asid pd
-   \<lbrace>\<lambda>rv s.  \<not> ([VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+   \<lbrace>\<lambda>rv s.  \<not> ([VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool),
                 VSRef (ucast (asid_high_bits_of asid)) None]  \<rhd> pd) s\<rbrace>"
   apply (simp add: delete_asid_def
                    mask_asid_low_bits_ucast_ucast
@@ -391,7 +387,7 @@ lemma (* arch_finalise_cap_invs *)[wp,Finalise_AI_asms]:
   apply (rule hoare_pre)
    apply (wp unmap_page_invs | wpc)+
   apply (clarsimp simp: valid_cap_def cap_aligned_def)
-  apply (auto simp: mask_def vmsz_aligned_def wellformed_mapdata_def)
+  apply (auto simp: mask_def wellformed_mapdata_def)
   done
 
 lemma arch_finalise_cap_replaceable[wp]:

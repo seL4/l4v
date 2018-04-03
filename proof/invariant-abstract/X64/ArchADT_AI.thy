@@ -50,31 +50,19 @@ where
           \<Rightarrow> (case x64_asid_table astate (asid_high_bits_of asid) of
                 None \<Rightarrow> x64_global_pml4 astate
               | Some p \<Rightarrow> (case khp p of
-                            Some (ArchObj ako) \<Rightarrow>
-                               if (VSRef (asid && mask asid_low_bits)
-                                         (Some AASIDPool), pm_ref)
-                                  \<in> vs_refs_arch ako
-                                 then pm_ref
-                               else x64_global_pml4 astate
+                               Some (ArchObj ako) \<Rightarrow>
+                                 if (VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool), pm_ref)
+                                      \<in> vs_refs_arch ako
+                                   then pm_ref
+                                   else x64_global_pml4 astate
                              | _ \<Rightarrow> x64_global_pml4 astate))
       | _ \<Rightarrow>  x64_global_pml4 astate)
    | _ \<Rightarrow>  x64_global_pml4 astate"
 
-
 lemma VSRef_AASIDPool_in_vs_refs:
-  "(VSRef (asid && mask asid_low_bits) (Some AASIDPool), r) \<in> vs_refs_arch ko =
-   (\<exists>apool. ko = ASIDPool apool \<and> apool (ucast (asid && mask asid_low_bits)) = Some r)"
-  apply simp
-  apply (case_tac ko, simp_all add: image_def graph_of_def)
-  apply (rename_tac arch_kernel_obj)
-  apply (rule iffI)
-   apply clarsimp
-   apply (subst ucast_up_ucast_id, simp add: is_up, assumption)
-  apply (intro exI conjI, assumption)
-  apply (rule sym, rule ucast_ucast_len)
-  apply (cut_tac and_mask_less'[of asid_low_bits asid])
-   apply (simp_all add: asid_low_bits_def)
-  done
+  "(VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool), r) \<in> vs_refs_arch ko =
+   (\<exists>apool. ko = ASIDPool apool \<and> apool (asid_low_bits_of asid) = Some r)"
+  by (case_tac ko; simp add: image_def graph_of_def up_ucast_inj_eq)
 
 context
 notes vs_refs_arch_def[simp del]
@@ -88,7 +76,7 @@ lemma get_vspace_of_thread_def2:
                \<Rightarrow> if (\<exists>p apool.
                         x64_asid_table astate (asid_high_bits_of asid) = Some p \<and>
                         khp p = Some (ArchObj (ASIDPool apool)) \<and>
-                        apool (ucast (asid && mask asid_low_bits)) = Some pm_ref)
+                        apool (asid_low_bits_of asid) = Some pm_ref)
                     then pm_ref
                     else x64_global_pml4 astate
            | _ \<Rightarrow>  x64_global_pml4 astate)

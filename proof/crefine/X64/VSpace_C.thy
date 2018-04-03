@@ -876,25 +876,25 @@ lemma findVSpaceForASID_ccorres:
     apply (rule allI, rule conseqPre, vcg)
     apply (clarsimp simp: throwError_def return_def bindE_def NonDetMonad.lift_def
                           EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def lookup_fault_lift_invalid_root)
-    apply (frule rf_sr_asidTable_None[THEN iffD2],
-                 fastforce intro: le_mask_imp_and_mask, assumption, assumption)
-    apply (fastforce simp: asid_map_asid_map_none_def asid_map_asid_map_vspace_def
+    apply (frule rf_sr_asidTable_None[where asid=asid, THEN iffD2],
+           simp add: asid_wf_def3, assumption, assumption)
+    apply (fastforce simp: asid_map_asid_map_none_def asid_map_asid_map_vspace_def asid_wf_def2
                            Kernel_C.asidLowBits_def asid_shiftr_low_bits_less)
   (* Case where the first look-up succeeds *)
-  apply clarsimp
-  apply (rule ccorres_liftE_Seq)
-  apply (rule ccorres_guard_imp)
+   apply clarsimp
+   apply (rule ccorres_liftE_Seq)
+   apply (rule ccorres_guard_imp)
      apply (rule ccorres_pre_getObject_asidpool)
      apply (rename_tac asidPool)
-     apply (case_tac "inv ASIDPool asidPool (asid && mask asid_low_bits) = Some 0")
-      apply (fastforce simp: ccorres_fail')
+     apply (case_tac "inv ASIDPool asidPool (ucast (asid_low_bits_of asid)) = Some 0")
+      apply (clarsimp simp: ccorres_fail')
      apply (rule_tac P="\<lambda>s. asidTable=x64KSASIDTable (ksArchState s) \<and>
-                            valid_arch_state' s \<and> (asid \<le> mask asid_bits)"
+                            valid_arch_state' s \<and> (asid_wf asid)"
                  and P'="{s'. (\<exists>ap'. cslift s' (ap_Ptr (the (asidTable (ucast (asid_high_bits_of asid)))))
                                                = Some ap' \<and> casid_pool_relation asidPool ap')}"
                   in ccorres_from_vcg_throws_nofail)
      apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: ucast_asid_high_bits_is_shift)
+     apply (clarsimp simp: ucast_asid_high_bits_is_shift asid_wf_def2)
      apply (frule_tac idx="(asid >> asid_low_bits)" in rf_asidTable, assumption,
                       simp add: leq_asid_bits_shift)
      apply (clarsimp simp: typ_heap_simps)
@@ -903,7 +903,8 @@ lemma findVSpaceForASID_ccorres:
      apply (case_tac ap', simp)
      apply (simp add: array_relation_def)
      apply (erule_tac x="(asid && 2 ^ asid_low_bits - 1)" in allE)
-     apply (simp add: word_and_le1 mask_def option_to_ptr_def option_to_0_def asid_shiftr_low_bits_less)
+     apply (simp add: word_and_le1 mask_def option_to_ptr_def option_to_0_def
+                      asid_shiftr_low_bits_less asid_low_bits_of_p2m1_eq)
      apply (rename_tac "fun" array)
      apply (case_tac "fun (asid && 2 ^ asid_low_bits - 1)", clarsimp)
       apply (clarsimp simp: throwError_def return_def EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def)
@@ -911,7 +912,7 @@ lemma findVSpaceForASID_ccorres:
       apply (rule conjI)
        apply (simp add: asid_low_bits_def asid_bits_def)
        apply word_bitwise
-      apply (fastforce simp: asid_map_relation_def asid_map_lift_def
+      apply (clarsimp simp: asid_map_relation_def asid_map_lift_def
                              asid_map_asid_map_none_def asid_map_asid_map_vspace_def)
      apply (clarsimp simp: Kernel_C.asidLowBits_def)
      apply (rule conjI)
@@ -1813,7 +1814,7 @@ lemmas ccorres_name_ksCurThread = ccorres_pre_getCurThread[where f="\<lambda>_. 
 
 lemma unmapPage_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
-                          and (\<lambda>_. asid \<le> mask asid_bits \<and> vmsz_aligned' vptr sz
+                          and (\<lambda>_. asid_wf asid \<and> vmsz_aligned' vptr sz
                                            \<and> vptr < pptrBase))
       (UNIV \<inter> {s. framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 3}
             \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
@@ -1882,7 +1883,7 @@ lemma unmapPage_ccorres:
                   apply (rule conseqPre, vcg)
                   apply (clarsimp simp: typ_heap_simps')
                   apply (clarsimp simp: cpde_relation_def Let_def pde_lift_def pde_pde_large_lift_def
-                                        isLargePagePDE_def if_1_0_0 pde_get_tag_def pde_tag_defs
+                                        isLargePagePDE_def pde_get_tag_def pde_tag_defs
                                  split: if_split_asm pde.split_asm)
                  apply (rule ceqv_refl)
                 apply (simp add: unfold_checkMapping_return liftE_liftM
@@ -2637,7 +2638,7 @@ lemma performASIDPoolInvocation_ccorres:
      apply (clarsimp simp: typ_heap_simps)
      apply (case_tac pool')
      apply (simp add: casid_pool_relation_def)
-    apply simp
+    apply (simp add: asid_low_bits_of_mask_eq mask_def asid_low_bits_def)
    apply (clarsimp simp: asid_map_relation_def asid_map_asid_map_vspace_lift
                          asid_map_asid_map_none_def asid_map_asid_map_vspace_def
                          asid_map_lifts[simplified asid_map_asid_map_vspace_def, simplified]

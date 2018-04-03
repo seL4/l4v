@@ -437,26 +437,26 @@ where valid_cap'_def:
                     \<and> (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask n)) s))
   | Structures_H.ArchObjectCap ac \<Rightarrow> (case ac of
     ASIDPoolCap pool asid \<Rightarrow>
-    typ_at' (ArchT ASIDPoolT) pool s \<and> is_aligned asid asid_low_bits \<and> asid \<le> 2^asid_bits - 1
+    typ_at' (ArchT ASIDPoolT) pool s \<and> is_aligned asid asid_low_bits \<and> asid_wf asid
   | ASIDControlCap \<Rightarrow> True
   | PageCap ref rghts t sz d mapdata \<Rightarrow> ref \<noteq> 0 \<and>
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' (if d then UserDataDeviceT else UserDataT)
     (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> (t=VMNoMap) | Some (asid, ref) \<Rightarrow>
-            0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < pptrBase \<and> t \<noteq> VMNoMap)
+            0 < asid \<and> asid_wf asid \<and> vmsz_aligned' ref sz \<and> ref < pptrBase)
   | PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
-            0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < pptrBase)
+            0 < asid \<and> asid_wf asid \<and> ref < pptrBase)
   | PageDirectoryCap ref mapdata \<Rightarrow>
     page_directory_at' ref s \<and>
-    (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le> 2^asid_bits-1 \<and> ref < pptrBase)
+    (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid_wf asid \<and> ref < pptrBase)
   | PDPointerTableCap ref mapdata \<Rightarrow>
     pd_pointer_table_at' ref s \<and>
-    (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le> 2^asid_bits-1 \<and> ref < pptrBase)
+    (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid_wf asid \<and> ref < pptrBase)
   | PML4Cap ref mapdata \<Rightarrow>
     page_map_l4_at' ref s \<and>
-    case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata
+    case_option True (\<lambda>asid. 0 < asid \<and> asid_wf asid) mapdata
   | IOPortCap first l \<Rightarrow> first \<le> l
   | IOPortControlCap \<Rightarrow> True))"
 
@@ -3892,4 +3892,3 @@ add_upd_simps "invs' (gsUntypedZeroRanges_update f s)
 declare upd_simps[simp]
 
 end
-

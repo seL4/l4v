@@ -100,7 +100,7 @@ lemma p2_low_bits_max:
 
 
 lemma dom_ucast_eq:
-  "(- dom (\<lambda>a::10 word. p (ucast a::word32)) \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + y \<noteq> 0} = {}) =
+  "(- dom (\<lambda>a::asid_low_index. p (ucast a::machine_word)) \<inter> {x. ucast x + y \<noteq> 0} = {}) =
    (- dom p \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> x + y \<noteq> 0} = {})"
   apply safe
    apply clarsimp
@@ -166,10 +166,10 @@ lemma dom_ucast_eq_7:
 
 
 lemma ucast_fst_hd_assocs:
-  "- dom (\<lambda>x. pool (ucast (x::10 word)::word32)) \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + (w::word32) \<noteq> 0} \<noteq> {}
+  "- dom (\<lambda>x. pool (ucast (x::asid_low_index)::machine_word)) \<inter> {x. ucast x + (w::machine_word) \<noteq> 0} \<noteq> {}
   \<Longrightarrow>
   fst (hd [(x, y)\<leftarrow>assocs pool . x \<le> 2 ^ asid_low_bits - 1 \<and> x + w \<noteq> 0 \<and> y = None]) =
-  ucast (fst (hd [(x, y)\<leftarrow>assocs (\<lambda>a::10 word. pool (ucast a)) .
+  ucast (fst (hd [(x, y)\<leftarrow>assocs (\<lambda>a::asid_low_index. pool (ucast a)) .
                           x \<le> 2 ^ asid_low_bits - 1 \<and>
                           ucast x + w \<noteq> 0 \<and> y = None]))"
   apply (simp add: ucast_assocs[unfolded o_def])
@@ -1501,7 +1501,6 @@ lemma arch_decode_inv_wf[wp]:
         apply (clarsimp simp: obj_at_def)
         apply (subgoal_tac "ucast (ucast xa + word2) = xa")
          apply simp
-        apply (simp add: p2_low_bits_max)
         apply (simp add: is_aligned_nth)
         apply (subst word_plus_and_or_coroll)
          apply (rule word_eqI)

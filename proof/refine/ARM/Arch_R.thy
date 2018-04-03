@@ -809,7 +809,7 @@ lemma resolve_vaddr_valid_mapping_size:
   done
 
 lemma dec_arch_inv_corres:
-notes check_vp_inv[wp del] check_vp_wpR[wp] [[goals_limit = 1]]
+notes check_vp_inv[wp del] check_vp_wpR[wp]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)
 shows
@@ -873,7 +873,7 @@ shows
                   apply (rule corres_trivial)
                   apply simp
                  apply simp
-                apply (rule_tac F="- dom pool \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + word2 \<noteq> 0} \<noteq> {}" in corres_gen_asm)
+                apply (rule_tac F="- dom pool \<inter> {x. ucast x + word2 \<noteq> 0} \<noteq> {}" in corres_gen_asm)
                 apply (frule dom_hd_assocsD)
                 apply (simp add: select_ext_fap[simplified free_asid_pool_select_def]
                                  free_asid_pool_select_def)
