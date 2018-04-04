@@ -3541,7 +3541,7 @@ done
 
 
 
-lemma (in kernel_m) updateMDB_set_mdbPrev:
+lemma updateMDB_set_mdbPrev:
  "ccorres dc xfdc
           (\<lambda>s. is_aligned slota cteSizeBits)
           {s. slotc = slota } hs
@@ -3561,7 +3561,7 @@ lemma (in kernel_m) updateMDB_set_mdbPrev:
   apply (simp)
   done
 
-lemma (in kernel_m) updateMDB_set_mdbNext:
+lemma updateMDB_set_mdbNext:
  "ccorres dc xfdc
           (\<lambda>s. is_aligned slota cteSizeBits \<and> canonical_address slota)
           {s. slotc = slota} hs
