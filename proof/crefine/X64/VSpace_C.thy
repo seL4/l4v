@@ -12,6 +12,13 @@ theory VSpace_C
 imports TcbAcc_C CSpace_C PSpace_C TcbQueue_C
 begin
 
+autocorres
+  [ skip_heap_abs, skip_word_abs,
+    scope = handleVMFault lookupPDPTSlot,
+    scope_depth = 0,
+    c_locale = kernel_all_substitute
+  ] "../c/build/$L4V_ARCH/kernel_all.c_pp"
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma ccorres_name_pre_C:
@@ -72,6 +79,9 @@ end
 
 context kernel_m begin
 
+local_setup
+  \<open>AutoCorresModifiesProofs.new_modifies_rules "../c/build/$L4V_ARCH/kernel_all.c_pp"\<close>
+
 lemma pageBitsForSize_le:
   "pageBitsForSize x \<le> 30"
   by (simp add: pageBitsForSize_def bit_simps split: vmpage_size.splits)
@@ -91,13 +101,8 @@ lemma checkVPAlignment_ccorres:
            []
            (checkVPAlignment sz w)
            (Call checkVPAlignment_'proc)"
-proof -
-  note [split del] = if_split
-  show ?thesis
   apply (cinit lift: sz_' w_')
-  sorry (* FIXME x64: csymbr not unifying with pageBitsForSize_spec
-                      also need to check pageBitsForSize_modifies, it can apparently modify everything
-   apply (csymbr) thm pageBitsForSize_modifies
+   apply (csymbr)
    apply clarsimp
    apply (rule ccorres_Guard [where A=\<top> and C'=UNIV])
    apply (simp split: if_split)
@@ -122,9 +127,7 @@ proof -
   apply (simp add: word_less_nat_alt)
   apply (rule order_le_less_trans, rule pageBitsForSize_le)
   apply simp
-  done *)
-qed
-
+  done
 
 lemma rf_asidTable:
   "\<lbrakk> (\<sigma>, x) \<in> rf_sr; valid_arch_state' \<sigma>; idx \<le> mask asid_high_bits \<rbrakk>
@@ -185,22 +188,20 @@ lemma asid_high_bits_word_bits:
   "asid_high_bits < word_bits"
   by (simp add: asid_high_bits_def word_bits_def)
 
-(* FIXME x64: update for new asid map carch_state_relation *)
-(*
-lemma rf_sr_asid_map_pd_:
-  "(s, s') \<in> rf_sr \<Longrightarrow>
-   asid_map_pd_to_hwasids (x64KSASIDMap (ksArchState s))
-       = set_option \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot)"
-  by (simp add: rf_sr_def cstate_relation_def Let_def
-                carch_state_relation_def)
-*)
-(* FIXME x64: need to fix up asid_map_lift conclusion *)
+lemma page_map_l4_at'_array_assertion:
+  assumes "(s,s') \<in> rf_sr"
+  assumes "page_map_l4_at' pm s"
+  shows "array_assertion (pml4e_Ptr pm) (2^ptTranslationBits) (hrs_htd (t_hrs_' (globals s')))"
+  using assms array_assertion_abs_pml4[where n="\<lambda>_. 2^ptTranslationBits" and x="\<lambda>_. (1::nat)"]
+  by (simp add: bit_simps)
+
 lemma vspace_at_asid_cross_over:
   "\<lbrakk> vspace_at_asid' pm asid s; asid \<le> mask asid_bits;
           (s, s') \<in> rf_sr\<rbrakk>
       \<Longrightarrow> \<exists>apptr ap. index (x86KSASIDTable_' (globals s')) (unat (asid >> asid_low_bits))
                      = (ap_Ptr apptr) \<and> cslift s' (ap_Ptr apptr) = Some (asid_pool_C ap)
-                  (*\<and> asid_map_lift (index ap (unat (asid && 2 ^ asid_low_bits - 1))) = pml4e_Ptr pm*)
+                  \<and> asid_map_lift (index ap (unat (asid && mask asid_low_bits)))
+                      = Some (Asid_map_asid_map_vspace \<lparr>vspace_root_CL = pm\<rparr>)
                   \<and> is_aligned pm pml4Bits
                   \<and> array_assertion (pml4e_Ptr pm) 512 (hrs_htd (t_hrs_' (globals s')))"
   apply (clarsimp simp: vspace_at_asid'_def)
@@ -222,33 +223,14 @@ lemma vspace_at_asid_cross_over:
          assumption, erule ko_at_projectKO_opt)
   apply (clarsimp simp: casid_pool_relation_def array_relation_def
                  split: asid_pool_C.split_asm)
-  (*
-  apply (drule spec, drule sym [OF mp])
-   apply (rule_tac y=asid in word_and_le1)
-  apply (frule(1) page_directory_at_rf_sr)
-  apply (clarsimp simp: mask_2pm1[symmetric] option_to_ptr_def option_to_0_def
-                        page_directory_at'_def typ_at_to_obj_at_arches)
-  apply (drule_tac x="pd_asid_slot" in spec,
-         simp add: pd_asid_slot_def pt_index_bits_def' pageBits_def)
-  apply (drule obj_at_ko_at'[where 'a=pde], clarsimp)
-  apply (rule cmap_relationE1 [OF rf_sr_cpde_relation],
-         assumption, erule ko_at_projectKO_opt)
-  apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
-  apply (clarsimp simp: valid_pde_mappings'_def)
-  apply (elim allE, drule(1) mp)
-  apply (simp add: valid_pde_mapping'_def valid_pde_mapping_offset'_def
-                   pd_asid_slot_def mask_add_aligned table_bits_defs)
-  apply (simp add: mask_def)
-  apply (clarsimp simp add: cpde_relation_def Let_def)
-  by (simp add: pde_lift_def Let_def split: if_split_asm) *)
-  sorry
+  apply (apply_conjunct \<open>solves \<open>simp add: page_map_l4_at'_def\<close>\<close>)
+  apply (drule spec, drule mp, rule word_and_mask_le_2pm1[of asid])
+  using page_map_l4_at'_array_assertion
+  by (simp add: asid_map_relation_def bit_simps asid_bits_defs asid_bits_of_defs ucast_ucast_mask
+         split: option.splits asid_map_CL.splits)
 
-lemma findVSpaceForASIDAssert_pd_at_wp2:
-  "\<lbrace>\<lambda>s. \<forall>pd. vspace_at_asid' pd asid s \<longrightarrow> P pd s\<rbrace> findVSpaceForASIDAssert asid \<lbrace>P\<rbrace>"
-  apply (simp add: findVSpaceForASIDAssert_def const_def
-                    checkPML4At_def)
-  apply (wpsimp wp: findVSpaceForASID_vs_at_wp)
-  done
+(* FIXME remove *)
+lemmas findVSpaceForASIDAssert_pd_at_wp2 = findVSpaceForASIDAssert_vs_at_wp
 
 lemma asid_shiftr_low_bits_less:
   "(asid :: machine_word) \<le> mask asid_bits \<Longrightarrow> asid >> asid_low_bits < 0x8"
@@ -266,120 +248,92 @@ lemma array_relation_update:
                (Arrays.update arr x' v')"
   by (simp add: array_relation_def word_le_nat_alt split: if_split)
 
-(* FIXME x64: this function doesn't exist in x64, related to
-              the maintenance of the asid map. Since the asid map
-              is contentious (gerwin advocates getting rid of it)
-              it is commented out now *)
-(*
-lemma invalidateASID_ccorres:
-  "ccorres dc xfdc ((\<lambda>_. asid \<le> mask asid_bits))
-                   (UNIV \<inter> {s. asid_' s = asid}) []
-     (invalidateASID asid) (Call invalidateASID_'proc)"
-  apply (rule ccorres_gen_asm)
-  apply (cinit lift: asid_')
-   apply (rule ccorres_Guard_Seq)+
-   apply (rule ccorres_symb_exec_l [OF _ _ _ empty_fail_findVSpaceForASIDAssert])
-     apply (rename_tac pd)
-     apply (rule_tac P="\<lambda>s. vspace_at_asid' pd asid s \<and> valid_pde_mappings' s
-                               \<and> pd \<notin> ran (option_map snd o x64KSASIDMap (ksArchState s)
-                                                     |` (- {asid}))
-                               \<and> option_map snd (x64KSASIDMap (ksArchState s) asid) \<in> {None, Some pd}"
-                   in ccorres_from_vcg[where P'=UNIV])
-     apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: Collect_const_mem word_sle_def word_sless_def
-                           asidLowBits_handy_convs simpler_gets_def
-                           simpler_modify_def bind_def)
-     apply (frule(2) vspace_at_asid_cross_over)
-     apply (clarsimp simp: typ_heap_simps)
-     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                           cpspace_relation_def
-                           ptr_add_assertion_positive
-                           array_assertion_shrink_right)
-     apply (clarsimp simp: typ_heap_simps cmachine_state_relation_def
-                           carch_state_relation_def vspace_at_asid'_def carch_globals_def
-                           fun_upd_def[symmetric] order_le_less_trans[OF word_and_le1]
-                           arg_cong[where f="\<lambda>x. 2 ^ x", OF meta_eq_to_obj_eq, OF asid_low_bits_def])
-     apply (intro conjI)
-      apply (erule iffD1 [OF cmap_relation_cong, rotated -1], simp_all)[1]
-      apply (simp split: if_split_asm)
-      apply (clarsimp simp: cpde_relation_def Let_def
-                            pde_lift_pde_invalid
-                      cong: X64_H.pde.case_cong)
-     apply (subst asid_map_pd_to_hwasids_clear, assumption)
-      subgoal by clarsimp
-     apply (rule ext, simp add: pd_pointer_to_asid_slot_def map_comp_def split: if_split)
-     subgoal by (clarsimp simp: pde_stored_asid_def false_def mask_def[where n="Suc 0"])
-    apply wp[1]
-   apply (wp findVSpaceForASIDAssert_pd_at_wp2)
-  apply (clarsimp simp: asidLowBits_handy_convs word_sle_def word_sless_def
-                        asid_shiftr_low_bits_less)
-  done *)
-
-(* FIXME x64: waiting on vm_fault_type enum for x64 *)
 definition
+  vm_fault_type_from_H :: "vmfault_type \<Rightarrow> machine_word"
+where
   "vm_fault_type_from_H fault \<equiv>
-  case fault of
-    vmfault_type.X64DataFault \<Rightarrow> (scast Kernel_C.X86DataFault) :: machine_word
-  | vmfault_type.X64InstructionFault \<Rightarrow> scast Kernel_C.X86InstructionFault"
+    case fault of
+         vmfault_type.X64DataFault \<Rightarrow> scast Kernel_C.X86DataFault
+       | vmfault_type.X64InstructionFault \<Rightarrow> scast Kernel_C.X86InstructionFault"
 
 lemma mask_64_id [simp]:
   "(x::machine_word) && mask 64 = x"
   using uint_lt2p [of x] by (simp add: mask_eq_iff)
 
-(* FIXME x64 *)
+(* FIXME: automate this *)
+lemma seL4_Fault_VMFault_new'_spec:
+  "\<lbrace> \<lambda>s. s = \<sigma> \<rbrace> seL4_Fault_VMFault_new' addr FSR i
+   \<lbrace> \<lambda>r s. s = \<sigma>
+            \<and> seL4_Fault_VMFault_lift r = \<lparr>address_CL = addr, FSR_CL = FSR && mask 5, instructionFault_CL = i && mask 1\<rparr>
+            \<and> seL4_Fault_get_tag r = scast seL4_Fault_VMFault \<rbrace>"
+  apply (rule hoare_weaken_pre, rule hoare_strengthen_post)
+    apply (rule autocorres_transfer_spec_no_modifies
+                  [where cs="undefined\<lparr>globals := \<sigma>, address_' := addr,
+                                       FSR_' := FSR, instructionFault_' := i\<rparr>",
+                   OF seL4_Fault_VMFault_new'_def seL4_Fault_VMFault_new_spec
+                      seL4_Fault_VMFault_new_modifies])
+      by auto
+
+lemma no_fail_seL4_Fault_VMFault_new':
+  "no_fail \<top> (seL4_Fault_VMFault_new' addr fault i)"
+  apply (rule terminates_spec_no_fail'[OF seL4_Fault_VMFault_new'_def seL4_Fault_VMFault_new_spec])
+  apply clarsimp
+  apply terminates_trivial
+  done
+
+lemma returnVMFault_corres:
+  "\<lbrakk> addr = addr'; i = i' && mask 1; fault = fault' && mask 5 \<rbrakk> \<Longrightarrow>
+   corres_underlying
+     {(x, y). cstate_relation x y} True True
+     (lift_rv id (\<lambda>y. ()) (\<lambda>e. e) (\<lambda>_ _. False)
+                 (\<lambda>e f e'. f = SCAST(32 signed \<rightarrow> 64) EXCEPTION_FAULT \<and>
+                           (\<exists>vf. e = ArchFault (VMFault (address_CL vf) [instructionFault_CL vf, FSR_CL vf])
+                                       \<and> errfault e' = Some (SeL4_Fault_VMFault vf))))
+     \<top> \<top>
+     (throwError (Fault_H.fault.ArchFault (VMFault addr [i, fault])))
+     (do f <- seL4_Fault_VMFault_new' addr' fault' i';
+         _ <- modify (current_fault_'_update (\<lambda>_. f));
+         e <- gets errglobals;
+         return (scast EXCEPTION_FAULT, e)
+      od)"
+  apply (rule corres_symb_exec_r)
+     apply (rename_tac vmf)
+     apply (rule_tac F="seL4_Fault_VMFault_lift vmf = \<lparr>address_CL = addr, FSR_CL = fault && mask 5, instructionFault_CL = i && mask 1\<rparr>
+                         \<and> seL4_Fault_get_tag vmf = scast seL4_Fault_VMFault"
+              in corres_gen_asm2)
+     apply (rule lift_rv_throwError;
+            clarsimp simp: exception_defs seL4_Fault_VMFault_lift)
+    apply (wpsimp wp: valid_spec_to_wp'[OF seL4_Fault_VMFault_new'_spec]
+                      no_fail_seL4_Fault_VMFault_new'
+                simp: mask_twice)+
+  done
+
 lemma handleVMFault_ccorres:
-  "ccorres ((\<lambda>a ex v. ex = scast EXCEPTION_FAULT \<and> (\<exists>vf.
-                      a = ArchFault (VMFault (seL4_Fault_VMFault_CL.address_CL vf) [instructionFault_CL vf, FSR_CL vf]) \<and>
-                      errfault v = Some (SeL4_Fault_VMFault vf))) \<currency>
-           (\<lambda>_. \<bottom>))
+  "ccorres ((\<lambda>f ex v. ex = scast EXCEPTION_FAULT
+                      \<and> (\<exists>vf. f = ArchFault (VMFault (address_CL vf)
+                                             [instructionFault_CL vf, FSR_CL vf])
+                          \<and> errfault v = Some (SeL4_Fault_VMFault vf))) \<currency> \<bottom>\<bottom>)
            (liftxf errstate id (K ()) ret__unsigned_long_')
            \<top>
-           (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace> \<inter> \<lbrace>\<acute>vm_faultType = vm_fault_type_from_H vm_fault\<rbrace>)
-          []
+           (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>
+                 \<inter> \<lbrace>\<acute>vm_faultType = vm_fault_type_from_H vm_fault\<rbrace>)
+           []
            (handleVMFault thread vm_fault)
            (Call handleVMFault_'proc)"
-  apply (cinit lift: thread_' vm_faultType_')
-   apply (ctac (no_vcg) add: getFaultAddr_ccorres pre: ccorres_liftE_Seq)
-  sorry (* getRegister returns word but gets truncated here
-    apply (ctac (no_vcg) add: getRegister_ccorres pre: ccorres_liftE_Seq)
-
-   apply (ctac add: getFaultAddr_ccorres)
-   apply wpc
-    apply (simp add: vm_fault_type_from_H_def)
-    apply (simp add: ccorres_cond_univ_iff)
-    apply (rule ccorres_rhs_assoc)+
-    apply csymbr
-    apply csymbr
-    apply (ctac (no_vcg) add: getHDFAR_ccorres pre: ccorres_liftE_Seq)
-     apply (ctac (no_vcg) add: addressTranslateS1CPR_ccorres pre: ccorres_liftE_Seq)
-      apply csymbr
-      apply (ctac (no_vcg) add: getHSR_ccorres pre: ccorres_liftE_Seq)
-       apply csymbr
-       apply (clarsimp simp: pageBits_def)
-       apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
-       apply (clarsimp simp add: throwError_def return_def)
-       apply (rule conseqPre)
-        apply vcg
-       apply (clarsimp simp: errstate_def EXCEPTION_FAULT_def EXCEPTION_NONE_def)
-       apply (wpsimp simp: seL4_Fault_VMFault_lift false_def mask_def)+
-  apply (simp add: vm_fault_type_from_H_def Kernel_C.ARMDataAbort_def Kernel_C.ARMPrefetchAbort_def)
-   apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff)
-   apply (rule ccorres_rhs_assoc)+
-   apply csymbr
-   apply csymbr
-   apply (ctac (no_vcg) pre: ccorres_liftE_Seq)
-    apply (ctac (no_vcg) add: addressTranslateS1CPR_ccorres pre: ccorres_liftE_Seq)
-     apply csymbr
-     apply (ctac (no_vcg) add: getHSR_ccorres pre: ccorres_liftE_Seq)
-      apply csymbr
-      apply (clarsimp simp: pageBits_def)
-      apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
-      apply (clarsimp simp add: throwError_def return_def)
-      apply (rule conseqPre)
-       apply vcg
-      apply (clarsimp simp: errstate_def EXCEPTION_FAULT_def EXCEPTION_NONE_def)
-      apply (wpsimp simp: seL4_Fault_VMFault_lift true_def mask_def)+
-  done *)
+  (* FIXME x64: make this a real ac_init *)
+  apply (rule corres_to_ccorres_rv_spec_errglobals[OF _ _ refl],
+         rule handleVMFault'_ac_corres[simplified o_def])
+    prefer 3 apply simp
+   apply (simp add: handleVMFault_def handleVMFault'_def liftE_bindE condition_const
+                    ucast_ucast_mask bind_assoc)
+   apply (rule corres_split[OF _ getFaultAddr_ccorres[ac]], drule sym, clarsimp)
+      apply (rule corres_split[OF _ getRegister_ccorres[ac]], drule sym, clarsimp)
+           apply (wpc; simp add: vm_fault_type_from_H_def X86InstructionFault_def X86DataFault_def
+                                 true_def false_def bind_assoc)
+            apply (rule returnVMFault_corres;
+                   clarsimp simp: exception_defs mask_twice lift_rv_def)+
+           apply (wpsimp simp: mask_def | terminates_trivial)+
+  done
 
 lemma unat_asidLowBits [simp]:
   "unat Kernel_C.asidLowBits = asidLowBits"
@@ -455,12 +409,10 @@ lemma clift_ptr_safe2:
 lemma ptTranslationBits_mask_le: "(x::machine_word) && 0x1FF < 0x200"
   by (word_bitwise)
 
-
-(* FIXME x64: lookupPML4Slot returns a struct, postcondition needs fixing *)
 lemma lookupPML4Slot_spec:
-  "\<forall>s. \<Gamma> \<turnstile>  \<lbrace>s. array_assertion (pml4_' s) (2 ^ ptTranslationBits) (hrs_htd (\<acute>t_hrs))\<rbrace>
+  "\<forall>s. \<Gamma> \<turnstile> \<lbrace> s. array_assertion (pml4_' s) (2 ^ ptTranslationBits) (hrs_htd (\<acute>t_hrs)) \<rbrace>
   Call lookupPML4Slot_'proc
-  \<lbrace>  \<acute>ret__ptr_to_struct_pml4e_C =  Ptr (lookupPML4Slot (ptr_val (pml4_' s))  (vptr_' s)) \<rbrace>"
+  \<lbrace> \<acute>ret__ptr_to_struct_pml4e_C =  Ptr (lookupPML4Slot (ptr_val (pml4_' s)) (vptr_' s)) \<rbrace>"
   apply vcg
   apply clarsimp
   apply (clarsimp simp: lookup_pml4_slot_def)
@@ -469,8 +421,8 @@ lemma lookupPML4Slot_spec:
    apply (rule unat_le_helper, clarsimp simp: ptTranslationBits_mask_le order_less_imp_le)
   apply (simp add: Let_def word_sle_def bit_simps getPML4Index_def mask_def)
   apply (case_tac pml4)
-  apply (simp add: shiftl_t2n )
-  oops
+  apply (simp add: shiftl_t2n)
+  done
 
 lemma ccorres_pre_getObject_pml4e:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
@@ -516,13 +468,6 @@ lemma ccorres_pre_getObject_pde:
   apply simp
   done
 
-(* FIXME: move *)
-(* FIXME: delete duplicates in Corres_C *)
-lemma ccorres_abstract_cleanup:
-  "ccorres r xf G G' hs a c \<Longrightarrow>
-   ccorres r xf G ({s. s \<in> S \<longrightarrow> s \<in> G'} \<inter> S) hs a c"
-   by (fastforce intro: ccorres_guard_imp)
-
 lemma ptrFromPAddr_spec:
   "\<forall>s. \<Gamma> \<turnstile>  {s}
   Call ptrFromPAddr_'proc
@@ -539,10 +484,204 @@ lemma addrFromPPtr_spec:
   apply (simp add: addrFromPPtr_def X64.pptrBase_def)
   done
 
-abbreviation
-  "lookupPDPTSlot_xf \<equiv> liftxf errstate lookupPDPTSlot_ret_C.status_C lookupPDPTSlot_ret_C.pdptSlot_C ret__struct_lookupPDPTSlot_ret_C_'"
+lemma corres_symb_exec_unknown_r:
+  assumes "\<And>rv. corres_underlying sr nf nf' r P P' a (c rv)"
+  shows "corres_underlying sr nf nf' r P P' a (unknown >>= c)"
+  apply (simp add: unknown_def)
+  apply (rule corres_symb_exec_r[OF assms]; wp select_inv non_fail_select)
+  done
 
+(* FIXME: automate this. *)
+lemma lookupPML4Slot'_spec:
+  "\<lbrace> \<lambda>s. s = \<sigma> \<and> array_assertion pm (2 ^ ptTranslationBits) (hrs_htd (t_hrs_' s)) \<rbrace>
+    lookupPML4Slot' pm vptr
+   \<lbrace> \<lambda>r s. s = \<sigma> \<and> r = pml4e_Ptr (lookupPML4Slot (ptr_val pm) vptr) \<rbrace>"
+  apply (rule hoare_weaken_pre, rule hoare_strengthen_post)
+    apply (rule autocorres_transfer_spec_no_modifies
+                  [where cs="undefined\<lparr>globals := \<sigma>, pml4_' := pm, vptr_' := vptr\<rparr>"
+                     and P="\<lambda>s. array_assertion (pml4_' s) (2 ^ ptTranslationBits) (hrs_htd (t_hrs_' (globals s)))",
+                   OF lookupPML4Slot'_def lookupPML4Slot_spec lookupPML4Slot_modifies])
+       by auto
+
+lemma no_fail_lookupPML4Slot':
+  "no_fail (\<lambda>s. array_assertion pm (2 ^ ptTranslationBits) (hrs_htd (t_hrs_' s))) (lookupPML4Slot' pm vptr)"
+  apply (rule terminates_spec_no_fail[OF lookupPML4Slot'_def lookupPML4Slot_spec]; clarsimp)
+  apply terminates_trivial
+  done
+
+lemmas corres_symb_exec_lookupPML4Slot' =
+  valid_spec_to_corres_gen_symb_exec_r[OF lookupPML4Slot'_spec no_fail_lookupPML4Slot']
+
+(* FIXME: automate this. *)
+lemma pml4e_ptr_get_present'_spec:
+  "\<lbrace> \<lambda>s. s = \<sigma> \<and> s \<Turnstile>\<^sub>g pml4e_ptr \<rbrace>
+    pml4e_ptr_get_present' pml4e_ptr
+   \<lbrace> \<lambda>r s. s = \<sigma> \<and> r = pml4e_CL.present_CL (pml4e_lift (the (gslift s pml4e_ptr))) \<rbrace>"
+  apply (rule hoare_weaken_pre, rule hoare_strengthen_post)
+    apply (rule autocorres_transfer_spec_no_modifies
+                  [where cs="undefined\<lparr>globals := \<sigma>, pml4e_ptr_' := pml4e_ptr\<rparr>"
+                     and P="\<lambda>s. s \<Turnstile>\<^sub>c pml4e_ptr_' s",
+                   OF pml4e_ptr_get_present'_def pml4e_ptr_get_present_spec
+                      pml4e_ptr_get_present_modifies])
+      by (auto dest: spec[where x="undefined\<lparr>globals := \<sigma>\<rparr>"])
+
+lemma pml4e_ptr_get_present'_no_fail:
+  "no_fail (\<lambda>s. s \<Turnstile>\<^sub>g pml4e_ptr) (pml4e_ptr_get_present' pml4e_ptr)"
+  apply (rule terminates_spec_no_fail[OF pml4e_ptr_get_present'_def pml4e_ptr_get_present_spec]; clarsimp)
+  apply terminates_trivial
+  done
+
+lemmas corres_symb_exec_pml4e_ptr_get_present' =
+  valid_spec_to_corres_symb_exec_r[OF pml4e_ptr_get_present'_spec pml4e_ptr_get_present'_no_fail]
+
+lemma lookup_fault_missing_capability_new'_spec:
+  "\<lbrace> \<lambda>s. s = \<sigma> \<rbrace>
+    lookup_fault_missing_capability_new' bits
+   \<lbrace> \<lambda>r s. s = \<sigma>
+            \<and> lookup_fault_missing_capability_lift r =
+                \<lparr>lookup_fault_missing_capability_CL.bitsLeft_CL = bits && mask 7\<rparr>
+            \<and> lookup_fault_get_tag r = scast lookup_fault_missing_capability \<rbrace>"
+  apply (rule hoare_weaken_pre, rule hoare_strengthen_post)
+    apply (rule autocorres_transfer_spec_no_modifies
+                  [where cs="undefined\<lparr>globals := \<sigma>, bitsLeft_' := bits\<rparr>" and P=\<top>,
+                   OF lookup_fault_missing_capability_new'_def
+                      lookup_fault_missing_capability_new_spec
+                      lookup_fault_missing_capability_new_modifies])
+      by (auto dest: spec[where x="undefined\<lparr>globals := \<sigma>\<rparr>"])
+
+lemma lookup_fault_missing_capability_new'_no_fail:
+  "no_fail \<top> (lookup_fault_missing_capability_new' bits)"
+  apply (rule terminates_spec_no_fail'[OF lookup_fault_missing_capability_new'_def
+                                          lookup_fault_missing_capability_new_spec];
+         clarsimp)
+  apply terminates_trivial
+  done
+
+lemmas corres_symb_exec_lookup_fault_missing_capability_new' =
+  valid_spec_to_corres_gen_symb_exec_r'[OF lookup_fault_missing_capability_new'_spec
+                                           lookup_fault_missing_capability_new'_no_fail]
+
+lemma pml4e_ptr_get_pdpt_base_address'_spec:
+  "\<lbrace> \<lambda>s. s = \<sigma> \<and> s \<Turnstile>\<^sub>g pml4e_ptr \<rbrace>
+    pml4e_ptr_get_pdpt_base_address' pml4e_ptr
+   \<lbrace> \<lambda>r s. s = \<sigma> \<and> r = pdpt_base_address_CL (pml4e_lift (the (gslift s pml4e_ptr))) \<rbrace>"
+  apply (rule hoare_weaken_pre, rule hoare_strengthen_post)
+    apply (rule autocorres_transfer_spec_no_modifies
+                  [where cs="undefined\<lparr>globals := \<sigma>, pml4e_ptr_' := pml4e_ptr\<rparr>"
+                     and P="\<lambda>s. s \<Turnstile>\<^sub>c pml4e_ptr_' s",
+                   OF pml4e_ptr_get_pdpt_base_address'_def
+                      pml4e_ptr_get_pdpt_base_address_spec
+                      pml4e_ptr_get_pdpt_base_address_modifies])
+      by (auto dest: spec[where x="undefined\<lparr>globals := \<sigma>\<rparr>"])
+
+lemma pml4e_ptr_get_pdpt_base_address'_no_fail:
+  "no_fail (\<lambda>s. s \<Turnstile>\<^sub>g pml4e_ptr) (pml4e_ptr_get_pdpt_base_address' pml4e_ptr)"
+  apply (rule terminates_spec_no_fail[OF pml4e_ptr_get_pdpt_base_address'_def
+                                         pml4e_ptr_get_pdpt_base_address_spec];
+         clarsimp)
+  apply terminates_trivial
+  done
+
+lemmas corres_symb_exec_pml4e_ptr_get_pdpt_base_address' =
+  valid_spec_to_corres_symb_exec_r[OF pml4e_ptr_get_pdpt_base_address'_spec
+                                      pml4e_ptr_get_pdpt_base_address'_no_fail]
+
+lemma ptrFromPAddr'_spec:
+  "\<lbrace> \<lambda>s. s = \<sigma> \<rbrace>
+    ptrFromPAddr' paddr
+   \<lbrace> \<lambda>r s. s = \<sigma> \<and> r = Ptr (ptrFromPAddr paddr) \<rbrace>"
+  apply (rule hoare_weaken_pre, rule hoare_strengthen_post)
+    apply (rule autocorres_transfer_spec_no_modifies
+                  [where cs="undefined\<lparr>globals := \<sigma>, paddr_' := paddr\<rparr>" and P=\<top>,
+                   OF ptrFromPAddr'_def ptrFromPAddr_spec ptrFromPAddr_modifies])
+      by (auto dest: spec[where x="undefined\<lparr>globals := \<sigma>\<rparr>"])
+
+lemma ptrFromPAddr'_no_fail:
+  "no_fail \<top> (ptrFromPAddr' paddr)"
+  apply (rule terminates_spec_no_fail'[OF ptrFromPAddr'_def ptrFromPAddr_spec]; clarsimp)
+  apply terminates_trivial
+  done
+
+lemmas corres_symb_exec_ptrFromPAddr' =
+  valid_spec_to_corres_gen_symb_exec_r'[OF ptrFromPAddr'_spec ptrFromPAddr'_no_fail]
+
+(* Move near rf_sr_cpml4e_relation. *)
+lemma cstate_relation_cpml4e_relation:
+  "cstate_relation s s' \<Longrightarrow>
+    cmap_relation (map_to_pml4es (ksPSpace s)) (gslift s') pml4e_Ptr cpml4e_relation"
+  by (clarsimp simp: cstate_relation_def Let_def cpspace_relation_def)
+
+(* Mirrors proof of ccorres_pre_getObject_pml4e.
+   Is there a generic way to lift these existing rules? *)
+lemma corres_pre_getObject_pml4e:
+  assumes corres: "\<And>rv. corres_underlying {(x, y). cstate_relation x y} True True r (P rv) (P' rv) (f rv) c"
+  shows "corres_underlying
+           {(x, y). cstate_relation x y} True True r
+           (\<lambda>s. \<forall>pml4e. ko_at' pml4e p s \<longrightarrow> P pml4e s)
+           (\<lambda>s. \<forall>pml4e pml4e'. gslift s (pml4e_Ptr p) = Some pml4e' \<and> cpml4e_relation pml4e pml4e'
+                    \<longrightarrow> P' pml4e s)
+           (getObject p >>= (\<lambda>rv. f rv)) c"
+  apply (rule stronger_corres_guard_imp[OF corres_symb_exec_l''])
+        apply (rule stronger_corres_guard_imp[OF corres])
+         apply (rule_tac Q="ko_at' rv p s" in conjunct1, assumption, assumption)
+       apply (wpsimp wp: getPML4E_wp simp: empty_fail_getObject)+
+  by (auto elim: cmap_relationE1[OF cstate_relation_cpml4e_relation] ko_at_projectKO_opt)
+
+abbreviation
+  "lookupPDPTSlot_xf \<equiv> liftxf errstate
+                              lookupPDPTSlot_ret_C.status_C
+                              lookupPDPTSlot_ret_C.pdptSlot_C
+                              ret__struct_lookupPDPTSlot_ret_C_'"
+
+(* Compare this AutoCorres-based proof with ccorres proof below. *)
 lemma lookupPDPTSlot_ccorres:
+  "ccorres (lookup_failure_rel \<currency> (\<lambda>rv rv'. rv' = pdpte_Ptr rv)) lookupPDPTSlot_xf
+       (page_map_l4_at' pm)
+       (UNIV \<inter> \<lbrace>\<acute>pml4 = Ptr pm \<rbrace> \<inter> \<lbrace>\<acute>vptr = vptr  \<rbrace>)
+       []
+       (lookupPDPTSlot pm vptr)
+       (Call lookupPDPTSlot_'proc)"
+  (* FIXME: get ac_init to do this. *)
+  apply (rule corres_to_ccorres_rv_spec_errglobals[OF _ _ refl],
+         rule lookupPDPTSlot'_ac_corres[simplified o_def])
+    prefer 3 apply simp
+   apply (simp add: lookupPDPTSlot_def lookupPDPTSlot'_def
+                    liftE_bindE condition_const bind_assoc)
+   apply (rule corres_pre_getObject_pml4e; rename_tac pml4e)
+   apply (rule corres_symb_exec_lookupPML4Slot'; rename_tac pml4e_ptr)
+   apply (rule corres_symb_exec_unknown_r; rename_tac undefined)
+   apply (rule corres_symb_exec_pml4e_ptr_get_present'; rename_tac present)
+   apply wpc
+    apply (rule_tac F="present = 0" in corres_gen_asm2)
+    apply (simp add: bind_assoc)
+    apply (rule corres_symb_exec_lookup_fault_missing_capability_new'; rename_tac lookup_fault)
+    apply (rule lift_rv_throwError)
+     apply (simp add: exception_defs)
+    apply (simp add: bind_assoc bit_simps mask_def errglobals_def
+                     lookup_fault_missing_capability_lift)
+   apply (rename_tac base_addr acc cd wt ed rights)
+   apply (rule_tac F="present \<noteq> 0" in corres_gen_asm2)
+   apply (simp add: bind_assoc liftE_bind_return_bindE_returnOk liftE_bindE)
+   apply (rule corres_stateAssert_l)
+   apply (rule_tac Q="pd_pointer_table_at' (ptrFromPAddr base_addr)" in corres_cross_over_guard)
+   apply (rule corres_symb_exec_pml4e_ptr_get_pdpt_base_address'; rename_tac base_addr')
+   apply (rule_tac F="base_addr = base_addr'" in corres_gen_asm2)
+   apply (rule corres_symb_exec_ptrFromPAddr')
+   apply (rule corres_guard_r)
+   apply (rule lift_rv_returnOk;
+          simp add: exception_defs lookup_pdpt_slot_no_fail_def getPDPTIndex_def bit_simps
+                    shiftl_t2n mask_def)
+  apply (clarsimp simp: Collect_const_mem h_t_valid_clift bit_simps)
+  apply (frule page_map_l4_at_rf_sr, simp add: rf_sr_def, clarsimp)
+  apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
+  apply (rule conjI; clarsimp simp: cpml4e_relation_def Let_def)
+  apply (frule pd_pointer_table_at_rf_sr, simp add: rf_sr_def, clarsimp)
+  apply (subst (asm) array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
+   apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp+)
+  done
+
+(* For comparison, here is the ccorres proof. *)
+lemma lookupPDPTSlot_ccorres':
   "ccorres (lookup_failure_rel \<currency> (\<lambda>rv rv'. rv' = pdpte_Ptr rv)) lookupPDPTSlot_xf
        (page_map_l4_at' pm)
        (UNIV \<inter> \<lbrace>\<acute>pml4 = Ptr pm \<rbrace> \<inter> \<lbrace>\<acute>vptr = vptr  \<rbrace>)
@@ -552,48 +691,42 @@ lemma lookupPDPTSlot_ccorres:
   apply (cinit lift: pml4_' vptr_')
    apply (simp add: liftE_bindE)
    apply (rule ccorres_pre_getObject_pml4e)
-  sorry (*
+   apply csymbr
    apply csymbr
    apply csymbr
    apply (rule ccorres_abstract_cleanup)
-   apply (rule_tac P="(ret__unsigned = scast pde_pde_coarse) = (isPageTablePDE rv)"
+   apply (rule_tac P="(ret__unsigned_longlong = 0) = (rv = X64_H.InvalidPML4E)"
                in ccorres_gen_asm2)
-   apply (rule ccorres_cond2'[where R=\<top>])
-     apply (clarsimp simp: Collect_const_mem)
-    apply simp
+   apply (wpc; ccorres_rewrite)
     apply (rule_tac P=\<top> and P' =UNIV in ccorres_from_vcg_throws)
     apply (rule allI, rule conseqPre, vcg)
     apply (clarsimp simp: throwError_def  return_def syscall_error_rel_def)
     apply (clarsimp simp: EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def)
     apply (simp add: lookup_fault_missing_capability_lift)
-    apply (simp add: mask_def)
-   apply (rule ccorres_rhs_assoc)+
-   apply (simp add: checkPTAt_def bind_liftE_distrib liftE_bindE
-                    returnOk_liftE[symmetric])
+    apply (simp add: mask_def bit_simps)
+   apply (thin_tac "_ = PDPointerTablePML4E _ _ _ _ _ _")
+   apply (simp add: bind_liftE_distrib liftE_bindE returnOk_liftE[symmetric])
    apply (rule ccorres_stateAssert)
-   apply (rule_tac P="page_table_at' (ptrFromPAddr (pdeTable rv))
-         and ko_at' rv (lookup_pd_slot pd vptr)
-         and K (isPageTablePDE rv)" and P'=UNIV in ccorres_from_vcg_throws)
+   apply (rule_tac P="pd_pointer_table_at' (ptrFromPAddr (pml4eTable rv))
+                        and ko_at' rv (lookup_pml4_slot pm vptr)
+                        and K (isPDPointerTablePML4E rv)"
+               and P'=UNIV
+            in ccorres_from_vcg_throws)
    apply (rule allI, rule conseqPre, vcg)
-   apply (clarsimp simp: returnOk_def return_def Collect_const_mem
-                         lookup_pd_slot_def word_sle_def)
-   apply (frule(1) page_table_at_rf_sr, clarsimp)
-   apply (erule cmap_relationE1[OF rf_sr_cpde_relation], erule ko_at_projectKO_opt)
-   apply (clarsimp simp: typ_heap_simps cpde_relation_def Let_def isPageTablePDE_def
-                         pde_pde_coarse_lift_def pde_pde_coarse_lift
-                  split: pde.split_asm)
+   apply (clarsimp simp: returnOk_def return_def)
+   apply (frule (1) pd_pointer_table_at_rf_sr, clarsimp)
+   apply (erule cmap_relationE1[OF rf_sr_cpml4e_relation], erule ko_at_projectKO_opt)
+   apply (clarsimp simp: typ_heap_simps cpml4e_relation_def Let_def isPDPointerTablePML4E_def
+                  split: pml4e.split_asm)
    apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
     apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
-   apply (simp add: word_shift_by_2 lookup_pt_slot_no_fail_def)
-   apply (simp add: table_bits_defs mask_def shiftl_t2n)
-  apply (clarsimp simp: Collect_const_mem h_t_valid_clift)
-  apply (frule(1) page_directory_at_rf_sr, clarsimp)
+   apply (simp add: lookup_pdpt_slot_no_fail_def getPDPTIndex_def bit_simps shiftl_t2n mask_def)
+  apply (clarsimp simp: Collect_const_mem h_t_valid_clift bit_simps)
+  apply (frule(1) page_map_l4_at_rf_sr, clarsimp)
   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
-   apply (simp add: table_bits_defs)
-  apply (clarsimp simp: cpde_relation_def pde_pde_coarse_lift_def
-                        pde_pde_coarse_lift Let_def isPageTablePDE_def
-                 split: X64_H.pde.split_asm)
-  done *)
+  apply (clarsimp simp: cpml4e_relation_def Let_def isPDPointerTablePML4E_def
+                 split: pml4e.splits)
+  done
 
 lemma ccorres_pre_getObject_pdpte:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
@@ -618,7 +751,8 @@ lemma ccorres_pre_getObject_pdpte:
   done
 
 abbreviation
-  "lookupPDSlot_xf \<equiv> liftxf errstate lookupPDSlot_ret_C.status_C lookupPDSlot_ret_C.pdSlot_C ret__struct_lookupPDSlot_ret_C_'"
+  "lookupPDSlot_xf \<equiv> liftxf errstate lookupPDSlot_ret_C.status_C pdSlot_C
+                             ret__struct_lookupPDSlot_ret_C_'"
 
 lemma pdpte_case_isPageDirectoryPDPTE:
   "(case pdpte of PageDirectoryPDPTE p _ _ _ _ _ \<Rightarrow> fn p | _ \<Rightarrow> g)
@@ -633,61 +767,66 @@ lemma lookupPDSlot_ccorres:
        (lookupPDSlot pm vptr)
        (Call lookupPDSlot_'proc)"
   apply (cinit lift: pml4_' vptr_')
+   apply (rename_tac vptr' pml4)
    apply (simp add: liftE_bindE pdpte_case_isPageDirectoryPDPTE)
    apply (ctac add: lookupPDPTSlot_ccorres)
-      apply (rule ccorres_pre_getObject_pdpte)
-      apply (simp del: Collect_const)
-      apply (ccorres_rewrite)
-  sorry (* FIXME x64: bitfield gen bug, not generating enough spec rules
-      apply csymbr
-
-
-
-   apply csymbr
-   apply csymbr
-   apply (rule ccorres_abstract_cleanup)
-   apply (rule_tac P="(ret__unsigned = scast pde_pde_coarse) = (isPageTablePDE rv)"
-               in ccorres_gen_asm2)
-   apply (rule ccorres_cond2'[where R=\<top>])
-     apply (clarsimp simp: Collect_const_mem)
-    apply simp
-    apply (rule_tac P=\<top> and P' =UNIV in ccorres_from_vcg_throws)
-    apply (rule allI, rule conseqPre, vcg)
-    apply (clarsimp simp: throwError_def  return_def syscall_error_rel_def)
-    apply (clarsimp simp: EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def)
-    apply (simp add: lookup_fault_missing_capability_lift)
-    apply (simp add: mask_def)
-   apply (rule ccorres_rhs_assoc)+
-   apply (simp add: checkPTAt_def bind_liftE_distrib liftE_bindE
-                    returnOk_liftE[symmetric])
-   apply (rule ccorres_stateAssert)
-   apply (rule_tac P="page_table_at' (ptrFromPAddr (pdeTable rv))
-         and ko_at' rv (lookup_pd_slot pd vptr)
-         and K (isPageTablePDE rv)" and P'=UNIV in ccorres_from_vcg_throws)
-   apply (rule allI, rule conseqPre, vcg)
-   apply (clarsimp simp: returnOk_def return_def Collect_const_mem
-                         lookup_pd_slot_def word_sle_def)
-   apply (frule(1) page_table_at_rf_sr, clarsimp)
-   apply (erule cmap_relationE1[OF rf_sr_cpde_relation], erule ko_at_projectKO_opt)
-   apply (clarsimp simp: typ_heap_simps cpde_relation_def Let_def isPageTablePDE_def
-                         pde_pde_coarse_lift_def pde_pde_coarse_lift
-                  split: pde.split_asm)
-   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
-    apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
-   apply (simp add: word_shift_by_2 lookup_pt_slot_no_fail_def)
-   apply (simp add: table_bits_defs mask_def shiftl_t2n)
-  apply (clarsimp simp: Collect_const_mem h_t_valid_clift)
-  apply (frule(1) page_directory_at_rf_sr, clarsimp)
-  apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
-   apply (simp add: table_bits_defs)
-  apply (clarsimp simp: cpde_relation_def pde_pde_coarse_lift_def
-                        pde_pde_coarse_lift Let_def isPageTablePDE_def
-                 split: X64_H.pde.split_asm)
-  done *)
-
+      apply (rename_tac pdpte_ptr lookup_ret, case_tac lookup_ret, clarsimp)
+      apply (rule ccorres_pre_getObject_pdpte, rename_tac pdpte)
+      apply (csymbr, rename_tac page_size, rule ccorres_abstract_cleanup)
+      apply (rule ccorres_rhs_assoc2)
+      apply (rule_tac ccorres_symb_exec_r)
+        apply (rule ccorres_if_lhs)
+         apply (rule ccorres_cond_false)
+         apply (simp add: bind_liftE_distrib liftE_bindE returnOk_liftE[symmetric])
+         apply (rule ccorres_stateAssert)
+         apply (rule_tac P="page_directory_at' (ptrFromPAddr (pdpteTable pdpte))
+                              and ko_at' pdpte pdpte_ptr
+                              and K (isPageDirectoryPDPTE pdpte)"
+                     and P'=UNIV
+                  in ccorres_from_vcg_throws)
+         apply (rule allI, rule conseqPre, vcg)
+         apply (clarsimp simp: returnOk_def return_def, rename_tac s s')
+         apply (frule (1) page_directory_at_rf_sr, clarsimp, rename_tac pd')
+         apply (rule cmap_relationE1[OF rf_sr_cpdpte_relation], assumption,
+                erule ko_at_projectKO_opt, rename_tac pdpte')
+         apply (clarsimp simp: typ_heap_simps cpdpte_relation_def Let_def isPageDirectoryPDPTE_def
+                        split: pdpte.splits,
+                rename_tac pd_ptr ac cd wt xd rights)
+         apply (rule context_conjI, simp add: pdpte_lift_def Let_def split: if_splits, intro imp_ignore)
+         apply (clarsimp simp: pdpte_lift_def pdpte_pdpte_pd_lift_def Let_def pdpte_tag_defs)
+         apply (subst array_ptr_valid_array_assertionI[OF h_t_valid_clift], assumption, simp)
+          apply (rule unat_le_helper[OF order_trans[OF word_and_le1]], simp)
+         apply (simp add: lookup_pd_slot_no_fail_def getPDIndex_def mask_def bit_simps shiftl_t2n)
+        apply (rule ccorres_cond_true)
+        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+        apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: throwError_def return_def syscall_error_rel_def)
+        apply (clarsimp simp: EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def)
+        apply (simp add: lookup_fault_missing_capability_lift mask_def bit_simps)
+       apply vcg
+      apply (rule conseqPre, vcg, clarsimp)
+     apply (ccorres_rewrite, rename_tac lookupPDPTSlot_errstate)
+     apply (rule_tac P=\<top> and P'="{s. lookupPDPTSlot_errstate = errstate s}"
+              in ccorres_from_vcg_throws)
+     apply (rule allI, rule conseqPre, vcg, clarsimp simp: throwError_def return_def)
+    apply (clarsimp, wp)
+   apply (vcg exspec=lookupPDPTSlot_modifies)
+  apply clarsimp
+  apply (frule h_t_valid_clift; simp)
+  apply (strengthen imp_ignore[where A="Ex P" for P])
+  apply (clarsimp simp: cpdpte_relation_def isPageDirectoryPDPTE_def Let_def
+                        pdpte_lift_def pdpte_pdpte_pd_lift_def pdpte_tag_defs
+                 split: X64_H.pdpte.splits if_splits)
+  done
 
 abbreviation
-  "lookupPTSlot_xf \<equiv> liftxf errstate lookupPTSlot_ret_C.status_C lookupPTSlot_ret_C.ptSlot_C ret__struct_lookupPTSlot_ret_C_'"
+  "lookupPTSlot_xf \<equiv> liftxf errstate lookupPTSlot_ret_C.status_C ptSlot_C
+                             ret__struct_lookupPTSlot_ret_C_'"
+
+lemma pde_case_isPageTablePDE:
+  "(case pde of PageTablePDE p _ _ _ _ _ \<Rightarrow> fn p | _ \<Rightarrow> g)
+    = (if isPageTablePDE pde then fn (pdeTable pde) else g)"
+  by (cases pde, simp_all add: isPageTablePDE_def)
 
 lemma lookupPTSlot_ccorres:
   "ccorres (lookup_failure_rel \<currency> (\<lambda>rv rv'. rv' = pte_Ptr rv)) lookupPTSlot_xf
@@ -697,68 +836,62 @@ lemma lookupPTSlot_ccorres:
        (lookupPTSlot pm vptr)
        (Call lookupPTSlot_'proc)"
   apply (cinit lift: vspace_' vptr_')
-   apply (simp add: liftE_bindE)
+   apply (rename_tac vptr' pml4)
+   apply (simp add: liftE_bindE pde_case_isPageTablePDE)
    apply (ctac add: lookupPDSlot_ccorres)
-   apply (rule ccorres_pre_getObject_pde)
-      apply simp
-      apply csymbr
-      apply (rule ccorres_abstract_cleanup)
+      apply (rename_tac pde_ptr lookup_ret, case_tac lookup_ret, clarsimp)
+      apply (rule ccorres_pre_getObject_pde, rename_tac pde)
+      apply (csymbr, rename_tac page_size, rule ccorres_abstract_cleanup)
       apply (rule ccorres_rhs_assoc2)
-      apply (rule_tac xf'=ret__int_' and
-                      val="from_bool (isPageTablePDE rva)"
-                 in ccorres_symb_exec_r_known_rv_UNIV)
-apply vcg
-apply (clarsimp simp: pde_pde_pt_def)
-  sorry (*
-thm pde_pde_pt_ptr_get_present_spec
-term rf_sr
-   apply csymbr
-   apply (rule ccorres_abstract_cleanup)
-   apply (rule_tac P="(ret__unsigned = scast pde_pde_coarse) = (isPageTablePDE rv)"
-               in ccorres_gen_asm2)
-   apply (rule ccorres_cond2'[where R=\<top>])
-     apply (clarsimp simp: Collect_const_mem)
-    apply simp
-    apply (rule_tac P=\<top> and P' =UNIV in ccorres_from_vcg_throws)
-    apply (rule allI, rule conseqPre, vcg)
-    apply (clarsimp simp: throwError_def  return_def syscall_error_rel_def)
-    apply (clarsimp simp: EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def)
-    apply (simp add: lookup_fault_missing_capability_lift)
-    apply (simp add: mask_def)
-   apply (rule ccorres_rhs_assoc)+
-   apply (simp add: checkPTAt_def bind_liftE_distrib liftE_bindE
-                    returnOk_liftE[symmetric])
-   apply (rule ccorres_stateAssert)
-   apply (rule_tac P="page_table_at' (ptrFromPAddr (pdeTable rv))
-         and ko_at' rv (lookup_pd_slot pd vptr)
-         and K (isPageTablePDE rv)" and P'=UNIV in ccorres_from_vcg_throws)
-   apply (rule allI, rule conseqPre, vcg)
-   apply (clarsimp simp: returnOk_def return_def Collect_const_mem
-                         lookup_pd_slot_def word_sle_def)
-   apply (frule(1) page_table_at_rf_sr, clarsimp)
-   apply (erule cmap_relationE1[OF rf_sr_cpde_relation], erule ko_at_projectKO_opt)
-   apply (clarsimp simp: typ_heap_simps cpde_relation_def Let_def isPageTablePDE_def
-                         pde_pde_coarse_lift_def pde_pde_coarse_lift
-                  split: pde.split_asm)
-   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
-    apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
-   apply (simp add: word_shift_by_2 lookup_pt_slot_no_fail_def)
-   apply (simp add: table_bits_defs mask_def shiftl_t2n)
-  apply (clarsimp simp: Collect_const_mem h_t_valid_clift)
-  apply (frule(1) page_directory_at_rf_sr, clarsimp)
-  apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
-   apply (simp add: table_bits_defs)
-  apply (clarsimp simp: cpde_relation_def pde_pde_coarse_lift_def
-                        pde_pde_coarse_lift Let_def isPageTablePDE_def
-                 split: X64_H.pde.split_asm)
-  done *)
-
+      apply (rule_tac ccorres_symb_exec_r)
+        apply (rule ccorres_if_lhs)
+         apply (rule ccorres_cond_false)
+         apply (simp add: bind_liftE_distrib liftE_bindE returnOk_liftE[symmetric])
+         apply (rule ccorres_stateAssert)
+         apply (rule_tac P="page_table_at' (ptrFromPAddr (pdeTable pde))
+                              and ko_at' pde pde_ptr
+                              and K (isPageTablePDE pde)"
+                     and P'=UNIV
+                  in ccorres_from_vcg_throws)
+         apply (rule allI, rule conseqPre, vcg)
+         apply (clarsimp simp: returnOk_def return_def, rename_tac s s')
+         apply (frule (1) page_table_at_rf_sr, clarsimp, rename_tac pt')
+         apply (rule cmap_relationE1[OF rf_sr_cpde_relation], assumption,
+                erule ko_at_projectKO_opt, rename_tac pdpte')
+         apply (clarsimp simp: typ_heap_simps cpde_relation_def Let_def isPageTablePDE_def
+                        split: pde.splits,
+                rename_tac pt_ptr ac cd wt xd rights)
+         apply (rule context_conjI, simp add: pde_lift_def Let_def split: if_splits, intro imp_ignore)
+         apply (clarsimp simp: pde_lift_def pde_pde_pt_lift_def Let_def pde_tag_defs)
+         apply (subst array_ptr_valid_array_assertionI[OF h_t_valid_clift], assumption, simp)
+          apply (rule unat_le_helper[OF order_trans[OF word_and_le1]], simp)
+         apply (simp add: lookup_pt_slot_no_fail_def getPTIndex_def mask_def bit_simps shiftl_t2n)
+        apply (rule ccorres_cond_true)
+        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+        apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: throwError_def return_def syscall_error_rel_def)
+        apply (clarsimp simp: EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def)
+        apply (simp add: lookup_fault_missing_capability_lift mask_def bit_simps)
+       apply vcg
+      apply (rule conseqPre, vcg, clarsimp)
+     apply (ccorres_rewrite, rename_tac lookupPDSlot_errstate)
+     apply (rule_tac P=\<top> and P'="{s. lookupPDSlot_errstate = errstate s}"
+              in ccorres_from_vcg_throws)
+     apply (rule allI, rule conseqPre, vcg, clarsimp simp: throwError_def return_def)
+    apply (clarsimp, wp)
+   apply (vcg exspec=lookupPDSlot_modifies)
+  apply clarsimp
+  apply (frule h_t_valid_clift; simp)
+  apply (strengthen imp_ignore[where A="Ex P" for P])
+  apply (clarsimp simp: cpde_relation_def isPageTablePDE_def Let_def
+                        pde_lift_def pde_pde_pt_lift_def pde_tag_defs
+                 split: X64_H.pde.splits if_splits)
+  done
 
 lemma cap_case_isPML4Cap:
-  "(case cap of capability.ArchObjectCap (arch_capability.PML4Cap pm ( Some asid))  \<Rightarrow> fn pm asid
-                | _ => g)
-    = (if ( if (isArchObjectCap cap) then if (isPML4Cap (capCap cap)) then capPML4MappedASID (capCap cap) \<noteq> None else False else False)
-                then fn (capPML4BasePtr (capCap cap)) (the ( capPML4MappedASID (capCap cap))) else g)"
+  "(case cap of ArchObjectCap (PML4Cap pm (Some asid)) \<Rightarrow> fn pm asid | _ => g)
+    = (if (if isArchObjectCap cap then if isPML4Cap (capCap cap) then capPML4MappedASID (capCap cap) \<noteq> None else False else False)
+          then fn (capPML4BasePtr (capCap cap)) (the (capPML4MappedASID (capCap cap))) else g)"
   apply (cases cap; simp add: isArchObjectCap_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability, simp_all add: isPML4Cap_def)
@@ -857,8 +990,10 @@ lemma ccorres_from_vcg_throws_nofail:
   done
 
 lemma findVSpaceForASID_ccorres:
-  "ccorres (lookup_failure_rel \<currency> (\<lambda>pml4eptrc pml4eptr. pml4eptr = pml4e_Ptr pml4eptrc)) findVSpaceForASID_xf
-       (valid_arch_state' and no_0_obj' and (\<lambda>_. asid \<le> mask asid_bits))
+  "ccorres
+       (lookup_failure_rel \<currency> (\<lambda>pml4eptrc pml4eptr. pml4eptr = pml4e_Ptr pml4eptrc))
+       findVSpaceForASID_xf
+       (valid_arch_state' and no_0_obj' and (\<lambda>_. asid_wf asid))
        (UNIV \<inter> \<lbrace>\<acute>asid = asid\<rbrace> )
        []
        (findVSpaceForASID asid)
