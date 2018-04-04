@@ -190,7 +190,7 @@ The maximum number of capabilities passed as arguments to a method invocation. T
 > msgAlignBits = wordSizeCase 9 10
 
 > msgLabelBits :: Int
-> msgLabelBits = 20
+> msgLabelBits = wordSizeCase 20 52
 
 \subsection{Capability Transfers}
 

@@ -495,14 +495,13 @@ lemma wordFromMessageInfo_spec:
   "\<forall>s. \<Gamma>\<turnstile> {s} Call wordFromMessageInfo_'proc
       {s'. \<forall>mi. seL4_MessageInfo_lift (mi_' s) = mi_from_H mi
                    \<longrightarrow> ret__unsigned_long_' s' = wordFromMessageInfo mi}"
-  apply (rule allI, rule conseqPost, rule wordFromMessageInfo_spec2[rule_format])
-   prefer 2
-   apply simp
-  apply (clarsimp simp: wordFromMessageInfo_def Let_def Types_H.msgExtraCapBits_def
-                        Types_H.msgLengthBits_def Types_H.msgMaxExtraCaps_def
-                        shiftL_nat)
-  apply (clarsimp simp: mi_from_H_def seL4_MessageInfo_lift_def
-                        word_bw_comms word_bw_assocs word_bw_lcs)
+  apply (rule allI, rule conseqPost[OF wordFromMessageInfo_spec[rule_format] _ subset_refl])
+  apply (clarsimp simp: wordFromMessageInfo_def
+                        msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def shiftL_nat)
+  apply (drule sym[where t="mi_from_H mi" for mi])
+  apply (clarsimp simp: seL4_MessageInfo_lift_def mi_from_H_def mask_def)
+  apply (thin_tac _)+
+  apply word_bitwise
   done
 
 lemma handleDoubleFault_ccorres:
