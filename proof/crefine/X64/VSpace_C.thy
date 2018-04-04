@@ -1548,9 +1548,8 @@ lemma setMR_as_setRegister_ccorres:
   apply (clarsimp simp: word_less_nat_alt word_le_nat_alt unat_of_nat_eq not_le[symmetric])
   done
 
-(* FIXME x64: what stops padding bits not being 1 in bitfield struct *)
 lemma wordFromMessageInfo_spec:
-  defines "mil s \<equiv> seL4_MessageInfo_lift \<^bsup>s\<^esup>mi"
+  defines "mil s \<equiv> seL4_MessageInfo_lift (mi_' s)"
   shows "\<forall>s. \<Gamma> \<turnstile> {s} Call wordFromMessageInfo_'proc
                   \<lbrace>\<acute>ret__unsigned_long = (label_CL (mil s) << 12)
                                       || (capsUnwrapped_CL (mil s) << 9)
@@ -1558,30 +1557,23 @@ lemma wordFromMessageInfo_spec:
                                       || length_CL (mil s)\<rbrace>"
   unfolding mil_def
   apply vcg
-  apply (simp add: seL4_MessageInfo_lift_def mask_shift_simps word_sless_def word_sle_def)
-thm wordFromMessageInfo_body_def
+  apply (simp add: seL4_MessageInfo_lift_def mask_shift_simps)
   apply word_bitwise
-  sorry
-
-lemmas wordFromMessageInfo_spec2 = wordFromMessageInfo_spec
+  done
 
 lemma wordFromMessageInfo_ccorres [corres]:
-  "\<And>mi. ccorres (op =) ret__unsigned_long_' \<top> {s. mi = message_info_to_H (mi_' s)} []
+  "ccorres (op =) ret__unsigned_long_'
+           \<top> {s. mi = message_info_to_H (mi_' s)} []
            (return (wordFromMessageInfo mi)) (Call wordFromMessageInfo_'proc)"
   apply (rule ccorres_from_spec_modifies [where P = \<top>, simplified])
      apply (rule wordFromMessageInfo_spec)
     apply (rule wordFromMessageInfo_modifies)
    apply simp
-  apply simp
+  apply clarsimp
   apply (simp add: return_def wordFromMessageInfo_def Let_def message_info_to_H_def
-    Types_H.msgLengthBits_def Types_H.msgExtraCapBits_def
-    Types_H.msgMaxExtraCaps_def shiftL_nat word_bw_assocs word_bw_comms word_bw_lcs)
+                   msgLengthBits_def msgExtraCapBits_def
+                   msgMaxExtraCaps_def shiftL_nat word_bw_assocs word_bw_comms word_bw_lcs)
   done
-
-(* FIXME move *)
-lemma unat_register_from_H_range:
-  "unat (register_from_H r) < 23"
-  by (case_tac r, simp_all add: C_register_defs)
 
 (* FIXME move *)
 lemma register_from_H_eq:
@@ -1589,13 +1581,14 @@ lemma register_from_H_eq:
   apply (case_tac r, simp_all add: C_register_defs)
                    by (case_tac r', simp_all add: C_register_defs)+
 
-(* FIXME x64: this will break with msgRegister changes *)
 lemma setMessageInfo_ccorres:
   "ccorres dc xfdc (tcb_at' thread)
            (UNIV \<inter> \<lbrace>mi = message_info_to_H mi'\<rbrace>) hs
            (setMessageInfo thread mi)
            (\<acute>ret__unsigned_long :== CALL wordFromMessageInfo(mi');;
-            CALL setRegister(tcb_ptr_to_ctcb_ptr thread, scast Kernel_C.msgInfoRegister, \<acute>ret__unsigned_long))"
+            CALL setRegister(tcb_ptr_to_ctcb_ptr thread,
+                             scast Kernel_C.msgInfoRegister,
+                             \<acute>ret__unsigned_long))"
   unfolding setMessageInfo_def
   apply (rule ccorres_guard_imp2)
    apply ctac
@@ -1607,7 +1600,6 @@ lemma setMessageInfo_ccorres:
                    Kernel_C.msgInfoRegister_def Kernel_C.RSI_def)
   done
 
-(* FIXME x64: msgRegister changes *)
 lemma performPageGetAddress_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       \<top>
@@ -1618,7 +1610,8 @@ lemma performPageGetAddress_ccorres:
   apply (cinit lift: vbase_ptr_')
    apply csymbr
    apply (rule ccorres_pre_getCurThread)
-   apply (clarsimp simp add: setMRs_def zipWithM_x_mapM_x mapM_x_Nil length_of_msgRegisters zip_singleton msgRegisters_unfold mapM_x_singleton)
+   apply (clarsimp simp: setMRs_def zipWithM_x_mapM_x mapM_x_Nil length_of_msgRegisters
+                         zip_singleton msgRegisters_unfold mapM_x_singleton)
    apply (ctac add: setRegister_ccorres)
      apply csymbr
      apply (rule ccorres_add_return2)
@@ -1641,8 +1634,7 @@ lemma performPageGetAddress_ccorres:
   apply (auto simp: X64_H.fromPAddr_def message_info_to_H_def mask_def X64_H.msgInfoRegister_def
                     X64.msgInfoRegister_def Kernel_C.msgInfoRegister_def Kernel_C.RSI_def
                     word_sle_def word_sless_def Kernel_C.RDI_def
-                    kernel_all_global_addresses.msgRegisters_def fupdate_def Arrays.update_def
-                    fcp_beta)
+                    kernel_all_global_addresses.msgRegisters_def fupdate_def)
   done
 
 lemma ignoreFailure_liftM:

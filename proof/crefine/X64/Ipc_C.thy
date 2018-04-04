@@ -1047,7 +1047,7 @@ lemma ccorres_break_return:
 
 lemma messageInfoFromWord_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call messageInfoFromWord_'proc {t. seL4_MessageInfo_lift (ret__struct_seL4_MessageInfo_C_' t) =
-            \<lparr>label_CL = (w_' s >> 12) && 0xFFFFF, capsUnwrapped_CL = (w_' s >> 9) && 7,
+            \<lparr>label_CL = (w_' s >> 12) && 0xFFFFFFFFFFFFF, capsUnwrapped_CL = (w_' s >> 9) && 7,
                  extraCaps_CL = (w_' s >> 7) && 3, length_CL = let v = w_' s && 0x7F in if v > msgMaxLength then msgMaxLength else v\<rparr>}"
   apply vcg
   apply (simp add: seL4_MessageInfo_lift_def Let_def msgMaxLength_def mask_def word_sle_def
@@ -3710,7 +3710,6 @@ proof -
                              msgLengthBits_def word_bw_assocs)
       apply (wp getMessageInfo_le3 getMessageInfo_msgLength[unfolded K_def] static_imp_wp
                   | simp)+
-     apply (simp add: Collect_const_mem)
     apply (auto simp: excaps_in_mem_def valid_ipc_buffer_ptr'_def
                       option_to_0_def option_to_ptr_def
                       seL4_MessageInfo_lift_def mi_from_H_def message_info_to_H_def
