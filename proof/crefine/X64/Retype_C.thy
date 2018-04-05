@@ -7304,7 +7304,7 @@ lemma insertNewCap_ct_active'[wp]:
   apply (simp add:ct_in_state'_def)
   apply (rule hoare_pre)
   apply wps
-  apply (wp insertNewCap_ct | simp)+
+  apply (wp insertNewCap_ksCurThread | simp)+
   done
 
 lemma updateMDB_ctes_of_cap:

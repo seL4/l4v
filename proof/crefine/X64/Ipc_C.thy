@@ -605,7 +605,7 @@ lemma handleArchFaultReply':
     apply (case_tac sb, simp_all add: word_size n_msgRegisters_def)[1]
   done
 
-lemmas lookup_uset_getreg_swap = bind_inv_inv_comm[OF lookupIPCBuffer_inv'
+lemmas lookup_uset_getreg_swap = bind_inv_inv_comm[OF lookupIPCBuffer_inv
                                  user_getreg_inv'
                                  empty_fail_lookupIPCBuffer
                                  empty_fail_asUser[OF empty_fail_getRegister]]
@@ -792,7 +792,7 @@ lemma handleFaultReply':
                  | rule monadic_rewrite_bind_tail monadic_rewrite_refl
                         monadic_rewrite_symb_exec_l[OF stateAssert_inv]
                         monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
-                 | wp asUser_tcb_at' lookupIPCBuffer_inv' )+)+))
+                 | wp asUser_typ_ats lookupIPCBuffer_inv )+)+))
       apply wp
      (* capFault *)
      apply (rule monadic_rewrite_symb_exec_l, (wp empty_fail_asUser empty_fail_getRegister)+)+
@@ -842,7 +842,7 @@ lemma handleFaultReply':
                                   asUser_return submonad_asUser.fn_stateAssert
                  | rule monadic_rewrite_bind_tail monadic_rewrite_refl
                         monadic_rewrite_symb_exec_l[OF stateAssert_inv]
-                 | wp asUser_tcb_at')+)+
+                 | wp asUser_typ_ats)+)+
       apply (case_tac "msgLength tag < scast n_msgRegisters")
        apply (erule disjE[OF word_less_cases],
                  ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
@@ -857,7 +857,7 @@ lemma handleFaultReply':
                         monadic_rewrite_symb_exec_l[OF stateAssert_inv]
                         monadic_rewrite_threadGet_return
                         monadic_rewrite_getSanitiseRegisterInfo_return
-                 | wp asUser_tcb_at' mapM_wp')+)+
+                 | wp asUser_typ_ats mapM_wp')+)+
       apply (simp add: n_msgRegisters_def word_le_nat_alt n_syscallMessage_def
                        linorder_not_less syscallMessage_unfold)
       apply (clarsimp | frule neq0_conv[THEN iffD2, THEN not0_implies_Suc,
@@ -900,7 +900,7 @@ lemma handleFaultReply':
                               monadic_rewrite_threadGet_return
                               monadic_rewrite_getSanitiseRegisterInfo_return
                               monadic_rewrite_getSanitiseRegisterInfo_drop
-                       | wp asUser_tcb_at' empty_fail_loadWordUser)+)+
+                       | wp asUser_typ_ats empty_fail_loadWordUser)+)+
       apply (clarsimp simp: upto_enum_word word_le_nat_alt simp del: upt.simps cong: if_weak_cong)
       apply (cut_tac i="unat n" and j="Suc (unat (scast n_syscallMessage :: machine_word))"
                                 and k="Suc msgMaxLength" in upt_add_eq_append')
@@ -1561,7 +1561,7 @@ shows
             apply (simp add: n_msgRegisters_def length_msgRegisters)
            apply (rule allI, rule conseqPre, vcg)
            apply clarsimp
-          apply (rule hoare_pre, wp hoare_valid_ipc_buffer_ptr_typ_at')
+          apply (rule hoare_pre, wpsimp wp: hoare_valid_ipc_buffer_ptr_typ_at')
           apply clarsimp
          apply (simp add: length_msgRegisters n_msgRegisters_def msgMaxLength_def
                           word_bits_def)
@@ -2215,7 +2215,7 @@ proof -
       apply (rule ccorres_add_return2)
       apply (ctac add: Arch_setMRs_fault_ccorres[simplified setMRs_to_setMR last.simps K_bind_def])
         apply (ctac add: ccorres_return_C)
-       apply wp
+       apply wpsimp
       apply (vcg exspec=Arch_setMRs_fault_modifies)
       apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
       apply (rule fault_to_fault_tag.simps(2)[symmetric])
