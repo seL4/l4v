@@ -5197,10 +5197,10 @@ private method readVCPUReg_hardware methods mop_ctac vcg_modifies = solves \<ope
    vcg_modifies (* e.g. vcg exspec=getSCTLR_modifies *)\<close>
 
 (* solves cases like this, but for all vcpuregs:
-    ccorres op = ret__unsigned_' (ko_at' vcpu vcpuptr) UNIV (SKIP # hs)
+    ccorres op = ret__unsigned_long_' (ko_at' vcpu vcpuptr) UNIV (SKIP # hs)
               (return (vcpuRegs vcpu VCPURegSCTLR))
               (Guard C_Guard {s. s \<Turnstile>\<^sub>c vcpu_Ptr vcpuptr}
-                (return_C ret__unsigned_'_update
+                (return_C ret__unsigned_long_'_update
                   (\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s)))
                         (Ptr &(Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''cpx_C''])\<rightarrow>[''sctlr_C'']))))) *)
 private method readVCPUReg_vcpu = solves \<open>
@@ -5219,7 +5219,7 @@ private method readVCPUReg_vcpu = solves \<open>
 lemma readVCPUReg_ccorres:
   notes Collect_const[simp del] dc_simp[simp del]
   shows
-  "ccorres (op=) ret__unsigned_'
+  "ccorres (op=) ret__unsigned_long_'
       (vcpu_at' vcpuptr and no_0_obj')
       (UNIV \<inter> \<lbrace>\<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace> \<inter> \<lbrace>\<acute>field = of_nat (fromEnum reg) \<rbrace>) hs
     (readVCPUReg vcpuptr reg) (Call readVCPUReg_'proc)"
@@ -5444,10 +5444,8 @@ lemma decodeVCPUWriteReg_ccorres:
    apply clarsimp
    apply (rule ccorres_add_return)
    apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
-     apply csymbr
      apply (rule ccorres_add_return)
      apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=1 and buffer=buffer])
-       apply csymbr
        apply (clarsimp simp: fromEnum_maxBound_vcpureg_def seL4_VCPUReg_Num_def hd_conv_nth[symmetric])
        apply (rule ccorres_Cond_rhs_Seq)
         apply (simp add: word_le_nat_alt throwError_bind invocationCatch_def invocation_eq_use_types
@@ -5482,7 +5480,7 @@ lemma decodeVCPUWriteReg_ccorres:
   apply (rule conjI; clarsimp) -- "not enough args"
    apply (clarsimp simp: isCap_simps cap_get_tag_isCap capVCPUPtr_eq)
    apply (subst from_to_enum; clarsimp simp: fromEnum_maxBound_vcpureg_def)
-    -- "enough args"
+  -- "enough args"
   apply (clarsimp simp: isCap_simps cap_get_tag_isCap capVCPUPtr_eq valid_cap'_def)
   apply (subgoal_tac "args \<noteq> []")
    prefer 2 subgoal by (cases args; clarsimp, unat_arith?)
@@ -5823,7 +5821,6 @@ lemma decodeVCPUReadReg_ccorres:
    apply clarsimp
    apply (rule ccorres_add_return)
    apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
-     apply csymbr
      apply (clarsimp simp: fromEnum_maxBound_vcpureg_def seL4_VCPUReg_Num_def hd_conv_nth[symmetric])
      apply (rule ccorres_Cond_rhs_Seq)
       apply (simp add: word_le_nat_alt throwError_bind invocationCatch_def invocation_eq_use_types
