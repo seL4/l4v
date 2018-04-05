@@ -4448,6 +4448,7 @@ crunch no_0_obj'[wp]: setupReplyMaster no_0_obj'
   (wp: crunch_wps simp: crunch_simps)
 
 crunch pspace_canonical'[wp]: setupReplyMaster "pspace_canonical'"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma setupReplyMaster_valid_pspace':
   "\<lbrace>valid_pspace' and tcb_at' t\<rbrace>
