@@ -471,7 +471,7 @@ lemma get_ep_valid_ep[wp]:
    \<lbrace> valid_ep \<rbrace>"
   by (wpsimp simp: ep_at_def2 valid_ep_def2 simp_del: valid_simple_obj_def)
 
-lemma get_sc_valid_sc[wp]:
+lemma get_sc_valid_sc:
   "\<lbrace> invs and sc_at sc \<rbrace>
    get_sched_context sc
    \<lbrace> \<lambda>rv. valid_sched_context rv \<rbrace>"

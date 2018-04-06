@@ -1038,9 +1038,10 @@ lemma reply_push_st_tcb_at[wp]:
                    thread_get_def no_reply_in_ts_def unbind_reply_in_ts_def comp_def
                wp: weak_if_wp sts_st_tcb_at_cases hoare_drop_imp)
 
-lemma sched_context_update_consumed_if_live:
-  "\<lbrace>if_live_then_nonz_cap and ex_nonz_cap_to param_a\<rbrace>
+lemma sched_context_update_consumed_if_live[wp]:
+  "\<lbrace>if_live_then_nonz_cap\<rbrace>
   sched_context_update_consumed param_a \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: sched_context_update_consumed_def wp: get_sched_context_wp)
-
+  apply (wpsimp simp: sched_context_update_consumed_def set_sched_context_def
+     wp: get_sched_context_wp get_object_wp)
+  by (clarsimp simp: if_live_then_nonz_cap_def obj_at_def live_def live_sc_def)
 end

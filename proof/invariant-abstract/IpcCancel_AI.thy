@@ -716,11 +716,14 @@ lemma cancel_all_signals_it[wp]:
   by (wpsimp simp: cancel_all_signals_def set_thread_state_def get_simple_ko_def get_object_def
                wp: mapM_x_wp')
 
-crunch it[wp]: unbind_notification "\<lambda>(s::det_ext state). P (idle_thread s)"
+crunch it[wp]: unbind_notification "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps select_wp maybeM_inv simp: unless_def crunch_simps)
 
-crunch it[wp]: fast_finalise "\<lambda>(s::det_ext state). P (idle_thread s)"
-  (wp: crunch_wps select_wp maybeM_inv simp: unless_def crunch_simps)
+crunch it[wp]: tcb_release_remove,test_reschedule "\<lambda>s. P (idle_thread s)"
+
+crunch it[wp]: fast_finalise "\<lambda>s. P (idle_thread s)"
+  (wp: crunch_wps select_wp maybeM_inv simp: unless_def crunch_simps
+    ignore: test_reschedule tcb_release_remove)
 
 context IpcCancel_AI begin
 lemma reply_cancel_ipc_it[wp]:

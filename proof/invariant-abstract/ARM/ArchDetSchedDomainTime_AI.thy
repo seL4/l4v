@@ -43,6 +43,10 @@ declare init_arch_objects_exst[DetSchedDomainTime_AI_assms]
 crunch domain_consumed_time_inv [wp, DetSchedDomainTime_AI_assms]: make_arch_fault_msg
   "\<lambda>s. P (domain_time s)(consumed_time s)"
 
+crunch domain_consumed_time_inv [wp, DetSchedDomainTime_AI_assms]:
+  arch_switch_to_idle_thread,arch_switch_to_thread "\<lambda>s. P (domain_time s)(consumed_time s)"
+  (simp: whenE_def)
+
 end
 
 global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI
