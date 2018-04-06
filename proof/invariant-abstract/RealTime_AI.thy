@@ -394,6 +394,11 @@ where
   "sc_tcb_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_tcb sc))"
 
 definition
+  tcb_sched_context_tcb_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "tcb_sched_context_tcb_at P \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> P (tcb_sched_context tcb))"
+
+definition
   sc_yf_sc_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "sc_yf_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_yield_from sc))"
@@ -796,11 +801,11 @@ lemma reply_unlink_tcb_tcb_at [wp]:
   done
 
 lemma reply_remove_valid_objs [wp]:
-  "\<lbrace>valid_objs and (\<lambda>s. reply_tcb_reply_at (\<lambda>x. x=Some t \<and> tcb_at t s) r s)\<rbrace>
+  "\<lbrace>\<lambda>s. \<exists>t. valid_objs s \<and> reply_tcb_reply_at (\<lambda>x. x=Some t \<and> tcb_at t s) r s\<rbrace>
         reply_remove r \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (wpsimp simp: reply_remove_def update_sk_obj_ref_def get_simple_ko_def
-      get_thread_state_def get_sched_context_def
-      wp: hoare_vcg_if_lift2 hoare_drop_imp get_object_wp thread_get_wp)
+                      get_thread_state_def get_sched_context_def
+                  wp: hoare_vcg_if_lift2 hoare_drop_imp get_object_wp thread_get_wp)
   apply (clarsimp simp: obj_at_def reply_tcb_reply_at_def is_tcb is_reply cong: conj_cong)
   done
 
@@ -863,17 +868,22 @@ lemma reply_unlink_tcb_iflive[wp]:
 crunch ex_nonz_cap_to[wp]: reply_unlink_tcb, reply_unlink_sc "ex_nonz_cap_to t"
   (wp: hoare_drop_imps)
 
-lemma reply_remove_iflive[wp]: (* original precondition: \<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace> *)
-  "\<lbrace>if_live_then_nonz_cap and ex_nonz_cap_to r
-    and (\<lambda>s. reply_tcb_reply_at (\<lambda>p. \<exists>t. p = (Some t) \<and> ex_nonz_cap_to t s) r s)
-    and (\<lambda>s. reply_sc_reply_at (\<lambda>p. \<exists>t. p = (Some t) \<and> ex_nonz_cap_to t s) r s)\<rbrace>
-  reply_remove r
-  \<lbrace>\<lambda>_ s. if_live_then_nonz_cap s\<rbrace>"
+lemma reply_remove_iflive [wp]:
+  "\<lbrace>if_live_then_nonz_cap and ex_nonz_cap_to rp
+    and (\<lambda>s. reply_tcb_reply_at (\<lambda>p. \<forall>tp. p = (Some tp) \<longrightarrow> ex_nonz_cap_to tp s) rp s)
+    and (\<lambda>s. reply_sc_reply_at (\<lambda>p. \<forall>scp. p = (Some scp) \<longrightarrow> ex_nonz_cap_to scp s) rp s)\<rbrace>
+   reply_remove rp
+   \<lbrace>\<lambda>_ s. if_live_then_nonz_cap s\<rbrace>"
   apply (simp add: reply_remove_def)
-  by (wpsimp simp: reply_tcb_reply_at_def obj_at_def reply_sc_reply_at_def
-                  wp: hoare_drop_imp hoare_vcg_if_lift2 get_object_wp hoare_vcg_conj_lift
-                      hoare_vcg_all_lift get_simple_ko_wp get_sched_context_wp
-                  split_del: if_split)
+  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
+  apply (case_tac "reply_tcb reply = None")
+   apply (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2)
+  apply (case_tac "reply_sc reply = None")
+   apply (rule hoare_seq_ext [OF _ assert_opt_inv])
+   apply (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2)
+  apply (wpsimp simp: obj_at_def reply_sc_reply_at_def reply_tcb_reply_at_def
+                  wp: hoare_drop_imp hoare_vcg_if_lift2)
+  done
 
 lemma reply_remove_valid_ioc[wp]:
       "\<lbrace>valid_ioc\<rbrace> reply_remove r
