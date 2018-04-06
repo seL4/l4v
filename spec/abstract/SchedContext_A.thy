@@ -340,7 +340,7 @@ where
           rs = tl refills'
       in if rs \<noteq> [] \<and> can_merge_refill r1' (hd rs)
          then merge_refill r1' (hd rs) # tl rs
-         else [r1]
+         else r1'#rs
     else refills');
 
     set_refills sc_ptr refills'';
@@ -352,7 +352,7 @@ where
 
     when (capacity > 0 \<and> ready) $ refill_split_check sc_ptr usage';
     full \<leftarrow> refill_full sc_ptr;
-    set_refills sc_ptr (min_budget_merge full (sc_refills sc))
+    update_sched_context sc_ptr (sc_refills_update (\<lambda>rs. min_budget_merge full rs))
   od"
 
 definition

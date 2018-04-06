@@ -555,6 +555,7 @@ where
       throwError (RangeError (ucast MIN_BUDGET_US) (ucast period_\<mu>s));
     whenE (unat (extra_refills + MIN_REFILLS) > refill_absolute_max(target_cap)) $
       throwError (RangeError 0 (of_nat (refill_absolute_max(target_cap) - MIN_REFILLS)));
+    assertE (MIN_REFILLS \<le> unat (extra_refills + MIN_REFILLS));
     returnOk $ InvokeSchedControlConfigure sc_ptr
        (us_to_ticks budget_\<mu>s) (us_to_ticks period_\<mu>s) (unat $ extra_refills + MIN_REFILLS) badge
   odE"

@@ -117,7 +117,13 @@ qualify ARM (in Arch)
 axiomatization
   us_to_ticks :: "64 word \<Rightarrow> 64 word"
 where
-  us_to_ticks_mono[intro!]: "\<forall> x y. x \<le> y \<longrightarrow> us_to_ticks x \<le> us_to_ticks y"
+  us_to_ticks_mono[intro!]: "mono us_to_ticks"
+and
+  us_to_ticks_mult[iff]: "n * (us_to_ticks x) = us_to_ticks (n * x)"
+and
+  us_to_ticks_zero[iff]: "us_to_ticks 0 = 0"
+and
+  us_to_ticks_nonzero: "y \<noteq> 0 \<Longrightarrow> us_to_ticks y \<noteq> 0"
 
 end_qualify
 

@@ -61,6 +61,11 @@ requalify_consts
   us_to_ticks
   setDeadline
   timerPrecision
+requalify_facts
+  us_to_ticks_mono
+  us_to_ticks_mult
+  us_to_ticks_zero
+  us_to_ticks_nonzero
 
 (* HERE IS THE PLACE FOR GENERIC WORD LEMMAS FOR ALL ARCHITECTURES *)
 
