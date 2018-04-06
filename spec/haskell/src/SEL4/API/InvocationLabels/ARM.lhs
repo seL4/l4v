@@ -29,12 +29,6 @@ FIXME ARMHYP ARMPageMapIO is an inconsistant name (but coined by kernel team)
 >         | ARMPDInvalidate_Data
 >         | ARMPDCleanInvalidate_Data
 >         | ARMPDUnify_Instruction
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->         | ARMVCPUSetTCB
->         | ARMVCPUInjectIRQ
->         | ARMVCPUReadReg
->         | ARMVCPUWriteReg
-#endif
 >         | ARMPageTableMap
 >         | ARMPageTableUnmap
 #ifdef CONFIG_ARM_SMMU
@@ -54,5 +48,11 @@ FIXME ARMHYP ARMPageMapIO is an inconsistant name (but coined by kernel team)
 >         | ARMPageGetAddress
 >         | ARMASIDControlMakePool
 >         | ARMASIDPoolAssign
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>         | ARMVCPUSetTCB
+>         | ARMVCPUInjectIRQ
+>         | ARMVCPUReadReg
+>         | ARMVCPUWriteReg
+#endif
 >         deriving (Eq, Enum, Bounded, Show)
 
