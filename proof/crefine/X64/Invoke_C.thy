@@ -2463,7 +2463,8 @@ lemma invokeUntyped_Retype_ccorres:
       done
 
     have APIType_capBits_max:
-      "APIType_capBits newType us \<le> maxUntypedSizeBits"  sorry
+      "APIType_capBits newType us \<le> maxUntypedSizeBits"
+      using vui by clarsimp
 
     have some_range_cover_arithmetic:
       "(ptr + (of_nat (length destSlots) << unat (of_nat (APIType_capBits newType us) :: addr))
@@ -2893,7 +2894,7 @@ lemma toEnum_object_type_to_H:
   done
 
 lemma unat_of_nat_APIType_capBits:
-  "b \<le> 61
+  "b \<le> word_bits
   \<Longrightarrow> unat (of_nat (APIType_capBits z b) ::machine_word) = APIType_capBits z b"
   apply (rule unat_of_nat64)
   apply (case_tac z)
@@ -3087,21 +3088,23 @@ shows
                  apply arith
                 apply (rule syscall_error_throwError_ccorres_n)
                 apply (simp add: syscall_error_to_H_cases)
+               apply csymbr
                apply ((rule ccorres_Guard_Seq)+)?
+               apply (subst whenE_whenE_body)
                apply (rule ccorres_split_when_throwError_cond
                                [where Q=\<top> and Q'=\<top>, rotated -1])
                   apply vcg
-                 apply (clarsimp simp: word_size Collect_const_mem
-                                       fromIntegral_def integral_inv
-                                       hd_drop_conv_nth2 word_le_nat_alt
-                                       maxUntypedSizeBits_def)
-                 apply arith
+                 apply (clarsimp simp: word_size Collect_const_mem fromIntegral_def integral_inv
+                                       hd_drop_conv_nth2 word_le_nat_alt maxUntypedSizeBits_def
+                                       toEnum_object_type_to_H wordBits_def not_less[symmetric])
+                 apply (subst hd_conv_nth, clarsimp)
+                 apply (simp add: unat_of_nat_APIType_capBits word_bits_def)
                 apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                 apply (rule allI, rule conseqPre, vcg)
                 apply (clarsimp simp: throwError_def return_def maxUntypedSizeBits_def
                                       syscall_error_rel_def exception_defs
                                       syscall_error_to_H_cases)
-                apply (simp add: word_size word_sle_def)
+               apply (simp add: word_size word_sle_def)
                apply (simp add: fromIntegral_def integral_inv
                                 hd_drop_conv_nth2
                            del: Collect_const)
@@ -3129,330 +3132,311 @@ shows
                                   fromAPIType_def X64_H.fromAPIType_def)
                 apply (rule syscall_error_throwError_ccorres_n)
                 apply (simp add: syscall_error_to_H_cases)
-                apply (rule_tac xf'="nodeCap_'"
+               apply (rule_tac xf'="nodeCap_'"
                              and r'="\<lambda>rv rv'. ccap_relation rv rv' \<and> unat (args ! 3) \<le> word_bits"
                           in ccorres_splitE)
-                    apply (rule ccorres_cond2[where R=\<top>])
-                      apply (clarsimp simp add: unat_eq_0 )
-                     apply (rule_tac P="args ! 3 = 0" in ccorres_gen_asm)
-                     apply (rule ccorres_move_c_guard_cte)
-                     apply (simp add: injection_handler_returnOk)
-                     apply (rule ccorres_nohs)
-                     apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
-                     apply (rule ccorres_seq_skip'[THEN iffD1])
-                     apply ctac
-                       apply (rule ccorres_assert2)
-                       apply (rule_tac P'="{s. nodeCap_' s = nodeCap}" in ccorres_from_vcg[where P=\<top>])
-                       apply (rule allI, rule conseqPre, vcg)
-                       apply (clarsimp simp: returnOk_def return_def hd_conv_nth)
-                      apply (wp hoare_drop_imps)
-                     apply vcg
-                    apply (simp add: split_def injection_bindE[OF refl refl]
-                                del: Collect_const)
-                    apply (rule ccorres_rhs_assoc)+
-                    apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
+                   apply (rule ccorres_cond2[where R=\<top>])
+                     apply (clarsimp simp add: unat_eq_0 )
+                    apply (rule_tac P="args ! 3 = 0" in ccorres_gen_asm)
                     apply (rule ccorres_move_c_guard_cte)
+                    apply (simp add: injection_handler_returnOk)
+                    apply (rule ccorres_nohs)
+                    apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
+                    apply (rule ccorres_seq_skip'[THEN iffD1])
                     apply ctac
                       apply (rule ccorres_assert2)
-                      apply (ctac add: ccorres_injection_handler_csum1
+                      apply (rule_tac P'="{s. nodeCap_' s = nodeCap}" in ccorres_from_vcg[where P=\<top>])
+                      apply (rule allI, rule conseqPre, vcg)
+                      apply (clarsimp simp: returnOk_def return_def hd_conv_nth)
+                     apply (wp hoare_drop_imps)
+                    apply vcg
+                   apply (simp add: split_def injection_bindE[OF refl refl]
+                                del: Collect_const)
+                   apply (rule ccorres_rhs_assoc)+
+                   apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
+                   apply (rule ccorres_move_c_guard_cte)
+                   apply ctac
+                     apply (rule ccorres_assert2)
+                     apply (ctac add: ccorres_injection_handler_csum1
                                         [OF lookupTargetSlot_ccorres,
                                             unfolded lookupTargetSlot_def])
-                         apply (simp add: injection_liftE[OF refl])
-                         apply (simp add: liftE_liftM o_def split_def withoutFailure_def
-                                          hd_drop_conv_nth2 numeral_eqs[symmetric])
-                         apply (rule ccorres_nohs)
-                         apply (rule ccorres_getSlotCap_cte_at)
-                         apply (rule ccorres_move_c_guard_cte)
-                         apply ctac
-                        apply simp
-                        apply (rule ccorres_split_throws, simp?,
-                               rule ccorres_return_C_errorE_inl_rrel, simp+)
-                        apply vcg
+                        apply (simp add: injection_liftE[OF refl])
+                        apply (simp add: liftE_liftM o_def split_def withoutFailure_def
+                                         hd_drop_conv_nth2 numeral_eqs[symmetric])
+                        apply (rule ccorres_nohs)
+                        apply (rule ccorres_getSlotCap_cte_at)
+                        apply (rule ccorres_move_c_guard_cte)
+                        apply ctac
                        apply simp
-                       apply wp
-                      apply (simp add: all_ex_eq_helper)
-                      apply (vcg exspec=lookupTargetSlot_modifies)
-                     apply simp
-                     apply (wp hoare_drop_imps)
-                    apply (simp add: hd_conv_nth)
-                    apply vcg
-                   apply ceqv
-                  apply (rule_tac P="\<lambda>_. capAligned rv" in ccorres_cross_over_guard)
-                  apply csymbr
-                  apply (elim conjE)
-                  apply (simp add: if_1_0_0 cap_get_tag_isCap
-                                    cap_case_CNodeCap_True_throw
-                                    injection_handler_whenE
-                                    injection_handler_throwError
-                               del: Collect_const)
-                  apply (rule ccorres_Cond_rhs_Seq)
+                       apply (rule ccorres_split_throws, simp?,
+                              rule ccorres_return_C_errorE_inl_rrel, simp+)
+                       apply vcg
+                      apply simp
+                      apply wp
+                     apply (simp add: all_ex_eq_helper)
+                     apply (vcg exspec=lookupTargetSlot_modifies)
                     apply simp
-                    apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
-                     apply vcg
-                    apply (rule conseqPre, vcg)
-                    apply (clarsimp simp: throwError_def return_def
-                                          syscall_error_rel_def exception_defs
-                                          syscall_error_to_H_cases)
-                    apply (simp add: lookup_fault_missing_capability_lift
-                                     hd_drop_conv_nth2 numeral_eqs[symmetric])
-                    apply (rule le_64_mask_eq)
-                    apply (simp add: word_bits_def word_le_nat_alt)
-                   apply simp
-                   apply csymbr
-                   apply (rule ccorres_Guard_Seq)
-                   apply csymbr
-                   apply (rule ccorres_split_when_throwError_cond
+                    apply (wp hoare_drop_imps)
+                   apply (simp add: hd_conv_nth)
+                   apply vcg
+                  apply ceqv
+                 apply (rule_tac P="\<lambda>_. capAligned rv" in ccorres_cross_over_guard)
+                 apply csymbr
+                 apply (elim conjE)
+                 apply (simp add: if_1_0_0 cap_get_tag_isCap
+                                  cap_case_CNodeCap_True_throw
+                                  injection_handler_whenE
+                                  injection_handler_throwError
+                             del: Collect_const)
+                 apply (rule ccorres_Cond_rhs_Seq)
+                  apply simp
+                  apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
+                   apply vcg
+                  apply (rule conseqPre, vcg)
+                  apply (clarsimp simp: throwError_def return_def
+                                        syscall_error_rel_def exception_defs
+                                        syscall_error_to_H_cases)
+                  apply (simp add: lookup_fault_missing_capability_lift
+                                   hd_drop_conv_nth2 numeral_eqs[symmetric])
+                  apply (rule le_64_mask_eq)
+                  apply (simp add: word_bits_def word_le_nat_alt)
+                 apply simp
+                 apply csymbr
+                 apply (rule ccorres_Guard_Seq)
+                 apply csymbr
+                 apply (rule ccorres_split_when_throwError_cond
                                    [where Q=\<top> and Q'=\<top>, rotated -1])
-                      apply vcg
-                     apply (clarsimp simp: Collect_const_mem cap_get_tag_isCap[symmetric])
-                     apply (drule(1) cap_get_tag_to_H)
-                     apply (clarsimp simp: linorder_not_le)
-  sorry (* overflow bug: need 1ul in nodeSize = 1 << cap_cnode_cap_get_capCNodeRadix(nodeCap)
-                    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-                    apply (rule allI, rule conseqPre, vcg)
-                    apply (clarsimp simp: throwError_def return_def
-                                          syscall_error_rel_def exception_defs
-                                          syscall_error_to_H_cases)
-                    apply (simp add: cap_get_tag_isCap[symmetric])
-                    apply (drule(1) cap_get_tag_to_H)
-                    apply clarsimp
-  subgoal (* same overflow bug *)
-                   apply (rule ccorres_split_when_throwError_cond
+                    apply vcg
+                   apply (clarsimp simp: Collect_const_mem cap_get_tag_isCap[symmetric])
+                   apply (drule(1) cap_get_tag_to_H)
+                   apply (clarsimp simp: linorder_not_le)
+                  apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+                  apply (rule allI, rule conseqPre, vcg)
+                  apply (clarsimp simp: throwError_def return_def
+                                        syscall_error_rel_def exception_defs
+                                        syscall_error_to_H_cases)
+                  apply (simp add: cap_get_tag_isCap[symmetric])
+                  apply (drule(1) cap_get_tag_to_H)
+                  apply clarsimp
+                 apply (rule ccorres_split_when_throwError_cond
                                    [where Q=\<top> and Q'=\<top>, rotated -1])
-                      apply vcg
-                     apply (clarsimp simp:)
-                     apply (simp add: retypeFanOutLimit_def word_le_nat_alt
-                                      linorder_not_le)
-                     apply (auto simp: linorder_not_le unat_eq_0)[1]
-                    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-                    apply (rule allI, rule conseqPre, vcg)
-                    apply (clarsimp simp: throwError_def return_def
-                                          syscall_error_rel_def exception_defs
-                                          syscall_error_to_H_cases)
-                    apply (simp add: retypeFanOutLimit_def)
-                   apply (rule ccorres_split_when_throwError_cond
+                    apply vcg
+                   apply (clarsimp simp:)
+                   apply (simp add: retypeFanOutLimit_def word_le_nat_alt
+                                    linorder_not_le)
+                   apply (auto simp: linorder_not_le unat_eq_0)[1]
+                  apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+                  apply (rule allI, rule conseqPre, vcg)
+                  apply (clarsimp simp: throwError_def return_def
+                                        syscall_error_rel_def exception_defs
+                                        syscall_error_to_H_cases)
+                  apply (simp add: retypeFanOutLimit_def)
+                 apply (rule ccorres_split_when_throwError_cond
                                    [where Q=\<top> and Q'=\<top>, rotated -1])
-                      apply vcg
-                     apply (clarsimp simp: numeral_eqs[symmetric]
-                                           word_le_nat_alt linorder_not_le
-                                           cap_get_tag_isCap[symmetric])
-                     apply (drule(1) cap_get_tag_to_H)
-                     apply clarsimp
-  subgoal (* same overflow bug *)
-                    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-                    apply (rule allI, rule conseqPre, vcg)
-                    apply (clarsimp simp: throwError_def return_def
-                                          syscall_error_rel_def exception_defs
-                                          syscall_error_to_H_cases)
-                    apply (simp add: cap_get_tag_isCap[symmetric])
-                    apply (drule(1) cap_get_tag_to_H)
-                    apply (clarsimp)
-  subgoal (* same overflow bug *)
-                   apply csymbr
-                   apply csymbr
-                   apply csymbr
-                   apply csymbr
-
-                   apply (simp add: mapM_locate_eq liftE_bindE
-                                    injection_handler_sequenceE mapME_x_sequenceE
-                                    whileAnno_def injection_bindE[OF refl refl]
-                                    bindE_assoc injection_handler_returnOk)
-                   (* gsCNodes assertion *)
-                   apply (rule ccorres_stateAssert)
-                   apply csymbr
-                   apply (simp add: liftE_bindE[symmetric])
-                   apply (rule_tac P="capAligned rv" in ccorres_gen_asm)
-                   apply (subgoal_tac "args ! 5 \<le> args ! 4 + args ! 5")
-                    prefer 2
-                    apply (clarsimp simp: numeral_eqs[symmetric])
-                    apply (subst field_simps, erule plus_minus_no_overflow_ab)
-                    apply (erule order_trans)
-                    apply (rule order_less_imp_le, rule word_power_less_1)
-                    apply (clarsimp simp: capAligned_def isCap_simps word_bits_def)
-                   apply (rule ccorres_splitE)
-                       apply (rule_tac F="\<lambda>_ s. case gsCNodes s (RetypeDecls_H.capUntypedPtr rv) of
+                    apply vcg
+                   apply (clarsimp simp: numeral_eqs[symmetric]
+                                         word_le_nat_alt linorder_not_le
+                                         cap_get_tag_isCap[symmetric])
+                   apply (drule(1) cap_get_tag_to_H)
+                   apply clarsimp
+                  apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+                  apply (rule allI, rule conseqPre, vcg)
+                  apply (clarsimp simp: throwError_def return_def
+                                        syscall_error_rel_def exception_defs
+                                        syscall_error_to_H_cases)
+                  apply (simp add: cap_get_tag_isCap[symmetric])
+                  apply (drule(1) cap_get_tag_to_H)
+                  apply (clarsimp)
+                 apply csymbr
+                 apply csymbr
+                 apply csymbr
+                 apply csymbr
+                 apply (simp add: mapM_locate_eq liftE_bindE
+                                  injection_handler_sequenceE mapME_x_sequenceE
+                                  whileAnno_def injection_bindE[OF refl refl]
+                                  bindE_assoc injection_handler_returnOk)
+                 (* gsCNodes assertion *)
+                 apply (rule ccorres_stateAssert)
+                 apply csymbr
+                 apply (simp add: liftE_bindE[symmetric])
+                 apply (rule_tac P="capAligned rv" in ccorres_gen_asm)
+                 apply (subgoal_tac "args ! 5 \<le> args ! 4 + args ! 5")
+                  prefer 2
+                  apply (clarsimp simp: numeral_eqs[symmetric])
+                  apply (subst field_simps, erule plus_minus_no_overflow_ab)
+                  apply (erule order_trans)
+                  apply (rule order_less_imp_le, rule word_power_less_1)
+                  apply (clarsimp simp: capAligned_def isCap_simps word_bits_def)
+                 apply (rule ccorres_splitE)
+                     apply (rule_tac F="\<lambda>_ s. case gsCNodes s (RetypeDecls_H.capUntypedPtr rv) of
                            None \<Rightarrow> False | Some n \<Rightarrow> args ! 4 + args ! 5 - 1 < 2 ^ n"
                                in ccorres_sequenceE_while_gen'
                                      [where i="unat (args ! 4)" and xf'=xfdc
                                        and xf_update="i_'_update" and xf="i_'"
                                        and r'=dc and Q=UNIV])
-                             apply simp
-                             apply (rule ccorres_guard_imp2)
-                              apply (rule ccorres_add_returnOk)
-                              apply (rule ccorres_Guard_Seq
-                                          ccorres_rhs_assoc)+
-                              apply (ctac add: ccorres_injection_handler_csum1
+                           apply simp
+                           apply (rule ccorres_guard_imp2)
+                            apply (rule ccorres_add_returnOk)
+                            apply (rule ccorres_Guard_Seq ccorres_rhs_assoc)+
+                            apply (ctac add: ccorres_injection_handler_csum1
                                                   [OF ensureEmptySlot_ccorres])
-                                 apply (rule ccorres_Guard_Seq
-                                             ccorres_rhs_assoc)+
-                                 apply (simp add: ccorres_cond_iffs returnOk_def)
-                                 apply (rule ccorres_return_Skip')
-                                apply (rule ccorres_Guard_Seq
-                                            ccorres_rhs_assoc)+
-                                apply (simp add: ccorres_cond_iffs inl_rrel_inl_rrel)
-                                apply (rule ccorres_return_C_errorE_inl_rrel,
-                                       simp+)[1]
-                               apply wp
-                              apply (simp add: all_ex_eq_helper)
-                              apply (vcg exspec=ensureEmptySlot_modifies)
-                             apply (clarsimp simp: upto_enum_word
-                                            split: if_split_asm simp del: upt.simps)
-                             apply (simp add: cte_level_bits_def field_simps size_of_def
-                                              numeral_eqs[symmetric])
-                             apply (simp add: cap_get_tag_isCap[symmetric]
-                                       split: option.split_asm)
-                             apply (drule(1) rf_sr_gsCNodes_array_assertion)
-                             apply (drule(1) cap_get_tag_to_H)
-                             apply clarsimp
-                             apply (subgoal_tac P for P)
-                              apply (subst array_assertion_shrink_right, assumption, assumption)
-                              apply (simp add: array_assertion_shrink_right)
-                             apply (rule unat_le_helper, simp)
-                             apply (erule order_trans[rotated])
-                             apply (subst add.commute, rule word_plus_mono_right)
-                              apply (simp add: unat_plus_simple[THEN iffD1] olen_add_eqv[symmetric])
-                              apply (simp add: word_le_nat_alt unat_of_nat)
-                             apply (simp add: olen_add_eqv[symmetric])
-                            apply (clarsimp simp add: upto_enum_word
-                                            simp del: upt.simps)
-                            apply (simp add: word_less_nat_alt[symmetric] numeral_eqs[symmetric])
-                            apply (simp add: Suc_unat_diff_1)
-                            apply (subst iffD1 [OF unat_plus_simple])
-                             apply (erule iffD2 [OF olen_add_eqv])
-                            apply simp
-                           apply (rule conseqPre, vcg exspec=ensureEmptySlot_modifies)
-                           apply clarsimp
-                          apply simp
-                          apply (wp injection_wp_E[OF refl])
-                         apply (simp only: word_bits_def[symmetric])
-                         apply clarsimp
-                         apply (simp add: upto_enum_word numeral_eqs[symmetric]
-                                          Suc_unat_diff_1
-                                     del: upt.simps)
-                         apply (subst(asm) olen_add_eqv[symmetric])
-                         apply (simp add: iffD1 [OF unat_plus_simple])
-                         apply (simp add: iffD1 [OF unat_plus_simple, symmetric])
-                         apply (simp only: word_bits_def)
-                         apply (rule unat_lt2p)
-                        apply simp
-                       apply simp
-                      apply (rule ceqv_refl)
-                     apply (ctac (c_lines 2) add:checkFreeIndex_ccorres[unfolded fun_app_def])
-                        apply (rename_tac reset reset_fi_tup)
-                        apply (rule_tac xf'=reset_' in ccorres_abstract, ceqv)
-                        apply (rule_tac xf'=freeIndex_' in ccorres_abstract, ceqv)
-                        apply (rename_tac reset' fi', rule_tac P="reset_fi_tup = (fi', reset')"
-                            in ccorres_gen_asm2)
-                        apply csymbr
-                        apply csymbr+
-                        apply (rule ccorres_Guard_Seq)+
-                        apply csymbr
-                        apply csymbr
-                        apply (rule ccorres_symb_exec_r)
-                         apply (rule_tac xf'=ret__int_' in ccorres_abstract, ceqv)
-                         apply (rule_tac P = "rv'b = (if (unat (2 ^ capBlockSize cp - (fi' << 4)
-                           >> (APIType_capBits (toEnum (unat (hd args))) (unat (args ! Suc 0))))
-                           < unat (args ! 5)) then 1 else 0)" in ccorres_gen_asm2)
-                         apply (rule
-                           ccorres_split_when_throwError_cond[where Q = \<top> and Q' = \<top>])
-                            apply (case_tac reset;
-                              clarsimp simp: ccap_relation_untyped_CL_simps shiftL_nat
-                              valid_untyped_capBlockSize_misc
-                              valid_untyped_capBlockSize_misc[where z=0, simplified]
-                              of_nat_shiftR)
-  (*
-                             apply (clarsimp simp:toEnum_object_type_to_H
-                               unat_of_nat_APIType_capBits word_size hd_conv_nth length_ineq_not_Nil
-                               split:if_splits)
-                            apply (clarsimp simp:toEnum_object_type_to_H
-                              unat_of_nat_APIType_capBits word_size hd_conv_nth length_ineq_not_Nil
-                              split:if_splits) *)
-                          apply (rule syscall_error_throwError_ccorres_n)
-                          apply (case_tac reset; clarsimp simp: syscall_error_rel_def
-                            ccap_relation_untyped_CL_simps shiftL_nat
-                            syscall_error_to_H_cases valid_untyped_capBlockSize_misc)
-                         apply csymbr
-                         apply csymbr
-                         apply (rule ccorres_symb_exec_r)
-                           apply (rule ccorres_symb_exec_r)
-
-                           apply (rule_tac xf'=ret__int_' in ccorres_abstract, ceqv)
-                           apply (rule_tac P = "rv'c = from_bool (capIsDevice cp \<and>
-                             \<not> isFrameType (toEnum (unat (hd args))))"
-                             in ccorres_gen_asm2)
-                           apply (rule_tac
-                             ccorres_split_when_throwError_cond[where Q = \<top> and Q' = \<top>])
-                           apply (clarsimp simp: toEnum_eq_to_fromEnum_eq
-                                  fromEnum_object_type_to_H from_bool_0
-                                  object_type_from_H_def hd_conv_nth length_ineq_not_Nil
-                                  fromAPIType_def X64_H.fromAPIType_def)
-                          apply (rule syscall_error_throwError_ccorres_n)
-                          apply (clarsimp simp: syscall_error_rel_def
-                            ccap_relation_untyped_CL_simps shiftL_nat
-                            syscall_error_to_H_cases )
-                         apply csymbr
-                         apply (simp add:liftE_bindE)
-                         apply (rule ccorres_symb_exec_l)
-                            apply (simp (no_asm) add: ccorres_invocationCatch_Inr split_def
-                              performInvocation_def liftE_bindE bind_assoc)
-                              apply (ctac add: setThreadState_ccorres)
-                                apply (rule ccorres_trim_returnE, (simp (no_asm))+)
-                                apply (simp (no_asm) add: o_def dc_def[symmetric]
-                                   bindE_assoc id_def[symmetric] bind_bindE_assoc)
-                              apply (rule ccorres_seq_skip'[THEN iffD1])
-                              apply (ctac(no_vcg) add: invokeUntyped_Retype_ccorres[where start = "args!4"])
-                                apply (rule ccorres_alternative2)
-                                apply (rule ccorres_returnOk_skip)
-                               apply (simp(no_asm) add: throwError_def, rule ccorres_return_Skip')
-                              apply (rule hoare_vcg_conj_lift
-                                | rule_tac p="capCNodePtr rv" in setThreadState_cap_to'
-                                | wp_once sts_invs_minor' setThreadStateRestart_ct_active'
-                                        sts_valid_untyped_inv')+
-                              apply (clarsimp simp: ccap_relation_untyped_CL_simps shiftL_nat
-                               toEnum_object_type_to_H unat_of_nat_APIType_capBits word_size
-                               valid_untyped_capBlockSize_misc getFreeRef_def hd_conv_nth length_ineq_not_Nil)
-                              apply (rule_tac conseqPost[where A' = "{}" and Q' = UNIV])
-                                apply (vcg exspec=setThreadState_modifies)
-                               apply (clarsimp simp: object_type_from_to_H cap_get_tag_isCap
-                                 ccap_relation_isDeviceCap)
-                               apply (frule_tac cap = rv in cap_get_tag_to_H(5))
-                                apply (simp add: cap_get_tag_isCap)
-                               apply (simp add: field_simps Suc_unat_diff_1)
-                               apply (rule conjI)
-                                apply (clarsimp split: bool.split_asm)
-                                apply (simp add: unat_of_nat_APIType_capBits maxUntypedSizeBits_def)
-                               apply (simp add: unat_of_nat_APIType_capBits maxUntypedSizeBits_def)
-                               apply (frule iffD2[OF olen_add_eqv])
-                               apply (frule(1) isUntypedCap_ccap_relation_helper)
-                               apply (clarsimp simp: unat_plus_simple[THEN iffD1])
-                               apply (case_tac slots,simp)
-                               apply clarsimp
-                               apply (subst upto_enum_word)
-                               apply (subst nth_map_upt)
-                                apply (clarsimp simp: field_simps Suc_unat_diff_1 unat_plus_simple[THEN iffD1])
-                               apply (clarsimp simp: cte_level_bits_def objBits_defs)
-                              apply simp
+                               apply (rule ccorres_Guard_Seq ccorres_rhs_assoc)+
+                               apply (simp add: ccorres_cond_iffs returnOk_def)
+                               apply (rule ccorres_return_Skip')
+                              apply (rule ccorres_Guard_Seq ccorres_rhs_assoc)+
+                              apply (simp add: ccorres_cond_iffs inl_rrel_inl_rrel)
+                              apply (rule ccorres_return_C_errorE_inl_rrel,
+                                     simp+)[1]
                              apply wp
-                             apply simp
-                            apply (simp (no_asm))
-                            apply (rule hoare_strengthen_post[OF stateAssert_sp])
-                               apply clarsimp
-                              apply assumption
-                             apply simp
-                            apply clarsimp
-                            apply vcg
-                            apply clarsimp
-                           apply vcg
+                            apply (simp add: all_ex_eq_helper)
+                            apply (vcg exspec=ensureEmptySlot_modifies)
+                           apply (clarsimp simp: upto_enum_word
+                                          split: if_split_asm simp del: upt.simps)
+                           apply (simp add: cte_level_bits_def field_simps size_of_def
+                                            numeral_eqs[symmetric])
+                           apply (simp add: cap_get_tag_isCap[symmetric]
+                                     split: option.split_asm)
+                           apply (drule(1) rf_sr_gsCNodes_array_assertion)
+                           apply (drule(1) cap_get_tag_to_H)
                            apply clarsimp
-                          apply (rule conseqPre,vcg,clarsimp)
+                           apply (subgoal_tac P for P)
+                            apply (subst array_assertion_shrink_right, assumption, assumption)
+                            apply (simp add: array_assertion_shrink_right)
+                           apply (rule unat_le_helper, simp)
+                           apply (erule order_trans[rotated])
+                           apply (subst add.commute, rule word_plus_mono_right)
+                            apply (simp add: unat_plus_simple[THEN iffD1] olen_add_eqv[symmetric])
+                            apply (simp add: word_le_nat_alt unat_of_nat)
+                           apply (simp add: olen_add_eqv[symmetric])
+                          apply (clarsimp simp add: upto_enum_word
+                                          simp del: upt.simps)
+                          apply (simp add: word_less_nat_alt[symmetric] numeral_eqs[symmetric])
+                          apply (simp add: Suc_unat_diff_1)
+                          apply (subst iffD1 [OF unat_plus_simple])
+                           apply (erule iffD2 [OF olen_add_eqv])
+                          apply simp
+                         apply (rule conseqPre, vcg exspec=ensureEmptySlot_modifies)
+                         apply clarsimp
+                        apply simp
+                        apply (wp injection_wp_E[OF refl])
+                        apply (simp only: word_bits_def[symmetric])
+                        apply clarsimp
+                       apply (simp add: upto_enum_word numeral_eqs[symmetric]
+                                   del: upt.simps)
+                       apply (subst Suc_unat_diff_1)
+                        apply clarsimp
+                        apply unat_arith
+                       apply (subst(asm) olen_add_eqv[symmetric])
+                       apply (simp add: iffD1 [OF unat_plus_simple])
+                       apply (simp add: iffD1 [OF unat_plus_simple, symmetric])
+                       apply (simp only: word_bits_def)
+                       apply (rule less_le_trans, rule unat_lt2p, simp)
+                      apply simp
+                     apply simp
+                    apply (rule ceqv_refl)
+                   apply (ctac (c_lines 2) add:checkFreeIndex_ccorres[unfolded fun_app_def])
+                      apply (rename_tac reset reset_fi_tup)
+                      apply (rule_tac xf'=reset_' in ccorres_abstract, ceqv)
+                      apply (rule_tac xf'=freeIndex_' in ccorres_abstract, ceqv)
+                      apply (rename_tac reset' fi', rule_tac P="reset_fi_tup = (fi', reset')"
+                            in ccorres_gen_asm2)
+                      apply csymbr
+                      apply csymbr+
+                      apply (rule ccorres_Guard_Seq)+
+                      apply csymbr
+                      apply (rule ccorres_Guard_Seq)
+                      apply (rule_tac ccorres_split_when_throwError_cond[where Q = \<top> and Q' = \<top>])
+                         apply (case_tac reset;
+                                clarsimp simp: ccap_relation_untyped_CL_simps shiftL_nat
+                                               valid_untyped_capBlockSize_misc
+                                               valid_untyped_capBlockSize_misc[where z=0, simplified]
+                                               of_nat_shiftR toEnum_object_type_to_H)
+                          apply (subst hd_conv_nth, clarsimp)
+                          apply (subst unat_of_nat_APIType_capBits,
+                                 clarsimp simp: wordBits_def word_size word_bits_def)
+                          apply simp
+                         apply (subst hd_conv_nth, clarsimp)
+                         apply (subst unat_of_nat_APIType_capBits,
+                                clarsimp simp: wordBits_def word_size word_bits_def)
+                         apply simp
+                        apply (rule syscall_error_throwError_ccorres_n)
+                        apply (case_tac reset; clarsimp simp: syscall_error_rel_def shiftL_nat
+                                               ccap_relation_untyped_CL_simps syscall_error_to_H_cases
+                                               valid_untyped_capBlockSize_misc)
+                       apply csymbr
+                       apply csymbr
+                       apply csymbr
+                       apply (rule ccorres_symb_exec_r)
+                         apply (rule_tac xf'=ret__int_' in ccorres_abstract, ceqv)
+                         apply (rule_tac P = "rv'b = from_bool (capIsDevice cp \<and>
+                                              \<not> isFrameType (toEnum (unat (hd args))))"
+                                         in ccorres_gen_asm2)
+                         apply (rule_tac ccorres_split_when_throwError_cond[where Q = \<top> and Q' = \<top>])
+                            apply (clarsimp simp: toEnum_eq_to_fromEnum_eq length_ineq_not_Nil
+                                                  fromEnum_object_type_to_H from_bool_0
+                                                  object_type_from_H_def hd_conv_nth
+                                                  fromAPIType_def X64_H.fromAPIType_def)
+                           apply (rule syscall_error_throwError_ccorres_n)
+                           apply (clarsimp simp: syscall_error_rel_def
+                                                 ccap_relation_untyped_CL_simps shiftL_nat
+                                                 syscall_error_to_H_cases )
+                          apply csymbr
+                          apply (simp add:liftE_bindE)
+                          apply (rule ccorres_symb_exec_l)
+                             apply (simp (no_asm) add: ccorres_invocationCatch_Inr split_def
+                                                       performInvocation_def liftE_bindE bind_assoc)
+                             apply (ctac add: setThreadState_ccorres)
+                               apply (rule ccorres_trim_returnE, (simp (no_asm))+)
+                               apply (simp (no_asm) add: o_def dc_def[symmetric] bindE_assoc
+                                                         id_def[symmetric] bind_bindE_assoc)
+                               apply (rule ccorres_seq_skip'[THEN iffD1])
+                               apply (ctac(no_vcg) add: invokeUntyped_Retype_ccorres[where start = "args!4"])
+                                 apply (rule ccorres_alternative2)
+                                 apply (rule ccorres_returnOk_skip)
+                                apply (simp(no_asm) add: throwError_def, rule ccorres_return_Skip')
+                               apply (rule hoare_vcg_conj_lift
+                                      | rule_tac p="capCNodePtr rv" in setThreadState_cap_to'
+                                      | wp_once sts_invs_minor' setThreadStateRestart_ct_active'
+                                                sts_valid_untyped_inv')+
+                             apply (clarsimp simp: ccap_relation_untyped_CL_simps shiftL_nat
+                                                   toEnum_object_type_to_H unat_of_nat_APIType_capBits
+                                                   word_size valid_untyped_capBlockSize_misc
+                                                   getFreeRef_def hd_conv_nth length_ineq_not_Nil)
+                             apply (rule_tac conseqPost[where A' = "{}" and Q' = UNIV])
+                               apply (vcg exspec=setThreadState_modifies)
+                              apply (clarsimp simp: object_type_from_to_H cap_get_tag_isCap
+                                                    ccap_relation_isDeviceCap)
+                              apply (frule_tac cap = rv in cap_get_tag_to_H(5))
+                               apply (simp add: cap_get_tag_isCap)
+                              apply (simp add: field_simps Suc_unat_diff_1)
+                              apply (rule conjI)
+                               apply (clarsimp split: bool.split_asm
+                                                simp: unat_of_nat_APIType_capBits wordBits_def
+                                                      word_size word_bits_def)
+                              apply (frule iffD2[OF olen_add_eqv])
+                              apply (frule(1) isUntypedCap_ccap_relation_helper)
+                              apply (clarsimp simp: unat_plus_simple[THEN iffD1])
+                              apply (case_tac slots,simp)
+                              apply clarsimp
+                              apply (subst upto_enum_word)
+                              apply (subst nth_map_upt)
+                               apply (clarsimp simp: field_simps Suc_unat_diff_1 unat_plus_simple[THEN iffD1])
+                              apply (clarsimp simp: cte_level_bits_def objBits_defs)
+                             apply simp
+                            apply wp
+                            apply simp
+                           apply (simp (no_asm))
+                           apply (rule hoare_strengthen_post[OF stateAssert_sp])
+                           apply clarsimp
+                           apply assumption
+                          apply simp
+                         apply clarsimp
                          apply vcg
-                         apply (clarsimp simp: if_1_0_0 ccap_relation_isDeviceCap)
-                        apply (rule conseqPre,vcg,clarsimp)
-                       apply vcg
-                       apply (clarsimp simp: if_1_0_0 from_bool_neq_0 from_bool_0
-                        ccap_relation_isDeviceCap[unfolded to_bool_neq_0])
-                    apply vcg
-                      apply (rule conseqPre,vcg,clarsimp)
+                        apply clarsimp
+                        apply vcg
+                       apply clarsimp
+                       apply (rule conseqPre,vcg,clarsimp)
+                      apply vcg
                      apply (rule ccorres_guard_imp
                          [where Q =\<top> and Q' = UNIV,rotated],assumption+)
                      apply (simp add: o_def)
@@ -3478,8 +3462,8 @@ shows
                     apply (clarsimp simp: not_less shiftr_overflow maxUntypedSizeBits_def
                                           unat_of_nat_APIType_capBits)
                     apply (intro conjI impI;
-                           clarsimp simp: not_less shiftr_overflow maxUntypedSizeBits_def
-                                          unat_of_nat_APIType_capBits)
+                           clarsimp simp: not_less shiftr_overflow unat_of_nat_APIType_capBits
+                                          wordBits_def word_size word_bits_def)
                    apply simp
                   apply simp
                   apply (rule_tac Q'="\<lambda>r. cte_wp_at' (\<lambda>cte. cteCap cte = cp) slot
@@ -3497,7 +3481,7 @@ shows
                     apply (frule st_tcb_at_idle_thread',fastforce)
                     apply (clarsimp simp: valid_idle'_def)
                    apply (clarsimp simp: st_tcb_at'_def obj_at'_def
-                       invs'_def valid_state'_def)
+                                         invs'_def valid_state'_def)
                    apply (subgoal_tac "tcbState obja \<noteq> Inactive \<and> \<not> idle' (tcbState obja)")
                     prefer 2
                     apply (rule conjI, clarsimp)
@@ -3505,8 +3489,8 @@ shows
                    apply (subgoal_tac "tcb_st_refs_of' (tcbState obja) = {}")
                     prefer 2
                     apply fastforce (* slow fastforce *)
-                   apply (clarsimp split:if_splits simp: not_less toEnum_object_type_to_H
-                             word_size hd_conv_nth length_ineq_not_Nil)
+                   apply (clarsimp split: if_splits simp: not_less toEnum_object_type_to_H
+                                          word_size hd_conv_nth length_ineq_not_Nil)
                    apply (subgoal_tac "tcbQueued obja \<longrightarrow> runnable' (tcbState obja)")
                     apply (simp add: trans [OF olen_add_eqv[symmetric] unat_plus_simple]
                                      fromAPIType_def)
@@ -3515,7 +3499,7 @@ shows
                                    split: option.split_asm if_split_asm)
                     apply blast
                    apply (case_tac "tcbState obja",
-                     (simp add: runnable'_def valid_tcb_state'_def)+)[1]
+                          (simp add: runnable'_def valid_tcb_state'_def)+)[1]
                   apply simp
                   apply (rule validE_validE_R, rule mapME_wp'[unfolded mapME_def])
                   apply (rule hoare_pre)
@@ -3589,8 +3573,8 @@ shows
    apply (clarsimp simp: fromAPIType_def)
    apply (subgoal_tac "unat (args ! Suc 0) < word_bits")
     prefer 2
-    apply (erule le_less_trans)
-    apply (simp add: word_size fromIntegral_def fromInteger_nat toInteger_nat word_bits_def maxUntypedSizeBits_def)
+    apply (simp add: word_size fromIntegral_def fromInteger_nat toInteger_nat word_bits_def
+                     maxUntypedSizeBits_def wordBits_def)
    apply (clarsimp simp: excaps_map_def neq_Nil_conv excaps_in_mem_def
                          slotcap_in_mem_def cte_wp_at_ctes_of
                          valid_capAligned[OF ctes_of_valid'] invs_valid_objs'
@@ -3607,24 +3591,17 @@ shows
                         extra_sle_sless_unfolds
                  elim!: inl_inrE
               simp del: rf_sr_upd_safe imp_disjL)
-  apply (clarsimp simp:cap_get_tag_isCap[symmetric])
-  apply (rule conjI)
-   apply (clarsimp simp: cap_get_tag_isCap[symmetric]
-     capCNodeRadix_CL_less_64s rf_sr_ksCurThread not_le
+   apply (rule conjI)
+    apply clarsimp
+   apply (rule conjI)
+    apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_isCap_unfolded_H_cap
+                          capCNodeRadix_CL_less_64s rf_sr_ksCurThread not_le
+                   elim!: inl_inrE)
+   apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_isCap_unfolded_H_cap
+                         capCNodeRadix_CL_less_64s rf_sr_ksCurThread not_le
                   elim!: inl_inrE)
-   apply (drule(1) cap_get_tag_to_H)+
-   apply (clarsimp simp: isCap_simps capAligned_def[unfolded capUntypedPtr_def, split_simps capability.split]
-                         objBits_simps' word_bits_def)
-  subgoal (* same overflow bug *)
-
-  apply (clarsimp simp: cap_get_tag_isCap[symmetric]
-    capCNodeRadix_CL_less_64s rf_sr_ksCurThread not_le
-                 elim!: inl_inrE)
-  apply (drule(1) cap_get_tag_to_H)+
-  apply (clarsimp simp: isCap_simps capAligned_def[unfolded capUntypedPtr_def, split_simps capability.split]
-                        objBits_simps' word_bits_def)
-  subgoal (* same overflow bug *)
-  done *)
+  apply (clarsimp simp: enum_object_type enum_apiobject_type word_le_nat_alt seL4_ObjectTypeCount_def)
+  done
 
 lemma decodeUntypedInvocation_ccorres:
 notes TripleSuc[simp]
