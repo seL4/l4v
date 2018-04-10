@@ -66,6 +66,11 @@ assumes invalidateASID_ccorres:
   "ccorres dc xfdc \<top> (UNIV \<inter> \<lbrace>\<acute>vspace = pml4e_Ptr vspace\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace>) []
            (doMachineOp (invalidateASID vspace asid)) (Call invalidateASID_'proc)"
 
+assumes invalidateLocalPageStructureCacheASID_ccorres:
+  "ccorres dc xfdc \<top> (UNIV \<inter> \<lbrace>\<acute>root = vspace\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace>) []
+           (doMachineOp (invalidateLocalPageStructureCacheASID vspace asid))
+           (Call invalidateLocalPageStructureCacheASID_'proc)"
+
 (* The following are fastpath specific assumptions.
    We might want to move them somewhere else. *)
 
