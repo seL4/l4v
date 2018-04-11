@@ -1017,13 +1017,16 @@ lemma updateMDB_no_0 [wp]:
   \<lbrace>\<lambda>rv s. no_0 (ctes_of s)\<rbrace>"
   by wp simp
 
-definition
-  "revokable' srcCap cap \<equiv>
-  if isEndpointCap cap then capEPBadge cap \<noteq> capEPBadge srcCap
-  else if isNotificationCap cap then capNtfnBadge cap \<noteq> capNtfnBadge srcCap
-  else if isUntypedCap cap then True
-  else if isIRQHandlerCap cap then isIRQControlCap srcCap
-  else False"
+abbreviation
+  "revokable a b \<equiv> is_cap_revocable b a"
+
+abbreviation
+  "revokable' a b \<equiv> global.isCapRevocable b a"
+
+declare arch_is_cap_revocable_def[simp] ARM_HYP_H.isCapRevocable_def[simp]
+
+lemmas revokable_def = is_cap_revocable_def is_cap_revocable_def[split_simps cap.split]
+lemmas revokable'_def = Retype_H.isCapRevocable_def Retype_H.isCapRevocable_def[split_simps capability.split]
 
 lemma isMDBParentOf_next_update [simp]:
   "isMDBParentOf (cteMDBNode_update (mdbNext_update f) cte) cte' =
@@ -3001,7 +3004,6 @@ lemma revokable_eq:
                         bits_of_def revokable_def revokable'_def
                         sameRegionAs_def3
                  split: cap_relation_split_asm arch_cap.split_asm)
-    apply auto
   done
 
 lemma isMDBParentOf_prev_update [simp]:
@@ -3803,7 +3805,7 @@ lemma revokable_plus_orderD:
   "\<lbrakk> revokable' old new; (capBadge old, capBadge new) \<in> capBadge_ordering P;
        capMasterCap old = capMasterCap new \<rbrakk>
       \<Longrightarrow> (isUntypedCap new \<or> (\<exists>x. capBadge old = Some 0 \<and> capBadge new = Some x \<and> x \<noteq> 0))"
-  by (clarsimp simp: revokable'_def isCap_simps split: if_split_asm)
+  by (clarsimp simp: revokable'_def isCap_simps split: if_split_asm capability.splits)
 
 lemma valid_badges_def2:
   "valid_badges m =
@@ -4230,15 +4232,6 @@ lemma nullMDBNode_pointers[simp]:
   "mdbPrev nullMDBNode = nullPointer"
   "mdbNext nullMDBNode = nullPointer"
   by (simp add: nullMDBNode_def)+
-
-(* Arguments to capability_case need to be in the same order as the constructors in 'capabilility' data type *)
-lemma revokable'_fold:
-  "revokable' srcCap cap =
-  (case cap of capability.NotificationCap _ _ _ _ \<Rightarrow> capNtfnBadge cap \<noteq> capNtfnBadge srcCap
-     | capability.IRQHandlerCap _ \<Rightarrow> isIRQControlCap srcCap
-     | capability.EndpointCap _ _ _ _ _ \<Rightarrow> capEPBadge cap \<noteq> capEPBadge srcCap
-     | capability.UntypedCap _ _ _ _ \<Rightarrow> True | _ \<Rightarrow> False)"
-  by (simp add: revokable'_def isCap_simps split: capability.splits)
 
 lemma cap_relation_untyped_free_index_update:
   "\<lbrakk>cap_relation cap cap';isUntypedCap cap'\<or> is_untyped_cap cap;a = a'\<rbrakk>
@@ -5796,7 +5789,6 @@ lemma cins_corres:
   (is "corres _ (?P and (\<lambda>s. cte_wp_at _ _ s)) (?P' and cte_wp_at' _ _) _ _")
   using assms
   unfolding cap_insert_def cteInsert_def
-  apply (fold revokable_def revokable'_fold)
   apply simp
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_cap_corres])

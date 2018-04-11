@@ -274,7 +274,7 @@ lemmas undefined_validE_R = hoare_FalseE_R[where f=undefined]
 lemma arch_derive_cap_valid_cap:
   "\<lbrace>valid_cap (cap.ArchObjectCap arch_cap)\<rbrace>
   arch_derive_cap arch_cap
-  \<lbrace>valid_cap \<circ> cap.ArchObjectCap\<rbrace>, -"
+  \<lbrace>valid_cap\<rbrace>, -"
   apply(simp add: arch_derive_cap_def)
   apply(cases arch_cap, simp_all add: arch_derive_cap_def o_def)
       apply(rule hoare_pre, wpc?, wp+,

@@ -818,17 +818,17 @@ have a virtual ASID and location assigned. This is because page directories
 cannot have multiple current virtual ASIDs and page tables cannot be shared
 between address spaces or virtual locations. *}
 definition
-  arch_derive_cap :: "arch_cap \<Rightarrow> (arch_cap,'z::state_ext) se_monad"
+  arch_derive_cap :: "arch_cap \<Rightarrow> (cap,'z::state_ext) se_monad"
 where
   "arch_derive_cap c \<equiv> case c of
-     PageTableCap _ (Some x) \<Rightarrow> returnOk c
+     PageTableCap _ (Some x) \<Rightarrow> returnOk (ArchObjectCap c)
    | PageTableCap _ None \<Rightarrow> throwError IllegalOperation
-   | PageDirectoryCap _ (Some x) \<Rightarrow> returnOk c
+   | PageDirectoryCap _ (Some x) \<Rightarrow> returnOk (ArchObjectCap c)
    | PageDirectoryCap _ None \<Rightarrow> throwError IllegalOperation
-   | PageCap dev r R pgs x \<Rightarrow> returnOk (PageCap dev r R pgs None)
-   | ASIDControlCap \<Rightarrow> returnOk c
-   | ASIDPoolCap _ _ \<Rightarrow> returnOk c
-   | VCPUCap _ \<Rightarrow> returnOk c"
+   | PageCap dev r R pgs x \<Rightarrow> returnOk (ArchObjectCap (PageCap dev r R pgs None))
+   | ASIDControlCap \<Rightarrow> returnOk (ArchObjectCap c)
+   | ASIDPoolCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)
+   | VCPUCap _ \<Rightarrow> returnOk (ArchObjectCap c)"
 
 text {* No user-modifiable data is stored in ARM-specific capabilities. *}
 definition

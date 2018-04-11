@@ -18,6 +18,24 @@ begin
 
 context Arch begin global_naming ARM
 
+definition
+   safe_ioport_insert :: "cap \<Rightarrow> cap \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
+where
+  "safe_ioport_insert newcap oldcap s \<equiv> True"
+
+declare safe_ioport_insert_def[simp]
+
+lemma safe_ioport_insert_triv:
+  "\<not>is_arch_cap newcap \<Longrightarrow> safe_ioport_insert newcap oldcap s"
+  by (clarsimp simp: safe_ioport_insert_def)
+
+lemma set_cap_ioports':
+ "\<lbrace>\<lambda>s. valid_ioports s
+      \<and> cte_wp_at (\<lambda>cap'. safe_ioport_insert cap cap' s) ptr s\<rbrace>
+    set_cap cap ptr
+  \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  by wpsimp
+
 lemma replace_cap_invs:
   "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s p cap) p s
         \<and> cap \<noteq> cap.NullCap
@@ -109,6 +127,110 @@ lemma replace_cap_invs:
   apply (rule Ball_emptyI)
   apply (simp add: gen_obj_refs_subset)
   done
+
+definition
+  "is_simple_cap_arch cap \<equiv> \<not>is_pt_cap cap \<and> \<not> is_pd_cap cap"
+
+declare is_simple_cap_arch_def[simp]
+
+lemma is_simple_cap_arch:
+  "\<not>is_arch_cap cap \<Longrightarrow> is_simple_cap_arch cap"
+  by (simp add: is_cap_simps)
+
+lemmas cap_master_cap_def = cap_master_cap_def[simplified cap_master_arch_cap_def]
+
+definition
+  "cap_vptr_arch acap \<equiv> case acap of
+     (PageCap _ _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
+  |  (PageTableCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
+  | _ \<Rightarrow> None"
+
+definition
+  "cap_vptr cap \<equiv> arch_cap_fun_lift cap_vptr_arch None cap"
+
+declare cap_vptr_arch_def[abs_def, simp]
+
+lemmas cap_vptr_simps [simp] =
+  cap_vptr_def [simplified, split_simps cap.split arch_cap.split option.split prod.split]
+
+definition
+  "is_derived_arch cap cap' \<equiv>
+    ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow>
+         cap_asid cap = cap_asid cap' \<and> cap_asid cap \<noteq> None) \<and>
+     (vs_cap_ref cap = vs_cap_ref cap' \<or> is_pg_cap cap')"
+
+lemma is_derived_arch_non_arch:
+  "\<not>is_arch_cap cap \<Longrightarrow> \<not> is_arch_cap cap' \<Longrightarrow>
+      is_derived_arch cap cap'"
+  unfolding is_derived_arch_def is_pg_cap_def is_pt_cap_def is_pd_cap_def
+            vs_cap_ref_def is_arch_cap_def
+  by (auto split: cap.splits)
+
+lemma is_derived_cap_arch_asid:
+  "is_derived_arch cap cap' \<Longrightarrow> cap_master_cap cap = cap_master_cap cap' \<Longrightarrow>
+      is_pt_cap cap' \<or> is_pd_cap cap' \<Longrightarrow> cap_asid cap = cap_asid cap'"
+  unfolding is_derived_arch_def
+  apply (cases cap; cases cap'; simp)
+  by (auto simp: is_cap_simps cap_master_cap_def split: arch_cap.splits)
+
+lemma
+  cap_master_cap_arch_simps:
+  "cap_master_arch_cap ((arch_cap.PageCap dev ref rghts sz mapdata)) =
+         (arch_cap.PageCap dev ref UNIV sz None)"
+  "cap_master_arch_cap ( (arch_cap.ASIDPoolCap pool asid)) =
+          (arch_cap.ASIDPoolCap pool 0)"
+  "cap_master_arch_cap ( (arch_cap.PageTableCap ptr x)) =
+          (arch_cap.PageTableCap ptr None)"
+  "cap_master_arch_cap ( (arch_cap.PageDirectoryCap ptr y)) =
+          (arch_cap.PageDirectoryCap ptr None)"
+  "cap_master_arch_cap ( arch_cap.ASIDControlCap) =
+          arch_cap.ASIDControlCap"
+  by (simp add: cap_master_arch_cap_def)+
+
+definition
+  "cap_asid_base_arch cap \<equiv> case cap of
+     (arch_cap.ASIDPoolCap _ asid) \<Rightarrow> Some asid
+  | _ \<Rightarrow> None"
+
+declare cap_asid_base_arch_def[abs_def, simp]
+
+definition
+  "cap_asid_base cap \<equiv> arch_cap_fun_lift cap_asid_base_arch None cap"
+
+lemmas cap_asid_base_simps [simp] =
+  cap_asid_base_def [simplified, split_simps cap.split arch_cap.split]
+
+lemma same_master_cap_same_types:
+  "cap_master_cap cap = cap_master_cap cap' \<Longrightarrow>
+    (is_pt_cap cap = is_pt_cap cap') \<and> (is_pd_cap cap = is_pd_cap cap')"
+  by (clarsimp simp: cap_master_cap_def is_cap_simps
+                  split: cap.splits arch_cap.splits)
+
+lemma is_derived_cap_arch_asid_issues:
+  "is_derived_arch cap cap' \<Longrightarrow>
+    cap_master_cap cap = cap_master_cap cap'
+      \<Longrightarrow> ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow> cap_asid cap \<noteq> None)
+             \<and> (is_pg_cap cap \<or> (vs_cap_ref cap = vs_cap_ref cap'))"
+  apply (simp add: is_derived_arch_def)
+  by (auto simp: cap_master_cap_def is_cap_simps
+                  cap_asid_def
+                  split: cap.splits arch_cap.splits option.splits)
+
+definition
+  safe_parent_for_arch :: "cap \<Rightarrow> cap \<Rightarrow> bool"
+where
+  "safe_parent_for_arch cap parent \<equiv> False"
+
+declare safe_parent_for_arch_def[simp]
+
+lemma safe_parent_for_arch_not_arch:
+  "\<not>is_arch_cap cap \<Longrightarrow> \<not>safe_parent_for_arch cap p"
+  by (clarsimp simp: safe_parent_for_arch_def is_cap_simps)
+
+lemma safe_parent_cap_range_arch:
+  "\<And>cap pcap. safe_parent_for_arch cap pcap \<Longrightarrow> cap_range cap \<subseteq> cap_range pcap"
+  by (clarsimp simp: safe_parent_for_arch_def cap_range_def)
+
 
 end
 

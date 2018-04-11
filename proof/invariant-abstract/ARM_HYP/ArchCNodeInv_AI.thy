@@ -540,6 +540,12 @@ lemma prepare_thread_delete_thread_cap [CNodeInv_AI_assms]:
    \<lbrace>\<lambda>rv s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>"
   by (wpsimp simp: prepare_thread_delete_def)
 
+lemma cap_swap_ioports[wp, CNodeInv_AI_assms]:
+  "\<lbrace>valid_ioports and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
+     cap_swap c a c' b
+   \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  by wpsimp
+
 end
 
 
@@ -554,6 +560,18 @@ termination rec_del by (rule rec_del_termination)
 
 
 context Arch begin global_naming ARM
+
+lemma post_cap_delete_pre_is_final_cap':
+  "\<And>rv s'' rva s''a s.
+       \<lbrakk>valid_ioports s; caps_of_state s slot = Some cap; is_final_cap' cap s; cap_cleanup_opt cap \<noteq> NullCap\<rbrakk>
+       \<Longrightarrow> post_cap_delete_pre (cap_cleanup_opt cap) (caps_of_state s(slot \<mapsto> NullCap))"
+  apply (clarsimp simp: cap_cleanup_opt_def cte_wp_at_def post_cap_delete_pre_def arch_cap_cleanup_opt_def
+                      split: cap.split_asm if_split_asm
+                      elim!: ranE dest!: caps_of_state_cteD)
+   (* IRQHandlerCap case *)
+   apply (drule(2) final_cap_duplicate_irq)
+     apply simp+
+  done
 
 lemma rec_del_invs'':
   notes Inr_in_liftE_simp[simp del]
@@ -579,7 +597,7 @@ lemma rec_del_invs'':
                (case call of FinaliseSlotCall sl x \<Rightarrow>
                              ((fst rv \<or> x) \<longrightarrow> cte_wp_at (replaceable s sl cap.NullCap) sl s)
                              \<and> (snd rv \<noteq> NullCap \<longrightarrow>
-                                   snd rv \<notin> ran ((caps_of_state s) (sl \<mapsto> cap.NullCap)))
+                                   post_cap_delete_pre (snd rv) ((caps_of_state s) (sl \<mapsto> cap.NullCap)))
                           | ReduceZombieCall cap sl x \<Rightarrow>
                              (\<not> x \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) sl s)
                           | _ \<Rightarrow> True) \<and>
@@ -640,16 +658,8 @@ next
       apply (clarsimp simp: cte_wp_at_caps_of_state)
       apply (erule disjE)
        apply clarsimp
-       apply (clarsimp simp: cap_cleanup_opt_def cte_wp_at_def
-                      split: cap.split_asm if_split_asm
-                      elim!: ranE dest!: caps_of_state_cteD)
-        apply (drule(2) final_cap_duplicate_irq)
-          apply simp+
-       apply (drule(2) final_cap_duplicate_arch_refs)
-         apply (simp add: arch_cap_cleanup_opt_def)+
-      apply clarsimp
-      apply (rule conjI)
-       apply clarsimp
+       apply (rule post_cap_delete_pre_is_final_cap', clarsimp+)
+      apply (rule conjI, clarsimp)
        apply (subst replaceable_def)
        apply (clarsimp simp: is_cap_simps tcb_cap_valid_NullCapD
                              no_cap_to_obj_with_diff_ref_Null gen_obj_refs_eq
@@ -993,6 +1003,10 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
    apply (erule(1) tcb_cap_valid_caps_of_stateD)
   apply (simp add: is_cap_simps)
   done
+
+lemma arch_derive_is_arch:
+  "\<lbrace>\<top>\<rbrace> arch_derive_cap c \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> is_arch_cap rv\<rbrace>,-"
+  by (wpsimp simp: is_arch_cap_def arch_derive_cap_def)
 
 end
 

@@ -259,7 +259,7 @@ lemma (* obj_ref_ofI *) [Finalise_AI_asms]: "obj_refs cap = {x} \<Longrightarrow
 lemma (* empty_slot_invs *) [Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s sl cap.NullCap) sl s \<and>
         emptyable sl s \<and>
-        (info \<noteq> NullCap \<longrightarrow> info \<notin> ran ((caps_of_state s) (sl \<mapsto> NullCap)))\<rbrace>
+        (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre info ((caps_of_state s) (sl \<mapsto> NullCap)))\<rbrace>
      empty_slot sl info
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: empty_slot_def set_cdt_def bind_assoc cong: if_cong)
@@ -2430,6 +2430,18 @@ lemma (* zombie_cap_two_nonidles *)[Finalise_AI_asms]:
   apply (simp add: cap_range_def global_refs_def)
   apply (cases ptr, auto dest: valid_idle_has_null_cap_ARCH[rotated -1])[1]
   done
+
+crunches empty_slot, finalise_cap, send_ipc, receive_ipc
+  for ioports[wp]: valid_ioports
+  (wp: crunch_wps valid_ioports_lift simp: crunch_simps ignore: set_object)
+
+lemma arch_derive_cap_notzombie[wp]:
+  "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv s. \<not> is_zombie rv\<rbrace>, -"
+  by (cases acap; wpsimp simp: arch_derive_cap_def is_zombie_def o_def)
+
+lemma arch_derive_cap_notIRQ[wp]:
+  "\<lbrace>\<top>\<rbrace> arch_derive_cap cap \<lbrace>\<lambda>rv s. rv \<noteq> cap.IRQControlCap\<rbrace>,-"
+  by (cases cap; wpsimp simp: arch_derive_cap_def o_def)
 
 end
 
