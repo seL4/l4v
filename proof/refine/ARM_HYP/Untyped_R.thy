@@ -1599,7 +1599,7 @@ shows
               del: split_paired_All split_paired_Ex split del: if_split)
   apply(subgoal_tac "finite_depth (cdt s)")
    prefer 2
-   apply(simp add: finite_depth valid_mdb_def2[symmetric])
+   apply(simp add: finite_depth valid_mdb_def2[simplified,symmetric])
   apply(intro impI allI)
   apply(subgoal_tac "mdb_insert_abs (cdt s) p (a, b)")
    prefer 2

@@ -1204,6 +1204,12 @@ lemma init_arch_objects_excap:
 crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at P t"
   (wp: crunch_wps)
 
+lemma valid_arch_mdb_detype:
+  "valid_arch_mdb (is_original_cap s) (caps_of_state s) \<Longrightarrow>
+            valid_arch_mdb (is_original_cap (detype (untyped_range cap) s))
+         (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
+  by auto
+
 end
 
 lemmas clearMemory_invs[wp] = ARM.clearMemory_invs

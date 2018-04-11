@@ -1943,11 +1943,3 @@ case \x of UntypedCap {capIsDevice = False} | capBlockSize untyped == objBits po
     then ->1
     else ->2
 
-
-
-
-
-
-
-
-
