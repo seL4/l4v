@@ -2080,16 +2080,12 @@ lemma cap_to_H_PageCap_tag:
   apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits if_split_asm)
      by (simp_all add: Let_def cap_lift_def split_def split: if_splits)
 
-(* FIXME x64: we now call 3 functions rather than just generic_frame_cap_ptr_set...
-              so this will need to be redone whilst proving performPageInvocation_ccorres *)
-(* FIXME VER-917: the spec needs to be updated so that the mapping type is set to MappingNone
-                  like in the C *)
 lemma updateCap_frame_mapped_addr_ccorres:
   notes option.case_cong_weak [cong]
   shows "ccorres dc xfdc
            (cte_wp_at' (\<lambda>c. ArchObjectCap cap = cteCap c) ctSlot and K (isPageCap cap))
            UNIV []
-           (updateCap ctSlot (ArchObjectCap (capVPMappedAddress_update empty cap)))
+           (updateCap ctSlot (ArchObjectCap (capVPMapType_update (\<lambda>_. VMNoMap) (capVPMappedAddress_update empty cap))))
            (Guard C_Guard {s. s \<Turnstile>\<^sub>c cte_Ptr ctSlot}
               (CALL cap_frame_cap_ptr_set_capFMappedAddress(cap_Ptr &(cte_Ptr ctSlot\<rightarrow>[''cap_C'']), 0));;
             Guard C_Guard {s. s \<Turnstile>\<^sub>c cte_Ptr ctSlot}
@@ -2108,7 +2104,7 @@ lemma updateCap_frame_mapped_addr_ccorres:
    apply (erule (1) rf_sr_ctes_of_cliftE)
    apply (frule cap_CL_lift)
    apply (clarsimp simp: typ_heap_simps)
-   apply (rule conjI)
+   apply (rule context_conjI)
     apply (clarsimp simp: isCap_simps)
     apply (drule cap_CL_lift)
     apply (drule (1) cap_to_H_PageCap_tag)
@@ -2119,16 +2115,32 @@ lemma updateCap_frame_mapped_addr_ccorres:
    apply clarsimp
    apply (frule (1) rf_sr_ctes_of_clift)
    apply clarsimp
-   apply (subgoal_tac "ccte_relation (cteCap_update (\<lambda>_. ArchObjectCap (PageCap v0 v1 v2 v3 d None)) (cte_to_H ctel')) (cte_C.cap_C_update (\<lambda>_. capb) cte')")
-    prefer 2
-    apply (clarsimp simp: ccte_relation_def)
-    apply (clarsimp simp: cte_lift_def)
-    apply (simp split: option.splits)
-    apply clarsimp
-    apply (simp add: cte_to_H_def c_valid_cte_def)
-    apply (rule conjI, simp add: cap_lift_frame_cap)
-    apply (clarsimp)
-  sorry
+   prefer 2 apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (clarsimp simp: packed_heap_update_collapse_hrs)
+  apply (subgoal_tac "ccte_relation (cteCap_update (\<lambda>_. ArchObjectCap (PageCap v0 v1 VMNoMap v3 d None))
+                                                   (cte_to_H ctel'))
+                                    (cte_C.cap_C_update (\<lambda>_. capb) cte')")
+   apply (clarsimp simp: rf_sr_def cstate_relation_def typ_heap_simps Let_def cpspace_relation_def)
+   apply (rule conjI)
+    apply (erule (3) cmap_relation_updI)
+    subgoal by simp
+   apply (erule_tac t=s' in ssubst)
+   apply (simp add: heap_to_user_data_def)
+   apply (rule conjI)
+    apply (erule (1) setCTE_tcb_case)
+   subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
+                         typ_heap_simps h_t_valid_clift_Some_iff
+                         cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
+  apply (clarsimp simp: ccte_relation_def)
+  apply (clarsimp simp: cte_lift_def)
+  apply (simp split: option.splits)
+  apply (clarsimp simp: cte_to_H_def c_valid_cte_def)
+  apply (rule conjI, simp add: cap_frame_cap_lift)
+  apply (clarsimp simp: cap_frame_cap_lift_def)
+  apply (clarsimp simp: c_valid_cap_def cl_valid_cap_def
+                        cap_frame_cap_lift cap_to_H_def maptype_to_H_def
+                        X86_MappingNone_def asidInvalid_def)
+  done
 
 (* FIXME: move *)
 lemma diminished_PageCap:
@@ -2197,10 +2209,9 @@ lemma performPageInvocationUnmap_ccorres:
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (cinit lift: cap_' ctSlot_')
    apply csymbr
-   apply (rule ccorres_guard_imp [where A=
-               "invs'
-                and cte_wp_at' (diminished' (ArchObjectCap cap) o cteCap) ctSlot
-                and K (isPageCap cap)"])
+   apply (rule ccorres_guard_imp
+                 [where A="invs' and cte_wp_at' (diminished' (ArchObjectCap cap) o cteCap) ctSlot
+                                 and K (isPageCap cap)"])
      apply wpc
       apply (rule_tac P="ret__unsigned_longlong = 0" in ccorres_gen_asm)
       apply clarsimp
@@ -2208,7 +2219,6 @@ lemma performPageInvocationUnmap_ccorres:
          apply (subst bind_return [symmetric])
          apply (rule ccorres_rhs_assoc2)+
          apply (rule ccorres_split_nothrow_novcg)
-         (* FIXME VER-917 *)
          apply (rule updateCap_frame_mapped_addr_ccorres)
             apply ceqv
            apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
@@ -2233,7 +2243,6 @@ lemma performPageInvocationUnmap_ccorres:
       apply (rule ccorres_split_nothrow_novcg)
           apply (rule ccorres_symb_exec_l)
              apply clarsimp
-             (* FIXME VER-917 *)
              apply (rule updateCap_frame_mapped_addr_ccorres)
             apply (wp getSlotCap_wp', simp)
            apply (wp getSlotCap_wp')
