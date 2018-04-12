@@ -5897,7 +5897,7 @@ proof -
                     gsUserPages_update_ccorres[folded modify_gsUserPages_update])
             | (rule match_ccorres, csymbr))+)[1]
           apply (intro conjI)
-           apply (clarsimp simp: createObject_hs_preconds_def framSizeConstants_defs
+           apply (clarsimp simp: createObject_hs_preconds_def frameSizeConstants_defs
                                 APIType_capBits_def pageBits_def)
           apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
                     framesize_to_H_def cap_to_H_simps cap_frame_cap_lift X86_SmallPage_def
@@ -5922,7 +5922,7 @@ proof -
                     gsUserPages_update_ccorres[folded modify_gsUserPages_update])
             | (rule match_ccorres, csymbr))+)[1]
          apply (intro conjI)
-          apply (clarsimp simp: createObject_hs_preconds_def framSizeConstants_defs ptTranslationBits_def
+          apply (clarsimp simp: createObject_hs_preconds_def frameSizeConstants_defs ptTranslationBits_def
                                 APIType_capBits_def pageBits_def)
          apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
                     framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
@@ -5947,7 +5947,7 @@ proof -
                     gsUserPages_update_ccorres[folded modify_gsUserPages_update])
             | (rule match_ccorres, csymbr))+)[1]
         apply (intro conjI)
-         apply (clarsimp simp: createObject_hs_preconds_def framSizeConstants_defs ptTranslationBits_def
+         apply (clarsimp simp: createObject_hs_preconds_def frameSizeConstants_defs ptTranslationBits_def
                                 APIType_capBits_def pageBits_def)
         apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
                     framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
