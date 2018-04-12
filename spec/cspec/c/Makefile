@@ -45,16 +45,14 @@ CSPEC_DIR=${PWD}/..
 KERNEL_DEPS = $(shell find ${SOURCE_ROOT} -type f)
 
 # Top level rule for rebuilding kernel_all.c_pp
-${BUILDROOT}/kernel_all.c_pp: ${BUILDROOT}/CMakeCache.txt
+${BUILDROOT}/kernel_all.c_pp: init_CMake
 	cd ${BUILDROOT} && ninja kernel_all_pp_wrapper
 	cp -a ${BUILDROOT}/kernel_all_pp.c $@
 
-# Rule for initializing the CMake build. In order to pick up changes to the configuration
-# we have to purge everything and start again, so for simplicity we just make the cache
-# depend upon all the kernel sources. This is mostly needed as the usage of this 'hides' the
-# fact there is a configured build going on, so we accept increased rebuild times to not
-# confuse users by not rebuilding when we should
-${BUILDROOT}/CMakeCache.txt: ${SOURCE_ROOT}/gcc.cmake ${SOURCE_ROOT}/configs/${CONFIG} ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE}
+# Initialize the CMake build. CMake produces many build files, so rather than trying
+# to list them as dependencies, we just re-run it every time. This keeps things simple
+# and correct at the expense of some performance.
+init_CMake: ${SOURCE_ROOT}/gcc.cmake ${SOURCE_ROOT}/configs/${CONFIG} ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE}
 	rm -rf ${BUILDROOT}
 	mkdir -p ${BUILDROOT}
 	cd ${BUILDROOT} && \
@@ -77,4 +75,4 @@ clean:
 	rm -rf build
 	rm -f ${UMM_TYPES}
 
-.PHONY: clean
+.PHONY: clean init_CMake
