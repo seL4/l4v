@@ -608,12 +608,13 @@ definition
   "carch_state_to_H cstate \<equiv>
    X64KernelState
       (array_map_conv (\<lambda>x. if x=NULL then None else Some (ptr_val x))
-                     (2^asid_high_bits - 1) (x86KSASIDTable_' cstate))
-      (symbol_table ''x64KSKernelPML4'')
-      [symbol_table ''x64KSKernelPDPT'']
-      [symbol_table ''x64KSKernelPD'']
-      [symbol_table ''x64KSKernelPT'']
-      (CR3 (x64KSCurrentUserCR3_' cstate) undefined (*FIXME*))
+                      (2^asid_high_bits - 1) (x86KSASIDTable_' cstate))
+      (symbol_table ''x64KSSKIMPML4'')
+      [symbol_table ''x64KSSKIMPDPT'']
+      [symbol_table ''x64KSSKIMPD'']
+      []
+      (CR3 (x64KSCurrentUserCR3_' cstate && (mask 39 << 12))
+           (x64KSCurrentUserCR3_' cstate && mask 12))
       x64KSKernelVSpace_C"
 
 
@@ -631,18 +632,6 @@ lemma carch_state_to_H_correct:
   apply (rename_tac v1 v2 v3 v4 v5 v6 v7)
   using rel[simplified carch_state_relation_def carch_globals_def]
   apply (clarsimp simp: carch_state_to_H_def)
-  (*
-  apply (rule conjI[rotated])
-   apply (rule conjI[rotated])
-    subgoal using valid rel
-      by (clarsimp simp: unat_of_nat_eq valid_arch_state'_def)
-   apply (rule array_relation_map_conv2[OF _ eq_option_to_0_rev])
-     apply assumption
-    using valid[simplified valid_arch_state'_def]
-    subgoal by (fastforce simp: is_inv_def valid_asid_map'_def)
-   apply clarsimp
-   apply (cut_tac w=i in word_le_p2m1, simp add: minus_one_norm)
-  *)
   apply (rule conjI)
   apply (rule array_relation_map_conv2[OF _ eq_option_to_ptr_rev])
     apply assumption
@@ -650,7 +639,8 @@ lemma carch_state_to_H_correct:
    apply (fastforce simp: valid_asid_table'_def)
   using valid[simplified valid_arch_state'_def]
   apply (fastforce simp: valid_asid_table'_def)
-  sorry (* FIXME: arch state needs more definitions *)
+  apply (simp add: ccr3_relation_def split: cr3.splits)
+  done
 
 end
 

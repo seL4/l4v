@@ -94,8 +94,10 @@ begin
 
 (* relates fixed adresses *)
 definition
-  "carch_globals s \<equiv>
-    (x64KSSKIMPML4 s = symbol_table ''x64KSSKIMPML4'')"
+  "carch_globals s \<equiv> (x64KSSKIMPML4 s = symbol_table ''x64KSSKIMPML4'')
+                   \<and> (x64KSSKIMPDPTs s = [symbol_table ''x64KSSKIMPDPT''])
+                   \<and> (x64KSSKIMPDs s = [symbol_table ''x64KSSKIMPD''])
+                   \<and> (x64KSSKIMPTs s = [])"
 
 (* FIXME x64: DON'T DELETE!
     keep this for a rainy day, if we find out that leaving the asid map out of the state relation
