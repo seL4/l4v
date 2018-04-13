@@ -45,16 +45,16 @@ CSPEC_DIR=${PWD}/..
 KERNEL_DEPS = $(shell find ${SOURCE_ROOT} -type f)
 
 # Top level rule for rebuilding kernel_all.c_pp
-${BUILDROOT}/kernel_all.c_pp: ${BUILDROOT}/CMakeCache.txt
+${BUILDROOT}/kernel_all.c_pp: ${BUILDROOT}/.cmake_done
 	cd ${BUILDROOT} && ninja kernel_all_pp_wrapper
 	cp -a ${BUILDROOT}/kernel_all_pp.c $@
 
-# Rule for initializing the CMake build. In order to pick up changes to the configuration
-# we have to purge everything and start again, so for simplicity we just make the cache
-# depend upon all the kernel sources. This is mostly needed as the usage of this 'hides' the
-# fact there is a configured build going on, so we accept increased rebuild times to not
-# confuse users by not rebuilding when we should
-${BUILDROOT}/CMakeCache.txt: ${SOURCE_ROOT}/gcc.cmake ${SOURCE_ROOT}/configs/${CONFIG} ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE}
+# Initialize the CMake build. We purge the build directory and start again
+# whenever any of the kernel sources change, so that we can reliably pick up
+# changes to the build config.
+# This step also generates a large number of files, so we create a dummy file
+# .cmake_done to represent overall completion for make's dependency tracking.
+${BUILDROOT}/.cmake_done: ${SOURCE_ROOT}/gcc.cmake ${SOURCE_ROOT}/configs/${CONFIG} ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE}
 	rm -rf ${BUILDROOT}
 	mkdir -p ${BUILDROOT}
 	cd ${BUILDROOT} && \
@@ -65,6 +65,7 @@ ${BUILDROOT}/CMakeCache.txt: ${SOURCE_ROOT}/gcc.cmake ${SOURCE_ROOT}/configs/${C
 		-DUMM_TYPES=${UMM_TYPES} \
 		-DSORRY_BITFIELD_PROOFS=${SORRY_BITFIELD_PROOFS} \
 		-DKernelDomainSchedule=${CONFIG_DOMAIN_SCHEDULE} -G Ninja ${SOURCE_ROOT}
+	touch ${BUILDROOT}/.cmake_done
 
 # called by ../spec/Makefile
 cspec: ${UMM_TYPES} ${BUILDROOT}/kernel_all.c_pp
