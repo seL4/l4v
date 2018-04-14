@@ -278,7 +278,7 @@ crunch domain_list_inv[wp]: sched_context_bind_tcb,sched_context_bind_ntfn "\<la
 crunch domain_list_inv[wp]: sched_context_unbind_reply "\<lambda>s. P (domain_list s)"
  (wp: hoare_drop_imps mapM_x_wp')
 crunch domain_list_inv[wp]: sched_context_yield_to "\<lambda>s. P (domain_list s)"
-  (wp: hoare_drop_imps mapM_wp' simp: zipWithM_x_mapM)
+  (wp: hoare_drop_imps mapM_wp' maybeM_inv simp: zipWithM_x_mapM)
 
 
 context DetSchedDomainTime_AI begin

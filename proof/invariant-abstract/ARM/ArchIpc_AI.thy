@@ -528,10 +528,6 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
   apply (simp split: kernel_object.split_asm)
   done
 
-lemma set_mrs_state_hyp_refs_of[wp]:
-  "\<lbrace>\<lambda> s. P (state_hyp_refs_of s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
-  by (wp set_mrs_thread_set_dmo thread_set_hyp_refs_trivial | simp)+
-
 crunch state_hyp_refs_of[wp, Ipc_AI_cont_assms]: do_ipc_transfer "\<lambda> s. P (state_hyp_refs_of s)"
   (wp: crunch_wps simp: zipWithM_x_mapM)
 

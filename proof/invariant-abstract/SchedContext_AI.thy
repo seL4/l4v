@@ -1252,35 +1252,7 @@ lemma refill_unblock_check_it_ct[wp]:
             update_sched_context_def set_object_def
         wp: get_refills_wp hoare_vcg_if_lift2 get_object_wp get_sched_context_wp)
 
-lemma sched_context_yield_to_invs[wp]:
-  notes refs_of_simps [simp del]
-  shows
-  "\<lbrace>invs and (\<lambda>s. cur_thread s \<noteq> idle_thread s ) (* cur_thread must be set to Restart *)
-    and (\<lambda>s. bound_yt_tcb_at (op = None) (cur_thread s) s)
-    and sc_yf_sc_at (op = None) scp
-     and (\<lambda>s. ex_nonz_cap_to (cur_thread s) s) and ex_nonz_cap_to scp\<rbrace>
-       sched_context_yield_to scp args \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (unfold sched_context_yield_to_def) (* why do I need to unfold this first? *)
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def is_schedulable_def get_sc_obj_ref_def
-                wp: valid_irq_node_typ ethread_get_inv hoare_vcg_if_lift2 hoare_drop_imps)
-  apply (clarsimp simp: cur_tcb_def)
-  apply (subst conj_assoc[symmetric])
-  apply (thin_tac "tcb_at (cur_thread s) s" for s)
-  apply (clarsimp simp: pred_tcb_at_def sc_yf_sc_at_def)
-  apply (clarsimp simp: conj_commute cong: conj_cong)
-  apply safe
-    apply (fastforce simp: obj_at_def is_sc_obj_def intro!: valid_sched_context_size_objsI)
-   apply (erule delta_sym_refs)
-    apply (clarsimp split: if_split_asm simp: obj_at_def)
-   apply (clarsimp split: if_split_asm)
-     apply (clarsimp simp: obj_at_def)
-    apply (drule obj_at_state_refs_ofD)+
-    apply (clarsimp simp: refs_of_def refs_of_tcb_def refs_of_sc_def get_refs_def2 tcb_st_refs_of_def
-      split: thread_state.split_asm if_split_asm)
-   apply (drule obj_at_state_refs_ofD)+
-   apply (clarsimp simp: refs_of_def refs_of_sc_def get_refs_def2
-      split: thread_state.split_asm if_split_asm)
-  done
-
+(* sched_context_yield_to is moved to the start of SchedContextInv_AI
+because it needs to be after Ipc_AI *)
 
 end

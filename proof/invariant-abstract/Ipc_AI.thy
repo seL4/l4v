@@ -1537,11 +1537,9 @@ lemma set_mrs_cur [wp]:
   "\<lbrace>cur_tcb\<rbrace> set_mrs r t mrs \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
   by (wp set_mrs_thread_set_dmo)
 
-
-lemma set_mrs_ex_nonz_cap_to[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> set_mrs a b c \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
-  by (wp ex_nonz_cap_to_pres)
-
+lemma set_mrs_state_hyp_refs_of[wp]:
+  "\<lbrace>\<lambda> s. P (state_hyp_refs_of s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
+  by (wp set_mrs_thread_set_dmo thread_set_hyp_refs_trivial | simp)+
 
 lemma set_mrs_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace> set_mrs a b c \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
@@ -2027,6 +2025,7 @@ crunches maybe_donate_sc
   and valid_irq_states[wp]: valid_irq_states
   and valid_machine_state[wp]: valid_machine_state
   and valid_mdb[wp]: valid_mdb
+  and cte_wp_at[wp]: "cte_wp_at P c"
   and zombies_final[wp]: zombies_final
   (wp: maybeM_inv)
 
@@ -2093,6 +2092,15 @@ lemma maybe_donate_sc_sym_refs:
   apply (wpsimp simp: maybe_donate_sc_def)
   sorry
 
+lemma maybe_donate_sc_ex_nonz_cap_to[wp]:
+  "\<lbrace>ex_nonz_cap_to p\<rbrace> maybe_donate_sc r n \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
+  by (wp ex_nonz_cap_to_pres)
+
+lemma maybe_donate_sc_state_hyp_refs_of[wp]:
+      "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr \<lbrace>\<lambda>r s. P (state_hyp_refs_of s)\<rbrace>"
+  by (wpsimp simp: maybe_donate_sc_def sched_context_donate_def
+               wp: hoare_vcg_if_lift2 hoare_drop_imp)
+
 lemma update_waiting_invs:
   notes if_split[split del]  hoare_pre [wp_pre del]
   shows
@@ -2106,15 +2114,12 @@ lemma update_waiting_invs:
 
    apply (wp |simp)+
     apply (simp add: invs_def valid_state_def valid_pspace_def)
-    apply (wp valid_irq_node_typ sts_only_idle)
-    apply (simp add: valid_tcb_state_def conj_comms)
-  apply wpsimp
-
+    apply (wpsimp simp: wp: valid_irq_node_typ sts_only_idle)
+   apply (simp add: valid_tcb_state_def conj_comms)
+    apply (wpsimp simp: wp: valid_irq_node_typ)
 (*   apply (simp add: cte_wp_at_caps_of_state)
 
-   apply (wp set_simple_ko_valid_objs hoare_post_imp [OF disjI1]
-             valid_irq_node_typ valid_ioports_lift | assumption | simp |
-             strengthen reply_cap_doesnt_exist_strg)+
+   apply (wpsimp wp: set_simple_ko_valid_objs hoare_post_imp [OF disjI1] hoare_vcg_conj_lift)
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                         ep_redux_simps neq_Nil_conv
                   cong: list.case_cong if_cong)
