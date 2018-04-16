@@ -17,6 +17,7 @@ chapter "Library"
 theory Lib
 imports
   Value_Abbreviation
+  Subseq_Abbreviation
   Try_Methods
   Extract_Conjunct
   Eval_Bool
