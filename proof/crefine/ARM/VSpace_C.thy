@@ -1105,12 +1105,21 @@ lemma ccorres_pre_gets_armKSGlobalPD_ksArchState:
   apply simp
   done
 
+lemma invalidateTranslationASIDLocal_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>hw_asid = hw_asid \<rbrace>) []
+           (doMachineOp (invalidateLocalTLB_ASID hw_asid))
+           (Call invalidateTranslationASIDLocal_'proc)"
+  apply cinit'
+  apply (ctac (no_vcg) add: invalidateLocalTLB_ASID_ccorres)
+  apply clarsimp
+  done
+
 lemma invalidateTranslationASID_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>hw_asid = hw_asid \<rbrace>) []
            (doMachineOp (invalidateLocalTLB_ASID hw_asid))
            (Call invalidateTranslationASID_'proc)"
   apply cinit'
-  apply (ctac (no_vcg) add: invalidateLocalTLB_ASID_ccorres)
+  apply (ctac (no_vcg) add: invalidateTranslationASIDLocal_ccorres)
   apply clarsimp
   done
 
@@ -1995,12 +2004,21 @@ lemma performPageDirectoryInvocationFlush_ccorres:
   apply (clarsimp simp: order_less_imp_le)
   done
 
+lemma invalidateTranslationSingleLocal_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>vptr = w\<rbrace>) []
+           (doMachineOp (invalidateLocalTLB_VAASID w))
+           (Call invalidateTranslationSingleLocal_'proc)"
+  apply cinit'
+  apply (ctac (no_vcg) add: invalidateLocalTLB_VAASID_ccorres)
+  apply clarsimp
+  done
+
 lemma invalidateTranslationSingle_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>vptr = w\<rbrace>) []
            (doMachineOp (invalidateLocalTLB_VAASID w))
            (Call invalidateTranslationSingle_'proc)"
   apply cinit'
-  apply (ctac (no_vcg) add: invalidateLocalTLB_VAASID_ccorres)
+  apply (ctac (no_vcg) add: invalidateTranslationSingleLocal_ccorres)
   apply clarsimp
   done
 
