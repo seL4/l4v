@@ -76,7 +76,26 @@ fun lambda_frees_vars ctxt ord_t t = let
     val ord_vars = filter (member (op =) vars) all_vars
   in fold lambda ord_vars t end
 
-fun subseq_abbreviation mode name constr hd tl thm_info int ctxt = let
+fun add_reassoc b lambda_term cname thm_info ctxt = let
+    val thm = singleton (Attrib.eval_thms ctxt) thm_info
+    val (xs, _) = Term.strip_abs lambda_term
+    val xxs = Variable.variant_frees ctxt [] (("x", dummyT) :: xs)
+    val freeTs = fold (Term.add_tfreesT o snd) xxs []
+    val term = betapplys (lambda_term, map Free (tl xxs))
+    val lhs = Const (cname, dummyT) $ term $ Free (hd xxs)
+      |> Syntax.check_term ctxt
+      |> Thm.cterm_of ctxt
+    val rew = Simplifier.rewrite (clear_simpset ctxt addsimps [thm]) lhs
+      |> Thm.symmetric
+      |> Drule.generalize (map fst freeTs, map fst xxs)
+    val br = Binding.suffix_name "_reassoc" b
+    val (_, ctxt) = Local_Theory.note ((br, []), [rew]) ctxt
+    val pretty_decl = Pretty.block [Pretty.str (Binding.name_of br ^ ":\n"),
+        Thm.pretty_thm ctxt rew]
+  in Pretty.writeln pretty_decl; ctxt end
+
+fun subseq_abbreviation mode name subseq_info reassoc int ctxt = let
+    val (((constr, hd), tl), thm_info) = subseq_info
     val thm = singleton (Attrib.eval_thms ctxt) thm_info
     val thy = Proof_Context.theory_of ctxt
     val decl = (name, NONE, Mixfix.NoSyn)
@@ -93,13 +112,18 @@ fun subseq_abbreviation mode name constr hd tl thm_info int ctxt = let
     val eq = Logic.mk_equals (lhs, subseq_lambda)
     val ctxt = Specification.abbreviation mode (SOME decl) [] eq int ctxt
     val pretty_eq = Syntax.pretty_term ctxt eq
-  in Pretty.writeln pretty_eq; ctxt end
+  in Pretty.writeln pretty_eq; case reassoc of NONE => ctxt
+    | SOME reassoc_thm => add_reassoc name subseq_lambda cname reassoc_thm ctxt end
+
+val seq_parse = Parse.term -- Parse.term -- Parse.term -- Parse.thm
+
+val reassoc_parse = Scan.option (Parse.reserved "reassoc" |-- Parse.$$$ ":" |-- Parse.thm)
 
 val _ =
   Outer_Syntax.local_theory' @{command_keyword subseq_abbreviation}
     "setup abbreviation for subsequence of definition"
-    (Parse.syntax_mode -- Parse.binding -- Parse.term -- Parse.term -- Parse.term -- Parse.thm
-      >> (fn (((((mode, name), term), hd), tl), thm) => subseq_abbreviation mode name term hd tl thm));
+    (Parse.syntax_mode -- Parse.binding -- seq_parse -- reassoc_parse
+      >> (fn (((mode, name), subseq), reassoc) => subseq_abbreviation mode name subseq reassoc));
 
 end
 *}
@@ -109,14 +133,15 @@ Here's a simple example. There's a more complicated monadic test in
 the associated test theory Subseq_Abbreviation_Test.
 *}
 
-locale simple_test_subseq begin
+experiment begin
 
 definition
   "simple_test_subseq_abbr_body P Q =
     (P \<and> Q \<and> P \<and> P \<and> P \<and> True \<and> Q, [Suc 0, 0])"
 
-subseq_abbreviation (input) simple_test_subseq_abbr "HOL.conj"
-  "Q :: bool" "True" simple_test_subseq_abbr_body_def[where Q="Q :: bool"]
+subseq_abbreviation (input) simple_test_subseq_abbr
+  "HOL.conj" "Q :: bool" "True" simple_test_subseq_abbr_body_def[where Q="Q :: bool"]
+  reassoc: conj_assoc
 
 end
 

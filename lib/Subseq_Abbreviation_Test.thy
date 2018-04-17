@@ -16,8 +16,8 @@ imports
 
 begin
 
-locale test_subseq_abbreviation
-  = fixes a :: "(int, unit) nondet_monad"
+experiment
+  fixes a :: "(int, unit) nondet_monad"
     and b :: "int \<Rightarrow> (int, unit) nondet_monad"
     and c :: "(int, unit) nondet_monad"
 begin
@@ -35,6 +35,7 @@ definition
 
 subseq_abbreviation (input) foo_block bind
   "\<lambda>x. b x" "c" test_foo_def[simplified K_bind_def]
+  reassoc: bind_assoc
 
 end
 
