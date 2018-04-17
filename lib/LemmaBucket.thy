@@ -464,4 +464,11 @@ lemma strenghten_False_imp:
   "\<not>P \<Longrightarrow> P \<longrightarrow> Q"
   by blast
 
+lemma foldl_fun_or_alt:
+  "foldl (\<lambda>x y. x \<or> f y) b ls = foldl (op \<or>) b (map f ls)"
+  apply (induct ls)
+   apply clarsimp
+  apply clarsimp
+  by (simp add: foldl_map)
+
 end
