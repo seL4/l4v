@@ -81,12 +81,11 @@ lemma performPageTableInvocationUnmap_ccorres:
         apply csymbr
         apply csymbr
         apply (ctac add: unmapPageTable_ccorres)
-  sorry (*
-          apply csymbr thm cap_get_capSizeBits_spec
-
+          apply csymbr
           apply (simp add: storePTE_def' swp_def)
-          apply (ctac add: clearMemory_setObject_PTE_ccorres[simplified objBits_InvalidPTE,
-                              unfolded dc_def])
+          apply clarsimp
+          apply(simp only: dc_def[symmetric] bit_simps_corres[symmetric])
+          apply (ctac add: clearMemory_setObject_PTE_ccorres)
          apply wp
         apply (simp del: Collect_const)
         apply (vcg exspec=unmapPageTable_modifies)
@@ -147,8 +146,9 @@ lemma performPageTableInvocationUnmap_ccorres:
                         capRange_def Int_commute asid_bits_def
                  elim!: ccap_relationE cong: if_cong
                  dest!: diminished_capMaster)
-  apply (drule spec[where x=0], clarsimp)
-  done *)
+  apply (drule spec[where x=0])
+  apply (auto simp add: word_and_le1)
+  done
 
 lemma performPageDirectoryInvocationUnmap_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
