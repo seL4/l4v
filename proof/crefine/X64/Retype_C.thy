@@ -4834,13 +4834,49 @@ lemmas clift_array_assertionE
         OF _ refl _ exI[where x=0], simplified]
 
 lemma copyGlobalMappings_ccorres:
-  "ccorres dc xfdc \<top> (UNIV \<inter> {s. new_vspace_' s = Ptr pm}) []
-    (copyGlobalMappings pm) (Call copyGlobalMappings_'proc)"
+  "ccorres dc xfdc (page_map_l4_at' pm) (UNIV \<inter> {s. new_vspace_' s = Ptr pm}) []
+           (copyGlobalMappings pm) (Call copyGlobalMappings_'proc)"
   apply (cinit lift: new_vspace_' simp:)
-  sorry (* copyGlobalMappings_ccorres
-   apply (rule ccorres_return_Skip)
-  apply simp
-  done *)
+   apply csymbr
+   apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState, rename_tac skimPM)
+   apply (rule ccorres_rel_imp[where r=dc, OF _ dc_simp])
+   apply (clarsimp simp: whileAnno_def objBits_simps archObjSize_def
+                         getPML4Index_def bit_simps X64.pptrBase_def mask_def)
+    apply csymbr
+    apply (rule_tac F="\<lambda>n s. skimPM = x64KSSKIMPML4 (ksArchState s) \<and> page_map_l4_at' pm s"
+                and i="0x1FF"
+             in ccorres_mapM_x_while';
+           clarsimp simp: word_bits_def)
+    apply (rule ccorres_guard_imp2)
+     apply (rule ccorres_pre_getObject_pml4e, rename_tac pml4e)
+     apply (simp add: storePML4E_def)
+     apply (rule_tac P="\<lambda>s. ko_at' pml4e (x64KSSKIMPML4 (ksArchState s) + 0xFF8) s
+                             \<and> page_map_l4_at' pm s" and P'="\<lbrace>\<acute>i = 0x1FF\<rbrace>"
+              in setObject_ccorres_helper)
+       apply (rule conseqPre, vcg, clarsimp)
+       apply (strengthen array_assertion_shrink_right[where n'=511 and n=512, simplified])
+       apply (frule (1) page_map_l4_at'_array_assertion; clarsimp simp: bit_simps)
+       apply (frule page_map_l4_pml4e_atI'[where x="0x1FF"]; simp add: bit_simps c_guard_abs_pml4e)
+       apply (rule conjI, clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+       apply (clarsimp simp: rf_sr_x64KSSKIMPML4)
+       apply (rule cmap_relationE1[OF rf_sr_cpml4e_relation], assumption,
+              erule_tac ko=ko' in ko_at_projectKO_opt)
+       apply (rule cmap_relationE1[OF rf_sr_cpml4e_relation], assumption,
+              erule_tac ko=pml4e in ko_at_projectKO_opt)
+       apply (clarsimp simp: typ_heap_simps' heap_access_Array_element)
+       apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+       apply (clarsimp simp: typ_heap_simps update_pml4e_map_tos)
+       apply (rule conjI)
+        apply (clarsimp simp: cpspace_relation_def typ_heap_simps
+                              update_pml4e_map_tos update_pml4e_map_to_pml4es
+                              carray_map_relation_upd_triv)
+        subgoal by (erule (2) cmap_relation_updI; simp)
+       subgoal by (clarsimp simp: carch_state_relation_def cmachine_state_relation_def)
+      apply simp
+     apply (simp add: objBits_simps archObjSize_def)
+    apply clarsimp
+   apply (rule conseqPre, vcg, clarsimp)
+  by clarsimp
 
 lemma add_mult_aligned_neg_mask:
   "\<lbrakk> m && (2 ^ n - 1) = (0 :: machine_word) \<rbrakk> \<Longrightarrow>
@@ -5417,13 +5453,11 @@ lemma placeNewObject_pml4e:
 
 end
 
-context begin interpretation Arch . (*FIXME: arch_split*)
-end
-
 lemma dom_disj_union:
   "dom (\<lambda>x. if P x \<or> Q x then Some (G x) else None) = dom (\<lambda>x. if P x then Some (G x) else None)
   \<union> dom (\<lambda>x. if Q x then Some (G x) else None)"
   by (auto split:if_splits)
+
 context kernel_m begin
 
 lemma createObjects_ccorres_user_data_device:
@@ -6050,7 +6084,7 @@ proof -
                 ptBits_def pageBits_def pdBits_def word_sle_def word_sless_def)
      apply (rule ccorres_rhs_assoc)+
      apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps archObjSize_def
-                            X64_H.createObject_def bit_simps)
+                           X64_H.createObject_def bit_simps)
      apply (ctac pre only: add: placeNewObject_pml4e[simplified ptTranslationBits_def])
        apply (ctac add: copyGlobalMappings_ccorres)
          apply csymbr
@@ -6060,7 +6094,7 @@ proof -
          apply simp
         apply wp
        apply (vcg exspec=copyGlobalMappings_modifies)
-      apply wp
+      apply (wp placeNewObject_pml4_at'[simplified bitSimps objBits_simps archObjSize_def, simplified])
      apply vcg
     apply clarify
     apply (intro conjI)
@@ -8073,8 +8107,15 @@ lemma copyGlobalMappings_preserves_bytes:
       {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
          \<and> byte_regions_unmodified' s t}"
   apply (hoare_rule HoarePartial.ProcNoRec1)
-  apply simp
-  sorry (* copyGlobalMappings_preserves_bytes, needs invariant *)
+  apply (clarsimp simp only: whileAnno_def)
+  apply (subst whileAnno_def[symmetric, where V=undefined
+       and I="{t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}" for s])
+  apply (rule conseqPre, vcg)
+  apply (safe intro!: byte_regions_unmodified_hrs_mem_update
+    elim!: byte_regions_unmodified_trans byte_regions_unmodified_trans[rotated],
+    (simp_all add: h_t_valid_field)+)
+  done
 
 lemma hrs_htd_update_canon:
   "hrs_htd_update (\<lambda>_. f (hrs_htd hrs)) hrs = hrs_htd_update f hrs"
