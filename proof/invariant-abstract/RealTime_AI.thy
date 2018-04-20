@@ -218,7 +218,7 @@ lemma set_sc_yf_valid_objs[wp]:
   done
 
 lemma set_sc_replies_valid_objs[wp]:
-  "\<lbrace>valid_objs and (\<lambda>s. list_all (\<lambda>rp. reply_at rp s) replies)\<rbrace>
+  "\<lbrace>valid_objs and (\<lambda>s. list_all (\<lambda>rp. reply_at rp s) replies) and K (distinct replies)\<rbrace>
        set_sc_obj_ref sc_replies_update t replies \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (wpsimp wp: set_object_valid_objs get_object_wp
           simp: set_sc_obj_ref_def obj_at_def update_sched_context_def

@@ -564,6 +564,7 @@ where
      \<and> valid_bound_tcb (sc_tcb sc) s
      \<and> valid_bound_tcb (sc_yield_from sc) s
      \<and> list_all (\<lambda>r. reply_at r s) (sc_replies sc)
+     \<and> distinct (sc_replies sc)
      \<and> length (sc_refills sc) \<ge> 1
      (* \<and> length (sc_replies sc) \<le> sc_refill_max sc *)"
 

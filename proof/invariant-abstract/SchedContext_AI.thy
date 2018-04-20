@@ -1029,7 +1029,7 @@ lemma sched_context_unbind_reply_invs[wp]:
   apply (simp add: sched_context_unbind_reply_def)
   apply (wpsimp wp: mapM_x_set_reply_sc_refs_of valid_irq_node_typ hoare_vcg_conj_lift
       simp: invs_def valid_state_def valid_pspace_def)
-                      prefer 7
+                      prefer 8
                       apply (rule hoare_strengthen_post)
                       apply (wp mapM_x_set_reply_sc_refs_of)
                       apply simp
