@@ -562,6 +562,19 @@ lemma ccorres_if_lhs:
           hs (if P then f else g) conc"
   by (simp split: if_split)
 
+lemma ccorres_if_bindE:
+  "ccorres_underlying sr Gamm r xf arrel axf G G' hs (if a then (b >>=E f) else (c >>=E f)) d
+  \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf G G' hs ((if a then b else c) >>=E f) d"
+  by (simp split: if_split_asm)
+
+lemma ccorres_liftE:
+  fixes \<Gamma>
+  assumes cc: "ccorresG sr \<Gamma> (\<lambda> rv. r (Inr rv)) xf P P' hs a c"
+  shows   "ccorresG sr \<Gamma> r xf P P' hs (liftE a) c"
+  using cc
+  by (fastforce split: xstate.splits
+                simp: liftE_def ccorres_underlying_def bind_def' return_def unif_rrel_def)
+
 lemma ccorres_if_bind:
   "ccorres_underlying sr Gamm r xf arrel axf G G' hs (if a then (b >>= f) else (c >>= f)) d
   \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf G G' hs ((if a then b else c) >>= f) d"

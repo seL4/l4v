@@ -1300,47 +1300,88 @@ lemma unat_shiftr_le_bound:
   apply simp
   done
 
+lemma flushTable_ccorres:
+  "ccorres dc xfdc (invs' and (\<lambda>s. asid \<le> mask asid_bits \<and> vptr < pptrBase))
+      (UNIV \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pt_' s = Ptr ptPtr})
+      [] (flushTable vspace vptr ptPtr asid) (Call flushTable_'proc)"
+  apply (rule ccorres_gen_asm)
+  apply (cinit lift: asid_' vptr_' pt_')
+sorry
+
 lemma unmapPageTable_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. asid \<le> mask asid_bits \<and> vaddr < pptrBase))
-      (UNIV \<inter> {s. asid_' s = asid} \<inter> {s. vaddr___unsigned_long_' s = vaddr} \<inter> {s. pt_' s = Ptr ptPtr}) []
-      (unmapPageTable asid vaddr ptPtr) (Call unmapPageTable_'proc)"
-thm unmapPageTable_def unmapPageTable_body_def
+      (UNIV \<inter> {s. asid_' s = asid} \<inter> {s. vaddr___unsigned_long_' s = vaddr} \<inter> {s. pt_' s = Ptr ptPtr})
+      [] (unmapPageTable asid vaddr ptPtr) (Call unmapPageTable_'proc)"
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_' vaddr___unsigned_long_' pt_')
-  sorry (*
-   apply (ctac(no_vcg) add: pageTableMapped_ccorres)
-    apply wpc
-     apply (simp add: option_to_ptr_def option_to_0_def ccorres_cond_iffs)
-     apply (rule ccorres_return_Skip[unfolded dc_def])
-    apply (simp add: option_to_ptr_def option_to_0_def ccorres_cond_iffs)
-    apply (rule ccorres_rhs_assoc)+
-    apply csymbr
-    apply (rule ccorres_move_array_assertion_pd)
-    apply csymbr
-    apply csymbr
-    apply (rule ccorres_split_nothrow_novcg_dc)
-       apply (rule storePDE_Basic_ccorres)
-       apply (simp add: cpde_relation_def Let_def pde_lift_pde_invalid)
-      apply (fold dc_def)
-      apply csymbr
-      apply (ctac add: cleanByVA_PoU_ccorres)
-        apply (ctac(no_vcg) add:flushTable_ccorres)
-       apply wp
-      apply (vcg exspec=cleanByVA_PoU_modifies)
-     apply wp
-    apply (fastforce simp: guard_is_UNIV_def Collect_const_mem Let_def
-      shiftl_t2n field_simps lookup_pd_slot_def table_bits_defs)
-   apply (rule_tac Q="\<lambda>rv s. (case rv of Some pd \<Rightarrow> page_directory_at' pd s | _ \<Rightarrow> True) \<and> invs' s"
-             in hoare_post_imp)
-    apply (clarsimp simp: lookup_pd_slot_def Let_def
-                          mask_add_aligned less_kernelBase_valid_pde_offset''
-                          page_directory_at'_def table_bits_defs)
-   apply (wp pageTableMapped_pd)
-  apply (clarsimp simp: word_sle_def lookup_pd_slot_def
-                        Let_def shiftl_t2n field_simps
-                        Collect_const_mem table_bits_defs)
-  apply (simp add: unat_shiftr_le_bound unat_eq_0)
-  done *)
+   apply (clarsimp simp add: ignoreFailure_liftM)
+   apply (ctac add: findVSpaceForASID_ccorres,rename_tac vspace find_ret)
+      apply clarsimp
+      apply (ctac add: lookupPDSlot_ccorres, rename_tac pdSlot lu_ret)
+         apply (clarsimp simp add: pde_pde_pt_def liftE_bindE)
+         apply (rule ccorres_rhs_assoc2)
+         apply (rule ccorres_rhs_assoc2)
+         apply (rule ccorres_rhs_assoc2)
+         apply (rule ccorres_pre_getObject_pde)
+         apply (simp only: pde_case_isPageTablePDE)
+         apply (rule_tac xf'=ret__int_'
+                      and R'=UNIV
+                      and val="from_bool (isPageTablePDE pde \<and> pdeTable pde = addrFromPPtr ptPtr)"
+                      and R="ko_at' pde pdSlot"
+                  in ccorres_symb_exec_r_known_rv_UNIV)
+            apply vcg
+            apply clarsimp
+            apply (erule cmap_relationE1[OF rf_sr_cpde_relation])
+             apply (erule ko_at_projectKO_opt)
+            apply (rename_tac pde_C)
+            apply (clarsimp simp: typ_heap_simps)
+            apply (rule conjI, clarsimp simp: pde_pde_pt_def)
+             apply (drule pde_lift_pde_pt[simplified pde_pde_pt_def, simplified])
+             apply (clarsimp simp: from_bool_def cpde_relation_def Let_def isPageTablePDE_def
+                                   pde_pde_pt_lift_def case_bool_If
+                             split: pde.split_asm)
+            apply clarsimp
+            apply (simp add: from_bool_def split:bool.splits)
+            apply (rule strenghten_False_imp)
+            apply (simp add: cpde_relation_def Let_def)
+            apply (subgoal_tac "pde_get_tag pde_C = 1")
+             apply (clarsimp dest!: pde_lift_pde_large[simplified pde_pde_large_def, simplified]
+                             simp: isPageTablePDE_def split: pde.splits)
+            apply (clarsimp simp: pde_get_tag_def word_and_1)
+           apply ceqv
+          apply (rule ccorres_Cond_rhs_Seq)
+           apply (simp add: from_bool_0)
+           apply ccorres_rewrite
+           apply (clarsimp simp: throwError_def)
+           apply (rule ccorres_return_void_C[simplified dc_def])
+          apply (simp add: from_bool_0)
+          apply (rule ccorres_liftE[simplified dc_def])
+          apply (ctac add: flushTable_ccorres)
+            apply (csymbr, rename_tac invalidPDE)
+            apply (rule ccorres_split_nothrow_novcg_dc)
+               apply (rule storePDE_Basic_ccorres)
+               apply (simp add: cpde_relation_def Let_def)
+              apply (csymbr, rename_tac root)
+              apply (ctac add: invalidatePageStructureCacheASID_ccorres[simplified dc_def])
+             apply wp
+            apply (clarsimp simp add: guard_is_UNIV_def)
+           apply wp
+          apply clarsimp
+          apply (vcg exspec=flushTable_modifies)
+         apply (clarsimp simp: guard_is_UNIV_def)
+        apply (simp,ccorres_rewrite,simp add:throwError_def)
+        apply (rule ccorres_return_void_C[simplified dc_def])
+       apply (clarsimp,wp)
+       apply (rule_tac Q'="\<lambda>_ s. invs' s" in hoare_post_imp_R)
+        apply wp
+       apply simp
+      apply (vcg exspec=lookupPDSlot_modifies)
+     apply (simp,ccorres_rewrite,simp add:throwError_def)
+     apply (rule ccorres_return_void_C[simplified dc_def])
+    apply wp
+   apply vcg
+  apply (auto simp add: asid_wf_def mask_def)
+  done
 
 lemma return_Null_ccorres:
   "ccorres ccap_relation ret__struct_cap_C_'
