@@ -1519,11 +1519,12 @@ lemma updateCap_ct_active'[wp]:
 
 lemma APIType_capBits_low:
   "\<lbrakk> newType = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < us;
-     newType = APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 61\<rbrakk>
+     newType = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits\<rbrakk>
            \<Longrightarrow> 4 \<le> APIType_capBits newType us"
   apply (case_tac newType)
-  apply (clarsimp simp:invokeUntyped_proofs_def APIType_capBits_def objBits_simps' bit_simps
-                  split: apiobject_type.splits)+
+  apply (clarsimp simp: invokeUntyped_proofs_def APIType_capBits_def objBits_simps' bit_simps
+                        untypedBits_defs
+                 split: apiobject_type.splits)+
   done
 
 lemma APIType_capBits_high:
@@ -2363,10 +2364,9 @@ lemma invokeUntyped_Retype_ccorres:
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
      (invs' and ct_active' and ex_cte_cap_to' cnodeptr
        and (\<lambda>s. case gsCNodes s cnodeptr of None \<Rightarrow> False
-          | Some n \<Rightarrow> length destSlots + unat start \<le> 2 ^ n)
+                  | Some n \<Rightarrow> length destSlots + unat start \<le> 2 ^ n)
        and valid_untyped_inv' (Retype cref reset ptr_base ptr newType us destSlots isdev)
-       and K (isdev \<longrightarrow> (newType = APIObjectType ArchTypes_H.apiobject_type.Untyped
-                \<or> isFrameType newType))
+       and K (isdev \<longrightarrow> (newType = APIObjectType ArchTypes_H.apiobject_type.Untyped \<or> isFrameType newType))
      )
      (UNIV \<inter>  {s. retypeBase_' s = Ptr ptr}
            \<inter>  {s. srcSlot_' s = Ptr cref}
@@ -2420,7 +2420,7 @@ lemma invokeUntyped_Retype_ccorres:
 
     have us_misc:
       "newType = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < us"
-      "newType = APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 61"
+      "newType = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits"
       using vui
       by (auto simp: cte_wp_at_ctes_of untypedBits_defs)
 
@@ -2574,12 +2574,12 @@ lemma invokeUntyped_Retype_ccorres:
          apply (vcg exspec=cap_untyped_cap_ptr_set_capFreeIndex_modifies)
         apply simp
         apply (rule validE_validE_R, rule hoare_post_impErr,
-          rule hoare_vcg_conj_liftE1[rotated, where Q="\<lambda>_ s.
-            case gsCNodes s cnodeptr of None \<Rightarrow> False
-              | Some n \<Rightarrow> length destSlots + unat start \<le> 2 ^ n"],
-          rule whenE_reset_resetUntypedCap_invs_etc
-              [where ui="Retype cref reset ptr_base ptr newType us destSlots isdev"
-                 and dev=isdev and ptr="ptr && ~~ mask sz" and ptr'=ptr and sz=sz and idx=idx])
+               rule hoare_vcg_conj_liftE1[rotated, where Q="\<lambda>_ s.
+                 case gsCNodes s cnodeptr of None \<Rightarrow> False
+                   | Some n \<Rightarrow> length destSlots + unat start \<le> 2 ^ n"],
+               rule whenE_reset_resetUntypedCap_invs_etc
+                   [where ui="Retype cref reset ptr_base ptr newType us destSlots isdev"
+                      and dev=isdev and ptr="ptr && ~~ mask sz" and ptr'=ptr and sz=sz and idx=idx])
           apply (simp add: whenE_def, wp resetUntypedCap_gsCNodes_at_pt)[1]
          prefer 2
          apply simp
@@ -2617,9 +2617,6 @@ lemma invokeUntyped_Retype_ccorres:
                  apply (clarsimp simp: APIType_capBits_low)
                (* new idx le *)
                 apply (clarsimp split: if_split)
-              (* APIType \<le> maxUntypedSizeBits *)
-              apply (cut_tac APIType_capBits_max)
-              apply (simp add: untypedBits_defs)
               (* cnodeptr not in area *)
               apply (rule contra_subsetD[rotated],
                 rule invokeUntyped_proofs.ex_cte_no_overlap'[OF proofs], rule misc)

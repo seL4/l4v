@@ -73,6 +73,10 @@ private lemma modifies_inv_Skip [modifies_inv_intros]:
   shows "\<Gamma>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} SKIP (P \<sigma>),(P \<sigma>)"
   using modifies_inv_prop' by (auto intro: modifies_inv_prop_lift HoarePartial.Skip)
 
+private lemma modifies_inv_Skip' [modifies_inv_intros]:
+  shows "\<Gamma>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} SKIP (P \<sigma>)"
+  using modifies_inv_prop' by (auto intro: modifies_inv_prop_lift HoarePartial.Skip)
+
 private lemma modifies_inv_whileAnno [modifies_inv_intros]:
   assumes c: "\<And>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} c (P \<sigma>),(P \<sigma>)"
   shows "\<Gamma>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} whileAnno b I V c (P \<sigma>),(P \<sigma>)"

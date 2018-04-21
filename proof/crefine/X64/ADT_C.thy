@@ -79,12 +79,12 @@ lemma Basic_sem_eq:
 
 lemma setTCBContext_C_corres:
   "\<lbrakk> ccontext_relation tc tc'; t' = tcb_ptr_to_ctcb_ptr t \<rbrakk> \<Longrightarrow>
-  corres_underlying rf_sr nf nf' dc (tcb_at' t) \<top>
+  corres_underlying rf_sr nf nf' dc (pspace_domain_valid and tcb_at' t) \<top>
     (threadSet (\<lambda>tcb. tcb \<lparr> tcbArch := atcbContextSet tc (tcbArch tcb)\<rparr>) t) (setTCBContext_C tc' t')"
   apply (simp add: setTCBContext_C_def exec_C_def Basic_sem_eq corres_underlying_def)
   apply clarsimp
   apply (simp add: threadSet_def bind_assoc split_def exec_gets)
-  apply (drule (1) obj_at_cslift_tcb)
+  apply (frule (1) obj_at_cslift_tcb)
   apply clarsimp
   apply (frule getObject_eq [rotated -1], simp)
    apply (simp add: objBits_simps')
@@ -109,11 +109,10 @@ lemma setTCBContext_C_corres:
   apply (simp add: map_to_ctes_upd_tcb_no_ctes map_to_tcbs_upd tcb_cte_cases_def
                    cvariable_relation_upd_const ko_at_projectKO_opt)
   apply (simp add: cep_relations_drop_fun_upd)
-  apply (rule conjI)
-   defer
-   apply (erule cready_queues_relation_not_queue_ptrs)
-    apply (rule ext, simp split: if_split)
-   apply (rule ext, simp split: if_split)
+  apply (apply_conjunct \<open>match conclusion in \<open>fpu_null_state_relation _\<close> \<Rightarrow>
+         \<open>simp add: fpu_null_state_heap_update_span_disjoint[OF tcb_at'_non_kernel_data_ref]\<close>\<close>)
+  apply (apply_conjunct \<open>match conclusion in \<open>cready_queues_relation _ _ _\<close> \<Rightarrow>
+         \<open>erule cready_queues_relation_not_queue_ptrs; rule ext; simp split: if_split\<close>\<close>)
   apply (drule ko_at_projectKO_opt)
   apply (erule (2) cmap_relation_upd_relI)
     apply (simp add: ctcb_relation_def carch_tcb_relation_def)

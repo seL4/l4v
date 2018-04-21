@@ -121,7 +121,8 @@ lemma performPageTableInvocationUnmap_ccorres:
                              cap_page_table_cap_lift_def)
       apply simp
      apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
-                           typ_heap_simps'
+                           fpu_null_state_heap_update_tag_disj_simps
+                           global_ioport_bitmap_heap_update_tag_disj_simps
                            cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
                     dest!: ksPSpace_update_eq_ExD)
     apply (simp add: cte_wp_at_ctes_of)
@@ -184,7 +185,9 @@ lemma clearMemory_setObject_PDE_ccorres:
     subgoal by (simp add: cpde_relation_def Let_def pde_lift_def pde_get_tag_def pde_tag_defs
                    split: if_splits pde.split_asm)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                    typ_heap_simps update_pde_map_tos)
+                    fpu_null_state_heap_update_tag_disj_simps
+                    global_ioport_bitmap_heap_update_tag_disj_simps
+                    update_pde_map_tos)
   apply simp
   done
 
@@ -261,7 +264,8 @@ lemma performPageDirectoryInvocationUnmap_ccorres:
                              cap_page_directory_cap_lift_def)
       apply simp
      apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
-                           typ_heap_simps'
+                           fpu_null_state_heap_update_tag_disj_simps
+                           global_ioport_bitmap_heap_update_tag_disj_simps
                            cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
                     dest!: ksPSpace_update_eq_ExD)
     apply (simp add: cte_wp_at_ctes_of)
@@ -324,7 +328,9 @@ lemma clearMemory_setObject_PDPTE_ccorres:
     subgoal by (simp add: cpdpte_relation_def Let_def pdpte_lift_def pdpte_get_tag_def pdpte_tag_defs
                    split: if_splits pdpte.split_asm)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                    typ_heap_simps update_pdpte_map_tos)
+                    fpu_null_state_heap_update_tag_disj_simps
+                    global_ioport_bitmap_heap_update_tag_disj_simps
+                    update_pdpte_map_tos)
   apply simp
   done
 
@@ -401,7 +407,8 @@ lemma performPDPTInvocationUnmap_ccorres:
                              cap_pdpt_cap_lift_def)
       apply simp
      apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
-                           typ_heap_simps'
+                           fpu_null_state_heap_update_tag_disj_simps
+                           global_ioport_bitmap_heap_update_tag_disj_simps
                            cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
                     dest!: ksPSpace_update_eq_ExD)
     apply (simp add: cte_wp_at_ctes_of)

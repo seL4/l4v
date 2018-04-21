@@ -3881,6 +3881,10 @@ lemma from_bool_all_helper:
       = ((\<exists>bool. from_bool bool = val) \<longrightarrow> P (val \<noteq> 0))"
   by (auto simp: from_bool_0)
 
+lemma from_bool_to_bool_iff:
+  "w = from_bool b \<longleftrightarrow> to_bool w = b \<and> (w = 0 \<or> w = 1)"
+  by (cases b) (auto simp: from_bool_def to_bool_def)
+
 lemma word_rsplit_upt:
   "\<lbrakk> size x = len_of TYPE('a :: len) * n; n \<noteq> 0 \<rbrakk>
     \<Longrightarrow> word_rsplit x = map (\<lambda>i. ucast (x >> i * len_of TYPE ('a)) :: 'a word) (rev [0 ..< n])"
