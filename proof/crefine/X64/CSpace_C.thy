@@ -430,9 +430,9 @@ lemma ccorres_updateCap [corres]:
    apply (simp add: heap_to_user_data_def heap_to_device_data_def)
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
-   subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
-                         typ_heap_simps' ntbs_1024)
-  by clarsimp
+   by (auto simp: carch_state_relation_def cmachine_state_relation_def
+                  global_ioport_bitmap_heap_update_tag_disj_simps
+                  fpu_null_state_heap_update_tag_disj_simps)
 
 lemma ccorres_updateMDB_const [corres]:
   fixes ptr :: "cstate \<Rightarrow> cte_C ptr" and val :: "cstate \<Rightarrow> mdb_node_C"
@@ -468,10 +468,9 @@ lemma ccorres_updateMDB_const [corres]:
    apply (simp add: heap_to_user_data_def)
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
-   apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                    typ_heap_simps)
-  apply (clarsimp)
-  done
+   by (auto simp: carch_state_relation_def cmachine_state_relation_def
+                  global_ioport_bitmap_heap_update_tag_disj_simps
+                  fpu_null_state_heap_update_tag_disj_simps)
 
 (* 64 == badgeBits *)
 lemma cap_lift_capNtfnBadge_mask_eq:
@@ -636,10 +635,9 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
    apply simp
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
-   subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
-                         typ_heap_simps h_t_valid_clift_Some_iff)
-  apply clarsimp
-  done
+   by (auto simp: carch_state_relation_def cmachine_state_relation_def
+                  global_ioport_bitmap_heap_update_tag_disj_simps
+                  fpu_null_state_heap_update_tag_disj_simps)
 
 lemma ccorres_updateMDB_set_mdbPrev [corres]:
   "src=src' \<Longrightarrow>
@@ -681,11 +679,10 @@ lemma ccorres_updateMDB_set_mdbPrev [corres]:
     apply (simp add: cmdbnode_relation_def mask_def)
    apply (erule_tac t = s'a in ssubst)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                    h_t_valid_clift_Some_iff typ_heap_simps')
-
+                    fpu_null_state_heap_update_tag_disj_simps
+                    global_ioport_bitmap_heap_update_tag_disj_simps)
    apply (erule (1) setCTE_tcb_case)
-   apply clarsimp
-   done
+  by clarsimp
 
 lemma ccorres_updateMDB_skip:
   "ccorres dc xfdc (\<top> and (\<lambda>_. n = 0)) UNIV hs (updateMDB n f) SKIP"
@@ -820,8 +817,11 @@ lemma update_freeIndex':
        apply clarsimp
        apply (rule conjI)
         subgoal by (erule (1) setCTE_tcb_case)
-       subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def typ_heap_simps')
-      by (clarsimp simp:cte_wp_at_ctes_of)
+       apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
+                             fpu_null_state_heap_update_tag_disj_simps
+                             global_ioport_bitmap_heap_update_tag_disj_simps
+                             packed_heap_update_collapse_hrs)
+      by (clarsimp simp: cte_wp_at_ctes_of)
   qed
 
 lemma update_freeIndex:
@@ -1540,10 +1540,11 @@ lemma emptySlot_helper:
      apply (rule conjI)
       prefer 2
       apply (erule_tac t = s' in ssubst)
-      apply (simp add: carch_state_relation_def cmachine_state_relation_def h_t_valid_clift_Some_iff
+      apply (simp add: carch_state_relation_def cmachine_state_relation_def
+                       fpu_null_state_heap_update_tag_disj_simps
                        cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
-                       typ_heap_simps'
-                  cong: lifth_update)
+                       h_t_valid_clift_Some_iff typ_heap_simps'
+                 cong: lifth_update)
       apply (erule (1) setCTE_tcb_case)
 
      apply (erule (2)  cspace_cte_relation_upd_mdbI)
@@ -1571,10 +1572,10 @@ lemma emptySlot_helper:
     prefer 2
     apply (erule_tac t = s' in ssubst)
     apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                     h_t_valid_clift_Some_iff
+                     fpu_null_state_heap_update_tag_disj_simps
                      cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
-                     typ_heap_simps'
-                cong: lifth_update)
+                     typ_heap_simps' h_t_valid_clift_Some_iff
+               cong: lifth_update)
     apply (erule (1) setCTE_tcb_case)
 
    apply (erule (2)  cspace_cte_relation_upd_mdbI)

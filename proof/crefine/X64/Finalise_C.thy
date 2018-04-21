@@ -325,9 +325,11 @@ lemma cancelAllIPC_ccorres:
             apply (clarsimp simp: typ_heap_simps setEndpoint_def)
             apply (rule rev_bexI)
              apply (rule setObject_eq; simp add: objBits_simps')[1]
-            apply (clarsimp simp: rf_sr_def cstate_relation_def
-                                  Let_def carch_state_relation_def carch_globals_def
-                                  cmachine_state_relation_def)
+            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                                  carch_state_relation_def carch_globals_def
+                                  cmachine_state_relation_def
+                                  fpu_null_state_heap_update_tag_disj_simps
+                                  packed_heap_update_collapse_hrs)
             apply (clarsimp simp: cpspace_relation_def
                                   update_ep_map_tos typ_heap_simps')
             apply (erule(2) cpspace_relation_ep_update_ep)
@@ -375,9 +377,11 @@ lemma cancelAllIPC_ccorres:
           apply (clarsimp simp: typ_heap_simps setEndpoint_def)
           apply (rule rev_bexI)
            apply (rule setObject_eq, simp_all add: objBits_simps')[1]
-          apply (clarsimp simp: rf_sr_def cstate_relation_def
-                                Let_def carch_state_relation_def carch_globals_def
-                                cmachine_state_relation_def)
+          apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                                carch_state_relation_def carch_globals_def
+                                cmachine_state_relation_def
+                                fpu_null_state_heap_update_tag_disj_simps
+                                packed_heap_update_collapse_hrs)
           apply (clarsimp simp: cpspace_relation_def typ_heap_simps'
                                 update_ep_map_tos)
           apply (erule(2) cpspace_relation_ep_update_ep)
@@ -462,9 +466,11 @@ lemma cancelAllSignals_ccorres:
           apply (clarsimp simp: typ_heap_simps setNotification_def)
           apply (rule rev_bexI)
            apply (rule setObject_eq, simp_all add: objBits_simps')[1]
-          apply (clarsimp simp: rf_sr_def cstate_relation_def
-                                Let_def carch_state_relation_def carch_globals_def
-                                cmachine_state_relation_def)
+          apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                                carch_state_relation_def carch_globals_def
+                                cmachine_state_relation_def
+                                fpu_null_state_heap_update_tag_disj_simps
+                                packed_heap_update_collapse_hrs)
           apply (clarsimp simp: cpspace_relation_def typ_heap_simps'
                                 update_ntfn_map_tos)
           apply (erule(2) cpspace_relation_ntfn_update_ntfn)
@@ -666,7 +672,9 @@ lemma doUnbindNotification_ccorres:
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
                apply (case_tac "ntfnObj rv", ((simp add: option_to_ctcb_ptr_def)+)[4])
-             subgoal by (simp add: carch_state_relation_def typ_heap_simps')
+             subgoal by (simp add: carch_state_relation_def
+                                   global_ioport_bitmap_heap_update_tag_disj_simps
+                                   fpu_null_state_heap_update_tag_disj_simps)
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
           subgoal by (simp add: objBits_simps')
@@ -716,7 +724,9 @@ lemma doUnbindNotification_ccorres':
                apply (fold_subgoals (prefix))[2]
                subgoal premises prems using prems
                        by (case_tac "ntfnObj ntfn", (simp add: option_to_ctcb_ptr_def)+)
-             subgoal by (simp add: carch_state_relation_def typ_heap_simps')
+             subgoal by (simp add: carch_state_relation_def
+                                   global_ioport_bitmap_heap_update_tag_disj_simps
+                                   fpu_null_state_heap_update_tag_disj_simps)
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
           subgoal by (simp add: objBits_simps')
@@ -1203,8 +1213,9 @@ lemma deleteASID_ccorres:
               subgoal by (clarsimp dest!: asid_map_lift_asid_map_none simp: asid_map_relation_def)
              subgoal by (simp add: asid_low_bits_def)
             subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
-                             carch_globals_def update_asidpool_map_tos
-                             typ_heap_simps')
+                                  fpu_null_state_heap_update_tag_disj_simps
+                                  global_ioport_bitmap_heap_update_tag_disj_simps
+                                  carch_globals_def update_asidpool_map_tos)
            apply (rule ccorres_pre_getCurThread)
            apply (ctac add: setVMRoot_ccorres)
           apply (simp add: cur_tcb'_def[symmetric])

@@ -9,8 +9,18 @@
  *)
 
 theory TcbQueue_C
-imports SR_lemmas_C
+imports Ctac_lemmas_C
 begin
+
+(* FIXME: move *)
+lemma (in semigroup) foldl_first:
+  "f x (foldl f y zs) = foldl f (f x y) zs"
+  by (induction zs arbitrary: x y) (auto simp: assoc)
+
+(* FIXME: move *)
+lemma (in monoid) foldl_first':
+  "f x (foldl f z zs) = foldl f x zs"
+  using foldl_first by simp
 
 context kernel
 begin
@@ -1186,22 +1196,307 @@ lemma cvariable_relation_upd_const:
         = cvariable_array_map_relation m (\<lambda>x. n)"
   by (auto simp: fun_eq_iff cvariable_array_map_relation_def)
 
-thm pad_typ_name_def
-thm tcb_C_td_names
-thm td_names_word32
+(* FIXME: move *)
+lemma invs'_pspace_domain_valid:
+  "invs' s \<Longrightarrow> pspace_domain_valid s"
+  by (simp add: invs'_def valid_state'_def)
+
+lemma ptr_span_ctcb_subset:
+  "is_aligned p tcbBlockSizeBits \<Longrightarrow> ptr_span (tcb_ptr_to_ctcb_ptr p) \<subseteq> {p .. p + 2^tcbBlockSizeBits-1}"
+  apply (simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
+  apply (frule aligned_add_aligned[where m=ctcb_size_bits, OF _ is_aligned_triv],
+         simp add: objBits_defs ctcb_size_bits_def)
+  apply (subst upto_intvl_eq'; clarsimp)
+   apply (erule is_aligned_no_wrap', simp add: ctcb_size_bits_def)
+  apply (rule conjI)
+   apply (erule is_aligned_no_wrap', simp add: objBits_defs ctcb_size_bits_def)
+  apply (cut_tac word_add_le_mono1[where k=p and j="2^tcbBlockSizeBits-1"])
+    apply (simp add: field_simps)
+   apply (simp add: objBits_defs ctcb_size_bits_def)
+  apply (subst field_simps, subst unat_plus_simple[where x=p, THEN iffD1, symmetric])
+   apply (erule is_aligned_no_overflow')
+  apply (rule unat_lt2p)
+  done
+
+(* FIXME: move *)
+lemma tcb_at'_non_kernel_data_ref:
+  "pspace_domain_valid s \<Longrightarrow> tcb_at' p s \<Longrightarrow> ptr_span (tcb_ptr_to_ctcb_ptr p) \<inter> kernel_data_refs = {}"
+  apply (rule disjoint_subset[OF ptr_span_ctcb_subset])
+   apply (erule tcb_aligned')
+  apply (drule map_to_tcbs_from_tcb_at)
+  apply (clarsimp simp: pspace_domain_valid_def map_comp_def split: option.splits)
+  apply (drule spec, drule spec, drule (1) mp)
+  apply (simp add: projectKOs objBits_simps)
+  done
+
+lemmas tcb_at'_non_kernel_data_ref'
+  = tcb_at'_non_kernel_data_ref[OF invs'_pspace_domain_valid]
+
+(* FIXME: move. Wants to go in SR_lemmas_C, but dependencies make this hard. *)
+lemma fpu_null_state_heap_update_span_disjoint:
+  assumes "ptr_span p \<inter> kernel_data_refs = {}"
+  shows "fpu_null_state_relation (hrs_mem_update (heap_update p v) h) = fpu_null_state_relation h"
+  by (cases "ptr_span (fpu_state_Ptr (symbol_table ''x86KSnullFpuState'')) \<subseteq> kernel_data_refs";
+      clarsimp simp: fpu_null_state_relation_def lift_t_Some_iff hrs_mem_update
+                     h_val_update_regions_disjoint
+              dest!: disjoint_subset2[OF _ assms])
+
+(* FIXME: move near tag_disj_via_td_name *)
+lemma tag_not_less_via_td_name:
+  assumes ta: "typ_name (typ_info_t TYPE('a)) \<noteq> pad_typ_name"
+  assumes tina: "typ_name (typ_info_t TYPE('a)) \<notin> td_names (typ_info_t TYPE('b))"
+  shows   "\<not> typ_uinfo_t TYPE('a::c_type) < typ_uinfo_t TYPE('b::c_type)"
+  using assms
+  by (auto simp: sub_typ_proper_def typ_tag_lt_def typ_simps dest: td_set_td_names)
+
+(* FIXME: move *)
+lemma td_set_map_td_commute[rule_format]:
+  "\<forall>i. td_set (map_td f t) i = apfst (map_td f) ` td_set t i"
+  "\<forall>i. td_set_struct (map_td_struct f st) i = apfst (map_td f) ` td_set_struct st i"
+  "\<forall>i. td_set_list (map_td_list f ts) i = apfst (map_td f) ` td_set_list ts i"
+  "\<forall>i. td_set_pair (map_td_pair f tp) i = apfst (map_td f) ` td_set_pair tp i"
+  apply (induct t and st and ts and tp)
+  apply simp_all
+  apply (case_tac dt_pair; clarsimp simp: image_Un)
+  done
+
+(* FIXME: move *)
+lemma td_set_export_uinfo_eq:
+  "td_set (export_uinfo t) i = apfst export_uinfo ` td_set t i"
+  unfolding export_uinfo_def by (rule td_set_map_td_commute)
+
+(* FIXME: move *)
+lemma td_set_adjust_ti_eq:
+  "td_set (adjust_ti t a b) i = apfst (\<lambda>t. adjust_ti t a b) ` td_set t i"
+  unfolding adjust_ti_def by (rule td_set_map_td_commute)
+
+(* FIXME: move *)
+lemma td_set_list_app:
+  "td_set_list (ts @ ts') i = td_set_list ts i \<union> td_set_list ts' (i + size_td_list ts)"
+  apply (induct ts arbitrary: i, simp)
+  apply (rename_tac p ps i, case_tac p, simp add: Un_assoc field_simps)
+  done
+
+(* FIXME: move *)
+lemma apfst_comp:
+  "apfst f \<circ> apfst g = apfst (f \<circ> g)"
+  by auto
+
+lemma td_set_offset_wf[rule_format]:
+  fixes td :: "'a typ_desc"
+    and st :: "'a typ_struct"
+    and ts :: "('a typ_desc, char list) dt_pair list"
+    and tp :: "('a typ_desc, char list) dt_pair"
+  shows "\<forall>s n m. (s, n) \<in> td_set td m \<longrightarrow> m \<le> n"
+        "\<forall>s n m. (s, n) \<in> td_set_struct st m \<longrightarrow> m \<le> n"
+        "\<forall>s n m. (s, n) \<in> td_set_list ts m \<longrightarrow> m \<le> n"
+        "\<forall>s n m. (s, n) \<in> td_set_pair tp m \<longrightarrow> m \<le> n"
+  apply (induct td and st and ts and tp)
+  apply simp_all
+  apply (case_tac dt_pair; fastforce)
+  done
+
+lemma field_lookup_offset_wf[rule_format]:
+  fixes td :: "'a typ_desc"
+    and st :: "'a typ_struct"
+    and ts :: "('a typ_desc, char list) dt_pair list"
+    and tp :: "('a typ_desc, char list) dt_pair"
+  shows "\<forall>s n m f. field_lookup td f m = Some (s, n) \<longrightarrow> m \<le> n"
+        "\<forall>s n m f. field_lookup_struct st f m = Some (s, n) \<longrightarrow> m \<le> n"
+        "\<forall>s n m f. field_lookup_list ts f m = Some (s, n) \<longrightarrow> m \<le> n"
+        "\<forall>s n m f. field_lookup_pair tp f m = Some (s, n) \<longrightarrow> m \<le> n"
+  apply (induct td and st and ts and tp)
+  apply simp_all
+  apply (fastforce split: option.splits)+
+  done
+
+lemma td_set_field_lookup_wf[rule_format]:
+  fixes td :: "'a typ_desc"
+    and st :: "'a typ_struct"
+    and ts :: "('a typ_desc, char list) dt_pair list"
+    and tp :: "('a typ_desc, char list) dt_pair"
+  shows "\<forall>k m. wf_desc td \<longrightarrow> k \<in> td_set td m \<longrightarrow> (\<exists>f. field_lookup td f m = Some k)"
+        "\<forall>k m. wf_desc_struct st \<longrightarrow> k \<in> td_set_struct st m \<longrightarrow> (\<exists>f. field_lookup_struct st f m = Some k)"
+        "\<forall>k m. wf_desc_list ts \<longrightarrow> k \<in> td_set_list ts m \<longrightarrow> (\<exists>f. field_lookup_list ts f m = Some k)"
+        "\<forall>k m. wf_desc_pair tp \<longrightarrow> k \<in> td_set_pair tp m \<longrightarrow> (\<exists>f. field_lookup_pair tp f m = Some k)"
+  using td_set_field_lookup'[of td st ts tp]
+  apply -
+  apply (clarsimp, frule td_set_offset_wf, drule spec, drule spec, drule spec, drule mp,
+         erule rsubst[where P="\<lambda>n. (s,n) \<in> td_set" for s td_set], subst add_diff_inverse_nat,
+         simp add: not_less, simp, simp)+
+  done
+
+lemma td_set_image_field_lookup:
+  "wf_desc td \<Longrightarrow> k \<in> f ` td_set td m \<Longrightarrow> (\<exists>fn. option_map f (field_lookup td fn m) = Some k)"
+  "wf_desc_struct st \<Longrightarrow> k \<in> f ` td_set_struct st m \<Longrightarrow> (\<exists>fn. option_map f (field_lookup_struct st fn m) = Some k)"
+  "wf_desc_list ts \<Longrightarrow> k \<in> f ` td_set_list ts m \<Longrightarrow> (\<exists>fn. option_map f (field_lookup_list ts fn m) = Some k)"
+  "wf_desc_pair tp \<Longrightarrow> k \<in> f ` td_set_pair tp m \<Longrightarrow> (\<exists>fn. option_map f (field_lookup_pair tp fn m) = Some k)"
+  by (fastforce simp: image_def dest: td_set_field_lookup_wf)+
+
+lemma field_lookup_td_set[rule_format]:
+  fixes td :: "'a typ_desc"
+    and st :: "'a typ_struct"
+    and ts :: "('a typ_desc, char list) dt_pair list"
+    and tp :: "('a typ_desc, char list) dt_pair"
+  shows "\<forall>k m f. field_lookup td f m = Some k \<longrightarrow> k \<in> td_set td m"
+        "\<forall>k m f. field_lookup_struct st f m = Some k \<longrightarrow> k \<in> td_set_struct st m"
+        "\<forall>k m f. field_lookup_list ts f m = Some k \<longrightarrow> k \<in> td_set_list ts m"
+        "\<forall>k m f. field_lookup_pair tp f m = Some k \<longrightarrow> k \<in> td_set_pair tp m"
+  using td_set_field_lookup_rev'[of td st ts tp]
+  apply -
+  apply (clarsimp, frule field_lookup_offset_wf, drule spec, drule spec, drule spec, drule mp,
+         rule exI, erule rsubst[where P="\<lambda>n. f = Some (s,n)" for f s], subst add_diff_inverse_nat,
+         simp add: not_less, simp, simp)+
+  done
+
+lemma field_lookup_list_Some:
+  assumes "wf_desc_list ts"
+  assumes "field_lookup_list ts (fn # fns') m = Some (s, n)"
+  shows "\<exists>td' m'. field_lookup_list ts [fn] m = Some (td', m') \<and> field_lookup td' fns' m' = Some (s, n)"
+  using assms
+  apply (induct ts arbitrary: m, simp)
+  apply (rename_tac tp ts m, case_tac tp)
+  apply (clarsimp split: if_splits option.splits simp: field_lookup_list_None)
+  done
+
+lemma field_lookup_Some_cases:
+  assumes "wf_desc td"
+  assumes "field_lookup td fns m = Some (s,n)"
+  shows "case fns of
+              [] \<Rightarrow> s = td \<and> m = n
+            | fn # fns' \<Rightarrow> \<exists>td' m'. field_lookup td [fn] m = Some (td',m')
+                                  \<and> field_lookup td' fns' m' = Some (s,n)"
+  using assms
+  apply (cases fns; simp)
+  apply (cases td, rename_tac fn fns' st tn, clarsimp)
+  apply (case_tac st; clarsimp simp: field_lookup_list_Some)
+  done
+
+lemma field_lookup_SomeE:
+  assumes lookup: "field_lookup td fns m = Some (s,n)"
+  assumes wf: "wf_desc td"
+  assumes nil: "\<lbrakk> fns = []; s = td; m = n \<rbrakk> \<Longrightarrow> P"
+  assumes some: "\<And>fn fns' td' m'. \<lbrakk> fns = fn # fns'; field_lookup td [fn] m = Some (td',m');
+                                      field_lookup td' fns' m' = Some (s,n) \<rbrakk> \<Longrightarrow> P"
+  shows P
+  using field_lookup_Some_cases[OF wf lookup]
+  by (cases fns) (auto simp add: nil some)
+
+lemmas typ_combine_simps =
+  ti_typ_pad_combine_def[where tag="TypDesc st tn" for st tn]
+  ti_typ_combine_def[where tag="TypDesc st tn" for st tn]
+  ti_pad_combine_def[where tag="TypDesc st tn" for st tn]
+  align_td_array' size_td_array
+  CompoundCTypes.field_names_list_def
+  empty_typ_info_def
+  final_pad_def padup_def
+  align_of_def
+
+bundle typ_combine_bundle =
+  typ_combine_simps[simp]
+  if_weak_cong[cong]
+
+schematic_goal tcb_C_typ_info_unfold:
+  "typ_info_t (?t :: tcb_C itself) = TypDesc ?st ?tn"
+  including typ_combine_bundle by (simp add: tcb_C_typ_info tcb_C_tag_def)
+
+schematic_goal arch_tcb_C_typ_info_unfold:
+  "typ_info_t (?t :: arch_tcb_C itself) = TypDesc ?st ?tn"
+  including typ_combine_bundle by (simp add: arch_tcb_C_typ_info arch_tcb_C_tag_def)
+
+schematic_goal user_context_C_typ_info_unfold:
+  "typ_info_t (?t :: user_context_C itself) = TypDesc ?st ?tn"
+  including typ_combine_bundle by (simp add: user_context_C_typ_info user_context_C_tag_def)
+
+schematic_goal user_fpu_state_C_typ_info_unfold:
+  "typ_info_t (?t :: user_fpu_state_C itself) = TypDesc ?st ?tn"
+  including typ_combine_bundle by (simp add: user_fpu_state_C_typ_info user_fpu_state_C_tag_def)
+
+lemma user_fpu_state_C_in_tcb_C_offset:
+  "(typ_uinfo_t TYPE(user_fpu_state_C), n) \<in> td_set (typ_uinfo_t TYPE(tcb_C)) 0 \<Longrightarrow> n = 0"
+  -- \<open>Examine the fields of tcb_C.\<close>
+  apply (simp add: typ_uinfo_t_def tcb_C_typ_info_unfold td_set_export_uinfo_eq td_set_adjust_ti_eq
+                   image_comp image_Un apfst_comp o_def[where f=export_uinfo]
+              del: export_uinfo_typdesc_simp)
+  apply (elim disjE)
+  apply (all \<open>drule td_set_image_field_lookup[rotated]; clarsimp\<close>)
+  apply (all \<open>drule arg_cong[where f=typ_name]; simp add: adjust_ti_def\<close>)
+  apply (all \<open>(solves \<open>drule field_lookup_td_set; drule td_set_td_names; simp\<close>)?\<close>)
+  -- \<open>Only the arch_tcb_C may contain user_fpu_state_C, so examine the fields of that.\<close>
+  apply (drule field_lookup_td_set)
+  apply (simp add: arch_tcb_C_typ_info_unfold td_set_adjust_ti_eq)
+  apply (drule td_set_image_field_lookup[rotated]; clarsimp simp: adjust_ti_def)
+  -- \<open>Similarly for user_context_C.\<close>
+  apply (drule field_lookup_td_set)
+  apply (simp add: user_context_C_typ_info_unfold td_set_adjust_ti_eq)
+  apply (elim disjE)
+  apply (all \<open>drule td_set_image_field_lookup[rotated]; clarsimp simp: adjust_ti_def\<close>)
+  apply (all \<open>(solves \<open>drule field_lookup_td_set; drule td_set_td_names; simp\<close>)?\<close>)
+  -- \<open>Finally, we have user_fpu_state_C.\<close>
+  apply (rename_tac fns s)
+  apply (case_tac fns; clarsimp)
+  -- \<open>But we must also show that there is no user_fpu_state_C buried within user_fpu_state_C.\<close>
+  apply (drule field_lookup_td_set)
+  apply (simp add: user_fpu_state_C_typ_info_unfold td_set_adjust_ti_eq)
+  apply (elim disjE; clarsimp simp: adjust_ti_def)
+  apply (drule td_set_td_names; simp)
+  done
+
+context
+  fixes t :: "tcb_C ptr"
+  fixes tcb :: tcb_C
+  fixes h u :: heap_raw_state
+  fixes t_fpu :: "user_fpu_state_C ptr"
+  defines "t_fpu \<equiv> fpu_state_Ptr &(user_context_Ptr &(atcb_Ptr &(t\<rightarrow>[''tcbArch_C''])\<rightarrow>[''tcbContext_C''])\<rightarrow>[''fpuState_C''])"
+  defines "u \<equiv> hrs_mem_update (heap_update t tcb) h"
+  assumes f: "clift u t_fpu = clift h t_fpu"
+  assumes v: "hrs_htd h \<Turnstile>\<^sub>t t"
+begin
+
+lemma fpu_state_preservation:
+  "(clift u :: user_fpu_state_C typ_heap) = clift h"
+  apply (rule ext)
+  apply (rename_tac null_fpu)
+  apply (case_tac "ptr_val null_fpu = ptr_val t_fpu")
+  subgoal for null_fpu
+    using f by (cases null_fpu; clarsimp simp: u_def t_fpu_def lift_t_if split: if_splits)
+  apply (subgoal_tac "hrs_htd h \<Turnstile>\<^sub>t t_fpu")
+   prefer 2 subgoal
+     unfolding t_fpu_def
+     by (rule h_t_valid_field[OF h_t_valid_field[OF h_t_valid_field[OF v]]], simp+)
+  using f v unfolding u_def t_fpu_def
+  apply (cases h; case_tac "hrs_htd h \<Turnstile>\<^sub>t null_fpu";
+         clarsimp simp: lift_t_if hrs_mem_update_def hrs_htd_def)
+  apply (thin_tac "_ \<Turnstile>\<^sub>t fpu_state_Ptr _", thin_tac "h_val _ _ = h_val _ _", thin_tac "h = _")
+  apply (rule h_val_heap_same; simp add: sub_typ_proper_def tag_not_less_via_td_name field_lvalue_def)
+  apply (thin_tac "_ \<Turnstile>\<^sub>t _", thin_tac "_ \<Turnstile>\<^sub>t _", simp)
+  apply (erule contrapos_np; simp add: field_of_t_def field_of_def)
+  apply (drule user_fpu_state_C_in_tcb_C_offset)
+  apply (simp add: unat_eq_0)
+  done
+
+lemma fpu_null_state_preservation:
+  shows "fpu_null_state_relation u = fpu_null_state_relation h"
+  by (simp add: fpu_null_state_relation_def fpu_state_preservation)
+
+end
 
 lemma rf_sr_tcb_update_no_queue:
-  "\<lbrakk> (s, s') \<in> rf_sr; ko_at' tcb thread s;
-  t_hrs_' (globals t) = hrs_mem_update (heap_update
-    (tcb_ptr_to_ctcb_ptr thread) ctcb) (t_hrs_' (globals s'));
-  tcbEPNext_C ctcb = tcbEPNext_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
-  tcbEPPrev_C ctcb = tcbEPPrev_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
-  tcbSchedNext_C ctcb = tcbSchedNext_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
-  tcbSchedPrev_C ctcb = tcbSchedPrev_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
-  (\<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF tcb' = getF tcb) x);
-  ctcb_relation tcb' ctcb
-  \<rbrakk>
-  \<Longrightarrow> (s\<lparr>ksPSpace := ksPSpace s(thread \<mapsto> KOTCB tcb')\<rparr>, x\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
+  "\<lbrakk> (s, s') \<in> rf_sr;
+     ko_at' tcb thread s;
+     t_hrs_' (globals t) = hrs_mem_update (heap_update (tcb_ptr_to_ctcb_ptr thread) ctcb)
+                                          (t_hrs_' (globals s'));
+     tcbEPNext_C ctcb = tcbEPNext_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
+     tcbEPPrev_C ctcb = tcbEPPrev_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
+     tcbSchedNext_C ctcb = tcbSchedNext_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
+     tcbSchedPrev_C ctcb = tcbSchedPrev_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
+     fpuState_C (tcbContext_C (tcbArch_C ctcb))
+       = fpuState_C (tcbContext_C (tcbArch_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)))));
+     (\<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF tcb' = getF tcb) x);
+     ctcb_relation tcb' ctcb
+   \<rbrakk>
+  \<Longrightarrow> (s\<lparr>ksPSpace := ksPSpace s(thread \<mapsto> KOTCB tcb')\<rparr>,
+       x\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
   apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes
                         heap_to_user_data_def)
@@ -1225,7 +1520,7 @@ lemma rf_sr_tcb_update_no_queue:
     apply (erule cready_queues_relation_not_queue_ptrs)
      subgoal by (clarsimp intro!: ext)
     subgoal by (clarsimp intro!: ext)
-   subgoal by (clarsimp simp: carch_state_relation_def typ_heap_simps')
+   subgoal by (clarsimp simp: carch_state_relation_def fpu_null_state_preservation typ_heap_simps')
   by (simp add: cmachine_state_relation_def)
 
 lemma rf_sr_tcb_update_no_queue_helper:
@@ -1290,7 +1585,9 @@ lemma rf_sr_tcb_update_not_in_queue:
      apply (drule valid_queues_obj_at'D, clarsimp)
      apply (clarsimp simp: obj_at'_def projectKOs inQ_def)
     subgoal by simp
-   subgoal by (simp add: carch_state_relation_def carch_globals_def typ_heap_simps')
+   apply (simp add: carch_state_relation_def)
+   subgoal by (clarsimp simp: fpu_null_state_heap_update_span_disjoint[OF tcb_at'_non_kernel_data_ref']
+                              global_ioport_bitmap_heap_update_tag_disj_simps obj_at'_def projectKOs)
   by (simp add: cmachine_state_relation_def)
 
 lemmas rf_sr_tcb_update_not_in_queue2

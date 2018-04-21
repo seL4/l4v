@@ -179,16 +179,25 @@ where
            \<and> ptr_span (ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts'')) \<subseteq> kernel_data_refs"
 
 definition
+  fpu_null_state_relation :: "heap_raw_state \<Rightarrow> bool"
+where
+  "fpu_null_state_relation hrs \<equiv>
+    clift hrs (Ptr (symbol_table ''x86KSnullFpuState''))
+      = Some (user_fpu_state_C (ARRAY i. FPUNullState (finite_index i))) \<and>
+    ptr_span (fpu_state_Ptr (symbol_table ''x86KSnullFpuState'')) \<subseteq> kernel_data_refs"
+
+definition
   carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
   "carch_state_relation astate cstate \<equiv>
-  x64KSKernelVSpace astate = x64KSKernelVSpace_C \<and>
-  array_relation (op = \<circ> option_to_ptr) (2^asid_high_bits - 1) (x64KSASIDTable astate) (x86KSASIDTable_' cstate) \<and>
-  ccr3_relation (x64KSCurrentUserCR3 astate) (x64KSCurrentUserCR3_' cstate) \<and>
-  global_ioport_bitmap_relation (clift (t_hrs_' cstate)) (x64KSAllocatedIOPorts astate) \<and>
-  x64KSNumIOAPICs astate = UCAST (32 \<rightarrow> 64) (num_ioapics_' cstate) \<and>
-  array_relation x64_irq_state_relation maxIRQ (x64KSIRQState astate) (x86KSIRQState_' cstate) \<and>
-  carch_globals astate"
+    x64KSKernelVSpace astate = x64KSKernelVSpace_C \<and>
+    array_relation (op = \<circ> option_to_ptr) (2^asid_high_bits - 1) (x64KSASIDTable astate) (x86KSASIDTable_' cstate) \<and>
+    ccr3_relation (x64KSCurrentUserCR3 astate) (x64KSCurrentUserCR3_' cstate) \<and>
+    global_ioport_bitmap_relation (clift (t_hrs_' cstate)) (x64KSAllocatedIOPorts astate) \<and>
+    fpu_null_state_relation (t_hrs_' cstate) \<and>
+    x64KSNumIOAPICs astate = UCAST (32 \<rightarrow> 64) (num_ioapics_' cstate) \<and>
+    array_relation x64_irq_state_relation maxIRQ (x64KSIRQState astate) (x86KSIRQState_' cstate) \<and>
+    carch_globals astate"
 
 end
 
@@ -1121,5 +1130,10 @@ lemma (in kernel) cmap_relation_cs_atD:
   apply (drule (1) injD)
   apply simp
   done
+
+definition (in kernel)
+  rf_sr :: "(KernelStateData_H.kernel_state \<times> cstate) set"
+  where
+  "rf_sr \<equiv> {(s, s'). cstate_relation s (globals s')}"
 
 end

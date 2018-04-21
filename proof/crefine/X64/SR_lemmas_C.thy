@@ -1028,11 +1028,6 @@ end
 context kernel
 begin
 
-definition
-  rf_sr :: "(KernelStateData_H.kernel_state \<times> cstate) set"
-  where
-  "rf_sr \<equiv> {(s, s'). cstate_relation s (globals s')}"
-
 lemma cmap_relation_tcb [intro]:
   "(s, s') \<in> rf_sr \<Longrightarrow> cpspace_tcb_relation (ksPSpace s) (t_hrs_' (globals s'))"
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
@@ -2556,9 +2551,37 @@ lemma tcb_and_not_mask_canonical:
 lemmas tcb_ptr_sign_extend_canonical =
       tcb_and_not_mask_canonical[where n=0, simplified mask_def objBits_simps', simplified]
 
+lemma fpu_null_state_typ_heap_preservation:
+  assumes "fpu_null_state_relation s"
+  assumes "(clift t :: user_fpu_state_C typ_heap) = clift s"
+  shows "fpu_null_state_relation t"
+  using assms by (simp add: fpu_null_state_relation_def)
+
+(* FIXME: move up to TypHeap? *)
 lemma lift_t_Some_iff:
   "lift_t g hrs p = Some v \<longleftrightarrow> hrs_htd hrs, g \<Turnstile>\<^sub>t p \<and> h_val (hrs_mem hrs) p = v"
   unfolding hrs_htd_def hrs_mem_def by (cases hrs) (auto simp: lift_t_if)
+
+context
+  fixes p :: "'a::mem_type ptr"
+  fixes q :: "'b::c_type ptr"
+  fixes d g\<^sub>p g\<^sub>q
+  assumes val_p: "d,g\<^sub>p \<Turnstile>\<^sub>t p"
+  assumes val_q: "d,g\<^sub>q \<Turnstile>\<^sub>t q"
+  assumes disj: "typ_uinfo_t TYPE('a) \<bottom>\<^sub>t typ_uinfo_t TYPE('b)"
+begin
+
+lemma h_val_heap_same_typ_disj:
+  "h_val (heap_update p v h) q = h_val h q"
+  using disj by (auto intro: h_val_heap_same[OF val_p val_q]
+                       simp: tag_disj_def sub_typ_proper_def field_of_t_def typ_tag_lt_def
+                             field_of_def typ_tag_le_def)
+
+lemma h_val_heap_same_hrs_mem_update_typ_disj:
+  "h_val (hrs_mem (hrs_mem_update (heap_update p v) s)) q = h_val (hrs_mem s) q"
+  by (simp add: hrs_mem_update h_val_heap_same_typ_disj)
+
+end
 
 lemma global_ioport_bitmap_relation_def2:
   "global_ioport_bitmap_relation (clift hrs) htable \<equiv>
@@ -2567,6 +2590,14 @@ lemma global_ioport_bitmap_relation_def2:
         \<and> cioport_bitmap_to_H ctable = htable
         \<and> ptr_span (ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts'')) \<subseteq> kernel_data_refs"
   by (clarsimp simp: global_ioport_bitmap_relation_def lift_t_Some_iff)
+
+lemma fpu_null_state_relation_def2:
+  "fpu_null_state_relation hrs \<equiv>
+    hrs_htd hrs \<Turnstile>\<^sub>t fpu_state_Ptr (symbol_table ''x86KSnullFpuState'')
+     \<and> h_val (hrs_mem hrs) (fpu_state_Ptr (symbol_table ''x86KSnullFpuState''))
+         = user_fpu_state_C (ARRAY i. FPUNullState (finite_index i))
+     \<and> ptr_span (fpu_state_Ptr (symbol_table ''x86KSnullFpuState'')) \<subseteq> kernel_data_refs"
+  by (clarsimp simp: fpu_null_state_relation_def lift_t_Some_iff)
 
 lemma global_ioport_bitmap_heap_update_tag_disj':
   fixes p :: "'a::mem_type ptr"
@@ -2578,8 +2609,17 @@ lemma global_ioport_bitmap_heap_update_tag_disj':
   by (clarsimp simp: global_ioport_bitmap_relation_def hrs_mem_update_def hrs_htd_def
               split: prod.splits)
 
+lemma fpu_null_state_heap_update_tag_disj':
+  fixes p :: "'a::mem_type ptr"
+  assumes valid: "hrs_htd h, g \<Turnstile>\<^sub>t p"
+  assumes disj: "typ_uinfo_t TYPE(user_fpu_state_C) \<bottom>\<^sub>t typ_uinfo_t TYPE('a)"
+  shows "fpu_null_state_relation (hrs_mem_update (heap_update p v) h) = fpu_null_state_relation h"
+  unfolding fpu_null_state_relation_def
+  using lift_t_heap_update_same[OF valid disj]
+  by (clarsimp simp: fpu_null_state_relation_def hrs_mem_update_def hrs_htd_def
+              split: prod.splits)
+
 lemmas h_t_valid_nested_fields =
-  h_t_valid_field[OF h_t_valid_field[OF h_t_valid_field[OF h_t_valid_field]]]
   h_t_valid_field[OF h_t_valid_field[OF h_t_valid_field]]
   h_t_valid_field[OF h_t_valid_field]
   h_t_valid_field
@@ -2591,6 +2631,8 @@ lemmas h_t_valid_fields_clift =
 lemmas global_ioport_bitmap_heap_update_tag_disj_simps =
   h_t_valid_fields_clift[THEN global_ioport_bitmap_heap_update_tag_disj'[OF _ tag_disj_via_td_name]]
 
+lemmas fpu_null_state_heap_update_tag_disj_simps =
+  h_t_valid_fields_clift[THEN fpu_null_state_heap_update_tag_disj'[OF _ tag_disj_via_td_name]]
 
 end
 end

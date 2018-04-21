@@ -615,10 +615,6 @@ lemma access_in_array:
   apply simp
   done
 
-lemma foo: "P (access_ti (typ_info_t TYPE (('a :: c_type)[4])) v xs)"
-  apply (simp add: typ_info_array' upt_rec)
-  oops
-
 lemma access_ti_list_array:
   "\<lbrakk> \<forall>n. size_td_pair (f n) = v3; length xs = v3 * n;
      \<forall>m. m < n \<and> v3 \<le> length (drop (v3 * m) xs)
