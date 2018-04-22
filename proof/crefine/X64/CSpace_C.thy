@@ -486,67 +486,77 @@ lemma cap_lift_capEPBadge_mask_eq:
   unfolding cap_lift_def
   by (fastforce simp: Let_def mask_def word_bw_assocs split: if_split_asm)
 
+lemma Arch_isCapRevocable_spec:
+  "\<forall>s. \<Gamma>\<turnstile> {\<sigma>. s = \<sigma> \<and> True}
+          Call Arch_isCapRevocable_'proc
+        {t. \<forall>c c'.  ccap_relation c (derivedCap_' s) \<and> ccap_relation c' (srcCap_' s)
+            \<longrightarrow> ret__unsigned_long_' t = from_bool (Arch.isCapRevocable c c')}"
+  apply vcg
+  by (auto simp: false_def from_bool_def X64_H.isCapRevocable_def
+                 cap_get_tag_isCap_unfolded_H_cap cap_tag_defs isCap_simps
+                 cap_get_tag_isCap[unfolded cap_io_port_control_cap_def, simplified]
+          split: capability.splits arch_capability.splits bool.splits)
+
+lemmas isCapRevocable_simps[simp] = Retype_H.isCapRevocable_def[split_simps capability.split]
+
+context begin (* revokable_ccorres *)
+
+private method revokable'_hammer = solves \<open>(
+              simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
+              rule ccorres_guard_imp,
+              rule ccorres_return_C; clarsimp)\<close>
+
 lemma revokable_ccorres:
-  "\<lbrakk>ccap_relation cap newCap; cmdbnode_relation rva srcMDB;
-  ccap_relation rvb srcCap; ret__unsigned_longlong = cap_get_tag newCap \<rbrakk> \<Longrightarrow>
-  ccorres (\<lambda>a c. from_bool a = c) newCapIsRevocable_'
-           (\<lambda>_. capMasterCap cap = capMasterCap rvb \<or> is_simple_cap' cap) UNIV hs
-           (return (revokable' rvb cap))
-           (IF ret__unsigned_longlong = scast cap_endpoint_cap THEN
-              \<acute>ret__unsigned_longlong :== CALL cap_endpoint_cap_get_capEPBadge(newCap);;
-              \<acute>unsigned_longlong_eret_2 :== CALL cap_endpoint_cap_get_capEPBadge(srcCap);;
-              \<acute>newCapIsRevocable :==
-                (if \<acute>ret__unsigned_longlong \<noteq> \<acute>unsigned_longlong_eret_2 then 1
-                 else 0)
-            ELSE
-              IF ret__unsigned_longlong = scast cap_notification_cap THEN
-                \<acute>ret__unsigned_longlong :== CALL cap_notification_cap_get_capNtfnBadge(newCap);;
-                \<acute>unsigned_longlong_eret_2 :== CALL cap_notification_cap_get_capNtfnBadge(srcCap);;
-                \<acute>newCapIsRevocable :==
-                  (if \<acute>ret__unsigned_longlong \<noteq> \<acute>unsigned_longlong_eret_2 then 1
-                   else 0)
-              ELSE
-                IF ret__unsigned_longlong = scast cap_irq_handler_cap THEN
-                  \<acute>ret__unsigned_longlong :== CALL cap_get_capType(srcCap);;
-                  \<acute>newCapIsRevocable :==
-                    (if \<acute>ret__unsigned_longlong = scast cap_irq_control_cap then 1
-                     else 0)
-                ELSE
-                  IF ret__unsigned_longlong = scast cap_untyped_cap THEN
-                    \<acute>newCapIsRevocable :== scast true
-                  ELSE
-                    \<acute>newCapIsRevocable :== scast false
-                  FI
-                FI
-              FI
-            FI)"
-  unfolding revokable'_fold
-  apply (rule ccorres_gen_asm [where G = \<top>, simplified])
-  apply (cases cap)
-	     apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
-	      rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
-	    apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
-	     rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
-	   apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
-	   apply (rule ccorres_return, vcg)
-	   apply (frule cap_get_tag_NotificationCap [where cap' = srcCap, THEN iffD1])
-	    apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
-	   apply (frule cap_get_tag_NotificationCap [where cap' = newCap, THEN iffD1])
-	    apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
-	   apply (fastforce simp: cap_get_tag_isCap isCap_simps)
+  "ccorres (\<lambda>a c. from_bool a = c) ret__unsigned_long_'
+           (\<lambda>_. capMasterCap cap = capMasterCap parent \<or> is_simple_cap' cap)
+           (UNIV \<inter> {s. ccap_relation cap (derivedCap_' s)} \<inter> {s. ccap_relation parent (srcCap_' s)}) hs
+           (return (isCapRevocable cap parent))
+           (Call isCapRevocable_'proc)"
+  apply (rule ccorres_gen_asm[where G=\<top>, simplified])
+  apply (cinit' lift: derivedCap_' srcCap_')
+   -- "Clear up Arch cap case"
+   apply csymbr
+   apply (clarsimp simp: cap_get_tag_isCap split del: if_splits simp del: Collect_const)
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply (rule ccorres_rhs_assoc)
+    apply (clarsimp simp: isCap_simps)
+    apply csymbr
+    apply (drule spec, drule spec, drule mp, fastforce)
+    apply ccorres_rewrite
+    apply (drule sym, simp only:)
+    apply (rule ccorres_return_C, clarsimp+)
+  apply csymbr
+  apply (rule_tac P'=UNIV and P=\<top> in ccorres_inst)
+   apply (cases cap)
+    -- "Uninteresting caps"
+              apply revokable'_hammer+
+    -- "NotificationCap"
+            apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
+            apply (rule ccorres_guard_imp, (rule ccorres_rhs_assoc)+, csymbr, csymbr)
+              apply (rule ccorres_return_C, clarsimp+)
+            apply (frule_tac cap'1=srcCap in cap_get_tag_NotificationCap[THEN iffD1])
+             apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
+            apply (frule_tac cap'1=derivedCap in cap_get_tag_NotificationCap[THEN iffD1])
+             apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
+            apply (fastforce simp: cap_get_tag_isCap isCap_simps)
+    -- "IRQHandlerCap"
+           apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
+           apply (rule ccorres_guard_imp, csymbr)
+             apply (rule ccorres_return_C, clarsimp+)
+           apply (fastforce simp: cap_get_tag_isCap isCap_simps)
+    -- "EndpointCap"
+          apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
+          apply (rule ccorres_guard_imp, (rule ccorres_rhs_assoc)+, csymbr, csymbr)
+            apply (rule ccorres_return_C, clarsimp+)
+          apply (frule_tac cap'1=srcCap in cap_get_tag_EndpointCap[THEN iffD1])
+           apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
+          apply (frule_tac cap'1=derivedCap in cap_get_tag_EndpointCap[THEN iffD1])
+           apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
+          apply (fastforce simp: cap_get_tag_isCap isCap_simps)
+    -- "Other Caps"
+  by (revokable'_hammer | fastforce simp: isCap_simps)+
 
-          apply (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
-	  rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
-	 apply (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
-	 apply (rule ccorres_return, vcg)
-	 apply (frule cap_get_tag_EndpointCap [where cap' = srcCap, THEN iffD1])
-	  apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
-	 apply (frule cap_get_tag_EndpointCap [where cap' = newCap, THEN iffD1])
-	  apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
-	 subgoal by (fastforce simp: cap_get_tag_isCap isCap_simps)
-
-	by (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
-	  rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)+
+end (* revokable_ccorres *)
 
 lemma from_bool_mask_simp [simp]:
   "((from_bool r) :: machine_word) && mask (Suc 0) = from_bool r"
@@ -693,65 +703,8 @@ definition
     \<and> tag \<noteq> scast cap_untyped_cap \<and> tag \<noteq> scast cap_reply_cap
     \<and> tag \<noteq> scast cap_endpoint_cap \<and> tag \<noteq> scast cap_notification_cap
     \<and> tag \<noteq> scast cap_thread_cap \<and> tag \<noteq> scast cap_cnode_cap
-    \<and> tag \<noteq> scast cap_zombie_cap \<and> tag \<noteq> scast cap_io_port_cap
+    \<and> tag \<noteq> scast cap_zombie_cap \<and> tag \<noteq> scast cap_io_port_control_cap
     \<and> tag \<noteq> scast cap_frame_cap"
-
-definition
-  "cteInsert_newCapIsRevocable_if newCap srcCap \<equiv> (if (cap_get_tag newCap = scast cap_endpoint_cap)
-             then (if (capEPBadge_CL (cap_endpoint_cap_lift newCap) = capEPBadge_CL (cap_endpoint_cap_lift srcCap))
-                     then 0 else 1)
-             else if (cap_get_tag newCap = scast cap_notification_cap)
-                  then (if (capNtfnBadge_CL (cap_notification_cap_lift newCap) = capNtfnBadge_CL (cap_notification_cap_lift srcCap))
-                     then 0 else 1)
-             else if (cap_get_tag newCap = scast cap_irq_handler_cap)
-                  then (if cap_get_tag srcCap = scast cap_irq_control_cap then 1 else 0)
-             else if (cap_get_tag newCap = scast cap_untyped_cap) then 1 else 0)"
-
-lemma cteInsert_if_helper:
-  assumes cgt: "rv = cap_get_tag newCap"
-  and     rul: "\<And>s g. (s \<in> Q) = (s\<lparr> ret__unsigned_longlong_' := undefined,
-  unsigned_longlong_eret_2_':= undefined \<rparr> \<in> Q')"
-  shows "\<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s. (cap_get_tag srcCap = cap_get_tag newCap
-                          \<or> is_simple_cap_tag (cap_get_tag newCap)) \<and>
-            (s\<lparr>newCapIsRevocable_' := cteInsert_newCapIsRevocable_if newCap srcCap\<rparr> \<in> Q)}
-          (IF rv = scast cap_endpoint_cap THEN
-               \<acute>ret__unsigned_longlong :== CALL cap_endpoint_cap_get_capEPBadge(newCap);;
-               \<acute>unsigned_longlong_eret_2 :== CALL cap_endpoint_cap_get_capEPBadge(srcCap);;
-               \<acute>newCapIsRevocable :== (if \<acute>ret__unsigned_longlong \<noteq> \<acute>unsigned_longlong_eret_2 then 1 else 0)
-             ELSE
-               IF rv = scast cap_notification_cap THEN
-                 \<acute>ret__unsigned_longlong :== CALL cap_notification_cap_get_capNtfnBadge(newCap);;
-                 \<acute>unsigned_longlong_eret_2 :== CALL cap_notification_cap_get_capNtfnBadge(srcCap);;
-                 \<acute>newCapIsRevocable :== (if \<acute>ret__unsigned_longlong \<noteq> \<acute>unsigned_longlong_eret_2 then 1 else 0)
-               ELSE
-                 IF rv = scast cap_irq_handler_cap THEN
-                   \<acute>ret__unsigned_longlong :== CALL cap_get_capType(srcCap);;
-                   \<acute>newCapIsRevocable :== (if \<acute>ret__unsigned_longlong = scast cap_irq_control_cap then 1 else 0)
-                 ELSE
-                   IF rv = scast cap_untyped_cap THEN
-                     \<acute>newCapIsRevocable :== scast true
-                   ELSE
-                     \<acute>newCapIsRevocable :== scast false
-                   FI
-                 FI
-               FI
-             FI) Q"
-  unfolding cteInsert_newCapIsRevocable_if_def
-  apply (unfold cgt)
-  apply (rule conseqPre)
-  apply vcg
-  apply (clarsimp simp: true_def false_def
-                        is_simple_cap_tag_def
-                  cong: if_cong)
-  apply (simp add: cap_tag_defs)
-  apply (intro allI conjI impI)
-		      apply (clarsimp simp: rul)+
-  done
-
-lemma forget_Q':
-  "(x \<in> Q) = (y \<in> Q) \<Longrightarrow> (x \<in> Q) = (y \<in> Q)" .
-
-lemmas cteInsert_if_helper' = cteInsert_if_helper [OF _ forget_Q']
 
 (* Useful:
   apply (tactic {* let val _ = reset CtacImpl.trace_ceqv; val _ = reset CtacImpl.trace_ctac in all_tac end; *})
@@ -763,7 +716,7 @@ schematic_goal ccap_relation_tag_Master:
       \<Longrightarrow> cap_get_tag ccap =
             case_capability ?a ?b ?c ?d ?e ?f ?g
                (case_arch_capability ?aa ?ab ?ac
-                           ?ad ?ae ?af ?ag ?ah) ?h ?i ?j ?k
+                           ?ad ?ae ?af ?ag ?ah ?ai) ?h ?i ?j ?k
             (capMasterCap cap)"
   by (fastforce simp: ccap_relation_def map_option_Some_eq2
                      Let_def cap_lift_def cap_to_H_def
@@ -1102,46 +1055,41 @@ lemma cteInsert_ccorres:
    apply (ctac pre: ccorres_pre_getCTE)
      apply (rule ccorres_move_c_guard_cte)
      apply (ctac pre: ccorres_pre_getCTE)
-       apply csymbr
-       apply (fold revokable'_fold)
-       apply (ctac add: revokable_ccorres)
-         apply (ctac (c_lines 3) add: cteInsert_ccorres_mdb_helper)
-           apply (simp del: Collect_const)
-           apply (rule ccorres_pre_getCTE ccorres_assert)+
-           apply (ctac add: setUntypedCapAsFull_ccorres)
-             apply (rule ccorres_move_c_guard_cte)
-             apply (ctac)
-               apply (rule ccorres_move_c_guard_cte)
-               apply ctac
-                 apply (rule ccorres_move_c_guard_cte)
-                 apply (ctac(no_vcg))
+       apply (ctac (no_vcg) add: revokable_ccorres)
+        apply (ctac (c_lines 3) add: cteInsert_ccorres_mdb_helper)
+          apply (simp del: Collect_const)
+          apply (rule ccorres_pre_getCTE ccorres_assert)+
+          apply (ctac add: setUntypedCapAsFull_ccorres)
+            apply (rule ccorres_move_c_guard_cte)
+            apply (ctac)
+              apply (rule ccorres_move_c_guard_cte)
+              apply ctac
+                apply (rule ccorres_move_c_guard_cte)
+                apply (ctac(no_vcg))
+                 apply csymbr
+                 apply (erule_tac t = ret__unsigned_longlong in ssubst)
+                 apply (rule ccorres_cond_both [where R = \<top>, simplified])
+                   apply (erule mdbNext_not_zero_eq)
                   apply csymbr
-                  apply (erule_tac t = ret__unsigned_longlong in ssubst)
-                  apply (rule ccorres_cond_both [where R = \<top>, simplified])
-                    apply (erule mdbNext_not_zero_eq)
-                   apply csymbr
-                   apply simp
-                   apply (rule ccorres_move_c_guard_cte)
-                   apply (simp add:dc_def[symmetric])
-                   apply (ctac ccorres:ccorres_updateMDB_set_mdbPrev)
+                  apply simp
+                  apply (rule ccorres_move_c_guard_cte)
                   apply (simp add:dc_def[symmetric])
-                  apply (ctac ccorres: ccorres_updateMDB_skip)
-                 apply (wp static_imp_wp)+
-               apply (clarsimp simp: Collect_const_mem dc_def split del: if_split)
-               apply vcg
-              apply (wp static_imp_wp)
-             apply (clarsimp simp: Collect_const_mem dc_def split del: if_split)
-             apply vcg
-            apply (clarsimp simp:cmdb_node_relation_mdbNext)
-            apply (wp setUntypedCapAsFull_cte_at_wp static_imp_wp)
-           apply (clarsimp simp: Collect_const_mem dc_def split del: if_split)
-           apply (vcg exspec=setUntypedCapAsFull_modifies)
-          apply wp
-         apply vcg
-        apply wp
-       apply (rule cteInsert_if_helper')
-        apply simp
-       apply simp
+                  apply (ctac ccorres:ccorres_updateMDB_set_mdbPrev)
+                 apply (simp add:dc_def[symmetric])
+                 apply (ctac ccorres: ccorres_updateMDB_skip)
+                apply (wp static_imp_wp)+
+              apply (clarsimp simp: Collect_const_mem dc_def split del: if_split)
+              apply vcg
+             apply (wp static_imp_wp)
+            apply (clarsimp simp: Collect_const_mem dc_def split del: if_split)
+            apply vcg
+           apply (clarsimp simp:cmdb_node_relation_mdbNext)
+           apply (wp setUntypedCapAsFull_cte_at_wp static_imp_wp)
+          apply (clarsimp simp: Collect_const_mem dc_def split del: if_split)
+          apply (vcg exspec=setUntypedCapAsFull_modifies)
+         apply wp
+        apply vcg
+       apply wp
       apply wp
      apply vcg
     apply wp
@@ -1172,7 +1120,6 @@ lemma cteInsert_ccorres:
              split del: if_split)
   apply (clarsimp simp: typ_heap_simps c_guard_clift split_def)
   apply (clarsimp simp: is_simple_cap_get_tag_relation ccte_relation_ccap_relation cmdb_node_relation_mdbNext[symmetric])
-  apply (metis (hide_lams, no_types) ccap_relation_Master_tags_eq ccte_relation_ccap_relation rf_sr_cte_relation)
   done
 
 (****************************************************************************)
@@ -2081,31 +2028,48 @@ lemma canonical_address_mdbNext:
   apply (erule canonical_address_mdbNext')
   done
 
-lemma Arch_postCapDeletion_ccorres:
-  "ccorres dc xfdc
-     \<top>
-     (UNIV \<inter> {s. ccap_relation (ArchObjectCap acap) (cap_' s)}) hs
-     (X64_H.postCapDeletion acap)
-     (Call Arch_postCapDeletion_'proc)"
-  apply (cinit lift: cap_')
-   apply (rule ccorres_return_Skip)
-  by simp
-
-lemma not_irq_or_arch_cap_case:
-  "\<lbrakk>\<not>isIRQHandlerCap cap; \<not> isArchCap \<top> cap\<rbrakk> \<Longrightarrow>
-    (case cap of IRQHandlerCap irq \<Rightarrow> f irq | ArchObjectCap acap \<Rightarrow> g acap | _ \<Rightarrow> h) = h"
-  by (case_tac cap; clarsimp simp: isCap_simps)
-
 definition
   arch_cleanup_info_wf' :: "arch_capability \<Rightarrow> bool"
 where
-  "arch_cleanup_info_wf' acap \<equiv> True"
+  "arch_cleanup_info_wf' acap \<equiv> case acap of IOPortCap f l \<Rightarrow> f \<le> l | _ \<Rightarrow> True"
 
 definition
   cleanup_info_wf' :: "capability \<Rightarrow> bool"
 where
   "cleanup_info_wf' cap \<equiv> case cap of IRQHandlerCap irq \<Rightarrow>
       UCAST(8\<rightarrow>16) irq \<le> SCAST(32 signed\<rightarrow>16) Kernel_C.maxIRQ | ArchObjectCap acap \<Rightarrow> arch_cleanup_info_wf' acap | _ \<Rightarrow> True"
+
+
+lemma freeIOPortRange_ccorres:
+  "ccorres dc xfdc (\<top> and (\<lambda>s. f \<le> l))
+    (UNIV \<inter> {s. first_port_' s = f} \<inter> {s. last_port_' s = l}) hs
+    (freeIOPortRange f l)
+    (Call freeIOPortRange_'proc)"
+  apply (cinit lift: first_port_' last_port_')
+  sorry
+
+lemma Arch_postCapDeletion_ccorres:
+  "ccorres dc xfdc
+     (\<top> and (\<lambda>s. arch_cleanup_info_wf' acap))
+     (UNIV \<inter> {s. ccap_relation (ArchObjectCap acap) (cap_' s)}) hs
+     (X64_H.postCapDeletion acap)
+     (Call Arch_postCapDeletion_'proc)"
+  apply (cinit lift: cap_')
+   apply csymbr
+   apply (wpc; clarsimp simp: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs; ccorres_rewrite)
+   prefer 3 (* IOPort case *)
+   apply (rule ccorres_rhs_assoc)+
+   apply csymbr+
+   apply (ctac add: freeIOPortRange_ccorres[simplified dc_def])
+   apply (rule ccorres_return_Skip[simplified dc_def])+
+  apply (clarsimp simp: arch_cleanup_info_wf'_def split: arch_capability.splits)
+  apply (frule cap_get_tag_isCap_unfolded_H_cap)
+  by (clarsimp simp: ccap_relation_def cap_io_port_cap_lift cap_to_H_def)
+
+lemma not_irq_or_arch_cap_case:
+  "\<lbrakk>\<not>isIRQHandlerCap cap; \<not> isArchCap \<top> cap\<rbrakk> \<Longrightarrow>
+    (case cap of IRQHandlerCap irq \<Rightarrow> f irq | ArchObjectCap acap \<Rightarrow> g acap | _ \<Rightarrow> h) = h"
+  by (case_tac cap; clarsimp simp: isCap_simps)
 
 lemma postCapDeletion_ccorres:
   "cleanup_info_wf' cap \<Longrightarrow>
@@ -2141,8 +2105,8 @@ lemma postCapDeletion_ccorres:
    apply (frule cap_get_tag_isCap_unfolded_H_cap(5))
    apply (clarsimp simp: cap_irq_handler_cap_lift ccap_relation_def cap_to_H_def
                          cleanup_info_wf'_def maxIRQ_def Kernel_C.maxIRQ_def)
-  apply word_bitwise
-  apply (rule conjI, clarsimp simp: isCap_simps)
+   apply word_bitwise
+  apply (rule conjI, clarsimp simp: isCap_simps cleanup_info_wf'_def)
   apply (rule conjI[rotated], clarsimp simp: isCap_simps)
   apply (clarsimp simp: isCap_simps)
   apply (frule cap_get_tag_isCap_unfolded_H_cap(5))
@@ -2395,8 +2359,9 @@ lemma Arch_sameRegionAs_spec:
   apply (simp_all add: cap_tag_defs isCap_simps from_bool_def true_def false_def if_0_1_eq)
   apply (all \<open>clarsimp simp: ccap_relation_def cap_to_H_def
                              c_valid_cap_def cl_valid_cap_def Let_def\<close>)
-   apply (simp add: cap_io_port_cap_lift_def'[simplified cap_tag_defs]
-                    ucast_le_ucast_eq[OF and_mask_less' and_mask_less'])
+   apply (simp add: cap_io_port_cap_lift_def'[simplified cap_tag_defs] mask_def
+                    ucast_le_ucast_eq[OF and_mask_less' and_mask_less'] split: bool.splits)
+   apply (intro conjI impI; clarsimp; word_bitwise; auto)
   apply (clarsimp simp: cap_frame_cap_lift_def'[simplified cap_tag_defs]
                         framesize_to_H_def pageBitsForSize_def field_simps
                         X86_SmallPage_def X86_LargePage_def pageBits_def ptTranslationBits_def
@@ -2655,7 +2620,7 @@ lemma ccap_relation_get_capIsPhysical:
                                        get_capIsPhysical_CL_def
                        dest!: cap_get_tag_isCap_unfolded_H_cap)
   apply (rename_tac arch_cap)
-  apply (case_tac arch_cap; clarsimp simp: cap_lifts cap_lift_asid_control_cap
+  apply (case_tac arch_cap; clarsimp simp: cap_lifts cap_lift_asid_control_cap cap_lift_io_port_control_cap
                       dest!: cap_get_tag_isCap_unfolded_H_cap)
   done
 
@@ -2969,7 +2934,6 @@ lemma Arch_sameObjectAs_spec:
                                  ccap_relation_PageCap_fields framesize_from_H_eq capAligned_def
                           split: if_splits\<close>)
       apply (all \<open>(fastforce simp: X64_H.sameRegionAs_def isCap_simps)?\<close>)
-      subgoal sorry (* Arch_sameObjectAs_spec: C and Haskell differ for IO ports. *)
       done
       done
   qed
@@ -3176,7 +3140,6 @@ lemma updateCapData_spec:
       apply (clarsimp simp:cap_endpoint_cap_lift_def cap_lift_def cap_tag_defs)
       apply (simp add: ccap_relation_def cap_lift_def cap_tag_defs cap_to_H_def)
     -- "preserve is zero and capNtfnBadge_CL \<dots> \<noteq> 0"
-  (*
      apply clarsimp
      apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
     -- "preserve is not zero"
@@ -3201,11 +3164,12 @@ lemma updateCapData_spec:
   apply (thin_tac "ccap_relation x y" for x y)
   apply (thin_tac "ret__unsigned_long_' t = v" for t v)+
 
-  apply (simp add: cnode_capdata_lift_def fupdate_def word_size word_less_nat_alt mask_def
+  (* FIXME x64: VER-930: padding bits incorrectly set on x64
+  apply (simp add: seL4_CNode_CapData_lift_def fupdate_def word_size word_less_nat_alt mask_def
              cong: if_cong)
   apply (simp only: unat_word_ariths(1))
-  apply (rule ssubst [OF nat_mod_eq' [where n = "2 ^ len_of TYPE(32)"]])
-   -- " unat (\<dots> && 0x1F) +  unat (\<dots> mod 0x20) < 2 ^ len_of TYPE(32)"
+  apply (rule ssubst [OF nat_mod_eq' [where n = "2 ^ len_of TYPE(64)"]])
+   -- " unat (\<dots> && 0x3F) +  unat (\<dots> mod 0x40) < 2 ^ len_of TYPE(64)"
    apply (rule order_le_less_trans, rule add_le_mono)
      apply (rule word_le_nat_alt[THEN iffD1])
      apply (rule word_and_le1)
@@ -3218,8 +3182,8 @@ lemma updateCapData_spec:
   apply (rule conjI, clarsimp simp:  ccap_relation_NullCap_iff cap_tag_defs)
   apply clarsimp
   apply (rule conjI)
-   apply (rule unat_less_power[where sz=5, simplified], simp add: word_bits_def)
-   apply (rule and_mask_less'[where n=5, unfolded mask_def, simplified], simp)
+   apply (rule unat_less_power[where sz=6, simplified], simp add: word_bits_def)
+   apply (rule and_mask_less'[where n=6, unfolded mask_def, simplified], simp)
 
   apply clarsimp
   apply (simp add: ccap_relation_def c_valid_cap_def cl_valid_cap_def
@@ -3227,7 +3191,7 @@ lemma updateCapData_spec:
                    cap_cnode_cap_lift_def)
   apply (simp add: word_bw_assocs word_bw_comms word_bw_lcs)
   done *)
-  sorry (* FIXME x64: badge bits are in flux, as are cnode_guard_bits *)
+  sorry (* FIXME x64: VER-930 *)
 
 abbreviation
   "deriveCap_xf \<equiv> liftxf errstate deriveCap_ret_C.status_C deriveCap_ret_C.cap_C ret__struct_deriveCap_ret_C_'"
@@ -3295,7 +3259,7 @@ lemma ensureNoChildren_ccorres:
   done
 
 lemma Arch_deriveCap_ccorres:
-  "ccorres (syscall_error_rel \<currency> (ccap_relation \<circ> ArchObjectCap)) deriveCap_xf
+  "ccorres (syscall_error_rel \<currency> ccap_relation) deriveCap_xf
   \<top> (UNIV \<inter> {s. ccap_relation (ArchObjectCap cap) (cap_' s)}) []
   (Arch.deriveCap slot cap) (Call Arch_deriveCap_'proc)"
   apply (cinit lift: cap_')
@@ -3358,41 +3322,91 @@ lemma Arch_deriveCap_ccorres:
                           cap_tag_defs cap_to_H_def to_bool_def
                           cap_page_directory_cap_lift_def
                    split: if_split_asm)
+   -- "PDPTCap"
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                           ccorres_cond_iffs)
-  (*
-    apply (case_tac "capVPSize cap = ARMSmallPage")
-     apply (clarsimp simp: ccorres_cond_iffs)
-     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-     apply (rule allI, rule conseqPre, vcg)
-     apply clarsimp
-     apply (rule context_conjI)
-      apply (simp add: cap_get_tag_isCap_ArchObject)
-     apply (clarsimp simp: returnOk_def return_def isCap_simps)
-     subgoal by  (simp add: ccap_relation_def cap_lift_def Let_def
-                            cap_tag_defs cap_to_H_def to_bool_def
-                            cap_small_frame_cap_lift_def asidInvalid_def)
-    apply (clarsimp simp: ccorres_cond_iffs)
     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
     apply (rule allI, rule conseqPre, vcg)
-    apply clarsimp
+    apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
     apply (rule context_conjI)
-     apply (simp add: cap_get_tag_isCap_ArchObject)
+     apply (clarsimp simp: returnOk_def return_def cap_tag_defs)
+    apply (clarsimp simp: returnOk_def return_def exception_defs)
+    apply (frule cap_get_tag_isCap_unfolded_H_cap)
+    apply (clarsimp simp: cap_pdpt_cap_lift ccap_relation_def cap_to_H_def)
+   apply wpc
+    apply (clarsimp simp: cap_get_tag_isCap_ArchObject
+                          ccorres_cond_iffs)
+    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+    apply (rule allI, rule conseqPre, vcg)
+    apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
+    apply (rule context_conjI)
+     apply (clarsimp simp: throwError_def return_def cap_tag_defs
+                          errstate_def syscall_error_rel_def
+                          syscall_error_to_H_cases
+                          exception_defs)
+     apply (frule cap_get_tag_isCap_unfolded_H_cap)
+     apply (clarsimp simp: cap_pdpt_cap_lift ccap_relation_def cap_to_H_def to_bool_def
+                    split: if_split_asm)
+    apply (clarsimp simp: throwError_def return_def
+                          errstate_def syscall_error_rel_def
+                          syscall_error_to_H_cases
+                          exception_defs)
+   -- "PML4Cap"
+   apply wpc
+    apply (clarsimp simp: cap_get_tag_isCap_ArchObject
+                          ccorres_cond_iffs)
+    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+    apply (rule allI, rule conseqPre, vcg)
+    apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
+    apply (rule context_conjI)
+     apply (clarsimp simp: returnOk_def return_def)
+    apply (clarsimp simp: returnOk_def return_def exception_defs)
+    apply (frule cap_get_tag_isCap_unfolded_H_cap)
+    apply (clarsimp simp: cap_pml4_cap_lift ccap_relation_def cap_to_H_def)
+   apply wpc
+    apply (clarsimp simp: cap_get_tag_isCap_ArchObject
+                          ccorres_cond_iffs)
+    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+    apply (rule allI, rule conseqPre, vcg)
+    apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
+    apply (rule context_conjI)
+     apply (clarsimp simp: throwError_def return_def
+                          errstate_def syscall_error_rel_def
+                          syscall_error_to_H_cases
+                          exception_defs)
+     apply (frule cap_get_tag_isCap_unfolded_H_cap)
+     apply (clarsimp simp: cap_pml4_cap_lift ccap_relation_def cap_to_H_def to_bool_def
+                    split: if_split_asm)
+    apply (clarsimp simp: throwError_def return_def
+                          errstate_def syscall_error_rel_def
+                          syscall_error_to_H_cases
+                          exception_defs)
+   -- "PageCap"
+   apply wpc
+    apply (clarsimp simp: cap_get_tag_isCap_ArchObject
+                          ccorres_cond_iffs)
+    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+    apply (rule allI, rule conseqPre, vcg)
+    apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
+    apply (rule context_conjI)
+     apply (simp add: cap_tag_defs)
     apply (clarsimp simp: returnOk_def return_def isCap_simps)
-    subgoal by (simp add: ccap_relation_def cap_lift_def Let_def
-                          cap_tag_defs cap_to_H_def to_bool_def
-                          cap_frame_cap_lift_def asidInvalid_def c_valid_cap_def cl_valid_cap_def)
+    subgoal apply (frule cap_get_tag_isCap_unfolded_H_cap)
+      by (clarsimp simp: cap_frame_cap_lift[simplified cap_tag_defs, simplified] cap_tag_defs
+                         ccap_relation_def cap_to_H_def asidInvalid_def maptype_to_H_def
+                         vm_page_map_type_defs c_valid_cap_def cl_valid_cap_def
+                  split: if_splits)
    apply (simp add: cap_get_tag_isCap_ArchObject
                     ccorres_cond_iffs)
    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
    apply (rule allI, rule conseqPre, vcg)
    apply (clarsimp simp: returnOk_def return_def subset_iff
                   split: bool.split)
-   apply (cases cap, simp_all add: isCap_simps)[1]
+   apply (cases cap, simp_all add: isCap_simps ccap_relation_NullCap_iff)[1]
   apply clarsimp
-  done *)
-  sorry (* FIXME x64: needs updating for new page table structures *)
+  done
+
 
 lemma isArchCap_T_isArchObjectCap:
   "isArchCap \<top> = isArchObjectCap"
@@ -3461,6 +3475,7 @@ lemma deriveCap_ccorres':
     apply (clarsimp simp: cap_get_tag_isCap
                           liftME_def Let_def isArchCap_T_isArchObjectCap
                           ccorres_cond_univ_iff from_bool_def)
+    apply (rule ccorres_add_returnOk)
     apply (rule ccorres_split_nothrow_call_novcgE
                     [where xf'=ret__struct_deriveCap_ret_C_'])
            apply (rule Arch_deriveCap_ccorres)
@@ -3496,9 +3511,6 @@ lemma deriveCap_ccorres:
   apply (rule ccorres_guard_imp2, rule deriveCap_ccorres')
   apply fastforce
   done
-
-
-
 
 lemma ensureEmptySlot_ccorres:
   "ccorres (syscall_error_rel \<currency> dc) (liftxf errstate id undefined ret__unsigned_long_')
@@ -3538,8 +3550,6 @@ lemma ensureEmptySlot_ccorres:
   apply clarsimp
   apply (simp add: cte_wp_at_ctes_of)
 done
-
-
 
 lemma updateMDB_set_mdbPrev:
  "ccorres dc xfdc

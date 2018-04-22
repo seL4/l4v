@@ -99,7 +99,8 @@ lemma cap_get_tag_isCap0:
   \<and> isArchCap_tag (cap_get_tag cap') = isArchCap \<top> cap
   \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isArchPageCap cap)
   \<and> (cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap
-  \<and> (cap_get_tag cap' = scast cap_io_port_cap) = isArchIOPortCap cap"
+  \<and> (cap_get_tag cap' = scast cap_io_port_cap) = isArchIOPortCap cap
+  \<and> (cap_get_tag cap' = scast cap_io_port_control_cap) = isIOPortControlCap' cap"
   using cr
   apply -
   apply (erule ccap_relationE)
@@ -125,6 +126,7 @@ lemma cap_get_tag_isCap:
   and "(cap_get_tag cap' = scast cap_frame_cap) = (isArchPageCap cap)"
   and "(cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap"
   and "(cap_get_tag cap' = scast cap_io_port_cap) = (isArchIOPortCap cap)"
+  and "(cap_get_tag cap' = scast cap_io_port_control_cap) = (isIOPortControlCap' cap)"
   using cap_get_tag_isCap0 [OF cr] by auto
 
 lemma cap_get_tag_NullCap:
@@ -2123,7 +2125,8 @@ lemma cap_get_tag_isCap_ArchObject0:
   \<and> (cap_get_tag cap' = scast cap_pdpt_cap) = isPDPointerTableCap cap
   \<and> (cap_get_tag cap' = scast cap_pml4_cap) = isPML4Cap cap
   \<and> (cap_get_tag cap' = scast cap_io_port_cap) = isIOPortCap cap
-  \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isPageCap cap)"
+  \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isPageCap cap)
+  \<and> (cap_get_tag cap' = scast cap_io_port_control_cap) = (isIOPortControlCap cap)"
   using cr
   apply -
   apply (erule ccap_relationE)
@@ -2140,6 +2143,7 @@ lemma cap_get_tag_isCap_ArchObject:
   and "(cap_get_tag cap' = scast cap_pml4_cap) = isPML4Cap cap"
   and "(cap_get_tag cap' = scast cap_frame_cap) = (isPageCap cap)"
   and "(cap_get_tag cap' = scast cap_io_port_cap) = isIOPortCap cap"
+  and "(cap_get_tag cap' = scast cap_io_port_control_cap) = isIOPortControlCap cap"
   using cap_get_tag_isCap_ArchObject0 [OF cr] by auto
 
 lemma cap_get_tag_isCap_unfolded_H_cap:
@@ -2163,6 +2167,7 @@ lemma cap_get_tag_isCap_unfolded_H_cap:
   and "ccap_relation (capability.ArchObjectCap (arch_capability.PML4Cap v36 v37)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_pml4_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.PageCap v101 v44 v45 v46 v47 v48)) cap'  \<Longrightarrow> (cap_get_tag cap' = scast cap_frame_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.IOPortCap v60 v61)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_io_port_cap)"
+  and "ccap_relation (capability.ArchObjectCap arch_capability.IOPortControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_io_port_control_cap)"
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)
   apply (frule cap_get_tag_isCap(2), simp)
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps pageSize_def)+
@@ -2196,6 +2201,8 @@ lemma cap_get_tag_isCap_ArchObject2:
            = (isArchObjectCap cap \<and> isPageCap (capCap cap))"
   and   "(cap_get_tag cap' = scast cap_io_port_cap)
            = (isArchObjectCap cap \<and> isIOPortCap (capCap cap))"
+  and   "(cap_get_tag cap' = scast cap_io_port_control_cap)
+           = (isArchObjectCap cap \<and> isIOPortControlCap (capCap cap))"
   by (rule cap_get_tag_isCap_ArchObject2_worker [OF _ cr],
       simp add: cap_get_tag_isCap_ArchObject,
       simp add: isArchCap_tag_def2 cap_tag_defs)+
@@ -2224,7 +2231,7 @@ lemmas ccap_rel_cap_get_tag_cases_generic =
     [OF back_subst[of "\<lambda>cap. ccap_relation cap cap'" for cap']]
 
 lemmas ccap_rel_cap_get_tag_cases_arch =
-  cap_get_tag_isCap_unfolded_H_cap(12-19)
+  cap_get_tag_isCap_unfolded_H_cap(12-20)
     [OF back_subst[of "\<lambda>cap. ccap_relation (ArchObjectCap cap) cap'" for cap'],
      OF back_subst[of "\<lambda>cap. ccap_relation cap cap'" for cap']]
 
