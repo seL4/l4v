@@ -920,9 +920,9 @@ lemma arch_state_update_invs:
 
 lemma valid_ioports_cr3_update[iff]:
   "valid_ioports (s\<lparr>arch_state := arch_state s\<lparr>x64_current_cr3 := c\<rparr>\<rparr>) = valid_ioports s"
-crunch global_pml4[wp]: set_current_cr3 "\<lambda>s. P (x64_global_pml4 (arch_state s))"
-
   by (clarsimp simp: valid_ioports_def all_ioports_issued_def issued_ioports_def)
+
+crunch global_pml4[wp]: set_current_cr3 "\<lambda>s. P (x64_global_pml4 (arch_state s))"
 
 lemma set_current_cr3_invs[wp]:
   "\<lbrace>invs and K (valid_cr3 c)\<rbrace> set_current_cr3 c \<lbrace>\<lambda>rv. invs\<rbrace>"

@@ -263,7 +263,6 @@ where
             else (typ_at (AArch (AUserData sz)) r s)) \<and>
     (rghts \<in> valid_vm_rights) \<and>
     (case_option (maptyp=VMNoMap) (wellformed_mapdata (pageBitsForSize sz) and (\<lambda>_. maptyp\<noteq>VMNoMap)) mapdata)
-                                             \<and> maptyp \<noteq> VMNoMap)
   | PageTableCap r mapdata \<Rightarrow>
     typ_at (AArch APageTable) r s \<and>
     case_option True (wellformed_mapdata pd_shift_bits) mapdata
@@ -275,7 +274,7 @@ where
     case_option True (wellformed_mapdata pml4_shift_bits) mapdata
   | PML4Cap r mapdata \<Rightarrow>
     typ_at (AArch APageMapL4) r s \<and>
-    case_option True (\<lambda>asid. 0 < asid \<and> asid_wf asid) mapdata)"
+    case_option True (\<lambda>asid. 0 < asid \<and> asid_wf asid) mapdata
   | IOPortControlCap \<Rightarrow> True)"
 
 lemmas valid_arch_cap_simps =
