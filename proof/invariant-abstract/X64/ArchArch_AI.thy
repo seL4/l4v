@@ -1644,12 +1644,6 @@ lemma arch_decode_inv_wf[wp]:
                   apply (simp add: lookup_target_slot_def)
                   apply wp
                  apply (clarsimp simp: cte_wp_at_def asid_wf_high)
-                 apply (rule conjI, clarsimp)
-                 apply (rule shiftl_less_t2n)
-                  apply (rule order_less_le_trans, rule ucast_less, simp)
-                  apply (simp add: asid_bits_def asid_low_bits_def)
-                 apply (simp add: asid_bits_def)
-                apply (simp split del: if_split)
                 apply (wp ensure_no_children_sp select_ext_weak_wp select_wp whenE_throwError_wp | wpc | simp)+
          apply clarsimp
          apply (rule conjI, fastforce)
