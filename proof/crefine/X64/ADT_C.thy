@@ -615,7 +615,8 @@ definition
       []
       (CR3 (x64KSCurrentUserCR3_' cstate && (mask 39 << 12))
            (x64KSCurrentUserCR3_' cstate && mask 12))
-      x64KSKernelVSpace_C"
+      x64KSKernelVSpace_C
+      undefined (* IOPort map *)"
 
 
 lemma eq_option_to_ptr_rev:
@@ -640,7 +641,7 @@ lemma carch_state_to_H_correct:
   using valid[simplified valid_arch_state'_def]
   apply (fastforce simp: valid_asid_table'_def)
   apply (simp add: ccr3_relation_def split: cr3.splits)
-  done
+  sorry
 
 end
 

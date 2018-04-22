@@ -775,9 +775,7 @@ lemma finaliseSlot_ccorres:
              apply simp
              apply (rule ccorres_drop_cutMon,
                     rule ccorres_split_throws)
-              apply (rule_tac P="\<lambda>s. case (snd rvb) of
-                                        IRQHandlerCap irq \<Rightarrow> UCAST(8\<rightarrow>16) irq \<le> SCAST (32 signed\<rightarrow>16)Kernel_C.maxIRQ
-                                      | _ \<Rightarrow> True"
+              apply (rule_tac P="\<lambda>s. cleanup_info_wf' (snd rvb)"
                               in ccorres_from_vcg_throws[where P'=UNIV])
               apply (rule allI, rule conseqPre, vcg)
               apply (clarsimp simp: returnOk_def return_def
@@ -909,9 +907,14 @@ lemma finaliseSlot_ccorres:
          apply (erule disjE[where P="F \<and> G" for F G])
           apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of cap_has_cleanup'_def
                          split: option.split capability.splits)
+           apply (auto dest!: ctes_of_valid'
+                        simp: valid_cap'_def Kernel_C.maxIRQ_def X64.maxIRQ_def
+                              unat_ucast word_le_nat_alt cleanup_info_wf'_def arch_cleanup_info_wf'_def)[1]
+          apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of arch_cap_has_cleanup'_def
+                         split: option.split capability.splits)
           apply (auto dest!: ctes_of_valid'
-                       simp: valid_cap'_def Kernel_C.maxIRQ_def X64.maxIRQ_def
-                             unat_ucast word_le_nat_alt)[1]
+                       simp: valid_cap'_def isCap_simps
+                             unat_ucast word_le_nat_alt cleanup_info_wf'_def arch_cleanup_info_wf'_def)[1]
          apply (clarsimp dest!: isCapDs)
          subgoal by (auto dest!: valid_capAligned ctes_of_valid'
                       simp: isCap_simps final_matters'_def o_def)
