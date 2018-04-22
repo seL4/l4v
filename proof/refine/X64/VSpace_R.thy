@@ -1885,7 +1885,7 @@ lemma dmo_writeCR3_invs_no_cicd'[wp]:
   done
 
 lemma valid_ioports_cr3_update[elim!]:
-  "valid_ioports' s \<Longrightarrow> valid_ioports' (s\<lparr>ksArchState := x64KSCurrentCR3_update (\<lambda>_. c) (ksArchState s)\<rparr>)"
+  "valid_ioports' s \<Longrightarrow> valid_ioports' (s\<lparr>ksArchState := x64KSCurrentUserCR3_update (\<lambda>_. c) (ksArchState s)\<rparr>)"
   by (clarsimp simp: valid_ioports'_simps)
 
 lemma setCurrentUserCR3_invs' [wp]:

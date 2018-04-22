@@ -788,18 +788,6 @@ lemma capUntypedSize_capBits:
   apply fastforce
   done
 
-
-definition
-  "portSubRange r r' \<equiv>
-    case (r, r') of
-         (Some (f, l), Some (f', l')) \<Rightarrow> f \<le> f' \<and> l' \<le> l
-       | _ \<Rightarrow> False"
-
-lemmas portRange_defs = portSubRange_def portRange_def
-lemma portSubRange_eq [simp]:
-  "portSubRange (portRange cap) (portRange cap) = isArchIOPortCap cap"
-  by (auto simp: portRange_defs isCap_simps
-          split: capability.splits arch_capability.splits)
 lemma sameRegionAs_def2:
  "sameRegionAs cap cap' = (\<lambda>cap cap'.
      (cap = cap'
