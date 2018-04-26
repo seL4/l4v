@@ -2173,7 +2173,8 @@ lemma finaliseCap_ccorres:
                           signed_shift_guard_simpler_32)
     apply (rule conjI)
      apply (simp add: word_less_nat_alt)
-    apply clarsimp
+    apply (rule conjI)
+     apply (auto simp: word_less_nat_alt)[1]
     apply (simp add: ccap_relation_def cap_zombie_cap_lift)
     apply (simp add: cap_to_H_def isZombieTCB_C_def ZombieTCB_C_def)
     apply (simp add: less_mask_eq word_less_nat_alt less_imp_neq)
@@ -2183,7 +2184,7 @@ lemma finaliseCap_ccorres:
     apply (thin_tac "a = b" for a b)+
     apply (subgoal_tac "P" for P)
      apply (subst add.commute, subst unatSuc, assumption)+
-     apply (rule conjI)
+     apply (intro impI, rule conjI)
       apply (rule word_eqI)
       apply (simp add: word_size word_ops_nth_size nth_w2p
                        less_Suc_eq_le is_aligned_nth)
