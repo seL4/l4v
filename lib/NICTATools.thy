@@ -17,6 +17,7 @@ imports
   (* Solves_Tac *)
   Rule_By_Method
   Eisbach_Methods
+  Time_Methods_Cmd
   Insulin
   ShowTypes
   AutoLevity_Hooks
