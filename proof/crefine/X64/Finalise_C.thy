@@ -1301,15 +1301,76 @@ lemma unat_shiftr_le_bound:
   done
 
 lemma flushTable_ccorres:
-  "ccorres dc xfdc (invs' and (\<lambda>s. asid \<le> mask asid_bits \<and> vptr < pptrBase))
-      (UNIV \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pt_' s = Ptr ptPtr})
+  "ccorres dc xfdc (invs' and page_table_at' ptPtr and (\<lambda>s. asid \<le> mask asid_bits \<and> vptr < pptrBase))
+      (UNIV \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr}
+            \<inter> {s. pt_' s = pte_Ptr ptPtr} \<inter> {s. vspace_' s = pml4e_Ptr vspace})
       [] (flushTable vspace vptr ptPtr asid) (Call flushTable_'proc)"
   apply (rule ccorres_gen_asm)
-  apply (cinit lift: asid_' vptr_' pt_')
-sorry
+  apply (cinit lift: asid_' vptr_' pt_' vspace_')
+   apply (rule ccorres_assert)
+   apply (rule ccorres_name_ksCurThread)
+   apply (rule_tac val="tcb_ptr_to_ctcb_ptr rv" and xf'="\<lambda>s. ksCurThread_' (globals s)"
+               in ccorres_abstract_known, ceqv)
+   apply (simp add: cte_C_size del: Collect_const)
+   apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_move_c_guard_tcb_ctes)+
+   apply (rule ccorres_symb_exec_r)
+     apply (rule ccorres_rel_imp)
+      apply (clarsimp simp: whileAnno_def objBits_simps archObjSize_def)
+      apply csymbr
+      apply (rule_tac i="0" and F="\<lambda>n s. page_table_at' ptPtr s" in ccorres_mapM_x_while')
+          apply (clarsimp simp: bit_simps)
+          apply (rule ccorres_guard_imp2)
+           apply (rule ccorres_pre_getObject_pte, rename_tac pte)
+           apply (rule ccorres_move_array_assertion_pt)
+           apply (rule ccorres_Guard_Seq)
+           apply (rule ccorres_move_array_assertion_pt)
+           apply (rule ccorres_rhs_assoc)
+           apply csymbr
+           apply (rule ccorres_abstract_cleanup)
+           apply (rule ccorres_move_array_assertion_pt)
+           apply ccorres_rewrite
+           apply wpc
+            apply (rule ccorres_cond_false, rule ccorres_return_Skip)
+           apply (rule ccorres_cond_true)
+           apply (rule_tac xf'=ret__int_' and val=1 and R=\<top> and R'=UNIV
+                            in ccorres_symb_exec_r_known_rv)
+              apply vcg
+              apply clarsimp
+             apply ceqv
+            apply ccorres_rewrite
+            apply (ctac (no_vcg) add: invalidateTranslationSingleASID_ccorres)
+           apply vcg
+          apply (clarsimp simp: unat_gt_0)
+          apply (rule conjI, clarsimp simp: cpte_relation_def upto_enum_word word_shift_by_3
+                                            typ_heap_simps
+                                     split: if_split_asm)
+          apply (rule conjI, clarsimp simp: bit_simps upto_enum_word cpte_relation_def
+                                            word_shift_by_3 typ_heap_simps
+                                     split: if_split)
+          apply (clarsimp simp: bit_simps)
+          apply (rule context_conjI, rule word_unat_less_le,
+                    clarsimp simp: word_le_not_less
+                            dest!:unat_less_helper)
+          apply clarsimp
+          apply (rule c_guard_abs_pte[rule_format])
+          apply (rule conjI, assumption,
+                     clarsimp simp: word_shift_by_3 page_table_at'_def bit_simps)
+          apply (drule_tac x="of_nat n" in spec)
+          apply (clarsimp simp: word_le_not_less[symmetric])
+          apply unat_arith
+         apply (clarsimp simp: bit_simps upto_enum_word)
+        apply (rule allI, rule conseqPre, vcg)
+        apply clarsimp
+       apply (wpsimp wp: getPTE_wp)
+      apply (clarsimp simp: bit_simps word_bits_def)
+     apply clarsimp
+    apply vcg
+   apply (rule conseqPre, vcg, clarsimp)
+  by (clarsimp simp: rf_sr_ksCurThread typ_heap_simps invs_cur'[simplified cur_tcb'_def]
+                        tcb_cnode_index_defs)
 
 lemma unmapPageTable_ccorres:
-  "ccorres dc xfdc (invs' and (\<lambda>s. asid \<le> mask asid_bits \<and> vaddr < pptrBase))
+  "ccorres dc xfdc (invs' and page_table_at' ptPtr and (\<lambda>s. asid \<le> mask asid_bits \<and> vaddr < pptrBase))
       (UNIV \<inter> {s. asid_' s = asid} \<inter> {s. vaddr___unsigned_long_' s = vaddr} \<inter> {s. pt_' s = Ptr ptPtr})
       [] (unmapPageTable asid vaddr ptPtr) (Call unmapPageTable_'proc)"
   apply (rule ccorres_gen_asm)
@@ -1372,9 +1433,9 @@ lemma unmapPageTable_ccorres:
         apply (simp,ccorres_rewrite,simp add:throwError_def)
         apply (rule ccorres_return_void_C[simplified dc_def])
        apply (clarsimp,wp)
-       apply (rule_tac Q'="\<lambda>_ s. invs' s" in hoare_post_imp_R)
+       apply (rule_tac Q'="\<lambda>_ s. invs' s \<and> page_table_at' ptPtr s" in hoare_post_imp_R)
         apply wp
-       apply simp
+       apply clarsimp
       apply (vcg exspec=lookupPDSlot_modifies)
      apply (simp,ccorres_rewrite,simp add:throwError_def)
      apply (rule ccorres_return_void_C[simplified dc_def])
