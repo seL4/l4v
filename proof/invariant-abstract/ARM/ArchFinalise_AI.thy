@@ -321,11 +321,20 @@ lemma dom_tcb_cap_cases_lt_ARCH [Finalise_AI_asms]:
 lemma (* unbind_notification_final *) [wp,Finalise_AI_asms]:
   "\<lbrace>is_final_cap' cap\<rbrace> unbind_notification t \<lbrace> \<lambda>rv. is_final_cap' cap\<rbrace>"
   unfolding unbind_notification_def
-  apply (wp final_cap_lift thread_set_caps_of_state_trivial hoare_drop_imps
-       | wpc | simp add: tcb_cap_cases_def)+
-  sorry
+  by (wpsimp wp: final_cap_lift thread_set_caps_of_state_trivial hoare_drop_imps 
+        simp: tcb_cap_cases_def)
+
+lemmas complete_yield_to_final_cap[wp] =
+    final_cap_lift [OF complete_yield_to_caps_of_state]
+
+lemmas unbind_from_sc_final_cap[wp] =
+    final_cap_lift [OF unbind_from_sc_caps_of_state]
 
 crunch is_final_cap'[wp]: prepare_thread_delete "is_final_cap' cap"
+
+crunches unbind_from_sc
+ for cte_wp_at[wp]: "cte_wp_at P c"
+  (wp: maybeM_inv)
 
 lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. final \<longrightarrow> is_final_cap' cap s
@@ -344,38 +353,41 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
         \<and> fst_cte_ptrs (fst rv) = fst_cte_ptrs cap
         \<and> vs_cap_ref cap = None\<rbrace>"
   apply (cases cap, simp_all split del: if_split cong: if_cong)
-            apply ((wp suspend_final_cap[where sl=slot]
+            apply ((wp suspend_final_cap[where sl=slot] get_simple_ko_wp
                       deleting_irq_handler_final[where slot=slot]
                       | simp add: o_def is_cap_simps fst_cte_ptrs_def
                                   dom_tcb_cap_cases_lt_ARCH tcb_cnode_index_def
                                   can_fast_finalise_def
                                   appropriate_cte_cap_def gen_obj_refs_def
                                   vs_cap_ref_def cap_cleanup_opt_def
-                      | intro impI TrueI ext conjI)+)[11]
-(*  apply (simp add: arch_finalise_cap_def split del: if_split)
+                      | intro impI TrueI ext conjI)+)[13]
+  apply (simp add: arch_finalise_cap_def split del: if_split)
   apply (rule hoare_pre)
    apply (wpsimp simp: cap_cleanup_opt_def arch_cap_cleanup_opt_def)+
-  done*) sorry
+  done
 
 crunch typ_at_arch[wp,Finalise_AI_asms]: arch_finalise_cap,prepare_thread_delete "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps unless_def assertE_def
         ignore: maskInterrupt )
 
 crunch tcb_at[wp]: prepare_thread_delete "\<lambda>s. tcb_at p s"
+crunch tcb_at[wp]: tcb_release_remove "\<lambda>s. tcb_at p s"
+crunch tcb_at[wp]: unbind_from_sc "\<lambda>s. tcb_at p s"
+  (ignore: tcb_release_remove wp: maybeM_inv hoare_drop_imps)
 
 lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
   "\<lbrace>valid_cap cap\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>"
   apply (cases cap, simp_all)
-            apply (wp suspend_valid_cap
+            apply (wp suspend_valid_cap get_simple_ko_wp
                      | simp add: o_def valid_cap_def cap_aligned_def
                                  valid_cap_Null_ext
                            split del: if_split
                      | clarsimp | rule conjI)+
-(*  apply (simp add: arch_finalise_cap_def)
+  apply (simp add: arch_finalise_cap_def)
   apply (rule hoare_pre)
   apply (wp|simp add: o_def valid_cap_def cap_aligned_def
                  split del: if_split|clarsimp|wpc)+
-  done*) sorry
+  done
 
 lemma (* arch_finalise_cap_invs *)[wp,Finalise_AI_asms]:
   "\<lbrace>invs and valid_cap (ArchObjectCap cap)\<rbrace>
@@ -430,7 +442,7 @@ lemma arch_finalise_cap_replaceable[wp]:
            | strengthen strg imp_and_strg tcb_cap_valid_imp_NullCap
            | simp add: simps reachable_pg_cap_def
            | wpc)+
-(*  apply (auto simp: valid_cap_def obj_at_def simps
+ (* apply (auto simp: valid_cap_def obj_at_def simps
                     a_type_def data_at_def
              elim!: tcb_cap_valid_imp_NullCap[rule_format, rotated]
              split: cap.splits arch_cap.splits vmpage_size.splits)[1]
@@ -495,11 +507,13 @@ lemma suspend_unlive':
   "\<lbrace>bound_tcb_at ((=) None) t and valid_mdb and valid_objs and tcb_at t \<rbrace>
       suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
-(*  apply (simp add: suspend_def set_thread_state_def set_object_def)
-  apply (wp | simp only: obj_at_exst_update)+
+  apply (simp add: suspend_def set_thread_state_def update_sched_context_def[simplified set_object_def]
+                   set_object_def maybeM_def get_tcb_obj_ref_def thread_get_def
+                   set_tcb_obj_ref_def set_sc_obj_ref_def)
+  apply (wp get_object_wp hoare_drop_imp | simp only: obj_at_exst_update | wpc)+
   apply (simp add: obj_at_def)
   apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
-  apply wp
+(*  apply (wp cancel_ipc_bound_tcb_at)
   apply (auto simp: pred_tcb_def2 live_def hyp_live_def dest: refs_of_live)
   done*) sorry
 
