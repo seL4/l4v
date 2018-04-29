@@ -2220,7 +2220,7 @@ lemma prepareThreadDelete_ccorres:
    (prepareThreadDelete thread) (Call Arch_prepareThreadDelete_'proc)"
   supply dc_simp[simp del]
   apply (cinit lift: thread_', rename_tac cthread)
-thm fpuThreadDelete_body_def
+thm fpuThreadDelete_body_def nativeThreadUsingFPU_body_def
   sorry (* FIXME x64: FPU stuff
    apply (rule ccorres_move_c_guard_tcb)
    apply (rule ccorres_pre_archThreadGet, rename_tac vcpuopt)
@@ -2308,25 +2308,26 @@ lemma finaliseCap_ccorres:
                           objBits_simps word_bits_conv
                           signed_shift_guard_simpler_64)
     apply (rule conjI)
-  sorry (*
      apply (simp add: word_less_nat_alt)
-    apply clarsimp
+    apply (rule conjI)
+     apply (auto simp: word_less_nat_alt word_le_not_less[symmetric] bit_simps objBits_defs)[1]
     apply (simp add: ccap_relation_def cap_zombie_cap_lift)
     apply (simp add: cap_to_H_def isZombieTCB_C_def ZombieTCB_C_def)
     apply (simp add: less_mask_eq word_less_nat_alt less_imp_neq)
-    apply (simp add: mod_mask_drop[where n=5] mask_def[where n=5]
+    apply (simp add: mod_mask_drop[where n=6] mask_def[where n=6]
                      less_imp_neq [OF word_mod_less_divisor]
-                     less_imp_neq Let_def)
+                     less_imp_neq Let_def objBits_simps')
     apply (thin_tac "a = b" for a b)+
     apply (subgoal_tac "P" for P)
      apply (subst add.commute, subst unatSuc, assumption)+
+     apply clarsimp
      apply (rule conjI)
       apply (rule word_eqI)
       apply (simp add: word_size word_ops_nth_size nth_w2p
                        less_Suc_eq_le is_aligned_nth)
       apply (safe, simp_all)[1]
-     apply (simp add: shiftL_nat ccap_relation_NullCap_iff)
-     apply (rule trans, rule unat_power_lower32[symmetric])
+     apply (simp add: shiftL_nat ccap_relation_NullCap_iff[symmetric, simplified ccap_relation_def])
+     apply (rule trans, rule unat_power_lower64[symmetric])
       apply (simp add: word_bits_conv)
      apply (rule unat_cong, rule word_eqI)
      apply (simp add: word_size word_ops_nth_size nth_w2p
@@ -2363,8 +2364,8 @@ lemma finaliseCap_ccorres:
                         word_bw_assocs)
        apply (simp add: objBits_simps ctcb_ptr_to_tcb_ptr_def)
        apply (frule is_aligned_add_helper[where p="tcbptr - ctcb_offset" and d=ctcb_offset for tcbptr])
-        apply (simp add: ctcb_offset_def)
-       apply (simp add: mask_def irq_opt_relation_def)
+        apply (simp add: ctcb_offset_defs objBits_defs)
+       subgoal sorry (*apply (simp add: mask_def objBits_defs) *) (* FIXME x64: c code needs change for tcbArchCNodeEntries *)
       apply (simp add: cap_get_tag_isCap)
      apply wp+
    apply (rule ccorres_if_lhs)
@@ -2377,9 +2378,10 @@ lemma finaliseCap_ccorres:
    apply (rule ccorres_if_lhs)
     apply (simp add: Collect_False Collect_True Let_def true_def
                 del: Collect_const)
-    apply (rule_tac P="(capIRQ cap) \<le>  ARM_HYP.maxIRQ" in ccorres_gen_asm)
+    apply (rule_tac P="(capIRQ cap) \<le>  X64.maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
-    apply (rule ccorres_symb_exec_r)
+    apply csymbr
+    apply csymbr
       apply (rule_tac xf'=irq_' in ccorres_abstract,ceqv)
       apply (rule_tac P="rv' = ucast (capIRQ cap)" in ccorres_gen_asm2)
       apply (ctac(no_vcg) add: deletingIRQHandler_ccorres)
@@ -2389,9 +2391,6 @@ lemma finaliseCap_ccorres:
        apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
        apply (simp add: ccap_relation_NullCap_iff split: if_split)
       apply wp
-     apply vcg
-    apply (rule conseqPre,vcg)
-    apply clarsimp
    apply (rule ccorres_if_lhs)
     apply simp
     apply (rule ccorres_fail)
@@ -2430,8 +2429,8 @@ lemma finaliseCap_ccorres:
          apply clarsimp
         apply (clarsimp simp: isCap_simps valid_cap'_def )
       apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def ccap_relation_def isCap_simps
-      c_valid_cap_def cap_thread_cap_lift_def cap_to_H_def
-      ctcb_ptr_to_tcb_ptr_def Let_def
+                            c_valid_cap_def cap_thread_cap_lift_def cap_to_H_def
+                            ctcb_ptr_to_tcb_ptr_def Let_def
                    split: option.splits cap_CL.splits if_splits)
      apply clarsimp
      apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
@@ -2441,18 +2440,18 @@ lemma finaliseCap_ccorres:
    apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
    apply (frule(1) ccap_relation_IRQHandler_mask)
    apply (clarsimp simp: isCap_simps irqInvalid_def
-                      valid_cap'_def ARM_HYP.maxIRQ_def
+                      valid_cap'_def X64.maxIRQ_def
                       Kernel_C.maxIRQ_def)
     apply (rule irq_opt_relation_Some_ucast', simp)
     apply (clarsimp simp: isCap_simps irqInvalid_def
-                      valid_cap'_def ARM_HYP.maxIRQ_def
+                      valid_cap'_def X64.maxIRQ_def
                       Kernel_C.maxIRQ_def)
    apply fastforce
   apply clarsimp
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
   apply (frule(1) ccap_relation_IRQHandler_mask)
   apply (clarsimp simp add:mask_eq_ucast_eq)
-  done *)
+  done
   end
 
 end
