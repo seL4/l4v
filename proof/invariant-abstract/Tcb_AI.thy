@@ -212,12 +212,6 @@ lemma out_st_tcb:
   apply (rule thread_set_no_change_tcb_state, rule x)
   done
 
-lemma out_emptyable:
-  assumes x: "\<And>tcb v. tcb_state  (fn v tcb) = tcb_state  tcb"
-  shows      "\<lbrace>emptyable sl\<rbrace> option_update_thread t fn v
-              \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
-  by (wp emptyable_lift out_typ_at out_st_tcb x)
-
 lemma inQ_residue[simp]:
   "(P \<and> Q \<and> (P \<longrightarrow> R)) = (P \<and> Q \<and> R)"
   by fastforce
@@ -384,12 +378,6 @@ lemma tcb_cap_always_valid_strg:
          \<longrightarrow> tcb_cap_valid cap (t, p) s"
   by (clarsimp simp: tcb_cap_valid_def st_tcb_def2 tcb_at_def
               split: option.split_asm)
-
-lemma thread_set_emptyable[wp]:
-  assumes x: "\<And>tcb. tcb_state (fn tcb) = tcb_state tcb"
-  shows      "\<lbrace>emptyable sl\<rbrace> thread_set fn p \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
-  by (wp emptyable_lift x thread_set_no_change_tcb_state)
-
 
 crunch not_cte_wp_at[wp]: unbind_maybe_notification "\<lambda>s. \<forall>cp\<in>ran (caps_of_state s). P cp"
   (wp: thread_set_caps_of_state_trivial simp: tcb_cap_cases_def)

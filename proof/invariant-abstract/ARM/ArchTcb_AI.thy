@@ -256,7 +256,7 @@ lemma tc_invs[Tcb_AI_asms]:
              hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
              thread_set_tcb_ipc_buffer_cap_cleared_invs
              thread_set_invs_trivial[OF ball_tcb_cap_casesI]
-             hoare_vcg_all_lift thread_set_valid_cap out_emptyable
+             hoare_vcg_all_lift thread_set_valid_cap
              check_cap_inv [where P="valid_cap c" for c]
              check_cap_inv [where P="tcb_cap_valid c p" for c p]
              check_cap_inv[where P="cte_at p0" for p0]
@@ -269,7 +269,6 @@ lemma tc_invs[Tcb_AI_asms]:
              thread_set_ipc_tcb_cap_valid
              static_imp_wp static_imp_conj_wp)[1]
         | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
-                    emptyable_def
                del: hoare_True_E_R
         | wpc
         | strengthen use_no_cap_to_obj_asid_strg

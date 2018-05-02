@@ -352,16 +352,10 @@ lemma st_tcb_at_valid_st2:
   apply (simp add: valid_obj_def valid_tcb_def)
   done
 
-
-definition
- "emptyable \<equiv> \<lambda>p s. (tcb_at (fst p) s \<and> snd p = tcb_cnode_index 2) \<longrightarrow>
-                          st_tcb_at halted (fst p) s"
-
-
 locale delete_one_abs =
   fixes state_ext_type :: "('a :: state_ext) itself"
   assumes delete_one_invs:
-    "\<And>p. \<lbrace>invs and emptyable p\<rbrace> (cap_delete_one p :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
+    "\<And>p. \<lbrace>invs\<rbrace> (cap_delete_one p :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
 
   assumes delete_one_deletes:
     "\<lbrace>\<top>\<rbrace> (cap_delete_one sl :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) sl\<rbrace>"
@@ -1000,8 +994,8 @@ lemma reply_cancel_ipc_invs:
           apply (auto simp: tcb_cap_cases_def tcb_sched_context_tcb_at_def obj_at_def get_tcb_def)
   done
 
-lemma (in delete_one_abs) cancel_ipc_invs[wp]:
-  "\<lbrace>invs and tcb_sched_context_tcb_at (\<lambda>x. x = None) t\<rbrace> (cancel_ipc t :: (unit,'a) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
+lemma cancel_ipc_invs[wp]:
+  "\<lbrace>invs and tcb_sched_context_tcb_at (\<lambda>x. x = None) t\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cancel_ipc_def)
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (case_tac state, simp_all)
@@ -1009,7 +1003,6 @@ lemma (in delete_one_abs) cancel_ipc_invs[wp]:
                             hoare_weaken_pre [OF blocked_cancel_ipc_invs]
                             hoare_weaken_pre [OF cancel_signal_invs]
                             hoare_weaken_pre [OF reply_cancel_ipc_invs]
-                            delete_one_invs
                      elim!: pred_tcb_weakenE)
   done
 
@@ -1149,13 +1142,12 @@ lemma blocked_cancel_ipc_it[wp]:
 crunch it[wp]: cancel_ipc "\<lambda>(s::'a state). P (idle_thread s)"
   (wp: maybeM_inv)
 end
-
-lemma (in delete_one_abs) reply_cancel_ipc_no_reply_cap:
+(*
+lemma reply_cancel_ipc_no_reply_cap:
   notes hoare_pre [wp_pre del]
   shows "\<lbrace>invs and tcb_at t\<rbrace> (reply_cancel_ipc t r:: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv s. \<not> has_reply_cap t s\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
   apply wp
-sorry (*
      apply (rule_tac Q="\<lambda>rvp s. cte_wp_at (\<lambda>c. c = cap.NullCap) x s \<and>
                                 (\<forall>sl. sl \<noteq> x \<longrightarrow>
                                   caps_of_state s sl \<noteq> Some (cap.ReplyCap t False))"
@@ -1186,7 +1178,7 @@ sorry (*
   done*) (* RT: the statement is probably wrong *)
 
 
-lemma (in delete_one_abs) cancel_ipc_no_reply_cap:
+lemma cancel_ipc_no_reply_cap:
   shows "\<lbrace>invs and tcb_at t\<rbrace> (cancel_ipc t :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv s. \<not> has_reply_cap t s\<rbrace>"
   apply (simp add: cancel_ipc_def)
 sorry
@@ -1202,7 +1194,7 @@ sorry
   done *) (* RT: the statement is probably wrong *)
 
 
-lemma (in delete_one_abs) suspend_invs:
+lemma suspend_invs:
   "\<lbrace>invs and tcb_at t and (\<lambda>s. t \<noteq> idle_thread s)\<rbrace>
    (suspend t :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
 sorry (*  apply (simp add: suspend_def)
@@ -1239,25 +1231,25 @@ crunch cte_wp_at[wp]: cancel_signal "cte_wp_at P p"
 
 crunch cte_wp_at[wp]: reply_remove_tcb "cte_wp_at P p"
   (wp: crunch_wps)
-
+(*
 locale delete_one_pre =
   assumes delete_one_cte_wp_at_preserved:
     "(\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap) \<Longrightarrow>
      \<lbrace>cte_wp_at P sl\<rbrace> (cap_delete_one sl' :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. cte_wp_at P sl\<rbrace>"
+*)
 
-
-lemma (in delete_one_pre) reply_cancel_ipc_cte_wp_at_preserved:
+lemma reply_cancel_ipc_cte_wp_at_preserved:
   "(\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap) \<Longrightarrow>
   \<lbrace>cte_wp_at P p\<rbrace> (reply_cancel_ipc t r:: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
   unfolding reply_cancel_ipc_def
-  apply (wpsimp wp: select_wp delete_one_cte_wp_at_preserved)
+  apply (wpsimp wp: select_wp)
    apply (rule_tac Q="\<lambda>_. cte_wp_at P p" in hoare_post_imp, clarsimp)
    apply (wpsimp wp: thread_set_cte_wp_at_trivial simp: ran_tcb_cap_cases)
   apply assumption
   done
 
 
-lemma (in delete_one_pre) cancel_ipc_cte_wp_at_preserved:
+lemma cancel_ipc_cte_wp_at_preserved:
   "(\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap) \<Longrightarrow>
   \<lbrace>cte_wp_at P p\<rbrace> (cancel_ipc t :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
   apply (simp add: cancel_ipc_def)
@@ -1273,7 +1265,7 @@ lemma set_sc_yield_from_update_cte_wp_at [wp]:
   "\<lbrace>cte_wp_at P c\<rbrace> set_sc_obj_ref sc_yield_from_update t sc \<lbrace>\<lambda>rv. cte_wp_at P c\<rbrace>"
   by wp
 
-lemma (in delete_one_pre) suspend_cte_wp_at_preserved:
+lemma suspend_cte_wp_at_preserved:
   "(\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap) \<Longrightarrow>
   \<lbrace>cte_wp_at P p\<rbrace> (suspend tcb :: (unit,det_ext) s_monad) \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>"
   by (simp add: suspend_def) (wpsimp wp: cancel_ipc_cte_wp_at_preserved)
@@ -1905,9 +1897,5 @@ lemma cancel_badged_sends_invs[wp]:
    apply (fastforce simp: get_refs_def2)
   apply wpsimp
   done
-
-lemma real_cte_emptyable_strg:
-  "real_cte_at p s \<longrightarrow> emptyable p s"
-  by (clarsimp simp: emptyable_def obj_at_def is_tcb is_cap_table)
 
 end

@@ -496,24 +496,6 @@ lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
 
 lemmas finalise_cap_makes_halted = finalise_cap_makes_halted_proof
 
-lemma deleting_irq_handler_emptyable[wp, CNodeInv_AI_assms]:
-  "\<lbrace>emptyable sl and invs\<rbrace> deleting_irq_handler param_a \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  sorry
-
-lemma arch_finalise_cap_emptyable[wp, CNodeInv_AI_assms]:
-  "\<lbrace>emptyable sl\<rbrace> arch_finalise_cap param_a param_b \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  sorry
-
-lemma finalise_cap_emptyable[wp, CNodeInv_AI_assms]:
-  "\<lbrace>emptyable sl and (invs and valid_mdb)\<rbrace> finalise_cap param_a param_b \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  sorry
-(*
-crunch emptyable[wp, CNodeInv_AI_assms]: finalise_cap "\<lambda>(s::det_ext state). emptyable sl s"
-  (simp: crunch_simps set_object_def rule: emptyable_lift
-     wp: crunch_wps suspend_emptyable unbind_notification_invs
-         unbind_maybe_notification_invs maybeM_inv)
-*)
-
 lemma nat_to_cref_0_replicate [CNodeInv_AI_assms]:
   "\<And>n. n < word_bits \<Longrightarrow> nat_to_cref n 0 = replicate n False"
   apply (subgoal_tac "nat_to_cref n (unat (of_bl (replicate n False))) = replicate n False")
@@ -576,7 +558,6 @@ lemma rec_del_invs'':
            and (\<lambda>s. \<not> exposed_rdcall call
                        \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {})
                                 (slot_rdcall call) s)
-           and emptyable (slot_rdcall call)
            and (\<lambda>s. case call of ReduceZombieCall cap sl ex \<Rightarrow>
                                \<not> cap_removeable cap sl
                                \<and> (\<forall>t\<in>obj_refs cap. halted_if_tcb t s)
@@ -589,8 +570,7 @@ lemma rec_del_invs'':
                                    post_cap_delete_pre (snd rv) ((caps_of_state s) (sl \<mapsto> cap.NullCap)))
                           | ReduceZombieCall cap sl x \<Rightarrow>
                              (\<not> x \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) sl s)
-                          | _ \<Rightarrow> True) \<and>
-               emptyable (slot_rdcall call) s\<rbrace>,
+                          | _ \<Rightarrow> True)\<rbrace>,
        \<lbrace>\<lambda>rv. Q and invs\<rbrace>"
 (*proof (induct rule: rec_del.induct,
        simp_all only: rec_del_fails)
@@ -600,7 +580,7 @@ lemma rec_del_invs'':
     apply (simp only: split_def)
     apply wp
      apply (simp(no_asm))
-     apply (wp empty_slot_invs empty_slot_emptyable)[1]
+     apply (wp empty_slot_invs)[1]
     apply (rule hoare_pre_spec_validE)
      apply (rule spec_strengthen_postE, unfold slot_rdcall.simps)
       apply (rule "1.hyps"[simplified rec_del_call.simps slot_rdcall.simps])
@@ -951,8 +931,7 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
          and tcb_cap_valid cap ptr'
          and cte_wp_at (weak_derived cap) ptr
          and cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap) ptr
-         and ex_cte_cap_wp_to (appropriate_cte_cap cap) ptr' and K (ptr \<noteq> ptr')
-         and K (\<not> is_master_reply_cap cap)\<rbrace>
+         and ex_cte_cap_wp_to (appropriate_cte_cap cap) ptr' and K (ptr \<noteq> ptr')\<rbrace>
      cap_move cap ptr ptr'
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def

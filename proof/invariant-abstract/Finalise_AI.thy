@@ -64,7 +64,7 @@ locale Finalise_AI_1 =
   assumes obj_ref_ofI: "\<And> cap x. obj_refs cap = {x} \<Longrightarrow> obj_ref_of cap = x"
   assumes empty_slot_invs:
     "\<And>sl info. \<lbrace>\<lambda> (s :: 'a state). invs s \<and> cte_wp_at (replaceable s sl cap.NullCap) sl s \<and>
-          emptyable sl s \<and> (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre info ((caps_of_state s) (sl \<mapsto> NullCap)))\<rbrace>
+          (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre info ((caps_of_state s) (sl \<mapsto> NullCap)))\<rbrace>
      empty_slot sl info
      \<lbrace>\<lambda>rv. invs\<rbrace>"
   assumes dom_tcb_cap_cases_lt:
@@ -148,13 +148,8 @@ text {* Properties about empty_slot *}
 definition
  "halted_if_tcb \<equiv> \<lambda>t s. tcb_at t s \<longrightarrow> st_tcb_at halted t s"
 
-lemma halted_emptyable:
-  "\<And>ref. halted_if_tcb t s \<Longrightarrow> emptyable (t, ref) s"
-  by (simp add: halted_if_tcb_def emptyable_def)
-
-
 lemma tcb_cap_valid_NullCapD:
-  "\<And>cap sl. \<lbrakk> tcb_cap_valid cap sl s; \<not> is_master_reply_cap cap \<rbrakk> \<Longrightarrow>
+  "\<And>cap sl. \<lbrakk> tcb_cap_valid cap sl s \<rbrakk> \<Longrightarrow>
    tcb_cap_valid cap.NullCap sl s"
   apply (clarsimp simp: tcb_cap_valid_def valid_ipc_buffer_cap_def
                  elim!: pred_tcb_weakenE split: option.splits)
@@ -166,9 +161,9 @@ lemma tcb_cap_valid_NullCapD:
   done
 
 
-lemma emptyable_valid_NullCapD:
-  "\<lbrakk> emptyable sl s; valid_objs s \<rbrakk> \<Longrightarrow> tcb_cap_valid cap.NullCap sl s"
-  apply (clarsimp simp: emptyable_def tcb_cap_valid_def
+lemma valid_NullCapD:
+  "\<lbrakk> valid_objs s \<rbrakk> \<Longrightarrow> tcb_cap_valid cap.NullCap sl s"
+  apply (clarsimp simp: tcb_cap_valid_def
                         valid_ipc_buffer_cap_def)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb split: option.split)
   apply (erule(1) valid_objsE)
@@ -177,9 +172,9 @@ lemma emptyable_valid_NullCapD:
   done
 
 
-lemma emptyable_valid_NullCap_strg:
-  "emptyable sl s \<and> valid_objs s \<longrightarrow> tcb_cap_valid cap.NullCap sl s"
-  by (simp add: emptyable_valid_NullCapD)
+lemma valid_NullCap_strg:
+  " valid_objs s \<longrightarrow> tcb_cap_valid cap.NullCap sl s"
+  by (simp add: valid_NullCapD)
 
 
 lemma tcb_cap_valid_pspaceI[intro]:
@@ -190,19 +185,6 @@ lemma tcb_cap_valid_pspaceI[intro]:
 crunch valid_objs[wp]: deleted_irq_handler "valid_objs"
 
 
-lemma emptyable_rvk[simp]:
-  "emptyable sl (is_original_cap_update f s) = emptyable sl s"
-  by (simp add: emptyable_def)
-
-
-lemma set_cdt_emptyable[wp]:
-  "\<lbrace>emptyable sl\<rbrace> set_cdt m \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
-  by (simp add: set_cdt_def emptyable_def | wp)+
-
-lemma emptyable_more_update[simp]:
-  "emptyable sl (trans_state f s) = emptyable sl s"
-  by (simp add: emptyable_def)
-
 lemma tcb_cp_valid_trans_state_update[simp]: "tcb_cap_valid cap sl
          (trans_state f s) = tcb_cap_valid cap sl s"
   apply (simp add: tcb_cap_valid_def)
@@ -212,12 +194,12 @@ crunches post_cap_deletion
   for valid_objs[wp]: "valid_objs"
 
 lemma empty_slot_valid_objs[wp]:
-  "\<lbrace>valid_objs and emptyable sl\<rbrace> empty_slot sl irqopt \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  "\<lbrace>valid_objs\<rbrace> empty_slot sl irqopt \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (simp add: empty_slot_def)
   apply (rule hoare_pre)
    apply (wp set_cap_valid_objs set_cdt_valid_objs set_cdt_valid_cap
                  | simp add: trans_state_update[symmetric] del: trans_state_update| wpcw
-                 | strengthen emptyable_valid_NullCap_strg
+                 | strengthen valid_NullCap_strg
                  | wp_once hoare_drop_imps)+
   done
 
@@ -359,40 +341,6 @@ lemma post_cap_deletion_invs:
    apply (wp arch_post_cap_deletion_invs | wpc)+
   apply (clarsimp simp: post_cap_delete_pre_def split: cap.splits)
   done
-
-(*
-lemma emptyable_no_reply_cap:
-  assumes e: "emptyable sl s"
-  and   mdb: "reply_caps_mdb (mdb s) (caps_of_state s)"
-  and    vr: "valid_reply_caps s"
-  and    vm: "valid_reply_masters s"
-  and    vo: "valid_objs s"
-  and    rc: "caps_of_state s sl' = Some (cap.ReplyCap t False)"
-  and    rp: "mdb s sl' = Some sl"
-  shows      "False"
-proof -
-  have rm:
-    "caps_of_state s sl = Some (cap.ReplyCap t True)"
-    using mdb rc rp unfolding reply_caps_mdb_def
-    by fastforce
-  have tcb_slot:
-    "sl = (t, tcb_cnode_index 2)"
-    using vm rm unfolding valid_reply_masters_def
-    by (fastforce simp: cte_wp_at_caps_of_state)
-  have tcb_halted:
-    "st_tcb_at halted t s"
-    using vo rm tcb_slot e unfolding emptyable_def
-    by (fastforce dest: caps_of_state_valid_cap simp: valid_cap_def)
-  have tcb_not_halted:
-    "st_tcb_at (Not \<circ> halted) t s"
-    using vr rc unfolding valid_reply_caps_def
-    by (fastforce simp add: has_reply_cap_def cte_wp_at_caps_of_state
-                 simp del: split_paired_Ex
-                    elim!: pred_tcb_weakenE)
-  show ?thesis
-    using tcb_halted tcb_not_halted
-    by (clarsimp simp: st_tcb_def2)
-qed *)
 
 lemmas (in Finalise_AI_1) obj_ref_ofI' = obj_ref_ofI[OF obj_ref_elemD]
 
@@ -961,8 +909,7 @@ lemma tcb_cap_valid_imp':
 
 
 lemma tcb_cap_valid_imp_NullCap:
-  "(\<not> is_master_reply_cap cap)
-     \<longrightarrow> (tcb_cap_valid cap sl s \<longrightarrow> tcb_cap_valid cap.NullCap sl s)"
+  "(tcb_cap_valid cap sl s \<longrightarrow> tcb_cap_valid cap.NullCap sl s)"
   apply (strengthen tcb_cap_valid_imp')
   apply (clarsimp simp: ran_tcb_cap_cases valid_ipc_buffer_cap_def
                  split: Structures_A.thread_state.split_asm)
@@ -1110,10 +1057,10 @@ lemma cap_delete_one_cte_wp_at_preserved:
   apply (wp cap_delete_one_caps_of_state)
   apply (clarsimp simp: cte_wp_at_caps_of_state x)
   done
-
+(*
 interpretation delete_one_pre
   by (unfold_locales, wp cap_delete_one_cte_wp_at_preserved)
-
+*)
 lemma (in Finalise_AI_1) finalise_cap_equal_cap[wp]:
   "\<lbrace>cte_wp_at ((=) cap) sl\<rbrace>
      finalise_cap cap fin
@@ -1137,153 +1084,17 @@ apply (wpsimp wp: suspend_cte_wp_at_preserved)
 thm suspend_cte_wp_at_preserved
   sorry
 
-lemma emptyable_lift:
-  assumes typ_at: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at T t s)\<rbrace>"
-  assumes st_tcb: "\<And>t. \<lbrace>st_tcb_at halted t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at halted t\<rbrace>"
-  shows "\<lbrace>emptyable t\<rbrace> f \<lbrace>\<lambda>_. emptyable t\<rbrace>"
-  unfolding emptyable_def
-  apply (subst imp_conv_disj)+
-  apply (rule hoare_vcg_disj_lift)
-   apply (simp add: tcb_at_typ)
-   apply (rule typ_at)
-  apply (rule st_tcb)
-  done
-
-
-crunch emptyable[wp]: set_simple_ko "emptyable sl"
-  (rule: emptyable_lift)
-
-lemma sts_emptyable:
-  "\<lbrace>emptyable sl and st_tcb_at (\<lambda>st. \<not> halted st) t\<rbrace>
-    set_thread_state t st
-   \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
-  apply (simp add: emptyable_def)
-  apply (subst imp_conv_disj)+
-  apply (wp hoare_vcg_disj_lift sts_st_tcb_at_cases | simp add: tcb_at_typ)+
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  done
-
-
-lemma unbind_notification_emptyable[wp]:
-  "\<lbrace> emptyable sl \<rbrace> unbind_notification t \<lbrace> \<lambda>rv. emptyable sl\<rbrace>"
-  unfolding unbind_notification_def
-  by (wpsimp wp: emptyable_lift hoare_drop_imps thread_set_no_change_tcb_state
-             simp: update_sk_obj_ref_def)+
-
-lemma unbind_maybe_notification_emptyable[wp]:
-  "\<lbrace> emptyable sl \<rbrace> unbind_maybe_notification r \<lbrace> \<lambda>rv. emptyable sl\<rbrace>"
-  by (wpsimp wp: emptyable_lift)
-
-lemma sched_context_maybe_unbind_ntfn_emptyable[wp]:
-  "\<lbrace> emptyable sl \<rbrace> sched_context_maybe_unbind_ntfn r \<lbrace> \<lambda>rv. emptyable sl\<rbrace>"
-  by (wpsimp wp: emptyable_lift)
-
-lemma sched_context_unbind_ntfn_emptyable[wp]:
-  "\<lbrace> emptyable sl \<rbrace> sched_context_unbind_ntfn r \<lbrace> \<lambda>rv. emptyable sl\<rbrace>"
-  by (wpsimp wp: emptyable_lift)
-(*
-lemma sched_context_unbind_yield_from_st_tcb_at[wp]:
-   assumes x[simp]: "P Running" shows
-  "\<lbrace>st_tcb_at P t\<rbrace> sched_context_unbind_yield_from scptr \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
-  by (wpsimp simp: sched_context_unbind_yield_from_def maybeM_def)
-*)
-
-lemma reply_unlink_tcb_emptyable[wp]:
-  "\<lbrace> emptyable sl \<rbrace> reply_unlink_tcb r \<lbrace> \<lambda>rv. emptyable sl\<rbrace>"
-  by (wpsimp wp: emptyable_lift reply_unlink_tcb_typ_at reply_unlink_tcb_st_tcb_at)
-
 lemma reply_clear_tcb_st_tcb_at[wp]:
    assumes x[simp]: "P Inactive" shows
   "\<lbrace>st_tcb_at P t\<rbrace> reply_clear_tcb scptr \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   by (wpsimp simp: reply_clear_tcb_def
           wp: reply_unlink_tcb_st_tcb_at hoare_drop_imps)
 
-lemma sched_context_unbind_yield_from_emptyable[wp]:
-  "\<lbrace> emptyable sl \<rbrace> sched_context_unbind_yield_from r \<lbrace> \<lambda>rv. emptyable sl\<rbrace>"
-  apply_trace (wpsimp wp: emptyable_lift)
-  sorry
-
-lemma cancel_all_signals_emptyable_helper:
-  "\<lbrace>emptyable sl and (\<lambda>s. \<forall>t \<in> set q. st_tcb_at (\<lambda>st. \<not> halted st) t s)\<rbrace>
-     mapM_x (\<lambda>t. do y \<leftarrow> set_thread_state t Structures_A.Restart;
-                    do_extended_op (possible_switch_to t) od) q
-   \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
-  apply (rule hoare_strengthen_post)
-   apply (rule mapM_x_wp [where S="set q", simplified])
-    apply_trace (wp, simp, wp hoare_vcg_const_Ball_lift sts_emptyable sts_st_tcb_at_cases)
-     apply simp+
-  done
-
-lemma cancel_all_ipc_emptyable_helper:
-  "\<lbrace>emptyable sl and (\<lambda>s. \<forall>t \<in> set q. st_tcb_at (\<lambda>st. \<not> halted st) t s)\<rbrace>
-     mapM_x (\<lambda>t. do st <- get_thread_state t;
-                 reply_opt <- case st of BlockedOnReceive x xa \<Rightarrow> return xa | _ \<Rightarrow> return None;
-                 y <- when (\<exists>y. reply_opt = Some y) (reply_unlink_tcb (the reply_opt));
-                 y <- set_thread_state t Restart;
-                 do_extended_op (possible_switch_to t)
-              od) q
-   \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
-  apply (rule hoare_strengthen_post)
-   apply (rule mapM_x_wp [where S="set q", simplified])
-(*    apply (rule hoare_seq_ext[OF _ gts_sp])*)
-    apply (wp, simp,
- wp hoare_vcg_const_Ball_lift sts_emptyable sts_st_tcb_at_cases)
-apply (case_tac reply_opt; simp)
-apply wpsimp
-apply (wpsimp wp: reply_unlink_tcb_st_tcb_at)
-(*     apply simp+
-  done*) sorry
-
-
-lemma reply_clear_tcb_emptyable[wp]:
-  "\<lbrace> emptyable sl \<rbrace> reply_clear_tcb r \<lbrace> \<lambda>rv. emptyable sl\<rbrace>"
-  by (wpsimp wp: emptyable_lift)
-
-lemma sched_context_clear_replies_emptyable[wp]:
-  "\<lbrace> emptyable sl \<rbrace> sched_context_clear_replies r \<lbrace> \<lambda>rv. emptyable sl\<rbrace>"
-  by (wpsimp wp: emptyable_lift)
-
-lemma sched_context_unbind_all_tcbs_emptyable[wp]:
-  "\<lbrace> emptyable sl \<rbrace> sched_context_unbind_all_tcbs r \<lbrace> \<lambda>rv. emptyable sl\<rbrace>"
-  by (wpsimp wp: emptyable_lift)
-
-lemma cancel_all_signals_emptyable[wp]:
-  "\<lbrace>invs and emptyable sl\<rbrace> cancel_all_signals ptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  unfolding cancel_all_signals_def unbind_maybe_notification_def
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (rule hoare_pre)
-  apply (wp cancel_all_signals_emptyable_helper
-            hoare_vcg_const_Ball_lift
-       | wpc
-       | simp)+
-  apply (auto elim: ntfn_queued_st_tcb_at)
-  done
-
-lemma cancel_all_ipc_emptyable[wp]:
-  "\<lbrace>invs and emptyable sl\<rbrace> cancel_all_ipc ptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  apply (simp add: cancel_all_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-  apply (case_tac ep, simp_all)
-    apply (wp, simp)
-   apply (wp cancel_all_ipc_emptyable_helper hoare_vcg_const_Ball_lift
-        | simp add: get_ep_queue_def
-        | clarsimp simp: invs_def valid_state_def valid_pspace_def
-                         ep_queued_st_tcb_at)+
-  done
-
-
-lemma (in Finalise_AI_1) fast_finalise_emptyable[wp]:
-  "\<lbrace>invs and emptyable sl\<rbrace> fast_finalise cap fin \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
-  apply (simp add: fast_finalise_def2)
-  apply (case_tac cap, simp_all add: can_fast_finalise_def)
-      apply (wpsimp wp: unbind_maybe_notification_invs hoare_drop_imps simp: o_def)+
-  done
-
 locale Finalise_AI_2 = Finalise_AI_1 a b
   for a :: "('a :: state_ext) itself"
   and b :: "('b :: state_ext) itself" +
   assumes cap_delete_one_invs[wp]:
-    "\<And> ptr. \<lbrace>invs and emptyable ptr\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv. invs :: 'a state \<Rightarrow> bool\<rbrace>"
+    "\<And> ptr. \<lbrace>invs\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv. invs :: 'a state \<Rightarrow> bool\<rbrace>"
 
 lemma cap_delete_one_deletes[wp]:
   "\<lbrace>\<top>\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) ptr\<rbrace>"
@@ -1292,54 +1103,16 @@ lemma cap_delete_one_deletes[wp]:
   apply (clarsimp elim!: cte_wp_at_weakenE)
   done
 
+
 context Finalise_AI_2 begin
 
 sublocale delete_one_abs a' for a' :: "('a :: state_ext) itself"
   by (unfold_locales; wp cap_delete_one_deletes cap_delete_one_caps_of_state)
 
 end
-(*
-lemma cap_delete_one_deletes_reply:
-  "\<lbrace>cte_wp_at ((=) (cap.ReplyCap t)) slot and valid_reply_caps\<rbrace>
-    cap_delete_one slot
-   \<lbrace>\<lambda>rv s. \<not> has_reply_cap t s\<rbrace>"
-  apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
-  apply wp
-     apply (rule_tac Q="\<lambda>rv s. \<forall>sl'. if (sl' = slot)
-                               then cte_wp_at (\<lambda>c. c = cap.NullCap) sl' s
-                               else caps_of_state s sl' \<noteq> Some (cap.ReplyCap t)"
-                  in hoare_post_imp)
-      apply (clarsimp simp add: has_reply_cap_def cte_wp_at_caps_of_state
-                      simp del: split_paired_All split_paired_Ex
-                         split: if_split_asm elim!: allEI)
-     apply (rule hoare_vcg_all_lift)
-     apply simp
-     apply (wp static_imp_wp empty_slot_deletes empty_slot_caps_of_state get_cap_wp)+
-  apply (fastforce simp: cte_wp_at_caps_of_state valid_reply_caps_def
-                        is_cap_simps unique_reply_caps_def
-              simp del: split_paired_All)
-  done
-*)
-(*
-lemma cap_delete_one_reply_st_tcb_at:
-  "\<lbrace>pred_tcb_at proj P t and cte_wp_at ((=) (cap.ReplyCap t')) slot\<rbrace>
-    cap_delete_one slot
-   \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
-  apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
-  apply (rule hoare_seq_ext [OF _ get_cap_sp])
-  apply (rule hoare_assume_pre)
-  apply (clarsimp simp: cte_wp_at_caps_of_state when_def)
-  apply wpsimp
-  done
-*)
-lemma get_irq_slot_emptyable[wp]:
-  "\<lbrace>invs\<rbrace> get_irq_slot irq \<lbrace>emptyable\<rbrace>"
-  apply (rule hoare_strengthen_post)
-   apply (rule get_irq_slot_real_cte)
-  apply (clarsimp simp: emptyable_def is_cap_table is_tcb elim!: obj_atE)
-  done
 
 crunch (in Finalise_AI_2) invs[wp]: deleting_irq_handler "invs :: 'a state \<Rightarrow> bool"
+  (wp: maybeM_inv)
 
 crunch tcb_at[wp]: unbind_notification "tcb_at t"
 
@@ -1687,18 +1460,5 @@ lemma cap_table_at_length:
                         valid_cs_size_def well_formed_cnode_n_def
                         length_set_helper)
   done
-
-lemma emptyable_cte_wp_atD:   "\<lbrakk> cte_wp_at P sl s; valid_objs s\<rbrakk>
-   \<Longrightarrow> emptyable sl s"
-  apply (clarsimp simp: emptyable_def pred_tcb_at_def obj_at_def
-                        is_tcb cte_wp_at_cases)
-  apply (erule(1) pspace_valid_objsE)
-  apply (clarsimp simp: valid_obj_def valid_tcb_def ran_tcb_cap_cases)
-  sorry
-
-lemma thread_set_emptyable:
-  assumes z: "\<And>tcb. tcb_state  (f tcb) = tcb_state  tcb"
-  shows      "\<lbrace>emptyable sl\<rbrace> thread_set f t \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
-  by (wp emptyable_lift thread_set_no_change_tcb_state z)
 
 end

@@ -134,7 +134,7 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
     apply simp
    apply (rename_tac irq cap prod)
    apply (rule hoare_pre)
-    apply (wp valid_cap_typ [OF cap_delete_one_typ_at])
+    apply_trace (wp valid_cap_typ [OF cap_delete_one_typ_at])
      apply (strengthen real_cte_tcb_valid)
      apply (wp real_cte_at_typ_valid [OF cap_delete_one_typ_at])
      apply (rule_tac Q="\<lambda>rv s. is_ntfn_cap cap \<and> invs s

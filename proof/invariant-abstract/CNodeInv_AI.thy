@@ -194,21 +194,6 @@ locale CNodeInv_AI =
     "\<And>(s::'state_ext state) ptr zbits n m irqn.
       \<lbrakk> s \<turnstile> Zombie ptr zbits n; invs s; m < n \<rbrakk>
         \<Longrightarrow> (ptr, nat_to_cref (zombie_cte_bits zbits) m) \<in> cte_refs (Zombie ptr zbits n) irqn"
-  assumes finalise_cap_emptyable[wp]:
-    "\<And>sl c f.
-      \<lbrace>emptyable sl and (invs and valid_mdb)\<rbrace>
-        finalise_cap c f
-      \<lbrace>\<lambda>_. emptyable sl :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  assumes deleting_irq_handler_emptyable[wp]:
-    "\<And>sl irq.
-      \<lbrace>emptyable sl and invs :: 'state_ext state \<Rightarrow> bool\<rbrace>
-        deleting_irq_handler irq
-      \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  assumes arch_finalise_cap_emptyable[wp]:
-    "\<And>sl c f.
-      \<lbrace>emptyable sl :: 'state_ext state \<Rightarrow> bool\<rbrace>
-        arch_finalise_cap c f
-      \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
   assumes nat_to_cref_0_replicate:
     "\<And>n. n < word_bits \<Longrightarrow> nat_to_cref n 0 = replicate n False"
   assumes prepare_thread_delete_thread_cap:
@@ -222,7 +207,6 @@ locale CNodeInv_AI_2 = CNodeInv_AI state_ext_t
     "\<And>(s::'state_ext state) call.
       s \<turnstile> \<lbrace>\<lambda>x. invs x \<and> valid_rec_del_call call x \<and>
               (\<not> exposed_rdcall call \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) (slot_rdcall call) x) \<and>
-              emptyable (slot_rdcall call) x \<and>
               (case call of ReduceZombieCall cap sl ex \<Rightarrow> \<not> cap_removeable cap sl \<and>
                     (\<forall>t\<in>obj_refs cap. halted_if_tcb t x)
                 | _ \<Rightarrow> True)\<rbrace>
@@ -231,8 +215,7 @@ locale CNodeInv_AI_2 = CNodeInv_AI state_ext_t
               (case call of CTEDeleteCall _ bool \<Rightarrow> True
                 | FinaliseSlotCall sl x \<Rightarrow> (fst rv \<or> x \<longrightarrow> cte_wp_at (replaceable s sl NullCap) sl s) \<and>
                     (snd rv \<noteq> NullCap \<longrightarrow> post_cap_delete_pre (snd rv) ((caps_of_state s) (sl \<mapsto> cap.NullCap)))
-                | ReduceZombieCall cap sl x \<Rightarrow> \<not> x \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) sl s) \<and>
-                    emptyable (slot_rdcall call) s\<rbrace>,
+                | ReduceZombieCall cap sl x \<Rightarrow> \<not> x \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) sl s)\<rbrace>,
           \<lbrace>\<lambda>rv. invs\<rbrace>"
 
 
@@ -875,12 +858,6 @@ lemma suspend_thread_cap:
     apply (clarsimp simp add: can_fast_finalise_def)
    apply (simp add: cte_wp_at_caps_of_state)+
   done*) sorry
-
-
-lemma emptyable_irq_state_independent[intro!, simp]:
-  "emptyable x (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
-   = emptyable x s"
-  by (auto simp: emptyable_def)
 
 lemma not_recursive_cspaces_irq_state_independent[intro!, simp]:
   "not_recursive_cspaces (s \<lparr> machine_state := machine_state s \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)
@@ -2006,16 +1983,6 @@ lemma zombie_is_cap_toE2:
   done
 
 
-lemma set_cap_emptyable[wp]:
-  "\<not> is_master_reply_cap cap \<Longrightarrow>
-   \<lbrace>emptyable sl and cte_at p\<rbrace> set_cap cap p \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
-  apply (simp add: emptyable_def)
-  apply (subst imp_conv_disj)+
-  apply (wp hoare_vcg_disj_lift set_cap_typ_at set_cap_cte_wp_at
-       | simp add: tcb_at_typ)+
-  done
-
-
 lemma set_cap_halted_if_tcb[wp]:
   "\<lbrace>halted_if_tcb t\<rbrace> set_cap cap p \<lbrace>\<lambda>rv. halted_if_tcb t\<rbrace>"
   apply (simp add: halted_if_tcb_def)
@@ -2090,40 +2057,6 @@ lemma suspend_makes_halted[wp]:
     | clarsimp elim!: pred_tcb_weakenE)+
 
 
-lemma empty_slot_emptyable[wp]:
-  "\<lbrace>emptyable sl and cte_at slot'\<rbrace> empty_slot slot' opt \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
-  apply (rule hoare_assume_pre)
-  apply (rule hoare_weaken_pre)
-   apply (simp add: emptyable_def)
-   apply (subst imp_conv_disj)+
-   apply (wp hoare_vcg_disj_lift | simp add: tcb_at_typ)+
-  apply (simp add: is_cap_simps emptyable_def tcb_at_typ)
-  done
-
-(* might need this as a lemma
-crunch emptyable[wp]: reply_unlink_tcb "emptyable sl"
-  (ignore: set_thread_state wp: emptyable_lift sts_st_tcb_at_cases static_imp_wp)
-*)
-
-lemma blocked_cancel_ipc_emptyable[wp]:
-"\<lbrace>emptyable sl\<rbrace> blocked_cancel_ipc param_a param_b param_c 
-\<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  sorry
-(*crunch emptyable[wp]: blocked_cancel_ipc "emptyable sl"
-  (ignore: set_thread_state wp: emptyable_lift sts_st_tcb_at_cases static_imp_wp)
-*)
-
-crunch emptyable[wp]: cancel_signal "emptyable sl"
-  (ignore: set_thread_state wp: emptyable_lift sts_st_tcb_at_cases static_imp_wp)
-
-
-lemma cap_delete_one_emptyable[wp]:
-  "\<lbrace>invs and emptyable sl and cte_at sl'\<rbrace> cap_delete_one sl' \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
-  apply (wpsimp wp: get_cap_wp)
-  done
-
-
 lemmas tcb_at_cte_at_2 = tcb_at_cte_at [where ref="tcb_cnode_index 2",
                                         simplified dom_tcb_cap_cases]
 
@@ -2131,58 +2064,9 @@ lemmas tcb_at_cte_at_2 = tcb_at_cte_at [where ref="tcb_cnode_index 2",
 declare thread_set_Pmdb [wp]
 
 
-lemma reply_cancel_ipc_emptyable[wp]:
-  "\<lbrace>invs and emptyable sl and valid_mdb\<rbrace> reply_cancel_ipc ptr rptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  apply (simp add: reply_cancel_ipc_def)
-  apply (wp select_wp select_inv hoare_drop_imps | simp add: Ball_def)+
-(*    apply (wp hoare_vcg_all_lift hoare_convert_imp thread_set_Pmdb
-              thread_set_invs_trivial thread_set_emptyable thread_set_cte_at
-         | simp add: tcb_cap_cases_def descendants_of_cte_at)+
-  done *) sorry (* need reply_remove_emptyable *)
-
-crunch emptyable[wp]: cancel_ipc "emptyable sl"
-
-lemma suspend_emptyable[wp]:
-  "\<lbrace>invs and emptyable sl and valid_mdb\<rbrace> SchedContext_A.suspend l \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  apply (simp add: SchedContext_A.suspend_def)
-  apply (wp|simp)+
-    apply (wp emptyable_lift sts_st_tcb_at_cases)+
-    apply simp
-   apply (wp set_thread_state_cte_wp_at | simp)+
-  sorry
-
-
-crunch emptyable[wp]: do_machine_op "emptyable sl"
-  (rule: emptyable_lift)
-
-crunch emptyable[wp]: set_irq_state "emptyable sl"
-  (rule: emptyable_lift)
-
-
 declare get_irq_slot_real_cte [wp]
 
-
-lemma cap_swap_for_delete_emptyable[wp]:
-  "\<lbrace>emptyable sl and emptyable sl'\<rbrace> cap_swap_for_delete sl' sl \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
-  apply (simp add: emptyable_def cap_swap_for_delete_def cap_swap_def tcb_at_typ)
-  apply (rule hoare_pre)
-   apply (subst imp_conv_disj)+
-   apply (wp hoare_vcg_disj_lift set_cdt_typ_at set_cap_typ_at | simp split del: if_split)+
-  done
-
 crunch cte_at_pres[wp]: empty_slot "cte_at sl"
-
-
-lemma cte_wp_at_emptyableD:
-  "\<And>P. \<lbrakk> cte_wp_at (\<lambda>c. c = cap) p s; valid_objs s (*; \<And>cap. P cap \<Longrightarrow> \<not> is_master_reply_cap cap*) \<rbrakk> \<Longrightarrow>
-   P cap \<longrightarrow> emptyable p s"
-  apply (simp add: emptyable_def)
-  apply (clarsimp simp add: obj_at_def is_tcb)
-  apply (erule(1) valid_objsE)
-  apply (clarsimp simp: cte_wp_at_cases valid_obj_def valid_tcb_def
-                        tcb_cap_cases_def pred_tcb_at_def obj_at_def
-                 split: Structures_A.thread_state.splits)
-  sorry
 
 
 declare finalise_cap_cte_cap_to [wp]
@@ -2221,7 +2105,6 @@ lemma rec_del_invs:
     \<lbrace>invs and valid_rec_del_call args
           and (\<lambda>s. \<not> exposed_rdcall args
                  \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) (slot_rdcall args) s)
-          and emptyable (slot_rdcall args)
           and (\<lambda>s. case args of ReduceZombieCall cap sl ex \<Rightarrow>
                          \<not> cap_removeable cap sl
                          \<and> (\<forall>t\<in>obj_refs cap. halted_if_tcb t s)
@@ -2238,7 +2121,7 @@ lemma rec_del_invs:
 
 lemma cap_delete_invs[wp]:
   "\<And>ptr.
-    \<lbrace>invs and emptyable ptr :: 'state_ext state \<Rightarrow> bool\<rbrace>
+    \<lbrace>invs :: 'state_ext state \<Rightarrow> bool\<rbrace>
       cap_delete ptr
     \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding cap_delete_def
@@ -2539,31 +2422,9 @@ termination red_zombie_will_fail
 
 context CNodeInv_AI_3 begin
 
-lemma rec_del_emptyable:
- "\<And>args.
-    \<lbrace>invs and valid_rec_del_call args
-          and (\<lambda>s. \<not> exposed_rdcall args
-                     \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) (slot_rdcall args) s)
-          and emptyable (slot_rdcall args)
-          and (\<lambda>s. case args of ReduceZombieCall cap sl ex \<Rightarrow>
-                             \<not> cap_removeable cap sl
-                             \<and> (\<forall>t\<in>obj_refs cap. halted_if_tcb t s)
-                      | _ \<Rightarrow> True)\<rbrace>
-      rec_del args
-    \<lbrace>\<lambda>rv. emptyable (slot_rdcall args) :: 'state_ext state \<Rightarrow> bool\<rbrace>, -"
-  apply (rule validE_validE_R)
-  apply (rule hoare_post_impErr)
-  apply (rule hoare_pre)
-    apply (rule use_spec)
-    apply (rule rec_del_invs')
-   apply simp+
-  done
-
-
 lemma reduce_zombie_cap_to:
   "\<And>cap slot exp.
     \<lbrace>invs and valid_rec_del_call (ReduceZombieCall cap slot exp) and
-          emptyable slot and
           (\<lambda>s. \<not> exp \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) slot s) and
           K (\<not> cap_removeable cap slot) and
           (\<lambda>s. \<forall>t\<in>obj_refs cap. halted_if_tcb t s)\<rbrace>
@@ -2583,7 +2444,7 @@ lemma cte_at_replicate_zbits:
     \<lbrakk> s \<turnstile> cap.Zombie oref zb n \<rbrakk> \<Longrightarrow> cte_at (oref, replicate (zombie_cte_bits zb) False) s"
   apply (clarsimp simp: valid_cap_def obj_at_def is_tcb is_cap_table
                  split: option.split_asm)
-(*   apply (rule cte_wp_at_tcbI, simp)
+   apply (rule cte_wp_at_tcbI, simp)
     apply (fastforce simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1)
    apply simp
   apply (subgoal_tac "replicate x2 False \<in> dom cs")
@@ -2593,7 +2454,7 @@ lemma cte_at_replicate_zbits:
     apply simp
    apply simp
   apply (clarsimp simp: well_formed_cnode_n_def)
-  done*) sorry
+  done
 
 
 lemma reduce_zombie_cap_somewhere:
@@ -2634,24 +2495,6 @@ lemma set_cap_cap_somewhere:
   apply (rule_tac x=cref in exI)
   apply fastforce
   done
-
-
-context CNodeInv_AI_3 begin
-
-lemma rec_del_ReduceZombie_emptyable:
-  "\<And>cap slot ex.
-    \<lbrace>invs and (cte_wp_at ((=) cap) slot and is_final_cap' cap
-          and (\<lambda>y. is_zombie cap))
-          and (\<lambda>s. \<not> ex \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) slot s)
-          and emptyable slot
-          and (\<lambda>s. \<not> cap_removeable cap slot \<and> (\<forall>t\<in>obj_refs cap. halted_if_tcb t s))\<rbrace>
-      rec_del (ReduceZombieCall cap slot ex)
-    \<lbrace>\<lambda>rv. emptyable slot :: 'state_ext state \<Rightarrow> bool\<rbrace>, -"
-  subgoal for cap slot ex
-  by (rule rec_del_emptyable [where args="ReduceZombieCall cap slot ex", simplified])
-  done
-
-end
 
 
 text {* The revoke function and its properties are
@@ -2759,7 +2602,7 @@ lemma cap_revoke_typ_at:
 lemma cap_revoke_invs:
   "\<And>ptr. \<lbrace>\<lambda>s::'state_ext state. invs s\<rbrace> cap_revoke ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wp cap_revoke_preservation_desc_of)
-(*   apply (fastforce simp: emptyable_def dest: reply_slot_not_descendant)
+(*   apply (fastforce simp:  dest: reply_slot_not_descendant)
   apply (wp preemption_point_inv)
    apply simp+
   done*) sorry
@@ -3096,8 +2939,7 @@ locale CNodeInv_AI_5 = CNodeInv_AI_4 state_ext_t
             and tcb_cap_valid cap ptr'
             and cte_wp_at (weak_derived cap) ptr
             and cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap) ptr
-            and ex_cte_cap_wp_to (appropriate_cte_cap cap) ptr' and K (ptr \<noteq> ptr')
-            and K (\<not> is_master_reply_cap cap)\<rbrace>
+            and ex_cte_cap_wp_to (appropriate_cte_cap cap) ptr' and K (ptr \<noteq> ptr')\<rbrace>
         cap_move cap ptr ptr'
       \<lbrace>\<lambda>rv. invs::'state_ext state \<Rightarrow> bool\<rbrace>"
 

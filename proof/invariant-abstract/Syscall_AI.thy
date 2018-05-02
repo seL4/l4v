@@ -277,15 +277,6 @@ lemma do_ipc_transfer_tcb_at [wp]:
   "\<lbrace>\<lambda>s. P (tcb_at t s)\<rbrace> do_ipc_transfer s ep bg grt r \<lbrace>\<lambda>rv s. P (tcb_at t s)\<rbrace>"
   by (simp add: tcb_at_typ) wp
 
-lemma do_ipc_transfer_emptyable[wp]:
-  "\<lbrace>emptyable sl\<rbrace> do_ipc_transfer sender ep badge grant receiver \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  apply (clarsimp simp add: emptyable_def)
-  apply (wp hoare_convert_imp | clarsimp)+
-  done
-
-crunch emptyable[wp]: do_ipc_transfer "emptyable sl"
-
-
 lemma do_ipc_transfer_non_null_cte_wp_at2:
   fixes P
   assumes PNN: "\<And>cap. P cap \<Longrightarrow> cap \<noteq> cap.NullCap"

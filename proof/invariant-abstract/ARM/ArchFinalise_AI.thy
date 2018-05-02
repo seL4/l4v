@@ -252,7 +252,6 @@ lemma (* obj_ref_ofI *) [Finalise_AI_asms]: "obj_refs cap = {x} \<Longrightarrow
 
 lemma (* empty_slot_invs *) [Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s sl cap.NullCap) sl s \<and>
-        emptyable sl s \<and>
         (info \<noteq> NullCap \<longrightarrow> post_cap_delete_pre info ((caps_of_state s) (sl \<mapsto> NullCap)))\<rbrace>
      empty_slot sl info
    \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -289,8 +288,8 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
   apply (rule conjI)
    apply (simp add: valid_ioc_def)
   apply (rule conjI)
-   apply (clarsimp simp: tcb_cap_valid_def
-                  dest!: emptyable_valid_NullCapD)
+   apply (fastforce simp: tcb_cap_valid_def
+                  dest!: valid_NullCapD)
   apply (rule conjI)
    apply (clarsimp simp: mdb_cte_at_def cte_wp_at_caps_of_state)
    apply (cases sl)
@@ -427,7 +426,7 @@ lemma arch_finalise_cap_replaceable[wp]:
   apply (simp add: arch_finalise_cap_def)
   apply (rule hoare_pre)
    apply (simp add: simps split: option.splits vmpage_size.splits)
-   apply (wp wps
+(*   apply (wp wps
           | strengthen strg
           | simp add: simps reachable_pg_cap_def
           | wpc)+
@@ -442,7 +441,7 @@ lemma arch_finalise_cap_replaceable[wp]:
            | strengthen strg imp_and_strg tcb_cap_valid_imp_NullCap
            | simp add: simps reachable_pg_cap_def
            | wpc)+
- (* apply (auto simp: valid_cap_def obj_at_def simps
+  apply (auto simp: valid_cap_def obj_at_def simps
                     a_type_def data_at_def
              elim!: tcb_cap_valid_imp_NullCap[rule_format, rotated]
              split: cap.splits arch_cap.splits vmpage_size.splits)[1]
@@ -657,22 +656,22 @@ lemma fast_finalise_replaceable[wp]:
 
 global_naming Arch
 lemma (* cap_delete_one_invs *) [Finalise_AI_asms,wp]:
-  "\<lbrace>invs and emptyable ptr\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
   apply (rule hoare_pre)
   apply (wp empty_slot_invs get_cap_wp)
   apply clarsimp
-(*  apply (drule cte_wp_at_valid_objs_valid_cap, fastforce+)
-  done*) sorry
+  apply (drule cte_wp_at_valid_objs_valid_cap, fastforce+)
+  done
 
 end
-
+(*
 interpretation Finalise_AI_2?: Finalise_AI_2
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_asms)?)
   qed
-
+*)
 context Arch begin global_naming ARM
 
 crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"

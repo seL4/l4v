@@ -1096,12 +1096,6 @@ lemma untyped_inc':
   done
 
 end
-(*
-lemma default_cap_replies[simp]:
-  "\<not> is_reply_cap (default_cap otype oref sz dev)"
-  "\<not> is_master_reply_cap (default_cap otype oref sz dev)"
-  by (cases otype, simp_all add: is_cap_simps)+
-*)
 
 lemma inter_non_emptyD:
  "\<lbrakk>A \<subseteq> B; A \<inter> C \<noteq> {}\<rbrakk> \<Longrightarrow> B \<inter> C \<noteq> {}"
