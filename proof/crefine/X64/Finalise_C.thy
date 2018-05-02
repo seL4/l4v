@@ -2365,7 +2365,7 @@ lemma finaliseCap_ccorres:
        apply (simp add: objBits_simps ctcb_ptr_to_tcb_ptr_def)
        apply (frule is_aligned_add_helper[where p="tcbptr - ctcb_offset" and d=ctcb_offset for tcbptr])
         apply (simp add: ctcb_offset_defs objBits_defs)
-       subgoal sorry (*apply (simp add: mask_def objBits_defs) *) (* FIXME x64: c code needs change for tcbArchCNodeEntries *)
+       apply (simp add: mask_def objBits_defs tcb_arch_cnode_index_defs)
       apply (simp add: cap_get_tag_isCap)
      apply wp+
    apply (rule ccorres_if_lhs)
