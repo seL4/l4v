@@ -1513,7 +1513,6 @@ lemma isFinalCapability_ccorres:
          apply (drule ccte_relation_ccap_relation)+
          apply (rule exI, rule conjI, assumption)+
          apply (auto)[1]
-  sorry (*
         apply ceqv
        apply (clarsimp simp del: Collect_const)
        apply (rule ccorres_cond2[where R=\<top>])
@@ -1551,7 +1550,7 @@ lemma isFinalCapability_ccorres:
   apply (clarsimp simp add: ccte_relation_def map_option_Some_eq2)
   by (auto,
          auto dest!: ctes_of_valid' [OF _ invs_valid_objs']
-              elim!: valid_capAligned) *)
+              elim!: valid_capAligned)
 
 lemmas cleanup_info_wf'_simps[simp] = cleanup_info_wf'_def[split_simps capability.split]
 
