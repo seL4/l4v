@@ -311,6 +311,10 @@ definition
   sched_context_yield_to :: "obj_ref \<Rightarrow> data list \<Rightarrow> (unit, det_ext) s_monad"
 where
   "sched_context_yield_to sc_ptr args \<equiv> do
+    sc_yf_opt \<leftarrow> get_sc_obj_ref sc_yield_from sc_ptr;
+    when (sc_yf_opt \<noteq> None) $ complete_yield_to (the sc_yf_opt); (* sc_yield_from = None *)
+    sc_yf_opt \<leftarrow> get_sc_obj_ref sc_yield_from sc_ptr;
+    assert (sc_yf_opt = None);
     flag \<leftarrow> return True;
     refill_unblock_check sc_ptr;
     sc_tcb_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
@@ -337,7 +341,7 @@ where
         flag \<leftarrow> return False;
         set_sc_obj_ref sc_yield_from_update sc_ptr (Some ct_ptr);
         set_tcb_obj_ref tcb_yield_to_update ct_ptr (Some sc_ptr);
-        possible_switch_to ct_ptr
+        possible_switch_to tcb_ptr
       od
     od;
     when flag $ set_consumed sc_ptr args

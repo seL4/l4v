@@ -447,9 +447,8 @@ where
          args \<leftarrow> lookup_ipc_buffer True tcb_ptr;
          buf \<leftarrow> assert_opt args;
          set_consumed sc_ptr [buf];
-         set_sc_obj_ref sc_yield_from_update sc_ptr None;
          set_tcb_obj_ref tcb_yield_to_update tcb_ptr None;
-         set_thread_state tcb_ptr Running
+         set_sc_obj_ref sc_yield_from_update sc_ptr None
        od) yt_opt
     od"
 

@@ -273,6 +273,18 @@ where
     when (tcb_ptr = cur \<and> sched_act = resume_cur_thread \<and> \<not>schedulable) $ reschedule_required
   od"
 
+definition
+  set_thread_state_ext :: "obj_ref \<Rightarrow> unit det_ext_monad"
+where
+  "set_thread_state_ext tcb_ptr \<equiv> do
+    cur \<leftarrow> gets cur_thread;
+    sched_act \<leftarrow> gets scheduler_action;
+    in_release_q \<leftarrow> gets $ in_release_queue tcb_ptr;
+    schedulable \<leftarrow> is_schedulable tcb_ptr in_release_q;
+    when (tcb_ptr = cur \<and> sched_act = resume_cur_thread \<and> \<not>schedulable) $ set_scheduler_action choose_new_thread
+  od"
+
+
 
 
 (***)
@@ -283,7 +295,7 @@ where
   "set_thread_state ref ts \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb ref;
      set_object ref (TCB (tcb \<lparr> tcb_state := ts \<rparr>));
-     do_extended_op (schedule_tcb ref)
+     do_extended_op (set_thread_state_ext ref)
    od"
 
 definition
