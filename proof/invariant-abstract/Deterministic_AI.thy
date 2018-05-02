@@ -3858,6 +3858,13 @@ crunch all_but_exst[wp]: schedule_tcb "all_but_exst P"
 interpretation schedule_tcb_ext_extended: is_extended "schedule_tcb r"
   by (unfold_locales; wp ARM.schedule_tcb_empty_fail)  (* RT FIXME: requialify *)
 
+crunch valid_list[wp]: set_thread_state_ext "valid_list"
+  (simp: unless_def)
+
+crunch all_but_exst[wp]: set_thread_state_ext "all_but_exst P"
+
+interpretation set_thread_state_ext_extended: is_extended "set_thread_state_ext r"
+  by (unfold_locales; wp)  (* RT FIXME: requialify *)
 (*
 crunch valid_list[wp]: reply_unlink_tcb, sched_context_donate, schedule_tcb valid_list
   (wp: crunch_wps maybeM_inv dxo_wp_weak mapM_x_wp set_object_def simp: valid_list_2_def ignore: set_object)
@@ -3959,6 +3966,10 @@ lemma sched_context_donate_valid_list[wp]:
 lemma schedule_tcb_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> schedule_tcb p \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
   by (wpsimp simp: schedule_tcb_def)
+
+lemma set_thread_state_cdt_cdt_list[wp]:
+  "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> set_thread_state_ext p \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
+  by (wpsimp simp: set_thread_state_ext_def)
 
 lemma sts_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> set_thread_state t ts \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"

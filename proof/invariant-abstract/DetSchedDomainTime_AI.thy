@@ -552,8 +552,11 @@ lemma commit_domain_time_domain_time:
       commit_domain_time \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   by (wpsimp simp: commit_domain_time_def)
 
-crunch consumed_time_inv[wp]: set_thread_state,store_word_offs "(\<lambda>s. P (consumed_time s))"
+crunch consumed_time_inv[wp]: set_thread_state_ext "(\<lambda>s. P (consumed_time s))"
   (wp: crunch_wps dxo_wp_weak)
+
+crunch consumed_time_inv[wp]: set_thread_state,store_word_offs "(\<lambda>s. P (consumed_time s))"
+  (wp: crunch_wps dxo_wp_weak ignore: set_thread_state_ext)
 
 crunch domain_time_consumed_time[wp]:
   refill_budget_check

@@ -402,6 +402,9 @@ lemma get_epq_sp:
   apply (cases ep)
   apply (wp|simp)+
   done
+crunches set_thread_state_ext
+ for no_cdt[wp]: "\<lambda>s. P (cdt s)"
+ and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
 
 crunches reply_unlink_tcb
  for aligned[wp]: pspace_aligned
@@ -437,7 +440,7 @@ crunches reply_unlink_tcb
  and valid_mdb[wp]: "valid_mdb"
  and valid_ioc[wp]: "valid_ioc"
  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-  (simp: Let_def wp: hoare_drop_imps)
+  (simp: Let_def wp: hoare_drop_imps ignore: set_thread_state_ext)
 
 lemma sc_at[wp]: "\<lbrace>sc_at sc_ptr\<rbrace> reply_unlink_tcb rp \<lbrace>\<lambda>_. sc_at sc_ptr\<rbrace>"
   apply (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def set_simple_ko_def

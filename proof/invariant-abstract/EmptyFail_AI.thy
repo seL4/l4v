@@ -443,7 +443,7 @@ end
 crunch (empty_fail) empty_fail[wp]: set_scheduler_action, next_domain, reschedule_required
   (simp: scheduler_action.split)
 
-crunch (empty_fail) empty_fail[wp, intro!, simp]: ethread_get_when
+crunch (empty_fail) empty_fail[wp, intro!, simp]: ethread_get_when,set_thread_state_ext
 
 locale EmptyFail_AI_schedule_det = EmptyFail_AI_schedule "TYPE(det_ext)" +
   assumes choose_thread_empty_fail[wp]: "empty_fail choose_thread"

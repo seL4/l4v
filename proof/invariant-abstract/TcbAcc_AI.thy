@@ -200,7 +200,7 @@ lemma thread_set_split_out_set_thread_state:
   assumes f: "\<forall>tcb. (tcb_state_update (\<lambda>_. tcb_state (f undefined)) (f tcb))
                         = f tcb"
   shows "(do y \<leftarrow> thread_set f t;
-             do_extended_op (schedule_tcb t)
+             do_extended_op (set_thread_state_ext t)
           od)
       = (do thread_set (\<lambda>tcb. (f tcb) \<lparr> tcb_state := tcb_state tcb \<rparr>) t;
             set_thread_state t (tcb_state (f undefined))
@@ -1398,7 +1398,7 @@ lemma syt_hyp_refs_of[wp]:
 
 lemma set_thread_state_thread_set:
   "set_thread_state p st = (do thread_set (tcb_state_update (\<lambda>_. st)) p;
-                               do_extended_op (schedule_tcb p)
+                               do_extended_op (set_thread_state_ext p)
                             od)"
   by (simp add: set_thread_state_def thread_set_def bind_assoc)
 
