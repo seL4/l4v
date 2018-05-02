@@ -112,7 +112,7 @@ datatype cap
            \<comment> \<open>device flag, pointer, size in bits (i.e. @{text "size = 2^bits"}) and freeIndex (i.e. @{text "freeRef = obj_ref + (freeIndex * 2^4)"})\<close>
          | EndpointCap obj_ref badge cap_rights
          | NotificationCap obj_ref badge cap_rights
-         | ReplyCap obj_ref bool
+         | ReplyCap obj_ref bool cap_rights
          | CNodeCap obj_ref nat "bool list"
            \<comment> \<open>CNode ptr, number of bits translated, guard\<close>
          | ThreadCap obj_ref
@@ -173,10 +173,10 @@ definition
 
 definition
   is_reply_cap :: "cap \<Rightarrow> bool" where
-  "is_reply_cap cap \<equiv> case cap of ReplyCap _ m \<Rightarrow> \<not> m | _ \<Rightarrow> False"
+  "is_reply_cap cap \<equiv> case cap of ReplyCap _ m _ \<Rightarrow> \<not> m | _ \<Rightarrow> False"
 definition
   is_master_reply_cap :: "cap \<Rightarrow> bool" where
-  "is_master_reply_cap cap \<equiv> case cap of ReplyCap _ m \<Rightarrow> m | _ \<Rightarrow> False"
+  "is_master_reply_cap cap \<equiv> case cap of ReplyCap _ m _ \<Rightarrow> m | _ \<Rightarrow> False"
 definition
   is_zombie :: "cap \<Rightarrow> bool" where
   "is_zombie cap \<equiv> case cap of Zombie _ _ _ \<Rightarrow> True | _ \<Rightarrow> False"
@@ -223,6 +223,7 @@ primrec (nonexhaustive)
 where
   "cap_rights (EndpointCap _ _ cr) = cr"
 | "cap_rights (NotificationCap _ _ cr) = cr"
+| "cap_rights (ReplyCap _ _ cr) = cr"
 | "cap_rights (ArchObjectCap acap) = acap_rights acap"
 end
 
@@ -234,7 +235,8 @@ definition
    case cap of
      EndpointCap oref badge cr \<Rightarrow> EndpointCap oref badge cr'
    | NotificationCap oref badge cr
-     \<Rightarrow> NotificationCap oref badge (cr' - {AllowGrant})
+     \<Rightarrow> NotificationCap oref badge (cr' - {AllowGrant, AllowGrantReply})
+   | ReplyCap t False cr \<Rightarrow> ReplyCap t False (cr' - {AllowRead, AllowGrantReply} \<union> {AllowWrite})
    | ArchObjectCap acap \<Rightarrow> ArchObjectCap (acap_rights_update cr' acap)
    | _ \<Rightarrow> cap"
 
@@ -360,15 +362,19 @@ are to be sent in @{text tcb_fault_handler}.
 *}
 
 record sender_payload =
- sender_badge     :: badge
- sender_can_grant :: bool
- sender_is_call   :: bool
+ sender_badge           :: badge
+ sender_can_grant       :: bool
+ sender_can_grant_reply :: bool
+ sender_is_call         :: bool
+
+record receiver_payload =
+ receiver_can_grant :: bool
 
 datatype thread_state
   = Running
   | Inactive
   | Restart
-  | BlockedOnReceive obj_ref
+  | BlockedOnReceive obj_ref receiver_payload
   | BlockedOnSend obj_ref sender_payload
   | BlockedOnReply
   | BlockedOnNotification obj_ref
@@ -398,7 +404,7 @@ where
   "runnable (Running)               = True"
 | "runnable (Inactive)              = False"
 | "runnable (Restart)               = True"
-| "runnable (BlockedOnReceive x)  = False"
+| "runnable (BlockedOnReceive x y)  = False"
 | "runnable (BlockedOnSend x y)     = False"
 | "runnable (BlockedOnNotification x) = False"
 | "runnable (IdleThreadState)       = False"
@@ -597,7 +603,7 @@ primrec
   obj_refs :: "cap \<Rightarrow> obj_ref set"
 where
   "obj_refs NullCap = {}"
-| "obj_refs (ReplyCap r m) = {}"
+| "obj_refs (ReplyCap r m cr) = {}"
 | "obj_refs IRQControlCap = {}"
 | "obj_refs (IRQHandlerCap irq) = {}"
 | "obj_refs (UntypedCap dev r s f) = {}"
@@ -618,7 +624,7 @@ primrec (nonexhaustive)
   obj_ref_of :: "cap \<Rightarrow> obj_ref"
 where
   "obj_ref_of (UntypedCap dev r s f) = r"
-| "obj_ref_of (ReplyCap r m) = r"
+| "obj_ref_of (ReplyCap r m cr) = r"
 | "obj_ref_of (CNodeCap r bits guard) = r"
 | "obj_ref_of (EndpointCap r b cr) = r"
 | "obj_ref_of (NotificationCap r b cr) = r"

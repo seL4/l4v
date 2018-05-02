@@ -40,7 +40,7 @@ definition
      old_cap <- get_cap (thread, tcb_cnode_index 2);
      when (old_cap = NullCap) $ do
          set_original (thread, tcb_cnode_index 2) True;
-         set_cap (ReplyCap thread True) (thread, tcb_cnode_index 2)
+         set_cap (ReplyCap thread True {AllowGrant, AllowWrite}) (thread, tcb_cnode_index 2)
      od
   od"
 

@@ -64,7 +64,8 @@ definition
     w = data_to_16 data
    in {x. case x of AllowWrite \<Rightarrow> w !! 0
                   | AllowRead \<Rightarrow> w !! 1
-                  | AllowGrant \<Rightarrow> w !! 2}"
+                  | AllowGrant \<Rightarrow> w !! 2
+                  | AllowGrantReply \<Rightarrow> w !! 3}"
 
 text {* Check that a capability stored in a slot is not a parent of any other
 capability. *}
@@ -113,7 +114,7 @@ derive_cap :: "cslot_ptr \<Rightarrow> cap \<Rightarrow> (cap,'z::state_ext) se_
     ArchObjectCap c \<Rightarrow> arch_derive_cap c
     | UntypedCap dev ptr sz f \<Rightarrow> doE ensure_no_children slot; returnOk cap odE
     | Zombie ptr n sz \<Rightarrow> returnOk NullCap
-    | ReplyCap ptr m \<Rightarrow> returnOk NullCap
+    | ReplyCap ptr m cr \<Rightarrow> returnOk NullCap
     | IRQControlCap \<Rightarrow> returnOk NullCap
     | _ \<Rightarrow> returnOk cap"
 
@@ -434,10 +435,10 @@ fun
 where
   "finalise_cap NullCap                  final = return (NullCap, NullCap)"
 | "finalise_cap (UntypedCap dev r bits f)    final = return (NullCap, NullCap)"
-| "finalise_cap (ReplyCap r m)           final = return (NullCap, NullCap)"
+| "finalise_cap (ReplyCap r m R)         final = return (NullCap, NullCap)"
 | "finalise_cap (EndpointCap r b R)      final =
       (liftM (K (NullCap, NullCap)) $ when final $ cancel_all_ipc r)"
-| "finalise_cap (NotificationCap r b R) final =
+| "finalise_cap (NotificationCap r b R)  final =
       (liftM (K (NullCap, NullCap)) $ when final $ do
           unbind_maybe_notification r;
           cancel_all_signals r
@@ -467,7 +468,7 @@ where
 definition
   can_fast_finalise :: "cap \<Rightarrow> bool" where
  "can_fast_finalise cap \<equiv> case cap of
-    ReplyCap r m \<Rightarrow> True
+    ReplyCap r m R \<Rightarrow> True
   | EndpointCap r b R \<Rightarrow> True
   | NotificationCap r b R \<Rightarrow> True
   | NullCap \<Rightarrow> True
@@ -650,7 +651,7 @@ definition
   | DomainCap \<Rightarrow> False
   | IRQControlCap \<Rightarrow> False
   | IRQHandlerCap _ \<Rightarrow> False
-  | ReplyCap _ _ \<Rightarrow> False
+  | ReplyCap _ _ _ \<Rightarrow> False
   | ArchObjectCap c \<Rightarrow> arch_is_physical c
   | _ \<Rightarrow> True"
 
@@ -669,7 +670,7 @@ where
     (is_ntfn_cap c' \<and> obj_ref_of c' = r)"
 | "same_region_as (CNodeCap r bits g) c' =
     (is_cnode_cap c' \<and> obj_ref_of c' = r \<and> bits_of c' = bits)"
-| "same_region_as (ReplyCap n m) c' = (\<exists>m'. c' = ReplyCap n m')"
+| "same_region_as (ReplyCap n m cr) c' = (\<exists>m' cr. c' = ReplyCap n m' cr)"
 | "same_region_as (ThreadCap r) c' =
     (is_thread_cap c' \<and> obj_ref_of c' = r)"
 | "same_region_as (Zombie r b n) c' = False"
@@ -847,7 +848,7 @@ definition
     cap \<leftarrow> get_cap src_slot;
     (case cap of
           NullCap \<Rightarrow> return ()
-        | ReplyCap _ False \<Rightarrow> cap_move cap src_slot slot
+        | ReplyCap _ False _ \<Rightarrow> cap_move cap src_slot slot
         | _ \<Rightarrow> fail) od
   | CancelBadgedSendsCall (EndpointCap ep b R) \<Rightarrow>
     without_preemption $ when (b \<noteq> 0) $ cancel_badged_sends ep b

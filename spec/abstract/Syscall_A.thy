@@ -166,10 +166,10 @@ where
       returnOk []
     odE"
 
-| "perform_invocation block call (InvokeEndpoint ep badge canGrant) =
+| "perform_invocation block call (InvokeEndpoint ep badge canGrant canGrantReply) =
     (without_preemption $ do
        thread \<leftarrow> gets cur_thread;
-       send_ipc block call badge canGrant thread ep;
+       send_ipc block call badge canGrant canGrantReply thread ep;
        return []
      od)"
 
@@ -183,10 +183,10 @@ where
 
 | "perform_invocation block call (InvokeDomain tptr d) = invoke_domain tptr d"
 
-| "perform_invocation block call (InvokeReply thread slot) =
+| "perform_invocation block call (InvokeReply thread slot grant) =
     liftE (do
       sender \<leftarrow> gets cur_thread;
-      do_reply_transfer sender thread slot;
+      do_reply_transfer sender thread slot grant;
       return []
     od)"
 
@@ -315,7 +315,8 @@ definition
     thread \<leftarrow> gets cur_thread;
     caller_cap \<leftarrow> get_cap (thread, tcb_cnode_index 3);
     case caller_cap of
-      ReplyCap caller False \<Rightarrow> do_reply_transfer thread caller (thread, tcb_cnode_index 3)
+      ReplyCap caller False R \<Rightarrow>
+        do_reply_transfer thread caller (thread, tcb_cnode_index 3) (AllowGrant \<in> R)
     | NullCap \<Rightarrow> return ()
     | _ \<Rightarrow> fail
   od"

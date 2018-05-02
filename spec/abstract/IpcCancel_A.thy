@@ -154,7 +154,7 @@ definition
   get_blocking_object :: "thread_state \<Rightarrow> (obj_ref,'z::state_ext) s_monad"
 where
  "get_blocking_object state \<equiv>
-       case state of BlockedOnReceive epptr \<Rightarrow> return epptr
+       case state of BlockedOnReceive epptr x \<Rightarrow> return epptr
                     | BlockedOnSend epptr x \<Rightarrow> return epptr
                     | _ \<Rightarrow> fail"
 
@@ -181,7 +181,7 @@ fun
   fast_finalise :: "cap \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "fast_finalise NullCap                  final = return ()"
-| "fast_finalise (ReplyCap r m)           final = return ()"
+| "fast_finalise (ReplyCap r m R)         final = return ()"
 | "fast_finalise (EndpointCap r b R)      final =
       (when final $ cancel_all_ipc r)"
 | "fast_finalise (NotificationCap r b R) final =
@@ -352,7 +352,7 @@ where
      case state
        of
           BlockedOnSend x y \<Rightarrow> blocked_cancel_ipc state tptr
-        | BlockedOnReceive x \<Rightarrow> blocked_cancel_ipc state tptr
+        | BlockedOnReceive x y \<Rightarrow> blocked_cancel_ipc state tptr
         | BlockedOnNotification event \<Rightarrow> cancel_signal tptr event
         | BlockedOnReply \<Rightarrow> reply_cancel_ipc tptr
         | _ \<Rightarrow> return ()
