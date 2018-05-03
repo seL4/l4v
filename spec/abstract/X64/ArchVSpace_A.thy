@@ -212,9 +212,9 @@ od"
 text {* Remove virtual to physical mappings in either direction involving this
 virtual ASID. *}
 definition
-invalidate_asid_entry :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"invalidate_asid_entry asid vspace \<equiv>
-  do_machine_op $ hwASIDInvalidate vspace (ucast asid)"
+hw_asid_invalidate :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+"hw_asid_invalidate asid vspace \<equiv>
+  do_machine_op $ invalidateASID vspace (ucast asid)"
 
 definition
 delete_asid_pool :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
@@ -224,7 +224,7 @@ delete_asid_pool :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ex
   when (asid_table (asid_high_bits_of base) = Some ptr) $ do
     pool \<leftarrow> get_asid_pool ptr;
     mapM (\<lambda>offset. (when (pool (ucast offset) \<noteq> None) $
-                          invalidate_asid_entry (base + offset) (the (pool (ucast offset)))))
+                          hw_asid_invalidate (base + offset) (the (pool (ucast offset)))))
                     [0 .e. (1 << asid_low_bits) - 1];
     asid_table' \<leftarrow> return (asid_table (asid_high_bits_of base:= None));
     modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> x64_asid_table := asid_table' \<rparr>\<rparr>);
@@ -244,7 +244,7 @@ delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_
   | Some pool_ptr \<Rightarrow>  do
      pool \<leftarrow> get_asid_pool pool_ptr;
      when (pool (asid_low_bits_of asid) = Some pml4) $ do
-                invalidate_asid_entry asid pml4;
+                hw_asid_invalidate asid pml4;
                 pool' \<leftarrow> return (pool (asid_low_bits_of asid := None));
                 set_asid_pool pool_ptr pool';
                 tcb \<leftarrow> gets cur_thread;

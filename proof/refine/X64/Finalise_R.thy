@@ -2569,9 +2569,9 @@ lemma invs_asid_update_strg':
   apply (auto simp add: ran_def split: if_split_asm)
   done
 
-lemma invalidateASIDEntry_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> invalidateASIDEntry asid vs \<lbrace>\<lambda>r. invs'\<rbrace>"
-  apply (simp add: invalidateASIDEntry_def hwASIDInvalidate_def)
+lemma hwASIDInvalidate_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> hwASIDInvalidate asid vs \<lbrace>\<lambda>r. invs'\<rbrace>"
+  apply (simp add: hwASIDInvalidate_def)
   by wpsimp
 
 lemma deleteASIDPool_invs[wp]:
@@ -2584,9 +2584,9 @@ lemma deleteASIDPool_invs[wp]:
               | simp)+
   done
 
-lemma invalidateASIDEntry_valid_ap' [wp]:
-  "\<lbrace>valid_asid_pool' p\<rbrace> invalidateASIDEntry asid vs \<lbrace>\<lambda>r. valid_asid_pool' p\<rbrace>"
-  apply (simp add: invalidateASIDEntry_def)
+lemma hwASIDInvalidate_valid_ap' [wp]:
+  "\<lbrace>valid_asid_pool' p\<rbrace> hwASIDInvalidate asid vs \<lbrace>\<lambda>r. valid_asid_pool' p\<rbrace>"
+  apply (simp add: hwASIDInvalidate_def)
   by wp
 
 lemma deleteASID_invs'[wp]:

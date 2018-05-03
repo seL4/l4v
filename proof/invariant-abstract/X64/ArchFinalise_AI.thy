@@ -156,7 +156,7 @@ lemma delete_asid_unmapped[wp]:
                    mask_asid_low_bits_ucast_ucast
               del: set_arch_obj_simps(5)
              cong: option.case_cong)
-  apply (wp set_asid_pool_unmap hoare_vcg_all_lift hoare_vcg_imp_lift invalidate_asid_entry_vs_lookup
+  apply (wp set_asid_pool_unmap hoare_vcg_all_lift hoare_vcg_imp_lift hw_asid_invalidate_vs_lookup
            | wpc
            | simp add: if_apply_def2 del: set_arch_obj_simps(5) split del: if_splits)+
   apply (intro allI conjI impI)
@@ -722,7 +722,7 @@ lemma flush_table_empty:
   done
 
 crunch empty[wp]: flush_all, invalidate_page_structure_cache_asid, lookup_pt_slot, set_vm_root,
-                  invalidate_asid_entry
+                  hw_asid_invalidate
   "\<lambda>s. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) word s"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -1002,11 +1002,11 @@ lemma replaceable_reset_pml4:
 crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
    (wp: crunch_wps simp: crunch_simps)
 
-crunch obj_at[wp]: invalidate_page_structure_cache_asid, invalidate_asid_entry
+crunch obj_at[wp]: invalidate_page_structure_cache_asid, hw_asid_invalidate
   "\<lambda>s. P' (obj_at P p s)"
   (wp: hoare_whenE_wp simp: crunch_simps)
 
-crunch x64_global_pdpts[wp]: invalidate_page_structure_cache_asid, invalidate_asid_entry
+crunch x64_global_pdpts[wp]: invalidate_page_structure_cache_asid, hw_asid_invalidate
   "\<lambda>s. P' (x64_global_pdpts (arch_state s))"
   (wp: hoare_whenE_wp simp: crunch_simps)
 
@@ -1232,8 +1232,8 @@ lemma replaceable_or_arch_update_pg:
   apply (auto simp: is_cap_simps is_arch_update_def cap_master_cap_simps)
   done
 
-crunch valid_cap: invalidate_page_structure_cache_asid, invalidate_asid_entry "valid_cap cap"
-crunch valid_objs[wp]: invalidate_page_structure_cache_asid, invalidate_asid_entry "valid_objs"
+crunch valid_cap: invalidate_page_structure_cache_asid, hw_asid_invalidate "valid_cap cap"
+crunch valid_objs[wp]: invalidate_page_structure_cache_asid, hw_asid_invalidate "valid_objs"
 crunch valid_asid_table[wp]: do_machine_op
   "\<lambda>s. valid_asid_table (x64_asid_table (arch_state s)) s"
 
@@ -1323,7 +1323,7 @@ lemma (* replace_cap_invs_arch_update *)[Finalise_AI_asms]:
   apply simp
   done
 
-crunch pred_tcb_at_P [wp]: invalidate_asid_entry "\<lambda>s. P (pred_tcb_at proj Q p s)"
+crunch pred_tcb_at_P [wp]: hw_asid_invalidate "\<lambda>s. P (pred_tcb_at proj Q p s)"
 
 lemma dmo_tcb_cap_valid_ARCH [Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. P (tcb_cap_valid cap ptr s)\<rbrace> do_machine_op mop \<lbrace>\<lambda>_ s. P (tcb_cap_valid cap ptr s)\<rbrace>"
@@ -1579,7 +1579,7 @@ lemma delete_asid_pool_unmapped2:
   apply fastforce
   done
 
-crunch x64_global_pml4[wp]: invalidate_asid_entry, invalidate_page_structure_cache_asid
+crunch x64_global_pml4[wp]: hw_asid_invalidate, invalidate_page_structure_cache_asid
            "\<lambda>s. P (x64_global_pml4(arch_state s))"
 
 crunch global_refs_invs[wp]: invalidate_page_structure_cache_asid

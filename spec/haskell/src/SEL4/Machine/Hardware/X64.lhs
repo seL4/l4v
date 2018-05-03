@@ -575,9 +575,6 @@ Page entries -- any of PTEs, PDEs or PDPTEs.
 > numIODomainIDBits :: Int
 > numIODomainIDBits = Platform.numIODomainIDBits
 
-> hwASIDInvalidate :: Word -> Word64 -> MachineMonad ()
-> hwASIDInvalidate = invalidateASID
-
 > getFaultAddress :: MachineMonad VPtr
 > getFaultAddress = do
 >     cbptr <- ask
