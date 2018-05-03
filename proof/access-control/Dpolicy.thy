@@ -15,6 +15,18 @@ imports
   "../drefine/Include_D"
 begin
 
+(*
+This file proves that the authority granted by any abstract state that
+satisfies the extended invariants agrees with the authority granted by the
+corresponding capDL state. This result is given by the final lemma in the file,
+pas_refined_transform.
+
+More details of this result and how it is used can be found in Section 6.1 of
+"Comprehensive Formal Verification of an OS Microkernel", which can be
+downloaded from
+https://ts.data61.csiro.au/publications/nictaabstracts/Klein_AEMSKH_14.abstract.pml
+*)
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
