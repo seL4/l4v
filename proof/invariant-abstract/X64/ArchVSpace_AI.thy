@@ -330,54 +330,54 @@ lemma asid_high_bits_shl:
   done
 
 
-crunch vs_lookup [wp]: invalidate_asid_entry "\<lambda>s. P (vs_lookup s)"
+crunch vs_lookup [wp]: hw_asid_invalidate "\<lambda>s. P (vs_lookup s)"
 
-crunch aligned [wp]: invalidate_asid_entry pspace_aligned
+crunch aligned [wp]: hw_asid_invalidate pspace_aligned
 
-crunch "distinct" [wp]: invalidate_asid_entry pspace_distinct
+crunch "distinct" [wp]: hw_asid_invalidate pspace_distinct
 
-crunch caps_of_state[wp]: invalidate_asid_entry "\<lambda>s. P (caps_of_state s)"
+crunch caps_of_state[wp]: hw_asid_invalidate "\<lambda>s. P (caps_of_state s)"
 
-crunch vspace_objs [wp]: invalidate_asid_entry valid_vspace_objs
+crunch vspace_objs [wp]: hw_asid_invalidate valid_vspace_objs
   (simp: valid_vspace_objs_arch_update)
 
-crunch typ_at [wp]: invalidate_asid_entry "\<lambda>s. P (typ_at T p s)"
+crunch typ_at [wp]: hw_asid_invalidate "\<lambda>s. P (typ_at T p s)"
 
-lemmas invalidate_asid_entry_typ_ats [wp] =
-  abs_typ_at_lifts [OF invalidate_asid_entry_typ_at]
+lemmas hw_asid_invalidate_typ_ats [wp] =
+  abs_typ_at_lifts [OF hw_asid_invalidate_typ_at]
 
-crunch cur [wp]: invalidate_asid_entry cur_tcb
+crunch cur [wp]: hw_asid_invalidate cur_tcb
 
-crunch valid_objs [wp]: invalidate_asid_entry valid_objs
+crunch valid_objs [wp]: hw_asid_invalidate valid_objs
 
-crunch obj_at [wp]: invalidate_asid_entry "\<lambda>s. P (obj_at Q p s)"
+crunch obj_at [wp]: hw_asid_invalidate "\<lambda>s. P (obj_at Q p s)"
 
-crunch valid_vs_lookup[wp]: invalidate_asid_entry "valid_vs_lookup"
+crunch valid_vs_lookup[wp]: hw_asid_invalidate "valid_vs_lookup"
 
-crunch arm_asid_table_inv[wp]: invalidate_asid_entry
+crunch arm_asid_table_inv[wp]: hw_asid_invalidate
     "\<lambda>s. P (x64_asid_table (arch_state s))"
 
-lemma hwASIDInvalidate_underlying_memory:
+lemma invalidateASID_underlying_memory:
   "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace>
-   hwASIDInvalidate a b
+   invalidateASID a b
    \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (simp add: hwASIDInvalidate_def invalidateASID_def machine_op_lift_underlying_memory)
+  by (simp add: invalidateASID_def invalidateASID_def machine_op_lift_underlying_memory)
 
 (* FIXME x64: move to Machine_AI *)
-lemma no_irq_hwASIDInvalidate: "no_irq (hwASIDInvalidate a b)"
-  by (clarsimp simp: hwASIDInvalidate_def invalidateASID_def)
+lemma no_irq_invalidateASID: "no_irq (invalidateASID a b)"
+  by (clarsimp simp: invalidateASID_def invalidateASID_def)
 
-lemmas hwASIDInvalidate_irq_masks = no_irq[OF no_irq_hwASIDInvalidate]
+lemmas invalidateASID_irq_masks = no_irq[OF no_irq_invalidateASID]
 
-crunch device_state_inv[wp]: hwASIDInvalidate "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: invalidateASID "\<lambda>ms. P (device_state ms)"
   (ignore: ignore_failure)
 
-lemma dmo_hwASIDInvalidate_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (hwASIDInvalidate a b) \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (simp add: hwASIDInvalidate_def invalidateASID_def do_machine_op_lift_invs)
+lemma dmo_invalidateASID_invs[wp]:
+  "\<lbrace>invs\<rbrace> do_machine_op (invalidateASID a b) \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (simp add: invalidateASID_def do_machine_op_lift_invs)
 
-lemma invalidate_asid_entry_invs[wp]: "\<lbrace>invs\<rbrace> invalidate_asid_entry asid vspace \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (wpsimp simp: invalidate_asid_entry_def)
+lemma hw_asid_invalidate_invs[wp]: "\<lbrace>invs\<rbrace> hw_asid_invalidate asid vspace \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (wpsimp simp: hw_asid_invalidate_def)
 
 
 lemma asid_low_bits_word_bits:
@@ -1700,17 +1700,6 @@ lemma not_in_global_refs_vs_lookup:
   apply (simp add: cap_range_def)
   apply blast
   done
-
-crunch device_state_inv[wp]: invalidateASID "\<lambda>s. P (device_state s)"
-
-lemma invalidateASID_underlying_memory[wp]:
-  "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> invalidateASID vspace asid \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (simp add: invalidateASID_def machine_op_lift_underlying_memory)
-
-lemma no_irq_invalidateASID: "no_irq (invalidateASID vpsace asid)"
-  by (clarsimp simp: invalidateASID_def)
-
-lemmas invalidateASID_irq_masks = no_irq[OF no_irq_invalidateASID]
 
 lemma flush_all_invs[wp]:
   "\<lbrace>invs\<rbrace> flush_all vspace asid \<lbrace>\<lambda>_. invs\<rbrace>"

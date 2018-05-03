@@ -413,29 +413,25 @@ lemma get_asid_pool_corres_inv':
 lemma no_fail_invalidateASID[wp]: "no_fail \<top> (invalidateASID a b)"
   by (simp add: invalidateASID_def)
 
-(* FIXME x64: move *)
-lemma no_fail_hwASIDInvalidate[wp]: "no_fail \<top> (hwASIDInvalidate a b)"
-  by (simp add: hwASIDInvalidate_def no_fail_invalidateASID)
-
 lemma dMo_no_0_obj'[wp]:
   "\<lbrace>no_0_obj'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
   apply wp
   by (simp add: no_0_obj'_def)
 
-lemma invalidate_asid_entry_corres:
+lemma hw_asid_invalidate_corres:
   assumes "pm' = pm" "asid' = asid"
-  shows "corres dc \<top> \<top> (invalidate_asid_entry asid pm) (invalidateASIDEntry asid' pm')"
+  shows "corres dc \<top> \<top> (hw_asid_invalidate asid pm) (hwASIDInvalidate asid' pm')"
   using assms
-  apply (simp add: invalidate_asid_entry_def invalidateASIDEntry_def)
+  apply (simp add: hw_asid_invalidate_def hwASIDInvalidate_def)
   apply (rule corres_machine_op)
   apply (rule corres_Id; simp add: ucast_id)
   apply wp
   done
 
-crunch aligned' [wp]: invalidateASIDEntry pspace_aligned'
-crunch distinct' [wp]: invalidateASIDEntry pspace_distinct'
-crunch cur' [wp]: invalidateASIDEntry cur_tcb'
+crunch aligned' [wp]: hwASIDInvalidate pspace_aligned'
+crunch distinct' [wp]: hwASIDInvalidate pspace_distinct'
+crunch cur' [wp]: hwASIDInvalidate cur_tcb'
 
 lemma dMo_x64KSASIDTable_inv[wp]:
   "\<lbrace>\<lambda>s. P (x64KSASIDTable (ksArchState s))\<rbrace> doMachineOp f \<lbrace>\<lambda>_ s. P (x64KSASIDTable (ksArchState s))\<rbrace>"
@@ -450,8 +446,8 @@ lemma dMo_valid_arch_state'[wp]:
   by (clarsimp)
 
 lemma invalidateASID_valid_arch_state [wp]:
-  "\<lbrace>valid_arch_state'\<rbrace> invalidateASIDEntry x y \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  unfolding invalidateASIDEntry_def
+  "\<lbrace>valid_arch_state'\<rbrace> hwASIDInvalidate x y \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  unfolding hwASIDInvalidate_def
   by wpsimp
 
 crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
@@ -465,12 +461,12 @@ lemma set_asid_pool_vspace_objs_unmap_single:
   by (simp add: restrict_map_def fun_upd_def if_flip)
 
 (* FIXME x64: move *)
-lemma invalidate_asid_entry_valid_arch_state[wp]:
-  "\<lbrace>valid_arch_state\<rbrace> invalidate_asid_entry asid pm \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  unfolding invalidate_asid_entry_def by wp
+lemma hw_asid_invalidate_valid_arch_state[wp]:
+  "\<lbrace>valid_arch_state\<rbrace> hw_asid_invalidate asid pm \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  unfolding hw_asid_invalidate_def by wp
 
 (* FIXME x64: move *)
-crunch valid_global_objs[wp]: invalidate_asid_entry "valid_global_objs"
+crunch valid_global_objs[wp]: hw_asid_invalidate "valid_global_objs"
 
 
 lemma delete_asid_corres [corres]:
@@ -497,7 +493,7 @@ lemma delete_asid_corres [corres]:
          apply (simp add: dom_def)
          apply (rule get_asid_pool_corres_inv'[OF refl])
         apply (rule corres_when, simp add: mask_asid_low_bits_ucast_ucast asid_low_bits_of_def)
-        apply (rule corres_split [OF _ invalidate_asid_entry_corres[where pm=pm]])
+        apply (rule corres_split [OF _ hw_asid_invalidate_corres[where pm=pm]])
             apply (rule_tac P="asid_pool_at (the (asidTable (ucast (asid_high_bits_of asid))))
                                and valid_etcbs"
                         and P'="pspace_aligned' and pspace_distinct'"
@@ -556,7 +552,7 @@ lemma valid_arch_state_unmap_strg':
   apply (auto simp: ran_def split: if_split_asm)
   done
 
-crunch x64KSASIDTable_inv[wp]: invalidateASIDEntry
+crunch x64KSASIDTable_inv[wp]: hwASIDInvalidate
     "\<lambda>s. P (x64KSASIDTable (ksArchState s))"
 
 lemma delete_asid_pool_corres:
@@ -590,7 +586,7 @@ lemma delete_asid_pool_corres:
                  apply (clarsimp simp: ucast_ucast_low_bits)
                 apply (simp add: ucast_ucast_low_bits)
                 apply (rule_tac pm="the (inv ASIDPool x xa)"
-                         in invalidate_asid_entry_corres[OF refl refl])
+                         in hw_asid_invalidate_corres[OF refl refl])
                apply simp
               apply simp
              apply clarsimp

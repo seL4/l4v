@@ -138,7 +138,6 @@ writeCR3 = error "Unimplemented"
 
 invalidateTLB = error "Unimplemented"
 mfence = error "Unimplemented"
-hwASIDInvalidate = error "Unimplemented"
 invalidateASID = error "Unimplemented"
 invalidateTranslationSingleASID = error "Unimplemented"
 

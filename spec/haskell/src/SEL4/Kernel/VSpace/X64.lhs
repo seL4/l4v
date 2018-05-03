@@ -299,7 +299,7 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >     when (asidTable!(asidHighBitsOf base) == Just ptr) $ do
 >         ASIDPool pool <- getObject ptr
 >         forM [0 .. (bit asidLowBits) - 1] $ \offset -> do
->             when (isJust $ pool ! offset) $ invalidateASIDEntry (base + offset) $ fromJust $ pool ! offset
+>             when (isJust $ pool ! offset) $ hwASIDInvalidate (base + offset) $ fromJust $ pool ! offset
 >         let asidTable' = asidTable//[(asidHighBitsOf base, Nothing)]
 >         modify (\s -> s {
 >             ksArchState = (ksArchState s) { x64KSASIDTable = asidTable' }})
@@ -316,7 +316,7 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >         Just poolPtr -> do
 >             ASIDPool pool <- getObject poolPtr
 >             when (pool!(asidLowBitsOf asid) == Just pm) $ do
->                 invalidateASIDEntry asid pm
+>                 hwASIDInvalidate asid pm
 >                 let pool' = pool//[(asidLowBitsOf asid, Nothing)]
 >                 setObject poolPtr $ ASIDPool pool'
 >                 tcb <- getCurThread
@@ -504,9 +504,9 @@ Note that implementations with separate high and low memory regions may also wis
 
 \subsection{Managing ASID Map}
 
-> invalidateASIDEntry :: ASID -> PPtr PML4E -> Kernel ()
-> invalidateASIDEntry asid vspace =
->     doMachineOp $ hwASIDInvalidate (fromPPtr vspace) (fromASID asid)
+> hwASIDInvalidate :: ASID -> PPtr PML4E -> Kernel ()
+> hwASIDInvalidate asid vspace =
+>     doMachineOp $ invalidateASID (fromPPtr vspace) (fromASID asid)
 
 \subsection{Decoding x64 Invocations}
 

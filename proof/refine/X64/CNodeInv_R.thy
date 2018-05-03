@@ -9724,7 +9724,7 @@ crunch irq_states' [wp]: capSwapForDelete valid_irq_states'
 
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
-       no_irq_hwASIDInvalidate no_irq_writeCR3 no_irq_invalidateASID
+       no_irq_writeCR3 no_irq_invalidateASID
        no_irq_invalidateLocalPageStructureCacheASID
    simp: crunch_simps o_def ignore: getObject setObject)
 

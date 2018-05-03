@@ -1788,13 +1788,13 @@ lemma findFreeHWASID_no_orphans [wp]:
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
   done
 
-crunch ksCurThread [wp]: invalidateASIDEntry "\<lambda> s. P (ksCurThread s)"
+crunch ksCurThread [wp]: hwASIDInvalidate "\<lambda> s. P (ksCurThread s)"
 
-crunch ksReadyQueues[wp]: invalidateASIDEntry "\<lambda>s. P (ksReadyQueues s)"
+crunch ksReadyQueues[wp]: hwASIDInvalidate "\<lambda>s. P (ksReadyQueues s)"
 
-lemma invalidateASIDEntry_no_orphans [wp]:
+lemma hwASIDInvalidate_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
-   invalidateASIDEntry asid
+   hwASIDInvalidate asid
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding no_orphans_disj all_queued_tcb_ptrs_def
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
