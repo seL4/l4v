@@ -364,18 +364,18 @@ lemma emptyable_no_reply_cap:
   and    vr: "valid_reply_caps s"
   and    vm: "valid_reply_masters s"
   and    vo: "valid_objs s"
-  and    rc: "caps_of_state s sl' = Some (cap.ReplyCap t False)"
+  and    rc: "\<exists> R. caps_of_state s sl' = Some (cap.ReplyCap t False R)"
   and    rp: "mdb s sl' = Some sl"
   shows      "False"
 proof -
   have rm:
-    "caps_of_state s sl = Some (cap.ReplyCap t True)"
+    "\<exists> R. caps_of_state s sl = Some (cap.ReplyCap t True R)"
     using mdb rc rp unfolding reply_caps_mdb_def
     by fastforce
   have tcb_slot:
     "sl = (t, tcb_cnode_index 2)"
     using vm rm unfolding valid_reply_masters_def
-    by (fastforce simp: cte_wp_at_caps_of_state)
+    by (fastforce simp: cte_wp_at_caps_of_state is_master_reply_cap_to_def)
   have tcb_halted:
     "st_tcb_at halted t s"
     using vo rm tcb_slot e unfolding emptyable_def
@@ -383,7 +383,7 @@ proof -
   have tcb_not_halted:
     "st_tcb_at (Not \<circ> halted) t s"
     using vr rc unfolding valid_reply_caps_def
-    by (fastforce simp add: has_reply_cap_def cte_wp_at_caps_of_state
+    by (fastforce simp add: has_reply_cap_def is_reply_cap_to_def cte_wp_at_caps_of_state
                  simp del: split_paired_Ex
                     elim!: pred_tcb_weakenE)
   show ?thesis
@@ -940,34 +940,34 @@ sublocale delete_one_abs a' for a' :: "('a :: state_ext) itself"
 end
 
 lemma cap_delete_one_deletes_reply:
-  "\<lbrace>cte_wp_at ((=) (cap.ReplyCap t False)) slot and valid_reply_caps\<rbrace>
+  "\<lbrace>cte_wp_at (is_reply_cap_to t) slot and valid_reply_caps\<rbrace>
     cap_delete_one slot
    \<lbrace>\<lambda>rv s. \<not> has_reply_cap t s\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
   apply wp
-     apply (rule_tac Q="\<lambda>rv s. \<forall>sl'. if (sl' = slot)
+     apply (rule_tac Q="\<lambda>rv s. \<forall>sl' R. if (sl' = slot)
                                then cte_wp_at (\<lambda>c. c = cap.NullCap) sl' s
-                               else caps_of_state s sl' \<noteq> Some (cap.ReplyCap t False)"
+                               else caps_of_state s sl' \<noteq> Some (cap.ReplyCap t False R)"
                   in hoare_post_imp)
-      apply (clarsimp simp add: has_reply_cap_def cte_wp_at_caps_of_state
+      apply (clarsimp simp add: has_reply_cap_def is_reply_cap_to_def cte_wp_at_caps_of_state
                       simp del: split_paired_All split_paired_Ex
                          split: if_split_asm elim!: allEI)
      apply (rule hoare_vcg_all_lift)
      apply simp
      apply (wp static_imp_wp empty_slot_deletes empty_slot_caps_of_state get_cap_wp)+
   apply (fastforce simp: cte_wp_at_caps_of_state valid_reply_caps_def
-                        is_cap_simps unique_reply_caps_def
+                        is_cap_simps unique_reply_caps_def is_reply_cap_to_def
               simp del: split_paired_All)
   done
 
 lemma cap_delete_one_reply_st_tcb_at:
-  "\<lbrace>pred_tcb_at proj P t and cte_wp_at ((=) (cap.ReplyCap t' False)) slot\<rbrace>
+  "\<lbrace>pred_tcb_at proj P t and cte_wp_at (is_reply_cap_to t') slot\<rbrace>
     cap_delete_one slot
    \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
   apply (rule hoare_seq_ext [OF _ get_cap_sp])
   apply (rule hoare_assume_pre)
-  apply (clarsimp simp: cte_wp_at_caps_of_state when_def)
+  apply (clarsimp simp: cte_wp_at_caps_of_state when_def is_reply_cap_to_def)
   apply wpsimp
   done
 

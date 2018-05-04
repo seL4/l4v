@@ -36,7 +36,7 @@ lemma update_cap_data_closedform:
    | cap.DomainCap \<Rightarrow> cap.DomainCap
    | cap.UntypedCap d p n idx \<Rightarrow> cap.UntypedCap d p n idx
    | cap.NullCap \<Rightarrow> cap.NullCap
-   | cap.ReplyCap t m \<Rightarrow> cap.ReplyCap t m
+   | cap.ReplyCap t m rights \<Rightarrow> cap.ReplyCap t m rights
    | cap.IRQControlCap \<Rightarrow> cap.IRQControlCap
    | cap.IRQHandlerCap irq \<Rightarrow> cap.IRQHandlerCap irq
    | cap.Zombie r b n \<Rightarrow> cap.Zombie r b n
@@ -107,14 +107,12 @@ lemma is_derived_cap_rights [simp, Ipc_AI_assms]:
   apply (rule ext)
   apply (simp add: cap_rights_update_def is_derived_def is_cap_simps)
   apply (case_tac x, simp_all)
-           apply (simp add: cap_master_cap_def bits_of_def is_cap_simps
-                             vs_cap_ref_def
-                     split: cap.split)+
-  apply (simp add: is_cap_simps is_page_cap_def
-             cong: arch_cap.case_cong)
-  apply (simp split: arch_cap.split cap.split
-                add: is_cap_simps acap_rights_update_def is_pt_cap_def)
-  done
+  by (auto simp: cap_master_cap_def bits_of_def is_cap_simps
+                     vs_cap_ref_def is_page_cap_def
+                     acap_rights_update_def is_pt_cap_def
+           cong: arch_cap.case_cong
+           split: arch_cap.split cap.split bool.splits)
+
 
 lemma data_to_message_info_valid [Ipc_AI_assms]:
   "valid_message_info (data_to_message_info w)"
@@ -138,7 +136,7 @@ lemma get_extra_cptrs_length[wp, Ipc_AI_assms]:
 
 lemma cap_asid_rights_update [simp, Ipc_AI_assms]:
   "cap_asid (cap_rights_update R c) = cap_asid c"
-  apply (simp add: cap_rights_update_def acap_rights_update_def split: cap.splits arch_cap.splits)
+  apply (simp add: cap_rights_update_def acap_rights_update_def split: cap.splits arch_cap.splits bool.splits)
   apply (clarsimp simp: cap_asid_def)
   done
 
@@ -146,22 +144,22 @@ lemma cap_rights_update_vs_cap_ref[simp, Ipc_AI_assms]:
   "vs_cap_ref (cap_rights_update rs cap) = vs_cap_ref cap"
   by (simp add: vs_cap_ref_def cap_rights_update_def
                 acap_rights_update_def
-         split: cap.split arch_cap.split)
+         split: cap.split arch_cap.split bool.splits)
 
 lemma is_derived_cap_rights2[simp, Ipc_AI_assms]:
   "is_derived m p c (cap_rights_update R c') = is_derived m p c c'"
   apply (case_tac c')
   apply (simp_all add: cap_rights_update_def)
   apply (clarsimp simp: is_derived_def is_cap_simps cap_master_cap_def vs_cap_ref_def
-                 split: cap.splits )+
+                 split: cap.splits bool.splits)+
   apply (rename_tac acap1 acap2)
   apply (case_tac acap1)
    by (auto simp: acap_rights_update_def)
 
 lemma cap_range_update [simp, Ipc_AI_assms]:
   "cap_range (cap_rights_update R cap) = cap_range cap"
-  by (simp add: cap_range_def cap_rights_update_def acap_rights_update_def
-         split: cap.splits arch_cap.splits)
+  by (auto simp add: cap_range_def cap_rights_update_def acap_rights_update_def
+         split: cap.splits arch_cap.splits bool.splits)
 
 lemma derive_cap_idle[wp, Ipc_AI_assms]:
   "\<lbrace>\<lambda>s. global_refs s \<inter> cap_range cap = {}\<rbrace>
@@ -185,9 +183,9 @@ lemma arch_derive_cap_objrefs_iszombie [Ipc_AI_assms]:
 
 lemma obj_refs_remove_rights[simp, Ipc_AI_assms]:
   "obj_refs (remove_rights rs cap) = obj_refs cap"
-  by (simp add: remove_rights_def cap_rights_update_def
+  by (auto simp add: remove_rights_def cap_rights_update_def
                 acap_rights_update_def
-         split: cap.splits arch_cap.splits)
+         split: cap.splits arch_cap.splits bool.splits)
 
 lemma storeWord_um_inv:
   "\<lbrace>\<lambda>s. underlying_memory s = um\<rbrace>
@@ -393,7 +391,7 @@ lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
   done
 
 lemma is_derived_ReplyCap [simp, Ipc_AI_assms]:
-  "\<And>m p. is_derived m p (cap.ReplyCap t False) = (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = t)"
+  "\<And>m p R. is_derived m p (cap.ReplyCap t False R) = (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = t)"
   apply (subst fun_eq_iff)
   apply clarsimp
   apply (case_tac x, simp_all add: is_derived_def is_cap_simps
@@ -436,9 +434,9 @@ lemma cap_insert_valid_vso_at[wp]:
   by (wpsimp wp: sts_obj_at_impossible sts_typ_ats hoare_vcg_ex_lift)
 
 lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_assms]:
-  "\<lbrace>valid_global_objs\<rbrace> setup_caller_cap send recv \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
+  "\<lbrace>valid_global_objs\<rbrace> setup_caller_cap send recv grant \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
   apply (wp valid_global_objs_lift valid_ao_at_lift)
-  apply (simp_all add: setup_caller_cap_def)
+  unfolding setup_caller_cap_def
    apply (wp sts_obj_at_impossible | simp add: tcb_not_empty_table)+
   done
 

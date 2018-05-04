@@ -98,7 +98,7 @@ lemma ball_tcb_cap_casesI:
                                                 \<and> obj_ref_of c = t)
                                              \<or> (halted st \<and> (c = cap.NullCap))));
      P (tcb_caller, tcb_caller_update, (\<lambda>_ st. case st of
-                                       Structures_A.BlockedOnReceive e \<Rightarrow>
+                                       Structures_A.BlockedOnReceive e data \<Rightarrow>
                                          ((=) cap.NullCap)
                                      | _ \<Rightarrow> is_reply_cap or ((=) cap.NullCap)));
      P (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or ((=) cap.NullCap))) \<rbrakk>
@@ -781,7 +781,7 @@ lemma idle_thread_idle[wp]:
 
 lemma set_thread_state_valid_objs[wp]:
  "\<lbrace>valid_objs and valid_tcb_state st and
-   (\<lambda>s. (\<forall>a. st = Structures_A.BlockedOnReceive a \<longrightarrow>
+   (\<lambda>s. (\<forall>a data. st = Structures_A.BlockedOnReceive a data \<longrightarrow>
               cte_wp_at ((=) cap.NullCap) (thread, tcb_cnode_index 3) s) \<and>
         (st_tcb_at (\<lambda>st. \<not> halted st) thread s \<or> halted st \<or>
               cte_wp_at (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = thread)
@@ -1397,8 +1397,8 @@ lemma st_tcb_reply_cap_valid:
                   split: Structures_A.thread_state.split_asm)
 
 lemma st_tcb_caller_cap_null:
-  "\<And>ep t (s::'state_ext state).
-    \<forall>cap. (st_tcb_at (\<lambda>st. st = Structures_A.BlockedOnReceive ep) t s \<and>
+  "\<And>ep data t (s::'state_ext state).
+    \<forall>cap. (st_tcb_at (\<lambda>st. st = Structures_A.BlockedOnReceive ep data) t s \<and>
             tcb_cap_valid cap (t, tcb_cnode_index 3) s) \<longrightarrow>
             cap = cap.NullCap"
   by (clarsimp simp: tcb_cap_valid_def st_tcb_at_tcb_at st_tcb_def2)
@@ -1540,7 +1540,7 @@ crunches set_thread_state, set_bound_notification
 lemma sts_invs_minor:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st) t
      and (\<lambda>s. \<not> halted st \<longrightarrow> ex_nonz_cap_to t s)
-     and (\<lambda>s. \<forall>a. st = Structures_A.BlockedOnReceive a \<longrightarrow>
+     and (\<lambda>s. \<forall>a data. st = Structures_A.BlockedOnReceive a data \<longrightarrow>
                     cte_wp_at ((=) cap.NullCap) (t, tcb_cnode_index 3) s)
      and (\<lambda>s. t \<noteq> idle_thread s)
      and (\<lambda>s. st_tcb_at (\<lambda>st. \<not> halted st) t s \<or> halted st \<or>
@@ -1575,7 +1575,7 @@ lemma sts_invs_minor2:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st \<and> \<not> awaiting_reply st') t
      and invs and ex_nonz_cap_to t and (\<lambda>s. t \<noteq> idle_thread s)
      and K (\<not> awaiting_reply st \<and> \<not>idle st)
-     and (\<lambda>s. \<forall>a. st = Structures_A.BlockedOnReceive a \<longrightarrow>
+     and (\<lambda>s. \<forall>a data. st = Structures_A.BlockedOnReceive a data \<longrightarrow>
                     cte_wp_at ((=) cap.NullCap) (t, tcb_cnode_index 3) s)
      and (\<lambda>s. st_tcb_at (\<lambda>st. \<not> halted st) t s \<or> halted st \<or>
                     cte_wp_at (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = t)
@@ -1741,8 +1741,8 @@ lemma ntfn_queued_st_tcb_at:
 lemma ep_queued_st_tcb_at:
   "\<And>P. \<lbrakk>ko_at (Endpoint ep) ptr s; (t, rt) \<in> ep_q_refs_of ep;
          valid_objs s; sym_refs (state_refs_of s);
-         \<And>ref pl. P (Structures_A.BlockedOnSend ref pl) \<and>
-  P (Structures_A.BlockedOnReceive ref) \<rbrakk>
+         \<And>ref pl pl'. P (Structures_A.BlockedOnSend ref pl) \<and>
+  P (Structures_A.BlockedOnReceive ref pl') \<rbrakk>
     \<Longrightarrow> st_tcb_at P t s"
   apply (case_tac ep, simp_all)
   apply (frule(1) sym_refs_ko_atD, clarsimp, erule (1) my_BallE,

@@ -229,8 +229,8 @@ lemma cancel_ipc_tcb [wp]:
 end
 
 lemma gbep_ret:
-  "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr \<or>
-     st = Structures_A.BlockedOnSend epPtr p \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr pl' \<or>
+     st = Structures_A.BlockedOnSend epPtr pl \<rbrakk> \<Longrightarrow>
   get_blocking_object st = return epPtr"
   by (auto simp add: get_blocking_object_def)
 
@@ -268,7 +268,7 @@ lemma reply_master_no_descendants_no_reply:
   "\<lbrakk> valid_mdb s; valid_reply_masters s; tcb_at t s \<rbrakk> \<Longrightarrow>
    descendants_of (t, tcb_cnode_index 2) (cdt s) = {} \<longrightarrow> \<not> has_reply_cap t s"
   by (fastforce simp: invs_def valid_state_def valid_mdb_def has_reply_cap_def
-                     cte_wp_at_caps_of_state reply_mdb_def
+                     cte_wp_at_caps_of_state reply_mdb_def is_reply_cap_to_def
                      reply_caps_mdb_def descendants_of_def cdt_parent_defs
                dest: reply_master_caps_of_stateD tranclD)
 
@@ -311,7 +311,7 @@ lemma ep_redux_simps2:
 lemma gbi_ep_sp:
   "\<lbrace>P\<rbrace>
      get_blocking_object st
-   \<lbrace>\<lambda>ep. P and K ((st = Structures_A.BlockedOnReceive ep)
+   \<lbrace>\<lambda>ep. P and K ((\<exists>d. st = Structures_A.BlockedOnReceive ep d)
                     \<or> (\<exists>d. st = Structures_A.BlockedOnSend ep d))\<rbrace>"
   apply (cases st, simp_all add: get_blocking_object_def)
    apply (wp | simp)+
@@ -532,8 +532,8 @@ end
 
 lemma reply_cap_descends_from_master:
   "\<lbrakk> invs s; tcb_at t s \<rbrakk> \<Longrightarrow>
-   \<forall>sl\<in>descendants_of (t, tcb_cnode_index 2) (cdt s).  \<forall>sl'. sl' \<noteq> sl \<longrightarrow>
-      caps_of_state s sl' \<noteq> Some (cap.ReplyCap t False)"
+   \<forall>sl\<in>descendants_of (t, tcb_cnode_index 2) (cdt s).  \<forall>sl' R. sl' \<noteq> sl \<longrightarrow>
+      caps_of_state s sl' \<noteq> Some (cap.ReplyCap t False R)"
   apply (subgoal_tac "cte_wp_at (\<lambda>c. (is_master_reply_cap c \<and> obj_ref_of c = t)
                                      \<or> c = cap.NullCap)
                                 (t, tcb_cnode_index 2) s")
@@ -557,13 +557,13 @@ lemma (in delete_one_abs) reply_cancel_ipc_no_reply_cap[wp]:
   apply (simp add: reply_cancel_ipc_def)
   apply wp
         apply (rule_tac Q="\<lambda>rvp s. cte_wp_at (\<lambda>c. c = cap.NullCap) x s \<and>
-                                (\<forall>sl. sl \<noteq> x \<longrightarrow>
-                                  caps_of_state s sl \<noteq> Some (cap.ReplyCap t False))"
+                                (\<forall>sl R. sl \<noteq> x \<longrightarrow>
+                                  caps_of_state s sl \<noteq> Some (cap.ReplyCap t False R))"
                   in hoare_strengthen_post)
          apply (wp hoare_vcg_conj_lift hoare_vcg_all_lift
                    delete_one_deletes delete_one_caps_of_state)
-        apply (clarsimp simp: has_reply_cap_def cte_wp_at_caps_of_state)
-        apply (case_tac "(aa, ba) = (a, b)", simp_all)[1]
+        apply (clarsimp simp: has_reply_cap_def cte_wp_at_caps_of_state is_reply_cap_to_def)
+        apply (case_tac "(aa, ba) = (a, b)",simp_all)[1]
        apply (wp hoare_vcg_all_lift select_wp | simp del: split_paired_All)+
    apply (rule_tac Q="\<lambda>_ s. invs s \<and> tcb_at t s" in hoare_post_imp)
     apply (erule conjE)
@@ -672,17 +672,17 @@ crunch bound_tcb_at[wp]: cancel_all_ipc, empty_slot, is_final_cap, get_cap "boun
 
 
 lemma fast_finalise_bound_tcb_at:
-  "\<lbrace>\<lambda>s. bound_tcb_at P t s \<and> (\<exists>tt b. cap = ReplyCap tt b) \<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
+  "\<lbrace>\<lambda>s. bound_tcb_at P t s \<and> (\<exists>tt b R. cap = ReplyCap tt b R) \<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   by (case_tac cap, simp_all)
 
 
 lemma get_cap_reply_cap_helper:
-  "\<lbrace>\<lambda>s. \<exists>t b. Some (ReplyCap t b) = caps_of_state s slot \<rbrace> get_cap slot \<lbrace>\<lambda>rv s. \<exists>t b. rv = ReplyCap t b\<rbrace>"
+  "\<lbrace>\<lambda>s. \<exists>t b R. Some (ReplyCap t b R) = caps_of_state s slot \<rbrace> get_cap slot \<lbrace>\<lambda>rv s. \<exists>t b R. rv = ReplyCap t b R\<rbrace>"
   by (auto simp: valid_def get_cap_caps_of_state[symmetric])
 
 
 lemma cap_delete_one_bound_tcb_at:
-  "\<lbrace>\<lambda>s. bound_tcb_at P t s \<and> (\<exists>t b. caps_of_state s c = Some (ReplyCap t b)) \<rbrace>
+  "\<lbrace>\<lambda>s. bound_tcb_at P t s \<and> (\<exists>t b R. caps_of_state s c = Some (ReplyCap t b R)) \<rbrace>
      cap_delete_one c
    \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   apply (clarsimp simp: unless_def cap_delete_one_def)

@@ -359,15 +359,12 @@ lemma update_cap_valid[Tcb_AI_asms]:
          simp_all add: update_cap_data_def cap_rights_update_def
                        is_cap_defs Let_def split_def valid_cap_def
                        badge_update_def the_cnode_cap_def cap_aligned_def
-                       arch_update_cap_data_def
-            split del: if_split)
-     apply (simp add: badge_update_def cap_rights_update_def)
-    apply (simp add: badge_update_def)
+                       arch_update_cap_data_def split: bool.splits)
    apply (simp add: word_bits_def)
   apply (rename_tac arch_cap)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
   apply (case_tac arch_cap, simp_all add: acap_rights_update_def
-                                     split: option.splits prod.splits)
+                                     split: option.splits prod.splits bool.splits)
   done
 
 

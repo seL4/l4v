@@ -227,6 +227,12 @@ lemma caps_of_state_init_A_st_Null:
    apply (auto simp add: state_defs tcb_cap_cases_def split: if_split_asm)
   done
 
+lemma cte_wp_at_init_A_st_Null:
+  "cte_wp_at P p init_A_st \<Longrightarrow> P cap.NullCap"
+  apply (subst(asm) cte_wp_at_caps_of_state)
+  apply (simp add:caps_of_state_init_A_st_Null split: if_splits)
+  done
+
 lemmas cte_wp_at_caps_of_state_eq
     = cte_wp_at_caps_of_state[where P="(=) cap" for cap]
 
@@ -303,12 +309,17 @@ lemma invs_A:
    apply (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def state_defs)
   apply (rule conjI)
    apply (clarsimp simp: if_unsafe_then_cap_def caps_of_state_init_A_st_Null)
-  apply (clarsimp simp: valid_reply_caps_def unique_reply_caps_def
-                        has_reply_cap_def pred_tcb_at_def obj_at_def
-                        caps_of_state_init_A_st_Null
-                        cte_wp_at_caps_of_state_eq
-                        valid_reply_masters_def valid_global_refs_def
-                        valid_refs_def[unfolded cte_wp_at_caps_of_state])
+  apply (subst conj_assoc[symmetric])
+  apply (subst conj_assoc[symmetric])
+  apply (subst conj_assoc)
+  apply (rule conjI)
+ using cte_wp_at_init_A_st_Null
+   apply (fastforce simp: valid_reply_caps_def unique_reply_caps_def
+                         has_reply_cap_def is_reply_cap_to_def pred_tcb_at_def obj_at_def
+                         caps_of_state_init_A_st_Null is_master_reply_cap_to_def
+                         valid_reply_masters_def valid_global_refs_def
+                         valid_refs_def[unfolded cte_wp_at_caps_of_state])
+
   apply (rule conjI)
    apply (clarsimp simp: valid_arch_state_def)
    apply (rule conjI)

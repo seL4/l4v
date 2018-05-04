@@ -113,7 +113,7 @@ lemma setup_reply_master_reply_master[wp]:
 
 lemma setup_reply_master_has_reply[wp]:
   "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> setup_reply_master t' \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
-  apply (simp add: has_reply_cap_def cte_wp_at_caps_of_state
+  apply (simp add: has_reply_cap_def is_reply_cap_to_def cte_wp_at_caps_of_state
                    setup_reply_master_def)
   apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state elim!: rsubst[where P=P])
@@ -272,7 +272,7 @@ lemma smrs_cte_at[wp]:
 
 
 lemma si_cte_at[wp]:
-  "\<lbrace>cte_at p\<rbrace> send_ipc bl c ba cg t ep \<lbrace>\<lambda>_. cte_at p\<rbrace>"
+  "\<lbrace>cte_at p\<rbrace> send_ipc bl c ba cg cgr t ep \<lbrace>\<lambda>_. cte_at p\<rbrace>"
   by (wp valid_cte_at_typ)
 
 

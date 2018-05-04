@@ -38,14 +38,14 @@ crunch typ_at[wp, Syscall_AI_assms]: invoke_irq_control "\<lambda>s. P (typ_at T
 
 lemma obj_refs_cap_rights_update[simp, Syscall_AI_assms]:
   "obj_refs (cap_rights_update rs cap) = obj_refs cap"
-  by (simp add: cap_rights_update_def acap_rights_update_def
-         split: cap.split arch_cap.split)
+  by (auto simp add: cap_rights_update_def acap_rights_update_def
+         split: cap.split arch_cap.split bool.splits)
 
 (* FIXME: move to TCB *)
 lemma table_cap_ref_mask_cap [Syscall_AI_assms]:
   "table_cap_ref (mask_cap R cap) = table_cap_ref cap"
   by (clarsimp simp add:mask_cap_def table_cap_ref_def acap_rights_update_def
-    cap_rights_update_def split:cap.splits arch_cap.splits)
+    cap_rights_update_def split:cap.splits arch_cap.splits bool.splits)
 
 lemma diminished_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
   "\<lbrakk> cte_wp_at (diminished cap) p s; valid_arch_caps s \<rbrakk>

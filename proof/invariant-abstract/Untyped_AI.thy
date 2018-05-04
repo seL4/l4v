@@ -124,7 +124,7 @@ lemma lookup_cap_ex:
 
 lemma is_cnode_mask:
   "is_cnode_cap (mask_cap m c) = is_cnode_cap c"
-  by (case_tac c, simp_all add: mask_cap_def cap_rights_update_def is_cap_simps)
+  by (case_tac c, simp_all add: mask_cap_def cap_rights_update_def is_cap_simps split:bool.splits)
 
 
 lemma Suc_length_not_empty:
@@ -147,7 +147,7 @@ lemma caps_of_state_valid:
 lemma mask_CNodeD:
   "mask_cap M' cap = cap.CNodeCap r bits g \<Longrightarrow>
   cap = cap.CNodeCap r bits g"
-  by (cases cap, auto simp: mask_cap_def cap_rights_update_def)
+  by (cases cap, auto simp: mask_cap_def cap_rights_update_def split:bool.splits)
 
 (* FIXME: move *)
 lemma unat_2p_sub_1:
@@ -796,11 +796,17 @@ lemma not_waiting_reply_slot_no_descendants:
   apply (clarsimp simp: st_tcb_def2)
   apply (erule disjE)
    apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
-   apply (elim allE, drule(1) mp, clarsimp)
+   apply (elim allE impE)
+    apply fastforce
+   apply (clarsimp)
    apply (drule(1) bspec)
-   apply (drule has_reply_cap_cte_wpD[OF caps_of_state_cteD])
-   apply (erule notE[rotated], strengthen reply_cap_doesnt_exist_strg)
-   apply (simp add: st_tcb_def2)
+   apply (subgoal_tac "has_reply_cap t s")
+    apply (erule notE[rotated], strengthen reply_cap_doesnt_exist_strg)
+    apply (simp add: st_tcb_def2)
+   apply (erule exE)
+   apply (drule caps_of_state_cteD)+
+   apply (fastforce simp add:has_reply_cap_def is_reply_cap_to_def elim:cte_wp_at_lift
+                    intro:  caps_of_state_cteD)
   apply clarsimp
   apply (frule mdb_Null_descendants[OF caps_of_state_cteD])
    apply (simp add: valid_mdb_def reply_mdb_def reply_masters_mdb_def)
@@ -1203,7 +1209,7 @@ lemma create_cap_mdb[wp]:
      apply (simp add: irq_revocable_def del: split_paired_All)
     apply (simp add: reply_master_revocable_def del: split_paired_All)
    apply (simp add: reply_mdb_def)
-   apply (subgoal_tac "\<And>t m. default_cap tp oref sz dev \<noteq> cap.ReplyCap t m")
+   apply (subgoal_tac "\<And>t m R. default_cap tp oref sz dev \<noteq> cap.ReplyCap t m R")
     apply (rule conjI)
      apply (fastforce simp: reply_caps_mdb_def descendants_of_def
                             mdb_insert_abs.parency
@@ -1778,9 +1784,8 @@ lemma set_cap_valid_mdb_simple:
   apply (intro allI impI conjI)
    apply (drule spec)+
    apply (erule(1) impE)
-  apply (erule exE)
+  apply (erule exE)+
   apply (rule_tac x = ptr' in exI)
-  apply simp+
   apply clarsimp
   done
   assume "reply_masters_mdb (cdt s) (caps_of_state s)"
@@ -1791,7 +1796,7 @@ lemma set_cap_valid_mdb_simple:
    apply (elim allE impE)
     apply simp
    using cstate
-   apply clarsimp
+   apply fastforce
    done
   assume misc:
     "mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
@@ -2923,7 +2928,7 @@ crunch it[wp]: create_cap "\<lambda>s. P (idle_thread s)"
 
 
 lemma default_cap_reply:
-  "default_cap tp ptr sz dev \<noteq> cap.ReplyCap ptr' bool"
+  "default_cap tp ptr sz dev \<noteq> cap.ReplyCap ptr' bool R"
   by (cases tp; simp)
 
 lemma create_cap_valid_reply_caps[wp]:
@@ -2931,14 +2936,14 @@ lemma create_cap_valid_reply_caps[wp]:
      create_cap tp sz p dev (cref, oref)
    \<lbrace>\<lambda>rv. valid_reply_caps\<rbrace>"
   apply (simp add: valid_reply_caps_def has_reply_cap_def
-                   cte_wp_at_caps_of_state create_cap_def
+                   cte_wp_at_caps_of_state create_cap_def is_reply_cap_to_def
                    set_cdt_def)
   apply (simp only: imp_conv_disj)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
   apply (clarsimp simp: default_cap_reply)
-  apply (erule conjI [OF allEI], clarsimp)
-  apply (simp add: unique_reply_caps_def)
+  apply (erule conjI [OF allEI], fastforce)
+  apply (simp add: unique_reply_caps_def default_cap_reply)
   done
 
 
@@ -2947,7 +2952,7 @@ lemma create_cap_valid_reply_masters[wp]:
      create_cap tp sz p dev (cref, oref)
    \<lbrace>\<lambda>rv. valid_reply_masters\<rbrace>"
   apply (simp add: valid_reply_masters_def cte_wp_at_caps_of_state
-                   create_cap_def)
+                   create_cap_def is_master_reply_cap_to_def)
   apply (wp | simp add: default_cap_reply)+
   done
 

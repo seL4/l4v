@@ -253,6 +253,10 @@ abbreviation
 where
   "cte_at \<equiv> cte_wp_at \<top>"
 
+lemma cte_wp_at_lift:
+  "\<lbrakk>cte_wp_at P p s ; \<And>s. P s \<Longrightarrow> Q s \<rbrakk> \<Longrightarrow> cte_wp_at Q p s"
+  by (fastforce simp: cte_wp_at_def)
+
 
 subsection "Valid caps and objects"
 
@@ -266,7 +270,7 @@ where
 | "untyped_range (cap.CNodeCap r bits guard)            = {}"
 | "untyped_range (cap.ThreadCap r)                      = {}"
 | "untyped_range (cap.DomainCap)                        = {}"
-| "untyped_range (cap.ReplyCap r master)                = {}"
+| "untyped_range (cap.ReplyCap r master rights)         = {}"
 | "untyped_range (cap.IRQControlCap)                    = {}"
 | "untyped_range (cap.IRQHandlerCap irq)                = {}"
 | "untyped_range (cap.Zombie r b n)                     = {}"
@@ -303,7 +307,7 @@ where
 | "cap_bits (CNodeCap r b m) = cte_level_bits + b"
 | "cap_bits (ThreadCap r) = obj_bits (TCB undefined)"
 | "cap_bits (DomainCap) = 0"
-| "cap_bits (ReplyCap r m) = obj_bits (TCB undefined)"
+| "cap_bits (ReplyCap r m R) = obj_bits (TCB undefined)"
 | "cap_bits (Zombie r zs n) =
     (case zs of None \<Rightarrow> obj_bits (TCB undefined)
             | Some n \<Rightarrow> cte_level_bits + n)"
@@ -340,12 +344,15 @@ where
   "wellformed_cap c \<equiv>
   case c of
     UntypedCap dev p sz idx \<Rightarrow> untyped_min_bits \<le> sz
-  | NotificationCap r badge rights \<Rightarrow> AllowGrant \<notin> rights
+  | NotificationCap r badge rights \<Rightarrow> AllowGrant \<notin> rights \<and> AllowGrantReply \<notin> rights
   | CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
   | Zombie r b n \<Rightarrow> (case b of None \<Rightarrow> n \<le> 5
                                           | Some b \<Rightarrow> n \<le> 2 ^ b \<and> b \<noteq> 0)
   | ArchObjectCap ac \<Rightarrow> wellformed_acap ac
+  | ReplyCap t master rights \<Rightarrow>
+      (master \<longrightarrow> AllowGrant \<in> rights) \<and> AllowWrite \<in> rights \<and> AllowRead \<notin> rights \<and>
+      AllowGrantReply \<notin> rights
   | _ \<Rightarrow> True"
 
 definition
@@ -359,7 +366,7 @@ where
   | CNodeCap r bits guard \<Rightarrow> cap_table_at bits r s
   | ThreadCap r \<Rightarrow> tcb_at r s
   | DomainCap \<Rightarrow> True
-  | ReplyCap r m \<Rightarrow> tcb_at r s
+  | ReplyCap r m rights \<Rightarrow> tcb_at r s
   | IRQControlCap \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> True
   | Zombie r b n \<Rightarrow>
@@ -375,12 +382,13 @@ where
   | UntypedCap dev p b f \<Rightarrow> valid_untyped c s \<and> untyped_min_bits \<le> b \<and> f \<le> 2 ^ b \<and> p \<noteq> 0
   | EndpointCap r badge rights \<Rightarrow> ep_at r s
   | NotificationCap r badge rights \<Rightarrow>
-         ntfn_at r s \<and> AllowGrant \<notin> rights
+         ntfn_at r s \<and> AllowGrant \<notin> rights \<and> AllowGrantReply \<notin> rights
   | CNodeCap r bits guard \<Rightarrow>
          cap_table_at bits r s \<and> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | ThreadCap r \<Rightarrow> tcb_at r s
   | DomainCap \<Rightarrow> True
-  | ReplyCap r m \<Rightarrow> tcb_at r s
+  | ReplyCap r m rights \<Rightarrow> tcb_at r s \<and>  (m \<longrightarrow> AllowGrant \<in> rights)
+                        \<and> AllowWrite \<in> rights \<and> AllowRead \<notin> rights \<and> AllowGrantReply \<notin> rights
   | IRQControlCap \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
   | Zombie r b n \<Rightarrow>
@@ -410,7 +418,7 @@ where
 | "cap_class (cap.Zombie r b n)                     = PhysicalClass"
 | "cap_class (cap.IRQControlCap)                    = IRQClass"
 | "cap_class (cap.IRQHandlerCap irq)                = IRQClass"
-| "cap_class (cap.ReplyCap tcb m)                   = ReplyClass tcb"
+| "cap_class (cap.ReplyCap tcb m rights)            = ReplyClass tcb"
 | "cap_class (cap.ArchObjectCap cap)                = acap_class cap"
 
 
@@ -427,7 +435,7 @@ definition
   valid_tcb_state :: "thread_state \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_tcb_state ts s \<equiv> case ts of
-    BlockedOnReceive ref \<Rightarrow> ep_at ref s
+    BlockedOnReceive ref sp \<Rightarrow> ep_at ref s
   | BlockedOnSend ref sp \<Rightarrow> ep_at ref s
   | BlockedOnNotification ref \<Rightarrow> ntfn_at ref s
   | _ \<Rightarrow> True"
@@ -440,6 +448,13 @@ abbreviation
                      Inactive \<Rightarrow> True
                    | IdleThreadState \<Rightarrow> True
                    | _ \<Rightarrow> False"
+
+text {*
+  For each slot in the tcb, we give the accessor function, the update function and
+  The invariant that should be verified about that slot.
+
+  The invariant paramters are inv thread_ptr tread_state cap_in_that_slot
+*}
 
 definition
   tcb_cap_cases ::
@@ -455,9 +470,9 @@ where
                                   \<or> (halted st \<and> (c = NullCap)))),
     tcb_cnode_index 3 \<mapsto> (tcb_caller, tcb_caller_update,
                           (\<lambda>_ st. case st of
-                                    BlockedOnReceive e \<Rightarrow>
-                                      ((=) NullCap)
-                                  | _ \<Rightarrow> is_reply_cap or ((=) NullCap))),
+                                    BlockedOnReceive e data \<Rightarrow>
+                                      (=) NullCap
+                                  | _ \<Rightarrow> is_reply_cap or (=) NullCap)),
     tcb_cnode_index 4 \<mapsto> (tcb_ipcframe, tcb_ipcframe_update,
                           (\<lambda>_ _. is_nondevice_page_cap or ((=) NullCap)))]"
 
@@ -613,7 +628,7 @@ where
   | (Restart)               => {}
   | (BlockedOnReply)        => {}
   | (IdleThreadState)       => {}
-  | (BlockedOnReceive x)  => {(x, TCBBlockedRecv)}
+  | (BlockedOnReceive x payl)  => {(x, TCBBlockedRecv)}
   | (BlockedOnSend x payl)  => {(x, TCBBlockedSend)}
   | (BlockedOnNotification x) => {(x, TCBSignal)}"
 
@@ -744,7 +759,7 @@ where
                 unat (of_bl xs :: machine_word) < n}"
 | "cte_refs (IRQControlCap) f                    = {}"
 | "cte_refs (IRQHandlerCap irq) f                = {(f irq, [])}"
-| "cte_refs (ReplyCap tcb master) f              = {}"
+| "cte_refs (ReplyCap tcb master rights) f              = {}"
 | "cte_refs (ArchObjectCap cap) f                = {}"
 
 definition
@@ -838,7 +853,13 @@ definition
    \<forall>p. is_original_cap s p \<longrightarrow> cte_wp_at (\<lambda>x. x \<noteq> NullCap)  p s"
 
 definition
-  "has_reply_cap t s \<equiv> \<exists>p. cte_wp_at ((=) (ReplyCap t False)) p s"
+  "is_reply_cap_to t \<equiv>  \<lambda>cap. \<exists>rights. cap = ReplyCap t False rights"
+
+definition
+  "is_master_reply_cap_to t \<equiv>  \<lambda>cap. \<exists>rights. cap = ReplyCap t True rights"
+
+definition
+  "has_reply_cap t s \<equiv> \<exists>p. cte_wp_at (is_reply_cap_to t) p s"
 
 definition
   "mdb_cte_at ct_at m \<equiv> \<forall>p c. m c = Some p \<longrightarrow> ct_at p \<and> ct_at c"
@@ -857,14 +878,14 @@ definition
                                           is_master_reply_cap cap \<longrightarrow> r p"
 
 definition
-  "reply_caps_mdb m cs \<equiv> \<forall>ptr t.
-     cs ptr = Some (ReplyCap t False) \<longrightarrow>
-     (\<exists>ptr'. m ptr = Some ptr' \<and> cs ptr' = Some (ReplyCap t True))"
+  "reply_caps_mdb m cs \<equiv> \<forall>ptr t rights.
+     cs ptr = Some (ReplyCap t False rights) \<longrightarrow>
+     (\<exists>ptr' rights'. m ptr = Some ptr' \<and> cs ptr' = Some (ReplyCap t True rights'))"
 
 definition
-  "reply_masters_mdb m cs \<equiv> \<forall>ptr t.
-     cs ptr = Some (ReplyCap t True) \<longrightarrow> m ptr = None \<and>
-     (\<forall>ptr'\<in>descendants_of ptr m. cs ptr' = Some (ReplyCap t False))"
+  "reply_masters_mdb m cs \<equiv> \<forall>ptr t rights.
+     cs ptr = Some (ReplyCap t True rights) \<longrightarrow> m ptr = None \<and>
+     (\<forall>ptr'\<in>descendants_of ptr m. \<exists>rights'. cs ptr' = Some (ReplyCap t False rights'))"
 
 definition
   "reply_mdb m cs \<equiv> reply_caps_mdb m cs \<and> reply_masters_mdb m cs"
@@ -892,14 +913,21 @@ definition
   "only_idle \<equiv> \<lambda>s. \<forall>t. st_tcb_at idle t s \<longrightarrow> t = idle_thread s"
 
 definition
-  "valid_reply_masters \<equiv> \<lambda>s. \<forall>p t. cte_wp_at ((=) (ReplyCap t True)) p s \<longrightarrow>
+  "valid_reply_masters \<equiv> \<lambda>s. \<forall>p t. cte_wp_at (is_master_reply_cap_to t) p s \<longrightarrow>
                                      p = (t, tcb_cnode_index 2)"
 
 definition
+ "reply_cap_get_tcb cap \<equiv> case cap of (ReplyCap t _ _) \<Rightarrow> t"
+
+lemma reply_cap_get_tcb_simp[simp]: "reply_cap_get_tcb (ReplyCap t m R) = t"
+ by (simp add: reply_cap_get_tcb_def)
+
+
+definition
   "unique_reply_caps cs \<equiv>
-   \<forall>ptr ptr' cap cap'.
-       cs ptr = Some cap \<longrightarrow> is_reply_cap cap \<longrightarrow>
-       cs ptr' = Some cap' \<longrightarrow> cap = cap' \<longrightarrow> ptr = ptr'"
+   \<forall>ptr ptr' t R R'.
+       cs ptr = Some (ReplyCap t False R) \<longrightarrow>
+       cs ptr' = Some (ReplyCap t False R') \<longrightarrow> ptr = ptr'"
 
 definition
   "valid_reply_caps \<equiv> \<lambda>s.
@@ -1181,7 +1209,7 @@ lemma valid_cap_def2:
           apply (simp_all add: valid_cap_simps wellformed_cap_simps
                                valid_cap_ref_simps
                         split: option.splits)
-    apply (fastforce+)[4]
+    apply (fastforce+)
   by (simp add: valid_arch_cap_def2)
 
 lemma valid_capsD:
@@ -1207,7 +1235,7 @@ lemma tcb_cap_cases_simps[simp]:
   "tcb_cap_cases (tcb_cnode_index 3) =
    Some (tcb_caller, tcb_caller_update,
          (\<lambda>_ st. case st of
-                   BlockedOnReceive e \<Rightarrow> ((=) NullCap)
+                   BlockedOnReceive e data \<Rightarrow> ((=) NullCap)
                  | _ \<Rightarrow> is_reply_cap or ((=) NullCap)))"
   "tcb_cap_cases (tcb_cnode_index 4) =
    Some (tcb_ipcframe, tcb_ipcframe_update,
@@ -1222,7 +1250,7 @@ lemma ran_tcb_cap_cases:
                                        (is_master_reply_cap c \<and> obj_ref_of c = t)
                                      \<or> (halted st \<and> (c = NullCap)))),
      (tcb_caller, tcb_caller_update, (\<lambda>_ st. case st of
-                                       Structures_A.BlockedOnReceive e \<Rightarrow>
+                                       Structures_A.BlockedOnReceive e data \<Rightarrow>
                                          ((=) NullCap)
                                      | _ \<Rightarrow> is_reply_cap or ((=) NullCap))),
      (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or ((=) NullCap)))}"
@@ -1269,7 +1297,7 @@ lemma tcb_st_refs_of_simps[simp]: (* ARMHYP add TCBHypRef? *)
  "tcb_st_refs_of (Restart)               = {}"
  "tcb_st_refs_of (BlockedOnReply)        = {}"
  "tcb_st_refs_of (IdleThreadState)       = {}"
- "\<And>x. tcb_st_refs_of (BlockedOnReceive x)  = {(x, TCBBlockedRecv)}"
+ "\<And>x. tcb_st_refs_of (BlockedOnReceive x payl')  = {(x, TCBBlockedRecv)}"
  "\<And>x. tcb_st_refs_of (BlockedOnSend x payl)  = {(x, TCBBlockedSend)}"
  "\<And>x. tcb_st_refs_of (BlockedOnNotification x) = {(x, TCBSignal)}"
   by (auto simp: tcb_st_refs_of_def)
@@ -1311,9 +1339,9 @@ lemma refs_of_simps[simp]:
 
 lemma refs_of_rev:
  "(x, TCBBlockedRecv) \<in> refs_of ko =
-    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = BlockedOnReceive x))"
+    (\<exists>tcb. ko = TCB tcb \<and> (\<exists>pl. tcb_state tcb = BlockedOnReceive x pl))"
  "(x, TCBBlockedSend) \<in> refs_of ko =
-    (\<exists>tcb. ko = TCB tcb \<and> (\<exists>pl. tcb_state tcb = BlockedOnSend    x pl))"
+    (\<exists>tcb. ko = TCB tcb \<and> (\<exists>pl. tcb_state tcb = BlockedOnSend x pl))"
  "(x, TCBSignal) \<in> refs_of ko =
     (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = BlockedOnNotification x))"
  "(x, EPRecv) \<in> refs_of ko =
@@ -1340,7 +1368,7 @@ lemma refs_of_rev:
 
 lemma st_tcb_at_refs_of_rev:
   "obj_at (\<lambda>ko. (x, TCBBlockedRecv) \<in> refs_of ko) t s
-     = st_tcb_at (\<lambda>ts. ts = BlockedOnReceive x) t s"
+     = st_tcb_at (\<lambda>ts. \<exists>pl. ts = BlockedOnReceive x pl) t s"
   "obj_at (\<lambda>ko. (x, TCBBlockedSend) \<in> refs_of ko) t s
      = st_tcb_at (\<lambda>ts. \<exists>pl. ts = BlockedOnSend x pl   ) t s"
   "obj_at (\<lambda>ko. (x, TCBSignal) \<in> refs_of ko) t s
@@ -1532,13 +1560,13 @@ lemma valid_reply_capsD:
   by simp
 
 lemma reply_master_caps_of_stateD:
-  "\<And>sl. \<lbrakk> valid_reply_masters s; caps_of_state s sl = Some (ReplyCap t True)\<rbrakk>
-   \<Longrightarrow> sl = (t, tcb_cnode_index 2)"
-  by (simp add: valid_reply_masters_def cte_wp_at_caps_of_state
+  "\<And>slot. \<lbrakk> valid_reply_masters s; caps_of_state s slot = Some (ReplyCap t True rights)\<rbrakk>
+   \<Longrightarrow> slot = (t, tcb_cnode_index 2)"
+  by (simp add: valid_reply_masters_def cte_wp_at_caps_of_state is_master_reply_cap_to_def
            del: split_paired_All)
 
 lemma has_reply_cap_cte_wpD:
-  "\<And>t sl. cte_wp_at ((=) (ReplyCap t False)) sl s \<Longrightarrow> has_reply_cap t s"
+  "\<And>t slot. cte_wp_at (is_reply_cap_to t) slot s \<Longrightarrow> has_reply_cap t s"
   by (fastforce simp: has_reply_cap_def)
 
 lemma reply_cap_doesnt_exist_strg:
@@ -1547,6 +1575,7 @@ lemma reply_cap_doesnt_exist_strg:
   by (clarsimp dest!: valid_reply_capsD
                 simp: st_tcb_def2)
 
+(*FIXME destruction rule argument order is wrong *)
 lemma mdb_cte_atD:
   "\<lbrakk> m c = Some p; mdb_cte_at ct_at m \<rbrakk>
      \<Longrightarrow> ct_at p \<and> ct_at c"
@@ -2373,8 +2402,8 @@ lemma is_cap_simps:
   "is_ntfn_cap cap = (\<exists>r b R. cap = NotificationCap r b R)"
   "is_zombie cap = (\<exists>r b n. cap = Zombie r b n)"
   "is_arch_cap cap = (\<exists>a. cap = ArchObjectCap a)"
-  "is_reply_cap cap = (\<exists>x. cap = ReplyCap x False)"
-  "is_master_reply_cap cap = (\<exists>x. cap = ReplyCap x True)"
+  "is_reply_cap cap = (\<exists>x R. cap = ReplyCap x False R)"
+  "is_master_reply_cap cap = (\<exists>x R. cap = ReplyCap x True R)"
   by (cases cap, auto simp: is_zombie_def is_arch_cap_def
                             is_reply_cap_def is_master_reply_cap_def)+
 
@@ -3007,19 +3036,35 @@ lemma is_master_reply_cap_NullCap:
 
 lemma unique_reply_capsD:
   "\<lbrakk> unique_reply_caps cs; reply_masters_mdb m cs;
-     cs master = Some (ReplyCap t True);
+     cs master = Some (ReplyCap t True rights);
      sl\<in>descendants_of master m; sl'\<in>descendants_of master m \<rbrakk>
    \<Longrightarrow> sl = sl'"
-  by (simp add: unique_reply_caps_def reply_masters_mdb_def is_cap_simps
+  apply (simp add: reply_masters_mdb_def
            del: split_paired_All)
+  apply (drule_tac x=master in spec)
+  apply (drule_tac x=t in spec)
+  apply (clarsimp simp del: split_paired_All)
+  apply (frule_tac x=sl in bspec,assumption)
+  apply (drule_tac x=sl' in bspec,assumption)
+  by (clarsimp simp add: unique_reply_caps_def is_cap_simps
+           simp del: split_paired_All)
 
 (* FIXME: duplicated with caps_of_state_valid_cap *)
 lemmas caps_of_state_valid =  caps_of_state_valid_cap
 
 lemma valid_reply_mastersD:
-  "\<lbrakk> cte_wp_at ((=) (ReplyCap t True)) p s; valid_reply_masters s \<rbrakk>
+  "\<lbrakk> cte_wp_at (is_master_reply_cap_to t) p s; valid_reply_masters s \<rbrakk>
    \<Longrightarrow> p = (t, tcb_cnode_index 2)"
   by (simp add: valid_reply_masters_def del: split_paired_All)
+
+lemma valid_reply_mastersD':
+  "\<lbrakk> cte_wp_at ((=) (ReplyCap t True R)) p s; valid_reply_masters s \<rbrakk>
+   \<Longrightarrow> p = (t, tcb_cnode_index 2)"
+  by (fastforce simp add: valid_reply_masters_def is_master_reply_cap_to_def
+                simp del: split_paired_All
+                elim: cte_wp_at_lift
+                elim!: impE)
+
 
 lemma valid_cap_aligned:
   "s \<turnstile> cap \<Longrightarrow> cap_aligned cap"
@@ -3141,11 +3186,11 @@ lemma only_idle_lift:
 lemma cap_rights_update_id [intro!, simp]:
   "wellformed_cap c \<Longrightarrow> cap_rights_update (cap_rights c) c = c"
   unfolding cap_rights_update_def
-  by (cases c) (auto simp: wellformed_cap_simps)
+  by (cases c) (auto simp: wellformed_cap_simps split: bool.split)
 
 lemma cap_mask_UNIV [simp]:
   "wellformed_cap c \<Longrightarrow> mask_cap UNIV c = c"
-by (simp add: mask_cap_def)
+  by (simp add: mask_cap_def)
 
 lemma wf_empty_bits:
   "well_formed_cnode_n bits (empty_cnode bits)"
@@ -3343,7 +3388,7 @@ locale invs_locale =
   assumes set_endpoint_ex_inv[wp]: "\<And>a b.\<lbrace>ex_inv\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.ex_inv\<rbrace>"
   assumes sts_ex_inv[wp]: "\<And>a b. \<lbrace>ex_inv\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.ex_inv\<rbrace>"
 
-  assumes setup_caller_cap_ex_inv[wp]: "\<And>send receive. \<lbrace>ex_inv and valid_mdb\<rbrace> setup_caller_cap send receive \<lbrace>\<lambda>_.ex_inv\<rbrace>"
+  assumes setup_caller_cap_ex_inv[wp]: "\<And>send receive grant. \<lbrace>ex_inv and valid_mdb\<rbrace> setup_caller_cap send receive grant \<lbrace>\<lambda>_.ex_inv\<rbrace>"
   assumes do_ipc_transfer_ex_inv[wp]: "\<And>a b c d e. \<lbrace>ex_inv and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.ex_inv\<rbrace>"
 
   assumes thread_set_ex_inv[wp]: "\<And>a b. \<lbrace>ex_inv\<rbrace> thread_set a b \<lbrace>\<lambda>_.ex_inv\<rbrace>"

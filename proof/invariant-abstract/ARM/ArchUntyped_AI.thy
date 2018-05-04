@@ -34,7 +34,7 @@ lemma cnode_cap_ex_cte[Untyped_AI_assms]:
   apply (simp only: ex_cte_cap_wp_to_def)
   apply (rule exI, erule cte_wp_at_weakenE)
   apply (clarsimp simp: is_cap_simps bits_of_def)
-  apply (case_tac c, simp_all add: mask_cap_def cap_rights_update_def)
+  apply (case_tac c, simp_all add: mask_cap_def cap_rights_update_def split:bool.splits)
   apply (clarsimp simp: nat_to_cref_def word_bits_def)
   apply (erule(2) valid_CNodeCapE)
   apply (simp add: word_bits_def cte_level_bits_def)
@@ -118,7 +118,7 @@ proof -
    apply (drule(1) caps_of_state_valid[rotated])+
    apply (clarsimp simp: is_cap_simps diminished_def mask_cap_def
                          cap_rights_update_def,
-             simp split: cap.splits)
+             simp split: cap.splits bool.splits)
   apply (subgoal_tac "\<forall>r\<in>cte_refs node_cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s")
    apply (clarsimp simp:cte_wp_at_caps_of_state)
    apply (frule(1) caps_of_state_valid[rotated])
@@ -153,7 +153,7 @@ proof -
    apply (rule conjI, assumption)
     apply (clarsimp simp: diminished_def is_cap_simps mask_cap_def
                           cap_rights_update_def,
-              simp split: cap.splits )
+              simp split: cap.splits bool.splits)
    done
 qed
 

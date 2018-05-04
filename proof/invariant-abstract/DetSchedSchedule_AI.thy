@@ -2401,9 +2401,9 @@ lemma thread_set_ct_active_wp:
   by (wp ct_in_state_thread_state_lift thread_set_no_change_tcb_state, simp)
 
 lemma do_reply_transfer_valid_sched[wp]:
-  "\<lbrace>valid_sched and valid_objs and ct_active and cte_wp_at ((=) (ReplyCap t' False)) slot
+  "\<lbrace>valid_sched and valid_objs and ct_active and cte_wp_at (is_reply_cap_to t') slot
        and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
-     do_reply_transfer sender receiver slot
+     do_reply_transfer sender receiver slot grant
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wp set_thread_state_not_runnable_valid_sched sts_st_tcb_at'
@@ -2489,9 +2489,9 @@ lemma set_thread_state_sched_act_not_valid_sched:
 
 lemma setup_caller_cap_sched_act_not_valid_sched:
   "\<lbrace>valid_sched and scheduler_act_not sender and not_queued sender\<rbrace>
-     setup_caller_cap sender receiver
+     setup_caller_cap sender receiver grant
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  by (simp add: setup_caller_cap_def |
+  by (auto simp add: setup_caller_cap_def |
       wp set_thread_state_sched_act_not_valid_sched)+
 
 
@@ -2555,7 +2555,7 @@ context DetSchedSchedule_AI begin
 lemma send_ipc_valid_sched:
   "\<lbrace>valid_sched and st_tcb_at active thread and scheduler_act_not thread and not_queued thread
       and (ct_active or ct_idle) and invs\<rbrace>
-   send_ipc block call badge can_grant thread epptr \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+   send_ipc block call badge can_grant can_grant_reply thread epptr \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: send_ipc_def)
   apply (wp set_thread_state_sched_act_not_valid_sched | wpc)+
             apply ((wp set_thread_state_sched_act_not_valid_sched
@@ -2587,7 +2587,7 @@ lemma send_ipc_valid_sched:
                         valid_sched_def valid_sched_action_def
                         weak_valid_sched_action_def scheduler_act_not_def
                   split: kernel_object.splits)+
-    apply (rename_tac tcb recvr q rtcb ep)
+    apply (rename_tac tcb recvr q rtcb ep recv_pl)
     apply (case_tac "recvr = idle_thread s")
      subgoal by (fastforce dest: invs_valid_idle simp: valid_idle_def pred_tcb_at_def obj_at_def)
     apply (case_tac "recvr = cur_thread s")
@@ -2746,7 +2746,6 @@ lemma receive_ipc_valid_sched:
                           set_thread_state_runnable_valid_queues
                           set_thread_state_runnable_valid_sched_action
                           set_thread_state_valid_blocked_except | simp | wpc)+)[3]
-             apply simp
              apply (rule_tac Q="\<lambda>_. valid_sched and scheduler_act_not (sender) and not_queued (sender) and not_cur_thread (sender) and (\<lambda>s. sender \<noteq> idle_thread s)" in hoare_strengthen_post)
               apply wp
              apply (simp add: valid_sched_def)
@@ -3148,10 +3147,18 @@ lemma invoke_domain_valid_sched[wp]:
   apply (auto simp: st_tcb_def2 tcb_at_def)
   done
 
+
 lemma idle_not_reply_cap:
-  "\<lbrakk> valid_idle s; valid_reply_caps s; cte_wp_at ((=) (ReplyCap r False)) p s \<rbrakk> \<Longrightarrow> r \<noteq> idle_thread s"
-  apply (drule_tac p=p in valid_reply_caps_of_stateD)
-   apply (simp add: caps_of_state_def cte_wp_at_def)
+  "\<lbrakk> valid_idle s; valid_reply_caps s; cte_wp_at (is_reply_cap_to r) p s \<rbrakk> \<Longrightarrow> r \<noteq> idle_thread s"
+  apply (drule_tac p=p in valid_reply_caps_of_stateD',assumption)
+  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
+  done
+
+lemma idle_not_reply_cap':
+  "\<lbrakk> valid_idle s; valid_reply_caps s; cte_wp_at ((=) (ReplyCap r False R)) p s \<rbrakk>
+   \<Longrightarrow> r \<noteq> idle_thread s"
+  apply (simp add: cte_wp_at_caps_of_state)
+  apply (drule_tac p=p in valid_reply_caps_of_stateD,assumption)
   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
@@ -3166,6 +3173,7 @@ lemma perform_invocation_valid_sched[wp]:
          apply (clarsimp simp: ct_in_state_def)
         apply (wp invoke_cnode_valid_sched send_ipc_valid_sched invoke_domain_valid_sched
              | simp add: invs_valid_objs idle_not_reply_cap invs_valid_idle invs_valid_reply_caps
+                         is_reply_cap_to_def
              | clarsimp simp: ct_in_state_def)+
   done
 end
@@ -3210,8 +3218,10 @@ lemma handle_reply_valid_sched:
   "\<lbrace>valid_sched and ct_active and invs\<rbrace> handle_reply \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: handle_reply_def)
   apply (wp get_cap_wp | wpc | clarsimp)+
-  apply (auto simp: invs_valid_objs idle_not_reply_cap invs_valid_idle invs_valid_reply_caps)
-  done
+
+  apply (auto simp: invs_valid_objs idle_not_reply_cap' invs_valid_idle invs_valid_reply_caps is_reply_cap_to_def | erule cte_wp_at_lift)+
+
+done
 end
 
 crunch ct_not_queued[wp]: do_machine_op, cap_insert, set_extra_badge "\<lambda>s. not_queued (cur_thread s) s"
@@ -3248,7 +3258,7 @@ crunch weak_valid_sched_action[wp]: empty_slot_ext, cap_delete_one weak_valid_sc
 lemma do_reply_transfer_not_queued[wp]:
   "\<lbrace>not_queued t and invs and st_tcb_at active t and scheduler_act_not t and
     K(receiver \<noteq> t)\<rbrace>
-     do_reply_transfer sender receiver slot
+     do_reply_transfer sender receiver slot grant
    \<lbrace>\<lambda>_. not_queued t\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wp cap_delete_one_not_queued hoare_vcg_if_lift | wpc |
@@ -3258,7 +3268,7 @@ lemma do_reply_transfer_not_queued[wp]:
 
 lemma do_reply_transfer_schedact_not[wp]:
   "\<lbrace>scheduler_act_not t and K(receiver \<noteq> t)\<rbrace>
-     do_reply_transfer sender receiver slot
+     do_reply_transfer sender receiver slot grant
    \<lbrace>\<lambda>_. scheduler_act_not t\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wp hoare_vcg_if_lift | wpc | clarsimp split del: if_split |
@@ -3274,9 +3284,9 @@ lemma assert_false:"\<lbrace>\<lambda>s. \<not> P\<rbrace> assert P \<lbrace>\<l
 
 lemma do_reply_transfer_add_assert:
   assumes a: "\<lbrace>st_tcb_at awaiting_reply receiver and P\<rbrace>
-               do_reply_transfer sender receiver slot
+               do_reply_transfer sender receiver slot grant
               \<lbrace>\<lambda>_. Q\<rbrace>"
-  shows "\<lbrace>P\<rbrace> do_reply_transfer sender receiver slot \<lbrace>\<lambda>_. Q\<rbrace>"
+  shows "\<lbrace>P\<rbrace> do_reply_transfer sender receiver slot grant \<lbrace>\<lambda>_. Q\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (case_tac "st_tcb_at awaiting_reply receiver s")
    apply (rule hoare_pre)
@@ -3298,7 +3308,7 @@ context DetSchedSchedule_AI begin
 
 lemma do_reply_transfer_ct_not_queued[wp]:
   "\<lbrace>ct_not_queued and invs and ct_active and scheduler_act_sane\<rbrace>
-     do_reply_transfer sender receiver slot
+     do_reply_transfer sender receiver slot grant
    \<lbrace>\<lambda>_. ct_not_queued\<rbrace>"
   apply (rule do_reply_transfer_add_assert)
   apply (rule hoare_pre)
@@ -3308,7 +3318,7 @@ lemma do_reply_transfer_ct_not_queued[wp]:
 
 lemma do_reply_transfer_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane and ct_active\<rbrace>
-     do_reply_transfer sender receiver slot
+     do_reply_transfer sender receiver slot grant
    \<lbrace>\<lambda>_. scheduler_act_sane\<rbrace>"
   apply (rule do_reply_transfer_add_assert)
   apply (rule hoare_pre)

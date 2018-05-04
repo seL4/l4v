@@ -84,7 +84,7 @@ definition
   obj_reply_refs :: "cap \<Rightarrow> machine_word set"
 where
  "obj_reply_refs cap \<equiv> obj_refs cap \<union>
-   (case cap of cap.ReplyCap t m \<Rightarrow> {t} | _ \<Rightarrow> {})"
+   (case cap of cap.ReplyCap t m R \<Rightarrow> {t} | _ \<Rightarrow> {})"
 
 
 lemma ex_cte_cap_to_obj_ref_disj:
@@ -533,23 +533,24 @@ lemma vmaster: "valid_reply_masters s"
 lemma valid_cap2:
     "\<And>cap'. \<lbrakk> \<exists>p. cte_wp_at ((=) cap') p s \<rbrakk>
     \<Longrightarrow> obj_reply_refs cap' \<subseteq> (UNIV - untyped_range cap)"
-    apply clarsimp
-    apply (simp add: obj_reply_refs_def, erule disjE)
-     apply (erule untyped_children_in_mdbEE [OF child cap untyped])
-      apply blast
-     apply (drule descendants_range_inD[OF drange])
-      apply (simp add:cte_wp_at_caps_of_state)
-     apply (simp add:untyped)
-    apply (clarsimp split: cap.split_asm bool.split_asm)
-    apply (rename_tac bool)
-    apply (case_tac bool, simp_all)
-     apply (frule valid_reply_mastersD [OF _ vmaster])
-     apply (fastforce simp: cte_wp_at_caps_of_state dest: non_null_caps)
-    apply (drule has_reply_cap_cte_wpD)
-    apply (drule valid_reply_capsD [OF _ vreply])
-    apply (simp add: pred_tcb_at_def)
-    apply (fastforce simp: live_def dest: live_okE)
-    done
+  apply clarsimp
+  apply (simp add: obj_reply_refs_def, erule disjE)
+   apply (erule untyped_children_in_mdbEE [OF child cap untyped])
+    apply blast
+   apply (drule descendants_range_inD[OF drange])
+    apply (simp add:cte_wp_at_caps_of_state)
+   apply (simp add:untyped)
+  apply (clarsimp split: cap.split_asm bool.split_asm)
+  apply (rename_tac t master rights)
+  apply (case_tac master, simp_all)
+   apply (frule valid_reply_mastersD' [OF _ vmaster])
+   apply (fastforce simp: cte_wp_at_caps_of_state dest: non_null_caps)
+  apply (subgoal_tac "has_reply_cap t s")
+   apply (drule valid_reply_capsD [OF _ vreply])
+   apply (simp add: pred_tcb_at_def)
+   apply (fastforce simp: live_def dest: live_okE)
+  apply (fastforce simp: has_reply_cap_def is_reply_cap_to_def elim:cte_wp_at_lift)
+  done
 
 (* invariants BEGIN *)
 

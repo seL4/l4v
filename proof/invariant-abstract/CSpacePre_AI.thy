@@ -70,7 +70,7 @@ lemma masked_as_full_simps[simp]:
   "masked_as_full (cap.Zombie r bits n) cap = (cap.Zombie r bits n)"
   "masked_as_full (cap.ArchObjectCap x) cap = (cap.ArchObjectCap x)"
   "masked_as_full (cap.CNodeCap r n g) cap = (cap.CNodeCap r n g)"
-  "masked_as_full (cap.ReplyCap r m) cap = (cap.ReplyCap r m)"
+  "masked_as_full (cap.ReplyCap r m a) cap = (cap.ReplyCap r m a)"
   "masked_as_full cap.NullCap cap = cap.NullCap"
   "masked_as_full cap.DomainCap cap = cap.DomainCap"
   "masked_as_full (cap.ThreadCap r) cap = cap.ThreadCap r"
@@ -78,7 +78,7 @@ lemma masked_as_full_simps[simp]:
   "masked_as_full cap (cap.Zombie r bits n) = cap"
   "masked_as_full cap (cap.ArchObjectCap x) = cap"
   "masked_as_full cap (cap.CNodeCap r n g) = cap"
-  "masked_as_full cap (cap.ReplyCap r m) = cap"
+  "masked_as_full cap (cap.ReplyCap r m a) = cap"
   "masked_as_full cap cap.NullCap = cap"
   "masked_as_full cap cap.DomainCap = cap"
   "masked_as_full cap (cap.ThreadCap r) = cap"
@@ -188,14 +188,19 @@ where
     \<not> is_reply_cap cap \<and> \<not> is_master_reply_cap cap'"
 
 
+
 (* FIXME: remove copy_of and use cap_master_cap with weak_derived directly *)
 definition
   copy_of :: "cap \<Rightarrow> cap \<Rightarrow> bool"
 where
   "copy_of cap' cap \<equiv>
-  if (is_untyped_cap cap \<or> is_reply_cap cap \<or> is_master_reply_cap cap)
-     then cap = cap' else same_object_as cap cap'"
+  if (is_untyped_cap cap)
+     then cap = cap' else same_object_as cap cap'  \<and>
+   is_reply_cap cap = is_reply_cap cap' \<and>
+   is_master_reply_cap cap = is_master_reply_cap cap'"
 
+(* cap' can be the result of a modification from cap made by the user 
+   using Copy, Mint, Move, Mutate,... Actually, that relation should be symmetric*)
 definition
   "weak_derived cap cap' \<equiv>
   (copy_of cap cap' \<and>

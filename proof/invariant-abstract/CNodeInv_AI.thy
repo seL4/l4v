@@ -1139,10 +1139,9 @@ lemma obj_ref_untyped_empty [simp]:
   "obj_refs c \<inter> untyped_range c = {}"
   by (cases c, auto)
 
-
 lemma weak_derived_Reply_eq:
-  "\<lbrakk> weak_derived c c'; c = ReplyCap t m \<rbrakk> \<Longrightarrow> c' = ReplyCap t m"
-  "\<lbrakk> weak_derived c c'; c' = ReplyCap t m \<rbrakk> \<Longrightarrow> c = ReplyCap t m"
+  "\<lbrakk> weak_derived c c'; c = ReplyCap t m R \<rbrakk> \<Longrightarrow> (\<exists> R'. (c' = cap.ReplyCap t m R'))"
+  "\<lbrakk> weak_derived c c'; c' = ReplyCap t m R\<rbrakk> \<Longrightarrow> (\<exists> R'. (c = cap.ReplyCap t m R' ))"
   by (auto simp: weak_derived_def copy_of_def
                  same_object_as_def is_cap_simps
           split: if_split_asm cap.split_asm)
@@ -1275,18 +1274,18 @@ proof -
     apply (simp split: if_split_asm del: split_paired_All split_paired_Ex)
       apply (elim allE)
       apply (drule weak_derived_Reply_eq(1) [OF sder], simp del: split_paired_Ex)
-      apply (erule(1) impE)
+      apply (erule impE, fastforce)
       apply (intro conjI impI)
        apply (clarsimp elim!: weak_derived_Reply_eq(2) [OF dder])
       apply (erule exEI, clarsimp)
      apply (elim allE)
      apply (drule weak_derived_Reply_eq(1) [OF dder], simp del: split_paired_Ex)
-     apply (erule(1) impE)
+     apply (erule impE, fastforce)
      apply (intro conjI impI)
       apply (clarsimp elim!: weak_derived_Reply_eq(2) [OF sder])
      apply (erule exEI, clarsimp)
     apply (erule_tac x=ptr in allE, erule_tac x=t in allE)
-    apply (erule(1) impE)
+    apply (erule impE,fastforce)
     apply (intro conjI impI)
       apply (clarsimp elim!: weak_derived_Reply_eq(2) [OF dder])
      apply (clarsimp elim!: weak_derived_Reply_eq(2) [OF sder])
@@ -1302,8 +1301,8 @@ proof -
   have r: "reply_masters_mdb m cs"
     by (simp add: cs_def m valid_mdb_def2 reply_mdb_def)
   have n_None:
-    "\<And>t. scap = cap.ReplyCap t True \<Longrightarrow> n dest = None"
-    "\<And>t. dcap = cap.ReplyCap t True \<Longrightarrow> n src = None"
+    "\<And>t R. scap = cap.ReplyCap t True R \<Longrightarrow> n dest = None"
+    "\<And>t R. dcap = cap.ReplyCap t True R \<Longrightarrow> n src = None"
     using r cap cap' unfolding reply_masters_mdb_def n_def
      by (drule_tac weak_derived_Reply_eq(1) [OF sder]
                    weak_derived_Reply_eq(1) [OF dder],
@@ -1311,27 +1310,28 @@ proof -
   show ?thesis unfolding reply_masters_mdb_def cs'_def using cap cap' r
     apply (intro allI impI)
     apply (simp add: n_None descendants s_d_swap_def
-              split: if_split_asm del: split_paired_All)
+        split: if_split_asm del: split_paired_All)
       apply (unfold reply_masters_mdb_def)[1]
       apply (drule weak_derived_Reply_eq(1) [OF sder], simp del: split_paired_All)
-      apply (elim allE, erule(1) impE, elim conjE)
+      apply (elim allE, erule impE, fastforce, elim conjE)
       apply (intro impI conjI)
-       apply (drule(1) bspec, rule weak_derived_Reply_eq(2) [OF dder], simp)
+        apply (drule(1) bspec)
+        apply clarsimp
+        apply( rule weak_derived_Reply_eq(2) [OF dder])
+        apply simp
+       apply fastforce
       apply fastforce
      apply (unfold reply_masters_mdb_def)[1]
      apply (drule weak_derived_Reply_eq(1) [OF dder], simp del: split_paired_All)
-     apply (elim allE, erule(1) impE, elim conjE)
+     apply (elim allE, erule impE, fastforce, elim conjE)
      apply (intro impI conjI)
-      apply (drule(1) bspec, rule weak_derived_Reply_eq(2) [OF sder], simp)
-     apply fastforce
+       apply (drule(1) bspec,clarsimp, rule weak_derived_Reply_eq(2) [OF sder], simp)
+      apply fastforce+
     apply (unfold reply_masters_mdb_def)[1]
     apply (erule_tac x=ptr in allE, erule_tac x=t in allE)
-    apply (erule(1) impE, erule conjE, simp add: n_def n'_def)
-    apply (intro impI conjI)
-        apply (rule weak_derived_Reply_eq(2) [OF dder]
-                    weak_derived_Reply_eq(2) [OF sder],
-               simp)+
-    apply fastforce
+    apply (elim allE impE,fastforce)
+    apply (erule conjE, simp add: n_def n'_def)
+    apply (fastforce intro:weak_derived_Reply_eq(2) [OF dder] weak_derived_Reply_eq(2) [OF sder])+
     done
 qed
 
@@ -1603,46 +1603,36 @@ lemma unique_reply_caps_cap_swap:
   shows "unique_reply_caps (cs (p \<mapsto> c', p' \<mapsto> c))"
 proof -
   have new_cap_is_unique[elim]:
-    "\<And>p'' c''.
-     \<lbrakk> is_reply_cap c''; p'' \<noteq> p; p'' \<noteq> p'; cs p'' = Some c''; c'' = c \<or> c'' = c' \<rbrakk>
+    "\<And> p'' t R R'.\<lbrakk>p'' \<noteq> p; p'' \<noteq> p'; cs p'' = Some (ReplyCap t False R); 
+       c = ReplyCap t False R' \<or> c' = ReplyCap t False R' \<rbrakk>
      \<Longrightarrow> False"
     using u unfolding unique_reply_caps_def
     apply (erule_tac disjE)
-     apply (elim allE)
-     apply (erule (1) impE, erule (1) impE)
-     apply (erule impE, rule c)
-     apply (simp add: weak_derived_reply_eq[OF wd])
-    apply (elim allE)
-    apply (erule (1) impE, erule (1) impE)
-    apply (erule impE, rule c')
-    apply (simp add: weak_derived_reply_eq[OF wd'])
+     apply simp
+     apply (frule weak_derived_Reply_eq[OF wd])
+     apply (fastforce simp add:c)
+    apply simp
+    apply (frule weak_derived_Reply_eq[OF wd'])
+    apply (fastforce simp add:c' is_cap_simps)
     done
+
   have old_caps_differ:
-    "\<And>cap''.
-     \<lbrakk> is_reply_cap cap; is_reply_cap cap'; cap = cap''; cap' = cap'' \<rbrakk>
+    "\<And>t R R'.
+     \<lbrakk> cap= ReplyCap t False R; cap' = ReplyCap t False R' \<rbrakk>
      \<Longrightarrow> False"
-    using u unfolding unique_reply_caps_def
-    apply (elim allE)
-    apply (erule impE, rule c)
-    apply (erule impE, simp)
-    apply (erule impE, rule c')
-    apply (simp add: pneq)
-    done
-  have new_caps_differ:
-    "\<And>c''. \<lbrakk> is_reply_cap c''; c = c''; c' = c'' \<rbrakk> \<Longrightarrow> False"
-    apply (subgoal_tac "is_reply_cap c", subgoal_tac "is_reply_cap c'")
-      apply (subst(asm) weak_derived_replies [OF wd])
-      apply (subst(asm) weak_derived_replies [OF wd'])
-      apply (frule(1) old_caps_differ)
-          apply (simp add: weak_derived_reply_eq [OF wd])
-         apply (simp add: weak_derived_reply_eq [OF wd'])
-        apply simp+
-    done
+    using u c c' is_cap_simps pneq unfolding unique_reply_caps_def by fastforce
+
+  have new_cap_objs_differ[elim]:
+    "\<And>t R R'. \<lbrakk> c= ReplyCap t False R; c' = ReplyCap t False R'\<rbrakk> \<Longrightarrow> False"
+    apply (drule weak_derived_Reply_eq [OF wd])
+    apply (drule weak_derived_Reply_eq [OF wd'])
+    using old_caps_differ by fastforce
+
   show ?thesis
     using u unfolding unique_reply_caps_def
     apply (intro allI impI)
     apply (simp split: if_split_asm del: split_paired_All)
-         apply (erule(2) new_caps_differ | fastforce)+
+         apply fastforce+
     done
 qed
 
@@ -1652,20 +1642,18 @@ lemma cap_swap_no_reply_caps:
   and    cap': "cs p' = Some cap'"
   and      wd: "weak_derived c cap"
   and     wd': "weak_derived c' cap'"
-  and      nr: "\<forall>sl. cs sl \<noteq> Some (cap.ReplyCap t False)"
-  shows        "\<forall>sl. (cs(p \<mapsto> c', p' \<mapsto> c)) sl \<noteq> Some (cap.ReplyCap t False)"
+  and      nr: "\<forall>sl R. cs sl \<noteq> Some (cap.ReplyCap t False R)"
+  shows        "\<forall>sl R. (cs(p \<mapsto> c', p' \<mapsto> c)) sl \<noteq> Some (cap.ReplyCap t False R)"
 proof -
   have
-    "cap \<noteq> cap.ReplyCap t False"
-    "cap' \<noteq> cap.ReplyCap t False"
+    "\<forall> R. cap \<noteq> cap.ReplyCap t False R"
+    "\<forall> R. cap' \<noteq> cap.ReplyCap t False R"
     using cap cap' nr by clarsimp+
   hence
-    "c \<noteq> cap.ReplyCap t False"
-    "c' \<noteq> cap.ReplyCap t False"
-    by (rule_tac ccontr, simp,
-        drule_tac weak_derived_Reply_eq [OF wd]
-                  weak_derived_Reply_eq [OF wd'],
-        simp)+
+    "\<forall> R. c \<noteq> cap.ReplyCap t False R"
+    "\<forall> R. c' \<noteq> cap.ReplyCap t False R"
+    by (clarsimp,drule_tac weak_derived_Reply_eq [OF wd] 
+                           weak_derived_Reply_eq [OF wd'],fastforce)+
   thus ?thesis
     using nr unfolding fun_upd_def
     by (clarsimp split: if_split_asm)
@@ -1678,11 +1666,12 @@ lemma cap_swap_has_reply_cap_neg:
     cte_wp_at (weak_derived c') p' s \<and>
     p \<noteq> p'\<rbrace>
    cap_swap c p c' p' \<lbrace>\<lambda>rv s. \<not> has_reply_cap t s\<rbrace>"
-  apply (simp add: has_reply_cap_def cte_wp_at_caps_of_state
+  apply (simp add: has_reply_cap_def is_reply_cap_to_def cte_wp_at_caps_of_state
               del: split_paired_All split_paired_Ex)
   apply (wp cap_swap_caps_of_state)
   apply (elim conjE exE)
-  apply (erule(4) cap_swap_no_reply_caps)
+  apply (drule(3) cap_swap_no_reply_caps[where cs="caps_of_state _"])
+  apply fastforce+
   done
 
 
@@ -1715,12 +1704,13 @@ lemma cap_swap_fd_replies[wp]:
 lemma cap_swap_reply_masters:
   "\<lbrace>valid_reply_masters and K(\<not> is_master_reply_cap c \<and> \<not> is_master_reply_cap c')\<rbrace>
    cap_swap c p c' p' \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
-  apply (simp add: valid_reply_masters_def cte_wp_at_caps_of_state)
+  apply (simp add: valid_reply_masters_def is_master_reply_cap_to_def cte_wp_at_caps_of_state)
   apply (rule hoare_pre)
   apply (simp only: imp_conv_disj)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift cap_swap_caps_of_state
              cap_swap_typ_at tcb_at_typ_at)
-  apply (auto simp: is_cap_simps)
+  apply (simp add: is_cap_simps)
+  apply fastforce
   done
 
 
@@ -1764,7 +1754,7 @@ lemma copy_of_is_zombie:
 
 
 lemma copy_of_reply_cap:
-  "copy_of (ReplyCap t False) cap \<Longrightarrow> cap = ReplyCap t False"
+  "copy_of (ReplyCap t False R) cap \<Longrightarrow> \<exists> R'. cap = ReplyCap t False R'"
   apply (clarsimp simp: copy_of_def is_cap_simps)
   by (cases cap, simp_all add: same_object_as_def)
 
@@ -1806,10 +1796,16 @@ crunch irq_node[wp]: cap_swap "\<lambda>s. P (interrupt_irq_node s)"
 
 
 lemma valid_reply_caps_of_stateD:
-  "\<And>p t s. \<lbrakk> valid_reply_caps s; caps_of_state s p = Some (cap.ReplyCap t False) \<rbrakk>
+  "\<And>p t s R. \<lbrakk> valid_reply_caps s; caps_of_state s p = Some (cap.ReplyCap t False R) \<rbrakk>
    \<Longrightarrow> st_tcb_at awaiting_reply t s"
-  by (auto simp: valid_reply_caps_def has_reply_cap_def cte_wp_at_caps_of_state)
+  by (fastforce simp: valid_reply_caps_def has_reply_cap_def 
+                      is_reply_cap_to_def cte_wp_at_caps_of_state)
 
+lemma valid_reply_caps_of_stateD':
+  "\<And>p t s R. \<lbrakk> valid_reply_caps s; cte_wp_at (is_reply_cap_to t) p s \<rbrakk>
+   \<Longrightarrow> st_tcb_at awaiting_reply t s"
+  by (fastforce simp: valid_reply_caps_def has_reply_cap_def 
+                      is_reply_cap_to_def cte_wp_at_caps_of_state)
 
 crunch interrupt_states[wp]: cap_swap "\<lambda>s. P (interrupt_states s)"
 
@@ -2456,7 +2452,7 @@ lemma cte_wp_at_not_reply_master:
               valid_objs s; valid_reply_masters s \<rbrakk>
    \<Longrightarrow> cte_wp_at (\<lambda>c. \<not> is_master_reply_cap c) (a, b) s"
   by (fastforce simp: valid_reply_masters_def cte_wp_at_caps_of_state
-                     is_cap_simps valid_cap_def
+                     is_cap_simps valid_cap_def is_master_reply_cap_to_def
                dest: caps_of_state_valid_cap)
 
 
@@ -3318,11 +3314,12 @@ lemma cap_move_has_reply_cap_neg:
     cte_wp_at ((=) cap.NullCap) p' s \<and>
     p \<noteq> p'\<rbrace>
    cap_move c p p' \<lbrace>\<lambda>rv s. \<not> has_reply_cap t s\<rbrace>"
-  apply (simp add: has_reply_cap_def cte_wp_at_caps_of_state
+  apply (simp add: has_reply_cap_def is_reply_cap_to_def cte_wp_at_caps_of_state
               del: split_paired_All split_paired_Ex)
   apply (wp cap_move_caps_of_state)
   apply (elim conjE exE)
-  apply (erule(1) cap_swap_no_reply_caps, clarsimp+)
+  apply (drule(1) cap_swap_no_reply_caps[where cs="caps_of_state _"])
+  apply fastforce+
   done
 
 

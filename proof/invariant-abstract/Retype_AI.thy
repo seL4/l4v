@@ -1820,11 +1820,11 @@ lemma unique_reply_caps:
 lemma valid_reply_caps:
   "valid_reply_caps s \<Longrightarrow> valid_reply_caps s'"
   by (clarsimp simp: valid_reply_caps_def unique_reply_caps has_reply_cap_def
-                     pred_tcb_at_pres cte_retype)
+                     pred_tcb_at_pres cte_retype is_reply_cap_to_def)
 
 lemma valid_reply_masters:
   "valid_reply_masters s \<Longrightarrow> valid_reply_masters s'"
-  by (clarsimp simp: valid_reply_masters_def cte_retype is_cap_simps obj_at_pres)
+  by (clarsimp simp: valid_reply_masters_def cte_retype is_cap_simps obj_at_pres is_master_reply_cap_to_def)
 
 end
 
