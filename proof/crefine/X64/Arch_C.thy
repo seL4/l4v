@@ -13,17 +13,11 @@ imports Recycle_C
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunch ctes_of[wp]: unmapPageTable "\<lambda>s. P (ctes_of s)"
+
+crunches unmapPageTable, unmapPageDirectory, unmapPDPT
+  for ctes_of[wp]:  "\<lambda>s. P (ctes_of s)"
+  and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
-
-crunch gsMaxObjectSize[wp]: unmapPageTable "\<lambda>s. P (gsMaxObjectSize s)"
-  (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
-
-crunch inv[wp]: pteCheckIfMapped "P"
-  (ignore: getObject setObject)
-
-crunch inv[wp]: pdeCheckIfMapped "P"
-  (ignore: getObject setObject)
 
 end
 
@@ -48,7 +42,6 @@ lemma storePML4E_def':
   "storePML4E slot pml4e = setObject slot pml4e"
   unfolding storePML4E_def
   by (simp add: tailM_def headM_def)
-
 
 lemma objBits_InvalidPTE:
   "objBits X64_H.InvalidPTE = word_size_bits"
@@ -150,6 +143,51 @@ lemma performPageTableInvocationUnmap_ccorres:
   apply (auto simp add: word_and_le1)
   done
 
+lemma clearMemory_setObject_PDE_ccorres:
+  "ccorres dc xfdc (page_directory_at' ptr
+                and (\<lambda>s. 2 ^ pdBits \<le> gsMaxObjectSize s)
+                and (\<lambda>_. is_aligned ptr pdBits \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
+            (UNIV \<inter> {s. ptr___ptr_to_void_' s = Ptr ptr} \<inter> {s. bits_' s = of_nat pdBits}) []
+       (mapM_x (\<lambda>a. setObject a X64_H.InvalidPDE)
+                       [ptr , ptr + 2 ^ objBits X64_H.InvalidPDE .e. ptr + 2 ^ pdBits - 1])
+       (Call clearMemory_'proc)"
+  apply (rule ccorres_gen_asm)+
+  apply (cinit' lift: ptr___ptr_to_void_' bits_')
+   apply (rule_tac P="page_directory_at' ptr and (\<lambda>s. 2 ^ pdBits \<le> gsMaxObjectSize s)"
+               in ccorres_from_vcg_nofail[where P'=UNIV])
+   apply (rule allI, rule conseqPre, vcg)
+   apply clarsimp
+   apply (subst ghost_assertion_size_logic[unfolded o_def])
+     apply (simp add: bit_simps)
+    apply simp
+   apply (clarsimp simp: replicateHider_def[symmetric] bit_simps)
+   apply (frule is_aligned_no_overflow', simp)
+   apply (intro conjI)
+      apply (erule is_aligned_weaken, simp)
+     apply (clarsimp simp: is_aligned_def)
+    apply (erule (1) page_directory_at_rf_sr_dom_s[unfolded pdBits_def bit_simps, simplified])
+   apply (clarsimp simp add: bit_simps
+                      cong: StateSpace.state.fold_congs globals.fold_congs)
+   apply (simp add: upto_enum_step_def objBits_simps bit_simps
+                    field_simps linorder_not_less[symmetric] archObjSize_def
+                    upto_enum_word split_def)
+  apply (erule mapM_x_store_memset_ccorres_assist
+                      [unfolded split_def, OF _ _ _ _ _ _ subset_refl],
+         simp_all add: shiftl_t2n hd_map objBits_simps archObjSize_def bit_simps)[1]
+   apply (rule cmap_relationE1, erule rf_sr_cpde_relation, erule ko_at_projectKO_opt)
+   apply (subst coerce_memset_to_heap_update_pde)
+   apply (clarsimp simp: rf_sr_def Let_def cstate_relation_def typ_heap_simps)
+   apply (rule conjI)
+    apply (simp add: cpspace_relation_def typ_heap_simps update_pde_map_tos
+                     update_pde_map_to_pdes carray_map_relation_upd_triv)
+    apply (rule cmap_relation_updI, simp_all)[1]
+    subgoal by (simp add: cpde_relation_def Let_def pde_lift_def pde_get_tag_def pde_tag_defs
+                   split: if_splits pde.split_asm)
+   apply (simp add: carch_state_relation_def cmachine_state_relation_def
+                    typ_heap_simps update_pde_map_tos)
+  apply simp
+  done
+
 lemma performPageDirectoryInvocationUnmap_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and cte_wp_at' (diminished' (ArchObjectCap cap) \<circ> cteCap) ctSlot
@@ -158,7 +196,137 @@ lemma performPageDirectoryInvocationUnmap_ccorres:
        []
        (liftE (performPageDirectoryInvocation (PageDirectoryUnmap cap ctSlot)))
        (Call performX64PageDirectoryInvocationUnmap_'proc)"
-  sorry
+  apply (simp only: liftE_liftM ccorres_liftM_simp)
+  apply (rule ccorres_gen_asm)
+  apply (cinit lift: cap_' ctSlot_')
+   apply csymbr
+   apply (simp del: Collect_const)
+   apply (rule ccorres_split_nothrow_novcg_dc)
+      apply (subgoal_tac "capPDMappedAddress cap
+                           = (\<lambda>cp. if to_bool (capPDIsMapped_CL cp)
+                              then Some (capPDMappedASID_CL cp, capPDMappedAddress_CL cp)
+                              else None) (cap_page_directory_cap_lift capa)")
+       apply (rule ccorres_Cond_rhs)
+        apply (simp add: to_bool_def)
+        apply (rule ccorres_rhs_assoc)+
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply (ctac add: unmapPageDirectory_ccorres)
+          apply csymbr
+          apply (simp add: storePDE_def' swp_def)
+          apply clarsimp
+          apply(simp only: dc_def[symmetric] bit_simps_corres[symmetric])
+          apply (ctac add: clearMemory_setObject_PDE_ccorres)
+         apply wp
+        apply (simp del: Collect_const)
+        apply (vcg exspec=unmapPageDirectory_modifies)
+       apply (simp add: to_bool_def)
+       apply (rule ccorres_return_Skip')
+      apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
+      apply (clarsimp simp: cap_lift_page_directory_cap cap_to_H_def
+                            cap_page_directory_cap_lift_def
+                     elim!: ccap_relationE cong: if_cong)
+     apply (simp add: liftM_def getSlotCap_def updateCap_def
+                 del: Collect_const)
+     apply (rule ccorres_move_c_guard_cte)
+     apply (rule ccorres_getCTE)+
+     apply (rule_tac P="cte_wp_at' (op = rv) ctSlot
+                          and (\<lambda>_. rv = rva \<and> isArchCap isPageDirectoryCap (cteCap rv))"
+                in ccorres_from_vcg_throws [where P'=UNIV])
+     apply (rule allI, rule conseqPre, vcg)
+     apply (clarsimp simp: cte_wp_at_ctes_of cap_get_tag_isCap_ArchObject)
+     apply (rule cmap_relationE1[OF cmap_relation_cte], assumption+)
+     apply (frule ccte_relation_ccap_relation)
+     apply (clarsimp simp: typ_heap_simps cap_get_tag_isCap_ArchObject)
+     apply (rule fst_setCTE [OF ctes_of_cte_at], assumption)
+     apply (erule rev_bexI)
+     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                           typ_heap_simps')
+     apply (rule conjI)
+      apply (clarsimp simp: cpspace_relation_def typ_heap_simps')
+      apply (subst setCTE_tcb_case, assumption+)
+      apply (clarsimp dest!: ksPSpace_update_eq_ExD)
+      apply (erule cmap_relation_updI, assumption)
+       apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
+       apply (clarsimp simp: ccte_relation_def c_valid_cte_def
+                      elim!: ccap_relationE)
+       apply (subst cteCap_update_cte_to_H)
+         apply (clarsimp simp: map_option_Some_eq2)
+         apply (rule trans, rule sym, rule option.sel, rule sym, erule arg_cong)
+        apply (erule iffD1[OF cap_page_directory_cap_lift])
+       apply (clarsimp simp: map_option_Some_eq2 cap_get_tag_isCap_ArchObject[symmetric]
+                             cap_lift_page_directory_cap cap_to_H_def
+                             cap_page_directory_cap_lift_def)
+      apply simp
+     apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
+                           typ_heap_simps'
+                           cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
+                    dest!: ksPSpace_update_eq_ExD)
+    apply (simp add: cte_wp_at_ctes_of)
+    apply (wp mapM_x_wp' | wpc | simp)+
+   apply (simp add: guard_is_UNIV_def)
+  apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric] cte_wp_at_ctes_of)
+  apply (frule ctes_of_valid', clarsimp)
+  apply (frule_tac x=s in fun_cong[OF diminished_valid'])
+  apply (frule valid_global_refsD_with_objSize, clarsimp)
+  apply (clarsimp simp: cap_lift_page_directory_cap cap_to_H_def
+                        cap_page_directory_cap_lift_def isCap_simps
+                        valid_cap'_def get_capSizeBits_CL_def
+                        bit_simps capAligned_def
+                        to_bool_def mask_def page_directory_at'_def
+                        capRange_def Int_commute asid_bits_def
+                 elim!: ccap_relationE cong: if_cong
+                 dest!: diminished_capMaster)
+  apply (drule spec[where x=0])
+  apply (auto simp add: word_and_le1)
+  done
+
+lemma clearMemory_setObject_PDPTE_ccorres:
+  "ccorres dc xfdc (pd_pointer_table_at' ptr
+                and (\<lambda>s. 2 ^ pdptBits \<le> gsMaxObjectSize s)
+                and (\<lambda>_. is_aligned ptr pdptBits \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
+            (UNIV \<inter> {s. ptr___ptr_to_void_' s = Ptr ptr} \<inter> {s. bits_' s = of_nat pdptBits}) []
+       (mapM_x (\<lambda>a. setObject a X64_H.InvalidPDPTE)
+                       [ptr , ptr + 2 ^ objBits X64_H.InvalidPDPTE .e. ptr + 2 ^ pdptBits - 1])
+       (Call clearMemory_'proc)"
+  apply (rule ccorres_gen_asm)+
+  apply (cinit' lift: ptr___ptr_to_void_' bits_')
+   apply (rule_tac P="pd_pointer_table_at' ptr and (\<lambda>s. 2 ^ pdptBits \<le> gsMaxObjectSize s)"
+               in ccorres_from_vcg_nofail[where P'=UNIV])
+   apply (rule allI, rule conseqPre, vcg)
+   apply clarsimp
+   apply (subst ghost_assertion_size_logic[unfolded o_def])
+     apply (simp add: bit_simps)
+    apply simp
+   apply (clarsimp simp: replicateHider_def[symmetric] bit_simps)
+   apply (frule is_aligned_no_overflow', simp)
+   apply (intro conjI)
+      apply (erule is_aligned_weaken, simp)
+     apply (clarsimp simp: is_aligned_def)
+    apply (erule (1) pd_pointer_table_at_rf_sr_dom_s[unfolded pdptBits_def bit_simps, simplified])
+   apply (clarsimp simp add: bit_simps
+                      cong: StateSpace.state.fold_congs globals.fold_congs)
+   apply (simp add: upto_enum_step_def objBits_simps bit_simps
+                    field_simps linorder_not_less[symmetric] archObjSize_def
+                    upto_enum_word split_def)
+  apply (erule mapM_x_store_memset_ccorres_assist
+                      [unfolded split_def, OF _ _ _ _ _ _ subset_refl],
+         simp_all add: shiftl_t2n hd_map objBits_simps archObjSize_def bit_simps)[1]
+   apply (rule cmap_relationE1, erule rf_sr_cpdpte_relation, erule ko_at_projectKO_opt)
+   apply (subst coerce_memset_to_heap_update_pdpte)
+   apply (clarsimp simp: rf_sr_def Let_def cstate_relation_def typ_heap_simps)
+   apply (rule conjI)
+    apply (simp add: cpspace_relation_def typ_heap_simps update_pdpte_map_tos
+                     update_pdpte_map_to_pdptes carray_map_relation_upd_triv)
+    apply (rule cmap_relation_updI, simp_all)[1]
+    subgoal by (simp add: cpdpte_relation_def Let_def pdpte_lift_def pdpte_get_tag_def pdpte_tag_defs
+                   split: if_splits pdpte.split_asm)
+   apply (simp add: carch_state_relation_def cmachine_state_relation_def
+                    typ_heap_simps update_pdpte_map_tos)
+  apply simp
+  done
 
 lemma performPDPTInvocationUnmap_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -168,7 +336,92 @@ lemma performPDPTInvocationUnmap_ccorres:
        []
        (liftE (performPDPTInvocation (PDPTUnmap cap ctSlot)))
        (Call performX64PDPTInvocationUnmap_'proc)"
-  sorry
+  apply (simp only: liftE_liftM ccorres_liftM_simp)
+  apply (rule ccorres_gen_asm)
+  apply (cinit lift: cap_' ctSlot_')
+   apply csymbr
+   apply (simp del: Collect_const)
+   apply (rule ccorres_split_nothrow_novcg_dc)
+      apply (subgoal_tac "capPDPTMappedAddress cap
+                           = (\<lambda>cp. if to_bool (capPDPTIsMapped_CL cp)
+                              then Some (capPDPTMappedASID_CL cp, capPDPTMappedAddress_CL cp)
+                              else None) (cap_pdpt_cap_lift capa)")
+       apply (rule ccorres_Cond_rhs)
+        apply (simp add: to_bool_def)
+        apply (rule ccorres_rhs_assoc)+
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply (ctac add: unmapPDPointerTable_ccorres)
+          apply csymbr
+          apply (simp add: storePDPTE_def' swp_def)
+          apply clarsimp
+          apply(simp only: dc_def[symmetric] bit_simps_corres[symmetric])
+          apply (ctac add: clearMemory_setObject_PDPTE_ccorres)
+         apply wp
+        apply (simp del: Collect_const)
+        apply (vcg exspec=unmapPDPT_modifies)
+       apply (simp add: to_bool_def)
+       apply (rule ccorres_return_Skip')
+      apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
+      apply (clarsimp simp: cap_lift_pdpt_cap cap_to_H_def
+                            cap_pdpt_cap_lift_def
+                     elim!: ccap_relationE cong: if_cong)
+     apply (simp add: liftM_def getSlotCap_def updateCap_def
+                 del: Collect_const)
+     apply (rule ccorres_move_c_guard_cte)
+     apply (rule ccorres_getCTE)+
+     apply (rule_tac P="cte_wp_at' (op = rv) ctSlot
+                          and (\<lambda>_. rv = rva \<and> isArchCap isPDPointerTableCap (cteCap rv))"
+                in ccorres_from_vcg_throws [where P'=UNIV])
+     apply (rule allI, rule conseqPre, vcg)
+     apply (clarsimp simp: cte_wp_at_ctes_of cap_get_tag_isCap_ArchObject)
+     apply (rule cmap_relationE1[OF cmap_relation_cte], assumption+)
+     apply (frule ccte_relation_ccap_relation)
+     apply (clarsimp simp: typ_heap_simps cap_get_tag_isCap_ArchObject)
+     apply (rule fst_setCTE [OF ctes_of_cte_at], assumption)
+     apply (erule rev_bexI)
+     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                           typ_heap_simps')
+     apply (rule conjI)
+      apply (clarsimp simp: cpspace_relation_def typ_heap_simps')
+      apply (subst setCTE_tcb_case, assumption+)
+      apply (clarsimp dest!: ksPSpace_update_eq_ExD)
+      apply (erule cmap_relation_updI, assumption)
+       apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
+       apply (clarsimp simp: ccte_relation_def c_valid_cte_def
+                      elim!: ccap_relationE)
+       apply (subst cteCap_update_cte_to_H)
+         apply (clarsimp simp: map_option_Some_eq2)
+         apply (rule trans, rule sym, rule option.sel, rule sym, erule arg_cong)
+        apply (erule iffD1[OF cap_pdpt_cap_lift])
+       apply (clarsimp simp: map_option_Some_eq2 cap_get_tag_isCap_ArchObject[symmetric]
+                             cap_lift_pdpt_cap cap_to_H_def
+                             cap_pdpt_cap_lift_def)
+      apply simp
+     apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
+                           typ_heap_simps'
+                           cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
+                    dest!: ksPSpace_update_eq_ExD)
+    apply (simp add: cte_wp_at_ctes_of)
+    apply (wp mapM_x_wp' | wpc | simp)+
+   apply (simp add: guard_is_UNIV_def)
+  apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric] cte_wp_at_ctes_of)
+  apply (frule ctes_of_valid', clarsimp)
+  apply (frule_tac x=s in fun_cong[OF diminished_valid'])
+  apply (frule valid_global_refsD_with_objSize, clarsimp)
+  apply (clarsimp simp: cap_lift_pdpt_cap cap_to_H_def
+                        cap_pdpt_cap_lift_def isCap_simps
+                        valid_cap'_def get_capSizeBits_CL_def
+                        bit_simps capAligned_def
+                        to_bool_def mask_def pd_pointer_table_at'_def
+                        capRange_def Int_commute asid_bits_def
+                 elim!: ccap_relationE cong: if_cong
+                 dest!: diminished_capMaster)
+  apply (drule spec[where x=0])
+  apply (auto simp add: word_and_le1)
+  done
 
 lemma cap_case_PML4Cap2:
   "(case cap of ArchObjectCap (PML4Cap pd mapdata)
