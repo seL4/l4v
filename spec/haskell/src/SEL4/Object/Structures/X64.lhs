@@ -156,3 +156,20 @@ ASIDs are mapped to address space roots by a global two-level table. The actual 
 >     where
 >         vspace' = vspace .&. (mask pml4ShiftBits `shiftL` asidBits)
 
+\subsection{IRQ State}
+
+> data X64IRQState =
+>     X64IRQFree
+>   | X64IRQReserved
+>   | X64IRQMSI {
+>     msiBus :: Word,
+>     msiDev :: Word,
+>     msiFunc :: Word,
+>     msiHandle :: Word }
+>   | X64IRQIOAPIC {
+>     irqIOAPIC :: Word,
+>     irqPin :: Word,
+>     irqLevel :: Word,
+>     irqPolarity :: Word,
+>     irqMasked :: Bool }
+

@@ -597,6 +597,12 @@ IO Port interface.
 
 IRQ parameters
 
+> minUserIRQ :: IRQ
+> minUserIRQ = Platform.minUserIRQ
+
+> maxUserIRQ :: IRQ
+> maxUserIRQ = Platform.maxUserIRQ
+
 > irqIntOffset :: Word
 > irqIntOffset = Platform.irqIntOffset
 
@@ -609,9 +615,6 @@ IRQ parameters
 > maxPCIFunc :: Word
 > maxPCIFunc = Platform.maxPCIFunc
 
-> numIOAPICs :: Word
-> numIOAPICs = error "Unimplemented . boot code"
-
 > ioapicIRQLines :: Word
 > ioapicIRQLines = Platform.ioapicIRQLines
 
@@ -621,25 +624,6 @@ IRQ parameters
 >     liftIO $ Platform.ioapicMapPinToVector cbptr ioapic pin level polarity vector
 
 %FIXME: review how deeply we need to model this.
-
-> data X64IRQState =
->     IRQFree
->   | IRQReserved
->   | IRQMSI {
->     msiBus :: Word,
->     msiDev :: Word,
->     msiFunc :: Word,
->     msiHandle :: Word }
->   | IRQIOAPIC {
->     irqIOAPIC :: Word,
->     irqPin :: Word,
->     irqLevel :: Word,
->     irqPolarity :: Word,
->     irqMasked :: Bool }
-
-
-> updateIRQState :: IRQ -> X64IRQState -> MachineMonad ()
-> updateIRQState _ _ = error "Unimplemented"
 
 > initIRQController :: MachineMonad ()
 > initIRQController = error "Unimplemented"

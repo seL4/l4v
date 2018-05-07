@@ -18,6 +18,7 @@ This module defines the machine-specific interrupt handling routines for x64.
 
 > import SEL4.Machine
 > import SEL4.Model
+> import SEL4.Model.StateData.X64
 > import SEL4.Object.Structures
 > import SEL4.API.Failures
 > import SEL4.API.Types
@@ -29,6 +30,9 @@ This module defines the machine-specific interrupt handling routines for x64.
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
 > import {-# SOURCE #-} SEL4.Object.Interrupt
 > import qualified SEL4.Machine.Hardware.X64 as Arch
+> import Data.Word (Word8)
+> import Data.Array ((//))
+> import Data.Bits
 
 
 \end{impdetails}
@@ -44,9 +48,9 @@ This module defines the machine-specific interrupt handling routines for x64.
 >         (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerIOAPIC,
 >                  index:depth:ioapic:pin:level:polarity:irqW:_, cnode:_) -> do
 >
->             -- FIXME: separate ranges for ISA interrupts and user interrupts
->             rangeCheck irqW (fromEnum minIRQ) (fromEnum maxIRQ)
->             let irq = toEnum (fromIntegral irqW) :: IRQ
+>             let preIrq = fromIntegral irqW :: Word8
+>             rangeCheck preIrq 0 (fromEnum Arch.maxUserIRQ - fromEnum Arch.minUserIRQ)
+>             let irq = toEnum (fromEnum Arch.minUserIRQ + fromIntegral preIrq) :: IRQ
 >
 >             irqActive <- withoutFailure $ isIRQActive irq
 >             when irqActive $ throw RevokeFirst
@@ -56,7 +60,9 @@ This module defines the machine-specific interrupt handling routines for x64.
 >             ensureEmptySlot destSlot
 >
 >             -- from ioapic_map_pin_to_vector
->             rangeCheck ioapic 0 (Arch.numIOAPICs - 1)
+>             numIOAPICs <- withoutFailure $ gets (x64KSNumIOAPICs . ksArchState)
+>             when (numIOAPICs == 0) $ throw IllegalOperation
+>             rangeCheck ioapic 0 (numIOAPICs - 1)
 >             rangeCheck pin 0 (Arch.ioapicIRQLines - 1)
 >             rangeCheck level (0::Word) 1
 >             rangeCheck polarity (0::Word) 1
@@ -71,9 +77,9 @@ This module defines the machine-specific interrupt handling routines for x64.
 >         (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerMSI,
 >                  index:depth:pciBus:pciDev:pciFunc:handle:irqW:_, cnode:_) -> do
 >
->             -- FIXME: separate ranges for ISA interrupts and user interrupts
->             rangeCheck irqW (fromEnum minIRQ) (fromEnum maxIRQ)
->             let irq = toEnum (fromIntegral irqW) :: IRQ
+>             let preIrq = fromIntegral irqW :: Word8
+>             rangeCheck preIrq 0 (fromEnum Arch.maxUserIRQ - fromEnum Arch.minUserIRQ)
+>             let irq = toEnum (fromEnum Arch.minUserIRQ + fromIntegral preIrq) :: IRQ
 >
 >             irqActive <- withoutFailure $ isIRQActive irq
 >             when irqActive $ throw RevokeFirst
@@ -93,12 +99,19 @@ This module defines the machine-specific interrupt handling routines for x64.
 
 >         _ -> throw IllegalOperation
 
+updateIRQState sets the arch-specific IRQ state for an IRQ
+
+> updateIRQState :: IRQ -> X64IRQState -> Kernel ()
+> updateIRQState irq irqState = do
+>     irqStates <- gets (x64KSIRQState . ksArchState)
+>     modify (\s -> s { ksArchState = (ksArchState s) { x64KSIRQState = irqStates // [(irq, irqState)]} })
+
 > performIRQControl :: ArchInv.IRQControlInvocation -> KernelP ()
 > performIRQControl (ArchInv.IssueIRQHandlerIOAPIC (IRQ irq) destSlot srcSlot ioapic
 >         pin level polarity vector) = withoutPreemption $ do
 >     doMachineOp $ Arch.ioapicMapPinToVector ioapic pin level polarity vector
->     irqState <- return $ Arch.IRQIOAPIC ioapic pin level polarity True
->     doMachineOp $ Arch.updateIRQState irq irqState
+>     irqState <- return $ X64IRQIOAPIC (ioapic .&. mask 5) (pin .&. mask 5) (level .&. 1) (polarity .&. 1) True
+>     updateIRQState (IRQ irq) irqState
 >     -- do same thing as generic path in performIRQControl in Interrupt.lhs
 >     setIRQState IRQSignal (IRQ irq)
 >     cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot
@@ -106,8 +119,8 @@ This module defines the machine-specific interrupt handling routines for x64.
 >
 > performIRQControl (ArchInv.IssueIRQHandlerMSI (IRQ irq) destSlot srcSlot pciBus
 >         pciDev pciFunc handle) = withoutPreemption $ do
->     irqState <- return $ Arch.IRQMSI pciBus pciDev pciFunc handle
->     doMachineOp $ Arch.updateIRQState irq irqState
+>     irqState <- return $ X64IRQMSI (pciBus .&. mask 8) (pciDev .&. mask 5) (pciFunc .&. mask 3) (handle .&. mask 32)
+>     updateIRQState (IRQ irq) irqState
 >     -- do same thing as generic path in performIRQControl in Interrupt.lhs
 >     setIRQState IRQSignal (IRQ irq)
 >     cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot

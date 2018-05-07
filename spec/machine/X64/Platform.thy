@@ -72,6 +72,14 @@ definition
   maxIRQ :: "irq" where
   "maxIRQ \<equiv> 125"
 
+definition
+  minUserIRQ :: "irq" where
+  "minUserIRQ \<equiv> 16"
+
+definition
+  maxUserIRQ :: "irq" where
+  "maxUserIRQ \<equiv> 123"
+
 datatype cr3 = X64CR3 word64 (*pml4*) word64 (*asid*)
 
 primrec CR3BaseAddress where

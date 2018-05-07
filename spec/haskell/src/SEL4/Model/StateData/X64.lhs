@@ -41,7 +41,9 @@ This module contains the architecture-specific kernel global data for the X86-64
 >     x64KSSKIMPTs        :: [PPtr PTE],
 >     x64KSCurrentUserCR3 :: CR3,
 >     x64KSKernelVSpace :: PPtr Word -> X64VSpaceRegionUse,
->     x64KSAllocatedIOPorts :: Array IOPort Bool}
+>     x64KSAllocatedIOPorts :: Array IOPort Bool,
+>     x64KSNumIOAPICs :: Word,
+>     x64KSIRQState :: Array IRQ X64IRQState}
 
 > newKernelState :: PAddr -> (KernelState, [PAddr])
 > newKernelState _ = error "No initial state defined for x64"

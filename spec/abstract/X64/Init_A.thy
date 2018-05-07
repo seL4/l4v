@@ -58,7 +58,9 @@ definition
     x64_global_pdpts = [init_global_pdpt],
     x64_global_pds = [init_global_pd],
     x64_current_cr3 = cr3 0 0,
-    x64_allocated_io_ports = \<lambda>_. False
+    x64_allocated_io_ports = \<lambda>_. False,
+    x64_num_ioapics = 1,
+    x64_irq_state = K IRQFree
    \<rparr>"
 
 definition [simp]:

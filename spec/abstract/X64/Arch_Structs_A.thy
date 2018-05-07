@@ -248,6 +248,21 @@ datatype
   | PML4Obj
   | ASIDPoolObj
 
+datatype X64IRQState =
+   IRQFree
+ | IRQReserved
+ | IRQMSI
+      (MSIBus : machine_word)
+      (MSIDev : machine_word)
+      (MSIFunc : machine_word)
+      (MSIHandle : machine_word)
+ | IRQIOAPIC
+      (IRQioapic : machine_word)
+      (IRQPin : machine_word)
+      (IRQLevel : machine_word)
+      (IRQPolarity : machine_word)
+      (IRQMasked : bool)
+
 definition
   arch_is_frame_type :: "aobject_type \<Rightarrow> bool"
 where
@@ -298,6 +313,8 @@ record arch_state =
   x64_global_pds            :: "obj_ref list"
   x64_current_cr3           :: "X64_A.cr3"
   x64_allocated_io_ports    :: "X64_A.io_port \<Rightarrow> bool"
+  x64_num_ioapics           :: "64 word"
+  x64_irq_state             :: "8 word \<Rightarrow> X64_A.X64IRQState"
 
 (* FIXME x64-vtd:
   x64_num_io_domain_bits    :: "16 word"
