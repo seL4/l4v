@@ -124,7 +124,7 @@ ASID capabilities can be copied without modification, as can IOPort and IOSpace 
 CNodes have differing numbers of guard bits and rights bits
 
 > cteRightsBits :: Int
-> cteRightsBits = 2
+> cteRightsBits = 0
 
 > cteGuardBits :: Int
 > cteGuardBits = 58

@@ -27,7 +27,7 @@ where
 
 definition cnode_padding_bits :: "nat"
 where
-  "cnode_padding_bits \<equiv> 2"
+  "cnode_padding_bits \<equiv> 0"
 
 text {* On a user request to modify a cnode capability, extract new guard bits and guard. *}
 definition

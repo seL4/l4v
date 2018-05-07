@@ -423,8 +423,8 @@ proof -
                isCap_defs is_cap_defs Let_def badge_bits_def
                cap_rights_update_def badge_update_def
   { fix x :: machine_word
-    def y \<equiv> "(x >> 8) && mask 58" (* guard_bits *)
-    def z \<equiv> "unat ((x >> 2) && mask 6)" (* cnode_padding_bits, cnode_guard_size_bits *)
+    def y \<equiv> "(x >> 6) && mask 58" (* guard_bits *)
+    def z \<equiv> "unat (x && mask 6)" (* cnode_guard_size_bits *)
     have "of_bl (to_bl (y && mask z)) = (of_bl (replicate (64-z) False @ drop (64-z) (to_bl y))::machine_word)"
       by (simp add: bl_and_mask)
     then
@@ -449,7 +449,7 @@ proof -
   apply (simp add: simps word_bits_def the_cnode_cap_def andCapRights_def
                    rightsFromWord_def data_to_rights_def nth_ucast cteRightsBits_def cteGuardBits_def)
   apply (insert x)
-  apply (subgoal_tac "unat ((x >> 2) && mask 6) < unat (2^6::machine_word)")
+  apply (subgoal_tac "unat (x && mask 6) < unat (2^6::machine_word)")
    prefer 2
    apply (fold word_less_nat_alt)[1]
    apply (rule and_mask_less_size)

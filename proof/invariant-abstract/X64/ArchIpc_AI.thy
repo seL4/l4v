@@ -33,7 +33,7 @@ lemma update_cap_data_closedform:
        then NullCap
        else CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> cnode_padding_bits) && mask cnode_guard_size_bits))
                                          (to_bl g''))
-                             ((w >> 8) && mask 58))
+                             ((w >> 6) && mask 58))
    | ThreadCap r \<Rightarrow> ThreadCap r
    | DomainCap \<Rightarrow> DomainCap
    | UntypedCap d p n idx \<Rightarrow> UntypedCap d p n idx
