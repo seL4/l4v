@@ -32,6 +32,8 @@ crunch (bcorres)bcorres[wp]: set_mcpriority,arch_tcb_set_ipc_buffer truncate_sta
 
 crunch (bcorres)bcorres[wp, BCorres2_AI_assms]: arch_get_sanitise_register_info, arch_post_modify_registers truncate_state
 
+crunch (bcorres)bcorres[wp]: updateIRQState truncate_state
+
 lemma invoke_tcb_bcorres[wp]:
   fixes a
   shows "bcorres (invoke_tcb a) (invoke_tcb a)"

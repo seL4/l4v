@@ -22,7 +22,8 @@ where
                     cte_wp_at (op = IRQControlCap) src_slot and
                     ex_cte_cap_wp_to is_cnode_cap dest_slot and
                     real_cte_at dest_slot and
-                    K (irq \<le> maxIRQ \<and> ioapic < numIOAPICs \<and>
+                    (\<lambda>s. ioapic < x64_num_ioapics (arch_state s)) and
+                    K (minUserIRQ \<le> irq \<and> irq \<le> maxUserIRQ \<and>
                        pin < ioapicIRQLines \<and> level < 2 \<and>
                        polarity < 2))"
 | "arch_irq_control_inv_valid_real (IssueIRQHandlerMSI irq dest_slot src_slot bus dev func handle)
@@ -30,7 +31,8 @@ where
                     cte_wp_at (op = IRQControlCap) src_slot and
                     ex_cte_cap_wp_to is_cnode_cap dest_slot and
                     real_cte_at dest_slot and
-                    K (irq \<le> maxIRQ \<and> bus \<le> maxPCIBus \<and> dev \<le> maxPCIDev \<and> func \<le> maxPCIFunc))"
+                    K (minUserIRQ \<le> irq \<and> irq \<le> maxUserIRQ \<and>
+                       bus \<le> maxPCIBus \<and> dev \<le> maxPCIDev \<and> func \<le> maxPCIFunc))"
 
 defs arch_irq_control_inv_valid_def:
   "arch_irq_control_inv_valid \<equiv> arch_irq_control_inv_valid_real"
@@ -54,10 +56,26 @@ context begin
 private method cap_hammer = (((drule_tac x="caps ! 0" in bspec)+, (rule nth_mem, fastforce)+),
                         solves \<open>(clarsimp simp: cte_wp_at_eq_simp)\<close>)
 
-private method word_hammer = solves \<open>(clarsimp simp: not_less maxIRQ_def numIOAPICs_def ioapicIRQLines_def
+private method word_hammer = solves \<open>(clarsimp simp: not_less maxIRQ_def ioapicIRQLines_def
                                     maxPCIDev_def maxPCIBus_def maxPCIFunc_def,
                                     (word_bitwise, auto?)?)[1]\<close>
 
+lemma irq_plus_min_ge_min:
+  "irq \<le> maxUserIRQ - minUserIRQ \<Longrightarrow>
+   minUserIRQ \<le> irq + minUserIRQ"
+  apply (clarsimp simp: minUserIRQ_def maxUserIRQ_def)
+  apply (subst add.commute)
+  apply (rule no_olen_add_nat[THEN iffD2])
+  apply (clarsimp simp: unat_ucast word_le_nat_alt)
+  done
+
+lemma irq_plus_min_le_max:
+  "irq \<le> maxUserIRQ - minUserIRQ \<Longrightarrow>
+   irq + minUserIRQ \<le> maxUserIRQ"
+  apply (clarsimp simp: minUserIRQ_def maxUserIRQ_def)
+  apply (subst add.commute)
+  apply (clarsimp simp: Word.le_plus)
+  done
 
 lemma arch_decode_irq_control_valid[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> cap)
@@ -72,10 +90,16 @@ lemma arch_decode_irq_control_valid[wp]:
              cong: if_cong)
   apply (rule hoare_pre)
    apply (wp ensure_empty_stronger hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift
-              | simp add: cte_wp_at_eq_simp split del: if_split
-              | wpc | wp_once hoare_drop_imps)+
-  apply clarsimp
-  by (safe; (cap_hammer | word_hammer))
+          | simp add: cte_wp_at_eq_simp split del: if_split
+          | wpc
+          | wp hoare_vcg_imp_lift_R[where P="\<lambda>rv s. \<not> x64_num_ioapics (arch_state s) - 1 < args ! 2"]
+          | wp hoare_vcg_imp_lift_R[where P="\<lambda>rv s. x64_num_ioapics (arch_state s) \<noteq> 0"]
+          | wp_once hoare_drop_imps)+
+  apply (safe; clarsimp simp: word_le_not_less[symmetric] minus_one_helper5
+                              ucast_id irq_plus_min_ge_min irq_plus_min_le_max
+               | cap_hammer
+               | word_hammer)+
+  done
 
 end
 
@@ -199,22 +223,21 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
   done
 qed
 
-crunch device_state_inv[wp]: updateIRQState, ioapicMapPinToVector "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: ioapicMapPinToVector "\<lambda>ms. P (device_state ms)"
 
-(* FIXME x64: move to Machine_AI *)
-lemma no_irq_updateIRQState: "no_irq (updateIRQState vs asid)"
-  by (wp no_irq | clarsimp simp: no_irq_def updateIRQState_def)+
-
-lemmas updateIRQState_irq_masks = no_irq[OF no_irq_updateIRQState]
-
-lemma dmo_updateIRQState[wp]: "\<lbrace>invs\<rbrace> do_machine_op (updateIRQState irq b) \<lbrace>\<lambda>y. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-          in use_valid)
-     apply ((clarsimp simp: updateIRQState_def machine_op_lift_def
-                           machine_rest_lift_def split_def | wp)+)[3]
-  apply(erule (1) use_valid[OF _ updateIRQState_irq_masks])
+lemma updateIRQState_invs[wp]:
+  "\<lbrace>invs and K (irq \<le> maxIRQ)\<rbrace>
+   updateIRQState irq state
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (clarsimp simp: updateIRQState_def)
+  apply wp
+  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_global_refs_def
+                        global_refs_def valid_arch_state_def valid_vspace_objs_def
+                        valid_arch_caps_def valid_vs_lookup_def vs_lookup_def vs_lookup_pages_def
+                        vs_lookup_pages1_def valid_table_caps_def empty_table_def second_level_tables_def
+                        valid_global_objs_def valid_kernel_mappings_def valid_asid_map_def
+                        valid_x64_irq_state_def valid_ioports_def all_ioports_issued_def
+                        issued_ioports_def Word_Lemmas.word_not_le[symmetric])
   done
 
 lemma no_irq_ioapicMapPinToVector: "no_irq (ioapicMapPinToVector a b c d e)"
@@ -232,6 +255,18 @@ lemma dmo_ioapicMapPinToVector[wp]: "\<lbrace>invs\<rbrace> do_machine_op (ioapi
   apply(erule (1) use_valid[OF _ ioapicMapPinToVector_irq_masks])
   done
 
+crunches updateIRQState
+  for real_cte_at[wp]: "real_cte_at x"
+  and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at Q slot s)"
+  and cdt[wp]: "\<lambda>s. P (cdt s)"
+  and ex_cte_cap_wp_to[wp]: "ex_cte_cap_wp_to a b"
+  and valid_objs[wp]: "valid_objs"
+  and pspace_distinct[wp]: "pspace_distinct"
+  and pspace_aligned[wp]: "pspace_aligned"
+  and valid_mdb[wp]: "valid_mdb"
+  and kheap[wp]: "\<lambda>s. P (kheap s)"
+  (simp: ex_cte_cap_wp_to_def)
+
 lemma arch_invoke_irq_control_invs[wp]:
   "\<lbrace>invs and arch_irq_control_inv_valid i\<rbrace> arch_invoke_irq_control i \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: arch_invoke_irq_control_def)
@@ -239,10 +274,12 @@ lemma arch_invoke_irq_control_invs[wp]:
    apply (wp cap_insert_simple_invs | wpc
          | simp add: IRQHandler_valid is_cap_simps no_cap_to_obj_with_diff_IRQHandler_ARCH
                      is_cap_simps safe_ioport_insert_triv
-         | strengthen real_cte_tcb_valid)+
+         | strengthen real_cte_tcb_valid
+         | wps)+
   by (auto simp: cte_wp_at_caps_of_state IRQ_def arch_irq_control_inv_valid_def
                         is_simple_cap_def is_cap_simps is_pt_cap_def
                         safe_parent_for_def
+                        maxUserIRQ_def maxIRQ_def order.trans
                         ex_cte_cap_to_cnode_always_appropriate_strg)
 
 lemma (* invoke_irq_control_invs *) [Interrupt_AI_asms]:

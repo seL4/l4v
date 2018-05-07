@@ -1103,6 +1103,11 @@ where
   "valid_global_pdpts' pdpts \<equiv> \<lambda>s. \<forall>p \<in> set pdpts. pd_pointer_table_at' p s"
 
 definition
+  valid_x64_irq_state' :: "(8 word \<Rightarrow> x64irqstate) \<Rightarrow> bool"
+where
+  "valid_x64_irq_state' irqState \<equiv> \<forall>irq > maxIRQ. irqState irq = X64IRQFree"
+
+definition
   valid_arch_state' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_arch_state' \<equiv> \<lambda>s.
@@ -1111,7 +1116,8 @@ where
   page_map_l4_at' (x64KSSKIMPML4 (ksArchState s)) s \<and>
   valid_global_pds' (x64KSSKIMPDs (ksArchState s)) s \<and>
   valid_global_pdpts' (x64KSSKIMPDPTs (ksArchState s)) s \<and>
-  valid_global_pts' (x64KSSKIMPTs (ksArchState s)) s"
+  valid_global_pts' (x64KSSKIMPTs (ksArchState s)) s \<and>
+  valid_x64_irq_state' (x64KSIRQState (ksArchState s))"
 
 definition
   irq_issued' :: "irq \<Rightarrow> kernel_state \<Rightarrow> bool"

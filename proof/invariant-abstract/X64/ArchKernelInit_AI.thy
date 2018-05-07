@@ -293,7 +293,7 @@ lemma invs_A:
     apply (clarsimp simp: valid_asid_table_def state_defs)
    apply (simp add: valid_global_pts_def valid_global_pds_def valid_global_pdpts_def
                     valid_arch_state_def state_defs obj_at_def a_type_def
-                    valid_cr3_def asid_wf_0)
+                    valid_cr3_def valid_x64_irq_state_def asid_wf_0)
   apply (rule conjI)
    apply (clarsimp simp: valid_irq_node_def obj_at_def state_defs
                          is_cap_table_def wf_empty_bits
