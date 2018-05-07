@@ -153,6 +153,12 @@ firstValidIODomain = error "Unimplemented"
 numIODomainIDBits :: Int
 numIODomainIDBits = error "Unimplemented"
 
+minUserIRQ :: IRQ
+minUserIRQ = IRQ 0x10 -- irq_user_min in C
+
+maxUserIRQ :: IRQ
+maxUserIRQ = IRQ 0x7B -- irq_user_max in C
+
 irqIntOffset :: Word
 irqIntOffset = 0x20 -- IRQ_INT_OFFSET in C
 

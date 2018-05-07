@@ -339,7 +339,6 @@ definition
 where
   "hwASIDInvalidate \<equiv> invalidateASID"
 
-
 consts'
   getFaultAddress_val :: "machine_state \<Rightarrow> machine_word"
 definition
@@ -370,11 +369,6 @@ where
 "maxPCIFunc \<equiv> 7"
 
 definition
-numIOAPICs :: "machine_word"
-where
-"numIOAPICs \<equiv> 1" (* FIXME x64: bc adrian said so *)
-
-definition
 ioapicIRQLines :: "machine_word"
 where
 "ioapicIRQLines \<equiv> 24"
@@ -386,29 +380,6 @@ definition
 ioapicMapPinToVector :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
 where
 "ioapicMapPinToVector ioapic pin level polarity vector \<equiv> machine_op_lift (ioapicMapPinToVector_impl ioapic pin level polarity vector)"
-
-datatype X64IRQState =
-   IRQFree
- | IRQReserved
- | IRQMSI
-      (MSIBus : machine_word)
-      (MSIDev : machine_word)
-      (MSIFunc : machine_word)
-      (MSIHandle : machine_word)
- | IRQIOAPIC
-      (IRQioapic : machine_word)
-      (IRQPin : machine_word)
-      (IRQLevel : machine_word)
-      (IRQPolarity : machine_word)
-      (IRQMasked : bool)
-
-
-consts'
-  updateIRQState_impl :: "irq \<Rightarrow> X64IRQState \<Rightarrow> unit machine_rest_monad"
-definition
-updateIRQState :: "irq \<Rightarrow> X64IRQState \<Rightarrow> unit machine_monad"
-where
-"updateIRQState arg1 arg2 \<equiv> machine_op_lift (updateIRQState_impl arg1 arg2)"
 
 (*FIXME: How to deal with this directly? *)
 definition

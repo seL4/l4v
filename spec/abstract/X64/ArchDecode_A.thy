@@ -57,16 +57,17 @@ definition
  "arch_decode_irq_control_invocation label args src_slot cps \<equiv>
   (if invocation_type label = ArchInvocationLabel X64IRQIssueIRQHandlerIOAPIC
     then (if length args \<ge> 7 \<and> length cps \<ge> 1
-      then let x = args ! 6; index = args ! 0; depth = args ! 1;
-               cnode = cps ! 0; irqv = ucast x;
+      then let pre_irq = UCAST (64 \<rightarrow> 8) (args ! 6); index = args ! 0; depth = args ! 1;
+               cnode = cps ! 0;
+               irqv = ucast pre_irq + minUserIRQ;
                ioapic = args ! 2;
                pin = args ! 3;
                level = args ! 4;
                polarity = args ! 5;
-               vector = x + irqIntOffset
+               vector = ucast irqv + irqIntOffset
         in doE
 
-        whenE (x > ucast maxIRQ) $ throwError (RangeError 0 (ucast maxIRQ));
+        whenE (pre_irq > ucast (maxUserIRQ - minUserIRQ)) $ throwError (RangeError 0 (ucast (maxUserIRQ - minUserIRQ)));
         irq_active \<leftarrow> liftE $ is_irq_active irqv;
         whenE irq_active $ throwError RevokeFirst;
         dest_slot \<leftarrow> lookup_target_slot cnode (data_to_cptr index) (unat depth);
@@ -75,6 +76,8 @@ definition
        (* Following should be wrapped in to a funcion like what c did
           since it is pc99 related, problem is where to put this function*)
 
+        numIOAPICs \<leftarrow> liftE $ gets (x64_num_ioapics \<circ> arch_state);
+        whenE (numIOAPICs = 0) $ throwError IllegalOperation;
         whenE (ioapic > numIOAPICs - 1) $ throwError (RangeError 0 (numIOAPICs-1));
         whenE (pin > ioapicIRQLines - 1) $ throwError (RangeError 0 (ioapicIRQLines-1));
         whenE (level > 1) $ throwError (RangeError 0 1);
@@ -86,12 +89,12 @@ definition
     else throwError TruncatedMessage)
   else (if invocation_type label = ArchInvocationLabel X64IRQIssueIRQHandlerMSI
     then (if length args \<ge> 7 \<and> length cps \<ge> 1
-      then let x = args ! 6; index = args ! 0; depth = args ! 1;
-               cnode = cps ! 0; irqv = ucast x;
+      then let pre_irq = UCAST (64 \<rightarrow> 8) (args ! 6); index = args ! 0; depth = args ! 1;
+               cnode = cps ! 0; irqv = ucast pre_irq + minUserIRQ;
                bus = args ! 2; dev = args ! 3; func = args ! 4; handle = args ! 5
         in doE
 
-        whenE (x > ucast maxIRQ) $ throwError (RangeError 0 (ucast maxIRQ));
+        whenE (pre_irq > ucast (maxUserIRQ - minUserIRQ)) $ throwError (RangeError 0 (ucast (maxUserIRQ - minUserIRQ)));
         irq_active \<leftarrow> liftE $ is_irq_active irqv;
         whenE irq_active $ throwError RevokeFirst;
 
