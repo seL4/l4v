@@ -1040,6 +1040,11 @@ where
                       ioports_no_overlap (caps_of_state s)"
 
 definition
+  valid_x64_irq_state :: "(8 word \<Rightarrow> X64IRQState) \<Rightarrow> bool"
+where
+  "valid_x64_irq_state irqState \<equiv> \<forall>irq > maxIRQ. irqState irq = IRQFree"
+
+definition
   valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_arch_state \<equiv> \<lambda>s.
@@ -1048,7 +1053,8 @@ where
       \<and> valid_global_pts s
       \<and> valid_global_pds s
       \<and> valid_global_pdpts s
-      \<and> valid_cr3 (x64_current_cr3 (arch_state s))"
+      \<and> valid_cr3 (x64_current_cr3 (arch_state s))
+      \<and> valid_x64_irq_state (x64_irq_state (arch_state s))"
 
 definition
   vs_cap_ref_arch :: "arch_cap \<Rightarrow> vs_ref list option"

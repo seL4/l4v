@@ -2177,5 +2177,13 @@ lemma dmo_clearMemory_invs'[wp]:
   apply fastforce
   done
 
+lemma corres_gets_num_ioapics [corres]:
+  "corres (op =) \<top> \<top> (gets (x64_num_ioapics \<circ> arch_state)) (gets (x64KSNumIOAPICs \<circ> ksArchState))"
+  by (simp add: state_relation_def arch_state_relation_def)
+
+lemma corres_gets_x64_irq_state [corres]:
+  "corres x64_irq_relation \<top> \<top> (gets (x64_irq_state \<circ> arch_state)) (gets (x64KSIRQState \<circ> ksArchState))"
+  by (simp add: state_relation_def arch_state_relation_def)
+
 end
 end

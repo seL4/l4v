@@ -18,7 +18,7 @@ named_theorems EmptyFail_AI_assms
 
 crunch_ignore (empty_fail)
   (add: invalidateTLBEntry_impl invalidateTranslationSingleASID_impl
-        invalidateASID_impl ioapicMapPinToVector_impl updateIRQState_impl
+        invalidateASID_impl ioapicMapPinToVector_impl
         in8_impl in16_impl in32_impl out8_impl out16_impl out32_impl)
 
 lemma invalidateLocalPageStructureCacheASID_ef[simp,wp]:
