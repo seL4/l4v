@@ -1510,7 +1510,6 @@ lemma setRegister_ccorres:
   apply (auto intro: typ_heap_simps elim: obj_at'_weakenE)
   done
 
-(* FIXME x64: haskell msg registers are wrong, see VER-830 *)
 lemma msgRegisters_ccorres:
   "n < unat n_msgRegisters \<Longrightarrow>
   register_from_H (X64_H.msgRegisters ! n) = (index kernel_all_substitute.msgRegisters n)"
