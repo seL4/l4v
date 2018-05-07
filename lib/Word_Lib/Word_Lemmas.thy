@@ -3769,6 +3769,11 @@ lemma zero_sle_ucast_up:
   apply arith
   done
 
+lemma word_le_ucast_sless:
+  "\<lbrakk> x \<le> y; y \<noteq> -1; LENGTH('a) < LENGTH('b) \<rbrakk> \<Longrightarrow>
+    UCAST (('a :: len) \<rightarrow> ('b :: len) signed) x <s ucast (y + 1)"
+  by (clarsimp simp: word_le_make_less word_sless_alt sint_ucast_eq_uint is_down word_less_def)
+
 lemma msb_ucast_eq:
     "len_of TYPE('a) = len_of TYPE('b) \<Longrightarrow>
          msb (ucast x :: ('a::len) word) = msb (x :: ('b::len) word)"
