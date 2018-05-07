@@ -122,6 +122,33 @@ where
                          \<and> pcid = ccr3 && mask 12
                          \<and> 1 << 63 = ccr3 && (~~ mask 51)"
 
+fun
+  x86_irq_state_to_H :: "x86_irq_state_CL \<Rightarrow> x64irqstate"
+where
+  "x86_irq_state_to_H X86_irq_state_irq_free = X64IRQFree"
+| "x86_irq_state_to_H X86_irq_state_irq_reserved = X64IRQReserved"
+| "x86_irq_state_to_H (X86_irq_state_irq_ioapic irq_ioapic) =
+     X64IRQIOAPIC
+       (ucast (id_CL irq_ioapic))
+       (ucast (pin_CL irq_ioapic))
+       (ucast (level_CL irq_ioapic))
+       (ucast (polarity_low_CL irq_ioapic))
+       (to_bool (masked_CL irq_ioapic))"
+| "x86_irq_state_to_H (X86_irq_state_irq_msi irq_msi) =
+     X64IRQMSI
+       (ucast (bus_CL irq_msi))
+       (ucast (dev_CL irq_msi))
+       (ucast (func_CL irq_msi))
+       (ucast (handle_CL irq_msi))"
+
+definition
+  x64_irq_state_relation :: "x64irqstate \<Rightarrow> x86_irq_state_C \<Rightarrow> bool"
+where
+  "x64_irq_state_relation s s' \<equiv>
+     case x86_irq_state_lift s' of
+       None \<Rightarrow> False (* should never happen *)
+     | Some x \<Rightarrow> s = x86_irq_state_to_H x"
+
 definition
   carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
@@ -130,6 +157,8 @@ where
   array_relation (op = \<circ> option_to_ptr) (2^asid_high_bits - 1) (x64KSASIDTable astate) (x86KSASIDTable_' cstate) \<and>
   ccr3_relation (x64KSCurrentUserCR3 astate) (x64KSCurrentUserCR3_' cstate) \<and>
 (* FIXME x64: Still needed: relation for IOPort bitmap *)
+  x64KSNumIOAPICs astate = UCAST (32 \<rightarrow> 64) (num_ioapics_' cstate) \<and>
+  array_relation x64_irq_state_relation maxIRQ (x64KSIRQState astate) (x86KSIRQState_' cstate) \<and>
   carch_globals astate"
 
 end

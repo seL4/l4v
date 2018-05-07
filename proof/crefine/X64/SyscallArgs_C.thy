@@ -529,6 +529,11 @@ lemma injection_handler_throwError:
   by (simp add: injection_handler_def handleE'_def
                 throwError_bind)
 
+lemma injection_handler_whenE:
+  "injection_handler injf (whenE P f)
+    = whenE P (injection_handler injf f)"
+  by (simp add: whenE_def injection_handler_returnOk split: if_split)
+
 lemmas injection_handler_bindE = injection_bindE [OF refl refl]
 lemmas injection_handler_wp = injection_wp [OF refl]
 

@@ -605,6 +605,9 @@ end
 context state_rel begin
 
 definition
+  "unwrap_or def opt \<equiv> case opt of Some x \<Rightarrow> x | None \<Rightarrow> def"
+
+definition
   "carch_state_to_H cstate \<equiv>
    X64KernelState
       (array_map_conv (\<lambda>x. if x=NULL then None else Some (ptr_val x))
@@ -616,7 +619,13 @@ definition
       (CR3 (x64KSCurrentUserCR3_' cstate && (mask 39 << 12))
            (x64KSCurrentUserCR3_' cstate && mask 12))
       x64KSKernelVSpace_C
-      undefined (* IOPort map *)"
+      undefined (* IOPort map *)
+      (ucast (num_ioapics_' cstate))
+      (* Map IRQ states to their Haskell equivalent, and out-of-bounds entries to X64IRQFree *)
+      (unwrap_or X64IRQFree o
+          (array_map_conv
+            (\<lambda>x. map_option x86_irq_state_to_H (x86_irq_state_lift x))
+            maxIRQ (x86KSIRQState_' cstate)))"
 
 
 lemma eq_option_to_ptr_rev:
@@ -641,7 +650,15 @@ lemma carch_state_to_H_correct:
   using valid[simplified valid_arch_state'_def]
   apply (fastforce simp: valid_asid_table'_def)
   apply (simp add: ccr3_relation_def split: cr3.splits)
-  sorry
+  apply (rule conjI)
+   prefer 2
+   apply (rule ext)
+   apply (clarsimp simp: x64_irq_state_relation_def array_relation_def array_map_conv_def
+                         array_to_map_def unwrap_or_def)
+   using valid[simplified valid_arch_state'_def valid_x64_irq_state'_def]
+   apply (case_tac "x \<le> maxIRQ"; fastforce split: option.split)
+  subgoal sorry
+  done
 
 end
 

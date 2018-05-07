@@ -773,9 +773,6 @@ lemma transferCaps_simple:
         od"
   apply (cases mi)
   apply (clarsimp simp: transferCaps_def getThreadCSpaceRoot_def locateSlot_conv)
-  apply (rule ext bind_apply_cong[OF refl])+
-  apply (simp add: upto_enum_def
-            split: option.split)
   done
 
 lemma transferCaps_simple_rewrite:

@@ -30,6 +30,17 @@ assumes resetTimer_ccorres:
            (doMachineOp resetTimer)
            (Call resetTimer_'proc)"
 
+assumes ioapicMapPinToVector_ccorres:
+  "ccorres dc xfdc \<top>
+     (UNIV \<inter> \<lbrace>\<acute>ioapic___unsigned_long = ioapic\<rbrace>
+           \<inter> \<lbrace>\<acute>pin___unsigned_long = pin\<rbrace>
+           \<inter> \<lbrace>\<acute>level___unsigned_long = level\<rbrace>
+           \<inter> \<lbrace>\<acute>polarity = polarity\<rbrace>
+           \<inter> \<lbrace>\<acute>vector___unsigned_long = vector\<rbrace>)
+     []
+     (doMachineOp (ioapicMapPinToVector ioapic pin level polarity vector))
+     (Call ioapic_map_pin_to_vector_'proc)"
+
 (* FIXME x64: double-check this, assumption is ccorres holds regardless of in_kernel *)
 (* FIXME x64: accessor function relation was complicated on ARM, testing if you don't
               need it to be that way *)
