@@ -1808,15 +1808,6 @@ lemma unat_less_iff64:
   apply simp
   done
 
-lemma injection_handler_whenE:
-  "injection_handler Inl (whenE a b)
-   = (if a then (injection_handler Inl b)
-      else (returnOk ()))"
-  apply (subst injection_handler_returnOk[symmetric])
-  apply (clarsimp simp:whenE_def injection_handler_def)
-  apply (fastforce simp:split:if_splits)
-  done
-
 lemma injection_handler_if_returnOk:
   "injection_handler Inl (if a then b else returnOk c)
   = (if a then (injection_handler Inl b) else returnOk c)"

@@ -1156,7 +1156,9 @@ lemma cstate_relation_only_t_hrs:
   ghost'state_' s = ghost'state_' t;
   ksDomScheduleIdx_' s = ksDomScheduleIdx_' t;
   ksCurDomain_' s = ksCurDomain_' t;
-  ksDomainTime_' s = ksDomainTime_' t
+  ksDomainTime_' s = ksDomainTime_' t;
+  num_ioapics_' s = num_ioapics_' t;
+  x86KSIRQState_' s = x86KSIRQState_' t
   \<rbrakk>
   \<Longrightarrow> cstate_relation a s = cstate_relation a t"
   unfolding cstate_relation_def
@@ -1181,6 +1183,8 @@ lemma rf_sr_upd:
     "ksDomScheduleIdx_' (globals x) = ksDomScheduleIdx_' (globals y)"
     "ksCurDomain_' (globals x) = ksCurDomain_' (globals y)"
     "ksDomainTime_' (globals x) = ksDomainTime_' (globals y)"
+    "num_ioapics_' (globals x) = num_ioapics_' (globals y)"
+    "x86KSIRQState_' (globals x) = x86KSIRQState_' (globals y)"
   shows "((a, x) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
   unfolding rf_sr_def using assms
   by simp (rule cstate_relation_only_t_hrs, auto)
@@ -1202,6 +1206,8 @@ lemma rf_sr_upd_safe[simp]:
     "x86KSASIDTable_' (globals (g y)) = x86KSASIDTable_' (globals y)"
     "x64KSCurrentUserCR3_' (globals (g y)) = x64KSCurrentUserCR3_' (globals y)"
     "phantom_machine_state_' (globals (g y)) = phantom_machine_state_' (globals y)"
+    "num_ioapics_' (globals (g y)) = num_ioapics_' (globals y)"
+    "x86KSIRQState_' (globals (g y)) = x86KSIRQState_' (globals y)"
   and    gs: "ghost'state_' (globals (g y)) = ghost'state_' (globals y)"
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
   shows "((a, (g y)) \<in> rf_sr) = ((a, y) \<in> rf_sr)"

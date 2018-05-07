@@ -2696,11 +2696,6 @@ lemma ccorres_returnOk_Basic:
   apply (clarsimp simp: returnOk_def return_def)
   done
 
-lemma injection_handler_whenE:
-  "injection_handler injf (whenE P f)
-    = whenE P (injection_handler injf f)"
-  by (simp add: whenE_def injection_handler_returnOk split: if_split)
-
 lemma fromEnum_object_type_to_H:
   "fromEnum x = unat (object_type_from_H x)"
   apply (cut_tac eqset_imp_iff[where x=x, OF enum_surj])
