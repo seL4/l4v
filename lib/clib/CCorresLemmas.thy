@@ -627,6 +627,20 @@ lemma ccorres_guard_from_wp_bind:
   apply simp
   done
 
+lemma ccorres_disj_division:
+  "\<lbrakk> P \<or> Q; P \<Longrightarrow> ccorres_underlying sr G r xf ar axf R S hs a c;
+            Q \<Longrightarrow> ccorres_underlying sr G r xf ar axf T U hs a c \<rbrakk>
+     \<Longrightarrow> ccorres_underlying sr G r xf ar axf
+             (\<lambda>s. (P \<longrightarrow> R s) \<and> (Q \<longrightarrow> T s)) {s. (P \<longrightarrow> s \<in> S) \<and> (Q \<longrightarrow> s \<in> U)}
+                hs a c"
+  apply (erule disjE, simp_all)
+   apply (auto elim!: ccorres_guard_imp)
+  done
+
+lemma disj_division_bool: "b \<or> \<not> b" by simp
+
+lemmas ccorres_case_bools2 = ccorres_disj_division [OF disj_division_bool]
+
 lemma ceqv_tuple:
   "\<lbrakk> ceqv \<Gamma> xfa va s s' x y; ceqv \<Gamma> xfb vb s s' y z \<rbrakk>
         \<Longrightarrow> ceqv \<Gamma> (\<lambda>s. (xfa s, xfb s)) (va, vb) s s' x z"
