@@ -509,7 +509,7 @@ lemma suspend_unlive':
   apply (simp add: suspend_def set_thread_state_def update_sched_context_def[simplified set_object_def]
                    set_object_def maybeM_def get_tcb_obj_ref_def thread_get_def
                    set_tcb_obj_ref_def set_sc_obj_ref_def)
-  apply (wp get_object_wp hoare_drop_imp | simp only: obj_at_exst_update | wpc)+
+  apply (wp get_object_wp hoare_drop_imp | simp only: more_update.obj_at_update | wpc)+
   apply (simp add: obj_at_def)
   apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
 (*  apply (wp cancel_ipc_bound_tcb_at)

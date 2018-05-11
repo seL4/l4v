@@ -1953,13 +1953,11 @@ lemma cap_delete_one_valid_tcb_state:
   "\<lbrace>\<lambda>s. P (valid_tcb_state st s)\<rbrace> cap_delete_one slot \<lbrace>\<lambda>_ s'. P (valid_tcb_state st s')\<rbrace>"
   apply (simp add: valid_tcb_state_def)
   apply (cases st, (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift cong: conj_cong split: option.splits)+)
-defer
-defer
-  apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift cong: conj_cong split: option.splits)+
-defer
-  apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift cong: conj_cong split: option.splits)+
-
-
+       defer
+       defer
+       apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift cong: conj_cong split: option.splits)+
+      defer
+      apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift cong: conj_cong split: option.splits)+
   sorry
 
 lemma cte_wp_at_reply_cap_can_fast_finalise:
@@ -2004,20 +2002,114 @@ lemma tcb_bound_refs_eq_restr:
   by (auto dest: refs_in_tcb_bound_refs)
 *)
 
+crunches maybe_donate_sc
+  for equal_kernel_mappings[wp]: equal_kernel_mappings
+  and pspace_in_kernel_window[wp]: pspace_in_kernel_window
+  and valid_arch_caps[wp]: valid_arch_caps
+  and valid_arch_state[wp]: valid_arch_state
+  and valid_asid_map[wp]: valid_asid_map
+  and valid_global_objs[wp]: valid_global_objs
+  and valid_global_vspace_mappings[wp]: valid_global_vspace_mappings
+  and valid_kernel_mappings[wp]: valid_kernel_mappings
+  and valid_vspace_objs[wp]: valid_vspace_objs
+  and pspace_aligned[wp]: pspace_aligned
+  and pspace_distinct[wp]: pspace_distinct
+  and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
+  and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
+  and cur_tcb[wp]: cur_tcb
+  and if_unsafe_then_cap[wp]: if_unsafe_then_cap
+  and only_idle[wp]: only_idle
+  and pspace_respects_device_region[wp]: pspace_respects_device_region
+  and valid_global_refs[wp]: valid_global_refs
+  and valid_ioc[wp]: valid_ioc
+  and valid_irq_handlers[wp]: valid_irq_handlers
+  and valid_irq_node[wp]: valid_irq_node
+  and valid_irq_states[wp]: valid_irq_states
+  and valid_machine_state[wp]: valid_machine_state
+  and valid_mdb[wp]: valid_mdb
+  and zombies_final[wp]: zombies_final
+  (wp: maybeM_inv)
+
+lemma gsc_ntfn_sp:
+  "\<lbrace>P\<rbrace> get_ntfn_obj_ref ntfn_sc ntfnptr
+   \<lbrace>\<lambda>sc s. (\<exists>ntfn. kheap s ntfnptr = Some (Notification ntfn) \<and> ntfn_sc ntfn = sc) \<and> P s\<rbrace>"
+  apply (wpsimp simp: get_sk_obj_ref_def get_simple_ko_def get_object_def)
+  apply auto
+  done
+
+lemma maybe_donate_sc_if_live_then_nonz_cap[wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> ex_nonz_cap_to tptr s
+\<and> (\<forall>scptr ntfn. kheap s ntfnptr = Some (Notification ntfn) \<and> ntfn_sc ntfn = Some scptr
+     \<longrightarrow> ex_nonz_cap_to scptr s)
+\<rbrace>
+   maybe_donate_sc tptr ntfnptr
+   \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  apply (simp add: maybe_donate_sc_def)
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (case_tac sc_opt)
+   apply clarsimp
+   apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
+   apply (wpsimp simp: get_sc_obj_ref_def wp: maybeM_wp weak_if_wp)
+  apply wpsimp
+  done
+
+
+lemma maybe_donate_sc_valid_idle[wp]:
+  "\<lbrace>\<lambda>s. valid_idle s \<and> tptr \<noteq> idle_thread s
+  \<and> (\<forall>scptr ntfn. kheap s ntfnptr = Some (Notification ntfn) \<and> ntfn_sc ntfn = Some scptr
+     \<longrightarrow> sc_tcb_sc_at (\<lambda>x. x \<noteq> Some (idle_thread s)) scptr s)
+\<rbrace>
+   maybe_donate_sc tptr ntfnptr
+   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  apply (simp add: maybe_donate_sc_def)
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (case_tac sc_opt)
+   apply clarsimp
+   apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
+   apply (wpsimp simp: get_sc_obj_ref_def wp: maybeM_wp weak_if_wp)
+  apply wpsimp
+  done
+
+lemma maybe_donate_sc_valid_objs[wp]:
+  "\<lbrace>valid_objs\<rbrace> maybe_donate_sc tptr ntfnptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  apply (simp add: maybe_donate_sc_def)
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (case_tac sc_opt)
+   apply clarsimp
+   apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
+   apply (wpsimp simp: get_sc_obj_ref_def pred_tcb_at_def obj_at_def is_tcb
+                   wp: maybeM_wp weak_if_wp)
+  apply wpsimp
+  done
+
+lemma maybe_donate_sc_sym_refs:
+  "\<lbrace>\<lambda>s. sym_refs (\<lambda>a. if a = hd q then {r \<in> state_refs_of s (hd q). snd r = TCBBound \<or>
+                                        snd r = TCBSchedContext \<or> snd r = TCBYieldTo}
+                      else state_refs_of s a)\<rbrace>
+   maybe_donate_sc (hd q) ntfnptr
+   \<lbrace>\<lambda>rv s. sym_refs (\<lambda>a. if a = hd q then {r \<in> state_refs_of s (hd q). snd r = TCBBound \<or>
+                                           snd r = TCBSchedContext \<or> snd r = TCBYieldTo}
+                         else state_refs_of s a)\<rbrace>"
+  apply (wpsimp simp: maybe_donate_sc_def)
+  sorry
+
 lemma update_waiting_invs:
-  notes if_split[split del]
+  notes if_split[split del]  hoare_pre [wp_pre del]
   shows
-  "\<lbrace>ko_at (Notification ntfn) ntfnptr and invs
-     and K (ntfn_obj ntfn = ntfn.WaitingNtfn q \<and> ntfn_bound_tcb ntfn = bound_tcb)\<rbrace>
+  "\<lbrace>\<lambda>s. ko_at (Notification ntfn) ntfnptr s \<and> invs s
+     \<and> ntfn_obj ntfn = ntfn.WaitingNtfn q \<and> ntfn_bound_tcb ntfn = bound_tcb \<and>
+            ntfn_sc ntfn = sc \<and> (bound sc \<longrightarrow> ex_nonz_cap_to (the sc) s)\<rbrace>
      update_waiting_ntfn ntfnptr q bound_tcb sc bdg
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: update_waiting_ntfn_def)
   apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_pre)
+
    apply (wp |simp)+
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (wp valid_irq_node_typ sts_only_idle)
-   apply (simp add: valid_tcb_state_def conj_comms)
+    apply (simp add: valid_tcb_state_def conj_comms)
+  apply wpsimp
+
 (*   apply (simp add: cte_wp_at_caps_of_state)
 
    apply (wp set_simple_ko_valid_objs hoare_post_imp [OF disjI1]
@@ -2049,6 +2141,7 @@ lemma update_waiting_invs:
                  split: if_split_asm if_split)
   apply (clarsimp elim!: pred_tcb_weakenE)
   done *) sorry
+
 
 
 lemma cancel_ipc_ex_nonz_tcb_cap:
@@ -2097,17 +2190,18 @@ lemma cancel_ipc_simple2:
   apply fastforce
   done
 
-
 lemma cancel_ipc_cte_wp_at_not_reply_state:
-  "\<lbrace>st_tcb_at ((\<noteq>) (BlockedOnReply r)) t and cte_wp_at P p\<rbrace>
+  notes hoare_pre [wp_pre del]
+  shows
+  "\<lbrace>\<lambda>s. \<forall>r. st_tcb_at ((\<noteq>) (BlockedOnReply r)) t s \<and> cte_wp_at P p s\<rbrace>
     cancel_ipc t
    \<lbrace>\<lambda>r. cte_wp_at P p\<rbrace>"
   apply (simp add: cancel_ipc_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_pre_cont[where a="reply_cancel_ipc t r"] gts_wp | wpc)+
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (case_tac state; wpsimp)
+  apply (wp hoare_pre_cont)
   apply (clarsimp simp: st_tcb_at_def obj_at_def)
-  sorry
-
+  done
 
 crunch idle[wp]: cancel_ipc "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps select_wp simp: crunch_simps unless_def)
@@ -2220,13 +2314,9 @@ lemma si_tcb_at [wp]:
     \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
   by (simp add: tcb_at_typ) wp
 
-lemma handle_fault_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> handle_fault param_a param_b \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  sorry
-(*
-crunch typ_at[wp]: handle_fault "\<lambda>s::'state_ext state. P (typ_at T p s)"
-  (wp: simp: crunch_simps)
-*)
+lemma handle_fault_typ_at [wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> handle_fault t f \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+  by (wpsimp simp: handle_fault_def unless_def handle_no_fault_def send_fault_ipc_def)
 
 lemma hf_tcb_at [wp]:
   "\<And>t' t x.
@@ -2240,7 +2330,7 @@ lemma sfi_tcb_at [wp]:
     \<lbrace>tcb_at t :: det_ext state \<Rightarrow> bool\<rbrace>
       send_fault_ipc tptr handler_cap fault can_donate
     \<lbrace>\<lambda>_. tcb_at t\<rbrace>"
-(*  by (simp add: tcb_at_typ, wp) *) sorry
+  by (wpsimp simp: send_fault_ipc_def)
 
 end
 
@@ -2291,7 +2381,7 @@ crunch it[wp]: receive_ipc "\<lambda>s::det_ext state. P (idle_thread s)"
 end
 
 lemma schedule_tcb_Pmdb[wp]: "\<lbrace>\<lambda>s. P (cdt s)\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_ s. P (cdt s)\<rbrace>"
-  sorry
+  by (wpsimp simp: schedule_tcb_def)
 
 crunch Pmdb[wp]: set_thread_state "\<lambda>s. P (cdt s)"
 
@@ -2544,7 +2634,7 @@ crunch irq_node[wp]: set_message_info "\<lambda>s. P (interrupt_irq_node s)"
 
 lemma set_message_info_global_refs [wp]:
   "\<lbrace>valid_global_refs\<rbrace> set_message_info a b \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
-sorry (*  by (rule valid_global_refs_cte_lift; wp)*)
+  by (rule valid_global_refs_cte_lift; wp)
 
 crunch irq_node[wp]: set_mrs "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -2708,7 +2798,8 @@ lemma maybe_return_sc_cap_to[wp]:
 
 lemma schedule_tcb_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
-  sorry
+  by (wpsimp simp: schedule_tcb_def)
+
 
 lemma receive_ipc_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> receive_ipc param_a param_b param_c param_d  \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"

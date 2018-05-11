@@ -394,11 +394,6 @@ where
   "sc_tcb_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_tcb sc))"
 
 definition
-  tcb_sched_context_tcb_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "tcb_sched_context_tcb_at P \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> P (tcb_sched_context tcb))"
-
-definition
   sc_yf_sc_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "sc_yf_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_yield_from sc))"
