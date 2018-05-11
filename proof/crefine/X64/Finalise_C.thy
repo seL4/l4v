@@ -1906,12 +1906,60 @@ lemma unmapPageDirectory_ccorres:
 lemma unmapPDPointerTable_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. asid \<le> mask asid_bits \<and> vaddr < pptrBase))
       (UNIV \<inter> {s. asid_' s = asid} \<inter> {s. vaddr___unsigned_long_' s = vaddr} \<inter> {s. pdpt_' s = Ptr pdptPtr})
-      [] (unmapPDPT asid vaddr pdPtr) (Call unmapPDPT_'proc)"
+      [] (unmapPDPT asid vaddr pdptPtr) (Call unmapPDPT_'proc)"
+  supply Collect_const[simp del]
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_' vaddr___unsigned_long_' pdpt_')
    apply (clarsimp simp add: ignoreFailure_liftM)
-   apply (ctac add: findVSpaceForASID_ccorres,rename_tac vspace find_ret)
-   sorry (* FIXME x64: lookupPML4Slot AutoCorres shenanigans? *)
+   apply (ctac add: findVSpaceForASID_ccorres, rename_tac vspace find_ret)
+    apply (rule_tac P="page_map_l4_at' vspace" in ccorres_cross_over_guard)
+      apply (simp add: liftE_bindE)
+      apply (rule ccorres_pre_getObject_pml4e, rename_tac pml4e)
+      apply ccorres_rewrite
+      apply (rule ccorres_rhs_assoc2)
+      apply (rule ccorres_rhs_assoc2)
+      apply (rule ccorres_rhs_assoc2)
+      apply (rule_tac xf'=ret__int_' and
+                      R'=UNIV and
+                      val="from_bool (isPDPointerTablePML4E pml4e \<and> pml4eTable pml4e = addrFromPPtr pdptPtr)" and
+                      R="ko_at' pml4e (lookup_pml4_slot vspace vaddr) and page_map_l4_at' vspace"
+                      in ccorres_symb_exec_r_known_rv)
+         apply vcg
+         apply clarsimp
+         apply (clarsimp simp: page_map_l4_at'_array_assertion)
+         apply (erule cmap_relationE1[OF rf_sr_cpml4e_relation])
+          apply (erule ko_at_projectKO_opt)
+         apply (rename_tac pml4e_C)
+         apply (fastforce simp: typ_heap_simps cpml4e_relation_def Let_def
+                                isPDPointerTablePML4E_def from_bool_def
+                          split: bool.splits if_split pml4e.split_asm)
+        apply ceqv
+       apply (rule ccorres_Cond_rhs_Seq)
+        apply ccorres_rewrite
+        apply (clarsimp simp: from_bool_0 isPDPointerTablePML4E_def split: pml4e.splits;
+               clarsimp simp: throwError_def;
+               rule ccorres_return_void_C[simplified dc_def])
+       apply (clarsimp simp: isPDPointerTablePML4E_def liftE_def bind_assoc split: pml4e.split_asm)
+       apply (ctac add: flushPDPT_ccorres)
+         apply csymbr
+         apply (rule ccorres_seq_skip'[THEN iffD1])
+         apply (rule ccorres_split_nothrow_novcg_dc)
+            apply (rule storePML4E_Basic_ccorres')
+            apply (fastforce simp: cpml4e_relation_def)
+           apply (rule ccorres_return_Skip[simplified dc_def])
+          apply wp
+         apply (fastforce simp: guard_is_UNIV_def)
+        apply wp
+       apply (vcg exspec=flushPDPT_modifies)
+      apply vcg
+     apply ccorres_rewrite
+     apply (clarsimp simp: throwError_def)
+     apply (rule ccorres_return_void_C[simplified dc_def])
+    apply (wpsimp wp: hoare_drop_imps)
+   apply (vcg exspec=findVSpaceForASID_modifies)
+  apply (auto simp: invs_arch_state' invs_no_0_obj' asid_wf_def mask_def typ_heap_simps
+              intro: page_map_l4_at'_array_assertion)
+  done
 
 method return_NullCap_pair_ccorres =
    solves \<open>((rule ccorres_rhs_assoc2)+), (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV]),
