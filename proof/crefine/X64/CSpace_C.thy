@@ -3164,7 +3164,6 @@ lemma updateCapData_spec:
   apply (thin_tac "ccap_relation x y" for x y)
   apply (thin_tac "ret__unsigned_long_' t = v" for t v)+
 
-  (* FIXME x64: VER-930: padding bits incorrectly set on x64
   apply (simp add: seL4_CNode_CapData_lift_def fupdate_def word_size word_less_nat_alt mask_def
              cong: if_cong)
   apply (simp only: unat_word_ariths(1))
@@ -3190,8 +3189,7 @@ lemma updateCapData_spec:
                    cap_lift_cnode_cap cap_tag_defs cap_to_H_simps
                    cap_cnode_cap_lift_def)
   apply (simp add: word_bw_assocs word_bw_comms word_bw_lcs)
-  done *)
-  sorry (* FIXME x64: VER-930 *)
+  done
 
 abbreviation
   "deriveCap_xf \<equiv> liftxf errstate deriveCap_ret_C.status_C deriveCap_ret_C.cap_C ret__struct_deriveCap_ret_C_'"
