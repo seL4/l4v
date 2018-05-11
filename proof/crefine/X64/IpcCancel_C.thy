@@ -3413,4 +3413,3 @@ lemma cancelIPC_ccorres1:
 
 end
 end
-
