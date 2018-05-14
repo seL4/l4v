@@ -2846,7 +2846,7 @@ lemma capFSize_range:
   "\<And>cap. cap_get_tag cap = scast cap_frame_cap \<Longrightarrow> c_valid_cap cap \<Longrightarrow>
    capFSize_CL (cap_frame_cap_lift cap) \<le> 2"
   apply (simp add: cap_frame_cap_lift_def c_valid_cap_def cl_valid_cap_def)
-  apply (simp add: cap_frame_cap_lift)
+  apply (clarsimp simp: cap_frame_cap_lift)
   apply (drule word_less_sub_1, simp)
   done
 

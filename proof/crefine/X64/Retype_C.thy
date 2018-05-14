@@ -5935,7 +5935,8 @@ proof -
                                 APIType_capBits_def pageBits_def)
           apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
                     framesize_to_H_def cap_to_H_simps cap_frame_cap_lift X86_SmallPage_def
-                    vmrights_to_H_def mask_def vm_rights_defs c_valid_cap_def cl_valid_cap_def)
+                    vmrights_to_H_def mask_def vm_rights_defs c_valid_cap_def cl_valid_cap_def
+                    vm_page_map_type_defs maptype_to_H_def)
           apply (erule disjE; clarsimp)
 
         -- "Page objects: could possibly fix the duplication here"
@@ -5961,7 +5962,8 @@ proof -
          apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
                     framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
                     X86_SmallPage_def X86_LargePage_def ptTranslationBits_def
-                    vmrights_to_H_def mask_def vm_rights_defs c_valid_cap_def cl_valid_cap_def)
+                    vmrights_to_H_def mask_def vm_rights_defs c_valid_cap_def cl_valid_cap_def
+                    vm_page_map_type_defs maptype_to_H_def)
          apply (erule disjE; clarsimp)
 
         apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
@@ -5986,7 +5988,8 @@ proof -
         apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
                     framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
                     X86_SmallPage_def X86_LargePage_def X64_HugePage_def ptTranslationBits_def
-                    vmrights_to_H_def mask_def vm_rights_defs c_valid_cap_def cl_valid_cap_def)
+                    vmrights_to_H_def mask_def vm_rights_defs c_valid_cap_def cl_valid_cap_def
+                    vm_page_map_type_defs maptype_to_H_def)
         apply (erule disjE; clarsimp)
 
        -- "PageTableObject"
