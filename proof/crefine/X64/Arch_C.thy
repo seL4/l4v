@@ -1735,37 +1735,135 @@ primrec (nonexhaustive)
   thePDPTEPtr :: "vmpage_entry_ptr \<Rightarrow> machine_word" where
   "thePDPTEPtr (VMPDPTEPtr p) = p"
 
-lemma performPageInvocationMapPDPTE_ccorres:
-  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and cte_at' slot and (\<lambda>s. 7 \<le> gsMaxObjectSize s)
-              and (\<lambda>s. asid \<le> mask asid_bits \<and> page_entry_map_corres mapping))
-       (UNIV \<inter> {s. cpdpte_relation (thePDPTE (fst mapping)) (pdpte_' s)}
-             \<inter> {s. pdptSlot_' s = pdpte_Ptr (thePDPTEPtr (snd mapping))}
-             \<inter> {s. ccap_relation cap (cap_' s)}
-             \<inter> {s. ctSlot_' s = cte_Ptr slot}
-             \<inter> {s. vspace_' s = pml4e_Ptr vspace}
-             \<inter> {s. isVMPDPTE mapping}) []
-       (liftE (performPageInvocation (PageMap cap slot mapping vspace)))
-       (Call performX64ModeMapRemapPage_'proc)"
-thm performX86PageInvocationRemapPTE_body_def
-  sorry (* performPageInvocationMapPDPTE_ccorres*)
+lemma storePDPTE_Basic_ccorres'':
+  "ccorres dc xfdc \<top> {s. ptr_val (f s) = p \<and> cpdpte_relation pte pte'} hs
+     (storePDPTE p pte)
+     (Guard C_Guard {s. s \<Turnstile>\<^sub>c f s}
+        (Basic (\<lambda>s. globals_update( t_hrs_'_update
+            (hrs_mem_update (heap_update (f s) pte'))) s)))"
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_gen_asm2, erule storePDPTE_Basic_ccorres')
+  apply simp
+  done
 
-(* FIXME x64: need to split performX64ModeMapRemapPage into two functions
-              for map and remap *)
+lemma updatePDPTE_ccorres:
+  "ccorres
+            (K (K \<bottom>) \<currency> dc)
+            (liftxf errstate id (\<lambda>y. ()) ret__unsigned_long_')
+            \<top>
+            (UNIV \<inter> {s. asid_' s = asid}
+                  \<inter> {s. cpdpte_relation pdpte (pdpte_' s)}
+                  \<inter> {s. pdptSlot_' s = pdpte_Ptr pdptPtr}
+                  \<inter> {s. vspace_' s = pml4e_Ptr vspace})
+            hs
+            (doE y <- liftE (storePDPTE pdptPtr pdpte);
+                liftE (invalidatePageStructureCacheASID
+                 (addrFromPPtr vspace) asid)
+             odE)
+            (Call updatePDPTE_'proc)"
+  supply Collect_const[simp del]
+  apply (cinit' lift: asid_' pdpte_' pdptSlot_' vspace_')
+   apply (clarsimp simp: bind_liftE_distrib[symmetric])
+   apply (simp only: liftE_liftM ccorres_liftM_simp)
+   apply (rule ccorres_split_nothrow)
+       apply (rule storePDPTE_Basic_ccorres'')
+      apply ceqv
+     apply csymbr
+     apply (rule ccorres_add_return2)
+     apply (rule ccorres_split_nothrow)
+         apply (rule ccorres_call[where xf'=xfdc])
+            apply (ctac add: invalidatePageStructureCacheASID_ccorres)
+           apply clarsimp
+          apply clarsimp
+         apply clarsimp
+        apply ceqv
+       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+       apply (rule allI, rule conseqPre, vcg)
+       apply (clarsimp simp: return_def)
+      apply wp
+     apply (vcg exspec=invalidatePageStructureCacheASID_modifies)
+    apply wp
+   apply vcg
+  apply clarsimp
+  done
+
 lemma performPageInvocationRemapPDPTE_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and cte_at' slot and (\<lambda>s. 7 \<le> gsMaxObjectSize s)
-              and (\<lambda>s. asid \<le> mask asid_bits \<and> page_entry_map_corres mapping))
+       ((\<lambda>s. page_entry_map_corres mapping))
+       (UNIV \<inter> {s. cpdpte_relation (thePDPTE (fst mapping)) (pdpte_' s)}
+             \<inter> {s. pdptSlot_' s = pdpte_Ptr (thePDPTEPtr (snd mapping))}
+             \<inter> {s. asid_' s = asid}
+             \<inter> {s. vspace_' s = pml4e_Ptr vspace}
+             \<inter> {s. isVMPDPTE mapping}) hs
+       (liftE (performPageInvocation (PageRemap mapping asid vspace)))
+       (Call performX64ModeRemap_'proc)"
+  supply pageBitsForSize_le_64 [simp]
+  apply (rule ccorres_gen_asm2)
+  apply (simp add: performPageInvocation_def bind_liftE_distrib)
+  apply (cinit' lift:  pdpte_' pdptSlot_' asid_' vspace_')
+   apply (clarsimp simp: page_entry_map_corres_def isVMPDPTE_def)
+   (* FIXME x64: UGLY HACK *)
+   apply (rule ccorres_seq_skip[THEN iffD1],
+             rule ccorres_add_return,
+              ctac (no_vcg) add: ccorres_return_Skip)
+     apply (rule ccorres_add_returnOk)
+     apply (ctac add: updatePDPTE_ccorres)
+        apply (rule ccorres_return_CE)
+          apply clarsimp
+         apply clarsimp
+        apply clarsimp
+       apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+       apply clarsimp
+      apply wp
+     apply vcg
+    apply wp
+   apply clarsimp
+  apply clarsimp
+  done
+
+lemma performPageInvocationMapPDPTE_ccorres:
+  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (cte_at' slot and (\<lambda>s. page_entry_map_corres mapping \<and> isArchPageCap cap
+                            \<and> capVPMappedAddress (capCap cap) \<noteq> None))
        (UNIV \<inter> {s. cpdpte_relation (thePDPTE (fst mapping)) (pdpte_' s)}
              \<inter> {s. pdptSlot_' s = pdpte_Ptr (thePDPTEPtr (snd mapping))}
              \<inter> {s. ccap_relation cap (cap_' s)}
              \<inter> {s. ctSlot_' s = cte_Ptr slot}
              \<inter> {s. vspace_' s = pml4e_Ptr vspace}
-             \<inter> {s. isVMPDPTE mapping}) []
-       (liftE (performPageInvocation (PageRemap mapping asid vspace)))
-       (Call performX64ModeMapRemapPage_'proc)"
-  sorry (* performPageInvocationRemapPDPTE_ccorres *)
-
+             \<inter> {s. isVMPDPTE mapping}) hs
+       (liftE (performPageInvocation (PageMap cap slot mapping vspace)))
+       (Call performX64ModeMap_'proc)"
+  supply pageBitsForSize_le_64 [simp]
+  apply (rule ccorres_gen_asm2)
+  apply (rule ccorres_gen_asm)
+  apply (simp add: performPageInvocation_def)
+  apply (cinit' lift:  pdpte_' pdptSlot_' cap_' ctSlot_' vspace_')
+   apply (clarsimp simp: page_entry_map_corres_def isVMPDPTE_def)
+   apply (rename_tac apdpte apdpteptr a b)
+   apply (simp only: bind_liftE_distrib)
+   apply (subst liftE_bindE)
+   apply ctac
+     apply (clarsimp simp: isCap_simps)
+     apply csymbr
+     apply (clarsimp simp: liftE_foo_to_fooE)
+     apply (rule ccorres_add_returnOk)
+     apply (ctac add: updatePDPTE_ccorres)
+        apply (rule ccorres_return_CE)
+          apply clarsimp
+         apply clarsimp
+        apply clarsimp
+       apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+       apply clarsimp
+      apply wp
+     apply (vcg exspec=updatePDPTE_modifies)
+    apply wp
+   apply (clarsimp simp: isCap_simps)
+   apply (clarsimp simp: ccap_relation_PageCap_MappedASID)
+   apply (frule cap_get_tag_isCap_unfolded_H_cap)
+   apply clarsimp
+   apply vcg
+  apply clarsimp
+  done
 
 lemma vmsz_aligned_addrFromPPtr':
   "vmsz_aligned' (addrFromPPtr p) sz
