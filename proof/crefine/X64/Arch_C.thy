@@ -3536,6 +3536,18 @@ lemma decodeX64MMUInvocation_ccorres:
                  elim!: ccap_relationE split: if_split_asm)
   done *)
 
+lemma ucast_ucast_first_port_is_ucast:
+  "cap_lift y = Some (Cap_io_port_cap x) \<Longrightarrow> UCAST(16 \<rightarrow> 32) (UCAST(64 \<rightarrow> 16) (capIOPortFirstPort_CL x))
+          = UCAST(64 \<rightarrow> 32) (capIOPortFirstPort_CL x)"
+  apply (clarsimp simp: cap_lift_def Let_def cap_tag_defs mask_def split: if_split_asm)
+  by word_bitwise
+
+lemma ucast_ucast_last_port_is_ucast:
+  "cap_lift y = Some (Cap_io_port_cap x) \<Longrightarrow> UCAST(16 \<rightarrow> 32) (UCAST(64 \<rightarrow> 16) (capIOPortLastPort_CL x))
+          = UCAST(64 \<rightarrow> 32) (capIOPortLastPort_CL x)"
+  apply (clarsimp simp: cap_lift_def Let_def cap_tag_defs mask_def split: if_split_asm)
+  by word_bitwise
+
 lemma ensurePortOperationAllowed_ccorres:
   "cap = IOPortCap f l \<Longrightarrow> ccorres (syscall_error_rel \<currency> dc)
             (liftxf errstate id (\<lambda>y. ()) ret__unsigned_long_')
@@ -3546,6 +3558,7 @@ lemma ensurePortOperationAllowed_ccorres:
             hs
             (ensurePortOperationAllowed cap start magnitude)
             (Call ensurePortOperationAllowed_'proc)"
+  supply Collect_const[simp del]
   apply (cinit lift: cap_' start_port_' size___unsigned_')
    apply (simp cong: StateSpace.state.fold_congs globals.fold_congs)
    apply csymbr
@@ -3554,12 +3567,30 @@ lemma ensurePortOperationAllowed_ccorres:
    apply csymbr
    apply csymbr
    apply (rule ccorres_assertE)
-   apply (rule ccorres_seq_skip[THEN iffD1],
-                rule ccorres_add_return,
-                ctac (no_vcg) add: ccorres_return_Skip)
-     apply (rule ccorres_split_when_throwError_cond)
-sorry
-
+   apply (rule ccorres_assertE)
+   apply (frule cap_get_tag_isCap_unfolded_H_cap)
+   apply (erule ccap_relationE)
+   apply (clarsimp simp: cap_to_H_def Let_def cap_io_port_cap_lift_def
+                         ucast_ucast_first_port_is_ucast ucast_ucast_last_port_is_ucast whenE_def
+                  split: if_split_asm cap_CL.split_asm)
+   apply (rule ccorres_add_returnOk)
+   apply (rule ccorres_inst[where P=\<top> and P'=UNIV], rule ccorres_guard_imp)
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply clarsimp
+      apply ccorres_rewrite
+      apply (rule ccorres_from_vcg_throws[where P'=UNIV and P=\<top>])
+      apply (rule allI, rule conseqPre, vcg)
+      apply (clarsimp simp: throwError_def return_def syscall_error_rel_def syscall_error_to_H_cases
+                            exception_defs)
+     apply (clarsimp simp: whenE_def)
+     apply (rule ccorres_return_CE)
+       apply clarsimp
+      apply clarsimp
+     apply clarsimp
+    apply clarsimp
+   apply clarsimp
+  apply clarsimp
+  by (auto dest!: cap_get_tag_isCap_unfolded_H_cap)
 
 lemma decodeIOPortInvocation_ccorres:
   notes if_cong[cong]
@@ -3587,29 +3618,32 @@ proof -
   apply (clarsimp simp: isCap_simps decodeX64PortInvocation_def Let_def)
   apply (cinit' lift: invLabel_' length___unsigned_long_' slot_' excaps_' cap_' buffer_')
    apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
-   sorry
-qed (*
-   apply (rule ccorres_Cond_rhs_Seq) (* length args = 0 *)
-    prefer 2 (* FIXME x64: discussions about error cases *)
-    apply ccorres_rewrite
-    apply (rule ccorres_Cond_rhs_Seq) (* out invocations *)
-     apply (erule disjE)
-      apply (clarsimp simp: throwError_bind invocation_eq_use_types
-                            invocation_eq_use_types(44)[THEN iffD1] (* Out8 *)
-                      cong: invocation_label.case_cong arch_invocation_label.case_cong)
-      apply (rule ccorres_Cond_rhs_Seq)
-       apply (clarsimp simp: dest!: x_less_2_0_1)
-       apply (cases args; clarsimp simp: throwError_bind invocationCatch_def)
-       apply ccorres_rewrite
-apply (rule syscall_error_throwError_ccorres_n[simplified dc_def id_def o_def])
-apply (clarsimp simp: syscall_error_to_H_cases)
-apply (clarsimp simp: word_le_not_less[symmetric] word_le_nat_alt val_le_length_Cons)
-apply ccorres_rewrite
-    apply (rule ccorres_add_return,
-           ctac add: getSyscallArg_ccorres_foo[where args=args and buffer=buffer and n=0])
-apply csymbr
-apply (rule ccorres_rhs_assoc)+
-apply csymbr *)
+   apply (rule ccorres_Cond_rhs) (* IN invocations *)
+    apply (erule disjE)
+     -- "In8"
+       apply (clarsimp simp: invocation_eq_use_types cong: list.case_cong)
+       apply (rule ccorres_rhs_assoc)+
+       apply (rule ccorres_Cond_rhs_Seq) (* length error *)
+        apply (clarsimp simp: throwError_bind invocationCatch_def)
+        apply ccorres_rewrite
+        apply (rule syscall_error_throwError_ccorres_n)
+        apply (clarsimp simp: syscall_error_to_H_cases)
+       apply (case_tac args; clarsimp simp: unat_gt_0[symmetric])
+       apply (rule ccorres_add_return,
+                 ctac add: getSyscallArg_ccorres_foo[where args=args and buffer=buffer and n=0])
+         apply csymbr
+         apply ccorres_rewrite
+         apply (clarsimp simp: invocationCatch_use_injection_handler injection_bindE[OF refl refl]
+                               injection_handler_If injection_handler_throwError
+                               injection_liftE[OF refl] injection_handler_returnOk bindE_assoc)
+         apply (ctac add: ccorres_injection_handler_csum1 [OF ensurePortOperationAllowed_ccorres])
+            apply (clarsimp, ccorres_rewrite)
+            apply (clarsimp simp: injection_handler_returnOk ccorres_invocationCatch_Inr bindE_assoc returnOk_bind liftE_bindE)
+            apply (ctac add: setThreadState_ccorres)
+              apply (simp add: X64_H.performInvocation_def performInvocation_def returnOk_bind bindE_assoc)
+thm invocationCatch_def performX64PortInvocation_def
+  sorry (* decodeIOPortInvocation *)
+qed
 
 
 lemma Arch_decodeInvocation_ccorres:
