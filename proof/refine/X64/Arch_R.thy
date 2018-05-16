@@ -1071,22 +1071,31 @@ lemma decode_pdpt_inv_corres:
 
 lemma ensure_port_op_allowed_corres:
   "\<lbrakk>cap = arch_cap.IOPortCap f l; acap_relation cap cap'\<rbrakk> \<Longrightarrow>
-   corres (ser \<oplus> dc) (valid_cap (cap.ArchObjectCap cap)) (valid_cap' (ArchObjectCap cap'))
+   corres (ser \<oplus> dc) (valid_cap (cap.ArchObjectCap cap) and K (w \<le> 0xFFFF \<and> (x = 1\<or> x = 2 \<or> x = 4))) (valid_cap' (ArchObjectCap cap'))
      (ensure_port_operation_allowed cap w x)
      (ensurePortOperationAllowed cap' w x)"
   apply (simp add: ensure_port_operation_allowed_def ensurePortOperationAllowed_def)
+  apply (rule corres_gen_asm)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqrE)
-       apply (rule whenE_throwError_corres, simp, simp)
+       apply (rule corres_split_eqrE)
        apply (rule corres_whenE, simp)
         apply clarsimp
        apply clarsimp
       apply (rule corres_assertE_assume)
        apply (rule impI, assumption)+
-     apply (wp)+
-   apply (auto simp: valid_cap_def)[1]
-  apply (auto simp: valid_cap'_def)
+        apply wp+
+      apply (rule corres_assertE_assume; (rule impI, assumption))
+     apply wp+
+   apply (clarsimp simp: valid_cap_def; elim disjE; clarsimp)
+    apply (subst add.commute, subst no_olen_add, simp add: word_le_def)+
+  apply (clarsimp simp: valid_cap'_def; elim disjE; clarsimp)
+   apply (subst add.commute, subst no_olen_add, simp add: word_le_def)+
   done
+
+lemma ucast_ucast_ioport_max [simp]:
+  "UCAST(16 \<rightarrow> 32) (UCAST(64 \<rightarrow> 16) y) \<le> 0xFFFF"
+  by word_bitwise
 
 lemma decode_port_inv_corres:
   "\<lbrakk>cap = arch_cap.IOPortCap f l; acap_relation cap cap' \<rbrakk> \<Longrightarrow>

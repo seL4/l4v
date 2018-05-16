@@ -33,16 +33,17 @@ This module defines IO port routines, specific to x64.
 
 > import Data.Bool
 > import Data.Array
+> import Data.Word(Word32)
 
 \end{impdetails}
 
-> ensurePortOperationAllowed :: ArchCapability -> IOPort -> Int ->
+> ensurePortOperationAllowed :: ArchCapability -> Word32 -> Int ->
 >     KernelF SyscallError ()
 > ensurePortOperationAllowed (IOPortCap { capIOPortFirstPort = first_allowed, capIOPortLastPort = last_allowed }) start_port size = do
 >     let end_port = start_port + fromIntegral size - 1
 >     assert (first_allowed <= last_allowed) "first allowed must be less than last allowed"
->     when (start_port > end_port) $ throw IllegalOperation
->     when ((start_port < first_allowed) || (end_port > last_allowed)) $
+>     assert (start_port <= end_port) "first requested must be less than last requested"
+>     when ((start_port < fromIntegral first_allowed) || (end_port > fromIntegral last_allowed)) $
 >         throw IllegalOperation
 > ensurePortOperationAllowed _ _ _ = fail "Unreachable"
 
@@ -62,34 +63,34 @@ This module defines IO port routines, specific to x64.
 >     case (invocationType label, args) of
 >         (ArchInvocationLabel X64IOPortIn8, port':_) -> do
 >             let port = (fromIntegral port') :: IOPort
->             ensurePortOperationAllowed cap port 1
+>             ensurePortOperationAllowed cap (fromIntegral port) 1
 >             return $ InvokeIOPort $ IOPortInvocation port $ IOPortIn8
 >         (ArchInvocationLabel X64IOPortIn8, _) -> throw TruncatedMessage
 >         (ArchInvocationLabel X64IOPortIn16, port':_) -> do
 >             let port = (fromIntegral port') :: IOPort
->             ensurePortOperationAllowed cap port 2
+>             ensurePortOperationAllowed cap (fromIntegral port) 2
 >             return $ InvokeIOPort $ IOPortInvocation port $ IOPortIn16
 >         (ArchInvocationLabel X64IOPortIn16, _) -> throw TruncatedMessage
 >         (ArchInvocationLabel X64IOPortIn32, port':_) -> do
 >             let port = (fromIntegral port') :: IOPort
->             ensurePortOperationAllowed cap port 4
+>             ensurePortOperationAllowed cap (fromIntegral port) 4
 >             return $ InvokeIOPort $ IOPortInvocation port $ IOPortIn32
 >         (ArchInvocationLabel X64IOPortIn32, _) -> throw TruncatedMessage
 >         (ArchInvocationLabel X64IOPortOut8, port':out:_) -> do
 >             let port = (fromIntegral port') :: IOPort
->             ensurePortOperationAllowed cap port 1
+>             ensurePortOperationAllowed cap (fromIntegral port) 1
 >             let output_data = fromIntegral out
 >             return $ InvokeIOPort $ IOPortInvocation port $ IOPortOut8 output_data
 >         (ArchInvocationLabel X64IOPortOut8, _) -> throw TruncatedMessage
 >         (ArchInvocationLabel X64IOPortOut16, port':out:_)-> do
 >             let port = (fromIntegral port') :: IOPort
->             ensurePortOperationAllowed cap port 2
+>             ensurePortOperationAllowed cap (fromIntegral port) 2
 >             let output_data = fromIntegral out
 >             return $ InvokeIOPort $ IOPortInvocation port $ IOPortOut16 output_data
 >         (ArchInvocationLabel X64IOPortOut16, _) -> throw TruncatedMessage
 >         (ArchInvocationLabel X64IOPortOut32, port':out:_) -> do
 >             let port = (fromIntegral port') :: IOPort
->             ensurePortOperationAllowed cap port 4
+>             ensurePortOperationAllowed cap (fromIntegral port) 4
 >             let output_data = fromIntegral out
 >             return $ InvokeIOPort $ IOPortInvocation port $ IOPortOut32 output_data
 >         (ArchInvocationLabel X64IOPortOut32, _) -> throw TruncatedMessage

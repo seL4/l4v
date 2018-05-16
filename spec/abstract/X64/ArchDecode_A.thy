@@ -117,14 +117,14 @@ abbreviation (input)
   "args_at_least n args \<equiv>  whenE (n > length args) $ throwError TruncatedMessage"
 
 definition
-  ensure_port_operation_allowed :: "arch_cap \<Rightarrow> io_port \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) se_monad"
+  ensure_port_operation_allowed :: "arch_cap \<Rightarrow> 32 word \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) se_monad"
 where
   "ensure_port_operation_allowed cap start_port sz \<equiv> case cap of
     IOPortCap first_allowed last_allowed \<Rightarrow> doE
       end_port \<leftarrow> returnOk $ start_port + of_nat sz - 1;
       assertE (first_allowed \<le> last_allowed);
-      whenE (start_port > end_port) $ throwError IllegalOperation;
-      whenE ((start_port < first_allowed) \<or> (end_port > last_allowed)) $ throwError IllegalOperation
+      assertE (start_port \<le> end_port);
+      whenE ((start_port < ucast first_allowed) \<or> (end_port > ucast last_allowed)) $ throwError IllegalOperation
     odE
   | _ \<Rightarrow> fail"
 
@@ -136,39 +136,39 @@ where
     (ArchInvocationLabel X64IOPortIn8) \<Rightarrow> doE
       args_at_least 1 args;
       port \<leftarrow> returnOk $ ucast $ args ! 0;
-      ensure_port_operation_allowed cap port 1;
+      ensure_port_operation_allowed cap (ucast port) 1;
       returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortIn8
     odE
   | (ArchInvocationLabel X64IOPortIn16) \<Rightarrow> doE
       args_at_least 1 args;
       port \<leftarrow> returnOk $ ucast $ args ! 0;
-      ensure_port_operation_allowed cap port 2;
+      ensure_port_operation_allowed cap (ucast port) 2;
       returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortIn16
     odE
   | (ArchInvocationLabel X64IOPortIn32) \<Rightarrow> doE
       args_at_least 1 args;
       port \<leftarrow> returnOk $ ucast $ args ! 0;
-      ensure_port_operation_allowed cap port 4;
+      ensure_port_operation_allowed cap (ucast port) 4;
       returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortIn32
     odE
   | (ArchInvocationLabel X64IOPortOut8) \<Rightarrow> doE
       args_at_least 2 args;
       port \<leftarrow> returnOk $ ucast $ args ! 0;
-      ensure_port_operation_allowed cap port 1;
+      ensure_port_operation_allowed cap (ucast port) 1;
       output_data \<leftarrow> returnOk $ ucast $ args ! 1;
       returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortOut8 output_data
     odE
   | (ArchInvocationLabel X64IOPortOut16) \<Rightarrow> doE
       args_at_least 2 args;
       port \<leftarrow> returnOk $ ucast $ args ! 0;
-      ensure_port_operation_allowed cap port 2;
+      ensure_port_operation_allowed cap (ucast port) 2;
       output_data \<leftarrow> returnOk $ ucast $ args ! 1;
       returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortOut16 output_data
     odE
   | (ArchInvocationLabel X64IOPortOut32) \<Rightarrow> doE
       args_at_least 2 args;
       port \<leftarrow> returnOk $ ucast $ args ! 0;
-      ensure_port_operation_allowed cap port 4;
+      ensure_port_operation_allowed cap (ucast port) 4;
       output_data \<leftarrow> returnOk $ ucast $ args ! 1;
       returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortOut32 output_data
       odE
