@@ -556,7 +556,8 @@ Note that implementations with separate high and low memory regions may also wis
 >                 pageMapVSpace = vspace }
 >         (ArchInvocationLabel X64PageMap, _, _) -> throw TruncatedMessage
 >         (ArchInvocationLabel X64PageRemap, rightsMask:attr:_, (vspaceCap,_):_) -> do
->             when (capVPMapType cap == VMIOSpaceMap) $ throw IllegalOperation
+>--           FIXME x64-vtd:
+>--           when (capVPMapType cap == VMIOSpaceMap) $ throw IllegalOperation
 >             (vspace,asid) <- case vspaceCap of
 >                 ArchObjectCap (PML4Cap {
 >                         capPML4MappedASID = Just asid,
