@@ -443,7 +443,7 @@ where valid_cap'_def:
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' (if d then UserDataDeviceT else UserDataT)
     (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> (t=VMNoMap) | Some (asid, ref) \<Rightarrow>
-            0 < asid \<and> asid_wf asid \<and> vmsz_aligned' ref sz \<and> ref < pptrBase)
+            (t = VMVSpaceMap) \<and> 0 < asid \<and> asid_wf asid \<and> vmsz_aligned' ref sz \<and> ref < pptrBase)
   | PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>

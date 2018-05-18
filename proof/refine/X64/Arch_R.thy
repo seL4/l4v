@@ -704,7 +704,6 @@ lemma decode_page_inv_corres:
    apply (case_tac excaps', simp)
    apply clarsimp
    apply (rule corres_guard_imp)
-     apply (rule whenE_throwError_corres, simp, simp)
      apply (rule corres_splitEE [where r' = "op ="])
         prefer 2
         apply (clarsimp simp: list_all2_Cons2)

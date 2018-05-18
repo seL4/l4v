@@ -363,7 +363,8 @@ where
                   attr = args ! 1;
                   vspace_cap = fst (extra_caps ! 0)
          in doE
-             whenE (map_type = VMIOSpaceMap) $ throwError IllegalOperation;
+             (* FIXME x64-vtd: *)
+             (* whenE (map_type = VMIOSpaceMap) $ throwError IllegalOperation; *)
              (vspace,asid) \<leftarrow> (case vspace_cap of
                                   ArchObjectCap (PML4Cap pm (Some asid)) \<Rightarrow>
                                         returnOk (pm, asid)

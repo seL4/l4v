@@ -523,7 +523,8 @@ Page entries -- any of PTEs, PDEs or PDPTEs.
 > data VMMapType
 >     = VMNoMap
 >     | VMVSpaceMap
->     | VMIOSpaceMap
+>--   FIXME x64-vtd:
+>--   | VMIOSpaceMap
 >     deriving (Show, Eq, Enum)
 
 > data VMRights
