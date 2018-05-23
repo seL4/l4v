@@ -307,7 +307,7 @@ where
    TCB \<lparr>
      tcb_ctable             = CNodeCap 6 undefined undefined,
      tcb_vtable             = ArchObjectCap (PageDirectoryCap 3063 (Some asid1_3063)),
-     tcb_reply              = ReplyCap 3079 True, \<comment> \<open>master reply cap to itself\<close>
+     tcb_reply              = ReplyCap 3079 True {AllowGrant,AllowWrite}, \<comment> \<open>master reply cap to itself\<close>
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
      tcb_state              = Running,
@@ -328,10 +328,10 @@ where
    TCB \<lparr>
      tcb_ctable             = CNodeCap 7 undefined undefined,
      tcb_vtable             = ArchObjectCap (PageDirectoryCap 3065 (Some asid1_3065)),
-     tcb_reply              = ReplyCap 3080 True, \<comment> \<open>master reply cap to itself\<close>
+     tcb_reply              = ReplyCap 3080 True {AllowGrant,AllowWrite}, \<comment> \<open>master reply cap to itself\<close>
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
-     tcb_state              = BlockedOnReceive 9,
+     tcb_state              = BlockedOnReceive 9 \<lparr> receiver_can_grant = False \<rparr>,
      tcb_fault_handler      = undefined,
      tcb_ipc_buffer         = undefined,
      tcb_fault              = undefined,
@@ -505,12 +505,12 @@ lemma s1_caps_of_state :
          ((7::obj_ref,(the_nat_to_bl_10 318)),EndpointCap  9 0 {AllowRecv}) ,
          ((3079::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined ),
          ((3079::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap 3063 (Some asid1_3063))),
-         ((3079::obj_ref, (tcb_cnode_index 2)), ReplyCap 3079 True),
+         ((3079::obj_ref, (tcb_cnode_index 2)), ReplyCap 3079 True {AllowGrant,AllowWrite}),
          ((3079::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((3079::obj_ref, (tcb_cnode_index 4)), NullCap),
          ((3080::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined ),
          ((3080::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap 3065 (Some asid1_3065))),
-         ((3080::obj_ref, (tcb_cnode_index 2)), ReplyCap 3080 True),
+         ((3080::obj_ref, (tcb_cnode_index 2)), ReplyCap 3080 True {AllowGrant,AllowWrite}),
          ((3080::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((3080::obj_ref, (tcb_cnode_index 4)), NullCap)} "
   apply (insert caps1_7_well_formed)
@@ -535,7 +535,7 @@ lemma Sys1_wellformed: "pas_wellformed Sys1PAS"
  done
 
 lemma tcb_states_of_state_1:
-  "tcb_states_of_state s1 = [0xC08 \<mapsto> thread_state.BlockedOnReceive 9,  0xC07 \<mapsto> thread_state.Running ]"
+  "tcb_states_of_state s1 = [0xC08 \<mapsto> thread_state.BlockedOnReceive 9 \<lparr> receiver_can_grant = False \<rparr>,  0xC07 \<mapsto> thread_state.Running ]"
   unfolding s1_def tcb_states_of_state_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
@@ -565,28 +565,29 @@ lemma domains_of_state_s1[simp]:
 lemma "pas_refined Sys1PAS s1"
   apply (clarsimp simp: pas_refined_def)
   apply (intro conjI)
-       apply (simp add: Sys1_wellformed)
-      apply (simp add: irq_map_wellformed_aux_def s1_def Sys1AgentMap_simps Sys1PAS_def)
-     apply (clarsimp simp: auth_graph_map_def
+       subgoal by (simp add: Sys1_wellformed)
+      subgoal by (simp add: irq_map_wellformed_aux_def s1_def Sys1AgentMap_simps Sys1PAS_def)
+     subgoal by (simp  add: tcb_domain_map_wellformed_aux_def)
+    apply (clarsimp simp: auth_graph_map_def
                            Sys1PAS_def
                            state_objs_to_policy_def
-                           state_bits_to_policy_def tcb_domain_map_wellformed_aux_def
                            )+
-    apply (erule state_bits_to_policyp.cases, simp_all, clarsimp)
+    apply (erule state_bits_to_policy.cases, simp_all, clarsimp)
+          apply (drule s1_caps_of_state, clarsimp)
+          apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def)
+          apply (elim disjE conjE; solves\<open>clarsimp simp: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def\<close>)
          apply (drule s1_caps_of_state, clarsimp)
-         apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def)
-         apply (elim disjE conjE, auto simp: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def)[1]
-        apply (drule s1_caps_of_state, clarsimp)
-        apply (elim disjE, simp_all add: thread_bound_ntfns_def)[1]
-       apply (clarsimp simp: state_refs_of_def thread_states_def tcb_states_of_state_1
-              Sys1AuthGraph_def Sys1AgentMap_simps
-              complete_AuthGraph_def
-              Sys1AuthGraph_aux_def
-              split: if_splits)
-      apply (simp add:  thread_bound_ntfns_1)
+         apply (elim disjE; solves \<open>simp add: thread_bound_ntfns_def\<close>)
+        apply (clarsimp simp: state_refs_of_def thread_states_def tcb_states_of_state_1
+               Sys1AuthGraph_def Sys1AgentMap_simps
+               complete_AuthGraph_def
+               Sys1AuthGraph_aux_def
+               split: if_splits)
+       apply (simp add:  thread_bound_ntfns_1)
+      apply (simp add: s1_def) (* this is OK because cdt is empty..*)
      apply (simp add: s1_def) (* this is OK because cdt is empty..*)
 
-    apply (clarsimp simp: state_vrefs_def
+    apply (fastforce simp: state_vrefs_def
                            vs_refs_no_global_pts_def
                            s1_def kh1_def  Sys1AgentMap_simps
                            kh1_obj_def comp_def pt1_3072_def pt1_3077_def pte_ref_def pde_ref2_def pd1_3065_def pd1_3063_def
@@ -845,7 +846,7 @@ where
    TCB \<lparr>
      tcb_ctable             = CNodeCap 6 undefined undefined ,
      tcb_vtable             = ArchObjectCap (PageDirectoryCap 3063 (Some asid2_3063)),
-     tcb_reply              = ReplyCap 3079 True, \<comment> \<open>master reply cap to itself\<close>
+     tcb_reply              = ReplyCap 3079 True {AllowGrant,AllowWrite}, \<comment> \<open>master reply cap to itself\<close>
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
      tcb_state              = Running,
@@ -866,10 +867,10 @@ where
    TCB \<lparr>
      tcb_ctable             = CNodeCap 7 undefined undefined ,
      tcb_vtable             = ArchObjectCap (PageDirectoryCap 3065 (Some asid2_3065)),
-     tcb_reply              = ReplyCap 3080 True, \<comment> \<open>master reply cap to itself\<close>
+     tcb_reply              = ReplyCap 3080 True {AllowGrant,AllowWrite}, \<comment> \<open>master reply cap to itself\<close>
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
-     tcb_state              = BlockedOnReceive 9,
+     tcb_state              = BlockedOnReceive 9 \<lparr> receiver_can_grant = False \<rparr>,
      tcb_fault_handler      = undefined,
      tcb_ipc_buffer         = undefined,
      tcb_fault              = undefined,
@@ -1016,12 +1017,12 @@ lemma s2_caps_of_state :
          ((7::obj_ref,(the_nat_to_bl_10 4)),  CNodeCap 5 undefined undefined),
          ((3079::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined ),
          ((3079::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap 3063 (Some asid2_3063))),
-         ((3079::obj_ref, (tcb_cnode_index 2)), ReplyCap 3079 True),
+         ((3079::obj_ref, (tcb_cnode_index 2)), ReplyCap 3079 True {AllowGrant,AllowWrite}),
          ((3079::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((3079::obj_ref, (tcb_cnode_index 4)), NullCap),
          ((3080::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined ),
          ((3080::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap 3065 (Some asid2_3065))),
-         ((3080::obj_ref, (tcb_cnode_index 2)), ReplyCap 3080 True),
+         ((3080::obj_ref, (tcb_cnode_index 2)), ReplyCap 3080 True {AllowGrant,AllowWrite}),
          ((3080::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((3080::obj_ref, (tcb_cnode_index 4)), NullCap)} "
   apply (insert caps2_7_well_formed)
@@ -1084,21 +1085,22 @@ lemma "pas_refined Sys2PAS s2"
                           state_objs_to_policy_def
                           state_bits_to_policy_def tcb_domain_map_wellformed_aux_def)+
     apply (erule state_bits_to_policyp.cases, simp_all)
+         apply (drule s2_caps_of_state, clarsimp)
+         apply (elim disjE, simp_all add: cap_auth_conferred_def
+                                          Sys2AgentMap_simps
+                                          Sys2AuthGraph_def Sys2AuthGraph_aux_def
+                                          complete_AuthGraph_def
+                              split: if_split_asm)[1]
         apply (drule s2_caps_of_state, clarsimp)
-        apply (elim disjE, simp_all add: cap_auth_conferred_def
-                                         Sys2AgentMap_simps
-                                         Sys2AuthGraph_def Sys2AuthGraph_aux_def
-                                         complete_AuthGraph_def
-                             split: if_split_asm)[1]
-       apply (drule s2_caps_of_state, clarsimp)
-       apply (elim disjE, simp_all)[1]
-      apply (clarsimp simp: state_refs_of_def s2_def kh2_def kh2_obj_def
-                      split: if_splits)
-      apply (clarsimp split:if_splits option.splits
-                      simp: thread_states_def tcb_states_of_state_def
-                            Sys2AgentMap_simps Sys2AuthGraph_def
-                            complete_AuthGraph_def Sys2AuthGraph_aux_def
-                     dest!: get_tcb_SomeD)
+        apply (elim disjE, simp_all)[1]
+       apply (clarsimp simp: state_refs_of_def s2_def kh2_def kh2_obj_def
+                       split: if_splits)
+       apply (clarsimp split:if_splits option.splits
+                       simp: thread_states_def tcb_states_of_state_def
+                             Sys2AgentMap_simps Sys2AuthGraph_def
+                             complete_AuthGraph_def Sys2AuthGraph_aux_def
+                      dest!: get_tcb_SomeD)
+      apply (simp add: s2_def) (* this is OK because cdt is empty..*)
      apply (simp add: s2_def) (* this is OK because cdt is empty..*)
 
     apply ((clarsimp simp: state_vrefs_def

@@ -77,6 +77,12 @@ lemma list_filter_remove: "P a \<Longrightarrow>
 definition list_integ where
 "list_integ P t t' \<equiv>  \<forall>x. P x \<or> (filtered_eq P (cdt_list t x) (cdt_list t' x))"
 
+lemmas list_integI = list_integ_def[THEN meta_eq_to_obj_eq,THEN iffD2,rule_format]
+lemma list_integE:
+  assumes hyp: "list_integ P t t'"
+  obtains "P x" | "(filtered_eq P (cdt_list t x) (cdt_list t' x))"
+  using hyp list_integ_def by blast
+
 
 lemma update_cdt_list_wp:
   "\<lbrace>(\<lambda>s. P (s\<lparr>cdt_list := f (cdt_list s)\<rparr>))\<rbrace> update_cdt_list f \<lbrace>\<lambda>_.P\<rbrace>"
@@ -97,7 +103,7 @@ lemma cap_move_list_integrity:
 lemma cap_insert_list_integrity:
   notes split_paired_All[simp del]
   shows
-  "\<lbrace>list_integ P st and K(P src) and K(P dest)\<rbrace> cap_insert_ext src_parent src dest src_p dest_p \<lbrace>\<lambda>_. list_integ P st\<rbrace>"
+  "\<lbrace>list_integ P st and K(P dest)\<rbrace> cap_insert_ext src_parent src dest src_p dest_p \<lbrace>\<lambda>_. list_integ P st\<rbrace>"
   apply (simp add: cap_insert_ext_def split del: if_split)
   apply (wp update_cdt_list_wp)
   apply (intro impI conjI allI | simp add: list_filter_insert_after list_filter_remove split: option.splits | elim conjE | simp add: list_integ_def)+
@@ -148,9 +154,13 @@ lemma weaken_filter: "(\<forall>s. P s \<longrightarrow> T s) \<Longrightarrow> 
   apply (induct list,simp+)
   done
 
+lemmas weaken_filter' = weaken_filter[rule_format,rotated]
+
 lemma weaken_filter_eq: "(\<forall>s. P s \<longrightarrow> T s) \<Longrightarrow> filtered_eq P list list' \<Longrightarrow> filtered_eq T list list'"
   apply (subst weaken_filter[symmetric],assumption)
   apply (simp add: weaken_filter)
   done
+
+lemmas weaken_filter_eq' = weaken_filter_eq[rule_format,rotated]
 
 end

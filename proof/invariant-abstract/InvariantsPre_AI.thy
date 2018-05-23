@@ -224,6 +224,7 @@ lemma symreftype_inverse[simp]:
   "symreftype (symreftype t) = t"
   by (cases t, simp+)
 
+(* FIXME this is not a destruction rule of sym_refs *)
 lemma sym_refsD:
   "\<lbrakk> (y, tp) \<in> st x; sym_refs st \<rbrakk> \<Longrightarrow> (x, symreftype tp) \<in> st y"
   apply (simp add: sym_refs_def)
@@ -231,6 +232,7 @@ lemma sym_refsD:
   apply simp
   done
 
+(* FIXME this is not a elimination rule of sym_refs *)
 lemma sym_refsE:
   "\<lbrakk> sym_refs st; (y, symreftype tp) \<in> st x \<rbrakk> \<Longrightarrow> (x, tp) \<in> st y"
   by (drule(1) sym_refsD, simp)
