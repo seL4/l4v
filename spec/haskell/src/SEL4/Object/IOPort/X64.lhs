@@ -115,25 +115,16 @@ This module defines IO port routines, specific to x64.
 > decodeX64PortInvocation _ _ _ _ _ = fail "Unreachable"
 
 > portIn f = do
->       ct <- getCurThread
 >       res <- doMachineOp $ f
->       setMRs ct Nothing [res]
->       msgInfo <- return $ MI {
->           msgLength = 1,
->           msgExtraCaps = 0,
->           msgCapsUnwrapped = 0,
->           msgLabel = 0 }
->       setMessageInfo ct msgInfo
+>       return [res]
 
 > portOut f w = do
->        ct <- getCurThread
 >        doMachineOp $ f w
->        setMessageInfo ct $ MI 0 0 0 0
-
+>        return []
 
 >
 > performX64PortInvocation :: ArchInv.Invocation -> KernelP [Word]
-> performX64PortInvocation (InvokeIOPort (IOPortInvocation port port_data)) = withoutPreemption $ do
+> performX64PortInvocation (InvokeIOPort (IOPortInvocation port port_data)) = withoutPreemption $
 >     case port_data of
 >         ArchInv.IOPortIn8 -> portIn $ in8 port
 >         ArchInv.IOPortIn16 -> portIn $ in16 port
@@ -141,7 +132,6 @@ This module defines IO port routines, specific to x64.
 >         ArchInv.IOPortOut8 w -> portOut (out8 port) w
 >         ArchInv.IOPortOut16 w -> portOut (out16 port) w
 >         ArchInv.IOPortOut32 w -> portOut (out32 port) w
->     return $ []
 
 > performX64PortInvocation (InvokeIOPortControl (IOPortControlIssue f l destSlot srcSlot)) =
 >   withoutPreemption $ do
