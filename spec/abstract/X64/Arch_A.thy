@@ -251,25 +251,21 @@ case iv of PDPTMap cap ct_slot pml4e pml4_slot vspace \<Rightarrow> do
   | _ \<Rightarrow> fail"
 
 definition
-  port_out :: "('a word \<Rightarrow> unit machine_monad) \<Rightarrow> ('a word) \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  port_out :: "('a word \<Rightarrow> unit machine_monad) \<Rightarrow> ('a word) \<Rightarrow> (data list,'z::state_ext) s_monad" where
   "port_out f w = do
-    ct \<leftarrow> gets cur_thread;
     do_machine_op $ f w;
-    set_message_info ct $ MI 0 0 0 0
+    return []
   od"
 
 definition
-  port_in :: "(data machine_monad) \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  port_in :: "(data machine_monad) \<Rightarrow> (data list,'z::state_ext) s_monad" where
   "port_in f = do
-    ct \<leftarrow> gets cur_thread;
     res \<leftarrow> do_machine_op f;
-    set_mrs ct None [res];
-    msg_info \<leftarrow> return $ MI 1 0 0 0;
-    set_message_info ct msg_info
+    return [res]
   od"
 
 definition
-  perform_io_port_invocation :: "io_port_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  perform_io_port_invocation :: "io_port_invocation \<Rightarrow> (data list,'z::state_ext) s_monad" where
   "perform_io_port_invocation i \<equiv> (
     case i of (IOPortInvocation port port_data) \<Rightarrow> (
       case port_data of
@@ -292,21 +288,24 @@ where
       cap_insert (ArchObjectCap (IOPortCap f l)) control_slot dest_slot
     od"
 
+abbreviation
+  arch_no_return :: "(unit, 'z::state_ext) s_monad \<Rightarrow> (data list, 'z::state_ext) s_monad"
+where
+  "arch_no_return oper \<equiv> do oper; return [] od"
+
 text {* Top level system call despatcher for all x64-specific system calls. *}
 definition
   arch_perform_invocation :: "arch_invocation \<Rightarrow> (data list,'z::state_ext) p_monad" where
-  "arch_perform_invocation i \<equiv> liftE $ do
+  "arch_perform_invocation i \<equiv> liftE $
     case i of
-          InvokePageTable oper \<Rightarrow> perform_page_table_invocation oper
-        | InvokePageDirectory oper \<Rightarrow> perform_page_directory_invocation oper
-        | InvokePDPT oper \<Rightarrow> perform_pdpt_invocation oper
-        | InvokePage oper \<Rightarrow> perform_page_invocation oper
-        | InvokeASIDControl oper \<Rightarrow> perform_asid_control_invocation oper
-        | InvokeASIDPool oper \<Rightarrow> perform_asid_pool_invocation oper
+          InvokePageTable oper \<Rightarrow> arch_no_return $ perform_page_table_invocation oper
+        | InvokePageDirectory oper \<Rightarrow> arch_no_return $ perform_page_directory_invocation oper
+        | InvokePDPT oper \<Rightarrow> arch_no_return $ perform_pdpt_invocation oper
+        | InvokePage oper \<Rightarrow> arch_no_return $ perform_page_invocation oper
+        | InvokeASIDControl oper \<Rightarrow> arch_no_return $ perform_asid_control_invocation oper
+        | InvokeASIDPool oper \<Rightarrow> arch_no_return $ perform_asid_pool_invocation oper
         | InvokeIOPort oper \<Rightarrow> perform_io_port_invocation oper
-        | InvokeIOPortControl oper \<Rightarrow> perform_ioport_control_invocation oper;
-    return $ []
-od"
+        | InvokeIOPortControl oper \<Rightarrow> arch_no_return $ perform_ioport_control_invocation oper"
 
 end
 end

@@ -1465,27 +1465,22 @@ lemma corresK_machine_op[corresK]: "corres_underlyingK Id False True F r P Q x x
   by (erule corres_machine_op)
 
 lemma port_in_corres[corres]:
-  "no_fail \<top> a \<Longrightarrow> corres dc (einvs and ct_active) (invs' and ct_active') (port_in a) (portIn a)"
+  "no_fail \<top> a \<Longrightarrow> corres (op =) \<top> \<top> (port_in a) (portIn a)"
   apply (clarsimp simp: port_in_def portIn_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF _ gct_corres])
-      apply (rule corres_split_eqr)
-         apply (rule corres_split_eqr[OF set_mi_corres set_mrs_corres])
-            apply wpsimp+
-        apply (rule corres_machine_op[OF corres_Id], simp+)
-       apply wpsimp+
-  done
+    apply (rule corres_split_eqr)
+       apply wpsimp
+      apply (rule corres_machine_op[OF corres_Id], simp+)
+  by wpsimp+
 
 lemma port_out_corres[@lift_corres_args, corres]:
-  "no_fail \<top> (a w) \<Longrightarrow> corres dc (einvs and ct_active) (invs' and ct_active')
-                       (port_out a w) (portOut a w)"
+  "no_fail \<top> (a w) \<Longrightarrow> corres (op =) \<top> \<top> (port_out a w) (portOut a w)"
   apply (clarsimp simp: port_out_def portOut_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF _ gct_corres])
-      apply (rule corres_split_eqr[OF set_mi_corres])
-         apply wpsimp+
-        apply (rule corres_machine_op[OF corres_Id], simp+)
-       apply wpsimp+
+    apply (rule corres_split_eqr)
+       apply wpsimp
+      apply (rule corres_machine_op[OF corres_Id], simp+)
+     apply wpsimp+
   done
 
 (* FIXME x64: move *)
@@ -1518,7 +1513,7 @@ lemma perform_port_inv_corres:
   \<Longrightarrow> corres (intr \<oplus> (op =))
         (einvs and ct_active and valid_arch_inv ai)
         (invs' and ct_active' and valid_arch_inv' ai')
-        (liftE (do perform_io_port_invocation x; return [] od))
+        (liftE (perform_io_port_invocation x))
         (performX64PortInvocation ai')"
   apply (clarsimp simp: perform_io_port_invocation_def performX64PortInvocation_def
                         archinv_relation_def ioport_invocation_map_def)
@@ -1619,38 +1614,45 @@ lemma inv_arch_corres:
   apply (subst arch_ioport_inv_case_simp; simp)
   apply (clarsimp simp: archinv_relation_def)
   apply (clarsimp simp: performX64MMUInvocation_def)
-  apply (rule corres_split' [where r'=dc])
-     prefer 2
-     apply (rule corres_trivial)
-     apply simp
-    apply (cases ai)
-           apply (clarsimp simp: archinv_relation_def performX64MMUInvocation_def)
-           apply (erule corres_guard_imp [OF perform_page_table_corres])
-            apply (fastforce simp: valid_arch_inv_def)
-           apply (fastforce simp: valid_arch_inv'_def)
-          apply (clarsimp simp: archinv_relation_def)
-          apply (erule corres_guard_imp [OF perform_page_directory_corres])
-           apply (fastforce simp: valid_arch_inv_def)
-          apply (fastforce simp: valid_arch_inv'_def)
-         apply (clarsimp simp: archinv_relation_def)
-         apply (erule corres_guard_imp [OF perform_pdpt_corres])
+  apply (cases ai)
+         apply (clarsimp simp: archinv_relation_def performX64MMUInvocation_def)
+         apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
+             apply (rule perform_page_table_corres; wpsimp)
+            apply wpsimp+
           apply (fastforce simp: valid_arch_inv_def)
          apply (fastforce simp: valid_arch_inv'_def)
         apply (clarsimp simp: archinv_relation_def)
-        apply (erule corres_guard_imp [OF perform_page_corres])
+        apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
+            apply (rule perform_page_directory_corres; wpsimp)
+           apply wpsimp+
          apply (fastforce simp: valid_arch_inv_def)
         apply (fastforce simp: valid_arch_inv'_def)
        apply (clarsimp simp: archinv_relation_def)
-       apply (rule corres_guard_imp [OF pac_corres], rule refl)
+       apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
+           apply (rule perform_pdpt_corres; wpsimp)
+          apply wpsimp+
         apply (fastforce simp: valid_arch_inv_def)
        apply (fastforce simp: valid_arch_inv'_def)
       apply (clarsimp simp: archinv_relation_def)
-      apply (rule corres_guard_imp [OF pap_corres], rule refl)
+      apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
+          apply (rule perform_page_corres; wpsimp)
+         apply wpsimp+
        apply (fastforce simp: valid_arch_inv_def)
       apply (fastforce simp: valid_arch_inv'_def)
-     apply clarsimp
-    apply clarsimp
-   apply wp+
+     apply (clarsimp simp: archinv_relation_def)
+     apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
+         apply (rule pac_corres; wpsimp)
+        apply wpsimp+
+      apply (fastforce simp: valid_arch_inv_def)
+     apply (fastforce simp: valid_arch_inv'_def)
+    apply (clarsimp simp: archinv_relation_def)
+    apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
+        apply (rule pap_corres; wpsimp)
+       apply wpsimp+
+     apply (fastforce simp: valid_arch_inv_def)
+    apply (fastforce simp: valid_arch_inv'_def)
+   apply clarsimp
+  apply clarsimp
   done
 
 lemma asid_pool_typ_at_ext':
