@@ -2841,6 +2841,68 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
        (Call decodeX64PageDirectoryInvocation_'proc)"
   sorry (* decodeX64PageDirectoryInvocation_ccorres *)
 
+lemma makeUserPML4E_spec:
+  "\<forall>s. \<Gamma> \<turnstile>
+  {s}
+  Call makeUserPML4E_'proc
+  \<lbrace> pml4e_lift \<acute>ret__struct_pml4e_C = ( \<lparr>
+       pml4e_CL.xd_CL = 0,
+       pml4e_CL.pdpt_base_address_CL = \<^bsup>s\<^esup>paddr && (mask 39 << 12),
+       pml4e_CL.accessed_CL = 0,
+       pml4e_CL.cache_disabled_CL = x86PCDBit_CL (vm_attributes_lift \<^bsup>s\<^esup>vm_attr),
+       pml4e_CL.write_through_CL = x86PWTBit_CL (vm_attributes_lift \<^bsup>s\<^esup>vm_attr),
+       pml4e_CL.super_user_CL = 1,
+       pml4e_CL.read_write_CL = 1,
+       pml4e_CL.present_CL = 1\<rparr>) \<rbrace>"
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: pml4e_lift_def
+                        superuser_from_vm_rights_mask writable_from_vm_rights_mask
+                        vm_attributes_lift_def mask_def)
+  done
+
+lemma ccap_relation_pdpt_mapped_asid:
+  "ccap_relation (ArchObjectCap (PDPointerTableCap p (Some (asid, vspace)))) cap
+    \<Longrightarrow> asid = capPDPTMappedASID_CL (cap_pdpt_cap_lift cap)"
+  by (frule cap_get_tag_isCap_unfolded_H_cap)
+     (clarsimp simp: cap_pdpt_cap_lift ccap_relation_def cap_to_H_def split: if_splits)
+
+lemma performPDPTInvocationMap_ccorres:
+  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (cte_at' ctSlot)
+       (UNIV \<inter> \<lbrace>ccap_relation cap \<acute>cap\<rbrace> \<inter> \<lbrace>\<acute>ctSlot = Ptr ctSlot\<rbrace> \<inter> \<lbrace>cpml4e_relation pml4e \<acute>pml4e\<rbrace> \<inter> \<lbrace>\<acute>pml4Slot = Ptr pml4Slot\<rbrace>
+             \<inter> \<lbrace>\<acute>vspace = Ptr vspace\<rbrace>)
+       []
+       (liftE (performPDPTInvocation (PDPTMap cap ctSlot pml4e pml4Slot vspace)))
+       (Call performX64PDPTInvocationMap_'proc)"
+  apply (simp only: liftE_liftM ccorres_liftM_simp)
+  apply (cinit lift: cap_' ctSlot_' pml4e_' pml4Slot_' vspace_')
+   apply (ctac (no_vcg))
+     apply (rule ccorres_split_nothrow)
+         apply simp
+         apply (erule storePML4E_Basic_ccorres)
+        apply ceqv
+       apply (rule ccorres_cases[where P="\<exists>p a v. cap = ArchObjectCap (PDPointerTableCap p (Some (a, v)))" and H=\<top> and H'=UNIV];
+              clarsimp split: capability.splits arch_capability.splits simp: ccorres_fail)
+       apply csymbr
+       apply csymbr
+       apply (rule ccorres_add_return2)
+       apply (rule ccorres_split_nothrow_novcg)
+           apply (frule ccap_relation_pdpt_mapped_asid)
+           apply simp
+           apply (rule ccorres_call[where xf'=xfdc, OF invalidatePageStructureCacheASID_ccorres]; simp)
+          apply ceqv
+         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+         apply (rule allI, rule conseqPre, vcg)
+         apply (clarsimp simp: return_def)
+        apply wp
+       apply (simp add: guard_is_UNIV_def)
+      apply (clarsimp, wp)
+     apply vcg
+    apply wp
+   apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap)
+  apply simp
+  done
+
 lemma decodeX64PDPTInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   shows
@@ -2864,6 +2926,7 @@ lemma decodeX64PDPTInvocation_ccorres:
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeX64PDPTInvocation_'proc)"
      (is "_ \<Longrightarrow>_ \<Longrightarrow> ccorres _ _ ?pre _ _ _ _")
+  supply Collect_const[simp del]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_' extraCaps___struct_extra_caps_C_' cap_' buffer_'
                 simp: decodeX64MMUInvocation_def invocation_eq_use_types decodeX64PDPointerTableInvocation_def)
@@ -2996,7 +3059,6 @@ apply csymbr
                         injection_handler_returnOk bindE_assoc cap_pml4_cap_lift get_capMappedASID_CL_def
                   cong: if_cong del: Collect_const)
        apply csymbr
- sorry (* decodePDPTInvocation: c code PR up
        apply (ctac add: ccorres_injection_handler_csum1 [OF ccorres_injection_handler_csum1,
                                                          OF findVSpaceForASID_ccorres])
           apply (simp add: Collect_False if_to_top_of_bindE del: Collect_const)
@@ -3009,34 +3071,19 @@ apply csymbr
                         apply (simp add: syscall_error_to_H_cases)
                        apply (simp add: bindE_assoc del: Collect_const,
                               simp add: liftE_bindE del: Collect_const)
-                       apply (ctac add: ccorres_injection_handler_csum1 [OF ccorres_injection_handler_csum1,
-                                                                                 OF lookupPDSlot_ccorres])
-                          apply (rule ccorres_pre_getObject_pde)
-                          apply (rule ccorres_cond_false_seq)
-                          apply ccorres_rewrite
-                          apply (clarsimp simp del: Collect_const)
-                          apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
-                          apply (rule_tac xf'=ret__int_' and R="ko_at' rvb rva" and R'=UNIV
-                                           and val="from_bool (rvb \<noteq> InvalidPDE)"
-                                            in ccorres_symb_exec_r_known_rv)
-                             apply vcg
-                             apply (clarsimp simp: from_bool_0)
-                             apply (erule cmap_relationE1[OF rf_sr_cpde_relation], erule ko_at_projectKO_opt)
-                             apply (clarsimp simp: typ_heap_simps from_bool_eq_if)
-                             apply (auto simp: cpde_relation_def Let_def pde_pde_pt_lift_def
-                                               pde_pde_pt_lift pde_tag_defs pde_pde_large_lift_def
-                                               pde_lift_def from_bool_def case_bool_If
-                                        split: pde.split_asm if_splits)[1]
-                            apply ceqv
-                           apply (clarsimp simp: from_bool_neq_0 simp del: Collect_const)
-                           apply (rule ccorres_Cond_rhs_Seq)
-                            apply (clarsimp simp: throwError_bind invocationCatch_def
-                                                  injection_handler_throwError
-                                        simp del: Collect_const)
-                            apply ccorres_rewrite
-                            apply (rule syscall_error_throwError_ccorres_n)
-                            apply (clarsimp simp: syscall_error_to_H_cases)
-                           apply (clarsimp simp: injection_handler_returnOk simp del: Collect_const)
+                          apply (rule ccorres_pre_getObject_pml4e)
+apply (clarsimp simp: get_capPtr_CL_def)
+apply (rule ccorres_rhs_assoc2, rule ccorres_symb_exec_r)
+apply (simp add: unlessE_def if_to_top_of_bindE injection_handler_If)
+apply (rule_tac Q'="\<lambda>s. \<exists>v. cslift s (pml4e_Ptr (lookup_pml4_slot (capPML4BasePtr (capCap (fst (extraCaps ! 0))))
+                                                (args ! 0 && 0xFFFFFF8000000000))) = Some v
+                             \<and> cpml4e_relation rva v \<and> ret__unsigned_longlong_' s = pml4e_CL.present_CL (pml4e_lift v)" in ccorres_if_cond_throws2[rotated -1, where Q=\<top>])
+apply vcg
+apply clarsimp
+apply (clarsimp simp: cpml4e_relation_def Let_def split: pml4e.split_asm)
+apply (simp add: injection_handler_throwError throwError_bind invocationCatch_def)
+apply (rule syscall_error_throwError_ccorres_n)
+apply (simp add: syscall_error_to_H_cases)
                            apply (simp add: injection_handler_returnOk
              performX64MMUInvocations bindE_assoc)
                            apply csymbr
@@ -3046,14 +3093,16 @@ apply csymbr
                            apply csymbr
                            apply csymbr
                            apply (ctac add: setThreadState_ccorres)
-                             apply (ctac add: performPageTableInvocationMap_ccorres)
+                             apply (ctac(no_vcg) add: performPDPTInvocationMap_ccorres)
                              apply (rule ccorres_alternative2)
                              apply (rule ccorres_return_CE, simp+)[1]
                              apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
                              apply wp+
-                           apply simp using [[goals_limit=10]]
-                           apply (vcg exspec=performX86PageTableInvocationMap_modifies)
+                           apply (simp add: bit_simps) using [[goals_limit=10]]
+                           apply (vcg exspec=setThreadState_modifies)
                           apply simp
+apply vcg (* this vcg generates False as a precondition *)
+sorry (*
 apply wp
 apply simp
                           apply (vcg exspec=setThreadState_modifies)
