@@ -644,6 +644,36 @@ lemma trancl_trancl:
   "(R\<^sup>+)\<^sup>+ = R\<^sup>+"
   by auto
 
+text {* Some rules for showing that the reflexive transitive closure of a
+relation/predicate doesn't add much if it was already transitively
+closed. *}
+
+lemma rtrancl_eq_reflc_trans:
+  assumes trans: "trans X"
+  shows "rtrancl X = X \<union> Id"
+  by (simp only: rtrancl_trancl_reflcl trancl_id[OF trans])
+
+lemma rtrancl_id:
+  assumes refl: "Id \<subseteq> X"
+  assumes trans: "trans X"
+  shows "rtrancl X = X"
+  using refl rtrancl_eq_reflc_trans[OF trans]
+  by blast
+
+lemma rtranclp_eq_reflcp_transp:
+  assumes trans: "transp X"
+  shows "rtranclp X = (\<lambda>x y. X x y \<or> x = y)"
+  by (simp add: Enum.rtranclp_rtrancl_eq fun_eq_iff
+                rtrancl_eq_reflc_trans trans[unfolded transp_trans])
+
+lemma rtranclp_id:
+  shows "reflp X \<Longrightarrow> transp X \<Longrightarrow> rtranclp X = X"
+  apply (simp add: rtranclp_eq_reflcp_transp)
+  apply (auto simp: fun_eq_iff elim: reflpD)
+  done
+
+lemmas rtranclp_id2 = rtranclp_id[unfolded reflp_def transp_relcompp le_fun_def]
+
 lemma if_1_0_0:
   "((if P then 1 else 0) = (0 :: ('a :: zero_neq_one))) = (\<not> P)"
   by (simp split: if_split)
@@ -852,7 +882,7 @@ lemma Union_subset:
 
 lemma UN_sub_empty:
   "\<lbrakk>list_all P xs; \<And>x. P x \<Longrightarrow> f x = g x\<rbrakk> \<Longrightarrow> (\<Union>x\<in>set xs. f x) - (\<Union>x\<in>set xs. g x) = {}"
-  by (metis Ball_set_list_all Diff_cancel SUP_cong)
+  by (simp add: Ball_set_list_all[symmetric] Union_subset)
 
 (*******************
  * bij_betw rules. *
