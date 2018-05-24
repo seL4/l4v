@@ -757,6 +757,13 @@ lemma unbind_notification_not_recursive:
   apply (wp unbind_notification_caps_of_state)
   done
 
+lemma unbind_from_sc_not_recursive:
+  "\<lbrace>\<lambda>s. P (not_recursive_cspaces s)\<rbrace>
+     unbind_from_sc tcb
+   \<lbrace>\<lambda>rv s. P (not_recursive_cspaces s)\<rbrace>"
+  apply (simp add: not_recursive_cspaces_def cte_wp_at_caps_of_state)
+  apply (wp unbind_notification_caps_of_state)
+  done
 
 lemma get_cap_det2:
   "(r, s') \<in> fst (get_cap p s) \<Longrightarrow> get_cap p s = ({(r, s)}, False) \<and> s' = s"
@@ -853,11 +860,11 @@ lemma suspend_thread_cap:
      SchedContext_A.suspend t
    \<lbrace>\<lambda>rv s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>"
   apply (rule hoare_chain)
-(*    apply (rule suspend_cte_wp_at_preserved
+    apply (rule suspend_cte_wp_at_preserved
                   [where p=x and P="(=) (cap.ThreadCap p)"])
     apply (clarsimp simp add: can_fast_finalise_def)
    apply (simp add: cte_wp_at_caps_of_state)+
-  done*) sorry
+  done
 
 lemma not_recursive_cspaces_irq_state_independent[intro!, simp]:
   "not_recursive_cspaces (s \<lparr> machine_state := machine_state s \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)
@@ -918,19 +925,21 @@ lemma rec_del_termination:
    apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
                          fst_cte_ptrs_def
                   split: if_split_asm)
-(*   apply (frule(1) use_valid [OF _ unbind_notification_caps_of_state],
+   apply (frule(1) use_valid [OF _ unbind_notification_caps_of_state],
+          frule(1) use_valid [OF _ unbind_from_sc_caps_of_state],
           frule(1) use_valid [OF _ suspend_thread_cap],
           frule(1) use_valid [OF _ prepare_thread_delete_thread_cap])
    apply clarsimp
    apply (erule use_valid [OF _ prepare_thread_delete_not_recursive])
    apply (erule use_valid [OF _ suspend_not_recursive])
+   apply (erule use_valid [OF _ unbind_from_sc_not_recursive])
    apply (erule use_valid [OF _ unbind_notification_not_recursive])
    apply simp
-  apply (clarsi mp simp: in_monad cte_wp_at_caps_of_state
+  apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
                         fst_cte_ptrs_def zombie_cte_bits_def
                         tcb_cnode_index_def
                  split: option.split_asm)
-  done *) sorry
+  done
 
 lemma rec_del_dom: "\<And> (p :: rec_del_call \<times> 'state_ext state). rec_del_dom p"
   using rec_del_termination by blast

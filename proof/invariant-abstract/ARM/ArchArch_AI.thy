@@ -1102,9 +1102,9 @@ lemma vs_lookup_and_unique_refs:
   apply (frule_tac cap'=capa in unique_table_refsD)
      apply simp+
    apply (case_tac capa, simp_all)
-        apply ((case_tac cap, simp_all)+)[6]
+        apply ((case_tac cap, simp_all)+)[8]
      apply (clarsimp simp add: table_cap_ref_def vs_cap_ref_def split: cap.splits arch_cap.splits option.splits)
-  sorry
+  done
 
 
 lemma valid_global_ptsD2:

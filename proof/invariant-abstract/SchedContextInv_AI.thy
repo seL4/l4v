@@ -1518,12 +1518,41 @@ lemma refill_budget_check_ex_nonz_cap_to_ct[wp]:
   by (wpsimp simp: refill_budget_check_def set_refills_def is_round_robin_def refill_full_def
       wp: get_sched_context_wp get_refills_wp hoare_drop_imp hoare_vcg_if_lift2 split_del: if_split)
 
-crunch ct_active[wp]: tcb_sched_action, reschedule_required, tcb_release_remove ct_active
+crunch ct_active[wp]: tcb_sched_action ct_active
 
-(*
+crunch ct_active[wp]: reschedule_required ct_active
+
+crunch ct_active[wp]: tcb_sched_action, tcb_release_remove,test_reschedule ct_active
+
+crunch ct_active[wp]: tcb_release_enqueue,sort_queue ct_active
+  (ignore: set_thread_state_ext set_object wp: hoare_drop_imps mapM_wp')
+
+lemma send_ipc_active[wp]:
+  "\<lbrace>ct_active\<rbrace>
+      send_ipc block call badge can_grant can_donate thread epptr \<lbrace> \<lambda>_ . ct_active\<rbrace>"
+  apply (clarsimp simp: send_ipc_def)
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (case_tac ep; cases block; simp)
+  apply (wpsimp simp: send_ipc_def set_simple_ko_def set_object_def set_thread_state_def
+       wp: get_sched_context_wp get_object_wp hoare_drop_imp hoare_vcg_if_lift2
+       split_del: if_split)
+  sorry
+
+lemma send_fault_ipc_active[wp]:
+  "\<lbrace>ct_active\<rbrace> send_fault_ipc tptr handler_cap fault can_donate \<lbrace> \<lambda>_ . ct_active\<rbrace>"
+  apply (wpsimp simp: send_fault_ipc_def thread_set_def set_object_def
+      wp: get_sched_context_wp)
+  apply (clarsimp dest!: get_tcb_SomeD simp: pred_tcb_at_def obj_at_def)
+sorry
+
+
+lemma handle_timeout_active[wp]:
+  "\<lbrace>ct_active\<rbrace> handle_timeout tptr ex \<lbrace> \<lambda>_ . ct_active\<rbrace>"
+  by (wpsimp simp: handle_timeout_def wp: get_sched_context_wp)
+
 lemma end_timeslice_active[wp]:
   "\<lbrace>ct_active\<rbrace> end_timeslice canTimeout \<lbrace> \<lambda>_ . ct_active\<rbrace>"
-  by (wpsimp simp: end_timeslice_def wp: get_sched_context_wp)
+  by (wpsimp simp: end_timeslice_def handle_timeout_def wp: get_sched_context_wp)
 
 lemma refill_budget_check_active[wp]:
   "\<lbrace>ct_active\<rbrace> refill_budget_check csc_ptr consumed capacity \<lbrace> \<lambda>_ . ct_active\<rbrace>"
@@ -1533,16 +1562,17 @@ lemma refill_budget_check_active[wp]:
 lemma charge_budget_ct_active[wp]:
   "\<lbrace>ct_active\<rbrace> charge_budget capacity consumed canTimeout \<lbrace> \<lambda>_. ct_active\<rbrace>"
   by (wpsimp simp: charge_budget_def Let_def wp: get_sched_context_wp)
-*)
-lemma check_budget_ct_active[wp]:
-  "\<lbrace>ct_active\<rbrace> check_budget \<lbrace> \<lambda>_ . ct_active\<rbrace>"
-sorry(*   by (wpsimp simp: check_budget_def refill_capacity_def wp: get_refills_wp get_sched_context_wp)
-*)
 
-lemma refill_budget_check_active[wp]:
-  "\<lbrace>ct_active\<rbrace> refill_budget_check csc_ptr consumed capacity \<lbrace> \<lambda>_ . ct_active\<rbrace>"
-  by (wpsimp simp: refill_budget_check_def set_refills_def
-       wp: hoare_drop_imp get_sched_context_wp split_del: if_split)
+lemma check_budget_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace> check_budget \<lbrace> \<lambda>_. ct_active\<rbrace>"
+  by (wpsimp simp: check_budget_def Let_def refill_capacity_def
+      wp: get_sched_context_wp hoare_drop_imps get_refills_wp)
+
+lemma check_budget_restart_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace> check_budget_restart \<lbrace> \<lambda>_. ct_active\<rbrace>"
+  apply (wpsimp simp: check_budget_restart_def Let_def refill_capacity_def set_thread_state_def set_object_def
+      wp: get_sched_context_wp hoare_drop_imps get_refills_wp hoare_vcg_if_lift2)
+  sorry
 
 lemma charge_budget_invs:
   "\<lbrace>invs and ct_active\<rbrace>

@@ -1316,7 +1316,7 @@ lemma (* deleting_irq_handler_st_tcb_at *) [Finalise_AI_asms]:
   apply (simp add: deleting_irq_handler_def)
   apply (wp cap_delete_one_st_tcb_at)
   apply simp
-  done
+  sorry (* need to remove "P Inactive" in reply_clear_tcb_st_tcb_at *)
 
 lemma irq_node_global_refs_ARCH [Finalise_AI_asms]:
   "interrupt_irq_node s irq \<in> global_refs s"

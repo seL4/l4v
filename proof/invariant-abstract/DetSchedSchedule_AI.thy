@@ -388,17 +388,21 @@ lemma assert_get_tcb_ko':
                      obj_at_def
                split: option.splits Structures_A.kernel_object.splits)
 
+crunch valid_blocked[wp]: is_schedulable "valid_blocked"
+
 lemma reschedule_required_valid_blocked:
   "\<lbrace>valid_blocked\<rbrace> reschedule_required \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (clarsimp simp: reschedule_required_def)
-  apply (simp add: is_schedulable_def | wp set_scheduler_action_cnt_valid_blocked tcb_sched_action_enqueue_valid_blocked hoare_vcg_all_lift | wpc)+
+  apply (wpsimp wp: set_scheduler_action_cnt_valid_blocked
+                    tcb_sched_action_enqueue_valid_blocked hoare_vcg_all_lift)
     apply (simp add: tcb_sched_action_def)
-    apply (wp get_sched_context_wp)+
+   apply (wpsimp wp: hoare_drop_imp)
+    apply (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp split_del: if_split)+
   apply clarsimp
   apply (rule conjI)
-   apply clarsimp
+(*   apply clarsimp
   apply (rule conjI)
-(*   apply (for ce simp: etcb_at_def tcb_sched_enqueue_def valid_blocked_def valid_blocked_except_def
+   apply (for ce simp: etcb_at_def tcb_sched_enqueue_def valid_blocked_def valid_blocked_except_def
                 split: option.splits)
   apply clarsimp*)
  sorry
@@ -498,11 +502,13 @@ lemma set_thread_state_cur_is_activatable[wp]:
   "\<lbrace>\<lambda>s. is_activatable (cur_thread s) s\<rbrace>
      set_thread_state ref ts
    \<lbrace>\<lambda>_ (s::det_state). is_activatable (cur_thread s) s\<rbrace>"
-  apply (wpsimp simp: set_thread_state_def set_object_def set_thread_state_ext_def do_extended_op_def
-                      wrap_ext_op_det_ext_ext_def)
-  apply (clarsimp simp: is_activatable_def st_tcb_at_kh_if_split in_monad split_def
-                        pred_tcb_at_def obj_at_def)
-  sorry
+  apply (simp add: set_thread_state_def)
+  apply (wpsimp simp: set_thread_state_ext_def set_object_def is_schedulable_def
+      split_del: if_split
+      wp: set_scheduler_action_wp gts_wp hoare_vcg_if_lift2 get_sched_context_wp)
+  apply (clarsimp simp: is_activatable_def st_tcb_at_kh_if_split pred_tcb_at_def obj_at_def
+              dest!: get_tcb_SomeD)
+  done
 
 lemma set_bound_notification_cur_is_activatable[wp]:
   "\<lbrace>\<lambda>s. is_activatable (cur_thread s) s\<rbrace>
@@ -624,7 +630,8 @@ lemma set_thread_state_valid_blocked_except:
        apply (rule set_scheduler_action_cnt_valid_blocked_weak)
       apply simp
      apply (wpsimp wp: gts_wp hoare_vcg_if_lift2 hoare_drop_imp simp_del: fun_upd_apply)+
-  apply (clarsimp simp: valid_blocked_def valid_blocked_except_def st_tcb_at_def obj_at_def)
+apply (clarsimp dest!: get_tcb_SomeD)
+(*  apply (fastforce simp: valid_blocked_def valid_blocked_except_def st_tcb_at_def obj_at_def)*)
   sorry
 
 (* as user schedule invariants *)
@@ -1088,8 +1095,8 @@ lemmas det_ext_simps[simp] = select_switch_det_ext_ext_def unwrap_ext_det_ext_ex
 
 lemma guarded_switch_to_lift:
   "\<lbrace>P\<rbrace> switch_to_thread thread \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> guarded_switch_to thread \<lbrace>Q\<rbrace>"
-(*  by (wpsimp simp: guarded_switch_to_def get_thread_state_def thread_get_def)*)
-  sorry
+  by (wpsimp wp: get_sched_context_wp
+      simp: guarded_switch_to_def is_schedulable_def get_thread_state_def thread_get_def)
 
 lemma tcb_sched_action_lift:
   "(\<And>f s. P s \<Longrightarrow> P (ready_queues_update f s))

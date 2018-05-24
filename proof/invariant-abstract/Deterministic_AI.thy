@@ -3990,11 +3990,12 @@ lemma update_sched_context_cdt_cdt_list[wp]:
 
 lemma reply_unlink_tcb_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reply_unlink_tcb r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp simp: reply_unlink_tcb_def wp: hoare_drop_imp)
+  by (wpsimp simp: reply_unlink_tcb_def set_simple_ko_def wp: hoare_drop_imp set_object_wp)
 
 lemma reply_unlink_sc_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reply_unlink_sc sc r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp simp: reply_unlink_sc_def set_sc_obj_ref_def wp: hoare_drop_imp)
+  by (wpsimp simp: reply_unlink_sc_def set_sc_obj_ref_def set_simple_ko_def
+      wp: hoare_drop_imp set_object_wp)
 
 lemma sched_context_donate_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> sched_context_donate sc r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"

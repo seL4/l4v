@@ -70,23 +70,34 @@ lemma set_thread_state_ct_st:
   apply (wp|simp)+
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
+
 (*
-crunches complete_yield_to
- for invs[wp]: invs
- and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
-  (wp: maybeM_inv hoare_drop_imp mapM_wp' simp: zipWithM_x_mapM)
+lemma as_user_ct_in_state:
+  "\<lbrace>ct_in_state x\<rbrace> as_user t f \<lbrace>\<lambda>_. ct_in_state x\<rbrace>"
+  by (rule ct_in_state_thread_state_lift) (wp as_user_ct)+
 *)
+
+lemma set_consumed_ct_in_state[wp]: "\<lbrace>\<lambda>s. ct_in_state P s\<rbrace> set_consumed a buf \<lbrace>\<lambda>_ s. ct_in_state P s\<rbrace>"
+  by (rule ct_in_state_thread_state_lift) wpsimp+
+
+lemma complete_yield_to_ct_in_state[wp]:
+  "\<lbrace>\<lambda>s. ct_in_state P s\<rbrace> complete_yield_to tptr \<lbrace>\<lambda>_ s. ct_in_state P s\<rbrace>"
+  by (rule ct_in_state_thread_state_lift) wpsimp+
+
+crunches complete_yield_to
+ for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  (wp: maybeM_inv hoare_drop_imp mapM_wp' simp: zipWithM_x_mapM)
+
 lemma (in Tcb_AI_1) activate_invs:
   "\<lbrace>(invs::'state_ext::state_ext state \<Rightarrow> bool)\<rbrace> activate_thread \<lbrace>\<lambda>rv s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
-  apply (unfold activate_thread_def)
+  apply (unfold activate_thread_def get_tcb_obj_ref_def)
   apply (rule hoare_seq_ext [OF _ gets_sp])
-  apply (rule hoare_seq_ext [OF _ _])
-  apply wp
-(*  apply (wp complete_yield_to_invs)
+  apply (rule hoare_seq_ext [OF _ thread_get_sp])
+  apply (case_tac yt_opt, simp)
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (rule_tac Q="st_tcb_at (op = x) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
   apply (rename_tac state)
-  apply (case_tac state, simp_all)
+  apply (case_tac state; simp)
     apply wp
     apply (clarsimp elim!: pred_tcb_weakenE
                      simp: ct_in_state_def)
@@ -102,10 +113,37 @@ lemma (in Tcb_AI_1) activate_invs:
                          valid_idle_def valid_pspace_def
                elim: st_tcb_ex_cap pred_tcb_weakenE,
           auto simp: st_tcb_def2 pred_tcb_at_def obj_at_def)[1]
-  apply (rule_tac Q="\<lambda>rv. invs and ct_idle" in hoare_post_imp, simp)
-  apply (wp activate_idle_invs hoare_post_imp [OF disjI2])
-  apply (clarsimp simp: ct_in_state_def elim!: pred_tcb_weakenE)
-  done*) sorry
+    apply (rule_tac Q="\<lambda>rv. invs and ct_idle" in hoare_post_imp, simp)
+    apply (wp activate_idle_invs hoare_post_imp [OF disjI2])
+    apply (clarsimp simp: ct_in_state_def elim!: pred_tcb_weakenE)
+   apply clarsimp
+  apply (rule hoare_seq_ext)
+   apply (rule hoare_K_bind)
+   apply (rule hoare_seq_ext [OF _ gts_sp])
+   apply (rule_tac Q="st_tcb_at (op = state) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
+    apply (rename_tac state)
+    apply (case_tac state; simp)
+      apply wp
+      apply (clarsimp elim!: pred_tcb_weakenE
+      simp: ct_in_state_def)
+     apply (rule_tac Q="\<lambda>rv. invs and ct_running" in hoare_post_imp, simp)
+     apply (rule hoare_pre)
+      apply (wp sts_invs_minor ct_in_state_set)
+        apply simp
+       apply (simp)+
+       apply (wp as_user_ct hoare_post_imp [OF disjI1] | assumption
+               | clarsimp elim!: st_tcb_weakenE)+
+     apply (auto simp: invs_def valid_state_def
+      valid_idle_def valid_pspace_def
+      elim: st_tcb_ex_cap pred_tcb_weakenE,
+      auto simp: st_tcb_def2 pred_tcb_at_def obj_at_def)[1]
+    apply (rule_tac Q="\<lambda>rv. invs and ct_idle" in hoare_post_imp, simp)
+    apply (wp activate_idle_invs hoare_post_imp [OF disjI2])
+    apply (clarsimp simp: ct_in_state_def elim!: pred_tcb_weakenE)
+   apply clarsimp
+   apply simp
+  apply (wpsimp wp: complete_yield_to_invs)
+  done
 
 lemma restart_invs[wp]:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace> restart t \<lbrace>\<lambda>rv. invs\<rbrace>"

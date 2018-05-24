@@ -153,10 +153,10 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
             | rule impI
             | rule hoare_drop_imps)+
      apply (clarsimp simp: ball_ran_eq x)
-(*    apply (wp delete_one_caps_of_state
+    apply (wp delete_one_caps_of_state
          | rule impI
          | simp add: deleting_irq_handler_def get_irq_slot_def x ball_ran_eq)+
-    done*) sorry
+    done
 
 
 lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_asms]:

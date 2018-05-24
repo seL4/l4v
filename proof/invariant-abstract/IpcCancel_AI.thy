@@ -127,12 +127,11 @@ lemma reply_unlink_tcb_st_tcb_at:
   done
 
 lemma cancel_all_ipc_st_tcb_at:
-  assumes x[simp]: "P Structures_A.Restart"
-  assumes y[simp]: "P Structures_A.Inactive" shows
+  assumes x[simp]: "P Structures_A.Restart" shows
   "\<lbrace>st_tcb_at P t\<rbrace> cancel_all_ipc epptr \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   unfolding cancel_all_ipc_def
-  by (wpsimp wp: ep_cases_weak_wp mapM_x_wp' hoare_drop_imp sts_st_tcb_at_cases
-              reply_unlink_tcb_st_tcb_at)
+(*  by (wpsimp wp: ep_cases_weak_wp mapM_x_wp' hoare_drop_imp sts_st_tcb_at_cases
+              reply_unlink_tcb_st_tcb_at)*) sorry
 
 lemmas cancel_all_ipc_makes_simple[wp] =
   cancel_all_ipc_st_tcb_at[where P=simple, simplified]
@@ -222,14 +221,11 @@ lemma set_message_info_st_tcb_at[wp]:
    by (wpsimp simp: set_message_info_def)
 
 lemma complete_yield_to_st_tcb_at[wp]:
-   assumes x[simp]: "P Running" shows
   "\<lbrace>st_tcb_at P t\<rbrace> complete_yield_to scptr \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
-  by (wpsimp simp: complete_yield_to_def set_sc_obj_ref_def set_consumed_def
-                   get_sc_obj_ref_def
- wp: set_thread_state_st_tcb_at set_message_info_st_tcb_at hoare_drop_imp)
+  by (wpsimp simp: complete_yield_to_def set_sc_obj_ref_def set_consumed_def get_sc_obj_ref_def
+         wp: set_thread_state_st_tcb_at set_message_info_st_tcb_at hoare_drop_imp)
 
 lemma sched_context_unbind_yield_from_st_tcb_at[wp]:
-   assumes x[simp]: "P Running" shows
   "\<lbrace>st_tcb_at P t\<rbrace> sched_context_unbind_yield_from scptr \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   by (wpsimp simp: sched_context_unbind_yield_from_def)
 
