@@ -56,8 +56,6 @@ build-x64: sandbox $(BOOT_FILES)
 	    --builddir="dist/x64"
 	$(CABAL) build --builddir="dist/x64"
 
-pdf:
-	cd doc && make
 
 # We assume that if the .stack-work directory exists,
 # we don't need to install ghc, cabal, nor fetch the cabal
@@ -84,4 +82,4 @@ clean:
 realclean:
 	rm -rf $(BOOT_FILES) dist .stack-work .cabal-sandbox cabal.sandbox.config
 
-.PHONY: all build-arm build-arm-hyp build-x64 pdf clean sandbox realclean
+.PHONY: all build-arm build-arm-hyp build-x64 clean sandbox realclean
