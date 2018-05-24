@@ -2038,9 +2038,8 @@ lemma gsc_ntfn_sp:
 
 lemma maybe_donate_sc_if_live_then_nonz_cap[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> ex_nonz_cap_to tptr s
-\<and> (\<forall>scptr ntfn. kheap s ntfnptr = Some (Notification ntfn) \<and> ntfn_sc ntfn = Some scptr
-     \<longrightarrow> ex_nonz_cap_to scptr s)
-\<rbrace>
+        \<and> (\<forall>scptr ntfn. kheap s ntfnptr = Some (Notification ntfn) \<and> ntfn_sc ntfn = Some scptr
+                        \<longrightarrow> ex_nonz_cap_to scptr s)\<rbrace>
    maybe_donate_sc tptr ntfnptr
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: maybe_donate_sc_def)
@@ -2052,20 +2051,16 @@ lemma maybe_donate_sc_if_live_then_nonz_cap[wp]:
   apply wpsimp
   done
 
-
 lemma maybe_donate_sc_valid_idle[wp]:
-  "\<lbrace>\<lambda>s. valid_idle s \<and> tptr \<noteq> idle_thread s
-  \<and> (\<forall>scptr ntfn. kheap s ntfnptr = Some (Notification ntfn) \<and> ntfn_sc ntfn = Some scptr
-     \<longrightarrow> sc_tcb_sc_at (\<lambda>x. x \<noteq> Some (idle_thread s)) scptr s)
-\<rbrace>
-   maybe_donate_sc tptr ntfnptr
-   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  "\<lbrace>\<lambda>s. valid_idle s \<and> tptr \<noteq> idle_thread s\<rbrace> maybe_donate_sc tptr ntfnptr \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: maybe_donate_sc_def)
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (case_tac sc_opt)
    apply clarsimp
    apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
-   apply (wpsimp simp: get_sc_obj_ref_def wp: maybeM_wp weak_if_wp)
+   apply (wpsimp simp: get_sc_obj_ref_def get_sched_context_def get_object_def sc_tcb_sc_at_def
+                       obj_at_def
+                   wp: maybeM_wp)
   apply wpsimp
   done
 
@@ -2081,72 +2076,132 @@ lemma maybe_donate_sc_valid_objs[wp]:
   apply wpsimp
   done
 
-lemma maybe_donate_sc_sym_refs:
-  "\<lbrace>\<lambda>s. sym_refs (\<lambda>a. if a = hd q then {r \<in> state_refs_of s (hd q). snd r = TCBBound \<or>
-                                        snd r = TCBSchedContext \<or> snd r = TCBYieldTo}
-                      else state_refs_of s a)\<rbrace>
-   maybe_donate_sc (hd q) ntfnptr
-   \<lbrace>\<lambda>rv s. sym_refs (\<lambda>a. if a = hd q then {r \<in> state_refs_of s (hd q). snd r = TCBBound \<or>
-                                           snd r = TCBSchedContext \<or> snd r = TCBYieldTo}
-                         else state_refs_of s a)\<rbrace>"
-  apply (wpsimp simp: maybe_donate_sc_def)
-  sorry
-
 lemma maybe_donate_sc_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> maybe_donate_sc r n \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)
 
 lemma maybe_donate_sc_state_hyp_refs_of[wp]:
-      "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr \<lbrace>\<lambda>r s. P (state_hyp_refs_of s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr
+   \<lbrace>\<lambda>r s. P (state_hyp_refs_of s)\<rbrace>"
   by (wpsimp simp: maybe_donate_sc_def sched_context_donate_def
                wp: hoare_vcg_if_lift2 hoare_drop_imp)
 
+lemma sym_refs_helper_update_waiting_invs:
+  "\<lbrace>\<lambda>s. sym_refs (\<lambda>a. if a = tptr then {r \<in> state_refs_of s tptr. snd r = TCBBound \<or>
+                                        snd r = TCBSchedContext \<or> snd r = TCBYieldTo}
+                      else state_refs_of s a)\<rbrace>
+   maybe_donate_sc tptr ntfnptr
+   \<lbrace>\<lambda>rv s. sym_refs (\<lambda>a. if a = tptr then {r \<in> state_refs_of s tptr. snd r = TCBBound \<or>
+                                           snd r = TCBSchedContext \<or> snd r = TCBYieldTo}
+                         else state_refs_of s a)\<rbrace>"
+  apply (simp add: maybe_donate_sc_def)
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (case_tac sc_opt; simp)
+   apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
+   apply (case_tac x)
+    apply (clarsimp simp: maybeM_def)
+    apply wpsimp
+   apply (clarsimp simp: maybeM_def)
+   apply (rule hoare_seq_ext[OF _ gsct_sp])
+   apply (case_tac sc_tcb)
+    apply (simp add: sched_context_donate_def)
+    apply (rule hoare_seq_ext[OF _ gsct_sp])
+    apply (case_tac from_opt)
+     apply wpsimp
+     apply (intro conjI)
+      apply (fastforce simp: sc_tcb_sc_at_def obj_at_def pred_tcb_at_def)
+     apply clarsimp
+     apply (rule delta_sym_refs, assumption)
+      apply (fastforce split: if_splits)
+     apply (clarsimp split: if_splits)
+      apply (frule pred_tcb_at_tcb_at)
+      apply (fastforce simp: state_refs_of_def obj_at_def get_refs_def2 pred_tcb_at_def
+                             tcb_st_refs_of_def
+                      split: thread_state.splits if_splits)
+     apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def state_refs_of_def get_refs_def2)
+    apply (wpsimp simp: sc_tcb_sc_at_def obj_at_def)
+   apply wpsimp
+  apply wpsimp
+  done
+
+lemma not_idle_tcb_in_waitingntfn:
+  "kheap s ntfnptr = Some (Notification ntfn) \<Longrightarrow> ntfn_obj ntfn = WaitingNtfn q \<Longrightarrow> valid_idle s
+   \<Longrightarrow> sym_refs (state_refs_of s) \<Longrightarrow> \<forall>t\<in>set q. t \<noteq> idle_thread s"
+  apply (clarsimp simp: sym_refs_def)
+  apply (erule_tac x = ntfnptr in allE)
+  apply (erule_tac x = "(idle_thread s, NTFNSignal)" in ballE)
+   apply (auto simp: state_refs_of_def valid_idle_def obj_at_def pred_tcb_at_def)
+  done
+
+lemma ex_nonz_cap_to_tcb_in_waitingntfn:
+  "kheap s ntfnptr = Some (Notification ntfn) \<Longrightarrow> ntfn_obj ntfn = WaitingNtfn q \<Longrightarrow> valid_objs s
+   \<Longrightarrow> sym_refs (state_refs_of s) \<Longrightarrow> if_live_then_nonz_cap s \<Longrightarrow> \<forall>t\<in>set q. ex_nonz_cap_to t s"
+  apply (erule (1) valid_objsE)
+  apply (clarsimp simp: valid_obj_def valid_ntfn_def)
+  apply (erule_tac x = t in ballE)
+   apply (clarsimp simp: sym_refs_def)
+   apply (erule_tac x = ntfnptr in allE)
+   apply (erule_tac x = "(t, NTFNSignal)" in ballE)
+    apply (auto simp: state_refs_of_def is_tcb get_refs_def2 live_def dest!: if_live_then_nonz_capD)
+  done
+
+lemma st_in_waitingntfn:
+  "kheap s ntfnptr = Some (Notification ntfn) \<Longrightarrow> ntfn_obj ntfn = WaitingNtfn q \<Longrightarrow> valid_objs s
+   \<Longrightarrow> sym_refs (state_refs_of s)
+   \<Longrightarrow> \<forall>t\<in>set q. st_tcb_at (\<lambda>x. x = BlockedOnNotification ntfnptr) t s"
+  apply (erule (1) valid_objsE)
+  apply (clarsimp simp: valid_obj_def valid_ntfn_def)
+  apply (erule_tac x = t in ballE)
+   apply (clarsimp simp: sym_refs_def)
+   apply (erule_tac x = ntfnptr in allE)
+   apply (erule_tac x = "(t, NTFNSignal)" in ballE)
+    apply (auto simp: state_refs_of_def is_tcb obj_at_def pred_tcb_at_def tcb_st_refs_of_def
+                      get_refs_def2
+               split: thread_state.splits if_splits)
+  done
+
 lemma update_waiting_invs:
-  notes if_split[split del]  hoare_pre [wp_pre del]
+  notes if_split[split del] hoare_pre [wp_pre del]
   shows
-  "\<lbrace>\<lambda>s. ko_at (Notification ntfn) ntfnptr s \<and> invs s
-     \<and> ntfn_obj ntfn = ntfn.WaitingNtfn q \<and> ntfn_bound_tcb ntfn = bound_tcb \<and>
-            ntfn_sc ntfn = sc \<and> (bound sc \<longrightarrow> ex_nonz_cap_to (the sc) s)\<rbrace>
-     update_waiting_ntfn ntfnptr q bound_tcb sc bdg
+  "\<lbrace>\<lambda>s. invs s \<and> ko_at (Notification ntfn) ntfnptr s
+        \<and> ntfn_obj ntfn = WaitingNtfn q \<and> ntfn_bound_tcb ntfn = bound_tcb \<and> ntfn_sc ntfn = sc
+        \<and> (bound sc \<longrightarrow> ex_nonz_cap_to (the sc) s)\<rbrace>
+   update_waiting_ntfn ntfnptr q bound_tcb sc bdg
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: update_waiting_ntfn_def)
   apply (rule hoare_seq_ext[OF _ assert_sp])
-
-   apply (wp |simp)+
-    apply (simp add: invs_def valid_state_def valid_pspace_def)
-    apply (wpsimp simp: wp: valid_irq_node_typ sts_only_idle)
-   apply (simp add: valid_tcb_state_def conj_comms)
-    apply (wpsimp simp: wp: valid_irq_node_typ)
-(*   apply (simp add: cte_wp_at_caps_of_state)
-
-   apply (wpsimp wp: set_simple_ko_valid_objs hoare_post_imp [OF disjI1] hoare_vcg_conj_lift)
-  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
-                        ep_redux_simps neq_Nil_conv
-                  cong: list.case_cong if_cong)
-  apply (frule(1) sym_refs_obj_atD, clarsimp simp: st_tcb_at_refs_of_rev)
-  apply (frule (1) if_live_then_nonz_capD)
-   apply (clarsimp simp: live_def)
-  apply (frule(1) st_tcb_ex_cap)
-   apply simp
-  apply (simp add: st_tcb_at_tcb_at)
-  apply (frule ko_at_state_refs_ofD)
-  apply (frule st_tcb_at_state_refs_ofD)
-  apply (erule(1) obj_at_valid_objsE)
-  apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def is_ntfn_def
-             split del: if_split)
-  apply (rule conjI, clarsimp simp: obj_at_def split: option.splits list.splits)
-  apply (rule conjI, clarsimp elim!: pred_tcb_weakenE)
-  apply (rule conjI, clarsimp dest!: idle_no_ex_cap)
-  apply (rule conjI, erule delta_sym_refs)
-    apply (clarsimp dest!: refs_in_ntfn_bound_refs
-                    split: if_split_asm if_split)
-   apply (simp only: tcb_bound_refs_eq_restr, simp)
-   apply (fastforce dest!: refs_in_ntfn_bound_refs symreftype_inverse'
-                  elim!: valid_objsE simp: valid_obj_def valid_ntfn_def obj_at_def is_tcb
-                 split: if_split_asm if_split)
-  apply (clarsimp elim!: pred_tcb_weakenE)
-  done *) sorry
-
+  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
+                  wp: valid_irq_node_typ sts_only_idle)
+   apply (wpsimp simp: valid_tcb_state_def conj_comms)
+   apply (wpsimp simp: maybe_donate_sc_def
+                   wp: hoare_vcg_conj_lift sym_refs_helper_update_waiting_invs)
+  apply (simp add: invs_def valid_state_def valid_pspace_def obj_at_def)
+  apply wpsimp
+        apply (rule hoare_conjI)
+         apply (wpsimp simp: set_simple_ko_def set_object_def get_object_def
+                       split: option.splits)
+         apply (fastforce simp: obj_at_def is_ntfn elim!: ex_cap_to_after_update)
+        apply (wpsimp wp: valid_irq_node_typ)
+                      defer
+                      apply (clarsimp simp: not_idle_tcb_in_waitingntfn
+                                            ex_nonz_cap_to_tcb_in_waitingntfn)+
+       apply (fastforce simp: live_def live_ntfn_def elim!: if_live_then_nonz_capD2)
+      apply (clarsimp simp: ex_nonz_cap_to_tcb_in_waitingntfn)
+     apply clarsimp+
+   apply (case_tac q; simp)
+   apply (fastforce simp: valid_obj_def valid_ntfn_def
+                   elim!: valid_objsE
+                   split: option.splits list.splits)
+  apply (rule valid_objsE, assumption+)
+  apply (clarsimp simp: valid_obj_def valid_ntfn_def)
+  apply (subgoal_tac "st_tcb_at (\<lambda>x. x = BlockedOnNotification ntfnptr) (hd q) s")
+   apply (case_tac q; simp)
+   apply (rule delta_sym_refs, assumption)
+    apply (fastforce simp: state_refs_of_def split: if_splits list.splits)
+   apply (fastforce simp: state_refs_of_def get_refs_def2 st_tcb_at_def obj_at_def
+                   split: if_splits list.splits)
+  apply (clarsimp simp: st_in_waitingntfn)
+  done
 
 
 lemma cancel_ipc_ex_nonz_tcb_cap:
@@ -2798,8 +2853,11 @@ lemma receive_ipc_cap_to[wp]:
 end
 
 lemma maybe_return_sc_cap_to[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> maybe_return_sc param_a param_b \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
-  sorry
+  "\<lbrace>ex_nonz_cap_to p\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
+  apply (wpsimp simp: maybe_return_sc_def set_tcb_obj_ref_def set_object_def get_tcb_obj_ref_def
+                      thread_get_def get_sk_obj_ref_def get_simple_ko_def get_object_def)
+  apply (auto simp: tcb_cap_cases_def intro!: ex_cap_to_after_update)
+  done
 
 lemma schedule_tcb_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
