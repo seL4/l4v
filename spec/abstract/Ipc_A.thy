@@ -352,7 +352,7 @@ where
      reply \<leftarrow> (case reply_cap of 
                  ReplyCap r \<Rightarrow> do
                    tptr \<leftarrow> get_reply_obj_ref reply_tcb r;
-                   when (tptr \<noteq> None \<and> the tptr \<noteq> thread) $ reply_clear_tcb (the tptr);
+                   when (tptr \<noteq> None \<and> the tptr \<noteq> thread) $ cancel_ipc (the tptr);
                    return (Some r)
                  od 
                | NullCap \<Rightarrow> return None
@@ -568,7 +568,8 @@ where
     recv_opt \<leftarrow> get_reply_tcb reply;
     swp maybeM recv_opt (\<lambda>receiver. do
       state \<leftarrow> get_thread_state receiver;
-      if (state = BlockedOnReply (Some reply)) then do
+      case state of BlockedOnReply r \<Rightarrow>
+      if r =(Some reply) then do
         reply_remove reply;
         fault \<leftarrow> thread_get tcb_fault receiver;
         case fault of
@@ -605,7 +606,8 @@ where
             od
          od
        od
-       else return ()
+       else fail
+    | _ \<Rightarrow> return ()
     od)
   od"
 
@@ -732,10 +734,8 @@ where
       tcb_sched_action tcb_sched_dequeue tcb_ptr;
       cur_sc \<leftarrow> gets cur_sc;
       when (cur_sc = sc_ptr) $ do
-        consumed \<leftarrow> gets consumed_time;
-        capacity \<leftarrow> refill_capacity sc_ptr consumed;
         result \<leftarrow> check_budget;
-        if result then commit_time else charge_budget capacity consumed False
+        when result $ commit_time
       od;
       st \<leftarrow> get_thread_state tcb_ptr;
       if 0 < sc_refill_max sc then do

@@ -321,7 +321,7 @@ where
       (when final $ do
           reply \<leftarrow> get_reply r;
           tptr \<leftarrow> return (reply_tcb reply);
-          when (tptr \<noteq> None) $ reply_clear_tcb r
+          when (tptr \<noteq> None) $ cancel_ipc (the tptr)
            od)"
 | "fast_finalise (EndpointCap r b R)     final =
       (when final $ cancel_all_ipc r)"
@@ -478,7 +478,7 @@ where
       (liftM (K (NullCap, NullCap)) $ when final $ do
          reply \<leftarrow> get_reply r;
          tptr \<leftarrow> return (reply_tcb reply);
-         when (tptr \<noteq> None) $ reply_clear_tcb r
+         when (tptr \<noteq> None) $ cancel_ipc (the tptr)
        od)"
 | "finalise_cap (EndpointCap r b R)      final =
       (liftM (K (NullCap, NullCap)) $ when final $ cancel_all_ipc r)"

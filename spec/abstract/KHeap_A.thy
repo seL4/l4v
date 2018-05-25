@@ -240,13 +240,21 @@ where
   od"
 
 definition
+  test_sc_refill_max :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "test_sc_refill_max sp \<equiv> (\<lambda>s.
+     case kheap s sp of
+       Some (SchedContext sc _) \<Rightarrow> (sc_refill_max sc > 0)
+     | _ \<Rightarrow> False)"
+
+definition
   is_schedulable_opt :: "obj_ref \<Rightarrow> bool \<Rightarrow> 'z::state_ext state \<Rightarrow> bool option"
-where 
+where
   "is_schedulable_opt tcb_ptr in_release_q \<equiv> \<lambda>s.
     case get_tcb tcb_ptr s of None \<Rightarrow> None | Some tcb \<Rightarrow>
       (case tcb_sched_context tcb of None => Some False
-       | Some sc_ptr => 
-           Some (runnable (tcb_state tcb)   (* FIXME *)
+       | Some sc_ptr =>
+           Some (runnable (tcb_state tcb) \<and> (test_sc_refill_max sc_ptr s)
            \<and> \<not>in_release_q))"
 
 definition reschedule_required :: "unit det_ext_monad" where

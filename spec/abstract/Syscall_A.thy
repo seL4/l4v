@@ -393,6 +393,8 @@ where
 
 | "handle_event Interrupt = (without_preemption $ do
     active \<leftarrow> do_machine_op $ getActiveIRQ False;
+    update_time_stamp;
+    check_budget;
     case active of
        Some irq \<Rightarrow> handle_interrupt irq
      | None \<Rightarrow> return ()
