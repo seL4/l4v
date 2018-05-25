@@ -2987,9 +2987,32 @@ lemma unbindMaybeNotification_tcb_at'[wp]:
   apply (wp gbn_wp' | wpc | simp)+
   done
 
+lemma dmo_nativeThreadUsingFPU_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (nativeThreadUsingFPU thread) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_nativeThreadUsingFPU no_irq)
+  apply clarsimp
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid[where P=P and Q="\<lambda>_. P" for P])
+    apply (simp add: nativeThreadUsingFPU_def machine_op_lift_def
+                     machine_rest_lift_def split_def | wp)+
+  done
+
+lemma dmo_switchFpuOwner_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (switchFpuOwner thread cpu) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_switchFpuOwner no_irq)
+  apply clarsimp
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid[where P=P and Q="\<lambda>_. P" for P])
+    apply (simp add: switchFpuOwner_def machine_op_lift_def
+                     machine_rest_lift_def split_def | wp)+
+  done
+
 crunch cte_wp_at'[wp]: prepareThreadDelete "cte_wp_at' P p"
 crunch valid_cap'[wp]: prepareThreadDelete "valid_cap' cap"
-crunch invs[wp]: prepareThreadDelete "invs'"
+crunch invs[wp]: prepareThreadDelete "invs'" (ignore: doMachineOp)
+crunch obj_at'[wp]: prepareThreadDelete
+  "\<lambda>s. P' (obj_at' P p s)"
+  (wp: hoare_whenE_wp simp: crunch_simps)
 
 end
 
@@ -3033,7 +3056,6 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
            | (rule hoare_strengthen_post [OF arch_finaliseCap_removeable[where slot=slot]],
                   clarsimp simp: isCap_simps)
            | wpc)+
-
   apply clarsimp
   apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
   apply (case_tac "cteCap cte",

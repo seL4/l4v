@@ -362,8 +362,32 @@ crunch valid_cap[wp]: prepare_thread_delete "valid_cap cap"
 crunch tcb_at[wp]: prepare_thread_delete "tcb_at p"
 crunch cte_wp_at[wp, Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (cte_wp_at P' p s)"
 crunch irq_node[wp, Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (interrupt_irq_node s)"
-crunch invs[wp]: prepare_thread_delete invs
 crunch caps_of_state[wp, Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (caps_of_state s)"
+
+crunch device_state_inv[wp]: nativeThreadUsingFPU, switchFpuOwner "\<lambda>ms. P (device_state ms)"
+
+lemma dmo_nativeThreadUsingFPU[wp]: "\<lbrace>invs\<rbrace> do_machine_op (nativeThreadUsingFPU thread) \<lbrace>\<lambda>y. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: nativeThreadUsingFPU_def machine_op_lift_def
+                            machine_rest_lift_def split_def | wp)+)[3]
+  apply (erule (1) use_valid[OF _ nativeThreadUsingFPU_irq_masks])
+  done
+
+lemma dmo_switchFpuOwner[wp]: "\<lbrace>invs\<rbrace> do_machine_op (switchFpuOwner thread cpu) \<lbrace>\<lambda>y. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: switchFpuOwner_def machine_op_lift_def
+                            machine_rest_lift_def split_def | wp)+)[3]
+  apply (erule (1) use_valid[OF _ switchFpuOwner_irq_masks])
+  done
+
+crunch invs[wp]: prepare_thread_delete invs
+  (ignore: do_machine_op)
 
 lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
   "\<lbrace>valid_cap cap\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>"
@@ -496,6 +520,16 @@ lemma suspend_unlive':
   apply wp
   apply (auto simp: pred_tcb_def2 live_def hyp_live_def dest: refs_of_live)
   done
+
+crunch obj_at[wp]: fpu_thread_delete
+  "\<lambda>s. P' (obj_at P p s)"
+  (wp: hoare_whenE_wp simp: crunch_simps)
+
+lemma (* fpu_thread_delete_no_cap_to_obj_ref *)[wp,Finalise_AI_asms]:
+  "\<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
+     fpu_thread_delete thread
+   \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref cap S\<rbrace>"
+  by (wpsimp simp: no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state)
 
 lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> valid_mdb s

@@ -1412,10 +1412,42 @@ lemma (in delete_one) suspend_corres:
   apply (clarsimp simp add: invs'_def valid_state'_def valid_queues_inQ_queues)
   done
 
+lemma no_fail_switchFpuOwner[wp]:
+  "no_fail \<top> (X64.switchFpuOwner thread cpu)"
+  by (simp add: X64.switchFpuOwner_def Arch.no_fail_machine_op_lift)
+
+lemma no_fail_nativeThreadUsingFPU[wp]:
+  "no_fail (\<top> and \<top>) (X64.nativeThreadUsingFPU thread)"
+  supply Collect_const[simp del]
+  apply (simp only: X64.nativeThreadUsingFPU_def)
+  apply (rule no_fail_bind)
+    apply (simp add: Arch.no_fail_machine_op_lift)
+   apply simp
+  apply wp
+  done
+
 lemma (in delete_one) prepareThreadDelete_corres:
   "corres dc (tcb_at t) (tcb_at' t)
         (prepare_thread_delete t) (ArchRetypeDecls_H.X64_H.prepareThreadDelete t)"
-  by (simp add: ArchVSpace_A.X64_A.prepare_thread_delete_def ArchRetype_H.X64_H.prepareThreadDelete_def)
+  apply (simp add: ArchVSpace_A.X64_A.prepare_thread_delete_def ArchRetype_H.X64_H.prepareThreadDelete_def
+                   ArchVSpace_A.X64_A.fpu_thread_delete_def ArchRetype_H.X64_H.fpuThreadDelete_def
+                   X64_H.fromPPtr_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[where r'="op ="])
+       apply clarsimp
+       apply (rule corres_when)
+        apply clarsimp
+       apply (rule corres_machine_op)
+       apply (rule corres_Id, rule refl, simp)
+       apply wpsimp
+      apply (rule corres_machine_op)
+      apply (rule corres_Id, rule refl, simp)
+      apply wpsimp
+     apply clarsimp
+     apply wpsimp
+    apply wpsimp
+   apply auto
+  done
 
 lemma no_refs_simple_strg':
   "st_tcb_at' simple' t s' \<and> P {} \<longrightarrow> st_tcb_at' (\<lambda>st. P (tcb_st_refs_of' st)) t s'"
@@ -2756,7 +2788,7 @@ lemma suspend_unqueued:
   apply (rule TrueI)
   done
 
-crunch unqueued: prepareThreadDelete "obj_at' (Not \<circ> tcbQueued) t"
+crunch unqueued: prepareThreadDelete "obj_at' (\<lambda>a. \<not> tcbQueued a) t"
 crunch inactive: prepareThreadDelete "st_tcb_at' (op = Inactive) t'"
 crunch nonq: prepareThreadDelete " \<lambda>s. \<forall>d p. t' \<notin> set (ksReadyQueues s (d, p))"
 

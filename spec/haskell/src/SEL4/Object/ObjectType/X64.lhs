@@ -386,9 +386,13 @@ Create an architecture-specific object.
 > --capUntypedSize (IOSpaceCap {}) = 0
 > --capUntypedSize (IOPageTableCap {}) = 1 `shiftL` 12
 
-
-No arch-specific thread deletion operations needed on X64 platform.
+Notify the FPU when deleting a thread, in case that thread is using the FPU
 
 > prepareThreadDelete :: PPtr TCB -> Kernel ()
-> prepareThreadDelete _ = return ()
+> prepareThreadDelete threadPtr = fpuThreadDelete threadPtr
+
+> fpuThreadDelete :: PPtr TCB -> Kernel ()
+> fpuThreadDelete threadPtr = do
+>     usingFpu <- doMachineOp $ nativeThreadUsingFPU (fromPPtr threadPtr)
+>     when usingFpu $ doMachineOp (switchFpuOwner 0 0)
 
