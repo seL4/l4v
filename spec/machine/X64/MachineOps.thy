@@ -220,7 +220,6 @@ definition
  "freeMemory ptr bits \<equiv>
   mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size  .e.  ptr + 2 ^ bits - 1]"
 
-
 section "User Monad"
 
 
@@ -268,6 +267,24 @@ where
 (* The FPU state is opaque; the null state is a constant snapshot taken after initialisation *)
 consts'
   FPUNullState :: fpu_state
+
+consts'
+  nativeThreadUsingFPU_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+  nativeThreadUsingFPU_val :: "machine_state \<Rightarrow> bool"
+definition
+  nativeThreadUsingFPU :: "machine_word \<Rightarrow> bool machine_monad"
+where
+  "nativeThreadUsingFPU thread_ptr \<equiv> do
+       machine_op_lift (nativeThreadUsingFPU_impl thread_ptr);
+       gets nativeThreadUsingFPU_val
+  od"
+
+consts'
+  switchFpuOwner_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+  switchFpuOwner :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+where
+  "switchFpuOwner new_owner cpu \<equiv> machine_op_lift (switchFpuOwner_impl new_owner cpu)"
 
 consts'
   initL2Cache_impl :: "unit machine_rest_monad"

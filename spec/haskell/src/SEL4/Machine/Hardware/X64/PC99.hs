@@ -144,6 +144,12 @@ invalidateTranslationSingleASID = error "Unimplemented"
 invalidateLocalPageStructureCacheASID :: PAddr -> Word64 -> IO ()
 invalidateLocalPageStructureCacheASID = error "Unimplemented"
 
+nativeThreadUsingFPU :: Word -> IO Bool
+nativeThreadUsingFPU = error "Unimplemented"
+
+switchFpuOwner :: Word -> Word -> IO ()
+switchFpuOwner = error "Unimplemented"
+
 getFaultAddress :: Ptr CallbackData -> IO VPtr
 getFaultAddress _ = error "Unimplemented" -- FIXME: should read CR2
 

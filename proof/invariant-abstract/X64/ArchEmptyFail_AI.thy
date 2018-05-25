@@ -155,7 +155,8 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slo
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits
-         forM_x_def empty_fail_mapM_x update_object_def)
+         forM_x_def empty_fail_mapM_x update_object_def
+   ignore: nativeThreadUsingFPU_impl switchFpuOwner_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: setRegister, setNextPC
 

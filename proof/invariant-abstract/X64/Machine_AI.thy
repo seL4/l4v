@@ -357,6 +357,15 @@ lemma no_irq_invalidateLocalPageStructureCacheASID:
 lemmas invalidateLocalPageStructureCacheASID_irq_masks =
   no_irq[OF no_irq_invalidateLocalPageStructureCacheASID]
 
+lemma no_irq_nativeThreadUsingFPU: "no_irq (nativeThreadUsingFPU thread)"
+  by (wp | clarsimp simp: nativeThreadUsingFPU_def)+
+
+lemma no_irq_switchFpuOwner: "no_irq (switchFpuOwner thread cpu)"
+  by (wp | clarsimp simp: switchFpuOwner_def)+
+
+lemmas nativeThreadUsingFPU_irq_masks = no_irq[OF no_irq_nativeThreadUsingFPU]
+lemmas switchFpuOwner_irq_masks = no_irq[OF no_irq_switchFpuOwner]
+
 lemma getActiveIRQ_le_maxIRQ':
   "\<lbrace>\<lambda>s. \<forall>irq > maxIRQ. irq_masks s irq\<rbrace>
     getActiveIRQ in_kernel
