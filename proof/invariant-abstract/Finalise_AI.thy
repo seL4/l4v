@@ -1309,7 +1309,7 @@ lemma (in Finalise_AI_3) finalise_cap_zombie_cap[wp]:
 
 lemma fast_finalise_st_tcb_at:
   assumes x: "P Inactive" shows
-  "\<lbrace>st_tcb_at P t and K (\<forall>st. active st \<longrightarrow> P st)\<rbrace>
+  "\<lbrace>st_tcb_at P t and invs and K (\<forall>st. active st \<longrightarrow> P st)\<rbrace>
      fast_finalise cap fin
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (rule hoare_gen_asm)
@@ -1320,7 +1320,7 @@ crunch st_tcb_at[wp]: empty_slot "st_tcb_at P t"
 
 lemma cap_delete_one_st_tcb_at:
   assumes x: "P Inactive" shows
-  "\<lbrace>st_tcb_at P t and K (\<forall>st. active st \<longrightarrow> P st)\<rbrace>
+  "\<lbrace>st_tcb_at P t and invs and K (\<forall>st. active st \<longrightarrow> P st)\<rbrace>
      cap_delete_one ptr
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
