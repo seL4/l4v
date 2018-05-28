@@ -3938,6 +3938,295 @@ lemma ensurePortOperationAllowed_ccorres:
   apply clarsimp
   by (auto dest!: cap_get_tag_isCap_unfolded_H_cap)
 
+(* FIXME: Move to Machine_C *)
+lemma in8_ccorres:
+  "ccorres (\<lambda>ar cr. ar = ucast cr) ret__unsigned_char_'
+        \<top>
+        (UNIV \<inter> {s. port_' s = port}) []
+           (doMachineOp (in8 port))
+           (Call in8_'proc)"
+  sorry
+
+lemma in16_ccorres:
+  "ccorres (\<lambda>ar cr. ar = ucast cr) ret__unsigned_short_'
+        \<top>
+        (UNIV \<inter> {s. port_' s = port}) []
+           (doMachineOp (in16 port))
+           (Call in16_'proc)"
+  sorry
+
+lemma in32_ccorres:
+  "ccorres (\<lambda>ar cr. ar = ucast cr) ret__unsigned_'
+        \<top>
+        (UNIV \<inter> {s. port_' s = port}) []
+           (doMachineOp (in32 port))
+           (Call in32_'proc)"
+  sorry
+
+lemma setMessageInfo_ksCurThread_ccorres:
+  "ccorres dc xfdc (tcb_at' thread and (\<lambda>s. ksCurThread s = thread))
+           (UNIV \<inter> \<lbrace>mi = message_info_to_H mi'\<rbrace>) hs
+           (setMessageInfo thread mi)
+           (\<acute>ret__unsigned_long :== CALL wordFromMessageInfo(mi');;
+            CALL setRegister(\<acute>ksCurThread,
+                             scast Kernel_C.msgInfoRegister,
+                             \<acute>ret__unsigned_long))"
+  unfolding setMessageInfo_def
+  apply (rule ccorres_guard_imp2)
+   apply ctac
+     apply simp
+     apply (ctac add: setRegister_ccorres)
+    apply wp
+   apply vcg
+  apply (simp add: X64_H.msgInfoRegister_def X64.msgInfoRegister_def
+                   Kernel_C.msgInfoRegister_def Kernel_C.RSI_def rf_sr_ksCurThread)
+  done
+
+lemma invokeX86PortIn8_ccorres:
+  notes Collect_const[simp del] dc_simp[simp del]
+  shows
+  "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (valid_objs' and valid_queues and ct_in_state' (op = Restart) and
+        (\<lambda>s. ksCurThread s = thread \<and> sch_act_wf (ksSchedulerAction s) s))
+       (UNIV \<inter> \<lbrace>\<acute>invLabel = scast Kernel_C.X86IOPortIn8\<rbrace>
+             \<inter> \<lbrace>\<acute>port = port\<rbrace>
+             \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>)
+       hs
+       (doE reply \<leftarrow> performX64PortInvocation (InvokeIOPort (IOPortInvocation port IOPortIn8));
+           liftE (replyOnRestart thread reply isCall) odE)
+       (Call invokeX86PortIn_'proc)"
+  apply (clarsimp simp: performX64PortInvocation_def portIn_def liftE_bindE bind_assoc
+                        Let_def replyOnRestart_def)
+  apply (cinit' lift: invLabel_' port_' call_')
+   apply (clarsimp simp: n_msgRegisters_def)
+   apply ccorres_rewrite
+   apply (rule ccorres_rhs_assoc)+
+   apply (ctac add: in8_ccorres)
+     apply csymbr
+     apply (clarsimp simp: liftE_def when_def replyFromKernel_def if_to_top_of_bind bind_assoc setMRs_single)
+     apply (rule ccorres_symb_exec_l[OF _ _ _ empty_fail_getThreadState])
+       apply (rule ccorres_if_lhs[OF _ ccorres_False[where P'=UNIV]])
+       apply (rule ccorres_if_lhs)
+        apply ccorres_rewrite
+        apply (rule ccorres_symb_exec_l[OF _ _ _ empty_fail_lookupIPCBuffer])
+          apply (rule ccorres_rhs_assoc)+
+          apply (ctac add: setRegister_ccorres)
+            apply (rule ccorres_rhs_assoc)+
+            apply (ctac add: setRegister_ccorres)
+              apply csymbr
+              apply csymbr
+              apply (rule ccorres_rhs_assoc2)
+              apply (ctac (no_vcg) add: setMessageInfo_ksCurThread_ccorres)
+                apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
+                apply (ctac (no_vcg) add: setThreadState_ccorres)
+                 apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+                 apply (rule allI, rule conseqPre, vcg)
+                 apply (clarsimp simp: return_def dc_def)
+                apply wpsimp+
+              apply (clarsimp simp: ThreadState_Running_def mask_def rf_sr_ksCurThread)
+             apply wpsimp
+            apply (vcg exspec=setRegister_modifies)
+           apply wpsimp
+          apply (vcg exspec=setRegister_modifies)
+         apply wpsimp
+        apply wpsimp
+       apply ccorres_rewrite
+       apply (ctac (no_vcg) add: setThreadState_ccorres)
+        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+        apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: return_def dc_def)
+       apply (wpsimp wp: gts_wp' hoare_vcg_all_lift hoare_drop_imps)
+      apply wpsimp
+     apply (wpsimp wp: gts_wp')
+    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift hoare_vcg_imp_lift')+
+   apply (vcg exspec=in8_modifies)
+  by (clarsimp simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def projectKOs
+                     ThreadState_Running_def mask_def rf_sr_ksCurThread
+                     X64_H.badgeRegister_def X64.badgeRegister_def "StrictC'_register_defs"
+                     X64.capRegister_def msgRegisters_unfold message_info_to_H_def
+                     msgRegisters_ccorres[where n=0, simplified n_msgRegisters_def,
+                                           simplified, symmetric])
+
+lemma invokeX86PortIn16_ccorres:
+  notes Collect_const[simp del] dc_simp[simp del]
+  shows
+  "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (valid_objs' and valid_queues and ct_in_state' (op = Restart) and
+        (\<lambda>s. ksCurThread s = thread \<and> sch_act_wf (ksSchedulerAction s) s))
+       (UNIV \<inter> \<lbrace>\<acute>invLabel = scast Kernel_C.X86IOPortIn16\<rbrace>
+             \<inter> \<lbrace>\<acute>port = port\<rbrace>
+             \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>)
+       hs
+       (doE reply \<leftarrow> performX64PortInvocation (InvokeIOPort (IOPortInvocation port IOPortIn16));
+           liftE (replyOnRestart thread reply isCall) odE)
+       (Call invokeX86PortIn_'proc)"
+  apply (clarsimp simp: performX64PortInvocation_def portIn_def liftE_bindE bind_assoc
+                        Let_def replyOnRestart_def)
+  apply (cinit' lift: invLabel_' port_' call_')
+   apply (clarsimp simp: n_msgRegisters_def arch_invocation_label_defs)
+   apply ccorres_rewrite
+   apply (rule ccorres_rhs_assoc)+
+   apply (ctac add: in16_ccorres)
+     apply csymbr
+     apply (clarsimp simp: liftE_def when_def replyFromKernel_def if_to_top_of_bind bind_assoc setMRs_single)
+     apply (rule ccorres_symb_exec_l[OF _ _ _ empty_fail_getThreadState])
+       apply (rule ccorres_if_lhs[OF _ ccorres_False[where P'=UNIV]])
+       apply (rule ccorres_if_lhs)
+        apply ccorres_rewrite
+        apply (rule ccorres_symb_exec_l[OF _ _ _ empty_fail_lookupIPCBuffer])
+          apply (rule ccorres_rhs_assoc)+
+          apply (ctac add: setRegister_ccorres)
+            apply (rule ccorres_rhs_assoc)+
+            apply (ctac add: setRegister_ccorres)
+              apply csymbr
+              apply csymbr
+              apply (rule ccorres_rhs_assoc2)
+              apply (ctac (no_vcg) add: setMessageInfo_ksCurThread_ccorres)
+                apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
+                apply (ctac (no_vcg) add: setThreadState_ccorres)
+                 apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+                 apply (rule allI, rule conseqPre, vcg)
+                 apply (clarsimp simp: return_def dc_def)
+                apply wpsimp+
+              apply (clarsimp simp: ThreadState_Running_def mask_def rf_sr_ksCurThread)
+             apply wpsimp
+            apply (vcg exspec=setRegister_modifies)
+           apply wpsimp
+          apply (vcg exspec=setRegister_modifies)
+         apply wpsimp
+        apply wpsimp
+       apply ccorres_rewrite
+       apply (ctac (no_vcg) add: setThreadState_ccorres)
+        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+        apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: return_def dc_def)
+       apply (wpsimp wp: gts_wp' hoare_vcg_all_lift hoare_drop_imps)
+      apply wpsimp
+     apply (wpsimp wp: gts_wp')
+    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift hoare_vcg_imp_lift')+
+   apply (vcg exspec=in16_modifies)
+  by (clarsimp simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def projectKOs
+                     ThreadState_Running_def mask_def rf_sr_ksCurThread
+                     X64_H.badgeRegister_def X64.badgeRegister_def "StrictC'_register_defs"
+                     X64.capRegister_def msgRegisters_unfold message_info_to_H_def
+                     msgRegisters_ccorres[where n=0, simplified n_msgRegisters_def,
+                                           simplified, symmetric])
+
+lemma invokeX86PortIn32_ccorres:
+  notes Collect_const[simp del] dc_simp[simp del]
+  shows
+  "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (valid_objs' and valid_queues and ct_in_state' (op = Restart) and
+        (\<lambda>s. ksCurThread s = thread \<and> sch_act_wf (ksSchedulerAction s) s))
+       (UNIV \<inter> \<lbrace>\<acute>invLabel = scast Kernel_C.X86IOPortIn32\<rbrace>
+             \<inter> \<lbrace>\<acute>port = port\<rbrace>
+             \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>)
+       hs
+       (doE reply \<leftarrow> performX64PortInvocation (InvokeIOPort (IOPortInvocation port IOPortIn32));
+           liftE (replyOnRestart thread reply isCall) odE)
+       (Call invokeX86PortIn_'proc)"
+  apply (clarsimp simp: performX64PortInvocation_def portIn_def liftE_bindE bind_assoc
+                        Let_def replyOnRestart_def)
+  apply (cinit' lift: invLabel_' port_' call_')
+   apply (clarsimp simp: n_msgRegisters_def arch_invocation_label_defs)
+   apply ccorres_rewrite
+   apply (ctac add: in32_ccorres)
+     apply (clarsimp simp: liftE_def when_def replyFromKernel_def if_to_top_of_bind bind_assoc setMRs_single)
+     apply (rule ccorres_symb_exec_l[OF _ _ _ empty_fail_getThreadState])
+       apply (rule ccorres_if_lhs[OF _ ccorres_False[where P'=UNIV]])
+       apply (rule ccorres_if_lhs)
+        apply ccorres_rewrite
+        apply (rule ccorres_symb_exec_l[OF _ _ _ empty_fail_lookupIPCBuffer])
+          apply (rule ccorres_rhs_assoc)+
+          apply (ctac add: setRegister_ccorres)
+            apply (rule ccorres_rhs_assoc)+
+            apply (ctac add: setRegister_ccorres)
+              apply csymbr
+              apply csymbr
+              apply (rule ccorres_rhs_assoc2)
+              apply (ctac (no_vcg) add: setMessageInfo_ksCurThread_ccorres)
+                apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
+                apply (ctac (no_vcg) add: setThreadState_ccorres)
+                 apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+                 apply (rule allI, rule conseqPre, vcg)
+                 apply (clarsimp simp: return_def dc_def)
+                apply wpsimp+
+              apply (clarsimp simp: ThreadState_Running_def mask_def rf_sr_ksCurThread)
+             apply wpsimp
+            apply (vcg exspec=setRegister_modifies)
+           apply wpsimp
+          apply (vcg exspec=setRegister_modifies)
+         apply wpsimp
+        apply wpsimp
+       apply ccorres_rewrite
+       apply (ctac (no_vcg) add: setThreadState_ccorres)
+        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+        apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: return_def dc_def)
+       apply (wpsimp wp: gts_wp' hoare_vcg_all_lift hoare_drop_imps)
+      apply wpsimp
+     apply (wpsimp wp: gts_wp')
+    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift hoare_vcg_imp_lift')+
+   apply (vcg exspec=in32_modifies)
+  by (clarsimp simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def projectKOs
+                     ThreadState_Running_def mask_def rf_sr_ksCurThread
+                     X64_H.badgeRegister_def X64.badgeRegister_def "StrictC'_register_defs"
+                     X64.capRegister_def msgRegisters_unfold message_info_to_H_def
+                     msgRegisters_ccorres[where n=0, simplified n_msgRegisters_def,
+                                           simplified, symmetric])
+
+lemma invokeX86PortControl_ccorres:
+  notes Collect_const[simp del]
+  shows
+  "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and cte_at' parent)
+       (UNIV \<inter> \<lbrace>\<acute>first_port = f\<rbrace> \<inter> \<lbrace>\<acute>last_port = l\<rbrace>
+             \<inter> \<lbrace>\<acute>ioportSlot = cte_Ptr dest\<rbrace>
+             \<inter> \<lbrace>\<acute>controlSlot = cte_Ptr src\<rbrace>)
+       hs
+       (performX64PortInvocation (InvokeIOPortControl (IOPortControlIssue f l dest src)))
+       (Call invokeX86PortControl_'proc)"
+  apply (clarsimp simp: isCap_simps performX64PortInvocation_def Let_def)
+  apply (cinit' lift: first_port_' last_port_' ioportSlot_' controlSlot_')
+   apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
+   apply (rule ccorres_Guard_Seq)
+  sorry (* invokeX86PortControl_ccorres *)
+
+lemma decodeIOPortControlInvocation_ccorres:
+  notes if_cong[cong]
+  assumes "interpret_excaps extraCaps' = excaps_map extraCaps"
+  assumes "isIOPortControlCap cp"
+  shows
+  "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
+              and (excaps_in_mem extraCaps \<circ> ctes_of)
+              and cte_wp_at' (diminished' (ArchObjectCap cp) \<circ> cteCap) slot
+              and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
+              and sysargs_rel args buffer and valid_objs')
+       (UNIV \<inter> {s. invLabel_' s = label}
+             \<inter> {s. unat (length___unsigned_long_' s) = length args}
+             \<inter> {s. slot_' s = cte_Ptr slot}
+             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
+             \<inter> {s. buffer_' s = option_to_ptr buffer}
+             \<inter> {s. call_' s = from_bool isCall}) []
+       (decodeX64PortInvocation label args slot cp (map fst extraCaps)
+              >>= invocationCatch thread isBlocking isCall InvokeArchObject)
+       (Call decodeX86PortControlInvocation_'proc)"
+proof -
+  from assms show ?thesis
+  supply Collect_const[simp del]
+  apply (clarsimp simp: isCap_simps decodeX64PortInvocation_def Let_def)
+  apply (cinit' lift: invLabel_' length___unsigned_long_' slot_' excaps_' cap_' buffer_' call_')
+   apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
+  sorry (* decodeX86PortControlInvocation_ccorres *)
+qed
+
+(* FIXME: move to Lib *)
+lemma length_Suc_0_conv:
+  "length x = Suc 0 = (\<exists>y. x = [y])"
+  by (induct x; clarsimp)
+
 lemma decodeIOPortInvocation_ccorres:
   notes if_cong[cong]
   assumes "interpret_excaps extraCaps' = excaps_map extraCaps"
@@ -3954,7 +4243,8 @@ lemma decodeIOPortInvocation_ccorres:
              \<inter> {s. slot_' s = cte_Ptr slot}
              \<inter> {s. excaps_' s = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
-             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+             \<inter> {s. buffer_' s = option_to_ptr buffer}
+             \<inter> {s. call_' s = from_bool isCall}) []
        (decodeX64PortInvocation label args slot cp (map fst extraCaps)
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeX86PortInvocation_'proc)"
@@ -3962,10 +4252,10 @@ proof -
   from assms show ?thesis
   supply Collect_const[simp del]
   apply (clarsimp simp: isCap_simps decodeX64PortInvocation_def Let_def)
-  apply (cinit' lift: invLabel_' length___unsigned_long_' slot_' excaps_' cap_' buffer_')
+  apply (cinit' lift: invLabel_' length___unsigned_long_' slot_' excaps_' cap_' buffer_' call_')
    apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule ccorres_Cond_rhs) (* IN invocations *)
-    apply (erule disjE)
+    apply (erule ccorres_disj_division)
      -- "In8"
        apply (clarsimp simp: invocation_eq_use_types cong: list.case_cong)
        apply (rule ccorres_rhs_assoc)+
@@ -3987,8 +4277,168 @@ proof -
             apply (clarsimp simp: injection_handler_returnOk ccorres_invocationCatch_Inr bindE_assoc returnOk_bind liftE_bindE)
             apply (ctac add: setThreadState_ccorres)
               apply (simp add: X64_H.performInvocation_def performInvocation_def returnOk_bind bindE_assoc)
-thm invocationCatch_def performX64PortInvocation_def
-  sorry (* decodeIOPortInvocation *)
+              apply (rule ccorres_nondet_refinement)
+               apply (rule is_nondet_refinement_bindE)
+                apply (rule is_nondet_refinement_refl)
+               apply (simp split: if_split)
+               apply (rule conjI[rotated], rule impI, rule is_nondet_refinement_refl)
+               apply (rule impI, rule is_nondet_refinement_alternative1)
+              apply (simp add: ucast_mask_drop[where n=16, simplified mask_def, simplified])
+              apply (rule ccorres_add_returnOk)
+              apply (ctac (no_vcg) add:invokeX86PortIn8_ccorres)
+                apply (rule ccorres_return_CE, simp+)[1]
+               apply (rule ccorres_return_C_errorE, simp+)[1]
+              apply wp
+             apply (wpsimp wp: ct_in_state'_set sts_running_valid_queues)
+            apply (simp add: Collect_const_mem intr_and_se_rel_def cintr_def exception_defs)
+            apply (vcg exspec=setThreadState_modifies)
+           apply clarsimp
+           apply ccorres_rewrite
+           apply (rule ccorres_return_C_errorE, simp+)[1]
+          apply (wpsimp wp: injection_wp_E[where f=Inl])
+         apply (vcg exspec=ensurePortOperationAllowed_modifies)
+        apply wpsimp
+       apply (vcg exspec=getSyscallArg_modifies)
+    apply (erule ccorres_disj_division)
+    -- "In16"
+       apply (clarsimp simp: invocation_eq_use_types cong: list.case_cong)
+       apply (rule ccorres_rhs_assoc)+
+       apply (rule ccorres_Cond_rhs_Seq) (* length error *)
+        apply (clarsimp simp: throwError_bind invocationCatch_def)
+        apply ccorres_rewrite
+        apply (rule syscall_error_throwError_ccorres_n)
+        apply (clarsimp simp: syscall_error_to_H_cases)
+       apply (case_tac args; clarsimp simp: unat_gt_0[symmetric])
+       apply (rule ccorres_add_return,
+                 ctac add: getSyscallArg_ccorres_foo[where args=args and buffer=buffer and n=0])
+         apply csymbr
+         apply ccorres_rewrite
+         apply (clarsimp simp: invocationCatch_use_injection_handler injection_bindE[OF refl refl]
+                               injection_handler_If injection_handler_throwError
+                               injection_liftE[OF refl] injection_handler_returnOk bindE_assoc)
+        apply (ctac add: ccorres_injection_handler_csum1 [OF ensurePortOperationAllowed_ccorres])
+           apply (clarsimp, ccorres_rewrite)
+           apply (clarsimp simp: injection_handler_returnOk ccorres_invocationCatch_Inr bindE_assoc returnOk_bind liftE_bindE)
+           apply (ctac add: setThreadState_ccorres)
+             apply (simp add: X64_H.performInvocation_def performInvocation_def returnOk_bind bindE_assoc)
+             apply (rule ccorres_nondet_refinement)
+              apply (rule is_nondet_refinement_bindE)
+               apply (rule is_nondet_refinement_refl)
+              apply (simp split: if_split)
+              apply (rule conjI[rotated], rule impI, rule is_nondet_refinement_refl)
+             apply (rule impI, rule is_nondet_refinement_alternative1)
+             apply (simp add: ucast_mask_drop[where n=16, simplified mask_def, simplified])
+             apply (rule ccorres_add_returnOk)
+             apply (ctac (no_vcg) add:invokeX86PortIn16_ccorres)
+               apply (rule ccorres_return_CE, simp+)[1]
+              apply (rule ccorres_return_C_errorE, simp+)[1]
+             apply wp
+            apply (wpsimp wp: ct_in_state'_set sts_running_valid_queues)
+           apply (simp add: Collect_const_mem intr_and_se_rel_def cintr_def exception_defs)
+           apply (vcg exspec=setThreadState_modifies)
+          apply clarsimp
+          apply ccorres_rewrite
+          apply (rule ccorres_return_C_errorE, simp+)[1]
+         apply (wpsimp wp: injection_wp_E[where f=Inl])
+        apply (vcg exspec=ensurePortOperationAllowed_modifies)
+       apply wpsimp
+      apply (vcg exspec=getSyscallArg_modifies)
+    -- "In32"
+       apply (clarsimp simp: invocation_eq_use_types cong: list.case_cong)
+       apply (rule ccorres_rhs_assoc)+
+       apply (rule ccorres_Cond_rhs_Seq) (* length error *)
+        apply (clarsimp simp: throwError_bind invocationCatch_def)
+        apply ccorres_rewrite
+        apply (rule syscall_error_throwError_ccorres_n)
+        apply (clarsimp simp: syscall_error_to_H_cases)
+       apply (case_tac args; clarsimp simp: unat_gt_0[symmetric])
+       apply (rule ccorres_add_return,
+                 ctac add: getSyscallArg_ccorres_foo[where args=args and buffer=buffer and n=0])
+         apply csymbr
+         apply ccorres_rewrite
+         apply (clarsimp simp: invocationCatch_use_injection_handler injection_bindE[OF refl refl]
+                               injection_handler_If injection_handler_throwError
+                               injection_liftE[OF refl] injection_handler_returnOk bindE_assoc)
+        apply (ctac add: ccorres_injection_handler_csum1 [OF ensurePortOperationAllowed_ccorres])
+           apply (clarsimp, ccorres_rewrite)
+           apply (clarsimp simp: injection_handler_returnOk ccorres_invocationCatch_Inr bindE_assoc returnOk_bind liftE_bindE)
+           apply (ctac add: setThreadState_ccorres)
+             apply (simp add: X64_H.performInvocation_def performInvocation_def returnOk_bind bindE_assoc)
+             apply (rule ccorres_nondet_refinement)
+              apply (rule is_nondet_refinement_bindE)
+               apply (rule is_nondet_refinement_refl)
+              apply (simp split: if_split)
+              apply (rule conjI[rotated], rule impI, rule is_nondet_refinement_refl)
+             apply (rule impI, rule is_nondet_refinement_alternative1)
+             apply (simp add: ucast_mask_drop[where n=16, simplified mask_def, simplified])
+             apply (rule ccorres_add_returnOk)
+             apply (ctac (no_vcg) add:invokeX86PortIn32_ccorres)
+               apply (rule ccorres_return_CE, simp+)[1]
+              apply (rule ccorres_return_C_errorE, simp+)[1]
+             apply wp
+            apply (wpsimp wp: ct_in_state'_set sts_running_valid_queues)
+           apply (simp add: Collect_const_mem intr_and_se_rel_def cintr_def exception_defs)
+           apply (vcg exspec=setThreadState_modifies)
+          apply clarsimp
+          apply ccorres_rewrite
+          apply (rule ccorres_return_C_errorE, simp+)[1]
+         apply (wpsimp wp: injection_wp_E[where f=Inl])
+        apply (vcg exspec=ensurePortOperationAllowed_modifies)
+       apply wpsimp
+      apply (vcg exspec=getSyscallArg_modifies)
+   apply clarsimp
+   apply (rule ccorres_Cond_rhs) (* OUT invocations *)
+    apply (erule ccorres_disj_division) using [[goals_limit=1]]
+    -- "Out8"
+       apply (clarsimp simp: invocation_eq_use_types cong: list.case_cong)
+       apply (rule ccorres_rhs_assoc)+
+       apply (rule ccorres_Cond_rhs_Seq) (* length error *)
+        apply (rule ccorres_equals_throwError)
+         apply (drule x_less_2_0_1, erule disjE;
+                    clarsimp simp: throwError_bind invocationCatch_def length_Suc_0_conv
+                            dest!: sym[where s="Suc 0"];
+                    fastforce)
+        apply ccorres_rewrite
+        apply (rule syscall_error_throwError_ccorres_n)
+        apply (clarsimp simp: syscall_error_to_H_cases)
+       apply (subgoal_tac "\<exists>x xa xs. args = x#xa#xs")
+        prefer 2
+        apply (case_tac args; clarsimp simp: not_less unat_eq_0)
+        apply (case_tac list; clarsimp simp: unat_eq_1 word_le_not_less)
+       apply clarsimp
+       apply (rule ccorres_add_return,
+                 ctac add: getSyscallArg_ccorres_foo[where args=args and buffer=buffer and n=0])
+         apply csymbr
+         apply (rule ccorres_add_return,
+                 ctac add: getSyscallArg_ccorres_foo[where args=args and buffer=buffer and n=1])
+           apply csymbr
+         apply ccorres_rewrite
+         apply (clarsimp simp: invocationCatch_use_injection_handler injection_bindE[OF refl refl]
+                               injection_handler_If injection_handler_throwError
+                               injection_liftE[OF refl] injection_handler_returnOk bindE_assoc)
+           apply (ctac add: ccorres_injection_handler_csum1 [OF ensurePortOperationAllowed_ccorres])
+           apply (clarsimp, ccorres_rewrite)
+           apply (clarsimp simp: injection_handler_returnOk ccorres_invocationCatch_Inr bindE_assoc returnOk_bind liftE_bindE)
+           apply (ctac add: setThreadState_ccorres)
+             apply (simp add: X64_H.performInvocation_def performInvocation_def returnOk_bind bindE_assoc)
+             apply (simp add: ucast_mask_drop[where n=16, simplified mask_def, simplified])
+thm ccorres_alternative2
+  sorry (*
+             apply (ctac (no_vcg) add:invokeX86PortIn32_ccorres)
+               apply (rule ccorres_return_CE, simp+)[1]
+              apply (rule ccorres_return_C_errorE, simp+)[1]
+             apply wp
+            apply (wpsimp wp: ct_in_state'_set sts_running_valid_queues)
+           apply (simp add: Collect_const_mem intr_and_se_rel_def cintr_def exception_defs)
+           apply (vcg exspec=setThreadState_modifies)
+          apply clarsimp
+          apply ccorres_rewrite
+          apply (rule ccorres_return_C_errorE, simp+)[1]
+         apply (wpsimp wp: injection_wp_E[where f=Inl])
+        apply (vcg exspec=ensurePortOperationAllowed_modifies)
+       apply wpsimp
+      apply (vcg exspec=getSyscallArg_modifies)
+  sorry (* decodeIOPortInvocation *) *)
 qed
 
 
