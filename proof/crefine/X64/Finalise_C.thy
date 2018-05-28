@@ -2399,6 +2399,23 @@ lemma Arch_finaliseCap_ccorres:
                  Let_def isCap_simps cap_get_tag_isCap_ArchObject
            split: cap_CL.splits if_split_asm)
 
+lemma fpuThreadDelete_ccorres:
+  "ccorres dc xfdc
+     (invs' and tcb_at' thread)
+     (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}) hs
+   (fpuThreadDelete thread) (Call fpuThreadDelete_'proc)"
+  supply Collect_const[simp del] dc_simp[simp del]
+  apply (cinit lift: thread_')
+   apply clarsimp
+   apply (ctac (no_vcg) add: nativeThreadUsingFPU_ccorres)
+    apply clarsimp
+    apply (rule ccorres_when[where R=\<top>])
+     apply fastforce
+    apply (ctac add: switchFpuOwner_ccorres)
+   apply wpsimp
+  apply fastforce
+  done
+
 lemma prepareThreadDelete_ccorres:
   "ccorres dc xfdc
      (invs' and tcb_at' thread)
@@ -2406,32 +2423,9 @@ lemma prepareThreadDelete_ccorres:
    (prepareThreadDelete thread) (Call Arch_prepareThreadDelete_'proc)"
   supply dc_simp[simp del]
   apply (cinit lift: thread_', rename_tac cthread)
-thm fpuThreadDelete_body_def nativeThreadUsingFPU_body_def
-  sorry (* FIXME x64: FPU stuff
-   apply (rule ccorres_move_c_guard_tcb)
-   apply (rule ccorres_pre_archThreadGet, rename_tac vcpuopt)
-   apply simp
-   apply (rule_tac Q="valid_objs' and
-                      no_0_obj'   and
-                      obj_at' (\<lambda>tcb. atcbVCPUPtr (tcbArch tcb) = vcpuopt) thread"
-               and Q'=UNIV  and C'="{s. vcpuopt \<noteq> None}" in ccorres_rewrite_cond_sr)
-    apply clarsimp
-    apply (drule (1) obj_at_cslift_tcb)
-    apply (fastforce simp: typ_heap_simps ctcb_relation_def carch_tcb_relation_def
-                           option_to_ptr_NULL_eq
-                     dest: ko_at'_tcb_vcpu_not_NULL
-                    split: option.splits)
-   apply (wpc ; clarsimp ; ccorres_rewrite)
-    apply (rule ccorres_return_Skip)
-   apply (rule ccorres_move_c_guard_tcb)
-   apply (ctac add: dissociateVCPUTCB_tcb_ccorres)
-  apply (clarsimp simp: invs_valid_pspace')
-  apply (rule conjI; clarsimp simp: typ_heap_simps)
-   apply (rule conjI)
-    apply (clarsimp simp: invs'_def valid_pspace'_def valid_state'_def)
-    apply (clarsimp simp: invs'_def valid_pspace'_def valid_state'_def obj_at'_def)
-  apply (clarsimp simp: typ_heap_simps ctcb_relation_def carch_tcb_relation_def)
-  done *)
+   apply (ctac add: fpuThreadDelete_ccorres)
+  apply fastforce
+  done
 
 lemma finaliseCap_ccorres:
   "\<And>final.
