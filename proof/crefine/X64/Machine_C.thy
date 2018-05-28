@@ -125,6 +125,48 @@ assumes ackInterrupt_ccorres:
            (doMachineOp (ackInterrupt irq))
            (Call ackInterrupt_'proc)"
 
+assumes in8_ccorres:
+  "ccorres (\<lambda>ar cr. ar = ucast cr) ret__unsigned_char_'
+        \<top>
+        (UNIV \<inter> {s. port_' s = port}) []
+           (doMachineOp (in8 port))
+           (Call in8_'proc)"
+
+assumes in16_ccorres:
+  "ccorres (\<lambda>ar cr. ar = ucast cr) ret__unsigned_short_'
+        \<top>
+        (UNIV \<inter> {s. port_' s = port}) []
+           (doMachineOp (in16 port))
+           (Call in16_'proc)"
+
+assumes in32_ccorres:
+  "ccorres (\<lambda>ar cr. ar = ucast cr) ret__unsigned_'
+        \<top>
+        (UNIV \<inter> {s. port_' s = port}) []
+           (doMachineOp (in32 port))
+           (Call in32_'proc)"
+
+assumes out8_ccorres:
+  "ccorres dc xfdc
+         \<top>
+        (UNIV \<inter> {s. port_' s = port} \<inter> {s. value___unsigned_char_' s = ucast dat}) []
+           (doMachineOp (out8 port dat))
+           (Call out8_'proc)"
+
+assumes out16_ccorres:
+  "ccorres dc xfdc
+         \<top>
+        (UNIV \<inter> {s. port_' s = port} \<inter> {s. value___unsigned_short_' s = ucast dat16}) []
+           (doMachineOp (out16 port dat16))
+           (Call out16_'proc)"
+
+assumes out32_ccorres:
+  "ccorres dc xfdc
+         \<top>
+        (UNIV \<inter> {s. port_' s = port} \<inter> {s. value___unsigned_' s = ucast dat32}) []
+           (doMachineOp (out32 port dat32))
+           (Call out32_'proc)"
+
 context kernel_m begin
 
 lemma index_xf_for_sequence:
