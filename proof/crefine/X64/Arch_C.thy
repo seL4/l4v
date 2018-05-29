@@ -4433,7 +4433,7 @@ proof -
       apply (vcg exspec=getSyscallArg_modifies)
    apply clarsimp
    apply (rule ccorres_Cond_rhs) (* OUT invocations *)
-    apply (erule ccorres_disj_division) using [[goals_limit=1]]
+    apply (erule ccorres_disj_division)
     -- "Out8"
      apply (clarsimp simp: invocation_eq_use_types cong: list.case_cong)
      apply (rule ccorres_rhs_assoc)+
@@ -4458,8 +4458,9 @@ proof -
         apply (clarsimp simp: invocationCatch_use_injection_handler injection_bindE[OF refl refl]
                             injection_handler_If injection_handler_throwError
                             injection_liftE[OF refl] injection_handler_returnOk bindE_assoc)
+        apply (rule ccorres_rhs_assoc)+
         apply (ctac add: ccorres_injection_handler_csum1 [OF ensurePortOperationAllowed_ccorres])
-           apply (clarsimp, ccorres_rewrite)
+           apply (clarsimp, ccorres_rewrite, csymbr)
            apply (clarsimp simp: injection_handler_returnOk ccorres_invocationCatch_Inr bindE_assoc returnOk_bind liftE_bindE)
            apply (ctac add: setThreadState_ccorres)
              apply (simp add: X64_H.performInvocation_def performInvocation_def returnOk_bind bindE_assoc)
@@ -4474,7 +4475,7 @@ proof -
               apply (vcg exspec=invokeX86PortOut_modifies)
              apply (wp sts_invs_minor')
             apply (vcg exspec=setThreadState_modifies)
-           apply (clarsimp, ccorres_rewrite)
+           apply (clarsimp, ccorres_rewrite, csymbr)
            apply (rule ccorres_return_C_errorE, simp+)[1]
           apply (wpsimp wp: injection_wp_E[where f=Inl])
          apply (vcg exspec=ensurePortOperationAllowed_modifies)
@@ -4507,8 +4508,9 @@ proof -
         apply (clarsimp simp: invocationCatch_use_injection_handler injection_bindE[OF refl refl]
                             injection_handler_If injection_handler_throwError
                             injection_liftE[OF refl] injection_handler_returnOk bindE_assoc)
+        apply (rule ccorres_rhs_assoc)+
         apply (ctac add: ccorres_injection_handler_csum1 [OF ensurePortOperationAllowed_ccorres])
-           apply (clarsimp, ccorres_rewrite)
+           apply (clarsimp, ccorres_rewrite, csymbr)
            apply (clarsimp simp: injection_handler_returnOk ccorres_invocationCatch_Inr bindE_assoc returnOk_bind liftE_bindE)
            apply (ctac add: setThreadState_ccorres)
              apply (simp add: X64_H.performInvocation_def performInvocation_def returnOk_bind bindE_assoc)
@@ -4523,7 +4525,7 @@ proof -
              apply (vcg exspec=invokeX86PortOut_modifies)
             apply (wp sts_invs_minor')
            apply (vcg exspec=setThreadState_modifies)
-          apply (clarsimp, ccorres_rewrite)
+          apply (clarsimp, ccorres_rewrite, csymbr)
           apply (rule ccorres_return_C_errorE, simp+)[1]
          apply (wpsimp wp: injection_wp_E[where f=Inl])
         apply (vcg exspec=ensurePortOperationAllowed_modifies)
@@ -4555,8 +4557,9 @@ proof -
         apply (clarsimp simp: invocationCatch_use_injection_handler injection_bindE[OF refl refl]
                             injection_handler_If injection_handler_throwError
                             injection_liftE[OF refl] injection_handler_returnOk bindE_assoc)
+        apply (rule ccorres_rhs_assoc)+
         apply (ctac add: ccorres_injection_handler_csum1 [OF ensurePortOperationAllowed_ccorres])
-           apply (clarsimp, ccorres_rewrite)
+           apply (clarsimp, ccorres_rewrite, csymbr)
            apply (clarsimp simp: injection_handler_returnOk ccorres_invocationCatch_Inr bindE_assoc returnOk_bind liftE_bindE)
            apply (ctac add: setThreadState_ccorres)
              apply (simp add: X64_H.performInvocation_def performInvocation_def returnOk_bind bindE_assoc)
@@ -4571,7 +4574,7 @@ proof -
              apply (vcg exspec=invokeX86PortOut_modifies)
             apply (wp sts_invs_minor')
            apply (vcg exspec=setThreadState_modifies)
-          apply (clarsimp, ccorres_rewrite)
+          apply (clarsimp, ccorres_rewrite, csymbr)
           apply (rule ccorres_return_C_errorE, simp+)[1]
          apply (wpsimp wp: injection_wp_E[where f=Inl])
         apply (vcg exspec=ensurePortOperationAllowed_modifies)
@@ -4584,15 +4587,15 @@ proof -
     apply (fastforce simp: throwError_bind invocationCatch_def
                     split: invocation_label.splits arch_invocation_label.splits)
    apply (rule syscall_error_throwError_ccorres_n)
-   apply (clarsimp simp: syscall_error_to_H_cases) using [[goals_limit=10]]
+   apply (clarsimp simp: syscall_error_to_H_cases)
   apply (clarsimp simp: arch_invocation_label_defs sysargs_rel_to_n valid_tcb_state'_def tcb_at_invs'
                         invs_queues invs_sch_act_wf' ct_active_st_tcb_at_minor' rf_sr_ksCurThread
                         ThreadState_Restart_def mask_def
                         ucast_mask_drop[where n=16, simplified mask_def, simplified])
-apply (safe, simp_all add: unat_eq_0 unat_eq_1)
-apply (clarsimp dest!: unat_length_2_helper simp: ThreadState_Restart_def mask_def)+
-
-  sorry (* decodeIOPortInvocation, needs small C change *)
+  apply (safe, simp_all add: unat_eq_0 unat_eq_1)
+         apply (clarsimp dest!: unat_length_2_helper simp: ThreadState_Restart_def mask_def syscall_error_rel_def
+                                | (thin_tac "P" for P)+, word_bitwise)+
+  done
 qed
 
 
