@@ -1377,40 +1377,12 @@ lemma do_nbrecv_failed_transfer_state_refs_of[wp]:
 
 crunch st_tcb_at_runnable[wp]: do_nbrecv_failed_transfer "st_tcb_at runnable t"
 
-(*RT FIXME: move *)
-lemma sc_unbind_ntfn_invs[wp]:
-  "\<lbrace>invs\<rbrace> sched_context_unbind_ntfn ptr \<lbrace>\<lambda>_. invs\<rbrace>"
-  sorry
-
-(*RT FIXME: move *)
-lemma sc_maybe_unbind_ntfn_invs[wp]:
-  "\<lbrace>invs\<rbrace> sched_context_maybe_unbind_ntfn ptr \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (wpsimp simp: sched_context_maybe_unbind_ntfn_def get_sk_obj_ref_def wp: get_sc_obj_ref_inv)
-
-(*RT FIXME: move *)
-lemma reply_clear_tcb_invs[wp]:
-  "\<lbrace>invs\<rbrace> reply_clear_tcb ptr \<lbrace>\<lambda>_. invs\<rbrace>"
-  sorry
-
-(*RT FIXME: move *)
-lemma sc_unbind_yield_from_invs[wp]:
-  "\<lbrace>invs\<rbrace> sched_context_unbind_yield_from ptr \<lbrace>\<lambda>_. invs\<rbrace>"
-  sorry
-
-(*RT FIXME: move *)
-lemma sched_context_unbind_all_tcbs_invs[wp]:
-  "\<lbrace>invs\<rbrace> sched_context_unbind_all_tcbs ptr \<lbrace>\<lambda>_. invs\<rbrace>"
-  sorry
-
-(*RT FIXME: move *)
-lemma sched_context_clear_replies_invs[wp]:
-  "\<lbrace>invs\<rbrace> sched_context_clear_replies ptr \<lbrace>\<lambda>_. invs\<rbrace>"
-  sorry
-
 lemma fast_finalise_sym_refs:
   "\<lbrace>invs\<rbrace> fast_finalise cap final \<lbrace>\<lambda>y s. sym_refs (state_refs_of s)\<rbrace>"
   apply (cases cap; clarsimp simp: when_def)
-     apply (wp cancel_all_signals_invs cancel_all_ipc_invs unbind_maybe_notification_invs get_simple_ko_wp
+     apply (wp cancel_all_signals_invs cancel_all_ipc_invs unbind_maybe_notification_invs
+               cancel_ipc_invs sched_context_unbind_yield_from_invs get_simple_ko_wp
+               sched_context_clear_replies_invs
              | strengthen invs_sym_refs
              | clarsimp)+
   done

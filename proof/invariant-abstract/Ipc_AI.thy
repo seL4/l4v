@@ -2212,10 +2212,8 @@ lemma cancel_ipc_ex_nonz_tcb_cap:
               del: split_paired_Ex)
   apply (wp cancel_ipc_caps_of_state)
   apply (clarsimp simp del: split_paired_Ex split_paired_All)
-  apply (intro conjI allI impI)
    apply (rule_tac x="(a, b)" in exI)
    apply (clarsimp simp: cte_wp_at_caps_of_state can_fast_finalise_def)
-  apply fastforce
   done
 
 
@@ -2259,8 +2257,6 @@ lemma cancel_ipc_cte_wp_at_not_reply_state:
   apply (simp add: cancel_ipc_def)
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (case_tac state; wpsimp)
-  apply (wp hoare_pre_cont)
-  apply (clarsimp simp: st_tcb_at_def obj_at_def)
   done
 
 crunch idle[wp]: cancel_ipc "\<lambda>s. P (idle_thread s)"

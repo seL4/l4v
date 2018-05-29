@@ -1826,7 +1826,7 @@ lemma unbind_notification_valid_etcbs[wp]:
   by (wpsimp wp: hoare_drop_imps valid_etcbs_lift
       simp: unbind_notification_def set_tcb_obj_ref_def get_sk_obj_ref_def)
 
-crunch valid_sched[wp]: reply_clear_tcb valid_sched
+crunch valid_sched[wp]: reply_unlink_tcb valid_sched
   (simp: wp: maybeM_inv get_simple_ko_wp ignore: set_object)
 
 context DetSchedSchedule_AI begin

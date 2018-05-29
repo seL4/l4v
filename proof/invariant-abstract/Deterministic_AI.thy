@@ -4011,10 +4011,6 @@ lemma reply_remove_tcb_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> reply_remove_tcb r \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: reply_remove_tcb_def wp: gts_inv hoare_vcg_all_lift hoare_drop_imp)
 
-lemma reply_clear_tcb_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> reply_clear_tcb r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: reply_clear_tcb_def wp: gts_inv hoare_drop_imp)
-
 crunch all_but_exst[wp]: possible_switch_to "all_but_exst P"
 
 interpretation possible_switch_toe_extended: is_extended "possible_switch_to a"
@@ -4090,19 +4086,6 @@ lemma sched_context_unbind_yield_from_valid_list[wp]:
 lemma cancel_all_ipc_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> cancel_all_ipc r \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: cancel_all_ipc_def wp: mapM_x_wp' hoare_drop_imp)
-
-crunch valid_list[wp]: cancel_all_ipc valid_list
-  (wp: crunch_wps maybeM_inv dxo_wp_weak mapM_x_wp set_object_def simp: valid_list_2_def ignore: set_object)
-
-lemma fast_finalise_valid_list[wp]: "\<lbrace>valid_list\<rbrace> fast_finalise c b \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  unfolding reply_cancel_ipc_def
-  by (case_tac c; wpsimp wp: select_wp hoare_drop_imps thread_set_mdb)
-
-crunch valid_list[wp]: fast_finalise valid_list
-  (wp: crunch_wps maybeM_inv dxo_wp_weak mapM_x_wp hoare_drop_imp simp: valid_list_2_def set_object_def ignore: set_object)
-
-lemma cap_delete_one_valid_list[wp]: "\<lbrace>valid_list\<rbrace> cap_delete_one a \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  unfolding cap_delete_one_def by (wpsimp simp: unless_def)
 
 crunch valid_list[wp]: thread_set valid_list
 
@@ -4334,6 +4317,17 @@ crunch valid_list[wp]: blocked_cancel_ipc,cancel_signal "valid_list"
 lemma cancel_ipc_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> cancel_ipc tp \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: cancel_ipc_def wp: hoare_drop_imp get_sched_context_wp)
+
+lemma fast_finalise_valid_list[wp]: "\<lbrace>valid_list\<rbrace> fast_finalise c b \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  unfolding reply_cancel_ipc_def
+  by (case_tac c; wpsimp wp: select_wp hoare_drop_imps thread_set_mdb)
+
+crunch valid_list[wp]: fast_finalise valid_list
+  (wp: crunch_wps maybeM_inv dxo_wp_weak mapM_x_wp hoare_drop_imp simp: valid_list_2_def set_object_def ignore: set_object)
+
+lemma cap_delete_one_valid_list[wp]: "\<lbrace>valid_list\<rbrace> cap_delete_one a \<lbrace>\<lambda>_.valid_list\<rbrace>"
+  unfolding cap_delete_one_def by (wpsimp simp: unless_def)
+
 
 lemma restart_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> restart t \<lbrace>\<lambda>_.valid_list\<rbrace>"

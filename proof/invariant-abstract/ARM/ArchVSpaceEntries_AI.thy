@@ -458,7 +458,7 @@ crunch valid_pdpt_objs[wp]: send_ipc, send_signal "valid_pdpt_objs"
   (wp: transfer_caps_loop_pres)
 
 crunch valid_pdpt_objs[wp]: cancel_all_ipc, cancel_all_signals, unbind_maybe_notification,
-sched_context_maybe_unbind_ntfn, reply_clear_tcb, sched_context_clear_replies,
+sched_context_maybe_unbind_ntfn, reply_unlink_tcb, sched_context_clear_replies,
 sched_context_unbind_all_tcbs "valid_pdpt_objs"
   (wp: maybeM_inv hoare_drop_imp mapM_x_wp' ignore: tcb_release_remove)
 

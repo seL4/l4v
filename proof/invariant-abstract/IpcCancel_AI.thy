@@ -1309,9 +1309,15 @@ lemma reply_remove_bound_tcb_at [wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> reply_remove rptr \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   by (wpsimp simp: reply_remove_def wp: get_simple_ko_wp)
 
-lemma reply_clear_tcb_bound_tcb_at [wp]:
-  "\<lbrace>bound_tcb_at P t\<rbrace> reply_clear_tcb rptr \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
-  by (wpsimp simp: reply_clear_tcb_def get_thread_state_def thread_get_def wp: get_simple_ko_wp)
+lemma reply_cancel_ipc_bound_tcb_at[wp]:
+  "\<lbrace>bound_tcb_at P t\<rbrace> reply_cancel_ipc p r \<lbrace>\<lambda>rv. bound_tcb_at P t\<rbrace>"
+  apply (wpsimp simp: reply_cancel_ipc_def reply_remove_tcb_def get_thread_state_def thread_get_def
+                      thread_set_def set_object_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
+  done
+
+crunch bound_tcb_at[wp]: cancel_ipc "bound_tcb_at P t"
+(ignore: set_object thread_set wp: mapM_x_wp_inv maybeM_inv)
 
 lemma fast_finalise_bound_tcb_at:
   "\<lbrace>\<lambda>s. bound_tcb_at P t s \<and> (\<exists>tt. cap = ReplyCap tt) \<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
@@ -1354,16 +1360,6 @@ lemma descendants_of_nullcap:
   apply (drule_tac cs="caps_of_state s" and p="(a,b)" and m="(cdt s)" in mdb_cte_at_Null_descendants)
    apply (clarsimp simp: valid_mdb_def2)+
   done
-
-lemma reply_cancel_ipc_bound_tcb_at[wp]:
-  "\<lbrace>bound_tcb_at P t\<rbrace> reply_cancel_ipc p r \<lbrace>\<lambda>rv. bound_tcb_at P t\<rbrace>"
-  apply (wpsimp simp: reply_cancel_ipc_def reply_remove_tcb_def get_thread_state_def thread_get_def
-                      thread_set_def set_object_def)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
-  done
-
-crunch bound_tcb_at[wp]: cancel_ipc "bound_tcb_at P t"
-(ignore: set_object thread_set wp: mapM_x_wp_inv maybeM_inv)
 
 lemma set_thread_state_bound_sc_tcb_at:
   "\<lbrace>bound_sc_tcb_at P t'\<rbrace> set_thread_state t ts \<lbrace>\<lambda>rv. bound_sc_tcb_at P t'\<rbrace>"
@@ -1807,8 +1803,9 @@ lemmas cancel_all_ipc_makes_simple[wp] =
 lemma fast_finalise_misc:
 "\<lbrace>st_tcb_at simple t and invs\<rbrace> fast_finalise a b \<lbrace>\<lambda>_. st_tcb_at simple t\<rbrace>"
   apply (case_tac a,simp_all)
-  by (wpsimp simp: when_def reply_clear_tcb_def
+  apply (wpsimp simp: when_def
                wp: reply_unlink_tcb_st_tcb_at hoare_drop_imp get_simple_ko_wp)+
+  sorry (* needs cancel_ipc_simple but generic t *)
 
 lemma ntfn_q_refs_no_NTFNBound:
   "(x, NTFNBound) \<notin> ntfn_q_refs_of ntfn"
