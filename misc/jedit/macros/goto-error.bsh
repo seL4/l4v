@@ -37,7 +37,7 @@ class FirstError {
 
     boolean handle(cmd, offset, markup) {
 
-        if (markup.name() == "error_message") {
+        if (markup.name().equals("error_message")) {
             first_error_pos = offset;
             return false;
         }
@@ -47,14 +47,14 @@ class FirstError {
         if (first_error_pos >= 0) {
             textArea.setCaretPosition(first_error_pos);
         } else {
-            msg("No errors detected in theory " + model.node_name() + " (at present).");
+            msg("No errors detected in theory " + model.get().node_name() + " (at present).");
         }
     }
 }
 
 class MsgError {
     boolean handle(cmd, offset, markup) {
-        if (markup.name() == "error_message") {
+        if (markup.name().equals("error_message")) {
             int line = textArea.getLineOfOffset(offset);
             int col = offset - textArea.getLineStartOffset(line);
             msg(markup.name() + "\n" + offset + "(l " + line + ", c " + col +
@@ -67,7 +67,6 @@ class MsgError {
     }
 }
 
-// TODO: end when past a specific line
 command_markup_scanner(int startLine, handler) {
     boolean keep_going = true;
 
