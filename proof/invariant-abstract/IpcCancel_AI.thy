@@ -875,7 +875,7 @@ lemma sched_context_donate_refs_of:
   done
 
 lemma reply_remove_tcb_invs:
-  "\<lbrace>invs and bound_sc_tcb_at (op = None) t\<rbrace>
+  "\<lbrace>invs (*and bound_sc_tcb_at (op = None) t*)\<rbrace>
    reply_remove_tcb t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: reply_remove_def invs_def valid_state_def valid_pspace_def
                       reply_remove_tcb_def
@@ -930,9 +930,9 @@ lemma reply_remove_tcb_invs:
       apply (fastforce simp: state_refs_of_def image_def obj_at_def get_tcb_def
                       split: if_splits)
      apply (clarsimp split: if_splits)
-        apply (fastforce simp: state_refs_of_def get_refs_def2 sc_tcb_sc_at_def obj_at_def
+  (*      apply (fastforce simp: state_refs_of_def get_refs_def2 sc_tcb_sc_at_def obj_at_def
                         split: if_splits)
-       apply (fastforce simp: obj_at_def get_refs_def2 state_refs_of_def get_tcb_def
+       apply (fastfo rce simp: obj_at_def get_refs_def2 state_refs_of_def get_tcb_def
                               pred_tcb_at_def)
       apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
       apply (fastforce simp: state_refs_of_def refs_of_rev
@@ -953,19 +953,17 @@ lemma reply_remove_tcb_invs:
   apply (auto simp: state_refs_of_def obj_at_def get_tcb_def get_refs_def2 valid_obj_def
                     valid_sched_context_def
              split: if_splits)
-  done
+  done*)sorry
 
 lemma reply_cancel_ipc_invs:
-  "\<lbrace>invs and bound_sc_tcb_at (op = None) t\<rbrace> reply_cancel_ipc t r \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs (*and bound_sc_tcb_at (op = None) t*)\<rbrace> reply_cancel_ipc t r \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: reply_cancel_ipc_def wp: reply_remove_tcb_invs)
-   apply (rule hoare_vcg_conj_lift[rotated])
-    apply (wpsimp simp: thread_set_def set_object_def)
    apply (wpsimp wp: thread_set_invs_trivial)
           apply (auto simp: tcb_cap_cases_def pred_tcb_at_def obj_at_def get_tcb_def)
   done
 
 lemma cancel_ipc_invs[wp]:
-  "\<lbrace>invs and bound_sc_tcb_at (op = None) t\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs (*and bound_sc_tcb_at (op = None) t*)\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cancel_ipc_def)
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (case_tac state, simp_all)

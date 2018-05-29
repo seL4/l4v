@@ -700,7 +700,8 @@ lemma check_budget_restart_domain_consumed_time_gt[wp]:
 lemma update_time_stamp_domain_consumed_time_gt[wp]:
   "\<lbrace>\<lambda>s. P (domain_time s)(consumed_time s)\<rbrace>
       update_time_stamp \<lbrace>\<lambda>_ s. P (domain_time s)(consumed_time s) \<rbrace>"
-  apply (wpsimp simp: update_time_stamp_def do_machine_op_def ARM.getCurrentTime_def)
+  apply (clarsimp simp: update_time_stamp_def)
+  apply (wpsimp simp: do_machine_op_def ARM.getCurrentTime_def)
 sorry
 
 lemma handle_event_domain_time_inv:
@@ -711,7 +712,7 @@ lemma handle_event_domain_time_inv:
       apply (case_tac syscall, simp_all add: handle_send_def whenE_def)
              apply (wpsimp split_del: if_split wp: hoare_vcg_if_lift2 hoare_drop_imp)+
   apply (clarsimp simp: valid_domain_list_def)
-  sorry
+  using word_gt_0 by fastforce
 
 end
 
