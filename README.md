@@ -271,7 +271,7 @@ run
 
     ./isabelle/bin/isabelle jedit -d . -l ASpec
 
-in `l4v/` and open one of the files in `spec/invariant-abstract`.
+in `l4v/` and open one of the files in `proof/invariant-abstract`.
 
 
 License
