@@ -39,7 +39,20 @@ requalify_facts
   set_cap_hyp_refs_of
   state_hyp_refs_of_revokable
   set_cap_hyp_refs_of
+  is_valid_vtable_root_is_arch_cap
 end
+
+lemma is_valid_vtable_root_simps[simp]:
+  "\<not> is_valid_vtable_root (UntypedCap a b c d)"
+  "\<not> is_valid_vtable_root (ThreadCap tcb_ref)"
+  "\<not> is_valid_vtable_root (CNodeCap cnode_ref sz guard)"
+  "\<not> is_valid_vtable_root (EndpointCap ep_ref badge R)"
+  "\<not> is_valid_vtable_root (NotificationCap ep_ref badge R)"
+  "\<not> is_valid_vtable_root (ReplyCap tcb_ref master R)"
+  "\<not> is_valid_vtable_root (Zombie e f g)"
+  "\<not> is_valid_vtable_root (NullCap)"
+  "\<not> is_valid_vtable_root (DomainCap)"
+  by (fastforce dest: is_valid_vtable_root_is_arch_cap simp: is_cap_simps)+
 
 lemmas [simp] = aobj_ref_acap_rights_update arch_obj_size_acap_rights_update
   valid_validate_vm_rights cap_master_arch_inv acap_rights_update_idem
@@ -1078,9 +1091,6 @@ lemma no_cap_to_obj_with_diff_ref_Null:
   by (rule ext, clarsimp simp: no_cap_to_obj_with_diff_ref_def
                                cte_wp_at_caps_of_state abj_ref_none_no_refs)
 
-lemma "(a \<or> (\<not>b \<and> c \<and> d) \<or> (b \<and> e \<and> f)) \<longleftrightarrow> (a \<or> (if b then e else c) \<and> (if b then f else d))"
-by simp
-
 definition
   replaceable :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
 where
@@ -2026,16 +2036,21 @@ lemma tcb_cap_valid_update_free_index[simp]:
   apply (intro conjI impI allI)
     apply (clarsimp simp: tcb_at_def pred_tcb_at_def is_tcb_def obj_at_def
                    dest!: get_tcb_SomeD)
-    apply (clarsimp simp: tcb_cap_cases_def free_index_update_def is_cap_simps is_nondevice_page_cap_simps
+    apply (clarsimp simp: tcb_cap_cases_def free_index_update_def is_cap_simps
+                          is_nondevice_page_cap_simps
+                   dest!: is_valid_vtable_root_is_arch_cap
                    split: if_splits cap.split_asm Structures_A.thread_state.split_asm)
-    apply (clarsimp simp: pred_tcb_at_def obj_at_def is_cap_simps free_index_update_def is_nondevice_page_cap_simps
-                   split: cap.split_asm)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_cap_simps free_index_update_def
+                         is_nondevice_page_cap_simps
+                  split: cap.split_asm)
   apply (clarsimp simp: tcb_cap_valid_def)
   apply (intro conjI impI allI)
-    apply (clarsimp simp: tcb_at_def pred_tcb_at_def is_tcb_def obj_at_def
-                   dest!: get_tcb_SomeD)
-    apply (clarsimp simp: tcb_cap_cases_def free_index_update_def is_cap_simps is_nondevice_page_cap_simps
-                   split: if_splits cap.split_asm Structures_A.thread_state.split_asm)
+   apply (clarsimp simp: tcb_at_def pred_tcb_at_def is_tcb_def obj_at_def
+                  dest!: get_tcb_SomeD)
+   apply (clarsimp simp: tcb_cap_cases_def free_index_update_def is_cap_simps
+                         is_nondevice_page_cap_simps
+                  dest!: is_valid_vtable_root_is_arch_cap
+                  split: if_splits cap.split_asm Structures_A.thread_state.split_asm)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_cap_simps free_index_update_def
                         valid_ipc_buffer_cap_def
                  split: cap.splits)

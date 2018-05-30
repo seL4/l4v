@@ -455,7 +455,8 @@ text {*
 
   The invariant paramters are inv thread_ptr tread_state cap_in_that_slot
 *}
-
+(* WARNING to anyone who would like to add an invariant to ctable slot:
+   During deletion procedure, any type of cap can land in that slot *)
 definition
   tcb_cap_cases ::
   "cap_ref \<rightharpoonup> ((tcb \<Rightarrow> cap) \<times>
@@ -464,7 +465,8 @@ definition
 where
   "tcb_cap_cases \<equiv>
    [tcb_cnode_index 0 \<mapsto> (tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>)),
-    tcb_cnode_index 1 \<mapsto> (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. \<top>)),
+    tcb_cnode_index 1 \<mapsto> (tcb_vtable, tcb_vtable_update,
+                          (\<lambda>_ _. is_valid_vtable_root or ((=) NullCap))),
     tcb_cnode_index 2 \<mapsto> (tcb_reply, tcb_reply_update,
                           (\<lambda>t st c. (is_master_reply_cap c \<and> obj_ref_of c = t)
                                   \<or> (halted st \<and> (c = NullCap)))),
@@ -1227,7 +1229,7 @@ lemma tcb_cap_cases_simps[simp]:
   "tcb_cap_cases (tcb_cnode_index 0) =
    Some (tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>))"
   "tcb_cap_cases (tcb_cnode_index (Suc 0)) =
-   Some (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. \<top>))"
+   Some (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. is_valid_vtable_root or ((=) NullCap)))"
   "tcb_cap_cases (tcb_cnode_index 2) =
    Some (tcb_reply, tcb_reply_update,
          (\<lambda>t st c. (is_master_reply_cap c \<and> obj_ref_of c = t) \<or>
@@ -1245,7 +1247,7 @@ lemma tcb_cap_cases_simps[simp]:
 lemma ran_tcb_cap_cases:
   "ran (tcb_cap_cases) =
     {(tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>)),
-     (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. \<top>)),
+     (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. is_valid_vtable_root or ((=) NullCap))),
      (tcb_reply, tcb_reply_update, (\<lambda>t st c.
                                        (is_master_reply_cap c \<and> obj_ref_of c = t)
                                      \<or> (halted st \<and> (c = NullCap)))),

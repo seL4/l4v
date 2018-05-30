@@ -2921,6 +2921,8 @@ lemma arch_update_cap_invs_map:
   apply (frule master_cap_cap_range, simp del: imp_disjL)
   apply (thin_tac "cap_range a = cap_range b" for a b)
   apply (rule conjI)
+   apply (fastforce simp:is_valid_vtable_root_def vs_cap_ref_def split:arch_cap.splits vmpage_size.splits option.splits)
+  apply (rule conjI)
    apply (rule ext)
    apply (simp add: cap_master_cap_def split: cap.splits arch_cap.splits)
   apply (rule context_conjI)
@@ -3007,7 +3009,7 @@ lemma arch_update_cap_invs_unmap_page:
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
                         is_cap_simps cap_master_cap_simps
                         fun_eq_iff appropriate_cte_cap_irqs
-                        is_pt_cap_def
+                        is_pt_cap_def is_valid_vtable_root_def
                  dest!: cap_master_cap_eqDs
               simp del: imp_disjL)
   apply (rule conjI)
@@ -3044,7 +3046,7 @@ lemma arch_update_cap_invs_unmap_page_table:
              set_cap_cap_refs_respects_device_region_spec[where ptr = p])
   apply (simp add: final_cap_at_eq)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
-                        is_cap_simps cap_master_cap_simps
+                        is_cap_simps cap_master_cap_simps is_valid_vtable_root_def
                         appropriate_cte_cap_irqs is_pt_cap_def
                         fun_eq_iff[where f="cte_refs cap" for cap]
                  dest!: cap_master_cap_eqDs

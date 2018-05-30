@@ -93,7 +93,7 @@ qed
 
 lemma ball_tcb_cap_casesI:
   "\<lbrakk> P (tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>));
-     P (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. \<top>));
+     P (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. is_valid_vtable_root or ((=) cap.NullCap)));
      P (tcb_reply, tcb_reply_update, (\<lambda>t st c. (is_master_reply_cap c
                                                 \<and> obj_ref_of c = t)
                                              \<or> (halted st \<and> (c = cap.NullCap))));
@@ -796,6 +796,7 @@ lemma set_thread_state_valid_objs[wp]:
   apply (erule allE, erule impE, blast)
   apply (clarsimp simp: valid_obj_def valid_tcb_def
                         a_type_def tcb_cap_cases_def)
+  (* very long *)
   by (erule cte_wp_atE disjE
        | clarsimp simp: st_tcb_def2 tcb_cap_cases_def
                  dest!: get_tcb_SomeD

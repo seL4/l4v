@@ -47,13 +47,17 @@ lemma vm_sets_diff[simp]:
 lemmas vm_sets_diff2[simp] = not_sym[OF vm_sets_diff]
 
 lemma cap_master_cap_tcb_cap_valid_arch:
-  "\<lbrakk> cap_master_cap c = cap_master_cap c'; is_arch_cap c \<rbrakk> \<Longrightarrow>
-  tcb_cap_valid c p s = tcb_cap_valid c' p s"
-  by (auto simp add: cap_master_cap_def tcb_cap_valid_def tcb_cap_cases_def
-                   valid_ipc_buffer_cap_def  is_cap_simps
-                   is_nondevice_page_cap_simps is_nondevice_page_cap_arch_def
-            split: option.splits cap.splits arch_cap.splits
-                   Structures_A.thread_state.splits)
+  "\<lbrakk> cap_master_cap c = cap_master_cap c'; is_arch_cap c' ;
+     is_valid_vtable_root c \<Longrightarrow> is_valid_vtable_root c' ; tcb_cap_valid c p s \<rbrakk> \<Longrightarrow>
+   tcb_cap_valid c' p s"
+  (* very long *)
+  by (auto simp: cap_master_cap_def tcb_cap_valid_def tcb_cap_cases_def
+                 valid_ipc_buffer_cap_def  is_cap_simps
+                 is_nondevice_page_cap_simps is_nondevice_page_cap_arch_def
+           elim: pred_tcb_weakenE
+          split: option.splits cap.splits arch_cap.splits
+                 Structures_A.thread_state.splits)
+
 
 crunch device_state_inv[wp]: invalidateLocalTLB_ASID "\<lambda>ms. P (device_state ms)"
   (ignore: ignore_failure)

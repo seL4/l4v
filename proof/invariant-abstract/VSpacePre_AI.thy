@@ -150,8 +150,10 @@ lemma arch_update_cap_zombies:
   done
 
 lemma arch_update_cap_pspace:
-  "\<lbrace>cte_wp_at (is_arch_update cap) p and valid_pspace and valid_cap cap\<rbrace>
-  set_cap cap p
+  "\<lbrace>cte_wp_at (is_arch_update cap and
+               (\<lambda>c. is_valid_vtable_root c \<longrightarrow> is_valid_vtable_root cap)) p
+    and valid_pspace and valid_cap cap\<rbrace>
+     set_cap cap p
   \<lbrace>\<lambda>rv. valid_pspace\<rbrace>"
   apply (simp add: valid_pspace_def)
   apply (rule hoare_pre)
@@ -162,7 +164,7 @@ lemma arch_update_cap_pspace:
   apply clarsimp
   apply (drule caps_of_state_cteD)
   apply (drule (1) cte_wp_tcb_cap_valid)
-  apply (simp add: cap_master_cap_tcb_cap_valid_arch)
+  apply (clarsimp simp: cap_master_cap_tcb_cap_valid_arch)
   done
 
 lemma arch_update_cap_valid_mdb:

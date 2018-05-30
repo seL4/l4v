@@ -1810,6 +1810,8 @@ lemma set_cap_valid_mdb_simple:
    done
  qed
 
+
+
 lemma set_free_index_valid_pspace_simple:
   "\<lbrace>\<lambda>s. valid_mdb s \<and> valid_pspace s \<and> pspace_no_overlap_range_cover ptr sz s
    \<and> descendants_range_in {ptr .. ptr+2^sz - 1} cref s
@@ -1832,10 +1834,9 @@ lemma set_free_index_valid_pspace_simple:
   apply (clarsimp simp add: pred_tcb_at_def tcb_cap_valid_def obj_at_def is_tcb
           valid_ipc_buffer_cap_def split: option.split)
   apply (drule(2) tcb_cap_slot_regular)
-  apply (clarsimp simp: tcb_cap_cases_def split: if_splits)
+  apply (clarsimp simp: tcb_cap_cases_def is_cap_simps split: if_splits)
     apply (fastforce simp: is_nondevice_page_cap_simps)
    apply (clarsimp split: thread_state.splits simp: is_reply_cap_def)
-  apply (clarsimp simp: is_master_reply_cap_def)
   done
 
 lemma set_untyped_cap_refs_respects_device_simple:
@@ -2428,8 +2429,8 @@ lemma tcb_cap_valid_untyped_cong:
    tcb_cap_valid (cap.UntypedCap dev2 a2 b2 c2)"
   apply (rule ext)+
   apply (clarsimp simp:tcb_cap_valid_def valid_ipc_buffer_cap_def split:option.splits)
-  apply (simp add: tcb_cap_cases_def is_master_reply_cap_def is_reply_cap_def
-                   is_arch_cap_def is_nondevice_page_cap_simps
+  apply (simp add: tcb_cap_cases_def
+                   is_arch_cap_def is_nondevice_page_cap_simps is_cap_simps
             split: thread_state.split)
   done
 
@@ -2438,7 +2439,7 @@ lemma tcb_cap_valid_untyped_to_thread:
    tcb_cap_valid (cap.ThreadCap 0)"
   apply (rule ext)+
   apply (clarsimp simp:tcb_cap_valid_def valid_ipc_buffer_cap_def split:option.splits)
-  apply (simp add: tcb_cap_cases_def is_master_reply_cap_def is_reply_cap_def
+  apply (simp add: tcb_cap_cases_def is_cap_simps
                    is_arch_cap_def is_nondevice_page_cap_simps
             split: thread_state.split)
   done

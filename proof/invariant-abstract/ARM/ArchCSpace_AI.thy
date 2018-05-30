@@ -57,19 +57,19 @@ lemma weak_derived_valid_cap [CSpace_AI_assms]:
 
 (* FIXME: unused *)
 lemma weak_derived_tcb_cap_valid:
-  "\<lbrakk> tcb_cap_valid cap p s; weak_derived cap cap' \<rbrakk> \<Longrightarrow> tcb_cap_valid cap' p s"
+  "weak_derived cap cap' \<Longrightarrow> tcb_cap_valid cap p s = tcb_cap_valid cap' p s"
   apply (clarsimp simp add: tcb_cap_valid_def weak_derived_def
                             obj_at_def is_tcb
                      split: option.split)
   apply (clarsimp simp: st_tcb_def2)
   apply (erule disjE; simp add: copy_of_def split: if_split_asm; (solves \<open>clarsimp\<close>)?)
   apply (clarsimp simp: tcb_cap_cases_def split: if_split_asm)
-    apply (auto simp: is_cap_simps same_object_as_def
+    by (auto simp: is_cap_simps same_object_as_def
                       valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
                       is_nondevice_page_cap_arch_def
-               split: cap.split_asm arch_cap.split_asm
+                      is_valid_vtable_root_def cap_asid_def cap_asid_arch_def
+               split: cap.split_asm arch_cap.split_asm option.split_asm
                       thread_state.split_asm)
-  done
 
 lemma copy_obj_refs [CSpace_AI_assms]:
   "copy_of cap cap' \<Longrightarrow> obj_refs cap' = obj_refs cap"
@@ -188,9 +188,9 @@ lemma is_derived_is_cap:
   \<and> (is_arch_cap cap = is_arch_cap cap')
   \<and> (cap_is_device cap = cap_is_device cap')"
   apply (clarsimp simp: is_derived_def is_derived_arch_def split: if_split_asm)
-  apply (clarsimp simp: cap_master_cap_def is_cap_simps
+  by (clarsimp simp: cap_master_cap_def is_cap_simps
     split: cap.splits arch_cap.splits)+
-  done
+
 
 (* FIXME: move to CSpace_I near lemma vs_lookup1_tcb_update *)
 lemma vs_lookup_pages1_tcb_update:
