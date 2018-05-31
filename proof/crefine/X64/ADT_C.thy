@@ -619,7 +619,7 @@ definition
       (CR3 (x64KSCurrentUserCR3_' cstate && (mask 39 << 12))
            (x64KSCurrentUserCR3_' cstate && mask 12))
       x64KSKernelVSpace_C
-      undefined (* IOPort map *)
+      (cioport_bitmap_to_H (the (clift (t_hrs_' cstate) (Ptr (symbol_table ''x86KSAllocatedIOPorts'')))))
       (ucast (num_ioapics_' cstate))
       (* Map IRQ states to their Haskell equivalent, and out-of-bounds entries to X64IRQFree *)
       (unwrap_or X64IRQFree o
@@ -657,7 +657,7 @@ lemma carch_state_to_H_correct:
                          array_to_map_def unwrap_or_def)
    using valid[simplified valid_arch_state'_def valid_x64_irq_state'_def]
    apply (case_tac "x \<le> maxIRQ"; fastforce split: option.split)
-  subgoal sorry
+  apply (clarsimp simp: global_ioport_bitmap_relation_def)
   done
 
 end

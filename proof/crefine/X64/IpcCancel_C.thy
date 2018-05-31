@@ -118,6 +118,7 @@ abbreviation
                 \<and> (cslift s :: pml4e_C typ_heap) = cslift t
                 \<and> (cslift s :: user_data_C typ_heap) = cslift t
                 \<and> (cslift s :: user_data_device_C typ_heap) = cslift t
+                \<and> (cslift s :: ioport_table_C typ_heap) = cslift t
 "
 
 lemma tcbEPDequeue_spec:
