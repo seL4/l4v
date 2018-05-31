@@ -144,7 +144,8 @@ where
     modify (\<lambda>s. s \<lparr> time_state := time_state s + 1 \<rparr>);
     passed \<leftarrow> gets $ time_oracle o time_state;
     last \<leftarrow> gets last_machine_time;
-    current \<leftarrow> return (if last + passed + kernelWCET_ticks < last then -(kernelWCET_ticks+1) else last + passed);
+    current \<leftarrow> return (if last + passed + kernelWCET_ticks < last + passed \<or> last + passed < last
+                       then -(kernelWCET_ticks+1) else last + passed);
     modify (\<lambda>s. s\<lparr>last_machine_time := current\<rparr>);
     return current
   od"
