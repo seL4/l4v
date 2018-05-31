@@ -149,6 +149,34 @@ where
        None \<Rightarrow> False (* should never happen *)
      | Some x \<Rightarrow> s = x86_irq_state_to_H x"
 
+(* 1024 = number of entries in ioport table
+        = 2^16 (total number of ioports) / word_bits *)
+type_synonym ioport_table_C = "machine_word[1024]"
+
+(* This is required for type collision shenanigans, 1024 matches above *)
+lemma ntbs_1024[simp]:
+  "nat_to_bin_string 1024 = ''000000000010''"
+  by (simp add: nat_to_bin_string_simps)
+
+abbreviation
+  ioport_table_Ptr :: "machine_word \<Rightarrow> ioport_table_C ptr"
+where
+  "ioport_table_Ptr \<equiv> Ptr"
+
+definition
+  cioport_bitmap_to_H :: "ioport_table_C \<Rightarrow> (ioport \<Rightarrow> bool)"
+where
+  "cioport_bitmap_to_H ctable \<equiv>
+    \<lambda>port. ctable.[unat (port >> wordRadix)] !! unat (port && mask wordRadix)"
+
+definition
+  global_ioport_bitmap_relation :: "(ioport_table_C ptr \<Rightarrow> ioport_table_C option) \<Rightarrow>
+                                      (ioport \<Rightarrow> bool) \<Rightarrow> bool"
+where
+  "global_ioport_bitmap_relation ctable_heap htable \<equiv>
+    \<exists>ctable. ctable_heap (Ptr (symbol_table ''x86KSAllocatedIOPorts'')) = Some ctable
+           \<and> cioport_bitmap_to_H ctable = htable"
+
 definition
   carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
@@ -156,7 +184,7 @@ where
   x64KSKernelVSpace astate = x64KSKernelVSpace_C \<and>
   array_relation (op = \<circ> option_to_ptr) (2^asid_high_bits - 1) (x64KSASIDTable astate) (x86KSASIDTable_' cstate) \<and>
   ccr3_relation (x64KSCurrentUserCR3 astate) (x64KSCurrentUserCR3_' cstate) \<and>
-(* FIXME x64: Still needed: relation for IOPort bitmap *)
+  global_ioport_bitmap_relation (clift (t_hrs_' cstate)) (x64KSAllocatedIOPorts astate) \<and>
   x64KSNumIOAPICs astate = UCAST (32 \<rightarrow> 64) (num_ioapics_' cstate) \<and>
   array_relation x64_irq_state_relation maxIRQ (x64KSIRQState astate) (x86KSIRQState_' cstate) \<and>
   carch_globals astate"

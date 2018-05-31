@@ -431,7 +431,7 @@ lemma ccorres_updateCap [corres]:
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
    subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
-                         typ_heap_simps)
+                         typ_heap_simps' ntbs_1024)
   by clarsimp
 
 lemma ccorres_updateMDB_const [corres]:

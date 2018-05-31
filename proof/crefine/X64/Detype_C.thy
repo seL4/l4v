@@ -2024,11 +2024,13 @@ proof -
                (%x. ghost'state_'_update (gs_clear_region ptr bits)
                       (t_hrs_'_update ?th x)) s') \<in> rf_sr"
     using sr untyped_cap_rf_sr_ptr_bits_domain[OF cte invs sr]
-    by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def clift
                        psu_restrict cpspace_relation_def
                        carch_state_relation_def cmachine_state_relation_def
                        hrs_htd_update htd_safe_typ_region_bytes
                        zero_ranges_are_zero_typ_region_bytes)
+    sorry (* global_ioport_bitmap_relation for typ_region_bytes *)
+
 qed
 
 abbreviation (input)

@@ -1225,7 +1225,7 @@ lemma rf_sr_tcb_update_no_queue:
     apply (erule cready_queues_relation_not_queue_ptrs)
      subgoal by (clarsimp intro!: ext)
     subgoal by (clarsimp intro!: ext)
-   subgoal by (simp add: carch_state_relation_def typ_heap_simps')
+   subgoal by (clarsimp simp: carch_state_relation_def typ_heap_simps')
   by (simp add: cmachine_state_relation_def)
 
 lemma rf_sr_tcb_update_no_queue_helper:
@@ -1290,8 +1290,7 @@ lemma rf_sr_tcb_update_not_in_queue:
      apply (drule valid_queues_obj_at'D, clarsimp)
      apply (clarsimp simp: obj_at'_def projectKOs inQ_def)
     subgoal by simp
-   subgoal by (simp add: carch_state_relation_def carch_globals_def
-                         typ_heap_simps')
+   subgoal by (simp add: carch_state_relation_def carch_globals_def typ_heap_simps')
   by (simp add: cmachine_state_relation_def)
 
 lemmas rf_sr_tcb_update_not_in_queue2
