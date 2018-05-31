@@ -2039,6 +2039,24 @@ where
   "cleanup_info_wf' cap \<equiv> case cap of IRQHandlerCap irq \<Rightarrow>
       UCAST(8\<rightarrow>16) irq \<le> SCAST(32 signed\<rightarrow>16) Kernel_C.maxIRQ | ArchObjectCap acap \<Rightarrow> arch_cleanup_info_wf' acap | _ \<Rightarrow> True"
 
+lemma setIOPortMask_ccorres:
+  notes Collect_const[simp del]
+  shows
+  "ccorres dc xfdc
+     \<top> (* this is probably wrong *)
+     (UNIV \<inter> \<lbrace>\<acute>ioport_bitmap = Ptr (symbol_table ''x86KSAllocatedIOPorts'')\<rbrace>
+           \<inter> \<lbrace>\<acute>low = f\<rbrace>
+           \<inter> \<lbrace>\<acute>high = l\<rbrace>
+           \<inter> \<lbrace>\<acute>set = from_bool b\<rbrace>) hs
+     (setIOPortMask f l b)
+     (Call setIOPortMask_'proc)"
+  apply (cinit lift: ioport_bitmap_' low_' high_' set_')
+   apply csymbr
+   apply (rule ccorres_Guard_Seq)
+   apply csymbr
+   apply (rule ccorres_Guard_Seq)
+   apply csymbr
+  sorry (* setIOPortMask_ccorres *)
 
 lemma freeIOPortRange_ccorres:
   "ccorres dc xfdc (\<top> and (\<lambda>s. f \<le> l))
@@ -2046,7 +2064,11 @@ lemma freeIOPortRange_ccorres:
     (freeIOPortRange f l)
     (Call freeIOPortRange_'proc)"
   apply (cinit lift: first_port_' last_port_')
-  sorry
+   apply (rule ccorres_Guard)
+   apply (ctac add: setIOPortMask_ccorres)
+  by (clarsimp simp: false_def rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                        global_ioport_bitmap_relation_def typ_heap_simps
+                 split: if_splits)
 
 lemma Arch_postCapDeletion_ccorres:
   "ccorres dc xfdc

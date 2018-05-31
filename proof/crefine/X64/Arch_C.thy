@@ -4207,25 +4207,6 @@ lemma invokeX86PortOut32_ccorres:
   apply clarsimp
   done
 
-lemma setIOPortMask_ccorres:
-  notes Collect_const[simp del]
-  shows
-  "ccorres dc xfdc
-     invs'
-     (UNIV \<inter> \<lbrace>\<acute>ioport_bitmap = Ptr (symbol_table ''x86KSAllocatedIOPorts'')\<rbrace>
-           \<inter> \<lbrace>\<acute>low = f\<rbrace>
-           \<inter> \<lbrace>\<acute>high = l\<rbrace>
-           \<inter> \<lbrace>\<acute>set = from_bool b\<rbrace>) hs
-     (setIOPortMask f l b)
-     (Call setIOPortMask_'proc)"
-  apply (cinit lift: ioport_bitmap_' low_' high_' set_')
-   apply csymbr
-   apply (rule ccorres_Guard_Seq)
-   apply csymbr
-   apply (rule ccorres_Guard_Seq)
-   apply csymbr
-  sorry (* setIOPortMask_ccorres *)
-
 lemma setIOPortMask_valid_mdb'[wp]:
   "\<lbrace>valid_mdb'\<rbrace> setIOPortMask f l b \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
   by (wpsimp simp: setIOPortMask_def valid_mdb'_def)
