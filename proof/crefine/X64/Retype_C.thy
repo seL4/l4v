@@ -7315,14 +7315,13 @@ lemma ccorres_typ_region_bytes_dummy:
   apply (simp add: hrs_htd_update gsCNodes_typ_region_bytes
                    cnodes_retype_have_size_mono[where T=S]
                    tcb_ctes_typ_region_bytes[OF _ _ invs_pspace_aligned'])
-  apply (simp add: cmap_array_typ_region_bytes_triv
-               invs_pspace_aligned' bit_simps
-               objBitsT_simps word_bits_def
-               zero_ranges_are_zero_typ_region_bytes)
-  sorry (* ioport_bitmap_C fallout
-  apply (rule htd_safe_typ_region_bytes, simp)
-  apply blast
-  done *)
+  apply (simp add: cmap_array_typ_region_bytes_triv invs_pspace_aligned' bit_simps
+                   objBitsT_simps word_bits_def zero_ranges_are_zero_typ_region_bytes
+             cong: conj_cong)
+  apply (rule conjI, rule htd_safe_typ_region_bytes, simp, blast)
+  apply (clarsimp simp: global_ioport_bitmap_relation_def typ_bytes_cpspace_relation_clift_gptr
+                        cpspace_relation_def bit_simps word_bits_def invs_pspace_aligned')
+  done
 
 lemma region_is_typeless_cong:
   "t_hrs_' (globals t) = t_hrs_' (globals s)
