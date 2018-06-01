@@ -1843,6 +1843,23 @@ proof -
   }
 
   moreover
+  {
+    assume "s' \<Turnstile>\<^sub>c ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts'')"
+    moreover
+    from sr ptr_refs have "ptr_span (ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts''))
+      \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
+      by (fastforce simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                          global_ioport_bitmap_relation_def)
+    ultimately
+    have "hrs_htd (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s')))
+      \<Turnstile>\<^sub>t ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts'')"
+      using al wb
+      apply (cases "t_hrs_' (globals s')")
+      apply (simp add: hrs_htd_update_def hrs_htd_def h_t_valid_typ_region_bytes upto_intvl_eq)
+      done
+  }
+
+  moreover
   have h2ud_eq:
        "heap_to_user_data (?psu (ksPSpace s))
                           (?mmu (underlying_memory (ksMachineState s))) =
@@ -2025,11 +2042,11 @@ proof -
                       (t_hrs_'_update ?th x)) s') \<in> rf_sr"
     using sr untyped_cap_rf_sr_ptr_bits_domain[OF cte invs sr]
     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def clift
-                       psu_restrict cpspace_relation_def
+                       psu_restrict cpspace_relation_def global_ioport_bitmap_relation_def2
                        carch_state_relation_def cmachine_state_relation_def
                        hrs_htd_update htd_safe_typ_region_bytes
                        zero_ranges_are_zero_typ_region_bytes)
-    sorry (* global_ioport_bitmap_relation for typ_region_bytes *)
+    done
 
 qed
 

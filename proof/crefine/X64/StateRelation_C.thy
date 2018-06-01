@@ -175,7 +175,8 @@ definition
 where
   "global_ioport_bitmap_relation ctable_heap htable \<equiv>
     \<exists>ctable. ctable_heap (Ptr (symbol_table ''x86KSAllocatedIOPorts'')) = Some ctable
-           \<and> cioport_bitmap_to_H ctable = htable"
+           \<and> cioport_bitmap_to_H ctable = htable
+           \<and> ptr_span (ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts'')) \<subseteq> kernel_data_refs"
 
 definition
   carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool"

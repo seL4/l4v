@@ -2556,5 +2556,17 @@ lemma tcb_and_not_mask_canonical:
 lemmas tcb_ptr_sign_extend_canonical =
       tcb_and_not_mask_canonical[where n=0, simplified mask_def objBits_simps', simplified]
 
+lemma lift_t_Some_iff:
+  "lift_t g hrs p = Some v \<longleftrightarrow> hrs_htd hrs, g \<Turnstile>\<^sub>t p \<and> h_val (hrs_mem hrs) p = v"
+  unfolding hrs_htd_def hrs_mem_def by (cases hrs) (auto simp: lift_t_if)
+
+lemma global_ioport_bitmap_relation_def2:
+  "global_ioport_bitmap_relation (clift hrs) htable \<equiv>
+      \<exists>ctable. hrs_htd hrs \<Turnstile>\<^sub>t (ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts''))
+        \<and> h_val (hrs_mem hrs) (ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts'')) = ctable
+        \<and> cioport_bitmap_to_H ctable = htable
+        \<and> ptr_span (ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts'')) \<subseteq> kernel_data_refs"
+  by (clarsimp simp: global_ioport_bitmap_relation_def lift_t_Some_iff)
+
 end
 end
