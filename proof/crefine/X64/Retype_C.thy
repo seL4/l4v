@@ -4871,8 +4871,8 @@ lemma copyGlobalMappings_ccorres:
                               update_pml4e_map_tos update_pml4e_map_to_pml4es
                               carray_map_relation_upd_triv)
         subgoal by (erule (2) cmap_relation_updI; simp)
-       subgoal sorry (* ioport_bitmap_C fallout
-             by (clarsimp simp: carch_state_relation_def cmachine_state_relation_def) *)
+       subgoal by (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
+                                  global_ioport_bitmap_heap_update_tag_disj_simps)
       apply simp
      apply (simp add: objBits_simps archObjSize_def)
     apply clarsimp
