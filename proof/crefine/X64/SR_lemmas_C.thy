@@ -2568,5 +2568,29 @@ lemma global_ioport_bitmap_relation_def2:
         \<and> ptr_span (ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts'')) \<subseteq> kernel_data_refs"
   by (clarsimp simp: global_ioport_bitmap_relation_def lift_t_Some_iff)
 
+lemma global_ioport_bitmap_heap_update_tag_disj':
+  fixes p :: "'a::mem_type ptr"
+  assumes valid: "hrs_htd h, g \<Turnstile>\<^sub>t p"
+  assumes disj: "typ_uinfo_t TYPE(ioport_table_C) \<bottom>\<^sub>t typ_uinfo_t TYPE('a)"
+  shows "global_ioport_bitmap_relation (clift (hrs_mem_update (heap_update p v) h)) = global_ioport_bitmap_relation (clift h)"
+  unfolding global_ioport_bitmap_relation_def
+  using lift_t_heap_update_same[OF valid disj]
+  by (clarsimp simp: global_ioport_bitmap_relation_def hrs_mem_update_def hrs_htd_def
+              split: prod.splits)
+
+lemmas h_t_valid_nested_fields =
+  h_t_valid_field[OF h_t_valid_field[OF h_t_valid_field[OF h_t_valid_field]]]
+  h_t_valid_field[OF h_t_valid_field[OF h_t_valid_field]]
+  h_t_valid_field[OF h_t_valid_field]
+  h_t_valid_field
+
+lemmas h_t_valid_fields_clift =
+  h_t_valid_nested_fields[OF h_t_valid_clift]
+  h_t_valid_clift
+
+lemmas global_ioport_bitmap_heap_update_tag_disj_simps =
+  h_t_valid_fields_clift[THEN global_ioport_bitmap_heap_update_tag_disj'[OF _ tag_disj_via_td_name]]
+
+
 end
 end
