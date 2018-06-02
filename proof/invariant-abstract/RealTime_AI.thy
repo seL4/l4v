@@ -901,12 +901,17 @@ lemma reply_remove_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> reply_remove r \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)
 
-lemma reply_unlink_sc_iflive[wp]:
-  "\<lbrace>if_live_then_nonz_cap and ex_nonz_cap_to sc_ptr and ex_nonz_cap_to reply_ptr\<rbrace>
-  reply_unlink_sc sc_ptr reply_ptr
-  \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: reply_unlink_sc_def
-                     wp: hoare_drop_imp)
+lemma reply_unlink_sc_iflive [wp]:
+  "\<lbrace>if_live_then_nonz_cap\<rbrace> reply_unlink_sc sc_ptr reply_ptr \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
+  apply (wpsimp simp: reply_unlink_sc_def set_simple_ko_def set_object_def get_object_def
+                      get_simple_ko_def get_sched_context_def partial_inv_def)
+  apply (intro conjI)
+   apply (fastforce simp: live_def live_sc_def obj_at_def is_reply
+                   elim!: ex_cap_to_after_update
+                   dest!: if_live_then_nonz_capD2)
+  apply (fastforce simp: if_live_then_nonz_cap_def obj_at_def is_reply live_def live_reply_def
+                  elim!: ex_cap_to_after_update)
+  done
 
 lemma reply_unlink_tcb_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace> reply_unlink_tcb reply_ptr \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
