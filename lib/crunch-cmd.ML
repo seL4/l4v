@@ -40,7 +40,7 @@ whether a rule already exists for that goal (P \<turnstile> g). It does this by
 checking whether a) crunch has already proven a rule for that constant,
 b) a rule in the wp set can be used to solve the goal, or c) a rule
 already exists with the name that crunch would use. In the case of c),
-crunch will fail if the found rule cannot be used to solve the goal.
+crunch will fail if the found rule cannot be applied to the goal.
 
 There are some monadic constants that it does not make sense to apply
 crunch to. These are added to a crunch_ignore set, and are removed from
@@ -98,20 +98,42 @@ fun gen_term_eq (f $ x, f' $ x') = gen_term_eq (f, f') andalso gen_term_eq (x, x
 fun ae_conv (t, t') = gen_term_eq
   (Envir.beta_eta_contract t, Envir.beta_eta_contract t')
 
+(*
+Crunch can be instantiated to prove different properties about monadic
+specifications. For several examples of this instantion see
+Crunch_Instances_NonDet.
+*)
 signature CrunchInstance =
 sig
-    type extra;
+    (* The name of the property. *)
     val name : string;
-    val has_preconds : bool;
-    val mk_term : term -> term -> extra -> term;
-    val dest_term : term -> (term * term * extra) option;
-    val get_precond : term -> term;
-    val put_precond : term -> term -> term;
+    (* The type of any parameters of the property beyond a (optional) precondition
+       and the function being crunched. *)
+    type extra;
+    (* Equality of the extra parameter, often uses ae_conv. *)
     val eq_extra : extra * extra -> bool;
-    val pre_thms : thm list;
-    val wpc_tactic : Proof.context -> tactic;
+    (* How to parse anything after the list of specifications to be crunched,
+       returns a precondition and extra field. *)
     val parse_extra : Proof.context -> string -> term * extra;
+    (* Whether the property has preconditions. *)
+    val has_preconds : bool;
+    (* Construct the property out of a precondition, function and extra. *)
+    val mk_term : term -> term -> extra -> term;
+    (* Deconstruct the property. *)
+    val dest_term : term -> (term * term * extra) option;
+    (* Put a new precondition into an instance of the property*)
+    val put_precond : term -> term -> term;
+    (* Theorems used to modify the precondition of the property. An empty list
+       if the property has no preconditions. *)
+    val pre_thms : thm list;
+    (* The wpc_tactic used, normally wp_cases_tactic_weak. See BCorres_UL for
+       an alternative. *)
+    val wpc_tactic : Proof.context -> tactic;
     val magic : term;
+    (* Get the type of the state a monadic specification is operating on. Returns
+       NONE when given the wrong type. See get_nondet_monad_state_type in
+       Crunch_Instances_NonDet for an example. *)
+    val get_monad_state_type : typ -> typ option
 end
 
 signature CRUNCH =
@@ -194,9 +216,9 @@ fun get_monad ctxt f xs = if is_Const f then
        constants like If, case_option, K_bind being considered monadic *)
     let val T = dest_Const f |> fst |> read_const ctxt |> type_of;
 
-    fun is_product v (Type ("Product_Type.prod", [Type ("fun", [Type ("Product_Type.prod", [_,v']), Type ("HOL.bool",[])]), Type ("HOL.bool",[])])) = (v = v')
-      | is_product v (Type ("Product_Type.prod", [Type ("Set.set", [Type ("Product_Type.prod", [_,v'])]), Type ("HOL.bool",[])])) = (v = v')
-      | is_product _ _ = false;
+    fun is_product v p =
+      Option.getOpt (Option.map (fn v' => v = v') (Instance.get_monad_state_type p),
+                     false)
 
     fun num_args (Type ("fun", [v,p])) n =
           if is_product v p then SOME n else num_args p (n + 1)
@@ -263,9 +285,15 @@ fun deep_search_thms ctxt defn const nmspce =
         | defs => defs
      end;
 
-val unfold_get_params = @{thms Let_def return_bind returnOk_bindE
-    K_bind_def split_def bind_assoc bindE_assoc
-    trans[OF liftE_bindE return_bind]};
+(*
+When making recursive crunch calls we want to identify and collect preconditions
+about parameters of the functions we are crunching. To assist with this we
+attempt to turn bound variables into free variables by simplifying with rules
+like Let_def, return_bind and bind_assoc. One example of this named_theorem
+being populated can be found in Crunch_Instances_NonDet.
+*)
+fun unfold_get_params ctxt =
+  Named_Theorems.get ctxt @{named_theorems crunch_param_rules}
 
 fun def_from_ctxt ctxt const =
   let
@@ -298,7 +326,7 @@ fun unfold ctxt const triple nmspce =
       val _ = debug_trace_bl [K (Pretty.str "unfold_rule :"),
         fn () => Thm.pretty_thm ctxt unfold_rule]
       val ms = unfold_rule
-        |> Simplifier.rewrite_goals_rule ctxt unfold_get_params
+        |> Simplifier.rewrite_goals_rule ctxt (unfold_get_params ctxt)
         |> Thm.prems_of |> maps (monads_of ctxt);
     in if Thm.eq_thm_prop (trivial_rule, unfold_rule)
        then error ("Unfold rule generated for " ^ const ^ " does not apply")
@@ -368,7 +396,7 @@ fun unfold_data ctxt constn goal nmspce NONE = (
       val trivial_rule = Thm.trivial goal
       val unfold_rule = Simplifier.rewrite_goals_rule ctxt [safe_mk_meta_eq thm] trivial_rule;
       val ms = unfold_rule
-        |> Simplifier.rewrite_goals_rule ctxt unfold_get_params
+        |> Simplifier.rewrite_goals_rule ctxt (unfold_get_params ctxt)
         |> Thm.prems_of |> maps (monads_of ctxt);
     in if Thm.eq_thm_prop (trivial_rule, unfold_rule)
        then error ("Unfold rule given for " ^ constn ^ " does not apply")
@@ -384,9 +412,16 @@ fun maybe_cheat_tac ctxt thm =
   then ALLGOALS (Skip_Proof.cheat_tac ctxt) thm
   else all_tac thm;
 
+fun get_precond t =
+  if Instance.has_preconds
+    then case Instance.dest_term t of
+      SOME (pre, _, _) => pre
+    | _ => error ("get_precond: not a " ^ Instance.name ^ " term")
+    else error ("crunch (" ^ Instance.name ^ ") should not be calling get_precond")
+
 fun var_precond v =
   if Instance.has_preconds
-  then Instance.put_precond (Var (("Precond", 0), Instance.get_precond v |> fastype_of)) v
+  then Instance.put_precond (Var (("Precond", 0), get_precond v |> fastype_of)) v
   else v;
 
 fun is_proof_of cfg const (name, _) =
@@ -403,7 +438,7 @@ fun get_inst_precond ctxt pre extra (mapply, goal) = let
       |> Syntax.check_term ctxt |> var_precond
       |> HOLogic.mk_Trueprop |> Thm.cterm_of ctxt;
     val spec = goal RS Thm.trivial goal2;
-    val precond = Thm.concl_of spec |> HOLogic.dest_Trueprop |> Instance.get_precond;
+    val precond = Thm.concl_of spec |> HOLogic.dest_Trueprop |> get_precond;
   in SOME precond end
     (* in rare cases the tuple extracted from the naming scheme doesn't
        match what we were trying to prove, thus a THM exception from RS *)
@@ -647,7 +682,7 @@ fun crunch cfg pre extra stack const' thms =
           fun collect_preconds pre =
             let val preconds = map_filter (fn (x, SOME y) => SOME (x, y) | (_, NONE) => NONE) (map snd ms ~~ goals)
                                                     |> map_filter (get_inst_precond ctxt'' pre extra);
-              val precond = combine_preconds ctxt'' (Instance.get_precond goal) preconds;
+              val precond = combine_preconds ctxt'' (get_precond goal) preconds;
             in Instance.put_precond precond goal |> HOLogic.mk_Trueprop end;
           val goal_prop2 = if Instance.has_preconds then collect_preconds pre else goal_prop;
 

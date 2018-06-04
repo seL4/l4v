@@ -8,18 +8,10 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory Crunch
-imports
-  "Monad_WP/wp/WP"
-  Lib
-keywords "crunch" "crunch_ignore" "crunches" :: thy_decl
+theory Crunch_Test_Qualified_Trace
+imports Crunch_Instances_Trace
 begin
 
-named_theorems "crunch_def"
-named_theorems "crunch_rules"
-named_theorems "crunch_param_rules"
-
-ML_file "crunch-cmd.ML"
-ML_file "Crunch.ML"
+definition "foo_const \<equiv> return ()"
 
 end

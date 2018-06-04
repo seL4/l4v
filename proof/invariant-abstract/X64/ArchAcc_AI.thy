@@ -14,7 +14,7 @@ Lemmas on arch get/set object etc
 
 theory ArchAcc_AI
 imports "../SubMonad_AI" "ArchVSpaceLookup_AI"
- "../../../lib/Crunch"
+ "../../../lib/Crunch_Instances_NonDet"
 begin
 
 

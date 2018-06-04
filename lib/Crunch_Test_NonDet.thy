@@ -8,9 +8,12 @@
  * @TAG(NICTA_BSD)
  *)
 
-
-theory Crunch_Test (* FIXME: not tested *)
-imports Crunch Crunch_Test_Qualified GenericLib Defs
+theory Crunch_Test_NonDet (* FIXME: not tested *)
+imports
+  Crunch_Instances_NonDet
+  Crunch_Test_Qualified_NonDet
+  GenericLib
+  Defs
 begin
 
 text {* Test cases for crunch *}
@@ -170,6 +173,7 @@ lemma "\<lbrace>Q\<rbrace> crunch_foo7 \<lbrace>\<lambda>_. Q\<rbrace>" by wp
 
 (* crunch still works on an interpreted locale constant *)
 crunch test2: crunch_foo7 P
+  (wp_del: crunch_foo7_test)
 
 locale test_sublocale
 
@@ -185,7 +189,7 @@ end
 (* check that qualified names are handled properly. *)
 
 consts foo_const :: "(unit, unit) nondet_monad"
-defs foo_const_def: "foo_const \<equiv> Crunch_Test_Qualified.foo_const"
+defs foo_const_def: "foo_const \<equiv> Crunch_Test_Qualified_NonDet.foo_const"
 
 crunch test: foo_const P
 
@@ -193,6 +197,6 @@ crunch test: foo_const P
 
 crunches crunch_foo3, crunch_foo4, crunch_foo5
   for silly: "\<lambda>s. True \<noteq> False" and (no_fail)nf and (empty_fail)ef
-  (ignore: modify bind rule: crunch_foo4_alt)
+  (ignore: modify bind rule: crunch_foo4_alt wp_del: hoare_vcg_prop)
 
 end

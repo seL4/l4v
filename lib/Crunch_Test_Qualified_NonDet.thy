@@ -8,8 +8,8 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory Crunch_Test_Qualified
-imports Crunch
+theory Crunch_Test_Qualified_NonDet
+imports Crunch_Instances_NonDet
 begin
 
 definition "foo_const \<equiv> return ()"

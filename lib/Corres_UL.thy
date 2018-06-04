@@ -10,7 +10,7 @@
 
 theory Corres_UL
 imports
-  Crunch
+  Crunch_Instances_NonDet
   "Monad_WP/wp/WPEx"
   "Monad_WP/wp/WPFix"
   HaskellLemmaBucket

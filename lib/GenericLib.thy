@@ -10,7 +10,7 @@
 
 theory GenericLib
 imports
-  Crunch
+  Crunch_Instances_NonDet
   "Monad_WP/wp/WPEx"
   HaskellLemmaBucket
 begin

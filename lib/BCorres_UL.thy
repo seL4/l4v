@@ -11,7 +11,7 @@
 theory BCorres_UL
 imports
   "Monad_WP/NonDetMonadVCG"
-  Crunch
+  Crunch_Instances_NonDet
 begin
 
 definition s_bcorres_underlying where
@@ -243,28 +243,27 @@ lemma mapME_x_bcorres_underlying[wp]: "(\<And>x. bcorres_underlying t (f x) (f' 
 ML {*
 structure CrunchBCorresInstance : CrunchInstance =
 struct
+  val name = "bcorres";
   type extra = term;
   val eq_extra = ae_conv;
-  val name = "bcorres";
-  val has_preconds = false;
-  fun mk_term _ body extra =
-    (Syntax.parse_term @{context} "bcorres_underlying") $ extra $ body $ body;
-  fun get_precond (Const (@{const_name "bcorres_underlying"}, _) $ _ $ _ $ _ ) = Term.dummy
-    | get_precond _ = error "get_precond: not an bcorres term";
-  fun put_precond _ ((v as Const (@{const_name "bcorres_underlying"}, _)) $ extra $ body $ body')
-        = v $ extra $ body $ body'
-    | put_precond _ _ = error "put_precond: not an bcorres term";
-  fun dest_term (Const (@{const_name "bcorres_underlying"}, _) $ extra $ body $ _)
-      = SOME (Term.dummy, body, extra)
-    | dest_term _ = NONE
-  val pre_thms = [];
-  val wpc_tactic = WeakestPreCases.wp_cases_tac @{thms wpc_processors};
   fun parse_extra ctxt extra
         = case extra of
              "" => error "bcorres needs truncate function"
              | e =>(Syntax.parse_term ctxt "%_. True", Syntax.parse_term ctxt e);
+  val has_preconds = false;
+  fun mk_term _ body extra =
+    (Syntax.parse_term @{context} "bcorres_underlying") $ extra $ body $ body;
+  fun dest_term (Const (@{const_name "bcorres_underlying"}, _) $ extra $ body $ _)
+        = SOME (Term.dummy, body, extra)
+    | dest_term _ = NONE;
+  fun put_precond _ ((v as Const (@{const_name "bcorres_underlying"}, _)) $ extra $ body $ body')
+        = v $ extra $ body $ body'
+    | put_precond _ _ = error "put_precond: not an bcorres term";
+  val pre_thms = [];
+  val wpc_tactic = WeakestPreCases.wp_cases_tac @{thms wpc_processors};
   val magic = Syntax.parse_term @{context}
-    "\<lambda>mapp_lambda_ignore. bcorres_underlying t_free_ignore mapp_lambda_ignore g_free_ignore"
+    "\<lambda>mapp_lambda_ignore. bcorres_underlying t_free_ignore mapp_lambda_ignore g_free_ignore";
+  val get_monad_state_type = get_nondet_monad_state_type;
 end;
 
 structure CrunchBCorres : CRUNCH = Crunch(CrunchBCorresInstance);
