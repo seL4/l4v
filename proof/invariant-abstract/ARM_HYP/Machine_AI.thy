@@ -29,25 +29,25 @@ wpc_setup "\<lambda>m. no_irq m" wpc_helper_no_irq
 ML {*
 structure CrunchNoIrqInstance : CrunchInstance =
 struct
+  val name = "no_irq";
   type extra = unit;
   val eq_extra = op =;
-  val name = "no_irq";
-  val has_preconds = false;
-  fun mk_term _ body _ =
-    (Syntax.parse_term @{context} "no_irq") $ body;
-  fun get_precond _ = error "crunch no_irq should not be calling get_precond";
-  fun put_precond _ _ = error "crunch no_irq should not be calling put_precond";
-  fun dest_term (Const (@{const_name no_irq}, _) $ body)
-    = SOME (Term.dummy, body, ())
-    | dest_term _ = NONE;
-  val pre_thms = [];
-  val wpc_tactic = wp_cases_tactic_weak;
   fun parse_extra ctxt extra
         = case extra of
             "" => (Syntax.parse_term ctxt "%_. True", ())
           | _ => error "no_irq does not need a precondition";
+  val has_preconds = false;
+  fun mk_term _ body _ =
+    (Syntax.parse_term @{context} "no_irq") $ body;
+  fun dest_term (Const (@{const_name no_irq}, _) $ body)
+    = SOME (Term.dummy, body, ())
+    | dest_term _ = NONE;
+  fun put_precond _ _ = error "crunch no_irq should not be calling put_precond";
+  val pre_thms = [];
+  val wpc_tactic = wp_cases_tactic_weak;
   val magic = Syntax.parse_term @{context}
-    "\<lambda>mapp_lambda_ignore. no_irq mapp_lambda_ignore"
+    "\<lambda>mapp_lambda_ignore. no_irq mapp_lambda_ignore";
+  val get_monad_state_type = get_nondet_monad_state_type;
 end;
 
 structure CrunchNoIrq : CRUNCH = Crunch(CrunchNoIrqInstance);
