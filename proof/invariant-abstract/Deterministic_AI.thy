@@ -4089,7 +4089,7 @@ lemma cancel_all_ipc_valid_list[wp]:
 
 crunch valid_list[wp]: thread_set valid_list
 
-lemma reply_cancel_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_cancel_ipc tptr reply_opt \<lbrace>\<lambda>_. valid_list\<rbrace>"
+lemma reply_cancel_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_cancel_ipc tptr \<lbrace>\<lambda>_. valid_list\<rbrace>"
   unfolding reply_cancel_ipc_def
   by (wp select_wp hoare_drop_imps thread_set_mdb | simp)+
 
@@ -4316,7 +4316,8 @@ crunch valid_list[wp]: blocked_cancel_ipc,cancel_signal "valid_list"
 
 lemma cancel_ipc_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> cancel_ipc tp \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: cancel_ipc_def wp: hoare_drop_imp get_sched_context_wp)
+  by (wpsimp simp: cancel_ipc_def
+      wp: hoare_drop_imp get_sched_context_wp hoare_vcg_conj_lift hoare_vcg_all_lift)
 
 lemma fast_finalise_valid_list[wp]: "\<lbrace>valid_list\<rbrace> fast_finalise c b \<lbrace>\<lambda>_. valid_list\<rbrace>"
   unfolding reply_cancel_ipc_def

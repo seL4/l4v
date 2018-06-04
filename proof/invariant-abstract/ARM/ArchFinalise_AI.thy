@@ -1310,13 +1310,13 @@ lemmas (*arch_finalise_cte_irq_node *) [wp,Finalise_AI_asms]
     = hoare_use_eq_irq_node [OF arch_finalise_cap_irq_node arch_finalise_cap_cte_wp_at]
 
 lemma (* deleting_irq_handler_st_tcb_at *) [Finalise_AI_asms]:
-  "\<lbrace>st_tcb_at P t and K (\<forall>st. simple st \<longrightarrow> P st)\<rbrace>
+  "\<lbrace>st_tcb_at P t and K (\<forall>st. simple st \<longrightarrow> P st) and invs\<rbrace>
      deleting_irq_handler irq
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (simp add: deleting_irq_handler_def)
-  apply (wp cap_delete_one_st_tcb_at)
+  apply (wp cap_delete_one_st_tcb_at hoare_drop_imp hoare_vcg_ex_lift)
   apply simp
-  sorry (* need to remove "P Inactive" in reply_clear_tcb_st_tcb_at *)
+  done
 
 lemma irq_node_global_refs_ARCH [Finalise_AI_asms]:
   "interrupt_irq_node s irq \<in> global_refs s"

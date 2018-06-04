@@ -4051,9 +4051,7 @@ lemma cap_insert_invs[wp]:
           and (\<lambda>s. \<forall>r\<in>obj_refs cap. \<forall>p'. dest \<noteq> p' \<and> cte_wp_at (\<lambda>cap'. r \<in> obj_refs cap') p' s
                                          \<longrightarrow> (cte_wp_at (Not \<circ> is_zombie) p' s \<and> \<not> is_zombie cap))
           and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)
-          and (\<lambda>s. cte_wp_at (\<lambda>cap'. \<forall>irq \<in> cap_irqs cap - cap_irqs cap'. irq_issued irq s) src s)
-          and (\<lambda>s. \<forall>t. cap = cap.ReplyCap t \<longrightarrow>
-                   st_tcb_at awaiting_reply t s \<and> \<not> has_reply_cap t s)\<rbrace>
+          and (\<lambda>s. cte_wp_at (\<lambda>cap'. \<forall>irq \<in> cap_irqs cap - cap_irqs cap'. irq_issued irq s) src s)\<rbrace>
       cap_insert cap src dest
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: invs_def valid_state_def)

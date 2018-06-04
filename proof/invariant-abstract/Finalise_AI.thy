@@ -1199,7 +1199,7 @@ locale Finalise_AI_3 = Finalise_AI_2 a b
     \<lbrace>\<lambda>rv s. P (interrupt_irq_node s)
               (cte_wp_at (P' (interrupt_irq_node s)) (p (interrupt_irq_node s)) s)\<rbrace>"
   assumes deleting_irq_handler_st_tcb_at:
-    "\<And>P t irq.\<lbrace>st_tcb_at P t and K (\<forall>st. simple st \<longrightarrow> P st)\<rbrace>
+    "\<And>P t irq.\<lbrace>st_tcb_at P t and K (\<forall>st. simple st \<longrightarrow> P st) and invs\<rbrace>
        deleting_irq_handler irq
      \<lbrace>\<lambda>rv. st_tcb_at P t :: 'a state \<Rightarrow> bool\<rbrace>"
   assumes irq_node_global_refs:
@@ -1313,32 +1313,73 @@ lemma (in Finalise_AI_3) finalise_cap_zombie_cap[wp]:
        apply (wp deleting_irq_handler_cte_preserved cancel_ipc_cte_preserved_irqn
                | clarsimp simp: is_cap_simps can_fast_finalise_def)+
   done
-(*
-crunch st_tcb_at[wp]: cancel_signal "st_tcb_at P t"
-crunch st_tcb_at[wp]: reply_remove_tcb "st_tcb_at P t"
-crunch st_tcb_at[wp]: reply_cancel_ipc "st_tcb_at P t"
-  (ignore: set_object thread_set)
-crunch st_tcb_at[wp]: cancel_ipc "st_tcb_at P t"
-  (ignore: cancel_signal set_object thread_set)
-*)
+
+lemma reply_remove_tcb_st_tcb_at_general:
+  "\<lbrace>st_tcb_at P t' and K (t = t' \<longrightarrow> (P Structures_A.Inactive))
+     and
+   (\<lambda>s. st_tcb_at (\<lambda>st. \<exists>rptr. (st = BlockedOnReply (Some rptr))
+                       \<and> reply_tcb_reply_at (\<lambda>p. p = Some t) rptr s) t s)\<rbrace>
+   reply_remove_tcb t
+   \<lbrace>\<lambda>rv. st_tcb_at P t'\<rbrace>"
+  apply (clarsimp simp: reply_remove_tcb_def)
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (case_tac ts; clarsimp simp: assert_opt_def)
+  apply (rename_tac reply)
+  apply (wpsimp wp: reply_remove_st_tcb_at)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_reply)
+  apply (clarsimp simp: reply_tcb_reply_at_def obj_at_def pred_tcb_at_def is_reply)
+  done
+
+lemma reply_ipc_st_tcb_at_general:
+  "\<lbrace>st_tcb_at P t' and K (t = t' \<longrightarrow> (P Structures_A.Inactive))
+    and (\<lambda>s. st_tcb_at (\<lambda>st. \<exists>r. st = BlockedOnReply (Some r)
+                       \<and> reply_tcb_reply_at (\<lambda>p. p = Some t) r s) t s)\<rbrace>
+     reply_cancel_ipc t \<lbrace>\<lambda>rv. st_tcb_at P t'\<rbrace>"
+  apply (simp add: reply_cancel_ipc_def)
+  apply (wpsimp wp: sts_st_tcb_at_cases get_object_wp reply_remove_tcb_st_tcb_at_general
+      simp: thread_set_def set_object_def pred_tcb_at_def obj_at_def split_del: if_split)
+  apply (case_tac "t=t'"; clarsimp dest!: get_tcb_SomeD)
+   apply (clarsimp simp: reply_tcb_reply_at_def obj_at_def)+
+  done
+
+lemma cancel_ipc_st_tcb_at:
+  "\<lbrace>st_tcb_at P t and K (t = t' \<longrightarrow> (P Structures_A.Running \<and> P Structures_A.Inactive)) and invs\<rbrace>
+      cancel_ipc t' \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+  apply (clarsimp simp: cancel_ipc_def)
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (case_tac state; wpsimp wp: blocked_ipc_st_tcb_at_general reply_ipc_st_tcb_at_general
+                    cancel_signal_st_tcb_at_general thread_get_wp simp: pred_tcb_at_def obj_at_def)
+  apply (drule invs_sym_refs)
+  apply (drule sym_refs_ko_atD[rotated])
+   apply (clarsimp simp: obj_at_def, simp)
+  apply (clarsimp simp: obj_at_def tcb_st_refs_of_def refs_of_rev split: option.split thread_state.splits)
+  apply (clarsimp simp: reply_tcb_reply_at_def obj_at_def)
+  apply (drule invs_sym_refs)
+  apply (drule sym_refs_ko_atD[rotated])
+   apply (clarsimp simp: obj_at_def, simp)
+  apply (clarsimp simp: obj_at_def tcb_st_refs_of_def refs_of_rev split: if_splits option.split thread_state.splits)
+  apply (clarsimp simp: reply_tcb_reply_at_def obj_at_def)+
+  done
+
 lemma fast_finalise_st_tcb_at:
-  assumes x: "P Inactive" shows
-  "\<lbrace>st_tcb_at P t and invs and K (\<forall>st. active st \<longrightarrow> P st)\<rbrace>
+  "\<lbrace>st_tcb_at P t and invs and K ((\<forall>st. active st \<longrightarrow> P st) \<and>(is_reply_cap cap \<longrightarrow> (P Structures_A.Inactive)))\<rbrace>
      fast_finalise cap fin
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (cases cap; wpsimp wp: cancel_all_ipc_st_tcb_at cancel_all_signals_st_tcb_at x)
-  sorry
+  apply (clarsimp)
+  apply (cases cap; wpsimp wp: cancel_all_ipc_st_tcb_at cancel_all_signals_st_tcb_at
+                          cancel_ipc_st_tcb_at get_simple_ko_wp simp: is_reply_cap_def)
+  done
 
 crunch st_tcb_at[wp]: empty_slot "st_tcb_at P t"
 
 lemma cap_delete_one_st_tcb_at:
-  assumes x: "P Inactive" shows
-  "\<lbrace>st_tcb_at P t and invs and K (\<forall>st. active st \<longrightarrow> P st)\<rbrace>
+  "\<lbrace>st_tcb_at P t and invs and K (\<forall>st. active st \<longrightarrow> P st)
+    and (\<lambda>s. \<exists>cap. cte_wp_at (\<lambda>c. is_reply_cap c) ptr s \<longrightarrow> P Inactive)\<rbrace>
      cap_delete_one ptr
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
-  apply (wpsimp wp: fast_finalise_st_tcb_at get_cap_wp x)
+  apply (wpsimp wp: fast_finalise_st_tcb_at get_cap_wp simp: cte_wp_at_def)
   done
 
 lemma can_fast_finalise_Null:

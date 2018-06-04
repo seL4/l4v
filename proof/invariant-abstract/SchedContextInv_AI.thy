@@ -1272,7 +1272,7 @@ lemma invoke_sched_context_typ_at[wp]:
        simp: invoke_sched_context_def sched_context_bind_ntfn_def)
 
 crunch typ_at[wp]: charge_budget "\<lambda>s. P (typ_at T p s)"
-  (wp: hoare_drop_imp simp: Let_def)
+  (wp: hoare_drop_imp maybeM_inv simp: Let_def)
 
 lemma check_budget_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> check_budget \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"

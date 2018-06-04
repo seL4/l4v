@@ -9,7 +9,7 @@
  *)
 
 theory Tcb_AI
-imports "./$L4V_ARCH/ArchCNodeInv_AI" SchedContextInv_AI
+imports "./$L4V_ARCH/ArchCNodeInv_AI" SchedContextInv_AI IpcDet_AI
 begin
 
 context begin interpretation Arch .

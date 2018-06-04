@@ -696,13 +696,13 @@ lemma check_budget_restart_domain_consumed_time_gt[wp]:
   "\<lbrace>(\<lambda>s. consumed_time s < domain_time s)\<rbrace>
       check_budget_restart \<lbrace>\<lambda>_ s. consumed_time s  < domain_time s \<rbrace>"
   by (wpsimp simp: check_budget_restart_def)
-
+(*
 lemma update_time_stamp_domain_consumed_time_gt[wp]:
-  "\<lbrace>\<lambda>s. P (domain_time s)(consumed_time s)\<rbrace>
+  "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace>
       update_time_stamp \<lbrace>\<lambda>_ s. P (domain_time s)(consumed_time s) \<rbrace>"
   apply (clarsimp simp: update_time_stamp_def)
   apply (wpsimp simp: do_machine_op_def ARM.getCurrentTime_def)
-sorry
+
 
 lemma handle_event_domain_time_inv:
   "\<lbrace>valid_domain_list and (\<lambda>s. consumed_time s < domain_time s) and K (e \<noteq> Interrupt)\<rbrace>
@@ -712,7 +712,7 @@ lemma handle_event_domain_time_inv:
       apply (case_tac syscall, simp_all add: handle_send_def whenE_def)
              apply (wpsimp split_del: if_split wp: hoare_vcg_if_lift2 hoare_drop_imp)+
   apply (clarsimp simp: valid_domain_list_def)
-  using word_gt_0 by fastforce
+  using word_gt_0 by fastforce*)
 
 end
 
@@ -740,7 +740,7 @@ lemma sc_and_timer_domain_time_left[wp]:
   "\<lbrace> valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace>
      sc_and_timer \<lbrace>\<lambda>_ s. 0 < domain_time s \<rbrace>"
   by (wpsimp simp: sc_and_timer_def Let_def)
-
+(*
 lemma next_domain_domain_time_left[wp]:
   "\<lbrace> valid_domain_list \<rbrace> next_domain \<lbrace>\<lambda>_ s. 0 < domain_time s \<rbrace>"
   apply (wpsimp simp: next_domain_def Let_def)
@@ -748,7 +748,7 @@ lemma next_domain_domain_time_left[wp]:
    apply (simp add: all_set_conv_all_nth)
    apply (erule_tac x="Suc (domain_index s) mod length (domain_list s)" in allE)
    apply (clarsimp simp: \<mu>s_to_ms_def)
-   sorry
+
 
 lemma schedule_choose_new_thread_domain_time_left[wp]:
   "\<lbrace> valid_domain_list \<rbrace>
@@ -770,8 +770,8 @@ lemma schedule_domain_time_left:
   apply (wp|wpc)+
 (*           apply (wp hoare_drop_imps)[1]
           apply (wpsimp wp: gts_wp hoare_drop_imps simp: is_schedulable_def)+
-  done*) sorry
-
+  done*)
+*)
 end
 
 (* FIXME: move to where hoare_drop_imp is, add E/R variants etc *)
@@ -780,7 +780,7 @@ lemma hoare_false_imp:
   by (auto simp: valid_def)
 
 context DetSchedDomainTime_AI_2 begin
-
+(*
 lemma call_kernel_domain_time_inv_det_ext:
   "\<lbrace> (\<lambda>s. 0 < domain_time s) and valid_domain_list and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) \<rbrace>
    (call_kernel e) :: (unit,det_ext) s_monad
@@ -802,7 +802,7 @@ lemma call_kernel_domain_time_inv_det_ext:
    apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp_R)
     apply (wp handle_event_domain_time_inv)
    apply fastf orce+
-  done*) sorry
+  done*) *)
 end
 
 end

@@ -918,8 +918,7 @@ lemma reply_unlink_tcb_iflive[wp]:
   apply (wpsimp simp: reply_unlink_tcb_def get_thread_state_def thread_get_def get_simple_ko_def
                    get_object_def)
   apply (clarsimp simp: a_type_def split: kernel_object.splits dest!: get_tcb_SomeD)
-  apply (drule (1) if_live_then_nonz_capD2)
-   by (clarsimp simp: live_def live_reply_def)
+  by (rule conjI; drule (1) if_live_then_nonz_capD2; clarsimp simp: live_def live_reply_def)
 
 crunch ex_nonz_cap_to[wp]: reply_unlink_tcb, reply_unlink_sc "ex_nonz_cap_to t"
   (wp: hoare_drop_imps)

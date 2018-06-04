@@ -1667,7 +1667,7 @@ lemma cap_swap_invs[wp]:
     cte_wp_at (weak_derived c) a and
     cte_wp_at (\<lambda>cc. is_untyped_cap cc \<longrightarrow> cc = c) a and
     cte_wp_at (weak_derived c') b and
-    cte_wp_at (\<lambda>cc. is_untyped_cap cc \<longrightarrow> cc = c') b\<rbrace>
+    cte_wp_at (\<lambda>cc. is_untyped_cap cc \<longrightarrow> cc = c') b and K (a \<noteq> b)\<rbrace>
    cap_swap c a c' b \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   apply (wp valid_arch_state_lift_aobj_at
@@ -1682,7 +1682,7 @@ lemma cap_swap_invs[wp]:
                 simp del: split_paired_Ex split_paired_All
          | rule conjI
          | clarsimp dest!: )+
-  sorry
+  done
 
 lemma cap_swap_fd_invs[wp]:
   "\<And>a b.
@@ -1694,10 +1694,11 @@ lemma cap_swap_fd_invs[wp]:
   apply (simp add: cap_swap_for_delete_def)
   apply (wp get_cap_wp)
   apply (clarsimp)
-(*  apply (rule conjI, fastforce dest: cte_wp_at_valid_objs_valid_cap)
+  apply (strengthen cap_irqs_appropriate_strengthen, simp)
+  apply (rule conjI, fastforce dest: cte_wp_at_valid_objs_valid_cap)
   apply (rule conjI, fastforce dest: cte_wp_at_valid_objs_valid_cap)
   apply (clarsimp simp: cte_wp_at_caps_of_state weak_derived_def)
-  done*) sorry
+  done
 
 end
 
@@ -2036,8 +2037,8 @@ lemma replicate_False_tcb_valid[simp]:
    apply (clarsimp split: option.split)
    apply (frule tcb_cap_cases_length[OF domI])
    apply (clarsimp simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1)
-  apply (cases n, simp_all add: tcb_cnode_index_def)
-  sorry
+  apply (cases n; clarsimp simp: tcb_cnode_index_def dest!: replicate_not_True[OF sym])
+  done
 
 
 lemma tcb_valid_nonspecial_cap:
@@ -2610,11 +2611,8 @@ lemma cap_revoke_typ_at:
 
 lemma cap_revoke_invs:
   "\<And>ptr. \<lbrace>\<lambda>s::'state_ext state. invs s\<rbrace> cap_revoke ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wp cap_revoke_preservation_desc_of)
-(*   apply (fastforce simp:  dest: reply_slot_not_descendant)
-  apply (wp preemption_point_inv)
-   apply simp+
-  done*) sorry
+  by (wpsimp wp: cap_revoke_preservation_desc_of[where Q="\<lambda>_ _ _. True", simplified]
+                 preemption_point_inv)
 
 end
 
@@ -3044,58 +3042,39 @@ lemma invoke_cnode_invs[wp]:
   "\<lbrace>invs and valid_cnode_inv i\<rbrace> invoke_cnode i \<lbrace>\<lambda>rv. invs::'state_ext state \<Rightarrow> bool\<rbrace>"
   unfolding invoke_cnode_def
   apply (cases i)
-        apply simp
-        apply wp
-        apply (simp add: ex_cte_cap_to_cnode_always_appropriate_strg
-                         real_cte_tcb_valid)
-        apply (rule conjI)
-         apply (clarsimp simp: cte_wp_at_caps_of_state dest!: cap_irqs_is_derived)
-(*        apply (rule conjI)
-          apply (elim conjE)
-           apply (drule real_cte_is_derived_not_replyD)
-           apply (simp add:invs_valid_objs invs_valid_reply_masters)+
-         apply (clarsimp simp:is_cap_simps)
-        apply (elim conjE)
-        apply (drule real_cte_not_reply_masterD)
-         apply (simp add:invs_valid_objs invs_valid_reply_masters)+
-        apply (clarsimp simp: cte_wp_at_caps_of_state is_derived_def)
        apply simp
        apply wp
-       apply (fastforce simp: real_cte_tcb_valid cte_wp_at_caps_of_state
-                             ex_cte_cap_to_cnode_always_appropriate_strg
-                       dest: real_cte_weak_derived_not_reply_masterD)
+       apply (simp add: ex_cte_cap_to_cnode_always_appropriate_strg
+                        real_cte_tcb_valid)
+       apply (clarsimp simp: cte_wp_at_caps_of_state dest!: cap_irqs_is_derived)
       apply simp
-      apply (wp cap_revoke_invs)
-      apply simp
+      apply wp
+      apply (fastforce simp: real_cte_tcb_valid cte_wp_at_caps_of_state
+                             ex_cte_cap_to_cnode_always_appropriate_strg)
      apply simp
-     apply wp
-     apply (clarsimp simp: emptyable_def obj_at_def is_tcb is_cap_table)
+     apply (wp cap_revoke_invs)
+     apply simp
     apply simp
-    apply (rule conjI)
-     apply (rule impI)
-     apply wp
-     apply (fastforce simp: real_cte_tcb_valid
-                           ex_cte_cap_to_cnode_always_appropriate_strg
-                     dest: real_cte_weak_derived_not_reply_masterD)
-    apply (rule impI)
-    apply (rule hoare_pre)
-     apply wp
-     apply (simp add: cte_wp_at_caps_of_state)
-     apply (wp cap_move_caps_of_state cap_move_ex_cap_cte)
-    apply (simp add: pred_conj_def)
-    apply (elim conjE exE)
-    apply (simp add: real_cte_tcb_valid ex_cte_cap_to_cnode_always_appropriate_strg
-                     cap_irqs_appropriateness [OF weak_derived_cap_irqs])
-    apply (intro conjI,
-          (fastforce simp: cte_wp_at_caps_of_state
-                    dest: real_cte_weak_derived_not_reply_masterD)+)[1]
-   apply (wpsimp wp: hoare_drop_imps get_cap_wp)+
+    apply wp
+    apply (clarsimp simp: obj_at_def is_tcb is_cap_table)
+   apply simp
    apply (rule conjI)
-    apply (clarsimp elim!: cte_wp_valid_cap)
-   apply (clarsimp simp: real_cte_tcb_valid cte_wp_at_caps_of_state
-                         is_cap_simps ex_cte_cap_to_cnode_always_appropriate_strg)
-  apply (wpsimp)
-  done*) sorry
+    apply (rule impI)
+    apply wp
+    apply (fastforce simp: real_cte_tcb_valid ex_cte_cap_to_cnode_always_appropriate_strg)
+   apply (rule impI)
+   apply (rule hoare_pre)
+    apply wp
+    apply (simp add: cte_wp_at_caps_of_state)
+    apply (wp cap_move_caps_of_state cap_move_ex_cap_cte)
+   apply (simp add: pred_conj_def)
+   apply (elim conjE exE)
+   apply (simp add: real_cte_tcb_valid ex_cte_cap_to_cnode_always_appropriate_strg
+                    cap_irqs_appropriateness [OF weak_derived_cap_irqs])
+   apply (intro conjI,
+           (fastforce simp: cte_wp_at_caps_of_state)+)[1]
+  apply (wpsimp wp: hoare_drop_imps get_cap_wp)+
+  done
 
 end
 

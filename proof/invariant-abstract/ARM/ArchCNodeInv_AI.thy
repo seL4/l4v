@@ -158,15 +158,8 @@ lemma weak_derived_update_cap_data [CNodeInv_AI_assms]:
                    cap_vptr_update_cap_data
               split del: if_split cong: if_cong)
   apply (erule disjE)
-   apply (clarsimp split: if_split_asm)
-(*   apply (erule disjE)
-    apply (clarsimp simp: is_cap_simps)
+   apply (clarsimp simp: is_cap_simps split: if_split_asm)
     apply (simp add: update_cap_data_def arch_update_cap_data_def is_cap_simps)
-   apply (erule disjE)
-    apply (clarsimp simp: is_cap_simps)
-    apply (simp add: update_cap_data_def arch_update_cap_data_def is_cap_simps)
-   apply (clarsimp simp: is_cap_simps)
-   apply (simp add: update_cap_data_def arch_update_cap_data_def is_cap_simps)
    apply (erule (1) same_object_as_update_cap_data)
   apply clarsimp
   apply (rule conjI, clarsimp simp: is_cap_simps update_cap_data_def split del: if_split)+
@@ -175,7 +168,7 @@ lemma weak_derived_update_cap_data [CNodeInv_AI_assms]:
                   split: cap.split_asm arch_cap.splits if_split_asm)
   apply (simp add: update_cap_data_def badge_update_def cap_rights_update_def is_cap_simps arch_update_cap_data_def
                    Let_def split_def the_cnode_cap_def bits_of_def split: if_split_asm cap.splits)+
-  done*) sorry
+  done
 
 lemma cap_badge_update_cap_data [CNodeInv_AI_assms]:
   "update_cap_data False x c \<noteq> NullCap \<and> (bdg, cap_badge c) \<in> capBadge_ordering False
@@ -264,7 +257,7 @@ lemma cte_at_nat_to_cref_zbits [CNodeInv_AI_assms]:
    apply (rule cte_wp_at_tcbI, fastforce+)
   apply (clarsimp elim!: cap_table_at_cte_at simp: cap_aligned_def)
   apply (simp add: nat_to_cref_def word_bits_conv)
-  sorry
+  done
 
 
 lemma copy_of_cap_range [CNodeInv_AI_assms]:
@@ -462,13 +455,28 @@ lemma zombie_is_cap_toE_pre[CNodeInv_AI_assms]:
      \<Longrightarrow> (ptr, nat_to_cref (zombie_cte_bits zbits) m) \<in> cte_refs (Zombie ptr zbits n) irqn"
   apply (clarsimp simp add: valid_cap_def cap_aligned_def)
   apply (clarsimp split: option.split_asm)
-(*   apply (simp add: unat_of_bl_nat_to_cref)
+   apply (simp add: unat_of_bl_nat_to_cref)
    apply (simp add: nat_to_cref_def word_bits_conv)
   apply (simp add: unat_of_bl_nat_to_cref)
   apply (simp add: nat_to_cref_def word_bits_conv)
-  done*) sorry
+  done
 
 crunch st_tcb_at_halted[wp]: prepare_thread_delete "st_tcb_at halted t"
+
+crunch valid_objs[wp]: set_consumed valid_objs
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma complete_yield_to_valid_objs[wp]:
+  "\<lbrace>valid_objs\<rbrace> complete_yield_to t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  by (wpsimp simp: complete_yield_to_def | wp_once hoare_drop_imps)+
+
+lemma sched_context_unbind_tcb_valid_objs[wp]:
+  "\<lbrace>valid_objs\<rbrace> sched_context_unbind_tcb t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  by (wpsimp simp: sched_context_unbind_tcb_def | wp_once hoare_drop_imps)+
+
+lemma unbind_from_sc_valid_objs[wp]:
+  "\<lbrace>valid_objs\<rbrace> unbind_from_sc t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  by (wpsimp simp: unbind_from_sc_def)
 
 lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
   "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s)
@@ -483,7 +491,7 @@ lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
                            split: option.split
                  | intro impI conjI
                  | rule hoare_drop_imp)+
-(*  apply (drule_tac final_zombie_not_live; (assumption | simp add: invs_iflive)?)
+   apply (drule_tac final_zombie_not_live; (assumption | simp add: invs_iflive)?)
    apply (clarsimp simp: pred_tcb_at_def is_tcb obj_at_def live_def, elim disjE)
     apply (clarsimp; case_tac "tcb_state tcb"; simp)+
   apply (rename_tac arch_cap)
@@ -492,7 +500,7 @@ lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
             | clarsimp simp: valid_cap_def obj_at_def is_tcb_def is_cap_table_def
                        split: option.splits bool.split
             | intro impI conjI)+
-  done *) sorry (* unbind_from_sc valid_objs *)
+  done
 
 lemmas finalise_cap_makes_halted = finalise_cap_makes_halted_proof
 
@@ -792,6 +800,10 @@ global_interpretation CNodeInv_AI_2?: CNodeInv_AI_2
 
 context Arch begin global_naming ARM
 
+crunch rvk_prog: unbind_from_sc "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
+  (simp: crunch_simps o_def unless_def is_final_cap_def
+     wp: crunch_wps empty_slot_rvk_prog' select_wp maybeM_inv ignore: set_tcb_obj_ref)
+
 lemma finalise_cap_rvk_prog [CNodeInv_AI_assms]:
    "\<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>
    finalise_cap a b
@@ -799,7 +811,7 @@ lemma finalise_cap_rvk_prog [CNodeInv_AI_assms]:
   apply (case_tac a,simp_all add:liftM_def)
     apply (wp suspend_rvk_prog deleting_irq_handler_rvk_prog
       | clarsimp simp:is_final_cap_def comp_def)+
-  sorry (* unbind_from_sc rvk_prog *)
+  done
 
 
 lemma rec_del_rvk_prog [CNodeInv_AI_assms]:
