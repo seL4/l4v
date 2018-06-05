@@ -764,6 +764,7 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
         val (_, thms) = funkyfold (crunch {ctxt = ctxt'', prp_name = prp_name, nmspce = nmspce,
               wps = wps, igs = igs, simps = simps, ig_dels = ig_dels, rules = rules} pre' extra' [])
             full_const_names [];
+        val _ = if null thms then warning "crunch: no theorems proven" else ();
 
         val atts' = map (Attrib.check_src ctxt) atts;
 
