@@ -11,6 +11,7 @@
 theory Time_Methods_Cmd_Test imports
   Time_Methods_Cmd
   Eisbach_Methods
+  "~~/src/HOL/Sublist"
 begin
 
 text \<open>
@@ -80,6 +81,26 @@ experiment begin
             slow200: \<open>simp only: rev.simps append.simps\<close>
             fast200: \<open>subst list_eval_rev_append(1), simp only: list_eval_rev_append(2-3)\<close>
           )
+    done
+
+  text \<open>
+    Fast and slow subsequence testing.
+  \<close>
+  lemma
+    "subseq (map (op* 2) [1 ..  5]) [1 .. 10]"
+    "subseq (map (op* 2) [1 ..  6]) [1 .. 12]"
+    "subseq (map (op* 2) [1 ..  7]) [1 .. 14]"
+    "subseq (map (op* 2) [1 ..  8]) [1 .. 16]"
+    apply (all \<open>match conclusion in "subseq x y" for x y \<Rightarrow>
+                  \<open>rule subst[where t = x], simp add: upto.simps,
+                   rule subst[where t = y], simp add: upto.simps\<close>\<close>)
+
+    apply (time_methods
+      "HOL simp": \<open>simp\<close>
+
+      "l4v simp": \<open>simp cong: if_cong cong del: if_weak_cong\<close>
+        -- "exponential time!"
+      )+
     done
 
   text \<open>
