@@ -770,6 +770,7 @@ context delete_locale begin interpretation Arch . (*FIXME: arch_split*)
 lemma valid_objs: "valid_objs' s"
   and        pa: "pspace_aligned' s"
   and        pc: "pspace_canonical' s"
+  and       pkm: "pspace_in_kernel_mappings' s"
   and        pd: "pspace_distinct' s"
   and        vq: "valid_queues s"
   and       vq': "valid_queues' s"
@@ -1270,6 +1271,9 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
 
   show "pspace_canonical' ?s" using pc
     by (simp add: pspace_canonical'_def dom_def)
+
+  show "pspace_in_kernel_mappings' ?s" using pkm
+    by (simp add: pspace_in_kernel_mappings'_def dom_def)
 
   show "pspace_distinct' ?s" using pd
     by (clarsimp simp add: pspace_distinct'_def ps_clear_def
@@ -4338,6 +4342,7 @@ lemma pspace_no_overlap_gsUntypedZeroRanges[simp]:
 
 crunch pspace_aligned'[wp]: updateNewFreeIndex "pspace_aligned'"
 crunch pspace_canonical'[wp]: updateNewFreeIndex "pspace_canonical'"
+crunch pspace_in_kernel_mappings'[wp]: updateNewFreeIndex "pspace_in_kernel_mappings'"
 crunch pspace_distinct'[wp]: updateNewFreeIndex "pspace_distinct'"
 crunch valid_arch_state'[wp]: updateNewFreeIndex "valid_arch_state'"
 crunch pspace_no_overlap'[wp]: updateNewFreeIndex "pspace_no_overlap' ptr n"
@@ -5930,6 +5935,7 @@ lemma createNewObjects_def2:
     valid_arch_state' s;
     range_cover ptr sz (Types_H.getObjectSize ty us) (length dslots);
     ptr \<noteq> 0; sz \<le> maxUntypedSizeBits; canonical_address (ptr && ~~ mask sz);
+    ptr && ~~ mask sz \<in> kernel_mappings;
     ksCurDomain s \<le> maxDomain\<rbrakk>
    \<Longrightarrow> createNewObjects ty parent dslots ptr us d s =
        insertNewCaps ty parent dslots ptr us d s"
@@ -5945,6 +5951,7 @@ lemma createNewObjects_def2:
   assume not_0: "ptr \<noteq> 0"
   assume sz_limit: "sz \<le> maxUntypedSizeBits"
   assume ptr_cn: "canonical_address (ptr && ~~ mask sz)"
+  assume ptr_km: "ptr && ~~ mask sz \<in> kernel_mappings"
   assume kscd: "ksCurDomain s \<le> maxDomain"
   assume valid_psp: "valid_pspace' s"
   assume valid_arch_state: "valid_arch_state' s"
@@ -5960,7 +5967,7 @@ lemma createNewObjects_def2:
             insertNewCap parent slot)
         [0.e.of_nat (length ys)] (y # ys) s =
        (createNewCaps ty ptr (Suc (length ys)) us d >>= zipWithM_x (insertNewCap parent) (y # ys))  s"
-    using le list_nc dist extra range_cover not_0 sz_limit ptr_cn caps_reserved
+    using le list_nc dist extra range_cover not_0 sz_limit ptr_cn ptr_km caps_reserved
     proof (induct ys arbitrary: y rule:rev_induct)
       case Nil
       show ?case
@@ -6055,6 +6062,7 @@ assumes check: "distinct dslots"
   and   not_0: "ptr \<noteq> 0" "length dslots \<noteq> 0"
   and sz_limit: "sz \<le> maxUntypedSizeBits"
   and  ptr_cn: "canonical_address (ptr && ~~ mask sz)"
+  and  ptr_km: "ptr && ~~ mask sz \<in> kernel_mappings"
   and       c: "corres r P P' f (insertNewCaps ty parent dslots ptr us d)"
   and     imp: "\<And>s. P' s \<Longrightarrow> (cte_wp_at' (\<lambda>c. isUntypedCap (cteCap c)) parent s
   \<and> (\<forall>slot \<in> set dslots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s)
@@ -6064,7 +6072,7 @@ assumes check: "distinct dslots"
    {ptr..ptr + of_nat (length dslots) * 2^ (Types_H.getObjectSize ty us) - 1} s
   \<and> valid_pspace' s \<and> valid_arch_state' s \<and> ksCurDomain s \<le> maxDomain)"
 shows "corres r P P' f (createNewObjects ty parent dslots ptr us d)"
-  using check cover not_0 sz_limit ptr_cn
+  using check cover not_0 sz_limit ptr_cn ptr_km
   apply (clarsimp simp:corres_underlying_def)
   apply (frule imp)
   apply (frule range_cover.range_cover_le_n_less(1)[where 'a=machine_word_len, folded word_bits_def, OF _ le_refl])
@@ -6082,6 +6090,7 @@ lemma createNewObjects_wp_helper:
   and   not_0: "ptr \<noteq> 0" "length dslots \<noteq> 0"
   and   sz_limit: "sz \<le> maxUntypedSizeBits"
   and   ptr_cn: "canonical_address (ptr && ~~ mask sz)"
+  and   ptr_km: "ptr && ~~ mask sz \<in> kernel_mappings"
   shows "\<lbrace>P\<rbrace> insertNewCaps ty parent dslots ptr us d \<lbrace>Q\<rbrace>
   \<Longrightarrow> \<lbrace>P and (cte_wp_at' (\<lambda>c. isUntypedCap (cteCap c)) parent
   and (\<lambda>s. \<forall>slot \<in> set dslots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s)

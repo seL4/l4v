@@ -773,6 +773,7 @@ lemmas transferCapsToSlots_pres2
 
 crunch pspace_aligned'[wp]: transferCapsToSlots pspace_aligned'
 crunch pspace_canonical'[wp]: transferCapsToSlots pspace_canonical'
+crunch pspace_in_kernel_mappings'[wp]: transferCapsToSlots pspace_in_kernel_mappings'
 crunch pspace_distinct'[wp]: transferCapsToSlots pspace_distinct'
 
 lemma transferCapsToSlots_typ_at'[wp]:
@@ -1192,7 +1193,8 @@ lemma tc_corres:
     and (\<lambda>s. valid_message_info info)
     and transfer_caps_srcs caps)
    (tcb_at' receiver and valid_objs' and
-    pspace_aligned' and pspace_distinct' and pspace_canonical' and no_0_obj' and valid_mdb'
+    pspace_aligned' and pspace_distinct' and pspace_canonical' and pspace_in_kernel_mappings'
+    and no_0_obj' and valid_mdb'
     and (\<lambda>s. case ep of Some x \<Rightarrow> ep_at' x s | _ \<Rightarrow> True)
     and case_option \<top> valid_ipc_buffer_ptr' recv_buf
     and transferCaps_srcs caps'
@@ -1435,6 +1437,8 @@ crunch aligned'[wp]: copyMRs pspace_aligned'
   (wp: crunch_wps simp: crunch_simps ignore: getObject wp: crunch_wps)
 crunch pspace_canonical'[wp]: copyMRs pspace_canonical'
   (wp: crunch_wps simp: crunch_simps ignore: getObject wp: crunch_wps)
+crunch pspace_in_kernel_mappings'[wp]: copyMRs pspace_in_kernel_mappings'
+  (wp: crunch_wps simp: crunch_simps ignore: getObject wp: crunch_wps)
 crunch distinct'[wp]: copyMRs pspace_distinct'
   (wp: crunch_wps simp: crunch_simps ignore: getObject wp: crunch_wps)
 crunch aligned'[wp]: setMessageInfo pspace_aligned'
@@ -1647,7 +1651,7 @@ lemma do_normal_transfer_corres:
    and case_option \<top> in_user_frame recv_buf)
   (tcb_at' sender and tcb_at' receiver and valid_objs'
    and pspace_aligned' and pspace_distinct' and pspace_canonical' and cur_tcb'
-   and valid_mdb' and no_0_obj'
+   and valid_mdb' and no_0_obj' and pspace_in_kernel_mappings'
    and (\<lambda>s. case ep of Some x \<Rightarrow> ep_at' x s | _ \<Rightarrow> True)
    and case_option \<top> valid_ipc_buffer_ptr' send_buf
    and case_option \<top> valid_ipc_buffer_ptr' recv_buf)
@@ -2525,6 +2529,7 @@ lemma valid_pspace'_splits[elim!]:
   "valid_pspace' s \<Longrightarrow> valid_objs' s"
   "valid_pspace' s \<Longrightarrow> pspace_aligned' s"
   "valid_pspace' s \<Longrightarrow> pspace_canonical' s"
+  "valid_pspace' s \<Longrightarrow> pspace_in_kernel_mappings' s"
   "valid_pspace' s \<Longrightarrow> pspace_distinct' s"
   "valid_pspace' s \<Longrightarrow> valid_mdb' s"
   "valid_pspace' s \<Longrightarrow> no_0_obj' s"
@@ -2535,6 +2540,7 @@ lemma sts_valid_pspace_hangers:
   "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
   "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. pspace_canonical'\<rbrace>"
+  "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. pspace_in_kernel_mappings'\<rbrace>"
   "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
   "\<lbrace>valid_pspace' and tcb_at' t and valid_tcb_state' st\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. no_0_obj'\<rbrace>"
   by (safe intro!: hoare_strengthen_post [OF sts'_valid_pspace'_inv])

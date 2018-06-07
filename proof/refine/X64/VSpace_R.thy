@@ -2453,6 +2453,9 @@ crunch gsUntypedZeroRanges[wp]: storePTE, storePDE, storePDPTE, storePML4E "\<la
 crunch pspace_canonical'[wp]: storePTE, storePDE, storePDPTE, storePML4E "pspace_canonical'"
   (ignore: getObject setObject)
 
+crunch pspace_in_kernel_mappings'[wp]: storePTE, storePDE, storePDPTE, storePML4E "pspace_in_kernel_mappings'"
+  (ignore: getObject setObject)
+
 lemma storePDE_invs[wp]:
   "\<lbrace>invs' and valid_pde' pde\<rbrace>
       storePDE p pde

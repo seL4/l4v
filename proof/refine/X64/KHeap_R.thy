@@ -619,6 +619,17 @@ lemma setObject_canonical[wp]:
   apply (fastforce dest: bspec[OF _ domI])
   done
 
+lemma setObject_in_kernel_mappings[wp]:
+  shows     "\<lbrace>pspace_in_kernel_mappings'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_in_kernel_mappings'\<rbrace>"
+  apply (clarsimp simp: setObject_def split_def valid_def in_monad
+                        projectKOs pspace_in_kernel_mappings'_def ps_clear_upd'
+                        objBits_def[symmetric] lookupAround2_char1
+                 split: if_split_asm
+                 dest!: updateObject_objBitsKO)
+   apply (fastforce dest: bspec[OF _ domI])
+  apply (fastforce dest: bspec[OF _ domI])
+  done
+
 lemma set_ep_aligned' [wp]:
   "\<lbrace>pspace_aligned'\<rbrace> setEndpoint ep v  \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   unfolding setEndpoint_def by wp
@@ -628,6 +639,8 @@ lemma set_ep_distinct' [wp]:
   unfolding setEndpoint_def by wp
 
 crunch pspace_canonical'[wp]: setEndpoint, getEndpoint "pspace_canonical'"
+
+crunch pspace_in_kernel_mappings'[wp]: setEndpoint, getEndpoint "pspace_in_kernel_mappings'"
 
 lemma setEndpoint_cte_wp_at':
   "\<lbrace>cte_wp_at' P p\<rbrace> setEndpoint ptr v \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"

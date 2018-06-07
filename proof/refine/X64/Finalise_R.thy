@@ -26,6 +26,7 @@ lemma case_Null_If:
 
 crunch aligned'[wp]: emptySlot pspace_aligned' (simp: case_Null_If)
 crunch pspace_canonical'[wp]: emptySlot pspace_canonical' (simp: case_Null_If)
+crunch pspace_in_kernel_mappings'[wp]: emptySlot pspace_in_kernel_mappings' (simp: case_Null_If)
 crunch distinct'[wp]: emptySlot pspace_distinct' (simp: case_Null_If)
 
 lemma updateCap_cte_wp_at_cases:
