@@ -2794,6 +2794,9 @@ crunch aligned'[wp]: cteInsert pspace_aligned'
 crunch pspace_canonical'[wp]: cteInsert pspace_canonical'
   (wp: crunch_wps)
 
+crunch pspace_in_kernel_mappings'[wp]: cteInsert pspace_in_kernel_mappings'
+  (wp: crunch_wps)
+
 crunch distinct'[wp]: cteInsert pspace_distinct'
   (wp: crunch_wps)
 
@@ -3652,6 +3655,9 @@ lemma cteInsert_untyped_ranges_zero[wp]:
 crunch pspace_canonical'[wp]: cteInsert "pspace_canonical'"
   (wp: crunch_wps)
 
+crunch pspace_in_kernel_mappings'[wp]: cteInsert "pspace_in_kernel_mappings'"
+  (wp: crunch_wps)
+
 lemma cteInsert_invs:
  "\<lbrace>invs' and cte_wp_at' (\<lambda>c. cteCap c=NullCap) dest and valid_cap' cap and
   (\<lambda>s. src \<noteq> dest) and (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s)
@@ -4448,6 +4454,9 @@ crunch no_0_obj'[wp]: setupReplyMaster no_0_obj'
   (wp: crunch_wps simp: crunch_simps)
 
 crunch pspace_canonical'[wp]: setupReplyMaster "pspace_canonical'"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunch pspace_in_kernel_mappings'[wp]: setupReplyMaster "pspace_in_kernel_mappings'"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma setupReplyMaster_valid_pspace':
@@ -6856,6 +6865,8 @@ lemma updateFreeIndex_forward_valid_mdb':
   done
 
 crunch pspace_canonical'[wp]: updateFreeIndex "pspace_canonical'"
+
+crunch pspace_in_kernel_mappings'[wp]: updateFreeIndex "pspace_in_kernel_mappings'"
 
 lemma updateFreeIndex_forward_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' ((\<lambda>cap. isUntypedCap cap

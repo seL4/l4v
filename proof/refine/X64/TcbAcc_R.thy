@@ -2386,6 +2386,7 @@ crunches rescheduleRequired, tcbSchedDequeue
 crunches rescheduleRequired, tcbSchedDequeue
   for no_0_obj'[wp]: "no_0_obj'"
   and pspace_canonical'[wp]: "pspace_canonical'"
+  and pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
   (ignore:getObject)
 
 lemma sts'_valid_pspace'_inv[wp]:

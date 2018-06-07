@@ -421,7 +421,7 @@ where valid_cap'_def:
   | Structures_H.UntypedCap d r n f \<Rightarrow>
       valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> minUntypedSizeBits \<le> n \<and> n \<le> maxUntypedSizeBits
         \<and> f \<le> 2^n \<and> is_aligned (of_nat f :: machine_word) minUntypedSizeBits
-        \<and> canonical_address r
+        \<and> canonical_address r \<and> r \<in> kernel_mappings
   | Structures_H.EndpointCap r badge x y z \<Rightarrow> ep_at' r s
   | Structures_H.NotificationCap r badge x y \<Rightarrow> ntfn_at' r s
   | Structures_H.CNodeCap r bits guard guard_sz \<Rightarrow>
@@ -607,6 +607,11 @@ definition
   pspace_canonical' :: "kernel_state \<Rightarrow> bool"
 where
  "pspace_canonical' s \<equiv> \<forall>p \<in> dom (ksPSpace s). canonical_address p"
+
+definition
+  pspace_in_kernel_mappings' :: "kernel_state \<Rightarrow> bool"
+where
+ "pspace_in_kernel_mappings' s \<equiv> \<forall>p \<in> dom (ksPSpace s). p \<in> kernel_mappings"
 
 definition
   pspace_distinct' :: "kernel_state \<Rightarrow> bool"
@@ -892,6 +897,7 @@ where
   "valid_pspace' \<equiv> valid_objs' and
                    pspace_aligned' and
                    pspace_canonical' and
+                   pspace_in_kernel_mappings' and
                    pspace_distinct' and
                    no_0_obj' and
                    valid_mdb'"
@@ -1937,14 +1943,14 @@ lemmas valid_irq_states'_def = valid_irq_masks'_def
 
 lemma valid_pspaceI' [intro]:
   "\<lbrakk>valid_objs' s; pspace_aligned' s; pspace_canonical' s; pspace_distinct' s;
-    valid_mdb' s; no_0_obj' s\<rbrakk>
+    valid_mdb' s; no_0_obj' s; pspace_in_kernel_mappings' s\<rbrakk>
    \<Longrightarrow> valid_pspace' s"
   unfolding valid_pspace'_def by simp
 
 lemma valid_pspaceE' [elim]:
   "\<lbrakk>valid_pspace' s;
     \<lbrakk> valid_objs' s; pspace_aligned' s; pspace_distinct' s; no_0_obj' s;
-      valid_mdb' s\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+      valid_mdb' s; pspace_canonical' s; pspace_in_kernel_mappings' s\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_pspace'_def by simp
 
 lemma idle'_no_refs:
@@ -2087,7 +2093,7 @@ lemma valid_pspace':
   "valid_pspace' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_pspace' s'"
   by  (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def pspace_canonical'_def
                      pspace_distinct'_def ps_clear_def no_0_obj'_def ko_wp_at'_def
-                     typ_at'_def
+                     typ_at'_def pspace_in_kernel_mappings'_def
            intro: valid_obj'_pspaceI valid_mdb'_pspaceI)
 
 lemma ex_cte_cap_to_pspaceI'[elim]:
@@ -3025,6 +3031,10 @@ lemma pspace_canonical_update [iff]:
   "pspace_canonical' (f s) = pspace_canonical' s"
   by (simp add: pspace pspace_canonical'_def)
 
+lemma pspace_in_kernel_mappings_update [iff]:
+  "pspace_in_kernel_mappings' (f s) = pspace_in_kernel_mappings' s"
+  by (simp add: pspace pspace_in_kernel_mappings'_def)
+
 lemma pspace_distinct_update [iff]:
   "pspace_distinct' (f s) = pspace_distinct' s"
   by (simp add: pspace pspace_distinct'_def ps_clear_def)
@@ -3857,6 +3867,44 @@ lemma invs_pspace_canonical'[elim!]:
 
 lemma valid_pspace_canonical'[elim!]:
   "valid_pspace' s \<Longrightarrow> pspace_canonical' s"
+  by (clarsimp simp: valid_pspace'_def)
+
+lemma in_kernel_mappings_add:
+  assumes "is_aligned p n"
+  assumes "f < 2 ^ n"
+  assumes "p \<in> kernel_mappings"
+  shows "p + f \<in> kernel_mappings"
+  using assms
+  unfolding kernel_mappings_def pptr_base_def X64.pptrBase_def
+  using is_aligned_no_wrap' word_le_plus_either by blast
+
+
+lemma range_cover_in_kernel_mappings:
+  "\<lbrakk> range_cover ptr sz us n ; p < n ;
+     (ptr && ~~ mask sz) \<in> kernel_mappings ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> (ptr + of_nat p * 2 ^ us) \<in> kernel_mappings"
+  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
+  apply (subst add.commute)
+  apply (subst add.assoc)
+  apply (rule in_kernel_mappings_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
+  apply (drule (1) range_cover.range_cover_compare)
+  apply (clarsimp simp: word_less_nat_alt)
+  apply unat_arith
+  done
+
+lemma in_kernel_mappings_neq_mask:
+  "\<lbrakk> (ptr :: machine_word) \<in> kernel_mappings ; sz \<le> 39 \<rbrakk>
+   \<Longrightarrow> ptr && ~~ mask sz \<in> kernel_mappings"
+  apply (clarsimp simp: kernel_mappings_def untypedBits_defs pptr_base_def
+                        X64.pptrBase_def)
+  by (word_bitwise, clarsimp simp: neg_mask_bang word_size)
+
+lemma invs_pspace_in_kernel_mappings'[elim!]:
+  "invs' s \<Longrightarrow> pspace_in_kernel_mappings' s"
+  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
+
+lemma valid_pspace_in_kernel_mappings'[elim!]:
+  "valid_pspace' s \<Longrightarrow> pspace_in_kernel_mappings' s"
   by (clarsimp simp: valid_pspace'_def)
 
 end
