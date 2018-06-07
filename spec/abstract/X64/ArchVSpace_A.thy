@@ -513,8 +513,8 @@ definition
 attribs_from_word :: "machine_word \<Rightarrow> frame_attrs" where
 "attribs_from_word w \<equiv>
   let V = (if w !!0 then {PTAttr WriteThrough} else {});
-      V' = (if w!!1 then insert PAT V else V)
-  in if w!!2 then insert (PTAttr CacheDisabled) V' else V'"
+      V' = (if w!!1 then insert (PTAttr CacheDisabled) V else V)
+  in if w!!2 then insert PAT V' else V'"
 
 
 text {* Update the mapping data saved in a page or page table capability. *}

@@ -513,8 +513,8 @@ Note that implementations with separate high and low memory regions may also wis
 > attribsFromWord :: Word -> VMAttributes
 > attribsFromWord w = VMAttributes {
 >     x64WriteThrough = w `testBit` 0,
->     x64PAT = w `testBit` 1,
->     x64CacheDisabled = w `testBit` 2 }
+>     x64PAT = w `testBit` 2,
+>     x64CacheDisabled = w `testBit` 1 }
 
 > pageBase :: VPtr -> VMPageSize -> VPtr
 > pageBase vaddr size = vaddr .&. (complement $ mask (pageBitsForSize size))
