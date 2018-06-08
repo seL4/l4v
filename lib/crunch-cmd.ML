@@ -587,7 +587,8 @@ fun crunch_rule cfg const goal extra thms =
                 #> Instance.dest_term #> the #> #3 #> curry Instance.eq_extra goal_extra)
             t = SOME true
           then all_tac
-          else DETERM (((wp' [] ORELSE' simp_tac ctxt) THEN_ALL_NEW fail_tac t) i)))
+          else DETERM (((fn i => REPEAT_DETERM (CHANGED (wp' [] i ORELSE simp_tac ctxt i)))
+                        THEN_ALL_NEW fail_tac t) i)))
 
     val seq = Seq.maps (fn (ms, t) => Seq.map (pair ms) (finalise t)) seq
 

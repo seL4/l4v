@@ -3151,7 +3151,7 @@ crunch ct'[wp]: sendSignal "\<lambda>s. P (ksCurThread s)"
 crunch it'[wp]: sendSignal "\<lambda>s. P (ksIdleThread s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch irqs_masked'[wp]: sendSignal "irqs_masked'"
+crunch irqs_masked'[wp]: sendSignal, setBoundNotification "irqs_masked'"
   (wp: crunch_wps getObject_inv loadObject_default_inv
    simp: crunch_simps unless_def o_def
    rule: irqs_masked_lift ignore: getObject)
