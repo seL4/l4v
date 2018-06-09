@@ -15,6 +15,9 @@ imports
   "../../../tools/asmrefine/CommonOps"
 begin
 
+external_file
+  "../c/build/$L4V_ARCH/kernel_all.c_pp"
+
 context begin interpretation Arch .
 
 requalify_types
