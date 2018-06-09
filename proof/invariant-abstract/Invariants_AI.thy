@@ -129,7 +129,7 @@ lemmas [simp] =  acap_rights_update_id state_hyp_refs_update
 term "vs_lookup :: 'z::state_ext state \<Rightarrow> vs_chain set"
 term "(a \<rhd> b) :: ('z:: state_ext state) \<Rightarrow> bool"
 
--- ---------------------------------------------------------------------------
+\<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Invariant Definitions for Abstract Spec"
 
 definition
@@ -1057,7 +1057,7 @@ abbreviation(input)
        and cur_tcb"
 
 
--- ---------------------------------------------------------------------------
+\<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Lemmas"
 
 lemma valid_bound_ntfn_None[simp]:
@@ -1102,7 +1102,7 @@ lemma is_cap_table:
 
 lemmas is_obj_defs = is_ep is_ntfn is_tcb is_cap_table
 
--- "sanity check"
+\<comment> \<open>sanity check\<close>
 lemma obj_at_get_object:
   "obj_at P ref s \<Longrightarrow> fst (get_object ref s) \<noteq> {}"
   by (auto simp: obj_at_def get_object_def gets_def get_def

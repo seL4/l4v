@@ -3152,7 +3152,7 @@ lemma unmapPage_ccorres:
       apply (simp add: liftE_bindE Collect_False bind_bindE_assoc
                   del: Collect_const)
       apply (rule ccorres_splitE_novcg[where r'=dc and xf'=xfdc])
-          -- "ARMSmallPage"
+          \<comment> \<open>ARMSmallPage\<close>
           apply (rule ccorres_Cond_rhs)
            apply (simp add: gen_framesize_to_H_def dc_def[symmetric])
            apply (rule ccorres_rhs_assoc)+
@@ -3195,7 +3195,7 @@ lemma unmapPage_ccorres:
             apply (wp)
            apply simp
            apply (vcg exspec=lookupPTSlot_modifies)
-          -- "ARMLargePage"
+          \<comment> \<open>ARMLargePage\<close>
           apply (rule ccorres_Cond_rhs)
            apply (simp add: gen_framesize_to_H_def dc_def[symmetric])
            apply (rule ccorres_rhs_assoc)+
@@ -3289,7 +3289,7 @@ lemma unmapPage_ccorres:
             apply (wp lookupPTSlot_inv Arch_R.lookupPTSlot_aligned
                   lookupPTSlot_page_table_at' | simp add: ptBits_eq)+
            apply (vcg exspec=lookupPTSlot_modifies)
-          -- "ARMSection"
+          \<comment> \<open>ARMSection\<close>
           apply (rule ccorres_Cond_rhs)
            apply (rule ccorres_rhs_assoc)+
            apply (csymbr, csymbr)
@@ -3324,7 +3324,7 @@ lemma unmapPage_ccorres:
             apply simp
             apply wp
            apply (simp add: guard_is_UNIV_def)
-          -- "ARMSuperSection"
+          \<comment> \<open>ARMSuperSection\<close>
           apply (rule ccorres_Cond_rhs)
            apply (rule ccorres_rhs_assoc)+
            apply csymbr

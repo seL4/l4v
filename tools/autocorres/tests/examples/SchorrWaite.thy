@@ -157,7 +157,7 @@ by (induct xs arbitrary: p) auto
 section {* Machinery for the Schorr-Waite proof*}
 
 definition
-  -- "Relations induced by a mapping"
+  \<comment> \<open>Relations induced by a mapping\<close>
   rel :: "('a ptr \<Rightarrow> 'a ptr) \<Rightarrow> ('a ptr \<times> 'a ptr) set"
   where "rel m = {(x,y). m x = y \<and> y \<noteq> NULL}"
 
@@ -229,7 +229,7 @@ apply (simp add:rel_defs fun_upd_apply)
 done
 
 definition
-  -- "Restriction of a relation"
+  \<comment> \<open>Restriction of a relation\<close>
   restr ::"('a ptr \<times> 'a ptr) set \<Rightarrow> ('a ptr \<Rightarrow> bool) \<Rightarrow> ('a ptr \<times> 'a ptr) set"       ("(_/ | _)" [50, 51] 50)
   where "restr r m = {(x,y). (x,y) \<in> r \<and> \<not> m x}"
 
@@ -258,7 +258,7 @@ apply (simp add:restr_def fun_upd_apply)
 done
 
 definition
-  -- "A short form for the stack mapping function for List"
+  \<comment> \<open>A short form for the stack mapping function for List\<close>
   S :: "('a ptr \<Rightarrow> bool) \<Rightarrow> ('a ptr \<Rightarrow> 'a ptr) \<Rightarrow> ('a ptr \<Rightarrow> 'a ptr) \<Rightarrow> ('a ptr \<Rightarrow> 'a ptr)"
   where "S c l r = (\<lambda>x. if c x then r x else l x)"
 
@@ -289,7 +289,7 @@ apply(induct_tac stack)
 done
 
 primrec
-  --"Recursive definition of what is means for a the graph/stack structure to be reconstructible"
+  \<comment> \<open>Recursive definition of what is means for a the graph/stack structure to be reconstructible\<close>
   stkOk :: "('a ptr \<Rightarrow> bool) \<Rightarrow> ('a ptr \<Rightarrow> 'a ptr) \<Rightarrow> ('a ptr \<Rightarrow> 'a ptr) \<Rightarrow> ('a ptr \<Rightarrow> 'a ptr) \<Rightarrow> ('a ptr \<Rightarrow> 'a ptr) \<Rightarrow> 'a ptr \<Rightarrow>'a ptr list \<Rightarrow>  bool"
 where
   stkOk_nil:  "stkOk c l r iL iR t [] = True"
@@ -461,21 +461,21 @@ proof (tactic "wp_all_tac @{context}",
     have "?Inv (s[p]\<rightarrow>r) p (Cbool (?cond (s[p]\<rightarrow>r) p ?pop_s)) ?pop_s stack_tl"
           (is "?poI1\<and> ?poI2\<and> ?poI3\<and> ?poI4\<and> ?poI5\<and> ?poI6\<and> ?poI7\<and> ?poI8\<and> ?poI9")
     proof -
-        -- {*List property is maintained:*}
+        \<comment> \<open>List property is maintained:\<close>
       from i1 p_notin_stack_tl ifB2
         have poI1: "List (S (\<lambda>x. ?pop_s[x]\<rightarrow>c \<noteq> 0) (\<lambda>x. ?pop_s[x]\<rightarrow>l) (\<lambda>x. ?pop_s[x]\<rightarrow>r)) (s[p]\<rightarrow>r) stack_tl"
         by(simp, simp add: S_def)
 
       moreover
-        -- {*Everything on the stack is marked:*}
+        \<comment> \<open>Everything on the stack is marked:\<close>
       from i2 have poI2: "\<forall> x \<in> set stack_tl. s[x]\<rightarrow>m \<noteq> 0" by simp
       moreover
 
-        -- {*Everything is still reachable:*}
+        \<comment> \<open>Everything is still reachable:\<close>
       let "(R = reachable ?Ra ?A)" = "?I3"
         let "?Rb" = "relS {\<lambda>x. ?pop_s[x]\<rightarrow>l, \<lambda>x. ?pop_s[x]\<rightarrow>r}"
       let "?B" = "{p, s[p]\<rightarrow>r}"
-        -- {*Our goal is @{text"R = reachable ?Rb ?B"}.*}
+        \<comment> \<open>Our goal is @{text"R = reachable ?Rb ?B"}.\<close>
       have "?Ra\<^sup>* `` addrs ?A = ?Rb\<^sup>* `` addrs ?B" (is "?L = ?R")
       proof
         show "?L \<subseteq> ?R"
@@ -501,11 +501,11 @@ proof (tactic "wp_all_tac @{context}",
         with i3 have poI3: "R = reachable ?Rb ?B"  by (simp add:reachable_def)
       moreover
 
-        -- "If it is reachable and not marked, it is still reachable using..."
+        \<comment> \<open>If it is reachable and not marked, it is still reachable using...\<close>
       let "\<forall>x. x \<in> R \<and> s[x]\<rightarrow>m = 0 \<longrightarrow> x \<in> reachable ?Ra ?A"  =  ?I4
         let "?Rb" = "restr (relS {\<lambda>x. ?pop_s[x]\<rightarrow>l, \<lambda>x. ?pop_s[x]\<rightarrow>r}) (\<lambda>x. ?pop_s[x]\<rightarrow>m \<noteq> 0)"
         let "?B" = "{p} \<union> set (map (\<lambda>x. ?pop_s[x]\<rightarrow>r) stack_tl)"
-        -- {*Our goal is @{text"\<forall>x. x \<in> R \<and> \<not> m x \<longrightarrow> x \<in> reachable ?Rb ?B"}.*}
+        \<comment> \<open>Our goal is @{text"\<forall>x. x \<in> R \<and> \<not> m x \<longrightarrow> x \<in> reachable ?Rb ?B"}.\<close>
       let ?T = "{t, s[p]\<rightarrow>r}"
 
       have "?Ra\<^sup>* `` addrs ?A \<subseteq> ?Rb\<^sup>* `` (addrs ?B \<union> addrs ?T)"
@@ -518,37 +518,37 @@ proof (tactic "wp_all_tac @{context}",
           by (clarsimp simp:restr_def relS_def)
               (fastforce simp add:rel_def Image_iff addrs_def dest:rel_upd1)
       qed
-          -- "We now bring a term from the right to the left of the subset relation."
+          \<comment> \<open>We now bring a term from the right to the left of the subset relation.\<close>
       hence subset: "?Ra\<^sup>* `` addrs ?A - ?Rb\<^sup>* `` addrs ?T \<subseteq> ?Rb\<^sup>* `` addrs ?B"
         by blast
         have poI4: "\<forall>x. x \<in> R \<and> ?pop_s[x]\<rightarrow>m = 0 \<longrightarrow> x \<in> reachable ?Rb ?B"
       proof (rule allI, rule impI)
         fix x
           assume a: "x \<in> R \<and> ?pop_s[x]\<rightarrow>m = 0"
-          -- {*First, a disjunction on @{term "s[p]\<rightarrow>r"} used later in the proof*}
+          \<comment> \<open>First, a disjunction on @{term "s[p]\<rightarrow>r"} used later in the proof\<close>
         have pDisj:"s[p]\<rightarrow>r = NULL \<or> (s[p]\<rightarrow>r \<noteq> NULL \<and> s[(s[p]\<rightarrow>r)]\<rightarrow>m \<noteq> 0)" using poI1 poI2
           by (case_tac stack_tl, auto simp: List_def)
-            -- {*@{term x} belongs to the left hand side of @{thm[source] subset}:*}
+            \<comment> \<open>@{term x} belongs to the left hand side of @{thm[source] subset}:\<close>
         have incl: "x \<in> ?Ra\<^sup>*``addrs ?A" using  a i4 by (simp only:reachable_def, clarsimp)
           have excl: "x \<notin> ?Rb\<^sup>*`` addrs ?T" using pDisj ifB1 a by (auto simp add:addrs_def)
-          -- {*And therefore also belongs to the right hand side of @{thm[source]subset},*}
-          -- {*which corresponds to our goal.*}
+          \<comment> \<open>And therefore also belongs to the right hand side of @{thm[source]subset},\<close>
+          \<comment> \<open>which corresponds to our goal.\<close>
         from incl excl subset  show "x \<in> reachable ?Rb ?B" by (auto simp add:reachable_def)
       qed
       moreover
 
-        -- "If it is marked, then it is reachable"
+        \<comment> \<open>If it is marked, then it is reachable\<close>
         from i5 have poI5: "\<forall>x. ?pop_s[x]\<rightarrow>m \<noteq> 0 \<longrightarrow> x \<in> R" by simp
       moreover
 
-        -- {*If it is not on the stack, then its @{term l} and @{term r} fields are unchanged*}
+        \<comment> \<open>If it is not on the stack, then its @{term l} and @{term r} fields are unchanged\<close>
       from i7 i6 ifB2
         have poI6: "\<forall>x. x \<notin> set stack_tl \<longrightarrow> ?pop_s[x]\<rightarrow>r = s0[x]\<rightarrow>r \<and> ?pop_s[x]\<rightarrow>l = s0[x]\<rightarrow>l"
         by(auto simp: fun_upd_apply)
 
       moreover
 
-        -- {*If it is on the stack, then its @{term l} and @{term r} fields can be reconstructed*}
+        \<comment> \<open>If it is on the stack, then its @{term l} and @{term r} fields can be reconstructed\<close>
         from p_notin_stack_tl i7 have poI7: "stkOk (\<lambda>x. ?pop_s[x]\<rightarrow>c \<noteq> 0) (\<lambda>x. ?pop_s[x]\<rightarrow>l) (\<lambda>x. ?pop_s[x]\<rightarrow>r) (\<lambda>x. s0[x]\<rightarrow>l) (\<lambda>x. s0[x]\<rightarrow>r) p stack_tl"
           by clarsimp
       moreover
@@ -561,11 +561,11 @@ proof (tactic "wp_all_tac @{context}",
   }
   note popStack = this
 
-    -- "Proofs of the Swing and Push arm follow."
-    -- "Since they are in principle simmilar to the Pop arm proof,"
-    -- "we show fewer comments and use frequent pattern matching."
+    \<comment> \<open>Proofs of the Swing and Push arm follow.\<close>
+    \<comment> \<open>Since they are in principle simmilar to the Pop arm proof,\<close>
+    \<comment> \<open>we show fewer comments and use frequent pattern matching.\<close>
   {
-      -- "Swing arm"
+      \<comment> \<open>Swing arm\<close>
     fix s p t cond stack
     assume stackInv: "?Inv p t cond s stack"
       and whileB: "cond \<noteq> 0" (is "?whileB")
@@ -586,18 +586,18 @@ proof (tactic "wp_all_tac @{context}",
       (is "?swI1\<and>?swI2\<and>?swI3\<and>?swI4\<and>?swI5\<and>?swI6\<and>?swI7\<and>?swI8\<and>?swI9")
     proof -
 
-        -- {*List property is maintained:*}
+        \<comment> \<open>List property is maintained:\<close>
       from i1 p_notin_stack_tl nifB2
       have swI1: "?swI1"
           by (simp add: stack_eq, auto simp: S_def fun_upd_apply)
       moreover
 
-        -- {*Everything on the stack is marked:*}
+        \<comment> \<open>Everything on the stack is marked:\<close>
       from i2
         have swI2: "?swI2" by simp
       moreover
 
-        -- {*Everything is still reachable:*}
+        \<comment> \<open>Everything is still reachable:\<close>
       let "R = reachable ?Ra ?A" = "?I3"
       let "R = reachable ?Rb ?B" = "?swI3"
       have "?Ra\<^sup>* `` addrs ?A = ?Rb\<^sup>* `` addrs ?B"
@@ -618,7 +618,7 @@ proof (tactic "wp_all_tac @{context}",
         have swI3: "?swI3" by (simp add:reachable_def)
       moreover
 
-        -- "If it is reachable and not marked, it is still reachable using..."
+        \<comment> \<open>If it is reachable and not marked, it is still reachable using...\<close>
       let "\<forall>x. x \<in> R \<and> s[x]\<rightarrow>m = 0 \<longrightarrow> x \<in> reachable ?Ra ?A" = ?I4
       let "\<forall>x. x \<in> R \<and> _[x]\<rightarrow>m = 0 \<longrightarrow> x \<in> reachable ?Rb ?B" = ?swI4
       let ?T = "{t}"
@@ -648,18 +648,18 @@ proof (tactic "wp_all_tac @{context}",
       qed
       moreover
 
-        -- "If it is marked, then it is reachable"
+        \<comment> \<open>If it is marked, then it is reachable\<close>
       from i5
         have "?swI5" by simp
       moreover
 
-        -- {*If it is not on the stack, then its @{term l} and @{term r} fields are unchanged*}
+        \<comment> \<open>If it is not on the stack, then its @{term l} and @{term r} fields are unchanged\<close>
       from i6 stack_eq
       have "?swI6"
           by clarsimp
       moreover
 
-        -- {*If it is on the stack, then its @{term l} and @{term r} fields can be reconstructed*}
+        \<comment> \<open>If it is on the stack, then its @{term l} and @{term r} fields can be reconstructed\<close>
       from stackDist i7 nifB2
       have "?swI7"
           by (simp add: stack_eq) (auto simp: fun_upd_apply)
@@ -674,7 +674,7 @@ proof (tactic "wp_all_tac @{context}",
   note swStack = this
 
   {
-      -- "Push arm"
+      \<comment> \<open>Push arm\<close>
     fix s p t cond stack
     assume stackInv: "?Inv p t cond s stack"
       and whileB: "cond \<noteq> 0" (is "?whileB")
@@ -693,19 +693,19 @@ proof (tactic "wp_all_tac @{context}",
     have "?Inv t (s[t]\<rightarrow>l) (Cbool (?cond t (s[t]\<rightarrow>l) ?pu_s)) ?pu_s new_stack"
       (is "?puI1\<and>?puI2\<and>?puI3\<and>?puI4\<and>?puI5\<and>?puI6\<and>?puI7\<and>?puI8\<and>?puI9")
     proof -
-        -- {*List property is maintained:*}
+        \<comment> \<open>List property is maintained:\<close>
       from i1 t_notin_stack new_stack_eq
       have puI1: "?puI1"
           by (simp add: new_stack_eq del: fun_upd_apply) (auto simp:S_def fun_upd_apply)
       moreover
 
-        -- {*Everything on the stack is marked:*}
+        \<comment> \<open>Everything on the stack is marked:\<close>
       from i2
       have puI2: "?puI2"
         by (simp add:new_stack_eq fun_upd_apply)
       moreover
 
-          -- {*Everything is still reachable:*}
+          \<comment> \<open>Everything is still reachable:\<close>
       let "R = reachable ?Ra ?A" = "?I3"
       let "R = reachable ?Rb ?B" = "?puI3"
       have "?Ra\<^sup>* `` addrs ?A = ?Rb\<^sup>* `` addrs ?B"
@@ -726,7 +726,7 @@ proof (tactic "wp_all_tac @{context}",
       have puI3: "?puI3" by (simp add:reachable_def addrs_def)
       moreover
 
-        -- "If it is reachable and not marked, it is still reachable using..."
+        \<comment> \<open>If it is reachable and not marked, it is still reachable using...\<close>
       let "\<forall>x. x \<in> R \<and> s[x]\<rightarrow>m = 0 \<longrightarrow> x \<in> reachable ?Ra ?A" = ?I4
       let "\<forall>x. x \<in> R \<and> _[x]\<rightarrow>m = 0 \<longrightarrow> x \<in> reachable ?Rb ?B" = ?puI4
       let ?T = "{t}"
@@ -756,19 +756,19 @@ proof (tactic "wp_all_tac @{context}",
       qed
       moreover
 
-        -- "If it is marked, then it is reachable"
+        \<comment> \<open>If it is marked, then it is reachable\<close>
         from i5
       have "?puI5"
           by (auto simp:addrs_def i3 reachable_def fun_upd_apply intro:self_reachable)
       moreover
 
-        -- {*If it is not on the stack, then its @{term l} and @{term r} fields are unchanged*}
+        \<comment> \<open>If it is not on the stack, then its @{term l} and @{term r} fields are unchanged\<close>
       from i6
       have "?puI6"
           by (simp add:new_stack_eq)
       moreover
 
-        -- {*If it is on the stack, then its @{term l} and @{term r} fields can be reconstructed*}
+        \<comment> \<open>If it is on the stack, then its @{term l} and @{term r} fields can be reconstructed\<close>
       from stackDist i6 t_notin_stack i7
         have "?puI7" by (simp add: new_stack_eq) (auto simp: fun_upd_apply)
       moreover

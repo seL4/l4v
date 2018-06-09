@@ -108,7 +108,7 @@ record 'a PAS =
   pasASIDAbs :: "'a agent_asid_map"
   pasIRQAbs :: "'a agent_irq_map"
   pasPolicy :: "'a auth_graph"
-  pasSubject :: "'a"                -- "The active label"
+  pasSubject :: "'a"                \<comment> \<open>The active label\<close>
   pasMayActivate :: "bool"
   pasMayEditReadyQueues :: "bool"
   pasMaySendIrqs :: "bool"

@@ -315,15 +315,15 @@ text \<open>One layer of context around a Simpl program.
       command of a @{term Seq} if the first command @{text never_continues}.\<close>
 
 datatype ('s,'p,'f) com_ctxt
-  = Seq1C "('s,'p,'f) com" -- "first command of a @{term Seq}"
-  | Seq2C "('s,'p,'f) com" -- "second command of a @{term Seq}"
-  | CondTC "'s bexp" "('s,'p,'f) com" -- "first branch of a @{term Cond}"
-  | CondFC "'s bexp" "('s,'p,'f) com" bool -- "second branch of a @{term Cond}"
-  | WhileC "'s bexp" -- "body of a @{term While}"
-  | WhileAnnoC "'s bexp" "'s assn" "('s \<times> 's) assn" -- "body of a @{term whileAnno}"
-  | GuardC "'f" "'s bexp" -- "body of a @{term Guard}"
-  | TryC "('s,'p,'f) com" -- "body of a @{term Catch}"
-  | HandlerC "('s,'p,'f) com" bool -- "handler of a @{term Catch}"
+  = Seq1C "('s,'p,'f) com" \<comment> \<open>first command of a @{term Seq}\<close>
+  | Seq2C "('s,'p,'f) com" \<comment> \<open>second command of a @{term Seq}\<close>
+  | CondTC "'s bexp" "('s,'p,'f) com" \<comment> \<open>first branch of a @{term Cond}\<close>
+  | CondFC "'s bexp" "('s,'p,'f) com" bool \<comment> \<open>second branch of a @{term Cond}\<close>
+  | WhileC "'s bexp" \<comment> \<open>body of a @{term While}\<close>
+  | WhileAnnoC "'s bexp" "'s assn" "('s \<times> 's) assn" \<comment> \<open>body of a @{term whileAnno}\<close>
+  | GuardC "'f" "'s bexp" \<comment> \<open>body of a @{term Guard}\<close>
+  | TryC "('s,'p,'f) com" \<comment> \<open>body of a @{term Catch}\<close>
+  | HandlerC "('s,'p,'f) com" bool \<comment> \<open>handler of a @{term Catch}\<close>
 
 text \<open>Rewrite Simpl programs under a predicate @{term P} which is preserved by @{term com_eq}.\<close>
 

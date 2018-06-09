@@ -1810,7 +1810,7 @@ lemma dcorres_get_object_special:
   and     ap_lift: "\<And>s obj. \<lbrakk>AP ptr s = Some obj; AP_Q s\<rbrakk>
                    \<Longrightarrow> opt_object ptr (transform s) = Some (C (AP_LIFT obj s))"
   and     c: "\<And>obj. dcorres r (R obj) (R' obj) (a (C obj)) c"
-  -- "weak"
+  \<comment> \<open>weak\<close>
   shows   "dcorres r (\<lambda>s. (\<forall>obj. opt_object ptr s = Some (C obj) \<longrightarrow> R obj s))
                      (\<lambda>s. (\<forall>obj'. AP ptr s = Some obj' \<longrightarrow> R' (AP_LIFT obj' s) s) \<and> AP ptr s \<noteq> None \<and> AP_Q s)
                      (KHeap_D.get_object ptr >>= a) c"
@@ -1826,7 +1826,7 @@ lemma dcorres_get_object_special:
      apply (simp add: unc)
     apply clarsimp
     apply (drule (1) ap_lift [symmetric])
-    apply (simp, simp add: unc) -- "yuck, first simp applies unc too early"
+    apply (simp, simp add: unc) \<comment> \<open>yuck, first simp applies unc too early\<close>
    apply clarsimp
    apply (frule (1) ap_lift)
    apply (simp add: unc)
@@ -1839,7 +1839,7 @@ lemma dcorres_get_object_special_2:
   assumes     ap_lift: "\<And>s obj etcb. \<lbrakk> get_tcb ptr s = Some obj; get_etcb ptr s = Some etcb; AP_Q s\<rbrakk>
                    \<Longrightarrow> opt_object ptr (transform s) = Some (Tcb (AP_LIFT obj etcb s))"
   and     c: "\<And>obj. dcorres r (R obj) (R' obj) (a (Tcb obj)) c"
-  -- "weak"
+  \<comment> \<open>weak\<close>
   shows   "dcorres r (\<lambda>s. (\<forall>obj. opt_object ptr s = Some (Tcb obj) \<longrightarrow> R obj s))
                      (\<lambda>s. (\<forall>obj' etcb. get_tcb ptr s = Some obj' \<and> get_etcb ptr s = Some etcb \<longrightarrow> R' (AP_LIFT obj' etcb s) s) \<and>
                            get_tcb ptr s \<noteq> None \<and> get_etcb ptr s \<noteq> None \<and> AP_Q s)
@@ -2260,7 +2260,7 @@ lemma derive_cap_dcorres:
            (CSpace_A.derive_cap slot cap)"
   unfolding CSpace_D.derive_cap_def derive_cap_def
   apply (cases cap, simp_all add: dcorres_returnOk')
-   -- "Untyped"
+   \<comment> \<open>Untyped\<close>
    apply (rule corres_guard_imp)
      apply (rule corres_splitEE[where r' = "op ="])
         apply (rule dcorres_returnOk)
@@ -2485,7 +2485,7 @@ lemma decode_cnode_corres:
             prefer 2
             apply fastforce
            apply (fastforce simp: valid_mdb_def mdb_cte_at_def)
-          -- Mint
+          \<comment> \<open>Mint\<close>
           apply (rule corres_guard_imp)
             apply (rule corres_splitEE[OF _ lookup_slot_for_cnode_op_corres])
                   apply simp
@@ -2519,7 +2519,7 @@ lemma decode_cnode_corres:
            apply (fastforce simp: valid_mdb_def mdb_cte_at_def)
           apply fastforce
 
-         -- Move
+         \<comment> \<open>Move\<close>
          apply (rule corres_guard_imp)
            apply (rule corres_splitEE)
               prefer 2
@@ -2546,7 +2546,7 @@ lemma decode_cnode_corres:
                    apply (simp add: translate_cnode_invocation_def all_rights_def)
                   apply ((wp hoare_drop_imps get_cap_wellformed lsfco_not_idle|simp)+)
          apply fastforce
-        -- Mutate
+        \<comment> \<open>Mutate\<close>
         apply (rule corres_guard_imp)
           apply (rule corres_splitEE[OF _ lookup_slot_for_cnode_op_corres])
                 apply simp

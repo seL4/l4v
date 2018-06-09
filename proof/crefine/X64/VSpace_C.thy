@@ -1904,7 +1904,7 @@ lemma unmapPage_ccorres:
       apply (simp add: liftE_bindE Collect_False bind_bindE_assoc
                   del: Collect_const)
       apply (rule ccorres_splitE_novcg[where r'=dc and xf'=xfdc])
-          -- "X64SmallPage"
+          \<comment> \<open>X64SmallPage\<close>
           apply (rule ccorres_Cond_rhs)
            apply (simp add: framesize_to_H_def dc_def[symmetric])
            apply (rule ccorres_rhs_assoc)+
@@ -1940,7 +1940,7 @@ lemma unmapPage_ccorres:
             apply (wp)
            apply simp
            apply (vcg exspec=lookupPTSlot_modifies)
-          -- "X64LargePage"
+          \<comment> \<open>X64LargePage\<close>
           apply (rule ccorres_Cond_rhs)
            apply (simp add: framesize_to_H_def dc_def[symmetric]
                        del: Collect_const)
@@ -1978,7 +1978,7 @@ lemma unmapPage_ccorres:
             apply (wp)
            apply simp
            apply (vcg exspec=lookupPDSlot_modifies)
-          -- "X64HugePage"
+          \<comment> \<open>X64HugePage\<close>
           apply (simp add: framesize_to_H_def dc_def[symmetric])
           apply (rule ccorres_add_return2)
           apply (ctac add: modeUnmapPage_ccorres)

@@ -437,7 +437,7 @@ lemma decode_cnode_inv_wf[wp]:
       decode_cnode_invocation mi args cap cs
     \<lbrace>valid_cnode_inv\<rbrace>,-"
   apply (rule decode_cnode_cases2[where args=args and exs=cs and label=mi])
-         -- "Move/Insert"
+         \<comment> \<open>Move/Insert\<close>
         apply (simp add: decode_cnode_invocation_def unlessE_whenE
                      split del: if_split)
         apply (wp lsfco_cte_at ensure_no_children_wp whenE_throwError_wp
@@ -477,17 +477,17 @@ lemma decode_cnode_inv_wf[wp]:
             apply (wp get_cap_cte_wp_at ensure_empty_cte_wp_at)+
         apply simp
         apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
-       -- "Revoke"
+       \<comment> \<open>Revoke\<close>
        apply (simp add: decode_cnode_invocation_def unlessE_whenE cong: if_cong)
        apply (wp lsfco_cte_at hoare_drop_imps whenE_throwError_wp
                   | simp add: split_beta validE_R_def[symmetric])+
        apply clarsimp
-      -- "Delete"
+      \<comment> \<open>Delete\<close>
       apply (simp add: decode_cnode_invocation_def unlessE_whenE cong: if_cong)
       apply (wp lsfco_cte_at hoare_drop_imps whenE_throwError_wp
                  | simp add: split_beta validE_R_def[symmetric])+
       apply clarsimp
-     -- "Save"
+     \<comment> \<open>Save\<close>
      apply (simp add: decode_cnode_invocation_def unlessE_whenE cong: if_cong)
      apply (rule hoare_pre)
       apply (wp ensure_empty_stronger whenE_throwError_wp
@@ -496,7 +496,7 @@ lemma decode_cnode_inv_wf[wp]:
                 | simp add: split_beta
                 | wp_once hoare_drop_imps)+
      apply clarsimp
-    -- "CancelBadgedSends"
+    \<comment> \<open>CancelBadgedSends\<close>
     apply (simp add: decode_cnode_invocation_def
                      unlessE_def whenE_def
                split del: if_split)
@@ -504,7 +504,7 @@ lemma decode_cnode_inv_wf[wp]:
      apply (rule_tac Q'="\<lambda>rv. invs and cte_wp_at (\<lambda>_. True) rv" in hoare_post_imp_R)
       apply (wp lsfco_cte_at)
      apply (clarsimp simp: cte_wp_valid_cap invs_valid_objs has_cancel_send_rights_ep_cap)+
-   -- "Rotate"
+   \<comment> \<open>Rotate\<close>
    apply (simp add: decode_cnode_invocation_def split_def
                     whenE_def unlessE_def)
    apply (rule hoare_pre)

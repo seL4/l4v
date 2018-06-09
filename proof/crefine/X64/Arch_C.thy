@@ -2791,7 +2791,7 @@ lemma decodeX64FrameInvocation_ccorres:
     apply (rule_tac t=a and s="hd args" in ssubst, fastforce)
     apply (rule_tac t=b and s="hd (tl args)" in ssubst, fastforce)
     apply (vcg exspec=getSyscallArg_modifies)
-   -- "PageMap"
+   \<comment> \<open>PageMap\<close>
    apply (rule ccorres_rhs_assoc)+
    apply csymbr+
    apply (simp add: if_1_0_0 word_less_nat_alt del: Collect_const)
@@ -5797,7 +5797,7 @@ proof -
    apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule ccorres_Cond_rhs) (* IN invocations *)
     apply (erule ccorres_disj_division)
-     -- "In8"
+     \<comment> \<open>In8\<close>
        apply (clarsimp simp: invocation_eq_use_types cong: list.case_cong)
        apply (rule ccorres_rhs_assoc)+
        apply (rule ccorres_Cond_rhs_Seq) (* length error *)
@@ -5841,7 +5841,7 @@ proof -
         apply wpsimp
        apply (vcg exspec=getSyscallArg_modifies)
     apply (erule ccorres_disj_division)
-    -- "In16"
+    \<comment> \<open>In16\<close>
        apply (clarsimp simp: invocation_eq_use_types cong: list.case_cong)
        apply (rule ccorres_rhs_assoc)+
        apply (rule ccorres_Cond_rhs_Seq) (* length error *)
@@ -5884,7 +5884,7 @@ proof -
         apply (vcg exspec=ensurePortOperationAllowed_modifies)
        apply wpsimp
       apply (vcg exspec=getSyscallArg_modifies)
-    -- "In32"
+    \<comment> \<open>In32\<close>
        apply (clarsimp simp: invocation_eq_use_types cong: list.case_cong)
        apply (rule ccorres_rhs_assoc)+
        apply (rule ccorres_Cond_rhs_Seq) (* length error *)
@@ -5930,7 +5930,7 @@ proof -
    apply clarsimp
    apply (rule ccorres_Cond_rhs) (* OUT invocations *)
     apply (erule ccorres_disj_division)
-    -- "Out8"
+    \<comment> \<open>Out8\<close>
      apply (clarsimp simp: invocation_eq_use_types cong: list.case_cong)
      apply (rule ccorres_rhs_assoc)+
      apply (rule ccorres_Cond_rhs_Seq) (* length error *)
@@ -5980,7 +5980,7 @@ proof -
       apply wpsimp
      apply (vcg exspec=getSyscallArg_modifies)
     apply (erule ccorres_disj_division)
-    -- "Out16"
+    \<comment> \<open>Out16\<close>
      apply (clarsimp simp: invocation_eq_use_types cong: list.case_cong)
      apply (rule ccorres_rhs_assoc)+
      apply (rule ccorres_Cond_rhs_Seq) (* length error *)
@@ -6029,7 +6029,7 @@ proof -
       apply (vcg exspec=getSyscallArg_modifies)
      apply wpsimp
     apply (vcg exspec=getSyscallArg_modifies)
-    -- "Out32"
+    \<comment> \<open>Out32\<close>
      apply (clarsimp simp: invocation_eq_use_types cong: list.case_cong)
      apply (rule ccorres_rhs_assoc)+
      apply (rule ccorres_Cond_rhs_Seq) (* length error *)

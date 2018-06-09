@@ -558,14 +558,14 @@ lemma pis_Guard:
   done
 
 lemmas push_in_stmt_rules =
-  -- "No ordering apart from pis_base which must be last."
+  \<comment> \<open>No ordering apart from pis_base which must be last.\<close>
   pis_throw
   pis_creturn
   pis_Seq_right
   pis_Cond
   pis_switch_Singleton pis_switch_Cons
   pis_Guard
-  -- "Last, just stick it where it is"
+  \<comment> \<open>Last, just stick it where it is\<close>
   pis_base
 
 lemma ccorres_special_trim_guard_DontReach_pis:
@@ -581,7 +581,7 @@ lemma ccorres_special_trim_guard_DontReach_pis:
 end
 
 lemmas ccorres_boilerplace_simp_dels =
-  Collect_const -- "Avoid getting an implication due to if_split.  Should probably just remove if_split"
+  Collect_const \<comment> \<open>Avoid getting an implication due to if_split.  Should probably just remove if_split\<close>
 
 lemma ccorres_introduce_UNIV_Int_when_needed:
   "ccorres_underlying sr Gamm r xf ar axf P (UNIV \<inter> {x. Q x}) hs a c
@@ -1030,7 +1030,7 @@ lemma creturn_ceqv_xf:
 lemma creturn_ceqv_not_xf:
   fixes \<Gamma> :: "(('a globals_scheme, 'b) myvars_scheme) c_body"
   assumes rl: "\<And>t. rewrite_xf xf t v rv rv'"
-  and    xfu: "\<And>s f. xf (xfu' f s) = xf s" -- "i.e., xf is independent of xfu"
+  and    xfu: "\<And>s f. xf (xfu' f s) = xf s" \<comment> \<open>i.e., xf is independent of xfu\<close>
   and    xfg: "\<And>s f. xf (global_exn_var_'_update f s) = xf s"
   shows   "ceqv \<Gamma> xf v t t' (return_C xfu' rv) (return_C xfu' rv')"
   unfolding creturn_def
@@ -1092,14 +1092,14 @@ lemma Cond_empty_ceqv: (* Crops up occasionally *)
 
 lemmas Guard_UNIV_ceqv = Guard_ceqv [where x = UNIV and x' = UNIV, simplified]
 
-lemmas ceqv_rules = ceqv_refl [where xf' = xfdc] -- "Any ceqv with xfdc should be ignored"
+lemmas ceqv_rules = ceqv_refl [where xf' = xfdc] \<comment> \<open>Any ceqv with xfdc should be ignored\<close>
   While_ceqv [OF Collect_mem_eqv] While_ceqv [OF UNIV_mem_eqv]
   Cond_ceqv [OF Collect_mem_eqv] Cond_UNIV_ceqv Cond_empty_ceqv
   Guard_ceqv [OF Collect_mem_eqv] Guard_UNIV_ceqv
   Seq_ceqv Seq_weak_ceqv
   Basic_ceqv call_ceqv Skip_ceqv
   Catch_ceqv Throw_ceqv
-  creturn_ceqv_xf creturn_ceqv_not_xf -- "order is important with these two, the second is more general"
+  creturn_ceqv_xf creturn_ceqv_not_xf \<comment> \<open>order is important with these two, the second is more general\<close>
   ceqv_refl [where c = return_void_C] ceqv_refl [where c = break_C]
   ceqv_refl [where c = catchbrk_C]
 

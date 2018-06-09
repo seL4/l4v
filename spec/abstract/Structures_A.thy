@@ -109,18 +109,18 @@ authority but cannot be replaced until the deletion is finished.
 datatype cap
          = NullCap
          | UntypedCap bool obj_ref nat nat
-           -- {* device flag, pointer, size in bits (i.e. @{text "size = 2^bits"}) and freeIndex (i.e. @{text "freeRef = obj_ref + (freeIndex * 2^4)"}) *}
+           \<comment> \<open>device flag, pointer, size in bits (i.e. @{text "size = 2^bits"}) and freeIndex (i.e. @{text "freeRef = obj_ref + (freeIndex * 2^4)"})\<close>
          | EndpointCap obj_ref badge cap_rights
          | NotificationCap obj_ref badge cap_rights
          | ReplyCap obj_ref bool
          | CNodeCap obj_ref nat "bool list"
-           -- "CNode ptr, number of bits translated, guard"
+           \<comment> \<open>CNode ptr, number of bits translated, guard\<close>
          | ThreadCap obj_ref
          | DomainCap
          | IRQControlCap
          | IRQHandlerCap irq
          | Zombie obj_ref "nat option" nat
-           -- {* @{text "cnode ptr * nat + tcb or cspace ptr"} *}
+           \<comment> \<open>@{text "cnode ptr * nat + tcb or cspace ptr"}\<close>
          | ArchObjectCap (the_arch_cap: arch_cap)
 
 lemmas cap_cases =
@@ -426,7 +426,7 @@ All kernel objects are CNodes, TCBs, Endpoints, Notifications or architecture
 specific.
 *}
 datatype kernel_object
-         = CNode nat cnode_contents -- "size in bits, and contents"
+         = CNode nat cnode_contents \<comment> \<open>size in bits, and contents\<close>
          | TCB tcb
          | Endpoint endpoint
          | Notification notification
@@ -476,7 +476,7 @@ datatype a_type =
   | AEndpoint
   | ANTFN
   | ACapTable nat
-  | AGarbage nat -- "number of bytes of garbage"
+  | AGarbage nat \<comment> \<open>number of bytes of garbage\<close>
   | AArch aa_type
 
 definition

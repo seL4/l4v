@@ -894,7 +894,7 @@ lemma send_signal_corres:
   apply (rename_tac ntfn_ext)
   apply (case_tac "ntfn_obj ntfn_ext", clarsimp)
     apply (case_tac "ntfn_bound_tcb ntfn_ext", clarsimp)
-     -- "Idle, not bound"
+     \<comment> \<open>Idle, not bound\<close>
      apply (rule corres_alternate1)
      apply (rule dcorres_absorb_get_l)
      apply (clarsimp split del: if_split)
@@ -904,12 +904,12 @@ lemma send_signal_corres:
      apply (frule get_notification_pick,simp)
      apply (clarsimp simp:ntfn_waiting_set_lift valid_state_def valid_ntfn_abstract_def none_is_waiting_ntfn_def)
      apply (rule corres_guard_imp,rule corres_dummy_set_notification,simp+)[1]
-    -- "Idle, bound"
+    \<comment> \<open>Idle, bound\<close>
     apply (clarsimp simp: get_thread_state_def thread_get_def gets_the_def gets_def bind_assoc split del: if_split)
     apply (rule dcorres_absorb_get_r)
     apply (clarsimp simp: assert_opt_def corres_free_fail split: Structures_A.kernel_object.splits option.splits)
     apply (case_tac "receive_blocked (tcb_state x2)")
-     -- "receive_blocked"
+     \<comment> \<open>receive_blocked\<close>
      apply (clarsimp)
      apply (rule corres_alternate2)
      apply (clarsimp simp: send_signal_bound_def gets_def)
@@ -947,7 +947,7 @@ lemma send_signal_corres:
     apply (frule get_notification_pick,simp)
     apply (clarsimp simp:ntfn_waiting_set_lift valid_state_def valid_ntfn_abstract_def none_is_waiting_ntfn_def)
     apply (rule corres_guard_imp,rule corres_dummy_set_notification,simp+)[1]
-   -- "Waiting"
+   \<comment> \<open>Waiting\<close>
    apply (rule corres_alternate1)
    apply (rule dcorres_absorb_get_l)
    apply (clarsimp split del: if_split)
@@ -968,7 +968,7 @@ lemma send_signal_corres:
    apply (drule_tac A="ntfn_waiting_set epptr s'" and x = y in eqset_imp_iff)
    apply (clarsimp simp:valid_pspace_def ntfn_waiting_set_def)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_ntfn_def split:list.splits option.splits)
-  -- "Active"
+  \<comment> \<open>Active\<close>
   apply (rule corres_alternate1)
   apply (rule dcorres_absorb_get_l)
   apply (clarsimp split del: if_split)
@@ -2541,7 +2541,7 @@ lemma recv_sync_ipc_corres:
      apply (rule dcorres_absorb_get_r)
      apply (clarsimp simp: assert_opt_def corres_free_fail split: Structures_A.kernel_object.splits option.splits )
      apply safe[1]
-     -- "not bound"
+     \<comment> \<open>not bound\<close>
       apply (rule corres_alternate2)
       apply (rule dcorres_receive_sync, simp_all)[1]
      apply (simp add: get_simple_ko_def gets_def get_object_def bind_assoc)

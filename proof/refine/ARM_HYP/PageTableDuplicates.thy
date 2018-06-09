@@ -1875,10 +1875,10 @@ lemma performPageInvocation_valid_duplicates'[wp]:
   supply vs_entry_align_nondup_obj[simp]
   apply (rule hoare_name_pre_state)
   apply (case_tac page_invocation)
-  -- "PageFlush"
+  \<comment> \<open>PageFlush\<close>
      apply (simp_all add:performPageInvocation_def pteCheckIfMapped_def pdeCheckIfMapped_def)
      apply ((wp|simp|wpc)+)[2]
-    -- "PageRemap"
+    \<comment> \<open>PageRemap\<close>
     apply (rename_tac word sum)
     apply (case_tac sum)
      apply (case_tac a)
@@ -1932,7 +1932,7 @@ lemma performPageInvocation_valid_duplicates'[wp]:
     apply (wp|wpc|simp add:vs_entry_align_def)+
      apply (rule_tac p=p in mapM_x_superSectionPDEOffsets)
     apply clarsimp
-   -- "PageMap"
+   \<comment> \<open>PageMap\<close>
    apply (clarsimp simp: pteCheckIfMapped_def pdeCheckIfMapped_def)
    apply (clarsimp simp:valid_pde_slots'_def valid_page_inv'_def
        valid_slots_duplicated'_def valid_arch_inv'_def )

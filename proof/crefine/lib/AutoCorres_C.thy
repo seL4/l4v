@@ -647,7 +647,7 @@ lemma autocorres_transfer_spec_no_modifies:
   assumes ac_def:
     "ac_f \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl check_termination \<Gamma> f_'proc)"
   assumes c_spec:
-    "\<forall>s0. hoarep \<Gamma> {} {} (P' s0) (Call f_'proc) (Collect (Q s0)) A" -- \<open>syntax parser barfs...\<close>
+    "\<forall>s0. hoarep \<Gamma> {} {} (P' s0) (Call f_'proc) (Collect (Q s0)) A" \<comment> \<open>syntax parser barfs...\<close>
   assumes c_modifies:
     "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call f_'proc {t. t may_not_modify_globals \<sigma>}"
   assumes c_spec_unify:

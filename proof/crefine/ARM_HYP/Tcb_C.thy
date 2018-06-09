@@ -3887,7 +3887,7 @@ lemma bindNotification_ccorres:
                                     typ_heap_simps')
             apply (elim conjE)
             apply (intro conjI)
-            -- "tcb relation"
+            \<comment> \<open>tcb relation\<close>
               apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
@@ -4109,7 +4109,7 @@ lemma decodeBindNotification_ccorres:
        apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
        apply (simp add: bindE_bind_linearise del: Collect_const)
        apply wpc
-         -- "IdleNtfn"
+         \<comment> \<open>IdleNtfn\<close>
          apply (simp add: case_option_If del: Collect_const)
          apply (rule ccorres_Cond_rhs_Seq)
           apply (clarsimp simp: isWaitingNtfn_def from_bool_neq_0)

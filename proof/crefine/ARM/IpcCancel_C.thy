@@ -229,7 +229,7 @@ lemma cancelSignal_ccorres_helper:
   apply (clarsimp simp: typ_heap_simps cong: imp_cong split del: if_split simp del: comp_def)
   apply (frule null_ep_queue [simplified Fun.comp_def])
   apply (intro impI conjI allI)
-   -- "empty case"
+   \<comment> \<open>empty case\<close>
    apply clarsimp
    apply (frule iffD1 [OF tcb_queue_head_empty_iff [OF tcb_queue_relation'_queue_rel]])
      apply (rule ballI, erule bspec)
@@ -243,20 +243,20 @@ lemma cancelSignal_ccorres_helper:
                         typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
-            -- "tcb relation"
+            \<comment> \<open>tcb relation\<close>
             apply (erule ctcb_relation_null_queue_ptrs)
             apply (clarsimp simp: comp_def)
-           -- "ep relation"
+           \<comment> \<open>ep relation\<close>
            apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
            apply simp
            apply (rule cendpoint_relation_ntfn_queue [OF invs_sym'], assumption+)
            apply simp
            apply (erule (1) map_to_ko_atI')
-          -- "ntfn relation"
+          \<comment> \<open>ntfn relation\<close>
           apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
           apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def)
           apply (simp add: carch_state_relation_def carch_globals_def)
-         -- "queue relation"
+         \<comment> \<open>queue relation\<close>
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
         apply (simp add: carch_state_relation_def carch_globals_def
@@ -268,7 +268,7 @@ lemma cancelSignal_ccorres_helper:
     apply (simp add: objBits_simps)
    apply assumption
 
-  -- "non empty case"
+  \<comment> \<open>non empty case\<close>
   apply (frule tcb_queue_head_empty_iff [OF tcb_queue_relation'_queue_rel])
    apply (rule ballI, erule bspec)
    apply (erule subsetD [rotated])
@@ -281,10 +281,10 @@ lemma cancelSignal_ccorres_helper:
                        typ_heap_simps')
       apply (elim conjE)
       apply (intro conjI)
-           -- "tcb relation"
+           \<comment> \<open>tcb relation\<close>
            apply (erule ctcb_relation_null_queue_ptrs)
            apply (clarsimp simp: comp_def)
-          -- "ep relation"
+          \<comment> \<open>ep relation\<close>
           apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
           apply simp
           apply (rule cendpoint_relation_ntfn_queue)
@@ -292,7 +292,7 @@ lemma cancelSignal_ccorres_helper:
              apply assumption+
           apply simp
           apply (erule (1) map_to_ko_atI')
-         -- "ntfn relation"
+         \<comment> \<open>ntfn relation\<close>
          apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
           apply (simp add: cnotification_relation_def Let_def isWaitingNtfn_def
                     split: ntfn.splits split del: if_split)
@@ -302,7 +302,7 @@ lemma cancelSignal_ccorres_helper:
           apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff)
           apply (simp add: tcb_queue_relation'_prev_mask)
          apply simp
-        -- "queue relation"
+        \<comment> \<open>queue relation\<close>
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         apply (clarsimp simp: comp_def)
        apply (simp add: carch_state_relation_def carch_globals_def
@@ -740,7 +740,7 @@ lemma state_relation_queue_update_helper':
    apply (clarsimp simp: inQ_def obj_at'_def)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
   apply (intro conjI)
-      -- "cpspace_relation"
+      \<comment> \<open>cpspace_relation\<close>
      apply (erule nonemptyE, drule(1) bspec)
      apply (clarsimp simp: cpspace_relation_def)
      apply (drule obj_at_ko_at', clarsimp)
@@ -749,18 +749,18 @@ lemma state_relation_queue_update_helper':
      apply (frule null_sched_queue)
      apply (frule null_sched_epD)
      apply (intro conjI)
-       -- "tcb relation"
+       \<comment> \<open>tcb relation\<close>
        apply (drule ctcb_relation_null_queue_ptrs,
               simp_all)[1]
-      -- "endpoint relation"
+      \<comment> \<open>endpoint relation\<close>
       apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
       apply simp
       apply (erule cendpoint_relation_upd_tcb_no_queues, simp+)
-     -- "ntfn relation"
+     \<comment> \<open>ntfn relation\<close>
      apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
      apply simp
      apply (erule cnotification_relation_upd_tcb_no_queues, simp+)
-    -- "ready queues"
+    \<comment> \<open>ready queues\<close>
     apply (simp add: cready_queues_relation_def Let_def
                      cready_queues_index_to_C_in_range
                      seL4_MinPrio_def minDom_def)
@@ -3050,7 +3050,7 @@ lemma cancelIPC_ccorres_helper:
   apply (clarsimp simp: typ_heap_simps cong: imp_cong split del: if_split simp del: comp_def)
   apply (frule null_ep_queue [simplified comp_def] null_ep_queue)
   apply (intro impI conjI allI)
-   -- "empty case"
+   \<comment> \<open>empty case\<close>
    apply clarsimp
    apply (frule iffD1 [OF tcb_queue_head_empty_iff [OF tcb_queue_relation'_queue_rel]])
      apply (rule ballI, erule bspec)
@@ -3063,21 +3063,21 @@ lemma cancelIPC_ccorres_helper:
                         cpspace_relation_def update_ep_map_tos typ_heap_simps')
        apply (elim conjE)
        apply (intro conjI)
-       -- "tcb relation"
+       \<comment> \<open>tcb relation\<close>
             apply (erule ctcb_relation_null_queue_ptrs)
             subgoal by (clarsimp simp: comp_def)
-        -- "ep relation"
+        \<comment> \<open>ep relation\<close>
            apply (rule cpspace_relation_ep_update_ep, assumption+)
             subgoal by (simp add: cendpoint_relation_def Let_def EPState_Idle_def)
            subgoal by simp
-           -- "ntfn relation"
+           \<comment> \<open>ntfn relation\<close>
           apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
           apply simp
           apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
            subgoal by simp
           apply (erule (1) map_to_ko_atI')
          apply (simp add: heap_to_user_data_def Let_def)
- -- "queue relation"
+ \<comment> \<open>queue relation\<close>
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          subgoal by (clarsimp simp: comp_def)
         subgoal by (simp add: carch_state_relation_def carch_globals_def
@@ -3087,7 +3087,7 @@ lemma cancelIPC_ccorres_helper:
      subgoal by (simp add: objBits_simps')
     subgoal by (simp add: objBits_simps)
    apply assumption
-  -- "non empty case"
+  \<comment> \<open>non empty case\<close>
   apply clarsimp
   apply (frule tcb_queue_head_empty_iff [OF tcb_queue_relation'_queue_rel])
    apply (rule ballI, erule bspec)
@@ -3100,28 +3100,28 @@ lemma cancelIPC_ccorres_helper:
                        cpspace_relation_def update_ep_map_tos typ_heap_simps')
       apply (elim conjE)
       apply (intro conjI)
-      -- "tcb relation"
+      \<comment> \<open>tcb relation\<close>
            apply (erule ctcb_relation_null_queue_ptrs)
            subgoal by (clarsimp simp: comp_def)
-       -- "ep relation"
+       \<comment> \<open>ep relation\<close>
           apply (rule cpspace_relation_ep_update_ep, assumption+)
            apply (simp add: cendpoint_relation_def Let_def isSendEP_def isRecvEP_def split: endpoint.splits split del: if_split)
-           -- "recv case"
+           \<comment> \<open>recv case\<close>
             apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff
               tcb_queue_relation'_next_mask tcb_queue_relation'_prev_mask cong: tcb_queue_relation'_cong)
             subgoal by (intro impI conjI; simp)
-           -- "send case"
+           \<comment> \<open>send case\<close>
            apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff
              tcb_queue_relation'_next_mask tcb_queue_relation'_prev_mask cong: tcb_queue_relation'_cong)
            subgoal by (intro impI conjI; simp)
           subgoal by simp
-                -- "ntfn relation"
+                \<comment> \<open>ntfn relation\<close>
          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
          apply simp
          apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
          apply simp
          apply (erule (1) map_to_ko_atI')
-         -- "queue relation"
+         \<comment> \<open>queue relation\<close>
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         subgoal by (clarsimp simp: comp_def)
        subgoal by (simp add: carch_state_relation_def carch_globals_def
@@ -3280,7 +3280,7 @@ lemma cancelIPC_ccorres1:
      apply (rule_tac xf'=ret__unsigned_' in ccorres_abstract, ceqv)
      apply (rule_tac P="rv' = thread_state_to_tsType rv" in ccorres_gen_asm2)
      apply wpc
-            -- "BlockedOnReceive"
+            \<comment> \<open>BlockedOnReceive\<close>
             apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs cong: call_ignore_cong)
             apply (fold dc_def)
             apply (rule ccorres_rhs_assoc)+
@@ -3288,7 +3288,7 @@ lemma cancelIPC_ccorres1:
             apply csymbr
             apply (rule ccorres_pre_getEndpoint)
             apply (rule ccorres_assert)
-            apply (rule ccorres_symb_exec_r) -- "ptr_get lemmas don't work so well :("
+            apply (rule ccorres_symb_exec_r) \<comment> \<open>ptr_get lemmas don't work so well :(\<close>
               apply (rule ccorres_symb_exec_r)
                 apply (simp only: fun_app_def simp_list_case_return
                                   return_bind ccorres_seq_skip)
@@ -3307,7 +3307,7 @@ lemma cancelIPC_ccorres1:
              apply (rule subset_refl)
             apply (rule conseqPre, vcg)
             apply clarsimp
-          -- "BlockedOnReply case"
+          \<comment> \<open>BlockedOnReply case\<close>
            apply (simp add: "StrictC'_thread_state_defs" ccorres_cond_iffs
                             Collect_False Collect_True word_sle_def
                       cong: call_ignore_cong del: Collect_const)
@@ -3370,7 +3370,7 @@ lemma cancelIPC_ccorres1:
             apply (wp threadSet_invs_trivial | simp)+
            apply (clarsimp simp add: guard_is_UNIV_def tcbReplySlot_def
                         Kernel_C.tcbReply_def tcbCNodeEntries_def)
-          -- "BlockedOnNotification"
+          \<comment> \<open>BlockedOnNotification\<close>
           apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs dc_def [symmetric] cong: call_ignore_cong)
           apply (rule ccorres_symb_exec_r)
             apply (ctac (no_vcg))
@@ -3379,18 +3379,18 @@ lemma cancelIPC_ccorres1:
            apply (rule subset_refl)
           apply (rule conseqPre, vcg)
           apply clarsimp
-         -- "Running, Inactive, and Idle"
+         \<comment> \<open>Running, Inactive, and Idle\<close>
          apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs dc_def [symmetric] cong: call_ignore_cong,
                 rule ccorres_return_Skip)+
-      -- "BlockedOnSend"
+      \<comment> \<open>BlockedOnSend\<close>
       apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs dc_def [symmetric] cong: call_ignore_cong)
-      -- "clag"
+      \<comment> \<open>clag\<close>
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
       apply csymbr
       apply (rule ccorres_pre_getEndpoint)
       apply (rule ccorres_assert)
-      apply (rule ccorres_symb_exec_r) -- "ptr_get lemmas don't work so well :("
+      apply (rule ccorres_symb_exec_r) \<comment> \<open>ptr_get lemmas don't work so well :(\<close>
         apply (rule ccorres_symb_exec_r)
           apply (simp only: fun_app_def simp_list_case_return return_bind ccorres_seq_skip)
           apply (rule ccorres_rhs_assoc2)
@@ -3408,10 +3408,10 @@ lemma cancelIPC_ccorres1:
        apply (rule conseqPre, vcg, rule subset_refl)
       apply (rule conseqPre, vcg)
       apply clarsimp
-  -- "Restart"
+  \<comment> \<open>Restart\<close>
      apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs dc_def [symmetric] cong: call_ignore_cong,
             rule ccorres_return_Skip)
-    -- "Post wp proofs"
+    \<comment> \<open>Post wp proofs\<close>
     apply vcg
    apply clarsimp
    apply (rule conseqPre, vcg)

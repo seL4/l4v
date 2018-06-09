@@ -1764,7 +1764,7 @@ proof -
             , assumption +,
             simp_all add: objBits_simps' archObjSize_def projectKOs
                           machine_bits_defs
-                          heap_to_user_data_restrict heap_to_device_data_restrict)[1])+ -- "waiting ..."
+                          heap_to_user_data_restrict heap_to_device_data_restrict)[1])+ \<comment> \<open>waiting ...\<close>
     apply (simp add: map_to_ctes_delete' cmap_relation_restrict_both_proj
                      cmap_relation_restrict_both cmap_array_helper hrs_htd_update
                      table_bits_defs cmap_array)
@@ -1811,7 +1811,7 @@ proof -
     apply fastforce
     apply ((subst lift_t_typ_region_bytes, rule cm_disj_tcb, assumption+,
       simp_all add: objBits_simps archObjSize_def pageBits_def projectKOs)[1])+
-      -- "waiting ..."
+      \<comment> \<open>waiting ...\<close>
     apply (simp add: tcb_queue_relation_live_restrict
                      [OF D.valid_untyped tat tlive rl])
     done

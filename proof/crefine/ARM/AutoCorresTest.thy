@@ -207,7 +207,7 @@ lemma (* handleDoubleFault_ccorres: *)
   apply ac_init
     prefer 3 apply simp
    apply (unfold handleDoubleFault_def handleDoubleFault'_def K_bind_def)
-   apply (rule corres_add_noop_rhs2) -- "split out extra haskell code"
+   apply (rule corres_add_noop_rhs2) \<comment> \<open>split out extra haskell code\<close>
    apply (rule corres_split[OF _ setThreadState_ccorres[ac]])
        apply (rule corres_symb_exec_l_no_exs)
           apply simp

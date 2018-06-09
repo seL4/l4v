@@ -75,12 +75,12 @@ text {*
 *}
 
 datatype number =
-    -- "High level types"
+    \<comment> \<open>High level types\<close>
     UnsignedInteger
   | Integer
   | Real
   | Boolean
-    -- "C-specific types"
+    \<comment> \<open>C-specific types\<close>
   | uint8_t
   | uint16_t
   | uint32_t
@@ -94,10 +94,10 @@ datatype number =
   | uintptr_t
 
 datatype textual =
-    -- "High level types"
+    \<comment> \<open>High level types\<close>
     Character
   | String
-    -- "C-specific types"
+    \<comment> \<open>C-specific types\<close>
   | char
 
 datatype primitive =
@@ -171,8 +171,8 @@ text {*
   Finally, @{text dataport}, is used to model shared memory communication.
 *}
 type_synonym procedure = "method list"
-type_synonym event     = nat -- "ID"
-type_synonym dataport  = "string option" -- "type"
+type_synonym event     = nat \<comment> \<open>ID\<close>
+type_synonym dataport  = "string option" \<comment> \<open>type\<close>
 datatype interface =
     Procedure procedure
   | Event event
@@ -191,9 +191,9 @@ text {*
   data.
 *}
 datatype native_connector_type =
-    AsynchronousEvent -- "an asynchronous notification"
-  | RPC -- "a synchronous channel"
-  | SharedData -- "a shared memory region"
+    AsynchronousEvent \<comment> \<open>an asynchronous notification\<close>
+  | RPC \<comment> \<open>a synchronous channel\<close>
+  | SharedData \<comment> \<open>a shared memory region\<close>
 
 text {*
   Recalling that hardware devices are modelled as components in CAmkES, hardware
@@ -202,9 +202,9 @@ text {*
   corresponds to the mode of interaction with the device.
 *}
 datatype hardware_connector_type =
-    HardwareMMIO -- "memory mapped IO"
-  | HardwareInterrupt -- "device interrupts"
-  | HardwareIOPort -- "IA32 IO ports"
+    HardwareMMIO \<comment> \<open>memory mapped IO\<close>
+  | HardwareInterrupt \<comment> \<open>device interrupts\<close>
+  | HardwareIOPort \<comment> \<open>IA32 IO ports\<close>
 
 text {*
   Export connectors are used when

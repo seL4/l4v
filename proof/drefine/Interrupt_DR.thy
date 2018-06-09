@@ -56,7 +56,7 @@ lemma decode_irq_control_corres:
    apply (simp add: transform_intent_def transform_intent_issue_irq_handler_def
                     split: list.splits)
    apply (rule conjI)
-    prefer 2 -- "error case"
+    prefer 2 \<comment> \<open>error case\<close>
     apply clarsimp
     apply (rule corres_guard_imp)
       apply (rule dcorres_alternative_throw)
@@ -142,7 +142,7 @@ lemma decode_irq_handler_corres:
   apply (cases "invocation_type label' = IRQSetIRQHandler")
    apply (simp add: transform_intent_def cdl_cap_irq_def)
    apply (rule conjI)
-    prefer 2 -- "excaps' = []"
+    prefer 2 \<comment> \<open>excaps' = []\<close>
     apply (clarsimp intro!: corres_alternate2)
    apply (clarsimp simp: neq_Nil_conv)
    apply (rule conjI)

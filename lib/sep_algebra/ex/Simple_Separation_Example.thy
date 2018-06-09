@@ -150,7 +150,7 @@ lemma "VARS H p q r
    apply (rule_tac x = "p # qs" in exI)
    apply (simp add: sep_conj_exists sep_conj_ac)
    apply (rule exI)
-   apply (sep_rule (direct) maps_to_write) -- "note: demonstrates computation"
+   apply (sep_rule (direct) maps_to_write) \<comment> \<open>note: demonstrates computation\<close>
    apply (sep_solve add: maps_to_maps_to_ex)
   apply clarsimp
   done

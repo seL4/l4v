@@ -642,7 +642,7 @@ lemma more_pd_inner_beauty:
   shows "(p && ~~ mask pd_bits) + (ucast x << word_size_bits) = p \<Longrightarrow> False"
   by (rule mask_split_aligned_neg[OF _ _ x]; simp add: bit_simps)
 
--- "set_other_obj_corres unfortunately doesn't work here"
+\<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
 lemma set_pd_corres:
   "pde_relation' pde pde' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits)
@@ -728,7 +728,7 @@ lemma more_pt_inner_beauty:
   shows "(p && ~~ mask pt_bits) + (ucast x << word_size_bits) = p \<Longrightarrow> False"
   by (rule mask_split_aligned_neg[OF _ _ x]; simp add: bit_simps)
 
--- "set_other_obj_corres unfortunately doesn't work here"
+\<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
 lemma set_pt_corres:
   "pte_relation' pte pte' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits)
@@ -814,7 +814,7 @@ lemma more_pdpt_inner_beauty:
   shows "(p && ~~ mask pdpt_bits) + (ucast x << word_size_bits) = p \<Longrightarrow> False"
   by (rule mask_split_aligned_neg[OF _ _ x]; simp add: bit_simps)
 
--- "set_other_obj_corres unfortunately doesn't work here"
+\<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
 lemma set_pdpt_corres:
   "pdpte_relation' pdpte pdpte' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PDPointerTable pt)) (p && ~~ mask pdpt_bits)
@@ -900,7 +900,7 @@ lemma more_pml4_inner_beauty:
   shows "(p && ~~ mask pml4_bits) + (ucast x << word_size_bits) = p \<Longrightarrow> False"
   by (rule mask_split_aligned_neg[OF _ _ x]; simp add: bit_simps)
 
--- "set_other_obj_corres unfortunately doesn't work here"
+\<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
 lemma set_pml4_corres:
   "pml4e_relation' pml4e pml4e' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageMapL4 pt)) (p && ~~ mask pml4_bits)

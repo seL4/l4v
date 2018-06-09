@@ -694,7 +694,7 @@ lemma decode_page_inv_corres:
       apply (wp hoare_drop_imps find_vspace_for_asid_lookup_slot[unfolded mask_def, simplified])+
     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
    apply fastforce
-    -- "PageRemap"
+    \<comment> \<open>PageRemap\<close>
   apply (cases "invocation_type l = ArchInvocationLabel X64PageRemap")
    apply (case_tac "\<not>(1 < length args \<and> excaps \<noteq> [])")
     subgoal by (auto split: list.split)
@@ -761,13 +761,13 @@ lemma decode_page_inv_corres:
     apply (fastforce simp: invs_def valid_state_def valid_pspace_def mask_def)
    apply (clarsimp split: option.split)
    apply fastforce
-  -- "PageUnmap"
+  \<comment> \<open>PageUnmap\<close>
   apply (simp split del: if_split)
   apply (cases "invocation_type l = ArchInvocationLabel X64PageUnmap")
    apply simp
    apply (rule corres_returnOk)
    apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
-  -- "PageGetAddress"
+  \<comment> \<open>PageGetAddress\<close>
   apply (cases "invocation_type l = ArchInvocationLabel X64PageGetAddress")
    apply simp
    apply (rule corres_returnOk)
@@ -842,7 +842,7 @@ lemma decode_page_table_inv_corres:
     apply (fastforce simp: valid_cap_def mask_def)
    apply (clarsimp simp: valid_cap'_def)
    apply fastforce
-    -- "PageTableUnmap"
+    \<comment> \<open>PageTableUnmap\<close>
   apply (clarsimp simp: isCap_simps)+
   apply (cases "invocation_type l = ArchInvocationLabel X64PageTableUnmap")
    apply (clarsimp simp: unlessE_whenE liftE_bindE)
@@ -944,7 +944,7 @@ lemma decode_page_directory_inv_corres:
     apply (fastforce simp: valid_cap_def mask_def)
    apply (clarsimp simp: valid_cap'_def)
    apply fastforce
-    -- "PageDirectoryUnmap"
+    \<comment> \<open>PageDirectoryUnmap\<close>
   apply (clarsimp simp: isCap_simps)+
   apply (cases "invocation_type l = ArchInvocationLabel X64PageDirectoryUnmap")
    apply (clarsimp simp: unlessE_whenE liftE_bindE)
@@ -1034,7 +1034,7 @@ lemma decode_pdpt_inv_corres:
     apply (fastforce simp: valid_cap_def mask_def intro!: page_map_l4_pml4e_at_lookupI)
    apply (clarsimp simp: valid_cap'_def)
    apply fastforce
-    -- "PDPTUnmap"
+    \<comment> \<open>PDPTUnmap\<close>
   apply (clarsimp simp: isCap_simps)+
   apply (cases "invocation_type l = ArchInvocationLabel X64PDPTUnmap")
    apply (clarsimp simp: unlessE_whenE liftE_bindE)
@@ -1270,7 +1270,7 @@ shows
                    decodeX64MMUInvocation_def
               split del: if_split)
   apply (cases arch_cap)
-      -- "ASIDPoolCap"
+      \<comment> \<open>ASIDPoolCap\<close>
       apply (simp add: isCap_simps isIOCap_def decodeX64MMUInvocation_def
                        decodeX64ASIDPoolInvocation_def Let_def
             split del: if_split)
@@ -1327,7 +1327,7 @@ shows
          apply (wp hoare_whenE_wp getASID_wp)+
        apply (clarsimp simp: valid_cap_def)
       apply auto[1]
-     -- "ASIDControlCap"
+     \<comment> \<open>ASIDControlCap\<close>
      apply (simp add: isCap_simps isIOCap_def decodeX64MMUInvocation_def
                       Let_def decodeX64ASIDControlInvocation_def
            split del: if_split)
@@ -1413,36 +1413,36 @@ shows
       apply (drule hd_in_set)
       apply simp
      apply fastforce
-    -- "IOPortCap"
+    \<comment> \<open>IOPortCap\<close>
         apply (simp add: isCap_simps isIOCap_def Let_def split del: if_split)
         apply (rule corres_guard_imp, rule decode_port_inv_corres; simp)
 
--- "IOPortControlCap"
+\<comment> \<open>IOPortControlCap\<close>
        apply (simp add: isCap_simps isIOCap_def Let_def split del: if_split)
        apply (rule corres_guard_imp, rule decode_ioport_control_inv_corres; simp)
 
-    -- "PageCap"
+    \<comment> \<open>PageCap\<close>
     apply (rename_tac word cap_rights vmpage_size option)
     apply (simp add: isCap_simps isIOCap_def decodeX64MMUInvocation_def Let_def
           split del: if_split)
         apply (rule decode_page_inv_corres; simp)
 
-   -- "PageTableCap"
+   \<comment> \<open>PageTableCap\<close>
    apply (simp add: isCap_simps isIOCap_def decodeX64MMUInvocation_def Let_def
          split del: if_split)
    apply (rule decode_page_table_inv_corres; simp)
 
-  -- "PageDirectoryCap"
+  \<comment> \<open>PageDirectoryCap\<close>
   apply (simp add: isCap_simps isIOCap_def decodeX64MMUInvocation_def Let_def
         split del: if_split)
   apply (rule decode_page_directory_inv_corres; simp)
 
-  -- "PDPointerTableCap"
+  \<comment> \<open>PDPointerTableCap\<close>
   apply (simp add: isCap_simps isIOCap_def decodeX64MMUInvocation_def Let_def
         split del: if_split)
   apply (rule decode_pdpt_inv_corres; simp)
 
-  -- "PML4Cap - no invocations"
+  \<comment> \<open>PML4Cap - no invocations\<close>
   apply (clarsimp simp: isCap_simps isIOCap_def decodeX64MMUInvocation_def Let_def
               split del: if_split)
   done
@@ -2073,7 +2073,7 @@ lemma arch_decodeInvocation_wf[wp]:
    Arch.decodeInvocation label args cap_index slot arch_cap excaps
    \<lbrace>valid_arch_inv'\<rbrace>,-"
   apply (cases arch_cap)
-      -- "ASIDPool cap"
+      \<comment> \<open>ASIDPool cap\<close>
       apply (simp add: decodeX64MMUInvocation_def X64_H.decodeInvocation_def
                        Let_def split_def isCap_simps isIOCap_def decodeX64ASIDPoolInvocation_def
                   cong: if_cong split del: if_split)
@@ -2094,7 +2094,7 @@ lemma arch_decodeInvocation_wf[wp]:
         apply assumption
        apply (simp add: asid_low_bits_def asid_bits_def)
       apply assumption
-     -- "ASIDControlCap"
+     \<comment> \<open>ASIDControlCap\<close>
      apply (simp add: decodeX64MMUInvocation_def X64_H.decodeInvocation_def
                        Let_def split_def isCap_simps isIOCap_def decodeX64ASIDControlInvocation_def
                   cong: if_cong invocation_label.case_cong arch_invocation_label.case_cong list.case_cong prod.case_cong
@@ -2130,12 +2130,12 @@ lemma arch_decodeInvocation_wf[wp]:
      apply clarsimp
      apply (rule conjI, fastforce)
      apply (clarsimp simp: cte_wp_at_ctes_of objBits_simps archObjSize_def)
-    -- "IOPortCap"
+    \<comment> \<open>IOPortCap\<close>
     apply (simp add: decodeX64MMUInvocation_def X64_H.decodeInvocation_def
                        Let_def split_def isCap_simps isIOCap_def valid_arch_inv'_def
                 cong: if_cong split del: if_split)
     apply (wp decode_port_inv_wf, simp+)
-    -- "IOPortControlCap"
+    \<comment> \<open>IOPortControlCap\<close>
     apply (simp add: decodeX64MMUInvocation_def X64_H.decodeInvocation_def Let_def isCap_simps
                      split_def isIOCap_def
                cong: if_cong
@@ -2143,27 +2143,27 @@ lemma arch_decodeInvocation_wf[wp]:
     apply (wp decode_port_control_inv_wf, simp)
     apply (clarsimp simp: cte_wp_at_ctes_of diminished_IOPortControl')
 
-    -- "PageCap"
+    \<comment> \<open>PageCap\<close>
         apply (simp add: decodeX64MMUInvocation_def isCap_simps X64_H.decodeInvocation_def Let_def isIOCap_def
                    cong: if_cong split del: if_split)
         apply (wp, simp+)
 
-    -- "PageTableCap"
+    \<comment> \<open>PageTableCap\<close>
     apply (simp add: decodeX64MMUInvocation_def isCap_simps X64_H.decodeInvocation_def isIOCap_def Let_def
                cong: if_cong split del: if_split)
     apply (wpsimp, simp+)
 
-    -- "PageDirectoryCap"
+    \<comment> \<open>PageDirectoryCap\<close>
     apply (simp add: decodeX64MMUInvocation_def isCap_simps X64_H.decodeInvocation_def isIOCap_def Let_def
                cong: if_cong split del: if_split)
     apply (wpsimp, simp+)
 
-    -- "PDPointerTableCap"
+    \<comment> \<open>PDPointerTableCap\<close>
     apply (simp add: decodeX64MMUInvocation_def isCap_simps X64_H.decodeInvocation_def isIOCap_def Let_def
                cong: if_cong split del: if_split)
     apply (wpsimp, simp+)
 
-      -- "PML4Cap"
+      \<comment> \<open>PML4Cap\<close>
   apply (simp add: decodeX64MMUInvocation_def isCap_simps X64_H.decodeInvocation_def isIOCap_def Let_def
                cong: if_cong split del: if_split)
   by (wpsimp)

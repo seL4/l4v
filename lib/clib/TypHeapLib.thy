@@ -454,21 +454,21 @@ end
 *)
 
 lemmas typ_heap_simps =
-  -- "c_guard"
+  \<comment> \<open>c_guard\<close>
   c_guard_field
   c_guard_h_t_valid
-  -- "h_t_valid"
+  \<comment> \<open>h_t_valid\<close>
   h_t_valid_field
   h_t_valid_clift
-  -- "h_val"
+  \<comment> \<open>h_val\<close>
   h_val_field_clift'
   h_val_clift'
-  -- "clift"
+  \<comment> \<open>clift\<close>
   clift_field
   clift_field_update
   heap_update_field_hrs
   heap_update_field'
   clift_heap_update
-  clift_heap_update_same_td_name -- "Try this last (is expensive)"
+  clift_heap_update_same_td_name \<comment> \<open>Try this last (is expensive)\<close>
 
 end

@@ -667,7 +667,7 @@ lemma doUnbindNotification_ccorres:
                              cpspace_relation_def update_ntfn_map_tos)
             apply (elim conjE)
             apply (intro conjI)
-            -- "tcb relation"
+            \<comment> \<open>tcb relation\<close>
               apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
@@ -717,7 +717,7 @@ lemma doUnbindNotification_ccorres':
                              cpspace_relation_def update_ntfn_map_tos)
             apply (elim conjE)
             apply (intro conjI)
-            -- "tcb relation"
+            \<comment> \<open>tcb relation\<close>
               apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
@@ -916,7 +916,7 @@ lemma finaliseCap_True_cases_ccorres:
      apply (clarsimp simp add: return_def ccap_relation_NullCap_iff)
      apply (clarsimp simp add: irq_opt_relation_def)
     apply vcg
-   -- "NullCap case by exhaustion"
+   \<comment> \<open>NullCap case by exhaustion\<close>
    apply (simp add: cap_get_tag_isCap Let_def
                     ccorres_cond_empty_iff ccorres_cond_univ_iff)
    apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
@@ -2214,7 +2214,7 @@ lemma Arch_finaliseCap_ccorres:
             apply return_NullCap_pair_ccorres (* ASIDControlCap *)
            apply return_NullCap_pair_ccorres (* IOPortCap *)
           apply return_NullCap_pair_ccorres (* IOPortControlCap *)
-         -- "PageTableCap"
+         \<comment> \<open>PageTableCap\<close>
          apply (subst ccorres_cond_seq2_seq[symmetric])
          apply (rule ccorres_guard_imp)
            apply (rule ccorres_rhs_assoc)
@@ -2223,7 +2223,7 @@ lemma Arch_finaliseCap_ccorres:
            apply ccorres_rewrite
            apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
            apply (return_NullCap_pair_ccorres, simp+)
-        -- "PageDirectoryCap"
+        \<comment> \<open>PageDirectoryCap\<close>
         apply (subst ccorres_cond_seq2_seq[symmetric])
         apply (rule ccorres_guard_imp)
           apply (rule ccorres_rhs_assoc)
@@ -2232,7 +2232,7 @@ lemma Arch_finaliseCap_ccorres:
           apply ccorres_rewrite
           apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
           apply (return_NullCap_pair_ccorres, simp+)
-       -- "PDPointerTableCap"
+       \<comment> \<open>PDPointerTableCap\<close>
        apply (rule ccorres_guard_imp)
          apply (rule ccorres_add_return2)
          apply (ctac (no_vcg) add: Mode_finaliseCap_ccorres_pdpt[where is_final=False, simplified if_False])
@@ -2242,7 +2242,7 @@ lemma Arch_finaliseCap_ccorres:
          apply wp
         apply fastforce
        apply (fastforce simp: false_def)
-      -- "PML4Cap"
+      \<comment> \<open>PML4Cap\<close>
       apply (rule ccorres_guard_imp)
         apply (rule ccorres_add_return2)
         apply (ctac (no_vcg) add: Mode_finaliseCap_ccorres_pml4[where is_final=False, simplified if_False])
@@ -2252,7 +2252,7 @@ lemma Arch_finaliseCap_ccorres:
         apply wp
        apply fastforce
       apply (fastforce simp: false_def)
-     -- "PageCap"
+     \<comment> \<open>PageCap\<close>
      apply (clarsimp simp: isCap_simps)
      apply (rule ccorres_guard_imp[where A="?abstract_pre" and A'=UNIV])
        apply ccorres_rewrite
@@ -2267,7 +2267,7 @@ lemma Arch_finaliseCap_ccorres:
     apply (fastforce simp: isCap_simps)
    apply ccorres_rewrite
    apply (rule ccorres_Cond_rhs_Seq)
-    -- "final \<and> PageDirectoryCap"
+    \<comment> \<open>final \<and> PageDirectoryCap\<close>
     apply (clarsimp simp: isCap_simps)
     apply (rule ccorres_rhs_assoc)+
     apply csymbr
@@ -2308,7 +2308,7 @@ lemma Arch_finaliseCap_ccorres:
                     split: if_split_asm)
     apply simp
     apply (rule ccorres_inst[where P=\<top> and P'=UNIV], return_NullCap_pair_ccorres)
-   -- "final \<and> PageTableCap"
+   \<comment> \<open>final \<and> PageTableCap\<close>
    apply (rule ccorres_Cond_rhs_Seq)
     apply (clarsimp simp: isCap_simps)
     apply (rule ccorres_rhs_assoc)+
@@ -2352,7 +2352,7 @@ lemma Arch_finaliseCap_ccorres:
                     split: if_split_asm)
      apply simp
      apply (rule ccorres_inst[where P=\<top> and P'=UNIV], return_NullCap_pair_ccorres)
-   -- "final \<and> ASIDPoolCap"
+   \<comment> \<open>final \<and> ASIDPoolCap\<close>
    apply (rule ccorres_Cond_rhs_Seq)
     apply (clarsimp simp: isCap_simps)
     apply (rule ccorres_rhs_assoc)+
@@ -2364,22 +2364,22 @@ lemma Arch_finaliseCap_ccorres:
     apply (ctac (no_vcg) add: deleteASIDPool_ccorres)
      apply (rule ccorres_inst[where P=\<top> and P'=UNIV], return_NullCap_pair_ccorres)
     apply (rule wp_post_taut)
-   -- "final \<and> (ASIDControlCap \<or> IOPortControlCap"
+   \<comment> \<open>final \<and> (ASIDControlCap \<or> IOPortControlCap\<close>
    apply (rule ccorres_Cond_rhs_Seq)
     apply (clarsimp simp: isCap_simps)
     apply (erule disjE; ccorres_rewrite; clarsimp; (rule ccorres_inst[where P=\<top> and P'=UNIV], return_NullCap_pair_ccorres))
-   -- "final \<and> IOPortCap"
+   \<comment> \<open>final \<and> IOPortCap\<close>
    apply (rule ccorres_Cond_rhs_Seq)
     apply (clarsimp simp: isCap_simps)
     apply ccorres_rewrite
     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
     apply (rule allI, rule conseqPre, vcg)
     apply  (clarsimp simp: return_def ccap_relation_NullCap_iff)
-   -- "Mode_finaliseCap"
+   \<comment> \<open>Mode_finaliseCap\<close>
    apply ccorres_rewrite
    (* Winnow out the irrelevant cases *)
    apply (wpc; (rule ccorres_inst[where P=\<top> and P'=UNIV], fastforce simp: isCap_simps)?)
-     -- "PageCap"
+     \<comment> \<open>PageCap\<close>
      apply clarsimp
      apply (rule ccorres_add_return2)
      apply (ctac (no_vcg) add: Mode_finaliseCap_ccorres_page_cap)
@@ -2387,14 +2387,14 @@ lemma Arch_finaliseCap_ccorres:
       apply (rule allI, rule conseqPre, vcg)
       apply (fastforce simp: return_def)
      apply wp
-    -- "PDPointerTableCap"
+    \<comment> \<open>PDPointerTableCap\<close>
     apply (rule ccorres_add_return2)
     apply (ctac (no_vcg) add: Mode_finaliseCap_ccorres_pdpt[where is_final=True, simplified if_True])
      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
      apply (rule allI, rule conseqPre, vcg)
      apply (fastforce simp: return_def)
     apply wp
-   -- "PML4Cap"
+   \<comment> \<open>PML4Cap\<close>
    apply (rule ccorres_add_return2)
    apply (ctac (no_vcg) add: Mode_finaliseCap_ccorres_pml4[where is_final=True, simplified if_True])
     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])

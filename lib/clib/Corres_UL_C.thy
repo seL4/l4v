@@ -1166,7 +1166,7 @@ lemma ccorres_trim_redundant_throw':
   apply (erule exec_handlers_Seq_cases')
    apply simp
    apply (erule disjE)
-    -- "Non-abrupt case"
+    \<comment> \<open>Non-abrupt case\<close>
     apply clarsimp
     apply (erule_tac x = "t'" in ccorresE [OF cc])
         apply assumption
@@ -1175,7 +1175,7 @@ lemma ccorres_trim_redundant_throw':
      apply (erule (1) EHOther)
     apply simp
     apply (erule exec_Normal_elim_cases | simp)+
-   -- "Abrupt case"
+   \<comment> \<open>Abrupt case\<close>
    apply clarsimp
    apply (erule_tac x = "t'" in ccorresE [OF cc])
        apply assumption
@@ -1383,7 +1383,7 @@ lemma ccorres_split_nothrow_record_novcg:
   and     bd: "\<And>rv rv'. r' rv rv' \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (Q rv) (Q' rv rv') hs (b rv) (d' (xfru (\<lambda>_. rv') oldv))"
   and  valid: "\<lbrace>R\<rbrace> a \<lbrace>Q\<rbrace>"
   and  novcg: "guard_is_UNIV r' (xfr \<circ> xf') Q'"
-  -- "This might cause problems \<dots> has to be preserved across c in vcg case, but we can't do that"
+  \<comment> \<open>This might cause problems \<dots> has to be preserved across c in vcg case, but we can't do that\<close>
   and xfoldv: "\<And>s. xf' s = xfru (\<lambda>_. (xfr \<circ> xf') s) oldv"
   shows "ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) P' hs (a >>= (\<lambda>rv. b rv)) (c ;; d)"
   apply (rule ccorres_master_split_nohs_UNIV)

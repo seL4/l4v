@@ -589,7 +589,7 @@ lemma blocked_cancel_ipc_nosts_reads_respects:
 
     subgoal
     proof (cases "aag_can_read_label aag (pasObjectAbs aag x) \<or> aag_can_affect aag l x")
-      case True thus ?thesis -- "boring case, can read or affect ep"
+      case True thus ?thesis \<comment> \<open>boring case, can read or affect ep\<close>
       unfolding blocked_cancel_ipc_nosts_def get_blocking_object_def
       apply clarsimp
       apply (rule pre_ev)
@@ -603,7 +603,7 @@ lemma blocked_cancel_ipc_nosts_reads_respects:
       by (fastforce dest:read_sync_ep_read_receivers_strong )
 
     next
-      case False thus ?thesis apply -  -- "can't read or affect ep"
+      case False thus ?thesis apply -  \<comment> \<open>can't read or affect ep\<close>
       apply (rule gen_asm_ev)
       apply (drule label_is_invisible[THEN iffD2])
       apply clarsimp

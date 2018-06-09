@@ -246,7 +246,7 @@ lemma handleSyscall_ccorres:
    apply (rule ccorres_split_nothrow_novcg)
        apply wpc
               prefer 3
-              -- "SysSend"
+              \<comment> \<open>SysSend\<close>
               apply (clarsimp simp: syscall_from_H_def syscall_defs)
               apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
               apply (simp add: handleSend_def)
@@ -285,7 +285,7 @@ lemma handleSyscall_ccorres:
               apply clarsimp
               apply (vcg exspec=handleInvocation_modifies)
              prefer 3
-             -- "SysNBSend"
+             \<comment> \<open>SysNBSend\<close>
              apply (clarsimp simp: syscall_from_H_def syscall_defs)
              apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
              apply (simp add: handleSend_def)
@@ -322,7 +322,7 @@ lemma handleSyscall_ccorres:
               apply (simp add: invs'_def valid_state'_def)
              apply clarsimp
              apply (vcg exspec=handleInvocation_modifies)
-            -- "SysCall"
+            \<comment> \<open>SysCall\<close>
             apply (clarsimp simp: syscall_from_H_def syscall_defs)
             apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
             apply (simp add: handleCall_def)
@@ -362,7 +362,7 @@ lemma handleSyscall_ccorres:
             apply clarsimp
             apply (vcg exspec=handleInvocation_modifies)
            prefer 2
-           -- "SysRecv"
+           \<comment> \<open>SysRecv\<close>
            apply (clarsimp simp: syscall_from_H_def syscall_defs)
            apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
            apply (simp add: liftE_bind)
@@ -371,7 +371,7 @@ lemma handleSyscall_ccorres:
             apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
            apply wp
           prefer 2
-          -- "SysReply"
+          \<comment> \<open>SysReply\<close>
           apply (clarsimp simp: syscall_from_H_def syscall_defs)
           apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
           apply (simp add: liftE_bind)
@@ -379,7 +379,7 @@ lemma handleSyscall_ccorres:
           apply (ctac (no_vcg) add: handleReply_ccorres)
            apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
           apply wp
-         -- "SysReplyRecv"
+         \<comment> \<open>SysReplyRecv\<close>
          apply (clarsimp simp: syscall_from_H_def syscall_defs)
          apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
          apply (simp add: liftE_bind bind_assoc)
@@ -395,7 +395,7 @@ lemma handleSyscall_ccorres:
                               in hoare_post_imp)
           apply (simp add: ct_in_state'_def)
          apply (wp handleReply_sane handleReply_ct_not_ksQ)
-        -- "SysYield"
+        \<comment> \<open>SysYield\<close>
         apply (clarsimp simp: syscall_from_H_def syscall_defs)
         apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
         apply (simp add: liftE_bind)
@@ -403,7 +403,7 @@ lemma handleSyscall_ccorres:
         apply (ctac (no_vcg) add: handleYield_ccorres)
          apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
         apply wp
-       -- "SysNBRecv"
+       \<comment> \<open>SysNBRecv\<close>
        apply (clarsimp simp: syscall_from_H_def syscall_defs)
        apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
        apply (simp add: liftE_bind)
@@ -411,7 +411,7 @@ lemma handleSyscall_ccorres:
        apply (ctac (no_vcg) add: handleRecv_ccorres)
         apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
        apply wp
-      -- " rest of body"
+      \<comment> \<open>rest of body\<close>
       apply ceqv
      apply (ctac (no_vcg) add: schedule_ccorres)
       apply (rule ccorres_add_return2)

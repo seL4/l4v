@@ -3852,7 +3852,7 @@ proof -
                                  modify_registers_def
                            cong: if_cong simp del: the_index.simps)
          apply ((wp |simp)+)[5]
-    -- "buf = Some a"
+    \<comment> \<open>buf = Some a\<close>
     using if_split[split del]
     apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_Nil zipWithM_x_modify
                           take_min_len zip_take_triv2 min.commute

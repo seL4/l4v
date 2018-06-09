@@ -3487,7 +3487,7 @@ proof -
   note hacky_cte = retype_ctes_helper [where sz = "objBitsKO kotcb" and ko = kotcb and ptr = "ctcb_ptr_to_tcb_ptr p",
     OF pal pds pno al _ _ mko, simplified new_cap_addrs_def, simplified]
 
-  -- "Ugh"
+  \<comment> \<open>Ugh\<close>
   moreover have
     "\<And>y. y \<in> ptr_val ` (CTypesDefs.ptr_add (cte_Ptr (ctcb_ptr_to_tcb_ptr p)) \<circ> of_nat) ` {k. k < 5}
       = (y && ~~ mask tcbBlockSizeBits = ctcb_ptr_to_tcb_ptr p \<and> y && mask tcbBlockSizeBits \<in> dom tcb_cte_cases)"
@@ -3592,7 +3592,7 @@ proof -
       eval_nat_numeral ThreadState_Inactive_def)
     apply (simp add: ccontext_relation_def newContext_def2 carch_tcb_relation_def)
     apply rule
-    apply (case_tac r, simp_all add: "StrictC'_register_defs" eval_nat_numeral atcbContext_def newArchTCB_def newContext_def initContext_def)[1] -- "takes ages"
+    apply (case_tac r, simp_all add: "StrictC'_register_defs" eval_nat_numeral atcbContext_def newArchTCB_def newContext_def initContext_def)[1] \<comment> \<open>takes ages\<close>
     apply (simp add: thread_state_lift_def eval_nat_numeral atcbContextGet_def)+
     apply (simp add: timeSlice_def)
     apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
@@ -3718,15 +3718,15 @@ proof -
     apply (simp add: rl kotcb_def projectKOs rl_tcb rl_cte)
     apply (elim conjE)
     apply (intro conjI)
-     -- "cte"
+     \<comment> \<open>cte\<close>
      apply (erule cmap_relation_retype2)
      apply (simp add:ccte_relation_nullCap nullMDBNode_def nullPointer_def)
-    -- "tcb"
+    \<comment> \<open>tcb\<close>
      apply (erule cmap_relation_updI2 [where dest = "ctcb_ptr_to_tcb_ptr p" and f = "tcb_ptr_to_ctcb_ptr", simplified])
      apply (rule map_comp_simps)
      apply (rule pks)
      apply (rule tcb_rel)
-    -- "ep"
+    \<comment> \<open>ep\<close>
      apply (erule iffD2 [OF cmap_relation_cong, OF refl refl, rotated -1])
      apply (simp add: cendpoint_relation_def Let_def)
      apply (subst endpoint.case_cong)
@@ -3735,7 +3735,7 @@ proof -
      apply (simp add: tcb_queue_update_other' del: tcb_queue_relation'_empty)
     apply (simp add: tcb_queue_update_other' ep2)
    apply clarsimp
-  -- "ntfn"
+  \<comment> \<open>ntfn\<close>
    apply (erule iffD2 [OF cmap_relation_cong, OF refl refl, rotated -1])
    apply (simp add: cnotification_relation_def Let_def)
      apply (subst ntfn.case_cong)
@@ -5534,7 +5534,7 @@ proof -
                     framesize_to_H_def cap_to_H_simps cap_small_frame_cap_lift
                     vmrights_to_H_def mask_def vm_rights_defs)
 
-        -- "Page objects: could possibly fix the duplication here"
+        \<comment> \<open>Page objects: could possibly fix the duplication here\<close>
         apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
          apply (simp add: object_type_from_H_def Kernel_C_defs)
          apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
@@ -5616,7 +5616,7 @@ proof -
                  cl_valid_cap_def c_valid_cap_def
                  is_aligned_neg_mask_eq_concrete[THEN sym])
 
-     -- "PageTableObject"
+     \<comment> \<open>PageTableObject\<close>
      apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
       apply (simp add: object_type_from_H_def Kernel_C_defs)
       apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
@@ -5649,7 +5649,7 @@ proof -
                 Kernel_C.VMKernelOnly_def Kernel_C.VMReadOnly_def)
      apply (simp add: to_bool_def false_def isFrameType_def)
 
-    -- "PageDirectoryObject"
+    \<comment> \<open>PageDirectoryObject\<close>
     apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
      apply (simp add: object_type_from_H_def Kernel_C_defs)
      apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff

@@ -972,7 +972,7 @@ qed
 
 lemma ProcProcParModifyReturn:
   assumes q: "P \<subseteq> {s. p s = q} \<inter> P'"
-   \<comment>\<open>@{thm[source] DynProcProcPar} introduces the same constraint as first conjunction in
+   \<comment> \<open>@{thm[source] DynProcProcPar} introduces the same constraint as first conjunction in
          @{term P'}, so the vcg can simplify it.\<close>
   assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' (dynCall init p return' c) Q,A"
   assumes ret_nrm_modif: "\<forall>s t. t \<in> (Modif (init s))
@@ -997,7 +997,7 @@ qed
 
 lemma ProcProcParModifyReturnSameFaults:
   assumes q: "P \<subseteq> {s. p s = q} \<inter> P'"
-   \<comment>\<open>@{thm[source] DynProcProcPar} introduces the same constraint as first conjunction in
+   \<comment> \<open>@{thm[source] DynProcProcPar} introduces the same constraint as first conjunction in
          @{term P'}, so the vcg can simplify it.\<close>
   assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' (dynCall init p return' c) Q,A"
   assumes ret_nrm_modif: "\<forall>s t. t \<in> (Modif (init s))
@@ -1021,7 +1021,7 @@ qed
 
 lemma ProcProcParModifyReturnNoAbr:
   assumes q: "P \<subseteq> {s. p s = q} \<inter> P'"
-   \<comment>\<open>@{thm[source] DynProcProcParNoAbrupt} introduces the same constraint as
+   \<comment> \<open>@{thm[source] DynProcProcParNoAbrupt} introduces the same constraint as
       first conjunction in @{term P'}, so the vcg can simplify it.\<close>
   assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' (dynCall init p return' c) Q,A"
   assumes ret_nrm_modif: "\<forall>s t. t \<in> (Modif (init s))
@@ -1042,7 +1042,7 @@ qed
 
 lemma ProcProcParModifyReturnNoAbrSameFaults:
   assumes q: "P \<subseteq> {s. p s = q} \<inter> P'"
-      \<comment>\<open>@{thm[source] DynProcProcParNoAbrupt} introduces the same constraint as
+      \<comment> \<open>@{thm[source] DynProcProcParNoAbrupt} introduces the same constraint as
       first conjunction in @{term P'}, so the vcg can simplify it.\<close>
   assumes to_prove: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' (dynCall init p return' c) Q,A"
   assumes ret_nrm_modif: "\<forall>s t. t \<in> (Modif (init s))

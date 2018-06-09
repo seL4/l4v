@@ -121,11 +121,11 @@ definition
 definition
   ep_at_C' :: "word64 \<Rightarrow> heap_raw_state \<Rightarrow> bool"
 where
-  "ep_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: endpoint_C typ_heap)" -- "endpoint_lift is total"
+  "ep_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: endpoint_C typ_heap)" \<comment> \<open>endpoint_lift is total\<close>
 
 definition
   ntfn_at_C' :: "word64 \<Rightarrow> heap_raw_state \<Rightarrow> bool"
-  where -- "notification_lift is total"
+  where \<comment> \<open>notification_lift is total\<close>
   "ntfn_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: notification_C typ_heap)"
 
 definition

@@ -20,7 +20,7 @@ definition
   has_size :: "'a set \<Rightarrow> nat \<Rightarrow> bool" where
    "has_size s n = (finite s \<and> card s = n)"
 
--- {* If @{typ 'a} is not finite, there is no @{term "n < CARD('a)"} *}
+\<comment> \<open>If @{typ 'a} is not finite, there is no @{term "n < CARD('a)"}\<close>
 definition
   finite_index :: "nat \<Rightarrow> 'a::finite" where
   "finite_index = (SOME f. \<forall>x. \<exists>!n. n < CARD('a) \<and> f n = x)"

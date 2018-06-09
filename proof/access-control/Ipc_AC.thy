@@ -183,7 +183,7 @@ lemma dmo_storeWord_respects_ipc:
       apply (simp add: msg_align_bits)
      apply (erule mul_word_size_lt_msg_align_bits_ofnat)
     apply simp
-   -- "non auth case"
+   \<comment> \<open>non auth case\<close>
   apply (rule hoare_pre)
   apply (simp add: storeWord_def)
   apply (wp dmo_wp)
@@ -201,7 +201,7 @@ lemma dmo_storeWord_respects_ipc:
      apply (simp add: msg_align_bits)
     apply (erule mul_word_size_lt_msg_align_bits_ofnat)
    apply simp
-  -- "otherwise"
+  \<comment> \<open>otherwise\<close>
   apply (auto simp: is_aligned_mask [symmetric] intro!: trm_lrefl ptr_range_memI ptr_range_add_memI)
   done
 
@@ -593,7 +593,7 @@ lemma send_signal_respects:
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_name_pre_state)
   apply (case_tac "ntfn_obj ntfn = IdleNtfn \<and> ntfn_bound_tcb ntfn \<noteq> None")
-   -- "ntfn-binding case"
+   \<comment> \<open>ntfn-binding case\<close>
    apply (rule hoare_pre)
     apply (wp set_notification_respects[where auth=Notify]
                  as_user_set_register_respects_indirect[where ntfnptr=ntfnptr]
@@ -637,7 +637,7 @@ lemma send_signal_respects:
    apply simp
   apply simp
   apply (intro impI conjI)
-     -- "st_tcb_at receive_blocked st"
+     \<comment> \<open>st_tcb_at receive_blocked st\<close>
    apply (erule (2) integrity_receive_blocked_chain)
   apply clarsimp
   done
@@ -1125,7 +1125,7 @@ lemma receive_ipc_base_pas_refined:
   apply (clarsimp simp: tcb_at_def [symmetric] conj_ac tcb_at_st_tcb_at)
   apply (rule conjI)
    apply (rule impI)
-   -- "is_subject"
+   \<comment> \<open>is_subject\<close>
    apply (subgoal_tac "aag_has_auth_to aag Control (hd x)")
     apply (fastforce simp add: pas_refined_refl dest!: aag_Control_into_owns)
    apply (rule_tac ep = "pasObjectAbs aag epptr" in aag_wellformed_grant_Control_to_send [OF _ _ pas_refined_wellformed])
@@ -1410,7 +1410,7 @@ lemma receive_ipc_base_integrity:
   apply safe
     apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def
                            ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong)
-   -- "is_subject"
+   \<comment> \<open>is_subject\<close>
    apply (subgoal_tac "aag_has_auth_to aag Control (hd x)")
     apply (fastforce simp add: pas_refined_refl dest!: aag_Control_into_owns)
    apply (rule_tac ep = "pasObjectAbs aag epptr" in aag_wellformed_grant_Control_to_send [OF _ _ pas_refined_wellformed])
@@ -1534,12 +1534,12 @@ lemma integrity_tcb_in_ipc_final:
     apply (clarsimp simp: tcb_bound_notification_reset_integrity_def)
    apply (rule disjI1)
    apply (clarsimp simp: direct_send_def)
-    -- "trm"
+    \<comment> \<open>trm\<close>
   apply clarsimp
   apply (cases "is_subject aag thread")
    apply (rule trm_write)
    apply simp
-  -- "doesn't own"
+  \<comment> \<open>doesn't own\<close>
   apply (erule tcb_in_ipc.cases, simp_all)[1]
   apply clarsimp
   apply (rule trm_ipc [where p' = thread and ep = epptr])
@@ -1653,7 +1653,7 @@ lemma set_object_integrity_in_ipc_autarch:
    apply simp
    apply (erule integrity_trans)
    apply (clarsimp simp: integrity_def)
-  -- "tii"
+  \<comment> \<open>tii\<close>
   apply clarsimp
   done
 
@@ -2018,14 +2018,14 @@ lemma send_ipc_integrity_autarch:
     apply (rule hoare_pre)
      apply (wp set_endpoinintegrity  set_thread_state_integrity_autarch
                  | wpc | simp)+
-    apply (fastforce simp: obj_at_def is_ep) -- "ep_at and has_auth"
-   -- "SendEP"
+    apply (fastforce simp: obj_at_def is_ep) \<comment> \<open>ep_at and has_auth\<close>
+   \<comment> \<open>SendEP\<close>
    apply simp
    apply (rule hoare_pre)
     apply (wp set_endpoinintegrity  set_thread_state_integrity_autarch
                | wpc | simp)+
-   apply (fastforce simp: obj_at_def is_ep) -- "ep_at and has_auth"
-  -- "WaitingEP"
+   apply (fastforce simp: obj_at_def is_ep) \<comment> \<open>ep_at and has_auth\<close>
+  \<comment> \<open>WaitingEP\<close>
   apply (rename_tac list)
   apply simp
   apply (case_tac "is_subject aag (hd list)") (* autarch or not on rec. side *)
@@ -2045,12 +2045,12 @@ lemma send_ipc_integrity_autarch:
     apply blast
    apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def valid_simple_obj_def
                           ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong)
-  -- "we don't own head of queue"
+  \<comment> \<open>we don't own head of queue\<close>
   apply clarsimp
-  apply (rule use_spec') -- "Name initial state"
-  apply (simp add: spec_valid_def) -- "no imp rule?"
+  apply (rule use_spec') \<comment> \<open>Name initial state\<close>
+  apply (simp add: spec_valid_def) \<comment> \<open>no imp rule?\<close>
 
-  apply (rule_tac Q =  "\<lambda>_ s'. integrity aag X st s \<and> integrity aag X s s'" in hoare_post_imp) -- "We want to apply refl later on, so use initial state"
+  apply (rule_tac Q =  "\<lambda>_ s'. integrity aag X st s \<and> integrity aag X s s'" in hoare_post_imp) \<comment> \<open>We want to apply refl later on, so use initial state\<close>
    apply (clarsimp elim!: integrity_trans)
   apply (rule hoare_pre)
    apply (wp set_endpoinintegrity set_thread_state_integrity_autarch setup_caller_cap_integrity_autarch
@@ -2077,9 +2077,9 @@ lemma send_ipc_integrity_autarch:
    apply simp
   apply simp
   apply (intro conjI)
-     -- "\<not> can_grant"
+     \<comment> \<open>\<not> can_grant\<close>
      apply (clarsimp simp: obj_at_def)
-    -- "refl tcb_in_ipc"
+    \<comment> \<open>refl tcb_in_ipc\<close>
    apply (erule (4) integrity_tcb_in_ipc_refl)
   apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def
                          ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong)

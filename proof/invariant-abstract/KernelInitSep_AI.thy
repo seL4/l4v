@@ -1005,7 +1005,7 @@ lemma ko_combine_commute:
                      check_components_def
                      tcb_override_commute ao_clean_def sane_components_def
                split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
-     -- "ao_override_def is too much for auto/fastforce above"
+     \<comment> \<open>ao_override_def is too much for auto/fastforce above\<close>
      (auto intro!: ext simp: ao_override_def split: if_split_asm)
 
 
@@ -1397,7 +1397,7 @@ lemma sep_disj_add:
    apply (clarsimp dest!: empty_Inter_UnD empty_Inter_UnD_left)
    apply ((rule conjI | intro empty_Inter_UnI empty_Inter_UnI_left
            | simp add: Int_commute)+)[1]
-   -- "concludes first branch of iffI"
+   \<comment> \<open>concludes first branch of iffI\<close>
   apply (clarsimp dest!: empty_Inter_UnD empty_Inter_UnD_left)
   apply ((rule conjI | intro empty_Inter_UnI empty_Inter_UnI_left
           | simp add: Int_commute)+)[1]
@@ -1553,7 +1553,7 @@ lemma sep_map_base_implode_eq:
     apply (fastforce simp: sep_map_base_def
                     dest!: sane_components_ko_clean_ko_overrideD)
    apply (drule (4) sane_components_ko_clean_ko_overrideD)
-     -- "why can't clarsimp apply this with dest!: ?"
+     \<comment> \<open>why can't clarsimp apply this with dest!: ?\<close>
    apply (clarsimp simp: sep_disj_defs kheap_shadows_def kheap_shadow_def
                          obj_comp_map_disj_def check_components_def
                          sane_components_def)

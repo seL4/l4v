@@ -169,7 +169,7 @@ lemma ccorres_split_nothrow_novcgE:
   and  valid: "\<lbrace>R\<rbrace> a \<lbrace>Q\<rbrace>,\<lbrace>QE\<rbrace>"
   and  novcg: "guard_is_UNIV (\<lambda>rv rv'. r' rv (vf' rv'))
                                  xf' (\<lambda>rv rv'. {s. ef' rv' = scast EXCEPTION_NONE \<longrightarrow> s \<in> Q' rv rv'})"
-  -- "hack"
+  \<comment> \<open>hack\<close>
   and  novcg_err: "\<And>err. guard_is_UNIV (\<lambda>rv. f' err (ef' rv)) es
                               (\<lambda>rv rv'. {s. ef' (xf' s) \<noteq> scast EXCEPTION_NONE \<longrightarrow> s \<in> Q'' err rv rv'})"
   shows "ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) P' hs (a >>=E (\<lambda>rv. b rv)) (c ;; d)"
@@ -497,7 +497,7 @@ lemma ccorres_split_nothrow_call_record_novcg:
   and      igl: "\<And>s. globals (i s) = globals s"
   and  valid: "\<lbrace>R\<rbrace> a \<lbrace>Q\<rbrace>"
   and  novcg: "guard_is_UNIV r' (xfr \<circ> xf') Q'"
-  -- "This might cause problems \<dots> has to be preserved across c in vcg case, but we can't do that"
+  \<comment> \<open>This might cause problems \<dots> has to be preserved across c in vcg case, but we can't do that\<close>
   and xfoldv: "\<And>s. xf' s = xfru (\<lambda>_. (xfr \<circ> xf') s) oldv"
   shows "ccorres_underlying rf_sr \<Gamma> r xf arrel axf (P and R) ({s. i s \<in> P'}) hs (a >>= (\<lambda>rv. b rv)) (call i f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>)
                 (\<lambda>_ t. Basic (xfu' (\<lambda>_. xfru (\<lambda>_. xf'' t) oldv))) ;; d)"

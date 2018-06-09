@@ -140,7 +140,7 @@ where
  "debugPrint \<equiv> \<lambda>message. return ()"
 
 
--- "Interrupt controller operations"
+\<comment> \<open>Interrupt controller operations\<close>
 
 text {*
   Interrupts that cannot occur while the kernel is running (e.g. at preemption points),

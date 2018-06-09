@@ -33,7 +33,7 @@ lemma projectKO_eq2:
   by (auto simp: projectKO_def fail_def return_def split: option.splits)
 
 
--- -----------------------------------
+\<comment> \<open>-----------------------------------\<close>
 
 instantiation endpoint :: pre_storable
 begin
@@ -173,7 +173,7 @@ lemmas injectKO_defs =
 lemmas koType_defs =
   koType_tcb koType_cte koType_ntfn koType_ep koType_user_data koType_user_data_device
 
--- -----------------------------------
+\<comment> \<open>-----------------------------------\<close>
 
 instantiation endpoint :: pspace_storable
 begin

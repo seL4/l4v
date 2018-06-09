@@ -1089,9 +1089,9 @@ proof -
   show ?thesis
   unfolding schedule_def
   apply (wp, wpc)
-       -- "action = ResumeCurrentThread"
+       \<comment> \<open>action = ResumeCurrentThread\<close>
       apply (wp)[1]
-     -- "action = ChooseNewThread"
+     \<comment> \<open>action = ChooseNewThread\<close>
      apply (clarsimp simp: when_def scheduleChooseNewThread_def)
      apply (wp ssa_no_orphans hoare_vcg_all_lift)
          apply (wp hoare_disjI1 chooseThread_nosch)
@@ -1114,7 +1114,7 @@ proof -
              | strengthen all_invs_but_ct_idle_or_in_cur_domain'_strg
              | wps tcbSchedEnqueue_ct')+)[1]
      apply wp[1]
-    -- "action = SwitchToThread candidate"
+    \<comment> \<open>action = SwitchToThread candidate\<close>
      apply (clarsimp)
     apply (rename_tac candidate)
    apply (wpsimp wp: do_switch_to abort_switch_to_enq abort_switch_to_app)

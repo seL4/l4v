@@ -1782,7 +1782,7 @@ lemma createMappingEntries_valid_pde_slots'2:
     apply (rule hoare_pre, wp)
     apply (clarsimp simp: vmsz_aligned'_def page_directory_at'_def lookup_pd_slot_def)
     apply (rule conjI)
-    subgoal -- "valid_pde_mapping_offset'"
+    subgoal \<comment> \<open>valid_pde_mapping_offset'\<close>
      apply (clarsimp simp: superSectionPDEOffsets_def length_upto_enum_step pdeBits_def)
      apply (clarsimp simp: upto_enum_step_def upto_enum_def comp_def)
      apply (clarsimp simp: linorder_not_less field_simps mask_add_aligned)
@@ -1790,7 +1790,7 @@ lemma createMappingEntries_valid_pde_slots'2:
      apply (rule word_of_nat_le, simp)
      done
   apply (rule conjI)
-   subgoal -- "pde_at'"
+   subgoal \<comment> \<open>pde_at'\<close>
      apply (clarsimp simp: superSectionPDEOffsets_def length_upto_enum_step pdeBits_def)
      apply (clarsimp simp:upto_enum_step_def upto_enum_def hd_map_simp comp_def)
        apply (simp add: vaddr_segment_nonsense6)
@@ -3012,7 +3012,7 @@ lemma decodeARMFrameInvocation_ccorres:
     apply simp
     apply (vcg exspec=getSyscallArg_modifies)
 
-   -- "PageMap"
+   \<comment> \<open>PageMap\<close>
    apply (rule ccorres_rhs_assoc)+
    apply csymbr+
    apply (simp add: if_1_0_0 word_less_nat_alt del: Collect_const)
@@ -4130,7 +4130,7 @@ lemma Arch_decodeInvocation_ccorres:
      apply wp
     apply simp
     apply (vcg exspec=getSyscallArg_modifies)
-   apply (rule ccorres_Cond_rhs) -- "ASIDPoolCap case"
+   apply (rule ccorres_Cond_rhs) \<comment> \<open>ASIDPoolCap case\<close>
     apply (simp add: imp_conjR[symmetric] decodeARMMMUInvocation_def
                 del: Collect_const)
     apply (rule ccorres_rhs_assoc)+

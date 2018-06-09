@@ -1960,7 +1960,7 @@ lemma createMappingEntries_valid_pde_slots'2:
   apply (rule hoare_pre, wp)
   apply (clarsimp simp: vmsz_aligned'_def page_directory_at'_def lookup_pd_slot_def)
   apply (rule conjI)
-   subgoal -- "valid_pde_mapping_offset'"
+   subgoal \<comment> \<open>valid_pde_mapping_offset'\<close>
      apply (clarsimp simp: superSectionPDEOffsets_def length_upto_enum_step table_bits_defs)
      apply (clarsimp simp: upto_enum_step_def upto_enum_def comp_def)
      apply (clarsimp simp: linorder_not_less field_simps mask_add_aligned)
@@ -1968,7 +1968,7 @@ lemma createMappingEntries_valid_pde_slots'2:
      apply (rule word_of_nat_le, simp)
      done
   apply (rule conjI)
-   subgoal -- "pde_at'"
+   subgoal \<comment> \<open>pde_at'\<close>
      apply (clarsimp simp: superSectionPDEOffsets_def length_upto_enum_step table_bits_defs)
      apply (clarsimp simp:upto_enum_step_def upto_enum_def hd_map_simp comp_def)
      apply (simp add: vaddr_segment_nonsense6)
@@ -3112,7 +3112,7 @@ lemma resolveVAddr_ccorres:
        apply (subgoal_tac "scast Kernel_C.ARMLargePage && mask 2 = (scast Kernel_C.ARMLargePage :: machine_word)")
         prefer 2
         apply (simp add: mask_def ARMLargePage_def)
-       -- "reduce to resolve_ret_rel goals first"
+       \<comment> \<open>reduce to resolve_ret_rel goals first\<close>
        apply (clarsimp simp: fst_return pte_get_tag_alt true_def false_def split: pte.splits)
        apply (safe ; clarsimp simp: cpte_relation_get_tag_simps c_pages_noteq)
        (* 4 subgoals *)
@@ -3151,7 +3151,7 @@ lemma resolveVAddr_ccorres:
                              ARMSection_def mask_def)
        done
   apply clarsimp
-  apply (rule conjI, fastforce elim: valid_objs_valid_pte') -- "valid_pte'"
+  apply (rule conjI, fastforce elim: valid_objs_valid_pte') \<comment> \<open>valid_pte'\<close>
   apply (frule(1) page_directory_at_rf_sr)
   apply (clarsimp simp: isPageTablePDE_def pde_get_tag_alt pde_tag_defs cpde_relation_def
                         typ_heap_simps pde_pde_coarse_lift_def
@@ -3602,7 +3602,7 @@ lemma decodeARMFrameInvocation_ccorres:
     apply simp
     apply (vcg exspec=getSyscallArg_modifies)
 
-   -- "PageMap"
+   \<comment> \<open>PageMap\<close>
    apply (rule ccorres_rhs_assoc)+
    apply csymbr+
    apply (simp add: if_1_0_0 word_less_nat_alt del: Collect_const)
@@ -4269,7 +4269,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
             apply (clarsimp simp: invs_valid_objs' invs_sch_act_wf'
               valid_tcb_state'_def invs_queues)
 
-           -- "cache flush constraints"
+           \<comment> \<open>cache flush constraints\<close>
            subgoal for _ _ _ _ _ _ sz p
              using pbfs_atleast_pageBits[simplified pageBits_def, of sz]
              apply (intro conjI)
@@ -4726,7 +4726,7 @@ lemma decodeARMMMUInvocation_ccorres:
      apply wp
     apply simp
     apply (vcg exspec=getSyscallArg_modifies)
-   apply (rule ccorres_Cond_rhs) -- "ASIDPoolCap case"
+   apply (rule ccorres_Cond_rhs) \<comment> \<open>ASIDPoolCap case\<close>
     apply (simp add: imp_conjR[symmetric] decodeARMMMUInvocation_def
                 del: Collect_const)
     apply (rule ccorres_rhs_assoc)+
@@ -5105,10 +5105,10 @@ lemma writeVCPUReg_ccorres:
             and Q'=UNIV in ccorres_rewrite_cond_sr)
   subgoal by (fastforce dest: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def
                           split: option.splits)
-   apply (clarsimp simp: vcpureg_eq_use_types) -- "C register comparison into reg comparison"
+   apply (clarsimp simp: vcpureg_eq_use_types) \<comment> \<open>C register comparison into reg comparison\<close>
    apply (rule ccorres_Cond_rhs)
 
-    -- "vcpuptr is current vcpu"
+    \<comment> \<open>vcpuptr is current vcpu\<close>
     apply clarsimp
     apply (rename_tac curvcpuactive)
     apply (rule ccorres_Cond_rhs ; clarsimp)
@@ -5117,22 +5117,23 @@ lemma writeVCPUReg_ccorres:
                             and Q'=UNIV in ccorres_rewrite_cond_sr)
   subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def
                         split: option.splits)
-     (* unification choking on schematics with pairs *)
-     apply (rule_tac A="vcpu_at' vcpuptr" and A'=UNIV in ccorres_guard_imp)
-       apply (rule ccorres_Cond_rhs ; clarsimp)
-        apply (ctac (no_vcg) add: setSCTLR_ccorres)
-       apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
-      apply fastforce
-     apply fastforce
-    apply (ctac (no_vcg) add: vcpu_hw_write_reg_ccorres)
-   -- "no current vcpu"
-   apply clarsimp
-   apply wpc
-   apply (subgoal_tac "\<not> x1")
-    prefer 2
-    apply fastforce
-   apply simp
-   apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
+                   (* unification choking on schematics with pairs *)
+                   apply (rule ccorres_guard_imp)
+                     apply (rule ccorres_Cond_rhs; clarsimp)
+                      \<comment> \<open>SCTLR to hardware\<close>
+                      apply (ctac (no_vcg) add: setSCTLR_ccorres)
+                     \<comment> \<open>SCTLR from vcpu\<close>
+                     apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
+
+  (* 20 subgoals *)
+  apply (solves \<open>
+           match conclusion in "_ (heap_update (Ptr x))" for x \<Rightarrow> \<open>print_term x\<close>,
+           rule ccorres_guard_imp, rule ccorres_move_c_guard_vcpu,
+           rule_tac P="ko_at' vcpu vcpuptr" in setObject_ccorres_helper[where P'=UNIV],
+           rule conseqPre, vcg,
+           determ \<open>solve_rf_sr_vcpu_update\<close>,
+           (fastforce simp: ko_at_vcpu_at'D objBits_simps archObjSize_def machine_bits_defs)+\<close>)+
+  apply fastforce
   apply fastforce
   done
 
@@ -5175,9 +5176,9 @@ lemma readVCPUReg_ccorres:
             and Q'=UNIV in ccorres_rewrite_cond_sr)
   subgoal by (fastforce dest: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def
                           split: option.splits)
-   apply (clarsimp simp: vcpureg_eq_use_types) -- "C register comparison into reg comparison"
+   apply (clarsimp simp: vcpureg_eq_use_types) \<comment> \<open>C register comparison into reg comparison\<close>
    apply (rule ccorres_Cond_rhs)
-    -- "vcpuptr is current vcpu"
+    \<comment> \<open>vcpuptr is current vcpu\<close>
     apply clarsimp
     apply (rename_tac curvcpuactive)
     apply (rule ccorres_Cond_rhs ; clarsimp)
@@ -5186,11 +5187,10 @@ lemma readVCPUReg_ccorres:
                             and Q'=UNIV in ccorres_rewrite_cond_sr)
   subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def
                         split: option.splits)
-
      (* unification choking on schematics with pairs *)
      apply (rule_tac A=\<top> and A'=UNIV in ccorres_guard_imp)
        apply (rule ccorres_Cond_rhs ; clarsimp)
-        -- "SCTLR"
+        \<comment> \<open>SCTLR\<close>
         apply (rule ccorres_add_return2)
         apply (ctac (no_vcg) add: getSCTLR_ccorres)
          apply (fastforce intro!: ccorres_return_C)
@@ -5203,7 +5203,7 @@ lemma readVCPUReg_ccorres:
       (* re-unify with ccorres_guard_imp *)
       apply fastforce
      apply fastforce
-    -- "any other hyp register"
+    \<comment> \<open>any other hyp register\<close>
     apply (rule ccorres_add_return2)
     apply (ctac (no_vcg) add: vcpu_hw_read_reg_ccorres)
      apply (fastforce intro!: ccorres_return_C)
@@ -5246,7 +5246,7 @@ lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres
      apply (ctac add: readVCPUReg_ccorres)
        apply (rule ccorres_Cond_rhs_Seq[rotated]; clarsimp)
 
-        -- "if we are not part of a call"
+        \<comment> \<open>if we are not part of a call\<close>
         apply (simp add: replyOnRestart_def liftE_def bind_assoc)
         apply (rule getThreadState_ccorres_foo, rename_tac tstate)
         apply (rule_tac P="tstate = Restart" in ccorres_gen_asm)
@@ -5259,7 +5259,7 @@ lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres
          apply (clarsimp simp: return_def dc_simp)
         apply (rule hoare_post_taut[of \<top>])
 
-       -- "now if we are part of a call"
+       \<comment> \<open>now if we are part of a call\<close>
        apply (rule ccorres_rhs_assoc)+
        apply (rename_tac rval)
        apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
@@ -5384,7 +5384,7 @@ lemma decodeVCPUWriteReg_ccorres:
        apply (clarsimp simp: word_le_nat_alt)
        apply (simp add: returnOk_bind bindE_assoc
                         performARMMMUInvocations performARMVCPUInvocation_def)
-       -- "we want the second alternative - nothing to return to user"
+       \<comment> \<open>we want the second alternative - nothing to return to user\<close>
        apply (subst liftE_invokeVCPUWriteReg_empty_return, clarsimp)
        apply (ctac add: setThreadState_ccorres)
          apply csymbr
@@ -5406,10 +5406,10 @@ lemma decodeVCPUWriteReg_ccorres:
                         invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
                         rf_sr_ksCurThread msgRegisters_unfold
                         valid_tcb_state'_def ThreadState_Restart_def mask_def)
-  apply (rule conjI; clarsimp) -- "not enough args"
+  apply (rule conjI; clarsimp) \<comment> \<open>not enough args\<close>
    apply (clarsimp simp: isCap_simps cap_get_tag_isCap capVCPUPtr_eq)
    apply (subst from_to_enum; clarsimp simp: fromEnum_maxBound_vcpureg_def)
-  -- "enough args"
+  \<comment> \<open>enough args\<close>
   apply (clarsimp simp: isCap_simps cap_get_tag_isCap capVCPUPtr_eq valid_cap'_def)
   apply (subgoal_tac "args \<noteq> []")
    prefer 2 subgoal by (cases args; clarsimp, unat_arith?)
@@ -5629,7 +5629,7 @@ lemma decodeVCPUInjectIRQ_ccorres:
        apply (subst liftE_invokeVCPUInjectIRQ_empty_return)
        apply clarsimp
 
-     -- "we want the second alternative - nothing to return to user"
+     \<comment> \<open>we want the second alternative - nothing to return to user\<close>
      apply (ctac add: setThreadState_ccorres)
        apply (ctac add: invokeVCPUInjectIRQ_ccorres)
           apply (rule ccorres_alternative2)
@@ -5761,10 +5761,10 @@ lemma decodeVCPUReadReg_ccorres:
                         rf_sr_ksCurThread msgRegisters_unfold
                         valid_tcb_state'_def ThreadState_Restart_def mask_def)
 
-  apply (rule conjI; clarsimp) -- "no args"
+  apply (rule conjI; clarsimp) \<comment> \<open>no args\<close>
    subgoal by (clarsimp simp: isCap_simps cap_get_tag_isCap capVCPUPtr_eq)
                (subst from_to_enum; clarsimp simp: fromEnum_maxBound_vcpureg_def)
-  -- "at least one arg"
+  \<comment> \<open>at least one arg\<close>
   apply (clarsimp simp: isCap_simps cap_get_tag_isCap capVCPUPtr_eq valid_cap'_def)
   apply (subgoal_tac "args \<noteq> []")
     prefer 2 apply (cases args; clarsimp, unat_arith?)
@@ -5845,7 +5845,7 @@ lemma decodeVCPUSetTCB_ccorres:
      apply clarsimp
      apply (simp add: returnOk_bind bindE_assoc
                         performARMMMUInvocations performARMVCPUInvocation_def)
-       -- "we want the second alternative - nothing to return to user"
+       \<comment> \<open>we want the second alternative - nothing to return to user\<close>
        apply (subst liftE_associateVCPUTCB_empty_return, clarsimp)
      apply (ctac add: setThreadState_ccorres)
        apply csymbr
@@ -5928,7 +5928,7 @@ lemma decodeARMVCPUInvocation_ccorres:
     apply (rule ccorres_trim_returnE, simp+)
     apply (rule ccorres_call[OF decodeVCPUInjectIRQ_ccorres]; simp)
 
-   -- "unknown (arch) invocation labels all throw IllegalOperation in line with the Haskell"
+   \<comment> \<open>unknown (arch) invocation labels all throw IllegalOperation in line with the Haskell\<close>
     apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
    apply (intro allI, rule conseqPre, vcg)
@@ -5939,7 +5939,7 @@ lemma decodeARMVCPUInvocation_ccorres:
            ; simp add: invocation_eq_use_types throwError_invocationCatch fst_throwError_returnOk
                        exception_defs syscall_error_rel_def syscall_error_to_H_cases)
     done
-  -- "preconditions imply calculated preconditions"
+  \<comment> \<open>preconditions imply calculated preconditions\<close>
   apply auto
   done
 

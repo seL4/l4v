@@ -122,7 +122,7 @@ lemma tcb_set_cap_local_via_explosion:
        apply (fastforce simp: insert_commute a_base_type_cmp_of_def
                         intro: singleton_subsetI
                         dest: abt_valid_cnode_index_in_components)+
-    apply (clarsimp simp: sep_conj_assoc) -- "flatten"
+    apply (clarsimp simp: sep_conj_assoc) \<comment> \<open>flatten\<close>
     apply (sep_rule sep_map_base_sep_map_capI'[where ko="TCB tcb"])
      apply simp+
    apply (clarsimp simp: a_base_type_cmp_of_def split: if_split_asm)
@@ -141,7 +141,7 @@ lemma cnode_set_cap_local_via_explosion:
    \<lbrace> \<lambda>_ s. (sep_map_ko p (set_ko_cap (CNode sz cn) i cap) \<and>* P) (lift_sep_state s) \<rbrace>, \<lbrace> E \<rbrace>"
   unfolding sep_map_ko_def
   apply (rule hoare_gen_asmE'[simplified K_def pred_conj_def])
-   -- "concludes zero-sized cnode case"
+   \<comment> \<open>concludes zero-sized cnode case\<close>
    apply (rule_tac E=E in hoare_post_impErr)
      apply (rule hoare_pre)
       apply (rule ki_set_cap_frame)
@@ -151,7 +151,7 @@ lemma cnode_set_cap_local_via_explosion:
        apply (fastforce simp: insert_commute a_base_type_cmp_of_def
                               abt_valid_cnode_index_def insert_same_length_id)
       apply simp
-     apply (clarsimp simp: sep_conj_assoc a_base_type_cmp_of_def) -- "flatten"
+     apply (clarsimp simp: sep_conj_assoc a_base_type_cmp_of_def) \<comment> \<open>flatten\<close>
      apply (sep_rule sep_map_base_sep_map_capI'[where ko="CNode sz cn"])
         apply (simp add: a_base_type_cmp_of_def)+
     apply (clarsimp simp: valid_cnode_index_def)

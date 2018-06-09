@@ -445,7 +445,7 @@ proof -
    apply (rename_tac arch_cap)
    apply (case_tac arch_cap; simp add: simps arch_update_cap_data_def
                              X64_H.updateCapData_def)
-  -- CNodeCap
+  \<comment> \<open>CNodeCap\<close>
   apply (simp add: simps word_bits_def the_cnode_cap_def andCapRights_def
                    rightsFromWord_def data_to_rights_def nth_ucast cteRightsBits_def cteGuardBits_def)
   apply (insert x)

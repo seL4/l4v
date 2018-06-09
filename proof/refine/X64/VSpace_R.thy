@@ -664,13 +664,13 @@ lemma get_mapM_x_lower:
   fixes P :: "'a option \<Rightarrow> 's \<Rightarrow> bool"
   fixes f :: "('s,'a) nondet_monad"
   fixes g :: "'a \<Rightarrow> 'b \<Rightarrow> ('s,'c) nondet_monad"
-  -- "@{term g} preserves the state that @{term f} cares about"
+  \<comment> \<open>@{term g} preserves the state that @{term f} cares about\<close>
   assumes g: "\<And>x y. \<lbrace> P (Some x) \<rbrace> g x y \<lbrace> \<lambda>_. P (Some x) \<rbrace>"
-  -- "@{term P} specifies whether @{term f} either fails or returns a deterministic result"
+  \<comment> \<open>@{term P} specifies whether @{term f} either fails or returns a deterministic result\<close>
   assumes f: "\<And>opt_x s. P opt_x s \<Longrightarrow> f s = case_option ({},True) (\<lambda>x. ({(x,s)},False)) opt_x"
-  -- "Every state determines P, and therefore the behaviour of @{term f}"
+  \<comment> \<open>Every state determines P, and therefore the behaviour of @{term f}\<close>
   assumes x: "\<And>s. \<exists> opt_x. P opt_x s"
-  -- "If @{term f} may fail, ensure there is at least one @{term f}"
+  \<comment> \<open>If @{term f} may fail, ensure there is at least one @{term f}\<close>
   assumes y: "\<exists>s. P None s \<Longrightarrow> ys \<noteq> []"
   shows "do x \<leftarrow> f; mapM_x (g x) ys od = mapM_x (\<lambda>y. do x \<leftarrow> f; g x y od) ys"
   proof -
@@ -1233,7 +1233,7 @@ proof -
       apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct valid_page_inv_def cte_wp_at_caps_of_state is_arch_update_def is_cap_simps)
      apply (simp add: cap_master_cap_def split: cap.splits arch_cap.splits)
      apply (auto simp: cte_wp_at_ctes_of valid_page_inv'_def)[1]
-       -- "PageRemap"
+       \<comment> \<open>PageRemap\<close>
       apply (rename_tac asid vspace)
       apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def
       page_invocation_map_def)
@@ -1259,7 +1259,7 @@ proof -
       apply (rule corres_split[OF _ store_pdpte_corres'])
          apply (rule invalidatePageStructureCacheASID_corres)
         apply (wpsimp simp: invs_pspace_aligned')+
-     -- "PageUnmap"
+     \<comment> \<open>PageUnmap\<close>
    apply (clarsimp simp: performPageInvocation_def perform_page_invocation_def
                          page_invocation_map_def)
    apply (rule corres_assume_pre)
@@ -1295,7 +1295,7 @@ proof -
     apply (clarsimp simp add: wellformed_mapdata_def valid_cap_def mask_def)
     apply auto[1]
    apply (auto simp: cte_wp_at_ctes_of)[1]
-    -- "PageGetAddr"
+    \<comment> \<open>PageGetAddr\<close>
   apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def page_invocation_map_def fromPAddr_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ gct_corres])

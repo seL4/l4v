@@ -57,7 +57,7 @@ definition
   "c \<in>cap C \<equiv> \<exists>c' \<in> C. target c = target c' \<and> rights (extra_rights c) \<subseteq> rights (extra_rights c')"
 
 abbreviation not_cap_in_caps where
-  "not_cap_in_caps x A \<equiv> ~ (x \<in>cap A)" -- "non-membership"
+  "not_cap_in_caps x A \<equiv> ~ (x \<in>cap A)" \<comment> \<open>non-membership\<close>
 
 notation (input) cap_in_caps (infix ":cap" 50)
 notation (latex output)  cap_in_caps (infix "\<in>\<^sub>c\<^sub>a\<^sub>p" 50)

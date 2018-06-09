@@ -1010,7 +1010,7 @@ lemma cready_queues_relation_null_queue_ptrs:
    apply (clarsimp simp: tcb_null_ep_ptrs_def)
    apply (case_tac z, case_tac a)
    apply simp
-  -- "clag"
+  \<comment> \<open>clag\<close>
   apply (rule ext)
   apply (case_tac "mp' x")
    apply (frule compD [OF same])
@@ -1414,7 +1414,7 @@ schematic_goal user_fpu_state_C_typ_info_unfold:
 
 lemma user_fpu_state_C_in_tcb_C_offset:
   "(typ_uinfo_t TYPE(user_fpu_state_C), n) \<in> td_set (typ_uinfo_t TYPE(tcb_C)) 0 \<Longrightarrow> n = 0"
-  -- \<open>Examine the fields of tcb_C.\<close>
+  \<comment> \<open>Examine the fields of tcb_C.\<close>
   apply (simp add: typ_uinfo_t_def tcb_C_typ_info_unfold td_set_export_uinfo_eq td_set_adjust_ti_eq
                    image_comp image_Un apfst_comp o_def[where f=export_uinfo]
               del: export_uinfo_typdesc_simp)
@@ -1422,20 +1422,20 @@ lemma user_fpu_state_C_in_tcb_C_offset:
   apply (all \<open>drule td_set_image_field_lookup[rotated]; clarsimp\<close>)
   apply (all \<open>drule arg_cong[where f=typ_name]; simp add: adjust_ti_def\<close>)
   apply (all \<open>(solves \<open>drule field_lookup_td_set; drule td_set_td_names; simp\<close>)?\<close>)
-  -- \<open>Only the arch_tcb_C may contain user_fpu_state_C, so examine the fields of that.\<close>
+  \<comment> \<open>Only the arch_tcb_C may contain user_fpu_state_C, so examine the fields of that.\<close>
   apply (drule field_lookup_td_set)
   apply (simp add: arch_tcb_C_typ_info_unfold td_set_adjust_ti_eq)
   apply (drule td_set_image_field_lookup[rotated]; clarsimp simp: adjust_ti_def)
-  -- \<open>Similarly for user_context_C.\<close>
+  \<comment> \<open>Similarly for user_context_C.\<close>
   apply (drule field_lookup_td_set)
   apply (simp add: user_context_C_typ_info_unfold td_set_adjust_ti_eq)
   apply (elim disjE)
   apply (all \<open>drule td_set_image_field_lookup[rotated]; clarsimp simp: adjust_ti_def\<close>)
   apply (all \<open>(solves \<open>drule field_lookup_td_set; drule td_set_td_names; simp\<close>)?\<close>)
-  -- \<open>Finally, we have user_fpu_state_C.\<close>
+  \<comment> \<open>Finally, we have user_fpu_state_C.\<close>
   apply (rename_tac fns s)
   apply (case_tac fns; clarsimp)
-  -- \<open>But we must also show that there is no user_fpu_state_C buried within user_fpu_state_C.\<close>
+  \<comment> \<open>But we must also show that there is no user_fpu_state_C buried within user_fpu_state_C.\<close>
   apply (drule field_lookup_td_set)
   apply (simp add: user_fpu_state_C_typ_info_unfold td_set_adjust_ti_eq)
   apply (elim disjE; clarsimp simp: adjust_ti_def)

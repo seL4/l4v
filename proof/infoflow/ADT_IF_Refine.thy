@@ -96,7 +96,7 @@ lemma kernel_entry_if_valid_domain_time:
    apply (rule hoare_pre)
     apply (wp handle_interrupt_valid_domain_time
            | clarsimp | wpc)+
-   -- "strengthen post of do_machine_op; we know interrupt occurred"
+   \<comment> \<open>strengthen post of do_machine_op; we know interrupt occurred\<close>
    apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
    apply (wp+, simp)
    done
@@ -1198,7 +1198,7 @@ lemma kernelEntry_if_valid_domain_time:
   apply (clarsimp simp: handleEvent_def)
   apply (rule hoare_pre)
    apply (wp handleInterrupt_valid_domain_time | wpc | clarsimp)+
-       apply (rule hoare_false_imp) -- "debugPrint"
+       apply (rule hoare_false_imp) \<comment> \<open>debugPrint\<close>
        apply (wp handleInterrupt_valid_domain_time hoare_vcg_all_lift hoare_drop_imps | simp)+
   done
 

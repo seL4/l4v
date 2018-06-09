@@ -12,7 +12,7 @@ theory ArchInvariants_AI
 imports "../InvariantsPre_AI"
 begin
 
--- ---------------------------------------------------------------------------
+\<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Move this up"
 
 qualify ARM (in Arch)
@@ -24,7 +24,7 @@ axiomatization
 
 end_qualify
 
--- ---------------------------------------------------------------------------
+\<comment> \<open>---------------------------------------------------------------------------\<close>
 section "ARM-specific invariant definitions"
 
 qualify ARM_HYP_A (in Arch)

@@ -218,7 +218,7 @@ abbreviation
 where
   "s \<turnstile> x cdt_parent_of\<^sup>* y \<equiv> (x, y) \<in> (cdt_parent_rel s)\<^sup>*"
 
--- "descendants of a slot"
+\<comment> \<open>descendants of a slot\<close>
 definition
   descendants_of :: "cdl_cap_ref \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_ref set" where
   "descendants_of p s \<equiv> {q. (p,q) \<in> (cdt_parent_rel s)\<^sup>+}"

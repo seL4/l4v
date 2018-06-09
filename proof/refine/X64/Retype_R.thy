@@ -2401,21 +2401,21 @@ proof -
       apply (clarsimp simp: X64_H.toAPIType_def APIType_capBits_def
           split: X64_H.object_type.splits)
 
-            -- "SmallPageObject"
+            \<comment> \<open>SmallPageObject\<close>
             apply wp
             apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
             apply (wp createObjects_aligned2 createObjects_nonzero'
                       cwo_ret'[where bs=0, simplified]
                    | simp add: objBits_if_dev pageBits_def ptr range_cover_n_wb)+
             apply (simp add:pageBits_def ptr word_bits_def)
-           -- "LargePageObject"
+           \<comment> \<open>LargePageObject\<close>
            apply wp
            apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
            apply (wp createObjects_aligned2 createObjects_nonzero'
                      cwo_ret'[where bs=ptTranslationBits, simplified]
                   | simp add: objBits_if_dev pageBits_def ptr range_cover_n_wb)+
            apply (simp add:pageBits_def ptr word_bits_def)
-          -- "HugePageObject"
+          \<comment> \<open>HugePageObject\<close>
           apply wp
           apply (simp add: valid_cap'_def capAligned_def n_less_word_bits ball_conj_distrib)
           apply (wp createObjects_aligned2 createObjects_nonzero'
@@ -2423,7 +2423,7 @@ proof -
                  | simp add: objBits_if_dev pageBits_def ptr range_cover_n_wb)+
           apply (simp add:pageBits_def ptr word_bits_def)
 
-         -- "PageTableObject"
+         \<comment> \<open>PageTableObject\<close>
          apply wp
           apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
           apply (simp only: imp_conv_disj page_table_at'_def typ_at_to_obj_at_arches)
@@ -2439,7 +2439,7 @@ proof -
           apply (clarsimp simp: objBits_simps archObjSize_def bit_simps)
          apply clarsimp
 
-        -- "PageDirectoryObject"
+        \<comment> \<open>PageDirectoryObject\<close>
         apply wp
          apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
          apply (simp only: imp_conv_disj page_directory_at'_def typ_at_to_obj_at_arches)
@@ -2455,7 +2455,7 @@ proof -
          apply (clarsimp simp: objBits_simps archObjSize_def bit_simps)
         apply simp
 
-       -- "PDPointerTableObject"
+       \<comment> \<open>PDPointerTableObject\<close>
        apply wp
         apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
         apply (simp only: imp_conv_disj pd_pointer_table_at'_def typ_at_to_obj_at_arches)
@@ -2471,7 +2471,7 @@ proof -
         apply (clarsimp simp: objBits_simps archObjSize_def bit_simps)
        apply simp
 
-      -- "PML4Object"
+      \<comment> \<open>PML4Object\<close>
       apply (wp hoare_vcg_const_Ball_lift)
         apply (wp mapM_x_wp' )
        apply (simp add: valid_cap'_def capAligned_def n_less_word_bits)
@@ -5805,7 +5805,7 @@ lemma corres_retype_region_createNewCaps:
   apply (cases ty, simp_all add: Arch_createNewCaps_def split del: if_split)
          apply (rename_tac apiobject_type)
          apply (case_tac apiobject_type, simp_all split del: if_split)
-             -- "Untyped"
+             \<comment> \<open>Untyped\<close>
              apply (simp add: retype_region_def obj_bits_api_def APIType_map2_def
                          split del: if_split cong: if_cong)
              apply (subst upto_enum_red')
@@ -5820,7 +5820,7 @@ lemma corres_retype_region_createNewCaps:
                  apply simp
                 apply (clarsimp simp: range_cover_def)
                 apply (arith+)[4]
-            -- "TCB, EP, NTFN"
+            \<comment> \<open>TCB, EP, NTFN\<close>
             apply (simp_all add: retype_region2_ext_retype_region
                                  bind_cong[OF curDomain_mapM_x_futz refl, unfolded bind_assoc]
                             split del: if_split)[10] (* not PML4Object *)
@@ -5870,7 +5870,7 @@ lemma corres_retype_region_createNewCaps:
            apply simp
           apply (clarsimp simp: list_all2_same list_all2_map1 list_all2_map2 objBits_simps
                                 APIType_map2_def)
-         -- "CapTable"
+         \<comment> \<open>CapTable\<close>
          apply (subst retype_region2_extra_ext_trivial)
           apply (simp add: APIType_map2_def)
          apply (subst bind_assoc_reverse[of "createObjects y n (KOCTE makeObject) us"])
@@ -5888,7 +5888,7 @@ lemma corres_retype_region_createNewCaps:
          apply (clarsimp simp: list_all2_same list_all2_map1 list_all2_map2 objBits_simps
                                allRights_def APIType_map2_def
                          split del: if_split)
-        -- SmallPageObject
+        \<comment> \<open>SmallPageObject\<close>
         apply (subst retype_region2_extra_ext_trivial)
          apply (simp add: APIType_map2_def)
         apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
@@ -5904,7 +5904,7 @@ lemma corres_retype_region_createNewCaps:
           apply fastforce+
         apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
                          list_all2_map1 list_all2_map2 list_all2_same)
-       -- LargePageObject
+       \<comment> \<open>LargePageObject\<close>
        apply (subst retype_region2_extra_ext_trivial)
         apply (simp add: APIType_map2_def)
        apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
@@ -5920,7 +5920,7 @@ lemma corres_retype_region_createNewCaps:
          apply fastforce+
        apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
                         list_all2_map1 list_all2_map2 list_all2_same)
-      -- HugePageObject
+      \<comment> \<open>HugePageObject\<close>
       apply (subst retype_region2_extra_ext_trivial)
        apply (simp add: APIType_map2_def)
       apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
@@ -5936,7 +5936,7 @@ lemma corres_retype_region_createNewCaps:
         apply fastforce+
       apply (simp add: APIType_map2_def arch_default_cap_def vm_read_write_def vmrights_map_def
                        list_all2_map1 list_all2_map2 list_all2_same)
-     -- "PageTable"
+     \<comment> \<open>PageTable\<close>
      apply (subst retype_region2_extra_ext_trivial)
       apply (simp add: APIType_map2_def)
      apply (simp_all add: corres_liftM2_simp[unfolded liftM_def])
@@ -5951,7 +5951,7 @@ lemma corres_retype_region_createNewCaps:
        apply (clarsimp simp: list_all2_map1 list_all2_map2 list_all2_same
                              APIType_map2_def arch_default_cap_def)
       apply fastforce+
-    -- "PageDirectory"
+    \<comment> \<open>PageDirectory\<close>
     apply (subst retype_region2_extra_ext_trivial)
      apply (simp add: APIType_map2_def)
     apply (simp_all add: corres_liftM2_simp[unfolded liftM_def])
@@ -5966,7 +5966,7 @@ lemma corres_retype_region_createNewCaps:
       apply (clarsimp simp: list_all2_map1 list_all2_map2 list_all2_same
                             APIType_map2_def arch_default_cap_def)
      apply fastforce+
-   -- "PDPT"
+   \<comment> \<open>PDPT\<close>
    apply (subst retype_region2_extra_ext_trivial)
     apply (simp add: APIType_map2_def)
    apply (simp_all add: corres_liftM2_simp[unfolded liftM_def])
@@ -5981,7 +5981,7 @@ lemma corres_retype_region_createNewCaps:
      apply (clarsimp simp: list_all2_map1 list_all2_map2 list_all2_same
                            APIType_map2_def arch_default_cap_def)
     apply fastforce+
-  -- "PML4"
+  \<comment> \<open>PML4\<close>
   apply (corressimp corres: corres_retype[where ty="Inr PML4Object" and 'a=pml4e and sz=sz,
                                           simplified, folded retype_region2_retype_region_PML4Obj]
                    corresK: corresK_mapM_x_list_all2[where I="\<lambda>xs s. valid_arch_state s \<and> pspace_aligned s

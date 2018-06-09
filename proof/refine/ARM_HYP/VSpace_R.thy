@@ -2952,7 +2952,7 @@ proof -
         apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct valid_page_inv_def cte_wp_at_caps_of_state is_arch_update_def is_cap_simps)
         apply (simp add: cap_master_cap_def split: cap.splits arch_cap.splits)
        apply (auto simp: cte_wp_at_ctes_of valid_page_inv'_def)[1]
-       -- "PageRemap"
+       \<comment> \<open>PageRemap\<close>
       apply (rename_tac word sum)
       apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def
                             page_invocation_map_def)
@@ -3144,7 +3144,7 @@ proof -
         apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
         apply (wp hoare_drop_imps)+
      apply (auto simp: valid_page_inv_def)[2]
-  -- "PageGetAddr"
+  \<comment> \<open>PageGetAddr\<close>
   apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def page_invocation_map_def fromPAddr_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ gct_corres])

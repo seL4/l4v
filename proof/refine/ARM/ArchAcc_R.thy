@@ -378,7 +378,7 @@ lemma get_master_pde_corres [@lift_corres_args, corres]:
     apply (clarsimp simp: pde_at_def obj_at_def)
     apply (clarsimp split:ARM_A.pde.splits)
     apply (intro conjI impI)
-  -- "master_pde = InvaliatePTE"
+  \<comment> \<open>master_pde = InvaliatePTE\<close>
        apply (clarsimp simp add: a_type_def return_def get_pd_def
                   bind_def get_pde_def get_object_def gets_def get_def
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -405,7 +405,7 @@ lemma get_master_pde_corres [@lift_corres_args, corres]:
        apply (clarsimp simp: pde_relation_aligned_def
                   is_aligned_mask[where 'a=32, symmetric])
 
-  -- "master_pde = PageTablePDE"
+  \<comment> \<open>master_pde = PageTablePDE\<close>
       apply (clarsimp simp add: a_type_def return_def get_pd_def
         bind_def get_pde_def get_object_def gets_def get_def
         split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -429,7 +429,7 @@ lemma get_master_pde_corres [@lift_corres_args, corres]:
        apply assumption
       apply (clarsimp simp:pde_relation_aligned_def
          is_aligned_mask[symmetric])
-  -- "master_pde = SectionPDE"
+  \<comment> \<open>master_pde = SectionPDE\<close>
      apply (clarsimp simp add: a_type_def return_def get_pd_def
        bind_def get_pde_def get_object_def gets_def get_def
        split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -453,7 +453,7 @@ lemma get_master_pde_corres [@lift_corres_args, corres]:
       apply assumption
      apply (clarsimp simp:pde_relation_aligned_def
          is_aligned_mask[symmetric])
-  -- "master_pde = SuperSectionPDE"
+  \<comment> \<open>master_pde = SuperSectionPDE\<close>
     apply (clarsimp simp add: a_type_def return_def get_pd_def
       bind_def get_pde_def get_object_def gets_def get_def
       split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -648,7 +648,7 @@ lemma get_master_pte_corres [@lift_corres_args, corres]:
     apply (clarsimp simp: pte_at_def obj_at_def)
     apply (clarsimp split:ARM_A.pte.splits)
     apply (intro conjI impI)
-  -- "master_pde = InvaliatePTE"
+  \<comment> \<open>master_pde = InvaliatePTE\<close>
       apply (clarsimp simp add: a_type_def return_def get_pt_def
                   bind_def get_pte_def get_object_def gets_def get_def
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -672,7 +672,7 @@ lemma get_master_pte_corres [@lift_corres_args, corres]:
        apply assumption
       apply (clarsimp simp: pte_relation_aligned_def
                  is_aligned_mask[where 'a=32, symmetric])
-  -- "master_pde = LargePagePTE"
+  \<comment> \<open>master_pde = LargePagePTE\<close>
      apply (clarsimp simp add: a_type_def return_def get_pt_def
        bind_def get_pte_def get_object_def gets_def get_def
        split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -704,7 +704,7 @@ lemma get_master_pte_corres [@lift_corres_args, corres]:
        apply simp
       apply (clarsimp simp: vs_ptr_align_def and_not_mask_twice)
      apply (clarsimp simp: if_bool_eq_disj)
-  -- "master_pde = SmallPagePTE"
+  \<comment> \<open>master_pde = SmallPagePTE\<close>
     apply (clarsimp simp add: a_type_def return_def get_pt_def
                bind_def get_pte_def get_object_def gets_def get_def
             split: if_split_asm Structures_A.kernel_object.splits
@@ -775,7 +775,7 @@ lemma pt_slot_eq:
   apply clarsimp
   done
 
--- "set_other_obj_corres unfortunately doesn't work here"
+\<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
 lemma set_pd_corres [@lift_corres_args, corres]:
   "pde_relation_aligned (p>>2) pde pde' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits)

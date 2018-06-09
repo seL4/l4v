@@ -302,7 +302,7 @@ lemmas ccorres_move_array_assertion_cnode_ctes [corres_pre]
       ccorres_move_Guard [OF array_assertion_abs_cnode_ctes]
 
 lemma locateSlotCNode_ccorres [corres]:
-  assumes gl: "\<And>v s. globals (xfu v s) = globals s" -- "for state rel. preservation"
+  assumes gl: "\<And>v s. globals (xfu v s) = globals s" \<comment> \<open>for state rel. preservation\<close>
   and     fg: "\<And>v s. xf (xfu (\<lambda>_. v) s) = v"
   shows "ccorres (\<lambda>v v'. v' = Ptr v) xf \<top> {_. cnode = cnode' \<and> offset = offset'} hs
     (locateSlotCNode cnode bits offset)
@@ -323,7 +323,7 @@ lemma locateSlotCNode_ccorres [corres]:
   done
 
 lemma locateSlotTCB_ccorres [corres]:
-  assumes gl: "\<And>v s. globals (xfu v s) = globals s" -- "for state rel. preservation"
+  assumes gl: "\<And>v s. globals (xfu v s) = globals s" \<comment> \<open>for state rel. preservation\<close>
   and     fg: "\<And>v s. xf (xfu (\<lambda>_. v) s) = v"
   shows "ccorres (\<lambda>v v'. v' = Ptr v) xf \<top> {_. cnode = cnode' \<and> offset = offset'} hs
     (locateSlotTCB cnode offset)
@@ -339,13 +339,13 @@ lemma locateSlotTCB_ccorres [corres]:
 
 lemma getSlotCap_h_val_ccorres [corres]:
   fixes p :: "cstate \<Rightarrow> cte_C ptr"
-  assumes gl: "\<And>v s. globals (xfu v s) = globals s" -- "for state rel. preservation"
+  assumes gl: "\<And>v s. globals (xfu v s) = globals s" \<comment> \<open>for state rel. preservation\<close>
   and     fg: "\<And>v s. xf (xfu (\<lambda>_. v) s) = v"
   shows "ccorres ccap_relation xf \<top> {s. p s = Ptr a} hs
          (getSlotCap a) (Basic (\<lambda>s. xfu (\<lambda>_. h_val (hrs_mem (t_hrs_' (globals s))) (Ptr &(p s\<rightarrow>[''cap_C'']) :: cap_C ptr)) s))"
   unfolding getSlotCap_def
   apply (rule ccorres_add_UNIV_Int)
-  apply (cinitlift p) -- "EVIL!"
+  apply (cinitlift p) \<comment> \<open>EVIL!\<close>
   apply simp
   apply (rule ccorres_guard_imp2)
   apply (rule ccorres_pre_getCTE)

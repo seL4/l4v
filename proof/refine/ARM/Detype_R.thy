@@ -3524,9 +3524,9 @@ lemma createObject_setCTE_commute:
                        ARM_H.getObjectSize_def apiGetObjectSize_def
                        tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
                        cteSizeBits_def)
-            -- Untyped
+            \<comment> \<open>Untyped\<close>
             apply (simp add: monad_commute_guard_imp[OF return_commute])
-           -- "TCB, EP, NTFN"
+           \<comment> \<open>TCB, EP, NTFN\<close>
            apply (rule monad_commute_guard_imp[OF commute_commute])
             apply (rule monad_commute_split[OF monad_commute_split])
                 apply (rule monad_commute_split[OF commute_commute[OF return_commute]])
@@ -3543,7 +3543,7 @@ lemma createObject_setCTE_commute:
             ,rule monad_commute_split[OF commute_commute[OF return_commute]]
             ,rule setCTE_placeNewObject_commute
             ,(wp|clarsimp simp: objBits_simps')+)+
-        -- CNode
+        \<comment> \<open>CNode\<close>
         apply (rule monad_commute_guard_imp[OF commute_commute])
          apply (rule monad_commute_split)+
              apply (rule return_commute[THEN commute_commute])
@@ -3552,7 +3552,7 @@ lemma createObject_setCTE_commute:
            apply wp
           apply (rule setCTE_placeNewObject_commute)
          apply (wp|clarsimp simp: objBits_simps')+
-       -- "Arch Objects"
+       \<comment> \<open>Arch Objects\<close>
        apply ((rule monad_commute_guard_imp[OF commute_commute]
               , rule monad_commute_split[OF commute_commute[OF return_commute]]
               , clarsimp simp: ARM_H.createObject_def
@@ -5051,7 +5051,7 @@ proof -
         apply (case_tac apiobject_type)
             apply (simp_all add: bind_assoc ARM_H.toAPIType_def
                                  )
-            -- Untyped
+            \<comment> \<open>Untyped\<close>
             apply (simp add:
               bind_assoc ARM_H.getObjectSize_def
               mapM_def sequence_def Retype_H.createObject_def
@@ -5061,7 +5061,7 @@ proof -
               apiGetObjectSize_def shiftl_t2n field_simps
               shiftL_nat mapM_x_def sequence_x_def append
               fromIntegral_def integral_inv[unfolded Fun.comp_def])
-           -- "TCB, EP, NTFN"
+           \<comment> \<open>TCB, EP, NTFN\<close>
            apply (simp add: bind_assoc
                       ARM_H.getObjectSize_def
                       sequence_def Retype_H.createObject_def
@@ -5145,7 +5145,7 @@ proof -
                    , subst monad_eq, rule createObjects_Cons
                    , (simp add: field_simps shiftl_t2n bind_assoc pageBits_def
                                objBits_simps' placeNewObject_def2)+)+)[2]
-        -- CNode
+        \<comment> \<open>CNode\<close>
         apply (simp add: cteSizeBits_def pageBits_def tcbBlockSizeBits_def
                       epSizeBits_def ntfnSizeBits_def pdBits_def bind_assoc
                       ARM_H.getObjectSize_def
@@ -5169,7 +5169,7 @@ proof -
         apply (rule ext)
         apply simp
 
-       -- "SmallPageObject"
+       \<comment> \<open>SmallPageObject\<close>
        apply (simp add: Arch_createNewCaps_def
                         Retype_H.createObject_def createObjects_def bind_assoc
                         ARM_H.toAPIType_def ARM_H.toAPIType_def
@@ -5201,7 +5201,7 @@ proof -
                     unless_dmo'_createObjects'_comm
                     dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
                    | simp add: modify_modify_bind o_def)+
-      -- "LargePageObject"
+      \<comment> \<open>LargePageObject\<close>
       apply (simp add: Arch_createNewCaps_def
                        Retype_H.createObject_def createObjects_def bind_assoc
                        ARM_H.toAPIType_def ARM_H.toAPIType_def
@@ -5232,7 +5232,7 @@ proof -
                    unless_dmo'_createObjects'_comm
                    dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
              | simp add: modify_modify_bind o_def)+
-     -- "SectionObject"
+     \<comment> \<open>SectionObject\<close>
      apply (simp add: Arch_createNewCaps_def
                       Retype_H.createObject_def createObjects_def bind_assoc
                       toAPIType_def ARM_H.toAPIType_def
@@ -5263,7 +5263,7 @@ proof -
                   unless_dmo'_createObjects'_comm
                   dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
             | simp add: modify_modify_bind o_def)+
-    -- "SuperSectionObject"
+    \<comment> \<open>SuperSectionObject\<close>
     apply (simp add: Arch_createNewCaps_def
                      Retype_H.createObject_def createObjects_def bind_assoc
                      toAPIType_def ARM_H.toAPIType_def
@@ -5294,7 +5294,7 @@ proof -
                  unless_dmo'_createObjects'_comm
                  dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
            | simp add: modify_modify_bind o_def)+
-   -- "PageTableObject"
+   \<comment> \<open>PageTableObject\<close>
    apply (simp add:Arch_createNewCaps_def Retype_H.createObject_def
            createObjects_def bind_assoc ARM_H.toAPIType_def
            ARM_H.createObject_def)
@@ -5308,7 +5308,7 @@ proof -
                ARM_H.getObjectSize_def placeNewObject_def2
                objBits_simps append)
 
--- "PageDirectoryObject"
+\<comment> \<open>PageDirectoryObject\<close>
          apply (simp add:Arch_createNewCaps_def Retype_H.createObject_def
            createObjects_def bind_assoc ARM_H.toAPIType_def
            ARM_H.createObject_def)

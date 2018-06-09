@@ -189,10 +189,10 @@ lemma handleEvent_ccorres:
    apply (wpc, simp_all)[1]
        apply (wpc, simp_all add: handleSyscall_C_body_if_def syscall_from_H_def liftE_def
                                  ccorres_cond_univ_iff syscall_defs ccorres_cond_empty_iff)[1]
-              -- "SysCall"
+              \<comment> \<open>SysCall\<close>
               apply (simp add: handleCall_def)
               apply (ctac (no_vcg) add: handleInvocation_ccorres)
-             -- "SysReplyRecv"
+             \<comment> \<open>SysReplyRecv\<close>
              apply (simp add: bind_assoc)
              apply (rule ccorres_rhs_assoc)+
              apply (ctac (no_vcg) add: handleReply_ccorres)
@@ -208,37 +208,37 @@ lemma handleEvent_ccorres:
                    in hoare_post_imp)
               apply (simp add: ct_in_state'_def)
              apply (wp handleReply_sane handleReply_ct_not_ksQ)
-             -- "SysSend"
+             \<comment> \<open>SysSend\<close>
             apply (simp add: handleSend_def)
             apply (ctac (no_vcg) add: handleInvocation_ccorres)
-           -- "SysNBSend"
+           \<comment> \<open>SysNBSend\<close>
            apply (simp add: handleSend_def)
            apply (ctac (no_vcg) add: handleInvocation_ccorres)
-          -- "SysRecv"
+          \<comment> \<open>SysRecv\<close>
           apply (ctac (no_vcg) add: handleRecv_ccorres)
            apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
            apply (rule allI, rule conseqPre, vcg)
            apply (clarsimp simp: return_def)
           apply wp
-         -- "SysReply"
+         \<comment> \<open>SysReply\<close>
          apply (ctac (no_vcg) add: handleReply_ccorres)
           apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
           apply (rule allI, rule conseqPre, vcg)
           apply (clarsimp simp: return_def)
          apply wp
-       -- "SysYield"
+       \<comment> \<open>SysYield\<close>
        apply (ctac (no_vcg) add: handleYield_ccorres)
         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
         apply (rule allI, rule conseqPre, vcg)
         apply (clarsimp simp: return_def)
        apply wp
-      -- "SysNBRecv"
+      \<comment> \<open>SysNBRecv\<close>
           apply (ctac (no_vcg) add: handleRecv_ccorres)
            apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
            apply (rule allI, rule conseqPre, vcg)
            apply (clarsimp simp: return_def)
           apply wp
-      -- "UnknownSyscall"
+      \<comment> \<open>UnknownSyscall\<close>
       apply (simp add: liftE_def bind_assoc handleUnknownSyscall_C_body_if_def)
       apply (rule ccorres_pre_getCurThread)
       apply (rule ccorres_symb_exec_r)
@@ -249,7 +249,7 @@ lemma handleEvent_ccorres:
         apply wp
        apply (clarsimp, vcg)
       apply (clarsimp, rule conseqPre, vcg, clarsimp)
-     -- "UserLevelFault"
+     \<comment> \<open>UserLevelFault\<close>
      apply (simp add: liftE_def bind_assoc handleUserLevelFault_C_body_if_def)
      apply (rule ccorres_pre_getCurThread)
      apply (rule ccorres_symb_exec_r)
@@ -260,9 +260,9 @@ lemma handleEvent_ccorres:
        apply wp
       apply (clarsimp, vcg)
      apply (clarsimp, rule conseqPre, vcg, clarsimp)
-    -- "Interrupt"
+    \<comment> \<open>Interrupt\<close>
     apply (ctac add: handleInterrupt_ccorres[unfolded handleEvent_def, simplified])
-   -- "VMFaultEvent"
+   \<comment> \<open>VMFaultEvent\<close>
    apply (simp add: liftE_def bind_assoc handleVMFaultEvent_C_body_if_def)
    apply (rule ccorres_pre_getCurThread)
    apply (simp add: catch_def)
@@ -295,7 +295,7 @@ lemma handleEvent_ccorres:
                     is_cap_fault_def
               elim: pred_tcb'_weakenE st_tcb_ex_cap''
               dest: st_tcb_at_idle_thread' rf_sr_ksCurThread)
-  -- "HypervisorEvent"
+  \<comment> \<open>HypervisorEvent\<close>
   apply (simp add: liftE_def bind_assoc)
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_symb_exec_l)

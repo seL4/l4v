@@ -69,12 +69,12 @@ lemma typ_dt_pair_induct:
      \<Longrightarrow> P4 dt_pair"
    by (rule compat_typ_desc_char_list_dt_pair.induct)
 
--- "Declare as default induct rule with old case names"
+\<comment> \<open>Declare as default induct rule with old case names\<close>
 lemmas typ_desc_typ_struct_inducts [case_names
   TypDesc TypScalar TypAggregate Nil_typ_desc Cons_typ_desc DTPair_typ_desc, induct type] =
   typ_desc_induct typ_struct_induct typ_list_induct typ_dt_pair_induct
 
--- "Make sure list induct rule is tried first"
+\<comment> \<open>Make sure list induct rule is tried first\<close>
 declare list.induct [induct type]
 
 type_synonym 'a typ_pair = "('a typ_desc,field_name) dt_pair"

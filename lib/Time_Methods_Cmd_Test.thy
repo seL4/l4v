@@ -99,7 +99,7 @@ experiment begin
       "HOL simp": \<open>simp\<close>
 
       "l4v simp": \<open>simp cong: if_cong cong del: if_weak_cong\<close>
-        -- "exponential time!"
+        \<comment> \<open>exponential time!\<close>
       )+
     done
 
