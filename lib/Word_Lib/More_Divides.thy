@@ -11,15 +11,12 @@
 section "More Lemmas on Division"
 
 theory More_Divides
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 lemma div_mult_le:
   "(a::nat) div b * b \<le> a"
-  apply(subgoal_tac "a = a div b * b + a mod b")
-   apply arith
-  apply simp
-  done
+  by (fact div_times_less_eq_dividend)
 
 lemma diff_mod_le:
   "\<lbrakk> (a::nat) < d; b dvd d \<rbrakk> \<Longrightarrow> a - a mod b \<le> d - b"

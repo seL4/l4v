@@ -17,13 +17,11 @@ session Word_Lib (lib) = "HOL-Word" +
   theories
     "Word_Lemmas_32"
     "Word_Lemmas_64"
- 
+
   (* not in the AFP: *)
   theories
     "../Distinct_Prop"
     "../$L4V_ARCH/WordSetup"
- 
+
   document_files
     "root.tex"
-
- 

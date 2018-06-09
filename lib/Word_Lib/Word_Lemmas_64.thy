@@ -12,7 +12,7 @@ section "Lemmas for Word Length 64"
 
 theory Word_Lemmas_64
 imports
-  Word_Lemmas
+  Word_Lemmas_Prefix
   Word_Setup_64
 begin
 
@@ -290,7 +290,7 @@ lemma cast_chunk_assemble_id_64'[simp]:
   "(((ucast ((scast (x::64 word))::32 word))::64 word) || (((ucast ((scast (x >> 32))::32 word))::64 word) << 32)) = x"
   by (simp add:cast_chunk_scast_assemble_id)
 
-(* Specialiasations of down_cast_same for adding to local simpsets. *)
+(* Specialisations of down_cast_same for adding to local simpsets. *)
 lemma cast_down_u64: "(scast::64 word \<Rightarrow> 32 word) = (ucast::64 word \<Rightarrow> 32 word)"
   apply (subst down_cast_same[symmetric])
    apply (simp add:is_down)+
