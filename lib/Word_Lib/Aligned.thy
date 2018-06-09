@@ -236,8 +236,16 @@ proof cases
       by simp
 
     ultimately have upls: "unat x + unat y = 2 ^ m * (2 ^ k * q1 + q2)"
-      by (metis Divides.mod_less l1 l2 power_add semiring_normalization_rules(18)
-                semiring_normalization_rules(34) word_unat.inverse_norm)
+    proof -
+      have f1: "unat x = 2 ^ (m + k) * q1"
+        by (metis (no_types) \<open>x = of_nat (2 ^ (m + k) * q1)\<close> l1 nat_mod_lem word_unat.inverse_norm
+                             zero_less_numeral zero_less_power)
+      have "unat y = 2 ^ m * q2"
+        by (metis (no_types) \<open>y = of_nat (2 ^ m * q2)\<close> l2 nat_mod_lem word_unat.inverse_norm
+                             zero_less_numeral zero_less_power)
+      then show ?thesis
+        using f1 by (simp add: power_add semiring_normalization_rules(34))
+    qed
 
     (* (2 ^ k * q1 + q2) *)
     show "\<exists>d. unat (x + y) = 2 ^ m * d"

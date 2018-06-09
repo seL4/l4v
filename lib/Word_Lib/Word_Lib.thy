@@ -148,7 +148,7 @@ corollary uint_of_bl_is_bl_to_bin:
 
 
 lemma bin_to_bl_or:
-  "bin_to_bl n (a OR b) = map2 (op \<or>) (bin_to_bl n a) (bin_to_bl n b)"
+  "bin_to_bl n (a OR b) = map2 (\<or>) (bin_to_bl n a) (bin_to_bl n b)"
   using bl_or_aux_bin[where n=n and v=a and w=b and bs="[]" and cs="[]"]
   by simp
 
@@ -568,10 +568,7 @@ lemma ucast_of_nat:
   apply (rule nat_int.Rep_eqD)
   apply (simp only: zmod_int)
   apply (rule mod_mod_cancel)
-  apply (subst zdvd_int[symmetric])
-  apply (rule le_imp_power_dvd)
-  apply (simp add: is_down_def target_size_def source_size_def word_size)
-  done
+  by (simp add: is_down le_imp_power_dvd)
 
 (* shortcut for some specific lengths *)
 lemma word_fixed_sint_1[simp]:

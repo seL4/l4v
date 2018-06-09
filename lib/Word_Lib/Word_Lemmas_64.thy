@@ -277,7 +277,7 @@ lemma unat_of_int_64:
   "\<lbrakk>i \<ge> 0; i \<le> 2 ^ 63\<rbrakk> \<Longrightarrow> (unat ((of_int i)::sword64)) = nat i"
   unfolding unat_def
   apply (subst eq_nat_nat_iff, clarsimp+)
-  apply (simp add: word_of_int uint_word_of_int int_mod_eq')
+  apply (simp add: word_of_int uint_word_of_int)
   done
 
 (* Helper for packing then unpacking a 64-bit variable. *)
