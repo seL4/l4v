@@ -106,8 +106,6 @@ session CKernel = CParser +
     "cspec/$L4V_ARCH/Kernel_C"
   theories
     "cspec/$L4V_ARCH/Kernel_C"
-  files
-    "cspec/c/build/$L4V_ARCH/kernel_all.c_pp"
 
 session SimplExport = CSpec +
   theories "../tools/asmrefine/SimplExport"
