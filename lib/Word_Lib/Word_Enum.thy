@@ -46,7 +46,7 @@ lemma fromEnum_unat[simp]: "fromEnum (x :: ('a :: len) word) = unat x"
    defer
    apply simp
   apply (unfold fromEnum_def enum_word_def)
-  apply (subgoal_tac "ALL n. n < 2 ^ len_of TYPE('a) --> (map of_nat [0..< 2 ^ len_of TYPE('a)] ! n) = x --> n = unat x")
+  apply (subgoal_tac "\<forall>n. n < 2 ^ len_of TYPE('a) \<longrightarrow> (map of_nat [0..< 2 ^ len_of TYPE('a)] ! n) = x --> n = unat x")
    apply (subgoal_tac "(map of_nat [0..< 2 ^ len_of TYPE('a)]) ! (the_index (map of_nat [0..< 2 ^ len_of TYPE('a)]) x) = x")
     apply (subgoal_tac "the_index (map of_nat [0..< 2 ^ len_of TYPE('a)]) x < 2 ^ len_of TYPE('a)")
      apply simp

@@ -11,7 +11,7 @@
 section "Enumeration extensions and alternative definition"
 
 theory Enumeration
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 abbreviation
