@@ -323,7 +323,7 @@ where
   "ackInterrupt irq \<equiv> machine_op_lift (ackInterrupt_impl irq)"
 
 
--- "Interrupt controller operations"
+\<comment> \<open>Interrupt controller operations\<close>
 
 text {*
   Interrupts that cannot occur while the kernel is running (e.g. at preemption points),

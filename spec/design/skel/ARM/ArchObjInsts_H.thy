@@ -101,7 +101,7 @@ lemmas (in Arch) [simp] =
   injectKO_pte koType_pte
   injectKO_asidpool koType_asidpool
 
--- --------------------------------------
+\<comment> \<open>--------------------------------------\<close>
 
 #INCLUDE_SETTINGS keep_constructor = asidpool
 

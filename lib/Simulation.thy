@@ -92,7 +92,7 @@ lemma hoare_triple_refinement:
   by (simp add: refines_def hoare_triple_def) blast
 
 
--- "composing two relations"
+\<comment> \<open>composing two relations\<close>
 definition
   rel_semi :: "('a \<times> 'b) set \<Rightarrow> ('b \<times> 'c) set \<Rightarrow> ('a \<times> 'c) set" (infixl ";;;" 65)
 where

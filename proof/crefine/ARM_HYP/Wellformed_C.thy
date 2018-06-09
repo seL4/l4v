@@ -118,11 +118,11 @@ definition
 definition
   ep_at_C' :: "word32 \<Rightarrow> heap_raw_state \<Rightarrow> bool"
 where
-  "ep_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: endpoint_C typ_heap)" -- "endpoint_lift is total"
+  "ep_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: endpoint_C typ_heap)" \<comment> \<open>endpoint_lift is total\<close>
 
 definition
   ntfn_at_C' :: "word32 \<Rightarrow> heap_raw_state \<Rightarrow> bool"
-  where -- "notification_lift is total"
+  where \<comment> \<open>notification_lift is total\<close>
   "ntfn_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: notification_C typ_heap)"
 
 definition
@@ -235,8 +235,8 @@ abbreviation
   ARMSuperSection :: "vmpage_size" where
  "ARMSuperSection == ARM_HYP.ARMSuperSection"
 
--- "ARMSmallFrame is treated in a separate cap in C,
-    so needs special treatment in ccap_relation"
+\<comment> \<open>ARMSmallFrame is treated in a separate cap in C,
+    so needs special treatment in ccap_relation\<close>
 definition
 framesize_to_H:: "word32 \<Rightarrow> vmpage_size" where
 "framesize_to_H c \<equiv>
@@ -244,7 +244,7 @@ framesize_to_H:: "word32 \<Rightarrow> vmpage_size" where
   else if c = scast Kernel_C.ARMSection then ARMSection
   else ARMSuperSection"
 
--- "Use this for results of generic_frame_cap_get_capFSize"
+\<comment> \<open>Use this for results of generic_frame_cap_get_capFSize\<close>
 definition
 gen_framesize_to_H:: "word32 \<Rightarrow> vmpage_size" where
 "gen_framesize_to_H c \<equiv>

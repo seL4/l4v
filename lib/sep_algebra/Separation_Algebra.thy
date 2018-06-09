@@ -721,7 +721,7 @@ syntax (HTML output)
 syntax (latex output)
   "_sep_map_set_conj" :: "pttrn => 'a set => 'b => 'b::comm_monoid_add"    ("(3\<And>\<^sup>*(00\<^bsub>_\<in>_\<^esub>) _)" [0, 51, 10] 10)
 
-translations -- {* Beware of argument permutation! *}
+translations \<comment> \<open>Beware of argument permutation!\<close>
   "SETSEPCONJ x:A. g" == "CONST sep_map_set_conj (%x. g) A"
   "\<And>* x\<in>A. g" == "CONST sep_map_set_conj (%x. g) A"
 

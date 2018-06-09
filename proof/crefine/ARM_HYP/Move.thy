@@ -105,7 +105,7 @@ lemma sym_refs_tcb_vcpu':
 lemma ko_at'_tcb_vcpu_not_NULL:
   "\<lbrakk> ko_at' (tcb::tcb) t s ; valid_objs' s ; no_0_obj' s ; atcbVCPUPtr (tcbArch tcb) = Some p \<rbrakk>
    \<Longrightarrow> 0 < p"
-  -- "when C pointer is NULL, need this to show atcbVCPUPtr is None"
+  \<comment> \<open>when C pointer is NULL, need this to show atcbVCPUPtr is None\<close>
   unfolding valid_pspace'_def
   by (fastforce simp: valid_tcb'_def valid_arch_tcb'_def word_gt_0 typ_at'_no_0_objD
                 dest: valid_objs_valid_tcb')

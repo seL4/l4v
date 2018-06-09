@@ -740,7 +740,7 @@ proof -
   apply (clarsimp simp:assert_def corres_free_fail)
   apply (rename_tac obj')
   apply (case_tac obj', simp_all add:corres_free_fail split del: if_split)
-   -- "cnode or IRQ Node case"
+   \<comment> \<open>cnode or IRQ Node case\<close>
    apply (clarsimp simp: corres_free_fail split: if_split)
    apply (rename_tac sz cn ocap)
    apply (clarsimp simp: corres_underlying_def in_monad set_object_def cte_wp_at_cases caps_of_state_cte_wp_at)
@@ -764,7 +764,7 @@ proof -
    apply (rule ext)
    apply clarsimp
    apply (simp add: option_map_def restrict_map_def map_add_def split: option.splits)
-  -- "tcb case"
+  \<comment> \<open>tcb case\<close>
   apply (drule(1) valid_etcbs_tcb_etcb)
   apply (clarsimp simp: cdl_objects_tcb opt_object_def
                         assert_opt_def has_slots_def object_slots_def

@@ -515,7 +515,7 @@ lemma revokable_ccorres:
            (Call isCapRevocable_'proc)"
   apply (rule ccorres_gen_asm[where G=\<top>, simplified])
   apply (cinit' lift: derivedCap_' srcCap_')
-   -- "Clear up Arch cap case"
+   \<comment> \<open>Clear up Arch cap case\<close>
    apply csymbr
    apply (clarsimp simp: cap_get_tag_isCap split del: if_splits simp del: Collect_const)
    apply (rule ccorres_Cond_rhs_Seq)
@@ -529,9 +529,9 @@ lemma revokable_ccorres:
   apply csymbr
   apply (rule_tac P'=UNIV and P=\<top> in ccorres_inst)
    apply (cases cap)
-    -- "Uninteresting caps"
+    \<comment> \<open>Uninteresting caps\<close>
               apply revokable'_hammer+
-    -- "NotificationCap"
+    \<comment> \<open>NotificationCap\<close>
             apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
             apply (rule ccorres_guard_imp, (rule ccorres_rhs_assoc)+, csymbr, csymbr)
               apply (rule ccorres_return_C, clarsimp+)
@@ -540,12 +540,12 @@ lemma revokable_ccorres:
             apply (frule_tac cap'1=derivedCap in cap_get_tag_NotificationCap[THEN iffD1])
              apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
             apply (fastforce simp: cap_get_tag_isCap isCap_simps)
-    -- "IRQHandlerCap"
+    \<comment> \<open>IRQHandlerCap\<close>
            apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
            apply (rule ccorres_guard_imp, csymbr)
              apply (rule ccorres_return_C, clarsimp+)
            apply (fastforce simp: cap_get_tag_isCap isCap_simps)
-    -- "EndpointCap"
+    \<comment> \<open>EndpointCap\<close>
           apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
           apply (rule ccorres_guard_imp, (rule ccorres_rhs_assoc)+, csymbr, csymbr)
             apply (rule ccorres_return_C, clarsimp+)
@@ -554,7 +554,7 @@ lemma revokable_ccorres:
           apply (frule_tac cap'1=derivedCap in cap_get_tag_EndpointCap[THEN iffD1])
            apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
           apply (fastforce simp: cap_get_tag_isCap isCap_simps)
-    -- "Other Caps"
+    \<comment> \<open>Other Caps\<close>
   by (revokable'_hammer | fastforce simp: isCap_simps)+
 
 end (* revokable_ccorres *)
@@ -1096,7 +1096,7 @@ lemma cteInsert_ccorres:
      apply vcg
     apply wp
    apply vcg
-  apply (simp add: Collect_const_mem split del: if_split) -- "Takes a while"
+  apply (simp add: Collect_const_mem split del: if_split) \<comment> \<open>Takes a while\<close>
   apply (rule conjI)
    apply (clarsimp simp: conj_comms cte_wp_at_ctes_of)
    apply (intro conjI)
@@ -1520,7 +1520,7 @@ lemma emptySlot_helper:
   apply (case_tac "mdbNext rva \<noteq> 0")
    apply (case_tac "mdbNext_CL (mdb_node_lift mdbNode) = 0", simp)
 
-   -- "case where mdbNext rva \<noteq> 0 and mdbNext_CL (mdb_node_lift mdbNode) \<noteq> 0"
+   \<comment> \<open>case where mdbNext rva \<noteq> 0 and mdbNext_CL (mdb_node_lift mdbNode) \<noteq> 0\<close>
    apply (unfold updateMDB_def)
    apply (clarsimp simp: Let_def)
    apply (rule ccorres_pre_getCTE [where P = "\<lambda>cte s. ctes_of s (mdbNext rva) = Some cte" and P' = "\<lambda>_. UNIV"])
@@ -1532,7 +1532,7 @@ lemma emptySlot_helper:
    apply (frule(1) rf_sr_ctes_of_clift)
    apply (clarsimp simp: typ_heap_simps' nextmdb_def if_1_0_0 nextcte_def)
    apply (intro conjI impI allI)
-     -- "\<dots> \<exists>x\<in>fst \<dots>"
+     \<comment> \<open>\<dots> \<exists>x\<in>fst \<dots>\<close>
      apply clarsimp
      apply (rule fst_setCTE [OF ctes_of_cte_at], assumption )
      apply (erule bexI [rotated])
@@ -1563,7 +1563,7 @@ lemma emptySlot_helper:
       apply (drule cteMDBNode_CL_lift [symmetric])
       subgoal by (simp add: mdb_node_lift_def mask_def word_bw_assocs)
      subgoal by (simp add: to_bool_def mask_def)
-   -- "\<dots> \<exists>x\<in>fst \<dots>"
+   \<comment> \<open>\<dots> \<exists>x\<in>fst \<dots>\<close>
    apply clarsimp
    apply (rule fst_setCTE [OF ctes_of_cte_at], assumption )
    apply (erule bexI [rotated])
@@ -1595,7 +1595,7 @@ lemma emptySlot_helper:
     subgoal by (simp add: mdb_node_lift_def mask_def word_bw_assocs)
    apply (simp add: to_bool_def mask_def split: if_split)
 
-  -- "trivial case where mdbNext rva = 0"
+  \<comment> \<open>trivial case where mdbNext rva = 0\<close>
    apply (simp add:ccorres_cond_empty_iff)
    apply (rule ccorres_guard_imp2)
    apply (rule ccorres_return_Skip)
@@ -2764,12 +2764,12 @@ lemma emptySlot_ccorres:
           (Call emptySlot_'proc)"
   apply (cinit lift: slot_' cleanupInfo_' simp: case_Null_If)
 
-  -- "--- handle the clearUntypedFreeIndex"
+  \<comment> \<open>--- handle the clearUntypedFreeIndex\<close>
    apply (rule ccorres_split_noop_lhs, rule clearUntypedFreeIndex_noop_ccorres)
 
-  -- "--- instruction: newCTE \<leftarrow> getCTE slot;                 ---"
+  \<comment> \<open>--- instruction: newCTE \<leftarrow> getCTE slot;                 ---\<close>
     apply (rule ccorres_pre_getCTE)
-  -- "--- instruction: CALL on C side"
+  \<comment> \<open>--- instruction: CALL on C side\<close>
     apply (rule ccorres_move_c_guard_cte)
     apply csymbr
     apply (rule ccorres_abstract_cleanup)
@@ -2778,21 +2778,21 @@ lemma emptySlot_ccorres:
           = (cteCap newCTE = NullCap)" in ccorres_gen_asm2)
     apply (simp del: Collect_const)
 
-   -- "--- instruction: if-then-else / IF-THEN-ELSE "
+   \<comment> \<open>--- instruction: if-then-else / IF-THEN-ELSE\<close>
     apply (rule ccorres_cond2'[where R=\<top>])
 
-    -- "*** link between abstract and concrete conditionals ***"
+    \<comment> \<open>*** link between abstract and concrete conditionals ***\<close>
       apply (clarsimp split: if_split)
 
-    -- "*** proof for the 'else' branch (return () and SKIP) ***"
+    \<comment> \<open>*** proof for the 'else' branch (return () and SKIP) ***\<close>
      prefer 2
      apply (ctac add: ccorres_return_Skip[unfolded dc_def])
 
-    -- "*** proof for the 'then' branch ***"
+    \<comment> \<open>*** proof for the 'then' branch ***\<close>
 
-    -- "---instructions: multiple on C side, including mdbNode fetch"
+    \<comment> \<open>---instructions: multiple on C side, including mdbNode fetch\<close>
     apply (rule ccorres_rhs_assoc)+
-              -- "we have to do it here because the first assoc did not apply inside the then block"
+              \<comment> \<open>we have to do it here because the first assoc did not apply inside the then block\<close>
     apply (rule ccorres_move_c_guard_cte | csymbr)+
     apply (rule ccorres_symb_exec_r)
       apply (rule_tac xf'="mdbNode_'" in ccorres_abstract, ceqv)
@@ -2801,54 +2801,54 @@ lemma emptySlot_ccorres:
         in ccorres_gen_asm2)
       apply csymbr+
 
-      -- "--- instruction: updateMDB (mdbPrev rva) (mdbNext_update \<dots>) but with Ptr\<dots>\<noteq> NULL on C side"
-      apply (simp only:Ptr_not_null_pointer_not_zero) --"replaces Ptr p \<noteq> NULL with p\<noteq>0"
+      \<comment> \<open>--- instruction: updateMDB (mdbPrev rva) (mdbNext_update \<dots>) but with Ptr\<dots>\<noteq> NULL on C side\<close>
+      apply (simp only:Ptr_not_null_pointer_not_zero) \<comment> \<open>replaces Ptr p \<noteq> NULL with p\<noteq>0\<close>
 
-      -- "--- instruction: y \<leftarrow> updateMDB (mdbPrev rva) (mdbNext_update (\<lambda>_. mdbNext rva)) "
+      \<comment> \<open>--- instruction: y \<leftarrow> updateMDB (mdbPrev rva) (mdbNext_update (\<lambda>_. mdbNext rva))\<close>
       apply (ctac (no_simp, no_vcg) pre:ccorres_move_guard_ptr_safe
         add: updateMDB_mdbPrev_set_mdbNext)
-            -- "here ctac alone does not apply because the subgoal generated
-                by the rule are not solvable by simp"
-            -- "so we have to use (no_simp) (or apply (rule ccorres_split_nothrow))"
+            \<comment> \<open>here ctac alone does not apply because the subgoal generated
+                by the rule are not solvable by simp\<close>
+            \<comment> \<open>so we have to use (no_simp) (or apply (rule ccorres_split_nothrow))\<close>
           apply (simp add: cmdbnode_relation_def)
          apply assumption
-      -- "*** Main goal ***"
-      -- "--- instruction: updateMDB (mdbNext rva)
+      \<comment> \<open>*** Main goal ***\<close>
+      \<comment> \<open>--- instruction: updateMDB (mdbNext rva)
                     (\<lambda>mdb. mdbFirstBadged_update (\<lambda>_. mdbFirstBadged mdb \<or> mdbFirstBadged rva)
-                            (mdbPrev_update (\<lambda>_. mdbPrev rva) mdb));"
-        apply (rule ccorres_rhs_assoc2 )  -- " to group the 2 first C instrutions together"
+                            (mdbPrev_update (\<lambda>_. mdbPrev rva) mdb));\<close>
+        apply (rule ccorres_rhs_assoc2 )  \<comment> \<open>to group the 2 first C instrutions together\<close>
         apply (ctac (no_vcg) add: emptySlot_helper)
 
-      -- "--- instruction:  y \<leftarrow> updateCap slot capability.NullCap;"
+      \<comment> \<open>--- instruction:  y \<leftarrow> updateCap slot capability.NullCap;\<close>
           apply (simp del: Collect_const)
           apply csymbr
             apply (ctac (no_vcg) pre:ccorres_move_guard_ptr_safe)
             apply csymbr
             apply (rule ccorres_move_c_guard_cte)
-                -- "--- instruction y \<leftarrow> updateMDB slot (\<lambda>a. nullMDBNode);"
+                \<comment> \<open>--- instruction y \<leftarrow> updateMDB slot (\<lambda>a. nullMDBNode);\<close>
                 apply (ctac (no_vcg) pre: ccorres_move_guard_ptr_safe
                   add: ccorres_updateMDB_const [unfolded const_def])
 
-                  -- "the post_cap_deletion case "
+                  \<comment> \<open>the post_cap_deletion case\<close>
 
                   apply (ctac(no_vcg) add: postCapDeletion_ccorres [unfolded dc_def])
 
-                -- "Haskell pre/post for y \<leftarrow> updateMDB slot (\<lambda>a. nullMDBNode);"
+                \<comment> \<open>Haskell pre/post for y \<leftarrow> updateMDB slot (\<lambda>a. nullMDBNode);\<close>
                  apply wp
-                -- "C       pre/post for y \<leftarrow> updateMDB slot (\<lambda>a. nullMDBNode);"
+                \<comment> \<open>C       pre/post for y \<leftarrow> updateMDB slot (\<lambda>a. nullMDBNode);\<close>
                 apply simp
-              -- "C pre/post for the 2nd CALL "
-            -- "Haskell pre/post for y \<leftarrow> updateCap slot capability.NullCap;"
+              \<comment> \<open>C pre/post for the 2nd CALL\<close>
+            \<comment> \<open>Haskell pre/post for y \<leftarrow> updateCap slot capability.NullCap;\<close>
              apply wp
-            -- "C       pre/post for y \<leftarrow> updateCap slot capability.NullCap;"
+            \<comment> \<open>C       pre/post for y \<leftarrow> updateCap slot capability.NullCap;\<close>
             apply (simp add: Collect_const_mem cmdbnode_relation_def mdb_node_to_H_def nullMDBNode_def false_def)
-        -- "Haskell pre/post for the two nested updates "
+        \<comment> \<open>Haskell pre/post for the two nested updates\<close>
          apply wp
-        -- "C       pre/post for the two nested updates "
+        \<comment> \<open>C       pre/post for the two nested updates\<close>
         apply (simp add: Collect_const_mem ccap_relation_NullCap_iff)
-      -- "Haskell pre/post for  (updateMDB (mdbPrev rva) (mdbNext_update (\<lambda>_. mdbNext rva)))"
+      \<comment> \<open>Haskell pre/post for  (updateMDB (mdbPrev rva) (mdbNext_update (\<lambda>_. mdbNext rva)))\<close>
        apply (simp, wp)
-      -- "C       pre/post for  (updateMDB (mdbPrev rva) (mdbNext_update (\<lambda>_. mdbNext rva)))"
+      \<comment> \<open>C       pre/post for  (updateMDB (mdbPrev rva) (mdbNext_update (\<lambda>_. mdbNext rva)))\<close>
       apply simp+
      apply vcg
     apply (rule conseqPre, vcg)
@@ -2856,15 +2856,15 @@ lemma emptySlot_ccorres:
    apply simp
    apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift)
 
-  -- "final precondition proof"
+  \<comment> \<open>final precondition proof\<close>
   apply (clarsimp simp: typ_heap_simps Collect_const_mem
                         cte_wp_at_ctes_of)
 
   apply (rule conjI)
-   -- "Haskell side"
+   \<comment> \<open>Haskell side\<close>
    apply (simp add: is_aligned_3_next canonical_address_mdbNext)
 
-  -- "C side"
+  \<comment> \<open>C side\<close>
   apply (clarsimp simp: map_comp_Some_iff typ_heap_simps)
   apply (subst cap_get_tag_isCap)
    apply (rule ccte_relation_ccap_relation)
@@ -2900,40 +2900,40 @@ lemma capSwapForDelete_ccorres:
           (capSwapForDelete slot1 slot2)
           (Call capSwapForDelete_'proc)"
   apply (cinit lift: slot1_' slot2_' simp del: return_bind)
-  -- "***Main goal***"
-  -- "--- instruction: when (slot1 \<noteq> slot2) \<dots> / IF Ptr slot1 = Ptr slot2 THEN \<dots>"
+  \<comment> \<open>***Main goal***\<close>
+  \<comment> \<open>--- instruction: when (slot1 \<noteq> slot2) \<dots> / IF Ptr slot1 = Ptr slot2 THEN \<dots>\<close>
    apply (simp add:when_def)
    apply (rule ccorres_if_cond_throws2 [where Q = \<top> and Q' = \<top>])
       apply (case_tac "slot1=slot2", simp+)
      apply (rule ccorres_return_void_C [simplified dc_def])
 
-  -- "***Main goal***"
-  -- "--- ccorres goal with 2 affectations (cap1 and cap2) on both on Haskell and C "
-  -- "---   \<Longrightarrow> execute each part independently"
+  \<comment> \<open>***Main goal***\<close>
+  \<comment> \<open>--- ccorres goal with 2 affectations (cap1 and cap2) on both on Haskell and C\<close>
+  \<comment> \<open>---   \<Longrightarrow> execute each part independently\<close>
     apply (simp add: liftM_def cong: call_ignore_cong)
     apply (rule ccorres_pre_getCTE)+
     apply (rule ccorres_move_c_guard_cte, rule ccorres_symb_exec_r)+
-  -- "***Main goal***"
+  \<comment> \<open>***Main goal***\<close>
         apply (ctac (no_vcg) add: cteSwap_ccorres [unfolded dc_def] )
-       -- "C Hoare triple for \<acute>cap2 :== \<dots>"
+       \<comment> \<open>C Hoare triple for \<acute>cap2 :== \<dots>\<close>
        apply vcg
-       -- "C existential Hoare triple for \<acute>cap2 :== \<dots>"
+       \<comment> \<open>C existential Hoare triple for \<acute>cap2 :== \<dots>\<close>
       apply simp
       apply (rule conseqPre)
        apply vcg
       apply simp
-     -- "C Hoare triple for \<acute>cap1 :== \<dots>"
+     \<comment> \<open>C Hoare triple for \<acute>cap1 :== \<dots>\<close>
      apply vcg
-     -- "C existential Hoare triple for \<acute>cap1 :== \<dots>"
+     \<comment> \<open>C existential Hoare triple for \<acute>cap1 :== \<dots>\<close>
     apply simp
     apply (rule conseqPre)
      apply vcg
     apply simp
 
-  -- "Hoare triple for return_void"
+  \<comment> \<open>Hoare triple for return_void\<close>
    apply vcg
 
-  -- "***Generalized preconditions***"
+  \<comment> \<open>***Generalized preconditions***\<close>
   apply simp
   apply (clarsimp simp: cte_wp_at_ctes_of map_comp_Some_iff
     typ_heap_simps ccap_relation_def)
@@ -3347,7 +3347,7 @@ lemma sameRegionAs_spec:
   apply clarsimp
   apply (simp add: sameRegionAs_def isArchCap_tag_def2 ccap_relation_c_valid_cap)
   apply (case_tac capa, simp_all add: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
-            -- "capa is a ThreadCap"
+            \<comment> \<open>capa is a ThreadCap\<close>
              apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                           isCap_simps cap_tag_defs from_bool_def false_def)[1]
               apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(1))
@@ -3359,9 +3359,9 @@ lemma sameRegionAs_spec:
                               cong: if_cong)
              apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
              apply (clarsimp simp: isArchCap_tag_def2)
-           -- "capa is a NullCap"
+           \<comment> \<open>capa is a NullCap\<close>
             apply (simp add: cap_tag_defs from_bool_def false_def)
-          -- "capa is an NotificationCap"
+          \<comment> \<open>capa is an NotificationCap\<close>
            apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                         isCap_simps cap_tag_defs from_bool_def false_def)[1]
             apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(3))
@@ -3372,7 +3372,7 @@ lemma sameRegionAs_spec:
             apply (clarsimp split: if_split)
            apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
            apply (clarsimp simp: isArchCap_tag_def2)
-          -- "capa is an IRQHandlerCap"
+          \<comment> \<open>capa is an IRQHandlerCap\<close>
           apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                       isCap_simps cap_tag_defs from_bool_def false_def)[1]
            apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(5))
@@ -3387,7 +3387,7 @@ lemma sameRegionAs_spec:
                           | simp )
           apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
           apply (clarsimp simp: isArchCap_tag_def2)
-         -- "capa is an EndpointCap"
+         \<comment> \<open>capa is an EndpointCap\<close>
          apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                       isCap_simps cap_tag_defs from_bool_def false_def)[1]
           apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(4))
@@ -3398,23 +3398,23 @@ lemma sameRegionAs_spec:
           apply (clarsimp split: if_split)
          apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
          apply (clarsimp simp: isArchCap_tag_def2)
-        -- "capa is a DomainCap"
+        \<comment> \<open>capa is a DomainCap\<close>
         apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                      isCap_simps cap_tag_defs from_bool_def false_def true_def)[1]
         apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
         apply (fastforce simp: isArchCap_tag_def2 split: if_split)
-       -- "capa is a Zombie"
+       \<comment> \<open>capa is a Zombie\<close>
        apply (simp add: cap_tag_defs from_bool_def false_def)
-      -- "capa is an Arch object cap"
+      \<comment> \<open>capa is an Arch object cap\<close>
       apply (frule_tac cap'=cap_a in cap_get_tag_isArchCap_unfolded_H_cap)
       apply (clarsimp simp: isArchCap_tag_def2 cap_tag_defs linorder_not_less [THEN sym])
       apply (rule conjI, clarsimp, rule impI)+
       apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                    isCap_simps cap_tag_defs from_bool_def false_def)[1]
-      -- "capb is an Arch object cap"
+      \<comment> \<open>capb is an Arch object cap\<close>
       apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
       apply (fastforce simp: isArchCap_tag_def2 cap_tag_defs linorder_not_less [THEN sym])
-     -- "capa is a ReplyCap"
+     \<comment> \<open>capa is a ReplyCap\<close>
      apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                   isCap_simps cap_tag_defs from_bool_def false_def)[1]
       apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
@@ -3425,7 +3425,7 @@ lemma sameRegionAs_spec:
      apply (simp add: cap_reply_cap_lift)
      apply (simp add: cap_to_H_def ctcb_ptr_to_tcb_ptr_def)
      apply (clarsimp split: if_split)
-    -- "capa is an UntypedCap"
+    \<comment> \<open>capa is an UntypedCap\<close>
     apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(9))
     apply (intro conjI)
      apply (rule impI, intro conjI)
@@ -3455,7 +3455,7 @@ lemma sameRegionAs_spec:
                                field_simps valid_cap'_def)+)[4]
     apply (rule impI, simp add: from_bool_0 ccap_relation_get_capIsPhysical[symmetric])
     apply (simp add: from_bool_def false_def)
-   -- "capa is a CNodeCap"
+   \<comment> \<open>capa is a CNodeCap\<close>
    apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                 isCap_simps cap_tag_defs from_bool_def false_def)[1]
     apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
@@ -3466,7 +3466,7 @@ lemma sameRegionAs_spec:
    apply (simp add: cap_cnode_cap_lift)
    apply (simp add: cap_to_H_def)
    apply (clarsimp split: if_split bool.split)
-  -- "capa is an IRQControlCap"
+  \<comment> \<open>capa is an IRQControlCap\<close>
   apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                isCap_simps cap_tag_defs from_bool_def false_def true_def)[1]
   apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
@@ -3590,21 +3590,21 @@ lemma sameObjectAs_spec:
                                       isCap_simps cap_tag_defs
                                       from_bool_def false_def)
             apply fastforce+
-     -- "capa is an arch cap"
+     \<comment> \<open>capa is an arch cap\<close>
      apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
      apply (simp add: isArchCap_tag_def2)
      apply (rule conjI, rule impI, clarsimp, rule impI)+
      apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                                          isCap_simps cap_tag_defs)[1]
                 apply ((fastforce)+)[7]
-         -- "capb is an arch cap"
+         \<comment> \<open>capb is an arch cap\<close>
          apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
          apply (fastforce simp: isArchCap_tag_def2 linorder_not_less [symmetric])+
-  -- "capa is an irq handler cap"
+  \<comment> \<open>capa is an irq handler cap\<close>
   apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                                       isCap_simps cap_tag_defs)
            apply fastforce+
-      -- "capb is an arch cap"
+      \<comment> \<open>capb is an arch cap\<close>
       apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
       apply (fastforce simp: isArchCap_tag_def2)+
   done
@@ -3683,24 +3683,24 @@ lemma isMDBParentOf_spec:
                  split: option.split_asm)
 
   apply (rule conjI)
-   -- "sameRegionAs = 0"
+   \<comment> \<open>sameRegionAs = 0\<close>
    apply (rule impI)
    apply (clarsimp simp: from_bool_def false_def
                   split: if_split bool.splits)
 
-  -- "sameRegionAs \<noteq> 0"
+  \<comment> \<open>sameRegionAs \<noteq> 0\<close>
   apply (clarsimp simp: from_bool_def false_def)
   apply (clarsimp cong:bool.case_cong if_cong simp: typ_heap_simps)
 
   apply (rule conjI)
-    --" cap_get_tag of cte_a is an endpoint"
+    \<comment> \<open>cap_get_tag of cte_a is an endpoint\<close>
    apply clarsimp
    apply (frule cap_get_tag_EndpointCap)
    apply simp
-   apply (clarsimp simp: to_bool_def isNotificationCap_def isEndpointCap_def true_def) -- "badge of A is not 0 now"
+   apply (clarsimp simp: to_bool_def isNotificationCap_def isEndpointCap_def true_def) \<comment> \<open>badge of A is not 0 now\<close>
 
 
-   apply (subgoal_tac "cap_get_tag (cte_C.cap_C cte_b) = scast cap_endpoint_cap") --"needed also after"
+   apply (subgoal_tac "cap_get_tag (cte_C.cap_C cte_b) = scast cap_endpoint_cap") \<comment> \<open>needed also after\<close>
     prefer 2
     apply (rule sameRegionAs_EndpointCap, assumption+)
 
@@ -3709,14 +3709,14 @@ lemma isMDBParentOf_spec:
    apply (clarsimp split: if_split_asm simp: if_distrib [where f=scast])
 
   apply (clarsimp, rule conjI)
-  --" cap_get_tag of cte_a is an notification"
+  \<comment> \<open>cap_get_tag of cte_a is an notification\<close>
    apply clarsimp
    apply (frule cap_get_tag_NotificationCap)
    apply simp
-   apply (clarsimp simp: to_bool_def isNotificationCap_def isEndpointCap_def true_def) -- "badge of A is not 0 now"
+   apply (clarsimp simp: to_bool_def isNotificationCap_def isEndpointCap_def true_def) \<comment> \<open>badge of A is not 0 now\<close>
 
 
-   apply (subgoal_tac "cap_get_tag (cte_C.cap_C cte_b) = scast cap_notification_cap") --"needed also after"
+   apply (subgoal_tac "cap_get_tag (cte_C.cap_C cte_b) = scast cap_notification_cap") \<comment> \<open>needed also after\<close>
     prefer 2
     apply (rule sameRegionAs_NotificationCap, assumption+)
 
@@ -3726,7 +3726,7 @@ lemma isMDBParentOf_spec:
    apply (frule_tac cap="(cap_to_H x2c)" in cap_get_tag_NotificationCap)
    apply clarsimp
 
-  -- " main goal"
+  \<comment> \<open>main goal\<close>
   apply clarsimp
   apply (simp add: to_bool_def)
   apply (subgoal_tac "(\<not> (isEndpointCap (cap_to_H x2b))) \<and> ( \<not> (isNotificationCap (cap_to_H x2b)))")
@@ -3746,21 +3746,21 @@ lemma updateCapData_spec:
 
   apply (case_tac cap, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                         isCap_simps from_bool_def isArchCap_tag_def2 cap_tag_defs Let_def)
-  -- "NotificationCap"
+  \<comment> \<open>NotificationCap\<close>
      apply clarsimp
      apply (frule cap_get_tag_isCap_unfolded_H_cap(3))
      apply (frule (1) iffD1[OF cap_get_tag_NotificationCap])
      apply clarsimp
 
      apply (intro conjI impI)
-     -- "preserve is zero and capNtfnBadge_CL \<dots> = 0"
+     \<comment> \<open>preserve is zero and capNtfnBadge_CL \<dots> = 0\<close>
        apply clarsimp
        apply (clarsimp simp:cap_notification_cap_lift_def cap_lift_def cap_tag_defs)
        apply (simp add: ccap_relation_def cap_lift_def cap_tag_defs cap_to_H_def)
-     -- "preserve is zero and capNtfnBadge_CL \<dots> \<noteq> 0"
+     \<comment> \<open>preserve is zero and capNtfnBadge_CL \<dots> \<noteq> 0\<close>
       apply clarsimp
       apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
-     -- "preserve is not zero"
+     \<comment> \<open>preserve is not zero\<close>
      apply clarsimp
      apply (simp add: to_bool_def)
      apply (case_tac "preserve_' x = 0 \<and> capNtfnBadge_CL (cap_notification_cap_lift (cap_' x))= 0",
@@ -3768,34 +3768,34 @@ lemma updateCapData_spec:
      apply (simp add: if_not_P)
      apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
 
-  -- "EndpointCap"
+  \<comment> \<open>EndpointCap\<close>
     apply clarsimp
     apply (frule cap_get_tag_isCap_unfolded_H_cap(4))
     apply (frule (1) iffD1[OF cap_get_tag_EndpointCap])
     apply clarsimp
 
     apply (intro impI conjI)
-    -- "preserve is zero and capNtfnBadge_CL \<dots> = 0"
+    \<comment> \<open>preserve is zero and capNtfnBadge_CL \<dots> = 0\<close>
       apply clarsimp
       apply (clarsimp simp:cap_endpoint_cap_lift_def cap_lift_def cap_tag_defs)
       apply (simp add: ccap_relation_def cap_lift_def cap_tag_defs cap_to_H_def)
-    -- "preserve is zero and capNtfnBadge_CL \<dots> \<noteq> 0"
+    \<comment> \<open>preserve is zero and capNtfnBadge_CL \<dots> \<noteq> 0\<close>
      apply clarsimp
      apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
-    -- "preserve is not zero"
+    \<comment> \<open>preserve is not zero\<close>
     apply clarsimp
     apply (simp add: to_bool_def)
     apply (case_tac "preserve_' x = 0 \<and> capEPBadge_CL (cap_endpoint_cap_lift (cap_' x))= 0", clarsimp)
     apply (simp add: if_not_P)
     apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
 
-  -- "ArchObjectCap"
+  \<comment> \<open>ArchObjectCap\<close>
    apply clarsimp
    apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
    apply (simp add: isArchCap_tag_def2)
    apply (simp add: X64_H.updateCapData_def)
 
-  -- "CNodeCap"
+  \<comment> \<open>CNodeCap\<close>
   apply (clarsimp simp: cteRightsBits_def cteGuardBits_def)
   apply (frule cap_get_tag_isCap_unfolded_H_cap(10))
   apply (frule (1) iffD1[OF cap_get_tag_CNodeCap])
@@ -3808,7 +3808,7 @@ lemma updateCapData_spec:
              cong: if_cong)
   apply (simp only: unat_word_ariths(1))
   apply (rule ssubst [OF nat_mod_eq' [where n = "2 ^ len_of TYPE(64)"]])
-   -- " unat (\<dots> && 0x3F) +  unat (\<dots> mod 0x40) < 2 ^ len_of TYPE(64)"
+   \<comment> \<open>unat (\<dots> && 0x3F) +  unat (\<dots> mod 0x40) < 2 ^ len_of TYPE(64)\<close>
    apply (rule order_le_less_trans, rule add_le_mono)
      apply (rule word_le_nat_alt[THEN iffD1])
      apply (rule word_and_le1)
@@ -3854,9 +3854,9 @@ lemma ensureNoChildren_ccorres:
 
    apply (clarsimp simp: whenE_def throwError_def return_def nullPointer_def liftE_bindE)
 
-   apply (clarsimp simp: returnOk_def return_def) -- "solve the case where mdbNext is zero"
+   apply (clarsimp simp: returnOk_def return_def) \<comment> \<open>solve the case where mdbNext is zero\<close>
 
-   -- "main goal"
+   \<comment> \<open>main goal\<close>
    apply (simp add: ccte_relation_def)
    apply (frule_tac cte="cte_to_H y" in valid_mdb_ctes_of_next, simp+)
    apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -3870,7 +3870,7 @@ lemma ensureNoChildren_ccorres:
 
    apply clarsimp
    apply (rule conjI)
-   -- "isMDBParentOf is not zero"
+   \<comment> \<open>isMDBParentOf is not zero\<close>
     apply clarsimp
     apply (simp add: from_bool_def)
     apply (case_tac "isMDBParentOf (cte_to_H y) (cte_to_H ya)", simp_all)[1]
@@ -3881,7 +3881,7 @@ lemma ensureNoChildren_ccorres:
     apply (simp add: cte_wp_at_ctes_of)
     apply (simp add: syscall_error_rel_def EXCEPTION_NONE_def EXCEPTION_SYSCALL_ERROR_def)
     apply (simp add: syscall_error_to_H_cases(9))
-   -- "isMDBParentOf is zero"
+   \<comment> \<open>isMDBParentOf is zero\<close>
    apply clarsimp
    apply (simp add: from_bool_def)
    apply (case_tac "isMDBParentOf (cte_to_H y) (cte_to_H ya)", simp_all)[1]
@@ -3891,7 +3891,7 @@ lemma ensureNoChildren_ccorres:
    apply (simp add: cte_wp_at_ctes_of)
    apply (simp add: returnOk_def return_def)
 
-  -- " last goal"
+  \<comment> \<open>last goal\<close>
   apply clarsimp
   apply (simp add: cte_wp_at_ctes_of)
   done
@@ -3960,7 +3960,7 @@ lemma Arch_deriveCap_ccorres:
                           cap_tag_defs cap_to_H_def to_bool_def
                           cap_page_directory_cap_lift_def
                    split: if_split_asm)
-   -- "PDPTCap"
+   \<comment> \<open>PDPTCap\<close>
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                           ccorres_cond_iffs)
@@ -3990,7 +3990,7 @@ lemma Arch_deriveCap_ccorres:
                           errstate_def syscall_error_rel_def
                           syscall_error_to_H_cases
                           exception_defs)
-   -- "PML4Cap"
+   \<comment> \<open>PML4Cap\<close>
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                           ccorres_cond_iffs)
@@ -4020,7 +4020,7 @@ lemma Arch_deriveCap_ccorres:
                           errstate_def syscall_error_rel_def
                           syscall_error_to_H_cases
                           exception_defs)
-   -- "PageCap"
+   \<comment> \<open>PageCap\<close>
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                           ccorres_cond_iffs)

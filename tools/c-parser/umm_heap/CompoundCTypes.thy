@@ -153,7 +153,7 @@ lemma field_names_list_ti_pad_combine [simp]:
       {foldl op @ ''!pad_'' (field_names_list tag)}"
   by (clarsimp simp: ti_pad_combine_def Let_def)
 
--- "matches on padding"
+\<comment> \<open>matches on padding\<close>
 lemma hd_string_hd_fold_eq [simp, rule_format]:
   "\<forall>s. s \<noteq> [] \<longrightarrow> hd s = CHR ''!'' \<longrightarrow> hd (foldl op @ s xs) = CHR ''!''"
   by (induct_tac xs, clarsimp+)

@@ -271,6 +271,17 @@ section {* Transferring capabilities *}
 text {* These functions are used in interpreting from user arguments the manner
 in which a capability transfer should take place. *}
 
+record captransfer =
+  ct_receive_root :: cap_ref
+  ct_receive_index :: cap_ref
+  ct_receive_depth :: data
+
+
+definition
+  captransfer_size :: "nat" \<comment> \<open>in words\<close>
+where
+  "captransfer_size \<equiv> 3"
+
 definition
   captransfer_from_words :: "machine_word \<Rightarrow> (captransfer,'z::state_ext) s_monad"
 where
@@ -571,7 +582,7 @@ where
   apply (rename_tac cap cslot_ptr bool)
   apply (case_tac cap, safe)
              apply auto[10]
-   -- Zombie
+   \<comment> \<open>Zombie\<close>
    apply (rename_tac obj_ref option nat)
    apply (case_tac bool)
     apply (case_tac nat, auto)[1]

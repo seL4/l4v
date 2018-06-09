@@ -288,7 +288,7 @@ lemma send_fault_ipc_bisim:
          apply (wp | simp)+
      apply clarsimp
      apply assumption
-     -- "det_ont"
+     \<comment> \<open>det_ont\<close>
     apply (simp add: Let_def cong: cap.case_cong)
     apply (wp not_empty_lc)
       apply (rule_tac P = "separate_cap xa" in not_empty_gen_asm)

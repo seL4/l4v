@@ -5728,7 +5728,7 @@ lemma perform_page_invs [wp]:
   "\<lbrace>invs and valid_page_inv pinv\<rbrace> perform_page_invocation pinv \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: perform_page_invocation_def)
   apply (cases pinv, simp_all)
-     -- "PageMap"
+     \<comment> \<open>PageMap\<close>
      apply (rename_tac asid cap cslot_ptr sum)
      apply clarsimp
      apply (rule hoare_pre)
@@ -5810,7 +5810,7 @@ lemma perform_page_invs [wp]:
      apply (drule_tac x=sl in imageI[where f="\<lambda>x. x && ~~ mask pd_bits"])
      apply (drule (1) subsetD)
      apply (clarsimp simp: cap_range_def)
-   -- "PageRemap"
+   \<comment> \<open>PageRemap\<close>
     apply (rule hoare_pre)
      apply (wp get_master_pte_wp get_master_pde_wp hoare_vcg_ex_lift mapM_x_swp_store_pde_invs_unmap
               | wpc | simp add: pte_check_if_mapped_def pde_check_if_mapped_def
@@ -5869,7 +5869,7 @@ lemma perform_page_invs [wp]:
             valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD]) *)
       apply simp+
     apply force
-   -- "PageUnmap"
+   \<comment> \<open>PageUnmap\<close>
    apply (rename_tac arch_cap cslot_ptr)
    apply (rule hoare_pre)
     apply (wp dmo_invs arch_update_cap_invs_unmap_page get_cap_wp
@@ -5898,7 +5898,7 @@ lemma perform_page_invs [wp]:
    using valid_validate_vm_rights[simplified valid_vm_rights_def]
    apply (auto simp: valid_cap_def cap_aligned_def mask_def vs_cap_ref_def vspace_bits_defs data_at_def
                    split: vmpage_size.splits option.splits if_splits)[1]
-  -- "PageFlush"
+  \<comment> \<open>PageFlush\<close>
   apply (rule hoare_pre)
    apply (wp dmo_invs set_vm_root_for_flush_invs
              hoare_vcg_const_imp_lift hoare_vcg_all_lift

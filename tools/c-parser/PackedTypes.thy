@@ -597,19 +597,19 @@ class packed_type = mem_type +
   assumes td_fa_hi:     "td_fa_hi (typ_info_t TYPE('a::c_type))"
 
 lemmas td_fafu_idem_intro_simps =
-  -- "Axioms"
+  \<comment> \<open>Axioms\<close>
   td_fafu_idem
-  -- "Combinators"
+  \<comment> \<open>Combinators\<close>
   td_fafu_idem_final_pad td_fafu_idem_ti_typ_pad_combine td_fafu_idem_ti_typ_combine td_fafu_idem_empty_typ_info
-  -- "Constructors"
+  \<comment> \<open>Constructors\<close>
   td_fafu_idem_ptr td_fafu_idem_word td_fafu_idem_array
 
 lemmas td_fa_hi_intro_simps =
-  -- "Axioms"
+  \<comment> \<open>Axioms\<close>
   td_fa_hi
-  -- "Combinators"
+  \<comment> \<open>Combinators\<close>
   td_fa_hi_final_pad td_fa_hi_ti_typ_pad_combine td_fa_hi_ti_typ_combine td_fa_hi_empty_typ_info
-  -- "Constructors"
+  \<comment> \<open>Constructors\<close>
   td_fa_hi_ptr td_fa_hi_word td_fa_hi_array
 
 lemma align_td_array':

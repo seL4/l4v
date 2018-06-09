@@ -180,20 +180,20 @@ lemma decode_invocation_corres:
   apply (rule corres_gen_asm)
   apply (unfold decode_invocation_def decodeInvocation_def)
   apply (case_tac cap, simp_all only: cap.simps)
-   --"dammit, simp_all messes things up, must handle cases manually"
-             -- "Null"
+   \<comment> \<open>dammit, simp_all messes things up, must handle cases manually\<close>
+             \<comment> \<open>Null\<close>
              apply (simp add: isCap_defs)
-            -- "Untyped"
+            \<comment> \<open>Untyped\<close>
             apply (simp add: isCap_defs Let_def o_def split del: if_split)
             apply (rule corres_guard_imp, rule dec_untyped_inv_corres)
               apply ((clarsimp simp:cte_wp_at_caps_of_state diminished_def)+)[3]
-           -- "(Async)Endpoint"
+           \<comment> \<open>(Async)Endpoint\<close>
            apply (simp add: isCap_defs returnOk_def)
           apply (simp add: isCap_defs)
           apply (clarsimp simp: returnOk_def neq_Nil_conv)
-         -- "ReplyCap"
+         \<comment> \<open>ReplyCap\<close>
          apply (simp add: isCap_defs Let_def returnOk_def)
-        -- "CNodeCap"
+        \<comment> \<open>CNodeCap\<close>
         apply (rename_tac word nat list)
         apply (simp add: isCap_defs Let_def CanModify_def
                     split del: if_split cong: if_cong)
@@ -203,7 +203,7 @@ lemma decode_invocation_corres:
           apply (rule dec_cnode_inv_corres, simp+)
          apply (simp add: valid_cap_def word_bits_def)
         apply simp
-       -- "ThreadCap"
+       \<comment> \<open>ThreadCap\<close>
        apply (simp add: isCap_defs Let_def CanModify_def
                    split del: if_split cong: if_cong)
        apply (clarsimp simp add: o_def)
@@ -214,20 +214,20 @@ lemma decode_invocation_corres:
        apply (rule list_all2_conj)
         apply (simp add: list_all2_map2 list_all2_map1)
        apply assumption
-      -- "DomainCap"
+      \<comment> \<open>DomainCap\<close>
       apply (simp add: isCap_defs)
       apply (rule corres_guard_imp)
       apply (rule dec_domain_inv_corres)
       apply (simp+)[4]
-     -- "IRQControl"
+     \<comment> \<open>IRQControl\<close>
      apply (simp add: isCap_defs o_def)
      apply (rule corres_guard_imp, rule decode_irq_control_corres, simp+)[1]
-    -- "IRQHandler"
+    \<comment> \<open>IRQHandler\<close>
     apply (simp add: isCap_defs o_def)
     apply (rule corres_guard_imp, rule decode_irq_handler_corres, simp+)[1]
-   -- "Zombie"
+   \<comment> \<open>Zombie\<close>
    apply (simp add: isCap_defs)
-  -- "Arch"
+  \<comment> \<open>Arch\<close>
   apply (clarsimp simp only: cap_relation.simps)
   apply (clarsimp simp add: isCap_defs Let_def o_def)
   apply (rule corres_guard_imp [OF dec_arch_inv_corres])
@@ -308,7 +308,7 @@ lemma hinv_corres_assist:
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE [OF _ corres_cap_fault])
        prefer 2
-       -- "switched over to argument of corres_cap_fault"
+       \<comment> \<open>switched over to argument of corres_cap_fault\<close>
        apply (rule lcs_corres, simp)
       apply (rule corres_split [OF _ lipcb_corres])
         apply (rule corres_splitEE [OF _ lec_corres])
@@ -538,14 +538,14 @@ lemma pinv_corres:
       apply (rule corres_guard_imp)
         apply (erule tcbinv_corres)
        apply (simp)+
-      -- "domain cap"
+      \<comment> \<open>domain cap\<close>
       apply (clarsimp simp: invoke_domain_def)
       apply (rule corres_guard_imp)
       apply (rule corres_split [OF _ set_domain_setDomain_corres])
         apply (rule corres_trivial, simp)
        apply (wp)+
        apply (clarsimp+)[2]
-     -- "CNodes"
+     \<comment> \<open>CNodes\<close>
      apply clarsimp
      apply (rule corres_guard_imp)
        apply (rule corres_splitEE [OF _ inv_cnode_corres])

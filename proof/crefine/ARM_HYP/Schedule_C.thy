@@ -264,7 +264,7 @@ proof -
      apply (rule_tac R="\<lambda>s. l1 = ksReadyQueuesL1Bitmap s curdom \<and> curdom \<le> maxDomain"
               in ccorres_cond)
        subgoal by (fastforce dest!: rf_sr_cbitmap_L1_relation simp: cbitmap_L1_relation_def)
-      prefer 2 -- "switchToIdleThread"
+      prefer 2 \<comment> \<open>switchToIdleThread\<close>
       apply (ctac(no_vcg) add: switchToIdleThread_ccorres)
      apply clarsimp
      apply (rule ccorres_rhs_assoc)+

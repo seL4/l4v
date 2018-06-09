@@ -647,7 +647,7 @@ where
      map (\<lambda>(cap, slot). (transform_cap cap, transform_cslot_ptr slot))"
 
 
--- "Convert a nat into a bool list of the given size."
+\<comment> \<open>Convert a nat into a bool list of the given size.\<close>
 definition
   nat_to_bl :: "nat \<Rightarrow> nat \<Rightarrow> bool list option"
 where

@@ -2755,7 +2755,7 @@ proof -
             apply wp+
           apply (clarsimp simp: st_tcb_at_tcb_at valid_tcb_state_def)
          apply clarsimp
-         -- "concludes IdleEP if bl branch"
+         \<comment> \<open>concludes IdleEP if bl branch\<close>
         apply (simp add: ep_relation_def)
         apply (rule corres_guard_imp)
           apply (rule corres_split [OF _ sts_corres])
@@ -2765,7 +2765,7 @@ proof -
            apply wp+
          apply (clarsimp simp: st_tcb_at_tcb_at valid_tcb_state_def)
         apply clarsimp
-        -- "concludes SendEP if bl branch"
+        \<comment> \<open>concludes SendEP if bl branch\<close>
        apply (simp add: ep_relation_def)
        apply (rename_tac list)
        apply (rule_tac F="list \<noteq> []" in corres_req)
@@ -2840,9 +2840,9 @@ proof -
       apply (rename_tac rv rv')
       apply (case_tac rv)
         apply (simp add: ep_relation_def)
-        -- "concludes IdleEP branch if not bl and no ft"
+        \<comment> \<open>concludes IdleEP branch if not bl and no ft\<close>
        apply (simp add: ep_relation_def)
-       -- "concludes SendEP branch if not bl and no ft"
+       \<comment> \<open>concludes SendEP branch if not bl and no ft\<close>
       apply (simp add: ep_relation_def)
       apply (rename_tac list)
       apply (rule_tac F="list \<noteq> []" in corres_req)
@@ -2962,7 +2962,7 @@ lemma send_signal_corres:
       apply (wp get_simple_ko_ko_at get_ntfn_ko')+
     apply (simp add: invs_valid_objs)+
   apply (case_tac "ntfn_obj ntfn")
-    -- "IdleNtfn"
+    \<comment> \<open>IdleNtfn\<close>
     apply (clarsimp simp add: ntfn_relation_def)
     apply (case_tac "ntfnBoundTCB nTFN")
      apply clarsimp
@@ -2999,12 +2999,12 @@ lemma send_signal_corres:
                 intro: st_tcb_at_reply_cap_valid
                 split: Structures_A.thread_state.splits)[1]
     apply (clarsimp simp: valid_ntfn'_def invs'_def valid_state'_def valid_pspace'_def sch_act_wf_weak)
-   -- "WaitingNtfn"
+   \<comment> \<open>WaitingNtfn\<close>
    apply (clarsimp simp add: ntfn_relation_def Let_def)
    apply (simp add: update_waiting_ntfn_def)
    apply (rename_tac list)
    apply (case_tac "tl list = []")
-    -- "tl list = []"
+    \<comment> \<open>tl list = []\<close>
     apply (rule corres_guard_imp)
       apply (rule_tac F="list \<noteq> []" in corres_gen_asm)
       apply (simp add: list_case_helper split del: if_split)
@@ -3035,7 +3035,7 @@ lemma send_signal_corres:
     apply (auto simp: valid_ntfn'_def )[1]
     apply (clarsimp simp: invs'_def valid_state'_def)
 
-   -- "tl list \<noteq> []"
+   \<comment> \<open>tl list \<noteq> []\<close>
    apply (rule corres_guard_imp)
      apply (rule_tac F="list \<noteq> []" in corres_gen_asm)
      apply (simp add: list_case_helper)
@@ -3061,7 +3061,7 @@ lemma send_signal_corres:
    apply (auto simp: valid_ntfn'_def neq_Nil_conv invs'_def valid_state'_def
                      weak_sch_act_wf_def
               split: option.splits)[1]
-  -- "ActiveNtfn"
+  \<comment> \<open>ActiveNtfn\<close>
   apply (clarsimp simp add: ntfn_relation_def)
   apply (rule corres_guard_imp)
     apply (rule set_ntfn_corres)
@@ -3369,9 +3369,9 @@ proof -
   show ?thesis
   apply (simp add: cancelIPC_def Let_def)
   apply (wp, wpc)
-          prefer 4 -- "state = Running"
+          prefer 4 \<comment> \<open>state = Running\<close>
           apply wp
-         prefer 7 -- "state = Restart"
+         prefer 7 \<comment> \<open>state = Restart\<close>
          apply wp
         apply (wp)+
            apply (wp hoare_convert_imp)[1]
@@ -3596,7 +3596,7 @@ lemma receive_ipc_corres:
                                            valid_ep' epa"
                                  in corres_inst)
              apply (case_tac ep)
-               -- "IdleEP"
+               \<comment> \<open>IdleEP\<close>
                apply (simp add: ep_relation_def)
                apply (rule corres_guard_imp)
                  apply (case_tac isBlocking; simp)
@@ -3610,7 +3610,7 @@ lemma receive_ipc_corres:
                 apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def
                valid_tcb_state_def st_tcb_at_tcb_at)
                apply auto[1]
-       -- "SendEP"
+       \<comment> \<open>SendEP\<close>
        apply (simp add: ep_relation_def)
        apply (rename_tac list)
        apply (rule_tac F="list \<noteq> []" in corres_req)
@@ -3679,7 +3679,7 @@ lemma receive_ipc_corres:
                apply (drule(1) sym_refs_obj_atD[where P="\<lambda>ko. ko = Endpoint e" for e])
                apply (fastforce simp: st_tcb_at_refs_of_rev elim: st_tcb_weakenE)
               apply (auto simp: valid_ep'_def invs'_def valid_state'_def split: list.split)[1]
-             -- "RecvEP"
+             \<comment> \<open>RecvEP\<close>
              apply (simp add: ep_relation_def)
              apply (rule_tac corres_guard_imp)
                apply (case_tac isBlocking; simp)
@@ -3729,7 +3729,7 @@ lemma receive_signal_corres:
                          in corres_split [OF _ get_ntfn_corres])
       apply clarsimp
       apply (case_tac "ntfn_obj rv")
-        -- "IdleNtfn"
+        \<comment> \<open>IdleNtfn\<close>
         apply (simp add: ntfn_relation_def)
         apply (rule corres_guard_imp)
           apply (case_tac isBlocking; simp)
@@ -3739,7 +3739,7 @@ lemma receive_signal_corres:
              apply simp
             apply wp+
           apply (rule corres_guard_imp, rule do_nbrecv_failed_transfer_corres, simp+)
-       -- "WaitingNtfn"
+       \<comment> \<open>WaitingNtfn\<close>
        apply (simp add: ntfn_relation_def)
        apply (rule corres_guard_imp)
          apply (case_tac isBlocking; simp)
@@ -3750,7 +3750,7 @@ lemma receive_signal_corres:
            apply wp+
          apply (rule corres_guard_imp)
            apply (rule do_nbrecv_failed_transfer_corres, simp+)
-      -- "ActiveNtfn"
+      \<comment> \<open>ActiveNtfn\<close>
       apply (simp add: ntfn_relation_def)
       apply (rule corres_guard_imp)
         apply (simp add: badgeRegister_def badge_register_def)
@@ -4234,7 +4234,7 @@ lemma ri_invs' [wp]:
    apply (rule_tac R="ko_at' ep (capEPPtr cap) and ?pre" in hoare_vcg_if_split)
     apply (wp completeSignal_invs)
    apply (case_tac ep)
-     -- "endpoint = RecvEP"
+     \<comment> \<open>endpoint = RecvEP\<close>
      apply (simp add: invs'_def valid_state'_def)
      apply (rule hoare_pre, wpc, wp valid_irq_node_lift)
       apply (simp add: valid_ep'_def del: fun_upd_apply)
@@ -4264,7 +4264,7 @@ lemma ri_invs' [wp]:
                 apply (auto dest!: symreftype_inverse')[10]
       apply (clarsimp split: if_split_asm)
      apply (fastforce simp: valid_pspace'_def global'_no_ex_cap idle'_not_queued)
-   -- "endpoint = IdleEP"
+   \<comment> \<open>endpoint = IdleEP\<close>
     apply (simp add: invs'_def valid_state'_def)
     apply (rule hoare_pre, wpc, wp valid_irq_node_lift)
      apply (simp add: valid_ep'_def del: fun_upd_apply)
@@ -4286,7 +4286,7 @@ lemma ri_invs' [wp]:
                      split: if_split_asm)
      apply (fastforce simp: global'_no_ex_cap)
     apply (clarsimp simp: obj_at'_def pred_tcb_at'_def projectKOs)
-   -- "endpoint = SendEP"
+   \<comment> \<open>endpoint = SendEP\<close>
    apply (simp add: invs'_def valid_state'_def)
    apply (rename_tac list)
    apply (case_tac list, simp_all split del: if_split)
@@ -4362,7 +4362,7 @@ lemma rai_invs'[wp]:
   apply (rule hoare_seq_ext [OF _ get_ntfn_sp'])
   apply (rename_tac ep)
   apply (case_tac "ntfnObj ep")
-    -- "ep = IdleNtfn"
+    \<comment> \<open>ep = IdleNtfn\<close>
     apply (simp add: invs'_def valid_state'_def)
     apply (rule hoare_pre)
      apply (wp valid_irq_node_lift sts_sch_act' typ_at_lifts
@@ -4386,7 +4386,7 @@ lemma rai_invs'[wp]:
                       split: if_split_asm)
      apply (clarsimp dest!: global'_no_ex_cap)
     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
-   -- "ep = ActiveNtfn"
+   \<comment> \<open>ep = ActiveNtfn\<close>
    apply (simp add: invs'_def valid_state'_def)
    apply (rule hoare_pre)
     apply (wp valid_irq_node_lift sts_valid_objs' typ_at_lifts static_imp_wp
@@ -4400,7 +4400,7 @@ lemma rai_invs'[wp]:
                  ko_at_state_refs_ofD')+
    apply (erule delta_sym_refs)
     apply (clarsimp split: if_split_asm simp: global'_no_ex_cap)+
-  -- "ep = WaitingNtfn"
+  \<comment> \<open>ep = WaitingNtfn\<close>
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift sts_sch_act'
@@ -4534,7 +4534,7 @@ lemma si_invs'[wp]:
   apply (simp add: sendIPC_def split del: if_split)
   apply (rule hoare_seq_ext [OF _ get_ep_sp'])
   apply (case_tac epa)
-    -- "epa = RecvEP"
+    \<comment> \<open>epa = RecvEP\<close>
     apply simp
     apply (rename_tac list)
     apply (case_tac list)
@@ -4591,7 +4591,7 @@ lemma si_invs'[wp]:
     apply (rule conjI, clarsimp split: list.splits)
     apply (erule delta_sym_refs)
      apply (auto simp: symreftype_inverse' tcb_bound_refs'_def split: if_split_asm)[2]
-   -- "epa = IdleEP"
+   \<comment> \<open>epa = IdleEP\<close>
    apply (cases bl)
     apply (simp add: invs'_def valid_state'_def)
     apply (rule hoare_pre, wp valid_irq_node_lift)
@@ -4612,7 +4612,7 @@ lemma si_invs'[wp]:
    apply simp
    apply wp
    apply simp
-  -- "epa = SendEP"
+  \<comment> \<open>epa = SendEP\<close>
   apply (cases bl)
    apply (simp add: invs'_def valid_state'_def)
    apply (rule hoare_pre, wp valid_irq_node_lift)

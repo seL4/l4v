@@ -36,7 +36,7 @@ end
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
--- ---------------------------------------------------------------------------
+\<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Invariants on Executable Spec"
 
 definition
@@ -1282,7 +1282,7 @@ locale mdb_order = mdb_next +
   assumes no_0: "no_0 m"
   assumes chain: "mdb_chain_0 m"
 
--- ---------------------------------------------------------------------------
+\<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Alternate split rules for preserving subgoal order"
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma capability_splits[split]:
@@ -1451,7 +1451,7 @@ lemma ntfn_splits[split]:
        (\<exists>x3. ntfn = Structures_H.ntfn.WaitingNtfn x3 \<and>
              \<not> P (f3 x3))))"
   by (case_tac ntfn; simp)+
--- ---------------------------------------------------------------------------
+\<comment> \<open>---------------------------------------------------------------------------\<close>
 
 section "Lemmas"
 

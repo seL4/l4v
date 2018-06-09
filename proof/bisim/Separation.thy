@@ -82,7 +82,7 @@ definition
 
 definition
   "separate_tcb p cs \<equiv> case_option True (separate_cnode_cap cs) (cs (p, tcb_cnode_index 0))
-                       \<and> cs (p, tcb_cnode_index 3) = Some NullCap" -- "ctable and caller cap"
+                       \<and> cs (p, tcb_cnode_index 3) = Some NullCap" \<comment> \<open>ctable and caller cap\<close>
 
 lemma separate_cnode_cap_rab:
   "\<lbrakk> separate_cnode_cap cs cap; length cref = word_bits \<rbrakk> \<Longrightarrow>

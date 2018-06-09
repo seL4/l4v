@@ -3009,11 +3009,11 @@ lemma schedule_invs':
   apply (simp add: schedule_def)
   apply (rule_tac hoare_seq_ext, rename_tac t)
    apply (wp, wpc)
-      -- "action = ResumeCurrentThread"
+      \<comment> \<open>action = ResumeCurrentThread\<close>
       apply (wp)[1]
-     -- "action = ChooseNewThread"
+     \<comment> \<open>action = ChooseNewThread\<close>
      apply (wp scheduleChooseNewThread_invs')
-    -- "action = SwitchToThread candidate"
+    \<comment> \<open>action = SwitchToThread candidate\<close>
     apply (wpsimp wp: scheduleChooseNewThread_invs' ssa_invs'
                       chooseThread_invs_no_cicd' setSchedulerAction_invs' setSchedulerAction_direct
                       switchToThread_tcb_in_cur_domain' switchToThread_ct_not_queued_2
@@ -3104,11 +3104,11 @@ lemma schedule_ct_activatable'[wp]:
   apply (simp add: schedule_def)
   apply (rule_tac hoare_seq_ext, rename_tac t)
    apply (wp, wpc)
-      -- "action = ResumeCurrentThread"
+      \<comment> \<open>action = ResumeCurrentThread\<close>
       apply (wp)[1]
-     -- "action = ChooseNewThread"
+     \<comment> \<open>action = ChooseNewThread\<close>
      apply wpsimp
-    -- "action = SwitchToThread"
+    \<comment> \<open>action = SwitchToThread\<close>
     apply (wpsimp wp: ssa_invs' setSchedulerAction_direct ssa_ct
            | wp hoare_drop_imp[where f="isHighestPrio d p" for d p]
            | simp only: obj_at'_activatable_st_tcb_at'[simplified comp_def]

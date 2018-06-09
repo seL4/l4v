@@ -1288,7 +1288,7 @@ lemma cte_refs_capRange:
     apply (drule minus_one_helper3)
     apply simp
    defer
-   -- "CNodeCap"
+   \<comment> \<open>CNodeCap\<close>
    apply (clarsimp simp: objBits_simps capAligned_def dest!: valid_capAligned)
    apply (rename_tac word1 nat1 word2 nat2 x)
    apply (subgoal_tac "x * 2 ^ cteSizeBits < 2 ^ (cteSizeBits + nat1)")
@@ -1306,7 +1306,7 @@ lemma cte_refs_capRange:
     apply simp
    apply (simp only: power_add)
    apply (simp add: word_bits_def)
-  -- "Zombie"
+  \<comment> \<open>Zombie\<close>
   apply (clarsimp simp: capAligned_def valid_cap'_def objBits_simps)
   apply (rename_tac word zombie_type nat x)
   apply (subgoal_tac "x * 2^cteSizeBits < 2 ^ zBits zombie_type")

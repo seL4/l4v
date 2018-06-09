@@ -2254,10 +2254,10 @@ lemma decode_arch_invocation_authorised_for_globals:
                         neq_Nil_conv invs_psp_aligned invs_vspace_objs cli_no_irqs)
   apply (drule diminished_cte_wp_at_valid_cap, clarsimp+)
   apply (cases cap, simp_all)
-    -- "PageCap"
+    \<comment> \<open>PageCap\<close>
     apply (clarsimp simp: valid_cap_simps cli_no_irqs)
     apply (cases "invocation_type label";(rename_tac arch, case_tac arch; simp add: isPageFlushLabel_def isPDFlushLabel_def))
-           -- "Map"
+           \<comment> \<open>Map\<close>
            apply (rename_tac word cap_rights vmpage_size option arch)
            apply(clarsimp simp: isPageFlushLabel_def isPDFlushLabel_def | rule conjI)+
             apply(drule diminished_cte_wp_at_valid_cap)
@@ -2268,13 +2268,13 @@ lemma decode_arch_invocation_authorised_for_globals:
             apply(insert pbfs_less_wb)
             apply(clarsimp)
            apply(fastforce simp: x_power_minus_1)
-          -- "Remap"
+          \<comment> \<open>Remap\<close>
           apply(clarsimp)
           apply(fastforce dest: diminished_cte_wp_at_valid_cap simp: invs_def valid_state_def valid_cap_def)
-         -- "Unmap"
+         \<comment> \<open>Unmap\<close>
          apply(simp add: authorised_for_globals_page_inv_def)+
    apply(clarsimp)
-   -- "PageTableCap"
+   \<comment> \<open>PageTableCap\<close>
    apply(simp add: authorised_for_globals_page_table_inv_def)
    apply(clarsimp)
    apply(frule_tac vptr="msg ! 0" in pd_shifting')

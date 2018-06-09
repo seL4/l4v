@@ -175,8 +175,8 @@ notepad begin
  fix D C
   assume DC:"D \<Longrightarrow> C"
   have "D \<and> D \<Longrightarrow> C \<and> C"
-  apply (only_asm \<open>simp\<close>) -- "stash conclusion before applying method"
-  apply (only_concl \<open>simp add: DC\<close>) -- "hide premises from method"
+  apply (only_asm \<open>simp\<close>) \<comment> \<open>stash conclusion before applying method\<close>
+  apply (only_concl \<open>simp add: DC\<close>) \<comment> \<open>hide premises from method\<close>
   by (rule DC)
 
 end
@@ -281,12 +281,12 @@ notepad begin
     by (rule A)+
 
   have "A \<and> A" "A \<and> A" "B"
-    apply (find_goal \<open>fails \<open>simp\<close>\<close>) -- "find the first goal which cannot be simplified"
+    apply (find_goal \<open>fails \<open>simp\<close>\<close>) \<comment> \<open>find the first goal which cannot be simplified\<close>
     apply (rule B)
     by (simp add: A)+
 
   have  "B" "A" "A \<and> A"
-    apply (find_goal \<open>succeeds \<open>simp\<close>\<close>) -- "find the first goal which can be simplified (without doing so)"
+    apply (find_goal \<open>succeeds \<open>simp\<close>\<close>) \<comment> \<open>find the first goal which can be simplified (without doing so)\<close>
     apply (rule conjI)
     by (rule A B)+
 
@@ -373,7 +373,7 @@ notepad begin
   by (rule A)
 
   have "B \<Longrightarrow> A" "A"
-  by (distinct_subgoals_strong \<open>assumption\<close>, rule A) -- "backtracking required here"
+  by (distinct_subgoals_strong \<open>assumption\<close>, rule A) \<comment> \<open>backtracking required here\<close>
   }
 
   {
@@ -382,7 +382,7 @@ notepad begin
   assume B: "B"
   assume BC: "B \<Longrightarrow> C" "B \<Longrightarrow> A"
   have "A" "B \<longrightarrow> (A \<and> C)" "B"
-  apply (distinct_subgoals_strong \<open>simp\<close>, rule B) -- "backtracking required here"
+  apply (distinct_subgoals_strong \<open>simp\<close>, rule B) \<comment> \<open>backtracking required here\<close>
   by (simp add: BC)
 
   }

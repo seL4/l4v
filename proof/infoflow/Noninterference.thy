@@ -1999,7 +1999,7 @@ lemma integrity_part:
     (s, s') \<in> Simulation.Step (big_step_ADT_A_if utf) ();
     (part s, u) \<notin> policyFlows (pasPolicy initial_aag); u \<noteq> PSched; part s \<noteq> PSched\<rbrakk> \<Longrightarrow>
    (s,s') \<in> uwr u"
-  supply [[simp_depth_limit=0]] -- "speedup"
+  supply [[simp_depth_limit=0]] \<comment> \<open>speedup\<close>
   apply(simp add: uwr_def_cur[where s=s])
   apply(case_tac s, case_tac s', simp)
   apply(case_tac a, case_tac aa, simp)
@@ -2018,7 +2018,7 @@ lemma integrity_part:
         apply(fastforce dest: silc_inv_initial_aag_reachable[OF reachable_Step'] simp: silc_inv_cur)
        apply(rule pas_wellformed_cur)
       apply(simp add: current_aag_def)
-     supply [[simp_depth_limit=0]] -- "speeds up the rest of the proof"
+     supply [[simp_depth_limit=0]] \<comment> \<open>speeds up the rest of the proof\<close>
      apply(fastforce dest!: reachable_invs_if domains_distinct[THEN pas_domains_distinct_inj]
                      simp: invs_if_def Invs_def guarded_pas_domain_def
                            guarded_is_subject_cur_thread_def current_aag_def)
@@ -2895,7 +2895,7 @@ lemma do_user_op_A_if_confidentiality:
    xx = yy \<and>
    (s', t') \<in> uwr u \<and> (s', t') \<in> uwr PSched \<and> (s', t') \<in> uwr (part s)"
   including no_pre
-  supply [[simp_depth_limit=2]] -- "speedup"
+  supply [[simp_depth_limit=2]] \<comment> \<open>speedup\<close>
   apply(frule (1) uwr_part_sys_mode_of_user_context_of_eq)
   apply(clarsimp simp: check_active_irq_A_if_def)
   apply(case_tac s, case_tac t, simp_all)
@@ -2998,7 +2998,7 @@ lemma kernel_schedule_if_confidentiality:
     ((fst t),(),(fst t')) \<in> kernel_schedule_if;
     snd s' = snd t'\<rbrakk> \<Longrightarrow>
    (s', t') \<in> uwr u \<and> (s', t') \<in> uwr PSched \<and> (s', t') \<in> uwr (part s)"
-  supply [[simp_depth_limit=1]] -- "speedup"
+  supply [[simp_depth_limit=1]] \<comment> \<open>speedup\<close>
   apply(frule (1) uwr_part_sys_mode_of_user_context_of_eq)
   apply(frule part_not_PSched_sys_mode_of_not_KernelSchedule_True)
   apply(clarsimp simp: kernel_schedule_if_def)
@@ -3128,7 +3128,7 @@ lemma kernel_call_A_if_confidentiality:
     snd s' = f x; snd t' = f y\<rbrakk> \<Longrightarrow>
    x = y \<and>
    (s', t') \<in> uwr u \<and> (s', t') \<in> uwr PSched \<and> (s', t') \<in> uwr (part s)"
-  supply [[simp_depth_limit=3]] -- "speedup"
+  supply [[simp_depth_limit=3]] \<comment> \<open>speedup\<close>
   apply(frule (1) uwr_part_sys_mode_of_user_context_of_eq)
   apply(frule part_not_PSched_sys_mode_of_not_KernelSchedule_True)
   apply(clarsimp simp: kernel_call_A_if_def)
@@ -3305,7 +3305,7 @@ lemma kernel_exit_A_if_confidentiality:
     snd s' = f x; snd t' = f y\<rbrakk> \<Longrightarrow>
    x = y \<and>
    (s', t') \<in> uwr u \<and> (s', t') \<in> uwr PSched \<and> (s', t') \<in> uwr (part s)"
-  supply [[simp_depth_limit=2]] -- "speedup"
+  supply [[simp_depth_limit=2]] \<comment> \<open>speedup\<close>
   apply(clarsimp simp: kernel_exit_A_if_def)
   apply(case_tac s, case_tac t, simp_all)
   apply(case_tac u, simp_all)
@@ -4040,7 +4040,7 @@ lemma scheduler_step_1_confidentiality:
   assumes reach_t: "system.reachable (ADT_A_if utf) s0 t"
   shows "\<lbrakk>interrupted_modes (sys_mode_of s)\<rbrakk> \<Longrightarrow>
        (s',t') \<in> uwr u"
-  supply [[simp_depth_limit=2]] -- "speedup"
+  supply [[simp_depth_limit=2]] \<comment> \<open>speedup\<close>
   apply (insert uwr step_s step_t)
   apply (cut_tac ADT_A_if_reachable_invs_if[OF reach_s])
   apply (cut_tac ADT_A_if_reachable_invs_if[OF reach_t])

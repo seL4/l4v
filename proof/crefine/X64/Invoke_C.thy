@@ -434,13 +434,13 @@ lemma invokeCNodeSaveCaller_ccorres:
                                  Collect_False Collect_True
                             del: Collect_const)[1]
                  apply (rule ccorres_fail)+
-                  -- "NullCap case"
+                  \<comment> \<open>NullCap case\<close>
                 apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
                 apply (rule allI, rule conseqPre, vcg)
                 apply clarsimp
                 apply (simp add: return_def)
                apply (rule ccorres_fail)+
-          -- "ReplyCap case"
+          \<comment> \<open>ReplyCap case\<close>
           apply (rule ccorres_rhs_assoc)
           apply csymbr
           apply (frule cap_get_tag_isCap_unfolded_H_cap)
@@ -726,7 +726,7 @@ lemma decodeCNodeInvocation_ccorres:
                                          injection_handler_returnOk Collect_const[symmetric]
                                    cong: call_ignore_cong del: Collect_const)
                         apply (rule ccorres_Cond_rhs_Seq)
-                         -- "CNodeCopy case"
+                         \<comment> \<open>CNodeCopy case\<close>
                          apply (simp add: Collect_const[symmetric] del: Collect_const)
                          apply (rule ccorres_rhs_assoc)+
                          apply (rule ccorres_Cond_rhs_Seq)
@@ -796,7 +796,7 @@ lemma decodeCNodeInvocation_ccorres:
                          apply (simp add: Collect_const_mem)
                          apply (vcg exspec=getSyscallArg_modifies)
                         apply (rule ccorres_Cond_rhs_Seq)
-                         -- "CNodeMint case"
+                         \<comment> \<open>CNodeMint case\<close>
                          apply (simp add: Collect_const[symmetric]
                                      del: Collect_const)
                          apply (rule ccorres_rhs_assoc)+
@@ -883,7 +883,7 @@ lemma decodeCNodeInvocation_ccorres:
                          apply (simp add: Collect_const_mem)
                          apply (vcg exspec=getSyscallArg_modifies)
                         apply (rule ccorres_Cond_rhs_Seq)
-                         -- "CNodeMove case"
+                         \<comment> \<open>CNodeMove case\<close>
                          apply (simp add: Collect_const[symmetric] split_def
                                           injection_handler_returnOk whenE_def
                                           ccorres_invocationCatch_Inr
@@ -911,7 +911,7 @@ lemma decodeCNodeInvocation_ccorres:
                           apply vcg
                          apply (rule conseqPre, vcg, clarsimp)
                         apply (rule ccorres_Cond_rhs_Seq)
-                         -- "CNodeMutate case"
+                         \<comment> \<open>CNodeMutate case\<close>
                          apply (rule ccorres_rhs_assoc)+
                          apply (simp add: Collect_const[symmetric] del: Collect_const
                                     cong: call_ignore_cong)

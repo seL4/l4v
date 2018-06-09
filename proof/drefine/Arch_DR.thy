@@ -1592,7 +1592,7 @@ lemma invoke_page_corres:
      apply (clarsimp simp:invs_def valid_state_def cte_wp_at_caps_of_state)
      apply (frule_tac v = b in valid_idle_has_null_cap,simp+)
      apply (clarsimp simp:is_arch_update_def is_arch_cap_def cap_master_cap_def split:cap.split_asm)
-   -- "PageRemap"
+   \<comment> \<open>PageRemap\<close>
     apply (rename_tac sum)
     apply (case_tac sum)
      apply (clarsimp simp: mapM_singleton mapM_x_mapM)
@@ -1631,7 +1631,7 @@ lemma invoke_page_corres:
                  )+
     apply (clarsimp simp:invs_def valid_state_def
       cte_wp_at_caps_of_state page_inv_duplicates_valid_def)
-   -- "PageUnmap"
+   \<comment> \<open>PageUnmap\<close>
    apply (rule dcorres_expand_pfx)
    apply (clarsimp simp: valid_page_inv_def transform_mapping_def liftM_def
      split:arch_cap.splits option.splits)
@@ -1674,7 +1674,7 @@ lemma invoke_page_corres:
     apply (rule sym)
     apply (simp add:get_cap_caps_of_state)+
 
-  -- "PageFlush"
+  \<comment> \<open>PageFlush\<close>
   apply (clarsimp simp:invoke_page_def)
   apply (clarsimp simp: when_def split: if_splits)
   apply (rule corres_guard_imp)
@@ -1688,7 +1688,7 @@ lemma invoke_page_corres:
         apply (erule notE)+
         apply (clarsimp)
        apply (wp do_machine_op_wp | clarsimp)+
-  -- "Get Address"
+  \<comment> \<open>Get Address\<close>
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ get_cur_thread_corres])
       apply (subst duplicate_corrupt_tcb_intent[symmetric])

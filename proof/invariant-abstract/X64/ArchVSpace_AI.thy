@@ -3482,7 +3482,7 @@ lemma perform_page_invs [wp]:
   "\<lbrace>invs and valid_page_inv page_inv\<rbrace> perform_page_invocation page_inv \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: perform_page_invocation_def)
   apply (cases page_inv, simp_all)
-     -- "PageMap"
+     \<comment> \<open>PageMap\<close>
      apply (rename_tac cap cslot_ptr sum)
      apply clarsimp
      apply (rule hoare_pre)
@@ -3540,7 +3540,7 @@ lemma perform_page_invs [wp]:
       apply (drule valid_global_refsD2[where cap = "(ArchObjectCap (PDPointerTableCap pc asid))" for pc asid], fastforce)
       apply (clarsimp dest!: is_aligned_pdpt[OF _ invs_psp_aligned]
                        simp: is_aligned_neg_mask_eq cap_range_def valid_cap_def cap_aligned_def)
-     -- "PageReMap"
+     \<comment> \<open>PageReMap\<close>
      apply (rename_tac sum)
      apply clarsimp
      apply (rule hoare_pre)
@@ -3621,7 +3621,7 @@ lemma perform_page_invs [wp]:
      apply (drule valid_global_refsD2, fastforce)
      apply (clarsimp dest!: is_aligned_pdpt[OF _ invs_psp_aligned]
                        simp: is_aligned_neg_mask_eq cap_range_def valid_cap_def)
-    -- "PageUnmap"
+    \<comment> \<open>PageUnmap\<close>
     apply (rename_tac arch_cap cslot_ptr)
     apply (rule hoare_pre)
      apply (wp dmo_invs arch_update_cap_invs_unmap_page get_cap_wp
@@ -3651,7 +3651,7 @@ lemma perform_page_invs [wp]:
    apply (auto simp: valid_cap_simps cap_aligned_def mask_def vs_cap_ref_def data_at_def
               split: vmpage_size.splits option.splits if_splits)[1]
    apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state valid_cap_def mask_def)
-  -- "PageFlush"
+  \<comment> \<open>PageFlush\<close>
   apply wp
   apply (simp add: valid_page_inv_def tcb_at_invs)
   done

@@ -3959,7 +3959,7 @@ proof -
   note hacky_cte = retype_ctes_helper [where sz = "objBitsKO kotcb" and ko = kotcb and ptr = "ctcb_ptr_to_tcb_ptr p",
     OF pal pds pno al _ _ mko, simplified new_cap_addrs_def, simplified]
 
-  -- "Ugh"
+  \<comment> \<open>Ugh\<close>
   moreover have
     "\<And>y. y \<in> ptr_val ` (CTypesDefs.ptr_add (cte_Ptr (ctcb_ptr_to_tcb_ptr p)) \<circ> of_nat) ` {k. k < 5}
     = (y && ~~ mask tcbBlockSizeBits = ctcb_ptr_to_tcb_ptr p \<and> y && mask tcbBlockSizeBits \<in> dom tcb_cte_cases)" (is "\<And>y. ?LHS y = ?RHS y")
@@ -4203,15 +4203,15 @@ proof -
     apply (simp add: rl kotcb_def projectKOs rl_tcb rl_cte)
     apply (elim conjE)
     apply (intro conjI)
-     -- "cte"
+     \<comment> \<open>cte\<close>
      apply (erule cmap_relation_retype2)
      apply (simp add:ccte_relation_nullCap nullMDBNode_def nullPointer_def)
-    -- "tcb"
+    \<comment> \<open>tcb\<close>
      apply (erule cmap_relation_updI2 [where dest = "ctcb_ptr_to_tcb_ptr p" and f = "tcb_ptr_to_ctcb_ptr", simplified])
      apply (rule map_comp_simps)
      apply (rule pks)
      apply (rule tcb_rel[simplified FLAGS_default_eq, simplified])
-    -- "ep"
+    \<comment> \<open>ep\<close>
      apply (erule iffD2 [OF cmap_relation_cong, OF refl refl, rotated -1])
      apply (simp add: cendpoint_relation_def Let_def)
      apply (subst endpoint.case_cong)
@@ -4220,7 +4220,7 @@ proof -
      apply (simp add: tcb_queue_update_other' del: tcb_queue_relation'_empty)
     apply (simp add: tcb_queue_update_other' ep2)
    apply clarsimp
-  -- "ntfn"
+  \<comment> \<open>ntfn\<close>
    apply (erule iffD2 [OF cmap_relation_cong, OF refl refl, rotated -1])
    apply (simp add: cnotification_relation_def Let_def)
      apply (subst ntfn.case_cong)
@@ -6126,7 +6126,7 @@ proof -
                     vmrights_to_H_def mask_def vm_rights_defs c_valid_cap_def cl_valid_cap_def
                     vm_page_map_type_defs maptype_to_H_def)
 
-        -- "Page objects: could possibly fix the duplication here"
+        \<comment> \<open>Page objects: could possibly fix the duplication here\<close>
          apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
           apply (simp add: object_type_from_H_def Kernel_C_defs)
           apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
@@ -6177,7 +6177,7 @@ proof -
                     vmrights_to_H_def mask_def vm_rights_defs c_valid_cap_def cl_valid_cap_def
                     vm_page_map_type_defs maptype_to_H_def)
 
-       -- "PageTableObject"
+       \<comment> \<open>PageTableObject\<close>
        apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
         apply (simp add: object_type_from_H_def Kernel_C_defs)
         apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
@@ -6206,7 +6206,7 @@ proof -
                              vmrights_to_H_def)
        apply (clarsimp simp: to_bool_def false_def isFrameType_def)
 
-      -- "PageDirectoryObject"
+      \<comment> \<open>PageDirectoryObject\<close>
       apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
        apply (simp add: object_type_from_H_def Kernel_C_defs)
        apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
@@ -6235,7 +6235,7 @@ proof -
                             vmrights_to_H_def bit_simps)
       apply (clarsimp simp: to_bool_def false_def isFrameType_def)
 
-     -- "PDPointerTableObject"
+     \<comment> \<open>PDPointerTableObject\<close>
      apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
       apply (simp add: object_type_from_H_def Kernel_C_defs)
       apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
@@ -6263,7 +6263,7 @@ proof -
                            vmrights_to_H_def bit_simps)
      apply (clarsimp simp: to_bool_def false_def isFrameType_def)
 
-    -- "PML4Object"
+    \<comment> \<open>PML4Object\<close>
     apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
      apply (simp add: object_type_from_H_def Kernel_C_defs)
      apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff

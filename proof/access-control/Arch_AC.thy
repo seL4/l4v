@@ -1114,12 +1114,12 @@ lemma decode_arch_invocation_authorised:
                         neq_Nil_conv invs_psp_aligned invs_vspace_objs cli_no_irqs)
   apply (drule diminished_cte_wp_at_valid_cap, clarsimp+)
   apply (cases cap, simp_all)
-      -- "asid pool"
+      \<comment> \<open>asid pool\<close>
      apply ((clarsimp simp: split_def cap_auth_conferred_def is_page_cap_def
                            pas_refined_all_auth_is_owns asid_high_bits_of_add_ucast
                            valid_cap_simps cap_links_asid_slot_def
                            label_owns_asid_slot_def pas_refined_refl )+)[1]
-     -- "ControlCap"
+     \<comment> \<open>ControlCap\<close>
     apply (clarsimp simp: neq_Nil_conv split_def valid_cap_simps)
     apply (cases excaps, simp_all)[1]
     apply (clarsimp simp: neq_Nil_conv aag_has_auth_to_Control_eq_owns)
@@ -1127,12 +1127,12 @@ lemma decode_arch_invocation_authorised:
     apply (clarsimp simp: valid_cap_def cap_aligned_def)
 
     apply (clarsimp simp: is_cap_simps cap_auth_conferred_def pas_refined_all_auth_is_owns aag_cap_auth_def)
-   -- "PageCap"
+   \<comment> \<open>PageCap\<close>
    apply (clarsimp simp: valid_cap_simps cli_no_irqs)
    apply (cases "invocation_type label", simp_all)
    apply (rename_tac archlabel)
    apply (case_tac archlabel, simp_all)
-     -- "Map"
+     \<comment> \<open>Map\<close>
    apply (clarsimp simp: cap_auth_conferred_def is_cap_simps is_page_cap_def pas_refined_all_auth_is_owns)
      apply (rule conjI)
       apply (clarsimp simp: cap_auth_conferred_def is_page_cap_def pas_refined_all_auth_is_owns aag_cap_auth_def cli_no_irqs cap_links_asid_slot_def)
@@ -1144,7 +1144,7 @@ lemma decode_arch_invocation_authorised:
                 exI vspace_cap_rights_to_auth_def mask_vm_rights_def
                 validate_vm_rights_def vm_read_write_def vm_read_only_def
                 vm_kernel_only_def)
-  -- "Remap"
+  \<comment> \<open>Remap\<close>
    apply (clarsimp simp: cap_auth_conferred_def
      is_page_cap_def pas_refined_all_auth_is_owns)
    apply (rule conjI, fastforce)
@@ -1155,16 +1155,16 @@ lemma decode_arch_invocation_authorised:
                 validate_vm_rights_def vm_read_write_def vm_read_only_def
                 vm_kernel_only_def
              split: if_split_asm)
-   -- "Unmap"
+   \<comment> \<open>Unmap\<close>
    apply (simp add: aag_cap_auth_def cli_no_irqs)
-   -- "PageTableCap"
+   \<comment> \<open>PageTableCap\<close>
    apply (cases "invocation_type label", simp_all)
    apply (rename_tac archlabel)
    apply (case_tac archlabel, simp_all)
-   -- "PTMap"
+   \<comment> \<open>PTMap\<close>
    apply (clarsimp simp: aag_cap_auth_def cli_no_irqs cap_links_asid_slot_def cap_auth_conferred_def is_page_cap_def
      pde_ref2_def pas_refined_all_auth_is_owns pas_refined_refl pd_shifting [folded pd_bits_14] )
-  -- "Unmap"
+  \<comment> \<open>Unmap\<close>
    apply (rename_tac word option archlabel)
    apply (clarsimp simp: aag_cap_auth_def cli_no_irqs cap_links_asid_slot_def cap_auth_conferred_def is_page_cap_def
      pde_ref2_def pas_refined_all_auth_is_owns pas_refined_refl  )

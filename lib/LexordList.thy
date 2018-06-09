@@ -164,9 +164,9 @@ text \<open>
 
 lemmas lexord_list_simps =
   simp_thms
-  lexord_list.inject list.distinct list.inject -- "eq"
-  lexord_not_less_Nil lexord_Nil_less_Cons lexord_Cons_less_Cons -- "less"
-  lexord_le_Nil lexord_Nil_le_Cons lexord_Cons_le_Cons -- "le"
+  lexord_list.inject list.distinct list.inject \<comment> \<open>eq\<close>
+  lexord_not_less_Nil lexord_Nil_less_Cons lexord_Cons_less_Cons \<comment> \<open>less\<close>
+  lexord_le_Nil lexord_Nil_le_Cons lexord_Cons_le_Cons \<comment> \<open>le\<close>
 
 experiment begin
   lemma "lexord_list [1, 2, 3] < lexord_list [1, 3 :: nat]"

@@ -935,7 +935,7 @@ lemma pt_slot_eq:
   apply clarsimp
   done
 
--- "set_other_obj_corres unfortunately doesn't work here"
+\<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
 lemma set_pd_corres [corres]:
   "pde_relation_aligned (p>>pde_bits) pde pde' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits)

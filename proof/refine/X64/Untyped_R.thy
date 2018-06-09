@@ -460,23 +460,23 @@ lemma ctes_of_ko:
    (\<forall>ptr\<in>capRange cap. \<exists>optr ko. ksPSpace s optr = Some ko \<and>
                                   ptr \<in> obj_range' optr ko)"
   apply (case_tac cap)
-             -- "TCB case"
+             \<comment> \<open>TCB case\<close>
              apply (simp_all add: isCap_simps capRange_def)
        apply (clarsimp simp: valid_cap'_def obj_at'_def)
        apply (intro exI conjI, assumption)
        apply (clarsimp simp: projectKO_eq objBits_def obj_range'_def
                        dest!: projectKO_opt_tcbD simp: objBitsKO_def)
-      -- "NTFN case"
+      \<comment> \<open>NTFN case\<close>
       apply (clarsimp simp: valid_cap'_def obj_at'_def)
       apply (intro exI conjI, assumption)
       apply (clarsimp simp: projectKO_eq objBits_def
      obj_range'_def projectKO_ntfn objBitsKO_def)
-     -- "EP case"
+     \<comment> \<open>EP case\<close>
      apply (clarsimp simp: valid_cap'_def obj_at'_def)
      apply (intro exI conjI, assumption)
      apply (clarsimp simp: projectKO_eq objBits_def
     obj_range'_def projectKO_ep objBitsKO_def)
-    -- "Zombie case"
+    \<comment> \<open>Zombie case\<close>
     apply (rename_tac word zombie_type nat)
     apply (case_tac zombie_type)
      apply (clarsimp simp: valid_cap'_def obj_at'_def)
@@ -491,10 +491,10 @@ lemma ctes_of_ko:
     apply (drule_tac x=idx in spec)
     apply (clarsimp simp: less_mask_eq)
     apply (fastforce simp: obj_range'_def projectKOs objBits_simps' field_simps)[1]
-   -- "Arch cases"
+   \<comment> \<open>Arch cases\<close>
    apply (rename_tac arch_capability)
    apply (case_tac arch_capability)
-       -- "ASID case"
+       \<comment> \<open>ASID case\<close>
           apply (clarsimp simp: valid_cap'_def  typ_at'_def ko_wp_at'_def)
           apply (intro exI conjI, assumption)
           apply (clarsimp simp: obj_range'_def archObjSize_def objBitsKO_def)
@@ -503,11 +503,11 @@ lemma ctes_of_ko:
           apply (case_tac arch_kernel_object;
               simp add: archObjSize_def asid_low_bits_def pageBits_def bit_simps)
          apply simp
-        -- "IOPort case"
+        \<comment> \<open>IOPort case\<close>
         apply clarsimp
-        -- "IOPortControl case"
+        \<comment> \<open>IOPortControl case\<close>
         apply clarsimp
-     -- "Page case"
+     \<comment> \<open>Page case\<close>
        apply (rename_tac word vmrights vmpage_size option)
        apply (clarsimp simp: valid_cap'_def typ_at'_def ko_wp_at'_def capAligned_def)
        apply (frule_tac ptr = ptr and sz = "pageBits" in nasty_range [where 'a=machine_word_len, folded word_bits_def])
@@ -518,7 +518,7 @@ lemma ctes_of_ko:
        apply (clarsimp simp: obj_range'_def)
        apply (case_tac ko, simp_all split: if_splits,
              (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)+)[1]
-    -- "PT case"
+    \<comment> \<open>PT case\<close>
       apply (rename_tac word option)
       apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def bit_simps
                             page_table_at'_def typ_at'_def ko_wp_at'_def ptBits_def)
@@ -536,7 +536,7 @@ lemma ctes_of_ko:
       apply (rename_tac arch_kernel_object)
       apply (case_tac arch_kernel_object; simp)
       apply (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)
-   -- "PD case"
+   \<comment> \<open>PD case\<close>
      apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def pdBits_def bit_simps
                          page_directory_at'_def typ_at'_def ko_wp_at'_def)
      apply (frule_tac ptr=ptr and sz=3 in
@@ -553,7 +553,7 @@ lemma ctes_of_ko:
      apply (rename_tac arch_kernel_object)
      apply (case_tac arch_kernel_object; simp)
      apply (simp add: field_simps archObjSize_def shiftl_t2n)
-   -- "PDPT case"
+   \<comment> \<open>PDPT case\<close>
     apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def pdptBits_def bit_simps
                          pd_pointer_table_at'_def typ_at'_def ko_wp_at'_def)
     apply (frule_tac ptr=ptr and sz=3 in
@@ -570,7 +570,7 @@ lemma ctes_of_ko:
     apply (rename_tac arch_kernel_object)
     apply (case_tac arch_kernel_object; simp)
     apply (simp add: field_simps archObjSize_def shiftl_t2n)
-   -- "PML4 case"
+   \<comment> \<open>PML4 case\<close>
    apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def pml4Bits_def bit_simps
                          page_map_l4_at'_def typ_at'_def ko_wp_at'_def)
    apply (frule_tac ptr=ptr and sz=3 in
@@ -587,7 +587,7 @@ lemma ctes_of_ko:
    apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object; simp)
    apply (simp add: field_simps archObjSize_def shiftl_t2n)
-  -- "CNode case"
+  \<comment> \<open>CNode case\<close>
   apply (clarsimp simp: valid_cap'_def obj_at'_def capAligned_def
                         objBits_simps projectKOs)
   apply (frule_tac ptr=ptr and sz=cte_level_bits

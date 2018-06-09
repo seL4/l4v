@@ -192,7 +192,7 @@ always discards the effect of the method it is given.
 \<close>
 lemma "\<lbrakk> A; B; \<lbrakk> A; B; D; E \<rbrakk> \<Longrightarrow> C; D; E \<rbrakk> \<Longrightarrow> A \<and> ((B \<and> C) \<and> D) \<and> E"
   apply (lift_conjunct \<open>match conclusion in C \<Rightarrow> \<open>-\<close>\<close>)
-  -- \<open>@{term C} as been moved to the front of the conclusion.\<close>
+  \<comment> \<open>@{term C} as been moved to the front of the conclusion.\<close>
   apply (match conclusion in \<open>C \<and> A \<and> (B \<and> D) \<and> E\<close> \<Rightarrow> \<open>-\<close>)
   oops
 
@@ -203,10 +203,10 @@ is discarded, so the body of the @{method match} is irrelevant.
 \<close>
 lemma "\<lbrakk> A; B; \<lbrakk> A; B; D; E \<rbrakk> \<Longrightarrow> C; D; E \<rbrakk> \<Longrightarrow> A \<and> ((B \<and> C) \<and> D) \<and> E"
   apply (extract_conjunct \<open>match conclusion in C \<Rightarrow> \<open>-\<close>\<close>)
-  -- \<open>@{method extract_conjunct} gives us the matched conjunct @{term C} as a separate subgoal.\<close>
+  \<comment> \<open>@{method extract_conjunct} gives us the matched conjunct @{term C} as a separate subgoal.\<close>
    apply (match conclusion in C \<Rightarrow> \<open>-\<close>)
    apply blast
-  -- \<open>The other subgoal contains the remaining conjuncts untouched.\<close>
+  \<comment> \<open>The other subgoal contains the remaining conjuncts untouched.\<close>
   apply (match conclusion in \<open>A \<and> (B \<and> D) \<and> E\<close> \<Rightarrow> \<open>-\<close>)
   oops
 
@@ -216,12 +216,12 @@ to the extracted subgoal.
 \<close>
 lemma "\<lbrakk> A; B; \<lbrakk> A; B; D; E \<rbrakk> \<Longrightarrow> C; D; E \<rbrakk> \<Longrightarrow> A \<and> ((B \<and> C) \<and> D) \<and> E"
   apply (apply_conjunct \<open>match conclusion in C \<Rightarrow> \<open>match premises in H: _ \<Rightarrow> \<open>rule H\<close>\<close>\<close>)
-  -- \<open>We get four subgoals from applying the given method to the matched conjunct @{term C}.\<close>
+  \<comment> \<open>We get four subgoals from applying the given method to the matched conjunct @{term C}.\<close>
       apply (match premises in H: A \<Rightarrow> \<open>rule H\<close>)
      apply (match premises in H: B \<Rightarrow> \<open>rule H\<close>)
     apply (match premises in H: D \<Rightarrow> \<open>rule H\<close>)
    apply (match premises in H: E \<Rightarrow> \<open>rule H\<close>)
-  -- \<open>The last subgoal contains the remaining conjuncts untouched.\<close>
+  \<comment> \<open>The last subgoal contains the remaining conjuncts untouched.\<close>
   apply (match conclusion in \<open>A \<and> (B \<and> D) \<and> E\<close> \<Rightarrow> \<open>-\<close>)
   oops
 

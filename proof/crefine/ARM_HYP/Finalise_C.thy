@@ -661,7 +661,7 @@ lemma doUnbindNotification_ccorres:
                              cpspace_relation_def update_ntfn_map_tos)
             apply (elim conjE)
             apply (intro conjI)
-            -- "tcb relation"
+            \<comment> \<open>tcb relation\<close>
               apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
@@ -709,7 +709,7 @@ lemma doUnbindNotification_ccorres':
                              cpspace_relation_def update_ntfn_map_tos)
             apply (elim conjE)
             apply (intro conjI)
-            -- "tcb relation"
+            \<comment> \<open>tcb relation\<close>
               apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
@@ -906,7 +906,7 @@ lemma finaliseCap_True_cases_ccorres:
      apply (clarsimp simp add: return_def ccap_relation_NullCap_iff)
      apply (clarsimp simp add: irq_opt_relation_def)
     apply vcg
-   -- "NullCap case by exhaustion"
+   \<comment> \<open>NullCap case by exhaustion\<close>
    apply (simp add: cap_get_tag_isCap Let_def
                     ccorres_cond_empty_iff ccorres_cond_univ_iff)
    apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,

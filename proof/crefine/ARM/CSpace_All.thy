@@ -40,9 +40,9 @@ lemma lookupCap_ccorres':
   apply (cinit lift: cPtr_' thread_' simp: lookupCapAndSlot_def liftME_def bindE_assoc)
 
    apply (ctac (no_vcg) add: lookupSlotForThread_ccorres')
-     --"case where lu_ret.status is EXCEPTION_NONE"
+     \<comment> \<open>case where lu_ret.status is EXCEPTION_NONE\<close>
      apply (simp  add: split_beta cong:call_ignore_cong)
-     apply csymbr  --"call status_C_update"
+     apply csymbr  \<comment> \<open>call status_C_update\<close>
      apply (simp add: Collect_const[symmetric] lookupSlot_raw_rel_def liftE_def
                  del: Collect_const)
      apply (rule ccorres_move_c_guard_cte)
@@ -50,18 +50,18 @@ lemma lookupCap_ccorres':
        apply (rule ccorres_return_CE [unfolded returnOk_def, simplified], simp+)[1]
       apply wp
      apply vcg
-    --"case where lu_ret.status is *not* EXCEPTION_NONE"
+    \<comment> \<open>case where lu_ret.status is *not* EXCEPTION_NONE\<close>
     apply simp
     apply (rule ccorres_split_throws)
      apply (rule ccorres_rhs_assoc)+
      apply csymbr
-     apply csymbr -- "call cap_null_cap_new_'proc"
+     apply csymbr \<comment> \<open>call cap_null_cap_new_'proc\<close>
      apply csymbr
      apply (rule ccorres_return_C_errorE, simp+)[1]
     apply vcg
    apply (wp | simp)+
 
-  -- "last subgoal"
+  \<comment> \<open>last subgoal\<close>
   apply (clarsimp simp: valid_pspace_valid_objs')
   apply (intro impI conjI allI)
     apply (simp add: lookupSlot_raw_rel_def)
@@ -91,10 +91,10 @@ lemma lookupCapAndSlot_ccorres :
   apply (cinit lift: thread_' cPtr_')
 
    apply (ctac (no_vcg))
-     --"case where lu_ret.status is EXCEPTION_NONE"
+     \<comment> \<open>case where lu_ret.status is EXCEPTION_NONE\<close>
      apply (simp  add: split_beta cong:call_ignore_cong)
-     apply csymbr  --"call status_C_update"
-     apply csymbr  --"call slot_C_update"
+     apply csymbr  \<comment> \<open>call status_C_update\<close>
+     apply csymbr  \<comment> \<open>call slot_C_update\<close>
      apply (simp add: Collect_const[symmetric] lookupSlot_raw_rel_def liftE_bindE
                  del: Collect_const)
      apply (rule ccorres_move_c_guard_cte)
@@ -103,7 +103,7 @@ lemma lookupCapAndSlot_ccorres :
      apply (clarsimp simp: Bex_def in_monad getSlotCap_def in_getCTE2 cte_wp_at_ctes_of)
      apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
      apply (simp add: ccte_relation_ccap_relation typ_heap_simps')
-    --"case where lu_ret.status is *not* EXCEPTION_NONE"
+    \<comment> \<open>case where lu_ret.status is *not* EXCEPTION_NONE\<close>
     apply simp
     apply (rule ccorres_split_throws)
      apply (rule ccorres_rhs_assoc)+
@@ -113,7 +113,7 @@ lemma lookupCapAndSlot_ccorres :
     apply vcg
    apply (wp | simp)+
 
-  -- "last subgoal"
+  \<comment> \<open>last subgoal\<close>
   apply clarsimp
   apply (rule conjI, fastforce)
   apply clarsimp
@@ -160,14 +160,14 @@ lemma lookupSlotForCNodeOp_ccorres':
   (lookupSlotForCNodeOp isSource croot capptr depth)
   (Call lookupSlotForCNodeOp_'proc)"
   apply (cinit lift: capptr_' isSource_' root_' depth_')
-   apply csymbr -- "slot_C_update"
-   apply csymbr -- "cap_get_capType"
+   apply csymbr \<comment> \<open>slot_C_update\<close>
+   apply csymbr \<comment> \<open>cap_get_capType\<close>
 
    apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws2)
-      -- "correspondance of Haskell and C conditions"
+      \<comment> \<open>correspondance of Haskell and C conditions\<close>
       apply (clarsimp simp: Collect_const_mem cap_get_tag_isCap)
 
-     -- "case where root is *not* a CNode => throw InvalidRoot"
+     \<comment> \<open>case where root is *not* a CNode => throw InvalidRoot\<close>
      apply simp
      apply (rule_tac P=\<top> and P' =UNIV in ccorres_from_vcg_throws)
      apply (rule allI, rule conseqPre, vcg)
@@ -177,7 +177,7 @@ lemma lookupSlotForCNodeOp_ccorres':
      apply clarsimp
      apply (subst syscall_error_to_H_cases(6), simp+)[1]
 
-    -- " case where root is a CNode"
+    \<comment> \<open>case where root is a CNode\<close>
     apply (simp add: rangeCheck_def)
     apply csymbr
     apply (rule ccorres_Cond_rhs_Seq)
@@ -194,13 +194,13 @@ lemma lookupSlotForCNodeOp_ccorres':
      apply vcg
     apply csymbr
     apply (rule_tac Q="\<lambda>s. depth < 2 ^ word_bits" and Q'=\<top> in ccorres_split_unless_throwError_cond)
-       -- "correspondance of Haskell and C conditions"
+       \<comment> \<open>correspondance of Haskell and C conditions\<close>
        apply (clarsimp simp: Collect_const_mem fromIntegral_def integral_inv
                              if_1_0_0)
        apply (simp add: word_size unat_of_nat32 word_less_nat_alt
                         word_less_1[symmetric] linorder_not_le)
 
-      -- "case of RangeError"
+      \<comment> \<open>case of RangeError\<close>
       apply (rule_tac P= \<top> and P' =UNIV in ccorres_from_vcg_throws)
       apply (rule allI, rule conseqPre, vcg)
       apply (clarsimp simp: throwError_def  return_def syscall_error_rel_def)
@@ -208,20 +208,20 @@ lemma lookupSlotForCNodeOp_ccorres':
       apply (subst syscall_error_to_H_cases(4), simp+)[1]
       apply (simp add: word_size word_sle_def)
 
-     -- "case where there is *no* RangeError"
+     \<comment> \<open>case where there is *no* RangeError\<close>
      apply (rule_tac xf'=lookupSlot_xf in  ccorres_rel_imp)
       apply (rule_tac r="\<lambda>w w'. w'= Ptr w"
           and f="\<lambda> st fl es. fl = scast EXCEPTION_SYSCALL_ERROR \<and>
                            syscall_error_to_H (errsyscall es) (errlookup_fault es) = Some (FailedLookup isSource st)"
           in lookupErrorOnFailure_ccorres)
-      apply (ctac (no_vcg))  -- "resolveAddressBits"
-        -- " case where resolveAddressBits results in EXCEPTION_NONE"
+      apply (ctac (no_vcg))  \<comment> \<open>resolveAddressBits\<close>
+        \<comment> \<open>case where resolveAddressBits results in EXCEPTION_NONE\<close>
         apply clarsimp
       apply (rule_tac A=\<top> and A'=UNIV in ccorres_guard_imp2)
          apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws2)
-            -- "correspondance of Haskell and C conditions"
+            \<comment> \<open>correspondance of Haskell and C conditions\<close>
             apply (clarsimp simp: Collect_const_mem unat_gt_0)
-           -- " case where bits are remaining"
+           \<comment> \<open>case where bits are remaining\<close>
            apply (rule_tac P= \<top> and P' =UNIV in ccorres_from_vcg_throws)
          apply (rule allI, rule conseqPre, vcg)
          apply (clarsimp simp: throwError_def return_def)
@@ -230,17 +230,17 @@ lemma lookupSlotForCNodeOp_ccorres':
            apply (simp add: lookup_fault_depth_mismatch_lift)
            apply (erule le_32_mask_eq)
 
-          -- " case where *no* bits are remaining"
-          apply csymbr -- "slot_C_update"
-        apply csymbr -- "status_C_update"
+          \<comment> \<open>case where *no* bits are remaining\<close>
+          apply csymbr \<comment> \<open>slot_C_update\<close>
+        apply csymbr \<comment> \<open>status_C_update\<close>
         apply (rule ccorres_return_CE, simp+)[1]
 
        apply vcg
 
-        -- "guard_imp subgoal"
+        \<comment> \<open>guard_imp subgoal\<close>
         apply clarsimp
 
-       -- " case where resolveAddressBits does *not* results in EXCEPTION_NONE"
+       \<comment> \<open>case where resolveAddressBits does *not* results in EXCEPTION_NONE\<close>
        apply clarsimp
      apply (rule_tac P= \<top> and P' ="\<lbrace>\<exists>v. (lookup_fault_lift (\<acute>current_lookup_fault)) = Some v
                                               \<and> lookup_fault_to_H v = err \<rbrace>"
@@ -251,7 +251,7 @@ lemma lookupSlotForCNodeOp_ccorres':
      apply (subst syscall_error_to_H_cases(6), simp+)[1]
       apply wp
 
-     -- "rel_imp"
+     \<comment> \<open>rel_imp\<close>
      apply clarsimp
      apply (case_tac x, clarsimp)
       apply (simp add: syscall_error_rel_def errstate_def)
@@ -261,7 +261,7 @@ lemma lookupSlotForCNodeOp_ccorres':
     apply vcg
    apply vcg
 
-  -- "last subgoal"
+  \<comment> \<open>last subgoal\<close>
   apply (clarsimp simp: if_1_0_0  to_bool_def true_def word_size
                         fromIntegral_def integral_inv)
   apply (case_tac "cap_get_tag root = scast cap_cnode_cap")

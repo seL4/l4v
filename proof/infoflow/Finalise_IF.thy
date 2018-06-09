@@ -1195,7 +1195,7 @@ lemma unbind_maybe_notification_reads_respects:
 apply wp
   apply (case_tac "ntfn_bound_tcb rv")
    apply (clarsimp, wp)[1]
-  -- "interesting case, ntfn is bound"
+  \<comment> \<open>interesting case, ntfn is bound\<close>
   apply (clarsimp)
    apply ((wp set_bound_notification_none_reads_respects set_simple_ko_reads_respects
               get_simple_ko_reads_respects

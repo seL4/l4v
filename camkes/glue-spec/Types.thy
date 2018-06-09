@@ -57,22 +57,22 @@ text {*
 *}
 
 datatype question_data
-   -- "Inter-component questions"
+   \<comment> \<open>Inter-component questions\<close>
   = Call nat "variable list"
   | Return "variable list"
-   -- "Questions from components to events"
+   \<comment> \<open>Questions from components to events\<close>
   | Set
   | Poll
-   -- "Questions from components to shared memory"
+   \<comment> \<open>Questions from components to shared memory\<close>
   | Read nat
   | Write nat variable
 
 datatype answer_data
-   -- "Answers from events to components"
+   \<comment> \<open>Answers from events to components\<close>
   = Pending bool
-   -- "Answers from shared memory to components"
+   \<comment> \<open>Answers from shared memory to components\<close>
   | Value variable
-   -- "An answer that conveys no information"
+   \<comment> \<open>An answer that conveys no information\<close>
   | Void
 
 record ('channel) question =

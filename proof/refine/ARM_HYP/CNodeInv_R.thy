@@ -183,7 +183,7 @@ lemma dec_cnode_inv_corres:
   (decodeCNodeInvocation (mi_label mi) args
     cap' cs')"
   apply (rule decode_cnode_cases2[where args=args and exs=cs and label="mi_label mi"])
-        -- "Move / Insert"
+        \<comment> \<open>Move / Insert\<close>
         apply (clarsimp simp: list_all2_Cons1 decode_cnode_invocation_def
                               decodeCNodeInvocation_def split_def Let_def
                               unlessE_whenE isCNodeCap_CNodeCap
@@ -230,7 +230,7 @@ lemma dec_cnode_inv_corres:
                                  | clarsimp)+
          subgoal by (auto elim!: valid_cnode_capI)
         apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-       -- "Revoke"
+       \<comment> \<open>Revoke\<close>
        apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def
                         isCap_simps Let_def unlessE_whenE del: ser_def split del: if_split)
        apply (rule corres_guard_imp, rule corres_splitEE [OF _ lsfc_corres])
@@ -242,7 +242,7 @@ lemma dec_cnode_inv_corres:
           apply wp+
         apply (auto elim!: valid_cnode_capI)[1]
        apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-      -- "Delete"
+      \<comment> \<open>Delete\<close>
       apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def
                        isCap_simps Let_def unlessE_whenE del: ser_def split del: if_split)
       apply (rule corres_guard_imp)
@@ -255,7 +255,7 @@ lemma dec_cnode_inv_corres:
          apply wp+
        apply (auto elim!: valid_cnode_capI)[1]
       apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-     -- "SaveCall"
+     \<comment> \<open>SaveCall\<close>
      apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def
                       isCap_simps Let_def unlessE_whenE del: ser_def split del: if_split)
      apply (rule corres_guard_imp)
@@ -273,7 +273,7 @@ lemma dec_cnode_inv_corres:
         apply (wp hoare_drop_imps)+
       apply (auto elim!: valid_cnode_capI)[1]
      apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-    -- "CancelBadgedSends"
+    \<comment> \<open>CancelBadgedSends\<close>
     apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def
                      isCap_simps Let_def unlessE_whenE del: ser_def split del: if_split)
     apply (rule corres_guard_imp)
@@ -290,7 +290,7 @@ lemma dec_cnode_inv_corres:
       apply (simp add: cte_wp_at_ctes_of pred_conj_def cong: conj_cong)
      apply (fastforce elim!: valid_cnode_capI simp: invs_def valid_state_def valid_pspace_def)
     apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-   -- "Rotate"
+   \<comment> \<open>Rotate\<close>
    apply (frule list_all2_lengthD)
    apply (clarsimp simp: list_all2_Cons1)
    apply (simp add: le_diff_conv2 split_def decode_cnode_invocation_def decodeCNodeInvocation_def
@@ -356,7 +356,7 @@ lemma dec_cnode_inv_corres:
                     | simp add: if_apply_def2 del: de_Morgan_conj split del: if_split)+
     apply (auto elim!: valid_cnode_capI)[1]
    apply (clarsimp dest!: list_all2_lengthD simp: invs'_def valid_state'_def valid_pspace'_def)
-  -- "Errors"
+  \<comment> \<open>Errors\<close>
   apply (elim disjE)
      apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def
                       isCNodeCap_CNodeCap unlessE_whenE
@@ -487,7 +487,7 @@ lemma decodeCNodeInv_wf[wp]:
      (CNodeCap w n w2 n2) cs
    \<lbrace>valid_cnode_inv'\<rbrace>, -"
   apply (rule decode_cnode_cases2[where label=label and args=args and exs=cs])
-        -- "Move/Insert"
+        \<comment> \<open>Move/Insert\<close>
         apply (simp add: decodeCNodeInvocation_def isCNodeCap_CNodeCap
                          split_def cnode_invok_case_cleanup unlessE_whenE
                    cong: if_cong bool.case_cong list.case_cong)
@@ -511,26 +511,26 @@ lemma decodeCNodeInv_wf[wp]:
                             untyped_derived_eq_refl)
            apply (auto simp:isCap_simps updateCapData_def)[1]
           apply (wp ensureEmptySlot_stronger | simp | wp_once hoare_drop_imps)+
-       -- "Revoke"
+       \<comment> \<open>Revoke\<close>
        apply (simp add: decodeCNodeInvocation_def isCNodeCap_CNodeCap split_def
                         unlessE_whenE
                   cong: if_cong bool.case_cong list.case_cong)
        apply (rule hoare_pre)
         apply (wp lsfco_cte_at' | simp)+
        apply clarsimp
-      -- "Delete"
+      \<comment> \<open>Delete\<close>
       apply (simp add: decodeCNodeInvocation_def isCNodeCap_CNodeCap split_def
                        unlessE_whenE
                  cong: if_cong bool.case_cong list.case_cong)
       apply (rule hoare_pre)
        apply (wp lsfco_cte_at' | simp)+
       apply clarsimp
-     -- "SaveCaller"
+     \<comment> \<open>SaveCaller\<close>
      apply (simp add: decodeCNodeInvocation_def isCNodeCap_CNodeCap split_def
                       unlessE_whenE)
      apply (rule hoare_pre)
       apply (wp lsfco_cte_at' | simp | wp_once hoare_drop_imps)+
-    -- "CancelBadgedSends"
+    \<comment> \<open>CancelBadgedSends\<close>
     apply (simp add: decodeCNodeInvocation_def isCNodeCap_CNodeCap split_def
                      unlessE_whenE)
     apply (rule hoare_pre)
@@ -540,7 +540,7 @@ lemma decodeCNodeInv_wf[wp]:
      apply (simp add: cte_wp_at_ctes_of imp_ex hasCancelSendRights_not_Null)
      apply (clarsimp simp: ctes_of_valid' invs_valid_objs')
     apply (simp add: invs_valid_objs')
-   -- "Rotate"
+   \<comment> \<open>Rotate\<close>
    apply (simp add: decodeCNodeInvocation_def isCNodeCap_CNodeCap split_def
                     unlessE_def)
    apply (rule hoare_pre)
@@ -558,7 +558,7 @@ lemma decodeCNodeInv_wf[wp]:
       apply (fastforce simp:isCap_simps updateCapData_def)
      apply (wp lsfco_cte_at')+
    apply clarsimp
-  -- "Errors"
+  \<comment> \<open>Errors\<close>
   apply (elim disjE exE conjE,
          simp_all add: decodeCNodeInvocation_def isCNodeCap_CNodeCap
                        unlessE_whenE cnode_invok_case_cleanup

@@ -216,7 +216,7 @@ lemma arch_decode_irq_control_corres:
                              liftE_bindE split_def)
    prefer 2 apply (auto split: list.split)[1]
   apply (rule conjI, clarsimp)
-  -- "MSI"
+  \<comment> \<open>MSI\<close>
   apply (rule corres_guard_imp)
    apply (rule whenE_throwError_corres)
      apply (simp add: irq_const_defs)
@@ -234,7 +234,7 @@ lemma arch_decode_irq_control_corres:
            apply ((wpsimp wp: isIRQActive_inv
       simp: invs_valid_objs invs_psp_aligned invs_valid_objs' invs_pspace_aligned' invs_pspace_distinct'
       | wp_once hoare_drop_imps)+)
-    -- "IOAPIC"
+    \<comment> \<open>IOAPIC\<close>
   apply (rule conjI, clarsimp)
   apply (rule corres_guard_imp)
    apply (rule whenE_throwError_corres)

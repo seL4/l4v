@@ -341,7 +341,7 @@ lemma set_cap_pas_refined [wp]:
   apply (rule hoare_pre)
    apply (wp set_cap_caps_of_state| wps)+
   apply clarsimp
-  apply (intro conjI)  -- "auth_graph_map"
+  apply (intro conjI)  \<comment> \<open>auth_graph_map\<close>
    apply (clarsimp dest!: auth_graph_map_memD)
    apply (erule state_bits_to_policy.cases, auto simp: cap_links_asid_slot_def label_owns_asid_slot_def intro: auth_graph_map_memI state_bits_to_policy.intros
         split: if_split_asm)[1]

@@ -19,7 +19,7 @@ imports
   KHeap_D
 begin
 
--- "Return all slots in the system containing a cap with the given property."
+\<comment> \<open>Return all slots in the system containing a cap with the given property.\<close>
 definition
   slots_with :: "(cdl_cap \<Rightarrow> bool) \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_ref set"
 where
@@ -28,14 +28,14 @@ where
                                         object_slots x slot = Some c \<and> P c}"
 
 
--- "Remove a pending operation from the given TCB."
+\<comment> \<open>Remove a pending operation from the given TCB.\<close>
 definition
   remove_pending_operation :: "cdl_tcb \<Rightarrow> cdl_cap \<Rightarrow> cdl_tcb"
 where
   "remove_pending_operation t cap \<equiv> t\<lparr>cdl_tcb_caps := (cdl_tcb_caps t)(tcb_pending_op_slot \<mapsto> cap)\<rparr>"
 
 
--- "Is the given thread pending on the given endpoint?"
+\<comment> \<open>Is the given thread pending on the given endpoint?\<close>
 definition
   is_thread_blocked_on_endpoint :: "cdl_tcb \<Rightarrow> cdl_object_id \<Rightarrow> bool"
 where
@@ -47,7 +47,7 @@ where
       | _ \<Rightarrow> False"
 
 
--- "Cancel all pending IPCs currently blocked on this endpoint."
+\<comment> \<open>Cancel all pending IPCs currently blocked on this endpoint.\<close>
 definition
   cancel_all_ipc :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
@@ -62,7 +62,7 @@ where
            | _ \<Rightarrow> obj)
           \<circ> (cdl_objects s)\<rparr>)"
 
--- "Is the given thread bound to the given ntfn?"
+\<comment> \<open>Is the given thread bound to the given ntfn?\<close>
 definition
   is_thread_bound_to_ntfn :: "cdl_tcb \<Rightarrow> cdl_object_id \<Rightarrow> bool"
 where
@@ -71,7 +71,7 @@ where
         Some (BoundNotificationCap a) \<Rightarrow> a = ntfn
       | _ \<Rightarrow> False"
 
--- "find all tcbs that are bound to a given ntfn"
+\<comment> \<open>find all tcbs that are bound to a given ntfn\<close>
 definition
   get_bound_notification_threads :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id set"
 where
@@ -159,7 +159,7 @@ where
 
 end
 
--- "These caps don't count when determining if an entity should be deleted or not"
+\<comment> \<open>These caps don't count when determining if an entity should be deleted or not\<close>
 definition
   cap_counts :: "cdl_cap \<Rightarrow> bool" where
  "cap_counts cap \<equiv> (case cap of
@@ -186,7 +186,7 @@ definition
   cdl_cap_irq :: "cdl_cap \<Rightarrow> cdl_irq option" where
  "cdl_cap_irq cap \<equiv> (case cap of IrqHandlerCap irq \<Rightarrow> Some irq | _ \<Rightarrow> None)"
 
--- "Some caps don't count when determining if an entity should be deleted or not"
+\<comment> \<open>Some caps don't count when determining if an entity should be deleted or not\<close>
 definition
   is_final_cap' :: "cdl_cap \<Rightarrow> cdl_state \<Rightarrow> bool" where
  "is_final_cap' cap s \<equiv> ((cap_counts cap) \<and>

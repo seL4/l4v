@@ -454,7 +454,7 @@ proof -
    apply (case_tac arch_cap)
         apply (simp_all add: simps arch_update_cap_data_def
                              ARM_HYP_H.updateCapData_def)[6]
-  -- CNodeCap
+  \<comment> \<open>CNodeCap\<close>
   apply (simp add: simps word_bits_def the_cnode_cap_def andCapRights_def
                    rightsFromWord_def data_to_rights_def nth_ucast cteRightsBits_def
                    cteGuardBits_def)

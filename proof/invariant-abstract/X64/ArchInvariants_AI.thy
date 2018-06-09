@@ -16,7 +16,7 @@ section "Move this up"
 
 qualify X64 (in Arch)
 
--- ---------------------------------------------------------------------------
+\<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Things to Move Up"
 
 (* FIXME: move to spec level *)
@@ -26,7 +26,7 @@ axiomatization
 
 end_qualify
 
--- ---------------------------------------------------------------------------
+\<comment> \<open>---------------------------------------------------------------------------\<close>
 section "X64-specific invariant definitions"
 
 qualify X64_A (in Arch)

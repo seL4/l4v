@@ -99,9 +99,9 @@ lemma perform_invocation_respects:
             invoke_arch_respects invoke_irq_control_respects invoke_irq_handler_respects
        | wp_once hoare_pre_cont)+
   apply (clarsimp simp: authorised_invocation_def split: Invocations_A.invocation.splits)
-  -- "EP case"
+  \<comment> \<open>EP case\<close>
   apply (fastforce simp: obj_at_def is_tcb split: if_split_asm)
-  -- "NTFN case"
+  \<comment> \<open>NTFN case\<close>
   apply fastforce
   done
 
@@ -529,7 +529,7 @@ lemma handle_interrupt_integrity:
        | wpc
        | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def handle_reserved_irq_def)+
   apply clarsimp
-  apply (rule conjI, fastforce)+ -- "valid_objs etc."
+  apply (rule conjI, fastforce)+ \<comment> \<open>valid_objs etc.\<close>
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (rule_tac s = s in hacky_ipc_Send [where irq = irq])
    apply (drule (1) cap_auth_caps_of_state)

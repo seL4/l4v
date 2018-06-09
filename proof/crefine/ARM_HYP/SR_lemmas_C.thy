@@ -102,7 +102,7 @@ lemma cap_get_tag_isCap0:
   apply (erule ccap_relationE)
   apply (simp add: cap_to_H_def cap_lift_def Let_def isArchCap_tag_def2 isArchCap_def)
   by (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def
-              split: if_split_asm) -- "takes a while"
+              split: if_split_asm) \<comment> \<open>takes a while\<close>
 
 
 lemma cap_get_tag_isCap:
@@ -1541,7 +1541,7 @@ lemma cmap_relation_cong:
    apply (rule Some_the [where f = cm'])
    apply (erule subsetD)
    apply (erule imageI)
-  -- "clag"
+  \<comment> \<open>clag\<close>
    apply simp
    apply (erule conjE)
    apply (drule equalityD1)
@@ -2124,7 +2124,7 @@ lemma cap_get_tag_isCap_ArchObject0:
   apply -
   apply (erule ccap_relationE)
   apply (simp add: cap_to_H_def cap_lift_def Let_def isArchCap_def)
-  by (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def split: if_split_asm) -- "takes a while"
+  by (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def split: if_split_asm) \<comment> \<open>takes a while\<close>
 
 lemma cap_get_tag_isCap_ArchObject:
   assumes cr: "ccap_relation (capability.ArchObjectCap cap) cap'"

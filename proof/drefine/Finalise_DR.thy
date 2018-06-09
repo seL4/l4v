@@ -1781,7 +1781,7 @@ lemma dcorres_unmap_large_section:
   apply (rule conjI)
    apply (rule less_kernel_base_mapping_slots)
     apply (simp add:pd_bits_def pageBits_def)+
-  apply (rule conjI,fastforce) -- valid_idle
+  apply (rule conjI,fastforce) \<comment> \<open>valid_idle\<close>
   apply (rule conj_comms[THEN iffD1])
   apply (rule context_conjI)
    apply (clarsimp simp:tl_map field_simps)
@@ -2391,7 +2391,7 @@ lemma dcorres_unmap_page:
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:valid_cap_def)
   apply (case_tac vmpage_size)
--- ARMSmallPage
+\<comment> \<open>ARMSmallPage\<close>
   apply (simp add:ARM_A.unmap_page_def bindE_assoc mapM_x_singleton
     PageTableUnmap_D.unmap_page_def cdl_page_mapping_entries_def)
   apply (rule corres_guard_imp)
@@ -2420,7 +2420,7 @@ prefer 2
        | wp lookup_pt_slot_inv find_pd_for_asid_kernel_mapping_help
        | rule conjI | clarify)+
 
--- ARMLargePage
+\<comment> \<open>ARMLargePage\<close>
 
   apply (simp add:ARM_A.unmap_page_def bindE_assoc mapM_x_singleton
     PageTableUnmap_D.unmap_page_def cdl_page_mapping_entries_def)
@@ -2458,7 +2458,7 @@ prefer 2
            find_pd_for_asid_kernel_mapping_help
          | safe)+
 
--- Section
+\<comment> \<open>Section\<close>
   apply (simp add:ARM_A.unmap_page_def bindE_assoc mapM_x_singleton
     PageTableUnmap_D.unmap_page_def cdl_page_mapping_entries_def)
   apply (rule corres_guard_imp)
@@ -2486,7 +2486,7 @@ prefer 2
        | wp lookup_pt_slot_inv find_pd_for_asid_kernel_mapping_help
        | safe)+
 
--- SuperSection
+\<comment> \<open>SuperSection\<close>
 
   apply (simp add:ARM_A.unmap_page_def bindE_assoc mapM_x_singleton
     PageTableUnmap_D.unmap_page_def cdl_page_mapping_entries_def)
@@ -2660,7 +2660,7 @@ lemma dcorres_finalise_cap:
   apply (case_tac arch_cap)
       apply (simp_all add: arch_finalise_cap_def split:arch_cap.split_asm)
      apply clarsimp
-     -- arch_cap.ASIDPoolCap
+     \<comment> \<open>arch_cap.ASIDPoolCap\<close>
      apply (rule corres_guard_imp)
        apply (simp add:transform_asid_def)
        apply (rule corres_split[OF _ dcorres_delete_asid_pool])
@@ -2668,7 +2668,7 @@ lemma dcorres_finalise_cap:
          apply (clarsimp simp:transform_cap_def)
         apply (wp|clarsimp)+
     apply (clarsimp split:option.splits | rule conjI)+
-     -- arch_cap.PageCap
+     \<comment> \<open>arch_cap.PageCap\<close>
      apply (simp add:transform_mapping_def)
     apply (clarsimp simp:transform_mapping_def)
     apply (rule corres_guard_imp)
@@ -2677,7 +2677,7 @@ lemma dcorres_finalise_cap:
         apply (clarsimp simp:transform_cap_def)
        apply (wp | clarsimp )+
     apply simp
-   --arch_cap.PageTableCap
+   \<comment> \<open>arch_cap.PageTableCap\<close>
    apply (clarsimp simp:transform_mapping_def split:option.splits)
    apply (rule dcorres_expand_pfx)
    apply (rule corres_guard_imp)

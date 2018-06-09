@@ -926,7 +926,7 @@ lemma cready_queues_relation_null_queue_ptrs:
    apply (clarsimp simp: tcb_null_ep_ptrs_def)
    apply (case_tac z, case_tac a)
    apply simp
-  -- "clag"
+  \<comment> \<open>clag\<close>
   apply (rule ext)
   apply (case_tac "mp' x")
    apply (frule compD [OF same])

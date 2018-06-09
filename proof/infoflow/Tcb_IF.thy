@@ -660,19 +660,19 @@ lemma invoke_tcb_reads_respects_f:
       defer
       apply((wp suspend_reads_respects_f[where st=st] restart_reads_respects_f[where st=st]
               | simp add: authorised_tcb_inv_def )+)[2]
-    -- "NotificationControl"
+    \<comment> \<open>NotificationControl\<close>
     apply (rename_tac option)
     apply (case_tac option, simp_all)[1]
      apply ((wp unbind_notification_is_subj_reads_respects unbind_notification_silc_inv
            bind_notification_reads_respects
          | clarsimp simp: authorised_tcb_inv_def
          | rule_tac Q=\<top> and st=st in reads_respects_f)+)[2]
-   -- "SetTLSBase"
+   \<comment> \<open>SetTLSBase\<close>
    apply (rename_tac tcb tls_base)
    apply(wpsimp wp: when_ev reschedule_required_reads_respects_f
                     as_user_reads_respects_f hoare_drop_imps)+
-        apply(auto simp: det_setRegister authorised_tcb_inv_def)[1]
-  -- "ThreadControl"
+   apply(auto simp: det_setRegister authorised_tcb_inv_def)[1]
+  \<comment> \<open>ThreadControl\<close>
   apply (simp add: split_def cong: option.case_cong)
   apply (wpsimp wp: hoare_vcg_const_imp_lift_R simp: when_def | wpc)+
                       apply (rule conjI)
