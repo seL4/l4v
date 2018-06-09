@@ -554,7 +554,7 @@ lemma capless_at_def2:
   done
 
 abbreviation
-  "ko_at k \<equiv> object_at (op = k)"
+  "ko_at k \<equiv> object_at ((=) k)"
 
 lemma ko_at_tcb_at:
   "ko_at (Tcb t) p s \<Longrightarrow> tcb_at p s"

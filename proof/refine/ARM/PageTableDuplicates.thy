@@ -1861,7 +1861,7 @@ lemma mapM_x_storePDE_update_invalid:
   pspace_aligned' s\<rbrace>
   mapM_x (swp storePDE ARM_H.pde.InvalidPDE)
   (map ((\<lambda>x. x + word) \<circ>
-                 swp op << (objBits ARM_H.pde.InvalidPDE))
+                 swp (<<) (objBits ARM_H.pde.InvalidPDE))
              [0.e.(kernelBase >> 20) - 1])
   \<lbrace>\<lambda>y s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
 proof -

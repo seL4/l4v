@@ -908,10 +908,10 @@ done
 
 
 lemma (in insert_impl) insert_spec:
-    "\<forall>\<sigma> Ps . \<Gamma>\<turnstile> \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps \<and> sorted (op \<le>) (map \<acute>cont Ps) \<and>
+    "\<forall>\<sigma> Ps . \<Gamma>\<turnstile> \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps \<and> sorted (\<le>) (map \<acute>cont Ps) \<and>
                   \<acute>r \<noteq> Null \<and> \<acute>r \<notin> set Ps\<rbrace>
          \<acute>p :== PROC insert(\<acute>r,\<acute>p)
-   \<lbrace>\<exists>Qs. List \<acute>p \<acute>next Qs \<and> sorted (op \<le>) (map \<^bsup>\<sigma>\<^esup>cont  Qs) \<and>
+   \<lbrace>\<exists>Qs. List \<acute>p \<acute>next Qs \<and> sorted (\<le>) (map \<^bsup>\<sigma>\<^esup>cont  Qs) \<and>
            set Qs = insert \<^bsup>\<sigma>\<^esup>r (set Ps) \<and>
            (\<forall>x. x \<notin> set Qs \<longrightarrow> \<acute>next x = \<^bsup>\<sigma>\<^esup>next x)\<rbrace>"
 
@@ -960,7 +960,7 @@ rule @{thm [source] HoareTotal.annotateI}.
 lemma (in insertSort_impl) insertSort_body_spec:
   shows "\<forall>\<sigma> Ps. \<Gamma>,\<Theta>\<turnstile> \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps \<rbrace>
               \<acute>p :== PROC insertSort(\<acute>p)
-          \<lbrace>\<exists>Qs. List \<acute>p \<acute>next Qs \<and> sorted (op \<le>) (map \<^bsup>\<sigma>\<^esup>cont Qs) \<and>
+          \<lbrace>\<exists>Qs. List \<acute>p \<acute>next Qs \<and> sorted (\<le>) (map \<^bsup>\<sigma>\<^esup>cont Qs) \<and>
            set Qs = set Ps\<rbrace>"
   apply (hoare_rule HoarePartial.ProcRec1)
   apply (hoare_rule anno=
@@ -968,7 +968,7 @@ lemma (in insertSort_impl) insertSort_body_spec:
          WHILE \<acute>p \<noteq> Null
          INV \<lbrace>\<exists>Qs Rs. List \<acute>p \<acute>next Qs \<and> List \<acute>r \<acute>next Rs \<and>
                   set Qs \<inter> set Rs = {} \<and>
-                  sorted (op \<le>) (map \<acute>cont Rs) \<and> set Qs \<union> set Rs = set Ps \<and>
+                  sorted (\<le>) (map \<acute>cont Rs) \<and> set Qs \<union> set Rs = set Ps \<and>
                   \<acute>cont = \<^bsup>\<sigma>\<^esup>cont \<rbrace>
           DO \<acute>q :== \<acute>p;; \<acute>p :== \<acute>p\<rightarrow>\<acute>next;; \<acute>r :== CALL insert(\<acute>q,\<acute>r) OD;;
           \<acute>p :== \<acute>r" in HoarePartial.annotateI)

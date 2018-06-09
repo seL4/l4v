@@ -520,7 +520,7 @@ lemma set_cap_a_type_inv:
   "((), t) \<in> fst (set_cap cap slot s) \<Longrightarrow> typ_at T p t = typ_at T p s"
   apply (subgoal_tac "EX x. typ_at T p s = x")
    apply (elim exE)
-   apply (cut_tac P="op= x" in set_cap_typ_at[of _ T p cap slot])
+   apply (cut_tac P="(=) x" in set_cap_typ_at[of _ T p cap slot])
    apply (fastforce simp: valid_def)
   apply fastforce
   done
@@ -694,7 +694,7 @@ lemma set_cap_ifunsafe:
                                    \<or> (\<exists>cp. appropriate_cte_cap cp cap'
                                             \<and> \<not> appropriate_cte_cap cp cap))
                             \<longrightarrow>
-                             (p' \<noteq> p \<longrightarrow> cte_wp_at (op = cap.NullCap) p' s)
+                             (p' \<noteq> p \<longrightarrow> cte_wp_at ((=) cap.NullCap) p' s)
                            \<and> (p' = p \<longrightarrow> cap = cap.NullCap)) p s
         \<and> if_unsafe_then_cap s
         \<and> (cap \<noteq> cap.NullCap \<longrightarrow> ex_cte_cap_wp_to (appropriate_cte_cap cap) p s)\<rbrace>
@@ -829,7 +829,7 @@ lemma zombie_cap_arch_gen_obj_refs:
   by (clarsimp simp: is_cap_simps)
 
 lemma zombies_final_def2:
-  "zombies_final = (\<lambda>s. \<forall>p p' cap cap'. (cte_wp_at (op = cap) p s \<and> cte_wp_at (op = cap') p' s
+  "zombies_final = (\<lambda>s. \<forall>p p' cap cap'. (cte_wp_at ((=) cap) p s \<and> cte_wp_at ((=) cap') p' s
                                           \<and> (obj_refs cap \<inter> obj_refs cap' \<noteq> {}) \<and> p \<noteq> p')
                                       \<longrightarrow> (\<not> is_zombie cap \<and> \<not> is_zombie cap'))"
   unfolding zombies_final_def
@@ -892,7 +892,7 @@ lemma set_cap_final_cap_at:
 
 lemma set_cap_zombies':
   "\<lbrace>\<lambda>s. zombies_final s
-         \<and> cte_wp_at (\<lambda>cap'. \<forall>p' cap''. (cte_wp_at (op = cap'') p' s \<and> p \<noteq> p'
+         \<and> cte_wp_at (\<lambda>cap'. \<forall>p' cap''. (cte_wp_at ((=) cap'') p' s \<and> p \<noteq> p'
                             \<and> (obj_refs cap \<inter> obj_refs cap'' \<noteq> {})
                              \<longrightarrow> (\<not> is_zombie cap \<and> \<not> is_zombie cap''))) p s\<rbrace>
      set_cap cap p
@@ -976,14 +976,14 @@ lemma set_cap_obj_at_other:
 
 
 lemma new_cap_iflive:
-  "\<lbrace>cte_wp_at (op = cap.NullCap) p
+  "\<lbrace>cte_wp_at ((=) cap.NullCap) p
       and if_live_then_nonz_cap\<rbrace>
      set_cap cap p \<lbrace>\<lambda>rv s. if_live_then_nonz_cap s\<rbrace>"
   by (wp set_cap_iflive, clarsimp elim!: cte_wp_at_weakenE)
 
 
 lemma new_cap_ifunsafe:
-  "\<lbrace>cte_wp_at (op = cap.NullCap) p
+  "\<lbrace>cte_wp_at ((=) cap.NullCap) p
       and if_unsafe_then_cap and ex_cte_cap_wp_to (appropriate_cte_cap cap) p\<rbrace>
      set_cap cap p \<lbrace>\<lambda>rv s. if_unsafe_then_cap s\<rbrace>"
   by (wp set_cap_ifunsafe, clarsimp elim!: cte_wp_at_weakenE)
@@ -995,7 +995,7 @@ lemma ex_zombie_refs_Null[simp]:
 
 
 lemma new_cap_zombies:
-  "\<lbrace>\<lambda>s. cte_wp_at (op = cap.NullCap) p s \<and>
+  "\<lbrace>\<lambda>s. cte_wp_at ((=) cap.NullCap) p s \<and>
         (\<forall>r\<in>obj_refs cap. \<forall>p'. p \<noteq> p' \<and> cte_wp_at (\<lambda>cap'. r \<in> obj_refs cap') p' s
                                    \<longrightarrow> (cte_wp_at (Not \<circ> is_zombie) p' s \<and> \<not> is_zombie cap))
         \<and> zombies_final s\<rbrace>
@@ -1007,7 +1007,7 @@ lemma new_cap_zombies:
 
 
 lemma new_cap_valid_pspace:
-  "\<lbrace>cte_wp_at (op = cap.NullCap) p and valid_cap cap
+  "\<lbrace>cte_wp_at ((=) cap.NullCap) p and valid_cap cap
       and tcb_cap_valid cap p and valid_pspace
       and (\<lambda>s. \<forall>r\<in>obj_refs cap. \<forall>p'. p \<noteq> p' \<and> cte_wp_at (\<lambda>cap'. r \<in> obj_refs cap') p' s
                                      \<longrightarrow> (cte_wp_at (Not \<circ> is_zombie) p' s \<and> \<not> is_zombie cap))\<rbrace>
@@ -1095,7 +1095,7 @@ where
                     \<or> (\<exists>cp. appropriate_cte_cap cp cap
                              \<and> \<not> appropriate_cte_cap cp newcap))
              \<longrightarrow>
-                 (p' \<noteq> sl \<longrightarrow> cte_wp_at (op = cap.NullCap) p' s)
+                 (p' \<noteq> sl \<longrightarrow> cte_wp_at ((=) cap.NullCap) p' s)
                \<and> (p' = sl \<longrightarrow> newcap = cap.NullCap))
       \<and> (gen_obj_refs newcap \<subseteq> gen_obj_refs cap)
       \<and> (newcap \<noteq> cap.NullCap \<longrightarrow> cap_range newcap = cap_range cap)
@@ -1116,7 +1116,7 @@ lemma range_not_empty_is_physical:
 
 lemma zombies_finalE:
   "\<lbrakk> \<not> is_final_cap' cap s; is_zombie cap; zombies_final s;
-     cte_wp_at (op = cap) p s \<rbrakk>
+     cte_wp_at ((=) cap) p s \<rbrakk>
      \<Longrightarrow> P"
   apply (frule(1) zombies_finalD)
    apply simp
@@ -1146,9 +1146,9 @@ lemma delete_duplicate_iflive:
 
 
 lemma non_unsafe_set_cap:
-  "\<lbrace>\<lambda>s. \<not> cte_wp_at (op \<noteq> cap.NullCap) p' s\<rbrace>
+  "\<lbrace>\<lambda>s. \<not> cte_wp_at ((\<noteq>) cap.NullCap) p' s\<rbrace>
      set_cap cap.NullCap p''
-   \<lbrace>\<lambda>rv s. \<not> cte_wp_at (op \<noteq> cap.NullCap) p' s\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<not> cte_wp_at ((\<noteq>) cap.NullCap) p' s\<rbrace>"
   by (simp add: cte_wp_at_caps_of_state | wp)+
 
 
@@ -1161,7 +1161,7 @@ lemma cte_refs_obj_refs_elem:
 lemma get_cap_valid_objs_valid_cap:
   "\<lbrakk> fst (get_cap p s) = {(cap, s)}; valid_objs s \<rbrakk>
      \<Longrightarrow> valid_cap cap s"
-  apply (rule cte_wp_at_valid_objs_valid_cap[where P="op = cap", simplified])
+  apply (rule cte_wp_at_valid_objs_valid_cap[where P="(=) cap", simplified])
    apply (simp add: cte_wp_at_def)
   apply assumption
   done
@@ -1311,7 +1311,7 @@ lemma set_cap_reply [wp]:
       (\<lambda>s. \<forall>t. cap = cap.ReplyCap t False \<longrightarrow>
                st_tcb_at awaiting_reply t s \<and>
                (\<not> has_reply_cap t s \<or>
-                cte_wp_at (op = (cap.ReplyCap t False)) dest s))\<rbrace>
+                cte_wp_at ((=) (cap.ReplyCap t False)) dest s))\<rbrace>
    set_cap cap dest \<lbrace>\<lambda>_. valid_reply_caps\<rbrace>"
   apply (simp add: valid_reply_caps_def has_reply_cap_def)
   apply (rule hoare_pre)
@@ -1352,7 +1352,7 @@ lemma arch_obj_caps_of:
   by (simp add: caps_of_def cap_of_def)
 
 lemma get_cap_wp:
-  "\<lbrace>\<lambda>s. \<forall>cap. cte_wp_at (op = cap) p s \<longrightarrow> Q cap s\<rbrace> get_cap p \<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>cap. cte_wp_at ((=) cap) p s \<longrightarrow> Q cap s\<rbrace> get_cap p \<lbrace>Q\<rbrace>"
   apply (clarsimp simp: valid_def cte_wp_at_def)
   apply (frule in_inv_by_hoareD [OF get_cap_inv])
   apply (drule get_cap_det)
@@ -1809,7 +1809,7 @@ definition masked_as_full :: "cap \<Rightarrow> cap \<Rightarrow> cap" where
 lemma set_untyped_cap_as_full_cte_wp_at:
   "\<lbrace>\<lambda>s. (dest \<noteq> src \<and> cte_wp_at P dest s \<or>
          dest = src \<and> cte_wp_at (\<lambda>a. P (masked_as_full a cap)) src s) \<and>
-        cte_wp_at (op = src_cap) src s\<rbrace>
+        cte_wp_at ((=) src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>ya s. (cte_wp_at P dest s)\<rbrace>"
   apply (clarsimp simp: set_untyped_cap_as_full_def)
@@ -2015,7 +2015,7 @@ lemma tcb_cap_valid_update_free_index[simp]:
 
 
 lemma set_untyped_cap_full_valid_objs:
-  "\<lbrace>valid_objs and cte_wp_at (op = cap) slot\<rbrace>
+  "\<lbrace>valid_objs and cte_wp_at ((=) cap) slot\<rbrace>
    set_untyped_cap_as_full cap cap_new slot
    \<lbrace>\<lambda>r. valid_objs\<rbrace>"
   apply (simp add: set_untyped_cap_as_full_def split del: if_split)

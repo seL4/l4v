@@ -60,7 +60,7 @@ structure Time_Methods = struct
         (* Compare the proof states that we peeked at *)
         case other_results
               |> filter (fn result =>
-                    (* It's tempting to use aconv, etc., here instead of op<>, but
+                    (* It's tempting to use aconv, etc., here instead of (<>), but
                      * minute differences such as bound names in Pure.all can
                      * break a proof script later on. *)
                     Option.map Thm.full_prop_of (#state result) <>

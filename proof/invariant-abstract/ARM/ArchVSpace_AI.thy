@@ -296,7 +296,7 @@ lemma valid_asid_mapD:
 
 
 lemma page_directory_cap_pd_at_uniq:
-  "\<lbrakk> cte_wp_at (op = (cap.ArchObjectCap (arch_cap.PageDirectoryCap pd (Some asid)))) slot s;
+  "\<lbrakk> cte_wp_at ((=) (cap.ArchObjectCap (arch_cap.PageDirectoryCap pd (Some asid)))) slot s;
      valid_asid_map s; valid_vs_lookup s; unique_table_refs (caps_of_state s);
      valid_arch_state s; valid_global_objs s; valid_objs s \<rbrakk>
           \<Longrightarrow> pd_at_uniq asid pd s"
@@ -1454,7 +1454,7 @@ definition
 definition
   "valid_page_inv pg_inv \<equiv> case pg_inv of
     PageMap asid cap ptr m \<Rightarrow>
-      cte_wp_at (is_arch_update cap and (op = None \<circ> vs_cap_ref)) ptr
+      cte_wp_at (is_arch_update cap and ((=) None \<circ> vs_cap_ref)) ptr
       and cte_wp_at is_pg_cap ptr
       and (\<lambda>s. same_refs m cap s)
       and valid_slots m
@@ -1624,7 +1624,7 @@ lemma find_free_hw_asid_invs [wp]:
                         pd_at_asid_arch_up')
   apply (rule conjI, blast)
   apply (clarsimp simp: vspace_at_asid_def)
-  apply (drule_tac P1 = "op = (device_state (machine_state s))" in
+  apply (drule_tac P1 = "(=) (device_state (machine_state s))" in
     use_valid[OF _ invalidateLocalTLB_ASID_device_state_inv])
    apply simp
   apply clarsimp
@@ -2521,9 +2521,9 @@ lemmas store_pte_cte_wp_at1[wp]
     = hoare_cte_wp_caps_of_state_lift [OF store_pte_caps_of_state]
 
 lemma mdb_cte_at_store_pte[wp]:
-  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>
+  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrace>
    store_pte y pte
-   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
+   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrace>"
   apply (clarsimp simp:mdb_cte_at_def)
   apply (simp only: imp_conv_disj)
   apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)

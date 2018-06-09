@@ -24,7 +24,7 @@ lemma invokeIRQHandler_AckIRQ_ccorres:
   done
 
 lemma getIRQSlot_ccorres:
-  "ccorres (op = \<circ> Ptr) irqSlot_'
+  "ccorres ((=) \<circ> Ptr) irqSlot_'
           \<top> UNIV hs
       (getIRQSlot irq)
       (\<acute>irqSlot :== CTypesDefs.ptr_add \<acute>intStateIRQNode (sint (ucast (ucast irq ::word16) :: 32 signed word)))"

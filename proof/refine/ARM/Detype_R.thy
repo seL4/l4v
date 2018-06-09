@@ -399,7 +399,7 @@ lemma map_to_ctes_delete:
   shows
   "map_to_ctes (\<lambda>x. if base \<le> x \<and> x \<le> base + (2 ^ magnitude - 1) then None else ksPSpace s x)
     = (\<lambda>x. if base \<le> x \<and> x \<le> base + (2 ^ magnitude - 1) then None else ctes_of s x)"
-  using cte_wp_at_delete' [where P="op = cte" for cte, OF vc vs]
+  using cte_wp_at_delete' [where P="(=) cte" for cte, OF vc vs]
         arg_cong [where f=Not, OF cte_wp_at_delete' [OF vc vs, where P="\<top>"]]
   apply (simp (no_asm_use) add: cte_wp_at_ctes_of)
   apply (rule ext)
@@ -458,14 +458,14 @@ proof -
   note blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
           atLeastAtMost_iff
-  have "\<And>t m. \<exists>ptr. cte_wp_at (op = (cap.ReplyCap t m)) ptr s
+  have "\<And>t m. \<exists>ptr. cte_wp_at ((=) (cap.ReplyCap t m)) ptr s
         \<Longrightarrow> t \<notin> {base .. base + 2 ^ magnitude - 1}"
     by (fastforce dest!: valid_cap2 simp: cap obj_reply_refs_def)
-  hence "\<forall>ptr t m. cte_wp_at (op = (cap.ReplyCap t m)) ptr s
+  hence "\<forall>ptr t m. cte_wp_at ((=) (cap.ReplyCap t m)) ptr s
          \<longrightarrow> t \<notin> {base .. base + 2 ^ magnitude - 1}"
     by (fastforce simp del: split_paired_All)
   hence "\<forall>t. t \<in> {base .. base + 2 ^ magnitude - 1} \<longrightarrow>
-          (\<forall>ptr m. \<not> cte_wp_at (op = (cap.ReplyCap t m)) ptr s)"
+          (\<forall>ptr m. \<not> cte_wp_at ((=) (cap.ReplyCap t m)) ptr s)"
     by fastforce
   hence cte: "\<forall>t. t \<in> {base .. base + 2 ^ magnitude - 1} \<longrightarrow>
           (\<forall>ptr m. \<not> cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m) ptr s')"
@@ -589,7 +589,7 @@ lemma cap_table_at_gsCNodes_eq:
   done
 
 lemma cNodeNoPartialOverlap:
-  "corres dc (\<lambda>s. \<exists>cref. cte_wp_at (op = (cap.UntypedCap d base magnitude idx)) cref s
+  "corres dc (\<lambda>s. \<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s
                      \<and> valid_objs s \<and> pspace_aligned s)
      \<top>
     (return x) (stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s)
@@ -628,7 +628,7 @@ lemma detype_corres:
    corres dc
       (\<lambda>s. einvs s
            \<and> s \<turnstile> (cap.UntypedCap d base magnitude idx)
-           \<and> (\<exists>cref. cte_wp_at (op = (cap.UntypedCap d base magnitude idx)) cref s
+           \<and> (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s
                      \<and> descendants_range (cap.UntypedCap d base magnitude idx) cref s)
            \<and> untyped_children_in_mdb s \<and> if_unsafe_then_cap s
            \<and> valid_mdb s \<and> valid_global_refs s \<and> ct_active s)
@@ -661,7 +661,7 @@ lemma detype_corres:
                              dom_if_None Diff_Int_distrib)
   apply (simp add: delete_objects_def)
   apply (rule_tac Q="\<lambda>_ s. valid_objs s \<and> valid_list s \<and>
-           (\<exists>cref. cte_wp_at (op = (cap.UntypedCap d base magnitude idx)) cref s \<and>
+           (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
                    descendants_range (cap.UntypedCap d base magnitude idx) cref s ) \<and>
            s \<turnstile> cap.UntypedCap d base magnitude idx \<and> pspace_aligned s \<and>
            valid_mdb s \<and> pspace_distinct s \<and> if_live_then_nonz_cap s \<and>
@@ -979,7 +979,7 @@ lemma refs_notRange:
   done
 
 lemma valid_obj':
-  "\<lbrakk> valid_obj' obj s; ko_wp_at' (op = obj) p s \<rbrakk> \<Longrightarrow> valid_obj' obj state'"
+  "\<lbrakk> valid_obj' obj s; ko_wp_at' ((=) obj) p s \<rbrakk> \<Longrightarrow> valid_obj' obj state'"
   apply (case_tac obj, simp_all add: valid_obj'_def)
       apply (rename_tac endpoint)
       apply (case_tac endpoint, simp_all add: valid_ep'_def)[1]
@@ -1671,7 +1671,7 @@ lemma deleteObjects_st_tcb_at':
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
      and invs' and ct_active' and sch_act_simple
      and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))
-     and st_tcb_at' (P and op \<noteq> Inactive and op \<noteq> IdleThreadState) t
+     and st_tcb_at' (P and (\<noteq>) Inactive and (\<noteq>) IdleThreadState) t
      and K (bits < word_bits \<and> is_aligned ptr bits)\<rbrace>
      deleteObjects ptr bits
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
@@ -1915,12 +1915,12 @@ lemma getCTE_commute:
    apply (rule iffI)
     apply clarsimp
     apply (rule bexI[rotated], assumption)
-    apply (drule_tac Q1 ="op = cte" in use_valid[OF _ cte_at_modify])
+    apply (drule_tac Q1 ="(=) cte" in use_valid[OF _ cte_at_modify])
      apply (simp add:cte_wp_at'_def)
     apply (simp add:cte_wp_at'_def)
    apply clarsimp
    apply (rule conjI)
-    apply (frule_tac Q1 = "op = cte" in use_valid[OF _ cte_at_modify])
+    apply (frule_tac Q1 = "(=) cte" in use_valid[OF _ cte_at_modify])
      apply (clarsimp simp:cte_wp_at'_def ko_wp_at'_def)
     apply (clarsimp simp:cte_wp_at'_def)
    apply (rule bexI[rotated], assumption)
@@ -1935,7 +1935,7 @@ lemma getCTE_commute:
   apply (cut_tac s = b in no_failD[OF no_fail_getCTE[unfolded getCTE_def]])
    prefer 2
    apply fastforce
-  apply (drule_tac Q1 = "op = cte" in use_valid[OF _ cte_at_modify])
+  apply (drule_tac Q1 = "(=) cte" in use_valid[OF _ cte_at_modify])
    apply (simp add:cte_wp_at'_def)
   apply (simp add:cte_wp_at_ctes_of)
   done
@@ -2688,7 +2688,7 @@ lemma magnitudeCheck_det:
   done
 
 lemma getPDE_det:
-  "ko_wp_at' (op = (KOArch (KOPDE pde))) p s
+  "ko_wp_at' ((=) (KOArch (KOPDE pde))) p s
    \<Longrightarrow> getObject p s = ({((pde::ARM_H.pde),s)},False)"
   apply (clarsimp simp:ko_wp_at'_def getObject_def split_def
                        bind_def gets_def return_def get_def
@@ -2725,8 +2725,8 @@ lemma getPDE_det:
   done
 
 lemma pde_at_obj_at':
-  "ko_wp_at' (op = (KOArch (KOPDE (pde::pde)))) ptr s =
-   obj_at' (op = pde) ptr s"
+  "ko_wp_at' ((=) (KOArch (KOPDE (pde::pde)))) ptr s =
+   obj_at' ((=) pde) ptr s"
   by(clarsimp simp:obj_at'_real_def ko_wp_at'_def projectKO_PDE)
 
 lemma in_dom_eq:
@@ -2734,10 +2734,10 @@ lemma in_dom_eq:
   by (rule set_eqI,clarsimp simp:dom_def)
 
 lemma setCTE_pde_at':
-  "\<lbrace>ko_wp_at' (op = (KOArch (KOPDE pde))) ptr and
+  "\<lbrace>ko_wp_at' ((=) (KOArch (KOPDE pde))) ptr and
     cte_wp_at' (\<lambda>_. True) src and pspace_distinct'\<rbrace>
    setCTE src cte
-   \<lbrace>\<lambda>x s. ko_wp_at' (op = (KOArch (KOPDE pde))) ptr s\<rbrace>"
+   \<lbrace>\<lambda>x s. ko_wp_at' ((=) (KOArch (KOPDE pde))) ptr s\<rbrace>"
    apply (clarsimp simp:setCTE_def2)
    including no_pre apply wp
    apply (simp add:split_def)
@@ -2769,7 +2769,7 @@ lemma getPDE_setCTE_commute:
   apply (case_tac arch_kernel_object,simp_all)
   apply clarsimp
   apply (rename_tac pde)
-  apply (subgoal_tac "ko_wp_at' (op = (KOArch (KOPDE pde))) ptr s")
+  apply (subgoal_tac "ko_wp_at' ((=) (KOArch (KOPDE pde))) ptr s")
    prefer 2
    apply (clarsimp simp:ko_wp_at'_def)
   apply (rule monad_commute_guard_imp)
@@ -2792,7 +2792,7 @@ lemma getPDE_doMachineOp_commute:
   apply (case_tac arch_kernel_object,simp_all)
   apply clarsimp
   apply (rename_tac pde)
-  apply (subgoal_tac "ko_wp_at' (op = (KOArch (KOPDE pde))) ptr s")
+  apply (subgoal_tac "ko_wp_at' ((=) (KOArch (KOPDE pde))) ptr s")
    prefer 2
    apply (clarsimp simp:ko_wp_at'_def)
   apply (rule monad_commute_guard_imp)
@@ -2824,7 +2824,7 @@ lemma getPDE_placeNewObject_commute:
   apply (case_tac arch_kernel_object,simp_all)
   apply clarsimp
   apply (rename_tac pde)
-  apply (subgoal_tac "ko_wp_at' (op = (KOArch (KOPDE pde))) src s")
+  apply (subgoal_tac "ko_wp_at' ((=) (KOArch (KOPDE pde))) src s")
    prefer 2
    apply (clarsimp simp:ko_wp_at'_def)
   apply (rule monad_commute_guard_imp)
@@ -2838,7 +2838,7 @@ lemma getPDE_placeNewObject_commute:
   done
 
 lemma storePDE_det:
-  "ko_wp_at' (op = (KOArch (KOPDE pde))) ptr s
+  "ko_wp_at' ((=) (KOArch (KOPDE pde))) ptr s
    \<Longrightarrow> storePDE ptr (new_pde::ARM_H.pde) s =
        modify
          (ksPSpace_update (\<lambda>_. ksPSpace s(ptr \<mapsto> KOArch (KOPDE new_pde)))) s"
@@ -2995,7 +2995,7 @@ lemma doMachineOp_storePDE_commute:
   apply (case_tac arch_kernel_object,simp_all)
   apply clarsimp
   apply (rename_tac pde)
-  apply (subgoal_tac "ko_wp_at' (op = (KOArch (KOPDE pde))) src s")
+  apply (subgoal_tac "ko_wp_at' ((=) (KOArch (KOPDE pde))) src s")
    prefer 2
    apply (clarsimp simp:ko_wp_at'_def)
   apply (rule monad_commute_guard_imp)
@@ -3034,7 +3034,7 @@ lemma storePDE_placeNewObject_commute:
   apply (case_tac arch_kernel_object,simp_all)
   apply clarsimp
   apply (rename_tac pde)
-  apply (subgoal_tac "ko_wp_at' (op = (KOArch (KOPDE pde))) src s")
+  apply (subgoal_tac "ko_wp_at' ((=) (KOArch (KOPDE pde))) src s")
    prefer 2
    apply (clarsimp simp:ko_wp_at'_def)
   apply (subgoal_tac "range_cover ptr (objBitsKO (injectKOS val) + sz) (objBitsKO (injectKOS val) + sz) (Suc 0)")
@@ -3134,7 +3134,7 @@ lemma storePDE_setCTE_commute:
   apply (case_tac arch_kernel_object,simp_all)
   apply clarsimp
   apply (rename_tac pde)
-  apply (subgoal_tac "ko_wp_at' (op = (KOArch (KOPDE pde))) ptr s")
+  apply (subgoal_tac "ko_wp_at' ((=) (KOArch (KOPDE pde))) ptr s")
    prefer 2
    apply (clarsimp simp:ko_wp_at'_def)
   apply (rule monad_commute_guard_imp)
@@ -3311,7 +3311,7 @@ lemma setCTE_modify_gsUserPages_commute:
            split: option.splits if_split_asm)
 
 lemma getTCB_det:
-  "ko_wp_at' (op = (KOTCB tcb)) p s
+  "ko_wp_at' ((=) (KOTCB tcb)) p s
    \<Longrightarrow> getObject p s = ({(tcb,s)},False)"
   apply (clarsimp simp:ko_wp_at'_def getObject_def split_def
                        bind_def gets_def return_def get_def

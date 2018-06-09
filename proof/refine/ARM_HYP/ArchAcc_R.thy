@@ -433,14 +433,14 @@ lemma master_pde_relation_non_super:
 lemma getObject_pde_ko_at':
   "(pde::pde, s') \<in> fst (getObject p s) \<Longrightarrow> s' = s \<and> ko_at' pde p s"
   apply (rule context_conjI)
-   apply (drule use_valid, rule getObject_inv[where P="op = s"]; simp add: loadObject_default_inv)
+   apply (drule use_valid, rule getObject_inv[where P="(=) s"]; simp add: loadObject_default_inv)
   apply (drule use_valid, rule getObject_ko_at; clarsimp simp: obj_at_simps pde_bits_def)
   done
 
 lemma getObject_pte_ko_at':
   "(pte::pte, s') \<in> fst (getObject p s) \<Longrightarrow> s' = s \<and> ko_at' pte p s"
   apply (rule context_conjI)
-   apply (drule use_valid, rule getObject_inv[where P="op = s"]; simp add: loadObject_default_inv)
+   apply (drule use_valid, rule getObject_inv[where P="(=) s"]; simp add: loadObject_default_inv)
   apply (drule use_valid, rule getObject_ko_at; clarsimp simp: obj_at_simps pte_bits_def)
   done
 
@@ -1281,7 +1281,7 @@ lemmas checkPTAt_corres [corresK] =
 
 
 lemma lookup_pt_slot_corres [corres]:
-  "corres (lfr \<oplus> op =)
+  "corres (lfr \<oplus> (=))
           (pde_at (lookup_pd_slot pd vptr) and pspace_aligned and valid_vspace_objs
           and (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits)) and
           K (is_aligned pd pd_bits \<and> vptr < kernel_base))
@@ -1333,7 +1333,7 @@ lemma align_entry_add_cong:
   done
 
 lemma armhyp_global_pd_corres [corres]:
-  "corres op = (\<lambda>_. True) (\<lambda>_. True)
+  "corres (=) (\<lambda>_. True) (\<lambda>_. True)
      (gets (arm_us_global_pd \<circ> arch_state)) (gets (armUSGlobalPD \<circ> ksArchState))"
  by (clarsimp simp: state_relation_def arch_state_relation_def)
 
@@ -1395,7 +1395,7 @@ definition
   mapping_map :: "ARM_A.pte \<times> word32 list + ARM_A.pde \<times> word32 list \<Rightarrow>
                   ARM_HYP_H.pte \<times> word32 list + ARM_HYP_H.pde \<times> word32 list \<Rightarrow> bool"
 where
-  "mapping_map \<equiv> pte_relation' \<otimes> (op =) \<oplus> pde_relation' \<otimes> (op =)"
+  "mapping_map \<equiv> pte_relation' \<otimes> (=) \<oplus> pde_relation' \<otimes> (=)"
 
 lemma create_mapping_entries_corres [corres]:
   "\<lbrakk> vm_rights' = vmrights_map vm_rights;
@@ -1464,7 +1464,7 @@ lemma ensure_safe_mapping_corres [corres]:
                     (ensure_safe_mapping m) (ensureSafeMapping m')"
   unfolding mapping_map_def ensureSafeMapping_def
   apply (cases m; cases m'; simp;
-         match premises in "(_ \<otimes> op =) p p'" for p p' \<Rightarrow> \<open>cases "fst p"; cases "fst p'"\<close>; clarsimp)
+         match premises in "(_ \<otimes> (=)) p p'" for p p' \<Rightarrow> \<open>cases "fst p"; cases "fst p'"\<close>; clarsimp)
         by (corressimp corresK: mapME_x_corresK_inv
                             wp: get_master_pte_wp get_master_pde_wp getPTE_wp getPDE_wp;
             auto simp add: valid_mapping_entries_def)+
@@ -1496,7 +1496,7 @@ lemma ko_at_typ_at_asidpool:
   by (clarsimp simp: obj_at_def a_type_simps)
 
 lemma find_pd_for_asid_corres [@lift_corres_args, corres]:
-  "corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s)
+  "corres (lfr \<oplus> (=)) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s)
                            and valid_vspace_objs and pspace_aligned
                            and K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
@@ -1551,7 +1551,7 @@ lemma find_pd_for_asid_corres [@lift_corres_args, corres]:
   done
 
 lemma find_pd_for_asid_corres':
-  "corres (lfr \<oplus> op =) (vspace_at_asid asid pd and valid_vspace_objs
+  "corres (lfr \<oplus> (=)) (vspace_at_asid asid pd and valid_vspace_objs
                            and pspace_aligned and  K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
                        (find_pd_for_asid asid) (findPDForASID asid)"

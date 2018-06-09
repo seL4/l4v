@@ -82,12 +82,12 @@ lemma strengthenI:
   "rel y x \<Longrightarrow> st False rel x y"
   by (simp_all add: st_def)
 
-lemmas imp_to_strengthen = strengthenI(2)[where rel="op \<longrightarrow>"]
-lemmas rev_imp_to_strengthen = strengthenI(1)[where rel="op \<longrightarrow>"]
-lemmas ord_to_strengthen = strengthenI[where rel="op \<le>"]
+lemmas imp_to_strengthen = strengthenI(2)[where rel="(\<longrightarrow>)"]
+lemmas rev_imp_to_strengthen = strengthenI(1)[where rel="(\<longrightarrow>)"]
+lemmas ord_to_strengthen = strengthenI[where rel="(\<le>)"]
 
 lemma use_strengthen_imp:
-  "st False (op \<longrightarrow>) Q P \<Longrightarrow> P \<Longrightarrow> Q"
+  "st False (\<longrightarrow>) Q P \<Longrightarrow> P \<Longrightarrow> Q"
   by (simp add: st_def)
 
 lemma use_strengthen_prop_elim:
@@ -316,7 +316,7 @@ fun params once ctxt = {trace = Config.get ctxt (fst tracing), once = once}
 
 fun apply_tac_as_strg ctxt (params : params) (tac : tactic)
   = SUBGOAL (fn (t, i) => case Logic.strip_assums_concl t of
-      @{term Trueprop} $ (@{term "st False (op \<longrightarrow>)"} $ x $ _)
+      @{term Trueprop} $ (@{term "st False (\<longrightarrow>)"} $ x $ _)
       => let
     val triv = Thm.trivial (Thm.cterm_of ctxt (HOLogic.mk_Trueprop x))
     val trace = #trace params
@@ -405,12 +405,12 @@ text {* Important strengthen congruence rules. *}
 context strengthen_implementation begin
 
 lemma strengthen_imp_imp[simp]:
-  "st True (op \<longrightarrow>) A B = (A \<longrightarrow> B)"
-  "st False (op \<longrightarrow>) A B = (B \<longrightarrow> A)"
+  "st True (\<longrightarrow>) A B = (A \<longrightarrow> B)"
+  "st False (\<longrightarrow>) A B = (B \<longrightarrow> A)"
   by (simp_all add: st_def)
 
 abbreviation(input)
-  "st_ord t \<equiv> st t (op \<le> :: ('a :: preorder) \<Rightarrow> _)"
+  "st_ord t \<equiv> st t ((\<le>) :: ('a :: preorder) \<Rightarrow> _)"
 
 lemma strengthen_imp_ord[simp]:
   "st_ord True A B = (A \<le> B)"
@@ -418,60 +418,60 @@ lemma strengthen_imp_ord[simp]:
   by (auto simp add: st_def)
 
 lemma strengthen_imp_conj [strg]:
-  "\<lbrakk> A' \<Longrightarrow> st F (op \<longrightarrow>) B B'; B \<Longrightarrow> st F (op \<longrightarrow>) A A' \<rbrakk>
-    \<Longrightarrow> st F (op \<longrightarrow>) (A \<and> B) (A' \<and> B')"
+  "\<lbrakk> A' \<Longrightarrow> st F (\<longrightarrow>) B B'; B \<Longrightarrow> st F (\<longrightarrow>) A A' \<rbrakk>
+    \<Longrightarrow> st F (\<longrightarrow>) (A \<and> B) (A' \<and> B')"
   by (cases F, auto)
 
 lemma strengthen_imp_disj [strg]:
-  "\<lbrakk> \<not> A' \<Longrightarrow> st F (op \<longrightarrow>) B B'; \<not> B \<Longrightarrow> st F (op \<longrightarrow>) A A' \<rbrakk>
-    \<Longrightarrow> st F (op \<longrightarrow>) (A \<or> B) (A' \<or> B')"
+  "\<lbrakk> \<not> A' \<Longrightarrow> st F (\<longrightarrow>) B B'; \<not> B \<Longrightarrow> st F (\<longrightarrow>) A A' \<rbrakk>
+    \<Longrightarrow> st F (\<longrightarrow>) (A \<or> B) (A' \<or> B')"
   by (cases F, auto)
 
 lemma strengthen_imp_implies [strg]:
-  "\<lbrakk> st (\<not> F) (op \<longrightarrow>) X X'; X \<Longrightarrow> st F (op \<longrightarrow>) Y Y' \<rbrakk>
-    \<Longrightarrow> st F (op \<longrightarrow>) (X \<longrightarrow> Y) (X' \<longrightarrow> Y')"
+  "\<lbrakk> st (\<not> F) (\<longrightarrow>) X X'; X \<Longrightarrow> st F (\<longrightarrow>) Y Y' \<rbrakk>
+    \<Longrightarrow> st F (\<longrightarrow>) (X \<longrightarrow> Y) (X' \<longrightarrow> Y')"
   by (cases F, auto)
 
 lemma strengthen_all[strg]:
-  "\<lbrakk> \<And>x. st F (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
-    \<Longrightarrow> st F (op \<longrightarrow>) (\<forall>x. P x) (\<forall>x. Q x)"
+  "\<lbrakk> \<And>x. st F (\<longrightarrow>) (P x) (Q x) \<rbrakk>
+    \<Longrightarrow> st F (\<longrightarrow>) (\<forall>x. P x) (\<forall>x. Q x)"
   by (cases F, auto)
 
 lemma strengthen_ex[strg]:
-  "\<lbrakk> \<And>x. st F (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
-    \<Longrightarrow> st F (op \<longrightarrow>) (\<exists>x. P x) (\<exists>x. Q x)"
+  "\<lbrakk> \<And>x. st F (\<longrightarrow>) (P x) (Q x) \<rbrakk>
+    \<Longrightarrow> st F (\<longrightarrow>) (\<exists>x. P x) (\<exists>x. Q x)"
   by (cases F, auto)
 
 lemma strengthen_Ball[strg]:
   "\<lbrakk> st_ord (Not F) S S';
-        \<And>x. x \<in> S \<Longrightarrow> st F (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
-    \<Longrightarrow> st F (op \<longrightarrow>) (\<forall>x \<in> S. P x) (\<forall>x \<in> S'. Q x)"
+        \<And>x. x \<in> S \<Longrightarrow> st F (\<longrightarrow>) (P x) (Q x) \<rbrakk>
+    \<Longrightarrow> st F (\<longrightarrow>) (\<forall>x \<in> S. P x) (\<forall>x \<in> S'. Q x)"
   by (cases F, auto)
 
 lemma strengthen_Bex[strg]:
   "\<lbrakk> st_ord F S S';
-        \<And>x. x \<in> S \<Longrightarrow> st F (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
-    \<Longrightarrow> st F (op \<longrightarrow>) (\<exists>x \<in> S. P x) (\<exists>x \<in> S'. Q x)"
+        \<And>x. x \<in> S \<Longrightarrow> st F (\<longrightarrow>) (P x) (Q x) \<rbrakk>
+    \<Longrightarrow> st F (\<longrightarrow>) (\<exists>x \<in> S. P x) (\<exists>x \<in> S'. Q x)"
   by (cases F, auto)
 
 lemma strengthen_Collect[strg]:
-  "\<lbrakk> \<And>x. st F (op \<longrightarrow>) (P x) (P' x) \<rbrakk>
+  "\<lbrakk> \<And>x. st F (\<longrightarrow>) (P x) (P' x) \<rbrakk>
     \<Longrightarrow> st_ord F {x. P x} {x. P' x}"
   by (cases F, auto)
 
 lemma strengthen_mem[strg]:
   "\<lbrakk> st_ord F S S' \<rbrakk>
-    \<Longrightarrow> st F (op \<longrightarrow>) (x \<in> S) (x \<in> S')"
+    \<Longrightarrow> st F (\<longrightarrow>) (x \<in> S) (x \<in> S')"
   by (cases F, auto)
 
 lemma strengthen_ord[strg]:
   "st_ord (\<not> F) x x' \<Longrightarrow> st_ord F y y'
-    \<Longrightarrow> st F (op \<longrightarrow>) (x \<le> y) (x' \<le> y')"
+    \<Longrightarrow> st F (\<longrightarrow>) (x \<le> y) (x' \<le> y')"
   by (cases F, simp_all, (metis order_trans)+)
 
 lemma strengthen_strict_ord[strg]:
   "st_ord (\<not> F) x x' \<Longrightarrow> st_ord F y y'
-    \<Longrightarrow> st F (op \<longrightarrow>) (x < y) (x' < y')"
+    \<Longrightarrow> st F (\<longrightarrow>) (x < y) (x' < y')"
   by (cases F, simp_all, (metis order_le_less_trans order_less_le_trans)+)
 
 lemma strengthen_image[strg]:
@@ -501,8 +501,8 @@ lemma strengthen_INT[strg]:
   by (cases F, auto)
 
 lemma strengthen_imp_strengthen_prop[strg]:
-  "st False (op \<longrightarrow>) P Q \<Longrightarrow> PROP (st_prop1 (Trueprop P) (Trueprop Q))"
-  "st True (op \<longrightarrow>) P Q \<Longrightarrow> PROP (st_prop2 (Trueprop P) (Trueprop Q))"
+  "st False (\<longrightarrow>) P Q \<Longrightarrow> PROP (st_prop1 (Trueprop P) (Trueprop Q))"
+  "st True (\<longrightarrow>) P Q \<Longrightarrow> PROP (st_prop2 (Trueprop P) (Trueprop Q))"
   unfolding st_prop1_def st_prop2_def
   by auto
 

@@ -520,7 +520,7 @@ lemma flush_type_map:
 
 lemma resolve_vaddr_corres:
   "\<lbrakk> is_aligned pd pd_bits; vaddr < kernel_base \<rbrakk> \<Longrightarrow>
-  corres (op =) (pspace_aligned and valid_vspace_objs and page_directory_at pd
+  corres (=) (pspace_aligned and valid_vspace_objs and page_directory_at pd
                  and (\<exists>\<rhd> (lookup_pd_slot pd vaddr && ~~ mask pd_bits)))
                 (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> vs_valid_duplicates' (ksPSpace s))
           (resolve_vaddr pd vaddr) (resolveVAddr pd vaddr)"
@@ -1059,7 +1059,7 @@ shows
      apply (case_tac excaps', simp)
      apply clarsimp
      apply (rule corres_guard_imp)
-       apply (rule corres_splitEE [where r' = "op ="])
+       apply (rule corres_splitEE [where r' = "(=)"])
           prefer 2
           apply (clarsimp simp: list_all2_Cons2)
           apply (case_tac "fst (hd excaps)", simp_all)[1]
@@ -1271,7 +1271,7 @@ shows
 
 lemma inv_arch_corres:
   "archinv_relation ai ai' \<Longrightarrow>
-   corres (intr \<oplus> op=)
+   corres (intr \<oplus> (=))
      (einvs and ct_active and valid_arch_inv ai)
      (invs' and ct_active' and valid_arch_inv' ai' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
      (arch_perform_invocation ai) (Arch.performInvocation ai')"
@@ -2000,7 +2000,7 @@ crunch st_tcb_at': performPageDirectoryInvocation, performPageTableInvocation, p
    wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps)
 
 lemma performASIDControlInvocation_st_tcb_at':
-  "\<lbrace>st_tcb_at' (P and op \<noteq> Inactive and op \<noteq> IdleThreadState) t and
+  "\<lbrace>st_tcb_at' (P and (\<noteq>) Inactive and (\<noteq>) IdleThreadState) t and
     valid_aci' aci and invs' and ct_active'\<rbrace>
     performASIDControlInvocation aci
   \<lbrace>\<lambda>y. st_tcb_at' P t\<rbrace>"
@@ -2044,7 +2044,7 @@ lemma performASIDControlInvocation_st_tcb_at':
   done
 
 lemma arch_pinv_st_tcb_at':
-  "\<lbrace>valid_arch_inv' ai and st_tcb_at' (P and op \<noteq> Inactive and op \<noteq> IdleThreadState) t and
+  "\<lbrace>valid_arch_inv' ai and st_tcb_at' (P and (\<noteq>) Inactive and (\<noteq>) IdleThreadState) t and
     invs' and ct_active'\<rbrace>
      Arch.performInvocation ai
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>" (is "?pre (pgi ai) ?post")

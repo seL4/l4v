@@ -374,7 +374,7 @@ lemma getCTE_assert_opt:
    apply (simp add: empty_failD[OF empty_fail_getCTE])
   apply clarsimp
   apply (simp add: no_failD[OF no_fail_getCTE, OF ctes_of_cte_at])
-  apply (subgoal_tac "cte_wp_at' (op = x2) p x")
+  apply (subgoal_tac "cte_wp_at' ((=) x2) p x")
    apply (clarsimp simp: cte_wp_at'_def getCTE_def)
   apply (simp add: cte_wp_at_ctes_of)
   done
@@ -1155,7 +1155,7 @@ lemma oblivious_switchToThread_schact:
 lemma empty_fail_getCurThread[iff]:
   "empty_fail getCurThread" by (simp add: getCurThread_def)
 lemma activateThread_simple_rewrite:
-  "monadic_rewrite True True (ct_in_state' (op = Running))
+  "monadic_rewrite True True (ct_in_state' ((=) Running))
        (activateThread) (return ())"
   apply (simp add: activateThread_def)
   apply (rule monadic_rewrite_imp)
@@ -1208,7 +1208,7 @@ lemma setThreadState_no_sch_change:
   (is "NonDetMonad.valid ?P ?f ?Q")
   apply (simp add: setThreadState_def setSchedulerAction_def)
   apply (wp hoare_pre_cont[where a=rescheduleRequired])
-  apply (rule_tac Q="\<lambda>_. ?P and st_tcb_at' (op = st) t" in hoare_post_imp)
+  apply (rule_tac Q="\<lambda>_. ?P and st_tcb_at' ((=) st) t" in hoare_post_imp)
    apply (clarsimp split: if_split)
    apply (clarsimp simp: obj_at'_def st_tcb_at'_def projectKOs)
   apply (wp threadSet_pred_tcb_at_state)

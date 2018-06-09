@@ -427,7 +427,7 @@ lemma corres_select_f':
   by (clarsimp simp: select_f_def corres_underlying_def)
 
 lemma corres_dmo_getExMonitor_C:
-  "corres_underlying rf_sr nf nf' op = \<top> \<top> (doMachineOp getExMonitor) (doMachineOp_C getExMonitor)"
+  "corres_underlying rf_sr nf nf' (=) \<top> \<top> (doMachineOp getExMonitor) (doMachineOp_C getExMonitor)"
   apply (clarsimp simp: doMachineOp_def doMachineOp_C_def)
   apply (rule corres_guard_imp)
     apply (rule_tac r'="\<lambda>ms ms'. exclusive_state ms = exclusive_state ms' \<and> machine_state_rest ms = machine_state_rest ms'
@@ -498,7 +498,7 @@ lemma absKState_crelation:
               split: if_splits)
 
 lemma do_user_op_if_C_corres:
-   "corres_underlying rf_sr False False op =
+   "corres_underlying rf_sr False False (=)
    (invs' and ex_abs einvs and (\<lambda>_. uop_nonempty f)) \<top>
    (doUserOp_if f tc) (doUserOp_C_if f tc)"
   apply (rule corres_gen_asm)
@@ -539,13 +539,13 @@ lemma do_user_op_if_C_corres:
                           Let_def cmachine_state_relation_def)
    apply simp
   apply (rule corres_guard_imp)
-    apply (rule_tac P=\<top> and P'=\<top> and r'="op=" in corres_split)
+    apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
        prefer 2
        apply (clarsimp simp add: corres_underlying_def fail_def
                                  assert_def return_def
                           split: if_splits)
       apply simp
-      apply (rule_tac P=\<top> and P'=\<top> and r'="op=" in corres_split)
+      apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
          prefer 2
          apply (clarsimp simp add: corres_underlying_def fail_def
                                    assert_def return_def
@@ -553,7 +553,7 @@ lemma do_user_op_if_C_corres:
         apply simp
         apply (rule corres_split[OF _ corres_dmo_getExMonitor_C])
           apply clarsimp
-          apply (rule_tac r'="op=" in corres_split[OF _ corres_select])
+          apply (rule_tac r'="(=)" in corres_split[OF _ corres_select])
               prefer 2
               apply clarsimp
              apply simp
@@ -589,7 +589,7 @@ definition
   "check_active_irq_C_if \<equiv> {((tc, s), irq, (tc', s')). ((irq, tc'), s') \<in> fst (checkActiveIRQ_C_if tc s)}"
 
 lemma check_active_irq_corres_C:
-  "corres_underlying rf_sr False nf (op =) \<top> \<top>
+  "corres_underlying rf_sr False nf (=) \<top> \<top>
                      (checkActiveIRQ_if tc) (checkActiveIRQ_C_if tc)"
   apply (simp add: checkActiveIRQ_if_def checkActiveIRQ_C_if_def)
   apply (simp add: getActiveIRQ_C_def)
@@ -654,7 +654,7 @@ lemma handleEvent_Interrupt_no_fail: "no_fail (invs' and ex_abs einvs) (handleEv
   done
 
 lemma handle_preemption_corres_C:
-  "corres_underlying rf_sr False nf (op =) (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and ex_abs einvs) \<top>
+  "corres_underlying rf_sr False nf (=) (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and ex_abs einvs) \<top>
                      (handlePreemption_if tc) (handlePreemption_C_if tc)"
   apply (simp add: handlePreemption_if_def2 handlePreemption_C_if_def)
   apply (rule corres_guard_imp)
@@ -701,7 +701,7 @@ lemma ccorres_corres_u':
 
 
 lemma schedule_if_corres_C:
-  "corres_underlying rf_sr False nf (op =) (invs' and ex_abs einvs) \<top>
+  "corres_underlying rf_sr False nf (=) (invs' and ex_abs einvs) \<top>
                      (schedule'_if tc) (schedule_C_if' tc)"
   apply (simp add: schedule'_if_def schedule_C_if'_def)
   apply (rule corres_guard_imp)
@@ -753,7 +753,7 @@ lemma corres_underlying_nf_imp2:
   by (auto simp: corres_underlying_def)
 
 lemma kernel_exit_corres_C:
-  "corres_underlying rf_sr False nf (op =) (invs') \<top>
+  "corres_underlying rf_sr False nf (=) (invs') \<top>
                      (kernelExit_if tc) (kernelExit_C_if tc)"
   apply (rule corres_underlying_nf_imp2)
   apply (simp add: kernelExit_if_def kernelExit_C_if_def)

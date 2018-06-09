@@ -17,7 +17,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemmas lookup_slot_wrapper_defs'[simp] =
    lookupSourceSlot_def lookupTargetSlot_def lookupPivotSlot_def
 
-lemma get_mi_corres: "corres (op = \<circ> message_info_map)
+lemma get_mi_corres: "corres ((=) \<circ> message_info_map)
                       (tcb_at t) (tcb_at' t)
                       (get_message_info t) (getMessageInfo t)"
   apply (rule corres_guard_imp)
@@ -226,7 +226,7 @@ declare word64_minus_one_le [simp]
 
 lemma load_word_offs_corres':
   "\<lbrakk> y < unat max_ipc_words; y' = of_nat y * 8 \<rbrakk> \<Longrightarrow>
-  corres op = \<top> (valid_ipc_buffer_ptr' a) (load_word_offs a y) (loadWordUser (a + y'))"
+  corres (=) \<top> (valid_ipc_buffer_ptr' a) (load_word_offs a y) (loadWordUser (a + y'))"
   apply simp
   apply (erule load_word_offs_corres)
   done
@@ -241,7 +241,7 @@ lemma get_extra_cptrs_corres:
   apply (cases mi, cases buf; simp add: getExtraCPtrs_def del: upt.simps)
   apply (rule corres_guard_imp)
     apply (simp add: mapM_map_simp comp_def del: upt.simps)
-  apply (rule corres_mapM_list_all2[where r'="op =" and S="\<lambda>x y. y < 7 \<and> x = Suc msg_max_length + unat y"])
+  apply (rule corres_mapM_list_all2[where r'="(=)" and S="\<lambda>x y. y < 7 \<and> x = Suc msg_max_length + unat y"])
          apply simp
         apply simp
        apply simp
@@ -465,7 +465,7 @@ lemma tc_loop_corres:
   "\<lbrakk> list_all2 (\<lambda>(cap, slot) (cap', slot'). cap_relation cap cap'
              \<and> slot' = cte_map slot) caps caps';
       mi' = message_info_map mi \<rbrakk> \<Longrightarrow>
-   corres (op = \<circ> message_info_map)
+   corres ((=) \<circ> message_info_map)
       (\<lambda>s. valid_objs s \<and> pspace_aligned s \<and> pspace_distinct s \<and> valid_mdb s
          \<and> valid_list s
          \<and> (case ep of Some x \<Rightarrow> ep_at x s | _ \<Rightarrow> True)
@@ -1144,7 +1144,7 @@ lemma transferCapsToSlots_invs[wp]:
 lemma set_extra_badges_flags_eq:
   "length badges \<le> msgMaxExtraCaps \<Longrightarrow>
    of_bl (rev (map (\<lambda>x. x = None) badges)) =
-          foldl op + (0::word32)
+          foldl (+) (0::word32)
            (zipWith (\<lambda>n. case_option (2 ^ n) (\<lambda>v5. 0)) [0..< Suc msgMaxExtraCaps]
              badges)"
   apply (induct badges rule: rev_induct)
@@ -1184,7 +1184,7 @@ lemma tc_corres:
     list_all2 (\<lambda>x y. cap_relation (fst x) (fst y) \<and> snd y = cte_map (snd x))
          caps caps' \<rbrakk>
   \<Longrightarrow>
-   corres (op = \<circ> message_info_map)
+   corres ((=) \<circ> message_info_map)
    (tcb_at receiver and valid_objs and
     pspace_aligned and pspace_distinct and valid_mdb
     and valid_list
@@ -1603,9 +1603,9 @@ lemma lec_corres:
 
        apply (rule_tac S = "\<lambda>x y. x = y \<and> x < unat w2"
                in corres_mapM_list_all2
-         [where Q = "\<lambda>_. valid_objs and pspace_aligned and tcb_at thread" and r = "op ="
+         [where Q = "\<lambda>_. valid_objs and pspace_aligned and tcb_at thread" and r = "(=)"
             and Q' = "\<lambda>_. valid_objs' and pspace_aligned' and pspace_distinct' and tcb_at' thread
-              and case_option \<top> valid_ipc_buffer_ptr' buffer'" and r'="op =" ])
+              and case_option \<top> valid_ipc_buffer_ptr' buffer'" and r'="(=)" ])
             apply simp
            apply simp
           apply simp
@@ -1750,7 +1750,7 @@ lemma msgFromLookupFailure_map[simp]:
   by (cases lf, simp_all add: lookup_failure_map_def msgFromLookupFailure_def)
 
 lemma getRestartPCs_corres:
-  "corres op = (tcb_at t) (tcb_at' t)
+  "corres (=) (tcb_at t) (tcb_at' t)
                  (as_user t getRestartPC) (asUser t getRestartPC)"
   apply (rule corres_as_user')
   apply (rule corres_Id, simp, simp)
@@ -1758,7 +1758,7 @@ lemma getRestartPCs_corres:
   done
 
 lemma user_mapM_getRegister_corres:
-  "corres op = (tcb_at t) (tcb_at' t)
+  "corres (=) (tcb_at t) (tcb_at' t)
      (as_user t (mapM getRegister regs))
      (asUser t (mapM getRegister regs))"
   apply (rule corres_as_user')
@@ -1768,7 +1768,7 @@ lemma user_mapM_getRegister_corres:
   done
 
 lemma make_arch_fault_msg_corres:
-  "corres op = (tcb_at t) (tcb_at' t)
+  "corres (=) (tcb_at t) (tcb_at' t)
   (make_arch_fault_msg f t)
   (makeArchFaultMessage (arch_fault_map f) t)"
   apply (cases f, clarsimp simp: makeArchFaultMessage_def split: arch_fault.split)
@@ -1779,7 +1779,7 @@ lemma make_arch_fault_msg_corres:
   done
 
 lemma mk_ft_msg_corres:
-  "corres op = (tcb_at t) (tcb_at' t)
+  "corres (=) (tcb_at t) (tcb_at' t)
      (make_fault_msg ft t)
      (makeFaultMessage (fault_map ft) t)"
   apply (cases ft, simp_all add: makeFaultMessage_def split del: if_split)
@@ -2069,7 +2069,7 @@ lemma sanitise_register_corres:
                     sanitiseOrFlags_def sanitiseAndFlags_def)
 
 lemma handle_fault_reply_registers_corres:
-  "corres (op =) (tcb_at t) (tcb_at' t)
+  "corres (=) (tcb_at t) (tcb_at' t)
            (do t' \<leftarrow> arch_get_sanitise_register_info t;
                y \<leftarrow> as_user t
                 (zipWithM_x
@@ -2098,7 +2098,7 @@ lemma handle_fault_reply_registers_corres:
 
 lemma handle_fault_reply_corres:
   "ft' = fault_map ft \<Longrightarrow>
-   corres (op =) (tcb_at t) (tcb_at' t)
+   corres (=) (tcb_at t) (tcb_at' t)
      (handle_fault_reply ft t label msg)
      (handleFaultReply ft' t label msg)"
   apply (cases ft)
@@ -2192,7 +2192,7 @@ lemma capClass_Reply:
   done
 
 lemma reply_cap_end_mdb_chain:
-  "\<lbrakk> cte_wp_at (op = (cap.ReplyCap t False)) slot s; invs s;
+  "\<lbrakk> cte_wp_at ((=) (cap.ReplyCap t False)) slot s; invs s;
      invs' s';
      (s, s') \<in> state_relation; ctes_of s' (cte_map slot) = Some cte \<rbrakk>
       \<Longrightarrow> (mdbPrev (cteMDBNode cte) \<noteq> nullPointer
@@ -2403,7 +2403,7 @@ lemma restart_rewrite:
 lemma do_reply_transfer_corres:
   "corres dc
      (einvs and tcb_at receiver and tcb_at sender
-           and cte_wp_at (op = (cap.ReplyCap receiver False)) slot)
+           and cte_wp_at ((=) (cap.ReplyCap receiver False)) slot)
      (invs' and tcb_at' sender and tcb_at' receiver
             and valid_pspace' and cte_at' (cte_map slot))
      (do_reply_transfer sender receiver slot)

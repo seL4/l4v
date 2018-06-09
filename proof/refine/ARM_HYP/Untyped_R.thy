@@ -147,7 +147,7 @@ lemma dec_untyped_inv_corres:
   assumes cap_rel: "list_all2 cap_relation cs cs'"
   shows "corres
         (ser \<oplus> untypinv_relation)
-        (invs and cte_wp_at (op = (cap.UntypedCap d w n idx)) slot and (\<lambda>s. \<forall>x \<in> set cs. s \<turnstile> x))
+        (invs and cte_wp_at ((=) (cap.UntypedCap d w n idx)) slot and (\<lambda>s. \<forall>x \<in> set cs. s \<turnstile> x))
         (invs'
           and (\<lambda>s. \<forall>x \<in> set cs'. s \<turnstile>' x))
         (decode_untyped_invocation label args slot (cap.UntypedCap d w n idx) cs)
@@ -1376,7 +1376,7 @@ lemma mdb_relation_simp:
   by (cases p, clarsimp simp: state_relation_def cdt_relation_def)
 
 lemma in_getCTE2:
-  "((cte, s') \<in> fst (getCTE p s)) = (s' = s \<and> cte_wp_at' (op = cte) p s)"
+  "((cte, s') \<in> fst (getCTE p s)) = (s' = s \<and> cte_wp_at' ((=) cte) p s)"
   apply (safe dest!: in_getCTE)
   apply (clarsimp simp: cte_wp_at'_def getCTE_def)
   done
@@ -1464,9 +1464,9 @@ shows
   "\<lbrakk> cref' = cte_map (fst tup)
      \<and> cap_relation (default_cap tp (snd tup) sz d) cap \<rbrakk> \<Longrightarrow>
    corres dc
-     (cte_wp_at (op = cap.NullCap) (fst tup) and pspace_aligned
+     (cte_wp_at ((=) cap.NullCap) (fst tup) and pspace_aligned
         and pspace_distinct and valid_objs and valid_mdb and valid_list
-        and cte_wp_at (op \<noteq> cap.NullCap) p)
+        and cte_wp_at ((\<noteq>) cap.NullCap) p)
      (cte_wp_at' (\<lambda>c. cteCap c = NullCap) cref' and
       cte_wp_at' (\<lambda>cte. isUntypedCap (cteCap cte) \<and> sameRegionAs (cteCap cte) cap) (cte_map p)
        and valid_mdb' and pspace_aligned' and pspace_distinct' and valid_objs'
@@ -3073,7 +3073,7 @@ lemma inv_untyped_corres_helper1:
               caps_overlap_reserved (untyped_range (default_cap tp (snd tup) sz d)) s)
           \<and> (\<forall>tup \<in> set (zip crefs orefs). real_cte_at (fst tup) s)
           \<and> (\<forall>tup \<in> set (zip crefs orefs).
-              cte_wp_at (op = cap.NullCap) (fst tup) s)
+              cte_wp_at ((=) cap.NullCap) (fst tup) s)
           \<and> distinct (p # (map fst (zip crefs orefs)))
           \<and> distinct_sets (map (\<lambda>tup. cap_range (default_cap tp (snd tup) sz d)) (zip crefs orefs))
           \<and> (\<forall>tup \<in> set (zip crefs orefs).
@@ -3424,7 +3424,7 @@ lemma createNewCaps_not_parents:
   done
 
 lemma createObjects_distinct:
-  "\<lbrace>\<lambda>s. 0<n \<and> range_cover ptr sz ((objBitsKO obj) + us) n\<rbrace> createObjects ptr n obj us \<lbrace>\<lambda>rv s. distinct_prop op \<noteq> rv\<rbrace>"
+  "\<lbrace>\<lambda>s. 0<n \<and> range_cover ptr sz ((objBitsKO obj) + us) n\<rbrace> createObjects ptr n obj us \<lbrace>\<lambda>rv s. distinct_prop (\<noteq>) rv\<rbrace>"
   apply (simp add: createObjects_def unless_def alignError_def split_def
                    lookupAround2_pspace_no createObjects'_def
              cong: if_cong split del: if_split)
@@ -3535,7 +3535,7 @@ lemma createNewCaps_parent_helper:
                        (\<forall>tup\<in>set (zip (xs rv) rv).
                                 sameRegionAs (cteCap cte) (snd tup)))
     p\<rbrace>"
-  apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>cte. cte_wp_at' (op = cte) p s
+  apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>cte. cte_wp_at' ((=) cte) p s
                                            \<and> isUntypedCap (cteCap cte)
                                            \<and> (\<forall>tup\<in>set (zip (xs rv) rv).
                                 sameRegionAs (cteCap cte) (snd tup))"])
@@ -5198,7 +5198,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma inv_untyped_corres':
   "\<lbrakk> untypinv_relation ui ui' \<rbrakk> \<Longrightarrow>
-   corres (intr \<oplus> (op =))
+   corres (intr \<oplus> (=))
      (einvs and valid_untyped_inv ui and ct_active)
      (invs' and valid_untyped_inv' ui' and ct_active')
      (invoke_untyped ui) (invokeUntyped ui')"
@@ -5225,7 +5225,7 @@ lemma inv_untyped_corres':
     and    vui': "valid_untyped_inv_wcap' ?ui' (Some (UntypedCap dev (ptr && ~~ mask sz') sz' idx')) s'"
     assume   ui: "ui = ?ui" and ui': "ui' = ?ui'"
 
-    have cte_at: "cte_wp_at (op = ?cap) cref s" (is "?cte_cond s")
+    have cte_at: "cte_wp_at ((=) ?cap) cref s" (is "?cte_cond s")
        using vui by (simp add:cte_wp_at_caps_of_state)
 
     have ptr_sz_simp[simp]: "ptr_base = ptr && ~~ mask sz \<and> sz' = sz \<and> idx' = idx \<and> 2 \<le> sz"
@@ -5426,7 +5426,7 @@ lemma inv_untyped_corres':
 
     note msimp[simp add] = getObjectSize_def_eq neg_mask_add_mask
     note if_split[split del]
-    show " corres (intr \<oplus> (op =)) (op = s) (op = s')
+    show " corres (intr \<oplus> (=)) ((=) s) ((=) s')
            (invoke_untyped ?ui)
            (invokeUntyped ?ui')"
       apply (clarsimp simp:invokeUntyped_def invoke_untyped_def getSlotCap_def bind_assoc)
@@ -5745,7 +5745,7 @@ lemma insertNewCap_nullcap:
   apply (subgoal_tac "cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) slot s")
    apply fastforce
   apply (clarsimp simp: insertNewCap_def in_monad cte_wp_at_ctes_of liftM_def
-                 dest!: use_valid [OF _ getCTE_sp[where P="op = s" for s], OF _ refl])
+                 dest!: use_valid [OF _ getCTE_sp[where P="(=) s" for s], OF _ refl])
   done
 
 crunch idle'[wp]: insertNewCap "valid_idle'"
@@ -6160,7 +6160,7 @@ lemma invokeUntyped_invs'':
     note neg_mask_add_mask = word_plus_and_or_coroll2
     [symmetric,where w = "mask sz" and t = ptr,symmetric]
     note msimp[simp add] =  misc getObjectSize_def_eq neg_mask_add_mask
-    show "\<lbrace>op = s\<rbrace> invokeUntyped ui \<lbrace>\<lambda>rv s. invs' s \<and> Q s\<rbrace>"
+    show "\<lbrace>(=) s\<rbrace> invokeUntyped ui \<lbrace>\<lambda>rv s. invs' s \<and> Q s\<rbrace>"
     including no_pre
     apply (clarsimp simp:invokeUntyped_def getSlotCap_def ui)
     apply (rule validE_valid)
@@ -6273,7 +6273,7 @@ lemma invokeUntyped_invs'[wp]:
 crunch pred_tcb_at'[wp]: updateFreeIndex "pred_tcb_at' pr P p"
 
 lemma resetUntypedCap_st_tcb_at':
-  "\<lbrace>invs' and st_tcb_at' (P and (op \<noteq> Inactive) and (op \<noteq> IdleThreadState)) t
+  "\<lbrace>invs' and st_tcb_at' (P and ((\<noteq>) Inactive) and ((\<noteq>) IdleThreadState)) t
       and cte_wp_at' (\<lambda>cp. isUntypedCap (cteCap cp)) slot
       and ct_active' and sch_act_simple and (\<lambda>s. descendants_of' slot (ctes_of s) = {})\<rbrace>
     resetUntypedCap slot
@@ -6296,7 +6296,7 @@ lemma resetUntypedCap_st_tcb_at':
   done
 
 lemma inv_untyp_st_tcb_at'[wp]:
-  "\<lbrace>invs' and st_tcb_at' (P and (op \<noteq> Inactive) and (op \<noteq> IdleThreadState)) tptr
+  "\<lbrace>invs' and st_tcb_at' (P and ((\<noteq>) Inactive) and ((\<noteq>) IdleThreadState)) tptr
          and valid_untyped_inv' ui and ct_active'\<rbrace>
      invokeUntyped ui
    \<lbrace>\<lambda>rv. st_tcb_at' P tptr\<rbrace>"

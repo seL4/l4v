@@ -689,7 +689,7 @@ lemma getSanitiseRegisterInfo_moreMapM_comm:
 
 
 lemma monadic_rewrite_symb_exec_r':
-  "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>; no_fail P m;
+  "\<lbrakk> \<And>s. \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>; no_fail P m;
      \<And>rv. monadic_rewrite F False (Q rv) x (y rv);
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
       \<Longrightarrow> monadic_rewrite F False P x (m >>= y)"
@@ -1592,7 +1592,7 @@ declare zipWith_Nil2[simp]
 declare zipWithM_x_Nil2[simp]
 
 lemma getRestartPC_ccorres [corres]:
-  "ccorres (op =) ret__unsigned_long_' \<top>
+  "ccorres (=) ret__unsigned_long_' \<top>
      (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
      (asUser thread (getRegister register.FaultIP))
      (Call getRestartPC_'proc)"
@@ -3870,7 +3870,7 @@ lemma length_exceptionMessage:
   by (simp add: X64_H.exceptionMessage_def X64.exceptionMessage_def n_exceptionMessage_def)
 
 lemma Arch_getSanitiseRegisterInfo_ccorres:
-  "ccorres (op = \<circ> from_bool) ret__unsigned_long_'
+  "ccorres ((=) \<circ> from_bool) ret__unsigned_long_'
      (tcb_at' r and no_0_obj' and valid_objs')
      (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr r}) hs
      (getSanitiseRegisterInfo r)
@@ -6289,7 +6289,7 @@ lemma receiveIPC_ccorres [corres]:
                  apply (rule conseqPre, vcg, clarsimp)
                 apply (clarsimp simp: guard_is_UNIV_def ThreadState_Inactive_def)
            apply (rule_tac Q="\<lambda>rv. valid_queues and valid_pspace' and valid_objs'
-                                   and st_tcb_at' (op = sendState) sender
+                                   and st_tcb_at' ((=) sendState) sender
                                    and tcb_at' thread and sch_act_not sender
                                    and (\<lambda>s. ksCurDomain s \<le> maxDomain)
                                    and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
@@ -6372,7 +6372,7 @@ lemma receiveIPC_ccorres [corres]:
 
 lemma sendSignal_dequeue_ccorres_helper:
   "ccorres (\<lambda>rv rv'. rv' = tcb_ptr_to_ctcb_ptr dest) dest___ptr_to_struct_tcb_C_'
-           (invs' and st_tcb_at' (op = (BlockedOnNotification ntfn)) dest
+           (invs' and st_tcb_at' ((=) (BlockedOnNotification ntfn)) dest
                   and ko_at' nTFN ntfn
                   and K (ntfnObj nTFN = WaitingNtfn (dest # rest))) UNIV hs
            (setNotification ntfn $ ntfnObj_update (\<lambda>_. case rest of [] \<Rightarrow> Structures_H.ntfn.IdleNtfn

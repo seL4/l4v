@@ -38,7 +38,7 @@ where
 | "irq_handler_inv_valid (Invocations_A.ClearIRQHandler irq) = \<top>"
 | "irq_handler_inv_valid (Invocations_A.SetIRQHandler irq cap cte_ptr)
      = (\<lambda>s. ex_cte_cap_wp_to (is_cnode_cap) cte_ptr s
-            \<and> (\<exists>ptr'. cte_wp_at (op = (cap.IRQHandlerCap irq)) ptr' s)
+            \<and> (\<exists>ptr'. cte_wp_at ((=) (cap.IRQHandlerCap irq)) ptr' s)
             \<and> cte_wp_at (interrupt_derived cap) cte_ptr s
             \<and> s \<turnstile> cap \<and> is_ntfn_cap cap)"
 
@@ -50,8 +50,8 @@ primrec
 where
   "irq_control_inv_valid (Invocations_A.ArchIRQControl ivk) = (arch_irq_control_inv_valid ivk)"
 | "irq_control_inv_valid (Invocations_A.IRQControl irq ptr ptr') =
-       (cte_wp_at (op = cap.NullCap) ptr and
-        cte_wp_at (op = cap.IRQControlCap) ptr'
+       (cte_wp_at ((=) cap.NullCap) ptr and
+        cte_wp_at ((=) cap.IRQControlCap) ptr'
         and ex_cte_cap_wp_to is_cnode_cap ptr and real_cte_at ptr
         and K (irq \<le> maxIRQ))"
 
@@ -66,7 +66,7 @@ locale Interrupt_AI =
     \<lbrace>\<lambda>s :: 'a state. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> cap)
           \<and> (\<forall>cap \<in> set caps. is_cnode_cap cap \<longrightarrow>
                   (\<forall>r \<in> cte_refs cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s))
-          \<and> cte_wp_at (op = cap.IRQControlCap) slot s\<rbrace>
+          \<and> cte_wp_at ((=) cap.IRQControlCap) slot s\<rbrace>
       decode_irq_control_invocation label args slot caps
     \<lbrace>irq_control_inv_valid\<rbrace>,-"
   assumes get_irq_slot_different:
@@ -124,13 +124,13 @@ crunch inv[wp]: decode_irq_handler_invocation "P"
   (simp: crunch_simps)
 
 lemma valid_irq_handlersD:
-  "\<lbrakk>cte_wp_at (op = (IRQHandlerCap irq)) (a, b) s; valid_irq_handlers s\<rbrakk>  \<Longrightarrow>
+  "\<lbrakk>cte_wp_at ((=) (IRQHandlerCap irq)) (a, b) s; valid_irq_handlers s\<rbrakk>  \<Longrightarrow>
   interrupt_states s irq = IRQSignal"
   apply(auto simp: valid_irq_handlers_def cte_wp_at_caps_of_state irq_issued_def cap_irqs_def cap_irq_opt_def split: cap.splits)
   done
 
 lemma decode_irq_handler_valid[wp]:
-  "\<lbrace>\<lambda>s. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> fst cap) \<and> (\<exists>ptr'. cte_wp_at (op = (cap.IRQHandlerCap irq)) ptr' s)
+  "\<lbrace>\<lambda>s. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> fst cap) \<and> (\<exists>ptr'. cte_wp_at ((=) (cap.IRQHandlerCap irq)) ptr' s)
         \<and> (\<forall>cap \<in> set caps. \<forall>r \<in> cte_refs (fst cap) (interrupt_irq_node s). ex_cte_cap_to r s)
         \<and> (\<forall>cap \<in> set caps. ex_cte_cap_wp_to is_cnode_cap (snd cap) s)
         \<and> (\<forall>cap \<in> set caps. cte_wp_at (interrupt_derived (fst cap)) (snd cap) s)\<rbrace>
@@ -201,7 +201,7 @@ lemma cap_delete_one_cte_cap_to[wp]:
 
 
 lemma get_irq_slot_ex_cte:
-  "\<lbrace>\<lambda>s. \<exists>ptr. cte_wp_at (op = (cap.IRQHandlerCap irq)) ptr s \<and> P (cap.IRQHandlerCap irq)\<rbrace>
+  "\<lbrace>\<lambda>s. \<exists>ptr. cte_wp_at ((=) (cap.IRQHandlerCap irq)) ptr s \<and> P (cap.IRQHandlerCap irq)\<rbrace>
       get_irq_slot irq
    \<lbrace>ex_cte_cap_wp_to P\<rbrace>"
   apply (simp add: get_irq_slot_def)

@@ -80,9 +80,9 @@ crunch mdb_inv[wp]: store_pde "\<lambda>s. P (cdt s)"
   (ignore: clearMemory wp: crunch_wps)
 
 lemma mdb_cte_at_store_pde[wp]:
-  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>
+  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrace>
    store_pde y pde
-   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
+   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrace>"
   apply (clarsimp simp:mdb_cte_at_def)
   apply (simp only: imp_conv_disj)
   apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
@@ -484,7 +484,7 @@ context Arch begin global_naming ARM
 
 lemma valid_untyped_helper [Retype_AI_assms]:
   assumes valid_c : "s  \<turnstile> c"
-  and   cte_at  : "cte_wp_at (op = c) q s"
+  and   cte_at  : "cte_wp_at ((=) c) q s"
   and     tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
   and   cover  : "range_cover ptr sz (obj_bits_api ty us) n"
   and   range  : "is_untyped_cap c \<Longrightarrow> usable_untyped_range c \<inter> {ptr..ptr + of_nat (n * 2 ^ (obj_bits_api ty us)) - 1} = {}"
@@ -1179,7 +1179,7 @@ lemma clearMemory_invs:
    apply (clarsimp simp: invs_def valid_state_def)
    apply (erule_tac p=p in valid_machine_stateE)
    apply (clarsimp simp: use_valid[OF _ clearMemory_underlying_mem_0])
-  apply (clarsimp simp: use_valid[OF _ clearMemory_irq_masks_inv[where P="op = v" for v], OF _ refl])
+  apply (clarsimp simp: use_valid[OF _ clearMemory_irq_masks_inv[where P="(=) v" for v], OF _ refl])
   done
 
 lemma caps_region_kernel_window_imp:

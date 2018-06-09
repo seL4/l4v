@@ -139,7 +139,7 @@ lemma st_tcb_at_tcb_states_of_state:
   unfolding tcb_states_of_state_def st_tcb_def2 by auto
 
 lemma st_tcb_at_tcb_states_of_state_eq:
-  "(st_tcb_at (op = st) p s) = (tcb_states_of_state s p = Some st)"
+  "(st_tcb_at ((=) st) p s) = (tcb_states_of_state s p = Some st)"
   unfolding tcb_states_of_state_def st_tcb_def2 by auto
 
 lemma kheap_auth_ipc_buffer_same:
@@ -167,7 +167,7 @@ lemma tro_auth_ipc_buffer_idem:
   done
 
 lemma dmo_storeWord_respects_ipc:
-  "\<lbrace>integrity aag X st and st_tcb_at (op = Structures_A.Running) thread and
+  "\<lbrace>integrity aag X st and st_tcb_at ((=) Structures_A.Running) thread and
     K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at (receive_blocked_on ep) thread st \<and> auth_ipc_buffers st thread = ptr_range buf msg_align_bits) \<and>
       ipc_buffer_has_auth aag thread (Some buf) \<and> p < 2 ^ (msg_align_bits - 2)) \<rbrace>
     do_machine_op (storeWord (buf + of_nat p * of_nat word_size) v)
@@ -206,7 +206,7 @@ lemma dmo_storeWord_respects_ipc:
   done
 
 lemma store_word_offs_respects:
-  "\<lbrace>integrity aag X st and st_tcb_at (op = Structures_A.Running) thread and
+  "\<lbrace>integrity aag X st and st_tcb_at ((=) Structures_A.Running) thread and
     K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at (receive_blocked_on ep) thread st \<and> auth_ipc_buffers st thread = ptr_range buf msg_align_bits) \<and>
       ipc_buffer_has_auth aag thread (Some buf) \<and> p < 2 ^ (msg_align_bits - 2)) \<rbrace>
    store_word_offs buf p v
@@ -308,7 +308,7 @@ lemma length_msg_registers:
 
 lemma send_upd_ctxintegrity:
   "\<lbrakk> direct_send {pasSubject aag} aag ep tcb \<or> indirect_send {pasSubject aag} aag ep recv tcb;
-     integrity aag X st s; st_tcb_at (op = Structures_A.thread_state.Running) thread s;
+     integrity aag X st s; st_tcb_at ((=) Structures_A.thread_state.Running) thread s;
      get_tcb thread st = Some tcb; get_tcb thread s = Some tcb' \<rbrakk>
      \<Longrightarrow> integrity aag X st (s\<lparr>kheap := kheap s(thread \<mapsto> TCB (tcb'\<lparr>tcb_arch := arch_tcb_context_set c' (tcb_arch tcb')\<rparr>))\<rparr>)"
   apply (clarsimp simp: integrity_def tcb_states_of_state_preserved st_tcb_def2)
@@ -323,7 +323,7 @@ lemma send_upd_ctxintegrity:
   done
 
 lemma set_mrs_respects_in_signalling':
-  "\<lbrace>integrity aag X st and st_tcb_at (op = Structures_A.Running) thread and
+  "\<lbrace>integrity aag X st and st_tcb_at ((=) Structures_A.Running) thread and
     K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at (receive_blocked_on ep) thread st
         \<and> case_option True (\<lambda>buf'. auth_ipc_buffers st thread = ptr_range buf' msg_align_bits) buf)
         \<and> aag_has_auth_to aag Notify ep \<and> ipc_buffer_has_auth aag thread buf) \<rbrace>
@@ -335,7 +335,7 @@ lemma set_mrs_respects_in_signalling':
        | wpc
        | simp split del: if_split
                     add: zipWithM_x_mapM_x split_def store_word_offs_def fun_upd_def[symmetric])+
-  apply (rule hoare_post_imp [where Q = "\<lambda>rv. st_tcb_at (op = Structures_A.Running) thread and integrity aag X st"])
+  apply (rule hoare_post_imp [where Q = "\<lambda>rv. st_tcb_at ((=) Structures_A.Running) thread and integrity aag X st"])
    apply simp
   apply (wp mapM_x_wp' dmo_storeWord_respects_ipc [where thread = thread and ep = ep])
    apply (fastforce simp add: set_zip nth_append simp: msg_align_bits msg_max_length_def
@@ -355,7 +355,7 @@ lemma set_mrs_respects_in_signalling':
   done
 
 lemma as_user_set_register_respects:
-  "\<lbrace>integrity aag X st and st_tcb_at (op = Structures_A.Running) thread and
+  "\<lbrace>integrity aag X st and st_tcb_at ((=) Structures_A.Running) thread and
     K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at (receive_blocked_on ep) thread st) \<and> (aag_has_auth_to aag SyncSend ep \<or> aag_has_auth_to aag Notify ep)) \<rbrace>
    as_user thread (set_register r v)
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
@@ -503,7 +503,7 @@ lemma cancel_ipc_receive_blocked_respects:
         | wpc)+
    apply (clarsimp simp: st_tcb_at_def2 obj_at_def)
    apply (drule_tac t="tcb_state tcb" in sym)
-   apply (subgoal_tac "st_tcb_at (op = (tcb_state tcb)) t sa")
+   apply (subgoal_tac "st_tcb_at ((=) (tcb_state tcb)) t sa")
     apply (drule(1) sym_refs_st_tcb_atD)
     apply (clarsimp simp: obj_at_def ep_q_refs_of_def fun_upd_def get_tcb_def
                    split: endpoint.splits cong: if_cong)
@@ -535,9 +535,9 @@ lemma set_thread_state_integrity':
   by fastforce
 
 lemma as_user_set_register_respects_indirect:
-  "\<lbrace>integrity aag X st and st_tcb_at (op = Structures_A.Running) thread and
+  "\<lbrace>integrity aag X st and st_tcb_at ((=) Structures_A.Running) thread and
     K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at receive_blocked thread st
-           \<and> bound_tcb_at (op = (Some ntfnptr)) thread st)
+           \<and> bound_tcb_at ((=) (Some ntfnptr)) thread st)
         \<and> (aag_has_auth_to aag Notify ntfnptr)) \<rbrace>
    as_user thread (set_register r v)
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
@@ -561,7 +561,7 @@ lemma integrity_receive_blocked_chain':
   done
 
 lemma tba_Some:
-  "thread_bound_ntfns s t = Some a \<Longrightarrow> bound_tcb_at (op = (Some a)) t s"
+  "thread_bound_ntfns s t = Some a \<Longrightarrow> bound_tcb_at ((=) (Some a)) t s"
   by (clarsimp simp: thread_bound_ntfns_def pred_tcb_at_def obj_at_def get_tcb_def split: option.splits kernel_object.splits)
 
 
@@ -575,7 +575,7 @@ lemma tsos_tro':
   done
 
 lemma integrity_receive_blocked_chain_bound:
-  "\<lbrakk> bound_tcb_at (op = (Some ntfnptr)) p s; integrity aag X st s; \<not> is_subject aag p \<rbrakk> \<Longrightarrow> bound_tcb_at (op = (Some ntfnptr)) p st"
+  "\<lbrakk> bound_tcb_at ((=) (Some ntfnptr)) p s; integrity aag X st s; \<not> is_subject aag p \<rbrakk> \<Longrightarrow> bound_tcb_at ((=) (Some ntfnptr)) p st"
   apply (clarsimp simp: integrity_def)
   apply (drule bound_tcb_at_thread_bound_ntfns)
   apply (drule tsos_tro' [where p = p], simp+ )
@@ -1050,7 +1050,7 @@ lemma case_list_cons_cong:
 
 lemma complete_signal_integrity:
   "\<lbrace>integrity aag X st and pas_refined aag and valid_objs
-           and bound_tcb_at (op = (Some ntfnptr)) thread
+           and bound_tcb_at ((=) (Some ntfnptr)) thread
            and K (is_subject aag thread)\<rbrace>
      complete_signal ntfnptr thread
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
@@ -1141,7 +1141,7 @@ lemma receive_ipc_base_pas_refined:
   done
 
 lemma complete_signal_pas_refined:
-  "\<lbrace>pas_refined aag and bound_tcb_at (op = (Some ntfnptr)) thread\<rbrace>
+  "\<lbrace>pas_refined aag and bound_tcb_at ((=) (Some ntfnptr)) thread\<rbrace>
      complete_signal ntfnptr thread
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: complete_signal_def)

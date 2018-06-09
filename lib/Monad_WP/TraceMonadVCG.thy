@@ -693,7 +693,7 @@ lemma pred_and_false_var[simp]: "(\<bottom> and P) = \<bottom>"
   by(simp add:pred_conj_def)
 
 lemma bipred_disj_op_eq[simp]:
-  "reflp R \<Longrightarrow> op = Or R = R"
+  "reflp R \<Longrightarrow> (=) Or R = R"
   apply (rule ext, rule ext)
   apply (auto simp: reflp_def)
   done
@@ -940,7 +940,7 @@ lemma use_validE_except: "\<lbrakk> (Inl r', s') \<in> mres (B s); \<lbrace> P \
 
 lemma in_inv_by_hoareD:
   "\<lbrakk> \<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>; (x,s') \<in> mres (f s) \<rbrakk> \<Longrightarrow> s' = s"
-  apply (drule_tac x="op = s" in meta_spec)
+  apply (drule_tac x="(=) s" in meta_spec)
   apply (auto simp add: valid_def mres_def)
   done
 
@@ -2628,29 +2628,29 @@ text {* Strengthen setup. *}
 context strengthen_implementation begin
 
 lemma strengthen_hoare [strg]:
-  "(\<And>r s. st F (op \<longrightarrow>) (Q r s) (R r s))
-    \<Longrightarrow> st F (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>)"
+  "(\<And>r s. st F (\<longrightarrow>) (Q r s) (R r s))
+    \<Longrightarrow> st F (\<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>)"
   by (cases F, auto elim: hoare_strengthen_post)
 
 lemma strengthen_validE_R_cong[strg]:
-  "(\<And>r s. st F (op \<longrightarrow>) (Q r s) (R r s))
-    \<Longrightarrow> st F (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, -)"
+  "(\<And>r s. st F (\<longrightarrow>) (Q r s) (R r s))
+    \<Longrightarrow> st F (\<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, -)"
   by (cases F, auto intro: hoare_post_imp_R)
 
 lemma strengthen_validE_cong[strg]:
-  "(\<And>r s. st F (op \<longrightarrow>) (Q r s) (R r s))
-    \<Longrightarrow> (\<And>r s. st F (op \<longrightarrow>) (S r s) (T r s))
-    \<Longrightarrow> st F (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>S\<rbrace>) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>T\<rbrace>)"
+  "(\<And>r s. st F (\<longrightarrow>) (Q r s) (R r s))
+    \<Longrightarrow> (\<And>r s. st F (\<longrightarrow>) (S r s) (T r s))
+    \<Longrightarrow> st F (\<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>S\<rbrace>) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>T\<rbrace>)"
   by (cases F, auto elim: hoare_post_impErr)
 
 lemma strengthen_validE_E_cong[strg]:
-  "(\<And>r s. st F (op \<longrightarrow>) (S r s) (T r s))
-    \<Longrightarrow> st F (op \<longrightarrow>) (\<lbrace>P\<rbrace> f -, \<lbrace>S\<rbrace>) (\<lbrace>P\<rbrace> f -, \<lbrace>T\<rbrace>)"
+  "(\<And>r s. st F (\<longrightarrow>) (S r s) (T r s))
+    \<Longrightarrow> st F (\<longrightarrow>) (\<lbrace>P\<rbrace> f -, \<lbrace>S\<rbrace>) (\<lbrace>P\<rbrace> f -, \<lbrace>T\<rbrace>)"
   by (cases F, auto elim: hoare_post_impErr simp: validE_E_def)
 
 lemma strengthen_validI[strg]:
-  "(\<And>r s0 s. st F (op \<longrightarrow>) (Q r s0 s) (Q' r s0 s))
-    \<Longrightarrow> st F (op \<longrightarrow>) (\<lbrace>P\<rbrace>,\<lbrace>G\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>Q\<rbrace>) (\<lbrace>P\<rbrace>,\<lbrace>G\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>Q'\<rbrace>)"
+  "(\<And>r s0 s. st F (\<longrightarrow>) (Q r s0 s) (Q' r s0 s))
+    \<Longrightarrow> st F (\<longrightarrow>) (\<lbrace>P\<rbrace>,\<lbrace>G\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>Q\<rbrace>) (\<lbrace>P\<rbrace>,\<lbrace>G\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>Q'\<rbrace>)"
   by (cases F, auto elim: validI_strengthen_post)
 
 end

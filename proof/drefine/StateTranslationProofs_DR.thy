@@ -119,7 +119,7 @@ lemma transform_full_intent_cong:
   by (simp add: transform_full_intent_def get_tcb_message_info_def get_tcb_mrs_def Suc_le_eq get_ipc_buffer_words_def)
 
 lemma caps_of_state_eq_lift:
-    "\<forall>cap. cte_wp_at (op=cap) p s = cte_wp_at (op=cap) p s' \<Longrightarrow>  caps_of_state s p = caps_of_state s' p"
+    "\<forall>cap. cte_wp_at ((=cap)) p s = cte_wp_at ((=cap)) p s' \<Longrightarrow>  caps_of_state s p = caps_of_state s' p"
   apply (simp add:cte_wp_at_def caps_of_state_def)
   done
 

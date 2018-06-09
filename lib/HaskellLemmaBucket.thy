@@ -15,7 +15,7 @@ imports
 begin
 
 lemma map_bits_to_bl:
-  "map (op !! x) [0..<size x] = reverse (to_bl x)"
+  "map ((!!) x) [0..<size x] = reverse (to_bl x)"
   by (simp add: map_bits_rev_to_bl)
 
 lemma not_orList_is_replicate:

@@ -77,7 +77,7 @@ fun get_action prop = let
             val (fname, T) = dest_Const c
             val acts = Symtab.lookup_list actions fname
             fun interesting arg = not (member Term.aconv_untyped xs arg)
-                andalso exists (fn i => not (member (op =) xs (Bound i)))
+                andalso exists (fn i => not (member (=) xs (Bound i)))
                     (Term.loose_bnos arg)
           in the (sfirst acts (fn (i, selname, thms) => if interesting (nth ys i)
             then SOME (var, idx, mk_sel selname T i, thms) else NONE))

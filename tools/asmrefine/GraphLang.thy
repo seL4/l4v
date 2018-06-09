@@ -717,7 +717,7 @@ fun parse_fun (["Function" :: ss]) = let
     val (nm, xs, ys) = parse_fun_decl ("Function" :: ss)
     val _ = tracing ("Parsing " ^ nm)
     val (node_sss, sss) = take_prefix
-        (fn ss => not (is_prefix (op =) ["EntryPoint"] ss)) sss
+        (fn ss => not (is_prefix (=) ["EntryPoint"] ss)) sss
     val (ep, sss) = case sss of (ep :: sss) => (ep, sss)
         | [] => raise PARSEGRAPH [
         "parse_fun: EntryPoint not found"]

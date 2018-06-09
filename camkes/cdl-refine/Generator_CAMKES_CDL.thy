@@ -178,7 +178,7 @@ lemma helper3: "(\<Sum>(a, b) \<leftarrow> xs. Suc (f a b)) = length xs + (\<Sum
   apply (induct xs)
    by clarsimp+
 
-lemma helper4: "fold op + ((map (\<lambda>(a, b). f a b) xs)::nat list) 0 = (\<Sum>(a, b) \<leftarrow> xs. f a b)"
+lemma helper4: "fold (+) ((map (\<lambda>(a, b). f a b) xs)::nat list) 0 = (\<Sum>(a, b) \<leftarrow> xs. f a b)"
   apply (subst fold_plus_sum_list_rev)
   apply (subst sum_list_rev)
   by clarsimp
@@ -488,15 +488,15 @@ where
   "poa_of spec extra irqs \<equiv> (\<lambda>id. case (
 
      (* Labelling of the output of the low-level generator: *)
-     fold (op ++)
+     fold (++)
        (map (\<lambda>(name, _). [the_id_of name \<mapsto> behead name ''cnode_'']) (cnode_objs spec))
          Map.empty
 
      ++
-     fold (op ++)
+     fold (++)
        (map (\<lambda>(name, _). [the_id_of name \<mapsto> trunc name ''_ep'']) (ep_objs spec)) Map.empty
      ++
-     fold (op ++)
+     fold (++)
        (map (\<lambda>(name, _). [the_id_of name \<mapsto> behead name ''tcb_'']) (tcb_objs spec)) Map.empty
 
      (* Labelling of address space objects: *)

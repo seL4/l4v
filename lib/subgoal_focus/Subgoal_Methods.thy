@@ -72,7 +72,7 @@ fun fold_subgoals ctxt prefix raw_st =
 
       val subgoals = Thm.prems_of st;
       val paramss = map strip_params subgoals;
-      val common_params = max_common_prefix (eq_snd op =) paramss;
+      val common_params = max_common_prefix (eq_snd (=)) paramss;
 
       fun strip_shift subgoal =
         let
@@ -83,7 +83,7 @@ fun fold_subgoals ctxt prefix raw_st =
 
       val premss = map (strip_shift) subgoals;
 
-      val common_prems = max_common_prefix (op aconv) premss;
+      val common_prems = max_common_prefix (aconv) premss;
 
       val common_params = if prefix then common_params else [];
       val common_prems = if prefix then common_prems else [];
@@ -149,8 +149,8 @@ fun distinct_subgoals ctxt raw_st =
       |> Seq.hd;
 
     val subgoals' = subgoals
-      |> inter (op aconvc) (Thm.chyps_of st')
-      |> distinct (op aconvc);
+      |> inter (aconvc) (Thm.chyps_of st')
+      |> distinct (aconvc);
   in
     Drule.implies_intr_list subgoals' st'
     |> singleton (Variable.export inner_ctxt ctxt)

@@ -1218,7 +1218,7 @@ lemma prefix_refinement_repeat_n:
 lemma prefix_refinement_env_n_steps:
   assumes env_stable: "env_stable AR R sr iosr Q"
   shows "prefix_refinement sr iosr iosr (\<lambda>_ _. True)
-        (op =) (\<lambda>t0 t. t0 = t \<and> Q t0) AR R (env_n_steps n) (env_n_steps n)"
+        (=) (\<lambda>t0 t. t0 = t \<and> Q t0) AR R (env_n_steps n) (env_n_steps n)"
   apply (rule prefix_refinement_repeat_n)
     apply (rule prefix_refinement_env_step[OF env_stable])
    apply (simp add: env_step_def)
@@ -1241,7 +1241,7 @@ lemma prefix_refinement_repeat:
     \<Longrightarrow> prefix_refinement sr iosr iosr (\<lambda>_ _. True) P Q AR R (repeat f) (repeat g)"
   apply (simp add: repeat_def)
   apply (rule prefix_refinement_weaken_pre)
-    apply (rule prefix_refinement_bind, rule prefix_refinement_select[where rvr="op ="])
+    apply (rule prefix_refinement_bind, rule prefix_refinement_select[where rvr="(=)"])
        apply simp
       apply simp
       apply (rule prefix_refinement_repeat_n, assumption+)
@@ -1255,7 +1255,7 @@ lemma prefix_refinement_repeat:
 lemma prefix_refinement_env_steps:
   "env_stable AR R sr iosr Q
     \<Longrightarrow> prefix_refinement sr iosr iosr (\<lambda>_ _. True)
-        (op =) (\<lambda>t0 t. t0 = t \<and> Q t0) AR R env_steps env_steps"
+        (=) (\<lambda>t0 t. t0 = t \<and> Q t0) AR R env_steps env_steps"
   apply (simp add: env_steps_repeat)
   apply (rule prefix_refinement_repeat)
     apply (erule prefix_refinement_env_step)
@@ -1537,11 +1537,11 @@ lemma list_all2_is_me:
 
 lemma is_matching_fragment_trans:
   assumes assms:
-    "is_matching_fragment sr osr op = h_tr h_res t0 R' t frag_g"
+    "is_matching_fragment sr osr (=) h_tr h_res t0 R' t frag_g"
     "(g_tr, g_res) \<in> frag_g t" "length g_tr = length h_tr"
-    "is_matching_fragment sr osr op = g_tr g_res s0 R s frag_f"
+    "is_matching_fragment sr osr (=) g_tr g_res s0 R s frag_f"
   assumes sr: "equivp sr" "equivp osr"
-  shows "is_matching_fragment sr osr op = h_tr h_res s0 R s frag_f"
+  shows "is_matching_fragment sr osr (=) h_tr h_res s0 R s frag_f"
 proof -
   have matching_tr1:
     "matching_tr sr (rev g_tr) (rev h_tr)"
@@ -1587,11 +1587,11 @@ lemma matching_tr_rely_cond:
   done
 
 lemma prefix_refinement_in_place_trans:
-  "prefix_refinement sr isr osr (op =) P (\<lambda>_ _. True) AR (\<lambda>t0 t. \<exists>s0 s. sr s0 t0 \<and> sr s t \<and> R s0 s) f g
-    \<Longrightarrow> prefix_refinement sr isr osr (op =) (\<lambda>_ _. True) Q AR R g h
+  "prefix_refinement sr isr osr (=) P (\<lambda>_ _. True) AR (\<lambda>t0 t. \<exists>s0 s. sr s0 t0 \<and> sr s t \<and> R s0 s) f g
+    \<Longrightarrow> prefix_refinement sr isr osr (=) (\<lambda>_ _. True) Q AR R g h
     \<Longrightarrow> equivp sr \<Longrightarrow> equivp osr \<Longrightarrow> equivp isr
     \<Longrightarrow> (\<forall>s t t'. sr s t \<longrightarrow> R t t' \<longrightarrow> (\<exists>s'. sr s' t' \<and> AR s s'))
-    \<Longrightarrow> prefix_refinement sr isr osr (op =) P Q AR R f h"
+    \<Longrightarrow> prefix_refinement sr isr osr (=) P Q AR R f h"
   apply (subst prefix_refinement_def, clarsimp)
   apply (drule_tac s=t and t=t and ?t0.0=t0 and cprog=h in pfx_refnD;
       assumption?)
@@ -1600,7 +1600,7 @@ lemma prefix_refinement_in_place_trans:
   apply clarsimp
   apply (rename_tac h_tr h_res frag_g)
   apply (rule_tac x="\<lambda>s. \<Union>(tr, res) \<in> frag_g t \<inter> ({tr. length tr = length h_tr} \<times> UNIV).
-    \<Union>frag_f \<in> {frag_f. is_matching_fragment sr osr (op =) tr res s0 AR s frag_f
+    \<Union>frag_f \<in> {frag_f. is_matching_fragment sr osr (=) tr res s0 AR s frag_f
                 \<and> triv_refinement f frag_f}. frag_f s" in exI)
   apply (rule conjI)
    apply (rule is_matching_fragment_UNION)

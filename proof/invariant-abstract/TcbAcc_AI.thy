@@ -99,9 +99,9 @@ lemma ball_tcb_cap_casesI:
                                              \<or> (halted st \<and> (c = cap.NullCap))));
      P (tcb_caller, tcb_caller_update, (\<lambda>_ st. case st of
                                        Structures_A.BlockedOnReceive e \<Rightarrow>
-                                         (op = cap.NullCap)
-                                     | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap)));
-     P (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or (op = cap.NullCap))) \<rbrakk>
+                                         ((=) cap.NullCap)
+                                     | _ \<Rightarrow> is_reply_cap or ((=) cap.NullCap)));
+     P (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or ((=) cap.NullCap))) \<rbrakk>
     \<Longrightarrow> \<forall>x \<in> ran tcb_cap_cases. P x"
   by (simp add: tcb_cap_cases_def)
 
@@ -780,7 +780,7 @@ lemma idle_thread_idle[wp]:
 lemma set_thread_state_valid_objs[wp]:
  "\<lbrace>valid_objs and valid_tcb_state st and
    (\<lambda>s. (\<forall>a. st = Structures_A.BlockedOnReceive a \<longrightarrow>
-              cte_wp_at (op = cap.NullCap) (thread, tcb_cnode_index 3) s) \<and>
+              cte_wp_at ((=) cap.NullCap) (thread, tcb_cnode_index 3) s) \<and>
         (st_tcb_at (\<lambda>st. \<not> halted st) thread s \<or> halted st \<or>
               cte_wp_at (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = thread)
                         (thread, tcb_cnode_index 2) s))\<rbrace>
@@ -1539,7 +1539,7 @@ lemma sts_invs_minor:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st) t
      and (\<lambda>s. \<not> halted st \<longrightarrow> ex_nonz_cap_to t s)
      and (\<lambda>s. \<forall>a. st = Structures_A.BlockedOnReceive a \<longrightarrow>
-                    cte_wp_at (op = cap.NullCap) (t, tcb_cnode_index 3) s)
+                    cte_wp_at ((=) cap.NullCap) (t, tcb_cnode_index 3) s)
      and (\<lambda>s. t \<noteq> idle_thread s)
      and (\<lambda>s. st_tcb_at (\<lambda>st. \<not> halted st) t s \<or> halted st \<or>
                     cte_wp_at (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = t)
@@ -1574,7 +1574,7 @@ lemma sts_invs_minor2:
      and invs and ex_nonz_cap_to t and (\<lambda>s. t \<noteq> idle_thread s)
      and K (\<not> awaiting_reply st \<and> \<not>idle st)
      and (\<lambda>s. \<forall>a. st = Structures_A.BlockedOnReceive a \<longrightarrow>
-                    cte_wp_at (op = cap.NullCap) (t, tcb_cnode_index 3) s)
+                    cte_wp_at ((=) cap.NullCap) (t, tcb_cnode_index 3) s)
      and (\<lambda>s. st_tcb_at (\<lambda>st. \<not> halted st) t s \<or> halted st \<or>
                     cte_wp_at (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = t)
                               (t, tcb_cnode_index 2) s)\<rbrace>

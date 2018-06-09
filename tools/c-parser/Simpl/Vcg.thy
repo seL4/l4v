@@ -254,7 +254,7 @@ translations
   "_last_grd g" => "[g]"
   "_guards gs c" == "CONST guards gs c"
 
-  "{|s. P|}"                   == "{|_antiquoteCur(op = s) \<and> P |}"
+  "{|s. P|}"                   == "{|_antiquoteCur((=) s) \<and> P |}"
   "{|b|}"                   => "CONST Collect (_quote b)"
   "IF b THEN c1 ELSE c2 FI" => "CONST Cond {|b|} c1 c2"
   "IF b THEN c1 FI"         ==  "IF b THEN c1 ELSE SKIP FI"

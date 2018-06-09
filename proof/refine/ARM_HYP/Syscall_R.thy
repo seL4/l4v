@@ -245,7 +245,7 @@ crunch inv' [wp]: lookupCapAndSlot P
 lemma load_word_offs_word_corres:
   assumes y: "y < max_ipc_words"
   and    yv: "y' = y * 4"
-  shows "corres op = \<top> (valid_ipc_buffer_ptr' a) (load_word_offs_word a y) (loadWordUser (a + y'))"
+  shows "corres (=) \<top> (valid_ipc_buffer_ptr' a) (load_word_offs_word a y) (loadWordUser (a + y'))"
   unfolding loadWordUser_def yv using y
   apply -
   apply (rule corres_stateAssert_assume [rotated])
@@ -359,7 +359,7 @@ lemma threadSet_tcbDomain_update_ct_not_inQ:
 
 (* FIXME: move *)
 lemma setObject_F_ct_activatable':
-  "\<lbrakk>\<And>tcb f. tcbState (F f tcb) = tcbState tcb \<rbrakk> \<Longrightarrow>  \<lbrace>ct_in_state' activatable' and obj_at' (op = tcb) t\<rbrace>
+  "\<lbrakk>\<And>tcb f. tcbState (F f tcb) = tcbState tcb \<rbrakk> \<Longrightarrow>  \<lbrace>ct_in_state' activatable' and obj_at' ((=) tcb) t\<rbrace>
     setObject t (F f tcb)
    \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
   apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)
@@ -373,7 +373,7 @@ lemmas setObject_tcbDomain_update_ct_activatable'[wp] = setObject_F_ct_activatab
 
 (* FIXME: move *)
 lemma setObject_F_st_tcb_at':
-  "\<lbrakk>\<And>tcb f. tcbState (F f tcb) = tcbState tcb \<rbrakk> \<Longrightarrow> \<lbrace>st_tcb_at' P t' and obj_at' (op = tcb) t\<rbrace>
+  "\<lbrakk>\<And>tcb f. tcbState (F f tcb) = tcbState tcb \<rbrakk> \<Longrightarrow> \<lbrace>st_tcb_at' P t' and obj_at' ((=) tcb) t\<rbrace>
     setObject t (F f tcb)
    \<lbrace>\<lambda>_. st_tcb_at' P t'\<rbrace>"
   apply (simp add: st_tcb_at'_def)
@@ -487,7 +487,7 @@ lemma set_domain_setDomain_corres:
 
 lemma pinv_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
-   corres (intr \<oplus> op=)
+   corres (intr \<oplus> (=))
      (einvs and valid_invocation i
             and simple_sched_action
             and ct_active
@@ -1940,7 +1940,7 @@ lemma hr_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ gct_corres])
       apply (rule corres_split [OF _ get_cap_corres])
-        apply (rule_tac P="einvs and cte_wp_at (op = caller_cap) (thread, tcb_cnode_index 3)
+        apply (rule_tac P="einvs and cte_wp_at ((=) caller_cap) (thread, tcb_cnode_index 3)
                                 and K (is_reply_cap caller_cap \<or> caller_cap = cap.NullCap)
                                 and tcb_at thread and st_tcb_at active thread
                                 and valid_cap caller_cap"

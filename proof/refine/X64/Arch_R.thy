@@ -706,7 +706,7 @@ lemma decode_page_inv_corres:
    apply clarsimp
    apply (rule corres_guard_imp)
      apply (rule whenE_throwError_corres, simp, simp)
-     apply (rule corres_splitEE [where r' = "op ="])
+     apply (rule corres_splitEE [where r' = "(=)"])
         prefer 2
         apply (clarsimp simp: list_all2_Cons2)
         apply (case_tac "fst (hd excaps)", simp_all)[1]
@@ -1175,7 +1175,7 @@ lemma free_range_corres:
   by auto
 
 lemma is_ioport_range_free_corres:
-  "f \<le> l \<Longrightarrow> corres (op =) \<top> \<top>
+  "f \<le> l \<Longrightarrow> corres (=) \<top> \<top>
      (is_ioport_range_free f l)
      (isIOPortRangeFree f l)"
   apply (clarsimp simp: is_ioport_range_free_def isIOPortRangeFree_def)
@@ -1468,7 +1468,7 @@ lemma corresK_machine_op[corresK]: "corres_underlyingK Id False True F r P Q x x
   by (erule corres_machine_op)
 
 lemma port_in_corres[corres]:
-  "no_fail \<top> a \<Longrightarrow> corres (op =) \<top> \<top> (port_in a) (portIn a)"
+  "no_fail \<top> a \<Longrightarrow> corres (=) \<top> \<top> (port_in a) (portIn a)"
   apply (clarsimp simp: port_in_def portIn_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr)
@@ -1477,7 +1477,7 @@ lemma port_in_corres[corres]:
   by wpsimp+
 
 lemma port_out_corres[@lift_corres_args, corres]:
-  "no_fail \<top> (a w) \<Longrightarrow> corres (op =) \<top> \<top> (port_out a w) (portOut a w)"
+  "no_fail \<top> (a w) \<Longrightarrow> corres (=) \<top> \<top> (port_out a w) (portOut a w)"
   apply (clarsimp simp: port_out_def portOut_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr)
@@ -1513,7 +1513,7 @@ lemma no_fail_out32[wp]:
 
 lemma perform_port_inv_corres:
   "\<lbrakk>archinv_relation ai ai'; ai = arch_invocation.InvokeIOPort x\<rbrakk>
-  \<Longrightarrow> corres (intr \<oplus> (op =))
+  \<Longrightarrow> corres (intr \<oplus> (=))
         (einvs and ct_active and valid_arch_inv ai)
         (invs' and ct_active' and valid_arch_inv' ai')
         (liftE (perform_io_port_invocation x))
@@ -1547,7 +1547,7 @@ lemma valid_ioports_issuedD':
 
 lemma perform_ioport_control_inv_corres:
   "\<lbrakk>archinv_relation ai ai'; ai = arch_invocation.InvokeIOPortControl x\<rbrakk> \<Longrightarrow>
-   corres (intr \<oplus> (op =))
+   corres (intr \<oplus> (=))
       (einvs and ct_active and valid_arch_inv ai)
       (invs' and ct_active' and valid_arch_inv' ai')
       (liftE (do perform_ioport_control_invocation x; return [] od))
@@ -1599,7 +1599,7 @@ lemma arch_ioport_inv_case_simp:
 
 lemma inv_arch_corres:
   "archinv_relation ai ai' \<Longrightarrow>
-   corres (intr \<oplus> op=)
+   corres (intr \<oplus> (=))
      (einvs and ct_active and valid_arch_inv ai)
      (invs' and ct_active' and valid_arch_inv' ai')
      (arch_perform_invocation ai) (Arch.performInvocation ai')"
@@ -2217,7 +2217,7 @@ crunch st_tcb_at': performPageDirectoryInvocation, performPageTableInvocation,
    wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps)
 
 lemma performASIDControlInvocation_st_tcb_at':
-  "\<lbrace>st_tcb_at' (P and op \<noteq> Inactive and op \<noteq> IdleThreadState) t and
+  "\<lbrace>st_tcb_at' (P and (\<noteq>) Inactive and (\<noteq>) IdleThreadState) t and
     valid_aci' aci and invs' and ct_active'\<rbrace>
     performASIDControlInvocation aci
   \<lbrace>\<lambda>y. st_tcb_at' P t\<rbrace>"
@@ -2261,7 +2261,7 @@ lemma performASIDControlInvocation_st_tcb_at':
   done
 
 lemma arch_pinv_st_tcb_at':
-  "\<lbrace>valid_arch_inv' ai and st_tcb_at' (P and op \<noteq> Inactive and op \<noteq> IdleThreadState) t and
+  "\<lbrace>valid_arch_inv' ai and st_tcb_at' (P and (\<noteq>) Inactive and (\<noteq>) IdleThreadState) t and
     invs' and ct_active'\<rbrace>
      Arch.performInvocation ai
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>" (is "?pre (pgi ai) ?post")

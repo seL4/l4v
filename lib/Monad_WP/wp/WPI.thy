@@ -257,7 +257,7 @@ ML \<open>
     val frees = Term.add_frees t [];
     val frees' = Term.add_frees t' [];
   in
-   exists (member (op =) frees') frees
+   exists (member (=) frees') frees
   end
 \<close>
 

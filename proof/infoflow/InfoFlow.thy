@@ -655,7 +655,7 @@ definition reads_equiv :: "'a PAS \<Rightarrow> det_state \<Rightarrow> det_stat
 where
   "reads_equiv aag s s' \<equiv>
    ((\<forall> d\<in>subjectReads (pasPolicy aag) (pasSubject aag).
-         states_equiv_for_labels aag (op = d) s s') \<and>
+         states_equiv_for_labels aag ((=) d) s s') \<and>
          cur_thread s = cur_thread s' \<and>
          cur_domain s = cur_domain s' \<and>
          scheduler_action s = scheduler_action s' \<and>
@@ -1134,7 +1134,7 @@ lemma reads_respects_g:
 (* prove doesnt_touch_globals as an invariant *)
 lemma globals_equiv_invD:
   "\<lbrace> globals_equiv st and P \<rbrace> f \<lbrace> \<lambda>_. globals_equiv st \<rbrace> \<Longrightarrow>
-   \<lbrace> P and op = st \<rbrace> f \<lbrace> \<lambda>_. globals_equiv st \<rbrace>"
+   \<lbrace> P and (=) st \<rbrace> f \<lbrace> \<lambda>_. globals_equiv st \<rbrace>"
   by(fastforce simp: valid_def intro: globals_equiv_refl)
 
 lemma doesnt_touch_globalsI:
@@ -1497,7 +1497,7 @@ lemma do_machine_op_spec_reads_respects':
   apply(rule equiv_valid_2_guard_imp)
    apply(rule_tac R'="\<lambda> rv rv'. equiv_machine_state (aag_can_read aag or aag_can_affect aag l) rv rv'
                                \<and> equiv_irq_state rv rv'"
-              and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="op = st" and P'="\<top>"  in equiv_valid_2_bind)
+              and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="(=) st" and P'="\<top>"  in equiv_valid_2_bind)
        apply(rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r'
                                    \<and> equiv_machine_state (aag_can_read aag)  ms' ms''
                                    \<and> equiv_machine_state (aag_can_affect aag l)  ms' ms''
@@ -1556,7 +1556,7 @@ lemma do_machine_op_spec_rev:
                                 equiv_irq_state rv rv'"
               and Q="\<lambda> r s. st = s \<and> r = machine_state s"
               and Q'="\<lambda>r s. r = machine_state s"
-              and P="op = st" and P'="\<top>"
+              and P="(=) st" and P'="\<top>"
                in equiv_valid_2_bind)
        apply(rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r' \<and>
                                         equiv_machine_state (aag_can_read aag) ms' ms''"
@@ -1625,7 +1625,7 @@ lemma dmo_loadWord_rev:
   apply(simp add: loadWord_def equiv_valid_def2 spec_equiv_valid_def)
   apply(rule_tac R'="\<lambda> rv rv'. for_each_byte_of_word (\<lambda> y. rv y = rv' y) p" and Q="\<top>\<top>" and Q'="\<top>\<top>"
              and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
-       apply(rule_tac R'="op =" and Q="\<lambda> r s. p && mask 2 = 0" and Q'="\<lambda> r s. p && mask 2 = 0"
+       apply(rule_tac R'="(=)" and Q="\<lambda> r s. p && mask 2 = 0" and Q'="\<lambda> r s. p && mask 2 = 0"
                   and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
             apply(rule return_ev2)
             apply(rule_tac f="word_rcat" in arg_cong)

@@ -185,7 +185,7 @@ definition
           ('a typ_info \<times> qualified_field_name list)"
 where
   "fin r \<equiv> \<lambda>tn ts. let t = TypDesc (TypAggregate (map (\<lambda>((t,fs),f). DTPair t f) ts)) tn in
-    (t,if r = export_uinfo t then [[]] else concat (map (\<lambda>((t,fs),f). map (op # f) fs) ts))"
+    (t,if r = export_uinfo t then [[]] else concat (map (\<lambda>((t,fs),f). map ((#) f) fs) ts))"
 
 definition
   field_typ_untyped :: "'a typ_desc \<Rightarrow> qualified_field_name \<Rightarrow> 'a typ_desc"

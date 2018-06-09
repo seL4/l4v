@@ -94,7 +94,7 @@ exception SAME;
 fun eta_flat (Abs (name, tp, (Abs a)))
         = eta_flat (Abs (name, tp, eta_flat (Abs a)))
   | eta_flat (Abs (_, _, t $ Bound 0))
-        = if member (op =) (loose_bnos t) 0 then raise SAME
+        = if member (=) (loose_bnos t) 0 then raise SAME
           else subst_bound (Bound 0, t)
   | eta_flat (Abs (name, tp, t $ Abs a))
         = eta_flat (Abs (name, tp, t $ eta_flat (Abs a)))
@@ -131,7 +131,7 @@ fun build_annotate' t wr ps = case (const_spine t, wr) of
                   val borings = ["x", "y", "rv"];
                   val rvnms = case b of
                       Abs (rvnm, _, _) =>
-                          if member op = borings rvnm then []
+                          if member (=) borings rvnm then []
                           else [(rvnm, rvnm ^ "_st")]
                     | _ => [];
                   val cnms = case const_spine a' of
@@ -369,7 +369,7 @@ val wps_method = Attrib.thms >> curry
 method_setup wps = {* wps_method *} "experimental wp simp method"
 
 lemma foo3:
-  "\<lbrace>P\<rbrace> do v \<leftarrow> return (Suc 0); return (Suc (Suc 0)) od \<lbrace>op =\<rbrace>"
+  "\<lbrace>P\<rbrace> do v \<leftarrow> return (Suc 0); return (Suc (Suc 0)) od \<lbrace>(=\<rbrace>)"
   apply (rule hoare_pre)
    apply (rule hoare_seq_ext)+
     apply (wps | rule hoare_vcg_prop)+

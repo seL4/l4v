@@ -23,7 +23,7 @@ instance virq_C :: array_inner_packed
   apply intro_classes
   by (simp add: size_of_def)
 
-definition (* FIXME ARMHYP REMOVE, missing machine op stub *)
+definition (* FIXME ARMHYP REMOVE, missing machine (stub) *)
   setCurrentPDPL2 :: "machine_word \<Rightarrow> unit machine_monad"
 where
   "setCurrentPDPL2 = undefined"
@@ -70,7 +70,7 @@ assumes writeContextIDAndPD_ccorres:
            (Call writeContextIDAndPD_'proc)"
 
 assumes getHSR_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp getHSR)
            (Call getHSR_'proc)"
 
@@ -80,12 +80,12 @@ assumes setHCR_ccorres:
            (Call setHCR_'proc)"
 
 assumes getHDFAR_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp getHDFAR)
            (Call getHDFAR_'proc)"
 
 assumes getSCTLR_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp getSCTLR)
            (Call getSCTLR_'proc)"
 
@@ -95,7 +95,7 @@ assumes setSCTLR_ccorres:
            (Call setSCTLR_'proc)"
 
 assumes addressTranslateS1CPR_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> (\<lbrace>\<acute>vaddr = vaddr \<rbrace>) []
+  "ccorres (=) ret__unsigned_long_' \<top> (\<lbrace>\<acute>vaddr = vaddr \<rbrace>) []
            (doMachineOp (addressTranslateS1CPR vaddr))
            (Call addressTranslateS1CPR_'proc)"
 
@@ -186,17 +186,17 @@ assumes clearExMonitor_ccorres:
            (Call clearExMonitor_'proc)"
 
 assumes getIFSR_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp getIFSR)
            (Call getIFSR_'proc)"
 
 assumes getDFSR_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp getDFSR)
            (Call getDFSR_'proc)"
 
 assumes getFAR_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp getFAR)
            (Call getFAR_'proc)"
 
@@ -241,7 +241,7 @@ assumes vcpu_hw_write_reg_ccorres:
            (Call vcpu_hw_write_reg_'proc)"
 
 assumes vcpu_hw_read_reg_ccorres:
-  "\<And>r. ccorres op= ret__unsigned_long_'
+  "\<And>r. ccorres (=) ret__unsigned_long_'
          \<top> (UNIV \<inter> \<lbrace> unat \<acute>reg_index = fromEnum r \<rbrace>) hs
          (doMachineOp (readVCPUHardwareReg r))
          (Call vcpu_hw_read_reg_'proc)"
@@ -249,25 +249,25 @@ assumes vcpu_hw_read_reg_ccorres:
 (* ARM Hypervisor Virtual Global Interrupt Controller (VGIC) *)
 
 assumes get_gic_vcpu_ctrl_hcr_ccorres:
-  "ccorres (op =) ret__unsigned_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_' \<top> UNIV []
            (doMachineOp get_gic_vcpu_ctrl_hcr) (Call get_gic_vcpu_ctrl_hcr_'proc)"
 assumes get_gic_vcpu_ctrl_vmcr_ccorres:
-  "ccorres (op =) ret__unsigned_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_' \<top> UNIV []
            (doMachineOp get_gic_vcpu_ctrl_vmcr) (Call get_gic_vcpu_ctrl_vmcr_'proc)"
 assumes get_gic_vcpu_ctrl_apr_ccorres:
-  "ccorres (op =) ret__unsigned_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_' \<top> UNIV []
            (doMachineOp get_gic_vcpu_ctrl_apr) (Call get_gic_vcpu_ctrl_apr_'proc)"
 assumes get_gic_vcpu_ctrl_vtr_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp get_gic_vcpu_ctrl_vtr) (Call get_gic_vcpu_ctrl_vtr_'proc)"
 assumes get_gic_vcpu_ctrl_eisr0_ccorres:
-  "ccorres (op =) ret__unsigned_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_' \<top> UNIV []
            (doMachineOp get_gic_vcpu_ctrl_eisr0) (Call get_gic_vcpu_ctrl_eisr0_'proc)"
 assumes get_gic_vcpu_ctrl_eisr1_ccorres:
-  "ccorres (op =) ret__unsigned_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_' \<top> UNIV []
            (doMachineOp get_gic_vcpu_ctrl_eisr1) (Call get_gic_vcpu_ctrl_eisr1_'proc)"
 assumes get_gic_vcpu_ctrl_misr_ccorres:
-  "ccorres (op =) ret__unsigned_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_' \<top> UNIV []
            (doMachineOp get_gic_vcpu_ctrl_misr) (Call get_gic_vcpu_ctrl_misr_'proc)"
 
 assumes set_gic_vcpu_ctrl_hcr_ccorres:
@@ -304,7 +304,7 @@ assumes clearExMonitor_fp_ccorres:
 *)
 assumes slowpath_ccorres:
   "ccorres dc xfdc
-     (\<lambda>s. invs' s \<and> ct_in_state' (op = Running) s)
+     (\<lambda>s. invs' s \<and> ct_in_state' ((=) Running) s)
      ({s. syscall_' s = syscall_from_H ev})
      [SKIP]
      (callKernel (SyscallEvent ev)) (Call slowpath_'proc)"
@@ -343,7 +343,7 @@ lemma index_xf_for_sequence:
           \<and> globals (index_'_update f s) = globals s"
   by simp
 
-(* FIXME CLEANUP on all arches: this entire cache op section has:
+(* FIXME CLEANUP on all arches: this entire cache (section) has:
    - a number of useful word lemmas that can go into WordLib
    - a ton of hardcoded "mask 6" and "64", which on sabre is "mask 5" and "32" respectively.
    - The proofs themselves are extremely similar.

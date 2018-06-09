@@ -182,7 +182,7 @@ definition
 where
   "carch_state_relation astate cstate \<equiv>
     x64KSKernelVSpace astate = x64KSKernelVSpace_C \<and>
-    array_relation (op = \<circ> option_to_ptr) (2^asid_high_bits - 1) (x64KSASIDTable astate) (x86KSASIDTable_' cstate) \<and>
+    array_relation ((=) \<circ> option_to_ptr) (2^asid_high_bits - 1) (x64KSASIDTable astate) (x86KSASIDTable_' cstate) \<and>
     ccr3_relation (x64KSCurrentUserCR3 astate) (x64KSCurrentUserCR3_' cstate) \<and>
     global_ioport_bitmap_relation (clift (t_hrs_' cstate)) (x64KSAllocatedIOPorts astate) \<and>
     fpu_null_state_relation (t_hrs_' cstate) \<and>

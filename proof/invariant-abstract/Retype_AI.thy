@@ -806,7 +806,7 @@ lemma caps_of_state_foldr:
   apply (case_tac x)
   apply (rename_tac oref cref)
   apply (simp add: caps_of_state_cte_wp_at split del: if_split)
-  apply (case_tac "\<exists>cap. cte_wp_at (op = cap) (oref, cref) s'")
+  apply (case_tac "\<exists>cap. cte_wp_at ((=) cap) (oref, cref) s'")
    apply clarsimp
    apply (simp add: s'_def cte_wp_at_cases)
    apply (erule disjE)
@@ -1267,7 +1267,7 @@ lemma unsafe_rep2:
 
 
 lemma descendants_inc_null_filter:
-  "\<lbrakk>mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrakk>
+  "\<lbrakk>mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrakk>
    \<Longrightarrow> descendants_inc (cdt s) (null_filter (caps_of_state s)) =
        descendants_inc (cdt s) (caps_of_state s)"
   apply (simp add:descendants_inc_def descendants_of_def del:split_paired_All)
@@ -1326,26 +1326,26 @@ lemma valid_mdb_rep2:
    apply (clarsimp simp: null_filter_def)
   apply (rule conj_cong)
    apply (simp add:descendants_inc_null_filter)
-  apply (rule arg_cong2 [where f="op \<and>"])
+  apply (rule arg_cong2 [where f="(\<and>)"])
    apply (rule refl)
-  apply (rule arg_cong2 [where f="op \<and>"])
+  apply (rule arg_cong2 [where f="(\<and>)"])
    prefer 2
-   apply (rule arg_cong2 [where f="op \<and>"])
+   apply (rule arg_cong2 [where f="(\<and>)"])
     apply (simp add: ut_revocable_def null_filter_def del: split_paired_All)
     apply (auto simp: is_cap_simps)[1]
-   apply (rule arg_cong2 [where f="op \<and>"])
+   apply (rule arg_cong2 [where f="(\<and>)"])
     apply (simp add: irq_revocable_def null_filter_def del: split_paired_All)
     apply auto[1]
-   apply (rule arg_cong2 [where f="op \<and>"])
+   apply (rule arg_cong2 [where f="(\<and>)"])
     apply (simp add: reply_master_revocable_def null_filter_def del: split_paired_All)
     apply (auto simp: is_cap_simps)[1]
    apply (simp add: reply_mdb_def null_filter_def)
-   apply (rule arg_cong2 [where f="op \<and>"])
+   apply (rule arg_cong2 [where f="(\<and>)"])
     apply (simp add: reply_caps_mdb_def
                 del: split_paired_Ex split_paired_All)
     apply (fastforce intro!: iffI elim!: allEI exEI
                   simp del: split_paired_Ex split_paired_All)
-   apply (rule arg_cong2 [where f="op \<and>"])
+   apply (rule arg_cong2 [where f="(\<and>)"])
     apply (fastforce simp: reply_masters_mdb_def intro!: iffI elim!: allEI
                  simp del: split_paired_All split: if_split_asm)
    apply (fastforce simp: valid_arch_mdb_null_filter[simplified null_filter_def])
@@ -1657,7 +1657,7 @@ locale Retype_AI_valid_untyped_helper =
   assumes valid_untyped_helper:
     "\<And>s c q ty ptr sz us n dev.
       \<lbrakk> (s :: 'state_ext state) \<turnstile> c;
-        cte_wp_at (op = c) q s;
+        cte_wp_at ((=) c) q s;
         ty \<noteq> Untyped;
         range_cover ptr sz (obj_bits_api ty us) n;
         is_untyped_cap c \<Longrightarrow>
@@ -1852,7 +1852,7 @@ lemma le_subset: "\<lbrakk>(a::('g::len) word) \<le> c\<rbrakk> \<Longrightarrow
 context retype_region_proofs_gen begin
 
 lemma valid_cap_pres:
-  "\<lbrakk> s \<turnstile> c; cte_wp_at (op = c) (oref,cref) s \<rbrakk> \<Longrightarrow> s' \<turnstile> c"
+  "\<lbrakk> s \<turnstile> c; cte_wp_at ((=) c) (oref,cref) s \<rbrakk> \<Longrightarrow> s' \<turnstile> c"
   using cover mem orth
   apply (simp add:s'_def ps_def)
   apply (rule valid_untyped_helper[ OF _ _ tyunt cover _ _ _ vp ])
@@ -1971,7 +1971,7 @@ lemma (in retype_region_proofs_gen) valid_pspace: "valid_pspace s'"
 (* I have the feeling I'm making this unnecessarily hard,
    but I can't put my finger on where. *)
 
-lemma F: "\<And>x c s. (caps_of_state s x = Some c) = (cte_wp_at (op = c) x s)"
+lemma F: "\<And>x c s. (caps_of_state s x = Some c) = (cte_wp_at ((=) c) x s)"
   apply (simp add: caps_of_state_cte_wp_at)
   apply (fastforce simp: cte_wp_at_def)
   done
@@ -2026,9 +2026,9 @@ lemma caps_retype:
   and      newcap: "caps_of_state s' p = Some cap"
   shows            "caps_of_state s p = Some cap"
 proof -
-  from newcap have "cte_wp_at (op = cap) p s'"
+  from newcap have "cte_wp_at ((=) cap) p s'"
     by (simp add: cte_wp_at_caps_of_state)
-  hence "cte_wp_at (op = cap) p s"
+  hence "cte_wp_at ((=) cap) p s"
     by (rule_tac subst [OF cte_retype], rule_tac nonnull, assumption)
   thus ?thesis
     by (simp add: cte_wp_at_caps_of_state)

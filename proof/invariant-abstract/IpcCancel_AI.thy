@@ -236,7 +236,7 @@ lemma gbep_ret:
 
 
 lemma st_tcb_at_valid_st2:
-  "\<lbrakk> st_tcb_at (op = st) t s; valid_objs s \<rbrakk> \<Longrightarrow> valid_tcb_state st s"
+  "\<lbrakk> st_tcb_at ((=) st) t s; valid_objs s \<rbrakk> \<Longrightarrow> valid_tcb_state st s"
   apply (clarsimp simp add: valid_objs_def get_tcb_def pred_tcb_at_def
                   obj_at_def)
   apply (drule_tac x=t in bspec)
@@ -336,7 +336,7 @@ lemma refs_in_ntfn_bound_refs:
   by (auto simp: ntfn_bound_refs_def split: option.splits)
 
 lemma blocked_cancel_ipc_invs:
-  "\<lbrace>invs and st_tcb_at (op = st) t\<rbrace> blocked_cancel_ipc st t \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs and st_tcb_at ((=) st) t\<rbrace> blocked_cancel_ipc st t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: blocked_cancel_ipc_def)
   apply (rule hoare_seq_ext [OF _ gbi_ep_sp])
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
@@ -369,7 +369,7 @@ lemma symreftype_inverse':
   by (cases ref) simp_all
 
 lemma cancel_signal_invs:
-  "\<lbrace>invs and st_tcb_at (op = (Structures_A.BlockedOnNotification ntfn)) t\<rbrace>
+  "\<lbrace>invs and st_tcb_at ((=) (Structures_A.BlockedOnNotification ntfn)) t\<rbrace>
   cancel_signal t ntfn
   \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cancel_signal_def
@@ -581,7 +581,7 @@ lemma (in delete_one_abs) cancel_ipc_no_reply_cap[wp]:
                   cancel_signal_invs cancel_signal_st_tcb_at_general
                   blocked_cancel_ipc_invs blocked_ipc_st_tcb_at_general
         | strengthen reply_cap_doesnt_exist_strg)+
-   apply (rule_tac Q="\<lambda>rv. st_tcb_at (op = rv) t and invs" in hoare_strengthen_post)
+   apply (rule_tac Q="\<lambda>rv. st_tcb_at ((=) rv) t and invs" in hoare_strengthen_post)
     apply (wpsimp wp: gts_st_tcb)
    apply (fastforce simp: invs_def valid_state_def st_tcb_at_tcb_at
                    elim!: pred_tcb_weakenE)+
@@ -759,13 +759,13 @@ crunch bound_tcb_at[wp]: cancel_ipc "bound_tcb_at P t"
 (ignore: set_object thread_set wp: mapM_x_wp_inv)
 
 lemma suspend_unlive:
-  "\<lbrace>bound_tcb_at (op = None) t and valid_mdb and valid_objs and tcb_at t \<rbrace>
+  "\<lbrace>bound_tcb_at ((=) None) t and valid_mdb and valid_objs and tcb_at t \<rbrace>
       suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live0) t\<rbrace>"
   apply (simp add: suspend_def set_thread_state_def set_object_def)
   apply (wp | simp only: obj_at_exst_update)+
   apply (simp add: obj_at_def)
-  apply (rule_tac Q="\<lambda>_. bound_tcb_at (op = None) t" in hoare_strengthen_post)
+  apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
   apply wp
   apply (auto simp: pred_tcb_def2 dest: refs_of_live)
   done

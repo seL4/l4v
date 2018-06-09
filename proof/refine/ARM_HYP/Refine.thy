@@ -235,7 +235,7 @@ lemma set_thread_state_sched_act:
        apply wp
       apply force
      apply (wp gts_st_tcb_at)+
-     apply (rule_tac Q="\<lambda>rv. st_tcb_at (op = state) thread and (\<lambda>s. runnable state) and (\<lambda>s. P (scheduler_action s))" in hoare_strengthen_post)
+     apply (rule_tac Q="\<lambda>rv. st_tcb_at ((=) state) thread and (\<lambda>s. runnable state) and (\<lambda>s. P (scheduler_action s))" in hoare_strengthen_post)
      apply (simp add: st_tcb_at_def)
      apply (wp obj_set_prop_at)+
     apply (force simp: st_tcb_at_def obj_at_def)
@@ -633,19 +633,19 @@ lemma kernel_corres:
   done
 
 lemma user_mem_corres:
-  "corres (op =) invs invs' (gets (\<lambda>x. g (user_mem x))) (gets (\<lambda>x. g (user_mem' x)))"
+  "corres (=) invs invs' (gets (\<lambda>x. g (user_mem x))) (gets (\<lambda>x. g (user_mem' x)))"
   by (clarsimp simp add: gets_def get_def return_def bind_def
                          invs_def invs'_def
                          corres_underlying_def user_mem_relation)
 
 lemma device_mem_corres:
-  "corres (op =) invs invs' (gets (\<lambda>x. g (device_mem x))) (gets (\<lambda>x. g (device_mem' x)))"
+  "corres (=) invs invs' (gets (\<lambda>x. g (device_mem x))) (gets (\<lambda>x. g (device_mem' x)))"
   by (clarsimp simp add: gets_def get_def return_def bind_def
                          invs_def invs'_def
                          corres_underlying_def device_mem_relation)
 
 lemma entry_corres:
-  "corres (op =) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
+  "corres (=) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
                   (\<lambda>s. 0 < domain_time s) and valid_domain_list and (ct_running or ct_idle) and
                   (\<lambda>s. scheduler_action s = resume_cur_thread))
                  (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
@@ -687,37 +687,37 @@ lemma entry_corres:
   done
 
 lemma corres_gets_machine_state:
-  "corres (op =) \<top> \<top> (gets (f \<circ> machine_state)) (gets (f \<circ> ksMachineState))"
+  "corres (=) \<top> \<top> (gets (f \<circ> machine_state)) (gets (f \<circ> ksMachineState))"
   by (clarsimp simp: gets_def corres_underlying_def
                      in_monad bind_def get_def return_def state_relation_def)
 
 lemma do_user_op_corres:
-  "corres (op =) (einvs and ct_running)
+  "corres (=) (einvs and ct_running)
                  (invs' and (%s. ksSchedulerAction s = ResumeCurrentThread) and
                   ct_running')
           (do_user_op f tc) (doUserOp f tc)"
   apply (simp add: do_user_op_def doUserOp_def split_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ gct_corres])
-      apply (rule_tac r'="op=" and P=einvs and P'=invs' in corres_split)
+      apply (rule_tac r'="(=)" and P=einvs and P'=invs' in corres_split)
          prefer 2
          apply (fastforce dest: absKState_correct [rotated])
-        apply (rule_tac r'="op=" and P=einvs and P'=invs' in corres_split)
+        apply (rule_tac r'="(=)" and P=einvs and P'=invs' in corres_split)
            prefer 2
            apply (fastforce dest: absKState_correct [rotated])
-          apply (rule_tac r'="op=" and P=invs and P'=invs' in corres_split)
+          apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split)
              prefer 2
              apply (rule user_mem_corres)
-            apply (rule_tac r'="op=" and P=invs and P'=invs' in corres_split)
+            apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split)
                prefer 2
                apply (rule device_mem_corres)
-              apply (rule_tac r'="op=" in corres_split)
+              apply (rule_tac r'="(=)" in corres_split)
                  prefer 2
                  apply (rule corres_gets_machine_state)
                 apply (rule_tac F = "dom (rvb \<circ> addrFromPPtr)  \<subseteq> - dom rvd" in corres_gen_asm)
                 apply (rule_tac F = "dom (rvc \<circ> addrFromPPtr)  \<subseteq> dom rvd" in corres_gen_asm)
                 apply simp
-                apply (rule_tac r'="op=" in corres_split[OF _ corres_select])
+                apply (rule_tac r'="(=)" in corres_split[OF _ corres_select])
                    apply (rule corres_split'[OF corres_machine_op])
                       apply simp
                       apply (rule corres_underlying_trivial)
@@ -782,7 +782,7 @@ lemma checkActiveIRQ_valid_duplicates':
   done
 
 lemma check_active_irq_corres':
-  "corres op = \<top> \<top> (check_active_irq) (checkActiveIRQ)"
+  "corres (=) \<top> \<top> (check_active_irq) (checkActiveIRQ)"
   apply (simp add: check_active_irq_def checkActiveIRQ_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ corres_machine_op[OF corres_underlying_trivial], where R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"])
@@ -792,7 +792,7 @@ lemma check_active_irq_corres':
   done
 
 lemma check_active_irq_corres:
-  "corres op =
+  "corres (=)
     (invs and (ct_running or ct_idle) and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
      and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
     (invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
@@ -804,7 +804,7 @@ lemma check_active_irq_corres:
   done
 
 lemma check_active_irq_corres_just_running:
-  "corres op =
+  "corres (=)
     (invs and ct_running and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
       and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
     (invs' and ct_running' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))
@@ -816,7 +816,7 @@ lemma check_active_irq_corres_just_running:
   done
 
 lemma check_active_irq_corres_just_idle:
-  "corres op =
+  "corres (=)
     (invs and ct_idle and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
       and (\<lambda>s. 0 < domain_time s)  and valid_domain_list)
     (invs' and ct_idle' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))

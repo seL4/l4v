@@ -2226,7 +2226,7 @@ lemma performASIDControlInvocation_no_orphans [wp]:
      apply (simp add:cte invs')+
     done
 
-  show "\<lbrace>op = s\<rbrace>performASIDControlInvocation (asidcontrol_invocation.MakePool ptr_base p cref ptr)
+  show "\<lbrace>(=) s\<rbrace>performASIDControlInvocation (asidcontrol_invocation.MakePool ptr_base p cref ptr)
        \<lbrace>\<lambda>reply. no_orphans\<rbrace>"
   apply (clarsimp simp: performASIDControlInvocation_def
                   split: asidcontrol_invocation.splits)

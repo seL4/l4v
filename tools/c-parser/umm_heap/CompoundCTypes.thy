@@ -105,7 +105,7 @@ definition field_names_list :: "'a typ_desc \<Rightarrow> field_name list" where
 
 definition ti_pad_combine :: "nat \<Rightarrow> 'a typ_info \<Rightarrow> 'a typ_info" where
   "ti_pad_combine n tag \<equiv> let
-    fn = foldl (op @) ''!pad_'' (field_names_list tag);
+    fn = foldl (@) ''!pad_'' (field_names_list tag);
     td = \<lparr> field_access = \<lambda>v. id, field_update = \<lambda>bs. id \<rparr>;
     nf = TypDesc (TypScalar n 0 td) ''!pad_typ''
       in
@@ -150,12 +150,12 @@ lemma field_names_list_ti_typ_combine [simp]:
 
 lemma field_names_list_ti_pad_combine [simp]:
   "set (field_names_list (ti_pad_combine n tag)) = set (field_names_list tag) \<union>
-      {foldl op @ ''!pad_'' (field_names_list tag)}"
+      {foldl (@) ''!pad_'' (field_names_list tag)}"
   by (clarsimp simp: ti_pad_combine_def Let_def)
 
 \<comment> \<open>matches on padding\<close>
 lemma hd_string_hd_fold_eq [simp, rule_format]:
-  "\<forall>s. s \<noteq> [] \<longrightarrow> hd s = CHR ''!'' \<longrightarrow> hd (foldl op @ s xs) = CHR ''!''"
+  "\<forall>s. s \<noteq> [] \<longrightarrow> hd s = CHR ''!'' \<longrightarrow> hd (foldl (@) s xs) = CHR ''!''"
   by (induct_tac xs, clarsimp+)
 
 lemma field_names_list_ti_typ_pad_combine [simp]:
@@ -178,7 +178,7 @@ apply(case_tac typ_struct, clarsimp+)
 done
 
 lemma foldl_append_length:
-  "length (foldl op @ s xs) \<ge> length s"
+  "length (foldl (@) s xs) \<ge> length s"
 apply(induct xs arbitrary: s, clarsimp)
 apply(rename_tac a list s)
 apply(drule_tac x="s@a" in meta_spec)
@@ -186,12 +186,12 @@ apply clarsimp
 done
 
 lemma foldl_append_nmem:
-  "s \<noteq> [] \<Longrightarrow> foldl op @ s xs \<notin> set xs"
+  "s \<noteq> [] \<Longrightarrow> foldl (@) s xs \<notin> set xs"
 apply(induct xs arbitrary: s, clarsimp)
 apply(rename_tac a list s)
 apply(drule_tac x="s@a" in meta_spec)
 apply clarsimp
-apply(subgoal_tac "length (foldl op @ (s@a) list) \<ge> length (s@a)")
+apply(subgoal_tac "length (foldl (@) (s@a) list) \<ge> length (s@a)")
  apply simp
 apply(rule foldl_append_length)
 done

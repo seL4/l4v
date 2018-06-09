@@ -976,27 +976,27 @@ lemma dom_unpack:
   by (simp add: dom_map_of_conv_image_fst image_image)
 
 lemma fold_to_disj:
-"fold op ++ ms a x = Some y \<Longrightarrow> (\<exists>b \<in> set ms. b x = Some y) \<or> a x = Some y"
+"fold (++) ms a x = Some y \<Longrightarrow> (\<exists>b \<in> set ms. b x = Some y) \<or> a x = Some y"
   by (induct ms arbitrary:a x y; clarsimp) blast
 
 lemma fold_ignore1:
-  "a x = Some y \<Longrightarrow> fold op ++ ms a x = Some y"
+  "a x = Some y \<Longrightarrow> fold (++) ms a x = Some y"
   by (induct ms arbitrary:a x y; clarsimp)
 
 lemma fold_ignore2:
-  "fold op ++ ms a x = None \<Longrightarrow> a x = None"
+  "fold (++) ms a x = None \<Longrightarrow> a x = None"
   by (metis fold_ignore1 option.collapse)
 
 lemma fold_ignore3:
-  "fold op ++ ms a x = None \<Longrightarrow> (\<forall>b \<in> set ms. b x = None)"
+  "fold (++) ms a x = None \<Longrightarrow> (\<forall>b \<in> set ms. b x = None)"
   by (induct ms arbitrary:a x; clarsimp) (meson fold_ignore2 map_add_None)
 
 lemma fold_ignore4:
-  "b \<in> set ms \<Longrightarrow> b x = Some y \<Longrightarrow> \<exists>y. fold op ++ ms a x = Some y"
+  "b \<in> set ms \<Longrightarrow> b x = Some y \<Longrightarrow> \<exists>y. fold (++) ms a x = Some y"
   using fold_ignore3 by fastforce
 
 lemma dom_unpack2:
-  "dom (fold op ++ ms empty) = \<Union>(set (map dom ms))"
+  "dom (fold (++) ms empty) = \<Union>(set (map dom ms))"
   apply (induct ms; clarsimp simp:dom_def)
   apply (rule equalityI; clarsimp)
    apply (drule fold_to_disj)
@@ -1014,19 +1014,19 @@ lemma dom_unpack2:
   apply (erule_tac y=y in fold_ignore4; clarsimp)
   done
 
-lemma fold_ignore5:"fold op ++ ms a x = Some y \<Longrightarrow> a x = Some y \<or> (\<exists>b \<in> set ms. b x = Some y)"
+lemma fold_ignore5:"fold (++) ms a x = Some y \<Longrightarrow> a x = Some y \<or> (\<exists>b \<in> set ms. b x = Some y)"
   by (induct ms arbitrary:a x y; clarsimp) blast
 
 lemma dom_inter_nothing:"dom f \<inter> dom g = {} \<Longrightarrow> \<forall>x. f x = None \<or> g x = None"
   by auto
 
 lemma fold_ignore6:
-  "f x = None \<Longrightarrow> fold op ++ ms f x = fold op ++ ms empty x"
+  "f x = None \<Longrightarrow> fold (++) ms f x = fold (++) ms empty x"
   apply (induct ms arbitrary:f x; clarsimp simp:map_add_def)
   by (metis (no_types, lifting) fold_ignore1 option.collapse option.simps(4))
 
 lemma fold_ignore7:
-  "m x = m' x \<Longrightarrow> fold op ++ ms m x = fold op ++ ms m' x"
+  "m x = m' x \<Longrightarrow> fold (++) ms m x = fold (++) ms m' x"
   apply (case_tac "m x")
    apply (frule_tac ms=ms in fold_ignore6)
    apply (cut_tac f=m' and ms=ms and x=x in fold_ignore6)
@@ -1037,7 +1037,7 @@ lemma fold_ignore7:
   done
 
 lemma fold_ignore8:
-  "fold op ++ ms [x \<mapsto> y] = (fold op ++ ms empty)(x \<mapsto> y)"
+  "fold (++) ms [x \<mapsto> y] = (fold (++) ms empty)(x \<mapsto> y)"
   apply (rule ext)
   apply (rename_tac xa)
   apply (case_tac "xa = x")
@@ -1048,14 +1048,14 @@ lemma fold_ignore8:
   done
 
 lemma fold_ignore9:
-  "\<lbrakk>fold op ++ ms [x \<mapsto> y] x' = Some z; x = x'\<rbrakk> \<Longrightarrow> y = z"
+  "\<lbrakk>fold (++) ms [x \<mapsto> y] x' = Some z; x = x'\<rbrakk> \<Longrightarrow> y = z"
   by (subst (asm) fold_ignore8) clarsimp
 
 lemma fold_to_map_of:
-  "fold op ++ (map (\<lambda>x. [f x \<mapsto> g x]) xs) empty = map_of (map (\<lambda>x. (f x, g x)) xs)"
+  "fold (++) (map (\<lambda>x. [f x \<mapsto> g x]) xs) empty = map_of (map (\<lambda>x. (f x, g x)) xs)"
   apply (rule ext)
   apply (rename_tac x)
-  apply (case_tac "fold op ++ (map (\<lambda>x. [f x \<mapsto> g x]) xs) Map.empty x")
+  apply (case_tac "fold (++) (map (\<lambda>x. [f x \<mapsto> g x]) xs) Map.empty x")
    apply clarsimp
    apply (drule fold_ignore3)
    apply (clarsimp split:if_split_asm)
@@ -1590,7 +1590,7 @@ lemma tl_drop_1 :
   by (simp add: drop_Suc)
 
 lemma upt_lhs_sub_map:
-  "[x ..< y] = map (op + x) [0 ..< y - x]"
+  "[x ..< y] = map ((+) x) [0 ..< y - x]"
   by (induct y) (auto simp: Suc_diff_le)
 
 lemma upto_0_to_4:
@@ -1607,7 +1607,7 @@ lemma dom_fun_upd2:
   by (simp add: insert_absorb domI)
 
 lemma foldl_True :
-  "foldl op \<or> True bs"
+  "foldl (\<or>) True bs"
   by (induct bs) auto
 
 lemma image_set_comp:
@@ -2006,24 +2006,24 @@ lemma filter_eq_If:
   by (induct xs) auto
 
 lemma (in semigroup_add) foldl_assoc:
-shows "foldl op+ (x+y) zs = x + (foldl op+ y zs)"
+shows "foldl (+) (x+y) zs = x + (foldl (+) y zs)"
   by (induct zs arbitrary: y) (simp_all add:add.assoc)
 
 lemma (in monoid_add) foldl_absorb0:
-shows "x + (foldl op+ 0 zs) = foldl op+ x zs"
+shows "x + (foldl (+) 0 zs) = foldl (+) x zs"
   by (induct zs) (simp_all add:foldl_assoc)
 
 lemma foldl_conv_concat:
-  "foldl (op @) xs xss = xs @ concat xss"
+  "foldl (@) xs xss = xs @ concat xss"
 proof (induct xss arbitrary: xs)
   case Nil show ?case by simp
 next
-  interpret monoid_add "op @" "[]" proof qed simp_all
+  interpret monoid_add "(@)" "[]" proof qed simp_all
   case Cons then show ?case by (simp add: foldl_absorb0)
 qed
 
 lemma foldl_concat_concat:
-  "foldl op @ [] (xs @ ys) = foldl op @ [] xs @ foldl op @ [] ys"
+  "foldl (@) [] (xs @ ys) = foldl (@) [] xs @ foldl (@) [] ys"
   by (simp add: foldl_conv_concat)
 
 lemma foldl_does_nothing:
@@ -2067,7 +2067,7 @@ lemma take_min_len:
 lemmas interval_empty = atLeastatMost_empty_iff
 
 lemma fold_and_false[simp]:
-  "\<not>(fold (op \<and>) xs False)"
+  "\<not>(fold (\<and>) xs False)"
   apply clarsimp
   apply (induct xs)
    apply simp
@@ -2075,7 +2075,7 @@ lemma fold_and_false[simp]:
   done
 
 lemma fold_and_true:
-  "fold (op \<and>) xs True \<Longrightarrow> \<forall>i < length xs. xs ! i"
+  "fold (\<and>) xs True \<Longrightarrow> \<forall>i < length xs. xs ! i"
   apply clarsimp
   apply (induct xs)
    apply simp
@@ -2085,11 +2085,11 @@ lemma fold_and_true:
   done
 
 lemma fold_or_true[simp]:
-  "fold (op \<or>) xs True"
+  "fold (\<or>) xs True"
   by (induct xs, simp+)
 
 lemma fold_or_false:
-  "\<not>(fold (op \<or>) xs False) \<Longrightarrow> \<forall>i < length xs. \<not>(xs ! i)"
+  "\<not>(fold (\<or>) xs False) \<Longrightarrow> \<forall>i < length xs. \<not>(xs ! i)"
   apply (induct xs, simp+)
   apply (case_tac a, simp+)
   apply (rule allI, case_tac "i = 0", simp+)
@@ -2341,7 +2341,7 @@ lemma not_psubset_eq:
 
 
 lemma in_image_op_plus:
-  "(x + y \<in> op + x ` S) = ((y :: 'a :: ring) \<in> S)"
+  "(x + y \<in> (+) x ` S) = ((y :: 'a :: ring) \<in> S)"
   by (simp add: image_def)
 
 lemma insert_subtract_new:

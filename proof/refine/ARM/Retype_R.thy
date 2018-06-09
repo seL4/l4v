@@ -404,7 +404,7 @@ lemma state_relation_null_filterE:
      ghost_relation (kheap t) (gsUserPages t') (gsCNodes t'); valid_list s;
      pspace_aligned' s'; pspace_distinct' s'; valid_objs s; valid_mdb s;
      pspace_aligned' t'; pspace_distinct' t';
-     mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s) \<rbrakk>
+     mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s) \<rbrakk>
       \<Longrightarrow> (t, t') \<in> state_relation"
   apply (clarsimp simp: state_relation_def)
   apply (intro conjI)
@@ -643,7 +643,7 @@ lemma ctes_of_retype:
              then Some (CTE NullCap nullMDBNode)
              else map_to_ctes (ksPSpace s) x)"
   (is "map_to_ctes ?ps' = ?map'")
-  using cte_wp_at_retype' [where P="op = cte" for cte, OF ko pv pv' al pn]
+  using cte_wp_at_retype' [where P="(=) cte" for cte, OF ko pv pv' al pn]
         arg_cong [where f=Not, OF cte_wp_at_retype' [OF ko pv pv' al pn, where P="\<top>"]]
   apply (simp(no_asm_use) add: cte_wp_at_ctes_of cong: if_cong)
   apply (rule ext)
@@ -1452,7 +1452,7 @@ lemma retype_state_relation:
   show "valid_list s" using et
     by (clarsimp)
 
-  show "mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)" using vs
+  show "mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)" using vs
     by (clarsimp simp: valid_mdb_def)
 
   have pspr: "pspace_relation (kheap s) (ksPSpace s')"
@@ -2695,7 +2695,7 @@ lemma corres_retype:
   and             orr: "obj_bits_api (APIType_map2 ty) us \<le> sz \<Longrightarrow>
                         obj_relation_retype (default_object (APIType_map2 ty) dev us) ko"
   and           cover: "range_cover ptr sz (obj_bits_api (APIType_map2 ty) us) n"
-  shows "corres (op =)
+  shows "corres (=)
   (\<lambda>s. valid_pspace s \<and> pspace_no_overlap_range_cover ptr sz s
      \<and> valid_mdb s \<and> valid_etcbs s \<and> valid_list s)
   (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' ptr sz s
@@ -2744,7 +2744,7 @@ lemma copy_global_corres:
     apply (rule corres_split_eqr)
        apply (rule_tac F ="is_aligned pd 6 \<and> is_aligned global_pd 6" in corres_gen_asm)
        apply (simp add: liftM_def[symmetric])
-       apply (rule_tac S="op =" and r'=dc
+       apply (rule_tac S="(=)" and r'=dc
                    and Q="\<lambda>xs s. \<forall>x \<in> set xs. pde_at (global_pd + (x << 2)) s
                                               \<and> pde_at (pd + (x << 2)) s \<and> pspace_aligned s \<and>
                                               valid_etcbs s"
@@ -4190,9 +4190,9 @@ lemma sch_act_wf_lift_asm:
   apply (frule use_valid [OF _ ksA])
    prefer 2
    apply assumption
-  apply (frule_tac P1="op = (ksCurThread s)" in use_valid [OF _ kCT])
+  apply (frule_tac P1="(=) (ksCurThread s)" in use_valid [OF _ kCT])
    apply (rule refl)
-  apply (frule_tac P1="op = (ksCurDomain s)" in use_valid [OF _ kCD])
+  apply (frule_tac P1="(=) (ksCurDomain s)" in use_valid [OF _ kCD])
    apply (rule refl)
   apply (case_tac "ksSchedulerAction s")
     apply (simp add: ct_in_state'_def)
@@ -4929,9 +4929,9 @@ lemma sch_act_wf_lift_asm_futz:
   apply (frule use_valid [OF _ ksA])
    prefer 2
    apply assumption
-  apply (frule_tac P1="op = (ksCurThread s)" in use_valid [OF _ kCT])
+  apply (frule_tac P1="(=) (ksCurThread s)" in use_valid [OF _ kCT])
    apply (rule refl)
-  apply (frule_tac P1="op = (ksCurDomain s)" in use_valid [OF _ kCD])
+  apply (frule_tac P1="(=) (ksCurDomain s)" in use_valid [OF _ kCD])
    apply (rule refl)
   apply (case_tac "ksSchedulerAction s")
     apply (simp add: ct_in_state'_def)
@@ -5624,7 +5624,7 @@ lemma corres_retype_update_gsI:
 (*FIXME: Move to Deterministic_AI*)
 crunch valid_etcbs[wp]: copy_global_mappings valid_etcbs (wp: mapM_x_wp')
 
-lemma gcd_corres: "corres op = \<top> \<top> (gets cur_domain) curDomain"
+lemma gcd_corres: "corres (=) \<top> \<top> (gets cur_domain) curDomain"
   by (simp add: curDomain_def state_relation_def)
 
 (* FIXME move *)
@@ -5953,7 +5953,7 @@ lemma corres_retype_region_createNewCaps:
              apply (rule_tac Q="\<lambda>xs s. (\<forall>x \<in> set xs. page_directory_at x s)
                                     \<and> valid_arch_state s \<and> pspace_aligned s \<and> valid_etcbs s"
                           and Q'="\<lambda>xs s. (\<forall>x \<in> set xs. page_directory_at' x s) \<and> valid_arch_state' s"
-                          in corres_mapM_list_all2[where r'=dc and S="op ="])
+                          in corres_mapM_list_all2[where r'=dc and S="(=)"])
                   apply simp+
                 apply (rule corres_guard_imp, rule copy_global_corres)
                  apply simp+

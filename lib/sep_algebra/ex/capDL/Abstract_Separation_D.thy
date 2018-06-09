@@ -679,8 +679,8 @@ end
 instantiation "sep_state" :: stronger_sep_algebra
 begin
 
-definition "(op ##) \<equiv> sep_state_disj"
-definition "(op +) \<equiv> sep_state_add"
+definition "(##) \<equiv> sep_state_disj"
+definition "(+) \<equiv> sep_state_add"
 
 
 

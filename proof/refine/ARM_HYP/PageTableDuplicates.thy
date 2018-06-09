@@ -1677,7 +1677,7 @@ lemma superSectionPDEOffsets_aligned:
   by (auto simp: superSectionPDEOffsets_def upto_enum_step_def vspace_bits_defs zip_map1)
 
 lemma largePagePTEOffsets_unfold:
-  "is_aligned p 7 \<Longrightarrow> map (op + p) largePagePTEOffsets = [p , p + 8 .e. p + mask 7]"
+  "is_aligned p 7 \<Longrightarrow> map ((+) p) largePagePTEOffsets = [p , p + 8 .e. p + mask 7]"
   by (fastforce simp: largePagePTEOffsets_def vspace_bits_defs mask_def upto_enum_step_def
                 dest: is_aligned_no_overflow')
 

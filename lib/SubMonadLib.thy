@@ -514,7 +514,7 @@ lemma assert_opt_submonad:
   done
 
 lemma is_stateAssert_gets:
-  "\<lbrakk> \<forall>s. \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>_. op = s\<rbrace>; \<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>_. guard\<rbrace>;
+  "\<lbrakk> \<forall>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_. (=) s\<rbrace>; \<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>_. guard\<rbrace>;
      empty_fail f; no_fail guard f; \<lbrace>guard\<rbrace> f \<lbrace>\<lambda>rv s. fetch s = rv\<rbrace> \<rbrakk>
     \<Longrightarrow> f = do stateAssert guard []; gets fetch od"
   apply (rule ext)
@@ -532,7 +532,7 @@ lemma is_stateAssert_gets:
   done
 
 lemma is_modify:
-  "\<And>s. \<lbrakk> \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>_. op = (replace s)\<rbrace>; empty_fail f;
+  "\<And>s. \<lbrakk> \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_. (=) (replace s)\<rbrace>; empty_fail f;
           no_fail guard f; guard s \<rbrakk>
     \<Longrightarrow> f s = modify replace s"
   apply (clarsimp simp: bind_def empty_fail_def valid_def no_fail_def

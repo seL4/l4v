@@ -2812,7 +2812,7 @@ lemma irq_state_inv_triv':
 
 
 lemma OR_choiceE_wp:
-  assumes a: "\<And>s. \<lbrace>P and op = s\<rbrace> b \<lbrace>\<lambda> r s'. (r \<longrightarrow> P' s) \<and> (\<not> r \<longrightarrow> P'' s)\<rbrace>"
+  assumes a: "\<And>s. \<lbrace>P and (=) s\<rbrace> b \<lbrace>\<lambda> r s'. (r \<longrightarrow> P' s) \<and> (\<not> r \<longrightarrow> P'' s)\<rbrace>"
   assumes b: "\<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   assumes c: "\<lbrace>P''\<rbrace> g \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   shows
@@ -3160,7 +3160,7 @@ lemma perform_invocation_irq_state_inv:
             oper = InvokeIRQHandler blah \<longrightarrow>
              (\<exists>ptr'.
                  cte_wp_at
-                 (op = (IRQHandlerCap (irq_of_handler_inv blah)))
+                 ((=) (IRQHandlerCap (irq_of_handler_inv blah)))
                  ptr' s)) and
      domain_sep_inv False sta and
      valid_invocation oper and K (irq_is_recurring irq st)\<rbrace>
@@ -3326,7 +3326,7 @@ lemma kernel_entry_if_irq_measure:
   \<Longrightarrow> irq_measure_if b \<le> irq_measure_if i_s"
  apply (fold irq_measure_if_inv_def)
   apply (rule mp)
-   apply (erule_tac P="op = i_s" and Q="\<lambda>rv s. (isRight (fst rv)) \<longrightarrow> Q s" for Q in use_valid)
+   apply (erule_tac P="(=) i_s" and Q="\<lambda>rv s. (isRight (fst rv)) \<longrightarrow> Q s" for Q in use_valid)
     apply (simp_all add: isRight_def)
   apply (simp add: kernel_entry_if_def)
   apply (rule hoare_pre, wp)

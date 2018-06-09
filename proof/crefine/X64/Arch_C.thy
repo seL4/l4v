@@ -92,7 +92,7 @@ lemma performPageTableInvocationUnmap_ccorres:
                  del: Collect_const)
      apply (rule ccorres_move_c_guard_cte)
      apply (rule ccorres_getCTE)+
-     apply (rule_tac P="cte_wp_at' (op = rv) ctSlot
+     apply (rule_tac P="cte_wp_at' ((=) rv) ctSlot
                           and (\<lambda>_. rv = rva \<and> isArchCap isPageTableCap (cteCap rv))"
                 in ccorres_from_vcg_throws [where P'=UNIV])
      apply (rule allI, rule conseqPre, vcg)
@@ -235,7 +235,7 @@ lemma performPageDirectoryInvocationUnmap_ccorres:
                  del: Collect_const)
      apply (rule ccorres_move_c_guard_cte)
      apply (rule ccorres_getCTE)+
-     apply (rule_tac P="cte_wp_at' (op = rv) ctSlot
+     apply (rule_tac P="cte_wp_at' ((=) rv) ctSlot
                           and (\<lambda>_. rv = rva \<and> isArchCap isPageDirectoryCap (cteCap rv))"
                 in ccorres_from_vcg_throws [where P'=UNIV])
      apply (rule allI, rule conseqPre, vcg)
@@ -378,7 +378,7 @@ lemma performPDPTInvocationUnmap_ccorres:
                  del: Collect_const)
      apply (rule ccorres_move_c_guard_cte)
      apply (rule ccorres_getCTE)+
-     apply (rule_tac P="cte_wp_at' (op = rv) ctSlot
+     apply (rule_tac P="cte_wp_at' ((=) rv) ctSlot
                           and (\<lambda>_. rv = rva \<and> isArchCap isPDPointerTableCap (cteCap rv))"
                 in ccorres_from_vcg_throws [where P'=UNIV])
      apply (rule allI, rule conseqPre, vcg)
@@ -828,7 +828,7 @@ shows
        apply clarsimp
        apply (wp getSlotCap_wp)
       apply clarsimp
-     apply (rule_tac Q="\<lambda>_. cte_wp_at' (op = (UntypedCap isdev frame pageBits idx) o cteCap) parent
+     apply (rule_tac Q="\<lambda>_. cte_wp_at' ((=) (UntypedCap isdev frame pageBits idx) o cteCap) parent
                            and (\<lambda>s. descendants_range_in' {frame..frame + (2::machine_word) ^ pageBits - (1::machine_word)} parent (ctes_of s))
                            and pspace_no_overlap' frame pageBits
                            and invs'
@@ -4843,7 +4843,7 @@ lemma invokeX86PortIn8_ccorres:
   notes Collect_const[simp del] dc_simp[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (valid_objs' and valid_queues and ct_in_state' (op = Restart) and
+       (valid_objs' and valid_queues and ct_in_state' ((=) Restart) and
         (\<lambda>s. ksCurThread s = thread \<and> sch_act_wf (ksSchedulerAction s) s))
        (UNIV \<inter> \<lbrace>\<acute>invLabel = scast Kernel_C.X86IOPortIn8\<rbrace>
              \<inter> \<lbrace>\<acute>port = port\<rbrace>
@@ -4908,7 +4908,7 @@ lemma invokeX86PortIn16_ccorres:
   notes Collect_const[simp del] dc_simp[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (valid_objs' and valid_queues and ct_in_state' (op = Restart) and
+       (valid_objs' and valid_queues and ct_in_state' ((=) Restart) and
         (\<lambda>s. ksCurThread s = thread \<and> sch_act_wf (ksSchedulerAction s) s))
        (UNIV \<inter> \<lbrace>\<acute>invLabel = scast Kernel_C.X86IOPortIn16\<rbrace>
              \<inter> \<lbrace>\<acute>port = port\<rbrace>
@@ -4973,7 +4973,7 @@ lemma invokeX86PortIn32_ccorres:
   notes Collect_const[simp del] dc_simp[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (valid_objs' and valid_queues and ct_in_state' (op = Restart) and
+       (valid_objs' and valid_queues and ct_in_state' ((=) Restart) and
         (\<lambda>s. ksCurThread s = thread \<and> sch_act_wf (ksSchedulerAction s) s))
        (UNIV \<inter> \<lbrace>\<acute>invLabel = scast Kernel_C.X86IOPortIn32\<rbrace>
              \<inter> \<lbrace>\<acute>port = port\<rbrace>

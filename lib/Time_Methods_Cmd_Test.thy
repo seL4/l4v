@@ -62,8 +62,8 @@ experiment begin
     "rev (x # xs) @ ys = rev xs @ (x # ys)"
     by auto
 
-  lemma "rev [0..100] = map (op- 100) [0..100]"
-        "rev [0..200] = map (op- 200) [0..200]"
+  lemma "rev [0..100] = map ((-) 100) [0..100]"
+        "rev [0..200] = map ((-) 200) [0..200]"
     text \<open>evaluate everything but @{term rev}\<close>
     apply (all \<open>match conclusion in "rev x = y" for x y \<Rightarrow>
                   \<open>rule subst[where t = x], simp add: upto.simps\<close>\<close>)
@@ -87,10 +87,10 @@ experiment begin
     Fast and slow subsequence testing.
   \<close>
   lemma
-    "subseq (map (op* 2) [1 ..  5]) [1 .. 10]"
-    "subseq (map (op* 2) [1 ..  6]) [1 .. 12]"
-    "subseq (map (op* 2) [1 ..  7]) [1 .. 14]"
-    "subseq (map (op* 2) [1 ..  8]) [1 .. 16]"
+    "subseq (map (( * ) 2) [1 ..  5]) [1 .. 10]"
+    "subseq (map (( * ) 2) [1 ..  6]) [1 .. 12]"
+    "subseq (map (( * ) 2) [1 ..  7]) [1 .. 14]"
+    "subseq (map (( * ) 2) [1 ..  8]) [1 .. 16]"
     apply (all \<open>match conclusion in "subseq x y" for x y \<Rightarrow>
                   \<open>rule subst[where t = x], simp add: upto.simps,
                    rule subst[where t = y], simp add: upto.simps\<close>\<close>)

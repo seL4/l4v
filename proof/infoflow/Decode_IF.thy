@@ -135,14 +135,14 @@ lemma range_check_ev:
 
 (* FIXME: move *)
 lemma cte_wp_at_caps_of_state:
-  "cte_wp_at (op = c) slot s \<Longrightarrow> caps_of_state s slot = Some c"
+  "cte_wp_at ((=) c) slot s \<Longrightarrow> caps_of_state s slot = Some c"
   by(simp add: caps_of_state_def cte_wp_at_def)
 
 (* FIXME: move *)
 lemma aag_has_auth_to_obj_refs_of_owned_cap:
   "\<lbrakk>pas_refined aag s;
     is_subject aag (fst slot);
-    cte_wp_at (op = cap) slot s;
+    cte_wp_at ((=) cap) slot s;
     a \<in> cap_auth_conferred cap; x \<in> Access.obj_refs cap\<rbrakk> \<Longrightarrow>
    aag_has_auth_to aag a x"
   apply(drule sym, erule ssubst)
@@ -415,7 +415,7 @@ lemma pas_cap_cur_auth_ASIDControlCap:
 
 lemma cte_wp_at_diminished_cnode_cap:
   "\<lbrakk>cte_wp_at (diminished cap) slot s; is_cnode_cap cap\<rbrakk> \<Longrightarrow>
-   cte_wp_at (op = cap) slot s"
+   cte_wp_at ((=) cap) slot s"
   apply(case_tac cap, simp_all)
   apply(clarsimp simp: cte_wp_at_def diminished_def mask_cap_def)
   apply(case_tac capa)
@@ -432,7 +432,7 @@ lemma owns_cnode_owns_obj_ref_of_child_cnodes:
 
 lemma cte_wp_at_diminished_PageDirectoryCap:
   "\<lbrakk>cte_wp_at (diminished cap) slot s; cap = ArchObjectCap (PageDirectoryCap x y)\<rbrakk> \<Longrightarrow>
-   cte_wp_at (op = cap) slot s"
+   cte_wp_at ((=) cap) slot s"
   apply(clarsimp simp: cte_wp_at_def diminished_def mask_cap_def)
   apply(case_tac capa)
   apply(clarsimp simp: cap_rights_update_def)+
@@ -442,7 +442,7 @@ lemma cte_wp_at_diminished_PageDirectoryCap:
 
 lemma cte_wp_at_diminished_PageTableCap:
   "\<lbrakk>cte_wp_at (diminished cap) slot s; cap = ArchObjectCap (PageTableCap x y)\<rbrakk> \<Longrightarrow>
-   cte_wp_at (op = cap) slot s"
+   cte_wp_at ((=) cap) slot s"
   apply(clarsimp simp: cte_wp_at_def diminished_def mask_cap_def)
   apply(case_tac capa)
   apply(clarsimp simp: cap_rights_update_def)+

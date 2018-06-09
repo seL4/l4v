@@ -63,11 +63,11 @@ notation (input) cap_in_caps (infix ":cap" 50)
 notation (latex output)  cap_in_caps (infix "\<in>\<^sub>c\<^sub>a\<^sub>p" 50)
 
 notation
-  not_cap_in_caps  ("op \<notin>cap") and
+  not_cap_in_caps  ("(\<notin>cap)") and
   not_cap_in_caps  ("(_/ \<notin>cap _)" [51, 51] 50)
 
 notation (latex output)
-  not_cap_in_caps  ("op \<notin>\<^sub>c\<^sub>a\<^sub>p") and
+  not_cap_in_caps  ("(\<notin>\<^sub>c\<^sub>a\<^sub>p)") and
   not_cap_in_caps  (infix "\<notin>\<^sub>c\<^sub>a\<^sub>p" 50)
 
 (* A set of caps "caps" have less (or equal) access to an entity as "cap" does. *)

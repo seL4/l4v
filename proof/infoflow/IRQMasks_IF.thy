@@ -57,7 +57,7 @@ crunch irq_masks[wp]: send_ipc "\<lambda>s. P (irq_masks_of_state s)"
 
 lemma invoke_irq_handler_irq_masks:
   shows
-  "\<lbrace>domain_sep_inv False st and (\<lambda>s. (\<exists>ptr'. cte_wp_at (op = (IRQHandlerCap irq)) ptr' s))\<rbrace>
+  "\<lbrace>domain_sep_inv False st and (\<lambda>s. (\<exists>ptr'. cte_wp_at ((=) (IRQHandlerCap irq)) ptr' s))\<rbrace>
     invoke_irq_handler blah
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   apply(clarsimp simp: valid_def domain_sep_inv_def)
@@ -339,7 +339,7 @@ fun irq_of_handler_inv where
 crunch irq_masks[wp]: invoke_domain "\<lambda>s. P (irq_masks_of_state s)"
 
 lemma perform_invocation_irq_masks:
-  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and (\<lambda>s. (\<forall> blah. oper = InvokeIRQHandler blah \<longrightarrow>  (\<exists>ptr'. cte_wp_at (op = (IRQHandlerCap (irq_of_handler_inv blah))) ptr' s))) and domain_sep_inv False st and valid_invocation oper\<rbrace>
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and (\<lambda>s. (\<forall> blah. oper = InvokeIRQHandler blah \<longrightarrow>  (\<exists>ptr'. cte_wp_at ((=) (IRQHandlerCap (irq_of_handler_inv blah))) ptr' s))) and domain_sep_inv False st and valid_invocation oper\<rbrace>
   perform_invocation blocking calling oper
   \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   apply(case_tac oper)
@@ -362,7 +362,7 @@ lemma decode_invocation_IRQHandlerCap:
        \<lbrace>\<lambda>rv s.
            (\<forall>x. rv = InvokeIRQHandler x \<longrightarrow>
                 (\<exists>a b. cte_wp_at
-                        (op = (IRQHandlerCap (irq_of_handler_inv x)))
+                        ((=) (IRQHandlerCap (irq_of_handler_inv x)))
                         (a, b) s))\<rbrace>,-"
   apply(simp add: decode_invocation_def split del: if_split)
   apply(rule hoare_pre)

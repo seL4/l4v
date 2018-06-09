@@ -235,7 +235,7 @@ fun parse_thm_index name =
  *)
 fun adjust_thm_name ctxt (name,index) term =
 let
-  val possible_names = case index of NONE => distinct (op =) [(name, NONE), parse_thm_index name]
+  val possible_names = case index of NONE => distinct (=) [(name, NONE), parse_thm_index name]
                                    | SOME i => [(name,SOME i)]
 
   fun match (n, i) =

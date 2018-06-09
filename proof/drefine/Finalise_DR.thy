@@ -215,18 +215,18 @@ lemma delete_cap_one_shrink_descendants:
      apply (wp dxo_wp_weak)
          apply simp
         apply (rule_tac P="\<lambda>s. valid_mdb s \<and> cdt s = xa \<and> cdt pres = xa \<and> slot \<in> CSpaceAcc_A.descendants_of p (cdt s)
-          \<and> mdb_cte_at (swp (cte_wp_at (op\<noteq> cap.NullCap)) s) (cdt s)"
+          \<and> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
           in hoare_vcg_precond_imp)
-         apply (rule_tac Q ="\<lambda>r s. Q r s \<and>  (mdb_cte_at (swp (cte_wp_at (op\<noteq> cap.NullCap)) s) (cdt s))" for Q in hoare_strengthen_post)
+         apply (rule_tac Q ="\<lambda>r s. Q r s \<and>  (mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s))" for Q in hoare_strengthen_post)
           apply (rule hoare_vcg_conj_lift)
            apply (rule delete_cdt_slot_shrink_descendants[where y= "cdt pres" and p = p])
-          apply (rule_tac Q="\<lambda>s. mdb_cte_at (swp (cte_wp_at (op\<noteq>cap.NullCap)) s ) xa" in hoare_vcg_precond_imp)
+          apply (rule_tac Q="\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>)cap.NullCap)) s ) xa" in hoare_vcg_precond_imp)
            apply (case_tac slot)
            apply (clarsimp simp:set_cdt_def get_def put_def bind_def valid_def mdb_cte_at_def)
           apply (assumption)
          apply clarsimp+
        apply wp+
-     apply (rule hoare_vcg_conj_lift[where P="\<lambda>s. cdt s = cdt pres \<and> mdb_cte_at (swp (cte_wp_at (op\<noteq>cap.NullCap)) s) (cdt s)"])
+     apply (rule hoare_vcg_conj_lift[where P="\<lambda>s. cdt s = cdt pres \<and> mdb_cte_at (swp (cte_wp_at ((\<noteq>)cap.NullCap)) s) (cdt s)"])
       prefer 2
       apply (rule hoare_drop_imp)
       apply wp
@@ -330,7 +330,7 @@ lemma dcorres_revoke_the_cap_corres:
                          invs_def valid_state_def descendants_of_eqv)
    apply (rule dcorres_absorb_get_l)
    apply (clarsimp simp: when_def assert_def corres_free_fail)
-   apply (subgoal_tac "cte_wp_at (op \<noteq> cap.NullCap) (a,b) s'")
+   apply (subgoal_tac "cte_wp_at ((\<noteq>) cap.NullCap) (a,b) s'")
     prefer 2
     apply (erule descendants_not_null_cap [rotated])
     apply fastforce
@@ -357,7 +357,7 @@ lemma dcorres_revoke_the_cap_corres:
     apply fastforce
     apply (rule conjI)
       apply (rule ccontr)
-      apply (subgoal_tac "cte_wp_at (op\<noteq>cap.NullCap) (a,b) s")
+      apply (subgoal_tac "cte_wp_at ((\<noteq>)cap.NullCap) (a,b) s")
         apply (clarsimp simp: cte_wp_at_caps_of_state)
         apply (drule valid_idle_has_null_cap)
         apply (simp add:not_idle_thread_def)+
@@ -444,7 +444,7 @@ lemma finalise_cancel_ipc:
       tcb_at_cte_at_2[unfolded tcb_at_def])
    apply (simp add:cancel_signal_def)
    apply (rule corres_guard_imp)
-     apply (rule_tac Q'="\<lambda>r. valid_ntfn r and op=s'" in corres_symb_exec_r)
+     apply (rule_tac Q'="\<lambda>r. valid_ntfn r and (=s')" in corres_symb_exec_r)
         apply (rule corres_symb_exec_r)
            apply (rule corres_dummy_return_pl)
            apply (rule corres_split[ OF _ corres_dummy_set_notification])
@@ -1078,7 +1078,7 @@ done
 
 lemma remove_cdt_pt_slot_exec:
   "\<lbrakk>dcorres dc \<top> Q (g ()) f;
-   \<And>s. Q s\<longrightarrow> ( (\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)) and valid_idle and pt_page_relation a pg_id ptr UNIV) s\<rbrakk>
+   \<And>s. Q s\<longrightarrow> ( (\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)) and valid_idle and pt_page_relation a pg_id ptr UNIV) s\<rbrakk>
     \<Longrightarrow> dcorres dc P Q
     (remove_parent (a ,aptr) >>= g) f"
   apply (rule corres_dummy_return_pr)
@@ -1095,7 +1095,7 @@ done
 
 lemma remove_cdt_pd_slot_exec:
   "\<lbrakk>dcorres dc \<top> Q (g ()) f;
-   \<And>s. Q s\<longrightarrow> ((\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)) and valid_idle and page_directory_at a) s\<rbrakk>
+   \<And>s. Q s\<longrightarrow> ((\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)) and valid_idle and page_directory_at a) s\<rbrakk>
     \<Longrightarrow> dcorres dc P Q
     (remove_parent (a ,aptr) >>= g) f"
   apply (rule corres_dummy_return_pr)
@@ -1107,7 +1107,7 @@ done
 
 lemma remove_cdt_asid_pool_slot_exec:
   "\<lbrakk>dcorres dc \<top> Q (g ()) f;
-   \<And>s. Q s\<longrightarrow> ((\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)) and valid_idle and asid_pool_at a) s\<rbrakk>
+   \<And>s. Q s\<longrightarrow> ((\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)) and valid_idle and asid_pool_at a) s\<rbrakk>
     \<Longrightarrow> dcorres dc P Q
     (remove_parent (a ,aptr) >>= g) f"
   apply (rule corres_dummy_return_pr)
@@ -1147,7 +1147,7 @@ lemma dcorres_set_pte_cap:
 done
 
 lemma dcorres_delete_cap_simple_set_pt:
-  "dcorres dc \<top> ((\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s))
+  "dcorres dc \<top> ((\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s))
        and pt_page_relation (ptr && ~~ mask pt_bits) pg_id ptr UNIV
        and valid_idle and ko_at (ArchObj (arch_kernel_obj.PageTable fun)) (ptr && ~~ mask pt_bits))
     (delete_cap_simple (ptr && ~~ mask pt_bits, unat (ptr && mask pt_bits >> 2)))
@@ -1236,7 +1236,7 @@ done
 
 lemma dcorres_delete_cap_simple_set_pde:
   " ucast (ptr && mask pd_bits >> 2) \<notin> kernel_mapping_slots
-    \<Longrightarrow>dcorres dc \<top> ((\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s))
+    \<Longrightarrow>dcorres dc \<top> ((\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s))
     and (pd_pt_relation (ptr && ~~ mask pd_bits) oid ptr
          or pd_section_relation (ptr && ~~ mask pd_bits) oid ptr
          or pd_super_section_relation (ptr && ~~ mask pd_bits) oid ptr)
@@ -1991,8 +1991,8 @@ crunch valid_idle[wp]: flush_page "valid_idle"
   (wp: crunch_wps simp:crunch_simps)
 
 lemma mdb_cte_at_flush_page[wp]:
-  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace> flush_page a b c d
-   \<lbrace>\<lambda>_ s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
+  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrace> flush_page a b c d
+   \<lbrace>\<lambda>_ s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrace>"
   apply (simp add:mdb_cte_at_def)
   apply (simp only: imp_conv_disj)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
@@ -2014,7 +2014,7 @@ crunch valid_idle[wp]: flush_space "valid_idle"
   (wp: crunch_wps simp:crunch_simps)
 
 lemma page_table_mapped_stable[wp]:
-  "\<lbrace>op = s\<rbrace> page_table_mapped a b w \<lbrace>\<lambda>r. op = s\<rbrace>"
+  "\<lbrace>(=) s\<rbrace> page_table_mapped a b w \<lbrace>\<lambda>r. (=) s\<rbrace>"
   apply (simp add:page_table_mapped_def)
   apply (wp|wpc)+
   apply (simp add:get_pde_def)
@@ -2025,7 +2025,7 @@ lemma page_table_mapped_stable[wp]:
 done
 
 lemma eqv_imply_stable:
-assumes "\<And>cs. \<lbrace>op = cs\<rbrace> f \<lbrace>\<lambda>r. op = cs\<rbrace>"
+assumes "\<And>cs. \<lbrace>(=) cs\<rbrace> f \<lbrace>\<lambda>r. (=) cs\<rbrace>"
 shows "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r. P\<rbrace>"
   using assms
   apply (fastforce simp:valid_def)
@@ -2120,7 +2120,7 @@ lemma cdl_asid_table_transform:
   by (simp add:transform_def transform_asid_table_def)
 
 lemma dcorres_find_pd_for_asid:
-  "dcorres ( dc \<oplus> op =) \<top> valid_idle
+  "dcorres ( dc \<oplus> (=)) \<top> valid_idle
     (cdl_find_pd_for_asid (transform_asid a, b))
     (find_pd_for_asid a)"
   apply (simp add:cdl_find_pd_for_asid_def find_pd_for_asid_def transform_asid_def)
@@ -2240,7 +2240,7 @@ lemma lookup_pd_slot_aligned_simp:
 
 
 lemma dcorres_unmap_page_table_store_pde:
-  "dcorres dc \<top> ((\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s))
+  "dcorres dc \<top> ((\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s))
     and valid_idle and K (is_aligned pd 14 \<and> vptr < kernel_base)
     and pd_pt_relation (lookup_pd_slot pd vptr && ~~ mask pd_bits) pt_id (lookup_pd_slot pd vptr) )
            (delete_cap_simple (cdl_lookup_pd_slot pd vptr))
@@ -2363,7 +2363,7 @@ lemma find_pd_for_asid_kernel_mapping_help:
   done
 
 lemma dcorres_might_throw:
-  "\<lbrakk>\<And>s. \<lbrace>op = s\<rbrace> b \<lbrace>\<lambda>r. op = s\<rbrace>\<rbrakk> \<Longrightarrow> dcorres (dc \<oplus> dc) \<top> \<top> might_throw (throw_on_false a b)"
+  "\<lbrakk>\<And>s. \<lbrace>(=) s\<rbrace> b \<lbrace>\<lambda>r. (=) s\<rbrace>\<rbrakk> \<Longrightarrow> dcorres (dc \<oplus> dc) \<top> \<top> might_throw (throw_on_false a b)"
   apply (simp add: liftE_bindE unlessE_def
     might_throw_def throw_on_false_def split:if_splits)
   apply (rule corres_symb_exec_r)
@@ -2395,7 +2395,7 @@ lemma dcorres_unmap_page:
   apply (simp add:ARM_A.unmap_page_def bindE_assoc mapM_x_singleton
     PageTableUnmap_D.unmap_page_def cdl_page_mapping_entries_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac P = "\<lambda>x. x = transform s'" and P' = "op = s'"
+    apply (rule_tac P = "\<lambda>x. x = transform s'" and P' = "(=) s'"
       in corres_split_catch [where f = dc and E = dc and E' =dc])
        apply simp
       apply (rule corres_guard_imp)
@@ -2425,7 +2425,7 @@ prefer 2
   apply (simp add:ARM_A.unmap_page_def bindE_assoc mapM_x_singleton
     PageTableUnmap_D.unmap_page_def cdl_page_mapping_entries_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac P = "\<lambda>x. x = transform s'" and P' = "op = s'"
+    apply (rule_tac P = "\<lambda>x. x = transform s'" and P' = "(=) s'"
       in corres_split_catch [where f = dc and E = dc and E' =dc])
        apply simp
       apply (rule corres_guard_imp)
@@ -2462,7 +2462,7 @@ prefer 2
   apply (simp add:ARM_A.unmap_page_def bindE_assoc mapM_x_singleton
     PageTableUnmap_D.unmap_page_def cdl_page_mapping_entries_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac P = "\<lambda>x. x = transform s'" and P' = "op = s'"
+    apply (rule_tac P = "\<lambda>x. x = transform s'" and P' = "(=) s'"
       in corres_split_catch [where f = dc and E = dc and E' =dc])
        apply simp
       apply (rule corres_guard_imp)
@@ -2491,7 +2491,7 @@ prefer 2
   apply (simp add:ARM_A.unmap_page_def bindE_assoc mapM_x_singleton
     PageTableUnmap_D.unmap_page_def cdl_page_mapping_entries_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac P = "\<lambda>x. x = transform s'" and P' = "op = s'"
+    apply (rule_tac P = "\<lambda>x. x = transform s'" and P' = "(=) s'"
       in corres_split_catch [where f = dc and E = dc and E' =dc])
        apply simp
       apply (rule corres_guard_imp)
@@ -2584,7 +2584,7 @@ lemma dcorres_delete_asid:
 done
 
 lemma thread_in_thread_cap_not_idle:
- "\<lbrakk>valid_global_refs s;cte_wp_at (op = (cap.ThreadCap ptr)) slot s\<rbrakk>
+ "\<lbrakk>valid_global_refs s;cte_wp_at ((=) (cap.ThreadCap ptr)) slot s\<rbrakk>
   \<Longrightarrow> not_idle_thread ptr s"
   apply (rule ccontr)
   apply (clarsimp simp:valid_cap_def valid_global_refs_def valid_refs_def)
@@ -2616,7 +2616,7 @@ lemma prepare_thread_delete_dcorres: "dcorres dc P P' (CSpace_D.prepare_thread_d
 lemma dcorres_finalise_cap:
   "cdlcap = transform_cap cap \<Longrightarrow>
       dcorres (\<lambda>r r'. fst r = transform_cap (fst r'))
-             \<top> (invs and valid_cap cap and valid_pdpt_objs and cte_wp_at (op=cap) slot and valid_etcbs)
+             \<top> (invs and valid_cap cap and valid_pdpt_objs and cte_wp_at ((=cap)) slot and valid_etcbs)
           (CSpace_D.finalise_cap cdlcap final)
           (CSpace_A.finalise_cap cap final)"
   apply (case_tac cap)
@@ -3130,7 +3130,7 @@ lemma finalise_cap_zombie':
   by (simp split: cdl_cap.split_asm)
 
 lemma corres_use_cutMon:
-  "\<lbrakk> \<And>s. corres_underlying sr False fl r P P' f (cutMon (op = s) g) \<rbrakk>
+  "\<lbrakk> \<And>s. corres_underlying sr False fl r P P' f (cutMon ((=) s) g) \<rbrakk>
        \<Longrightarrow> corres_underlying sr False fl r P P' f g"
   apply atomize
   apply (simp add: corres_underlying_def cutMon_def fail_def
@@ -3162,7 +3162,7 @@ lemma corres_drop_cutMon_bindE:
   done
 
 lemma corres_cutMon:
-  "\<lbrakk> \<And>s. Q s \<Longrightarrow> corres_underlying sr False False r P P' f (cutMon (op = s) g) \<rbrakk>
+  "\<lbrakk> \<And>s. Q s \<Longrightarrow> corres_underlying sr False False r P P' f (cutMon ((=) s) g) \<rbrakk>
          \<Longrightarrow> corres_underlying sr False False r P P' f (cutMon Q g)"
   apply atomize
   apply (simp add: corres_underlying_def cutMon_def fail_def
@@ -3354,7 +3354,7 @@ lemma OR_choiceE_det:
                gets_the_def assert_opt_def return_def gets_def fail_def mk_ef_def liftE_def no_fail_def
                split: option.splits prod.splits)
   apply atomize
-  apply (erule_tac x="op = x" in allE)
+  apply (erule_tac x="(=) x" in allE)
   apply (erule_tac x=x in allE)+
   apply clarsimp
   done
@@ -3498,7 +3498,7 @@ lemma dcorres_rec_del:
               \<and> \<not> (transform_cslot_ptr (slot_rdcall args)) \<in> fst ` snd S') Monads_D.throw;
          returnOk S'
        odE)
-      (cutMon (op = s) (rec_del args))"
+      (cutMon ((=) s) (rec_del args))"
 proof (induct arbitrary: S rule: rec_del.induct,
        simp_all(no_asm) only: rec_del_fails fail_bindE corres_free_fail cutMon_fail)
   case (1 slot exposed s S)
@@ -3545,7 +3545,7 @@ next
   case (2 slot exposed s S)
   note if_split[split del]
   have removeables:
-    "\<And>s cap fin. \<lbrakk> cte_wp_at (op = cap) slot s; s \<turnstile> remainder_cap fin cap; invs s; valid_etcbs s;
+    "\<And>s cap fin. \<lbrakk> cte_wp_at ((=) cap) slot s; s \<turnstile> remainder_cap fin cap; invs s; valid_etcbs s;
             CSpace_A.cap_removeable (remainder_cap fin cap) slot  \<rbrakk>
       \<Longrightarrow> CSpace_D.cap_removeable (transform_cap (remainder_cap fin cap))
                  (transform_cslot_ptr slot) (transform s)"
@@ -3646,7 +3646,7 @@ next
               apply (rule corres_underlying_gets_pre_lhs)
               apply (rename_tac remove)
               apply (rule_tac P="\<lambda>s. remove = CSpace_D.cap_removeable (fst fin) (transform_cslot_ptr slot) s"
-                         and P'="cte_wp_at (op = cap) slot and invs and valid_etcbs and valid_cap (fst fin')"
+                         and P'="cte_wp_at ((=) cap) slot and invs and valid_etcbs and valid_cap (fst fin')"
                          and F="CSpace_A.cap_removeable (fst fin') slot \<longrightarrow> remove"
                               in corres_req2)
                apply (drule use_valid[OF _ finalise_cap_remainder, OF _ TrueI])
@@ -3738,7 +3738,7 @@ next
             apply (rule_tac Q="\<lambda>fin s. invs s \<and> replaceable s slot (fst fin) cap
                                       \<and> valid_pdpt_objs s
                                       \<and> valid_etcbs s
-                                      \<and> cte_wp_at (op = cap) slot s \<and> s \<turnstile> fst fin
+                                      \<and> cte_wp_at ((=) cap) slot s \<and> s \<turnstile> fst fin
                                       \<and> emptyable slot s \<and> fst slot \<noteq> idle_thread s
                                       \<and> (\<forall>t\<in>obj_refs (fst fin). halted_if_tcb t s)"
                        in hoare_vcg_conj_lift)

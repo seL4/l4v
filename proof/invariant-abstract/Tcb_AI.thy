@@ -636,7 +636,7 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
               | rule conjI | erule disjE)+
   apply (clarsimp simp: valid_tcb_def dest!: get_tcb_SomeD)
   apply (rule conjI, simp add: ran_tcb_cap_cases)
-  apply (cut_tac P="op = v" and t="(t, tcb_cnode_index 4)" for v
+  apply (cut_tac P="(=) v" and t="(t, tcb_cnode_index 4)" for v
             in  cte_wp_at_tcbI)
      apply simp
     apply fastforce
@@ -771,7 +771,7 @@ where
                                                 \<and> (ntfn_bound_tcb ntfn = None)
                                                 \<and> (\<forall>q. ntfn_obj ntfn \<noteq> WaitingNtfn q)) ntfnptr
                                           and ex_nonz_cap_to ntfnptr
-                                          and bound_tcb_at (op = None) t) ))"
+                                          and bound_tcb_at ((=) None) t) ))"
 | "tcb_inv_wf (SetTLSBase t tls_base) = (tcb_at t and ex_nonz_cap_to t)"
 
 end
@@ -802,7 +802,7 @@ lemma unbind_notification_has_reply[wp]:
 
 lemma bind_notification_invs:
   shows
-  "\<lbrace>bound_tcb_at (op = None) tcbptr
+  "\<lbrace>bound_tcb_at ((=) None) tcbptr
     and obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> (ntfn_bound_tcb ntfn = None)
                            \<and> (\<forall>q. ntfn_obj ntfn \<noteq> WaitingNtfn q)) ntfnptr
     and invs
@@ -954,14 +954,14 @@ lemma OR_choiceE_E_weak_wp: "\<lbrace>P\<rbrace> f \<sqinter> g \<lbrace>Q\<rbra
   done
 
 lemma thread_get_pred_tcb_at_wp:
-  "\<lbrace>\<lambda>s. \<forall>f. pred_tcb_at proj (op = f) t s \<longrightarrow> P f s \<rbrace> thread_get (proj \<circ> tcb_to_itcb) t \<lbrace>P\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>f. pred_tcb_at proj ((=) f) t s \<longrightarrow> P f s \<rbrace> thread_get (proj \<circ> tcb_to_itcb) t \<lbrace>P\<rbrace>"
   apply (wp thread_get_wp')
   apply clarsimp
   apply (drule spec, erule mp)
   by (simp add: pred_tcb_at_def obj_at_def)
 
 lemma thread_get_ret:
-  "\<lbrace>\<top>\<rbrace> thread_get (proj \<circ> tcb_to_itcb) t \<lbrace>\<lambda>rv. pred_tcb_at proj (op = rv) t\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> thread_get (proj \<circ> tcb_to_itcb) t \<lbrace>\<lambda>rv. pred_tcb_at proj ((=) rv) t\<rbrace>"
   apply (simp add: thread_get_def)
   apply wp
   by (clarsimp simp: pred_tcb_at_def)

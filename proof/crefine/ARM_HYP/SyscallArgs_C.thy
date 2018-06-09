@@ -704,7 +704,7 @@ lemma getMRs_tcbContext:
   done
 
 lemma threadGet_tcbIpcBuffer_ccorres [corres]:
-  "ccorres (op =) w_bufferPtr_' (tcb_at' tptr) UNIV hs
+  "ccorres (=) w_bufferPtr_' (tcb_at' tptr) UNIV hs
            (threadGet tcbIPCBuffer tptr)
            (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t tcb_ptr_to_ctcb_ptr tptr\<rbrace>
                (\<acute>w_bufferPtr :==
@@ -800,7 +800,7 @@ lemma ccap_relation_page_is_device:
    done
 
 lemma lookupIPCBuffer_ccorres[corres]:
-  "ccorres (op = \<circ> option_to_ptr) ret__ptr_to_unsigned_long_'
+  "ccorres ((=) \<circ> option_to_ptr) ret__ptr_to_unsigned_long_'
            (tcb_at' t)
            (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr t}
                   \<inter> {s. isReceiver_' s = from_bool isReceiver}) []

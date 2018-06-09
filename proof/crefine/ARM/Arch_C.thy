@@ -78,7 +78,7 @@ lemma performPageTableInvocationUnmap_ccorres:
                  del: Collect_const)
      apply (rule ccorres_move_c_guard_cte)
      apply (rule ccorres_getCTE)+
-     apply (rule_tac P="cte_wp_at' (op = rv) ctSlot
+     apply (rule_tac P="cte_wp_at' ((=) rv) ctSlot
                           and (\<lambda>_. rv = rva \<and> isArchCap isPageTableCap (cteCap rv))"
                 in ccorres_from_vcg_throws [where P'=UNIV])
      apply (rule allI, rule conseqPre, vcg)
@@ -504,7 +504,7 @@ shows
        apply clarsimp
        apply (wp getSlotCap_wp)
       apply clarsimp
-     apply (rule_tac Q="\<lambda>_. cte_wp_at' (op = (UntypedCap isdev frame pageBits idx) o cteCap) parent
+     apply (rule_tac Q="\<lambda>_. cte_wp_at' ((=) (UntypedCap isdev frame pageBits idx) o cteCap) parent
                            and (\<lambda>s. descendants_range_in' {frame..frame + (2::word32) ^ pageBits - (1::word32)} parent (ctes_of s))
                            and pspace_no_overlap' frame pageBits
                            and invs'

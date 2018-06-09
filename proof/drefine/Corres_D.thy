@@ -129,7 +129,7 @@ lemma corres_dummy_get_pl:
   by (fastforce simp: corres_underlying_def bind_def get_def)
 
 lemma dcorres_free_throw:
-  assumes "\<And>s. \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>e. op = s\<rbrace>"
+  assumes "\<And>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>e. (=) s\<rbrace>"
   shows "dcorres (dc \<oplus> r) P P' Monads_D.throw f"
   using assms
   apply (simp add:corres_underlying_def throwError_def return_def)
@@ -155,20 +155,20 @@ lemma  corres_split_keep_pfx:
 
 lemma dcorres_absorb_pfx:
   assumes "dcorres r (P) (P') (f) (f')"
-  shows "\<And> s s'. \<lbrakk>s = transform s'; P s; P' s'\<rbrakk> \<Longrightarrow> dcorres r (op = s) (op = s') f f' "
+  shows "\<And> s s'. \<lbrakk>s = transform s'; P s; P' s'\<rbrakk> \<Longrightarrow> dcorres r ((=) s) ((=) s') f f' "
   using assms
 by (fastforce simp:corres_underlying_def)
 
 lemma dcorres_expand_pfx:
-assumes "\<And> s s'. \<lbrakk>s = transform s'; P s; P' s'\<rbrakk> \<Longrightarrow> dcorres r (op = s) (op = s') f f' "
+assumes "\<And> s s'. \<lbrakk>s = transform s'; P s; P' s'\<rbrakk> \<Longrightarrow> dcorres r ((=) s) ((=) s') f f' "
 shows "dcorres r P P' f f'"
 using assms
 by (fastforce simp:corres_underlying_def)
 
 lemma dcorres_absorb_get_l:
-  assumes "!!s'. \<lbrakk> P (transform s');P' s'\<rbrakk> \<Longrightarrow> dcorres rv (op = (transform s')) (op=s') (f (transform s')) g"
+  assumes "!!s'. \<lbrakk> P (transform s');P' s'\<rbrakk> \<Longrightarrow> dcorres rv ((=) (transform s')) ((=s')) (f (transform s')) g"
   shows "dcorres rv P P' (do t\<leftarrow> get; f t od)  g"
-  apply (rule corres_symb_exec_l [where Q="%x. P and (op = x)"])
+  apply (rule corres_symb_exec_l [where Q="%x. P and ((=) x)"])
     apply (rule dcorres_expand_pfx)
     apply clarsimp
     apply (rule assms)
@@ -178,14 +178,14 @@ lemma dcorres_absorb_get_l:
 lemma dcorres_expand_get_l:
   assumes "dcorres rv P P' (do t\<leftarrow>get; f t od) g"
   shows "\<lbrakk> P (transform s'); P' s'\<rbrakk> \<Longrightarrow>
-         dcorres rv (op = (transform s')) (op=s') (f (transform s')) g"
+         dcorres rv ((=) (transform s')) ((=s')) (f (transform s')) g"
   using assms
   by (simp add:get_def corres_underlying_def bind_def)
 
 lemma dcorres_absorb_get_r:
-  assumes "!!s'. \<lbrakk>P (transform s'); P' s'\<rbrakk> \<Longrightarrow> dcorres rv (op= (transform s')) (op = s') f (g s')"
+  assumes "!!s'. \<lbrakk>P (transform s'); P' s'\<rbrakk> \<Longrightarrow> dcorres rv ((=) (transform s')) ((=) s') f (g s')"
   shows "dcorres rv P P' f (do t\<leftarrow> get; g t od)"
-  apply (rule corres_symb_exec_r [where Q'="%x. P' and (op = x)"])
+  apply (rule corres_symb_exec_r [where Q'="%x. P' and ((=) x)"])
     apply (rule dcorres_expand_pfx)
     apply clarsimp
     apply (rule assms)
@@ -194,13 +194,13 @@ lemma dcorres_absorb_get_r:
 
 lemma dcorres_expand_get_r:
   assumes "dcorres rv P P' f (do t\<leftarrow> get; g t od)"
-  shows "!!s'. \<lbrakk>P (transform s'); P' s'\<rbrakk> \<Longrightarrow> dcorres rv (op= (transform s')) (op = s') f (g s')"
+  shows "!!s'. \<lbrakk>P (transform s'); P' s'\<rbrakk> \<Longrightarrow> dcorres rv ((=) (transform s')) ((=) s') f (g s')"
   using assms
   by (clarsimp simp:get_def corres_underlying_def bind_def)
 
 lemma dcorres_absorb_gets_the:
   assumes A: "\<And>s' obj'. \<lbrakk>P' s';  g' s' = Some obj'; P (transform s')\<rbrakk>
-          \<Longrightarrow> dcorres r (op = (transform s')) (op = s') (f) (f' obj')"
+          \<Longrightarrow> dcorres r ((=) (transform s')) ((=) s') (f) (f' obj')"
   shows "dcorres r P P' (f) (do a\<leftarrow> gets_the (g'); f' a od)"
   apply (simp add: gets_the_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
@@ -213,10 +213,10 @@ done
 
 lemma dcorres_get:
   assumes A: "\<And>s s'. \<lbrakk>s = transform s';P s; P' s'\<rbrakk>
-          \<Longrightarrow> dcorres r (op = s) (op = s') (f s) (f' s')"
+          \<Longrightarrow> dcorres r ((=) s) ((=) s') (f s) (f' s')"
   shows "dcorres r P P' (do s\<leftarrow>get;f s od) (do s'\<leftarrow> get; f' s' od)"
   apply (rule dcorres_expand_pfx)
-  apply (rule_tac r'="\<lambda>r r'. s=r \<and> s'=r'" and P="%x. op=s" and P'="%x. op=s'" in corres_underlying_split)
+  apply (rule_tac r'="\<lambda>r r'. s=r \<and> s'=r'" and P="%x. (=s)" and P'="%x. (=s')" in corres_underlying_split)
     apply (clarsimp simp: corres_underlying_def get_def)
     apply wp+
   apply (drule A)
@@ -225,7 +225,7 @@ done
 
 lemma dcorres_gets_the:
   assumes A: "\<And>s s' obj obj'. \<lbrakk>s = transform s';P s; P' s';  g' s' = Some obj' ;g s = Some obj\<rbrakk>
-          \<Longrightarrow> dcorres r (op = s) (op = s') (f obj) (f' obj')"
+          \<Longrightarrow> dcorres r ((=) s) ((=) s') (f obj) (f' obj')"
   assumes B: "\<And>s s'. \<lbrakk>s = transform s'; P s; P' s' ; g' s' \<noteq> None\<rbrakk> \<Longrightarrow> g s \<noteq> None"
   shows "dcorres r P P' (do a\<leftarrow>gets_the (g);f a od) (do a\<leftarrow> gets_the (g'); f' a od)"
   apply (simp add:gets_the_def)
@@ -239,7 +239,7 @@ lemma dcorres_gets_the:
     apply (clarsimp split:option.splits simp:corres_free_fail)
       apply (subgoal_tac "\<exists>obj. g x \<noteq> None")
       apply (clarsimp split:option.splits)
-      apply (rule_tac Q="op=(transform xa)" and Q'="op=xa" in corres_guard_imp)
+      apply (rule_tac Q="(=)(transform xa)" and Q'="(=xa)" in corres_guard_imp)
     apply (simp add:A)+
   using B
   apply (wp|clarsimp)+
@@ -293,7 +293,7 @@ lemma dcorres_idempotent_mapM_rhs:
   apply (rule corres_symb_exec_r [where Q'="\<lambda>_. P'"])
      apply (clarsimp simp: corres_underlying_def bind_def return_def split_def)
     apply (erule_tac x=P' in allE, assumption)
-   apply (erule_tac x="op = s" in allE, assumption)
+   apply (erule_tac x="(=) s" in allE, assumption)
   apply simp
   done
 
@@ -312,7 +312,7 @@ lemma dcorres_returnOk:
  by (clarsimp simp:corres_underlying_def return_def returnOk_def)
 
 lemma split_return_throw_thingy:
-  "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> g \<lbrace>\<lambda>rv s'. s' = s \<and> rvP rv\<rbrace>,\<lbrace>\<lambda>ft. op = s\<rbrace>;
+  "\<lbrakk> \<And>s. \<lbrace>(=) s\<rbrace> g \<lbrace>\<lambda>rv s'. s' = s \<and> rvP rv\<rbrace>,\<lbrace>\<lambda>ft. (=) s\<rbrace>;
      \<And>rv. rvP rv \<Longrightarrow> corres_underlying sr nf nf' (dc \<oplus> r) P P' (f \<sqinter> throwError e) (h rv);
         nf' \<Longrightarrow> no_fail P' g \<rbrakk>
      \<Longrightarrow> corres_underlying sr nf nf' (dc \<oplus> r) P P'
@@ -346,7 +346,7 @@ lemma lift_returnOk_bind_triv:
   by (simp add: lift_def case_sum_triv_return cong: bind_cong)
 
 lemma corres_return_throw_thingy:
-  "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> g \<lbrace>\<lambda>rv s'. s' = s \<and> Q rv\<rbrace>,\<lbrace>\<lambda>ft. op = s\<rbrace>;
+  "\<lbrakk> \<And>s. \<lbrace>(=) s\<rbrace> g \<lbrace>\<lambda>rv s'. s' = s \<and> Q rv\<rbrace>,\<lbrace>\<lambda>ft. (=) s\<rbrace>;
         nf' \<Longrightarrow> no_fail P' g; \<forall>rv. Q rv \<longrightarrow> r v rv \<rbrakk>
      \<Longrightarrow> corres_underlying sr nf nf' (dc \<oplus> r) P P'
              (returnOk v \<sqinter> throwError e) (g)"
@@ -359,7 +359,7 @@ lemma corres_return_throw_thingy:
   done
 
 lemma dcorres_throw_wp:
-assumes "\<forall>s. \<lbrace>op = s\<rbrace>g\<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>e. op = s\<rbrace>"
+assumes "\<forall>s. \<lbrace>(=) s\<rbrace>g\<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>e. (=) s\<rbrace>"
 shows "dcorres (dc\<oplus>anyrel) \<top> P (Monads_D.throw) g"
   using assms
   apply (clarsimp simp:throwError_def corres_underlying_def return_def validE_def valid_def)
@@ -399,7 +399,7 @@ lemma dcorres_symb_exec_r_catch:
   "\<lbrakk>
     \<And>rv. dcorres r P (Q1 rv) f (h rv);
     \<And>rv'. dcorres r P (Q2 rv') f (i rv'<catch> h);
-   \<lbrace>P'\<rbrace> g \<lbrace>Q2\<rbrace>, \<lbrace>Q1\<rbrace>; \<And>s. \<lbrace>op = s\<rbrace> g \<lbrace>\<lambda>r. op = s\<rbrace>
+   \<lbrace>P'\<rbrace> g \<lbrace>Q2\<rbrace>, \<lbrace>Q1\<rbrace>; \<And>s. \<lbrace>(=) s\<rbrace> g \<lbrace>\<lambda>r. (=) s\<rbrace>
    \<rbrakk>
   \<Longrightarrow> dcorres r P P' f (g >>=E i <catch> h)"
   apply (subst catch_def)
@@ -522,8 +522,8 @@ lemma corres_alternative_throw_splitE:
   assumes b:  "\<And>x x'. r' x x' \<Longrightarrow> corres_underlying R False z (dc \<oplus> r) (Q x) (Q' x') (g x \<sqinter> Monads_D.throw) (g' x')"
   assumes f: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
   assumes f': "\<lbrace>P'\<rbrace> f' \<lbrace>Q'\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
-  assumes f'_eq: "\<And>s. \<lbrace>op = s\<rbrace> f' \<lbrace>\<lambda>_. op = s\<rbrace>"
-  assumes g'_eq: "\<And>s x. \<lbrace>\<lambda>s'. s' = s \<and> Q' x s'\<rbrace> g' x \<lbrace>\<lambda>_. \<top>\<rbrace>, \<lbrace>\<lambda>_. op = s\<rbrace>"
+  assumes f'_eq: "\<And>s. \<lbrace>(=) s\<rbrace> f' \<lbrace>\<lambda>_. (=) s\<rbrace>"
+  assumes g'_eq: "\<And>s x. \<lbrace>\<lambda>s'. s' = s \<and> Q' x s'\<rbrace> g' x \<lbrace>\<lambda>_. \<top>\<rbrace>, \<lbrace>\<lambda>_. (=) s\<rbrace>"
   shows "corres_underlying R False z (dc \<oplus> r) P P' ((f >>=E g) \<sqinter> Monads_D.throw) (f' >>=E g')"
   apply (clarsimp simp: bindE_def corres_underlying_def)
   apply (rule conjI)
@@ -593,7 +593,7 @@ lemma corres_alternative_throw_splitE:
 
 lemma corres_throw_skip_r:
   assumes c: "corres_underlying R False z (dc \<oplus> r) P P' (f \<sqinter> Monads_D.throw) g'"
-  assumes eq: "\<And>s. \<lbrace>op = s\<rbrace> f' \<lbrace>\<lambda>_. op = s\<rbrace>"
+  assumes eq: "\<And>s. \<lbrace>(=) s\<rbrace> f' \<lbrace>\<lambda>_. (=) s\<rbrace>"
   assumes nf: "z \<longrightarrow> no_fail P' f'"
   shows "corres_underlying R nf z (dc \<oplus> r) P P' (f \<sqinter> Monads_D.throw) (f' >>=E (\<lambda>_. g'))"
   using c

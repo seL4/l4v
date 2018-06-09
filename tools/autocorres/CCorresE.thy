@@ -411,7 +411,7 @@ lemma ccorresE_Catch_nothrow:
 
 lemma ccorresE_symb_exec_l:
   "\<lbrakk> \<And>x. ccorresE st ct \<Gamma> (P' x) Q (B x) C;
-    \<And>s. P s \<Longrightarrow> \<lbrace> op = s \<rbrace> A \<exists>\<lbrace> \<lambda>r' s'. (\<exists>a. r' = Inr a) \<and> s = s' \<rbrace>;
+    \<And>s. P s \<Longrightarrow> \<lbrace> (=) s \<rbrace> A \<exists>\<lbrace> \<lambda>r' s'. (\<exists>a. r' = Inr a) \<and> s = s' \<rbrace>;
     \<lbrace> P \<rbrace> A \<lbrace> P' \<rbrace>,\<lbrace> \<lambda>_ _. False \<rbrace> \<rbrakk>
    \<Longrightarrow> ccorresE st ct \<Gamma> P Q (A >>=E B) C"
   apply atomize

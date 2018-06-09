@@ -621,7 +621,7 @@ lemma access_ti_list_array:
         \<longrightarrow> access_ti_pair (f m) (FCP g) (take v3 (drop (v3 * m) xs)) = (h m)
           \<rbrakk> \<Longrightarrow>
    access_ti_list (map f [0 ..< n]) (FCP g) xs
-     = foldl (op @) [] (map h [0 ..< n])"
+     = foldl (@) [] (map h [0 ..< n])"
   apply (subgoal_tac "\<forall>ys. size_td_list (map f ys) = v3 * length ys")
    prefer 2
    apply (rule allI, induct_tac ys, simp+)
@@ -639,7 +639,7 @@ lemma access_ti_list_array:
 
 lemma take_drop_foldl_concat:
   "\<lbrakk> \<And>y. y < m \<Longrightarrow> length (f y) = n; x < m \<rbrakk>
-      \<Longrightarrow> take n (drop (x * n) (foldl op @ [] (map f [0 ..< m]))) = f x"
+      \<Longrightarrow> take n (drop (x * n) (foldl (@) [] (map f [0 ..< m]))) = f x"
   apply (subst split_upt_on_n, assumption)
   apply (simp only: foldl_concat_concat map_append)
   apply (subst drop_append_miracle)

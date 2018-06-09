@@ -288,7 +288,7 @@ lemma find_pd_for_asid_reads_respects:
        apply(rule return_ev2, simp)
       apply(rule return_ev2, simp)
      apply wp+
-   apply(rule_tac R'="op =" and Q="\<lambda> rv s. rv = (arm_asid_table (arch_state s)) (asid_high_bits_of asid) \<and> is_subject_asid aag asid \<and> asid \<noteq> 0" and Q'="\<lambda> rv s. rv = (arm_asid_table (arch_state s)) (asid_high_bits_of asid) \<and> is_subject_asid aag asid \<and> asid \<noteq> 0" in equiv_valid_2_bindE)
+   apply(rule_tac R'="(=)" and Q="\<lambda> rv s. rv = (arm_asid_table (arch_state s)) (asid_high_bits_of asid) \<and> is_subject_asid aag asid \<and> asid \<noteq> 0" and Q'="\<lambda> rv s. rv = (arm_asid_table (arch_state s)) (asid_high_bits_of asid) \<and> is_subject_asid aag asid \<and> asid \<noteq> 0" in equiv_valid_2_bindE)
       apply (simp add: equiv_valid_def2[symmetric])
       apply (split option.splits)
       apply (intro conjI impI allI)
@@ -445,34 +445,34 @@ lemma equiv_valid_2_unobservable:
   apply(frule use_valid[OF _ f'])
    apply(rule states_equiv_for_refl)
   apply(frule use_valid)
-    apply(rule_tac P="op = (cur_thread s)" in g)
+    apply(rule_tac P="(=) (cur_thread s)" in g)
    apply(rule refl)
   apply(frule_tac f=f' in use_valid)
-    apply(rule_tac P="op = (cur_thread t)" in g')
+    apply(rule_tac P="(=) (cur_thread t)" in g')
    apply(rule refl)
   apply(frule use_valid)
-    apply(rule_tac P="op = (cur_domain s)" in h)
+    apply(rule_tac P="(=) (cur_domain s)" in h)
    apply(rule refl)
   apply(frule_tac f=f' in use_valid)
-    apply(rule_tac P="op = (cur_domain t)" in h')
+    apply(rule_tac P="(=) (cur_domain t)" in h')
    apply(rule refl)
   apply(frule use_valid)
-    apply(rule_tac P="op = (scheduler_action s)" in j)
+    apply(rule_tac P="(=) (scheduler_action s)" in j)
    apply(rule refl)
   apply(frule_tac f=f' in use_valid)
-    apply(rule_tac P="op = (scheduler_action t)" in j')
+    apply(rule_tac P="(=) (scheduler_action t)" in j')
    apply(rule refl)
   apply(frule use_valid)
-    apply(rule_tac P="op = (work_units_completed s)" in k)
+    apply(rule_tac P="(=) (work_units_completed s)" in k)
    apply(rule refl)
   apply(frule_tac f=f' in use_valid)
-    apply(rule_tac P="op = (work_units_completed t)" in k')
+    apply(rule_tac P="(=) (work_units_completed t)" in k')
    apply(rule refl)
   apply(frule use_valid)
-    apply(rule_tac P="op = (irq_state (machine_state s))" in l)
+    apply(rule_tac P="(=) (irq_state (machine_state s))" in l)
    apply(rule refl)
   apply(frule_tac f=f' in use_valid)
-    apply(rule_tac P="op = (irq_state (machine_state t))" in l')
+    apply(rule_tac P="(=) (irq_state (machine_state t))" in l')
    apply(rule refl)
 
   apply(clarsimp simp: reads_equiv_def2 affects_equiv_def2)
@@ -634,7 +634,7 @@ lemma get_pte_reads_respects:
   by (wpsimp wp: get_pt_reads_respects)
 
 lemma gets_cur_thread_revrv:
-  "reads_equiv_valid_rv_inv (affects_equiv aag l) aag op = \<top> (gets cur_thread)"
+  "reads_equiv_valid_rv_inv (affects_equiv aag l) aag (=) \<top> (gets cur_thread)"
   apply(rule equiv_valid_rv_guard_imp)
    apply(rule gets_evrv)
   apply(fastforce simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist elim: reads_equivE affects_equivE)
@@ -947,7 +947,7 @@ lemma as_user_set_register_ev2:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows
   "labels_are_invisible aag l (pasObjectAbs aag ` {thread,thread'}) \<Longrightarrow>
-   equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (op =) \<top> \<top> (as_user thread (setRegister x y)) (as_user thread' (setRegister a b))"
+   equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (=) \<top> \<top> (as_user thread (setRegister x y)) (as_user thread' (setRegister a b))"
   apply(simp add: as_user_def)
   apply(rule equiv_valid_2_guard_imp)
    apply(rule_tac L="{pasObjectAbs aag thread}" and L'="{pasObjectAbs aag thread'}" and Q="\<top>" and Q'="\<top>" in ev2_invisible[OF domains_distinct])
@@ -2121,7 +2121,7 @@ lemma perform_asid_control_invocation_globals_equiv:
    apply(rule_tac Q="\<lambda> a b. globals_equiv s b \<and>
                             invs b \<and> valid_ko_at_arm b \<and> word1 \<noteq> arm_global_pd (arch_state b) \<and>
                             word1 \<noteq> idle_thread b \<and>
-                            (\<exists> idx. cte_wp_at (op = (UntypedCap False word1 pageBits idx)) cslot_ptr2 b) \<and>
+                            (\<exists> idx. cte_wp_at ((=) (UntypedCap False word1 pageBits idx)) cslot_ptr2 b) \<and>
                              descendants_of cslot_ptr2 (cdt b) = {} \<and>
                              pspace_no_overlap_range_cover word1 pageBits b"
          in hoare_strengthen_post)
@@ -2463,7 +2463,7 @@ lemma cap_swap_for_delete_valid_arch_caps[wp]:
   done
 
 lemma mapM_x_swp_store_pte_reads_respects':
-  "reads_respects aag l (invs and (cte_wp_at (op = (ArchObjectCap (PageTableCap word option))) slot) and K (is_subject aag word))
+  "reads_respects aag l (invs and (cte_wp_at ((=) (ArchObjectCap (PageTableCap word option))) slot) and K (is_subject aag word))
                         (mapM_x (swp store_pte InvalidPTE) [word , word + 4 .e. word + 2 ^ pt_bits - 1])"
   apply (rule gen_asm_ev)
   apply (wp mapM_x_ev)
@@ -2486,9 +2486,9 @@ lemma mapM_x_swp_store_pte_reads_respects':
   done
 
 lemma mapM_x_swp_store_pde_reads_respects':
-  "reads_respects aag l (cte_wp_at (op = (ArchObjectCap (PageDirectoryCap word option))) slot and valid_objs and K(is_subject aag word))
+  "reads_respects aag l (cte_wp_at ((=) (ArchObjectCap (PageDirectoryCap word option))) slot and valid_objs and K(is_subject aag word))
              (mapM_x (swp store_pde InvalidPDE)
-               (map ((\<lambda>x. x + word) \<circ> swp op << 2) [0.e.(kernel_base >> 20) - 1]))"
+               (map ((\<lambda>x. x + word) \<circ> swp (<<) 2) [0.e.(kernel_base >> 20) - 1]))"
   apply (wp mapM_x_ev)
    apply simp
    apply (rule equiv_valid_guard_imp)

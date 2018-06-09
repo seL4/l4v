@@ -67,7 +67,7 @@ fun expand_forall_pats ctxt pats tac t = let
      |> Variable.variant_frees ctxt [bdy_x] |> map Free
 
     val f = Pattern.rewrite_term thy (pat_xs ~~ ys) [] bdy_x
-      |> tap (fn f => exists_subterm (curry (op =) x) f
+      |> tap (fn f => exists_subterm (curry (=) x) f
       andalso raise TERM ("expand_forall_pats: not all converted",
           [x] @ pat_xs @ ys))
       |> lambda_tuple ys

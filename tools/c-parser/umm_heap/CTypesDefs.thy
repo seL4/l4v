@@ -801,7 +801,7 @@ where
 definition
   tnSum :: "typ_name \<Rightarrow> (nat \<times> field_name) list \<Rightarrow> nat"
 where
-  "tnSum \<equiv> \<lambda>tn ts. foldr (op + o fst) ts 0"
+  "tnSum \<equiv> \<lambda>tn ts. foldr ((+) o fst) ts 0"
 
 definition
   tnMax :: "typ_name \<Rightarrow> (nat \<times> field_name) list \<Rightarrow> nat"
@@ -811,11 +811,11 @@ where
 definition
   wfd :: "typ_name \<Rightarrow> (bool \<times> field_name) list \<Rightarrow> bool"
 where
-  "wfd \<equiv> \<lambda>tn ts. distinct (map snd ts) \<and> foldr (op \<and>) (map fst ts) True"
+  "wfd \<equiv> \<lambda>tn ts. distinct (map snd ts) \<and> foldr (\<and>) (map fst ts) True"
 
 definition
   wfsd :: "typ_name \<Rightarrow> (bool \<times> field_name) list \<Rightarrow> bool"
 where
-  "wfsd \<equiv> \<lambda>tn ts. ts \<noteq> [] \<and> foldr (op \<and>) (map fst ts) True"
+  "wfsd \<equiv> \<lambda>tn ts. ts \<noteq> [] \<and> foldr (\<and>) (map fst ts) True"
 
 end

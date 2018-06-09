@@ -1455,8 +1455,8 @@ lemma ccte_relation_ccap_relation:
                      c_valid_cte_def)
 
 lemma isFinalCapability_ccorres:
-  "ccorres (op = \<circ> from_bool) ret__unsigned_long_'
-   (cte_wp_at' (op = cte) slot and invs')
+  "ccorres ((=) \<circ> from_bool) ret__unsigned_long_'
+   (cte_wp_at' ((=) cte) slot and invs')
    (UNIV \<inter> {s. cte_' s = Ptr slot}) []
    (isFinalCapability cte) (Call isFinalCapability_'proc)"
   apply (cinit lift: cte_')
@@ -1467,7 +1467,7 @@ lemma isFinalCapability_ccorres:
       apply ceqv
      apply (rule_tac P="mdb_node_to_H (mdb_node_lift rv') = cteMDBNode cte" in ccorres_gen_asm2)
      apply csymbr
-     apply (rule_tac r'="op = \<circ> from_bool" and xf'="prevIsSameObject_'"
+     apply (rule_tac r'="(=) \<circ> from_bool" and xf'="prevIsSameObject_'"
                in ccorres_split_nothrow_novcg)
          apply (rule ccorres_cond2[where R=\<top>])
            apply (clarsimp simp: Collect_const_mem nullPointer_def)
@@ -1477,8 +1477,8 @@ lemma isFinalCapability_ccorres:
           apply (simp add: return_def from_bool_def false_def)
          apply (rule ccorres_rhs_assoc)+
          apply (rule ccorres_symb_exec_l[OF _ getCTE_inv getCTE_wp empty_fail_getCTE])
-         apply (rule_tac P="cte_wp_at' (op = cte) slot
-                             and cte_wp_at' (op = rv) (mdbPrev (cteMDBNode cte))
+         apply (rule_tac P="cte_wp_at' ((=) cte) slot
+                             and cte_wp_at' ((=) rv) (mdbPrev (cteMDBNode cte))
                              and valid_cap' (cteCap rv)
                              and K (capAligned (cteCap cte) \<and> capAligned (cteCap rv))"
                     and P'=UNIV in ccorres_from_vcg)
@@ -1501,8 +1501,8 @@ lemma isFinalCapability_ccorres:
          apply (simp add: nullPointer_def Collect_const_mem mdbNext_to_H[symmetric])
         apply (rule ccorres_return_C, simp+)[1]
        apply (rule ccorres_symb_exec_l[OF _ getCTE_inv getCTE_wp empty_fail_getCTE])
-       apply (rule_tac P="cte_wp_at' (op = cte) slot
-                           and cte_wp_at' (op = rva) (mdbNext (cteMDBNode cte))
+       apply (rule_tac P="cte_wp_at' ((=) cte) slot
+                           and cte_wp_at' ((=) rva) (mdbNext (cteMDBNode cte))
                            and K (capAligned (cteCap rva) \<and> capAligned (cteCap cte))
                            and valid_cap' (cteCap cte)"
                   and P'=UNIV in ccorres_from_vcg_throws)
@@ -1560,7 +1560,7 @@ lemma cteDeleteOne_ccorres:
     apply (rule ccorres_Guard_Seq)
     apply (rule ccorres_basic_srnoop)
       apply (ctac(no_vcg) add: isFinalCapability_ccorres[where slot=slot])
-       apply (rule_tac A="invs'  and cte_wp_at' (op = cte) slot"
+       apply (rule_tac A="invs'  and cte_wp_at' ((=) cte) slot"
                      in ccorres_guard_imp2[where A'=UNIV])
         apply (simp add: split_def dc_def[symmetric]
                     del: Collect_const)
@@ -2059,7 +2059,7 @@ lemma dissociateVCPUTCB_ccorres:
              apply (rule setObject_vcpuTCB_Basic_ccorres[of _ _ _ None, simplified option_to_ctcb_ptr_def, simplified])
             apply ceqv
            apply (subst asUser_bind_distrib; simp)
-           apply (rule ccorres_split_nothrow[where r'="op =" and xf'=ret__unsigned_long_'])
+           apply (rule ccorres_split_nothrow[where r'="(=)" and xf'=ret__unsigned_long_'])
                apply clarsimp
                apply (ctac add: getRegister_ccorres)
               apply ceqv

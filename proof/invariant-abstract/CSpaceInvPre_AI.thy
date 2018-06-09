@@ -111,7 +111,7 @@ lemma not_final_another_caps:
   apply (drule(1) not_final_another')
    apply clarsimp
   apply clarsimp
-  apply (subgoal_tac "cte_wp_at (op = cap') (a, b) s")
+  apply (subgoal_tac "cte_wp_at ((=) cap') (a, b) s")
    apply (fastforce simp: cte_wp_at_caps_of_state)
   apply (simp add: cte_wp_at_def)
   done

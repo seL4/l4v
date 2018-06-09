@@ -75,7 +75,7 @@ lemma obj_at_pspaceI:
   "\<lbrakk> obj_at P ref s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> obj_at P ref s'"
   by (simp add: obj_at_def)
 
-abbreviation "ko_at k \<equiv> obj_at (op = k)"
+abbreviation "ko_at k \<equiv> obj_at ((=) k)"
 abbreviation "ako_at ako == ko_at (ArchObj ako)"
 
 lemma obj_atE:

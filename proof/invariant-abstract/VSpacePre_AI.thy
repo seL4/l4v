@@ -65,7 +65,7 @@ lemma pull_out_P:
   by blast
 
 lemma upto_enum_step_subtract:
-  "x \<le> z \<Longrightarrow> [x, y .e. z] = (map ((op +) x) [0, y - x .e. z - x])"
+  "x \<le> z \<Longrightarrow> [x, y .e. z] = (map ((+) x) [0, y - x .e. z - x])"
   by (auto simp add: upto_enum_step_def)
 
 (* FIXME: move *)
@@ -99,7 +99,7 @@ lemma inj_on_domD: "\<lbrakk>inj_on f (dom f); f x = Some z; f y = Some z\<rbrak
   by (erule inj_onD) clarsimp+
 
 lemma hoare_name_pre_state2:
-  "(\<And>s. \<lbrace>P and (op = s)\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
+  "(\<And>s. \<lbrace>P and ((=) s)\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   by (auto simp: valid_def intro: hoare_name_pre_state)
 
 lemma pd_casting_shifting:

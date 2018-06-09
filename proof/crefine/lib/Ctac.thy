@@ -475,7 +475,7 @@ lemma ccorres_rewrite_cond_sr:
   shows   "ccorres_underlying sr \<Gamma> r xf arrel axf (P and Q) (P' \<inter> Q') hs
                               m (Cond C c d)"
   apply (rule ccorres_name_pre)
-  apply (rule_tac Q="op = s" and Q'="P' \<inter> Q' \<inter> {s'. (s, s') \<in> sr}" in stronger_ccorres_guard_imp)
+  apply (rule_tac Q="(=) s" and Q'="P' \<inter> Q' \<inter> {s'. (s, s') \<in> sr}" in stronger_ccorres_guard_imp)
     apply (rule ccorres_semantic_equiv[THEN iffD1, rotated])
      apply (rule ccorres_guard_imp, rule c1, simp_all)
   apply (clarsimp simp add: semantic_equiv_Cond_cases abs semantic_equiv_refl)
@@ -487,7 +487,7 @@ lemma ccorres_rewrite_cond_sr_Seq:
   shows   "ccorres_underlying sr \<Gamma> r xf arrel axf (P and Q) (P' \<inter> Q') hs
                               m (Cond C c d ;; e)"
   apply (rule ccorres_name_pre)
-  apply (rule_tac Q="op = s" and Q'="P' \<inter> Q' \<inter> {s'. (s, s') \<in> sr}" in stronger_ccorres_guard_imp)
+  apply (rule_tac Q="(=) s" and Q'="P' \<inter> Q' \<inter> {s'. (s, s') \<in> sr}" in stronger_ccorres_guard_imp)
     apply (rule ccorres_semantic_equiv[THEN iffD1, rotated])
      apply (rule ccorres_guard_imp, rule c1, simp_all)
   apply (rule semantic_equiv_Seq_cong)

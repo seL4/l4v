@@ -99,7 +99,7 @@ lemma performPageTableInvocationUnmap_ccorres:
                  del: Collect_const)
      apply (rule ccorres_move_c_guard_cte)
      apply (rule ccorres_getCTE)+
-     apply (rule_tac P="cte_wp_at' (op = rv) ctSlot
+     apply (rule_tac P="cte_wp_at' ((=) rv) ctSlot
                           and (\<lambda>_. rv = rva \<and> isArchCap isPageTableCap (cteCap rv))"
                 in ccorres_from_vcg_throws [where P'=UNIV])
      apply (rule allI, rule conseqPre, vcg)
@@ -526,7 +526,7 @@ shows
        apply clarsimp
        apply (wp getSlotCap_wp)
       apply clarsimp
-     apply (rule_tac Q="\<lambda>_. cte_wp_at' (op = (UntypedCap isdev frame pageBits idx) o cteCap) parent
+     apply (rule_tac Q="\<lambda>_. cte_wp_at' ((=) (UntypedCap isdev frame pageBits idx) o cteCap) parent
                            and (\<lambda>s. descendants_range_in' {frame..frame + (2::word32) ^ pageBits - (1::word32)} parent (ctes_of s))
                            and pspace_no_overlap' frame pageBits
                            and invs'
@@ -5163,7 +5163,7 @@ lemma vcpu_read_reg_ccorres:
 lemma readVCPUReg_ccorres:
   notes Collect_const[simp del] dc_simp[simp del]
   shows
-  "ccorres (op=) ret__unsigned_long_'
+  "ccorres ((=)) ret__unsigned_long_'
       (vcpu_at' vcpuptr and no_0_obj')
       (UNIV \<inter> \<lbrace>\<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace> \<inter> \<lbrace>\<acute>field = of_nat (fromEnum reg) \<rbrace>) hs
     (readVCPUReg vcpuptr reg) (Call readVCPUReg_'proc)"
@@ -5225,7 +5225,7 @@ lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres
   notes Collect_const[simp del] dc_simp[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' (op = Restart)
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart)
          and vcpu_at' vcpuptr)
        (UNIV \<inter> \<lbrace>\<acute>vcpu = Ptr vcpuptr \<rbrace>
              \<inter> \<lbrace>\<acute>field = of_nat (fromEnum reg) \<rbrace>

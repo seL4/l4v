@@ -15,7 +15,7 @@ begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 abbreviation
-"thread_is_running y s \<equiv> st_tcb_at (op=Structures_A.thread_state.Running) y s"
+"thread_is_running y s \<equiv> st_tcb_at ((=Structures_A.thread_state.Running)) y s"
 
 lemmas [wp] = abs_typ_at_lifts[OF set_simple_ko_typ_at]
 
@@ -164,7 +164,7 @@ lemma detE:
 
 (* might be an equality *)
 lemma evalMonad_from_wp:
-  "\<lbrakk> \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>rv _. P rv\<rbrace>; det f \<rbrakk> \<Longrightarrow> P (the (evalMonad f s))"
+  "\<lbrakk> \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>rv _. P rv\<rbrace>; det f \<rbrakk> \<Longrightarrow> P (the (evalMonad f s))"
   apply (erule detE [where s = s])
   apply (drule use_valid [rotated])
   apply (rule refl)
@@ -271,11 +271,11 @@ lemma no_pending_cap_when_active_corres:
 
 lemma dummy_finalise_wp[wp]:
   "is_pending_cap obj
-         \<Longrightarrow> \<lbrace>op = s\<rbrace> PageTableUnmap_D.fast_finalise obj (PageTableUnmap_D.is_final_cap' obj s) \<lbrace>\<lambda>x. op = s\<rbrace>"
+         \<Longrightarrow> \<lbrace>(=) s\<rbrace> PageTableUnmap_D.fast_finalise obj (PageTableUnmap_D.is_final_cap' obj s) \<lbrace>\<lambda>x. (=) s\<rbrace>"
   by (clarsimp simp:is_pending_cap_def split:cdl_cap.splits)
 
 lemma cte_at_into_opt_cap:
-  "cte_at p s = (\<exists>cap. cte_wp_at (op = cap) p s
+  "cte_at p s = (\<exists>cap. cte_wp_at ((=) cap) p s
         \<and> (fst p \<noteq> idle_thread s \<and> valid_etcbs s \<longrightarrow> opt_cap (transform_cslot_ptr p) (transform s) = Some (transform_cap cap)))"
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (safe, simp_all)
@@ -354,7 +354,7 @@ lemma dcorres_when_l:
 
 lemma corres_name_pre:
   "\<lbrakk> \<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk>
-                 \<Longrightarrow> corres_underlying sr nf nf' r (op = s) (op = s') f g \<rbrakk>
+                 \<Longrightarrow> corres_underlying sr nf nf' r ((=) s) ((=) s') f g \<rbrakk>
         \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
   apply (simp add: corres_underlying_def split_def
                    Ball_def)
@@ -518,7 +518,7 @@ lemma possible_switch_to_dcorres:
 lemma corres_update_waiting_ntfn_do_notification_transfer:
   "dcorres dc \<top>
     (pspace_aligned and valid_objs and valid_mdb and pspace_distinct and valid_idle and valid_etcbs and
-     (st_tcb_at (op = (Structures_A.thread_state.BlockedOnNotification epptr)) y) and
+     (st_tcb_at ((=) (Structures_A.thread_state.BlockedOnNotification epptr)) y) and
      valid_ntfn (\<lparr>ntfn_obj = case ys of [] \<Rightarrow> Structures_A.ntfn.IdleNtfn | a # list \<Rightarrow> Structures_A.ntfn.WaitingNtfn ys, ntfn_bound_tcb = bound_tcb\<rparr> ))
           (Endpoint_D.do_notification_transfer y)
           (update_waiting_ntfn epptr (y # ys) bound_tcb badge)"
@@ -551,7 +551,7 @@ lemma corres_update_waiting_ntfn_do_notification_transfer:
   done
 
 lemma ntfn_waiting_set_spec:
-  "\<lbrakk>y\<in> ntfn_waiting_set epptr s\<rbrakk>\<Longrightarrow> st_tcb_at (op = (Structures_A.thread_state.BlockedOnNotification epptr)) y s"
+  "\<lbrakk>y\<in> ntfn_waiting_set epptr s\<rbrakk>\<Longrightarrow> st_tcb_at ((=) (Structures_A.thread_state.BlockedOnNotification epptr)) y s"
 by (clarsimp simp: ntfn_waiting_set_def st_tcb_at_def obj_at_def)
 
 lemma not_empty_list_not_empty_set:
@@ -600,7 +600,7 @@ lemma recv_signal_corres:
   apply (clarsimp simp:receive_signal_def invs_def recv_signal_def corres_free_fail split:cap.splits)
   apply (rename_tac word1 word2 rights)
   apply (rule dcorres_expand_pfx)
-  apply (rule_tac Q' = "\<lambda>r. op = s' and ko_at (kernel_object.Notification r) word1 and valid_ntfn r" in corres_symb_exec_r)
+  apply (rule_tac Q' = "\<lambda>r. (=) s' and ko_at (kernel_object.Notification r) word1 and valid_ntfn r" in corres_symb_exec_r)
      apply (rule dcorres_expand_pfx)
      apply (clarsimp simp:obj_at_def is_ntfn_def)
      apply (case_tac "ntfn_obj rv"; simp)
@@ -716,7 +716,7 @@ lemma dcorres_dat:
   done
 
 lemma not_idle_after_blocked_cancel_ipc:
-  "\<lbrace>valid_idle and not_idle_thread obj_id' and valid_objs and st_tcb_at (op = state) obj_id'\<rbrace>
+  "\<lbrace>valid_idle and not_idle_thread obj_id' and valid_objs and st_tcb_at ((=) state) obj_id'\<rbrace>
     blocked_cancel_ipc state obj_id' \<lbrace>\<lambda>y. valid_idle\<rbrace>"
   including no_pre
   apply (simp add:blocked_cancel_ipc_def)
@@ -872,7 +872,7 @@ lemma cancel_ipc_valid_idle:
 apply (clarsimp simp: cancel_ipc_def)
 apply (wp not_idle_after_blocked_cancel_ipc not_idle_after_reply_cancel_ipc
       not_idle_thread_cancel_signal | wpc | simp)+
-    apply (rule hoare_strengthen_post[where Q="\<lambda>r. st_tcb_at (op = r) obj_id'
+    apply (rule hoare_strengthen_post[where Q="\<lambda>r. st_tcb_at ((=) r) obj_id'
       and not_idle_thread obj_id' and invs"])
     apply (wp gts_sp)
     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def not_idle_thread_def | rule conjI)+
@@ -1034,7 +1034,7 @@ lemma evalMonad_mapM:
   assumes as:"evalMonad (mapM f ls) s = Some v"
   assumes "\<And>l. empty_when_fail (f l)"
   assumes "\<And>P l. weak_det_spec P (f l)"
-  assumes wp: "\<And>s l. \<lbrace>op = s\<rbrace> f l \<lbrace>\<lambda>r. op = s\<rbrace>"
+  assumes wp: "\<And>s l. \<lbrace>(=) s\<rbrace> f l \<lbrace>\<lambda>r. (=) s\<rbrace>"
   shows "v = (map (\<lambda>p. the (evalMonad (f p) s)) ls)"
   using as
   proof (induct ls arbitrary: v)
@@ -1095,10 +1095,10 @@ lemma evalMonad_get_extra_cptrs:
   done
 
 lemma dcorres_symb_exec_r_evalMonad:
-assumes wp:"\<And>sa. \<lbrace>op = sa\<rbrace> f \<lbrace>\<lambda>r. op = sa\<rbrace>"
-assumes corres:"\<And>rv. evalMonad f s = Some rv \<Longrightarrow> dcorres r P (op = s) h (g rv)"
-shows "\<lbrakk>empty_when_fail f;weak_det_spec (op = s) f\<rbrakk> \<Longrightarrow> dcorres r P (op = s) h (f>>=g)"
-  apply (rule_tac Q'="\<lambda>r. op = s and K_bind (evalMonad f s = Some r)" in corres_symb_exec_r)
+assumes wp:"\<And>sa. \<lbrace>(=) sa\<rbrace> f \<lbrace>\<lambda>r. (=) sa\<rbrace>"
+assumes corres:"\<And>rv. evalMonad f s = Some rv \<Longrightarrow> dcorres r P ((=) s) h (g rv)"
+shows "\<lbrakk>empty_when_fail f;weak_det_spec ((=) s) f\<rbrakk> \<Longrightarrow> dcorres r P ((=) s) h (f>>=g)"
+  apply (rule_tac Q'="\<lambda>r. (=) s and K_bind (evalMonad f s = Some r)" in corres_symb_exec_r)
   apply (rule dcorres_expand_pfx)
   using corres
   apply (clarsimp simp:corres_underlying_def)
@@ -1201,7 +1201,7 @@ lemma evalMonad_thread_get_eq:
 
 lemma evalMonad_lookup_ipc_buffer_wp:
 assumes cte_wp:"\<And>P slot. (\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c)
-  \<Longrightarrow> \<lbrace>cte_wp_at (P and op\<noteq> cap.NullCap) slot\<rbrace> f \<lbrace>\<lambda>r. cte_wp_at P slot\<rbrace>"
+  \<Longrightarrow> \<lbrace>cte_wp_at (P and (\<noteq>) cap.NullCap) slot\<rbrace> f \<lbrace>\<lambda>r. cte_wp_at P slot\<rbrace>"
 assumes tcb_wp:"\<And>buf t. \<lbrace>ipc_buffer_wp_at buf t\<rbrace> f \<lbrace>\<lambda>r. ipc_buffer_wp_at buf t \<rbrace>"
 shows "\<lbrace>\<lambda>s. evalMonad (lookup_ipc_buffer in_receive x) s = Some (Some buf)\<rbrace> f \<lbrace>\<lambda>rv s. evalMonad (lookup_ipc_buffer in_receive x) s = Some (Some buf)\<rbrace>"
   apply (simp add:valid_def lookup_ipc_buffer_def)
@@ -1222,7 +1222,7 @@ shows "\<lbrace>\<lambda>s. evalMonad (lookup_ipc_buffer in_receive x) s = Some 
   apply (clarsimp simp:evalMonad_get_cap split:option.split_asm cap.split_asm)
   apply (drule caps_of_state_cteD)
   apply (rename_tac arch_cap)
-  apply (frule_tac P1 = "op = (cap.ArchObjectCap arch_cap)" in use_valid[OF _ cte_wp])
+  apply (frule_tac P1 = "(=) (cap.ArchObjectCap arch_cap)" in use_valid[OF _ cte_wp])
     apply (clarsimp simp:is_cap_simps)
    apply (erule cte_wp_at_weakenE)
    apply clarsimp
@@ -1270,7 +1270,7 @@ lemma ipc_buffer_wp_at_cap_insert[wp]:
 
 lemma cap_insert_weak_cte_wp_at_not_null:
 assumes "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
-shows "\<lbrace>cte_wp_at (P and op \<noteq> cap.NullCap) slot :: det_state \<Rightarrow> bool\<rbrace> cap_insert cap' src dest
+shows "\<lbrace>cte_wp_at (P and (\<noteq>) cap.NullCap) slot :: det_state \<Rightarrow> bool\<rbrace> cap_insert cap' src dest
   \<lbrace>\<lambda>r. cte_wp_at P slot\<rbrace>"
   apply (case_tac "slot = dest")
    apply (clarsimp simp:cap_insert_def)
@@ -1407,7 +1407,7 @@ next
        \<and> valid_mdb s \<and> QM s cap'))" for QM
        in hoare_post_imp_R)
        prefer 2
-       apply (subgoal_tac "r\<noteq> cap.NullCap \<longrightarrow> cte_wp_at (op \<noteq> cap.NullCap) (slot_ptr, slot_idx) s")
+       apply (subgoal_tac "r\<noteq> cap.NullCap \<longrightarrow> cte_wp_at ((\<noteq>) cap.NullCap) (slot_ptr, slot_idx) s")
         apply (intro impI)
         apply simp
         apply (elim conjE)
@@ -1707,7 +1707,7 @@ lemma dcorres_lookup_extra_caps:
     valid_global_refs s; valid_objs s; valid_irq_node s; valid_idle s; valid_etcbs s;
     not_idle_thread thread s\<rbrakk>
     \<Longrightarrow> dcorres (dc \<oplus> (\<lambda>extra extra'. extra = transform_cap_list extra'))
-     \<top> (op = s)
+     \<top> ((=) s)
      (Endpoint_D.lookup_extra_caps thread
                                    (cdl_intent_extras (transform_full_intent (machine_state s) thread t)))
      (Ipc_A.lookup_extra_caps thread buffer (data_to_message_info (arch_tcb_context_get (tcb_arch t) msg_info_register)))"
@@ -1912,7 +1912,7 @@ shows "\<lbrace>\<lambda>s. evalMonad (lookup_ipc_buffer in_receive x) s = Some 
       apply (clarsimp simp:evalMonad_get_cap split:option.split_asm cap.split_asm)
     apply (drule caps_of_state_cteD)
     apply (rename_tac arch_cap)
-    apply (frule_tac P1 = "op = (cap.ArchObjectCap arch_cap)" in use_valid[OF _ cte_wp])
+    apply (frule_tac P1 = "(=) (cap.ArchObjectCap arch_cap)" in use_valid[OF _ cte_wp])
       apply (erule cte_wp_at_weakenE)
       apply clarsimp
     apply (clarsimp simp:cte_wp_at_caps_of_state evalMonad_thread_get_eq)
@@ -2110,8 +2110,8 @@ lemma set_cap_overlap:
   done
 
 lemma remove_parent_dummy_when_pending_wp:
-  "\<lbrakk>mdb_cte_at (swp (cte_wp_at (op\<noteq>cap.NullCap) ) s) (cdt s); tcb_at y s\<rbrakk>
-  \<Longrightarrow>\<lbrace>op = (transform s)\<rbrace> remove_parent (y, tcb_pending_op_slot) \<lbrace>\<lambda>r. op = (transform s)\<rbrace>"
+  "\<lbrakk>mdb_cte_at (swp (cte_wp_at ((\<noteq>)cap.NullCap) ) s) (cdt s); tcb_at y s\<rbrakk>
+  \<Longrightarrow>\<lbrace>(=) (transform s)\<rbrace> remove_parent (y, tcb_pending_op_slot) \<lbrace>\<lambda>r. (=) (transform s)\<rbrace>"
   apply (clarsimp simp:remove_parent_def valid_def simpler_modify_def transform_def)
   apply (rule ext)
   apply (clarsimp simp:transform_cdt_def| rule conjI)+
@@ -2156,7 +2156,7 @@ lemma dcorres_set_thread_state_Restart:
    apply (clarsimp simp:delete_cap_simple_def bind_assoc)
    apply (rule dcorres_gets_the)
     apply (clarsimp simp:tcb_at_def)+
-  apply (subgoal_tac "dcorres dc (op = (transform s')) (op = s') (KHeap_D.set_cap (recver, 5) RestartCap)
+  apply (subgoal_tac "dcorres dc ((=) (transform s')) ((=) s') (KHeap_D.set_cap (recver, 5) RestartCap)
            (KHeap_A.set_object recver (TCB (update_tcb_state Structures_A.thread_state.Restart y)))")
    apply (clarsimp simp:delete_cap_simple_def bind_assoc
                         assert_opt_def set_thread_state_def)
@@ -2171,7 +2171,7 @@ lemma dcorres_set_thread_state_Restart:
       apply (intro conjI impI)
        apply (rule corres_symb_exec_l)
           apply (rule corres_symb_exec_l)
-             apply (rule_tac Q = "\<lambda>rv. op = (transform s'a)" in corres_symb_exec_l)
+             apply (rule_tac Q = "\<lambda>rv. (=) (transform s'a)" in corres_symb_exec_l)
                 apply (simp add:corres_underlying_def)
                 apply (frule(1) valid_etcbs_get_tcb_get_etcb, clarsimp)
                 apply (subst set_cap_overlap[unfolded K_def])
@@ -2258,7 +2258,7 @@ lemma do_reply_transfer_corres:
   shows
   "slot' = transform_cslot_ptr slot \<Longrightarrow>
    dcorres dc \<top>
-     (invs and tcb_at recver and tcb_at sender and cte_wp_at (op = (cap.ReplyCap recver False)) slot
+     (invs and tcb_at recver and tcb_at sender and cte_wp_at ((=) (cap.ReplyCap recver False)) slot
       and (\<lambda>s. not_idle_thread (cur_thread s) s)
       and not_idle_thread recver and not_idle_thread sender and valid_etcbs)
      (Endpoint_D.do_reply_transfer sender recver slot')
@@ -2359,7 +2359,7 @@ lemma dcorres_receive_sync:
   "\<lbrakk> ep_at word1 s; ko_at (kernel_object.Endpoint rv) word1 s; not_idle_thread thread s;
         not_idle_thread (cur_thread s) s; st_tcb_at active thread s; valid_state s;
         valid_etcbs s \<rbrakk> \<Longrightarrow>
-    dcorres dc (op = (transform s)) (op = s)
+    dcorres dc ((=) (transform s)) ((=) s)
         (receive_sync thread word1)
         (case rv of
             Structures_A.endpoint.IdleEP \<Rightarrow> case is_blocking of
@@ -2429,7 +2429,7 @@ lemma dcorres_receive_sync:
    apply (drule_tac s = "set list" in sym)
    apply (rule conjI, clarsimp dest!: not_empty_list_not_empty_set)
    apply (clarsimp simp:neq_Nil_conv)
-   apply (rule_tac P1="\<top>" and P'="op = s" and x1 = y
+   apply (rule_tac P1="\<top>" and P'="(=) s" and x1 = y
      in dcorres_absorb_pfx[OF select_pick_corres[OF dcorres_expand_pfx],rotated])
       apply clarsimp
      apply clarsimp
@@ -2536,7 +2536,7 @@ lemma recv_sync_ipc_corres:
   apply (clarsimp simp:corres_free_fail cap_ep_ptr_def Ipc_A.receive_ipc_def
                  split:cap.splits Structures_A.endpoint.splits)
   apply (rule dcorres_expand_pfx)
-  apply (rule_tac Q'="\<lambda>ko. op = s' and ko_at (kernel_object.Endpoint ko) epptr" in corres_symb_exec_r)
+  apply (rule_tac Q'="\<lambda>ko. (=) s' and ko_at (kernel_object.Endpoint ko) epptr" in corres_symb_exec_r)
      apply (simp add:Endpoint_D.receive_ipc_def get_bound_notification_def thread_get_def gets_the_def gets_def bind_assoc)
      apply (rule dcorres_absorb_get_r)
      apply (clarsimp simp: assert_opt_def corres_free_fail split: Structures_A.kernel_object.splits option.splits )
@@ -2589,7 +2589,7 @@ lemma dcorres_alternate_seq2:
   done
 
 lemma dcorres_dummy_set_pending_cap_Restart:
-  "dcorres dc \<top> (st_tcb_at (op = Structures_A.thread_state.Restart) thread and not_idle_thread thread and valid_etcbs)
+  "dcorres dc \<top> (st_tcb_at ((=) Structures_A.thread_state.Restart) thread and not_idle_thread thread and valid_etcbs)
   (KHeap_D.set_cap (thread, tcb_pending_op_slot) RestartCap) (return ())"
   apply (simp add:KHeap_D.set_cap_def gets_the_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_l)
@@ -2625,7 +2625,7 @@ lemma send_sync_ipc_corres:
   apply (clarsimp simp:gets_def Endpoint_D.send_ipc_def Ipc_A.send_ipc_def split del:if_splits)
   apply (rule dcorres_absorb_get_l)
   apply (clarsimp split del:if_splits)
-  apply (rule_tac Q' = "\<lambda>r. op = s' and ko_at (kernel_object.Endpoint r) epptr" in corres_symb_exec_r[rotated])
+  apply (rule_tac Q' = "\<lambda>r. (=) s' and ko_at (kernel_object.Endpoint r) epptr" in corres_symb_exec_r[rotated])
      apply (wp get_simple_ko_ko_at |simp split del:if_splits)+
   apply (rule dcorres_expand_pfx)
   apply (clarsimp split del:if_splits)
@@ -2663,7 +2663,7 @@ lemma send_sync_ipc_corres:
   apply (rename_tac list)
   apply (drule_tac s = "set list" in sym)
   apply (clarsimp simp: bind_assoc neq_Nil_conv split del:if_split)
-  apply (rule_tac P1="\<top>" and P'="op = s'a" and x1 = y
+  apply (rule_tac P1="\<top>" and P'="(=) s'a" and x1 = y
          in dcorres_absorb_pfx[OF select_pick_corres[OF dcorres_expand_pfx]])
       defer
       apply (simp+)[3]
@@ -2823,7 +2823,7 @@ lemma send_fault_ipc_corres:
   apply (simp add:Endpoint_D.send_fault_ipc_def Ipc_A.send_fault_ipc_def)
   apply (rule dcorres_expand_pfx)
   apply (rule corres_guard_imp)
-    apply (rule_tac P'="op=s'" in thread_get_corresE[where tcb' = tcb and etcb'=etcb])
+    apply (rule_tac P'="(=s')" in thread_get_corresE[where tcb' = tcb and etcb'=etcb])
      apply simp_all
    prefer 2
    apply (rule conjI)

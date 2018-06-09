@@ -527,7 +527,7 @@ lemma cap_insert_simple_arch_caps_ap:
   apply (wp get_cap_wp set_cap_valid_vs_lookup set_cap_arch_obj
             set_cap_valid_table_caps hoare_vcg_all_lift
           | simp split del: if_split)+
-       apply (rule_tac P = "cte_wp_at (op = src_cap) src" in set_cap_orth)
+       apply (rule_tac P = "cte_wp_at ((=) src_cap) src" in set_cap_orth)
        apply (wp hoare_vcg_imp_lift hoare_vcg_ball_lift set_free_index_final_cap
                  hoare_vcg_disj_lift set_cap_reachable_pg_cap set_cap.vs_lookup_pages
               | clarsimp)+
@@ -627,7 +627,7 @@ lemma cap_insert_ap_invs:
 
 lemma max_index_upd_no_cap_to:
   "\<lbrace>\<lambda>s. no_cap_to_obj_with_diff_ref cap {slot} s \<and>
-        cte_wp_at (op = ucap) cref s \<and> is_untyped_cap ucap\<rbrace>
+        cte_wp_at ((=) ucap) cref s \<and> is_untyped_cap ucap\<rbrace>
    set_cap (max_free_index_update ucap) cref
    \<lbrace>\<lambda>rv s. no_cap_to_obj_with_diff_ref cap {slot} s \<rbrace>"
   apply (clarsimp simp:no_cap_to_obj_with_diff_ref_def)
@@ -702,7 +702,7 @@ lemma perform_asid_control_invocation_st_tcb_at:
   done
 
 lemma set_cap_idx_up_aligned_area:
-  "\<lbrace>K (\<exists>idx. pcap = UntypedCap dev ptr pageBits idx) and cte_wp_at (op = pcap) slot
+  "\<lbrace>K (\<exists>idx. pcap = UntypedCap dev ptr pageBits idx) and cte_wp_at ((=) pcap) slot
       and valid_objs\<rbrace> set_cap (max_free_index_update pcap) slot
   \<lbrace>\<lambda>rv s. (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr pageBits \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)\<rbrace>"
   apply (rule hoare_pre)
@@ -850,7 +850,7 @@ lemma aci_invs':
    apply (erule notE, erule is_aligned_no_overflow)
 
   apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def)
-  apply (thin_tac "cte_wp_at (op = cap.NullCap) p s" for p s)
+  apply (thin_tac "cte_wp_at ((=) cap.NullCap) p s" for p s)
   apply (subst(asm) eq_commute,
          erule(1) untyped_children_in_mdbE[where cap="cap.UntypedCap dev p bits idx" for dev p bits idx,
                                          simplified, rotated])

@@ -58,7 +58,7 @@ lemma dcorres_arch_switch_to_idle_thread_return: "dcorres dc \<top> \<top> (retu
     apply (rule dcorres_set_vm_root)
    by simp+
 
-lemma change_current_domain_same: "\<lbrace>op = s\<rbrace> change_current_domain \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
+lemma change_current_domain_same: "\<lbrace>(=) s\<rbrace> change_current_domain \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
   apply (clarsimp simp: change_current_domain_def exs_valid_def bind_def return_def gets_def modify_def put_def fst_def snd_def get_def select_def)
   apply (rule_tac x="cdl_current_domain s" in exI)
   apply clarsimp
@@ -252,7 +252,7 @@ lemma schedule_resume_cur_thread_dcorres_L:
 
 
 lemma schedule_resume_cur_thread_dcorres:
-         "\<And>cur cur_ts. dcorres dc \<top> (\<lambda>s. cur = cur_thread s \<and> st_tcb_at (op = cur_ts) cur s \<and> valid_etcbs s \<and> valid_sched s \<and> invs s \<and> scheduler_action s = resume_cur_thread)
+         "\<And>cur cur_ts. dcorres dc \<top> (\<lambda>s. cur = cur_thread s \<and> st_tcb_at ((=) cur_ts) cur s \<and> valid_etcbs s \<and> valid_sched s \<and> invs s \<and> scheduler_action s = resume_cur_thread)
         Schedule_D.schedule
        (do idle_t \<leftarrow> gets idle_thread;
            assert (runnable cur_ts \<or> cur = idle_t)
@@ -454,7 +454,7 @@ lemma schedule_choose_new_thread_dcorres:
 
 lemma schedule_choose_new_thread_dcorres_fragment:
   "\<And>cur_ts cur. dcorres dc \<top>
-        (\<lambda>s. cur = cur_thread s \<and> st_tcb_at (op = cur_ts) cur s \<and> valid_etcbs s \<and> valid_sched s \<and> invs s \<and> scheduler_action s = choose_new_thread)
+        (\<lambda>s. cur = cur_thread s \<and> st_tcb_at ((=) cur_ts) cur s \<and> valid_etcbs s \<and> valid_sched s \<and> invs s \<and> scheduler_action s = choose_new_thread)
         Schedule_D.schedule
         (do y \<leftarrow> when (runnable cur_ts) (tcb_sched_action tcb_sched_enqueue cur);
             schedule_choose_new_thread
@@ -478,7 +478,7 @@ lemma set_scheduler_action_transform:
 (* RHS copy-pasted from schedule_dcorres switch_thread case *)
 lemma schedule_switch_thread_dcorres:
       "dcorres dc \<top>
-        (\<lambda>s. cur = cur_thread s \<and> st_tcb_at (op = cur_ts) cur s \<and> valid_etcbs s \<and> valid_sched s
+        (\<lambda>s. cur = cur_thread s \<and> st_tcb_at ((=) cur_ts) cur s \<and> valid_etcbs s \<and> valid_sched s
              \<and> invs s \<and> scheduler_action s = switch_thread target)
         Schedule_D.schedule
         (do y <- when (runnable cur_ts) (tcb_sched_action tcb_sched_enqueue cur);

@@ -3081,11 +3081,11 @@ lemma vdlist_next_src_unique:
   by (drule (2) vdlist_nextD0)+ (clarsimp simp: mdb_prev_def)
 
 lemma cte_at_cte_wp_atD:
-  "cte_at' p s \<Longrightarrow> \<exists>cte. cte_wp_at' (op = cte) p s"
+  "cte_at' p s \<Longrightarrow> \<exists>cte. cte_wp_at' ((=) cte) p s"
   by (clarsimp simp add: cte_wp_at'_def)
 
 lemma cte_at_cte_wp_atE:
-  "\<lbrakk> cte_at' p s;  \<And>cte. cte_wp_at' (op = cte) p s \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+  "\<lbrakk> cte_at' p s;  \<And>cte. cte_wp_at' ((=) cte) p s \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (blast dest: cte_at_cte_wp_atD)
 
 lemma valid_pspace_no_0 [elim]:
@@ -3422,7 +3422,7 @@ interpretation gsCNodes_update: P_Arch_Idle_update_eq "gsCNodes_update f"
 interpretation gsUserPages_update: P_Arch_Idle_update_eq "gsUserPages_update f"
   by unfold_locales simp_all
 lemma ko_wp_at_aligned:
-  "ko_wp_at' (op = ko) p s \<Longrightarrow> is_aligned p (objBitsKO ko)"
+  "ko_wp_at' ((=) ko) p s \<Longrightarrow> is_aligned p (objBitsKO ko)"
   by (simp add: ko_wp_at'_def)
 
 interpretation ksCurDomain:
@@ -3446,7 +3446,7 @@ interpretation gsUntypedZeroRanges:
   by unfold_locales auto
 
 lemma ko_wp_at_norm:
-  "ko_wp_at' P p s \<Longrightarrow> \<exists>ko. P ko \<and> ko_wp_at' (op = ko) p s"
+  "ko_wp_at' P p s \<Longrightarrow> \<exists>ko. P ko \<and> ko_wp_at' ((=) ko) p s"
   by (auto simp add: ko_wp_at'_def)
 
 lemma valid_mdb'_queues [iff]:
@@ -3458,7 +3458,7 @@ lemma valid_mdb_machine_state [iff]:
   by (simp add: valid_mdb'_def)
 
 lemma cte_wp_at_norm':
-  "cte_wp_at' P p s \<Longrightarrow> \<exists>cte. cte_wp_at' (op = cte) p s \<and> P cte"
+  "cte_wp_at' P p s \<Longrightarrow> \<exists>cte. cte_wp_at' ((=) cte) p s \<and> P cte"
   by (simp add: cte_wp_at'_def)
 
 lemma pred_tcb_at'_disj:

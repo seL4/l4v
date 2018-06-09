@@ -904,8 +904,8 @@ lemma valid_arch_mdb_lift:
   assumes r: "\<And>P. \<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> f \<lbrace>\<lambda>r s. P (is_original_cap s)\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>r s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>"
   apply (clarsimp simp: valid_arch_mdb_def valid_def)
-  apply (frule_tac P1="op = (caps_of_state s)" in use_valid [OF _  c], rule refl)
-  apply (frule_tac P1="op = (is_original_cap s)" in use_valid [OF _  r], rule refl)
+  apply (frule_tac P1="(=) (caps_of_state s)" in use_valid [OF _  c], rule refl)
+  apply (frule_tac P1="(=) (is_original_cap s)" in use_valid [OF _  r], rule refl)
   apply clarsimp
   done
 

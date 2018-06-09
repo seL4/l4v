@@ -288,7 +288,7 @@ next
        apply rule
        apply (clarsimp simp: in_getCTE_cte_wp_at' cte_wp_at_ctes_of)
        apply clarsimp
-       apply (subgoal_tac "cte_wp_at' (op = z) p s")
+       apply (subgoal_tac "cte_wp_at' ((=) z) p s")
        apply (clarsimp simp: getCTE_def cte_wp_at'_def)
        apply (simp add: cte_wp_at_ctes_of)
        done

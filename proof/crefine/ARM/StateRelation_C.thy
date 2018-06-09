@@ -124,8 +124,8 @@ where
   "carch_state_relation astate cstate \<equiv>
   armKSNextASID_' cstate = armKSNextASID astate \<and>
   armKSKernelVSpace astate = armKSKernelVSpace_C \<and>
-  array_relation (op = \<circ> option_to_0) 0xFF (armKSHWASIDTable astate) (armKSHWASIDTable_' cstate) \<and>
-  array_relation (op = \<circ> option_to_ptr) (2^asid_high_bits - 1) (armKSASIDTable astate) (armKSASIDTable_' cstate) \<and>
+  array_relation ((=) \<circ> option_to_0) 0xFF (armKSHWASIDTable astate) (armKSHWASIDTable_' cstate) \<and>
+  array_relation ((=) \<circ> option_to_ptr) (2^asid_high_bits - 1) (armKSASIDTable astate) (armKSASIDTable_' cstate) \<and>
   (asid_map_pd_to_hwasids (armKSASIDMap astate))
        = set_option \<circ> (pde_stored_asid  \<circ>\<^sub>m clift (t_hrs_' cstate) \<circ>\<^sub>m pd_pointer_to_asid_slot) \<and>
   carch_globals astate"
@@ -516,7 +516,7 @@ where
   "casid_pool_relation asid_pool casid_pool \<equiv>
   case asid_pool of ASIDPool pool \<Rightarrow>
   case casid_pool of asid_pool_C cpool \<Rightarrow>
-  array_relation (op = \<circ> option_to_ptr) (2^asid_low_bits - 1) pool cpool"
+  array_relation ((=) \<circ> option_to_ptr) (2^asid_low_bits - 1) pool cpool"
 
 definition
   cuser_user_data_relation :: "(10 word \<Rightarrow> word32) \<Rightarrow> user_data_C \<Rightarrow> bool"

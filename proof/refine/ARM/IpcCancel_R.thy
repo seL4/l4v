@@ -162,7 +162,7 @@ crunch tcb_at'[wp]: setEndpoint "tcb_at' t"
 lemma blocked_cancel_ipc_corres:
   "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr \<or>
      st = Structures_A.BlockedOnSend epPtr p; thread_state_relation st st' \<rbrakk> \<Longrightarrow>
-   corres dc (invs and st_tcb_at (op = st) t) (invs' and st_tcb_at' (op = st') t)
+   corres dc (invs and st_tcb_at ((=) st) t) (invs' and st_tcb_at' ((=) st') t)
            (blocked_cancel_ipc st t)
            (do ep \<leftarrow> getEndpoint epPtr;
                y \<leftarrow> assert (\<not> (case ep of IdleEP \<Rightarrow> True | _ \<Rightarrow> False));
@@ -179,8 +179,8 @@ lemma blocked_cancel_ipc_corres:
       apply (rule_tac F="ep \<noteq> IdleEP" in corres_gen_asm2)
       apply (rule corres_assert_assume[rotated])
        apply (clarsimp split: endpoint.splits)
-      apply (rule_tac P="invs and st_tcb_at (op = st) t" and
-                      P'="invs' and st_tcb_at' (op = st') t" in corres_inst)
+      apply (rule_tac P="invs and st_tcb_at ((=) st) t" and
+                      P'="invs' and st_tcb_at' ((=) st') t" in corres_inst)
       apply (case_tac rv)
         apply (simp add: ep_relation_def)
        apply (simp add: get_ep_queue_def ep_relation_def split del: if_split)
@@ -300,8 +300,8 @@ lemma blocked_cancel_ipc_corres:
 
 lemma ac_corres:
   "corres dc
-          (invs and st_tcb_at (op = (Structures_A.BlockedOnNotification ntfn)) t)
-          (invs' and st_tcb_at' (op = (BlockedOnNotification ntfn)) t)
+          (invs and st_tcb_at ((=) (Structures_A.BlockedOnNotification ntfn)) t)
+          (invs' and st_tcb_at' ((=) (BlockedOnNotification ntfn)) t)
           (cancel_signal t ntfn)
           (cancelSignal t ntfn)"
   apply (simp add: cancel_signal_def cancelSignal_def Let_def)
@@ -371,7 +371,7 @@ lemma reply_no_descendants_mdbNext_null:
   shows          "mdbNext (cteMDBNode cte) = nullPointer"
 proof -
   from invs st_tcb_at_reply_cap_valid[OF tcb]
-    have "cte_wp_at (op = (cap.ReplyCap t True)) (t, tcb_cnode_index 2) s"
+    have "cte_wp_at ((=) (cap.ReplyCap t True)) (t, tcb_cnode_index 2) s"
     by (fastforce simp: cte_wp_at_caps_of_state is_cap_simps)
   hence "cteCap cte = capability.ReplyCap t True"
     using invs sr
@@ -389,7 +389,7 @@ proof -
     done
 
   from invs tcb descs have "\<forall>ptr m.
-      cte_wp_at (op = (cap.ReplyCap t m)) ptr s \<longrightarrow> ptr = (t, tcb_cnode_index 2)"
+      cte_wp_at ((=) (cap.ReplyCap t m)) ptr s \<longrightarrow> ptr = (t, tcb_cnode_index 2)"
     apply (intro allI)
     apply (case_tac m)
      apply (clarsimp simp: invs_def valid_state_def valid_reply_masters_def)
@@ -570,7 +570,7 @@ lemma (in delete_one) reply_cancel_ipc_corres:
     apply (simp add: when_def getSlotCap_def capHasProperty_def
                 del: split_paired_Ex)
     apply (rule corres_guard_imp)
-      apply (rule_tac P'="cte_wp_at (op = (cap.ReplyCap t False)) sl"
+      apply (rule_tac P'="cte_wp_at ((=) (cap.ReplyCap t False)) sl"
                    in corres_stateAssert_implied [OF delete_one_corres])
       apply (fastforce dest: pspace_relation_cte_wp_at
                             state_relation_pspace_relation
@@ -593,8 +593,8 @@ lemma (in delete_one) cancel_ipc_corres:
   apply (simp add: cancel_ipc_def cancelIPC_def Let_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gts_corres])
-      apply (rule_tac P="einvs and st_tcb_at (op = state) t" and
-                      P'="invs' and st_tcb_at' (op = statea) t" in corres_inst)
+      apply (rule_tac P="einvs and st_tcb_at ((=) state) t" and
+                      P'="invs' and st_tcb_at' ((=) statea) t" in corres_inst)
       apply (case_tac state, simp_all add: isTS_defs list_case_If)[1]
          apply (rule corres_guard_imp)
            apply (rule blocked_cancel_ipc_corres)
@@ -1227,7 +1227,7 @@ lemma tcbSchedDequeue_corres':
    apply (simp add: ready_queues_relation_def)
   apply (simp add: unless_def when_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[where r'="op =", OF _ ethreadget_corres])
+    apply (rule corres_split[where r'="(=)", OF _ ethreadget_corres])
        apply (simp split del: if_split)
        apply (rule corres_split_eqr[OF _ ethreadget_corres])
           apply (rule corres_split_eqr[OF _ getQueue_corres])
@@ -1443,7 +1443,7 @@ lemma (in delete_one_conc_pre) cancelIPC_it[wp]:
 crunch ksQ: threadGet "\<lambda>s. P (ksReadyQueues s p)"
 
 lemma threadGet_ksQ_oa:
-  "\<lbrace>\<lambda>s. obj_at' (op = p \<circ> f) t s \<and> P (g p (ksReadyQueues s p) s)\<rbrace>
+  "\<lbrace>\<lambda>s. obj_at' ((=) p \<circ> f) t s \<and> P (g p (ksReadyQueues s p) s)\<rbrace>
     threadGet f t
    \<lbrace>\<lambda>rv s. P (g rv (ksReadyQueues s rv) s)\<rbrace>"
   apply (rule hoare_weaken_pre)
@@ -1929,7 +1929,7 @@ lemma (in delete_one_conc_pre) suspend_nonq:
   done
 
 lemma suspend_makes_inactive:
-  "\<lbrace>K (t = t')\<rbrace> suspend t \<lbrace>\<lambda>rv. st_tcb_at' (op = Inactive) t'\<rbrace>"
+  "\<lbrace>K (t = t')\<rbrace> suspend t \<lbrace>\<lambda>rv. st_tcb_at' ((=) Inactive) t'\<rbrace>"
   apply (cases "t = t'", simp_all)
   apply (simp add: suspend_def unless_def)
   apply (wp threadSet_pred_tcb_no_state setThreadState_st_tcb | simp)+
@@ -2704,10 +2704,10 @@ lemma cancel_badged_sends_corres:
             apply (rule set_ep_corres)
             apply (simp split: list.split add: ep_relation_def)
            apply (wp weak_sch_act_wf_lift_linear)+
-         apply (rule_tac S="op ="
+         apply (rule_tac S="(=)"
                      and Q="\<lambda>xs s. (\<forall>x \<in> set xs. (epptr, TCBBlockedSend) \<in> state_refs_of s x) \<and> distinct xs \<and> valid_etcbs s"
                     and Q'="\<lambda>xs s. (\<forall>x \<in> set xs. tcb_at' x s) \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> Invariants_H.valid_queues s \<and> valid_queues' s \<and> valid_objs' s"
-                     in corres_mapM_list_all2[where r'="op ="],
+                     in corres_mapM_list_all2[where r'="(=)"],
                 simp_all add: list_all2_refl)[1]
            apply (clarsimp simp: liftM_def[symmetric] o_def)
            apply (rule corres_guard_imp)
@@ -2763,7 +2763,7 @@ lemma suspend_unqueued:
   done
 
 crunch unqueued: prepareThreadDelete "obj_at' (Not \<circ> tcbQueued) t"
-crunch inactive: prepareThreadDelete "st_tcb_at' (op = Inactive) t'"
+crunch inactive: prepareThreadDelete "st_tcb_at' ((=) Inactive) t'"
 crunch nonq: prepareThreadDelete " \<lambda>s. \<forall>d p. t' \<notin> set (ksReadyQueues s (d, p))"
 
 end

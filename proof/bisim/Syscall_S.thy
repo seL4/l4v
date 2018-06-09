@@ -60,7 +60,7 @@ lemma dc_refl: "dc r r" by simp
 lemma bisim_catch_faults_r:
   assumes bs: "\<And>x. bisim_underlying sr r P (P' x) a (m x)"
   and    flt: "\<lbrace>S\<rbrace> b \<lbrace>\<lambda>_ _. False\<rbrace>, \<lbrace>P'\<rbrace>"
-  and   pure: "\<And>s. \<lbrace>S' and op = s\<rbrace> b \<lbrace>\<lambda>_. op = s\<rbrace>"
+  and   pure: "\<And>s. \<lbrace>S' and (=) s\<rbrace> b \<lbrace>\<lambda>_. (=) s\<rbrace>"
   and     db: "not_empty Pd b"
   shows "bisim_underlying sr r P (S and S' and Pd) a (b <catch> m)"
   unfolding catch_def
@@ -73,7 +73,7 @@ lemma bisim_catch_faults_r:
   done
 
 lemma bisim_validE_R:
-  assumes ac: "bisim_underlying (op =) (dc \<oplus> op =) P P' a a'"
+  assumes ac: "bisim_underlying (=) (dc \<oplus> (=)) P P' a a'"
   and     rl: "\<lbrace>Q\<rbrace> a \<lbrace>S\<rbrace>, -"
   shows   "\<lbrace>P and P' and Q\<rbrace> a' \<lbrace>S\<rbrace>, -"
   using ac rl
@@ -81,7 +81,7 @@ lemma bisim_validE_R:
   by (fastforce simp: split_def split: sum.splits)
 
 lemma bisim_validE_R2:
-  assumes ac: "bisim_underlying (op =) (op =) P P' a a'"
+  assumes ac: "bisim_underlying (=) (=) P P' a a'"
   and     rl: "\<lbrace>Q\<rbrace> a' \<lbrace>S\<rbrace>, -"
   shows   "\<lbrace>P and P' and Q\<rbrace> a \<lbrace>S\<rbrace>, -"
   using ac rl
@@ -90,7 +90,7 @@ lemma bisim_validE_R2:
 
 
 lemma bisim_rab:
-  "bisim (dc \<oplus> op =) \<top> (\<lambda>s. separate_cnode_cap (caps_of_state s) cap \<and> valid_cap cap s)
+  "bisim (dc \<oplus> (=)) \<top> (\<lambda>s. separate_cnode_cap (caps_of_state s) cap \<and> valid_cap cap s)
                        (doE
                             _ \<leftarrow> whenE (length cref < word_bits) (throwError undefined);
                             case cap of
@@ -264,10 +264,10 @@ lemma not_empty_gen_asm:
   shows "not_empty (R and (\<lambda>_. P)) m"
   using ne unfolding not_empty_def by auto
 
-lemmas bisim_refl' = bisim_refl [where P = \<top> and P' = \<top> and R = "op =", OF refl]
+lemmas bisim_refl' = bisim_refl [where P = \<top> and P' = \<top> and R = "(=)", OF refl]
 
 lemma send_fault_ipc_bisim:
-  "bisim op = \<top> (tcb_at tcb and valid_objs and separate_state)
+  "bisim (=) \<top> (tcb_at tcb and valid_objs and separate_state)
    (set_thread_state tcb Inactive) (send_fault_ipc tcb flt' <catch> handle_double_fault tcb flt')"
   unfolding send_fault_ipc_def
   apply (rule bisim_guard_imp)
@@ -297,7 +297,7 @@ lemma send_fault_ipc_bisim:
   done
 
 lemma handle_fault_bisim:
-  "bisim op = \<top> (separate_state and tcb_at tcb and valid_objs) (handle_fault tcb flt) (Ipc_A.handle_fault tcb flt')"
+  "bisim (=) \<top> (separate_state and tcb_at tcb and valid_objs) (handle_fault tcb flt) (Ipc_A.handle_fault tcb flt')"
   unfolding handle_fault_def Ipc_A.handle_fault_def
   apply (rule bisim_guard_imp)
     apply (rule bisim_symb_exec_r [where Pe = \<top>])
@@ -316,8 +316,8 @@ lemma bisim_returnOk:
   done
 
 lemma bisim_liftME_same:
-  assumes bs: "bisim (f \<oplus> op =) P P' m m'"
-  shows "bisim (f \<oplus> op =) P P' (liftME g m) (liftME g m')"
+  assumes bs: "bisim (f \<oplus> (=)) P P' m m'"
+  shows "bisim (f \<oplus> (=)) P P' (liftME g m) (liftME g m')"
   unfolding liftME_def
   apply (rule bisim_guard_imp)
   apply (rule bisim_splitE [OF bs])
@@ -335,21 +335,21 @@ lemma bisim_split_if:
   by simp
 
 lemma bisim_reflE:
-  "bisim (op = \<oplus> op =) \<top> \<top> a a"
+  "bisim ((=) \<oplus> (=)) \<top> \<top> a a"
   apply (rule bisim_underlyingI)
    apply (case_tac r, fastforce+)[1]
   apply (case_tac r', fastforce+)[1]
   done
 
 lemma bisim_reflE_dc:
-  "bisim (dc \<oplus> op =) \<top> \<top> a a"
+  "bisim (dc \<oplus> (=)) \<top> \<top> a a"
   apply (rule bisim_underlyingI)
    apply (case_tac r, fastforce+)[1]
   apply (case_tac r', fastforce+)[1]
   done
 
 lemma decode_invocation_bisim:
-  "bisim (op = \<oplus> op =) \<top> (K (separate_cap cap))
+  "bisim ((=) \<oplus> (=)) \<top> (K (separate_cap cap))
      (decode_invocation a b c d cap f) (Decode_A.decode_invocation a b c d cap f)"
   unfolding decode_invocation_def Decode_A.decode_invocation_def
   apply (rule bisim_guard_imp)
@@ -366,15 +366,15 @@ abbreviation
   "separate_inv c \<equiv> \<exists>ptr badge. c = InvokeNotification ptr badge"
 
 lemma perform_invocation_bisim:
-  "bisim (dc \<oplus> op =) \<top> (\<top> and K (separate_inv c))
+  "bisim (dc \<oplus> (=)) \<top> (\<top> and K (separate_inv c))
   (perform_invocation a b c) (Syscall_A.perform_invocation a b c)"
   apply (rule bisim_gen_asm_r)
     apply clarsimp
     apply (rule bisim_reflE_dc)
   done
 
-lemmas bisim_split_reflE_eq = bisim_split_reflE [where R = "op =" and f = "op =", OF _ _ _ refl refl]
-lemmas bisim_split_reflE_dc = bisim_split_reflE [where R = "op =" and f = "dc", OF _ _ _ dc_refl refl]
+lemmas bisim_split_reflE_eq = bisim_split_reflE [where R = "(=)" and f = "(=)", OF _ _ _ refl refl]
+lemmas bisim_split_reflE_dc = bisim_split_reflE [where R = "(=)" and f = "dc", OF _ _ _ dc_refl refl]
 
 lemma decode_separate_inv:
   "\<lbrace>\<top> and K ((\<forall>c \<in> set f. separate_cap (fst c)) \<and> (separate_cap cap))\<rbrace> Decode_A.decode_invocation a b c d cap f  \<lbrace>\<lambda>rv s. separate_inv rv\<rbrace>, -"
@@ -401,7 +401,7 @@ lemma lec_separate_caps:
   done
 
 lemma handle_invocation_bisim:
-  "bisim (dc \<oplus> op =) \<top> (separate_state and valid_objs and cur_tcb) (handle_invocation c b) (Syscall_A.handle_invocation c b)"
+  "bisim (dc \<oplus> (=)) \<top> (separate_state and valid_objs and cur_tcb) (handle_invocation c b) (Syscall_A.handle_invocation c b)"
   unfolding handle_invocation_def Syscall_A.handle_invocation_def
   apply (simp add: split_def)
   apply (rule bisim_guard_imp)
@@ -448,17 +448,17 @@ lemma bisim_split_catch:
   done
 
 lemma rel_sum_comb_eq:
-  "(op = \<oplus> op =) = (op =)"
+  "((=) \<oplus> (=)) = (=)"
   apply (rule ext, rule ext)
   apply (case_tac x)
   apply auto
   done
 
 lemma bisim_split_catch_req:
-  assumes bm: "bisim (op = \<oplus> op =) Pn Pn' m m'"
-  and     bc: "\<And>x. bisim op = (Pf x) (Pf' x) (c x) (c' x)"
+  assumes bm: "bisim ((=) \<oplus> (=)) Pn Pn' m m'"
+  and     bc: "\<And>x. bisim (=) (Pf x) (Pf' x) (c x) (c' x)"
   and     v1: "\<lbrace>P\<rbrace> m \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>r. Pf r and Pf' r\<rbrace>"
-  shows "bisim op = (Pn and P) Pn' (m <catch> c) (m' <catch> c')"
+  shows "bisim (=) (Pn and P) Pn' (m <catch> c) (m' <catch> c')"
   unfolding catch_def
   apply (rule bisim_split_req [where Q = "\<lambda>r s. case_sum (\<lambda>l. Pf l s) (\<lambda>_. True) r" and Q' = "\<lambda>r s. case_sum (\<lambda>l. Pf' l s) (\<lambda>_. True) r"])
   apply (rule bm [simplified rel_sum_comb_eq])
@@ -581,7 +581,7 @@ lemma bisim_caller_cap:
   done
 
 lemma delete_caller_cap_bisim:
-  "bisim op = \<top> (tcb_at r and separate_state) (return ()) (delete_caller_cap r)"
+  "bisim (=) \<top> (tcb_at r and separate_state) (return ()) (delete_caller_cap r)"
   unfolding delete_caller_cap_def
   apply (rule bisim_guard_imp)
   apply (simp add: cap_delete_one_def unless_when)
@@ -596,7 +596,7 @@ lemma bisim_guard_imp_both:
   unfolding bisim_underlying_def by auto
 
 lemma handle_recv_bisim:
-  "bisim op = \<top> (separate_state and cur_tcb and valid_objs) (handle_recv is_blocking) (Syscall_A.handle_recv is_blocking)"
+  "bisim (=) \<top> (separate_state and cur_tcb and valid_objs) (handle_recv is_blocking) (Syscall_A.handle_recv is_blocking)"
   unfolding handle_recv_def Syscall_A.handle_recv_def
   apply (simp add: Let_def)
   apply (rule bisim_guard_imp_both)
@@ -604,7 +604,7 @@ lemma handle_recv_bisim:
        apply (rule bisim_split_refl)
            apply (rule bisim_split_catch_req)
               apply (simp add: cap_fault_injection)
-              apply (rule bisim_injection [OF refl refl, where f' = "op ="])
+              apply (rule bisim_injection [OF refl refl, where f' = "(=)"])
                apply simp
               apply (rule bisim_split_reflE)
                   apply (rule_tac cap = rb in bisim_separate_cap_cases)
@@ -622,7 +622,7 @@ lemma handle_recv_bisim:
   done
 
 lemma handle_reply_bisim:
-  "bisim op = \<top> (separate_state and cur_tcb) (return ()) Syscall_A.handle_reply"
+  "bisim (=) \<top> (separate_state and cur_tcb) (return ()) Syscall_A.handle_reply"
   unfolding Syscall_A.handle_reply_def
   apply (rule bisim_guard_imp_both)
    apply (rule bisim_symb_exec_r [where Pe = \<top>])
@@ -634,7 +634,7 @@ lemma handle_reply_bisim:
   done
 
 lemma handle_event_bisim:
-  "bisim (dc \<oplus> op =) \<top> (separate_state and cur_tcb and valid_objs) (handle_event ev) (Syscall_A.handle_event ev)"
+  "bisim (dc \<oplus> (=)) \<top> (separate_state and cur_tcb and valid_objs) (handle_event ev) (Syscall_A.handle_event ev)"
   apply (cases ev; simp add: handle_send_def Syscall_A.handle_send_def
                              handle_call_def Syscall_A.handle_call_def
                              handle_reply_def
@@ -696,7 +696,7 @@ lemma handle_event_bisim:
   done
 
 lemma call_kernel_bisim:
-  "bisim (op =) \<top> (separate_state and cur_tcb and valid_objs) (call_kernel ev) (Syscall_A.call_kernel ev)"
+  "bisim (=) \<top> (separate_state and cur_tcb and valid_objs) (call_kernel ev) (Syscall_A.call_kernel ev)"
   unfolding call_kernel_def Syscall_A.call_kernel_def
   apply (rule bisim_guard_imp_both)
    apply simp

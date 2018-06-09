@@ -144,7 +144,7 @@ lemma set_cdt_reads_respects:
 
 lemma set_cdt_ev2:
   "equiv_for (((aag_can_read aag) or (aag_can_affect aag l)) \<circ> fst) id c c' \<Longrightarrow>
-   equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (op =) \<top> \<top> (set_cdt c) (set_cdt c')"
+   equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (=) \<top> \<top> (set_cdt c) (set_cdt c')"
   unfolding set_cdt_def
   apply(rule get_bind_ev2)
   apply(unfold fun_app_def, rule put_ev2)
@@ -153,7 +153,7 @@ lemma set_cdt_ev2:
 
 lemma set_cdt_list_ev2:
   "equiv_for (((aag_can_read aag) or (aag_can_affect aag l)) \<circ> fst) id c c' \<Longrightarrow>
-   equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (op =) \<top> \<top> (set_cdt_list c) (set_cdt_list c')"
+   equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (=) \<top> \<top> (set_cdt_list c) (set_cdt_list c')"
   unfolding set_cdt_list_def
   apply(rule get_bind_ev2)
   apply(unfold fun_app_def, rule put_ev2)
@@ -530,7 +530,7 @@ lemmas invs_imps = invs_valid_vs_lookup invs_sym_refs invs_psp_aligned invs_dist
 
 lemma cte_wp_at_page_cap_aligned :
   "\<lbrakk>cte_wp_at
-           (op = (ArchObjectCap (PageCap dev word fun vmpage_size option))) slot s ; valid_objs s \<rbrakk>\<Longrightarrow>
+           ((=) (ArchObjectCap (PageCap dev word fun vmpage_size option))) slot s ; valid_objs s \<rbrakk>\<Longrightarrow>
   is_aligned word (pageBitsForSize vmpage_size)"
   apply (simp add: cte_wp_at_caps_of_state)
   apply (case_tac slot)
@@ -542,7 +542,7 @@ lemma cte_wp_at_page_cap_aligned :
 done
 
 lemma cte_wp_at_pt_exists_cap:
-  "valid_objs s \<Longrightarrow> cte_wp_at (op = (ArchObjectCap (PageTableCap word option))) slot s \<Longrightarrow>
+  "valid_objs s \<Longrightarrow> cte_wp_at ((=) (ArchObjectCap (PageTableCap word option))) slot s \<Longrightarrow>
     x \<in> set [word , word + 4 .e. word + 2 ^ pt_bits - 1]
     \<Longrightarrow>\<exists>a b cap.
                caps_of_state s (a, b) = Some cap \<and>
@@ -572,7 +572,7 @@ done
 
 
 lemma cte_wp_at_page_directory_not_in_globals:
-  "\<lbrakk>cte_wp_at (op = (ArchObjectCap (PageDirectoryCap word optiona)))
+  "\<lbrakk>cte_wp_at ((=) (ArchObjectCap (PageDirectoryCap word optiona)))
            slot s; x \<le> (kernel_base >> 20) - 1; valid_objs s; valid_global_refs s\<rbrakk> \<Longrightarrow>
     (x << 2) + word && ~~ mask pd_bits \<notin> global_refs s
             "
@@ -593,7 +593,7 @@ lemma not_in_global_not_arm:
 
 
 lemma cte_wp_at_page_cap_bits :
-  "\<lbrakk>cte_wp_at (op = (ArchObjectCap (PageTableCap word option))) slot
+  "\<lbrakk>cte_wp_at ((=) (ArchObjectCap (PageTableCap word option))) slot
            s; valid_objs s\<rbrakk> \<Longrightarrow>
     cte_wp_at
                    (\<lambda>c. (\<lambda>x. x && ~~ mask pt_bits) `
@@ -614,7 +614,7 @@ done
 lemma mapM_x_swp_store_pte_invs' :
   "\<lbrace>invs
      and
-     (\<lambda>s. cte_wp_at (op = (ArchObjectCap (PageTableCap word option))) slot
+     (\<lambda>s. cte_wp_at ((=) (ArchObjectCap (PageTableCap word option))) slot
            s)\<rbrace>
     mapM_x (swp store_pte InvalidPTE) [word , word + 4 .e. word + 2 ^ pt_bits - 1] \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (rule hoare_pre)
@@ -627,7 +627,7 @@ lemma mapM_x_swp_store_pte_invs' :
 done
 
 lemma cte_wp_at_page_directory_not_in_kernel_mappings:
-  "\<lbrakk>cte_wp_at (op = (ArchObjectCap (PageDirectoryCap word optiona)))
+  "\<lbrakk>cte_wp_at ((=) (ArchObjectCap (PageDirectoryCap word optiona)))
            slot s; x \<le> (kernel_base >> 20) - 1; valid_objs s; valid_global_refs s\<rbrakk> \<Longrightarrow>
   ucast ((x << 2) + word && mask pd_bits >> 2) \<notin> kernel_mapping_slots"
   apply (frule (1) cte_wp_at_valid_objs_valid_cap)
@@ -804,7 +804,7 @@ lemma do_machine_op_spec_reads_respects':
   "spec_reads_respects st aag l P (do_machine_op f)"
   unfolding do_machine_op_def spec_equiv_valid_def
   apply(rule equiv_valid_2_guard_imp)
-   apply(rule_tac  R'="\<lambda> rv rv'. equiv_machine_state (aag_can_read aag or aag_can_affect aag l) rv rv' \<and> equiv_irq_state rv rv'" and Q="\<lambda> r s. st = s \<and> Q r" and Q'="\<lambda> r s. Q r" and P="op = st" and P'="\<top>" in equiv_valid_2_bind)
+   apply(rule_tac  R'="\<lambda> rv rv'. equiv_machine_state (aag_can_read aag or aag_can_affect aag l) rv rv' \<and> equiv_irq_state rv rv'" and Q="\<lambda> r s. st = s \<and> Q r" and Q'="\<lambda> r s. Q r" and P="(=) st" and P'="\<top>" in equiv_valid_2_bind)
        apply(rule gen_asm_ev2_l[simplified K_def pred_conj_def])
        apply(rule gen_asm_ev2_r')
        apply(rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r' \<and> equiv_machine_state (aag_can_read aag)  ms' ms'' \<and> equiv_machine_state (aag_can_affect aag l) ms' ms'' \<and> equiv_irq_state ms' ms''" and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
@@ -1004,7 +1004,7 @@ lemma descendants_of_eq: "\<lbrakk>reads_equiv aag s t; affects_equiv aag l s t;
   done
 
 lemma gets_descendants_of_revrv:
-  "reads_equiv_valid_rv_inv (affects_equiv aag l) aag op = (pas_refined aag and K (is_subject aag (fst slot))) (gets (descendants_of slot \<circ> cdt))"
+  "reads_equiv_valid_rv_inv (affects_equiv aag l) aag (=) (pas_refined aag and K (is_subject aag (fst slot))) (gets (descendants_of slot \<circ> cdt))"
   apply(rule gets_evrv'')
   apply clarsimp
   apply (rule descendants_of_eq)

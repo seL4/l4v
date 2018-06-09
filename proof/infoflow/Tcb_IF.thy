@@ -187,7 +187,7 @@ next
                        | rule finalise_cap_not_reply_master
                        | simp add: in_monad)+
          apply (rule hoare_strengthen_post)
-        apply (rule_tac Q="\<lambda>fin s. invs s \<and> cte_wp_at (op = rv) slot s \<and> s \<turnstile> (fst fin)
+        apply (rule_tac Q="\<lambda>fin s. invs s \<and> cte_wp_at ((=) rv) slot s \<and> s \<turnstile> (fst fin)
                                           \<and> P s
                                           \<and> replaceable s slot (fst fin) rv
                                           \<and> emptyable slot s

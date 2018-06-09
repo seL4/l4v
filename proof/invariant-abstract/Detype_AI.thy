@@ -22,7 +22,7 @@ end
 locale Detype_AI =
   fixes state_ext_type :: "'a :: state_ext itself"
   assumes valid_globals_irq_node:
-    "\<And>s cap ptr irq. \<lbrakk> valid_global_refs (s :: 'a state); cte_wp_at (op = cap) ptr s \<rbrakk>
+    "\<And>s cap ptr irq. \<lbrakk> valid_global_refs (s :: 'a state); cte_wp_at ((=) cap) ptr s \<rbrakk>
           \<Longrightarrow> interrupt_irq_node s irq \<notin> cap_range cap"
   assumes caps_of_state_ko:
     "\<And>cap s. valid_cap cap (s :: 'a state)
@@ -90,7 +90,7 @@ where
 lemma ex_cte_cap_to_obj_ref_disj:
   "ex_cte_cap_wp_to P ptr s
       \<Longrightarrow> ((\<exists>ptr'. cte_wp_at (\<lambda>cap. fst ptr \<in> obj_refs cap) ptr' s)
-               \<or> (\<exists>ptr' irq. cte_wp_at (op = (cap.IRQHandlerCap irq)) ptr' s
+               \<or> (\<exists>ptr' irq. cte_wp_at ((=) (cap.IRQHandlerCap irq)) ptr' s
                                \<and> ptr = (interrupt_irq_node s irq, [])))"
   apply (clarsimp simp: ex_cte_cap_wp_to_def cte_wp_at_caps_of_state)
   apply (frule cte_refs_obj_refs_elem, erule disjE)
@@ -229,9 +229,9 @@ lemma (in Detype_AI) untyped_cap_descendants_range:
 
 
 lemma untyped_children_in_mdbEE:
-  assumes ass: "untyped_children_in_mdb s" "cte_wp_at (op = cap) ptr s" "is_untyped_cap cap" "cte_wp_at P ptr' s"
-  and  step1: "\<And>cap'. \<lbrakk>cte_wp_at (op = cap') ptr' s; P cap'\<rbrakk> \<Longrightarrow> obj_refs cap' \<inter> untyped_range cap \<noteq> {}"
-  and  step2: "\<And>cap'. \<lbrakk>cte_wp_at (op = cap') ptr' s; cap_range cap' \<inter> untyped_range cap \<noteq> {};ptr' \<in> descendants_of ptr (cdt s) \<rbrakk> \<Longrightarrow> Q"
+  assumes ass: "untyped_children_in_mdb s" "cte_wp_at ((=) cap) ptr s" "is_untyped_cap cap" "cte_wp_at P ptr' s"
+  and  step1: "\<And>cap'. \<lbrakk>cte_wp_at ((=) cap') ptr' s; P cap'\<rbrakk> \<Longrightarrow> obj_refs cap' \<inter> untyped_range cap \<noteq> {}"
+  and  step2: "\<And>cap'. \<lbrakk>cte_wp_at ((=) cap') ptr' s; cap_range cap' \<inter> untyped_range cap \<noteq> {};ptr' \<in> descendants_of ptr (cdt s) \<rbrakk> \<Longrightarrow> Q"
   shows "Q"
   using ass
   apply (clarsimp simp:cte_wp_at_caps_of_state)
@@ -340,7 +340,7 @@ lemma descendants_range_imply_no_descendants:
 
 locale detype_locale =
   fixes cap and ptr and s
-  assumes cap: "cte_wp_at (op = cap) ptr s"
+  assumes cap: "cte_wp_at ((=) cap) ptr s"
   and untyped: "is_untyped_cap cap"
   and  nodesc: "descendants_range cap ptr s"
   and    invs: "invs s"
@@ -441,7 +441,7 @@ end
 locale Detype_AI_2 =
   fixes cap ptr s
   assumes detype_invariants:
-    "\<lbrakk> cte_wp_at (op = cap) ptr s
+    "\<lbrakk> cte_wp_at ((=) cap) ptr s
      ; is_untyped_cap cap
      ; descendants_range cap ptr s
      ; invs s
@@ -496,7 +496,7 @@ lemma irq_node:
   by (simp add: cap_range_def)
 
 lemma non_null_present:
-    "\<And>p. cte_wp_at (op \<noteq> cap.NullCap) p s \<Longrightarrow> fst p \<notin> untyped_range cap"
+    "\<And>p. cte_wp_at ((\<noteq>) cap.NullCap) p s \<Longrightarrow> fst p \<notin> untyped_range cap"
     apply (drule if_unsafe_then_capD[OF _ ifunsafe], simp)
     apply (drule ex_cte_cap_to_obj_ref_disj, erule disjE)
      apply clarsimp
@@ -531,7 +531,7 @@ lemma vmaster: "valid_reply_masters s"
   using invs by (simp add: invs_def valid_state_def)
 
 lemma valid_cap2:
-    "\<And>cap'. \<lbrakk> \<exists>p. cte_wp_at (op = cap') p s \<rbrakk>
+    "\<And>cap'. \<lbrakk> \<exists>p. cte_wp_at ((=) cap') p s \<rbrakk>
     \<Longrightarrow> obj_reply_refs cap' \<subseteq> (UNIV - untyped_range cap)"
     apply clarsimp
     apply (simp add: obj_reply_refs_def, erule disjE)
@@ -1030,8 +1030,8 @@ lemma dom_known_length:
 
 
 lemma (in Detype_AI) cte_map_not_null_outside: (*FIXME: arch_split*)
-  "\<lbrakk> cte_wp_at (op \<noteq> cap.NullCap) p (s :: 'a state);
-     cte_wp_at (op = cap) p' s;is_untyped_cap cap;
+  "\<lbrakk> cte_wp_at ((\<noteq>) cap.NullCap) p (s :: 'a state);
+     cte_wp_at ((=) cap) p' s;is_untyped_cap cap;
      descendants_range cap p' s; untyped_children_in_mdb s;
      if_unsafe_then_cap s; valid_global_refs s \<rbrakk>
      \<Longrightarrow> fst p \<notin> untyped_range cap"
@@ -1125,10 +1125,10 @@ lemma dmo_valid_cap[wp]:
   by (simp add: do_machine_op_def split_def | wp)+
 
 lemma (in Detype_AI)cte_map_not_null_outside':
-  "\<lbrakk>cte_wp_at (op = (cap.UntypedCap dev q n m)) p' (s :: 'a state);
+  "\<lbrakk>cte_wp_at ((=) (cap.UntypedCap dev q n m)) p' (s :: 'a state);
     descendants_range (cap.UntypedCap dev q n m) p' s; untyped_children_in_mdb s;
     if_unsafe_then_cap s; valid_global_refs s;
-    cte_wp_at (op \<noteq> cap.NullCap) p s\<rbrakk>
+    cte_wp_at ((\<noteq>) cap.NullCap) p s\<rbrakk>
    \<Longrightarrow> fst p \<notin> untyped_range (cap.UntypedCap dev q n m)"
   by (erule (1) cte_map_not_null_outside, simp_all)
 

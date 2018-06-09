@@ -224,7 +224,7 @@ fun desugar ctxt (t0: term) (bads: string list): term =
       val _ = if null bads then error "Nothing to desugar" else ()
       fun rewrite t = let
         val counts0 = count t
-        fun improved t' = exists op< (count t' ~~ counts0)
+        fun improved t' = exists (<) (count t' ~~ counts0)
         val t' = rewrite_pass ctxt t improved escape_const
         in if forall (fn c => c = 0) (count t') (* bad strings gone *)
            then t'

@@ -15,7 +15,7 @@ definition elem_wise :: "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a
   where "elem_wise f xs ys = map (\<lambda> (x, y). f x y) (zip xs ys)"
 
 definition p_and  :: "bool list => bool list => bool list"  (infixl "\<and>\<^sub>p"  35)
-  where "p_and = elem_wise op&"
+  where "p_and = elem_wise (&)"
 
 notation (ASCII)
   p_and  (infixl "pand"  35)

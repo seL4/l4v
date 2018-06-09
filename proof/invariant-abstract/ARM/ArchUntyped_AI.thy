@@ -70,7 +70,7 @@ lemma data_to_obj_type_sp[Untyped_AI_assms]:
   done
 
 lemma dui_inv_wf[wp, Untyped_AI_assms]:
-  "\<lbrace>invs and cte_wp_at (op = (cap.UntypedCap dev w sz idx)) slot
+  "\<lbrace>invs and cte_wp_at ((=) (cap.UntypedCap dev w sz idx)) slot
      and (\<lambda>s. \<forall>cap \<in> set cs. is_cnode_cap cap
                       \<longrightarrow> (\<forall>r\<in>cte_refs cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s))
     and (\<lambda>s. \<forall>x \<in> set cs. s \<turnstile> x)\<rbrace>
@@ -92,7 +92,7 @@ proof -
      apply (simp add:le_diff_conv2)
     done
   have nasty_strengthen:
-    "\<And>S a f s. (\<forall>x\<in>S. cte_wp_at (op = cap.NullCap) (a, f x) s)
+    "\<And>S a f s. (\<forall>x\<in>S. cte_wp_at ((=) cap.NullCap) (a, f x) s)
     \<Longrightarrow> cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap) slot s
     \<longrightarrow> slot \<notin> (Pair a \<circ> f) ` S"
     by (auto simp:cte_wp_at_caps_of_state)
@@ -344,7 +344,7 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
       and (\<lambda>(s::'state_ext::state_ext state). \<forall>r\<in>obj_refs (default_cap tp oref sz dev).
                 (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> obj_refs cap) p' s)
               \<and> \<not> obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
-      and cte_wp_at (op = cap.NullCap) cref
+      and cte_wp_at ((=) cap.NullCap) cref
       and K (tp \<noteq> ArchObject ASIDPoolObj)\<rbrace>
      create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
   apply (simp add: create_cap_def set_cdt_def)

@@ -16,7 +16,7 @@ imports
 begin
 
 lemma corres_underlying_trivial:
-  "\<lbrakk> nf' \<Longrightarrow> no_fail P' f \<rbrakk> \<Longrightarrow> corres_underlying Id nf nf' op = \<top> P' f f"
+  "\<lbrakk> nf' \<Longrightarrow> no_fail P' f \<rbrakk> \<Longrightarrow> corres_underlying Id nf nf' (=) \<top> P' f f"
   by (auto simp add: corres_underlying_def Id_def no_fail_def)
 
 lemma hoare_spec_gen_asm:
@@ -294,7 +294,7 @@ lemma sum_suc_pair: "(\<Sum>(a, b) \<leftarrow> xs. Suc (f a b)) = length xs + (
   apply (induct xs)
    by clarsimp+
 
-lemma fold_add_sum: "fold op + ((map (\<lambda>(a, b). f a b) xs)::nat list) 0 = (\<Sum>(a, b) \<leftarrow> xs. f a b)"
+lemma fold_add_sum: "fold (+) ((map (\<lambda>(a, b). f a b) xs)::nat list) 0 = (\<Sum>(a, b) \<leftarrow> xs. f a b)"
   apply (subst fold_plus_sum_list_rev)
   apply (subst sum_list_rev)
   by clarsimp
@@ -431,7 +431,7 @@ lemma sum_suc_triple: "(\<Sum>(a, b, c)\<leftarrow>xs. Suc (f a b c)) = length x
 lemma sum_enumerate: "(\<Sum>(a, b)\<leftarrow>enumerate n xs. P b) = (\<Sum>b\<leftarrow>xs. P b)"
   by (induct xs arbitrary:n; clarsimp)
 
-lemma dom_map_fold:"dom (fold op ++ (map (\<lambda>x. [f x \<mapsto> g x]) xs) ms) = dom ms \<union> set (map f xs)"
+lemma dom_map_fold:"dom (fold (++) (map (\<lambda>x. [f x \<mapsto> g x]) xs) ms) = dom ms \<union> set (map f xs)"
   by (induct xs arbitrary:f g ms; clarsimp)
 
 lemma list_ran_prop:"map_of (map (\<lambda>x. (f x, g x)) xs) i = Some t \<Longrightarrow> \<exists>x \<in> set xs. g x = t"
@@ -465,7 +465,7 @@ lemma strenghten_False_imp:
   by blast
 
 lemma foldl_fun_or_alt:
-  "foldl (\<lambda>x y. x \<or> f y) b ls = foldl (op \<or>) b (map f ls)"
+  "foldl (\<lambda>x y. x \<or> f y) b ls = foldl (\<or>) b (map f ls)"
   apply (induct ls)
    apply clarsimp
   apply clarsimp

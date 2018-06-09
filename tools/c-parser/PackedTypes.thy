@@ -292,7 +292,7 @@ next
   from Cons_typ_desc.prems show ?case
     apply simp
     apply (erule conjE)
-    apply (rule arg_cong2 [where f = "op @"])
+    apply (rule arg_cong2 [where f = "(@)"])
     apply (erule Cons_typ_desc.hyps, simp, simp)
     apply (erule Cons_typ_desc.hyps, simp, simp)
     done

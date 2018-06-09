@@ -59,11 +59,11 @@ where
 
 lemma decode_set_ipc_buffer_translate_tcb_invocation:
   "\<lbrakk>x \<noteq> [];excaps ! 0 = (a,b,c)\<rbrakk> \<Longrightarrow>
-    (\<And>s. \<lbrace>op = s\<rbrace> decode_set_ipc_buffer x (cap.ThreadCap t) slot' excaps
+    (\<And>s. \<lbrace>(=) s\<rbrace> decode_set_ipc_buffer x (cap.ThreadCap t) slot' excaps
     \<lbrace>\<lambda>rv s'. s' = s \<and> rv = tcb_invocation.ThreadControl t slot' None None None None None (tc_new_buffer rv) \<and>
       translate_tcb_invocation_thread_ctrl_buffer (tc_new_buffer rv) = (if (x ! 0) = 0 then None
       else Some (reset_mem_mapping (transform_cap a), transform_cslot_ptr (b, c)))
-    \<rbrace>,\<lbrace>\<lambda>ft. op = s\<rbrace>)"
+    \<rbrace>,\<lbrace>\<lambda>ft. (=) s\<rbrace>)"
   apply (clarsimp simp:decode_set_ipc_buffer_def whenE_def | rule conjI)+
     apply (wp , simp_all add:translate_tcb_invocation_thread_ctrl_buffer_def)
    apply (clarsimp | rule conjI)+
@@ -78,7 +78,7 @@ lemma decode_set_ipc_buffer_translate_tcb_invocation:
   done
 
 lemma derive_cap_translate_tcb_invocation:
- "\<lbrace>op = s\<rbrace>derive_cap a b \<lbrace>\<lambda>rv. op = s\<rbrace>,\<lbrace>\<lambda>rv. \<top>\<rbrace>"
+ "\<lbrace>(=) s\<rbrace>derive_cap a b \<lbrace>\<lambda>rv. (=) s\<rbrace>,\<lbrace>\<lambda>rv. \<top>\<rbrace>"
   apply (simp add:derive_cap_def)
   apply (case_tac b)
              apply (clarsimp simp:ensure_no_children_def whenE_def |wp)+
@@ -90,10 +90,10 @@ lemma derive_cap_translate_tcb_invocation:
   done
 
 lemma derive_cnode_cap_as_vroot:
-  "\<lbrace>op = s \<rbrace> derive_cap (ba, ca) aa
+  "\<lbrace>(=) s \<rbrace> derive_cap (ba, ca) aa
    \<lbrace>\<lambda>vroot_cap'.
       if is_valid_vtable_root vroot_cap' then \<lambda>sa. sa = s  \<and> vroot_cap' = aa
-      else op = s\<rbrace>, \<lbrace>\<lambda>r. op = s\<rbrace>"
+      else (=) s\<rbrace>, \<lbrace>\<lambda>r. (=) s\<rbrace>"
   apply (simp add:derive_cap_def is_valid_vtable_root_def)
   apply (case_tac aa)
              apply (clarsimp|wp)+
@@ -107,8 +107,8 @@ lemma derive_cnode_cap_as_vroot:
   done
 
 lemma derive_cnode_cap_as_croot:
-  "\<lbrace>op = s\<rbrace> derive_cap (b, c) a
-   \<lbrace>\<lambda>croot_cap'. if Structures_A.is_cnode_cap croot_cap' then \<lambda>sa. s = sa \<and> croot_cap' = a \<and> is_cnode_cap a else op = s\<rbrace>,\<lbrace>\<lambda>r. op = s\<rbrace>"
+  "\<lbrace>(=) s\<rbrace> derive_cap (b, c) a
+   \<lbrace>\<lambda>croot_cap'. if Structures_A.is_cnode_cap croot_cap' then \<lambda>sa. s = sa \<and> croot_cap' = a \<and> is_cnode_cap a else (=) s\<rbrace>,\<lbrace>\<lambda>r. (=) s\<rbrace>"
   apply (clarsimp simp:derive_cap_def is_cap_simps)
   apply (case_tac a)
              apply (clarsimp|wp)+
@@ -130,7 +130,7 @@ lemma valid_vtable_root_update:
   done
 
 lemma decode_set_space_translate_tcb_invocation:
-  "\<And>s. \<lbrace>op = s\<rbrace> decode_set_space x (cap.ThreadCap t) slot' (excaps')
+  "\<And>s. \<lbrace>(=) s\<rbrace> decode_set_space x (cap.ThreadCap t) slot' (excaps')
     \<lbrace>\<lambda>rv s'. s' = s \<and>
     (rv =  tcb_invocation.ThreadControl t slot' (tc_new_fault_ep rv) None None (tc_new_croot rv) (tc_new_vroot rv) None) \<and>
     (tc_new_fault_ep rv = Some (to_bl (x!0)))
@@ -140,7 +140,7 @@ lemma decode_set_space_translate_tcb_invocation:
         = (if (x!1 = 0) then Some (fst (excaps' ! 0)) else Some (update_cap_data False (x ! Suc 0) (fst (excaps' ! 0)))))
     \<and> (option_map (\<lambda>c. fst c)  (tc_new_vroot rv) = Some (fst (excaps' ! Suc 0)))
     \<and> (option_map (\<lambda>c. is_cnode_cap (fst c)) (tc_new_croot rv) = Some True)
-    \<rbrace>,\<lbrace>\<lambda>rv. op = s\<rbrace>"
+    \<rbrace>,\<lbrace>\<lambda>rv. (=) s\<rbrace>"
   apply (case_tac "excaps' ! 0")
   apply (case_tac "excaps' ! Suc 0")
   apply (clarsimp simp:decode_set_space_def whenE_def | rule conjI)+
@@ -190,7 +190,7 @@ lemma decode_set_space_translate_tcb_invocation:
 
 lemma decode_tcb_cap_label_not_match:
   "\<lbrakk>\<forall>ui. Some (TcbIntent ui) \<noteq> transform_intent (invocation_type label') args'; cap' = Structures_A.ThreadCap t\<rbrakk>
-    \<Longrightarrow> \<lbrace>op=s\<rbrace>Decode_A.decode_tcb_invocation label' args' cap' slot' excaps' \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>e. op=s\<rbrace>"
+    \<Longrightarrow> \<lbrace>(=s\<rbrace>Decode_A.decode_tcb_invocation) label' args' cap' slot' excaps' \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>e. (=s\<rbrace>)"
   apply (simp add:Decode_A.decode_tcb_invocation_def)
   apply (case_tac "invocation_type label'")
     apply (simp_all add:transform_intent_def)
@@ -484,7 +484,7 @@ lemma dcorres_setup_reply_master:
     apply (subgoal_tac "opt_cap (obj_id,tcb_replycap_slot) (transform s')
       = Some (cdl_cap.MasterReplyCap obj_id)")
      apply (clarsimp simp:corres_underlying_def set_cap_is_noop_opt_cap return_def)
-    apply (subgoal_tac "cte_wp_at (op =  (cap.ReplyCap obj_id True))
+    apply (subgoal_tac "cte_wp_at ((=)  (cap.ReplyCap obj_id True))
       (obj_id,tcb_cnode_index 2) s'")
      apply (clarsimp dest!:iffD1[OF cte_wp_at_caps_of_state])
      apply (drule caps_of_state_transform_opt_cap)
@@ -567,7 +567,7 @@ lemma restart_corres:
             apply wp
            apply (simp add:not_idle_thread_def)
            apply ((wp|wps)+)[2]
-         apply (rule_tac Q="op = s' and invs" in  hoare_vcg_precond_imp)
+         apply (rule_tac Q="(=) s' and invs" in  hoare_vcg_precond_imp)
           apply (rule hoare_strengthen_post
              [where Q="\<lambda>r. invs and tcb_at obj_id and not_idle_thread obj_id and valid_etcbs"])
            apply (simp add:not_idle_thread_def)
@@ -701,7 +701,7 @@ lemma not_idle_after_restart [wp]:
    apply (simp add:cancel_ipc_def)
    apply (wp not_idle_after_blocked_cancel_ipc not_idle_after_reply_cancel_ipc
    not_idle_thread_cancel_signal | wpc)+
-   apply (rule hoare_strengthen_post[where Q="\<lambda>r. st_tcb_at (op = r) obj_id'
+   apply (rule hoare_strengthen_post[where Q="\<lambda>r. st_tcb_at ((=) r) obj_id'
                                                   and not_idle_thread obj_id' and invs"])
     apply (wp gts_sp)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def not_idle_thread_def | rule conjI)+
@@ -1105,7 +1105,7 @@ lemma dcorres_tcb_update_ipc_buffer:
                  apply (rule dcorres_insert_cap_combine)
                  apply (clarsimp+)[2]
                apply (rule hoare_strengthen_post[OF hoare_TrueI[where P = \<top>]],simp)
-              apply (rule_tac Q = "\<lambda>r s. cte_wp_at (op = cap.NullCap) (obj_id', tcb_cnode_index 4) s
+              apply (rule_tac Q = "\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index 4) s
                                          \<and> cte_wp_at (\<lambda>_. True) (ab, ba) s
                                          \<and> valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s
                                          \<and> valid_mdb s \<and> valid_objs s\<and> not_idle_thread ab s \<and> valid_etcbs s
@@ -1196,7 +1196,7 @@ lemma dcorres_tcb_update_vspace_root:
                apply (simp add: transform_cap_def,simp)
              apply wp
             apply (simp add: same_object_as_def)
-            apply (rule_tac Q = "\<lambda>r s. cte_wp_at (op = cap.NullCap) (obj_id', tcb_cnode_index (Suc 0)) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
+            apply (rule_tac Q = "\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index (Suc 0)) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
               \<and>  valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s \<and> valid_mdb s \<and> not_idle_thread ba s \<and> valid_objs s \<and> valid_etcbs s
               \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow> ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index (Suc 0)) s)"
               in hoare_strengthen_post)
@@ -1276,7 +1276,7 @@ lemma dcorres_tcb_update_cspace_root:
         apply (rule dcorres_insert_cap_combine[folded alternative_com])
         apply ((clarsimp simp:is_cap_simps)+)[2]
         apply wp
-      apply (rule_tac Q = "\<lambda>r s. cte_wp_at (op = cap.NullCap) (obj_id', tcb_cnode_index 0) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
+      apply (rule_tac Q = "\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index 0) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
         \<and>  valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s \<and> valid_mdb s \<and> not_idle_thread ba s \<and> valid_objs s \<and> valid_etcbs s
         \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow> ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index 0) s)"
         in hoare_strengthen_post)
@@ -1415,7 +1415,7 @@ lemma set_mcpriority_transform:
   apply wp
   apply (clarsimp simp: transform_def transform_current_thread_def transform_objects_def)
   apply (thin_tac "i = _")
-  apply (rule_tac f="op ++ ((\<lambda>ptr. Some cdl_object.Untyped) |` (- {idle_thread s}))" in arg_cong)
+  apply (rule_tac f="(++) ((\<lambda>ptr. Some cdl_object.Untyped) |` (- {idle_thread s}))" in arg_cong)
   apply (rule ext)
   apply (rename_tac s tcb ptr)
   apply (drule (1) valid_etcbs_get_tcb_get_etcb; clarsimp)

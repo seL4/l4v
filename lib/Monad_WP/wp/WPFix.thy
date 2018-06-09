@@ -40,14 +40,14 @@ where
   "target_var n x = x"
 
 lemma strengthen_to_conjunct1_target:
-  "strengthen_implementation.st True (op \<longrightarrow>)
+  "strengthen_implementation.st True (\<longrightarrow>)
     (target_var n (P \<and> Q)) (target_var n P)"
   by (simp add: strengthen_implementation.st_def target_var_def)
 
 lemma strengthen_to_conjunct2_target_trans:
-  "strengthen_implementation.st True (op \<longrightarrow>)
+  "strengthen_implementation.st True (\<longrightarrow>)
         (target_var n Q) R
-    \<Longrightarrow> strengthen_implementation.st True (op \<longrightarrow>)
+    \<Longrightarrow> strengthen_implementation.st True (\<longrightarrow>)
         (target_var n (P \<and> Q)) R"
   by (simp add: strengthen_implementation.st_def target_var_def)
 
@@ -58,7 +58,7 @@ lemma target_var_drop_func:
 named_theorems wp_fix_strgs
 
 lemma strg_target_to_true:
-  "strengthen_implementation.st F (op \<longrightarrow>) (target_var n True) True"
+  "strengthen_implementation.st F (\<longrightarrow>) (target_var n True) True"
   by (simp add: target_var_def strengthen_implementation.strengthen_refl)
 
 ML {*
@@ -161,9 +161,9 @@ fun classify v thm = let
         (Thm.prems_of thm ~~ (1 upto Thm.nprems_of thm))
         |> map (apfst (Logic.strip_assums_concl #> Envir.beta_eta_contract))
     fun class t = case dest_strg t of
-        ("st", SOME (@{term True}, @{term "op -->"}, lhs, _))
+        ("st", SOME (@{term True}, @{term "(-->)"}, lhs, _))
             => if has_t lhs then SOME true else NONE
-      | ("st", SOME (@{term False}, @{term "op -->"}, lhs, _))
+      | ("st", SOME (@{term False}, @{term "(-->)"}, lhs, _))
             => if has_t lhs then SOME false else NONE
       | _ => NONE
     val classn = map (apfst class) relevant

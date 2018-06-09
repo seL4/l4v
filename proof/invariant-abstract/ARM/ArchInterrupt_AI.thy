@@ -33,7 +33,7 @@ lemma (* decode_irq_control_valid *)[Interrupt_AI_asms]:
   "\<lbrace>\<lambda>s. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> cap)
         \<and> (\<forall>cap \<in> set caps. is_cnode_cap cap \<longrightarrow>
                 (\<forall>r \<in> cte_refs cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s))
-        \<and> cte_wp_at (op = cap.IRQControlCap) slot s\<rbrace>
+        \<and> cte_wp_at ((=) cap.IRQControlCap) slot s\<rbrace>
      decode_irq_control_invocation label args slot caps
    \<lbrace>irq_control_inv_valid\<rbrace>,-"
   apply (simp add: decode_irq_control_invocation_def Let_def split_def

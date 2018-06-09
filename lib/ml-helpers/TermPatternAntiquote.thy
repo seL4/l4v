@@ -86,9 +86,9 @@ fun gen_term_pattern (Var (("_dummy_", _), _)) = "_"
 (* Create term pattern. All Var names must be distinct in order to generate ML variables. *)
 fun term_pattern_antiquote ctxt s =
   let val pat = Proof_Context.read_term_pattern ctxt s
-      val add_var_names' = fold_aterms (fn Var (v, _) => curry op:: v | _ => I);
+      val add_var_names' = fold_aterms (fn Var (v, _) => curry (::) v | _ => I);
       val vars = add_var_names' pat [] |> filter (fn (n, _) => n <> "_dummy_")
-      val _ = if vars = distinct op= vars then () else
+      val _ = if vars = distinct (=) vars then () else
                 raise TERM ("Pattern contains duplicate vars", [pat])
   in "(" ^ gen_term_pattern pat ^ ")" end
 

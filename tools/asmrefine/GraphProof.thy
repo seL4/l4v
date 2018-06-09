@@ -248,7 +248,7 @@ where
 
 abbreviation
   "equals v1 expr1 v2 expr2
-    \<equiv> related_pair v1 expr1 v2 expr2 (split (op =))"
+    \<equiv> related_pair v1 expr1 v2 expr2 (split (=))"
 
 abbreviation
   "equals' n1 restrs1 expr1 n2 restrs2 expr2
@@ -1699,7 +1699,7 @@ lemma visit_Call_loop_lemma:
 lemma pred_restrs_list:
   "pred_restrs nn (restrs_list xs)
     = restrs_list (map (\<lambda>(i, ns). (i, if nn = NextNode i
-        then map (\<lambda>x. x - 1) (filter (op \<noteq> 0) ns) else ns)) xs)"
+        then map (\<lambda>x. x - 1) (filter ((\<noteq>) 0) ns) else ns)) xs)"
   apply (clarsimp simp: pred_restrs_def split: next_node.split)
   apply (rule sym)
   apply (induct xs, simp_all)

@@ -133,7 +133,7 @@ text{*
 Establish that the pointers this syscall will change are labelled with
 the current agent's label.
 
-NOTE: @{term "op \<subseteq>"} is used consciously here to block the simplifier
+NOTE: @{term "(\<subseteq>)"} is used consciously here to block the simplifier
 rewriting (the equivalent equalities) in the wp proofs.
 
 *}

@@ -395,7 +395,7 @@ lemma lookupExtraCaps_excaps_in_mem[wp]:
   done
 
 lemma getCurThread_ccorres:
-  "ccorres (op = \<circ> tcb_ptr_to_ctcb_ptr) thread_'
+  "ccorres ((=) \<circ> tcb_ptr_to_ctcb_ptr) thread_'
        \<top> UNIV hs getCurThread (\<acute>thread :== \<acute>ksCurThread)"
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)
@@ -427,7 +427,7 @@ lemma messageInfoFromWord_spec:
   done
 
 lemma threadGet_tcbIpcBuffer_ccorres [corres]:
-  "ccorres (op =) w_bufferPtr_' (tcb_at' tptr) UNIV hs
+  "ccorres (=) w_bufferPtr_' (tcb_at' tptr) UNIV hs
            (threadGet tcbIPCBuffer tptr)
            (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t (Ptr &(tcb_ptr_to_ctcb_ptr tptr\<rightarrow>
                                   [''tcbIPCBuffer_C''])::machine_word ptr)\<rbrace>
@@ -534,7 +534,7 @@ lemma cap_case_EndpointCap_CanSend_CanGrant:
            split: capability.split bool.split)
 
 lemma threadGet_tcbFaultHandler_ccorres [corres]:
-  "ccorres (op =) handlerCPtr_' (tcb_at' tptr) UNIV hs
+  "ccorres (=) handlerCPtr_' (tcb_at' tptr) UNIV hs
            (threadGet tcbFaultHandler tptr)
            (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t (tcb_ptr_to_ctcb_ptr tptr)\<rbrace>
                (\<acute>handlerCPtr :==
@@ -1571,7 +1571,7 @@ lemma ccorres_ntfn_cases:
 
 (* FIXME: generalise the one in Interrupt_C *)
 lemma getIRQSlot_ccorres2:
-  "ccorres (op = \<circ> Ptr) slot_'
+  "ccorres ((=) \<circ> Ptr) slot_'
           \<top> UNIV hs
       (getIRQSlot irq) (\<acute>slot :== CTypesDefs.ptr_add \<acute>intStateIRQNode (uint (ucast irq :: machine_word)))"
   apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])

@@ -33,7 +33,7 @@ ML {*
   val cs = Term.add_consts b_t []
 *}
 
-ML {* member op= (map #1 cs) "CProof.strictc_errortype.C_Guard" orelse
+ML {* member (=) (map #1 cs) "CProof.strictc_errortype.C_Guard" orelse
       OS.Process.exit OS.Process.failure *}
 
 end

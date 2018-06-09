@@ -599,7 +599,7 @@ lemma map2_append1:
 lemma set_cap_caps_of_state_monad:
   "(v, s') \<in> fst (set_cap cap p s) \<Longrightarrow> caps_of_state s' = (caps_of_state s (p \<mapsto> cap))"
   apply (drule use_valid)
-    apply (rule set_cap_caps_of_state [where P="op = (caps_of_state s (p\<mapsto>cap))"])
+    apply (rule set_cap_caps_of_state [where P="(=) (caps_of_state s (p\<mapsto>cap))"])
    apply (rule refl)
   apply simp
   done
@@ -1734,7 +1734,7 @@ lemma is_derived_not_Null:
 
 lemma mdb_cte_at_cdt_null:
   "\<lbrakk>caps_of_state s p = Some cap.NullCap;
-    mdb_cte_at (swp (cte_wp_at (op\<noteq> cap.NullCap)) s) (cdt s)\<rbrakk>
+    mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrakk>
    \<Longrightarrow> (cdt s) p = None"
   apply (rule ccontr)
   apply (clarsimp)
@@ -1755,7 +1755,7 @@ lemma set_untyped_cap_as_full_cdt[wp]:
 lemma mdb_cte_at_set_untyped_cap_as_full:
   assumes localcong:"\<And>a cap. P (cap\<lparr>free_index:= a\<rparr>) = P cap"
   shows "
-  \<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at P) s) (cdt s) \<and> cte_wp_at (op = src_cap) src s\<rbrace>
+  \<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at P) s) (cdt s) \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
   set_untyped_cap_as_full src_cap cap src
   \<lbrace>\<lambda>rv s'. mdb_cte_at (swp (cte_wp_at P) s') (cdt s') \<rbrace>"
   apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_splits)
@@ -1846,12 +1846,12 @@ lemma mdb_cte_at_more_swp[simp]: "mdb_cte_at
   done
 
 lemma cap_insert_mdb_cte_at:
-  "\<lbrace>(\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)) and (\<lambda>s. no_mloop (cdt s))
+  "\<lbrace>(\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)) and (\<lambda>s. no_mloop (cdt s))
     and valid_cap cap and
     (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s) and
     K (src \<noteq> dest) \<rbrace>
     cap_insert cap src dest
-   \<lbrace>\<lambda>_ s.  mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
+   \<lbrace>\<lambda>_ s.  mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrace>"
   unfolding cap_insert_def
   apply (wp | simp cong: update_original_mdb_cte_at split del: if_split)+
   apply (wp update_cdt_mdb_cte_at set_cap_mdb_cte_at[simplified swp_def] | simp split del: if_split)+
@@ -1883,7 +1883,7 @@ lemma cap_insert_mdb_cte_at:
 
 
 lemma mdb_cte_at_rewrite:
-  "\<lbrakk>mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrakk>
+  "\<lbrakk>mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrakk>
    \<Longrightarrow> mdb_cte_at (\<lambda>p. \<exists>c. (caps_of_state s) p = Some c \<and> cap.NullCap \<noteq> c)
                   (cdt s)"
  apply (clarsimp simp:mdb_cte_at_def)
@@ -1979,7 +1979,7 @@ lemma reply_mdb_update_free_index:
 
 
 lemma set_untyped_cap_as_full_valid_mdb:
-  "\<lbrace>valid_mdb and cte_wp_at (op = src_cap) src\<rbrace>
+  "\<lbrace>valid_mdb and cte_wp_at ((=) src_cap) src\<rbrace>
    set_untyped_cap_as_full src_cap c src
    \<lbrace>\<lambda>rv. valid_mdb\<rbrace>"
   apply (simp add:valid_mdb_def set_untyped_cap_as_full_def split del: if_split)
@@ -1999,7 +1999,7 @@ lemma set_untyped_cap_as_full_valid_mdb:
 
 
 lemma set_free_index_valid_mdb:
-  "\<lbrace>\<lambda>s. valid_objs s \<and> valid_mdb s \<and> cte_wp_at (op = cap ) cref s \<and>
+  "\<lbrace>\<lambda>s. valid_objs s \<and> valid_mdb s \<and> cte_wp_at ((=) cap ) cref s \<and>
         (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and> idx \<le> 2^cap_bits cap)\<rbrace>
    set_cap (free_index_update (\<lambda>_. idx) cap) cref
    \<lbrace>\<lambda>rv s'. valid_mdb s'\<rbrace>"
@@ -2116,7 +2116,7 @@ lemma set_free_index_valid_mdb:
    using cstate
    apply clarsimp
    done
-  assume mdb:"mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)"
+  assume mdb:"mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
   and desc_inc:"descendants_inc (cdt s) (caps_of_state s)"
   and cte:"caps_of_state s cref = Some (cap.UntypedCap dev r bits f)"
   show "descendants_inc (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
@@ -2340,9 +2340,9 @@ lemma derived_not_Null [simp]:
 
 
 lemma set_untyped_cap_as_full_impact:
-  "\<lbrace>cte_wp_at (op = src_cap) src\<rbrace>
+  "\<lbrace>cte_wp_at ((=) src_cap) src\<rbrace>
    set_untyped_cap_as_full src_cap c src
-   \<lbrace>\<lambda>r. cte_wp_at (op = (masked_as_full src_cap c)) src\<rbrace>"
+   \<lbrace>\<lambda>r. cte_wp_at ((=) (masked_as_full src_cap c)) src\<rbrace>"
   apply (simp only: set_untyped_cap_as_full_def)
   apply (rule hoare_pre)
   apply (wp set_cap_cte_wp_at)
@@ -2398,7 +2398,7 @@ lemma connect_eqv_singleE':
   apply (simp add:connect_eqv_singleE[OF single])
   done
 
-lemma identity_eq :"(op = x) = (\<lambda>c. c = x)"
+lemma identity_eq :"((=) x) = (\<lambda>c. c = x)"
   by (rule ext) auto
 
 lemma forall_eq: "(\<forall>x. P x = Q x) \<Longrightarrow> (\<forall>x. P x) = (\<forall>b. Q b)"
@@ -2434,7 +2434,7 @@ lemma cte_at_get_cap:
 
 
 lemma cte_at_get_cap_wp:
-  "cte_at p s \<Longrightarrow> \<exists>c. (c, s) \<in> fst (get_cap p s) \<and> cte_wp_at (op = c) p s"
+  "cte_at p s \<Longrightarrow> \<exists>c. (c, s) \<in> fst (get_cap p s) \<and> cte_wp_at ((=) c) p s"
   by (clarsimp simp: cte_wp_at_def)
 
 
@@ -2697,7 +2697,7 @@ locale mdb_move_abs =
 
   assumes valid_mdb: "valid_mdb s"
 
-  assumes dest_null: "cte_wp_at (op = cap.NullCap) dest s"
+  assumes dest_null: "cte_wp_at ((=) cap.NullCap) dest s"
 
   assumes m: "m = cdt s"
 
@@ -2797,7 +2797,7 @@ lemma direct_src_loop_unfolded [iff]:
 
 
 lemma mdb_cte_at:
-  "mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) m"
+  "mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) m"
   using valid_mdb by (simp add: valid_mdb_def m)
 
 
@@ -3300,7 +3300,7 @@ lemma mdb_move_abs_gen:
 lemma cap_move_mdb [wp]:
   fixes dest cap src
   shows
-  "\<lbrace>valid_mdb and cte_wp_at (op = cap.NullCap) dest and
+  "\<lbrace>valid_mdb and cte_wp_at ((=) cap.NullCap) dest and
     cte_wp_at (\<lambda>c. weak_derived cap c \<and> c \<noteq> cap.NullCap) src\<rbrace>
   cap_move cap src dest
   \<lbrace>\<lambda>_. valid_mdb :: 'state_ext state \<Rightarrow> bool\<rbrace>"
@@ -3418,7 +3418,7 @@ lemma set_cdt_iflive[wp]:
 
 lemma set_untyped_cap_as_full_cap_to:
   shows
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> cte_wp_at (op = src_cap) src s\<rbrace>
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. if_live_then_nonz_cap s\<rbrace>"
   apply (clarsimp simp:if_live_then_nonz_cap_def set_untyped_cap_as_full_def
@@ -3450,7 +3450,7 @@ lemma tcb_cap_slot_regular:
 
 
 lemma set_free_index_valid_pspace:
-  "\<lbrace>\<lambda>s. valid_pspace s \<and> cte_wp_at (op = cap) cref s \<and>
+  "\<lbrace>\<lambda>s. valid_pspace s \<and> cte_wp_at ((=) cap) cref s \<and>
         (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and>idx \<le> 2^ cap_bits cap)\<rbrace>
    set_cap (free_index_update (\<lambda>_. idx) cap) cref
    \<lbrace>\<lambda>rv s'. valid_pspace s'\<rbrace>"
@@ -3491,7 +3491,7 @@ locale CSpace_AI_set_free_index_invs =
   assumes set_free_index_invs_known_cap:
     "\<And>cap idx.
       \<lbrace>\<lambda>s::'state_ext state. (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and> idx \<le> 2^cap_bits cap)
-           \<and> invs s \<and> cte_wp_at (op = cap ) cref s\<rbrace>
+           \<and> invs s \<and> cte_wp_at ((=) cap ) cref s\<rbrace>
         set_cap (free_index_update (\<lambda>_. idx) cap) cref
       \<lbrace>\<lambda>rv s'. invs s'\<rbrace>"
 
@@ -3512,7 +3512,7 @@ lemma (in CSpace_AI_set_free_index_invs) set_free_index_invs:
   done
 
 lemma set_untyped_cap_as_full_cap_zombies_final:
-  "\<lbrace>zombies_final and cte_wp_at (op = src_cap) src\<rbrace>
+  "\<lbrace>zombies_final and cte_wp_at ((=) src_cap) src\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s.  zombies_final s\<rbrace>"
   apply (clarsimp simp:set_untyped_cap_as_full_def
@@ -3531,7 +3531,7 @@ lemma set_untyped_cap_as_full_cap_zombies_final:
 
 (* FIXME: MOVE *)
 lemma set_untyped_cap_as_full_valid_pspace:
-  "\<lbrace>valid_pspace and cte_wp_at (op = src_cap) src\<rbrace>
+  "\<lbrace>valid_pspace and cte_wp_at ((=) src_cap) src\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. valid_pspace s \<rbrace>"
   apply (clarsimp simp:valid_pspace_def)
@@ -3541,7 +3541,7 @@ done
 
 
 lemma cap_insert_valid_pspace:
-  "\<lbrace>valid_pspace and cte_wp_at (op = cap.NullCap) dest
+  "\<lbrace>valid_pspace and cte_wp_at ((=) cap.NullCap) dest
                  and valid_cap cap and tcb_cap_valid cap dest
       and (\<lambda>s. \<forall>r\<in>obj_refs cap. \<forall>p'. dest \<noteq> p' \<and> cte_wp_at (\<lambda>cap'. r \<in> obj_refs cap') p' s
                                     \<longrightarrow> (cte_wp_at (Not \<circ> is_zombie) p' s \<and> \<not> is_zombie cap))\<rbrace>
@@ -3587,7 +3587,7 @@ lemma cap_insert_idle [wp]:
 crunch reply[wp]: set_cdt "valid_reply_caps"
 
 lemma set_untyped_cap_as_full_has_reply_cap:
-  "\<lbrace>\<lambda>s. (has_reply_cap t s) \<and> cte_wp_at (op = src_cap) src s\<rbrace>
+  "\<lbrace>\<lambda>s. (has_reply_cap t s) \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. (has_reply_cap t s)\<rbrace>"
   apply (clarsimp simp:has_reply_cap_def)
@@ -3601,7 +3601,7 @@ lemma set_untyped_cap_as_full_has_reply_cap:
 
 
 lemma set_untyped_cap_as_full_has_reply_cap_neg:
-  "\<lbrace>\<lambda>s. \<not> (has_reply_cap t s) \<and> cte_wp_at (op = src_cap) src s\<rbrace>
+  "\<lbrace>\<lambda>s. \<not> (has_reply_cap t s) \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. \<not> (has_reply_cap t s)\<rbrace>"
   apply (clarsimp simp:has_reply_cap_def)
@@ -3615,12 +3615,12 @@ lemma set_untyped_cap_as_full_has_reply_cap_neg:
 
 
 lemma caps_of_state_cte_wp_at_neq:
-  "(caps_of_state s slot \<noteq> Some capa) = (\<not> cte_wp_at (op = capa) slot s)"
+  "(caps_of_state s slot \<noteq> Some capa) = (\<not> cte_wp_at ((=) capa) slot s)"
   by (clarsimp simp:cte_wp_at_caps_of_state)
 
 
 lemma set_untyped_cap_as_full_unique_reply_caps:
-  "\<lbrace>\<lambda>s. unique_reply_caps (caps_of_state s) \<and> cte_wp_at (op = src_cap) src s\<rbrace>
+  "\<lbrace>\<lambda>s. unique_reply_caps (caps_of_state s) \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. unique_reply_caps (caps_of_state s)\<rbrace>"
   apply (simp add:unique_reply_caps_def)
@@ -3649,7 +3649,7 @@ lemma set_untyped_cap_as_full_unique_reply_caps:
 
 
 lemma set_untyped_cap_as_full_valid_reply_masters:
-  "\<lbrace>\<lambda>s. valid_reply_masters s \<and> cte_wp_at (op = src_cap) src s\<rbrace>
+  "\<lbrace>\<lambda>s. valid_reply_masters s \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. valid_reply_masters s \<rbrace>"
   apply (clarsimp simp:set_untyped_cap_as_full_def)
@@ -3665,7 +3665,7 @@ crunch global_refs[wp]: set_untyped_cap_as_full "\<lambda>s. P (global_refs s)"
 
 
 lemma set_untyped_cap_as_full_valid_global_refs[wp]:
-  "\<lbrace>valid_global_refs and cte_wp_at (op = src_cap) src\<rbrace>
+  "\<lbrace>valid_global_refs and cte_wp_at ((=) src_cap) src\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>r. valid_global_refs\<rbrace>"
   apply (simp add:valid_global_refs_def valid_refs_def)
@@ -3800,18 +3800,18 @@ locale CSpace_AI_set_untyped_cap_as_full =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes set_untyped_cap_as_full_valid_arch_caps:
     "\<And>src_cap src cap.
-      \<lbrace>valid_arch_caps and cte_wp_at (op = src_cap) src\<rbrace>
+      \<lbrace>valid_arch_caps and cte_wp_at ((=) src_cap) src\<rbrace>
         set_untyped_cap_as_full src_cap cap src
       \<lbrace>\<lambda>ya. valid_arch_caps :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes set_untyped_cap_as_full[wp]:
     "\<And>src_cap a b src cap.
-      \<lbrace>\<lambda>s::'state_ext state. no_cap_to_obj_with_diff_ref a b s \<and> cte_wp_at (op = src_cap) src s\<rbrace>
+      \<lbrace>\<lambda>s::'state_ext state. no_cap_to_obj_with_diff_ref a b s \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
         set_untyped_cap_as_full src_cap cap src
       \<lbrace>\<lambda>rv s. no_cap_to_obj_with_diff_ref a b s\<rbrace>"
 
 
 lemma set_untyped_cap_as_full_is_final_cap':
-  "\<lbrace>is_final_cap' cap' and cte_wp_at (op = src_cap) src\<rbrace>
+  "\<lbrace>is_final_cap' cap' and cte_wp_at ((=) src_cap) src\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. is_final_cap' cap' s\<rbrace>"
    apply (simp add:set_untyped_cap_as_full_def)
@@ -3853,7 +3853,7 @@ lemma set_untyped_cap_as_full_obj_at_impossible:
 
 
 lemma caps_of_state_cteD':
-  "(caps_of_state m p = Some x \<and> P x) = cte_wp_at (op = x and P) p m"
+  "(caps_of_state m p = Some x \<and> P x) = cte_wp_at ((=) x and P) p m"
   by (clarsimp simp:cte_wp_at_caps_of_state)
 
 
@@ -3964,7 +3964,7 @@ lemma set_original_valid_ioc[wp]:
 
 
 lemma valid_ioc_NullCap_not_original:
-  "\<lbrakk>valid_ioc s; cte_wp_at (op= cap.NullCap) slot s\<rbrakk>
+  "\<lbrakk>valid_ioc s; cte_wp_at ((=) cap.NullCap) slot s\<rbrakk>
    \<Longrightarrow> \<not> is_original_cap s slot"
   by (cases slot) (fastforce simp add: cte_wp_at_caps_of_state valid_ioc_def)
 

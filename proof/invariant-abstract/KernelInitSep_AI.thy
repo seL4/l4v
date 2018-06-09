@@ -1407,7 +1407,7 @@ instantiation sep_state :: stronger_sep_algebra
 begin
 
 definition
-  "(op +) \<equiv> sep_add"
+  "(+) \<equiv> sep_add"
 definition
   "sep_disj_sep_state \<equiv> sep_disj"
 definition

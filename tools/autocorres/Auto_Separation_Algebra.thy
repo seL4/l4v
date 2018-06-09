@@ -33,7 +33,7 @@ end
 instantiation "bool" ::  stronger_sep_algebra
    begin
        definition "zero_bool \<equiv> False"
-       definition "plus_bool  \<equiv> (op \<or>)"
+       definition "plus_bool  \<equiv> (\<or>)"
        definition "sep_disj_bool \<equiv> \<lambda>p q. p \<longrightarrow> \<not>q"
      instance
  apply (standard)

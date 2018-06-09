@@ -995,7 +995,7 @@ where
    in the concrete precondition. Not sure if this is necessary, or even a good idea. *)
 lemma corres_symb_exec_l'':
   assumes corres: "\<And>rv. corres_underlying sr nf nf' r (R rv) (R' rv) (x rv) y"
-  assumes no_upd: "\<And>s. P s \<Longrightarrow> \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>"
+  assumes no_upd: "\<And>s. P s \<Longrightarrow> \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>"
   assumes result: "\<lbrace>Q\<rbrace> m \<lbrace>R\<rbrace>"
   assumes nofail: "\<not> nf \<longrightarrow> no_fail P m"
   assumes mtfail: "empty_fail m"

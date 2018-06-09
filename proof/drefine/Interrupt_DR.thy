@@ -287,7 +287,7 @@ lemma handle_interrupt_corres:
   apply (clarsimp split:irq_state.splits simp:corres_free_fail | rule conjI)+
    apply (simp add:Interrupt_D.handle_interrupt_def bind_assoc)
    apply (rule corres_guard_imp)
-     apply (rule_tac Q'="op=s'" in corres_split[OF _ dcorres_get_irq_slot])
+     apply (rule_tac Q'="(=s')" in corres_split[OF _ dcorres_get_irq_slot])
        apply (rule_tac R'="\<lambda>rv.  (\<lambda>s. (is_ntfn_cap rv \<longrightarrow> ntfn_at (obj_ref_of rv) s)) and invs and valid_etcbs"
           in corres_split[OF _ option_get_cap_corres])
           apply (case_tac rv'a)
@@ -387,7 +387,7 @@ lemma dcorres_invoke_irq_control:
    apply (simp add:valid_cap_def cap_aligned_def word_bits_def)
    apply (rule hoare_pre)
     apply (rule hoare_vcg_conj_lift)
-     apply (rule_tac Q = "\<lambda>r s. cte_wp_at (op = cap.IRQControlCap) (aa,ba) s
+     apply (rule_tac Q = "\<lambda>r s. cte_wp_at ((=) cap.IRQControlCap) (aa,ba) s
         \<and> is_original_cap s (aa, ba)" in hoare_strengthen_post)
       apply (wp set_irq_state_cte_wp_at set_irq_state_original)
      apply (simp add:cte_wp_at_def should_be_parent_of_def)
@@ -410,7 +410,7 @@ lemma dcorres_invoke_irq_control:
   apply (wp set_irq_state_dwp,simp)
   done
 
-lemma op_eq_simp: "(op = y) = (\<lambda>x. x = y)" by auto
+lemma op_eq_simp: "((=) y) = (\<lambda>x. x = y)" by auto
 
 lemma get_irq_slot_not_idle_wp:
   "\<lbrace>valid_idle and valid_irq_node \<rbrace> KHeap_A.get_irq_slot word \<lbrace>\<lambda>rv. not_idle_thread (fst rv)\<rbrace>"
@@ -420,7 +420,7 @@ lemma get_irq_slot_not_idle_wp:
   done
 
 lemma get_irq_slot_ex_cte_cap_wp_to:
-  "\<lbrace>\<lambda>s. valid_irq_node s \<and> (\<exists>slot. cte_wp_at (op = (cap.IRQHandlerCap w)) slot s)\<rbrace> KHeap_A.get_irq_slot w
+  "\<lbrace>\<lambda>s. valid_irq_node s \<and> (\<exists>slot. cte_wp_at ((=) (cap.IRQHandlerCap w)) slot s)\<rbrace> KHeap_A.get_irq_slot w
            \<lbrace>\<lambda>rv s. (ex_cte_cap_wp_to (\<lambda>a. True) rv s) \<rbrace>"
   apply (wpsimp simp:get_irq_slot_def)
   apply (clarsimp simp:ex_cte_cap_wp_to_def valid_irq_node_def)

@@ -1515,7 +1515,7 @@ lemma wordFromMessageInfo_spec:
   done
 
 lemma wordFromMessageInfo_ccorres [corres]:
-  "ccorres (op =) ret__unsigned_long_'
+  "ccorres (=) ret__unsigned_long_'
            \<top> {s. mi = message_info_to_H (mi_' s)} []
            (return (wordFromMessageInfo mi)) (Call wordFromMessageInfo_'proc)"
   apply (rule ccorres_from_spec_modifies [where P = \<top>, simplified])
@@ -2566,13 +2566,13 @@ lemma performASIDPoolInvocation_ccorres:
       apply (rule ccorres_rhs_assoc2)
       apply (rule_tac ccorres_split_nothrow [where r'=dc and xf'=xfdc])
           apply (simp add: updateCap_def)
-          apply (rule_tac A="cte_wp_at' (op = rv o cteCap) ctSlot
+          apply (rule_tac A="cte_wp_at' ((=) rv o cteCap) ctSlot
                              and K (isPML4Cap' rv \<and> asid \<le> mask asid_bits \<and> asid \<noteq> ucast asidInvalid)"
                       and A'=UNIV in ccorres_guard_imp2)
            apply (rule ccorres_pre_getCTE)
-           apply (rule_tac P="cte_wp_at' (op = rv o cteCap) ctSlot
+           apply (rule_tac P="cte_wp_at' ((=) rv o cteCap) ctSlot
                               and K (isPML4Cap' rv \<and> asid \<le> mask asid_bits \<and> asid \<noteq> ucast asidInvalid)
-                              and cte_wp_at' (op = rva) ctSlot"
+                              and cte_wp_at' ((=) rva) ctSlot"
                        and P'=UNIV in ccorres_from_vcg)
            apply (rule allI, rule conseqPre, vcg)
            apply (clarsimp simp: cte_wp_at_ctes_of)

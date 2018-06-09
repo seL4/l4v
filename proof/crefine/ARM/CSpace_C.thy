@@ -2215,28 +2215,6 @@ lemma deletedIRQHandler_ccorres:
   apply clarsimp
 done
 
-(* for long printing: switch off printing of abbreviation :
-
-ML {*fun show_abbrevs true = (PrintMode.print_mode := List.filter
-                           ((curry op<>) "no_abbrevs")
-                           (!PrintMode.print_mode))
-  | show_abbrevs false = (PrintMode.print_mode := "no_abbrevs"::
-                            (!PrintMode.print_mode))
-
-val () = show_abbrevs false;
-
-*}
-
-then
-ML {*show_abbrevs true*}
-ML {*show_abbrevs false*}
-
-or if within proof mode:
-
-ML_command {*show_abbrevs true*}
-ML_command {*show_abbrevs false*}
-
-*)
 lemmas ccorres_split_noop_lhs
   = ccorres_split_nothrow[where c=Skip, OF _ ceqv_refl _ _ hoarep.Skip,
     simplified ccorres_seq_skip]
@@ -2377,7 +2355,7 @@ lemma updateTrackedFreeIndex_noop_ccorres:
   apply (simp add: updateTrackedFreeIndex_def getSlotCap_def)
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_pre_getCTE[where P="\<lambda>rv.
-        cte_wp_at' (op = rv) slot and ?P" and P'="K ?P'"])
+        cte_wp_at' ((=) rv) slot and ?P" and P'="K ?P'"])
     apply (rule ccorres_from_vcg)
     apply (rule allI, rule conseqPre, vcg)
     apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -2433,7 +2411,7 @@ lemma clearUntypedFreeIndex_noop_ccorres:
       (clearUntypedFreeIndex p) Skip"
   apply (simp add: clearUntypedFreeIndex_def getSlotCap_def)
   apply (rule ccorres_guard_imp)
-    apply (rule ccorres_pre_getCTE[where P="\<lambda>rv. cte_wp_at' (op = rv) p
+    apply (rule ccorres_pre_getCTE[where P="\<lambda>rv. cte_wp_at' ((=) rv) p
         and valid_objs' and untyped_ranges_zero'" and P'="K UNIV"])
     apply (case_tac "cteCap cte", simp_all add: ccorres_guard_imp[OF ccorres_return_Skip])[1]
     apply (rule ccorres_guard_imp, rule updateTrackedFreeIndex_forward_noop_ccorres)
