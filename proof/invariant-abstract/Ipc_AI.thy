@@ -73,7 +73,7 @@ lemma get_recv_slot_inv[wp]:
   done
 
 lemma cte_wp_at_eq_simp:
-  "cte_wp_at (op = cap) = cte_wp_at (\<lambda>c. c = cap)"
+  "cte_wp_at ((=) cap) = cte_wp_at (\<lambda>c. c = cap)"
   apply (rule arg_cong [where f=cte_wp_at])
   apply (safe intro!: ext)
   done
@@ -91,7 +91,7 @@ lemma get_rs_cte_at[wp]:
 lemma get_rs_cte_at2[wp]:
   "\<lbrace>\<top>\<rbrace>
   get_receive_slots receiver recv_buf
-  \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. cte_wp_at (op = cap.NullCap) x s\<rbrace>"
+  \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. cte_wp_at ((=) cap.NullCap) x s\<rbrace>"
   apply (rule hoare_strengthen_post, rule get_rs_cte_at)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
@@ -279,9 +279,9 @@ locale Ipc_AI =
   assumes do_normal_transfer_non_null_cte_wp_at:
     "\<And>P ptr st send_buffer ep b gr rt recv_buffer.
       (\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c) \<Longrightarrow>
-        \<lbrace>valid_objs and cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr :: 'state_ext state \<Rightarrow> bool\<rbrace>
+        \<lbrace>valid_objs and cte_wp_at (P and ((\<noteq>) cap.NullCap)) ptr :: 'state_ext state \<Rightarrow> bool\<rbrace>
           do_normal_transfer st send_buffer ep b gr rt recv_buffer
-        \<lbrace>\<lambda>_. cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>"
+        \<lbrace>\<lambda>_. cte_wp_at (P and ((\<noteq>) cap.NullCap)) ptr\<rbrace>"
   assumes is_derived_ReplyCap [simp]:
     "\<And>m p t. is_derived m p (cap.ReplyCap t False) = (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = t)"
   assumes do_ipc_transfer_tcb_caps:
@@ -540,7 +540,7 @@ crunch ex_cte_cap_wp_to [wp]: set_extra_badge "ex_cte_cap_wp_to P p"
 
 lemma cap_insert_assume_null:
   "\<lbrace>P\<rbrace> cap_insert cap src dest \<lbrace>Q\<rbrace> \<Longrightarrow>
-   \<lbrace>\<lambda>s. cte_wp_at (op = cap.NullCap) dest s \<longrightarrow> P s\<rbrace> cap_insert cap src dest \<lbrace>Q\<rbrace>"
+   \<lbrace>\<lambda>s. cte_wp_at ((=) cap.NullCap) dest s \<longrightarrow> P s\<rbrace> cap_insert cap src dest \<lbrace>Q\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (erule impCE)
    apply (simp add: cap_insert_def)
@@ -560,7 +560,7 @@ lemma transfer_caps_loop_presM:
                                P s \<and> (vo \<longrightarrow> valid_objs s \<and> valid_mdb s \<and> real_cte_at dest s \<and> s \<turnstile> cap \<and> tcb_cap_valid cap dest s
                                    \<and> real_cte_at src s
                                    \<and> cte_wp_at (is_derived (cdt s) src cap) src s \<and> cap \<noteq> cap.NullCap)
-                       \<and> (em \<longrightarrow> cte_wp_at (op = cap.NullCap) dest s)
+                       \<and> (em \<longrightarrow> cte_wp_at ((=) cap.NullCap) dest s)
                        \<and> (ex \<longrightarrow> ex_cte_cap_wp_to (appropriate_cte_cap cap) dest s)\<rbrace>
                  cap_insert cap src dest \<lbrace>\<lambda>rv. P\<rbrace>"
   assumes eb: "\<And>b n. \<lbrace>P\<rbrace> set_extra_badge buffer b n \<lbrace>\<lambda>_. P\<rbrace>"
@@ -1935,9 +1935,9 @@ lemma do_ipc_transfer_non_null_cte_wp_at:
   fixes P ptr st ep b gr rt
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows
-  "\<lbrace>valid_objs and cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr :: 'state_ext state \<Rightarrow> bool\<rbrace>
+  "\<lbrace>valid_objs and cte_wp_at (P and ((\<noteq>) cap.NullCap)) ptr :: 'state_ext state \<Rightarrow> bool\<rbrace>
    do_ipc_transfer st ep b gr rt
-   \<lbrace>\<lambda>_. cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>"
+   \<lbrace>\<lambda>_. cte_wp_at (P and ((\<noteq>) cap.NullCap)) ptr\<rbrace>"
   unfolding do_ipc_transfer_def
   apply (wp do_normal_transfer_non_null_cte_wp_at hoare_drop_imp hoare_allI
     | wpc | simp add:imp)+
@@ -1971,7 +1971,7 @@ lemma cap_delete_one_valid_tcb_state:
   done
 
 lemma cte_wp_at_reply_cap_can_fast_finalise:
-  "cte_wp_at (op = (cap.ReplyCap tcb v)) slot s \<longrightarrow> cte_wp_at can_fast_finalise slot s"
+  "cte_wp_at ((=) (cap.ReplyCap tcb v)) slot s \<longrightarrow> cte_wp_at can_fast_finalise slot s"
   by (clarsimp simp: cte_wp_at_caps_of_state can_fast_finalise_def)
 
 context Ipc_AI begin
@@ -2063,7 +2063,7 @@ lemma update_waiting_invs:
 
 
 lemma cancel_ipc_ex_nonz_tcb_cap:
-  "\<lbrace>\<lambda>s. \<exists>ptr. cte_wp_at (op = (cap.ThreadCap p)) ptr s\<rbrace>
+  "\<lbrace>\<lambda>s. \<exists>ptr. cte_wp_at ((=) (cap.ThreadCap p)) ptr s\<rbrace>
      cancel_ipc t
    \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   apply (simp add: ex_nonz_cap_to_def cte_wp_at_caps_of_state
@@ -2110,7 +2110,7 @@ lemma cancel_ipc_simple2:
 
 
 lemma cancel_ipc_cte_wp_at_not_reply_state:
-  "\<lbrace>st_tcb_at (op \<noteq> BlockedOnReply) t and cte_wp_at P p\<rbrace>
+  "\<lbrace>st_tcb_at ((\<noteq>) BlockedOnReply) t and cte_wp_at P p\<rbrace>
     cancel_ipc t
    \<lbrace>\<lambda>r. cte_wp_at P p\<rbrace>"
   apply (simp add: cancel_ipc_def)
@@ -2197,7 +2197,7 @@ lemma rfk_invs: "\<lbrace>invs and tcb_at t\<rbrace> reply_from_kernel t r \<lbr
   unfolding reply_from_kernel_def by (cases r; wpsimp)
 
 lemma st_tcb_at_valid_st:
-  "\<lbrakk> invs s ; tcb_at t s ; st_tcb_at (op= st) t s \<rbrakk> \<Longrightarrow> valid_tcb_state st s"
+  "\<lbrakk> invs s ; tcb_at t s ; st_tcb_at ((=) st) t s \<rbrakk> \<Longrightarrow> valid_tcb_state st s"
   apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def
                   valid_objs_def tcb_at_def get_tcb_def pred_tcb_at_def
                   obj_at_def)
@@ -2210,7 +2210,7 @@ lemma st_tcb_at_valid_st:
 
 
 lemma gts_eq_ts:
-  "\<lbrace> tcb_at thread \<rbrace> get_thread_state thread \<lbrace>\<lambda>rv. st_tcb_at (op= rv) thread \<rbrace>"
+  "\<lbrace> tcb_at thread \<rbrace> get_thread_state thread \<lbrace>\<lambda>rv. st_tcb_at ((=) rv) thread \<rbrace>"
   apply (rule hoare_strengthen_post)
    apply (rule gts_sp)
   apply (clarsimp simp add: pred_tcb_at_def obj_at_def)
@@ -2633,7 +2633,7 @@ lemma ri_invs':
   notes dxo_wp_weak[wp del]
   shows
   "\<lbrace>(invs::'state_ext state \<Rightarrow> bool) and Q and st_tcb_at active t and ex_nonz_cap_to t
-         and cte_wp_at (op = cap.NullCap) (t, tcb_cnode_index 3)
+         and cte_wp_at ((=) cap.NullCap) (t, tcb_cnode_index 3)
          and (\<lambda>s. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)\<rbrace>
      receive_ipc t cap is_blocking \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>" (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (simp add: receive_ipc_def split_def)

@@ -1892,7 +1892,7 @@ lemma valid_global_refsD2:
                 cte_wp_at_caps_of_state)
 
 lemma valid_global_refsD:
-  "\<lbrakk> valid_global_refs s; cte_wp_at (op = cap) ptr s;
+  "\<lbrakk> valid_global_refs s; cte_wp_at ((=) cap) ptr s;
          r \<in> global_refs s \<rbrakk>
         \<Longrightarrow> r \<notin> cap_range cap"
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -1987,9 +1987,9 @@ lemmas update_aobj_cte_wp_at1[wp]
     = hoare_cte_wp_caps_of_state_lift [OF update_aobj_caps_of_state]
 
 lemma update_aobj_mdb_cte_at[wp]:
-  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>
+  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrace>
    update_object ptr (ArchObj pool)
-   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
+   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrace>"
   apply (rule hoare_pre)
   apply wps
   apply (clarsimp simp: mdb_cte_at_def cte_wp_at_caps_of_state)
@@ -3099,7 +3099,7 @@ lemma pspace_respects_device_region_dmo:
   apply (clarsimp simp: do_machine_op_def gets_def select_f_def simpler_modify_def
                         bind_def valid_def get_def return_def)
   apply (drule use_valid[OF _ valid_f,
-                         of _ _ _ "op = (device_state (machine_state s))" for s,
+                         of _ _ _ "(=) (device_state (machine_state s))" for s,
                          OF _ refl])
   by simp
 
@@ -3109,7 +3109,7 @@ lemma cap_refs_respects_device_region_dmo:
   apply (clarsimp simp: do_machine_op_def gets_def select_f_def simpler_modify_def bind_def
                         valid_def get_def return_def)
   apply (drule use_valid[OF _ valid_f,
-                         of _ _ _ "op = (device_state (machine_state s))" for s,
+                         of _ _ _ "(=) (device_state (machine_state s))" for s,
                          OF _ refl])
   by simp
 

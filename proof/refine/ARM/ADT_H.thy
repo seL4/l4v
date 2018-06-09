@@ -1305,7 +1305,7 @@ lemma cte_map_inj_through_cnp:
   by (drule arg_cong[where f=cnp]) metis
 
 lemma ctes_of_cte_wp_atD:
-  "ctes_of s p = Some cte \<Longrightarrow> cte_wp_at' (op = cte) p s"
+  "ctes_of s p = Some cte \<Longrightarrow> cte_wp_at' ((=) cte) p s"
 by (simp add: KHeap_R.cte_wp_at_ctes_of)
 
 
@@ -1603,7 +1603,7 @@ lemma next_slot_cte_at:
   apply force
   done
 
-lemma cte_at_has_cap: "cte_at slot s \<Longrightarrow> \<exists>c. cte_wp_at (op = c) slot s"
+lemma cte_at_has_cap: "cte_at slot s \<Longrightarrow> \<exists>c. cte_wp_at ((=) c) slot s"
   apply (drule cte_at_get_cap_wp)
   apply force
   done

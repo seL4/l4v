@@ -207,7 +207,7 @@ lemma user_data_relation_upd:
    apply (clarsimp simp: mask_pageBits_inner_beauty [OF al] byte_to_word_heap_def)
    apply (subst index_update)
     apply (simp, unat_arith, simp)
-   apply (subgoal_tac "map (op ! (word_rsplit w)) [0,1,2,3]
+   apply (subgoal_tac "map ((!) (word_rsplit w)) [0,1,2,3]
                       = (word_rsplit w :: word8 list)")
     apply (clarsimp simp: word_rcat_rsplit)
    apply (cut_tac w=w and m=4 and 'a=8
@@ -255,7 +255,7 @@ lemma user_data_device_relation_upd:
    apply (clarsimp simp: mask_pageBits_inner_beauty [OF al] byte_to_word_heap_def)
    apply (subst index_update)
     apply (simp, unat_arith, simp)
-   apply (subgoal_tac "map (op ! (word_rsplit w)) [0,1,2,3]
+   apply (subgoal_tac "map ((!) (word_rsplit w)) [0,1,2,3]
                       = (word_rsplit w :: word8 list)")
     apply (clarsimp simp: word_rcat_rsplit)
    apply (cut_tac w=w and m=4 and 'a=8

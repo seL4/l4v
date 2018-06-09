@@ -59,13 +59,13 @@ fun all_type (Const (@{const_name "All"}, T) $ _)
 fun split_thm prefix ctxt t = let
     val ok = not (String.isPrefix "Q" prefix orelse String.isPrefix "R" prefix)
     val _ = ok orelse error ("split_thm: prefix has prefix Q/R: " ^ prefix)
-    fun params (@{term "op \<and>"} $ x $ y) Ts = params x Ts @ params y Ts
-      | params (@{term "op \<or>"} $ _ $ y) Ts = (Ts, SOME @{typ bool}) :: params y Ts
+    fun params (@{term "(\<and>)"} $ x $ y) Ts = params x Ts @ params y Ts
+      | params (@{term "(\<or>)"} $ _ $ y) Ts = (Ts, SOME @{typ bool}) :: params y Ts
       | params (all as (Const (@{const_name "All"}, _) $ t)) Ts
         = params (betapply (t, Bound 0)) (all_type all :: Ts)
       | params (ball as (Const (@{const_name "Ball"}, T) $ _ $ t)) Ts
         = (Ts, SOME (domain_type T)) :: params (betapply (t, Bound 0)) (all_type ball :: Ts)
-      | params (@{term "op \<longrightarrow>"} $ _ $ t) Ts = (Ts, SOME @{typ bool}) :: params t Ts
+      | params (@{term "(\<longrightarrow>)"} $ _ $ t) Ts = (Ts, SOME @{typ bool}) :: params t Ts
       | params _ Ts = [(Ts, NONE)]
     val ps = params t []
     val Ps = Variable.variant_frees ctxt [t]
@@ -77,14 +77,14 @@ fun split_thm prefix ctxt t = let
         |> map Free
     val Qs = map (fn (Q, (ps, _)) => Term.list_comb (Q, map Bound (0 upto (length ps - 1))))
         (Qs ~~ ps)
-    fun assemble_bits (@{term "op \<and>"} $ x $ y) Ps = let
+    fun assemble_bits (@{term "(\<and>)"} $ x $ y) Ps = let
         val (x, Ps) = assemble_bits x Ps
         val (y, Ps) = assemble_bits y Ps
-      in (@{term "op \<and>"} $ x $ y, Ps) end
-      | assemble_bits (@{term "op \<or>"} $ _ $ y) Ps = let
+      in (@{term "(\<and>)"} $ x $ y, Ps) end
+      | assemble_bits (@{term "(\<or>)"} $ _ $ y) Ps = let
         val x = hd Ps
         val (y, Ps) = assemble_bits y (tl Ps)
-      in (@{term "op \<or>"} $ x $ y, Ps) end
+      in (@{term "(\<or>)"} $ x $ y, Ps) end
       | assemble_bits (all as (Const (@{const_name "All"}, T) $ t)) Ps = let
         val nm = abs_name t
         val (t, Ps) = assemble_bits (betapply (t, Bound 0)) Ps
@@ -94,10 +94,10 @@ fun split_thm prefix ctxt t = let
         val S = hd Ps
         val (t, Ps) = assemble_bits (betapply (t, Bound 0)) (tl Ps)
       in (Const (@{const_name "Ball"}, T) $ S $ Abs (nm, all_type ball, t), Ps) end
-      | assemble_bits (@{term "op \<longrightarrow>"} $ _ $ y) Ps = let
+      | assemble_bits (@{term "(\<longrightarrow>)"} $ _ $ y) Ps = let
         val x = hd Ps
         val (y, Ps) = assemble_bits y (tl Ps)
-      in (@{term "op \<longrightarrow>"} $ x $ y, Ps) end
+      in (@{term "(\<longrightarrow>)"} $ x $ y, Ps) end
       | assemble_bits _ Ps = (hd Ps, tl Ps)
     val bits_lhs = assemble_bits t Qs |> fst
     fun imp tf (P, Q) = if String.isPrefix "R" (fst (dest_Free (head_of Q))) then Q
@@ -132,7 +132,7 @@ ML {*
 structure Partial_Prove = struct
 
 fun inst_frees_tac _ Ps ct = REPEAT_DETERM o SUBGOAL (fn (t, _) =>
-  fn thm => case Term.add_frees t [] |> filter (member (op =) Ps)
+  fn thm => case Term.add_frees t [] |> filter (member (=) Ps)
   of [] => Seq.empty
   | (f :: _) => let
     val idx = Thm.maxidx_of thm + 1

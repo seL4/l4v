@@ -478,7 +478,7 @@ lemma getObject_obj_at':
   assumes x: "\<And>q n ko. loadObject p q n ko =
                 (loadObject_default p q n ko :: ('a :: pspace_storable) kernel)"
   assumes P: "\<And>(v::'a::pspace_storable). (1 :: machine_word) < 2 ^ (objBits v)"
-  shows      "\<lbrace> \<top> \<rbrace> getObject p \<lbrace>\<lambda>r::'a::pspace_storable. obj_at' (op = r) p\<rbrace>"
+  shows      "\<lbrace> \<top> \<rbrace> getObject p \<lbrace>\<lambda>r::'a::pspace_storable. obj_at' ((=) r) p\<rbrace>"
   by (clarsimp simp: valid_def getObject_def in_monad
                      loadObject_default_def obj_at'_def projectKOs
                      split_def in_magnitude_check lookupAround2_char1
@@ -755,7 +755,7 @@ lemma ctes_of_canonical:
   assumes ctes_of: "ctes_of s p = Some cte"
   shows "canonical_address p"
 proof -
-  from ctes_of have "cte_wp_at' (op = cte) p s"
+  from ctes_of have "cte_wp_at' ((=) cte) p s"
     by (simp add: cte_wp_at_ctes_of)
   thus ?thesis using canonical
     by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def field_simps objBits_defs
@@ -781,7 +781,7 @@ lemma ctes_of_from_cte_wp_at:
   apply (case_tac "ctes_of s x", simp_all)
    apply (drule_tac P1=Not and P'1="\<top>" and p1=x in use_valid [OF _ x],
            simp_all add: cte_wp_at_ctes_of)
-  apply (drule_tac P1=id and P'1="op = aa" and p1=x in use_valid [OF _ x],
+  apply (drule_tac P1=id and P'1="(=) aa" and p1=x in use_valid [OF _ x],
           simp_all add: cte_wp_at_ctes_of)
   done
 
@@ -871,7 +871,7 @@ lemma map_to_ctes_upd_other:
   done
 
 lemma ctes_of_eq_cte_wp_at':
-  "cte_wp_at' (op = cte) x s \<Longrightarrow> ctes_of s x = Some cte"
+  "cte_wp_at' ((=) cte) x s \<Longrightarrow> ctes_of s x = Some cte"
   by (simp add: cte_wp_at_ctes_of)
 
 lemma tcb_cte_cases_change:
@@ -898,7 +898,7 @@ lemma ctes_of_setObject_cte:
    apply (rule ext, clarsimp)
    apply (intro conjI impI)
     apply (clarsimp simp: tcb_cte_cases_def split: if_split_asm)
-   apply (drule(1) cte_wp_at_tcbI'[where P="op = cte"])
+   apply (drule(1) cte_wp_at_tcbI'[where P="(=) cte"])
       apply (simp add: ps_clear_def3 field_simps)
      apply assumption+
    apply (simp add: cte_wp_at_ctes_of)

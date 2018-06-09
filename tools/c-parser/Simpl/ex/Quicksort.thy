@@ -161,7 +161,7 @@ procedures quickSort(p|p) =
   quickSort_spec:
   "\<forall>\<sigma> Ps. \<Gamma>\<turnstile> \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps\<rbrace> \<acute>p :== PROC quickSort(\<acute>p)
        \<lbrace>(\<exists>sortedPs. List \<acute>p \<acute>next sortedPs \<and>
-        sorted (op \<le>) (map \<^bsup>\<sigma>\<^esup>cont sortedPs) \<and>
+        sorted (\<le>) (map \<^bsup>\<sigma>\<^esup>cont sortedPs) \<and>
         Ps <~~> sortedPs) \<and>
         (\<forall>x. x\<notin>set Ps \<longrightarrow> \<acute>next x = \<^bsup>\<sigma>\<^esup>next x)\<rbrace>"
 
@@ -181,7 +181,7 @@ shows
   "\<forall>\<sigma> Ps. \<Gamma>\<turnstile> \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps\<rbrace>
                   \<acute>p :== PROC quickSort(\<acute>p)
                 \<lbrace>(\<exists>sortedPs. List \<acute>p \<acute>next sortedPs \<and>
-                 sorted (op \<le>) (map \<^bsup>\<sigma>\<^esup>cont sortedPs) \<and>
+                 sorted (\<le>) (map \<^bsup>\<sigma>\<^esup>cont sortedPs) \<and>
                  Ps <~~> sortedPs) \<and>
                  (\<forall>x. x\<notin>set Ps \<longrightarrow> \<acute>next x = \<^bsup>\<sigma>\<^esup>next x)\<rbrace>"
 apply (hoare_rule HoarePartial.ProcRec1)

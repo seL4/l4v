@@ -272,7 +272,7 @@ lemma set_array_FCP [simp]:
   by (auto simp: set_array_list)
 
 lemma map_array_set_img:
-  "set_array \<circ> map_array f = op ` f \<circ> set_array"
+  "set_array \<circ> map_array f = (`) f \<circ> set_array"
   by (rule ext) (auto simp: map_array_def in_set_array_index_conv intro!: imageI)
 
 lemma fcp_cong [cong]:
@@ -297,7 +297,7 @@ next
     by (rule map_array_setI)
 next
   fix f :: "'a \<Rightarrow> 'b"
-  show "set_array \<circ> map_array f = op ` f \<circ> set_array"
+  show "set_array \<circ> map_array f = (`) f \<circ> set_array"
     by (rule map_array_set_img)
 next
   show "card_order (BNF_Cardinal_Arithmetic.csum natLeq (card_of UNIV))"

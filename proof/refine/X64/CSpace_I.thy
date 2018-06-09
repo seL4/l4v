@@ -1033,7 +1033,7 @@ lemma getCTE_valid_cap:
   apply (clarsimp simp add: getCTE_def valid_def)
   apply (frule in_inv_by_hoareD [OF getObject_cte_inv], clarsimp)
   apply (subst conj_commute)
-  apply (subgoal_tac "cte_wp_at' (op = a) t s")
+  apply (subgoal_tac "cte_wp_at' ((=) a) t s")
    apply (rule conjI)
     apply (clarsimp elim!: cte_wp_at_weakenE')
    apply (drule(1) cte_wp_at_valid_objs_valid_cap')
@@ -1047,7 +1047,7 @@ lemmas getCTE_valid_cap' [wp] =
 
 lemma ctes_of_valid_cap':
   "\<lbrakk> ctes_of s p = Some (CTE c n); valid_objs' s\<rbrakk> \<Longrightarrow> s \<turnstile>' c"
-  apply (rule cte_wp_at_valid_objs_valid_cap'[where P="op = (CTE c n)", simplified])
+  apply (rule cte_wp_at_valid_objs_valid_cap'[where P="(=) (CTE c n)", simplified])
    apply (simp add: cte_wp_at_ctes_of)
   apply assumption
   done

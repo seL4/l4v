@@ -118,7 +118,7 @@ lemma set_thread_state_ext_reads_respects:
   apply (rule equiv_valid_rv_bind[where W="\<top>\<top>"])
     apply (clarsimp simp: equiv_valid_2_def get_thread_state_def thread_get_def gets_the_def return_def bind_def assert_opt_def gets_def get_tcb_def fail_def get_def split: option.splits kernel_object.splits)
    apply clarsimp
-   apply (rule equiv_valid_2_bind[where R'="op =" and Q="\<lambda>rv _. rv \<noteq> ref" and Q'="\<lambda>rv _. rv \<noteq> ref"])
+   apply (rule equiv_valid_2_bind[where R'="(=)" and Q="\<lambda>rv _. rv \<noteq> ref" and Q'="\<lambda>rv _. rv \<noteq> ref"])
       apply (rule gen_asm_ev2)
       apply (simp add: equiv_valid_def2[symmetric] | wp)+
       apply (clarsimp simp: reads_equiv_def)
@@ -132,7 +132,7 @@ lemma set_thread_state_reads_respects:
   shows
   "reads_respects aag l (\<lambda>s. is_subject aag (cur_thread s)) (set_thread_state ref ts)"
   unfolding set_thread_state_def fun_app_def
-  apply (simp add: bind_assoc[symmetric]) (*Remove the currently not considered extended op*)
+  apply (simp add: bind_assoc[symmetric]) (*Remove the currently not considered extended ( * ))
   apply (rule pre_ev)
    apply (rule_tac P'=\<top> in bind_ev)
      apply (rule set_thread_state_ext_reads_respects)
@@ -221,7 +221,7 @@ lemma set_thread_state_runnable_reads_respects:
   shows
   "runnable ts \<Longrightarrow> reads_respects aag l \<top> (set_thread_state ref ts)"
   unfolding set_thread_state_def fun_app_def
-  apply (simp add: bind_assoc[symmetric]) (*Remove the currently not considered extended op*)
+  apply (simp add: bind_assoc[symmetric]) (*Remove the currently not considered extended ( * ))
   apply (rule pre_ev)
    apply (rule_tac P'=\<top> in bind_ev)
      apply (rule set_thread_state_ext_runnable_reads_respects)
@@ -526,7 +526,7 @@ lemma mapM_x_ev2_invisible:
     mam': "\<And> ptr. modifies_at_most aag (L' ptr) \<top> ((f'::word32 \<Rightarrow> (unit,det_ext) s_monad) ptr)"
   shows
   "equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l)
-   op =
+   (=)
    (K (\<forall>x. x \<in> set list' \<longrightarrow> (labels_are_invisible aag l (L' x))))
    (K (\<forall>x. x \<in> set list \<longrightarrow>  (labels_are_invisible aag l (L x))))
    (mapM_x f' list') (mapM_x f list)"
@@ -536,7 +536,7 @@ lemma mapM_x_ev2_invisible:
     apply (blast intro: return_ev2)
    apply (simp add: mapM_x_Cons mapM_x_Nil)
    apply (subst bind_return_unit[where f="return ()"])
-   apply (rule_tac R'="op =" and P="\<lambda> s. labels_are_invisible aag l (L' a)" in equiv_valid_2_bind_pre)
+   apply (rule_tac R'="(=)" and P="\<lambda> s. labels_are_invisible aag l (L' a)" in equiv_valid_2_bind_pre)
         apply simp
        apply(rule gen_asm_ev2_l)
        apply(rule equiv_valid_2_guard_imp[OF ev2_invisible[OF domains_distinct]], assumption+)
@@ -545,7 +545,7 @@ lemma mapM_x_ev2_invisible:
           apply(wp | simp)+
   apply (simp add: mapM_x_Cons)
   apply (subst bind_return_unit2)
-  apply (rule_tac R'="op =" and P'="\<lambda> s. labels_are_invisible aag l (L a)" in equiv_valid_2_bind_pre)
+  apply (rule_tac R'="(=)" and P'="\<lambda> s. labels_are_invisible aag l (L a)" in equiv_valid_2_bind_pre)
        apply simp
        apply(rule gen_asm_ev2_r)
        apply(rule equiv_valid_2_guard_imp[OF ev2_invisible[OF domains_distinct]], assumption+)
@@ -576,7 +576,7 @@ lemma mapM_x_ev2_r_invisible:
     inv: "\<And> P. invariant g P"
   shows
   "equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l)
-   op = \<top>
+   (=) \<top>
    (K (\<forall>x. x \<in> set list \<longrightarrow>  labels_are_invisible aag l (L x)))
    g (mapM_x f list)"
   apply(induct list)
@@ -585,7 +585,7 @@ lemma mapM_x_ev2_r_invisible:
    apply wp
    apply (simp add: mapM_x_Cons)
   apply (subst bind_return_unit2)
-  apply (rule_tac R'="op =" and P'="\<lambda> s. labels_are_invisible aag l (L a)" in equiv_valid_2_bind_pre)
+  apply (rule_tac R'="(=)" and P'="\<lambda> s. labels_are_invisible aag l (L a)" in equiv_valid_2_bind_pre)
        apply simp
       apply(rule gen_asm_ev2_r)
       apply(rule equiv_valid_2_guard_imp[OF ev2_invisible[OF domains_distinct]], assumption+)
@@ -621,7 +621,7 @@ lemma mapM_x_ev2_l_invisible:
     inv: "\<And> P. invariant g P"
   shows
   "equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l)
-   op =
+   (=)
    (K (\<forall>x. x \<in> set list \<longrightarrow> labels_are_invisible aag l (L x)))
    \<top>
    (mapM_x f list) g"
@@ -653,11 +653,11 @@ lemma label_is_invisible:
   apply(simp add: labels_are_invisible_def)
   done
 
-lemma op_eq_unit_taut: "(op =) = (\<lambda> (_:: unit) _. True)"
+lemma op_eq_unit_taut: "(=) = (\<lambda> (_:: unit) _. True)"
   apply (rule ext | simp)+
   done
 
-lemma ev2_symmetric: "equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) op = P P f f' \<Longrightarrow> equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) op = P P f' f"
+lemma ev2_symmetric: "equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (=) P P f f' \<Longrightarrow> equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (=) P P f' f"
   apply (clarsimp simp add: equiv_valid_2_def)
   apply (drule_tac x=t in spec)
   apply (drule_tac x=s in spec)
@@ -851,7 +851,7 @@ lemma cancel_all_ipc_reads_respects:
                apply(subst bind_return_unit)
                apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
                     apply (subst bind_return_unit)
-                    apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top>  and P'=\<top> and R'="op =" in equiv_valid_2_bind_pre)
+                    apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top>  and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
                          apply (simp add: op_eq_unit_taut)
                          apply (rule equiv_valid_2_unobservable)
                             apply wp
@@ -866,7 +866,7 @@ lemma cancel_all_ipc_reads_respects:
          apply(subst bind_return_unit)
          apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
               apply(subst bind_return_unit)
-              apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="op =" in equiv_valid_2_bind_pre)
+              apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="(=)" in equiv_valid_2_bind_pre)
                    apply (simp add: op_eq_unit_taut)
                    apply (rule equiv_valid_2_unobservable)
                       apply wp
@@ -883,7 +883,7 @@ lemma cancel_all_ipc_reads_respects:
              apply(subst bind_return_unit[where f="return ()"])
              apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
                   apply(subst bind_return_unit[where f="return ()"])
-                  apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="op =" in equiv_valid_2_bind_pre)
+                  apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="(=)" in equiv_valid_2_bind_pre)
                        apply (simp add: op_eq_unit_taut)
                        apply (rule equiv_valid_2_unobservable)
                           apply wp
@@ -896,7 +896,7 @@ lemma cancel_all_ipc_reads_respects:
             apply(rule ev2_inv | wp | simp add: get_ep_queue_def)+
        apply(clarsimp)
        apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-            apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="op =" in equiv_valid_2_bind_pre)
+            apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
                  apply (simp add: op_eq_unit_taut)
                  apply (rule equiv_valid_2_unobservable)
                     apply wp
@@ -911,7 +911,7 @@ lemma cancel_all_ipc_reads_respects:
            apply(rule gen_asm_ev2_l)
            apply(rule gen_asm_ev2_r)
            apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-                apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="op =" in equiv_valid_2_bind_pre)
+                apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
                      apply (simp add: equiv_valid_def2[symmetric])
                      apply (rule reads_respects_unobservable_unit_return)
                       apply wp
@@ -926,7 +926,7 @@ lemma cancel_all_ipc_reads_respects:
      apply(subst bind_return_unit[where f="return ()"])
      apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
           apply(subst bind_return_unit[where f="return ()"])
-          apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="op =" in equiv_valid_2_bind_pre)
+          apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
                apply (simp add: op_eq_unit_taut)
                apply (rule equiv_valid_2_unobservable)
                   apply (wp)
@@ -941,7 +941,7 @@ lemma cancel_all_ipc_reads_respects:
          apply(rule gen_asm_ev2_l)
          apply(rule gen_asm_ev2_r)
          apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-              apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="op =" in equiv_valid_2_bind_pre)
+              apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
                    apply (simp add: op_eq_unit_taut)
                    apply (rule equiv_valid_2_unobservable)
                       apply wp
@@ -954,7 +954,7 @@ lemma cancel_all_ipc_reads_respects:
         apply(rule ev2_inv | wp | simp add: get_ep_queue_def)+
    apply(clarsimp)
    apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-        apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="op =" in equiv_valid_2_bind_pre)
+        apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
              apply (simp add: op_eq_unit_taut)
              apply (rule equiv_valid_2_unobservable)
                 apply wp
@@ -1066,7 +1066,7 @@ lemma cancel_all_signals_reads_respects:
           apply(subst bind_return_unit[where f="return ()"])
           apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
                apply(subst bind_return_unit[where f="return ()"])
-               apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="op =" in equiv_valid_2_bind_pre)
+               apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
                     apply (simp add: op_eq_unit_taut)
                     apply (rule equiv_valid_2_unobservable)
                        apply wp
@@ -1080,7 +1080,7 @@ lemma cancel_all_signals_reads_respects:
         apply(subst bind_return_unit[where f="return ()"])
         apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
              apply(subst bind_return_unit[where f="return ()"])
-             apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="op =" in equiv_valid_2_bind_pre)
+             apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
                   apply (simp add: op_eq_unit_taut)
                   apply (rule equiv_valid_2_unobservable)
                      apply wp
@@ -1091,7 +1091,7 @@ lemma cancel_all_signals_reads_respects:
                 apply (simp add: labels_are_invisible_def)+
               apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+)[7]
        apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-            apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="op =" in equiv_valid_2_bind_pre)
+            apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
                  apply (simp add: op_eq_unit_taut)
                  apply (rule equiv_valid_2_unobservable)
                     apply wp
@@ -1104,7 +1104,7 @@ lemma cancel_all_signals_reads_respects:
       apply(subst bind_return_unit[where f="return ()"])
       apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
            apply(subst bind_return_unit[where f="return ()"])
-           apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="op =" in equiv_valid_2_bind_pre)
+           apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
                 apply (simp add: op_eq_unit_taut)
                 apply (rule equiv_valid_2_unobservable)
                    apply wp
@@ -1118,7 +1118,7 @@ lemma cancel_all_signals_reads_respects:
     apply(subst bind_return_unit[where f="return ()"])
     apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
          apply(subst bind_return_unit[where f="return ()"])
-         apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="op =" in equiv_valid_2_bind_pre)
+         apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
               apply (simp add: op_eq_unit_taut)
               apply (rule equiv_valid_2_unobservable)
                  apply wp
@@ -1165,7 +1165,7 @@ lemma get_bound_notification_reads_respects:
 
 
 lemma bound_tcb_at_implies_read:
-  "\<lbrakk>pas_refined aag s; is_subject aag t; bound_tcb_at (op = (Some x)) t s\<rbrakk>
+  "\<lbrakk>pas_refined aag s; is_subject aag t; bound_tcb_at ((=) (Some x)) t s\<rbrakk>
      \<Longrightarrow> aag_can_read_label aag (pasObjectAbs aag x)"
   apply (frule bound_tcb_at_implies_receive, simp)
   apply clarsimp
@@ -1175,7 +1175,7 @@ apply (auto simp: aag_can_read_read)
 
 lemma bound_tcb_at_eq:
   "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s ntfnptr = Some (Notification ntfn);
-    ntfn_bound_tcb ntfn = Some tcbptr; bound_tcb_at (op = (Some ntfnptr')) tcbptr s\<rbrakk>
+    ntfn_bound_tcb ntfn = Some tcbptr; bound_tcb_at ((=) (Some ntfnptr')) tcbptr s\<rbrakk>
     \<Longrightarrow> ntfnptr = ntfnptr'"
     apply (drule_tac x=ntfnptr in sym_refsD[rotated])
    apply (fastforce simp: state_refs_of_def)
@@ -1250,7 +1250,7 @@ lemma cap_delete_one_reads_respects_f:
         | simp | elim conjE)+
       apply (rule_tac Q="\<lambda>rva s.
              rva = is_final_cap' rv s \<and>
-             cte_wp_at (op = rv) slot s \<and>
+             cte_wp_at ((=) rv) slot s \<and>
              silc_inv aag st s \<and>
              is_subject aag (fst slot) \<and> pasObjectAbs aag (fst slot) \<noteq> SilcLabel" in hoare_strengthen_post)
        apply wp
@@ -1299,12 +1299,12 @@ lemma owns_thread_blocked_reads_endpoint:
 
 
 lemma st_tcb_at_sym:
-  "st_tcb_at (op = x) t s = st_tcb_at (\<lambda> y. y = x) t s"
+  "st_tcb_at ((=) x) t s = st_tcb_at (\<lambda> y. y = x) t s"
   apply(auto simp: st_tcb_at_def obj_at_def)
   done
 
 lemma blocked_cancel_ipc_reads_respects:
-  "reads_respects aag l (pas_refined aag and invs and st_tcb_at (op = state) tptr and (\<lambda>_. (is_subject aag tptr)))
+  "reads_respects aag l (pas_refined aag and invs and st_tcb_at ((=) state) tptr and (\<lambda>_. (is_subject aag tptr)))
     (blocked_cancel_ipc state tptr)"
   unfolding blocked_cancel_ipc_def
   apply(wp set_thread_state_owned_reads_respects set_simple_ko_reads_respects get_ep_queue_reads_respects
@@ -1448,7 +1448,7 @@ lemma prepare_thread_delete_reads_respects_f:
 
 lemma arch_finalise_cap_reads_respects:
   "reads_respects aag l (pas_refined aag and invs and
-    cte_wp_at (op = (ArchObjectCap cap)) slot and
+    cte_wp_at ((=) (ArchObjectCap cap)) slot and
     K(pas_cap_cur_auth aag (ArchObjectCap cap))) (arch_finalise_cap cap is_final)"
   apply (rule gen_asm_ev)
   unfolding arch_finalise_cap_def
@@ -1483,7 +1483,7 @@ lemma deleting_irq_handler_reads_respects:
 lemma finalise_cap_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and cte_wp_at (op = cap) slot and K (pas_cap_cur_auth aag cap)
+  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and cte_wp_at ((=) cap) slot and K (pas_cap_cur_auth aag cap)
     and K (final \<longrightarrow> (case cap of EndpointCap r badge rights \<Rightarrow> is_subject aag r |
                            NotificationCap r badge rights \<Rightarrow> is_subject aag r |
                             _ \<Rightarrow> True))) (finalise_cap cap final)"
@@ -1539,7 +1539,7 @@ lemma rec_del_pas_refined'':
 
 lemma owns_cnode_owns_obj_ref_of_child_cnodes_threads_and_zombies:
   "\<lbrakk>pas_refined aag s; is_subject aag (fst slot);
-        cte_wp_at (op = cap) slot s; is_cnode_cap cap \<or> is_thread_cap cap \<or> is_zombie cap\<rbrakk>
+        cte_wp_at ((=) cap) slot s; is_cnode_cap cap \<or> is_thread_cap cap \<or> is_zombie cap\<rbrakk>
        \<Longrightarrow> is_subject aag (obj_ref_of cap)"
   apply(frule (1) cap_cur_auth_caps_of_state[rotated])
   apply(simp add: cte_wp_at_caps_of_state)
@@ -1655,7 +1655,7 @@ next
                           (\<exists>lslot. lslot \<in> slots_holding_overlapping_caps (fst fin) s \<and>
                                      pasObjectAbs aag (fst lslot) = SilcLabel))
                                  \<and> einvs s \<and> replaceable s slot (fst fin) rv
-                                 \<and> cte_wp_at (op = rv) slot s \<and> s \<turnstile> (fst fin)
+                                 \<and> cte_wp_at ((=) rv) slot s \<and> s \<turnstile> (fst fin)
                                  \<and> ex_cte_cap_wp_to (appropriate_cte_cap rv) slot s
                                  \<and> (\<forall>t\<in>obj_refs (fst fin). halted_if_tcb t s)
                                  \<and> pas_refined aag s
@@ -1697,7 +1697,7 @@ next
         apply(wp drop_spec_ev[OF liftE_ev] is_final_cap_reads_respects | simp)+
 
 
-       apply(rule_tac Q="\<lambda> rva s. rva = is_final_cap' rv s \<and> cte_wp_at (op = rv) slot s \<and>
+       apply(rule_tac Q="\<lambda> rva s. rva = is_final_cap' rv s \<and> cte_wp_at ((=) rv) slot s \<and>
                             only_timer_irq_inv irq st' s \<and>
                             silc_inv aag st s \<and>
                             pas_refined aag s \<and>
@@ -2029,10 +2029,10 @@ done
 
 
 lemma mapM_x_swp_store_kernel_base_globals_equiv:
-  "\<lbrace>invs and globals_equiv st and cte_wp_at (op = (ArchObjectCap (PageDirectoryCap word option)))
+  "\<lbrace>invs and globals_equiv st and cte_wp_at ((=) (ArchObjectCap (PageDirectoryCap word option)))
          slot\<rbrace>
   mapM_x (swp store_pde InvalidPDE)
-        (map ((\<lambda>x. x + word) \<circ> swp op << 2)
+        (map ((\<lambda>x. x + word) \<circ> swp (<<) 2)
           [0.e.(kernel_base >> 20) - 1])
        \<lbrace>\<lambda>y s. globals_equiv st s \<and>
               invs s\<rbrace>"

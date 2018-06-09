@@ -952,7 +952,7 @@ lemma ccorres_from_vcg_split_throws:
 
 lemma ccorres_symb_exec_l3:
   "\<lbrakk> \<And>rv. ccorres_underlying sr \<Gamma> r xf arrel axf (Q rv) (Q' rv) hs (f rv) c;
-     \<And>s. \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>; \<lbrace>G\<rbrace> m \<lbrace>Q\<rbrace>; empty_fail m\<rbrakk>
+     \<And>s. \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>; \<lbrace>G\<rbrace> m \<lbrace>Q\<rbrace>; empty_fail m\<rbrakk>
   \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf G {s'. \<forall>rv. s' \<in> Q' rv}
                   hs (m >>= f) c"
   apply (rule ccorres_guard_imp2, erule ccorres_symb_exec_l)

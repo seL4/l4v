@@ -31,8 +31,8 @@ program with ghost variable to the initial program.
 *}
 
 definition
-  "plus2 \<equiv> do env_steps; modify (op + (1 :: nat));
-    interference; modify (op + 1); interference od"
+  "plus2 \<equiv> do env_steps; modify ((+) (1 :: nat));
+    interference; modify ((+) 1); interference od"
 
 section {* The ghost-extended program. *}
 
@@ -48,9 +48,9 @@ where
 
 definition
   "plus2_x tid \<equiv> do env_steps;
-    modify (mainv_update (op + 1) o threadv_update (point_update tid (op + 1)));
+    modify (mainv_update ((+) 1) o threadv_update (point_update tid ((+) 1)));
     interference;
-    modify (mainv_update (op + 1) o threadv_update (point_update tid (op + 1)));
+    modify (mainv_update ((+) 1) o threadv_update (point_update tid ((+) 1)));
     interference
   od"
 
@@ -75,7 +75,7 @@ lemma plus2_inv_Suc[simp]:
     \<Longrightarrow> plus2_inv tids (mainv_update Suc (threadv_update (point_update tid Suc) s))
         = plus2_inv tids s"
   apply (simp add: plus2_inv_def point_update_def)
-  apply (simp add: sum.If_cases[where h=f and g=f and P="op = tid" and A="tids" for f x, simplified])
+  apply (simp add: sum.If_cases[where h=f and g=f and P="(=) tid" and A="tids" for f x, simplified])
   done
 
 theorem plus2_x_property:
@@ -113,7 +113,7 @@ abbreviation(input)
     (\<lambda>s t. t = mainv s) rvr P Q AR R"
 
 theorem pfx_refn_plus2_x:
-  "p_refn (\<top>\<top>) (op =) (\<top>\<top>) AR R (plus2_x tid) plus2"
+  "p_refn (\<top>\<top>) (=) (\<top>\<top>) AR R (plus2_x tid) plus2"
   apply (simp add: plus2_x_def plus2_def)
   apply (rule prefix_refinement_weaken_pre)
     apply (rule pfx_refn_bind prefix_refinement_interference

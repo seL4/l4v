@@ -1115,7 +1115,7 @@ lemma ensure_safe_mapping_ensures[wp]:
         split:if_splits)
       done
     have name_pre:
-      "\<And>F P Q. (\<And>s. P s \<Longrightarrow> \<lbrace>op = s \<rbrace> F \<lbrace>Q\<rbrace>, -) \<Longrightarrow> \<lbrace>P\<rbrace> F \<lbrace>Q\<rbrace>,-"
+      "\<And>F P Q. (\<And>s. P s \<Longrightarrow> \<lbrace>(=) s \<rbrace> F \<lbrace>Q\<rbrace>, -) \<Longrightarrow> \<lbrace>P\<rbrace> F \<lbrace>Q\<rbrace>,-"
       apply (simp add:validE_R_def validE_def)
       apply (rule hoare_name_pre_state)
       apply assumption

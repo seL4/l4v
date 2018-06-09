@@ -28,8 +28,8 @@ definition
   valid_iocontrol_inv :: "io_port_control_invocation \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
 where
   "valid_iocontrol_inv iopc \<equiv> case iopc of
-    IOPortControlInvocation f l dest_slot src_slot \<Rightarrow> (cte_wp_at (op = NullCap) dest_slot
-             and cte_wp_at (op = (ArchObjectCap IOPortControlCap)) src_slot
+    IOPortControlInvocation f l dest_slot src_slot \<Rightarrow> (cte_wp_at ((=) NullCap) dest_slot
+             and cte_wp_at ((=) (ArchObjectCap IOPortControlCap)) src_slot
              and ex_cte_cap_wp_to is_cnode_cap dest_slot
              and real_cte_at dest_slot
              and (\<lambda>s. {f..l} \<inter> issued_ioports (arch_state s) = {})
@@ -524,7 +524,7 @@ lemma cap_insert_simple_arch_caps_ap:
   apply (wp get_cap_wp set_cap_valid_vs_lookup set_cap_arch_obj
             set_cap_valid_table_caps hoare_vcg_all_lift
           | simp split del: if_split)+
-       apply (rule_tac P = "cte_wp_at (op = src_cap) src" in set_cap_orth)
+       apply (rule_tac P = "cte_wp_at ((=) src_cap) src" in set_cap_orth)
        apply (wp hoare_vcg_imp_lift hoare_vcg_ball_lift set_free_index_final_cap
                  hoare_vcg_disj_lift set_cap_reachable_pg_cap set_cap.vs_lookup_pages
               | clarsimp)+
@@ -634,7 +634,7 @@ lemma cap_insert_ap_invs:
 
 lemma max_index_upd_no_cap_to:
   "\<lbrace>\<lambda>s. no_cap_to_obj_with_diff_ref cap {slot} s \<and>
-        cte_wp_at (op = ucap) cref s \<and> is_untyped_cap ucap\<rbrace>
+        cte_wp_at ((=) ucap) cref s \<and> is_untyped_cap ucap\<rbrace>
    set_cap (max_free_index_update ucap) cref
    \<lbrace>\<lambda>rv s. no_cap_to_obj_with_diff_ref cap {slot} s \<rbrace>"
   apply (clarsimp simp:no_cap_to_obj_with_diff_ref_def)
@@ -707,7 +707,7 @@ lemma perform_asid_control_invocation_st_tcb_at:
   done
 
 lemma set_cap_idx_up_aligned_area:
-  "\<lbrace>K (\<exists>idx. pcap = UntypedCap dev ptr pageBits idx) and cte_wp_at (op = pcap) slot
+  "\<lbrace>K (\<exists>idx. pcap = UntypedCap dev ptr pageBits idx) and cte_wp_at ((=) pcap) slot
       and valid_objs\<rbrace> set_cap (max_free_index_update pcap) slot
   \<lbrace>\<lambda>rv s. (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr pageBits \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)\<rbrace>"
   apply (rule hoare_pre)
@@ -857,7 +857,7 @@ lemma aci_invs':
    apply (erule notE, erule is_aligned_no_overflow)
 
   apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def)
-  apply (thin_tac "cte_wp_at (op = cap.NullCap) p s" for p s)
+  apply (thin_tac "cte_wp_at ((=) cap.NullCap) p s" for p s)
   apply (subst(asm) eq_commute,
          erule(1) untyped_children_in_mdbE[where cap="cap.UntypedCap dev p bits idx" for dev p bits idx,
                                          simplified, rotated])
@@ -900,7 +900,7 @@ lemma set_ioport_mask_safe_parent_for:
   by (clarsimp simp: cte_wp_at_caps_of_state)
 
 lemma set_ioport_mask_safe_ioport_insert:
-  "\<lbrace>\<lambda>s. cte_wp_at (op = NullCap) sl s \<and> (\<forall>cap\<in>ran (caps_of_state s). cap_ioports ac \<inter> cap_ioports cap = {}) \<and> ac = (ArchObjectCap (IOPortCap x1 x2))\<rbrace>
+  "\<lbrace>\<lambda>s. cte_wp_at ((=) NullCap) sl s \<and> (\<forall>cap\<in>ran (caps_of_state s). cap_ioports ac \<inter> cap_ioports cap = {}) \<and> ac = (ArchObjectCap (IOPortCap x1 x2))\<rbrace>
      set_ioport_mask x1 x2 True
    \<lbrace>\<lambda>rv s. cte_wp_at (\<lambda>c. safe_ioport_insert ac c s) sl s\<rbrace>"
   apply (clarsimp simp: safe_ioport_insert_def issued_ioports_def set_ioport_mask_def)
@@ -1549,7 +1549,7 @@ lemma asid_wf_high:
    by (auto simp: asid_bits_defs)
 
 lemma cte_wp_at_eq_simp:
-  "cte_wp_at (op = cap) = cte_wp_at (\<lambda>c. c = cap)"
+  "cte_wp_at ((=) cap) = cte_wp_at (\<lambda>c. c = cap)"
   apply (rule arg_cong [where f=cte_wp_at])
   apply (safe intro!: ext)
   done
@@ -1560,7 +1560,7 @@ lemma is_ioport_range_free_wp:
 
 lemma decode_ioport_control_inv_wf[wp]:
   "arch_cap = IOPortControlCap \<Longrightarrow>
-   \<lbrace>invs and cte_wp_at (op = (cap.ArchObjectCap IOPortControlCap)) slot
+   \<lbrace>invs and cte_wp_at ((=) (cap.ArchObjectCap IOPortControlCap)) slot
      and (\<lambda>s. \<forall>cap \<in> set excaps. is_cnode_cap cap \<longrightarrow>
                   (\<forall>r \<in> cte_refs cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s))
      and (\<lambda>s. \<forall>cap \<in> set excaps. s \<turnstile> cap)\<rbrace>

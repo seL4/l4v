@@ -30,7 +30,7 @@ ML {*
 *}
 
 ML {*
-  member op= (map #1 cs) "CProof.strictc_errortype.C_Guard" orelse
+  member (=) (map #1 cs) "CProof.strictc_errortype.C_Guard" orelse
   OS.Process.exit OS.Process.failure
 *}
 

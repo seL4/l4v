@@ -200,7 +200,7 @@ lemma asidBits_asid_bits[simp]:
 
 lemma find_vspace_for_asid_assert_corres [corres]:
   assumes "asid' = asid"
-  shows "corres (op =)
+  shows "corres (=)
                 (K (asid \<noteq> 0 \<and> asid_wf asid) and vspace_at_asid_ex asid
                     and pspace_aligned and pspace_distinct and valid_vspace_objs)
                 (pspace_aligned' and pspace_distinct' and no_0_obj')
@@ -280,7 +280,7 @@ lemma hv_corres:
         apply (simp, wp as_user_typ_at)
        apply (simp, wp asUser_typ_ats)
       apply simp
-      apply (rule corres_machine_op [where r="op ="])
+      apply (rule corres_machine_op [where r="(=)"])
       apply (rule corres_Id, rule refl, simp)
       apply (rule no_fail_getFaultAddress)
      apply wpsimp+
@@ -352,7 +352,7 @@ proof -
               catchFailure_def withoutFailure_def throw_def
               make_cr3_def makeCR3_def
     apply (rule corres_guard_imp)
-      apply (rule corres_split' [where r'="op = \<circ> cte_map"])
+      apply (rule corres_split' [where r'="(=) \<circ> cte_map"])
          apply (simp add: tcbVTableSlot_def cte_map_def objBits_def cte_level_bits_def
                           objBitsKO_def tcb_cnode_index_def to_bl_1 assms)
         apply (rule_tac R="\<lambda>thread_root. valid_arch_state and
@@ -360,7 +360,7 @@ proof -
                                          unique_table_refs o caps_of_state and
                                          valid_global_objs and valid_objs and
                                          pspace_aligned and pspace_distinct and
-                                         cte_wp_at (op = thread_root) thread_root_slot"
+                                         cte_wp_at ((=) thread_root) thread_root_slot"
                     and R'="\<lambda>thread_root. pspace_aligned' and pspace_distinct' and no_0_obj'"
                  in corres_split [OF _ getSlotCap_corres])
            apply (case_tac rv; simp add: isCap_simps Q[simplified])
@@ -1192,7 +1192,7 @@ proof -
            apply (clarsimp simp:mapM_Cons bind_assoc split del: if_split)
            apply (rule corres_guard_imp)
              apply (rule corres_split[OF _ store_pte_corres'])
-                apply (rule corres_split[where r'="op ="])
+                apply (rule corres_split[where r'="(=)"])
                    apply simp
                    apply (rule invalidatePageStructureCacheASID_corres)
                   apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
@@ -1206,7 +1206,7 @@ proof -
           apply (clarsimp simp:mapM_Cons bind_assoc split del: if_split)
           apply (rule corres_guard_imp)
             apply (rule corres_split[OF _ store_pde_corres'])
-               apply (rule corres_split[where r'="op ="])
+               apply (rule corres_split[where r'="(=)"])
                   apply simp
                   apply (rule invalidatePageStructureCacheASID_corres)
                  apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
@@ -1220,7 +1220,7 @@ proof -
          apply (clarsimp simp:mapM_Cons bind_assoc split del: if_split)
          apply (rule corres_guard_imp)
                 apply (rule corres_split[OF _ store_pdpte_corres'])
-              apply (rule corres_split[where r'="op ="])
+              apply (rule corres_split[where r'="(=)"])
                  apply simp
                  apply (rule invalidatePageStructureCacheASID_corres)
                 apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
@@ -1347,7 +1347,7 @@ lemma clear_page_table_corres:
                    upto_enum_step_red[where us=3, simplified]
                    mapM_x_mapM liftM_def[symmetric])
   apply (rule corres_guard_imp,
-         rule_tac r'=dc and S="op ="
+         rule_tac r'=dc and S="(=)"
                and Q="\<lambda>xs s. \<forall>x \<in> set xs. pte_at x s \<and> pspace_aligned s \<and> valid_etcbs s"
                and Q'="\<lambda>xs. pspace_aligned' and pspace_distinct'"
                 in corres_mapM_list_all2, simp_all)
@@ -1379,7 +1379,7 @@ lemma clear_page_directory_corres:
                    upto_enum_step_red[where us=3, simplified]
                    mapM_x_mapM liftM_def[symmetric])
   apply (rule corres_guard_imp,
-         rule_tac r'=dc and S="op ="
+         rule_tac r'=dc and S="(=)"
                and Q="\<lambda>xs s. \<forall>x \<in> set xs. pde_at x s \<and> pspace_aligned s \<and> valid_etcbs s"
                and Q'="\<lambda>xs. pspace_aligned' and pspace_distinct'"
                 in corres_mapM_list_all2, simp_all)
@@ -1411,7 +1411,7 @@ lemma clear_pdpt_corres:
                    upto_enum_step_red[where us=3, simplified]
                    mapM_x_mapM liftM_def[symmetric])
   apply (rule corres_guard_imp,
-         rule_tac r'=dc and S="op ="
+         rule_tac r'=dc and S="(=)"
                and Q="\<lambda>xs s. \<forall>x \<in> set xs. pdpte_at x s \<and> pspace_aligned s \<and> valid_etcbs s"
                and Q'="\<lambda>xs. pspace_aligned' and pspace_distinct'"
                 in corres_mapM_list_all2, simp_all)
@@ -1451,7 +1451,7 @@ lemma perform_page_table_corres:
         prefer 2
         apply assumption
        apply (rule corres_split [OF _ store_pde_corres'])
-          apply (rule corres_split[where r'="op =" and P="\<top>" and P'="\<top>"])
+          apply (rule corres_split[where r'="(=)" and P="\<top>" and P'="\<top>"])
              apply simp
              apply (rule invalidatePageStructureCacheASID_corres)
             apply (case_tac cap; clarsimp simp add: is_pt_cap_def)
@@ -1583,7 +1583,7 @@ lemma perform_page_directory_corres:
         prefer 2
         apply assumption
        apply (rule corres_split [OF _ store_pdpte_corres'])
-          apply (rule corres_split[where r'="op =" and P="\<top>" and P'="\<top>"])
+          apply (rule corres_split[where r'="(=)" and P="\<top>" and P'="\<top>"])
              apply simp
              apply (rule invalidatePageStructureCacheASID_corres)
             apply (case_tac cap; clarsimp simp add: is_pd_cap_def)
@@ -1712,7 +1712,7 @@ lemma perform_pdpt_corres:
         prefer 2
         apply assumption
        apply (rule corres_split [OF _ store_pml4e_corres'])
-          apply (rule corres_split[where r'="op =" and P="\<top>" and P'="\<top>"])
+          apply (rule corres_split[where r'="(=)" and P="\<top>" and P'="\<top>"])
              apply simp
              apply (rule invalidatePageStructureCacheASID_corres)
             apply (case_tac cap; clarsimp simp add: is_pdpt_cap_def)

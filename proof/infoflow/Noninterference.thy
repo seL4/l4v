@@ -416,7 +416,7 @@ lemma integrity_update_reference_state:
    st = st'\<lparr> kheap := kheap st'( t \<mapsto> blah)\<rparr> \<Longrightarrow>
    integrity aag X st' s"
   apply(erule integrity_trans[rotated])
-  apply(subgoal_tac "\<lbrace>op = st'\<rbrace> set_object t blah \<lbrace>\<lambda>_. integrity aag X st'\<rbrace>")
+  apply(subgoal_tac "\<lbrace>(=) st'\<rbrace> set_object t blah \<lbrace>\<lambda>_. integrity aag X st'\<rbrace>")
    apply(simp add: valid_def)
    apply(drule_tac x="((),st)" in bspec)
     apply(simp add: set_object_def bind_def get_def put_def return_def)
@@ -441,7 +441,7 @@ lemma kernel_entry_if_integrity:
   shows
   "\<lbrace> einvs and schact_is_rct and pas_refined aag and is_subject aag \<circ> cur_thread and
      domain_sep_inv (pasMaySendIrqs aag) st' and guarded_pas_domain aag and
-     (\<lambda> s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and op = st\<rbrace>
+     (\<lambda> s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and (=) st\<rbrace>
    kernel_entry_if e tc
    \<lbrace> \<lambda>_. integrity aag X st \<rbrace>"
   unfolding kernel_entry_if_def
@@ -563,7 +563,7 @@ lemma domain_fields_equiv_lift:
 lemma kernel_entry_if_partitionIntegrity:
   "\<lbrace>silc_inv aag st and pas_refined aag and einvs and schact_is_rct and
        is_subject aag \<circ> cur_thread  and domain_sep_inv (pasMaySendIrqs aag) st' and
-       guarded_pas_domain aag and (\<lambda>s. ev \<noteq> Interrupt \<and> ct_active s) and op = st\<rbrace>
+       guarded_pas_domain aag and (\<lambda>s. ev \<noteq> Interrupt \<and> ct_active s) and (=) st\<rbrace>
      kernel_entry_if ev tc
    \<lbrace>\<lambda> rv. partitionIntegrity aag st\<rbrace>"
   apply(rule_tac Q="\<lambda>rv s. (\<forall> X. integrity (aag\<lparr> pasMayActivate := False,
@@ -2273,8 +2273,8 @@ lemma ev2_invisible':
    apply(blast intro: reads_equiv_trans reads_equiv_sym affects_equiv_trans affects_equiv_sym
                       globals_equiv_trans globals_equiv_sym)
   apply atomize
-  apply (erule_tac x="op = (exclusive_state (machine_state s))" in allE)
-  apply (erule_tac x="op = (exclusive_state (machine_state t))" in allE)
+  apply (erule_tac x="(=) (exclusive_state (machine_state s))" in allE)
+  apply (erule_tac x="(=) (exclusive_state (machine_state t))" in allE)
   apply(clarsimp simp: valid_def)
   apply (thin_tac "\<forall>x y. P x y" for P)
   apply (erule_tac x=s in allE)
@@ -3224,7 +3224,7 @@ lemma thread_get_tcb_context_reads_respects_g:
    guaranteed to be equal when called, so we need an equiv_valid_2
 *)
 lemma kernel_exit_if_reads_respects_g_2:
-  "equiv_valid_2 (reads_equiv_g aag) (affects_equiv aag l) (affects_equiv aag l) (op =)
+  "equiv_valid_2 (reads_equiv_g aag) (affects_equiv aag l) (affects_equiv aag l) (=)
                  (\<lambda>s. cur_thread s = idle_thread s \<or> is_subject aag (cur_thread s))
                  (\<lambda>s. cur_thread s = idle_thread s \<or> is_subject aag (cur_thread s))
                  (kernel_exit_if tc) (kernel_exit_if tc')"
@@ -3235,10 +3235,10 @@ lemma kernel_exit_if_reads_respects_g_2:
   done
 
 lemma reads_respects_f_g_2':
-  "\<lbrakk>equiv_valid_2 (reads_equiv_g aag) (affects_equiv aag l) (affects_equiv aag l) (op =) P P' f f';
+  "\<lbrakk>equiv_valid_2 (reads_equiv_g aag) (affects_equiv aag l) (affects_equiv aag l) (=) P P' f f';
      \<lbrace>silc_inv aag st and Q\<rbrace> f \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>;
      \<lbrace>silc_inv aag st and Q'\<rbrace> f' \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>\<rbrakk> \<Longrightarrow>
-   equiv_valid_2 (reads_equiv_f_g aag) (affects_equiv aag l) (affects_equiv aag l) (op =)
+   equiv_valid_2 (reads_equiv_f_g aag) (affects_equiv aag l) (affects_equiv aag l) (=)
                 (silc_inv aag st and P and Q) (silc_inv aag st and P' and Q') f f'"
   apply(clarsimp simp: equiv_valid_def2 equiv_valid_2_def reads_equiv_f_g_def reads_equiv_g_def)
   apply(rule conjI, fastforce)
@@ -3254,7 +3254,7 @@ lemma reads_respects_f_g_2':
   done
 
 lemma kernel_exit_if_reads_respects_f_g_2:
-  "equiv_valid_2 (reads_equiv_f_g aag) (affects_equiv aag l) (affects_equiv aag l) (op =)
+  "equiv_valid_2 (reads_equiv_f_g aag) (affects_equiv aag l) (affects_equiv aag l) (=)
                  (silc_inv aag st and (\<lambda>s. cur_thread s = idle_thread s
                                          \<or> is_subject aag (cur_thread s)))
                  (silc_inv aag st and (\<lambda>s. cur_thread s = idle_thread s
@@ -3766,11 +3766,11 @@ lemma preemption_interrupt_scheduler_invisible:
        apply (rule equiv_valid_2_bind_right)
             apply (simp add: liftE_def bind_assoc)
             apply (simp only: option.case_eq_if)
-            apply (rule equiv_valid_2_bind_pre[where R'="op ="])
+            apply (rule equiv_valid_2_bind_pre[where R'="(=)"])
                  apply (simp add: when_def split del: if_split)
                  apply (subst if_swap)
                  apply (simp split del: if_split)
-                 apply (rule equiv_valid_2_bind_pre[where R'="op =" and Q="\<top>\<top>" and Q'="\<top>\<top>"])
+                 apply (rule equiv_valid_2_bind_pre[where R'="(=)" and Q="\<top>\<top>" and Q'="\<top>\<top>"])
                       apply (rule return_ev2)
                       apply simp
                      apply (rule equiv_valid_2)
@@ -3837,10 +3837,10 @@ lemma kernel_entry_scheduler_equiv_2:
        (kernel_entry_if Interrupt uc) (kernel_entry_if Interrupt uc')"
   apply (simp add: kernel_entry_if_def)
   apply (simp add: bind_assoc[symmetric])
-  apply (rule equiv_valid_2_bind_pre[where R'="op ="])
+  apply (rule equiv_valid_2_bind_pre[where R'="(=)"])
        apply (rule_tac P="\<top>" and P'="\<top>" in return_ev2)
        apply simp
-      apply (rule equiv_valid_2_bind_pre[where R'="op ="])
+      apply (rule equiv_valid_2_bind_pre[where R'="(=)"])
            apply (rule equiv_valid_2)
            apply simp
            apply (wp del: no_irq add: handle_interrupt_reads_respects_scheduler[where st=st]

@@ -667,20 +667,20 @@ subclass sep_algebra by standard auto
 
 end
 
-interpretation sep: ab_semigroup_mult "op **"
+interpretation sep: ab_semigroup_mult "( ** )"
   by unfold_locales (simp add: sep_conj_ac)+
 
-interpretation sep: comm_monoid "op **" \<box>
+interpretation sep: comm_monoid "( ** )" \<box>
   by unfold_locales simp
 
-interpretation sep: comm_monoid_mult "op **" \<box>
+interpretation sep: comm_monoid_mult "( ** )" \<box>
   by unfold_locales simp
 
 section {* Folding separating conjunction over lists and sets of predicates *}
 
 definition
   sep_list_conj :: "('a::sep_algebra \<Rightarrow> bool) list \<Rightarrow> ('a \<Rightarrow> bool)"  where
-  "sep_list_conj Ps \<equiv> foldl (op **) \<box> Ps"
+  "sep_list_conj Ps \<equiv> foldl (( ** )) \<box> Ps"
 
 abbreviation
   sep_map_list_conj :: "('b \<Rightarrow> 'a::sep_algebra \<Rightarrow> bool) \<Rightarrow> 'b list \<Rightarrow> ('a \<Rightarrow> bool)"
@@ -757,7 +757,7 @@ in [(@{const_syntax sep_map_set_conj}, K setsepconj_tr')] end
 *}
 
 
-interpretation sep: folding "op \<and>*" \<box>
+interpretation sep: folding "(\<and>*)" \<box>
   by unfold_locales (simp add: comp_def sep_conj_ac)
 
 lemma "\<And>* [\<box>,P] = P"
@@ -867,7 +867,7 @@ lemma sep_list_conj_map_add:
 
 
 lemma filter_empty:
-  "x \<notin> set xs \<Longrightarrow> filter (op = x) xs = []"
+  "x \<notin> set xs \<Longrightarrow> filter ((=) x) xs = []"
   by (induct xs, clarsimp+)
 
 lemma filter_singleton:
@@ -989,8 +989,8 @@ lemma sep_map_set_conj_sub_sub_disjoint:
   done
 
 lemma foldl_use_filter_map:
-  "foldl op \<and>* Q (map (\<lambda>x. if T x then P x else \<box>) xs) =
-   foldl op \<and>* Q (map P (filter T xs))"
+  "foldl (\<and>*) Q (map (\<lambda>x. if T x then P x else \<box>) xs) =
+   foldl (\<and>*) Q (map P (filter T xs))"
   by (induct xs arbitrary: Q, simp_all)
 
 lemma sep_list_conj_filter_map:
@@ -1039,7 +1039,7 @@ definition
   precise :: "('a \<Rightarrow> bool) \<Rightarrow> bool" where
   "precise P = (\<forall>h hp hp'. hp \<preceq> h \<and> P hp \<and> hp' \<preceq> h \<and> P hp' \<longrightarrow> hp = hp')"
 
-lemma "precise (op = s)"
+lemma "precise ((=) s)"
   by (metis (full_types) precise_def)
 
 lemma sep_add_cancel:
@@ -1106,8 +1106,8 @@ next
     have "\<forall>Q R. ((Q and R) \<and>* P) (z + hp) = ((Q \<and>* P) and (R \<and>* P)) (z' + hp')"
       by (fastforce simp: h_eq sep_add_ac sep_conj_commute)
 
-    hence "((op = z and op = z') \<and>* P) (z + hp) =
-           ((op = z \<and>* P) and (op = z' \<and>* P)) (z' + hp')" by blast
+    hence "(((=) z and (=) z') \<and>* P) (z + hp) =
+           (((=) z \<and>* P) and ((=) z' \<and>* P)) (z' + hp')" by blast
 
     thus  "hp = hp'" using php php' hpz hpz' h_eq
       by (fastforce dest!: iffD2 cong: conj_cong

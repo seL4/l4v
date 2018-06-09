@@ -99,7 +99,7 @@ proof (induct cap capptr bits rule: resolveAddressBits.induct)
     apply (simp only: Let_def haskell_assertE_def K_bind_def)
     apply (rule monadic_rewrite_name_pre)
     apply (rule monadic_rewrite_imp)
-     apply (rule_tac P="op = s" in monadic_rewrite_trans)
+     apply (rule_tac P="(=) s" in monadic_rewrite_trans)
       (* step 1, apply the induction hypothesis on the lhs *)
       apply (rule monadic_rewrite_named_if monadic_rewrite_named_bindE
                   monadic_rewrite_refl[THEN monadic_rewrite_imp, where f="returnOk y" for y]

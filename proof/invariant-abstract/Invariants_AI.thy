@@ -452,10 +452,10 @@ where
     tcb_cnode_index 3 \<mapsto> (tcb_caller, tcb_caller_update,
                           (\<lambda>_ st. case st of
                                     BlockedOnReceive e \<Rightarrow>
-                                      (op = NullCap)
-                                  | _ \<Rightarrow> is_reply_cap or (op = NullCap))),
+                                      ((=) NullCap)
+                                  | _ \<Rightarrow> is_reply_cap or ((=) NullCap))),
     tcb_cnode_index 4 \<mapsto> (tcb_ipcframe, tcb_ipcframe_update,
-                          (\<lambda>_ _. is_nondevice_page_cap or (op = NullCap)))]"
+                          (\<lambda>_ _. is_nondevice_page_cap or ((=) NullCap)))]"
 
 definition
   valid_fault :: "ExceptionTypes_A.fault \<Rightarrow> bool"
@@ -834,7 +834,7 @@ definition
    \<forall>p. is_original_cap s p \<longrightarrow> cte_wp_at (\<lambda>x. x \<noteq> NullCap)  p s"
 
 definition
-  "has_reply_cap t s \<equiv> \<exists>p. cte_wp_at (op = (ReplyCap t False)) p s"
+  "has_reply_cap t s \<equiv> \<exists>p. cte_wp_at ((=) (ReplyCap t False)) p s"
 
 definition
   "mdb_cte_at ct_at m \<equiv> \<forall>p c. m c = Some p \<longrightarrow> ct_at p \<and> ct_at c"
@@ -866,7 +866,7 @@ definition
   "reply_mdb m cs \<equiv> reply_caps_mdb m cs \<and> reply_masters_mdb m cs"
 
 definition
-  "valid_mdb \<equiv> \<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> NullCap)) s) (cdt s) \<and>
+  "valid_mdb \<equiv> \<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) NullCap)) s) (cdt s) \<and>
                    untyped_mdb (cdt s) (caps_of_state s) \<and> descendants_inc (cdt s) (caps_of_state s) \<and>
                    no_mloop (cdt s) \<and> untyped_inc (cdt s) (caps_of_state s) \<and>
                    ut_revocable (is_original_cap s) (caps_of_state s) \<and>
@@ -885,7 +885,7 @@ definition
   "only_idle \<equiv> \<lambda>s. \<forall>t. st_tcb_at idle t s \<longrightarrow> t = idle_thread s"
 
 definition
-  "valid_reply_masters \<equiv> \<lambda>s. \<forall>p t. cte_wp_at (op = (ReplyCap t True)) p s \<longrightarrow>
+  "valid_reply_masters \<equiv> \<lambda>s. \<forall>p t. cte_wp_at ((=) (ReplyCap t True)) p s \<longrightarrow>
                                      p = (t, tcb_cnode_index 2)"
 
 definition
@@ -1000,14 +1000,14 @@ definition
   untyped_children_in_mdb :: "'z::state_ext state \<Rightarrow> bool"
 where
  "untyped_children_in_mdb s \<equiv>
-    \<forall>ptr ptr' cap. (cte_wp_at (op = cap) ptr s \<and> is_untyped_cap cap
+    \<forall>ptr ptr' cap. (cte_wp_at ((=) cap) ptr s \<and> is_untyped_cap cap
                      \<and> cte_wp_at (\<lambda>cap'. obj_refs cap' \<inter> untyped_range cap \<noteq> {}) ptr' s)
                      \<longrightarrow> ptr' \<in> descendants_of ptr (cdt s)"
 
 definition
   "caps_contained s \<equiv> \<forall>c p c' p'.
-  cte_wp_at (op = c) p s \<longrightarrow>
-  cte_wp_at (op = c') p' s \<longrightarrow>
+  cte_wp_at ((=) c) p s \<longrightarrow>
+  cte_wp_at ((=) c') p' s \<longrightarrow>
   obj_ref_of c' \<in> untyped_range c \<longrightarrow>
   (is_cnode_cap c' \<or> is_thread_cap c') \<longrightarrow>
   obj_ref_of c' + obj_size c' - 1 \<in> untyped_range c"
@@ -1200,11 +1200,11 @@ lemma tcb_cap_cases_simps[simp]:
   "tcb_cap_cases (tcb_cnode_index 3) =
    Some (tcb_caller, tcb_caller_update,
          (\<lambda>_ st. case st of
-                   BlockedOnReceive e \<Rightarrow> (op = NullCap)
-                 | _ \<Rightarrow> is_reply_cap or (op = NullCap)))"
+                   BlockedOnReceive e \<Rightarrow> ((=) NullCap)
+                 | _ \<Rightarrow> is_reply_cap or ((=) NullCap)))"
   "tcb_cap_cases (tcb_cnode_index 4) =
    Some (tcb_ipcframe, tcb_ipcframe_update,
-         (\<lambda>_ _. is_nondevice_page_cap or (op = cap.NullCap)))"
+         (\<lambda>_ _. is_nondevice_page_cap or ((=) cap.NullCap)))"
   by (simp add: tcb_cap_cases_def)+
 
 lemma ran_tcb_cap_cases:
@@ -1216,9 +1216,9 @@ lemma ran_tcb_cap_cases:
                                      \<or> (halted st \<and> (c = NullCap)))),
      (tcb_caller, tcb_caller_update, (\<lambda>_ st. case st of
                                        Structures_A.BlockedOnReceive e \<Rightarrow>
-                                         (op = NullCap)
-                                     | _ \<Rightarrow> is_reply_cap or (op = NullCap))),
-     (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or (op = NullCap)))}"
+                                         ((=) NullCap)
+                                     | _ \<Rightarrow> is_reply_cap or ((=) NullCap))),
+     (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or ((=) NullCap)))}"
   by (simp add: tcb_cap_cases_def insert_commute)
 
 lemma tcb_cnode_map_tcb_cap_cases:
@@ -1461,8 +1461,8 @@ lemma if_live_then_nonz_capD2:
   done
 
 lemma caps_of_state_cte_wp_at:
- "caps_of_state s = (\<lambda>p. if (\<exists>cap. cte_wp_at (op = cap) p s)
-                         then Some (THE cap. cte_wp_at (op = cap) p s)
+ "caps_of_state s = (\<lambda>p. if (\<exists>cap. cte_wp_at ((=) cap) p s)
+                         then Some (THE cap. cte_wp_at ((=) cap) p s)
                          else None)"
   by (rule ext) (clarsimp simp: cte_wp_at_def caps_of_state_def)
 
@@ -1531,7 +1531,7 @@ lemma reply_master_caps_of_stateD:
            del: split_paired_All)
 
 lemma has_reply_cap_cte_wpD:
-  "\<And>t sl. cte_wp_at (op = (ReplyCap t False)) sl s \<Longrightarrow> has_reply_cap t s"
+  "\<And>t sl. cte_wp_at ((=) (ReplyCap t False)) sl s \<Longrightarrow> has_reply_cap t s"
   by (fastforce simp: has_reply_cap_def)
 
 lemma reply_cap_doesnt_exist_strg:
@@ -1597,7 +1597,7 @@ lemma idle_no_ex_cap:
   by blast
 
 lemma caps_of_state_cteD:
-  "caps_of_state s p = Some cap \<Longrightarrow> cte_wp_at (op = cap) p s"
+  "caps_of_state s p = Some cap \<Longrightarrow> cte_wp_at ((=) cap) p s"
   by (simp add: cte_wp_at_caps_of_state)
 
 lemma untyped_mdb_alt:
@@ -1607,9 +1607,9 @@ lemma untyped_mdb_alt:
   done
 
 lemma untyped_children_in_mdbE:
-  assumes x: "untyped_children_in_mdb s" "cte_wp_at (op = cap) ptr s"
+  assumes x: "untyped_children_in_mdb s" "cte_wp_at ((=) cap) ptr s"
              "is_untyped_cap cap" "cte_wp_at P ptr' s"
-  assumes y: "\<And>cap'. \<lbrakk> cte_wp_at (op = cap') ptr' s; P cap' \<rbrakk> \<Longrightarrow>
+  assumes y: "\<And>cap'. \<lbrakk> cte_wp_at ((=) cap') ptr' s; P cap' \<rbrakk> \<Longrightarrow>
                  obj_refs cap' \<inter> untyped_range cap \<noteq> {}"
   assumes z: "ptr' \<in> descendants_of ptr (cdt s) \<Longrightarrow> Q"
   shows Q using x
@@ -2099,7 +2099,7 @@ lemma pred_tcb_at_tcb_at:
 lemmas st_tcb_at_tcb_at = pred_tcb_at_tcb_at[where proj=itcb_state, simplified]
 
 lemma st_tcb_at_opeqI:
-  "\<lbrakk> st_tcb_at (op= st) t s ; test st \<rbrakk> \<Longrightarrow> st_tcb_at test t s"
+  "\<lbrakk> st_tcb_at ((=) st) t s ; test st \<rbrakk> \<Longrightarrow> st_tcb_at test t s"
   by (fastforce simp add: pred_tcb_def2)
 
 lemma cte_wp_at_weakenE:
@@ -2164,7 +2164,7 @@ lemma cte_at_typ:
                 \<or> (typ_at ATCB (fst p) s \<and> snd p \<in> dom tcb_cap_cases))"
   apply (rule ext)
   apply (simp add: cte_at_cases obj_at_def)
-  apply (rule arg_cong2[where f="op \<or>"])
+  apply (rule arg_cong2[where f="(\<or>)"])
    apply (safe, simp_all add: a_type_def DomainI)
     apply (clarsimp simp add: a_type_def well_formed_cnode_n_def length_set_helper)
     apply (drule_tac m="fun" in domI)
@@ -2507,7 +2507,7 @@ lemma valid_mdb_def2:
   by (auto simp add: valid_mdb_def swp_cte_at_caps_of)
 
 lemma cte_wp_valid_cap:
-  "\<lbrakk> cte_wp_at (op = c) p s; valid_objs s \<rbrakk> \<Longrightarrow> s \<turnstile> c"
+  "\<lbrakk> cte_wp_at ((=) c) p s; valid_objs s \<rbrakk> \<Longrightarrow> s \<turnstile> c"
   apply (simp add: cte_wp_at_cases)
   apply (erule disjE)
    apply clarsimp
@@ -2521,7 +2521,7 @@ lemma cte_wp_valid_cap:
   done
 
 lemma cte_wp_tcb_cap_valid:
-  "\<lbrakk> cte_wp_at (op = c) p s; valid_objs s \<rbrakk> \<Longrightarrow> tcb_cap_valid c p s"
+  "\<lbrakk> cte_wp_at ((=) c) p s; valid_objs s \<rbrakk> \<Longrightarrow> tcb_cap_valid c p s"
   apply (clarsimp simp: tcb_cap_valid_def obj_at_def
                         pred_tcb_at_def cte_wp_at_cases)
   apply (erule disjE, (clarsimp simp: is_tcb)+)
@@ -2970,7 +2970,7 @@ lemma untyped_incD:
   done
 
 lemma cte_wp_at_norm:
-  "cte_wp_at P p s \<Longrightarrow> \<exists>c. cte_wp_at (op = c) p s \<and> P c"
+  "cte_wp_at P p s \<Longrightarrow> \<exists>c. cte_wp_at ((=) c) p s \<and> P c"
   by (auto simp add: cte_wp_at_cases)
 
 lemma valid_mdb_arch_state [simp]:
@@ -3011,7 +3011,7 @@ lemma unique_reply_capsD:
 lemmas caps_of_state_valid =  caps_of_state_valid_cap
 
 lemma valid_reply_mastersD:
-  "\<lbrakk> cte_wp_at (op = (ReplyCap t True)) p s; valid_reply_masters s \<rbrakk>
+  "\<lbrakk> cte_wp_at ((=) (ReplyCap t True)) p s; valid_reply_masters s \<rbrakk>
    \<Longrightarrow> p = (t, tcb_cnode_index 2)"
   by (simp add: valid_reply_masters_def del: split_paired_All)
 
@@ -3042,7 +3042,7 @@ lemma dmo_aligned:
   done
 
 lemma cte_wp_at_eqD2:
-  "\<lbrakk>cte_wp_at (op = c) p s; cte_wp_at P p s \<rbrakk> \<Longrightarrow> P c"
+  "\<lbrakk>cte_wp_at ((=) c) p s; cte_wp_at P p s \<rbrakk> \<Longrightarrow> P c"
   by (auto elim!: cte_wp_atE split: if_split_asm)
 
 lemma not_pred_tcb:
@@ -3183,7 +3183,7 @@ lemma invs_mdb [elim!]:
   by (simp add: invs_def valid_state_def)
 
 lemma invs_mdb_cte [elim!]:
-  "invs s \<Longrightarrow> mdb_cte_at (swp (cte_wp_at (op \<noteq> NullCap)) s) (cdt s)"
+  "invs s \<Longrightarrow> mdb_cte_at (swp (cte_wp_at ((\<noteq>) NullCap)) s) (cdt s)"
   by (simp add: invs_def valid_state_def valid_mdb_def)
 
 lemma invs_valid_pspace [elim!]:
@@ -3319,7 +3319,7 @@ lemma cte_wp_at_cap_aligned:
   done
 
 lemma cte_wp_at_cap_aligned':
-  "\<lbrakk>cte_wp_at (op = cap) p s; invs s\<rbrakk> \<Longrightarrow> cap_aligned cap"
+  "\<lbrakk>cte_wp_at ((=) cap) p s; invs s\<rbrakk> \<Longrightarrow> cap_aligned cap"
   apply (drule (1) cte_wp_at_valid_objs_valid_cap [OF _ invs_valid_objs])
   apply (fastforce simp: valid_cap_def)
   done

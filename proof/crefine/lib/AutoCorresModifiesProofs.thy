@@ -608,7 +608,7 @@ fun prove_modifies
           val callees = map (FunctionInfo.all_callees o the o Symtab.lookup fn_info) f_names
                         |> Symset.union_sets |> Symset.dest;
           val missing_callees = callees |> filter_out (fn callee =>
-                Symtab.defined results callee orelse member op= f_names callee);
+                Symtab.defined results callee orelse member (=) f_names callee);
           in if not (null missing_callees)
              then (warning ("Can't prove modifies; depends on functions without modifies proofs: " ^
                             commas missing_callees);

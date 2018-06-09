@@ -152,7 +152,7 @@ wp can cope with this.
 definition
   spec_equiv_valid :: "'s \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s,'b) nondet_monad \<Rightarrow> bool"
 where
-  "spec_equiv_valid st I A B P f \<equiv> equiv_valid_2 I A B (op =) (P and (op = st)) P f f"
+  "spec_equiv_valid st I A B P f \<equiv> equiv_valid_2 I A B (=) (P and ((=) st)) P f f"
 
 abbreviation spec_equiv_valid_inv where
   "spec_equiv_valid_inv st I A P f \<equiv> spec_equiv_valid st I A A P f"
@@ -173,7 +173,7 @@ where
   "equiv_valid I A B P f \<equiv> \<forall>st. spec_equiv_valid st I A B P f"
 
 lemma equiv_valid_def2:
-  "equiv_valid I A B P f = equiv_valid_2 I A B (op =) P P f f"
+  "equiv_valid I A B P f = equiv_valid_2 I A B (=) P P f f"
   by (simp add: equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
 
 abbreviation equiv_valid_rv where
@@ -186,7 +186,7 @@ lemma bind_ev_general:
   assumes hoare: "\<lbrace> P'' \<rbrace> f \<lbrace> Q \<rbrace>"
   shows "equiv_valid I A C (\<lambda>s. P' s \<and> P'' s) (f >>= g)"
   unfolding equiv_valid_def2
-  apply (rule equiv_valid_2_bind_general[where R'="op ="])
+  apply (rule equiv_valid_2_bind_general[where R'="(=)"])
      apply (auto intro: reads_res_1[unfolded equiv_valid_def2] reads_res_2[unfolded equiv_valid_def2])[2]
    apply (rule hoare)
   apply (rule hoare)
@@ -280,7 +280,7 @@ lemma put_ev2:
 
 
 lemma get_bind_ev2:
-  assumes "\<And> rv rv'. \<lbrakk>I rv rv'; A rv rv'\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R (P and (op = rv)) (P' and (op = rv')) (f rv) (f' rv')"
+  assumes "\<And> rv rv'. \<lbrakk>I rv rv'; A rv rv'\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R (P and ((=) rv)) (P' and ((=) rv')) (f rv) (f' rv')"
   shows "equiv_valid_2 I A B R P P' (get >>= f) (get >>= f')"
   apply(rule equiv_valid_2_guard_imp)
   apply(rule_tac R'="I And A" in equiv_valid_2_bind_general)
@@ -770,7 +770,7 @@ lemma equiv_valid_2_bindE:
    by auto
 
 lemma rel_sum_comb_equals:
-  "((op =) \<oplus> (op =)) = (op =)"
+  "((=) \<oplus> (=)) = (=)"
   apply(rule ext)
   apply(rule ext)
   apply(rename_tac a b)
@@ -779,11 +779,11 @@ lemma rel_sum_comb_equals:
 
 definition spec_equiv_valid_2_inv where
   "spec_equiv_valid_2_inv s I A R P P' f f' \<equiv>
-      equiv_valid_2 I A A R (P and (op = s)) P' f f'"
+      equiv_valid_2 I A A R (P and ((=) s)) P' f f'"
 
 lemma spec_equiv_valid_def2:
   "spec_equiv_valid s I A A P f =
-   spec_equiv_valid_2_inv s I A (op =) P P f f"
+   spec_equiv_valid_2_inv s I A (=) P P f f"
   apply(simp add: spec_equiv_valid_def spec_equiv_valid_2_inv_def)
   done
 

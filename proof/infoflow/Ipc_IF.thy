@@ -464,7 +464,7 @@ lemma sts_to_modify':
     apply simp
     apply (rule_tac x="the (get_tcb tcb x)" in monadic_rewrite_symb_exec,(wp | simp)+)
     apply (rule_tac x="x" in  monadic_rewrite_symb_exec,(wp | simp)+)
-    apply (rule_tac P="op = x" in monadic_rewrite_refl3)
+    apply (rule_tac P="(=) x" in monadic_rewrite_refl3)
     apply (clarsimp simp add: put_def modify_def get_def bind_def)
    apply assumption
   apply wp
@@ -556,7 +556,7 @@ lemma ev2_invisible_simple:
 lemma blocked_cancel_ipc_nosts_equiv_but_for_labels:
   "\<lbrace>pas_refined aag and
     st_tcb_at (\<lambda>st. st = BlockedOnReceive x) t and
-    bound_tcb_at (op = (Some ntfnptr)) t and
+    bound_tcb_at ((=) (Some ntfnptr)) t and
     equiv_but_for_labels aag L st and
     K(pasObjectAbs aag x \<in> L) and
     K(pasObjectAbs aag t \<in> L) \<rbrace>
@@ -575,7 +575,7 @@ lemma blocked_cancel_ipc_nosts_reads_respects:
   "reads_respects aag l (pas_refined aag
                           and st_tcb_at (\<lambda>st. \<exists>xa. st = (BlockedOnReceive x)) t
 
-                          and bound_tcb_at (op = (Some ntfnptr)) t
+                          and bound_tcb_at ((=) (Some ntfnptr)) t
                           and (\<lambda>s. is_subject aag (cur_thread s))
                           and K (
                               (pasObjectAbs aag t, Receive, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag
@@ -705,7 +705,7 @@ lemma send_signal_reads_respects:
     apply (intro impI allI)
     apply (simp add: obj_at_def)
     apply (rule conjI)
-     apply (frule (3) ntfn_bound_tcb_at[where P="op = (Some ntfnptr)",OF _ _ _ _ refl])
+     apply (frule (3) ntfn_bound_tcb_at[where P="(=) (Some ntfnptr)",OF _ _ _ _ refl])
      apply (frule (1) bound_tcb_at_implies_receive)
      apply (elim disjE)
       apply (rule disjI1)
@@ -713,7 +713,7 @@ lemma send_signal_reads_respects:
      apply (rule disjI2)
      apply (fastforce dest:read_sync_ep_read_receivers_strong)
     apply (clarsimp)
-    apply (frule (1) ntfn_bound_tcb_at[where P="op = (Some ntfnptr)",OF _ _ _ _ refl])
+    apply (frule (1) ntfn_bound_tcb_at[where P="(=) (Some ntfnptr)",OF _ _ _ _ refl])
       apply (fastforce simp: obj_at_def)
      apply assumption
     apply (rule conjI)
@@ -773,7 +773,7 @@ lemma send_signal_reads_respects:
        by (fastforce simp add: all_with_auth_to_def all_to_which_has_auth_def)
 
      apply (frule (1)
-       ntfn_bound_tcb_at[where P="op = (Some ntfnptr)",OF _ _ _ _ refl])
+       ntfn_bound_tcb_at[where P="(=) (Some ntfnptr)",OF _ _ _ _ refl])
        apply (fastforce simp: obj_at_def)
       apply assumption
      apply (intro allI conjI impI)
@@ -1449,7 +1449,7 @@ lemma dmo_loadWord_reads_respects:
   apply(rule do_machine_op_spec_reads_respects)
   apply(simp add: loadWord_def equiv_valid_def2 spec_equiv_valid_def)
   apply(rule_tac R'="\<lambda> rv rv'. for_each_byte_of_word (\<lambda> y. rv y = rv' y) p" and Q="\<top>\<top>" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
-       apply(rule_tac R'="op =" and Q="\<lambda> r s. p && mask 2 = 0" and Q'="\<lambda> r s. p && mask 2 = 0" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
+       apply(rule_tac R'="(=)" and Q="\<lambda> r s. p && mask 2 = 0" and Q'="\<lambda> r s. p && mask 2 = 0" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
             apply(rule return_ev2)
             apply(rule_tac f="word_rcat" in arg_cong)
             apply(fastforce intro: is_aligned_no_wrap' word_plus_mono_right simp: is_aligned_mask for_each_byte_of_word_def) (* slow *)

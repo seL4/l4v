@@ -31,9 +31,9 @@ text {*
 *}
 definition domain_sep_inv where
   "domain_sep_inv irqs st s \<equiv>
-    (\<forall> slot. \<not> cte_wp_at (op = DomainCap) slot s) \<and>
-    (irqs \<or> (\<forall> irq slot. \<not> cte_wp_at (op = IRQControlCap) slot s
-      \<and> \<not> cte_wp_at (op = (IRQHandlerCap irq)) slot s
+    (\<forall> slot. \<not> cte_wp_at ((=) DomainCap) slot s) \<and>
+    (irqs \<or> (\<forall> irq slot. \<not> cte_wp_at ((=) IRQControlCap) slot s
+      \<and> \<not> cte_wp_at ((=) (IRQHandlerCap irq)) slot s
       \<and> interrupt_states s irq \<noteq> IRQSignal
       \<and> interrupt_states s irq \<noteq> IRQReserved
       \<and> interrupt_states s = interrupt_states st))"
@@ -49,10 +49,10 @@ definition domain_sep_inv_cap where
 lemma cte_wp_at_not_domain_sep_inv_cap:
   "cte_wp_at (not domain_sep_inv_cap irqs) slot s \<longleftrightarrow>
    ((irqs \<longrightarrow> False) \<and>
-    (\<not> irqs \<longrightarrow> (cte_wp_at (op = IRQControlCap) slot s \<or>
-                    (\<exists> irq. cte_wp_at (op = (IRQHandlerCap irq)) slot s)))
+    (\<not> irqs \<longrightarrow> (cte_wp_at ((=) IRQControlCap) slot s \<or>
+                    (\<exists> irq. cte_wp_at ((=) (IRQHandlerCap irq)) slot s)))
    )
-   \<or> cte_wp_at (op = DomainCap) slot s"
+   \<or> cte_wp_at ((=) DomainCap) slot s"
   apply(rule iffI)
    apply(drule cte_wp_at_eqD)
    apply clarsimp
@@ -62,9 +62,9 @@ lemma cte_wp_at_not_domain_sep_inv_cap:
 
 lemma domain_sep_inv_def2:
   "domain_sep_inv irqs st s =
-    ((\<forall> slot. \<not> cte_wp_at (op = DomainCap) slot s) \<and>
-    (irqs \<or> (\<forall> irq slot. \<not> cte_wp_at (op = IRQControlCap) slot s
-                            \<and> \<not> cte_wp_at (op = (IRQHandlerCap irq)) slot s)) \<and>
+    ((\<forall> slot. \<not> cte_wp_at ((=) DomainCap) slot s) \<and>
+    (irqs \<or> (\<forall> irq slot. \<not> cte_wp_at ((=) IRQControlCap) slot s
+                            \<and> \<not> cte_wp_at ((=) (IRQHandlerCap irq)) slot s)) \<and>
     (irqs \<or> (\<forall> irq.
         interrupt_states s irq \<noteq> IRQSignal
         \<and> interrupt_states s irq \<noteq> IRQReserved
@@ -199,7 +199,7 @@ lemma set_cap_domain_sep_inv:
   done
 
 lemma cte_wp_at_domain_sep_inv_cap:
-  "\<lbrakk>domain_sep_inv irqs st s; cte_wp_at (op = cap) slot s\<rbrakk> \<Longrightarrow> domain_sep_inv_cap irqs cap"
+  "\<lbrakk>domain_sep_inv irqs st s; cte_wp_at ((=) cap) slot s\<rbrakk> \<Longrightarrow> domain_sep_inv_cap irqs cap"
   apply(case_tac slot)
   apply(auto simp: domain_sep_inv_def domain_sep_inv_cap_def split: cap.splits)
   done
@@ -598,7 +598,7 @@ lemma cap_move_cte_wp_at_other:
   done
 
 lemma cte_wp_at_weak_derived_ReplyCap:
-  "cte_wp_at (op = (ReplyCap x False)) slot s
+  "cte_wp_at ((=) (ReplyCap x False)) slot s
        \<Longrightarrow> cte_wp_at (weak_derived (ReplyCap x False)) slot s"
   apply(erule cte_wp_atE)
    apply(rule cte_wp_at_cteI)
@@ -738,7 +738,7 @@ lemma perform_page_invocation_domain_sep_inv_get_cap_helper:
 
 
 lemma set_object_tcb_context_update_neg_cte_wp_at:
-  "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s \<and> obj_at (op = (TCB tcb)) ptr s\<rbrace>
+  "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s \<and> obj_at ((=) (TCB tcb)) ptr s\<rbrace>
    set_object ptr (TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set X (arch_tcb tcb)\<rparr>))
    \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
   apply(wp set_object_wp)
@@ -768,7 +768,7 @@ crunch domain_sep_inv[wp]: as_user "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv)
 
 lemma set_object_tcb_context_update_domain_sep_inv:
-  "\<lbrace>\<lambda>s. domain_sep_inv irqs st s \<and> obj_at (op = (TCB tcb)) ptr s\<rbrace>
+  "\<lbrace>\<lambda>s. domain_sep_inv irqs st s \<and> obj_at ((=) (TCB tcb)) ptr s\<rbrace>
    set_object ptr (TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set X (tcb_arch tcb)\<rparr>))
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply(rule hoare_pre)

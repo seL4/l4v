@@ -143,8 +143,8 @@ lemma corres_add_noop_rhs2:
 
 (* Use termination (nf=True) to avoid exs_valid *)
 lemma corres_noop2_no_exs:
-  assumes x: "\<And>s. P s  \<Longrightarrow> \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>r. op = s\<rbrace> \<and> empty_fail f"
-  assumes y: "\<And>s. P' s \<Longrightarrow> \<lbrace>op = s\<rbrace> g \<lbrace>\<lambda>r. op = s\<rbrace>"
+  assumes x: "\<And>s. P s  \<Longrightarrow> \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>r. (=) s\<rbrace> \<and> empty_fail f"
+  assumes y: "\<And>s. P' s \<Longrightarrow> \<lbrace>(=) s\<rbrace> g \<lbrace>\<lambda>r. (=) s\<rbrace>"
   assumes z: "nf' \<Longrightarrow> no_fail P f" "no_fail P' g"
   shows      "corres_underlying sr True nf' dc P P' f g"
   apply (clarsimp simp: corres_underlying_def)
@@ -158,7 +158,7 @@ lemma corres_noop2_no_exs:
 
 lemma corres_symb_exec_l_no_exs:
   assumes z: "\<And>rv. corres_underlying sr True nf' r (Q rv) P' (x rv) y"
-  assumes x: "\<And>s. P s \<Longrightarrow> \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace> \<and> empty_fail m"
+  assumes x: "\<And>s. P s \<Longrightarrow> \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace> \<and> empty_fail m"
   assumes y: "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>"
   assumes nf: "nf' \<Longrightarrow> no_fail P m"
   shows      "corres_underlying sr True nf' r P P' (m >>= (\<lambda>rv. x rv)) y"

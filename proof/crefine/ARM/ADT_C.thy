@@ -613,7 +613,7 @@ lemma inj_on_option_map:
 
 lemma eq_option_to_0_rev:
   "Some 0 ~: A \<Longrightarrow> \<forall>x. \<forall>y\<in>A.
-   (op = \<circ> option_to_0) y x \<longrightarrow> (if x = 0 then None else Some x) = y"
+   ((=) \<circ> option_to_0) y x \<longrightarrow> (if x = 0 then None else Some x) = y"
   by (clarsimp simp: option_to_0_def split: option.splits)
 
 lemma inj_hwasidsI:
@@ -687,7 +687,7 @@ definition (in state_rel)
 
 lemma eq_option_to_ptr_rev:
   "Some 0 \<notin> A \<Longrightarrow>
-   \<forall>x. \<forall>y\<in>A. (op = \<circ> option_to_ptr) y x \<longrightarrow>
+   \<forall>x. \<forall>y\<in>A. ((=) \<circ> option_to_ptr) y x \<longrightarrow>
               (if x=NULL then None else Some (ptr_val x)) = y"
   apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
   apply (auto intro: word_gt_0[THEN iffD2])
@@ -1171,7 +1171,7 @@ lemmas projectKO_opts = projectKO_opt_ep projectKO_opt_ntfn projectKO_opt_tcb
 abbreviation
   map_to_cnes :: "(word32 \<rightharpoonup> kernel_object) \<Rightarrow> word32 \<rightharpoonup> cte"
 where
-  "map_to_cnes \<equiv> op \<circ>\<^sub>m projectKO_opt"
+  "map_to_cnes \<equiv> (\<circ>\<^sub>m) projectKO_opt"
 
 lemma map_to_cnes_eq:
   assumes aligned: "pspace_aligned' s"   and aligned': "pspace_aligned' s'"

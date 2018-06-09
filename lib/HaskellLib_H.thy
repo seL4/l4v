@@ -148,7 +148,7 @@ type_synonym ordering = bool
 
 definition
   compare :: "('a :: ord) \<Rightarrow> 'a \<Rightarrow> ordering" where
-  "compare \<equiv> op <"
+  "compare \<equiv> (<)"
 
 primrec
   insertBy :: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a list \<Rightarrow> 'a list"
@@ -359,10 +359,10 @@ lemma show_simp_away[simp]: "S @ show t = S"
   by (simp add: show_def)
 
 definition
- "andList \<equiv> foldl (op \<and>) True"
+ "andList \<equiv> foldl (\<and>) True"
 
 definition
- "orList \<equiv> foldl (op \<or>) False"
+ "orList \<equiv> foldl (\<or>) False"
 
 primrec
   mapAccumL :: "('a \<Rightarrow> 'b \<Rightarrow> 'a \<times> 'c) \<Rightarrow> 'a \<Rightarrow> 'b list \<Rightarrow> 'a \<times> ('c list)"
@@ -504,7 +504,7 @@ definition
 
 definition
   sum :: "'a list \<Rightarrow> 'a::{plus,zero}" where
- "sum \<equiv> foldl (op +) 0"
+ "sum \<equiv> foldl (+) 0"
 
 definition
  "replicateM n m \<equiv> sequence (replicate n m)"

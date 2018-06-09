@@ -126,7 +126,7 @@ lemma decode_irq_handler_valid'[wp]:
   done
 
 lemma is_irq_active_corres:
-  "corres op = \<top> \<top> (is_irq_active irq) (isIRQActive irq)"
+  "corres (=) \<top> \<top> (is_irq_active irq) (isIRQActive irq)"
   apply (simp add: is_irq_active_def isIRQActive_def get_irq_state_def
                    getIRQState_def getInterruptState_def)
   apply (clarsimp simp: state_relation_def interrupt_state_relation_def)
@@ -502,7 +502,7 @@ lemma timerTick_corres:
           apply (rule corres_if[where Q = \<top> and Q' = \<top>])
             apply (case_tac state,simp_all)[1]
           apply (simp add: Let_def)
-          apply (rule_tac r'="op =" in corres_split [OF _ ethreadget_corres])
+          apply (rule_tac r'="(=)" in corres_split [OF _ ethreadget_corres])
              apply (rename_tac ts ts')
              apply (rule_tac R="1 < ts" in corres_cases)
               apply (simp)
@@ -562,12 +562,12 @@ lemma timerTick_corres:
   done
 
 lemma corres_return_VGICMaintenance [corres]:
-  "corres (op = o arch_fault_map) (K (a=b)) \<top>
+  "corres ((=) o arch_fault_map) (K (a=b)) \<top>
           (return (ARM_A.VGICMaintenance a)) (return (ARM_HYP_H.VGICMaintenance b))"
   by simp
 
 lemma corres_gets_numlistregs [corres]:
-  "corres (op =) \<top> \<top>
+  "corres (=) \<top> \<top>
       (gets (arm_gicvcpu_numlistregs \<circ> arch_state)) (gets (armKSGICVCPUNumListRegs \<circ> ksArchState))"
   by (clarsimp simp: state_relation_def arch_state_relation_def)
 
@@ -583,7 +583,7 @@ lemma countTrailingZeros_simp [simp]:
   by (simp add: to_bl_upt)
 
 lemma corres_do_machine_op_gets[corres]:
-  "f = f' \<Longrightarrow> corres (op =) \<top> \<top> (do_machine_op (gets f)) (doMachineOp (gets f'))"
+  "f = f' \<Longrightarrow> corres (=) \<top> \<top> (do_machine_op (gets f)) (doMachineOp (gets f'))"
   by (corressimp search: corres_machine_op corres_underlying_trivial; simp)
 
 lemma corres_do_machine_op_machine_lift[corres]:

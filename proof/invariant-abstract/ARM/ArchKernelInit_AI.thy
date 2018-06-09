@@ -221,14 +221,14 @@ lemma pspace_distinct_init_A:
 lemma caps_of_state_init_A_st_Null:
   "caps_of_state (init_A_st::'z::state_ext state) x
      = (if cte_at x (init_A_st::'z::state_ext state) then Some cap.NullCap else None)"
-  apply (subgoal_tac "\<not> cte_wp_at (op \<noteq> cap.NullCap) x init_A_st")
+  apply (subgoal_tac "\<not> cte_wp_at ((\<noteq>) cap.NullCap) x init_A_st")
    apply (auto simp add: cte_wp_at_caps_of_state)[1]
   apply (clarsimp, erule cte_wp_atE)
    apply (auto simp add: state_defs tcb_cap_cases_def split: if_split_asm)
   done
 
 lemmas cte_wp_at_caps_of_state_eq
-    = cte_wp_at_caps_of_state[where P="op = cap" for cap]
+    = cte_wp_at_caps_of_state[where P="(=) cap" for cap]
 
 declare ptrFormPAddr_addFromPPtr[simp]
 

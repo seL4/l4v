@@ -328,13 +328,14 @@ lemma delete_asid_corresb:
   done
 
 lemma cte_wp_at_ex:
-  "cte_wp_at (\<lambda>_. True) p s \<Longrightarrow> (\<exists>cap. cte_wp_at (op = cap) p s)"
+  "cte_wp_at (\<lambda>_. True) p s \<Longrightarrow> (\<exists>cap. cte_wp_at ((=) cap) p s)"
   by (simp add: cte_wp_at_def)
 
 (* Sadly broken:
 lemma set_vm_root_for_flush_corres:
   notes [corres] = gct_corres getSlotCap_corres
-  shows "corres (op =)
+  shows
+  "corres (=)
           (cur_tcb and vspace_at_asid asid pd
            and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
            and valid_asid_map and valid_vs_lookup
@@ -377,7 +378,7 @@ text \<open>Note we can wrap it all up in corressimp\<close>
 lemma set_vm_root_for_flush_corres':
   notes [corres] = gct_corres getSlotCap_corres
   shows
-  "corres (op =)
+  "corres (=)
           (cur_tcb and vspace_at_asid asid pd
            and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
            and valid_asid_map and valid_vs_lookup

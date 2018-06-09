@@ -216,9 +216,9 @@ locale Max_test = Max_spec where
 
 lemma (in Max_test)
   shows
-  "\<Gamma>\<turnstile> {\<sigma>} \<acute>k :== CALL Max(LEQ_'proc,\<acute>n,\<acute>m) \<lbrace>\<acute>k = mx (op \<le>) \<^bsup>\<sigma>\<^esup>n \<^bsup>\<sigma>\<^esup>m\<rbrace>"
+  "\<Gamma>\<turnstile> {\<sigma>} \<acute>k :== CALL Max(LEQ_'proc,\<acute>n,\<acute>m) \<lbrace>\<acute>k = mx (\<le>) \<^bsup>\<sigma>\<^esup>n \<^bsup>\<sigma>\<^esup>m\<rbrace>"
 proof -
-  note Max_spec = Max_spec [where leq="(op \<le>)"]
+  note Max_spec = Max_spec [where leq="(\<le>)"]
   show ?thesis
     apply vcg
     apply (clarsimp)
@@ -264,12 +264,12 @@ locale Max_test' = Max_impl where
         + LEQ_impl
 lemma (in Max_test')
   shows
-  "\<forall>n m. \<Gamma>\<turnstile> \<lbrace>\<acute>n=n \<and> \<acute>m=m\<rbrace> \<acute>k :== CALL Max(LEQ_'proc,\<acute>n,\<acute>m) \<lbrace>\<acute>k = mx (op \<le>) n m\<rbrace>"
+  "\<forall>n m. \<Gamma>\<turnstile> \<lbrace>\<acute>n=n \<and> \<acute>m=m\<rbrace> \<acute>k :== CALL Max(LEQ_'proc,\<acute>n,\<acute>m) \<lbrace>\<acute>k = mx (\<le>) n m\<rbrace>"
 proof -
   note Max_spec = Max_spec5
   show ?thesis
     apply vcg
-    apply (rule_tac x="op \<le>" in exI)
+    apply (rule_tac x="(\<le>)" in exI)
     apply clarsimp
     apply (rule LEQ_spec [rule_format])
     done

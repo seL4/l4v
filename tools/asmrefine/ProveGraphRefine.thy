@@ -286,7 +286,7 @@ ML {*
 fun preserve_skel_conv consts arg_conv ct = let
     val (hd, xs) = strip_comb (Thm.term_of ct)
     val self = preserve_skel_conv consts arg_conv
-  in if is_Const hd andalso member (op =) consts
+  in if is_Const hd andalso member (=) consts
         (fst (dest_Const hd))
     then  if null xs then Conv.all_conv ct
         else Conv.combination_conv self self ct
@@ -294,7 +294,7 @@ fun preserve_skel_conv consts arg_conv ct = let
 
 fun fold_of_nat_eq_Ifs ctxt tm = let
     fun recr (Const (@{const_name If}, _)
-            $ (@{term "op = :: word32 => _"} $ _ $ n) $ y $ z)
+            $ (@{term "(=) :: word32 => _"} $ _ $ n) $ y $ z)
         = (SOME n, y) :: recr z
       | recr t = [(NONE, t)]
     val (ns, vs) = recr tm |> map_split I
@@ -313,8 +313,8 @@ fun fold_of_nat_eq_Ifs ctxt tm = let
               ; t)
     val pat = lambda n (get_pat (nth vs 0) (nth vs 1))
     val m = HOLogic.mk_number @{typ nat} (length vs - 1)
-    val conv = preserve_skel_conv [fst (dest_Const @{term "op ==>"}),
-            @{const_name Trueprop}, fst (dest_Const @{term "op =="}),
+    val conv = preserve_skel_conv [fst (dest_Const @{term "(==>)"}),
+            @{const_name Trueprop}, fst (dest_Const @{term "(==)"}),
             @{const_name If}]
         (Simplifier.rewrite ctxt)
     val thm = @{thm fold_of_nat_eq_Ifs}
@@ -369,7 +369,7 @@ ML {*
 structure ProveSimplToGraphGoals = struct
 
 fun goal_eq (g, g') =
-    (eq_list (op aconv) (Logic.strip_assums_hyp g, Logic.strip_assums_hyp g'))
+    (eq_list (aconv) (Logic.strip_assums_hyp g, Logic.strip_assums_hyp g'))
     andalso (Logic.strip_assums_concl g aconv Logic.strip_assums_concl g')
     andalso (map snd (Logic.strip_params g) = map snd (Logic.strip_params g'))
 
@@ -643,7 +643,7 @@ fun decompose_mem_goals trace ctxt = warn_schem_tac "decompose_mem_goals" ctxt
     | @{term Trueprop} $ (Const (@{const_name pglobal_valid}, _) $ _ $ _ $ _)
         => asm_simp_tac (ctxt addsimps @{thms pglobal_valid_def}
             addsimps #3 (get_globals_rewrites ctxt))
-    | @{term Trueprop} $ (@{term "op = :: heap_mem \<Rightarrow> _"} $ x $ y) => let
+    | @{term Trueprop} $ (@{term "(=) :: heap_mem \<Rightarrow> _"} $ x $ y) => let
         val query = (heap_upd_kind x, heap_upd_kind y)
         val _ = if trace then writeln ("decompose_mem_goals: " ^ @{make_string} query)
             else ()
@@ -805,7 +805,7 @@ fun graph_refine_proof_full_tac csenv ctxt = EVERY
         (graph_refine_proof_tacs csenv ctxt))
 
 fun graph_refine_proof_full_goal_tac csenv ctxt i t
-    = (foldr1 (op THEN_ALL_NEW)
+    = (foldr1 (THEN_ALL_NEW)
         (map snd (graph_refine_proof_tacs csenv ctxt)) i t)
         |> try Seq.hd |> (fn NONE => Seq.empty | SOME t => Seq.single t)
 

@@ -75,7 +75,7 @@ locale Finalise_AI_1 =
      \<lbrace> \<lambda>rv. is_final_cap' cap\<rbrace>"
    assumes finalise_cap_cases1:
   "\<And> cap final slot. \<lbrace>\<lambda>(s :: 'a state). final \<longrightarrow> is_final_cap' cap s
-         \<and> cte_wp_at (op = cap) slot s\<rbrace>
+         \<and> cte_wp_at ((=) cap) slot s\<rbrace>
      finalise_cap cap final
    \<lbrace>\<lambda>rv (s :: 'a state). fst rv = cap.NullCap
          \<and> snd rv = (if final then cap_cleanup_opt cap else NullCap)
@@ -111,7 +111,7 @@ locale Finalise_AI_1 =
       deleting_irq_handler irq
     \<lbrace>\<lambda>rv (s :: 'a state). (interrupt_irq_node s irq, []) \<noteq> sl\<rbrace>"
   assumes no_cap_to_obj_with_diff_ref_finalI:
-    "\<And>p (s :: 'a state) cap cap'. \<lbrakk> cte_wp_at (op = cap) p s; is_final_cap' cap s;
+    "\<And>p (s :: 'a state) cap cap'. \<lbrakk> cte_wp_at ((=) cap) p s; is_final_cap' cap s;
               obj_refs cap' = obj_refs cap \<rbrakk>
         \<Longrightarrow> no_cap_to_obj_with_diff_ref cap' {p} s"
   assumes suspend_no_cap_to_obj_ref[wp]:
@@ -122,7 +122,7 @@ locale Finalise_AI_1 =
   assumes finalise_cap_replaceable:
     "\<And> cap x sl.
     \<lbrace>\<lambda>(s :: 'a state). s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> valid_mdb s
-          \<and> cte_wp_at (op = cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s)
+          \<and> cte_wp_at ((=) cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s)
           \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)
           \<and> (is_arch_cap cap \<longrightarrow> pspace_aligned s \<and>
                                  valid_vspace_objs s \<and>
@@ -524,7 +524,7 @@ lemma suspend_caps_of_state:
 
 lemma suspend_final_cap:
   "\<lbrace>\<lambda>s. is_final_cap' cap s \<and> \<not> can_fast_finalise cap
-            \<and> cte_wp_at (op = cap) sl s\<rbrace>
+            \<and> cte_wp_at ((=) cap) sl s\<rbrace>
      suspend t
    \<lbrace>\<lambda>rv s. is_final_cap' cap s\<rbrace>"
   apply (simp add: is_final_cap'_def2 cte_wp_at_caps_of_state
@@ -542,7 +542,7 @@ lemma suspend_final_cap:
   done
 
 lemma cap_delete_one_final_cap:
-  "\<lbrace>\<lambda>s. cte_wp_at (op = cap) slot s
+  "\<lbrace>\<lambda>s. cte_wp_at ((=) cap) slot s
         \<and> \<not> can_fast_finalise cap
         \<and> is_final_cap' cap s\<rbrace>
      cap_delete_one slot'
@@ -561,7 +561,7 @@ lemma cap_delete_one_final_cap:
   done
 
 lemma deleting_irq_handler_final:
-  "\<lbrace>is_final_cap' cap and cte_wp_at (op = cap) slot
+  "\<lbrace>is_final_cap' cap and cte_wp_at ((=) cap) slot
           and K (\<not> can_fast_finalise cap)\<rbrace>
       deleting_irq_handler irq
    \<lbrace>\<lambda>rv. is_final_cap' cap\<rbrace>"
@@ -577,7 +577,7 @@ lemma unbind_notification_cte_wp_at[wp]:
 
 lemma (in Finalise_AI_1) finalise_cap_cases:
   "\<lbrace>\<lambda>(s :: 'a state). final \<longrightarrow> is_final_cap' cap s
-         \<and> cte_wp_at (op = cap) slot s\<rbrace>
+         \<and> cte_wp_at ((=) cap) slot s\<rbrace>
      finalise_cap cap final
    \<lbrace>\<lambda>rv (s :: 'a state). fst rv = cap.NullCap
             \<and> snd rv = (if final then cap_cleanup_opt cap else NullCap)
@@ -660,7 +660,7 @@ lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
    apply (frule refs_in_ntfn_q_refs)
    apply (fastforce)
   apply (clarsimp split: if_split_asm)
-   apply (frule_tac P="op = (Some ntfnptr)" in ntfn_bound_tcb_at, simp_all add: obj_at_def)[1]
+   apply (frule_tac P="(=) (Some ntfnptr)" in ntfn_bound_tcb_at, simp_all add: obj_at_def)[1]
    apply (fastforce simp: ntfn_q_refs_no_NTFNBound tcb_at_no_ntfn_bound tcb_ntfn_is_bound_def
                           obj_at_def tcb_st_refs_no_TCBBound
                    dest!: pred_tcb_at_tcb_at bound_tcb_at_state_refs_ofD)
@@ -728,7 +728,7 @@ crunch irq_node[wp]: cap_delete_one "\<lambda>s. P (interrupt_irq_node s)"
 lemma deleting_irq_handler_empty:
   "\<lbrace>\<top>\<rbrace>
      deleting_irq_handler irq
-   \<lbrace>\<lambda>rv s. cte_wp_at (op = cap.NullCap) (interrupt_irq_node s irq, []) s\<rbrace>"
+   \<lbrace>\<lambda>rv s. cte_wp_at ((=) cap.NullCap) (interrupt_irq_node s irq, []) s\<rbrace>"
   apply (simp add: deleting_irq_handler_def cte_wp_at_caps_of_state
                    get_irq_slot_def)
   apply (wp hoare_use_eq_irq_node [OF cap_delete_one_irq_node cap_delete_one_caps_of_state])
@@ -755,7 +755,7 @@ lemma unbind_notification_not_bound:
    apply (wp sbn_obj_at_impossible simple_obj_set_prop_at | wpc | simp)+
   apply (clarsimp simp: obj_at_def)
   apply (rule valid_objsE, simp+)
-  apply (drule_tac P="op = (Some ntfnptr)" in ntfn_bound_tcb_at, simp+)
+  apply (drule_tac P="(=) (Some ntfnptr)" in ntfn_bound_tcb_at, simp+)
   apply (auto simp: obj_at_def valid_obj_def is_tcb valid_ntfn_def pred_tcb_at_def)
   done
 
@@ -770,7 +770,7 @@ lemma unbind_notification_not_bound:
   done
 
 lemma unbind_notification_bound_tcb_at[wp]:
-  "\<lbrace>\<top>\<rbrace> unbind_notification tcbptr \<lbrace>\<lambda>_. bound_tcb_at (op = None) tcbptr\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> unbind_notification tcbptr \<lbrace>\<lambda>_. bound_tcb_at ((=) None) tcbptr\<rbrace>"
   apply (simp add: unbind_notification_def)
   apply (wpsimp wp: sbn_bound_tcb_at')
    apply (rule gbn_bound_tcb[THEN hoare_strengthen_post])
@@ -824,9 +824,9 @@ interpretation delete_one_pre
   by (unfold_locales, wp cap_delete_one_cte_wp_at_preserved)
 
 lemma (in Finalise_AI_1) finalise_cap_equal_cap[wp]:
-  "\<lbrace>cte_wp_at (op = cap) sl\<rbrace>
+  "\<lbrace>cte_wp_at ((=) cap) sl\<rbrace>
      finalise_cap cap fin
-   \<lbrace>\<lambda>rv. cte_wp_at (op = cap) sl :: 'a state \<Rightarrow> bool\<rbrace>"
+   \<lbrace>\<lambda>rv. cte_wp_at ((=) cap) sl :: 'a state \<Rightarrow> bool\<rbrace>"
   apply (cases cap, simp_all split del: if_split)
     apply (wp suspend_cte_wp_at_preserved
                  deleting_irq_handler_cte_preserved prepare_thread_delete_cte_wp_at
@@ -940,7 +940,7 @@ sublocale delete_one_abs a' for a' :: "('a :: state_ext) itself"
 end
 
 lemma cap_delete_one_deletes_reply:
-  "\<lbrace>cte_wp_at (op = (cap.ReplyCap t False)) slot and valid_reply_caps\<rbrace>
+  "\<lbrace>cte_wp_at ((=) (cap.ReplyCap t False)) slot and valid_reply_caps\<rbrace>
     cap_delete_one slot
    \<lbrace>\<lambda>rv s. \<not> has_reply_cap t s\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
@@ -961,7 +961,7 @@ lemma cap_delete_one_deletes_reply:
   done
 
 lemma cap_delete_one_reply_st_tcb_at:
-  "\<lbrace>pred_tcb_at proj P t and cte_wp_at (op = (cap.ReplyCap t' False)) slot\<rbrace>
+  "\<lbrace>pred_tcb_at proj P t and cte_wp_at ((=) (cap.ReplyCap t' False)) slot\<rbrace>
     cap_delete_one slot
    \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
@@ -990,7 +990,7 @@ locale Finalise_AI_3 = Finalise_AI_2 a b
   fixes c :: "'c itself"
   assumes finalise_cap_invs:
     "\<And> cap slot x.
-    \<lbrace>invs and cte_wp_at (op = cap) slot\<rbrace>
+    \<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace>
       finalise_cap cap x
     \<lbrace>\<lambda>rv. invs :: 'a state \<Rightarrow> bool\<rbrace>"
   assumes finalise_cap_irq_node:
@@ -1184,7 +1184,7 @@ lemma cap_not_in_valid_global_refs:
 
 (* FIXME: move *)
 lemma gts_wp:
-  "\<lbrace>\<lambda>s. \<forall>st. st_tcb_at (op = st) t s \<longrightarrow> P st s\<rbrace> get_thread_state t \<lbrace>P\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>st. st_tcb_at ((=) st) t s \<longrightarrow> P st s\<rbrace> get_thread_state t \<lbrace>P\<rbrace>"
   unfolding get_thread_state_def
   apply (wp thread_get_wp')
   apply clarsimp
@@ -1193,7 +1193,7 @@ lemma gts_wp:
   done
 
 lemma gbn_wp:
-  "\<lbrace>\<lambda>s. \<forall>ntfn. bound_tcb_at (op = ntfn) t s \<longrightarrow> P ntfn s\<rbrace> get_bound_notification t \<lbrace>P\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>ntfn. bound_tcb_at ((=) ntfn) t s \<longrightarrow> P ntfn s\<rbrace> get_bound_notification t \<lbrace>P\<rbrace>"
   unfolding get_bound_notification_def
   apply (wp thread_get_wp')
   apply (clarsimp)
@@ -1295,11 +1295,11 @@ lemma hoare_when_weak_wp:
 
 
 lemma zombie_not_ex_cap_to:
-  "\<lbrakk> cte_wp_at (op = (cap.Zombie ptr zbits n)) slot s;
+  "\<lbrakk> cte_wp_at ((=) (cap.Zombie ptr zbits n)) slot s;
          zombies_final s \<rbrakk>
       \<Longrightarrow> \<not> ex_nonz_cap_to ptr s"
   apply (clarsimp simp: ex_nonz_cap_to_def )
-  apply (frule(1) zombies_finalD3[where P="op = c" and P'="\<lambda>c. x \<in> S c" for c x S])
+  apply (frule(1) zombies_finalD3[where P="(=) c" and P'="\<lambda>c. x \<in> S c" for c x S])
      apply (clarsimp simp: cte_wp_at_caps_of_state)
     apply assumption
    apply (rule notI, drule_tac a=ptr in equals0D)

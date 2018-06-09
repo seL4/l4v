@@ -1422,7 +1422,7 @@ lemma valid_global_refsD2:
 
 
 lemma valid_global_refsD:
-  "\<lbrakk> valid_global_refs s; cte_wp_at (op = cap) ptr s;
+  "\<lbrakk> valid_global_refs s; cte_wp_at ((=) cap) ptr s;
          r \<in> global_refs s \<rbrakk>
         \<Longrightarrow> r \<notin> cap_range cap"
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -2132,9 +2132,9 @@ lemmas set_asid_pool_cte_wp_at1[wp]
 
 
 lemma mdb_cte_at_set_asid_pool[wp]:
-  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>
+  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrace>
    set_asid_pool y pool
-   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
+   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrace>"
   apply (clarsimp simp:mdb_cte_at_def)
   apply (simp only: imp_conv_disj)
   apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
@@ -3329,7 +3329,7 @@ lemma pspace_respects_device_region_dmo:
   shows "\<lbrace>pspace_respects_device_region\<rbrace>do_machine_op f\<lbrace>\<lambda>r. pspace_respects_device_region\<rbrace>"
   apply (clarsimp simp: do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
     get_def return_def)
-  apply (drule_tac P1 = "op = (device_state (machine_state s))" in use_valid[OF _ valid_f])
+  apply (drule_tac P1 = "(=) (device_state (machine_state s))" in use_valid[OF _ valid_f])
   apply auto
   done
 
@@ -3338,7 +3338,7 @@ lemma cap_refs_respects_device_region_dmo:
   shows "\<lbrace>cap_refs_respects_device_region\<rbrace>do_machine_op f\<lbrace>\<lambda>r. cap_refs_respects_device_region\<rbrace>"
   apply (clarsimp simp: do_machine_op_def gets_def select_f_def simpler_modify_def bind_def valid_def
     get_def return_def)
-  apply (drule_tac P1 = "op = (device_state (machine_state s))" in use_valid[OF _ valid_f])
+  apply (drule_tac P1 = "(=) (device_state (machine_state s))" in use_valid[OF _ valid_f])
   apply auto
   done
 

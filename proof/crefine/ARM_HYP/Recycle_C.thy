@@ -25,7 +25,7 @@ definition
 
 lemma collapse_foldl_replicate:
   "replicate (length xs) v = xs \<Longrightarrow>
-   foldl (op @) [] (map (\<lambda>_. xs) ys)
+   foldl (@) [] (map (\<lambda>_. xs) ys)
         = replicateHider (length xs * length ys) v"
   apply (induct ys rule: rev_induct)
    apply (simp add: replicateHider_def)
@@ -1306,7 +1306,7 @@ lemma updateFreeIndex_ccorres:
    apply (rule ccorres_split_noop_lhs, rule_tac cap'=cap' in updateTrackedFreeIndex_noop_ccorres)
     apply (rule ccorres_pre_getCTE)+
     apply (rename_tac cte cte2)
-    apply (rule_tac P = "\<lambda>s. ?cte_wp_at' s \<and> cte2 = cte \<and> cte_wp_at' (op = cte) srcSlot s"
+    apply (rule_tac P = "\<lambda>s. ?cte_wp_at' s \<and> cte2 = cte \<and> cte_wp_at' ((=) cte) srcSlot s"
               and P'="{s. \<exists>cte cte'. cslift s (cte_Ptr srcSlot) = Some cte'
                \<and> cteCap cte = cap' \<and> ccte_relation cte cte'} \<inter> ?P'" in ccorres_from_vcg)
     apply (rule allI, rule HoarePartial.conseq_exploit_pre, clarify)

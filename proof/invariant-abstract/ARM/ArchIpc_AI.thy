@@ -355,17 +355,17 @@ lemma transfer_caps_tcb_caps:
 
 lemma transfer_caps_non_null_cte_wp_at:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
-  shows  "\<lbrace>valid_objs and cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>
+  shows  "\<lbrace>valid_objs and cte_wp_at (P and ((\<noteq>) cap.NullCap)) ptr\<rbrace>
      transfer_caps mi caps ep receiver recv_buf
-   \<lbrace>\<lambda>_. cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>"
+   \<lbrace>\<lambda>_. cte_wp_at (P and ((\<noteq>) cap.NullCap)) ptr\<rbrace>"
   unfolding transfer_caps_def
   apply simp
   apply (rule hoare_pre)
    apply (wp hoare_vcg_ball_lift transfer_caps_loop_cte_wp_at static_imp_wp
      | wpc | clarsimp simp:imp)+
    apply (rule hoare_strengthen_post
-            [where Q="\<lambda>rv s'. (cte_wp_at (op \<noteq> cap.NullCap) ptr) s'
-                      \<and> (\<forall>x\<in>set rv. cte_wp_at (op = cap.NullCap) x s')",
+            [where Q="\<lambda>rv s'. (cte_wp_at ((\<noteq>) cap.NullCap) ptr) s'
+                      \<and> (\<forall>x\<in>set rv. cte_wp_at ((=) cap.NullCap) x s')",
              rotated])
     apply (clarsimp)
     apply  (rule conjI)
@@ -383,9 +383,9 @@ crunch cte_wp_at[wp,Ipc_AI_assms]: do_fault_transfer "cte_wp_at P p"
 
 lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
-  shows  "\<lbrace>valid_objs and cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>
+  shows  "\<lbrace>valid_objs and cte_wp_at (P and ((\<noteq>) cap.NullCap)) ptr\<rbrace>
    do_normal_transfer st send_buffer ep b gr rt recv_buffer
-   \<lbrace>\<lambda>_. cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>"
+   \<lbrace>\<lambda>_. cte_wp_at (P and ((\<noteq>) cap.NullCap)) ptr\<rbrace>"
   unfolding do_normal_transfer_def
   apply simp
   apply (wp transfer_caps_non_null_cte_wp_at

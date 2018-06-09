@@ -366,9 +366,9 @@ lemma dmo_no_mem_globals_equiv:
   unfolding do_machine_op_def
   apply (wp | simp add: split_def)+
   apply atomize
-  apply (erule_tac x="op = (underlying_memory (machine_state sa))" in allE)
-  apply (erule_tac x="op = (device_state (machine_state sa))" in allE)
-  apply (erule_tac x="op = (exclusive_state (machine_state sa))" in allE)
+  apply (erule_tac x="(=) (underlying_memory (machine_state sa))" in allE)
+  apply (erule_tac x="(=) (device_state (machine_state sa))" in allE)
+  apply (erule_tac x="(=) (exclusive_state (machine_state sa))" in allE)
   apply (fastforce simp: valid_def globals_equiv_def idle_equiv_def)
   done
 
@@ -618,7 +618,7 @@ lemma retype_region_reads_respects:
     apply(rule equiv_valid_rv_guard_imp[OF if_evrv])
       apply (rule equiv_valid_rv_bind[OF gets_kheap_revrv])
        apply simp
-       apply (rule_tac Q="\<lambda>_ s. rv = kheap s" and Q'="\<lambda>_ s. rv' = kheap s" and R'="op =" in equiv_valid_2_bind_pre)
+       apply (rule_tac Q="\<lambda>_ s. rv = kheap s" and Q'="\<lambda>_ s. rv' = kheap s" and R'="(=)" in equiv_valid_2_bind_pre)
             apply (rule modify_ev2)
             apply(fastforce elim: reads_equiv_identical_kheap_updates affects_equiv_identical_kheap_updates simp: identical_kheap_updates_def)
            apply (rule_tac P=\<top> and P'=\<top> in modify_ev2)
@@ -820,7 +820,7 @@ lemma obj_range_small_page_as_ptr_range:
 
 
 lemma untyped_caps_do_not_overlap_global_refs:
-  "\<lbrakk>cte_wp_at (op = (UntypedCap dev word sz idx)) slot s;
+  "\<lbrakk>cte_wp_at ((=) (UntypedCap dev word sz idx)) slot s;
     valid_global_refs s\<rbrakk> \<Longrightarrow>
   ptr_range word sz \<inter> global_refs s = {}"
    apply(simp add: cte_wp_at_caps_of_state)
@@ -912,7 +912,7 @@ lemma when_ev:
 
 lemma delete_objects_caps_no_overlap:
   "\<lbrace> invs and ct_active and (\<lambda> s. \<exists> slot idx.
-    cte_wp_at (op = (UntypedCap dev ptr sz idx)) slot s \<and> descendants_range_in {ptr..ptr + 2 ^ sz - 1} slot s) \<rbrace>
+    cte_wp_at ((=) (UntypedCap dev ptr sz idx)) slot s \<and> descendants_range_in {ptr..ptr + 2 ^ sz - 1} slot s) \<rbrace>
     delete_objects ptr sz
   \<lbrace>\<lambda>_. caps_no_overlap ptr sz\<rbrace>"
   apply(clarsimp simp: valid_def)
@@ -1096,7 +1096,7 @@ lemma reads_equiv_caps_of_state:
   "reads_equiv aag s s'
     \<Longrightarrow> is_subject aag (fst slot)
     \<Longrightarrow> caps_of_state s slot = caps_of_state s' slot"
-  apply (frule(1) reads_equiv_cte_wp_at[where P="op = (the (caps_of_state s slot))"])
+  apply (frule(1) reads_equiv_cte_wp_at[where P="(=) (the (caps_of_state s slot))"])
   apply (frule(1) reads_equiv_cte_wp_at[where P="\<top>"])
   apply (auto simp: cte_wp_at_caps_of_state)
   done

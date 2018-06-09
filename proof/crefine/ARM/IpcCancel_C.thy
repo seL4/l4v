@@ -193,7 +193,7 @@ lemma ntfn_ptr_set_queue_spec:
   done
 
 lemma cancelSignal_ccorres_helper:
-  "ccorres dc xfdc (invs' and st_tcb_at' (op = (BlockedOnNotification ntfn)) thread and ko_at' ntfn' ntfn)
+  "ccorres dc xfdc (invs' and st_tcb_at' ((=) (BlockedOnNotification ntfn)) thread and ko_at' ntfn' ntfn)
         UNIV
         []
         (setNotification ntfn (ntfnObj_update
@@ -1422,7 +1422,7 @@ lemma cbitmap_L2_relationD:
 
 (* FIXME move *)
 lemma filter_noteq_op:
-  "[x \<leftarrow> xs . x \<noteq> y] = filter (op \<noteq> y) xs"
+  "[x \<leftarrow> xs . x \<noteq> y] = filter ((\<noteq>) y) xs"
   by (induct xs) auto
 
 (* FIXME move *)
@@ -2320,7 +2320,7 @@ proof -
     subgoal
     apply (clarsimp simp: return_def l1IndexToPrio_def)
     apply (simp add: signed_word_log2 word_log2_def32[symmetric] ucast_or_distrib)
-    apply (rule_tac f="op ||" in arg_cong2)
+    apply (rule_tac f="(||)" in arg_cong2)
     apply (subst of_nat_shiftl)+
      apply (subst ucast_of_nat_small, simp add: wordRadix_def l2BitmapSize_def')
      apply (rule refl)
@@ -2724,7 +2724,7 @@ lemma simp_list_case_return:
 
 lemma cancelSignal_ccorres [corres]:
      "ccorres dc xfdc
-      (invs' and st_tcb_at' (op = (Structures_H.thread_state.BlockedOnNotification ntfn)) thread)
+      (invs' and st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnNotification ntfn)) thread)
       (UNIV \<inter> {s. threadPtr_' s = tcb_ptr_to_ctcb_ptr thread} \<inter> {s. ntfnPtr_' s = Ptr ntfn})
       [] (cancelSignal thread ntfn) (Call cancelSignal_'proc)"
   apply (cinit lift: threadPtr_' ntfnPtr_' simp add: Let_def list_case_return cong add: call_ignore_cong)
@@ -3137,7 +3137,7 @@ declare empty_fail_get[iff]
 
 lemma getThreadState_ccorres_foo:
   "(\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c) \<Longrightarrow>
-    ccorres r xf (\<lambda>s. \<forall>ts. st_tcb_at' (op = ts) t s \<longrightarrow> P ts s)
+    ccorres r xf (\<lambda>s. \<forall>ts. st_tcb_at' ((=) ts) t s \<longrightarrow> P ts s)
                  {s. \<forall>ts tcb'. cslift s (tcb_ptr_to_ctcb_ptr t) = Some tcb'
                               \<and> cthread_state_relation ts (tcbState_C tcb', tcbFault_C tcb')
                             \<longrightarrow> s \<in> P' ts} hs
@@ -3211,7 +3211,7 @@ lemma cancelIPC_ccorres_reply_helper:
        apply (simp (no_asm) only: liftM_def bind_assoc return_bind del: Collect_const)
        apply (rule ccorres_pre_getCTE)
        apply (rule_tac xf'=ret__unsigned_' and val="mdbNext (cteMDBNode x)"
-                      and R="cte_wp_at' (op = x) rv and invs'"
+                      and R="cte_wp_at' ((=) x) rv and invs'"
                        in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
           apply vcg
           apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -3247,14 +3247,14 @@ lemma cancelIPC_ccorres_reply_helper:
 *)
 
 lemma ep_blocked_in_queueD_recv:
-  "\<lbrakk>st_tcb_at' (op = (Structures_H.thread_state.BlockedOnReceive x)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isRecvEP ep'"
+  "\<lbrakk>st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnReceive x)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isRecvEP ep'"
   apply (frule sym_refs_st_tcb_atD', clarsimp)
   apply (clarsimp simp: refs_of_rev' obj_at'_def ko_wp_at'_def projectKOs)
   apply (cases ep', simp_all add: isSendEP_def isRecvEP_def)[1]
   done
 
 lemma ep_blocked_in_queueD_send:
-  "\<lbrakk>st_tcb_at' (op = (Structures_H.thread_state.BlockedOnSend x xa xb xc)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isSendEP ep'"
+  "\<lbrakk>st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnSend x xa xb xc)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isSendEP ep'"
   apply (frule sym_refs_st_tcb_atD', clarsimp)
   apply (clarsimp simp: refs_of_rev' obj_at'_def ko_wp_at'_def projectKOs)
   apply (cases ep', simp_all add: isSendEP_def isRecvEP_def)[1]
@@ -3339,7 +3339,7 @@ lemma cancelIPC_ccorres1:
                apply (rename_tac slot slot' cte)
                apply (rule ccorres_move_c_guard_cte)
                apply (rule_tac xf'=ret__unsigned_' and val="mdbNext (cteMDBNode cte)"
-                         and R="cte_wp_at' (op = cte) slot and invs'"
+                         and R="cte_wp_at' ((=) cte) slot and invs'"
                           in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
                   apply vcg
                   apply (clarsimp simp: cte_wp_at_ctes_of)

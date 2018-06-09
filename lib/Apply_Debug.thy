@@ -437,7 +437,7 @@ fun set_continuation i ctxt = if get_continuation ctxt = i then ctxt else
 fun set_can_break b ctxt = if get_can_break ctxt = b then ctxt else
   Debug_Data.map (@{apply 5 (3)} (fn _ => b)) ctxt;
 
-fun has_break_tag (SOME tag) tags = member (op =) tags tag
+fun has_break_tag (SOME tag) tags = member (=) tags tag
   | has_break_tag NONE _ = true;
 
 fun break ctxt tag = (fn thm =>

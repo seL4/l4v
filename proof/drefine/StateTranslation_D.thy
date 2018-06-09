@@ -27,7 +27,7 @@ type_synonym tcb = Structures_A.tcb
 type_synonym pte = ARM_A.pte
 
 (* Transform an abstract-spec cap ptr to a capDL one. This is currently
- * a no-op; however, it is conceivable that the capDL cptr representation could
+ * a no-(;) however, it is conceivable that the capDL cptr representation could
  * be changed. Allowing for this potential change is the purpose of this
  * definition.
  *)
@@ -993,7 +993,7 @@ lemma evalMonad_bind:
   apply (subgoal_tac "b = s")
    apply simp
   apply (subgoal_tac "(a,b) \<in> fst (f s)")
-   apply (drule use_valid, rule f [where P="op = s"])
+   apply (drule use_valid, rule f [where P="(=) s"])
     apply (rule refl)
    apply simp
   apply simp

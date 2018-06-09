@@ -40,7 +40,7 @@ lemma bisim_is_corres_both_ways:
 *)
 
 lemma bisim_valid:
-  assumes ac: "bisim_underlying (op =)  (op =) P P' a a'"
+  assumes ac: "bisim_underlying (=)  (=) P P' a a'"
   and     rl: "\<lbrace>Q\<rbrace> a \<lbrace>S\<rbrace>"
   shows   "\<lbrace>P and P' and Q\<rbrace> a' \<lbrace>S\<rbrace>"
   using ac rl
@@ -48,7 +48,7 @@ lemma bisim_valid:
   by (fastforce simp: split_def)
 
 lemma bisim_valid2:
-  assumes ac: "bisim_underlying (op =) (op =) P P' a a'"
+  assumes ac: "bisim_underlying (=) (=) P P' a a'"
   and     rl: "\<lbrace>Q\<rbrace> a' \<lbrace>S\<rbrace>"
   shows   "\<lbrace>P and P' and Q\<rbrace> a \<lbrace>S\<rbrace>"
   using ac rl
@@ -112,7 +112,7 @@ lemma bisim_split:
   done
 
 abbreviation
-  "bisim \<equiv> bisim_underlying (op =)"
+  "bisim \<equiv> bisim_underlying (=)"
 
 lemma bisim_refl:
   assumes rrefl: "\<And>r. R r r"
@@ -180,7 +180,7 @@ lemma bisim_split_refl:
   shows "bisim R S S' (a >>= b) (a >>= d)"
   apply (rule bisim_guard_imp)
   apply (rule bisim_split [OF _ _ v1 v2])
-   apply (rule bisim_refl [where P = \<top> and P' = \<top> and R = "op =", OF refl])
+   apply (rule bisim_refl [where P = \<top> and P' = \<top> and R = "(=)", OF refl])
   apply simp
   apply (rule bs)
   apply simp_all
@@ -220,7 +220,7 @@ lemma bisim_split_reflE:
   using refls
   apply -
   apply (rule bisim_guard_imp)
-  apply (rule bisim_splitE [where R' = "op =", OF _ _ v1 v2])
+  apply (rule bisim_splitE [where R' = "(=)", OF _ _ v1 v2])
   apply (rule bisim_refl)
   apply (case_tac r, simp_all)[1]
   apply simp
@@ -263,8 +263,8 @@ lemma det_onE:
   unfolding det_on_def by fastforce
 
 lemma bisim_noop_det_on:
-  assumes a: "\<And>s. \<lbrace>Pa and op = s\<rbrace> a \<lbrace>\<lambda>_. op = s\<rbrace>"
-  and     b: "\<And>s. \<lbrace>Pb and op = s\<rbrace> b \<lbrace>\<lambda>_. op = s\<rbrace>"
+  assumes a: "\<And>s. \<lbrace>Pa and (=) s\<rbrace> a \<lbrace>\<lambda>_. (=) s\<rbrace>"
+  and     b: "\<And>s. \<lbrace>Pb and (=) s\<rbrace> b \<lbrace>\<lambda>_. (=) s\<rbrace>"
   and    da: "det_on P a"
   and    db: "det_on P' b"
   shows   "bisim_underlying sr dc (Pa and P) (Pb and P') a b"
@@ -356,7 +356,7 @@ wpc_setup "\<lambda>m. det_on P (m >>= c)" wpc_helper_det_on
 lemma bisim_symb_exec_r_det_on:
   assumes z: "\<And>rv. bisim_underlying sr r P (Q' rv) x (y rv)"
   assumes y: "\<lbrace>P'\<rbrace> m \<lbrace>Q'\<rbrace>"
-  assumes x: "\<And>s. \<lbrace>Pe and op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>"
+  assumes x: "\<And>s. \<lbrace>Pe and (=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>"
   assumes nf: "det_on Pd m"
   shows      "bisim_underlying sr r P (P' and Pe and Pd) x (m >>= (\<lambda>rv. y rv))"
   apply (rule bisim_guard_imp)
@@ -438,8 +438,8 @@ wpc_setup "\<lambda>m. not_empty P m" wpc_helper_not_empty
 wpc_setup "\<lambda>m. not_empty P (m >>= c)" wpc_helper_not_empty
 
 lemma bisim_noop:
-  assumes a: "\<And>s. \<lbrace>Pa and op = s\<rbrace> a \<lbrace>\<lambda>_. op = s\<rbrace>"
-  and     b: "\<And>s. \<lbrace>Pb and op = s\<rbrace> b \<lbrace>\<lambda>_. op = s\<rbrace>"
+  assumes a: "\<And>s. \<lbrace>Pa and (=) s\<rbrace> a \<lbrace>\<lambda>_. (=) s\<rbrace>"
+  and     b: "\<And>s. \<lbrace>Pb and (=) s\<rbrace> b \<lbrace>\<lambda>_. (=) s\<rbrace>"
   and    da: "not_empty P a"
   and    db: "not_empty P' b"
   shows   "bisim_underlying sr dc (Pa and P) (Pb and P') a b"
@@ -462,7 +462,7 @@ lemma bisim_noop:
 lemma bisim_symb_exec_r:
   assumes  z: "\<And>rv. bisim_underlying sr r P (Q' rv) x (y rv)"
   assumes  y: "\<lbrace>P'\<rbrace> m \<lbrace>Q'\<rbrace>"
-  assumes  x: "\<And>s. \<lbrace>Pe and op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>"
+  assumes  x: "\<And>s. \<lbrace>Pe and (=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>"
   assumes ne: "not_empty Pd m"
   shows      "bisim_underlying sr r P (P' and Pe and Pd) x (m >>= (\<lambda>rv. y rv))"
   apply (rule bisim_guard_imp)
@@ -483,12 +483,12 @@ lemma bisim_not_empty:
   unfolding not_empty_def using bs ne
   apply clarsimp
   apply (erule (1) not_emptyE)
-  apply (erule_tac s=s and s'=s in bisim_underlyingE1 [where SR = "op ="])
+  apply (erule_tac s=s and s'=s in bisim_underlyingE1 [where SR = "(=)"])
       apply simp+
   done
 
 lemma bisim_split_req:
-  assumes ac: "bisim (op =) P P' a c"
+  assumes ac: "bisim (=) P P' a c"
   and     bd: "\<And>r. bisim R (Q r) (Q' r) (b r) (d r)"
   and     v1: "\<lbrace>S\<rbrace> a \<lbrace>\<lambda>r. Q r and Q' r\<rbrace>"
   shows "bisim R (P and S) P' (a >>= b) (c >>= d)"
@@ -525,7 +525,7 @@ lemma bisim_split_req:
   done
 
 lemma bisim_splitE_req:
-  assumes ac: "bisim (f \<oplus> op =) P P' a c"
+  assumes ac: "bisim (f \<oplus> (=)) P P' a c"
   and     bd: "\<And>r. bisim (f \<oplus> R) (Q r) (Q' r) (b r) (d r)"
   and     v1: "\<lbrace>S\<rbrace> a \<lbrace>\<lambda>r. Q r and Q' r\<rbrace>, -"
   shows "bisim (f \<oplus> R) (P and S) P' (a >>=E b) (c >>=E d)"
@@ -575,7 +575,7 @@ lemma bisim_splitE_req:
   done
 
 lemma bisim_symb_exec_r_bs:
-  assumes bs: "bisim op = R R' (return ()) m"
+  assumes bs: "bisim (=) R R' (return ()) m"
   and      z: "\<And>rv. bisim r P P' x (y rv)"
   shows      "bisim r (P and R and P') R' x (m >>= (\<lambda>rv. y rv))"
   apply (rule bisim_guard_imp)

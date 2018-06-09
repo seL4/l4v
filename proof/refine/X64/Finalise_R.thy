@@ -1639,7 +1639,7 @@ lemma deleted_irq_corres:
   done
 
 lemma corres_gets_allocated_io_ports [corres]:
-  "corres (op =) \<top> \<top>
+  "corres (=) \<top> \<top>
         (gets (x64_allocated_io_ports \<circ> arch_state))
         (gets (x64KSAllocatedIOPorts \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
@@ -1718,8 +1718,8 @@ lemma empty_slot_corres:
   apply (simp add: case_Null_If)
   apply (rule corres_guard_imp)
     apply (rule corres_split_noop_rhs[OF _ clearUntypedFreeIndex_corres_noop])
-     apply (rule_tac R="\<lambda>cap. einvs and cte_wp_at (op = cap) slot" and
-                     R'="\<lambda>cte. valid_pspace' and cte_wp_at' (op = cte) (cte_map slot)" in
+     apply (rule_tac R="\<lambda>cap. einvs and cte_wp_at ((=) cap) slot" and
+                     R'="\<lambda>cte. valid_pspace' and cte_wp_at' ((=) cte) (cte_map slot)" in
                      corres_split [OF _ get_cap_corres])
        defer
        apply (wp get_cap_wp getCTE_wp')+
@@ -2056,7 +2056,7 @@ lemma notFinal_prev_or_next:
   done
 
 lemma isFinal:
-  "\<lbrace>\<lambda>s. valid_mdb' s \<and> cte_wp_at' (op = cte) x s
+  "\<lbrace>\<lambda>s. valid_mdb' s \<and> cte_wp_at' ((=) cte) x s
           \<and> final_matters' (cteCap cte)
           \<and> Q (isFinal (cteCap cte) x (cteCaps_of s)) s\<rbrace>
     isFinalCapability cte
@@ -2192,7 +2192,7 @@ lemma (in vmdb) isFinal_untypedParent:
   done
 
 lemma isFinal2:
-  "\<lbrace>\<lambda>s. cte_wp_at' (op = cte) sl s \<and> valid_mdb' s\<rbrace>
+  "\<lbrace>\<lambda>s. cte_wp_at' ((=) cte) sl s \<and> valid_mdb' s\<rbrace>
      isFinalCapability cte
    \<lbrace>\<lambda>rv s. rv \<and> final_matters' (cteCap cte) \<longrightarrow>
              isFinal (cteCap cte) sl (cteCaps_of s)\<rbrace>"
@@ -2206,7 +2206,7 @@ lemma isFinal2:
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma no_fail_isFinalCapability [wp]:
-  "no_fail (valid_mdb' and cte_wp_at' (op = cte) p) (isFinalCapability cte)"
+  "no_fail (valid_mdb' and cte_wp_at' ((=) cte) p) (isFinalCapability cte)"
   apply (simp add: isFinalCapability_def)
   apply (clarsimp simp: Let_def split del: if_split)
   apply (rule no_fail_pre, wp getCTE_wp')
@@ -2259,8 +2259,8 @@ lemma obj_refs_Master:
 
 lemma final_cap_corres':
   "final_matters' (cteCap cte) \<Longrightarrow>
-   corres op = (invs and cte_wp_at (op = cap) ptr)
-               (invs' and cte_wp_at' (op = cte) (cte_map ptr))
+   corres (=) (invs and cte_wp_at ((=) cap) ptr)
+               (invs' and cte_wp_at' ((=) cte) (cte_map ptr))
        (is_final_cap cap) (isFinalCapability cte)"
   apply (rule corres_gets_lift)
       apply (rule isFinalCapability_inv)
@@ -2351,8 +2351,8 @@ lemma final_cap_corres':
 
 lemma final_cap_corres:
   "corres (\<lambda>rv rv'. final_matters' (cteCap cte) \<longrightarrow> rv = rv')
-          (invs and cte_wp_at (op = cap) ptr)
-          (invs' and cte_wp_at' (op = cte) (cte_map ptr))
+          (invs and cte_wp_at ((=) cap) ptr)
+          (invs' and cte_wp_at' ((=) cte) (cte_map ptr))
        (is_final_cap cap) (isFinalCapability cte)"
   apply (cases "final_matters' (cteCap cte)")
    apply simp
@@ -2538,7 +2538,7 @@ lemma unbindMaybeNotification_invs[wp]:
    apply (clarsimp split: if_split_asm)
    apply (frule ko_at_state_refs_ofD', simp)
   apply (clarsimp split: if_split_asm)
-   apply (frule_tac P="op = (Some ntfnptr)" in ntfn_bound_tcb_at', simp_all add: valid_pspace'_def)[1]
+   apply (frule_tac P="(=) (Some ntfnptr)" in ntfn_bound_tcb_at', simp_all add: valid_pspace'_def)[1]
    subgoal by (fastforce simp: ntfn_q_refs_of'_def state_refs_of'_def tcb_ntfn_is_bound'_def
                           tcb_st_refs_of'_def
                    dest!: bound_tcb_at_state_refs_ofD'
@@ -2950,7 +2950,7 @@ crunch bound_tcb_at'[wp]: suspend, prepareThreadDelete "bound_tcb_at' P t"
    ignore: getObject setObject threadSet)
 
 lemma unbindNotification_bound_tcb_at':
-  "\<lbrace>\<lambda>_. True\<rbrace> unbindNotification t \<lbrace>\<lambda>rv. bound_tcb_at' (op = None) t\<rbrace>"
+  "\<lbrace>\<lambda>_. True\<rbrace> unbindNotification t \<lbrace>\<lambda>rv. bound_tcb_at' ((=) None) t\<rbrace>"
   apply (simp add: unbindNotification_def)
   apply (wp setBoundNotification_bound_tcb gbn_wp' | wpc | simp)+
   done
@@ -2959,7 +2959,7 @@ lemma unbindMaybeNotification_bound_tcb_at':
   "\<lbrace>bound_tcb_at' (\<lambda>ntfn. ntfn = Some a \<or> ntfn = None) t
         and sym_refs o state_refs_of'\<rbrace>
      unbindMaybeNotification a
-   \<lbrace>\<lambda>rv s. bound_tcb_at' (op = None) t s\<rbrace>"
+   \<lbrace>\<lambda>rv s. bound_tcb_at' ((=) None) t s\<rbrace>"
   apply (simp add: unbindMaybeNotification_def)
   apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
   apply (case_tac "ntfnBoundTCB ntfn")
@@ -3033,9 +3033,9 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
             \<and> capBits (fst rv) = capBits cap
             \<and> capRange (fst rv) = capRange cap
             \<and> (isThreadCap cap \<or> isCNodeCap cap \<or> isZombie cap)
-            \<and> (\<forall>p \<in> threadCapRefs cap. st_tcb_at' (op = Inactive) p s
+            \<and> (\<forall>p \<in> threadCapRefs cap. st_tcb_at' ((=) Inactive) p s
                      \<and> obj_at' (Not \<circ> tcbQueued) p s
-                     \<and> bound_tcb_at' (op = None) p s
+                     \<and> bound_tcb_at' ((=) None) p s
                      \<and> (\<forall>pr. p \<notin> set (ksReadyQueues s pr))))\<rbrace>"
   apply (simp add: finaliseCap_def Let_def getThreadCSpaceRoot
              cong: if_cong split del: if_split)
@@ -3740,7 +3740,7 @@ lemma arch_finalise_cap_corres:
                        \<and> s \<turnstile> cap.ArchObjectCap cap
                        \<and> (final_matters (cap.ArchObjectCap cap)
                             \<longrightarrow> final = is_final_cap' (cap.ArchObjectCap cap) s)
-                       \<and> cte_wp_at (op = (cap.ArchObjectCap cap)) sl s)
+                       \<and> cte_wp_at ((=) (cap.ArchObjectCap cap)) sl s)
            (\<lambda>s. invs' s \<and> s \<turnstile>' ArchObjectCap cap' \<and>
                  (final_matters' (ArchObjectCap cap') \<longrightarrow>
                       final' = isFinal (ArchObjectCap cap') (cte_map sl) (cteCaps_of s)))
@@ -3841,7 +3841,7 @@ lemma fast_finalise_corres:
      can_fast_finalise cap \<rbrakk>
    \<Longrightarrow> corres dc
            (\<lambda>s. invs s \<and> valid_sched s \<and> s \<turnstile> cap
-                       \<and> cte_wp_at (op = cap) sl s)
+                       \<and> cte_wp_at ((=) cap) sl s)
            (\<lambda>s. invs' s \<and> s \<turnstile>' cap')
            (fast_finalise cap final)
            (do
@@ -3911,7 +3911,7 @@ lemma finalise_cap_corres:
           flag \<longrightarrow> can_fast_finalise cap \<rbrakk>
      \<Longrightarrow> corres (\<lambda>x y. cap_relation (fst x) (fst y) \<and> cap_relation (snd x) (snd y))
            (\<lambda>s. einvs s \<and> s \<turnstile> cap \<and> (final_matters cap \<longrightarrow> final = is_final_cap' cap s)
-                       \<and> cte_wp_at (op = cap) sl s)
+                       \<and> cte_wp_at ((=) cap) sl s)
            (\<lambda>s. invs' s \<and> s \<turnstile>' cap' \<and>
                  (final_matters' cap' \<longrightarrow>
                       final' = isFinal cap' (cte_map sl) (cteCaps_of s)))
@@ -4036,7 +4036,7 @@ apply (auto simp: obj_at'_def)
 done
 
 lemma cte_wp_at_norm_eq':
-  "cte_wp_at' P p s = (\<exists>cte. cte_wp_at' (op = cte) p s \<and> P cte)"
+  "cte_wp_at' P p s = (\<exists>cte. cte_wp_at' ((=) cte) p s \<and> P cte)"
   by (simp add: cte_wp_at_ctes_of)
 
 lemma isFinal_cte_wp_def:
@@ -4187,7 +4187,7 @@ lemma tcb_update_all_corres':
   apply (erule conjE)
   apply (rule corres_guard_imp)
     apply (rule corres_rel_imp)
-     apply (rule set_thread_all_corres[where P="op = tcb'"])
+     apply (rule set_thread_all_corres[where P="(=) tcb'"])
            apply (rule ext)+
            apply simp
           defer

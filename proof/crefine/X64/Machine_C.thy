@@ -21,7 +21,7 @@ begin
 (* FIXME x64: add all machine operations as required *)
 locale kernel_m = kernel +
 assumes getFaultAddr_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp getFaultAddress)
            (Call getFaultAddr_'proc)"
 
@@ -110,7 +110,7 @@ assumes invalidateLocalPageStructureCacheASID_ccorres:
 *)
 assumes slowpath_ccorres:
   "ccorres dc xfdc
-     (\<lambda>s. invs' s \<and> ct_in_state' (op = Running) s)
+     (\<lambda>s. invs' s \<and> ct_in_state' ((=) Running) s)
      ({s. syscall_' s = syscall_from_H ev})
      [SKIP]
      (callKernel (SyscallEvent ev)) (Call slowpath_'proc)"

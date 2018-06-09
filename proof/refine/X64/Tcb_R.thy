@@ -35,7 +35,7 @@ lemma activate_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ gct_corres])
       apply (rule_tac R="\<lambda>ts s. valid_tcb_state ts s \<and> (idle ts \<or> runnable ts)
-                                \<and> invs s \<and> st_tcb_at (op = ts) thread s"
+                                \<and> invs s \<and> st_tcb_at ((=) ts) thread s"
                   and R'="\<lambda>ts s. valid_tcb_state' ts s \<and> (idle' ts \<or> runnable' ts)
                                 \<and> invs' s \<and> st_tcb_at' (\<lambda>ts'. ts' = ts) thread s"
                   in  corres_split [OF _ gts_corres])
@@ -141,7 +141,7 @@ lemma setThreadState_runnable_simp:
    threadSet (tcbState_update (\<lambda>x. ts)) t"
   apply (simp add: setThreadState_def isRunnable_def isBlocked_def liftM_def)
   apply (subst bind_return[symmetric], rule bind_cong[OF refl])
-  apply (drule use_valid[OF _ threadSet_pred_tcb_at_state[where proj="itcbState" and p=t and P="op = ts"]])
+  apply (drule use_valid[OF _ threadSet_pred_tcb_at_state[where proj="itcbState" and p=t and P="(=) ts"]])
    apply simp
   apply (subst bind_known_operation_eq)
        apply wp+
@@ -292,7 +292,7 @@ lemma
   by (simp add: getRegister_def)
 
 lemma readreg_corres:
-  "corres (intr \<oplus> op =)
+  "corres (intr \<oplus> (=))
         (einvs  and tcb_at src and ex_nonz_cap_to src)
         (invs' and sch_act_simple and tcb_at' src and ex_nonz_cap_to' src)
         (invoke_tcb (tcb_invocation.ReadRegisters src susp n arch))
@@ -344,7 +344,7 @@ lemma arch_post_modify_registers_corres:
      by simp+
 
 lemma writereg_corres:
-  "corres (intr \<oplus> op =) (einvs  and tcb_at dest and ex_nonz_cap_to dest)
+  "corres (intr \<oplus> (=)) (einvs  and tcb_at dest and ex_nonz_cap_to dest)
         (invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest)
         (invoke_tcb (tcb_invocation.WriteRegisters dest resume values arch))
         (invokeTCB (tcbinvocation.WriteRegisters dest resume values arch'))"
@@ -400,7 +400,7 @@ lemma suspend_ResumeCurrentThread_imp_notct[wp]:
   by (simp add: suspend_def, wp)
 
 lemma copyreg_corres:
-  "corres (intr \<oplus> op =)
+  "corres (intr \<oplus> (=))
         (einvs and simple_sched_action and tcb_at dest and tcb_at src and ex_nonz_cap_to src and
           ex_nonz_cap_to dest)
         (invs' and sch_act_simple and tcb_at' dest and tcb_at' src
@@ -1198,7 +1198,7 @@ lemma tc_corres:
      and sl: "{e, f, option_map undefined g} \<noteq> {None} \<longrightarrow> sl' = cte_map slot"
   notes arch_tcb_set_ipc_buffer_def[simp del]
   shows
-  "corres (intr \<oplus> op =)
+  "corres (intr \<oplus> (=))
     (einvs and simple_sched_action and tcb_at a and
      (\<lambda>s. {e, f, option_map undefined g} \<noteq> {None} \<longrightarrow> cte_at slot s) and
      case_option \<top> (valid_cap o fst) e and
@@ -1225,8 +1225,8 @@ lemma tc_corres:
      K (case_option True (case_option True (isArchObjectCap o fst) o snd) g') and
      case_option \<top> (case_option \<top> (valid_cap' o fst) o snd) g' and
      tcb_at' a and ex_nonz_cap_to' a and K (valid_option_prio p_auth \<and> valid_option_prio mcp_auth) and
-     (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at' (op \<le> pr) auth s) p_auth) and
-     (\<lambda>s. case_option True (\<lambda>(m, auth). mcpriority_tcb_at' (op \<le> m) auth s) mcp_auth))
+     (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at' ((\<le>) pr) auth s) p_auth) and
+     (\<lambda>s. case_option True (\<lambda>(m, auth). mcpriority_tcb_at' ((\<le>) m) auth s) mcp_auth))
     (invoke_tcb (tcb_invocation.ThreadControl a slot (option_map to_bl b') mcp_auth p_auth e f g))
     (invokeTCB (tcbinvocation.ThreadControl a sl' b' mcp_auth p_auth e' f' g'))"
 proof -
@@ -1661,8 +1661,8 @@ where
                K (case_option True (case_option True (isArchObjectCap o fst) o snd) buf) and
                (\<lambda>s. {croot, vroot, option_map undefined buf} \<noteq> {None}
                      \<longrightarrow> cte_at' sl s) and
-               (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at' (op \<le> pr) auth s) p) and
-               (\<lambda>s. case_option True (\<lambda>(m, auth). mcpriority_tcb_at' (op \<le> m) auth s) mcp))"
+               (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at' ((\<le>) pr) auth s) p) and
+               (\<lambda>s. case_option True (\<lambda>(m, auth). mcpriority_tcb_at' ((\<le>) m) auth s) mcp))"
 | "tcb_inv_wf' (tcbinvocation.ReadRegisters src susp n arch)
              = (tcb_at' src and ex_nonz_cap_to' src)"
 | "tcb_inv_wf' (tcbinvocation.WriteRegisters dest resume values arch)
@@ -1676,13 +1676,13 @@ where
                           | Some ntfnptr \<Rightarrow> obj_at' (\<lambda>ko. ntfnBoundTCB ko = None
                                            \<and> (\<forall>q. ntfnObj ko \<noteq> WaitingNtfn q)) ntfnptr
                                           and ex_nonz_cap_to' ntfnptr
-                                          and bound_tcb_at' (op = None) t) )"
+                                          and bound_tcb_at' ((=) None) t) )"
 | "tcb_inv_wf' (tcbinvocation.SetTLSBase ref w)
              = (tcb_at' ref and ex_nonz_cap_to' ref)"
 
 lemma tcbinv_corres:
  "tcbinv_relation ti ti' \<Longrightarrow>
-  corres (intr \<oplus> op =)
+  corres (intr \<oplus> (=))
          (einvs and simple_sched_action and Tcb_AI.tcb_inv_wf ti)
          (invs' and sch_act_simple and tcb_inv_wf' ti')
          (invoke_tcb ti) (invokeTCB ti')"
@@ -1771,7 +1771,7 @@ lemma valid_bound_ntfn_lift:
   done
 
 lemma bindNotification_invs':
-  "\<lbrace>bound_tcb_at' (op = None) tcbptr
+  "\<lbrace>bound_tcb_at' ((=) None) tcbptr
        and ex_nonz_cap_to' ntfnptr
        and ex_nonz_cap_to' tcbptr
        and obj_at' (\<lambda>ntfn. ntfnBoundTCB ntfn = None \<and> (\<forall>q. ntfnObj ntfn \<noteq> WaitingNtfn q)) ntfnptr
@@ -2060,7 +2060,7 @@ lemma getMCP_sp:
   apply (clarsimp simp: obj_at'_def)
   done
 
-lemma getMCP_wp: "\<lbrace>\<lambda>s. \<forall>mcp. mcpriority_tcb_at' (op = mcp) t s \<longrightarrow> P mcp s\<rbrace> threadGet tcbMCP t \<lbrace>P\<rbrace>"
+lemma getMCP_wp: "\<lbrace>\<lambda>s. \<forall>mcp. mcpriority_tcb_at' ((=) mcp) t s \<longrightarrow> P mcp s\<rbrace> threadGet tcbMCP t \<lbrace>P\<rbrace>"
   apply (rule hoare_post_imp)
    prefer 2
    apply (rule getMCP_sp)
@@ -2269,7 +2269,7 @@ crunch inv[wp]: decodeSetIPCBuffer "P"
 
 lemma slot_long_running_corres:
   "cte_map ptr = ptr' \<Longrightarrow>
-   corres op = (cte_at ptr and invs) invs'
+   corres (=) (cte_at ptr and invs) invs'
            (slot_cap_long_running_delete ptr)
            (slotCapLongRunningDelete ptr')"
   apply (clarsimp simp: slot_cap_long_running_delete_def

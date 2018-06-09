@@ -16,7 +16,7 @@ definition
   "det_wp P f \<equiv> \<forall>s. P s \<longrightarrow> (\<exists>r. f s = ({r}, False))"
 
 lemma det_result:
-  "\<lbrakk> det_wp P f; \<And>s. \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>_. op = s\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. fst (f s) = {(rv, s)}\<rbrace>"
+  "\<lbrakk> det_wp P f; \<And>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_. (=) s\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. fst (f s) = {(rv, s)}\<rbrace>"
   by (fastforce simp: det_wp_def valid_def split_def)
 
 lemma det_wp_use:

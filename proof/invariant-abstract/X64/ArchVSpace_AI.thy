@@ -709,7 +709,7 @@ definition
 definition
   "valid_page_inv page_inv \<equiv> case page_inv of
     PageMap cap ptr m vspace \<Rightarrow>
-      cte_wp_at (is_arch_update cap and (op = None \<circ> vs_cap_ref)) ptr
+      cte_wp_at (is_arch_update cap and ((=) None \<circ> vs_cap_ref)) ptr
       and cte_wp_at is_pg_cap ptr
       and (\<lambda>s. same_refs m cap s)
       and valid_slots m
@@ -3103,7 +3103,7 @@ lemma perform_page_directory_invocation_invs[wp]:
   apply (rule hoare_pre)
    apply (wpc | clarsimp simp: cte_wp_at_caps_of_state | wp arch_update_cap_invs_unmap_page_directory get_cap_wp)+
     apply (rule_tac P = "is_pd_cap cap" in hoare_gen_asm)
-    apply (rule_tac Q = "\<lambda>r. cte_wp_at (op = cap) (a,b) and invs and is_final_cap' cap
+    apply (rule_tac Q = "\<lambda>r. cte_wp_at ((=) cap) (a,b) and invs and is_final_cap' cap
                              and (\<lambda>s. (the (vs_cap_ref (ArchObjectCap (PageDirectoryCap p (Some (x1, x2a))))), p) \<notin> vs_lookup_pages s)
                              and obj_at (empty_table {}) (the (aobj_ref (update_map_data (Structures_A.the_arch_cap cap) None None)))"
                              in hoare_post_imp)
@@ -3190,7 +3190,7 @@ lemma perform_page_table_invocation_invs[wp]:
   apply (rule hoare_pre)
    apply (wpc | clarsimp simp: cte_wp_at_caps_of_state | wp arch_update_cap_invs_unmap_page_table get_cap_wp)+
     apply (rule_tac P = "is_pt_cap cap" in hoare_gen_asm)
-    apply (rule_tac Q = "\<lambda>r. cte_wp_at (op = cap) (a,b) and invs and is_final_cap' cap
+    apply (rule_tac Q = "\<lambda>r. cte_wp_at ((=) cap) (a,b) and invs and is_final_cap' cap
                              and (\<lambda>s. (the (vs_cap_ref (ArchObjectCap (PageTableCap p (Some (x1, x2a))))), p) \<notin> vs_lookup_pages s)
                              and obj_at (empty_table {}) (the (aobj_ref (update_map_data (Structures_A.the_arch_cap cap) None None)))"
                              in hoare_post_imp)
@@ -3308,7 +3308,7 @@ lemma perform_pdpt_invocation_invs[wp]:
   apply (rule hoare_pre)
    apply (wpc | clarsimp simp: cte_wp_at_caps_of_state | wp arch_update_cap_invs_unmap_pd_pointer_table get_cap_wp)+
     apply (rule_tac P = "is_pdpt_cap cap" in hoare_gen_asm)
-    apply (rule_tac Q = "\<lambda>r. cte_wp_at (op = cap) (a,b) and invs and is_final_cap' cap
+    apply (rule_tac Q = "\<lambda>r. cte_wp_at ((=) cap) (a,b) and invs and is_final_cap' cap
                              and (\<lambda>s. (the (vs_cap_ref (ArchObjectCap (PDPointerTableCap p (Some (x1, x2a))))), p) \<notin> vs_lookup_pages s)
                              and obj_at (empty_table {}) (the (aobj_ref (update_map_data (Structures_A.the_arch_cap cap) None None)))"
                              in hoare_post_imp)
@@ -3983,7 +3983,7 @@ lemma diminished_table_cap_iff_eq: "diminished c c' \<longleftrightarrow> c = c'
          rename_tac ac'; case_tac ac'; simp\<close>)
   done
 
-lemma diminished_table_cap_eq: "diminished c = (op = c)"
+lemma diminished_table_cap_eq: "diminished c = ((=) c)"
   by (rule ext, rule diminished_table_cap_iff_eq)
 
 end

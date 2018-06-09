@@ -230,7 +230,7 @@ lemma perform_page_table_invocation_pas_refined [wp]:
   apply (cases page_table_invocation)
    apply (fastforce simp: valid_pti_def is_cap_simps pas_refined_refl auth_graph_map_def2  dest: pde_ref_pde_ref2)
   apply clarsimp
-  apply (subgoal_tac "cte_wp_at (op = xc) (aa, ba) s \<longrightarrow>
+  apply (subgoal_tac "cte_wp_at ((=) xc) (aa, ba) s \<longrightarrow>
                       pas_cap_cur_auth aag  (cap.ArchObjectCap (update_map_data (the_arch_cap xc) None))")
    apply simp
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -815,7 +815,7 @@ lemma delete_objects_def2:
 
 lemma delete_objects_pspace_no_overlap:
   "\<lbrace> pspace_aligned and valid_objs and
-     (\<lambda> s. \<exists> idx. cte_wp_at (op = (UntypedCap dev ptr sz idx)) slot s)\<rbrace>
+     (\<lambda> s. \<exists> idx. cte_wp_at ((=) (UntypedCap dev ptr sz idx)) slot s)\<rbrace>
     delete_objects ptr sz
    \<lbrace>\<lambda>rv. pspace_no_overlap_range_cover ptr sz\<rbrace>"
   unfolding delete_objects_def do_machine_op_def
@@ -828,7 +828,7 @@ lemma delete_objects_pspace_no_overlap:
 
 lemma delete_objects_invs_ex:
   "\<lbrace>(\<lambda>s. \<exists>slot dev f.
-         cte_wp_at (op = (UntypedCap dev ptr bits f)) slot s \<and>
+         cte_wp_at ((=) (UntypedCap dev ptr bits f)) slot s \<and>
          descendants_range (UntypedCap dev ptr bits f) slot s) and
    invs and
    ct_active\<rbrace>
@@ -859,7 +859,7 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
              hoare_vcg_all_lift static_imp_wp
             | simp add: do_machine_op_def split_def)+
    apply(rename_tac word1 prod1 prod2 word2 cap )
-   apply(rule_tac Q="\<lambda> rv s. (\<exists> idx. cte_wp_at (op = (UntypedCap False word1 pageBits idx)) prod2 s) \<and>
+   apply(rule_tac Q="\<lambda> rv s. (\<exists> idx. cte_wp_at ((=) (UntypedCap False word1 pageBits idx)) prod2 s) \<and>
                      (\<forall> x\<in>ptr_range word1 pageBits. is_subject aag x) \<and>
                      pas_refined aag s \<and>
                      pas_cur_domain aag s \<and>

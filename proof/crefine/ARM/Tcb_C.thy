@@ -180,11 +180,11 @@ lemma threadGet_state:
   done
 
 lemma asUser_state:
-  "\<lbrakk>(x,s) \<in> fst (asUser t' f s); ko_at' ko t s; \<And>s. \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>_. op = s\<rbrace> \<rbrakk> \<Longrightarrow>
+  "\<lbrakk>(x,s) \<in> fst (asUser t' f s); ko_at' ko t s; \<And>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_. (=) s\<rbrace> \<rbrakk> \<Longrightarrow>
   (x,s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>) \<in>
   fst (asUser t' f (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
   apply (clarsimp simp: asUser_def in_monad select_f_def)
-  apply (frule use_valid, rule threadGet_inv [where P="op = s"], rule refl)
+  apply (frule use_valid, rule threadGet_inv [where P="(=) s"], rule refl)
   apply (frule use_valid, assumption, rule refl)
   apply clarsimp
   apply (frule (1) threadGet_state)
@@ -192,7 +192,7 @@ lemma asUser_state:
   apply (erule conjI)
   apply (rule exI, erule conjI)
   apply (clarsimp simp: threadSet_def in_monad)
-  apply (frule use_valid, rule getObject_inv [where P="op = s"])
+  apply (frule use_valid, rule getObject_inv [where P="(=) s"])
     apply (simp add: loadObject_default_def)
     apply wp
     apply simp
@@ -287,7 +287,7 @@ lemma doMachineOp_state:
 
 lemma mapM_upd_inv:
   assumes f: "\<And>x rv. (rv,s) \<in> fst (f x s) \<Longrightarrow> x \<in> set xs \<Longrightarrow> (rv, g s) \<in> fst (f x (g s))"
-  assumes inv: "\<And>x. \<lbrace>op = s\<rbrace> f x \<lbrace>\<lambda>_. op = s\<rbrace>"
+  assumes inv: "\<And>x. \<lbrace>(=) s\<rbrace> f x \<lbrace>\<lambda>_. (=) s\<rbrace>"
   shows "(rv,s) \<in> fst (mapM f xs s) \<Longrightarrow> (rv, g s) \<in> fst (mapM f xs (g s))"
   using f inv
 proof (induct xs arbitrary: rv s)
@@ -327,7 +327,7 @@ lemma getMRs_rel_state:
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def projectKOs obj_at'_real_def
                          objBits_simps ps_clear_def split: if_split)
   apply (clarsimp simp: getMRs_def in_monad)
-  apply (frule use_valid, rule asUser_inv [where P="op = s"])
+  apply (frule use_valid, rule asUser_inv [where P="(=) s"])
     apply (wp mapM_wp' getRegister_inv)[1]
    apply simp
   apply clarsimp
@@ -499,7 +499,7 @@ lemma checkCapAt_ccorres:
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_move_c_guard_cte)
    apply (rule_tac xf'=ret__unsigned_long_' and val="from_bool (sameObjectAs cap (cteCap x))"
-                and R="cte_wp_at' (op = x) slot and valid_cap' cap and invs'"
+                and R="cte_wp_at' ((=) x) slot and valid_cap' cap and invs'"
                  in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
       apply vcg
       apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -990,7 +990,7 @@ lemma setupReplyMaster_ccorres:
      apply (rule ccorres_pre_getCTE)
      apply (rule ccorres_move_c_guard_cte)
      apply (rule_tac F="\<lambda>rv'. (rv' = scast cap_null_cap) = (cteCap oldCTE = NullCap)"
-                 and R="cte_wp_at' (op = oldCTE) rv"
+                 and R="cte_wp_at' ((=) oldCTE) rv"
                and xf'=ret__unsigned_'
                   in ccorres_symb_exec_r_abstract_UNIV[where R'=UNIV])
         apply (rule conseqPre, vcg)
@@ -1352,12 +1352,12 @@ done
 
 
 lemma asUser_context:
-  "\<lbrakk>(x,s) \<in> fst (asUser (ksCurThread s) f s); ko_at' ko t s; \<And>s. \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>_. op = s\<rbrace> ;
+  "\<lbrakk>(x,s) \<in> fst (asUser (ksCurThread s) f s); ko_at' ko t s; \<And>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_. (=) s\<rbrace> ;
     t \<noteq> ksCurThread s\<rbrakk> \<Longrightarrow>
   (x,s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>) \<in>
   fst (asUser (ksCurThread s) f (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>))"
   apply (clarsimp simp: asUser_def in_monad select_f_def)
-  apply (frule use_valid, rule threadGet_inv [where P="op = s"], rule refl)
+  apply (frule use_valid, rule threadGet_inv [where P="(=) s"], rule refl)
   apply (frule use_valid, assumption, rule refl)
   apply clarsimp
   apply (frule (2) threadGet_context)
@@ -1365,7 +1365,7 @@ lemma asUser_context:
   apply (erule conjI)
   apply (rule exI, erule conjI)
   apply (clarsimp simp: threadSet_def in_monad)
-  apply (frule use_valid, rule getObject_inv [where P="op = s"])
+  apply (frule use_valid, rule getObject_inv [where P="(=) s"])
     apply (simp add: loadObject_default_def)
     apply wp
     apply simp
@@ -1440,7 +1440,7 @@ lemma getMRs_rel_context:
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def projectKOs obj_at'_real_def
                          objBits_simps ps_clear_def split: if_split)
   apply (clarsimp simp: getMRs_def in_monad)
-  apply (frule use_valid, rule asUser_inv [where P="op = s"])
+  apply (frule use_valid, rule asUser_inv [where P="(=) s"])
     apply (wp mapM_wp' getRegister_inv)[1]
    apply simp
   apply clarsimp
@@ -1757,7 +1757,7 @@ notes
   wordSize_def' [simp]
 shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' (op = Restart)
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart)
               and tcb_at' target and sch_act_simple and (\<lambda>s. target \<noteq> ksIdleThread s)
               and (\<lambda>_. target \<noteq> thread))
        (UNIV
@@ -2147,7 +2147,7 @@ shows
        apply (simp add: Collect_const_mem "StrictC'_thread_state_defs"
                         mask_def)
        apply vcg
-      apply (rule_tac Q="\<lambda>rv. invs' and st_tcb_at' (op = Restart) thread
+      apply (rule_tac Q="\<lambda>rv. invs' and st_tcb_at' ((=) Restart) thread
                              and tcb_at' target" in hoare_post_imp)
        apply (clarsimp simp: pred_tcb_at')
        apply (auto elim!: pred_tcb'_weakenE)[1]
@@ -2672,14 +2672,14 @@ apply (simp add:checkValidIPCBuffer_def ARM_H.checkValidIPCBuffer_def)
    done
 
 lemma slotCapLongRunningDelete_ccorres:
-  "ccorres (op = \<circ> from_bool) ret__unsigned_long_' invs'
+  "ccorres ((=) \<circ> from_bool) ret__unsigned_long_' invs'
            (UNIV \<inter> {s. slot_' s = cte_Ptr slot}) []
      (slotCapLongRunningDelete slot) (Call slotCapLongRunningDelete_'proc)"
   apply (cinit lift: slot_')
    apply (simp add: case_Null_If del: Collect_const)
    apply (rule ccorres_pre_getCTE)
    apply (rule ccorres_move_c_guard_cte)
-   apply (rule_tac P="cte_wp_at' (op = rv) slot"
+   apply (rule_tac P="cte_wp_at' ((=) rv) slot"
                 in ccorres_cross_over_guard)
    apply (rule ccorres_symb_exec_r)
      apply (rule ccorres_if_lhs)
@@ -2700,7 +2700,7 @@ lemma slotCapLongRunningDelete_ccorres:
         apply vcg
        apply (simp del: Collect_const)
        apply (rule ccorres_move_c_guard_cte)
-       apply (rule_tac P="cte_wp_at' (op = rv) slot"
+       apply (rule_tac P="cte_wp_at' ((=) rv) slot"
                   in  ccorres_from_vcg_throws[where P'=UNIV])
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: cte_wp_at_ctes_of return_def)

@@ -289,7 +289,7 @@ lemma set_object_cdl_field_wp:
             "object_type obj_p = object_type obj"
   and fields: "object_wipe_slots (object_clean obj_np) = object_wipe_slots (object_clean obj_n)"
   shows
-  "\<lbrace>\<lambda>s. <obj_id \<mapsto>f obj_p \<and>* R> s \<and> object_at (op = obj) obj_id s\<rbrace>
+  "\<lbrace>\<lambda>s. <obj_id \<mapsto>f obj_p \<and>* R> s \<and> object_at ((=) obj) obj_id s\<rbrace>
   set_object obj_id obj_n
   \<lbrace>\<lambda>rv. <obj_id \<mapsto>f obj_np \<and>* R>\<rbrace>"
   apply (clarsimp simp: set_object_def)

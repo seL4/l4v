@@ -306,7 +306,7 @@ definition
 
      mem_regs \<leftarrow> do_kernel_op $ do_machine_op getMemoryRegions;
 
-     free_addrs \<leftarrow> returnOk $ foldl (op \<union>) {}
+     free_addrs \<leftarrow> returnOk $ foldl (\<union>) {}
                              $ map (\<lambda>(start,end). {start..<end}) mem_regs;
 
      (* subtract userland image addresses from the set of free addresses *)

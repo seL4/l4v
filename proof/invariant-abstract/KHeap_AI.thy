@@ -575,7 +575,7 @@ lemma valid_mdb_lift:
   assumes r: "\<And>P. \<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> f \<lbrace>\<lambda>r s. P (is_original_cap s)\<rbrace>"
   shows "\<lbrace>valid_mdb\<rbrace> f \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
   apply (clarsimp simp add: valid_def valid_mdb_def mdb_cte_at_def)
-  apply (frule_tac P1="op = (cdt s)" in use_valid [OF _  m], rule refl)
+  apply (frule_tac P1="(=) (cdt s)" in use_valid [OF _  m], rule refl)
   apply (rule conjI)
    apply clarsimp
    apply (erule allE)+
@@ -841,7 +841,7 @@ lemma dmo_invs1:
                          valid_machine_state_def
                    intro!: valid_irq_states_machine_state_updateI
                    elim: valid_irq_statesE)
-   apply (frule_tac P1 = "op = (device_state (machine_state s))" in use_valid[OF _ valid_mf])
+   apply (frule_tac P1 = "(=) (device_state (machine_state s))" in use_valid[OF _ valid_mf])
     apply simp
    apply clarsimp
    apply (intro conjI)

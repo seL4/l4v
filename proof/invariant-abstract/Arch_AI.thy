@@ -121,7 +121,7 @@ crunch arch [wp]: retype_region "\<lambda>s. P (arch_state s)"
   (simp: crunch_simps)
 
 lemma set_free_index_final_cap:
-  "\<lbrace>\<lambda>s. P (is_final_cap' cap s) \<and> cte_wp_at (op = src_cap) src s\<rbrace>
+  "\<lbrace>\<lambda>s. P (is_final_cap' cap s) \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
    set_cap (free_index_update f src_cap) src
    \<lbrace>\<lambda>rv s. P (is_final_cap' cap s) \<rbrace>"
   apply (simp add:is_final_cap'_def2)
@@ -139,9 +139,9 @@ lemma set_free_index_final_cap:
 
 lemma set_cap_orth:
   "\<lbrace>\<lambda>s. P s \<and> Q cap' s\<rbrace> set_cap cap src \<lbrace>\<lambda>rv s. Q cap' s\<rbrace> \<Longrightarrow>
-   \<lbrace>\<lambda>s. P s \<and> src\<noteq> dest \<and> (cte_wp_at (op = cap') dest s \<longrightarrow> Q cap' s)\<rbrace>
+   \<lbrace>\<lambda>s. P s \<and> src\<noteq> dest \<and> (cte_wp_at ((=) cap') dest s \<longrightarrow> Q cap' s)\<rbrace>
    set_cap cap src
-   \<lbrace>\<lambda>rv s. cte_wp_at (op = cap') dest s \<longrightarrow> Q cap' s\<rbrace>"
+   \<lbrace>\<lambda>rv s. cte_wp_at ((=) cap') dest s \<longrightarrow> Q cap' s\<rbrace>"
    apply (clarsimp simp:valid_def cte_wp_at_caps_of_state)
    apply (drule_tac x = s in spec)
    apply (frule set_cap_caps_of_state_monad)
@@ -163,13 +163,13 @@ lemma set_cap_empty_tables[wp]:
 
 
 lemma cte_wp_at_eq_to_op_eq:
-  "cte_wp_at (\<lambda>c. c = cap) = cte_wp_at (op = cap)"
+  "cte_wp_at (\<lambda>c. c = cap) = cte_wp_at ((=) cap)"
   by (simp add: cte_wp_at_caps_of_state fun_eq_iff)
 
 
 lemma max_index_upd_caps_overlap_reserved:
   "\<lbrace>\<lambda>s. invs s \<and> S \<subseteq> untyped_range cap \<and>
-       descendants_range_in S slot s \<and> cte_wp_at (op = cap) slot s \<and> is_untyped_cap cap\<rbrace>
+       descendants_range_in S slot s \<and> cte_wp_at ((=) cap) slot s \<and> is_untyped_cap cap\<rbrace>
   set_cap (max_free_index_update cap) slot
   \<lbrace>\<lambda>rv. caps_overlap_reserved S\<rbrace>"
   apply (rule hoare_name_pre_state)
@@ -182,7 +182,7 @@ lemma max_index_upd_caps_overlap_reserved:
 lemma max_index_upd_invs_simple:
   "\<lbrace>\<lambda>s. descendants_range_in (untyped_range cap) cref s \<and>
          pspace_no_overlap_range_cover (obj_ref_of cap) (cap_bits cap) s \<and>
-         invs s \<and> cte_wp_at (op = cap) cref s \<and>  is_untyped_cap cap\<rbrace>
+         invs s \<and> cte_wp_at ((=) cap) cref s \<and>  is_untyped_cap cap\<rbrace>
    set_cap  (max_free_index_update cap) cref \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp:is_cap_simps)

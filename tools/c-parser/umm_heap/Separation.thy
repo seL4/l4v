@@ -20,7 +20,7 @@ type_synonym ('a,'b) map_assert = "('a \<rightharpoonup> 'b) \<Rightarrow> bool"
 type_synonym heap_assert = "(addr \<times> s_heap_index,s_heap_value) map_assert"
 
 definition sep_emp :: "('a,'b) map_assert" ("\<box>") where
-  "sep_emp \<equiv> (op =) empty"
+  "sep_emp \<equiv> (=) empty"
 
 definition sep_true :: "('a,'b) map_assert" where
   "sep_true \<equiv> \<lambda>s. True"

@@ -46,7 +46,7 @@ lemma ccorres_drop_cutMon_bindE:
   done
 
 lemma ccorres_cutMon:
-  "(\<And>s. Q s \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon (op = s) f) g)
+  "(\<And>s. Q s \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon ((=) s) f) g)
         \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon Q f) g"
   apply (clarsimp simp: ccorres_underlying_def
                         cutMon_def fail_def bind_def
@@ -191,12 +191,12 @@ lemma cteDelete_ccorres1:
                    ret__struct_finaliseSlot_ret_C_')
      (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (expo \<or> ex_cte_cap_to' slot s))
      (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool expo}) []
-     (cutMon (op = s) (finaliseSlot slot expo)) (Call finaliseSlot_'proc)"
+     (cutMon ((=) s) (finaliseSlot slot expo)) (Call finaliseSlot_'proc)"
   shows
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_' )
      (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (expo \<or> ex_cte_cap_to' slot s))
      (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. exposed_' s = from_bool expo}) []
-     (cutMon (op = s) (cteDelete slot expo)) (Call cteDelete_'proc)"
+     (cutMon ((=) s) (cteDelete slot expo)) (Call cteDelete_'proc)"
   apply (cinit' lift: slot_' exposed_' cong: call_ignore_cong)
    apply (simp add: cteDelete_def split_def cutMon_walk_bindE
                del: Collect_const cong: call_ignore_cong)
@@ -333,9 +333,9 @@ lemma ccorres_Cond_rhs_Seq_ret_int:
 (* it's a little painful to have to do this from first principles *)
 lemma ccorres_cutMon_stateAssert:
   "\<lbrakk> Q s \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs
-      (cutMon (op = s) (a ())) c \<rbrakk> \<Longrightarrow>
+      (cutMon ((=) s) (a ())) c \<rbrakk> \<Longrightarrow>
    ccorres_underlying sr Gamm r xf arrel axf (\<lambda>s. Q s \<longrightarrow> P s) P' hs
-      (cutMon (op = s) (stateAssert Q [] >>= a)) c"
+      (cutMon ((=) s) (stateAssert Q [] >>= a)) c"
   apply (simp add: cutMon_walk_bind)
   apply (cases "\<not> Q s")
    apply (simp add: stateAssert_def cutMon_def exec_get assert_def
@@ -370,12 +370,12 @@ lemma ccorres_cutMon_locateSlotCap_Zombie:
   "\<lbrakk> (capZombiePtr cap + 2 ^ cte_level_bits * n, s) \<in> fst (locateSlotCap cap n s)
     \<Longrightarrow> ccorres_underlying rf_sr Gamm r xf arrel axf
       Q Q' hs
-      (cutMon (op = s) (a (capZombiePtr cap + 2 ^ cte_level_bits * n))) c \<rbrakk>
+      (cutMon ((=) s) (a (capZombiePtr cap + 2 ^ cte_level_bits * n))) c \<rbrakk>
     \<Longrightarrow> ccorres_underlying rf_sr Gamm r xf arrel axf
       (Q and valid_cap' cap and (\<lambda>_. isZombie cap \<and> n = of_nat (capZombieNumber cap - 1)))
       {s. array_assertion (cte_Ptr (capZombiePtr cap)) (capZombieNumber cap - 1)
            (hrs_htd (t_hrs_' (globals s))) \<longrightarrow> s \<in> Q'} hs
-      (cutMon (op = s) (locateSlotCap cap n >>= a)) c"
+      (cutMon ((=) s) (locateSlotCap cap n >>= a)) c"
   apply (simp add: locateSlot_conv in_monad cutMon_walk_bind)
   apply (rule ccorres_gen_asm)
   apply (rule ccorres_guard_imp2)
@@ -417,13 +417,13 @@ lemma reduceZombie_ccorres1:
                    ret__struct_finaliseSlot_ret_C_')
      (\<lambda>s. invs' s \<and> sch_act_simple s \<and> ex_cte_cap_to' slot s)
      (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool False}) []
-     (cutMon (op = s) (finaliseSlot slot False)) (Call finaliseSlot_'proc)"
+     (cutMon ((=) s) (finaliseSlot slot False)) (Call finaliseSlot_'proc)"
   shows
   "isZombie cap \<Longrightarrow>
    ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_' )
      (invs' and sch_act_simple and cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot)
      (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool expo}) []
-     (cutMon (op = s) (reduceZombie cap slot expo)) (Call reduceZombie_'proc)"
+     (cutMon ((=) s) (reduceZombie cap slot expo)) (Call reduceZombie_'proc)"
   apply (cinit' lift: slot_' immediate_')
    apply (simp add: from_bool_0 del: Collect_const)
    apply (rule_tac P="capZombieNumber cap < 2 ^ word_bits" in ccorres_gen_asm)
@@ -504,7 +504,7 @@ lemma reduceZombie_ccorres1:
           apply (rule_tac F="\<lambda>rv'. \<exists>cp. ccap_relation (cteCap rv) cp
                                       \<and> rv' = cap_get_tag cp"
                       and xf'=ret__unsigned_'
-                      and R="cte_wp_at' (op = rv) slot"
+                      and R="cte_wp_at' ((=) rv) slot"
                    in ccorres_symb_exec_r_abstract_UNIV[where R'=UNIV])
              apply (rule conseqPre, vcg)
              apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -523,7 +523,7 @@ lemma reduceZombie_ccorres1:
             apply (rule ccorres_move_c_guard_cte ccorres_rhs_assoc)+
             apply (rule_tac xf'=ret__unsigned_long_'
                         and val="capZombiePtr (cteCap rv)"
-                        and R="cte_wp_at' (op = rv) slot and invs'"
+                        and R="cte_wp_at' ((=) rv) slot and invs'"
                      in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
                apply (rule conseqPre, vcg)
                apply clarsimp
@@ -545,7 +545,7 @@ lemma reduceZombie_ccorres1:
              apply (rule ccorres_move_c_guard_cte)
              apply (rule_tac xf'=ret__unsigned_long_'
                          and val="of_nat (capZombieNumber (cteCap rv))"
-                         and R="cte_wp_at' (op = rv) slot and invs'"
+                         and R="cte_wp_at' ((=) rv) slot and invs'"
                       in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
                 apply (rule conseqPre, vcg)
                 apply clarsimp
@@ -564,7 +564,7 @@ lemma reduceZombie_ccorres1:
               apply (rule ccorres_move_c_guard_cte)
               apply (rule_tac xf'=ret__unsigned_'
                           and val="case_zombie_type ZombieTCB_C of_nat (capZombieType (cteCap rv))"
-                          and R="cte_wp_at' (op = rv) slot and invs'"
+                          and R="cte_wp_at' ((=) rv) slot and invs'"
                        in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
                  apply (rule conseqPre, vcg)
                  apply clarsimp
@@ -590,7 +590,7 @@ lemma reduceZombie_ccorres1:
                  apply (rule ccorres_assert)
                  apply (rule_tac xf'=ret__struct_cap_C_'
                              and F="\<lambda>rv'. ccap_relation (capZombieNumber_update (\<lambda>x. x - 1) cap) rv'"
-                             and R="cte_wp_at' (op = rv) slot and invs'"
+                             and R="cte_wp_at' ((=) rv) slot and invs'"
                           in ccorres_symb_exec_r_abstract_UNIV[where R'=UNIV])
                     apply (rule conseqPre, vcg)
                     apply clarsimp
@@ -676,7 +676,7 @@ schematic_goal finaliseSlot_ccorres_induction_helper:
                    ret__struct_finaliseSlot_ret_C_')
      (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (exposed \<or> ex_cte_cap_to' slot s))
      (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool exposed}) []
-     (cutMon (op = s) (finaliseSlot slot exposed)) (Call finaliseSlot_'proc)"
+     (cutMon ((=) s) (finaliseSlot slot exposed)) (Call finaliseSlot_'proc)"
   unfolding finaliseSlot_def
   apply (rule ccorres_Call)
    apply (rule finaliseSlot_impl[unfolded finaliseSlot_body_def])
@@ -700,7 +700,7 @@ lemma finaliseSlot_ccorres:
                    ret__struct_finaliseSlot_ret_C_')
      (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (exposed \<or> ex_cte_cap_to' slot s))
      (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool exposed}) []
-     (cutMon (op = s) (finaliseSlot slot exposed)) (Call finaliseSlot_'proc)"
+     (cutMon ((=) s) (finaliseSlot slot exposed)) (Call finaliseSlot_'proc)"
   apply (rule finaliseSlot_ccorres_induction_helper)
   apply (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and ?a2.0=s])
   subgoal premises hyps for slot' expo s'
@@ -739,7 +739,7 @@ lemma finaliseSlot_ccorres:
         apply (rule ccorres_cutMon, simp only: cutMon_walk_bind)
         apply (rule ccorres_drop_cutMon_bind)
         apply (rule ccorres_move_c_guard_cte)
-        apply (rule_tac A="\<lambda>s. invs' s \<and> sch_act_simple s \<and> cte_wp_at' (op = rv) slot' s
+        apply (rule_tac A="\<lambda>s. invs' s \<and> sch_act_simple s \<and> cte_wp_at' ((=) rv) slot' s
                                 \<and> (expo \<or> ex_cte_cap_to' slot' s)
                                 \<and> (final_matters' (cteCap rv) \<longrightarrow> rva = isFinal (cteCap rv) slot' (cteCaps_of s))"
                     and A'=UNIV
@@ -922,7 +922,7 @@ lemma finaliseSlot_ccorres:
   done
 
 lemma ccorres_use_cutMon:
-  "(\<And>s. ccorres rvr xf P P' hs (cutMon (op = s) f) g)
+  "(\<And>s. ccorres rvr xf P P' hs (cutMon ((=) s) f) g)
        \<Longrightarrow> ccorres rvr xf P P' hs f g"
   apply (simp add: ccorres_underlying_def
                    snd_cutMon)
@@ -936,7 +936,7 @@ lemmas cteDelete_ccorres = ccorres_use_cutMon [OF cteDelete_ccorres2]
 lemma cteRevoke_ccorres1:
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
      (invs' and sch_act_simple) (UNIV \<inter> {s. slot_' s = cte_Ptr slot}) []
-     (cutMon (op = s) (cteRevoke slot)) (Call cteRevoke_'proc)"
+     (cutMon ((=) s) (cteRevoke slot)) (Call cteRevoke_'proc)"
   apply (cinit' lift: slot_' simp: whileAnno_def)
    apply simp
    apply (rule ccorres_inst[where P="invs' and sch_act_simple" and P'=UNIV])
@@ -953,7 +953,7 @@ lemma cteRevoke_ccorres1:
                        [OF _ getCTE_inv _ empty_fail_getCTE])
       apply (rule ccorres_move_c_guard_cte)
       apply (rule_tac xf'=ret__unsigned_' and val="mdbNext (cteMDBNode rv)"
-                    and R="cte_wp_at' (op = rv) slot'"
+                    and R="cte_wp_at' ((=) rv) slot'"
                      in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
          apply vcg
          apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -982,8 +982,8 @@ lemma cteRevoke_ccorres1:
        apply (rule ccorres_rhs_assoc)+
        apply (rule_tac xf'="ret__unsigned_long_'"
                       and val="from_bool (isMDBParentOf rv rva)"
-                      and R="cte_wp_at' (op = rv) slot' and invs'
-                               and cte_wp_at' (op = rva) (mdbNext (cteMDBNode rv))"
+                      and R="cte_wp_at' ((=) rv) slot' and invs'
+                               and cte_wp_at' ((=) rva) (mdbNext (cteMDBNode rv))"
                        in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
           apply vcg
           apply (clarsimp simp: cte_wp_at_ctes_of)

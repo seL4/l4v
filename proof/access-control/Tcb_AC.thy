@@ -289,7 +289,7 @@ lemma invoke_tcb_unbind_notification_respects:
   done
 
 lemma sbn_bind_respects:
-  "\<lbrace>integrity aag X st and bound_tcb_at (op = None) t
+  "\<lbrace>integrity aag X st and bound_tcb_at ((=) None) t
     and K ((pasSubject aag, Receive, pasObjectAbs aag ntfn) \<in> pasPolicy aag \<and> is_subject aag t)\<rbrace>
        set_bound_notification t (Some ntfn)
    \<lbrace>\<lambda>rv. integrity aag X st \<rbrace>"
@@ -302,7 +302,7 @@ lemma sbn_bind_respects:
 
 
 lemma bind_notification_respects:
-  "\<lbrace>integrity aag X st and pas_refined aag and bound_tcb_at (op = None) t and K (is_subject aag t \<and> (pasSubject aag, Receive, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag)\<rbrace> bind_notification t ntfnptr \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+  "\<lbrace>integrity aag X st and pas_refined aag and bound_tcb_at ((=) None) t and K (is_subject aag t \<and> (pasSubject aag, Receive, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag)\<rbrace> bind_notification t ntfnptr \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: bind_notification_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])

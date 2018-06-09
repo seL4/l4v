@@ -20,8 +20,8 @@ text {* Test cases for crunch *}
 
 definition
   "crunch_foo1 (x :: nat) \<equiv> do
-    modify (op + x);
-    modify (op + x)
+    modify ((+) x);
+    modify ((+) x)
   od"
 
 definition
@@ -138,16 +138,16 @@ definition
 
 definition
   "crunch_foo9 (x :: nat) \<equiv> do
-    modify (op + x);
-    modify (op + x)
+    modify ((+) x);
+    modify ((+) x)
   od"
 
 crunch test: crunch_foo9 "\<lambda>x. x > y" (ignore: bind)
 
 definition
   "crunch_foo10 (x :: nat) \<equiv> do
-    modify (op + x);
-    modify (op + x)
+    modify ((+) x);
+    modify ((+) x)
   od"
 
 (*crunch_def attribute overrides definition lookup *)

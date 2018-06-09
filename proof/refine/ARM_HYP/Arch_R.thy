@@ -540,7 +540,7 @@ lemma flush_type_map:
 
 lemma resolve_vaddr_corres:
   "\<lbrakk> is_aligned pd pd_bits; vaddr < kernel_base \<rbrakk> \<Longrightarrow>
-  corres (op =) (pspace_aligned and valid_vspace_objs and page_directory_at pd
+  corres (=) (pspace_aligned and valid_vspace_objs and page_directory_at pd
                  and (\<exists>\<rhd> (lookup_pd_slot pd vaddr && ~~ mask pd_bits)))
                 (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> vs_valid_duplicates' (ksPSpace s))
           (resolve_vaddr pd vaddr) (resolveVAddr pd vaddr)"
@@ -829,13 +829,13 @@ lemma list_all2_Cons: "list_all2 f (x#xs) b \<Longrightarrow> \<exists>y ys. b =
   by (induct b; simp)
 
 lemma corres_gets_numlistregsE[corres]:
-  "corres (r \<oplus> op =) \<top> \<top>
+  "corres (r \<oplus> (=)) \<top> \<top>
             (liftE (gets (arm_gicvcpu_numlistregs \<circ> arch_state)))
             (liftE (gets (armKSGICVCPUNumListRegs \<circ> ksArchState)))"
   by (clarsimp simp: state_relation_def arch_state_relation_def)
 
 lemma corres_gets_numlistregs [corres]:
-  "corres (op =) \<top> \<top>
+  "corres (=) \<top> \<top>
       (gets (arm_gicvcpu_numlistregs \<circ> arch_state)) (gets (armKSGICVCPUNumListRegs \<circ> ksArchState))"
   by (clarsimp simp: state_relation_def arch_state_relation_def)
 
@@ -1177,7 +1177,7 @@ shows
      apply (case_tac excaps', simp)
      apply (clarsimp simp add: isIOSpaceFrame_def)
      apply (rule corres_guard_imp)
-       apply (rule corres_splitEE [where r' = "op ="])
+       apply (rule corres_splitEE [where r' = "(=)"])
           prefer 2
           apply (clarsimp simp: list_all2_Cons2)
           apply (case_tac "fst (hd excaps)", simp_all)[1]
@@ -1386,7 +1386,7 @@ shows
 
 
 lemma invokeVCPUInjectIRQ_corres:
-  "corres (op =) (vcpu_at v) (vcpu_at' v)
+  "corres (=) (vcpu_at v) (vcpu_at' v)
         (do y \<leftarrow> invoke_vcpu_inject_irq v index virq;
                  return []
          od)
@@ -1398,7 +1398,7 @@ lemma invokeVCPUInjectIRQ_corres:
   done
 
 lemma dmo_gets_corres:
-  "corres (op =) P P' (do_machine_op (gets f)) (doMachineOp (gets f))"
+  "corres (=) P P' (do_machine_op (gets f)) (doMachineOp (gets f))"
   apply (corres)
   apply (auto simp : corres_underlyingK_def)
   done
@@ -1407,7 +1407,7 @@ lemma [wp]:"no_fail \<top> getSCTLR"
   by (clarsimp simp: getSCTLR_def)
 
 lemma invoke_vcpu_read_register_corres:
-  "corres (op =) (vcpu_at v) (vcpu_at' v and no_0_obj')
+  "corres (=) (vcpu_at v) (vcpu_at' v and no_0_obj')
                  (invoke_vcpu_read_register v r)
                  (invokeVCPUReadReg v r)"
   unfolding invoke_vcpu_read_register_def invokeVCPUReadReg_def read_vcpu_register_def readVCPUReg_def
@@ -1428,7 +1428,7 @@ lemma dmo_rest_corres:
   done
 
 lemma invoke_vcpu_write_register_corres:
-  "corres op = (vcpu_at vcpu) (vcpu_at' vcpu and no_0_obj')
+  "corres (=) (vcpu_at vcpu) (vcpu_at' vcpu and no_0_obj')
         (do y \<leftarrow> invoke_vcpu_write_register vcpu r v;
                  return []
          od)
@@ -1463,7 +1463,7 @@ lemma archThreadSet_corres_vcpu_Some[corres]:
   done
 
 lemma associate_vcpu_tcb_corres:
-  "corres op = (invs and vcpu_at v and tcb_at t)
+  "corres (=) (invs and vcpu_at v and tcb_at t)
                (invs' and vcpu_at' v and tcb_at' t)
                (do y \<leftarrow> associate_vcpu_tcb v t;
                    return []
@@ -1511,7 +1511,7 @@ lemma associate_vcpu_tcb_corres:
 lemma perform_vcpu_invocation_corres:
   notes inv_corres = invokeVCPUInjectIRQ_corres invoke_vcpu_read_register_corres
                      invoke_vcpu_write_register_corres associate_vcpu_tcb_corres
-  shows "corres (op =) (einvs and ct_active and valid_vcpu_invocation iv)
+  shows "corres (=) (einvs and ct_active and valid_vcpu_invocation iv)
                        (invs' and ct_active' and valid_vcpuinv' (vcpu_invocation_map iv))
                 (perform_vcpu_invocation iv) (performARMVCPUInvocation (vcpu_invocation_map iv))"
   unfolding perform_vcpu_invocation_def performARMVCPUInvocation_def
@@ -1521,7 +1521,7 @@ lemma perform_vcpu_invocation_corres:
 
 lemma inv_arch_corres:
   assumes "archinv_relation ai ai'"
-  shows   "corres (intr \<oplus> op=)
+  shows   "corres (intr \<oplus> (=))
                   (einvs and ct_active and valid_arch_inv ai)
                   (invs' and ct_active' and valid_arch_inv' ai' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
                   (arch_perform_invocation ai) (Arch.performInvocation ai')"
@@ -2253,7 +2253,7 @@ crunch st_tcb_at': performARMVCPUInvocation "st_tcb_at' P t"
   (ignore: getObject setObject wp: crunch_wps simp: crunch_simps)
 
 lemma performASIDControlInvocation_st_tcb_at':
-  "\<lbrace>st_tcb_at' (P and op \<noteq> Inactive and op \<noteq> IdleThreadState) t and
+  "\<lbrace>st_tcb_at' (P and (\<noteq>) Inactive and (\<noteq>) IdleThreadState) t and
     valid_aci' aci and invs' and ct_active'\<rbrace>
     performASIDControlInvocation aci
   \<lbrace>\<lambda>y. st_tcb_at' P t\<rbrace>"
@@ -2297,7 +2297,7 @@ lemma performASIDControlInvocation_st_tcb_at':
   done
 
 lemma arch_pinv_st_tcb_at':
-  "\<lbrace>valid_arch_inv' ai and st_tcb_at' (P and op \<noteq> Inactive and op \<noteq> IdleThreadState) t and
+  "\<lbrace>valid_arch_inv' ai and st_tcb_at' (P and (\<noteq>) Inactive and (\<noteq>) IdleThreadState) t and
     invs' and ct_active'\<rbrace>
      Arch.performInvocation ai
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>" (is "?pre (pgi ai) ?post")

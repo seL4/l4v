@@ -865,7 +865,7 @@ lemma read_write_valid_hrs_mem:
  * differently to other "h_val s ptr" terms that were already in the RHS.
  * Thus we define heap_lift__h_val \<equiv> h_val to carry this information around.
  *)
-definition "heap_lift__wrap_h_val \<equiv> op ="
+definition "heap_lift__wrap_h_val \<equiv> (=)"
 
 lemma heap_lift_wrap_h_val [heap_abs]:
   "heap_lift__wrap_h_val (heap_lift__h_val s p) (h_val s p)"
@@ -1490,7 +1490,7 @@ lemma access_ti_list_array_unpacked:
               access_ti_pair (f m) (FCP g) xs = h m xs
    \<rbrakk> \<Longrightarrow>
    access_ti_list (map f [0 ..< n]) (FCP g) xs
-     = foldl (op @) [] (map (\<lambda>m. h m (take v3 (drop (v3 * m) xs))) [0 ..< n])"
+     = foldl (@) [] (map (\<lambda>m. h m (take v3 (drop (v3 * m) xs))) [0 ..< n])"
   apply (subgoal_tac "\<forall>ys. size_td_list (map f ys) = v3 * length ys")
    prefer 2
    apply (rule allI, induct_tac ys, simp+)

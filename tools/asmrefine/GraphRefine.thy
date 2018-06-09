@@ -1774,8 +1774,8 @@ val store_word32s_equality_simproc =
               orelse raise TERM ("foo", [])
             val pivot = nth zs (length zs div 2)
             val pred = (if pivot = List.last zs
-                    then @{term "op = :: word32 \<Rightarrow> _"}
-                    else @{term "op \<ge> :: word32 \<Rightarrow> _"})
+                    then @{term "(=) :: word32 \<Rightarrow> _"}
+                    else @{term "(\<ge>) :: word32 \<Rightarrow> _"})
                 $ HOLogic.mk_number @{typ word32} pivot
           in store_word32_trace "success" (SOME (infer_instantiate
               ctxt [(("P",0), Thm.cterm_of ctxt pred)]
@@ -1929,7 +1929,7 @@ fun inst_graph_node_tac ctxt =
   THEN' SUBGOAL (fn (t, i) => case
     HOLogic.dest_Trueprop (Logic.strip_assums_concl
         (Envir.beta_eta_contract t))
-  of @{term "op = :: node option \<Rightarrow> _"} $ (f $ n) $ _ => (let
+  of @{term "(=) :: node option \<Rightarrow> _"} $ (f $ n) $ _ => (let
     val g = head_of f |> dest_Const |> fst
     val n' = dest_nat n
     val thm = Proof_Context.get_thm ctxt
@@ -2176,7 +2176,7 @@ fun check_while_assums t = let
 fun get_while_body_guard C c = case c of
     Const (@{const_name com.Seq}, _) $ _ $ last => let
     val setT = fastype_of C
-    fun mk_int (x, y) = Const (fst (dest_Const @{term "op Int"}),
+    fun mk_int (x, y) = Const (fst (dest_Const @{term "(Int)"}),
         setT --> setT --> setT) $ x $ y
     fun build_guard (Const (@{const_name Guard}, _) $ _ $ G
         $ Const (@{const_name com.Skip}, _))
@@ -2237,7 +2237,7 @@ fun get_conts (@{term node.Basic} $ nn $ _) = [nn]
   | get_conts n = raise TERM ("get_conts", [n])
 
 fun get_rvals (Abs (_, _, t)) = let
-    fun inner (Const _ $ (s as (@{term "op # :: char \<Rightarrow> _"} $ _ $ _)) $ Bound 0)
+    fun inner (Const _ $ (s as (@{term "(#) :: char \<Rightarrow> _"} $ _ $ _)) $ Bound 0)
       = [HOLogic.dest_string s]
       | inner (f $ x) = inner f @ inner x
       | inner (Const _) = []

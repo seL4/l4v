@@ -103,7 +103,7 @@ lemma weak_derived_obj_ref_of [CSpace_AI_assms]:
 
 lemma set_free_index_invs [CSpace_AI_assms]:
   "\<lbrace>\<lambda>s. (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and> idx \<le> 2^cap_bits cap) \<and>
-        invs s \<and> cte_wp_at (op = cap ) cref s\<rbrace>
+        invs s \<and> cte_wp_at ((=) cap ) cref s\<rbrace>
    set_cap (free_index_update (\<lambda>_. idx) cap) cref
    \<lbrace>\<lambda>rv s'. invs s'\<rbrace>"
   apply (rule hoare_grab_asm)+
@@ -146,7 +146,7 @@ lemma set_free_index_invs [CSpace_AI_assms]:
   done
 
 lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
-  "\<lbrace>valid_arch_caps and cte_wp_at (op = src_cap) src\<rbrace>
+  "\<lbrace>valid_arch_caps and cte_wp_at ((=) src_cap) src\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>ya. valid_arch_caps\<rbrace>"
   apply (clarsimp simp:valid_arch_caps_def set_untyped_cap_as_full_def)
@@ -164,7 +164,7 @@ lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
   done
 
 lemma set_untyped_cap_as_full[wp, CSpace_AI_assms]:
-  "\<lbrace>\<lambda>s. no_cap_to_obj_with_diff_ref a b s \<and> cte_wp_at (op = src_cap) src s\<rbrace>
+  "\<lbrace>\<lambda>s. no_cap_to_obj_with_diff_ref a b s \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. no_cap_to_obj_with_diff_ref a b s\<rbrace>"
   apply (clarsimp simp:no_cap_to_obj_with_diff_ref_def)

@@ -136,17 +136,17 @@ assumes clearExMonitor_ccorres:
            (Call clearExMonitor_'proc)"
 
 assumes getIFSR_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp getIFSR)
            (Call getIFSR_'proc)"
 
 assumes getDFSR_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp getDFSR)
            (Call getDFSR_'proc)"
 
 assumes getFAR_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp getFAR)
            (Call getFAR_'proc)"
 
@@ -200,7 +200,7 @@ assumes clearExMonitor_fp_ccorres:
 *)
 assumes slowpath_ccorres:
   "ccorres dc xfdc
-     (\<lambda>s. invs' s \<and> ct_in_state' (op = Running) s)
+     (\<lambda>s. invs' s \<and> ct_in_state' ((=) Running) s)
      ({s. syscall_' s = syscall_from_H ev})
      [SKIP]
      (callKernel (SyscallEvent ev)) (Call slowpath_'proc)"

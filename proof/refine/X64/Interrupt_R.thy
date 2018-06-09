@@ -145,7 +145,7 @@ lemma decode_irq_handler_valid'[wp]:
   done
 
 lemma is_irq_active_corres:
-  "corres op = \<top> \<top> (is_irq_active irq) (isIRQActive irq)"
+  "corres (=) \<top> \<top> (is_irq_active irq) (isIRQActive irq)"
   apply (simp add: is_irq_active_def isIRQActive_def get_irq_state_def
                    getIRQState_def getInterruptState_def)
   apply (clarsimp simp: state_relation_def interrupt_state_relation_def)
@@ -748,7 +748,7 @@ lemma timerTick_corres:
           apply (rule corres_if[where Q = \<top> and Q' = \<top>])
             apply (case_tac state,simp_all)[1]
           apply (simp add: Let_def)
-          apply (rule_tac r'="op =" in corres_split [OF _ ethreadget_corres])
+          apply (rule_tac r'="(=)" in corres_split [OF _ ethreadget_corres])
              apply (rename_tac ts ts')
              apply (rule_tac R="1 < ts" in corres_cases)
               apply (simp)

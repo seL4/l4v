@@ -304,7 +304,7 @@ lemma findPDForASIDAssert_known_corres:
   done
 
 lemma load_hw_asid_corres:
-  "corres op =
+  "corres (=)
           (valid_vspace_objs and pspace_distinct
                  and pspace_aligned and valid_asid_map
                  and vspace_at_asid a pd
@@ -313,7 +313,7 @@ lemma load_hw_asid_corres:
           (pspace_aligned' and pspace_distinct' and no_0_obj')
           (load_hw_asid a) (loadHWASID a)"
   apply (simp add: load_hw_asid_def loadHWASID_def)
-  apply (rule_tac r'="op =" in corres_split' [OF _ _ gets_sp gets_sp])
+  apply (rule_tac r'="(=)" in corres_split' [OF _ _ gets_sp gets_sp])
    apply (clarsimp simp: state_relation_def arch_state_relation_def)
   apply (case_tac "rv' a")
    apply simp
@@ -381,7 +381,7 @@ lemma invalidate_asid_corres:
   apply (rule corres_guard_imp)
     apply (rule_tac pd=pd in findPDForASIDAssert_known_corres)
     apply (rule_tac P="?P" and P'="?P'" in corres_inst)
-    apply (rule_tac r'="op =" in corres_split' [OF _ _ gets_sp gets_sp])
+    apply (rule_tac r'="(=)" in corres_split' [OF _ _ gets_sp gets_sp])
      apply (clarsimp simp: state_relation_def arch_state_relation_def)
     apply (rule corres_modify)
     apply (simp add: state_relation_def arch_state_relation_def
@@ -417,7 +417,7 @@ lemma invalidate_hw_asid_entry_corres:
   done
 
 lemma find_free_hw_asid_corres:
-  "corres (op =)
+  "corres (=)
           (valid_asid_map and valid_vspace_objs
               and pspace_aligned and pspace_distinct
               and (unique_table_refs o caps_of_state)
@@ -483,7 +483,7 @@ crunch distinct'[wp]: findFreeHWASID "pspace_distinct'"
 crunch no_0_obj'[wp]: getHWASID "no_0_obj'"
 
 lemma get_hw_asid_corres:
-  "corres op =
+  "corres (=)
           (vspace_at_asid a pd and K (a \<noteq> 0 \<and> a \<le> mask asid_bits)
            and unique_table_refs o caps_of_state
            and valid_vs_lookup
@@ -684,7 +684,7 @@ lemma hv_corres:
    apply simp
    apply (rule corres_guard_imp)
      apply (rule corres_splitEE, prefer_next,simp,
-            rule corres_machine_op [where r="op ="],
+            rule corres_machine_op [where r="(=)"],
             rule corres_Id refl, rule refl, simp, simp)+
          apply (rule corres_trivial)
          apply (simp add: arch_fault_map_def)
@@ -692,11 +692,11 @@ lemma hv_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE,prefer_next,simp)
        apply (rule corres_as_user')
-       apply (rule corres_no_failI [where R="op ="])
+       apply (rule corres_no_failI [where R="(=)"])
         apply (rule no_fail_getRestartPC)
        apply fastforce
       apply (rule corres_splitEE, prefer_next,simp,
-             rule corres_machine_op [where r="op ="],
+             rule corres_machine_op [where r="(=)"],
              rule corres_Id refl, rule refl, simp, simp)+
           apply (rule corres_trivial, simp add: arch_fault_map_def)
          apply wpsimp+
@@ -826,7 +826,7 @@ lemma getObject_vcpu_sp:
   by (wp getObject_obj_at'; simp)
 
 lemma corres_gets_gicvcpu_numlistregs:
-  "corres (op =) \<top> \<top> (gets (arm_gicvcpu_numlistregs \<circ> arch_state))
+  "corres (=) \<top> \<top> (gets (arm_gicvcpu_numlistregs \<circ> arch_state))
                       (gets (armKSGICVCPUNumListRegs \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
 
@@ -1089,7 +1089,7 @@ lemma vcpuSwitch_corres:
                              (modifyArchState (armHSCurVCPU_update (\<lambda>_. Some (a, b))))"
       by (clarsimp simp add: modifyArchState_def state_relation_def arch_state_relation_def
                    intro!: corres_modify)
-    have get_current_vcpu: "corres (op =) \<top> \<top> (gets (arm_current_vcpu \<circ> arch_state))
+    have get_current_vcpu: "corres (=) \<top> \<top> (gets (arm_current_vcpu \<circ> arch_state))
                                                (gets (armHSCurVCPU \<circ> ksArchState))"
       apply clarsimp
       apply (rule_tac P = "(arm_current_vcpu (arch_state s)) = (armHSCurVCPU (ksArchState s'))"
@@ -1203,7 +1203,7 @@ proof -
                od))"
     apply (rule corres_guard_imp)
       apply (rule corres_split_catch [where f=lfr])
-         apply (rule corres_split' [where P=\<top> and P'=\<top> and r'="op ="])
+         apply (rule corres_split' [where P=\<top> and P'=\<top> and r'="(=)"])
             apply (clarsimp simp: state_relation_def arch_state_relation_def)
            apply (simp, rule setCurrentPD_corres, rule refl)
           apply wp+
@@ -1221,7 +1221,7 @@ proof -
     unfolding set_vm_root_def setVMRoot_def locateSlot_conv
                      getThreadVSpaceRoot_def
     apply (rule corres_guard_imp)
-      apply (rule corres_split' [where r'="op = \<circ> cte_map"])
+      apply (rule corres_split' [where r'="(=) \<circ> cte_map"])
          apply (simp add: tcbVTableSlot_def cte_map_def objBits_def cte_level_bits_def
                           objBitsKO_def tcb_cnode_index_def to_bl_1)
         apply (rule_tac R="\<lambda>thread_root. valid_arch_state and valid_asid_map and
@@ -1230,7 +1230,7 @@ proof -
                                          valid_objs and
                                          tcb_at t and
                                          pspace_aligned and pspace_distinct and
-                                         cte_wp_at (op = thread_root) thread_root_slot"
+                                         cte_wp_at ((=) thread_root) thread_root_slot"
                      and R'="\<lambda>thread_root. pspace_aligned' and pspace_distinct' and no_0_obj' and tcb_at' t"
                      in corres_split [OF _ getSlotCap_corres])
            apply (case_tac rv, simp_all add: isCap_simps Q[simplified])[1]
@@ -1250,7 +1250,7 @@ proof -
                                       and valid_vspace_objs
                                       and valid_arch_state"
                             in corres_stateAssert_implied)
-                 apply (rule corres_split' [where P=\<top> and P'=\<top> and r'="op ="])
+                 apply (rule corres_split' [where P=\<top> and P'=\<top> and r'="(=)"])
                     apply (clarsimp simp: state_relation_def arch_state_relation_def)
                    apply (rule setCurrentPD_corres, simp)
                   apply wp+
@@ -1622,7 +1622,7 @@ lemma delete_asid_pool_corres:
 done
 
 lemma set_vm_root_for_flush_corres:
-  "corres (op =)
+  "corres (=)
           (cur_tcb and vspace_at_asid asid pd
            and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
            and valid_asid_map and valid_vs_lookup
@@ -1634,7 +1634,7 @@ lemma set_vm_root_for_flush_corres:
           (set_vm_root_for_flush pd asid)
           (setVMRootForFlush pd asid)"
 proof -
-  have X: "corres op = (vspace_at_asid asid pd and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
+  have X: "corres (=) (vspace_at_asid asid pd and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
                           and valid_asid_map and valid_vs_lookup
                           and valid_vspace_objs
                           and unique_table_refs o caps_of_state
@@ -1833,7 +1833,7 @@ crunch valid_arch' [wp]: setVMRootForFlush "valid_arch_state'"
   (wp: hoare_drop_imps)
 
 lemma load_hw_asid_corres2:
-  "corres op =
+  "corres (=)
      (valid_vspace_objs and pspace_distinct and pspace_aligned
        and valid_asid_map and vspace_at_asid a pd
        and valid_vs_lookup and valid_global_objs
@@ -1951,7 +1951,7 @@ crunch distinct'[wp]: unmapPageTable "pspace_distinct'"
        wp: crunch_wps getObject_inv loadObject_default_inv)
 
 lemma page_table_mapped_corres:
-  "corres (op =) (valid_arch_state and valid_vspace_objs and pspace_aligned
+  "corres (=) (valid_arch_state and valid_vspace_objs and pspace_aligned
                        and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits))
                  (pspace_aligned' and pspace_distinct' and no_0_obj')
        (page_table_mapped asid vaddr pt)
@@ -2643,7 +2643,7 @@ lemma updateCap_valid_slots'[wp]:
   done
 
 lemma pte_check_if_mapped_corres:
-  "corres (op =) (pte_at slot) ((\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_aligned' and pspace_distinct') (pte_check_if_mapped slot) (pteCheckIfMapped slot)"
+  "corres (=) (pte_at slot) ((\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_aligned' and pspace_distinct') (pte_check_if_mapped slot) (pteCheckIfMapped slot)"
   apply (simp add: pte_check_if_mapped_def pteCheckIfMapped_def)
     apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ get_master_pte_corres', simplified])
@@ -2657,7 +2657,7 @@ lemma pte_check_if_mapped_corres:
   done
 
 lemma pde_check_if_mapped_corres:
-  "corres (op =) (pde_at slot) ((\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_aligned' and pspace_distinct') (pde_check_if_mapped slot) (pdeCheckIfMapped slot)"
+  "corres (=) (pde_at slot) ((\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_aligned' and pspace_distinct') (pde_check_if_mapped slot) (pdeCheckIfMapped slot)"
   apply (simp add: pde_check_if_mapped_def pdeCheckIfMapped_def)
     apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ get_master_pde_corres', simplified])
@@ -3198,7 +3198,7 @@ lemma clear_page_table_corres:
                    upto_enum_step_red[where us=2, simplified]
                    mapM_x_mapM liftM_def[symmetric])
   apply (rule corres_guard_imp,
-         rule_tac r'=dc and S="op ="
+         rule_tac r'=dc and S="(=)"
                and Q="\<lambda>xs s. \<forall>x \<in> set xs. pte_at x s \<and> pspace_aligned s \<and> valid_etcbs s"
                and Q'="\<lambda>xs. pspace_aligned' and pspace_distinct'"
                 in corres_mapM_list_all2, simp_all)
@@ -4027,7 +4027,7 @@ lemma vcpuRestore_hyp[wp]:
 lemma getObject_vcpu_ko_at':
   "(vcpu::vcpu, s') \<in> fst (getObject p s) \<Longrightarrow> s' = s \<and> ko_at' vcpu p s"
   apply (rule context_conjI)
-   apply (drule use_valid, rule getObject_inv[where P="op = s"]; simp add: loadObject_default_inv)
+   apply (drule use_valid, rule getObject_inv[where P="(=) s"]; simp add: loadObject_default_inv)
   apply (drule use_valid, rule getObject_ko_at; clarsimp simp: obj_at_simps vcpu_bits_def)
   done
 

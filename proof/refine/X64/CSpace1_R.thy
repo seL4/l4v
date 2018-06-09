@@ -222,7 +222,7 @@ lemma tcb_cases_related:
 
 lemma pspace_relation_cte_wp_at:
   "\<lbrakk> pspace_relation (kheap s) (ksPSpace s');
-    cte_wp_at (op = c) (cref, oref) s; pspace_aligned' s';
+    cte_wp_at ((=) c) (cref, oref) s; pspace_aligned' s';
      pspace_distinct' s' \<rbrakk>
   \<Longrightarrow> cte_wp_at' (\<lambda>cte. cap_relation c (cteCap cte)) (cte_map (cref, oref)) s'"
   apply (simp add: cte_wp_at_cases)
@@ -251,7 +251,7 @@ lemma pspace_relation_cte_wp_at:
 
 lemma pspace_relation_ctes_ofI:
   "\<lbrakk> pspace_relation (kheap s) (ksPSpace s');
-    cte_wp_at (op = c) slot s; pspace_aligned' s';
+    cte_wp_at ((=) c) slot s; pspace_aligned' s';
      pspace_distinct' s' \<rbrakk>
   \<Longrightarrow> \<exists>cte. ctes_of s' (cte_map slot) = Some cte \<and> cap_relation c (cteCap cte)"
   apply (cases slot, clarsimp)
@@ -299,7 +299,7 @@ lemma cap_relation_masks:
          [simplified, simplified rights_mask_map_def])
 
 lemma getCTE_wp:
-  "\<lbrace>\<lambda>s. cte_at' p s \<longrightarrow> (\<exists>cte. cte_wp_at' (op = cte) p s \<and> Q cte s)\<rbrace> getCTE p \<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s. cte_at' p s \<longrightarrow> (\<exists>cte. cte_wp_at' ((=) cte) p s \<and> Q cte s)\<rbrace> getCTE p \<lbrace>Q\<rbrace>"
   apply (clarsimp simp add: getCTE_def valid_def cte_wp_at'_def)
   apply (drule getObject_cte_det)
   apply clarsimp
@@ -316,7 +316,7 @@ lemma getCTE_ctes_of_weakened:
   by (wp getCTE_ctes_of, simp)
 
 lemma getCTE_wp':
-  "\<lbrace>\<lambda>s. \<forall>cte. cte_wp_at' (op = cte) p s \<longrightarrow> Q cte s\<rbrace> getCTE p \<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>cte. cte_wp_at' ((=) cte) p s \<longrightarrow> Q cte s\<rbrace> getCTE p \<lbrace>Q\<rbrace>"
   apply (clarsimp simp add: getCTE_def valid_def cte_wp_at'_def)
   apply (drule getObject_cte_det)
   apply clarsimp
@@ -945,7 +945,7 @@ lemma maxFreeIndex_update_valid_cap'[simp]:
 
 lemma ctes_of_valid_cap'':
   "\<lbrakk> ctes_of s p = Some r; valid_objs' s\<rbrakk> \<Longrightarrow> s \<turnstile>' (cteCap r)"
-  apply (rule cte_wp_at_valid_objs_valid_cap'[where P="op = r", simplified])
+  apply (rule cte_wp_at_valid_objs_valid_cap'[where P="(=) r", simplified])
    apply (simp add: cte_wp_at_ctes_of)
   apply assumption
   done
@@ -2164,8 +2164,8 @@ lemma updateCap_stuff:
 (* FIXME: move *)
 lemma pspace_relation_cte_wp_atI':
   "\<lbrakk> pspace_relation (kheap s) (ksPSpace s');
-     cte_wp_at' (op = cte) x s'; valid_objs s \<rbrakk>
-  \<Longrightarrow> \<exists>c slot. cte_wp_at (op = c) slot s \<and> cap_relation c (cteCap cte) \<and> x = cte_map slot"
+     cte_wp_at' ((=) cte) x s'; valid_objs s \<rbrakk>
+  \<Longrightarrow> \<exists>c slot. cte_wp_at ((=) c) slot s \<and> cap_relation c (cteCap cte) \<and> x = cte_map slot"
   apply (simp add: cte_wp_at_cases')
   apply (elim disjE conjE exE)
    apply (erule(1) pspace_dom_relatedE)
@@ -2190,7 +2190,7 @@ lemma pspace_relation_cte_wp_atI':
 lemma pspace_relation_cte_wp_atI:
   "\<lbrakk> pspace_relation (kheap s) (ksPSpace s');
      ctes_of (s' :: kernel_state) x = Some cte; valid_objs s \<rbrakk>
-  \<Longrightarrow> \<exists>c slot. cte_wp_at (op = c) slot s \<and> cap_relation c (cteCap cte) \<and> x = cte_map slot"
+  \<Longrightarrow> \<exists>c slot. cte_wp_at ((=) c) slot s \<and> cap_relation c (cteCap cte) \<and> x = cte_map slot"
   apply (erule pspace_relation_cte_wp_atI'[where x=x])
    apply (simp add: cte_wp_at_ctes_of)
   apply assumption
@@ -2212,7 +2212,7 @@ lemma is_final_cap_unique:
   shows "False"
 proof -
   from fin obtain c where
-    c: "cte_wp_at (op = c) slot s" and
+    c: "cte_wp_at ((=) c) slot s" and
     final: "is_final_cap' c s" and
     fm: "final_matters c"
     by (auto simp add: cte_wp_at_cases)
@@ -2221,7 +2221,7 @@ proof -
     by (auto dest!: pspace_relation_ctes_ofI)
   from cte' psr valid
   obtain slot' c' where
-    c': "cte_wp_at (op = c') slot' s" and
+    c': "cte_wp_at ((=) c') slot' s" and
     cr': "cap_relation c' (cteCap cte')" and
     x: "x = cte_map slot'"
     by (auto dest!: pspace_relation_cte_wp_atI)
@@ -2291,7 +2291,7 @@ lemma is_final_cap_unique_sym:
   shows "False"
 proof -
   from fin obtain c where
-    c: "cte_wp_at (op = c) slot s" and
+    c: "cte_wp_at ((=) c) slot s" and
     final: "is_final_cap' c s"
     by (auto simp add: cte_wp_at_cases)
   with valid psr cte
@@ -2299,7 +2299,7 @@ proof -
     by (auto dest!: pspace_relation_ctes_ofI)
   from cte' psr valid
   obtain slot' c' where
-    c': "cte_wp_at (op = c') slot' s" and
+    c': "cte_wp_at ((=) c') slot' s" and
     cr': "cap_relation c' (cteCap cte')" and
     x: "x = cte_map slot'"
     by (auto dest!: pspace_relation_cte_wp_atI)
@@ -2659,7 +2659,7 @@ lemma cte_at'_obj_at':
   by (simp add: cte_wp_at'_obj_at')
 
 lemma ctes_of_valid:
-  "\<lbrakk> cte_wp_at' (op = cte) p s; valid_objs' s \<rbrakk>
+  "\<lbrakk> cte_wp_at' ((=) cte) p s; valid_objs' s \<rbrakk>
   \<Longrightarrow> s \<turnstile>' cteCap cte"
   apply (simp add: cte_wp_at'_obj_at')
   apply (erule disjE)
@@ -2889,7 +2889,7 @@ lemma updateMDB_pspace_relation:
   assumes "pspace_aligned' s'" "pspace_distinct' s'"
   shows "pspace_relation (kheap s) (ksPSpace s'')" using assms
   apply (clarsimp simp: updateMDB_def Let_def in_monad split: if_split_asm)
-  apply (drule_tac P="op = s'" in use_valid [OF _ getCTE_sp], rule refl)
+  apply (drule_tac P="(=) s'" in use_valid [OF _ getCTE_sp], rule refl)
   apply clarsimp
   apply (clarsimp simp: setCTE_def setObject_def in_monad
                         split_def)
@@ -2937,7 +2937,7 @@ lemma updateMDB_ekheap_relation:
   shows "ekheap_relation (ekheap s) (ksPSpace s'')" using assms
   apply (clarsimp simp: updateMDB_def Let_def setCTE_def setObject_def in_monad ekheap_relation_def etcb_relation_def split_def split: if_split_asm)
   apply (drule(1) updateObject_cte_is_tcb_or_cte[OF _ refl, rotated])
-  apply (drule_tac P="op = s'" in use_valid [OF _ getCTE_sp], rule refl)
+  apply (drule_tac P="(=) s'" in use_valid [OF _ getCTE_sp], rule refl)
   apply (drule bspec, erule domI)
   apply (clarsimp simp: tcb_cte_cases_def lookupAround2_char1 split: if_split_asm)
   done
@@ -4399,9 +4399,9 @@ lemma updateUntypedCap_descendants_of:
 
 lemma set_untyped_cap_corres:
   "\<lbrakk>cap_relation cap (cteCap cte); is_untyped_cap cap; idx' = idx\<rbrakk>
-   \<Longrightarrow> corres dc (cte_wp_at (op = cap) src and valid_objs and
+   \<Longrightarrow> corres dc (cte_wp_at ((=) cap) src and valid_objs and
                   pspace_aligned and pspace_distinct)
-                 (cte_wp_at' (op = cte) (cte_map src) and
+                 (cte_wp_at' ((=) cte) (cte_map src) and
                   pspace_distinct' and pspace_aligned')
                  (set_cap (free_index_update (\<lambda>_. idx) cap) src)
                  (setCTE (cte_map src) (cteCap_update
@@ -4495,9 +4495,9 @@ lemma set_untyped_cap_as_full_corres:
     cap_relation src_cap (cteCap srcCTE); rv = cap.NullCap;
     cteCap rv' = capability.NullCap; mdbPrev (cteMDBNode rv') = nullPointer \<and>
     mdbNext (cteMDBNode rv') = nullPointer\<rbrakk>
-   \<Longrightarrow> corres dc (cte_wp_at (op = src_cap) src and valid_objs and
+   \<Longrightarrow> corres dc (cte_wp_at ((=) src_cap) src and valid_objs and
                   pspace_aligned and pspace_distinct)
-                 (cte_wp_at' (op = srcCTE) (cte_map src) and
+                 (cte_wp_at' ((=) srcCTE) (cte_map src) and
                   pspace_aligned' and pspace_distinct')
                  (set_untyped_cap_as_full src_cap c src)
                  (setUntypedCapAsFull (cteCap srcCTE) c' (cte_map src))"
@@ -4545,7 +4545,7 @@ lemma cap_relation_masked_as_full:
   by (case_tac c; clarsimp)
 
 lemma setUntypedCapAsFull_pspace_distinct[wp]:
-  "\<lbrace>pspace_distinct' and cte_wp_at' (op = srcCTE) slot\<rbrace>
+  "\<lbrace>pspace_distinct' and cte_wp_at' ((=) srcCTE) slot\<rbrace>
    setUntypedCapAsFull (cteCap srcCTE) c slot \<lbrace>\<lambda>r. pspace_distinct'\<rbrace>"
   apply (clarsimp simp: setUntypedCapAsFull_def split:if_splits)
   apply (intro conjI impI)
@@ -4556,7 +4556,7 @@ lemma setUntypedCapAsFull_pspace_distinct[wp]:
 done
 
 lemma setUntypedCapAsFull_pspace_aligned[wp]:
-  "\<lbrace>pspace_aligned' and cte_wp_at' (op = srcCTE) slot\<rbrace>
+  "\<lbrace>pspace_aligned' and cte_wp_at' ((=) srcCTE) slot\<rbrace>
    setUntypedCapAsFull (cteCap srcCTE) c slot
    \<lbrace>\<lambda>r. pspace_aligned'\<rbrace>"
   apply (clarsimp simp:setUntypedCapAsFull_def split:if_splits)
@@ -4572,7 +4572,7 @@ lemma setUntypedCapAsFull_ctes_of:
   "\<lbrace>\<lambda>s. src \<noteq> dest \<and> P (ctes_of s dest) \<or>
         src = dest \<and> P (Some (CTE (maskedAsFull (cteCap srcCTE) cap)
                                   (cteMDBNode srcCTE))) \<and>
-        cte_wp_at' (op = srcCTE) src s\<rbrace>
+        cte_wp_at' ((=) srcCTE) src s\<rbrace>
   setUntypedCapAsFull (cteCap srcCTE) cap src
   \<lbrace>\<lambda>r s. P (ctes_of s dest)\<rbrace>"
   apply (clarsimp simp:setUntypedCapAsFull_def split:if_splits)
@@ -4590,7 +4590,7 @@ lemma setUntypedCapAsFull_ctes_of:
   done
 
 lemma setUntypedCapAsFull_ctes_of_no_0:
-  "\<lbrace>\<lambda>s. no_0 ((ctes_of s)(a:=b)) \<and> cte_wp_at' (op = srcCTE) src s\<rbrace>
+  "\<lbrace>\<lambda>s. no_0 ((ctes_of s)(a:=b)) \<and> cte_wp_at' ((=) srcCTE) src s\<rbrace>
    setUntypedCapAsFull (cteCap srcCTE) cap src
    \<lbrace>\<lambda>r s. no_0 ((ctes_of s)(a:=b)) \<rbrace>"
   apply (clarsimp simp:no_0_def split:if_splits)
@@ -5729,7 +5729,7 @@ lemma setUntypedCapAsFull_ctes:
   done
 
 lemma setUntypedCapAsFull_valid_cap:
-  "\<lbrace>valid_cap' cap and cte_wp_at' (op = srcCTE) slot\<rbrace>
+  "\<lbrace>valid_cap' cap and cte_wp_at' ((=) srcCTE) slot\<rbrace>
    setUntypedCapAsFull (cteCap srcCTE) c slot
    \<lbrace>\<lambda>r. valid_cap' cap\<rbrace>"
   apply (clarsimp simp:setUntypedCapAsFull_def split:if_splits)
@@ -5745,7 +5745,7 @@ lemma cteCap_update_simps:
 done
 
 lemma setUntypedCapAsFull_cte_wp_at:
-  "\<lbrace>cte_wp_at' (op = srcCTE) slot and
+  "\<lbrace>cte_wp_at' ((=) srcCTE) slot and
     (\<lambda>s. cte_wp_at' (\<lambda>c. P c) dest s \<and> dest \<noteq> slot \<or>
          dest = slot \<and> cte_wp_at' (\<lambda>c. P (CTE (maskedAsFull (cteCap c) c')
                                               (cteMDBNode c))) slot s) \<rbrace>
@@ -5906,10 +5906,10 @@ lemma cins_corres:
         apply simp
         apply (rule_tac P="?P and cte_at dest and
                             (\<lambda>s. cte_wp_at (is_derived (cdt s) src c) src s) and
-                            cte_wp_at (op = src_cap) src" and
+                            cte_wp_at ((=) src_cap) src" and
                         Q="?P' and
-                           cte_wp_at' (op = rv') (cte_map dest) and
-                           cte_wp_at' (op = srcCTE) (cte_map src)"
+                           cte_wp_at' ((=) rv') (cte_map dest) and
+                           cte_wp_at' ((=) srcCTE) (cte_map src)"
                         in corres_assert_assume)
          prefer 2
          apply (clarsimp simp: cte_wp_at_ctes_of valid_mdb'_def valid_mdb_ctes_def valid_nullcaps_def)
@@ -5921,9 +5921,9 @@ lemma cins_corres:
         apply (rule corres_guard_imp)
           apply (rule_tac R="\<lambda>r. ?P and cte_at dest and
                             (\<lambda>s. (is_derived (cdt s) src c) src_cap) and
-                            cte_wp_at (op = (masked_as_full src_cap c)) src" and
-                        R'="\<lambda>r. ?P' and cte_wp_at' (op = rv') (cte_map dest) and
-                           cte_wp_at' (op = (CTE (maskedAsFull (cteCap srcCTE) c') (cteMDBNode srcCTE)))
+                            cte_wp_at ((=) (masked_as_full src_cap c)) src" and
+                        R'="\<lambda>r. ?P' and cte_wp_at' ((=) rv') (cte_map dest) and
+                           cte_wp_at' ((=) (CTE (maskedAsFull (cteCap srcCTE) c') (cteMDBNode srcCTE)))
                            (cte_map src)"
                         in corres_split[where r'=dc])
              apply (rule corres_stronger_no_failI)
@@ -6573,7 +6573,7 @@ lemma no_loops_lift:
   done
 
 lemma in_getCTE:
-  "(cte, s') \<in> fst (getCTE p s) \<Longrightarrow> s' = s \<and> cte_wp_at' (op = cte) p s"
+  "(cte, s') \<in> fst (getCTE p s) \<Longrightarrow> s' = s \<and> cte_wp_at' ((=) cte) p s"
   apply (frule in_inv_by_hoareD [OF getCTE_inv])
   apply (drule use_valid [OF _ getCTE_cte_wp_at], rule TrueI)
   apply (simp add: cte_wp_at'_def)

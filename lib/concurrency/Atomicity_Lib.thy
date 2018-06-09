@@ -328,7 +328,7 @@ where
   "rel_tr_refinement sr P R commit f g = (\<forall>tr res s s0. P s
     \<longrightarrow> (tr, res) \<in> f s \<longrightarrow> rely_cond R s0 tr \<longrightarrow> (commit \<longrightarrow> s0 = s)
     \<longrightarrow> (\<exists>tr'. (tr', res) \<in> g s \<and> rely_cond R s0 tr'
-                \<and> list_all2 (rel_prod (op =) sr) tr tr'))"
+                \<and> list_all2 (rel_prod (=) sr) tr tr'))"
 
 lemma rely_cond_equiv_s:
   "rely_cond R s0 tr
@@ -369,7 +369,7 @@ lemma rel_tr_refinement_trans:
   done
 
 lemma list_all2_matching_tr_pfx:
-  "list_all2 (rel_prod (op =) (\<lambda>cs cs'. \<forall>as. sr as cs = sr as cs')) tr tr'
+  "list_all2 (rel_prod (=) (\<lambda>cs cs'. \<forall>as. sr as cs = sr as cs')) tr tr'
     \<Longrightarrow> matching_tr_pfx sr atr tr = matching_tr_pfx sr atr tr'"
   apply (simp add: matching_tr_pfx_def list_all2_lengthD matching_tr_def)
   apply (intro conj_cong; simp?)
@@ -379,7 +379,7 @@ lemma list_all2_matching_tr_pfx:
 
 lemma is_matching_fragment_list_all2:
   "is_matching_fragment sr osr rvr tr' res s0 R s f
-    \<Longrightarrow> list_all2 (rel_prod (op =) (\<lambda>cs cs'. \<forall>as. sr as cs = sr as cs')) tr tr'
+    \<Longrightarrow> list_all2 (rel_prod (=) (\<lambda>cs cs'. \<forall>as. sr as cs = sr as cs')) tr tr'
     \<Longrightarrow> is_matching_fragment sr osr rvr tr res s0 R s f"
   apply (clarsimp simp: is_matching_fragment_def)
   apply (subst(asm) list_all2_is_me[symmetric], assumption, simp)
@@ -632,7 +632,7 @@ lemma shuttle_modify_interference[simplified K_bind_def]:
         (do modify f; interference od)"
 proof -
   have list_all2_map:
-    "\<And>xs. list_all2 (rel_prod op = sr) xs (map (apsnd f) xs)"
+    "\<And>xs. list_all2 (rel_prod (=) sr) xs (map (apsnd f) xs)"
     by (clarsimp simp add: list_all2_map2 list_all2_same sr)
   have rely_cond:
     "\<And>xs. \<forall>s. P s \<longrightarrow> rely_cond R s (map (Pair Env) xs)

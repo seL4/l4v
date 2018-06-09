@@ -965,7 +965,7 @@ lemma decodeCNodeInvocation_ccorres:
                        apply (wp getCTE_wp')
                       apply (simp add: Collect_const_mem)
                       apply vcg
-                     apply (simp add: cte_wp_at_ctes_of[where P="op = cte" for cte]
+                     apply (simp add: cte_wp_at_ctes_of[where P="(=) cte" for cte]
                                       cte_wp_at_ctes_of[where P="\<lambda>cte. Q cte \<and> R cte" for Q R]
                                       badge_derived_updateCapData)
                      apply (rule validE_R_validE)

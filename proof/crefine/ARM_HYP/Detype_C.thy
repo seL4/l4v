@@ -576,7 +576,7 @@ lemma ctes_of_is_aligned:
   assumes ks: "ctes_of s p = Some cte"
   shows "is_aligned p (objBits cte)"
 proof -
-  have "cte_wp_at' (op = cte) p s" using ks by (clarsimp simp: cte_wp_at_ctes_of)
+  have "cte_wp_at' ((=) cte) p s" using ks by (clarsimp simp: cte_wp_at_ctes_of)
   thus ?thesis
     apply (simp add: cte_wp_at_cases' objBits_simps' cte_level_bits_def)
     apply (erule disjE)
@@ -695,7 +695,7 @@ proof -
     apply simp
     done
 
-  from ks have "cte_wp_at' (op = cte) (ptr_val x) s" by (clarsimp simp: cte_wp_at_ctes_of)
+  from ks have "cte_wp_at' ((=) cte) (ptr_val x) s" by (clarsimp simp: cte_wp_at_ctes_of)
   thus ?thesis
   proof (cases rule: cte_wp_at_casesE')
     case (cte cte')
@@ -2031,7 +2031,7 @@ proof -
       apply blast
       done
 
-    from sr have "cvariable_array_map_relation (gsCNodes s|\<^bsub>(- {ptr..+2 ^ bits})\<^esub>) (op ^ 2) cte_Ptr
+    from sr have "cvariable_array_map_relation (gsCNodes s|\<^bsub>(- {ptr..+2 ^ bits})\<^esub>) ((^) 2) cte_Ptr
        (typ_region_bytes ptr bits (hrs_htd (t_hrs_' (globals s'))))"
       "cvariable_array_map_relation (map_to_tcbs (ksPSpace s|\<^bsub>(- {ptr..+2 ^ bits})\<^esub>)) (\<lambda>x. 5) cte_Ptr
        (typ_region_bytes ptr bits (hrs_htd (t_hrs_' (globals s'))))"

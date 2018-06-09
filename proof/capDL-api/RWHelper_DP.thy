@@ -207,9 +207,9 @@ lemma sep_irq_node_dom_sep_map_predicate:
   done
 
 lemma sep_map_rewrite_spec:
-  "sep_map_general = (\<lambda>p obj cmps.  sep_map_predicate p (op = obj) cmps)"
-  "sep_map_o = (\<lambda>p obj. sep_map_predicate p (op = obj) UNIV)"
-  "sep_map_f = (\<lambda>p obj. sep_map_predicate p (op = obj) {Fields})"
+  "sep_map_general = (\<lambda>p obj cmps.  sep_map_predicate p ((=) obj) cmps)"
+  "sep_map_o = (\<lambda>p obj. sep_map_predicate p ((=) obj) UNIV)"
+  "sep_map_f = (\<lambda>p obj. sep_map_predicate p ((=) obj) {Fields})"
   "sep_map_c = (\<lambda>p cap. let (ptr,slot) = p in
    sep_map_predicate ptr (\<lambda>obj. object_slots obj = [ slot \<mapsto> cap]) {Slot slot})"
   by (fastforce simp: sep_map_predicate_def sep_any_def sep_map_general_def
@@ -267,13 +267,13 @@ lemma sep_spec_simps:
 
 lemma sep_conj_spec:
   "\<lbrakk> < P \<and>* Q > s\<rbrakk>
-   \<Longrightarrow> \<exists>s'. < P \<and>* op = s' > s"
+   \<Longrightarrow> \<exists>s'. < P \<and>* (=) s' > s"
   by (auto simp:sep_state_projection_def sep_conj_def
     sep_disj_sep_state_def sep_state_disj_def)
 
 
 lemma sep_conj_spec_value:
-  "\<lbrakk> < P \<and>* op = s' > s; sep_heap_dom P m; p \<notin> m\<rbrakk>
+  "\<lbrakk> < P \<and>* (=) s' > s; sep_heap_dom P m; p \<notin> m\<rbrakk>
   \<Longrightarrow> (sep_heap s') p = (sep_heap (sep_state_projection s) |` (UNIV - m)) p"
   apply (clarsimp simp:sep_state_projection_def sep_conj_def
     sep_disj_sep_state_def sep_state_disj_def)

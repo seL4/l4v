@@ -40,9 +40,9 @@ let
     let
       val deps = Option.map snd (Symtab.lookup thy_deps i)
     in
-      case deps of SOME deps => member (op =) deps j | NONE => false end
+      case deps of SOME deps => member (=) deps j | NONE => false end
 
-   val thys = distinct (op =) thys'
+   val thys = distinct (=) thys'
 
 in
   if exists (fn ex_thy => reachable ex_thy thy) thys then thys else
@@ -58,7 +58,7 @@ fun add_thy_consts spec_graph (e : Proof_Graph.proof_entry) =
   let
     val thys' = map (Int_Graph.get_node spec_graph #> #theory) (#contains e)
   in
-    (union (op =) thys') end
+    (union (=) thys') end
 
 
 
@@ -88,19 +88,19 @@ let
       val thyn = Long_Name.explode nm' |> hd
       fun warn _ = if not (Symtab.defined thy_names nm') then (warning (nm ^ " depends on " ^ nm' ^ " which is not marked for levitation and is outside theory import chain. NOT levitating.");true) else b
 
-    in if member (op =) spec_theories thyn then (NONE,warn ()) else (SOME thyn,b) end
+    in if member (=) spec_theories thyn then (NONE,warn ()) else (SOME thyn,b) end
 
     val (deps,rem) = fold_map get_dep all_succs false
     |>> map_filter I
     |>> append (map_filter (Symtab.lookup thy_names) all_succs)
-    |>> remove (op =) thy_name
+    |>> remove (=) thy_name
 
     val imm_succs  = String_Graph.immediate_succs proof_graph nm
 
 
   in
     (if rem then (thm_deps,thytab) else
-      (Symtab.update (nm,(e,imm_succs)) thm_deps,fold (fn dep => Symtab.insert_list (op =) (thy_name,dep)) deps thytab)) end
+      (Symtab.update (nm,(e,imm_succs)) thm_deps,fold (fn dep => Symtab.insert_list (=) (thy_name,dep)) deps thytab)) end
 
   fun rem_cycles (thy_names,thy_imports) =
   let
@@ -114,9 +114,9 @@ let
 
 
     val thy_graph' =
-    Proof_Graph.restrict_subgraph (fn (i,_) => not (member (op =) l i)) thy_graph
+    Proof_Graph.restrict_subgraph (fn (i,_) => not (member (=) l i)) thy_graph
 
-    val thy_names' = Symtab.map (fn _ => fn thyn => if member (op =) l thyn then n else thyn) thy_names
+    val thy_names' = Symtab.map (fn _ => fn thyn => if member (=) l thyn then n else thyn) thy_names
    in
     (thy_names',thy_graph') end;
 
@@ -125,8 +125,8 @@ let
 
    val cycles = map (flat o cycles_of) (String_Graph.keys thy_graph)
     |> filter_out null
-    |> map (sort_wrt I #> distinct (op =) #> rev)
-    |> distinct (op =)
+    |> map (sort_wrt I #> distinct (=) #> rev)
+    |> distinct (=)
 
    val thy_graph = thy_imports
       |> Symtab.dest
@@ -136,7 +136,7 @@ let
 
    val (thy_names',thy_graph') = fold merge_deps cycles (thy_names,thy_graph)
 
-   val thy_imports' = map (fn i => (i,String_Graph.all_succs thy_graph' [i] |> remove (op =) i)) (String_Graph.keys thy_graph')
+   val thy_imports' = map (fn i => (i,String_Graph.all_succs thy_graph' [i] |> remove (=) i)) (String_Graph.keys thy_graph')
     |> filter (fn (i,_) => Symtab.defined thy_imports i)
     |> Symtab.make
 
@@ -169,11 +169,11 @@ let
     |> Symtab.dest
     |> map snd
     |> flat
-    |> distinct (op =)
-    |> filter_out (member (op =) (Symtab.keys thy_imports'))
+    |> distinct (=)
+    |> filter_out (member (=) (Symtab.keys thy_imports'))
     |> thy_list thy_deps
     |> map (fn n => "\"" ^ (Symtab.lookup thy_deps n |> the |> fst) ^ "/" ^ n ^ "\"")
-    |> distinct (op =)
+    |> distinct (=)
   in
     ("AutoLevity_Base",(all_imports,[])) end
 
@@ -195,7 +195,7 @@ let
     (Parse.command |-- Parse_Spec.opt_thm_name ":") toks handle _  => error ("Failed to parse lemma attributes" ^ str)
 in
   map (fst o fst o Args.dest_src) attribs
-  |> filter (member (op =) declare_attribs) end
+  |> filter (member (=) declare_attribs) end
 
 fun parse_attribs sorted =
 let
@@ -290,7 +290,7 @@ let
   |> map_range (K (SOME (header ^ declare) )) (beg,beg)
 
 in
-  (Symtab.insert_list (op =) (#file e,thy_nm) new_deps,Symtab.update (#file e,thy_file') cache) end
+  (Symtab.insert_list (=) (#file e,thy_nm) new_deps,Symtab.update (#file e,thy_file') cache) end
 
 (*TODO: Auto-generate thy dependencies or assume everyone will import us?*)
 fun remove_thy (thy_nm,(deps,lemmas)) cache = fold (remove_lemma thy_nm) lemmas cache
@@ -308,9 +308,9 @@ let
   fun is_already_imported file_nm dep =
   let
     val deps = Symtab.lookup file_deps file_nm |> the
-    |> remove (op =) file_nm
+    |> remove (=) file_nm
   in
-    exists (fn d => case (Symtab.lookup new_deps d) of SOME deps' => member (op =) deps' dep | NONE => false) deps end
+    exists (fn d => case (Symtab.lookup new_deps d) of SOME deps' => member (=) deps' dep | NONE => false) deps end
 
   fun add_deps file_nm file =
   let

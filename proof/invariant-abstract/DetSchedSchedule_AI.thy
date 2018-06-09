@@ -2274,7 +2274,7 @@ end
 
 lemma thread_set_state_eq_valid_queues:
   "(\<And>x. tcb_state (f x) = ts) \<Longrightarrow>
-   \<lbrace>valid_queues and st_tcb_at (op = ts) tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
+   \<lbrace>valid_queues and st_tcb_at ((=) ts) tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
   apply (simp add: thread_set_def set_object_def)
   apply wp
   apply (fastforce simp: valid_queues_def st_tcb_at_kh_if_split st_tcb_def2)
@@ -2282,7 +2282,7 @@ lemma thread_set_state_eq_valid_queues:
 
 lemma thread_set_state_eq_valid_sched_action:
   "(\<And>x. tcb_state (f x) = ts) \<Longrightarrow>
-   \<lbrace>valid_sched_action and st_tcb_at (op = ts) tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. valid_sched_action\<rbrace>"
+   \<lbrace>valid_sched_action and st_tcb_at ((=) ts) tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. valid_sched_action\<rbrace>"
   apply (simp add: thread_set_def set_object_def)
   apply wp
   apply (fastforce simp: valid_sched_action_def weak_valid_sched_action_def
@@ -2291,7 +2291,7 @@ lemma thread_set_state_eq_valid_sched_action:
 
 lemma thread_set_state_eq_ct_in_cur_domain:
   "(\<And>x. tcb_state (f x) = ts) \<Longrightarrow>
-   \<lbrace>ct_in_cur_domain and st_tcb_at (op = ts) tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. ct_in_cur_domain\<rbrace>"
+   \<lbrace>ct_in_cur_domain and st_tcb_at ((=) ts) tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. ct_in_cur_domain\<rbrace>"
   apply (simp add: thread_set_def set_object_def)
   apply wp
   apply (fastforce simp: ct_in_cur_domain_def st_tcb_at_kh_if_split st_tcb_def2)
@@ -2299,7 +2299,7 @@ lemma thread_set_state_eq_ct_in_cur_domain:
 
 lemma thread_set_state_eq_valid_blocked:
   "(\<And>x. tcb_state (f x) = ts) \<Longrightarrow>
-   \<lbrace>valid_blocked and st_tcb_at (op = ts) tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
+   \<lbrace>valid_blocked and st_tcb_at ((=) ts) tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
   apply (simp add: thread_set_def set_object_def)
   apply wp
   apply (fastforce simp: valid_blocked_def st_tcb_at_kh_if_split st_tcb_def2)
@@ -2310,7 +2310,7 @@ crunch etcb_at[wp]: thread_set "etcb_at P t"
 context DetSchedSchedule_AI begin
 lemma thread_set_state_eq_valid_sched:
   "(\<And>x. tcb_state (f x) = ts) \<Longrightarrow>
-   \<lbrace>valid_sched and st_tcb_at (op = ts) tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+   \<lbrace>valid_sched and st_tcb_at ((=) ts) tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: valid_sched_def)
   apply (wp thread_set_state_eq_valid_queues thread_set_state_eq_valid_blocked thread_set_state_eq_valid_sched_action thread_set_state_eq_ct_in_cur_domain | simp)+
   done
@@ -2399,7 +2399,7 @@ lemma thread_set_ct_active_wp:
   by (wp ct_in_state_thread_state_lift thread_set_no_change_tcb_state, simp)
 
 lemma do_reply_transfer_valid_sched[wp]:
-  "\<lbrace>valid_sched and valid_objs and ct_active and cte_wp_at (op = (ReplyCap t' False)) slot
+  "\<lbrace>valid_sched and valid_objs and ct_active and cte_wp_at ((=) (ReplyCap t' False)) slot
        and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
      do_reply_transfer sender receiver slot
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
@@ -2912,7 +2912,7 @@ lemma unbind_maybe_notification_sym_refs[wp]:
   apply clarsimp
   apply (rule delta_sym_refs, assumption)
    apply (clarsimp split: if_split_asm, frule ko_at_state_refs_ofD, simp)+
-   apply (frule_tac P="op = (Some a)" in ntfn_bound_tcb_at, simp_all add: obj_at_def)[1]
+   apply (frule_tac P="(=) (Some a)" in ntfn_bound_tcb_at, simp_all add: obj_at_def)[1]
    apply (fastforce simp: ntfn_q_refs_no_NTFNBound obj_at_def is_tcb state_refs_of_def
                           tcb_st_refs_of_no_NTFNBound tcb_bound_refs_def2 tcb_ntfn_is_bound_def
                           tcb_st_refs_no_TCBBound
@@ -3147,7 +3147,7 @@ lemma invoke_domain_valid_sched[wp]:
   done
 
 lemma idle_not_reply_cap:
-  "\<lbrakk> valid_idle s; valid_reply_caps s; cte_wp_at (op = (ReplyCap r False)) p s \<rbrakk> \<Longrightarrow> r \<noteq> idle_thread s"
+  "\<lbrakk> valid_idle s; valid_reply_caps s; cte_wp_at ((=) (ReplyCap r False)) p s \<rbrakk> \<Longrightarrow> r \<noteq> idle_thread s"
   apply (drule_tac p=p in valid_reply_caps_of_stateD)
    apply (simp add: caps_of_state_def cte_wp_at_def)
   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)

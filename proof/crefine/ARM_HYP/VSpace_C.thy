@@ -1276,7 +1276,7 @@ lemma ccorres_from_vcg_might_throw:
 
 lemma rf_sr_armKSASIDTable_rel:
   "(s, s') \<in> rf_sr
-    \<Longrightarrow> array_relation (op = \<circ> option_to_0) 0xFF (armKSHWASIDTable (ksArchState s))
+    \<Longrightarrow> array_relation ((=) \<circ> option_to_0) 0xFF (armKSHWASIDTable (ksArchState s))
                                (armKSHWASIDTable_' (globals s'))"
   by (clarsimp simp: rf_sr_def cstate_relation_def
                      Let_def carch_state_relation_def)
@@ -1326,7 +1326,7 @@ context kernel_m begin
 
 
 lemma findFreeHWASID_ccorres:
-  "ccorres (op =) ret__unsigned_char_'
+  "ccorres (=) ret__unsigned_char_'
        (valid_arch_state' and valid_pde_mappings') UNIV []
        (findFreeHWASID) (Call findFreeHWASID_'proc)"
   apply (cinit)
@@ -1468,7 +1468,7 @@ lemma invs_valid_pde_mappings':
 lemmas invs_valid_pde_mappings'[rule_format, elim!]
 
 lemma getHWASID_ccorres:
-  "ccorres (op =) ret__unsigned_char_'
+  "ccorres (=) ret__unsigned_char_'
      (all_invs_but_ct_idle_or_in_cur_domain' and (\<lambda>s. asid \<le> mask asid_bits)) (UNIV \<inter> {s. asid_' s = asid}) []
      (getHWASID asid) (Call getHWASID_'proc)"
   apply (cinit lift: asid_')
@@ -2008,7 +2008,7 @@ lemma ccorres_pre_getsNumListRegs:
   done
 
 lemma ccorres_gets_armKSGICVCPUNumListRegs:
-  "ccorres (op = \<circ> of_nat) lr_num_' \<top> UNIV hs
+  "ccorres ((=) \<circ> of_nat) lr_num_' \<top> UNIV hs
            (gets (armKSGICVCPUNumListRegs \<circ> ksArchState)) (\<acute>lr_num :== \<acute>gic_vcpu_num_list_regs)"
   apply (rule ccorres_from_vcg_nofail)
   apply clarsimp
@@ -2714,7 +2714,7 @@ lemma wordFromMessageInfo_spec:
 lemmas wordFromMessageInfo_spec2 = wordFromMessageInfo_spec
 
 lemma wordFromMessageInfo_ccorres [corres]:
-  "\<And>mi. ccorres (op =) ret__unsigned_long_' \<top> {s. mi = message_info_to_H (mi_' s)} []
+  "\<And>mi. ccorres (=) ret__unsigned_long_' \<top> {s. mi = message_info_to_H (mi_' s)} []
            (return (wordFromMessageInfo mi)) (Call wordFromMessageInfo_'proc)"
   apply (rule ccorres_from_spec_modifies [where P = \<top>, simplified])
      apply (rule wordFromMessageInfo_spec)
@@ -4021,13 +4021,13 @@ lemma performASIDPoolInvocation_ccorres:
          apply (rule ccorres_rhs_assoc2)
          apply (rule_tac ccorres_split_nothrow [where r'=dc and xf'=xfdc])
              apply (simp add: updateCap_def)
-             apply (rule_tac A="cte_wp_at' (op = rv o cteCap) ctSlot
+             apply (rule_tac A="cte_wp_at' ((=) rv o cteCap) ctSlot
                                 and K (isPDCap rv \<and> asid \<le> mask asid_bits)"
                          and A'=UNIV in ccorres_guard_imp2)
               apply (rule ccorres_pre_getCTE)
-              apply (rule_tac P="cte_wp_at' (op = rv o cteCap) ctSlot
+              apply (rule_tac P="cte_wp_at' ((=) rv o cteCap) ctSlot
                                  and K (isPDCap rv \<and> asid \<le> mask asid_bits)
-                                 and cte_wp_at' (op = rva) ctSlot"
+                                 and cte_wp_at' ((=) rva) ctSlot"
                           and P'=UNIV in ccorres_from_vcg)
               apply (rule allI, rule conseqPre, vcg)
               apply (clarsimp simp: cte_wp_at_ctes_of)

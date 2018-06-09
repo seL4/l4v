@@ -851,7 +851,7 @@ lemma caps_of_state_tcb:
   "\<lbrakk> get_tcb p s = Some tcb; option_map fst (tcb_cap_cases idx) = Some getF \<rbrakk> \<Longrightarrow> caps_of_state s (p, idx) = Some (getF tcb)"
   apply (drule get_tcb_SomeD)
   apply clarsimp
-  apply (drule (1) cte_wp_at_tcbI [where t = "(p, idx)" and P = "op = (getF tcb)", simplified])
+  apply (drule (1) cte_wp_at_tcbI [where t = "(p, idx)" and P = "(=) (getF tcb)", simplified])
   apply simp
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done

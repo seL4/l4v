@@ -104,7 +104,7 @@ lemma maksed_as_full_test_function_stuff[simp]:
 lemma set_untyped_cap_as_full_cte_wp_at_neg:
   "\<lbrace>\<lambda>s. (dest \<noteq> src \<and> \<not> (cte_wp_at P dest s) \<or>
          dest = src \<and> \<not> cte_wp_at (\<lambda>a. P (masked_as_full a cap)) src s) \<and>
-        cte_wp_at (op = src_cap) src s\<rbrace>
+        cte_wp_at ((=) src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>ya s. \<not> cte_wp_at P dest s\<rbrace>"
   apply (clarsimp simp:set_untyped_cap_as_full_def | rule conjI |wp set_cap_cte_wp_at_neg)+
@@ -114,14 +114,14 @@ lemma set_untyped_cap_as_full_cte_wp_at_neg:
 done
 
 lemma set_untyped_cap_as_full_is_final_cap'_neg:
-  "\<lbrace>\<lambda>s. \<not> is_final_cap' cap' s \<and> cte_wp_at (op = src_cap) src s\<rbrace>
+  "\<lbrace>\<lambda>s. \<not> is_final_cap' cap' s \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. \<not> is_final_cap' cap' s\<rbrace>"
   apply (rule hoare_pre)
   apply (simp add:is_final_cap'_def2)
      apply (wp hoare_vcg_all_lift hoare_vcg_ex_lift)
        apply (rule_tac Q = "cte_wp_at Q slot"
-         and Q'="cte_wp_at (op = src_cap) src" for Q slot in P_bool_lift' )
+         and Q'="cte_wp_at ((=) src_cap) src" for Q slot in P_bool_lift' )
        apply (wp set_untyped_cap_as_full_cte_wp_at)
        apply clarsimp
      apply (wp set_untyped_cap_as_full_cte_wp_at_neg)

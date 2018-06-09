@@ -267,7 +267,7 @@ lemma corres_split_catch:
 
 lemma corres_split_eqr:
  assumes y: "\<And>rv. corres_underlying sr nf nf' r (R rv) (R' rv) (b rv) (d rv)"
- assumes x: "corres_underlying sr nf nf' op = P P' a c" "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>"
+ assumes x: "corres_underlying sr nf nf' (=) P P' a c" "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>"
  shows      "corres_underlying sr nf nf' r (P and Q) (P' and Q') (a >>= (\<lambda>rv. b rv)) (c >>= d)"
   apply (rule corres_split[OF _ x])
   apply (simp add: y)
@@ -301,7 +301,7 @@ lemma corres_split_norE:
 
 lemma corres_split_eqrE:
   assumes y: "\<And>rv. corres_underlying sr nf nf' (f \<oplus> r) (R rv) (R' rv) (b rv) (d rv)"
-  assumes z: "corres_underlying sr nf nf' (f \<oplus> op =) P P' a c"
+  assumes z: "corres_underlying sr nf nf' (f \<oplus> (=)) P P' a c"
   assumes x: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
   shows      "corres_underlying sr nf nf' (f \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E d)"
   apply (rule corres_splitEE[OF _ z x])
@@ -310,7 +310,7 @@ lemma corres_split_eqrE:
 
 lemma corres_split_mapr:
   assumes x: "\<And>rv. corres_underlying sr nf nf' r (R rv) (R' (f rv)) (b rv) (d (f rv))"
-  assumes y: "corres_underlying sr nf nf' (op = \<circ> f) P P' a c"
+  assumes y: "corres_underlying sr nf nf' ((=) \<circ> f) P P' a c"
   assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>"
   shows      "corres_underlying sr nf nf' r (P and Q) (P' and Q') (a >>= (\<lambda>rv. b rv)) (c >>= d)"
   apply (rule corres_split[OF _ y z])
@@ -321,7 +321,7 @@ lemma corres_split_mapr:
 
 lemma corres_split_maprE:
   assumes y: "\<And>rv. corres_underlying sr nf nf' (r' \<oplus> r) (R rv) (R' (f rv)) (b rv) (d (f rv))"
-  assumes z: "corres_underlying sr nf nf' (r' \<oplus> (op = \<circ> f)) P P' a c"
+  assumes z: "corres_underlying sr nf nf' (r' \<oplus> ((=) \<circ> f)) P P' a c"
   assumes x: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
   shows      "corres_underlying sr nf nf' (r' \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E d)"
   apply (rule corres_splitEE[OF _ z x])
@@ -419,8 +419,8 @@ qed
 
 (* this could be stronger in the no_fail part *)
 lemma corres_noop2:
-  assumes x: "\<And>s. P s  \<Longrightarrow> \<lbrace>op = s\<rbrace> f \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
-  assumes y: "\<And>s. P' s \<Longrightarrow> \<lbrace>op = s\<rbrace> g \<lbrace>\<lambda>r. op = s\<rbrace>"
+  assumes x: "\<And>s. P s  \<Longrightarrow> \<lbrace>(=) s\<rbrace> f \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
+  assumes y: "\<And>s. P' s \<Longrightarrow> \<lbrace>(=) s\<rbrace> g \<lbrace>\<lambda>r. (=) s\<rbrace>"
   assumes z: "nf' \<Longrightarrow> no_fail P f" "nf' \<Longrightarrow> no_fail P' g"
   shows      "corres_underlying sr nf nf' dc P P' f g"
   apply (clarsimp simp: corres_underlying_def)
@@ -479,7 +479,7 @@ text {* Support for symbolically executing into the guards
 
 lemma corres_symb_exec_l:
   assumes z: "\<And>rv. corres_underlying sr nf nf' r (Q rv) P' (x rv) y"
-  assumes x: "\<And>s. P s \<Longrightarrow> \<lbrace>op = s\<rbrace> m \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
+  assumes x: "\<And>s. P s \<Longrightarrow> \<lbrace>(=) s\<rbrace> m \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
   assumes y: "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>"
   assumes nf: "nf' \<Longrightarrow> no_fail P m"
   shows      "corres_underlying sr nf nf' r P P' (m >>= (\<lambda>rv. x rv)) y"
@@ -499,7 +499,7 @@ lemma corres_symb_exec_l:
 lemma corres_symb_exec_r:
   assumes z: "\<And>rv. corres_underlying sr nf nf' r P (Q' rv) x (y rv)"
   assumes y: "\<lbrace>P'\<rbrace> m \<lbrace>Q'\<rbrace>"
-  assumes x: "\<And>s. P' s \<Longrightarrow> \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>"
+  assumes x: "\<And>s. P' s \<Longrightarrow> \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>"
   assumes nf: "nf' \<Longrightarrow> no_fail P' m"
   shows      "corres_underlying sr nf nf' r P P' x (m >>= (\<lambda>rv. y rv))"
   apply (rule corres_guard_imp)
@@ -830,7 +830,7 @@ lemma corres_liftME2[simp]:
 
 lemma corres_assertE_assume:
   "\<lbrakk>\<And>s. P s \<longrightarrow> P'; \<And>s'. Q s' \<longrightarrow> Q'\<rbrakk> \<Longrightarrow>
-   corres_underlying sr nf nf' (f \<oplus> op =) P Q (assertE P') (assertE Q')"
+   corres_underlying sr nf nf' (f \<oplus> (=)) P Q (assertE P') (assertE Q')"
   apply (simp add: corres_underlying_def assertE_def returnOk_def
                    fail_def return_def)
   by blast
@@ -875,7 +875,7 @@ next
 qed
 
 lemma select_corres_eq:
-  "corres_underlying sr nf nf' (op =) \<top> \<top> (select UNIV) (select UNIV)"
+  "corres_underlying sr nf nf' (=) \<top> \<top> (select UNIV) (select UNIV)"
   by (simp add: corres_underlying_def select_def)
 
 lemma corres_cases:
@@ -1096,7 +1096,7 @@ lemma isLeft_case_sum:
 
 lemma corres_symb_exec_catch_r:
   "\<lbrakk> \<And>rv. corres_underlying sr nf nf' r P (Q' rv) f (h rv);
-        \<lbrace>P'\<rbrace> g \<lbrace>\<bottom>\<bottom>\<rbrace>, \<lbrace>Q'\<rbrace>; \<And>s. \<lbrace>op = s\<rbrace> g \<lbrace>\<lambda>r. op = s\<rbrace>; nf' \<Longrightarrow> no_fail P' g \<rbrakk>
+        \<lbrace>P'\<rbrace> g \<lbrace>\<bottom>\<bottom>\<rbrace>, \<lbrace>Q'\<rbrace>; \<And>s. \<lbrace>(=) s\<rbrace> g \<lbrace>\<lambda>r. (=) s\<rbrace>; nf' \<Longrightarrow> no_fail P' g \<rbrakk>
       \<Longrightarrow> corres_underlying sr nf nf' r P P' f (g <catch> h)"
   apply (simp add: catch_def)
   apply (rule corres_symb_exec_r, simp_all)
@@ -1109,7 +1109,7 @@ lemma corres_symb_exec_catch_r:
   done
 
 lemma corres_return_eq_same:
-  "a = b \<Longrightarrow> corres_underlying srel nf' nf op= \<top> \<top> (return a) (return b)"
+  "a = b \<Longrightarrow> corres_underlying srel nf' nf (=) \<top> \<top> (return a) (return b)"
   apply (simp add: corres_underlying_def return_def)
   done
 
@@ -1144,9 +1144,9 @@ lemma corres_gets_trivial:
 text {* Some setup of specialised methods. *}
 
 lemma (in strengthen_implementation) wpfix_strengthen_corres_guard_imp:
-  "(\<And>s. st (\<not> F) (op \<longrightarrow>) (P s) (Q s))
-    \<Longrightarrow> (\<And>s. st (\<not> F) (op \<longrightarrow>) (P' s) (Q' s))
-    \<Longrightarrow> st F (op \<longrightarrow>)
+  "(\<And>s. st (\<not> F) (\<longrightarrow>) (P s) (Q s))
+    \<Longrightarrow> (\<And>s. st (\<not> F) (\<longrightarrow>) (P' s) (Q' s))
+    \<Longrightarrow> st F (\<longrightarrow>)
         (corres_underlying sr nf nf' r P P' f g)
         (corres_underlying sr nf nf' r Q Q' f g)"
   by (cases F; auto elim: corres_guard_imp)

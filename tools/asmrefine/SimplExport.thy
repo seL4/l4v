@@ -401,7 +401,7 @@ fun mk_ptr_offs opt_T p offs = let
     val T = case opt_T of NONE => pT
       | SOME T => Type (@{type_name ptr}, [T])
   in Const (@{const_name Ptr}, @{typ word32} --> T)
-       $ (@{term "op + :: word32 \<Rightarrow> _"}
+       $ (@{term "(+) :: word32 \<Rightarrow> _"}
             $ get_ptr_val p $ offs)
   end
 
@@ -454,7 +454,7 @@ fun narrow_mem_upd ctxt (params : export_params) p v = let
         val (elT, n) = dest_arrayT T
         val elT_size = get_c_type_size ctxt elT
       in case v of (Const (@{const_name Arrays.update}, _) $ arr $ i $ x)
-          => narrow_mem_upd ctxt params (mk_offs elT (@{term "op * :: word32 => _"}
+          => narrow_mem_upd ctxt params (mk_offs elT (@{term "( * ) :: word32 => _"}
                   $ HOLogic.mk_number @{typ word32} elT_size
                       $ (@{term "of_nat :: nat \<Rightarrow> word32"} $ i)))
               x @ narrow_mem_upd ctxt params p arr
@@ -479,7 +479,7 @@ fun narrow_mem_upd ctxt (params : export_params) p v = let
 fun triv_mem_upd ctxt p v = case dest_mem_acc_addr v of
       NONE => false
     | SOME p' => p aconv p' orelse let
-      val t = @{term "op - :: word32 \<Rightarrow> _"} $ get_ptr_val p $ get_ptr_val p'
+      val t = @{term "(-) :: word32 \<Rightarrow> _"} $ get_ptr_val p $ get_ptr_val p'
       val thm = ptr_simp ctxt (Thm.cterm_of ctxt t)
       val t' = Thm.rhs_of thm |> Thm.term_of
     in t' = @{term "0 :: word32"}
@@ -491,7 +491,7 @@ fun narrow_mem_acc _ _ [] p = p
     fun get_offs (Const (@{const_name Arrays.index}, idxT) $ i) = let
         val (elT, _) = dest_arrayT (domain_type idxT)
         val elT_size = get_c_type_size ctxt elT
-      in @{term "op * :: word32 \<Rightarrow> _"} $ HOLogic.mk_number @{typ word32} elT_size
+      in @{term "( * ) :: word32 \<Rightarrow> _"} $ HOLogic.mk_number @{typ word32} elT_size
               $ (@{term "of_nat :: nat \<Rightarrow> word32"} $ i) end
       | get_offs (Const (s, T)) = let
         val struct_typ = domain_type T |> dest_Type |> fst
@@ -503,7 +503,7 @@ fun narrow_mem_acc _ _ [] p = p
       in HOLogic.mk_number @{typ word32} offs end
       | get_offs t = raise TERM ("narrow_mem_acc: get_offs: ", [t])
     val T' = get_acc_type accs (@{typ nat} (* doesn't matter *))
-    val offs = foldr1 (fn (x, y) => @{term "op + :: word32 \<Rightarrow> _"} $ x $ y)
+    val offs = foldr1 (fn (x, y) => @{term "(+) :: word32 \<Rightarrow> _"} $ x $ y)
         (map get_offs accs)
     in mk_ptr_offs (SOME T') p offs end
 
@@ -771,7 +771,7 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
   | convert_ph3 ctxt params t = let
     val (f, xs) = strip_comb t
     val (c, _) = dest_Const f
-    val xs = if member (op =) [@{const_name shiftl},
+    val xs = if member (=) [@{const_name shiftl},
         @{const_name shiftr}, @{const_name sshiftr}] c
       then case xs of
         [x, y] => [x, Const (@{const_name of_nat}, @{typ nat} --> fastype_of x) $ y]
@@ -892,7 +892,7 @@ fun get_reads_calls ctxt params globals name = let
   in (reads, calls (Thm.concl_of thm) |> map call_to_name) end
 
 fun is_no_read ctxt params globals s = let
-    fun inner stack s = if member (op =) stack s then true else let
+    fun inner stack s = if member (=) stack s then true else let
         val (reads, calls) = get_reads_calls ctxt params globals s
       in not reads andalso forall I (map (inner (s :: stack)) calls) end
   in inner [] s end

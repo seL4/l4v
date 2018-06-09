@@ -1499,7 +1499,7 @@ lemma exst_cdt_update[iff]:
   by simp
 
 definition valid_mdb_weak where
-"valid_mdb_weak s \<equiv> mdb_cte_at (swp (cte_wp_at (op \<noteq> NullCap)) s) (cdt s) \<and> no_mloop (cdt s)"
+"valid_mdb_weak s \<equiv> mdb_cte_at (swp (cte_wp_at ((\<noteq>) NullCap)) s) (cdt s) \<and> no_mloop (cdt s)"
 
 lemma self_parent_eq: "m src = Some src \<Longrightarrow> m(dest \<mapsto> src) = m (dest := m src)"
   by simp

@@ -44,7 +44,7 @@ lemma return_wp_exs_valid [wp]: "\<lbrace> P x \<rbrace> return x \<exists>\<lbr
   by (simp add: exs_valid_def return_def)
 
 (* FIXME: move to NonDetMonadVCG *)
-lemma get_exs_valid [wp]: "\<lbrace>op = s\<rbrace> get \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
+lemma get_exs_valid [wp]: "\<lbrace>(=) s\<rbrace> get \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
   by (simp add: get_def exs_valid_def)
 
 lemma invs_no_cicd'_queues:
@@ -143,7 +143,7 @@ proof -
 qed
 
 lemma awesome_case1:
-  assumes x: "corres op = P P' (return False) (g x)"
+  assumes x: "corres (=) P P' (return False) (g x)"
   shows      "corres (\<lambda>a b. if b then (\<exists>a'. a = Some a' \<and> r a' (Some x)) else a = None)
             P P' ((f >>= (\<lambda>x. return (Some x))) \<sqinter> (return None)) (g x)"
 proof -
@@ -236,9 +236,9 @@ lemma tcbSchedAppend_corres:
    apply clarsimp
   apply (clarsimp simp: unless_def when_def cong: if_cong)
   apply (rule stronger_corres_guard_imp)
-    apply (rule corres_split[where r'="op =", OF _ ethreadget_corres])
-       apply (rule corres_split[where r'="op =", OF _ ethreadget_corres])
-          apply (rule corres_split[where r'="op ="])
+    apply (rule corres_split[where r'="(=)", OF _ ethreadget_corres])
+       apply (rule corres_split[where r'="(=)", OF _ ethreadget_corres])
+          apply (rule corres_split[where r'="(=)"])
              apply (rule corres_split_noop_rhs2)
                 apply (rule corres_split_noop_rhs2)
                    apply (rule threadSet_corres_noop, simp_all add: tcb_relation_def exst_same_def)[1]
@@ -953,7 +953,7 @@ proof -
   show ?thesis
     apply -
     apply (simp add: switch_to_thread_def Thread_H.switchToThread_def)
-    apply (rule corres_symb_exec_l [where Q = "\<lambda> s rv. (?PA and op = rv) s",
+    apply (rule corres_symb_exec_l [where Q = "\<lambda> s rv. (?PA and (=) rv) s",
                                     OF corres_symb_exec_l [OF mainpart]])
     apply (auto intro: no_fail_pre [OF no_fail_assert]
                       no_fail_pre [OF no_fail_get]
@@ -1521,7 +1521,7 @@ proof -
 qed
 
 lemma tcbSchedDequeue_ksReadyQueues_eq:
-  "\<lbrace>\<lambda>s. obj_at' (inQ d p) t s \<and> filter (op \<noteq> t) (ksReadyQueues s (d, p)) = ts\<rbrace>
+  "\<lbrace>\<lambda>s. obj_at' (inQ d p) t s \<and> filter ((\<noteq>) t) (ksReadyQueues s (d, p)) = ts\<rbrace>
       tcbSchedDequeue t
    \<lbrace>\<lambda>rv s. ksReadyQueues s (d, p) = ts\<rbrace>"
   apply (simp add: tcbSchedDequeue_def threadGet_def liftM_def)
@@ -2047,8 +2047,8 @@ crunch cur[wp]: tcbSchedEnqueue cur_tcb'
 
 (* FIXME: move *)
 lemma corres_noop3:
-  assumes x: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk>  \<Longrightarrow> \<lbrace>op = s\<rbrace> f \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
-  assumes y: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk> \<Longrightarrow> \<lbrace>op = s'\<rbrace> g \<lbrace>\<lambda>r. op = s'\<rbrace>"
+  assumes x: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk>  \<Longrightarrow> \<lbrace>(=) s\<rbrace> f \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
+  assumes y: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk> \<Longrightarrow> \<lbrace>(=) s'\<rbrace> g \<lbrace>\<lambda>r. (=) s'\<rbrace>"
   assumes z: "nf' \<Longrightarrow> no_fail P' g"
   shows      "corres_underlying sr nf nf' dc P P' f g"
   apply (clarsimp simp: corres_underlying_def)
@@ -2071,7 +2071,7 @@ lemma corres_noop3:
 
 lemma corres_symb_exec_l':
   assumes z: "\<And>rv. corres_underlying sr nf nf' r (Q' rv) P' (x rv) y"
-  assumes x: "\<And>s. P s \<Longrightarrow> \<lbrace>op = s\<rbrace> m \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
+  assumes x: "\<And>s. P s \<Longrightarrow> \<lbrace>(=) s\<rbrace> m \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
   assumes y: "\<lbrace>Q\<rbrace> m \<lbrace>Q'\<rbrace>"
   shows      "corres_underlying sr nf nf' r (P and Q) P' (m >>= (\<lambda>rv. x rv)) y"
   apply (rule corres_guard_imp)
@@ -2089,7 +2089,7 @@ lemma corres_symb_exec_l':
 lemma corres_symb_exec_r':
   assumes z: "\<And>rv. corres_underlying sr nf nf' r P (P'' rv) x (y rv)"
   assumes y: "\<lbrace>P'\<rbrace> m \<lbrace>P''\<rbrace>"
-  assumes x: "\<And>s. Q' s \<Longrightarrow> \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>"
+  assumes x: "\<And>s. Q' s \<Longrightarrow> \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>"
   assumes nf: "nf' \<Longrightarrow> no_fail R' m"
   shows      "corres_underlying sr nf nf' r P (P' and Q' and R') x (m >>= (\<lambda>rv. y rv))"
   apply (rule corres_guard_imp)
@@ -2119,14 +2119,14 @@ lemma corres_case_list:
    done
 
 lemma findM_corres:
-  "\<lbrakk>\<And>x. x \<in> set xs \<Longrightarrow> corres op = P P' (f x) (f' x);
+  "\<lbrakk>\<And>x. x \<in> set xs \<Longrightarrow> corres (=) P P' (f x) (f' x);
     \<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>r. P\<rbrace>; \<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P'\<rbrace> f' x \<lbrace>\<lambda>r. P'\<rbrace>\<rbrakk>
-    \<Longrightarrow> corres op = P P' (findM f xs) (findM f' xs)"
+    \<Longrightarrow> corres (=) P P' (findM f xs) (findM f' xs)"
   apply (induct xs)
    apply simp
   apply simp
   apply (rule corres_guard_imp)
-    apply (rule corres_split[where r'="op ="])
+    apply (rule corres_split[where r'="(=)"])
        apply (rule corres_if[where P=P and P'=P'])
          apply simp
         apply simp
@@ -2136,7 +2136,7 @@ lemma findM_corres:
      done
 
 lemma thread_get_exs_valid[wp]:
-  "tcb_at t s \<Longrightarrow> \<lbrace>op = s\<rbrace> thread_get f t \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
+  "tcb_at t s \<Longrightarrow> \<lbrace>(=) s\<rbrace> thread_get f t \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
   apply (clarsimp simp: get_thread_state_def  assert_opt_def fail_def
              thread_get_def gets_the_def exs_valid_def gets_def
              get_def bind_def return_def split: option.splits)
@@ -2144,7 +2144,7 @@ lemma thread_get_exs_valid[wp]:
   done
 
 lemma gts_exs_valid[wp]:
-  "tcb_at t s \<Longrightarrow> \<lbrace>op = s\<rbrace> get_thread_state t \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
+  "tcb_at t s \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_thread_state t \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
   apply (clarsimp simp: get_thread_state_def  assert_opt_def fail_def
              thread_get_def gets_the_def exs_valid_def gets_def
              get_def bind_def return_def split: option.splits)
@@ -2256,7 +2256,7 @@ lemma findM_ignore_head: "\<forall>y\<in> set ys. f y = return False \<Longright
   apply (induct ys,simp+)
   done
 
-lemma curDomain_corres: "corres (op =) \<top> \<top> (gets cur_domain) (curDomain)"
+lemma curDomain_corres: "corres (=) \<top> \<top> (gets cur_domain) (curDomain)"
   by (simp add: curDomain_def state_relation_def)
 
 lemma valid_queues_non_empty:
@@ -2414,7 +2414,7 @@ interpretation tcb_sched_action_extended: is_extended' "tcb_sched_action f a"
   by (unfold_locales)
 
 lemma domain_time_corres:
-  "corres (op =) \<top> \<top> (gets domain_time) getDomainTime"
+  "corres (=) \<top> \<top> (gets domain_time) getDomainTime"
   by (simp add: getDomainTime_def state_relation_def)
 
 lemma next_domain_corres:
@@ -2534,7 +2534,7 @@ lemma schedule_ChooseNewThread_fragment_corres:
 
 lemma schedule_switch_thread_fastfail_corres:
   "\<lbrakk> ct \<noteq> it \<longrightarrow> (tp = tp' \<and> cp = cp') ; ct = ct' ; it = it' \<rbrakk> \<Longrightarrow>
-   corres (op=) (is_etcb_at ct) (tcb_at' ct)
+   corres ((=)) (is_etcb_at ct) (tcb_at' ct)
      (schedule_switch_thread_fastfail ct it cp tp)
      (scheduleSwitchThreadFastfail ct' it' cp' tp')"
   by (clarsimp simp: schedule_switch_thread_fastfail_def scheduleSwitchThreadFastfail_def)
@@ -2550,7 +2550,7 @@ lemma isHighestPrio_corres:
   assumes "d' = d"
   assumes "p' = p"
   shows
-    "corres (op=) \<top> valid_queues
+    "corres ((=)) \<top> valid_queues
       (gets (is_highest_prio d p))
       (isHighestPrio d' p')"
   using assms
@@ -2673,9 +2673,9 @@ lemma schedule_corres:
           apply (rule corres_split[OF _ corres_when])
               apply (rule corres_split[OF _ git_corres], rename_tac it it')
                 apply (rule_tac F="was_running \<longrightarrow> ct \<noteq> it" in corres_gen_asm)
-                apply (rule corres_split[OF _ ethreadget_corres[where r="op ="]],
+                apply (rule corres_split[OF _ ethreadget_corres[where r="(=)"]],
                        rename_tac tp tp')
-                   apply (rule corres_split[OF _ ethread_get_when_corres[where r="op ="]],
+                   apply (rule corres_split[OF _ ethread_get_when_corres[where r="(=)"]],
                            rename_tac cp cp')
                       apply (rule corres_split[OF _ schedule_switch_thread_fastfail_corres])
                            apply (rule corres_split[OF _ curDomain_corres])
@@ -3156,7 +3156,7 @@ lemma possibleSwitchTo_corres:
   apply (simp add: possible_switch_to_def possibleSwitchTo_def cong: if_cong)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ curDomain_corres], simp)
-      apply (rule corres_split[OF _ ethreadget_corres[where r="op ="]])
+      apply (rule corres_split[OF _ ethreadget_corres[where r="(=)"]])
          apply (rule corres_split[OF _ get_sa_corres])
            apply (rule corres_if, simp)
             apply (rule tcbSchedEnqueue_corres)

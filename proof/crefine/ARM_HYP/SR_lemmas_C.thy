@@ -505,7 +505,7 @@ lemma ctes_of_ksI [intro?]:
   and     pd: "pspace_distinct' s"
   shows   "ctes_of s x = Some cte"
 proof (rule ctes_of_eq_cte_wp_at')
-  from ks show "cte_wp_at' (op = cte) x s"
+  from ks show "cte_wp_at' ((=) cte) x s"
   proof (rule cte_wp_at_cteI' [OF _ _ _ refl])
     from ks pa have "is_aligned x (objBitsKO (KOCTE cte))" ..
     thus "is_aligned x cte_level_bits"
@@ -754,7 +754,7 @@ lemma lifth_update:
   by simp
 
 lemma getCTE_exs_valid:
-  "cte_at' dest s \<Longrightarrow> \<lbrace>op = s\<rbrace> getCTE dest \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
+  "cte_at' dest s \<Longrightarrow> \<lbrace>(=) s\<rbrace> getCTE dest \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
   unfolding exs_valid_def getCTE_def cte_wp_at'_def
   by clarsimp
 
@@ -971,7 +971,7 @@ lemma ctes_of_aligned_bits [simp]:
   and   bits: "bits \<le> cte_level_bits"
   shows  "is_aligned p bits"
 proof -
-  from cof have "cte_wp_at' (op = cte) p s"
+  from cof have "cte_wp_at' ((=) cte) p s"
     by (simp add: cte_wp_at_ctes_of)
   thus ?thesis
     apply -
@@ -1282,7 +1282,7 @@ lemma ko_at_valid_ntfn':
 
 (* MOVE *)
 lemma ntfn_blocked_in_queueD:
-  "\<lbrakk> st_tcb_at' (op = (Structures_H.thread_state.BlockedOnNotification ntfn)) thread \<sigma>; ko_at' ntfn' ntfn \<sigma>; invs' \<sigma> \<rbrakk>
+  "\<lbrakk> st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnNotification ntfn)) thread \<sigma>; ko_at' ntfn' ntfn \<sigma>; invs' \<sigma> \<rbrakk>
    \<Longrightarrow> thread \<in> set (ntfnQueue (ntfnObj ntfn')) \<and> isWaitingNtfn (ntfnObj ntfn')"
   apply (drule sym_refs_st_tcb_atD')
    apply clarsimp
@@ -1385,7 +1385,7 @@ lemma exs_getObject:
                 (loadObject_default p q n ko :: ('a :: pspace_storable) kernel)"
   assumes P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
   and objat: "obj_at' (P :: ('a::pspace_storable \<Rightarrow> bool)) p s"
-  shows      "\<lbrace>op = s\<rbrace> getObject p \<exists>\<lbrace>\<lambda>r :: ('a :: pspace_storable). op = s\<rbrace>"
+  shows      "\<lbrace>(=) s\<rbrace> getObject p \<exists>\<lbrace>\<lambda>r :: ('a :: pspace_storable). (=) s\<rbrace>"
   using objat unfolding exs_valid_def obj_at'_def
   apply clarsimp
   apply (rule_tac x = "(the (projectKO_opt ko), s)" in bexI)

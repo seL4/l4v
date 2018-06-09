@@ -472,7 +472,7 @@ abbreviation (input) "initMemory == clearMemory"
 
 text {*
   Free memory that had been initialized as user memory.
-  While freeing memory is a no-op in the implementation,
+  While freeing memory is a no-(in) the implementation,
   we zero out the underlying memory in the specifications to avoid garbage.
   If we know that there is no garbage,
   we can compute from the implementation state

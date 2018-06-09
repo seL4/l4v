@@ -244,7 +244,7 @@ done
 lemma field_names_ti_typ_combine:
   "\<lbrakk> typ_name t \<noteq> typ_name ti; fg_cons f g \<rbrakk> \<Longrightarrow>
       field_names (ti_typ_combine (t_b::'b::mem_type itself) f g fn ti) t =
-        field_names ti t @ map (op # fn) (field_names (typ_info_t TYPE('b)) t)"
+        field_names ti t @ map ((#) fn) (field_names (typ_info_t TYPE('b)) t)"
 apply(clarsimp simp: ti_typ_combine_def Let_def)
 apply(subst field_names_extend_ti)
  apply(simp add: export_uinfo_def size_map_td)
@@ -297,7 +297,7 @@ lemma typ_name_map_td [simp]:
 lemma field_names_ti_typ_pad_combine:
   "\<lbrakk> typ_name t \<noteq> typ_name ti; fg_cons f g; aggregate ti; hd (typ_name t) \<noteq> CHR ''!'' \<rbrakk> \<Longrightarrow>
       field_names (ti_typ_pad_combine (t_b::'b::mem_type itself) f g fn ti) t =
-        field_names ti t @ map (op # fn) (field_names (typ_info_t TYPE('b)) t)"
+        field_names ti t @ map ((#) fn) (field_names (typ_info_t TYPE('b)) t)"
 apply(auto simp: ti_typ_pad_combine_def Let_def)
  apply(subst field_names_ti_typ_combine)
    apply simp

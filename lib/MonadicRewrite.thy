@@ -85,7 +85,7 @@ lemma monadic_rewrite_catch:
   done
 
 lemma monadic_rewrite_symb_exec_pre:
-  assumes inv: "\<And>s. \<lbrace>op = s\<rbrace> g \<lbrace>\<lambda>r. op = s\<rbrace>"
+  assumes inv: "\<And>s. \<lbrace>(=) s\<rbrace> g \<lbrace>\<lambda>r. (=) s\<rbrace>"
        and ef: "empty_fail g"
        and rv: "\<And>s. \<lbrace>P\<rbrace> g \<lbrace>\<lambda>y s. y \<in> S\<rbrace>"
        and h': "\<And>y. y \<in> S \<longrightarrow> h y = h'"
@@ -182,7 +182,7 @@ lemma monadic_rewrite_drop_modify:
   by (simp add: monadic_rewrite_def bind_def simpler_modify_def)
 
 lemma monadic_rewrite_symb_exec_r:
-  "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>; no_fail P' m;
+  "\<lbrakk> \<And>s. \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>; no_fail P' m;
      \<And>rv. monadic_rewrite F False (Q rv) x (y rv);
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
       \<Longrightarrow> monadic_rewrite F False (P and P') x (m >>= y)"
@@ -207,7 +207,7 @@ lemma monadic_rewrite_symb_exec_r':
   done
 
 lemma monadic_rewrite_symb_exec_l'':
-  "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>; empty_fail m;
+  "\<lbrakk> \<And>s. \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>; empty_fail m;
      \<not> F \<longrightarrow> no_fail P' m;
      \<And>rv. monadic_rewrite F False (Q rv) (x rv) y;
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
@@ -278,7 +278,7 @@ lemma monadic_rewrite_alternative_rhs:
   done
 
 lemma monadic_rewrite_rdonly_bind:
-  "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>rv. op = s\<rbrace> \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> \<And>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>rv. (=) s\<rbrace> \<rbrakk> \<Longrightarrow>
     monadic_rewrite F False \<top>
          (alternative (f >>= (\<lambda>x. g x)) h)
                 (f >>= (\<lambda>x. alternative (g x) h))"
@@ -362,7 +362,7 @@ lemma monadic_rewrite_cases:
   by (cases P, simp_all)
 
 lemma monadic_rewrite_symb_exec_l_known:
-  "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>; empty_fail m;
+  "\<lbrakk> \<And>s. \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>; empty_fail m;
         monadic_rewrite True False Q (x rv) y; \<lbrace>P\<rbrace> m \<lbrace>\<lambda>rv' s. rv' = rv \<and> Q s\<rbrace> \<rbrakk>
       \<Longrightarrow> monadic_rewrite True False P (m >>= x) y"
   apply (erule(1) monadic_rewrite_symb_exec_l)
@@ -440,17 +440,17 @@ lemma monadic_rewrite_gets_known:
   by (simp add: monadic_rewrite_def exec_gets)
 
 lemma monadic_rewrite_name_pre:
-  "\<lbrakk> \<And>s. P s \<Longrightarrow> monadic_rewrite F E (op = s) f g \<rbrakk>
+  "\<lbrakk> \<And>s. P s \<Longrightarrow> monadic_rewrite F E ((=) s) f g \<rbrakk>
     \<Longrightarrow> monadic_rewrite F E P f g"
   by (auto simp add: monadic_rewrite_def)
 
 lemma monadic_rewrite_named_bindE:
-  "\<lbrakk> monadic_rewrite F E (op = s) f f';
+  "\<lbrakk> monadic_rewrite F E ((=) s) f f';
     \<And>rv s'. (Inr rv, s') \<in> fst (f' s)
-      \<Longrightarrow> monadic_rewrite F E (op = s') (g rv) (g' rv) \<rbrakk>
-    \<Longrightarrow> monadic_rewrite F E (op = s) (f >>=E (\<lambda>rv. g rv)) (f' >>=E g')"
+      \<Longrightarrow> monadic_rewrite F E ((=) s') (g rv) (g' rv) \<rbrakk>
+    \<Longrightarrow> monadic_rewrite F E ((=) s) (f >>=E (\<lambda>rv. g rv)) (f' >>=E g')"
   apply (rule monadic_rewrite_imp)
-   apply (erule_tac R="op = s" and Q="\<lambda>rv s'. (Inr rv, s') \<in> fst (f' s)" in monadic_rewrite_bindE)
+   apply (erule_tac R="(=) s" and Q="\<lambda>rv s'. (Inr rv, s') \<in> fst (f' s)" in monadic_rewrite_bindE)
     apply (rule monadic_rewrite_name_pre)
     apply clarsimp
    apply (clarsimp simp add: validE_R_def validE_def valid_def
@@ -459,7 +459,7 @@ lemma monadic_rewrite_named_bindE:
   done
 
 lemmas monadic_rewrite_named_if
-    = monadic_rewrite_if[where Q="op = s" and R="op = s", simplified] for s
+    = monadic_rewrite_if[where Q="(=) s" and R="(=) s", simplified] for s
 
 lemma monadic_rewrite_if_lhs:
   "\<lbrakk> P \<Longrightarrow> monadic_rewrite F E Q b a; \<not> P \<Longrightarrow> monadic_rewrite F E R c a \<rbrakk>

@@ -1631,7 +1631,7 @@ lemma equiv_valid_2_unobservable:
 
 
 lemma equiv_valid_2:
-  "equiv_valid I A B P f \<Longrightarrow> equiv_valid_rv I A B (op =) P f"
+  "equiv_valid I A B P f \<Longrightarrow> equiv_valid_rv I A B (=) P f"
   apply (simp add: equiv_valid_def2)
   done
 
@@ -1658,7 +1658,7 @@ lemma reads_respects_scheduler_invisible_domain_switch:
       apply wp
      apply wp
     apply (rule equiv_valid_2_bind_pre[where R'=dc])
-         apply (rule equiv_valid_2_bind_pre[where R'="op ="])
+         apply (rule equiv_valid_2_bind_pre[where R'="(=)"])
               apply simp
               apply (rule_tac P="rv'b = choose_new_thread" in  EquivValid.gen_asm_ev2_l)
               apply simp
@@ -1776,7 +1776,7 @@ lemma tcb_sched_action_scheduler_equiv[wp]:
   by (rule scheduler_equiv_lift; wp)
 
 lemma cur_thread_cur_domain:
-  "\<lbrakk>st_tcb_at (op = st) (cur_thread s) s; \<not> idle st; invs s; guarded_pas_domain aag s\<rbrakk>
+  "\<lbrakk>st_tcb_at ((=) st) (cur_thread s) s; \<not> idle st; invs s; guarded_pas_domain aag s\<rbrakk>
     \<Longrightarrow> pasObjectAbs aag (cur_thread s) \<in> pasDomainAbs aag (cur_domain s)"
   apply (clarsimp simp add: pred_tcb_at_def invs_def valid_idle_def
                             valid_state_def
@@ -1794,7 +1794,7 @@ lemma valid_sched_valid_queues[intro]:
   done
 
 lemma ethread_get_wp2:
-  "\<lbrace>\<lambda>s. \<forall>etcb. etcb_at (op = etcb) t s \<longrightarrow> Q (f etcb) s\<rbrace> ethread_get f t \<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>etcb. etcb_at ((=) etcb) t s \<longrightarrow> Q (f etcb) s\<rbrace> ethread_get f t \<lbrace>Q\<rbrace>"
   apply wp
   apply (clarsimp simp: etcb_at_def split: option.split)
   done
@@ -2626,7 +2626,7 @@ lemma as_user_reads_respects_scheduler:
   done
 
 lemma restart_not_idle:
-  "valid_idle s \<Longrightarrow> st_tcb_at (op = Restart) t s \<Longrightarrow> t \<noteq> idle_thread s"
+  "valid_idle s \<Longrightarrow> st_tcb_at ((=) Restart) t s \<Longrightarrow> t \<noteq> idle_thread s"
   by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
 
 lemma sts_silc_dom_equiv[wp]:
@@ -2691,7 +2691,7 @@ lemma as_user_scheduler_affects_equiv[wp]:
 
 (* FIXME: MOVE *)
 lemma st_tcb_at_not_idle_thread:
-  "\<lbrakk> invs s; st_tcb_at (op = t_st) t s; t_st \<noteq> IdleThreadState \<rbrakk> \<Longrightarrow> t \<noteq> idle_thread s"
+  "\<lbrakk> invs s; st_tcb_at ((=) t_st) t s; t_st \<noteq> IdleThreadState \<rbrakk> \<Longrightarrow> t \<noteq> idle_thread s"
   apply (frule st_tcb_at_tcb_at)
   apply (fastforce dest: st_tcb_at_idle_thread)
   done
@@ -2788,7 +2788,7 @@ lemma thread_set_reads_respect_scheduler[wp]:
   done
 
 lemma op_eq_unit_dc:
-  "((op = ) :: unit \<Rightarrow> unit \<Rightarrow> bool) = (dc)"
+  "((=) :: unit \<Rightarrow> unit \<Rightarrow> bool) = (dc)"
   apply (rule ext)+
   apply simp
   done
@@ -2808,7 +2808,7 @@ lemma cur_thread_idle:
 
 lemma context_update_cur_thread_snippit_unobservable:
   "equiv_valid_2 (scheduler_equiv aag) (scheduler_affects_equiv aag l)
-     (scheduler_affects_equiv aag l) op =
+     (scheduler_affects_equiv aag l) (=)
      (invs and silc_inv aag st and guarded_pas_domain aag and
           (\<lambda>s. \<not> reads_scheduler_cur_domain aag l s) and
           (\<lambda>s. ct_idle s \<longrightarrow> uc = idle_context s))
@@ -2842,7 +2842,7 @@ lemma context_update_cur_thread_snippit_cur_domain:
   case splitting rule*)
 lemma context_update_cur_thread_snippit:
   "equiv_valid_2 (scheduler_equiv aag) (scheduler_affects_equiv aag l)
-     (scheduler_affects_equiv aag l) op =
+     (scheduler_affects_equiv aag l) (=)
      (invs and silc_inv aag st and guarded_pas_domain aag and
          (\<lambda>s. reads_scheduler_cur_domain aag l s \<longrightarrow> uc = uc') and
          (\<lambda>s. ct_idle s \<longrightarrow> uc = idle_context s))

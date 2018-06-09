@@ -126,7 +126,7 @@ lemma gets_bind_alternative:
 lemma corres_from_rdonly:
   assumes rdonly: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. P\<rbrace>" "\<And>P. \<lbrace>P\<rbrace> g \<lbrace>\<lambda>rv. P\<rbrace>"
   assumes rv: "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk>
-                     \<Longrightarrow> \<lbrace>op = s'\<rbrace> g \<lbrace>\<lambda>rv s''. \<exists>rv' s'''. (rv', s''') \<in> fst (f s) \<and> r rv' rv\<rbrace>"
+                     \<Longrightarrow> \<lbrace>(=) s'\<rbrace> g \<lbrace>\<lambda>rv s''. \<exists>rv' s'''. (rv', s''') \<in> fst (f s) \<and> r rv' rv\<rbrace>"
   assumes nfl: "fl' \<Longrightarrow> no_fail P' g"
   shows "corres_underlying sr fl fl' r P P' f g"
   apply (clarsimp simp: corres_underlying_def no_failD[OF nfl])
@@ -728,7 +728,7 @@ next
          apply (rule unat_le_helper)
          apply simp
         apply (simp add:bindE_assoc)
-        apply (rule corres_splitEE [OF _ dcorres_ensure_no_children[where P="op \<noteq> cap.NullCap"]])
+        apply (rule corres_splitEE [OF _ dcorres_ensure_no_children[where P="(\<noteq>) cap.NullCap"]])
           apply (rule corres_splitEE [OF _ lookup_slot_for_cnode_op_corres])
                 apply (simp, elim conjE)
                 apply (rule corres_splitEE [OF _ dcorres_ensure_empty])
@@ -1196,7 +1196,7 @@ lemma invoke_page_table_corres:
    apply (clarsimp simp: liftM_def)
    apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ get_cap_corres])
-       apply (rule_tac P="\<lambda>y s. cte_wp_at (op = x) (a,b) s \<and> s = s'" in set_cap_corres_stronger)
+       apply (rule_tac P="\<lambda>y s. cte_wp_at ((=) x) (a,b) s \<and> s = s'" in set_cap_corres_stronger)
         apply clarsimp
         apply (drule cte_wp_at_eqD2, simp)
         apply (clarsimp simp:is_arch_diminished_def transform_mapping_def update_map_data_def)
@@ -1213,7 +1213,7 @@ lemma invoke_page_table_corres:
                     corres_split[OF _ corres_alternate1[OF dcorres_clear_object_caps_pt]])
            apply (rule dcorres_symb_exec_r)
              apply (rule corres_split[OF _ get_cap_corres])
-                apply (rule_tac P="\<lambda>y s. cte_wp_at (op=xb) (a,b) s \<and>
+                apply (rule_tac P="\<lambda>y s. cte_wp_at ((=xb)) (a,b) s \<and>
                                     caps_of_state s' = caps_of_state s" in set_cap_corres_stronger)
                  apply (clarsimp simp:cte_wp_at_caps_of_state)
                  apply (clarsimp simp:is_arch_diminished_def transform_mapping_def update_map_data_def)
@@ -1637,7 +1637,7 @@ lemma invoke_page_corres:
      split:arch_cap.splits option.splits)
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF _ get_cap_corres])
-         apply (rule_tac P="\<lambda>y s. cte_wp_at (op = x) (a,b) s \<and> s = s'" in set_cap_corres_stronger)
+         apply (rule_tac P="\<lambda>y s. cte_wp_at ((=) x) (a,b) s \<and> s = s'" in set_cap_corres_stronger)
           apply clarsimp
           apply (drule cte_wp_at_eqD2, simp)
           apply (clarsimp simp:is_arch_diminished_def transform_mapping_def update_map_data_def
@@ -1652,7 +1652,7 @@ lemma invoke_page_corres:
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF _ dcorres_unmap_page])
        apply (rule corres_split[OF _ get_cap_corres])
-          apply (rule_tac P="\<lambda>y s. cte_wp_at (op=x) (a,b) s \<and>
+          apply (rule_tac P="\<lambda>y s. cte_wp_at ((=x)) (a,b) s \<and>
                                     caps_of_state s' = caps_of_state s"
             in set_cap_corres_stronger)
            apply (clarsimp simp:cte_wp_at_caps_of_state)
@@ -1764,7 +1764,7 @@ proof -
   assume relation:"arch_invocation_relation (InvokeAsidControl asid_inv)
          (arch_invocation.InvokeASIDControl (asid_control_invocation.MakePool frame cnode_ref cref base))"
   assume asid_para: "asid_inv' = asid_control_invocation.MakePool frame cnode_ref cref base"
-  show "dcorres dc (op = (transform s')) (op = s') (invoke_asid_control asid_inv)
+  show "dcorres dc ((=) (transform s')) ((=) s') (invoke_asid_control asid_inv)
            (perform_asid_control_invocation (asid_control_invocation.MakePool frame cnode_ref cref base))"
     using relation asid_para
     apply (clarsimp simp:invoke_asid_control_def)
@@ -1800,7 +1800,7 @@ proof -
                 apply (rule_tac Q="\<lambda>rv s. cte_wp_at (\<lambda>c. \<exists>idx. c = (cap.UntypedCap False frame pageBits idx))
                                              cref s
                                 \<and> asid_pool_at frame s
-                                \<and> cte_wp_at (op = cap.NullCap) cnode_ref s
+                                \<and> cte_wp_at ((=) cap.NullCap) cnode_ref s
                                 \<and> ex_cte_cap_to cnode_ref s \<and> invs s \<and> valid_etcbs s"
                     in hoare_post_imp)
                  apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -1846,8 +1846,8 @@ proof -
       apply (rule_tac Q="\<lambda>_ s.
         invs s \<and> valid_etcbs s \<and> pspace_no_overlap_range_cover frame pageBits s \<and>
         descendants_range_in (untyped_range (cap.UntypedCap False frame pageBits idx)) cref s \<and>
-        cte_wp_at (op = (cap.UntypedCap False frame pageBits idx)) cref s \<and>
-        cte_wp_at (op = cap.NullCap) cnode_ref s \<and>
+        cte_wp_at ((=) (cap.UntypedCap False frame pageBits idx)) cref s \<and>
+        cte_wp_at ((=) cap.NullCap) cnode_ref s \<and>
         ex_cte_cap_wp_to (\<lambda>_. True) cnode_ref s \<and>
         region_in_kernel_window {frame..frame + 2 ^ pageBits - 1} s \<and>
         is_aligned frame pageBits" in hoare_post_imp)

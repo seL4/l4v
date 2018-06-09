@@ -302,17 +302,17 @@ lemma sbn_unbind_respects[wp]:
   done
 
 lemma bound_tcb_at_thread_bound_ntfns:
-  "bound_tcb_at (op = ntfn) t s \<Longrightarrow> thread_bound_ntfns s t = ntfn"
+  "bound_tcb_at ((=) ntfn) t s \<Longrightarrow> thread_bound_ntfns s t = ntfn"
   by (clarsimp simp: thread_bound_ntfns_def pred_tcb_at_def obj_at_def get_tcb_def split: option.splits)
 
 
 lemma bound_tcb_at_implies_receive:
-  "\<lbrakk>pas_refined aag s; bound_tcb_at (op = (Some x)) t s\<rbrakk>
+  "\<lbrakk>pas_refined aag s; bound_tcb_at ((=) (Some x)) t s\<rbrakk>
           \<Longrightarrow> (pasObjectAbs aag t, Receive, pasObjectAbs aag x) \<in> pasPolicy aag"
   by (fastforce dest!: bound_tcb_at_thread_bound_ntfns sta_bas pas_refined_mem)
 
 lemma bound_tcb_at_implies_reset:
-  "\<lbrakk>pas_refined aag s; bound_tcb_at (op = (Some x)) t s\<rbrakk>
+  "\<lbrakk>pas_refined aag s; bound_tcb_at ((=) (Some x)) t s\<rbrakk>
           \<Longrightarrow> (pasObjectAbs aag t, Reset, pasObjectAbs aag x) \<in> pasPolicy aag"
   by (fastforce dest!: bound_tcb_at_thread_bound_ntfns sta_bas pas_refined_mem)
 
@@ -511,7 +511,7 @@ lemma finalise_cap_respects[wp]:
   done
 
 lemma finalise_cap_auth:
-  "\<lbrace>(\<lambda>s. final \<longrightarrow> is_final_cap' cap s \<and> cte_wp_at (op = cap) slot s)
+  "\<lbrace>(\<lambda>s. final \<longrightarrow> is_final_cap' cap s \<and> cte_wp_at ((=) cap) slot s)
              and K (pas_cap_cur_auth aag cap)\<rbrace>
       finalise_cap cap final
    \<lbrace>\<lambda>rv s. \<forall>x\<in>obj_refs (fst rv). \<forall>a \<in> cap_auth_conferred (fst rv). (pasSubject aag, a, pasObjectAbs aag x) \<in> pasPolicy aag\<rbrace>"
@@ -577,7 +577,7 @@ lemma zombie_ptr_emptyable:
 
 lemma finalise_cap_makes_halted:
   "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s)
-         and cte_wp_at (op = cap) slot\<rbrace>
+         and cte_wp_at ((=) cap) slot\<rbrace>
     finalise_cap cap ex
    \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
   apply (case_tac cap, simp_all)
@@ -667,7 +667,7 @@ next
                        | simp add: in_monad)+
        apply (rule hoare_strengthen_post)
         apply (rule_tac Q="\<lambda>fin s. einvs s \<and> simple_sched_action s \<and> replaceable s slot (fst fin) rv
-                                  \<and> cte_wp_at (op = rv) slot s \<and> s \<turnstile> (fst fin)
+                                  \<and> cte_wp_at ((=) rv) slot s \<and> s \<turnstile> (fst fin)
                                   \<and> ex_cte_cap_wp_to (appropriate_cte_cap rv) slot s
                                   \<and> emptyable slot s
                                   \<and> (\<forall>t\<in>obj_refs (fst fin). halted_if_tcb t s)
@@ -935,7 +935,7 @@ lemma rec_del_preserves_cte_zombie_null:
   shows "s \<turnstile> \<lbrace>\<lambda>s. ((slot_rdcall call \<noteq> p \<or> exposed_rdcall call)
                          \<longrightarrow> cte_wp_at P p s)
                     \<and> (case call of ReduceZombieCall remove slot _
-                        \<Rightarrow> cte_wp_at (op = remove) slot s | _ \<Rightarrow> True)\<rbrace>
+                        \<Rightarrow> cte_wp_at ((=) remove) slot s | _ \<Rightarrow> True)\<rbrace>
               rec_del call
              \<lbrace>\<lambda>_ s. (slot_rdcall call \<noteq> p \<or> exposed_rdcall call)
                          \<longrightarrow> cte_wp_at P p s\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"

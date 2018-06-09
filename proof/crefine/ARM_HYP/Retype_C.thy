@@ -534,7 +534,7 @@ next
 qed
 
 lemma image_add_intvl:
-  "(op + x) ` {p ..+ n} = {p + x ..+ n}"
+  "((+) x) ` {p ..+ n} = {p + x ..+ n}"
   by (auto simp add: intvl_def)
 
 lemma intvl_sum:
@@ -730,7 +730,7 @@ lemma h_t_valid_ptr_retyps_gen:
   assumes sz: "nptrs * size_of TYPE('a :: mem_type) < addr_card"
     and gd: "gd p'"
   shows
-  "(p' \<in> (op +\<^sub>p (Ptr p :: 'a ptr) \<circ> int) ` {k. k < nptrs})
+  "(p' \<in> ((+\<^sub>p) (Ptr p :: 'a ptr) \<circ> int) ` {k. k < nptrs})
     \<Longrightarrow> h_t_valid (ptr_retyps_gen nptrs (Ptr p :: 'a ptr) arr htd) gd p'"
   using gd sz
   apply (cases arr, simp_all add: ptr_retyps_gen_def)
@@ -869,7 +869,7 @@ lemma h_t_valid_ptr_retyps_gen_same:
   assumes sz: "nptrs * size_of TYPE('a) < addr_card"
   shows
   "h_t_valid (ptr_retyps_gen nptrs (Ptr p :: 'a ptr) arr htd) gd p'
-    = ((p' \<in> (op +\<^sub>p (Ptr p :: 'a ptr) \<circ> int) ` {k. k < nptrs}) \<or> h_t_valid htd gd p')"
+    = ((p' \<in> ((+\<^sub>p) (Ptr p :: 'a ptr) \<circ> int) ` {k. k < nptrs}) \<or> h_t_valid htd gd p')"
   (is "h_t_valid ?htd' gd p' = (p' \<in> ?S \<or> h_t_valid htd gd p')")
 proof (cases "{ptr_val p' ..+ size_of TYPE('a)} \<inter> {p ..+ nptrs * size_of TYPE('a)} = {}")
   case True
@@ -956,7 +956,7 @@ lemma clift_ptr_retyps_gen_memset_same:
                    h_t_valid_ptr_retyps_gen_same[OF guard cleared not_byte]
                    addr_card_wb)
   apply (rule ext, rename_tac p')
-  apply (case_tac "p' \<in> (op +\<^sub>p (Ptr p) \<circ> int) ` {k. k < n}")
+  apply (case_tac "p' \<in> ((+\<^sub>p) (Ptr p) \<circ> int) ` {k. k < n}")
    apply (clarsimp simp: h_val_def)
    apply (simp only: Word.Abs_fnat_hom_mult hrs_mem_update)
    apply (frule_tac k="size_of TYPE('a)" in mult_le_mono1[where j=n, OF Suc_leI])
@@ -1018,7 +1018,7 @@ lemma clift_heap_list_update_no_heap_other:
   done
 
 lemma add_is_injective_ring:
-  "inj ((op +) (x :: 'a :: ring))"
+  "inj ((+) (x :: 'a :: ring))"
   by (rule inj_onI, clarsimp)
 
 (* assumes that y & elements are n-aligned but not that the compound
@@ -1030,7 +1030,7 @@ lemma ptr_span_disjoint_ptr_set_span:
   and al: "is_aligned (ptr_val y) n"
   and card: "b * 2 ^ n < addr_card"
   and b: "b \<noteq> 0"
-  shows "y \<notin> (op +\<^sub>p (Ptr p) \<circ> int) ` {k. k < b}
+  shows "y \<notin> ((+\<^sub>p) (Ptr p) \<circ> int) ` {k. k < b}
     \<longrightarrow> ptr_span y \<inter> {p ..+ b * 2 ^ n} = {}"
 proof -
   from card b have word_bits: "n < word_bits"
@@ -1058,7 +1058,7 @@ proof -
     apply safe
     apply (simp only: mask_in_range[symmetric] al_sub)
     apply simp
-    apply (drule_tac f="op + p" in arg_cong, simp)
+    apply (drule_tac f="(+) p" in arg_cong, simp)
     apply (erule notE, rule_tac x="unat (x >> n)" in image_eqI)
      apply (simp add: size_of)
      apply (cases y, clarsimp simp: and_not_mask shiftl_t2n)
@@ -2574,7 +2574,7 @@ lemma ccorres_to_vcg_nf:
   done
 
 lemma mdb_node_get_mdbNext_heap_ccorres:
-  "ccorres (op =) ret__unsigned_' \<top> UNIV hs
+  "ccorres (=) ret__unsigned_' \<top> UNIV hs
   (liftM (mdbNext \<circ> cteMDBNode) (getCTE parent))
   (\<acute>ret__unsigned :== CALL mdb_node_get_mdbNext(h_val
                            (hrs_mem \<acute>t_hrs)
@@ -2758,7 +2758,7 @@ lemma updateNewFreeIndex_noop_ccorres:
   (is "ccorres _ _ ?P ?P' hs _ _")
   apply (simp add: updateNewFreeIndex_def getSlotCap_def)
   apply (rule ccorres_guard_imp)
-    apply (rule ccorres_pre_getCTE[where P="\<lambda>rv. cte_wp_at' (op = rv) slot and ?P"
+    apply (rule ccorres_pre_getCTE[where P="\<lambda>rv. cte_wp_at' ((=) rv) slot and ?P"
         and P'="K ?P'"])
     apply (case_tac "cteCap cte", simp_all add: ccorres_guard_imp[OF ccorres_return_Skip])[1]
     defer
@@ -2766,7 +2766,7 @@ lemma updateNewFreeIndex_noop_ccorres:
    apply simp
   apply (simp add: updateTrackedFreeIndex_def getSlotCap_def)
   apply (rule ccorres_guard_imp)
-    apply (rule_tac P="\<lambda>rv. cte_wp_at' (op = rv) slot and K (rv = cte) and ?P"
+    apply (rule_tac P="\<lambda>rv. cte_wp_at' ((=) rv) slot and K (rv = cte) and ?P"
         in ccorres_pre_getCTE[where P'="K ?P'"])
     defer
     apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -4569,7 +4569,7 @@ lemma placeNewObject_eq:
   notes option.case_cong_weak [cong]
   shows
   "\<lbrakk> groupSizeBits < word_bits; is_aligned ptr (groupSizeBits + objBitsKO (injectKOS object));
-    no_fail (op = s) (placeNewObject ptr object groupSizeBits) \<rbrakk> \<Longrightarrow>
+    no_fail ((=) s) (placeNewObject ptr object groupSizeBits) \<rbrakk> \<Longrightarrow>
   ((), (s\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr (injectKOS object)) (new_cap_addrs (2 ^ groupSizeBits) ptr (injectKOS object)) (ksPSpace s)\<rparr>))
                 \<in> fst (placeNewObject ptr object groupSizeBits s)"
   apply (clarsimp simp: placeNewObject_def placeNewObject'_def)
@@ -7189,12 +7189,12 @@ lemma cnodes_retype_have_size_mono:
 context kernel_m begin
 
 lemma gsCNodes_typ_region_bytes:
-  "cvariable_array_map_relation (gsCNodes \<sigma>) (op ^ 2) cte_Ptr (hrs_htd hrs)
+  "cvariable_array_map_relation (gsCNodes \<sigma>) ((^) 2) cte_Ptr (hrs_htd hrs)
     \<Longrightarrow> cnodes_retype_have_size {ptr..+2 ^ bits} bits (gsCNodes \<sigma>)
     \<Longrightarrow> 0 \<notin> {ptr..+2 ^ bits} \<Longrightarrow> is_aligned ptr bits
     \<Longrightarrow> clift (hrs_htd_update (typ_region_bytes ptr bits) hrs)
         = (clift hrs :: cte_C ptr \<Rightarrow> _)
-    \<Longrightarrow> cvariable_array_map_relation (gsCNodes \<sigma>) (op ^ 2) cte_Ptr
+    \<Longrightarrow> cvariable_array_map_relation (gsCNodes \<sigma>) ((^) 2) cte_Ptr
         (typ_region_bytes ptr bits (hrs_htd hrs))"
   apply (clarsimp simp: cvariable_array_map_relation_def
                         h_t_array_valid_def)
@@ -7676,7 +7676,7 @@ lemma createObject_parent_helper:
     \<rbrace>
     createObject ty ptr us dev
     \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. isUntypedCap (cteCap cte) \<and> (sameRegionAs (cteCap cte) rv)) p\<rbrace>"
-  apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>cte. cte_wp_at' (op = cte) p s
+  apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>cte. cte_wp_at' ((=) cte) p s
                                            \<and> isUntypedCap (cteCap cte) \<and>
                                 sameRegionAs (cteCap cte) rv"])
   apply (clarsimp simp:cte_wp_at_ctes_of)
@@ -8188,7 +8188,7 @@ lemma bits_2_subtract_ineq_helper:
    apply clarsimp
    apply unat_arith
   apply (simp only: mult_Suc_right[symmetric])
-  apply (rule trans[OF mult.commute], rule arg_cong2[where f="op *"], simp_all)
+  apply (rule trans[OF mult.commute], rule arg_cong2[where f="( * )"], simp_all)
   apply (simp add: word_less_nat_alt)
   done
 

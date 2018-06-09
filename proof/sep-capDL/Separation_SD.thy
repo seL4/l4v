@@ -31,7 +31,7 @@ where
   "object_at_heap P obj_id s \<equiv> \<exists>object. s obj_id = Some object \<and> P object"
 
 abbreviation
-  "ko_at_heap k \<equiv> object_at_heap (op = k)"
+  "ko_at_heap k \<equiv> object_at_heap ((=) k)"
 
 
 (* End of things to move *)

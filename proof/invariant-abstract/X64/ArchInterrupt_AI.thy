@@ -18,8 +18,8 @@ primrec arch_irq_control_inv_valid_real :: "arch_irq_control_invocation \<Righta
 where
   "arch_irq_control_inv_valid_real (IssueIRQHandlerIOAPIC irq dest_slot src_slot
                     ioapic pin level polarity vector) =
-                    (cte_wp_at (op = NullCap) dest_slot and
-                    cte_wp_at (op = IRQControlCap) src_slot and
+                    (cte_wp_at ((=) NullCap) dest_slot and
+                    cte_wp_at ((=) IRQControlCap) src_slot and
                     ex_cte_cap_wp_to is_cnode_cap dest_slot and
                     real_cte_at dest_slot and
                     (\<lambda>s. ioapic < x64_num_ioapics (arch_state s)) and
@@ -27,8 +27,8 @@ where
                        pin < ioapicIRQLines \<and> level < 2 \<and>
                        polarity < 2))"
 | "arch_irq_control_inv_valid_real (IssueIRQHandlerMSI irq dest_slot src_slot bus dev func handle)
-      = (cte_wp_at (op = NullCap) dest_slot and
-                    cte_wp_at (op = IRQControlCap) src_slot and
+      = (cte_wp_at ((=) NullCap) dest_slot and
+                    cte_wp_at ((=) IRQControlCap) src_slot and
                     ex_cte_cap_wp_to is_cnode_cap dest_slot and
                     real_cte_at dest_slot and
                     K (minUserIRQ \<le> irq \<and> irq \<le> maxUserIRQ \<and>
@@ -81,7 +81,7 @@ lemma arch_decode_irq_control_valid[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> cap)
         \<and> (\<forall>cap \<in> set caps. is_cnode_cap cap \<longrightarrow>
                 (\<forall>r \<in> cte_refs cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s))
-        \<and> cte_wp_at (op = cap.IRQControlCap) slot s\<rbrace>
+        \<and> cte_wp_at ((=) cap.IRQControlCap) slot s\<rbrace>
      arch_decode_irq_control_invocation label args slot caps
    \<lbrace>arch_irq_control_inv_valid\<rbrace>,-"
   apply (simp add: arch_decode_irq_control_invocation_def Let_def whenE_def
@@ -107,7 +107,7 @@ lemma (* decode_irq_control_valid *)[Interrupt_AI_asms]:
   "\<lbrace>\<lambda>s. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> cap)
         \<and> (\<forall>cap \<in> set caps. is_cnode_cap cap \<longrightarrow>
                 (\<forall>r \<in> cte_refs cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s))
-        \<and> cte_wp_at (op = cap.IRQControlCap) slot s\<rbrace>
+        \<and> cte_wp_at ((=) cap.IRQControlCap) slot s\<rbrace>
      decode_irq_control_invocation label args slot caps
    \<lbrace>irq_control_inv_valid\<rbrace>,-"
   apply (simp add: decode_irq_control_invocation_def Let_def split_def

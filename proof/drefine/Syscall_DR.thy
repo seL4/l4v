@@ -94,7 +94,7 @@ lemma decode_invocation_untypedcap_corres:
      excaps = transform_cap_list excaps';
      invoked_cap' = cap.UntypedCap dev a b idx \<rbrakk> \<Longrightarrow>
     dcorres (dc \<oplus> cdl_invocation_relation) \<top>
-        (invs and cte_wp_at (op = invoked_cap') invoked_cap_ref'
+        (invs and cte_wp_at ((=) invoked_cap') invoked_cap_ref'
                  and (\<lambda>s. \<forall>x \<in> set (map fst excaps'). s \<turnstile> x)
                  and (\<lambda>s. \<forall>x \<in> set excaps'. cte_wp_at (diminished (fst x)) (snd x) s)
                  and valid_etcbs)
@@ -258,7 +258,7 @@ lemma decode_domain_corres:
 
 lemma decode_domain_cap_label_not_match:
   "\<lbrakk>\<forall>ui. Some (DomainIntent ui) \<noteq> transform_intent (invocation_type label') args'\<rbrakk>
-    \<Longrightarrow> \<lbrace>op=s\<rbrace>Decode_A.decode_domain_invocation label' args' excaps' \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>e. op=s\<rbrace>"
+    \<Longrightarrow> \<lbrace>(=s\<rbrace>Decode_A.decode_domain_invocation) label' args' excaps' \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>e. (=s\<rbrace>)"
   apply (case_tac "invocation_type label' = DomainSetSet")
    apply (clarsimp simp: Decode_A.decode_domain_invocation_def transform_intent_def)+
    apply (clarsimp simp: transform_intent_domain_def split: option.splits list.splits)
@@ -351,7 +351,7 @@ lemma transform_type_eq_None:
 
 lemma transform_intent_untyped_cap_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.UntypedCap dev w n idx\<rbrakk>
-         \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. op = s\<rbrace>"
+         \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
   including no_pre
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply wp
@@ -372,7 +372,7 @@ lemma transform_intent_untyped_cap_None:
 
 lemma transform_intent_cnode_cap_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.CNodeCap w n list\<rbrakk>
-   \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. op = s\<rbrace>"
+   \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply (simp add: Decode_A.decode_cnode_invocation_def unlessE_def upto_enum_def
                    fromEnum_def toEnum_def enum_invocation_label
@@ -388,7 +388,7 @@ lemma transform_intent_cnode_cap_None:
 
 lemma transform_intent_thread_cap_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.ThreadCap w\<rbrakk>
-             \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. op = s\<rbrace>"
+             \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
   including no_pre
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply wp+
@@ -411,7 +411,7 @@ lemma transform_intent_thread_cap_None:
 
 lemma transform_intent_irq_control_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.IRQControlCap\<rbrakk>
-      \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. op = s\<rbrace>"
+      \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
   including no_pre
   apply (clarsimp simp:Decode_A.decode_invocation_def)
     apply wp
@@ -424,7 +424,7 @@ lemma transform_intent_irq_control_None:
 
 lemma transform_intent_irq_handler_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.IRQHandlerCap w\<rbrakk>
-             \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. op = s\<rbrace>"
+             \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply (wp)
     apply (clarsimp simp:decode_irq_handler_invocation_def|rule conjI)+
@@ -434,14 +434,14 @@ done
 
 lemma transform_intent_zombie_cap_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.Zombie w option n\<rbrakk>
-         \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. op = s\<rbrace>"
+         \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply (wp)
 done
 
 lemma transform_intent_domain_cap_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.DomainCap\<rbrakk>
-     \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap.DomainCap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. op = s\<rbrace>"
+     \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap.DomainCap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
   including no_pre
   apply (clarsimp simp: Decode_A.decode_invocation_def)
   apply wp
@@ -459,7 +459,7 @@ lemma transform_intent_domain_cap_None:
 
 lemma transform_intent_arch_cap_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.ArchObjectCap arch_cap\<rbrakk>
-         \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. op = s\<rbrace>"
+         \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
   including no_pre
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply wp
@@ -499,7 +499,7 @@ lemma transform_intent_arch_cap_None:
 
 lemma decode_invocation_error_branch:
   "\<lbrakk>transform_intent (invocation_type label) args = None; \<not> ep_related_cap (transform_cap cap)\<rbrakk>
-    \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>x. op = s\<rbrace>"
+    \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>x. (=) s\<rbrace>"
   apply (case_tac cap)
     apply (simp_all add:ep_related_cap_def transform_cap_def split:if_split_asm)
     apply (clarsimp simp:Decode_A.decode_invocation_def,wp)
@@ -604,7 +604,7 @@ lemma ct_active_not_idle_etc:
 lemma dcorres_set_eobject_tcb:
   "\<lbrakk> \<exists>tcb'. (transform_tcb (machine_state s') p' tcb' etcb = Tcb tcb \<and> kheap s' p' = Some (TCB tcb'));
      p' \<noteq> idle_thread s'; kheap s' p' \<noteq> None; ekheap s' p' \<noteq> None \<rbrakk> \<Longrightarrow>
-  dcorres dc (op = (transform s')) (op = s')
+  dcorres dc ((=) (transform s')) ((=) s')
            (KHeap_D.set_object p' (Tcb tcb ))
            (set_eobject p' etcb)"
   apply (clarsimp simp: corres_underlying_def set_eobject_def in_monad)
@@ -810,7 +810,7 @@ lemma handle_fault_corres:
    done
 
 lemma get_tcb_mrs_wp:
-  "\<lbrace>ko_at (TCB obj) thread and K_bind (evalMonad (lookup_ipc_buffer False thread) sa = Some (op_buf)) and op = sa\<rbrace>
+  "\<lbrace>ko_at (TCB obj) thread and K_bind (evalMonad (lookup_ipc_buffer False thread) sa = Some (op_buf)) and (=) sa\<rbrace>
     get_mrs thread (op_buf) (data_to_message_info (arch_tcb_context_get (tcb_arch obj) msg_info_register))
             \<lbrace>\<lambda>rv s. rv = get_tcb_mrs (machine_state sa) obj\<rbrace>"
   apply (case_tac op_buf)
@@ -854,7 +854,7 @@ lemma dcorres_reply_from_kernel:
   apply (case_tac msg_rv)
   apply (clarsimp simp:corrupt_ipc_buffer_def)
   apply (rule dcorres_expand_pfx)
-  apply (rule_tac Q' = "\<lambda>r. op = s' and K_bind (evalMonad (lookup_ipc_buffer True oid) s' = Some r)"
+  apply (rule_tac Q' = "\<lambda>r. (=) s' and K_bind (evalMonad (lookup_ipc_buffer True oid) s' = Some r)"
                   in corres_symb_exec_r)
      apply (rule dcorres_expand_pfx)
      apply (clarsimp)
@@ -941,7 +941,7 @@ lemma dcorres_when_r:
 lemma evalMonad_from_wp:
   "\<lbrakk>evalMonad f s = Some a;\<lbrace>P\<rbrace>f\<lbrace> \<lambda>rv s. R rv\<rbrace>;P s;empty_when_fail f;\<And>Q. weak_det_spec Q f \<rbrakk>\<Longrightarrow> R a"
   apply (clarsimp simp:evalMonad_def valid_def)
-  apply (drule_tac x = "op = s" in meta_spec)
+  apply (drule_tac x = "(=) s" in meta_spec)
   apply (fastforce simp:weak_det_spec_def empty_when_fail_def no_fail_def det_spec_def)
   done
 
@@ -998,7 +998,7 @@ lemma decode_invocation_corres':
      cap = transform_cap cap' \<and> slot = transform_cslot_ptr slot' \<and> extra = transform_cap_list extra')
      rv rv'; get_tcb (cur_thread s) s = Some ctcb; ct_running s;invs s\<rbrakk>
   \<Longrightarrow> dcorres (dc \<oplus> cdl_invocation_relation) \<top>
-    (op = s and (\<lambda>(slot,cap,excaps,buffer) s. \<not> is_master_reply_cap (cap) \<and> valid_cap cap s \<and> valid_etcbs s
+    ((=) s and (\<lambda>(slot,cap,excaps,buffer) s. \<not> is_master_reply_cap (cap) \<and> valid_cap cap s \<and> valid_etcbs s
     \<and> evalMonad (lookup_ipc_buffer False (cur_thread s)) s = Some buffer
     \<and> (\<forall>e\<in> set excaps. s \<turnstile> fst e) \<and> cte_wp_at (Not \<circ> is_master_reply_cap) slot s \<and> cte_wp_at (diminished cap) slot s
     \<and> (\<forall>e\<in> set excaps. cte_wp_at (diminished (fst e)) (snd e) s)) rv')
@@ -1263,12 +1263,12 @@ lemma handle_invocation_corres:
                        handle_elseE_def)
   apply (rule corres_guard_imp)
     apply (rule_tac
-           P' = "op = s'a" and P=\<top>
-           and  Q' = "op = s'a" and Q=\<top>
+           P' = "(=) s'a" and P=\<top>
+           and  Q' = "(=) s'a" and Q=\<top>
            and rr="\<lambda>(cap,slot,extra) (slot',cap',extra',buffer).
          cap = transform_cap cap' \<and> slot = transform_cslot_ptr slot'
          \<and> extra = transform_cap_list extra'"  in  corres_split_bind_case_sum)
-        apply (rule_tac Q = "\<lambda>x. \<top>" and Q'="\<lambda>x. op = s'a" in corres_initial_splitE)
+        apply (rule_tac Q = "\<lambda>x. \<top>" and Q'="\<lambda>x. (=) s'a" in corres_initial_splitE)
            apply (clarsimp simp: transform_full_intent_def Let_def)
            apply (rule corres_guard_imp[OF dcorres_lookup_cap_and_slot[simplified]])
               apply (clarsimp simp: word_bits_def not_idle_thread_def invs_def valid_state_def)+
@@ -1485,7 +1485,7 @@ lemma handle_reply_corres:
       apply (rule_tac R="\<lambda>_. \<top>" and
                       R'="\<lambda>cap. invs and valid_etcbs and ct_running and tcb_at thread
                                 and not_idle_thread thread
-                                and cte_wp_at (op = cap) (thread, tcb_cnode_index 3)"
+                                and cte_wp_at ((=) cap) (thread, tcb_cnode_index 3)"
                   in  corres_split [OF _ get_cap_corres])
          apply (simp add: transform_cap_def corres_fail split: cap.split)
          apply (clarsimp simp: corres_fail dc_def[symmetric] split: bool.split)

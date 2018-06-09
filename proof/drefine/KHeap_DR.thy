@@ -171,7 +171,7 @@ termination revoke_cap_simple
   apply (clarsimp simp: delete_cap_simple_def in_monad gets_the_def)
   apply (clarsimp simp: PageTableUnmap_D.is_final_cap_def in_monad)
   apply (drule use_valid,
-         rule_tac P="op = (KHeap_D.descendants_of (a,b) s)" in
+         rule_tac P="(=) (KHeap_D.descendants_of (a,b) s)" in
                   fast_finalise_descendants,
          rule refl)
   apply clarsimp
@@ -319,7 +319,7 @@ lemma cap_slot_cnode_property_lift:
   \<Longrightarrow> (opt_cap (transform_cslot_ptr (a, b)) (transform s')) =
      (case (cs b) of None \<Rightarrow> None | Some y \<Rightarrow> Some (transform_cap y))"
   apply clarsimp
-  apply (subgoal_tac "cte_wp_at (op = y) (a, b) s'")
+  apply (subgoal_tac "cte_wp_at ((=) y) (a, b) s'")
    apply (subst caps_of_state_transform_opt_cap, simp_all)
     apply (simp add: cte_wp_at_caps_of_state)
    apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
@@ -346,7 +346,7 @@ lemma get_cap_no_fail:
   done
 
 lemma get_cap_helper:
-  "dcorres r P (P') f (get_cap slot >>= g) \<Longrightarrow> dcorres r P (P' and (cte_wp_at (op=cap) slot)) f  (g cap)"
+  "dcorres r P (P') f (get_cap slot >>= g) \<Longrightarrow> dcorres r P (P' and (cte_wp_at ((=cap)) slot)) f  (g cap)"
   by (clarsimp simp:bind_def corres_underlying_def cte_wp_at_def)
 
 lemma get_cap_corres:
@@ -500,7 +500,7 @@ lemma opt_cap_wp_at_ex_opt_cap:
 
 lemma is_final_cap_corres:
   "\<lbrakk>cdl_cap = transform_cap cap;cap\<noteq> cap.NullCap\<rbrakk>
-    \<Longrightarrow> dcorres (op=) \<top> (valid_objs and valid_irq_node and valid_idle and if_unsafe_then_cap and valid_global_refs and valid_etcbs)
+    \<Longrightarrow> dcorres ((=)) \<top> (valid_objs and valid_irq_node and valid_idle and if_unsafe_then_cap and valid_global_refs and valid_etcbs)
           (PageTableUnmap_D.is_final_cap (cdl_cap))
           (IpcCancel_A.is_final_cap (cap))"
   apply (clarsimp simp: IpcCancel_A.is_final_cap_def PageTableUnmap_D.is_final_cap_def)
@@ -898,8 +898,8 @@ lemma set_cap_null_cap_corres:
 
 
 lemma mdb_cte_at_cte_wp_at:
-  "\<lbrakk>mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s); cdt s slot = Some slot'\<rbrakk>
-    \<Longrightarrow> (cte_wp_at (op \<noteq> cap.NullCap) slot s)"
+  "\<lbrakk>mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s); cdt s slot = Some slot'\<rbrakk>
+    \<Longrightarrow> (cte_wp_at ((\<noteq>) cap.NullCap) slot s)"
   apply (clarsimp simp:mdb_cte_at_def)
   apply (case_tac slot,case_tac slot')
   apply (drule spec)+
@@ -907,8 +907,8 @@ lemma mdb_cte_at_cte_wp_at:
   done
 
 lemma mdb_cte_at_cte_wp_at':
-  "\<lbrakk>mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s); cdt s slot = Some slot'\<rbrakk>
-   \<Longrightarrow>(cte_wp_at (op\<noteq> cap.NullCap) slot' s)"
+  "\<lbrakk>mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s); cdt s slot = Some slot'\<rbrakk>
+   \<Longrightarrow>(cte_wp_at ((\<noteq>) cap.NullCap) slot' s)"
   apply (case_tac slot,case_tac slot')
   apply (clarsimp simp:mdb_cte_at_def)
   done
@@ -923,7 +923,7 @@ lemma transform_cdt_slot_inj_on_mdb_cte_at:
   done
 
 lemma transform_cdt_none:
-  "\<lbrakk> cte_at slot s; mdb_cte_at (swp (cte_wp_at (op\<noteq> cap.NullCap)) s) (cdt s);
+  "\<lbrakk> cte_at slot s; mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s);
        (cdt s) slot = None \<rbrakk>
     \<Longrightarrow> transform_cdt s (transform_cslot_ptr slot) = None"
   apply (case_tac slot)
@@ -935,7 +935,7 @@ lemma transform_cdt_none:
   done
 
 lemma transform_cdt_some:
-  "\<lbrakk> mdb_cte_at (swp (cte_wp_at (op\<noteq> cap.NullCap)) s) (cdt s);
+  "\<lbrakk> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s);
       (cdt s) slot = Some slot' \<rbrakk>
   \<Longrightarrow> transform_cdt s (transform_cslot_ptr slot)
           = Some (transform_cslot_ptr slot')"
@@ -947,7 +947,7 @@ lemma transform_cdt_some:
   done
 
 lemma mdb_cte_transform_cdt_lift:
-  "\<lbrakk>cte_at slot s; mdb_cte_at (swp (cte_wp_at(op\<noteq> cap.NullCap)) s ) (cdt s) \<rbrakk>
+  "\<lbrakk>cte_at slot s; mdb_cte_at (swp (cte_wp_at((\<noteq>) cap.NullCap)) s ) (cdt s) \<rbrakk>
    \<Longrightarrow> transform_cdt s (transform_cslot_ptr slot)
         = (case ((cdt s) slot ) of
       None \<Rightarrow> None
@@ -985,7 +985,7 @@ done
 lemma transform_cdt_some_rev:
   "\<lbrakk> transform_cdt s (transform_cslot_ptr slot_a)
            = Some (transform_cslot_ptr slot);
-    cte_at slot s; mdb_cte_at (swp (cte_wp_at (op\<noteq> cap.NullCap)) s)(cdt s) \<rbrakk>
+    cte_at slot s; mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s)(cdt s) \<rbrakk>
   \<Longrightarrow>\<exists>slot_b. transform_cslot_ptr slot_b
         = transform_cslot_ptr slot_a \<and> (cdt s) slot_b = Some slot"
   apply (clarsimp simp: transform_cdt_def map_lift_over_eq_Some)
@@ -1013,7 +1013,7 @@ lemma asid_pool_not_in_cdt:"\<lbrakk>asid_pool_at a s;cte_wp_at P (a, ba) s\<rbr
 done
 
 lemma dummy_remove_cdt_pt_slot:
-  "dcorres dc \<top> ( (\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)) and valid_idle and page_table_at a)
+  "dcorres dc \<top> ( (\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)) and valid_idle and page_table_at a)
     (remove_parent (a, y)) (return x)"
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:remove_parent_def corres_underlying_def return_def simpler_modify_def)
@@ -1045,7 +1045,7 @@ lemma dummy_remove_cdt_pt_slot:
 done
 
 lemma dummy_remove_cdt_pd_slot:
-  "dcorres dc \<top> ( (\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)) and valid_idle and page_directory_at a)
+  "dcorres dc \<top> ( (\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)) and valid_idle and page_directory_at a)
     (remove_parent (a,y)) (return x)"
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:remove_parent_def corres_underlying_def return_def simpler_modify_def)
@@ -1077,7 +1077,7 @@ lemma dummy_remove_cdt_pd_slot:
 done
 
 lemma dummy_remove_cdt_asid_pool_slot:
-  "dcorres dc \<top> ( (\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)) and valid_idle and asid_pool_at a)
+  "dcorres dc \<top> ( (\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)) and valid_idle and asid_pool_at a)
     (remove_parent (a,y)) (return x)"
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:remove_parent_def corres_underlying_def return_def simpler_modify_def)
@@ -1130,7 +1130,7 @@ lemma cte_at_single_update : "cte_at x s \<Longrightarrow> cte_at x (abs_cdt_sin
   by (clarsimp simp:abs_cdt_single_update_def)
 
 lemma cdt_single_update_eq:
-assumes mdb:"mdb_cte_at (swp (cte_wp_at (op\<noteq> cap.NullCap)) s) (cdt s)"
+assumes mdb:"mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
 shows
 "\<lbrakk>cte_at p s; cte_at c s\<rbrakk> \<Longrightarrow> cdl_cdt (cdl_cdt_single_update (transform s) (transform_cslot_ptr c) (transform_cslot_ptr p)) = transform_cdt (abs_cdt_single_update s c p)"
   apply (simp add: transform_cdt_def abs_cdt_single_update_def)
@@ -1143,7 +1143,7 @@ shows
   done
 
 lemma cdt_single_remove_eq:
-assumes mdb:"mdb_cte_at (swp (cte_wp_at (op\<noteq> cap.NullCap)) s) (cdt s)"
+assumes mdb:"mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
 shows
 "\<lbrakk>cte_at c s\<rbrakk> \<Longrightarrow> cdl_cdt (cdl_cdt_single_remove (transform s) (transform_cslot_ptr c)) = transform_cdt (abs_cdt_single_remove s c)"
   apply (simp add: transform_cdt_def abs_cdt_single_remove_def)
@@ -1172,8 +1172,8 @@ lemma cdt_set_update_eq:
 assumes dom_onto: "df =  transform_cslot_ptr ` dg"
 assumes exc:  "\<forall>x\<in> dg. \<forall>y. transform_cslot_ptr x = transform_cslot_ptr y \<longrightarrow> ((y\<in> dg) \<or> (\<not> cte_at y s))"
 assumes ran_map:"\<forall>x\<in>dg. f (transform_cslot_ptr x) = map_option transform_cslot_ptr (g x)"
-assumes mdb1:"mdb_cte_at (swp (cte_wp_at (op\<noteq> cap.NullCap)) s) (cdt s)"
-assumes mdb2:"mdb_cte_at (swp (cte_wp_at (op\<noteq> cap.NullCap)) (abs_cdt_set_update s dg g)) (cdt (abs_cdt_set_update s dg g))"
+assumes mdb1:"mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
+assumes mdb2:"mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) (abs_cdt_set_update s dg g)) (cdt (abs_cdt_set_update s dg g))"
 shows
 "cdl_cdt (cdl_cdt_set_update (transform s) df f)  = transform_cdt (abs_cdt_set_update s dg g)"
   apply (rule ext)
@@ -1219,7 +1219,7 @@ using dom_onto_is[OF dom_onto]
 done
 
 definition weak_valid_mdb :: "'z::state_ext state \<Rightarrow>bool"
-where "weak_valid_mdb s \<equiv> mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s) \<and> no_mloop (cdt s)"
+where "weak_valid_mdb s \<equiv> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s) \<and> no_mloop (cdt s)"
 
 lemma cdl_remove_parent_def':
  "remove_parent slot = (modify (\<lambda>s. cdl_cdt_single_remove (cdl_cdt_set_update s {x. if cdl_cdt s x = Some slot then True else False} (\<lambda>x. cdl_cdt s slot)) slot))"
@@ -1937,11 +1937,11 @@ lemma valid_objs_valid_ntfn_simp:
 done
 
 lemma tcb_type_set_obj_ep:
-  "\<lbrace>op = s'a\<rbrace> KHeap_A.set_object word1 (kernel_object.Endpoint Structures_A.endpoint.IdleEP) \<lbrace>\<lambda>r s. \<forall>x. tcb_at x s \<longrightarrow> tcb_at x s'a\<rbrace>"
+  "\<lbrace>(=) s'a\<rbrace> KHeap_A.set_object word1 (kernel_object.Endpoint Structures_A.endpoint.IdleEP) \<lbrace>\<lambda>r s. \<forall>x. tcb_at x s \<longrightarrow> tcb_at x s'a\<rbrace>"
   by (clarsimp simp:valid_def set_object_def put_def get_def bind_def return_def tcb_at_def get_tcb_def)
 
 lemma tcb_type_at_set_ep:
-  "\<lbrace>op = s'a\<rbrace> set_endpoint word1 Structures_A.endpoint.IdleEP \<lbrace>\<lambda>r s. \<forall>x. tcb_at x s \<longrightarrow> tcb_at x s'a\<rbrace>"
+  "\<lbrace>(=) s'a\<rbrace> set_endpoint word1 Structures_A.endpoint.IdleEP \<lbrace>\<lambda>r s. \<forall>x. tcb_at x s \<longrightarrow> tcb_at x s'a\<rbrace>"
   apply (clarsimp simp:set_simple_ko_def)
   apply (wp tcb_type_set_obj_ep)
   apply (clarsimp simp:get_object_def)
@@ -1963,12 +1963,12 @@ lemma is_thread_blocked_on_sth:
 done
 
 lemma set_ep_exec_wp: (* generalise? *)
-  "\<lbrace>op = s\<rbrace> set_endpoint epptr ep \<lbrace>\<lambda>r s'. s' = update_kheap ((kheap s)(epptr \<mapsto> Endpoint ep)) s\<rbrace> "
+  "\<lbrace>(=) s\<rbrace> set_endpoint epptr ep \<lbrace>\<lambda>r s'. s' = update_kheap ((kheap s)(epptr \<mapsto> Endpoint ep)) s\<rbrace> "
   by (wpsimp simp: set_simple_ko_def set_object_def get_object_def a_type_def fun_upd_def
             split: option.splits Structures_A.kernel_object.splits)
 
 lemma set_ntfn_exec_wp:
-  "\<lbrace>op = s\<rbrace> set_notification epptr ep \<lbrace>\<lambda>r s'. s' = update_kheap ((kheap s)(epptr \<mapsto> Notification ep)) s\<rbrace> "
+  "\<lbrace>(=) s\<rbrace> set_notification epptr ep \<lbrace>\<lambda>r s'. s' = update_kheap ((kheap s)(epptr \<mapsto> Notification ep)) s\<rbrace> "
   by (wpsimp simp: set_simple_ko_def set_object_def get_object_def a_type_def fun_upd_def
             split: option.splits Structures_A.kernel_object.splits)
 
@@ -2041,7 +2041,7 @@ lemma tcb_at_set_thread_state_wp:
 
 lemma invalid_cte_wp_at_pending_slot:
   "\<lbrakk>tcb_at y s;transform_cslot_ptr (ad, bd) = (y, tcb_pending_op_slot);
-    cte_wp_at (op \<noteq> cap.NullCap) (ad, bd) s\<rbrakk> \<Longrightarrow> False"
+    cte_wp_at ((\<noteq>) cap.NullCap) (ad, bd) s\<rbrakk> \<Longrightarrow> False"
     apply (clarsimp simp:transform_cslot_ptr_def
       cte_wp_at_cases tcb_at_def dest!:get_tcb_SomeD)
       apply (clarsimp simp:tcb_cap_cases_def tcb_cnode_index_def tcb_pending_op_slot_def
@@ -2051,8 +2051,8 @@ done
 
 (* cap_dl wp rule: a pending cap will never have parent *)
 lemma remove_parent_dummy_when_pending_slot:
-  "\<lbrakk>mdb_cte_at (swp (cte_wp_at (op\<noteq>cap.NullCap) ) s) (cdt s); tcb_at y s\<rbrakk>
-  \<Longrightarrow>\<lbrace>op = (transform s)\<rbrace> remove_parent (y, tcb_pending_op_slot) \<exists>\<lbrace>\<lambda>r. op = (transform s)\<rbrace>"
+  "\<lbrakk>mdb_cte_at (swp (cte_wp_at ((\<noteq>)cap.NullCap) ) s) (cdt s); tcb_at y s\<rbrakk>
+  \<Longrightarrow>\<lbrace>(=) (transform s)\<rbrace> remove_parent (y, tcb_pending_op_slot) \<exists>\<lbrace>\<lambda>r. (=) (transform s)\<rbrace>"
   apply (clarsimp simp:remove_parent_def exs_valid_def simpler_modify_def transform_def)
   apply (rule ext)
   apply (clarsimp simp:transform_cdt_def| rule conjI)+
@@ -2635,7 +2635,7 @@ lemma unbind_maybe_notification_valid_state[wp]:
                    split: if_split_asm)
   apply (clarsimp split: if_split_asm)
    apply (clarsimp simp: obj_at_def)
-   apply (frule_tac P="op = (Some a)" in ntfn_bound_tcb_at, simp+)
+   apply (frule_tac P="(=) (Some a)" in ntfn_bound_tcb_at, simp+)
    apply (frule pred_tcb_at_tcb_at)
    apply (frule_tac p=aa in obj_at_ko_at, clarsimp)
    apply (subst (asm) ko_at_state_refs_ofD, assumption)
@@ -2692,8 +2692,8 @@ lemma cdl_cdt_transform:
 
 lemma set_parent_corres:
   "\<lbrakk>slot = transform_cslot_ptr slot';pslot = transform_cslot_ptr pslot'\<rbrakk>
-    \<Longrightarrow>dcorres dc \<top> ((cte_wp_at (op\<noteq>cap.NullCap) slot') and
-             weak_valid_mdb and (cte_wp_at (op\<noteq>cap.NullCap) pslot')
+    \<Longrightarrow>dcorres dc \<top> ((cte_wp_at ((\<noteq>)cap.NullCap) slot') and
+             weak_valid_mdb and (cte_wp_at ((\<noteq>)cap.NullCap) pslot')
              and (\<lambda>s. cdt s slot' = None))
              (set_parent slot pslot)
              (update_cdt (\<lambda>cdt a. if a = slot' then Some pslot' else cdt a))"
@@ -2728,7 +2728,7 @@ lemma set_parent_corres:
   done
 
 lemma set_tcb_capslot_weak_valid_mdb:
-  "\<lbrace>weak_valid_mdb and cte_wp_at (op=cap.NullCap) slot\<rbrace> set_cap cap slot \<lbrace>\<lambda>r s. weak_valid_mdb s\<rbrace> "
+  "\<lbrace>weak_valid_mdb and cte_wp_at ((=cap.NullCap)) slot\<rbrace> set_cap cap slot \<lbrace>\<lambda>r s. weak_valid_mdb s\<rbrace> "
   apply (simp add: weak_valid_mdb_def cte_wp_at_caps_of_state swp_def)
   apply (wp set_cap_caps_of_state2)
   apply (case_tac slot)
@@ -2738,11 +2738,11 @@ lemma set_tcb_capslot_weak_valid_mdb:
   done
 
 lemma get_tcb_reply_cap_wp_cte_at:
-    "\<lbrace>tcb_at sid and valid_objs and cte_wp_at (op\<noteq> cap.NullCap) (sid, tcb_cnode_index 2)\<rbrace> CSpaceAcc_A.get_cap (sid, tcb_cnode_index 2)
-    \<lbrace>\<lambda>rv. cte_wp_at (op \<noteq> cap.NullCap) (obj_ref_of rv, tcb_cnode_index 2)\<rbrace>"
+    "\<lbrace>tcb_at sid and valid_objs and cte_wp_at ((\<noteq>) cap.NullCap) (sid, tcb_cnode_index 2)\<rbrace> CSpaceAcc_A.get_cap (sid, tcb_cnode_index 2)
+    \<lbrace>\<lambda>rv. cte_wp_at ((\<noteq>) cap.NullCap) (obj_ref_of rv, tcb_cnode_index 2)\<rbrace>"
   apply (rule hoare_post_imp
      [where Q="\<lambda>r. cte_wp_at (\<lambda>c. r \<noteq> cap.NullCap) (sid,tcb_cnode_index 2)
-       and tcb_at sid and valid_objs and cte_wp_at (op=r) (sid,tcb_cnode_index 2)"])
+       and tcb_at sid and valid_objs and cte_wp_at ((=r)) (sid,tcb_cnode_index 2)"])
    apply clarsimp
    apply (frule cte_wp_tcb_cap_valid)
     apply simp+
@@ -2752,11 +2752,11 @@ lemma get_tcb_reply_cap_wp_cte_at:
   done
 
 lemma get_tcb_reply_cap_wp_master_cap:
-  "\<lbrace>tcb_at sid and valid_objs and cte_wp_at (op\<noteq> cap.NullCap) (sid,tcb_cnode_index 2) \<rbrace> CSpaceAcc_A.get_cap (sid, tcb_cnode_index 2)
+  "\<lbrace>tcb_at sid and valid_objs and cte_wp_at ((\<noteq>) cap.NullCap) (sid,tcb_cnode_index 2) \<rbrace> CSpaceAcc_A.get_cap (sid, tcb_cnode_index 2)
     \<lbrace>\<lambda>rv s. (is_master_reply_cap rv)  \<rbrace>"
   apply (rule hoare_post_imp
      [where Q="\<lambda>r. cte_wp_at (\<lambda>c. r \<noteq> cap.NullCap) (sid,tcb_cnode_index 2)
-       and tcb_at sid and valid_objs and cte_wp_at (op=r) (sid,tcb_cnode_index 2)"])
+       and tcb_at sid and valid_objs and cte_wp_at ((=r)) (sid,tcb_cnode_index 2)"])
    apply clarsimp
    apply (frule cte_wp_tcb_cap_valid)
     apply simp+
@@ -2766,11 +2766,11 @@ lemma get_tcb_reply_cap_wp_master_cap:
   done
 
 lemma get_tcb_reply_cap_wp_original_cap:
-    "\<lbrace>tcb_at sid and valid_objs and cte_wp_at (op\<noteq> cap.NullCap) (sid,tcb_cnode_index 2) and valid_mdb \<rbrace> CSpaceAcc_A.get_cap (sid, tcb_cnode_index 2)
+    "\<lbrace>tcb_at sid and valid_objs and cte_wp_at ((\<noteq>) cap.NullCap) (sid,tcb_cnode_index 2) and valid_mdb \<rbrace> CSpaceAcc_A.get_cap (sid, tcb_cnode_index 2)
     \<lbrace>\<lambda>rv s. is_original_cap s (obj_ref_of rv, tcb_cnode_index 2)\<rbrace>"
    apply (rule hoare_post_imp
      [where Q="\<lambda>r. cte_wp_at (\<lambda>c. r \<noteq> cap.NullCap) (sid,tcb_cnode_index 2) and valid_mdb
-       and tcb_at sid and valid_objs and cte_wp_at (op=r) (sid,tcb_cnode_index 2)"])
+       and tcb_at sid and valid_objs and cte_wp_at ((=r)) (sid,tcb_cnode_index 2)"])
    apply clarsimp
    apply (subgoal_tac "is_master_reply_cap r \<and> obj_ref_of r = sid")
      apply clarsimp
@@ -2789,11 +2789,11 @@ lemma get_tcb_reply_cap_wp_original_cap:
 done
 
 lemma get_tcb_reply_cap_wp_obj_ref:
-    "\<lbrace>tcb_at sid and valid_objs and cte_wp_at (op\<noteq> cap.NullCap) (sid,tcb_cnode_index 2) \<rbrace> CSpaceAcc_A.get_cap (sid, tcb_cnode_index 2)
+    "\<lbrace>tcb_at sid and valid_objs and cte_wp_at ((\<noteq>) cap.NullCap) (sid,tcb_cnode_index 2) \<rbrace> CSpaceAcc_A.get_cap (sid, tcb_cnode_index 2)
     \<lbrace>\<lambda>rv s. (obj_ref_of rv = sid) \<rbrace>"
    apply (rule hoare_post_imp
      [where Q="\<lambda>r. cte_wp_at (\<lambda>c. r \<noteq> cap.NullCap) (sid,tcb_cnode_index 2)
-       and tcb_at sid and valid_objs and cte_wp_at (op=r) (sid,tcb_cnode_index 2)"])
+       and tcb_at sid and valid_objs and cte_wp_at ((=r)) (sid,tcb_cnode_index 2)"])
    apply clarsimp
    apply (frule cte_wp_tcb_cap_valid)
    apply simp+
@@ -2804,7 +2804,7 @@ done
 
 lemma tcb_reply_cap_cte_wp_at:
   "\<lbrakk>valid_objs s;st_tcb_at (\<lambda>r. \<not> inactive r \<and> \<not> idle r) sid s\<rbrakk>
-     \<Longrightarrow> cte_wp_at (op \<noteq> cap.NullCap) (sid, tcb_cnode_index 2) s"
+     \<Longrightarrow> cte_wp_at ((\<noteq>) cap.NullCap) (sid, tcb_cnode_index 2) s"
   apply (clarsimp simp:valid_objs_def)
   apply (drule_tac x = sid in bspec)
     apply (clarsimp simp:st_tcb_at_def obj_at_def)
@@ -2847,7 +2847,7 @@ lemma opt_cap_objects_cong:
 lemma always_empty_slot_NullCap_corres:
   "dcorres dc \<top>
            (weak_valid_mdb and not_idle_thread (fst slot) and
-            cte_wp_at (op = cap.NullCap) slot and valid_etcbs)
+            cte_wp_at ((=) cap.NullCap) slot and valid_etcbs)
            (do y \<leftarrow> remove_parent (transform_cslot_ptr slot);
                KHeap_D.set_cap (transform_cslot_ptr slot) cdl_cap.NullCap
             od)
@@ -3104,7 +3104,7 @@ lemma resolve_address_bits_error_corres:
      \<not> in_recursive_branch ref cap;
      cap = cap.CNodeCap oref radix_bits guard;
      valid_cap cap s;valid_idle s;length ref \<le> 32;valid_objs s\<rbrakk>
-    \<Longrightarrow> dcorres (dc \<oplus> (\<lambda>r r'. (fst r) = transform_cslot_ptr (fst r') \<and> snd r = length (snd r'))) \<top> (op=s)
+    \<Longrightarrow> dcorres (dc \<oplus> (\<lambda>r r'. (fst r) = transform_cslot_ptr (fst r') \<and> snd r = length (snd r'))) \<top> ((=s))
     ( CSpace_D.resolve_address_bits (cap') (of_bl ref) (length ref) )
     ( CSpace_A.resolve_address_bits (cap,ref) )"
   apply (subst KHeap_DR.resolve_address_bits.simps)
@@ -3148,7 +3148,7 @@ lemma resolve_address_bits_error_corres:
 
 lemma resolve_address_bits_terminate_corres:
   "\<lbrakk>in_terminate_branch ref cap; cap = cap.CNodeCap oref radix_bits guard; cap'=transform_cap cap; valid_cap cap s;valid_idle s;length ref \<le> 32;valid_objs s\<rbrakk>
-      \<Longrightarrow> dcorres (dc \<oplus> (\<lambda>r r'. fst r = transform_cslot_ptr (fst r') \<and> snd r = length (snd r'))) \<top> (op=s)
+      \<Longrightarrow> dcorres (dc \<oplus> (\<lambda>r r'. fst r = transform_cslot_ptr (fst r') \<and> snd r = length (snd r'))) \<top> ((=s))
     ( CSpace_D.resolve_address_bits cap' (of_bl ref) (length ref) )
     ( CSpace_A.resolve_address_bits (cap,ref) )"
   apply (subst KHeap_DR.resolve_address_bits.simps,frule resolve_address_bits_terminate_branch[where 'a=det_ext],fastforce)

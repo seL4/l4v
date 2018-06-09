@@ -125,7 +125,7 @@ where
 | "valid_invocation (InvokeTCB i) = Tcb_AI.tcb_inv_wf i"
 | "valid_invocation (InvokeDomain thread domain) = (tcb_at thread and (\<lambda>s. thread \<noteq> idle_thread s))"
 | "valid_invocation (InvokeReply thread slot) =
-       (tcb_at thread and cte_wp_at (op = (cap.ReplyCap thread False)) slot)"
+       (tcb_at thread and cte_wp_at ((=) (cap.ReplyCap thread False)) slot)"
 | "valid_invocation (InvokeIRQControl i) = irq_control_inv_valid i"
 | "valid_invocation (InvokeIRQHandler i) = irq_handler_inv_valid i"
 | "valid_invocation (InvokeCNode i) = valid_cnode_inv i"
@@ -362,7 +362,7 @@ locale Systemcall_AI_Pre2 = Systemcall_AI_Pre itcb_state state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself"
 
 lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
-  "\<lbrace>tcb_at t and tcb_at t' and cte_wp_at (op = (cap.ReplyCap t False)) slot and
+  "\<lbrace>tcb_at t and tcb_at t' and cte_wp_at ((=) (cap.ReplyCap t False)) slot and
     invs\<rbrace>
      do_reply_transfer t' t slot
    \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
@@ -389,7 +389,7 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
               hoare_strengthen_post[rotated], clarsimp)
        apply (wp cap_delete_one_reply_st_tcb_at cap_delete_one_deletes_reply | simp)+
       apply (rule_tac Q = "\<lambda>_. valid_reply_caps and
-                          cte_wp_at (op = (cap.ReplyCap t False)) slot" in
+                          cte_wp_at ((=) (cap.ReplyCap t False)) slot" in
              hoare_strengthen_post[rotated], clarsimp)
        apply (erule cte_wp_at_weakenE, simp)
       apply (wp)
@@ -432,9 +432,9 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
     apply (wp hoare_drop_imp hoare_allI)[1]
    apply (wp assert_wp)
   apply (clarsimp)
-  apply (rule_tac Q = "\<lambda>rv. st_tcb_at (op = rv) t and tcb_at t' and invs and
+  apply (rule_tac Q = "\<lambda>rv. st_tcb_at ((=) rv) t and tcb_at t' and invs and
                       emptyable slot and
-                      cte_wp_at (op = (cap.ReplyCap t False)) slot" in
+                      cte_wp_at ((=) (cap.ReplyCap t False)) slot" in
          hoare_strengthen_post[rotated])
    apply (clarsimp simp add: st_tcb_at_tcb_at)
    apply (rule conjI, erule pred_tcb_weakenE, clarsimp)+
@@ -527,7 +527,7 @@ lemma cte_wp_cdt_lift:
   assumes m: "\<And>P. \<lbrace>\<lambda>s. P (cdt s)\<rbrace> f \<lbrace>\<lambda>r s. P (cdt s)\<rbrace>"
   shows "\<lbrace>\<lambda>s. cte_wp_at (P (cdt s)) p s\<rbrace> f \<lbrace>\<lambda>r s. cte_wp_at (P (cdt s)) p s\<rbrace>"
   apply (clarsimp simp add: valid_def)
-  apply (frule_tac P1="op = (cdt s)" in use_valid [OF _  m], rule refl)
+  apply (frule_tac P1="(=) (cdt s)" in use_valid [OF _  m], rule refl)
   apply simp
   apply (erule use_valid [OF _ c])
   apply simp
@@ -774,7 +774,7 @@ lemma lsft_ex_cte_cap_to:
   apply (wp rab_cte_cap_to)
   apply (clarsimp simp: ex_cte_cap_wp_to_def)
   apply (clarsimp dest!: get_tcb_SomeD)
-  apply (frule cte_wp_at_tcbI[where t="(t', tcb_cnode_index 0)" and P="op = v" for t' v, simplified])
+  apply (frule cte_wp_at_tcbI[where t="(t', tcb_cnode_index 0)" and P="(=) v" for t' v, simplified])
     apply fastforce
    apply fastforce
   apply (intro exI, erule cte_wp_at_weakenE)
@@ -1017,7 +1017,7 @@ lemma hinv_invs':
 
   apply (wp syscall_valid sts_invs_minor2 rfk_invs
             hoare_vcg_all_lift hoare_vcg_disj_lift | simp split del: if_split)+
-  apply (rule_tac Q = "\<lambda>st. st_tcb_at (op = st) thread and (invs and Q)" in
+  apply (rule_tac Q = "\<lambda>st. st_tcb_at ((=) st) thread and (invs and Q)" in
          hoare_post_imp)
   apply (auto elim!: pred_tcb_weakenE st_tcb_ex_cap
               dest: st_tcb_at_idle_thread
@@ -1125,7 +1125,7 @@ lemma delete_caller_cap_simple[wp]:
   done
 
 lemma delete_caller_deletes_caller[wp]:
-  "\<lbrace>\<top>\<rbrace> delete_caller_cap t \<lbrace>\<lambda>rv. cte_wp_at (op = cap.NullCap) (t, tcb_cnode_index 3)\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> delete_caller_cap t \<lbrace>\<lambda>rv. cte_wp_at ((=) cap.NullCap) (t, tcb_cnode_index 3)\<rbrace>"
   apply (rule_tac Q="\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) (t, tcb_cnode_index 3)"
                in hoare_post_imp,
          clarsimp elim!: cte_wp_at_weakenE)
@@ -1210,7 +1210,7 @@ lemma active_from_running:
 
 lemma tcb_caller_cap:
   "\<lbrakk>tcb_at t s; valid_objs s\<rbrakk> \<Longrightarrow>
-   cte_wp_at (is_reply_cap or op = cap.NullCap) (t, tcb_cnode_index 3) s"
+   cte_wp_at (is_reply_cap or (=) cap.NullCap) (t, tcb_cnode_index 3) s"
   by (fastforce intro: tcb_cap_wp_at split: Structures_A.thread_state.split_asm)
 
 lemma (in Syscall_AI) hr_invs[wp]:
@@ -1320,7 +1320,7 @@ lemma handle_reply_nonz_cap_to_ct:
 (* FIXME: move *)
 lemma do_reply_transfer_st_tcb_at_active:
   "\<lbrace>valid_objs and st_tcb_at active t and st_tcb_at awaiting_reply t' and
-    cte_wp_at (op = (cap.ReplyCap t' False)) sl\<rbrace>
+    cte_wp_at ((=) (cap.ReplyCap t' False)) sl\<rbrace>
     do_reply_transfer t t' sl
    \<lbrace>\<lambda>rv. st_tcb_at active t :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: do_reply_transfer_def)

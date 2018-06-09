@@ -80,7 +80,7 @@ lemma pi_cases:
     |  Invocations_A.InvokeArchObject i \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeArchObject i))"
   by (cases i, simp_all)
 
-(* (op = st) -- too strong, the thread state of the calling thread changes. *)
+(* ((=) st) -- too strong, the thread state of the calling thread changes. *)
 lemma perform_invocation_respects:
   "\<lbrace>pas_refined aag and integrity aag X st
           and einvs and simple_sched_action and valid_invocation oper
@@ -108,13 +108,13 @@ lemma perform_invocation_respects:
 declare AllowSend_def[simp] AllowRecv_def[simp]
 
 lemma diminshed_IRQControlCap_eq:
-  "diminished IRQControlCap = (op = IRQControlCap)"
+  "diminished IRQControlCap = ((=) IRQControlCap)"
   apply (rule ext)
   apply (case_tac x, auto simp: diminished_def mask_cap_def cap_rights_update_def)
   done
 
 lemma diminished_DomainCap_eq:
-  "diminished DomainCap = (op = DomainCap)"
+  "diminished DomainCap = ((=) DomainCap)"
   apply (rule ext)
   apply (case_tac x, auto simp: diminished_def mask_cap_def cap_rights_update_def)
   done
@@ -224,7 +224,7 @@ lemma set_thread_state_authorised[wp]:
   done
 
 lemma sts_first_restart:
-  "\<lbrace>op = st and (\<lambda>s. thread = cur_thread s)\<rbrace>
+  "\<lbrace>(=) st and (\<lambda>s. thread = cur_thread s)\<rbrace>
      set_thread_state thread Structures_A.thread_state.Restart
    \<lbrace>\<lambda>rv s. \<forall>p ko. kheap s p = Some ko \<longrightarrow>
            (is_tcb ko \<longrightarrow> p \<noteq> cur_thread st) \<longrightarrow> kheap st p = Some ko\<rbrace>"
@@ -321,7 +321,7 @@ lemma handle_invocation_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and guarded_pas_domain aag and domain_sep_inv (pasMaySendIrqs aag) st'
           and einvs and ct_active and schact_is_rct
           and is_subject aag \<circ> cur_thread
-          and (op = st)\<rbrace>
+          and ((=) st)\<rbrace>
      handle_invocation calling blocking
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: handle_invocation_def split_def)
@@ -634,7 +634,7 @@ crunch integrity[wp]: handle_yield "integrity aag X st"
 lemma handle_event_integrity:
   "\<lbrace>integrity aag X st and pas_refined aag and guarded_pas_domain aag and domain_sep_inv (pasMaySendIrqs aag) st'
           and einvs and schact_is_rct
-          and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s)) and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and (op = st)\<rbrace>
+          and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s)) and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and ((=) st)\<rbrace>
     handle_event ev
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (case_tac "ev \<noteq> Interrupt")
@@ -658,7 +658,7 @@ lemma handle_event_integrity:
 
 lemma integrity_restart_context:
   "\<lbrakk> integrity aag X st s; pasMayActivate aag;
-       st_tcb_at (op = Structures_A.Restart) thread s; \<not> is_subject aag thread \<rbrakk>
+       st_tcb_at ((=) Structures_A.Restart) thread s; \<not> is_subject aag thread \<rbrakk>
    \<Longrightarrow> \<exists>tcb tcb'. get_tcb thread st = Some tcb \<and>
                   get_tcb thread s = Some tcb' \<and>
                   (arch_tcb_context_get (tcb_arch tcb') = arch_tcb_context_get (tcb_arch tcb) \<or>
@@ -674,7 +674,7 @@ definition
     obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> arch_tcb_context_get (tcb_arch tcb) TPIDRURW = tcb_ipc_buffer tcb)"
 
 lemma set_thread_state_restart_to_running_respects:
-  "\<lbrace>integrity aag X st and st_tcb_at (op = Structures_A.Restart) thread
+  "\<lbrace>integrity aag X st and st_tcb_at ((=) Structures_A.Restart) thread
           and K (pasMayActivate aag)\<rbrace>
               do pc \<leftarrow> as_user thread getRestartPC;
                  as_user thread $ setNextPC pc;
@@ -795,9 +795,9 @@ lemma tcb_sched_action_dequeue_integrity_pasMayEditReadyQueues:
   done
 
 lemma as_user_set_register_respects_indirect:
-  "\<lbrace>integrity aag X st and st_tcb_at (op = Structures_A.Running) thread and
+  "\<lbrace>integrity aag X st and st_tcb_at ((=) Structures_A.Running) thread and
     K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at receive_blocked thread st
-           \<and> bound_tcb_at (op = (Some ntfnptr)) thread st)
+           \<and> bound_tcb_at ((=) (Some ntfnptr)) thread st)
         \<and> (aag_has_auth_to aag Notify ntfnptr)) \<rbrace>
    as_user thread (setRegister r v)
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"

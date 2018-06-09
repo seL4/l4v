@@ -488,7 +488,7 @@ crunch st_tcb_at_halted[wp]: prepare_thread_delete "st_tcb_at halted t"
 
 lemma finalise_cap_makes_halted_proof:
   "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s)
-         and cte_wp_at (op = cap) slot\<rbrace>
+         and cte_wp_at ((=) cap) slot\<rbrace>
     finalise_cap cap ex
    \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
   apply (case_tac cap, simp_all)
@@ -647,7 +647,7 @@ next
        apply (wp hoare_vcg_const_Ball_lift)+
       apply (rule hoare_strengthen_post)
        apply (rule_tac Q="\<lambda>fin s. Q s \<and> invs s \<and> replaceable s slot (fst fin) rv
-                                 \<and> cte_wp_at (op = rv) slot s \<and> s \<turnstile> (fst fin)
+                                 \<and> cte_wp_at ((=) rv) slot s \<and> s \<turnstile> (fst fin)
                                  \<and> ex_cte_cap_wp_to (appropriate_cte_cap rv) slot s
                                  \<and> emptyable slot s
                                  \<and> (\<forall>t\<in>obj_refs (fst fin). halted_if_tcb t s)"
@@ -875,7 +875,7 @@ next
                   set_cap_cte_wp_at_cases
                    | simp)+
        apply (rule hoare_strengthen_post)
-        apply (rule_tac Q="\<lambda>fc s. cte_wp_at (op = rv) sl s
+        apply (rule_tac Q="\<lambda>fc s. cte_wp_at ((=) rv) sl s
                               \<and> revoke_progress_ord m (option_map cap_to_rpo \<circ> caps_of_state s)"
                  in hoare_vcg_conj_lift)
          apply (wp finalise_cap_rvk_prog[folded o_def])[1]
@@ -964,7 +964,7 @@ global_interpretation CNodeInv_AI_4?: CNodeInv_AI_4
 context Arch begin global_naming ARM
 
 lemma cap_move_invs[wp, CNodeInv_AI_assms]:
-  "\<lbrace>invs and valid_cap cap and cte_wp_at (op = cap.NullCap) ptr'
+  "\<lbrace>invs and valid_cap cap and cte_wp_at ((=) cap.NullCap) ptr'
          and tcb_cap_valid cap ptr'
          and cte_wp_at (weak_derived cap) ptr
          and cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap) ptr

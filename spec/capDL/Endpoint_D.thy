@@ -303,7 +303,7 @@ where
  * Signal on a notification.
  *
  * If someone is blocked on the notifications, we wake them up. Otherwise,
- * this is a no-op.
+ * this is a no-(.)
  *)
 
 definition
