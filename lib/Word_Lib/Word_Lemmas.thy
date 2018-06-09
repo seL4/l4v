@@ -1694,7 +1694,7 @@ qed
 lemma upto_enum_step_shift:
   "\<lbrakk> is_aligned p n \<rbrakk> \<Longrightarrow>
   ([p , p + 2 ^ m .e. p + 2 ^ n - 1])
-      = map (op + p) [0, 2 ^ m .e. 2 ^ n - 1]"
+      = map ((+) p) [0, 2 ^ m .e. 2 ^ n - 1]"
   apply (erule is_aligned_get_word_bits)
    prefer 2
    apply (simp add: map_idI)
@@ -2101,7 +2101,7 @@ definition
 lemma limited_and_eq_0:
   "\<lbrakk> limited_and x z; y && ~~ z = y \<rbrakk> \<Longrightarrow> x && y = 0"
   unfolding limited_and_def
-  apply (subst arg_cong2[where f="op &&"])
+  apply (subst arg_cong2[where f="(&&)"])
     apply (erule sym)+
   apply (simp(no_asm) add: word_bw_assocs word_bw_comms word_bw_lcs)
   done
@@ -2186,11 +2186,11 @@ lemma word_and_mask_shiftl:
   done
 
 lemma plus_Collect_helper:
-  "op + x ` {xa. P (xa :: 'a :: len word)} = {xa. P (xa - x)}"
+  "(+) x ` {xa. P (xa :: 'a :: len word)} = {xa. P (xa - x)}"
   by (fastforce simp add: image_def)
 
 lemma plus_Collect_helper2:
-  "op + (- x) ` {xa. P (xa :: 'a :: len word)} = {xa. P (x + xa)}"
+  "(+) (- x) ` {xa. P (xa :: 'a :: len word)} = {xa. P (x + xa)}"
   by (simp add: field_simps plus_Collect_helper)
 
 lemma word_FF_is_mask:
@@ -2452,7 +2452,7 @@ lemma i_hate_words:
   apply (rule diff_Suc_less)
   apply (subst neq0_conv[symmetric])
   apply (subst unat_eq_0)
-  apply (rule notI, drule arg_cong[where f="op + 1"])
+  apply (rule notI, drule arg_cong[where f="(+) 1"])
   apply simp
   done
 
@@ -2522,11 +2522,11 @@ lemma int_div_sub_1:
   apply (clarsimp simp: dvd_eq_mod_eq_0)
   apply (cases "m = 1")
    apply simp
-  apply (subst mod_diff_eq[symmetric], simp add: zmod_minus1 mod_pos_pos_trivial)
+  apply (subst mod_diff_eq[symmetric], simp add: zmod_minus1)
   apply clarsimp
   apply (subst diff_add_cancel[where b=1, symmetric])
   apply (subst mod_add_eq[symmetric])
-  apply (simp add: field_simps mod_pos_pos_trivial)
+  apply (simp add: field_simps)
   apply (rule mod_pos_pos_trivial)
    apply (subst add_0_right[where a=0, symmetric])
    apply (rule add_mono)
@@ -2575,8 +2575,7 @@ lemma word_div_mult:
   apply (subst td_gal_lt [symmetric])
    apply assumption
   apply (erule order_less_le_trans)
-  apply (subst unat_word_ariths)
-  by (metis Divides.mod_less_eq_dividend)
+  by (simp add: unat_word_ariths)
 
 lemma word_less_power_trans_ofnat:
   "\<lbrakk>n < 2 ^ (m - k); k \<le> m; m < len_of TYPE('a)\<rbrakk>
@@ -3111,10 +3110,8 @@ lemma sbintrunc_If:
     \<Longrightarrow> sbintrunc n x = (if x < - (2 ^ n) then x + 2 * (2 ^ n)
         else if x \<ge> 2 ^ n then x - 2 * (2 ^ n) else x)"
   apply (simp add: no_sbintr_alt2, safe)
-    apply (simp add: mod_pos_geq mod_pos_pos_trivial)
-   apply (subst mod_add_self1[symmetric], simp)
-   apply (simp add: mod_pos_pos_trivial)
-  apply (simp add: mod_pos_pos_trivial)
+   apply (simp add: mod_pos_geq)
+  apply (subst mod_add_self1[symmetric], simp)
   done
 
 lemma signed_arith_eq_checks_to_ord:
@@ -3226,13 +3223,8 @@ lemma sgn_div_eq_sgn_mult:
   done
 
 lemma sgn_sdiv_eq_sgn_mult:
-    "a sdiv b \<noteq> 0 \<Longrightarrow> sgn ((a :: int) sdiv b) = sgn (a * b)"
-  apply (clarsimp simp: sdiv_int_def sgn_mult)
-  apply (subst sgn_div_eq_sgn_mult)
-   apply simp
-  apply (clarsimp simp: sgn_mult)
-  apply (metis abs_mult div_0 nonzero_mult_div_cancel_right sgn_0_0 sgn_1_pos sgn_mult zero_less_abs_iff)
-  done
+  "a sdiv b \<noteq> 0 \<Longrightarrow> sgn ((a :: int) sdiv b) = sgn (a * b)"
+  by (auto simp: sdiv_int_def sgn_div_eq_sgn_mult sgn_mult)
 
 lemma int_sdiv_same_is_1 [simp]:
     "a \<noteq> 0 \<Longrightarrow> ((a :: int) sdiv b = a) = (b = 1)"
@@ -3272,7 +3264,7 @@ lemma int_sdiv_negated_is_minus1 [simp]:
     apply (clarsimp simp: sign_simps not_less sgn_mult)
     apply (metis less_le neg_less_0_iff_less not_less_iff_gr_or_eq pos_imp_zdiv_neg_iff)
    apply (clarsimp simp: sign_simps not_less sgn_mult)
-   apply (metis Divides.transfer_nat_int_function_closures(1) eq_iff minus_zero neg_le_iff_le)
+   apply (metis antisym_conv div_minus_right neg_imp_zdiv_nonneg_iff neg_le_0_iff_le not_less)
   apply (clarsimp simp: sgn_if)
   done
 
@@ -3281,8 +3273,7 @@ lemma sdiv_int_range:
   apply (unfold sdiv_int_def)
   apply (subgoal_tac "(abs a) div (abs b) \<le> (abs a)")
    apply (clarsimp simp: sgn_if)
-   apply (metis Divides.transfer_nat_int_function_closures(1) abs_ge_zero
-              abs_less_iff abs_of_nonneg less_asym less_minus_iff not_less)
+   apply (meson abs_ge_zero neg_le_0_iff_le nonneg_mod_div order_trans)
   apply (metis abs_eq_0 abs_ge_zero div_by_0 zdiv_le_dividend zero_less_abs_iff)
   done
 
@@ -3546,18 +3537,18 @@ lemma ucast_distrib:
 
 lemma ucast_down_add:
     "is_down (ucast:: 'a word \<Rightarrow> 'b word) \<Longrightarrow>  ucast ((a :: 'a::len word) + b) = (ucast a + ucast b :: 'b::len word)"
-  by (rule ucast_distrib [where L="op +"], (clarsimp simp: uint_word_ariths)+, presburger, simp)
+  by (rule ucast_distrib [where L="(+)"], (clarsimp simp: uint_word_ariths)+, presburger, simp)
 
 lemma ucast_down_minus:
     "is_down (ucast:: 'a word \<Rightarrow> 'b word) \<Longrightarrow>  ucast ((a :: 'a::len word) - b) = (ucast a - ucast b :: 'b::len word)"
-  apply (rule ucast_distrib [where L="op -"], (clarsimp simp: uint_word_ariths)+)
+  apply (rule ucast_distrib [where L="(-)"], (clarsimp simp: uint_word_ariths)+)
   apply (metis mod_diff_left_eq mod_diff_right_eq)
   apply simp
   done
 
 lemma ucast_down_mult:
     "is_down (ucast:: 'a word \<Rightarrow> 'b word) \<Longrightarrow>  ucast ((a :: 'a::len word) * b) = (ucast a * ucast b :: 'b::len word)"
-  apply (rule ucast_distrib [where L="op *"], (clarsimp simp: uint_word_ariths)+)
+  apply (rule ucast_distrib [where L="( * )"], (clarsimp simp: uint_word_ariths)+)
   apply (metis mod_mult_eq)
   apply simp
   done
@@ -3582,18 +3573,18 @@ lemma scast_distrib:
 
 lemma scast_down_add:
     "is_down (scast:: 'a word \<Rightarrow> 'b word) \<Longrightarrow>  scast ((a :: 'a::len word) + b) = (scast a + scast b :: 'b::len word)"
-  by (rule scast_distrib [where L="op +"], (clarsimp simp: uint_word_ariths)+, presburger, simp)
+  by (rule scast_distrib [where L="(+)"], (clarsimp simp: uint_word_ariths)+, presburger, simp)
 
 lemma scast_down_minus:
     "is_down (scast:: 'a word \<Rightarrow> 'b word) \<Longrightarrow>  scast ((a :: 'a::len word) - b) = (scast a - scast b :: 'b::len word)"
-  apply (rule scast_distrib [where L="op -"], (clarsimp simp: uint_word_ariths)+)
+  apply (rule scast_distrib [where L="(-)"], (clarsimp simp: uint_word_ariths)+)
   apply (metis mod_diff_left_eq mod_diff_right_eq)
   apply simp
   done
 
 lemma scast_down_mult:
     "is_down (scast:: 'a word \<Rightarrow> 'b word) \<Longrightarrow>  scast ((a :: 'a::len word) * b) = (scast a * scast b :: 'b::len word)"
-  apply (rule scast_distrib [where L="op *"], (clarsimp simp: uint_word_ariths)+)
+  apply (rule scast_distrib [where L="( * )"], (clarsimp simp: uint_word_ariths)+)
   apply (metis mod_mult_eq)
   apply simp
   done
@@ -3822,7 +3813,7 @@ lemma from_bool_0:
 
 definition
   to_bool :: "'a::len word \<Rightarrow> bool" where
-  "to_bool \<equiv> (op \<noteq>) 0"
+  "to_bool \<equiv> (\<noteq>) 0"
 
 lemma to_bool_and_1:
   "to_bool (x && 1) = (x !! 0)"
@@ -4178,7 +4169,7 @@ lemma uint_2_id:
 
 lemma bintrunc_id:
   "\<lbrakk>m \<le> of_nat n; 0 < m\<rbrakk> \<Longrightarrow> bintrunc n m = m"
-  by (simp add: bintrunc_mod2p le_less_trans int_mod_eq')
+  by (simp add: bintrunc_mod2p le_less_trans)
 
 lemma shiftr1_unfold: "shiftr1 x = x >> 1"
   by (metis One_nat_def comp_apply funpow.simps(1) funpow.simps(2) id_apply shiftr_def)
@@ -4429,8 +4420,7 @@ lemma card_map_elide:
      apply force
     apply clarsimp
     apply (subst (asm) card_word)
-    apply (metis (erased, hide_lams) Divides.mod_less_eq_dividend order_less_le_trans unat_of_nat
-                 word_less_nat_alt)
+    using unat_less_helper apply blast
    by clarsimp+
 
 lemma card_map_elide2:
@@ -5185,8 +5175,7 @@ next
       apply (clarsimp simp: field_simps)
       apply (rule ccontr)
       apply (drule (1) order_le_neq_trans)
-      apply (simp)
-      done
+      by auto
 
     then have "2 ^ (len_of TYPE('a) - n) - 1 < k" using r
       by simp
@@ -5376,7 +5365,7 @@ lemma is_aligned_diff_neg_mask:
   done
 
 lemma map_bits_rev_to_bl:
-  "map (op !! x) [0..<size x] = rev (to_bl x)"
+  "map ((!!) x) [0..<size x] = rev (to_bl x)"
   by (auto simp: list_eq_iff_nth_eq test_bit_bl word_size)
 
 (* negating a mask which has been shifted to the very left *)

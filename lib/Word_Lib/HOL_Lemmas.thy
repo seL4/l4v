@@ -81,7 +81,7 @@ next
       by (rule  div_mult_mod_eq [symmetric])
 
     moreover have "a ^ m mod a ^ n = 0"
-      by (subst mod_eq_0_iff, rule exI [where x = "a ^ q"],
+      by (subst mod_eq_0_iff_dvd, subst dvd_def, rule exI [where x = "a ^ q"],
       (subst power_add [symmetric] mv)+, rule refl)
 
     ultimately show "(a ^ m div a ^ n) * a ^ n = a ^ m" by simp
@@ -123,8 +123,7 @@ qed
 lemma nat_le_power_trans:
   fixes n :: nat
   shows "\<lbrakk>n \<le> 2 ^ (m - k); k \<le> m\<rbrakk> \<Longrightarrow> 2 ^ k * n \<le> 2 ^ m"
-  by (metis le_imp_less_or_eq less_imp_le nat_less_power_trans power_sub split_div_lemma
-            zero_less_numeral zero_less_power)
+  by (metis le_add_diff_inverse mult_le_mono2 semiring_normalization_rules(26))
 
 lemma x_power_minus_1:
   fixes x :: "'a :: {ab_group_add, power, numeral, one}"
