@@ -26,7 +26,7 @@ CABAL=stack exec -- ./stack-path cabal
 # warnings that are useless during large Haskell updates
 GHC_DEV_OPTS=--ghc-options=""
 
-all: build-arm build-arm-hyp-nosmmu build-x64
+all: build-riscv build-arm build-arm-hyp-nosmmu build-x64
 
 sandbox: .stack-work
 	$(CABAL) sandbox init
@@ -56,6 +56,11 @@ build-x64: sandbox $(BOOT_FILES)
 	    --builddir="dist/x64"
 	$(CABAL) build --builddir="dist/x64"
 
+build-riscv: sandbox $(BOOT_FILES)
+	$(CABAL) configure --configure-option="riscv-spike" \
+	    --flags="ArchRiscV -FFI" \
+	    --builddir="dist/riscv"
+	$(CABAL) build --builddir="dist/riscv"
 
 # We assume that if the .stack-work directory exists,
 # we don't need to install ghc, cabal, nor fetch the cabal

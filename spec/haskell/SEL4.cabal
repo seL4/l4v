@@ -33,6 +33,10 @@ Flag ArchX64
     description:        Include x86 64-bit modules and platforms
     default:            False
 
+Flag ArchRiscV
+    description:        Include RISC-V 64-bit modules and platforms
+    default:            False
+
 Library
     exposed-modules:        SEL4
                             SEL4.Machine.Target
@@ -166,6 +170,10 @@ Library
                             SEL4.Machine.Hardware.X64
 
                             SEL4.Machine.Hardware.X64.PC99
+
+    if flag(ArchRiscV)
+        other-modules:
+                            -- FIXME RISCV TODO
 
     hs-source-dirs:         src
     ghc-prof-options:       -auto-all -prof -fprof-auto
