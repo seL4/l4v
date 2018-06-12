@@ -10,13 +10,15 @@
 
 chapter "C-Parser"
 
-session "Simpl-VCG" = "HOL-Word" +
+session "Simpl-VCG" = Word_Lib +
   sessions
     "HOL-Statespace"
   theories
     "Simpl/Vcg"
 
 session CParser = "Simpl-VCG" +
+  sessions
+    "HOL-Library"
+    "HOL-Word"
   theories
     "CTranslation"
-

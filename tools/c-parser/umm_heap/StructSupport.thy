@@ -9,7 +9,7 @@
  *)
 
 theory StructSupport
-imports SepCode SepInv "../../../lib/Apply_Trace_Cmd"
+imports SepCode SepInv
 begin
 
 lemma field_lookup_list_Some2 [rule_format]:

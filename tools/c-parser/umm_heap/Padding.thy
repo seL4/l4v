@@ -9,7 +9,7 @@
  *)
 
 theory Padding
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 definition padup :: "nat \<Rightarrow> nat \<Rightarrow> nat" where

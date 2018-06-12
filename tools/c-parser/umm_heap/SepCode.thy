@@ -13,7 +13,7 @@
 theory SepCode
 imports
   Separation
-  "../Simpl/Vcg"
+  "Simpl-VCG.Vcg"
 begin
 
 definition

@@ -11,7 +11,7 @@
 theory CProof
 imports
   "umm_heap/SepFrame"
-  "Simpl/Vcg"
+  "Simpl-VCG.Vcg"
   "umm_heap/StructSupport"
   "umm_heap/ArrayAssertion"
 begin
