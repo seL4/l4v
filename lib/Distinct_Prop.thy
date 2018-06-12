@@ -10,10 +10,10 @@
 
 chapter "Distinct Proposition"
 
-theory Distinct_Prop
+theory Distinct_Prop  (* part of non-AFP Word_Lib *)
 imports
   "Word_Lib/HOL_Lemmas"
-  "~~/src/HOL/Library/Prefix_Order"
+  "HOL-Library.Prefix_Order"
 begin
 
 primrec

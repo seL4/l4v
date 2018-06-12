@@ -12,7 +12,7 @@ section "Print Words in Hex"
 
 theory Hex_Words
 imports
-  "~~/src/HOL/Word/Word"
+  "HOL-Word.Word"
 begin
 
 text \<open>Print words in hex.\<close>
