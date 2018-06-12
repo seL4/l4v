@@ -28,15 +28,15 @@ lemma pred_tcb_at_upd_apply:
 
 
 text {* The top-level invariance *}
-
-lemma akernel_invs:
+(*
+lemma akernel_invs_det_ext:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
   (call_kernel e) :: (unit,det_ext) s_monad
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
   unfolding call_kernel_def
-  sorry
+  *)
 
-lemma akernel_invs_det_ext:
+lemma akernel_invs:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
   (call_kernel e) :: (unit,det_ext) s_monad
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"

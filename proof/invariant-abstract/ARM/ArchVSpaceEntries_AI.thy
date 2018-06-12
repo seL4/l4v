@@ -728,7 +728,7 @@ lemma refill_unblock_check_valid_pdpt_objs[wp]:
      wp: get_sched_context_wp hoare_vcg_if_lift2 hoare_drop_imps)
 
 crunch valid_pdpt_objs[wp]: do_reply_transfer "valid_pdpt_objs"
-  (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps
+  (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps hoare_vcg_if_lift2
    ignore: tcb_release_remove set_object tcb_release_enqueue
    simp: unless_def is_round_robin_def)
 
@@ -1696,7 +1696,7 @@ crunch ct_active: set_thread_state_ext ct_active
   (wp: ignore: set_object)
 
 lemma check_budget_restart_invs:
-  "\<lbrace>invs and ct_active\<rbrace> check_budget_restart \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs\<rbrace> check_budget_restart \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: check_budget_restart_def)
   apply (rule hoare_seq_ext[rotated])
   apply (rule check_budget_invs)

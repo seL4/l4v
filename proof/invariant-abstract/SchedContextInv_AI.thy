@@ -1243,10 +1243,11 @@ lemma
    invoke_sched_control_configure (InvokeSchedControlConfigure scptr budget period mrefills badge)
    \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
   apply (clarsimp simp: invoke_sched_control_configure_def)
-  apply (rule conjI; wpsimp simp: invoke_sched_control_configure_def split_def cong: if_cong conj_cong
+  apply (rule conjI;
+         wpsimp simp: invoke_sched_control_configure_def split_def
              wp: hoare_vcg_if_lift2 get_sched_context_wp commit_time_valid_refills hoare_gets_sp
                  hoare_drop_imp set_sched_context_valid_refills_no_budget_update hoare_when_wp
-            split_del: if_split)
+            cong: if_cong conj_cong split_del: if_split)
   by (clarsimp simp: valid_refills_def sc_valid_refills_def obj_at_def MIN_REFILLS_def refills_sum_def)+
 
 end
@@ -1289,8 +1290,8 @@ lemma invoke_sched_control_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
      invoke_sched_control_configure i
    \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  by (cases i; wpsimp simp: invoke_sched_control_configure_def split_del: if_splits
-                  wp: hoare_vcg_if_lift2 hoare_drop_imp)
+  by (cases i; wpsimp simp: invoke_sched_control_configure_def
+                  split_del: if_split wp: hoare_vcg_if_lift2 hoare_drop_imp)
 
 lemma invoke_sched_context_tcb[wp]:
   "\<lbrace>tcb_at tptr\<rbrace> invoke_sched_context i \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
@@ -1527,86 +1528,54 @@ crunch ct_active[wp]: tcb_sched_action, tcb_release_remove,test_reschedule ct_ac
 crunch ct_active[wp]: tcb_release_enqueue,sort_queue ct_active
   (ignore: set_thread_state_ext set_object wp: hoare_drop_imps mapM_wp')
 
-lemma send_ipc_active[wp]:
-  "\<lbrace>ct_active\<rbrace>
-      send_ipc block call badge can_grant can_donate thread epptr \<lbrace> \<lambda>_ . ct_active\<rbrace>"
-  apply (clarsimp simp: send_ipc_def)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (case_tac ep; cases block; simp)
-  apply (wpsimp simp: send_ipc_def set_simple_ko_def set_object_def set_thread_state_def
-       wp: get_sched_context_wp get_object_wp hoare_drop_imp hoare_vcg_if_lift2
-       split_del: if_split)
-  sorry
-
-lemma send_fault_ipc_active[wp]:
-  "\<lbrace>ct_active\<rbrace> send_fault_ipc tptr handler_cap fault can_donate \<lbrace> \<lambda>_ . ct_active\<rbrace>"
-  apply (wpsimp simp: send_fault_ipc_def thread_set_def set_object_def
-      wp: get_sched_context_wp)
-  apply (clarsimp dest!: get_tcb_SomeD simp: pred_tcb_at_def obj_at_def)
-sorry
-
-
-lemma handle_timeout_active[wp]:
-  "\<lbrace>ct_active\<rbrace> handle_timeout tptr ex \<lbrace> \<lambda>_ . ct_active\<rbrace>"
-  by (wpsimp simp: handle_timeout_def wp: get_sched_context_wp)
-
-lemma end_timeslice_active[wp]:
-  "\<lbrace>ct_active\<rbrace> end_timeslice canTimeout \<lbrace> \<lambda>_ . ct_active\<rbrace>"
-  by (wpsimp simp: end_timeslice_def handle_timeout_def wp: get_sched_context_wp)
-
 lemma refill_budget_check_active[wp]:
   "\<lbrace>ct_active\<rbrace> refill_budget_check csc_ptr consumed capacity \<lbrace> \<lambda>_ . ct_active\<rbrace>"
   by (wpsimp simp: refill_budget_check_def set_refills_def
        wp: hoare_drop_imp get_sched_context_wp split_del: if_split)
 
-lemma charge_budget_ct_active[wp]:
-  "\<lbrace>ct_active\<rbrace> charge_budget capacity consumed canTimeout \<lbrace> \<lambda>_. ct_active\<rbrace>"
-  by (wpsimp simp: charge_budget_def Let_def wp: get_sched_context_wp)
-
-lemma check_budget_ct_active[wp]:
-  "\<lbrace>ct_active\<rbrace> check_budget \<lbrace> \<lambda>_. ct_active\<rbrace>"
-  by (wpsimp simp: check_budget_def Let_def refill_capacity_def
-      wp: get_sched_context_wp hoare_drop_imps get_refills_wp)
-
-lemma check_budget_restart_ct_active[wp]:
-  "\<lbrace>ct_active\<rbrace> check_budget_restart \<lbrace> \<lambda>_. ct_active\<rbrace>"
-  apply (wpsimp simp: check_budget_restart_def Let_def refill_capacity_def set_thread_state_def set_object_def
-      wp: get_sched_context_wp hoare_drop_imps get_refills_wp hoare_vcg_if_lift2)
-  sorry
+lemma charge_budget_invs_helper:
+  "\<lbrace>invs \<rbrace> do
+     ct <- gets cur_thread;
+     st <- get_thread_state ct;
+     when (runnable st) (do y <- end_timeslice canTimeout;
+                            y <- reschedule_required;
+                            modify (reprogram_timer_update (\<lambda>_. True))
+                          od) od \<lbrace> \<lambda>_. invs \<rbrace>"
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (wpsimp wp: end_timeslice_invs)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def ct_in_state_def)
+  apply (case_tac "tcb_state tcb"; clarsimp)
+  done
 
 lemma charge_budget_invs:
-  "\<lbrace>invs and ct_active\<rbrace>
-     charge_budget capacity consumed canTimeout \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs\<rbrace> charge_budget capacity consumed canTimeout \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: charge_budget_def is_round_robin_def)
   by (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp hoare_vcg_all_lift refill_budget_check_invs
-                 sc_consumed_add_invs update_sched_context_sc_refills_update_invs end_timeslice_invs
+                 sc_consumed_add_invs update_sched_context_sc_refills_update_invs
+                 charge_budget_invs_helper
             split_del: if_split simp: set_object_def Let_def set_refills_def)
 
 lemma check_budget_invs:
-  "\<lbrace>invs and ct_active\<rbrace> check_budget \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs\<rbrace> check_budget \<lbrace>\<lambda>rv. invs\<rbrace>"
     by (wpsimp simp: check_budget_def refill_full_def refill_size_def
             wp: get_refills_inv hoare_drop_imp get_sched_context_wp charge_budget_invs)
 
 crunch invs[wp]: tcb_release_remove invs
 
-thm invoke_sched_control_configure_def
 lemma invoke_sched_control_configure_invs[wp]:
-  "\<lbrace>invs and valid_sched_control_inv i and ct_active\<rbrace>
+  "\<lbrace>invs and valid_sched_control_inv i\<rbrace>
          invoke_sched_control_configure i \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (cases i)
-  apply (clarsimp simp: invoke_sched_control_configure_def split del: if_split)
-  by (wpsimp simp: invoke_sched_control_configure_def valid_sched_control_inv_def split_def
-      split_del: if_split
-      wp: commit_time_invs update_sc_badge_invs hoare_vcg_if_lift2 check_budget_invs
-         hoare_drop_imp get_sched_context_wp charge_budget_invs hoare_vcg_all_lift
-         refill_update_invs)
-
+  apply (rename_tac sc_ptr budget period mrefills badge)
+  apply (clarsimp simp: invoke_sched_control_configure_def split_def
+      split del: if_split)
+  apply (wpsimp wp: refill_update_invs update_sc_badge_invs hoare_vcg_if_lift2
+                    hoare_drop_imp get_sched_context_wp commit_time_invs check_budget_invs
+                split_del: if_split)
+  done
 
 text {* set_thread_state and schedcontext/schedcontrol invocations *}
-
-lemma sts_idle_thread[wp]:
-  "\<lbrace>\<lambda>s. t \<noteq> idle_thread s\<rbrace> set_thread_state t' st \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
-  by (wpsimp simp: set_thread_state_def set_object_def sc_ntfn_sc_at_def obj_at_def)
 
 lemma sts_sc_ntfn_sc_at:
   "\<lbrace>sc_ntfn_sc_at P scp\<rbrace> set_thread_state t' st \<lbrace>\<lambda>_. sc_ntfn_sc_at P scp\<rbrace>"

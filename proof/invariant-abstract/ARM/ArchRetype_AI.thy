@@ -1352,6 +1352,9 @@ lemma valid_arch_mdb_detype:
          (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
   by auto
 
+crunch bound_sc_tcb_at[wp]: init_arch_objects "bound_sc_tcb_at P t"
+  (wp: crunch_wps)
+
 end
 
 lemmas clearMemory_invs[wp] = ARM.clearMemory_invs

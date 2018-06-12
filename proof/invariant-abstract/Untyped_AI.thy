@@ -2883,6 +2883,19 @@ lemma reset_untyped_cap_st_tcb_at:
                         bits_of_def is_cap_simps)
   done
 
+lemma reset_untyped_cap_bound_sc_tcb_at:
+  "\<lbrace>invs and bound_sc_tcb_at P t and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot\<rbrace>
+    reset_untyped_cap slot
+  \<lbrace>\<lambda>_. bound_sc_tcb_at P t\<rbrace>, \<lbrace>\<lambda>_. bound_sc_tcb_at P t\<rbrace>"
+  apply (simp add: reset_untyped_cap_def)
+  apply (rule hoare_pre)
+   apply (wp mapME_x_inv_wp preemption_point_inv | simp add: unless_def)+
+    apply (simp add: delete_objects_def)
+    apply (wp get_cap_wp hoare_vcg_const_imp_lift | simp)+
+  apply (auto simp: cte_wp_at_caps_of_state cap_range_def
+                        bits_of_def is_cap_simps)
+  done
+
 lemma create_cap_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap
      and cte_wp_at ((=) cap.NullCap) cref\<rbrace>

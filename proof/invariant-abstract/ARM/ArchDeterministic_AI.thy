@@ -57,7 +57,8 @@ lemma perform_page_invocation_valid_list[wp]:
 
 crunch valid_list[wp]: update_waiting_ntfn, invoke_domain valid_list
 crunch valid_list[wp]: do_reply_transfer valid_list
- (simp: is_round_robin_def wp: maybeM_inv get_refills_wp hoare_vcg_if_lift2 get_sched_context_wp)
+ (simp: is_round_robin_def
+  wp: maybeM_inv get_refills_wp hoare_vcg_if_lift2 get_sched_context_wp hoare_drop_imps)
 
 lemma send_signal_valid_list[wp]: "\<lbrace>valid_list\<rbrace> send_signal param_a param_b \<lbrace>\<lambda>_. valid_list\<rbrace>"
   by (wpsimp simp: send_signal_def wp: get_simple_ko_wp)

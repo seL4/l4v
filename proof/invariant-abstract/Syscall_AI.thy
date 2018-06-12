@@ -1392,6 +1392,9 @@ crunch state_refs_of[wp]: empty_slot "\<lambda>s::det_ext state. P (state_refs_o
 
 lemmas sts_st_tcb_at_other = sts_st_tcb_at_neq[where proj=itcb_state]
 
+crunch st_tcb_at_runnable[wp]: sort_queue "st_tcb_at runnable t"
+  (wp: mapM_wp')
+
 lemma send_ipc_st_tcb_at_runnable:
   "\<lbrace>st_tcb_at runnable t and (\<lambda>s. sym_refs (state_refs_of s)) and K (thread \<noteq> t) \<rbrace>
    send_ipc block call badge can_grant can_donate thread epptr
@@ -1454,14 +1457,12 @@ lemma send_fault_ipc_st_tcb_at_runnable:
    send_fault_ipc t' handler_cap fault can_donate \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
   unfolding send_fault_ipc_def
   apply (rule hoare_pre, wp)
-(*     apply (clarsimp simp: Let_def)
      apply wpc
                 apply (wp send_ipc_st_tcb_at_runnable thread_set_no_change_tcb_state thread_set_refs_trivial
                           hoare_vcg_all_lift_R thread_get_wp
                         | clarsimp
                         | wp_once hoare_drop_imps)+
-  apply (clarsimp simp:  pred_tcb_at_def obj_at_def is_tcb)
-  done*) sorry
+  done
 
 lemma handle_fault_st_tcb_at_runnable:
   "\<lbrace>st_tcb_at runnable t and invs and K (t' \<noteq> t) \<rbrace>
