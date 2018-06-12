@@ -9,7 +9,7 @@
  *)
 
 theory signed_div
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "signed_div.c"

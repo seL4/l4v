@@ -9,7 +9,7 @@
  *)
 
 theory parse_include
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 new_C_include_dir "includes"

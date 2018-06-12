@@ -9,7 +9,7 @@
  *)
 
 theory void_ptr_init
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "void_ptr_init.c"

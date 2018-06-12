@@ -9,7 +9,7 @@
  *)
 
 theory modifies_assumptions
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "modifies_assumptions.c"

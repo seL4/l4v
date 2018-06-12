@@ -9,7 +9,7 @@
  *)
 
 theory switch_unsigned_signed
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "switch_unsigned_signed.c"

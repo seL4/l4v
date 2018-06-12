@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 theory globsall_addressed
-  imports "../CTranslation"
+  imports "CParser.CTranslation"
 begin
 
   declare [[globals_all_addressed=true]]

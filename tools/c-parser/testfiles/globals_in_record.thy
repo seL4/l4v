@@ -10,7 +10,7 @@
 
 theory globals_in_record
 imports
-  "../CTranslation"
+  "CParser.CTranslation"
 begin
 
 install_C_file "globals_in_record.c"

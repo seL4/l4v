@@ -9,7 +9,7 @@
  *)
 
 theory int_promotion
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "int_promotion.c"

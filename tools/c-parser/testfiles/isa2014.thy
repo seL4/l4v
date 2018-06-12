@@ -9,7 +9,7 @@
  *)
 
 theory isa2014
-  imports "../CTranslation"
+  imports "CParser.CTranslation"
 begin
 
   install_C_file "isa2014.c"

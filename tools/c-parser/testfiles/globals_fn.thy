@@ -9,7 +9,7 @@
  *)
 
 theory globals_fn
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "globals_fn.c"

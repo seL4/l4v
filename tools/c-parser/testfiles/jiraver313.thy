@@ -9,7 +9,7 @@
  *)
 
 theory jiraver313
-  imports "../CTranslation"
+  imports "CParser.CTranslation"
 begin
 
 ML {* Feedback.verbosity_level := 6 *}

@@ -9,7 +9,7 @@
  *)
 
 theory really_simple
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "really_simple.c"

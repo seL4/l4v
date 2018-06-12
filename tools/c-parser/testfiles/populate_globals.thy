@@ -9,7 +9,7 @@
  *)
 
 theory populate_globals
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 declare [[globals_all_addressed=true,populate_globals=true]]

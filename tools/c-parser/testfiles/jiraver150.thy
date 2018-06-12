@@ -9,7 +9,7 @@
  *)
 
 theory jiraver150
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 declare [[use_anonymous_local_variables=true]]

@@ -9,7 +9,7 @@
  *)
 
 theory ummbug20100217
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "ummbug20100217.c"

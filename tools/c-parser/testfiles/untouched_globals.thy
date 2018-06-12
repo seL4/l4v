@@ -9,7 +9,7 @@
  *)
 
 theory untouched_globals
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 declare [[record_globinits=true]]

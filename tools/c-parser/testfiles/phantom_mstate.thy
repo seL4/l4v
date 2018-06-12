@@ -9,7 +9,7 @@
  *)
 
 theory phantom_mstate
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "phantom_mstate.c" [machinety=bool]

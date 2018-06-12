@@ -10,7 +10,7 @@
 
 theory jiraver881
 
-imports "../CTranslation"
+imports "CParser.CTranslation"
 
 begin
 

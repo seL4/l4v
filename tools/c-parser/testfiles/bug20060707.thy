@@ -9,7 +9,7 @@
  *)
 
 theory bug20060707
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "bug20060707.c"

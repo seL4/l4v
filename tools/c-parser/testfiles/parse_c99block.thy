@@ -9,7 +9,7 @@
  *)
 
 theory parse_c99block
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "parse_c99block.c"

@@ -9,7 +9,7 @@
  *)
 
 theory test_locality
-imports "../../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "test_include2.h"

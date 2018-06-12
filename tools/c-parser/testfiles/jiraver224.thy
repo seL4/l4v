@@ -9,7 +9,7 @@
  *)
 
 theory jiraver224
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "jiraver224.c"

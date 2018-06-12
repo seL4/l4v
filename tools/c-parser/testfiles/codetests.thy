@@ -9,7 +9,7 @@
  *)
 
 theory codetests
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 ML {* Context.>> (Context.map_theory (

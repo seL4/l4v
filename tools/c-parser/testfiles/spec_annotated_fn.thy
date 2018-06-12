@@ -9,7 +9,7 @@
  *)
 
 theory spec_annotated_fn
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 declare sep_conj_ac [simp add]

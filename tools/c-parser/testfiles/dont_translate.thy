@@ -9,7 +9,7 @@
  *)
 
 theory dont_translate
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "dont_translate.c"

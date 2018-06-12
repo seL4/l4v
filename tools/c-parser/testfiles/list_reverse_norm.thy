@@ -9,7 +9,7 @@
  *)
 
 theory list_reverse_norm
-imports "../CTranslation" "$L4V_ARCH/imports/MachineWords"
+imports "CParser.CTranslation" "$L4V_ARCH/imports/MachineWords"
 begin
 
 declare sep_conj_ac [simp add]

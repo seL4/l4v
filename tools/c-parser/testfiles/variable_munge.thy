@@ -9,7 +9,7 @@
  *)
 
 theory variable_munge
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "variable_munge.c"

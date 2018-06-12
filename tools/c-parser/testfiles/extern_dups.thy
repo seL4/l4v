@@ -9,7 +9,7 @@
  *)
 
 theory extern_dups
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "extern_dups.c"

@@ -9,7 +9,7 @@
  *)
 
 theory analsignedoverflow
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 declare [[anal_integer_conversion=true]]

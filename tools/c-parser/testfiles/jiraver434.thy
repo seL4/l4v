@@ -9,7 +9,7 @@
  *)
 
 theory jiraver434
-  imports "../CTranslation"
+  imports "CParser.CTranslation"
 
 begin
 

@@ -9,7 +9,7 @@
  *)
 
 theory modifies_speed
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 text {* Speed test for modifies proofs. *}
