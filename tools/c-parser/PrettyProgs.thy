@@ -11,7 +11,7 @@
 chapter "Prettier Printing for Programs"
 
 theory PrettyProgs
-imports "Simpl/Vcg"
+imports "Simpl-VCG.Vcg"
 begin
 
 syntax (output)

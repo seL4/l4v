@@ -13,7 +13,7 @@
 
 theory Arrays
 imports
-  "~~/src/HOL/Library/Numeral_Type"
+  "HOL-Library.Numeral_Type"
 begin
 
 definition
