@@ -11,7 +11,7 @@
 section "Signed Words"
 
 theory Signed_Words
-imports "~~/src/HOL/Word/Word"
+imports "HOL-Word.Word"
 begin
 
 text \<open>Signed words as separate (isomorphic) word length class. Useful for tagging words in C.\<close>

@@ -12,7 +12,7 @@ section "Displaying Phantom Types for Word Operations"
 
 theory Word_Type_Syntax
 imports
-  "~~/src/HOL/Word/Word"
+  "HOL-Word.Word"
 begin
 
 ML \<open>
