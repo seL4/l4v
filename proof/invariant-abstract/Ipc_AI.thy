@@ -1950,31 +1950,25 @@ lemma thread_get_tcb_at:
   unfolding thread_get_def
   by (wp, clarsimp simp add: get_tcb_ko_at tcb_at_def)
 
-
 lemmas st_tcb_ex_cap' = st_tcb_ex_cap [OF _ invs_iflive]
-
 
 lemma cap_delete_one_tcb_at [wp]:
   "\<lbrace>\<lambda>s. P (tcb_at p s)\<rbrace> cap_delete_one slot \<lbrace>\<lambda>_ s'. P (tcb_at p s')\<rbrace>"
   by (clarsimp simp add: tcb_at_typ, rule cap_delete_one_typ_at)
 
-
 lemma cap_delete_one_ep_at [wp]:
   "\<lbrace>\<lambda>s. P (ep_at word s)\<rbrace> cap_delete_one slot \<lbrace>\<lambda>_ s'. P (ep_at word s')\<rbrace>"
   by (simp add: ep_at_typ, wp)
 
-
 lemma cap_delete_one_ntfn_at [wp]:
   "\<lbrace>\<lambda>s. P (ntfn_at word s)\<rbrace> cap_delete_one slot \<lbrace>\<lambda>_ s'. P (ntfn_at word s')\<rbrace>"
   by (simp add: ntfn_at_typ, wp)
-
 
 lemma cap_delete_one_valid_tcb_state:
   "\<lbrace>\<lambda>s. P (valid_tcb_state st s)\<rbrace> cap_delete_one slot \<lbrace>\<lambda>_ s'. P (valid_tcb_state st s')\<rbrace>"
   apply (simp add: valid_tcb_state_def)
   apply (cases st, (wp | simp)+)
   done
-
 
 lemma cte_wp_at_reply_cap_can_fast_finalise:
   "cte_wp_at (op = (cap.ReplyCap tcb v)) slot s \<longrightarrow> cte_wp_at can_fast_finalise slot s"
@@ -3118,11 +3112,10 @@ end
 
 crunch pred_tcb_at[wp]: set_message_info "pred_tcb_at proj P t"
 
-
 lemma rai_pred_tcb_neq:
   "\<lbrace>pred_tcb_at proj P t' and K (t \<noteq> t')\<rbrace>
-  receive_signal t cap is_blocking
-  \<lbrace>\<lambda>rv. pred_tcb_at proj P t'\<rbrace>"
+     receive_signal t cap is_blocking
+   \<lbrace>\<lambda>rv. pred_tcb_at proj P t'\<rbrace>"
   apply (simp add: receive_signal_def)
   apply (rule hoare_pre)
    by (wp sts_st_tcb_at_neq get_simple_ko_wp | wpc | clarsimp simp add: do_nbrecv_failed_transfer_def)+

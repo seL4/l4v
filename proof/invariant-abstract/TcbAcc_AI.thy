@@ -720,18 +720,15 @@ lemma as_user_ct: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> as_user t m \<
   apply simp
   done
 
-
 lemma as_user_cur [wp]:
   "\<lbrace>cur_tcb\<rbrace> as_user t f \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
   by (wp as_user_wp_thread_set_helper) simp
-
 
 lemma as_user_cte_wp_at [wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at P' c s)\<rbrace> as_user p' f \<lbrace>\<lambda>rv s. P (cte_wp_at P' c s)\<rbrace>"
   by (wp as_user_wp_thread_set_helper
          thread_set_cte_wp_at_trivial
          ball_tcb_cap_casesI | simp)+
-
 
 lemma as_user_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> as_user t m \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
@@ -1859,7 +1856,6 @@ lemma set_mrs_pred_tcb_at [wp]:
    apply (simp add: tcb_to_itcb_def)
   apply wp
   done
-
 
 lemma get_tcb_ko_atD:
   "get_tcb t s = Some tcb \<Longrightarrow> ko_at (TCB tcb) t s"
