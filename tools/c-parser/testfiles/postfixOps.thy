@@ -9,7 +9,7 @@
  *)
 
 theory postfixOps
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "postfixOps.c"

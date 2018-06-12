@@ -9,7 +9,7 @@
  *)
 
 theory builtins
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "builtins.c"

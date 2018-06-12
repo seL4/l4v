@@ -9,7 +9,7 @@
  *)
 
 theory jiraver464
-  imports "../CTranslation"
+  imports "CParser.CTranslation"
 begin
 
 (* declare [[calculate_modifies_proofs=false]] *)

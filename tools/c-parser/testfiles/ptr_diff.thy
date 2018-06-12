@@ -9,7 +9,7 @@
  *)
 
 theory ptr_diff
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "ptr_diff.c"

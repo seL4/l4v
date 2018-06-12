@@ -9,7 +9,7 @@
  *)
 
 theory parse_sizeof
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "parse_sizeof.c"

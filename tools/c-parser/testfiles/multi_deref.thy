@@ -9,7 +9,7 @@
  *)
 
 theory multi_deref
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "multi_deref.c"

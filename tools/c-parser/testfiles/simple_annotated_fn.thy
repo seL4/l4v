@@ -9,7 +9,7 @@
  *)
 
 theory simple_annotated_fn
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 consts

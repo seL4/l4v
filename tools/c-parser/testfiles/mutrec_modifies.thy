@@ -9,7 +9,7 @@
  *)
 
 theory mutrec_modifies
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "mutrec_modifies.c"

@@ -9,7 +9,7 @@
  *)
 
 theory parse_fncall
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "parse_fncall.c"

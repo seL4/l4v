@@ -9,7 +9,7 @@
  *)
 
 theory test_shifts
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "test_shifts.c"

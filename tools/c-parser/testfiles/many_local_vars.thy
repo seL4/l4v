@@ -10,7 +10,7 @@
 
 theory many_local_vars
 imports
-  "../CTranslation"
+  "CParser.CTranslation"
 begin
 
 (* Avoid memory explosion caused by the C parser generating a huge record

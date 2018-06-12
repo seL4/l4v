@@ -9,7 +9,7 @@
  *)
 
 theory fnptr
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 ML {*

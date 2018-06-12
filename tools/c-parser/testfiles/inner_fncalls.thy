@@ -9,7 +9,7 @@
  *)
 
 theory inner_fncalls
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "inner_fncalls.c"

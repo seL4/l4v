@@ -9,7 +9,7 @@
  *)
 
 theory parse_struct_array
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "parse_struct_array.c"

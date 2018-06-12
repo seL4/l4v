@@ -9,7 +9,7 @@
  *)
 
 theory breakcontinue
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 declare sep_conj_ac [simp add]

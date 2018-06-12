@@ -9,7 +9,7 @@
  *)
 
 theory swap
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 declare hrs_simps [simp add]

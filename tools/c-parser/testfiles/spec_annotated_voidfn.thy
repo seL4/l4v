@@ -9,7 +9,7 @@
  *)
 
 theory spec_annotated_voidfn
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "spec_annotated_voidfn.c"

@@ -9,7 +9,7 @@
  *)
 
 theory jiraver426
-  imports "../CTranslation"
+  imports "CParser.CTranslation"
 begin
 
 install_C_file "jiraver426.c"

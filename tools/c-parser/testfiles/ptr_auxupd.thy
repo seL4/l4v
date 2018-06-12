@@ -9,7 +9,7 @@
  *)
 
 theory ptr_auxupd
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 definition

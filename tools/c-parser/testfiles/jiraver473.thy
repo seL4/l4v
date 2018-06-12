@@ -9,7 +9,7 @@
  *)
 
 theory jiraver473
-  imports "../CTranslation"
+  imports "CParser.CTranslation"
 begin
 
   declare [[munge_info_fname="jiraver473.minfo"]]

@@ -9,7 +9,7 @@
  *)
 
 theory ghoststate1
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "simple_annotated_fn.c" [ghostty="nat \<Rightarrow> nat"]

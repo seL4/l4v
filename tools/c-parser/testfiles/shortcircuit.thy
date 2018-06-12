@@ -9,7 +9,7 @@
  *)
 
 theory shortcircuit
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "shortcircuit.c"

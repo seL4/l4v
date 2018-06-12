@@ -9,7 +9,7 @@
  *)
 
 theory jiraver332
-  imports "../CTranslation"
+  imports "CParser.CTranslation"
 begin
 
   install_C_file "jiraver332.c"

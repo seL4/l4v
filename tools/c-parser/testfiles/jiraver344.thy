@@ -9,7 +9,7 @@
  *)
 
 theory jiraver344
-  imports "../CTranslation"
+  imports "CParser.CTranslation"
 begin
 
 declare [[allow_underscore_idents=true]]

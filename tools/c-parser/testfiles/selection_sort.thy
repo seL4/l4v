@@ -9,7 +9,7 @@
  *)
 
 theory selection_sort
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "selection_sort.c"

@@ -9,7 +9,7 @@
  *)
 
 theory simple_constexpr_sizeof
-imports "../CTranslation"
+imports "CParser.CTranslation"
 begin
 
 install_C_file "simple_constexpr_sizeof.c"

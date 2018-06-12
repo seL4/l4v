@@ -11,7 +11,7 @@
 
 theory jiraver550
 imports
-  "../../../lib/CTranslationNICTA"
+  "../../../lCParser.CTranslationNICTA"
 begin
 
 install_C_file "jiraver550.c"

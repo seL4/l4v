@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory parse_spec imports "../CTranslation"  begin
+theory parse_spec imports "CParser.CTranslation"  begin
 
 install_C_file "parse_spec.c"
 
