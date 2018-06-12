@@ -416,9 +416,10 @@ def main():
     parser.add_argument("--no-dependencies", action="store_true",
             help="don't check for dependencies when running specific tests")
     parser.add_argument("-x", "--exclude", action="append", metavar="TEST", default=[],
-            help="exclude tests (one -x per test)")
+            help="exclude the given test; tests depending on it may still run")
+    # FIXME: get this to work with test selection
     parser.add_argument("-r", "--remove", action="append", metavar="TEST", default=[],
-            help="remove tests from the default set (when no implicit goal is given)")
+            help="remove the given test and tests that depend on it (if tests are not manually selected)")
     parser.add_argument("-v", "--verbose", action="store_true",
             help="print test output or list more details")
     parser.add_argument("--junit-report", metavar="FILE",
@@ -433,7 +434,7 @@ def main():
     parser.add_argument("--grace-period", type=float, default=5, metavar='N',
             help="notify processes N seconds before killing them (default: 5)")
     parser.add_argument("tests", metavar="TESTS",
-            help="tests to run (defaults to all tests)",
+            help="select these tests to run (defaults to all tests)",
             nargs="*")
     args = parser.parse_args()
 
@@ -442,6 +443,9 @@ def main():
 
     if args.scale_timeouts <= 0:
         parser.error("--scale-timeouts value must be greater than 0")
+
+    if args.remove and args.tests:
+        parser.error("--remove cannot be used with manual test selection")
 
     # Search for test files:
     test_xml = sorted(rglob(args.directory, "tests.xml"))
