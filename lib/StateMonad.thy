@@ -149,7 +149,7 @@ declare
 
 lemma returnOk_bindE [simp]: "(returnOk x >>=E f) = f x"
   unfolding bindE_def return_def returnOk_def
-  by (clarsimp simp: lift_def)
+  by (clarsimp simp: lift_def bind_def)
 
 lemma lift_return [simp]:
   "lift (return \<circ> Inr) = return"
