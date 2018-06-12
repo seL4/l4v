@@ -754,8 +754,7 @@ lemma ct_in_state_thread_state_lift:
 
 lemma as_user_ct_in_state:
   "\<lbrace>ct_in_state x\<rbrace> as_user t f \<lbrace>\<lambda>_. ct_in_state x\<rbrace>"
-  by (rule ct_in_state_thread_state_lift) (wp as_user_ct)+
-
+  by (rule ct_in_state_thread_state_lift) (wpsimp wp: as_user_ct)+
 
 lemma set_object_ntfn_at:
   "\<lbrace> ntfn_at p and tcb_at r \<rbrace> set_object r obj \<lbrace> \<lambda>rv. ntfn_at p \<rbrace>"
@@ -1853,7 +1852,7 @@ lemma set_mrs_thread_set_dmo:
   apply (wpsimp wp: ts mapM_wp' dmo)
   done
 
-lemma set_mrs_st_tcb [wp]:
+lemma set_mrs_pred_tcb_at [wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_mrs r t' mrs \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   apply (rule set_mrs_thread_set_dmo)
    apply (rule thread_set_no_change_tcb_pred)
