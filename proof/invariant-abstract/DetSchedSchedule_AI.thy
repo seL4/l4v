@@ -613,8 +613,8 @@ lemma as_user_valid_sched_action[wp]: "\<lbrace>valid_sched_action\<rbrace> as_u
   apply (drule get_tcb_SomeD, clarsimp)
   done
 
-lemma as_user_ct_in_cur_domain[wp]: "\<lbrace>ct_in_cur_domain\<rbrace> as_user ptr s \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>"
-  by (simp add: as_user_def set_object_def | wpc | wp)+
+crunch ct_in_cur_domain[wp]: as_user ct_in_cur_domain
+  (wp: ct_in_cur_domain_lift)
 
 lemma as_user_valid_idle_etcb[wp]: "\<lbrace>valid_idle_etcb\<rbrace> as_user ptr s \<lbrace>\<lambda>_. valid_idle_etcb\<rbrace>"
   by (simp add: as_user_def set_object_def | wpc | wp)+
@@ -1945,26 +1945,11 @@ lemma handle_yield_valid_sched[wp]:
 
 crunch valid_sched[wp]: store_word_offs valid_sched
 
-crunch pred_tcb_at[wp]: set_mrs, as_user "pred_tcb_at proj P t"
-
 crunch exst[wp]: set_mrs, as_user "\<lambda>s. P (exst s)"
   (simp: crunch_simps wp: crunch_wps)
 
-crunch it[wp]: as_user "\<lambda>s. P (idle_thread s)"
-
-crunch valid_etcbs[wp]: as_user valid_etcbs (wp: valid_etcbs_lift)
-
-crunch valid_queues[wp]: as_user valid_queues
-  (wp: valid_queues_lift)
-
 crunch ct_not_in_q[wp]: as_user ct_not_in_q
   (wp: ct_not_in_q_lift)
-
-crunch valid_sched_action[wp]: as_user valid_sched_action
-  (wp: valid_sched_action_lift)
-
-crunch ct_in_cur_domain[wp]: as_user ct_in_cur_domain
-  (wp: ct_in_cur_domain_lift)
 
 crunch valid_sched[wp]: set_mrs valid_sched
   (wp: valid_sched_lift)

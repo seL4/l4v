@@ -2062,7 +2062,7 @@ lemma cap_insert_objs [wp]:
     | simp split del: if_split)+
   done
 
-crunch pred_tcb_at[wp]: cap_insert "pred_tcb_at proj P t"
+crunch pred_tcb_at[wp]: cap_insert, set_cdt "pred_tcb_at proj P t"
   (wp: hoare_drop_imps)
 
 

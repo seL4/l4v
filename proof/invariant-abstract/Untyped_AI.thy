@@ -2496,13 +2496,9 @@ lemma detype_clear_um_simps[simp]:
                   cong: if_cong)+
   apply (simp add: clear_um_def)
   done
-crunch pred_tcb_at[wp]: set_cdt "pred_tcb_at proj P t"
-  (simp: pred_tcb_at_def)
 
 crunch pred_tcb_at[wp]: create_cap "pred_tcb_at proj P t"
   (simp: crunch_simps)
-
-crunch pred_tcb_at[wp]: do_machine_op "pred_tcb_at proj P t"
 
 crunch tcb[wp]: create_cap "tcb_at t"
   (simp: crunch_simps)
