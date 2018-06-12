@@ -27,8 +27,31 @@ end_qualify
 -- ---------------------------------------------------------------------------
 section "ARM-specific invariant definitions"
 
+qualify ARM_HYP_A (in Arch)
+record iarch_tcb =
+  itcb_vcpu :: "obj_ref option"
+end_qualify
+
 context Arch begin global_naming ARM
 
+definition
+  arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb"
+where
+  "arch_tcb_to_iarch_tcb arch_tcb \<equiv> \<lparr> itcb_vcpu = tcb_vcpu arch_tcb \<rparr>"
+
+(* Need one of these simp rules for each field in 'iarch_tcb' *)
+lemma arch_tcb_to_iarch_tcb_simps[simp]:
+  "itcb_vcpu (arch_tcb_to_iarch_tcb arch_tcb) = tcb_vcpu arch_tcb"
+  by (auto simp: arch_tcb_to_iarch_tcb_def)
+
+lemma iarch_tcb_context_set[simp]:
+  "arch_tcb_to_iarch_tcb (arch_tcb_context_set p tcb) = arch_tcb_to_iarch_tcb tcb"
+  by (auto simp: arch_tcb_to_iarch_tcb_def arch_tcb_context_set_def)
+
+lemma iarch_tcb_set_registers[simp]:
+  "arch_tcb_to_iarch_tcb (arch_tcb_set_registers regs arch_tcb)
+     = arch_tcb_to_iarch_tcb arch_tcb"
+  by (simp add: arch_tcb_set_registers_def)
 
 lemmas vspace_bits_defs = pd_bits_def pde_bits_def pt_bits_def pte_bits_def pageBits_def
 

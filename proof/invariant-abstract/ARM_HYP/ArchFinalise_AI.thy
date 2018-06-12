@@ -528,18 +528,20 @@ lemma arch_thread_set_valid_reply_masters[wp]:
   "\<lbrace>valid_reply_masters\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. valid_reply_masters\<rbrace>"
   by (rule valid_reply_masters_cte_lift) wp
 
-lemma arch_thread_set_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+lemma arch_thread_set_pred_tcb_at[wp_unsafe]:
+  "\<lbrace>pred_tcb_at proj P t and K (proj_not_field proj tcb_arch_update)\<rbrace>
+     arch_thread_set p v
+   \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: arch_thread_set_def set_object_def)
   apply wp
   apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_rev
-                        tcb_to_itcb_def
                   dest!: get_tcb_SomeD)
   done
 
 lemma arch_thread_set_valid_reply_caps[wp]:
   "\<lbrace>valid_reply_caps\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. valid_reply_caps\<rbrace>"
-  by (rule valid_reply_caps_st_cte_lift) wp+
+  by (rule valid_reply_caps_st_cte_lift)
+     (wpsimp wp: arch_thread_set_pred_tcb_at)+
 
 lemma arch_thread_set_if_unsafe_then_cap[wp]:
   "\<lbrace>if_unsafe_then_cap\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
@@ -556,11 +558,12 @@ lemma arch_thread_set_if_unsafe_then_cap[wp]:
 
 lemma arch_thread_set_only_idle[wp]:
   "\<lbrace>only_idle\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. only_idle\<rbrace>"
-  by (wp only_idle_lift set_asid_pool_typ_at)
+  by (wpsimp wp: only_idle_lift set_asid_pool_typ_at
+                 arch_thread_set_pred_tcb_at)
 
 lemma arch_thread_set_valid_idle[wp]:
   "\<lbrace>valid_idle\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  by (wp valid_idle_lift)
+  by (wpsimp wp: valid_idle_lift arch_thread_set_pred_tcb_at)
 
 lemma arch_thread_set_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. valid_ioc\<rbrace>"
@@ -1380,9 +1383,13 @@ crunch irq_node[Finalise_AI_asms,wp]: prepare_thread_delete "\<lambda>s. P (inte
 crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"
   (simp: crunch_simps wp: crunch_wps)
 
-crunch pred_tcb_at[wp]: arch_finalise_cap "pred_tcb_at proj P t"
-  (simp: crunch_simps wp: crunch_wps)
+crunch pred_tcb_at[wp]:
+  delete_asid_pool, delete_asid, unmap_page_table, unmap_page, vcpu_invalidate_active
+  "pred_tcb_at proj P t"
+  (simp: crunch_simps wp: crunch_wps test)
 
+crunch pred_tcb_at[wp_unsafe]: arch_finalise_cap "pred_tcb_at proj P t"
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma tcb_cap_valid_pagetable:
   "tcb_cap_valid (ArchObjectCap (PageTableCap word (Some v))) slot

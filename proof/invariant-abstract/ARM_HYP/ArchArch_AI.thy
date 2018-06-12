@@ -1780,11 +1780,17 @@ lemma arch_decode_inv_wf[wp]:
 
 declare word_less_sub_le [simp]
 
-crunches associate_vcpu_tcb, vcpu_read_reg, vcpu_write_reg, invoke_vcpu_inject_irq
+crunches associate_vcpu_tcb
+  for pred_tcb_at[wp_unsafe]: "pred_tcb_at proj P t"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunches vcpu_read_reg, vcpu_write_reg, invoke_vcpu_inject_irq
   for pred_tcb_at[wp]: "pred_tcb_at proj P t"
 
-lemma  perform_vcpu_invocation_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> perform_vcpu_invocation iv \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+lemma perform_vcpu_invocation_pred_tcb_at[wp_unsafe]:
+  "\<lbrace>pred_tcb_at proj P t and K (proj_not_field proj tcb_arch_update)\<rbrace>
+     perform_vcpu_invocation iv
+   \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: perform_vcpu_invocation_def)
   apply (rule hoare_pre)
   apply (wp associate_vcpu_tcb_pred_tcb_at | wpc

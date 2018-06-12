@@ -484,6 +484,7 @@ lemma zombie_is_cap_toE_pre[CNodeInv_AI_assms]:
   done
 
 crunch st_tcb_at_halted[wp]: prepare_thread_delete "st_tcb_at halted t"
+  (wp: dissociate_vcpu_tcb_pred_tcb_at)
 
 lemma finalise_cap_makes_halted_proof:
   "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s)
@@ -513,8 +514,8 @@ lemmas finalise_cap_makes_halted = finalise_cap_makes_halted_proof
 
 crunch emptyable[wp, CNodeInv_AI_assms]: finalise_cap "emptyable sl"
   (simp: crunch_simps rule: emptyable_lift
-     wp: crunch_wps suspend_emptyable unbind_notification_invs unbind_maybe_notification_invs)
-
+     wp: crunch_wps suspend_emptyable unbind_notification_invs
+         unbind_maybe_notification_invs arch_finalise_cap_pred_tcb_at)
 
 lemma finalise_cap_not_reply_master_unlifted [CNodeInv_AI_assms]:
   "(rv, s') \<in> fst (finalise_cap cap sl s) \<Longrightarrow>

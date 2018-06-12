@@ -29,7 +29,25 @@ end_qualify
 -- ---------------------------------------------------------------------------
 section "X64-specific invariant definitions"
 
+qualify X64_A (in Arch)
+type_synonym iarch_tcb = unit
+end_qualify
+
 context Arch begin global_naming X64
+
+definition
+  arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb"
+where
+  "arch_tcb_to_iarch_tcb arch_tcb \<equiv> ()"
+
+lemma iarch_tcb_context_set[simp]:
+  "arch_tcb_to_iarch_tcb (arch_tcb_context_set p tcb) = arch_tcb_to_iarch_tcb tcb"
+  by (auto simp: arch_tcb_to_iarch_tcb_def arch_tcb_context_set_def)
+
+lemma iarch_tcb_set_registers[simp]:
+  "arch_tcb_to_iarch_tcb (arch_tcb_set_registers regs arch_tcb)
+     = arch_tcb_to_iarch_tcb arch_tcb"
+  by (simp add: arch_tcb_set_registers_def)
 
 (* These simplifications allows us to keep many arch-specific proofs unchanged. *)
 

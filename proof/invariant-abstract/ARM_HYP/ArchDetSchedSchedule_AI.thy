@@ -327,7 +327,7 @@ crunch cur_thread[wp]: arch_thread_set "\<lambda>s. P (cur_thread s)"
 
 lemma arch_thread_set_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> arch_thread_set f t \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  by (rule valid_sched_lift; wp)
+  by (rule valid_sched_lift; wpsimp wp: arch_thread_set_pred_tcb_at)
 
 crunch ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete ct_not_in_q

@@ -17,6 +17,7 @@ context begin interpretation Arch .
 requalify_types
   vs_chain
   vs_ref
+  iarch_tcb
 
 requalify_consts
   not_kernel_window
@@ -64,6 +65,7 @@ requalify_consts
   tcb_arch_ref
 
   valid_arch_mdb
+  arch_tcb_to_iarch_tcb
 
 requalify_facts
   valid_arch_sizes
@@ -112,6 +114,8 @@ lemmas [simp] =
   tcb_bits_def
   endpoint_bits_def
   ntfn_bits_def
+  iarch_tcb_context_set
+  iarch_tcb_set_registers
 
 end
 
@@ -154,20 +158,21 @@ abbreviation
 
 
 (*
- * sseefried: 'itcb' is projection of the "mostly preserved" fields of 'tcb'. Many functions
- * in the spec will leave these fields of a TCB unchanged. The 'crunch' tool is easily able
- * to ascertain this from the types of the fields.
- *
- * The 'itcb' record is closely associated with the 'pred_tcb_at' definition.
- * 'pred_tcb_at' is used to assert an arbitrary predicate over the fields in 'itcb' for a TCB
- * Before the introduction of this data structure 'st_tcb_at' was defined directly. It is
- * now an abbreviation of a partial application of the 'pred_tcb_at' function, specifically
- * a partial application to the projection function 'itcb_state'.
- *
- * The advantage of this approach is that we an assert 'pred_tcb_at proj P t' is preserved
- * across calls to many functions. We get "for free" that 'st_tcb_at P t' is also preserved.
- * In the future we may introduce other abbreviations that assert preservation over other
- * fields in the TCB record.
+  'itcb' is a projection of the "mostly preserved" fields of 'tcb'. Many
+  functions in the spec will leave these fields of a TCB unchanged. The 'crunch'
+  tool is easily able to ascertain this from the types of the fields.
+
+  The 'itcb' record is closely associated with the 'pred_tcb_at' definition.
+  'pred_tcb_at' is used to assert an arbitrary predicate over the fields in
+  'itcb' for a TCB. Before the introduction of this data structure 'st_tcb_at'
+  was defined directly. It is now an abbreviation of a partial application of
+  the 'pred_tcb_at' function, specifically a partial application to the
+  projection function 'itcb_state'.
+
+  The advantage of this approach is that we an assert 'pred_tcb_at proj P t' is
+  preserved across calls to many functions. We get "for free" that 'st_tcb_at P
+  t' is also preserved. In the future we may introduce other abbreviations that
+  assert preservation over other fields in the TCB record.
  *)
 record itcb =
   itcb_state         :: thread_state
@@ -176,49 +181,48 @@ record itcb =
   itcb_fault         :: "fault option"
   itcb_bound_notification     :: "obj_ref option"
   itcb_mcpriority    :: priority
+  itcb_arch          :: iarch_tcb
 
+definition
+  tcb_to_itcb :: "tcb \<Rightarrow> itcb"
+where
+  "tcb_to_itcb tcb \<equiv>
+     \<lparr> itcb_state              = tcb_state tcb,
+       itcb_fault_handler      = tcb_fault_handler tcb,
+       itcb_ipc_buffer         = tcb_ipc_buffer tcb,
+       itcb_fault              = tcb_fault tcb,
+       itcb_bound_notification = tcb_bound_notification tcb,
+       itcb_mcpriority         = tcb_mcpriority tcb,
+       itcb_arch               = arch_tcb_to_iarch_tcb (tcb_arch tcb) \<rparr>"
 
-definition "tcb_to_itcb tcb \<equiv> \<lparr> itcb_state              = tcb_state tcb,
-                                itcb_fault_handler      = tcb_fault_handler tcb,
-                                itcb_ipc_buffer         = tcb_ipc_buffer tcb,
-                                itcb_fault              = tcb_fault tcb,
-                                itcb_bound_notification = tcb_bound_notification tcb,
-                                itcb_mcpriority         = tcb_mcpriority tcb\<rparr>"
+(*
+  The simplification rules below are used to help produce lemmas that talk about
+  fields of the 'tcb' data structure rather than the 'itcb' data structure when
+  the lemma refers to a predicate of the form 'pred_tcb_at proj P t'.
 
-(* sseefried: The simplification rules below are used to help produce
- * lemmas that talk about fields of the 'tcb' data structure rather than
- * the 'itcb' data structure when the lemma refers to a predicate of the
- * form 'pred_tcb_at proj P t'.
- *
- * e.g. You might have a lemma that has an assumption
- *   \<And>tcb. itcb_state (tcb_to_itcb (f tcb)) = itcb_state (tcb_to_itcb tcb)
- *
- * This simplifies to:
- *   \<And>tcb. tcb_state (f tcb) = tcb_state tcb
- *)
+  e.g. You might have a lemma that has an assumption
+    \<And>tcb. itcb_state (tcb_to_itcb (f tcb)) = itcb_state (tcb_to_itcb tcb)
 
-(* Need one of these simp rules for each field in 'itcb' *)
-lemma [simp]: "itcb_state (tcb_to_itcb tcb) = tcb_state tcb"
-  by (auto simp: tcb_to_itcb_def)
-
-(* Need one of these simp rules for each field in 'itcb' *)
-lemma [simp]: "itcb_fault_handler (tcb_to_itcb tcb) = tcb_fault_handler tcb"
-  by (auto simp: tcb_to_itcb_def)
+  This simplifies to:
+    \<And>tcb. tcb_state (f tcb) = tcb_state tcb
+*)
 
 (* Need one of these simp rules for each field in 'itcb' *)
-lemma [simp]: "itcb_ipc_buffer (tcb_to_itcb tcb) = tcb_ipc_buffer tcb"
+lemma tcb_to_itcb_simps[simp]:
+  "itcb_state (tcb_to_itcb tcb) = tcb_state tcb"
+  "itcb_fault_handler (tcb_to_itcb tcb) = tcb_fault_handler tcb"
+  "itcb_ipc_buffer (tcb_to_itcb tcb) = tcb_ipc_buffer tcb"
+  "itcb_fault (tcb_to_itcb tcb) = tcb_fault tcb"
+  "itcb_bound_notification (tcb_to_itcb tcb) = tcb_bound_notification tcb"
+  "itcb_mcpriority (tcb_to_itcb tcb) = tcb_mcpriority tcb"
+  "itcb_arch (tcb_to_itcb tcb) = arch_tcb_to_iarch_tcb (tcb_arch tcb)"
   by (auto simp: tcb_to_itcb_def)
 
-(* Need one of these simp rules for each field in 'itcb' *)
-lemma [simp]: "itcb_fault (tcb_to_itcb tcb) = tcb_fault tcb"
-  by (auto simp: tcb_to_itcb_def)
-
-(* Need one of these simp rules for each field in 'itcb' *)
-lemma [simp]: "itcb_bound_notification (tcb_to_itcb tcb) = tcb_bound_notification tcb"
-  by (auto simp: tcb_to_itcb_def)
-
-lemma [simp]: "itcb_mcpriority (tcb_to_itcb tcb) = tcb_mcpriority tcb"
- by (auto simp: tcb_to_itcb_def)
+(* This is used to assert whether an itcb projection is affected by a tcb
+   field update, such as tcb_arch_update. *)
+abbreviation
+  "proj_not_field proj field_upd \<equiv>
+     \<forall>f tcb. proj (tcb_to_itcb ((field_upd f) tcb)) = proj (tcb_to_itcb tcb)"
 
 definition
   pred_tcb_at :: "(itcb \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> machine_word \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -233,9 +237,7 @@ abbreviation "mcpriority_tcb_at \<equiv> pred_tcb_at itcb_mcpriority"
 lemma st_tcb_at_def: "st_tcb_at test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
   by (simp add: pred_tcb_at_def)
 
-
 text {* cte with property at *}
-
 
 definition
   cte_wp_at :: "(cap \<Rightarrow> bool) \<Rightarrow> cslot_ptr \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
