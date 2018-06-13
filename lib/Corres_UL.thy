@@ -1088,6 +1088,8 @@ lemmas corres_split_noop_rhs
 lemmas corres_split_noop_rhs2
   = corres_split_nor[THEN corres_add_noop_lhs2]
 
+lemmas corres_split_dc = corres_split[where r'=dc, simplified]
+
 lemma isLeft_case_sum:
   "isLeft v \<Longrightarrow> (case v of Inl v' \<Rightarrow> f v' | Inr v' \<Rightarrow> g v') = f (theLeft v)"
   by (clarsimp simp: isLeft_def)
@@ -1110,6 +1112,34 @@ lemma corres_return_eq_same:
   "a = b \<Longrightarrow> corres_underlying srel nf' nf op= \<top> \<top> (return a) (return b)"
   apply (simp add: corres_underlying_def return_def)
   done
+
+lemmas corres_discard_r =
+  corres_symb_exec_r [where P'=P' and Q'="\<lambda>_. P'" for P', simplified]
+
+lemmas corres_returnTT = corres_return[where P=\<top> and P'=\<top>, THEN iffD2]
+
+lemma corres_assert_gen_asm:
+  "\<lbrakk> F \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g ()) \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r (P and (\<lambda>_. F)) Q f (assert F >>= g)"
+  by (simp add: corres_gen_asm)
+
+lemma corres_assert_gen_asm2:
+  "\<lbrakk> F \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g ()) \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P (Q and (\<lambda>_. F)) f (assert F >>= g)"
+  by (simp add: corres_gen_asm2)
+
+lemma corres_add_guard:
+  "\<lbrakk>\<And>s s'. \<lbrakk>Q s; Q' s'; (s, s') \<in> sr\<rbrakk> \<Longrightarrow> P s \<and> P' s';
+    corres_underlying sr nf nf' r (Q and P) (Q' and P') f g\<rbrakk> \<Longrightarrow>
+    corres_underlying sr nf nf' r Q Q' f g"
+  by (auto simp: corres_underlying_def)
+
+(* safer non-rewrite version of corres_gets *)
+lemma corres_gets_trivial:
+  "\<lbrakk>\<And>s s'. (s,s') \<in> sr \<Longrightarrow> f s = f' s' \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' op = \<top> \<top> (gets f) (gets f')"
+  unfolding corres_underlying_def gets_def get_def return_def bind_def
+  by clarsimp
 
 text {* Some setup of specialised methods. *}
 

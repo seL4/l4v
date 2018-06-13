@@ -336,6 +336,9 @@ lemma fromIntegral_simp3[simp]: "fromIntegral = ucast"
   apply (simp add: unat_def)
   done
 
+lemma fromIntegral_simp_nat[simp]: "(fromIntegral :: nat \<Rightarrow> nat) = id"
+  by (simp add: fromIntegral_def fromInteger_nat toInteger_nat)
+
 definition
   infix_apply :: "'a \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'b \<Rightarrow> 'c" ("_ `~_~` _" [81, 100, 80] 80) where
   infix_apply_def[simp]:
