@@ -7,8 +7,8 @@
 -- @TAG(DATA61_GPL)
 
 -- This module contains the physical memory model's representations of the
--- RISC-V 64bit-specific data structures, as well as a type representing a capability to
--- a RISC-V-specific object.
+-- RISC-V 64bit-specific data structures, as well as a type representing
+-- capabilities to RISC-V-specific objects.
 
 {-# LANGUAGE EmptyDataDecls, GeneralizedNewtypeDeriving #-}
 
@@ -19,6 +19,7 @@ import SEL4.Machine.Hardware.RISCV64
 import Data.Array
 import Data.Bits
 import Data.Word(Word64)
+
 
 {- Capabilities -}
 
@@ -38,6 +39,7 @@ data ArchCapability
         capPTMappedAddress :: Maybe (ASID, VPtr) }
     deriving (Eq, Show)
 
+
 {- Kernel Objects -}
 
 data ArchKernelObject
@@ -45,12 +47,13 @@ data ArchKernelObject
     | KOPTE PTE
     deriving Show
 
-archObjSize ::  ArchKernelObject -> Int
-archObjSize a = error "FIXME RISCV TODO"
+archObjSize :: ArchKernelObject -> Int
+archObjSize (KOASIDPool _) = 12
+archObjSize (KOPTE _) = 3
+
 
 {- Threads -}
 
--- FIXME RISCV unchecked copypasta
 data ArchTCB = ArchThread {
         atcbContext :: UserContext }
     deriving Show
