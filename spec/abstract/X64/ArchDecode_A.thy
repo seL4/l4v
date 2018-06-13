@@ -18,8 +18,8 @@ theory ArchDecode_A
 imports
   "../Interrupt_A"
   "../InvocationLabels_A"
-  "../../../lib/Word_Lib/Word_Lib"
-  "../../design/InvocationLabels_H"
+  "Word_Lib.Word_Lib"
+  "ExecSpec.InvocationLabels_H"
 begin
 
 context Arch begin global_naming X64_A

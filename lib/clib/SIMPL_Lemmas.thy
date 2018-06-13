@@ -10,7 +10,7 @@
 
 theory SIMPL_Lemmas
 imports
-  "GenericLib_C"
+  "Lib.HaskellLemmaBucket"
   "CTranslationNICTA"
 begin
 

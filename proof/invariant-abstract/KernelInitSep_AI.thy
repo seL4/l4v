@@ -10,8 +10,8 @@
 
 theory KernelInitSep_AI
 imports
-  "../../spec/abstract/KernelInit_A"
-  "../../lib/sep_algebra/Sep_Algebra_L4v"
+  "ASpec.KernelInit_A"
+  "Sep_Algebra.Sep_Algebra_L4v"
   Invariants_AI
 begin
 

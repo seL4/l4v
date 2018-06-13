@@ -11,8 +11,8 @@
 theory AbstractSeparation_SD
 imports
   AbstractSeparationHelpers_SD
-  "../../lib/sep_algebra/Map_Extra"
-  "../../spec/capDL/Types_D"
+  "Sep_Algebra.Map_Extra"
+  "DSpec.Types_D"
 begin
 
 datatype cdl_component_id = Fields | Slot nat

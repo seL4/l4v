@@ -47,8 +47,8 @@
  * the proof to show fault-avoidence and termination.
  *)
 theory SchorrWaite imports
-  "~~/src/HOL/Library/Product_Lexorder"
-  "../../AutoCorres"
+  "HOL-Library.Product_Lexorder"
+  "AutoCorres.AutoCorres"
 begin
 
 declare fun_upd_apply[simp del]

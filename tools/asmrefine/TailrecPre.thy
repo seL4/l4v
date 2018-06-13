@@ -10,8 +10,8 @@
 
 theory TailrecPre
 imports
-  "../../lib/$L4V_ARCH/WordSetup"
-  "../../lib/Lib"
+  "Word_Lib.WordSetup"
+  "Lib.Lib"
 begin
 
 definition

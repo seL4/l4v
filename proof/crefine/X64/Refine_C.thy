@@ -20,10 +20,10 @@ imports
   SyscallArgs_C
   Delete_C
   Syscall_C
-  "../../refine/$L4V_ARCH/RAB_FN"
-  "../../../lib/clib/MonadicRewrite_C"
+  "Refine.RAB_FN"
+  "CLib.MonadicRewrite_C"
 
-  "../../../lib/clib/CToCRefine"
+  "../lib/CToCRefine"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

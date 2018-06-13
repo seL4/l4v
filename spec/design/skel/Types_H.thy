@@ -17,7 +17,7 @@ chapter "Types visible in the API"
 theory Types_H
 imports
   "./$L4V_ARCH/State_H"
-  "../../lib/Lib"
+  "Lib.Lib"
   "./$L4V_ARCH/ArchTypes_H"
 begin
 

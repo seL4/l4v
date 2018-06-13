@@ -8,9 +8,10 @@
  * @TAG(NICTA_GPL)
  *)
 
-theory AutoCorresModifiesProofs imports
-  "../../tools/autocorres/L4VerifiedLinks"
-  "../../lib/SIMPL_Lemmas"
+theory AutoCorresModifiesProofs
+imports
+  "L4VerifiedLinks"
+  "CLib.SIMPL_Lemmas"
 begin
 
 text \<open>

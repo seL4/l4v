@@ -15,9 +15,9 @@ text \<open>A simple proof method for rewriting Simpl programs under a predicate
 
 theory Simpl_Rewrite
 imports
-  "../../tools/c-parser/Simpl/Vcg"
-  "../Eisbach_Methods"
-  "../Apply_Debug"
+  "Simpl-VCG.Vcg"
+  "Lib.Eisbach_Methods"
+  "Lib.Apply_Debug"
 begin
 
 text \<open>Definitions and lemmas for reasoning about equivalence of Simpl programs.\<close>

@@ -9,7 +9,7 @@
  *)
 
 theory SplitRule
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 ML {*

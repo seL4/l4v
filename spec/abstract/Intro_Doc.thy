@@ -16,7 +16,7 @@ chapter "Introduction"
 
 (*<*)
 theory Intro_Doc
-imports "~~/src/HOL/Main"
+imports Main
 begin
 (*>*)
 text {*

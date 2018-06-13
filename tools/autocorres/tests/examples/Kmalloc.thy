@@ -9,7 +9,7 @@
  *)
 
 theory Kmalloc
-imports "../../AutoCorres"
+imports "AutoCorres.AutoCorres"
 begin
 
 (* No proof here, just testing the parser. *)

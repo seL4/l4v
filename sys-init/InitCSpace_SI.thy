@@ -10,7 +10,7 @@
 
 theory InitCSpace_SI
 imports
-  "../proof/capDL-api/CNode_DP"
+  "DSpecProofs.CNode_DP"
   ObjectInitialised_SI
   RootTask_SI
   SysInit_SI

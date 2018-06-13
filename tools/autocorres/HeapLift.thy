@@ -15,7 +15,7 @@ imports
   L2Defs
   ExecConcrete
   AbstractArrays
-  "../../lib/LemmaBucket_C"
+  "CLib.LemmaBucket_C"
 begin
 
 definition "L2Tcorres st A C = corresXF st (\<lambda>r _. r) (\<lambda>r _. r) \<top> A C"

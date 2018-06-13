@@ -10,8 +10,8 @@
 
 theory Hoare_Sep_Tactics
 imports
-  "../Monad_WP/NonDetMonadVCG"
-  "../sep_algebra/Sep_Algebra_L4v"
+  "Lib.NonDetMonadVCG"
+  "Sep_Algebra.Sep_Algebra_L4v"
 begin
 
 (* FIXME: needs cleanup *)

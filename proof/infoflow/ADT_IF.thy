@@ -18,8 +18,8 @@ text {*
 theory ADT_IF
 imports
     Noninterference_Base
-    "../access-control/Syscall_AC"
-    "../access-control/ADT_AC"
+    "Access.Syscall_AC"
+    "Access.ADT_AC"
     IRQMasks_IF FinalCaps Scheduler_IF UserOp_IF
 begin
 

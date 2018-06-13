@@ -9,7 +9,7 @@
  *)
 
 theory DetWP
-imports "../../../lib/clib/DetWPLib" Include_C
+imports "CLib.DetWPLib" Include_C
 begin
 
 (* FIXME YUCK where did you come from *)

@@ -10,8 +10,8 @@
 
 theory InitTCB_SI
 imports
-  "../proof/capDL-api/KHeap_DP"
-  "../proof/capDL-api/TCB_DP"
+  "DSpecProofs.KHeap_DP"
+  "DSpecProofs.TCB_DP"
   ObjectInitialised_SI
   RootTask_SI
   SysInit_SI

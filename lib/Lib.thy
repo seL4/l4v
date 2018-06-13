@@ -22,7 +22,7 @@ imports
   Extract_Conjunct
   Eval_Bool
   NICTATools
-  "~~/src/HOL/Library/Prefix_Order"
+  "HOL-Library.Prefix_Order"
 begin
 
 (* FIXME: eliminate *)

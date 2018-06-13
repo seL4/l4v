@@ -10,7 +10,7 @@
 
 theory Alloc
 imports
-  "../../AutoCorres"
+  "AutoCorres.AutoCorres"
 begin
 
 (* Parse the input file. *)

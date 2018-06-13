@@ -9,7 +9,7 @@
  *)
 
 theory MoreCorres
-imports "../../lib/ExtraCorres"
+imports "Lib.ExtraCorres"
 begin
 
 (* FIXME: move all of this into ExtraCorres *)

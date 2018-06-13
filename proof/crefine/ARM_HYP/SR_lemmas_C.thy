@@ -11,7 +11,7 @@
 theory SR_lemmas_C
 imports
   StateRelation_C
-  "../../refine/$L4V_ARCH/Invariants_H"
+  "Refine.Invariants_H"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

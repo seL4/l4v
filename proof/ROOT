@@ -32,12 +32,22 @@ chapter "Proofs"
 
 session Refine = BaseRefine +
   description {* Refinement between Haskell and Abstract spec. *}
+  sessions
+    Lib
+    CorresK
+    AInvs
   theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
     "refine/$L4V_ARCH/Refine"
+    "refine/$L4V_ARCH/RAB_FN"
+    "refine/$L4V_ARCH/EmptyFail_H"
   theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
     "refine/$L4V_ARCH/Refine"
+    "refine/$L4V_ARCH/RAB_FN"
+    "refine/$L4V_ARCH/EmptyFail_H"
   theories
     "refine/$L4V_ARCH/Refine"
+    "refine/$L4V_ARCH/RAB_FN"
+    "refine/$L4V_ARCH/EmptyFail_H"
   theories [condition = "L4V_ARCH_IS_ARM"]
     "refine/$L4V_ARCH/Orphanage"
 
@@ -83,12 +93,16 @@ session CRefine = CBaseRefine +
     "crefine/$L4V_ARCH/Refine_C"
 
 session CBaseRefine = CSpec +
+  sessions
+    CLib
+    Refine
+    AutoCorres
   theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
     (* ../lib/clib/AutoCorres_C explains why L4VerifiedLinks is included here. *)
-    "../tools/autocorres/L4VerifiedLinks"
+    "crefine/lib/L4VerifiedLinks"
     "crefine/$L4V_ARCH/Include_C"
   theories
-    "../tools/autocorres/L4VerifiedLinks"
+    "crefine/lib/L4VerifiedLinks"
     "crefine/$L4V_ARCH/Include_C"
 
 session AutoCorresCRefine = CRefine +
@@ -100,6 +114,8 @@ session AutoCorresCRefine = CRefine +
  *)
 
 session DBaseRefine = Refine +
+  sessions
+    DSpec
   theories
     "drefine/Include_D"
 
@@ -108,6 +124,8 @@ session DRefine = DBaseRefine +
     "drefine/Refine_D"
 
 session DPolicy = DRefine +
+  sessions
+    Access
   theories
     "access-control/Dpolicy"
 
@@ -117,6 +135,7 @@ session DPolicy = DRefine +
 
 session Access in "access-control" = AInvs +
   theories
+    "ADT_AC"
     "Syscall_AC"
     "ExampleSystem"
 
@@ -125,6 +144,10 @@ session InfoFlow in "infoflow" = Access +
     "InfoFlow_Image_Toplevel"
 
 session InfoFlowCBase = CRefine +
+  sessions
+    Refine
+    Access
+    InfoFlow
   theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
     "infoflow/Include_IF_C"
   theories
@@ -140,6 +163,9 @@ session InfoFlowC = InfoFlowCBase +
  *)
 
 session SepDSpec = DSpec +
+  sessions
+    Sep_Algebra
+    SepTactics
   theories
     "sep-capDL/Frame_SD"
 
@@ -152,6 +178,8 @@ session DSpecProofs in "capDL-api" = SepDSpec +
  *)
 
 session Bisim in bisim = AInvs +
+  sessions
+    ASepSpec
   theories
     "Syscall_S"
   files
@@ -163,11 +191,9 @@ session Bisim in bisim = AInvs +
  * Separation Logic
  *)
 
-session SepTactics = Word_Lib +
-  theories
-    "../lib/Hoare_Sep_Tactics/Hoare_Sep_Tactics"
-
 session SepTacticsExamples = SepTactics +
+  sessions
+    SepDSpec
   theories [quick_and_dirty]
     "capDL-api/Sep_Tactic_Examples"
 

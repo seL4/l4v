@@ -21,9 +21,9 @@
 
 theory WellFormed_SI
 imports
-  "../proof/capDL-api/Kernel_DP"
-  "../proof/sep-capDL/Separation_SD"
-  "../lib/SimpStrategy"
+  "DSpecProofs.Kernel_DP"
+  "SepDSpec.Separation_SD"
+  "Lib.SimpStrategy"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

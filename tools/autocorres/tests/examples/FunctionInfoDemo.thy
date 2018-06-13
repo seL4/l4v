@@ -16,7 +16,7 @@ text \<open>
   See also: TraceDemo
 \<close>
 theory FunctionInfoDemo imports
-  "../../AutoCorres"
+  "AutoCorres.AutoCorres"
 begin
 
 text \<open>Process a source file to populate our data structures.\<close>

@@ -10,7 +10,7 @@
 
 theory AbstractSeparationHelpers_SD
 imports
-  "../../lib/sep_algebra/Sep_Algebra_L4v"
+  "Sep_Algebra.Sep_Algebra_L4v"
 begin
 
 (*

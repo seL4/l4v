@@ -16,7 +16,7 @@
 chapter "Abstract Separation Logic, Alternative Definition"
 
 theory Separation_Algebra_Alt
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 text {*

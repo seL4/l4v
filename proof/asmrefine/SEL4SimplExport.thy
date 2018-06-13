@@ -12,7 +12,7 @@ theory SEL4SimplExport
 
 imports
   "../../tools/asmrefine/SimplExport"
-  "../../spec/cspec/Substitute"
+  "CSpec.Substitute"
 
 begin
 

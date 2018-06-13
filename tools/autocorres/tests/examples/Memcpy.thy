@@ -10,8 +10,8 @@
 
 theory Memcpy
 imports
-  "../../../c-parser/CTranslation"
-  "../../AutoCorres"
+  "CParser.CTranslation"
+  "AutoCorres.AutoCorres"
 begin
 
 abbreviation "ADDR_MAX \<equiv> UWORD_MAX TYPE(addr_bitsize)"

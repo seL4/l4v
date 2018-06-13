@@ -18,7 +18,7 @@ theory ArchTypes_H
 imports
   State_H
   Hardware_H
-  "../../../lib/Lib"
+  "Lib.Lib"
 begin
 
 #INCLUDE_HASKELL SEL4/API/Types/Universal.lhs all_bits

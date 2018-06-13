@@ -10,10 +10,10 @@
 
 theory LemmaBucket_C
 imports
-  Lib
-  "$L4V_ARCH/WordSetup"
+  "Lib.Lib"
+  "Word_Lib.WordSetup"
   TypHeapLib
-  "../tools/c-parser/umm_heap/ArrayAssertion"
+  "CParser.ArrayAssertion"
 begin
 
 declare word_neq_0_conv [simp del]

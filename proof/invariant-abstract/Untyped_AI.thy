@@ -12,7 +12,7 @@
 
 theory Untyped_AI
 imports "./$L4V_ARCH/ArchDetype_AI"
-  "../../lib/MonadicRewrite"
+  "Lib.MonadicRewrite"
 begin
 
 context begin interpretation Arch .

@@ -13,7 +13,7 @@ theory SEL4GlobalsSwap
 imports "../../tools/asmrefine/GlobalsSwap"
   "../../tools/asmrefine/AsmSemanticsRespects"
   "../../tools/asmrefine/FieldAccessors"
-  "../../spec/cspec/Substitute"
+  "CSpec.Substitute"
 
 begin
 

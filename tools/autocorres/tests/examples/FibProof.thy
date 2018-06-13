@@ -20,7 +20,7 @@ To do:
 
 theory FibProof
 imports
-  "../../AutoCorres"
+  "AutoCorres.AutoCorres"
 begin
 
 (*

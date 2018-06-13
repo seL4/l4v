@@ -9,7 +9,7 @@
  *)
 
 theory Cache
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 text {* Enable the proof cache, both skipping from it

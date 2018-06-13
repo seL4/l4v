@@ -17,10 +17,10 @@ chapter "x64 Machine Instantiation"
 
 theory Machine_A
 imports
-  "../../../lib/$L4V_ARCH/WordSetup"
-  "../../../lib/Monad_WP/NonDetMonad"
-  "../../machine/$L4V_ARCH/MachineTypes"
-  "../../machine/$L4V_ARCH/MachineOps"
+  "Word_Lib.WordSetup"
+  "Lib.NonDetMonad"
+  "ExecSpec.MachineTypes"
+  "ExecSpec.MachineOps"
 begin
 
 context Arch begin global_naming X64_A

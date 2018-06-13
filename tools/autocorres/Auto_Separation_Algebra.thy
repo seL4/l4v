@@ -12,7 +12,7 @@
    FIXME: this is not quite finished. There are some proof tactics missing (see getter_rewrite etc)
 *)
 theory Auto_Separation_Algebra
-imports "AutoCorres" "../../lib/sep_algebra/Separation_Algebra"
+imports "AutoCorres" "Sep_Algebra.Separation_Algebra"
 keywords "sep_instance" :: thy_goal
 begin
 

@@ -10,7 +10,7 @@
 
 theory MultByAdd
 imports
-  "../../AutoCorres"
+  "AutoCorres.AutoCorres"
 begin
 
 (* Parse the input file. *)

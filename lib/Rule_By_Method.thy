@@ -11,7 +11,7 @@
 theory Rule_By_Method
 imports
   Main
-  "~~/src/HOL/Eisbach/Eisbach_Tools"
+  "HOL-Eisbach.Eisbach_Tools"
 begin
 
 ML \<open>

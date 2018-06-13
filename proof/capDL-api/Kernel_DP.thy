@@ -10,8 +10,8 @@
 
 theory Kernel_DP
 imports
-  "../../spec/capDL/Syscall_D"
-  "../sep-capDL/Types_SD"
+  "DSpec.Syscall_D"
+  "SepDSpec.Types_SD"
 begin
 
 (* Bootinfo contructs *)

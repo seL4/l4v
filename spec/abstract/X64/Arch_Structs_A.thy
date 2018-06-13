@@ -12,7 +12,7 @@ chapter "x64-Specific Data Types"
 
 theory Arch_Structs_A
 imports
-  "../../design/$L4V_ARCH/Arch_Structs_B"
+  "ExecSpec.Arch_Structs_B"
   "../ExceptionTypes_A"
   "../VMRights_A"
 begin

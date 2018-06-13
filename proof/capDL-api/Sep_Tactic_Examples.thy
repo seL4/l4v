@@ -10,7 +10,7 @@
 
 theory Sep_Tactic_Examples
 imports
-  "../sep-capDL/Sep_Tactic_Helper"
+  "SepDSpec.Sep_Tactic_Helper"
   KHeap_DP
 begin
 

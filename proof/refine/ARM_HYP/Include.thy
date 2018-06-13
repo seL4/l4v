@@ -10,9 +10,9 @@
 
 theory Include
 imports
-  "../../../spec/abstract/Syscall_A"
-  "../../../spec/design/API_H"
-  "../../../spec/design/$L4V_ARCH/ArchIntermediate_H"
+  "ASpec.Syscall_A"
+  "ExecSpec.API_H"
+  "ExecSpec.ArchIntermediate_H"
 begin
 
 no_notation bind_drop (infixl ">>" 60)

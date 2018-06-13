@@ -49,7 +49,8 @@
  * - Naive algorithm, takes \<approx>quadratic time.
  *)
 
-theory Insulin imports HOL
+theory Insulin
+  imports Main
   keywords "desugar_term" "desugar_thm" "desugar_goal" :: diag
 begin
 

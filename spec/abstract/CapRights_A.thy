@@ -15,7 +15,7 @@ Definition of access rights.
 chapter "Access Rights"
 
 theory CapRights_A
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 text {* The possible access-control rights that exist in the system.

@@ -9,7 +9,7 @@
  *)
 
 theory MoreHOL
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 (*

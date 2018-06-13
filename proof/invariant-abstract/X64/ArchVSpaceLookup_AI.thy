@@ -10,7 +10,7 @@
 
 theory ArchVSpaceLookup_AI
 imports "../SubMonad_AI"
- "../../../lib/Crunch_Instances_NonDet"
+ "Lib.Crunch_Instances_NonDet"
 begin
 
 definition

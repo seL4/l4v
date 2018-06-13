@@ -13,7 +13,7 @@
  * JIRA issue ID: VER-356
  *)
 theory HeapWrap
-imports "../../AutoCorres"
+imports "AutoCorres.AutoCorres"
 begin
 
 install_C_file "heap_wrap.c"

@@ -13,7 +13,7 @@ chapter "Abstract Specification Instantiations"
 theory Deterministic_A
 imports
   Structures_A
-  "../../lib/List_Lib"
+  "Lib.List_Lib"
 
 begin
 

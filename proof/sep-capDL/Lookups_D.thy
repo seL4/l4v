@@ -10,8 +10,8 @@
 
 theory Lookups_D
 imports
-  "../../spec/capDL/Syscall_D"
-  "../../lib/Monad_WP/OptionMonadND"
+  "DSpec.Syscall_D"
+  "Lib.OptionMonadND"
 begin
 
 type_synonym 'a lookup = "cdl_state \<Rightarrow> 'a option"

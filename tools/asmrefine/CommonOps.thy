@@ -10,7 +10,7 @@
 
 theory CommonOps
 
-imports "../../lib/CTranslationNICTA"
+imports "CLib.CTranslationNICTA"
   "GlobalsSwap"
 
 begin

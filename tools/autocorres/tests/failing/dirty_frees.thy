@@ -11,7 +11,7 @@
 (*
  * Tests for handling of names and free variables.
  *)
-theory dirty_frees imports "../../AutoCorres" begin
+theory dirty_frees imports "AutoCorres.AutoCorres" begin
 
 install_C_file "dirty_frees.c"
 

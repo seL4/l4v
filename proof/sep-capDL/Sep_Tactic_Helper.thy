@@ -10,8 +10,8 @@
 
 theory Sep_Tactic_Helper
 imports
-  "../../lib/Hoare_Sep_Tactics/Hoare_Sep_Tactics"
-  "../../lib/sep_algebra/MonadSep"
+  "SepTactics.Hoare_Sep_Tactics"
+  "Sep_Algebra.MonadSep"
 begin
 
 lemma no_exception_conjE:

@@ -15,9 +15,9 @@
 
 theory Corres_UL_C
 imports
-  "../LemmaBucket_C"
-  "../LemmaBucket"
-  "../SIMPL_Lemmas"
+  "LemmaBucket_C"
+  "Lib.LemmaBucket"
+  "SIMPL_Lemmas"
 begin
 
 declare word_neq_0_conv [simp del]

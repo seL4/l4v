@@ -10,7 +10,7 @@
 
 theory Simple
 imports
-  "../../AutoCorres"
+  "AutoCorres.AutoCorres"
   GCD
 begin
 

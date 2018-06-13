@@ -13,9 +13,10 @@
 *)
 
 theory Eisbach_Methods
-imports "subgoal_focus/Subgoal_Methods"
-        "~~/src/HOL/Eisbach/Eisbach_Tools"
-        Rule_By_Method
+imports
+  "subgoal_focus/Subgoal_Methods"
+  "HOL-Eisbach.Eisbach_Tools"
+  Rule_By_Method
 begin
 
 

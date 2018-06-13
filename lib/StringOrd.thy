@@ -9,7 +9,7 @@
  *)
 
 theory StringOrd
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 datatype anotherBL =

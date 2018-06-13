@@ -19,7 +19,7 @@
 
 theory TypHeapSimple
 imports
-  "../../lib/TypHeapLib"
+  "CLib.TypHeapLib"
 begin
 
 (*

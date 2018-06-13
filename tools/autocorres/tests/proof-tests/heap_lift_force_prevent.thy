@@ -13,7 +13,7 @@
  *)
 
 theory heap_lift_force_prevent
-imports "../../AutoCorres"
+imports "AutoCorres.AutoCorres"
 begin
 
 install_C_file "heap_lift_force_prevent.c"

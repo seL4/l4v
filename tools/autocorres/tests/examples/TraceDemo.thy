@@ -15,7 +15,7 @@
  * translation phases.
  *)
 
-theory TraceDemo imports "../../AutoCorres" begin
+theory TraceDemo imports "AutoCorres.AutoCorres" begin
 
 install_C_file "trace_demo.c"
 

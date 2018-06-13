@@ -9,7 +9,7 @@
  *)
 
 theory IRQMasks_IF
-imports "../access-control/DomainSepInv"
+imports "Access.DomainSepInv"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

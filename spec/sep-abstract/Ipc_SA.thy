@@ -15,7 +15,7 @@ Specification of Inter-Process Communication.
 chapter "IPC"
 
 theory Ipc_SA
-imports "../abstract/Syscall_A"
+imports "ASpec.Syscall_A"
 begin
 
 

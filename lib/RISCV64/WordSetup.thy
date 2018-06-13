@@ -9,7 +9,7 @@
  *)
 
 
-theory WordSetup
+theory WordSetup (* part of non-AFP Word_Lib *)
 imports
   "../Distinct_Prop"
   "../Word_Lib/Word_Lemmas_64"

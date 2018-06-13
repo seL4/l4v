@@ -11,7 +11,7 @@
 theory TestSEL4
 imports
   AutoCorres
-  "../../spec/cspec/KernelInc_C"
+  "CSpec.KernelInc_C"
 begin
 
 (*

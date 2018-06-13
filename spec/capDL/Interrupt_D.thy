@@ -13,7 +13,7 @@
  *)
 
 theory Interrupt_D
-imports Endpoint_D "../machine/$L4V_ARCH/Platform"
+imports Endpoint_D "ExecSpec.Platform"
 begin
 
 context begin interpretation Arch .

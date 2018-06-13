@@ -9,7 +9,7 @@
  *)
 
 theory Noninterference_Base
-imports "../../lib/Simulation"
+imports "Lib.Simulation"
 begin
 
 text {*

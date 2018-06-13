@@ -12,7 +12,7 @@ theory RAB_FN
 
 imports
   "CSpace1_R"
-  "../../../lib/MonadicRewrite"
+  "Lib.MonadicRewrite"
 
 begin
 

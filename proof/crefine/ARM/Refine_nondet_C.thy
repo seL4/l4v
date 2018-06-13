@@ -13,7 +13,7 @@ header "Toplevel Refinement Statement for nondeterministic specification"
 theory Refine_nondet_C (* FIXME: broken *)
 imports
   Refine_C
-  "../../invariant-abstract/BCorres2_AI"
+  "AInvs.BCorres2_AI"
 begin
 
 definition (in state_rel)

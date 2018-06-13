@@ -16,7 +16,7 @@
 chapter {* More properties of maps plus map disjuction. *}
 
 theory Map_Extra
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 text {*

@@ -11,7 +11,7 @@
 theory DomainSepInv
 imports
   "Ipc_AC" (* for transfer_caps_loop_pres_dest lec_valid_cap' set_simple_ko_get_tcb thread_set_tcb_fault_update_valid_mdb *)
-  "../../lib/Monad_WP/wp/WPBang"
+  "Lib.WPBang"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

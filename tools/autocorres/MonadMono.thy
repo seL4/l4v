@@ -16,7 +16,7 @@
 theory MonadMono
 imports
   NonDetMonadEx
-  "../../lib/Monad_WP/OptionMonadWP"
+  "Lib.OptionMonadWP"
 begin
 
 (*

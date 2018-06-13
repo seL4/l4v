@@ -16,7 +16,7 @@ theory Syscall_D
 imports
   Schedule_D
   Decode_D
-  "../design/Event_H"
+  "ExecSpec.Event_H"
 begin
 
 (*

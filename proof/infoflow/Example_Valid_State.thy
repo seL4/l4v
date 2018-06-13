@@ -11,7 +11,7 @@
 theory Example_Valid_State
 imports
   "Noninterference"
-  "../../lib/Distinct_Cmd"
+  "Lib.Distinct_Cmd"
 begin
 
 section {* Example *}

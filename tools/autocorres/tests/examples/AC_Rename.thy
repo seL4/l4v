@@ -13,7 +13,7 @@
  * functions and globals.
  *)
 theory AC_Rename imports
-  "../../AutoCorres"
+  "AutoCorres.AutoCorres"
 begin
 
 declare [[allow_underscore_idents]]

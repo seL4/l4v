@@ -10,8 +10,8 @@
 
 theory ArchCrunchSetup_AI
 imports
-  "../../../spec/abstract/Syscall_A"
-  "../../../lib/Crunch_Instances_NonDet"
+  "ASpec.Syscall_A"
+  "Lib.Crunch_Instances_NonDet"
 begin
 context Arch begin global_naming X64
 

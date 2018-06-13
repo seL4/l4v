@@ -11,8 +11,8 @@
 theory SimplRewrite
 imports
   "CTranslationNICTA"
-  "SplitRule"
-  "~~/src/HOL/Eisbach/Eisbach"
+  "Lib.SplitRule"
+  "HOL-Eisbach.Eisbach"
 begin
 
 primrec

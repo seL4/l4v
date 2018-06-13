@@ -10,8 +10,8 @@
 
 theory Kernel_C
 imports
-  "../../machine/$L4V_ARCH/MachineTypes"
-  "../../../lib/CTranslationNICTA"
+  "ExecSpec.MachineTypes"
+  "CLib.CTranslationNICTA"
   "../../../tools/asmrefine/CommonOps"
 begin
 

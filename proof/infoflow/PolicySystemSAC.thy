@@ -11,7 +11,7 @@
 theory PolicySystemSAC
 imports
   Noninterference
-  "../access-control/ExampleSystem"
+  "Access.ExampleSystem"
 begin
 
 text {*

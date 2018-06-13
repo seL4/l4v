@@ -10,7 +10,7 @@
 
 theory Plus
 imports
-  "../../AutoCorres"
+  "AutoCorres.AutoCorres"
 begin
 
 install_C_file "plus.c"

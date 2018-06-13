@@ -9,7 +9,7 @@
  *)
 
 theory AdjustSchematic (* FIXME: bitrotted *)
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 lemma meta_arg_cong:

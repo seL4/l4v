@@ -9,7 +9,7 @@
  *)
 
 theory WordAbs
-imports "../../AutoCorres"
+imports "AutoCorres.AutoCorres"
 begin
 
 install_C_file "word_abs.c"

@@ -16,7 +16,7 @@ chapter "Machine State"
 
 theory State_H
 imports
-  "../../../lib/HaskellLib_H"
+  "Lib.HaskellLib_H"
   RegisterSet_H
   "../../machine/ARM/MachineOps"
 begin

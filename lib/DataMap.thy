@@ -9,7 +9,7 @@
  *)
 
 theory DataMap
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 type_synonym ('k, 'a) map = "'k \<rightharpoonup> 'a"

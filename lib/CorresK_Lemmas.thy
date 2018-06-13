@@ -11,7 +11,10 @@
 
 
 theory CorresK_Lemmas
-imports Corres_Method "../spec/design/Syscall_H" "../spec/abstract/Syscall_A"
+imports
+  Corres_Method
+  "ExecSpec.Syscall_H"
+  "ASpec.Syscall_A"
 begin
 
 lemma corres_throwError_str [corres_concrete_rER]:

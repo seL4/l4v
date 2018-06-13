@@ -9,7 +9,7 @@
  *)
 
 theory prototyped_functions
-imports "../../AutoCorres"
+imports "AutoCorres.AutoCorres"
 begin
 
 install_C_file "prototyped_functions.c"

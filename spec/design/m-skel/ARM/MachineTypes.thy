@@ -12,7 +12,7 @@ chapter "ARM Machine Types"
 
 theory MachineTypes
 imports
-  "../../../lib/Monad_WP/NonDetMonad"
+  "Lib.NonDetMonad"
   "../Setup_Locale"
   Platform
 begin

@@ -11,7 +11,7 @@
 theory SR_lemmas_C
 imports
   StateRelation_C
-  "../../refine/$L4V_ARCH/Invariants_H"
+  "Refine.Invariants_H"
 begin
 
 (* FIXME: move to Word_Lib *)

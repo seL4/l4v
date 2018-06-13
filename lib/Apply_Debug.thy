@@ -10,8 +10,11 @@
  *)
 
 theory Apply_Debug
-  imports Apply_Trace "~~/src/HOL/Eisbach/Eisbach_Tools"
-  keywords "apply_debug" :: "prf_script" % "proof" and
+  imports
+    Apply_Trace
+    "HOL-Eisbach.Eisbach_Tools"
+  keywords
+    "apply_debug" :: "prf_script" % "proof" and
     "continue" :: prf_script % "proof" and  "finish" :: prf_script % "proof"
 begin
 

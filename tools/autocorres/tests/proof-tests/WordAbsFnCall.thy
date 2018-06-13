@@ -9,7 +9,7 @@
  *)
 
 theory WordAbsFnCall imports
-  "../../AutoCorres"
+  "AutoCorres.AutoCorres"
 begin
 
 install_C_file "word_abs_fn_call.c"

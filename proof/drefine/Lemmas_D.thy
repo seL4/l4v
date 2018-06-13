@@ -20,9 +20,8 @@ imports
   Include_D
   MoreHOL
   MoreCorres
-  "../../spec/design/InvocationLabels_H"
-  "../../lib/MonadicRewrite"
-  "../refine/$L4V_ARCH/EmptyFail"
+  "ExecSpec.InvocationLabels_H"
+  "Refine.EmptyFail"
 begin
 
 no_notation bind_drop (infixl ">>" 60)

@@ -11,9 +11,9 @@
 theory CToCRefine
 
 imports
-    "../../spec/cspec/Substitute"
-    "../SimplRewrite"
-    "../TypHeapLib"
+    "CSpec.Substitute"
+    "CLib.SimplRewrite"
+    "CLib.TypHeapLib"
 begin
 
 lemma spec_statefn_simulates_lookup_tree_Node:

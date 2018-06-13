@@ -10,7 +10,7 @@
 
 theory Ipc_AI
 imports "./$L4V_ARCH/ArchFinalise_AI"
-  "../../lib/Monad_WP/wp/WPBang"
+  "Lib.WPBang"
 begin
 
 context begin interpretation Arch .

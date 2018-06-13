@@ -11,7 +11,7 @@
 theory ProofHelpers_DP
 imports
   Kernel_DP
-  "../sep-capDL/Frame_SD"
+  "SepDSpec.Frame_SD"
 begin
 
 crunch_ignore (add:

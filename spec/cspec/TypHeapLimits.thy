@@ -9,7 +9,7 @@
  *)
 
 theory TypHeapLimits
-imports "../../lib/TypHeapLib"
+imports "CLib.TypHeapLib"
 begin
 
 definition

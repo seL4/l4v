@@ -10,9 +10,9 @@
 
 theory Include_IF_C
 imports
-    "Noninterference"
-    "Noninterference_Base_Refinement"
-    "Example_Valid_State"
+    "InfoFlow.Noninterference"
+    "InfoFlow.Noninterference_Base_Refinement"
+    "InfoFlow.Example_Valid_State"
 begin
 
 end

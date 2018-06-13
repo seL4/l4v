@@ -11,7 +11,7 @@
 theory ADT_C
 imports
   Schedule_C Retype_C Recycle_C
-  "../../invariant-abstract/BCorres2_AI"
+  "AInvs.BCorres2_AI"
 begin
 
 

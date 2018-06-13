@@ -9,7 +9,7 @@
  *)
 
 theory DetWPLib
-imports "../GenericLib_C"
+imports "Lib.HaskellLemmaBucket"
 begin
 
 definition

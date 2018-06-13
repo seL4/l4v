@@ -9,7 +9,7 @@
  *)
 
 theory WhileLoopVarsPreserved imports
-  "../../AutoCorres"
+  "AutoCorres.AutoCorres"
 begin
 
 install_C_file "while_loop_vars_preserved.c"

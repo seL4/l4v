@@ -10,7 +10,7 @@
 
 theory ADT_IF_Refine
 imports
-    "ADT_IF" "../refine/$L4V_ARCH/Refine" "../refine/$L4V_ARCH/EmptyFail_H"
+    "ADT_IF" "Refine.Refine" "Refine.EmptyFail_H"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

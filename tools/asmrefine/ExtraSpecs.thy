@@ -11,7 +11,7 @@
 theory ExtraSpecs
 
 imports
-  "../../lib/TypHeapLib"
+  "CLib.TypHeapLib"
 
 begin
 

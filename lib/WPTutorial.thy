@@ -9,7 +9,7 @@
  *)
 
 theory WPTutorial
-imports "../proof/refine/$L4V_ARCH/Bits_R"
+imports "Refine.Bits_R"
 begin
 
 text {*

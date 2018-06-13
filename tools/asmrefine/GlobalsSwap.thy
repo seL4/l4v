@@ -10,9 +10,9 @@
 
 theory GlobalsSwap
 imports
-  "../../lib/Lib"
-  "../c-parser/CTranslation"
-  "../c-parser/PackedTypes"
+  "Lib.Lib"
+  "CParser.CTranslation"
+  "CParser.PackedTypes"
 begin
 
 datatype 'g global_data =

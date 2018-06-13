@@ -13,7 +13,7 @@ imports    "Noninterference_Base"
            "Noninterference_Base_Alternatives"
     "Scheduler_IF"
     "ADT_IF"
-    "../access-control/ADT_AC"
+    "Access.ADT_AC"
 begin
 
 text {*

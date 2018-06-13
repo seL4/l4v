@@ -9,7 +9,7 @@
  *)
 
 theory DataStructures
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 (*
