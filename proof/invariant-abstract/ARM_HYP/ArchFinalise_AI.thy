@@ -695,15 +695,19 @@ lemma get_vcpu_ko: "\<lbrace>Q\<rbrace> get_vcpu p \<lbrace>\<lambda>rv s. ko_at
    apply (wp get_object_sp[simplified pred_conj_def], simp)
   done
 
-lemma vcpu_disable_sym_refs_hyp [wp]:
-  "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> vcpu_disable vcpu_opt \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  unfolding vcpu_disable_def
-  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift
-           simp: obj_at_def)
+lemma vgic_update_sym_refs_hyp[wp]:
+  "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> vgic_update vcpuptr f \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vgic_update_def vcpu_update_def
+  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp simp: obj_at_def)
 
-lemma vcpu_invalidate_active_sym_refs_hyp [wp]:
-  "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> vcpu_invalidate_active \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  unfolding vcpu_invalidate_active_def by wpsimp
+lemma vcpu_save_reg_sym_refs_hyp[wp]:
+  "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> vcpu_save_reg vcpuptr r \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vcpu_save_reg_def vcpu_update_def
+  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift)
+     (simp add: obj_at_def)
+
+crunches vcpu_disable, vcpu_invalidate_active
+  for sym_refs_hyp[wp]: "\<lambda>s. sym_refs (state_hyp_refs_of s)"
 
 lemma vcpu_invalidate_tcbs_inv[wp]:
   "\<lbrace>obj_at (\<lambda>tcb. \<exists>t'. tcb = TCB t' \<and> P t') t\<rbrace>
@@ -848,15 +852,23 @@ lemma set_vcpu_if_live_then_nonz_cap_same_refs:
   apply (clarsimp simp: obj_at_def)
   done
 
-lemma vcpu_disable_if_live_then_nonz_cap[wp]:
-  "\<lbrace>if_live_then_nonz_cap\<rbrace> vcpu_disable vcpu \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
-  unfolding vcpu_disable_def
-  apply (wpsimp wp: set_vcpu_if_live_then_nonz_cap_same_refs
-                    get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift)
+lemma vgic_update_if_live_then_nonz_cap[wp]:
+  "\<lbrace>if_live_then_nonz_cap\<rbrace> vgic_update vcpuptr f \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
+  unfolding vgic_update_def vcpu_update_def
+  apply (wp set_vcpu_if_live_then_nonz_cap_same_refs get_vcpu_wp)
   apply (clarsimp simp: obj_at_def)
   done
 
-crunch if_live_then_nonz_cap[wp]: vcpu_invalidate_active if_live_then_nonz_cap
+lemma vcpu_save_reg_if_live_then_nonz_cap[wp]:
+  "\<lbrace>if_live_then_nonz_cap\<rbrace> vcpu_save_reg vcpuptr r \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
+  unfolding vcpu_save_reg_def vcpu_update_def
+  apply (wpsimp wp: set_vcpu_if_live_then_nonz_cap_same_refs get_vcpu_wp
+                    hoare_vcg_imp_lift hoare_vcg_all_lift)
+  apply (simp add: obj_at_def)
+  done
+
+crunches vcpu_disable, vcpu_invalidate_active
+  for if_live_then_nonz_cap[wp]: if_live_then_nonz_cap
 
 lemma dissociate_vcpu_tcb_if_live_then_nonz_cap[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace> dissociate_vcpu_tcb vr t \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
@@ -932,19 +944,30 @@ lemma dmo_machine_state_lift:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. Q rv (machine_state s)\<rbrace>"
   unfolding do_machine_op_def by wpsimp (erule use_valid; assumption)
 
-lemma vcpu_disable_valid_irq_states[wp]:
-  "\<lbrace>valid_irq_states\<rbrace> vcpu_disable vcpu_opt \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
-  unfolding vcpu_disable_def
-  by (wpsimp wp: dmo_valid_irq_states
-          simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
-                get_gic_vcpu_ctrl_hcr_def dsb_def)
+crunches vcpu_save_reg, vgic_update, vcpu_disable
+  for valid_irq_states[wp]: valid_irq_states
+  and in_user_frame[wp]: "in_user_frame p"
+  (wp: dmo_valid_irq_states
+   simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
+         get_gic_vcpu_ctrl_hcr_def dsb_def readVCPUHardwareReg_def)
+
+crunches vgic_update, vcpu_update
+  for valid_machine_state[wp]: valid_machine_state
+  and underlying_memory[wp]: "\<lambda>s. P (underlying_memory (machine_state s))"
+
+lemma vcpu_save_reg_underlying_memory[wp]:
+  "\<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace>
+   vcpu_save_reg vcpuptr r
+   \<lbrace>\<lambda>_ s. P (underlying_memory (machine_state s))\<rbrace>"
+  unfolding vcpu_save_reg_def
+  by (wpsimp simp: readVCPUHardwareReg_def)
 
 lemma vcpu_disable_valid_machine_state[wp]:
   "\<lbrace>valid_machine_state\<rbrace> vcpu_disable vcpu_opt \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   unfolding vcpu_disable_def valid_machine_state_def
   by (wpsimp wp: dmo_machine_state_lift hoare_vcg_all_lift hoare_vcg_disj_lift
-          simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
-                get_gic_vcpu_ctrl_hcr_def dsb_def|assumption)+
+             simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
+                   get_gic_vcpu_ctrl_hcr_def dsb_def)
 
 lemma valid_arch_state_vcpu_update_str:
   "valid_arch_state s \<Longrightarrow> valid_arch_state (s\<lparr>arch_state := arm_current_vcpu_update Map.empty (arch_state s)\<rparr>)"
@@ -1345,24 +1368,11 @@ interpretation Finalise_AI_2?: Finalise_AI_2
 
 context Arch begin global_naming ARM
 
-crunch irq_node[wp]: vcpu_update, vcpu_save_register, vgic_update
-  "\<lambda>s. P (interrupt_irq_node s)"
-
-crunch irq_node[wp]: vcpu_disable, vcpu_restore
-  "\<lambda>s. P (interrupt_irq_node s)"
-
-lemma vcpu_save_irq_node[wp]:
-  "\<lbrace> \<lambda>s. P (interrupt_irq_node s) \<rbrace> vcpu_save v  \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
-  apply (simp add: vcpu_save_def)
-  apply (cases v; simp; case_tac a;simp)
-  apply (wp | wpc | clarsimp | rule_tac S="set [0..<num_list_regs]" in mapM_wp)+
-  done
-
-lemma vcpu_switch_irq_node[wp]:
-  "\<lbrace> \<lambda>s. P (interrupt_irq_node s) \<rbrace> vcpu_switch v  \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
-  apply (simp add: vcpu_switch_def)
-  apply (cases v; (wp | wpc | simp)+)
-  done
+crunches
+  vcpu_update, vgic_update, vcpu_disable, vcpu_restore, vcpu_save_reg_range, vgic_update_lr,
+  vcpu_save, vcpu_switch
+  for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  (wp: crunch_wps subset_refl)
 
 crunch irq_node[Finalise_AI_asms,wp]: prepare_thread_delete "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps select_wp simp: crunch_simps)
@@ -1411,25 +1421,11 @@ lemma set_vcpu_empty[wp]:
                  split: kernel_object.splits arch_kernel_obj.splits)
   done
 
-crunch empty[wp]: vcpu_update, vcpu_save_register, vgic_update
-    "\<lambda>s. P (obj_at (empty_table {}) word s)"
-
-crunch empty[wp]: vcpu_disable, vcpu_enable
-    "\<lambda>s. P (obj_at (empty_table {}) word s)"
-
-lemma vcpu_save_empty[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at (empty_table {}) word s)\<rbrace> vcpu_save v \<lbrace>\<lambda>_ s. P (obj_at (empty_table {}) word s)\<rbrace>"
-  apply (simp add: vcpu_save_def)
-  apply (cases v; simp)
-  apply (case_tac a; simp)
-  apply (wp | wpc | clarsimp | rule_tac S="set [0..<num_list_regs]" in mapM_wp)+
-  done
-
-lemma vcpu_switch_empty[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at (empty_table {}) word s)\<rbrace> vcpu_switch v \<lbrace>\<lambda>_ s. P (obj_at (empty_table {}) word s)\<rbrace>"
-  apply (simp add: vcpu_switch_def)
-  apply (cases v; (wp | wpc | simp)+)
-  done
+crunches
+  vcpu_update, vgic_update, vcpu_disable, vcpu_restore, vcpu_save_reg_range, vgic_update_lr,
+  vcpu_save, vcpu_switch
+  for empty[wp]: "\<lambda>s. P (obj_at (empty_table {}) word s)"
+  (wp: crunch_wps subset_refl)
 
 lemma store_pte_unmap_empty:
   "\<lbrace>\<lambda>s. obj_at (empty_table {}) word s\<rbrace>

@@ -3165,7 +3165,7 @@ lemmas asUser_bound_obj_at'[wp] = asUser_pred_tcb_at' [of itcbBoundNotification]
 lemmas setObject_vcpu_pred_tcb_at'[wp] =
   setObject_vcpu_obj_at'_no_vcpu [of _ "\<lambda>ko. tst (pr (tcb_to_itcb' ko))" for tst pr, folded pred_tcb_at'_def]
 
-crunch bound_tcb_at'[wp]: dissociateVCPUTCB "bound_tcb_at' P t"
+crunch bound_tcb_at'[wp]: dissociateVCPUTCB, vgicUpdateLR "bound_tcb_at' P t"
   (wp: sts_bound_tcb_at' getVCPU_wp crunch_wps hoare_vcg_all_lift hoare_vcg_if_lift3
    ignore: getObject setObject archThreadSet)
 
@@ -4015,7 +4015,7 @@ lemma sym_refs_vcpu_tcb:
 lemma vcpuFinalise_corres [corres]:
   "corres dc (invs and vcpu_at vcpu) (invs' and vcpu_at' vcpu) (vcpu_finalise vcpu) (vcpuFinalise vcpu)"
   unfolding vcpuFinalise_def vcpu_finalise_def
-  apply (corressimp corres: corres_get_vcpu simp: vcpu_relation_def)
+  apply (corressimp corres: get_vcpu_corres simp: vcpu_relation_def)
      apply (wpsimp wp: get_vcpu_wp getVCPU_wp)+
   apply (rule conjI)
    apply clarsimp
@@ -4201,12 +4201,13 @@ lemma no_idle_thread_cap:
   apply (clarsimp simp: cap_range_def)
   done
 
-(* FIXME: move to Corres_UL *)
-lemma corres_add_guard:
-  "\<lbrakk>\<And>s s'. \<lbrakk>Q s; Q' s'; (s, s') \<in> sr\<rbrakk> \<Longrightarrow> P s \<and> P' s';
-    corres_underlying sr nf nf' r (Q and P) (Q' and P') f g\<rbrakk> \<Longrightarrow>
-    corres_underlying sr nf nf' r Q Q' f g"
-  by (auto simp: corres_underlying_def)
+lemmas getCTE_no_0_obj'_helper
+  = getCTE_inv
+    hoare_strengthen_post[where Q="\<lambda>_. no_0_obj'" and P=no_0_obj' and a="getCTE slot" for slot]
+
+crunches ThreadDecls_H.suspend, unbindNotification
+  for no_0_obj'[wp]: no_0_obj'
+  (simp: crunch_simps wp: crunch_wps getCTE_no_0_obj'_helper)
 
 lemma finalise_cap_corres:
   "\<lbrakk> final_matters' cap' \<Longrightarrow> final = final'; cap_relation cap cap';
@@ -4218,6 +4219,7 @@ lemma finalise_cap_corres:
                  (final_matters' cap' \<longrightarrow>
                       final' = isFinal cap' (cte_map sl) (cteCaps_of s)))
            (finalise_cap cap final) (finaliseCap cap' final' flag)"
+  supply invs_no_0_obj'[simp]
   apply (cases cap, simp_all add: finaliseCap_def isCap_simps
                                   corres_liftM2_simp[unfolded liftM_def]
                                   o_def dc_def[symmetric] when_def
@@ -4792,10 +4794,6 @@ lemma cteDeleteOne_ct_not_ksQ:
     apply (wp finaliseCapTrue_standin_ct_not_ksQ isFinalCapability_inv)+
   apply (clarsimp)
   done
-
-(* FIXME Move to Machine_AI? *)
-lemma no_fail_set_gic_vcpu_ctrl_lr[wp]: "no_fail \<top> (set_gic_vcpu_ctrl_lr w p)"
-  by (wpsimp simp: set_gic_vcpu_ctrl_lr_def)
 
 end
 

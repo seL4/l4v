@@ -42,6 +42,15 @@ abbreviation
   pte_Ptr :: "word32 \<Rightarrow> pte_C ptr" where "pte_Ptr == Ptr"
 abbreviation
   pde_Ptr :: "word32 \<Rightarrow> pde_C ptr" where "pde_Ptr == Ptr"
+abbreviation
+  regs_C_Ptr :: "addr \<Rightarrow> (machine_word_len word[41]) ptr" where "regs_C_Ptr \<equiv> Ptr"
+abbreviation
+  vgic_lr_C_Ptr :: "addr \<Rightarrow> (virq_C[64]) ptr" where "vgic_lr_C_Ptr \<equiv> Ptr"
+abbreviation
+  vgic_C_Ptr :: "addr \<Rightarrow> gicVCpuIface_C ptr" where "vgic_C_Ptr \<equiv> Ptr"
+(* FIXME might be useful on other platforms if not existing already *)
+abbreviation
+  word_Ptr :: "addr \<Rightarrow> machine_word ptr" where "word_Ptr \<equiv> Ptr"
 
 lemma halt_spec:
   "Gamma \<turnstile> {} Call halt_'proc {}"

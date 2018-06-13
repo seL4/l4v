@@ -858,7 +858,7 @@ lemma get_vcpu_LR_corres[corres]:
   "corres (r \<oplus> (\<lambda>vcpu lr. vgic_lr (vcpu_vgic vcpu) = lr)) (vcpu_at v) (vcpu_at' v)
              (liftE (get_vcpu v)) (liftE (liftM (vgicLR \<circ> vcpuVGIC) (getObject v)))"
   apply simp
-  apply (rule corres_rel_imp, rule corres_get_vcpu)
+  apply (rule corres_rel_imp, rule get_vcpu_corres)
   apply (rename_tac vcpu', case_tac vcpu')
   apply (clarsimp simp: vcpu_relation_def vgic_map_def)
   done
@@ -1393,17 +1393,9 @@ lemma invokeVCPUInjectIRQ_corres:
         (invokeVCPUInjectIRQ v index virq)"
   unfolding invokeVCPUInjectIRQ_def invoke_vcpu_inject_irq_def
   apply (clarsimp simp: bind_assoc)
-  apply (corressimp corres: corres_get_vcpu set_vcpu_corres wp: get_vcpu_wp)
+  apply (corressimp corres: get_vcpu_corres set_vcpu_corres wp: get_vcpu_wp)
   apply clarsimp
-  apply (safe
-        ; case_tac "vcpuVGIC rv'"
-        ; clarsimp simp: vcpu_relation_def vgic_map_def if_split
-        ; rule ext ; rename_tac x
-        ; case_tac "index = x"; clarsimp)
   done
-
-lemmas corres_discard_r =
-  corres_symb_exec_r [where P'=P' and Q'="\<lambda>_. P'" for P', simplified]
 
 lemma dmo_gets_corres:
   "corres (op =) P P' (do_machine_op (gets f)) (doMachineOp (gets f))"
@@ -1411,18 +1403,16 @@ lemma dmo_gets_corres:
   apply (auto simp : corres_underlyingK_def)
   done
 
-lemmas corres_returnTT = corres_return[where P=\<top> and P'=\<top>, THEN iffD2]
-
 lemma [wp]:"no_fail \<top> getSCTLR"
   by (clarsimp simp: getSCTLR_def)
 
 lemma invoke_vcpu_read_register_corres:
-  "corres (op =) (vcpu_at v) (vcpu_at' v)
+  "corres (op =) (vcpu_at v) (vcpu_at' v and no_0_obj')
                  (invoke_vcpu_read_register v r)
                  (invokeVCPUReadReg v r)"
   unfolding invoke_vcpu_read_register_def invokeVCPUReadReg_def read_vcpu_register_def readVCPUReg_def
   apply (rule corres_discard_r)
-  apply (corressimp corres: corres_get_vcpu wp: get_vcpu_wp)
+  apply (corressimp corres: get_vcpu_corres wp: get_vcpu_wp)
   apply (clarsimp simp: vcpu_relation_def split: option.splits)
   apply (wpsimp simp: getCurThread_def)+
   done
@@ -1437,19 +1427,19 @@ lemma dmo_rest_corres:
     apply auto
   done
 
-lemma [wp]:"no_fail \<top> (setSCTLR x)"
-  by (clarsimp simp: setSCTLR_def)
-
 lemma invoke_vcpu_write_register_corres:
-  "corres op = (vcpu_at vcpu) (vcpu_at' vcpu)
+  "corres op = (vcpu_at vcpu) (vcpu_at' vcpu and no_0_obj')
         (do y \<leftarrow> invoke_vcpu_write_register vcpu r v;
                  return []
          od)
         (invokeVCPUWriteReg vcpu r v)"
   unfolding invokeVCPUWriteReg_def invoke_vcpu_write_register_def write_vcpu_register_def
             writeVCPUReg_def
+
+thm write_vcpu_register_def
+
   apply (rule corres_discard_r)
-  apply (corressimp corres: set_vcpu_corres corres_get_vcpu wp: get_vcpu_wp)
+  apply (corressimp corres: set_vcpu_corres get_vcpu_corres wp: get_vcpu_wp)
   subgoal by (auto simp: vcpu_relation_def split: option.splits)
   apply (wpsimp simp: getCurThread_def)+
   done
@@ -1481,7 +1471,7 @@ lemma associate_vcpu_tcb_corres:
                (associateVCPUTCB v t)"
   unfolding associate_vcpu_tcb_def associateVCPUTCB_def
   apply (clarsimp simp: bind_assoc)
-  apply (corressimp search: corres_get_vcpu set_vcpu_corres
+  apply (corressimp search: get_vcpu_corres set_vcpu_corres
                        wp: get_vcpu_wp getVCPU_wp
                      simp: vcpu_relation_def)
       apply (rule_tac Q="\<lambda>_. invs and tcb_at t" in hoare_strengthen_post)
@@ -1513,7 +1503,7 @@ lemma associate_vcpu_tcb_corres:
    apply (clarsimp simp: obj_at_def)
   apply normalise_obj_at'
   apply (drule valid_objs_valid_tcb'[rotated], fastforce)
-  apply (clarsimp simp: valid_tcb'_def valid_arch_tcb'_def)
+  apply (clarsimp simp: valid_tcb'_def valid_arch_tcb'_def invs_no_0_obj')
   apply (drule valid_objs_valid_vcpu'[rotated], fastforce)
   apply (simp add: valid_vcpu'_def typ_at_tcb')
   done
@@ -1526,7 +1516,7 @@ lemma perform_vcpu_invocation_corres:
                 (perform_vcpu_invocation iv) (performARMVCPUInvocation (vcpu_invocation_map iv))"
   unfolding perform_vcpu_invocation_def performARMVCPUInvocation_def
   apply (cases iv; simp add: vcpu_invocation_map_def valid_vcpu_invocation_def valid_vcpuinv'_def)
-     apply (rule inv_corres [THEN corres_guard_imp]; simp)+
+     apply (rule inv_corres [THEN corres_guard_imp]; simp add: invs_no_0_obj')+
   done
 
 lemma inv_arch_corres:
@@ -1597,7 +1587,8 @@ lemma performASIDControlInvocation_tcb_at':
   apply clarsimp
   done
 
-crunch tcb_at'[wp]: performARMVCPUInvocation "tcb_at' p"
+crunches writeVCPUReg, readVCPUReg, performARMVCPUInvocation
+  for tcb_at'[wp]: "tcb_at' p"
   (ignore: getObject)
 
 lemma invokeArch_tcb_at':
@@ -2676,48 +2667,13 @@ lemma invokeVCPUInjectIRQ_invs'[wp]:
 
 lemma invokeVCPUReadReg_inv[wp]:
   "invokeVCPUReadReg vcpu r \<lbrace>P\<rbrace>"
-  unfolding invokeVCPUReadReg_def readVCPUReg_def
-  by (wpsimp wp: dmo_inv' simp: getSCTLR_def vcpuregs_gets)
-
-lemma setVCPU_regs_vcpu_live[wp]:
-  "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') p and ko_at' vcpu v\<rbrace>
-   setObject v (vcpuRegs_update f' vcpu) \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') p\<rbrace>"
-  apply (wp setObject_ko_wp_at, simp)
-    apply (simp add: objBits_simps archObjSize_def)
-   apply (clarsimp simp: vcpu_bits_def pageBits_def)
-  apply (clarsimp simp: pred_conj_def is_vcpu'_def ko_wp_at'_def obj_at'_real_def projectKOs)
-  done
-
-lemma setVCPU_regs_valid_arch'[wp]:
-  "\<lbrace>valid_arch_state' and ko_at' vcpu v\<rbrace> setObject v (vcpuRegs_update f' vcpu) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  apply (simp add: valid_arch_state'_def valid_asid_table'_def option_case_all_conv)
-  apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift)
-  apply (clarsimp simp: pred_conj_def o_def)
-  done
-
-lemma setVCPU_regs_invs'[wp]:
-  "\<lbrace>invs' and ko_at' vcpu v\<rbrace> setObject v (vcpuRegs_update f' vcpu) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
-            valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
-  supply fun_upd_apply[simp del]
-  apply (wpsimp wp: setObject_vcpu_no_tcb_update
-                      [where f="\<lambda>vcpu. vcpuRegs_update f' vcpu"]
-                    sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
-                    setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
-                    valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
-                    cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
-                    valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
-                    valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
-              simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def
-                    state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
-  apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
-  apply (fastforce simp: ko_wp_at'_def projectKOs)
-  done
+  unfolding invokeVCPUReadReg_def readVCPUReg_def vcpuReadReg_def
+  by (wpsimp wp: dmo_inv' simp: readVCPUHardwareReg_def getSCTLR_def)
 
 lemma invokeVCPUWriteReg_invs'[wp]:
   "invokeVCPUWriteReg vcpu r v \<lbrace>invs'\<rbrace>"
-  unfolding invokeVCPUWriteReg_def writeVCPUReg_def
-  by (wpsimp wp: dmo_machine_op_lift_invs' simp: setSCTLR_def vcpuregs_sets)
+  unfolding invokeVCPUWriteReg_def writeVCPUReg_def vcpuWriteReg_def vcpuUpdate_def
+  by (wpsimp wp: dmo_machine_op_lift_invs' setVCPU_regs_invs')
 
 lemma performARMVCPUInvocation_invs'[wp]:
   "\<lbrace>invs' and valid_vcpuinv' i\<rbrace> performARMVCPUInvocation i \<lbrace>\<lambda>_. invs'\<rbrace>"

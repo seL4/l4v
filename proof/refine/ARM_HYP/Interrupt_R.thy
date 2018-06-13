@@ -659,30 +659,57 @@ lemmas thread_state_rev_simps'[#\<open>solves \<open>simp\<close>\<close>] =
 
 lemmas thread_state_rev_simps = thread_state_rev_simps' thread_state_relation_send_rev_simp
 
+crunches vgicUpdateLR
+  for sch_act_not[wp]: "sch_act_not t"
+  and pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
+  and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  (ignore: getObject setObject)
+
 lemma vgic_maintenance_corres [corres]:
   "corres dc einvs
     (\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
     vgic_maintenance vgicMaintenance"
-  apply (simp add: vgic_maintenance_def vgicMaintenance_def isRunnable_def Let_def
-                   get_thread_state_def[symmetric] virqSetEOIIRQEN_def ARM_A.virqSetEOIIRQEN_def
-                   bind_assoc do_machine_op_bind doMachineOp_bind
-                   get_gic_vcpu_ctrl_eisr0_def get_gic_vcpu_ctrl_eisr1_def
-                   get_gic_vcpu_ctrl_misr_def
-                   get_gic_vcpu_ctrl_lr_def set_gic_vcpu_ctrl_lr_def
-             cong: if_cong)
-  apply (corressimp corres: gct_corres[unfolded getCurThread_def]
-                        gts_corres[@lift_corres_args]
-                     wp: no_fail_machine_op_lift dmo_wp_no_rest)
-  apply (corressimp corres: hf_corres[@lift_corres_args]
-                        wp: dmo_gets_wp dmo'_gets_wp gts_wp gts_wp')+
-  apply safe
-  by (auto simp: valid_fault_def thread_state_rev_simps
-              elim: ct_active_st_tcb_at_weaken
-                      [OF _ iffD1[OF runnable_eq], simplified ct_in_state_def]
-                    st_tcb_ex_cap'[OF _ _ runnable_not_halted]
-                    st_tcb_ex_cap''
-                    pred_tcb'_weakenE
-             split: Structures_H.thread_state.splits)
+proof -
+  (* hoare_lift_Pf-style rules match too often, slowing down proof unless specialised *)
+  note vilr = hoare_lift_Pf2[where f=cur_thread and m="vgic_update_lr v i virq" for v i virq]
+  note vilr' = hoare_lift_Pf2[where f=ksCurThread and m="vgicUpdateLR v i virq" for v i virq]
+  note wplr = vilr[where P="st_tcb_at active"]
+              vilr[where P="ex_nonz_cap_to"]
+  note wplr' = vilr'[where P="sch_act_not"]
+               vilr'[where P="ex_nonz_cap_to'"]
+               vilr'[where P="st_tcb_at' simple'"]
+               vilr'[where P="\<lambda>t s. t \<notin> set (ksReadyQueues s x)" for x]
+
+  show ?thesis
+    apply (simp add: vgic_maintenance_def vgicMaintenance_def isRunnable_def Let_def
+                     get_thread_state_def[symmetric] virqSetEOIIRQEN_def ARM_A.virqSetEOIIRQEN_def
+                     bind_assoc do_machine_op_bind doMachineOp_bind
+                     get_gic_vcpu_ctrl_eisr0_def get_gic_vcpu_ctrl_eisr1_def
+                     get_gic_vcpu_ctrl_misr_def
+                     get_gic_vcpu_ctrl_lr_def set_gic_vcpu_ctrl_lr_def
+               cong: if_cong)
+    apply (corressimp corres: vgicUpdateLR_corres[@lift_corres_args]
+                              gct_corres[unfolded getCurThread_def]
+                              gts_corres[@lift_corres_args]
+                              hf_corres[@lift_corres_args]
+                       wp: no_fail_machine_op_lift dmo_wp_no_rest
+                           hoare_vcg_all_lift hoare_vcg_imp_lift')
+                             apply (corressimp corres: hf_corres[@lift_corres_args]
+                                               wp: dmo_gets_wp dmo'_gets_wp gts_wp gts_wp' wplr wplr'
+                                                   hoare_vcg_all_lift hoare_vcg_imp_lift')+
+
+    apply (frule invs_arch_state, drule valid_arch_state_elims(2), frule invs_arch_state')
+    apply (fastforce split: Structures_H.thread_state.splits
+                     simp: valid_fault_def thread_state_rev_simps valid_arch_state'_def
+                           obj_at_typ_at[symmetric]
+                           obj_at_def vcpu_at_is_vcpu' valid_fault_def
+                     simp del: obj_at_typ_at
+                     elim: ct_active_st_tcb_at_weaken
+                             [OF _ iffD1[OF runnable_eq], simplified ct_in_state_def]
+                           st_tcb_ex_cap'[OF _ _ runnable_not_halted]
+                           st_tcb_ex_cap'' pred_tcb'_weakenE ko_wp_at'_weakenE)
+    done
+qed
 
 lemma handle_reserved_irq_corres[corres]:
   "corres dc einvs
@@ -1025,8 +1052,8 @@ lemma vgicMaintenance_invs'[wp]:
                 get_gic_vcpu_ctrl_misr_def get_gic_vcpu_ctrl_eisr1_def get_gic_vcpu_ctrl_eisr0_def
                 doMachineOp_bind)
   apply (wpsimp split_del: if_split wp: hoare_vcg_const_imp_lift hoare_drop_imps
-          | rule hoare_lift_Pf[where f=ksCurThread])+
-  apply (wpsimp wp: hoare_vcg_if_lift3)+
+          | rule hoare_lift_Pf2[where f=ksCurThread])+
+  apply (clarsimp cong: conj_cong)
   apply (rule conjI)
    apply (fastforce simp: st_tcb_at'_def obj_at'_def runnable'_eq)
   apply (rule conjI)

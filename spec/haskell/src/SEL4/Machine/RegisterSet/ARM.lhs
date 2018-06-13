@@ -50,6 +50,26 @@ This module defines the ARM register set.
 
 > data VCPUReg =
 >       VCPURegSCTLR
+>     | VCPURegACTLR
+>     | VCPURegTTBCR
+>     | VCPURegTTBR0
+>     | VCPURegTTBR1
+>     | VCPURegDACR
+>     | VCPURegDFSR
+>     | VCPURegIFSR
+>     | VCPURegADFSR
+>     | VCPURegAIFSR
+>     | VCPURegDFAR
+>     | VCPURegIFAR
+>     | VCPURegPRRR
+>     | VCPURegNMRR
+>     | VCPURegCIDR
+>     | VCPURegTPIDRPRW
+>     | VCPURegTPIDRURO
+>     | VCPURegTPIDRURW
+>     | VCPURegFPEXC
+>     | VCPURegCNTVTVAL
+>     | VCPURegCNTVCTL
 >     | VCPURegLRsvc
 >     | VCPURegSPsvc
 >     | VCPURegLRabt
@@ -65,7 +85,15 @@ This module defines the ARM register set.
 >     | VCPURegR10fiq
 >     | VCPURegR11fiq
 >     | VCPURegR12fiq
+>     | VCPURegSPSRsvc
+>     | VCPURegSPSRabt
+>     | VCPURegSPSRund
+>     | VCPURegSPSRirq
+>     | VCPURegSPSRfiq
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
+
+> vcpuRegNum :: Int
+> vcpuRegNum = fromEnum (maxBound :: VCPUReg)
 
 #endif
 

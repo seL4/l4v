@@ -488,54 +488,11 @@ where
   case casid_pool of asid_pool_C cpool \<Rightarrow>
   array_relation (op = \<circ> option_to_ptr) (2^asid_low_bits - 1) pool cpool"
 
-fun
-  vcpureg_from_H :: "vcpureg \<Rightarrow> word32"
-where
-  "vcpureg_from_H VCPURegSCTLR = scast seL4_VCPUReg_SCTLR"
-| "vcpureg_from_H VCPURegLRsvc = scast seL4_VCPUReg_LRsvc"
-| "vcpureg_from_H VCPURegSPsvc = scast seL4_VCPUReg_SPsvc"
-| "vcpureg_from_H VCPURegLRabt = scast seL4_VCPUReg_LRabt"
-| "vcpureg_from_H VCPURegSPabt = scast seL4_VCPUReg_SPabt"
-| "vcpureg_from_H VCPURegLRund = scast seL4_VCPUReg_LRund"
-| "vcpureg_from_H VCPURegSPund = scast seL4_VCPUReg_SPund"
-| "vcpureg_from_H VCPURegLRirq = scast seL4_VCPUReg_LRirq"
-| "vcpureg_from_H VCPURegSPirq = scast seL4_VCPUReg_SPirq"
-| "vcpureg_from_H VCPURegLRfiq = scast seL4_VCPUReg_LRfiq"
-| "vcpureg_from_H VCPURegSPfiq = scast seL4_VCPUReg_SPfiq"
-| "vcpureg_from_H VCPURegR8fiq = scast seL4_VCPUReg_R8fiq"
-| "vcpureg_from_H VCPURegR9fiq = scast seL4_VCPUReg_R9fiq"
-| "vcpureg_from_H VCPURegR10fiq = scast seL4_VCPUReg_R10fiq"
-| "vcpureg_from_H VCPURegR11fiq = scast seL4_VCPUReg_R11fiq"
-| "vcpureg_from_H VCPURegR12fiq = scast seL4_VCPUReg_R12fiq"
-
-term option_to_ptr
-find_consts name:r12_fiq_C
-term vcpuRegs
-term ASIDPool
-
-(* seL4 does not currently use an array to store these and spells them out individually.
-   If this changes, this should become an array_relation *)
 definition
   cvcpu_regs_relation :: "vcpu \<Rightarrow> vcpu_C \<Rightarrow> bool"
 where
   "cvcpu_regs_relation vcpu cvcpu \<equiv>
-    let rs = vcpuRegs vcpu in
-      sctlr_C (cpx_C cvcpu) = vcpuSCTLR vcpu
-    \<and> lr_svc_C cvcpu = rs VCPURegLRsvc
-    \<and> sp_svc_C cvcpu = rs VCPURegSPsvc
-    \<and> lr_abt_C cvcpu = rs VCPURegLRabt
-    \<and> sp_abt_C cvcpu = rs VCPURegSPabt
-    \<and> lr_und_C cvcpu = rs VCPURegLRund
-    \<and> sp_und_C cvcpu = rs VCPURegSPund
-    \<and> lr_irq_C cvcpu = rs VCPURegLRirq
-    \<and> sp_irq_C cvcpu = rs VCPURegSPirq
-    \<and> lr_fiq_C cvcpu = rs VCPURegLRfiq
-    \<and> sp_fiq_C cvcpu = rs VCPURegSPfiq
-    \<and> r8_fiq_C cvcpu = rs VCPURegR8fiq
-    \<and> r9_fiq_C cvcpu = rs VCPURegR9fiq
-    \<and> r10_fiq_C cvcpu = rs VCPURegR10fiq
-    \<and> r11_fiq_C cvcpu = rs VCPURegR11fiq
-    \<and> r12_fiq_C cvcpu = rs VCPURegR12fiq"
+    \<forall>r. regs_C cvcpu.[fromEnum r] = vcpuRegs vcpu r"
 
 definition
   virq_to_H :: "virq_C \<Rightarrow> virq"
@@ -558,7 +515,6 @@ definition
 where
   "cvcpu_relation vcpu cvcpu \<equiv>
      vcpuTCB_C cvcpu = option_to_ctcb_ptr (vcpuTCBPtr vcpu)
-     \<and> actlr_C (cpx_C cvcpu) = vcpuACTLR vcpu
      \<and> cvcpu_regs_relation vcpu cvcpu
      \<and> cvgic_relation (vcpuVGIC vcpu) (vgic_C cvcpu)"
 

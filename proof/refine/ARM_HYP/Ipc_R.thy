@@ -1746,7 +1746,7 @@ lemma make_arch_fault_msg_corres:
     apply (rule corres_split_eqr[OF _ getRestartPCs_corres])
       apply (rule corres_split_eqr[OF _ corres_machine_op])
          apply (rule corres_trivial, simp)
-        apply (rule corres_underlying_trivial[OF no_fail_addressTranslateS1CPR])
+        apply (rule corres_underlying_trivial[OF addressTranslateS1CPR_no_fail])
        apply (wp+, auto)
   done
 

@@ -359,16 +359,14 @@ crunch valid_sched[wp]:
   perform_page_invocation, perform_page_table_invocation, perform_asid_pool_invocation,
   perform_page_directory_invocation
   valid_sched
-  (wp: mapM_x_wp' mapM_wp')
+  (wp: crunch_wps)
 
-crunch cur_thread[wp]: read_vcpu_register "\<lambda>s. P (cur_thread s)"
-
-crunch ct_active[wp]:
-  write_vcpu_register,read_vcpu_register,set_message_info,as_user
-  ct_active
-  (wp: ct_in_state_thread_state_lift)
-
-crunch valid_sched[wp]: read_vcpu_register,write_vcpu_register valid_sched
+crunches
+  vcpu_read_reg,vcpu_write_reg,read_vcpu_register,write_vcpu_register,set_message_info,as_user
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  and valid_sched[wp]: valid_sched
+  and ct_in_state[wp]: "ct_in_state st"
+  (simp: crunch_simps wp: ct_in_state_thread_state_lift)
 
 lemma invoke_vcpu_read_register_valid_sched[wp]:
   "\<lbrace>valid_sched and ct_active\<rbrace> invoke_vcpu_read_register v reg \<lbrace>\<lambda>_. valid_sched\<rbrace>"
@@ -466,11 +464,20 @@ lemma vgic_maintenance_irq_valid_sched[wp]:
   "\<lbrace>valid_sched and invs and scheduler_act_sane and ct_not_queued\<rbrace>
   vgic_maintenance \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   unfolding vgic_maintenance_def
-            get_gic_vcpu_ctrl_misr_def get_gic_vcpu_ctrl_eisr1_def get_gic_vcpu_ctrl_eisr0_def
-  apply (wpsimp wp: handle_fault_valid_sched thread_get_wp' hoare_vcg_disj_lift
-              simp: do_machine_op_bind valid_fault_def submonad_do_machine_op.gets
-         | intro conjI impI)+
-   apply (clarsimp simp: st_tcb_at_def obj_at_def runnable_eq ct_in_state_def)+
+  supply if_split[split del] valid_fault_def[simp]
+  apply (wpsimp simp: get_gic_vcpu_ctrl_misr_def get_gic_vcpu_ctrl_eisr1_def
+                      get_gic_vcpu_ctrl_eisr0_def
+                 wp: thread_get_wp' handle_fault_valid_sched
+                     ct_in_state_thread_state_lift ct_not_queued_lift sch_act_sane_lift
+         | wp_once hoare_drop_imp[where f="do_machine_op m" for m]
+                   hoare_drop_imp[where f="return $ m" for m]
+                   hoare_vcg_disj_lift
+         | clarsimp simp: if_apply_def2
+         | wp_once hoare_vcg_imp_lift'
+         | rule hoare_vcg_conj_lift
+                hoare_lift_Pf[where f=cur_thread and m="vgic_update_lr p i v" for p i v])+
+  apply (clarsimp intro!: st_tcb_ex_cap[where P=active]
+                     simp: st_tcb_at_def obj_at_def ct_in_state_def runnable_eq halted_eq)+
   done
 
 lemma handle_reserved_irq_valid_sched:

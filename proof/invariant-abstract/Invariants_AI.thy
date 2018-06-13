@@ -2151,6 +2151,10 @@ lemma ko_at_obj_congD:
   unfolding obj_at_def
   by simp
 
+lemma not_obj_at_strengthen:
+  "obj_at (Not \<circ> P) p s \<Longrightarrow> \<not> obj_at P p s"
+  by (clarsimp simp: obj_at_def)
+
 text {* using typ_at triples to prove other triples *}
 
 lemma cte_at_typ:

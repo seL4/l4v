@@ -88,7 +88,10 @@ lemma set_object_valid_pdpt[wp]:
 crunch valid_pdpt_objs[wp]: cap_insert, cap_swap_for_delete,empty_slot "valid_pdpt_objs"
   (wp: crunch_wps simp: crunch_simps ignore:set_object)
 
-crunch valid_pdpt_objs[wp]: vcpu_save,vcpu_restore,vcpu_enable,get_vcpu,set_vcpu,vcpu_disable "valid_pdpt_objs"
+crunches
+  vcpu_save,vcpu_restore,vcpu_enable,get_vcpu,set_vcpu,vcpu_disable,vcpu_read_reg,
+  read_vcpu_register,write_vcpu_register
+  for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: crunch_wps simp: crunch_simps ignore: set_object do_machine_op)
 
 lemma vcpu_switch_valid_pdpt_objs[wp]:

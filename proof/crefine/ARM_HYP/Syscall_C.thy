@@ -1769,17 +1769,6 @@ lemma ctzl_spec:
   apply (simp add: mex_def meq_def)
   done
 
-(* FIXME move *)
-lemma word_ctz_le:
-  "word_ctz (w :: ('a::len word)) \<le> LENGTH('a)"
-  apply (clarsimp simp: word_ctz_def)
-  apply (rule nat_le_Suc_less_imp[where y="LENGTH('a) + 1" , simplified])
-  apply (rule order_le_less_trans[OF List.length_takeWhile_le])
-  apply (subst length_rev)
-  apply (subst word_size_bl[symmetric])
-  apply (clarsimp simp: word_size)
-  done
-
 lemma get_gic_vcpu_ctrl_misr_invs'[wp]:
   "valid invs' (doMachineOp get_gic_vcpu_ctrl_misr) (\<lambda>_. invs')"
   by (simp add: get_gic_vcpu_ctrl_misr_def doMachineOp_def split_def select_f_returns | wp)+
@@ -1947,13 +1936,58 @@ lemma virqSetEOIIRQEN_id:
   "\<lbrakk> virq_get_tag (virq_C (ARRAY _. idx)) \<noteq> scast virq_virq_active;
      virq_get_tag (virq_C (ARRAY _. idx)) \<noteq> scast virq_virq_pending;
      virq_get_tag (virq_C (ARRAY _. idx)) \<noteq> scast virq_virq_invalid \<rbrakk>
-    \<Longrightarrow> idx = virqSetEOIIRQEN idx 0"
+    \<Longrightarrow> virqSetEOIIRQEN idx 0 = idx"
   apply (clarsimp simp: virqSetEOIIRQEN_def virq_get_tag_def virq_tag_defs mask_def split: if_split)
   apply (rule_tac x="idx >> 28" in two_bits_cases; simp)
   done
 
+lemma vgicUpdateLR_ccorres_armHSCurVCPU:
+  "\<lbrakk> v' = v ; n' = n ; n \<le> 63 \<rbrakk> \<Longrightarrow>
+   ccorres dc xfdc
+       (\<lambda>s. (armHSCurVCPU (ksArchState s) \<noteq> None) \<and>
+          vcpu_at' (fst (the (armHSCurVCPU (ksArchState s)))) s)
+       (UNIV \<inter> \<lbrace>\<acute>armHSCurVCPU = vcpu_Ptr vcpuptr\<rbrace>) hs
+       (vgicUpdateLR vcpuptr n v)
+       (Guard C_Guard {s. s \<Turnstile>\<^sub>c armHSCurVCPU_' (globals s)}
+         (Basic_heap_update
+           (\<lambda>s. vgic_lr_C_Ptr &(vgic_C_Ptr &((armHSCurVCPU_' (globals s))\<rightarrow>[''vgic_C''])\<rightarrow>[''lr_C'']))
+           (\<lambda>s. Arrays.update
+                  (h_val (hrs_mem (t_hrs_' (globals s)))
+                  (vgic_lr_C_Ptr &(vgic_C_Ptr &((armHSCurVCPU_' (globals s))\<rightarrow>[''vgic_C''])\<rightarrow>[''lr_C''])))
+                  n' (virq_C (ARRAY _. v')))))"
+  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp]
+  apply (rule ccorres_guard_imp)
+    apply (rule_tac P="\<lambda>s. armHSCurVCPU (ksArchState s) \<noteq> None
+                            \<and> vcpu_at' (fst (the (armHSCurVCPU (ksArchState s)))) s"
+                and P'=\<top> in ccorres_move_Guard)
+     apply clarsimp
+     apply (frule rf_sr_ksArchState_armHSCurVCPU)
+     apply (clarsimp simp: cur_vcpu_relation_def split: option.splits)
+     apply (fastforce simp: move_c_guard_vcpu[rule_format, simplified])
+    apply (simp add: vgicUpdate_def vcpuUpdate_def vgicUpdateLR_def)
+    apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
+    apply (rule_tac P="ko_at' vcpu vcpuptr"
+      and P'="{s. armHSCurVCPU_' (globals s) = vcpu_Ptr vcpuptr }" in setObject_ccorres_helper
+      , rule conseqPre, vcg)
+      apply clarsimp
+      apply (rule cmap_relationE1[OF cmap_relation_vcpu]
+             ; (clarsimp simp: objBits_simps archObjSize_def machine_bits_defs)?)
+        apply (assumption, erule ko_at_projectKO_opt)
+      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                            cmachine_state_relation_def update_vcpu_map_to_vcpu
+                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
+      apply (erule (1) cmap_relation_updI
+             ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def ; (rule refl)?)
+      apply (fastforce simp: virq_to_H_def split: if_split)
+     apply (simp add: objBits_simps archObjSize_def machine_bits_defs)+
+  done
 
-(* FIXME ARMHYP: wrap up the duplication in a method *)
+(* folded calculation of eisr used in vgicMaintenance *)
+definition
+  eisr_calc :: "machine_word \<Rightarrow> machine_word \<Rightarrow> nat"
+where
+  "eisr_calc eisr0 eisr1 \<equiv> if eisr0 \<noteq> 0 then word_ctz eisr0 else word_ctz eisr1 + 32"
+
 lemma  ccorres_vgicMaintenance:
   notes dc_simp[simp del] Collect_const[simp del]
   notes scast_specific_plus32[simp] scast_specific_plus32_signed[simp]
@@ -1962,265 +1996,232 @@ lemma  ccorres_vgicMaintenance:
   notes virq_virq_pending_set_virqEOIIRQEN_spec = virq_virq_pending_set_virqEOIIRQEN_spec'
   shows
   "ccorres dc xfdc
-           (\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
-           UNIV hs vgicMaintenance (Call VGICMaintenance_'proc)"
-  apply cinit
-   apply (rule ccorres_pre_getCurThread[unfolded getCurThread_def], rename_tac cthread)
-   apply (ctac (no_vcg) add: isRunnable_ccorres, rename_tac runnable crunnable)
-    apply (drule sym)
-    apply (simp add: to_bool_def)
-    apply (rule_tac P=runnable in  ccorres_cases; clarsimp)
-     prefer 2
-     apply ccorres_rewrite
-     apply (rule ccorres_return_void_C_Seq)
-     apply (rule ccorres_return_void_C)
-    apply ccorres_rewrite
-    apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_eisr0_ccorres)
-     apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_eisr1_ccorres)
-      apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_misr_ccorres)
-       apply (rule ccorres_pre_gets_armKSGICVCPUNumListRegs_ksArchState, rename_tac num_list_regs)
-       apply clarsimp
-       apply (rule ccorres_Cond_rhs_Seq ; clarsimp)
-        apply (rule ccorres_rhs_assoc)+
-        apply csymbr
-        apply (rule_tac P="eisr0 = 0 \<and> eisr1 = 0" in ccorres_cases, simp)
-         apply ccorres_rewrite
-         apply csymbr
-         apply simp
-         apply ccorres_rewrite
-         apply (rule ccorres_pre_getCurThread, rename_tac cthread)
-         apply (rule_tac R'="{s. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr cthread}" in ccorres_symb_exec_r)
-           apply (ctac add: handleFault_ccorres)
-          apply vcg
-          apply (clarsimp simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
-                                seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
-         apply (rule conseqPre, vcg, clarsimp)
-        apply (rule_tac P="eisr0 = 0" in ccorres_cases; simp)
-         apply ccorres_rewrite
-         apply (rule ccorres_rhs_assoc)+
-         apply csymbr
-         apply (rule ccorres_Guard_Seq)
-         apply csymbr
-         apply (clarsimp simp: bind_assoc)
-         apply (subgoal_tac "0x21 + of_nat (word_ctz eisr1) \<noteq> (0::32 signed word)")
-          prefer 2
-          apply (rule neq_0_no_wrap; simp)
-          apply (cut_tac w=eisr1 in word_ctz_le)
-          apply (clarsimp simp: unat_of_nat word_size word_le_nat_alt unat_plus_if_size)
-         apply (simp add: if_to_top_of_bind)
-         apply (rule ccorres_cond_seq) thm ccorres_cross_over_guard
-         apply (rule_tac P="\<lambda>s. num_list_regs = armKSGICVCPUNumListRegs (ksArchState s) \<and> valid_arch_state' s" in ccorres_cross_over_guard)
-         apply (rule_tac R="\<lambda>s. num_list_regs = armKSGICVCPUNumListRegs (ksArchState s)
-                                \<and> valid_arch_state' s" in ccorres_cond)
-           apply (clarsimp simp: rf_sr_armKSGICVCPUNumListRegs valid_arch_state'_def max_armKSGICVCPUNumListRegs_def)
-           apply (cut_tac w=eisr1 in word_ctz_le)
-           apply (simp add: word_le_nat_alt unat_of_nat unat_plus_if')
-          apply (rule ccorres_pre_getCurThread, rename_tac cthread)
-          apply (rule_tac R'="{s. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr cthread}" in ccorres_symb_exec_r)
-            apply (ctac add: handleFault_ccorres)
-           apply vcg
-           apply (clarsimp simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
-                                seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
-          apply (rule conseqPre, vcg, clarsimp)
-         apply (simp add: doMachineOp_bind bind_assoc)
-         apply (rule ccorres_rhs_assoc)+
-         apply (ctac add: get_gic_vcpu_ctrl_lr_ccorres)
-           apply csymbr
-           apply simp
-           apply (rule ccorres_Cond_rhs_Seq)
-            apply csymbr
-            apply (ctac add: set_gic_vcpu_ctrl_lr_ccorres)
-              apply (rule ccorres_pre_getCurThread, rename_tac cthread)
-              apply (rule_tac R'="{s. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr cthread} \<inter>
-                                  \<lbrace> \<not>(\<acute>gic_vcpu_num_list_regs \<le> of_nat (word_ctz eisr1) + 0x20) \<and>
-                                    \<acute>gic_vcpu_num_list_regs \<le> 63\<rbrace>"
-                              in ccorres_symb_exec_r)
-                apply (ctac add: handleFault_ccorres)
-               apply vcg
-               apply (clarsimp simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def not_le
-                                    seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
-               apply (rule word_le_mask_eq; simp add: word_bits_def mask_def)
-              apply (rule conseqPre, vcg, clarsimp)
-             apply (rule hoare_lift_Pf[where f=ksCurThread])
-              apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift)+
-            apply vcg
+     (\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s
+          \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
+     UNIV hs
+     vgicMaintenance (Call VGICMaintenance_'proc)"
+proof -
+
+  have unat_of_nat_ctz_plus_32s[simp]:
+    "unat (of_nat (word_ctz w) + (0x20 :: int_sword)) = word_ctz w + 32" for w :: machine_word
+    apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_word_ctz_smw)
+    using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
+
+  have unat_of_nat_ctz_plus_32[simp]:
+    "unat (of_nat (word_ctz w) + (0x20 :: machine_word)) = word_ctz w + 32" for w :: machine_word
+    apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_word_ctz_mw)
+    using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
+
+  have eisr_calc_signed_limits:
+    "eisr0 = 0 \<longrightarrow> eisr1 \<noteq> 0
+     \<Longrightarrow> (0 :: int_sword) <=s of_nat (eisr_calc eisr0 eisr1)
+        \<and> of_nat (eisr_calc eisr0 eisr1) <s (0x40 :: int_sword)"
+    for eisr0 :: machine_word and eisr1
+    supply int_unat[simp del]
+    using word_ctz_le[where w=eisr0]  word_ctz_less[where w=eisr1]
+    apply (clarsimp simp: eisr_calc_def sint_word_ariths sbintrunc_If word_sint_msb_eq
+                          word_sless_alt word_sle_def word_size uint_nat
+                    split: if_splits)
+    apply (cut_tac not_msb_from_less[where v="of_nat (word_ctz eisr0) :: int_sword"])
+     apply (clarsimp simp: word_less_alt unat_of_nat_word_ctz_mw unat_of_nat_word_ctz_smw
+                           uint_nat)
+     apply (cut_tac not_msb_from_less[where v="of_nat (word_ctz eisr1 + 32) :: int_sword"])
+     apply (clarsimp simp: word_less_alt unat_of_nat_word_ctz_mw unat_of_nat_word_ctz_smw
+                           uint_nat)+
+    done
+
+  have eisr_calc_le:
+    "eisr0 = 0 \<longrightarrow> eisr1 \<noteq> 0
+     \<Longrightarrow> eisr_calc eisr0 eisr1 \<le> 63"
+    for eisr0 :: machine_word and eisr1
+    using word_ctz_le[where w=eisr0]  word_ctz_less[where w=eisr1]
+    by (clarsimp simp: eisr_calc_def split: if_splits)
+
+  have of_nat_word_ctz_0x21helper[simp]:
+    "0x21 + of_nat (word_ctz w) \<noteq> (0 :: int_sword)" for w :: machine_word
+    apply (subst unat_arith_simps, simp)
+    apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_word_ctz_smw)
+    using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
+
+  show ?thesis
+    apply (cinit)
+     apply (rule ccorres_pre_getCurThread[unfolded getCurThread_def], rename_tac cthread)
+     apply (ctac (no_vcg) add: isRunnable_ccorres, rename_tac runnable crunnable)
+      apply (drule sym)
+      apply (simp add: to_bool_def)
+      apply (rule_tac P=runnable in  ccorres_cases; clarsimp)
+       prefer 2
+       apply ccorres_rewrite
+       apply (rule ccorres_return_void_C_Seq)
+       apply (rule ccorres_return_void_C)
+      apply ccorres_rewrite
+      apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_eisr0_ccorres)
+       apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_eisr1_ccorres)
+        apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_misr_ccorres)
+         apply (rule ccorres_pre_gets_armKSGICVCPUNumListRegs_ksArchState, rename_tac num_list_regs)
+         apply clarsimp
+         apply (rule ccorres_Cond_rhs_Seq ; clarsimp)
+          apply (rule ccorres_rhs_assoc)+
+          apply csymbr
+          apply (fold eisr_calc_def)
+          apply (rule_tac xf'=irq_idx_'
+                    and val="if eisr0 \<noteq> 0
+                                then of_nat (word_ctz eisr0)
+                                else (if eisr1 \<noteq> 0 then of_nat (word_ctz eisr1 + 32) else -1)"
+                    and R=\<top> and R'=UNIV
+                    in ccorres_symb_exec_r_known_rv)
+             apply clarsimp
+             apply (rule conseqPre, vcg)
+             apply clarsimp
+             subgoal for _ _ eisr1 using sint_ctz_32[where x=eisr1] by clarsimp
+            apply ceqv
+           apply clarsimp
+           apply (simp add: if_to_top_of_bind)
+           apply (rule_tac C'="{s. eisr0 = 0 \<and> eisr1 = 0
+                                    \<or> num_list_regs \<le> eisr_calc eisr0 eisr1}"
+                      and Q="\<lambda>s. num_list_regs \<le> 63"
+                      and Q'="{s. gic_vcpu_num_list_regs_' (globals s) = of_nat num_list_regs}"
+                      in ccorres_rewrite_cond_sr_Seq)
+            apply clarsimp
+            subgoal for _ _ eisr0 eisr1
+              using word_ctz_not_minus_1[where w=eisr1] word_ctz_not_minus_1[where w=eisr0]
+              by (clarsimp split: if_splits simp: eisr_calc_def word_le_nat_alt unat_of_nat_eq
+                                                  unat_of_nat_word_ctz_mw of_nat_eq_signed_scast)
 
            apply (rule ccorres_Cond_rhs_Seq)
-            apply csymbr
-            apply (ctac add: set_gic_vcpu_ctrl_lr_ccorres)
-              apply (rule ccorres_pre_getCurThread, rename_tac cthread)
-              apply (rule_tac R'="{s. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr cthread} \<inter>
-                                  \<lbrace> \<not>(\<acute>gic_vcpu_num_list_regs \<le> of_nat (word_ctz eisr1) + 0x20) \<and>
-                                    \<acute>gic_vcpu_num_list_regs \<le> 63\<rbrace>"
-                              in ccorres_symb_exec_r)
-                apply (ctac add: handleFault_ccorres)
-               apply vcg
-               apply (clarsimp simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
-                                    seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
-               apply (rule word_le_mask_eq; simp add: word_bits_def mask_def)
-              apply (rule conseqPre, vcg, clarsimp)
-             apply (rule hoare_lift_Pf[where f=ksCurThread])
-              apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift)+
-            apply vcg
-           apply (rule ccorres_Cond_rhs_Seq)
-            apply csymbr
-            apply (ctac add: set_gic_vcpu_ctrl_lr_ccorres)
-              apply (rule ccorres_pre_getCurThread, rename_tac cthread)
-              apply (rule_tac R'="{s. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr cthread} \<inter>
-                                  \<lbrace> \<not>(\<acute>gic_vcpu_num_list_regs \<le> of_nat (word_ctz eisr1) + 0x20) \<and>
-                                    \<acute>gic_vcpu_num_list_regs \<le> 63\<rbrace>"
-                              in ccorres_symb_exec_r)
-                apply (ctac add: handleFault_ccorres)
-               apply vcg
-               apply (clarsimp simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
-                                    seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
-               apply (rule word_le_mask_eq; simp add: word_bits_def mask_def)
-              apply (rule conseqPre, vcg, clarsimp)
-             apply (rule hoare_lift_Pf[where f=ksCurThread])
-              apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift)+
-            apply vcg
-           apply ccorres_rewrite
-           apply (ctac add: set_gic_vcpu_ctrl_lr_ccorres)
-             apply (rule ccorres_pre_getCurThread, rename_tac cthread)
-             apply (rule_tac R'="{s. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr cthread} \<inter>
-                                  \<lbrace> \<not>(\<acute>gic_vcpu_num_list_regs \<le> of_nat (word_ctz eisr1) + 0x20) \<and>
-                                    \<acute>gic_vcpu_num_list_regs \<le> 63\<rbrace>"
-                             in ccorres_symb_exec_r)
-               apply (ctac add: handleFault_ccorres)
-              apply vcg
-              apply (clarsimp simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
-                                    seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
-              apply (rule word_le_mask_eq; simp add: word_bits_def mask_def)
-             apply (rule conseqPre, vcg, clarsimp)
-            apply (rule hoare_lift_Pf[where f=ksCurThread])
-             apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift)+
-           apply vcg
-          apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift)+
-         apply vcg
-        apply ccorres_rewrite
-        apply (rule ccorres_rhs_assoc)
-        apply csymbr
-        apply csymbr
-        apply simp
-        apply (subgoal_tac "of_nat (word_ctz eisr0) \<noteq> (- 1 :: 32 signed word)")
-         prefer 2
-         apply (cut_tac w=eisr0 in word_ctz_le)
-         apply simp
-         apply (clarsimp simp: of_nat_eq signed_unat_minus_one_32)
-        apply simp
-
-         apply (simp add: if_to_top_of_bind)
-         apply (rule ccorres_cond_seq)
-         apply (rule_tac R="\<lambda>s. num_list_regs = armKSGICVCPUNumListRegs (ksArchState s)
-                                \<and> valid_arch_state' s" in ccorres_cond)
-           apply (clarsimp simp: rf_sr_armKSGICVCPUNumListRegs valid_arch_state'_def max_armKSGICVCPUNumListRegs_def)
-           apply (cut_tac w=eisr0 in word_ctz_le)
-           apply (simp add: word_le_nat_alt unat_of_nat)
-          apply (rule ccorres_pre_getCurThread, rename_tac cthread)
-          apply (rule_tac R'="{s. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr cthread}" in ccorres_symb_exec_r)
-            apply (ctac add: handleFault_ccorres)
-           apply vcg
-           apply (clarsimp simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
-                                seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
-          apply (rule conseqPre, vcg, clarsimp)
-         apply (simp add: doMachineOp_bind bind_assoc)
-         apply (rule ccorres_rhs_assoc)+
-         apply (ctac add: get_gic_vcpu_ctrl_lr_ccorres)
-           apply csymbr
-           apply simp
-           apply (rule ccorres_Cond_rhs_Seq)
-            apply csymbr
-            apply (ctac add: set_gic_vcpu_ctrl_lr_ccorres)
-              apply (rule ccorres_pre_getCurThread, rename_tac cthread)
-              apply (rule_tac R'="{s. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr cthread}"
-                              in ccorres_symb_exec_r)
-                apply (ctac add: handleFault_ccorres)
-               apply vcg
-               apply (clarsimp simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
-                                    seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
-              apply (rule word_le_mask_eq; simp add: word_bits_def mask_def)
-              apply (cut_tac w=eisr0 in word_ctz_le)
-              apply (simp add: word_le_nat_alt unat_of_nat)
-              apply (rule conseqPre, vcg, clarsimp)
-             apply (rule hoare_lift_Pf[where f=ksCurThread])
-              apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift)+
-           apply vcg
-
-           apply (rule ccorres_Cond_rhs_Seq)
-           apply csymbr
-           apply (ctac add: set_gic_vcpu_ctrl_lr_ccorres)
-             apply (rule ccorres_pre_getCurThread, rename_tac cthread)
-             apply (rule_tac R'="{s. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr cthread}"
-                             in ccorres_symb_exec_r)
-               apply (ctac add: handleFault_ccorres)
-              apply vcg
-              apply (clarsimp simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
-                                    seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
-              apply (rule word_le_mask_eq; simp add: word_bits_def mask_def)
-              apply (cut_tac w=eisr0 in word_ctz_le)
-              apply (simp add: word_le_nat_alt unat_of_nat)
-             apply (rule conseqPre, vcg, clarsimp)
-            apply (rule hoare_lift_Pf[where f=ksCurThread])
-             apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift)+
-           apply vcg
-          apply (rule ccorres_Cond_rhs_Seq)
-           apply csymbr
-           apply (ctac add: set_gic_vcpu_ctrl_lr_ccorres)
-             apply (rule ccorres_pre_getCurThread, rename_tac cthread)
-             apply (rule_tac R'="{s. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr cthread}"
-                             in ccorres_symb_exec_r)
-               apply (ctac add: handleFault_ccorres)
-              apply vcg
-              apply (clarsimp simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
-                                    seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
-              apply (rule word_le_mask_eq; simp add: word_bits_def mask_def)
-              apply (cut_tac w=eisr0 in word_ctz_le)
-              apply (simp add: word_le_nat_alt unat_of_nat)
-             apply (rule conseqPre, vcg, clarsimp)
-            apply (rule hoare_lift_Pf[where f=ksCurThread])
-             apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift)+
-           apply vcg
-          apply ccorres_rewrite
-          apply (ctac add: set_gic_vcpu_ctrl_lr_ccorres)
+            (* handle fault branch *)
+            apply clarsimp
             apply (rule ccorres_pre_getCurThread, rename_tac cthread)
             apply (rule_tac R'="{s. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr cthread}"
-                             in ccorres_symb_exec_r)
+                      in ccorres_symb_exec_r)
               apply (ctac add: handleFault_ccorres)
-             apply vcg
-             apply (clarsimp simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
-                                   seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
-             apply (rule word_le_mask_eq; simp add: word_bits_def mask_def)
-             apply (cut_tac w=eisr0 in word_ctz_le)
-             apply (simp add: word_le_nat_alt unat_of_nat)
-            apply (rule conseqPre, vcg, clarsimp)
-           apply (wpsimp)
+             apply (rule conseqPre, vcg)
+             apply (fastforce simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
+                                    seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
+            apply (rule conseqPre, vcg, fastforce)
+           apply (simp only:) (* rewrite if condition to False *)
+           apply (clarsimp simp: bind_assoc)
+           apply (rule ccorres_rhs_assoc)+
+           apply (ctac add: get_gic_vcpu_ctrl_lr_ccorres)
+             apply (rename_tac virq virq')
+             apply clarsimp
+
+             apply (subgoal_tac "(if eisr0 \<noteq> 0 then of_nat (word_ctz eisr0)
+                                   else if eisr1 \<noteq> 0 then of_nat (word_ctz eisr1) + 32 else - 1)
+                                   = (of_nat (eisr_calc eisr0 eisr1) :: (machine_word_len sword))")
+              prefer 2
+              apply (fastforce split: if_splits simp: eisr_calc_def)
+
+             (* getting type and setting EOIIRQEN for valid virq types is captured by virqSetEOIIRQEN *)
+             apply (rule ccorres_rhs_assoc2)
+             apply (rule_tac xf'=virq_'
+                      and val="virq_C (ARRAY _. ARM_HYP_H.virqSetEOIIRQEN virq 0)"
+                      and R=\<top> and R'="{s. virq_' s = virq_C (ARRAY _. virq)}"
+                      in ccorres_symb_exec_r_known_rv)
+                apply (rule conseqPre, vcg)
+                apply (fastforce simp: virqSetEOIIRQEN_id)
+               apply ceqv
+              apply (ctac add: set_gic_vcpu_ctrl_lr_ccorres)
+                apply clarsimp
+                apply (rule ccorres_pre_getCurVCPU[simplified comp_def], rename_tac vcpuopt)
+                apply (rule ccorres_split_nothrow) (* updating vgic LR of current vcpu *)
+                    apply (wpc ; clarsimp)
+
+                     (* no current vcpu *)
+                     apply (rule_tac C'="{_. False }"
+                              and Q="\<lambda>s. armHSCurVCPU (ksArchState s) = None"
+                              and Q'=UNIV
+                              in ccorres_rewrite_cond_sr)
+                      apply (fastforce dest!: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def split: option.splits)
+                     apply ccorres_rewrite
+                     apply (rule ccorres_return_Skip)
+
+                    (* current vcpu *)
+                    apply (rename_tac vcpuptr active)
+                    apply (rule_tac C'="{_. active }"
+                             and Q="\<lambda>s. armHSCurVCPU (ksArchState s) = Some (vcpuptr, active)"
+                             and Q'=UNIV
+                             in ccorres_rewrite_cond_sr)
+                     apply (fastforce dest!: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def split: option.splits)
+
+                    (* we unfortunately split an option and product, so we can't unify directly *)
+                    apply (rule_tac A="\<lambda>s. vcpu_at' (fst (the (armHSCurVCPU (ksArchState s)))) s
+                                           \<and> armHSCurVCPU (ksArchState s) \<noteq> None"
+                              and A'="{s. armHSCurVCPU_' (globals s) = vcpu_Ptr (fst (vcpuptr, active))}"
+                              in ccorres_guard_imp)
+                      apply (rule_tac P=active in ccorres_cases ; clarsimp ; ccorres_rewrite)
+
+                       (* active *)
+                       apply (rule ccorres_move_const_guards)+
+                       apply (rule vgicUpdateLR_ccorres_armHSCurVCPU ; clarsimp simp: word_ctz_le)
+                        apply (fastforce dest: word_ctz_less
+                                         simp: eisr_calc_def unat_of_nat_word_ctz_smw)
+                       apply (erule eisr_calc_le)
+                      apply (rule ccorres_return_Skip)
+                     apply clarsimp
+                     apply (erule eisr_calc_signed_limits)
+                    apply fastforce
+                   apply ceqv
+                  apply clarsimp
+                  apply (rule ccorres_pre_getCurThread, rename_tac cthread)
+                  apply (rule_tac R'="{s. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr cthread}"
+                           in ccorres_symb_exec_r)
+                    apply (ctac add: handleFault_ccorres)
+                   apply (rule conseqPre, vcg)
+
+                   subgoal for _ _ _ eisr0 eisr1
+                     apply (clarsimp simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
+                                           seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def Let_def
+                                           eisr_calc_def mask_eq_iff
+                                     split: if_splits)
+                     apply (fastforce simp: uint_nat unat_of_nat_word_ctz_mw
+                                      dest: word_ctz_less[where w=eisr1] word_ctz_less[where w=eisr0])+
+                     done
+
+                  apply (rule conseqPre, vcg, fastforce)
+                 apply clarsimp
+                 apply (rule hoare_lift_Pf[where f=ksCurThread])
+                  apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift)+
+                apply vcg
+               apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift hoare_vcg_imp_lift'
+                      | assumption (* schematic asm *)
+                      | clarsimp simp: conj_ac cong: conj_cong)+
+              apply (vcg exspec=set_gic_vcpu_ctrl_lr_modifies)
+             apply clarsimp
+             apply (vcg exspec=set_gic_vcpu_ctrl_lr_modifies)
+            apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift hoare_vcg_imp_lift')
+           apply (clarsimp)
+           apply (vcg exspec=get_gic_vcpu_ctrl_lr_modifies)
           apply vcg
-         apply (wpsimp | rule hoare_lift_Pf[where f=ksCurThread]; wpsimp)+
-        apply (vcg)
+         apply (rule ccorres_pre_getCurThread, rename_tac cthread)
+         apply (rule_tac R'="{s. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr cthread}"
+                   in ccorres_symb_exec_r)
+           apply (ctac (no_vcg) add: handleFault_ccorres)
+          apply (rule conseqPre, vcg)
+          apply (fastforce simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
+                                    seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
+         apply (rule conseqPre, vcg)
+         apply (fastforce simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
+                                seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
+        (* we only care about lifting state-related imps, nothing rv-related is relevant *)
+        apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift
+                          hoare_vcg_imp_lift'[where P="\<lambda>_ s. P s" for P]
+               | wp_once hoare_drop_imp)+
 
-       apply ccorres_rewrite
-       apply (rule ccorres_pre_getCurThread, rename_tac cthread)
-       apply (rule_tac R'="{s. ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr cthread}" in ccorres_symb_exec_r)
-         apply (ctac add: handleFault_ccorres)
-        apply vcg
-        apply (clarsimp simp: cfault_rel_def seL4_Fault_VGICMaintenance_lift_def
-                              seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def)
-        apply (rule conseqPre, vcg, clarsimp)
-
-      apply ((wpsimp wp: hoare_drop_imps | rule hoare_lift_Pf[where f=ksCurThread])+)[3]
-   apply (simp add: isRunnable_def)
-   apply (wp gts_wp')
-  apply (clarsimp simp: dc_def cong: conj_cong)
-  apply (rule conjI, fastforce)
-  apply (rule conjI, clarsimp)
-   apply (rule conjI)
-    apply (erule pred_tcb'_weakenE, simp split: thread_state.splits)
-   apply fastforce
-  apply (clarsimp simp: virqSetEOIIRQEN_id)
-  apply (rule conjI; (clarsimp simp: gic_vcpu_num_list_regs_cross_over)?)
-  apply (cut_tac x="ret__unsigned_' tb" in sint_ctz_32)
-  apply auto
-  done
+    apply (clarsimp cong: conj_cong simp: dc_def tcb_at_invs')
+    apply (frule invs_arch_state')
+    apply (clarsimp simp: valid_arch_state'_def max_armKSGICVCPUNumListRegs_def)
+    apply (rule conjI, clarsimp)
+     apply (rule conjI)
+      apply (clarsimp simp: pred_tcb_at'_def)
+      apply (erule obj_at'_weakenE)
+      apply (case_tac "tcbState k"; fastforce)
+     apply clarsimp
+     apply (erule (1) invs'_HScurVCPU_vcpu_at')
+    apply clarsimp
+    apply (rule conjI; clarsimp simp: eisr_calc_def cur_vcpu_relation_def split: option.splits)
+    done
+qed
 
 lemma ccorres_handleReservedIRQ:
   "ccorres dc xfdc

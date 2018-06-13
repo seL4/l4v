@@ -16,52 +16,13 @@ context Arch begin global_naming ARM_HYP
 
 named_theorems DetSchedDomainTime_AI_assms
 
-lemma set_vcpu_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  by (wp set_vcpu_wp) simp
-
-crunch domain_list_inv[wp]: vcpu_update, vcpu_save_register, vgic_update "\<lambda>s. P (domain_list s)"
-crunch domain_list_inv[wp]: vcpu_enable, vcpu_disable, vcpu_restore "\<lambda>s. P (domain_list s)"
-
-lemma vcpu_save_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> vcpu_save v \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  apply (simp add: vcpu_save_def)
-  apply (cases v; simp)
-  apply (case_tac a; simp)
-  apply (wp | wpc | clarsimp | rule_tac S="set [0..<num_list_regs]" in mapM_wp)+
-  done
-
-lemma vcpu_switch_domain_list_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> vcpu_switch param_a \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  apply (simp add: vcpu_switch_def)
-  apply (rule hoare_pre)
-   apply (wp | wpc | clarsimp)+
-  done
-
-lemma set_vcpu_domain_time_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
-  by (wp set_vcpu_wp) simp
-
-crunch domain_time_inv[wp]:
-  vcpu_update, vcpu_save_register, vgic_update "\<lambda>s. P (domain_time s)"
-
-crunch domain_time_inv[wp]:
-  vcpu_enable, vcpu_disable, vcpu_restore "\<lambda>s. P (domain_time s)"
-
-lemma vcpu_save_domain_time_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace> vcpu_save v \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
-  apply (simp add: vcpu_save_def)
-  apply (cases v; simp)
-  apply (case_tac a; simp)
-  apply (wp | wpc | clarsimp | rule_tac S="set [0..<num_list_regs]" in mapM_wp)+
-  done
-
-lemma vcpu_switch_domain_time_inv[wp]:
-  "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace> vcpu_switch param_a \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
-  apply (simp add: vcpu_switch_def)
-  apply (rule hoare_pre)
-   apply (wp | wpc | clarsimp)+
-  done
+crunches
+  vcpu_update, vcpu_save_reg, vgic_update, vcpu_enable, vcpu_disable, vcpu_restore,
+  vcpu_write_reg, vcpu_read_reg, vcpu_save, vcpu_switch, set_vcpu, vgic_update_lr,
+  read_vcpu_register, write_vcpu_register
+  for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
+  and domain_time_inv[wp]: "\<lambda>s. P (domain_time s)"
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)

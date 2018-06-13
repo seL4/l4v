@@ -143,7 +143,6 @@ definition
   vcpu_relation :: "ARM_A.vcpu \<Rightarrow> vcpu \<Rightarrow> bool"
 where
   "vcpu_relation \<equiv> \<lambda>v v'. vcpu_tcb v = vcpuTCBPtr v' \<and>
-                           vcpu_actlr v = vcpuACTLR v' \<and>
                            vgic_map (vcpu_vgic v) = vcpuVGIC v' \<and>
                            vcpu_regs v = vcpuRegs v'"
 
@@ -573,7 +572,7 @@ where
        | SuperSectionObj  \<Rightarrow> SuperSectionObject
        | PageTableObj     \<Rightarrow> PageTableObject
        | PageDirectoryObj \<Rightarrow> PageDirectoryObject
-       | ARM_A.VCPUObj          \<Rightarrow> VCPUObject)"
+       | ARM_A.VCPUObj    \<Rightarrow> VCPUObject)"
 
 lemma get_tcb_at: "tcb_at t s \<Longrightarrow> (\<exists>tcb. get_tcb t s = Some tcb)"
   by (simp add: tcb_at_def)

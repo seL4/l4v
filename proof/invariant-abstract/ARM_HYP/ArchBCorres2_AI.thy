@@ -138,8 +138,10 @@ lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fau
   apply (simp | wp)+
   done
 
-lemma vgic_maintenance_bcorres[wp]: "bcorres vgic_maintenance vgic_maintenance"
-  unfolding vgic_maintenance_def by wpsimp
+lemma vgic_maintenance_bcorres[wp]:
+  "bcorres vgic_maintenance vgic_maintenance"
+  unfolding vgic_maintenance_def
+  by (wpsimp simp: vgic_update_lr_bcorres)
 
 lemma handle_reserved_irq_bcorres[wp]: "bcorres (handle_reserved_irq a) (handle_reserved_irq a)"
   unfolding handle_reserved_irq_def by wpsimp

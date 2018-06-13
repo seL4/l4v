@@ -207,13 +207,21 @@ lemma halted_eq:
   "halted st = (st = Inactive \<or> st = IdleThreadState)"
   by (cases st; simp)
 
+crunches vgic_update, vgic_update_lr, vcpu_update for ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
+  (wp: ex_nonz_cap_to_pres)
+
 lemma vgic_maintenance_invs[wp]:
   "\<lbrace>invs\<rbrace> vgic_maintenance \<lbrace>\<lambda>_. invs\<rbrace>"
-  unfolding vgic_maintenance_def get_gic_vcpu_ctrl_misr_def
-            get_gic_vcpu_ctrl_eisr1_def get_gic_vcpu_ctrl_eisr0_def
-  apply (wpsimp simp: do_machine_op_bind submonad_do_machine_op.gets valid_fault_def
-                  wp: thread_get_wp'
-         | intro conjI impI)+
+  unfolding vgic_maintenance_def
+  supply if_split[split del] valid_fault_def[simp]
+  apply (wpsimp simp: get_gic_vcpu_ctrl_misr_def get_gic_vcpu_ctrl_eisr1_def
+                      get_gic_vcpu_ctrl_eisr0_def
+                 wp: thread_get_wp'
+         | rule hoare_vcg_conj_lift hoare_lift_Pf[where f=cur_thread and m="vgic_update_lr p i v" for p i v]
+         | wp_once hoare_drop_imp[where f="do_machine_op m" for m]
+                   hoare_drop_imp[where f="return $ m" for m]
+         | clarsimp simp: if_apply_def2
+         | wp_once hoare_vcg_imp_lift')+
   apply (fastforce intro!: st_tcb_ex_cap[where P=active]
                      simp: st_tcb_at_def obj_at_def runnable_eq halted_eq)+
   done
