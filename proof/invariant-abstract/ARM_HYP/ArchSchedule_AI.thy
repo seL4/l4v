@@ -83,42 +83,16 @@ lemma idle_strg:
   by (clarsimp simp: invs_def valid_state_def valid_idle_def cur_tcb_def
                      pred_tcb_at_def valid_machine_state_def obj_at_def is_tcb_def)
 
-crunch it[wp]: vcpu_update, vcpu_save_register, vgic_update "\<lambda>s. P (idle_thread s)"
-crunch it[wp]: vcpu_enable, vcpu_disable, vcpu_restore "\<lambda>s. P (idle_thread s)"
-
-lemma vcpu_save_it[wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> vcpu_save v \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
-  unfolding vcpu_save_def
-  apply (cases v; simp)
-  apply (case_tac a; simp)
-  apply (wp | wpc | clarsimp | rule_tac S="set [0..<num_list_regs]" in mapM_wp)+
-  done
-
-lemma vcpu_switch_it[wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> vcpu_switch v \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
-  unfolding vcpu_switch_def
-  by (rule hoare_pre, wpsimp) simp
-
 lemma set_vcpu_ct[wp]:
   "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_vcpu v v' \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
   by (wpsimp simp: set_vcpu_def wp: get_object_wp)
 
-crunch ct[wp]: vcpu_update, vcpu_save_register, vgic_update "\<lambda>s. P (cur_thread s)"
-  (ignore: get_object)
-crunch ct[wp]: vcpu_enable, vcpu_disable, vcpu_restore "\<lambda>s. P (cur_thread s)"
-
-lemma vcpu_save_ct[wp]:
-  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> vcpu_save v \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
-  unfolding vcpu_save_def
-  apply (cases v; simp)
-  apply (case_tac a; simp)
-  apply (wp | wpc | clarsimp | rule_tac S="set [0..<num_list_regs]" in mapM_wp)+
-  done
-
-lemma vcpu_switch_ct[wp]:
-  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> vcpu_switch v \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
-  unfolding vcpu_switch_def
-  by wpsimp
+crunches
+  vcpu_update, vgic_update, vgic_update_lr, vcpu_restore_reg_range, vcpu_save_reg_range,
+  vcpu_enable, vcpu_disable, vcpu_save, vcpu_restore, vcpu_switch, vcpu_save
+  for it[wp]: "\<lambda>s. P (idle_thread s)"
+  and ct[wp]: "\<lambda>s. P (cur_thread s)"
+  (wp: mapM_x_wp mapM_wp subset_refl)
 
 lemma arch_stit_invs[wp, Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>r. invs\<rbrace>"

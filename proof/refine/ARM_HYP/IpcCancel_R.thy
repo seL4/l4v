@@ -1458,7 +1458,7 @@ lemma corres_gets_current_vcpu[corres]:
   by (simp add: state_relation_def arch_state_relation_def)
 
 lemma vcpuInvalidateActive_corres[corres]:
-  "corres dc \<top> \<top> vcpu_invalidate_active vcpuInvalidateActive"
+  "corres dc \<top> no_0_obj' vcpu_invalidate_active vcpuInvalidateActive"
   unfolding vcpuInvalidateActive_def vcpu_invalidate_active_def
   apply (corressimp  corres: vcpuDisable_corres
                     corresK: corresK_modifyT
@@ -1544,11 +1544,11 @@ lemma helper: "vcpu_relation v1 v2 \<Longrightarrow> vcpu_relation v1 v3 \<Longr
 lemma dissociateVCPUTCB_corres [@lift_corres_args, corres]:
   "corres dc (obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_vcpu (tcb_arch tcb) = Some v) t and
               obj_at (\<lambda>ko. \<exists>vcpu. ko = ArchObj (VCPU vcpu) \<and> vcpu_tcb vcpu = Some t) v)
-             (tcb_at' t and vcpu_at' v)
+             (tcb_at' t and vcpu_at' v and no_0_obj')
              (dissociate_vcpu_tcb v t) (dissociateVCPUTCB v t)"
   unfolding dissociate_vcpu_tcb_def dissociateVCPUTCB_def
   apply (clarsimp simp:  bind_assoc when_fail_assert opt_case_when)
-  apply (corressimp corres: corres_get_vcpu set_vcpu_corres get_tcb_corres)
+  apply (corressimp corres: get_vcpu_corres set_vcpu_corres get_tcb_corres)
   apply (wpsimp wp: arch_thread_get_wp
       simp: archThreadSet_def tcb_ko_at' tcb_at_typ_at'
       | strengthen imp_drop_strg[where Q="tcb_at t s" for s]
@@ -1574,7 +1574,7 @@ lemma sym_refs_tcb_vcpu:
   done
 
 lemma prepareThreadDelete_corres:
-  "corres dc (invs and tcb_at t) (valid_objs' and tcb_at' t)
+  "corres dc (invs and tcb_at t) (valid_objs' and tcb_at' t and no_0_obj')
         (prepare_thread_delete t) (prepareThreadDelete t)"
   apply (simp add: prepare_thread_delete_def prepareThreadDelete_def)
   apply (corressimp simp: tcb_vcpu_relation)

@@ -118,11 +118,8 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
 
 context Arch begin global_naming ARM
 
-crunch (empty_fail) empty_fail[wp]: vcpu_update
+crunch (empty_fail) empty_fail[wp]: vcpu_update, vcpu_save_reg_range, vgic_update_lr
   (ignore: set_object get_object)
-
-lemma vcpu_save_register_empty_fail[wp]: "empty_fail c \<Longrightarrow> empty_fail (vcpu_save_register vcpu f c)"
-  by (simp add:  vcpu_save_register_def) wpsimp
 
 lemma vcpu_save_empty_fail[wp,EmptyFail_AI_assms]: "empty_fail (vcpu_save a)"
   apply (simp add:  vcpu_save_def)
@@ -135,10 +132,8 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slo
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits
-   ignore: setACTLR set_gic_vcpu_ctrl_hcr_impl set_lr_svc_impl
-           set_sp_svc_impl set_lr_abt_impl set_sp_abt_impl set_lr_und_impl set_sp_und_impl
-           set_lr_irq_impl set_sp_irq_impl set_lr_fiq_impl set_sp_fiq_impl set_r8_fiq_impl
-           set_r9_fiq_impl set_r10_fiq_impl set_r11_fiq_impl set_r12_fiq_impl
+   ignore: do_machine_op set_gic_vcpu_ctrl_hcr_impl
+           writeVCPUHardwareReg_impl
            get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl
            writeContextIDAndPD_impl set_gic_vcpu_ctrl_hcr_impl setSCTLR_impl setHCR_impl
            set_gic_vcpu_ctrl_lr_impl setCurrentPDPL2_impl)

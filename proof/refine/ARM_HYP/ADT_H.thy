@@ -136,9 +136,8 @@ definition
    | KOPDE _ \<Rightarrow>
        if is_aligned a pd_bits then Some (PageDirectory (absPageDirectory h a))
        else None
-   | KOVCPU (VCPUObj tcb actlr vgic regs) \<Rightarrow>
+   | KOVCPU (VCPUObj tcb vgic regs) \<Rightarrow>
        Some (VCPU \<lparr> vcpu_tcb    = tcb,
-                    vcpu_actlr  = actlr,
                     vcpu_vgic   = absVGIC vgic,
                     vcpu_regs   = regs \<rparr>))"
 

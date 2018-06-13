@@ -28,14 +28,14 @@ defs makeVCPUObject_def:
 "makeVCPUObject \<equiv>
     VCPUObj_ \<lparr>
           vcpuTCBPtr= Nothing
-        , vcpuACTLR= actlrDefault
         , vcpuVGIC= VGICInterface_ \<lparr>
                           vgicHCR= vgicHCREN
                         , vgicVMCR= 0
                         , vgicAPR= 0
                         , vgicLR= (\<lambda>_. 0)
                         \<rparr>
-        , vcpuRegs= funArray (const 0)  aLU  [(VCPURegSCTLR, sctlrDefault)]
+        , vcpuRegs= funArray (const 0)  aLU  [(VCPURegSCTLR, sctlrDefault)
+                                             ,(VCPURegACTLR, actlrDefault)]
         \<rparr>"
 
 datatype arch_kernel_object_type =

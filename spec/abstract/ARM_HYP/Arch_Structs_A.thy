@@ -142,10 +142,8 @@ record  gic_vcpu_interface =
   vgic_apr  :: machine_word
   vgic_lr   :: "nat \<Rightarrow> ARM_A.virq"
 
-
 record vcpu =
   vcpu_tcb   :: "obj_ref option"
-  vcpu_actlr :: machine_word
   vcpu_vgic  :: gic_vcpu_interface
   vcpu_regs :: "vcpureg \<Rightarrow> machine_word"
 
@@ -169,9 +167,9 @@ definition
   default_vcpu :: vcpu where
   "default_vcpu \<equiv> \<lparr>
       vcpu_tcb    = None,
-      vcpu_actlr  = actlrDefault,
       vcpu_vgic   = default_gic_vcpu_interface,
-      vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrDefault) \<rparr>"
+      vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrDefault
+                             , VCPURegACTLR := actlrDefault) \<rparr>"
 
 
 text {*

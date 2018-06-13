@@ -231,10 +231,13 @@ caches must be done separately.
 
 \subsubsection{Address Space Setup}
 
-> writeTTBR0 :: PAddr -> MachineMonad ()
-> writeTTBR0 pd = do
+> writeTTBR0 :: Word -> MachineMonad ()
+> writeTTBR0 w = do
 >     cbptr <- ask
->     liftIO $ Platform.writeTTBR0 cbptr pd
+>     liftIO $ Platform.writeTTBR0 cbptr w
+
+> writeTTBR0Ptr :: PAddr -> MachineMonad ()
+> writeTTBR0Ptr pd = writeTTBR0 ((fromPAddr pd .&. 0xffffe000) .|. 0x18)
 
 > setCurrentPD :: PAddr -> MachineMonad ()
 > setCurrentPD pd = do
@@ -242,7 +245,7 @@ caches must be done separately.
 >     setCurrentPDPL2 pd
 #else
 >     dsb
->     writeTTBR0 pd
+>     writeTTBR0Ptr pd
 >     isb
 #endif
 
@@ -448,13 +451,15 @@ implementation assumes the monitor is not modelled in our simulator.
 > getDFSR = do
 >     cbptr <- ask
 >     liftIO $ Platform.getDFSR cbptr
->
+
 > getFAR :: MachineMonad VPtr
 > getFAR = do
 >     cbptr <- ask
 >     liftIO $ Platform.getFAR cbptr
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+\subsection{Hypervisor-specific status/control registers}
 
 > getHSR :: MachineMonad Word
 > getHSR = error "FIXME ARMHYP machine callback unimplemented"
@@ -474,75 +479,18 @@ implementation assumes the monitor is not modelled in our simulator.
 > setSCTLR :: Word -> MachineMonad ()
 > setSCTLR _sctlr = error "FIXME ARMHYP machine callback unimplemented"
 
-> getACTLR :: MachineMonad Word
-> getACTLR = error "FIXME ARMHYP machine callback unimplemented"
+\subsection{Hypervisor banked registers}
 
-> setACTLR :: Word -> MachineMonad ()
-> setACTLR _actlr = error "FIXME ARMHYP machine callback unimplemented"
+Rather than a line-for-line copy of every hypervisor register storage and
+retrieval function from the C code, we abstract the concept into one function
+each. Some special registers, like SCTLR, still get their own load/store
+functions due to being operated on separately.
 
-Hypervisor banked registers
+> readVCPUHardwareReg :: ARM.VCPUReg -> MachineMonad Word
+> readVCPUHardwareReg reg = error "FIXME ARMHYP machine callback unimplemented"
 
-> set_lr_svc :: Word -> MachineMonad ()
-> set_lr_svc _w = error "FIXME ARMHYP machine callback unimplemented"
-> set_sp_svc :: Word -> MachineMonad ()
-> set_sp_svc _w = error "FIXME ARMHYP machine callback unimplemented"
-> set_lr_abt :: Word -> MachineMonad ()
-> set_lr_abt _w = error "FIXME ARMHYP machine callback unimplemented"
-> set_sp_abt :: Word -> MachineMonad ()
-> set_sp_abt _w = error "FIXME ARMHYP machine callback unimplemented"
-> set_lr_und :: Word -> MachineMonad ()
-> set_lr_und _w = error "FIXME ARMHYP machine callback unimplemented"
-> set_sp_und :: Word -> MachineMonad ()
-> set_sp_und _w = error "FIXME ARMHYP machine callback unimplemented"
-> set_lr_irq :: Word -> MachineMonad ()
-> set_lr_irq _w = error "FIXME ARMHYP machine callback unimplemented"
-> set_sp_irq :: Word -> MachineMonad ()
-> set_sp_irq _w = error "FIXME ARMHYP machine callback unimplemented"
-> set_lr_fiq :: Word -> MachineMonad ()
-> set_lr_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
-> set_sp_fiq :: Word -> MachineMonad ()
-> set_sp_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
-> set_r8_fiq :: Word -> MachineMonad ()
-> set_r8_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
-> set_r9_fiq :: Word -> MachineMonad ()
-> set_r9_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
-> set_r10_fiq :: Word -> MachineMonad ()
-> set_r10_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
-> set_r11_fiq :: Word -> MachineMonad ()
-> set_r11_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
-> set_r12_fiq :: Word -> MachineMonad ()
-> set_r12_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
-
-> get_lr_svc :: MachineMonad Word
-> get_lr_svc = error "FIXME ARMHYP machine callback unimplemented"
-> get_sp_svc :: MachineMonad Word
-> get_sp_svc = error "FIXME ARMHYP machine callback unimplemented"
-> get_lr_abt :: MachineMonad Word
-> get_lr_abt = error "FIXME ARMHYP machine callback unimplemented"
-> get_sp_abt :: MachineMonad Word
-> get_sp_abt = error "FIXME ARMHYP machine callback unimplemented"
-> get_lr_und :: MachineMonad Word
-> get_lr_und = error "FIXME ARMHYP machine callback unimplemented"
-> get_sp_und :: MachineMonad Word
-> get_sp_und = error "FIXME ARMHYP machine callback unimplemented"
-> get_lr_irq :: MachineMonad Word
-> get_lr_irq = error "FIXME ARMHYP machine callback unimplemented"
-> get_sp_irq :: MachineMonad Word
-> get_sp_irq = error "FIXME ARMHYP machine callback unimplemented"
-> get_lr_fiq :: MachineMonad Word
-> get_lr_fiq = error "FIXME ARMHYP machine callback unimplemented"
-> get_sp_fiq :: MachineMonad Word
-> get_sp_fiq = error "FIXME ARMHYP machine callback unimplemented"
-> get_r8_fiq :: MachineMonad Word
-> get_r8_fiq = error "FIXME ARMHYP machine callback unimplemented"
-> get_r9_fiq :: MachineMonad Word
-> get_r9_fiq = error "FIXME ARMHYP machine callback unimplemented"
-> get_r10_fiq :: MachineMonad Word
-> get_r10_fiq = error "FIXME ARMHYP machine callback unimplemented"
-> get_r11_fiq :: MachineMonad Word
-> get_r11_fiq = error "FIXME ARMHYP machine callback unimplemented"
-> get_r12_fiq :: MachineMonad Word
-> get_r12_fiq = error "FIXME ARMHYP machine callback unimplemented"
+> writeVCPUHardwareReg :: ARM.VCPUReg -> Word -> MachineMonad ()
+> writeVCPUHardwareReg reg val = error "FIXME ARMHYP machine callback unimplemented"
 
 #endif
 

@@ -55,39 +55,18 @@ subsection "VCPU: Read/Write Registers"
 definition
   read_vcpu_register :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> (machine_word,'z::state_ext) s_monad"
 where
-  "read_vcpu_register vcpu_ptr reg \<equiv>
-  do
-     cur_vcpu \<leftarrow> gets (arm_current_vcpu o arch_state);
+  "read_vcpu_register vcpu_ptr reg \<equiv> do
+     cur_vcpu \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
      (on_cur_vcpu, active) \<leftarrow> return (case cur_vcpu of
-          Some (vcpu_ptr', a) \<Rightarrow> (vcpu_ptr' = vcpu_ptr, a)
-       |  _ \<Rightarrow> (False, False));
+         Some (vcpu_ptr', a) \<Rightarrow> (vcpu_ptr' = vcpu_ptr, a)
+       | _ \<Rightarrow> (False, False));
 
      if on_cur_vcpu
-         then case reg of
-                  VCPURegSCTLR \<Rightarrow> if active then do_machine_op getSCTLR
-                                            else do
-                                                vcpu \<leftarrow> get_vcpu vcpu_ptr;
-                                                return $ vcpu_regs vcpu reg
-                                            od
-                | VCPURegLRsvc \<Rightarrow> do_machine_op get_lr_svc
-                | VCPURegSPsvc \<Rightarrow> do_machine_op get_sp_svc
-                | VCPURegLRabt \<Rightarrow> do_machine_op get_lr_abt
-                | VCPURegSPabt \<Rightarrow> do_machine_op get_sp_abt
-                | VCPURegLRund \<Rightarrow> do_machine_op get_lr_und
-                | VCPURegSPund \<Rightarrow> do_machine_op get_sp_und
-                | VCPURegLRirq \<Rightarrow> do_machine_op get_lr_irq
-                | VCPURegSPirq \<Rightarrow> do_machine_op get_sp_irq
-                | VCPURegLRfiq \<Rightarrow> do_machine_op get_lr_fiq
-                | VCPURegSPfiq \<Rightarrow> do_machine_op get_sp_fiq
-                | VCPURegR8fiq \<Rightarrow> do_machine_op get_r8_fiq
-                | VCPURegR9fiq \<Rightarrow> do_machine_op get_r9_fiq
-                | VCPURegR10fiq \<Rightarrow> do_machine_op get_r10_fiq
-                | VCPURegR11fiq \<Rightarrow> do_machine_op get_r11_fiq
-                | VCPURegR12fiq \<Rightarrow> do_machine_op get_r12_fiq
-         else do
-             vcpu \<leftarrow> get_vcpu vcpu_ptr;
-             return $ vcpu_regs vcpu reg
-         od
+       then if reg = VCPURegSCTLR
+              then if active then do_machine_op getSCTLR
+                             else vcpu_read_reg vcpu_ptr VCPURegSCTLR
+              else do_machine_op $ readVCPUHardwareReg reg
+       else vcpu_read_reg vcpu_ptr reg
   od"
 
 definition
@@ -101,31 +80,11 @@ where
        | _ \<Rightarrow> (False, False));
 
      if on_cur_vcpu
-         then case reg of
-                  VCPURegSCTLR \<Rightarrow> if active then do_machine_op $ setSCTLR val
-                                            else do
-                                                vcpu \<leftarrow> get_vcpu vcpu_ptr;
-                                                set_vcpu vcpu_ptr $ vcpu \<lparr> vcpu_regs := (vcpu_regs vcpu) (reg := val) \<rparr>
-                                            od
-                | VCPURegLRsvc \<Rightarrow> do_machine_op $ set_lr_svc val
-                | VCPURegSPsvc \<Rightarrow> do_machine_op $ set_sp_svc val
-                | VCPURegLRabt \<Rightarrow> do_machine_op $ set_lr_abt val
-                | VCPURegSPabt \<Rightarrow> do_machine_op $ set_sp_abt val
-                | VCPURegLRund \<Rightarrow> do_machine_op $ set_lr_und val
-                | VCPURegSPund \<Rightarrow> do_machine_op $ set_sp_und val
-                | VCPURegLRirq \<Rightarrow> do_machine_op $ set_lr_irq val
-                | VCPURegSPirq \<Rightarrow> do_machine_op $ set_sp_irq val
-                | VCPURegLRfiq \<Rightarrow> do_machine_op $ set_lr_fiq val
-                | VCPURegSPfiq \<Rightarrow> do_machine_op $ set_sp_fiq val
-                | VCPURegR8fiq \<Rightarrow> do_machine_op $ set_r8_fiq val
-                | VCPURegR9fiq \<Rightarrow> do_machine_op $ set_r9_fiq val
-                | VCPURegR10fiq \<Rightarrow> do_machine_op $ set_r10_fiq val
-                | VCPURegR11fiq \<Rightarrow> do_machine_op $ set_r11_fiq val
-                | VCPURegR12fiq \<Rightarrow> do_machine_op $ set_r12_fiq val
-         else do
-             vcpu \<leftarrow> get_vcpu vcpu_ptr;
-             set_vcpu vcpu_ptr $ vcpu \<lparr> vcpu_regs := (vcpu_regs vcpu) (reg := val) \<rparr>
-         od
+       then if reg = VCPURegSCTLR
+         then if active then do_machine_op $ setSCTLR val
+                        else vcpu_write_reg vcpu_ptr reg val
+         else do_machine_op $ writeVCPUHardwareReg reg val
+       else vcpu_write_reg vcpu_ptr reg val
   od"
 
 definition decode_vcpu_read_register :: "machine_word list \<Rightarrow> arch_cap \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
@@ -193,16 +152,14 @@ where
   odE
 | _ \<Rightarrow> throwError TruncatedMessage"
 
-definition invoke_vcpu_inject_irq :: "obj_ref \<Rightarrow> nat \<Rightarrow> virq \<Rightarrow> (unit,'z::state_ext) s_monad"
-where "invoke_vcpu_inject_irq vr index virq \<equiv> do
-   cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
-   if (cur_v \<noteq> None \<and> fst (the cur_v) = vr)
-   then do_machine_op $ set_gic_vcpu_ctrl_lr (of_nat index) virq
-   else do
-           vcpu \<leftarrow> get_vcpu vr;
-           vcpuLR \<leftarrow> return $ (vgic_lr $ vcpu_vgic vcpu) (index := virq);
-           set_vcpu vr $ vcpu \<lparr> vcpu_vgic := (vcpu_vgic vcpu) \<lparr> vgic_lr := vcpuLR \<rparr>\<rparr>
-           od
+definition
+  invoke_vcpu_inject_irq :: "obj_ref \<Rightarrow> nat \<Rightarrow> virq \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "invoke_vcpu_inject_irq vr index virq \<equiv> do
+    cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
+    if (cur_v \<noteq> None \<and> fst (the cur_v) = vr)
+    then do_machine_op $ set_gic_vcpu_ctrl_lr (of_nat index) virq
+    else vgic_update_lr vr index virq
    od"
 
 text {* VCPU perform and decode main functions *}

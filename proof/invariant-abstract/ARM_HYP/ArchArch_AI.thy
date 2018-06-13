@@ -1010,31 +1010,33 @@ lemma set_vcpu_regs_update[wp]:
   unfolding invs_def valid_state_def
   by (wpsimp wp: set_vcpu_valid_pspace set_vcpu_valid_arch_eq_hyp)
 
-lemma write_vcpu_register_invs[wp]:
-  "\<lbrace>invs\<rbrace> write_vcpu_register vcpu reg val \<lbrace>\<lambda>_. invs\<rbrace>"
-  unfolding write_vcpu_register_def vcpuregs_sets
+lemma vcpu_write_reg_invs[wp]:
+  "\<lbrace>invs\<rbrace> vcpu_write_reg vcpuptr r v \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding vcpu_write_reg_def vcpu_update_def
   apply (wpsimp wp: get_vcpu_wp)
-  apply (fastforce intro: valid_objsE simp: obj_at_def)
+  apply (fastforce simp: obj_at_def dest!: invs_valid_objs)
   done
 
-lemma invoke_vcpu_inject_irq_invs[wp]:
-  "\<lbrace>invs\<rbrace> invoke_vcpu_inject_irq vcpu indx t \<lbrace>\<lambda>_. invs\<rbrace>"
-  unfolding invoke_vcpu_inject_irq_def invs_def valid_state_def
-  apply (wpsimp wp: get_vcpu_wp set_vcpu_valid_pspace
-                    do_machine_op_valid_pspace dmo_valid_irq_states
-                    dmo_machine_state_lift device_region_dmos
-                    cap_refs_respects_device_region_dmo
-                    hoare_vcg_all_lift hoare_vcg_disj_lift
-                    set_vcpu_valid_arch_eq_hyp
-              simp: set_gic_vcpu_ctrl_lr_def valid_machine_state_def)
-  apply (rule conjI; clarsimp simp: obj_at_def valid_pspace_def, erule (2) valid_objsE)
+lemma write_vcpu_register_invs[wp]:
+  "\<lbrace>invs\<rbrace> write_vcpu_register vcpu reg val \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding write_vcpu_register_def
+  by wpsimp
+
+lemma vgic_update_valid_pspace[wp]:
+  "\<lbrace>valid_pspace\<rbrace> vgic_update vcpuptr f \<lbrace>\<lambda>_. valid_pspace\<rbrace>"
+  unfolding vgic_update_def vcpu_update_def
+  apply (wpsimp wp: set_vcpu_valid_pspace get_vcpu_wp simp: valid_vcpu_def)
+  apply (fastforce simp: obj_at_def dest!: valid_pspace_vo)
   done
+
+crunches invoke_vcpu_inject_irq, vcpu_read_reg
+  for invs[wp]: invs (ignore: do_machine_op)
 
 lemma perform_vcpu_invs[wp]:
   "\<lbrace>invs and valid_vcpu_invocation vi\<rbrace> perform_vcpu_invocation vi \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: perform_vcpu_invocation_def valid_vcpu_invocation_def)
   apply (wpsimp simp: invoke_vcpu_read_register_def read_vcpu_register_def
-                      invoke_vcpu_write_register_def vcpuregs_gets)
+                      invoke_vcpu_write_register_def)
   done
 
 lemma invoke_arch_invs[wp]:
@@ -1778,11 +1780,8 @@ lemma arch_decode_inv_wf[wp]:
 
 declare word_less_sub_le [simp]
 
-crunch pred_tcb_at[wp]: associate_vcpu_tcb "pred_tcb_at proj P t"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch pred_tcb_at[wp]: invoke_vcpu_inject_irq "pred_tcb_at proj P t"
-  (wp: crunch_wps simp: crunch_simps)
+crunches associate_vcpu_tcb, vcpu_read_reg, vcpu_write_reg, invoke_vcpu_inject_irq
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
 
 lemma  perform_vcpu_invocation_pred_tcb_at[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> perform_vcpu_invocation iv \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"

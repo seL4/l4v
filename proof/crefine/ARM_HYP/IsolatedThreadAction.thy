@@ -603,6 +603,12 @@ lemma select_f_isolatable:
   apply (simp add: ksPSpace_update_partial_id o_def)
   done
 
+lemma thread_actions_isolatable_assert[simp]:
+  "thread_actions_isolatable idx (assert P)"
+  unfolding assert_def
+  by (fastforce split: if_splits
+                simp: thread_actions_isolatable_fail thread_actions_isolatable_return)
+
 lemma doMachineOp_isolatable:
   "thread_actions_isolatable idx (doMachineOp m)"
   apply (simp add: doMachineOp_def split_def)
@@ -724,12 +730,24 @@ lemma vgicUpdate_isolatable:
   "thread_actions_isolatable idx (vgicUpdate p f)"
   by (clarsimp simp: vgicUpdate_def vcpuUpdate_isolatable)
 
-lemma vcpuSaveRegister_isolatable:
-  "thread_actions_isolatable idx (vcpuSaveRegister p v m)"
-  apply (clarsimp simp: vcpuSaveRegister_def)
+lemma vgicUpdateLR_isolatable:
+  "thread_actions_isolatable idx (vgicUpdateLR p i virq)"
+  by (clarsimp simp: vgicUpdateLR_def vgicUpdate_isolatable)
+
+lemma vcpuSaveReg_isolatable:
+  "thread_actions_isolatable idx (vcpuSaveReg p v)"
+  apply (clarsimp simp: vcpuSaveReg_def)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                vcpuUpdate_isolatable doMachineOp_isolatable
-         |wp|assumption|clarsimp)+
+         |wpsimp)+
+  done
+
+lemma vcpuRestoreReg_isolatable:
+  "thread_actions_isolatable idx (vcpuRestoreReg p v)"
+  apply (clarsimp simp: vcpuRestoreReg_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               vcpuUpdate_isolatable doMachineOp_isolatable getVCPU_isolatable
+         |wpsimp)+
   done
 
 lemma thread_actions_isolatable_mapM_x:
@@ -740,45 +758,58 @@ lemma thread_actions_isolatable_mapM_x:
    apply assumption+
   done
 
+lemma vcpuSaveRegRange_isolatable:
+  "thread_actions_isolatable idx (vcpuSaveRegRange p r rt)"
+  apply (clarsimp simp: vcpuSaveRegRange_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               vcpuSaveReg_isolatable thread_actions_isolatable_mapM_x
+         | wpsimp)+
+  done
+
+lemma vcpuRestoreRegRange_isolatable:
+  "thread_actions_isolatable idx (vcpuRestoreRegRange p r rt)"
+  apply (clarsimp simp: vcpuRestoreRegRange_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               vcpuRestoreReg_isolatable thread_actions_isolatable_mapM_x
+         | wpsimp)+
+  done
+
 lemma vcpuSave_isolatable:
   "thread_actions_isolatable idx (vcpuSave v)"
   apply (clarsimp simp: vcpuSave_def thread_actions_isolatable_fail when_def split: option.splits)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                thread_actions_isolatable_if thread_actions_isolatable_returns
-               thread_actions_isolatable_fail getVCPU_isolatable setVCPU_isolatable
-               gets_isolatable doMachineOp_isolatable vcpuSaveRegister_isolatable
-               vgicUpdate_isolatable vcpuUpdate_isolatable thread_actions_isolatable_mapM_x
-         |wp mapM_x_wp|assumption|clarsimp|fastforce)+
+               thread_actions_isolatable_fail
+               gets_isolatable doMachineOp_isolatable vcpuSaveReg_isolatable
+               vgicUpdateLR_isolatable vgicUpdate_isolatable vcpuSaveRegRange_isolatable
+               thread_actions_isolatable_mapM_x
+         | wpsimp wp: mapM_x_wp|fastforce)+
   done
-
 
 lemma vcpuEnable_isolatable:
   "thread_actions_isolatable idx (vcpuEnable v)"
   apply (clarsimp simp: vcpuEnable_def)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
-               getVCPU_isolatable doMachineOp_isolatable
-         |wp|assumption)+
+               vcpuRestoreReg_isolatable doMachineOp_isolatable getVCPU_isolatable
+         | wpsimp)+
   done
 
 lemma vcpuRestore_isolatable:
   "thread_actions_isolatable idx (vcpuRestore v)"
-  apply (clarsimp simp: vcpuRestore_def thread_actions_isolatable_fail split: option.splits)
+  apply (clarsimp simp: vcpuRestore_def)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
-               thread_actions_isolatable_if thread_actions_isolatable_returns
-               thread_actions_isolatable_fail getVCPU_isolatable setVCPU_isolatable
-               gets_isolatable doMachineOp_isolatable vcpuEnable_isolatable
-         |wp|assumption|clarsimp)+
+               getVCPU_isolatable gets_isolatable doMachineOp_isolatable vcpuEnable_isolatable
+               vcpuRestoreRegRange_isolatable
+         | wpsimp)+
   done
 
 lemma vcpuDisable_isolatable:
   "thread_actions_isolatable idx (vcpuDisable v)"
-  apply (clarsimp simp: vcpuDisable_def thread_actions_isolatable_fail split: option.splits)
+  apply (clarsimp simp: vcpuDisable_def split: option.splits, intro conjI)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
-               thread_actions_isolatable_if thread_actions_isolatable_returns
-               thread_actions_isolatable_fail getVCPU_isolatable setVCPU_isolatable
-               gets_isolatable doMachineOp_isolatable vcpuEnable_isolatable
-               conjI impI
-         |wp|assumption|clarsimp)+
+               doMachineOp_isolatable vcpuEnable_isolatable
+               vgicUpdate_isolatable vcpuSaveReg_isolatable
+         | wpsimp)+
   done
 
 lemma vcpuSwitch_isolatable:
@@ -1103,8 +1134,10 @@ lemma oblivious_setVMRoot_schact:
                              invalidateHWASIDEntry_def storeHWASID_def
                              checkPDNotInASIDMap_def armv_contextSwitch_def
                              vcpuSwitch_def vcpuDisable_def vcpuRestore_def
-                             vcpuEnable_def vcpuSave_def vcpuSaveRegister_def
-                             vcpuUpdate_def vgicUpdate_def
+                             vcpuEnable_def vcpuSave_def
+                             vcpuUpdate_def vgicUpdate_def vgicUpdateLR_def
+                             vcpuSaveReg_def vcpuSaveRegRange_def
+                             vcpuRestoreReg_def vcpuRestoreRegRange_def
                       split: if_split capability.split arch_capability.split option.split)+
 
 

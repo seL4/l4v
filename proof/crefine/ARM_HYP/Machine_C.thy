@@ -94,16 +94,6 @@ assumes setSCTLR_ccorres:
            (doMachineOp (setSCTLR scltr))
            (Call setSCTLR_'proc)"
 
-assumes getACTLR_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
-           (doMachineOp getACTLR)
-           (Call getACTLR_'proc)"
-
-assumes setACTLR_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>actlr = actlr \<rbrace>) []
-           (doMachineOp (setACTLR acltr))
-           (Call setACTLR_'proc)"
-
 assumes addressTranslateS1CPR_ccorres:
   "ccorres (op =) ret__unsigned_long_' \<top> (\<lbrace>\<acute>vaddr = vaddr \<rbrace>) []
            (doMachineOp (addressTranslateS1CPR vaddr))
@@ -175,15 +165,15 @@ assumes cleanInvalidate_D_PoC_ccorres:
            (doMachineOp cleanInvalidate_D_PoC)
            (Call cleanInvalidate_D_PoC_'proc)"
 
-assumes cleanInvalidateL2Range_ccorres:
+assumes plat_cleanInvalidateL2Range_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace>) []
            (doMachineOp (cleanInvalidateL2Range w1 w2))
-           (Call cleanInvalidateL2Range_'proc)"
+           (Call plat_cleanInvalidateL2Range_'proc)"
 
-assumes invalidateL2Range_ccorres:
+assumes plat_invalidateL2Range_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace>) []
            (doMachineOp (invalidateL2Range w1 w2))
-           (Call invalidateL2Range_'proc)"
+           (Call plat_invalidateL2Range_'proc)"
 
 assumes cleanL2Range_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace>) []
@@ -239,75 +229,22 @@ assumes maskInterrupt_ccorres:
            (doMachineOp (maskInterrupt m irq))
            (Call maskInterrupt_'proc)"
 
-assumes invalidateLocalTLB_VAASID_spec:
- "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call invalidateMVA_'proc) UNIV"
-
 assumes cleanCacheRange_PoU_spec:
  "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call cleanCacheRange_PoU_'proc) UNIV"
 
 (* ARM Hypervisor banked register save/restoring *)
 
-assumes set_lr_svc_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_lr_svc v)) (Call set_lr_svc_'proc)"
-assumes set_sp_svc_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_sp_svc v)) (Call set_sp_svc_'proc)"
-assumes set_lr_abt_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_lr_abt v)) (Call set_lr_abt_'proc)"
-assumes set_sp_abt_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_sp_abt v)) (Call set_sp_abt_'proc)"
-assumes set_lr_und_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_lr_und v)) (Call set_lr_und_'proc)"
-assumes set_sp_und_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_sp_und v)) (Call set_sp_und_'proc)"
-assumes set_lr_irq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_lr_irq v)) (Call set_lr_irq_'proc)"
-assumes set_sp_irq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_sp_irq v)) (Call set_sp_irq_'proc)"
-assumes set_lr_fiq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_lr_fiq v)) (Call set_lr_fiq_'proc)"
-assumes set_sp_fiq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_sp_fiq v)) (Call set_sp_fiq_'proc)"
-assumes set_r8_fiq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_r8_fiq v)) (Call set_r8_fiq_'proc)"
-assumes set_r9_fiq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_r9_fiq v)) (Call set_r9_fiq_'proc)"
-assumes set_r10_fiq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_r10_fiq v)) (Call set_r10_fiq_'proc)"
-assumes set_r11_fiq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_r11_fiq v)) (Call set_r11_fiq_'proc)"
-assumes set_r12_fiq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_r12_fiq v)) (Call set_r12_fiq_'proc)"
+assumes vcpu_hw_write_reg_ccorres:
+  "\<And>r v. ccorres dc xfdc
+           \<top> (UNIV \<inter> \<lbrace> unat \<acute>reg_index = fromEnum r \<rbrace> \<inter> \<lbrace> \<acute>reg = v \<rbrace>) hs
+           (doMachineOp (writeVCPUHardwareReg r v))
+           (Call vcpu_hw_write_reg_'proc)"
 
-assumes get_lr_svc_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_lr_svc) (Call get_lr_svc_'proc)"
-assumes get_sp_svc_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_sp_svc) (Call get_sp_svc_'proc)"
-assumes get_lr_abt_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_lr_abt) (Call get_lr_abt_'proc)"
-assumes get_sp_abt_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_sp_abt) (Call get_sp_abt_'proc)"
-assumes get_lr_und_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_lr_und) (Call get_lr_und_'proc)"
-assumes get_sp_und_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_sp_und) (Call get_sp_und_'proc)"
-assumes get_lr_irq_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_lr_irq) (Call get_lr_irq_'proc)"
-assumes get_sp_irq_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_sp_irq) (Call get_sp_irq_'proc)"
-assumes get_lr_fiq_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_lr_fiq) (Call get_lr_fiq_'proc)"
-assumes get_sp_fiq_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_sp_fiq) (Call get_sp_fiq_'proc)"
-assumes get_r8_fiq_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_r8_fiq) (Call get_r8_fiq_'proc)"
-assumes get_r9_fiq_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_r9_fiq) (Call get_r9_fiq_'proc)"
-assumes get_r10_fiq_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_r10_fiq) (Call get_r10_fiq_'proc)"
-assumes get_r11_fiq_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_r11_fiq) (Call get_r11_fiq_'proc)"
-assumes get_r12_fiq_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_r12_fiq) (Call get_r12_fiq_'proc)"
+assumes vcpu_hw_read_reg_ccorres:
+  "\<And>r. ccorres op= ret__unsigned_long_'
+         \<top> (UNIV \<inter> \<lbrace> unat \<acute>reg_index = fromEnum r \<rbrace>) hs
+         (doMachineOp (readVCPUHardwareReg r))
+         (Call vcpu_hw_read_reg_'proc)"
 
 (* ARM Hypervisor Virtual Global Interrupt Controller (VGIC) *)
 
@@ -656,7 +593,7 @@ lemma cleanInvalidateCacheRange_RAM_ccorres:
                       empty_fail_cacheRangeOp empty_fail_cleanInvalByVA)
      apply (ctac (no_vcg) add: cleanCacheRange_PoC_ccorres)
       apply (ctac (no_vcg) add: dsb_ccorres)
-       apply (ctac (no_vcg) add: cleanInvalidateL2Range_ccorres)
+       apply (ctac (no_vcg) add: plat_cleanInvalidateL2Range_ccorres)
         apply csymbr
         apply (rule ccorres_split_nothrow_novcg)
             apply (rule cacheRangeOp_ccorres)
@@ -766,7 +703,7 @@ lemma invalidateCacheRange_RAM_ccorres:
           in ccorres_cross_over_guard)
        apply (rule ccorres_Guard_Seq)
        apply (rule ccorres_basic_srnoop2, simp)
-       apply (ctac add: invalidateL2Range_ccorres)
+       apply (ctac add: plat_invalidateL2Range_ccorres)
          apply (rule ccorres_Guard_Seq)
          apply (rule ccorres_basic_srnoop2, simp)
          apply (csymbr)

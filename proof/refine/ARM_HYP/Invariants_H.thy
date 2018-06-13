@@ -2259,7 +2259,8 @@ lemma valid_arch_obj'_pspaceI:
              intro: typ_at'_pspaceI[rotated])
   apply (rename_tac vcpu)
   apply (case_tac vcpu, rename_tac tcbref x1 x2 x3)
-  apply (case_tac tcbref; auto simp: valid_vcpu'_def intro: typ_at'_pspaceI[rotated])
+  apply (case_tac tcbref
+         ; auto simp: valid_vcpu'_def intro: typ_at'_pspaceI[rotated] split: option.splits)
   done
 
 lemma valid_obj'_pspaceI:

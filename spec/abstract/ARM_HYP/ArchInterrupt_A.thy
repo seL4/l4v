@@ -51,11 +51,14 @@ where
                    irq_idx \<ge> gic_vcpu_num_list_regs
                    then return $ VGICMaintenance None
                    else do
-                       do_machine_op $ do
-                         virq \<leftarrow> get_gic_vcpu_ctrl_lr (of_nat irq_idx);
-                         set_gic_vcpu_ctrl_lr (of_nat irq_idx) $ virqSetEOIIRQEN virq 0
-                       od;
-                       return $ VGICMaintenance $ Some $ of_nat irq_idx
+                     virq <- do_machine_op $ get_gic_vcpu_ctrl_lr (of_nat irq_idx);
+                     virqen <- return $ virqSetEOIIRQEN virq 0;
+                     do_machine_op $ set_gic_vcpu_ctrl_lr (of_nat irq_idx) virqen;
+                     cur_vcpu \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
+                     case cur_vcpu of
+                         Some (vr, True) \<Rightarrow> vgic_update_lr vr irq_idx virqen
+                       | _ \<Rightarrow> return ();
+                     return $ VGICMaintenance $ Some $ of_nat irq_idx
                    od
            else return $ VGICMaintenance None;
        ct \<leftarrow> gets cur_thread;

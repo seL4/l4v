@@ -986,7 +986,7 @@ lemma tcb_at_idle_thread_lift:
   apply (rule hoare_lift_Pf[where f=idle_thread])
   by (wpsimp wp: T I)+
 
-crunch valid_asid_map[wp]: vcpu_update, vcpu_save_register, vgic_update, vcpu_disable, vcpu_restore, vcpu_enable "valid_asid_map"
+crunch valid_asid_map[wp]: vcpu_update, vgic_update, vcpu_disable, vcpu_restore, vcpu_enable "valid_asid_map"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma vcpu_switch_valid_asid_map[wp]:
@@ -1550,22 +1550,10 @@ lemma setVCPU_cap_to'[wp]:
   "\<lbrace>ex_nonz_cap_to' p\<rbrace> setObject p' (v::vcpu) \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
   by (wp ex_nonz_cap_to_pres')
 
-crunch cap_to'[wp]: vcpuDisable, vcpuRestore, vcpuEnable "ex_nonz_cap_to' p"
-  (ignore: doMachineOp getObject setObject)
-
-crunch cap_to'[wp]: vcpuUpdate, vcpuSaveRegister, vgicUpdate "ex_nonz_cap_to' p"
-  (ignore: doMachineOp getObject setObject)
-
-lemma vcpuSave_cap_to'[wp]:
-  "\<lbrace>ex_nonz_cap_to' p\<rbrace> vcpuSave param_a \<lbrace>\<lambda>_. ex_nonz_cap_to' p\<rbrace>"
-  apply (wpsimp simp: vcpuSave_def modifyArchState_def | simp)+
-  apply (rule_tac S="set gicIndices" in mapM_x_wp)
-  apply wpsimp+
-  done
-
-lemma vcpuSwitch_cap_to'[wp]:
-  "\<lbrace>ex_nonz_cap_to' p\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. ex_nonz_cap_to' p\<rbrace>"
-  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | simp)+
+crunches
+  vcpuDisable, vcpuRestore, vcpuEnable, vcpuSaveRegRange, vgicUpdateLR, vcpuSave, vcpuSwitch
+  for cap_to'[wp]: "ex_nonz_cap_to' p"
+  (ignore: doMachineOp getObject setObject wp: crunch_wps)
 
 crunch cap_to'[wp]: "Arch.switchToThread" "ex_nonz_cap_to' p"
   (simp: crunch_simps ignore: ARM_HYP.clearExMonitor getObject updateObject)

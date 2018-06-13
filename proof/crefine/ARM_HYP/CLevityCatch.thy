@@ -33,6 +33,7 @@ lemmas ptBits_def' = ptBits_def[simplified pteBits_def, simplified]
 lemmas pdBits_def' = pdBits_def[simplified pdeBits_def, simplified]
 lemmas pt_index_bits_def' = pt_index_bits_def[simplified pt_bits_def pte_bits_def, simplified]
 lemmas vcpuBits_def' = vcpuBits_def[simplified pageBits_def, simplified]
+lemmas vcpu_bits_def' = vcpu_bits_def[simplified pageBits_def, simplified]
 
 lemmas table_bits_defs = pt_bits_def' pte_bits_def pd_bits_def' pde_bits_def
                          pageBits_def page_bits_def'
@@ -41,7 +42,7 @@ lemmas table_bits_defs = pt_bits_def' pte_bits_def pd_bits_def' pde_bits_def
                          ptBits_def' pdBits_def'
 
 lemmas machine_bits_defs = table_bits_defs
-                            vcpuBits_def' vcpu_bits_def
+                            vcpuBits_def' vcpu_bits_def'
 
 declare word_neq_0_conv [simp del]
 

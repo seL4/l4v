@@ -9557,33 +9557,18 @@ lemma setVCPU_valid_irq_states' [wp]:
   "setObject p (vcpu::vcpu) \<lbrace>valid_irq_states'\<rbrace>"
   by (wp valid_irq_states_lift')
 
-crunch irq_states' [wp]: vcpuDisable, vcpuEnable, vcpuRestore valid_irq_states'
+crunches
+  vcpuDisable, vcpuEnable, vcpuRestore, vcpuRestoreReg, vcpuSaveReg,
+  vcpuUpdate, vgicUpdateLR, vcpuSave
+  for irq_states' [wp]: valid_irq_states'
   (wp: crunch_wps no_irq no_irq_mapM_x
    simp: crunch_simps
          set_gic_vcpu_ctrl_hcr_def setSCTLR_def setHCR_def get_gic_vcpu_ctrl_hcr_def
          getSCTLR_def get_gic_vcpu_ctrl_lr_def get_gic_vcpu_ctrl_apr_def
-         get_gic_vcpu_ctrl_vmcr_def getACTLR_def vcpuregs_sets vcpuregs_gets
+         get_gic_vcpu_ctrl_vmcr_def
          set_gic_vcpu_ctrl_vmcr_def set_gic_vcpu_ctrl_apr_def uncurry_def
-         set_gic_vcpu_ctrl_lr_def setACTLR_def
+         set_gic_vcpu_ctrl_lr_def
    ignore: getObject setObject)
-
-crunch irq_states' [wp]: vcpuUpdate, vgicUpdate valid_irq_states'
-  (ignore: doMachineOp getObject setObject)
-
-lemma vcpuSaveRegister_irq_states'[wp]:
-  "\<forall>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> mop \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace> \<Longrightarrow>
-      vcpuSaveRegister vr r mop \<lbrace>valid_irq_states'\<rbrace>"
-  by (wpsimp simp: vcpuSaveRegister_def wp: doMachineOp_irq_states'
-       | subst doMachineOp_bind | rule empty_fail_bind)+
-
-lemma vcpuSave_irq_states' [wp]:
-  "vcpuSave v \<lbrace>valid_irq_states'\<rbrace>"
-  apply (wpsimp simp: vcpuSave_def vcpuregs_gets wp: doMachineOp_irq_states' isb_irq_masks)
-  apply (rule_tac S="set gicIndices" in mapM_x_wp)
-  by (wpsimp wp: doMachineOp_irq_states' get_gic_vcpu_ctrl_lr_irq_masks get_gic_vcpu_ctrl_apr_irq_masks
-                    get_gic_vcpu_ctrl_vmcr_irq_masks getACTLR_irq_masks get_gic_vcpu_ctrl_hcr_irq_masks
-                    getSCTLR_irq_masks dsb_irq_masks
-       | subst doMachineOp_bind | rule empty_fail_bind)+
 
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
