@@ -24,7 +24,7 @@
         <test name="haskell-translator" cwd="design" cpu-timeout="600">make design</test>
     </set>
 
-    <set depends="isabelle">
+    <set depends="isabelle Lib">
         <!-- Various seL4 specifications. -->
         <test name="ASpec" depends="haskell-translator">make ASpec</test>
         <test name="ASpecDoc" depends="ASpec">make ASpecDoc</test>

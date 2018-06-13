@@ -17,7 +17,7 @@
      format.
 
 -->
-<testsuite cpu-timeout="3600" depends="isabelle">
+<testsuite cpu-timeout="3600" depends="isabelle Lib">
     <!-- Refine -->
     <sequence depends="DSpecProofs">
         <test name="SysInit">make SysInit</test>
