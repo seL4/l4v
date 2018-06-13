@@ -18,7 +18,7 @@
 
 -->
 
-<testsuite cpu-timeout="3600" depends="isabelle">
+<testsuite cpu-timeout="3600" depends="isabelle Lib">
     <!-- Refine -->
     <sequence depends="ASpec">
         <test name="AInvs" cpu-timeout="7200">make AInvs</test>
