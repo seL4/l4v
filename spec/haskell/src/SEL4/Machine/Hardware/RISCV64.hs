@@ -147,6 +147,8 @@ clearMemoryVM ptr bits = error "FIXME RISCV TODO"
 data VMAttributes
     = VMAttributes { riscvExecuteNever :: Bool }
 
+{- The C code also defines VMWriteOnly.
+   Leaving it out here will show that it is unused. -}
 data VMRights
     = VMKernelOnly
     | VMReadOnly
