@@ -22,14 +22,27 @@ import Data.Word(Word64)
 
 {- Capabilities -}
 
-data ArchCapability -- FIXME RISCV TODO
+data ArchCapability
     = ASIDControlCap
+    | ASIDPoolCap {
+        capASIDPool :: PPtr ASIDPool,
+        capASIDBase :: ASID }
+    | FrameCap {
+        capFBasePtr :: PPtr Word,
+        capFVMRights :: VMRights,
+        capFSize :: VMPageSize,
+        capFIsDevice :: Bool,
+        capFMappedAddress :: Maybe (ASID, VPtr) }
+    | PageTableCap {
+        capPTBasePtr :: PPtr PTE,
+        capPTMappedAddress :: Maybe (ASID, VPtr) }
     deriving (Eq, Show)
 
 {- Kernel Objects -}
 
-data ArchKernelObject -- FIXME RISCV TODO
-    = FIXMERISCVArchKernelObject
+data ArchKernelObject
+    = KOASIDPool ASIDPool
+    | KOPTE PTE
     deriving Show
 
 archObjSize ::  ArchKernelObject -> Int
@@ -51,10 +64,26 @@ atcbContextSet uc atcb = atcb { atcbContext = uc }
 atcbContextGet :: ArchTCB -> UserContext
 atcbContextGet = atcbContext
 
+
 {- ASID Pools -}
 
--- FIXME RISCV unchecked copypasta
+newtype ASIDPool = ASIDPool (Array ASID (Maybe (PPtr PTE)))
+    deriving Show
+
 newtype ASID = ASID { fromASID :: Word64 }
     deriving (Show, Eq, Ord, Enum, Real, Integral, Num, Bits, Ix, Bounded)
 
--- FIXME RISCV TODO
+asidHighBits :: Int
+asidHighBits = 6
+
+asidLowBits :: Int
+asidLowBits = 10
+
+asidBits :: Int
+asidBits = asidHighBits + asidLowBits
+
+asidRange :: (ASID, ASID)
+asidRange = (0, (1 `shiftL` asidBits) - 1)
+
+asidHighBitsOf :: ASID -> ASID
+asidHighBitsOf asid = (asid `shiftR` asidLowBits) .&. mask asidHighBits

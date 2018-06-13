@@ -78,7 +78,8 @@ sameRegionAs :: ArchCapability -> ArchCapability -> Bool
 sameRegionAs = error "FIXME RISCV TODO"
 
 isPhysicalCap :: ArchCapability -> Bool
-isPhysicalCap ASIDControlCap = error "FIXME RISCV TODO"
+isPhysicalCap ASIDControlCap = False
+isPhysicalCap _ = True
 
 sameObjectAs :: ArchCapability -> ArchCapability -> Bool
 sameObjectAs = error "FIXME RISCV TODO"

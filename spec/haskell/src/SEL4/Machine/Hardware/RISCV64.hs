@@ -144,17 +144,59 @@ clearMemoryVM ptr bits = error "FIXME RISCV TODO"
 
 {- Page Table Structure -}
 
--- FIXME RISCV TODO
+data VMAttributes
+    = VMAttributes { riscvExecuteNever :: Bool }
+
+data VMRights
+    = VMKernelOnly
+    | VMReadOnly
+    | VMReadWrite
+    deriving (Show, Eq)
+
+vmRightsToBits :: VMRights -> Word
+vmRightsToBits VMKernelOnly = 0x00
+vmRightsToBits VMReadOnly = 0x01
+vmRightsToBits VMReadWrite = 0x11
+
+allowWrite :: VMRights -> Bool
+allowWrite VMKernelOnly = False
+allowWrite VMReadOnly = False
+allowWrite VMReadWrite = True
+
+allowRead :: VMRights -> Bool
+allowRead VMKernelOnly = False
+allowRead VMReadOnly = True
+allowRead VMReadWrite = True
+
+getVMRights :: Bool -> Bool -> VMRights
+getVMRights True True = VMReadWrite
+getVMRights False True = VMReadOnly
+getVMRights _ _ = VMKernelOnly
+
+vmRightsFromBits ::  Word -> VMRights
+vmRightsFromBits rw = getVMRights (testBit rw 1) (testBit rw 0)
+
+-- Page Table entries
+
+data PTE
+    = InvalidPTE
+    | SmallPagePTE {
+        ptePPN :: PAddr,
+        pteSW :: (Bool, Bool),
+        pteDirty :: Bool,
+        pteAccessed :: Bool,
+        pteGlobal :: Bool,
+        pteUser :: Bool,
+        pteExecute :: Bool,
+        pteRights :: VMRights,
+        pteValid :: Bool }
+    deriving (Show, Eq)
 
 pptrBase :: VPtr
 pptrBase = Platform.pptrBase
 
 physBase :: PAddr
 physBase = toPAddr Platform.physBase
-
--- Page entries -- any of PTEs, PDEs or PDPTEs.
-
--- FIXME RISCV TODO
 
 -- IRQ parameters
 
