@@ -21,8 +21,8 @@ text {*
 
 theory InfoFlow
 imports
-  "../access-control/Syscall_AC"
-  "../../lib/EquivValid"
+  "Access.Syscall_AC"
+  "Lib.EquivValid"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

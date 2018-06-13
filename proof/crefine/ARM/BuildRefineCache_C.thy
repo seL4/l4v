@@ -9,7 +9,7 @@
  *)
 
 theory BuildRefineCache_C (* FIXME: broken *)
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 ML {*

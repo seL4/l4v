@@ -35,14 +35,15 @@ session CamkesAdlSpec (Camkes) in "adl-spec" = HOL +
  * of CamkesAdlSpec and DSpec, and is defined because we can't easily depend on both.
  *)
 session CamkesCdlBase (Camkes) in "adl-spec" = DPolicy +
+  sessions
+    DSpec
+    CamkesAdlSpec
+    Lib
   theories
-    (* DSpec *)
-      "../spec/capDL/Syscall_D"
-    (* CamkesAdlSpec *)
-      "Wellformed_CAMKES"
-      "Examples_CAMKES"
-    (* Lemma buckets *)
-      "../../lib/LemmaBucket"
+    "DSpec.Syscall_D"
+    "CamkesAdlSpec.Wellformed_CAMKES"
+    "CamkesAdlSpec.Examples_CAMKES"
+    "Lib.LemmaBucket"
 
 (* CAmkES<->CapDL reasoning. *)
 session CamkesCdlRefine (Camkes) in "cdl-refine" = CamkesCdlBase +

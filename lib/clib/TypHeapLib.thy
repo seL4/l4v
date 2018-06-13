@@ -9,7 +9,7 @@
  *)
 
 theory TypHeapLib
-imports "../tools/c-parser/CTranslation"
+imports "CParser.CTranslation"
 begin
 
 (* This file contains everything you need to know and use for the

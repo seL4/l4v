@@ -10,8 +10,7 @@
 
 theory Swap
 imports
-  "../../AutoCorres"
-  "../../TypHeapSimple"
+  "AutoCorres.AutoCorres"
 begin
 
 (* Parse the input file. *)

@@ -10,7 +10,7 @@
 
 theory ArchStructures_H
 imports
-  "../../../lib/Lib"
+  "Lib.Lib"
   "../Types_H"
   Hardware_H
 begin

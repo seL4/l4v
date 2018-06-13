@@ -17,7 +17,7 @@ chapter "ARM Machine Instantiation"
 
 theory Machine_A
 imports
-  "../../machine/$L4V_ARCH/MachineTypes"
+  "ExecSpec.MachineTypes"
 begin
 
 context Arch begin global_naming ARM_A

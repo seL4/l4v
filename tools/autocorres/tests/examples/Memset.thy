@@ -9,7 +9,7 @@
  *)
 
 theory Memset
-imports "../../AutoCorres"
+imports "AutoCorres.AutoCorres"
 begin
 
 install_C_file "memset.c"

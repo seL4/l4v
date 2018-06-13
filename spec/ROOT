@@ -33,6 +33,10 @@ chapter "Specifications"
 (* Session on which most other sessions build. *)
 session ASpec in "abstract" = Word_Lib +
   options [document=false]
+  sessions
+    "HOL-Library"
+    Lib
+    ExecSpec
   theories
     "Syscall_A"
 
@@ -41,16 +45,12 @@ session ASpec in "abstract" = Word_Lib +
    whenever the git commit ID changes. *)
 session ASpecDoc in "abstract" = Word_Lib +
   options [document=pdf]
-  theories [document = false]
-    "../../lib/Lib"
-    "../../lib/Defs"
-    "../../lib/List_Lib"
-    "../../lib/$L4V_ARCH/WordSetup"
+  sessions
+    "HOL-Library"
+    Lib
+    ExecSpec
   theories
     "Intro_Doc"
-    "../../lib/Monad_WP/NonDetMonad"
-  theories [document = false]
-    "../../lib/Monad_WP/NonDetMonadLemmas"
   theories
     "Syscall_A"
     "Glossary_Doc"
@@ -77,6 +77,9 @@ session ASpecDoc in "abstract" = Word_Lib +
 
 session ExecSpec = Word_Lib +
   options [document = false]
+  sessions
+    Lib
+    "HOL-Eisbach"
   theories
     "design/API_H"
     "design/$L4V_ARCH/ArchIntermediate_H"
@@ -96,6 +99,9 @@ session CSpec = CKernel +
     "cspec/KernelState_C"
 
 session CKernel = CParser +
+  sessions
+    "ExecSpec"
+    "CLib"
   theories [condition = "SORRY_MODIFIES_PROOFS", quick_and_dirty]
     "cspec/$L4V_ARCH/Kernel_C"
   theories
@@ -104,23 +110,26 @@ session CKernel = CParser +
     "cspec/c/build/$L4V_ARCH/kernel_all.c_pp"
 
 session SimplExport = CSpec +
-  theories "cspec/SimplExport"
+  theories "../tools/asmrefine/SimplExport"
 
 
 (*
  * CapDL
  *)
 
-session DSpec = Word_Lib +
+session DSpec in capDL = Word_Lib +
+  sessions
+    ExecSpec
+    ASpec
   theories
-    "capDL/Syscall_D"
+    Syscall_D
 
 
 (*
  * Take-Grant.
  *)
 
-session TakeGrant in "take-grant" = "HOL-Word" +
+session TakeGrant in "take-grant" = Word_Lib +
   theories
     "System_S"
     "Isolation_S"

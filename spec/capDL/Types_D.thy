@@ -17,9 +17,9 @@
 
 theory Types_D
 imports
-  "../abstract/VMRights_A"
+  "ASpec.VMRights_A"
   Intents_D
-  "../../lib/SplitRule"
+  "Lib.SplitRule"
 begin
 
 (* A hardware IRQ number. *)

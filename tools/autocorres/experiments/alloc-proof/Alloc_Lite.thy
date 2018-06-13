@@ -10,7 +10,7 @@
 
 theory Alloc_Lite
 imports
-  "../../AutoCorres"
+  "AutoCorres.AutoCorres"
 begin
 
 (* Parse the input file. *)

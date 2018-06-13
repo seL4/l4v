@@ -18,7 +18,7 @@ theory Decode_A
 imports
   Interrupt_A
   "./$L4V_ARCH/ArchDecode_A"
-  "../design/InvocationLabels_H"
+  "ExecSpec.InvocationLabels_H"
 begin
 
 context begin interpretation Arch .

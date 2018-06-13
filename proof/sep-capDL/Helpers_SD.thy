@@ -11,9 +11,9 @@
 theory Helpers_SD
 imports
   "Lookups_D"
-  "../../lib/SimpStrategy"
-  "../../lib/LemmaBucket"
-  "../../lib/sep_algebra/Map_Extra"
+  "Lib.SimpStrategy"
+  "Lib.LemmaBucket"
+  "Sep_Algebra.Map_Extra"
 begin
 
 (* Functions we need from capDL, but can't have yet (until we change capDL).

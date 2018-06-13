@@ -16,7 +16,7 @@ chapter "System Calls"
 
 theory Syscall_A
 imports
-  "../design/Event_H"
+  "ExecSpec.Event_H"
   Decode_A
   "./$L4V_ARCH/Init_A"
   "./$L4V_ARCH/Hypervisor_A"

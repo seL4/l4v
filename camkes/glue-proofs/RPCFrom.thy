@@ -9,8 +9,8 @@
  *)
 (*<*)
 theory RPCFrom imports
-  "../../tools/c-parser/CTranslation"
-  "../../tools/autocorres/AutoCorres"
+  "CParser.CTranslation"
+  "AutoCorres.AutoCorres"
 begin
 
 (* THIS THEORY IS GENERATED. DO NOT EDIT. *)

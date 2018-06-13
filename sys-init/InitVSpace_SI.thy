@@ -11,8 +11,8 @@
 theory
   InitVSpace_SI
 imports
-  "../proof/capDL-api/Invocation_DP"
-  "../proof/capDL-api/Arch_DP"
+  "DSpecProofs.Invocation_DP"
+  "DSpecProofs.Arch_DP"
   ObjectInitialised_SI
   RootTask_SI
   SysInit_SI

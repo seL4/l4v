@@ -10,7 +10,7 @@
 
 (*<*)
 theory Chapter2_HoareHeap
-imports "../../AutoCorres"
+imports "AutoCorres.AutoCorres"
 begin
 (*>*)
 

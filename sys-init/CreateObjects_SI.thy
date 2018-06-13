@@ -10,7 +10,7 @@
 
 theory CreateObjects_SI
 imports
-  "../proof/capDL-api/Retype_DP"
+  "DSpecProofs.Retype_DP"
   ObjectInitialised_SI
   RootTask_SI
   SysInit_SI

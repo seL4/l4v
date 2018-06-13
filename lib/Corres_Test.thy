@@ -14,7 +14,7 @@
 *)
 
 theory Corres_Test
-imports "../proof/refine/ARM/VSpace_R" Corres_Method
+imports "Refine.VSpace_R" Corres_Method
 begin
 
 chapter \<open>The Corres Method\<close>

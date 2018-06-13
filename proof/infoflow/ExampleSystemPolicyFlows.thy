@@ -11,7 +11,7 @@
 theory ExampleSystemPolicyFlows
 imports
   Noninterference
-  "../access-control/ExampleSystem"
+  "Access.ExampleSystem"
 begin
 
 subsection {* Example 1 -- similar to Sys1 in ../access-control/ExampleSystem.thy *}

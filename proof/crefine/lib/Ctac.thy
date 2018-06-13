@@ -13,7 +13,7 @@
 theory Ctac
 imports
   AutoCorres_C
-  "../XPres"
+  "CLib.XPres"
 begin
 
 (* This file includes theorems associated with ctac and friends *)

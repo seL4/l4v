@@ -16,9 +16,9 @@
 
 theory Include_D
 imports
-  "../../spec/capDL/Syscall_D"
-  "../refine/$L4V_ARCH/Refine"
-  "../../lib/MonadicRewrite"
+  "DSpec.Syscall_D"
+  "Refine.Refine"
+  "Lib.MonadicRewrite"
 begin
 
 end

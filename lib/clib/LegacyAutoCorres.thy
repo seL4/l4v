@@ -10,7 +10,7 @@
 
 theory LegacyAutoCorres
 
-imports AutoCorres "../../lib/clib/Corres_UL_C"
+imports "AutoCorres.AutoCorres" "Corres_UL_C"
 
 begin
 

@@ -10,8 +10,8 @@
 chapter {* Syntax *}
 (*<*)
 theory Syntax imports
-  "../../tools/c-parser/CTranslation"
-  "../../tools/autocorres/AutoCorres"
+  "CParser.CTranslation"
+  "AutoCorres.AutoCorres"
 begin
 (*>*)
 

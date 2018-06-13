@@ -14,9 +14,9 @@
 
 theory NonDetMonadEx
 imports
-  "../../lib/$L4V_ARCH/WordSetup"
-  "../../lib/NonDetMonadLemmaBucket"
-  "../../lib/Monad_WP/OptionMonadND"
+  "Word_Lib.WordSetup"
+  "Lib.NonDetMonadLemmaBucket"
+  "Lib.OptionMonadND"
 begin
 
 (*

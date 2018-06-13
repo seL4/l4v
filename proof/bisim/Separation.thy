@@ -12,10 +12,10 @@ chapter "Restricted capabilities in the Separation Kernel Abstract Specification
 
 theory Separation
 imports
-  "../../spec/sep-abstract/Syscall_SA"
-  "../invariant-abstract/AInvs"
-  "../../lib/Bisim_UL"
-  "../../lib/LemmaBucket"
+  "ASepSpec.Syscall_SA"
+  "AInvs.AInvs"
+  "Lib.Bisim_UL"
+  "Lib.LemmaBucket"
 begin
 
 text {*

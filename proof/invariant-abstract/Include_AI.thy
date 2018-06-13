@@ -11,10 +11,10 @@
 theory Include_AI
 imports
   "./$L4V_ARCH/ArchCrunchSetup_AI"
-  "../../lib/Monad_WP/wp/Eisbach_WP"
-  "../../spec/abstract/Syscall_A"
-  "../../lib/LemmaBucket"
-  "../../lib/ListLibLemmas"
+  "Lib.Eisbach_WP"
+  "ASpec.Syscall_A"
+  "Lib.LemmaBucket"
+  "Lib.ListLibLemmas"
 begin
 
 no_notation bind_drop (infixl ">>" 60)

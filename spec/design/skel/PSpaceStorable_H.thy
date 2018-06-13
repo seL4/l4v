@@ -12,7 +12,7 @@ theory PSpaceStorable_H
 imports
   Structures_H
   KernelStateData_H
-  "../../lib/DataMap"
+  "Lib.DataMap"
 begin
 
 context begin interpretation Arch .

@@ -17,7 +17,7 @@ chapter "Kernel Object Invocations"
 theory InvocationLabels_A
 imports
   MiscMachine_A
-  "../design/$L4V_ARCH/ArchLabelFuns_H"
+  "ExecSpec.ArchLabelFuns_H"
 begin
 
 definition

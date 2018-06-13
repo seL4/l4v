@@ -13,8 +13,8 @@ imports
   "Monad_WP/NonDetMonadVCG"
   "MonadEq"
   "Monad_WP/WhileLoopRulesCompleteness"
-  Distinct_Prop
-  "~~/src/HOL/Word/Word_Miscellaneous"
+  "Word_Lib.Distinct_Prop"
+  "HOL-Word.Word_Miscellaneous"
 begin
 setup \<open>AutoLevity_Base.add_attribute_test "wp" WeakestPre.is_wp_rule\<close>
 

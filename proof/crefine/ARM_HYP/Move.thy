@@ -11,7 +11,7 @@
 (* things that should be moved into first refinement *)
 
 theory Move
-imports "../../refine/$L4V_ARCH/Refine"
+imports "Refine.Refine"
 begin
 
 (* FIXME move: need a theory on top of CSpec that arches can share *)

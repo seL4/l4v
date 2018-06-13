@@ -14,7 +14,7 @@ theory PSpaceFuns_H
 imports
   ObjectInstances_H
   FaultMonad_H
-  "../../lib/DataMap"
+  "Lib.DataMap"
 begin
 
 context begin interpretation Arch .

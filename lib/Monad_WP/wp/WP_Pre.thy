@@ -10,8 +10,8 @@
 
 theory WP_Pre
 imports
-  "~~/src/HOL/Main"
-  "~~/src/HOL/Eisbach/Eisbach_Tools"
+  Main
+  "HOL-Eisbach.Eisbach_Tools"
 begin
 
 named_theorems wp_pre

@@ -9,7 +9,7 @@
  *)
 
 theory ListRev
-imports "../../AutoCorres"
+imports "AutoCorres.AutoCorres"
 begin
 
 install_C_file "list_rev.c"

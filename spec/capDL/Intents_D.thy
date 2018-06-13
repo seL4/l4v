@@ -28,8 +28,8 @@
 
 theory Intents_D
 imports
-  "../../lib/$L4V_ARCH/WordSetup"
-  "../abstract/CapRights_A"
+  "Word_Lib.WordSetup"
+  "ASpec.CapRights_A"
 begin
 
 (*

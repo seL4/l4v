@@ -11,9 +11,9 @@
 theory Invariants_H
 imports
   LevityCatch
-  "../../invariant-abstract/Deterministic_AI"
-  "../../invariant-abstract/AInvs"
-  "../../../lib/AddUpdSimps"
+  "AInvs.Deterministic_AI"
+  "AInvs.AInvs"
+  "Lib.AddUpdSimps"
 begin
 
 context Arch begin

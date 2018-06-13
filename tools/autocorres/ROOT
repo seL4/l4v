@@ -13,10 +13,19 @@
  *)
 
 session AutoCorres = CParser +
+  sessions
+    "HOL-Eisbach"
+    Lib
+    CLib
   theories
     "AutoCorres"
 
 session AutoCorresSEL4 = CBaseRefine +
+  sessions
+    "HOL-Library"
+    "HOL-Computational_Algebra"
+    Lib
+    CLib
+    CParser
   theories
     "TestSEL4"
-

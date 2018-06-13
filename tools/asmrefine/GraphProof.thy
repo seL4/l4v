@@ -10,7 +10,7 @@
 
 theory GraphProof
 
-imports TailrecPre GraphLangLemmas "../../lib/SplitRule"
+imports TailrecPre GraphLangLemmas "Lib.SplitRule"
 
 begin
 

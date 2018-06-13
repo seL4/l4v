@@ -36,7 +36,7 @@
  *)
 
 theory CList imports
-  "../../AutoCorres"
+  "AutoCorres.AutoCorres"
 begin
 
 install_C_file "list.c"

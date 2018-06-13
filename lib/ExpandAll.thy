@@ -9,7 +9,7 @@
  *)
 
 theory ExpandAll (* FIXME: bitrotted *)
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 lemma expand_forall:

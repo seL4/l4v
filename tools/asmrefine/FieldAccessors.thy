@@ -10,7 +10,7 @@
 
 theory FieldAccessors
 
-imports "../../lib/LemmaBucket_C"
+imports "CLib.LemmaBucket_C"
 
 begin
 

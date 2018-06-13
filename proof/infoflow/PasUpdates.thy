@@ -16,8 +16,7 @@ theory PasUpdates
 imports
     "Arch_IF"
     "FinalCaps"
-    "../invariant-abstract/EmptyFail_AI"
-
+    "AInvs.EmptyFail_AI"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

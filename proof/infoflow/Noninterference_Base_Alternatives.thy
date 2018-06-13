@@ -9,7 +9,7 @@
  *)
 
 theory Noninterference_Base_Alternatives
-imports Noninterference_Base "../../lib/Eisbach_Methods"
+imports Noninterference_Base "Lib.Eisbach_Methods"
 begin
 
 

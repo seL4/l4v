@@ -25,10 +25,10 @@ imports
   TypHeapSimple
   HeapLift
   WordAbstract
-  "../../lib/Monad_WP/OptionMonadWP"
-  "../../lib/Apply_Trace"
+  "Lib.OptionMonadWP"
+  "Lib.Apply_Trace"
   AutoCorresSimpset
-  "../../lib/ml-helpers/TermPatternAntiquote"
+  "Lib.TermPatternAntiquote"
   keywords "autocorres" :: thy_decl
 begin
 

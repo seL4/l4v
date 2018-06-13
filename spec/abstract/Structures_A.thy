@@ -18,7 +18,7 @@ chapter "Basic Data Structures"
 theory Structures_A
 imports
   "./$L4V_ARCH/Arch_Structs_A"
-  "../machine/MachineExports"
+  "ExecSpec.MachineExports"
 
 begin
 

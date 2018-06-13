@@ -13,8 +13,8 @@ Termination for recursive functions.
 *)
 theory Factorial
 imports
-  "../../AutoCorres"
-  "../../../../lib/Monad_WP/OptionMonadWP"
+  "AutoCorres.AutoCorres"
+  "Lib.OptionMonadWP"
 begin
 
 (* Parse the input file. *)

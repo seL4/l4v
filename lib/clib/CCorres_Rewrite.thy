@@ -11,9 +11,7 @@
  *)
 
 theory CCorres_Rewrite
-imports
-  "Corres_UL_C"
-  "Simpl_Rewrite"
+imports Corres_UL_C Simpl_Rewrite
 begin
 
 text \<open>A simple proof method for rewriting Simpl programs under @{term ccorres_underlying}.\<close>

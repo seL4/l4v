@@ -11,8 +11,8 @@
 theory GraphLang
 
 imports
-  "../../lib/TypHeapLib"
-  "../../lib/SplitRule"
+  "CLib.TypHeapLib"
+  "Lib.SplitRule"
   "CommonOps"
 
 begin

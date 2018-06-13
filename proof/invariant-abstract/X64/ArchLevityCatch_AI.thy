@@ -11,8 +11,8 @@
 theory ArchLevityCatch_AI
 imports
   "../BCorres_AI"
-  "../../../lib/LemmaBucket"
-  "../../../lib/SplitRule"
+  "Lib.LemmaBucket"
+  "Lib.SplitRule"
 begin
 
 context Arch begin global_naming X64

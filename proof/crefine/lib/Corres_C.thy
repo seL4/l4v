@@ -10,8 +10,8 @@
 
 theory Corres_C
 imports
-  CCorresLemmas
-  "../../proof/crefine/$L4V_ARCH/SR_lemmas_C"
+  "CLib.CCorresLemmas"
+  "../$L4V_ARCH/SR_lemmas_C"
 begin
 
 abbreviation

@@ -9,7 +9,7 @@
  *)
 
 theory SimpStrategy
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 text {*

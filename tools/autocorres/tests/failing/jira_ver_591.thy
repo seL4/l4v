@@ -11,7 +11,7 @@
 (*
  * Test for Jira issue VER-591. See the C file for more details.
  *)
-theory jira_ver_591 imports "../../AutoCorres" begin
+theory jira_ver_591 imports "AutoCorres.AutoCorres" begin
 
 install_C_file "jira_ver_591.c"
 

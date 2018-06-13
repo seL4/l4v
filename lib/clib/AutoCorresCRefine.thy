@@ -9,9 +9,7 @@
  *)
 
 theory AutoCorresCRefine
-
-imports Ctac "../../tools/autocorres/LegacyAutoCorres"
-
+imports Ctac LegacyAutoCorres
 begin
 
 context kernel begin

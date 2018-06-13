@@ -16,8 +16,8 @@
 
 theory L4VerifiedLinks
 imports
-  AutoCorres
-  "../../lib/clib/Corres_UL_C"
+  "AutoCorres.AutoCorres"
+  "CLib.Corres_UL_C"
 begin
 
 (*

@@ -12,7 +12,7 @@ chapter {* X64-specific definitions for abstract datatype for the abstract speci
 
 theory ArchADT_AI
 imports
-  "../../../lib/Simulation"
+  "Lib.Simulation"
   "../Invariants_AI"
 begin
 context Arch begin global_naming X64

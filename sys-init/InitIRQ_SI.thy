@@ -10,7 +10,7 @@
 
 theory InitIRQ_SI
 imports
-  "../proof/capDL-api/IRQ_DP"
+  "DSpecProofs.IRQ_DP"
   ObjectInitialised_SI
   RootTask_SI
   SysInit_SI

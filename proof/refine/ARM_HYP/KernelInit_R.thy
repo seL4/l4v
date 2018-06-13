@@ -14,7 +14,7 @@
 theory KernelInit_R
 imports
   IncKernelInit
-  "../../invariant-abstract/KernelInit_AI"
+  "AInvs.KernelInit_AI"
 begin
 
 (* Axiomatisation of the rest of the initialisation code *)

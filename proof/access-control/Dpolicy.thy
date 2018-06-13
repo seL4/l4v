@@ -11,8 +11,8 @@
 theory Dpolicy
 imports
   Access
-  "../drefine/Refine_D"
-  "../drefine/Include_D"
+  "DRefine.Refine_D"
+  "DBaseRefine.Include_D"
 begin
 
 (*

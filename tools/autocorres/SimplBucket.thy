@@ -13,7 +13,7 @@
  *)
 
 theory SimplBucket
-imports "../c-parser/CTranslation"
+imports "CParser.CTranslation"
 begin
 
 lemma Normal_resultE:

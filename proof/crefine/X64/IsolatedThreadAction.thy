@@ -9,7 +9,7 @@
  *)
 
 theory IsolatedThreadAction
-imports "../../../lib/clib/MonadicRewrite_C" Finalise_C CSpace_All SyscallArgs_C
+imports "CLib.MonadicRewrite_C" Finalise_C CSpace_All SyscallArgs_C
 begin
 
 context begin interpretation Arch .

@@ -12,7 +12,7 @@ chapter "Register Set"
 
 theory RegisterSet_H
 imports
-  "../../../lib/HaskellLib_H"
+  "Lib.HaskellLib_H"
   "../../machine/RISCV64/MachineOps"
 begin
 context Arch begin global_naming RISCV64_H

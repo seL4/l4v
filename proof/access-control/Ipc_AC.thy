@@ -9,7 +9,7 @@
  *)
 
 theory Ipc_AC
-imports Finalise_AC "../../lib/MonadicRewrite"
+imports Finalise_AC "Lib.MonadicRewrite"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

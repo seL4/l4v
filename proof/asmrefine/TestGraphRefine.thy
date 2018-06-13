@@ -11,7 +11,7 @@
 theory TestGraphRefine
 
 imports "../../tools/asmrefine/ProveGraphRefine"
-  "../../spec/cspec/Substitute"
+  "CSpec.Substitute"
   "SEL4GlobalsSwap" "SEL4SimplExport"
 
 begin

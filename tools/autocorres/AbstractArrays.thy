@@ -10,8 +10,8 @@
 
 theory AbstractArrays
 imports
-  "../../lib/TypHeapLib"
-  "../../lib/$L4V_ARCH/WordSetup"
+  "CLib.TypHeapLib"
+  "Word_Lib.WordSetup"
 begin
 
 (*

@@ -9,7 +9,7 @@
  *)
 
 theory BinarySearch
-imports "../../AutoCorres" "../../DataStructures"
+imports "AutoCorres.AutoCorres" "../../DataStructures"
 begin
 
 install_C_file "binary_search.c"

@@ -12,10 +12,9 @@ chapter "x86-64bit Machine Types"
 
 theory MachineTypes
 imports
-  "../../../lib/Word_Lib/Enumeration"
-  "../../../lib/$L4V_ARCH/WordSetup"
-  "../../../lib/Monad_WP/NonDetMonad"
-  "../../../lib/HaskellLib_H"
+  "Word_Lib.WordSetup"
+  "Lib.NonDetMonad"
+  "Lib.HaskellLib_H"
   Platform
 begin
 

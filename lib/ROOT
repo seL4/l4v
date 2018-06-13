@@ -1,0 +1,175 @@
+(*
+ * Copyright 2018, Data61/CSIRO
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(DATA61_BSD)
+ *)
+
+chapter Lib
+
+session Lib (lib) = Word_Lib +
+  sessions
+    "HOL-Library"
+    "HOL-Eisbach"
+  theories
+    Lib
+    Apply_Trace_Cmd
+    AddUpdSimps
+    EmptyFailLib
+    List_Lib
+    Crunch_Test_NonDet
+    Crunch_Test_Qualified_NonDet
+    Crunch_Test_Qualified_Trace
+    Crunch_Test_Trace
+    SubMonadLib
+    Simulation
+    MonadEq
+    SimpStrategy
+    Extract_Conjunct
+    Apply_Debug_Test
+    GenericLib
+    ProvePart
+    Corres_Adjust_Preconds
+    AutoLevity_Base
+    Requalify
+    Value_Abbreviation
+    Eisbach_Methods
+    HaskellLib_H
+    AutoLevity_Test
+    Eval_Bool
+    Bisim_UL
+    Extend_Locale
+    Solves_Tac
+    Crunch
+    Crunch_Instances_NonDet
+    Crunch_Instances_Trace
+    StateMonad
+    Corres_UL
+    Find_Names
+    LemmaBucket
+    Try_Methods
+    ListLibLemmas
+    Time_Methods_Cmd
+    Apply_Debug
+    Match_Abbreviation_Test
+    MonadicRewrite
+    HaskellLemmaBucket
+    "ml-helpers/TermPatternAntiquote"
+    "subgoal_focus/Subgoal_Methods"
+    Insulin
+    ExtraCorres
+    NICTATools
+    BCorres_UL
+    Qualify
+    LexordList
+    Rule_By_Method
+    Defs
+    AutoLevity_Hooks
+    Distinct_Cmd
+    Match_Abbreviation
+    ShowTypes
+    SpecValid_R
+    EquivValid
+    SplitRule
+    Time_Methods_Cmd_Test
+    DataMap
+    Corres_Method
+    Conjuncts
+
+    (* should really be a separate session, but too entangled atm: *)
+    NonDetMonadLemmaBucket
+    "Monad_WP/WhileLoopRules"
+    "Monad_WP/TraceMonad"
+    "Monad_WP/OptionMonadND"
+    "Monad_WP/OptionMonadWP"
+    "Monad_WP/Strengthen_Demo"
+    "Monad_WP/TraceMonadLemmas"
+    "Monad_WP/wp/WPBang"
+    "Monad_WP/wp/WPFix"
+    "Monad_WP/wp/Eisbach_WP"
+    "Monad_WP/wp/WPI"
+    "Monad_WP/wp/WPC"
+    "Monad_WP/wp/WPEx"
+    "Monad_WP/wp/WP_Pre"
+    "Monad_WP/wp/WP"
+    "Monad_WP/Datatype_Schematic"
+    "Monad_WP/WhileLoopRulesCompleteness"
+    "Monad_WP/Strengthen"
+    "Monad_WP/OptionMonad"
+    "Monad_WP/TraceMonadVCG"
+    "Monad_WP/NonDetMonadVCG"
+    "Monad_WP/NonDetMonad"
+    "Monad_WP/NonDetMonadLemmas"
+
+(* bitrotted:
+    AdjustSchematic
+    ExpandAll
+    TSubst
+    Trace_Attribs
+    StringOrd
+    "ml-helpers/TacticAPI"
+*)
+
+session CLib (lib) in clib = CParser +
+  sessions
+    "HOL-Library"
+    "HOL-Statespace"
+    "HOL-Eisbach"
+    "Simpl-VCG"
+    Lib
+  theories
+    Corres_UL_C
+    CCorresLemmas
+    CCorres_Rewrite
+    Simpl_Rewrite
+    MonadicRewrite_C
+    DetWPLib
+    CTranslationNICTA
+    LemmaBucket_C
+    SIMPL_Lemmas
+    SimplRewrite
+    TypHeapLib
+    BitFieldProofsLib
+    XPres
+
+session CorresK = Lib +
+  sessions
+    ASpec
+    ExecSpec
+  theories
+    CorresK_Lemmas
+
+session LibTest (lib) = Refine +
+  sessions
+    Lib
+    CLib
+    ASpec
+    ExecSpec
+  theories
+    Corres_Test
+    WPTutorial
+
+session SepTactics (lib) in Hoare_Sep_Tactics = Sep_Algebra +
+  theories
+    Hoare_Sep_Tactics
+
+(* FIXME: in proof
+session AutoLevity (lib) = HOL +
+  theories
+    AutoLevity
+    AutoLevity_Run
+    AutoLevity_Theory_Report
+*)
+
+session Concurrency (lib) in concurrency = HOL +
+  sessions
+    Lib
+  theories
+    Atomicity_Lib
+    Triv_Refinement
+    Prefix_Refinement
+    "examples/Peterson_Atomicity"
+    "examples/Plus2_Prefix"

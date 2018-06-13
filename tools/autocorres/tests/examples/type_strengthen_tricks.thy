@@ -13,7 +13,7 @@
  * Based on type_strengthen.thy.
  *)
 theory type_strengthen_tricks imports
-  "../../AutoCorres"
+  "AutoCorres.AutoCorres"
 begin
 
 install_C_file "type_strengthen.c"

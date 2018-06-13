@@ -14,7 +14,7 @@ Lemmas on arch get/set object etc
 
 theory ArchAcc_AI
 imports "../SubMonad_AI"
- "../../../lib/Crunch_Instances_NonDet"
+ "Lib.Crunch_Instances_NonDet"
 begin
 
 context Arch begin global_naming ARM

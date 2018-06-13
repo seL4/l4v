@@ -11,7 +11,11 @@
 chapter Lib
 
 (* This is a testing session to make sure none of these are forgotten *)
-session Sep_Algebra = Word_Lib +
+session Sep_Algebra (lib) = Word_Lib +
+  sessions
+    "HOL-Eisbach"
+    "HOL-Hoare"
+    Lib
   theories
     "Generic_Separation_Algebras"
     "MonadSep"

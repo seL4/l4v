@@ -12,7 +12,7 @@ theory KernelInitSepProofs_AI (* unused and broken, kept here for future referen
 imports
   KernelInitSep_AI
   CSpaceInv_AI
-  "../../spec/abstract/KernelInit_A"
+  "ASpec.KernelInit_A"
 begin
 
 lemma propagate_do_kernel_op:

@@ -11,7 +11,7 @@
 theory MonadSep
 imports
   Sep_Algebra_L4v
-  "../LemmaBucket"
+  "Lib.LemmaBucket"
 begin
 
 locale sep_lifted =

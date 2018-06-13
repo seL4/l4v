@@ -9,7 +9,7 @@
  *)
 
 theory word_abs_cases imports
-  "../../AutoCorres"
+  "AutoCorres.AutoCorres"
 begin
 
 (* extra optimization for word_abs (currently does not work) *)

@@ -12,9 +12,9 @@ chapter "Platform Definitions"
 
 theory Platform
 imports
-  "../../../lib/Defs"
-  "../../../lib/Lib"
-  "../../../lib/ARM_HYP/WordSetup"
+  "Lib.Defs"
+  "Lib.Lib"
+  "Word_Lib.WordSetup"
   "../Setup_Locale"
 begin
 

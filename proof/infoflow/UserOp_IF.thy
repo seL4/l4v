@@ -9,7 +9,7 @@
  *)
 
 theory UserOp_IF
-imports Syscall_IF "../access-control/ADT_AC"
+imports Syscall_IF "Access.ADT_AC"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

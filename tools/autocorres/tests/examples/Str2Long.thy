@@ -10,8 +10,8 @@
 
 theory Str2Long
 imports
-  "../../../c-parser/CTranslation"
-  "../../AutoCorres"
+  "CParser.CTranslation"
+  "AutoCorres.AutoCorres"
 begin
 
 install_C_file "str2long.c"

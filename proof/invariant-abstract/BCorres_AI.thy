@@ -11,8 +11,8 @@
 theory BCorres_AI
 imports
   Include_AI
-  "../../lib/BCorres_UL"
-  "../../spec/abstract/Syscall_A"
+  "Lib.BCorres_UL"
+  "ASpec.Syscall_A"
 begin
 
 abbreviation "bcorres \<equiv> bcorres_underlying truncate_state"

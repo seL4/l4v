@@ -10,8 +10,8 @@
 
 theory IsPrime
 imports
-  "../../AutoCorres"
-  "~~/src/HOL/Computational_Algebra/Primes"
+  "AutoCorres.AutoCorres"
+  "HOL-Computational_Algebra.Primes"
 begin
 
 (* Parse the input file. *)

@@ -13,7 +13,7 @@ chapter "Physical Memory Structure"
 theory PSpaceStruct_H
 imports
   Structures_H
-  "../../lib/DataMap"
+  "Lib.DataMap"
 begin
 
 text {* Helper Functions *}

@@ -10,7 +10,7 @@
 
 (*<*)
 theory Chapter1_MinMax
-imports "../../AutoCorres"
+imports "AutoCorres.AutoCorres"
 begin
 (*>*)
 

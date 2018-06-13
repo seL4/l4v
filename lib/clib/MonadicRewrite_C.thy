@@ -12,7 +12,7 @@
 
 theory MonadicRewrite_C
 imports
-  "../MonadicRewrite"
+  "Lib.MonadicRewrite"
   Corres_UL_C
 begin
 

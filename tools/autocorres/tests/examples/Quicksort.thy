@@ -13,8 +13,8 @@
  *)
 theory Quicksort
 imports
-  "../../AutoCorres"
-  "~~/src/HOL/Library/Multiset"
+  "AutoCorres.AutoCorres"
+  "HOL-Library.Multiset"
 begin
 
 declare validNF_whileLoop_inv_measure_twosteps [wp]

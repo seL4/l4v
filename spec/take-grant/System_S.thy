@@ -20,7 +20,7 @@
  *)
 
 theory System_S
-imports "../../lib/$L4V_ARCH/WordSetup"
+imports "Word_Lib.WordSetup"
 begin
 
 (* System entities: Definition of entities that constitute the system

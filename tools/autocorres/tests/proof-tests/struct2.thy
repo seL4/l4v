@@ -9,7 +9,7 @@
  *)
 
 theory struct2
-imports "../../AutoCorres"
+imports "AutoCorres.AutoCorres"
 begin
 
 install_C_file "struct2.c"

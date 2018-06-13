@@ -12,7 +12,7 @@ chapter "Register Set"
 
 theory RegisterSet_H
 imports
-  "../../../lib/HaskellLib_H"
+  "Lib.HaskellLib_H"
   "../../machine/ARM_HYP/MachineTypes"
 begin
 context Arch begin global_naming ARM_HYP_H

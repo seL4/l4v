@@ -11,7 +11,7 @@
 chapter "List Manipulation Functions"
 
 theory List_Lib
-imports "~~/src/HOL/Main"
+imports Main
 begin
 
 definition list_replace :: "'a list \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a list" where

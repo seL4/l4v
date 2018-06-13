@@ -11,9 +11,9 @@
 theory Generator_CAMKES_CDL imports
   "../adl-spec/Types_CAMKES"
   "../adl-spec/Library_CAMKES"
-  "../../spec/capDL/Syscall_D"
+  "DSpec.Syscall_D"
   Types_CAMKES_CDL
-  "../../proof/access-control/Dpolicy"
+  "DPolicy.Dpolicy"
 begin
 
 text {*

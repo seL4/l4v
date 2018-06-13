@@ -15,7 +15,7 @@
 
 theory Suzuki
 imports
-  "../../AutoCorres"
+  "AutoCorres.AutoCorres"
 begin
 
 install_C_file "suzuki.c"

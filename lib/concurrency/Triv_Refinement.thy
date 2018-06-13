@@ -10,8 +10,8 @@
 theory Triv_Refinement
 
 imports
-  "../Monad_WP/TraceMonadVCG"
-  "../Monad_WP/Strengthen"
+  "Lib.TraceMonadVCG"
+  "Lib.Strengthen"
 
 begin
 

@@ -12,7 +12,7 @@
 
 theory Ctac_lemmas_C
 imports
-        "../../../lib/clib/Ctac"
+  "../lib/Ctac"
 begin
 
 context kernel

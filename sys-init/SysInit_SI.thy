@@ -10,8 +10,8 @@
 
 theory SysInit_SI
 imports
-  "../proof/capDL-api/Kernel_DP"
-  "../lib/NonDetMonadLemmaBucket"
+  "DSpecProofs.Kernel_DP"
+  "Lib.NonDetMonadLemmaBucket"
 begin
 
 definition
