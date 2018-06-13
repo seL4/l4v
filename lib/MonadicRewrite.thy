@@ -196,6 +196,16 @@ lemma monadic_rewrite_symb_exec_r:
   apply simp
   done
 
+lemma monadic_rewrite_symb_exec_r':
+  "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>; no_fail P m;
+     \<And>rv. monadic_rewrite F False (Q rv) x (y rv);
+     \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
+      \<Longrightarrow> monadic_rewrite F False P x (m >>= y)"
+  apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_symb_exec_r; assumption)
+  apply simp
+  done
+
 lemma monadic_rewrite_symb_exec_l'':
   "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>; empty_fail m;
      \<not> F \<longrightarrow> no_fail P' m;

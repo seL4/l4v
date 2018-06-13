@@ -800,11 +800,11 @@ lemma no_fail_returnOK [simp, wp]:
 
 text {* Empty results implies non-failure *}
 
-lemma empty_fail_modify [simp]:
+lemma empty_fail_modify [simp, wp]:
   "empty_fail (modify f)"
   by (simp add: empty_fail_def simpler_modify_def)
 
-lemma empty_fail_gets [simp]:
+lemma empty_fail_gets [simp, wp]:
   "empty_fail (gets f)"
   by (simp add: empty_fail_def simpler_gets_def)
 
@@ -826,7 +826,7 @@ lemma empty_fail_bind [simp]:
   apply (clarsimp simp: ex_in_conv [symmetric])
   done
 
-lemma empty_fail_return [simp]:
+lemma empty_fail_return [simp, wp]:
   "empty_fail (return x)"
   by (simp add: empty_fail_def return_def)
 
