@@ -55,7 +55,36 @@ lookupIPCBuffer isReceiver thread = error "FIXME RISCV TODO"
 
 {- ASID Lookups -}
 
--- FIXME RISCV TODO
+findVSpaceForASID :: ASID -> KernelF LookupFailure (PPtr PTE)
+findVSpaceForASID asid = do
+    assert (asid > 0) "ASID 0 is used for objects that are not mapped"
+    assert (asid <= snd asidRange) "ASID out of range"
+    asidTable <- withoutFailure $ gets (riscvKSASIDTable . ksArchState)
+    let poolPtr = asidTable!(asidHighBitsOf asid)
+    ASIDPool pool <- case poolPtr of
+        Just ptr -> withoutFailure $ getObject ptr
+        Nothing -> throw InvalidRoot
+    let pm = pool!(asid .&. mask asidLowBits)
+    case pm of
+        Just ptr -> do
+            assert (ptr /= 0) "findVSpaceForASID: found null PD"
+            withoutFailure $ checkPTAt ptr
+            return ptr
+        Nothing -> throw InvalidRoot
+
+findVSpaceForASIDAssert :: ASID -> Kernel (PPtr PTE)
+findVSpaceForASIDAssert asid = do
+    pm <- findVSpaceForASID asid `catchFailure`
+        const (fail "findVSpaceForASIDAssert: pt not found")
+    assert (pm .&. mask ptBits == 0)
+        "findVSpaceForASIDAssert: pt pointer alignment check"
+    checkPTAt pm
+    return pm
+
+-- used in proofs only, will be translated to ptable_at.
+checkPTAt :: PPtr PTE -> Kernel ()
+checkPTAt _ = return ()
+
 
 {- Locating Page Table and Page Directory Slots -}
 
