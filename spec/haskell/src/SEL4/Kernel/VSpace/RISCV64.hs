@@ -95,9 +95,9 @@ checkPTAt _ = return ()
 maxPTLevel :: Int
 maxPTLevel = 2
 
-isPTEPageTable :: PTE -> Bool
-isPTEPageTable (PageTablePTE {}) = True
-isPTEPageTable _ = False
+isPageTablePTE :: PTE -> Bool
+isPageTablePTE (PageTablePTE {}) = True
+isPageTablePTE _ = False
 
 getPPtrFromHWPTE :: PTE -> PPtr PTE
 getPPtrFromHWPTE pte = ptrFromPAddr (ptePPN pte `shiftL` ptBits)
@@ -118,7 +118,7 @@ lookupPTSlotLevel :: Int -> PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
 lookupPTSlotLevel l ptePtr vPtr = do
     pte <- pteAtIndex l ptePtr vPtr
     let ptr = getPPtrFromHWPTE pte
-    if isPTEPageTable pte && l > 0
+    if isPageTablePTE pte && l > 0
         then lookupPTSlotLevel (l-1) ptr vPtr
         else return (ptBitsLeft l, ptr)
 
