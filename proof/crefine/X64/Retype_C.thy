@@ -7434,7 +7434,7 @@ lemma createObject_invs':
           caps_overlap_reserved' {ptr..ptr + 2 ^ APIType_capBits ty us - 1} s \<and>
           (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < us) \<and>
           is_aligned ptr (APIType_capBits ty us) \<and> APIType_capBits ty us \<le> maxUntypedSizeBits \<and>
-          canonical_address ptr \<and>
+          canonical_address ptr \<and> ptr \<in> kernel_mappings \<and>
           {ptr..ptr + 2 ^ APIType_capBits ty us - 1} \<inter> kernel_data_refs = {} \<and>
           0 < gsMaxObjectSize s
     \<rbrace> createObject ty ptr us dev\<lbrace>\<lambda>r s. invs' s \<rbrace>"
@@ -7442,7 +7442,7 @@ lemma createObject_invs':
   apply (rule hoare_pre)
   apply (wp createNewCaps_invs'[where sz = "APIType_capBits ty us"])
   apply (subgoal_tac "APIType_capBits ty us < word_bits")
-   apply (fastforce simp: range_cover_full)
+   apply (clarsimp simp: range_cover_full invs_pspace_in_kernel_mappings' pspace_in_kernel_mappings'_def)
   apply (fastforce simp: untypedBits_defs word_bits_def)
   done
 
@@ -7481,6 +7481,7 @@ lemma createObject_valid_cap':
   "\<lbrace>\<lambda>s. pspace_no_overlap' ptr (APIType_capBits ty us) s \<and>
          valid_pspace' s \<and>
          is_aligned ptr (APIType_capBits ty us) \<and> canonical_address ptr \<and>
+         ptr \<in> kernel_mappings \<and>
           APIType_capBits ty us < word_bits \<and>
          (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < us \<and> us \<le> 42) \<and>
          (ty = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits) \<and> ptr \<noteq> 0\<rbrace>
@@ -8278,6 +8279,7 @@ lemma createNewCaps_valid_cap_hd:
     "\<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and>
         valid_pspace' s \<and> n \<noteq> 0 \<and>
         sz \<le> maxUntypedSizeBits \<and> canonical_address ptr \<and>
+        (ptr && ~~ mask sz) \<in> kernel_mappings \<and>
         range_cover ptr sz (APIType_capBits ty us) n \<and>
         (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> 0 < us) \<and>
         (ty = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow>
@@ -8288,7 +8290,7 @@ lemma createNewCaps_valid_cap_hd:
   apply (cases "n = 0")
    apply simp
   apply (rule hoare_chain)
-    apply (rule hoare_vcg_conj_lift)
+    apply (rule hoare_vcg_conj_lift) thm createNewCaps_def
      apply (rule createNewCaps_ret_len)
     apply (rule createNewCaps_valid_cap'[where sz=sz])
    apply (clarsimp simp: range_cover_n_wb canonical_address_neq_mask)
@@ -8359,7 +8361,7 @@ shows  "ccorres dc xfdc
                     \<and> ptr \<noteq> 0
                     \<and> sz \<le> maxUntypedSizeBits
                     \<and> APIType_capBits newType userSize \<le> maxUntypedSizeBits
-                    \<and> canonical_address (ptr && ~~ mask sz)
+                    \<and> canonical_address (ptr && ~~ mask sz) \<and> (ptr && ~~ mask sz) \<in> kernel_mappings
                     \<and> {ptr .. ptr + of_nat (length destSlots) * 2^ (getObjectSize newType userSize) - 1}
                       \<inter> kernel_data_refs = {}
                     \<and> cnodeptr \<notin> {ptr .. ptr + (of_nat (length destSlots)<< APIType_capBits newType userSize) - 1}

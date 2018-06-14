@@ -1429,7 +1429,7 @@ lemma ksPSpace_eq_imp_valid_pspace'_eq:
   using assms
   by (clarsimp simp: valid_pspace'_def pspace_aligned'_def
         pspace_distinct'_def ps_clear_def no_0_obj'_def valid_mdb'_def
-        pspace_canonical'_def
+        pspace_canonical'_def pspace_in_kernel_mappings'_def
         ksPSpace_eq_imp_valid_objs'_eq[OF ksPSpace])
 
 (* The awkwardness of this definition is only caused by the fact

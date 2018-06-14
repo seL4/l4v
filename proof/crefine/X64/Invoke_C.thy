@@ -2454,6 +2454,14 @@ lemma invokeUntyped_Retype_ccorres:
       apply (clarsimp simp: valid_cap_simps')
       done
 
+    have ptr_in_km:
+      "(ptr && ~~ mask sz) \<in> kernel_mappings"
+      using vui misc
+      apply (clarsimp simp: cte_wp_at_ctes_of)
+      apply (frule Finalise_R.ctes_of_valid', clarsimp)
+      apply (clarsimp simp: valid_cap_simps')
+      done
+
     have sz_bound:
       "sz \<le> 47"
       using vui misc
@@ -2598,7 +2606,7 @@ lemma invokeUntyped_Retype_ccorres:
                               invs_valid_pspace' isCap_simps
                               arg_cong[OF mask_out_sub_mask, where f="\<lambda>y. x - y" for x]
                               field_simps unat_of_nat_eq[OF range_cover.weak, OF cover]
-                              if_apply_def2 invs_valid_objs' ptr_base_eq sz_bound canonical_ptr
+                              if_apply_def2 invs_valid_objs' ptr_base_eq sz_bound canonical_ptr ptr_in_km
                               invs_urz untypedBits_defs)
 
         apply (intro conjI)
