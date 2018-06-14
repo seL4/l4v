@@ -12,15 +12,13 @@
 
 module SEL4.API.InvocationLabels.RISCV64 where
 
--- FIXME RISCV unchecked copypasta
 data ArchInvocationLabel
-        = RISCVPageDirectoryMap
-        | RISCVPageDirectoryUnmap
-        | RISCVPageTableMap
+        = RISCVPageTableMap
         | RISCVPageTableUnmap
         | RISCVPageMap
         | RISCVPageRemap
         | RISCVPageUnmap
         | RISCVPageGetAddress
-        | RISCVFIXME -- FIXME RISCV TODO
+        | RISCVASIDControlMakePool
+        | RISCVASIDPoolAssign
         deriving (Show, Eq, Enum, Bounded)
