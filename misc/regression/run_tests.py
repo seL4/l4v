@@ -417,9 +417,8 @@ def main():
             help="don't check for dependencies when running specific tests")
     parser.add_argument("-x", "--exclude", action="append", metavar="TEST", default=[],
             help="exclude the given test; tests depending on it may still run")
-    # FIXME: get this to work with test selection
     parser.add_argument("-r", "--remove", action="append", metavar="TEST", default=[],
-            help="remove the given test and tests that depend on it (if tests are not manually selected)")
+            help="remove the given test and tests that depend on it")
     parser.add_argument("-v", "--verbose", action="store_true",
             help="print test output or list more details")
     parser.add_argument("--junit-report", metavar="FILE",
@@ -432,7 +431,7 @@ def main():
     timeout_mod_args.add_argument("--no-timeouts", action="store_true",
             help="do not enforce any test timeouts")
     parser.add_argument("--grace-period", type=float, default=5, metavar='N',
-            help="notify processes N seconds before killing them (default: 5)")
+            help="interrupt over-time processes N seconds before killing them (default: 5)")
     parser.add_argument("tests", metavar="TESTS",
             help="select these tests to run (defaults to all tests)",
             nargs="*")
@@ -444,48 +443,64 @@ def main():
     if args.scale_timeouts <= 0:
         parser.error("--scale-timeouts value must be greater than 0")
 
-    if args.remove and args.tests:
-        parser.error("--remove cannot be used with manual test selection")
-
     # Search for test files:
     test_xml = sorted(rglob(args.directory, "tests.xml"))
     test_info = testspec.process_test_files(test_xml)
-    tests = test_info.tests
+    all_tests = test_info.tests
 
     # List test names if requested.
     if args.list:
-        print_tests('total', tests, args.verbose)
+        print_tests('total', all_tests, args.verbose)
         sys.exit(0)
 
-    args.exclude = set(args.exclude)
-
     # Calculate which tests should be run.
-    if len(args.tests) == 0 and not os.environ.get('RUN_TESTS_DEFAULT'):
-        tests_to_run = tests
-        remove_trans = [test_info.reverse_deps.rtrans(r, lambda x: frozenset()) for r in args.remove]
-        args.exclude = args.exclude.union(*remove_trans)
-    else:
-        desired_names = set(args.tests) or set(os.environ.get('RUN_TESTS_DEFAULT').split())
-        bad_names = desired_names - set([t.name for t in tests])
-        if len(bad_names) > 0:
-            parser.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
-        # Given a list of names return the corresponding set of Test objects.
-        def get_tests(x): return {t for t in tests if t.name in x}
-        # Given a list/set of Tests return a superset that includes all dependencies.
-        def get_deps(x):
-            x.update({t for w in x for t in get_deps(get_tests(w.depends))})
-            return x
-        tests_to_run_set = get_tests(desired_names)
-        # Are we skipping dependencies? if not, add them.
-        if not args.no_dependencies:
-            tests_to_run_set = get_deps(tests_to_run_set)
-        # Preserve the order of the original set of Tests.
-        tests_to_run = [t for t in tests if t in tests_to_run_set]
-
-    bad_names = args.exclude - set(t.name for t in tests)
+    desired_names = set(args.tests) or set(os.environ.get('RUN_TESTS_DEFAULT', '').split())
+    bad_names = desired_names - set([t.name for t in all_tests])
     if bad_names:
-        print("[Warning] Unknown test names: %s" % (", ".join(sorted(bad_names))))
-    tests_to_run = [t for t in tests_to_run if t.name not in args.exclude]
+        parser.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
+
+    def get_tests(names):
+        '''Given a set of names, return the corresponding set of Tests.'''
+        return {t for t in all_tests if t.name in names}
+    def add_deps(x):
+        '''Given a set of Tests, add all dependencies to it.'''
+        x.update({t for w in x for t in add_deps(get_tests(w.depends))})
+        return x
+
+    if desired_names:
+        tests_to_run_set = get_tests(desired_names)
+    else:
+        tests_to_run_set = set(all_tests)
+
+    # Are we skipping dependencies? If not, add them.
+    if not args.no_dependencies:
+        add_deps(tests_to_run_set)
+
+    # Preserve the order of the original set of Tests.
+    tests_to_run = [t for t in all_tests if t in tests_to_run_set]
+
+    # Process --exclude'd tests.
+    exclude_tests = set(args.exclude)
+    tests_to_run = [t for t in tests_to_run if t.name not in exclude_tests]
+
+    # Process --remove'd tests transitively.
+    remove_trans = frozenset.union(frozenset(), *[
+        test_info.reverse_deps.rtrans(r, lambda x: frozenset())
+        for r in args.remove])
+    conflict_names = {t for t in desired_names if t not in exclude_tests and t in remove_trans}
+    if conflict_names:
+        # It's unclear what we should do if a selected test has been --removed.
+        # For now, just bail out.
+        parser.error(
+            "Cannot run these tests because they depend on removed tests: %s\n" %
+            ", ".join(sorted(conflict_names))
+            + "(The removed tests are: %s)" %
+            ", ".join(args.remove))
+    tests_to_run = [t for t in tests_to_run if t.name not in remove_trans]
+
+    bad_names = set.union(exclude_tests, set(args.remove)) - {t.name for t in all_tests}
+    if bad_names:
+        sys.stderr.write("Warning: Unknown test names: %s\n" % (", ".join(sorted(bad_names))))
 
     if args.dry_run:
         print_tests('selected', tests_to_run, args.verbose)
