@@ -37,10 +37,10 @@ physBase = error "FIXME RISCV TODO"
 physMappingOffset = error "FIXME RISCV TODO"
 
 ptrFromPAddr :: PAddr -> PPtr a
-ptrFromPAddr (PAddr addr) = error "FIXME RISCV TODO"
+ptrFromPAddr (PAddr addr) = PPtr $ addr + physMappingOffset
 
 addrFromPPtr :: PPtr a -> PAddr
-addrFromPPtr (PPtr ptr) = error "FIXME RISCV TODO"
+addrFromPPtr (PPtr ptr) = PAddr $ ptr - physMappingOffset
 
 pageColourBits :: Int
 pageColourBits = error "FIXME RISCV TODO"

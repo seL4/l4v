@@ -86,7 +86,54 @@ checkPTAt :: PPtr PTE -> Kernel ()
 checkPTAt _ = return ()
 
 
-{- Locating Page Table and Page Directory Slots -}
+{- Locating Page Table Slots -}
+
+-- FIXME RISCV: lookupPTSlot needs review
+
+-- FIXME RISCV: is this the right place for this?
+-- counting from 0, i.e. number of levels = maxPTLevel + 1
+maxPTLevel :: Int
+maxPTLevel = 2
+
+isPTEPageTable :: PTE -> Bool
+isPTEPageTable (PageTablePTE {}) = True
+isPTEPageTable _ = False
+
+getPPtrFromHWPTE :: PTE -> PPtr PTE
+getPPtrFromHWPTE pte = ptrFromPAddr (ptePPN pte `shiftL` ptBits)
+
+ptBitsLeft :: Int -> Int
+ptBitsLeft level = ptTranslationBits * level + pageBits
+
+ptSlotIndex :: Int -> PPtr PTE -> VPtr -> PPtr PTE
+ptSlotIndex level ptePtr vPtr =
+    let index = (fromVPtr vPtr `shiftR` ptBitsLeft level) .&.
+                mask ptTranslationBits
+    in ptePtr + PPtr (index `shiftL` pteBits)
+
+pteAtIndex :: Int -> PPtr PTE -> VPtr -> Kernel PTE
+pteAtIndex level ptePtr vPtr = getObject (ptSlotIndex level ptePtr vPtr)
+
+lookupPTSlotLevel :: Int -> PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
+lookupPTSlotLevel 0 ptePtr vPtr = do
+    pte <- pteAtIndex 0 ptePtr vPtr
+    return (ptBitsLeft 0, getPPtrFromHWPTE pte)
+lookupPTSlotLevel l ptePtr vPtr = do
+    pte <- pteAtIndex l ptePtr vPtr
+    let ptr = getPPtrFromHWPTE pte
+    if isPTEPageTable pte
+        then lookupPTSlotLevel (l-1) ptr vPtr
+        else return (ptBitsLeft l, ptr)
+
+{-
+lookupPTSlot walks the page table and returns a pointer to the slot that
+maps a given virtual address, together with the number of bits left to
+translate, indicating the size of the frame.
+-}
+
+lookupPTSlot :: PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
+lookupPTSlot = lookupPTSlotLevel maxPTLevel
+
 
 -- FIXME RISCV TODO
 
