@@ -2353,7 +2353,7 @@ lemma makeUserPDELargePage_spec:
 
 lemma makeUserPDEPageTable_spec:
   "\<forall>s. \<Gamma> \<turnstile>
-  \<lbrace>s. vmsz_aligned' (\<acute>paddr) X64LargePage \<rbrace>
+  \<lbrace>s. vmsz_aligned' (\<acute>paddr) X64SmallPage\<rbrace>
   Call makeUserPDEPageTable_'proc
   \<lbrace> pde_lift \<acute>ret__struct_pde_C = Some (Pde_pde_pt \<lparr>
        pde_pde_pt_CL.xd_CL = 0,
