@@ -12,14 +12,15 @@
 module SEL4.Model.StateData.RISCV64 where
 
 import SEL4.Machine
-import SEL4.Machine.Hardware.RISCV64 ({-FIXME RISCV(..)-})
+import SEL4.Machine.Hardware.RISCV64 (PTE(..))
 import SEL4.Object.Structures.RISCV64
 
 import Data.Array
 
 data KernelState = RISCVKernelState {
     -- FIXME RISCV TODO: fill in rest
-    riscvKSASIDTable :: Array ASID (Maybe (PPtr ASIDPool)) }
+    riscvKSASIDTable :: Array ASID (Maybe (PPtr ASIDPool)),
+    riscvKSGlobalPT :: PPtr PTE }
 
 -- FIXME RISCV unchecked copypasta
 newKernelState :: PAddr -> (KernelState, [PAddr])
