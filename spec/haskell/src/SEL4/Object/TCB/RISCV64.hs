@@ -28,28 +28,22 @@ import Data.Bits
 
 import Data.Word(Word8)
 
--- FIXME RISCV unchecked copypasta
 decodeTransfer :: Word8 -> KernelF SyscallError CopyRegisterSets
 decodeTransfer _ = return RISCVNoExtraRegisters
 
--- FIXME RISCV unchecked copypasta
 performTransfer :: CopyRegisterSets -> PPtr TCB -> PPtr TCB -> Kernel ()
 performTransfer _ _ _ = return ()
 
 sanitiseRegister :: Bool -> Register -> Word -> Word
-sanitiseRegister _ r v = error "FIXME RISCV TODO"
+sanitiseRegister _ _ v = v
 
--- FIXME RISCV unchecked copypasta
 getSanitiseRegisterInfo :: PPtr TCB -> Kernel Bool
 getSanitiseRegisterInfo _ = return False
 
--- FIXME RISCV unchecked copypasta
 setTCBIPCBuffer :: VPtr -> UserMonad ()
-setTCBIPCBuffer ptr = return ()
+setTCBIPCBuffer ptr = setRegister (RegisterSet.Register TP) $ fromVPtr ptr
 
 -- Here, cur = ksCurThread
 
--- FIXME RISCV unchecked copypasta
 postModifyRegisters :: PPtr TCB -> PPtr TCB -> UserMonad ()
-postModifyRegisters cur dest =
-    when (dest /= cur) $ setRegister (RegisterSet.Register ErrorRegister) 0
+postModifyRegisters _cur _dest = return ()
