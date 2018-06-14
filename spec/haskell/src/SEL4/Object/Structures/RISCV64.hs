@@ -48,8 +48,8 @@ data ArchKernelObject
     deriving Show
 
 archObjSize :: ArchKernelObject -> Int
-archObjSize (KOASIDPool _) = 12
-archObjSize (KOPTE _) = 3
+archObjSize (KOASIDPool _) = pageBits
+archObjSize (KOPTE _) = pteBits
 
 
 {- Threads -}
