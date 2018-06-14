@@ -163,10 +163,24 @@ handleVMFault thread f = error "FIXME RISCV TODO"
 
 {- Address Space Switching -}
 
--- FIXME RISCV TODO
-
 setVMRoot :: PPtr TCB -> Kernel ()
-setVMRoot tcb = error "FIXME RISCV TODO"
+setVMRoot tcb = do
+    threadRootSlot <- getThreadVSpaceRoot tcb
+    threadRoot <- getSlotCap threadRootSlot
+    catchFailure
+        (case threadRoot of
+            ArchObjectCap (PageTableCap {
+                    capPTMappedAddress = Just (asid, _),
+                    capPTBasePtr = pt }) -> do
+                pt' <- findVSpaceForASID asid
+                when (pt /= pt') $ throw InvalidRoot -- FIXME RISCV: C uses cap asid, not 0 for global PT. Should probably change C.
+                withoutFailure $ doMachineOp $
+                    setVSpaceRoot (addrFromPPtr pt) (fromASID asid)
+            _ -> throw InvalidRoot)
+        (\_ -> do
+            globalPT <- gets (riscvKSGlobalPT . ksArchState)
+            doMachineOp $ setVSpaceRoot (addrFromKPPtr globalPT) 0)
+
 
 {- Helper Functions -}
 

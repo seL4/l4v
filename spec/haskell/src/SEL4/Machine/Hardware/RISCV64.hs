@@ -70,7 +70,8 @@ addrFromPPtr = Platform.addrFromPPtr
 fromPAddr :: PAddr -> Word
 fromPAddr = Platform.fromPAddr
 
--- FIXME RISCV: do we need addrFromKPPtr like x64?
+addrFromKPPtr :: PPtr a -> PAddr
+addrFromKPPtr = Platform.addrFromKPPtr
 
 {- Hardware Access -}
 
@@ -287,3 +288,6 @@ debugPrint str = liftIO $ putStrLn str
 
 initIRQController :: MachineMonad ()
 initIRQController = error "Unimplemented"
+
+setVSpaceRoot :: PAddr -> Word64 -> MachineMonad ()
+setVSpaceRoot addr asid = error "Unimplemented"

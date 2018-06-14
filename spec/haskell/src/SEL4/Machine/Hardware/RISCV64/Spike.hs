@@ -35,12 +35,17 @@ kernelBase = VPtr 0xFFFFFFFF80000000
 
 physBase = 0x0 -- called PADDR_BASE in C
 physMappingOffset = fromVPtr pptrBase - physBase -- called BASE_OFFSET in C
+paddrLoad = 0xC0000000
+kernelBaseOffset = fromVPtr kernelBase - paddrLoad
 
 ptrFromPAddr :: PAddr -> PPtr a
 ptrFromPAddr (PAddr addr) = PPtr $ addr + physMappingOffset
 
 addrFromPPtr :: PPtr a -> PAddr
 addrFromPPtr (PPtr ptr) = PAddr $ ptr - physMappingOffset
+
+addrFromKPPtr :: PPtr a -> PAddr
+addrFromKPPtr (PPtr ptr) = PAddr $ ptr - kernelBaseOffset
 
 pageColourBits :: Int
 pageColourBits = error "FIXME RISCV TODO"
