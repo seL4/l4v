@@ -16,21 +16,22 @@ import SEL4.Model.StateData
 import SEL4.Object.Structures
 import SEL4.Kernel.VSpace.RISCV64
 import {-# SOURCE #-} SEL4.Kernel.Init
+import {-# SOURCE #-} SEL4.Object.TCB (asUser, threadGet)
+import SEL4.Machine.RegisterSet.RISCV64(Register(..))
 
--- FIXME RISCV unchecked copypasta
 switchToThread :: PPtr TCB -> Kernel ()
-switchToThread tcb = setVMRoot tcb
+switchToThread tcb = do
+    setVMRoot tcb
+    bufferPtr <- threadGet tcbIPCBuffer tcb
+    asUser tcb $ setRegister (Register TP) $ fromVPtr bufferPtr
 
--- FIXME RISCV unchecked copypasta
 configureIdleThread :: PPtr TCB -> KernelInit ()
-configureIdleThread _ = error "Unimplemented. init code"
+configureIdleThread _ = error "Unimplemented init code"
 
--- FIXME RISCV unchecked copypasta
 switchToIdleThread :: Kernel ()
 switchToIdleThread = do
     t <- getIdleThread
     setVMRoot t
 
--- FIXME RISCV unchecked copypasta
 activateIdleThread :: PPtr TCB -> Kernel ()
 activateIdleThread _ = return ()
