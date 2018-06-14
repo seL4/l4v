@@ -25,22 +25,20 @@ import {-# SOURCE #-} SEL4.Kernel.CSpace
 import {-# SOURCE #-} SEL4.Object.Interrupt
 import qualified SEL4.Machine.Hardware.RISCV64 as Arch
 
+-- at this time, interrupts don't really exist on the target platform
 decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
         KernelF SyscallError ArchInv.IRQControlInvocation
 decodeIRQControlInvocation label args srcSlot extraCaps =
-    error "FIXME RISCV TODO"
+    throw IllegalOperation
 
 performIRQControl :: ArchInv.IRQControlInvocation -> KernelP ()
-performIRQControl = error "FIXME RISCV TODO"
+performIRQControl = error "Unreachable due to no IRQControl decode on this arch."
 
--- FIXME RISCV unchecked copypasta
 handleReservedIRQ :: IRQ -> Kernel ()
 handleReservedIRQ _ = return ()
 
--- FIXME RISCV unchecked copypasta
 initInterruptController :: Kernel ()
-initInterruptController = return ()
+initInterruptController = error "Unimplemented. Init code."
 
--- FIXME RISCV unchecked copypasta
 checkIRQ :: Word -> KernelF SyscallError ()
 checkIRQ irq = throw IllegalOperation
