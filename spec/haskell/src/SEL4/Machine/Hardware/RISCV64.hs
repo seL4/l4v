@@ -83,7 +83,8 @@ pageBits = 12
 ptTranslationBits :: Int
 ptTranslationBits = 9
 
-pteBits = (3 :: Int)
+pteBits :: Int
+pteBits = 3
 
 ptBits :: Int
 ptBits = ptTranslationBits + pteBits
