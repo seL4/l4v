@@ -17,31 +17,36 @@ import Data.Helpers
 
 import Control.Monad.State(State, gets, modify)
 
-data Register = FIXMERISCVreg -- FIXME RISCV TODO fill in and order properly
-    | ErrorRegister
+data Register
+    = LR -- "RA"
+    | SP | GP | TP | T0 | T1 | T2 | S0 | S1
+    | A0 | A1 | A2 | A3 | A4 | A5 | A6 | A7
+    | S2 | S3 | S4 | S5 | S6 | S7 | S8 | S9 | S10 | S11
+    | T3 | T4 | T5 | T6
+    | SCAUSE | SSTATUS | SEPC | NEXTPC
     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
 type Word = Data.Word.Word64
 
-capRegister = error "FIXME RISCV TODO"
-msgInfoRegister = error "FIXME RISCV TODO"
-msgRegisters = error "FIXME RISCV TODO"
-badgeRegister = error "FIXME RISCV TODO"
-frameRegisters = error "FIXME RISCV TODO"
-gpRegisters = error "FIXME RISCV TODO"
-exceptionMessage = error "FIXME RISCV TODO"
+capRegister = A0
+msgInfoRegister = A1
+msgRegisters = [A2 .. A5]
+badgeRegister = A0
+frameRegisters = SEPC : [LR .. A6]
+gpRegisters = []
+exceptionMessage = [SEPC, SP, A7]
+syscallMessage = SEPC : SP : LR : [A0 .. A6]
 
-syscallMessage = error "FIXME RISCV TODO"
+sstatusSPIE = 0x20 :: Word
 
 initContext :: [(Register, Word)]
-initContext = error "FIXME RISCV TODO"
+initContext = [ (SSTATUS , sstatusSPIE) ]
 
 {- User-level Context -}
 
 -- On RISC-V the representation of the user-level context of a thread is an array
--- of machine words, indexed by register name for the user registers, plus FIXME RISCV FPU?
+-- of machine words, indexed by register name for the user registers.
 
--- FIXME RISCV unchecked copypasta
 data UserContext = UC { fromUC :: Array Register Word }
   deriving Show
 
@@ -50,10 +55,10 @@ data UserContext = UC { fromUC :: Array Register Word }
 -- initial values for certain registers.
 
 newContext :: UserContext
-newContext = error "FIXME RISCV TODO"
+newContext = UC $ (funArray $ const 0)//initContext
 
 -- Functions are provided to get and set a single register.
 
 getRegister r = gets $ (!r) . fromUC
 
-setRegister r v = error "FIXME RISCV TODO"
+setRegister r v = modify $ UC . (//[(r, v)]) . fromUC
