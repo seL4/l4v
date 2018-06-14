@@ -38,6 +38,10 @@ import SEL4.API.Invocation.RISCV64 as ArchInv
 
 {- Constants -}
 
+-- counting from 0, i.e. number of levels = maxPTLevel + 1
+maxPTLevel :: Int
+maxPTLevel = 2
+
 -- FIXME RISCV TODO
 
 {- Creating a New Address Space -}
@@ -90,11 +94,6 @@ checkPTAt _ = return ()
 
 -- FIXME RISCV: lookupPTSlot needs review
 
--- FIXME RISCV: is this the right place for this?
--- counting from 0, i.e. number of levels = maxPTLevel + 1
-maxPTLevel :: Int
-maxPTLevel = 2
-
 isPageTablePTE :: PTE -> Bool
 isPageTablePTE (PageTablePTE {}) = True
 isPageTablePTE _ = False
@@ -131,8 +130,6 @@ translate, indicating the size of the frame.
 lookupPTSlot :: PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
 lookupPTSlot = lookupPTSlotLevel maxPTLevel
 
-
--- FIXME RISCV TODO
 
 {- Handling Faults -}
 

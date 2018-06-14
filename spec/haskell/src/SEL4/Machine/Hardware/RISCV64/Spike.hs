@@ -31,10 +31,10 @@ newtype PAddr = PAddr { fromPAddr :: Word }
     deriving (Integral, Real, Show, Eq, Num, Bits, FiniteBits, Ord, Enum, Bounded)
 
 kernelBase :: VPtr
-kernelBase = error "FIXME RISCV TODO"
+kernelBase = VPtr 0xFFFFFFFF80000000
 
-physBase = error "FIXME RISCV TODO"
-physMappingOffset = error "FIXME RISCV TODO"
+physBase = 0x0 -- called PADDR_BASE in C
+physMappingOffset = fromVPtr pptrBase - physBase -- called BASE_OFFSET in C
 
 ptrFromPAddr :: PAddr -> PPtr a
 ptrFromPAddr (PAddr addr) = PPtr $ addr + physMappingOffset
@@ -49,7 +49,8 @@ pageColourBits = error "FIXME RISCV TODO"
 
 {- stubs -}
 
-pptrBase = error "FIXME RISCV TODO"
+pptrBase :: VPtr
+pptrBase = VPtr 0xFFFFFFC000000000
 
 {- simulator callback stubs - we do not plan to support the simulator on this
    platform -}
