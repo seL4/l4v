@@ -201,18 +201,27 @@ vmRightsFromBits rw = getVMRights (testBit rw 1) (testBit rw 0)
 
 -- Page Table entries
 
+{-
+  Encoding notes:
+   - dirty and accessed bits are always 1 for valid PTEs
+   - SW bits always 0
+   - valid = 1 and read/write/execute = 0 => table PTE
+   - valid = 0 => invalid PTE
+   - otherwise => page PTE
+-}
+
 data PTE
     = InvalidPTE
-    | SmallPagePTE {
+    | PagePTE {
         ptePPN :: PAddr,
-        pteSW :: (Bool, Bool),
-        pteDirty :: Bool,
-        pteAccessed :: Bool,
         pteGlobal :: Bool,
         pteUser :: Bool,
         pteExecute :: Bool,
-        pteRights :: VMRights,
-        pteValid :: Bool }
+        pteRights :: VMRights }
+     | PageTablePTE {
+        ptePPN :: PAddr,
+        pteGlobal :: Bool,
+        pteUser :: Bool }
     deriving (Show, Eq)
 
 pptrBase :: VPtr
