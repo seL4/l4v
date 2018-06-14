@@ -173,7 +173,22 @@ Library
 
     if flag(ArchRiscV)
         other-modules:
-                            -- FIXME RISCV TODO
+                            SEL4.API.Types.RISCV64
+                            SEL4.API.InvocationLabels.RISCV64
+                            SEL4.API.Invocation.RISCV64
+                            SEL4.Kernel.VSpace.RISCV64
+                            SEL4.Kernel.Thread.RISCV64
+                            SEL4.Kernel.Hypervisor.RISCV64
+                            SEL4.Object.ObjectType.RISCV64
+                            SEL4.Object.Structures.RISCV64
+                            SEL4.Object.Interrupt.RISCV64
+                            SEL4.Object.Instances.RISCV64
+                            SEL4.Object.TCB.RISCV64
+                            SEL4.Model.StateData.RISCV64
+                            SEL4.Machine.RegisterSet.RISCV64
+                            SEL4.Machine.Hardware.RISCV64
+
+                            SEL4.Machine.Hardware.RISCV64.Spike
 
     hs-source-dirs:         src
     ghc-prof-options:       -auto-all -prof -fprof-auto
