@@ -115,13 +115,10 @@ pteAtIndex :: Int -> PPtr PTE -> VPtr -> Kernel PTE
 pteAtIndex level ptePtr vPtr = getObject (ptSlotIndex level ptePtr vPtr)
 
 lookupPTSlotLevel :: Int -> PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
-lookupPTSlotLevel 0 ptePtr vPtr = do
-    pte <- pteAtIndex 0 ptePtr vPtr
-    return (ptBitsLeft 0, getPPtrFromHWPTE pte)
 lookupPTSlotLevel l ptePtr vPtr = do
     pte <- pteAtIndex l ptePtr vPtr
     let ptr = getPPtrFromHWPTE pte
-    if isPTEPageTable pte
+    if isPTEPageTable pte && l > 0
         then lookupPTSlotLevel (l-1) ptr vPtr
         else return (ptBitsLeft l, ptr)
 
