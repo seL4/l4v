@@ -41,8 +41,12 @@ toPAddr = Platform.PAddr
 
 {- Virtual Memory -}
 
-data VMPageSize -- FIXME RISCV TODO
-    = FIXMERISCVPageSize
+-- these correspond to 4K, Mega and Giga pages in C
+
+data VMPageSize
+    = RISCVSmallPage
+    | RISCVLargePage
+    | RISCVHugePage
     deriving (Show, Eq, Ord, Enum, Bounded)
 
 data VMFaultType -- FIXME RISCV TODO
@@ -70,8 +74,16 @@ fromPAddr = Platform.fromPAddr
 
 {- Hardware Access -}
 
+pageBitsForSize :: VMPageSize -> Int
+pageBitsForSize RISCVSmallPage = error "FIXME RISCV TODO"
+pageBitsForSize RISCVLargePage = error "FIXME RISCV TODO"
+pageBitsForSize RISCVHugePage = error "FIXME RISCV TODO"
+
 pageBits :: Int
 pageBits = error "FIXME RISCV TODO"
+
+ptBits :: Int
+ptBits = error "FIXME RISCV TODO"
 
 -- FIXME RISCV TODO
 
