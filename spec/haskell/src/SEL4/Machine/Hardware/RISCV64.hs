@@ -74,16 +74,24 @@ fromPAddr = Platform.fromPAddr
 
 {- Hardware Access -}
 
-pageBitsForSize :: VMPageSize -> Int
-pageBitsForSize RISCVSmallPage = error "FIXME RISCV TODO"
-pageBitsForSize RISCVLargePage = error "FIXME RISCV TODO"
-pageBitsForSize RISCVHugePage = error "FIXME RISCV TODO"
-
 pageBits :: Int
-pageBits = error "FIXME RISCV TODO"
+pageBits = 12
+
+-- Each page table performs 9 bits of translation, with each entry occupying
+-- 2^3 bytes, thus occupying one small page.
+
+ptTranslationBits :: Int
+ptTranslationBits = 9
+
+pteBits = (3 :: Int)
 
 ptBits :: Int
-ptBits = error "FIXME RISCV TODO"
+ptBits = ptTranslationBits + pteBits
+
+pageBitsForSize :: VMPageSize -> Int
+pageBitsForSize RISCVSmallPage = pageBits
+pageBitsForSize RISCVLargePage = pageBits + ptTranslationBits
+pageBitsForSize RISCVHugePage = pageBits + ptTranslationBits + ptTranslationBits
 
 -- FIXME RISCV TODO
 
