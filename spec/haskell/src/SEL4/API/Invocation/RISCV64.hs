@@ -24,10 +24,6 @@ import Data.Word (Word8, Word16, Word32)
 -- ASID pool structures.
 
 data Invocation
-    = InvokeFIXMERISCV -- FIXME RISCV TODO
-    deriving Show
-
-{- FIXME RISCV total guess as to what will be needed
     = InvokePageTable PageTableInvocation
     | InvokePage PageInvocation
     | InvokeASIDControl ASIDControlInvocation
@@ -41,23 +37,19 @@ data PageTableInvocation
     | PageTableMap {
         ptMapCap :: Capability,
         ptMapCTSlot :: PPtr CTE,
-        ptMapPDE :: PDE,
-        ptMapPDSlot :: PPtr PDE,
-        ptMapVSpace :: PPtr PML4E }
+        ptMapPTE :: PTE,
+        ptMapPTSlot :: PPtr PTE }
     deriving Show
 
 data PageInvocation
     = PageGetAddr {
         pageGetBasePtr :: PPtr Word }
     | PageRemap {
-        pageRemapEntries :: (VMPageEntry, VMPageEntryPtr),
-        pageRemapASID :: ASID,
-        pageRemapVSpace :: PPtr PML4E }
+        pageRemapEntries :: (PTE, PPtr PTE) }
     | PageMap {
         pageMapCap :: Capability,
         pageMapCTSlot :: PPtr CTE,
-        pageMapEntries :: (VMPageEntry, VMPageEntryPtr),
-        pageMapVSpace :: PPtr PML4E }
+        pageMapEntries :: (PTE, PPtr PTE) }
     | PageUnmap {
         pageUnmapCap :: ArchCapability,
         pageUnmapCapSlot :: PPtr CTE }
@@ -77,12 +69,13 @@ data ASIDPoolInvocation
         assignASIDPool :: PPtr ASIDPool,
         assignASIDCTSlot :: PPtr CTE }
     deriving Show
--}
 
 {- Interrupt Control -}
 
+-- on current RISCV platforms, we do not have proper interrupts
+
 data IRQControlInvocation
-    = IssueIRQHandlerFIXMERISCV -- FIXME RISCV TODO
+    = RISCVNoIRQControlInvocation
     deriving Show
 
 {- Additional Register Subsets -}
