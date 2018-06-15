@@ -224,10 +224,6 @@ isValidVTableRoot = error "FIXME RISCV TODO"
 
 -- FIXME RISCV TODO
 
-{- Managing ASID Map -}
-
--- FIXME RISCV TODO
-
 {- Decoding RISC-V Invocations -}
 
 -- FIXME RISCV TODO
