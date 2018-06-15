@@ -12,7 +12,10 @@ module SEL4.API.Failures.RISCV64 where
 
 import SEL4.Machine
 
--- FIXME RISCV COPYPASTA
+-- note that typically the first word of vmFaultArchData corresponds to
+-- "instructionFault", while the second to "FSR", in opposite order to C, where
+-- "instructionFault" is the second, boolean, argument
+
 data ArchFault
     = VMFault {
             vmFaultAddress :: VPtr,

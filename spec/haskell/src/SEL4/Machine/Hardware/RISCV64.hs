@@ -23,7 +23,7 @@ import Data.Word(Word8, Word16, Word32, Word64)
 -- "RISCV" prefix, and the platform-specific hardware access functions are
 -- qualified with the "Platform" prefix.
 
-import qualified SEL4.Machine.RegisterSet.RISCV64 as RISCV
+import qualified SEL4.Machine.RegisterSet.RISCV64 as RISCV64
 import qualified SEL4.Machine.Hardware.RISCV64.PLATFORM as Platform
 
 {- Data Types -}
@@ -49,11 +49,37 @@ data VMPageSize
     | RISCVHugePage
     deriving (Show, Eq, Ord, Enum, Bounded)
 
-data VMFaultType -- FIXME RISCV TODO
-    = FIXMERISCVFaultType
+data VMFaultType
+    = RISCVInstructionMisaligned
+    | RISCVInstructionAccessFault
+    | RISCVInstructionIllegal
+    | RISCVBreakpoint
+    | RISCVLoadAccessFault
+    | RISCVAddressMisaligned
+    | RISCVStoreAccessFault
+    | RISCVEnvCall
+    | RISCVInstructionPageFault
+    | RISCVLoadPageFault
+    | RISCVStorePageFault
     deriving Show
 
-data HypFaultType -- FIXME RISCV TODO
+-- incomplete enumeration of VMFaultType, used only in handleVMFault, hence Word
+vmFaultTypeFSR :: VMFaultType -> Word
+vmFaultTypeFSR f =
+    case f of
+        RISCVInstructionMisaligned -> 0
+        RISCVInstructionAccessFault -> 1
+        RISCVInstructionIllegal -> 2
+        RISCVBreakpoint -> 3
+        RISCVLoadAccessFault -> 5
+        RISCVAddressMisaligned -> 6
+        RISCVStoreAccessFault -> 7
+        RISCVEnvCall -> 8
+        RISCVInstructionPageFault -> 12
+        RISCVLoadPageFault -> 13
+        RISCVStorePageFault -> 15
+
+data HypFaultType
     = RISCVNoHypFaults
     deriving Show
 
@@ -95,11 +121,6 @@ pageBitsForSize RISCVSmallPage = pageBits
 pageBitsForSize RISCVLargePage = pageBits + ptTranslationBits
 pageBitsForSize RISCVHugePage = pageBits + ptTranslationBits + ptTranslationBits
 
--- FIXME RISCV TODO
-
-setInterruptMode :: IRQ -> Bool -> Bool -> MachineMonad ()
-setInterruptMode _ _ _ = error "FIXME RISCV TODO"
-
 configureTimer :: MachineMonad IRQ
 configureTimer = do
     cbptr <- ask
@@ -110,8 +131,8 @@ resetTimer = do
     cbptr <- ask
     liftIO $ Platform.resetTimer cbptr
 
-getRestartPC = error "FIXME RISCV TODO" -- getRegister (Register FIXME.FaultIP)
-setNextPC = error "FIXME RISCV TODO" -- setRegister (Register FIXME.NextIP)
+getRestartPC = getRegister (Register RISCV64.SEPC)
+setNextPC = setRegister (Register RISCV64.NEXTPC)
 
 {- Memory Management -}
 
@@ -238,7 +259,7 @@ physBase = toPAddr Platform.physBase
 {- Simulator callbacks -}
 
 pageColourBits :: Int
-pageColourBits = error "FIXME RISCV TODO" -- Platform.pageColourBits
+pageColourBits = Platform.pageColourBits
 
 getMemoryRegions :: MachineMonad [(PAddr, PAddr)]
 getMemoryRegions = do

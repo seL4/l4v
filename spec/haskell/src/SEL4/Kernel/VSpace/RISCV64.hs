@@ -134,9 +134,22 @@ lookupPTSlot = lookupPTSlotLevel maxPTLevel
 {- Handling Faults -}
 
 handleVMFault :: PPtr TCB -> VMFaultType -> KernelF Fault ()
-handleVMFault thread f = error "FIXME RISCV TODO"
-
--- FIXME RISCV TODO
+handleVMFault thread f = do
+    addr <- withoutFailure $ doMachineOp (error "FIXME RISCV read_csr(sbadaddr) is currently inline assembler")
+    case f of
+        RISCVLoadPageFault -> throw $ loadf addr
+        RISCVLoadAccessFault -> throw $ loadf addr
+        RISCVStorePageFault -> throw $ storef addr
+        RISCVStoreAccessFault -> throw $ storef addr
+        RISCVInstructionPageFault -> instrf addr
+        RISCVInstructionAccessFault -> instrf addr
+        _ -> error "Invalid VM fault type"
+    where loadf a = ArchFault $ VMFault a [0, vmFaultTypeFSR RISCVLoadAccessFault]
+          storef a = ArchFault $ VMFault a [0, vmFaultTypeFSR RISCVStoreAccessFault]
+          instrf a = do
+              sepc <- withoutFailure $ asUser thread $ getRegister (Register SEPC)
+              withoutFailure $ asUser thread $ setRegister (Register NEXTPC) sepc
+              throw $ ArchFault $ VMFault a [1, vmFaultTypeFSR RISCVInstructionAccessFault]
 
 {- Unmapping and Deletion -}
 
