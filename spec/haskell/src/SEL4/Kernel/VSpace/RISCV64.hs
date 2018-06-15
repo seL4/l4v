@@ -38,7 +38,7 @@ import SEL4.API.Invocation.RISCV64 as ArchInv
 
 {- Constants -}
 
--- counting from 0, i.e. number of levels = maxPTLevel + 1
+-- counting from 0, i.e. number of levels = maxPTLevel + 1 = top-level table
 maxPTLevel :: Int
 maxPTLevel = 2
 
@@ -46,7 +46,17 @@ maxPTLevel = 2
 
 {- Creating a New Address Space -}
 
--- FIXME RISCV TODO
+copyGlobalMappings :: PPtr PTE -> Kernel ()
+copyGlobalMappings newPT = do
+    globalPT <- gets (riscvKSGlobalPT . ksArchState)
+    let base = ptIndex maxPTLevel pptrBase
+    let ptSize = 1 `shiftL` ptTranslationBits -- number of entries in table
+    forM_ [base .. ptSize - 1] $ \index -> do
+        let offset = PPtr index `shiftL` pteBits
+        pte <- getObject $ globalPT + offset
+        storePTE (newPT + offset) pte
+
+-- FIXME RISCV TODO: mapping entries etc
 
 {- Lookups and Faults -}
 
@@ -104,13 +114,15 @@ getPPtrFromHWPTE pte = ptrFromPAddr (ptePPN pte `shiftL` ptBits)
 ptBitsLeft :: Int -> Int
 ptBitsLeft level = ptTranslationBits * level + pageBits
 
--- Compute slot pointer for the pte in the table ptPtr at given level with index
--- computed from vPtr for that level.
+-- compute index into a page table from vPtr at given level
+ptIndex :: Int -> VPtr -> Word
+ptIndex level vPtr =
+    (fromVPtr vPtr `shiftR` ptBitsLeft level) .&. mask ptTranslationBits
+
+-- compute slot ptr inside the table ptPtr at given level for a vPtr
 ptSlotIndex :: Int -> PPtr PTE -> VPtr -> PPtr PTE
 ptSlotIndex level ptPtr vPtr =
-    let index = (fromVPtr vPtr `shiftR` ptBitsLeft level) .&.
-                mask ptTranslationBits
-    in ptPtr + PPtr (index `shiftL` pteBits)
+    ptPtr + PPtr (ptIndex level vPtr `shiftL` pteBits)
 
 -- Look up the pte in the table ptPtr at given level with index computed from
 -- vPtr for that level.
@@ -237,6 +249,15 @@ decodeRISCVMMUInvocation _ _ _ _ _ _ = fail "Unreachable"  -- FIXME RISCV TODO
 {- Invocation Implementations -}
 
 -- FIXME RISCV TODO
+
+{- Simulator Support -}
+
+storePTE :: PPtr PTE -> PTE -> Kernel ()
+storePTE slot pte = do
+    setObject slot pte
+-- No simulator support currently available for RISCV, but this would be the
+-- hook for PTEs:
+-- doMachineOp $ storeWordVM (PPtr $ fromPPtr slot) $ wordFromPTE pte
 
 {- Boot Code and Unimplemented Stubs -}
 
