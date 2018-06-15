@@ -16,7 +16,8 @@ import SEL4.API.Failures.RISCV64
 
 makeArchFaultMessage :: ArchFault -> PPtr TCB -> Kernel (Word, [Word])
 makeArchFaultMessage (VMFault vptr archData) thread = do
-    error "FIXME RISCV TODO"
+    pc <- asUser thread getRestartPC
+    return (5, pc:fromVPtr vptr:archData)
 
 handleArchFaultReply :: ArchFault -> PPtr TCB -> Word -> [Word] -> Kernel Bool
-handleArchFaultReply (VMFault {}) _ _ _ = error "FIXME RISCV TODO" -- return True
+handleArchFaultReply (VMFault {}) _ _ _ = return True
