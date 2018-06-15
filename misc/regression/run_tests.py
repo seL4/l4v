@@ -457,7 +457,7 @@ def main():
     desired_names = set(args.tests) or set(os.environ.get('RUN_TESTS_DEFAULT', '').split())
     bad_names = desired_names - set([t.name for t in all_tests])
     if bad_names:
-        parser.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
+        parser.error("These tests are requested, but do not exist: %s" % (", ".join(sorted(bad_names))))
 
     def get_tests(names):
         '''Given a set of names, return the corresponding set of Tests.'''
@@ -500,7 +500,7 @@ def main():
 
     bad_names = set.union(exclude_tests, set(args.remove)) - {t.name for t in all_tests}
     if bad_names:
-        sys.stderr.write("Warning: Unknown test names: %s\n" % (", ".join(sorted(bad_names))))
+        sys.stderr.write("Warning: These tests are excluded/removed, but do not exist: %s\n" % (", ".join(sorted(bad_names))))
 
     if args.dry_run:
         print_tests('selected', tests_to_run, args.verbose)
