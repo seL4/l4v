@@ -351,6 +351,10 @@ lemma and_mask_eq_iff_shiftr_0:
 lemmas and_mask_eq_iff_le_mask = trans
   [OF and_mask_eq_iff_shiftr_0 le_mask_iff [THEN sym]]
 
+lemma mask_shiftl_decompose:
+  "mask m << n = mask (m + n) && ~~ mask n"
+  by (auto intro!: word_eqI simp: and_not_mask nth_shiftl nth_shiftr word_size)
+
 lemma one_bit_shiftl: "set_bit 0 n True = (1 :: 'a :: len word) << n"
   apply (rule word_eqI)
   apply (auto simp add: test_bit_set_gen nth_shiftl word_size
