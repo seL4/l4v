@@ -92,8 +92,6 @@ checkPTAt _ = return ()
 
 {- Locating Page Table Slots -}
 
--- FIXME RISCV: lookupPTSlot needs review
-
 isPageTablePTE :: PTE -> Bool
 isPageTablePTE (PageTablePTE {}) = True
 isPageTablePTE _ = False
@@ -101,34 +99,40 @@ isPageTablePTE _ = False
 getPPtrFromHWPTE :: PTE -> PPtr PTE
 getPPtrFromHWPTE pte = ptrFromPAddr (ptePPN pte `shiftL` ptBits)
 
+-- how many bits there are left to be translated at a given level
+-- (0 = bottom level)
 ptBitsLeft :: Int -> Int
 ptBitsLeft level = ptTranslationBits * level + pageBits
 
+-- Compute slot pointer for the pte in the table ptPtr at given level with index
+-- computed from vPtr for that level.
 ptSlotIndex :: Int -> PPtr PTE -> VPtr -> PPtr PTE
-ptSlotIndex level ptePtr vPtr =
+ptSlotIndex level ptPtr vPtr =
     let index = (fromVPtr vPtr `shiftR` ptBitsLeft level) .&.
                 mask ptTranslationBits
-    in ptePtr + PPtr (index `shiftL` pteBits)
+    in ptPtr + PPtr (index `shiftL` pteBits)
 
+-- Look up the pte in the table ptPtr at given level with index computed from
+-- vPtr for that level.
 pteAtIndex :: Int -> PPtr PTE -> VPtr -> Kernel PTE
-pteAtIndex level ptePtr vPtr = getObject (ptSlotIndex level ptePtr vPtr)
+pteAtIndex level ptPtr vPtr = getObject (ptSlotIndex level ptPtr vPtr)
 
-lookupPTSlotLevel :: Int -> PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
-lookupPTSlotLevel l ptePtr vPtr = do
-    pte <- pteAtIndex l ptePtr vPtr
+-- We are counting levels down instead of up, i.e. level maxPTLevel is the
+-- top-level page table, and level 0 is the bottom level that contains only
+-- pages or invalid entries.
+lookupPTSlotFromLevel :: Int -> PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
+lookupPTSlotFromLevel level ptPtr vPtr = do
+    pte <- pteAtIndex level ptPtr vPtr
     let ptr = getPPtrFromHWPTE pte
-    if isPageTablePTE pte && l > 0
-        then lookupPTSlotLevel (l-1) ptr vPtr
-        else return (ptBitsLeft l, ptr)
+    if isPageTablePTE pte && level > 0
+        then lookupPTSlotFromLevel (level-1) ptr vPtr
+        else return (ptBitsLeft level, ptr)
 
-{-
-lookupPTSlot walks the page table and returns a pointer to the slot that
-maps a given virtual address, together with the number of bits left to
-translate, indicating the size of the frame.
--}
-
+-- lookupPTSlot walks the page table and returns a pointer to the slot that maps
+-- a given virtual address, together with the number of bits left to translate,
+-- indicating the size of the frame.
 lookupPTSlot :: PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
-lookupPTSlot = lookupPTSlotLevel maxPTLevel
+lookupPTSlot = lookupPTSlotFromLevel maxPTLevel
 
 
 {- Handling Faults -}
