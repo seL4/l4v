@@ -224,7 +224,13 @@ deleteASID asid pt = do
 
 {- Unmapping a Frame -}
 
--- FIXME RISCV TODO
+unmapPage :: VMPageSize -> ASID -> VPtr -> PPtr Word -> Kernel ()
+unmapPage size asid vptr ptr = ignoreFailure $ do
+    vspace <- findVSpaceForASID asid
+    (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
+    unless (bitsLeft == pageBitsForSize size) $ throw InvalidRoot
+    pte <- withoutFailure $ getObject slot
+    withoutFailure $ storePTE slot InvalidPTE
 
 {- Address Space Switching -}
 
