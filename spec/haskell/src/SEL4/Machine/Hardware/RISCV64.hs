@@ -183,6 +183,9 @@ clearMemoryVM ptr bits = error "FIXME RISCV TODO"
 
 {- Cache Cleaning and TLB Flushes -}
 
+hwASIDFlush :: Word64 -> MachineMonad ()
+hwASIDFlush asid = error "unimplemented"
+
 -- FIXME RISCV TODO
 
 {- Page Table Structure -}

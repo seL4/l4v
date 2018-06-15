@@ -204,7 +204,19 @@ deleteASIDPool base ptr = do
 
 {- Deleting an Address Space -}
 
--- FIXME RISCV TODO
+deleteASID :: ASID -> PPtr PTE -> Kernel ()
+deleteASID asid pt = do
+    asidTable <- gets (riscvKSASIDTable . ksArchState)
+    case asidTable!(asidHighBitsOf asid) of
+        Nothing -> return ()
+        Just poolPtr -> do
+            ASIDPool pool <- getObject poolPtr
+            when (pool!(asid .&. mask asidLowBits) == Just pt) $ do
+                doMachineOp $ hwASIDFlush (fromASID asid)
+                let pool' = pool//[(asid .&. mask asidLowBits, Nothing)]
+                setObject poolPtr $ ASIDPool pool'
+                tcb <- getCurThread
+                setVMRoot tcb
 
 {- Deleting a Page Table -}
 
