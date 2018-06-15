@@ -62,10 +62,23 @@ copyGlobalMappings newPT = do
 
 {- IPC Buffer Accesses -}
 
+-- physical address of the IPC buffer, if it is accessible
 lookupIPCBuffer :: Bool -> PPtr TCB -> Kernel (Maybe (PPtr Word))
-lookupIPCBuffer isReceiver thread = error "FIXME RISCV TODO"
-
--- FIXME RISCV TODO
+lookupIPCBuffer isReceiver thread = do
+    bufferPtr <- threadGet tcbIPCBuffer thread
+    bufferFrameSlot <- getThreadBufferSlot thread
+    bufferCap <- getSlotCap bufferFrameSlot
+    case bufferCap of
+        ArchObjectCap (FrameCap {capFIsDevice = False, capFBasePtr = basePtr,
+                                 capFVMRights = rights, capFSize = sz}) -> do
+            let pBits = pageBitsForSize sz
+            if (rights == VMReadWrite || not isReceiver && rights == VMReadOnly)
+                then do
+                    let ptr = basePtr + PPtr (fromVPtr bufferPtr .&. mask pBits)
+                    assert (ptr /= 0) "IPC buffer pointer must be non-null"
+                    return $ Just ptr
+                else return Nothing
+        _ -> return Nothing
 
 {- ASID Lookups -}
 
