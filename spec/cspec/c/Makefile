@@ -24,6 +24,10 @@ ifeq ($(findstring ARM, ${L4V_ARCH}),ARM)
     TOOLPREFIX ?= arm-none-eabi-
 endif
 
+ifeq (${L4V_ARCH},RISCV64)
+    TOOLPREFIX ?= riscv64-unknown-elf-
+endif
+
 SORRY_BITFIELD_PROOFS?=FALSE
 
 ifeq ($(shell which ${TOOLPREFIX}cpp),)
