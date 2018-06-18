@@ -316,6 +316,24 @@ decodeRISCVMMUInvocation _ _ _ _ _ _ = fail "Unreachable"  -- FIXME RISCV TODO
 
 -- FIXME RISCV TODO
 
+performPageTableInvocation :: PageTableInvocation -> Kernel ()
+performPageTableInvocation (PageTableMap cap ctSlot pte ptSlot) = do
+    updateCap ctSlot cap
+    storePTE ptSlot pte
+    doMachineOp sFence
+
+performPageTableInvocation (PageTableUnmap cap slot) = do
+    case capPTMappedAddress cap of
+        Just (asid, vaddr) -> do
+            let ptr = capPTBasePtr cap
+            unmapPageTable asid vaddr ptr
+            let slots = [ptr, ptr + bit pteBits .. ptr + bit ptBits - 1]
+            mapM_ (flip storePTE InvalidPTE) slots
+        _ -> return ()
+    ArchObjectCap cap <- getSlotCap slot
+    updateCap slot (ArchObjectCap $ cap { capPTMappedAddress = Nothing })
+
+
 performPageInvocation :: PageInvocation -> Kernel ()
 performPageInvocation (PageMap cap ctSlot (pte,slot)) = do
     updateCap ctSlot cap
