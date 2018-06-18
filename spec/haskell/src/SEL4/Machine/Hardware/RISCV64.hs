@@ -315,3 +315,6 @@ initIRQController = error "Unimplemented"
 
 setVSpaceRoot :: PAddr -> Word64 -> MachineMonad ()
 setVSpaceRoot addr asid = error "Unimplemented"
+
+readSBADAddr :: MachineMonad Word
+readSBADAddr = error "Unimplemented"
