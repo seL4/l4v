@@ -192,8 +192,8 @@ hwASIDFlush asid = error "unimplemented"
 data VMAttributes
     = VMAttributes { riscvExecuteNever :: Bool }
 
-{- The C code also defines VMWriteOnly.
-   Leaving it out here will show that it is unused. -}
+-- The C code also defines VMWriteOnly.
+-- Leaving it out here will show that it is unused.
 data VMRights
     = VMKernelOnly
     | VMReadOnly
@@ -225,14 +225,12 @@ vmRightsFromBits rw = getVMRights (testBit rw 1) (testBit rw 0)
 
 -- Page Table entries
 
-{-
-  Encoding notes:
-   - dirty and accessed bits are always 1 for valid PTEs
-   - SW bits always 0
-   - valid = 1 and read/write/execute = 0 => table PTE
-   - valid = 0 => invalid PTE
-   - otherwise => page PTE
--}
+--  Encoding notes:
+--  - dirty and accessed bits are always 1 for valid PTEs
+--   - SW bits always 0
+--   - valid = 1 and read/write/execute = 0 => table PTE
+--   - valid = 0 => invalid PTE
+--   - otherwise => page PTE
 
 data PTE
     = InvalidPTE
