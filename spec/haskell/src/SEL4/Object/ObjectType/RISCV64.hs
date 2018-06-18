@@ -178,14 +178,15 @@ createObject t regionBase _ isDevice =
 
 {- Capability Invocation -}
 
+-- The only Arch invocations on RISCV are MMU invocations
+
 decodeInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
         ArchCapability -> [(Capability, PPtr CTE)] ->
         KernelF SyscallError ArchInv.Invocation
-decodeInvocation label args capIndex slot cap extraCaps =
-    error "FIXME RISCV TODO"
+decodeInvocation = decodeRISCVMMUInvocation
 
 performInvocation :: ArchInv.Invocation -> KernelP [Word]
-performInvocation = error "FIXME RISCV TODO"
+performInvocation = performRISCVMMUInvocation
 
 {- Helper Functions -}
 
