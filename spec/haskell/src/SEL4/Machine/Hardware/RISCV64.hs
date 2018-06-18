@@ -318,3 +318,6 @@ setVSpaceRoot addr asid = error "Unimplemented"
 
 readSBADAddr :: MachineMonad Word
 readSBADAddr = error "Unimplemented"
+
+sFence :: MachineMonad ()
+sFence = error "Unimplemented"

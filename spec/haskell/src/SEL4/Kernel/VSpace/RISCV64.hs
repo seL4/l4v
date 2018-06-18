@@ -244,6 +244,7 @@ unmapPageTable asid vaddr pt = ignoreFailure $ do
     topLevelPT <- findVSpaceForASID asid
     ptSlot <- lookupPTFromLevel maxPTLevel topLevelPT vaddr pt
     withoutFailure $ storePTE ptSlot InvalidPTE
+    withoutFailure $ doMachineOp sFence
 
 {- Unmapping a Frame -}
 
@@ -254,6 +255,7 @@ unmapPage size asid vptr ptr = ignoreFailure $ do
     unless (bitsLeft == pageBitsForSize size) $ throw InvalidRoot
     pte <- withoutFailure $ getObject slot
     withoutFailure $ storePTE slot InvalidPTE
+    withoutFailure $ doMachineOp sFence
 
 {- Address Space Switching -}
 
