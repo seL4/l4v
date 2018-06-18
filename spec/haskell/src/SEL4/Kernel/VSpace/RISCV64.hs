@@ -167,7 +167,8 @@ lookupPTSlot = lookupPTSlotFromLevel maxPTLevel
 
 handleVMFault :: PPtr TCB -> VMFaultType -> KernelF Fault ()
 handleVMFault thread f = do
-    addr <- withoutFailure $ doMachineOp (error "FIXME RISCV read_csr(sbadaddr) is currently inline assembler")
+    w <- withoutFailure $ doMachineOp readSBADAddr
+    let addr = VPtr w
     case f of
         RISCVLoadPageFault -> throw $ loadf addr
         RISCVLoadAccessFault -> throw $ loadf addr
