@@ -45,8 +45,6 @@ maxPTLevel = 2
 ipcBufferSizeBits :: Int
 ipcBufferSizeBits = 10
 
--- FIXME RISCV TODO
-
 {- Creating a New Address Space -}
 
 copyGlobalMappings :: PPtr PTE -> Kernel ()
@@ -58,8 +56,6 @@ copyGlobalMappings newPT = do
         let offset = PPtr index `shiftL` pteBits
         pte <- getObject $ globalPT + offset
         storePTE (newPT + offset) pte
-
--- FIXME RISCV TODO: mapping entries etc
 
 {- Lookups and Faults -}
 
@@ -301,8 +297,6 @@ maskVMRights r m = case (r, capAllowRead m, capAllowWrite m) of
 
 {- Decoding RISC-V Invocations -}
 
--- FIXME RISCV TODO
-
 attribsFromWord :: Word -> VMAttributes
 attribsFromWord w = VMAttributes { riscvExecuteNever = w `testBit` 0 }
 
@@ -401,6 +395,51 @@ decodeRISCVFrameInvocation label args cte (cap@FrameCap {}) extraCaps =
 decodeRISCVFrameInvocation _ _ _ _ _ = fail "Unreachable"
 
 
+decodeRISCVPageTableMapInvocation :: PPtr CTE -> ArchCapability -> VPtr ->
+    Word -> Capability -> KernelF SyscallError ArchInv.Invocation
+decodeRISCVPageTableMapInvocation cte cap vptr attr vspaceCap = do
+    when (isJust $ capPTMappedAddress cap) $ throw $ InvalidCapability 0
+    (vspace,asid) <- case vspaceCap of
+        ArchObjectCap (PageTableCap {
+                 capPTMappedAddress = Just (asid,_),
+                 capPTBasePtr = vspace })
+            -> return (vspace,asid)
+        _ -> throw $ InvalidCapability 1
+    when (vptr >= pptrUserTop) $ throw $ InvalidArgument 0
+    vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
+    when (vspaceCheck /= vspace) $ throw $ InvalidCapability 1
+    (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
+    oldPTE <- withoutFailure $ getObject slot
+    when (bitsLeft == pageBits || oldPTE /= InvalidPTE) $ throw DeleteFirst
+    let pte = PageTablePTE {
+            ptePPN = addrFromPPtr (capPTBasePtr cap) `shiftR` pageBits,
+            pteGlobal = False,
+            pteUser = False }
+    return $ InvokePageTable $ PageTableMap {
+        ptMapCap = ArchObjectCap $ cap { capPTMappedAddress = Just (asid, vptr) },
+        ptMapCTSlot = cte,
+        ptMapPTE = pte,
+        ptMapPTSlot = slot }
+
+decodeRISCVPageTableInvocation :: Word -> [Word] -> PPtr CTE ->
+        ArchCapability -> [(Capability, PPtr CTE)] ->
+        KernelF SyscallError ArchInv.Invocation
+decodeRISCVPageTableInvocation label args cte cap@(PageTableCap {}) extraCaps =
+   case (invocationType label, args, extraCaps) of
+        (ArchInvocationLabel RISCVPageTableMap, vaddr:attr:_, (vspaceCap,_):_) -> do
+            decodeRISCVPageTableMapInvocation cte cap (VPtr vaddr) attr vspaceCap
+        (ArchInvocationLabel RISCVPageTableMap, _, _) -> throw TruncatedMessage
+        (ArchInvocationLabel RISCVPageTableUnmap, _, _) -> do
+            cteVal <- withoutFailure $ getCTE cte
+            final <- withoutFailure $ isFinalCapability cteVal
+            unless final $ throw RevokeFirst
+            return $ InvokePageTable $ PageTableUnmap {
+                ptUnmapCap = cap,
+                ptUnmapCapSlot = cte }
+        _ -> throw IllegalOperation
+decodeRISCVPageTableInvocation _ _ _ _ _ = fail "Unreachable"
+
+
 decodeRISCVASIDControlInvocation :: Word -> [Word] ->
         ArchCapability -> [(Capability, PPtr CTE)] ->
         KernelF SyscallError ArchInv.Invocation
@@ -467,15 +506,12 @@ decodeRISCVMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
         KernelF SyscallError ArchInv.Invocation
 decodeRISCVMMUInvocation label args _ cte cap@(FrameCap {}) extraCaps =
     decodeRISCVFrameInvocation label args cte cap extraCaps
-{- FIXME RISCV TODO
 decodeRISCVMMUInvocation label args _ cte cap@(PageTableCap {}) extraCaps =
     decodeRISCVPageTableInvocation label args cte cap extraCaps
--}
 decodeRISCVMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
     decodeRISCVASIDControlInvocation label args cap extraCaps
 decodeRISCVMMUInvocation label _ _ _ cap@(ASIDPoolCap {}) extraCaps =
     decodeRISCVASIDPoolInvocation label cap extraCaps
-decodeRISCVMMUInvocation _ _ _ _ _ _ = fail "Unreachable"
 
 
 {- Invocation Implementations -}
