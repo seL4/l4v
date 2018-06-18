@@ -17,6 +17,13 @@ import SEL4.Object.Structures.RISCV64
 
 import Data.Array
 
+-- used in proofs only
+data RISCVVSpaceRegionUse
+    = RISCVVSpaceUserRegion
+    | RISCVVSpaceInvalidRegion
+    | RISCVVSpaceKernelWindow
+    | RISCVVSpaceDeviceWindow
+
 data KernelState = RISCVKernelState {
     riscvKSASIDTable :: Array ASID (Maybe (PPtr ASIDPool)),
     riscvKSGlobalPT :: PPtr PTE }
