@@ -298,9 +298,6 @@ maskVMRights r m = case (r, capAllowRead m, capAllowWrite m) of
     (VMReadWrite, True, True) -> VMReadWrite
     _ -> VMKernelOnly
 
-{- Flushing -}
-
--- FIXME RISCV TODO
 
 {- Decoding RISC-V Invocations -}
 
@@ -312,9 +309,8 @@ decodeRISCVMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
 
 decodeRISCVMMUInvocation _ _ _ _ _ _ = fail "Unreachable"  -- FIXME RISCV TODO
 
-{- Invocation Implementations -}
 
--- FIXME RISCV TODO
+{- Invocation Implementations -}
 
 performPageTableInvocation :: PageTableInvocation -> Kernel ()
 performPageTableInvocation (PageTableMap cap ctSlot pte ptSlot) = do
