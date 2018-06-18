@@ -211,10 +211,10 @@ where
   "setRegister r v \<equiv> modify (\<lambda>s. UserContext ((user_regs s) (r := v)))"
 
 definition
-  "getRestartPC \<equiv> getRegister FaultIP"
+  "getRestartPC \<equiv> getRegister SEPC"
 
 definition
-  "setNextPC \<equiv> setRegister NextIP"
+  "setNextPC \<equiv> setRegister NEXTPC"
 
 
 consts'
