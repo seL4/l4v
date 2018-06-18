@@ -73,36 +73,108 @@ maskCapRights _ c = ArchObjectCap c
 {- Deleting Capabilities -}
 
 postCapDeletion :: ArchCapability -> Kernel ()
-postCapDeletion c = error "FIXME RISCV TODO"
+postCapDeletion c = return ()
 
 finaliseCap :: ArchCapability -> Bool -> Kernel (Capability, Capability)
-finaliseCap = error "FIXME RISCV TODO"
 
--- FIXME RISCV TODO
+finaliseCap (PageTableCap {
+        capPTMappedAddress = Just (asid, vptr),
+        capPTBasePtr = pte }) True = do
+
+    catchFailure
+        (do
+            vroot <- findVSpaceForASID asid
+            when (vroot == pte) (withoutFailure $ deleteASID asid pte))
+        (\_ -> unmapPageTable asid vptr pte)
+
+    return (NullCap, NullCap)
+
+finaliseCap (FrameCap {
+        capFMappedAddress = Just (asid, v),
+        capFSize = s,
+        capFBasePtr = ptr }) _ = do
+    unmapPage s asid v ptr
+    return (NullCap, NullCap)
+
+finaliseCap _ _ = return (NullCap, NullCap)
 
 {- Identifying Capabilities -}
 
+-- FIXME RISCV: current C code does not discuss ASID pool/control caps, it
+-- likely should, and when it does, check these again
+
 sameRegionAs :: ArchCapability -> ArchCapability -> Bool
-sameRegionAs = error "FIXME RISCV TODO"
+sameRegionAs (a@FrameCap {}) (b@FrameCap {}) =
+    (botA <= botB) && (topA >= topB) && (botB <= topB)
+    where
+        botA = capFBasePtr a
+        botB = capFBasePtr b
+        topA = botA + mask (pageBitsForSize $ capFSize a)
+        topB = botB + mask (pageBitsForSize $ capFSize b)
+sameRegionAs (a@PageTableCap {}) (b@PageTableCap {}) =
+    capPTBasePtr a == capPTBasePtr b
+sameRegionAs ASIDControlCap ASIDControlCap = True
+sameRegionAs (a@ASIDPoolCap {}) (b@ASIDPoolCap {}) =
+    capASIDPool a == capASIDPool b
+sameRegionAs _ _ = False
 
 isPhysicalCap :: ArchCapability -> Bool
 isPhysicalCap ASIDControlCap = False
 isPhysicalCap _ = True
 
 sameObjectAs :: ArchCapability -> ArchCapability -> Bool
-sameObjectAs = error "FIXME RISCV TODO"
-
--- FIXME RISCV TODO
+sameObjectAs (a@FrameCap { capFBasePtr = ptrA }) (b@FrameCap {}) =
+    (ptrA == capFBasePtr b) && (capFSize a == capFSize b)
+        && (ptrA <= ptrA + mask (pageBitsForSize $ capFSize a))
+        && (capFIsDevice a == capFIsDevice b)
+sameObjectAs a b = sameRegionAs a b
 
 {- Creating New Capabilities -}
 
 -- Create an architecture-specific object.
 
--- % FIXME: it is not clear wheather we can have large device page
+-- % FIXME: it is not clear whether we can have large/huge device pages
+
+placeNewDataObject :: PPtr () -> Int -> Bool -> Kernel ()
+placeNewDataObject regionBase sz isDevice = if isDevice
+    then placeNewObject regionBase UserDataDevice sz
+    else placeNewObject regionBase UserData sz
+
+-- FIXME RISCV: C code always passes down 0 for capFIsDevice for new frame caps, unclear if that's intentional so we pass it through here like on other arches
+-- FIXME RISCV: C code missing AUXUPD, TODO in later stages of project
 
 createObject :: ObjectType -> PPtr () -> Int -> Bool -> Kernel ArchCapability
 createObject t regionBase _ isDevice =
-    error "FIXME RISCV TODO"
+    let funupd = (\f x v y -> if y == x then v else f y) in
+    let pointerCast = PPtr . fromPPtr
+    in case t of
+        Arch.Types.APIObjectType _ ->
+            fail "Arch.createObject got an API type"
+        Arch.Types.SmallPageObject -> do
+            placeNewDataObject regionBase 0 isDevice
+            modify (\ks -> ks { gsUserPages =
+              funupd (gsUserPages ks)
+                     (fromPPtr regionBase) (Just RISCVSmallPage)})
+            return $! FrameCap (pointerCast regionBase)
+                  VMReadWrite RISCVSmallPage isDevice Nothing
+        Arch.Types.LargePageObject -> do
+            placeNewDataObject regionBase 0 isDevice
+            modify (\ks -> ks { gsUserPages =
+              funupd (gsUserPages ks)
+                     (fromPPtr regionBase) (Just RISCVLargePage)})
+            return $! FrameCap (pointerCast regionBase)
+                  VMReadWrite RISCVLargePage isDevice Nothing
+        Arch.Types.HugePageObject -> do
+            placeNewDataObject regionBase 0 isDevice
+            modify (\ks -> ks { gsUserPages =
+              funupd (gsUserPages ks)
+                     (fromPPtr regionBase) (Just RISCVHugePage)})
+            return $! FrameCap (pointerCast regionBase)
+                  VMReadWrite RISCVHugePage isDevice Nothing
+        Arch.Types.PageTableObject -> do
+            let ptSize = ptBits - objBits (makeObject :: PTE)
+            placeNewObject regionBase (makeObject :: PTE) ptSize
+            return $! PageTableCap (pointerCast regionBase) Nothing
 
 {- Capability Invocation -}
 
@@ -127,10 +199,10 @@ asidPoolBits :: Int
 asidPoolBits = 12
 
 capUntypedSize :: ArchCapability -> Word
-capUntypedSize (FrameCap {capFSize = sz}) = 1 `shiftL` pageBitsForSize sz
-capUntypedSize (PageTableCap {}) = 1 `shiftL` ptBits
+capUntypedSize (FrameCap {capFSize = sz}) = bit $ pageBitsForSize sz
+capUntypedSize (PageTableCap {}) = bit ptBits
 capUntypedSize (ASIDControlCap {}) = 0
-capUntypedSize (ASIDPoolCap {}) = 1 `shiftL` asidPoolBits
+capUntypedSize (ASIDPoolCap {}) = bit asidPoolBits
 
 -- No arch-specific thread deletion operations needed on RISC-V platform.
 
