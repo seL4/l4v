@@ -16,6 +16,7 @@ import SEL4.Machine.Hardware.RISCV64(PTE(..))
 import SEL4.Object.Structures
 import SEL4.Model
 import Data.Helpers
+import Data.Bits
 
 instance PSpaceStorable PTE where
     makeObject = InvalidPTE
@@ -26,7 +27,7 @@ instance PSpaceStorable PTE where
 
 instance PSpaceStorable ASIDPool where
     makeObject = ASIDPool $
-        funPartialArray (const Nothing) (0,1023)
+        funPartialArray (const Nothing) (0,bit asidLowBits - 1)
     injectKO = KOArch . KOASIDPool
     projectKO o = case o of
         KOArch (KOASIDPool e) -> return e
