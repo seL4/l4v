@@ -303,11 +303,82 @@ maskVMRights r m = case (r, capAllowRead m, capAllowWrite m) of
 
 -- FIXME RISCV TODO
 
+decodeRISCVASIDControlInvocation :: Word -> [Word] ->
+        ArchCapability -> [(Capability, PPtr CTE)] ->
+        KernelF SyscallError ArchInv.Invocation
+
+decodeRISCVASIDControlInvocation label args ASIDControlCap extraCaps =
+    case (invocationType label, args, extraCaps) of
+        (ArchInvocationLabel RISCVASIDControlMakePool, index:depth:_,
+                        (untyped,parentSlot):(croot,_):_) -> do
+            asidTable <- withoutFailure $ gets (riscvKSASIDTable . ksArchState)
+            let free = filter (\(x,y) -> x <= (1 `shiftL` asidHighBits) - 1 && isNothing y) $ assocs asidTable
+            when (null free) $ throw DeleteFirst
+            let base = (fst $ head free) `shiftL` asidLowBits
+            let pool = makeObject :: ASIDPool
+            frame <- case untyped of
+                UntypedCap { capIsDevice = False } | capBlockSize untyped == objBits pool -> do
+                    ensureNoChildren parentSlot
+                    return $ capPtr untyped
+                _ -> throw $ InvalidCapability 1
+            destSlot <- lookupTargetSlot croot (CPtr index) (fromIntegral depth)
+            ensureEmptySlot destSlot
+            return $ InvokeASIDControl $ MakePool {
+                makePoolFrame = frame,
+                makePoolSlot = destSlot,
+                makePoolParent = parentSlot,
+                makePoolBase = base }
+        (ArchInvocationLabel RISCVASIDControlMakePool, _, _) -> throw TruncatedMessage
+        _ -> throw IllegalOperation
+decodeRISCVASIDControlInvocation _ _ _ _ = fail "Unreachable"
+
+
+decodeRISCVASIDPoolInvocation :: Word ->
+        ArchCapability -> [(Capability, PPtr CTE)] ->
+        KernelF SyscallError ArchInv.Invocation
+
+decodeRISCVASIDPoolInvocation label cap@(ASIDPoolCap {}) extraCaps =
+    case (invocationType label, extraCaps) of
+        (ArchInvocationLabel RISCVASIDPoolAssign, (vspaceCap,vspaceCapSlot):_) ->
+            case vspaceCap of
+                ArchObjectCap (PageTableCap { capPTMappedAddress = Nothing })
+                  -> do
+                    asidTable <- withoutFailure $ gets (riscvKSASIDTable . ksArchState)
+                    let base = capASIDBase cap
+                    let poolPtr = asidTable!(asidHighBitsOf base)
+                    when (isNothing poolPtr) $ throw $ FailedLookup False InvalidRoot
+                    let Just p = poolPtr
+                    when (p /= capASIDPool cap) $ throw $ InvalidCapability 0
+                    ASIDPool pool <- withoutFailure $ getObject $ p
+                    let free = filter (\(x,y) -> x <=  (1 `shiftL` asidLowBits) - 1
+                                                 && x + base /= 0 && isNothing y) $ assocs pool
+                    when (null free) $ throw DeleteFirst
+                    let asid = fst $ head free
+                    return $ InvokeASIDPool $ Assign {
+                        assignASID = asid + base,
+                        assignASIDPool = capASIDPool cap,
+                        assignASIDCTSlot = vspaceCapSlot }
+                _ -> throw $ InvalidCapability 1
+        (ArchInvocationLabel RISCVASIDPoolAssign, _) -> throw TruncatedMessage
+        _ -> throw IllegalOperation
+decodeRISCVASIDPoolInvocation _ _ _ = fail "Unreachable"
+
+
 decodeRISCVMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
         ArchCapability -> [(Capability, PPtr CTE)] ->
         KernelF SyscallError ArchInv.Invocation
 
-decodeRISCVMMUInvocation _ _ _ _ _ _ = fail "Unreachable"  -- FIXME RISCV TODO
+{- FIXME RISCV TODO
+decodeRISCVMMUInvocation label args _ cte cap@(PageCap {}) extraCaps =
+    decodeRISCVFrameInvocation label args cte cap extraCaps
+decodeRISCVMMUInvocation label args _ cte cap@(PageTableCap {}) extraCaps =
+    decodeRISCVPageTableInvocation label args cte cap extraCaps
+-}
+decodeRISCVMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
+    decodeRISCVASIDControlInvocation label args cap extraCaps
+decodeRISCVMMUInvocation label _ _ _ cap@(ASIDPoolCap {}) extraCaps =
+    decodeRISCVASIDPoolInvocation label cap extraCaps
+decodeRISCVMMUInvocation _ _ _ _ _ _ = fail "Unreachable"
 
 
 {- Invocation Implementations -}
