@@ -42,6 +42,9 @@ import SEL4.API.Invocation.RISCV64 as ArchInv
 maxPTLevel :: Int
 maxPTLevel = 2
 
+ipcBufferSizeBits :: Int
+ipcBufferSizeBits = 10
+
 -- FIXME RISCV TODO
 
 {- Creating a New Address Space -}
@@ -275,12 +278,22 @@ setVMRoot tcb = do
 {- Helper Functions -}
 
 checkValidIPCBuffer :: VPtr -> Capability -> KernelF SyscallError ()
-checkValidIPCBuffer = error "FIXME RISCV TODO"
+checkValidIPCBuffer vptr (ArchObjectCap (FrameCap {capFIsDevice = False})) = do
+    when (vptr .&. mask ipcBufferSizeBits /= 0) $ throw AlignmentError
+    return ()
+checkValidIPCBuffer _ _ = throw IllegalOperation
 
 isValidVTableRoot :: Capability -> Bool
-isValidVTableRoot = error "FIXME RISCV TODO"
+isValidVTableRoot
+    (ArchObjectCap (PageTableCap { capPTMappedAddress = Just _ })) = True
+isValidVTableRoot _ = False
 
--- FIXME RISCV TODO
+maskVMRights :: VMRights -> CapRights -> VMRights
+maskVMRights r m = case (r, capAllowRead m, capAllowWrite m) of
+    (VMReadOnly, True, _) -> VMReadOnly
+    (VMReadWrite, True, False) -> VMReadOnly
+    (VMReadWrite, True, True) -> VMReadWrite
+    _ -> VMKernelOnly
 
 {- Flushing -}
 
