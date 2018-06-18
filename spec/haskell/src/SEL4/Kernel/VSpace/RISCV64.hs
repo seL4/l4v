@@ -220,10 +220,26 @@ deleteASID asid pt = do
 
 {- Deleting a Page Table -}
 
-unmapPageTable :: ASID -> VPtr -> PPtr PTE -> Kernel ()
-unmapPageTable asid vaddr pt = error "FIXME RISCV TODO"
+-- Difference to lookupPTSlotFromLevel is that we are given a target page table
+-- the slot should be in. If we don't find that page table during the walk, we
+-- will throw an exception which is later ignored, in the sense that it is used
+-- for early return + do nothing.
+-- Returns only slots with pageTablePTEs
+lookupPTFromLevel :: Int -> PPtr PTE -> VPtr -> PPtr PTE -> KernelF LookupFailure (PPtr PTE)
+lookupPTFromLevel level ptPtr vPtr targetPtPtr = do
+    unless (0 < level) $ throw InvalidRoot
+    pte <- withoutFailure $ pteAtIndex level ptPtr vPtr
+    unless (isPageTablePTE pte) $ throw InvalidRoot
+    let ptr = getPPtrFromHWPTE pte
+    if ptr == targetPtPtr
+        then return $ ptSlotIndex (level-1) ptr vPtr
+        else lookupPTFromLevel (level-1) ptr vPtr targetPtPtr
 
--- FIXME RISCV TODO
+unmapPageTable :: ASID -> VPtr -> PPtr PTE -> Kernel ()
+unmapPageTable asid vaddr pt = ignoreFailure $ do
+    topLevelPT <- findVSpaceForASID asid
+    ptSlot <- lookupPTFromLevel maxPTLevel topLevelPT vaddr pt
+    withoutFailure $ storePTE ptSlot InvalidPTE
 
 {- Unmapping a Frame -}
 
