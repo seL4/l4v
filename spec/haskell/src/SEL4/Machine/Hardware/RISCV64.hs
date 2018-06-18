@@ -261,7 +261,7 @@ physBase = toPAddr Platform.physBase
 {- Simulator callbacks -}
 
 pageColourBits :: Int
-pageColourBits = Platform.pageColourBits
+pageColourBits = error "unused in RISCV"
 
 getMemoryRegions :: MachineMonad [(PAddr, PAddr)]
 getMemoryRegions = do
