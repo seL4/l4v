@@ -8713,6 +8713,42 @@ lemma range_cover_n_le':
   apply (rule mult_le_mono1, rule one_le_power, simp)
   done
 
+(* FIXME: move to AInvs *)
+context
+  fixes ptr sz us n p
+  assumes cover: "range_cover ptr sz us n"
+  assumes p: "p < n"
+begin
+
+lemma range_cover_mask_offset_bound:
+  "(ptr && mask sz) + (of_nat p << us) < 2 ^ sz"
+proof -
+  note sz = range_cover.sz[OF cover]
+  note al = range_cover.aligned[OF cover]
+  have 1: "unat (ptr && mask sz >> us) + p < 2 ^ (sz - us)"
+    using sz(3) p by simp
+  have 2: "(ptr && mask sz >> us) + of_nat p < 2 ^ (sz - us)"
+    using of_nat_power[OF 1 less_imp_diff_less, OF sz(1)]
+          of_nat_add word_unat.Rep_inverse
+    by simp
+  have 3: "ptr && mask sz >> us << us = ptr && mask sz"
+    by (rule is_aligned_shiftr_shiftl[OF is_aligned_after_mask[OF al sz(2)]])
+  have 4: "((ptr && mask sz >> us) + of_nat p) << us < 2 ^ sz"
+    by (rule shiftl_less_t2n[OF 2 sz(1)])
+  show ?thesis
+    by (rule 4[simplified 3 word_shiftl_add_distrib])
+qed
+
+lemma range_cover_neg_mask_offset:
+  "ptr + (of_nat p << us) && ~~ mask sz = ptr && ~~ mask sz"
+  apply (subst AND_NOT_mask_plus_AND_mask_eq[of ptr sz, symmetric], subst add.assoc)
+  apply (rule is_aligned_add_helper[THEN conjunct2])
+   apply (rule Aligned.is_aligned_neg_mask[OF order_refl])
+  apply (rule range_cover_mask_offset_bound)
+  done
+
+end
+
 lemma createNewObjects_ccorres:
 notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
       Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
@@ -8880,15 +8916,15 @@ shows  "ccorres dc xfdc
                    apply (fold_subgoals (prefix))[2]
                   subgoal premises prems using prems
                             by (simp add:range_cover.sz[where 'a=machine_word_len, folded word_bits_def])+
-                 subgoal sorry (* kernel_mappings *)
+                 subgoal by (simp add: range_cover_neg_mask_offset)
                 apply (rule range_cover_one)
                   apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
-                   apply (simp add:is_aligned_shiftl_self)
+                   apply (simp add: is_aligned_shiftl_self)
                   apply (fold_subgoals (prefix))[2]
                  subgoal premises prems using prems
                            by (simp add: range_cover_sz'[where 'a=machine_word_len, folded word_bits_def]
                                          range_cover.sz[where 'a=machine_word_len, folded word_bits_def])+
-                apply (simp add:  word_bits_def range_cover_def)
+                apply (simp add: word_bits_def range_cover_def)
                apply (rule range_cover_full)
                 apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
                  apply (simp add:is_aligned_shiftl_self)
@@ -9018,9 +9054,8 @@ shows  "ccorres dc xfdc
                            subgoal by (clarsimp simp: cte_wp_at_ctes_of invs'_def valid_state'_def
                                                       valid_global_refs'_def cte_at_valid_cap_sizes_0)
                           subgoal by (erule range_cover_le, simp)
-                         subgoal sorry (* kernel_mappings *)
-                        apply (drule_tac p = "n" in range_cover_no_0)
-                          apply (simp add:field_simps shiftl_t2n)+
+                         subgoal by (simp add: range_cover_in_kernel_mappings shiftl_t2n field_simps)
+                        subgoal by (simp add: range_cover_no_0 shiftl_t2n field_simps)
                        apply (erule caps_no_overlap''_le)
                         apply (simp add:range_cover.sz[where 'a=machine_word_len, folded word_bits_def])+
                       apply (erule caps_no_overlap''_le2)
