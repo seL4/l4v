@@ -122,13 +122,13 @@ def get_defs(filename):
                  (cmdline, filename))
     input = [line.rstrip() for line in f]
     f.close()
-    defs = top_transform(input)
+    defs = top_transform(input, filename.endswith(".lhs"))
 
     file_defs[filename] = defs
     return defs
 
 
-def top_transform(input):
+def top_transform(input, isLhs):
     """Top level transform, deals with lhs artefacts, divides
         the code up into a series of seperate definitions, and
         passes these definitions through the definition transforms."""
@@ -138,21 +138,37 @@ def top_transform(input):
         if '\t' in line:
             sys.stderr.write('WARN: tab in line %d, %s.\n' %
                              (n, filename))
-        if line.startswith('> '):
-            if '--' in line:
-                line = line.split('--')[0].strip()
+        if isLhs:
+            if line.startswith('> '):
+                if '--' in line:
+                    line = line.split('--')[0].strip()
 
-            if line[2:].strip() == '':
-                comments.append((n, 'C', ''))
-            elif line.startswith('> {-#'):
-                comments.append((n, 'C', '(*' + line + '*)'))
+                if line[2:].strip() == '':
+                    comments.append((n, 'C', ''))
+                elif line.startswith('> {-#'):
+                    comments.append((n, 'C', '(*' + line + '*)'))
+                else:
+                    to_process.append((line[2:], n))
             else:
-                to_process.append((line[2:], n))
+                if line.strip():
+                    comments.append((n, 'C', '(*' + line + '*)'))
+                else:
+                    comments.append((n, 'C', ''))
         else:
-            if line.strip():
+            if '--' in line:
+                line = line.split('--')[0].rstrip()
+
+            if line.strip() == '':
+                comments.append((n, 'C', ''))
+            elif line.strip().startswith('{-'):
+                # single-line {- -} comments only
+                comments.append((n, 'C', '(*' + line + '*)'))
+            elif line.startswith('#'):
+                # preprocessor directives
                 comments.append((n, 'C', '(*' + line + '*)'))
             else:
-                comments.append((n, 'C', ''))
+                to_process.append((line, n))
+
     def_tree = offside_tree(to_process)
     defs = create_defs(def_tree)
     defs = group_defs(defs)
