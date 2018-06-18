@@ -258,9 +258,6 @@ pptrUserTop = Platform.pptrUserTop
 physBase :: PAddr
 physBase = toPAddr Platform.physBase
 
--- IRQ parameters
-
--- FIXME RISCV TODO
 
 {- Simulator callbacks -}
 
