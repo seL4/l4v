@@ -456,7 +456,6 @@ lemma createObjects_asidpool_ccorres:
    (placeNewObject frame (makeObject::asidpool) 0)
    (CALL memzero(Ptr frame, (2 ^ pageBits));;
    (global_htd_update (\<lambda>_. ptr_retyp (ap_Ptr frame))))"
-  sorry (*
 proof -
   have helper: "\<forall>\<sigma> x. (\<sigma>, x) \<in> rf_sr \<and> is_aligned frame pageBits \<and> frame \<noteq> 0
   \<and> pspace_aligned' \<sigma> \<and> pspace_distinct' \<sigma>
@@ -495,17 +494,20 @@ proof -
     "casid_pool_relation makeObject (from_bytes (replicate (size_of TYPE(asid_pool_C)) 0))"
     unfolding casid_pool_relation_def
     apply (clarsimp simp: makeObject_asidpool split: asid_pool_C.splits)
-    apply (clarsimp simp: array_relation_def option_to_ptr_def option_to_0_def)
+    apply (clarsimp simp: array_relation_def option_to_ptr_def asid_map_relation_def)
+    apply (rename_tac words i)
+    apply (subgoal_tac "asid_map_C.words_C (words.[unat i]).[0] = 0")
+    apply (clarsimp simp: asid_map_lift_def asid_map_get_tag_def asid_map_tag_defs)
     apply (simp add: from_bytes_def)
     apply (simp add: typ_info_simps asid_pool_C_tag_def
-      size_td_lt_final_pad size_td_lt_ti_typ_pad_combine Let_def size_of_def)
+                     size_td_lt_final_pad size_td_lt_ti_typ_pad_combine Let_def size_of_def)
     apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine)
     apply (simp add: padup_def align_td_array')
     apply (subst (asm) size_td_array)
     apply simp
     apply (simp add: size_td_array ti_typ_pad_combine_def ti_typ_combine_def
                      Let_def empty_typ_info_def update_ti_adjust_ti
-               del: replicate_numeral Kernel_C.pde_C_size)
+                del: replicate_numeral Kernel_C.pde_C_size)
     apply (simp add: typ_info_array array_tag_def
                 del: replicate_numeral)
     apply (drule ap_eq_D)
@@ -519,9 +521,13 @@ proof -
       apply auto[1]
      apply (simp add: asid_low_bits_def word_le_nat_alt)
     apply (simp split: if_split)
-    apply (rule conjI)
-     apply (clarsimp simp: update_ti_t_ptr_0s)
-    apply (clarsimp simp: asid_low_bits_def word_le_nat_alt)
+    apply (rule conjI[rotated], simp add: asid_low_bits_def word_le_nat_alt)
+    apply (simp add: asid_map_C_typ_info asid_map_C_tag_def
+                     final_pad_def Let_def size_td_lt_ti_typ_pad_combine
+                     padup_def align_td_array' size_td_array)
+    apply (simp add: ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def
+                     update_ti_adjust_ti size_td_array typ_info_array array_tag_def
+                     update_ti_t_array_tag_n_rep update_ti_t_machine_word_0s)
     done
 
   def ko \<equiv> "KOArch (KOASIDPool makeObject)"
@@ -566,14 +572,19 @@ proof -
 
 
   note rl = projectKO_opt_retyp_other [OF rc pal pno' ko_def]
-  note cterl = retype_ctes_helper[OF pal pdst pno' al'
-    le_refl range_cover_sz'[where 'a=32, folded word_bits_def, OF rc] mko rc,simplified]
+
+  note cterl = retype_ctes_helper
+                 [OF pal pdst pno' al' le_refl
+                     range_cover_sz'[where 'a=machine_word_len,
+                                     folded word_bits_def, OF rc]
+                     mko rc, simplified]
+
   note ht_rl = clift_eq_h_t_valid_eq[OF rl', OF tag_disj_via_td_name, simplified]
     uinfo_array_tag_n_m_not_le_typ_name
 
   have guard:
     "\<forall>n<2 ^ (pageBits - objBitsKO ko). c_guard (CTypesDefs.ptr_add ?ptr (of_nat n))"
-    apply (rule retype_guard_helper[where m = 2])
+    apply (rule retype_guard_helper[where m=3])
         apply (rule range_cover_rel[OF rc])
          apply fastforce
         apply simp
@@ -617,7 +628,8 @@ proof -
   thus ?thesis using rf empty kdr zro
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name
                      ko_def[symmetric])
-    apply (simp add: carch_state_relation_def cmachine_state_relation_def)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def
+                     fpu_null_state_relation_def)
     apply (simp add: rl' cterl tag_disj_via_td_name h_t_valid_clift_Some_iff tcb_C_size)
     apply (clarsimp simp: hrs_htd_update ptr_retyps_htd_safe_neg szo szko
                           kernel_data_refs_domain_eq_rotate
@@ -642,36 +654,37 @@ proof -
    apply (simp add: X64SmallPageBits_def pageBits_def)
   apply (erule valid_untyped_capE)
   apply (subst simpler_placeNewObject_def)
-      apply ((simp add:word_bits_conv objBits_simps archObjSize_def
-        capAligned_def)+)[4]
-  apply (simp add:simpler_modify_def rf_sr_htd_safe)
+      apply ((simp add: word_bits_conv objBits_simps archObjSize_def
+                        capAligned_def)+)[4]
+  apply (simp add: simpler_modify_def rf_sr_htd_safe)
   apply (subgoal_tac "{frame ..+ 2 ^ pageBits} \<inter> kernel_data_refs = {}")
    prefer 2
    apply (drule(1) valid_global_refsD')
-   apply (clarsimp simp:Int_commute pageBits_def X64SmallPageBits_def
-     intvl_range_conv[where bits = pageBits,unfolded pageBits_def word_bits_def,simplified])
+   apply (clarsimp simp: Int_commute pageBits_def X64SmallPageBits_def
+                         intvl_range_conv[where bits=pageBits, unfolded pageBits_def word_bits_def,
+                                          simplified])
   apply (intro conjI impI)
        apply (erule is_aligned_no_wrap')
-       apply (clarsimp simp:X64SmallPageBits_def pageBits_def)
-      apply (erule is_aligned_weaken,simp add:pageBits_def)
-     apply (simp add:is_aligned_def X64SmallPageBits_def)
+       apply (clarsimp simp: X64SmallPageBits_def pageBits_def)
+      apply (erule is_aligned_weaken, simp add:pageBits_def)
+     apply (simp add: is_aligned_def X64SmallPageBits_def bit_simps)
     apply (simp add: region_actually_is_bytes_dom_s pageBits_def X64SmallPageBits_def)
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
                          size_of_def pageBits_def
                   elim!: ptr_retyp_htd_safe_neg)
   apply clarsimp
-  apply (cut_tac helper [rule_format])
+  apply (cut_tac helper[rule_format])
    prefer 2
    apply fastforce
   apply (subst data_map_insert_def[symmetric])
-  apply (erule iffD1[OF rf_sr_upd,rotated -1 ])
+  apply (erule iffD1[OF rf_sr_upd, rotated -1])
    apply simp_all
   apply (simp add: hrs_htd_update_def hrs_mem_update_def split_def)
   apply (simp add: pageBits_def X64SmallPageBits_def ptr_retyps_gen_def
-              del:replicate_numeral)
+              del: replicate_numeral)
   done
-qed *)
+qed
 
 lemma cmap_relation_ccap_relation:
   "\<lbrakk>cmap_relation (ctes_of s) (cslift s') cte_Ptr ccte_relation;ctes_of s p = Some cte; cteCap cte = cap\<rbrakk>
