@@ -46,9 +46,7 @@ addrFromKPPtr :: PPtr a -> PAddr
 addrFromKPPtr (PPtr ptr) = PAddr $ ptr - kernelBaseOffset
 
 pageColourBits :: Int
-pageColourBits = error "FIXME RISCV TODO"
-
--- FIXME RISCV TODO
+pageColourBits = error "unused on this architecture"
 
 {- stubs -}
 
@@ -62,31 +60,31 @@ pptrUserTop = pptrBase
    platform -}
 
 getMemoryRegions :: Ptr CallbackData -> IO [(PAddr, PAddr)]
-getMemoryRegions _ = error "FIXME RISCV TODO"
+getMemoryRegions _ = error "unimplemented"
 
 getDeviceRegions :: Ptr CallbackData -> IO [(PAddr, PAddr)]
-getDeviceRegions _ = error "FIXME RISCV TODO"
+getDeviceRegions _ = error "unimplemented"
 
 getKernelDevices :: Ptr CallbackData -> IO [(PAddr, PPtr Word)]
-getKernelDevices _ = error "FIXME RISCV TODO"
+getKernelDevices _ = error "unimplemented"
 
 maskInterrupt :: Ptr CallbackData -> Bool -> IRQ -> IO ()
-maskInterrupt env mask (IRQ irq) = error "FIXME RISCV TODO"
+maskInterrupt env mask (IRQ irq) = error "unimplemented"
 
 loadWordCallback :: Ptr CallbackData -> PAddr -> IO Word
-loadWordCallback = error "FIXME RISCV TODO"
+loadWordCallback = error "unimplemented"
 
 storeWordCallback :: Ptr CallbackData -> PAddr -> Word -> IO ()
-storeWordCallback = error "FIXME RISCV TODO"
+storeWordCallback = error "unimplemented"
 
 getActiveIRQ :: Ptr CallbackData -> IO (Maybe IRQ)
-getActiveIRQ = error "FIXME RISCV TODO"
+getActiveIRQ = error "unimplemented"
 
 ackInterrupt :: Ptr CallbackData -> IRQ -> IO ()
-ackInterrupt _ _ = error "FIXME RISCV TODO"
+ackInterrupt _ _ = error "unimplemented"
 
 configureTimer :: Ptr CallbackData -> IO IRQ
-configureTimer env = error "FIXME RISCV TODO"
+configureTimer env = error "unimplemented"
 
 resetTimer :: Ptr CallbackData -> IO ()
-resetTimer env = error "FIXME RISCV TODO"
+resetTimer env = error "unimplemented"
