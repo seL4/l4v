@@ -37,7 +37,8 @@ gpRegisters = []
 exceptionMessage = [SEPC, SP, A7]
 syscallMessage = SEPC : SP : LR : [A0 .. A6]
 
-sstatusSPIE = 0x20 :: Word
+sstatusSPIE :: Word
+sstatusSPIE = 0x20
 
 initContext :: [(Register, Word)]
 initContext = [ (SSTATUS , sstatusSPIE) ]
