@@ -136,8 +136,9 @@ setNextPC = setRegister (Register RISCV64.NEXTPC)
 
 {- Memory Management -}
 
--- There are several operations used by the memory management code to access
--- relevant hardware registers.
+-- There are several machine operations used by the memory management code to
+-- access relevant hardware registers. They are relevant for simulator support
+-- only in Haskell and are implemented separately in C and the proofs.
 
 {- Cleaning Memory -}
 
@@ -145,10 +146,8 @@ setNextPC = setRegister (Register RISCV64.NEXTPC)
 -- It zeros every word to ensure that user tasks cannot access any private data
 -- that might previously have been stored in the region.
 
--- FIXME RISCV TODO
-
 clearMemory :: PPtr Word -> Int -> MachineMonad ()
-clearMemory ptr byteLength = error "FIXME RISCV TODO"
+clearMemory ptr byteLength = error "unimplemented"
 
 -- This function is called before a region of memory is made user-accessible.
 -- Though in Haskell, it is implemented as "clearMemory",
@@ -156,7 +155,7 @@ clearMemory ptr byteLength = error "FIXME RISCV TODO"
 -- in the Isabelle formalization.
 
 initMemory :: PPtr Word -> Int -> MachineMonad ()
-initMemory = error "FIXME RISCV TODO"
+initMemory = error "unimplemented"
 
 -- This function is called to free a region of user-memory after use.
 -- In Haskell, this operation does not do anything.
@@ -171,22 +170,22 @@ freeMemory _ _ = return ()
 -- caches must be done separately.
 
 clearMemoryVM :: PPtr Word -> Int -> MachineMonad ()
-clearMemoryVM ptr bits = error "FIXME RISCV TODO"
+clearMemoryVM ptr bits = error "unimplemented"
 
 {- Address Space Setup -}
 
--- FIXME RISCV TODO
+setVSpaceRoot :: PAddr -> Word64 -> MachineMonad ()
+setVSpaceRoot addr asid = error "Unimplemented"
 
 {- Memory Barriers -}
 
--- FIXME RISCV TODO
+sFence :: MachineMonad ()
+sFence = error "Unimplemented"
 
 {- Cache Cleaning and TLB Flushes -}
 
 hwASIDFlush :: Word64 -> MachineMonad ()
 hwASIDFlush asid = error "unimplemented"
-
--- FIXME RISCV TODO
 
 {- Page Table Structure -}
 
@@ -313,11 +312,5 @@ debugPrint str = liftIO $ putStrLn str
 initIRQController :: MachineMonad ()
 initIRQController = error "Unimplemented"
 
-setVSpaceRoot :: PAddr -> Word64 -> MachineMonad ()
-setVSpaceRoot addr asid = error "Unimplemented"
-
 readSBADAddr :: MachineMonad Word
 readSBADAddr = error "Unimplemented"
-
-sFence :: MachineMonad ()
-sFence = error "Unimplemented"
