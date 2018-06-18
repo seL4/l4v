@@ -74,7 +74,7 @@ record
   device_state :: "word64 \<Rightarrow> word8 option"
   machine_state_rest :: RISCV64.machine_state_rest
 
-consts irq_oracle :: "nat \<Rightarrow> word8"
+consts irq_oracle :: "nat \<Rightarrow> RISCV64.irq"
 
 end_qualify
 
