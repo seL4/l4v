@@ -252,6 +252,9 @@ data PTE
 pptrBase :: VPtr
 pptrBase = Platform.pptrBase
 
+pptrUserTop :: VPtr
+pptrUserTop = Platform.pptrUserTop
+
 physBase :: PAddr
 physBase = toPAddr Platform.physBase
 

@@ -303,6 +303,104 @@ maskVMRights r m = case (r, capAllowRead m, capAllowWrite m) of
 
 -- FIXME RISCV TODO
 
+attribsFromWord :: Word -> VMAttributes
+attribsFromWord w = VMAttributes { riscvExecuteNever = w `testBit` 0 }
+
+makeUserPTE :: PAddr -> Bool -> VMRights -> PTE
+makeUserPTE baseAddr executable rights =
+    PagePTE {
+        ptePPN = baseAddr `shiftR` pageBits,
+        pteGlobal = False,
+        pteUser = rights /= VMKernelOnly,
+        pteExecute = executable,
+        pteRights = rights }
+
+checkVPAlignment :: VMPageSize -> VPtr -> KernelF SyscallError ()
+checkVPAlignment sz w =
+    unless (w .&. mask (pageBitsForSize sz) == 0) $ throw AlignmentError
+
+checkFreeSlot :: PPtr PTE -> KernelF SyscallError ()
+checkFreeSlot slot = do
+    pte <- withoutFailure $ getObject slot
+    unless (pte == InvalidPTE) $ throw DeleteFirst
+
+decodeRISCVPageMapInvocation :: PPtr CTE -> ArchCapability -> VPtr -> Word ->
+    Word -> Capability -> KernelF SyscallError ArchInv.Invocation
+decodeRISCVPageMapInvocation cte cap vptr rightsMask attr vspaceCap = do
+    when (isJust $ capFMappedAddress cap) $ throw $ InvalidCapability 0
+    (vspace,asid) <- case vspaceCap of
+        ArchObjectCap (PageTableCap {
+                capPTMappedAddress = Just (asid, _),
+                capPTBasePtr = vspace })
+            -> return (vspace, asid)
+        _ -> throw $ InvalidCapability 1
+    vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
+    when (vspaceCheck /= vspace) $ throw $ InvalidCapability 1
+    let pgBits = pageBitsForSize $ capFSize cap
+    let vtop = vptr + (bit pgBits - 1)
+    when (vtop >= pptrUserTop) $ throw $ InvalidArgument 0
+    checkVPAlignment (capFSize cap) vptr
+    (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
+    unless (bitsLeft == pgBits) $ throw $
+        FailedLookup False $ MissingCapability bitsLeft
+    checkFreeSlot slot
+    let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
+    let framePAddr = addrFromPPtr (capFBasePtr cap)
+    let exec = not $ riscvExecuteNever (attribsFromWord attr)
+    return $ InvokePage $ PageMap {
+        pageMapCap = ArchObjectCap $ cap { capFMappedAddress = Just (asid,vptr) },
+        pageMapCTSlot = cte,
+        pageMapEntries = (makeUserPTE framePAddr exec vmRights, slot) }
+
+decodeRISCVPageRemapInvocation :: PPtr CTE -> ArchCapability -> Word ->
+    Word -> Capability -> KernelF SyscallError ArchInv.Invocation
+decodeRISCVPageRemapInvocation cte cap rightsMask attr vspaceCap = do
+    (vspace,asid) <- case vspaceCap of
+        ArchObjectCap (PageTableCap {
+                capPTMappedAddress = Just (asid, _),
+                capPTBasePtr = vspace })
+            -> return (vspace, asid)
+        _ -> throw $ InvalidCapability 1
+    (asid',vaddr) <- case capFMappedAddress cap of
+        Just v -> return v
+        _ -> throw $ InvalidCapability 0
+    vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
+    when (vspaceCheck /= vspace || asid /= asid') $ throw $ InvalidCapability 1
+    checkVPAlignment (capFSize cap) vaddr
+    (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vaddr
+    let pgBits = pageBitsForSize $ capFSize cap
+    unless (bitsLeft == pgBits) $ throw $
+        FailedLookup False $ MissingCapability bitsLeft
+    checkFreeSlot slot
+    let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
+    let framePAddr = addrFromPPtr (capFBasePtr cap)
+    let exec = not $ riscvExecuteNever (attribsFromWord attr)
+    return $ InvokePage $ PageRemap {
+        pageRemapEntries = (makeUserPTE framePAddr exec vmRights, slot) }
+
+
+decodeRISCVFrameInvocation :: Word -> [Word] -> PPtr CTE ->
+                   ArchCapability -> [(Capability, PPtr CTE)] ->
+                   KernelF SyscallError ArchInv.Invocation
+
+decodeRISCVFrameInvocation label args cte (cap@FrameCap {}) extraCaps =
+    case (invocationType label, args, extraCaps) of
+        (ArchInvocationLabel RISCVPageMap, vaddr:rightsMask:attr:_, (vspaceCap,_):_) -> do
+            decodeRISCVPageMapInvocation cte cap (VPtr vaddr) rightsMask attr vspaceCap
+        (ArchInvocationLabel RISCVPageMap, _, _) -> throw TruncatedMessage
+        (ArchInvocationLabel RISCVPageRemap, rightsMask:attr:_, (vspaceCap,_):_) -> do
+            decodeRISCVPageRemapInvocation cte cap rightsMask attr vspaceCap
+        (ArchInvocationLabel RISCVPageRemap, _, _) -> throw TruncatedMessage
+        (ArchInvocationLabel RISCVPageUnmap, _, _) ->
+            return $ InvokePage $ PageUnmap {
+                pageUnmapCap = cap,
+                pageUnmapCapSlot = cte }
+        (ArchInvocationLabel RISCVPageGetAddress, _, _) ->
+            return $ InvokePage $ PageGetAddr (capFBasePtr cap)
+        _ -> throw IllegalOperation
+decodeRISCVFrameInvocation _ _ _ _ _ = fail "Unreachable"
+
+
 decodeRISCVASIDControlInvocation :: Word -> [Word] ->
         ArchCapability -> [(Capability, PPtr CTE)] ->
         KernelF SyscallError ArchInv.Invocation
@@ -367,10 +465,9 @@ decodeRISCVASIDPoolInvocation _ _ _ = fail "Unreachable"
 decodeRISCVMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
         ArchCapability -> [(Capability, PPtr CTE)] ->
         KernelF SyscallError ArchInv.Invocation
-
-{- FIXME RISCV TODO
-decodeRISCVMMUInvocation label args _ cte cap@(PageCap {}) extraCaps =
+decodeRISCVMMUInvocation label args _ cte cap@(FrameCap {}) extraCaps =
     decodeRISCVFrameInvocation label args cte cap extraCaps
+{- FIXME RISCV TODO
 decodeRISCVMMUInvocation label args _ cte cap@(PageTableCap {}) extraCaps =
     decodeRISCVPageTableInvocation label args cte cap extraCaps
 -}
