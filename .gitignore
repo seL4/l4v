@@ -21,6 +21,7 @@
 /spec/design/*.thy
 /spec/design/ARM/*.thy
 /spec/design/ARM_HYP/*.thy
+/spec/design/RISCV64/*.thy
 /spec/design/X64/*.thy
 
 /spec/machine/*/MachineTypes.thy
