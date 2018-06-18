@@ -57,6 +57,9 @@ pageColourBits = error "FIXME RISCV TODO"
 pptrBase :: VPtr
 pptrBase = VPtr 0xFFFFFFC000000000
 
+pptrUserTop :: VPtr
+pptrUserTop = pptrBase
+
 {- simulator callback stubs - we do not plan to support the simulator on this
    platform -}
 
