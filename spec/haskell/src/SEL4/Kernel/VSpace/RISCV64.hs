@@ -220,6 +220,9 @@ deleteASID asid pt = do
 
 {- Deleting a Page Table -}
 
+unmapPageTable :: ASID -> VPtr -> PPtr PTE -> Kernel ()
+unmapPageTable asid vaddr pt = error "FIXME RISCV TODO"
+
 -- FIXME RISCV TODO
 
 {- Unmapping a Frame -}
