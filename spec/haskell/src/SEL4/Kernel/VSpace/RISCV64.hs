@@ -598,9 +598,8 @@ storePTE slot pte = do
 -- hook for PTEs:
 -- doMachineOp $ storeWordVM (PPtr $ fromPPtr slot) $ wordFromPTE pte
 
-{- Boot Code and Unimplemented Stubs -}
 
--- FIXME RISCV unchecked copypasta for this whole part
+{- Unimplemented Boot Code Stubs -}
 
 mapKernelWindow  :: Kernel ()
 mapKernelWindow = error "boot code unimplemented"
