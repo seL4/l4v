@@ -243,7 +243,7 @@ data PTE
         pteUser :: Bool,
         pteExecute :: Bool,
         pteRights :: VMRights }
-     | PageTablePTE {
+    | PageTablePTE {
         ptePPN :: PAddr,
         pteGlobal :: Bool,
         pteUser :: Bool }
