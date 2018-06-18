@@ -18,10 +18,8 @@ import SEL4.Object.Structures.RISCV64
 import Data.Array
 
 data KernelState = RISCVKernelState {
-    -- FIXME RISCV TODO: fill in rest
     riscvKSASIDTable :: Array ASID (Maybe (PPtr ASIDPool)),
     riscvKSGlobalPT :: PPtr PTE }
 
--- FIXME RISCV unchecked copypasta
 newKernelState :: PAddr -> (KernelState, [PAddr])
 newKernelState _ = error "No initial state defined for RISC-V"
