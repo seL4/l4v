@@ -316,6 +316,61 @@ decodeRISCVMMUInvocation _ _ _ _ _ _ = fail "Unreachable"  -- FIXME RISCV TODO
 
 -- FIXME RISCV TODO
 
+performPageInvocation :: PageInvocation -> Kernel ()
+performPageInvocation (PageMap cap ctSlot (pte,slot)) = do
+    updateCap ctSlot cap
+    storePTE slot pte
+    doMachineOp sFence
+
+performPageInvocation (PageRemap (pte,slot)) = do
+    storePTE slot pte
+    doMachineOp sFence
+
+performPageInvocation (PageUnmap cap ctSlot) = do
+    case capFMappedAddress cap of
+        Just (asid, vaddr) -> unmapPage (capFSize cap) asid vaddr (capFBasePtr cap)
+        _ -> return ()
+    ArchObjectCap cap <- getSlotCap ctSlot
+    updateCap ctSlot (ArchObjectCap $ cap { capFMappedAddress = Nothing })
+
+performPageInvocation (PageGetAddr ptr) = do
+    let paddr = fromPAddr $ addrFromPPtr ptr
+    ct <- getCurThread
+    msgTransferred <- setMRs ct Nothing [paddr]
+    msgInfo <- return $ MI {
+            msgLength = msgTransferred,
+            msgExtraCaps = 0,
+            msgCapsUnwrapped = 0,
+            msgLabel = 0 }
+    setMessageInfo ct msgInfo
+
+
+performASIDControlInvocation :: ASIDControlInvocation -> Kernel ()
+performASIDControlInvocation (MakePool frame slot parent base) = do
+    deleteObjects frame pageBits
+    pcap <- getSlotCap parent
+    updateFreeIndex parent (maxFreeIndex (capBlockSize pcap))
+    placeNewObject frame (makeObject :: ASIDPool) 0
+    let poolPtr = PPtr $ fromPPtr frame
+    cteInsert (ArchObjectCap $ ASIDPoolCap poolPtr base) parent slot
+    assert (base .&. mask asidLowBits == 0)
+        "ASID pool's base must be aligned"
+    asidTable <- gets (riscvKSASIDTable . ksArchState)
+    let asidTable' = asidTable//[(asidHighBitsOf base, Just poolPtr)]
+    modify (\s -> s {
+        ksArchState = (ksArchState s) { riscvKSASIDTable = asidTable' }})
+
+
+performASIDPoolInvocation :: ASIDPoolInvocation -> Kernel ()
+performASIDPoolInvocation (Assign asid poolPtr ctSlot) = do
+    oldcap <- getSlotCap ctSlot
+    let ArchObjectCap cap = oldcap
+    updateCap ctSlot (ArchObjectCap $ cap { capPTMappedAddress = Just (asid,0) })
+    copyGlobalMappings (capPTBasePtr cap)
+    ASIDPool pool <- getObject poolPtr
+    let pool' = pool//[(asid .&. mask asidLowBits, Just $ capPTBasePtr cap)]
+    setObject poolPtr $ ASIDPool pool'
+
 {- Simulator Support -}
 
 storePTE :: PPtr PTE -> PTE -> Kernel ()
