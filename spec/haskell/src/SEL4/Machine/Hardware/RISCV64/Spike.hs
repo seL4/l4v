@@ -13,19 +13,17 @@ module SEL4.Machine.Hardware.RISCV64.Spike where
 import SEL4.Machine.RegisterSet
 import Foreign.Ptr
 import Data.Bits
-import Data.Word(Word8, Word16)
+import Data.Word(Word8, Word16, Word32)
 import Data.Ix
 
 data CallbackData
 
--- FIXME RISCV unchecked copypasta
-newtype IRQ = IRQ Word8
+newtype IRQ = IRQ Word32
     deriving (Enum, Ord, Ix, Eq, Show)
 
--- FIXME RISCV unchecked copypasta
 instance Bounded IRQ where
     minBound = IRQ 0
-    maxBound = IRQ 31
+    maxBound = IRQ 5 -- no external interrupts supported yet on spike
 
 newtype PAddr = PAddr { fromPAddr :: Word }
     deriving (Integral, Real, Show, Eq, Num, Bits, FiniteBits, Ord, Enum, Bounded)
