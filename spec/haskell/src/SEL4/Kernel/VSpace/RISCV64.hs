@@ -589,6 +589,15 @@ performASIDPoolInvocation (Assign asid poolPtr ctSlot) = do
     let pool' = pool//[(asid .&. mask asidLowBits, Just $ capPTBasePtr cap)]
     setObject poolPtr $ ASIDPool pool'
 
+performRISCVMMUInvocation :: ArchInv.Invocation -> KernelP [Word]
+performRISCVMMUInvocation i = withoutPreemption $ do
+    case i of
+        InvokePageTable oper -> performPageTableInvocation oper
+        InvokePage oper -> performPageInvocation oper
+        InvokeASIDControl oper -> performASIDControlInvocation oper
+        InvokeASIDPool oper -> performASIDPoolInvocation oper
+    return $ []
+
 {- Simulator Support -}
 
 storePTE :: PPtr PTE -> PTE -> Kernel ()
