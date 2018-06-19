@@ -332,9 +332,9 @@ checkFreeSlot slot = do
     pte <- withoutFailure $ getObject slot
     unless (pte == InvalidPTE) $ throw DeleteFirst
 
-decodeRISCVPageMapInvocation :: PPtr CTE -> ArchCapability -> VPtr -> Word ->
+decodeRISCVPageInvocationMap :: PPtr CTE -> ArchCapability -> VPtr -> Word ->
     Word -> Capability -> KernelF SyscallError ArchInv.Invocation
-decodeRISCVPageMapInvocation cte cap vptr rightsMask attr vspaceCap = do
+decodeRISCVPageInvocationMap cte cap vptr rightsMask attr vspaceCap = do
     when (isJust $ capFMappedAddress cap) $ throw $ InvalidCapability 0
     (vspace,asid) <- case vspaceCap of
         ArchObjectCap (PageTableCap {
@@ -360,9 +360,9 @@ decodeRISCVPageMapInvocation cte cap vptr rightsMask attr vspaceCap = do
         pageMapCTSlot = cte,
         pageMapEntries = (makeUserPTE framePAddr exec vmRights, slot) }
 
-decodeRISCVPageRemapInvocation :: PPtr CTE -> ArchCapability -> Word ->
+decodeRISCVPageInvocationRemap :: PPtr CTE -> ArchCapability -> Word ->
     Word -> Capability -> KernelF SyscallError ArchInv.Invocation
-decodeRISCVPageRemapInvocation cte cap rightsMask attr vspaceCap = do
+decodeRISCVPageInvocationRemap cte cap rightsMask attr vspaceCap = do
     (vspace,asid) <- case vspaceCap of
         ArchObjectCap (PageTableCap {
                 capPTMappedAddress = Just (asid, _),
@@ -394,10 +394,10 @@ decodeRISCVFrameInvocation :: Word -> [Word] -> PPtr CTE ->
 decodeRISCVFrameInvocation label args cte (cap@FrameCap {}) extraCaps =
     case (invocationType label, args, extraCaps) of
         (ArchInvocationLabel RISCVPageMap, vaddr:rightsMask:attr:_, (vspaceCap,_):_) -> do
-            decodeRISCVPageMapInvocation cte cap (VPtr vaddr) rightsMask attr vspaceCap
+            decodeRISCVPageInvocationMap cte cap (VPtr vaddr) rightsMask attr vspaceCap
         (ArchInvocationLabel RISCVPageMap, _, _) -> throw TruncatedMessage
         (ArchInvocationLabel RISCVPageRemap, rightsMask:attr:_, (vspaceCap,_):_) -> do
-            decodeRISCVPageRemapInvocation cte cap rightsMask attr vspaceCap
+            decodeRISCVPageInvocationRemap cte cap rightsMask attr vspaceCap
         (ArchInvocationLabel RISCVPageRemap, _, _) -> throw TruncatedMessage
         (ArchInvocationLabel RISCVPageUnmap, _, _) ->
             return $ InvokePage $ PageUnmap {
@@ -409,9 +409,9 @@ decodeRISCVFrameInvocation label args cte (cap@FrameCap {}) extraCaps =
 decodeRISCVFrameInvocation _ _ _ _ _ = fail "Unreachable"
 
 
-decodeRISCVPageTableMapInvocation :: PPtr CTE -> ArchCapability -> VPtr ->
+decodeRISCVPageTableInvocationMap :: PPtr CTE -> ArchCapability -> VPtr ->
     Word -> Capability -> KernelF SyscallError ArchInv.Invocation
-decodeRISCVPageTableMapInvocation cte cap vptr attr vspaceCap = do
+decodeRISCVPageTableInvocationMap cte cap vptr attr vspaceCap = do
     when (isJust $ capPTMappedAddress cap) $ throw $ InvalidCapability 0
     (vspace,asid) <- case vspaceCap of
         ArchObjectCap (PageTableCap {
@@ -441,7 +441,7 @@ decodeRISCVPageTableInvocation :: Word -> [Word] -> PPtr CTE ->
 decodeRISCVPageTableInvocation label args cte cap@(PageTableCap {}) extraCaps =
    case (invocationType label, args, extraCaps) of
         (ArchInvocationLabel RISCVPageTableMap, vaddr:attr:_, (vspaceCap,_):_) -> do
-            decodeRISCVPageTableMapInvocation cte cap (VPtr vaddr) attr vspaceCap
+            decodeRISCVPageTableInvocationMap cte cap (VPtr vaddr) attr vspaceCap
         (ArchInvocationLabel RISCVPageTableMap, _, _) -> throw TruncatedMessage
         (ArchInvocationLabel RISCVPageTableUnmap, _, _) -> do
             cteVal <- withoutFailure $ getCTE cte
