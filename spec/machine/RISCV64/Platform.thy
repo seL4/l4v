@@ -44,12 +44,16 @@ definition
   "pptrBase = 0xFFFFFFC000000000"
 
 definition
+  baseOffset :: word64 where
+  "baseOffset = pptrBase - 0x80000000 (* PADDR_BASE *)"
+
+definition
   ptrFromPAddr :: "paddr \<Rightarrow> word64" where
-  "ptrFromPAddr paddr \<equiv> paddr + pptrBase"
+  "ptrFromPAddr paddr \<equiv> paddr + baseOffset"
 
 definition
   addrFromPPtr :: "word64 \<Rightarrow> paddr" where
-  "addrFromPPtr pptr \<equiv> pptr - pptrBase"
+  "addrFromPPtr pptr \<equiv> pptr - baseOffset"
 
 definition
   addrFromKPPtr :: "word64 \<Rightarrow> paddr" where
