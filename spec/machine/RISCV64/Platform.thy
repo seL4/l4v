@@ -44,6 +44,10 @@ definition
   "pptrBase = 0xFFFFFFC000000000"
 
 definition
+  pptrUserTop :: word64 where
+  "pptrUserTop \<equiv> pptrBase"
+
+definition
   baseOffset :: word64 where
   "baseOffset = pptrBase - 0x80000000 (* PADDR_BASE *)"
 
@@ -66,6 +70,11 @@ definition
 definition
   maxIRQ :: "irq" where
   "maxIRQ \<equiv> 5"
+
+(* not implemented on this platform *)
+definition
+  pageColourBits :: nat where
+  "pageColourBits \<equiv> undefined"
 
 end
 end
