@@ -43,7 +43,5 @@ getSanitiseRegisterInfo _ = return False
 setTCBIPCBuffer :: VPtr -> UserMonad ()
 setTCBIPCBuffer ptr = setRegister (RegisterSet.Register TP) $ fromVPtr ptr
 
--- Here, cur = ksCurThread
-
 postModifyRegisters :: PPtr TCB -> PPtr TCB -> UserMonad ()
-postModifyRegisters _cur _dest = return ()
+postModifyRegisters _ _ = return ()
