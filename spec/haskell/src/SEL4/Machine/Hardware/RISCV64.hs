@@ -147,7 +147,7 @@ setNextPC = setRegister (Register RISCV64.NEXTPC)
 -- that might previously have been stored in the region.
 
 clearMemory :: PPtr Word -> Int -> MachineMonad ()
-clearMemory ptr byteLength = error "unimplemented"
+clearMemory ptr byteLength = error "Unimplemented -- machine op"
 
 -- This function is called before a region of memory is made user-accessible.
 -- Though in Haskell, it is implemented as "clearMemory",
@@ -155,7 +155,7 @@ clearMemory ptr byteLength = error "unimplemented"
 -- in the Isabelle formalization.
 
 initMemory :: PPtr Word -> Int -> MachineMonad ()
-initMemory = error "unimplemented"
+initMemory = clearMemory
 
 -- This function is called to free a region of user-memory after use.
 -- In Haskell, this operation does not do anything.
@@ -170,22 +170,22 @@ freeMemory _ _ = return ()
 -- caches must be done separately.
 
 clearMemoryVM :: PPtr Word -> Int -> MachineMonad ()
-clearMemoryVM ptr bits = error "unimplemented"
+clearMemoryVM ptr bits = error "Unimplemented -- machine op"
 
 {- Address Space Setup -}
 
 setVSpaceRoot :: PAddr -> Word64 -> MachineMonad ()
-setVSpaceRoot addr asid = error "Unimplemented"
+setVSpaceRoot addr asid = error "Unimplemented - machine op"
 
 {- Memory Barriers -}
 
-sFence :: MachineMonad ()
-sFence = error "Unimplemented"
+sfence :: MachineMonad ()
+sfence = error "Unimplemented - machine op"
 
 {- Cache Cleaning and TLB Flushes -}
 
 hwASIDFlush :: Word64 -> MachineMonad ()
-hwASIDFlush asid = error "unimplemented"
+hwASIDFlush asid = error "unimplemented - machine op"
 
 {- Page Table Structure -}
 
@@ -259,7 +259,7 @@ physBase = toPAddr Platform.physBase
 {- Simulator callbacks -}
 
 pageColourBits :: Int
-pageColourBits = error "unused in RISCV"
+pageColourBits = Platform.pageColourBits
 
 getMemoryRegions :: MachineMonad [(PAddr, PAddr)]
 getMemoryRegions = do
@@ -308,7 +308,7 @@ debugPrint :: String -> MachineMonad ()
 debugPrint str = liftIO $ putStrLn str
 
 initIRQController :: MachineMonad ()
-initIRQController = error "Unimplemented"
+initIRQController = error "Unimplemented - boot code"
 
-readSBADAddr :: MachineMonad Word
-readSBADAddr = error "Unimplemented"
+read_sbadaddr :: MachineMonad Word
+read_sbadaddr = error "Unimplemented - machine op"
