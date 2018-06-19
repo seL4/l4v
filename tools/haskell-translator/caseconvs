@@ -1943,3 +1943,60 @@ case \x of UntypedCap {capIsDevice = False} | capBlockSize untyped == objBits po
     then ->1
     else ->2
 
+case \x of (c@PageTableCap { capPTMappedAddress = Just _ }) -> (PageTableCap { capPTMappedAddress = Nothing }) -> (c@FrameCap {}) -> c@ASIDControlCap -> (c@ASIDPoolCap {}) ->  ---> let c = \x in
+  if isPageTableCap c \<and> capPTMappedAddress c \<noteq> None
+  then ->1
+  else if isPageTableCap c \<and> capPTMappedAddress c = None
+  then ->2
+  else if isFrameCap c
+  then ->3
+  else if c = ASIDControlCap
+  then ->4
+  else if isASIDPoolCap c
+  then ->5
+  else undefined
+
+case \x of c@(FrameCap {}) -> c ->  ---> let c = \x in
+  if isFrameCap c
+  then ->1
+  else ->2
+
+case \x of ((a@FrameCap {}), (b@FrameCap {})) -> ((a@PageTableCap {}), (b@PageTableCap {})) -> (ASIDControlCap, ASIDControlCap) -> ((a@ASIDPoolCap {}), (b@ASIDPoolCap {})) -> (_, _) ->  ---> let (a,b) = \x in
+  if isFrameCap a \<and> isFrameCap b
+  then ->1
+  else if isPageTableCap a \<and> isPageTableCap b
+  then ->2
+  else if a = ASIDControlCap \<and> b = ASIDControlCap
+  then ->3
+  else if isASIDPoolCap a \<and> isASIDPoolCap b
+  then ->4
+  else ->5
+
+case \x of ((a@FrameCap { capFBasePtr = ptrA }), (b@FrameCap {})) -> (a, b) ->  ---> let (a, b) = \x in
+    if isFrameCap a \<and> isFrameCap b
+    then let ptrA = capFBasePtr a in ->1
+    else ->2
+
+case \x of Arch.Types.APIObjectType _ -> Arch.Types.SmallPageObject -> Arch.Types.LargePageObject -> Arch.Types.HugePageObject -> Arch.Types.PageTableObject ->  ---> let t = \x in
+    case t of
+     APIObjectType _ => ->1
+   | SmallPageObject => ->2
+   | LargePageObject => ->3
+   | HugePageObject => ->4
+   | PageTableObject => ->5
+
+case \x of (cap@FrameCap {}) -> _ ->  ---> let cap = \x in
+  if isFrameCap cap
+  then ->1
+  else ->2
+
+case \x of cap@(FrameCap {}) -> cap@(PageTableCap {}) -> cap@(ASIDControlCap {}) -> cap@(ASIDPoolCap {}) ->  ---> let cap = \x in
+  if isFrameCap cap
+  then ->1
+  else if isPageTableCap cap
+  then ->2
+  else if isASIDControlCap cap
+  then ->3
+  else if isASIDPoolCap cap
+  then ->4
+  else undefined
