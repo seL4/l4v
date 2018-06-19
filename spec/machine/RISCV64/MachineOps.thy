@@ -81,27 +81,19 @@ where
     gets configureTimer_val
   od"
 
-consts' (* XXX: replaces configureTimer in new boot code
-          TODO: remove configureTimer when haskell updated *)
+consts'
   initTimer_impl :: "unit machine_rest_monad"
 definition
   initTimer :: "unit machine_monad"
-where "initTimer \<equiv> machine_op_lift initTimer_impl"
+where
+  "initTimer \<equiv> machine_op_lift initTimer_impl"
 
 consts'
   resetTimer_impl :: "unit machine_rest_monad"
-
 definition
   resetTimer :: "unit machine_monad"
-where "resetTimer \<equiv> machine_op_lift resetTimer_impl"
-
-consts'
-  invalidateTLB_impl :: "unit machine_rest_monad"
-definition
-  invalidateTLB :: "unit machine_monad"
-where "invalidateTLB \<equiv> machine_op_lift invalidateTLB_impl"
-
-lemmas cache_machine_op_defs = invalidateTLB_def
+where
+  "resetTimer \<equiv> machine_op_lift resetTimer_impl"
 
 definition
   debugPrint :: "unit list \<Rightarrow> unit machine_monad"
@@ -216,6 +208,12 @@ definition
 definition
   "setNextPC \<equiv> setRegister NEXTPC"
 
+consts'
+  initL2Cache_impl :: "unit machine_rest_monad"
+definition
+  initL2Cache :: "unit machine_monad"
+where
+  "initL2Cache \<equiv> machine_op_lift initL2Cache_impl"
 
 consts'
   hwASIDFlush_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -230,6 +228,8 @@ definition
   sfence :: "unit machine_monad"
 where
   "sfence \<equiv> machine_op_lift sfence_impl"
+
+lemmas cache_machine_op_defs = sfence_def hwASIDFlush_def
 
 consts'
   sbadaddr_val :: "machine_state \<Rightarrow> machine_word"
