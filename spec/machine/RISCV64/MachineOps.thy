@@ -63,16 +63,22 @@ lemma loadWord_storeWord_is_return:
     modify_def gets_def get_def eval_nat_numeral put_def upto0_7_def
     word_rsplit_rcat_size word_size)
 
+consts'
+  memory_regions :: "(paddr \<times> paddr) list"
+definition
+  getMemoryRegions :: "(paddr * paddr) list machine_monad"
+where
+  "getMemoryRegions \<equiv> return memory_regions"
 
 text {* This instruction is required in the simulator, only. *}
 definition
   storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-  where "storeWordVM w p \<equiv> return ()"
+where
+  "storeWordVM w p \<equiv> return ()"
 
 consts'
   configureTimer_impl :: "unit machine_rest_monad"
   configureTimer_val :: "machine_state \<Rightarrow> irq"
-
 definition
   configureTimer :: "irq machine_monad"
 where
@@ -150,12 +156,13 @@ section "Memory Clearance"
 text {* Clear memory contents to recycle it as user memory *}
 definition
   clearMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
-  where
- "clearMemory ptr bytelength \<equiv> mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size .e. ptr + (of_nat bytelength) - 1]"
+where
+  "clearMemory ptr bytelength \<equiv>
+   mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size .e. ptr + (of_nat bytelength) - 1]"
 
 definition
   clearMemoryVM :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
-  where
+where
   "clearMemoryVM ptr bits \<equiv> return ()"
 
 text {*
@@ -176,9 +183,9 @@ text {*
 *}
 definition
   freeMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
-  where
- "freeMemory ptr bits \<equiv>
-  mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size  .e.  ptr + 2 ^ bits - 1]"
+where
+  "freeMemory ptr bits \<equiv>
+   mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size  .e.  ptr + 2 ^ bits - 1]"
 
 
 section "User Monad"
@@ -195,6 +202,8 @@ where
   "getRegister r \<equiv> gets (\<lambda>s. user_regs s r)"
 
 definition
+  modify_registers :: "(user_regs \<Rightarrow> user_regs) \<Rightarrow> user_context \<Rightarrow> user_context"
+where
   "modify_registers f uc \<equiv> UserContext (f (user_regs uc))"
 
 definition
