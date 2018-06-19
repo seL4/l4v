@@ -78,6 +78,10 @@ postCapDeletion c = return ()
 
 finaliseCap :: ArchCapability -> Bool -> Kernel (Capability, Capability)
 
+finaliseCap (ASIDPoolCap { capASIDBase = b, capASIDPool = ptr }) True = do
+    deleteASIDPool b ptr
+    return (NullCap, NullCap)
+
 finaliseCap (PageTableCap {
         capPTMappedAddress = Just (asid, vptr),
         capPTBasePtr = pte }) True = do
