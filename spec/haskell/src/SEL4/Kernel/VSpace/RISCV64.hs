@@ -244,12 +244,22 @@ unmapPageTable asid vaddr pt = ignoreFailure $ do
 
 {- Unmapping a Frame -}
 
+-- If the previous PTE is not a page pointing at the same address we are
+-- trying to unmap, the information is outdated and the operation should be ignored.
+checkMappingPPtr :: PPtr Word -> PTE -> KernelF LookupFailure ()
+checkMappingPPtr pptr pte =
+    case pte of
+        PagePTE { ptePPN = ppn } ->
+            unless (ptrFromPAddr ppn == pptr) $ throw InvalidRoot
+        _ -> throw InvalidRoot
+
 unmapPage :: VMPageSize -> ASID -> VPtr -> PPtr Word -> Kernel ()
-unmapPage size asid vptr ptr = ignoreFailure $ do
+unmapPage size asid vptr pptr = ignoreFailure $ do
     vspace <- findVSpaceForASID asid
     (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
     unless (bitsLeft == pageBitsForSize size) $ throw InvalidRoot
     pte <- withoutFailure $ getObject slot
+    checkMappingPPtr pptr pte -- FIXME RISCV: wait for C sync, then remove
     withoutFailure $ storePTE slot InvalidPTE
     withoutFailure $ doMachineOp sfence
 
