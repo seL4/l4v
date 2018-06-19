@@ -62,6 +62,9 @@ session BaseRefine2 = BaseRefine +
 
 session BaseRefine = AInvs +
   description {* Background theory and libraries for refinement proof. *}
+  sessions
+    Lib
+    CorresK
   theories
     "refine/$L4V_ARCH/Include"
 
