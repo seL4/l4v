@@ -225,18 +225,18 @@ where
   "hwASIDFlush asid \<equiv> machine_op_lift (hwASIDFlush_impl asid)"
 
 consts'
-  sFence_impl :: "unit machine_rest_monad"
+  sfence_impl :: "unit machine_rest_monad"
 definition
-  sFence :: "unit machine_monad"
+  sfence :: "unit machine_monad"
 where
-  "sFence \<equiv> machine_op_lift sFence_impl"
+  "sfence \<equiv> machine_op_lift sfence_impl"
 
 consts'
-  sBadAddr_val :: "machine_state \<Rightarrow> machine_word"
+  sbadaddr_val :: "machine_state \<Rightarrow> machine_word"
 definition
-  readSBADAddr :: "machine_word machine_monad"
+  readsbadaddr :: "machine_word machine_monad"
  where
-  "readSBADAddr = gets sBadAddr_val"
+  "readsbadaddr = gets sbadaddr_val"
 
 end
 
