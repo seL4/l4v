@@ -24,25 +24,30 @@ context Arch begin global_naming RISCV64_H
 
 #INCLUDE_HASKELL SEL4/Kernel/VSpace/RISCV64.hs CONTEXT RISCV64_H bodies_only ArchInv=ArchRetypeDecls_H ONLY pteAtIndex getPPtrFromHWPTE isPageTablePTE ptBitsLeft
 
-fun lookupPTSlotFromLevel where
-"lookupPTSlotFromLevel level ptPtr vPtr = (do
+fun
+  lookupPTSlotFromLevel :: "nat => machine_word => machine_word => (nat * machine_word) kernel"
+where
+  "lookupPTSlotFromLevel level ptPtr vPtr = do
     pte <- pteAtIndex level ptPtr vPtr;
-    ptr <- return ( getPPtrFromHWPTE pte);
+    ptr <- return (getPPtrFromHWPTE pte);
     if isPageTablePTE pte \<and> level > 0
-        then lookupPTSlotFromLevel (level- 1) ptr vPtr
+        then lookupPTSlotFromLevel (level - 1) ptr vPtr
         else return (ptBitsLeft level, ptr)
-od)"
+  od"
 
-fun lookupPTFromLevel where
-"lookupPTFromLevel level ptPtr vPtr targetPtPtr = (doE
+fun
+  lookupPTFromLevel :: "nat => machine_word => machine_word => machine_word =>
+    (lookup_failure, machine_word) kernel_f"
+where
+  "lookupPTFromLevel level ptPtr vPtr targetPtPtr = doE
     unlessE (0 < level) $ throw InvalidRoot;
     pte <- withoutFailure $ pteAtIndex level ptPtr vPtr;
     unlessE (isPageTablePTE pte) $ throw InvalidRoot;
-    ptr <- returnOk ( getPPtrFromHWPTE pte);
+    ptr <- returnOk (getPPtrFromHWPTE pte);
     if ptr = targetPtPtr
-        then returnOk $ ptSlotIndex (level- 1) ptr vPtr
-        else lookupPTFromLevel (level- 1) ptr vPtr targetPtPtr
-odE)"
+        then returnOk $ ptSlotIndex (level - 1) ptr vPtr
+        else lookupPTFromLevel (level - 1) ptr vPtr targetPtPtr
+  odE"
 
 #INCLUDE_HASKELL SEL4/Kernel/VSpace/RISCV64.hs CONTEXT RISCV64_H bodies_only ArchInv=ArchRetypeDecls_H NOT lookupPTSlotFromLevel lookupPTFromLevel pteAtIndex getPPtrFromHWPTE isPageTablePTE ptBitsLeft checkPTAt
 
