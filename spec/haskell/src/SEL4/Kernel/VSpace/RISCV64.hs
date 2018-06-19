@@ -163,7 +163,7 @@ lookupPTSlot = lookupPTSlotFromLevel maxPTLevel
 
 handleVMFault :: PPtr TCB -> VMFaultType -> KernelF Fault ()
 handleVMFault thread f = do
-    w <- withoutFailure $ doMachineOp readSBADAddr
+    w <- withoutFailure $ doMachineOp read_sbadaddr
     let addr = VPtr w
     case f of
         RISCVLoadPageFault -> throw $ loadf addr
@@ -240,7 +240,7 @@ unmapPageTable asid vaddr pt = ignoreFailure $ do
     topLevelPT <- findVSpaceForASID asid
     ptSlot <- lookupPTFromLevel maxPTLevel topLevelPT vaddr pt
     withoutFailure $ storePTE ptSlot InvalidPTE
-    withoutFailure $ doMachineOp sFence
+    withoutFailure $ doMachineOp sfence
 
 {- Unmapping a Frame -}
 
@@ -251,7 +251,7 @@ unmapPage size asid vptr ptr = ignoreFailure $ do
     unless (bitsLeft == pageBitsForSize size) $ throw InvalidRoot
     pte <- withoutFailure $ getObject slot
     withoutFailure $ storePTE slot InvalidPTE
-    withoutFailure $ doMachineOp sFence
+    withoutFailure $ doMachineOp sfence
 
 {- Address Space Switching -}
 
@@ -520,7 +520,7 @@ performPageTableInvocation :: PageTableInvocation -> Kernel ()
 performPageTableInvocation (PageTableMap cap ctSlot pte ptSlot) = do
     updateCap ctSlot cap
     storePTE ptSlot pte
-    doMachineOp sFence
+    doMachineOp sfence
 
 performPageTableInvocation (PageTableUnmap cap slot) = do
     case capPTMappedAddress cap of
@@ -538,11 +538,11 @@ performPageInvocation :: PageInvocation -> Kernel ()
 performPageInvocation (PageMap cap ctSlot (pte,slot)) = do
     updateCap ctSlot cap
     storePTE slot pte
-    doMachineOp sFence
+    doMachineOp sfence
 
 performPageInvocation (PageRemap (pte,slot)) = do
     storePTE slot pte
-    doMachineOp sFence
+    doMachineOp sfence
 
 performPageInvocation (PageUnmap cap ctSlot) = do
     case capFMappedAddress cap of
