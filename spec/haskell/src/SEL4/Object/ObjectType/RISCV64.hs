@@ -65,9 +65,10 @@ cteGuardBits = 58
 -- map objects into a page table or page directory is granted by possession of
 -- a capability to it; there is no specific permission bit restricting this
 -- ability.
--- FIXME RISCV does not mask any rights unlike other platforms, investigate whether that is intentional
 
 maskCapRights :: CapRights -> ArchCapability -> Capability
+maskCapRights r c@(FrameCap {}) = ArchObjectCap $ c {
+    capFVMRights = maskVMRights (capFVMRights c) r }
 maskCapRights _ c = ArchObjectCap c
 
 {- Deleting Capabilities -}
@@ -99,9 +100,6 @@ finaliseCap (FrameCap {
 finaliseCap _ _ = return (NullCap, NullCap)
 
 {- Identifying Capabilities -}
-
--- FIXME RISCV: current C code does not discuss ASID pool/control caps, it
--- likely should, and when it does, check these again
 
 sameRegionAs :: ArchCapability -> ArchCapability -> Bool
 sameRegionAs (a@FrameCap {}) (b@FrameCap {}) =
