@@ -194,7 +194,7 @@ deleteASIDPool base ptr = do
     assert (base .&. mask asidLowBits == 0)
         "ASID pool's base must be aligned"
     asidTable <- gets (riscvKSASIDTable . ksArchState)
-    when (asidTable ! asidHighBitsOf base == Just ptr) $ do
+    when (asidTable ! (asidHighBitsOf base) == Just ptr) $ do
         ASIDPool pool <- getObject ptr
         let asidTable' = asidTable//[(asidHighBitsOf base, Nothing)]
         modify (\s -> s {
