@@ -170,15 +170,19 @@ handleVMFault thread f = do
         RISCVLoadAccessFault -> throw $ loadf addr
         RISCVStorePageFault -> throw $ storef addr
         RISCVStoreAccessFault -> throw $ storef addr
-        RISCVInstructionPageFault -> instrf addr
-        RISCVInstructionAccessFault -> instrf addr
+        RISCVInstructionPageFault -> do
+            withoutFailure $ setPC
+            throw $ instrf addr
+        RISCVInstructionAccessFault ->  do
+            withoutFailure $ setPC
+            throw $ instrf addr
         _ -> error "Invalid VM fault type"
     where loadf a = ArchFault $ VMFault a [0, vmFaultTypeFSR RISCVLoadAccessFault]
           storef a = ArchFault $ VMFault a [0, vmFaultTypeFSR RISCVStoreAccessFault]
-          instrf a = do
-              sepc <- withoutFailure $ asUser thread $ getRegister (Register SEPC)
-              withoutFailure $ asUser thread $ setRegister (Register NEXTPC) sepc
-              throw $ ArchFault $ VMFault a [1, vmFaultTypeFSR RISCVInstructionAccessFault]
+          instrf a = ArchFault $ VMFault a [1, vmFaultTypeFSR RISCVInstructionAccessFault]
+          setPC = do
+              sepc <- asUser thread $ getRegister (Register SEPC)
+              asUser thread $ setRegister (Register NEXTPC) sepc
 
 {- Unmapping and Deletion -}
 
