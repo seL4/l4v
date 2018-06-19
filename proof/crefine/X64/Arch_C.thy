@@ -4840,8 +4840,7 @@ lemma decodeIOPortControlInvocation_ccorres:
              \<inter> {s. slot_' s = cte_Ptr slot}
              \<inter> {s. excaps_' s = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
-             \<inter> {s. buffer_' s = option_to_ptr buffer}
-             \<inter> {s. call_' s = from_bool isCall}) []
+             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeX64PortInvocation label args slot cp (map fst extraCaps)
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeX86PortControlInvocation_'proc)"
@@ -4849,7 +4848,7 @@ lemma decodeIOPortControlInvocation_ccorres:
 proof -
   from assms show ?thesis
     apply (clarsimp simp: isCap_simps decodeX64PortInvocation_def Let_def)
-    apply (cinit' lift: invLabel_' length___unsigned_long_' slot_' excaps_' cap_' buffer_' call_')
+    apply (cinit' lift: invLabel_' length___unsigned_long_' slot_' excaps_' cap_' buffer_')
      apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
      apply (rule ccorres_Cond_rhs_Seq, clarsimp simp: invocation_eq_use_types, ccorres_rewrite)
       apply (rule ccorres_equals_throwError)
@@ -5328,6 +5327,34 @@ proof -
   done
 qed
 
+lemma Mode_decodeInvocation_ccorres:
+  assumes "interpret_excaps extraCaps' = excaps_map extraCaps"
+  assumes "isPageCap cp \<or> isPageTableCap cp \<or> isPageDirectoryCap cp \<or> isPDPointerTableCap cp \<or> isPML4Cap cp"
+  shows
+  "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
+              and (excaps_in_mem extraCaps \<circ> ctes_of)
+              and cte_wp_at' (diminished' (ArchObjectCap cp) \<circ> cteCap) slot
+              and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
+              and sysargs_rel args buffer and valid_objs')
+       (UNIV \<inter> {s. label___unsigned_long_' s = label}
+             \<inter> {s. unat (length___unsigned_long_' s) = length args}
+             \<inter> {s. slot_' s = cte_Ptr slot}
+             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
+             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+       (decodeX64MMUInvocation label args cptr slot cp extraCaps
+          >>= invocationCatch thread isBlocking isCall Invocations_H.invocation.InvokeArchObject)
+       (Call Mode_decodeInvocation_'proc)"
+  using assms
+  apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' slot_'
+                      extraCaps___struct_extra_caps_C_' cap_' buffer_')
+   apply csymbr
+   apply (simp only: cap_get_tag_isCap_ArchObject X64_H.decodeInvocation_def)
+   apply (rule ccorres_cond_true)
+   apply (rule ccorres_trim_returnE[rotated 2, OF ccorres_call, OF decodeX64MMUInvocation_ccorres], simp+)[1]
+  apply (clarsimp simp: o_def)
+  done
 
 lemma Arch_decodeInvocation_ccorres:
   notes if_cong[cong]
@@ -5345,36 +5372,39 @@ lemma Arch_decodeInvocation_ccorres:
              \<inter> {s. excaps_' s = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}
-             \<inter> \<lbrace>\<acute>call = from_bool isCall \<rbrace>) []
+             \<inter> {s. call_' s = from_bool isCall }) []
        (Arch.decodeInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call Arch_decodeInvocation_'proc)"
   (is "ccorres ?r ?xf ?P (?P' slot_') [] ?a ?c")
 proof -
+  note trim_call = ccorres_trim_returnE[rotated 2, OF ccorres_call]
   from assms show ?thesis
-    apply (cinit' lift: invLabel_'  length___unsigned_long_'  slot_'  excaps_'  cap_'
-                        buffer_' call_')
+    apply (cinit' lift: invLabel_' length___unsigned_long_' slot_' excaps_' cap_' buffer_' call_')
      apply csymbr
      apply (simp only: cap_get_tag_isCap_ArchObject X64_H.decodeInvocation_def)
      apply (rule ccorres_Cond_rhs)
-  sorry (* Arch_decodeInvocation
-          FIXME x64: needs IOPort Invocation lemma
-      apply wpc
-           apply (clarsimp simp: )+
-      apply (rule ccorres_trim_returnE, simp+)
-      apply (rule ccorres_call,
-             rule decodeX64VCPUInvocation_ccorres, (simp add: isVCPUCap_def)+)[1]
-     (* will not rewrite any other way, and we do not want to repeat proof for each MMU cap case
-        of decodeX64MMUInvocation *)
-     apply (subst not_VCPUCap_case_helper_eq, assumption)
-     apply (rule ccorres_trim_returnE, simp+)
-     apply (rule ccorres_call,
-            rule decodeX64MMUInvocation_ccorres, simp+)[1]
-
-    apply (clarsimp simp: cte_wp_at_ctes_of ct_in_state'_def)
-    apply (frule(1) ctes_of_valid', simp only: diminished_valid'[symmetric])
-    apply (clarsimp split: arch_capability.splits simp: isVCPUCap_def)
-    done *)
+      apply (subgoal_tac "\<not> isIOCap cp", simp)
+       apply (rule trim_call[OF decodeX64MMUInvocation_ccorres], simp+)[1]
+      apply (fastforce simp: isCap_simps isIOCap_def)
+     apply (rule ccorres_Cond_rhs)
+      apply (subgoal_tac "isIOCap cp", simp)
+       apply (rule trim_call[OF decodeIOPortControlInvocation_ccorres], simp+)[1]
+      apply (fastforce simp: isCap_simps isIOCap_def)
+     apply (rule ccorres_Cond_rhs)
+      apply (subgoal_tac "isIOCap cp", simp)
+       apply (rule trim_call[OF decodeIOPortInvocation_ccorres], simp+)[1]
+      apply (fastforce simp: isCap_simps isIOCap_def)
+     apply (subgoal_tac "\<not> isIOCap cp", simp)
+      apply (rule trim_call[OF Mode_decodeInvocation_ccorres])
+            apply assumption
+           apply (cases cp; simp add: isCap_simps)
+          apply simp+
+     apply (cases cp; simp add: isCap_simps isIOCap_def)
+    apply (clarsimp simp: o_def excaps_in_mem_def slotcap_in_mem_def)
+    apply (drule (1) bspec)
+    apply (clarsimp simp: ctes_of_valid')
+    done
 qed
 
 end
