@@ -138,7 +138,6 @@ placeNewDataObject regionBase sz isDevice = if isDevice
     then placeNewObject regionBase UserDataDevice sz
     else placeNewObject regionBase UserData sz
 
--- FIXME RISCV: C code always passes down 0 for capFIsDevice for new frame caps, unclear if that's intentional so we pass it through here like on other arches
 -- FIXME RISCV: C code missing AUXUPD, TODO in later stages of project
 
 createObject :: ObjectType -> PPtr () -> Int -> Bool -> Kernel ArchCapability
