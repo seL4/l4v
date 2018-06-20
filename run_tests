@@ -15,7 +15,7 @@ import sys
 
 # Settings
 L4V_ARCH_DEFAULT="ARM"
-L4V_ARCH_LIST=["ARM","ARM_HYP","X64"]
+L4V_ARCH_LIST=["ARM","ARM_HYP","X64","RISCV64"]
 
 # Fetch directory this script is stored in.
 DIR=os.path.dirname(os.path.realpath(__file__))
@@ -73,6 +73,16 @@ EXCLUDE["X64"]=[
     "DSpec",
     "SepTacticsExamples",
     "SimplExportAndRefine"]
+
+EXCLUDE["RISCV64"]=[
+    "ASpec",
+    "DSpec",
+    "c-kernel",
+    "CKernel",
+    "CSpec",
+    "CamkesDarpaReport",
+    "CamkesGlueProofs"
+]
 
 # Check EXCLUDE is exhaustive over the available architectures
 if not set(L4V_ARCH_LIST) <= set(EXCLUDE.keys()):
