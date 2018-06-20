@@ -28,9 +28,9 @@ text {*
   destined for use in separation logic, and hence uses @{text "h"}
 *}
 
-text {* \<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash> *}
+text {*--------------------------------------- *}
 text {* Things that should go into Option Type *}
-text {* \<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash> *}
+text {*--------------------------------------- *}
 
 text {* Misc option lemmas *}
 
@@ -40,9 +40,9 @@ lemma None_com: "(None = x) = (x = None)" by fast
 
 lemma Some_com: "(Some y = x) = (x = Some y)" by fast
 
-text {* \<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash> *}
+text {*--------------------------------------- *}
 text {* Things that should go into Map.thy *}
-text {* \<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash> *}
+text {*--------------------------------------- *}
 
 text {* Map intersection: set of all keys for which the maps agree. *}
 
@@ -59,12 +59,12 @@ definition
 
 subsection {* Properties of maps not related to restriction *}
 
-lemma empty_forall_equiv: "(m = empty) = (\<forall>x. m x = None)"
-  by (fastforce intro!: ext)
+lemma empty_forall_equiv: "(m = Map.empty) = (\<forall>x. m x = None)"
+  by (rule fun_eq_iff)
 
 lemma map_le_empty2 [simp]:
-  "(m \<subseteq>\<^sub>m empty) = (m = empty)"
-  by (auto simp: map_le_def intro: ext)
+  "(m \<subseteq>\<^sub>m Map.empty) = (m = Map.empty)"
+  by (auto simp: map_le_def)
 
 lemma dom_iff:
   "(\<exists>y. m x = Some y) = (x \<in> dom m)"
@@ -87,17 +87,17 @@ lemma map_add_left_cancelI [intro!]:
   by simp
 
 lemma dom_empty_is_empty:
-  "(dom m = {}) = (m = empty)"
+  "(dom m = {}) = (m = Map.empty)"
 proof (rule iffI)
   assume a: "dom m = {}"
-  { assume "m \<noteq> empty"
+  { assume "m \<noteq> Map.empty"
     hence "dom m \<noteq> {}"
       by - (subst (asm) empty_forall_equiv, simp add: dom_def)
     hence False using a by blast
   }
-  thus "m = empty" by blast
+  thus "m = Map.empty" by blast
 next
-  assume a: "m = empty"
+  assume a: "m = Map.empty"
   thus "dom m = {}" by simp
 qed
 
@@ -114,19 +114,19 @@ lemma map_add_right_dom_eq:
 
 lemma map_le_same_dom_eq:
   "\<lbrakk> m\<^sub>0 \<subseteq>\<^sub>m m\<^sub>1 ; dom m\<^sub>0 = dom m\<^sub>1 \<rbrakk> \<Longrightarrow> m\<^sub>0 = m\<^sub>1"
-  by (auto intro!: ext simp: map_le_def elim!: ballE)
+  by (simp add: map_le_antisym map_le_def)
 
 subsection {* Properties of map restriction *}
 
 lemma restrict_map_cancel:
   "(m |` S = m |` T) = (dom m \<inter> S = dom m \<inter> T)"
-  by (fastforce intro: set_eqI ext dest: fun_cong
+  by (fastforce intro: set_eqI dest: fun_cong
                simp: restrict_map_def None_not_eq
                split: if_split_asm)
 
 lemma map_add_restricted_self [simp]:
   "m ++ m |` S = m"
-  by (auto intro: ext simp: restrict_map_def map_add_def split: option.splits)
+  by (auto simp: restrict_map_def map_add_def split: option.splits)
 
 lemma map_add_restrict_dom_right [simp]:
   "(m ++ m') |` dom m' = m'"
@@ -138,19 +138,19 @@ lemma restrict_map_UNIV [simp]:
 
 lemma restrict_map_dom:
   "S = dom m \<Longrightarrow> m |` S = m"
-  by (auto intro!: ext simp: restrict_map_def None_not_eq)
+  by (fastforce simp: restrict_map_def None_not_eq)
 
 lemma restrict_map_subdom:
   "dom m \<subseteq> S \<Longrightarrow> m |` S = m"
-  by (fastforce simp: restrict_map_def None_com intro: ext)
+  by (fastforce simp: restrict_map_def None_com)
 
 lemma map_add_restrict:
   "(m\<^sub>0 ++ m\<^sub>1) |` S = ((m\<^sub>0 |` S) ++ (m\<^sub>1 |` S))"
-  by (force simp: map_add_def restrict_map_def intro: ext)
+  by (force simp: map_add_def restrict_map_def)
 
 lemma map_le_restrict:
   "m \<subseteq>\<^sub>m m' \<Longrightarrow> m = m' |` dom m"
-  by (force simp: map_le_def restrict_map_def None_com intro: ext)
+  by (force simp: map_le_def restrict_map_def None_com)
 
 lemma restrict_map_le:
   "m |` S \<subseteq>\<^sub>m m"
@@ -162,16 +162,16 @@ lemma restrict_map_remerge:
                          split: option.splits)
 
 lemma restrict_map_empty:
-  "dom m \<inter> S = {} \<Longrightarrow> m |` S = empty"
-  by (fastforce simp: restrict_map_def intro: ext)
+  "dom m \<inter> S = {} \<Longrightarrow> m |` S = Map.empty"
+  by (fastforce simp: restrict_map_def)
 
 lemma map_add_restrict_comp_right [simp]:
   "(m |` S ++ m |` (UNIV - S)) = m"
-  by (force simp: map_add_def restrict_map_def split: option.splits intro: ext)
+  by (force simp: map_add_def restrict_map_def split: option.splits)
 
 lemma map_add_restrict_comp_right_dom [simp]:
   "(m |` S ++ m |` (dom m - S)) = m"
-  by (auto simp: map_add_def restrict_map_def split: option.splits intro!: ext)
+  by (fastforce simp: map_add_def restrict_map_def split: option.splits)
 
 lemma map_add_restrict_comp_left [simp]:
   "(m |` (UNIV - S) ++ m |` S) = m"
@@ -179,7 +179,7 @@ lemma map_add_restrict_comp_left [simp]:
 
 lemma restrict_self_UNIV:
   "m |` (dom m - S) = m |` (UNIV - S)"
-  by (auto intro!: ext simp: restrict_map_def)
+  by (fastforce simp: restrict_map_def)
 
 lemma map_add_restrict_nonmember_right:
   "x \<notin> dom m' \<Longrightarrow> (m ++ m') |` {x} = m |` {x}"
@@ -195,7 +195,7 @@ lemma map_add_restrict_right:
 
 lemma restrict_map_compose:
   "\<lbrakk> S \<union> T = dom m ; S \<inter> T = {} \<rbrakk> \<Longrightarrow> m |` S ++ m |` T = m"
-  by (fastforce intro: ext simp: map_add_def restrict_map_def)
+  by (fastforce simp: map_add_def restrict_map_def)
 
 lemma map_le_dom_subset_restrict:
   "\<lbrakk> m' \<subseteq>\<^sub>m m; dom m' \<subseteq> S \<rbrakk> \<Longrightarrow> m' \<subseteq>\<^sub>m (m |` S)"
@@ -203,27 +203,24 @@ lemma map_le_dom_subset_restrict:
 
 lemma map_le_dom_restrict_sub_add:
   "m' \<subseteq>\<^sub>m m \<Longrightarrow> m |` (dom m - dom m') ++ m' = m"
-  by (auto simp: None_com map_add_def restrict_map_def map_le_def
-           split: option.splits
-           intro!: ext)
-     (force simp: Some_com)+
+  by (metis map_add_restrict_comp_right_dom map_le_iff_map_add_commute map_le_restrict)
 
 lemma subset_map_restrict_sub_add:
   "T \<subseteq> S \<Longrightarrow> m |` (S - T) ++ m |` T = m |` S"
-  by (auto simp: restrict_map_def map_add_def intro!: ext split: option.splits)
+  by (fastforce simp: restrict_map_def map_add_def split: option.splits)
 
 lemma restrict_map_sub_union:
   "m |` (dom m - (S \<union> T)) = (m |` (dom m - T)) |` (dom m - S)"
-  by (auto intro!: ext simp: restrict_map_def)
+  by (auto simp: restrict_map_def)
 
 lemma prod_restrict_map_add:
   "\<lbrakk> S \<union> T = U; S \<inter> T = {} \<rbrakk> \<Longrightarrow> m |` (X \<times> S) ++ m |` (X \<times> T) = m |` (X \<times> U)"
-  by (auto simp: map_add_def restrict_map_def intro!: ext split: option.splits)
+  by (auto simp: map_add_def restrict_map_def split: option.splits)
 
 
-text {* \<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash> *}
+text {*--------------------------------------- *}
 text {* Things that should NOT go into Map.thy *}
-text {* \<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash>\<emdash> *}
+text {*--------------------------------------- *}
 
 section {* Definitions *}
 
@@ -274,11 +271,11 @@ lemma restrict_map_sub_add: "h |` S ++ h `- S = h"
 section {* Properties of map disjunction *}
 
 lemma map_disj_empty_right [simp]:
-  "h \<bottom> empty"
+  "h \<bottom> Map.empty"
   by (simp add: map_disj_def)
 
 lemma map_disj_empty_left [simp]:
-  "empty \<bottom> h"
+  "Map.empty \<bottom> h"
   by (simp add: map_disj_def)
 
 lemma map_disj_com:
@@ -302,7 +299,7 @@ lemma map_add_com:
 
 lemma map_add_left_commute:
   "h\<^sub>0 \<bottom> h\<^sub>1 \<Longrightarrow> h\<^sub>0 ++ (h\<^sub>1 ++ h\<^sub>2) = h\<^sub>1 ++ (h\<^sub>0 ++ h\<^sub>2)"
-  by (simp add: map_add_com map_disj_com map_add_assoc)
+  by (simp add: map_add_com map_disj_com)
 
 lemma map_add_disj:
   "h\<^sub>0 \<bottom> (h\<^sub>1 ++ h\<^sub>2) = (h\<^sub>0 \<bottom> h\<^sub>1 \<and> h\<^sub>0 \<bottom> h\<^sub>2)"
@@ -389,7 +386,7 @@ lemma map_add_left_eq:
   shows "h\<^sub>0 = h\<^sub>1"
 proof (rule ext)
   fix x
-  from eq have eq': "(h\<^sub>0 ++ h) x = (h\<^sub>1 ++ h) x" by (auto intro!: ext)
+  from eq have eq': "(h\<^sub>0 ++ h) x = (h\<^sub>1 ++ h) x" by auto
   { assume "x \<in> dom h"
     hence "h\<^sub>0 x = h\<^sub>1 x" using disj by (simp add: map_disj_None_left)
   } moreover {
@@ -434,11 +431,11 @@ lemma map_add_left_cancel:
 proof (rule iffI, rule ext)
   fix x
   assume "(h\<^sub>0 ++ h\<^sub>1) = (h\<^sub>0 ++ h\<^sub>1')"
-  hence "(h\<^sub>0 ++ h\<^sub>1) x = (h\<^sub>0 ++ h\<^sub>1') x" by (auto intro!: ext)
+  hence "(h\<^sub>0 ++ h\<^sub>1) x = (h\<^sub>0 ++ h\<^sub>1') x" by auto
   hence "h\<^sub>1 x = h\<^sub>1' x" using disj
     by - (cases "x \<in> dom h\<^sub>0",
           simp_all add: map_disj_None_right map_add_eval_right')
-  thus "h\<^sub>1 x = h\<^sub>1' x" by (auto intro!: ext)
+  thus "h\<^sub>1 x = h\<^sub>1' x" by auto
 qed auto
 
 lemma map_add_lr_disj:
@@ -460,12 +457,12 @@ lemma map_disj_update_right [simp]:
 lemma map_add_update_left:
   "\<lbrakk> h\<^sub>0 \<bottom> h\<^sub>1 ; p \<in> dom h\<^sub>0 \<rbrakk> \<Longrightarrow> (h\<^sub>0 ++ h\<^sub>1)(p \<mapsto> v) = (h\<^sub>0(p \<mapsto> v) ++ h\<^sub>1)"
   by (drule (1) map_disj_None_right)
-     (auto intro: ext simp: map_add_def cong: option.case_cong)
+     (auto simp: map_add_def cong: option.case_cong)
 
 lemma map_add_update_right:
   "\<lbrakk> h\<^sub>0 \<bottom> h\<^sub>1 ; p \<in> dom h\<^sub>1  \<rbrakk> \<Longrightarrow> (h\<^sub>0 ++ h\<^sub>1)(p \<mapsto> v) = (h\<^sub>0 ++ h\<^sub>1 (p \<mapsto> v))"
   by (drule (1) map_disj_None_left)
-     (auto intro: ext simp: map_add_def cong: option.case_cong)
+     (auto simp: map_add_def cong: option.case_cong)
 
 lemma map_add3_update:
   "\<lbrakk> h\<^sub>0 \<bottom> h\<^sub>1 ; h\<^sub>1  \<bottom> h\<^sub>2 ; h\<^sub>0 \<bottom> h\<^sub>2 ; p \<in> dom h\<^sub>0 \<rbrakk>
@@ -521,13 +518,13 @@ qed
 lemma map_le_conv:
   "(h\<^sub>0' \<subseteq>\<^sub>m h\<^sub>0 \<and> h\<^sub>0' \<noteq> h\<^sub>0) = (\<exists>h\<^sub>1. h\<^sub>0 = h\<^sub>0' ++ h\<^sub>1 \<and> h\<^sub>0' \<bottom> h\<^sub>1 \<and> h\<^sub>0' \<noteq> h\<^sub>0)"
   unfolding map_le_def map_disj_def map_add_def
-  by (rule iffI,
-      clarsimp intro!: exI[where x="\<lambda>x. if x \<notin> dom h\<^sub>0' then h\<^sub>0 x else None"])
-     (fastforce intro: ext intro: set_eqI split: option.splits if_split_asm)+
+  using exI[where x="\<lambda>x. if x \<notin> dom h\<^sub>0' then h\<^sub>0 x else None"]
+  by (rule iffI, clarsimp)
+     (fastforce intro: set_eqI split: option.splits if_split_asm)+
 
 lemma map_le_conv2:
   "h\<^sub>0' \<subseteq>\<^sub>m h\<^sub>0 = (\<exists>h\<^sub>1. h\<^sub>0 = h\<^sub>0' ++ h\<^sub>1 \<and> h\<^sub>0' \<bottom> h\<^sub>1)"
-  by (case_tac "h\<^sub>0'=h\<^sub>0", insert map_le_conv, auto intro: exI[where x=empty])
+  by (case_tac "h\<^sub>0'=h\<^sub>0", insert map_le_conv, auto intro: exI[where x=Map.empty])
 
 
 subsection {* Map disjunction and restriction *}
@@ -545,8 +542,8 @@ lemma map_disj_restrict_dom [simp]:
   by (force simp: map_disj_def)
 
 lemma restrict_map_disj_dom_empty:
-  "h \<bottom> h' \<Longrightarrow> h |` dom h' = empty"
-  by (fastforce simp: map_disj_def restrict_map_def intro: ext)
+  "h \<bottom> h' \<Longrightarrow> h |` dom h' = Map.empty"
+  by (fastforce simp: map_disj_def restrict_map_def)
 
 lemma restrict_map_univ_disj_eq:
   "h \<bottom> h' \<Longrightarrow> h |` (UNIV - dom h') = h"
@@ -590,9 +587,8 @@ lemma map_le_sub_dom:
 
 lemma map_submap_break:
   "\<lbrakk> h \<subseteq>\<^sub>m h' \<rbrakk> \<Longrightarrow> h' = (h' |` (UNIV - dom h)) ++ h"
-  by (fastforce intro!: ext split: option.splits
-               simp: map_le_restrict restrict_map_def map_le_def map_add_def
-                     dom_def)
+  by (fastforce split: option.splits
+                simp: map_le_restrict restrict_map_def map_le_def map_add_def dom_def)
 
 lemma map_add_disj_restrict_both:
   "\<lbrakk> h\<^sub>0 \<bottom> h\<^sub>1; S \<inter> S' = {}; T \<inter> T' = {} \<rbrakk>

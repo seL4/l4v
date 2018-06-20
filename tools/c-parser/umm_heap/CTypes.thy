@@ -564,17 +564,12 @@ lemma td_set_wf_size_desc [rule_format]:
   "(\<forall>s m n. wf_size_desc_pair x \<longrightarrow> ((s::'a typ_desc),m) \<in> td_set_pair x n \<longrightarrow> wf_size_desc s)"
   by (induct t and st and ts and x, auto) force
 
-definition
-  size_char :: "char \<Rightarrow> nat"
-where
-  "size_char \<equiv> \<lambda>c. 0"
-
 lemma td_set_size_lte':
   "(\<forall>s k m. ((s::'a typ_desc),k) \<in> td_set t m \<longrightarrow> size s = size t \<and> s=t \<and> k=m \<or> size s < size t)"
   "(\<forall>s k m. ((s::'a typ_desc),k) \<in> td_set_struct st m \<longrightarrow> size s < size st)"
-  "(\<forall>s k m. ((s::'a typ_desc),k) \<in> td_set_list xs m \<longrightarrow> size s < size_list (size_dt_pair size (size_list size_char)) xs)"
-  "(\<forall>s k m. ((s::'a typ_desc),k) \<in> td_set_pair x m \<longrightarrow> size s < size_dt_pair size (size_list size_char) x)"
-  by (induct t and st and xs and x) (force simp add: size_char_def)+
+  "(\<forall>s k m. ((s::'a typ_desc),k) \<in> td_set_list xs m \<longrightarrow> size s < size_list (size_dt_pair size (\<lambda>_. 0)) xs)"
+  "(\<forall>s k m. ((s::'a typ_desc),k) \<in> td_set_pair x m \<longrightarrow> size s < size_dt_pair size (\<lambda>_. 0) x)"
+  by (induct t and st and xs and x) force+
 
 lemma td_set_size_lte:
   "(s,k) \<in> td_set t m \<Longrightarrow> size s = size t \<and> s=t \<and> k=m \<or>
@@ -586,7 +581,7 @@ lemma td_set_struct_size_lte:
   by (simp add: td_set_size_lte')
 
 lemma td_set_list_size_lte:
-  "(s,k) \<in> td_set_list ts m \<Longrightarrow> size s < size_list (size_dt_pair size (size_list size_char)) ts"
+  "(s,k) \<in> td_set_list ts m \<Longrightarrow> size s < size_list (size_dt_pair size (\<lambda>_. 0)) ts"
   by (simp add: td_set_size_lte')
 
 lemma td_aggregate_not_in_td_set_list [simp]:
@@ -2744,7 +2739,7 @@ lemma ptr_aligned_plus:
   shows "ptr_aligned (p +\<^sub>p i)"
 proof -
   have "int (align_of TYPE('a)) dvd (i * int (size_of TYPE('a)))"
-    by (metis dvd_mult zdvd_int align_size_of)
+    by (simp add: align_size_of)
   with aligned show ?thesis
     apply (case_tac p, simp add: ptr_aligned_def ptr_add_def scast_id)
     apply (simp only: unat_simps len_signed)
@@ -2957,9 +2952,9 @@ lemma wf_size_desc_fm':
   "wf_size_desc_struct (st::'a typ_struct) = fold_td_struct (typ_name t) wfsd (map_td_struct (\<lambda>n x d. 0 < n) st)"
   "ts \<noteq> [] \<longrightarrow> wf_size_desc_list (ts::'a typ_pair list) = fold_td_list (typ_name t) wfsd (map_td_list (\<lambda>n x d. 0 < n) ts)"
   "wf_size_desc_pair (x::'a typ_pair) = fold_td_pair wfsd (map_td_pair (\<lambda>n x d. 0 < n) x)"
-apply(induct t and st and ts and x)
-     apply(auto simp: wfsd_def split: dt_pair.splits)
-done
+  apply(induct t and st and ts and x)
+       apply(auto simp: wfsd_def split: dt_pair.splits)
+  done
 
 lemma wf_size_desc_fm:
   "wf_size_desc (t::'a typ_desc) \<equiv> fold_td wfsd (map_td (\<lambda>n algn d. 0 < n) t)"

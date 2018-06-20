@@ -445,7 +445,7 @@ let
         end
       else thy
 
-  val globloc_expr = ([(globloc, (("", false), Expression.Named []))], [])
+  val globloc_expr = ([(globloc, (("", false), (Expression.Named [], [])))], [])
 
   (* three levels of folding - woohoo *)
   fun add_spec_locales ((name,specs), (localemap, thy)) = let
