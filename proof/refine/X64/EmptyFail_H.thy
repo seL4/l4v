@@ -108,7 +108,7 @@ lemma constOnFailure_empty_fail[intro!, wp, simp]:
   by (simp add: constOnFailure_def const_def empty_fail_catch)
 
 lemma ArchRetypeDecls_H_deriveCap_empty_fail[intro!, wp, simp]:
-  "isPageTableCap y \<or> isPageDirectoryCap y \<or> isPageCap y
+  "isPageTableCap y \<or> isPageDirectoryCap y \<or> isPageCap y \<or> isIOPortControlCap y
    \<or> isASIDControlCap y \<or> isASIDPoolCap y \<or> isPDPointerTableCap y \<or> isPML4Cap y \<or> isIOPortCap y
    \<Longrightarrow> empty_fail (Arch.deriveCap x y)"
   apply (simp add: X64_H.deriveCap_def)
