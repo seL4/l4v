@@ -20,7 +20,7 @@ type_synonym ('a,'b) map_assert = "('a \<rightharpoonup> 'b) \<Rightarrow> bool"
 type_synonym heap_assert = "(addr \<times> s_heap_index,s_heap_value) map_assert"
 
 definition sep_emp :: "('a,'b) map_assert" ("\<box>") where
-  "sep_emp \<equiv> (=) empty"
+  "sep_emp \<equiv> (=) Map.empty"
 
 definition sep_true :: "('a,'b) map_assert" where
   "sep_true \<equiv> \<lambda>s. True"
@@ -94,11 +94,11 @@ syntax
 text {* ---- *}
 
 lemma sep_empD:
-  "\<box> s \<Longrightarrow> s = empty"
+  "\<box> s \<Longrightarrow> s = Map.empty"
   by (simp add: sep_emp_def)
 
 lemma sep_emp_empty [simp]:
-  "\<box> empty"
+  "\<box> Map.empty"
   by (simp add: sep_emp_def)
 
 lemma sep_true [simp]:
@@ -407,7 +407,7 @@ lemma sep_map'_g_exc:
 
 lemma sep_conj_sep_true:
   "P s \<Longrightarrow> (P \<and>\<^sup>* sep_true) s"
-  by (erule_tac s\<^sub>1=empty in sep_conjI, simp+)
+  by (erule_tac s\<^sub>1=Map.empty in sep_conjI, simp+)
 
 lemma sep_map_sep_map'_exc [simp]:
   "(p \<mapsto>\<^sub>g v) s \<Longrightarrow> (p \<hookrightarrow>\<^sub>g v) s"
@@ -415,7 +415,7 @@ lemma sep_map_sep_map'_exc [simp]:
 
 lemma sep_conj_true [simp]:
   "(sep_true \<and>\<^sup>* sep_true) = sep_true"
-  by (rule ext, simp, rule_tac s\<^sub>0=x and s\<^sub>1=empty in sep_conjI, auto)
+  by (rule ext, simp, rule_tac s\<^sub>0=x and s\<^sub>1=Map.empty in sep_conjI, auto)
 
 lemma sep_conj_assocD:
   assumes l: "((P \<and>\<^sup>* Q) \<and>\<^sup>* R) s"
@@ -495,7 +495,7 @@ proof (rule ext, rule)
 next
   fix x
   assume "P x"
-  moreover have "\<box> empty" by simp
+  moreover have "\<box> Map.empty" by simp
   ultimately show "(P \<and>\<^sup>* \<box>) x" by - (erule (1) sep_conjI, auto)
 qed
 
@@ -586,7 +586,7 @@ lemma sep_emp_sep_impl [simp]:
   "(\<box> \<longrightarrow>\<^sup>* P) = P"
 apply(rule ext)
 apply(auto simp: sep_impl_def)
- apply(drule_tac x=empty in spec)
+ apply(drule_tac x=Map.empty in spec)
  apply auto
 apply(drule sep_empD)
 apply simp
@@ -602,7 +602,7 @@ lemma sep_impl_sep_false [simp]:
 
 lemma sep_impl_sep_true_P:
   "(sep_true \<longrightarrow>\<^sup>* P) s \<Longrightarrow> P s"
-  by (auto dest!: sep_implD, drule_tac x=empty in spec, simp)
+  by (auto dest!: sep_implD, drule_tac x=Map.empty in spec, simp)
 
 lemma sep_impl_sep_true_false [simp]:
   "(sep_true \<longrightarrow>\<^sup>* sep_false) = sep_false"
@@ -1012,11 +1012,11 @@ lemma map_restrict_dom_exact:
   by (force simp: restrict_map_def None_com intro: dom_epsI)
 
 lemma map_restrict_dom_exact2:
-  "\<lbrakk> dom_exact P; P s\<^sub>0; s\<^sub>0 \<bottom> s\<^sub>1 \<rbrakk> \<Longrightarrow> (s\<^sub>1 |` dom_eps P) = empty"
+  "\<lbrakk> dom_exact P; P s\<^sub>0; s\<^sub>0 \<bottom> s\<^sub>1 \<rbrakk> \<Longrightarrow> (s\<^sub>1 |` dom_eps P) = Map.empty"
   by (force simp: restrict_map_def map_disj_def dest: dom_epsD)
 
 lemma map_restrict_dom_exact3:
-  "\<lbrakk> dom_exact P; P s \<rbrakk> \<Longrightarrow> s |` (UNIV - dom_eps P) = empty"
+  "\<lbrakk> dom_exact P; P s \<rbrakk> \<Longrightarrow> s |` (UNIV - dom_eps P) = Map.empty"
   by (force simp: restrict_map_def dest: dom_epsI)
 
 lemma map_add_restrict_dom_exact:
@@ -1055,7 +1055,7 @@ lemma dom_exact_sep_map:
   by (clarsimp simp: dom_exact_def sep_map_def)
 
 lemma dom_exact_P_emp:
-  "\<lbrakk> dom_exact P; P empty; P s \<rbrakk> \<Longrightarrow> s = empty"
+  "\<lbrakk> dom_exact P; P Map.empty; P s \<rbrakk> \<Longrightarrow> s = Map.empty"
   by (auto simp: dom_exact_def)
 
 
@@ -1161,7 +1161,7 @@ lemma non_empty_sep_map':
 apply(unfold sep_map'_def)
 apply(clarsimp simp: non_empty_def sep_conj_ac)
 apply(rule_tac x="singleton p v h (ptr_retyp p d)" in exI)
-apply(rule_tac s\<^sub>0=empty in sep_conjI)
+apply(rule_tac s\<^sub>0=Map.empty in sep_conjI)
    apply simp
   apply(rule sep_map_singleton)
   apply(erule ptr_retyp_h_t_valid)
@@ -1170,7 +1170,7 @@ apply simp
 done
 
 lemma non_empty_sep_impl:
-  "\<not> P empty \<Longrightarrow> non_empty (P \<longrightarrow>\<^sup>* Q)"
+  "\<not> P Map.empty \<Longrightarrow> non_empty (P \<longrightarrow>\<^sup>* Q)"
 apply(clarsimp simp: non_empty_def)
 apply(rule_tac x="\<lambda>s. Some undefined" in exI)
 apply(rule sep_implI)

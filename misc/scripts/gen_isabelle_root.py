@@ -57,10 +57,8 @@ output_dir = os.path.dirname(options.output)
 with open(options.output, "w") as output:
     # Fetch list of files to test.
     theories = []
-    c_files = []
     for d in options.input_dir:
         theories += sorted(glob.glob(os.path.join(d, "*.thy")))
-        c_files += sorted(glob.glob(os.path.join(d, "*.c")))
 
     if options.theory_file:
         session_name = os.path.splitext(os.path.basename(options.output))[0]
@@ -91,8 +89,3 @@ with open(options.output, "w") as output:
             thy = os.path.relpath(i, output_dir)
             thy = os.path.splitext(thy)[0]
             output.write("    \"%s\"\n" % thy)
-        output.write("  files\n")
-        for i in c_files:
-            output.write("    \"%s\"\n" % os.path.relpath(i, output_dir))
-        output.write("\n")
-

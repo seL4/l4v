@@ -31,16 +31,15 @@ text {* A typ_desc wraps a typ_struct with a typ name.
         (for typ_uinfo), or an Aggregate, with a list of typ_desc,
         field name pairs.*}
 
-datatype (plugins del: size)
+datatype
          'a typ_desc   = TypDesc "'a typ_struct" typ_name
     and  'a typ_struct = TypScalar nat nat "'a" |
                          TypAggregate "('a typ_desc,field_name) dt_pair list"
 
-(* FIXME: eliminate eventually *)
 datatype_compat dt_pair
 datatype_compat typ_desc typ_struct
 
-(* FIXME: these recreate the precise order of subgoals of the old datatype package *)
+(* These recreate the precise order of subgoals of the old datatype package *)
 lemma typ_desc_induct:
   "\<lbrakk>\<And>typ_struct list. P2 typ_struct \<Longrightarrow> P1 (TypDesc typ_struct list); \<And>nat1 nat2 a. P2 (TypScalar nat1 nat2 a);
        \<And>list. P3 list \<Longrightarrow> P2 (TypAggregate list); P3 []; \<And>dt_pair list. \<lbrakk>P4 dt_pair; P3 list\<rbrakk> \<Longrightarrow> P3 (dt_pair # list);

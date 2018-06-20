@@ -210,15 +210,15 @@ lemma mem_safe_StuckD:
 
 lemma lift_state_d_restrict [simp]:
   "lift_state (h,(restrict_s d X)) = lift_state (h,d) |` X"
-  by (auto simp: lift_state_def restrict_map_def restrict_s_def intro!: ext split: s_heap_index.splits)
+  by (auto simp: lift_state_def restrict_map_def restrict_s_def split: s_heap_index.splits)
 
 lemma dom_merge_restrict [simp]:
   "(x ++ y) |` dom y = y"
-  by (force simp: restrict_map_def None_com intro: ext)
+  by (rule map_add_restrict_dom_right)
 
 lemma dom_compl_restrict [simp]:
-  "x |` (UNIV - dom x) = empty"
-  by (force simp: restrict_map_def intro: ext)
+  "x |` (UNIV - dom x) = Map.empty"
+  by (force simp: restrict_map_def)
 
 lemma lift_state_point_eq_mod:
   "\<lbrakk> point_eq_mod (lift_state (h,d)) (lift_state (h',d')) X \<rbrakk> \<Longrightarrow>

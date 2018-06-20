@@ -58,7 +58,7 @@ next
     by (auto simp: card_Suc_eq)
   with `finite S` Suc.hyps [of B]
   obtain f where IH: "(\<forall>m<n. f m \<in> B) \<and> (\<forall>x. x \<in> B \<longrightarrow> (\<exists>!m. m < n \<and> f m = x))" by auto
-  def f' \<equiv> "\<lambda>m. if m = card B then b else f m"
+  define f' where "f' \<equiv> \<lambda>m. if m = card B then b else f m"
   from Suc.prems S IH
   have "(\<forall>m<Suc n. f' m \<in> S) \<and> (\<forall>x. x \<in> S \<longrightarrow> (\<exists>!m. m < Suc n \<and> f' m = x))"
     unfolding f'_def

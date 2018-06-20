@@ -374,7 +374,7 @@ fun mk_SOME t = let
 in
   Const(@{const_name "Hilbert_Choice.Eps"}, ty --> dom) $ t
 end
-val conjunction = @{term "op &"}
+val conjunction = @{term "(&)"}
 fun mk_conj(t1,t2) = conjunction $ t1 $ t2
 fun list_mk_conj cs =
     case cs of

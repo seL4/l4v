@@ -260,11 +260,11 @@ lemma list_size_char:
   by (induct xs) auto
 
 lemma size_ti_extend_ti [simp]:
-  "aggregate ti \<Longrightarrow> size (extend_ti ti t fn) = size ti + size t + 2 + size fn"
-apply(cases ti, clarsimp)
-apply(rename_tac typ_struct xs)
-apply(case_tac typ_struct, auto simp: list_size_char)
-done
+  "aggregate ti \<Longrightarrow> size (extend_ti ti t fn) = size ti + size t + 2"
+  apply(cases ti, clarsimp)
+  apply(rename_tac typ_struct xs)
+  apply(case_tac typ_struct, auto simp: list_size_char)
+  done
 
 lemma typ_name_empty_typ_info [simp]:
   "typ_name (empty_typ_info tn) = tn"

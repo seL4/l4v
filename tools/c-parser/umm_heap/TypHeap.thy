@@ -61,7 +61,7 @@ where
   "s_footprint p \<equiv> s_footprint_untyped (ptr_val p) (typ_uinfo_t TYPE('a))"
 
 definition empty_htd :: "heap_typ_desc" where
-  "empty_htd \<equiv> \<lambda>x. (False,empty)"
+  "empty_htd \<equiv> \<lambda>x. (False,Map.empty)"
 
 definition dom_s :: "heap_typ_desc \<Rightarrow> s_addr set" where
   "dom_s d \<equiv> {(x,SIndexVal) | x. fst (d x)} \<union>
@@ -338,35 +338,31 @@ lemma typ_slice_t_not_empty [simp]:
   by (case_tac t, simp)
 
 lemma list_map_typ_slice_t_not_empty [simp]:
-  "list_map (typ_slice_t t n) \<noteq> empty"
-apply(simp add: list_map_def)
-apply(case_tac "typ_slice_t t n")
-apply(auto simp: )
-apply(drule_tac x=0 in fun_cong)
-apply simp
-done
+  "list_map (typ_slice_t t n) \<noteq> Map.empty"
+  apply(simp add: list_map_def)
+  apply(case_tac "typ_slice_t t n")
+   apply auto[1]
+  by (simp add: upt_rec)
 
 lemma s_footprint:
   "s_footprint (p::'a::c_type ptr) = {(ptr_val p + of_nat x,k) | x k. x < size_of TYPE('a) \<and>
       (k=SIndexVal \<or>
        (\<exists>n. k=SIndexTyp n \<and> n < length (typ_slice_t (typ_uinfo_t TYPE('a)) x)))}"
-apply(auto simp: s_footprint_def s_footprint_untyped_def size_of_def )
-done
+  by (auto simp: s_footprint_def s_footprint_untyped_def size_of_def )
 
 lemma ptr_val_SIndexVal_in_s_footprint [simp]:
   "(ptr_val p, SIndexVal) \<in> s_footprint (p::'a::mem_type ptr)"
-apply(simp add: s_footprint)
-apply(rule_tac x=0 in exI)
-apply auto
-done
+  apply(simp add: s_footprint)
+  apply(rule_tac x=0 in exI)
+  by auto
 
 lemma s_footprintI:
   "\<lbrakk> n < length (typ_slice_t (typ_uinfo_t TYPE('a)) x); x < size_of TYPE('a) \<rbrakk> \<Longrightarrow>
       (ptr_val p + of_nat x, SIndexTyp n) \<in> s_footprint (p::'a::c_type ptr)"
-apply(simp add: s_footprint)
-apply(rule_tac x=x in exI)
-apply auto
-done
+  apply(simp add: s_footprint)
+  apply(rule_tac x=x in exI)
+  apply auto
+  done
 
 lemma s_footprintI2:
   "x < size_of TYPE('a) \<Longrightarrow>
@@ -526,7 +522,7 @@ lemma lift_typ_heap_g:
   by (fast dest: lift_typ_heap_s_valid s_valid_g)
 
 lemma lift_state_empty [simp]:
-  "lift_state (h,empty_htd) = empty"
+  "lift_state (h,empty_htd) = Map.empty"
 apply(rule ext)
 apply(auto simp: lift_state_def empty_htd_def split: s_heap_index.splits)
 done
@@ -1420,94 +1416,88 @@ lemma size_of_neq_implies_typ_uinfo_t_neq [simp]:
 
 lemma guard_mono_self [simp]:
   "guard_mono g g"
-apply(clarsimp simp: guard_mono_def)
-apply(frule td_set_field_lookupD)
-apply(drule td_set_size_lte)
-apply simp
-done
+  apply(clarsimp simp: guard_mono_def)
+  apply(frule td_set_field_lookupD)
+  apply(drule td_set_size_lte)
+  apply simp
+  done
 
 lemma field_lookup_offset_size:
   "field_lookup (typ_info_t TYPE('a::c_type)) f 0 = Some (t,n) \<Longrightarrow>
       size_td t + n \<le> size_td (typ_info_t TYPE('a))"
-apply(drule td_set_field_lookupD)
-apply(drule td_set_offset_size)
-apply simp
-done
+  apply(drule td_set_field_lookupD)
+  apply(drule td_set_offset_size)
+  apply simp
+  done
 
 lemma sub_h_t_valid':
   "\<lbrakk> d,g \<Turnstile>\<^sub>t (p::'a::mem_type ptr); field_lookup (typ_uinfo_t TYPE('a)) f 0
       = Some (typ_uinfo_t TYPE('b),n);
       guard_mono g (g'::'b::mem_type ptr_guard)  \<rbrakk> \<Longrightarrow>
       d,g' \<Turnstile>\<^sub>t ((Ptr (ptr_val p + of_nat n))::'b::mem_type ptr)"
-apply(auto simp: h_t_valid_def guard_mono_def)
-apply(clarsimp simp: valid_footprint_def Let_def size_of_tag)
-apply(drule_tac x="n+y" in spec, erule impE)
- prefer 2
- apply clarsimp
- apply(simp add: ac_simps)
- apply(drule td_set_field_lookupD)
- apply(drule typ_slice_td_set)
+  apply(clarsimp simp: h_t_valid_def guard_mono_def)
+  apply(clarsimp simp: valid_footprint_def Let_def size_of_tag)
+  apply(drule_tac x="n+y" in spec, erule impE)
+   prefer 2
+   apply clarsimp
+   apply(simp add: ac_simps)
+   apply(drule td_set_field_lookupD)
+   apply(drule typ_slice_td_set)
+    apply(simp add: size_of_def typ_uinfo_t_def)
+   apply(erule map_list_map_trans)
+   apply(clarsimp simp: ac_simps)
+  apply(drule td_set_field_lookupD)
+  apply(drule td_set_offset_size)
   apply(simp add: size_of_def typ_uinfo_t_def)
- apply(erule map_list_map_trans)
- apply(clarsimp simp: ac_simps)
-apply(drule td_set_field_lookupD)
-apply(drule td_set_offset_size)
-apply(simp add: size_of_def typ_uinfo_t_def)
-done
+  done
 
 lemma sub_h_t_valid:
   "\<lbrakk> d,g \<Turnstile>\<^sub>t (p::'a::mem_type ptr); (typ_uinfo_t TYPE('b),n) \<in>
-      td_set (typ_uinfo_t TYPE('a)) 0 (*; guard_mono g p g' *) \<rbrakk> \<Longrightarrow>
+      td_set (typ_uinfo_t TYPE('a)) 0 \<rbrakk> \<Longrightarrow>
       d,(\<lambda>x. True) \<Turnstile>\<^sub>t ((Ptr (ptr_val p + of_nat n))::'b::mem_type ptr)"
-apply(subst (asm) td_set_field_lookup)
- apply(simp add: typ_uinfo_t_def export_uinfo_def wf_desc_map)
-apply clarsimp
-apply(rule sub_h_t_valid')
-  apply assumption+
-apply(clarsimp simp: guard_mono_def)
-done
+  apply(subst (asm) td_set_field_lookup)
+   apply(simp add: typ_uinfo_t_def export_uinfo_def wf_desc_map)
+  apply clarsimp
+  apply(rule sub_h_t_valid')
+    apply assumption+
+  apply(clarsimp simp: guard_mono_def)
+  done
 
 lemma h_t_valid_mono:
   "\<lbrakk> field_lookup (typ_info_t TYPE('a)) f 0 = Some (s,n);
       export_uinfo s = typ_uinfo_t TYPE('b); guard_mono g g' \<rbrakk> \<Longrightarrow>
       d,g \<Turnstile>\<^sub>t (p::'a::mem_type ptr) \<longrightarrow> d,g' \<Turnstile>\<^sub>t (Ptr (&(p\<rightarrow>f))::'b::mem_type ptr)"
-apply(clarsimp simp: field_lvalue_def)
-apply(drule field_lookup_export_uinfo_Some)
-apply(clarsimp simp: field_offset_def typ_uinfo_t_def field_offset_untyped_def)
-apply(rule sub_h_t_valid')
-  apply fast
- apply(clarsimp simp: typ_uinfo_t_def)
- apply fast
-apply assumption
-done
+  apply(clarsimp simp: field_lvalue_def)
+  apply(drule field_lookup_export_uinfo_Some)
+  apply(clarsimp simp: field_offset_def typ_uinfo_t_def field_offset_untyped_def)
+  apply(rule sub_h_t_valid')
+    apply fast
+   apply(clarsimp simp: typ_uinfo_t_def)
+   apply fast
+  apply assumption
+  done
 
 lemma s_valid_mono:
   "\<lbrakk> field_lookup (typ_info_t TYPE('a)) f 0 = Some (s,n);
       export_uinfo s = typ_uinfo_t TYPE('b); guard_mono g g' \<rbrakk> \<Longrightarrow>
       d,g \<Turnstile>\<^sub>s (p::'a::mem_type ptr) \<longrightarrow> d,g' \<Turnstile>\<^sub>s (Ptr (&(p\<rightarrow>f))::'b::mem_type ptr)"
-apply(unfold s_valid_def)
-apply(erule (2) h_t_valid_mono)
-done
+  apply(unfold s_valid_def)
+  apply(erule (2) h_t_valid_mono)
+  done
 
 lemma take_heap_list_le [rule_format]:
   "\<forall>k x. k \<le> n \<longrightarrow> take k (heap_list h n x) = heap_list h k x"
-apply(induct_tac n)
- apply simp
-apply clarsimp
-apply(case_tac k)
- apply simp
-apply clarsimp
-done
+  apply(induct_tac n; clarsimp)
+  apply(case_tac k; simp)
+  done
 
 lemma drop_heap_list_le [rule_format]:
   "\<forall>k x. k \<le> n \<longrightarrow> drop k (heap_list h n x) = heap_list h (n - k) (x + of_nat k)"
-apply(induct_tac n)
- apply simp
-apply clarsimp
-apply(case_tac k)
- apply simp
-apply(clarsimp simp: ac_simps)
-done
+  apply(induct_tac n; clarsimp)
+  apply(case_tac k)
+   apply simp
+  apply(clarsimp simp: ac_simps)
+  done
 
 lemma h_val_field_from_bytes:
   "\<lbrakk> field_ti TYPE('a::{mem_type}) f = Some t;
@@ -1518,9 +1508,8 @@ lemma h_val_field_from_bytes:
   apply (frule field_lookup_export_uinfo_Some)
   apply (frule_tac bs="heap_list (hrs_mem h) (size_of TYPE('a)) (ptr_val pa)" in fi_fa_consistentD)
    apply simp
-  apply (clarsimp simp: field_lvalue_def field_offset_def
-      field_offset_untyped_def typ_uinfo_t_def field_names_def
-      access_ti\<^sub>0_def)
+  apply (clarsimp simp: field_lvalue_def field_offset_def field_offset_untyped_def typ_uinfo_t_def
+                        field_names_def access_ti\<^sub>0_def)
   apply (subst drop_heap_list_le)
    apply(simp add: size_of_def)
    apply(drule td_set_field_lookupD)
@@ -1547,38 +1536,38 @@ lemma lift_typ_heap_mono:
       export_uinfo t = typ_uinfo_t TYPE('b); guard_mono g g'
       \<rbrakk> \<Longrightarrow>
           lift_typ_heap g' s (Ptr (&(p\<rightarrow>f))::'b::mem_type ptr) = Some (from_bytes (access_ti\<^sub>0 t v))"
-apply(auto simp: lift_typ_heap_if split: if_split_asm)
- prefer 2
- apply(drule (2) s_valid_mono)
- apply(erule impE)
-  apply fast
- apply assumption
-apply(clarsimp simp: heap_list_s_def)
-apply(frule field_lookup_export_uinfo_Some)
-apply(frule_tac bs="heap_list (proj_h s) (size_of TYPE('a)) (ptr_val p)" in fi_fa_consistentD)
- apply simp
-apply simp
+  apply(auto simp: lift_typ_heap_if split: if_split_asm)
+   prefer 2
+   apply(drule (2) s_valid_mono)
+   apply(erule impE)
+    apply fast
+   apply assumption
+  apply(clarsimp simp: heap_list_s_def)
+  apply(frule field_lookup_export_uinfo_Some)
+  apply(frule_tac bs="heap_list (proj_h s) (size_of TYPE('a)) (ptr_val p)" in fi_fa_consistentD)
+   apply simp
+  apply simp
 
-apply(simp add: field_lvalue_def field_offset_def field_offset_untyped_def typ_uinfo_t_def field_names_def access_ti\<^sub>0_def)
-apply(subst drop_heap_list_le)
- apply(simp add: size_of_def)
- apply(drule td_set_field_lookupD)
- apply(drule td_set_offset_size)
- apply simp
-apply(subst take_heap_list_le)
- apply(simp add: size_of_def)
- apply(drule td_set_field_lookupD)
- apply(drule td_set_offset_size)
- apply simp
-apply(fold norm_bytes_def)
-apply(subgoal_tac "size_td t = size_of TYPE('b)")
- apply(simp add: norm)
-apply(clarsimp simp: size_of_def)
-apply(subst typ_uinfo_size [symmetric])
-apply(unfold typ_uinfo_t_def)
-apply(drule sym)
-apply simp
-done
+  apply(simp add: field_lvalue_def field_offset_def field_offset_untyped_def typ_uinfo_t_def field_names_def access_ti\<^sub>0_def)
+  apply(subst drop_heap_list_le)
+   apply(simp add: size_of_def)
+   apply(drule td_set_field_lookupD)
+   apply(drule td_set_offset_size)
+   apply simp
+  apply(subst take_heap_list_le)
+   apply(simp add: size_of_def)
+   apply(drule td_set_field_lookupD)
+   apply(drule td_set_offset_size)
+   apply simp
+  apply(fold norm_bytes_def)
+  apply(subgoal_tac "size_td t = size_of TYPE('b)")
+   apply(simp add: norm)
+  apply(clarsimp simp: size_of_def)
+  apply(subst typ_uinfo_size [symmetric])
+  apply(unfold typ_uinfo_t_def)
+  apply(drule sym)
+  apply simp
+  done
 
 lemma lift_t_mono:
   "\<lbrakk> field_lookup (typ_info_t TYPE('a)) f 0 = Some (t,n);
@@ -1586,15 +1575,14 @@ lemma lift_t_mono:
       export_uinfo t = typ_uinfo_t TYPE('b); guard_mono g g'
       \<rbrakk> \<Longrightarrow>
           lift_t g' s (Ptr (&(p\<rightarrow>f))::'b::mem_type ptr) = Some (from_bytes (access_ti\<^sub>0 t v))"
-apply(clarsimp simp: lift_t_def)
-apply(drule_tac s="lift_state s" in lift_typ_heap_mono)
-apply auto
-done
+  apply(clarsimp simp: lift_t_def)
+  apply(drule_tac s="lift_state s" in lift_typ_heap_mono)
+     apply auto
+  done
 
 lemma align_td_field_lookupD:
   "field_lookup (t::'a typ_desc) f m = Some (s, n) \<Longrightarrow> align_td s \<le> align_td t"
-apply(simp add: align_td_field_lookup)
-done
+  by(simp add: align_td_field_lookup)
 
 lemma align_td_uinfo:
   "align_td (typ_uinfo_t TYPE('a)) = align_td (typ_info_t TYPE('a::c_type))"
@@ -1602,14 +1590,14 @@ lemma align_td_uinfo:
 
 lemma align_field_uinfo:
   "align_field (typ_uinfo_t TYPE('a)) = align_field (typ_info_t TYPE('a::c_type))"
-apply(auto simp: align_field_def)
- apply(drule field_lookup_export_uinfo_Some)
- apply(clarsimp simp: typ_uinfo_t_def)
- apply(force simp: align_td_uinfo)
-apply(clarsimp simp: typ_uinfo_t_def)
-apply(drule field_lookup_export_uinfo_Some_rev)
-apply clarsimp
-done
+  apply(auto simp: align_field_def) (* FIXME auto *)
+   apply(drule field_lookup_export_uinfo_Some)
+   apply(clarsimp simp: typ_uinfo_t_def)
+   apply(force simp: align_td_uinfo)
+  apply(clarsimp simp: typ_uinfo_t_def)
+  apply(drule field_lookup_export_uinfo_Some_rev)
+  apply clarsimp
+  done
 
 lemma ptr_aligned_mono':
   "\<lbrakk> field_lookup (typ_uinfo_t TYPE('a)) f 0 = Some (typ_uinfo_t TYPE('b),n)
@@ -1678,19 +1666,17 @@ done
 lemma size_map_td:
   "size (map_td f t) = size t"
   "size (map_td_struct f st) = size st"
-  "size_list (size_dt_pair size (size_list size_char)) (map_td_list f ts) = size_list (size_dt_pair size (size_list size_char)) ts"
-  "size_dt_pair size (size_list size_char) (map_td_pair f x) = size_dt_pair size (size_list size_char) x"
-apply(induct t and st and ts and x)
-apply (auto simp: size_char_def)
-done
+  "size_list (size_dt_pair size (\<lambda>_. 0)) (map_td_list f ts) = size_list (size_dt_pair size (\<lambda>_. 0)) ts"
+  "size_dt_pair size (\<lambda>_. 0) (map_td_pair f x) = size_dt_pair size (\<lambda>_. 0) x"
+  by (induct t and st and ts and x) auto
 
 (* case where 'b is a field type of 'a *)
 
 lemma field_names_size':
   "field_names t s \<noteq> [] \<longrightarrow> size s \<le> size (t::'a typ_info)"
   "field_names_struct st s \<noteq> [] \<longrightarrow> size s \<le> size (st::'a field_desc typ_struct)"
-  "field_names_list ts s \<noteq> [] \<longrightarrow> size s \<le> size_list (size_dt_pair size (size_list size_char)) (ts::('a typ_info,field_name) dt_pair list)"
-  "field_names_pair x s \<noteq> [] \<longrightarrow> size s \<le> size_dt_pair size (size_list size_char) (x::('a typ_info,field_name) dt_pair)"
+  "field_names_list ts s \<noteq> [] \<longrightarrow> size s \<le> size_list (size_dt_pair size (\<lambda>_. 0)) (ts::('a typ_info,field_name) dt_pair list)"
+  "field_names_pair x s \<noteq> [] \<longrightarrow> size s \<le> size_dt_pair size (\<lambda>_. 0) (x::('a typ_info,field_name) dt_pair)"
 apply(induct t and st and ts and x)
      apply(auto simp: size_map_td size_char_def)
 done
@@ -2483,7 +2469,7 @@ lemma heap_valid_footprint:
   by (simp add: heap_footprint_def)
 
 lemma heap_footprint_Some:
-  "x \<in> heap_footprint d t \<Longrightarrow> d x \<noteq> (False,empty)"
+  "x \<in> heap_footprint d t \<Longrightarrow> d x \<noteq> (False,Map.empty)"
   by (auto simp: heap_footprint_def intvl_def valid_footprint_def Let_def)
 
 
@@ -2604,7 +2590,7 @@ lemma typ_slices_index [simp]:
   by (simp add: typ_slices_def)
 
 lemma empty_not_in_typ_slices [simp]:
-  "empty \<notin> set (typ_slices TYPE('a::c_type))"
+  "Map.empty \<notin> set (typ_slices TYPE('a::c_type))"
 apply(auto simp: typ_slices_def)
 apply(drule sym, simp)
 done
@@ -2634,7 +2620,7 @@ lemma dom_s_empty_htd [simp]:
   by (clarsimp simp: empty_htd_def dom_s_def)
 
 lemma dom_s_nempty:
-  "d x \<noteq> (False,empty) \<Longrightarrow> \<exists>k. (x,k) \<in> dom_s d"
+  "d x \<noteq> (False,Map.empty) \<Longrightarrow> \<exists>k. (x,k) \<in> dom_s d"
 apply(clarsimp simp: dom_s_def)
 apply(case_tac "d x")
 apply clarsimp
@@ -2657,7 +2643,7 @@ done
 
 lemma ptr_retyp_None:
   "x \<notin> {ptr_val p..+size_of TYPE('a)} \<Longrightarrow>
-      ptr_retyp (p::'a::mem_type ptr) empty_htd x = (False,empty)"
+      ptr_retyp (p::'a::mem_type ptr) empty_htd x = (False,Map.empty)"
 apply(insert ptr_retyp_dom [of p empty_htd])
 apply(simp only: dom_s_empty_htd)
 apply(rule ccontr)
@@ -2692,11 +2678,11 @@ done
 
 lemma ptr_retyp_Some2:
   "x \<in> {ptr_val (p::'a::mem_type ptr)..+size_of TYPE('a)} \<Longrightarrow>
-      ptr_retyp p d x \<noteq> (False,empty)"
+      ptr_retyp p d x \<noteq> (False,Map.empty)"
   by (auto simp: ptr_retyp_Some ptr_retyp_footprint dest: intvl_neq_start)
 
 lemma snd_empty_htd [simp]:
-  "snd (empty_htd x) = empty"
+  "snd (empty_htd x) = Map.empty"
 apply(auto simp: empty_htd_def)
 done
 

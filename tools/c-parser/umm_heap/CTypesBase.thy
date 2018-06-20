@@ -117,7 +117,7 @@ abbreviation
 
 section "dt_pair: a reimplementation of 2 item tuples"
 
-datatype (plugins del: size)
+datatype
     ('a,'b) dt_pair = DTPair 'a 'b
 
 primrec
