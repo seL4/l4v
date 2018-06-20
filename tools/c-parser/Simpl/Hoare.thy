@@ -411,7 +411,7 @@ proof (rule ccontr)
 qed
 
 lemmas all_imp_to_ex = all_simps (5)
-(*"!!P Q. (ALL x. P x --> Q) = ((EX x. P x) --> Q)"
+(*"\<And>P Q. (\<forall>x. P x \<longrightarrow> Q) = ((\<exists>x. P x) \<longrightarrow> Q)"
 
  Avoid introduction of existential quantification of states on negative
  position.

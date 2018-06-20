@@ -1378,7 +1378,7 @@ ignored.  This leads to the following pattern:\<close>
 
 procedures foo (N::nat|M::nat)
   "\<acute>M :== \<acute>M
-   (* think of body with guards instead *)"
+   \<comment> \<open>think of body with guards instead\<close>"
 
   foo_spec: "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^sub>t (P \<sigma>) \<acute>M :== PROC foo(\<acute>N) (Q \<sigma>)"
   foo_modifies: "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} \<acute>M :== PROC foo(\<acute>N)
