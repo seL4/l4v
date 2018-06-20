@@ -655,6 +655,10 @@ lemma inl_whenE:
   "((Inl x, s') \<in> fst (whenE P f s)) = (P \<and> (Inl x, s') \<in> fst (f s))"
   by (auto simp add: in_whenE)
 
+lemma inr_in_unlessE_throwError[termination_simp]:
+  "(Inr (), s') \<in> fst (unlessE P (throwError E) s) = (P \<and> s'=s)"
+  by (simp add: unlessE_def returnOk_def throwError_def return_def)
+
 lemma in_fail:
   "r \<in> fst (fail s) = False"
   by (simp add: fail_def)
