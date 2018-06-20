@@ -9,7 +9,8 @@
  *)
 
 theory SchedContextInv_AI
-imports "./$L4V_ARCH/ArchIpc_AI"
+  imports "./$L4V_ARCH/ArchIpc_AI" "IpcDet_AI"
+
 begin
 
 

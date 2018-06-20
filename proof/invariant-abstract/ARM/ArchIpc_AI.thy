@@ -127,8 +127,13 @@ lemma data_to_message_info_valid [Ipc_AI_assms]:
 *)
   apply (simp add: valid_message_info_def data_to_message_info_def)
   apply (rule conjI)
-  apply (simp add: word_and_le1 msg_max_length_def msg_max_extra_caps_def Let_def not_less)+
-  sorry
+   apply (simp add: word_and_le1 msg_max_length_def msg_max_extra_caps_def Let_def not_less)+
+  apply (subgoal_tac "(w >> 7) && 3 \<le> 3")
+   apply (subgoal_tac "(3 :: 32 word) \<le> 7")
+    apply (clarsimp simp: order.trans)
+   apply simp
+  apply (clarsimp simp: word_and_le1)
+  done
 
 
 lemma get_extra_cptrs_length[wp, Ipc_AI_assms]:
@@ -308,7 +313,7 @@ lemma lookup_ipc_buffer_in_user_frame[wp, Ipc_AI_assms]:
    apply simp
   apply (simp add: is_nondevice_page_cap_def is_nondevice_page_cap_arch_def case_bool_If
             split: if_splits)
-  sorry
+  done
 
 lemma transfer_caps_loop_cte_wp_at:
   assumes imp: "\<And>cap. P cap \<Longrightarrow> \<not> is_untyped_cap cap"

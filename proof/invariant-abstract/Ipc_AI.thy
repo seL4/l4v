@@ -2469,22 +2469,6 @@ context Ipc_AI begin
 crunch cap_to[wp]: do_ipc_transfer "ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
-lemma receive_ipc_idle_thread[wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace>
-   receive_ipc thread cap is_blocking reply_cap \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
-  apply (simp add: receive_ipc_def)
-  apply (case_tac cap; simp)
-  apply (case_tac reply_cap; simp)
-   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-   apply (rule hoare_seq_ext[OF _ gbn_sp])
-   apply (case_tac ntfnptr; simp)
-    apply (case_tac x; simp)
-      apply (case_tac is_blocking; simp)
-       apply wpsimp
-      apply (wpsimp simp: do_nbrecv_failed_transfer_def)
-     apply (rule hoare_seq_ext[OF _ assert_sp])
-  sorry
-
 (*
 crunch it[wp]: receive_ipc "\<lambda>s::det_ext state. P (idle_thread s)"
   (wp: hoare_drop_imps simp: crunch_simps zipWithM_x_mapM)
@@ -2595,130 +2579,7 @@ crunch pspace_respects_device_region[wp]: as_user "pspace_respects_device_region
   (simp: crunch_simps wp: crunch_wps set_object_pspace_respects_device_region pspace_respects_device_region_dmo)
 
 context Ipc_AI_cont begin
-lemma ri_invs':
-  fixes Q t cap is_blocking reply
-  notes if_split[split del]
-  notes hyp_refs_of_simps[simp del]
-  assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes set_notification_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> complete_signal a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes ext_Q[wp]: "\<And>a (s::'a::state_ext state). \<lbrace>Q and valid_objs\<rbrace> do_extended_op (possible_switch_to a) \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes dit_Q[wp]: "\<And>a b c d e. \<lbrace>valid_mdb and valid_objs and Q\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes failed_transfer_Q[wp]: "\<And>a. \<lbrace>Q\<rbrace> do_nbrecv_failed_transfer a \<lbrace>\<lambda>_. Q\<rbrace>"
-  notes dxo_wp_weak[wp del]
-  shows
-  "\<lbrace>(invs::det_ext state \<Rightarrow> bool) and Q and st_tcb_at active t and ex_nonz_cap_to t
-         and cte_wp_at ((=) cap.NullCap) (t, tcb_cnode_index 3)
-         and (\<lambda>s. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)\<rbrace>
-     receive_ipc t cap is_blocking reply \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>" (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
-  apply (simp add: receive_ipc_def split_def)
-  apply (cases cap, simp_all)
-  apply (rename_tac ep badge rights)
-(*  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (rule hoare_seq_ext[OF _ gbn_sp])
-  apply (rule hoare_seq_ext)
-  (* set up precondition for old proof *)
-   apply (rule_tac R="ko_at (Endpoint x) ep and ?pre" in hoare_vcg_if_split)
-    apply (wp complete_signal_invs)
-   apply (case_tac x)
-    apply (wp | rule hoare_pre, wpc | simp)+
-     apply (simp add: invs_def valid_state_def valid_pspace_def)
-     apply (rule hoare_pre, wp valid_irq_node_typ valid_ioports_lift)
-      apply (simp add: valid_ep_def)
-      apply (wp valid_irq_node_typ sts_only_idle sts_ep_at_inv[simplified ep_at_def2, simplified]
-                failed_transfer_Q[simplified do_nbrecv_failed_transfer_def, simplified]
-            | simp add: live_def do_nbrecv_failed_transfer_def)+
-     apply (clarsimp simp: st_tcb_at_tcb_at valid_tcb_state_def invs_def valid_state_def valid_pspace_def)
-     apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ep_def)
-     apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
-     apply (rule conjI)
-      apply (subgoal_tac "ep \<noteq> t")
-       apply (drule obj_at_state_refs_ofD)
-       apply (drule active_st_tcb_at_state_refs_ofD)
-       apply (erule delta_sym_refs)
-        apply (clarsimp split: if_split_asm)
-       apply (clarsimp split: if_split_asm if_split)
-       apply (fastforce dest!: symreftype_inverse'
-                         simp: pred_tcb_at_def2 tcb_bound_refs_def2)
-      apply (clarsimp simp: obj_at_def st_tcb_at_def)
-     apply (simp add: obj_at_def is_ep_def)
-     apply (fastforce dest!: idle_no_ex_cap valid_reply_capsD
-                      simp: st_tcb_def2)
-    apply (simp add: invs_def valid_state_def valid_pspace_def)
-    apply (wp hoare_drop_imps valid_irq_node_typ hoare_post_imp[OF disjI1]
-              sts_only_idle
-         | simp add: valid_tcb_state_def cap_range_def
-         | strengthen reply_cap_doesnt_exist_strg | wpc
-         | (wp hoare_vcg_conj_lift | wp dxo_wp_weak | simp)+
-         | wp valid_ioports_lift)+
-    apply (clarsimp simp: st_tcb_at_tcb_at neq_Nil_conv)
-    apply (frule(1) sym_refs_obj_atD)
-    apply (frule(1) hyp_sym_refs_obj_atD)
-    apply (frule ko_at_state_refs_ofD)
-    apply (frule ko_at_state_hyp_refs_ofD)
-    apply (erule(1) obj_at_valid_objsE)
-    apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_tcb_at
-                          valid_obj_def ep_redux_simps
-                    cong: list.case_cong if_cong)
-    apply (frule(1) st_tcb_ex_cap[where P="\<lambda>ts. \<exists>pl. ts = st pl" for st],
-           clarsimp+)
-    apply (clarsimp simp: valid_ep_def)
-    apply (frule active_st_tcb_at_state_refs_ofD)
-    apply (frule st_tcb_at_state_refs_ofD
-                 [where P="\<lambda>ts. \<exists>pl. ts = st pl" for st])
-    apply (subgoal_tac "y \<noteq> t \<and> y \<noteq> idle_thread s \<and> t \<noteq> idle_thread s \<and>
-                        idle_thread s \<notin> set ys")
-     apply (clarsimp simp: st_tcb_def2 is_ep_def
-       conj_comms tcb_at_cte_at_2)
-     apply (clarsimp simp: obj_at_def)
-     apply (erule delta_sym_refs)
-      apply (clarsimp split: if_split_asm)
-     apply (clarsimp split: if_split_asm if_split) (* FIXME *)
-       apply ((fastforce simp: pred_tcb_at_def2 tcb_bound_refs_def2 is_tcb
-                       dest!: symreftype_inverse')+)[3]
-    apply (rule conjI)
-     apply (clarsimp simp: pred_tcb_at_def2 tcb_bound_refs_def2
-                     split: if_split_asm)
-     apply (simp add: set_eq_subset)
 
-    apply (rule conjI, clarsimp dest!: idle_no_ex_cap)+
-    apply (simp add: idle_not_queued')
-   apply (simp add: invs_def valid_state_def valid_pspace_def)
-   apply (rule hoare_pre)
-    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_typ sts_only_idle
-              sts_ep_at_inv[simplified ep_at_def2, simplified] valid_ioports_lift
-              failed_transfer_Q[unfolded do_nbrecv_failed_transfer_def, simplified]
-              | simp add: live_def valid_ep_def do_nbrecv_failed_transfer_def
-              | wpc)+
-   apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
-   apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ep_def)
-   apply (rule conjI, fastforce simp: st_tcb_def2)
-   apply (frule ko_at_state_refs_ofD)
-   apply (frule active_st_tcb_at_state_refs_ofD)
-   apply (frule(1) sym_refs_ko_atD)
-   apply (rule obj_at_valid_objsE, assumption+)
-   apply (clarsimp simp: valid_obj_def valid_ep_def)
-   apply (rule context_conjI)
-    apply (rule notI, (drule(1) bspec)+, (drule obj_at_state_refs_ofD)+, clarsimp)
-    apply (clarsimp simp: pred_tcb_at_def2 tcb_bound_refs_def2)
-    apply (blast intro: reftype.simps)
-   apply (rule conjI, erule delta_sym_refs)
-     apply (clarsimp split: if_split_asm if_split)
-     apply (rule conjI, rule impI)
-      apply (clarsimp simp: pred_tcb_at_def2 obj_at_def)
-     apply (fastforce simp: pred_tcb_at_def2 tcb_bound_refs_def2
-                     dest!: symreftype_inverse')
-    apply (clarsimp split: if_split_asm if_split)
-    apply (fastforce simp: pred_tcb_at_def2 tcb_bound_refs_def2
-                    dest!: symreftype_inverse')
-   apply (fastforce simp: obj_at_def is_ep pred_tcb_at_def2 dest!: idle_no_ex_cap valid_reply_capsD)
-  apply (rule hoare_pre)
-   apply (wp get_simple_ko_wp | wpc | clarsimp)+
-  apply (clarsimp simp: pred_tcb_at_tcb_at)
-  done*) sorry
-
-lemmas ri_invs[wp]
-  = ri_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI,simplified]
 
 end
 
@@ -2770,105 +2631,6 @@ crunch bound_tcb[wp]: set_message_info, set_mrs "valid_bound_tcb t"
 (wp: valid_bound_tcb_typ_at set_object_typ_at mapM_wp ignore: set_object
  simp: zipWithM_x_mapM)
 
-context Ipc_AI begin
-
-lemma rai_invs':
-  assumes set_notification_Q[wp]: "\<And>a b.\<lbrace> Q\<rbrace> set_notification a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes smi_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_message_info a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes as_user_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> as_user a b \<lbrace>\<lambda>r::unit. Q\<rbrace>"
-  assumes set_mrs_Q[wp]: "\<And>a b c. \<lbrace>Q\<rbrace> set_mrs a b c \<lbrace>\<lambda>_.Q\<rbrace>"
-  shows
-  "\<lbrace>invs and Q and st_tcb_at active t and ex_nonz_cap_to t
-         and (\<lambda>s. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)
-         and (\<lambda>s. \<exists>ntfnptr. is_ntfn_cap cap \<and> cap_ep_ptr cap = ntfnptr \<and>
-                     obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> (ntfn_bound_tcb ntfn = None
-                                                          \<or> ntfn_bound_tcb ntfn = Some t)) ntfnptr s)\<rbrace>
-     receive_signal t cap is_blocking
-   \<lbrace>\<lambda>r (s::det_ext state). invs s \<and> Q s\<rbrace>"
-  apply (simp add: receive_signal_def)
-  apply (cases cap, simp_all)
-  apply (rename_tac ntfn badge rights)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-  apply (case_tac "ntfn_obj x")
-    apply (simp add: invs_def valid_state_def valid_pspace_def)
-    apply (rule hoare_pre)
-     apply (wp set_simple_ko_valid_objs valid_irq_node_typ sts_only_idle valid_ioports_lift
-              sts_ntfn_at_inv[simplified ntfn_at_def2, simplified] | wpc
-          | simp add: live_def valid_ntfn_def do_nbrecv_failed_transfer_def)+
-(*    apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
-    apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ntfn_def)
-    apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
-    apply (rule conjI, clarsimp simp: obj_at_def split: option.splits)
-    apply (rule conjI, clarsimp simp: valid_bound_tcb_def obj_at_def
-                                dest!: st_tcb_at_tcb_at
-                                split: option.splits)
-    apply (rule conjI)
-
-     apply (subgoal_tac "t \<noteq> ntfn")
-      apply (drule ko_at_state_refs_ofD)
-      apply (drule active_st_tcb_at_state_refs_ofD)
-      apply (erule delta_sym_refs)
-       apply (clarsimp split: if_split_asm)
-      apply (fastforce simp: pred_tcb_at_def2 tcb_bound_refs_def2 split: if_split_asm)
-     apply (clarsimp simp: obj_at_def pred_tcb_at_def)
-    apply (simp add: is_ntfn obj_at_def)
-    apply (fastforce dest!: idle_no_ex_cap valid_reply_capsD
-                    elim!: pred_tcb_weakenE
-                    simp: st_tcb_at_reply_cap_valid st_tcb_def2)
-   apply (simp add: invs_def valid_state_def valid_pspace_def)
-   apply (rule hoare_pre)
-    apply (wpsimp wp: set_simple_ko_valid_objs hoare_vcg_const_Ball_lift sts_only_idle valid_ioports_lift
-                      valid_irq_node_typ sts_ntfn_at_inv[simplified ntfn_at_def2, simplified]
-               simp: live_def valid_ntfn_def do_nbrecv_failed_transfer_def)
-   apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
-   apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ntfn_def)
-   apply (rule obj_at_valid_objsE, assumption+)
-   apply (clarsimp simp: valid_obj_def valid_ntfn_def)
-   apply (frule(1) sym_refs_ko_atD, simp)
-   apply (frule ko_at_state_refs_ofD)
-   apply (frule active_st_tcb_at_state_refs_ofD)
-   apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
-   apply (rule context_conjI, fastforce simp: pred_tcb_at_def obj_at_def tcb_bound_refs_def2
-                                               state_refs_of_def)
-   apply (subgoal_tac "ntfn_bound_tcb x = None")
-    apply (rule conjI, clarsimp split: option.splits)
-    apply (rule conjI, erule delta_sym_refs)
-      apply (fastforce simp: pred_tcb_at_def2 obj_at_def symreftype_inverse'
-                      split: if_split_asm)
-     apply (fastforce simp: pred_tcb_at_def2 tcb_bound_refs_def2 split: if_split_asm)
-    apply (simp add: obj_at_def is_ntfn idle_not_queued)
-    apply (fastforce dest: idle_no_ex_cap valid_reply_capsD
-                    elim!: pred_tcb_weakenE
-                     simp: st_tcb_at_reply_cap_valid st_tcb_def2)
-   apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def
-                   elim: obj_at_valid_objsE
-                  split: option.splits)
-  apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply (rule hoare_pre)
-   apply (wp set_simple_ko_valid_objs hoare_vcg_const_Ball_lift valid_ioports_lift
-             as_user_no_del_ntfn[simplified ntfn_at_def2, simplified]
-             valid_irq_node_typ ball_tcb_cap_casesI static_imp_wp
-             valid_bound_tcb_typ_at[rule_format]
-             | simp add: valid_ntfn_def)+
-  apply clarsimp
-  apply (rule conjI, clarsimp simp: valid_bound_tcb_def obj_at_def pred_tcb_at_def2 is_tcb
-                             split: option.splits)
-  apply (frule ko_at_state_refs_ofD)
-  apply (frule active_st_tcb_at_state_refs_ofD)
-  apply (rule conjI, erule delta_sym_refs)
-    apply (clarsimp split: if_split_asm)
-   apply (clarsimp split: if_split_asm)
-  apply (fastforce simp: obj_at_def is_ntfn_def state_refs_of_def
-                        valid_idle_def pred_tcb_at_def
-                        st_tcb_at_reply_cap_valid
-                  dest: valid_reply_capsD)
-  done *) sorry
-
-lemmas rai_invs[wp] = rai_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI,simplified]
-
-end
-
 lemma pspace_clear_update1:
   "t \<noteq> t' \<Longrightarrow>
   pspace_clear t' (s\<lparr>kheap := (kheap s)(t := v)\<rparr>) =
@@ -2892,15 +2654,6 @@ lemma clear_revokable [iff]:
   "pspace_clear t (is_original_cap_update f s) = is_original_cap_update f (pspace_clear t s)"
   by (simp add: pspace_clear_def)
 
-
-context Ipc_AI begin
-(*crunch cap_to[wp]: receive_ipc "ex_nonz_cap_to p :: det_ext state \<Rightarrow> bool"
-  (wp: cap_insert_ex_cap hoare_drop_imps maybeM_inv simp: crunch_simps ignore: set_object)
-*)
-lemma receive_ipc_cap_to[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> receive_ipc param_a param_b param_c param_d  \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
-  sorry
-end
 
 lemma maybe_return_sc_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
@@ -2950,178 +2703,7 @@ lemma ep_queue_cap_to:
 
 context Ipc_AI_cont begin
 
-lemma si_invs':
-  assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes ext_Q[wp]: "\<And>a. \<lbrace>Q and valid_objs\<rbrace> do_extended_op (possible_switch_to a) \<lbrace>\<lambda>_. Q\<rbrace>"
-  assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes do_ipc_transfer_Q[wp]: "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
-  notes dxo_wp_weak[wp del]
-  shows
-  "\<lbrace>invs and Q and st_tcb_at active t and ex_nonz_cap_to ep and ex_nonz_cap_to t\<rbrace>
-     send_ipc bl call ba cg can_donate t ep
-   \<lbrace>\<lambda>r (s::det_ext state). invs s \<and> Q s\<rbrace>"
-  apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-  apply (case_tac epa, simp_all)
-    apply (cases bl, simp_all)[1]
-     apply (simp add: invs_def valid_state_def valid_pspace_def)
-     apply (wpsimp wp: valid_irq_node_typ valid_ioports_lift)
-     apply (simp add: live_def valid_ep_def)
-     apply (wp valid_irq_node_typ sts_only_idle sts_ep_at_inv[simplified ep_at_def2, simplified])
-     apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
-     apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ep_def)
-     apply (rule conjI, subgoal_tac "t \<noteq> ep")
-       apply (drule ko_at_state_refs_ofD active_st_tcb_at_state_refs_ofD)+
-(*       apply (erule delta_sym_refs)
-        apply (clarsimp split: if_split_asm)
-       apply (fastforce simp: pred_tcb_at_def2
-                       dest!: refs_in_tcb_bound_refs
-                       split: if_split_asm)
-      apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-     apply (simp add: obj_at_def is_ep)
-     apply (fastforce dest: idle_no_ex_cap valid_reply_capsD
-                     simp: st_tcb_def2)
-    apply wpsimp
-   apply (rename_tac list)
-   apply (cases bl, simp_all)[1]
-    apply (simp add: invs_def valid_state_def valid_pspace_def)
-    apply (wpsimp wp: valid_irq_node_typ valid_ioports_lift)
-    apply (simp add: live_def valid_ep_def)
-    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_typ sts_only_idle
-              sts_ep_at_inv[simplified ep_at_def2, simplified])
-    apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
-    apply (frule ko_at_state_refs_ofD)
-    apply (frule active_st_tcb_at_state_refs_ofD)
-    apply (subgoal_tac "t \<noteq> ep \<and> t \<notin> set list")
-     apply (erule obj_at_valid_objsE, clarsimp+)
-     apply (clarsimp simp: valid_obj_def valid_ep_def)
-     apply (rule conjI, clarsimp simp: obj_at_def is_ep_def)
-     apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
-     apply (rule conjI, erule delta_sym_refs)
-       apply (fastforce split: if_split_asm)
-      apply (fastforce simp: pred_tcb_at_def2
-                      dest!: refs_in_tcb_bound_refs
-                      split: if_split_asm)
-     apply (simp add: obj_at_def is_ep idle_not_queued)
-     apply (fastforce dest: idle_no_ex_cap valid_reply_capsD
-                     simp: st_tcb_def2)
-    apply (rule conjI, clarsimp simp: pred_tcb_at_def obj_at_def)
-    apply (drule(1) sym_refs_ko_atD, clarsimp simp: st_tcb_at_refs_of_rev)
-    apply (drule(1) bspec, clarsimp simp: pred_tcb_at_def obj_at_def)
-   apply wpsimp
-  apply (rename_tac list)
-  apply (case_tac list, simp_all add: invs_def valid_state_def valid_pspace_def split del:if_split)
-  apply (wp valid_irq_node_typ)
-          apply (simp add: if_apply_def2 )
-          apply (wp sts_only_idle sts_st_tcb_at_cases valid_irq_node_typ)
-          apply (wp hoare_drop_imps sts_st_tcb_at_cases valid_irq_node_typ do_ipc_transfer_tcb_caps
-                    sts_only_idle hoare_vcg_if_lift hoare_vcg_disj_lift thread_get_wp' hoare_vcg_all_lift
-               | clarsimp simp:is_cap_simps | wpc
-               | strengthen reply_cap_doesnt_exist_strg
-                            disjI2_strg[where Q="cte_wp_at (\<lambda>cp. is_master_reply_cap cp \<and> R cp) p s"]
-               | (wp hoare_vcg_conj_lift static_imp_wp | wp dxo_wp_weak | simp)+
-               | wp valid_ioports_lift)+
-  apply (clarsimp simp: ep_redux_simps conj_ac cong: list.case_cong if_cong)
-  apply (frule(1) sym_refs_ko_atD)
-  apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_tcb_at ep_at_def2)
-  apply (frule ko_at_state_refs_ofD)
-  apply (frule active_st_tcb_at_state_refs_ofD)
-  apply (erule(1) obj_at_valid_objsE)
-  apply clarsimp
-  apply (subgoal_tac "distinct ([t, a, ep, idle_thread s])")
-   apply (clarsimp simp: fun_upd_def[symmetric] fun_upd_idem)
-   apply (clarsimp simp: valid_obj_def valid_ep_def neq_Nil_conv)
-   apply (rule conjI, erule(1) st_tcb_ex_cap)
-    apply clarsimp
-   apply (simp add: obj_at_def is_ep idle_not_queued')
-   apply (subgoal_tac "state_refs_of s t = {r \<in> state_refs_of s t. snd r = TCBBound}")
-    apply (subst fun_upd_idem[where x=t], force simp: conj_commute)
-    apply (subgoal_tac "sym_refs ((state_refs_of s)(ep := set lista \<times> {EPRecv}, a := {r \<in> state_refs_of s a. snd r = TCBBound}))")
-     apply (fastforce elim!: pred_tcb_weakenE st_tcb_at_reply_cap_valid simp: conj_commute simp del: ntfn_at_def2)
 
-    apply (erule delta_sym_refs)
-     apply (clarsimp simp: fun_upd_def split: if_split_asm)
-    apply (fastforce simp: fun_upd_def
-                    dest!: symreftype_inverse' st_tcb_at_state_refs_ofD refs_in_tcb_bound_refs
-                    split: if_split_asm)
-   apply (clarsimp dest!: st_tcb_at_state_refs_ofD simp: sts_refs_of_helper)
-   apply fastforce
-  apply (drule bound_tcb_at_state_refs_ofD)
-  apply (clarsimp simp: tcb_bound_refs_def2)
-  apply (rule conjI, clarsimp dest!: st_tcb_at_state_refs_ofD, (auto simp: set_eq_iff)[1])
-  apply (rule conjI, clarsimp, (auto simp: set_eq_iff)[1])
-  apply (rule conjI, clarsimp simp: idle_no_ex_cap idle_not_queued' idle_only_sc_refs)
-  apply (rule conjI, clarsimp dest!: st_tcb_at_tcb_at simp: obj_at_def is_tcb)
-  apply (auto dest!: st_tcb_at_state_refs_ofD simp: idle_no_ex_cap idle_not_queued' idle_no_refs)
-  done*) sorry
-
-lemma hf_invs':
-  assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes ext_Q[wp]: "\<And>a. \<lbrace>Q and valid_objs\<rbrace> do_extended_op (possible_switch_to a) \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes do_ipc_transfer_Q[wp]: "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes thread_set_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> thread_set a b \<lbrace>\<lambda>_.Q\<rbrace>"
-  notes si_invs''[wp] = si_invs'[where Q=Q]
-  shows
-  "\<lbrace>invs and Q and st_tcb_at active t and ex_nonz_cap_to t and (\<lambda>_. valid_fault f)\<rbrace>
-   handle_fault t f
-   \<lbrace>\<lambda>r (s::det_ext state). invs s \<and> Q s\<rbrace>"
-  including no_pre
-(*  apply (cases "valid_fault f"; clarsimp)*)
-  apply (simp add: handle_fault_def)
-  apply wp
-    apply (simp add: handle_no_fault_def)
-(*    apply (wp sts_invs_minor)
-   apply (simp add: send_fault_ipc_def Let_def)
-(*
-   apply (wpsimp wp: thread_set_invs_trivial
-                     thread_set_no_change_tcb_state ex_nonz_cap_to_pres
-                     thread_set_cte_wp_at_trivial
-                     hoare_vcg_all_lift_R
-          | clarsimp simp: tcb_cap_cases_def
-          | erule disjE)+
-     apply (wpe lookup_cap_ex_cap)
-     apply (wpsimp wp: hoare_vcg_all_lift_R
-        | strengthen reply_cap_doesnt_exist_strg
-        | wp_once hoare_drop_imps)+
-  apply (simp add: conj_comms)
-  apply (fastforce elim!: pred_tcb_weakenE
-               simp: invs_def valid_state_def valid_idle_def st_tcb_def2
-                     idle_no_ex_cap pred_tcb_def2
-              split: Structures_A.thread_state.splits)
-  done
-*)
-   apply wp
-     apply (rule_tac P="invs and Q and st_tcb_at active t and ex_nonz_cap_to t and
-                        (\<lambda>_. valid_fault f) and (\<lambda>s. t \<noteq> idle_thread s) and
-                        (\<lambda>s. \<forall>r \<in> zobj_refs handler_cap. ex_nonz_cap_to r s)"
-                   in hoare_trivE)
-     apply (case_tac handler_cap)
-               apply (strengthen reply_cap_doesnt_exist_strg
-            | clarsimp simp: tcb_cap_cases_def
-            | rule conjI
-            | wp hoare_drop_imps
-                 thread_set_no_change_tcb_state ex_nonz_cap_to_pres
-                 thread_set_cte_wp_at_trivial
-            | fastforce elim!: pred_tcb_weakenE
-                       simp: invs_def valid_state_def valid_idle_def st_tcb_def2
-                    split: Structures_A.thread_state.splits)+
-              apply (rule hoare_pre_imp[rotated])
-               apply (rule_tac P="valid_fault f" in hoare_gen_asm)
-               apply (wp thread_set_invs_trivial)
-                     apply (strengthen reply_cap_doesnt_exist_strg
-             | clarsimp simp: tcb_cap_cases_def
-             | rule conjI
-             | wp hoare_drop_imps
-                  thread_set_no_change_tcb_state ex_nonz_cap_to_pres
-                  thread_set_cte_wp_at_trivial
-             | fastforce elim!: pred_tcb_weakenE
-                        simp: invs_def valid_state_def valid_idle_def pred_tcb_def2
-                              valid_pspace_def idle_no_ex_cap
-                     split: Structures_A.thread_state.splits)+
-  done*) sorry
-
-lemmas hf_invs[wp] = hf_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI TrueI,simplified]
 
 end
 
@@ -3237,27 +2819,7 @@ end
 
 context Ipc_AI begin
 
-lemma si_blk_makes_simple:
-  "\<lbrace>st_tcb_at simple t and K (t \<noteq> t') :: det_ext state \<Rightarrow> bool\<rbrace>
-     send_ipc True call bdg x can_donate t' ep
-   \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
-  apply (simp add: send_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_simple_ko_inv])
-  apply (case_tac epa, simp_all)
-    apply (wp sts_st_tcb_at_cases)
-    apply clarsimp
-   apply (wp sts_st_tcb_at_cases)
-   apply clarsimp
-  apply (rule hoare_gen_asm[simplified])
-  apply (rename_tac list)
-  apply (case_tac list, simp_all split del:if_split)
-(*  apply (rule hoare_seq_ext [OF _ set_simple_ko_pred_tcb_at])
-  apply (rule hoare_seq_ext [OF _ gts_sp])
-  apply (case_tac recv_state, simp_all split del: if_split)
-  apply (wp sts_st_tcb_at_cases setup_caller_cap_makes_simple
-            hoare_drop_imps
-            | simp add: if_apply_def2 split del: if_split)+
-  done *) sorry
+
 
 end
 
@@ -3271,32 +2833,6 @@ lemma ep_ntfn_cap_case_helper:
   by (cases x, simp_all)
 
 context Ipc_AI begin
-
-lemma sfi_makes_simple:
-  "\<lbrace>st_tcb_at simple t and K (t \<noteq> t') :: det_ext state \<Rightarrow> bool\<rbrace>
-     send_fault_ipc t' handler_cap ft can_donate
-   \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
-  apply (simp add: send_fault_ipc_def)
-  apply (case_tac handler_cap; simp)
-   apply wpsimp
-  apply (wpsimp simp: thread_set_def set_object_def wp: si_blk_makes_simple)
-  apply (auto simp: st_tcb_at_def obj_at_def)
-  done
-
-lemma hf_makes_simple:
-  notes hoare_pre [wp_pre del]
-  shows
-  "\<lbrace>st_tcb_at simple t' and K (t \<noteq> t') :: det_ext state \<Rightarrow> bool\<rbrace> handle_fault t ft
-   \<lbrace>\<lambda>rv. st_tcb_at simple t'\<rbrace>"
-  apply (simp add: handle_fault_def)
-  apply (rule hoare_seq_ext[OF _ assert_get_tcb])
-  apply (wpsimp simp: unless_def handle_no_fault_def send_fault_ipc_def wp: sts_st_tcb_at_cases)
-  apply (case_tac "tcb_fault_handler tcb"; simp)
-   apply wpsimp
-  apply (wpsimp wp: si_blk_makes_simple)
-  apply (wpsimp simp: thread_set_def set_object_def st_tcb_at_def obj_at_def)
-  done
-
 
 end
 

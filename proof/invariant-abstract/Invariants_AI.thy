@@ -1161,7 +1161,7 @@ lemma is_ep:
   unfolding is_ep_def by (cases ko) auto
 
 lemma is_ntfn:
-  "is_ntfn ko = (\<exists>ep. ko = Notification ep)"
+  "is_ntfn ko = (\<exists>np. ko = Notification np)"
   unfolding is_ntfn_def by (cases ko) auto
 
 lemma is_tcb:
