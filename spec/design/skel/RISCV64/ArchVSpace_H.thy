@@ -33,7 +33,7 @@ fun lookupPTSlotFromLevel where
         else return (ptBitsLeft level, ptr)
 od)"
 
-function lookupPTFromLevel where
+fun lookupPTFromLevel where
 "lookupPTFromLevel level ptPtr vPtr targetPtPtr = (doE
     unlessE (0 < level) $ throw InvalidRoot;
     pte <- withoutFailure $ pteAtIndex level ptPtr vPtr;
@@ -43,9 +43,6 @@ function lookupPTFromLevel where
         then returnOk $ ptSlotIndex (level- 1) ptr vPtr
         else lookupPTFromLevel (level- 1) ptr vPtr targetPtPtr
 odE)"
-sorry (* FIXME RISCV TODO: lookupPTFromLevel *)
-
-termination sorry (* FIXME RISCV TODO: lookupPTFromLevel *)
 
 #INCLUDE_HASKELL SEL4/Kernel/VSpace/RISCV64.hs CONTEXT RISCV64_H bodies_only ArchInv=ArchRetypeDecls_H NOT lookupPTSlotFromLevel lookupPTFromLevel pteAtIndex getPPtrFromHWPTE isPageTablePTE ptBitsLeft checkPTAt
 
