@@ -301,7 +301,7 @@ od"
 
 abbreviation
   "arm_context_switch_hwasid pd hwasid \<equiv> do
-              setCurrentPD $ addrFromPPtr pd;
+              set_current_pd $ addrFromPPtr pd;
               setHardwareASID hwasid
           od"
 
@@ -329,7 +329,7 @@ definition
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     (\<lambda>_. do
        global_pd \<leftarrow> gets (arm_global_pd \<circ> arch_state);
-       do_machine_op $ setCurrentPD $ addrFromPPtr global_pd
+       do_machine_op $ set_current_pd $ addrFromPPtr global_pd
     od)
 od"
 

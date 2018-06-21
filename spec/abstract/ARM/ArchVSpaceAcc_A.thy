@@ -71,6 +71,15 @@ definition
      set_object ptr (ArchObj (PageDirectory pd))
    od"
 
+definition
+  set_current_pd :: "paddr \<Rightarrow> unit machine_monad"
+where
+  "set_current_pd pd \<equiv> do
+     dsb;
+     writeTTBR0 ((pd && 0xffffe000) || 0x18);
+     isb
+   od"
+
 text {* The following function takes a pointer to a PDE in kernel memory
   and returns the actual PDE. *}
 definition

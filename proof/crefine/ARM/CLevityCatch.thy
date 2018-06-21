@@ -248,6 +248,10 @@ lemma exec_Basic_Guard_UNIV:
   apply (rule exec_Seq' exec.Basic exec.Guard | simp)+
   done
 
+(* only exists in Haskell, only used for C refinement *)
+crunches writeTTBR0Ptr
+  for (empty_fail) empty_fail[wp,simp]
+
 end
 
 end

@@ -152,8 +152,8 @@ lemma no_fail_dmb: "no_fail \<top> dmb"
 lemma no_fail_writeTTBR0: "no_fail \<top> (writeTTBR0 w)"
   by (simp add: writeTTBR0_def)
 
-lemma no_fail_setCurrentPD: "no_fail \<top> (setCurrentPD w)"
-  apply (simp add: setCurrentPD_def)
+lemma no_fail_set_current_pd: "no_fail \<top> (set_current_pd w)"
+  apply (simp add: set_current_pd_def)
   apply (rule no_fail_pre, wp no_fail_dsb no_fail_writeTTBR0 no_fail_isb, simp)
   done
 
@@ -531,8 +531,8 @@ lemma no_irq_modify:
   apply (clarsimp simp: in_monad)
   done
 
-lemma no_irq_setCurrentPD: "no_irq (setCurrentPD pd)"
-  apply (clarsimp simp: setCurrentPD_def)
+lemma no_irq_set_current_pd: "no_irq (set_current_pd pd)"
+  apply (clarsimp simp: set_current_pd_def)
   apply (wp no_irq_dsb no_irq_writeTTBR0 no_irq_isb)
   done
 

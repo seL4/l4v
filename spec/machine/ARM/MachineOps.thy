@@ -157,15 +157,6 @@ definition
   dmb :: "unit machine_monad"
 where "dmb \<equiv> machine_op_lift dmb_impl"
 
-
-definition
-  setCurrentPD :: "paddr \<Rightarrow> unit machine_monad"
-where "setCurrentPD pd \<equiv> do
-             dsb;
-             writeTTBR0 pd;
-             isb
-          od"
-
 consts'
   invalidateLocalTLB_impl :: "unit machine_rest_monad"
 definition

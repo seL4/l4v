@@ -77,7 +77,7 @@ crunch irq_masks[wp]: do_reply_transfer "\<lambda>s. P (irq_masks_of_state s)"
 
 
 crunch irq_masks[wp]: finalise_cap "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: select_wp crunch_wps dmo_wp no_irq simp: crunch_simps no_irq_setHardwareASID no_irq_setCurrentPD no_irq_invalidateLocalTLB_ASID no_irq_invalidateLocalTLB_VAASID no_irq_cleanByVA_PoU)
+  (wp: select_wp crunch_wps dmo_wp no_irq simp: crunch_simps no_irq_setHardwareASID no_irq_set_current_pd no_irq_invalidateLocalTLB_ASID no_irq_invalidateLocalTLB_VAASID no_irq_cleanByVA_PoU)
 
 crunch irq_masks[wp]: send_signal "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps ignore: do_machine_op wp: dmo_wp simp: crunch_simps)
