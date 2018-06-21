@@ -27,27 +27,21 @@ names (abbreviations) to other related constants (e.g. 2 ^ n, 2 ^ n - 1,
 
 ML {*
 structure Value_Abbreviation = struct
-
-fun value_and_abbreviation mode name eval_name expr int ctxt = let
+fun value_and_abbreviation mode name expr int ctxt = let
     val decl = (name, NONE, Mixfix.NoSyn)
     val expr = Syntax.read_term ctxt expr
-    val eval_expr = case eval_name of
-        NONE => Value_Command.value ctxt expr
-      | SOME n => Value_Command.value_select n ctxt expr
+    val eval_expr =Value_Command.value ctxt expr
     val lhs = Free (Binding.name_of name, fastype_of expr)
     val eq = Logic.mk_equals (lhs, eval_expr)
     val ctxt = Specification.abbreviation mode (SOME decl) [] eq int ctxt
     val pretty_eq = Syntax.pretty_term ctxt eq
   in Pretty.writeln pretty_eq; ctxt end
 
-val opt_evaluator =
-  Scan.option (@{keyword "["} |-- Parse.name --| @{keyword "]"})
-
 val _ =
   Outer_Syntax.local_theory' @{command_keyword value_abbreviation}
     "setup abbreviation for evaluated value"
-    (Parse.syntax_mode -- Parse.binding -- opt_evaluator -- Parse.term
-      >> (fn (((mode, name), eval_name), expr) => value_and_abbreviation mode name eval_name expr));
+    (Parse.syntax_mode -- Parse.binding -- Parse.term
+      >> (fn ((mode, name), expr) => value_and_abbreviation mode name expr));
 
 end
 *}
@@ -65,12 +59,12 @@ definition
 
 value_abbreviation (input)
   value_abbreviation_test_important_magic_number
-  [simp] "((2 :: int) ^ value_abbreviation_test_config_constant_1)
-        - (2 ^ value_abbreviation_test_config_constant_2)"
+    "((2 :: int) ^ value_abbreviation_test_config_constant_1)
+     - (2 ^ value_abbreviation_test_config_constant_2)"
 
 value_abbreviation (input)
   value_abbreviation_test_range_of_options
-  [simp] "rev [int value_abbreviation_test_config_constant_2
-        .. int value_abbreviation_test_config_constant_1]"
+    "rev [int value_abbreviation_test_config_constant_2
+          .. int value_abbreviation_test_config_constant_1]"
 
 end
