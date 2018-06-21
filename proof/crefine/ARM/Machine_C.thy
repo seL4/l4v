@@ -25,7 +25,7 @@ assumes resetTimer_ccorres:
            (Call resetTimer_'proc)"
 
 assumes writeTTBR0_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = pd\<rbrace>) []
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = pd\<rbrace>) []
            (doMachineOp (writeTTBR0 pd))
            (Call writeTTBR0_'proc)"
 
@@ -699,6 +699,14 @@ lemma cleanCaches_PoU_ccorres:
   apply clarsimp
   done
 
+lemma writeTTBR0Ptr_ccorres:
+  "ccorres dc xfdc \<top> (UNIV \<inter> \<lbrace>\<acute>addr = pd\<rbrace>) hs
+           (doMachineOp (writeTTBR0Ptr pd))
+           (Call writeTTBR0Ptr_'proc)"
+  apply (cinit' lift: addr_' simp: writeTTBR0Ptr_def fromPAddr_def)
+   apply (ctac (no_vcg) add: writeTTBR0_ccorres)
+  apply clarsimp
+  done
 
 lemma setCurrentPD_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = pd\<rbrace>) []
@@ -708,9 +716,9 @@ lemma setCurrentPD_ccorres:
    apply (clarsimp simp: setCurrentPD_def doMachineOp_bind empty_fail_dsb empty_fail_isb
                     writeTTBR0_empty_fail
                    intro!: ccorres_cond_empty)
-   apply (rule ccorres_rhs_assoc)
+   apply (rule ccorres_rhs_assoc)+
    apply (ctac (no_vcg) add: dsb_ccorres)
-    apply (ctac (no_vcg) add: writeTTBR0_ccorres)
+    apply (ctac (no_vcg) add: writeTTBR0Ptr_ccorres)
      apply (ctac (no_vcg) add: isb_ccorres)
     apply wp+
   apply clarsimp

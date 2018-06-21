@@ -56,7 +56,7 @@ lemma irq_state_clearExMonitor[wp]: "\<lbrace> \<lambda>s. P (irq_state s) \<rbr
 
 crunch irq_state_of_state[wp]: schedule "\<lambda>(s::det_state). P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp crunch_wps hoare_whenE_wp
-       simp: invalidateLocalTLB_ASID_def setHardwareASID_def setCurrentPD_def
+       simp: invalidateLocalTLB_ASID_def setHardwareASID_def set_current_pd_def
              machine_op_lift_def machine_rest_lift_def crunch_simps storeWord_def
              dsb_def isb_def writeTTBR0_def)
 
@@ -84,7 +84,7 @@ crunch irq_state'[wp]: cleanCacheRange_PoU "\<lambda> s. P (irq_state s)"
 
 
 crunch irq_state_of_state[wp]: arch_perform_invocation "\<lambda>(s::det_state). P (irq_state_of_state s)"
-  (wp: dmo_wp modify_wp simp: setCurrentPD_def invalidateLocalTLB_ASID_def invalidateLocalTLB_VAASID_def cleanByVA_PoU_def do_flush_def cache_machine_op_defs do_flush_defs wp: crunch_wps simp: crunch_simps ignore: ignore_failure)
+  (wp: dmo_wp modify_wp simp: set_current_pd_def invalidateLocalTLB_ASID_def invalidateLocalTLB_VAASID_def cleanByVA_PoU_def do_flush_def cache_machine_op_defs do_flush_defs wp: crunch_wps simp: crunch_simps ignore: ignore_failure)
 
 crunch irq_state_of_state[wp]: finalise_cap "\<lambda>(s::det_state). P (irq_state_of_state s)"
   (wp: select_wp modify_wp crunch_wps dmo_wp simp: crunch_simps invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def invalidate_I_PoU_def clean_D_PoU_def)
@@ -601,20 +601,20 @@ lemma arm_context_switch_reads_respects:
   apply(rule equiv_valid_guard_imp)
   apply(rule reads_respects_unobservable_unit_return)
     apply (wp do_machine_op_mol_states_equiv_for get_hw_asid_states_equiv_for
-     | simp add: setCurrentPD_def dsb_def isb_def writeTTBR0_def dmo_bind_valid setHardwareASID_def)+
+     | simp add: set_current_pd_def dsb_def isb_def writeTTBR0_def dmo_bind_valid setHardwareASID_def)+
   done
 
 lemma arm_context_switch_states_equiv_for:
   "invariant (arm_context_switch pd asid) (states_equiv_for P Q R S st)"
   unfolding arm_context_switch_def
-  apply (wp do_machine_op_mol_states_equiv_for get_hw_asid_states_equiv_for | simp add: setHardwareASID_def dmo_bind_valid setCurrentPD_def dsb_def isb_def writeTTBR0_def)+
+  apply (wp do_machine_op_mol_states_equiv_for get_hw_asid_states_equiv_for | simp add: setHardwareASID_def dmo_bind_valid set_current_pd_def dsb_def isb_def writeTTBR0_def)+
   done
 
 crunch states_equiv_for: find_pd_for_asid "states_equiv_for P Q R S st"
 
 lemma set_vm_root_states_equiv_for[wp]:
   "invariant (set_vm_root thread) (states_equiv_for P Q R S st)"
-  unfolding set_vm_root_def catch_def fun_app_def setCurrentPD_def isb_def dsb_def writeTTBR0_def
+  unfolding set_vm_root_def catch_def fun_app_def set_current_pd_def isb_def dsb_def writeTTBR0_def
   apply (wp_once hoare_drop_imps
         |wp do_machine_op_mol_states_equiv_for hoare_vcg_all_lift arm_context_switch_states_equiv_for hoare_whenE_wp
         | wpc | simp add: dmo_bind_valid if_apply_def2)+
@@ -637,14 +637,14 @@ lemma gets_cur_thread_revrv:
   done
 
 crunch states_equiv_for: set_vm_root_for_flush "states_equiv_for P Q R S st"
-  (wp: do_machine_op_mol_states_equiv_for ignore: do_machine_op simp: setCurrentPD_def)
+  (wp: do_machine_op_mol_states_equiv_for ignore: do_machine_op simp: set_current_pd_def)
 
 crunch cur_thread: set_vm_root_for_flush "\<lambda> s. P (cur_thread s)"
 
 lemma set_vm_root_for_flush_reads_respects:
   "reads_respects aag l (is_subject aag \<circ> cur_thread)
     (set_vm_root_for_flush pd asid)"
-  unfolding set_vm_root_for_flush_def fun_app_def setCurrentPD_def
+  unfolding set_vm_root_for_flush_def fun_app_def set_current_pd_def
   apply(rule equiv_valid_guard_imp)
   apply (wp_once hoare_drop_imps
         |wp arm_context_switch_reads_respects dmo_mol_reads_respects
@@ -1526,12 +1526,12 @@ lemma arm_context_switch_globals_equiv[wp]:
   "\<lbrace>globals_equiv s\<rbrace> arm_context_switch pd asid \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding arm_context_switch_def  setHardwareASID_def
   apply(wp dmo_mol_globals_equiv get_hw_asid_globals_equiv
-       | simp add: dmo_bind_valid setCurrentPD_def writeTTBR0_def isb_def dsb_def )+
+       | simp add: dmo_bind_valid set_current_pd_def writeTTBR0_def isb_def dsb_def )+
   done
 
 lemma set_vm_root_globals_equiv[wp]:
   "\<lbrace>globals_equiv s\<rbrace> set_vm_root tcb \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  apply (clarsimp simp:set_vm_root_def fun_app_def setCurrentPD_def dsb_def
+  apply (clarsimp simp:set_vm_root_def fun_app_def set_current_pd_def dsb_def
                        isb_def writeTTBR0_def dmo_bind_valid)
   apply(wp dmo_mol_globals_equiv arm_context_switch_globals_equiv whenE_inv
         | wpc
@@ -1574,7 +1574,7 @@ crunch globals_equiv: store_pte "globals_equiv s"
 
 lemma set_vm_root_for_flush_globals_equiv[wp]:
   "\<lbrace>globals_equiv s\<rbrace> set_vm_root_for_flush pd asid \<lbrace>\<lambda>rv. globals_equiv s\<rbrace>"
-  unfolding set_vm_root_for_flush_def setCurrentPD_def fun_app_def
+  unfolding set_vm_root_for_flush_def set_current_pd_def fun_app_def
   apply(wp dmo_mol_globals_equiv | wpc | simp)+
     apply(rule_tac Q="\<lambda>rv. globals_equiv s" in hoare_strengthen_post)
      apply(wp | simp)+

@@ -20,7 +20,7 @@ crunch_ignore (add: debugPrint invalidateLocalTLB_ASID invalidateLocalTLB_VAASID
   cleanByVA_PoU invalidateByVA invalidateByVA_I invalidate_I_PoU
   cleanInvalByVA branchFlush clean_D_PoU cleanInvalidate_D_PoC cleanInvalidateL2Range
   invalidateL2Range cleanL2Range flushBTAC writeContextID isb dsb dmb
-  setHardwareASID setCurrentPD clearMemory cacheRangeOp)
+  setHardwareASID writeTTBR0 clearMemory cacheRangeOp)
 
 end
 

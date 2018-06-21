@@ -63,18 +63,18 @@ declare dmo_mol_respects [wp]
 
 crunch respects[wp]: arm_context_switch "integrity X aag st"
   (simp: dmo_bind_valid dsb_def isb_def writeTTBR0_def invalidateLocalTLB_ASID_def
-         setHardwareASID_def setCurrentPD_def
+         setHardwareASID_def set_current_pd_def
  ignore: do_machine_op)
 
 crunch respects[wp]: find_pd_for_asid "integrity X aag st"
 
 crunch respects[wp]: set_vm_root "integrity X aag st"
     (wp: crunch_wps
-   simp: setCurrentPD_def isb_def dsb_def writeTTBR0_def dmo_bind_valid crunch_simps
+   simp: set_current_pd_def isb_def dsb_def writeTTBR0_def dmo_bind_valid crunch_simps
  ignore: do_machine_op)
 
 crunch respects[wp]: set_vm_root_for_flush "integrity X aag st"
-  (wp: crunch_wps simp: setCurrentPD_def crunch_simps ignore: do_machine_op)
+  (wp: crunch_wps simp: set_current_pd_def crunch_simps ignore: do_machine_op)
 
 crunch respects[wp]: flush_table "integrity X aag st"
   (wp: crunch_wps simp: invalidateLocalTLB_ASID_def crunch_simps ignore: do_machine_op)

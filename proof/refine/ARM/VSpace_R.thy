@@ -492,6 +492,11 @@ lemma get_hw_asid_corres:
   apply simp
   done
 
+lemma setCurrentPD_to_abs:
+  "setCurrentPD = set_current_pd"
+  by (rule ext)
+     (clarsimp simp: set_current_pd_def setCurrentPD_def writeTTBR0Ptr_def fromPAddr_def)
+
 lemma arm_context_switch_corres:
   "corres dc
           (vspace_at_asid a pd and K (a \<noteq> 0 \<and> a \<le> mask asid_bits)
@@ -506,10 +511,12 @@ lemma arm_context_switch_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ get_hw_asid_corres[where pd=pd]])
       apply (rule corres_machine_op)
+      apply (simp add: setCurrentPD_to_abs)
       apply (rule corres_rel_imp)
        apply (rule corres_underlying_trivial)
        apply (rule no_fail_pre)
-        apply (wp no_fail_setCurrentPD no_fail_setHardwareASID no_irq_setCurrentPD | clarsimp)+
+        apply (wpsimp wp: no_fail_set_current_pd no_fail_setHardwareASID no_irq_set_current_pd
+                      simp: setCurrentPD_to_abs)+
   done
 
 lemma hv_corres:
@@ -658,7 +665,7 @@ lemmas setCurrentPD_no_irqs = no_irq_dsb no_irq_isb no_irq_writeTTBR0
 
 lemma setCurrentPD_corres:
   "corres dc \<top> \<top> (do_machine_op (setCurrentPD addr)) (doMachineOp (setCurrentPD addr))"
-  apply (simp add: setCurrentPD_def)
+  apply (simp add: setCurrentPD_def writeTTBR0Ptr_def)
   apply (rule corres_machine_op)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr)
@@ -711,7 +718,7 @@ proof -
     done
   show ?thesis
     unfolding set_vm_root_def setVMRoot_def locateSlot_conv
-                     getThreadVSpaceRoot_def
+                     getThreadVSpaceRoot_def setCurrentPD_to_abs[symmetric]
     apply (rule corres_guard_imp)
       apply (rule corres_split' [where r'="op = \<circ> cte_map"])
          apply (simp add: tcbVTableSlot_def cte_map_def objBits_def cte_level_bits_def
@@ -2745,17 +2752,18 @@ lemma getHWASID_invs_no_cicd':
   done
 
 lemmas armv_ctxt_sw_defs = armv_contextSwitch_HWASID_def setHardwareASID_def setCurrentPD_def
-                           writeTTBR0_def isb_def dsb_def
+                           writeTTBR0_def writeTTBR0Ptr_def set_current_pd_def isb_def dsb_def
 
 lemma dmo_armv_contextSwitch_HWASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (armv_contextSwitch_HWASID pd hwasid) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wp dmo_invs')
-   apply (simp add: armv_contextSwitch_HWASID_def)
-   apply (wp no_irq_setCurrentPD no_irq_setHardwareASID no_irq)
+   apply (simp add: armv_contextSwitch_HWASID_def setCurrentPD_to_abs)
+   apply (wp no_irq_set_current_pd no_irq_setHardwareASID no_irq)
   apply safe
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
     apply (simp add: machine_op_lift_def machine_rest_lift_def split_def armv_ctxt_sw_defs
+                     writeTTBR0Ptr_def
               | wp)+
   done
 
@@ -2763,19 +2771,20 @@ lemma dmo_armv_contextSwitch_HWASID_invs'[wp]:
 lemma dmo_armv_contextSwitch_HWASID_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (armv_contextSwitch_HWASID pd hwasid) \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
   apply (wp dmo_invs_no_cicd')
-   apply (simp add: armv_contextSwitch_HWASID_def)
-   apply (wp no_irq_setCurrentPD no_irq_setHardwareASID no_irq)
+   apply (simp add: armv_contextSwitch_HWASID_def setCurrentPD_to_abs)
+   apply (wp no_irq_set_current_pd no_irq_setHardwareASID no_irq)
   apply safe
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
     apply (simp add: machine_op_lift_def machine_rest_lift_def split_def armv_ctxt_sw_defs
+                     writeTTBR0Ptr_def
               | wp)+
   done
 
 lemma no_irq_armv_contextSwitch_HWASID:
   "no_irq (armv_contextSwitch_HWASID pd hwasid)"
-  apply (simp add: armv_contextSwitch_HWASID_def)
-  apply (wp no_irq_setCurrentPD no_irq_setHardwareASID)
+  apply (simp add: armv_contextSwitch_HWASID_def setCurrentPD_to_abs)
+  apply (wp no_irq_set_current_pd no_irq_setHardwareASID)
   done
 
 lemma armv_contextSwitch_invs [wp]:
@@ -2788,13 +2797,14 @@ lemma armv_contextSwitch_invs [wp]:
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
     apply (simp add: machine_op_lift_def machine_rest_lift_def split_def armv_ctxt_sw_defs
+                     writeTTBR0Ptr_def
               | wp)+
   done
 
 lemma armv_contextSwitch_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> armv_contextSwitch pd asid \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (simp add: armv_contextSwitch_def armv_contextSwitch_HWASID_def)
-  apply (wp dmo_invs_no_cicd' no_irq_setHardwareASID no_irq_setCurrentPD no_irq)
+  apply (simp add: armv_contextSwitch_def armv_contextSwitch_HWASID_def setCurrentPD_to_abs)
+  apply (wp dmo_invs_no_cicd' no_irq_setHardwareASID no_irq_set_current_pd no_irq)
   apply (rule hoare_post_imp[rotated], rule getHWASID_invs_no_cicd')
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
@@ -2804,21 +2814,19 @@ lemma armv_contextSwitch_invs_no_cicd':
 
 lemma dmo_setCurrentPD_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (setCurrentPD addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_setCurrentPD no_irq)
-  apply clarsimp
+  apply (wpsimp wp: dmo_invs' no_irq_set_current_pd no_irq simp: setCurrentPD_to_abs)
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
-  apply (clarsimp simp: setCurrentPD_def machine_op_lift_def writeTTBR0_def dsb_def isb_def
-                        machine_rest_lift_def split_def | wp)+
+    apply (clarsimp simp: set_current_pd_def machine_op_lift_def writeTTBR0_def dsb_def isb_def
+                          machine_rest_lift_def split_def | wp)+
   done
 
 lemma dmo_setCurrentPD_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (setCurrentPD addr) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wp dmo_invs_no_cicd' no_irq_setCurrentPD no_irq)
-  apply clarsimp
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_current_pd no_irq  simp: setCurrentPD_to_abs)
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
-  apply (clarsimp simp: setCurrentPD_def machine_op_lift_def writeTTBR0_def dsb_def isb_def
+  apply (clarsimp simp: set_current_pd_def machine_op_lift_def writeTTBR0_def dsb_def isb_def
                         machine_rest_lift_def split_def | wp)+
   done
 
@@ -3533,9 +3541,9 @@ lemma dmo_cleanCaches_PoU_invs'[wp]:
 crunch invs'[wp]: unmapPageTable "invs'"
   (ignore: getObject setObject storePDE doMachineOp
        wp: dmo_invalidateLocalTLB_VAASID_invs' dmo_setCurrentPD_invs'
-           storePDE_Invalid_invs mapM_wp' no_irq_setCurrentPD
+           storePDE_Invalid_invs mapM_wp' no_irq_set_current_pd
            crunch_wps
-     simp: crunch_simps)
+     simp: crunch_simps setCurrentPD_to_abs)
 
 lemma perform_pti_invs [wp]:
   "\<lbrace>invs' and valid_pti' pti\<rbrace> performPageTableInvocation pti \<lbrace>\<lambda>_. invs'\<rbrace>"
