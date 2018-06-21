@@ -5119,7 +5119,7 @@ lemma invokeX86PortControl_ccorres:
   apply (clarsimp simp: is_simple_cap'_def isCap_simps invs_mdb' invs_valid_objs' invs_pspace_aligned'
                         invs_pspace_canonical' valid_cap_simps' capAligned_def word_bits_def)
   apply (rule conjI)
-   apply (clarsimp simp: Collect_const_mem cap_io_port_cap_lift ccap_relation_def cap_to_H_def mask_def)
+   apply (clarsimp simp: cap_io_port_cap_lift ccap_relation_def cap_to_H_def mask_def)
    apply word_bitwise
   apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def
                         global_ioport_bitmap_relation_def Let_def typ_heap_simps)

@@ -850,12 +850,12 @@ lemma ccorres_cases:
   done
 
 (* FIXME: move *)
-lemma word_and_le': "\<lbrakk> b \<le> c \<rbrakk> \<Longrightarrow> (a :: machine_word) && b \<le> c"
+lemma word_and_le': "\<lbrakk> b \<le> c \<rbrakk> \<Longrightarrow> (a :: 'a::len word) && b \<le> c"
   apply (metis word_and_le1 order_trans)
   done
 
 (* FIXME: move *)
-lemma word_and_less': "\<lbrakk> b < c \<rbrakk> \<Longrightarrow> (a :: machine_word) && b < c"
+lemma word_and_less': "\<lbrakk> b < c \<rbrakk> \<Longrightarrow> (a :: 'a::len word) && b < c"
   apply (metis word_and_le1 xtr7)
   done
 
@@ -2042,24 +2042,639 @@ where
   "cleanup_info_wf' cap \<equiv> case cap of IRQHandlerCap irq \<Rightarrow>
       UCAST(8\<rightarrow>16) irq \<le> SCAST(32 signed\<rightarrow>16) Kernel_C.maxIRQ | ArchObjectCap acap \<Rightarrow> arch_cleanup_info_wf' acap | _ \<Rightarrow> True"
 
+(* FIXME: move *)
+lemma hrs_mem_update_compose:
+  "hrs_mem_update f (hrs_mem_update g h) = hrs_mem_update (f \<circ> g) h"
+  by (auto simp: hrs_mem_update_def split: prod.split)
+
+(* FIXME: move *)
+lemma packed_heap_update_collapse':
+  fixes p :: "'a::packed_type ptr"
+  shows "heap_update p v \<circ> heap_update p u = heap_update p v"
+  by (auto simp: packed_heap_update_collapse)
+
+(* FIXME: move *)
+lemma access_array_from_elements:
+  fixes v :: "'a::packed_type['b::finite]"
+  assumes "\<forall>i < CARD('b). h_val h (array_ptr_index p False i) = v.[i]"
+  shows "h_val h p = v"
+  by (rule cart_eq[THEN iffD2]) (simp add: assms heap_access_Array_element')
+
+(* FIXME: move *)
+lemma h_val_foldr_heap_update:
+  fixes v :: "'i \<Rightarrow> 'a::mem_type"
+  assumes "\<forall>x y. {x,y} \<subseteq> set xs \<longrightarrow> x \<noteq> y \<longrightarrow> ptr_span (p x) \<inter> ptr_span (p y) = {}"
+  assumes "distinct xs" "i \<in> set xs"
+  shows "h_val (foldr (\<lambda>i. heap_update (p i) (v i)) xs h) (p i) = v i"
+  using assms by (induct xs arbitrary: h;
+                  fastforce simp: h_val_heap_update h_val_update_regions_disjoint)
+
+(* FIXME: move *)
+lemma ptr_span_array_ptr_index_disjoint:
+  fixes p :: "('a::packed_type['b::finite]) ptr"
+  assumes s: "CARD('b) * size_of TYPE('a) \<le> 2 ^ addr_bitsize"
+  assumes b: "x < CARD('b)" "y < CARD('b)"
+  assumes n: "x \<noteq> y"
+  shows "ptr_span (array_ptr_index p False x) \<inter> ptr_span (array_ptr_index p False y) = {}"
+  proof -
+    have l: "CARD('b) * size_of TYPE('a) \<le> 2 ^ LENGTH(64)" using s by simp
+    have p: "\<And>x k. x < CARD('b) \<Longrightarrow> k < size_of TYPE('a)
+                      \<Longrightarrow> x * size_of TYPE('a) + k < 2 ^ LENGTH(64)"
+      by (metis less_le_trans[OF _ l] Divides.mod_less Fields.sign_simps(5) mod_lemma
+                zero_less_card_finite)
+    show ?thesis
+      apply (clarsimp simp: array_ptr_index_def ptr_add_def intvl_disj_offset)
+      apply (rule disjointI)
+      apply (clarsimp simp: intvl_def)
+      apply (subst (asm) of_nat_mult[symmetric])+
+      apply (subst (asm) of_nat_add[symmetric])+
+      apply (subst (asm) of_nat_inj[OF p p]; (simp add: b)?)
+      apply (drule arg_cong[where f="\<lambda>x. x div size_of TYPE('a)"]; simp add: n)
+      done
+  qed
+
+(* FIXME: move *)
+lemma h_val_heap_update_Array:
+  fixes v :: "'a::packed_type['b::finite]"
+  assumes s: "CARD('b) * size_of TYPE('a) \<le> 2 ^ addr_bitsize"
+  shows "h_val (heap_update p v h) p = v"
+  apply (rule access_array_from_elements)
+  apply (clarsimp simp: heap_update_Array foldl_conv_foldr)
+  apply (rule h_val_foldr_heap_update; clarsimp simp: ptr_span_array_ptr_index_disjoint[OF s])
+  done
+
+(* FIXME: move *)
+lemma foldr_heap_update_commute:
+  assumes "\<forall>y. y \<in> set xs \<longrightarrow> ptr_span q \<inter> ptr_span (p y) = {}"
+  shows "foldr (\<lambda>i. heap_update (p i) (v i)) xs (heap_update q u h)
+           = heap_update q u (foldr (\<lambda>i. heap_update (p i) (v i)) xs h)"
+  using assms by (induct xs) (auto simp: LemmaBucket_C.heap_update_commute)
+
+(* FIXME: move *)
+lemma foldr_packed_heap_update_collapse:
+  fixes u v :: "'i \<Rightarrow> 'a::packed_type"
+  assumes "\<forall>x y. {x,y} \<subseteq> set xs \<longrightarrow> y \<noteq> x \<longrightarrow> ptr_span (p x) \<inter> ptr_span (p y) = {}"
+  assumes "distinct xs"
+  shows "foldr (\<lambda>i. heap_update (p i) (v i)) xs (foldr (\<lambda>i. heap_update (p i) (u i)) xs h)
+           = foldr (\<lambda>i. heap_update (p i) (v i)) xs h"
+  using assms
+  apply -
+  apply (induct xs arbitrary: h; clarsimp; rename_tac x xs h)
+  apply (drule_tac x=x in spec; clarsimp)
+  apply (subst foldr_heap_update_commute; clarsimp simp: packed_heap_update_collapse)
+  apply (drule_tac x=y in spec; clarsimp)
+  done
+
+(* FIXME: move *)
+lemma packed_Array_heap_update_collapse:
+  fixes p :: "('a::packed_type['b::finite]) ptr"
+  assumes s: "CARD('b) * size_of TYPE('a) \<le> 2 ^ addr_bitsize"
+  shows "heap_update p v (heap_update p u h) = heap_update p v h"
+  by (simp add: heap_update_Array foldl_conv_foldr foldr_packed_heap_update_collapse
+                ptr_span_array_ptr_index_disjoint[OF s])
+
+(* FIXME: move *)
+lemma packed_Array_heap_update_collapse':
+  fixes p :: "('a::packed_type['b::finite]) ptr"
+  assumes s: "CARD('b) * size_of TYPE('a) \<le> 2 ^ addr_bitsize"
+  shows "heap_update p v \<circ> heap_update p u = heap_update p v"
+  by (auto simp: packed_Array_heap_update_collapse[OF s])
+
+(* FIXME: move *)
+definition
+  heap_modify :: "'a::c_type ptr \<Rightarrow> ('a \<Rightarrow> 'a) \<Rightarrow> heap_mem \<Rightarrow> heap_mem"
+where
+  "heap_modify p f \<equiv> \<lambda>h. heap_update p (f (h_val h p)) h"
+
+(* FIXME: move *)
+lemma heap_modify_def2:
+  "heap_modify (p::'a::c_type ptr) f \<equiv>
+    \<lambda>h. let bytes = heap_list h (size_of TYPE('a)) (ptr_val p) in
+          heap_update_list (ptr_val p) (to_bytes (f (from_bytes bytes)) bytes) h"
+  by (simp add: heap_modify_def Let_def heap_update_def h_val_def)
+
+(* FIXME: move *)
+lemma heap_modify_compose:
+  fixes p :: "'a::packed_type ptr"
+  shows "heap_modify p f \<circ> heap_modify p g = heap_modify p (f \<circ> g)"
+    and "heap_modify p f (heap_modify p g h) = heap_modify p (f \<circ> g) h"
+  by (auto simp: heap_modify_def h_val_heap_update packed_heap_update_collapse)
+
+(* FIXME: move *)
+lemma heap_modify_compose_Array:
+  fixes p :: "('a::packed_type['b::finite]) ptr"
+  assumes s: "CARD('b) * size_of TYPE('a) \<le> 2 ^ addr_bitsize"
+  shows "heap_modify p f \<circ> heap_modify p g = heap_modify p (f \<circ> g)"
+    and "heap_modify p f (heap_modify p g h) = heap_modify p (f \<circ> g) h"
+  by (auto simp: heap_modify_def h_val_heap_update_Array[OF s]
+                 packed_Array_heap_update_collapse[OF s])
+
+(* FIXME: move *)
+lemma fold_heap_modify_commute:
+  fixes p :: "'a::packed_type ptr"
+  shows "fold (heap_modify p \<circ> f) upds = heap_modify p (fold f upds)"
+  apply (induction upds)
+   apply (simp add: heap_modify_def heap_update_id)
+  apply (clarsimp simp: heap_modify_compose[THEN fun_cong, simplified] o_def)
+  done
+
+(* FIXME: move *)
+lemma fold_heap_modify_commute_Array:
+  fixes p :: "('a::packed_type['b::finite]) ptr"
+  assumes s: "CARD('b) * size_of TYPE('a) \<le> 2 ^ addr_bitsize"
+  shows "fold (heap_modify p \<circ> f) upds = heap_modify p (fold f upds)"
+  apply (induction upds)
+   apply (simp add: heap_modify_def heap_update_id_Array)
+  apply (clarsimp simp: heap_modify_compose_Array[OF s, THEN fun_cong, simplified] o_def)
+  done
+
+(* FIXME: move *)
+lemma msb_le_mono:
+  fixes v w :: "'a::len word"
+  shows "v \<le> w \<Longrightarrow> msb v \<Longrightarrow> msb w"
+  by (simp add: msb_big)
+
+(* FIXME: move *)
+lemma neg_msb_le_mono:
+  fixes v w :: "'a::len word"
+  shows "v \<le> w \<Longrightarrow> \<not> msb w \<Longrightarrow> \<not> msb v"
+  by (simp add: msb_big)
+
+(* FIXME: move *)
+lemmas msb_less_mono = msb_le_mono[OF less_imp_le]
+lemmas neg_msb_less_mono = neg_msb_le_mono[OF less_imp_le]
+
+(* FIXME: move *)
+lemma word_sless_iff_less:
+  "\<lbrakk> \<not> msb v; \<not> msb w \<rbrakk> \<Longrightarrow> v <s w \<longleftrightarrow> v < w"
+  by (simp add: word_sless_alt sint_eq_uint word_less_alt)
+
+(* FIXME: move *)
+lemmas word_sless_imp_less = word_sless_iff_less[THEN iffD1, rotated 2]
+lemmas word_less_imp_sless = word_sless_iff_less[THEN iffD2, rotated 2]
+
+(* FIXME: move *)
+lemma word_sle_iff_le:
+  "\<lbrakk> \<not> msb v; \<not> msb w \<rbrakk> \<Longrightarrow> v <=s w \<longleftrightarrow> v \<le> w"
+  by (simp add: word_sle_def sint_eq_uint word_le_def)
+
+(* FIXME: move *)
+lemmas word_sle_imp_le = word_sle_iff_le[THEN iffD1, rotated 2]
+lemmas word_le_imp_sle = word_sle_iff_le[THEN iffD2, rotated 2]
+
+(* FIXME: move to Word_Lib *)
+lemma word_upcast_shiftr:
+  assumes "LENGTH('a::len) \<le> LENGTH('b::len)"
+  shows "UCAST('a \<rightarrow> 'b) (w >> n) = UCAST('a \<rightarrow> 'b) w >> n"
+  apply (intro word_eqI impI iffI; clarsimp simp: word_size nth_shiftr nth_ucast)
+  apply (drule test_bit_size)
+  using assms by (simp add: word_size)
+
+lemma word_upcast_neg_msb:
+  "LENGTH('a::len) < LENGTH('b::len) \<Longrightarrow> \<not> msb (UCAST('a \<rightarrow> 'b) w)"
+  apply (clarsimp simp: ucast_def msb_word_of_int)
+  apply (drule bin_nth_uint_imp)
+  by simp
+
+(* FIXME: move to Word_Lib *)
+lemma word_upcast_0_sle:
+  "LENGTH('a::len) < LENGTH('b::len) \<Longrightarrow> 0 <=s UCAST('a \<rightarrow> 'b) w"
+  by (simp add: word_sle_iff_le[OF word_msb_0 word_upcast_neg_msb])
+
+(* FIXME: move to Word_Lib *)
+lemma scast_ucast_up_eq_ucast:
+  assumes "LENGTH('a::len) < LENGTH('b::len)"
+  shows "SCAST('b \<rightarrow> 'c) (UCAST('a \<rightarrow> 'b) w) = UCAST('a \<rightarrow> 'c::len) w"
+  using assms
+  apply (subst scast_eq_ucast; simp)
+  apply (clarsimp simp: ucast_def msb_word_of_int)
+  apply (drule bin_nth_uint_imp)
+  apply simp
+  done
+
+lemma not_max_word_iff_less:
+  "w \<noteq> max_word \<longleftrightarrow> w < max_word"
+  by (simp add: order_less_le)
+
+lemma ucast_increment:
+  assumes "w \<noteq> max_word"
+  shows "UCAST('a::len \<rightarrow> 'b::len) w + 1 = UCAST('a \<rightarrow> 'b) (w + 1)"
+  apply (cases "LENGTH('b) \<le> LENGTH('a)")
+   apply (simp add: ucast_down_add is_down)
+  apply (subgoal_tac "uint w + 1 < 2 ^ LENGTH('a)")
+   apply (subgoal_tac "uint w + 1 < 2 ^ LENGTH('b)")
+    apply (subst word_uint_eq_iff)
+    apply (simp add: uint_arith_simps uint_up_ucast is_up)
+   apply (erule less_trans, rule power_strict_increasing, simp, simp)
+  apply (subst less_diff_eq[symmetric])
+  using assms
+  apply (simp add: not_max_word_iff_less word_less_alt)
+  apply (erule less_le_trans)
+  apply (simp add: max_word_def)
+  done
+
+lemma max_word_gt_0:
+  "0 < max_word"
+  by (simp add: le_neq_trans[OF max_word_max] max_word_not_0)
+
+lemma and_not_max_word:
+  "m \<noteq> max_word \<Longrightarrow> w && m \<noteq> max_word"
+  by (simp add: not_max_word_iff_less word_and_less')
+
+lemma mask_not_max_word:
+  "m < LENGTH('a::len) \<Longrightarrow> mask m \<noteq> (max_word :: 'a word)"
+  by (metis shiftl_1_not_0 shiftl_mask_is_0 word_bool_alg.conj_one_right)
+
+lemmas and_mask_not_max_word =
+  and_not_max_word[OF mask_not_max_word]
+
+lemma shiftr_not_max_word:
+  "0 < n \<Longrightarrow> w >> n \<noteq> max_word"
+  apply (simp add: not_max_word_iff_less)
+  apply (cases "n < size w")
+   apply (cases "w = 0")
+    apply (simp add: max_word_gt_0)
+   apply (subst shiftr_div_2n_w, assumption)
+   apply (rule less_le_trans[OF div_less_dividend_word max_word_max])
+    apply simp
+   apply (metis word_size_gt_0 less_numeral_extra(3) mask_def nth_mask power_0 shiftl_t2n)
+  apply (simp add: not_less word_size)
+  apply (subgoal_tac "w >> n = 0"; simp add: max_word_gt_0 shiftr_eq_0)
+  done
+
+lemma word_sandwich1:
+  fixes a b c :: "'a::len word"
+  assumes "a < b"
+  assumes "b <= c"
+  shows "0 < b - a \<and> b - a <= c"
+  using assms diff_add_cancel order_less_irrefl add_0 word_le_imp_diff_le
+        word_le_less_eq word_neq_0_conv
+  by metis
+
+lemma word_sandwich2:
+  fixes a b :: "'a::len word"
+  assumes "0 < a"
+  assumes "a <= b"
+  shows "b - a < b"
+  using assms less_le_trans word_diff_less
+  by blast
+
+lemma make_pattern_spec:
+  defines "bits \<equiv> 0x40 :: 32 sword"
+  notes word_less_imp_less_0 = revcut_rl[OF word_less_imp_sless[OF _ word_msb_0]]
+  notes word_le_imp_le_0 = revcut_rl[OF word_le_imp_sle[OF _ word_msb_0]]
+  shows
+  "\<forall>\<sigma>. \<Gamma> \<turnstile>
+    {s. s = \<sigma> \<and> start___int_' s < end___int_' s
+              \<and> end___int_' s \<le> bits }
+     Call make_pattern_'proc
+    {t. ret__unsigned_long_' t =
+          mask (unat (end___int_' \<sigma>)) && ~~ mask (unat (start___int_' \<sigma>))}"
+  apply (rule allI, rule conseqPre, hoare_rule HoarePartial.ProcNoRec1, vcg, clarsimp)
+  apply (fold bits_def)
+  subgoal for \<sigma>
+    apply (frule (1) word_sandwich1[of "start___int_' \<sigma>" "end___int_' \<sigma>" bits]; clarsimp)
+    apply (frule (1) word_sandwich2[of "end___int_' \<sigma> - start___int_' \<sigma>" bits])
+    apply (subgoal_tac "\<not> msb bits")
+     prefer 2 subgoal by (simp add: bits_def)
+    apply (frule (1) neg_msb_le_mono[of "end___int_' \<sigma>"])
+    apply (frule (1) neg_msb_less_mono[of "start___int_' \<sigma>"])
+    apply (frule (1) neg_msb_le_mono[of "end___int_' \<sigma> - start___int_' \<sigma>"])
+    apply (frule (1) neg_msb_less_mono[of "bits - (end___int_' \<sigma> - start___int_' \<sigma>)"])
+    apply (rule word_le_imp_le_0[of "start___int_' \<sigma>"], simp, simp)
+    apply (frule (2) word_less_imp_sless[of "start___int_' \<sigma>" "end___int_' \<sigma>"])
+    apply (frule (2) word_le_imp_sle[of "end___int_' \<sigma>" bits])
+    apply (rule word_less_imp_less_0[of "end___int_' \<sigma> - start___int_' \<sigma>"], simp, simp)
+    apply (frule (2) word_le_imp_sle[of "end___int_' \<sigma> - start___int_' \<sigma>" bits])
+    apply (rule word_le_imp_le_0[of "bits - (end___int_' \<sigma> - start___int_' \<sigma>)"], simp, simp)
+    apply (frule (2) word_less_imp_sless[of "bits - (end___int_' \<sigma> - start___int_' \<sigma>)" bits])
+    apply (intro conjI; (fastforce simp: word_sle_def word_sless_def bits_def | simp)?)
+    apply (subgoal_tac "start___int_' \<sigma> \<le> bits - (end___int_' \<sigma> - start___int_' \<sigma>)")
+     prefer 2
+     apply (meson le_minus_minus order.strict_implies_order order_trans word_le_minus_mono_left)
+    apply (simp add: shiftr_shiftl1 word_le_nat_alt[symmetric] unat_sub[symmetric] max_word_mask)
+    apply (subst shiftr_mask2, simp)
+    apply (simp add: unat_sub word_le_nat_alt bits_def)
+    done
+  done
+
+definition
+  word_set_or_clear :: "bool \<Rightarrow> 'a::len word \<Rightarrow> 'a::len word \<Rightarrow> 'a::len word"
+where
+  "word_set_or_clear s p w \<equiv> if s then w || p else w && ~~ p"
+
+lemma apply_pattern_spec:
+  "\<forall>\<sigma>. \<Gamma> \<turnstile>
+    {s. s = \<sigma> \<and> s \<Turnstile>\<^sub>c w___ptr_to_unsigned_long_' \<sigma>}
+     Call apply_pattern_'proc
+    {globals_update
+      (t_hrs_'_update
+        (hrs_mem_update
+          (heap_update (w___ptr_to_unsigned_long_' \<sigma>)
+                       (word_set_or_clear (to_bool (set_' \<sigma>))
+                                          (pattern_' \<sigma>)
+                                          (h_val (hrs_mem (t_hrs_' (globals \<sigma>)))
+                                                 (w___ptr_to_unsigned_long_' \<sigma>)))))) \<sigma>}"
+  apply (rule allI, rule conseqPre, hoare_rule HoarePartial.ProcNoRec1, vcg)
+  apply (clarsimp simp: word_set_or_clear_def to_bool_def)
+  done
+
+(* FIXME: move *)
+lemma whileAnno_subst_invariant:
+  "whileAnno b I' V c = whileAnno b I V c"
+  by (simp add: whileAnno_def)
+
+abbreviation
+  ioport_table_ptr_coerce :: "'a ptr \<Rightarrow> ioport_table_C ptr"
+where
+  "ioport_table_ptr_coerce \<equiv> ptr_coerce"
+
+lemma hoarep_conseq_spec_state:
+  fixes \<Gamma> :: "'p \<Rightarrow> ('s,'p,'f) com option"
+  assumes "\<forall>\<sigma>. \<Gamma> \<turnstile> {s. s = \<sigma> \<and> P s} c (Q \<sigma>)"
+  assumes "\<forall>\<sigma>. \<sigma> \<in> P' \<longrightarrow> P \<sigma> \<and> Q \<sigma> \<subseteq> Q'"
+  shows "\<Gamma> \<turnstile> P' c Q'"
+  using assms by (fastforce intro: hoarep.Conseq)
+
+lemma hrs_simps:
+  "hrs_mem (mem, htd) = mem"
+  "hrs_mem_update f (mem, htd) = (f mem, htd)"
+  "hrs_htd (mem, htd) = htd"
+  "hrs_htd_update g (mem, htd) = (mem, g htd)"
+  by (auto simp: hrs_mem_def hrs_mem_update_def hrs_htd_def hrs_htd_update_def)
+
+lemma clift_heap_modify_same:
+  fixes p :: "'a :: mem_type ptr"
+  assumes "hrs_htd hp \<Turnstile>\<^sub>t p"
+  assumes "typ_uinfo_t TYPE('a) \<bottom>\<^sub>t typ_uinfo_t TYPE('b)"
+  shows "clift (hrs_mem_update (heap_modify p f) hp) = (clift hp :: 'b :: mem_type typ_heap)"
+  using assms unfolding hrs_mem_update_def
+  apply (cases hp)
+  apply (simp add: split_def hrs_htd_def heap_modify_def)
+  apply (erule lift_t_heap_update_same)
+  apply simp
+  done
+
+lemma zero_ranges_are_zero_modify[simp]:
+  "h_t_valid (hrs_htd hrs) c_guard (ptr :: 'a ptr)
+    \<Longrightarrow> typ_uinfo_t TYPE('a :: wf_type) \<noteq> typ_uinfo_t TYPE(word8)
+    \<Longrightarrow> zero_ranges_are_zero rs (hrs_mem_update (heap_modify ptr f) hrs)
+        = zero_ranges_are_zero rs hrs"
+  apply (clarsimp simp: zero_ranges_are_zero_def hrs_mem_update
+                intro!: ball_cong[OF refl] conj_cong[OF refl])
+  apply (drule region_actually_is_bytes)
+  apply (drule(2) region_is_bytes_disjoint)
+  apply (simp add: heap_modify_def heap_update_def heap_list_update_disjoint_same Int_commute)
+  done
+
+lemma h_val_heap_modify:
+  fixes p :: "'a::mem_type ptr"
+  shows "h_val (heap_modify p f h) p = f (h_val h p)"
+  by (simp add: heap_modify_def h_val_heap_update)
+
+lemma array_fupdate_index:
+  fixes arr :: "'a::c_type['b::finite]"
+  assumes "i < CARD('b)" "j < CARD('b)"
+  shows "fupdate i f arr.[j] = (if i = j then f (arr.[i]) else arr.[j])"
+  using assms by (cases "i = j"; simp add: fupdate_def)
+
+lemma foldl_map_pair_constant:
+  "foldl (\<lambda>acc p. f acc (fst p) (snd p)) z (map (\<lambda>x. (x,v)) xs) = foldl (\<lambda>acc x. f acc x v) z xs"
+  by (induct xs arbitrary: z) auto
+
+lemma word_set_or_clear_test_bit:
+  fixes w :: "'a::len word"
+  shows "i < LENGTH('a) \<Longrightarrow> word_set_or_clear b p w !! i = (if p !! i then b else w !! i)"
+  by (auto simp: word_set_or_clear_def word_ops_nth_size word_size split: if_splits)
+
+lemma unat_and_mask_less_2p:
+  fixes w :: "'a::len word"
+  shows "m < LENGTH('a) \<Longrightarrow> unat (w && mask m) < 2 ^ m"
+  by (simp add: unat_less_helper  and_mask_less')
+
+lemma unat_shiftr_less_2p:
+  fixes w :: "'a::len word"
+  shows "n + m = LENGTH('a) \<Longrightarrow> unat (w >> n) < 2 ^ m"
+  by (cases "n = 0"; simp add: unat_less_helper shiftr_less_t2n3)
+
+lemma nat_div_less_mono:
+  fixes m n :: nat
+  shows "m div d < n div d \<Longrightarrow> m < n"
+  by (meson div_le_mono not_less)
+
+lemma word_shiftr_less_mono:
+  fixes w :: "'a::len word"
+  shows "w >> n < v >> n \<Longrightarrow> w < v"
+  by (auto simp: word_less_nat_alt shiftr_div_2n' elim: nat_div_less_mono)
+
+lemma word_shiftr_less_mask:
+  fixes w :: "'a::len word"
+  shows "(w >> n < v >> n) \<longleftrightarrow> (w && ~~mask n < v && ~~mask n)"
+  by (metis (mono_tags) le_shiftr mask_shift shiftr_eq_neg_mask_eq word_le_less_eq word_le_not_less)
+
+lemma word_shiftr_le_mask:
+  fixes w :: "'a::len word"
+  shows "(w >> n \<le> v >> n) \<longleftrightarrow> (w && ~~mask n \<le> v && ~~mask n)"
+  by (metis (mono_tags) le_shiftr mask_shift shiftr_eq_neg_mask_eq word_le_less_eq word_le_not_less)
+
+lemma word_shiftr_eq_mask:
+  fixes w :: "'a::len word"
+  shows "(w >> n = v >> n) \<longleftrightarrow> (w && ~~mask n = v && ~~mask n)"
+  by (metis (mono_tags) mask_shift shiftr_eq_neg_mask_eq)
+
+lemmas word_shiftr_cmp_mask =
+  word_shiftr_less_mask word_shiftr_le_mask word_shiftr_eq_mask
+
+lemma fold_array_update_index:
+  fixes arr :: "'a::c_type['b::finite]"
+  assumes "i < CARD('b)"
+  shows "fold (\<lambda>i arr. Arrays.update arr i (f i)) is arr.[i] = (if i \<in> set is then f i else arr.[i])"
+  using assms by (induct "is" arbitrary: arr) (auto split: if_splits)
+
+lemma if_if_if_same_output:
+  "(if c1 then if c2 then t else f else if c3 then t else f) = (if c1 \<and> c2 \<or> \<not>c1 \<and> c3 then t else f)"
+  by (simp split: if_splits)
+
+lemma word_le_split_mask:
+  "(w \<le> v) \<longleftrightarrow> (w >> n < v >> n \<or> w >> n = v >> n \<and> w && mask n \<le> v && mask n)"
+  apply (simp add: word_shiftr_eq_mask word_shiftr_less_mask)
+  apply (rule subst[where P="\<lambda>c. c \<le> d = e" for d e, OF AND_NOT_mask_plus_AND_mask_eq[where n=n]])
+  apply (rule subst[where P="\<lambda>c. d \<le> c = e" for d e, OF AND_NOT_mask_plus_AND_mask_eq[where n=n]])
+  apply (rule iffI)
+   apply safe
+     apply (fold_subgoals (prefix))[2]
+    apply (subst atomize_conj)
+    apply (rule context_conjI)
+     apply (metis AND_NOT_mask_plus_AND_mask_eq neg_mask_mono_le word_le_less_eq)
+    apply (metis add.commute word_and_le1 word_bw_comms(1) word_plus_and_or_coroll2 word_plus_mcs_4)
+   apply (metis Groups.add_ac(2) neg_mask_mono_le word_le_less_eq word_not_le word_plus_and_or_coroll2)
+  apply (metis add.commute word_and_le1 word_bw_comms(1) word_plus_and_or_coroll2 word_plus_mcs_3)
+  done
+
+lemma heap_modify_fold:
+  "heap_update p (f (h_val h p)) h = heap_modify p f h"
+  by (simp add: heap_modify_def)
+
+lemma t_hrs_'_update_heap_modify_fold:
+  "gs\<lparr> t_hrs_' := hrs_mem_update (heap_update p (f (h_val (hrs_mem (t_hrs_' gs)) p))) (t_hrs_' gs) \<rparr>
+    = t_hrs_'_update (hrs_mem_update (heap_modify p f)) gs"
+  by (clarsimp simp: heap_modify_def hrs_mem_update_def hrs_mem_def split: prod.splits)
+
+lemma heap_modify_Array_element:
+  fixes p :: "'a::packed_type ptr"
+  fixes p' :: "('a['b::finite]) ptr"
+  assumes "p = ptr_coerce p' +\<^sub>p int n"
+  assumes "n < CARD('b)"
+  assumes "CARD('b) * size_of TYPE('a) < 2 ^ addr_bitsize"
+  shows "heap_modify p f = heap_modify p' (fupdate n f)"
+  using assms by (simp add: heap_access_Array_element heap_update_Array_element'
+                            heap_modify_def fupdate_def)
+
+lemma fupdate_word_set_or_clear_max_word:
+  "fupdate i (word_set_or_clear b max_word) arr = Arrays.update arr i (if b then max_word else 0)"
+  by (simp add: fupdate_def word_set_or_clear_def)
+
+lemma h_t_valid_Array_element':
+  "\<lbrakk> htd \<Turnstile>\<^sub>t (p :: (('a :: mem_type)['b :: finite]) ptr); 0 \<le> n; n < CARD('b) \<rbrakk>
+    \<Longrightarrow> htd \<Turnstile>\<^sub>t ((ptr_coerce p :: 'a ptr) +\<^sub>p n)"
+  apply (drule_tac n="nat n" and coerce=False in h_t_valid_Array_element')
+   apply simp
+  apply (simp add: array_ptr_index_def)
+  done
+
+lemma setIOPortMask_spec:
+  notes ucast_mask = ucast_and_mask[where n=6, simplified mask_def, simplified]
+  notes not_max_word_simps = and_not_max_word shiftr_not_max_word and_mask_not_max_word
+  notes ucast_cmp_ucast = ucast_le_ucast ucast_less_ucast
+  notes array_assert = array_assertion_shrink_right[OF array_ptr_valid_array_assertionD]
+  notes word_unat.Rep_inject[simp del]
+  shows
+  "\<forall>\<sigma>. \<Gamma> \<turnstile>
+    {s. s = \<sigma> \<and> low_' s \<le> high_' s \<and> s \<Turnstile>\<^sub>c ioport_table_ptr_coerce (ioport_bitmap_' s)}
+      Call setIOPortMask_'proc
+    {t. globals t = t_hrs_'_update
+                      (hrs_mem_update
+                        (heap_modify
+                          (ioport_table_ptr_coerce (ioport_bitmap_' \<sigma>))
+                          (let low_word = low_' \<sigma> >> wordRadix;
+                               high_word = high_' \<sigma> >> wordRadix;
+                               low_mask = ~~ mask (unat (low_' \<sigma> && mask wordRadix));
+                               high_mask = mask (Suc (unat (high_' \<sigma> && mask wordRadix)));
+                               b = to_bool (set_' \<sigma>) in
+                           if low_word = high_word
+                             then fupdate (unat low_word) (word_set_or_clear b (high_mask && low_mask))
+                             else fupdate (unat high_word) (word_set_or_clear b high_mask)
+                                \<circ> fold (\<lambda>i arr. Arrays.update arr i (if b then max_word else 0))
+                                       ([Suc (unat low_word) ..< unat high_word])
+                                \<circ> fupdate (unat low_word) (word_set_or_clear b low_mask))))
+                      (globals \<sigma>)}"
+  apply (rule allI)
+  apply (hoare_rule HoarePartial.ProcNoRec1)
+  apply (simp add: scast_ucast_up_eq_ucast word_upcast_shiftr[symmetric] ucast_mask[symmetric]
+                   word_upcast_0_sle)
+  apply (rule ssubst[where P="\<lambda>c. hoarep \<Gamma> {} {} P (Catch (c1;; (Cond b c2 (c3;; c;; c4;; c5))) Skip) Q A"
+                       for P c1 b c2 c3 c4 c5 Q A],
+         rule_tac I="{s. s \<Turnstile>\<^sub>c ioport_table_ptr_coerce (bitmap_' s)
+                          \<and> bitmap_' s = ptr_coerce (ioport_bitmap_' \<sigma>)
+                          \<and> ucast (low_' \<sigma> >> wordRadix) < low_word_' s
+                          \<and> low_word_' s <= high_word_' s
+                          \<and> high_word_' s = ucast (high_' \<sigma> >> wordRadix)
+                          \<and> high_index_' s = ucast (high_' \<sigma> && mask wordRadix)
+                          \<and> set_' s = set_' \<sigma>
+                          \<and> globals s = t_hrs_'_update
+                                         (hrs_mem_update
+                                           (heap_modify
+                                             (ioport_table_ptr_coerce (ioport_bitmap_' \<sigma>))
+                                             (fold (\<lambda>i arr. Arrays.update arr i (if to_bool (set_' \<sigma>) then max_word else 0))
+                                                   ([Suc (unat (low_' \<sigma> >> wordRadix)) ..< unat (low_word_' s)])
+                                               \<circ> fupdate
+                                                   (unat (low_' \<sigma> >> wordRadix))
+                                                   (word_set_or_clear
+                                                     (to_bool (set_' \<sigma>))
+                                                     (~~ mask (unat (low_' \<sigma> && mask wordRadix)))))))
+                                         (globals \<sigma>)}"
+           in whileAnno_subst_invariant)
+  apply (rule conseqPre, vcg)
+    apply (all \<open>clarsimp simp: Let_def wordRadix_def hrs_simps is_up is_down
+                               unat_ucast_upcast uint_up_ucast sint_ucast_eq_uint up_ucast_inj_eq
+                               not_max_word_simps[THEN ucast_increment, simplified max_word_def]
+                               ucast_cmp_ucast ucast_cmp_ucast[where 'a=16 and y="0x40", simplified]
+                               heap_modify_fold t_hrs_'_update_heap_modify_fold
+                         cong: conj_cong\<close>)
+    subgoal for mem htd ioport_bitmap high set low low_word
+      (* Loop invariant is preserved. *)
+      apply (frule neg_msb_le_mono[OF _ word_upcast_neg_msb];
+             simp add: word_sless_iff_less[OF _ word_upcast_neg_msb] sint_eq_uint unat_arith_simps)
+      apply (frule less_trans[OF _ unat_shiftr_less_2p[where m=10]]; simp)
+      apply (frule h_t_valid_Array_element[where n="uint low_word"];
+             simp add: uint_nat heap_modify_compose o_def fupdate_word_set_or_clear_max_word
+                       heap_modify_Array_element[where 'b=1024 and p'="ptr_coerce ioport_bitmap"])
+      apply (clarsimp elim!: array_assertion_shrink_right dest!: array_ptr_valid_array_assertionD)
+      done
+   subgoal for mem htd ioport_bitmap high set low low_word
+     (* Invariant plus loop termination condition is sufficient to establish VCG postcondition. *)
+     apply (frule neg_msb_le_mono[OF _ word_upcast_neg_msb];
+            simp add: word_sless_iff_less[OF _ word_upcast_neg_msb] sint_eq_uint unat_arith_simps)
+     apply (cut_tac unat_and_mask_less_2p[of 6 high]; simp)
+     apply (cut_tac unat_shiftr_less_2p[of 6 10 high]; simp)
+     apply (frule h_t_valid_Array_element[where n="uint low_word"];
+            simp add: uint_nat heap_modify_compose o_def fupdate_word_set_or_clear_max_word
+                      heap_modify_Array_element[where 'b=1024 and p'="ptr_coerce ioport_bitmap"])
+     apply (clarsimp elim!: array_assertion_shrink_right dest!: array_ptr_valid_array_assertionD)
+     done
+  subgoal for \<sigma>'
+    (* VCG precondition is sufficient to establish loop invariant. *)
+    apply (frule word_le_split_mask[where n=6, THEN iffD1])
+    apply (simp add: unat_arith_simps)
+    apply (cut_tac unat_shiftr_less_2p[of 6 10 "low_' \<sigma>'"]; simp)
+    apply (cut_tac unat_shiftr_less_2p[of 6 10 "high_' \<sigma>'"]; simp)
+    apply (cut_tac unat_and_mask_less_2p[of 6 "low_' \<sigma>'"]; simp)
+    apply (cut_tac unat_and_mask_less_2p[of 6 "high_' \<sigma>'"]; simp)
+    apply (simp add: uint_nat mask_def[where n=6] mask_def[where n=64] less_Suc_eq_le Suc_le_eq
+                     heap_modify_Array_element[where 'b=1024 and p'="ptr_coerce (ioport_bitmap_' \<sigma>')"])
+    apply (frule h_t_valid_Array_element[where n="uint (low_' \<sigma>' >> 6)"]; simp add: uint_nat)
+    apply (frule h_t_valid_Array_element[where n="uint (high_' \<sigma>' >> 6)"]; simp add: uint_nat)
+    apply (frule array_assert[where n'="unat (low_' \<sigma>' >> 6)"]; simp)
+    apply (frule array_assert[where n'="unat (high_' \<sigma>' >> 6)"]; simp)
+    by auto
+  done
+
 lemma setIOPortMask_ccorres:
   notes Collect_const[simp del]
   shows
   "ccorres dc xfdc
-     \<top> (* this is probably wrong *)
+     (\<lambda>_. f \<le> l)
      (UNIV \<inter> \<lbrace>\<acute>ioport_bitmap = Ptr (symbol_table ''x86KSAllocatedIOPorts'')\<rbrace>
            \<inter> \<lbrace>\<acute>low = f\<rbrace>
            \<inter> \<lbrace>\<acute>high = l\<rbrace>
            \<inter> \<lbrace>\<acute>set = from_bool b\<rbrace>) hs
      (setIOPortMask f l b)
      (Call setIOPortMask_'proc)"
-  apply (cinit lift: ioport_bitmap_' low_' high_' set_')
-   apply csymbr
-   apply (rule ccorres_Guard_Seq)
-   apply csymbr
-   apply (rule ccorres_Guard_Seq)
-   apply csymbr
-  sorry (* setIOPortMask_ccorres *)
+  apply (intro ccorres_from_vcg hoarep_conseq_spec_state[OF setIOPortMask_spec] allI)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def Let_def
+                        global_ioport_bitmap_relation_def2
+                        setIOPortMask_def gets_def get_def modify_def put_def
+                        monad_simps in_monad
+                        hrs_mem_update h_val_heap_modify
+                        clift_heap_modify_same tag_disj_via_td_name
+                        cpspace_relation_def carch_globals_def cmachine_state_relation_def
+                        fpu_null_state_relation_def)
+  apply (match premises in H: \<open>cioport_bitmap_to_H _ = _\<close> and O: \<open>low_' s \<le> high_' s\<close> for s
+           \<Rightarrow> \<open>match premises in _[thin]: _(multi) \<Rightarrow> \<open>insert O H\<close>\<close>)
+  apply (clarsimp simp: cioport_bitmap_to_H_def wordRadix_def, rule ext, drule_tac x=port in fun_cong)
+  apply (clarsimp simp: foldl_map_pair_constant foldl_fun_upd_value)
+  apply (rule ssubst[where P="\<lambda>f. test_bit f i = e" for e i, OF if_distrib[where f="\<lambda>c. c v.[i]" for v i]])
+  apply (simp add: array_fupdate_index fold_array_update_index word_set_or_clear_test_bit
+                   if_distrib[where f="\<lambda>c. test_bit c i" for i] word_ops_nth_size word_size
+                   unat_shiftr_less_2p[of 6 10, simplified] unat_and_mask_less_2p[of 6, simplified]
+                   less_Suc_eq_le Suc_le_eq not_less unat_arith_simps(1,2)[symmetric]
+                   if_if_same_output if_if_if_same_output)
+  apply (thin_tac "_ = _")
+  apply (rule if_weak_cong)
+  apply (rule ssubst[OF word_le_split_mask[where n=6], where P="\<lambda>f. e \<longleftrightarrow> f \<and> c" for e c])
+  apply (rule ssubst[OF word_le_split_mask[where n=6], where P="\<lambda>f. e \<longleftrightarrow> c \<and> f" for e c])
+  apply (drule word_le_split_mask[where n=6, THEN iffD1])
+  by auto
 
 lemma freeIOPortRange_ccorres:
   "ccorres dc xfdc (\<top> and (\<lambda>s. f \<le> l))
