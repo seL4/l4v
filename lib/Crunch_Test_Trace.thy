@@ -19,8 +19,8 @@ text {* Test cases for crunch *}
 
 definition
   "crunch_foo1 (x :: nat) \<equiv> do
-    modify (op + x);
-    modify (op + x)
+    modify ((+) x);
+    modify ((+) x)
   od"
 
 definition
@@ -82,7 +82,7 @@ fun crunch_foo4 :: "nat => nat => 'a => (nat,unit) tmonad" where
 | "crunch_foo4 (Suc n) x y = crunch_foo4 n x y"
 
 definition
-  "crunch_foo5 x y \<equiv> crunch_foo1 x"
+  "crunch_foo5 x (y::'a) \<equiv> crunch_foo1 x"
 
 end
 
@@ -131,16 +131,16 @@ definition
 
 definition
   "crunch_foo9 (x :: nat) \<equiv> do
-    modify (op + x);
-    modify (op + x)
+    modify ((+) x);
+    modify ((+) x)
   od"
 
 crunch test: crunch_foo9 "\<lambda>x. x > y" (ignore: bind)
 
 definition
   "crunch_foo10 (x :: nat) \<equiv> do
-    modify (op + x);
-    modify (op + x)
+    modify ((+) x);
+    modify ((+) x)
   od"
 
 (*crunch_def attribute overrides definition lookup *)

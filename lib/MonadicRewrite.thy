@@ -87,7 +87,7 @@ lemma monadic_rewrite_catch:
 lemma monadic_rewrite_symb_exec_pre:
   assumes inv: "\<And>s. \<lbrace>(=) s\<rbrace> g \<lbrace>\<lambda>r. (=) s\<rbrace>"
        and ef: "empty_fail g"
-       and rv: "\<And>s. \<lbrace>P\<rbrace> g \<lbrace>\<lambda>y s. y \<in> S\<rbrace>"
+       and rv: "\<lbrace>P\<rbrace> g \<lbrace>\<lambda>y s. y \<in> S\<rbrace>"
        and h': "\<And>y. y \<in> S \<longrightarrow> h y = h'"
   shows "monadic_rewrite True True P (g >>= h) h'"
 proof -
@@ -197,7 +197,7 @@ lemma monadic_rewrite_symb_exec_r:
   done
 
 lemma monadic_rewrite_symb_exec_r':
-  "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>; no_fail P m;
+  "\<lbrakk> \<And>s. \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>; no_fail P m;
      \<And>rv. monadic_rewrite F False (Q rv) x (y rv);
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
       \<Longrightarrow> monadic_rewrite F False P x (m >>= y)"

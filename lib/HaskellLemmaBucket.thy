@@ -186,7 +186,7 @@ lemma const_apply:
   by (simp add: const_def)
 
 lemma const_None_empty:
-  "const None = empty"
+  "const None = Map.empty"
   by (rule ext, simp add: const_apply)
 
 lemma headM_tailM_Cons:

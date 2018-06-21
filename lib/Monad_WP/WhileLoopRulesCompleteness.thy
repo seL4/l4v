@@ -74,11 +74,9 @@ proof (rule iffI)
 next
   assume loop: "?RHS"
 
-  def I \<equiv> "\<lambda>r s. \<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<lbrace> \<lambda>r s. Q r s \<rbrace>!"
-  def R \<equiv> "{(x, y).
-                C (fst y) (snd y) \<and>
-                x \<in> fst (B (fst y) (snd y)) \<and>
-                whileLoop_terminates C B (fst y) (snd y)}"
+  define I where "I \<equiv> \<lambda>r s. \<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<lbrace> \<lambda>r s. Q r s \<rbrace>!"
+  define R where "R \<equiv> {(x, y). C (fst y) (snd y) \<and> x \<in> fst (B (fst y) (snd y)) \<and>
+                                whileLoop_terminates C B (fst y) (snd y)}"
 
   have "wf R"
     using R_def whileLoop_terminates_wf
@@ -126,40 +124,6 @@ next
     by blast
 qed
 
-(*
-
-lemma not_whileLoop_terminates_complete:
-  shows "(\<not> whileLoop_terminates C B r s) =
-              (\<exists>I. I r s \<and> C r s \<and>
-                   (\<forall>r s. (I r s \<and> C r s) \<longrightarrow> (\<exists>(r', s') \<in> fst (B r s). C r' s' \<and> I r' s')))"
-    (is "?LHS = ?RHS")
-proof (rule iffI)
-  assume "?LHS"
-  thus "?RHS"
-    apply -
-    apply (rule exI [where x="\<lambda>r s. \<not> whileLoop_terminates C B r s"])
-    apply clarsimp
-    apply (rule conjI)
-     apply (subst (asm) whileLoop_terminates.simps)
-     apply clarsimp
-    apply clarsimp
-    apply (subst (asm) (2) whileLoop_terminates.simps)
-    apply clarsimp
-    apply (erule bexI [rotated])
-    apply clarsimp
-    apply (subst (asm) (2) whileLoop_terminates.simps)
-    apply simp
-    done
-next
-  assume "?RHS"
-  thus "?LHS"
-    apply clarsimp
-    apply (cut_tac C=C and B=B and I=I and r=r and s=s in not_whileLoop_terminates)
-    apply auto
-    done
-qed
-
-*)
 
 lemma snd_whileLoop_complete:
   shows "snd (whileLoop C B r s) =
@@ -222,8 +186,9 @@ proof (rule iffI)
     done
 next
   assume no_fail: "?LHS"
-  def I \<equiv> "\<lambda>r s. \<not> snd (whileLoop C B r s)"
-  def R \<equiv> "{((r', s'), (r, s)). C r s \<and> (r', s') \<in> fst (B r s) \<and> whileLoop_terminates C B r s}"
+  define I where "I \<equiv> \<lambda>r s. \<not> snd (whileLoop C B r s)"
+  define R where "R \<equiv> {((r', s'), (r, s)). C r s \<and> (r', s') \<in> fst (B r s) \<and>
+                                            whileLoop_terminates C B r s}"
 
   have "I r s"
     by (clarsimp simp: I_def no_fail)
@@ -403,9 +368,9 @@ proof (rule iffI)
 next
   assume rhs: "?RHS"
 
-  def I \<equiv> "\<lambda>r s. \<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<exists>\<lbrace> Q \<rbrace>"
+  define I where "I \<equiv> \<lambda>r s. \<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<exists>\<lbrace> Q \<rbrace>"
 
-  def R \<equiv> "measure (\<lambda>(r, s). shortest_path_length C B (r, s) Q)"
+  define R where "R \<equiv> measure (\<lambda>(r, s). shortest_path_length C B (r, s) Q)"
 
   have P_s: "\<And>s. P s \<Longrightarrow> I r s"
     using rhs

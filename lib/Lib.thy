@@ -745,7 +745,7 @@ lemma graph_ofI:
   by (simp add: graph_of_def)
 
 lemma graph_of_empty :
-  "graph_of empty = {}"
+  "graph_of Map.empty = {}"
   by (simp add: graph_of_def)
 
 lemma graph_of_in_ranD: "\<forall>y \<in> ran f. P y \<Longrightarrow> (x,y) \<in> graph_of f \<Longrightarrow> P y"
@@ -996,7 +996,7 @@ lemma fold_ignore4:
   using fold_ignore3 by fastforce
 
 lemma dom_unpack2:
-  "dom (fold (++) ms empty) = \<Union>(set (map dom ms))"
+  "dom (fold (++) ms Map.empty) = \<Union>(set (map dom ms))"
   apply (induct ms; clarsimp simp:dom_def)
   apply (rule equalityI; clarsimp)
    apply (drule fold_to_disj)
@@ -1021,7 +1021,7 @@ lemma dom_inter_nothing:"dom f \<inter> dom g = {} \<Longrightarrow> \<forall>x.
   by auto
 
 lemma fold_ignore6:
-  "f x = None \<Longrightarrow> fold (++) ms f x = fold (++) ms empty x"
+  "f x = None \<Longrightarrow> fold (++) ms f x = fold (++) ms Map.empty x"
   apply (induct ms arbitrary:f x; clarsimp simp:map_add_def)
   by (metis (no_types, lifting) fold_ignore1 option.collapse option.simps(4))
 
@@ -1037,7 +1037,7 @@ lemma fold_ignore7:
   done
 
 lemma fold_ignore8:
-  "fold (++) ms [x \<mapsto> y] = (fold (++) ms empty)(x \<mapsto> y)"
+  "fold (++) ms [x \<mapsto> y] = (fold (++) ms Map.empty)(x \<mapsto> y)"
   apply (rule ext)
   apply (rename_tac xa)
   apply (case_tac "xa = x")
@@ -1052,7 +1052,7 @@ lemma fold_ignore9:
   by (subst (asm) fold_ignore8) clarsimp
 
 lemma fold_to_map_of:
-  "fold (++) (map (\<lambda>x. [f x \<mapsto> g x]) xs) empty = map_of (map (\<lambda>x. (f x, g x)) xs)"
+  "fold (++) (map (\<lambda>x. [f x \<mapsto> g x]) xs) Map.empty = map_of (map (\<lambda>x. (f x, g x)) xs)"
   apply (rule ext)
   apply (rename_tac x)
   apply (case_tac "fold (++) (map (\<lambda>x. [f x \<mapsto> g x]) xs) Map.empty x")
@@ -1066,7 +1066,7 @@ lemma fold_to_map_of:
    apply (erule_tac x=xa in ballE; clarsimp)
   apply clarsimp
   apply (frule fold_ignore5; clarsimp split:if_split_asm)
-  apply (subst map_add_map_of_foldr[where m=empty, simplified])
+  apply (subst map_add_map_of_foldr[where m=Map.empty, simplified])
   apply (induct xs arbitrary:f g; clarsimp split:if_split)
   apply (rule conjI; clarsimp)
    apply (drule fold_ignore9; clarsimp)
@@ -2382,7 +2382,7 @@ lemma suffix_eqI:
 
 lemma suffix_Cons_mem:
   "suffix (x # xs) as \<Longrightarrow> x \<in> set as"
-  by (drule suffix_set_subset) simp
+  by (metis in_set_conv_decomp suffix_def)
 
 lemma distinct_imply_not_in_tail:
   "\<lbrakk> distinct list; suffix (y # ys) list\<rbrakk> \<Longrightarrow> y \<notin> set ys"
@@ -2393,7 +2393,7 @@ lemma list_induct_suffix [case_names Nil Cons]:
   and    consr: "\<And>x xs. \<lbrakk>P xs; suffix (x # xs) as \<rbrakk> \<Longrightarrow> P (x # xs)"
   shows  "P as"
 proof -
-  def as' == as
+  define as' where "as' == as"
 
   have "suffix as as'" unfolding as'_def by simp
   then show ?thesis

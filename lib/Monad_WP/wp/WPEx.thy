@@ -369,7 +369,7 @@ val wps_method = Attrib.thms >> curry
 method_setup wps = {* wps_method *} "experimental wp simp method"
 
 lemma foo3:
-  "\<lbrace>P\<rbrace> do v \<leftarrow> return (Suc 0); return (Suc (Suc 0)) od \<lbrace>(=\<rbrace>)"
+  "\<lbrace>P\<rbrace> do v \<leftarrow> return (Suc 0); return (Suc (Suc 0)) od \<lbrace>(=)\<rbrace>"
   apply (rule hoare_pre)
    apply (rule hoare_seq_ext)+
     apply (wps | rule hoare_vcg_prop)+

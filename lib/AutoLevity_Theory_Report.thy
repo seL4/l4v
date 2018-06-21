@@ -44,9 +44,9 @@ ML_Antiquotation.inline @{binding string_record}
 
         val trim =
         String.explode
-        #> take_prefix (fn #" " => true | _ => false)
+        #> chop_prefix (fn #" " => true | _ => false)
         #> snd
-        #> take_suffix (fn #" " => true | _ => false)
+        #> chop_suffix (fn #" " => true | _ => false)
         #> fst
         #> String.implode
 
@@ -71,8 +71,8 @@ ML_Antiquotation.inline @{binding string_record}
       val base_typs = ["string","int","bool", "string list"]
 
 
-      val encodes = map snd entries |> distinct (=)
-        |> filter_out (member (=) base_typs)
+      val encodes = map snd entries |> distinct (op =)
+        |> filter_out (member (op =) base_typs)
 
       val sanitize = String.explode
       #> map (fn #" " => #"_"
@@ -340,7 +340,7 @@ fun base_name_of nm =
 
 
 fun make_deps (const_deps, type_deps) =
-  ({const_deps = distinct (=) const_deps, type_deps = distinct (=) type_deps} : deps)
+  ({const_deps = distinct (op =) const_deps, type_deps = distinct (op =) type_deps} : deps)
 
 fun make_tag (SOME (tag, range)) = (case location_from_range range
   of SOME rng => SOME ({tag = tag, location = rng} : levity_tag)
@@ -410,7 +410,7 @@ fun get_reports_for_thy thy =
                 map used_facts thms'
                 |> flat;
 
-             val lemma_deps = map base_name_of lemma_deps' |> distinct (=)
+             val lemma_deps = map base_name_of lemma_deps' |> distinct (op =)
 
              val deps =
                map deps_of_thm thms' |> ListPair.unzip |> apply2 flat |> make_deps

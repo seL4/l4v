@@ -17,7 +17,7 @@ begin
 declare len_of_numeral_defs [simp del]
 
 definition
-  "typ_clear_region ptr bits d \<equiv> \<lambda>x. (fst (d x), if x \<in> {ptr..+2 ^ bits} then empty else (snd (d x)))"
+  "typ_clear_region ptr bits d \<equiv> \<lambda>x. (fst (d x), if x \<in> {ptr..+2 ^ bits} then Map.empty else (snd (d x)))"
 
 definition
   "typ_region_bytes ptr bits d \<equiv> \<lambda>x. (if x \<in> {ptr ..+ 2 ^ bits}

@@ -297,7 +297,7 @@ lemma option_while_rule':
   assumes final: "\<And>s. C s \<Longrightarrow> I (Some s) \<Longrightarrow> B s = None \<Longrightarrow> I None"
   shows "I ss' \<and> (case ss' of Some s' \<Rightarrow> \<not> C s' | _ \<Rightarrow> True)"
 proof -
-  def ss \<equiv> "Some s"
+  define ss where "ss \<equiv> Some s"
   obtain ss1' where "(Some s, ss1') \<in> option_while' C B"
     using assms(3,2,4,5) by (rule option_while'_term)
   then have *: "(ss, ss') \<in> option_while' C B" using `option_while C B s = ss'`
