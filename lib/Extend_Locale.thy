@@ -67,7 +67,7 @@ val _ =
                (Name_Space.parent_path #> Name_Space.add_path (chunkN ^ chunk))
           |> Local_Theory.background_theory_result
                (Expression.add_locale_cmd binding binding
-                  ([((locale_name,Position.none), (("#",false), Expression.Positional []))], []) elems
+                  ([((locale_name,Position.none), (("#",false), (Expression.Positional [],[])))], []) elems
                  ##> Local_Theory.exit_global)
           ||> Local_Theory.restore_background_naming lthy
 
@@ -146,7 +146,15 @@ interpretation Generic
   subgoal
   proof -
   interpret Internal .
-  show ?thesis by (intro_locales; (unfold_locales, fact)?)
+  show ?thesis
+    (* annoyingly, the proof method "fact" no longer has access to facts produced by "interpret" *)
+    apply (intro_locales; unfold_locales)
+        apply (rule internal_lemma1)
+       apply (rule internal_lemma2)
+      apply (rule internal_lemma4)
+     apply (rule internal_lemma3)
+    apply (erule (1) asm_4)
+    done
   qed
   done
 
