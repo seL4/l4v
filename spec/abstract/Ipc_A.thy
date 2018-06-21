@@ -338,8 +338,7 @@ where
                   | _ \<Rightarrow> fail;
                 set_thread_state dest Running;
                 do_extended_op (possible_switch_to dest);
-                fault \<leftarrow> thread_get tcb_fault thread;
-                when (call \<or> fault \<noteq> None) $
+                when call $
                   if (can_grant \<or> can_grant_reply)
                   then setup_caller_cap thread dest reply_can_grant
                   else set_thread_state thread Inactive
@@ -421,8 +420,7 @@ where
               do_ipc_transfer sender (Some epptr)
                         (sender_badge data) (sender_can_grant data)
                         thread;
-              fault \<leftarrow> thread_get tcb_fault sender;
-              if ((sender_is_call data) \<or> (fault \<noteq> None))
+              if (sender_is_call data)
               then
                 if (sender_can_grant data \<or> sender_can_grant_reply data)
                 then setup_caller_cap sender thread (AllowGrant \<in> rights)
@@ -543,7 +541,7 @@ where
            if AllowSend \<in> rights \<and> (AllowGrant \<in> rights \<or> AllowGrantReply \<in> rights)
            then liftE $ (do
                thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := Some fault \<rparr>) tptr;
-               send_ipc True False (cap_ep_badge handler_cap)
+               send_ipc True True (cap_ep_badge handler_cap)
                         (AllowGrant \<in> rights) True tptr (cap_ep_ptr handler_cap)
              od)
            else throwError f
