@@ -14,7 +14,7 @@ begin
 
 definition
   "typ_clear_region ptr bits d \<equiv>
-  \<lambda>x. (fst (d x), if x \<in> {ptr..+2 ^ bits} then empty else (snd (d x)))"
+  \<lambda>x. (fst (d x), if x \<in> {ptr..+2 ^ bits} then Map.empty else (snd (d x)))"
 
 declare [[calculate_modifies_proofs = false]]
 

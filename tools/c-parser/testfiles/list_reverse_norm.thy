@@ -79,7 +79,7 @@ lemma list_heapE:
   by (subst list_restrict_dom [symmetric]) (simp add: list_restrict_dom)
 
 lemma list_heap_update_ignore [simp]:
-  "ptr_val x \<notin> set xs \<Longrightarrow> list (h (x \<mapsto> v)) xs p = list h xs p"
+  "ptr_val x \<notin> set xs \<Longrightarrow> list (h (x := Some v)) xs p = list h xs p"
   by (cases x) (auto elim: list_heapE)
 
 declare typ_simps [simp]

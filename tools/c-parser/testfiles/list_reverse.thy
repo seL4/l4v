@@ -24,7 +24,7 @@ where
 
 lemma list_empty [simp]:
   shows "list xs NULL = (\<lambda>s. xs = [] \<and> \<box> s)"
-  by (cases xs) (auto intro: ext dest!: sep_conj_mapD)
+  by (cases xs) (auto dest!: sep_conj_mapD)
 
 declare sep_conj_com [simp del]
 declare sep_conj_left_com [simp del]
