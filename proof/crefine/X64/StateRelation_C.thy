@@ -149,19 +149,10 @@ where
        None \<Rightarrow> False (* should never happen *)
      | Some x \<Rightarrow> s = x86_irq_state_to_H x"
 
-(* 1024 = number of entries in ioport table
-        = 2^16 (total number of ioports) / word_bits *)
-type_synonym ioport_table_C = "machine_word[1024]"
-
 (* This is required for type collision shenanigans, 1024 matches above *)
 lemma ntbs_1024[simp]:
   "nat_to_bin_string 1024 = ''000000000010''"
   by (simp add: nat_to_bin_string_simps)
-
-abbreviation
-  ioport_table_Ptr :: "machine_word \<Rightarrow> ioport_table_C ptr"
-where
-  "ioport_table_Ptr \<equiv> Ptr"
 
 definition
   cioport_bitmap_to_H :: "ioport_table_C \<Rightarrow> (ioport \<Rightarrow> bool)"

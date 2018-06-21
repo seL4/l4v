@@ -45,6 +45,10 @@ abbreviation
 abbreviation
   pml4e_Ptr :: "word64 \<Rightarrow> pml4e_C ptr" where "pml4e_Ptr == Ptr"
 
+(* 1024 = number of entries in ioport table
+        = 2^16 (total number of ioports) / word_bits *)
+type_synonym ioport_table_C = "machine_word[1024]"
+
 type_synonym tcb_cnode_array = "cte_C[5]"
 type_synonym fpu_bytes_array = "word8[fpu_bytes]"
 type_synonym registers_array = "machine_word[23]"
@@ -55,6 +59,7 @@ abbreviation "tcb_cnode_Ptr \<equiv> Ptr :: addr \<Rightarrow> tcb_cnode_array p
 abbreviation "fpu_state_Ptr \<equiv> Ptr :: addr \<Rightarrow> user_fpu_state_C ptr"
 abbreviation "fpu_bytes_Ptr \<equiv> Ptr :: addr \<Rightarrow> fpu_bytes_array ptr"
 abbreviation "registers_Ptr \<equiv> Ptr :: addr \<Rightarrow> registers_array ptr"
+abbreviation "ioport_table_Ptr \<equiv> Ptr :: addr \<Rightarrow> ioport_table_C ptr"
 
 lemma halt_spec:
   "Gamma \<turnstile> {} Call halt_'proc {}"
