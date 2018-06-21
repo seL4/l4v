@@ -323,7 +323,7 @@ lemma put_trace_eq_drop:
   apply (induct xs)
    apply (clarsimp simp: return_def)
   apply (clarsimp simp: put_trace_elem_def bind_def)
-  apply (simp add: Iic_Suc_eq_insert_0 image_image)
+  apply (simp add: atMost_Suc_eq_insert_0 image_image)
   apply (rule equalityI; clarsimp)
    apply (split if_split_asm; clarsimp)
    apply (auto intro: image_eqI[where x=0])[1]

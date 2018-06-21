@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory Crunch_Test_NonDet (* FIXME: not tested *)
+theory Crunch_Test_NonDet
 imports
   Crunch_Instances_NonDet
   Crunch_Test_Qualified_NonDet
@@ -89,7 +89,7 @@ fun crunch_foo4 :: "nat => nat => 'a => (nat,unit) nondet_monad" where
 | "crunch_foo4 (Suc n) x y s = crunch_foo4 n x y s"
 
 definition
-  "crunch_foo5 x y \<equiv> crunch_foo1 x"
+  "crunch_foo5 x (y::'a) \<equiv> crunch_foo1 x"
 
 end
 

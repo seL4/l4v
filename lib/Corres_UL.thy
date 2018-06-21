@@ -1137,7 +1137,7 @@ lemma corres_add_guard:
 (* safer non-rewrite version of corres_gets *)
 lemma corres_gets_trivial:
   "\<lbrakk>\<And>s s'. (s,s') \<in> sr \<Longrightarrow> f s = f' s' \<rbrakk>
-   \<Longrightarrow> corres_underlying sr nf nf' op = \<top> \<top> (gets f) (gets f')"
+   \<Longrightarrow> corres_underlying sr nf nf' (=) \<top> \<top> (gets f) (gets f')"
   unfolding corres_underlying_def gets_def get_def return_def bind_def
   by clarsimp
 

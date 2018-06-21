@@ -710,7 +710,7 @@ lemma ccorres_sequence_while_genQ':
                      (body ;; Basic (\<lambda>s. xf_update (\<lambda>_. xf s + of_nat j) s)))"
   (is "ccorresG rf_sr \<Gamma> ?r' ?xf' ?G (?G' \<inter> _) hs (sequence xs) ?body")
 proof -
-  def init_xs \<equiv> xs
+  define init_xs where "init_xs \<equiv> xs"
 
   have rl: "xs = drop (length init_xs - length xs) init_xs" unfolding init_xs_def
     by fastforce

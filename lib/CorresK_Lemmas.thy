@@ -12,7 +12,7 @@
 
 theory CorresK_Lemmas
 imports
-  Corres_Method
+  "Lib.Corres_Method"
   "ExecSpec.Syscall_H"
   "ASpec.Syscall_A"
 begin
