@@ -18,7 +18,7 @@ lemma direct_caps_of_update [simp]:
   by (rule ext, simp add: direct_caps_of_def split:option.splits)
 
 lemma direct_caps_of_empty [simp]:
-  "direct_caps_of empty = ( \<lambda> x. {})"
+  "direct_caps_of Map.empty = ( \<lambda> x. {})"
   by (simp add: direct_caps_of_def fun_eq_iff)
 
 definition "id\<^sub>0 \<equiv> 0"

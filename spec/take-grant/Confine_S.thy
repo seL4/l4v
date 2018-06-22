@@ -274,10 +274,10 @@ lemma tgs_connected_comm_eq:
   by (metis tgs_connected_comm)
 
 lemmas tgs_connected_trans =
-       rtrancl_trans [where r="directly_tgs_connected s", simplified tgs_connected_def[symmetric]]
+       rtrancl_trans [where r="directly_tgs_connected s"  for s, simplified tgs_connected_def[symmetric]]
 
 lemmas directly_tgs_connected_rtrancl_into_rtrancl =
-       rtrancl_into_rtrancl [where r="directly_tgs_connected s", simplified tgs_connected_def[symmetric]]
+       rtrancl_into_rtrancl [where r="directly_tgs_connected s" for s, simplified tgs_connected_def[symmetric]]
 
 lemma take_caps_directly_tgs_connected:
   "\<lbrakk>c \<in> caps_of s e; Take \<in> rights c\<rbrakk> \<Longrightarrow> s \<turnstile> e \<leftrightarrow> target c"
