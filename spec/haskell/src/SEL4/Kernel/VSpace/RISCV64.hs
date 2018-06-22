@@ -279,7 +279,7 @@ setVMRoot tcb = do
                     capPTMappedAddress = Just (asid, _),
                     capPTBasePtr = pt }) -> do
                 pt' <- findVSpaceForASID asid
-                when (pt /= pt') $ throw InvalidRoot -- FIXME RISCV: C uses cap asid, not 0 for global PT. Should probably change C.
+                when (pt /= pt') $ throw InvalidRoot
                 withoutFailure $ doMachineOp $
                     setVSpaceRoot (addrFromPPtr pt) (fromASID asid)
             _ -> throw InvalidRoot)
