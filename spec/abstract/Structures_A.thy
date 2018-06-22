@@ -638,7 +638,7 @@ definition
 
 definition
   "cap_of kobj \<equiv>
-   case kobj of CNode _ cs \<Rightarrow> cs | TCB tcb \<Rightarrow> tcb_cnode_map tcb | _ \<Rightarrow> empty"
+   case kobj of CNode _ cs \<Rightarrow> cs | TCB tcb \<Rightarrow> tcb_cnode_map tcb | _ \<Rightarrow> Map.empty"
 
 text {* The set of all caps contained in a kernel object. *}
 

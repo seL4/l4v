@@ -46,10 +46,10 @@ definition
 
 definition
   "init_arch_state \<equiv> \<lparr>
-    arm_asid_table = empty,
-    arm_hwasid_table = empty,
+    arm_asid_table = Map.empty,
+    arm_hwasid_table = Map.empty,
     arm_next_asid = 0,
-    arm_asid_map = empty,
+    arm_asid_map = Map.empty,
     arm_global_pd = init_global_pd,
     arm_global_pts = [],
     arm_kernel_vspace = \<lambda>ref.
@@ -85,7 +85,7 @@ definition
   )"
 
 definition
-  "init_cdt \<equiv> empty"
+  "init_cdt \<equiv> Map.empty"
 
 definition
   "init_ioc \<equiv>

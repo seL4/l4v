@@ -48,7 +48,7 @@ definition
 
 definition
   "init_arch_state \<equiv> \<lparr>
-    x64_asid_table = empty,
+    x64_asid_table = Map.empty,
     x64_global_pml4 = init_global_pml4,
     x64_kernel_vspace =
       \<lambda>ref. if ref \<in> {pptr_base .. pptr_base + mask pml4_shift_bits}
@@ -103,7 +103,7 @@ definition
     )"
 
 definition
-  "init_cdt \<equiv> empty"
+  "init_cdt \<equiv> Map.empty"
 
 definition
   "init_ioc \<equiv>
