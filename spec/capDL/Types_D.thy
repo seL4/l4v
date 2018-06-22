@@ -460,7 +460,7 @@ where
   | CNode x \<Rightarrow> cdl_cnode_caps x
   | Tcb x \<Rightarrow> cdl_tcb_caps x
   | IRQNode x \<Rightarrow> cdl_irq_node_caps x
-  | _ \<Rightarrow> empty"
+  | _ \<Rightarrow> Map.empty"
 
 definition
   update_slots :: "cdl_cap_map \<Rightarrow> cdl_object \<Rightarrow> cdl_object"

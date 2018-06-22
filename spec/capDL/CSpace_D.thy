@@ -521,7 +521,7 @@ where
   "resolve_address_bits cnode_cap cap_ptr remaining_size = doE
     unlessE (is_cnode_cap cnode_cap) $ throw;
 
-    (* Fetch the next level CNode. *)
+    \<comment> \<open>Fetch the next level CNode.\<close>
     cnode \<leftarrow> liftE $ get_cnode $ cap_object cnode_cap;
     radix_size \<leftarrow> returnOk $ cdl_cnode_size_bits cnode;
     guard_size \<leftarrow> returnOk $ cap_guard_size cnode_cap;
@@ -529,14 +529,14 @@ where
     level_size \<leftarrow> returnOk (radix_size + guard_size);
     assertE (level_size \<noteq> 0);
 
-    (* Ensure the guard matches up. *)
+    \<comment> \<open>Ensure the guard matches up.\<close>
     guard \<leftarrow> returnOk $ (cap_ptr >> (remaining_size-guard_size)) && (mask guard_size);
     unlessE (guard_size \<le> remaining_size \<and> guard = cap_guard) $ throw;
 
-    (* Ensure we still enough unresolved bits left in our CPTR. *)
+    \<comment> \<open>Ensure we still enough unresolved bits left in our CPTR.\<close>
     whenE (level_size > remaining_size) $ throw;
 
-    (* Find the next slot. *)
+    \<comment> \<open>Find the next slot.\<close>
     offset \<leftarrow> returnOk $ (cap_ptr >> (remaining_size-level_size)) && (mask radix_size);
     slot \<leftarrow> returnOk (cap_object cnode_cap, unat offset);
     size_left \<leftarrow> returnOk (remaining_size - level_size);

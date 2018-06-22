@@ -120,7 +120,7 @@ definition
 where
   "slots_of obj_id \<equiv> \<lambda>s.
   case opt_object obj_id s of
-    None \<Rightarrow> empty
+    None \<Rightarrow> Map.empty
   | Some obj \<Rightarrow> object_slots obj"
 
 (* The cap at the given cap_ref. None if object or cap does not exist *)
