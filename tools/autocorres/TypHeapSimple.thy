@@ -106,7 +106,7 @@ lemma if_eqI:
   by simp
 
 lemma heap_type_tag_ptr_retyp:
-    "snd (s (ptr_val t)) = empty \<Longrightarrow>
+    "snd (s (ptr_val t)) = Map.empty \<Longrightarrow>
         heap_type_tag (ptr_retyp (t :: 'a::mem_type ptr) s) (ptr_val t) = HeapType (typ_uinfo_t TYPE('a))"
   apply (unfold ptr_retyp_def heap_type_tag_def)
   apply (subst htd_update_list_index, fastforce, fastforce)+
@@ -126,7 +126,7 @@ lemma not_snd_last_typ_slice_t:
   by (case_tac z, clarsimp)
 
 lemma heap_type_tag_ptr_retyp_rest:
-    "\<lbrakk> snd (s (ptr_val t + k)) = empty; 0 < k; unat k < size_td (typ_uinfo_t TYPE('a)) \<rbrakk> \<Longrightarrow>
+    "\<lbrakk> snd (s (ptr_val t + k)) = Map.empty; 0 < k; unat k < size_td (typ_uinfo_t TYPE('a)) \<rbrakk> \<Longrightarrow>
         heap_type_tag (ptr_retyp (t :: 'a::mem_type ptr) s) (ptr_val t + k) = HeapFootprint"
   apply (unfold ptr_retyp_def heap_type_tag_def)
   apply (subst htd_update_list_index, simp, clarsimp,

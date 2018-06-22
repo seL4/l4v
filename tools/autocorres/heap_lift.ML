@@ -137,7 +137,7 @@ end
 (* The opposite to "mk_first_order" *)
 fun dest_first_order ctxt ct =
   Conv.bottom_conv (K (Conv.try_conv (Conv.rewr_conv
-    @{lemma "(op $) == (%a b. a b)" by (rule meta_ext, rule ext, simp)}))) ctxt ct
+    @{lemma "($) == (%a b. a b)" by (rule meta_ext, rule ext, simp)}))) ctxt ct
 
 (*
  * Resolve "base_thm" with "subgoal_thm" in all assumptions it is possible to
