@@ -131,7 +131,7 @@ definition
  "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks,
                          irq_state = 0,
                          underlying_memory = init_underlying_memory,
-                         device_state = empty,
+                         device_state = Map.empty,
                          exclusive_state = default_exclusive_state,
                          machine_state_rest = undefined \<rparr>"
 
