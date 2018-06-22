@@ -350,7 +350,7 @@ fun dropQuotes s = if String.isPrefix "\"" s andalso String.isSuffix "\"" s
                        then String.substring (s, 1, String.size s - 2) else s
 
 fun cterm_to_string no_markup =
-  Proof_Display.pp_cterm Thy_Info.pure_theory
+  Proof_Display.pp_cterm (fn _ => @{theory Pure})
   #> Pretty.string_of
   #> YXML.parse_body
   #> (if no_markup then XML.content_of else YXML.string_of_body)
