@@ -27,7 +27,7 @@ definition
       cdl_cnode_intent \<Rightarrow> cdl_cnode_invocation except_monad"
 where
   "decode_cnode_invocation target target_ref caps intent \<equiv> case intent of
-     (* Copy a cap to anther capslot, without modifying the cap. *)
+       \<comment> \<open>Copy a cap to anther capslot, without modifying the cap.\<close>
        CNodeCopyIntent dest_index dest_depth src_index src_depth rights \<Rightarrow>
          doE
            (src_root, _) \<leftarrow> throw_on_none $ get_index caps 0;
