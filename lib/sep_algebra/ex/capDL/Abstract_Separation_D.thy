@@ -101,7 +101,7 @@ definition
 where
   "slots_of_heap h \<equiv> \<lambda>obj_id.
   case h obj_id of
-    None \<Rightarrow> empty
+    None \<Rightarrow> Map.empty
   | Some obj \<Rightarrow> object_slots obj"
 
 (* Adds new caps to an object. It won't overwrite on a collision. *)
@@ -124,15 +124,15 @@ lemma add_to_slots_twice [simp]:
   by (fastforce simp: add_to_slots_def update_slots_def object_slots_def
               split: cdl_object.splits)
 
-lemma slots_of_heap_empty [simp]: "slots_of_heap empty object_id = empty"
+lemma slots_of_heap_empty [simp]: "slots_of_heap Map.empty object_id = Map.empty"
   by (simp add: slots_of_heap_def)
 
 lemma slots_of_heap_empty2 [simp]:
-  "h obj_id = None \<Longrightarrow> slots_of_heap h obj_id = empty"
+  "h obj_id = None \<Longrightarrow> slots_of_heap h obj_id = Map.empty"
   by (simp add: slots_of_heap_def)
 
 lemma update_slots_add_to_slots_empty [simp]:
-  "update_slots empty (add_to_slots new obj) = update_slots empty obj"
+  "update_slots Map.empty (add_to_slots new obj) = update_slots Map.empty obj"
   by (clarsimp simp: update_slots_def add_to_slots_def split:cdl_object.splits)
 
 lemma update_object_slots_id [simp]: "update_slots (object_slots a) a = a"
@@ -144,7 +144,7 @@ lemma update_slots_of_heap_id [simp]:
   by (clarsimp simp: update_slots_def slots_of_heap_def object_slots_def
               split: cdl_object.splits)
 
-lemma add_to_slots_empty [simp]: "add_to_slots empty h = h"
+lemma add_to_slots_empty [simp]: "add_to_slots Map.empty h = h"
   by (simp add: add_to_slots_def)
 
 lemma update_slots_eq:
@@ -317,11 +317,11 @@ lemma add_to_slots_object_slots:
   done
 
 lemma not_conflicting_objects_empty [simp]:
-  "not_conflicting_objects s (SepState empty (\<lambda>obj_id. {})) obj_id"
+  "not_conflicting_objects s (SepState Map.empty (\<lambda>obj_id. {})) obj_id"
   by (clarsimp simp: not_conflicting_objects_def split:option.splits)
 
 lemma empty_not_conflicting_objects [simp]:
-  "not_conflicting_objects (SepState empty (\<lambda>obj_id. {})) s obj_id"
+  "not_conflicting_objects (SepState Map.empty (\<lambda>obj_id. {})) s obj_id"
   by (clarsimp simp: not_conflicting_objects_def split:option.splits)
 
 lemma not_conflicting_objects_empty_object [elim!]:
@@ -335,17 +335,17 @@ lemma empty_object_not_conflicting_objects [elim!]:
   done
 
 lemma cdl_heap_add_empty [simp]:
- "cdl_heap_add (SepState h gs) (SepState empty (\<lambda>obj_id. {})) = h"
+ "cdl_heap_add (SepState h gs) (SepState Map.empty (\<lambda>obj_id. {})) = h"
   by (simp add: cdl_heap_add_def)
 
 lemma empty_cdl_heap_add [simp]:
-  "cdl_heap_add (SepState empty (\<lambda>obj_id. {})) (SepState h gs)= h"
+  "cdl_heap_add (SepState Map.empty (\<lambda>obj_id. {})) (SepState h gs)= h"
   apply (simp add: cdl_heap_add_def)
   apply (rule ext)
   apply (clarsimp split: option.splits)
   done
 
-lemma map_add_result_empty1: "a ++ b = empty \<Longrightarrow> a = empty"
+lemma map_add_result_empty1: "a ++ b = Map.empty \<Longrightarrow> a = Map.empty"
   apply (subgoal_tac "dom (a++b) = {}")
    apply (subgoal_tac "dom (a) = {}")
     apply clarsimp
@@ -354,7 +354,7 @@ lemma map_add_result_empty1: "a ++ b = empty \<Longrightarrow> a = empty"
   apply clarsimp
   done
 
-lemma map_add_result_empty2: "a ++ b = empty \<Longrightarrow> b = empty"
+lemma map_add_result_empty2: "a ++ b = Map.empty \<Longrightarrow> b = Map.empty"
   apply (subgoal_tac "dom (a++b) = {}")
    apply (subgoal_tac "dom (a) = {}")
     apply clarsimp
@@ -363,14 +363,14 @@ lemma map_add_result_empty2: "a ++ b = empty \<Longrightarrow> b = empty"
   apply clarsimp
   done
 
-lemma map_add_emptyE [elim!]: "\<lbrakk>a ++ b = empty; \<lbrakk>a = empty; b = empty\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+lemma map_add_emptyE [elim!]: "\<lbrakk>a ++ b = Map.empty; \<lbrakk>a = Map.empty; b = Map.empty\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
   apply (frule map_add_result_empty1)
   apply (frule map_add_result_empty2)
   apply clarsimp
   done
 
 lemma clean_slots_empty [simp]:
-  "clean_slots empty cmp = empty"
+  "clean_slots Map.empty cmp = Map.empty"
   by (clarsimp simp: clean_slots_def)
 
 lemma object_type_update_slots [simp]:
@@ -399,7 +399,7 @@ lemma object_slots_update_slots [simp]:
               split: cdl_object.splits)
 
 lemma object_slots_update_slots_empty [simp]:
-  "\<not>has_slots obj \<Longrightarrow> object_slots (update_slots slots obj) = empty"
+  "\<not>has_slots obj \<Longrightarrow> object_slots (update_slots slots obj) = Map.empty"
   by (clarsimp simp: object_slots_def update_slots_def has_slots_def
                  split: cdl_object.splits)
 
@@ -608,7 +608,7 @@ lemma sep_state_add_comm:
   done
 
 lemma add_to_slots_comm:
-  "\<lbrakk>object_slots y_obj \<bottom> object_slots z_obj; update_slots empty y_obj = update_slots empty z_obj \<rbrakk>
+  "\<lbrakk>object_slots y_obj \<bottom> object_slots z_obj; update_slots Map.empty y_obj = update_slots Map.empty z_obj \<rbrakk>
   \<Longrightarrow> add_to_slots (object_slots z_obj) y_obj = add_to_slots (object_slots y_obj) z_obj"
   by (fastforce simp: add_to_slots_def update_slots_def object_slots_def
                      cdl_tcb.splits cdl_cnode.splits
@@ -672,7 +672,7 @@ lemma sep_state_add_disj:
 
 instantiation "sep_state" :: zero
 begin
-  definition "0 \<equiv> SepState empty (\<lambda>obj_id. {})"
+  definition "0 \<equiv> SepState Map.empty (\<lambda>obj_id. {})"
   instance ..
 end
 

@@ -56,11 +56,11 @@ definition
 
 subsection {* Properties of maps not related to restriction *}
 
-lemma empty_forall_equiv: "(m = empty) = (\<forall>x. m x = None)"
-  by fastforce
+lemma empty_forall_equiv: "(m = Map.empty) = (\<forall>x. m x = None)"
+  by (rule fun_eq_iff)
 
 lemma map_le_empty2 [simp]:
-  "(m \<subseteq>\<^sub>m empty) = (m = empty)"
+  "(m \<subseteq>\<^sub>m Map.empty) = (m = Map.empty)"
   by (auto simp: map_le_def)
 
 lemma dom_iff:
@@ -84,17 +84,17 @@ lemma map_add_left_cancelI [intro!]:
   by simp
 
 lemma dom_empty_is_empty:
-  "(dom m = {}) = (m = empty)"
+  "(dom m = {}) = (m = Map.empty)"
 proof (rule iffI)
   assume a: "dom m = {}"
-  { assume "m \<noteq> empty"
+  { assume "m \<noteq> Map.empty"
     hence "dom m \<noteq> {}"
       by - (subst (asm) empty_forall_equiv, simp add: dom_def)
     hence False using a by blast
   }
-  thus "m = empty" by blast
+  thus "m = Map.empty" by blast
 next
-  assume a: "m = empty"
+  assume a: "m = Map.empty"
   thus "dom m = {}" by simp
 qed
 
@@ -158,7 +158,7 @@ lemma restrict_map_remerge:
                          split: option.splits)
 
 lemma restrict_map_empty:
-  "dom m \<inter> S = {} \<Longrightarrow> m |` S = empty"
+  "dom m \<inter> S = {} \<Longrightarrow> m |` S = Map.empty"
   by (fastforce simp: restrict_map_def)
 
 lemma map_add_restrict_comp_right [simp]:
@@ -242,11 +242,11 @@ lemma restrict_map_sub_add: "h |` S ++ h `- S = h"
 subsection {* Properties of map disjunction *}
 
 lemma map_disj_empty_right [simp]:
-  "h \<bottom> empty"
+  "h \<bottom> Map.empty"
   by (simp add: map_disj_def)
 
 lemma map_disj_empty_left [simp]:
-  "empty \<bottom> h"
+  "Map.empty \<bottom> h"
   by (simp add: map_disj_def)
 
 lemma map_disj_com:
@@ -497,7 +497,7 @@ lemma map_le_conv:
 
 lemma map_le_conv2:
   "h\<^sub>0' \<subseteq>\<^sub>m h\<^sub>0 = (\<exists>h\<^sub>1. h\<^sub>0 = h\<^sub>0' ++ h\<^sub>1 \<and> h\<^sub>0' \<bottom> h\<^sub>1)"
-  by (case_tac "h\<^sub>0'=h\<^sub>0", insert map_le_conv, auto intro: exI[where x=empty])
+  by (case_tac "h\<^sub>0'=h\<^sub>0", insert map_le_conv, auto intro: exI[where x=Map.empty])
 
 
 subsection {* Map disjunction and restriction *}
@@ -515,7 +515,7 @@ lemma map_disj_restrict_dom [simp]:
   by (force simp: map_disj_def)
 
 lemma restrict_map_disj_dom_empty:
-  "h \<bottom> h' \<Longrightarrow> h |` dom h' = empty"
+  "h \<bottom> h' \<Longrightarrow> h |` dom h' = Map.empty"
   by (fastforce simp: map_disj_def restrict_map_def)
 
 lemma restrict_map_univ_disj_eq:
