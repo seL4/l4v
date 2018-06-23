@@ -12,8 +12,9 @@
 theory Chapter1_MinMax
 imports "AutoCorres.AutoCorres"
 begin
-(*>*)
 
+external_file "minmax.c"
+(*>*)
 
 section {* Introduction *}
 
