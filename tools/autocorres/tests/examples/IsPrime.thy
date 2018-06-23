@@ -57,7 +57,7 @@ lemma mod_to_dvd:
   by (clarsimp simp: dvd_eq_mod_eq_0)
 
 lemma prime_of_product [simp]: "prime ((a::nat) * b) = ((a = 1 \<and> prime b) \<or> (prime a \<and> b = 1))"
-  using prime_product by force
+  by (metis mult.commute mult.right_neutral prime_product)
 
 lemma partial_prime_2 [simp]: "(partial_prime a 2) = (a > 1)"
   by (clarsimp simp: partial_prime_def)
@@ -100,7 +100,7 @@ lemma sqrt_prime:
 lemma partial_prime_sqr:
      "\<lbrakk> n * n > p \<rbrakk> \<Longrightarrow> partial_prime p n = prime p"
   apply (case_tac "n \<ge> p")
-   apply (clarsimp simp: partial_prime_ge)
+   apply clarsimp
   apply (case_tac "partial_prime p n")
    apply clarsimp
    apply (erule sqrt_prime)
@@ -161,7 +161,9 @@ theorem is_prime_faster_correct:
       where I="\<lambda>r s. is_prime_inv n r s"
       and M="(\<lambda>(r, s). (Suc n) * (Suc n) - r * r)"])
    apply wp
-    apply (fastforce elim: nat_leE simp: partial_prime_sqr prime_dvd)+
+    apply clarsimp
+    apply (metis One_nat_def Suc_leI Suc_lessD nat_leE prime_dvd leD mult_le_mono n_less_n_mult_m)
+   apply (fastforce elim: nat_leE simp: partial_prime_sqr)
   apply (clarsimp simp: SQRT_UINT_MAX_def)
   done
 
