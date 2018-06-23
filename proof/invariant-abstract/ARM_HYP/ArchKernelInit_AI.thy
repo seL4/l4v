@@ -55,14 +55,14 @@ lemma init_cdt [simp]:
   by (simp add: state_defs)
 
 lemma mdp_parent_empty [simp]:
-  "\<not>empty \<Turnstile> x \<rightarrow> y"
+  "\<not>Map.empty \<Turnstile> x \<rightarrow> y"
   apply clarsimp
   apply (drule tranclD)
   apply (clarsimp simp: cdt_parent_of_def)
   done
 
 lemma descendants_empty [simp]:
-  "descendants_of x empty = {}"
+  "descendants_of x Map.empty = {}"
   by (clarsimp simp: descendants_of_def)
 
 lemma [simp]: "\<not>is_reply_cap Structures_A.NullCap"
