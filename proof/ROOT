@@ -185,10 +185,10 @@ session Bisim in bisim = AInvs +
     ASepSpec
   theories
     "Syscall_S"
-  files
-    "document/root.tex"
-    "document/build"
-    "document/Makefile"
+  document_files
+    "root.tex"
+    "build"
+    "Makefile"
 
 (*
  * Separation Logic
