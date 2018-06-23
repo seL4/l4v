@@ -60,7 +60,7 @@ definition
 
 definition
   zero_vm_sep_state :: "('a, 'b, 'c, 'd) vm_sep_state" where
-  "zero_vm_sep_state \<equiv> VMSepState (empty, {})"
+  "zero_vm_sep_state \<equiv> VMSepState (Map.empty, {})"
 
 fun
   plus_vm_sep_state :: "('a, 'b, 'c, 'd) vm_sep_state

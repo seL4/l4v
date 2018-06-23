@@ -199,7 +199,7 @@ where
   "object_slots obj \<equiv> case obj of
     CNode x \<Rightarrow> cdl_cnode_caps x
   | Tcb x \<Rightarrow> cdl_tcb_caps x
-  | _ \<Rightarrow> empty"
+  | _ \<Rightarrow> Map.empty"
 
 definition
   update_slots :: "cdl_cap_map \<Rightarrow> cdl_object \<Rightarrow> cdl_object"
@@ -220,7 +220,7 @@ definition
 where
   "slots_of h \<equiv> \<lambda>obj_id.
   case h obj_id of
-    None \<Rightarrow> empty
+    None \<Rightarrow> Map.empty
   | Some obj \<Rightarrow> object_slots obj"
 
 

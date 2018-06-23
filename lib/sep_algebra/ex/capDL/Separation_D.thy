@@ -60,7 +60,7 @@ where
 definition
   sep_map_f :: "cdl_object_id \<Rightarrow> cdl_object \<Rightarrow> sep_pred" ("_ \<mapsto>f _" [76,71] 76)
 where
-  "p \<mapsto>f obj \<equiv> sep_map_general p (update_slots empty obj) {None}"
+  "p \<mapsto>f obj \<equiv> sep_map_general p (update_slots Map.empty obj) {None}"
 
 (* There is that cap there. *)
 definition

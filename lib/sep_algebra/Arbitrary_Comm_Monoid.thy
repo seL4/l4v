@@ -41,7 +41,7 @@ proof cases
   obtain x e where diff: "x \<noteq> (e :: 'a)"
     by (atomize_elim, clarsimp simp: two_elements)
 
-  def f \<equiv> "\<lambda>a b. (if a = e then b else (if b = e then a else x))"
+  define f where "f \<equiv> \<lambda>a b. (if a = e then b else (if b = e then a else x))"
 
   have "\<forall>a b. f a b = f b a"
     by (simp add: f_def)
