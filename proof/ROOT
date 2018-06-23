@@ -216,7 +216,7 @@ session SimplExportOnly = CSpec +
 (*
  * Libraries
  *)
-
+(* unused:
 session AutoLevity = AutoLevity_Base +
   theories
    "../lib/autolevity_buckets/AutoLevity_Top"
@@ -224,4 +224,4 @@ session AutoLevity = AutoLevity_Base +
 session AutoLevity_Base = Word_Lib +
   theories
     "../lib/autolevity_buckets/AutoLevity_Base"
-
+*)
