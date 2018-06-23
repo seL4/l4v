@@ -14,9 +14,6 @@ session "AutoCorresQuickstart" = "AutoCorres" +
     Chapter1_MinMax
     Chapter2_HoareHeap
     Chapter3_HoareHeap
-  files
-    "mult_by_add.c"
-    "minmax.c"
   document_files
     "root.tex"
     "root.bib"
