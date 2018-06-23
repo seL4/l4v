@@ -43,7 +43,7 @@ let
    let
      val gsuf = Long_Name.explode gnm |> tl' |> tl' |> Long_Name.implode;
 
-   in suf = gsuf andalso eq_list Thm.eq_thm_prop (thms, gthms)
+   in suf = gsuf andalso eq_list (Thm.equiv_thm (Proof_Context.theory_of ctxt)) (thms, gthms)
    end
 in
   case Long_Name.dest_local name of NONE => (name, thms) | SOME suf =>
