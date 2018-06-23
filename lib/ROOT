@@ -156,7 +156,7 @@ session SepTactics (lib) in Hoare_Sep_Tactics = Sep_Algebra +
   theories
     Hoare_Sep_Tactics
 
-(* FIXME: in proof
+(* bitrotted
 session AutoLevity (lib) = HOL +
   theories
     AutoLevity
