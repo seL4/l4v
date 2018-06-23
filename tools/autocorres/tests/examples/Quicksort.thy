@@ -850,7 +850,6 @@ lemma partitioned_array_sorted:
   apply (subst sorted_append, simp)
   apply (rule conjI)
    apply (subst the_array_concat2[where m = "1"], simp+)
-   apply (subst sorted_Cons)
    apply (simp add: partitioned_def)
    apply (subst all_set_conv_all_nth)
    apply (clarsimp simp: the_array_elem)

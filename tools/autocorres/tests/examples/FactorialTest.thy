@@ -11,7 +11,7 @@
 (*
 Termination for recursive functions.
 *)
-theory Factorial
+theory FactorialTest
 imports
   "AutoCorres.AutoCorres"
   "Lib.OptionMonadWP"
@@ -116,9 +116,8 @@ thm call_factorial'_def
 lemma "\<lbrace> \<top> \<rbrace> call_factorial' \<lbrace> \<lambda>r s. r = fact 42 \<rbrace>!"
   unfolding call_factorial'_def
   apply wp
-   using factorial'_correct_old
-   apply force
-  apply (force simp: option_monad_mono_eq (* factorial'_mono *))
+   apply (force simp: option_monad_mono_eq)
+  using factorial'_correct_old apply force
   done
 
 end

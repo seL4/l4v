@@ -11,7 +11,6 @@
 theory Simple
 imports
   "AutoCorres.AutoCorres"
-  GCD
 begin
 
 (* Parse the input file. *)
