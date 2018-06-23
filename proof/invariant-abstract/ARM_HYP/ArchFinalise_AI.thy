@@ -2165,7 +2165,7 @@ lemma vs_lookup1_arch [simp]:
 
 lemma vs_lookup_empty_table:
   "(rs \<rhd> q)
-  (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool empty)),
+  (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool Map.empty)),
      arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
    (rs \<rhd> q) s \<or> (rs = [VSRef (ucast x) None] \<and> q = p)"
   apply (erule vs_lookupE)
@@ -2198,7 +2198,7 @@ lemma vs_lookup_empty_table:
 
 lemma vs_lookup_pages_empty_table:
   "(rs \<unrhd> q)
-  (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool empty)),
+  (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool Map.empty)),
      arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
    (rs \<unrhd> q) s \<or> (rs = [VSRef (ucast x) None] \<and> q = p)"
   apply (subst (asm) vs_lookup_pages_def)
@@ -2231,7 +2231,7 @@ lemma vs_lookup_pages_empty_table:
 
 lemma set_asid_pool_empty_table_objs:
   "\<lbrace>valid_vspace_objs and asid_pool_at p\<rbrace>
-  set_asid_pool p empty
+  set_asid_pool p Map.empty
    \<lbrace>\<lambda>rv s. valid_vspace_objs
              (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table :=
                 arm_asid_table (arch_state s)(asid_high_bits_of word2 \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
@@ -2256,7 +2256,7 @@ lemma set_asid_pool_empty_table_objs:
 lemma set_asid_pool_empty_table_lookup:
   "\<lbrace>valid_vs_lookup and asid_pool_at p and
     (\<lambda>s. \<exists>p'. caps_of_state s p' = Some (ArchObjectCap (ASIDPoolCap p base)))\<rbrace>
-  set_asid_pool p empty
+  set_asid_pool p Map.empty
    \<lbrace>\<lambda>rv s. valid_vs_lookup
              (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table :=
                 arm_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
@@ -2279,7 +2279,7 @@ lemma set_asid_pool_empty_valid_asid_map:
   "\<lbrace>\<lambda>s. valid_asid_map s \<and> asid_pool_at p s
        \<and> (\<forall>asid'. \<not> ([VSRef asid' None] \<rhd> p) s)
        \<and> (\<forall>p'. \<not> ([VSRef (ucast (asid_high_bits_of base)) None] \<rhd> p') s)\<rbrace>
-       set_asid_pool p empty
+       set_asid_pool p Map.empty
    \<lbrace>\<lambda>rv s. valid_asid_map (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table :=
                  arm_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
@@ -2311,7 +2311,7 @@ lemma set_asid_pool_invs_table:
        \<and> (\<exists>p'. caps_of_state s p' = Some (ArchObjectCap (ASIDPoolCap p base)))
        \<and> (\<not> ([VSRef (ucast (asid_high_bits_of base)) None] \<rhd> p) s)
        \<and> (\<forall>p'. \<not> ([VSRef (ucast (asid_high_bits_of base)) None] \<rhd> p') s)\<rbrace>
-       set_asid_pool p empty
+       set_asid_pool p Map.empty
   \<lbrace>\<lambda>x s. invs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table :=
                  arm_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def)

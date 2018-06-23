@@ -2947,8 +2947,6 @@ lemma unique_table_caps_pdE:
   apply simp
   done
 
-lemmas unique_table_caps_pdE' = unique_table_caps_pdE[where cs="arch_caps_of x" for x, simplified]
-
 lemma set_pd_table_caps [wp]:
   "\<lbrace>valid_table_caps and (\<lambda>s.
     (obj_at (empty_table (set (second_level_tables (arch_state s)))) p s \<longrightarrow>

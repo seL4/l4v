@@ -2605,7 +2605,7 @@ qed
 
 
 lemmas parency_m_n' =
-  parency_m_n [where p="s_d_swp p" and p'="s_d_swp p'", simplified, folded s_d_swp_def]
+  parency_m_n [where p="s_d_swp p" and p'="s_d_swp p'" for p p', simplified, folded s_d_swp_def]
 
 
 lemma parency:
@@ -4415,7 +4415,7 @@ lemma of_nat_ucast:
   apply (rule nat_int.Rep_eqD)
   apply (simp only: zmod_int)
   apply (rule mod_mod_cancel)
-  apply (subst zdvd_int[symmetric])
+  apply (simp add: dvd_power_same)
   apply (rule le_imp_power_dvd)
   apply (simp add: is_down_def target_size_def source_size_def word_size)
   done

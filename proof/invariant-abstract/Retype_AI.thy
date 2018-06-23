@@ -800,7 +800,7 @@ lemma caps_of_state_foldr:
   (\<lambda>(oref,cref). if oref \<in> set addrs
                  then (case ty of Structures_A.CapTableObject \<Rightarrow> empty_cnode us
                                | Structures_A.TCBObject \<Rightarrow> option_map (\<lambda>x. cap.NullCap) \<circ> tcb_cap_cases
-                               | _ \<Rightarrow> empty) cref
+                               | _ \<Rightarrow> Map.empty) cref
                  else caps_of_state s (oref,cref))"
   apply (rule ext)+
   apply (case_tac x)

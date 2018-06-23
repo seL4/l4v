@@ -2178,10 +2178,6 @@ lemma unique_table_caps_pdE:
   apply simp
   done
 
-lemmas unique_table_caps_pml4E' = unique_table_caps_pml4E[where cs="arch_caps_of x" for x, simplified]
-lemmas unique_table_caps_pdptE' = unique_table_caps_pdptE[where cs="arch_caps_of x" for x, simplified]
-lemmas unique_table_caps_pdE' = unique_table_caps_pdE[where cs="arch_caps_of x" for x, simplified]
-
 (* FIXME: valid_globals_refsD is used here, so it might be still useful *)
 
 lemma eq_ucast_word9[simp]:
