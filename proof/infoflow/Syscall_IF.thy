@@ -737,6 +737,7 @@ lemma handle_recv_reads_respects_f:
       apply simp
      apply (wp as_user_silc_inv[where st=st] | simp)+
   apply (simp add: det_getRegister invs_valid_objs tcb_at_invs)
+  apply fastforce
   done
 
 lemma handle_recv_globals_equiv:

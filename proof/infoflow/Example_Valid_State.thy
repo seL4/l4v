@@ -345,7 +345,7 @@ lemma nat_to_bl_eq:
   apply (clarsimp simp: mod_eq_dvd_iff)
   apply (subst split_div_mod [where k=2])
   apply clarsimp
-  apply (metis of_nat_numeral mod_2_not_eq_zero_eq_one_nat of_nat_1 of_nat_eq_iff zmod_int)
+  apply (metis of_nat_numeral not_mod_2_eq_0_eq_1 of_nat_1 of_nat_eq_iff zmod_int)
   done
 
 lemma nat_to_bl_mod_n_eq [simp]:
@@ -840,7 +840,7 @@ definition machine_state0 :: "machine_state" where
   "machine_state0 \<equiv> \<lparr>irq_masks = (\<lambda>irq. if irq = timer_irq then False else True),
                      irq_state = 0,
                      underlying_memory = const 0,
-                     device_state = empty,
+                     device_state = Map.empty,
                      exclusive_state = undefined,
                      machine_state_rest = undefined \<rparr>"
 
@@ -857,7 +857,7 @@ definition
 where
   "s0_internal \<equiv>  \<lparr>
     kheap = kh0,
-    cdt = empty,
+    cdt = Map.empty,
     is_original_cap =  (\<lambda>_. False) ((Low_tcb_ptr, tcb_cnode_index 2) := True,
                                     (High_tcb_ptr, tcb_cnode_index 2) := True),
     cur_thread = Low_tcb_ptr,

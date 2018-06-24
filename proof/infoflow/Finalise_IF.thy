@@ -132,7 +132,7 @@ lemma set_thread_state_reads_respects:
   shows
   "reads_respects aag l (\<lambda>s. is_subject aag (cur_thread s)) (set_thread_state ref ts)"
   unfolding set_thread_state_def fun_app_def
-  apply (simp add: bind_assoc[symmetric]) (*Remove the currently not considered extended ( * ))
+  apply (simp add: bind_assoc[symmetric])
   apply (rule pre_ev)
    apply (rule_tac P'=\<top> in bind_ev)
      apply (rule set_thread_state_ext_reads_respects)
@@ -221,7 +221,7 @@ lemma set_thread_state_runnable_reads_respects:
   shows
   "runnable ts \<Longrightarrow> reads_respects aag l \<top> (set_thread_state ref ts)"
   unfolding set_thread_state_def fun_app_def
-  apply (simp add: bind_assoc[symmetric]) (*Remove the currently not considered extended ( * ))
+  apply (simp add: bind_assoc[symmetric])
   apply (rule pre_ev)
    apply (rule_tac P'=\<top> in bind_ev)
      apply (rule set_thread_state_ext_runnable_reads_respects)
@@ -828,144 +828,6 @@ lemma cancel_all_ipc_reads_respects:
             get_simple_ko_reads_respects get_simple_ko_wp | wpc
           | clarsimp simp: ball_conj_distrib | rule subset_refl | wp_once hoare_drop_imps | assumption)+
   done
-(*
-lemma cancel_all_ipc_reads_respects:
-  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and valid_sched and valid_objs and (sym_refs \<circ> state_refs_of) and K ((pasSubject aag, Reset, pasObjectAbs aag epptr) \<in> pasPolicy aag)) (cancel_all_ipc epptr)"
-  apply(subst (asm) label_is_invisible[symmetric])
-  apply(clarsimp simp: equiv_valid_def2 simp del: K_def)
-  apply(rule_tac W="\<lambda> ep ep'. (\<not> ep_queue_invisible aag l ep \<or> \<not> ep_queue_invisible aag l ep') \<longrightarrow> ep = ep'" and Q="\<lambda> rv s. pas_refined aag s" in equiv_valid_rv_bind)
-    apply(rule equiv_valid_rv_guard_imp, rule get_endpoint_revrv, simp)
-   apply(case_tac "rv = rv'")
-    apply(clarsimp)
-    apply(fold equiv_valid_def2)
-    apply(rule equiv_valid_guard_imp)
-     apply((wp mapM_x_ev'' set_thread_state_runnable_reads_respects set_endpoint_reads_respects get_ep_queue_reads_respects get_epq_SendEP_ret get_epq_RecvEP_ret get_endpoint_reads_respects get_endpoint_wp reschedule_required_reads_respects tcb_sched_action_reads_respects set_thread_state_pas_refined mapM_x_wp | wpc | simp | rule subset_refl | wp_once hoare_drop_imps)+)[2]
-   apply clarsimp+
-   apply(clarsimp  split: endpoint.splits)
-   apply(intro allI impI conjI)
-           apply(fastforce intro: return_ev2)
-          apply(clarsimp)
-          apply(subst bind_return_unit)
-          apply(rule_tac Q="\<top>\<top>" and Q'="\<lambda> rv s. rv = list" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-               apply(rule gen_asm_ev2_r)
-               apply(subst bind_return_unit)
-               apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-                    apply (subst bind_return_unit)
-                    apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top>  and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-                         apply (simp add: op_eq_unit_taut)
-                         apply (rule equiv_valid_2_unobservable)
-                            apply wp
-                        apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_r_invisible])
-                           apply(rule modifies_at_mostI)
-                           apply(wp set_thread_state_equiv_but_for  | simp add: labels_are_invisible_def)+
-                   apply(rule_tac L="{pasObjectAbs aag epptr}" and L'="{pasObjectAbs aag epptr}" in ev2_invisible)
-                       apply (simp add: labels_are_invisible_def)+
-                     apply(rule_tac P="\<top>" in modifies_at_mostI | wp set_endpoint_equiv_but_for_labels | simp)+
-              apply(rule ev2_inv | wp | simp add: get_ep_queue_def)+
-         apply(clarsimp)
-         apply(subst bind_return_unit)
-         apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-              apply(subst bind_return_unit)
-              apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="(=)" in equiv_valid_2_bind_pre)
-                   apply (simp add: op_eq_unit_taut)
-                   apply (rule equiv_valid_2_unobservable)
-                      apply wp
-                  apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_r_invisible])
-                     apply(rule modifies_at_mostI)
-                     apply(wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-             apply(rule_tac L="{pasObjectAbs aag epptr}" and L'="{pasObjectAbs aag epptr}" in ev2_invisible)
-                 apply (simp add: labels_are_invisible_def)+
-               apply(rule_tac P="\<top>" in modifies_at_mostI | wp set_endpoint_equiv_but_for_labels | simp)+
-        apply clarsimp
-        apply(subst bind_return_unit[where f="return ()"])
-        apply(rule_tac Q="\<lambda> rv s. rv = list" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-             apply(rule gen_asm_ev2_l)
-             apply(subst bind_return_unit[where f="return ()"])
-             apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-                  apply(subst bind_return_unit[where f="return ()"])
-                  apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="(=)" in equiv_valid_2_bind_pre)
-                       apply (simp add: op_eq_unit_taut)
-                       apply (rule equiv_valid_2_unobservable)
-                          apply wp
-                      apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_l_invisible])
-                         apply(rule modifies_at_mostI)
-                         apply(wp set_thread_state_equiv_but_for set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-                 apply(rule_tac L="{pasObjectAbs aag epptr}" and L'="{pasObjectAbs aag epptr}" in ev2_invisible)
-                     apply (simp add: labels_are_invisible_def)+
-                   apply(rule_tac P="\<top>" in modifies_at_mostI | wp set_endpoint_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+
-            apply(rule ev2_inv | wp | simp add: get_ep_queue_def)+
-       apply(clarsimp)
-       apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-            apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-                 apply (simp add: op_eq_unit_taut)
-                 apply (rule equiv_valid_2_unobservable)
-                    apply wp
-                apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_invisible])
-                   apply(rule modifies_at_mostI |
-                         wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-           apply(rule_tac L="{pasObjectAbs aag epptr}" and L'="{pasObjectAbs aag epptr}" in ev2_invisible)
-               apply (simp add: labels_are_invisible_def)+
-             apply(rule_tac P="\<top>" in modifies_at_mostI | simp | wp set_endpoint_equiv_but_for_labels | wp_once hoare_drop_imps)+
-      apply clarsimp
-      apply(rule_tac Q="\<lambda> rv s. rv = list" and Q'="\<lambda> rv s. rv = lista" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-           apply(rule gen_asm_ev2_l)
-           apply(rule gen_asm_ev2_r)
-           apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-                apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-                     apply (simp add: equiv_valid_def2[symmetric])
-                     apply (rule reads_respects_unobservable_unit_return)
-                      apply wp
-                    apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_invisible])
-                       apply(rule modifies_at_mostI |
-                             wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-               apply(rule_tac L="{pasObjectAbs aag epptr}" and L'="{pasObjectAbs aag epptr}" in ev2_invisible)
-                   apply (simp add: labels_are_invisible_def)+
-                 apply(rule_tac P="\<top>" in modifies_at_mostI | wp set_endpoint_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+
-          apply(rule ev2_inv | wp | simp add: get_ep_queue_def)+
-     apply(clarsimp)
-     apply(subst bind_return_unit[where f="return ()"])
-     apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-          apply(subst bind_return_unit[where f="return ()"])
-          apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-               apply (simp add: op_eq_unit_taut)
-               apply (rule equiv_valid_2_unobservable)
-                  apply (wp)
-              apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_l_invisible])
-                 apply(rule modifies_at_mostI)
-                 apply(wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-         apply(rule_tac L="{pasObjectAbs aag epptr}" and L'="{pasObjectAbs aag epptr}" in ev2_invisible)
-             apply (simp add: labels_are_invisible_def)+
-           apply(rule_tac P="\<top>" in modifies_at_mostI | wp set_endpoint_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+
-    apply clarsimp
-    apply(rule_tac Q="\<lambda> rv s. rv = list" and Q'="\<lambda> rv s. rv = lista" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-         apply(rule gen_asm_ev2_l)
-         apply(rule gen_asm_ev2_r)
-         apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-              apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-                   apply (simp add: op_eq_unit_taut)
-                   apply (rule equiv_valid_2_unobservable)
-                      apply wp
-                  apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_invisible])
-                     apply(rule modifies_at_mostI |
-                           wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-             apply(rule_tac L="{pasObjectAbs aag epptr}" and L'="{pasObjectAbs aag epptr}" in ev2_invisible)
-                 apply (simp add: labels_are_invisible_def)+
-               apply(rule_tac P="\<top>" in modifies_at_mostI | wp set_endpoint_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+
-        apply(rule ev2_inv | wp | simp add: get_ep_queue_def)+
-   apply(clarsimp)
-   apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-        apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-             apply (simp add: op_eq_unit_taut)
-             apply (rule equiv_valid_2_unobservable)
-                apply wp
-            apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_invisible])
-               apply(rule modifies_at_mostI |
-                     wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-       apply(rule_tac L="{pasObjectAbs aag epptr}" and L'="{pasObjectAbs aag epptr}" in ev2_invisible)
-           apply (simp add: labels_are_invisible_def)+
-         apply(rule_tac P="\<top>" in modifies_at_mostI | simp | wp set_endpoint_equiv_but_for_labels | wp_once hoare_drop_imps)+
-  done
-*)
 
 fun ntfn_queue_invisible where
   "ntfn_queue_invisible aag l (WaitingNtfn list) = labels_are_invisible aag l ((pasObjectAbs aag) ` (set list))" |
