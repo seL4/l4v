@@ -18,3 +18,4 @@ session "AutoCorresQuickstart" = "AutoCorres" +
     "root.tex"
     "root.bib"
     "comment.sty"
+    "ulem.sty"

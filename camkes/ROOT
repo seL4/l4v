@@ -30,6 +30,7 @@ session CamkesAdlSpec (Camkes) in "adl-spec" = HOL +
     "intro.tex"
     "root.tex"
     "comment.sty"
+    "ulem.sty"
 
 (* Base session for CAmkES<->CapDL reasoning. This session is intended to be simply a combination
  * of CamkesAdlSpec and DSpec, and is defined because we can't easily depend on both.
@@ -76,6 +77,7 @@ session CamkesGlueSpec (Camkes) in "glue-spec" = HOL +
     "filter.camkes"
     "simple.camkes"
     "comment.sty"
+    "ulem.sty"
 
 session CamkesGlueProofs (Camkes) in "glue-proofs" = AutoCorres +
   options [document = pdf, quick_and_dirty]
@@ -106,3 +108,4 @@ session CamkesGlueProofs (Camkes) in "glue-proofs" = AutoCorres +
     "to-echo-int.c"
     "imgs/NICTA_logo.pdf"
     "comment.sty"
+    "ulem.sty"

@@ -61,6 +61,7 @@ session ASpecDoc in "abstract" = Word_Lib +
     "root.tex"
     "root.bib"
     "defs.bib"
+    "ulem.sty"
     "imgs/CDT.pdf"
     "imgs/seL4-background_01.pdf"
     "imgs/seL4-background_03.pdf"

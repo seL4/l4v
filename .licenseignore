@@ -48,6 +48,8 @@ internal/*
 **/licenses
 **/CONTRIBUTORS
 
+**/ulem.sty
+
 spec/abstract/document/*/ARCH.tex
 spec/abstract/document/gitrev.tex
 
