@@ -139,7 +139,6 @@ session DPolicy = DRefine +
 session Access in "access-control" = AInvs +
   theories
     "ADT_AC"
-    "Syscall_AC"
     "ExampleSystem"
 
 session InfoFlow in "infoflow" = Access +
