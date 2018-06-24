@@ -15,7 +15,7 @@ begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 abbreviation
-"thread_is_running y s \<equiv> st_tcb_at ((=Structures_A.thread_state.Running)) y s"
+  "thread_is_running y s \<equiv> st_tcb_at ((=) Structures_A.Running) y s"
 
 lemmas [wp] = abs_typ_at_lifts[OF set_simple_ko_typ_at]
 
@@ -2823,7 +2823,7 @@ lemma send_fault_ipc_corres:
   apply (simp add:Endpoint_D.send_fault_ipc_def Ipc_A.send_fault_ipc_def)
   apply (rule dcorres_expand_pfx)
   apply (rule corres_guard_imp)
-    apply (rule_tac P'="(=s')" in thread_get_corresE[where tcb' = tcb and etcb'=etcb])
+    apply (rule_tac P'="(=) s'" in thread_get_corresE[where tcb' = tcb and etcb'=etcb])
      apply simp_all
    prefer 2
    apply (rule conjI)

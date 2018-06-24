@@ -287,7 +287,7 @@ lemma handle_interrupt_corres:
   apply (clarsimp split:irq_state.splits simp:corres_free_fail | rule conjI)+
    apply (simp add:Interrupt_D.handle_interrupt_def bind_assoc)
    apply (rule corres_guard_imp)
-     apply (rule_tac Q'="(=s')" in corres_split[OF _ dcorres_get_irq_slot])
+     apply (rule_tac Q'="(=) s'" in corres_split[OF _ dcorres_get_irq_slot])
        apply (rule_tac R'="\<lambda>rv.  (\<lambda>s. (is_ntfn_cap rv \<longrightarrow> ntfn_at (obj_ref_of rv) s)) and invs and valid_etcbs"
           in corres_split[OF _ option_get_cap_corres])
           apply (case_tac rv'a)

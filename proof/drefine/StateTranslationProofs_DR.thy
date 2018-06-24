@@ -119,7 +119,7 @@ lemma transform_full_intent_cong:
   by (simp add: transform_full_intent_def get_tcb_message_info_def get_tcb_mrs_def Suc_le_eq get_ipc_buffer_words_def)
 
 lemma caps_of_state_eq_lift:
-    "\<forall>cap. cte_wp_at ((=cap)) p s = cte_wp_at ((=cap)) p s' \<Longrightarrow>  caps_of_state s p = caps_of_state s' p"
+  "\<forall>cap. cte_wp_at ((=) cap) p s = cte_wp_at ((=) cap) p s' \<Longrightarrow>  caps_of_state s p = caps_of_state s' p"
   apply (simp add:cte_wp_at_def caps_of_state_def)
   done
 
@@ -134,9 +134,9 @@ lemma caps_of_state_irrelavent_simp:
 fun
    caps_of_object :: "kernel_object \<Rightarrow> (bool list \<rightharpoonup> cap)"
 where
-  "caps_of_object (Structures_A.CNode sz c) = (if well_formed_cnode_n sz c then c else empty)"
+    "caps_of_object (Structures_A.CNode sz c) = (if well_formed_cnode_n sz c then c else Map.empty)"
   | "caps_of_object (Structures_A.TCB t) = (\<lambda>n. option_map (\<lambda>(f, _). f t) (tcb_cap_cases n))"
-  | "caps_of_object _                    = empty"
+  | "caps_of_object _                    = Map.empty"
 
 lemma caps_of_state_def2:
   "caps_of_state s = (\<lambda>ptr. case (option_map caps_of_object (kheap s (fst ptr))) of
