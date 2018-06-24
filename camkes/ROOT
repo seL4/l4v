@@ -88,14 +88,6 @@ session CamkesGlueProofs (Camkes) in "glue-proofs" = AutoCorres +
     EventFrom
     EventTo
     DataIn
-(* FIXME Isabelle2018:
-  files
-    "RPCFrom.c"
-    "RPCTo.c"
-    "EventFrom.c"
-    "EventTo.c"
-    "DataIn.c"
-*)
   document_files
     "eventfrom-emit-underlying.c"
     "eventto-poll.c"

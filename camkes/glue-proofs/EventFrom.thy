@@ -19,6 +19,7 @@ begin
 
 declare [[allow_underscore_idents=true]]
 
+external_file "EventFrom.c"
 install_C_file "EventFrom.c"
 
 autocorres [ts_rules = nondet] "EventFrom.c"
