@@ -17,6 +17,7 @@ begin
 
 declare [[allow_underscore_idents=true]]
 
+external_file "RPCFrom.c"
 install_C_file "RPCFrom.c"
 
 (* Use non-determinism instead of the standard option monad type stregthening and do not heap

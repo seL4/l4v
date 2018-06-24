@@ -18,6 +18,7 @@ begin
 
 declare [[allow_underscore_idents=true]]
 
+external_file "DataIn.c"
 install_C_file "DataIn.c"
 
 autocorres [ts_rules = nondet] "DataIn.c"

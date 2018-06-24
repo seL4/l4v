@@ -33,6 +33,7 @@ abbreviation "scast_s32_to_s32 \<equiv> scast :: sword32 \<Rightarrow> sword32"
 
 declare [[allow_underscore_idents=true]]
 
+external_file "RPCTo.c"
 install_C_file "RPCTo.c"
 
 (* Use non-determinism instead of the standard option monad type stregthening and do not heap
