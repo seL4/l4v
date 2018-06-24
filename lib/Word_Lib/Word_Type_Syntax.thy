@@ -11,8 +11,7 @@
 section "Displaying Phantom Types for Word Operations"
 
 theory Word_Type_Syntax
-imports
-  "HOL-Word.Word"
+imports "HOL-Word.Word"
 begin
 
 ML \<open>

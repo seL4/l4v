@@ -13,7 +13,7 @@ section "Lemmas with Generic Word Length"
 theory Word_Lemmas
   imports
     Complex_Main
-    Aligned
+    Word_Next
     Word_Enum
     "HOL-Library.Sublist"
 begin
@@ -610,18 +610,6 @@ lemma upto_enum_set_conv2:
   fixes a :: "'a::len word"
   shows "set [a .e. b] = {a .. b}"
   by auto
-
-lemma fromEnum_upto_nth:
-  fixes start :: "'a :: enumeration_both"
-  assumes "n < length [start .e. end]"
-  shows "fromEnum ([start .e. end] ! n) = fromEnum start + n"
-proof -
-  have less_sub: "\<And>m k m' n. \<lbrakk> (n::nat) < m - k ; m \<le> m' \<rbrakk> \<Longrightarrow> n < m' - k" by fastforce
-  note  upt_Suc[simp del]
-  show ?thesis using assms
-  by (fastforce simp: upto_enum_red
-                dest: less_sub[where m'="Suc (fromEnum maxBound)"] intro: maxBound_is_bound)
-qed
 
 lemma of_nat_unat [simp]:
   "of_nat \<circ> unat = id"
@@ -1555,20 +1543,6 @@ lemma minus_one_helper5:
   fixes x :: "'a::len word"
   shows "\<lbrakk>y \<noteq> 0; x \<le> y - 1 \<rbrakk> \<Longrightarrow> x < y"
   using le_m1_iff_lt word_neq_0_conv by blast
-
-lemma plus_one_helper[elim!]:
-  "x < n + (1 :: 'a :: len word) \<Longrightarrow> x \<le> n"
-  apply (simp add: word_less_nat_alt word_le_nat_alt field_simps)
-  apply (case_tac "1 + n = 0")
-   apply simp
-  apply (subst(asm) unatSuc, assumption)
-  apply arith
-  done
-
-lemma plus_one_helper2:
-  "\<lbrakk> x \<le> n; n + 1 \<noteq> 0 \<rbrakk> \<Longrightarrow> x < n + (1 :: 'a :: len word)"
-  by (simp add: word_less_nat_alt word_le_nat_alt field_simps
-                unatSuc)
 
 lemma not_greatest_aligned:
   "\<lbrakk> x < y; is_aligned x n; is_aligned y n \<rbrakk>
@@ -2574,20 +2548,6 @@ lemma enum_word_div:
   apply (clarsimp simp: Suc_le_eq)
   apply (drule of_nat_mono_maybe[rotated, where 'a='a])
    apply simp
-  apply simp
-  done
-
-lemma less_x_plus_1:
-  fixes x :: "'a :: len word" shows
-  "x \<noteq> max_word \<Longrightarrow> (y < (x + 1)) = (y < x \<or> y = x)"
-  apply (rule iffI)
-   apply (rule disjCI)
-   apply (drule plus_one_helper)
-   apply simp
-  apply (subgoal_tac "x < x + 1")
-   apply (erule disjE, simp_all)
-  apply (rule plus_one_helper2 [OF order_refl])
-  apply (rule notI, drule max_word_wrap)
   apply simp
   done
 
@@ -5574,15 +5534,6 @@ lemma sign_extend_eq:
   "w && mask (Suc n) = v && mask (Suc n) \<Longrightarrow> sign_extend n w = sign_extend n v"
   by (rule word_eqI, fastforce dest: word_eqD simp: sign_extend_bitwise_if' word_size)
 
-lemma unat_minus_one_word:
-  "unat (-1 :: 'a :: len word) = 2 ^ len_of TYPE('a) - 1"
-  by (subst minus_one_word)
-     (subst unat_sub_if', clarsimp)
-
-lemma of_nat_eq_signed_scast:
-  "(of_nat x = (y :: ('a::len) signed word))
-   = (of_nat x = (scast y :: 'a word))"
-  by (metis scast_of_nat scast_scast_id(2))
 
 lemma sign_extended_add:
   assumes p: "is_aligned p n"
@@ -5684,6 +5635,60 @@ proof -
         power_inject_exp semiring_norm(76) unat_power_lower zero_neq_one)
   then show ?thesis by auto
 qed
+
+(* usually: x,y = (len_of TYPE ('a)) *)
+lemma bitmagic_zeroLast_leq_or1Last:
+  "(a::('a::len) word) AND (mask len << x - len) \<le> a OR mask (y - len)"
+  by (meson le_word_or2 order_trans word_and_le2)
+
+
+lemma zero_base_lsb_imp_set_eq_as_bit_operation:
+  fixes base ::"'a::len word"
+  assumes valid_prefix: "mask (len_of TYPE('a) - len) AND base = 0"
+  shows "(base = NOT mask (len_of TYPE('a) - len) AND a) \<longleftrightarrow>
+         (a \<in> {base .. base OR mask (len_of TYPE('a) - len)})"
+proof
+  have helper3: "x OR y = x OR y AND NOT x" for x y ::"'a::len word" by (simp add: word_oa_dist2)
+  from assms show "base = NOT mask (len_of TYPE('a) - len) AND a \<Longrightarrow>
+                    a \<in> {base..base OR mask (len_of TYPE('a) - len)}"
+    apply(simp add: word_and_le1)
+    apply(metis helper3 le_word_or2 word_bw_comms(1) word_bw_comms(2))
+  done
+next
+  assume "a \<in> {base..base OR mask (len_of TYPE('a) - len)}"
+  hence a: "base \<le> a \<and> a \<le> base OR mask (len_of TYPE('a) - len)" by simp
+  show "base = NOT mask (len_of TYPE('a) - len) AND a"
+  proof -
+    have f2: "\<forall>x\<^sub>0. base AND NOT mask x\<^sub>0 \<le> a AND NOT mask x\<^sub>0"
+      using a neg_mask_mono_le by blast
+    have f3: "\<forall>x\<^sub>0. a AND NOT mask x\<^sub>0 \<le> (base OR mask (len_of TYPE('a) - len)) AND NOT mask x\<^sub>0"
+      using a neg_mask_mono_le by blast
+    have f4: "base = base AND NOT mask (len_of TYPE('a) - len)"
+      using valid_prefix by (metis mask_eq_0_eq_x word_bw_comms(1))
+    hence f5: "\<forall>x\<^sub>6. (base OR x\<^sub>6) AND NOT mask (len_of TYPE('a) - len) =
+                      base OR x\<^sub>6 AND NOT mask (len_of TYPE('a) - len)"
+      using word_ao_dist by (metis)
+    have f6: "\<forall>x\<^sub>2 x\<^sub>3. a AND NOT mask x\<^sub>2 \<le> x\<^sub>3 \<or>
+                      \<not> (base OR mask (len_of TYPE('a) - len)) AND NOT mask x\<^sub>2 \<le> x\<^sub>3"
+      using f3 dual_order.trans by auto
+    have "base = (base OR mask (len_of TYPE('a) - len)) AND NOT mask (len_of TYPE('a) - len)"
+      using f5 by auto
+    hence "base = a AND NOT mask (len_of TYPE('a) - len)"
+      using f2 f4 f6 by (metis eq_iff)
+    thus "base = NOT mask (len_of TYPE('a) - len) AND a"
+      by (metis word_bw_comms(1))
+  qed
+qed
+
+lemma unat_minus_one_word:
+  "unat (-1 :: 'a :: len word) = 2 ^ len_of TYPE('a) - 1"
+  by (subst minus_one_word)
+     (subst unat_sub_if', clarsimp)
+
+lemma of_nat_eq_signed_scast:
+  "(of_nat x = (y :: ('a::len) signed word))
+   = (of_nat x = (scast y :: 'a word))"
+  by (metis scast_of_nat scast_scast_id(2))
 
 lemma word_ctz_le:
   "word_ctz (w :: ('a::len word)) \<le> LENGTH('a)"

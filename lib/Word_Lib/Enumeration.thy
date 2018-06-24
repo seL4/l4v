@@ -286,6 +286,18 @@ lemma le_imp_diff_le:
   "(j::nat) \<le> k \<Longrightarrow> j - n \<le> k"
   by simp
 
+lemma fromEnum_upto_nth:
+  fixes start :: "'a :: enumeration_both"
+  assumes "n < length [start .e. end]"
+  shows "fromEnum ([start .e. end] ! n) = fromEnum start + n"
+proof -
+  have less_sub: "\<And>m k m' n. \<lbrakk> (n::nat) < m - k ; m \<le> m' \<rbrakk> \<Longrightarrow> n < m' - k" by fastforce
+  note upt_Suc[simp del]
+  show ?thesis using assms
+  by (fastforce simp: upto_enum_red
+                dest: less_sub[where m'="Suc (fromEnum maxBound)"] intro: maxBound_is_bound)
+qed
+
 lemma length_upto_enum_le_maxBound:
   fixes start :: "'a :: enumeration_both"
   shows "length [start .e. end] \<le> Suc (fromEnum (maxBound :: 'a))"
