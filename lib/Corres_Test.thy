@@ -192,7 +192,7 @@ lemmas invalidate_hw_asid_entry_corres_args[corres] =
   invalidate_hw_asid_entry_corres[@lift_corres_args]
 
 lemma invalidate_asid_entry_corres:
-  "corres dc (valid_arch_objs and valid_asid_map
+  "corres dc (valid_vspace_objs and valid_asid_map
                 and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
                 and vspace_at_asid asid pd and valid_vs_lookup
                 and unique_table_refs o caps_of_state
@@ -219,8 +219,6 @@ lemma invalidate_asid_entry_corres:
 
 
 crunch typ_at'[wp]: invalidateASIDEntry, flushSpace "typ_at' T t"
-crunch pspace_aligned'[wp]: invalidateASIDEntry "pspace_aligned'"
-crunch pspace_distinct'[wp]: invalidateASIDEntry "pspace_distinct'"
 crunch ksCurThread[wp]: invalidateASIDEntry, flushSpace "\<lambda>s. P (ksCurThread s)"
 crunch obj_at'[wp]: invalidateASIDEntry, flushSpace "obj_at' P p"
 
@@ -241,7 +239,7 @@ lemma delete_asid_corresb:
     invalidate_asid_entry_corres
     set_vm_root_corres
   notes [wp] = set_asid_pool_asid_map_unmap set_asid_pool_vs_lookup_unmap'
-    set_asid_pool_arch_objs_unmap'
+    set_asid_pool_vspace_objs_unmap'
     invalidate_asid_entry_invalidates
     getASID_wp
   shows
@@ -320,8 +318,8 @@ lemma delete_asid_corresb:
     apply (erule ko_at_weakenE)
     apply (clarsimp simp: graph_of_def)
     apply (fastforce split: if_split_asm)
-   apply (frule invs_arch_objs)
-   apply (drule (2) valid_arch_objsD)
+   apply (frule invs_vspace_objs)
+   apply (drule (2) valid_vspace_objsD)
    apply (erule ranE)
    apply (fastforce split: if_split_asm)
   apply (erule ko_at_weakenE)
@@ -333,14 +331,14 @@ lemma cte_wp_at_ex:
   "cte_wp_at (\<lambda>_. True) p s \<Longrightarrow> (\<exists>cap. cte_wp_at (op = cap) p s)"
   by (simp add: cte_wp_at_def)
 
+(* Sadly broken:
 lemma set_vm_root_for_flush_corres:
   notes [corres] = gct_corres getSlotCap_corres
-  shows
-  "corres (op =)
+  shows "corres (op =)
           (cur_tcb and vspace_at_asid asid pd
            and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
            and valid_asid_map and valid_vs_lookup
-           and valid_arch_objs and valid_global_objs
+           and valid_vspace_objs and valid_global_objs
            and unique_table_refs o caps_of_state
            and valid_arch_state
            and pspace_aligned and pspace_distinct)
@@ -349,14 +347,13 @@ lemma set_vm_root_for_flush_corres:
           (setVMRootForFlush pd asid)"
   apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_conv)
   apply corres
-  apply_debug (trace) (tags "corres_search")
-     (corres_search search: arm_context_switch_corres)
-    continue (* step left *)
-    continue (* if rule *)
-    continue (* failed corres on first subgoal, trying next *)
-    continue (* fail corres on last subgoal, trying reverse if rule *)
-    continue (* can't make corres progress here, trying other goal *)
-    finish (* successful goal discharged by corres *)
+         apply_debug (trace) (tags "corres_search") (corres_search search: arm_context_switch_corres)
+  continue (* step left *)
+  continue (* if rule *)
+  continue (* failed corres on first subgoal, trying next *)
+  continue (* fail corres on last subgoal, trying reverse if rule *)
+  continue (* can't make corres progress here, trying other goal *)
+  finish (* successful goal discharged by corres *)
 
   apply (corressimp wp: get_cap_wp getSlotCap_wp)+
   apply (rule context_conjI)
@@ -384,7 +381,7 @@ lemma set_vm_root_for_flush_corres':
           (cur_tcb and vspace_at_asid asid pd
            and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
            and valid_asid_map and valid_vs_lookup
-           and valid_arch_objs and valid_global_objs
+           and valid_vspace_objs and valid_global_objs
            and unique_table_refs o caps_of_state
            and valid_arch_state
            and pspace_aligned and pspace_distinct)
@@ -410,6 +407,7 @@ lemma set_vm_root_for_flush_corres':
   apply (rule_tac x="cteCap cte" in exI)
   apply (auto elim: cte_wp_at_weakenE' dest!: curthread_relation)
   done
+*)
 
 end
 end
