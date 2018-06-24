@@ -258,11 +258,6 @@ lemma transform_cslot_pre_onto:
   apply (case_tac ptr)
   apply (clarsimp simp: transform_cslot_ptr_def transform_cslot_ptr_rev_def)
   apply (clarsimp simp: nat_to_bl_def bin_bl_bin' bintrunc_mod2p)
-  apply (subst int_mod_eq')
-    apply (clarsimp simp: not_le_imp_less)
-   apply (drule iffD2[OF of_nat_less_iff[where 'a=int]])
-   apply (clarsimp)
-  apply simp
   done
 
 definition
@@ -401,8 +396,7 @@ lemma opt_cap_None_word_bits:
      apply simp
     apply (rule power_strict_increasing, simp+)
    apply (frule valid_etcbs_tcb_etcb[rotated], fastforce)
-   apply (clarsimp simp:transform_tcb_def tcb_slot_defs word_bits_def
-                        tcb_pending_op_slot_def tcb_boundntfn_slot_def)
+   apply (clarsimp simp:transform_tcb_def tcb_slot_defs word_bits_def)
   apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj; simp)
     apply (simp add:transform_asid_pool_contents_def transform_page_table_contents_def
