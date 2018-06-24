@@ -23,7 +23,8 @@ type 'a ddecl = string wrap
                 * (expr ctype * string wrap option) wrap list option
                 * 'a list
 type addecl = gcc_attribute ddecl
-infix ood  (* composition of declarators *)
+
+(* composition of declarators *)
 fun ooa(adec1, adec2) = let
   (* composition of abstract declarators *)
   val a1 = node adec1
@@ -37,6 +38,8 @@ fun ood(ddw, adec) = let
 in
   wrap((nm, ooa(adec0,adec), params, data), left ddw, right adec)
 end
+
+infix ood
 
 fun add_attributes(ddw, attrs) = let
   val (nm, adec, ps, data0) = node ddw

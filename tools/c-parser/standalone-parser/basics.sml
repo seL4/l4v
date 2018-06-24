@@ -80,7 +80,7 @@ end
 
 open Basics
 
-infix mem union
+infix mem
 structure Library =
 struct
 
@@ -165,5 +165,7 @@ struct
 
 
 end
+
+infix union
 
 open Library
