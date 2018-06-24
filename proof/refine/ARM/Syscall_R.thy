@@ -572,7 +572,7 @@ lemma sendSignal_tcb_at'[wp]:
   done
 
 lemmas checkCap_inv_typ_at'
-  = checkCap_inv[where P="\<lambda>s. P (typ_at' T p s)" for T p]
+  = checkCap_inv[where P="\<lambda>s. P (typ_at' T p s)" for P T p]
 
 crunch typ_at'[wp]: restart, bindNotification "\<lambda>s. P (typ_at' T p s)"
 crunch typ_at'[wp]: performTransfer "\<lambda>s. P (typ_at' T p s)"
