@@ -12,6 +12,7 @@ theory ummbug20100217
 imports "CParser.CTranslation"
 begin
 
+external_file "ummbug20100217.c"
 install_C_file "ummbug20100217.c"
 
 print_locale ummbug20100217_global_addresses

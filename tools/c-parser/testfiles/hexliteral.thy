@@ -12,6 +12,7 @@ theory hexliteral
 imports "CParser.CTranslation"
 begin
 
+external_file "hexliteral.c"
 install_C_file "hexliteral.c"
 
 thm hexliteral_global_addresses.f_body_def

@@ -12,6 +12,7 @@ theory int_promotion
 imports "CParser.CTranslation"
 begin
 
+external_file "int_promotion.c"
 install_C_file "int_promotion.c"
 
   context int_promotion

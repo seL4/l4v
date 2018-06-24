@@ -12,6 +12,7 @@ theory extern_dups
 imports "CParser.CTranslation"
 begin
 
+external_file "extern_dups.c"
 install_C_file "extern_dups.c"
 
 print_locale extern_dups_global_addresses

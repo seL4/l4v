@@ -12,6 +12,7 @@ theory bigstruct
 imports "CParser.CTranslation"
 begin
 
+external_file "bigstruct.c"
 install_C_file "bigstruct.c"
 
 end

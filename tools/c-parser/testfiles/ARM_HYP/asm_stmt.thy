@@ -19,6 +19,7 @@ declare [[populate_globals=true]]
 typedecl machine_state
 typedecl cghost_state
 
+external_file "asm_stmt.c"
 install_C_file "asm_stmt.c"
   [machinety=machine_state, ghostty=cghost_state]
 

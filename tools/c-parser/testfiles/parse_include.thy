@@ -12,6 +12,9 @@ theory parse_include
 imports "CParser.CTranslation"
 begin
 
+external_file "includes/test_include2.h"
+external_file "parse_include.c"
+
 new_C_include_dir "includes"
 
 install_C_file "parse_include.c"

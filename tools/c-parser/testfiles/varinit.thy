@@ -12,6 +12,7 @@ theory varinit
 imports "CParser.CTranslation"
 begin
 
+external_file "varinit.c"
 install_C_file "varinit.c"
 
 context varinit begin

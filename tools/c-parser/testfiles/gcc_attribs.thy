@@ -12,6 +12,7 @@ theory gcc_attribs
 imports "CParser.CTranslation"
 begin
 
+external_file "gcc_attribs.c"
 install_C_file "gcc_attribs.c"
 
 context gcc_attribs

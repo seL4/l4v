@@ -12,6 +12,7 @@ theory inner_fncalls
 imports "CParser.CTranslation"
 begin
 
+external_file "inner_fncalls.c"
 install_C_file "inner_fncalls.c"
 
 print_locale inner_fncalls_global_addresses

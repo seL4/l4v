@@ -12,6 +12,7 @@ theory ptr_diff
 imports "CParser.CTranslation"
 begin
 
+external_file "ptr_diff.c"
 install_C_file "ptr_diff.c"
 
   context ptr_diff

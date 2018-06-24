@@ -12,6 +12,7 @@ theory dupthms
 imports "CParser.CTranslation"
 begin
 
+external_file "dupthms.c"
 install_C_file "dupthms.c"
 
 end

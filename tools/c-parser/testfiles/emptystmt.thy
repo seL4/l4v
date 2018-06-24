@@ -12,6 +12,7 @@ theory emptystmt
 imports "CParser.CTranslation"
 begin
 
+external_file "emptystmt.c"
 install_C_file "emptystmt.c"
 
 context emptystmt

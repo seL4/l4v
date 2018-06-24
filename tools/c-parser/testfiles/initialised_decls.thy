@@ -12,6 +12,7 @@ theory initialised_decls
 imports "CParser.CTranslation"
 begin
 
+external_file "initialised_decls.c"
 install_C_file "initialised_decls.c"
 
 context initialised_decls_global_addresses

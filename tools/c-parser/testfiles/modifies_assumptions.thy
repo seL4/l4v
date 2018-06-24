@@ -12,6 +12,7 @@ theory modifies_assumptions
 imports "CParser.CTranslation"
 begin
 
+external_file "modifies_assumptions.c"
 install_C_file "modifies_assumptions.c"
 
 context modifies_assumptions

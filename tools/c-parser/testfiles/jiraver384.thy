@@ -12,6 +12,7 @@ theory jiraver384
   imports "CParser.CTranslation"
 begin
 
+  external_file "jiraver384.c"
   install_C_file "jiraver384.c"
 
   context jiraver384

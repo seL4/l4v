@@ -12,6 +12,8 @@ theory jiraver150
 imports "CParser.CTranslation"
 begin
 
+external_file "jiraver150.c"
+
 declare [[use_anonymous_local_variables=true]]
   install_C_file "jiraver150.c"
 

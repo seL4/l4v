@@ -12,6 +12,7 @@ theory parse_switch
 imports "CParser.CTranslation"
 begin
 
+external_file "parse_switch.c"
 install_C_file "parse_switch.c"
 
 context parse_switch_global_addresses

@@ -12,7 +12,9 @@ theory jiraver473
   imports "CParser.CTranslation"
 begin
 
-  declare [[munge_info_fname="jiraver473.minfo"]]
-  install_C_file "jiraver473.c"
+declare [[munge_info_fname="jiraver473.minfo"]]
+
+external_file "jiraver473.c"
+install_C_file "jiraver473.c"
 
 end

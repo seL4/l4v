@@ -12,6 +12,7 @@ theory simple_fn
 imports "CParser.CTranslation"
 begin
 
+external_file "simple_fn.c"
 install_C_file "simple_fn.c"
 
 print_locale simple_fn_global_addresses

@@ -12,6 +12,7 @@ theory multi_deref
 imports "CParser.CTranslation"
 begin
 
+external_file "multi_deref.c"
 install_C_file "multi_deref.c"
 
 context multi_deref_global_addresses begin

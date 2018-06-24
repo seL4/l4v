@@ -12,6 +12,7 @@ theory postfixOps
 imports "CParser.CTranslation"
 begin
 
+external_file "postfixOps.c"
 install_C_file "postfixOps.c"
 
 context "postfixOps"

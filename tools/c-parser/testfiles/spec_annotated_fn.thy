@@ -14,6 +14,7 @@ begin
 
 declare sep_conj_ac [simp add]
 
+external_file "spec_annotated_fn.c"
 install_C_file "spec_annotated_fn.c"
 
 

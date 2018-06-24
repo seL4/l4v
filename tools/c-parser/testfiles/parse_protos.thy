@@ -12,6 +12,7 @@ theory parse_protos
 imports "CParser.CTranslation"
 begin
 
+external_file "parse_protos.c"
 install_C_file "parse_protos.c"
 
 context parse_protos_global_addresses

@@ -14,6 +14,7 @@ imports "CParser.CTranslation"
 
 begin
 
+external_file "jiraver881.c"
 install_C_file "jiraver881.c"
 
 context jiraver881 begin

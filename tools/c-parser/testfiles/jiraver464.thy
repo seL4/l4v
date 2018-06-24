@@ -13,6 +13,8 @@ theory jiraver464
 begin
 
 (* declare [[calculate_modifies_proofs=false]] *)
+
+external_file "jiraver464.c"
 install_C_file "jiraver464.c"
 
 print_locale f_spec

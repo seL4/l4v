@@ -16,6 +16,7 @@ ML {* Feedback.verbosity_level := 6 *}
 
 declare [[calculate_modifies_proofs = false ]]
 
+external_file "jiraver313.c"
 install_C_file memsafe "jiraver313.c"
 
 ML {*

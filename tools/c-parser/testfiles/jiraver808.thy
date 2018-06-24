@@ -12,7 +12,8 @@ theory jiraver808
   imports "CParser.CTranslation"
 begin
 
- install_C_file "jiraver808.c"
+external_file "jiraver808.c"
+install_C_file "jiraver808.c"
 
 context jiraver808
 begin

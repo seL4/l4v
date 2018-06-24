@@ -12,7 +12,8 @@ theory jiraver345
   imports "CParser.CTranslation"
 begin
 
-  install_C_file "jiraver345.c"
+external_file "jiraver345.c"
+install_C_file "jiraver345.c"
 
 context jiraver345
 begin

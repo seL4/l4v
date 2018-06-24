@@ -12,6 +12,7 @@ theory phantom_mstate
 imports "CParser.CTranslation"
 begin
 
+external_file "phantom_mstate.c"
 install_C_file "phantom_mstate.c" [machinety=bool]
 
 context phantom_mstate

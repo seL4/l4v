@@ -12,6 +12,7 @@ theory shortcircuit
 imports "CParser.CTranslation"
 begin
 
+external_file "shortcircuit.c"
 install_C_file "shortcircuit.c"
 
 
