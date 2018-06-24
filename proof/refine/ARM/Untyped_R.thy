@@ -3587,7 +3587,7 @@ lemma createNewCaps_ranges':
    apply (rule createNewCaps_ranges)
   apply (simp add: distinct_sets_prop del: map_map)
   apply (erule distinct_prop_prefixE)
-  apply (rule Sublist.map_prefixI)
+  apply (rule Sublist.map_mono_prefix)
   apply (rule map_snd_zip_prefix [unfolded less_eq_list_def])
   done
 
@@ -5942,7 +5942,7 @@ lemma zipWithM_x_insertNewCap_invs':
   apply (auto simp: map_snd_zip_prefix [unfolded less_eq_list_def]
               dest!: set_zip_helper
               elim!: distinct_prop_prefixE
-              intro!: Sublist.map_prefixI
+              intro!: Sublist.map_mono_prefix
               simp del: map_map)
   done
 

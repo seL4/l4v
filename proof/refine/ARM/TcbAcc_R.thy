@@ -3123,8 +3123,8 @@ lemma tcbSchedEnqueueOrAppend_valid_queues:
    \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
 proof -
 
-  def could_run ==
-    "\<lambda>d p t. obj_at' (\<lambda>tcb. inQ d p (tcbQueued_update (\<lambda>_. True) tcb) \<and> runnable' (tcbState tcb)) t"
+  define could_run where "could_run ==
+    \<lambda>d p t. obj_at' (\<lambda>tcb. inQ d p (tcbQueued_update (\<lambda>_. True) tcb) \<and> runnable' (tcbState tcb)) t"
 
   have addToBitmap_could_run:
   "\<And>d p. \<lbrace>\<lambda>s. \<forall>d p. t \<in> set (ksReadyQueues s (d, p)) \<longrightarrow> could_run d p t s\<rbrace>
