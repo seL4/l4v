@@ -256,7 +256,7 @@ lemma sep_map_spec_conj:
 lemma sep_spec_simps:
   "sep_map_spec (slot \<mapsto>c cap)
   (SepState [(fst slot,Slot (snd slot)) \<mapsto> (CDL_Cap (Some (reset_cap_asid cap)))]
-            empty)"
+            Map.empty)"
   apply (clarsimp simp:sep_map_spec_def sep_map_c_def sep_map_general_def)
   apply (case_tac s')
   apply (clarsimp simp:object_to_sep_state_def)
