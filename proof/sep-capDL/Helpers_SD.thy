@@ -40,7 +40,7 @@ lemma tcb_ipc_buffer_address_non_zero:
 (***************************************************
  * Generic Isabelle lemmas. Could be moved to lib. *
  ***************************************************)
-lemma map_upd_nonempty' [simp]: "empty \<noteq> t(k\<mapsto>x)"
+lemma map_upd_nonempty' [simp]: "Map.empty \<noteq> t(k\<mapsto>x)"
   by (rule not_sym, simp)
 
 lemma insert_unit_set [simp]:
@@ -48,8 +48,8 @@ lemma insert_unit_set [simp]:
   by auto
 
 lemma restrict_map_not_empty [simp]:
-  "f p = Some v \<Longrightarrow> f |` {p} \<noteq> empty"
-  "f p = Some v \<Longrightarrow> empty \<noteq> f |` {p}"
+  "f p = Some v \<Longrightarrow> f |` {p} \<noteq> Map.empty"
+  "f p = Some v \<Longrightarrow> Map.empty \<noteq> f |` {p}"
   by (clarsimp simp: restrict_map_def fun_eq_iff split: if_split_asm)+
 
 (* This lets us compose a total and a partial function in the obvious manner. *)
@@ -64,7 +64,7 @@ lemma map_comp'_apply [simp]: "(f \<circ>\<^sub>M g) x = case_option None (\<lam
   by (clarsimp simp: map_comp'_def)
 
 lemma map_comp'_empty [simp]:
-  "m \<circ>\<^sub>M empty = empty"
+  "m \<circ>\<^sub>M Map.empty = Map.empty"
   by auto
 
 lemma dom_map_comp' [simp]:
@@ -109,11 +109,11 @@ lemma map_add_restrict_comm:
   done
 
 lemma restrict_map_not_self_UNIV [simp]:
-  "h |` (UNIV - dom h) = empty"
+  "h |` (UNIV - dom h) = Map.empty"
   by (rule ext, clarsimp simp: restrict_map_def)
 
 lemma map_add_emptyE [elim!]:
-  "\<lbrakk>a ++ b = empty; \<lbrakk>a = empty; b = empty\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk>a ++ b = Map.empty; \<lbrakk>a = Map.empty; b = Map.empty\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
   by (metis map_add_None)
 
 lemma restrict_map_sub_singleton [simp]:
@@ -241,7 +241,7 @@ lemma object_slots_opt_capD:
   by (clarsimp simp: opt_cap_def object_slots_slots_of split: prod.split_asm)
 
 lemma object_slots_has_slots:
-  "object_slots obj \<noteq> empty \<Longrightarrow> has_slots obj"
+  "object_slots obj \<noteq> Map.empty \<Longrightarrow> has_slots obj"
   by (clarsimp simp: has_slots_def object_slots_def split: cdl_object.splits)
 
 lemma opt_object_dom_cdl_objects [elim!]:
@@ -1029,7 +1029,7 @@ lemma object_type_update_slots [simp]:
   by (clarsimp simp: object_type_def update_slots_def split: cdl_object.splits)
 
 lemma object_slots_empty [simp]:
-  "\<not> has_slots obj \<Longrightarrow> object_slots obj = empty"
+  "\<not> has_slots obj \<Longrightarrow> object_slots obj = Map.empty"
   by (clarsimp simp: object_slots_def has_slots_def split: cdl_object.splits)
 
 lemma object_slots_update_slots [simp]:
@@ -1038,7 +1038,7 @@ lemma object_slots_update_slots [simp]:
               split: cdl_object.splits)
 
 lemma object_slots_update_slots_empty [simp]:
-  "\<not>has_slots obj \<Longrightarrow> object_slots (update_slots slots obj) = empty"
+  "\<not>has_slots obj \<Longrightarrow> object_slots (update_slots slots obj) = Map.empty"
   by (clarsimp simp: object_slots_def update_slots_def has_slots_def
                  split: cdl_object.splits)
 

@@ -83,7 +83,7 @@ lemma object_clean_def2:
 definition
   object_wipe_slots :: "cdl_object \<Rightarrow> cdl_object"
 where
-  "object_wipe_slots obj \<equiv> update_slots empty obj"
+  "object_wipe_slots obj \<equiv> update_slots Map.empty obj"
 
 definition object_project :: "cdl_component_id \<Rightarrow> cdl_object \<Rightarrow> cdl_component"
   where "object_project comp_id obj \<equiv> case comp_id of
@@ -142,11 +142,11 @@ definition
 where
   "sep_map_general obj_id object comp_id \<equiv> \<lambda>s.
     sep_heap s = (object_to_sep_state obj_id object comp_id) \<and>
-    sep_irq_node s = empty"
+    sep_irq_node s = Map.empty"
 
 lemma sep_map_general_def2:
   "sep_map_general obj_id object comp_id = (\<lambda>s.
-    s = SepState (object_to_sep_state obj_id object comp_id) empty)"
+    s = SepState (object_to_sep_state obj_id object comp_id) Map.empty)"
   apply (clarsimp simp: sep_map_general_def, rule ext)
   apply (case_tac s, simp_all)
   done
@@ -207,7 +207,7 @@ definition
   sep_map_irq :: "cdl_irq \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred" ("_ \<mapsto>irq _" [76,71] 76)
 where
   "sep_map_irq irq obj_id \<equiv> \<lambda>s.
-    sep_heap s = empty \<and>
+    sep_heap s = Map.empty \<and>
     sep_irq_node s = [irq \<mapsto> obj_id]"
 
 abbreviation "sep_any_map_o \<equiv> sep_any sep_map_o"
@@ -321,7 +321,7 @@ lemma offset_slot:
 lemma sep_map_general_inj:
   "cmps \<noteq> {} \<Longrightarrow> inj (\<lambda>obj_id. sep_map_general obj_id object cmps)"
   apply (clarsimp simp: inj_on_def fun_eq_iff sep_map_general_def)
-  apply (erule_tac x="SepState (object_to_sep_state x object cmps) empty" in allE)
+  apply (erule_tac x="SepState (object_to_sep_state x object cmps) Map.empty" in allE)
   apply (fastforce simp: object_to_sep_state_def
                   split: if_split_asm)
   done
@@ -337,7 +337,7 @@ lemma sep_map_f_inj:
 lemma sep_map_s_inj:
   "inj (\<lambda>obj_id. obj_id \<mapsto>s obj)"
   apply (clarsimp simp: inj_on_def fun_eq_iff sep_map_s_def sep_map_general_def)
-  apply (erule_tac x="SepState (object_to_sep_state a obj {Slot b}) empty" in allE)
+  apply (erule_tac x="SepState (object_to_sep_state a obj {Slot b}) Map.empty" in allE)
   apply (fastforce simp: object_to_sep_state_def
                   split: if_split_asm)
   done
@@ -349,7 +349,7 @@ lemma sep_map_c_inj:
                                                  (CNode \<lparr> cdl_cnode_caps = [b \<mapsto> cap],
                                                           cdl_cnode_size_bits = 0 \<rparr>)
                                                  {Slot b})
-                                empty" in allE)
+                                Map.empty" in allE)
   apply (auto simp: object_to_sep_state_def object_project_def object_slots_def
              split: if_split_asm)
   done
@@ -491,8 +491,8 @@ lemma sep_map_decomp:
                          sep_state_add_def object_to_sep_state_add)
   (* (p \<mapsto>L obj \<and>* p \<mapsto>R obj) \<Longleftarrow> p \<mapsto> obj *)
   apply (clarsimp simp:sep_map_general_def)
-  apply (rule_tac x = "SepState (object_to_sep_state p obj cmps) empty" in exI)
-  apply (rule_tac x = "SepState (object_to_sep_state p obj cmps') empty" in exI)
+  apply (rule_tac x = "SepState (object_to_sep_state p obj cmps) Map.empty" in exI)
+  apply (rule_tac x = "SepState (object_to_sep_state p obj cmps') Map.empty" in exI)
   apply (clarsimp simp: plus_sep_state_def sep_state_add_def object_to_sep_state_add)
   apply (intro conjI disjointI)
    apply (clarsimp simp: dom_def object_to_sep_state_def
