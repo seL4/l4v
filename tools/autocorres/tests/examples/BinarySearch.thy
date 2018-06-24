@@ -12,6 +12,7 @@ theory BinarySearch
 imports "AutoCorres.AutoCorres" "../../DataStructures"
 begin
 
+external_file "binary_search.c"
 install_C_file "binary_search.c"
 
 autocorres [ts_rules = nondet, unsigned_word_abs=binary_search] "binary_search.c"

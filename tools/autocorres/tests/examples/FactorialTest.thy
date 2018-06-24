@@ -17,6 +17,8 @@ imports
   "Lib.OptionMonadWP"
 begin
 
+external_file "factorial.c"
+
 (* Parse the input file. *)
 install_C_file "factorial.c"
 

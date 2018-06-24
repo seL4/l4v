@@ -13,6 +13,8 @@ imports
   "AutoCorres.AutoCorres"
 begin
 
+external_file  "alloc.c"
+
 (* Parse the input file. *)
 install_C_file  "alloc.c"
 

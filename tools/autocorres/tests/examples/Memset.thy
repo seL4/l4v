@@ -12,6 +12,7 @@ theory Memset
 imports "AutoCorres.AutoCorres"
 begin
 
+external_file "memset.c"
 install_C_file "memset.c"
 
 autocorres [

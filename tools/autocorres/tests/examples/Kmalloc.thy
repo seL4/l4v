@@ -12,6 +12,8 @@ theory Kmalloc
 imports "AutoCorres.AutoCorres"
 begin
 
+external_file "kmalloc.c"
+
 (* No proof here, just testing the parser. *)
 
 consts
@@ -19,7 +21,6 @@ consts
   ptr_retyps :: "nat \<Rightarrow> addr \<Rightarrow> heap_typ_desc \<Rightarrow> heap_typ_desc"
 
 install_C_file "kmalloc.c"
-
 autocorres "kmalloc.c"
 
 context kmalloc begin

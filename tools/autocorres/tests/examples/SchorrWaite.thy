@@ -53,6 +53,7 @@ begin
 
 declare fun_upd_apply[simp del]
 
+external_file "schorr_waite.c"
 install_C_file "schorr_waite.c"
 autocorres [heap_abs_syntax] "schorr_waite.c"
 

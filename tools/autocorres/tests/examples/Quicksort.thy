@@ -22,6 +22,7 @@ declare validNF_whileLoopE_inv_measure_twosteps [wp]
 
 declare creturn_def [vcg_simp]
 
+external_file "quicksort.c"
 install_C_file "quicksort.c"
 autocorres "quicksort.c"
 

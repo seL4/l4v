@@ -12,6 +12,7 @@ theory WhileLoopVarsPreserved imports
   "AutoCorres.AutoCorres"
 begin
 
+external_file "while_loop_vars_preserved.c"
 install_C_file "while_loop_vars_preserved.c"
 
 autocorres [ts_force nondet = loop] "while_loop_vars_preserved.c"

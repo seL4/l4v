@@ -12,6 +12,7 @@ theory prototyped_functions
 imports "AutoCorres.AutoCorres"
 begin
 
+external_file "prototyped_functions.c"
 install_C_file "prototyped_functions.c"
 
 autocorres [ts_force option = moo4] "prototyped_functions.c"

@@ -46,6 +46,7 @@ tests/All.thy: \
 	@echo "Generating '$@' from '$<'..."
 	@printf '(* @LICENSE(NICTA) *)\n\n' > $@
 	@printf 'theory %s\nimports "AutoCorres.AutoCorres"\nbegin\n\n' $(notdir $(basename $<)) > $@
+	@printf 'external_file "%s"\n\n' $(notdir $<) >> $@
 	@printf 'install_C_file "%s"\n\n' $(notdir $<) >> $@
 	@printf 'autocorres "%s"\n\n' $(notdir $<) >> $@
 	@printf 'end\n' >> $@

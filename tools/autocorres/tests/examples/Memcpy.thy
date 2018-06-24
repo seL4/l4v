@@ -44,6 +44,7 @@ lemma ptr_contained:"\<lbrakk> c_guard (x::('a::c_type) ptr); size_of TYPE('a) =
   apply (clarsimp simp: nat_less_iff of_nat_nat)
   done
 
+external_file "memcpy.c"
 install_C_file "memcpy.c"
 
 (* FIXME: MOVE *)
