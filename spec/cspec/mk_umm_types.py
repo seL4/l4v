@@ -49,9 +49,10 @@ if "ISABELLE_PROCESS" not in os.environ or "ISABELLE_TOOL" not in os.environ:
 
 THY_DATA = """
 theory UmmTypesFile
-  imports CTranslation
+  imports CParser.CTranslation
 begin
 declare [[allow_underscore_idents = true]]
+external_file "%(input)s"
 setup {* IsarInstall.gen_umm_types_file "%(input)s" "%(output)s" *}
 end
 """
@@ -59,7 +60,6 @@ end
 ROOT_DATA = """
 session UmmTypes = CParser +
   theories UmmTypesFile
-  files "%(input)s"
 """
 
 # Create a new theory file and ROOT file in a temporary directory.
