@@ -809,7 +809,7 @@ lemma copy_global_mappings_pas_refined2:
 
 lemma pas_refined_set_asid_table_empty_strg:
   "pas_refined aag s \<and> is_subject aag pool \<and> (\<forall> asid. asid \<noteq> 0 \<and> asid_high_bits_of asid = base \<longrightarrow> is_subject_asid aag asid)
-         \<and> ko_at (ArchObj (arch_kernel_obj.ASIDPool empty)) pool s
+         \<and> ko_at (ArchObj (arch_kernel_obj.ASIDPool Map.empty)) pool s
     \<longrightarrow>
   pas_refined aag (s\<lparr>arch_state := arch_state s \<lparr>arm_asid_table := (arm_asid_table (arch_state s))(base \<mapsto> pool)\<rparr>\<rparr>)"
   apply (clarsimp simp: pas_refined_def state_objs_to_policy_def)

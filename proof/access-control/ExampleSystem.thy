@@ -307,7 +307,7 @@ where
    TCB \<lparr>
      tcb_ctable             = CNodeCap 6 undefined undefined,
      tcb_vtable             = ArchObjectCap (PageDirectoryCap 3063 (Some asid1_3063)),
-     tcb_reply              = ReplyCap 3079 True, (* master reply cap to itself *)
+     tcb_reply              = ReplyCap 3079 True, \<comment> \<open>master reply cap to itself\<close>
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
      tcb_state              = Running,
@@ -328,7 +328,7 @@ where
    TCB \<lparr>
      tcb_ctable             = CNodeCap 7 undefined undefined,
      tcb_vtable             = ArchObjectCap (PageDirectoryCap 3065 (Some asid1_3065)),
-     tcb_reply              = ReplyCap 3080 True, (* master reply cap to itself *)
+     tcb_reply              = ReplyCap 3080 True, \<comment> \<open>master reply cap to itself\<close>
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
      tcb_state              = BlockedOnReceive 9,
@@ -380,7 +380,7 @@ definition
 where
   "s1 \<equiv>  \<lparr>
     kheap = kh1,
-    cdt = empty,
+    cdt = Map.empty,
     is_original_cap = undefined,
     cur_thread = undefined,
     idle_thread = undefined,
@@ -543,7 +543,7 @@ lemma tcb_states_of_state_1:
   done
 
 lemma thread_bound_ntfns_1:
-  "thread_bound_ntfns s1 = empty"
+  "thread_bound_ntfns s1 = Map.empty"
   unfolding s1_def thread_bound_ntfns_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
@@ -845,7 +845,7 @@ where
    TCB \<lparr>
      tcb_ctable             = CNodeCap 6 undefined undefined ,
      tcb_vtable             = ArchObjectCap (PageDirectoryCap 3063 (Some asid2_3063)),
-     tcb_reply              = ReplyCap 3079 True, (* master reply cap to itself *)
+     tcb_reply              = ReplyCap 3079 True, \<comment> \<open>master reply cap to itself\<close>
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
      tcb_state              = Running,
@@ -866,7 +866,7 @@ where
    TCB \<lparr>
      tcb_ctable             = CNodeCap 7 undefined undefined ,
      tcb_vtable             = ArchObjectCap (PageDirectoryCap 3065 (Some asid2_3065)),
-     tcb_reply              = ReplyCap 3080 True, (* master reply cap to itself *)
+     tcb_reply              = ReplyCap 3080 True, \<comment> \<open>master reply cap to itself\<close>
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
      tcb_state              = BlockedOnReceive 9,
@@ -903,7 +903,7 @@ definition
 where
   "s2 \<equiv>  \<lparr>
     kheap = kh2,
-    cdt = empty,
+    cdt = Map.empty,
     is_original_cap = undefined,
     cur_thread = undefined,
     idle_thread = undefined,
@@ -1066,7 +1066,7 @@ lemma domains_of_state_s2[simp]:
   done
 
 lemma thread_bound_ntfns_2[simp]:
-  "thread_bound_ntfns s2 = empty"
+  "thread_bound_ntfns s2 = Map.empty"
   unfolding s2_def thread_bound_ntfns_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
@@ -1110,7 +1110,7 @@ lemma "pas_refined Sys2PAS s2"
                      simp: pd2_3065_def pd2_3063_def graph_of_def pde_ref_def
                            Sys2AgentMap_simps Sys2AuthGraph_def
                            complete_AuthGraph_def pt2_3077_def pte_ref_def
-                           pt2_3072_def graph_of_def pde_ref2_def
+                           pt2_3072_def pde_ref2_def
                            Sys2AuthGraph_aux_def ptr_range_def)+))+)[1]
    apply clarsimp
    apply (erule state_asids_to_policy_aux.cases)
