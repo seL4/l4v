@@ -821,7 +821,7 @@ lemma sameObjectAs_def2:
                  split: arch_capability.split cong: if_cong)
   apply (clarsimp simp: ARM_HYP_H.sameRegionAs_def isCap_simps
              split del: if_split cong: if_cong)
-  apply (simp add: capRange_def interval_empty)
+  apply (simp add: capRange_def)
   apply fastforce
   done
 
@@ -1097,7 +1097,7 @@ lemma mdb_chunked_init:
   unfolding mdb_chunked_def
 proof clarify
   fix p p' c c' n n'
-  def m' \<equiv> "m (x \<mapsto> CTE cap initMDBNode)"
+  define m' where "m' \<equiv> m (x \<mapsto> CTE cap initMDBNode)"
   assume p: "m' p = Some (CTE c n)"
   assume p': "m' p' = Some (CTE c' n')"
   assume r: "sameRegionAs c c'"
