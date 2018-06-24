@@ -196,7 +196,7 @@ session Bisim in bisim = AInvs +
 session SepTacticsExamples = SepTactics +
   sessions
     SepDSpec
-  theories [quick_and_dirty]
+  theories
     "capDL-api/Sep_Tactic_Examples"
 
 
