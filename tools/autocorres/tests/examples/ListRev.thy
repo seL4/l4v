@@ -12,6 +12,7 @@ theory ListRev
 imports "AutoCorres.AutoCorres"
 begin
 
+external_file "list_rev.c"
 install_C_file "list_rev.c"
 
 autocorres [heap_abs_syntax] "list_rev.c"

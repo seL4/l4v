@@ -63,6 +63,7 @@ lemma [unfolded INT_MIN_def INT_MAX_def, simplified, L2flow]:
   "simp_expr (INT_MIN \<le> b \<and> b \<le> INT_MAX \<and> b \<noteq> 0) (a smod b \<le> INT_MAX) True"
   by (simp add: simp_expr_def INT_MIN_MAX_smod)
 
+external_file "word_abs_cases.c"
 install_C_file "word_abs_cases.c"
 autocorres [
   unsigned_word_abs = callee_flat_u_abs

@@ -14,6 +14,8 @@ imports
   "HOL-Computational_Algebra.Primes"
 begin
 
+external_file "is_prime.c"
+
 (* Parse the input file. *)
 install_C_file "is_prime.c"
 

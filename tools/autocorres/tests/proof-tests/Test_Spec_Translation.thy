@@ -15,6 +15,7 @@ theory Test_Spec_Translation
 imports "AutoCorres.AutoCorres"
 begin
 
+external_file "test_spec_translation.c"
 install_C_file "test_spec_translation.c"
 
 autocorres [ts_rules = nondet] "test_spec_translation.c"

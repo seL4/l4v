@@ -16,6 +16,7 @@ theory type_strengthen_tricks imports
   "AutoCorres.AutoCorres"
 begin
 
+external_file "type_strengthen.c"
 install_C_file "type_strengthen.c"
 
 (* We can configure the type strengthen rules individually.

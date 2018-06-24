@@ -23,6 +23,8 @@ imports
   "AutoCorres.AutoCorres"
 begin
 
+external_file "factorial.c"
+
 (*
  * The venerable Fibonacci function.
  *)

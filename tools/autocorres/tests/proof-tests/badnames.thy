@@ -13,6 +13,8 @@
  *)
 theory badnames imports "AutoCorres.AutoCorres" begin
 
+external_file "badnames.c"
+
 declare [[allow_underscore_idents]]
 install_C_file "badnames.c"
 autocorres "badnames.c"

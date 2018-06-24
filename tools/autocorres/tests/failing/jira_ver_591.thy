@@ -13,6 +13,7 @@
  *)
 theory jira_ver_591 imports "AutoCorres.AutoCorres" begin
 
+external_file "jira_ver_591.c"
 install_C_file "jira_ver_591.c"
 
 (* This fails *)

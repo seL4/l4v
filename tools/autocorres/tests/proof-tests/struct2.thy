@@ -12,6 +12,7 @@ theory struct2
 imports "AutoCorres.AutoCorres"
 begin
 
+external_file "struct2.c"
 install_C_file "struct2.c"
 
 autocorres [keep_going] "struct2.c"

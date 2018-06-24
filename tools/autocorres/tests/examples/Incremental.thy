@@ -17,6 +17,7 @@ theory Incremental imports
   "AutoCorres.AutoCorres"
 begin
 
+external_file "type_strengthen.c"
 install_C_file "type_strengthen.c"
 
 (* Translate only opt_j *)
