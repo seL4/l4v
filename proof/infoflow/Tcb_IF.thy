@@ -464,9 +464,7 @@ crunch states_equiv[wp]: switch_if_required_to "states_equiv_for P Q R X st"
 *)
 
 lemmas gets_cur_thread_respects_f =
-       gets_cur_thread_ev[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>],simplified,wp]
-
-crunch pas_cur_domain[wp]: setup_reply_master "pas_cur_domain aag"
+       gets_cur_thread_ev[THEN reads_respects_f[where Q=\<top>],simplified,wp]
 
 lemma restart_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"

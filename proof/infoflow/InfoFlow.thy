@@ -1107,9 +1107,8 @@ lemma globals_equiv_sym:
 
 lemma globals_equiv_trans:
   "\<lbrakk>globals_equiv s t; globals_equiv t u\<rbrakk> \<Longrightarrow> globals_equiv s u"
-  apply (auto simp: globals_equiv_def)
-  apply (metis idle_equiv_trans idle_equiv_def)+
-  done
+  unfolding globals_equiv_def
+  by clarsimp (metis idle_equiv_trans idle_equiv_def)
 
 (* since doesnt_touch_globals is true for all of the kernel except the scheduler,
    the following lemma shows that we can just prove reads_respects for it, and
