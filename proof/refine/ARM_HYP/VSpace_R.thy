@@ -909,7 +909,7 @@ lemma vgicUpdateLR_corres[corres]:
   by (corressimp simp: vgic_update_lr_def vgicUpdateLR_def vgic_map_def)
 
 lemma vcpuReadReg_corres[corres]:
-  "corres op= (vcpu_at v) (vcpu_at' v and no_0_obj')
+  "corres (=) (vcpu_at v) (vcpu_at' v and no_0_obj')
           (vcpu_read_reg v r) (vcpuReadReg v r)"
   apply (simp add: vcpu_read_reg_def vcpuReadReg_def)
   apply (rule corres_guard_imp)
@@ -934,7 +934,7 @@ lemma vcpuSaveReg_corres[corres]:
   apply (clarsimp simp: vcpu_save_reg_def vcpuSaveReg_def)
   apply (rule corres_guard_imp)
     apply (rule corres_assert_gen_asm2)
-    apply (rule corres_split[OF _ corres_machine_op[where r="op="]])
+    apply (rule corres_split[OF _ corres_machine_op[where r="(=)"]])
        apply (rule vcpuUpdate_corres, fastforce simp: vcpu_relation_def vgic_map_def)
       apply (wpsimp wp: corres_Id)+
   done
