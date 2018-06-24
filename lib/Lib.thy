@@ -1843,10 +1843,6 @@ lemma rtrancl_simulate_weak:
   apply clarsimp
   by (rule converse_rtrancl_into_rtrancl)
 
-lemma nat_le_Suc_less_imp:
-  "x < y \<Longrightarrow> x \<le> y - Suc 0"
-  by arith
-
 lemma list_case_If2:
   "case_list f g xs = If (xs = []) f (g (hd xs) (tl xs))"
   by (simp split: list.split)

@@ -60,10 +60,6 @@ lemma takeWhile_replicate_id:
   "f x \<Longrightarrow> takeWhile f (replicate len x) = replicate len x"
   by (simp add: takeWhile_replicate)
 
-lemma le_imp_diff_le:
-  "(j::nat) \<le> k \<Longrightarrow> j - n \<le> k"
-  by simp
-
 lemma power_sub:
   fixes a :: nat
   assumes lt: "n \<le> m"
@@ -186,6 +182,44 @@ lemma power_sub_int:
    apply (clarsimp simp: power_add)
   apply (rule exI[where x="n - m"])
   apply simp
+  done
+
+lemma suc_le_pow_2:
+  "1 < (n::nat) \<Longrightarrow> Suc n < 2 ^ n"
+  by (induct n; clarsimp)
+     (case_tac "n = 1"; clarsimp)
+
+lemma nat_le_Suc_less_imp:
+  "x < y \<Longrightarrow> x \<le> y - Suc 0"
+  by arith
+
+lemma length_takeWhile_less:
+  "\<exists>x\<in>set xs. \<not> P x \<Longrightarrow> length (takeWhile P xs) < length xs"
+  by (induct xs) (auto split: if_splits)
+
+lemma drop_eq_mono:
+  assumes le: "m \<le> n"
+  assumes drop: "drop m xs = drop m ys"
+  shows "drop n xs = drop n ys"
+proof -
+  have ex: "\<exists>p. n = p + m" by (rule exI[of _ "n - m"]) (simp add: le)
+  then obtain p where p: "n = p + m" by blast
+  show ?thesis unfolding p drop_drop[symmetric] drop by simp
+qed
+
+lemma nat_Suc_less_le_imp:
+  "(k::nat) < Suc n \<Longrightarrow> k \<le> n"
+  by auto
+
+lemma nat_add_less_by_max:
+  "\<lbrakk> (x::nat) \<le> xmax ; y < k - xmax \<rbrakk> \<Longrightarrow> x + y < k"
+  by simp
+
+lemma mod_lemma: "[| (0::nat) < c; r < b |] ==> b * (q mod c) + r < b * c"
+  apply (cut_tac m = q and n = c in mod_less_divisor)
+  apply (drule_tac [2] m = "q mod c" in less_imp_Suc_add, auto)
+  apply (erule_tac P = "%x. lhs < rhs x" for lhs rhs in ssubst)
+  apply (simp add: add_mult_distrib2)
   done
 
 end

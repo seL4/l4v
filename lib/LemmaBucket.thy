@@ -471,46 +471,4 @@ lemma foldl_fun_or_alt:
   apply clarsimp
   by (simp add: foldl_map)
 
-lemma length_takeWhile_less:
-  "\<exists>x\<in>set xs. \<not> P x \<Longrightarrow> length (takeWhile P xs) < length xs"
-  by (induct xs) (auto split: if_splits)
-
-(* FIXME move to Word_Lib (note needs lemmas from Lib/LemmaBucket) *)
-lemma word_ctz_le:
-  "word_ctz (w :: ('a::len word)) \<le> LENGTH('a)"
-  apply (clarsimp simp: word_ctz_def)
-  apply (rule nat_le_Suc_less_imp[where y="LENGTH('a) + 1" , simplified])
-  apply (rule order_le_less_trans[OF List.length_takeWhile_le])
-  apply simp
-  done
-
-(* FIXME move to Word_Lib (note needs lemmas from Lib/LemmaBucket) *)
-lemma word_ctz_less:
-  "w \<noteq> 0 \<Longrightarrow> word_ctz (w :: ('a::len word)) < LENGTH('a)"
-  apply (clarsimp simp: word_ctz_def eq_zero_set_bl)
-  apply (rule order_less_le_trans[OF length_takeWhile_less])
-   apply fastforce+
-  done
-
-lemma suc_le_pow_2:
-  "1 < (n::nat) \<Longrightarrow> Suc n < 2 ^ n"
-  by (induct n; clarsimp)
-     (case_tac "n = 1"; clarsimp)
-
-lemma word_ctz_not_minus_1:
-  "1 < LENGTH('a) \<Longrightarrow> of_nat (word_ctz (w :: ('a :: len) word)) \<noteq> (- 1 :: ('a::len) word)"
-  apply (cut_tac w=w in word_ctz_le)
-  apply (subst word_unat.Rep_inject[symmetric])
-  apply (subst unat_of_nat_eq)
-   apply (erule order_le_less_trans, fastforce)
-  apply (subst unat_minus_one_word)
-  apply (rule less_imp_neq)
-  apply (erule order_le_less_trans)
-  apply (subst less_eq_Suc_le)
-  apply (subst le_diff_conv2, fastforce)
-  apply (clarsimp simp: le_diff_conv2 less_eq_Suc_le[symmetric] suc_le_pow_2)
-  done
-
-lemmas word_ctz_not_minus_1_32 = word_ctz_not_minus_1[where 'a=32, simplified]
-
 end

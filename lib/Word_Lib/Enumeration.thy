@@ -282,4 +282,36 @@ lemma toEnum_eq_to_fromEnum_eq:
   shows "n \<le> fromEnum (maxBound :: 'a) \<Longrightarrow> (toEnum n = v) = (n = fromEnum v)"
   by auto
 
+lemma le_imp_diff_le:
+  "(j::nat) \<le> k \<Longrightarrow> j - n \<le> k"
+  by simp
+
+lemma length_upto_enum_le_maxBound:
+  fixes start :: "'a :: enumeration_both"
+  shows "length [start .e. end] \<le> Suc (fromEnum (maxBound :: 'a))"
+  apply (clarsimp simp add: upto_enum_red split: if_splits)
+  apply (rule le_imp_diff_le[OF maxBound_is_bound[of "end"]])
+  done
+
+lemma less_length_upto_enum_maxBoundD:
+  fixes start :: "'a :: enumeration_both"
+  assumes "n < length [start .e. end]"
+  shows "n \<le> fromEnum (maxBound :: 'a)"
+  using assms
+  by (simp add: upto_enum_red less_Suc_eq_le
+                le_trans[OF _ le_imp_diff_le[OF maxBound_is_bound[of "end"]]]
+           split: if_splits)
+
+lemma fromEnum_eq_iff:
+  "(fromEnum e = fromEnum f) = (e = f)"
+proof -
+  have a: "e \<in> set enum" by auto
+  have b: "f \<in> set enum" by auto
+  from nth_the_index[OF a] nth_the_index[OF b] show ?thesis unfolding fromEnum_def by metis
+qed
+
+lemma maxBound_is_bound':
+  "i = fromEnum (e::('a::enum)) \<Longrightarrow> i \<le> fromEnum (maxBound::('a::enum))"
+  by clarsimp
+
 end
