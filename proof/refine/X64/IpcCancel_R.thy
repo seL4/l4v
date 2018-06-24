@@ -2191,7 +2191,7 @@ lemma cancel_all_invs'_helper:
   apply (intro conjI)
   apply (clarsimp simp: valid_tcb_state'_def global'_no_ex_cap
                  elim!: rsubst[where P=sym_refs]
-                 dest!: suffix_set_subset
+                 dest!: set_mono_suffix
                 intro!: ext
        | (drule (1) bspec, clarsimp simp: valid_pspace'_def valid_tcb'_def elim!: valid_objs_valid_tcbE))+
   done
