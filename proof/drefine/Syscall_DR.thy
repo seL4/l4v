@@ -258,7 +258,7 @@ lemma decode_domain_corres:
 
 lemma decode_domain_cap_label_not_match:
   "\<lbrakk>\<forall>ui. Some (DomainIntent ui) \<noteq> transform_intent (invocation_type label') args'\<rbrakk>
-    \<Longrightarrow> \<lbrace>(=s\<rbrace>Decode_A.decode_domain_invocation) label' args' excaps' \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>e. (=s\<rbrace>)"
+    \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_domain_invocation label' args' excaps' \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>e. (=) s\<rbrace>"
   apply (case_tac "invocation_type label' = DomainSetSet")
    apply (clarsimp simp: Decode_A.decode_domain_invocation_def transform_intent_def)+
    apply (clarsimp simp: transform_intent_domain_def split: option.splits list.splits)

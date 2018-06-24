@@ -29,7 +29,7 @@ lemma select_ext_select[simp]: "select_ext a S = (select S :: ('b, unit) s_monad
                  return_def bind_def fail_def image_def
           split: if_split_asm)
 
-lemma OR_choice_OR[simp]: "(OR_choice c (f :: ('a,unit) s_monad) g) = (f OR g)"
+lemma OR_choice_OR[simp]: "(OR_choice c (f :: ('a,unit) s_monad) g) = (f \<sqinter> g)"
   apply (rule ext, rename_tac s)
   apply (clarsimp simp: OR_choice_def alternative_def get_def select_def return_def bind_def
                         select_f_def mk_ef_def wrap_ext_unit_def wrap_ext_bool_unit_def image_def
@@ -166,7 +166,7 @@ using assms
 by (fastforce simp:corres_underlying_def)
 
 lemma dcorres_absorb_get_l:
-  assumes "!!s'. \<lbrakk> P (transform s');P' s'\<rbrakk> \<Longrightarrow> dcorres rv ((=) (transform s')) ((=s')) (f (transform s')) g"
+  assumes "!!s'. \<lbrakk> P (transform s'); P' s'\<rbrakk> \<Longrightarrow> dcorres rv ((=) (transform s')) ((=) s') (f (transform s')) g"
   shows "dcorres rv P P' (do t\<leftarrow> get; f t od)  g"
   apply (rule corres_symb_exec_l [where Q="%x. P and ((=) x)"])
     apply (rule dcorres_expand_pfx)
@@ -178,7 +178,7 @@ lemma dcorres_absorb_get_l:
 lemma dcorres_expand_get_l:
   assumes "dcorres rv P P' (do t\<leftarrow>get; f t od) g"
   shows "\<lbrakk> P (transform s'); P' s'\<rbrakk> \<Longrightarrow>
-         dcorres rv ((=) (transform s')) ((=s')) (f (transform s')) g"
+         dcorres rv ((=) (transform s')) ((=) s') (f (transform s')) g"
   using assms
   by (simp add:get_def corres_underlying_def bind_def)
 
@@ -216,7 +216,7 @@ lemma dcorres_get:
           \<Longrightarrow> dcorres r ((=) s) ((=) s') (f s) (f' s')"
   shows "dcorres r P P' (do s\<leftarrow>get;f s od) (do s'\<leftarrow> get; f' s' od)"
   apply (rule dcorres_expand_pfx)
-  apply (rule_tac r'="\<lambda>r r'. s=r \<and> s'=r'" and P="%x. (=s)" and P'="%x. (=s')" in corres_underlying_split)
+  apply (rule_tac r'="\<lambda>r r'. s=r \<and> s'=r'" and P="%x. (=) s" and P'="%x. (=) s'" in corres_underlying_split)
     apply (clarsimp simp: corres_underlying_def get_def)
     apply wp+
   apply (drule A)
@@ -239,8 +239,8 @@ lemma dcorres_gets_the:
     apply (clarsimp split:option.splits simp:corres_free_fail)
       apply (subgoal_tac "\<exists>obj. g x \<noteq> None")
       apply (clarsimp split:option.splits)
-      apply (rule_tac Q="(=)(transform xa)" and Q'="(=xa)" in corres_guard_imp)
-    apply (simp add:A)+
+      apply (rule_tac Q="(=)(transform xa)" and Q'="(=) xa" in corres_guard_imp)
+    apply (simp add: A)+
   using B
   apply (wp|clarsimp)+
 done

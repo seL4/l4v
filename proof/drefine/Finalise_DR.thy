@@ -444,7 +444,7 @@ lemma finalise_cancel_ipc:
       tcb_at_cte_at_2[unfolded tcb_at_def])
    apply (simp add:cancel_signal_def)
    apply (rule corres_guard_imp)
-     apply (rule_tac Q'="\<lambda>r. valid_ntfn r and (=s')" in corres_symb_exec_r)
+     apply (rule_tac Q'="\<lambda>r. valid_ntfn r and (=) s'" in corres_symb_exec_r)
         apply (rule corres_symb_exec_r)
            apply (rule corres_dummy_return_pl)
            apply (rule corres_split[ OF _ corres_dummy_set_notification])
@@ -2616,7 +2616,7 @@ lemma prepare_thread_delete_dcorres: "dcorres dc P P' (CSpace_D.prepare_thread_d
 lemma dcorres_finalise_cap:
   "cdlcap = transform_cap cap \<Longrightarrow>
       dcorres (\<lambda>r r'. fst r = transform_cap (fst r'))
-             \<top> (invs and valid_cap cap and valid_pdpt_objs and cte_wp_at ((=cap)) slot and valid_etcbs)
+             \<top> (invs and valid_cap cap and valid_pdpt_objs and cte_wp_at ((=) cap) slot and valid_etcbs)
           (CSpace_D.finalise_cap cdlcap final)
           (CSpace_A.finalise_cap cap final)"
   apply (case_tac cap)

@@ -190,7 +190,7 @@ lemma decode_set_space_translate_tcb_invocation:
 
 lemma decode_tcb_cap_label_not_match:
   "\<lbrakk>\<forall>ui. Some (TcbIntent ui) \<noteq> transform_intent (invocation_type label') args'; cap' = Structures_A.ThreadCap t\<rbrakk>
-    \<Longrightarrow> \<lbrace>(=s\<rbrace>Decode_A.decode_tcb_invocation) label' args' cap' slot' excaps' \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>e. (=s\<rbrace>)"
+    \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_tcb_invocation label' args' cap' slot' excaps' \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>e. (=) s\<rbrace>"
   apply (simp add:Decode_A.decode_tcb_invocation_def)
   apply (case_tac "invocation_type label'")
     apply (simp_all add:transform_intent_def)

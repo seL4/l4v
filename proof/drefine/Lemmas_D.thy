@@ -17,7 +17,7 @@
 
 theory Lemmas_D
 imports
-  Include_D
+  "DBaseRefine.Include_D"
   MoreHOL
   MoreCorres
   "ExecSpec.InvocationLabels_H"

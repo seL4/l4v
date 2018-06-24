@@ -316,7 +316,7 @@ lemma set_cxt_none_det_intent_corres:
              (KHeap_A.set_object y (TCB (tcb_arch_update (arch_tcb_context_set cxt) obj')))"
   apply (clarsimp simp:bind_assoc opt_object_def corrupt_tcb_intent_def get_thread_def gets_def gets_the_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac P="(=)(transform s')" and Q="(=s')"
+    apply (rule_tac P="(=)(transform s')" and Q="(=) s'"
        and x="transform_full_intent (machine_state (update_kheap ((kheap s')(y\<mapsto>(TCB (tcb_arch_update (arch_tcb_context_set cxt) obj')))) s'))
        y (tcb_arch_update (arch_tcb_context_set cxt) obj')"
        in select_pick_corres)
@@ -383,7 +383,7 @@ lemma dummy_corrupt_tcb_intent_corres:
   apply (clarsimp simp:tcb_at_def)
   apply (drule(1) valid_etcbs_get_tcb_get_etcb, clarsimp)
   apply (rule corres_guard_imp)
-    apply (rule_tac P="(=)(transform s')" and Q="(=s')"
+    apply (rule_tac P="(=)(transform s')" and Q="(=) s'"
        and x = "transform_full_intent (machine_state s') y tcb" in select_pick_corres)
     apply (clarsimp simp:update_thread_def gets_the_def gets_def bind_assoc)
     apply (rule dcorres_absorb_get_l)
@@ -476,7 +476,7 @@ lemma dcorres_dummy_corrupt_frame: "dcorres dc \<top> valid_etcbs
   apply (simp add:corrupt_frame_def)
   apply (rule dcorres_expand_pfx)
   apply (rule corres_guard_imp)
-    apply (rule_tac P="(=)(transform s')" and Q="(=s')"
+    apply (rule_tac P="(=)(transform s')" and Q="(=) s'"
       and x = "\<lambda>x. transform_full_intent (machine_state s') x (the (get_tcb x s'))"  in select_pick_corres)
     apply (clarsimp simp:get_def put_def modify_def assert_def bind_def return_def)
     apply (subst corres_singleton)
@@ -1194,13 +1194,13 @@ lemma get_ipc_buffer_words_empty_list[simp]:
 
 lemma evalMonad_mapM:
   "\<lbrakk>\<forall>r\<in>(set ls). evalMonad (f r) sa = evalMonad (g r) sb;
-    \<And>s r. \<lbrace>(=s\<rbrace>f) r\<lbrace>\<lambda>r. (=) s\<rbrace>;
-    \<And>s r. \<lbrace>(=s\<rbrace>g) r\<lbrace>\<lambda>r. (=) s\<rbrace>;
+    \<And>s r. \<lbrace>(=) s\<rbrace> f r\<lbrace>\<lambda>r. (=) s\<rbrace>;
+    \<And>s r. \<lbrace>(=) s\<rbrace> g r\<lbrace>\<lambda>r. (=) s\<rbrace>;
     \<And>r. empty_when_fail (f r);
     \<And>r. empty_when_fail (g r);
     \<And>r P. weak_det_spec P (f r);
     \<And>r P. weak_det_spec P (g r)\<rbrakk>
-   \<Longrightarrow> evalMonad (mapM f ls) sa= evalMonad (mapM g ls) sb"
+   \<Longrightarrow> evalMonad (mapM f ls) sa = evalMonad (mapM g ls) sb"
 proof(induct ls)
   case Nil
   show ?case by (clarsimp simp:mapM_def sequence_def)

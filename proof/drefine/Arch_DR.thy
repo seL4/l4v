@@ -1117,7 +1117,7 @@ lemma set_cap_opt_cap':
                           split del:if_split cong: if_cong bind_cong;
     wpsimp wp: select_wp)
        apply (safe elim!:rsubst[where P=P] intro!: ext)
-       apply (clarsimp simp:opt_cap_def slots_of_def opt_object_def object_slots_def)+
+         apply (clarsimp simp:opt_cap_def slots_of_def opt_object_def object_slots_def)+
   done
 
 lemma set_cap_opt_cap:
@@ -1213,7 +1213,7 @@ lemma invoke_page_table_corres:
                     corres_split[OF _ corres_alternate1[OF dcorres_clear_object_caps_pt]])
            apply (rule dcorres_symb_exec_r)
              apply (rule corres_split[OF _ get_cap_corres])
-                apply (rule_tac P="\<lambda>y s. cte_wp_at ((=xb)) (a,b) s \<and>
+                apply (rule_tac P="\<lambda>y s. cte_wp_at ((=) xb) (a,b) s \<and>
                                     caps_of_state s' = caps_of_state s" in set_cap_corres_stronger)
                  apply (clarsimp simp:cte_wp_at_caps_of_state)
                  apply (clarsimp simp:is_arch_diminished_def transform_mapping_def update_map_data_def)
@@ -1652,7 +1652,7 @@ lemma invoke_page_corres:
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF _ dcorres_unmap_page])
        apply (rule corres_split[OF _ get_cap_corres])
-          apply (rule_tac P="\<lambda>y s. cte_wp_at ((=x)) (a,b) s \<and>
+          apply (rule_tac P="\<lambda>y s. cte_wp_at ((=) x) (a,b) s \<and>
                                     caps_of_state s' = caps_of_state s"
             in set_cap_corres_stronger)
            apply (clarsimp simp:cte_wp_at_caps_of_state)
@@ -1808,7 +1808,7 @@ proof -
                  apply (clarsimp simp: valid_cap_simps cap_aligned_def)
                  apply (drule ex_cte_cap_to_not_idle,
                    auto simp: not_idle_thread_def)[1]
-                     apply (subst safe_parent_is_parent[where m=empty],
+                     apply (subst safe_parent_is_parent[where m=Map.empty],
                        auto simp: safe_parent_for_def
                        is_physical_def arch_is_physical_def)[1]
                     apply (case_tac cref,clarsimp)
