@@ -91,7 +91,7 @@ text {*
 definition
   init_memory_state :: "'component_state local_state"
 where
-  "init_memory_state \<equiv> Memory empty"
+  "init_memory_state \<equiv> Memory Map.empty"
 
 text {*
   In \camkes ADL descriptions, shared memory regions can have a type, typically
