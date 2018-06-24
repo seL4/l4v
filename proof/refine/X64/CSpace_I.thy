@@ -16,6 +16,8 @@ theory CSpace_I
 imports ArchAcc_R
 begin
 
+hide_const span
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma capUntypedPtr_simps [simp]:
@@ -1112,7 +1114,7 @@ lemma mdb_chunked_init:
   unfolding mdb_chunked_def
 proof clarify
   fix p p' c c' n n'
-  def m' \<equiv> "m (x \<mapsto> CTE cap initMDBNode)"
+  define m' where "m' \<equiv> m (x \<mapsto> CTE cap initMDBNode)"
   assume p: "m' p = Some (CTE c n)"
   assume p': "m' p' = Some (CTE c' n')"
   assume r: "sameRegionAs c c'"

@@ -423,8 +423,8 @@ proof -
                isCap_defs is_cap_defs Let_def badge_bits_def
                cap_rights_update_def badge_update_def
   { fix x :: machine_word
-    def y \<equiv> "(x >> 6) && mask 58" (* guard_bits *)
-    def z \<equiv> "unat (x && mask 6)" (* cnode_guard_size_bits *)
+    define y where "y \<equiv> (x >> 6) && mask 58" (* guard_bits *)
+    define z where "z \<equiv> unat (x && mask 6)" (* cnode_guard_size_bits *)
     have "of_bl (to_bl (y && mask z)) = (of_bl (replicate (64-z) False @ drop (64-z) (to_bl y))::machine_word)"
       by (simp add: bl_and_mask)
     then
@@ -2246,8 +2246,8 @@ proof -
   from final have refs_non_empty: "obj_refs c \<noteq> {} \<or> cap_irqs c \<noteq> {} \<or> arch_gen_refs c \<noteq> {}"
     by (clarsimp simp add: is_final_cap'_def gen_obj_refs_def)
 
-  def S \<equiv> "{cref. \<exists>cap'. fst (get_cap cref s) = {(cap', s)} \<and>
-                      (gen_obj_refs c \<inter> gen_obj_refs cap' \<noteq> {})}"
+  define S where "S \<equiv> {cref. \<exists>cap'. fst (get_cap cref s) = {(cap', s)} \<and>
+                                    (gen_obj_refs c \<inter> gen_obj_refs cap' \<noteq> {})}"
 
   have "is_final_cap' c s = (\<exists>cref. S = {cref})"
     by (simp add: is_final_cap'_def S_def)
@@ -2318,8 +2318,8 @@ proof -
   from final have refs_non_empty: "obj_refs c \<noteq> {} \<or> cap_irqs c \<noteq> {} \<or> arch_gen_refs c \<noteq> {}"
     by (clarsimp simp add: is_final_cap'_def gen_obj_refs_def)
 
-  def S \<equiv> "{cref. \<exists>cap'. fst (get_cap cref s) = {(cap', s)} \<and>
-                      (gen_obj_refs c \<inter> gen_obj_refs cap' \<noteq> {})}"
+  define S where "S \<equiv> {cref. \<exists>cap'. fst (get_cap cref s) = {(cap', s)} \<and>
+                                    (gen_obj_refs c \<inter> gen_obj_refs cap' \<noteq> {})}"
 
   have "is_final_cap' c s = (\<exists>cref. S = {cref})"
     by (simp add: is_final_cap'_def S_def)
