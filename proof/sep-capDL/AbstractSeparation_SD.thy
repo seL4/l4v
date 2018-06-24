@@ -79,7 +79,7 @@ lemma sep_state_add_comm:
 
 instantiation "sep_state" :: zero
 begin
-  definition "0 \<equiv> SepState (\<lambda>p. None) empty"
+  definition "0 \<equiv> SepState (\<lambda>p. None) Map.empty"
   instance ..
 end
 
