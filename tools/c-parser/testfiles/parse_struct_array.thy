@@ -12,6 +12,7 @@ theory parse_struct_array
 imports "CParser.CTranslation"
 begin
 
+external_file "parse_struct_array.c"
 install_C_file "parse_struct_array.c"
 
 term "globk2_'"

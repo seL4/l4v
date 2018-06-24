@@ -12,6 +12,7 @@ theory parse_struct
 imports "CParser.CTranslation"
 begin
 
+external_file "parse_struct.c"
 install_C_file "parse_struct.c"
 
 (* mem_type instances proved automatically.  If you remove the additional

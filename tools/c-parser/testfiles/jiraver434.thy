@@ -13,6 +13,7 @@ theory jiraver434
 
 begin
 
+external_file "jiraver434.c"
 install_C_file "jiraver434.c"
 
 context jiraver434

@@ -12,6 +12,7 @@ theory parse_retfncall
 imports "CParser.CTranslation"
 begin
 
+external_file "parse_retfncall.c"
 install_C_file "parse_retfncall.c"
 
 print_locale parse_retfncall_global_addresses

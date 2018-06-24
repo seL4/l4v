@@ -17,6 +17,7 @@ begin
  * containing local variables. *)
 declare [[record_codegen = false]]
 
+external_file "many_local_vars.c"
 install_C_file "many_local_vars.c"
 
 context "many_local_vars_global_addresses" begin

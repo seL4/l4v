@@ -12,6 +12,7 @@ theory selection_sort
 imports "CParser.CTranslation"
 begin
 
+external_file "selection_sort.c"
 install_C_file "selection_sort.c"
 
 print_locale selection_sort_global_addresses

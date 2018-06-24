@@ -12,6 +12,7 @@ theory relspec
 imports "CParser.CTranslation"
 begin
 
+external_file "relspec.c"
 install_C_file "relspec.c"
 
 end

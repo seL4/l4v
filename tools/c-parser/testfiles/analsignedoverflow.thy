@@ -12,6 +12,8 @@ theory analsignedoverflow
 imports "CParser.CTranslation"
 begin
 
+external_file "analsignedoverflow.c"
+
 declare [[anal_integer_conversion=true]]
 install_C_file "analsignedoverflow.c"
 

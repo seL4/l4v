@@ -12,6 +12,7 @@ theory signed_div
 imports "CParser.CTranslation"
 begin
 
+external_file "signed_div.c"
 install_C_file "signed_div.c"
 
 context signed_div

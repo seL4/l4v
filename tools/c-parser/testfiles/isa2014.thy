@@ -12,9 +12,10 @@ theory isa2014
   imports "CParser.CTranslation"
 begin
 
-  install_C_file "isa2014.c"
+external_file "isa2014.c"
+install_C_file "isa2014.c"
 
-  print_locale isa2014_global_addresses
+print_locale isa2014_global_addresses
 
 context isa2014
 begin

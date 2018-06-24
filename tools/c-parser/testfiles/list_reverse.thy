@@ -29,6 +29,7 @@ lemma list_empty [simp]:
 declare sep_conj_com [simp del]
 declare sep_conj_left_com [simp del]
 
+external_file "list_reverse.c"
 install_C_file memsafe "list_reverse.c"
 
 thm list_reverse_global_addresses.reverse_body_def

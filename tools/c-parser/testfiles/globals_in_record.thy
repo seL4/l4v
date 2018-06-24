@@ -13,6 +13,7 @@ imports
   "CParser.CTranslation"
 begin
 
+external_file "globals_in_record.c"
 install_C_file "globals_in_record.c"
 
 context globals_in_record begin

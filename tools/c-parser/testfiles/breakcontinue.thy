@@ -13,6 +13,8 @@ imports "CParser.CTranslation"
 begin
 
 declare sep_conj_ac [simp add]
+
+external_file "breakcontinue.c"
 install_C_file "breakcontinue.c"
 
 context breakcontinue_global_addresses

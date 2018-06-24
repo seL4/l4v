@@ -18,6 +18,7 @@ consts
   KMC :: word32
   ptr_retyps :: "nat \<Rightarrow> machine_word \<Rightarrow> heap_typ_desc \<Rightarrow> heap_typ_desc"
 
+external_file "kmalloc.c"
 install_C_file "kmalloc.c"
 
 context kmalloc begin

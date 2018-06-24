@@ -12,6 +12,7 @@ theory dc_embbug
 imports "CParser.CTranslation"
 begin
 
+external_file "dc_embbug.c"
 install_C_file "dc_embbug.c"
 
 thm dc_embbug_global_addresses.f_body_def

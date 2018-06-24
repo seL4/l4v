@@ -12,6 +12,7 @@ theory ghoststate1
 imports "CParser.CTranslation"
 begin
 
+external_file "simple_annotated_fn.c"
 install_C_file "simple_annotated_fn.c" [ghostty="nat \<Rightarrow> nat"]
 
 (* demonstrates existence of ghost'state global variable of appropriate type *)

@@ -12,6 +12,7 @@ theory parse_enum
 imports "CParser.CTranslation"
 begin
 
+external_file "parse_enum.c"
 install_C_file "parse_enum.c"
 
 print_locale parse_enum_global_addresses

@@ -12,6 +12,7 @@ theory bugzilla180
 imports "CParser.CTranslation"
 begin
 
+external_file "bugzilla180.c"
 install_C_file "bugzilla180.c"
 
 context "bugzilla180"

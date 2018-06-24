@@ -12,6 +12,7 @@ theory protoparamshadow
 imports "CParser.CTranslation"
 begin
 
+external_file "protoparamshadow.c"
 install_C_file "protoparamshadow.c"
 
 context protoparamshadow

@@ -12,6 +12,7 @@ theory parse_sizeof
 imports "CParser.CTranslation"
 begin
 
+external_file "parse_sizeof.c"
 install_C_file "parse_sizeof.c"
 
 print_locale parse_sizeof_global_addresses

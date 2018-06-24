@@ -12,20 +12,21 @@ theory jiraver310
   imports "CParser.CTranslation"
 begin
 
-  install_C_file "jiraver310.c"
+external_file "jiraver310.c"
+install_C_file "jiraver310.c"
 
-  context jiraver310
-  begin
+context jiraver310
+begin
 
-    thm f_body_def
-    thm g_body_def
+  thm f_body_def
+  thm g_body_def
 
-    lemma "g_body = X"
-    apply (simp add: g_body_def)
-    oops
+  lemma "g_body = X"
+  apply (simp add: g_body_def)
+  oops
 
-    thm h_body_def
+  thm h_body_def
 
-  end (* context *)
+end (* context *)
 
 end (* theory *)

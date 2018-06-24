@@ -12,6 +12,7 @@ theory longlong
 imports "CParser.CTranslation"
 begin
 
+external_file "longlong.c"
 install_C_file "longlong.c"
 
 ML {* NameGeneration.return_var_name (Absyn.Signed Absyn.LongLong) *}

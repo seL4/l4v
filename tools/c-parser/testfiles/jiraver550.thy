@@ -14,6 +14,7 @@ imports
   "CParser.CTranslation"
 begin
 
+external_file "jiraver550.c"
 install_C_file "jiraver550.c"
 
 

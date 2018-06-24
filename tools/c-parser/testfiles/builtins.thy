@@ -12,6 +12,7 @@ theory builtins
 imports "CParser.CTranslation"
 begin
 
+external_file "builtins.c"
 install_C_file "builtins.c"
 
 context builtins

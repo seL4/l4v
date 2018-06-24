@@ -12,6 +12,7 @@ theory test_shifts
 imports "CParser.CTranslation"
 begin
 
+external_file "test_shifts.c"
 install_C_file "test_shifts.c"
 
 print_locale test_shifts

@@ -12,6 +12,7 @@ theory test_locality
 imports "CParser.CTranslation"
 begin
 
+external_file "test_include2.h"
 install_C_file "test_include2.h"
 
 end;

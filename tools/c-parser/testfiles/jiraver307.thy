@@ -12,6 +12,7 @@ theory jiraver307
   imports "CParser.CTranslation"
 begin
 
+external_file "jira ver307.c"
 install_C_file "jira ver307.c"
 
 context "jira ver307"

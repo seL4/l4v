@@ -12,6 +12,7 @@ theory parse_voidfn
 imports "CParser.CTranslation"
 begin
 
+external_file "parse_voidfn.c"
 install_C_file "parse_voidfn.c"
 
 print_locale parse_voidfn_global_addresses

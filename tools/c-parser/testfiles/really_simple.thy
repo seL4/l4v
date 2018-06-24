@@ -12,6 +12,7 @@ theory really_simple
 imports "CParser.CTranslation"
 begin
 
+external_file "really_simple.c"
 install_C_file "really_simple.c"
 
 print_locale really_simple_global_addresses

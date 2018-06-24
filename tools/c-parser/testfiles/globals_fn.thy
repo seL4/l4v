@@ -12,6 +12,7 @@ theory globals_fn
 imports "CParser.CTranslation"
 begin
 
+external_file "globals_fn.c"
 install_C_file "globals_fn.c"
 
 print_locale globals_fn_global_addresses

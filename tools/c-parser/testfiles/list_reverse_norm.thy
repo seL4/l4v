@@ -84,6 +84,7 @@ lemma list_heap_update_ignore [simp]:
 
 declare typ_simps [simp]
 
+external_file "list_reverse_norm.c"
 install_C_file "list_reverse_norm.c"
 
 lemma (in list_reverse_norm_global_addresses) reverse_correct:

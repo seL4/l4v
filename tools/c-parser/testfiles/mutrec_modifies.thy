@@ -12,6 +12,7 @@ theory mutrec_modifies
 imports "CParser.CTranslation"
 begin
 
+external_file "mutrec_modifies.c"
 install_C_file "mutrec_modifies.c"
 
 context mutrec_modifies

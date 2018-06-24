@@ -12,6 +12,7 @@ theory bug20060707
 imports "CParser.CTranslation"
 begin
 
+external_file "bug20060707.c"
 install_C_file "bug20060707.c"
 
   print_locale bug20060707_global_addresses

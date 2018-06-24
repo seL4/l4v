@@ -12,6 +12,7 @@ theory switch_unsigned_signed
 imports "CParser.CTranslation"
 begin
 
+external_file "switch_unsigned_signed.c"
 install_C_file "switch_unsigned_signed.c"
 
 end

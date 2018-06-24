@@ -18,6 +18,7 @@ definition
 
 declare [[calculate_modifies_proofs = false]]
 
+external_file "ptr_auxupd.c"
 install_C_file "ptr_auxupd.c"
 
 (* FIXME: modifies proof fails, doesn't recognise AUXUPD *)

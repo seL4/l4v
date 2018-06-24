@@ -12,13 +12,14 @@ theory jiraver422
   imports "CParser.CTranslation"
 begin
 
-  install_C_file "jiraver422.c"
+external_file "jiraver422.c"
+install_C_file "jiraver422.c"
 
-  context jiraver422
-  begin
+context jiraver422
+begin
 
-    thm qux_body_def
+  thm qux_body_def
 
-  end
+end
 
 end

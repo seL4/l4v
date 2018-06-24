@@ -12,6 +12,7 @@ theory arrays
 imports "CParser.CTranslation"
 begin
 
+external_file "arrays.c"
 install_C_file "arrays.c"
 
 context arrays_global_addresses

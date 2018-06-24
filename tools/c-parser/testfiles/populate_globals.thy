@@ -12,8 +12,10 @@ theory populate_globals
 imports "CParser.CTranslation"
 begin
 
+external_file "globsall_addressed.c"
+
 declare [[globals_all_addressed=true,populate_globals=true]]
-  install_C_file "globsall_addressed.c"
+install_C_file "globsall_addressed.c"
 
 context globsall_addressed
 begin

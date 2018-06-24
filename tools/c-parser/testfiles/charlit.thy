@@ -12,6 +12,7 @@ theory charlit
 imports "CParser.CTranslation"
 begin
 
+external_file "charlit.c"
 install_C_file "charlit.c"
 
 context charlit
