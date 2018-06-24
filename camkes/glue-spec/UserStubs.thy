@@ -109,7 +109,7 @@ type_synonym lstate = "component_state local_state"
 definition
   trusted :: "('inst, ('channel component \<times> lstate)) map"
 where
-  "trusted \<equiv> empty"
+  "trusted \<equiv> Map.empty"
 
 (*<*)
 end
