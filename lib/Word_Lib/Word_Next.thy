@@ -1,3 +1,7 @@
+(*
+ * @TAG(OTHER_BSD)
+ *)
+
 section\<open>Increment and Decrement Machine Words Without Wrap-Around\<close>
 
 theory Word_Next
