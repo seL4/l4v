@@ -17,11 +17,11 @@ This is a tutorial on the use of the various Hoare mechanisms developed
 for the L4.verified project. We import Bits_R above, which is a compromise
 between the twin goals of getting the Hoare setup from L4.verified and not
 importing existing properties. It's probably best to work from a prebuilt
-REFINE_S or REFINE Isabelle image which includes Bits_R.
+Refine Isabelle image which includes Bits_R.
 *}
 
 text {* The point of our apparatus is to prove Hoare triples. These are a
-triple of a precondition, function and postcondition. In our state-monadic
+triple of a precondition, function, and postcondition. In our state-monadic
 world, the precondition is a function of the state, and the postcondition
 is a function of the return value and the state. In example 1 below,
 the precondition doesn't impose any restriction on the state, and the
@@ -66,8 +66,8 @@ lemma example_2:
      return x
    od \<lbrace>\<lambda>rv s. rv\<rbrace>"
   apply wp
-  apply (simp add: split_def)
-  apply wp
+     apply (simp add: split_def)
+     apply wp+
   apply simp
   done
 
@@ -95,24 +95,25 @@ lemma example_3:
      return $ y \<and> \<not> x
    od \<lbrace>\<lambda>rv s. rv\<rbrace>"
   apply wp
-  apply (simp add: if_apply_def2 split del: if_split)
-  apply wp
+    apply (simp add: if_apply_def2 split del: if_split)
+    apply wp+
   apply simp
   done
 
 text {* Let's make this more interesting by introducing some functions
-from the abstract specification. The set_endpoint function is used to
-set the contents of an endpoint object somewhere in the kernel object
-heap (kheap). The cap derivation tree (cdt) lives in an entirely
-different field of the state to the kheap, so this fact about it should
-be unchanged by the endpoint update. Solve example 4 - you'll have to
-unfold enough definitions that wp knows what to do. *}
+from the abstract specification. The set_endpoint function (an abbreviation
+for the function set_simple_ko) is used to set the contents of an endpoint
+object somewhere in the kernel object heap (kheap). The cap derivation
+tree (cdt) lives in an entirely different field of the state to the kheap,
+so this fact about it should be unchanged by the endpoint update.
+Solve example 4 - you'll have to unfold enough definitions that wp knows
+what to do. *}
 
 lemma example_4:
   "\<lbrace>\<lambda>s. cdt s (42, [True, False]) = None\<rbrace>
       set_endpoint ptr Structures_A.IdleEP
    \<lbrace>\<lambda>rv s. cdt s (42, [True, False]) = None\<rbrace>"
-  apply (simp add: set_endpoint_def set_object_def get_object_def)
+  apply (simp add: set_simple_ko_def set_object_def get_object_def)
   apply wp
   apply clarsimp
   done
@@ -129,7 +130,7 @@ lemma example_5:
   "\<lbrace>\<lambda>s. P (cdt s)\<rbrace>
       set_endpoint ptr Structures_A.IdleEP
    \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"
-  apply (simp add: set_endpoint_def set_object_def get_object_def)
+  apply (simp add: set_simple_ko_def set_object_def get_object_def)
   apply wp
   apply clarsimp
   done
@@ -213,14 +214,8 @@ added here.
 *}
 
 crunch machine_state_preserved:
-  setup_reply_master, set_endpoint
+  setup_reply_master, set_simple_ko
     "\<lambda>s. P (machine_state s)"
   (simp: split_def wp: crunch_wps)
-
-text {*
-We're making progress in solving simple problems here. It's time to
-introduce some more complicated predicates, and explain the remaining
-features of wp.
-*}
 
 end

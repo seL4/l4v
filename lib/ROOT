@@ -149,8 +149,10 @@ session LibTest (lib) = Refine +
     ASpec
     ExecSpec
   theories
-    Corres_Test
     WPTutorial
+  (* use virtual memory function as an example, only makes sense on ARM: *)
+  theories [condition = "L4V_ARCH_IS_ARM"]
+    Corres_Test
 
 session SepTactics (lib) in Hoare_Sep_Tactics = Sep_Algebra +
   theories
