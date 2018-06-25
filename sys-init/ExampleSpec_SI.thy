@@ -42,7 +42,7 @@ lemma object_type_simps [simp]:
 lemma well_formed_empty:
   "well_formed \<lparr>
   cdl_arch = undefined,
-  cdl_objects = empty,
+  cdl_objects = Map.empty,
   cdl_cdt = undefined,
   cdl_current_thread = undefined,
   cdl_irq_node = ucast,
@@ -107,7 +107,7 @@ definition
                                cdl_cnode_size_bits = 2\<rparr>),
                   pd_id \<mapsto> PageDirectory \<lparr>cdl_page_directory_caps = empty_cap_map pd_size\<rparr>,
                   frame_id \<mapsto> Frame \<lparr>cdl_frame_size_bits = small_frame_size\<rparr>],
-   cdl_cdt = empty, (* All caps are orig caps. *)
+   cdl_cdt = Map.empty, (* All caps are orig caps. *)
    cdl_current_thread = undefined,
    cdl_irq_node = example_irq_node,
    cdl_asid_table = undefined,

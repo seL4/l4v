@@ -244,7 +244,7 @@ lemma object_size_bits_new_cnode [simp]:
   by (clarsimp simp: object_size_bits_def)
 
 lemma object_slots_Endpoint [simp]:
-  "object_slots Endpoint = empty"
+  "object_slots Endpoint = Map.empty"
   by (simp add: object_slots_def)
 
 lemma cdl_frame_size_bits_empty_frame [simp]:
@@ -273,7 +273,7 @@ lemma empty_cap_map_NullCap [simp]:
   by (clarsimp simp: empty_cap_map_def split: if_split_asm)
 
 lemma new_cap_map_empty_NullCap [simp]:
-  "new_cap_map sz empty slot = Some cap \<Longrightarrow> cap = NullCap"
+  "new_cap_map sz Map.empty slot = Some cap \<Longrightarrow> cap = NullCap"
   by (clarsimp simp: new_cap_map_def)
 
 

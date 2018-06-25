@@ -544,8 +544,8 @@ lemma object_slots_spec2s_irqhandler_cap [simp]:
   done
 
 lemma update_slots_empty_spec2s [simp]:
-  "update_slots empty (spec2s t obj)
-   = update_slots empty obj"
+  "update_slots Map.empty (spec2s t obj)
+   = update_slots Map.empty obj"
   by (clarsimp simp: spec2s_def)
 
 lemma object_to_sep_state_fields_spec2s [simp]:
@@ -1088,7 +1088,7 @@ lemma object_default_state_has_slots_not_empty:
   done
 
 lemma well_formed_has_slots:
-  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; object_slots obj = empty; has_slots obj \<rbrakk> \<Longrightarrow> False"
+  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; object_slots obj = Map.empty; has_slots obj \<rbrakk> \<Longrightarrow> False"
   apply (clarsimp simp: well_formed_def)
   apply (erule_tac x=obj_id in allE)
   apply (clarsimp simp: opt_object_def split: option.splits)
@@ -1120,7 +1120,7 @@ lemma sep_map_s_object_default_state_no_slots:
   done
 
 lemma object_slots_empty_initialised_no_slots:
-  "\<lbrakk>well_formed spec; slots_of obj_id spec = empty\<rbrakk>
+  "\<lbrakk>well_formed spec; slots_of obj_id spec = Map.empty\<rbrakk>
   \<Longrightarrow> object_slots_empty spec t obj_id = object_slots_initialised spec t obj_id"
   apply (clarsimp simp: slots_of_def opt_object_def split: option.splits)
    apply (clarsimp simp: object_slots_empty_def object_slots_initialised_def object_initialised_general_def)
@@ -1195,7 +1195,7 @@ lemma object_slots_empty_decomp:
   done
 
 lemma well_formed_cnode_not_empty:
-  "\<lbrakk>well_formed spec; slots_of obj_id spec = empty; cnode_at obj_id spec\<rbrakk> \<Longrightarrow> P"
+  "\<lbrakk>well_formed spec; slots_of obj_id spec = Map.empty; cnode_at obj_id spec\<rbrakk> \<Longrightarrow> P"
   apply (clarsimp simp: slots_of_def opt_object_def object_at_def
                  split: option.splits)
   apply (rename_tac obj)
