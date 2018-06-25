@@ -92,7 +92,7 @@ where
         untyped_index \<leftarrow> inc_when    fail  untyped_index;
         si_caps   \<leftarrow> update_when (\<not> fail) si_caps obj_id free_cptr;
         return (obj_id_index, untyped_index, si_caps)
-     od) (0, 0, empty);
+     od) (0, 0, Map.empty);
      assert (untyped_index \<noteq> length untyped_cptrs);
      return (si_caps, drop (length [obj\<leftarrow>obj_ids. real_object_at obj spec]) free_cptrs)
   od"
