@@ -9,9 +9,7 @@
  *)
 
 theory global_asm_stmt
-
-imports
-  "../../c-parser/CTranslation" "../GlobalsSwap"
+imports "CParser.CTranslation" "AsmRefine.GlobalsSwap"
 begin
 
 declare [[populate_globals=true]]
@@ -19,6 +17,7 @@ declare [[populate_globals=true]]
 typedecl machine_state
 typedecl cghost_state
 
+external_file "global_asm_stmt.c"
 install_C_file "global_asm_stmt.c"
   [machinety=machine_state, ghostty=cghost_state]
 

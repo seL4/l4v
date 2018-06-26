@@ -107,9 +107,6 @@ session CKernel = CParser +
   theories
     "cspec/$L4V_ARCH/Kernel_C"
 
-session SimplExport = CSpec +
-  theories "../tools/asmrefine/SimplExport"
-
 
 (*
  * CapDL

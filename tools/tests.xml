@@ -39,4 +39,9 @@
         </set>
     </set>
 
+    <!-- AsmRefine -->
+    <set depends="CParser" cwd="asmrefine">
+        <test name="AsmRefine">make AsmRefineTest</test>
+    </set>
+
 </testsuite>

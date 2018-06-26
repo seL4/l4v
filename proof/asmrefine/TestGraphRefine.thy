@@ -9,11 +9,11 @@
  *)
 
 theory TestGraphRefine
-
-imports "../../tools/asmrefine/ProveGraphRefine"
+imports
+  "AsmRefine.ProveGraphRefine"
   "CSpec.Substitute"
-  "SEL4GlobalsSwap" "SEL4SimplExport"
-
+  "SEL4GlobalsSwap"
+  "SEL4SimplExport"
 begin
 
 ML {*

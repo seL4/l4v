@@ -771,7 +771,7 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
   | convert_ph3 ctxt params t = let
     val (f, xs) = strip_comb t
     val (c, _) = dest_Const f
-    val xs = if member (=) [@{const_name shiftl},
+    val xs = if member (op =) [@{const_name shiftl},
         @{const_name shiftr}, @{const_name sshiftr}] c
       then case xs of
         [x, y] => [x, Const (@{const_name of_nat}, @{typ nat} --> fastype_of x) $ y]
@@ -892,7 +892,7 @@ fun get_reads_calls ctxt params globals name = let
   in (reads, calls (Thm.concl_of thm) |> map call_to_name) end
 
 fun is_no_read ctxt params globals s = let
-    fun inner stack s = if member (=) stack s then true else let
+    fun inner stack s = if member (op =) stack s then true else let
         val (reads, calls) = get_reads_calls ctxt params globals s
       in not reads andalso forall I (map (inner (s :: stack)) calls) end
   in inner [] s end

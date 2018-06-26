@@ -9,10 +9,7 @@
  *)
 
 theory ProveGraphRefine
-
-imports GraphRefine
-  GlobalsSwap FieldAccessors AsmSemanticsRespects
-
+imports GraphRefine GlobalsSwap FieldAccessors AsmSemanticsRespects
 begin
 
 lemma const_globals_in_memory_heap_updateE:

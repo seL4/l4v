@@ -9,11 +9,7 @@
  *)
 
 theory inf_loop_gref
-
-imports inf_loop
-  "../SimplExport"
-  "../ProveGraphRefine"
-
+imports inf_loop "AsmRefine.SimplExport" "AsmRefine.ProveGraphRefine"
 begin
 
 locale graph_refine = target
@@ -43,7 +39,7 @@ lemma globals_list_valid:
   apply (rule globals_list_valid_optimisation[OF _ _ globals_list_ok])
   apply (simp_all add: globals_list_def globals_list_valid_def
                        global_data_defs
-                  del: distinct_prop.simps split del: split_if)
+                  del: distinct_prop.simps split del: if_split)
    apply (simp add: global_data_swappable_def global_data_def)
   apply (simp_all add: global_data_valid)?
   apply (simp_all add: global_data_valid_def addressed_global_data_def
@@ -185,9 +181,7 @@ val debug_tac = ProveSimplToGraphGoals.debug_tac
 
 schematic_goal "PROP ?P"
   apply (tactic {* resolve_tac @{context} [init_thm] 1 *})
-
   apply (tactic {* ALLGOALS (TRY o (debug_tac @{context} THEN_ALL_NEW K no_tac)) *})
-
   oops
 
 end
