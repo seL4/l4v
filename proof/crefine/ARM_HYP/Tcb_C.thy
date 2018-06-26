@@ -4207,7 +4207,6 @@ lemma decodeBindNotification_ccorres:
                   split: if_split)
   done
 
-
 lemma decodeSetSpace_ccorres:
   notes tl_drop_1[simp] scast_mask_8 [simp]
   shows
