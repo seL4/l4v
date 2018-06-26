@@ -229,7 +229,6 @@ lemma decode_set_sched_params_rev:
   apply (case_tac excs; clarsimp)
   done
 
-
 lemma decode_tcb_invocation_reads_respects_f:
   notes respects_f = reads_respects_f[where st=st and Q=\<top>]
   shows

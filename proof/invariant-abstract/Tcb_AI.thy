@@ -830,7 +830,6 @@ lemma bind_notification_invs:
                   split: thread_state.splits if_split_asm)
   done
 
-
 lemma (in Tcb_AI) tcbinv_invs:
   "\<lbrace>(invs::('state_ext::state_ext) state\<Rightarrow>bool) and tcb_inv_wf ti\<rbrace>
      invoke_tcb ti

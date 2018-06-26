@@ -1781,7 +1781,7 @@ crunch simple_sched_action[wp]: set_priority,set_mcpriority simple_sched_action
 lemma set_nonmember_if_cong: "(a \<notin> set (if P then x else y)) = (if P then a \<notin> set x else a \<notin> set y)"
   by auto
 
-lemma reschedule_preserves_valid_shed: "\<lbrace> valid_sched \<rbrace> reschedule_required \<lbrace> \<lambda>rv. valid_sched \<rbrace>"
+lemma reschedule_preserves_valid_sched: "\<lbrace> valid_sched \<rbrace> reschedule_required \<lbrace> \<lambda>rv. valid_sched \<rbrace>"
   unfolding reschedule_required_def set_scheduler_action_def tcb_sched_action_def
   apply (rule hoare_pre)
   apply (wp|wpc)+
@@ -1815,7 +1815,7 @@ lemma tc_valid_sched[wp]:
   unfolding split_def set_mcpriority_def
   by ((simp add: conj_comms, strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
           | wp check_cap_inv thread_set_not_state_valid_sched hoare_vcg_all_lift gts_wp static_imp_wp
-          | wpc | simp add: option_update_thread_def | rule reschedule_preserves_valid_shed
+          | wpc | simp add: option_update_thread_def | rule reschedule_preserves_valid_sched
           | wp_once hoare_drop_imps )+
 
 end
@@ -1926,14 +1926,14 @@ lemma invoke_tcb_valid_sched[wp]:
      invoke_tcb ti
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (cases ti, simp_all only:)
-        apply (wp mapM_x_wp | simp | rule subset_refl | rule reschedule_preserves_valid_shed |
+        apply (wp mapM_x_wp | simp | rule subset_refl | rule reschedule_preserves_valid_sched |
                clarsimp simp:invs_valid_objs invs_valid_global_refs idle_no_ex_cap |
                intro impI conjI)+
     apply (rename_tac option)
     apply (case_tac option)
      apply (wp mapM_x_wp | simp | rule subset_refl |
             clarsimp simp:invs_valid_objs invs_valid_global_refs idle_no_ex_cap |
-            rule reschedule_preserves_valid_shed | intro impI conjI)+
+            rule reschedule_preserves_valid_sched | intro impI conjI)+
   done
 end
 

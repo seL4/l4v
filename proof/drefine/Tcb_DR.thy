@@ -621,7 +621,7 @@ lemma invoke_tcb_corres_read_regs:
   done
 
 
-(* Write the reigsters of another thread. *)
+(* Write the registers of another thread. *)
 lemma invoke_tcb_corres_write_regs:
   "\<lbrakk> t' = tcb_invocation.WriteRegisters obj_id resume data flags;
      t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>
@@ -645,7 +645,6 @@ lemma invoke_tcb_corres_write_regs:
          apply (rule corrupt_tcb_intent_as_user_corres)
         apply (wp wp_post_taut | simp add:invs_def valid_state_def | fastforce)+
   done
-
 
 lemma corres_mapM_x_rhs_induct:
   "\<lbrakk> corres_underlying sr nf nf' dc P P' g (return ());
