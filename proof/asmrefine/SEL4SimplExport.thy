@@ -9,11 +9,7 @@
  *)
 
 theory SEL4SimplExport
-
-imports
-  "../../tools/asmrefine/SimplExport"
-  "CSpec.Substitute"
-
+imports "AsmRefine.SimplExport" "CSpec.Substitute"
 begin
 
 ML {*

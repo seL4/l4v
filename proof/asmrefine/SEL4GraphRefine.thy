@@ -10,7 +10,7 @@
 
 theory SEL4GraphRefine
 imports
-  "../../tools/asmrefine/ProveGraphRefine"
+  "AsmRefine.ProveGraphRefine"
   "CSpec.Substitute"
   "SEL4GlobalsSwap"
   "SEL4SimplExport"

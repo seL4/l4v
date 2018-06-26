@@ -12,7 +12,7 @@ theory Substitute
 
 imports
   "$L4V_ARCH/Kernel_C"
-  "../../tools/asmrefine/GlobalsSwap"
+  "AsmRefine.GlobalsSwap"
 begin
 
 ML {*

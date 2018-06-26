@@ -9,9 +9,7 @@
  *)
 
 theory GraphProof
-
 imports TailrecPre GraphLangLemmas "Lib.SplitRule"
-
 begin
 
 declare sep_false_def[symmetric, simp del]
@@ -33,7 +31,7 @@ proof -
 qed
 
 lemmas exec_graph_step_deterministic
-    = exec_graph_step_Gamma_deterministic[where adds=empty, simplified]
+    = exec_graph_step_Gamma_deterministic[where adds=Map.empty, simplified]
 
 lemma exec_graph_n_Gamma_deterministic:
   "(stack, stack') \<in> exec_graph_n Gamma n
@@ -47,7 +45,7 @@ lemma exec_graph_n_Gamma_deterministic:
   done
 
 lemmas exec_graph_n_deterministic
-    = exec_graph_n_Gamma_deterministic[where adds=empty, simplified]
+    = exec_graph_n_Gamma_deterministic[where adds=Map.empty, simplified]
 
 lemma step_implies_continuing:
   "(stack, stack') \<in> exec_graph_step Gamma
@@ -74,7 +72,7 @@ lemma exec_trace_Gamma_deterministic:
   done
 
 lemmas exec_trace_deterministic
-    = exec_trace_Gamma_deterministic[where adds=empty, simplified]
+    = exec_trace_Gamma_deterministic[where adds=Map.empty, simplified]
 
 lemma exec_trace_nat_trace:
   "tr \<in> exec_trace Gamma f \<Longrightarrow> tr \<in> nat_trace_rel continuing (exec_graph_step Gamma)"

@@ -12,7 +12,7 @@ theory Kernel_C
 imports
   "ExecSpec.MachineTypes"
   "CLib.CTranslationNICTA"
-  "../../../tools/asmrefine/CommonOps"
+  "AsmRefine.CommonOps"
 begin
 
 external_file

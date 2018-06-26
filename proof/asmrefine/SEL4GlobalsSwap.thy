@@ -9,12 +9,11 @@
  *)
 
 theory SEL4GlobalsSwap
-
-imports "../../tools/asmrefine/GlobalsSwap"
-  "../../tools/asmrefine/AsmSemanticsRespects"
-  "../../tools/asmrefine/FieldAccessors"
+imports
+  "AsmRefine.GlobalsSwap"
+  "AsmRefine.AsmSemanticsRespects"
+  "AsmRefine.FieldAccessors"
   "CSpec.Substitute"
-
 begin
 
 lemma globals_update_id:
