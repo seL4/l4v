@@ -263,7 +263,7 @@ unmapPage size asid vptr pptr = ignoreFailure $ do
     (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
     unless (bitsLeft == pageBitsForSize size) $ throw InvalidRoot
     pte <- withoutFailure $ getObject slot
-    checkMappingPPtr pptr pte -- FIXME RISCV: wait for C sync, then remove
+    checkMappingPPtr pptr pte
     withoutFailure $ storePTE slot InvalidPTE
     withoutFailure $ doMachineOp sfence
 
