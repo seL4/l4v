@@ -323,7 +323,7 @@ lemma invokeIRQControl_ccorres:
 lemma unat_ucast_16_32:
   "unat (ucast (x::(16 word))::32 signed word) = unat x"
   apply (subst unat_ucast)
-  apply (rule Divides.mod_less)
+  apply (rule Divides.mod_less, simp)
   apply (rule less_le_trans[OF unat_lt2p])
   apply simp
   done

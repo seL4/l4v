@@ -411,8 +411,8 @@ proof (intro allI impI)
     and piud: "pointerInUserData ptr \<sigma>"
     by simp_all
 
-  def offset \<equiv> "ucast ((ptr && mask pageBits) >> 2) :: 10 word"
-  def base \<equiv> "Ptr (ptr && ~~ mask  pageBits) :: user_data_C ptr"
+  define offset where "offset \<equiv> ucast ((ptr && mask pageBits) >> 2) :: 10 word"
+  define base where "base \<equiv> Ptr (ptr && ~~ mask  pageBits) :: user_data_C ptr"
 
   from piud
   obtain old_w where
@@ -719,8 +719,8 @@ proof (intro allI impI)
     and piud: "pointerInDeviceData ptr \<sigma>"
     by simp_all
 
-  def offset \<equiv> "ucast ((ptr && mask pageBits) >> 2) :: 10 word"
-  def base \<equiv> "Ptr (ptr && ~~ mask  pageBits) :: user_data_device_C ptr"
+  define offset where "offset \<equiv> ucast ((ptr && mask pageBits) >> 2) :: 10 word"
+  define base where "base \<equiv> Ptr (ptr && ~~ mask  pageBits) :: user_data_device_C ptr"
 
   from piud
   obtain old_w where

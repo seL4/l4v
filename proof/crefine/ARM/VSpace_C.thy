@@ -2689,7 +2689,7 @@ lemma updateCap_frame_mapped_addr_ccorres:
   shows "ccorres dc xfdc
            (cte_wp_at' (\<lambda>c. ArchObjectCap cap = cteCap c) ctSlot and K (isPageCap cap))
            UNIV []
-           (updateCap ctSlot (ArchObjectCap (capVPMappedAddress_update empty cap)))
+           (updateCap ctSlot (ArchObjectCap (capVPMappedAddress_update Map.empty cap)))
            (CALL generic_frame_cap_ptr_set_capFMappedAddress(cap_Ptr &(cte_Ptr ctSlot\<rightarrow>[''cap_C'']),(scast asidInvalid),0))"
   unfolding updateCap_def
   apply (rule ccorres_guard_imp2)

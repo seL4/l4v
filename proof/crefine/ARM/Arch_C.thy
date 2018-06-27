@@ -221,7 +221,7 @@ proof -
     apply (clarsimp simp: asid_low_bits_def word_le_nat_alt)
     done
 
-  def ko \<equiv> "KOArch (KOASIDPool makeObject)"
+  define ko where "ko \<equiv> KOArch (KOASIDPool makeObject)"
 
   have rc :"range_cover frame (objBitsKO ko) (objBitsKO ko) (Suc 0)"
     by (simp add:objBits_simps ko_def archObjSize_def al range_cover_full)
@@ -1803,22 +1803,6 @@ lemma createMappingEntries_valid_pde_slots'2:
    apply (rule is_aligned_shiftr)
    apply simp
   apply (simp add: pdBits_def)
-  done
-
-(* FIXME : move *)
-lemma of_nat_ucast:
-  "is_down (ucast :: ('a :: len) word \<Rightarrow> ('b :: len) word)
-    \<Longrightarrow> (of_nat n :: 'b word) = ucast (of_nat n :: 'a word)"
-  apply (subst word_unat.inverse_norm)
-  apply (simp add: ucast_def word_of_int[symmetric]
-                   of_nat_nat[symmetric] unat_def[symmetric])
-  apply (simp add: unat_of_nat)
-  apply (rule nat_int.Rep_eqD)
-  apply (simp only: zmod_int)
-  apply (rule mod_mod_cancel)
-  apply (subst zdvd_int[symmetric])
-  apply (rule le_imp_power_dvd)
-  apply (simp add: is_down_def target_size_def source_size_def word_size)
   done
 
 lemma mapM_x_storePDE_pde_mappings':
