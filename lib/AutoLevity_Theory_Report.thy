@@ -19,6 +19,13 @@ ML \<open>
 (* An antiquotation for creating json-like serializers for
    simple records. Serializers for primitive types are automatically used,
    while serializers for complex types are given as parameters. *)
+val JSON_string_encode: string -> string =
+  String.translate (
+      fn #"\\" => "\\\\"
+       | #"\n" => "\\n"
+       | x => if Char.isPrint x then String.str x else
+                "\\u" ^ align_right "0" 4 (Int.fmt StringCvt.HEX (Char.ord x)))
+  #> quote;
 
 val _ = Theory.setup(
 ML_Antiquotation.inline @{binding string_record}
@@ -78,18 +85,18 @@ ML_Antiquotation.inline @{binding string_record}
 
       fun mk_encode typ =
       if typ = "string"
-      then "(fn s => quote (String.translate (fn #\"\\n\" => \"\\\\n\" | x => String.str x) s))"
+      then "JSON_string_encode"
       else if typ = "int"
       then "Int.toString"
       else if typ = "bool"
       then "Bool.toString"
       else if typ = "string list"
-      then "(fn xs => (enclose \"[\" \"]\" (String.concatWith \", \" (map quote xs))))"
+      then "(fn xs => (enclose \"[\" \"]\" (String.concatWith \", \" (map JSON_string_encode xs))))"
        else  (sanitize typ) ^ "_encode"
 
 
       fun mk_elem nm _ value =
-        (ML_Syntax.print_string (quote nm) ^ "^ \" : \" ") ^ "^ (" ^ value ^ ")"
+        (ML_Syntax.print_string (JSON_string_encode nm) ^ "^ \" : \" ") ^ "^ (" ^ value ^ ")"
 
       fun mk_head body =
         "(\"" ^ "{\" ^ String.concatWith \", \" (" ^  body ^ ") ^ \"}\")"
@@ -473,7 +480,7 @@ fun add_commas (s :: s' :: ss) = s ^ "," :: (add_commas (s' :: ss))
 
 
 fun string_reports_of (thy_nm, logs, thy_parents, lemmas, consts, types) =
-      ["{\"theory_name\" : " ^ quote thy_nm ^ ","] @
+      ["{\"theory_name\" : " ^ JSON_string_encode thy_nm ^ ","] @
       ["\"logs\" : ["] @
       add_commas (map (log_entry_encode) logs) @
       ["],","\"theory_imports\" : ["] @
@@ -481,9 +488,9 @@ fun string_reports_of (thy_nm, logs, thy_parents, lemmas, consts, types) =
       ["],","\"lemmas\" : ["] @
       add_commas (map (lemma_entry_encode) lemmas) @
       ["],","\"consts\" : ["] @
-      add_commas (map ( dep_entry_encode) consts) @
+      add_commas (map (dep_entry_encode) consts) @
       ["],","\"types\" : ["] @
-      add_commas (map ( dep_entry_encode) types) @
+      add_commas (map (dep_entry_encode) types) @
       ["]}"]
       |> map (fn s => s ^ "\n")
 
