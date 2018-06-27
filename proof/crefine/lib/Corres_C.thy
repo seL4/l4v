@@ -1060,7 +1060,7 @@ lemma ccorres_sequenceE_while_gen_either_way:
                      (body ;; Basic (\<lambda>s. xf_update (\<lambda>_. xfrel_upd (xf s)) s)))"
   (is "ccorres_underlying sr \<Gamma> (inr_rrel ?r') ?xf' arrel axf ?G ?G' hs (sequenceE xs) ?body")
 proof -
-  def init_xs \<equiv> xs
+  define init_xs where "init_xs \<equiv> xs"
 
   have rl: "xs = drop (length init_xs - length xs) init_xs" unfolding init_xs_def
     by fastforce

@@ -2265,6 +2265,7 @@ proof -
     apply (subst uint_nat)
     apply (simp add: unat_of_nat)
     apply (subst Divides.mod_less)
+      apply simp
      apply (rule order_le_less_trans[OF word_clz_max])
      apply (simp add: word_size)
     apply (rule iffD2 [OF le_nat_iff[symmetric]])

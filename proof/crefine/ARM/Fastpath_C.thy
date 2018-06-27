@@ -4108,7 +4108,7 @@ lemma in_getCTE_slot:
     apply (drule(1) tcb_cte_cases_aligned[where cte=rv])
     apply (simp add: objBits_simps' cte_level_bits_def)
    apply (simp add: cte_wp_at_ctes_of)
-  apply (rule_tac x="undefined \<lparr> ksPSpace := empty (slot \<mapsto> KOCTE rv) \<rparr>" in exI)
+  apply (rule_tac x="undefined \<lparr> ksPSpace := Map.empty (slot \<mapsto> KOCTE rv) \<rparr>" in exI)
   apply (simp add: map_to_ctes_def Let_def objBits_simps' cte_level_bits_def)
   done
 
