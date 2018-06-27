@@ -10,7 +10,7 @@
 
 name:                   SEL4
 version:                1.4-pre
-cabal-version:          >= 1.18
+cabal-version:          == 1.18
 build-type:             Custom
 license:                GPL
 author:                 Philip Derrin et. al., NICTA
