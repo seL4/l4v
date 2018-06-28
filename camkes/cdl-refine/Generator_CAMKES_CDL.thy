@@ -9,8 +9,8 @@
  *)
 
 theory Generator_CAMKES_CDL imports
-  "../adl-spec/Types_CAMKES"
-  "../adl-spec/Library_CAMKES"
+  "CamkesAdlSpec.Types_CAMKES"
+  "CamkesAdlSpec.Library_CAMKES"
   "DSpec.Syscall_D"
   Types_CAMKES_CDL
   "DPolicy.Dpolicy"
@@ -91,7 +91,7 @@ where
      dom (cdl_objects initial) \<inter> dom (irqs_objects irqs) = {} \<and>
      dom extra \<inter> dom (irqs_objects irqs) = {} \<and>
      (\<forall>x \<in> ran (irqs_objects irqs). case x of
-        Types_D.CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = empty, cdl_cnode_size_bits = 0\<rparr>
+        Types_D.CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = Map.empty, cdl_cnode_size_bits = 0\<rparr>
       | _ \<Rightarrow> False)"
 
 text {*
@@ -232,7 +232,7 @@ lemma helper7:
       apply clarsimp
       apply (subst (asm) card_word)
       apply clarsimp
-      apply (metis (erased, hide_lams) Divides.mod_less_eq_dividend order_less_le_trans unat_of_nat word_less_nat_alt)
+      using unat_less_helper apply blast
      by clarsimp+
 
 lemma helper6: "n \<le> CARD(cdl_object_id) \<Longrightarrow> card ((of_nat::nat \<Rightarrow> cdl_object_id) ` {0..<n}) = n"
@@ -472,10 +472,10 @@ where
   "generate' spec \<equiv> \<lparr>
      cdl_arch = ARM11,
      cdl_objects = obj_heap spec,
-     cdl_cdt = empty,
+     cdl_cdt = Map.empty,
      cdl_current_thread = undefined,
      cdl_irq_node = undefined,
-     cdl_asid_table = empty,
+     cdl_asid_table = Map.empty,
      cdl_current_domain = undefined\<rparr>"
 
 text {*
@@ -756,7 +756,7 @@ lemma only_endpoint_caps:
 
 lemma valid_only_empty_cnodes:
   "valid_irqs spec extra irqs \<Longrightarrow> \<forall>obj \<in> ran (irqs_objects irqs). case obj of
-     Types_D.CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = empty, cdl_cnode_size_bits = 0\<rparr>
+     Types_D.CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = Map.empty, cdl_cnode_size_bits = 0\<rparr>
    | _ \<Rightarrow> False"
   by (clarsimp simp:valid_irqs_def)
 
