@@ -651,7 +651,7 @@ lemma decode_page_inv_corres:
         apply simp
        apply (rule whenE_throwError_corres, simp, simp)
        apply (rule_tac R="\<lambda>_ s. valid_vspace_objs s \<and> pspace_aligned s
-                                  \<and> (hd args && user_vtop) + (2 ^ pageBitsForSize sz - 1) \<le> user_vtop \<and>
+                                  \<and> (hd args && user_vtop) + (2 ^ pageBitsForSize sz) \<le> user_vtop \<and>
                                   valid_arch_state s \<and> equal_kernel_mappings s \<and> valid_global_objs s \<and>
                                   s \<turnstile> (fst (hd excaps)) \<and> (\<exists>\<rhd> (lookup_pml4_slot (obj_ref_of (fst (hd excaps))) (hd args) && ~~ mask pml4_bits)) s \<and>
                                   (\<exists>\<rhd> rv') s \<and> page_map_l4_at rv' s"
@@ -705,6 +705,7 @@ lemma decode_page_inv_corres:
    apply (case_tac excaps', simp)
    apply clarsimp
    apply (rule corres_guard_imp)
+     apply (rule whenE_throwError_corres, simp, simp)
      apply (rule corres_splitEE [where r' = "op ="])
         prefer 2
         apply (clarsimp simp: list_all2_Cons2)
@@ -738,10 +739,11 @@ lemma decode_page_inv_corres:
               apply (rule create_mapping_entries_corres)
                apply (simp add: mask_vmrights_corres)
               apply (simp add: vm_attributes_corres)
-             apply (rule corres_trivial)
-             apply (rule corres_returnOk)
-             apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
-            apply (wp | simp)+
+             apply (rule corres_splitEE[OF _ ensure_safe_mapping_corres])
+                apply (rule corres_trivial)
+                apply (rule corres_returnOk)
+                apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
+               apply (wp createMappingEntries_wf | simp)+
           apply (rule_tac Q'="\<lambda>rv s. valid_vspace_objs s \<and> pspace_aligned s \<and>
                                 (snd v') < pptr_base \<and> canonical_address (snd v') \<and>
                                 equal_kernel_mappings s \<and> valid_global_objs s \<and> valid_arch_state s \<and>

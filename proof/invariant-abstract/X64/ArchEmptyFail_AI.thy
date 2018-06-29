@@ -66,7 +66,7 @@ lemma decode_tcb_invocation_empty_fail[wp]:
   by (simp add: decode_tcb_invocation_def split: invocation_label.splits | wp | intro conjI impI)+
 
 crunch (empty_fail) empty_fail[wp]: find_vspace_for_asid, check_vp_alignment,
-                   ensure_safe_mapping, get_asid_pool, lookup_pt_slot,
+                   ensure_safe_mapping, get_asid_pool, lookup_pt_slot, get_pt,
                    decode_port_invocation, decode_ioport_control_invocation
   (simp: kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits
          pdpte.splits pml4e.splits vmpage_size.splits Let_def)
