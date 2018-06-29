@@ -416,7 +416,7 @@ where
 "cl_valid_cap c \<equiv>
    case c of
      Cap_irq_handler_cap fc \<Rightarrow> ((capIRQ_CL fc) && mask 8 = capIRQ_CL fc)
-   | Cap_frame_cap fc \<Rightarrow> capFSize_CL fc < 3 \<and> capFMapType_CL fc < 2
+   | Cap_frame_cap fc \<Rightarrow> capFSize_CL fc < 3 \<and> capFMapType_CL fc < 2 \<and> capFVMRights_CL fc < 4 \<and> capFVMRights_CL fc \<noteq> 0
    | x \<Rightarrow> True"
 
 definition

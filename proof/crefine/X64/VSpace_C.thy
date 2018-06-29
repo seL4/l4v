@@ -751,7 +751,7 @@ lemma ccorres_pre_getObject_pdpte:
   done
 
 abbreviation
-  "lookupPDSlot_xf \<equiv> liftxf errstate lookupPDSlot_ret_C.status_C pdSlot_C
+  "lookupPDSlot_xf \<equiv> liftxf errstate lookupPDSlot_ret_C.status_C lookupPDSlot_ret_C.pdSlot_C
                              ret__struct_lookupPDSlot_ret_C_'"
 
 lemma pdpte_case_isPageDirectoryPDPTE:
@@ -820,7 +820,7 @@ lemma lookupPDSlot_ccorres:
   done
 
 abbreviation
-  "lookupPTSlot_xf \<equiv> liftxf errstate lookupPTSlot_ret_C.status_C ptSlot_C
+  "lookupPTSlot_xf \<equiv> liftxf errstate lookupPTSlot_ret_C.status_C lookupPTSlot_ret_C.ptSlot_C
                              ret__struct_lookupPTSlot_ret_C_'"
 
 lemma pde_case_isPageTablePDE:
