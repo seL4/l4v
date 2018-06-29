@@ -2197,7 +2197,7 @@ crunch nosch[wp]: setMRs "\<lambda>s. P (ksSchedulerAction s)"
    simp: split_def zipWithM_x_mapM)
 
 crunch nosch [wp]: performX64MMUInvocation, performX64PortInvocation "\<lambda>s. P (ksSchedulerAction s)"
-  (ignore: getObject setObject
+  (ignore: getObject setObject simp: crunch_simps
    wp: crunch_wps getObject_cte_inv getASID_wp)
 
 lemma arch_pinv_nosch[wp]:

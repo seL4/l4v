@@ -1181,16 +1181,12 @@ Checking virtual address for page size dependent alignment:
 >         _ -> fail "impossible"
 >     invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
 >
-> performPageInvocation (PageUnmap cap ctSlot) = do
->     case capVPMappedAddress cap of
->         Just (asid, vaddr) -> unmapPage (capVPSize cap) asid vaddr
->                                     (capVPBasePtr cap)
->         _ -> return ()
->     ArchObjectCap cap <- getSlotCap ctSlot
->     updateCap ctSlot (ArchObjectCap $
->                           cap { capVPMappedAddress = Nothing,
->                                 capVPMapType = VMNoMap })
->
+> performPageInvocation (PageUnmap cap ctSlot) =
+>     when (isJust $ capVPMappedAddress cap) $ case capVPMapType cap of
+>         VMVSpaceMap -> performPageInvocationUnmap cap ctSlot
+>         _ -> fail "mapped cap has incorrect map type"
+
+
 >-- performPageInvocation (PageIOMap cap cptr vtdpte slot) = do
 >--     updateCap cptr cap
 >--     storeIOPTE slot vtdpte
@@ -1216,6 +1212,17 @@ Checking virtual address for page size dependent alignment:
 >             msgLabel = 0 }
 >     setMessageInfo ct msgInfo
 
+> performPageInvocationUnmap :: ArchCapability -> PPtr CTE -> Kernel ()
+> performPageInvocationUnmap cap ctSlot = do
+>     case capVPMappedAddress cap of
+>         Just (asid, vaddr) -> unmapPage (capVPSize cap) asid vaddr
+>                                     (capVPBasePtr cap)
+>         _ -> return ()
+>     ArchObjectCap cap <- getSlotCap ctSlot
+>     updateCap ctSlot (ArchObjectCap $
+>                           cap { capVPMappedAddress = Nothing,
+>                                 capVPMapType = VMNoMap })
+>
 
 > performASIDControlInvocation :: ASIDControlInvocation -> Kernel ()
 > performASIDControlInvocation (MakePool frame slot parent base) = do

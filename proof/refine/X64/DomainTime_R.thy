@@ -87,7 +87,7 @@ crunch ksDomSchedule_inv[wp]: preemptionPoint "\<lambda>s. P (ksDomSchedule s)"
 crunch ksDomSchedule_inv[wp]: performX64MMUInvocation, performX64PortInvocation "\<lambda>s. P (ksDomSchedule s)"
   (ignore: getObject setObject
    wp: crunch_wps getObject_cte_inv getASID_wp
-   simp: unless_def)
+   simp: unless_def crunch_simps)
 
 crunch ksDomSchedule_inv[wp]: performInvocation "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps zipWithM_x_inv cteRevoke_preservation mapME_x_inv_wp
@@ -199,7 +199,7 @@ crunch ksDomainTime_inv[wp]: createNewObjects "\<lambda>s. P (ksDomainTime s)"
 crunch ksDomainTime_inv[wp]: performX64MMUInvocation, performX64PortInvocation "\<lambda>s. P (ksDomainTime s)"
   (ignore: getObject setObject
    wp: crunch_wps getObject_cte_inv getASID_wp setObject_ksPSpace_only updateObject_default_inv
-   simp: unless_def)
+   simp: unless_def crunch_simps)
 
 crunch ksDomainTime_inv[wp]: preemptionPoint "\<lambda>s. P (ksDomainTime s)"
   (simp: whenE_def)

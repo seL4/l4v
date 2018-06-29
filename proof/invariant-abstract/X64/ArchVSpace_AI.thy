@@ -3625,7 +3625,7 @@ lemma perform_page_invs [wp]:
     apply (rename_tac arch_cap cslot_ptr)
     apply (rule hoare_pre)
      apply (wp dmo_invs arch_update_cap_invs_unmap_page get_cap_wp
-          | wpc | simp)+
+          | wpc | simp add: perform_page_invocation_unmap_def)+
       apply (rule_tac Q="\<lambda>_ s. invs s \<and>
                                cte_wp_at (\<lambda>c. is_pg_cap c \<and>
                                  (\<forall>ref. vs_cap_ref c = Some ref \<longrightarrow>

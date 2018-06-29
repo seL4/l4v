@@ -86,7 +86,8 @@ lemma perform_page_invocation_valid_list[wp]:
   apply (wp mapM_x_wp' mapM_wp' crunch_wps hoare_vcg_all_lift
           | intro impI conjI allI
           | wpc
-          | simp add: set_message_info_def set_mrs_def split: cap.splits arch_cap.splits option.splits sum.splits)+
+          | simp add: set_message_info_def set_mrs_def perform_page_invocation_unmap_def
+               split: cap.splits arch_cap.splits option.splits sum.splits)+
   done
 
 crunch valid_list[wp]: perform_invocation valid_list
