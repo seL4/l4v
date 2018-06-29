@@ -346,7 +346,7 @@ where
                                  | _ \<Rightarrow> throwError $ InvalidCapability 1);
              vspace' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
              whenE (vspace' \<noteq> vspace) $ throwError $ InvalidCapability 1;
-             vtop \<leftarrow> returnOk $ vaddr + mask (pageBitsForSize pgsz);
+             vtop \<leftarrow> returnOk $ vaddr + bit (pageBitsForSize pgsz);
              whenE (vtop > user_vtop) $ throwError $ InvalidArgument 0;
              vm_rights \<leftarrow> returnOk $ mask_vm_rights R (data_to_rights rights_mask);
              check_vp_alignment pgsz vaddr;
@@ -363,8 +363,7 @@ where
                   attr = args ! 1;
                   vspace_cap = fst (extra_caps ! 0)
          in doE
-             (* FIXME x64-vtd: *)
-             (* whenE (map_type = VMIOSpaceMap) $ throwError IllegalOperation; *)
+             whenE (map_type \<noteq> VMVSpaceMap) $ throwError IllegalOperation;
              (vspace,asid) \<leftarrow> (case vspace_cap of
                                   ArchObjectCap (PML4Cap pm (Some asid)) \<Rightarrow>
                                         returnOk (pm, asid)
@@ -372,12 +371,13 @@ where
              (asid',vaddr) \<leftarrow> (case mapped_address of
                                   Some a \<Rightarrow> returnOk a
                                 | _ \<Rightarrow> throwError $ InvalidCapability 0);
-             vspace' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
+             vspace' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid';
              whenE (vspace' \<noteq> vspace \<or> asid \<noteq> asid') $ throwError $ InvalidCapability 1;
              vm_rights \<leftarrow> returnOk $ mask_vm_rights R $ data_to_rights rights_mask;
              check_vp_alignment pgsz vaddr;
              entries \<leftarrow> create_mapping_entries (addrFromPPtr p) vaddr pgsz vm_rights
                                                (attribs_from_word attr) vspace;
+             ensure_safe_mapping entries;
              returnOk $ InvokePage $ PageRemap entries asid vspace
          odE
     else throwError TruncatedMessage

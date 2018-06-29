@@ -65,19 +65,14 @@ where
 |
 "ensure_safe_mapping (VMPDPTE InvalidPDPTE, _) = returnOk ()"
 |
-"ensure_safe_mapping (VMPTE (SmallPagePTE _ _ _), pt_slot) =
-    doE
-        pte \<leftarrow> liftE $ get_pte pt_slot;
-        (case pte of
-              InvalidPTE \<Rightarrow> returnOk ()
-            | _ \<Rightarrow> throwError DeleteFirst)
-    odE"
+"ensure_safe_mapping (VMPTE (SmallPagePTE _ _ _), pt_slot) = returnOk ()"
 |
 "ensure_safe_mapping (VMPDE (LargePagePDE _ _ _), pd_slot) =
     doE
         pde \<leftarrow> liftE $ get_pde pd_slot;
         (case pde of
               InvalidPDE \<Rightarrow> returnOk ()
+            | LargePagePDE _ _ _ \<Rightarrow> returnOk ()
             | _ \<Rightarrow> throwError DeleteFirst)
     odE"
 |
@@ -86,6 +81,7 @@ where
         pdpt \<leftarrow> liftE $ get_pdpte pdpt_slot;
         (case pdpt of
               InvalidPDPTE \<Rightarrow> returnOk ()
+            | HugePagePDPTE _ _ _ \<Rightarrow> returnOk ()
             | _ \<Rightarrow> throwError DeleteFirst)
     odE"
 |

@@ -123,22 +123,20 @@ The following function is called before creating or modifying mappings in a page
 > ensureSafeMapping (VMPDE InvalidPDE, _) = return ()
 > ensureSafeMapping (VMPDPTE InvalidPDPTE, _) = return ()
 >
-> ensureSafeMapping (VMPTE (SmallPagePTE {}), VMPTEPtr slot) = do
->         pte <- withoutFailure $ getObject slot
->         case pte of
->             InvalidPTE -> return ()
->             _ -> throw DeleteFirst
+> ensureSafeMapping (VMPTE (SmallPagePTE {}), VMPTEPtr slot) = return ()
 >
 > ensureSafeMapping (VMPDE (LargePagePDE {}), VMPDEPtr slot) = do
 >         pde <- withoutFailure $ getObject slot
 >         case pde of
 >             InvalidPDE -> return ()
+>             LargePagePDE {} -> return ()
 >             _ -> throw DeleteFirst
 >
 > ensureSafeMapping (VMPDPTE (HugePagePDPTE {}), VMPDPTEPtr slot) = do
 >         pdpte <- withoutFailure $ getObject slot
 >         case pdpte of
 >             InvalidPDPTE -> return ()
+>             HugePagePDPTE {} -> return ()
 >             _ -> throw DeleteFirst
 >
 > ensureSafeMapping _ = fail "This should never happen"
@@ -539,7 +537,7 @@ Note that implementations with separate high and low memory regions may also wis
 >             vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
 >             when (vspaceCheck /= vspace) $ throw $ InvalidCapability 1
 >             let vaddr' = vaddr .&. userVTop
->             let vtop = vaddr' + (bit (pageBitsForSize $ capVPSize cap) - 1)
+>             let vtop = vaddr' + bit (pageBitsForSize $ capVPSize cap)
 >             when (VPtr vtop > VPtr userVTop) $
 >                 throw $ InvalidArgument 0
 >             let vmRights = maskVMRights (capVPRights cap) $
@@ -556,26 +554,24 @@ Note that implementations with separate high and low memory regions may also wis
 >                 pageMapVSpace = vspace }
 >         (ArchInvocationLabel X64PageMap, _, _) -> throw TruncatedMessage
 >         (ArchInvocationLabel X64PageRemap, rightsMask:attr:_, (vspaceCap,_):_) -> do
->--           FIXME x64-vtd:
->--           when (capVPMapType cap == VMIOSpaceMap) $ throw IllegalOperation
+>             when (capVPMapType cap /= VMVSpaceMap) $ throw IllegalOperation
 >             (vspace,asid) <- case vspaceCap of
 >                 ArchObjectCap (PML4Cap {
 >                         capPML4MappedASID = Just asid,
 >                         capPML4BasePtr = vspace })
 >                     -> return (vspace,asid)
 >                 _ -> throw $ InvalidCapability 1
->             (asid',vaddr) <- case capVPMappedAddress cap of
+>             (asidCheck, vaddr) <- case capVPMappedAddress cap of
 >                 Just v -> return v
 >                 _ -> throw $ InvalidCapability 0
->             vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
->             when (vspaceCheck /= vspace || asid /= asid') $ throw $ InvalidCapability 1
->             -- asidCheck not required because ASIDs and HWASIDs are the same on x86
+>             vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asidCheck
+>             when (vspaceCheck /= vspace || asid /= asidCheck) $ throw $ InvalidCapability 1
 >             let vmRights = maskVMRights (capVPRights cap) $
 >                     rightsFromWord rightsMask
 >             checkVPAlignment (capVPSize cap) vaddr
 >             entries <- createMappingEntries (addrFromPPtr $ capVPBasePtr cap)
 >                 vaddr (capVPSize cap) vmRights (attribsFromWord attr) vspace
->             -- x64 allows arbitrary remapping, so no need to call ensureSafeMapping
+>             ensureSafeMapping entries
 >             return $ InvokePage $ PageRemap {
 >                 pageRemapEntries = entries,
 >                 pageRemapASID = asid,
