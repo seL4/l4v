@@ -110,9 +110,13 @@ end;
 end
 \<close>
 
-(* Do the output when the Isabelle session finishes *)
+(* Do the output when the Isabelle session finishes.
+   The session shutdown hook requires a patch to Isabelle, so we wrap
+   this code to be a no-op on vanilla Isabelle installations. *)
 ML \<open>
-Session.register_shutdown_hook AutoLevity_Combined_Report.levity_session_log
+try (ML_Context.eval ML_Compiler.flags @{here})
+    (ML_Lex.read_pos @{here}
+      "Session.register_shutdown_hook AutoLevity_Combined_Report.levity_session_log")
 \<close>
 
 end
