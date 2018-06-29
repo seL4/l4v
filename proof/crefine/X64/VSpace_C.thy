@@ -2199,14 +2199,13 @@ lemma framesize_from_H_bounded:
   by (clarsimp simp: framesize_from_H_def X86_SmallPage_def X86_LargePage_def X64_HugePage_def
                split: vmpage_size.split)
 
-lemma performPageInvocationUnmap_ccorres:
-  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+lemma performPageInvocationUnmap_ccorres':
+  "ccorres (\<lambda>rv rv'. rv' = scast EXCEPTION_NONE) ret__unsigned_long_'
        (invs' and cte_wp_at' (diminished' (ArchObjectCap cap) o cteCap) ctSlot and K (isPageCap cap))
        (UNIV \<inter> \<lbrace>ccap_relation (ArchObjectCap cap) \<acute>cap\<rbrace> \<inter> \<lbrace>\<acute>ctSlot = Ptr ctSlot\<rbrace>)
-       []
-       (liftE (performPageInvocation (PageUnmap cap ctSlot)))
+       hs
+       (performPageInvocationUnmap cap ctSlot)
        (Call performX86PageInvocationUnmap_'proc)"
-  apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (cinit lift: cap_' ctSlot_')
    apply csymbr
    apply (rule ccorres_guard_imp
@@ -2271,6 +2270,70 @@ lemma performPageInvocationUnmap_ccorres:
                         ccap_relation_PageCap_IsDevice ccap_relation_PageCap_MappedASID
                         ccap_relation_PageCap_MappedAddress)
   done
+
+definition
+  maptype_from_H :: "vmmap_type \<Rightarrow> machine_word"
+where
+  "maptype_from_H x \<equiv> case x of VMNoMap \<Rightarrow> scast X86_MappingNone
+                              | VMVSpaceMap \<Rightarrow> scast X86_MappingVSpace"
+
+lemma maptype_from_H_wf:
+  "(maptype_to_H \<circ> maptype_from_H) = id"
+  apply (clarsimp simp: maptype_to_H_def maptype_from_H_def o_def id_def)
+  by (rule ext, clarsimp simp: vm_page_map_type_defs split: if_splits vmmap_type.splits )
+
+lemma ccap_relation_PageCap_MapType:
+  "ccap_relation (ArchObjectCap (PageCap p r t s d m)) ccap
+    \<Longrightarrow> capFMapType_CL (cap_frame_cap_lift ccap) = maptype_from_H t"
+  apply (frule cap_get_tag_isCap_unfolded_H_cap)
+  apply (clarsimp simp: cap_frame_cap_lift_def ccap_relation_def cap_to_H_def cap_lift_def
+                        Let_def cap_tag_defs c_valid_cap_def cl_valid_cap_def
+                 split: if_splits)
+   by (clarsimp simp: maptype_to_H_def maptype_from_H_def vm_page_map_type_defs mask_def
+               split: vmmap_type.splits if_splits, word_bitwise, clarsimp)+
+
+lemma performPageInvocationUnmap_ccorres:
+  notes Collect_const[simp del]
+  shows
+  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and cte_wp_at' (diminished' (ArchObjectCap cap) o cteCap) ctSlot  and K (isPageCap cap))
+       (UNIV \<inter> \<lbrace>ccap_relation (ArchObjectCap cap) \<acute>cap\<rbrace> \<inter> \<lbrace>\<acute>cte = Ptr ctSlot\<rbrace>)
+       hs
+       (liftE (performPageInvocation (PageUnmap cap ctSlot)))
+       (Call performX86FrameInvocationUnmap_'proc)"
+  apply (simp only: liftE_liftM ccorres_liftM_simp K_def)
+  apply (rule ccorres_gen_asm)
+  apply (cinit' lift: cap_' cte_' simp: performPageInvocation_def)
+   apply csymbr
+   apply (clarsimp simp: isCap_simps)
+   apply (frule ccap_relation_mapped_asid_0)
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply (rule ccorres_rhs_assoc)+
+    apply csymbr
+    apply clarsimp
+    apply (frule ccap_relation_PageCap_MapType)
+    apply (frule cap_get_tag_isCap_unfolded_H_cap)
+    apply (rule ccorres_Cond_rhs_Seq)
+     apply (clarsimp simp: asidInvalid_def maptype_from_H_def vm_page_map_type_defs split: vmmap_type.splits)
+     apply (rule ccorres_rhs_assoc)
+     apply (drule_tac s=cap in sym, simp) (* schematic ugliness *)
+     apply ccorres_rewrite
+     apply (rule ccorres_add_return2) thm ccorres_add_returnOk
+     apply (ctac add: performPageInvocationUnmap_ccorres'[simplified K_def, simplified])
+       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+       apply (rule allI, rule conseqPre, vcg)
+       apply (clarsimp simp: return_def)
+      apply wp
+     apply (vcg exspec=performX86PageInvocationUnmap_modifies)
+    apply (clarsimp simp: asidInvalid_def)
+    apply (clarsimp simp: maptype_from_H_def split: vmmap_type.splits)
+    apply(rule ccorres_fail)
+   apply (clarsimp simp: asidInvalid_def)
+   apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+   apply (rule allI, rule conseqPre, vcg)
+   apply (clarsimp simp: return_def)
+  by (clarsimp simp: o_def isCap_simps cap_get_tag_isCap_unfolded_H_cap)
+
 
 lemma SuperUserFromVMRights_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0\<rbrace> Call SuperUserFromVMRights_'proc

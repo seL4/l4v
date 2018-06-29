@@ -136,6 +136,19 @@ where
      return (pd \<noteq> InvalidPDE)
   od"
 
+definition
+  perform_page_invocation_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "perform_page_invocation_unmap cap ct_slot \<equiv>
+      (case cap
+         of PageCap dev base rights map_type sz mapped \<Rightarrow> do
+            case mapped of Some (asid, vaddr) \<Rightarrow> unmap_page sz asid vaddr base
+                          | None \<Rightarrow> return ();
+            cap \<leftarrow> liftM the_arch_cap $ get_cap ct_slot;
+            set_cap (ArchObjectCap $ update_map_data cap None (Some VMNoMap)) ct_slot
+          od
+      | _ \<Rightarrow> fail)"
+
 text {* The Page capability confers the authority to map, unmap and flush the
 memory page. The remap system call is a convenience operation that ensures the
 page is mapped in the same location as this cap was previously used to map it
@@ -162,12 +175,12 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
     od
   | PageUnmap cap ct_slot \<Rightarrow>
       (case cap
-         of PageCap dev base rights map_type sz mapped \<Rightarrow> do
-            case mapped of Some (asid, vaddr) \<Rightarrow> unmap_page sz asid vaddr base
-                          | None \<Rightarrow> return ();
-            cap \<leftarrow> liftM the_arch_cap $ get_cap ct_slot;
-            set_cap (ArchObjectCap $ update_map_data cap None (Some VMNoMap)) ct_slot
-          od
+         of PageCap dev base rights map_type sz mapped \<Rightarrow>
+            case mapped of
+              Some _ \<Rightarrow> case map_type of
+                          VMVSpaceMap \<Rightarrow> perform_page_invocation_unmap cap ct_slot
+                        | _ \<Rightarrow> fail
+            | None \<Rightarrow> return ()
       | _ \<Rightarrow> fail)
 (*  | PageIOMap asid cap ct_slot entries \<Rightarrow> undefined (* FIXME unimplemented *)*)
   | PageGetAddr ptr \<Rightarrow> do

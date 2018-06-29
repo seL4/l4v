@@ -633,7 +633,7 @@ lemma perform_page_valid_vspace_objs'[wp]:
                       store_pdpte_valid_vspace_objs'
                       hoare_vcg_imp_lift[OF set_cap_arch_obj_neg] hoare_vcg_all_lift
                  | clarsimp simp: cte_wp_at_weakenE[OF _ TrueI] obj_at_def
-                                  swp_def valid_page_inv_def
+                                  swp_def valid_page_inv_def perform_page_invocation_unmap_def
                                   valid_slots_def pte_check_if_mapped_def
                                   pde_check_if_mapped_def
                            split: pte.splits pde.splits

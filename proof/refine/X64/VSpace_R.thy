@@ -1269,25 +1269,11 @@ proof -
    apply (rule corres_assume_pre)
    apply (clarsimp simp: valid_page_inv_def valid_page_inv'_def isCap_simps is_page_cap_def cong: option.case_cong prod.case_cong)
    apply (case_tac m)
-    apply simp
+    apply (simp add: split_def)+
+    apply (case_tac maptyp; simp)
+     apply (rule corres_fail, clarsimp simp: valid_cap_def)
+   apply (simp add: perform_page_invocation_unmap_def performPageInvocationUnmap_def split_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split [where r'="acap_relation"])
-         prefer 2
-         apply simp
-         apply (rule corres_rel_imp)
-          apply (rule get_cap_corres_all_rights_P[where P=is_arch_cap], rule refl)
-         apply (clarsimp simp: is_cap_simps)
-        apply (rule_tac F="is_page_cap cap" in corres_gen_asm)
-        apply (rule updateCap_same_master)
-        apply (clarsimp simp: is_page_cap_def update_map_data_def)
-       apply (wp get_cap_wp getSlotCap_wp)+
-     apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_diminished_def)
-     apply (drule (2) diminished_is_update')+
-     apply (clarsimp simp: cap_rights_update_def acap_rights_update_def update_map_data_def is_cap_simps)
-     apply (auto simp: valid_cap_def)[1]
-    apply (auto simp: cte_wp_at_ctes_of)[1]
-   apply clarsimp
-   apply (rule corres_guard_imp)
      apply (rule corres_split)
         prefer 2
         apply (rule unmap_page_corres[OF refl refl refl refl])
@@ -1982,7 +1968,7 @@ crunch typ_at' [wp]: performPDPTInvocation "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps)
 
 crunch typ_at' [wp]: performPageInvocation "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps ignore: getObject)
+  (wp: crunch_wps simp: crunch_simps ignore: getObject)
 
 lemma performASIDPoolInvocation_typ_at' [wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> performASIDPoolInvocation api \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
@@ -3009,7 +2995,7 @@ crunch valid_pte'[wp]: pteCheckIfMapped, pdeCheckIfMapped "valid_pte' pte"
 crunch valid_pde'[wp]: pteCheckIfMapped, pdeCheckIfMapped "valid_pde' pde"
   (ignore: getObject)
 
-lemma perform_pt_invs [wp]:
+lemma perform_page_invs [wp]:
   notes no_irq[wp]
   shows "\<lbrace>invs' and valid_page_inv' pt\<rbrace> performPageInvocation pt \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: performPageInvocation_def)
@@ -3020,7 +3006,9 @@ lemma perform_pt_invs [wp]:
                   simp: valid_page_inv'_def valid_slots'_def is_arch_update'_def
                  split: vmpage_entry.splits
              | (auto simp: is_arch_update'_def)[1])+)[3]
-  apply (wp arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp|wpc| clarsimp)+
+  apply (wp arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp
+         | wpc
+         | clarsimp simp: performPageInvocationUnmap_def)+
    apply (rename_tac acap word a b)
    apply (rule_tac Q="\<lambda>_. invs' and cte_wp_at' (\<lambda>cte. \<exists>r R mt sz d m. cteCap cte =
                                        ArchObjectCap (PageCap r R mt sz d m)) word"
@@ -3037,9 +3025,6 @@ lemma perform_pt_invs [wp]:
   apply (simp add: is_arch_update'_def isCap_simps)
   apply (case_tac cte)
   apply clarsimp+
-  apply (frule ctes_of_valid_cap')
-   apply (auto simp: valid_page_inv'_def valid_slots'_def cte_wp_at_ctes_of)[1]
-  apply (simp add: valid_cap'_def capAligned_def)
   done
 
 lemma ucast_ucast_le_low_bits [simp]:

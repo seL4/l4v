@@ -1749,14 +1749,8 @@ lemma ensure_safe_mapping_corres:
      apply (frule (1) mapping_map_pte, clarsimp)
      apply (case_tac x1)
       apply (simp add: mapping_map_simps corres_returnOk)
-     apply (clarsimp simp: mapping_map_simps)
-     apply (rule corres_guard_imp)
-       apply (rule corres_initial_splitE [where Q="\<lambda>_. \<top>" and Q'="\<lambda>_. \<top>"])
-          apply simp
-          apply (rule get_pte_corres')
-         apply (case_tac rv, simp_all add: corres_returnOk split:X64_H.pte.splits if_splits)[1]
-        apply wp[2]
-       apply (wp hoare_drop_imps | wpc | simp add: valid_mapping_entries_def)+
+     apply (clarsimp simp: mapping_map_simps corres_returnOk)
+    apply (simp add: valid_mapping_entries_def)
     apply (frule (1) mapping_map_pde, clarsimp)
     apply (case_tac x2)
       apply (simp add: mapping_map_simps corres_returnOk)
