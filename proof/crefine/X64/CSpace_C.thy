@@ -57,11 +57,12 @@ lemmas vmrights_defs =
 
 lemma maskVMRights_spec:
   "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter>
-           \<lbrace> \<acute>vm_rights && mask 2 = \<acute>vm_rights \<rbrace>)
+           \<lbrace> \<acute>vm_rights && mask 2 = \<acute>vm_rights \<and> \<acute>vm_rights \<noteq> 0 \<rbrace>)
   Call maskVMRights_'proc
   \<lbrace> vmrights_to_H \<acute>ret__unsigned_long =
-    maskVMRights (vmrights_to_H (ucast \<^bsup>s\<^esup>vm_rights)) (cap_rights_to_H (seL4_CapRights_lift \<^bsup>s\<^esup>cap_rights_mask)) \<and>
-    \<acute>ret__unsigned_long && mask 2 = \<acute>ret__unsigned_long \<rbrace>"
+    maskVMRights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) (cap_rights_to_H (seL4_CapRights_lift \<^bsup>s\<^esup>cap_rights_mask)) \<and>
+    \<acute>ret__unsigned_long && mask 2 = \<acute>ret__unsigned_long \<and>
+    \<acute>ret__unsigned_long \<noteq> 0 \<rbrace>"
   apply vcg
   apply clarsimp
   apply (rule conjI)
@@ -71,7 +72,7 @@ lemma maskVMRights_spec:
          | simp add: mask_def
          | word_bitwise)+)[1]
   apply clarsimp
-  apply (subgoal_tac "vm_rights = 0 \<or> vm_rights = 1 \<or> vm_rights = 2 \<or> vm_rights = 3")
+  apply (subgoal_tac "vm_rights = 1 \<or> vm_rights = 2 \<or> vm_rights = 3")
    apply (auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs
                      cap_rights_to_H_def seL4_CapRights_lift_def
                      to_bool_def mask_def
