@@ -12,8 +12,8 @@ chapter "Machine Operations"
 
 theory MachineOps
 imports
-  "../../../lib/$L4V_ARCH/WordSetup"
-  "../../../lib/Monad_WP/NonDetMonad"
+  "Word_Lib.WordSetup"
+  "Lib.NonDetMonad"
   "../MachineMonad"
 begin
 
@@ -108,7 +108,7 @@ where
  "debugPrint \<equiv> \<lambda>message. return ()"
 
 
--- "Interrupt controller operations"
+\<comment> \<open>Interrupt controller operations\<close>
 
 text {*
   Interrupts that cannot occur while the kernel is running (e.g. at preemption points),

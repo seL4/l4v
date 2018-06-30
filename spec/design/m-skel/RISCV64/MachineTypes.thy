@@ -106,7 +106,7 @@ definition
  "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks,
                          irq_state = 0,
                          underlying_memory = init_underlying_memory,
-                         device_state = empty,
+                         device_state = Map.empty,
                          machine_state_rest = undefined \<rparr>"
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/RISCV64.hs CONTEXT RISCV64 ONLY VMFaultType HypFaultType VMPageSize pageBits ptTranslationBits pageBitsForSize
