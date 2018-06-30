@@ -72,7 +72,8 @@ EXCLUDE["X64"]=[
     "DBaseRefine",
     "DSpec",
     "SepTacticsExamples",
-    "SimplExportAndRefine"]
+    "SimplExportAndRefine",
+    "AsmRefine"]
 
 EXCLUDE["RISCV64"]=[
     "ASpec",
@@ -81,7 +82,8 @@ EXCLUDE["RISCV64"]=[
     "CKernel",
     "CSpec",
     "CamkesDarpaReport",
-    "CamkesGlueProofs"
+    "CamkesGlueProofs",
+    "AsmRefine"
 ]
 
 # Check EXCLUDE is exhaustive over the available architectures
