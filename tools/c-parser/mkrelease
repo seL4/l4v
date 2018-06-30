@@ -85,15 +85,10 @@ echo "Tarring standard sources"
 # Some testfiles have non-ASCII filenames, so we need git ls-files -z. Ugh.
 git -C "${TOPLEVEL_DIR}" ls-files -z | tr '\0' '\n' |
     grep ^tools/c-parser |
-    grep -v tools/c-parser/testfiles/caduceus |
-    grep -v tools/c-parser/debugClass |
     grep -v tools/c-parser/notes |
-    grep -v tools/c-parser/map_sep |
-    grep -v tools/c-parser/kmalloc |
     grep -v tools/c-parser/mkrelease |
    tar -v -T - -c -f - -l |
   (cd "$outputdir/src" ; tar xf -)
-
 
 echo "Copying misc files"
 find tools/c-parser/CTranslation.thy tools/c-parser/testfiles -name '*.thy' |
@@ -110,33 +105,33 @@ echo "Removing files"
 /bin/rm -v "$outputdir/src/c-parser/testfiles/many_local_vars".{c,thy}
 
 echo "Executing gen_isabelle_root to generate testfiles/\$L4V_ARCH/ROOT."
-for L4V_ARCH in ARM ARM_HYP; do
+for L4V_ARCH in ARM ARM_HYP RISCV64 X64; do
     python misc/scripts/gen_isabelle_root.py -i "$outputdir/src/c-parser/testfiles" -i "$outputdir/src/c-parser/testfiles/${L4V_ARCH}" -o "$outputdir/src/c-parser/testfiles/$L4V_ARCH/ROOT" -s CParserTest -b CParser ||
         die "gen_isabelle_root failed."
 done
 
 echo "Executing gen_isabelle_root to generate testfiles/all_tests_\$L4V_ARCH.thy."
-for L4V_ARCH in ARM ARM_HYP; do
+for L4V_ARCH in ARM ARM_HYP RISCV64 X64; do
     python misc/scripts/gen_isabelle_root.py -T -o "$outputdir/src/c-parser/all_tests_${L4V_ARCH}.thy" -b CParser -i "$outputdir/src/c-parser/testfiles" -i "$outputdir/src/c-parser/testfiles/${L4V_ARCH}" ||
         die "gen_isabelle_root failed."
 done
 
-echo "Hacking IsaMakefile to remove ROOT generation."
-if ! grep -q '^testfiles/\$(L4V_ARCH)/ROOT' "$outputdir/src/c-parser/IsaMakefile"; then
-    die "failed to process c-parser/IsaMakefile"
+echo "Hacking Makefile to remove ROOT generation."
+if ! grep -q '^testfiles/\$(L4V_ARCH)/ROOT' "$outputdir/src/c-parser/Makefile"; then
+    die "failed to process c-parser/Makefile"
 fi
 sed $SEDIOPT \
     -e '/^testfiles\/\$(L4V_ARCH)\/ROOT/,/CParserTest/d' \
     -e '/^all_tests_\$(L4V_ARCH)\.thy/,/CParser/d' \
-    "$outputdir/src/c-parser/IsaMakefile"
+    "$outputdir/src/c-parser/Makefile"
 
-echo "Hacking IsaMakefile to change root dir."
-if ! grep -q '^L4V_ROOT_DIR = ' "$outputdir/src/c-parser/IsaMakefile"; then
-    die "failed to process c-parser/IsaMakefile"
+echo "Hacking Makefile to change root dir."
+if ! grep -q '^L4V_ROOT_DIR = ' "$outputdir/src/c-parser/Makefile"; then
+    die "failed to process c-parser/Makefile"
 fi
 sed $SEDIOPT \
     -e 's/^L4V_ROOT_DIR = .*$/L4V_ROOT_DIR = ./' \
-    "$outputdir/src/c-parser/IsaMakefile"
+    "$outputdir/src/c-parser/Makefile"
 
 
 # We are moving the c-parser directory from the "tools/c-parser" directory to
@@ -149,7 +144,7 @@ popd
 
 echo "Generating standalone-parser/table.ML"
 pushd "$TOPLEVEL_DIR/tools/c-parser" > /dev/null
-"$TOPLEVEL_DIR/isabelle/bin/isabelle" env make -f IsaMakefile "$(pwd)/standalone-parser/table.ML" \
+"$TOPLEVEL_DIR/isabelle/bin/isabelle" env make -f Makefile "$(pwd)/standalone-parser/table.ML" \
     || die "Couldn't generate table.ML for standalone parser"
 cp standalone-parser/table.ML "$outputdir/src/c-parser/standalone-parser"
 echo "Cleaning up standalone-parser's Makefile"
@@ -162,26 +157,6 @@ sed '
   /CLEAN_TARGETS/s|\$(STP_PFX)/table.ML||
 ' < standalone-parser/Makefile > "$outputdir/src/c-parser/standalone-parser/Makefile"
 popd > /dev/null
-
-#dolicensing ()
-#{
-#    pushd "$1" > /dev/null 2>&1 ||
-#        die "Tried to dolicensing in non-existent directory $1"
-#
-#    echo "Checking for unlicensed files in $1"
-#    "$TOPLEVEL_DIR/misc/license-tool/check_license.py" --exclude "$TOPLEVEL_DIR/c-parser/.licenseignore" . ||
-#        { /bin/rm -r "$outputdir" ; die "Unlicensed files detected"; }
-#
-#    echo "Adding licence information in $(basename "$1")."
-#
-#    "$TOPLEVEL_DIR/misc/license-tool/expand_license.py" "$TOPLEVEL_DIR/c-parser/release-licensing" . ||
-#        die "Licence expansion failed."
-#
-#    popd > /dev/null
-#}
-#
-#dolicensing "$outputdir/src/c-parser"
-#dolicensing "$outputdir/src/lib"
 
 
 echo "Making PDF of ctranslation file."
