@@ -21,9 +21,9 @@
 
     <!-- C Parser -->
     <sequence cwd="c-parser">
-      <test name="CParser">../../isabelle/bin/isabelle env make -f IsaMakefile CParser</test>
-      <test name="CParserTest" cpu-timeout="7200">../../isabelle/bin/isabelle env make -f IsaMakefile cparser_test</test>
-      <test name="CParserTools">../../isabelle/bin/isabelle env make -f IsaMakefile cparser_tools</test>
+      <test name="CParser">make CParser</test>
+      <test name="CParserTest" cpu-timeout="7200">make cparser_test</test>
+      <test name="CParserTools">make cparser_tools</test>
     </sequence>
 
     <!-- AutoCorres -->
