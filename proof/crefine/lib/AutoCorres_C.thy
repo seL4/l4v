@@ -35,25 +35,25 @@ an entirely new theory context, which is unfamiliar to any previous CRefine or A
 development. In particular, rules which were deleted in AutoCorres may reappear in this
 theory, but in a different place in the rule set than they appeared in Corres_C.
 
-The following setup restores the ordering from @{theory Corres_C} for the crucial
-@{attribute wp_comb} rule set, and places new rules introduced by @{theory AutoCorres} at
+The following setup restores the ordering from @{theory CRefine.Corres_C} for the crucial
+@{attribute wp_comb} rule set, and places new rules introduced by @{theory AutoCorres.AutoCorres} at
 the end of the @{attribute wp_comb} set.
 
 To ensure that we only have to do this once, we are careful to ensure that there is only
-one theory merge between AutoCorres and CRefine. We import @{theory L4VerifiedLinks} into
-@{theory AutoCorresModifiesProofs}, and import the latter here. This satisfies the
-dependencies from @{theory AutoCorresModifiesProofs} to @{theory AutoCorres}, and from
-this theory to @{theory L4VerifiedLinks} and @{theory Corres_C}, without duplicating
-theory merges. Finally, we list @{theory L4VerifiedLinks} as a top-level theory in the
-CBaseRefine session, so that @{theory AutoCorres} need not be processed in a CRefine
-session, but do not import @{theory AutoCorres} into @{text Include_C}, since that would
+one theory merge between AutoCorres and CRefine. We import @{theory CRefine.L4VerifiedLinks} into
+@{theory CRefine.AutoCorresModifiesProofs}, and import the latter here. This satisfies the
+dependencies from @{theory CRefine.AutoCorresModifiesProofs} to @{theory AutoCorres.AutoCorres}, and from
+this theory to @{theory CRefine.L4VerifiedLinks} and @{theory CRefine.Corres_C}, without duplicating
+theory merges. Finally, we list @{theory CRefine.L4VerifiedLinks} as a top-level theory in the
+CBaseRefine session, so that @{theory AutoCorres.AutoCorres} need not be processed in a CRefine
+session, but do not import @{theory AutoCorres.AutoCorres} into @{text CBaseRefine.Include_C}, since that would
 cause a redundant theory merge.
 \<close>
 
 setup \<open>
   fn thy => let
     fun get_combs thy = #combs (WeakestPre.get_rules (Proof_Context.init_global thy) [])
-    val corres_c_combs = get_combs (Context.get_theory thy "Corres_C")
+    val corres_c_combs = get_combs (Context.get_theory {long=true} thy "CRefine.Corres_C")
     val accorres_combs = get_combs thy
     val subtract_thms = subtract (fn (a,b) => Thm.prop_of a = Thm.prop_of b)
     val accorres_extra = subtract_thms corres_c_combs accorres_combs
