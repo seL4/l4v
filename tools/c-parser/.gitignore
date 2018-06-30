@@ -8,6 +8,7 @@ globalmakevars.local
 /standalone-parser/table.ML
 /standalone-parser/ARM/
 /standalone-parser/ARM_HYP/
+/standalone-parser/RISCV64/
 /standalone-parser/X64/
 
 /tools/mllex/mllex
