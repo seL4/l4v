@@ -12,9 +12,9 @@ chapter "Platform Definitions"
 
 theory Platform
 imports
-  "../../../lib/Lib"
-  "../../../lib/Word_Lib/Word_Enum"
-  "../../../lib/Defs"
+  "Lib.Lib"
+  "Word_Lib.Word_Enum"
+  "Lib.Defs"
   "../Setup_Locale"
 begin
 
