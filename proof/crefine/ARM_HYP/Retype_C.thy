@@ -101,7 +101,7 @@ definition
   region_is_typeless :: "word32 \<Rightarrow> nat \<Rightarrow> ('a globals_scheme, 'b) StateSpace.state_scheme \<Rightarrow> bool"
 where
   "region_is_typeless ptr sz s \<equiv>
-      \<forall>z\<in>{ptr ..+ sz}. snd (snd (t_hrs_' (globals s)) z) = empty"
+      \<forall>z\<in>{ptr ..+ sz}. snd (snd (t_hrs_' (globals s)) z) = Map.empty"
 
 lemma c_guard_word8:
   "c_guard (p :: word8 ptr) = (ptr_val p \<noteq> 0)"
@@ -210,7 +210,7 @@ lemma const_less_word: "\<lbrakk> (a :: word32) - 1 < b; a \<noteq> b \<rbrakk> 
 lemma const_le_unat_word: "\<lbrakk> b < 2 ^ word_bits; of_nat b \<le> a \<rbrakk> \<Longrightarrow> b \<le> unat (a :: word32)"
   apply (clarsimp simp: word_le_def uint_nat)
   apply (subst (asm) unat_of_nat32)
-   apply (clarsimp simp: word_bits_def size)
+   apply (clarsimp simp: word_bits_def)
   apply clarsimp
   done
 
@@ -495,7 +495,7 @@ qed
 
 lemma h_t_valid_not_empty:
   fixes p :: "'a :: c_type ptr"
-  shows "\<lbrakk> d,g \<Turnstile>\<^sub>t p; x \<in> {ptr_val p..+size_of TYPE('a)} \<rbrakk> \<Longrightarrow> snd (d x) \<noteq> empty"
+  shows "\<lbrakk> d,g \<Turnstile>\<^sub>t p; x \<in> {ptr_val p..+size_of TYPE('a)} \<rbrakk> \<Longrightarrow> snd (d x) \<noteq> Map.empty"
   apply (drule intvlD)
   apply (clarsimp simp: h_t_valid_def size_of_def)
   apply (drule valid_footprintD)
@@ -3266,7 +3266,7 @@ lemma cnc_tcb_helper:
   (is "(\<sigma>\<lparr>ksPSpace := ?ks\<rparr>, globals_update ?gs' x) \<in> rf_sr")
 
 proof -
-  def ko \<equiv> "(KOCTE (makeObject :: cte))"
+  define ko where "ko \<equiv> (KOCTE (makeObject :: cte))"
   let ?ptr = "cte_Ptr (ctcb_ptr_to_tcb_ptr p)"
   let ?arr_ptr = "Ptr (ctcb_ptr_to_tcb_ptr p) :: (cte_C[5]) ptr"
   let ?sp = "\<sigma>\<lparr>ksPSpace := ks\<rparr>"
@@ -4247,7 +4247,7 @@ proof (intro impI allI)
     apply simp
     done
 
-  def big_0s \<equiv> "(replicate (2^pageBits) 0) :: word8 list"
+  define big_0s where "big_0s \<equiv> (replicate (2^pageBits) 0) :: word8 list"
 
   have "length big_0s = 4096" unfolding big_0s_def
     by simp (simp add: table_bits_defs)
@@ -5522,7 +5522,7 @@ lemma ctes_of_retype_not_cte_tcb:
   shows "map_to_ctes (\<lambda>x. if x \<in> set addrs then Some obj else ksPSpace s x)
           = (\<lambda>x. map_to_ctes (ksPSpace s) x)"
   (is "map_to_ctes ?ps' = ?map'")
-  using cte_wp_at_retype'_not_cte_tcb[where P="op = cte" for cte, OF pv _ _ al pn] pv' irrelko
+  using cte_wp_at_retype'_not_cte_tcb[where P="(=) cte" for cte, OF pv _ _ al pn] pv' irrelko
         arg_cong [where f=Not, OF cte_wp_at_retype'_not_cte_tcb [OF pv _ _ al pn, where P="\<top>"]]
   apply simp
   apply (simp add: s'_def)

@@ -242,7 +242,7 @@ proof -
     apply (clarsimp simp: asid_low_bits_def word_le_nat_alt)
     done
 
-  def ko \<equiv> "KOArch (KOASIDPool makeObject)"
+  define ko where "ko \<equiv> KOArch (KOASIDPool makeObject)"
 
   have rc :"range_cover frame (objBitsKO ko) (objBitsKO ko) (Suc 0)"
     by (simp add:objBits_simps ko_def archObjSize_def al range_cover_full)
@@ -492,7 +492,7 @@ shows
                           del: fun_upd_apply)
               apply (erule array_relation_update)
                 apply (simp add: unat_ucast)
-                apply (subst Divides.mod_less)
+                apply (subst Divides.mod_less, simp)
                  apply (drule leq_asid_bits_shift)
                  apply (simp add: asid_high_bits_def mask_def word_le_nat_alt)
                 apply simp
@@ -1981,22 +1981,6 @@ lemma createMappingEntries_valid_pde_slots'2:
    apply (rule is_aligned_shiftr)
    apply simp
   apply simp
-  done
-
-(* FIXME : move *)
-lemma of_nat_ucast:
-  "is_down (ucast :: ('a :: len) word \<Rightarrow> ('b :: len) word)
-    \<Longrightarrow> (of_nat n :: 'b word) = ucast (of_nat n :: 'a word)"
-  apply (subst word_unat.inverse_norm)
-  apply (simp add: ucast_def word_of_int[symmetric]
-                   of_nat_nat[symmetric] unat_def[symmetric])
-  apply (simp add: unat_of_nat)
-  apply (rule nat_int.Rep_eqD)
-  apply (simp only: zmod_int)
-  apply (rule mod_mod_cancel)
-  apply (subst zdvd_int[symmetric])
-  apply (rule le_imp_power_dvd)
-  apply (simp add: is_down_def target_size_def source_size_def word_size)
   done
 
 lemma mapM_x_storePDE_pde_mappings':
@@ -5117,28 +5101,27 @@ lemma writeVCPUReg_ccorres:
                             and Q'=UNIV in ccorres_rewrite_cond_sr)
   subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def
                         split: option.splits)
-                   (* unification choking on schematics with pairs *)
-                   apply (rule ccorres_guard_imp)
-                     apply (rule ccorres_Cond_rhs; clarsimp)
-                      \<comment> \<open>SCTLR to hardware\<close>
-                      apply (ctac (no_vcg) add: setSCTLR_ccorres)
-                     \<comment> \<open>SCTLR from vcpu\<close>
-                     apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-
-  (* 20 subgoals *)
-  apply (solves \<open>
-           match conclusion in "_ (heap_update (Ptr x))" for x \<Rightarrow> \<open>print_term x\<close>,
-           rule ccorres_guard_imp, rule ccorres_move_c_guard_vcpu,
-           rule_tac P="ko_at' vcpu vcpuptr" in setObject_ccorres_helper[where P'=UNIV],
-           rule conseqPre, vcg,
-           determ \<open>solve_rf_sr_vcpu_update\<close>,
-           (fastforce simp: ko_at_vcpu_at'D objBits_simps archObjSize_def machine_bits_defs)+\<close>)+
-  apply fastforce
+     (* unification choking on schematics with pairs *)
+     apply (rule_tac A="vcpu_at' vcpuptr" and A'=UNIV in ccorres_guard_imp)
+       apply (rule ccorres_Cond_rhs ; clarsimp)
+        apply (ctac (no_vcg) add: setSCTLR_ccorres)
+       apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
+      apply fastforce
+     apply fastforce
+    apply (ctac (no_vcg) add: vcpu_hw_write_reg_ccorres)
+   \<comment> \<open>no current vcpu\<close>
+   apply clarsimp
+   apply wpc
+   apply (subgoal_tac "\<not> x1")
+    prefer 2
+    apply fastforce
+   apply simp
+   apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
   apply fastforce
   done
 
 lemma vcpu_read_reg_ccorres:
-  "ccorres op = ret__unsigned_long_' \<top>
+  "ccorres (=) ret__unsigned_long_' \<top>
        (UNIV \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace> \<inter> \<lbrace> \<acute>reg = of_nat (fromEnum reg) \<rbrace>) hs
      (vcpuReadReg vcpuptr reg)
      (Call vcpu_read_reg_'proc)"
