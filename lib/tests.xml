@@ -19,8 +19,11 @@
 -->
 <testsuite cpu-timeout="600">
 
-    <set depends="isabelle CParser">
+    <set depends="isabelle">
         <test name="Lib">../isabelle/bin/isabelle build -v -d .. Lib</test>
+        <test name="Concurrency" depends="Lib">../isabelle/bin/isabelle build -v -d .. Concurrency</test>
+        <test name="CLib" depends="Lib CParser">../isabelle/bin/isabelle build -v -d .. CLib</test>
+        <test name="LibTest" depends="Lib Refine">../isabelle/bin/isabelle build -v -d .. LibTest</test>
     </set>
 
 </testsuite>
