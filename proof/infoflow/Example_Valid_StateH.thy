@@ -9,9 +9,7 @@
  *)
 
 theory Example_Valid_StateH
-imports
-  Example_Valid_State
-  ADT_IF_Refine
+imports "InfoFlow.Example_Valid_State" ADT_IF_Refine
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

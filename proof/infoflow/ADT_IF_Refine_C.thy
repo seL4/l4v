@@ -9,8 +9,7 @@
  *)
 
 theory ADT_IF_Refine_C
-imports
-    "ADT_IF_Refine" "CRefine.Refine_C"
+imports ADT_IF_Refine "CRefine.Refine_C"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -867,7 +866,6 @@ lemma c_to_haskell: "uop_nonempty uop \<Longrightarrow> global_automata_refine c
     apply (rule haskell_invs)
    apply (unfold_locales)
                         apply (simp add: ADT_C_if_def)
-                        apply blast
                        apply (simp_all add: preserves_trivial preserves'_trivial)
           apply (clarsimp simp: lift_snd_rel_def ADT_C_if_def ADT_H_if_def absKState_crelation
                                 rf_sr_def full_invs_if'_def)
