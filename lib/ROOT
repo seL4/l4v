@@ -78,6 +78,7 @@ session Lib (lib) = Word_Lib +
     DataMap
     Corres_Method
     Conjuncts
+    DetWPLib
 
     (* should really be a separate session, but too entangled atm: *)
     NonDetMonadLemmaBucket
@@ -126,7 +127,6 @@ session CLib (lib) in clib = CParser +
     CCorres_Rewrite
     Simpl_Rewrite
     MonadicRewrite_C
-    DetWPLib
     CTranslationNICTA
     LemmaBucket_C
     SIMPL_Lemmas

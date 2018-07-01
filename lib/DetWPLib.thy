@@ -9,7 +9,7 @@
  *)
 
 theory DetWPLib
-imports "Lib.HaskellLemmaBucket"
+imports HaskellLemmaBucket
 begin
 
 definition
