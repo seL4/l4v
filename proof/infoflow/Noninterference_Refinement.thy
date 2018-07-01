@@ -9,7 +9,10 @@
  *)
 
 theory Noninterference_Refinement
-imports "Noninterference" "ADT_IF_Refine_C" "Noninterference_Base_Refinement"
+imports
+  "InfoFlow.Noninterference"
+  "ADT_IF_Refine_C"
+  "InfoFlow.Noninterference_Base_Refinement"
 begin
 
 (* FIXME: fp is currently ignored by ADT_C_if *)

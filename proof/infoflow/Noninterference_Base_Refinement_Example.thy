@@ -9,8 +9,7 @@
  *)
 
 theory Noninterference_Base_Refinement_Example
-imports
-  Noninterference_Base_Refinement
+imports "InfoFlow.Noninterference_Base_Refinement"
 begin
 
 (* I don't like the 'refinedby' definition above.

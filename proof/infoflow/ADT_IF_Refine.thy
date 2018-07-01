@@ -9,8 +9,7 @@
  *)
 
 theory ADT_IF_Refine
-imports
-    "ADT_IF" "Refine.Refine" "Refine.EmptyFail_H"
+imports "InfoFlow.ADT_IF" "Refine.EmptyFail_H"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -1236,7 +1235,6 @@ lemma haskell_invs:
   supply conj_cong[cong]
   apply (unfold_locales)
                apply (simp add: ADT_H_if_def)
-               apply blast
               apply (simp_all add: checkActiveIRQ_H_if_def doUserOp_H_if_def
                                     kernelCall_H_if_def handlePreemption_H_if_def
                                     schedule'_H_if_def kernelExit_H_if_def split del: if_split)[12]
