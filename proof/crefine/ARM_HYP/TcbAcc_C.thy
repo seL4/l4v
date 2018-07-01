@@ -406,7 +406,7 @@ lemma armHSCurVCPU_update_ccorres:
                      cmachine_state_relation_def from_bool_def true_def false_def
                split: bool.split)
 
-lemmas armHSCurVCPU_update_active_ccorres2 = armHSCurVCPU_update_ccorres[where curv="Some (v, b)"]
+lemmas armHSCurVCPU_update_active_ccorres2 = armHSCurVCPU_update_ccorres[where curv="Some (v, b)" for v b]
 
 lemma invs'_HScurVCPU_vcpu_at':
   "\<lbrakk>invs' s; armHSCurVCPU (ksArchState s) = Some (a, b) \<rbrakk> \<Longrightarrow> vcpu_at' a s"
