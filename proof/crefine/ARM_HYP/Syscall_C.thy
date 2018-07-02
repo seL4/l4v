@@ -2052,7 +2052,6 @@ proof -
       apply (rule_tac P=runnable in  ccorres_cases; clarsimp)
        prefer 2
        apply ccorres_rewrite
-       apply (rule ccorres_return_void_C_Seq)
        apply (rule ccorres_return_void_C)
       apply ccorres_rewrite
       apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_eisr0_ccorres)
