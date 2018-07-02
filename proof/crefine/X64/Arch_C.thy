@@ -5142,6 +5142,66 @@ lemma first_port_last_port_compare:
   apply (subst sint_ucast_eq_uint, clarsimp simp: is_down)+
   by (simp add: word_less_alt)
 
+
+(* FIXME X64: move to state rel? *)
+abbreviation
+  "x86KSAllocatedIOPorts_ptr == ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts'')"
+
+(* FIXME X64: use earlier or replace with earlier def? *)
+definition
+  port_pattern :: "16 word \<Rightarrow> 16 word \<Rightarrow> machine_word"
+where
+  "port_pattern start end =
+     mask (unat (start && mask wordRadix)) && ~~mask (unat (end && mask wordRadix))"
+
+lemma isIOPortRangeFree_spec:
+  "\<forall>\<sigma>. \<Gamma> \<turnstile>
+    {\<sigma>}
+      Call isIOPortRangeFree_'proc
+    {t. \<sigma> \<Turnstile>\<^sub>c x86KSAllocatedIOPorts_ptr \<longrightarrow>
+        (\<forall>port_array. cslift t x86KSAllocatedIOPorts_ptr = Some port_array \<longrightarrow>
+          ret__unsigned_long_' t = 1 \<longleftrightarrow>
+            (let f = first_port_' \<sigma>;
+                l = last_port_' \<sigma>;
+                fi = unat (f >> wordRadix);
+                li = unat (l >> wordRadix)
+             in
+               (\<forall>x. fi < x \<longrightarrow> x < li \<longrightarrow> port_array.[x] = 0) \<and>
+               (fi = li \<longrightarrow> port_array.[fi] && port_pattern f l = 0) \<and>
+               (fi \<noteq> li \<longrightarrow> port_array.[fi] && port_pattern f (of_nat word_bits) = 0) \<and>
+                            port_array.[li] && port_pattern 0 (last_port_' \<sigma>) = 0))}"
+  supply true_def[simp] false_def[simp] wordRadix_def[simp]
+  apply (rule allI)
+  subgoal for \<sigma>
+  apply (hoare_rule HoarePartial.ProcNoRec1)
+  apply (simp add: scast_ucast_up_eq_ucast word_upcast_0_sle)
+  apply (subst whileAnno_subst_invariant [where I="{s. s \<Turnstile>\<^sub>c x86KSAllocatedIOPorts_ptr
+                          \<and> low_word_' s <=s high_word_' \<sigma>
+                          \<and> 0 <=s low_word_' s
+                          \<and> high_word_' s <s 0x400
+                          \<and> high_index_' s = ucast (last_port_' \<sigma>) && mask wordRadix
+                          \<and> globals s = globals \<sigma>
+                          \<and> first_port_' s = first_port_' \<sigma>
+                          \<and> last_port_' s = last_port_' \<sigma> \<and>
+        (\<forall>port_array. cslift s x86KSAllocatedIOPorts_ptr = Some port_array \<longrightarrow>
+           (let f = first_port_' \<sigma>;
+                l = low_word_' s;
+                fi = unat (f >> wordRadix);
+                li = unat (l >> wordRadix)
+             in
+               (\<forall>x. fi < x \<longrightarrow> x < li \<longrightarrow> port_array.[x] = 0) \<and>
+               (fi \<noteq> li \<longrightarrow> port_array.[fi] && port_pattern f (of_nat word_bits) = 0)))}"])
+  apply vcg
+    apply clarsimp
+    defer
+   apply clarsimp
+   apply (rule conjI, fastforce)
+   defer
+  apply clarsimp
+  sorry
+  done
+
+
 lemma isIOPortRangeFree_ccorres:
   notes Collect_const[simp del]
   shows
