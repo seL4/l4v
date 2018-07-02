@@ -8,6 +8,10 @@
  * @TAG(NICTA_GPL)
  *)
 
+
+text{* This file contains a bunch of lemmas about updating the "extrenal flag of a PAS.
+  The concerned flags are the current subject, MayEditReadyQueue and MayActivate *}
+
 theory PasUpdates
 imports
     "Arch_IF"
@@ -18,14 +22,28 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+section {* Separation lemmas for the idle thread and domain fields *}
+
 crunch idle_thread[wp]: preemption_point "\<lambda>s::det_state. P (idle_thread s)"
 (wp: OR_choiceE_weak_wp crunch_wps simp: crunch_simps ignore: do_extended_op OR_choiceE)
 
-crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cancel_badged_sends "\<lambda>s::det_state. P (idle_thread s)" (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp dxo_wp_weak simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
+crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,
+                        cancel_badged_sends
+                        "\<lambda>s::det_state. P (idle_thread s)"
+  (   wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp
+          dxo_wp_weak
+    simp: crunch_simps check_cap_at_def filterM_mapM unless_def
+  ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
 
-crunch idle_thread[wp]: handle_event "\<lambda>s::det_state. P (idle_thread s)" (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation dxo_wp_weak simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke resetTimer ackInterrupt getFAR getDFSR getIFSR getActiveIRQ)
+crunch idle_thread[wp]: handle_event "\<lambda>s::det_state. P (idle_thread s)"
+  (  wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation dxo_wp_weak
+   simp: crunch_simps check_cap_at_def filterM_mapM unless_def
+ ignore: without_preemption filterM rec_del check_cap_at cap_revoke resetTimer ackInterrupt
+         getFAR getDFSR getIFSR getActiveIRQ)
 
-abbreviation (input) domain_fields where "domain_fields P s \<equiv> P (domain_time s) (domain_index s) (domain_list s)"
+abbreviation (input) domain_fields
+where
+  "domain_fields P s \<equiv> P (domain_time s) (domain_index s) (domain_list s)"
 
 lemma preemption_point_domain_fields[wp]:
   "\<lbrace>domain_fields P\<rbrace> preemption_point \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
@@ -34,7 +52,15 @@ lemma preemption_point_domain_fields[wp]:
       | wpc
       | simp add: reset_work_units_def update_work_units_def)+
 
-crunch domain_fields[wp]: retype_region_ext,create_cap_ext,cap_insert_ext,ethread_set,cap_move_ext,empty_slot_ext,cap_swap_ext,set_thread_state_ext,tcb_sched_action,reschedule_required,cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cancel_badged_sends,cap_insert "domain_fields P" (wp: syscall_valid select_wp crunch_wps rec_del_preservation cap_revoke_preservation modify_wp simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
+crunch domain_fields[wp]: retype_region_ext,create_cap_ext,cap_insert_ext,ethread_set,
+                          cap_move_ext,empty_slot_ext,cap_swap_ext,set_thread_state_ext,
+                          tcb_sched_action,reschedule_required,cap_swap_for_delete,
+                          finalise_cap,cap_move,cap_swap,cap_delete,cancel_badged_sends,
+                          cap_insert
+                          "domain_fields P"
+  (   wp: syscall_valid select_wp crunch_wps rec_del_preservation cap_revoke_preservation modify_wp
+    simp: crunch_simps check_cap_at_def filterM_mapM unless_def
+  ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
 
 lemma cap_revoke_domain_fields[wp]:"\<lbrace>domain_fields P\<rbrace> cap_revoke a \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
   by (rule cap_revoke_preservation2; wp)
@@ -53,6 +79,8 @@ crunch domain_fields[wp]:
    ignore: check_cap_at syscall
    rule: transfer_caps_loop_pres)
 
+section {* PAS wellformedness property for non-interference *}
+
 definition pas_wellformed_noninterference where
   "pas_wellformed_noninterference aag \<equiv>
     (\<forall>x\<in>range (pasObjectAbs aag) - {SilcLabel}.
@@ -63,6 +91,8 @@ lemma pas_wellformed_noninterference_silc[intro!]:
   "pas_wellformed_noninterference aag \<Longrightarrow> pasDomainAbs aag x \<noteq> SilcLabel"
   apply (simp add: pas_wellformed_noninterference_def)
   done
+
+section {* PAS subject update *}
 
 lemma pasObjectAbs_pasSubject_update:
   "pasObjectAbs (aag\<lparr> pasSubject := x \<rparr>) = pasObjectAbs aag"
@@ -115,14 +145,12 @@ lemma state_irqs_to_policy_pasSubject_update:
 lemma irq_map_wellformed_pasSubject_update:
   "irq_map_wellformed_aux (aag\<lparr> pasSubject := x \<rparr>) irqn =
    irq_map_wellformed_aux aag irqn"
-  apply(clarsimp simp: irq_map_wellformed_aux_def)
-  done
+  by (clarsimp simp: irq_map_wellformed_aux_def)
 
 lemma tcb_domain_map_wellformed_pasSubject_update:
   "tcb_domain_map_wellformed_aux (aag\<lparr> pasSubject := x \<rparr>) irqn =
    tcb_domain_map_wellformed_aux aag irqn"
-  apply(clarsimp simp: tcb_domain_map_wellformed_aux_def)
-  done
+  by (clarsimp simp: tcb_domain_map_wellformed_aux_def)
 
 lemma pas_refined_pasSubject_update':
    "\<lbrakk>pas_refined aag s; pas_wellformed (aag\<lparr> pasSubject := x \<rparr>)\<rbrakk> \<Longrightarrow>
@@ -141,24 +169,24 @@ lemma pas_wellformed_pasSubject_update:
    pas_wellformed (aag\<lparr>pasSubject := pasDomainAbs aag x\<rparr>)"
   by (auto simp: pas_wellformed_noninterference_def)
 
-lemmas pas_refined_pasSubject_update = pas_refined_pasSubject_update'[OF _ pas_wellformed_pasSubject_update]
+lemmas pas_refined_pasSubject_update =
+                   pas_refined_pasSubject_update'[OF _ pas_wellformed_pasSubject_update]
 
 lemma guarded_pas_domain_pasSubject_update[simp]:
   "guarded_pas_domain (aag\<lparr>pasSubject := x\<rparr>) s = guarded_pas_domain aag s"
-  apply (simp add: guarded_pas_domain_def)
-  done
+  by (simp add: guarded_pas_domain_def)
 
 
 lemma silc_inv_pasSubject_update':
   "\<lbrakk>silc_inv aag st s; x \<noteq> SilcLabel\<rbrakk> \<Longrightarrow> silc_inv (aag\<lparr>pasSubject := x\<rparr>) st s"
-  apply(auto simp: silc_inv_def silc_dom_equiv_def equiv_for_def intra_label_cap_def cap_points_to_label_def)
-  done
+  by (auto simp: silc_inv_def silc_dom_equiv_def intra_label_cap_def cap_points_to_label_def)
 
 lemma silc_inv_pasSubject_update:
-  "\<lbrakk>silc_inv aag st s; pas_wellformed_noninterference aag\<rbrakk> \<Longrightarrow> silc_inv (aag\<lparr>pasSubject := pasDomainAbs aag x\<rparr>) st s"
-  apply (clarsimp intro!: silc_inv_pasSubject_update')
-  done
+  "\<lbrakk>silc_inv aag st s; pas_wellformed_noninterference aag\<rbrakk>
+   \<Longrightarrow> silc_inv (aag\<lparr>pasSubject := pasDomainAbs aag x\<rparr>) st s"
+  by (clarsimp intro!: silc_inv_pasSubject_update')
 
+section {* PAS MayActivate update *}
 
 lemma prop_of_pasMayActivate_update_idemp:
   "\<lbrakk>P aag; pasMayActivate aag = v\<rbrakk> \<Longrightarrow> P (aag\<lparr> pasMayActivate := v \<rparr>)"
@@ -166,18 +194,15 @@ lemma prop_of_pasMayActivate_update_idemp:
 
 lemma pasObjectAbs_pasMayActivate_update:
   "pasObjectAbs (aag\<lparr> pasMayActivate := x \<rparr>) = pasObjectAbs aag"
-  apply simp
-  done
+  by simp
 
 lemma pasASIDAbs_pasMayActivate_update:
   "pasASIDAbs (aag\<lparr> pasMayActivate := x \<rparr>) = pasASIDAbs aag"
-  apply simp
-  done
+  by simp
 
 lemma pasIRQAbs_pasMayActivate_update:
   "pasIRQAbs (aag\<lparr> pasMayActivate := x \<rparr>) = pasIRQAbs aag"
-  apply simp
-  done
+  by simp
 
 lemma state_asids_to_policy_pasMayActivate_update:
   "state_asids_to_policy (aag\<lparr> pasMayActivate := x \<rparr>) s =
@@ -215,8 +240,15 @@ lemma pas_refined_pasMayActivate_update:
   "pas_refined aag s \<Longrightarrow>
    pas_refined (aag\<lparr> pasMayActivate := x \<rparr>) s"
   apply(simp add: pas_refined_def)
-  apply(clarsimp simp: irq_map_wellformed_aux_def state_asids_to_policy_pasMayActivate_update state_irqs_to_policy_pasMayActivate_update tcb_domain_map_wellformed_aux_def)
+  apply(clarsimp simp: irq_map_wellformed_aux_def state_asids_to_policy_pasMayActivate_update
+                       state_irqs_to_policy_pasMayActivate_update tcb_domain_map_wellformed_aux_def)
   done
+
+lemma guarded_pas_domainMayActivate_update[simp]:
+  "guarded_pas_domain (aag\<lparr>pasMayActivate := False\<rparr>) = guarded_pas_domain aag"
+  by (simp add: guarded_pas_domain_def)
+
+section {* PAS MayEditReadyQueue update *}
 
 lemma prop_of_pasMayEditReadyQueues_update_idemp:
   "\<lbrakk>P aag; pasMayEditReadyQueues aag = v\<rbrakk> \<Longrightarrow> P (aag\<lparr> pasMayEditReadyQueues := v \<rparr>)"
@@ -224,18 +256,15 @@ lemma prop_of_pasMayEditReadyQueues_update_idemp:
 
 lemma pasObjectAbs_pasMayEditReadyQueues_update:
   "pasObjectAbs (aag\<lparr> pasMayEditReadyQueues := x \<rparr>) = pasObjectAbs aag"
-  apply simp
-  done
+  by simp
 
 lemma pasASIDAbs_pasMayEditReadyQueues_update:
   "pasASIDAbs (aag\<lparr> pasMayEditReadyQueues := x \<rparr>) = pasASIDAbs aag"
-  apply simp
-  done
+  by simp
 
 lemma pasIRQAbs_pasMayEditReadyQueues_update:
   "pasIRQAbs (aag\<lparr> pasMayEditReadyQueues := x \<rparr>) = pasIRQAbs aag"
-  apply simp
-  done
+  by simp
 
 lemma state_asids_to_policy_pasMayEditReadyQueues_update:
   "state_asids_to_policy (aag\<lparr> pasMayEditReadyQueues := x \<rparr>) s =
@@ -273,8 +302,15 @@ lemma pas_refined_pasMayEditReadyQueues_update:
   "pas_refined aag s \<Longrightarrow>
    pas_refined (aag\<lparr> pasMayEditReadyQueues := x \<rparr>) s"
   apply(simp add: pas_refined_def)
-  apply(clarsimp simp: irq_map_wellformed_aux_def state_asids_to_policy_pasMayEditReadyQueues_update state_irqs_to_policy_pasMayEditReadyQueues_update tcb_domain_map_wellformed_aux_def)
+  apply(clarsimp simp: irq_map_wellformed_aux_def
+                       state_asids_to_policy_pasMayEditReadyQueues_update
+                       state_irqs_to_policy_pasMayEditReadyQueues_update
+                       tcb_domain_map_wellformed_aux_def)
   done
+
+lemma guarded_pas_domainMayEditReadyQueues_update[simp]:
+  "guarded_pas_domain (aag\<lparr>pasMayEditReadyQueues := False\<rparr>) = guarded_pas_domain aag"
+  by (simp add: guarded_pas_domain_def)
 
 end
 
