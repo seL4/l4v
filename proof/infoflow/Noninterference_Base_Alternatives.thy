@@ -23,8 +23,8 @@ context noninterference_system begin
 
 (* the following definition turns out to yield an information flow property equivalent
    to the above one -- see below *)
-primrec
- xources :: "'e list \<Rightarrow> 's \<Rightarrow> 'd \<Rightarrow> 'd set" where
+primrec xources :: "'e list \<Rightarrow> 's \<Rightarrow> 'd \<Rightarrow> 'd set"
+where
  xources_Nil: "xources [] s u = {u}"|
  xources_Cons: "xources (a#as) s u = (\<Inter>{xources as s' u| s'. (s,s') \<in> Step a}) \<union>
       {w. w = dom a s \<and> (\<forall> s'. (s,s') \<in> Step a \<longrightarrow> (\<exists> v. dom a s \<leadsto> v \<and> v \<in> xources as s' u))}"
@@ -65,16 +65,16 @@ where
 
 
 
-definition
-  xpurge :: "'d \<Rightarrow> 'e list \<Rightarrow> 's set \<Rightarrow> 'e list" where
+definition xpurge :: "'d \<Rightarrow> 'e list \<Rightarrow> 's set \<Rightarrow> 'e list"
+where
  "xpurge \<equiv> gen_purge xources"
 
-definition
-  ipurgx :: "'d \<Rightarrow> 'e list \<Rightarrow> 's set \<Rightarrow> 'e list" where
+definition ipurgx :: "'d \<Rightarrow> 'e list \<Rightarrow> 's set \<Rightarrow> 'e list"
+where
  "ipurgx \<equiv> gen_purgx sources"
 
-definition
-  xpurgx :: "'d \<Rightarrow> 'e list \<Rightarrow> 's set \<Rightarrow> 'e list" where
+definition xpurgx :: "'d \<Rightarrow> 'e list \<Rightarrow> 's set \<Rightarrow> 'e list"
+where
  "xpurgx \<equiv> gen_purgx xources"
 
 
@@ -172,13 +172,16 @@ lemma xpurge_ipurge':
   "confidentiality_u \<Longrightarrow> (\<forall> s\<in>ss. reachable s) \<longrightarrow> xpurge u as ss = ipurge u as ss"
   apply(induct as arbitrary: ss)
    apply(simp add: xpurge_Nil ipurge_Nil)
-  apply(clarsimp simp: ipurge_Cons xpurge_Cons xources_sources[rule_format] intro: reachable_Step | safe)+
+  apply(clarsimp simp: ipurge_Cons xpurge_Cons xources_sources[rule_format] intro: reachable_Step
+       | safe)+
   apply(drule_tac x="\<Union>s\<in>ss. {s'. (s,s') \<in> Step a}" in meta_spec)
   apply(fastforce intro: reachable_Step)
   done
 
 lemma ipurgx_xpurge':
-  "confidentiality_u \<Longrightarrow> (\<forall> s\<in>ss. reachable s) \<and> (\<exists>s. s \<in> ss) \<and> (\<forall> s s'. s\<in>ss \<and> s'\<in>ss \<longrightarrow> s\<sim>schedDomain\<sim>s') \<longrightarrow> ipurgx u as ss = xpurge u as ss"
+  "confidentiality_u
+   \<Longrightarrow> (\<forall> s\<in>ss. reachable s) \<and> (\<exists>s. s \<in> ss) \<and>
+       (\<forall> s s'. s\<in>ss \<and> s'\<in>ss \<longrightarrow> s\<sim>schedDomain\<sim>s') \<longrightarrow> ipurgx u as ss = xpurge u as ss"
   apply(induct as arbitrary: ss)
    apply(simp add: ipurgx_Nil xpurge_Nil)
   apply(clarsimp simp: xpurge_Cons ipurgx_Cons | safe)+
@@ -299,7 +302,8 @@ definition
          xpurgx u as {s} = xpurgx u bs {s} \<longrightarrow>
          uwr_equiv s as t bs u"
 
-(* The following perhaps feels more natural, but we show is equivalent. 'pg' here is for Pete Gammie who pushed me to prove this. *)
+(* The following perhaps feels more natural, but we show is equivalent.
+   'pg' here is for Pete Gammie who pushed me to prove this. *)
 definition
   Noninfluence_strong_uwr_pg :: "bool" where
  "Noninfluence_strong_uwr_pg \<equiv>
@@ -483,72 +487,93 @@ lemma xNonleakage_gen_confidentiality_u:
   apply(simp add: xources_Step uwr_equiv_def sameFor_dom_def Step_def)
   done
 
-lemma xNoninfluence_strong_uwr_xources_ipurge_integrity_u: "xNoninfluence_strong_uwr_xources_ipurge \<Longrightarrow> integrity_u"
+lemma xNoninfluence_strong_uwr_xources_ipurge_integrity_u:
+  "xNoninfluence_strong_uwr_xources_ipurge \<Longrightarrow> integrity_u"
   apply(clarsimp simp: xNoninfluence_strong_uwr_xources_ipurge_def integrity_u_def)
   apply(drule_tac x=u in spec, drule_tac x="[a]" in spec, drule_tac x="[]" in spec)
   apply(drule_tac x=s in spec, drule_tac x=s in spec)
-  apply(simp add: sources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def ipurge_Cons ipurge_Nil split: if_splits)
+  apply(simp add: sources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def ipurge_Cons
+                  ipurge_Nil
+           split: if_splits)
    apply(simp add: policy_refl)
   apply(simp add: execution_Nil)
   apply(blast intro: uwr_sym)
   done
 
-lemma xNoninfluence_strong_uwr_sources_xpurge_integrity_u: "xNoninfluence_strong_uwr_sources_xpurge \<Longrightarrow> integrity_u"
+lemma xNoninfluence_strong_uwr_sources_xpurge_integrity_u:
+  "xNoninfluence_strong_uwr_sources_xpurge \<Longrightarrow> integrity_u"
   apply(clarsimp simp: xNoninfluence_strong_uwr_sources_xpurge_def integrity_u_def)
   apply(drule_tac x=u in spec, drule_tac x="[a]" in spec, drule_tac x="[]" in spec)
   apply(drule_tac x=s in spec, drule_tac x=s in spec)
-  apply(simp add: xources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def xpurge_Cons xpurge_Nil split: if_splits)
+  apply(simp add: xources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def xpurge_Cons
+                  xpurge_Nil
+           split: if_splits)
    apply(simp add: policy_refl)
   apply(simp add: execution_Nil)
   apply(blast intro: uwr_sym)
   done
 
-lemma xNoninfluence_strong_uwr_xources_xpurge_integrity_u: "xNoninfluence_strong_uwr_xources_xpurge \<Longrightarrow> integrity_u"
+lemma xNoninfluence_strong_uwr_xources_xpurge_integrity_u:
+  "xNoninfluence_strong_uwr_xources_xpurge \<Longrightarrow> integrity_u"
   apply(clarsimp simp: xNoninfluence_strong_uwr_xources_xpurge_def integrity_u_def)
   apply(drule_tac x=u in spec, drule_tac x="[a]" in spec, drule_tac x="[]" in spec)
   apply(drule_tac x=s in spec, drule_tac x=s in spec)
-  apply(simp add: xources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def xpurge_Cons xpurge_Nil split: if_splits)
+  apply(simp add: xources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def xpurge_Cons
+                  xpurge_Nil
+           split: if_splits)
    apply(simp add: policy_refl)
   apply(simp add: execution_Nil)
   apply(blast intro: uwr_sym)
   done
 
 
-lemma xNoninfluence_strong_uwr_sources_ipurgx_integrity_u: "xNoninfluence_strong_uwr_sources_ipurgx \<Longrightarrow> integrity_u"
+lemma xNoninfluence_strong_uwr_sources_ipurgx_integrity_u:
+  "xNoninfluence_strong_uwr_sources_ipurgx \<Longrightarrow> integrity_u"
   apply(clarsimp simp: xNoninfluence_strong_uwr_sources_ipurgx_def integrity_u_def)
   apply(drule_tac x=u in spec, drule_tac x="[a]" in spec, drule_tac x="[]" in spec)
   apply(drule_tac x=s in spec, drule_tac x=s in spec)
-  apply(simp add: sources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def ipurgx_Cons ipurgx_Nil split: if_splits)
+  apply(simp add: sources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def ipurgx_Cons
+                  ipurgx_Nil
+           split: if_splits)
    apply(simp add: policy_refl)
   apply(simp add: execution_Nil)
   apply(blast intro: uwr_sym)
   done
 
-lemma xNoninfluence_strong_uwr_xources_ipurgx_integrity_u: "xNoninfluence_strong_uwr_xources_ipurgx \<Longrightarrow> integrity_u"
+lemma xNoninfluence_strong_uwr_xources_ipurgx_integrity_u:
+  "xNoninfluence_strong_uwr_xources_ipurgx \<Longrightarrow> integrity_u"
   apply(clarsimp simp: xNoninfluence_strong_uwr_xources_ipurgx_def integrity_u_def)
   apply(drule_tac x=u in spec, drule_tac x="[a]" in spec, drule_tac x="[]" in spec)
   apply(drule_tac x=s in spec, drule_tac x=s in spec)
-  apply(simp add: sources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def ipurgx_Cons ipurgx_Nil split: if_splits)
+  apply(simp add: sources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def ipurgx_Cons
+                  ipurgx_Nil
+           split: if_splits)
    apply(simp add: policy_refl)
   apply(simp add: execution_Nil)
   apply(blast intro: uwr_sym)
   done
 
-lemma xNoninfluence_strong_uwr_sources_xpurgx_integrity_u: "xNoninfluence_strong_uwr_sources_xpurgx \<Longrightarrow> integrity_u"
+lemma xNoninfluence_strong_uwr_sources_xpurgx_integrity_u:
+  "xNoninfluence_strong_uwr_sources_xpurgx \<Longrightarrow> integrity_u"
   apply(clarsimp simp: xNoninfluence_strong_uwr_sources_xpurgx_def integrity_u_def)
   apply(drule_tac x=u in spec, drule_tac x="[a]" in spec, drule_tac x="[]" in spec)
   apply(drule_tac x=s in spec, drule_tac x=s in spec)
-  apply(simp add: xources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def xpurgx_Cons xpurgx_Nil split: if_splits)
+  apply(simp add: xources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def xpurgx_Cons
+                  xpurgx_Nil
+           split: if_splits)
    apply(simp add: policy_refl)
   apply(simp add: execution_Nil)
   apply(blast intro: uwr_sym)
   done
 
-lemma xNoninfluence_strong_uwr_xources_xpurgx_integrity_u: "xNoninfluence_strong_uwr_xources_xpurgx \<Longrightarrow> integrity_u"
+lemma xNoninfluence_strong_uwr_xources_xpurgx_integrity_u:
+  "xNoninfluence_strong_uwr_xources_xpurgx \<Longrightarrow> integrity_u"
   apply(clarsimp simp: xNoninfluence_strong_uwr_xources_xpurgx_def integrity_u_def)
   apply(drule_tac x=u in spec, drule_tac x="[a]" in spec, drule_tac x="[]" in spec)
   apply(drule_tac x=s in spec, drule_tac x=s in spec)
-  apply(simp add: xources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def xpurgx_Cons xpurgx_Nil split: if_splits)
+  apply(simp add: xources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def xpurgx_Cons
+                  xpurgx_Nil
+           split: if_splits)
    apply(simp add: policy_refl)
   apply(simp add: execution_Nil)
   apply(blast intro: uwr_sym)
@@ -558,7 +583,9 @@ lemma Noninfluence_strong_uwr_pg_integrity_u: "Noninfluence_strong_uwr_pg \<Long
   apply(clarsimp simp: Noninfluence_strong_uwr_pg_def integrity_u_def)
   apply(drule_tac x=u in spec, drule_tac x="[a]" in spec, drule_tac x="[]" in spec)
   apply(drule_tac x=s in spec, drule_tac x=s in spec)
-  apply(simp add: sources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def ipurge_Cons ipurge_Nil split: if_splits)
+  apply(simp add: sources_Step sameFor_dom_def uwr_refl uwr_equiv_def Step_def ipurge_Cons
+                  ipurge_Nil
+           split: if_splits)
    apply(simp add: policy_refl)
   apply(simp add: execution_Nil)
   apply(blast intro: uwr_sym)
