@@ -105,7 +105,12 @@ in
    * so don't overwrite the levity log *)
   then warning ("No traces for session: " ^ this_session)
   else levity_report_all output_path
-end;
+end
+handle exn =>
+  (* from Pure/Tools/build.ML *)
+  (List.app (fn msg => writeln (encode_lines (YXML.content_of msg)))
+            (Runtime.exn_message_list exn);
+   Exn.reraise exn);
 
 end
 \<close>
