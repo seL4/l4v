@@ -5142,77 +5142,160 @@ lemma first_port_last_port_compare:
   apply (subst sint_ucast_eq_uint, clarsimp simp: is_down)+
   by (simp add: word_less_alt)
 
-
 (* FIXME X64: move to state rel? *)
 abbreviation
   "x86KSAllocatedIOPorts_ptr == ioport_table_Ptr (symbol_table ''x86KSAllocatedIOPorts'')"
 
 (* FIXME X64: use earlier or replace with earlier def? *)
 definition
-  port_pattern :: "16 word \<Rightarrow> 16 word \<Rightarrow> machine_word"
+  port_mask :: "16 word \<Rightarrow> 16 word \<Rightarrow> machine_word"
 where
-  "port_pattern start end =
-     mask (unat (start && mask wordRadix)) && ~~mask (unat (end && mask wordRadix))"
+  "port_mask start end =
+     mask (unat (end && mask wordRadix)) && ~~ mask (unat (start && mask wordRadix))"
+
+lemma shiftr_le_mask:
+  fixes w :: "'a::len word"
+  shows "w >> n \<le> mask (LENGTH('a) - n)"
+  by (metis and_mask_eq_iff_shiftr_0 le_mask_iff shiftr_mask_eq word_size)
+
+lemma word_minus_1_shiftr:
+  fixes w :: "'a::len word"
+  assumes "w && mask n = 0"
+  assumes "w \<noteq> 0"
+  shows "(w - 1) >> n = (w >> n) - 1"
+  sorry
 
 lemma isIOPortRangeFree_spec:
+  notes ucast_mask = ucast_and_mask[where n=6, simplified mask_def, simplified]
+  notes not_max_word_simps = and_not_max_word shiftr_not_max_word and_mask_not_max_word
+  notes ucast_cmp_ucast = ucast_le_ucast ucast_less_ucast
+  notes array_assert = array_assertion_shrink_right[OF array_ptr_valid_array_assertionD]
+  notes unat_arith_simps' = unat_arith_simps[where 'a=16] unat_arith_simps[where 'a="32 signed"]
+  notes word_unat.Rep_inject[simp del] int_unat[simp del]
+  defines "port_array s \<equiv> h_val (hrs_mem (t_hrs_' (globals s))) x86KSAllocatedIOPorts_ptr"
+  shows
   "\<forall>\<sigma>. \<Gamma> \<turnstile>
-    {\<sigma>}
+    {s. s = \<sigma> \<and> first_port_' s \<le> last_port_' s \<and> s \<Turnstile>\<^sub>c x86KSAllocatedIOPorts_ptr }
       Call isIOPortRangeFree_'proc
-    {t. \<sigma> \<Turnstile>\<^sub>c x86KSAllocatedIOPorts_ptr \<longrightarrow>
-        (\<forall>port_array. cslift t x86KSAllocatedIOPorts_ptr = Some port_array \<longrightarrow>
-          ret__unsigned_long_' t = 1 \<longleftrightarrow>
-            (let f = first_port_' \<sigma>;
-                l = last_port_' \<sigma>;
-                fi = unat (f >> wordRadix);
-                li = unat (l >> wordRadix)
-             in
-               (\<forall>x. fi < x \<longrightarrow> x < li \<longrightarrow> port_array.[x] = 0) \<and>
-               (fi = li \<longrightarrow> port_array.[fi] && port_pattern f l = 0) \<and>
-               (fi \<noteq> li \<longrightarrow> port_array.[fi] && port_pattern f (of_nat word_bits) = 0) \<and>
-                            port_array.[li] && port_pattern 0 (last_port_' \<sigma>) = 0))}"
-  supply true_def[simp] false_def[simp] wordRadix_def[simp]
+    {t. globals t = globals \<sigma> \<and>
+        ret__unsigned_long_' t = from_bool
+          (\<forall>port. first_port_' \<sigma> \<le> port \<and> port \<le> last_port_' \<sigma>
+                   \<longrightarrow> \<not> port_array \<sigma>.[unat (port >> wordRadix)] !! unat (port && mask wordRadix))}"
   apply (rule allI)
   subgoal for \<sigma>
   apply (hoare_rule HoarePartial.ProcNoRec1)
-  apply (simp add: scast_ucast_up_eq_ucast word_upcast_0_sle)
-  apply (subst whileAnno_subst_invariant [where I="{s. s \<Turnstile>\<^sub>c x86KSAllocatedIOPorts_ptr
-                          \<and> low_word_' s <=s high_word_' \<sigma>
-                          \<and> 0 <=s low_word_' s
-                          \<and> high_word_' s <s 0x400
-                          \<and> high_index_' s = ucast (last_port_' \<sigma>) && mask wordRadix
-                          \<and> globals s = globals \<sigma>
-                          \<and> first_port_' s = first_port_' \<sigma>
-                          \<and> last_port_' s = last_port_' \<sigma> \<and>
-        (\<forall>port_array. cslift s x86KSAllocatedIOPorts_ptr = Some port_array \<longrightarrow>
-           (let f = first_port_' \<sigma>;
-                l = low_word_' s;
-                fi = unat (f >> wordRadix);
-                li = unat (l >> wordRadix)
-             in
-               (\<forall>x. fi < x \<longrightarrow> x < li \<longrightarrow> port_array.[x] = 0) \<and>
-               (fi \<noteq> li \<longrightarrow> port_array.[fi] && port_pattern f (of_nat word_bits) = 0)))}"])
-  apply vcg
-    apply clarsimp
-    defer
-   apply clarsimp
-   apply (rule conjI, fastforce)
-   defer
-  apply clarsimp
-  sorry
+  apply (simp add: scast_ucast_up_eq_ucast word_upcast_shiftr[symmetric] ucast_mask[symmetric]
+                   word_upcast_0_sle)
+  apply (subst whileAnno_subst_invariant
+                 [where I="{s. globals s = globals \<sigma>
+                             \<and> first_port_' \<sigma> \<le> last_port_' \<sigma>
+                             \<and> \<sigma> \<Turnstile>\<^sub>c x86KSAllocatedIOPorts_ptr
+                             \<and> ucast (first_port_' \<sigma> >> wordRadix) < low_word_' s
+                             \<and> low_word_' s <= high_word_' s
+                             \<and> high_word_' s = ucast (last_port_' \<sigma> >> wordRadix)
+                             \<and> high_index_' s = ucast (last_port_' \<sigma> && mask wordRadix)
+                             \<and> (\<forall>port. first_port_' \<sigma> \<le> port \<and> ucast port < low_word_' s << wordRadix
+                                        \<longrightarrow> \<not> port_array \<sigma>.[unat (port >> wordRadix)]
+                                                !! unat (port && mask wordRadix))}"])
+  apply (simp add: port_array_def)
+  apply (rule conseqPre, vcg)
+    apply (all \<open>clarsimp simp: hrs_simps false_def from_bool_0 wordRadix_def is_up is_down
+                               unat_ucast_upcast uint_up_ucast sint_ucast_eq_uint up_ucast_inj_eq
+                               not_max_word_simps[THEN ucast_increment, simplified max_word_def]
+                               ucast_cmp_ucast ucast_cmp_ucast[where 'a=16 and y="0x40", simplified]\<close>)
+    subgoal for mem htd first_port last_port low_word
+      (* Loop invariant is preserved. *)
+      apply (frule neg_msb_le_mono[OF _ word_upcast_neg_msb], simp)
+      apply (simp add: word_sless_iff_less word_sle_iff_le word_upcast_neg_msb
+                       Word_Lemmas.sint_eq_uint uint_nat)
+      apply (frule less_le_trans[OF _ ucast_le_ucast[THEN iffD2],
+                                 OF _ _ shiftr_le_mask[unfolded mask_def]]; simp)
+      apply (intro conjI impI allI; (simp add: unat_arith_simps; fail)?)
+       apply (drule word_exists_nth; clarsimp)
+       subgoal for i
+         apply (rule_tac x="ucast (low_word << 6 + i)" in exI)
+         apply (match premises in L: \<open>_ < low_word\<close> and U: \<open>low_word < _\<close> (multi) and V: \<open>test_bit _ _\<close>
+                  \<Rightarrow> \<open>match premises in _[thin]: _ (multi) \<Rightarrow> \<open>insert L U V\<close>\<close>)
+         apply (frule test_bit_size; simp add: word_size)
+         apply (simp add: word_upcast_shiftr)
+         sorry
+      subgoal for port
+        apply (case_tac "ucast port < low_word << 6"; (simp add: unat_arith_simps; fail)?)
+        apply (clarsimp simp: not_less)
+        apply (subgoal_tac "low_word = ucast (port >> 6)", simp add: unat_arith_simps')
+        apply (match premises in L: \<open>low_word << 6 \<le> ucast port\<close> and
+                                 U: \<open>ucast port < low_word + 1 << 6\<close> and
+                                 T: \<open>low_word < 0x3FF\<close>for port
+                 \<Rightarrow> \<open>match premises in _[thin]: _ (multi) \<Rightarrow> \<open>insert T L U\<close>\<close>)
+        apply (drule le_shiftr[where n=6 and v="ucast port"],
+               drule le_shiftr[where n=6 and u="ucast port", OF word_less_sub_1])
+        apply (simp add: word_minus_1_shiftr[OF shiftl_mask_is_0,
+                                             OF word_shift_nonzero[where m=10,
+                                                                   OF inc_le _ less_is_non_zero_p1,
+                                                                   OF less_trans]]
+                         shiftl_shiftr_id[OF _ less_trans]
+                         shiftl_shiftr_id[OF _ le_less_trans[OF inc_le]]
+                         word_upcast_shiftr)
+        done
+      done
+   subgoal for mem htd first_port last_port low_word
+     (* Invariant plus loop termination condition is sufficient to establish VCG postcondition. *)
+     apply (frule neg_msb_le_mono[OF _ word_upcast_neg_msb];
+            simp add: word_sless_iff_less word_sle_iff_le word_upcast_neg_msb
+                      Word_Lemmas.sint_eq_uint unat_arith_simps')
+     apply (cut_tac unat_and_mask_less_2p[of 6 last_port]; simp)
+     apply (cut_tac unat_shiftr_less_2p[of 6 10 last_port]; simp add: uint_nat)
+(*
+     apply (rule conjI; clarsimp)
+      apply (frule word_exists_nth[OF word_neq_0_conv[THEN iffD2], OF unat_less_impl_less, simplified],
+             clarsimp simp: word_size)
+      apply (rule_tac x="(last_port && ~~mask 6) + of_nat i" in exI)
+      defer
+     apply (case_tac "port < (last_port >> 6) << 6")
+      apply (drule_tac x=port in spec)
+      apply (erule impE, simp)
+      apply (simp add: unat_arith_simps) apply (simp add: shiftl_t2n)
+      apply (erule impE, simp, simp add: unat_arith_simps unat_word_ariths, simp)
+     apply (simp add: not_less)
+     apply (simp add: word_unat.Rep_inject[where y=0, simplified])
+     apply (drule_tac f="\<lambda>w. test_bit w (unat (port && mask 6))" in arg_cong)
+     apply (simp add: word_size)
+      apply (frule_tac w1=port in word_le_split_mask[where n=6, THEN iffD1, OF word_le_nat_alt[THEN iffD2]])
+     apply (erule disjE)
+*)
+     sorry
+  subgoal
+    (* VCG precondition is sufficient to establish loop invariant. *)
+    sorry
+  done
   done
 
+lemma foldl_all_False:
+  "(\<not> foldl (\<lambda>b x. b \<or> f x) False xs) = (\<forall>x \<in> set xs. \<not> f x)"
+  apply (subst foldl_fun_or_alt)
+  apply (fold orList_def)
+  apply (simp add: orList_False image_subset_iff)
+  done
 
 lemma isIOPortRangeFree_ccorres:
   notes Collect_const[simp del]
   shows
   "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_'
-     \<top>
+     (\<lambda>_. f \<le> l)
      (UNIV \<inter> \<lbrace>\<acute>first_port = f\<rbrace> \<inter> \<lbrace>\<acute>last_port = l\<rbrace>)
      hs
      (isIOPortRangeFree f l)
      (Call isIOPortRangeFree_'proc)"
-  apply (cinit lift: first_port_' last_port_')
-  sorry (* isIOPortRangeFree_ccorres *)
+  apply (intro ccorres_from_vcg hoarep_conseq_spec_state[OF isIOPortRangeFree_spec] allI)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                        global_ioport_bitmap_relation_def2
+                        isIOPortRangeFree_def gets_def get_def monad_simps in_monad
+                intro!: arg_cong[where f=from_bool])
+  apply (match premises in H: \<open>cioport_bitmap_to_H _ = _\<close> and O: \<open>first_port_' s \<le> last_port_' s\<close> for s
+           \<Rightarrow> \<open>match premises in _[thin]: _(multi) \<Rightarrow> \<open>insert O H\<close>\<close>)
+  apply (clarsimp simp: cioport_bitmap_to_H_def wordRadix_def port_mask_def foldl_all_False)
+  apply (rule all_cong, drule_tac x=port in fun_cong)
+  by simp
 
 lemma decodeIOPortControlInvocation_ccorres:
   notes if_cong[cong] Collect_const[simp del]
