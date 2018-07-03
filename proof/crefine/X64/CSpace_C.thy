@@ -57,7 +57,7 @@ lemmas vmrights_defs =
 
 lemma maskVMRights_spec:
   "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter>
-           \<lbrace> \<acute>vm_rights && mask 2 = \<acute>vm_rights \<and> \<acute>vm_rights \<noteq> 0 \<rbrace>)
+           \<lbrace> \<acute>vm_rights && mask 2 = \<acute>vm_rights \<rbrace>)
   Call maskVMRights_'proc
   \<lbrace> vmrights_to_H \<acute>ret__unsigned_long =
     maskVMRights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) (cap_rights_to_H (seL4_CapRights_lift \<^bsup>s\<^esup>cap_rights_mask)) \<and>
@@ -72,7 +72,7 @@ lemma maskVMRights_spec:
          | simp add: mask_def
          | word_bitwise)+)[1]
   apply clarsimp
-  apply (subgoal_tac "vm_rights = 1 \<or> vm_rights = 2 \<or> vm_rights = 3")
+  apply (subgoal_tac "vm_rights = 0 \<or> vm_rights = 1 \<or> vm_rights = 2 \<or> vm_rights = 3")
    apply (auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs
                      cap_rights_to_H_def seL4_CapRights_lift_def
                      to_bool_def mask_def
@@ -99,7 +99,7 @@ lemma Arch_maskCapRights_ccorres [corres]:
   []
   (return (Arch.maskCapRights R arch_cap))
   (Call Arch_maskCapRights_'proc)"
-  apply (cinit' (trace) lift: cap_' cap_rights_mask_')
+  apply (cinit' lift: cap_' cap_rights_mask_')
    apply csymbr
    apply (unfold X64_H.maskCapRights_def)
    apply (simp only: Let_def)
@@ -113,13 +113,14 @@ lemma Arch_maskCapRights_ccorres [corres]:
     apply (simp add: cap_frame_cap_lift [THEN iffD1])
     apply (clarsimp simp: cap_to_H_def)
     apply (simp add: map_option_case split: option.splits)
-    apply (clarsimp simp add: cap_to_H_def Let_def split: cap_CL.splits if_split_asm)
-     apply (simp add: cap_frame_cap_lift_def)
-     apply (simp add: ccap_rights_relation_def cap_frame_cap_lift c_valid_cap_def
-                      cl_valid_cap_def
-               split: option.splits cap_CL.splits)
-    apply (simp add: cap_frame_cap_lift_def)
-    apply (simp add: ccap_rights_relation_def c_valid_cap_def cap_frame_cap_lift cl_valid_cap_def)
+    apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits if_split_asm)
+     apply (clarsimp simp: cap_frame_cap_lift_def)
+     apply (clarsimp simp: ccap_rights_relation_def cap_frame_cap_lift c_valid_cap_def
+                           cl_valid_cap_def mask_eq_iff word_less_alt
+                    split: option.splits cap_CL.splits)
+    apply (clarsimp simp: cap_frame_cap_lift_def)
+    apply (clarsimp simp: ccap_rights_relation_def c_valid_cap_def cap_frame_cap_lift
+                          cl_valid_cap_def mask_eq_iff word_less_alt)
    apply (clarsimp simp add: cap_get_tag_isCap isCap_simps simp del: not_ex)
    apply (rule conjI, clarsimp)
     apply (simp add: ccorres_cond_iffs)
