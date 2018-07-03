@@ -4486,6 +4486,86 @@ lemma decodeSetSpace_ccorres:
   apply clarsimp
   done
 
+lemma invokeTCB_SetTLSBase_ccorres:
+  notes static_imp_wp [wp]
+  shows
+  "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
+   (invs')
+   ({s. thread_' s = tcb_ptr_to_ctcb_ptr tcb}
+         \<inter> {s. tls_base_' s = tls_base}) []
+   (invokeTCB (SetTLSBase tcb tls_base))
+   (Call invokeSetTLSBase_'proc)"
+  apply (cinit lift: thread_' tls_base_')
+   apply (simp add: liftE_def bind_assoc
+               del: Collect_const)
+   apply (ctac add: setRegister_ccorres[simplified dc_def])
+     apply (rule ccorres_pre_getCurThread)
+     apply (rename_tac cur_thr)
+     apply (rule ccorres_split_nothrow_novcg_dc)
+        apply (rule_tac R="\<lambda>s. cur_thr = ksCurThread s" in ccorres_when)
+         apply (clarsimp simp: rf_sr_ksCurThread)
+        apply clarsimp
+        apply (ctac (no_vcg) add: rescheduleRequired_ccorres)
+       apply (unfold return_returnOk)[1]
+       apply (rule ccorres_return_CE, simp+)[1]
+      apply (wpsimp wp: hoare_drop_imp simp: guard_is_UNIV_def)+
+   apply vcg
+  apply (clarsimp simp: tlsBaseRegister_def X64.tlsBaseRegister_def
+                        invs_weak_sch_act_wf invs_queues
+                 split: if_split)
+  done
+
+lemma decodeSetTLSBase_ccorres:
+  "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and sch_act_simple
+              and (\<lambda>s. ksCurThread s = thread) and ct_active' and K (isThreadCap cp)
+              and valid_cap' cp and (\<lambda>s. \<forall>x \<in> zobj_refs' cp. ex_nonz_cap_to' x s)
+              and sysargs_rel args buffer)
+       (UNIV
+            \<inter> {s. ccap_relation cp (cap_' s)}
+            \<inter> {s. unat (length___unsigned_long_' s) = length args}
+            \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+     (decodeSetTLSBase args cp
+            >>= invocationCatch thread isBlocking isCall InvokeTCB)
+     (Call decodeSetTLSBase_'proc)"
+  apply (cinit' lift: cap_' length___unsigned_long_' buffer_'
+                simp: decodeSetTLSBase_def)
+   apply wpc
+    apply (simp add: throwError_bind invocationCatch_def)
+    apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
+     apply vcg
+    apply (rule conseqPre, vcg)
+    apply (clarsimp simp: throwError_def return_def
+                          exception_defs syscall_error_rel_def
+                          syscall_error_to_H_cases)
+   apply (rule ccorres_cond_false_seq; simp)
+   apply (rule ccorres_add_return,
+          ctac add: getSyscallArg_ccorres_foo'[where args=args and n=0 and buffer=buffer])
+     apply (simp add: invocationCatch_use_injection_handler
+                      bindE_assoc injection_handler_returnOk
+                      ccorres_invocationCatch_Inr performInvocation_def)
+     apply (ctac add: setThreadState_ccorres)
+       apply csymbr
+       apply (ctac (no_vcg) add: invokeTCB_SetTLSBase_ccorres)
+         apply simp
+         apply (rule ccorres_alternative2)
+         apply (rule ccorres_return_CE, simp+)[1]
+        apply (rule ccorres_return_C_errorE, simp+)[1]
+       apply (wpsimp wp: sts_invs_minor')+
+     apply (vcg exspec=setThreadState_modifies)
+    apply wp
+   apply vcg
+  apply (clarsimp simp: Collect_const_mem)
+  apply (rule conjI)
+   apply (clarsimp simp: ct_in_state'_def sysargs_rel_n_def n_msgRegisters_def)
+   apply (auto simp: valid_tcb_state'_def
+              elim!: pred_tcb'_weakenE)[1]
+  apply (simp add: StrictC'_thread_state_defs mask_eq_iff_w2p word_size)
+  apply (frule rf_sr_ksCurThread)
+  apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
+  apply (auto simp: unat_eq_0 le_max_word_ucast_id)+
+  done
+
 lemma decodeTCBInvocation_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -4607,6 +4687,12 @@ lemma decodeTCBInvocation_ccorres:
    apply (rule ccorres_Cond_rhs)
     apply simp
     apply (rule ccorres_add_returnOk, ctac(no_vcg) add: decodeUnbindNotification_ccorres)
+      apply (rule ccorres_return_CE, simp+)[1]
+     apply (rule ccorres_return_C_errorE, simp+)[1]
+    apply wp
+   apply (rule ccorres_Cond_rhs)
+    apply simp
+    apply (rule ccorres_add_returnOk, ctac(no_vcg) add: decodeSetTLSBase_ccorres)
       apply (rule ccorres_return_CE, simp+)[1]
      apply (rule ccorres_return_C_errorE, simp+)[1]
     apply wp
