@@ -1894,8 +1894,8 @@ lemma decode_page_inv_wf[wp]:
                     dest!: diminished_capMaster)
    apply (rule conjI)
     apply (erule is_aligned_addrFromPPtr_n, case_tac vmpage_size, simp_all add: bit_simps)[1]
-   apply (simp add: user_vtop_def X64.pptrBase_def X64.pptrUserTop_def)
-   apply (word_bitwise)
+   apply (simp add: user_vtop_def X64.pptrBase_def X64.pptrUserTop_def not_less)
+   subgoal by (word_bitwise, auto)
   apply (cases "invocation_type label = ArchInvocationLabel X64PageRemap")
    apply (simp add: split_def invs_valid_objs' split del: if_split
               cong: list.case_cong prod.case_cong)
