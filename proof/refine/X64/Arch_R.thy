@@ -651,7 +651,7 @@ lemma decode_page_inv_corres:
         apply simp
        apply (rule whenE_throwError_corres, simp, simp)
        apply (rule_tac R="\<lambda>_ s. valid_vspace_objs s \<and> pspace_aligned s
-                                  \<and> (hd args && user_vtop) + (2 ^ pageBitsForSize sz) \<le> user_vtop \<and>
+                                  \<and> hd args + (2 ^ pageBitsForSize sz) \<le> user_vtop \<and> hd args \<le> user_vtop \<and>
                                   valid_arch_state s \<and> equal_kernel_mappings s \<and> valid_global_objs s \<and>
                                   s \<turnstile> (fst (hd excaps)) \<and> (\<exists>\<rhd> (lookup_pml4_slot (obj_ref_of (fst (hd excaps))) (hd args) && ~~ mask pml4_bits)) s \<and>
                                   (\<exists>\<rhd> rv') s \<and> page_map_l4_at rv' s"
