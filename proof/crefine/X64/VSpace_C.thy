@@ -2601,7 +2601,7 @@ lemma performASIDPoolInvocation_ccorres:
   shows
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and cte_wp_at' (isPML4Cap' o cteCap) ctSlot and asid_pool_at' poolPtr
-        and K (asid \<le> mask asid_bits))
+        and K (asid \<le> mask asid_bits \<and> asid \<noteq> ucast asidInvalid))
        (UNIV \<inter> \<lbrace>\<acute>poolPtr = Ptr poolPtr\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace> \<inter> \<lbrace>\<acute>vspaceCapSlot = Ptr ctSlot\<rbrace>)
        []
        (liftE (performASIDPoolInvocation (Assign asid poolPtr ctSlot)))
@@ -2613,11 +2613,11 @@ lemma performASIDPoolInvocation_ccorres:
       apply (rule_tac ccorres_split_nothrow [where r'=dc and xf'=xfdc])
           apply (simp add: updateCap_def)
           apply (rule_tac A="cte_wp_at' (op = rv o cteCap) ctSlot
-                             and K (isPML4Cap' rv \<and> asid \<le> mask asid_bits)"
+                             and K (isPML4Cap' rv \<and> asid \<le> mask asid_bits \<and> asid \<noteq> ucast asidInvalid)"
                       and A'=UNIV in ccorres_guard_imp2)
            apply (rule ccorres_pre_getCTE)
            apply (rule_tac P="cte_wp_at' (op = rv o cteCap) ctSlot
-                              and K (isPML4Cap' rv \<and> asid \<le> mask asid_bits)
+                              and K (isPML4Cap' rv \<and> asid \<le> mask asid_bits \<and> asid \<noteq> ucast asidInvalid)
                               and cte_wp_at' (op = rva) ctSlot"
                        and P'=UNIV in ccorres_from_vcg)
            apply (rule allI, rule conseqPre, vcg)
@@ -2652,6 +2652,7 @@ lemma performASIDPoolInvocation_ccorres:
              apply (simp add: cap_pml4_cap_lift)
              apply (simp (no_asm) add: cap_to_H_def)
              apply (simp add: to_bool_def asid_bits_def le_mask_imp_and_mask word_bits_def)
+             apply (clarsimp simp: c_valid_cap_def cl_valid_cap_def)
              apply (erule (1) cap_lift_PML4Cap_Base)
             apply simp
            apply (erule_tac t = s' in ssubst)

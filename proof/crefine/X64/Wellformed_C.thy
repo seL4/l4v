@@ -417,6 +417,7 @@ where
    case c of
      Cap_irq_handler_cap fc \<Rightarrow> ((capIRQ_CL fc) && mask 8 = capIRQ_CL fc)
    | Cap_frame_cap fc \<Rightarrow> capFSize_CL fc < 3 \<and> capFMapType_CL fc < 2 \<and> capFVMRights_CL fc < 4 \<and> capFVMRights_CL fc \<noteq> 0
+   | Cap_pml4_cap pc \<Rightarrow> to_bool (capPML4IsMapped_CL pc) = (capPML4MappedASID_CL pc \<noteq> ucast asidInvalid)
    | x \<Rightarrow> True"
 
 definition
@@ -452,7 +453,6 @@ lemma  c_valid_cap_simps [simp]:
   "cap_get_tag c = scast cap_reply_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_null_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_pdpt_cap \<Longrightarrow> c_valid_cap c"
-  "cap_get_tag c = scast cap_pml4_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_io_port_cap \<Longrightarrow> c_valid_cap c"
   unfolding c_valid_cap_def  cap_lift_def cap_tag_defs
   by (simp add: cl_valid_cap_def)+

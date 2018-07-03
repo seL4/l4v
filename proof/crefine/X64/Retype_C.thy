@@ -6421,7 +6421,8 @@ proof -
     apply (clarsimp simp: ccap_relation_def APIType_capBits_def
                            framesize_to_H_def cap_to_H_simps cap_pml4_cap_lift
                            vmrights_to_H_def bit_simps)
-    apply (clarsimp simp: to_bool_def false_def isFrameType_def)
+    apply (clarsimp simp: to_bool_def false_def isFrameType_def
+                          c_valid_cap_def cl_valid_cap_def asidInvalid_def)
     done
 qed
 
