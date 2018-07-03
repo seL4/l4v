@@ -334,7 +334,7 @@ where
   PageCap dev p R map_type pgsz mapped_address \<Rightarrow>
     if invocation_type label = ArchInvocationLabel X64PageMap then
     if length args > 2 \<and> length extra_caps > 0
-    then let vaddr = args ! 0 && user_vtop;
+    then let vaddr = args ! 0;
              rights_mask = args ! 1;
              attr = args ! 2;
              vspace_cap = fst (extra_caps ! 0)
@@ -347,7 +347,7 @@ where
              vspace' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
              whenE (vspace' \<noteq> vspace) $ throwError $ InvalidCapability 1;
              vtop \<leftarrow> returnOk $ vaddr + bit (pageBitsForSize pgsz);
-             whenE (vtop > user_vtop) $ throwError $ InvalidArgument 0;
+             whenE (vaddr > user_vtop \<or> vtop > user_vtop) $ throwError $ InvalidArgument 0;
              vm_rights \<leftarrow> returnOk $ mask_vm_rights R (data_to_rights rights_mask);
              check_vp_alignment pgsz vaddr;
              entries \<leftarrow> create_mapping_entries (addrFromPPtr p) vaddr pgsz vm_rights

@@ -536,19 +536,18 @@ Note that implementations with separate high and low memory regions may also wis
 >                 _ -> throw $ InvalidCapability 1
 >             vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
 >             when (vspaceCheck /= vspace) $ throw $ InvalidCapability 1
->             let vaddr' = vaddr .&. userVTop
->             let vtop = vaddr' + bit (pageBitsForSize $ capVPSize cap)
->             when (VPtr vtop > VPtr userVTop) $
+>             let vtop = vaddr + bit (pageBitsForSize $ capVPSize cap)
+>             when (VPtr vaddr > VPtr userVTop || VPtr vtop > VPtr userVTop) $
 >                 throw $ InvalidArgument 0
 >             let vmRights = maskVMRights (capVPRights cap) $
 >                     rightsFromWord rightsMask
->             checkVPAlignment (capVPSize cap) (VPtr vaddr')
+>             checkVPAlignment (capVPSize cap) (VPtr vaddr)
 >             entries <- createMappingEntries (addrFromPPtr $ capVPBasePtr cap)
->                 (VPtr vaddr') (capVPSize cap) vmRights
+>                 (VPtr vaddr) (capVPSize cap) vmRights
 >                 (attribsFromWord attr) vspace
 >             ensureSafeMapping entries
 >             return $ InvokePage $ PageMap {
->                 pageMapCap = ArchObjectCap $ cap { capVPMapType = VMVSpaceMap, capVPMappedAddress = Just (asid, VPtr vaddr') },
+>                 pageMapCap = ArchObjectCap $ cap { capVPMapType = VMVSpaceMap, capVPMappedAddress = Just (asid, VPtr vaddr) },
 >                 pageMapCTSlot = cte,
 >                 pageMapEntries = entries,
 >                 pageMapVSpace = vspace }

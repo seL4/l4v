@@ -2817,7 +2817,6 @@ lemma decodeX64FrameInvocation_ccorres:
    apply csymbr
    apply (rule ccorres_add_return)
    apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
-     apply csymbr
      apply (rule ccorres_add_return)
      apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=1 and buffer=buffer])
        apply (rule ccorres_add_return)
@@ -2940,7 +2939,7 @@ lemma decodeX64FrameInvocation_ccorres:
                  apply (simp add: all_ex_eq_helper)
                 apply (rule_tac Q' = "{s. ccap_relation (ArchObjectCap
                                             (PageCap v0 v1 VMVSpaceMap v3 d
-                                                          (Some (y, a && user_vtop)))) cap}"
+                                                          (Some (y, a)))) cap}"
                             and A' = "{}" in conseqPost)
                   apply (vcg exspec=createSafeMappingEntries_PTE_modifies)
                  apply (clarsimp simp: ThreadState_Restart_def mask_def rf_sr_ksCurThread
@@ -2973,7 +2972,7 @@ lemma decodeX64FrameInvocation_ccorres:
                  apply (simp add: all_ex_eq_helper)
                 apply (rule_tac Q' = "{s. ccap_relation (ArchObjectCap
                                             (PageCap v0 v1 VMVSpaceMap v3 d
-                                                          (Some (y, a && user_vtop)))) cap}"
+                                                          (Some (y, a)))) cap}"
                             and A' = "{}" in conseqPost)
                   apply (vcg exspec=createSafeMappingEntries_PDE_modifies)
                  apply (clarsimp simp: ThreadState_Restart_def mask_def rf_sr_ksCurThread
@@ -3104,9 +3103,12 @@ lemma decodeX64FrameInvocation_ccorres:
                                  \<close>
               | solves \<open>(rule_tac cp=cp in ccap_relation_PageCap_MappedAddress_update;
                     fastforce simp: vm_page_map_type_defs mask_def
-                              canonical_address_user_vtop[simplified user_vtop_def X64.pptrUserTop_def])\<close>
+                              le_user_vtop_canonical_address
+                                            [simplified word_le_not_less user_vtop_def
+                                                        X64.pptrUserTop_def word_less_nat_alt,
+                                             simplified])\<close>
               | (rule framesize_to_from_H framesize_to_from_H[symmetric], fastforce simp: c_valid_cap_def cl_valid_cap_def)
-         )+)[1]\<close>) (* 95 sec *)
+         )+)[1]\<close>) (* 83 sec *)
   (* bit of duplicated stuff from previous subgoal here *)
   apply clarsimp
   apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
