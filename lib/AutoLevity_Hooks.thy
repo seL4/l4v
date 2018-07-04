@@ -50,12 +50,40 @@ in if Symtab.defined trans thy_short_name then
      NONE
 end;
 
+(* This has the usual race condition, but should be very unlikely in practice *)
+fun local_temp_file path = let
+  val dir = Path.dir path;
+  val file = Path.base_name path;
+  fun try_path () = let
+    (* avoid colliding with other processes *)
+    val pid = Posix.ProcEnv.getpid () |> Posix.Process.pidToWord |> SysWord.toInt;
+    (* timestamp *)
+    val now = Time.now () |> Time.toMilliseconds;
+    (* serialized pseudorandom state within this process *)
+    val rand = Random.random_range 100000 999999;
+    val temp_id = Library.space_implode "-" (map string_of_int [pid, now, rand]);
+    val temp_path = Path.append dir (Path.basic (file ^ ".tmp" ^ temp_id));
+    in if File.exists temp_path
+       then
+         ((* again, this should be very unlikely in practice *)
+          warning ("local_temp_file: (unlikely) failed attempt: " ^
+                   Path.implode temp_path);
+          try_path ())
+       else
+         (File.append temp_path ""; (* create empty file *)
+          temp_path)
+    end;
+  in try_path () end;
+
 (* Output all traces in this session to given path *)
 fun levity_report_all output_path: unit =
 let
   val this_session = Session.get_name ();
-  (* Use a temp file for atomic output *)
-  val temp_path = File.tmp_path output_path;
+  (* Use a temp file for atomic output. Note that we don't use
+     File.tmp_path or similar because the standard /tmp/isabelle-*
+     tmpdir might not be on the same file system as output_path,
+     whereas we can only rename atomically on the same file system *)
+  val temp_path = local_temp_file output_path;
 
   (* Wrap individual theory reports in JSON dictionaries
      indexed by session name and theory name.
