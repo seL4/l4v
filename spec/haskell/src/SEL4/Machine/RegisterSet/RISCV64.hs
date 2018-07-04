@@ -36,6 +36,7 @@ frameRegisters = SEPC : [LR .. A6]
 gpRegisters = []
 exceptionMessage = [SEPC, SP, A7]
 syscallMessage = SEPC : SP : LR : [A0 .. A6]
+tlsBaseRegister = TP -- note: used for IPC buffer until TLS is used
 
 sstatusSPIE :: Word
 sstatusSPIE = 0x20
