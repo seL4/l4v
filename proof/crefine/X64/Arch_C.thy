@@ -5188,6 +5188,26 @@ lemma word_minus_1_shiftr:
   apply fastforce
   done
 
+lemma ucast_shiftr:
+  "UCAST('a::len \<rightarrow> 'b::len) w >> n = UCAST('a \<rightarrow> 'b) ((w && mask LENGTH('b)) >> n)"
+  apply (rule word_eqI[rule_format]; rule iffI; clarsimp simp: nth_ucast nth_shiftr word_size)
+  apply (drule test_bit_size; simp add: word_size)
+  done
+
+lemma mask_eq_ucast_shiftr:
+  assumes mask: "w && mask LENGTH('b) = w"
+  shows "UCAST('a::len \<rightarrow> 'b::len) w >> n = UCAST('a \<rightarrow> 'b) (w >> n)"
+  by (rule ucast_shiftr[where 'a='a and 'b='b, of w n, simplified mask])
+
+lemma mask_le_mono:
+  "m \<le> n \<Longrightarrow> mask m \<le> mask n"
+  sorry
+
+lemma word_and_mask_eq_le_mono:
+  "w && mask m = w \<Longrightarrow> m \<le> n \<Longrightarrow> w && mask n = w"
+  apply (simp add: and_mask_eq_iff_le_mask)
+  by (erule order.trans, erule mask_le_mono)
+
 lemma first_last_highbits_eq_port_set:
   fixes f l :: "16 word"
   fixes arr :: "machine_word[1024]"
@@ -5363,12 +5383,34 @@ lemma isIOPortRangeFree_spec:
       apply (intro conjI impI allI; (simp add: unat_arith_simps; fail)?)
        apply (drule word_exists_nth; clarsimp)
        subgoal for i
-         apply (rule_tac x="ucast ((low_word << 6) + of_nat i)" in exI)
+         apply (rule_tac x="ucast ((low_word << 6) || of_nat i)" in exI)
          apply (match premises in L: \<open>_ < low_word\<close> and U: \<open>low_word < _\<close> (multi) and V: \<open>test_bit _ _\<close>
                   \<Rightarrow> \<open>match premises in _[thin]: _ (multi) \<Rightarrow> \<open>insert L U V\<close>\<close>)
          apply (frule test_bit_size; simp add: word_size)
-         apply (simp add: word_upcast_shiftr)
-         sorry
+         apply (rule revcut_rl[OF shiftl_shiftr_id[of 6 low_word]], simp, fastforce elim: less_trans)
+         apply (rule revcut_rl[OF and_mask_eq_iff_le_mask[of low_word 10, THEN iffD2]],
+                fastforce simp: mask_def elim: order.trans[where b="0x3FF", OF less_imp_le])
+         apply (rule revcut_rl[OF le_mask_iff[of "of_nat i :: 32 signed word" 6, THEN iffD1]],
+                fastforce intro: word_of_nat_le simp: mask_def)
+         apply (frule and_mask_eq_iff_shiftr_0[where w="of_nat i", THEN iffD2])
+         apply (subst mask_eq_ucast_shiftr)
+          apply (simp add: word_ao_dist)
+          apply (rule arg_cong2[where f=bitOR]; rule and_mask_eq_iff_le_mask[THEN iffD2])
+           apply (rule le_mask_shiftl_le_mask, simp)
+           apply (erule order_trans[where y="0x3FF", OF less_imp_le], simp add: mask_def)
+          apply (erule order_trans[OF less_imp_le[OF of_nat_mono_maybe], rotated]; simp add: mask_def)
+         apply (simp add: unat_ucast_eq_unat_and_mask ucast_and_mask[symmetric]
+                          shiftr_over_or_dist word_ao_dist unat_of_nat_eq word_and_mask_eq_le_mono)
+         apply (thin_tac "test_bit _ _")
+         apply (rule conjI;
+                rule word_le_split_mask[where n=6, THEN iffD2, OF disjI1];
+                rule ucast_less_ucast[where 'b="32 signed", THEN iffD1])
+         apply (simp_all add: ucast_shiftr ucast_ucast_mask word_ao_dist
+                              word_and_mask_eq_le_mono[of "of_nat i"]
+                              word_and_mask_eq_le_mono[of low_word]
+                              shiftr_over_and_dist shiftr_over_or_dist
+                              shiftr_mask2)
+         done
       subgoal for port
         apply (case_tac "ucast port < low_word << 6"; (simp add: unat_arith_simps; fail)?)
         apply (clarsimp simp: not_less)
