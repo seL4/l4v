@@ -5165,6 +5165,133 @@ lemma word_minus_1_shiftr:
   shows "(w - 1) >> n = (w >> n) - 1"
   sorry
 
+lemma first_last_highbits_eq_port_set:
+  fixes f l :: "16 word"
+  fixes arr :: "machine_word[1024]"
+  shows "\<lbrakk>unat f \<le> unat l; unat (f && 0x3F) \<le> unat (l && 0x3F);
+          unat (f >> 6) = unat (l >> 6);
+          0 < unat (arr.[unat (l >> 6)] && mask (Suc (unat (l && 0x3F)))
+                  && ~~ mask (unat (f && 0x3F)))\<rbrakk>
+         \<Longrightarrow> \<exists>port::16 word.
+                unat f \<le> unat port \<and> unat port \<le> unat l
+              \<and> arr.[unat (port >> 6)] !! unat (port && 0x3F)"
+    apply (frule word_exists_nth[OF word_neq_0_conv[THEN iffD2], OF unat_less_impl_less, simplified],
+                clarsimp simp: word_size)
+  apply (rule_tac x="(l && ~~ mask 6) + of_nat i" in exI)
+  apply (clarsimp simp: neg_mask_bang mask_def[where n=6, simplified, symmetric])
+  apply (frule test_bit_size, clarsimp simp: word_size less_Suc_eq_le)
+  apply (frule_tac n=i in word_of_nat_less[where x=64 and 'a=16, simplified])
+  apply (rule conjI)
+   subgoal for i
+     (* f \<le> port *)
+     apply (frule_tac n=i in word_of_nat_less[where x=64 and 'a=16, simplified])
+     apply (subst AND_NOT_mask_plus_AND_mask_eq[symmetric, where n=6])
+     apply (subst unat_plus_simple[THEN iffD1])
+      apply (clarsimp simp: AND_NOT_mask_plus_AND_mask_eq word_and_le2)
+     apply (subst unat_plus_simple[THEN iffD1])
+      apply (rule word_random[where x'="2^6 - 1"], rule is_aligned_no_overflow',
+                     simp add: is_aligned_neg_mask2)
+      apply (rule word_less_sub_1, simp)
+     by (simp add: unat_of_nat word_shiftr_eq_mask)
+  apply (rule conjI)
+   subgoal for i
+     (* port \<le> l *)
+     apply (subgoal_tac "(((l && ~~ mask 6) + of_nat i) >> 6) = l >> 6")
+      apply (frule_tac w1="f" in word_le_split_mask[where n=6, THEN iffD1, OF word_le_nat_alt[THEN iffD2]])
+      apply (erule disjE)
+       apply clarsimp
+      apply (rule iffD1[OF word_le_nat_alt])
+      apply (rule word_le_split_mask[where n=6, THEN iffD2])
+      apply clarsimp
+      apply (subst mask_eqs(1)[symmetric])
+      apply (simp add: mask_AND_NOT_mask)
+      apply (subst and_mask_eq_iff_le_mask[THEN iffD2])
+       apply (clarsimp simp add: mask_def dest!: word_less_sub_1)
+      apply (clarsimp simp: word_le_nat_alt unat_of_nat)
+     by (simp add: aligned_shift')
+  subgoal for i
+    (* arr set *)
+    apply (simp add: aligned_shift')
+    apply (subst mask_eqs(1)[symmetric])
+    apply (simp add: mask_AND_NOT_mask)
+    apply (subst and_mask_eq_iff_le_mask[THEN iffD2])
+     apply (clarsimp simp add: mask_def dest!: word_less_sub_1)
+    by (simp add: unat_of_nat)
+  done
+
+lemma port_set_in_first_word:
+  fixes f l :: "16 word"
+  fixes arr :: "machine_word[1024]"
+  shows "\<lbrakk>unat f \<le> unat l; unat (f >> 6) < unat (l >> 6);
+           0 < unat (arr.[unat (f >> 6)] && ~~ mask (unat (f && mask 6)))\<rbrakk>
+       \<Longrightarrow> \<exists>port::16 word. unat f \<le> unat port \<and> unat port \<le> unat l \<and>
+              arr.[unat (port >> 6)] !! unat (port && mask 6)"
+  apply (frule word_exists_nth[OF word_neq_0_conv[THEN iffD2], OF unat_less_impl_less, simplified],
+                clarsimp simp: word_size)
+  apply (rule_tac x="(f && ~~ mask 6) + of_nat i" in exI)
+  apply (clarsimp simp: neg_mask_bang mask_def[where n=6, simplified, symmetric])
+  apply (frule test_bit_size, clarsimp simp: word_size)
+  apply (frule_tac n=i in word_of_nat_less[where x=64 and 'a=16, simplified])
+  apply (rule conjI)
+   subgoal for i
+     (* f \<le> port *)
+     apply (frule_tac n=i in word_of_nat_less[where x=64 and 'a=16, simplified])
+     apply (subst AND_NOT_mask_plus_AND_mask_eq[symmetric, where n=6])
+     apply (subst unat_plus_simple[THEN iffD1])
+      apply (clarsimp simp: AND_NOT_mask_plus_AND_mask_eq word_and_le2)
+     apply (subst unat_plus_simple[THEN iffD1])
+      apply (rule word_random[where x'="2^6 - 1"], rule is_aligned_no_overflow',
+                     simp add: is_aligned_neg_mask2)
+      apply (rule word_less_sub_1, simp)
+     by (simp add: unat_of_nat)
+  apply (rule conjI)
+   subgoal for i
+     (* port \<le> l *)
+     apply (subgoal_tac "(((f && ~~ mask 6) + of_nat i) >> 6) = f >> 6")
+      apply (frule_tac w1="f" in word_le_split_mask[where n=6, THEN iffD1, OF word_le_nat_alt[THEN iffD2]])
+      apply (erule disjE)
+       apply (rule iffD1[OF word_le_nat_alt])
+       apply (rule word_le_split_mask[where n=6, THEN iffD2])
+       apply clarsimp
+      apply clarsimp
+     by (simp add: aligned_shift')
+  subgoal for i
+    (* arr set *)
+    apply (simp add: aligned_shift')
+    apply (subst mask_eqs(1)[symmetric])
+    apply (simp add: mask_AND_NOT_mask)
+    apply (subst and_mask_eq_iff_le_mask[THEN iffD2])
+     apply (clarsimp simp add: mask_def dest!: word_less_sub_1)
+    by (simp add: unat_of_nat)
+  done
+
+lemma word_not_exists_nth:
+  "(w::'a::len word) = 0 \<Longrightarrow> \<forall>i<LENGTH('a). \<not> w !! i"
+  by (clarsimp simp: nth_0)
+
+lemma bitmap_word_zero_no_bits_set1:
+  fixes f l :: "16 word"
+  fixes arr :: "machine_word[1024]"
+  shows "\<lbrakk>unat (f && mask 6) \<le> unat (l && mask 6);
+        unat (f >> 6) = unat (l >> 6);
+        arr.[unat (l >> 6)] && mask (Suc (unat (l && mask 6))) &&
+              ~~ mask (unat (f && mask 6)) = 0\<rbrakk>
+   \<Longrightarrow> \<forall>port::16 word.
+        unat f \<le> unat port \<and> unat port \<le> unat l \<longrightarrow>
+        \<not>arr.[unat (port >> 6)] !! unat (port && mask 6)"
+  apply clarsimp
+  apply (drule word_not_exists_nth)
+  apply (simp only: all_nat_less_eq)
+  apply (cut_tac w=port in unat_and_mask_less_2p[of 6, simplified mask_def, simplified]; simp)
+  apply (drule_tac x="unat (port && 0x3F)" in bspec, clarsimp)
+  apply (frule_tac v1=port in word_le_split_mask[where n=6, THEN iffD1, OF word_le_nat_alt[THEN iffD2]])
+  apply (frule_tac w1=port in word_le_split_mask[where n=6, THEN iffD1, OF word_le_nat_alt[THEN iffD2]])
+  apply (subgoal_tac "port >> 6 = l >> 6")
+   apply (clarsimp simp: word_size neg_mask_bang not_less not_le)
+   apply (clarsimp simp: word_unat.Rep_inject word_le_nat_alt mask_def)
+  apply (erule disjE; clarsimp simp:word_less_nat_alt)
+  done
+
 lemma isIOPortRangeFree_spec:
   notes ucast_mask = ucast_and_mask[where n=6, simplified mask_def, simplified]
   notes not_max_word_simps = and_not_max_word shiftr_not_max_word and_mask_not_max_word
@@ -5213,7 +5340,7 @@ lemma isIOPortRangeFree_spec:
       apply (intro conjI impI allI; (simp add: unat_arith_simps; fail)?)
        apply (drule word_exists_nth; clarsimp)
        subgoal for i
-         apply (rule_tac x="ucast (low_word << 6 + i)" in exI)
+         apply (rule_tac x="ucast ((low_word << 6) + of_nat i)" in exI)
          apply (match premises in L: \<open>_ < low_word\<close> and U: \<open>low_word < _\<close> (multi) and V: \<open>test_bit _ _\<close>
                   \<Rightarrow> \<open>match premises in _[thin]: _ (multi) \<Rightarrow> \<open>insert L U V\<close>\<close>)
          apply (frule test_bit_size; simp add: word_size)
@@ -5266,6 +5393,22 @@ lemma isIOPortRangeFree_spec:
      sorry
   subgoal
     (* VCG precondition is sufficient to establish loop invariant. *)
+    apply (frule word_le_split_mask[where n=6, THEN iffD1])
+    apply (simp add: unat_arith_simps)
+    apply (cut_tac unat_shiftr_less_2p[of 6 10 "first_port_' \<sigma>"]; simp)
+    apply (cut_tac unat_shiftr_less_2p[of 6 10 "last_port_' \<sigma>"]; simp)
+    apply (cut_tac unat_and_mask_less_2p[of 6 "first_port_' \<sigma>"]; simp)
+    apply (cut_tac unat_and_mask_less_2p[of 6 "last_port_' \<sigma>"]; simp)
+    apply (simp add: uint_nat mask_def[where n=6] mask_def[where n=64] less_Suc_eq_le Suc_le_eq)
+    apply (clarsimp intro!: word_less_imp_sless
+                      simp: unat_ucast_no_overflow_le word_upcast_neg_msb msb_nth zero_sle_ucast_up
+                            is_down unat_eq_0
+          | rule conjI
+          | erule (2) first_last_highbits_eq_port_set[simplified mask_def[where n=6], simplified]
+          | erule (2) port_set_in_first_word[simplified mask_def[where n=6], simplified]
+          | solves \<open>drule (2) bitmap_word_zero_no_bits_set1[simplified mask_def[where n=6], simplified],
+                     clarsimp\<close>)+
+    (* not sure about this ucast shenanigans *)
     sorry
   done
   done
