@@ -5336,6 +5336,40 @@ lemma bitmap_word_zero_no_bits_set1:
   apply (erule disjE; clarsimp simp:word_less_nat_alt)
   done
 
+lemma ucast_shiftl_6_absorb:
+  fixes f l :: "16 word"
+  assumes "f \<le> l"
+  assumes "f >> 6 < l >> 6"
+  shows "UCAST(16\<rightarrow>32 signed) ((f >> 6) + 1) << 6 = UCAST(16 \<rightarrow> 32 signed) (((f >> 6) + 1) << 6)"
+  using assms
+  by (word_bitwise, auto)
+
+
+lemma high_bits_bounded_eq:
+  fixes f port :: "16 word"
+  shows "\<lbrakk>f \<le> port; port < (f >> 6) + 1 << 6\<rbrakk>
+       \<Longrightarrow> f >> 6 = port >> 6"
+  sledgehammer
+  sorry
+
+lemma bitmap_word_zero_no_bits_set2:
+  fixes f l :: "16 word"
+  fixes arr :: "machine_word[1024]"
+  shows "\<lbrakk>unat f \<le> unat l; unat (f >> 6) < unat (l >> 6);
+        arr.[unat (f >> 6)] && ~~ mask (unat (f && mask 6)) = 0\<rbrakk>
+            \<Longrightarrow> \<forall>port::16 word. unat f \<le> unat port \<and>
+                   unat port < unat (UCAST(16 \<rightarrow> 32 signed) ((f >> 6) + 1) << 6) \<longrightarrow>
+        \<not>arr.[unat (port >> 6)] !! unat (port && mask 6)"
+  apply (clarsimp simp: word_le_nat_alt[symmetric] word_less_nat_alt[symmetric] ucast_shiftl_6_absorb)
+  apply (frule (1) high_bits_bounded_eq)
+  apply simp
+  apply (frule_tac v1=port in word_le_split_mask[where n=6, THEN iffD1])
+  apply (erule disjE; clarsimp)
+  apply (drule word_not_exists_nth)
+  apply (cut_tac w=port in unat_and_mask_less_2p[of 6]; simp)
+  apply (drule_tac x="unat (port && mask 6)" in spec, clarsimp simp: neg_mask_bang not_le word_le_nat_alt)
+  done
+
 lemma isIOPortRangeFree_spec:
   notes ucast_mask = ucast_and_mask[where n=6, simplified mask_def, simplified]
   notes not_max_word_simps = and_not_max_word shiftr_not_max_word and_mask_not_max_word
@@ -5462,7 +5496,6 @@ lemma isIOPortRangeFree_spec:
     apply (frule word_le_split_mask[where n=6, THEN iffD1])
     apply (simp add: unat_arith_simps)
     apply (cut_tac unat_shiftr_less_2p[of 6 10 "first_port_' \<sigma>"]; simp)
-    apply (cut_tac unat_shiftr_less_2p[of 6 10 "last_port_' \<sigma>"]; simp)
     apply (cut_tac unat_and_mask_less_2p[of 6 "first_port_' \<sigma>"]; simp)
     apply (cut_tac unat_and_mask_less_2p[of 6 "last_port_' \<sigma>"]; simp)
     apply (simp add: uint_nat mask_def[where n=6] mask_def[where n=64] less_Suc_eq_le Suc_le_eq)
@@ -5473,9 +5506,10 @@ lemma isIOPortRangeFree_spec:
           | erule (2) first_last_highbits_eq_port_set[simplified mask_def[where n=6], simplified]
           | erule (2) port_set_in_first_word[simplified mask_def[where n=6], simplified]
           | solves \<open>drule (2) bitmap_word_zero_no_bits_set1[simplified mask_def[where n=6], simplified],
-                     clarsimp\<close>)+
-    (* not sure about this ucast shenanigans *)
-    sorry
+                     clarsimp\<close>
+          | solves \<open>drule (2) bitmap_word_zero_no_bits_set2[simplified mask_def[where n=6], simplified],
+                     clarsimp\<close>
+          )+
   done
   done
 
