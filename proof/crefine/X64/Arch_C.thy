@@ -5430,6 +5430,7 @@ lemma isIOPortRangeFree_spec:
       apply (intro conjI impI allI; (simp add: unat_arith_simps; fail)?)
        apply (drule word_exists_nth; clarsimp)
        subgoal for i
+         (* Early return false. *)
          apply (rule_tac x="ucast ((low_word << 6) || of_nat i)" in exI)
          apply (match premises in L: \<open>_ < low_word\<close> and U: \<open>low_word < _\<close> (multi) and V: \<open>test_bit _ _\<close>
                   \<Rightarrow> \<open>match premises in _[thin]: _ (multi) \<Rightarrow> \<open>insert L U V\<close>\<close>)
@@ -5459,6 +5460,7 @@ lemma isIOPortRangeFree_spec:
                               shiftr_mask2)
          done
       subgoal for port
+        (* Continue to next loop iteration. *)
         apply (case_tac "ucast port < low_word << 6"; (simp add: unat_arith_simps; fail)?)
         apply (clarsimp simp: not_less)
         apply (subgoal_tac "low_word = ucast (port >> 6)", simp add: unat_arith_simps')
@@ -5485,28 +5487,25 @@ lemma isIOPortRangeFree_spec:
      apply (cut_tac word_and_mask_le_2pm1[of last_port 6], simp)
      apply (cut_tac shiftr_le_mask[of last_port 6, simplified mask_def], simp)
      apply (intro conjI allI impI; (simp add: unat_arith_simps; fail)?)
-      subgoal sorry
-     subgoal sorry
+     apply (drule word_exists_nth; clarsimp simp: word_size ucast_less_ucast)
+      subgoal for i
+        (* return false. *)
+        apply (rule exI[of _ "last_port && ~~ mask 6 || of_nat i"])
+        apply (rule revcut_rl[OF le_mask_iff[of "of_nat i :: 16 word" 6, THEN iffD1]],
+               fastforce intro: word_of_nat_le simp: mask_def)
+        apply (frule and_mask_eq_iff_shiftr_0[where w="of_nat i", THEN iffD2])
+        apply (simp add: shiftr_over_or_dist word_ao_dist mask_AND_NOT_mask unat_of_nat_eq)
+        apply (rule conjI; rule word_le_split_mask[where n=6, THEN iffD2];
+               simp add: ucast_less_ucast shiftr_over_or_dist
+                         word_ao_dist mask_AND_NOT_mask)
+        apply (rule word_of_nat_le, rule nat_Suc_less_le_imp)
+        apply (erule rsubst[where P="\<lambda>c. i < c"])
+        apply (simp add: unat_arith_simps)
+        done
+     subgoal
+       (* return true. *)
+       sorry
      done
-
-(*
-     apply (rule conjI; clarsimp)
-      apply (frule word_exists_nth[OF word_neq_0_conv[THEN iffD2], OF unat_less_impl_less, simplified],
-             clarsimp simp: word_size)
-      apply (rule_tac x="(last_port && ~~mask 6) + of_nat i" in exI)
-      defer
-     apply (case_tac "port < (last_port >> 6) << 6")
-      apply (drule_tac x=port in spec)
-      apply (erule impE, simp)
-      apply (simp add: unat_arith_simps) apply (simp add: shiftl_t2n)
-      apply (erule impE, simp, simp add: unat_arith_simps unat_word_ariths, simp)
-     apply (simp add: not_less)
-     apply (simp add: word_unat.Rep_inject[where y=0, simplified])
-     apply (drule_tac f="\<lambda>w. test_bit w (unat (port && mask 6))" in arg_cong)
-     apply (simp add: word_size)
-      apply (frule_tac w1=port in word_le_split_mask[where n=6, THEN iffD1, OF word_le_nat_alt[THEN iffD2]])
-     apply (erule disjE)
-*)
   subgoal
     (* VCG precondition is sufficient to establish loop invariant. *)
     apply (frule word_le_split_mask[where n=6, THEN iffD1])
