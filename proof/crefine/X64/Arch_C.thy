@@ -5479,11 +5479,16 @@ lemma isIOPortRangeFree_spec:
       done
    subgoal for mem htd first_port last_port low_word
      (* Invariant plus loop termination condition is sufficient to establish VCG postcondition. *)
-     apply (frule neg_msb_le_mono[OF _ word_upcast_neg_msb];
-            simp add: word_sless_iff_less word_sle_iff_le word_upcast_neg_msb
-                      Word_Lemmas.sint_eq_uint unat_arith_simps')
-     apply (cut_tac unat_and_mask_less_2p[of 6 last_port]; simp)
-     apply (cut_tac unat_shiftr_less_2p[of 6 10 last_port]; simp add: uint_nat)
+     apply (frule neg_msb_le_mono[OF _ word_upcast_neg_msb], simp)
+     apply (simp add: word_sless_iff_less word_sle_iff_le word_upcast_neg_msb
+                      Word_Lemmas.sint_eq_uint uint_nat)
+     apply (cut_tac word_and_mask_le_2pm1[of last_port 6], simp)
+     apply (cut_tac shiftr_le_mask[of last_port 6, simplified mask_def], simp)
+     apply (intro conjI allI impI; (simp add: unat_arith_simps; fail)?)
+      subgoal sorry
+     subgoal sorry
+     done
+
 (*
      apply (rule conjI; clarsimp)
       apply (frule word_exists_nth[OF word_neq_0_conv[THEN iffD2], OF unat_less_impl_less, simplified],
@@ -5502,7 +5507,6 @@ lemma isIOPortRangeFree_spec:
       apply (frule_tac w1=port in word_le_split_mask[where n=6, THEN iffD1, OF word_le_nat_alt[THEN iffD2]])
      apply (erule disjE)
 *)
-     sorry
   subgoal
     (* VCG precondition is sufficient to establish loop invariant. *)
     apply (frule word_le_split_mask[where n=6, THEN iffD1])
@@ -5522,6 +5526,7 @@ lemma isIOPortRangeFree_spec:
           | solves \<open>drule (2) bitmap_word_zero_no_bits_set2[simplified mask_def[where n=6], simplified],
                      clarsimp\<close>
           )+
+    done
   done
   done
 
