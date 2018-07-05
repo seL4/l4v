@@ -5199,6 +5199,15 @@ lemma mask_eq_ucast_shiftr:
   shows "UCAST('a::len \<rightarrow> 'b::len) w >> n = UCAST('a \<rightarrow> 'b) (w >> n)"
   by (rule ucast_shiftr[where 'a='a and 'b='b, of w n, simplified mask])
 
+lemma mask_eq_ucast_shiftl:
+  assumes "w && mask (LENGTH('a) - n) = w"
+  shows "UCAST('a::len \<rightarrow> 'b::len) w << n = UCAST('a \<rightarrow> 'b) (w << n)"
+  apply (rule subst[where P="\<lambda>c. ucast c << n = ucast (c << n)", OF assms])
+  apply (rule word_eqI[rule_format]; rule iffI;
+         clarsimp simp: nth_ucast nth_shiftl word_size;
+         drule test_bit_size; simp add: word_size)
+  done
+
 lemma mask_le_mono:
   "m \<le> n \<Longrightarrow> mask m \<le> mask n"
   apply (subst and_mask_eq_iff_le_mask[symmetric])
