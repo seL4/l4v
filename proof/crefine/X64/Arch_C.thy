@@ -5159,11 +5159,34 @@ lemma shiftr_le_mask:
   by (metis and_mask_eq_iff_shiftr_0 le_mask_iff shiftr_mask_eq word_size)
 
 lemma word_minus_1_shiftr:
+  notes word_unat.Rep_inject[simp del]
   fixes w :: "'a::len word"
-  assumes "w && mask n = 0"
-  assumes "w \<noteq> 0"
+  assumes low_bits_zero: "w && mask n = 0"
+  assumes neq_zero: "w \<noteq> 0"
   shows "(w - 1) >> n = (w >> n) - 1"
-  sorry
+  using neq_zero low_bits_zero
+  apply (subgoal_tac "n < LENGTH('a)")
+   prefer 2
+   apply (metis not_less ucast_id ucast_mask_drop)
+  apply (rule_tac t="w - 1" and s="(w && ~~ mask n) - 1" in subst,
+         fastforce simp: low_bits_zero mask_eq_x_eq_0)
+  apply (clarsimp simp: mask_eq_0_eq_x neg_mask_is_div lt1_neq0[symmetric])
+  apply (subst shiftr_div_2n_w, fastforce simp: word_size)+
+  apply (rule word_uint.Rep_eqD)
+  apply (simp only: uint_word_ariths uint_div uint_power_lower)
+  apply (subst mod_pos_pos_trivial, fastforce, fastforce)+
+  apply (subst mod_pos_pos_trivial)
+    apply (fastforce simp: le_diff_eq uint_2p_alt word_le_def)
+   apply (subst uint_1[symmetric])
+   apply (fastforce intro: uint_sub_lt2p)
+  apply (subst int_div_sub_1, fastforce)
+  apply (clarsimp simp: and_mask_dvd low_bits_zero)
+  apply (subst mod_pos_pos_trivial)
+    apply (metis linorder_not_less mult_zero_left shiftr_div_2n shiftr_div_2n_w uint_eq_0
+                 uint_le_0_iff word_less_1 word_uint.Rep_inject word_size zle_diff1_eq)
+   apply (metis shiftr_div_2n uint_1 uint_sub_lt2p)
+  apply fastforce
+  done
 
 lemma first_last_highbits_eq_port_set:
   fixes f l :: "16 word"
