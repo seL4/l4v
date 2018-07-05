@@ -5344,13 +5344,25 @@ lemma ucast_shiftl_6_absorb:
   using assms
   by (word_bitwise, auto)
 
-
-lemma high_bits_bounded_eq:
-  fixes f port :: "16 word"
-  shows "\<lbrakk>f \<le> port; port < (f >> 6) + 1 << 6\<rbrakk>
-       \<Longrightarrow> f >> 6 = port >> 6"
-  sledgehammer
-  sorry
+(* FIXME: move *)
+lemma word_highbits_bounded_highbits_eq:
+  "\<lbrakk>x \<le> (y :: 'a::len word); y < (x >> n) + 1 << n\<rbrakk> \<Longrightarrow> x >> n  = y >> n"
+  apply (cases "n < LENGTH('a)")
+   prefer 2
+   apply (simp add: shiftr_eq_0)
+  apply (drule_tac n=n in le_shiftr)
+  apply (subst (asm) word_shiftl_add_distrib)
+  apply (drule_tac word_less_sub_1)
+  apply (simp only: add_diff_eq[symmetric] mask_def[symmetric] and_not_mask[symmetric])
+  apply (drule_tac u=y and n=n in le_shiftr)
+  apply (subgoal_tac "(x && ~~ mask n) + mask n >> n \<le> x >> n")
+   apply fastforce
+  apply (subst aligned_shift')
+     apply (fastforce simp: mask_lt_2pn)
+    apply (fastforce simp: is_aligned_neg_mask)
+   apply fastforce
+  apply (fastforce simp: mask_shift)
+  done
 
 lemma bitmap_word_zero_no_bits_set2:
   fixes f l :: "16 word"
@@ -5361,7 +5373,7 @@ lemma bitmap_word_zero_no_bits_set2:
                    unat port < unat (UCAST(16 \<rightarrow> 32 signed) ((f >> 6) + 1) << 6) \<longrightarrow>
         \<not>arr.[unat (port >> 6)] !! unat (port && mask 6)"
   apply (clarsimp simp: word_le_nat_alt[symmetric] word_less_nat_alt[symmetric] ucast_shiftl_6_absorb)
-  apply (frule (1) high_bits_bounded_eq)
+  apply (frule (1) word_highbits_bounded_highbits_eq)
   apply simp
   apply (frule_tac v1=port in word_le_split_mask[where n=6, THEN iffD1])
   apply (erule disjE; clarsimp)
