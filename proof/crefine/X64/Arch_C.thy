@@ -5391,6 +5391,10 @@ lemma bitmap_word_zero_no_bits_set2:
   apply (drule_tac x="unat (port && mask 6)" in spec, clarsimp simp: neg_mask_bang not_le word_le_nat_alt)
   done
 
+lemma word_eq_cast_unsigned:
+  "(x = y) = (UCAST ('a signed \<rightarrow> ('a :: len)) x = ucast y)"
+  by (simp add: word_eq_iff nth_ucast)
+
 lemma isIOPortRangeFree_spec:
   notes ucast_mask = ucast_and_mask[where n=6, simplified mask_def, simplified]
   notes not_max_word_simps = and_not_max_word shiftr_not_max_word and_mask_not_max_word
@@ -5511,9 +5515,30 @@ lemma isIOPortRangeFree_spec:
         apply (erule rsubst[where P="\<lambda>c. i < c"])
         apply (simp add: unat_arith_simps)
         done
-     subgoal
+     subgoal for port
        (* return true. *)
-       sorry
+       apply (case_tac "ucast port < UCAST (16 \<rightarrow> 32 signed) (last_port >> 6) << 6")
+        apply (fastforce simp: unat_arith_simps)
+       apply (clarsimp simp: not_less ucast_le_ucast)
+       apply (subgoal_tac "port >> 6 = last_port >> 6")
+        prefer 2
+        apply (drule ucast_mono_le[where 'a="32 signed" and 'b="16"])
+         apply (rule order_less_le_trans, rule ucast_less, simp+)
+        apply (drule_tac u="ucast _" and v=port and n=6 in le_shiftr)
+        apply (clarsimp simp: ucast_shiftr shiftl_shiftr1)
+        apply (simp add: shiftl_shiftr1 word_size shiftr_then_mask_commute[where n=6 and m=10, simplified, symmetric]
+                         mask_twice ucast_and_mask)
+        apply (drule_tac u=port and n=6 in le_shiftr)+
+        apply (clarsimp simp add: shiftr_mask_eq' word_size)
+       apply (clarsimp simp: word_not_exists_nth)
+       apply (drule_tac x="unat (port && mask 6)" and v=0 in word_eqD)
+       apply (simp add: word_size unat_and_mask_less_2p[where m=6, simplified])
+       apply (simp add: word_less_nat_alt[symmetric])
+       apply (erule notE, rule plus_one_helper2)
+        apply (subst (asm) word_le_split_mask[where n=6 and v=last_port])+
+        apply simp
+       apply (simp add: unat_arith_simps)
+       done
      done
   subgoal
     (* VCG precondition is sufficient to establish loop invariant. *)
