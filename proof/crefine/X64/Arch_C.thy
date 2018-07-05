@@ -5201,7 +5201,8 @@ lemma mask_eq_ucast_shiftr:
 
 lemma mask_le_mono:
   "m \<le> n \<Longrightarrow> mask m \<le> mask n"
-  sorry
+  apply (subst and_mask_eq_iff_le_mask[symmetric])
+  by (auto intro: word_eqI simp: word_size)
 
 lemma word_and_mask_eq_le_mono:
   "w && mask m = w \<Longrightarrow> m \<le> n \<Longrightarrow> w && mask n = w"
