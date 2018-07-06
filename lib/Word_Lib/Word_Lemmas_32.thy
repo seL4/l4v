@@ -84,6 +84,12 @@ lemma unat_less_word_bits:
 lemmas unat_mask_word32' = unat_mask[where 'a=32]
 lemmas unat_mask_word32 = unat_mask_word32'[folded word_bits_def]
 
+lemma unat_less_2p_word_bits:
+  "unat (x :: 32 word) < 2 ^ word_bits"
+  apply (simp only: word_bits_def)
+  apply (rule unat_lt2p)
+  done
+
 lemma Suc_unat_mask_div:
   "Suc (unat (mask sz div word_size::word32)) = 2 ^ (min sz word_bits - 2)"
   apply (case_tac "sz < word_bits")
