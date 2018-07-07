@@ -2058,8 +2058,7 @@ lemma ptr_span_array_ptr_index_disjoint:
     have l: "CARD('b) * size_of TYPE('a) \<le> 2 ^ LENGTH(64)" using s by simp
     have p: "\<And>x k. x < CARD('b) \<Longrightarrow> k < size_of TYPE('a)
                       \<Longrightarrow> x * size_of TYPE('a) + k < 2 ^ LENGTH(64)"
-      by (metis less_le_trans[OF _ l] Divides.mod_less Fields.sign_simps(5) mod_lemma
-                zero_less_card_finite)
+      by (metis less_le_trans[OF _ l] less_imp_not_less mod_lemma mult.commute nat_mod_lem neq0_conv)
     show ?thesis
       apply (clarsimp simp: array_ptr_index_def ptr_add_def intvl_disj_offset)
       apply (rule disjointI)

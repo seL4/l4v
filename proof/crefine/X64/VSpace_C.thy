@@ -2038,7 +2038,7 @@ lemma updateCap_frame_mapped_addr_ccorres:
   shows "ccorres dc xfdc
            (cte_wp_at' (\<lambda>c. ArchObjectCap cap = cteCap c) ctSlot and K (isPageCap cap))
            UNIV []
-           (updateCap ctSlot (ArchObjectCap (capVPMapType_update (\<lambda>_. VMNoMap) (capVPMappedAddress_update empty cap))))
+           (updateCap ctSlot (ArchObjectCap (capVPMapType_update (\<lambda>_. VMNoMap) (capVPMappedAddress_update Map.empty cap))))
            (Guard C_Guard {s. s \<Turnstile>\<^sub>c cte_Ptr ctSlot}
               (CALL cap_frame_cap_ptr_set_capFMappedAddress(cap_Ptr &(cte_Ptr ctSlot\<rightarrow>[''cap_C'']), 0));;
             Guard C_Guard {s. s \<Turnstile>\<^sub>c cte_Ptr ctSlot}

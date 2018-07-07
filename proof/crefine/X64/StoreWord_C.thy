@@ -396,8 +396,8 @@ proof (intro allI impI)
     and piud: "pointerInUserData ptr \<sigma>"
     by simp_all
 
-  def offset \<equiv> "ucast ((ptr && mask pageBits) >> 3) :: 9 word"
-  def base \<equiv> "Ptr (ptr && ~~ mask  pageBits) :: user_data_C ptr"
+  define offset where "offset \<equiv> ucast ((ptr && mask pageBits) >> 3) :: 9 word"
+  define base where "base \<equiv> Ptr (ptr && ~~ mask  pageBits) :: user_data_C ptr"
 
   from piud
   obtain old_w where
@@ -512,7 +512,7 @@ proof (intro allI impI)
      apply (insert ptr_mask_less)[1]
      apply (simp add: word_less_nat_alt)
     apply (simp add: ptr_add_def word_shift_by_3 shiftr_shiftl1)
-    apply (simp add: is_aligned_neg_mask_eq al is_aligned_andI1)
+    apply (simp add: al is_aligned_andI1)
     apply (simp add: word_plus_and_or_coroll2 add.commute)
     done
 
@@ -717,8 +717,8 @@ proof (intro allI impI)
     and piud: "pointerInDeviceData ptr \<sigma>"
     by simp_all
 
-  def offset \<equiv> "ucast ((ptr && mask pageBits) >> 3) :: 9 word"
-  def base \<equiv> "Ptr (ptr && ~~ mask  pageBits) :: user_data_device_C ptr"
+  define offset where "offset \<equiv> ucast ((ptr && mask pageBits) >> 3) :: 9 word"
+  define base where "base \<equiv> Ptr (ptr && ~~ mask  pageBits) :: user_data_device_C ptr"
 
   from piud
   obtain old_w where
@@ -833,7 +833,7 @@ proof (intro allI impI)
      apply (insert ptr_mask_less)[1]
      apply (simp add: word_less_nat_alt)
     apply (simp add: ptr_add_def word_shift_by_3 shiftr_shiftl1)
-    apply (simp add: is_aligned_neg_mask_eq al is_aligned_andI1)
+    apply (simp add: al is_aligned_andI1)
     apply (simp add: word_plus_and_or_coroll2 add.commute)
     done
 

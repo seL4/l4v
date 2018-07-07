@@ -9,7 +9,7 @@
  *)
 
 theory DetWP
-imports "CLib.DetWPLib" Include_C
+imports "Lib.DetWPLib" Include_C
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
