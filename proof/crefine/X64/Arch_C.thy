@@ -530,7 +530,7 @@ proof -
                      update_ti_t_array_tag_n_rep update_ti_t_machine_word_0s)
     done
 
-  def ko \<equiv> "KOArch (KOASIDPool makeObject)"
+  define ko where "ko \<equiv> KOArch (KOASIDPool makeObject)"
 
   have rc :"range_cover frame (objBitsKO ko) (objBitsKO ko) (Suc 0)"
     by (simp add:objBits_simps ko_def archObjSize_def al range_cover_full)
@@ -793,7 +793,7 @@ shows
                           del: fun_upd_apply)
               apply (erule array_relation_update)
                 apply (simp add: unat_ucast)
-                apply (subst Divides.mod_less)
+                apply (subst Divides.mod_less, simp)
                  apply (drule leq_asid_bits_shift)
                  apply (simp add: asid_high_bits_def mask_def word_le_nat_alt)
                 apply simp
@@ -1631,23 +1631,6 @@ lemma vaddr_segment_nonsense3_folded:
    apply (simp add: bit_simps mask_def)+
   apply (rule shiftl_less_t2n[where m=12 and n=3, simplified, OF and_mask_less'[where n=9, unfolded mask_def, simplified]])
    apply simp+
-  done
-
-
-(* FIXME : move *)
-lemma of_nat_ucast:
-  "is_down (ucast :: ('a :: len) word \<Rightarrow> ('b :: len) word)
-    \<Longrightarrow> (of_nat n :: 'b word) = ucast (of_nat n :: 'a word)"
-  apply (subst word_unat.inverse_norm)
-  apply (simp add: ucast_def word_of_int[symmetric]
-                   of_nat_nat[symmetric] unat_def[symmetric])
-  apply (simp add: unat_of_nat)
-  apply (rule nat_int.Rep_eqD)
-  apply (simp only: zmod_int)
-  apply (rule mod_mod_cancel)
-  apply (subst zdvd_int[symmetric])
-  apply (rule le_imp_power_dvd)
-  apply (simp add: is_down_def target_size_def source_size_def word_size)
   done
 
 lemma storePDE_Basic_ccorres'':
