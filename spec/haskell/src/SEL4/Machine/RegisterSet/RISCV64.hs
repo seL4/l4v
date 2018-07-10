@@ -30,14 +30,31 @@ data Register
 
 type Word = Data.Word.Word64
 
+capRegister :: Register
 capRegister = A0
+
+msgInfoRegister :: Register
 msgInfoRegister = A1
+
+msgRegisters :: [Register]
 msgRegisters = [A2 .. A5]
+
+badgeRegister :: Register
 badgeRegister = A0
+
+frameRegisters :: [Register]
 frameRegisters = SEPC : [LR .. A6]
+
+gpRegisters :: [Register]
 gpRegisters = []
+
+exceptionMessage :: [Register]
 exceptionMessage = [SEPC, SP, A7]
+
+syscallMessage :: [Register]
 syscallMessage = SEPC : SP : LR : [A0 .. A6]
+
+tlsBaseRegister :: Register
 tlsBaseRegister = TP -- note: used for IPC buffer until TLS is used
 
 sstatusSPIE :: Word
