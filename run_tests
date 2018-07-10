@@ -76,7 +76,8 @@ EXCLUDE["X64"]=[
     "AsmRefine"]
 
 EXCLUDE["RISCV64"]=[
-    "ASpec",
+    "AInvs",
+    "ASepSpec",
     "DSpec",
     "c-kernel",
     "CKernel",
