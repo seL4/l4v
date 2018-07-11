@@ -109,7 +109,7 @@ definition
                          device_state = Map.empty,
                          machine_state_rest = undefined \<rparr>"
 
-#INCLUDE_HASKELL SEL4/Machine/Hardware/RISCV64.hs CONTEXT RISCV64 ONLY VMFaultType HypFaultType VMPageSize pageBits ptTranslationBits pageBitsForSize
+#INCLUDE_HASKELL SEL4/Machine/Hardware/RISCV64.hs CONTEXT RISCV64 ONLY VMFaultType HypFaultType vmFaultTypeFSR VMPageSize pageBits ptTranslationBits pageBitsForSize
 
 end
 
