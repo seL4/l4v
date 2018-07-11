@@ -243,11 +243,17 @@ lemmas cache_machine_op_defs = sfence_def hwASIDFlush_def
 consts'
   sbadaddr_val :: "machine_state \<Rightarrow> machine_word"
 definition
-  readsbadaddr :: "machine_word machine_monad"
- where
-  "readsbadaddr = gets sbadaddr_val"
+  read_sbadaddr :: "machine_word machine_monad"
+where
+  "read_sbadaddr = gets sbadaddr_val"
+
+consts'
+  setVSpaceRoot_impl :: "paddr \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+  setVSpaceRoot :: "paddr \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+where
+  "setVSpaceRoot pt asid \<equiv> machine_op_lift $ setVSpaceRoot_impl pt asid"
 
 end
-
 
 end
