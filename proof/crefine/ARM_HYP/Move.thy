@@ -167,7 +167,7 @@ crunch ksCurThread[wp]: readVCPUReg "\<lambda>s. P (ksCurThread s)"
   (ignore: getObject)
 
 lemma fromEnum_maxBound_vcpureg_def:
-  "fromEnum (maxBound :: vcpureg) = 40"
+  "fromEnum (maxBound :: vcpureg) = 38"
   by (clarsimp simp: fromEnum_def maxBound_def enum_vcpureg)
 
 lemma unat_of_nat_mword_fromEnum_vcpureg[simp]:

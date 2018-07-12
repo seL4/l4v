@@ -66,8 +66,6 @@ This module defines the ARM register set.
 >     | VCPURegNMRR
 >     | VCPURegCIDR
 >     | VCPURegTPIDRPRW
->     | VCPURegTPIDRURO
->     | VCPURegTPIDRURW
 >     | VCPURegFPEXC
 >     | VCPURegCNTVTVAL
 >     | VCPURegCNTVCTL
