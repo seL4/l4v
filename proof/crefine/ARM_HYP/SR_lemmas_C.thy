@@ -2402,8 +2402,6 @@ lemmas seL4_VCPUReg_defs =
     seL4_VCPUReg_NMRR_def
     seL4_VCPUReg_CIDR_def
     seL4_VCPUReg_TPIDRPRW_def
-    seL4_VCPUReg_TPIDRURO_def
-    seL4_VCPUReg_TPIDRURW_def
     seL4_VCPUReg_FPEXC_def
     seL4_VCPUReg_CNTV_TVAL_def
     seL4_VCPUReg_CNTV_CTL_def
