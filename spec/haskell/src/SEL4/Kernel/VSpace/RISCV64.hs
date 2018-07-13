@@ -328,10 +328,10 @@ checkVPAlignment :: VMPageSize -> VPtr -> KernelF SyscallError ()
 checkVPAlignment sz w =
     unless (w .&. mask (pageBitsForSize sz) == 0) $ throw AlignmentError
 
-checkFreeSlot :: PPtr PTE -> KernelF SyscallError ()
-checkFreeSlot slot = do
+checkSlot :: PPtr PTE -> (PTE -> Bool) -> KernelF SyscallError ()
+checkSlot slot test = do
     pte <- withoutFailure $ getObject slot
-    unless (pte == InvalidPTE) $ throw DeleteFirst
+    unless (test pte) $ throw DeleteFirst
 
 decodeRISCVPageInvocationMap :: PPtr CTE -> ArchCapability -> VPtr -> Word ->
     Word -> Capability -> KernelF SyscallError ArchInv.Invocation
@@ -352,7 +352,7 @@ decodeRISCVPageInvocationMap cte cap vptr rightsMask attr vspaceCap = do
     (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
     unless (bitsLeft == pgBits) $ throw $
         FailedLookup False $ MissingCapability bitsLeft
-    checkFreeSlot slot
+    checkSlot slot (\pte ->  pte == InvalidPTE)
     let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
     let framePAddr = addrFromPPtr (capFBasePtr cap)
     let exec = not $ riscvExecuteNever (attribsFromWord attr)
@@ -380,7 +380,7 @@ decodeRISCVPageInvocationRemap cte cap rightsMask attr vspaceCap = do
     let pgBits = pageBitsForSize $ capFSize cap
     unless (bitsLeft == pgBits) $ throw $
         FailedLookup False $ MissingCapability bitsLeft
-    checkFreeSlot slot
+    checkSlot slot (not . isPageTablePTE)
     let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
     let framePAddr = addrFromPPtr (capFBasePtr cap)
     let exec = not $ riscvExecuteNever (attribsFromWord attr)
