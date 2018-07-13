@@ -333,9 +333,9 @@ checkSlot slot test = do
     pte <- withoutFailure $ getObject slot
     unless (test pte) $ throw DeleteFirst
 
-decodeRISCVPageInvocationMap :: PPtr CTE -> ArchCapability -> VPtr -> Word ->
+decodeRISCVFrameInvocationMap :: PPtr CTE -> ArchCapability -> VPtr -> Word ->
     Word -> Capability -> KernelF SyscallError ArchInv.Invocation
-decodeRISCVPageInvocationMap cte cap vptr rightsMask attr vspaceCap = do
+decodeRISCVFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
     when (isJust $ capFMappedAddress cap) $ throw $ InvalidCapability 0
     (vspace,asid) <- case vspaceCap of
         ArchObjectCap (PageTableCap {
@@ -361,9 +361,9 @@ decodeRISCVPageInvocationMap cte cap vptr rightsMask attr vspaceCap = do
         pageMapCTSlot = cte,
         pageMapEntries = (makeUserPTE framePAddr exec vmRights, slot) }
 
-decodeRISCVPageInvocationRemap :: PPtr CTE -> ArchCapability -> Word ->
+decodeRISCVFrameInvocationRemap :: PPtr CTE -> ArchCapability -> Word ->
     Word -> Capability -> KernelF SyscallError ArchInv.Invocation
-decodeRISCVPageInvocationRemap cte cap rightsMask attr vspaceCap = do
+decodeRISCVFrameInvocationRemap cte cap rightsMask attr vspaceCap = do
     (vspace,asid) <- case vspaceCap of
         ArchObjectCap (PageTableCap {
                 capPTMappedAddress = Just (asid, _),
@@ -395,10 +395,10 @@ decodeRISCVFrameInvocation :: Word -> [Word] -> PPtr CTE ->
 decodeRISCVFrameInvocation label args cte (cap@FrameCap {}) extraCaps =
     case (invocationType label, args, extraCaps) of
         (ArchInvocationLabel RISCVPageMap, vaddr:rightsMask:attr:_, (vspaceCap,_):_) -> do
-            decodeRISCVPageInvocationMap cte cap (VPtr vaddr) rightsMask attr vspaceCap
+            decodeRISCVFrameInvocationMap cte cap (VPtr vaddr) rightsMask attr vspaceCap
         (ArchInvocationLabel RISCVPageMap, _, _) -> throw TruncatedMessage
         (ArchInvocationLabel RISCVPageRemap, rightsMask:attr:_, (vspaceCap,_):_) -> do
-            decodeRISCVPageInvocationRemap cte cap rightsMask attr vspaceCap
+            decodeRISCVFrameInvocationRemap cte cap rightsMask attr vspaceCap
         (ArchInvocationLabel RISCVPageRemap, _, _) -> throw TruncatedMessage
         (ArchInvocationLabel RISCVPageUnmap, _, _) ->
             return $ InvokePage $ PageUnmap {
