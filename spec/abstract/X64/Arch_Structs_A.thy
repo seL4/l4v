@@ -163,7 +163,7 @@ where
 | "arch_obj_size IOPortControlCap = 0"
 (* FIXME x64-vtd:
 | "arch_obj_size (IOSpaceCap _ _) = 0"
-| "arch_obj_size (IOPageTableCap _ _ _) = iotable_size" (* FIXME: check *) *)
+| "arch_obj_size (IOPageTableCap _ _ _) = iotable_size" *)
 | "arch_obj_size (PageCap _ _ _ _ sz _) = pageBitsForSize sz"
 | "arch_obj_size (PageTableCap _ _) = table_size"
 | "arch_obj_size (PageDirectoryCap _ _) = table_size"
@@ -179,7 +179,7 @@ where
 | "arch_cap_is_device IOPortControlCap = False"
 (* FIXME x64-vtd:
 | "arch_cap_is_device (IOSpaceCap _ _) = False"
-| "arch_cap_is_device (IOPageTableCap _ _ _) = False" (* FIXME: check *) *)
+| "arch_cap_is_device (IOPageTableCap _ _ _) = False" *)
 | "arch_cap_is_device (PageCap is_dev _ _ _ _ _) = is_dev"
 | "arch_cap_is_device (PageTableCap _ _) = False"
 | "arch_cap_is_device (PageDirectoryCap _ _) = False"
@@ -367,7 +367,7 @@ definition
 
 definition
   vtd_pt_bits :: "nat" where
-  "vtd_pt_bits \<equiv> 9" (* FIXME: seems not correct *)
+  "vtd_pt_bits \<equiv> iotable_size"
 
 definition
   x64_num_io_pt_levels :: "nat" where
