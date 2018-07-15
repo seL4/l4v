@@ -17,7 +17,6 @@ imports
   "../../../lib/Defs"
   "../Setup_Locale"
 begin
-(* FIXME X64: Missing lots of stuff *)
 
 context Arch begin global_naming X64
 
@@ -80,20 +79,15 @@ definition
   maxUserIRQ :: "irq" where
   "maxUserIRQ \<equiv> 123"
 
-datatype cr3 = X64CR3 word64 (*pml4*) word64 (*asid*)
+datatype cr3 = X64CR3 (CR3BaseAddress: word64) (cr3pcid: word64)
 
-primrec CR3BaseAddress where
-"CR3BaseAddress (X64CR3 v0 _) = v0"
+primrec cr3BaseAddress_update :: "(word64 \<Rightarrow> word64) \<Rightarrow> cr3 \<Rightarrow> cr3"
+where
+  "cr3BaseAddress_update f (X64CR3 v0 v1) = (X64CR3 (f v0) v1)"
 
-primrec cr3BaseAddress_update where
-"cr3BaseAddress_update f (X64CR3 v0 v1) = (X64CR3 (f v0) v1)"
-
-primrec cr3pcid where
-"cr3pcid (X64CR3 _ v1) = v1"
-
-primrec cr3pcid_update where
-"cr3pcid_update f (X64CR3 v0 v1) = (X64CR3 v0 (f v1))"
-
+primrec cr3pcid_update :: "(word64 \<Rightarrow> word64) \<Rightarrow> cr3 \<Rightarrow> cr3"
+where
+  "cr3pcid_update f (X64CR3 v0 v1) = (X64CR3 v0 (f v1))"
 
 
 end

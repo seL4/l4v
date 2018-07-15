@@ -390,65 +390,64 @@ ioapicIRQLines :: "machine_word"
 where
 "ioapicIRQLines \<equiv> 24"
 
-(* FIXME x64: technically this is defined in c and should be here *)
 consts'
-  ioapicMapPinToVector_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+  ioapicMapPinToVector_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow>
+    machine_word \<Rightarrow> unit machine_rest_monad"
 definition
-ioapicMapPinToVector :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+  ioapicMapPinToVector :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow>
+    machine_word \<Rightarrow> unit machine_monad"
 where
-"ioapicMapPinToVector ioapic pin level polarity vector \<equiv> machine_op_lift (ioapicMapPinToVector_impl ioapic pin level polarity vector)"
+  "ioapicMapPinToVector ioapic pin level polarity vector \<equiv>
+    machine_op_lift (ioapicMapPinToVector_impl ioapic pin level polarity vector)"
 
-(*FIXME: How to deal with this directly? *)
-definition
-IRQ :: "word8 \<Rightarrow> irq"
+definition IRQ :: "word8 \<Rightarrow> irq"
 where
-"IRQ \<equiv> id"
+  "IRQ \<equiv> id"
 
-(* FIXME x64: More underspecified operations *)
 consts'
   in8_impl :: "word16 \<Rightarrow> unit machine_rest_monad"
   in8_val :: "machine_state \<Rightarrow> machine_word"
 definition
-in8 :: "word16 \<Rightarrow> machine_word machine_monad"
+  in8 :: "word16 \<Rightarrow> machine_word machine_monad"
 where
-"in8 port \<equiv> do machine_op_lift $ in8_impl port; gets in8_val od"
+  "in8 port \<equiv> do machine_op_lift $ in8_impl port; gets in8_val od"
 
 consts'
   in16_impl :: "word16 \<Rightarrow> unit machine_rest_monad"
   in16_val :: "machine_state \<Rightarrow> machine_word"
 definition
-in16 :: "word16 \<Rightarrow> machine_word machine_monad"
+  in16 :: "word16 \<Rightarrow> machine_word machine_monad"
 where
-"in16 port \<equiv> do machine_op_lift $ in16_impl port; gets in16_val od"
+  "in16 port \<equiv> do machine_op_lift $ in16_impl port; gets in16_val od"
 
 consts'
   in32_impl :: "word16 \<Rightarrow> unit machine_rest_monad"
   in32_val :: "machine_state \<Rightarrow> machine_word"
 definition
-in32 :: "word16 \<Rightarrow> machine_word machine_monad"
+  in32 :: "word16 \<Rightarrow> machine_word machine_monad"
 where
-"in32 port \<equiv> do machine_op_lift $ in32_impl port; gets in32_val od"
+  "in32 port \<equiv> do machine_op_lift $ in32_impl port; gets in32_val od"
 
 consts'
   out8_impl :: "word16 \<Rightarrow> word8 \<Rightarrow> unit machine_rest_monad"
 definition
-out8 :: "word16 \<Rightarrow> word8 \<Rightarrow> unit machine_monad"
+  out8 :: "word16 \<Rightarrow> word8 \<Rightarrow> unit machine_monad"
 where
-"out8 port dat \<equiv> machine_op_lift $ out8_impl port dat"
+  "out8 port dat \<equiv> machine_op_lift $ out8_impl port dat"
 
 consts'
   out16_impl :: "word16 \<Rightarrow> word16 \<Rightarrow> unit machine_rest_monad"
 definition
-out16 :: "word16 \<Rightarrow> word16 \<Rightarrow> unit machine_monad"
+  out16 :: "word16 \<Rightarrow> word16 \<Rightarrow> unit machine_monad"
 where
-"out16 port dat \<equiv> machine_op_lift $ out16_impl port dat"
+  "out16 port dat \<equiv> machine_op_lift $ out16_impl port dat"
 
 consts'
   out32_impl :: "word16 \<Rightarrow> word32 \<Rightarrow> unit machine_rest_monad"
 definition
-out32 :: "word16 \<Rightarrow> word32 \<Rightarrow> unit machine_monad"
+  out32 :: "word16 \<Rightarrow> word32 \<Rightarrow> unit machine_monad"
 where
-"out32 port dat \<equiv> machine_op_lift $ out32_impl port dat"
+  "out32 port dat \<equiv> machine_op_lift $ out32_impl port dat"
 
 end
 
