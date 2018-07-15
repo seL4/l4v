@@ -43,8 +43,6 @@ This module defines the machine-specific interrupt handling routines.
 > checkIRQ :: Word -> KernelF SyscallError ()
 > checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)
 
-FIXME ARMHYP INTERRUPT_SMMU
-
 > handleReservedIRQ :: IRQ -> Kernel ()
 > handleReservedIRQ irq = do
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
