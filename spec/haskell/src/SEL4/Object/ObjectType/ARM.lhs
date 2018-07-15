@@ -70,7 +70,7 @@ ASID capabilities can be copied without modification.
 
 #ifdef CONFIG_ARM_SMMU
 > deriveCap _ (c@IOSpaceCap {}) = return $ ArchObjectCap c
-> deriveCap _ (c@IOPageTableCap {}) = error "FIXME ARMHYP TODO IO"
+> deriveCap _ (c@IOPageTableCap {}) = error "FIXME ARMHYP_SMMU"
 #endif /* CONFIG_ARM_SMMU */
 
 > isCapRevocable :: Capability -> Capability -> Bool
@@ -131,7 +131,7 @@ Deletion of any mapped frame capability requires the page table slot to be locat
 >                            capVPSize = s, capVPBasePtr = ptr }) _ =
 #ifdef CONFIG_ARM_SMMU
 >     if capVPisIOSpace cap
->       then error "FIXME ARMHYP TODO IO"
+>       then error "FIXME ARMHYP_SMMU"
 >       else
 #endif
 >            do
@@ -145,8 +145,8 @@ Deletion of any mapped frame capability requires the page table slot to be locat
 #endif
 
 #ifdef CONFIG_ARM_SMMU
-> finaliseCap (IOSpaceCap {}) _ = error "FIXME ARMHYP TODO IOSpace"
-> finaliseCap (IOPageTableCap {}) _ = error "FIXME ARMHYP TODO IOSpace" -- IO page directory does not need to be finalised
+> finaliseCap (IOSpaceCap {}) _ = error "FIXME ARMHYP_SMMU"
+> finaliseCap (IOPageTableCap {}) _ = error "FIXME ARMHYP_SMMU" -- IO page directory does not need to be finalised
 #endif
 
 All other capabilities need no finalisation action.
@@ -270,7 +270,7 @@ Create an architecture-specific object.
 #ifdef CONFIG_ARM_SMMU
 >         Arch.Types.IOPageTableObject -> do
 >             let ptSize = ioptBits -- see comment at ioptBits
->             error "FIXME ARMHYP TODO IO"
+>             error "FIXME ARMHYP_SMMU"
 #endif
 
 \subsection{Capability Invocation}
@@ -284,8 +284,8 @@ Create an architecture-specific object.
 >        VCPUCap {} -> decodeARMVCPUInvocation label args capIndex slot cap extraCaps
 #endif
 #ifdef CONFIG_ARM_SMMU
->        IOSpaceCap {} -> error "FIXME ARMHYP TODO IOSpace"
->        IOPageTableCap {} -> error "FIXME ARMHYP TODO IO"
+>        IOSpaceCap {} -> error "FIXME ARMHYP_SMMU"
+>        IOPageTableCap {} -> error "FIXME ARMHYP_SMMU"
 #endif
 >        _ -> decodeARMMMUInvocation label args capIndex slot cap extraCaps
 
@@ -298,9 +298,9 @@ Create an architecture-specific object.
 #endif
 #ifdef CONFIG_ARM_SMMU
 >                  ArchInv.InvokeIOSpace _ ->
->                      withoutPreemption $ error "FIXME ARMHYP TODO IOSpace"
+>                      withoutPreemption $ error "FIXME ARMHYP_SMMU"
 >                  ArchInv.InvokeIOPageTable _ ->
->                      withoutPreemption $ error "FIXME ARMHYP TODO IO"
+>                      withoutPreemption $ error "FIXME ARMHYP_SMMU"
 #endif
 >                  _ -> performARMMMUInvocation i
 
@@ -316,7 +316,7 @@ Create an architecture-specific object.
 > capUntypedPtr (VCPUCap { capVCPUPtr = PPtr p }) = PPtr p
 #endif
 #ifdef CONFIG_ARM_SMMU
-> capUntypedPtr (IOSpaceCap {}) = error "FIXME ARMHYP TODO IOSpace"
+> capUntypedPtr (IOSpaceCap {}) = error "FIXME ARMHYP_SMMU"
 > capUntypedPtr (IOPageTableCap { capIOPTBasePtr = PPtr p }) = PPtr p
 #endif
 

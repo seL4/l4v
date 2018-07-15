@@ -1327,7 +1327,7 @@ Note that these capabilities cannot be copied until they have been mapped, so an
 
 Virtual page capabilities may each represent a single mapping into a page table. Unlike page table capabilities, they may be unmapped without deletion, and may be freely copied to allow multiple mappings of the same page. Along with the \emph{Map} and \emph{Unmap} operations, there is a \emph{Remap} operation, which is used to change the access permissions on an existing mapping.
 
-FIXME ARMHYP TODO check SMMU isIOSpaceFrameCap(cap) for remap / unmap
+FIXME ARMHYP_SMMU check SMMU isIOSpaceFrameCap(cap) for remap / unmap
 FIXME ARMHYP TODO add call to ARMPageMapIO decode for map and unmap; remap not allowed
 FIXME ARMHYP capVPMappedAddress is not what we want for ARM\_HYP? C code has capFMappedAddress for ARM, capFBasePtr for ARM\_HYP here
 
@@ -1363,7 +1363,7 @@ FIXME ARMHYP capVPMappedAddress is not what we want for ARM\_HYP? C code has cap
 >                 pageMapEntries = entries }
 >         (ArchInvocationLabel ARMPageMap, _, _) -> throw TruncatedMessage
 #ifdef CONFIG_ARM_SMMU
->         (ArchInvocationLabel ARMPageMapIO, _, _) -> error "FIXME ARMHYP TODO IO"
+>         (ArchInvocationLabel ARMPageMapIO, _, _) -> error "FIXME ARMHYP_SMMU"
 #endif
 >         (ArchInvocationLabel ARMPageRemap, rightsMask:attr:_, (pdCap, _):_) -> do
 #ifdef CONFIG_ARM_SMMU
@@ -1394,7 +1394,7 @@ FIXME ARMHYP capVPMappedAddress is not what we want for ARM\_HYP? C code has cap
 >                 return $
 #ifdef CONFIG_ARM_SMMU
 >                          if (isIOSpaceFrameCap cap)
->                          then error "FIXME ARMHYP TODO IO"
+>                          then error "FIXME ARMHYP_SMMU"
 >                          else
 #endif
 >                               InvokePage $ PageUnmap {
