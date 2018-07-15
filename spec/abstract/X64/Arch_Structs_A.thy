@@ -67,7 +67,6 @@ section {* Architecture-specific objects *}
 datatype table_attr = Accessed | CacheDisabled | WriteThrough | ExecuteDisable
 type_synonym table_attrs = "table_attr set"
 
-(* FIXME: better keep two separate sets? *)
 datatype frame_attr = PTAttr table_attr | Global | PAT | Dirty
 type_synonym frame_attrs = "frame_attr set"
 

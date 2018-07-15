@@ -86,7 +86,6 @@ datatype page_invocation
 
 datatype vcpu_invocation =
        VCPUSetTCB obj_ref (*vcpu*) obj_ref (*tcb*)
-       (*FIXME ARMHYP: canonise canonical types for VCPUInjectIRQ *)
      | VCPUInjectIRQ obj_ref nat virq
      | VCPUReadRegister obj_ref vcpureg
      | VCPUWriteRegister obj_ref vcpureg machine_word

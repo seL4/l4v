@@ -47,15 +47,6 @@ definition
     od)
    )"
 
-
-(*FIXME x64: Current C code doesn't work for addresses above 32 bits.
-  This is meant to take a base address and craft a default
-  gdt_data structure. *)
-
-definition
-  base_to_gdt_data_word :: "machine_word \<Rightarrow> machine_word" where
-  "base_to_gdt_data_word = undefined"
-
 text {* Switch to a thread's virtual address space context and write its IPC
 buffer pointer into the globals frame. Clear the load-exclusive monitor. *}
 
@@ -66,7 +57,6 @@ definition
   arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_switch_to_thread t \<equiv> set_vm_root t"
 
-(* x64 done *)
 definition
    arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad" where
    "arch_switch_to_idle_thread \<equiv> do
@@ -74,7 +64,6 @@ definition
      set_vm_root thread
    od"
 
-(* x64 done *)
 definition
   arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_activate_idle_thread t \<equiv> return ()"
@@ -182,7 +171,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
                         | _ \<Rightarrow> fail
             | None \<Rightarrow> return ()
       | _ \<Rightarrow> fail)
-(*  | PageIOMap asid cap ct_slot entries \<Rightarrow> undefined (* FIXME unimplemented *)*)
+(*  | PageIOMap asid cap ct_slot entries \<Rightarrow> undefined *)
   | PageGetAddr ptr \<Rightarrow> do
       paddr \<leftarrow> return $ fromPAddr $ addrFromPPtr ptr;
       ct \<leftarrow> gets cur_thread;
@@ -191,8 +180,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
       set_message_info ct msg_info
     od)"
 
-text {* PageTable capabilities confer the authority to map and unmap page
-tables. *}
+text {* PageTable capabilities confer the authority to map and unmap page tables. *}
 definition
 perform_page_table_invocation :: "page_table_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "perform_page_table_invocation iv \<equiv>

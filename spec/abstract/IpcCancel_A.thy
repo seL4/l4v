@@ -102,8 +102,7 @@ where
 text {* Cancel all message operations on threads queued in a notification
 endpoint. *}
 
-text {* Miscellaneous NTFN binding stuff
-FIXME! *}
+(* FIXME: Miscellaneous NTFN binding stuff, move upwards? *)
 abbreviation
   ntfn_set_bound_tcb :: "notification \<Rightarrow> obj_ref option \<Rightarrow> notification"
 where
@@ -341,7 +340,6 @@ where
 
 text {* Cancel the message receive operation of a thread queued in an
 notification object. *}
-(* FIXME: need some way of easily retrieving ntfnBoundTCB? *)
 definition
   cancel_signal :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where

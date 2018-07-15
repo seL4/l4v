@@ -338,11 +338,6 @@ check_mapping_pptr :: "machine_word \<Rightarrow> vm_page_entry \<Rightarrow> bo
  | VMPDPTE (HugePagePDPTE base _ _) \<Rightarrow> base = addrFromPPtr pptr
  | _ \<Rightarrow> False"
 
-(* FIXME: move to generic *)
-text {* Raise an exception if a property does not hold. *}
-definition
-throw_on_false :: "'e \<Rightarrow> (bool,'z::state_ext) s_monad \<Rightarrow> ('e + unit,'z::state_ext) s_monad" where
-"throw_on_false ex f \<equiv> doE v \<leftarrow> liftE f; unlessE v $ throwError ex odE"
 
 text {* Unmap a mapped page if the given mapping details are still current. *}
 definition
