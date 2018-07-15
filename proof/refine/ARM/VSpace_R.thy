@@ -2106,10 +2106,9 @@ lemma message_info_to_data_eqv:
 
 lemma message_info_from_data_eqv:
   "message_info_map (data_to_message_info rv) = messageInfoFromWord rv"
-  apply (auto simp add: data_to_message_info_def messageInfoFromWord_def
-    msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def
-    shiftL_nat Let_def not_less msgMaxLength_def msgLabelBits_def)
-  done
+  by (auto simp: data_to_message_info_def messageInfoFromWord_def Let_def not_less
+                 msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def mask_def
+                 shiftL_nat msgMaxLength_def msgLabelBits_def)
 
 lemma set_mi_corres:
  "mi' = message_info_map mi \<Longrightarrow>

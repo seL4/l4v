@@ -55,6 +55,7 @@ requalify_consts
   aa_type
   untyped_min_bits
   untyped_max_bits
+  msg_label_bits
 end
 
 text {*
@@ -264,28 +265,32 @@ transferred. The @{text mi_label} parameter is transferred directly from sender
 to receiver as part of the message.
 *}
 
-datatype message_info = MI length_type length_type data msg_label
+datatype message_info =
+  MI (mi_length: length_type)
+     (mi_extra_caps: length_type)
+     (mi_caps_unwrapped: data)
+     (mi_label: msg_label)
 
+text {* Message infos are encoded to or decoded from a data word. *}
 primrec
-  mi_label :: "message_info \<Rightarrow> msg_label"
+  message_info_to_data :: "message_info \<Rightarrow> data"
 where
-  "mi_label (MI len exc unw label) = label"
+  "message_info_to_data (MI len exc unw mlabel) =
+   (let
+        extra = exc << 7;
+        unwrapped = unw << 9;
+        label = mlabel << 12
+    in
+       label || extra || unwrapped || len)"
 
-primrec
-  mi_length :: "message_info \<Rightarrow> length_type"
+definition
+  data_to_message_info :: "data \<Rightarrow> message_info"
 where
-  "mi_length (MI len exc unw label) = len"
-
-primrec
-  mi_extra_caps :: "message_info \<Rightarrow> length_type"
-where
-  "mi_extra_caps (MI len exc unw label) = exc"
-
-primrec
-  mi_caps_unwrapped :: "message_info \<Rightarrow> data"
-where
- "mi_caps_unwrapped (MI len exc unw label) = unw"
-
+  "data_to_message_info w \<equiv>
+   MI (let v = w && mask 7 in if v > 120 then 120 else v)
+      ((w >> 7) && mask 2)
+      ((w >> 9) && mask 3)
+      ((w >> 12) && mask msg_label_bits)"
 
 section {* Kernel Objects *}
 

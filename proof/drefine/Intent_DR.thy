@@ -1598,10 +1598,10 @@ lemma store_word_corres_helper:
       apply (rule_tac sz = vmpage_size and y = thread in within_page_ipc_buf)
             apply (simp add:ipc_frame_wp_at_def obj_at_def ipc_buffer_wp_at_def)+
       apply (simp add:msg_max_length_def msg_align_bits buffer_cptr_index_def)
-      apply (case_tac "(get_tcb_message_info tcb)")
+      apply (case_tac "get_tcb_message_info tcb")
       apply (clarsimp simp add: get_tcb_message_info_def data_to_message_info_def)
       apply (erule order_less_le_trans)
-      apply simp
+      apply (simp add: mask_def)
       apply (rule iffD1[OF word_le_nat_alt[where b = "0x6::word32",simplified]])
       apply (rule less_less_trans)
        apply (rule  word_and_le1[where a = 3])
@@ -1734,7 +1734,7 @@ lemma dcorres_store_word_safe:
          apply (case_tac "get_tcb_message_info tcb")
          apply (clarsimp simp add: get_tcb_message_info_def data_to_message_info_def)
          apply (erule order_less_le_trans)
-         apply simp
+         apply (simp add: mask_def)
          apply (rule iffD1[OF word_le_nat_alt[where b = "0x6::word32",simplified]])
          apply (rule less_less_trans)
           apply (rule word_and_le1[where a = 3])

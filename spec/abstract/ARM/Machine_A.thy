@@ -107,6 +107,10 @@ definition
   slot_bits :: nat where
   "slot_bits \<equiv> 4"
 
+definition
+  msg_label_bits :: nat where
+  [simp]: "msg_label_bits \<equiv> 20"
+
 type_synonym user_context = "register \<Rightarrow> data"
 
 definition

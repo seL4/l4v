@@ -1117,19 +1117,15 @@ lemma set_cap_valid_page_map_inv:
 lemma message_info_to_data_eqv:
   "wordFromMessageInfo (message_info_map mi) = message_info_to_data mi"
   apply (cases mi)
-  apply (simp add: wordFromMessageInfo_def
-    msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def
-    shiftL_nat)
+  apply (simp add: wordFromMessageInfo_def msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def shiftL_nat)
   done
 
 lemma message_info_from_data_eqv:
   "message_info_map (data_to_message_info rv) = messageInfoFromWord rv"
   using shiftr_mask_eq[where 'a=64 and n=12]
-  apply (auto simp add: data_to_message_info_def messageInfoFromWord_def
-                        msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def
-                        shiftL_nat Let_def not_less msgMaxLength_def msgLabelBits_def
-                        mask_def word_size)
-  done
+  by (auto simp: data_to_message_info_def messageInfoFromWord_def Let_def not_less
+                 msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def mask_def
+                 shiftL_nat msgMaxLength_def msgLabelBits_def)
 
 lemma set_mi_corres:
  "mi' = message_info_map mi \<Longrightarrow>
