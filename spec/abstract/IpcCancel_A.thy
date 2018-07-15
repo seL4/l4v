@@ -102,17 +102,6 @@ where
 text {* Cancel all message operations on threads queued in a notification
 endpoint. *}
 
-(* FIXME: Miscellaneous NTFN binding stuff, move upwards? *)
-abbreviation
-  ntfn_set_bound_tcb :: "notification \<Rightarrow> obj_ref option \<Rightarrow> notification"
-where
-  "ntfn_set_bound_tcb ntfn t \<equiv> ntfn \<lparr> ntfn_bound_tcb := t \<rparr>"
-
-abbreviation
-  ntfn_set_obj :: "notification \<Rightarrow> ntfn \<Rightarrow> notification"
-where
-  "ntfn_set_obj ntfn a \<equiv> ntfn \<lparr> ntfn_obj := a \<rparr>"
-
 abbreviation
   do_unbind_notification :: "obj_ref \<Rightarrow> notification \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
