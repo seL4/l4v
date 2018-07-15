@@ -39,7 +39,7 @@ subsection "VCPU: Set TCB"
 definition decode_vcpu_set_tcb :: "arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
 where "decode_vcpu_set_tcb cap extras \<equiv> case (cap, extras) of
   (VCPUCap v, fs#_) \<Rightarrow> (case fs of
-        (ThreadCap t, _) \<Rightarrow> returnOk $ InvokeVCPU $ VCPUSetTCB v t (* FIXME ARMHYP C code calls deriveCap here before checking the cap type, discuss with kernel team *)
+        (ThreadCap t, _) \<Rightarrow> returnOk $ InvokeVCPU $ VCPUSetTCB v t
       | _ \<Rightarrow> throwError IllegalOperation)
  |(VCPUCap v, _) \<Rightarrow> throwError TruncatedMessage
  | _ \<Rightarrow> throwError IllegalOperation"
@@ -116,7 +116,8 @@ where
 
 text {* VCPU : inject IRQ *}
 
-(* ARMHYP FIXME see comment in VCPU_H *)
+(* This following function does not correspond to exactly what the C does, but
+it is the value that is stored inside of lr in the vgic  *)
 definition make_virq :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> virq" where
   "make_virq grp prio irq \<equiv>
   let

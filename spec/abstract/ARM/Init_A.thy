@@ -34,7 +34,7 @@ definition
   init_irq_node_ptr :: word32 where
   "init_irq_node_ptr = kernel_base + 0x8000"
 
-(* FIXME: It is easy to remove a memory slot here, but once if we want to reserve other slots of memory, we have to do the proof of disjoint for example state again.
+(* It is easy to remove a memory slot here, but once if we want to reserve other slots of memory, we have to do the proof of disjoint for example state again.
    Comment is left here so that next time we need 4k memory, we don't need to fix example state and can simply change its name. *)
 definition
   init_globals_frame :: word32 where
@@ -80,7 +80,7 @@ definition
     tcb_mcpriority = minBound,
     tcb_arch = init_arch_tcb
   \<rparr>,
-  init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage), (* FIXME: same reason as why we kept the definition of init_globals_frame *)
+  init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage), (* same reason as why we kept the definition of init_globals_frame *)
   init_global_pd \<mapsto> ArchObj (PageDirectory global_pd)
   )"
 

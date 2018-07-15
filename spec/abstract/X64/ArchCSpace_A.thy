@@ -66,11 +66,10 @@ where
 | "arch_same_region_as (PML4Cap r _) c' = (\<exists>r' d'. c' = PML4Cap r' d' \<and> r = r')"
 | "arch_same_region_as ASIDControlCap c' = (c' = ASIDControlCap)"
 | "arch_same_region_as (ASIDPoolCap r _) c' = (\<exists>r' d'. c' = ASIDPoolCap r' d' \<and> r = r')"
-(* FIXME x64-vtd: *)
-(*
+(* FIXME x64-vtd:
 | "arch_same_region_as (IOPageTableCap r _ _) c = (is_IOPageTableCap c \<and> aobj_ref c = Some r)"
 | "arch_same_region_as (IOSpaceCap d_id pci_d) c = (is_IOSpaceCap c \<and> cap_io_pci_device c = pci_d)"
-  --"FIXME: should this also check domain id equality? C kernel does not"
+  FIXME x64-vtd: should this also check domain id equality? C kernel does not"
 *)
 | "arch_same_region_as (IOPortCap frst lst) c' =
    (\<exists>frst' lst'. c' = IOPortCap frst' lst' \<and> frst' = frst \<and> lst' = lst)"
@@ -87,7 +86,6 @@ definition
     | (IOPortControlCap, IOPortCap f' l') \<Rightarrow> False
     | _ \<Rightarrow> arch_same_region_as cp cp')"
 
-(* Proofs don't want to see this definition *)
 declare same_aobject_as_def[simp]
 
 definition

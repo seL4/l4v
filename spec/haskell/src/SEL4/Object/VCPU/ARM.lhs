@@ -207,8 +207,8 @@ Currently, there is only one VCPU register available for reading/writing by the 
 
 \subsection{VCPU: inject IRQ}
 
-FIXME ARMHYP: this does not at this instance correspond to exactly what the C
-    does, but it is the value that is stored inside of lr in the vgic
+This following function does not correspond to exactly what the C does, but
+it is the value that is stored inside of lr in the vgic
 
 > makeVIRQ :: Word -> Word -> Word -> VIRQ
 > makeVIRQ grp prio irq =

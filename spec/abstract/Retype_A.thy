@@ -134,8 +134,8 @@ definition
 
 (* FIXME: we need a sensible place for these configurable constants. *)
 definition
-  reset_chunk_bits :: nat
-where "reset_chunk_bits = 8"
+  reset_chunk_bits :: nat where
+  "reset_chunk_bits = 8"
 
 definition
   get_free_ref :: "obj_ref \<Rightarrow> nat \<Rightarrow> obj_ref" where

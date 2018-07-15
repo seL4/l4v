@@ -81,7 +81,7 @@ datatype page_invocation
          (page_iomap_cap: cap)
          (page_iomap_ct_clot: cslot_ptr)
          (page_iomap_asid: iopte)
-         (page_iomap_entries: "obj_ref") (*FIXME: double check plz*)*)
+         (page_iomap_entries: "obj_ref") *)
      | PageGetAddr
          (page_get_paddr: obj_ref)
 
