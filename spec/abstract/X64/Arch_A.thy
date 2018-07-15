@@ -140,32 +140,33 @@ page is mapped in the same location as this cap was previously used to map it
 in. *}
 definition
 perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"perform_page_invocation iv \<equiv> (case iv of
+"perform_page_invocation iv \<equiv> case iv of
     PageMap cap ct_slot entries vspace \<Rightarrow> do
       set_cap cap ct_slot;
-      (case entries
-       of (VMPTE pte, slot) \<Rightarrow> store_pte slot pte
+      case entries of
+          (VMPTE pte, slot) \<Rightarrow> store_pte slot pte
         | (VMPDE pde, slot) \<Rightarrow> store_pde slot pde
-        | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte);
-      asid <- case cap of ArchObjectCap (PageCap _ _ _ _ _ (Some (as, _))) \<Rightarrow> return as
-              | _ \<Rightarrow> fail;
+        | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte;
+      asid \<leftarrow> case cap of
+                  ArchObjectCap (PageCap _ _ _ _ _ (Some (as, _))) \<Rightarrow> return as
+                | _ \<Rightarrow> fail;
       invalidate_page_structure_cache_asid (addrFromPPtr vspace) asid
-      od
+    od
   | PageRemap entries asid vspace \<Rightarrow> do
-      (case entries
-       of (VMPTE pte, slot) \<Rightarrow> store_pte slot pte
+      case entries of
+          (VMPTE pte, slot) \<Rightarrow> store_pte slot pte
         | (VMPDE pde, slot) \<Rightarrow> store_pde slot pde
-        | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte);
+        | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte;
       invalidate_page_structure_cache_asid (addrFromPPtr vspace) asid
     od
   | PageUnmap cap ct_slot \<Rightarrow>
-      (case cap
-         of PageCap dev base rights map_type sz mapped \<Rightarrow>
-            case mapped of
-              Some _ \<Rightarrow> case map_type of
+      (case cap of
+        PageCap dev base rights map_type sz mapped \<Rightarrow>
+            (case mapped of
+              Some _ \<Rightarrow> (case map_type of
                           VMVSpaceMap \<Rightarrow> perform_page_invocation_unmap cap ct_slot
-                        | _ \<Rightarrow> fail
-            | None \<Rightarrow> return ()
+                        | _ \<Rightarrow> fail)
+            | None \<Rightarrow> return ())
       | _ \<Rightarrow> fail)
 (*  | PageIOMap asid cap ct_slot entries \<Rightarrow> undefined *)
   | PageGetAddr ptr \<Rightarrow> do
@@ -174,7 +175,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
       msg_transferred \<leftarrow> set_mrs ct Nothing [paddr];
       msg_info \<leftarrow> return $ MI msg_transferred 0 0 0;
       set_message_info ct msg_info
-    od)"
+    od"
 
 text {* PageTable capabilities confer the authority to map and unmap page tables. *}
 definition
