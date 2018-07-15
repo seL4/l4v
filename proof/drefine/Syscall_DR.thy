@@ -1053,7 +1053,7 @@ lemma reply_from_kernel_error:
      apply (rule exI)
      apply (rule conjI[rotated])
       apply (simp add:obj_at_def)
-     apply (simp add:get_tcb_message_info_def data_to_message_info_def word_neq_0_conv)
+     apply (simp add:get_tcb_message_info_def data_to_message_info_def word_neq_0_conv mask_def)
      apply (simp add:shiftr_over_or_dist le_mask_iff word_neq_0_conv)
      apply (subst shiftl_shiftr_id)
        apply (simp add:word_bits_def mask_def le_mask_iff[symmetric])+

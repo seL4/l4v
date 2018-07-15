@@ -20,28 +20,6 @@ begin
 
 context Arch begin global_naming X64_A
 
-text {* Message infos are encoded to or decoded from a data word. *}
-primrec
-  message_info_to_data :: "message_info \<Rightarrow> data"
-where
-  "message_info_to_data (MI len exc unw mlabel) =
-   (let
-        extra = exc << 7;
-        unwrapped = unw << 9;
-        label = mlabel << 12
-    in
-       label || extra || unwrapped || len)"
-
-text {* Hard-coded to avoid recursive imports? *}
-definition
-  data_to_message_info :: "data \<Rightarrow> message_info"
-where
-  "data_to_message_info w \<equiv>
-   MI (let v = w && ((1 << 7) - 1) in if v > 120 then 120 else v)
-      ((w >> 7) && ((1 << 2) - 1))
-      ((w >> 9) && ((1 << 3) - 1))
-      (w >> 12)"
-
 text {* These datatypes encode the arguments to the various possible
 x64-specific system calls. Selectors are defined for various fields
 for convenience elsewhere. *}

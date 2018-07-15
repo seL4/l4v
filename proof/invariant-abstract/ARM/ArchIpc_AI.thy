@@ -118,10 +118,8 @@ lemma is_derived_cap_rights [simp, Ipc_AI_assms]:
 
 lemma data_to_message_info_valid [Ipc_AI_assms]:
   "valid_message_info (data_to_message_info w)"
-  apply (simp add: valid_message_info_def data_to_message_info_def)
-  apply (rule conjI)
-  apply (simp add: word_and_le1 msg_max_length_def msg_max_extra_caps_def Let_def not_less)+
-  done
+  by (simp add: valid_message_info_def data_to_message_info_def  word_and_le1 msg_max_length_def
+                msg_max_extra_caps_def Let_def not_less mask_def)
 
 lemma get_extra_cptrs_length[wp, Ipc_AI_assms]:
   "\<lbrace>\<lambda>s . valid_message_info mi\<rbrace>

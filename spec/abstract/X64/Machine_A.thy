@@ -111,6 +111,10 @@ definition
   "slot_bits \<equiv> 5"
 
 definition
+  msg_label_bits :: nat where
+  [simp]: "msg_label_bits \<equiv> 52"
+
+definition
   new_context :: "user_context" where
   "new_context \<equiv> UserContext FPUNullState ((\<lambda>r. 0)(CS := selCS3, SS := selDS3, FLAGS := 0x202))"
 

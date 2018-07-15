@@ -25,10 +25,6 @@ requalify_types
   arch_irq_control_invocation
   arch_invocation
 
-requalify_consts
-  message_info_to_data
-  data_to_message_info
-
 end
 
 text {* These datatypes encode the arguments to the available system calls. *}
