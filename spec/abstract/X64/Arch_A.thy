@@ -47,8 +47,7 @@ definition
     od)
    )"
 
-text {* Switch to a thread's virtual address space context and write its IPC
-buffer pointer into the globals frame. Clear the load-exclusive monitor. *}
+text {* Switch to a thread's virtual address space context. *}
 
 (* FIXME x64: The IPC buffer pointer and TLS_BASE are stored in GS and FS register
    in restore_user_context, which is invisible to verification.
