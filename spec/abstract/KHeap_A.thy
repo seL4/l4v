@@ -207,6 +207,14 @@ abbreviation
   set_notification :: "obj_ref \<Rightarrow> notification \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_notification \<equiv> set_simple_ko Notification"
 
+abbreviation
+  ntfn_set_bound_tcb :: "notification \<Rightarrow> obj_ref option \<Rightarrow> notification" where
+  "ntfn_set_bound_tcb ntfn t \<equiv> ntfn \<lparr> ntfn_bound_tcb := t \<rparr>"
+
+abbreviation
+  ntfn_set_obj :: "notification \<Rightarrow> ntfn \<Rightarrow> notification" where
+  "ntfn_set_obj ntfn a \<equiv> ntfn \<lparr> ntfn_obj := a \<rparr>"
+
 
 section {* IRQ State and Slot *}
 
