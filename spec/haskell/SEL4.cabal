@@ -123,10 +123,6 @@ Library
                             SEL4.Machine.RegisterSet.ARM
                             SEL4.Machine.Hardware.ARM
 
-    -- FIXME ideally ARMHYP will share code with the main ARM development,
-    -- but when doing an architecture port we want to make sure we are doing a
-    -- full pass over the Haskell kernel, touching all files
-    -- TODO consolidate later
     if flag(ArchArmHyp)
         other-modules:
                             SEL4.Machine.Hardware.ARM.TK1
