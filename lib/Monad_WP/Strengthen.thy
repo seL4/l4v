@@ -418,12 +418,12 @@ lemma strengthen_imp_ord[simp]:
   by (auto simp add: st_def)
 
 lemma strengthen_imp_conj [strg]:
-  "\<lbrakk> B \<Longrightarrow> st F (op \<longrightarrow>) A A'; st F (op \<longrightarrow>) B B' \<rbrakk>
+  "\<lbrakk> A' \<Longrightarrow> st F (op \<longrightarrow>) B B'; B \<Longrightarrow> st F (op \<longrightarrow>) A A' \<rbrakk>
     \<Longrightarrow> st F (op \<longrightarrow>) (A \<and> B) (A' \<and> B')"
   by (cases F, auto)
 
 lemma strengthen_imp_disj [strg]:
-  "\<lbrakk> \<not> B \<Longrightarrow> st F (op \<longrightarrow>) A A'; st F (op \<longrightarrow>) B B' \<rbrakk>
+  "\<lbrakk> \<not> A' \<Longrightarrow> st F (op \<longrightarrow>) B B'; \<not> B \<Longrightarrow> st F (op \<longrightarrow>) A A' \<rbrakk>
     \<Longrightarrow> st F (op \<longrightarrow>) (A \<or> B) (A' \<or> B')"
   by (cases F, auto)
 
