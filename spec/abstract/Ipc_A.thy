@@ -303,8 +303,10 @@ where
                 fault \<leftarrow> thread_get tcb_fault thread;
                 if call \<or> fault \<noteq> None then
                   when (can_grant \<and> reply \<noteq> None) $ reply_push thread dest (the reply) can_donate
-                else when (can_donate \<and> sc_opt = None) $ sched_context_donate (the sc_opt) dest;
-
+                else when (can_donate \<and> sc_opt = None) $ do
+                   thread_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context thread;
+                   sched_context_donate (the thread_sc) dest
+                od;
                 set_thread_state dest Running;
                 possible_switch_to dest
               od
@@ -684,9 +686,9 @@ where
   "check_budget = do
      csc \<leftarrow> gets cur_sc;
      consumed \<leftarrow> gets consumed_time;
+     sc \<leftarrow> get_sched_context csc;
      capacity \<leftarrow> refill_capacity csc consumed;
 
-     sc \<leftarrow> get_sched_context csc;
      full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc); (* = refill_full csc *)
 
      robin \<leftarrow> return (sc_period sc = 0); (* is_round_robin csc;*)
