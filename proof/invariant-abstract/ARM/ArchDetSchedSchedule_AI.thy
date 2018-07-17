@@ -292,6 +292,7 @@ crunch ct_not_queued   [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arc
 
 crunch scheduler_action [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, arch_post_modify_registers "\<lambda>s. P (scheduler_action s)"
 declare make_arch_fault_msg_inv[DetSchedSchedule_AI_assms]
+crunch schedulable_tcb_at [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, arch_post_modify_registers "schedulable_tcb_at t"
 
 lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:
   "\<lbrace>\<lambda>s::det_ext state. t \<noteq> idle_thread s\<rbrace> arch_post_modify_registers c t \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
