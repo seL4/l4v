@@ -301,6 +301,7 @@ lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:
 crunches arch_post_cap_deletion
   for valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
   and valid_etcbs[wp, DetSchedSchedule_AI_assms]: valid_etcbs
+  and valid_queues[wp, DetSchedSchedule_AI_assms]: valid_queues
   and ct_not_in_q[wp, DetSchedSchedule_AI_assms]: ct_not_in_q
   and simple_sched_action[wp, DetSchedSchedule_AI_assms]: simple_sched_action
   and not_cur_thread[wp, DetSchedSchedule_AI_assms]: "not_cur_thread t"
