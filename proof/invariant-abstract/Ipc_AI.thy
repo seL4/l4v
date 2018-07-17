@@ -1398,11 +1398,6 @@ lemma copy_mrs_aligned [wp]:
   done
 
 
-lemma get_tcb_ko_at:
-  "(get_tcb t s = Some tcb) = ko_at (TCB tcb) t s"
-  by (auto simp: obj_at_def get_tcb_def
-           split: option.splits Structures_A.kernel_object.splits)
-
 
 lemmas get_tcb_ko_atI = get_tcb_ko_at [THEN iffD1]
 

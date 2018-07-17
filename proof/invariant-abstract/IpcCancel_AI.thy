@@ -2222,34 +2222,6 @@ crunch st_tcb_at[wp]: set_consumed "st_tcb_at P t"
 crunch pred_tcb_at[wp]: set_consumed "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
-(* FIXME: MOVE *)
-lemma not_tcb_st_refs[simp]:
-  "tp \<notin> {TCBReply, TCBBlockedRecv, TCBBlockedSend, TCBSignal} \<Longrightarrow>
-    (a, tp) \<notin> tcb_st_refs_of st"
-  by (clarsimp simp: tcb_st_refs_of_def split: thread_state.split_asm if_splits)
-lemma not_ep_q_refs[simp]:
-  "tp \<notin> {EPRecv, EPSend} \<Longrightarrow>
-    (a, tp) \<notin> ep_q_refs_of ep"
-  by (clarsimp simp: ep_q_refs_of_def split: endpoint.split_asm)
-
-lemma not_ntfn_q_refs[simp]:
-  "tp \<noteq> NTFNSignal \<Longrightarrow>
-    (a, tp) \<notin> ntfn_q_refs_of ntfn"
-  by (clarsimp simp: ntfn_q_refs_of_def split: ntfn.split_asm)
-
-lemma sym_ref_tcb_yt: "\<lbrakk> sym_refs (state_refs_of s); kheap s tp = Some (TCB tcb);
-   tcb_yield_to tcb = Some scp \<rbrakk> \<Longrightarrow>
-  \<exists>sc n. kheap s scp = Some (SchedContext sc n) \<and> sc_yield_from sc = Some tp"
-  apply (drule sym_refs_obj_atD[rotated, where p=tp])
-   apply (clarsimp simp: obj_at_def, simp)
-  apply (clarsimp simp: state_refs_of_def get_refs_def2 elim!: sym_refsE)
-  apply (drule_tac x="(scp, TCBYieldTo)" in bspec)
-   apply fastforce
-  apply (clarsimp simp: obj_at_def)
-  apply (case_tac koa; clarsimp simp: get_refs_def2)
-  done
-(* end FIXME *)
-
 lemma complete_yield_to_invs:
   "\<lbrace>invs\<rbrace> complete_yield_to tcb_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: complete_yield_to_def get_tcb_obj_ref_def maybeM_def)

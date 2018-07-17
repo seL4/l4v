@@ -253,6 +253,38 @@ abbreviation "mcpriority_tcb_at \<equiv> pred_tcb_at itcb_mcpriority"
 lemma st_tcb_at_def: "st_tcb_at test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
   by (simp add: pred_tcb_at_def)
 
+(* sc_at / reply_at  *)
+definition
+  sc_ntfn_sc_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "sc_ntfn_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_ntfn sc))"
+
+definition
+  sc_tcb_sc_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "sc_tcb_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_tcb sc))"
+
+definition
+  sc_yf_sc_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "sc_yf_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_yield_from sc))"
+
+definition
+  sc_replies_sc_at :: "(obj_ref list \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "sc_replies_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_replies sc))"
+
+definition
+  reply_sc_reply_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "reply_sc_reply_at P \<equiv> obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> P (reply_sc r))"
+
+definition
+  reply_tcb_reply_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "reply_tcb_reply_at P \<equiv> obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> P (reply_tcb r))"
+
+
 text {* cte with property at *}
 
 definition
@@ -1577,6 +1609,32 @@ lemma sym_refs_st_tcb_atD: (* RT: other versions? *)
   apply auto
   done
 
+lemma not_tcb_st_refs[simp]:
+  "tp \<notin> {TCBReply, TCBBlockedRecv, TCBBlockedSend, TCBSignal} \<Longrightarrow>
+    (a, tp) \<notin> tcb_st_refs_of st"
+  by (clarsimp simp: tcb_st_refs_of_def split: thread_state.split_asm if_splits)
+lemma not_ep_q_refs[simp]:
+  "tp \<notin> {EPRecv, EPSend} \<Longrightarrow>
+    (a, tp) \<notin> ep_q_refs_of ep"
+  by (clarsimp simp: ep_q_refs_of_def split: endpoint.split_asm)
+
+lemma not_ntfn_q_refs[simp]:
+  "tp \<noteq> NTFNSignal \<Longrightarrow>
+    (a, tp) \<notin> ntfn_q_refs_of ntfn"
+  by (clarsimp simp: ntfn_q_refs_of_def split: ntfn.split_asm)
+
+lemma sym_ref_tcb_yt: "\<lbrakk> sym_refs (state_refs_of s); kheap s tp = Some (TCB tcb);
+   tcb_yield_to tcb = Some scp \<rbrakk> \<Longrightarrow>
+  \<exists>sc n. kheap s scp = Some (SchedContext sc n) \<and> sc_yield_from sc = Some tp"
+  apply (drule sym_refs_obj_atD[rotated, where p=tp])
+   apply (clarsimp simp: obj_at_def, simp)
+  apply (clarsimp simp: state_refs_of_def get_refs_def2 elim!: sym_refsE)
+  apply (drule_tac x="(scp, TCBYieldTo)" in bspec)
+   apply fastforce
+  apply (clarsimp simp: obj_at_def)
+  apply (case_tac koa; clarsimp simp: get_refs_def2)
+  done
+
 lemma pspace_alignedE [elim]:
   "\<lbrakk> pspace_aligned s;
    x \<in> dom (kheap s); is_aligned x (obj_bits (the (kheap s x))) \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
@@ -1628,6 +1686,13 @@ lemma if_live_then_nonz_capD2:
    apply simp
   apply (simp add: obj_at_def)
   done
+
+lemma live_sc_update_simps[simp]:
+ "live_sc (sc_consumed_update f sc) = live_sc sc"
+ "live_sc (sc_period_update f sc) = live_sc sc"
+ "live_sc (sc_refills_update g sc) = live_sc sc"
+ "live_sc (sc_badge_update h sc) = live_sc sc"
+  by (simp add: live_sc_def)+
 
 lemma caps_of_state_cte_wp_at:
  "caps_of_state s = (\<lambda>p. if (\<exists>cap. cte_wp_at ((=) cap) p s)
@@ -3430,6 +3495,9 @@ lemma only_idle_lift:
    apply (rule assms)+
   done
 
+lemma maybeM_inv[wp]:
+  "\<forall>a. \<lbrace>P\<rbrace> f a \<lbrace>\<lambda>_. P\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> maybeM f opt \<lbrace>\<lambda>_. P\<rbrace>"
+  by (wpsimp simp: maybeM_def; fastforce)
 
 lemma cap_rights_update_id [intro!, simp]:
   "wellformed_cap c \<Longrightarrow> cap_rights_update (cap_rights c) c = c"

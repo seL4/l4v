@@ -1695,17 +1695,6 @@ crunch valid_pdpt[wp]: check_budget_restart,update_time_stamp "valid_pdpt_objs"
 crunch ct_active: set_thread_state_ext ct_active
   (wp: ignore: set_object)
 
-lemma check_budget_restart_invs:
-  "\<lbrace>invs\<rbrace> check_budget_restart \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (clarsimp simp: check_budget_restart_def)
-  apply (rule hoare_seq_ext[rotated])
-  apply (rule check_budget_invs)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (case_tac st; wpsimp)
-  by (drule invs_iflive,
-       clarsimp simp: if_live_then_nonz_cap_def pred_tcb_at_def obj_at_def live_def)+
-
 crunch valid_pdpt[wp]: sc_and_timer "valid_pdpt_objs"
   (wp: hoare_drop_imps hoare_vcg_if_lift2)
 crunch valid_pdpt[wp]: schedule_choose_new_thread "valid_pdpt_objs"

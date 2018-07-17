@@ -235,6 +235,10 @@ lemma symreftype_inverse[simp]:
   "symreftype (symreftype t) = t"
   by (cases t, simp+)
 
+lemma symreftype_inverse':
+  "symreftype ref = ref' \<Longrightarrow> ref = symreftype ref'"
+  by (cases ref) simp_all
+
 lemma sym_refsD:
   "\<lbrakk> (y, tp) \<in> st x; sym_refs st \<rbrakk> \<Longrightarrow> (x, symreftype tp) \<in> st y"
   apply (simp add: sym_refs_def)

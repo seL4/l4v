@@ -20,13 +20,6 @@ lemma get_etcb_SomeD: "get_etcb ptr s = Some v \<Longrightarrow> ekheap s ptr = 
   apply (case_tac "ekheap s ptr", simp_all add: get_etcb_def)
   done
 
-(* FIXME Move *)
-lemma assert_get_tcb_ko':
-  shows "\<lbrace> P \<rbrace> gets_the (get_tcb thread) \<lbrace>\<lambda>t. P and ko_at (TCB t) thread \<rbrace>"
-  by (clarsimp simp: valid_def in_monad gets_the_def get_tcb_def
-                     obj_at_def
-               split: option.splits Structures_A.kernel_object.splits)
-
 definition obj_at_kh where
 "obj_at_kh P ref kh \<equiv> obj_at P ref ((undefined :: det_ext state)\<lparr>kheap := kh\<rparr>)"
 

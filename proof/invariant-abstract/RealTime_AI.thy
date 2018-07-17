@@ -17,21 +17,7 @@ lemma invs_exst [iff]:
   "invs (trans_state f s) = invs s"
   by (simp add: invs_def valid_state_def)
 
-lemma maybeM_inv[wp]:
-  "\<forall>a. \<lbrace>P\<rbrace> f a \<lbrace>\<lambda>_. P\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> maybeM f opt \<lbrace>\<lambda>_. P\<rbrace>"
-  by (wpsimp simp: maybeM_def; fastforce)
-
 crunch inv[wp]: ethread_get, ethread_get_when P
-
-lemma get_sched_context_sp:
-  "\<lbrace>P\<rbrace> get_sched_context sc_ptr
-   \<lbrace> \<lambda>r s. P s \<and> (\<exists>n. ko_at (SchedContext r n) sc_ptr s)\<rbrace>"
-  apply (simp add: get_sched_context_def)
-  apply (rule hoare_seq_ext[rotated])
-   apply (rule get_object_sp)
-  apply (wpsimp, fastforce)
-  done
-
 
 text {* update\_sched\_context *}
 
@@ -381,39 +367,6 @@ lemma set_reply_tcb_refs_of[wp]:
       split_def  Collect_eq get_refs_def2
       intro!: ext split: option.splits if_splits)
   done
-
-(* RT FIXME: Move to Invariants_AI?  *)
-definition
-  sc_ntfn_sc_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "sc_ntfn_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_ntfn sc))"
-
-definition
-  sc_tcb_sc_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "sc_tcb_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_tcb sc))"
-
-definition
-  sc_yf_sc_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "sc_yf_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_yield_from sc))"
-
-definition
-  sc_replies_sc_at :: "(obj_ref list \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "sc_replies_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_replies sc))"
-
-definition
-  reply_sc_reply_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "reply_sc_reply_at P \<equiv> obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> P (reply_sc r))"
-
-definition
-  reply_tcb_reply_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "reply_tcb_reply_at P \<equiv> obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> P (reply_tcb r))"
-
-(* end: move to invariant_AI *)
 
 lemma gscn_sc_ntfn_sc_at:
   "\<lbrace>\<top>\<rbrace> get_sc_obj_ref sc_ntfn scp \<lbrace>\<lambda>rv. sc_ntfn_sc_at (\<lambda>ntfn. rv = ntfn) scp\<rbrace>"

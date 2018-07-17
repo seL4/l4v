@@ -151,6 +151,17 @@ lemma sts_Restart_invs[wp]:
            simp: invs_def valid_state_def valid_pspace_def)
   done
 
+lemma check_budget_restart_invs:
+  "\<lbrace>invs\<rbrace> check_budget_restart \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (clarsimp simp: check_budget_restart_def)
+  apply (rule hoare_seq_ext[rotated])
+  apply (rule check_budget_invs)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (case_tac st; wpsimp)
+  by (drule invs_iflive,
+       clarsimp simp: if_live_then_nonz_cap_def pred_tcb_at_def obj_at_def live_def)+
+
 lemma invoke_tcb_tcb[wp]:
   "\<lbrace>tcb_at tptr\<rbrace> invoke_tcb i \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
 (*  by (simp add: tcb_at_typ invoke_tcb_typ_at [where P=id, simplified]) *) sorry

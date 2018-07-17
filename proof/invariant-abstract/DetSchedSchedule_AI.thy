@@ -2052,22 +2052,10 @@ lemma complete_yield_to_valid_etcbs[wp]:
       simp: complete_yield_to_def set_tcb_obj_ref_def set_sc_obj_ref_def
             get_sk_obj_ref_def update_sched_context_def)
 
-(* FIXME: Move to SchedContext_AI *)
-lemma ssc_sc_yf_update_bound_sc_tcb_at[wp]:
-  "\<lbrace>bound_sc_tcb_at P t\<rbrace> set_sc_obj_ref sc_yield_from_update scp tcb \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def)
-
-(* FIXME: Move to SchedContext_AI *)
-lemma set_tcb_yt_update_bound_sc_tcb_at[wp]:
-  "\<lbrace>bound_sc_tcb_at P t\<rbrace> set_tcb_obj_ref tcb_yield_to_update scp tcb \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
-  by (wpsimp simp: set_tcb_obj_ref_def set_object_def pred_tcb_at_def obj_at_def get_tcb_rev)
-
-(* FIXME: Move to SchedContext_AI *)
 lemma ssc_sc_yf_update_schedulable_tcb_at[wp]:
   "\<lbrace>schedulable_tcb_at t\<rbrace> set_sc_obj_ref sc_yield_from_update scp tcb \<lbrace>\<lambda>rv. schedulable_tcb_at t\<rbrace>"
   by (wpsimp simp: set_sc_obj_ref_def wp: schedulable_tcb_at_update_sched_context_no_change)
 
-(* FIXME: Move to SchedContext_AI *)
 lemma set_tcb_yt_update_schedulable_tcb_at[wp]:
   "\<lbrace>schedulable_tcb_at t\<rbrace> set_tcb_obj_ref tcb_yield_to_update scp tcb \<lbrace>\<lambda>rv. schedulable_tcb_at t\<rbrace>"
   apply (clarsimp simp: set_tcb_obj_ref_def pred_tcb_at_def obj_at_def)
@@ -4670,18 +4658,6 @@ crunches send_ipc,check_budget,check_budget_restart
 for simple_sched_action[wp]: simple_sched_action
   (wp: maybeM_inv hoare_drop_imp mapM_wp' simp: Let_def)
 
-(* FIXME: copied from ArchVSpaceEntries_AI, but this should be in the generic context *)
-lemma check_budget_restart_invs:
-  "\<lbrace>invs\<rbrace> check_budget_restart \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (clarsimp simp: check_budget_restart_def)
-  apply (rule hoare_seq_ext[rotated])
-  apply (rule check_budget_invs)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (case_tac st; wpsimp)
-  by (drule invs_iflive,
-       clarsimp simp: if_live_then_nonz_cap_def pred_tcb_at_def obj_at_def live_def)+
-
 crunches update_time_stamp
 for valid_sched[wp]: valid_sched
 and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
@@ -4698,7 +4674,7 @@ lemma handle_event_valid_sched:
       apply (case_tac syscall, simp_all add: handle_send_def handle_call_def)
 
 apply (wpsimp wp: hoare_whenE_wp handle_invocation_valid_sched hoare_vcg_if_lift2 hoare_drop_imp
-ARM.check_budget_restart_invs
+check_budget_restart_invs
 | clarsimp simp: invs_valid_objs invs_sym_refs valid_sched_ct_not_queued cong: conj_cong)+
 (*            apply ((rule hoare_pre, wp handle_invocation_valid_sched handle_recv_valid_sched'
               | fastforce simp: invs_valid_objs invs_sym_refs valid_sched_ct_not_queued)+)[5]

@@ -440,7 +440,7 @@ lemma
       wp: valid_irq_node_typ static_imp_wp get_sched_context_wp hoare_vcg_conj_lift
           update_sched_context_valid_objs_same update_sched_context_iflive_same
           update_sched_context_refs_of_same)
-  apply (intro conjI impI allI; clarsimp simp: valid_sched_context_def live_sc_def)
+  apply (clarsimp simp: valid_sched_context_def live_sc_def)
   done
 
 crunches switch_sched_context
@@ -599,15 +599,6 @@ lemma sched_context_update_consumed_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. tcb_at (cur_thread s) s\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>rv s. tcb_at (cur_thread s) s\<rbrace>"
   by (wpsimp simp: sched_context_update_consumed_def)
 
-(* RT FIXME Move *)
-lemma [simp]:
- "live_sc (sc_consumed_update f sc) = live_sc sc"
- "live_sc (sc_period_update f sc) = live_sc sc"
- "live_sc (sc_refills_update g sc) = live_sc sc"
- "live_sc (sc_badge_update h sc) = live_sc sc"
-  by (simp add: live_sc_def)+
-
-
 lemma sched_context_update_consumed_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: sched_context_update_consumed_def
@@ -651,11 +642,6 @@ lemma ssc_refs_of_None[wp]:
                          get_tcb_rev pred_tcb_def2 mem_Times_iff tcb_st_refs_of_def
                  intro!: ext split: thread_state.splits)
   done
-
-(* RT FIXME: copied from IpcCancel_AI *)
-lemma symreftype_inverse':
-  "symreftype ref = ref' \<Longrightarrow> ref = symreftype ref'"
-  by (cases ref) simp_all
 
 
 lemma zombies_kheap_update:
@@ -917,6 +903,14 @@ lemma ssc_sc_tcb_update_bound_sc_tcb_at[wp]:
   "\<lbrace>bound_sc_tcb_at P t\<rbrace> set_sc_obj_ref sc_tcb_update scp tcb \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
   by (wpsimp simp: set_sc_obj_ref_def)
 
+lemma ssc_sc_yf_update_bound_sc_tcb_at[wp]:
+  "\<lbrace>bound_sc_tcb_at P t\<rbrace> set_sc_obj_ref sc_yield_from_update scp tcb \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
+  by (wpsimp simp: set_sc_obj_ref_def)
+
+lemma set_tcb_yt_update_bound_sc_tcb_at[wp]:
+  "\<lbrace>bound_sc_tcb_at P t\<rbrace> set_tcb_obj_ref tcb_yield_to_update scp tcb \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
+  by (wpsimp simp: set_tcb_obj_ref_def set_object_def pred_tcb_at_def obj_at_def get_tcb_rev)
+
 lemma sched_context_bind_tcb_invs[wp]:
   "\<lbrace>invs and (\<lambda>s. tcb \<noteq> idle_thread s)
     and bound_sc_tcb_at (op = None) tcb and ex_nonz_cap_to tcb
@@ -964,8 +958,6 @@ lemma sched_context_unbind_tcb_invs[wp]:
          clarsimp simp: refs_of_simps refs_of_defs get_refs_def2 image_iff
                         ntfn_q_refs_of_def ep_q_refs_of_def
                   split: ntfn.split_asm endpoint.split_asm)
-  apply (elim disjE)
-   apply (fastforce simp: tcb_st_refs_of_def split: thread_state.split_asm if_split_asm)
   apply (rename_tac tcb)
   apply (rule conjI)
    apply (erule delta_sym_refs)
@@ -1129,7 +1121,7 @@ lemma possible_switch_to_invs[wp]:
   "\<lbrace>invs\<rbrace> possible_switch_to target \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: possible_switch_to_def)
 
-lemma ssc_sc_yf_update_bound_sc_tcb_at[wp]:
+lemma ssc_sc_yf_update_bound_yt_tcb_at[wp]:
   "\<lbrace>bound_yt_tcb_at P t\<rbrace> set_sc_obj_ref sc_yield_from_update scp tcb \<lbrace>\<lambda>rv. bound_yt_tcb_at P t\<rbrace>"
   by (wpsimp simp: set_sc_obj_ref_def)
 
@@ -1251,6 +1243,15 @@ lemma refill_unblock_check_it_ct[wp]:
   by (wpsimp simp: refill_unblock_check_def is_round_robin_def set_refills_def
             update_sched_context_def set_object_def
         wp: get_refills_wp hoare_vcg_if_lift2 get_object_wp get_sched_context_wp)
+
+lemma refill_capacity_sp:
+  "\<lbrace>\<lambda>s. P s \<and> (\<exists>n. ko_at (SchedContext sc n) sc_ptr s)\<rbrace>
+     refill_capacity sc_ptr usage \<lbrace> \<lambda>rv. K( rv = refills_capacity usage (sc_refills sc)) and P \<rbrace>"
+  apply (clarsimp simp: refill_capacity_def)
+  apply (rule hoare_seq_ext[OF _ get_refills_sp])
+  apply wpsimp
+  by (clarsimp simp: obj_at_def refills_capacity_def)
+
 
 (* sched_context_yield_to is moved to the start of SchedContextInv_AI
 because it needs to be after Ipc_AI *)
