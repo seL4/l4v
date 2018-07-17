@@ -158,8 +158,8 @@ lemma restart_invs[wp]:
 
 lemma restart_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> Tcb_A.restart t \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-(*  by (wpsimp simp: Tcb_A.restart_def wp: cancel_ipc_typ_at)*)
-sorry
+  by (wpsimp simp: Tcb_A.restart_def wp: thread_get_typ_at cancel_ipc_typ_at
+      | rule hoare_strengthen_post[where Q="\<lambda>rv s. P (typ_at T p s)"])+
 
 lemma restart_tcb[wp]:
   "\<lbrace>tcb_at t'\<rbrace> Tcb_A.restart t \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
@@ -171,9 +171,8 @@ lemma suspend_nonz_cap_to_tcb:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to t s \<and> tcb_at t s \<and> valid_objs s\<rbrace>
      suspend t'
    \<lbrace>\<lambda>rv s. ex_nonz_cap_to t s\<rbrace>"
-  apply (simp add: suspend_def)
-  apply (wp cancel_ipc_ex_nonz_cap_to_tcb|simp)+
-  sorry
+  unfolding suspend_def
+  by (wpsimp wp: cancel_ipc_ex_nonz_cap_to_tcb)
 
 lemma readreg_invs:
   "\<lbrace>invs and tcb_at src and ex_nonz_cap_to src\<rbrace>
@@ -783,12 +782,8 @@ where
 
 end
 
-lemma unbind_notification_ex_nonz_cap_to[wp]:
-  "\<lbrace>ex_nonz_cap_to t\<rbrace> unbind_notification param_a \<lbrace>\<lambda>_. ex_nonz_cap_to t\<rbrace>"
-  sorry
-(*
 crunch ex_nonz_cap_to[wp]: unbind_notification "ex_nonz_cap_to t"
-  (wp: maybeM_inv ) *)
+ (wp: maybeM_inv)
 
 lemma sbn_has_reply[wp]:
   "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> set_tcb_obj_ref tcb_bound_notification_update tcb ntfnptr \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
@@ -816,12 +811,8 @@ lemma unbind_notification_has_reply[wp]:
   "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> unbind_notification t' \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
   apply (simp add: unbind_notification_def has_reply_cap_def cte_wp_at_caps_of_state)
   apply (rule hoare_seq_ext[OF _ gbn_sp])
-(*  apply (case_tac ntfnptr, simp, wp, simp)
-  apply (clarsimp)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (wp, clarsimp)
-  done*) sorry
-
+  apply (case_tac ntfnptr; wpsimp simp: maybeM_def)
+  done
 
 lemma bind_notification_invs:
   shows
@@ -1240,12 +1231,10 @@ lemma (in Tcb_AI) decode_tcb_conf_wf[wp]:
 
 lemma (in Tcb_AI) decode_tcb_conf_inv[wp]:
   "\<lbrace>P::'state_ext state \<Rightarrow> bool\<rbrace> decode_tcb_configure args cap slot extras \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (clarsimp simp add: decode_tcb_configure_def Let_def whenE_def
+  apply (clarsimp simp add: decode_tcb_configure_def decode_udpate_sc_def Let_def whenE_def
                  split del: if_split)
-  apply (rule hoare_pre, wp)
-  apply simp
-  sorry
-
+  apply (wpsimp wp: hoare_drop_imps)
+  done
 
 lemmas derived_cap_valid = derive_cap_valid_cap
 
@@ -1424,8 +1413,9 @@ lemma unbind_notification_sym_refs[wp]:
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: unbind_notification_def)
   apply (rule hoare_seq_ext [OF _ gbn_sp])
-  apply (case_tac ntfnptr, simp_all)
+  apply (case_tac ntfnptr; simp add: maybeM_def)
    apply (wpsimp)
+  apply (wpsimp simp: update_sk_obj_ref_def)
 (*  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (wp | wpc | simp)+
   apply (rule conjI)

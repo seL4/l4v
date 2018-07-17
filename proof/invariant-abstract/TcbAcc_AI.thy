@@ -2003,7 +2003,7 @@ lemma set_tcb_obj_ref_ex_nonz_cap_to[wp]:
 
 lemma set_bound_notification_ex_nonz_cap_to[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to p s\<rbrace>
-   set_tcb_obj_ref tcb_bound_notification_update p new
+   set_tcb_obj_ref tcb_bound_notification_update t new
    \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)
 
