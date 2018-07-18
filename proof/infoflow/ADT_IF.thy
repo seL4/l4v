@@ -1922,7 +1922,6 @@ lemma handle_preemption_if_domain_time_sched_action:
 definition user_context_of :: "'k global_sys_state \<Rightarrow> user_context"
 where
   "user_context_of \<equiv> \<lambda>s. fst (fst s)"
-
 lemma user_context_of_simp[simp]:
   "user_context_of ((uc,s),mode) = uc"
   by(simp add: user_context_of_def)
@@ -2133,7 +2132,7 @@ lemma the_label_of_domain_exists[intro, simp]:
 (* Corollary for current_aag *)
 lemma pas_cur_domain_current_aag:
   "pas_cur_domain (current_aag s) s"
-  apply (simp add: current_aag_def the_label_of_domain_exists)
+  apply (simp add: current_aag_def)
   done
 
 lemma subject_current_aag:
@@ -3081,7 +3080,7 @@ lemma invoke_tcb_irq_state_inv:
         |wp_once hoare_drop_imps | clarsimp split: option.splits | intro impI conjI allI)+
 
 lemma do_reply_transfer_irq_state_inv_triv[wp]:
-  "\<lbrace>irq_state_inv st\<rbrace> do_reply_transfer a b c \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"
+  "\<lbrace>irq_state_inv st\<rbrace> do_reply_transfer a b c d \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"
   apply (wp irq_state_inv_triv)
   done
 

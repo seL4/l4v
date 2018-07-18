@@ -40,12 +40,12 @@ declare example_auth_graph_def [simp]
 
 lemma subjectReads_T:
   "subjectReads example_auth_graph (partition_label T) = {partition_label T}"
-  apply(auto simp: reads_lrefl elim: subjectReads.induct)
+  apply(auto elim: subjectReads.induct)
   done
 
 lemma CTR_in_subjectReads_NTFN1:
   "partition_label CTR \<in> subjectReads example_auth_graph (partition_label NTFN1)"
-  apply(rule read_sync_ep_read_receivers[where ep="partition_label NTFN1"], auto intro: reads_lrefl)
+  apply(rule read_sync_ep_read_receivers[where ep="partition_label NTFN1"], auto)
   done
 
 lemma EP_in_subjectReads_NTFN1:
@@ -55,7 +55,9 @@ lemma EP_in_subjectReads_NTFN1:
 
 lemma C_in_subjectReads_NTFN1:
   "partition_label C \<in> subjectReads example_auth_graph (partition_label NTFN1)"
-  apply(rule reads_read_thread_read_pages, auto intro: CTR_in_subjectReads_NTFN1[simplified])
+  apply(rule reads_read_thread_read_pages)
+  apply (rule CTR_in_subjectReads_NTFN1)
+  apply simp
   done
 
 lemma RM_in_subjectReads_NTFN1:
@@ -85,7 +87,7 @@ lemma subjectReads_NTFN1:
 
 lemma RM_in_subjectReads_NTFN2:
   "partition_label RM \<in> subjectReads example_auth_graph (partition_label NTFN2)"
-  apply(rule read_sync_ep_read_receivers[where ep="partition_label NTFN2"], auto intro: reads_lrefl)
+  apply(rule read_sync_ep_read_receivers[where ep="partition_label NTFN2"], auto)
   done
 
 lemma EP_in_subjectReads_NTFN2:
@@ -100,7 +102,9 @@ lemma CTR_in_subjectReads_NTFN2:
 
 lemma C_in_subjectReads_NTFN2:
   "partition_label C \<in> subjectReads example_auth_graph (partition_label NTFN2)"
-  apply(rule reads_read_thread_read_pages, auto intro: CTR_in_subjectReads_NTFN2[simplified])
+  apply(rule reads_read_thread_read_pages)
+  apply (rule CTR_in_subjectReads_NTFN2)
+  apply simp
   done
 
 
@@ -128,7 +132,7 @@ lemma subjectReads_NTFN2:
 lemma EP_in_subjectReads_CTR:
   "partition_label EP \<in> subjectReads example_auth_graph (partition_label CTR)"
   apply(rule_tac a="partition_label CTR" and t="partition_label CTR" in reads_read_queued_thread_read_ep)
-      apply (auto intro: reads_lrefl)
+      apply auto
   done
 
 lemma RM_in_subjectReads_CTR:
@@ -149,7 +153,7 @@ lemma C_in_subjectReads_CTR:
 lemma NTFN1_in_subjectReads_CTR:
   "partition_label NTFN1 \<in> subjectReads example_auth_graph (partition_label CTR)"
   apply(rule_tac t="partition_label CTR" and auth="Receive" and a="partition_label T" and auth'="Notify" in reads_read_queued_thread_read_ep)
-  apply (auto intro: reads_lrefl)
+  apply (auto)
   done
 
 lemma NTFN2_in_subjectReads_CTR:
@@ -222,7 +226,7 @@ lemma CTR_in_subjectReads_EP:
   "partition_label CTR \<in> subjectReads example_auth_graph (partition_label EP)"
   apply(clarsimp)
   apply(rule_tac a="partition_label RM" and ep="partition_label EP" in read_sync_ep_read_senders)
-     apply (simp add: reads_lrefl)+
+     apply simp+
   done
 
 lemma NTFN1_in_subjectReads_EP:
@@ -352,7 +356,7 @@ lemma subjectAffects_T:
   apply(rule equalityI)
    apply(rule subsetI)
    apply(erule subjectAffects.cases)
-           apply(fastforce+)[7]
+           apply(fastforce+)[11]
     apply clarsimp
     apply (elim disjE conjE; simp)
   apply(auto simp: subjectAffects_T'[simplified])
@@ -403,7 +407,7 @@ lemma subjectAffects_NTFN2:
   apply(rule equalityI)
    apply(rule subsetI)
    apply(erule subjectAffects.cases)
-           apply(auto)[7]
+           apply(auto)[9]
    apply clarsimp
    apply (elim disjE conjE; simp)
   apply(auto simp: subjectAffects_NTFN2'[simplified])
@@ -495,7 +499,7 @@ lemma subjectAffects_EP:
   apply(rule equalityI)
    apply(rule subsetI)
    apply(erule subjectAffects.cases)
-           apply(fastforce+)[7]
+           apply(fastforce+)[11]
    apply clarsimp
    apply (elim conjE disjE; simp)
   apply(auto simp: subjectAffects_EP'[simplified])
@@ -620,39 +624,39 @@ lemma subjectReads_Low: "subjectReads example_auth_graph2 (partition_label Low) 
   apply(rule equalityI)
    apply(rule subsetI)
    apply(erule subjectReads.induct, fastforce+)
-  apply (auto intro: reads_lrefl reads_read)
+  apply (auto intro: reads_read)
   done
 
 lemma subjectReads_SharedPage: "subjectReads example_auth_graph2 (partition_label SharedPage) = {partition_label Low,partition_label SharedPage}"
   apply(rule equalityI)
    apply(rule subsetI)
    apply(erule subjectReads.induct, fastforce+)
-  apply (auto intro: reads_lrefl reads_read_page_read_thread)
+  apply (auto intro: reads_read_page_read_thread)
   done
 
 lemma High_in_subjectReads_NTFN:
   "partition_label High \<in> subjectReads example_auth_graph2 (partition_label NTFN)"
   apply(rule read_sync_ep_read_receivers)
-  apply(auto intro: reads_lrefl)
+  apply auto
   done
 
 lemma SharedPage_in_subjectReads_NTFN:
   "partition_label SharedPage \<in> subjectReads example_auth_graph2 (partition_label NTFN)"
   apply(rule reads_read_thread_read_pages[OF High_in_subjectReads_NTFN])
-  apply(auto)
+  apply auto
   done
 
 lemma Low_in_subjectReads_NTFN:
   "partition_label Low \<in> subjectReads example_auth_graph2 (partition_label NTFN)"
   apply(rule reads_read_page_read_thread[OF SharedPage_in_subjectReads_NTFN])
-  apply(auto)
+  apply auto
   done
 
 lemma subjectReads_NTFN: "subjectReads example_auth_graph2 (partition_label NTFN) = {partition_label NTFN,partition_label High,partition_label SharedPage, partition_label Low}"
   apply(rule equalityI)
    apply(rule subsetI)
    apply(erule subjectReads.induct, fastforce+)
-  apply (auto intro: High_in_subjectReads_NTFN Low_in_subjectReads_NTFN SharedPage_in_subjectReads_NTFN simp del: example_auth_graph2_def intro: reads_lrefl)
+  apply (auto intro: High_in_subjectReads_NTFN Low_in_subjectReads_NTFN SharedPage_in_subjectReads_NTFN simp del: example_auth_graph2_def)
   done
 
 lemma NTFN_in_subjectReads_High:
@@ -662,7 +666,7 @@ lemma NTFN_in_subjectReads_High:
 
 lemma SharedPage_in_subjectReads_High:
   "partition_label SharedPage \<in> subjectReads example_auth_graph2 (partition_label High)"
-  apply(fastforce intro: reads_read_thread_read_pages reads_lrefl)
+  apply(fastforce intro: reads_read_thread_read_pages)
   done
 
 lemma Low_in_subjectReads_High:
@@ -674,7 +678,7 @@ lemma subjectReads_High: "subjectReads example_auth_graph2 (partition_label High
   apply(rule equalityI)
    apply(rule subsetI)
    apply(erule subjectReads.induct, fastforce+)
-  apply(auto intro: reads_lrefl NTFN_in_subjectReads_High SharedPage_in_subjectReads_High Low_in_subjectReads_High simp del: example_auth_graph2_def)
+  apply(auto intro: NTFN_in_subjectReads_High SharedPage_in_subjectReads_High Low_in_subjectReads_High simp del: example_auth_graph2_def)
   done
 
 lemma SharedPage_in_subjectAffects_Low:

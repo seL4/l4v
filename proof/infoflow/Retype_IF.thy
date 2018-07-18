@@ -15,14 +15,18 @@ begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma create_cap_reads_respects:
-  "reads_respects aag l (K (is_subject aag (fst (fst slot)))) (create_cap type bits untyped dev slot)"
+  "reads_respects aag l (K (is_subject aag (fst (fst slot))))
+     (create_cap type bits untyped dev slot)"
   apply(rule gen_asm_ev)
   apply(simp add: create_cap_def split_def bind_assoc[symmetric])
   apply (fold update_cdt_def)
   apply (simp add: bind_assoc create_cap_ext_def)
   apply (wp set_cap_reads_respects set_original_reads_respects update_cdt_list_reads_respects update_cdt_reads_respects| simp | fastforce simp: equiv_for_def split: option.splits)+
   apply (intro impI conjI allI)
-   apply(fastforce simp: reads_equiv_def2 equiv_for_def elim: states_equiv_forE_is_original_cap states_equiv_forE_cdt dest: aag_can_read_self split: option.splits)+
+   apply(fastforce simp: reads_equiv_def2 equiv_for_def
+                   elim: states_equiv_forE_is_original_cap states_equiv_forE_cdt
+                   dest: aag_can_read_self
+                  split: option.splits)+
   done
 
 lemma gets_any_evrv:

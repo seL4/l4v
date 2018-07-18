@@ -23,23 +23,6 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 section {* Separation lemmas for the idle thread and domain fields *}
 
-crunch idle_thread[wp]: preemption_point "\<lambda>s::det_state. P (idle_thread s)"
-(wp: OR_choiceE_weak_wp crunch_wps simp: crunch_simps ignore: do_extended_op OR_choiceE)
-
-crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,
-                        cancel_badged_sends
-                        "\<lambda>s::det_state. P (idle_thread s)"
-  (   wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp
-          dxo_wp_weak
-    simp: crunch_simps check_cap_at_def filterM_mapM unless_def
-  ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
-
-crunch idle_thread[wp]: handle_event "\<lambda>s::det_state. P (idle_thread s)"
-  (  wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation dxo_wp_weak
-   simp: crunch_simps check_cap_at_def filterM_mapM unless_def
- ignore: without_preemption filterM rec_del check_cap_at cap_revoke resetTimer ackInterrupt
-         getFAR getDFSR getIFSR getActiveIRQ)
-
 abbreviation (input) domain_fields
 where
   "domain_fields P s \<equiv> P (domain_time s) (domain_index s) (domain_list s)"
@@ -253,6 +236,11 @@ lemma guarded_pas_domainMayActivate_update[simp]:
   "guarded_pas_domain (aag\<lparr>pasMayActivate := False\<rparr>) = guarded_pas_domain aag"
   by (simp add: guarded_pas_domain_def)
 
+lemma cdt_change_allowedMayActivate_update[simp]:
+  "cdt_change_allowed (aag\<lparr>pasMayActivate := x\<rparr>) =
+   cdt_change_allowed aag "
+  by (simp add: cdt_change_allowed_def[abs_def] cdt_direct_change_allowed.simps direct_call_def)
+
 section {* PAS MayEditReadyQueue update *}
 
 lemma prop_of_pasMayEditReadyQueues_update_idemp:
@@ -316,6 +304,11 @@ lemma pas_refined_pasMayEditReadyQueues_update:
 lemma guarded_pas_domainMayEditReadyQueues_update[simp]:
   "guarded_pas_domain (aag\<lparr>pasMayEditReadyQueues := False\<rparr>) = guarded_pas_domain aag"
   by (simp add: guarded_pas_domain_def)
+
+lemma cdt_change_allowedMayEditReadyQueues_update[simp]:
+  "cdt_change_allowed (aag\<lparr>pasMayEditReadyQueues := x\<rparr>) =
+   cdt_change_allowed aag"
+  by (simp add: cdt_change_allowed_def[abs_def] cdt_direct_change_allowed.simps direct_call_def)
 
 end
 

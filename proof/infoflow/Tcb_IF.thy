@@ -469,7 +469,10 @@ lemmas gets_cur_thread_respects_f =
 lemma restart_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and pas_cur_domain aag and invs and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag t)) (restart t)"
+  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and pas_cur_domain aag and invs
+                           and tcb_at t
+                           and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag t))
+      (restart t)"
   apply (rule gen_asm_ev | elim conjE)+
   apply (simp add: restart_def when_def)
   apply (wp reads_respects_f[OF set_thread_state_reads_respects, where Q="\<top>"]
@@ -479,7 +482,9 @@ lemma restart_reads_respects_f:
             setup_reply_master_pas_refined
             reads_respects_f[OF possible_switch_to_reads_respects, where Q="\<top>"]
             reads_respects_f[OF tcb_sched_action_reads_respects, where Q="\<top>"]
-            cancel_ipc_reads_respects_f setup_reply_master_silc_inv cancel_ipc_silc_inv | simp)+
+            cancel_ipc_reads_respects_f setup_reply_master_silc_inv cancel_ipc_silc_inv
+      | simp
+      | strengthen invs_mdb)+
 
     apply (simp add: get_thread_state_def thread_get_def)
     apply wp
@@ -506,7 +511,8 @@ lemma det_zipWithM:
   done
 
 lemma checked_insert_reads_respects:
-  "reads_respects aag l (K (is_subject aag (fst b) \<and> is_subject aag (fst d) \<and> is_subject aag (fst e))) (check_cap_at a b (check_cap_at c d (cap_insert a b e)))"
+  "reads_respects aag l (K (is_subject aag (fst b) \<and> is_subject aag (fst d) \<and> is_subject aag (fst e)))
+     (check_cap_at a b (check_cap_at c d (cap_insert a b e)))"
   apply(rule equiv_valid_guard_imp)
    apply(simp add: check_cap_at_def)
    apply (wp when_ev cap_insert_reads_respects get_cap_wp get_cap_rev | simp)+
@@ -626,35 +632,41 @@ lemmas thread_get_reads_respects_f = reads_respects_f[OF thread_get_reads_respec
 
 lemmas reschedule_required_reads_respects_f = reads_respects_f[OF reschedule_required_reads_respects, where Q="\<top>", simplified, OF _ reschedule_required_ext_extended.silc_inv]
 crunch pas_refined[wp]: restart "pas_refined aag"
+(* lemmas reschedule_required_reads_respects_f = reads_respects_f[OF reschedule_required_reads_respects, where Q="\<top>", simplified, OF reschedule_required_ext_extended.silc_inv] *)
 
 lemma invoke_tcb_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes validE_valid[wp del]
         static_imp_wp [wp]
   shows
-  "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and pas_refined aag and pas_cur_domain aag and Tcb_AI.tcb_inv_wf ti and (\<lambda>s. is_subject aag (cur_thread s)) and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti)) (invoke_tcb ti)"
+  "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs
+         and simple_sched_action and pas_refined aag and pas_cur_domain aag
+         and Tcb_AI.tcb_inv_wf ti and is_subject aag \<circ> cur_thread
+         and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
+     (invoke_tcb ti)"
   including no_pre
   apply(case_tac ti)
          apply(wpsimp wp: thread_get_reads_respects_f when_ev restart_reads_respects_f
                           reschedule_required_reads_respects_f as_user_reads_respects_f
                           static_imp_wp thread_get_wp' restart_silc_inv restart_pas_refined
                           hoare_vcg_if_lift)+
-         apply(auto intro: requiv_cur_thread_eq
-                   intro!: det_zipWithM
-                     simp: det_setRegister det_getRestartPC det_setNextPC authorised_tcb_inv_def reads_equiv_f_def)[1]
-        apply(wp as_user_reads_respects_f suspend_silc_inv when_ev suspend_reads_respects_f[where st=st]
-                 | simp | elim conjE, assumption)+
-        apply(auto simp: authorised_tcb_inv_def  det_getRegister reads_equiv_f_def
-                 intro!: det_mapM[OF _ subset_refl])[1]
+         apply(solves\<open>auto intro!: det_zipWithM
+                             simp: det_setRegister det_getRestartPC det_setNextPC
+                                   authorised_tcb_inv_def  reads_equiv_f_def\<close>)
+        apply(wp as_user_reads_respects_f suspend_silc_inv when_ev  suspend_reads_respects_f
+             | simp | elim conjE, assumption)+
+        apply(solves\<open>auto simp: authorised_tcb_inv_def  det_getRegister reads_equiv_f_def
+                        intro!: det_mapM[OF _ subset_refl]\<close>)
        apply(wp when_ev mapM_x_ev'' reschedule_required_reads_respects_f[where st=st]
                 as_user_reads_respects_f[where st=st] hoare_vcg_ball_lift mapM_x_wp'
                 restart_reads_respects_f restart_silc_inv hoare_vcg_if_lift
                 suspend_reads_respects_f suspend_silc_inv hoare_drop_imp
                 restart_silc_inv restart_pas_refined
-            | simp split del: if_split add: det_setRegister det_setNextPC)+
-       apply(auto simp: authorised_tcb_inv_def
+            | simp split del: if_split add: det_setRegister det_setNextPC
+            | strengthen invs_mdb)+
+       apply(solves\<open>auto simp: authorised_tcb_inv_def
                         idle_no_ex_cap[OF invs_valid_global_refs invs_valid_objs] det_getRestartPC
-                        det_getRegister)[1]
+                        det_getRegister\<close>)
       defer
       apply((wp suspend_reads_respects_f[where st=st] restart_reads_respects_f[where st=st]
               | simp add: authorised_tcb_inv_def )+)[2]
@@ -677,55 +689,63 @@ lemma invoke_tcb_reads_respects_f:
                        apply ((wpsimp wp: reschedule_required_reads_respects_f)+)[4]
                    apply((wp reads_respects_f[OF cap_insert_reads_respects, where st=st]
                              reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
-                             set_priority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
-                             set_mcpriority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
+                             set_priority_reads_respects[THEN
+                                                 reads_respects_f[where aag=aag and st=st and Q=\<top>]]
+                             set_mcpriority_reads_respects[THEN
+                                                 reads_respects_f[where aag=aag and st=st and Q=\<top>]]
                              check_cap_inv[OF check_cap_inv[OF cap_insert_valid_list]]
                              check_cap_inv[OF check_cap_inv[OF cap_insert_valid_sched]]
                              check_cap_inv[OF check_cap_inv[OF cap_insert_schedact]]
-                             get_thread_state_rev[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
+                             get_thread_state_rev[THEN
+                                                 reads_respects_f[where aag=aag and st=st and Q=\<top>]]
                              hoare_vcg_all_lift_R hoare_vcg_all_lift
-                             cap_delete_reads_respects[where st=st] itr_wps(19) cap_insert_pas_refined
-                             thread_set_pas_refined reads_respects_f[OF checked_insert_reads_respects, where st=st]
-                             checked_cap_insert_silc_inv[where st=st] cap_delete_silc_inv[where st=st]
+                             cap_delete_reads_respects[where st=st] checked_insert_pas_refined
+                             thread_set_pas_refined
+                             reads_respects_f[OF checked_insert_reads_respects, where st=st]
+                             checked_cap_insert_silc_inv[where st=st]
+                             cap_delete_silc_inv_not_transferable[where st=st]
                              checked_cap_insert_only_timer_irq_inv[where st=st' and irq=irq]
                              cap_delete_only_timer_irq_inv[where st=st' and irq=irq]
                              set_priority_only_timer_irq_inv[where st=st' and irq=irq]
                              set_mcpriority_only_timer_irq_inv[where st=st' and irq=irq]
                              cap_delete_deletes cap_delete_valid_cap cap_delete_cte_at
-                             cap_delete_pas_refined itr_wps(12) itr_wps(14) cap_insert_cte_at
+                             cap_delete_pas_refined' itr_wps(12) itr_wps(14) cap_insert_cte_at
                              checked_insert_no_cap_to hoare_vcg_const_imp_lift_R hoare_vcg_conj_lift
-                             as_user_reads_respects_f
-                            |wpc
-                            |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
-                                       tcb_at_st_tcb_at when_def
-                            |strengthen use_no_cap_to_obj_asid_strg)+)[9]
-     apply (
-        ((simp add: conj_comms, strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
-          | wp reads_respects_f[OF cap_insert_reads_respects, where st=st]
-            reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
-            set_priority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
-            set_mcpriority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
-            check_cap_inv[OF check_cap_inv[OF cap_insert_valid_list]]
-            check_cap_inv[OF check_cap_inv[OF cap_insert_valid_sched]]
-            check_cap_inv[OF check_cap_inv[OF cap_insert_schedact]]
-            get_thread_state_rev[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
-            hoare_vcg_all_lift_R hoare_vcg_all_lift
-            cap_delete_reads_respects[where st=st] itr_wps(19) cap_insert_pas_refined
-            thread_set_pas_refined reads_respects_f[OF checked_insert_reads_respects, where st=st]
-            checked_cap_insert_silc_inv[where st=st] cap_delete_silc_inv[where st=st]
-            checked_cap_insert_only_timer_irq_inv[where st=st' and irq=irq]
-            cap_delete_only_timer_irq_inv[where st=st' and irq=irq]
-            set_priority_only_timer_irq_inv[where st=st' and irq=irq]
-            set_mcpriority_only_timer_irq_inv[where st=st' and irq=irq]
-            cap_delete_deletes cap_delete_valid_cap cap_delete_cte_at
-            cap_delete_pas_refined itr_wps(12) itr_wps(14) cap_insert_cte_at
-            checked_insert_no_cap_to hoare_vcg_const_imp_lift_R
-            as_user_reads_respects_f
-       |wpc
-       |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
-                  tcb_at_st_tcb_at when_def
-       |strengthen use_no_cap_to_obj_asid_strg)+
-)
+                             as_user_reads_respects_f thread_set_mdb
+                        | wpc
+                        | simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
+                                    tcb_at_st_tcb_at when_def
+                        | strengthen use_no_cap_to_obj_asid_strg invs_mdb
+                        | fastforce)+)[9]
+  (* 11 subgoals here *)
+  apply ((simp add: conj_comms,
+          strengthen imp_consequent[where Q="x = None" for x],
+          simp cong: conj_cong)
+        | wp reads_respects_f[OF cap_insert_reads_respects, where st=st]
+             reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
+             set_priority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
+             set_mcpriority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
+             check_cap_inv[OF check_cap_inv[OF cap_insert_valid_list]]
+             check_cap_inv[OF check_cap_inv[OF cap_insert_valid_sched]]
+             check_cap_inv[OF check_cap_inv[OF cap_insert_schedact]]
+             get_thread_state_rev[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
+             hoare_vcg_all_lift_R hoare_vcg_all_lift
+             cap_delete_reads_respects[where st=st] checked_insert_pas_refined
+             thread_set_pas_refined reads_respects_f[OF checked_insert_reads_respects, where st=st]
+             checked_cap_insert_silc_inv[where st=st] cap_delete_silc_inv_not_transferable[where st=st]
+             checked_cap_insert_only_timer_irq_inv[where st=st' and irq=irq]
+             cap_delete_only_timer_irq_inv[where st=st' and irq=irq]
+             set_priority_only_timer_irq_inv[where st=st' and irq=irq]
+             set_mcpriority_only_timer_irq_inv[where st=st' and irq=irq]
+             cap_delete_deletes cap_delete_valid_cap cap_delete_cte_at
+             cap_delete_pas_refined' itr_wps(12) itr_wps(14) cap_insert_cte_at
+             checked_insert_no_cap_to hoare_vcg_const_imp_lift_R
+             as_user_reads_respects_f
+        |wpc
+        |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
+                   when_def st_tcb_at_triv
+        |strengthen use_no_cap_to_obj_asid_strg invs_mdb
+        |wp_once hoare_drop_imp)+
     apply(simp add: option_update_thread_def tcb_cap_cases_def
          | wp static_imp_wp static_imp_conj_wp reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
               thread_set_pas_refined | wpc)+
@@ -735,7 +755,7 @@ lemma invoke_tcb_reads_respects_f:
             thread_set_pas_refined thread_set_emptyable thread_set_valid_cap
             thread_set_cte_at  thread_set_no_cap_to_trivial
             thread_set_tcb_fault_handler_update_only_timer_irq_inv
-        | simp add: tcb_cap_cases_def | wpc)+
+        | simp add: tcb_cap_cases_def | wpc | wp_once hoare_drop_imp)+
   apply (clarsimp simp: authorised_tcb_inv_def  authorised_tcb_inv_extra_def emptyable_def)
   by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
                      det_setRegister

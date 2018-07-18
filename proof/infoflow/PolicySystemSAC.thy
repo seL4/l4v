@@ -127,7 +127,6 @@ lemma abdrm_reads_ep : "x \<in> {NicA, NicB, NicD, RM} \<Longrightarrow> partiti
      apply(fastforce intro: reads_Control_rev simp del: complete_AgentAuthGraph_def)
     apply(fastforce intro: reads_Control_rev simp del: complete_AgentAuthGraph_def)
    apply(fastforce intro: reads_Control_rev simp del: complete_AgentAuthGraph_def)
-  apply(rule reads_lrefl)
   done
 
 lemma abdrm_reads_sc : "x \<in> {NicA, NicB, NicD, RM} \<Longrightarrow> partition_label SC \<in> subjectReads SACAuthGraph (partition_label x)"
@@ -159,7 +158,7 @@ lemma abd_reads_all_bw : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> {partitio
   apply (rule subsetI)
   (* refl cases *)
   apply (case_tac "partition_label x = xa")
-  apply (simp add: reads_lrefl)
+  apply simp
   (* non refl cases *)
   apply (case_tac "xa \<in> RMControls")
     apply (rule reads_all_rm_controlled_subjects, rule abd_reads_rm, simp, simp)
@@ -391,7 +390,7 @@ lemma r_affects_ep : "partition_label EP \<in> subjectAffects SACAuthGraph (part
 lemma r_affects : "subjectAffects SACAuthGraph (partition_label R) =
                    {partition_label NicB, partition_label NicD, partition_label R,
                     partition_label RM, partition_label NicA, partition_label NTFN3,
-                    partition_label EP, partition_label NTFN2 (* these 2 added for NTFN binding *) }"
+                    partition_label EP, partition_label NTFN2 \<comment> \<open>these 2 added for NTFN binding\<close> }"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -474,7 +473,7 @@ lemma rm_affects : "subjectAffects SACAuthGraph (partition_label RM) =
                     {partition_label NicA, partition_label NicB, partition_label NicD,
                      partition_label R, partition_label SC, partition_label EP,
                      partition_label RM, partition_label NTFN2,
-                     partition_label NTFN3 (* added for NTFN binding *)}"
+                     partition_label NTFN3 \<comment> \<open>added for NTFN binding\<close>}"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -726,7 +725,7 @@ lemma ntfn123_reads_ep : "l \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow> partit
 by (auto simp:ntfn1_reads_ep ntfn2_reads_ep ntfn3_reads_ep)
 
 lemma ntfn123_reads_ntfn123 : "\<lbrakk>l \<in> {NTFN1, NTFN2, NTFN3}; x \<in> {NTFN1, NTFN2, NTFN3}\<rbrakk> \<Longrightarrow> partition_label l \<in> subjectReads SACAuthGraph (partition_label x)"
-by (auto simp:ntfn12_reads_ntfn3 ntfn13_reads_ntfn2 ntfn23_reads_ntfn1 reads_lrefl)
+by (auto simp:ntfn12_reads_ntfn3 ntfn13_reads_ntfn2 ntfn23_reads_ntfn1)
 
 lemma ntfn123_reads : "l \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow> subjectReads SACAuthGraph (partition_label l) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
   apply (rule subset_antisym)

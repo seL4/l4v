@@ -190,8 +190,6 @@ lemma scheduler_affects_equiv_sym[elim]:
 
 declare globals_equiv_scheduler_sym[elim]
 declare globals_equiv_scheduler_trans[elim]
-declare scheduler_affects_equiv_sym[elim]
-declare scheduler_affects_equiv_trans[elim]
 declare silc_dom_equiv_sym[elim]
 declare silc_dom_equiv_trans[elim]
 
@@ -286,8 +284,6 @@ lemmas globals_equiv_scheduler_inv = globals_equiv_scheduler_inv'[where P="\<top
 
 lemmas reads_respects_scheduler_unobservable =
              reads_respects_scheduler_unobservable'[where P="\<top>",simplified]
-
-crunch globals_equiv[wp]: set_scheduler_action "globals_equiv st"
 
 lemma silc_dom_equiv_scheduler_action_update[simp]:
   "silc_dom_equiv aag st (s\<lparr>scheduler_action := x\<rparr>) = silc_dom_equiv aag st s"

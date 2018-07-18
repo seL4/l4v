@@ -30,7 +30,7 @@ lemma invoke_irq_handler_reads_respects_f:
    apply(simp)
    apply(wp reads_respects_f[OF cap_insert_reads_respects] cap_delete_one_reads_respects_f[where st=st]
          reads_respects_f[OF get_irq_slot_reads_respects, where Q="\<top>"] cap_insert_silc_inv''
-         cap_delete_one_silc_inv cap_delete_one_cte_wp_at_other static_imp_wp
+         cap_delete_one_silc_inv_subject cap_delete_one_cte_wp_at_other static_imp_wp
          hoare_vcg_ex_lift slots_holding_overlapping_caps_from_silc_inv[where aag=aag and st=st]| simp | simp add: get_irq_slot_def)+
    apply (clarsimp simp: pas_refined_def irq_map_wellformed_aux_def)
    apply ((rule conjI, assumption) | clarsimp simp: conj_comms authorised_irq_hdl_inv_def)+
@@ -85,7 +85,6 @@ lemma invoke_irq_control_globals_equiv:
           | simp)+
   done
 
-crunch valid_ko_at_arm[wp]: cap_delete_one "valid_ko_at_arm" (simp: unless_def)
 crunch valid_global_objs[wp]: cap_delete_one "valid_global_objs" (wp: dxo_wp_weak simp: unless_def ignore: empty_slot_ext)
 
 lemma invoke_irq_handler_globals_equiv:

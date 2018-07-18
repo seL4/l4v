@@ -76,7 +76,7 @@ lemma Sys3UT3Reads_correct_bw : "x \<in> Sys3Reads \<Longrightarrow> x \<in> sub
   apply (simp add: Sys3AuthGraph_def Sys3AuthGraph_aux_def complete_AuthGraph_def Sys3Reads_def)
   apply (erule disjE)
    (* UT3 reads UT3 *)
-   apply (simp add: reads_lrefl)
+   apply simp
   (* UT3 reads EP3 *)
   apply (erule disjE)
    apply (rule_tac auth = SyncSend in reads_ep)
@@ -126,7 +126,7 @@ lemma Sys3T3Reads_correct_bw : "x \<in> Sys3Reads \<Longrightarrow> x \<in> subj
     apply (simp)
     apply (simp add:insertI1)
    (* T3 reads T3 *)
-  apply (simp add: reads_lrefl)
+  apply simp
   done
 
 lemma Sys3T3Affects_correct_bw : "x \<in> Sys3Affects \<Longrightarrow> x \<in> subjectAffects Sys3AuthGraph (OrdinaryLabel (T3))"
@@ -159,14 +159,14 @@ lemma Sys3EP3Reads_correct_bw : "x \<in> Sys3Reads \<Longrightarrow> x \<in> sub
    apply (rule_tac a = "OrdinaryLabel (T3)" and auth=Receive and ep = "OrdinaryLabel (EP3)" and b = "OrdinaryLabel (UT3)" in read_sync_ep_read_senders)
       apply (simp)
      apply (simp add:insertI1)
-    apply (simp add:reads_lrefl)
+    apply simp
    apply simp
   (* EP3 reads EP3 *)
   apply (erule disjE)
-   apply (simp add: reads_lrefl)
+   apply simp
   (* EP3 reads T3 *)
   apply (rule_tac a = "OrdinaryLabel (UT3)" and auth = SyncSend and ep = "OrdinaryLabel (EP3)" and a = "OrdinaryLabel (T3)" in read_sync_ep_read_receivers)
-     apply (simp_all add:reads_lrefl)
+     apply simp_all
   done
 
 lemma Sys3EP3Affects_correct_fw : "x \<in> subjectAffects Sys3AuthGraph (OrdinaryLabel (EP3)) \<Longrightarrow> x \<in> Sys3EP3Affects"

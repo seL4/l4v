@@ -86,7 +86,7 @@ where
   (* clearly, l can read from anything it has Read authority to *)
   reads_read: "(l,Read,l') \<in> g \<Longrightarrow>  l' \<in> subjectReads g l" |
   (* l can read from itself *)
-  reads_lrefl: "l \<in> subjectReads g l" |
+  reads_lrefl[simp,intro!]: "l \<in> subjectReads g l" |
   (* if l has SyncSend or Receive authority to an endpoint, l can read it *)
   reads_ep:
   "\<lbrakk>(l,auth,ep) \<in> g;  auth \<in> {SyncSend,Receive}\<rbrakk> \<Longrightarrow>
@@ -128,6 +128,9 @@ where
   read_sync_ep_read_senders_strong:
   "\<lbrakk>ep \<in> subjectReads g l; (b,SyncSend,ep) \<in> g\<rbrakk> \<Longrightarrow>
    b \<in> subjectReads g l" |
+  read_sync_ep_call_senders_strong:
+  "\<lbrakk>ep \<in> subjectReads g l; (b,Call,ep) \<in> g\<rbrakk> \<Longrightarrow>
+   b \<in> subjectReads g l" |
   (* This rule allows anyone who can read a synchronous endpoint, to also be
      able to read from its receivers. The intuition is that the state of the
      receivers can affect how the endpoint is affected. *)
@@ -147,7 +150,24 @@ where
      this rule does not seem worth it IMO. *)
   read_sync_ep_read_receivers_strong:
   "\<lbrakk>ep \<in> subjectReads g l; (b,Receive,ep) \<in> g\<rbrakk> \<Longrightarrow>
-   b \<in> subjectReads g l"
+   b \<in> subjectReads g l" |
+
+  (* if t can reply to t', then t can send directly information to t' *)
+  read_reply_thread_read_thread:
+  "\<lbrakk>t' \<in> subjectReads g l; (t,Reply,t') \<in> g\<rbrakk> \<Longrightarrow>
+   t \<in> subjectReads g l" |
+  (* This rule is only there for convinience if Reply authorities corresponds to Call authorities*)
+  read_reply_thread_read_thread_rev:
+  "\<lbrakk>t' \<in> subjectReads g l; (t',Reply,t) \<in> g\<rbrakk> \<Longrightarrow>
+   t \<in> subjectReads g l" |
+  (* if t can reply to t', then t can send directly information to t' *)
+  read_delder_thread_read_thread:
+  "\<lbrakk>t' \<in> subjectReads g l; (t,DeleteDerived,t') \<in> g\<rbrakk> \<Longrightarrow>
+   t \<in> subjectReads g l" |
+  (* This rule is only there for convinience if Reply authorities corresponds to Call authorities*)
+  read_delder_thread_read_thread_rev:
+  "\<lbrakk>t' \<in> subjectReads g l; (t',DeleteDerived,t) \<in> g\<rbrakk> \<Longrightarrow>
+   t \<in> subjectReads g l"
 
 
 lemma read_sync_ep_read_senders:
@@ -184,18 +204,15 @@ where
 
 lemma aag_can_read_self:
   "is_subject aag x \<Longrightarrow> aag_can_read aag x"
-  apply(fastforce intro: reads_lrefl)
-  done
+  by simp
 
 lemma aag_can_read_read:
   "aag_has_auth_to aag Read x \<Longrightarrow> aag_can_read aag x"
-  apply(fastforce intro: reads_read)
-  done
+  by (rule reads_read)
 
 lemma aag_can_read_irq_self:
   "is_subject_irq aag x \<Longrightarrow> aag_can_read_irq aag x"
-  apply(fastforce intro: reads_lrefl)
-  done
+  by simp
 
 subsection {* Generic equivalence *}
 
@@ -816,17 +833,33 @@ where
     "\<lbrakk>(l,auth,l') \<in> g; auth \<in> {Control, Write}\<rbrakk> \<Longrightarrow>
      l' \<in> subjectAffects g l" |
   affects_ep:
-    "\<lbrakk>(l,auth,l') \<in> g; auth \<in> {Receive, Notify, SyncSend, Reset}\<rbrakk> \<Longrightarrow>
+    "\<lbrakk>(l,auth,l') \<in> g; auth \<in> {Receive, Notify, SyncSend, Call, Reset}\<rbrakk> \<Longrightarrow>
      l' \<in> subjectAffects g l" |
-  (* ipc buffer is not necessary owned by thread *)
+  (* ipc buffer is not necessarily owned by thread *)
   affects_send:
-    "\<lbrakk>(l,auth,ep) \<in> g; auth \<in> {SyncSend, Notify}; (l',Receive,ep) \<in> g;
+    "\<lbrakk>(l,auth,ep) \<in> g; auth \<in> {SyncSend, Notify, Call}; (l',Receive,ep) \<in> g;
       (l',Write,l'') \<in> g\<rbrakk> \<Longrightarrow>
      l'' \<in> subjectAffects g l" |
   (* synchronous sends provide a back-channel from receiver to sender *)
   affects_recv:
     "\<lbrakk>(l,Receive,ep) \<in> g; (l',SyncSend,ep) \<in> g\<rbrakk> \<Longrightarrow>
      l' \<in> subjectAffects g l" |
+  (* reply back channel TODO: check if needed *)
+  affects_reply_back:
+    "\<lbrakk>(l',Reply,l) \<in> g\<rbrakk> \<Longrightarrow>
+     l' \<in> subjectAffects g l" |
+  (* reply direct ipc buffer writing *)
+  affects_reply:
+    "\<lbrakk>(l,Reply,l') \<in> g; (l',Write,l'') \<in> g\<rbrakk> \<Longrightarrow>
+     l'' \<in> subjectAffects g l" |
+  (* deletion direct channel *)
+  affects_delete_derived:
+    "\<lbrakk>(l,DeleteDerived,l') \<in> g\<rbrakk> \<Longrightarrow>
+     l' \<in> subjectAffects g l" |
+  (* If two agents can delete the same caps, they can affect each other *)
+  affects_delete_derived2:
+    "\<lbrakk>(l,DeleteDerived,l') \<in> g; (l'',DeleteDerived,l') \<in> g\<rbrakk> \<Longrightarrow>
+     l'' \<in> subjectAffects g l" |
   (* integrity definitions allow resets to modify ipc buffer *)
   affects_reset:
     "\<lbrakk>(l,Reset,ep) \<in> g; (l',auth,ep) \<in> g; auth \<in> {SyncSend, Receive};
@@ -853,8 +886,7 @@ where
 lemma aag_can_affect_labelI[intro!]:
   "\<lbrakk>d \<in> subjectAffects (pasPolicy aag) (pasSubject aag); d \<in> subjectReads (pasPolicy aag) l\<rbrakk>
      \<Longrightarrow> aag_can_affect_label aag l"
-  apply(auto simp: aag_can_affect_label_def)
-  done
+  by (auto simp: aag_can_affect_label_def)
 
 (* Defines when two states are equivalent for some domain l that can be affected
    by the current subject. When the current subject cannot affect domain l,
@@ -869,13 +901,11 @@ where
 
 lemma equiv_for_trivial:
   "(\<And> x. P x \<Longrightarrow> False) \<Longrightarrow> equiv_for P f c c'"
-  apply(auto simp: equiv_for_def)
-  done
+  by (auto simp: equiv_for_def)
 
 lemma equiv_asids_trivial:
   "(\<And> x. P x \<Longrightarrow> False) \<Longrightarrow> equiv_asids P x y"
-  apply(auto simp: equiv_asids_def)
-  done
+  by (auto simp: equiv_asids_def)
 
 abbreviation aag_can_affect
 where
