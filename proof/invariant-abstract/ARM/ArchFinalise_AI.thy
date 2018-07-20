@@ -1010,7 +1010,7 @@ lemma obj_at_empty_tableI:
     apply assumption
    apply (case_tac ko)
        apply ((erule_tac x="ucast (kernel_base >> 20) - 1" in allE,
-         simp add: kernel_base_def kernel_mapping_slots_def)+)[4]
+         simp add: kernel_base_def kernel_mapping_slots_def)+)[6]
    apply (rename_tac arch_kernel_obj)
    apply (case_tac arch_kernel_obj) defer 3
       apply ((erule_tac x="ucast (kernel_base >> 20) - 1" in allE,
@@ -1018,7 +1018,7 @@ lemma obj_at_empty_tableI:
    (* Interesting case *)
   apply (rename_tac "fun")
   apply clarsimp
-(*  apply (erule_tac x=x in allE)
+  apply (erule_tac x=x in allE)
   apply (case_tac "x \<notin> kernel_mapping_slots")
    apply (simp add:valid_pde_mappings_def pde_ref_def)
   apply simp
@@ -1036,7 +1036,7 @@ lemma obj_at_empty_tableI:
           erule_tac x="arm_global_pd (arch_state s)" in allE)
    apply (erule_tac x="fun" in allE, erule_tac x="pd" in allE)
    apply (simp add: empty_table_def)
-  done*) sorry
+  done
 
 lemma pd_shifting_again3:
   "is_aligned pd pd_bits \<Longrightarrow> ((ucast (ae :: 12 word) << 2) + (pd :: word32) && ~~ mask pd_bits) = pd"
@@ -1302,7 +1302,7 @@ lemma (* finalise_cap_irq_node *)[Finalise_AI_asms]:
 "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> finalise_cap a b \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
   apply (case_tac a,simp_all)
   apply (wp | clarsimp)+
-  sorry
+  done
 
 lemmas (*arch_finalise_cte_irq_node *) [wp,Finalise_AI_asms]
     = hoare_use_eq_irq_node [OF arch_finalise_cap_irq_node arch_finalise_cap_cte_wp_at]

@@ -1933,5 +1933,30 @@ lemma schedulable_unfold: "tcb_at tp s \<Longrightarrow> (the (is_schedulable_op
 lemma in_q_not_schedualble[simp]: "tcb_at tp s \<Longrightarrow> is_schedulable_opt tp True s = (Some False)"
   by (clarsimp simp: is_schedulable_opt_def get_tcb_ko_at obj_at_def is_tcb split: option.splits)
 
+lemma update_sched_context_obj_at_impossible:
+  "\<lbrakk> \<And>np n. \<not> (P (SchedContext np n)) \<rbrakk> \<Longrightarrow>
+       \<lbrace>\<lambda>s. Q (obj_at P p s)\<rbrace>
+         update_sched_context f t
+       \<lbrace>\<lambda>rv s. Q (obj_at P p s)\<rbrace>"
+  apply (simp add: update_sched_context_def set_object_def cong: kernel_object.case_cong)
+  apply (wpsimp wp: get_object_wp)
+  apply (clarsimp simp: obj_at_def)
+  done
+
+lemma set_sc_obj_ref_obj_at_impossible:
+  "(\<And>np n. \<not> P (SchedContext np n)) \<Longrightarrow>
+    \<lbrace>\<lambda>s. Q (obj_at P p s)\<rbrace>
+      set_sc_obj_ref f t ntfn
+    \<lbrace>\<lambda>rv s. Q (obj_at P p s)\<rbrace>"
+  unfolding set_sc_obj_ref_def
+  by (wp update_sched_context_obj_at_impossible, simp)
+
+lemma set_endpoint_obj_at_impossible:
+  "\<forall>ep. \<not> (P (Endpoint ep)) \<Longrightarrow>
+    \<lbrace>\<lambda>s. Q (obj_at P p s)\<rbrace> set_endpoint ptr endp \<lbrace>\<lambda>rv s. Q (obj_at P p s)\<rbrace>"
+  apply (simp add: set_simple_ko_def set_object_def cong: kernel_object.case_cong)
+  apply (wpsimp wp: get_object_wp set_object_at_obj)
+  apply (clarsimp simp: obj_at_def split: option.splits)
+  done
 
 end
