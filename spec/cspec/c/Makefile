@@ -71,6 +71,9 @@ ${BUILDROOT}/.cmake_done: ${SOURCE_ROOT}/gcc.cmake ${SOURCE_ROOT}/configs/${CONF
 		-DKernelDomainSchedule=${CONFIG_DOMAIN_SCHEDULE} -G Ninja ${SOURCE_ROOT}
 	touch ${BUILDROOT}/.cmake_done
 
+# called by graph-refine's seL4-example/Makefile.common
+c-kernel-source: ${BUILDROOT}/kernel_all.c_pp
+
 # called by ../spec/Makefile
 cspec: ${UMM_TYPES} ${BUILDROOT}/kernel_all.c_pp
 	cd ${BUILDROOT} && ninja kernel_theories
