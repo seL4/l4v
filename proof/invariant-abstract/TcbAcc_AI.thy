@@ -796,7 +796,7 @@ lemma set_thread_state_valid_objs[wp]:
   apply (erule allE, erule impE, blast)
   apply (clarsimp simp: valid_obj_def valid_tcb_def
                         a_type_def tcb_cap_cases_def)
-  (* very long *)
+  (* very slow *)
   by (erule cte_wp_atE disjE
        | clarsimp simp: st_tcb_def2 tcb_cap_cases_def
                  dest!: get_tcb_SomeD

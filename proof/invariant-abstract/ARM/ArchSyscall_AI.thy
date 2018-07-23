@@ -38,8 +38,8 @@ crunch typ_at[wp, Syscall_AI_assms]: invoke_irq_control "\<lambda>s. P (typ_at T
 
 lemma obj_refs_cap_rights_update[simp, Syscall_AI_assms]:
   "obj_refs (cap_rights_update rs cap) = obj_refs cap"
-  by (auto simp add: cap_rights_update_def acap_rights_update_def
-         split: cap.split arch_cap.split bool.splits)
+  by (auto simp: cap_rights_update_def acap_rights_update_def
+          split: cap.split arch_cap.split bool.splits)
 
 (* FIXME: move to TCB *)
 lemma table_cap_ref_mask_cap [Syscall_AI_assms]:

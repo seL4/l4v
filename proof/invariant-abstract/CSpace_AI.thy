@@ -1490,6 +1490,9 @@ qed
 
 end
 
+lemma (in mdb_insert_abs) m_Some_not_dest:
+  "m p = Some p' \<Longrightarrow> p' \<noteq> dest"
+  by clarsimp
 
 lemma (in mdb_insert_abs) reply_caps_mdb:
   assumes r: "reply_caps_mdb m cs"
@@ -1501,16 +1504,9 @@ lemma (in mdb_insert_abs) reply_caps_mdb:
   apply (intro allI impI)
   apply (simp add: desc neq split: if_split_asm del: split_paired_Ex)
    apply (fastforce simp: src is_derived_def is_cap_simps cap_master_cap_def)
-  apply (unfold reply_caps_mdb_def)[1]
-  apply (subgoal_tac "\<exists>ptr'. m ptr = Some ptr' \<and> (\<exists>rights'. cs ptr' = Some (ReplyCap t True rights'))")
-   apply (erule exE, rename_tac ptr')
-   apply (rule_tac x=ptr' in exI)
-   apply (subgoal_tac "ptr' \<noteq> dest")
-    apply fastforce
-   apply (rule classical)
-   apply simp
-  apply fastforce
-  done
+   apply (erule(1) reply_caps_mdbE)
+   apply (fastforce dest:m_Some_not_dest)
+done
 
 
 lemma (in mdb_insert_abs) reply_masters_mdb:
@@ -1937,8 +1933,6 @@ lemma untyped_inc_update_free_index:
       apply (simp del:fun_upd_apply split_paired_All)
     apply (clarsimp split:if_splits)+
   done
-
-term free_index
 
 lemma reply_cap_id_free_index:
  "\<lbrakk>m src = Some capa; m' = m (src \<mapsto> capa\<lparr>free_index :=x\<rparr>)\<rbrakk> \<Longrightarrow>
@@ -3148,13 +3142,21 @@ lemma weak_derived_is_reply_master:
                  same_object_as_def is_cap_simps
          split: if_split_asm cap.split_asm)
 
+context begin interpretation Arch .
+lemma non_arch_cap_asid_vptr_None:
+  assumes "\<not> is_arch_cap cap"
+  shows "cap_asid cap = None"
+    and "cap_asid_base cap = None"
+    and "cap_vptr cap = None"
+  using assms by (cases cap; simp add: is_cap_simps cap_asid_def cap_asid_base_def cap_vptr_def)+
+end
 
 lemma weak_derived_Reply:
   "weak_derived (cap.ReplyCap t m R) c = (\<exists> R'. (c = cap.ReplyCap t m R'))"
   "weak_derived c (cap.ReplyCap t m R) = (\<exists> R'. (c = cap.ReplyCap t m R'))"
   by (auto simp: weak_derived_def copy_of_def
                  same_object_as_def is_cap_simps
-                 ARM.cap_asid_def ARM.cap_asid_base_def ARM.cap_vptr_def
+                 non_arch_cap_asid_vptr_None[simplified is_cap_simps]
           split: if_split_asm cap.split_asm)
 
 
@@ -3208,17 +3210,12 @@ lemma reply_caps_mdb:
   apply blast
   done
 
-find_names split_paired_all
-thm Product_Type.split
-
 lemma reply_masters_mdb:
   assumes r: "reply_masters_mdb m cs"
   assumes s: "cs src = Some src_cap"
   assumes d: "cs dest = Some cap.NullCap"
   assumes c: "weak_derived cap src_cap"
-  shows "reply_masters_mdb
-       m'
-        (cs (dest \<mapsto> cap, src \<mapsto> cap.NullCap))"
+  shows "reply_masters_mdb m' (cs (dest \<mapsto> cap, src \<mapsto> cap.NullCap))"
   unfolding reply_masters_mdb_def
   using r c s d
   apply (intro allI impI)
@@ -3241,9 +3238,7 @@ lemma reply_mdb:
   assumes s: "cs src = Some src_cap"
   assumes d: "cs dest = Some cap.NullCap"
   assumes c: "weak_derived cap src_cap"
-  shows "reply_mdb
-        m'
-        (cs (dest \<mapsto> cap, src \<mapsto> cap.NullCap))"
+  shows "reply_mdb m' (cs (dest \<mapsto> cap, src \<mapsto> cap.NullCap))"
   using r c s d unfolding reply_mdb_def
   by (simp add: reply_caps_mdb reply_masters_mdb)
 
@@ -4371,23 +4366,21 @@ lemma of_nat_ucast:
   apply (simp add: is_down_def target_size_def source_size_def word_size)
   done
 
-thm has_reply_cap_def
-
 lemma no_reply_caps_for_thread:
   "\<lbrakk> invs s; tcb_at t s; cte_wp_at (\<lambda>c. c = cap.NullCap) (t, tcb_cnode_index 2) s \<rbrakk>
    \<Longrightarrow> \<forall>sl m R. \<not> cte_wp_at (\<lambda>c. c = cap.ReplyCap t m R) sl s"
   apply clarsimp
   apply (case_tac m, simp_all)
    apply (fastforce simp: invs_def valid_state_def valid_reply_masters_def
-                         cte_wp_at_caps_of_state is_master_reply_cap_to_def)
+                          cte_wp_at_caps_of_state is_master_reply_cap_to_def)
   apply (subgoal_tac "st_tcb_at halted t s")
    apply (fastforce simp: invs_def valid_state_def valid_reply_caps_def
-                         has_reply_cap_def cte_wp_at_caps_of_state st_tcb_def2
-                         is_reply_cap_to_def)
+                          has_reply_cap_def cte_wp_at_caps_of_state st_tcb_def2
+                          is_reply_cap_to_def)
   apply (thin_tac "cte_wp_at _ (a, b) s")
   apply (fastforce simp: pred_tcb_at_def obj_at_def is_tcb valid_obj_def
-                        valid_tcb_def cte_wp_at_cases tcb_cap_cases_def
-                  dest: invs_valid_objs)
+                         valid_tcb_def cte_wp_at_cases tcb_cap_cases_def
+                   dest: invs_valid_objs)
   done
 
 
@@ -4415,13 +4408,13 @@ lemma setup_reply_master_mdb[wp]:
   apply (clarsimp simp add: cte_wp_at_caps_of_state simp del: fun_upd_apply)
   apply (rule conjI)
    apply (clarsimp simp: mdb_cte_at_def simp del: split_paired_All)
-  apply (rule conjI, clarsimp simp: untyped_mdb_def)
+  apply (rule conjI, fastforce simp: untyped_mdb_def)
   apply (rule conjI, rule descendants_inc_upd_nullcap)
    apply simp+
-  apply (rule conjI, clarsimp simp: untyped_inc_def)
-  apply (rule conjI, clarsimp simp: ut_revocable_def)
-  apply (rule conjI, clarsimp simp: irq_revocable_def)
-  apply (rule conjI, clarsimp simp: reply_master_revocable_def)
+  apply (rule conjI, fastforce simp: untyped_inc_def)
+  apply (rule conjI, fastforce simp: ut_revocable_def)
+  apply (rule conjI, fastforce simp: irq_revocable_def)
+  apply (rule conjI, fastforce simp: reply_master_revocable_def)
   apply (rule conjI)
    apply (fastforce simp: reply_caps_mdb_def
                simp del: split_paired_All split_paired_Ex
@@ -4836,7 +4829,7 @@ lemma lookup_cnode_slot_real_cte [wp]:
 
 lemma cte_refs_rights_update [simp]:
   "cte_refs (cap_rights_update R cap) x = cte_refs cap x"
-  by (auto simp add: cap_rights_update_def split: cap.splits bool.split)
+  by (force simp: cap_rights_update_def split: cap.splits bool.split)
 
 
 lemmas set_cap_typ_ats [wp] = abs_typ_at_lifts [OF set_cap_typ_at]

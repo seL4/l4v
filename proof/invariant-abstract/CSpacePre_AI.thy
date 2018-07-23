@@ -194,12 +194,13 @@ definition
   copy_of :: "cap \<Rightarrow> cap \<Rightarrow> bool"
 where
   "copy_of cap' cap \<equiv>
-  if (is_untyped_cap cap)
-     then cap = cap' else same_object_as cap cap'  \<and>
-   is_reply_cap cap = is_reply_cap cap' \<and>
-   is_master_reply_cap cap = is_master_reply_cap cap'"
+     if (is_untyped_cap cap)
+     then cap = cap'
+     else same_object_as cap cap' \<and>
+          is_reply_cap cap = is_reply_cap cap' \<and>
+          is_master_reply_cap cap = is_master_reply_cap cap'"
 
-(* cap' can be the result of a modification from cap made by the user 
+(* cap' can be the result of a modification from cap made by the user
    using Copy, Mint, Move, Mutate,... Actually, that relation should be symmetric*)
 definition
   "weak_derived cap cap' \<equiv>

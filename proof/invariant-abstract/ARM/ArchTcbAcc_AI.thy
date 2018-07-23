@@ -50,7 +50,7 @@ lemma cap_master_cap_tcb_cap_valid_arch:
   "\<lbrakk> cap_master_cap c = cap_master_cap c'; is_arch_cap c' ;
      is_valid_vtable_root c \<Longrightarrow> is_valid_vtable_root c' ; tcb_cap_valid c p s \<rbrakk> \<Longrightarrow>
    tcb_cap_valid c' p s"
-  (* very long *)
+  (* slow: 5 to 10s *)
   by (auto simp: cap_master_cap_def tcb_cap_valid_def tcb_cap_cases_def
                  valid_ipc_buffer_cap_def  is_cap_simps
                  is_nondevice_page_cap_simps is_nondevice_page_cap_arch_def

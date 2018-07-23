@@ -355,7 +355,7 @@ lemma mapM_length[wp]:
 
 lemma cap_badge_rights_update[simp]:
   "cap_badge (cap_rights_update rights cap) = cap_badge cap"
-  by (auto simp add: cap_rights_update_def split: cap.split bool.splits)
+  by (auto simp: cap_rights_update_def split: cap.split bool.splits)
 
 lemma get_cap_cte_wp_at_rv:
   "\<lbrace>cte_wp_at (\<lambda>cap. P cap cap) p\<rbrace> get_cap p \<lbrace>\<lambda>rv. cte_wp_at (P rv) p\<rbrace>"
@@ -440,7 +440,7 @@ lemma derive_cap_is_derived_foo:
 
 lemma cap_rights_update_NullCap[simp]:
   "(cap_rights_update rs cap = cap.NullCap) = (cap = cap.NullCap)"
-  by (auto simp add: cap_rights_update_def split: cap.split bool.splits)
+  by (auto simp: cap_rights_update_def split: cap.split bool.splits)
 
 crunch in_user_frame[wp]: set_extra_badge "in_user_frame buffer"
 crunch in_device_frame[wp]: set_extra_badge "in_device_frame buffer"
@@ -779,8 +779,8 @@ lemma (in Ipc_AI) derive_cap_objrefs_iszombie:
 
 lemma is_zombie_rights[simp]:
   "is_zombie (remove_rights rs cap) = is_zombie cap"
-  by (auto simp add: is_zombie_def remove_rights_def cap_rights_update_def
-         split: cap.splits bool.splits)
+  by (auto simp: is_zombie_def remove_rights_def cap_rights_update_def
+          split: cap.splits bool.splits)
 
 crunch caps_of_state [wp]: set_extra_badge "\<lambda>s. P (caps_of_state s)"
 
@@ -2310,13 +2310,14 @@ lemma setup_caller_cap_objs[wp]:
    apply (subgoal_tac "s \<turnstile> cap.ReplyCap sender False {AllowGrant, AllowWrite}")
     prefer 2
     apply (fastforce simp: valid_cap_def cap_aligned_def word_bits_def
-      st_tcb_def2 tcb_at_def is_tcb
-      dest: pspace_alignedD get_tcb_SomeD)
-   apply (subgoal_tac "tcb_cap_valid (cap.ReplyCap sender False {AllowGrant, AllowWrite}) (rcvr, tcb_cnode_index 3) s")
+                           st_tcb_def2 tcb_at_def is_tcb
+                     dest: pspace_alignedD get_tcb_SomeD)
+   apply (subgoal_tac "tcb_cap_valid (cap.ReplyCap sender False {AllowGrant, AllowWrite})
+                                     (rcvr, tcb_cnode_index 3) s")
     prefer 2
     apply (clarsimp simp: tcb_cap_valid_def is_cap_simps
-      split: Structures_A.thread_state.splits
-      elim!: pred_tcb_weakenE)
+                   split: Structures_A.thread_state.splits
+                   elim!: pred_tcb_weakenE)
    apply (clarsimp simp: valid_tcb_state_def st_tcb_def2)
 (* \<not> grant *)
   apply (rule hoare_pre)
@@ -2324,13 +2325,14 @@ lemma setup_caller_cap_objs[wp]:
   apply (subgoal_tac "s \<turnstile> cap.ReplyCap sender False {AllowWrite}")
    prefer 2
    apply (fastforce simp: valid_cap_def cap_aligned_def word_bits_def
-      st_tcb_def2 tcb_at_def is_tcb
-      dest: pspace_alignedD get_tcb_SomeD)
-  apply (subgoal_tac "tcb_cap_valid (cap.ReplyCap sender False {AllowWrite}) (rcvr, tcb_cnode_index 3) s")
+                          st_tcb_def2 tcb_at_def is_tcb
+                          dest: pspace_alignedD get_tcb_SomeD)
+  apply (subgoal_tac "tcb_cap_valid (cap.ReplyCap sender False {AllowWrite})
+                                    (rcvr, tcb_cnode_index 3) s")
    prefer 2
    apply (clarsimp simp: tcb_cap_valid_def is_cap_simps
-      split: Structures_A.thread_state.splits
-      elim!: pred_tcb_weakenE)
+                  split: Structures_A.thread_state.splits
+                  elim!: pred_tcb_weakenE)
   apply (clarsimp simp: valid_tcb_state_def st_tcb_def2)
   done
 

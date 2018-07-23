@@ -101,7 +101,7 @@ lemma replace_cap_invs:
    apply (rule conjI)
     apply (unfold reply_caps_mdb_def)[1]
     apply (erule allEI, erule allEI)
-    apply_trace (clarsimp split: if_split simp add: is_cap_simps 
+    apply (clarsimp split: if_split simp add: is_cap_simps
                  simp del: split_paired_Ex split_paired_All)
     apply (rename_tac ptra ptrb rights')
     apply (rule_tac x="(ptra,ptrb)" in exI)

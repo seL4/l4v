@@ -453,7 +453,7 @@ text {*
   For each slot in the tcb, we give the accessor function, the update function and
   The invariant that should be verified about that slot.
 
-  The invariant paramters are inv thread_ptr tread_state cap_in_that_slot
+  The invariant parameters are: thread_ptr, thread_state, cap_in_that_slot
 *}
 (* WARNING to anyone who would like to add an invariant to ctable slot:
    During deletion procedure, any type of cap can land in that slot *)
@@ -625,13 +625,14 @@ text {* symref related definitions *}
 definition
   tcb_st_refs_of :: "thread_state  \<Rightarrow> (obj_ref \<times> reftype) set"
 where
-  "tcb_st_refs_of z \<equiv> case z of (Running)               => {}
-  | (Inactive)              => {}
-  | (Restart)               => {}
-  | (BlockedOnReply)        => {}
-  | (IdleThreadState)       => {}
-  | (BlockedOnReceive x payl)  => {(x, TCBBlockedRecv)}
-  | (BlockedOnSend x payl)  => {(x, TCBBlockedSend)}
+  "tcb_st_refs_of z \<equiv> case z of
+    (Running)                 => {}
+  | (Inactive)                => {}
+  | (Restart)                 => {}
+  | (BlockedOnReply)          => {}
+  | (IdleThreadState)         => {}
+  | (BlockedOnReceive x payl) => {(x, TCBBlockedRecv)}
+  | (BlockedOnSend x payl)    => {(x, TCBBlockedSend)}
   | (BlockedOnNotification x) => {(x, TCBSignal)}"
 
 definition
@@ -747,10 +748,10 @@ where
 primrec
   cte_refs :: "cap \<Rightarrow> (irq \<Rightarrow> obj_ref) \<Rightarrow> cslot_ptr set"
 where
-  "cte_refs (UntypedCap dev p n fr) f                = {}"
+  "cte_refs (UntypedCap dev p n fr) f            = {}"
 | "cte_refs (NullCap) f                          = {}"
 | "cte_refs (EndpointCap r badge rights) f       = {}"
-| "cte_refs (NotificationCap r badge rights) f  = {}"
+| "cte_refs (NotificationCap r badge rights) f   = {}"
 | "cte_refs (CNodeCap r bits guard) f            =
      {r} \<times> {xs. length xs = bits}"
 | "cte_refs (ThreadCap r) f                      =
@@ -761,7 +762,7 @@ where
                 unat (of_bl xs :: machine_word) < n}"
 | "cte_refs (IRQControlCap) f                    = {}"
 | "cte_refs (IRQHandlerCap irq) f                = {(f irq, [])}"
-| "cte_refs (ReplyCap tcb master rights) f              = {}"
+| "cte_refs (ReplyCap tcb master rights) f       = {}"
 | "cte_refs (ArchObjectCap cap) f                = {}"
 
 definition
@@ -879,10 +880,17 @@ definition
   "reply_master_revocable r cs \<equiv> \<forall>p cap. cs p = Some cap \<longrightarrow>
                                           is_master_reply_cap cap \<longrightarrow> r p"
 
-definition
+definition reply_caps_mdb
+where
   "reply_caps_mdb m cs \<equiv> \<forall>ptr t rights.
      cs ptr = Some (ReplyCap t False rights) \<longrightarrow>
      (\<exists>ptr' rights'. m ptr = Some ptr' \<and> cs ptr' = Some (ReplyCap t True rights'))"
+
+lemma reply_caps_mdbE:
+  assumes hyp:"reply_caps_mdb m cs"
+  assumes side_hyp: "cs slot = Some (ReplyCap t False R)"
+  obtains ptr R' where "m slot = Some ptr" and "cs ptr = Some (ReplyCap t True R')"
+  using side_hyp hyp by (fastforce simp:reply_caps_mdb_def)
 
 definition
   "reply_masters_mdb m cs \<equiv> \<forall>ptr t rights.

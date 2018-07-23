@@ -556,7 +556,7 @@ lemma no_irq_cacheRangeOp[simp, wp]:
   assumes nf: "\<And>a b. no_irq (oper a b)"
   shows "no_irq (cacheRangeOp oper s e p)"
   apply (simp add: cacheRangeOp_def)
-   apply (wp_trace no_irq_mapM_x nf | wpc | clarsimp)+
+   apply (wp no_irq_mapM_x nf | wpc | clarsimp)+
   done
 
 lemma no_irq_cleanCacheRange_PoU[simp, wp]:

@@ -2491,8 +2491,8 @@ lemma setup_caller_cap_sched_act_not_valid_sched:
   "\<lbrace>valid_sched and scheduler_act_not sender and not_queued sender\<rbrace>
      setup_caller_cap sender receiver grant
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  by (auto simp add: setup_caller_cap_def |
-      wp set_thread_state_sched_act_not_valid_sched)+
+  by (auto simp: setup_caller_cap_def
+     | wp set_thread_state_sched_act_not_valid_sched)+
 
 
 (* strong in case of tcb_domain t = tcb_domain target *)

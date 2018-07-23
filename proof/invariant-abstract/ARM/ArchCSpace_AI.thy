@@ -189,7 +189,7 @@ lemma is_derived_is_cap:
   \<and> (cap_is_device cap = cap_is_device cap')"
   apply (clarsimp simp: is_derived_def is_derived_arch_def split: if_split_asm)
   by (clarsimp simp: cap_master_cap_def is_cap_simps
-    split: cap.splits arch_cap.splits)+
+              split: cap.splits arch_cap.splits)+
 
 
 (* FIXME: move to CSpace_I near lemma vs_lookup1_tcb_update *)

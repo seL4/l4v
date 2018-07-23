@@ -149,12 +149,14 @@ lemma same_object_as_update_cap_data [CNodeInv_AI_assms]:
                    Let_def split_def the_cnode_cap_def bits_of_def split: if_split_asm cap.splits)+
   done
 
-lemma is_reply_update_cap_data [simp]: "is_reply_cap (update_cap_data P x c) = is_reply_cap c"
-  by (simp add:is_reply_cap_def update_cap_data_def arch_update_cap_data_def the_cnode_cap_def 
+lemma is_reply_update_cap_data [simp]:
+  "is_reply_cap (update_cap_data P x c) = is_reply_cap c"
+  by (simp add:is_reply_cap_def update_cap_data_def arch_update_cap_data_def the_cnode_cap_def
                is_arch_cap_def badge_update_def split:cap.split)
 
-lemma is_master_reply_update_cap_data[simp]: "is_master_reply_cap (update_cap_data P x c) = is_master_reply_cap c"
-  by (simp add:is_master_reply_cap_def update_cap_data_def arch_update_cap_data_def 
+lemma is_master_reply_update_cap_data[simp]:
+  "is_master_reply_cap (update_cap_data P x c) = is_master_reply_cap c"
+  by (simp add:is_master_reply_cap_def update_cap_data_def arch_update_cap_data_def
                the_cnode_cap_def is_arch_cap_def badge_update_def split:cap.split)
 
 lemma weak_derived_update_cap_data [CNodeInv_AI_assms]:

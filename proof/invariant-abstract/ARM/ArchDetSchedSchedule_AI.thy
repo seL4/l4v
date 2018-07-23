@@ -160,7 +160,6 @@ lemma astit_st_tcb_at[wp]:
   apply (simp add: arch_switch_to_idle_thread_def)
   by (wpsimp)
 
-thm stit_invs
 lemma stit_activatable' [DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
   apply (simp add: switch_to_idle_thread_def ct_in_state_def do_machine_op_def split_def)

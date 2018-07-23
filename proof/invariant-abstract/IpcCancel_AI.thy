@@ -1197,7 +1197,7 @@ lemma cancel_badged_sends_invs[wp]:
   apply wpsimp
   done
 
-
+(* FIXME rule_format? *)
 lemma real_cte_emptyable_strg:
   "real_cte_at p s \<longrightarrow> emptyable p s"
   by (clarsimp simp: emptyable_def obj_at_def is_tcb is_cap_table)

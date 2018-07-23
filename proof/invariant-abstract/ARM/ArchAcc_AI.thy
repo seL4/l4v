@@ -1624,7 +1624,7 @@ lemma set_pt_invs:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
-   apply_trace (wp set_pt_valid_objs set_pt_iflive set_pt_zombies
+   apply (wp set_pt_valid_objs set_pt_iflive set_pt_zombies
              set_pt_zombies_state_refs set_pt_zombies_state_hyp_refs set_pt_valid_mdb
              set_pt_valid_idle set_pt_ifunsafe set_pt_reply_caps
              set_pt_valid_arch_state set_pt_valid_global set_pt_cur

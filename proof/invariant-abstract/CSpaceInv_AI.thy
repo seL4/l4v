@@ -65,9 +65,10 @@ lemmas [wp] = set_cap_hyp_refs_of
 lemma remove_rights_cap_valid[simp]:
   "s \<turnstile> c \<Longrightarrow> s \<turnstile> remove_rights S c"
   using valid_validate_vm_rights
-  apply (cases c, simp_all add: remove_rights_def cap_rights_update_def
-                   valid_cap_def cap_aligned_def split: bool.splits)
-  by (fastforce)
+  apply (cases c; simp add: remove_rights_def cap_rights_update_def
+                            valid_cap_def cap_aligned_def
+                     split: bool.splits)
+  by fastforce
 
 
 lemma get_thread_state_inv [simp]:
@@ -1319,45 +1320,23 @@ lemma set_cap_cte_wp_at_neg:
   apply wpsimp
   done
 
-lemma set_cap_reply [wp]:
+lemma set_cap_reply[wp]:
+  notes split_paired_Ex[simp del] split_paired_All[simp del]
+  shows
   "\<lbrace>valid_reply_caps and cte_at dest and
       (\<lambda>s. \<forall>t rights. cap = cap.ReplyCap t False rights \<longrightarrow>
                st_tcb_at awaiting_reply t s \<and>
                (\<not> has_reply_cap t s \<or>
                 cte_wp_at (is_reply_cap_to t) dest s))\<rbrace>
-   set_cap cap dest \<lbrace>\<lambda>_. valid_reply_caps\<rbrace>"
-  apply (simp add: valid_reply_caps_def has_reply_cap_def del:split_paired_Ex split_paired_All)
-  apply (rule hoare_pre)
-   apply (subst imp_conv_disj)
-   apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift set_cap_cte_wp_at_neg
-        | simp del:split_paired_Ex split_paired_All)+
-  apply (clarsimp simp add: is_reply_cap_to_def simp del:split_paired_Ex split_paired_All)
-  apply (rule conjI)
-   apply (rule allI,rename_tac t)
-   apply fastforce
-
-  apply (case_tac "\<exists>t R. cap = ReplyCap t False R")
-prefer 2
-  apply (fastforce simp: unique_reply_caps_def is_cap_simps reply_cap_get_tcb_def
-                        cte_wp_at_caps_of_state)
-
-  apply (clarsimp simp add: unique_reply_caps_def is_cap_simps reply_cap_get_tcb_def
-                        cte_wp_at_caps_of_state
-                        simp del:split_paired_Ex split_paired_All
-                        )
-  apply (erule disjE)
-  apply (rule conjI)
-  apply (clarsimp simp del:split_paired_Ex split_paired_All)
-  apply (frule_tac x="(aa,ba)" and P="\<lambda>p. \<forall>cap. caps_of_state s p = Some cap \<longrightarrow> (\<forall>rights. cap \<noteq> ReplyCap t False rights)" in spec)
-  apply fastforce
-  apply (clarsimp simp del:split_paired_Ex split_paired_All)
-  apply (frule_tac x="(a,b)" and P="\<lambda>p. \<forall>cap. caps_of_state s p = Some cap \<longrightarrow> (\<forall>rights. cap \<noteq> ReplyCap ta False rights)" in spec)
-  apply fastforce
-
-
-  apply (rule conjI)
-  apply fastforce
-  apply (clarsimp simp del:split_paired_Ex split_paired_All)
+     set_cap cap dest
+   \<lbrace>\<lambda>_. valid_reply_caps\<rbrace>"
+  apply (simp add: valid_reply_caps_def has_reply_cap_def)
+  apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_all_lift set_cap_cte_wp_at_neg)
+  apply (clarsimp simp: is_reply_cap_to_def)
+  apply (rule conjI, fastforce)
+  (* Merging the simp and the fastforce fails miserably. I've no clue why *)
+  apply (simp add:unique_reply_caps_def)
+  apply (fastforce simp: is_cap_simps reply_cap_get_tcb_def cte_wp_at_caps_of_state)
   done
 
 
@@ -1366,7 +1345,7 @@ lemma set_cap_reply_masters [wp]:
        (\<lambda>s. \<forall>x. (\<exists> rights. cap = cap.ReplyCap x True rights) \<longrightarrow>
                 fst ptr = x \<and> snd ptr = tcb_cnode_index 2) \<rbrace>
    set_cap cap ptr \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
-  apply (simp add: valid_reply_masters_def cte_wp_at_caps_of_state  is_master_reply_cap_to_def)
+  apply (simp add: valid_reply_masters_def cte_wp_at_caps_of_state is_master_reply_cap_to_def)
   apply wp
   apply clarsimp
   done
@@ -2120,13 +2099,12 @@ lemma cap_insert_valid_cap[wp]:
 
 lemma cap_rights_update_idem [simp]:
   "cap_rights_update R (cap_rights_update R' cap) = cap_rights_update R cap"
-  by (auto simp add: cap_rights_update_def split: cap.splits bool.splits)
+  by (force simp: cap_rights_update_def split: cap.splits bool.splits)
 
 
 lemma cap_master_cap_rights [simp]:
   "cap_master_cap (cap_rights_update R cap) = cap_master_cap cap"
-  by (auto simp add: cap_master_cap_def cap_rights_update_def
-           split: cap.splits bool.splits)
+  by (force simp: cap_master_cap_def cap_rights_update_def split: cap.splits bool.splits)
 
 
 lemma cap_insert_obj_at_other:
@@ -2155,9 +2133,7 @@ lemma as_user_only_idle :
 lemma cap_rights_update_id [intro!, simp]:
   "valid_cap c s \<Longrightarrow> cap_rights_update (cap_rights c) c = c"
   unfolding cap_rights_update_def
-  apply (cases c)
-  apply (fastforce simp: valid_cap_def  split: bool.splits)+
-  done
+  by (cases c; fastforce simp: valid_cap_def split: bool.splits)
 
 
 lemma diminished_is_update:
