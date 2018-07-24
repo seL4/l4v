@@ -14,33 +14,36 @@ imports "Strengthen"
 
 begin
 
-text {* Here's a complicated predicate transformer, which
-sets up some quantifiers for our examples. *}
+text {* Here's a complicated predicate transformer. You don't need
+to understand this, it just makes it easy to set up some complicated
+example goals below. *}
 definition
   "predt f g h P x y = (\<exists>x'. (\<exists>y' \<in> f y. x' \<in> g y' ` h y) \<and> P x x')"
 
-text {* Here's strengthen proving a monotonicity
-property. We replace Q with P deep within the conclusion. *}
+text {* Strengthen performs the same kinds of steps as
+intro/elim rules, but it can perform them within complex
+conclusions. Here's an example where we replace Q with P
+(strengthening the goal) deep within some quantifiers. *}
 
 lemma predt_double_mono:
-  assumes PQ: "P \<le> Q"
+  assumes PQ: "\<And>x y. P x y \<longrightarrow> Q x y"
   assumes P: "predt f g h (predt f g h' P) x y"
   shows "predt f g h (predt f g h' Q) x y"
   using P
   apply (simp add: predt_def)
-  apply (strengthen predicate2D[OF PQ])
+  apply (strengthen PQ)
   apply assumption
   done
 
-text {* Here's a more conventional monotonicity proof,
-which uses more strengthen features. At each strengthen
-step our the goal is an existential quantifier which would
-be unpleasant to instantiate by hand. Instead, we want to
-use rule @{thm bexI} or @{thm image_eqI}, matching the
-set-membership premise against one of our assumptions. *}
+text {* Here's a more conventional monotonicity proof.
+Once the clarsimp has finished, the goal becomes a bit
+difficult to prove. Let's use some fancy strengthen
+features to address this. The rest of this demo will
+explain what the attribute and fancy features are doing,
+and thus how this proof works. *}
 
 lemma predt_double_mono2:
-  assumes PQ: "P \<le> Q"
+  assumes PQ: "\<And>x y. P x y \<longrightarrow> Q x y"
   assumes P: "predt f g h (predt f g' h P) x y"
   shows "predt f g h (predt f g' h Q) x y"
   using P
@@ -51,25 +54,31 @@ lemma predt_double_mono2:
   apply (strengthen bexI[mk_strg I _ O], assumption)
   apply (strengthen image_eqI[mk_strg I _ E])
   apply simp
-  apply (rule predicate2D[OF PQ])
-  apply simp
+  apply (simp add: PQ)
   done
 
 text {* The @{attribute mk_strg} controls the way that
 strengthen applies a rule. By default, strengthen will
 use a rule as an introduction rule, trying to replace
 the rule's conclusion with its premises.
+
+Once the @{attribute mk_strg} attribute has applied, the
+rule is formatted showing how strengthen will try to
+transform components of a goal. The syntax of the
+second theorem is reversed, showing that strengthen will
+attempt to replace instances of the subset predicate
+with instances of the proper subset predicate.
 *}
 thm psubset_imp_subset psubset_imp_subset[mk_strg]
 
-text {* This applies to rules with any number of premises,
-including no premises. *}
+text {* Rules can have any number of premises, or none,
+and still be used as strengthen rules. *}
 thm subset_UNIV subset_UNIV[mk_strg]
     equalityI equalityI[mk_strg]
 
 text {* Rules which would introduce schematics are
-also adjusted to introduce quantifiers instead.
-The argument I to mk_strg prevents this step.
+adjusted by @{attribute mk_strg} to introduce quantifiers
+instead. The argument I to mk_strg prevents this step.
 *}
 thm subsetD subsetD[mk_strg I] subsetD[mk_strg]
 
@@ -99,8 +108,9 @@ lemma
 
 text {* Subsequent arguments to mk_strg capture premises for
 special treatment. The 'A' argument (synonym 'E') specifies that
-a premise should be solved by assumption. The bexI[mk_strg I _ E]
-rule in our proof above has approximately the same effect as
+a premise should be solved by assumption. Our fancy proof above
+used a strengthen rule bexI[mk_strg I _ A], which tells strengthen
+to do approximately the same thing as
 \<open>apply (rule bexI) prefer 2 apply assumption\<close>
 
 This is a useful way to apply a rule, picking the premise which
