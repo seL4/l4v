@@ -362,6 +362,12 @@ fun map_consts f =
 
 fun map_unvarifyT t = map_types Logic.unvarifyT_global t
 
+fun dummy_fix ctxt vars = let
+    val nns = Name.invent Name.context "dummy_var_a" (length vars)
+    val frees = map Free (nns ~~ map fastype_of vars)
+      |> map (Thm.cterm_of ctxt)
+  in Drule.infer_instantiate ctxt (map (fst o dest_Var) vars ~~ frees) end
+
 fun induct_inst ctxt const goal nmspce =
     let
       val _ = debug_trace "induct_inst"
@@ -369,23 +375,29 @@ fun induct_inst ctxt const goal nmspce =
       val _ = debug_trace_pf "base_const: " (fn () => @{make_string} base_const)
       val induct_thm = base_const |> induct_of |> get_thm ctxt;
       val _ = debug_trace_pf "induct_thm: "  (fn () => @{make_string} induct_thm)
-      val const_term = read_const ctxt const |> map_unvarifyT;
-      val n = const_term |> fastype_of |> num_args;
-      val t = mk_abs (Instance.magic $ mk_apps const_term n 0) n
-              |> Syntax.check_term ctxt |> Logic.varify_global |> Thm.cterm_of ctxt;
-      val P = Thm.concl_of induct_thm |> HOLogic.dest_Trueprop |> head_of |> Term.dest_Var;
+      val act_goal = HOLogic.dest_Trueprop (Thm.term_of goal)
+      val goal_f = case Instance.dest_term act_goal of
+            NONE => (warning "induct_inst: dest_term failed"; error "induct_inst: dest_term failed")
+        | SOME (_, goal_f, _) => goal_f
+      val params = map_filter (fn Free (s, _) =>
+            (if String.isPrefix "param" s then SOME s else NONE) | _ => NONE)
+          (snd (strip_comb goal_f))
+      val _ = debug_trace ("induct_inst params: " ^ commas params)
+      val induct_thm_params = induct_thm |> Thm.concl_of
+          |> HOLogic.dest_Trueprop |> strip_comb |> snd
+      val induct_thm_inst = dummy_fix ctxt (drop (length params) induct_thm_params) induct_thm
       val trivial_rule = Thm.trivial goal;
-      val induct_inst = Thm.instantiate ([], [(P, t)]) induct_thm
-                        RS trivial_rule;
+      val tac = Induct_Tacs.induct_tac ctxt [map SOME params] (SOME [induct_thm_inst]) 1
+      val induct_inst = tac trivial_rule |> Seq.hd
       val _ = debug_trace_pf "induct_inst: " (fn () => Syntax.string_of_term ctxt (Thm.prop_of induct_inst))
-      val simp_thms = deep_search_thms ctxt (base_const |> simps_of) const_term nmspce;
+      val simp_thms = deep_search_thms ctxt (base_const |> simps_of) (head_of goal_f) nmspce;
       val induct_inst_simplified = induct_inst
         |> Simplifier.rewrite_goals_rule ctxt (map Simpdata.safe_mk_meta_eq simp_thms);
       val ms = maps (monads_of ctxt) (Thm.prems_of induct_inst_simplified);
-      val ms' = filter_out (eq_cname (resolve_abbreviated ctxt const_term) o head_of) ms;
+      val ms' = filter_out (eq_cname (resolve_abbreviated ctxt (head_of goal_f)) o head_of) ms;
     in if Thm.eq_thm_prop (trivial_rule, induct_inst)
        then error ("Unfold rule generated for " ^ const ^ " does not apply")
-       else (ms', induct_inst) end
+       else (ms', induct_inst_simplified) end
 
 fun unfold_data ctxt constn goal nmspce NONE = (
     induct_inst ctxt constn goal nmspce handle exn => handle_int exn
@@ -695,9 +707,8 @@ fun crunch cfg pre extra stack const' thms =
               ( (*DupSkip.goal_prove_wrapper *) (fn _ =>
               resolve_tac ctxt''' [rule] 1
                 THEN maybe_cheat_tac ctxt'''
+              THEN ALLGOALS (simp_tac ctxt''')
               THEN ALLGOALS (fn n =>
-                simp_tac ctxt''' n
-                THEN
                 TRY (resolve_tac ctxt''' Instance.pre_thms n)
                 THEN
                 REPEAT_DETERM (

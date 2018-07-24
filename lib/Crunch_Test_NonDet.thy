@@ -85,8 +85,8 @@ class foo_class =
 begin
 
 fun crunch_foo4 :: "nat => nat => 'a => (nat,unit) nondet_monad" where
-  "crunch_foo4 0 x _ = crunch_foo1 x"
-| "crunch_foo4 (Suc n) x y = crunch_foo4 n x y"
+  "crunch_foo4 0 x _ s = crunch_foo1 x s"
+| "crunch_foo4 (Suc n) x y s = crunch_foo4 n x y s"
 
 definition
   "crunch_foo5 x y \<equiv> crunch_foo1 x"
@@ -96,13 +96,13 @@ end
 lemma crunch_foo4_alt:
   "crunch_foo4 n x y \<equiv> crunch_foo1 x"
   apply (induct n)
-   apply simp+
+   apply (simp add: fun_eq_iff)+
   done
 
-(* FIXME: breaks, does not find induct_instance, wrong number of params
+(* prove rules about crunch_foo4 with and without the alternative definition *)
 crunch gt3: crunch_foo4 "\<lambda>x. x > y"
   (ignore: modify bind)
-*)
+
 crunch (no_fail) no_fail2: crunch_foo4
   (rule: crunch_foo4_alt ignore: modify bind)
 
