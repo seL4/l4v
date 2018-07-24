@@ -15,9 +15,12 @@ init_components "$USER_HOME/.isabelle/contrib" "$ISABELLE_HOME/Admin/components/
 init_components "$USER_HOME/.isabelle/contrib" "$ISABELLE_HOME/Admin/components/bundled"
 
 # 64 bit setup for large C proofs:
-ML_OPTIONS="-H 2000"
-ML_PLATFORM="$ISABELLE_PLATFORM64"
-ML_HOME="$(dirname ${ML_HOME})/$ML_PLATFORM"
+if [ -n "$ML_HOME" ]
+then
+  ML_OPTIONS="-H 2000"
+  ML_PLATFORM="$ISABELLE_PLATFORM64"
+  ML_HOME="$(dirname ${ML_HOME})/$ML_PLATFORM"
+fi
 
 # increased memory settings for large builds
 ISABELLE_BUILD_JAVA_OPTIONS="-Xms2048m -Xmx6096m -Xss4m"
@@ -29,13 +32,4 @@ ISABELLE_JEDIT_OPTIONS="-m brackets"
 # Everyone most likely wants ARM
 : ${L4V_ARCH:="ARM"}
 
-# Heap input locations. We have a unique set of heap files for each copy of
-# Isabelle the user has checked out, so that users can have multiple sessions
-# running at the same time without too many problems.
-USER_HEAPS=${OVERRIDE_USER_HEAPS:-"$ISABELLE_HOME_USER/heaps-${L4V_ARCH}${ISABELLE_HOME//\//-}"}
-ISABELLE_OUTPUT=${OVERRIDE_ISABELLE_OUTPUT:-"$USER_HEAPS"}
-ISABELLE_PATH=${OVERRIDE_ISABELLE_PATH:-"$USER_HEAPS"}
-ISABELLE_BROWSER_INFO=${OVERRIDE_ISABELLE_BROWSER_INFO:-"$ISABELLE_HOME_USER/browser_info"}
-
 # --- end L4.verified repository settings ---
-
