@@ -15,11 +15,13 @@ imports
   "wp/WPC"
   "wp/WPFix"
   "Strengthen"
+  "../Simp_No_Conditional"
 begin
 
 (* Wrap up the standard usage pattern of wp/wpc/simp into its own command: *)
 method wpsimp uses wp wp_del simp simp_del split split_del cong =
   ((determ \<open>wpfix | wp add: wp del: wp_del | wpc |
+            clarsimp_no_cond simp: simp simp del: simp_del split: split split del: split_del cong: cong |
             clarsimp simp: simp simp del: simp_del split: split split del: split_del cong: cong\<close>)+)[1]
 
 declare K_def [simp]
