@@ -45,9 +45,8 @@ HEAPS += SepTactics SepTacticsExamples
 
 # Additional dependencies
 
-SimplExportAndRefine: c-kernel
 BaseRefine Refine DBaseRefine DRefine: design-spec
-CBaseRefine CRefine CKernel CSpec: c-kernel design-spec
+CBaseRefine CRefine CKernel CSpec SimplExportAndRefine: c-kernel design-spec
 
 # Preprocess the kernel's source code and bitfield theory files.
 c-kernel: .FORCE
@@ -61,7 +60,7 @@ design-spec: .FORCE
 
 include ../misc/isa-common.mk
 
-# SimplExportOnly is a bit special, because we need to *not* build an image.
-SimplExportOnly: c-kernel
+# SimplExportOnly is treated specially, to not save an image.
+SimplExportOnly: c-kernel design-spec
 	$(ISABELLE_TOOL) build -v -c -d $(ROOT_PATH) $@
 .PHONY: SimplExportOnly
