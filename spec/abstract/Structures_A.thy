@@ -547,6 +547,7 @@ information.
 *}
 record 'a state = abstract_state + exst :: 'a
 
+section \<open>Helper functions\<close>
 
 text {* This wrapper lifts monadic operations on the underlying machine state to
 monadic operations on the kernel state. *}
@@ -644,5 +645,56 @@ text {* The set of all caps contained in a kernel object. *}
 definition
   caps_of :: "kernel_object \<Rightarrow> cap set" where
   "caps_of kobj \<equiv> ran (cap_of kobj)"
+
+section "Cap transfers"
+
+record captransfer =
+  ct_receive_root :: cap_ref
+  ct_receive_index :: cap_ref
+  ct_receive_depth :: data
+
+definition
+  captransfer_size :: "nat" -- "in words"
+where
+  "captransfer_size \<equiv> 3"
+
+text {* A thread's IPC buffer capability must be to a page that is capable of
+containing the IPC buffer without the end of the buffer spilling into another
+page. *}
+definition cap_transfer_data_size :: nat
+where
+  "cap_transfer_data_size \<equiv> 3"
+
+definition msg_max_length :: nat
+where
+  "msg_max_length \<equiv> 120"
+
+definition msg_max_extra_caps :: nat
+where
+  "msg_max_extra_caps \<equiv> 3"
+
+definition msg_align_bits :: nat
+where
+  "msg_align_bits \<equiv>
+     word_size_bits +
+     (LEAST n. cap_transfer_data_size + msg_max_length + msg_max_extra_caps + 2 \<le> 2 ^ n)"
+
+lemma msg_align_bits':
+  "msg_align_bits = word_size_bits + 7"
+proof -
+  have "(LEAST n. (cap_transfer_data_size + msg_max_length + msg_max_extra_caps + 2) \<le> 2 ^ n) = 7"
+  proof (rule Least_equality)
+    show "(cap_transfer_data_size + msg_max_length + msg_max_extra_caps + 2)  \<le> 2 ^ 7"
+      by (simp add: cap_transfer_data_size_def msg_max_length_def msg_max_extra_caps_def)
+  next
+    fix y
+    assume "(cap_transfer_data_size + msg_max_length + msg_max_extra_caps + 2) \<le> 2 ^ y"
+    hence "(2 :: nat) ^ 7 \<le> 2 ^ y"
+      by (simp add: cap_transfer_data_size_def msg_max_length_def msg_max_extra_caps_def)
+    thus "7 \<le> y"
+      by (rule power_le_imp_le_exp [rotated], simp)
+  qed
+  thus ?thesis unfolding msg_align_bits_def by simp
+qed
 
 end

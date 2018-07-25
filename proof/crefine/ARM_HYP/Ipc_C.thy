@@ -1207,7 +1207,7 @@ lemma setMR_ccorres:
           apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
           apply (erule aligned_add_aligned)
            apply (simp only: word_size_def is_aligned_mult_triv2[where n=2, simplified])
-          apply (simp add: msg_align_bits_def)
+          apply (simp add: msg_align_bits)
          apply (simp add: n_msgRegisters_def length_msgRegisters msgLengthBits_def mask_def)
         apply (simp add: msg_align_bits word_size_def msgMaxLength_def
                          length_msgRegisters n_msgRegisters_def)

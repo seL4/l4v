@@ -186,7 +186,7 @@ proof -
            apply (simp add: word_size_def)
            apply (rule is_aligned_mult_triv2[where n=2, simplified])
           apply simp
-         apply (simp add: msg_align_bits_def)
+         apply (simp add: msg_align_bits)
         apply (simp add: word_size_def)
         apply (rule word_less_power_trans_ofnat[where k=2, simplified],
                simp_all add: x msg_align_bits word_bits_def)[1]
@@ -211,7 +211,7 @@ proof -
   apply (case_tac "AllowRead \<in> rights",
          simp_all del: upt_Suc  split del: if_split)
   apply (cut_tac y=2 in is_aligned_weaken[OF 1])
-   apply (simp add: msg_align_bits_def)
+   apply (simp add: msg_align_bits)
   apply (cut_tac y=2 in is_aligned_weaken[OF 4])
    apply (case_tac sz, simp_all)[1]
   apply (frule (1) is_aligned_add[of buf 2 "tcb_ipc_buffer tcb"])

@@ -1918,7 +1918,7 @@ shows
                                  apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
                                  apply (erule aligned_add_aligned)
                                   apply (rule is_aligned_mult_triv2[where n=2, simplified])
-                                 apply (simp add: msg_align_bits_def)
+                                 apply (simp add: msg_align_bits)
                                 apply (clarsimp simp: getRegister_def submonad_asUser.guarded_gets
                                                       obj_at'_weakenE[OF _ TrueI])
                                 apply (clarsimp simp: asUser_fetch_def simpler_gets_def
@@ -2029,7 +2029,7 @@ shows
                                   apply (clarsimp simp: valid_ipc_buffer_ptr'_def,
                                          erule aligned_add_aligned)
                                    apply (rule is_aligned_mult_triv2[where n=2, simplified])
-                                  apply (simp add: msg_align_bits_def)
+                                  apply (simp add: msg_align_bits)
                                  apply (clarsimp simp: getRegister_def submonad_asUser.guarded_gets
                                                        obj_at'_weakenE[OF _ TrueI])
                                  apply (clarsimp simp: asUser_fetch_def simpler_gets_def

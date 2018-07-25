@@ -33,10 +33,6 @@ requalify_consts
   arch_same_region_as
   same_aobject_as
   prepare_thread_delete
-  msg_max_length
-  cap_transfer_data_size
-  msg_max_extra_caps
-  msg_align_bits
   update_cnode_cap_data
   cnode_padding_bits
   cnode_guard_size_bits
@@ -275,17 +271,6 @@ section {* Transferring capabilities *}
 text {* These functions are used in interpreting from user arguments the manner
 in which a capability transfer should take place. *}
 
-record captransfer =
-  ct_receive_root :: cap_ref
-  ct_receive_index :: cap_ref
-  ct_receive_depth :: data
-
-
-definition
-  captransfer_size :: "nat" -- "in words"
-where
-  "captransfer_size \<equiv> 3"
-
 definition
   captransfer_from_words :: "machine_word \<Rightarrow> (captransfer,'z::state_ext) s_monad"
 where
@@ -297,7 +282,6 @@ where
               ct_receive_index = data_to_cptr w1,
               ct_receive_depth = w2 \<rparr>
    od"
-
 
 definition
   load_cap_transfer :: "obj_ref \<Rightarrow> (captransfer,'z::state_ext) s_monad" where
