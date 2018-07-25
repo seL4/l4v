@@ -238,6 +238,8 @@ lemma tc_invs[Tcb_AI_asms]:
   apply (rule hoare_vcg_precond_imp)
    apply wp
       apply ((simp only: simp_thms
+        | (simp add: conj_comms del: hoare_True_E_R,
+                  strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
         | rule wp_split_const_if wp_split_const_if_R
                    hoare_vcg_all_lift_R
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
@@ -267,16 +269,15 @@ lemma tc_invs[Tcb_AI_asms]:
         | strengthen use_no_cap_to_obj_asid_strg
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])+)
-  apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified] is_nondevice_page_cap_arch_def
-                        is_cap_simps is_valid_vtable_root_def is_nondevice_page_cap_simps
+  apply (intro conjI impI; clarsimp?;
+    (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
+                        is_cap_simps is_valid_vtable_root_def
                         is_cnode_or_valid_arch_def tcb_cap_valid_def
                         invs_valid_objs cap_asid_def vs_cap_ref_def
-                 split: option.split_asm )+
-      apply (simp add: case_bool_If valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
-                       is_nondevice_page_cap_arch_def
-                split: arch_cap.splits if_splits)+
+                        case_bool_If valid_ipc_buffer_cap_def
+                       | split arch_cap.splits if_splits)+
+  )
   done
-
 
 lemma check_valid_ipc_buffer_inv: (* arch_specific *)
   "\<lbrace>P\<rbrace> check_valid_ipc_buffer vptr cap \<lbrace>\<lambda>rv. P\<rbrace>"

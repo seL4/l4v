@@ -1295,7 +1295,7 @@ lemma find_vspace_for_asid_lookup_vspace_wp:
   (is "\<lbrace> \<lambda>s. ?v s \<and> (\<forall>pm. ?vpm pm s \<longrightarrow> Q pm s) \<rbrace> ?f \<lbrace> Q \<rbrace>, -")
   apply (rule_tac Q'="\<lambda>rv s. ?vpm rv s \<and> (\<forall>pm. ?vpm pm s \<longrightarrow> Q pm s)" in hoare_post_imp_R)
    apply wpsimp
-  apply simp
+   apply (simp | fast)+
   done
 
 lemma aligned_sum_less_kernel_base:

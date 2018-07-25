@@ -303,7 +303,8 @@ lemma thread_set_cap_to:
   "(\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb)
   \<Longrightarrow> \<lbrace>ex_nonz_cap_to p\<rbrace> thread_set f tptr \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
   apply (clarsimp simp add: ex_nonz_cap_to_def)
-  apply (wpsimp wp: hoare_ex_wp thread_set_cte_wp_at_trivial)
+  apply (wpsimp wp: hoare_ex_wp thread_set_cte_wp_at_trivial
+    | fast)+
   done
 
 
@@ -311,7 +312,8 @@ lemma thread_set_has_no_reply_cap:
   "(\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb)
   \<Longrightarrow> \<lbrace>\<lambda>s. \<not>has_reply_cap tt s\<rbrace> thread_set f t \<lbrace>\<lambda>_ s. \<not>has_reply_cap tt s\<rbrace>"
   apply (clarsimp simp add: has_reply_cap_def)
-  apply (wpsimp wp: hoare_vcg_all_lift thread_set_cte_wp_at_trivial)
+  apply (wpsimp wp: hoare_vcg_all_lift thread_set_cte_wp_at_trivial
+    | fast)+
   done
 
 
@@ -593,8 +595,9 @@ lemma sts_valid_inv[wp]:
   by (cases i; wpsimp simp: sts_valid_untyped_inv sts_valid_arch_inv;
       rename_tac i'; case_tac i'; simp;
       wpsimp wp: set_thread_state_valid_cap sts_nasty_bit
-                 hoare_vcg_const_imp_lift hoare_vcg_ex_lift)
-
+                 sts_nasty_bit[where ptr'="(p_a, p_b)" for p_a p_b, simplified]
+                 hoare_vcg_const_imp_lift hoare_vcg_ex_lift;
+      auto)
 
 lemma sts_Restart_stay_simple:
   "\<lbrace>st_tcb_at simple t\<rbrace>

@@ -573,7 +573,8 @@ lemma out_no_cap_to_trivial:
          option_update_thread a f t
       \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref cap S\<rbrace>"
   apply (simp add: no_cap_to_obj_with_diff_ref_def)
-  apply (wpsimp wp: hoare_vcg_const_Ball_lift out_cte_wp_at_trivialT)
+  apply (wpsimp wp: hoare_vcg_const_Ball_lift out_cte_wp_at_trivialT
+    | fast)+
   done
 
 lemmas thread_set_no_cap_to_trivial = thread_set_no_cap_obj_ref_trivial
