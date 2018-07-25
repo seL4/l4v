@@ -406,11 +406,12 @@ lemma empty_slot_deletes[wp]:
 crunch caps_of_state[wp]: post_cap_deletion "\<lambda>s. P (caps_of_state s)"
 
 lemma empty_slot_final_cap_at:
-  "\<lbrace>(\<lambda>s. cte_wp_at (\<lambda>c. obj_refs c \<noteq> {} \<and> is_final_cap' c s) p s) and K (p \<noteq> p')\<rbrace>
+  "\<lbrace>(\<lambda>s. cte_wp_at (\<lambda>c. is_final_cap' c s) p s) and K (p \<noteq> p')\<rbrace>
       empty_slot p' opt \<lbrace>\<lambda>rv s. cte_wp_at (\<lambda>c. is_final_cap' c s) p s\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: empty_slot_def final_cap_at_eq cte_wp_at_conj cte_wp_at_caps_of_state)
   apply (wpsimp wp: opt_return_pres_lift get_cap_wp)
+  apply (fastforce simp: )?
   done
 
 crunch pred_tcb_at[wp]: empty_slot "pred_tcb_at proj P t"
@@ -503,7 +504,7 @@ lemma cancel_ipc_caps_of_state:
       apply (clarsimp simp: fun_upd_def[symmetric] split_paired_Ball)
      apply (simp add: cte_wp_at_caps_of_state)
      apply (wpsimp wp: hoare_vcg_all_lift hoare_convert_imp thread_set_caps_of_state_trivial
-                 simp: tcb_cap_cases_def)+
+                 simp: ran_tcb_cap_cases)+
    prefer 2
    apply assumption
   apply (rule hoare_strengthen_post [OF gts_sp])

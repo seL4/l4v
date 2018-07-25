@@ -974,7 +974,7 @@ lemma kernel_entry_if_invs:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding kernel_entry_if_def
   apply (wpsimp wp: thread_set_invs_trivial static_imp_wp
-              simp: arch_tcb_update_aux2 tcb_cap_cases_def)+
+              simp: arch_tcb_update_aux2 ran_tcb_cap_cases)+
   done
 
 lemma idle_equiv_as_globals_equiv:
@@ -1040,7 +1040,7 @@ lemma kernel_entry_if_globals_equiv:
             handle_event_globals_equiv
             thread_set_invs_trivial
             thread_set_context_globals_equiv
-        | simp add: tcb_cap_cases_def arch_tcb_update_aux2)+
+        | simp add: ran_tcb_cap_cases arch_tcb_update_aux2)+
   apply (clarsimp simp: cur_thread_idle)
   done
 
@@ -1090,7 +1090,7 @@ lemma kernel_entry_silc_inv[wp]:
      kernel_entry_if ev tc
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding kernel_entry_if_def
-  apply (wpsimp simp: tcb_cap_cases_def arch_tcb_update_aux2
+  apply (wpsimp simp: ran_tcb_cap_cases arch_tcb_update_aux2
                   wp: static_imp_wp handle_event_silc_inv thread_set_silc_inv_trivial
                       thread_set_invs_trivial thread_set_not_state_valid_sched
                       thread_set_pas_refined
@@ -1106,7 +1106,7 @@ lemma kernel_entry_pas_refined[wp]:
      kernel_entry_if ev tc
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   unfolding kernel_entry_if_def
-  apply (wpsimp simp: tcb_cap_cases_def schact_is_rct_def arch_tcb_update_aux2 tcb_arch_ref_def
+  apply (wpsimp simp: ran_tcb_cap_cases schact_is_rct_def arch_tcb_update_aux2 tcb_arch_ref_def
                   wp: static_imp_wp handle_event_pas_refined
              thread_set_pas_refined guarded_pas_domain_lift
              thread_set_invs_trivial thread_set_not_state_valid_sched)+
@@ -1117,7 +1117,7 @@ lemma kernel_entry_if_domain_sep_inv:
      kernel_entry_if e tc
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   unfolding kernel_entry_if_def
-  apply( wpsimp simp: tcb_cap_cases_def arch_tcb_update_aux2 tcb_arch_ref_def
+  apply( wpsimp simp: ran_tcb_cap_cases arch_tcb_update_aux2 tcb_arch_ref_def
           wp: handle_event_domain_sep_inv static_imp_wp
             thread_set_invs_trivial thread_set_not_state_valid_sched)+
   done
@@ -1135,7 +1135,7 @@ lemma kernel_entry_if_valid_sched:
        (\<lambda>s. (e \<noteq> Interrupt \<longrightarrow> ct_active s) \<and> scheduler_action s = resume_cur_thread)\<rbrace>
      kernel_entry_if e tc
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply(wpsimp simp: kernel_entry_if_def tcb_cap_cases_def arch_tcb_update_aux2 tcb_arch_ref_def
+  apply(wpsimp simp: kernel_entry_if_def ran_tcb_cap_cases arch_tcb_update_aux2 tcb_arch_ref_def
          wp: handle_event_valid_sched thread_set_invs_trivial hoare_vcg_disj_lift
              thread_set_no_change_tcb_state ct_in_state_thread_state_lift
              thread_set_not_state_valid_sched static_imp_wp)+
@@ -1145,7 +1145,7 @@ lemma kernel_entry_if_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and invs\<rbrace>
      kernel_entry_if e tc
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  apply( simp add: kernel_entry_if_def tcb_cap_cases_def arch_tcb_update_aux2 tcb_arch_ref_def
+  apply( simp add: kernel_entry_if_def ran_tcb_cap_cases arch_tcb_update_aux2 tcb_arch_ref_def
        | wp handle_event_irq_masks thread_set_invs_trivial)+
   by fastforce
 
@@ -2272,7 +2272,7 @@ lemma kernel_entry_if_valid_pdpt_objs[wp]:
   apply (case_tac "e = Interrupt")
    apply (simp add: kernel_entry_if_def)
    apply (wp|wpc|simp add: kernel_entry_if_def)+
-  apply (wpsimp simp: tcb_cap_cases_def arch_tcb_update_aux2
+  apply (wpsimp simp: ran_tcb_cap_cases arch_tcb_update_aux2
          wp: static_imp_wp thread_set_invs_trivial)+
   done
 
@@ -3293,7 +3293,7 @@ lemma kernel_entry_if_next_irq_state_of_state:
   apply(erule_tac f="thread_set (tcb_arch_update (arch_tcb_context_set uc)) t" in use_valid)
    apply(wpsimp wp: irq_measure_if_inv' irq_state_inv_triv thread_set_invs_trivial
                     irq_is_recurring_triv[where Q="\<top>"]
-              simp: tcb_cap_cases_def tcb_arch_ref_def)+
+              simp: ran_tcb_cap_cases tcb_arch_ref_def)+
   apply(erule use_valid)
    apply (wp | simp )+
   apply(simp add: irq_state_inv_def)
@@ -3314,7 +3314,7 @@ lemma kernel_entry_if_next_irq_state_of_state_next:
   apply(erule_tac f="thread_set (tcb_arch_update (arch_tcb_context_set uc)) t" in use_valid)
    apply(wpsimp wp: irq_measure_if_inv' irq_state_inv_triv
                     thread_set_invs_trivial irq_is_recurring_triv[where Q="\<top>"]
-              simp: tcb_cap_cases_def tcb_arch_ref_def)+
+              simp: ran_tcb_cap_cases tcb_arch_ref_def)+
   apply(erule use_valid)
    apply (wp | simp )+
   apply(simp add: irq_state_inv_def)
@@ -3334,7 +3334,7 @@ lemma kernel_entry_if_irq_measure:
      apply (wp irq_measure_if_inv handle_event_irq_state_inv[THEN validE_validE_R'])+
     apply(wpsimp wp: irq_measure_if_inv' irq_state_inv_triv
                     thread_set_invs_trivial irq_is_recurring_triv[where Q="\<top>"]
-              simp: tcb_cap_cases_def arch_tcb_update_aux2 tcb_arch_ref_def
+              simp: ran_tcb_cap_cases arch_tcb_update_aux2 tcb_arch_ref_def
                     irq_state_inv_refl)+
   apply(simp add: irq_measure_if_inv_def)
   done

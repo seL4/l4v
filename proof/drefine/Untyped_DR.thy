@@ -321,7 +321,7 @@ lemma delete_objects_dcorres:
   notes order_class.Icc_eq_Icc [simp del]
   assumes S: "S = {ptr..ptr + 2 ^ bits - 1}"
   shows "dcorres dc \<top>
-      (\<lambda>s. invs s \<and> ct_active s \<and> (\<exists>cref.
+      (\<lambda>s. invs s \<and> ct_active s \<and> (\<exists>cref dev idx.
         cte_wp_at (op= (cap.UntypedCap dev ptr bits idx)) cref s
          \<and> descendants_range (cap.UntypedCap dev ptr bits idx) cref s) \<and> valid_etcbs s)
       (modify (Untyped_D.detype S))
@@ -334,12 +334,13 @@ lemma delete_objects_dcorres:
    apply clarsimp
    apply (drule cte_wp_valid_cap, clarsimp)
    apply (simp add: valid_cap_def cap_aligned_def untyped_min_bits_def)
+  apply (rule corres_name_pre, clarify)
   apply (rule corres_guard_imp)
-  apply (rule corres_split[OF _ detype_dcorres])
-    apply (rule freeMemory_dcorres, simp+)
-  apply wp
-  apply clarsimp
-  apply assumption
+    apply (rule corres_split[OF _ detype_dcorres])
+       apply (rule freeMemory_dcorres, simp+)
+    apply wp
+   apply clarsimp
+   apply (rule TrueI)?
   apply clarsimp
   apply (rule conjI)
   apply fastforce
@@ -1283,7 +1284,16 @@ proof -
     done
 qed
 
+lemma delete_objects_invs2:
+  "\<lbrace>(\<lambda>s. \<exists>slot dev f. cte_wp_at (op = (cap.UntypedCap dev ptr bits f)) slot s
+    \<and> descendants_range (cap.UntypedCap dev ptr bits f) slot s) and
+    invs and ct_active\<rbrace>
+    delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (rule hoare_name_pre_state, clarsimp, wp delete_objects_invs, fast)
+
 lemma reset_untyped_cap_corres:
+  notes delete_objects_invs[wp del]
+  shows
   "dcorres (dc \<oplus> dc) \<top> (invs and valid_etcbs and ct_active
           and cte_wp_at (\<lambda>cap. is_untyped_cap cap \<and> free_index_of cap = idx) cref
           and (\<lambda>s. descendants_of cref (cdt s) = {}))
@@ -1395,20 +1405,20 @@ lemma reset_untyped_cap_corres:
                                word_bits_def word_size exI
                                rev_map[symmetric])
          apply (clarsimp simp: free_index_of_def free_range_of_untyped_def)
+        apply (simp del: hoare_TrueI)
         apply wp
-        apply clarsimp
-       apply (wp add: hoare_vcg_const_imp_lift get_cap_wp
+       apply (wp add: hoare_vcg_const_imp_lift get_cap_wp delete_objects_invs2
           | simp
           | strengthen invs_valid_objs invs_valid_idle
           | rule impI)+
   apply (clarsimp simp: cte_wp_at_caps_of_state
                         descendants_range_def2)
-  apply (cases cref, simp)
-  apply (strengthen exI[mk_strg I] empty_descendants_range_in[mk_strg I E]
-                    refl)+
+  apply (strengthen empty_descendants_range_in
+    subst[where P="\<lambda>x. descendants_of x c = {}" for c, mk_strg I _ E]
+    | simp add: prod_eq_iff)+
+  apply (cases cref)
   apply (clarsimp simp: is_cap_simps bits_of_def free_index_of_def
                         )
-  apply ((strengthen refl)+)?
   apply (frule cte_wp_at_valid_objs_valid_cap[OF caps_of_state_cteD],
     clarsimp+)
   apply (clarsimp simp: valid_cap_simps)
@@ -1416,7 +1426,8 @@ lemma reset_untyped_cap_corres:
   apply (frule(1) ex_cte_cap_protects[OF _ caps_of_state_cteD _ _ order_refl],
     simp add: empty_descendants_range_in, clarsimp+)
   apply (auto simp: not_idle_thread_def untyped_min_bits_def
-             dest!: valid_idle_has_null_cap[rotated -1])
+             dest!: valid_idle_has_null_cap[rotated -1],
+    auto intro: caps_of_state_valid)[1]
   done
 
 lemma range_le_free_range_of_untyped:

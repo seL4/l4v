@@ -466,7 +466,7 @@ lemma thread_set_ioports:
                   getF (f tcb) = getF tcb"
   shows
   "\<lbrace>valid_ioports\<rbrace> thread_set f t \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  by (wpsimp wp: valid_ioports_lift thread_set_caps_of_state_trivial simp: y)
+  by (wpsimp wp: valid_ioports_lift thread_set_caps_of_state_trivial y)
 
 (* NOTE: The function "thread_set f p" updates a TCB at p using function f.
    It should not be used to change capabilities, though. *)
@@ -617,7 +617,7 @@ lemma as_user_objs [wp]:
   "\<lbrace>valid_objs\<rbrace> as_user a f \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (wp as_user_wp_thread_set_helper
             thread_set_valid_objs_triv)
-  apply (wpsimp simp: tcb_cap_cases_def valid_arch_arch_tcb_context_set)+
+  apply (wpsimp simp: ran_tcb_cap_cases valid_arch_arch_tcb_context_set)+
   done
 
 end
@@ -1830,7 +1830,7 @@ lemma set_mrs_invs[wp]:
       set_mrs receiver recv_buf mrs
     \<lbrace>\<lambda>rv. invs \<rbrace>"
   by (wpsimp wp: mapM_wp' storeWord_invs thread_set_invs_trivial hoare_vcg_imp_lift
-           simp: set_mrs_redux zipWithM_x_mapM store_word_offs_def tcb_cap_cases_def
+           simp: set_mrs_redux zipWithM_x_mapM store_word_offs_def ran_tcb_cap_cases
       split_del: if_split)
 
 end

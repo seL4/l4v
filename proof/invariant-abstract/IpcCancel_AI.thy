@@ -636,7 +636,7 @@ lemma (in delete_one_pre) reply_cancel_ipc_cte_wp_at_preserved:
   unfolding reply_cancel_ipc_def
   apply (wpsimp wp: select_wp delete_one_cte_wp_at_preserved)
    apply (rule_tac Q="\<lambda>_. cte_wp_at P p" in hoare_post_imp, clarsimp)
-   apply (wpsimp wp: thread_set_cte_wp_at_trivial simp: tcb_cap_cases_def)
+   apply (wpsimp wp: thread_set_cte_wp_at_trivial simp: ran_tcb_cap_cases)
   apply assumption
   done
 
@@ -733,7 +733,7 @@ lemma reply_cancel_ipc_bound_tcb_at[wp]:
    apply (rule_tac Q="\<lambda>_. bound_tcb_at P t and valid_mdb and valid_objs and tcb_at p" in  hoare_strengthen_post)
     apply (wpsimp wp: thread_set_no_change_tcb_pred thread_set_mdb)
      apply (fastforce simp:tcb_cap_cases_def)
-    apply (wpsimp wp: thread_set_valid_objs_triv simp: tcb_cap_cases_def)
+    apply (wpsimp wp: thread_set_valid_objs_triv simp: ran_tcb_cap_cases)
    apply clarsimp
    apply (frule valid_mdb_impl_reply_masters)
    apply (clarsimp simp: reply_masters_mdb_def)

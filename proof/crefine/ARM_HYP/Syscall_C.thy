@@ -1784,8 +1784,8 @@ lemma get_gic_vcpu_ctrl_eisr0_invs'[wp]:
 crunch obj_at'_s[wp]: armv_contextSwitch "\<lambda>s. obj_at' P (ksCurThread s) s"
 
 lemma dmo_machine_valid_lift:
-  "(\<And>s f m. P s = P (ksMachineState_update f s)) \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp f' \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (wpsimp simp: doMachineOp_def machine_op_lift_def machine_rest_lift_def in_monad)
+  "(\<And>s f. P s = P (ksMachineState_update f s)) \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp f' \<lbrace>\<lambda>rv. P\<rbrace>"
+  apply (wpsimp simp: split_def doMachineOp_def machine_op_lift_def machine_rest_lift_def in_monad)
   done
 
 lemma tcb_runnable_imp_simple:
@@ -2179,12 +2179,13 @@ proof -
 
                   apply (rule conseqPre, vcg, fastforce)
                  apply clarsimp
+                 apply (simp only: split_def)
                  apply (rule hoare_lift_Pf[where f=ksCurThread])
                   apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift)+
                 apply vcg
                apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift hoare_vcg_imp_lift'
                       | assumption (* schematic asm *)
-                      | clarsimp simp: conj_ac cong: conj_cong)+
+                      | clarsimp simp: conj_comms cong: conj_cong)+
               apply (vcg exspec=set_gic_vcpu_ctrl_lr_modifies)
              apply clarsimp
              apply (vcg exspec=set_gic_vcpu_ctrl_lr_modifies)

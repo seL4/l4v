@@ -1386,7 +1386,7 @@ lemma lookup_pdpt_slot_corres:
     apply (rule pd_pointer_table_at_state_relation)
        apply fastforce
       apply (wpsimp wp: getPML4E_wp
-                  simp: lookup_pml4_slot_eq lookup_pml4_slot_kernel_mappings)+
+                  simp: lookup_pml4_slot_eq lookup_pml4_slot_kernel_mappings exI)+
   done
 
 crunch aligned'[wp]: lookupPDPTSlot, lookupPDSlot pspace_aligned'

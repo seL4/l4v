@@ -3236,7 +3236,7 @@ crunch valid_etcbs[wp]: set_extra_badge, do_ipc_transfer valid_etcbs
    rule: transfer_caps_loop_pres)
 
 crunch cur[wp]: handle_fault_reply "cur_tcb :: det_ext state \<Rightarrow> bool"
-  (wp: crunch_wps simp: cur_tcb_def unless_def)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch weak_valid_sched_action[wp]: empty_slot_ext, cap_delete_one weak_valid_sched_action
   (wp: crunch_wps set_thread_state_runnable_weak_valid_sched_action
