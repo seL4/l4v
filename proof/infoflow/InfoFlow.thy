@@ -1654,27 +1654,6 @@ lemma load_word_offs_rev:
   apply(clarsimp)
   done
 
-(* FIXME: move *)
-lemma msg_max_length_less_msg_align_bits:
-  "msg_max_length < 2 ^ (msg_align_bits - 2)"
-  apply(rule nat_power_less_diff)
-  apply(simp add: msg_align_bits_def)
-  apply(simp add: cap_transfer_data_size_def msg_max_extra_caps_def)
-  apply(rule_tac a=7 in LeastI2)
-   apply(clarsimp simp: msg_max_length_def)
-  apply simp
-  done
-
-(* FIXME: move *)
-lemma less_2_pow_msg_align_bits_sub_2:
-  "x = msg_max_length \<or> x < msg_max_length \<Longrightarrow>
-       x < 2 ^ (msg_align_bits - 2)"
-  apply(erule disjE)
-   apply(erule ssubst)
-   apply(rule msg_max_length_less_msg_align_bits)
-  apply(erule less_trans[OF _ msg_max_length_less_msg_align_bits])
-  done
-
 (* generalises auth_ipc_buffers_mem_Write *)
 lemma auth_ipc_buffers_mem_Write':
   "\<lbrakk> x \<in> auth_ipc_buffers s thread; pas_refined aag s; valid_objs s\<rbrakk>
