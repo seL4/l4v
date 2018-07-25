@@ -792,7 +792,7 @@ lemma idle_thread_idle[wp]:
 
 lemma set_thread_state_valid_objs[wp]:
  "\<lbrace>valid_objs and valid_tcb_state st and
-   (\<lambda>s. (st_tcb_at (\<lambda>st. \<not> halted st) thread s \<or> halted st))\<rbrace>
+   (\<lambda>s. (st_tcb_at (\<lambda>st. \<not> halted st) thread s \<or> halted st \<or> st = Restart))\<rbrace>
   set_thread_state thread st
   \<lbrace>\<lambda>r. valid_objs\<rbrace>"
   apply (simp add: set_thread_state_def)
@@ -1358,10 +1358,9 @@ lemma ssc_refs_of[wp]:
    set_tcb_obj_ref tcb_sched_context_update t sc
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (wpsimp simp: set_tcb_obj_ref_def set_object_def)
-  apply (fastforce elim!: rsubst[where P=P] dest!: get_tcb_SomeD
+  by (fastforce elim!: rsubst[where P=P] dest!: get_tcb_SomeD
          simp: state_refs_of_def get_refs_def2 tcb_st_refs_of_def get_tcb_rev
          intro!: ext split: option.splits if_splits thread_state.split)
-  done
 
 lemma ssc_hyp_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
@@ -1380,10 +1379,9 @@ lemma syt_refs_of[wp]:
    set_tcb_obj_ref tcb_yield_to_update t sc
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (wpsimp simp: set_tcb_obj_ref_def set_object_def)
-  apply (fastforce elim!: rsubst[where P=P] dest!: get_tcb_SomeD
+  by (fastforce elim!: rsubst[where P=P] dest!: get_tcb_SomeD
          simp: state_refs_of_def get_refs_def2 tcb_st_refs_of_def get_tcb_rev
          intro!: ext split: option.splits if_splits thread_state.split)
-  done
 
 lemma syt_hyp_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
@@ -1822,7 +1820,7 @@ lemma sts_invs_minor:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st) t
      and (\<lambda>s. \<not> halted st \<longrightarrow> ex_nonz_cap_to t s)
      and (\<lambda>s. t \<noteq> idle_thread s)
-     and (\<lambda>s. st_tcb_at (\<lambda>st. \<not> halted st) t s \<or> halted st)
+     and (\<lambda>s. st_tcb_at (\<lambda>st. \<not> halted st) t s \<or> halted st \<or> st = Restart)
      and (\<lambda>s. \<forall>typ. (idle_thread s, typ) \<notin> tcb_st_refs_of st)
      and K (\<not>idle st)
      and invs\<rbrace>
@@ -1844,7 +1842,7 @@ lemma sts_invs_minor2:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st \<and> \<not> awaiting_reply st') t
      and invs and ex_nonz_cap_to t and (\<lambda>s. t \<noteq> idle_thread s)
      and K (\<not> awaiting_reply st \<and> \<not>idle st)
-     and (\<lambda>s. st_tcb_at (\<lambda>st. \<not> halted st) t s \<or> halted st)\<rbrace>
+     and (\<lambda>s. st_tcb_at (\<lambda>st. \<not> halted st) t s \<or> halted st \<or> st = Restart)\<rbrace>
      set_thread_state t st
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
