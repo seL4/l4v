@@ -686,7 +686,7 @@ definition
 end
 
 translations
-  (type) "'a ARM_HYP.user_monad" <= (type) "(ARM_HYP.register \<Rightarrow> ARM_HYP.machine_word, 'a) nondet_monad"
+  (type) "'a ARM_HYP.user_monad" <= (type) "(ARM_HYP.register \<Rightarrow> machine_word, 'a) nondet_monad"
 
 
 end
