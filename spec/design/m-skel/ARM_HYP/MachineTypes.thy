@@ -27,15 +27,8 @@ text {*
 
 section "Types"
 
-#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM_HYP decls_only NOT UserContext UserMonad getRegister setRegister newContext
+#INCLUDE_HASKELL SEL4/Machine/RegisterSet/ARM.lhs CONTEXT ARM_HYP decls_only NOT UserContext UserMonad Word getRegister setRegister newContext
 (*<*)
-
-type_synonym machine_word_len = 32
-
-definition
-  word_size_bits :: "'a :: numeral"
-where
-  "word_size_bits \<equiv> 2"
 
 end
 

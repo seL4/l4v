@@ -228,9 +228,6 @@ lemma set_pd_globals_equiv: "\<lbrace>globals_equiv st and (\<lambda>s. a \<note
   apply clarsimp
   done
 
-crunch globals_equiv: set_pd "globals_equiv s"
-  (simp: crunch_simps wp: crunch_wps set_object_globals_equiv)
-
 lemma globals_equiv_cdt_update[simp]:
   "globals_equiv s (s'\<lparr> cdt := x \<rparr>) = globals_equiv s s'"
   by(fastforce simp: globals_equiv_def idle_equiv_def)
@@ -426,7 +423,7 @@ lemma is_aligned_2_upto_enum_step_mem:
   "\<lbrakk>is_aligned ptr bits; 2 \<le> bits; bits < word_bits;
     x \<in> set [ptr , ptr + word_size .e. ptr + 2 ^ bits - 1]\<rbrakk> \<Longrightarrow>
    is_aligned x 2"
-  apply(clarsimp simp: upto_enum_step_shift_red[where us=2, simplified] word_size_def )
+  apply(clarsimp simp: upto_enum_step_shift_red[where us=2, simplified] word_size_def word_bits_def)
   apply(erule aligned_add_aligned)
     apply(rule is_alignedI)
     apply(simp add: mult.commute)
@@ -442,7 +439,7 @@ lemma ptr_range_subset:
    ptr_range x 2 \<subseteq> ptr_range ptr bits"
   apply(frule is_aligned_2_upto_enum_step_mem, assumption+)
   apply(rule subsetI)
-  apply(clarsimp simp: upto_enum_step_shift_red[where us=2, simplified] word_size_def)
+  apply(clarsimp simp: upto_enum_step_shift_red[where us=2, simplified] word_size_def word_bits_def)
   apply(subst ptr_range_def)
   apply(clarsimp)
   apply(erule ptr_range_memE)
@@ -453,7 +450,7 @@ lemma ptr_range_subset:
      apply(erule of_nat_power)
      apply(simp add: word_bits_conv)
     apply assumption
-   apply (fold word_bits_def, assumption)
+   apply simp
   apply(erule order_trans)
   apply(subgoal_tac "ptr + of_nat xaa * 4 + 2\<^sup>2 - 1 = ptr + (3 + of_nat xaa * 4)")
    apply(subgoal_tac "ptr + 2 ^ bits - 1 = ptr + (2 ^ bits - 1)")
@@ -465,7 +462,7 @@ lemma ptr_range_subset:
      apply(erule is_aligned_no_wrap')
      apply simp
     apply(simp_all)
-  apply(drule (2) word_less_power_trans_ofnat[where 'a=32, folded word_bits_def])
+  apply(drule (1) word_less_power_trans_ofnat[where 'a=machine_word_len], simp)
   apply simp
   apply(subst add.commute)
   apply(erule is_aligned_add_less_t2n)
@@ -534,9 +531,6 @@ text {*
         | intro conjI impI)+
      (create_word_objects ptr numObjects bits dev)"
 *}
-
-crunch arm_global_pd: copy_global_mappings "\<lambda> s. P (arm_global_pd (arch_state s))"
-  (wp: crunch_wps simp: crunch_simps)
 
 lemma init_arch_objects_reads_respects_g:
   "reads_respects_g aag l
@@ -982,7 +976,7 @@ lemma delete_objects_pspace_no_overlap_again:
     delete_objects ptr sz
    \<lbrace>\<lambda>rv. pspace_no_overlap S\<rbrace>"
   unfolding delete_objects_def do_machine_op_def
-  apply(wp | simp add: split_def detype_msu_comm)+
+  apply(wp | simp add: split_def detype_machine_state_update_comm)+
   apply(clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
   apply(drule caps_of_state_cteD)
   apply(frule cte_wp_at_valid_objs_valid_cap, clarsimp+)
@@ -1116,9 +1110,6 @@ lemma untyped_cap_refs_in_kernel_window_helper:
   apply (simp add: untyped_range_def)
   apply blast
   done
-
-crunch valid_global_objs[wp]: create_cap "valid_global_objs"
-  (simp: crunch_simps)
 
 lemma invs_valid_global_objs_strg:
   "invs s \<longrightarrow> valid_global_objs s"

@@ -819,7 +819,7 @@ lemma delete_objects_pspace_no_overlap:
     delete_objects ptr sz
    \<lbrace>\<lambda>rv. pspace_no_overlap_range_cover ptr sz\<rbrace>"
   unfolding delete_objects_def do_machine_op_def
-  apply(wp | simp add: split_def detype_msu_comm)+
+  apply(wp | simp add: split_def detype_machine_state_update_comm)+
   apply(clarsimp)
   apply(rule pspace_no_overlap_detype)
    apply(auto dest: cte_wp_at_valid_objs_valid_cap)
@@ -1108,7 +1108,7 @@ lemma decode_arch_invocation_authorised:
            | wpc
            | simp add: authorised_asid_control_inv_def authorised_page_inv_def
                        authorised_page_directory_inv_def
-                  del: hoare_post_taut hoare_True_E_R
+                  del: hoare_True_E_R
                   split del: if_split)+
   apply (clarsimp simp: authorised_asid_pool_inv_def authorised_page_table_inv_def
                         neq_Nil_conv invs_psp_aligned invs_vspace_objs cli_no_irqs)

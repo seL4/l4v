@@ -110,7 +110,7 @@ lemma clearMemory_respects:
    apply (wp mol_respects)
    apply (rule_tac Q="\<lambda> x ms. integrity aag X st (s\<lparr>machine_state := ms\<rparr>) \<and> (\<forall> y\<in> set [ptr , ptr + 4 .e. ptr + of_nat (2 ^ sz) - 1]. (is_aligned y 2 \<longrightarrow> (\<forall> z \<in> ptr_range y 2. is_subject aag z)))" in  hoare_strengthen_post)
     apply(wp mapM_x_wp' storeWord_integrity_autarch | simp add: no_irq_storeWord word_size_def)+
-  apply(clarsimp simp: upto_enum_step_shift_red[where us=2, simplified])
+  apply(clarsimp simp: upto_enum_step_shift_red[where us=2, simplified] word_bits_def)
   apply(erule bspec)
   apply(erule subsetD[rotated])
   apply(rule ptr_range_subset)
@@ -267,7 +267,7 @@ lemma retype_region_integrity:
   apply (clarsimp simp add: integrity_def)
   apply(fastforce intro: tro_lrefl tre_lrefl
                  dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
-                 simp: set_map image_def p_assoc_help power_sub integrity_def)
+                 simp: image_def p_assoc_help power_sub integrity_def)
  done
 
 lemma retype_region_ret_is_subject:
@@ -277,7 +277,7 @@ lemma retype_region_ret_is_subject:
    \<lbrace>\<lambda>rv. K (\<forall> ref \<in> set rv. is_subject aag ref)\<rbrace>"
   apply(rule hoare_gen_asm2 | rule hoare_gen_asm)+
   apply(rule hoare_strengthen_post)
-  apply(rule retype_region_ret)
+   apply(rule retype_region_ret)
   apply(simp only: K_def)
   apply(rule ballI)
   apply(elim conjE)
@@ -285,7 +285,7 @@ lemma retype_region_ret_is_subject:
   apply(rule rev_subsetD, assumption)
   apply(simp add: p_assoc_help del: set_map)
   apply(rule retype_addrs_subset_ptr_bits[simplified retype_addrs_def])
-   apply simp+
+  apply simp
   done
 
 lemma retype_region_ret_pd_aligned:
@@ -379,20 +379,20 @@ lemma dmo_freeMemory_respects:
   apply wp
   apply clarsimp
   apply (erule use_valid)
-  apply (wp mol_respects mapM_x_wp' storeWord_integrity_autarch)
+   apply (wp mol_respects mapM_x_wp' storeWord_integrity_autarch)
+   apply simp
+   apply (clarsimp simp: word_size_def word_bits_def upto_enum_step_shift_red [where us=2, simplified])
+   apply (erule bspec)
+   apply (erule set_mp [rotated])
+   apply (rule ptr_range_subset)
+      apply simp
+     apply (simp add: is_aligned_mult_triv2 [where n = 2, simplified])
+    apply assumption
+   apply (erule word_less_power_trans_ofnat [where k = 2, simplified])
+    apply assumption
+   apply simp
   apply simp
-  apply (clarsimp simp add: word_size_def upto_enum_step_shift_red [where us = 2, simplified])
-  apply (erule bspec)
-  apply (erule set_mp [rotated])
-  apply (rule ptr_range_subset)
-           apply simp
-          apply (simp add: is_aligned_mult_triv2 [where n = 2, simplified])
-         apply assumption
-        apply (erule word_less_power_trans_ofnat [where k = 2, simplified])
-       apply assumption
-      apply (fold word_bits_def, assumption)
-     apply simp
-    done
+  done
 
 lemma delete_objects_respects[wp]:
   "\<lbrace>integrity aag X st and
@@ -423,11 +423,11 @@ lemma dmo_clearMemory_respects':
   apply wp
   apply clarsimp
   apply (erule use_valid)
-  apply wp
-   apply (simp add: cleanByVA_PoU_def)
-   apply (wp mol_respects mapM_x_wp' storeWord_respects)+
+   apply wp
+    apply (simp add: cleanByVA_PoU_def)
+    apply (wp mol_respects mapM_x_wp' storeWord_respects)+
    apply simp
-   apply (clarsimp simp add: word_size_def upto_enum_step_shift_red [where us = 2, simplified])
+   apply (clarsimp simp add: word_size_def word_bits_def upto_enum_step_shift_red[where us=2, simplified])
    apply (erule bspec)
    apply (erule set_mp [rotated])
    apply (rule ptr_range_subset)
@@ -436,7 +436,7 @@ lemma dmo_clearMemory_respects':
     apply assumption
    apply (erule word_less_power_trans_ofnat [where k = 2, simplified])
     apply assumption
-   apply (fold word_bits_def, assumption)
+   apply simp
   apply simp
   done
 
@@ -555,11 +555,6 @@ lemma create_cap_pas_refined:
   apply(auto intro: pas_refined_refl dest!: subsetD)
   done
 
-crunch pas_refined[wp]: do_machine_op "pas_refined aag"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch arm_global_pd: store_pde "\<lambda> s. P (arm_global_pd (arch_state s))"
-
 lemma pd_shifting_dual':
   "is_aligned (pd::word32) pd_bits \<Longrightarrow>
   pd + (vptr >> 20 << 2) && mask pd_bits = vptr >> 20 << 2"
@@ -608,7 +603,7 @@ lemma copy_global_mappings_pas_refined:
      apply(simp add: get_pde_def)
      apply(subst kernel_vsrefs_kernel_mapping_slots[symmetric])
      apply(wp)
-     apply(clarsimp simp: get_pde_def pd_shifting' pd_shifting_dual' K_def triple_shift_fun)
+     apply(clarsimp simp: get_pde_def pd_shifting' pd_shifting_dual' triple_shift_fun)
      apply(subst (asm) obj_at_def, erule exE, erule conjE)
      apply(rotate_tac -1, drule sym, simp)
      apply(frule (1) valid_kernel_mappingsD[folded obj_at_def])
@@ -872,16 +867,6 @@ lemma retype_region_ranges'':
   apply simp
   done
 
-lemma detype_msu_comm:
-  "detype S (machine_state_update f s) = machine_state_update f (detype S s)"
-  by (case_tac s, simp add: detype_def ext)
-
-
-lemma region_in_kernel_window_msu[simp]:
-  "region_in_kernel_window S (machine_state_update f s) =
-   region_in_kernel_window S s"
-  by (simp add: region_in_kernel_window_def)
-
 lemma region_in_kernel_window_preserved:
   assumes "\<And> P. \<lbrace>\<lambda> s. P (arch_state s) \<rbrace> f \<lbrace>\<lambda> rv s. P (arch_state s) \<rbrace>"
   shows "\<And> S. \<lbrace> region_in_kernel_window S \<rbrace> f \<lbrace> \<lambda>_. region_in_kernel_window S \<rbrace>"
@@ -1135,8 +1120,6 @@ lemma mask_neg_mask_is_zero:
   apply simp
   done
 
-declare word_neq_0_conv[simp del]
-
 (* clagged from Untyped_R.invoke_untyped_proofs.usable_range_disjoint *)
 lemma usable_range_disjoint:
   assumes cte_wp_at: "cte_wp_at (op = (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx)) cref s"
@@ -1205,7 +1188,7 @@ lemma delete_objects_pspace_no_overlap:
     delete_objects ptr sz
    \<lbrace>\<lambda>rv. pspace_no_overlap_range_cover ptr sz\<rbrace>"
   unfolding delete_objects_def do_machine_op_def
-  apply(wp | simp add: split_def detype_msu_comm)+
+  apply(wp | simp add: split_def detype_machine_state_update_comm)+
   apply clarsimp
   apply(rule pspace_no_overlap_detype)
    apply(auto dest: cte_wp_at_valid_objs_valid_cap)
@@ -1400,8 +1383,6 @@ lemma data_to_obj_type_ret_not_asid_pool:
   apply(auto simp: data_to_obj_type_def arch_data_to_obj_type_def throwError_def simp: returnOk_def bindE_def return_def bind_def lift_def split: if_split_asm)
   done
 
-crunch inv[wp]: data_to_obj_type "P"
-
 definition authorised_untyped_inv' where
  "authorised_untyped_inv' aag ui \<equiv> case ui of
      Invocations_A.untyped_invocation.Retype src_slot reset base aligned_free_ref new_type obj_sz slots dev \<Rightarrow>
@@ -1474,7 +1455,7 @@ lemma decode_untyped_invocation_authorised:
                        in hoare_strengthen_post)
             apply (wp get_cap_inv get_cap_ret_is_subject)
            apply (fastforce simp: nonzero_unat_simp)
-          apply(clarsimp simp: K_def)
+          apply clarsimp
           apply(wp lookup_slot_for_cnode_op_authorised
                    lookup_slot_for_cnode_op_inv whenE_throwError_wp)+
      apply(rule hoare_drop_imps)+

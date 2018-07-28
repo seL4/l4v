@@ -512,7 +512,7 @@ definition
 end
 
 translations
-  (type) "'a ARM.user_monad" <= (type) "(ARM.register \<Rightarrow> ARM.machine_word, 'a) nondet_monad"
+  (type) "'a ARM.user_monad" <= (type) "(ARM.register \<Rightarrow> machine_word, 'a) nondet_monad"
 
 
 end
