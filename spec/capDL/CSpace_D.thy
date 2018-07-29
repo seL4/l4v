@@ -250,9 +250,8 @@ lemma fast_finalise_def2:
      result \<leftarrow> finalise_cap cap final;
      assert (result = (NullCap, NullCap))
    od"
-  apply (cases cap, simp_all add: liftM_def assert_def can_fast_finalise_def)
-  apply (rename_tac option, case_tac option, simp+)+ (* FIXME *)
-  done
+  unfolding can_fast_finalise_def
+  by (rule finalise_cap.cases[of "(cap,final)"]; simp add: assert_def liftM_def)
 
 (*
  * Atomically swap the two given caps.
