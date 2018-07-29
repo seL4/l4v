@@ -549,4 +549,9 @@ definition
 abbreviation
   "null == List.null"
 
+syntax (input)
+  "_listcompr" :: "'a \<Rightarrow> lc_qual \<Rightarrow> lc_quals \<Rightarrow> 'a list"  ("[_ | __")
+
+lemma "[(x,1) . x \<leftarrow> [0..10]] = [(x,1) | x \<leftarrow> [0..10]]" by (rule refl)
+
 end
