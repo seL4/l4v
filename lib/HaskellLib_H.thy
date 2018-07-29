@@ -464,7 +464,7 @@ definition
 definition
   "maximum ls \<equiv> Max (set ls)"
 
-primrec
+primrec (nonexhaustive)
   hdCons :: "'a \<Rightarrow> 'a list list \<Rightarrow> 'a list list"
 where
  "hdCons x (ys # zs) = (x # ys) # zs"
