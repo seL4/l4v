@@ -319,7 +319,6 @@ where
       else return ()
     od"
 
-(* FIXME names *)
 definition
   send_signal :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
