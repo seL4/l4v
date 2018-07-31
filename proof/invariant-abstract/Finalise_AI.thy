@@ -413,7 +413,7 @@ lemma empty_slot_caps_of_state:
 crunch caps_of_state[wp]: cancel_all_ipc, cancel_all_signals "\<lambda>s. P (caps_of_state s)"
   (wp: mapM_x_wp' crunch_wps)
 
-crunch caps_of_state[wp]: reply_unlink_tcb "\<lambda>s. P (caps_of_state s)"
+crunch caps_of_state[wp]: reply_unlink_tcb, reply_unlink_sc "\<lambda>s. P (caps_of_state s)"
   (wp: maybeM_inv mapM_x_wp' crunch_wps)
 
 crunch caps_of_state[wp]: tcb_release_remove "\<lambda>s. P (caps_of_state s)"
@@ -430,8 +430,8 @@ lemma sched_context_unbind_all_tcbs_caps_of_state[wp]:
   by (wpsimp simp: sched_context_unbind_all_tcbs_def)
 
 crunch caps_of_state[wp]: fast_finalise "\<lambda>s. P (caps_of_state s)"
-  (wp: maybeM_inv mapM_x_wp thread_set_caps_of_state_trivial
-   simp: tcb_cap_cases_def)
+  (wp: maybeM_inv mapM_x_wp thread_set_caps_of_state_trivial get_simple_ko_inv assert_inv hoare_drop_imps
+   simp: tcb_cap_cases_def crunch_simps get_blocking_object_def)
 
 lemma cap_delete_one_caps_of_state:
   "\<lbrace>\<lambda>s. cte_wp_at can_fast_finalise p s
@@ -596,7 +596,7 @@ lemma is_final_cap'_objrefsE:
 crunch typ_at[wp]: update_sk_obj_ref, get_sk_obj_ref "\<lambda>s. P (typ_at T p s)"
 
 crunch typ_at[wp]: fast_finalise "\<lambda>s. P (typ_at T p s)"
-  (wp: maybeM_inv crunch_wps)
+  (wp: maybeM_inv crunch_wps simp: crunch_simps)
 
 crunch typ_at[wp]: deleting_irq_handler "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp:crunch_simps unless_def assertE_def)
@@ -605,7 +605,7 @@ context Finalise_AI_1 begin
 context begin
   declare if_cong[cong]
   crunch typ_at[wp]: finalise_cap "\<lambda>(s :: 'a state). P (typ_at T p s)"
-  (wp: maybeM_inv)
+  (wp: maybeM_inv get_simple_ko_wp simp: crunch_simps)
 end
 end
 
@@ -1009,7 +1009,7 @@ lemma (in Finalise_AI_1) fast_finalise_invs[wp]:
   by (cases cap;
      wpsimp simp: wp: cancel_all_ipc_invs cancel_all_signals_invs
       unbind_maybe_notification_invs sched_context_maybe_unbind_ntfn_invs
-      sched_context_unbind_yield_from_invs
+      sched_context_unbind_yield_from_invs get_simple_ko_wp
       sched_context_clear_replies_invs)
 
 lemma cnode_at_unlive[elim!]:
@@ -1149,6 +1149,7 @@ lemma fast_finalise_lift:
   assumes ep:"\<And>r. \<lbrace>P\<rbrace>cancel_all_ipc r \<lbrace>\<lambda>r s. P s\<rbrace>"
   and ntfn:"\<And>r. \<lbrace>P\<rbrace>cancel_all_signals r \<lbrace>\<lambda>r s. P s\<rbrace>"
   and reply:"\<And>r. \<lbrace>P\<rbrace> cancel_ipc r \<lbrace>\<lambda>r s. P s\<rbrace>"
+  and reply2: "\<And>sc re. \<lbrace>P\<rbrace> reply_unlink_sc sc re \<lbrace>\<lambda>r s. P s\<rbrace>"
   and unbind:"\<And>r. \<lbrace>P\<rbrace> unbind_notification r \<lbrace> \<lambda>r s. P s\<rbrace>"
   and unbind2: "\<And>r. \<lbrace>P\<rbrace> unbind_maybe_notification r \<lbrace> \<lambda>r s. P s\<rbrace>"
   and unbind3:"\<And>r. \<lbrace>P\<rbrace> sched_context_maybe_unbind_ntfn r \<lbrace> \<lambda>r s. P s\<rbrace>"
@@ -1158,8 +1159,8 @@ lemma fast_finalise_lift:
   and unbind7:"\<And>r. \<lbrace>P\<rbrace> sched_context_unbind_yield_from r \<lbrace> \<lambda>r s. P s\<rbrace>"
   shows "\<lbrace>P\<rbrace> fast_finalise cap final \<lbrace>\<lambda>r s. P s\<rbrace>"
   apply (case_tac cap,simp_all)
-  apply (wpsimp wp: ep ntfn reply unbind unbind2 unbind3 unbind4 unbind5
-                        unbind6 unbind7 hoare_drop_imps)+
+  apply (wpsimp wp: ep ntfn reply reply2 unbind unbind2 unbind3 unbind4 unbind5
+                        unbind6 unbind7 hoare_drop_imps get_simple_ko_wp)+
   done
 
 lemma reply_unlink_sc_cte_wp_at:
@@ -1204,7 +1205,7 @@ lemma (in Finalise_AI_1) finalise_cap_equal_cap[wp]:
   apply (cases cap, simp_all split del: if_split)
     apply (wp suspend_cte_wp_at_preserved
                  deleting_irq_handler_cte_preserved prepare_thread_delete_cte_wp_at
-                 hoare_drop_imp thread_set_cte_wp_at_trivial
+                 hoare_drop_imp thread_set_cte_wp_at_trivial reply_unlink_sc_cte_wp_at
                | clarsimp simp: can_fast_finalise_def unbind_maybe_notification_def
                                 unbind_notification_def
                                 tcb_cap_cases_def | wpc)+
@@ -1342,6 +1343,10 @@ lemmas (in Finalise_AI_3) cancel_ipc_cte_preserved_irqn
   = hoare_use_eq_irq_node [OF cancel_ipc_irq_node
                               cancel_ipc_cte_wp_at_preserved]
 
+lemmas (in Finalise_AI_3) reply_unlink_sc_cte_preserved_irqn
+  = hoare_use_eq_irq_node [OF reply_unlink_sc_irq_node
+                              reply_unlink_sc_cte_wp_at]
+
 lemmas (in Finalise_AI_3) prepare_thread_delete_cte_preserved_irqn
   = hoare_use_eq_irq_node [OF prepare_thread_delete_irq_node
                               prepare_thread_delete_cte_wp_at]
@@ -1360,6 +1365,7 @@ lemma (in Finalise_AI_3) finalise_cap_cte_cap_to[wp]:
        apply (wp hoare_vcg_ex_lift hoare_drop_imps
                  prepare_thread_delete_cte_preserved_irqn
                  deleting_irq_handler_cte_preserved_irqn
+                 reply_unlink_sc_cte_preserved_irqn
                  cancel_ipc_cte_preserved_irqn
                  | simp
                  | clarsimp simp: can_fast_finalise_def
@@ -1372,6 +1378,7 @@ lemma (in Finalise_AI_3) finalise_cap_zombie_cap[wp]:
    \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>cp. is_zombie cp \<and> P cp) sl\<rbrace>"
   apply (cases cap, simp_all split del: if_split)
        apply (wp deleting_irq_handler_cte_preserved cancel_ipc_cte_preserved_irqn
+                 reply_unlink_sc_cte_wp_at get_simple_ko_wp
                | clarsimp simp: is_cap_simps can_fast_finalise_def)+
   done
 
@@ -1428,8 +1435,9 @@ lemma fast_finalise_st_tcb_at:
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp)
-  apply (cases cap; wpsimp wp: cancel_all_ipc_st_tcb_at cancel_all_signals_st_tcb_at
-                          cancel_ipc_st_tcb_at get_simple_ko_wp simp: is_reply_cap_def)
+  apply (cases cap; (wpsimp wp: cancel_all_ipc_st_tcb_at cancel_all_signals_st_tcb_at
+                                cancel_ipc_st_tcb_at get_simple_ko_wp
+                         simp: is_reply_cap_def cong: if_cong | assumption)+)
   done
 
 crunch st_tcb_at[wp]: empty_slot "st_tcb_at P t"
@@ -1521,7 +1529,7 @@ lemma gts_wp:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
-lemma gbn_wp:
+lemma gbn_wp':
   "\<lbrace>\<lambda>s. \<forall>ntfn. bound_tcb_at ((=) ntfn) t s \<longrightarrow> P ntfn s\<rbrace> get_tcb_obj_ref tcb_bound_notification t \<lbrace>P\<rbrace>"
   unfolding get_tcb_obj_ref_def
   apply (wp thread_get_wp')
@@ -1649,6 +1657,30 @@ lemma cap_table_at_length:
   apply (clarsimp simp: valid_obj_def valid_cs_def
                         valid_cs_size_def well_formed_cnode_n_def
                         length_set_helper)
+  done
+
+
+lemma unbind_notification_sym_refs[wp]:
+  "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s \<and> tcb_at a s\<rbrace>
+     unbind_notification a
+   \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
+  apply (simp add: unbind_notification_def)
+  apply (rule hoare_seq_ext [OF _ gbn_sp])
+  apply (case_tac ntfnptr; simp add: maybeM_def)
+   apply (wpsimp)
+  apply (wpsimp simp: update_sk_obj_ref_def wp: get_simple_ko_wp)
+
+  apply (rule delta_sym_refs, assumption)
+   apply (fastforce simp: obj_at_def pred_tcb_at_def ntfn_q_refs_of_def
+                          state_refs_of_def
+                    split: if_split_asm)
+  apply (auto simp: valid_obj_def obj_at_def symreftype_inverse'
+                    ntfn_q_refs_of_def tcb_ntfn_is_bound_def state_refs_of_def
+                    tcb_st_refs_of_def get_refs_def2
+              split: ntfn.splits thread_state.splits if_split_asm
+              dest!: sym_refs_bound_tcb_atD
+              elim!: obj_at_valid_objsE
+              intro!: ntfn_q_refs_no_NTFNBound)
   done
 
 end

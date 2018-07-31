@@ -328,8 +328,8 @@ lemma set_reply_tcb_valid_objs[wp]:
   "\<lbrace>valid_objs and valid_bound_tcb tcb\<rbrace> set_reply_obj_ref reply_tcb_update rptr tcb \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (wpsimp wp: set_simple_ko_valid_objs get_simple_ko_wp
           simp: update_sk_obj_ref_def obj_at_def split: option.splits kernel_object.splits)
-  apply (erule (1) valid_objsE)
-  apply (auto simp: valid_obj_def valid_reply_def)
+  apply (erule (1) valid_objsE[where x=rptr])
+  apply (auto simp: valid_obj_def valid_reply_def obj_at_def)
   done
 
 lemma set_reply_tcb_iflive[wp]:
@@ -784,11 +784,13 @@ lemma reply_unlink_sc_tcb_at [wp]:
                    get_object_def get_sched_context_def)
 
 lemma reply_unlink_tcb_valid_objs [wp]:
-  "\<lbrace>valid_objs\<rbrace> reply_unlink_tcb rp \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  "\<lbrace>valid_objs\<rbrace>
+      reply_unlink_tcb rp
+   \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def get_simple_ko_def get_object_def
                       get_thread_state_def thread_get_def)
-  apply (auto simp: valid_obj_def valid_reply_def)
-  done
+  by (auto elim!: valid_objsE simp: valid_obj_def valid_reply_def obj_at_def) thm valid_sched_context_def
+thm receive_ipc_def
 
 lemma reply_unlink_tcb_tcb_at [wp]:
   "\<lbrace>tcb_at t\<rbrace> reply_unlink_tcb rp \<lbrace>\<lambda>_. tcb_at t\<rbrace>"
@@ -948,11 +950,11 @@ crunch bound_tcb[wp]: schedule_tcb "valid_bound_tcb t"
 
 crunch typ_at[wp]: schedule_tcb "\<lambda>s. P (typ_at T p s)"
 (wp: valid_bound_tcb_typ_at set_object_typ_at mapM_wp ignore: set_object
- simp: zipWithM_x_mapM) 
+ simp: zipWithM_x_mapM)
 
 crunch cap_to[wp]: sched_context_donate, sort_queue, schedule_tcb, maybe_donate_sc, maybe_return_sc
  "ex_nonz_cap_to p:: det_ext state \<Rightarrow> bool"
-  (wp: crunch_wps maybeM_inv) 
+  (wp: crunch_wps maybeM_inv)
 *)
 crunch typ_at[wp]: get_sched_context "\<lambda>s. P (typ_at T p s)"
   (wp: maybeM_inv simp: get_object_def)

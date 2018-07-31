@@ -2733,7 +2733,7 @@ lemma tcb_release_remove_valid_sched_def[wp]:
 context DetSchedSchedule_AI begin
 
 crunch valid_etcbs[wp]: cap_delete_one valid_etcbs
-  (wp: maybeM_inv mapM_x_wp' simp: unless_def)
+  (wp: maybeM_inv mapM_x_wp' crunch_wps  simp: unless_def)
 
 lemma suspend_valid_etcbs[wp]:
   "\<lbrace>valid_etcbs\<rbrace> suspend tp \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"

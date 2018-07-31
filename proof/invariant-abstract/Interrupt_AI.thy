@@ -250,7 +250,7 @@ crunch interrupt_states[wp]: sched_context_donate, reply_unlink_tcb "\<lambda>s.
   (wp: mapM_x_wp_inv maybeM_inv hoare_drop_imp hoare_vcg_if_lift2)
 
 crunch interrupt_states[wp]: update_waiting_ntfn, cancel_signal, blocked_cancel_ipc "\<lambda>s. P (interrupt_states s)" 
-  (wp: mapM_x_wp_inv maybeM_inv ignore: sched_context_donate)
+  (wp: mapM_x_wp_inv maybeM_inv crunch_wps ignore: sched_context_donate)
 
 crunch interrupt_states[wp]: cancel_ipc "\<lambda>s. P (interrupt_states s)" 
 

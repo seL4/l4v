@@ -4313,6 +4313,7 @@ lemma sched_context_resume_valid_list[wp]:
   by (wpsimp simp: sched_context_resume_def wp: get_sched_context_wp)
 
 crunch valid_list[wp]: blocked_cancel_ipc,cancel_signal "valid_list"
+  (wp: crunch_wps)
 
 lemma cancel_ipc_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> cancel_ipc tp \<lbrace>\<lambda>_.valid_list\<rbrace>"

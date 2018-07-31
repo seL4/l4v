@@ -199,17 +199,16 @@ lemma blocked_ipc_st_tcb_at_general:
            | _ \<Rightarrow> \<top>)\<rbrace>
    blocked_cancel_ipc st t rptropt
    \<lbrace>\<lambda>rv. st_tcb_at P t'\<rbrace>"
+
   apply (simp add: blocked_cancel_ipc_def)
   apply (rule hoare_seq_ext[OF _ get_blocking_object_inv])
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_seq_ext[OF _ get_ep_queue_inv])
-  apply (cases rptropt; clarsimp)
-   apply (wpsimp wp: sts_st_tcb_at_cases get_object_wp
-      simp: set_simple_ko_def set_object_def a_type_def partial_inv_def pred_tcb_at_def obj_at_def)
-  apply (wpsimp simp: set_simple_ko_def set_object_def get_ep_queue_def a_type_def partial_inv_def
-                      get_object_def get_blocking_object_def reply_tcb_reply_at_def obj_at_def
-                  wp: sts_st_tcb_at_cases static_imp_wp weak_if_wp reply_unlink_tcb_st_tcb_at
-                      get_simple_ko_wp)
+  apply (wpsimp simp: blocked_cancel_ipc_def set_simple_ko_def set_object_def
+                  wp: sts_st_tcb_at_cases reply_unlink_tcb_st_tcb_at static_imp_wp
+                      hoare_vcg_all_lift get_ep_queue_inv
+       | wp_once hoare_drop_imps)+
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def reply_tcb_reply_at_def)
   done
 
 lemma cancel_signal_st_tcb_at_general:
@@ -279,6 +278,7 @@ lemma scyf_st_tcb_at[wp]:
   apply (simp add: set_sc_obj_ref_def set_object_def)
   apply wp
   done
+
 lemma cancel_ipc_simple [wp]:
   "\<lbrace>\<top>\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
   apply (clarsimp simp: cancel_ipc_def)
@@ -303,8 +303,7 @@ lemma reply_remove_typ_at[wp]:
 
 lemma blocked_cancel_ipc_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> blocked_cancel_ipc st t r \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: blocked_cancel_ipc_def wp: reply_unlink_tcb_typ_at)
-
+  by (wpsimp simp: blocked_cancel_ipc_def wp: reply_unlink_tcb_typ_at get_simple_ko_inv assert_inv)
 
 lemma blocked_cancel_ipc_tcb_at [wp]:
   "\<lbrace>tcb_at t\<rbrace> blocked_cancel_ipc st t' r \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
@@ -554,8 +553,10 @@ shows
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_seq_ext)
    apply (wp sts_only_idle valid_irq_node_typ)
-   apply (simp add: valid_tcb_state_def)
-   apply (wp reply_unlink_tcb_refs_of)
+     apply (simp add: valid_tcb_state_def)
+     apply (wp reply_unlink_tcb_refs_of)
+    apply (wp assert_inv)
+   apply (wp get_simple_ko_inv)
   apply wp
    apply (rule hoare_vcg_conj_lift)
     apply (wpsimp simp: set_simple_ko_def set_object_def get_object_def split_del: if_split)
@@ -1032,16 +1033,9 @@ lemma blocked_cancel_ipc_valid_objs[wp]:
             valid_ep_queue_subset
          | simp only: valid_inactive simp_thms
                 cong: imp_cong
-         | rule hoare_drop_imps
+         | wpc
+         | wp_once hoare_drop_imps
          | clarsimp)+
-      apply safe
-       apply (wpsimp simp: get_ep_queue_def get_simple_ko_def get_object_def
-                           get_blocking_object_def)+
-   apply (erule valid_objsE, fastforce)
-  apply (clarsimp simp: valid_obj_def split: list.splits kernel_object.splits)
-  apply safe
-     apply (clarsimp simp: valid_ep_def, subgoal_tac "remove1 t x \<noteq> []", erule subst,
-            simp add: valid_ep_def, simp add: valid_ep_def)+
   done
 
 lemma cancel_signal_valid_objs[wp]:
@@ -1343,12 +1337,12 @@ lemma reply_cancel_ipc_bound_tcb_at[wp]:
   done
 
 crunch bound_tcb_at[wp]: cancel_ipc "bound_tcb_at P t"
-(ignore: set_object thread_set wp: mapM_x_wp_inv maybeM_inv)
+(ignore: set_object thread_set wp: mapM_x_wp_inv maybeM_inv get_simple_ko_inv assert_inv)
 
 lemma fast_finalise_bound_tcb_at:
   "\<lbrace>\<lambda>s. bound_tcb_at P t s \<and> (\<exists>tt. cap = ReplyCap tt) \<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   apply (case_tac cap, simp_all)
-  apply wpsimp
+  apply (wpsimp wp: hoare_drop_imps)
   done
 
 lemma get_cap_reply_cap_helper:
@@ -1402,7 +1396,8 @@ lemma reply_unlink_tcb_bound_sc_tcb_at:
 lemma blocked_cancel_ipc_bound_sc_tcb_at:
   "\<lbrace>bound_sc_tcb_at P t'\<rbrace> blocked_cancel_ipc ts t r \<lbrace>\<lambda>rv. bound_sc_tcb_at P t'\<rbrace>"
   by (wpsimp simp: blocked_cancel_ipc_def
-               wp: set_thread_state_bound_sc_tcb_at reply_unlink_tcb_bound_sc_tcb_at)
+               wp: set_thread_state_bound_sc_tcb_at reply_unlink_tcb_bound_sc_tcb_at
+                   assert_inv get_simple_ko_inv hoare_drop_imps)
 
 lemma cancel_signal_bound_sc_tcb_at:
   "\<lbrace>bound_sc_tcb_at P t'\<rbrace> cancel_signal r ntfn \<lbrace>\<lambda>rv. bound_sc_tcb_at P t'\<rbrace>"

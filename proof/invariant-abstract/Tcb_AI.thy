@@ -1301,7 +1301,7 @@ crunch inv[wp]:  decode_unbind_notification P
 lemma decode_bind_notification_inv[wp]:
   "\<lbrace>P\<rbrace> decode_bind_notification cap excaps \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding decode_bind_notification_def
-  by (wpsimp wp: get_simple_ko_wp gbn_wp
+  by (wpsimp wp: get_simple_ko_wp gbn_wp'
              simp: whenE_def if_apply_def2
              split_del: if_split)
 
@@ -1331,7 +1331,7 @@ lemma decode_bind_notification_wf:
   apply (simp add: decode_bind_notification_def whenE_def
              cong: list.case_cong split del: if_split)
   apply (rule hoare_pre)
-   apply (wp get_simple_ko_wp gbn_wp | wpc)+
+   apply (wp get_simple_ko_wp gbn_wp' | wpc)+
   apply (fastforce simp: valid_cap_def[where c="cap.ThreadCap t" for t] is_ntfn invs_def
                     valid_state_def valid_pspace_def
              elim!: obj_at_weakenE
@@ -1344,7 +1344,7 @@ lemma decode_unbind_notification_wf:
    \<lbrace>tcb_inv_wf\<rbrace>,-"
   apply (simp add: decode_unbind_notification_def)
   apply (rule hoare_pre)
-   apply (wp gbn_wp | wpc)+
+   apply (wp gbn_wp' | wpc)+
   apply clarsimp
   done
 
@@ -1446,23 +1446,6 @@ lemma tcb_not_in_state_refs_of_tcb:
   apply (simp_all split: if_split_asm)
   apply (simp split: option.splits)
   done
-
-lemma unbind_notification_sym_refs[wp]:
-  notes unfolds = obj_at_def pred_tcb_at_def state_refs_of_def get_refs_def2
-  shows
-    "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s \<and> tcb_at a s\<rbrace>
-       unbind_notification a
-     \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
-  unfolding unbind_notification_def
-  apply (rule hoare_seq_ext [OF _ gbn_sp])
-  apply (case_tac ntfnptr; simp add: maybeM_def)
-   apply wpsimp
-  apply (wpsimp simp: update_sk_obj_ref_def wp: get_simple_ko_wp)
-  apply (rule conjI, fastforce simp: unfolds)
-  apply clarsimp
-  apply (rule delta_sym_refs, assumption)
-   apply (fastforce simp: unfolds split: if_split_asm)
-  by (fastforce dest!: sym_refs_bound_tcb_atD simp: unfolds split: if_split_asm)
 
 lemma tcb_cap_cases_tcb_mcpriority:
   "\<forall>(getF, v)\<in>ran tcb_cap_cases.

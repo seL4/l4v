@@ -605,7 +605,9 @@ definition
 where
   "valid_reply reply s \<equiv>
      valid_bound_tcb (reply_tcb reply) s
-     \<and> valid_bound_sc (reply_sc reply) s"
+     \<and> valid_bound_sc (reply_sc reply) s
+     (*\<and> (reply_tcb reply = None \<longrightarrow> reply_sc reply = None) *) (* FIXME RT: this should be true but don't yet
+                                                                            know how to prove it *)"
 
 
 definition

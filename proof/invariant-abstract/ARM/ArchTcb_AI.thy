@@ -148,7 +148,7 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
                 finalise_cap cap fin
               \<lbrace>\<lambda>rv s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>"
   apply (cases cap, simp_all)
-       apply (wp suspend_caps_of_state hoare_vcg_all_lift
+       apply (wp suspend_caps_of_state hoare_vcg_all_lift get_simple_ko_wp
             | simp
             | rule impI
             | rule hoare_drop_imps)+
