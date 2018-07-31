@@ -404,7 +404,7 @@ where
            do st \<leftarrow> get_thread_state t;
               reply_opt \<leftarrow> case st of BlockedOnReceive _ r_opt \<Rightarrow> return r_opt
                                     | _ \<Rightarrow> return None;
-              when (reply_opt \<noteq> None) $ 
+              when (reply_opt \<noteq> None) $
                    reply_unlink_tcb (the reply_opt);
               set_thread_state t Restart;
               do_extended_op (possible_switch_to t)
@@ -515,7 +515,13 @@ where
      ep' \<leftarrow> return (case queue' of [] \<Rightarrow> IdleEP
                                 |  _ \<Rightarrow> update_ep_queue ep queue');
      set_endpoint epptr ep';
-     when (reply_opt \<noteq> None) $ reply_unlink_tcb (the reply_opt);
+     case reply_opt of
+         None \<Rightarrow> return ()
+       | Some r \<Rightarrow> do
+             reply \<leftarrow> get_reply r;
+             assert (reply_sc reply = None);
+             reply_unlink_tcb r
+         od;
      set_thread_state tptr Inactive
    od"
 
