@@ -1545,14 +1545,22 @@ global_naming Arch
 
 crunch invs[wp]: prepare_thread_delete invs
 
+lemma unbind_from_sc_invs[wp]:
+  "\<lbrace>invs\<rbrace> unbind_from_sc t \<lbrace>\<lambda>rv. invs\<rbrace>"
+  by (wpsimp wp: complete_yield_to_invs simp: unbind_from_sc_def)
+
 lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
-  shows "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. invs\<rbrace>"
+  shows "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv (s(*::det_ext state*)). invs s\<rbrace>"
   apply (cases cap, simp_all split del: if_split)
          apply (wp cancel_all_ipc_invs cancel_all_signals_invs unbind_notification_invs
-                   unbind_maybe_notification_invs
+                   unbind_maybe_notification_invs get_simple_ko_wp suspend_invs
+                   sched_context_unbind_yield_from_invs sched_context_clear_replies_invs
                   | simp add: o_def split del: if_split cong: if_cong
-                  | wpc )+
-(*      apply clarsimp (* thread *)
+                  | wpc
+                  | solves \<open>clarsimp\<close> )+
+  sorry (* finalise_cap_invs: needs det_ext shenanigans with the Finalise_AI locales
+
+      apply clarsimp (* thread *)
       apply (frule cte_wp_at_valid_objs_valid_cap, clarsimp)
       apply (clarsimp simp: valid_cap_def)
       apply (frule(1) valid_global_refsD[OF invs_valid_global_refs])
@@ -1560,7 +1568,7 @@ lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
       apply (simp add: cap_range_def)
      apply (wp deleting_irq_handler_invs  | simp | intro conjI impI)+
   apply (auto dest: cte_wp_at_valid_objs_valid_cap)
-  done*) sorry
+  done*)
 
 lemma (* finalise_cap_irq_node *)[Finalise_AI_asms]:
 "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> finalise_cap a b \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
