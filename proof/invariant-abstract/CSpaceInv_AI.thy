@@ -415,14 +415,6 @@ lemmas cap_master_cap_eqDs =
   cap_master_cap_eqDs1 [OF sym] cap_master_cap_arch_eqD [OF sym]
 
 
-definition
-  cap_badge :: "cap \<rightharpoonup> badge"
-where
- "cap_badge cap \<equiv> case cap of
-    cap.EndpointCap r badge rights \<Rightarrow> Some badge
-  | cap.NotificationCap r badge rights \<Rightarrow> Some badge
-  | _ \<Rightarrow> None"
-
 lemma cap_badge_simps [simp]:
  "cap_badge (cap.EndpointCap r badge rights)       = Some badge"
  "cap_badge (cap.NotificationCap r badge rights)   = Some badge"

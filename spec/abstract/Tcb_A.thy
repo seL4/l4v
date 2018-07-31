@@ -42,7 +42,7 @@ definition
       set_thread_state thread Restart;
       sc_ptr \<leftarrow> assert_opt sc_opt;
       sched_context_resume sc_ptr;
-      do_extended_op $ test_possible_switch_to thread
+      test_possible_switch_to thread
     od
   od"
 
@@ -151,7 +151,7 @@ request to yield its timeslice to another, to suspend or resume another, to
 reconfigure another thread, or to copy register sets into, out of or between
 other threads. *}
 fun
-  invoke_tcb :: "tcb_invocation \<Rightarrow> (data list, det_ext) p_monad"
+  invoke_tcb :: "tcb_invocation \<Rightarrow> (data list, 'z::state_ext) p_monad"
 where
   "invoke_tcb (Suspend thread) = liftE (do suspend thread; return [] od)"
 | "invoke_tcb (Resume thread) = liftE (do restart thread; return [] od)"
@@ -262,11 +262,11 @@ definition
   set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "set_domain tptr new_dom \<equiv> do
      cur \<leftarrow> gets cur_thread;
-     do_extended_op $ tcb_sched_action tcb_sched_dequeue tptr;
-     do_extended_op $ thread_set_domain tptr new_dom;
+     tcb_sched_action tcb_sched_dequeue tptr;
+     thread_set_domain tptr new_dom;
      ts \<leftarrow> get_thread_state tptr;
-     when (runnable ts) $ do_extended_op $ (tcb_sched_action tcb_sched_enqueue tptr);
-     when (tptr = cur) $ do_extended_op $ reschedule_required
+     when (runnable ts) $ tcb_sched_action tcb_sched_enqueue tptr;
+     when (tptr = cur) $ reschedule_required
    od"
 
 definition invoke_domain:: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad"

@@ -47,63 +47,66 @@ We call this second instantiation the
 text {* Translate a state of type @{typ "'a state"} to one of type @{typ "'b state"}
   via a function @{term t} from @{typ "'a"} to @{typ "'b"}.
 *}
-definition trans_state :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a state \<Rightarrow> 'b state" where
-"trans_state t s = \<lparr>kheap = kheap s, cdt = cdt s, is_original_cap = is_original_cap s,
-                     cur_thread = cur_thread s, idle_thread = idle_thread s,
-                     consumed_time = consumed_time s, cur_time = cur_time s,
-                     cur_sc = cur_sc s, reprogram_timer = reprogram_timer s,
-                     machine_state = machine_state s,
-                     interrupt_irq_node = interrupt_irq_node s,
-                     interrupt_states = interrupt_states s, arch_state = arch_state s,
-                     exst = t(exst s)\<rparr>"
+definition trans_state :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a state \<Rightarrow> 'b state"
+where
+  "trans_state t s = abstract_state.extend (abstract_state.truncate s) (state.fields (t (exst s)))"
 
 (*<*)
-lemma trans_state[simp]: "kheap (trans_state t s) = kheap s"
-                            "cdt (trans_state t s) = cdt s"
-                            "is_original_cap (trans_state t s) = is_original_cap s"
-                            "cur_thread (trans_state t s) = cur_thread s"
-                            "idle_thread (trans_state t s) = idle_thread s"
-                            "machine_state (trans_state t s) = machine_state s"
-                            "interrupt_irq_node (trans_state t s) = interrupt_irq_node s"
-                            "interrupt_states (trans_state t s) = interrupt_states s"
-                            "arch_state (trans_state t s) = arch_state s"
-                            "consumed_time (trans_state t s) = consumed_time s"
-                            "cur_time (trans_state t s) = cur_time s"
-                            "cur_sc (trans_state t s) = cur_sc s"
-                            "reprogram_timer (trans_state t s) = reprogram_timer s"
-                            "exst (trans_state t s) = (t (exst s))"
-                            "exst (trans_state (\<lambda>_. e) s) = e"
-  apply (simp add: trans_state_def)+
-  done
+lemma trans_state[simp]:
+  "kheap (trans_state t s) = kheap s"
+  "cdt (trans_state t s) = cdt s"
+  "is_original_cap (trans_state t s) = is_original_cap s"
+  "cur_thread (trans_state t s) = cur_thread s"
+  "idle_thread (trans_state t s) = idle_thread s"
+  "machine_state (trans_state t s) = machine_state s"
+  "interrupt_irq_node (trans_state t s) = interrupt_irq_node s"
+  "interrupt_states (trans_state t s) = interrupt_states s"
+  "arch_state (trans_state t s) = arch_state s"
+  "consumed_time (trans_state t s) = consumed_time s"
+  "cur_time (trans_state t s) = cur_time s"
+  "cur_sc (trans_state t s) = cur_sc s"
+  "reprogram_timer (trans_state t s) = reprogram_timer s"
+  "scheduler_action (trans_state t s) = scheduler_action s"
+  "domain_list (trans_state t s) = domain_list s"
+  "domain_index (trans_state t s) = domain_index s"
+  "cur_domain (trans_state t s) = cur_domain s"
+  "domain_time (trans_state t s) = domain_time s"
+  "ready_queues (trans_state t s) = ready_queues s"
+  "release_queue (trans_state t s) = release_queue s"
+  "exst (trans_state t s) = (t (exst s))"
+  "exst (trans_state (\<lambda>_. e) s) = e"
+  by (simp add: trans_state_def abstract_state.defs state.defs)+
 
 lemma trans_state_update[simp]:
- "trans_state t (kheap_update f s) = kheap_update f (trans_state t s)"
- "trans_state t (cdt_update g s) = cdt_update g (trans_state t s)"
- "trans_state t (is_original_cap_update h s) = is_original_cap_update h (trans_state t s)"
- "trans_state t (cur_thread_update i s) = cur_thread_update i (trans_state t s)"
- "trans_state t (idle_thread_update j s) = idle_thread_update j (trans_state t s)"
- "trans_state t (machine_state_update k s) = machine_state_update k (trans_state t s)"
- "trans_state t (interrupt_irq_node_update l s) = interrupt_irq_node_update l (trans_state t s)"
- "trans_state t (arch_state_update m s) = arch_state_update m (trans_state t s)"
- "trans_state t (consumed_time_update x s) = consumed_time_update x (trans_state t s)"
- "trans_state t (cur_time_update y s) = cur_time_update y (trans_state t s)"
- "trans_state t (cur_sc_update z s) = cur_sc_update z (trans_state t s)"
- "trans_state t (reprogram_timer_update a s) = reprogram_timer_update a (trans_state t s)"
- "trans_state t (interrupt_states_update p s) = interrupt_states_update p (trans_state t s)"
-  apply (simp add: trans_state_def)+
-  done
+  "trans_state t (kheap_update f s) = kheap_update f (trans_state t s)"
+  "trans_state t (cdt_update g s) = cdt_update g (trans_state t s)"
+  "trans_state t (is_original_cap_update h s) = is_original_cap_update h (trans_state t s)"
+  "trans_state t (cur_thread_update i s) = cur_thread_update i (trans_state t s)"
+  "trans_state t (idle_thread_update j s) = idle_thread_update j (trans_state t s)"
+  "trans_state t (machine_state_update k s) = machine_state_update k (trans_state t s)"
+  "trans_state t (interrupt_irq_node_update l s) = interrupt_irq_node_update l (trans_state t s)"
+  "trans_state t (arch_state_update m s) = arch_state_update m (trans_state t s)"
+  "trans_state t (consumed_time_update x s) = consumed_time_update x (trans_state t s)"
+  "trans_state t (cur_time_update y s) = cur_time_update y (trans_state t s)"
+  "trans_state t (cur_sc_update z s) = cur_sc_update z (trans_state t s)"
+  "trans_state t (reprogram_timer_update a s) = reprogram_timer_update a (trans_state t s)"
+  "trans_state t (scheduler_action_update b s) = scheduler_action_update b (trans_state t s)"
+  "trans_state t (domain_list_update c s) = domain_list_update c (trans_state t s)"
+  "trans_state t (domain_index_update d s) = domain_index_update d (trans_state t s)"
+  "trans_state t (cur_domain_update e s) = cur_domain_update e (trans_state t s)"
+  "trans_state t (domain_time_update f2 s) = domain_time_update f2 (trans_state t s)"
+  "trans_state t (ready_queues_update g2 s) = ready_queues_update g2 (trans_state t s)"
+  "trans_state t (release_queue_update h2 s) = release_queue_update h2 (trans_state t s)"
+  by (simp add: trans_state_def abstract_state.defs)+
 
 
 lemma trans_state_update':
   "trans_state f = exst_update f"
-  apply (rule ext)
-  apply simp
-  done
+  by (rule ext) simp
 
 lemma trans_state_update''[simp]:
   "trans_state t' (trans_state t s) = trans_state (\<lambda>e. t' (t e)) s"
-  apply simp
-  done
+  by simp
 (*>*)
 
 text {* Truncate an extended state of type @{typ "'a state"}
@@ -114,36 +117,8 @@ abbreviation "truncate_state \<equiv> trans_state (\<lambda>_. ())"
 section "Deterministic Abstract Specification"
 
 text {* \label{s:det-spec}
-  The deterministic abstract specification tracks the state of the scheduler
-and ordering information about sibling nodes in the CDT. *}
-
-text {* The current scheduler action,
-  which is part of the scheduling state. *}
-datatype scheduler_action =
-    resume_cur_thread
-  | switch_thread obj_ref
-  | choose_new_thread
-
-type_synonym domain = word8
-
-record etcb =
- tcb_priority :: "priority"
- tcb_domain :: "domain"
-
-definition num_domains :: nat where
-  "num_domains \<equiv> 16"
-
-definition default_priority :: "priority" where
-  "default_priority \<equiv> minBound"
-
-definition default_domain :: "domain" where
-  "default_domain \<equiv> minBound"
-
-definition default_etcb :: "etcb" where
-  "default_etcb \<equiv> \<lparr>tcb_priority = default_priority, tcb_domain = default_domain\<rparr>"
-
-type_synonym ready_queue = "obj_ref list"
-type_synonym release_queue = "obj_ref list"
+  The deterministic abstract specification tracks
+  ordering information about sibling nodes in the CDT. *}
 
 text {*
   For each entry in the CDT, we record an ordered list of its children.
@@ -158,15 +133,7 @@ text {*
 *}
 record det_ext =
    work_units_completed_internal :: "machine_word"
-   scheduler_action_internal :: scheduler_action
-   ekheap_internal :: "obj_ref \<Rightarrow> etcb option"
-   domain_list_internal :: "(domain \<times> time) list"
-   domain_index_internal :: nat
-   cur_domain_internal :: domain
-   domain_time_internal :: time
-   ready_queues_internal :: "domain \<Rightarrow> priority \<Rightarrow> ready_queue"
    cdt_list_internal :: cdt_list
-   release_queue_internal :: release_queue
 
 text {*
   The state of the deterministic abstract specification extends the
@@ -184,58 +151,10 @@ abbreviation
   "work_units_completed_update f (s::det_state) \<equiv>  trans_state (work_units_completed_internal_update f) s"
 
 abbreviation
-  "scheduler_action (s::det_state) \<equiv> scheduler_action_internal (exst s)"
-
-abbreviation
-  "scheduler_action_update f (s::det_state) \<equiv>  trans_state (scheduler_action_internal_update f) s"
-
-abbreviation
-  "ekheap (s::det_state) \<equiv> ekheap_internal (exst s)"
-
-abbreviation
-  "ekheap_update f (s::det_state) \<equiv> trans_state (ekheap_internal_update f) s"
-
-abbreviation
-  "domain_list (s::det_state) \<equiv> domain_list_internal (exst s)"
-
-abbreviation
-  "domain_list_update f (s::det_state) \<equiv> trans_state (domain_list_internal_update f) s"
-
-abbreviation
-  "domain_index (s::det_state) \<equiv> domain_index_internal (exst s)"
-
-abbreviation
-  "domain_index_update f (s::det_state) \<equiv> trans_state (domain_index_internal_update f) s"
-
-abbreviation
-  "cur_domain (s::det_state) \<equiv> cur_domain_internal (exst s)"
-
-abbreviation
-  "cur_domain_update f (s::det_state) \<equiv> trans_state (cur_domain_internal_update f) s"
-
-abbreviation
-  "domain_time (s::det_state) \<equiv> domain_time_internal (exst s)"
-
-abbreviation
-  "domain_time_update f (s::det_state) \<equiv> trans_state (domain_time_internal_update f) s"
-
-abbreviation
-  "ready_queues (s::det_state) \<equiv> ready_queues_internal (exst s)"
-
-abbreviation
-  "ready_queues_update f (s::det_state) \<equiv> trans_state (ready_queues_internal_update f) s"
-
-abbreviation
   "cdt_list (s::det_state) \<equiv> cdt_list_internal (exst s)"
 
 abbreviation
   "cdt_list_update f (s::det_state) \<equiv> trans_state (cdt_list_internal_update f) s"
-
-abbreviation
-  "release_queue (s::det_state) \<equiv> release_queue_internal (exst s)"
-
-abbreviation
-  "release_queue_update f (s::det_state) \<equiv> trans_state (release_queue_internal_update f) s"
 
 type_synonym 'a det_ext_monad = "(det_state,'a) nondet_monad"
 
@@ -255,9 +174,6 @@ class state_ext =
  fixes wrap_ext_bool :: "bool det_ext_monad \<Rightarrow> ('a state,bool) nondet_monad"
  fixes select_switch :: "'a \<Rightarrow> bool"
  fixes ext_init :: "'a"
-
-definition detype_ext :: "obj_ref set \<Rightarrow> 'z::state_ext \<Rightarrow> 'z" where
- "detype_ext S \<equiv> wrap_ext (\<lambda>s. s\<lparr>ekheap_internal := (\<lambda>x. if x \<in> S then None else ekheap_internal s x)\<rparr>)"
 
 
 section \<open>Type Class Instances\<close>
@@ -282,18 +198,9 @@ definition "wrap_ext_bool_det_ext_ext == (\<lambda>x. x) ::
 
 definition "select_switch_det_ext_ext == (\<lambda>_. True)  :: det_ext\<Rightarrow> bool"
 
-(* this probably doesn't satisfy the invariants *)
 definition "ext_init_det_ext_ext \<equiv>
      \<lparr>work_units_completed_internal = 0,
-      scheduler_action_internal = resume_cur_thread,
-      ekheap_internal = Map.empty (idle_thread_ptr \<mapsto> default_etcb),
-      domain_list_internal = [(0,15)],
-      domain_index_internal = 0,
-      cur_domain_internal = 0,
-      domain_time_internal = 15,
-      ready_queues_internal = const (const []),
-      cdt_list_internal = const [],
-      release_queue_internal = []\<rparr> :: det_ext"
+      cdt_list_internal = const [] \<rparr> :: det_ext"
 
 instance ..
 
@@ -301,7 +208,7 @@ end
 
 subsection "Nondeterministic Abstract Specification"
 
-text {* \label{s:nondet-spec} 
+text {* \label{s:nondet-spec}
 The nondeterministic abstract specification instantiates the extended state
 with the unit type -- i.e. it doesn't have any meaningful extended state.
 *}
@@ -330,169 +237,6 @@ end
 
 
 section \<open>Basic Deterministic Monadic Accessors\<close>
-
-text {*
-  Basic monadic functions for operating on the extended state of the
-  deterministic abstract specification.
-*}
-definition
-  get_etcb :: "obj_ref \<Rightarrow> det_state \<Rightarrow> etcb option"
-where
-  "get_etcb tcb_ref es \<equiv> ekheap es tcb_ref"
-
-definition
-  ethread_get :: "(etcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> 'a det_ext_monad"
-where
-  "ethread_get f tptr \<equiv> do
-     tcb \<leftarrow> gets_the $ get_etcb tptr;
-     return $ f tcb
-   od"
-
-(* For infoflow, we want to avoid certain read actions, such as reading the priority of the
-   current thread when it could be idle. Then we need to make sure we do not rely on the result.
-   undefined is the closest we have to a result that can't be relied on *)
-definition
-  ethread_get_when :: "bool \<Rightarrow> (etcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> 'a det_ext_monad"
-where
-  "ethread_get_when b f tptr \<equiv> if b then (ethread_get f tptr) else return undefined"
-
-definition set_eobject :: "obj_ref \<Rightarrow> etcb \<Rightarrow> unit det_ext_monad"
-  where
- "set_eobject ptr obj \<equiv>
-  do es \<leftarrow> get;
-    ekh \<leftarrow> return $ ekheap es(ptr \<mapsto> obj);
-    put (es\<lparr>ekheap := ekh\<rparr>)
-  od"
-
-definition
-  ethread_set :: "(etcb \<Rightarrow> etcb) \<Rightarrow> obj_ref \<Rightarrow> unit det_ext_monad"
-where
-  "ethread_set f tptr \<equiv> do
-     tcb \<leftarrow> gets_the $ get_etcb tptr;
-     set_eobject tptr $ f tcb
-   od"
-
-definition
-  set_scheduler_action :: "scheduler_action \<Rightarrow> unit det_ext_monad" where
-  "set_scheduler_action action \<equiv>
-     modify (\<lambda>es. es\<lparr>scheduler_action := action\<rparr>)"
-
-definition
-  thread_set_priority :: "obj_ref \<Rightarrow> priority \<Rightarrow> unit det_ext_monad" where
-  "thread_set_priority tptr prio \<equiv> ethread_set (\<lambda>tcb. tcb\<lparr>tcb_priority := prio\<rparr>) tptr"
-
-definition
-  thread_set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> unit det_ext_monad" where
-  "thread_set_domain tptr domain \<equiv> ethread_set (\<lambda>tcb. tcb\<lparr>tcb_domain := domain\<rparr>) tptr"
-
-
-definition
-  get_tcb_queue :: "domain \<Rightarrow> priority \<Rightarrow> ready_queue det_ext_monad" where
-  "get_tcb_queue d prio \<equiv> do
-     queues \<leftarrow> gets ready_queues;
-     return (queues d prio)
-   od"
-
-definition
-  set_tcb_queue :: "domain \<Rightarrow> priority \<Rightarrow> ready_queue \<Rightarrow> unit det_ext_monad" where
-  "set_tcb_queue d prio queue \<equiv>
-     modify (\<lambda>es. es\<lparr> ready_queues :=
-      (\<lambda>d' p. if d' = d \<and> p = prio then queue else ready_queues es d' p)\<rparr>)"
-
-
-definition
-  tcb_sched_action :: "(obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list) \<Rightarrow> obj_ref  \<Rightarrow> unit det_ext_monad" where
-  "tcb_sched_action action thread \<equiv> do
-     d \<leftarrow> ethread_get tcb_domain thread;
-     prio \<leftarrow> ethread_get tcb_priority thread;
-     queue \<leftarrow> get_tcb_queue d prio;
-     set_tcb_queue d prio (action thread queue)
-   od"
-
-definition
-  tcb_sched_enqueue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
-  "tcb_sched_enqueue thread queue \<equiv> if (thread \<notin> set queue) then thread # queue else queue"
-
-definition
-  tcb_sched_append :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
-  "tcb_sched_append thread queue \<equiv> if (thread \<notin> set queue) then queue @ [thread] else queue"
-
-definition
-  tcb_sched_dequeue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
-  "tcb_sched_dequeue thread queue \<equiv> filter (\<lambda>x. x \<noteq> thread) queue"
-
-definition
-  in_release_queue :: "obj_ref \<Rightarrow> det_state \<Rightarrow> bool"
-where
-  "in_release_queue tcb_ptr \<equiv> \<lambda>s. tcb_ptr \<in> set (release_queue s)"
-
-definition
-  tcb_release_dequeue :: "unit det_ext_monad"
-where
-  "tcb_release_dequeue =
-    modify (\<lambda>s. s\<lparr> release_queue := tl (release_queue s), reprogram_timer := True \<rparr>)"
-  
-definition
-  tcb_release_remove :: "obj_ref \<Rightarrow> unit det_ext_monad"
-where
-  "tcb_release_remove tcb_ptr = modify (release_queue_update (tcb_sched_dequeue tcb_ptr))"
-
-definition
-  thread_get_det :: "(tcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> 'a det_ext_monad"
-where
-  "thread_get_det f tptr \<equiv> do
-     hp \<leftarrow> gets kheap;
-     assert (\<exists>tcb. hp tptr = Some (TCB tcb));
-     case the (hp tptr) of TCB tcb \<Rightarrow> return $ f tcb
-   od"
-
-definition
-  commit_domain_time :: "unit det_ext_monad"
-where
-  "commit_domain_time = do
-    domain_time \<leftarrow> gets domain_time;
-    consumed \<leftarrow> gets consumed_time;
-    time' \<leftarrow> return (if domain_time < consumed then 0 else domain_time - consumed);
-    modify (\<lambda>s. s\<lparr>domain_time := time'\<rparr>)
-  od"
-
-definition
-  get_tcb :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> tcb option"
-where
-  "get_tcb tcb_ref state \<equiv>
-   case kheap state tcb_ref of
-      None      \<Rightarrow> None
-    | Some kobj \<Rightarrow> (case kobj of
-        TCB tcb \<Rightarrow> Some tcb
-      | _       \<Rightarrow> None)"
-
-definition "\<mu>s_to_ms = 1000"
-
-definition
-  next_domain :: "unit det_ext_monad" where
-  "next_domain \<equiv>
-    modify (\<lambda>s.
-      let domain_index' = (domain_index s + 1) mod length (domain_list s) in
-      let next_dom = (domain_list s)!domain_index'
-      in s\<lparr> domain_index := domain_index',
-            cur_domain := fst next_dom,
-            domain_time := us_to_ticks (snd next_dom * \<mu>s_to_ms),
-            work_units_completed := 0,
-            reprogram_timer := True\<rparr>)"
-
-definition
-  dec_domain_time :: "unit det_ext_monad" where
-  "dec_domain_time = modify (\<lambda>s. s\<lparr>domain_time := domain_time s - 1\<rparr>)"
-
-definition
-  set_next_timer_interrupt :: "time \<Rightarrow> unit det_ext_monad"
-where
-  "set_next_timer_interrupt thread_time = do
-     cur_tm \<leftarrow> gets cur_time;
-     domain_tm \<leftarrow> gets domain_time;
-     new_domain_tm \<leftarrow> return $ cur_tm + domain_tm;
-     do_machine_op $ setDeadline (min thread_time new_domain_tm - timerPrecision)
-  od"
 
 definition set_cdt_list :: "cdt_list \<Rightarrow> (det_state, unit) nondet_monad" where
   "set_cdt_list t \<equiv> do
@@ -541,24 +285,8 @@ definition next_slot :: "cslot_ptr \<Rightarrow> cdt_list \<Rightarrow> cdt \<Ri
                         then next_child slot t
                         else next_not_child slot t m"
 
+
 text {* \emph{Extended operations} for the deterministic abstract specification. *}
-
-definition max_non_empty_queue :: "(priority \<Rightarrow> ready_queue) \<Rightarrow> ready_queue" where
-  "max_non_empty_queue queues \<equiv> queues (Max {prio. queues prio \<noteq> []})"
-
-
-definition default_ext :: "apiobject_type \<Rightarrow> domain \<Rightarrow> etcb option" where
-  "default_ext type cdom \<equiv>
-      case type of TCBObject \<Rightarrow> Some (default_etcb\<lparr>tcb_domain := cdom\<rparr>)
-                         | _ \<Rightarrow> None"
-
-definition retype_region_ext :: "obj_ref list \<Rightarrow> apiobject_type \<Rightarrow> unit det_ext_monad" where
-  "retype_region_ext ptrs type \<equiv>  do
-                                     ekh \<leftarrow> gets ekheap;
-                                     cdom \<leftarrow> gets cur_domain;
-                                     ekh' \<leftarrow> return $ foldr (\<lambda>p ekh. (ekh(p := default_ext type cdom))) ptrs ekh;
-                                     modify (\<lambda>s. s\<lparr>ekheap := ekh'\<rparr>)
-                                  od"
 
 definition cap_swap_ext where
 "cap_swap_ext \<equiv> (\<lambda> slot1 slot2 slot1_op slot2_op.

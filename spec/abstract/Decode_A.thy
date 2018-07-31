@@ -269,7 +269,7 @@ where
       check_valid_ipc_buffer buffer buffer_cap;
       returnOk $ Some (buffer_cap, bslot)
     odE;
-  returnOk $ 
+  returnOk $
     ThreadControl (obj_ref_of cap) slot None None None None None None (Some (buffer, newbuf)) None
 odE"
 
@@ -374,7 +374,7 @@ where
                               None None
                               (tc_new_croot set_space) (tc_new_vroot set_space)
                               (tc_new_buffer set_params) (tc_new_sc update_sc)
-   odE" 
+   odE"
 
 definition
   decode_bind_notification ::
@@ -470,7 +470,7 @@ and scheduling control. *}
 
 definition
   decode_sched_context_invocation ::
-  "data \<Rightarrow> obj_ref \<Rightarrow> cap list \<Rightarrow> data list \<Rightarrow> (sched_context_invocation, det_ext) se_monad"
+  "data \<Rightarrow> obj_ref \<Rightarrow> cap list \<Rightarrow> data list \<Rightarrow> (sched_context_invocation, 'z::state_ext) se_monad"
 where
   "decode_sched_context_invocation label sc_ptr excaps args \<equiv>
   case invocation_type label of
@@ -515,7 +515,7 @@ where
       | Some tcb_ptr \<Rightarrow> doE
           ct_ptr \<leftarrow> liftE $ gets cur_thread;
           whenE (tcb_ptr = ct_ptr) $ throwError IllegalOperation;
-          prios \<leftarrow> liftE $ ethread_get tcb_priority tcb_ptr;
+          prios \<leftarrow> liftE $ thread_get tcb_priority tcb_ptr;
           ct_mcp \<leftarrow> liftE $ thread_get tcb_mcpriority ct_ptr;
           whenE (prios > ct_mcp) $ throwError IllegalOperation
       odE;
@@ -533,7 +533,7 @@ where
   "TIME_ARG_SIZE \<equiv> 2" (* sizeof(ticks_t) / sizeof(word_t) *)
 
 definition
-  decode_sched_control_invocation :: 
+  decode_sched_control_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cap list \<Rightarrow> (sched_control_invocation,'z::state_ext) se_monad"
 where
   "decode_sched_control_invocation label args excaps \<equiv> doE
@@ -721,7 +721,7 @@ invocation is allowed.
 
 definition
   decode_invocation ::
-  "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (invocation, det_ext) se_monad"
+  "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (invocation, 'z::state_ext) se_monad"
 where
   "decode_invocation label args cap_index slot cap excaps \<equiv>
   case cap of

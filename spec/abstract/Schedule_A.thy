@@ -8,10 +8,6 @@
  * @TAG(GD_GPL)
  *)
 
-(*
-Non-deterministic scheduler functionality.
-*)
-
 chapter "Scheduler"
 
 theory Schedule_A
@@ -53,12 +49,12 @@ definition
      state \<leftarrow> get;
      assert (get_tcb t state \<noteq> None);
      arch_switch_to_thread t;
-     do_extended_op (tcb_sched_action (tcb_sched_dequeue) t);
+     tcb_sched_action (tcb_sched_dequeue) t;
      modify (\<lambda>s. s \<lparr> cur_thread := t \<rparr>)
    od"
 
 text {* Asserts that a thread is schedulable before switching to it. *}
-definition guarded_switch_to :: "obj_ref \<Rightarrow> unit det_ext_monad" where
+definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "guarded_switch_to thread \<equiv> do
      inq \<leftarrow> gets $ in_release_queue thread;
      sched \<leftarrow> is_schedulable thread inq;
@@ -75,8 +71,37 @@ definition
      modify (\<lambda>s. s \<lparr> cur_thread := thread \<rparr>)
    od"
 
+definition "\<mu>s_to_ms = 1000"
+
 definition
-  set_next_interrupt :: "unit det_ext_monad"
+  next_domain :: "(unit, 'z::state_ext) s_monad" where
+  "next_domain \<equiv> do
+    modify (\<lambda>s.
+      let domain_index' = (domain_index s + 1) mod length (domain_list s) in
+      let next_dom = (domain_list s)!domain_index'
+      in s\<lparr> domain_index := domain_index',
+            cur_domain := fst next_dom,
+            domain_time := us_to_ticks (snd next_dom * \<mu>s_to_ms),
+            reprogram_timer := True\<rparr>);
+    do_extended_op $ modify (\<lambda>s. s \<lparr>work_units_completed := 0\<rparr>)
+  od"
+
+definition
+  dec_domain_time :: "(unit, 'z::state_ext) s_monad" where
+  "dec_domain_time = modify (\<lambda>s. s\<lparr>domain_time := domain_time s - 1\<rparr>)"
+
+definition
+  set_next_timer_interrupt :: "time \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "set_next_timer_interrupt thread_time = do
+     cur_tm \<leftarrow> gets cur_time;
+     domain_tm \<leftarrow> gets domain_time;
+     new_domain_tm \<leftarrow> return $ cur_tm + domain_tm;
+     do_machine_op $ setDeadline (min thread_time new_domain_tm - timerPrecision)
+  od"
+
+definition
+  set_next_interrupt :: "(unit, 'z::state_ext) s_monad"
 where
   "set_next_interrupt = do
      cur_tm \<leftarrow> gets cur_time;
@@ -117,7 +142,7 @@ where
   od"
 
 definition
-  sc_and_timer :: "(unit, det_ext) s_monad"
+  sc_and_timer :: "(unit, 'z::state_ext) s_monad"
 where
   "sc_and_timer = do
     switch_sched_context;
@@ -145,7 +170,7 @@ where
    od"
 
 definition
-  awaken :: "unit det_ext_monad"
+  awaken :: "(unit, 'z::state_ext) s_monad"
 where
   "awaken \<equiv> do
     rq \<leftarrow> gets release_queue;
@@ -159,10 +184,10 @@ where
     od) rq1
   od"
 
-class state_ext_sched = state_ext +
-  fixes schedule :: "(unit,'a) s_monad"
+definition max_non_empty_queue :: "(priority \<Rightarrow> ready_queue) \<Rightarrow> ready_queue" where
+  "max_non_empty_queue queues \<equiv> queues (Max {prio. queues prio \<noteq> []})"
 
-definition choose_thread :: "det_ext state \<Rightarrow> (unit \<times> det_ext state) set \<times> bool" where
+definition choose_thread :: "(unit, 'z::state_ext) s_monad" where
 "choose_thread \<equiv>
       do
         d \<leftarrow> gets cur_domain;
@@ -175,14 +200,11 @@ text {*
   Determine whether given priority is highest among queued ready threads in given domain.
   Trivially true if no threads are ready. *}
 definition
-  is_highest_prio :: "domain \<Rightarrow> priority \<Rightarrow> det_ext state \<Rightarrow> bool"
+  is_highest_prio :: "domain \<Rightarrow> priority \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "is_highest_prio d p s \<equiv>
     (\<forall>prio. ready_queues s d prio = [])
     \<or> p \<ge> Max {prio. ready_queues s d prio \<noteq> []}"
-
-instantiation  det_ext_ext :: (type) state_ext_sched
-begin
 
 definition
   "schedule_switch_thread_fastfail ct it ct_prio target_prio \<equiv>
@@ -199,7 +221,7 @@ definition
    od"
 
 definition
-  "schedule_det_ext_ext \<equiv> do
+  "schedule \<equiv> do
      awaken;
      ct \<leftarrow> gets cur_thread;
      inq \<leftarrow> gets $ in_release_queue ct;
@@ -219,10 +241,10 @@ definition
            when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct);
 
            it \<leftarrow> gets idle_thread;
-           target_prio \<leftarrow> ethread_get tcb_priority candidate;
+           target_prio \<leftarrow> thread_get tcb_priority candidate;
 
            \<comment> \<open>Infoflow does not like asking about the idle thread's priority or domain.\<close>
-           ct_prio \<leftarrow> ethread_get_when (ct \<noteq> it) tcb_priority ct;
+           ct_prio \<leftarrow> if ct \<noteq> it then thread_get tcb_priority ct else return 0;
            \<comment> \<open>When to look at the bitmaps. This optimisation is used in the C fast path,
               but there we know @{text cur_thread} is not idle.\<close>
            fastfail \<leftarrow> schedule_switch_thread_fastfail ct it ct_prio target_prio;
@@ -254,49 +276,6 @@ definition
      sc_and_timer
    od"
 
-instance ..
-end
-
-
-instantiation unit :: state_ext_sched
-begin
-
-
-text {*
-  The scheduler is heavily underspecified.
-  It is allowed to pick any active thread or the idle thread.
-  If the thread the scheduler picked is the current thread, it
-  may omit the call to @{const switch_to_thread}. Likewise it
-  may omit the call to @{const switch_to_idle_thread} if the
-  idle thread is the current thread.
-*}
-(*
-definition schedule_unit :: "(unit,unit) s_monad" where
-"schedule_unit \<equiv> do
- (do
-   cur \<leftarrow> gets cur_thread;
-   threads \<leftarrow> allActiveTCBs;
-   thread \<leftarrow> select threads;
-   (if thread = cur then
-     return () \<sqinter> switch_to_thread thread
-   else
-     switch_to_thread thread)
- od) \<sqinter>
- (do
-   cur \<leftarrow> gets cur_thread;
-   idl \<leftarrow> gets idle_thread;
-   if idl = cur then
-     return () \<sqinter> switch_to_idle_thread
-   else switch_to_idle_thread
-  od);
-  sc_and_timer
-  od"
-*)
-instance ..
-end
-
-
-lemmas schedule_def = schedule_det_ext_ext_def
 
 text {* Scheduling context invocation function *}
 
@@ -308,7 +287,7 @@ where
   "parse_time_arg i args \<equiv> (ucast (args!(i+1)) << 32) + ucast (args!i)"
 
 definition
-  sched_context_yield_to :: "obj_ref \<Rightarrow> data list \<Rightarrow> (unit, det_ext) s_monad"
+  sched_context_yield_to :: "obj_ref \<Rightarrow> data list \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_yield_to sc_ptr args \<equiv> do
     sc_yf_opt \<leftarrow> get_sc_obj_ref sc_yield_from sc_ptr;
@@ -330,8 +309,8 @@ where
 
       assert (sufficient \<and> ready);
       ct_ptr \<leftarrow> gets cur_thread;
-      prios \<leftarrow> ethread_get tcb_priority tcb_ptr;
-      ct_prios \<leftarrow> ethread_get tcb_priority ct_ptr;
+      prios \<leftarrow> thread_get tcb_priority tcb_ptr;
+      ct_prios \<leftarrow> thread_get tcb_priority ct_ptr;
       if (prios < ct_prios)
       then do
         tcb_sched_action tcb_sched_dequeue tcb_ptr;
@@ -349,7 +328,7 @@ where
 
 
 definition
-  invoke_sched_context :: "sched_context_invocation \<Rightarrow> (unit, det_ext) se_monad"
+  invoke_sched_context :: "sched_context_invocation \<Rightarrow> (unit, 'z::state_ext) se_monad"
 where
   "invoke_sched_context iv \<equiv> liftE $ case iv of
     InvokeSchedContextConsumed sc_ptr args \<Rightarrow> set_consumed sc_ptr args

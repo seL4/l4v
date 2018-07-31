@@ -17,7 +17,7 @@ begin
 text \<open> This theory contains operations on scheduling contexts and scheduling control. \<close>
 
 definition
-  is_cur_domain_expired :: "det_ext state \<Rightarrow> bool"
+  is_cur_domain_expired :: "'z::state_ext state \<Rightarrow> bool"
 where
   "is_cur_domain_expired = (\<lambda>s. domain_time  s < consumed_time s + MIN_BUDGET)"
 
@@ -56,7 +56,7 @@ where
 text \<open>Enqueue a TCB in the release queue, sorted by release time of
   the corresponding scheduling context.\<close>
 definition
-  tcb_release_enqueue :: "obj_ref \<Rightarrow> unit det_ext_monad"
+  tcb_release_enqueue :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "tcb_release_enqueue tcb_ptr = do
      time \<leftarrow> get_sc_time tcb_ptr;
@@ -385,22 +385,22 @@ where
   "postpone sc_ptr = do
     tcb_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
     tcb_ptr \<leftarrow> assert_opt tcb_opt;
-    do_extended_op $ tcb_sched_action tcb_sched_dequeue tcb_ptr;
-    do_extended_op $ tcb_release_enqueue tcb_ptr;
+    tcb_sched_action tcb_sched_dequeue tcb_ptr;
+    tcb_release_enqueue tcb_ptr;
     modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>)
   od"
 
 text \<open>
   Resume a scheduling context: check if the bound TCB
   is runnable and add it to the scheduling queue if required
-\<close> 
+\<close>
 definition
   sched_context_resume :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_resume sc_ptr \<equiv> do
      sc \<leftarrow> get_sched_context sc_ptr;
      tptr \<leftarrow> assert_opt $ sc_tcb sc;
-     in_release_q \<leftarrow> select_ext (in_release_queue tptr) {True,False};
+     in_release_q \<leftarrow> gets $ in_release_queue tptr;
      sched \<leftarrow> is_schedulable tptr in_release_q;
      when sched $ do
        ts \<leftarrow> thread_get tcb_state tptr;
@@ -463,7 +463,7 @@ od"
 text \<open>  Bind a TCB to a scheduling context. \<close>
 
 definition
-  test_possible_switch_to :: "obj_ref \<Rightarrow> unit det_ext_monad"
+  test_possible_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "test_possible_switch_to tcb_ptr = do
     inq \<leftarrow> gets $ in_release_queue tcb_ptr;
@@ -478,7 +478,7 @@ where
     set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
     set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr);
     sched_context_resume sc_ptr;
-    do_extended_op $ test_possible_switch_to tcb_ptr
+    test_possible_switch_to tcb_ptr
   od"
 
 text \<open> Unbind TCB from its scheduling context, if there is one bound. \<close>
@@ -518,6 +518,17 @@ where
     od
   od"
 
+
+definition
+  commit_domain_time :: "(unit, 'z::state_ext) s_monad"
+where
+  "commit_domain_time = do
+    domain_time \<leftarrow> gets domain_time;
+    consumed \<leftarrow> gets consumed_time;
+    time' \<leftarrow> return (if domain_time < consumed then 0 else domain_time - consumed);
+    modify (\<lambda>s. s\<lparr>domain_time := time'\<rparr>)
+  od"
+
 text \<open> Update time consumption of current scheduling context and current domain. \<close>
 definition
   commit_time :: "(unit, 'z::state_ext) s_monad"
@@ -534,7 +545,7 @@ where
         set_refills csc (new_hd # [new_tl])
       else refill_split_check csc consumed
     od;
-    do_extended_op $ commit_domain_time; (***)
+    commit_domain_time; (***)
     update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);
     modify (\<lambda>s. s\<lparr>consumed_time := 0\<rparr> )
   od"
@@ -577,8 +588,7 @@ where
        set_tcb_obj_ref tcb_yield_to_update thread None
      od) yt_opt;
      set_thread_state thread Inactive;
-     do_extended_op (tcb_sched_action (tcb_sched_dequeue) thread)
+     tcb_sched_action (tcb_sched_dequeue) thread
    od"
-
 
 end

@@ -79,6 +79,8 @@ definition
     tcb_mcpriority = minBound,
     tcb_sched_context = Some idle_sc_ptr,
     tcb_yield_to = None,
+    tcb_priority = 0,
+    tcb_domain = 0,
     tcb_arch = init_arch_tcb
   \<rparr>,
   init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage), (* FIXME: same reason as why we kept the definition of init_globals_frame *)
@@ -105,6 +107,13 @@ definition
     cur_time = 0,
     cur_sc = idle_sc_ptr,
     reprogram_timer = False,
+    scheduler_action = resume_cur_thread,
+    domain_list = [(0,15)],
+    domain_index = 0,
+    cur_domain = 0,
+    domain_time = 15,
+    ready_queues = const (const []),
+    release_queue = [],
     machine_state = init_machine_state,
     interrupt_irq_node = \<lambda>irq. init_irq_node_ptr + (ucast irq << cte_level_bits),
     interrupt_states = \<lambda>_. Structures_A.IRQInactive,
@@ -113,6 +122,5 @@ definition
   \<rparr>"
 
 end
-
 
 end

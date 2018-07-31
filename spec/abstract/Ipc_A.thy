@@ -265,7 +265,7 @@ and the thread is willing to block waiting to send then put it in the endpoint
 sending queue. *}
 definition
   send_ipc :: "bool \<Rightarrow> bool \<Rightarrow> badge \<Rightarrow> bool \<Rightarrow> bool
-                \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, det_ext) s_monad"
+                \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "send_ipc block call badge can_grant can_donate thread epptr \<equiv> do
      ep \<leftarrow> get_endpoint epptr;
@@ -345,18 +345,18 @@ where
   "do_nbrecv_failed_transfer thread = do as_user thread $ setRegister badge_register 0; return () od"
 
 definition
-  receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> cap \<Rightarrow> unit det_ext_monad"
+  receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> cap \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "receive_ipc thread cap is_blocking reply_cap \<equiv> do
      (epptr,rights) \<leftarrow> (case cap
                        of EndpointCap ref badge rights \<Rightarrow> return (ref,rights)
                         | _ \<Rightarrow> fail);
-     reply \<leftarrow> (case reply_cap of 
+     reply \<leftarrow> (case reply_cap of
                  ReplyCap r \<Rightarrow> do
                    tptr \<leftarrow> get_reply_obj_ref reply_tcb r;
                    when (tptr \<noteq> None \<and> the tptr \<noteq> thread) $ cancel_ipc (the tptr);
                    return (Some r)
-                 od 
+                 od
                | NullCap \<Rightarrow> return None
                | _ \<Rightarrow> fail);
      ep \<leftarrow> get_endpoint epptr;
@@ -432,7 +432,7 @@ where
      maybe_donate_sc dest ntfnptr;
      set_thread_state dest Running;
      as_user dest $ setRegister badge_register badge;
-     do_extended_op (possible_switch_to dest)
+     possible_switch_to dest
    od"
 
 text {* Handle a message send operation performed on a notification object.
@@ -476,7 +476,7 @@ text {* Handle a receive operation performed on a notification object by a
 thread. If a message is waiting then perform the transfer, otherwise put the
 thread in the endpoint's receiving queue. *}
 definition
-  receive_signal :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> unit det_ext_monad"
+  receive_signal :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
    "receive_signal thread cap is_blocking \<equiv> do
     ntfnptr \<leftarrow>
@@ -516,7 +516,7 @@ section {* Sending Fault Messages *}
 text {* When a thread encounters a fault, retreive its fault handler capability
 and send a fault message. *}
 definition
-  send_fault_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> fault \<Rightarrow> bool \<Rightarrow> (bool, det_ext) f_monad"
+  send_fault_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> fault \<Rightarrow> bool \<Rightarrow> (bool, 'z::state_ext) f_monad"
 where
   "send_fault_ipc tptr handler_cap fault can_donate \<equiv>
      (case handler_cap
@@ -533,7 +533,7 @@ where
         | _ \<Rightarrow> fail)"
 
 text {* timeout fault *}
-definition handle_timeout :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit, det_ext) s_monad"
+definition handle_timeout :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "handle_timeout tptr ex \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb tptr;
@@ -550,7 +550,7 @@ where
 
 text {* Handle a thread fault by sending a fault message if possible. *}
 definition
-  handle_fault :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit, det_ext) s_monad"
+  handle_fault :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "handle_fault thread ex \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb thread;
@@ -566,7 +566,7 @@ definition is_timeout_fault :: "fault \<Rightarrow> bool" where
     (case f of Timeout _ \<Rightarrow> True | _ \<Rightarrow> False)"
 
 definition
-  do_reply_transfer :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, det_ext) s_monad"
+  do_reply_transfer :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
  "do_reply_transfer sender reply \<equiv> do
     recv_opt \<leftarrow> get_reply_tcb reply;
@@ -633,7 +633,7 @@ where
 (* below are moved from Schedule_A, due to a dependency issue *)
 
 definition
-  end_timeslice :: "bool \<Rightarrow> (unit,det_ext) s_monad"
+  end_timeslice :: "bool \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "end_timeslice canTimeout = do
      ct \<leftarrow> gets cur_thread;
@@ -660,7 +660,7 @@ where
   od"
 
 definition
-  charge_budget :: "ticks \<Rightarrow> ticks \<Rightarrow> bool \<Rightarrow> (unit, det_ext) s_monad"
+  charge_budget :: "ticks \<Rightarrow> ticks \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "charge_budget capacity consumed canTimeout = do
     csc_ptr \<leftarrow> gets cur_sc;
@@ -684,7 +684,7 @@ where
   od"
 
 definition
-  check_budget :: "bool det_ext_monad"
+  check_budget :: "(bool, 'z::state_ext) s_monad"
 where
   "check_budget = do
      csc \<leftarrow> gets cur_sc;
@@ -713,7 +713,7 @@ where
   od"
 
 definition
-  check_budget_restart :: "bool det_ext_monad"
+  check_budget_restart :: "(bool, 'z::state_ext) s_monad"
 where
   "check_budget_restart = do
      result \<leftarrow> check_budget;
@@ -725,7 +725,7 @@ where
 
 text \<open> The Scheduling Control invocation configures the budget of a scheduling context. \<close>
 definition
-  invoke_sched_control_configure :: "sched_control_invocation \<Rightarrow> (unit, det_ext) se_monad"
+  invoke_sched_control_configure :: "sched_control_invocation \<Rightarrow> (unit, 'z::state_ext) se_monad"
 where
   "invoke_sched_control_configure iv \<equiv>
   case iv of InvokeSchedControlConfigure sc_ptr budget period mrefills badge \<Rightarrow> liftE $ do

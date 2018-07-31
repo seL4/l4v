@@ -382,6 +382,7 @@ datatype thread_state
   | IdleThreadState
 
 type_synonym priority = word8
+type_synonym domain = word8
 
 record tcb =
  tcb_ctable        :: cap
@@ -392,10 +393,12 @@ record tcb =
  tcb_state         :: thread_state
  tcb_ipc_buffer    :: vspace_ref
  tcb_fault         :: "fault option"
- tcb_bound_notification     :: "obj_ref option"
+ tcb_bound_notification :: "obj_ref option"
  tcb_mcpriority    :: priority
  tcb_sched_context :: "obj_ref option"
  tcb_yield_to      :: "obj_ref option"
+ tcb_priority      :: priority
+ tcb_domain        :: domain
  tcb_arch          :: arch_tcb
 
 text {* Determines whether a thread in a given state may be scheduled. *}
@@ -412,9 +415,21 @@ where
 | "runnable (IdleThreadState)       = False"
 | "runnable (BlockedOnReply _)        = False"
 
+definition num_domains :: nat
+where
+  "num_domains \<equiv> 16" (* FIXME: import from config *)
+
+definition default_domain :: domain
+where
+  "default_domain \<equiv> minBound"
+
+definition default_priority :: priority
+where
+  "default_priority \<equiv> minBound"
+
 definition
-  default_tcb :: tcb where
-  "default_tcb \<equiv> \<lparr>
+  default_tcb :: "domain \<Rightarrow> tcb" where
+  "default_tcb domain \<equiv> \<lparr>
       tcb_ctable   = NullCap,
       tcb_vtable   = NullCap,
       tcb_ipcframe = NullCap,
@@ -427,6 +442,8 @@ definition
       tcb_mcpriority = minBound,
       tcb_sched_context = None,
       tcb_yield_to      = None,
+      tcb_priority   = default_priority,
+      tcb_domain     = domain,
       tcb_arch       = default_arch_tcb\<rparr>"
 
 type_synonym ticks = "64 word"
@@ -562,6 +579,15 @@ datatype irq_state =
  | IRQTimer
  | IRQReserved
 
+text {* The current scheduler action *}
+datatype scheduler_action =
+    resume_cur_thread
+  | switch_thread obj_ref
+  | choose_new_thread
+
+type_synonym ready_queue = "obj_ref list"
+type_synonym release_queue = "obj_ref list"
+
 text {* The kernel state includes a heap, a capability derivation tree
 (CDT), a bitmap used to determine if a capability is the original
 capability to that object, a pointer to the current thread, a pointer
@@ -587,6 +613,13 @@ record abstract_state =
   cur_time           :: time     -- "current time at kernel entry"
   cur_sc             :: obj_ref  -- "current scheduling context"
   reprogram_timer    :: bool     -- "whether we need to reprogram the timer on exit"
+  scheduler_action   :: scheduler_action
+  domain_list        :: "(domain \<times> time) list"
+  domain_index       :: nat
+  cur_domain         :: domain
+  domain_time        :: time
+  ready_queues       :: "domain \<Rightarrow> priority \<Rightarrow> ready_queue"
+  release_queue      :: release_queue
   machine_state      :: machine_state
   interrupt_irq_node :: "irq \<Rightarrow> obj_ref"
   interrupt_states   :: "irq \<Rightarrow> irq_state"
@@ -684,6 +717,14 @@ primrec (nonexhaustive)
   cap_bits_untyped :: "cap \<Rightarrow> nat"
 where
   "cap_bits_untyped (UntypedCap dev r s f) = s"
+
+definition
+  cap_badge :: "cap \<rightharpoonup> badge"
+where
+ "cap_badge cap \<equiv> case cap of
+    cap.EndpointCap r badge rights \<Rightarrow> Some badge
+  | cap.NotificationCap r badge rights \<Rightarrow> Some badge
+  | _ \<Rightarrow> None"
 
 definition tcb_cnode_map :: "tcb \<Rightarrow> cnode_index \<Rightarrow> cap option"
   where

@@ -88,9 +88,9 @@ where
      sc \<leftarrow> get_sched_context sc_ptr;
      tptr \<leftarrow> assert_opt $ sc_tcb sc;
      cur \<leftarrow> gets $ cur_thread;
-     when (tptr = cur) $ do_extended_op reschedule_required;
-     do_extended_op $ tcb_sched_action tcb_sched_dequeue tptr;
-     do_extended_op $ tcb_release_remove tptr;
+     when (tptr = cur) $ reschedule_required;
+     tcb_sched_action tcb_sched_dequeue tptr;
+     tcb_release_remove tptr;
      set_tcb_obj_ref tcb_sched_context_update tptr None;
      set_sc_obj_ref sc_tcb_update sc_ptr None
   od"
@@ -98,7 +98,7 @@ where
 text \<open>Donate a scheduling context.\<close>
 
 definition
-  test_reschedule :: "obj_ref \<Rightarrow> (unit, det_ext) s_monad"
+  test_reschedule :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "test_reschedule from_tptr = do
     cur \<leftarrow> gets $ cur_thread;
@@ -114,9 +114,9 @@ where
     from_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
     when (from_opt \<noteq> None) $ do
       from_tptr \<leftarrow> assert_opt $ from_opt;
-      do_extended_op $ tcb_sched_action tcb_sched_dequeue from_tptr;
+      tcb_sched_action tcb_sched_dequeue from_tptr;
       set_tcb_obj_ref tcb_sched_context_update from_tptr None;
-      do_extended_op $ test_reschedule from_tptr
+      test_reschedule from_tptr
     od;
     set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
     set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr)
@@ -312,16 +312,16 @@ text {*
   or be inserted. Here, we just require a sorted result.
 *}
 definition
-  sort_queue :: "obj_ref list \<Rightarrow> obj_ref list det_ext_monad"
+  sort_queue :: "obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad"
 where
   "sort_queue qs = do
-     prios \<leftarrow> mapM (ethread_get tcb_priority) qs;
+     prios \<leftarrow> mapM (thread_get tcb_priority) qs;
      return $ map snd $ sort_key (\<lambda>x.255 - (fst x)) (zip prios qs) (* 0 \<le> priority < 256 *)
    od"
 
 text {* Bring endpoint queue back into priority order *}
 definition
-  reorder_ep :: "obj_ref \<Rightarrow> unit det_ext_monad"
+  reorder_ep :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "reorder_ep ep_ptr = do
     ep \<leftarrow> get_endpoint ep_ptr;
@@ -340,7 +340,7 @@ where
 
 text {* Bring notification queue back into priority order *}
 definition
-  reorder_ntfn :: "obj_ref \<Rightarrow> unit det_ext_monad"
+  reorder_ntfn :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "reorder_ntfn ntfn_ptr = do
     ntfn \<leftarrow> get_notification ntfn_ptr;
@@ -351,7 +351,7 @@ where
 
 text {* Set new priority for a TCB *}
 definition
-  set_priority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, det_ext) s_monad" where
+  set_priority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "set_priority tptr prio \<equiv> do
      tcb_sched_action tcb_sched_dequeue tptr;
      thread_set_priority tptr prio;
@@ -366,13 +366,13 @@ definition
    od"
 
 definition
-  possible_switch_to :: "obj_ref \<Rightarrow> unit det_ext_monad" where
+  possible_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "possible_switch_to target \<equiv> do
      sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context target;
      inq \<leftarrow> gets $ in_release_queue target;
      when (sc_opt \<noteq> None \<and> \<not>inq) $ do
      cur_dom \<leftarrow> gets cur_domain;
-     target_dom \<leftarrow> ethread_get tcb_domain target;
+     target_dom \<leftarrow> thread_get tcb_domain target;
      action \<leftarrow> gets scheduler_action;
 
      if (target_dom \<noteq> cur_dom) then
@@ -407,9 +407,9 @@ where
               when (reply_opt \<noteq> None) $
                    reply_unlink_tcb (the reply_opt);
               set_thread_state t Restart;
-              do_extended_op (possible_switch_to t)
+              possible_switch_to t
             od) $ queue;
-         do_extended_op (reschedule_required)
+         reschedule_required
       od
    od"
 
@@ -435,7 +435,7 @@ where
                 st \<leftarrow> get_thread_state t;
                 if blocking_ipc_badge st = badge then do
                   set_thread_state t Restart;
-                  do_extended_op $ possible_switch_to t;
+                  possible_switch_to t;
                   return False
                 od
                 else return True
@@ -444,7 +444,7 @@ where
                            [] \<Rightarrow> IdleEP
                          | _ \<Rightarrow> SendEP queue');
             set_endpoint epptr ep';
-            do_extended_op (reschedule_required)
+            reschedule_required
         od
   od"
 
@@ -489,8 +489,8 @@ where
      case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> do
                       _ \<leftarrow> set_notification ntfnptr $ ntfn_obj_update (K IdleNtfn) ntfn;
                       mapM_x (\<lambda>t. do set_thread_state t Restart;
-                                     do_extended_op $ possible_switch_to t od) queue;
-                      do_extended_op (reschedule_required)
+                                     possible_switch_to t od) queue;
+                      reschedule_required
                      od
                | _ \<Rightarrow> return ()
    od"
