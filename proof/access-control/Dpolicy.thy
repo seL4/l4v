@@ -181,7 +181,8 @@ abbreviation
   "cdl_domains_of_state s \<equiv> cdl_domains_of_state_aux (cdl_objects s)"
 
 definition
-  "cdl_tcb_domain_map_wellformed_aux aag tcbs_doms \<equiv> \<forall>(ptr, d) \<in> tcbs_doms. pasObjectAbs aag ptr = pasDomainAbs aag d"
+  "cdl_tcb_domain_map_wellformed_aux aag tcbs_doms \<equiv>
+      \<forall>(ptr, d) \<in> tcbs_doms. pasObjectAbs aag ptr \<in> pasDomainAbs aag d"
 
 abbreviation
   "cdl_tcb_domain_map_wellformed aag s \<equiv>

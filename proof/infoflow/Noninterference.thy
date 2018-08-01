@@ -48,18 +48,20 @@ fun user_modes where
 definition sameFor_subject
   :: "'a subject_label auth_graph \<Rightarrow> 'a subject_label agent_map \<Rightarrow>
       'a subject_label agent_irq_map \<Rightarrow> 'a subject_label agent_asid_map  \<Rightarrow>
-      (domain \<Rightarrow> 'a subject_label) \<Rightarrow> 'a \<Rightarrow> (observable_if \<times> observable_if) set"
+      'a subject_label agent_domain_map \<Rightarrow> 'a \<Rightarrow> (observable_if \<times> observable_if) set"
 where
   "sameFor_subject g ab irqab asidab domainab l \<equiv>
     {(os,os') | os os' s s'.
              s = internal_state_if os \<and>
              s' = internal_state_if os' \<and>
-             states_equiv_for (\<lambda>x. ab x \<in> subjectReads g (OrdinaryLabel l))
-                              (\<lambda>x. irqab x \<in> subjectReads g (OrdinaryLabel l))
-                              (\<lambda>x. asidab x \<in> subjectReads g (OrdinaryLabel l))
-                              (\<lambda>x. domainab x \<in> subjectReads g (OrdinaryLabel l)) s s' \<and>
-             ((domainab (cur_domain s) \<in> subjectReads g (OrdinaryLabel l) \<or>
-                   domainab (cur_domain s') \<in> subjectReads g (OrdinaryLabel l)) \<longrightarrow>
+             states_equiv_for
+                 (\<lambda>x. ab x \<in> subjectReads g (OrdinaryLabel l))
+                 (\<lambda>x. irqab x \<in> subjectReads g (OrdinaryLabel l))
+                 (\<lambda>x. asidab x \<in> subjectReads g (OrdinaryLabel l))
+                 (\<lambda>x. domainab x \<inter> subjectReads g (OrdinaryLabel l) \<noteq> {})
+                 s s' \<and>
+             ((domainab (cur_domain s) \<inter> subjectReads g (OrdinaryLabel l) \<noteq> {} \<or>
+                   domainab (cur_domain s') \<inter> subjectReads g (OrdinaryLabel l) \<noteq> {}) \<longrightarrow>
                 (cur_domain s = cur_domain s' \<and> globals_equiv s s' \<and>
                 scheduler_action s = scheduler_action s' \<and>
                 work_units_completed s = work_units_completed s' \<and>
@@ -72,7 +74,7 @@ where
 definition sameFor_scheduler
   :: "'a subject_label auth_graph \<Rightarrow> 'a subject_label agent_map \<Rightarrow>
       'a subject_label agent_irq_map \<Rightarrow> 'a subject_label agent_asid_map \<Rightarrow>
-      (domain \<Rightarrow> 'a subject_label) \<Rightarrow> (observable_if \<times> observable_if) set"
+      'a subject_label agent_domain_map \<Rightarrow> (observable_if \<times> observable_if) set"
 where
   "sameFor_scheduler g ab irqab asidab domainab \<equiv>
    {(os,os') | os os' s s'.
@@ -94,7 +96,7 @@ text {*
 definition sameFor
   :: "'a subject_label auth_graph \<Rightarrow> 'a subject_label agent_map \<Rightarrow>
       'a subject_label agent_irq_map \<Rightarrow> 'a subject_label agent_asid_map \<Rightarrow>
-      (domain \<Rightarrow> 'a subject_label) \<Rightarrow> 'a partition  \<Rightarrow> (observable_if \<times> observable_if) set"
+      'a subject_label agent_domain_map \<Rightarrow> 'a partition  \<Rightarrow> (observable_if \<times> observable_if) set"
 where
   "sameFor g ab irqab asidab domainab d \<equiv>
                  case d of Partition l \<Rightarrow> sameFor_subject g ab irqab asidab domainab l |
@@ -149,8 +151,8 @@ lemma pasSubject_not_SilcLabel:
 
 (* needs silc_inv to ensure pasSubject is not SilcLabel *)
 lemma sameFor_reads_equiv_f_g:
-  "pasDomainAbs aag (cur_domain s) = pasSubject aag \<or>
-   pasDomainAbs aag (cur_domain s') = pasSubject aag \<Longrightarrow>
+  "pasSubject aag \<in> pasDomainAbs aag (cur_domain s) \<or>
+   pasSubject aag \<in> pasDomainAbs aag (cur_domain s') \<Longrightarrow>
    silc_inv aag st' st'' \<Longrightarrow>
    reads_equiv_f_g aag s s' \<Longrightarrow>
    (((uc,s),mode),((uc,s'),mode)) \<in> same_for aag (Partition (label_of (pasSubject aag)))"
@@ -243,7 +245,7 @@ lemma sameFor_reads_f_g_affects_equiv:
   apply clarsimp
   apply(clarsimp simp: affects_equiv_def2 sameFor_def)
   apply(clarsimp simp: sameFor_subject_def[where l=l])
-  apply(fastforce elim: states_equiv_for_guard_imp)
+  apply(blast intro: states_equiv_for_guard_imp)
   done
 
 
@@ -252,8 +254,9 @@ lemma schedule_reads_affects_equiv_sameFor:
     user_modes mode \<longrightarrow> uc = uc'\<rbrakk> \<Longrightarrow>
     (((uc,s),mode),((uc',s'),mode)) \<in> same_for aag (Partition l)"
   by (auto simp: scheduler_equiv_def scheduler_affects_equiv_def sameFor_def sameFor_subject_def
-             intro: globals_equiv_from_scheduler
-              simp: silc_dom_equiv_def reads_scheduler_def reads_lrefl domain_fields_equiv_def)
+                 silc_dom_equiv_def reads_scheduler_def reads_lrefl domain_fields_equiv_def
+                 intersection_empty Bex_def
+           intro: globals_equiv_from_scheduler)
 
 
 lemma globals_equiv_to_scheduler_globals_frame_equiv:
@@ -280,9 +283,9 @@ lemma sameFor_scheduler_affects_equiv:
                         reads_scheduler_def sameFor_scheduler_def
                         globals_equiv_to_exclusive_state_equiv)
   (* simplifying using sameFor_subject_def in assumptions causes simp to loop *)
-  apply (simp (no_asm_use) add: sameFor_subject_def)
-  apply(blast intro: globals_equiv_to_scheduler_globals_frame_equiv
-                     globals_equiv_to_exclusive_state_equiv globals_equiv_to_cur_thread_eq)
+  apply (simp (no_asm_use) add: sameFor_subject_def intersection_empty Bex_def)
+  apply (blast intro: globals_equiv_to_scheduler_globals_frame_equiv
+                      globals_equiv_to_exclusive_state_equiv globals_equiv_to_cur_thread_eq)
   done
 
 
@@ -725,6 +728,8 @@ lemma schedule_domain_fields:
   done
 
 lemma schedule_if_partitionIntegrity:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "\<lbrace>partitionIntegrity aag st and guarded_pas_domain aag and pas_cur_domain aag and
        (\<lambda>s. domain_time s \<noteq> 0) and silc_inv aag st and einvs and pas_refined aag\<rbrace>
      schedule_if tc
@@ -751,7 +756,7 @@ lemma schedule_if_partitionIntegrity:
            | simp
            | simp add: silc_inv_def partitionIntegrity_def guarded_pas_domain_def
                        invs_valid_idle invs_valid_ko_at_arm silc_dom_equiv_def)+
-    apply(fastforce simp: equiv_for_refl)
+    apply(fastforce simp: equiv_for_refl dest: domains_distinct[THEN pas_domains_distinct_inj])
    apply(fastforce simp: partitionIntegrity_def globals_equiv_scheduler_def)+
   done
 
@@ -1183,18 +1188,19 @@ lemma valid_sched_valid_blocked: "valid_sched s \<Longrightarrow> valid_blocked 
   by (simp add: valid_sched_def)
 
 lemma partitionIntegrity_subjectAffects_ready_queues:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "\<lbrakk>partitionIntegrity aag s s'; pas_refined aag s; valid_objs s;
     einvs s; einvs s'; pas_refined aag s'; pas_cur_domain aag s;
     pas_wellformed_noninterference aag; silc_inv aag st s;
     silc_inv aag st' s'; cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject aag (cur_thread s);
      cur_thread s' \<noteq> idle_thread s' \<longrightarrow> is_subject aag (cur_thread s');
     ready_queues s d \<noteq> ready_queues s' d\<rbrakk> \<Longrightarrow>
-   pasDomainAbs aag d
-     \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
-  apply clarsimp
+   pasDomainAbs aag d \<inter> subjectAffects (pasPolicy aag) (pasSubject aag) \<noteq> {}"
+  apply (clarsimp simp: intersection_empty)
   apply (frule valid_sched_valid_blocked[where s=s])
-  apply (case_tac "pasDomainAbs aag d = pasSubject aag")
-   apply (simp add: affects_lrefl)
+  apply (case_tac "pasSubject aag \<in> pasDomainAbs aag d")
+   apply (metis affects_lrefl)
   apply (drule fun_noteqD,clarsimp)
   apply (clarsimp simp add: partitionIntegrity_def)
   apply (frule_tac d=d and p=a in integrity_subjects_ready_queues[rule_format])
@@ -1207,20 +1213,24 @@ lemma partitionIntegrity_subjectAffects_ready_queues:
    apply simp
   apply clarsimp
   apply (frule(1) tcb_domain_wellformed)
-  apply (drule_tac t="pasDomainAbs aag (tcb_domain t)" in sym)
+  apply (rename_tac tcb_ptr tcbs tcb)
+  apply (rule_tac x = "pasObjectAbs aag tcb_ptr" in exI)
   apply simp
-  apply (case_tac "scheduler_action s = switch_thread x")
-   apply (drule switch_within_domain,simp+)
+  apply (case_tac "scheduler_action s = switch_thread tcb_ptr")
+   apply (drule switch_within_domain)
+     apply simp
+    apply simp
+   apply (fastforce dest: domains_distinct[THEN pas_domains_distinct_inj])
 
-  apply (case_tac "ekheap s x \<noteq> ekheap s' x")
+  apply (case_tac "ekheap s tcb_ptr \<noteq> ekheap s' tcb_ptr")
    apply (rule_tac s=s and s'=s' in partitionIntegrity_subjectAffects_eobj)
            apply (simp add: partitionIntegrity_def)+
-  apply (subgoal_tac "kheap s x \<noteq> kheap s' x")
+  apply (subgoal_tac "kheap s tcb_ptr \<noteq> kheap s' tcb_ptr")
    apply (rule partitionIntegrity_subjectAffects_obj)
            apply (fastforce simp add: partitionIntegrity_def valid_sched_def)+
-  apply (rule_tac threads="x # xs'" in ready_queues_alters_kheap)
+  apply (rule_tac threads="tcb_ptr # tcbs" in ready_queues_alters_kheap)
                apply (fastforce simp add: partitionIntegrity_def valid_sched_def)+
-   done
+  done
 
 lemma partitionIntegrity_subjectAffects_asid:
   "\<lbrakk>partitionIntegrity aag s s'; pas_refined aag s; valid_objs s; valid_arch_state s;
@@ -1277,9 +1287,9 @@ lemma sameFor_subject_def2:
     {(os,os')|os os' s s'. s = internal_state_if os \<and> s' = internal_state_if os' \<and>
               (\<forall> d \<in> subjectReads g (OrdinaryLabel l).
                           states_equiv_for (\<lambda>x. ab x = d) (\<lambda>x. irqab x  = d) (\<lambda>x. asidab x = d)
-                                           (\<lambda>x. domainab x = d) s s') \<and>
-              ((domainab (cur_domain s) \<in> subjectReads g (OrdinaryLabel l) \<or>
-                domainab (cur_domain s') \<in> subjectReads g (OrdinaryLabel l)) \<longrightarrow>
+                                           (\<lambda>x. d \<in> domainab x) s s') \<and>
+              ((domainab (cur_domain s) \<inter> subjectReads g (OrdinaryLabel l) \<noteq> {} \<or>
+                domainab (cur_domain s') \<inter> subjectReads g (OrdinaryLabel l) \<noteq> {}) \<longrightarrow>
                  cur_domain s = cur_domain s' \<and> globals_equiv s s' \<and>
                  scheduler_action s = scheduler_action s' \<and>
                  work_units_completed s = work_units_completed s' \<and>
@@ -1298,7 +1308,7 @@ lemma sameFor_subject_def2:
    apply(rule conjI)
     apply(rule ballI)
     apply(erule states_equiv_for_guard_imp)
-       apply(simp+)[4]
+       apply(blast+)[4]
    apply(fastforce simp: globals_equiv_def)
   apply(rule subsetI)
   apply(drule CollectD)
@@ -1354,6 +1364,8 @@ where
         cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject aag (cur_thread s)"
 
 lemma partsSubjectAffects_bounds_subjects_affects:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "\<lbrakk>partitionIntegrity aag s s'; pas_refined aag s; pas_refined aag s'; valid_objs s;
     valid_arch_state s'; einvs s; einvs s'; silc_inv aag st s; silc_inv aag st' s';
     pas_wellformed_noninterference aag; pas_cur_domain aag s;
@@ -1369,21 +1381,24 @@ lemma partsSubjectAffects_bounds_subjects_affects:
   apply(clarsimp simp: sameFor_def sameFor_subject_def2 states_equiv_for_def equiv_for_def
                        partsSubjectAffects_def image_def label_can_affect_partition_def)
   apply (safe del: iffI notI)
-             apply(fastforce dest: partitionIntegrity_subjectAffects_obj)
-             apply ((auto dest: partitionIntegrity_subjectAffects_obj
-                                partitionIntegrity_subjectAffects_eobj
-                                partitionIntegrity_subjectAffects_mem
-                                partitionIntegrity_subjectAffects_device
-                                partitionIntegrity_subjectAffects_cdt
-                                partitionIntegrity_subjectAffects_cdt_list
-                                partitionIntegrity_subjectAffects_is_original_cap
-                                partitionIntegrity_subjectAffects_interrupt_states
-                                partitionIntegrity_subjectAffects_interrupt_irq_node
-                                partitionIntegrity_subjectAffects_asid
-                                partitionIntegrity_subjectAffects_ready_queues
-                                                 [folded guarded_is_subject_cur_thread_def]
-                     | fastforce simp: partitionIntegrity_def silc_dom_equiv_def equiv_for_def)+)[11]
-  by ((fastforce intro: affects_lrefl simp: partitionIntegrity_def domain_fields_equiv_def)+)[16]
+                             apply(fastforce dest: partitionIntegrity_subjectAffects_obj)
+                            apply ((auto dest: partitionIntegrity_subjectAffects_obj
+                                               partitionIntegrity_subjectAffects_eobj
+                                               partitionIntegrity_subjectAffects_mem
+                                               partitionIntegrity_subjectAffects_device
+                                               partitionIntegrity_subjectAffects_cdt
+                                               partitionIntegrity_subjectAffects_cdt_list
+                                               partitionIntegrity_subjectAffects_is_original_cap
+                                               partitionIntegrity_subjectAffects_interrupt_states
+                                               partitionIntegrity_subjectAffects_interrupt_irq_node
+                                               partitionIntegrity_subjectAffects_asid
+                                               partitionIntegrity_subjectAffects_ready_queues
+                                                 [folded guarded_is_subject_cur_thread_def, OF domains_distinct]
+                                               domains_distinct[THEN pas_domains_distinct_inj]
+                                  | fastforce simp: partitionIntegrity_def silc_dom_equiv_def equiv_for_def)+)[11]
+                 apply ((fastforce intro: affects_lrefl simp: partitionIntegrity_def domain_fields_equiv_def
+                                   dest: domains_distinct[THEN pas_domains_distinct_inj])+)[16]
+  done
 
 lemma cur_thread_not_SilcLabel:
   "\<lbrakk>silc_inv aag st s; invs s\<rbrakk> \<Longrightarrow>
@@ -1410,9 +1425,9 @@ lemma ev_add_pre: "equiv_valid_inv I A P f \<Longrightarrow> equiv_valid_inv I A
 crunch invs[wp]: check_active_irq_if "einvs"
   (wp: dmo_getActiveIRQ_wp ignore: do_machine_op)
 
-definition partition :: "(domain \<Rightarrow> 'a subject_label) \<Rightarrow> det_state \<Rightarrow> 'a"
+definition partition :: "'a subject_label agent_domain_map \<Rightarrow> det_state \<Rightarrow> 'a"
 where
-  "partition ab s \<equiv> (label_of (ab (cur_domain s)))"
+  "partition ab s \<equiv> label_of (the_elem (ab (cur_domain s)))"
 
 
 crunch schact_is_rct[wp]: thread_set "schact_is_rct"
@@ -1536,34 +1551,47 @@ where
   "partition_if s \<equiv> partition (pasDomainAbs initial_aag) (internal_state_if s)"
 
 lemma pasDomainAbs_not_SilcLabel[simp]:
-  "pasDomainAbs initial_aag x \<noteq> SilcLabel"
+  "SilcLabel \<notin> pasDomainAbs initial_aag x"
   apply(rule pas_wellformed_noninterference_silc)
   apply(rule policy_wellformed)
   done
 
+lemma domain_in_ordinary_label[simp]:
+  "OrdinaryLabel (label_of (the_elem (pasDomainAbs initial_aag (cur_domain s)))) =
+   the_elem (pasDomainAbs initial_aag (cur_domain s))"
+  apply (case_tac "the_elem (pasDomainAbs initial_aag (cur_domain s))")
+   apply simp
+  apply (metis the_label_of_domain_exists pasDomainAbs_not_SilcLabel)
+  done
+
 lemma uwr_partition_if:
   "\<lbrakk>(os,os') \<in> uwr (Partition (partition_if os));
-    s = internal_state_if os; s' = internal_state_if os'\<rbrakk>
-   \<Longrightarrow> states_equiv_for
-        (\<lambda>x. pasObjectAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag)
-                                          (OrdinaryLabel (partition (pasDomainAbs initial_aag) s)))
-        (\<lambda>x. pasIRQAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag)
-                                       (OrdinaryLabel (partition (pasDomainAbs initial_aag) s)))
-        (\<lambda>x. pasASIDAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag)
-                                         (OrdinaryLabel (partition (pasDomainAbs initial_aag) s)))
-        (\<lambda>x. pasDomainAbs initial_aag x \<in> subjectReads (pasPolicy initial_aag)
-                                          (OrdinaryLabel (partition (pasDomainAbs initial_aag) s)))
-        s s' \<and>
-      ((cur_thread s = cur_thread s' \<and> cur_domain s = cur_domain s') \<and>
-        globals_equiv s s' \<and> scheduler_action s = scheduler_action s' \<and>
-        work_units_completed s = work_units_completed s' \<and>
-        irq_state (machine_state s) = irq_state (machine_state s') \<and>
-        (user_modes (sys_mode_of os) \<longrightarrow> user_context_of os = user_context_of os') \<and>
-        sys_mode_of os = sys_mode_of os' \<and>
-        equiv_for (\<lambda> x. pasObjectAbs initial_aag x = SilcLabel) kheap s s')"
+    s = internal_state_if os; s' = internal_state_if os'\<rbrakk> \<Longrightarrow>
+   states_equiv_for
+     (\<lambda>x. pasObjectAbs initial_aag x \<in>
+            subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s)))
+     (\<lambda>x. pasIRQAbs initial_aag x \<in>
+            subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s)))
+     (\<lambda>x. pasASIDAbs initial_aag x \<in>
+            subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s)))
+     (\<lambda>x. pasDomainAbs initial_aag x \<inter>
+              subjectReads (pasPolicy initial_aag) (OrdinaryLabel (partition (pasDomainAbs initial_aag) s))
+            \<noteq> {})
+     s s' \<and>
+   cur_thread s = cur_thread s' \<and> cur_domain s = cur_domain s' \<and>
+   globals_equiv s s' \<and> scheduler_action s = scheduler_action s' \<and>
+   work_units_completed s = work_units_completed s' \<and>
+   irq_state (machine_state s) = irq_state (machine_state s') \<and>
+   (user_modes (sys_mode_of os) \<longrightarrow> user_context_of os = user_context_of os') \<and>
+   sys_mode_of os = sys_mode_of os' \<and>
+   equiv_for (\<lambda>x. pasObjectAbs initial_aag x = SilcLabel) kheap s s'"
   apply(simp add: uwr_def sameFor_def sameFor_subject_def)
   apply(clarify | simp (no_asm_use) add: partition_def)+
-  apply(simp add: reads_lrefl globals_equiv_def)
+  apply (subst (asm) the_subject_of_aag_domain, rule subject_current_aag)+
+  apply (simp add: current_aag_def)
+  apply (erule impE)
+   using reads_lrefl subject_current_aag apply fastforce
+  apply (fastforce simp: globals_equiv_def)
   done
 
 
@@ -1604,7 +1632,9 @@ lemma pas_refined_initial_aag_reachable:
    pas_refined initial_aag (internal_state_if s)"
   apply(simp add: initial_aag_bak[where s="internal_state_if s"])
   apply(rule pas_refined_pasSubject_update[OF pas_refined_if pas_wellformed_cur])
-  apply assumption
+   apply assumption
+  apply (clarsimp simp: current_aag_def)
+  apply blast
   done
 
 lemma silc_inv_initial_aag_reachable:
@@ -1665,13 +1695,6 @@ lemma ct_running_not_ct_idle:
   apply auto
   done
 
-lemma ct_running_cur_thread_not_idle_thread:
-  "valid_idle s \<Longrightarrow> ct_running s \<Longrightarrow> cur_thread s \<noteq> idle_thread s"
-  apply(simp add: ct_in_state_def valid_idle_def)
-  apply(simp add: pred_tcb_at_def obj_at_def)
-  apply auto
-  done
-
 lemma do_user_op_A_if_partitionIntegrity:
   "((a, b), x, aa, ba) \<in> do_user_op_A_if uop \<Longrightarrow> ct_running b \<Longrightarrow> Invs b
   \<Longrightarrow> partitionIntegrity (current_aag b) b ba"
@@ -1681,9 +1704,10 @@ lemma do_user_op_A_if_partitionIntegrity:
   apply(simp add: partitionIntegrity_refl)
   apply(simp add: Invs_def)
   apply(clarsimp simp: guarded_pas_domain_def current_aag_def)
-  apply(erule mp[THEN sym])
-  apply(erule ct_running_cur_thread_not_idle_thread[rotated])
-  apply(simp add: invs_valid_idle)
+  apply(erule impE)
+   apply(erule ct_running_not_idle)
+    apply (simp add: invs_valid_idle)
+  apply (simp add: the_subject_of_aag_domain)
   done
 
 lemma partitionIntegrity_current_aag_eq:
@@ -1744,7 +1768,7 @@ lemma kernel_call_A_if_partitionIntegrity:
   apply(erule impE)
    apply(rule ct_active_cur_thread_not_idle_thread, simp add: invs_valid_idle)
    apply simp
-  apply(fastforce)
+  apply (simp add: the_subject_of_aag_domain)
   done
 
 lemma not_schedule_modes_KernelEntry:
@@ -1764,7 +1788,6 @@ lemma Step_ADT_A_if'':
   apply(simp add: system.Step_def execution_def steps_def ADT_A_if_def)
   done
 
-
 lemma small_Step_partitionIntegrity:
   notes active_from_running[simp]
   shows
@@ -1776,7 +1799,7 @@ lemma small_Step_partitionIntegrity:
        apply(simp_all add: part_def split: if_splits
               add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def | safe )+
           apply (fold_subgoals (prefix))[5]
-          subgoal premises prems by (fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def
+          subgoal by (fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def
             intro: user_small_Step_partitionIntegrity check_active_irq_A_if_partitionIntegrity)+
      apply (fastforce dest: ADT_A_if_reachable_invs_if
        simp: invs_if_def not_schedule_modes_KernelEntry
@@ -1786,7 +1809,7 @@ lemma small_Step_partitionIntegrity:
    apply(erule use_valid, wp, simp add: partitionIntegrity_refl)
   apply(clarsimp simp: kernel_schedule_if_def)
   apply(erule use_valid)
-   apply(wp schedule_if_partitionIntegrity)
+   apply(wp schedule_if_partitionIntegrity current_domains_distinct)
   apply(clarsimp simp: partitionIntegrity_refl)
   apply(drule ADT_A_if_reachable_invs_if)
   apply(clarsimp simp: invs_if_def Invs_def silc_inv_refl current_aag_def)
@@ -1915,8 +1938,7 @@ lemma Step_current_aag_unchanged:
     part s \<noteq> PSched\<rbrakk> \<Longrightarrow>
      current_aag (internal_state_if s') = current_aag (internal_state_if s)"
   apply(simp add: current_aag_def)
-  apply(rule_tac f="\<lambda>x. initial_aag\<lparr>pasSubject := pasDomainAbs initial_aag x\<rparr>" in arg_cong)
-  apply(blast intro: Step_cur_domain_unchanged)
+  apply(metis Step_cur_domain_unchanged)
   done
 
 lemma reachable_Step':
@@ -1945,6 +1967,7 @@ lemma integrity_part:
   apply(case_tac s, case_tac s', simp)
   apply(case_tac a, case_tac aa, simp)
   apply(rule partsSubjectAffects_bounds_subjects_affects)
+                 apply(rule current_domains_distinct)
                 apply(fastforce dest: Step_partitionIntegrity)
                apply(fastforce dest: pas_refined_initial_aag_reachable simp: pas_refined_cur)
               apply(frule(2) pas_refined_current_aag'[OF _ Step_current_aag_unchanged[symmetric],
@@ -1958,13 +1981,14 @@ lemma integrity_part:
         apply(fastforce dest: silc_inv_initial_aag_reachable[OF reachable_Step'] simp: silc_inv_cur)
        apply(rule pas_wellformed_cur)
       apply(simp add: current_aag_def)
-     apply(fastforce dest!: reachable_invs_if
-                      simp: invs_if_def Invs_def guarded_pas_domain_def
-                            guarded_is_subject_cur_thread_def current_aag_def)
-    apply(frule Step_current_aag_unchanged[symmetric];simp)
-    apply(fastforce dest!: reachable_invs_if[OF reachable_Step']
+     apply(fastforce dest!: reachable_invs_if domains_distinct[THEN pas_domains_distinct_inj]
                      simp: invs_if_def Invs_def guarded_pas_domain_def
                            guarded_is_subject_cur_thread_def current_aag_def)
+    apply(frule Step_current_aag_unchanged[symmetric];simp)
+    apply(fastforce dest!: reachable_invs_if[OF reachable_Step']
+                           domains_distinct[THEN pas_domains_distinct_inj]
+                    simp: invs_if_def Invs_def guarded_pas_domain_def
+                          guarded_is_subject_cur_thread_def current_aag_def)
    apply(rule partsSubjectAffects_bounds_those_subject_not_allowed_to_affect,
          simp add: part_def split: if_split_asm add: partition_def current_aag_def)
   apply assumption
@@ -2028,10 +2052,12 @@ lemma relation_preserved_across_sub_big_steps:
 (* FIXME: move these next lemmas culminating in reads_respects_g
    for activate_thread and schedule into Schedule_IF or similar *)
 lemma set_thread_state_runnable_reads_respects_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (valid_ko_at_arm and K (runnable ts)) (set_thread_state t ts)"
   apply(rule gen_asm_ev)
   apply(rule equiv_valid_guard_imp)
-   apply(rule reads_respects_g[OF set_thread_state_runnable_reads_respects])
+   apply(rule reads_respects_g[OF set_thread_state_runnable_reads_respects[OF domains_distinct]])
     apply assumption
    apply(rule doesnt_touch_globalsI)
    apply(wp set_thread_state_globals_equiv | simp)+
@@ -2062,6 +2088,8 @@ lemma get_thread_state_reads_respects_g:
   done
 
 lemma activate_thread_reads_respects_g:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l ((\<lambda>s. cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject aag (cur_thread s))
                            and invs) activate_thread"
   apply(simp add: activate_thread_def)
@@ -2159,33 +2187,28 @@ lemma arch_switch_to_thread_reads_respects_g':
 
 lemmas tcb_sched_action_reads_respects_g =
     reads_respects_g[OF tcb_sched_action_reads_respects,
-                     OF doesnt_touch_globalsI[where P="\<top>"],
+                     OF _ doesnt_touch_globalsI[where P="\<top>"],
                      simplified,
-                     OF tcb_sched_action_extended.globals_equiv]
+                     OF _ tcb_sched_action_extended.globals_equiv]
 
 
 lemma set_tcb_queue_reads_respects_g':
   "equiv_valid (reads_equiv_g aag) (\<lambda>s s'. affects_equiv aag l s s' \<and> exclusive_state_equiv s s')
                (\<lambda>s s'. affects_equiv aag l s s' \<and> exclusive_state_equiv s s') \<top>
                (set_tcb_queue d prio queu)"
-  "reads_respects aag l (\<lambda>_. True) (set_tcb_queue d prio queue)"
   unfolding equiv_valid_def2 equiv_valid_2_def
-  apply (clarsimp simp: set_tcb_queue_def bind_def modify_def put_def get_def)
-   apply ((rule conjI
-          | rule affects_equiv_ready_queues_update reads_equiv_ready_queues_update, assumption
-          | clarsimp simp: reads_equiv_g_def
-          | fastforce elim: affects_equivE reads_equivE
-                      simp: equiv_for_def globals_equiv_def idle_equiv_def)+)[1]
   apply (clarsimp simp: set_tcb_queue_def bind_def modify_def put_def get_def)
   apply ((rule conjI
          | rule affects_equiv_ready_queues_update reads_equiv_ready_queues_update, assumption
          | clarsimp simp: reads_equiv_g_def
-         | fastforce elim: affects_equivE reads_equivE
+         | fastforce elim!: affects_equivE reads_equivE
                      simp: equiv_for_def globals_equiv_def idle_equiv_def)+)
   done
 
 (* consider rewriting the return-value assumption using equiv_valid_rv_inv *)
 lemma ev2_invisible':
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "\<lbrakk>labels_are_invisible aag l L;
     labels_are_invisible aag l L';
     modifies_at_most aag L Q f;
@@ -2206,10 +2229,10 @@ lemma ev2_invisible':
   apply(drule_tac s=t in modifies_at_mostD, assumption+)
   apply(drule_tac s=s in globals_equivI, assumption+)
   apply(drule_tac s=t in globals_equivI, assumption+)
-  apply(frule (1) equiv_but_for_reads_equiv)
-  apply(frule_tac s=t in equiv_but_for_reads_equiv, assumption)
-  apply(drule (1) equiv_but_for_affects_equiv)
-  apply(drule_tac s=t in equiv_but_for_affects_equiv, assumption)
+  apply(frule (1) equiv_but_for_reads_equiv[OF domains_distinct])
+  apply(frule_tac s=t in equiv_but_for_reads_equiv[OF domains_distinct], assumption)
+  apply(drule (1) equiv_but_for_affects_equiv[OF domains_distinct])
+  apply(drule_tac s=t in equiv_but_for_affects_equiv[OF domains_distinct], assumption)
   apply(clarsimp simp: reads_equiv_g_def)
   apply(simp only: conj_assoc[symmetric])
   apply (rule conjI)
@@ -2231,6 +2254,8 @@ lemma set_tcb_queue_globals_equiv[wp]:
   done
 
 lemma tcb_sched_action_reads_respects_g':
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "equiv_valid (reads_equiv_g aag) (\<lambda>s s'. affects_equiv aag l s s' \<and> exclusive_state_equiv s s')
                (\<lambda>s s'. affects_equiv aag l s s' \<and> exclusive_state_equiv s s')
                (pas_refined aag) (tcb_sched_action action thread)"
@@ -2239,10 +2264,13 @@ lemma tcb_sched_action_reads_respects_g':
   apply (case_tac "aag_can_read aag thread \<or> aag_can_affect aag l thread")
    apply (simp add: ethread_get_def)
    apply (wp set_tcb_queue_reads_respects_g')
-         apply (rule_tac Q="\<lambda>s. pasObjectAbs aag thread = pasDomainAbs aag (tcb_domain rv)"
+         apply (rule_tac Q="\<lambda>s. pasObjectAbs aag thread \<in> pasDomainAbs aag (tcb_domain rv)"
                          in equiv_valid_guard_imp)
-          apply (wp gets_apply_ev')
-          apply (fastforce simp: reads_equiv_g_def elim: reads_equivE affects_equivE equiv_forE)
+         apply (wp gets_apply_ev')
+          apply (clarsimp simp: reads_equiv_g_def)
+          apply (elim reads_equivE affects_equivE equiv_forE)
+          apply (clarsimp simp: intersection_empty)
+          apply metis (* only one that works *)
          apply (wp | simp)+
    apply (intro conjI impI allI
          | fastforce simp: get_etcb_def reads_equiv_g_def
@@ -2276,6 +2304,8 @@ lemma tcb_sched_action_reads_respects_g':
   done
 
 lemma switch_to_thread_reads_respects_g:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (pas_refined aag and (\<lambda>s. is_subject aag t)) (switch_to_thread t)"
   apply(simp add: switch_to_thread_def)
   apply(subst bind_assoc[symmetric])
@@ -2291,6 +2321,8 @@ lemma switch_to_thread_reads_respects_g:
   done
 
 lemma guarded_switch_to_reads_respects_g:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (pas_refined aag and valid_idle and (\<lambda>s. is_subject aag t))
                     (guarded_switch_to t)"
   apply(simp add: guarded_switch_to_def)
@@ -2322,6 +2354,8 @@ lemma switch_to_idle_thread_reads_respects_g[wp]:
   done
 
 lemma choose_thread_reads_respects_g:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l ((\<lambda>s. cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject aag (cur_thread s)) and
                            einvs and valid_queues and pas_cur_domain aag and pas_refined aag)
                     choose_thread"
@@ -2330,14 +2364,16 @@ lemma choose_thread_reads_respects_g:
   apply(rule conjI)
    apply(fastforce simp: reads_equiv_g_def reads_equiv_def)
   apply(rule conjI)
-   apply(fastforce simp: reads_equiv_g_def reads_equiv_def2 states_equiv_for_def equiv_for_def)
+   apply (clarsimp simp: reads_equiv_g_def reads_equiv_def2 states_equiv_for_def equiv_for_def
+                         intersection_empty)
+   apply (metis reads_lrefl)
   apply (simp add: invs_valid_idle)
   (* everything from here clagged from Syscall_AC.choose_thread_respects *)
   apply (clarsimp simp: pas_refined_def)
   apply (clarsimp simp: tcb_domain_map_wellformed_aux_def)
   apply (erule_tac x="(hd (max_non_empty_queue (ready_queues s (cur_domain s))), cur_domain s)"
                    in ballE)
-   apply simp
+   apply (fastforce dest: domains_distinct[THEN pas_domains_distinct_inj])
   apply (clarsimp simp: valid_queues_def is_etcb_at_def)
   apply (erule_tac x="cur_domain s" in allE)
   apply (erule_tac x="Max {prio. ready_queues s (cur_domain s) prio \<noteq> []}" in allE)
@@ -2354,6 +2390,8 @@ lemma choose_thread_reads_respects_g:
   done
 
 lemma scheduler_action_switch_thread_is_subject:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "\<lbrakk>valid_sched s;
         pas_cur_domain aag s;
         pas_refined aag s\<rbrakk>
@@ -2370,7 +2408,7 @@ lemma scheduler_action_switch_thread_is_subject:
    apply(simp add: st_tcb_weakenE)
    apply(simp add: is_etcb_at_def split: option.splits)
    apply(fastforce elim: domains_of_state_aux.intros)
-  apply fastforce
+  apply(fastforce dest: domains_distinct[THEN pas_domains_distinct_inj])
   done
 
 lemma gets_app_rewrite:
@@ -2393,9 +2431,8 @@ lemma reads_equiv_valid_g_inv_schedule_switch_thread_fastfail:
   by (wpsimp wp: reads_respects_g_from_inv[OF reads_respects_ethread_get])
 
 lemma gets_apply_ready_queues_reads_respects':
-  "reads_respects aag l (\<lambda>_. pasDomainAbs aag d = pasSubject aag) (gets_apply ready_queues d)"
-  apply (rule gets_apply_ev')
-  apply (fastforce elim: reads_equivE simp: equiv_for_def)
+  "reads_respects aag l (\<lambda>_. pasSubject aag \<in> pasDomainAbs aag d) (gets_apply ready_queues d)"
+  apply (rule gets_apply_ready_queues_reads_respects)
   done
 
 lemma gets_ev_blah:
@@ -2406,17 +2443,20 @@ lemma gets_ev_blah:
   done
 
 lemma reads_respects_gets_ready_queues:
-  "reads_respects aag l (\<lambda>s. pasDomainAbs aag d = pasSubject aag)
+  "reads_respects aag l (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag d)
      (gets (\<lambda>s. f (ready_queues s d)))"
-  by (wp gets_ev_blah)
-     (fastforce elim: reads_equivE simp: equiv_for_def)
+  apply (wp gets_ev_blah)
+  apply (force elim: reads_equivE simp: equiv_for_def)
+  done
 
 lemma reads_respects_is_highest_prio:
-  "reads_respects aag l (\<lambda>s. pasDomainAbs aag d = pasSubject aag)
+  "reads_respects aag l (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag d)
      (gets (\<lambda>s. is_highest_prio d p s))"
   by (fastforce simp: is_highest_prio_def intro: reads_respects_gets_ready_queues)
 
 lemma schedule_choose_new_thread_reads_respects_g:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l
      ((\<lambda>s. domain_time s \<noteq> 0) and einvs
         and pas_cur_domain aag and pas_refined aag
@@ -2439,7 +2479,20 @@ lemma reads_respects_ethread_get_when:
   apply wp
   done
 
+text {* strengthening of @{thm Syscall_AC.valid_sched_action_switch_subject_thread} *}
+lemma valid_sched_action_switch_is_subject:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
+   "\<lbrakk> scheduler_action s = switch_thread t ; valid_sched_action s ;
+      valid_etcbs s ; pas_refined aag s ; pas_cur_domain aag s \<rbrakk>
+    \<Longrightarrow> is_subject aag t"
+  apply (fastforce dest: valid_sched_action_switch_subject_thread
+                         domains_distinct[THEN pas_domains_distinct_inj])
+  done
+
 lemma schedule_reads_respects_g:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l
     ((\<lambda>s. cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject aag (cur_thread s)) and einvs
      and pas_cur_domain aag and (\<lambda>s. domain_time s \<noteq> 0) and pas_refined aag) schedule"
@@ -2479,7 +2532,7 @@ lemma schedule_reads_respects_g:
 
   apply (clarsimp simp: invs_valid_idle)
   apply (intro allI conjI impI ; (elim conjE)?
-         ; (solves \<open>clarsimp simp: valid_sched_def valid_sched_action_switch_is_subject
+         ; (solves \<open>clarsimp simp: valid_sched_def valid_sched_action_switch_is_subject[OF domains_distinct]
                              dest!: reads_equiv_gD intro!: globals_equiv_idle_thread_ptr\<close>)?)
                     apply (tactic {* distinct_subgoals_tac *})
               apply (all \<open>(erule requiv_g_cur_thread_eq)?\<close>)
@@ -2491,6 +2544,8 @@ lemma schedule_reads_respects_g:
   done
 
 lemma schedule_if_reads_respects_g:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (einvs and pas_cur_domain aag and guarded_pas_domain aag and
                            (\<lambda>s. domain_time s > 0) and pas_refined aag)
                     (schedule_if tc)"
@@ -2500,7 +2555,7 @@ lemma schedule_if_reads_respects_g:
                   in hoare_strengthen_post)
     apply (wp schedule_guarded_pas_domain schedule_cur_domain
           | simp add: guarded_pas_domain_def
-          | fastforce)+
+          | fastforce dest: domains_distinct[THEN pas_domains_distinct_inj])+
   done
 
 lemma do_user_op_if_reads_respects_g:
@@ -2513,20 +2568,19 @@ lemma do_user_op_if_reads_respects_g:
    using utf_det
    apply fastforce
   apply simp
-  apply (rule ct_running_cur_thread_not_idle_thread)
-   apply (simp add: invs_valid_idle)
-  apply simp
+  apply (rule ct_running_not_idle)
+   apply simp
+  apply (simp add: invs_valid_idle)
   done
 
 lemma sameFor_current_partition_sys_mode_of_eq:
-  "\<lbrakk>(s, t)
-         \<in> sameFor_subject (pasPolicy initial_aag) (pasObjectAbs initial_aag)
-            (pasIRQAbs initial_aag) (pasASIDAbs initial_aag)
-            (pasDomainAbs initial_aag) a;
-         label_of (pasDomainAbs initial_aag (cur_domain (internal_state_if t))) = a;
-         pasDomainAbs initial_aag (cur_domain (internal_state_if s)) =
-         OrdinaryLabel a\<rbrakk>
-        \<Longrightarrow> sys_mode_of s = sys_mode_of t"
+  "\<lbrakk> (s, t) \<in> sameFor_subject
+                (pasPolicy initial_aag) (pasObjectAbs initial_aag)
+                (pasIRQAbs initial_aag) (pasASIDAbs initial_aag)
+                (pasDomainAbs initial_aag) a;
+     label_of (the_elem (pasDomainAbs initial_aag (cur_domain (internal_state_if t)))) = a;
+     OrdinaryLabel a \<in> pasDomainAbs initial_aag (cur_domain (internal_state_if s)) \<rbrakk>
+   \<Longrightarrow> sys_mode_of s = sys_mode_of t"
   apply(simp add: sameFor_subject_def2)
   apply clarify
   apply(erule impE)
@@ -2538,11 +2592,12 @@ lemma uwr_part_sys_mode_of_eq:
   "\<lbrakk>(s,t) \<in> uwr (part s); part t = part s; part s \<noteq> PSched\<rbrakk> \<Longrightarrow> sys_mode_of s = sys_mode_of t"
   apply(simp add: part_def split: if_split_asm)
   apply(simp add: partition_def)
-  apply(cut_tac x= "(cur_domain (internal_state_if s))" in pas_wellformed_noninterference_silc[OF policy_wellformed])
-  apply(case_tac "pasDomainAbs initial_aag (cur_domain (internal_state_if s))")
+  apply(cut_tac pas_wellformed_noninterference_silc[OF policy_wellformed, where d="cur_domain (internal_state_if s)"])
+  apply(case_tac "the_elem (pasDomainAbs initial_aag (cur_domain (internal_state_if s)))")
    apply(simp add: uwr_def sameFor_def)
-   apply(blast intro: sameFor_current_partition_sys_mode_of_eq)
-  apply blast
+   apply (erule (1) sameFor_current_partition_sys_mode_of_eq)
+   apply (metis the_subject_of_aag_domain subject_current_aag)
+  apply (metis the_label_of_domain_exists)
   done
 
 
@@ -2844,7 +2899,7 @@ lemma do_user_op_A_if_confidentiality:
      apply(subgoal_tac "current_aag y = current_aag ya")
       apply simp
       apply (match premises in "t = ((_,q),_)" and H: "invs q" for q \<Rightarrow>
-              \<open>rule revcut_rl[OF ct_running_cur_thread_not_idle_thread[OF invs_valid_idle[OF H]]]\<close>)
+              \<open>rule revcut_rl[OF ct_running_not_idle[OF _ invs_valid_idle[OF H]]]\<close>)
        apply assumption
       apply (match premises in "t = ((_,q),_)" for q \<Rightarrow>
               \<open>rule revcut_rl[OF current_aag_def[where t=q]]\<close>)
@@ -2860,7 +2915,7 @@ lemma do_user_op_A_if_confidentiality:
      apply(erule use_valid[OF _ do_user_op_if_partitionIntegrity])
      apply(erule use_valid[OF _ check_active_irq_if_wp])
      apply(clarsimp)
-     apply(frule (1) ct_running_cur_thread_not_idle_thread[OF invs_valid_idle])
+     apply(frule (1) ct_running_not_idle[OF _ invs_valid_idle])
      apply (rule guarded_pas_is_subject_current_aag[rule_format])
        apply (simp only: active_from_running)+
     apply simp
@@ -2869,7 +2924,7 @@ lemma do_user_op_A_if_confidentiality:
     apply(clarsimp)
     apply(clarsimp simp: invs_if_def Invs_def)
     apply (match premises in "t = ((_,q),_)" and H: "invs q" for q \<Rightarrow>
-            \<open>rule revcut_rl[OF ct_running_cur_thread_not_idle_thread[OF invs_valid_idle[OF H]]]\<close>)
+            \<open>rule revcut_rl[OF ct_running_not_idle[OF _ invs_valid_idle[OF H]]]\<close>)
      apply assumption
     apply (rule guarded_pas_is_subject_current_aag[rule_format])
       apply (simp only: active_from_running)+
@@ -2895,7 +2950,7 @@ lemma do_user_op_A_if_confidentiality':
 
 lemmas schedule_if_reads_respects_f_g =
          reads_respects_f_g'[where Q="\<top>", simplified, OF schedule_if_reads_respects_g,
-                             OF schedule_if_silc_inv]
+                             OF _ schedule_if_silc_inv]
 
 lemma part_not_PSched_sys_mode_of_not_KernelSchedule_True:
   "part s \<noteq> PSched \<Longrightarrow> sys_mode_of s \<noteq> KernelSchedule True"
@@ -2921,8 +2976,9 @@ lemma kernel_schedule_if_confidentiality:
   apply(simp split: prod.splits)
   apply(case_tac s', case_tac t')
   apply(simp add: split_paired_all)
-  apply(frule_tac s=x2 and t=x2a and aag1="current_aag x2"
-               in use_ev[OF schedule_if_reads_respects_f_g[where st=s0_internal]])
+  apply(frule_tac s=x2 and t=x2a and s2=x2
+               in use_ev[OF schedule_if_reads_respects_f_g
+                              [where st=s0_internal, OF current_domains_distinct]])
        apply assumption
       apply(clarsimp simp: invs_if_def Invs_def current_aag_def)
      apply(clarsimp simp: invs_if_def Invs_def)
@@ -2936,10 +2992,10 @@ lemma kernel_schedule_if_confidentiality:
        apply(fastforce simp: invs_if_def Invs_def)
       apply simp
      apply simp
-     apply(erule use_valid[OF _ schedule_if_partitionIntegrity])
+     apply(erule use_valid[OF _ schedule_if_partitionIntegrity[OF current_domains_distinct]])
      apply(clarsimp simp: partitionIntegrity_refl invs_if_def Invs_def current_aag_def silc_inv_refl)
     apply simp
-    apply(erule use_valid[OF _ schedule_if_partitionIntegrity])
+    apply(erule use_valid[OF _ schedule_if_partitionIntegrity[OF current_domains_distinct]])
     apply(clarsimp simp: partitionIntegrity_refl invs_if_def Invs_def current_aag_def silc_inv_refl)
    apply(simp add: sys_mode_of_def)
   apply(simp add: user_context_of_def)
@@ -2969,11 +3025,13 @@ lemma thread_set_tcb_context_update_runnable_globals_equiv:
   done
 
 lemma thread_set_tcb_context_update_reads_respects_g:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (st_tcb_at runnable t and invs)
                     (thread_set (tcb_arch_update (arch_tcb_context_set uc)) t)"
   apply(rule equiv_valid_guard_imp)
    apply(rule reads_respects_g)
-    apply(rule thread_set_reads_respects)
+    apply(rule thread_set_reads_respects[OF domains_distinct])
    apply(rule doesnt_touch_globalsI)
    apply(wp thread_set_tcb_context_update_runnable_globals_equiv)
    apply simp+
@@ -2990,9 +3048,11 @@ lemma thread_set_tcb_context_update_silc_inv:
 lemmas thread_set_tcb_context_update_reads_respects_f_g =
                 reads_respects_f_g'[where Q="\<top>", simplified,
                                     OF thread_set_tcb_context_update_reads_respects_g,
-                                    OF thread_set_tcb_context_update_silc_inv]
+                                    OF _ thread_set_tcb_context_update_silc_inv]
 
 lemma kernel_entry_if_reads_respects_f_g:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f_g aag l (ct_active and silc_inv aag st
                                        and einvs
                                        and only_timer_irq_inv irq st'
@@ -3017,7 +3077,8 @@ lemma kernel_entry_if_reads_respects_f_g:
   apply(rule conjI)
    apply(fastforce dest: requiv_g_cur_thread_eq simp: reads_equiv_f_g_def)
   apply(clarsimp simp: guarded_pas_domain_def)
-  apply(fastforce simp: only_timer_irq_inv_def invs_valid_idle)
+  apply(fastforce simp: only_timer_irq_inv_def invs_valid_idle
+                  dest: domains_distinct[THEN pas_domains_distinct_inj])
   done
 
 
@@ -3041,8 +3102,9 @@ lemma kernel_call_A_if_confidentiality:
   apply(case_tac s, case_tac t, simp_all)
   apply(case_tac u, simp_all)
   apply(frule (6) uwr_reads_equiv_f_g_affects_equiv)
-  apply(frule_tac s=b and t=ba and aag1="current_aag b"
-               in use_ev[OF kernel_entry_if_reads_respects_f_g[where st=s0_internal]])
+  apply(frule_tac s=b and t=ba and s2=b
+               in use_ev[OF kernel_entry_if_reads_respects_f_g
+                              [where st=s0_internal, OF current_domains_distinct]])
        apply assumption
       apply(clarsimp simp: invs_if_def Invs_def current_aag_def schact_is_rct_def)
       apply assumption
@@ -3061,12 +3123,18 @@ lemma kernel_call_A_if_confidentiality:
      apply(clarsimp simp: partitionIntegrity_refl invs_if_def Invs_def current_aag_def
                           silc_inv_refl schact_is_rct_def guarded_pas_domain_def
                           ct_active_cur_thread_not_idle_thread[OF invs_valid_idle])
+     (* XXX: the conjI is needed here -- metis won't instantiate a schematic var *)
+     apply(rule conjI)
+      apply (metis the_subject_of_aag_domain)
      apply assumption
     apply simp
     apply(erule use_valid[OF _ kernel_entry_if_partitionIntegrity])
     apply(clarsimp simp: partitionIntegrity_refl invs_if_def Invs_def current_aag_def
                          silc_inv_refl schact_is_rct_def guarded_pas_domain_def
                          ct_active_cur_thread_not_idle_thread[OF invs_valid_idle])
+     (* XXX: and here *)
+    apply(rule conjI)
+     apply (metis the_subject_of_aag_domain)
     apply assumption
    apply(simp add: sys_mode_of_def)
   apply(simp add: user_context_of_def)
@@ -3189,7 +3257,8 @@ lemma reads_equiv_g_ct_running_eq:
    apply(drule invs_valid_idle)+
    apply(clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def valid_idle_def)
   apply(clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-  apply(fastforce simp: Invs_def guarded_pas_domain_def dest: is_subject_kheap_eq simp: current_aag_def)
+  apply(fastforce simp: Invs_def guarded_pas_domain_def simp: current_aag_def
+                  dest: is_subject_kheap_eq domains_distinct[THEN pas_domains_distinct_inj])
   done
 
 lemma kernel_exit_A_if_confidentiality:
@@ -3212,10 +3281,12 @@ lemma kernel_exit_A_if_confidentiality:
   apply(case_tac "fst t'", simp)
   apply(frule_tac s=x2 and t=x2a and aag1="current_aag x2" in use_ev2[OF kernel_exit_if_reads_respects_f_g_2[where st=s0_internal]])
        apply assumption
-      subgoal by (clarsimp simp: invs_if_def Invs_def current_aag_def guarded_pas_domain_def)
+      apply(clarsimp simp: invs_if_def Invs_def current_aag_def guarded_pas_domain_def)
+      apply(metis the_subject_of_aag_domain)
      apply(clarsimp simp: invs_if_def Invs_def)
      apply(drule uwr_PSched_cur_domain)
-     subgoal by (clarsimp simp: current_aag_def guarded_pas_domain_def)
+     apply(clarsimp simp: current_aag_def guarded_pas_domain_def)
+     apply(metis the_subject_of_aag_domain)
     apply simp
    apply fastforce
   apply simp
@@ -3642,15 +3713,17 @@ qed
 
 
 lemma preemption_interrupt_scheduler_invisible:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
     "equiv_valid_2 (scheduler_equiv aag) (scheduler_affects_equiv aag l)
       (scheduler_affects_equiv aag l) (\<lambda>r r'. r = uc \<and> snd r' = uc')
       (einvs and pas_refined aag and guarded_pas_domain aag and domain_sep_inv False st and
          silc_inv aag st' and (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s) and
-         (\<lambda>s. ct_idle s \<longrightarrow> uc = idle_context s) and (\<lambda>s. \<not> is_domain aag l s) and
+         (\<lambda>s. ct_idle s \<longrightarrow> uc = idle_context s) and (\<lambda>s. \<not> reads_scheduler_cur_domain aag l s) and
          guarded_pas_domain aag)
       (einvs and pas_refined aag and guarded_pas_domain aag and domain_sep_inv False st and
          silc_inv aag st' and  (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s) and
-         (\<lambda>s. ct_idle s \<longrightarrow> uc' = idle_context s) and (\<lambda>s. \<not> is_domain aag l s) and
+         (\<lambda>s. ct_idle s \<longrightarrow> uc' = idle_context s) and (\<lambda>s. \<not> reads_scheduler_cur_domain aag l s) and
          guarded_pas_domain aag)
       (handle_preemption_if uc)
       (kernel_entry_if Interrupt uc')"
@@ -3696,6 +3769,8 @@ lemma handle_preemption_agnostic_ret:
 
 
 lemma handle_preemption_reads_respects_scheduler:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_scheduler aag l (einvs and pas_refined aag and guarded_pas_domain aag and
                                    domain_sep_inv False st and silc_inv aag st' and
                                    (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s))
@@ -3713,15 +3788,18 @@ lemmas handle_preemption_reads_respects_scheduler_2 =
 
 
 lemma kernel_entry_scheduler_equiv_2:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
     "equiv_valid_2 (scheduler_equiv aag) (scheduler_affects_equiv aag l)
        (scheduler_affects_equiv aag l) (\<lambda>r r'. snd r = uc \<and> snd r' = uc')
        (einvs and pas_refined aag and guarded_pas_domain aag and domain_sep_inv False st and
           silc_inv aag st' and (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s) and
-          (\<lambda>s. ct_idle s \<longrightarrow> uc = idle_context s) and (\<lambda>s. is_domain aag l s \<longrightarrow> uc = uc'))
+          (\<lambda>s. ct_idle s \<longrightarrow> uc = idle_context s) and
+          (\<lambda>s. reads_scheduler_cur_domain aag l s \<longrightarrow> uc = uc'))
        (einvs and pas_refined aag and guarded_pas_domain aag and domain_sep_inv False st and
           silc_inv aag st' and  (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s) and
           (\<lambda>s. ct_idle s \<longrightarrow> uc' = idle_context s) and
-          (\<lambda>s. is_domain aag l s \<longrightarrow> uc = uc'))
+          (\<lambda>s. reads_scheduler_cur_domain aag l s \<longrightarrow> uc = uc'))
        (kernel_entry_if Interrupt uc) (kernel_entry_if Interrupt uc')"
   apply (simp add: kernel_entry_if_def)
   apply (simp add: bind_assoc[symmetric])
@@ -3745,6 +3823,8 @@ lemma kernel_entry_scheduler_equiv_2:
 
 (*Probably not needed*)
 lemma kernel_entry_if_reads_respects_scheduler:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "valid_exclusive_state
       \<Longrightarrow> reads_respects_scheduler aag l (einvs and pas_refined aag and guarded_pas_domain aag and
           domain_sep_inv False st and silc_inv aag st' and
@@ -3768,7 +3848,7 @@ lemma kernel_entry_if_reads_respects_scheduler:
                   | simp add:  arch_tcb_update_aux2
                   | elim conjE)+)[3]
         apply ((wp | simp add:  arch_tcb_update_aux2 | elim conjE)+)[2]
-      apply (clarsimp simp: guarded_pas_domain_def)
+      apply (clarsimp simp: guarded_pas_domain_def intersection_empty)
      apply (( wp thread_set_invs_trivial guarded_pas_domain_lift hoare_vcg_all_lift
                   thread_set_pas_refined thread_set_not_state_valid_sched
             | simp add: tcb_cap_cases_def  arch_tcb_update_aux2)+)
@@ -3833,6 +3913,7 @@ lemma internal_state_s0: "internal_state_if s0 = s0_internal"
   apply (simp add: s0_def)
   done
 
+(* FIXME: wat *)
 (*Lets pretend PSched is labeled with SilcLabel*)
 fun label_for_partition where
    "label_for_partition (Partition a) = (OrdinaryLabel a)"
@@ -3862,7 +3943,7 @@ lemma scheduler_affects_equiv_uwr:
   assumes imodes: "interrupted_modes (sys_mode_of s) = interrupted_modes (sys_mode_of s')"
   assumes smodes: "scheduler_modes (sys_mode_of s) = scheduler_modes (sys_mode_of s')"
   assumes dom_context:"
-   (is_domain initial_aag (label_for_partition u) (internal_state_if s) \<longrightarrow>
+   (reads_scheduler_cur_domain initial_aag (label_for_partition u) (internal_state_if s) \<longrightarrow>
      (user_modes (sys_mode_of s) \<longrightarrow> user_context_of s = user_context_of s') \<and>
      sys_mode_of s = sys_mode_of s')"
   shows "(s,s') \<in> uwr u"
@@ -3873,7 +3954,7 @@ lemma scheduler_affects_equiv_uwr:
    apply (rule schedule_reads_affects_equiv_sameFor_PSched')
      apply (simp add: schedeq imodes smodes)+
   apply (insert schedeq dom_context)
-  apply (case_tac "is_domain initial_aag (label_for_partition u) (internal_state_if s)")
+  apply (case_tac "reads_scheduler_cur_domain initial_aag (label_for_partition u) (internal_state_if s)")
    apply simp
    apply (frule_tac s="internal_state_if s" and mode="sys_mode_of s" and uc="user_context_of s"
                 and uc'="user_context_of s'" and aag="initial_aag"
@@ -3891,12 +3972,14 @@ lemma scheduler_affects_equiv_uwr:
   apply (case_tac s)
   apply clarsimp
   apply (case_tac s')
-  apply clarsimp
-   done
+  apply (clarsimp simp: intersection_empty)
+  apply metis
+  done
 
 
 lemma cur_domain_reads:
-  "(s,s') \<in> uwr u \<Longrightarrow> is_domain initial_aag (label_for_partition u) (internal_state_if s) \<Longrightarrow>
+  "(s,s') \<in> uwr u \<Longrightarrow>
+   reads_scheduler_cur_domain initial_aag (label_for_partition u) (internal_state_if s) \<Longrightarrow>
     (user_modes (sys_mode_of s) \<longrightarrow> user_context_of s = user_context_of s') \<and>
     sys_mode_of s = sys_mode_of s'"
   apply (case_tac u)
@@ -3934,7 +4017,8 @@ lemma scheduler_step_1_confidentiality:
      apply (rule equiv_valid_2E[where s="internal_state_if s" and t="internal_state_if t",
                                 OF kernel_entry_scheduler_equiv_2[
                                          where aag="initial_aag" and st="s0_internal"
-                                           and st'="s0_internal" and l="label_for_partition u"]],
+                                           and st'="s0_internal" and l="label_for_partition u",
+                                         OF domains_distinct]],
             assumption,assumption)
         apply (rule uwr_scheduler_affects_equiv,assumption+)
        apply ((clarsimp simp: blob)+)[2]
@@ -3949,12 +4033,28 @@ lemma scheduler_step_1_confidentiality:
              preemption_interrupt_scheduler_invisible[
                where aag="initial_aag" and st="s0_internal" and st'="s0_internal" and
                      uc="user_context_of t" and uc'="user_context_of s" and
-                     l="label_for_partition u"],
+                     l="label_for_partition u",
+               OF domains_distinct],
           OF scheduler_equiv_sym scheduler_affects_equiv_sym scheduler_affects_equiv_sym,
           simplified]])
          apply (fastforce+)[2]
        apply (rule uwr_scheduler_affects_equiv,assumption+)
-      apply ((clarsimp simp: blob)+)[2]
+      (* FIXME: manual frule *)
+      apply (clarsimp simp: blob)
+      (* this restores normal form for reads_scheduler_cur_domain *)
+      apply (rule ccontr[where P = "_ \<inter> _ = {}"])
+      apply (frule (1) domain_can_read_context[where u = u])
+      apply (frule domain_can_read_context'[where u = u])
+       apply (metis uwr_PSched_cur_domain)
+      apply (frule (1) domain_can_read_sys_mode[where u = u, simplified sys_mode_of_def])
+      apply force
+     apply (clarsimp simp: blob)
+     apply (rule ccontr[where P = "_ \<inter> _ = {}"])
+     apply (frule (1) domain_can_read_context'[where u = u])
+     apply (frule domain_can_read_context[where u = u])
+      apply (metis uwr_PSched_cur_domain)
+     apply (frule (1) domain_can_read_sys_mode'[where u = u, simplified sys_mode_of_def])
+     apply force
     apply (rule scheduler_affects_equiv_uwr,simp+)
     apply (clarsimp simp: blob)
    apply (rule_tac s=t and s'=t' in interrupt_step,simp_all)
@@ -3962,16 +4062,33 @@ lemma scheduler_step_1_confidentiality:
                                OF preemption_interrupt_scheduler_invisible
                                              [where aag="initial_aag" and st="s0_internal"
                                                 and st'="s0_internal" and uc="user_context_of s"
-                                                and l="label_for_partition u" ]],
+                                                and l="label_for_partition u",
+                                              OF domains_distinct]],
            assumption,assumption)
        apply (rule uwr_scheduler_affects_equiv,assumption+)
-      apply ((clarsimp simp: blob)+)[2]
+      (* FIXME: also clean up here *)
+      apply (clarsimp simp: blob)
+      apply (rule ccontr[where P = "_ \<inter> _ = {}"])
+      apply (frule (1) domain_can_read_context[where u = u])
+      apply (frule domain_can_read_context'[where u = u])
+       apply (metis uwr_PSched_cur_domain)
+      apply (frule (1) domain_can_read_sys_mode[where u = u, simplified sys_mode_of_def])
+      apply force
+     (* FIXME: and here *)
+     apply (clarsimp simp: blob)
+     apply (rule ccontr[where P = "_ \<inter> _ = {}"])
+     apply (frule (1) domain_can_read_context'[where u = u])
+     apply (frule domain_can_read_context[where u = u])
+      apply (metis uwr_PSched_cur_domain)
+     apply (frule (1) domain_can_read_sys_mode'[where u = u, simplified sys_mode_of_def])
+     apply force
     apply (rule scheduler_affects_equiv_uwr,simp+)
     apply (clarsimp simp: blob)
    apply (rule equiv_valid_2E[where s="internal_state_if s" and t="internal_state_if t",
                               OF handle_preemption_reads_respects_scheduler_2
                                         [where aag="initial_aag" and st="s0_internal"
-                                           and st'="s0_internal" and l="label_for_partition u"]],
+                                           and st'="s0_internal" and l="label_for_partition u",
+                                         OF domains_distinct]],
           assumption,assumption)
       apply (rule uwr_scheduler_affects_equiv,assumption+)
      apply ((clarsimp simp: blob)+)[2]
@@ -4005,7 +4122,10 @@ lemma schedule_step:
 
 
 
-lemma schedule_if_reads_respects_scheduler: "reads_respects_scheduler aag l
+lemma schedule_if_reads_respects_scheduler:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "reads_respects_scheduler aag l
    (einvs and pas_refined aag and silc_inv aag st and guarded_pas_domain aag and
     tick_done)
    (schedule_if uc)"
@@ -4047,7 +4167,8 @@ lemma scheduler_step_2_confidentiality:
   apply (rule equiv_valid_2E[where s="internal_state_if s" and t="internal_state_if t",
                              OF schedule_if_reads_respects_scheduler_2
                                             [where aag="initial_aag" and st="s0_internal"
-                                               and l="label_for_partition u"]],
+                                               and l="label_for_partition u",
+                                             OF domains_distinct]],
          assumption,assumption)
       apply (rule uwr_scheduler_affects_equiv,simp+)
     apply ((clarsimp simp: blob)+)[2]

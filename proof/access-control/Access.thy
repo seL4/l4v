@@ -39,6 +39,7 @@ the grant bit set.
 type_synonym 'a agent_map = "obj_ref \<Rightarrow> 'a"
 type_synonym 'a agent_asid_map = "asid \<Rightarrow> 'a"
 type_synonym 'a agent_irq_map = "10 word \<Rightarrow> 'a"
+type_synonym 'a agent_domain_map = "domain \<Rightarrow> 'a set"
 
 text{*
 
@@ -94,6 +95,10 @@ establishing some of the proof obligations for the infoflow proofs, particularly
 those over @{const handle_event} that neither activates new threads nor schedules
 new domains.
 
+The @{text pasDomainAbs} relation describes which labels may run in
+a given scheduler domain. This relation is not relevant to integrity
+but will be used in the information flow theory (with additional
+constraints on its structure).
 *}
 
 end
@@ -107,7 +112,7 @@ record 'a PAS =
   pasMayActivate :: "bool"
   pasMayEditReadyQueues :: "bool"
   pasMaySendIrqs :: "bool"
-  pasDomainAbs :: "domain \<Rightarrow> 'a"
+  pasDomainAbs :: "'a agent_domain_map"
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -540,7 +545,8 @@ abbreviation
   "domains_of_state s \<equiv> domains_of_state_aux (ekheap s)"
 
 definition
-  "tcb_domain_map_wellformed_aux aag etcbs_doms \<equiv> \<forall>(ptr, d) \<in> etcbs_doms. pasObjectAbs aag ptr = pasDomainAbs aag d"
+  "tcb_domain_map_wellformed_aux aag etcbs_doms \<equiv>
+     \<forall>(ptr, d) \<in> etcbs_doms. pasObjectAbs aag ptr \<in> pasDomainAbs aag d"
 
 abbreviation
   "tcb_domain_map_wellformed aag s \<equiv> tcb_domain_map_wellformed_aux aag (domains_of_state s)"
@@ -551,13 +557,12 @@ by (auto simp: tcb_domain_map_wellformed_aux_def get_etcb_def)
 
 text{*
 
-We sometimes need to know that the label on the current domain is that
-of the current subject.
+We sometimes need to know that our current subject may run in the current domain.
 
 *}
 
 abbreviation
-  "pas_cur_domain aag s \<equiv> pasDomainAbs aag (cur_domain s) = pasSubject aag"
+  "pas_cur_domain aag s \<equiv> pasSubject aag \<in> pasDomainAbs aag (cur_domain s)"
 
 text{*
 
@@ -811,7 +816,8 @@ added to the start of the queue.
 definition
   integrity_ready_queues
 where
-  "integrity_ready_queues aag subjects l' rq rq' \<equiv> pasMayEditReadyQueues aag \<or> (l' \<notin> subjects \<longrightarrow> (\<exists>threads. threads @ rq = rq'))"
+  "integrity_ready_queues aag subjects queue_labels rq rq' \<equiv>
+     pasMayEditReadyQueues aag \<or> (queue_labels \<inter> subjects = {} \<longrightarrow> (\<exists>threads. threads @ rq = rq'))"
 
 lemma integrity_ready_queues_refl[simp]: "integrity_ready_queues aag subjects ptr s s"
 unfolding integrity_ready_queues_def by simp

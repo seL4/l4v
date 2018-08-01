@@ -83,13 +83,18 @@ section {* PAS wellformedness property for non-interference *}
 
 definition pas_wellformed_noninterference where
   "pas_wellformed_noninterference aag \<equiv>
-    (\<forall>x\<in>range (pasObjectAbs aag) - {SilcLabel}.
-         pas_wellformed (aag\<lparr> pasSubject := x \<rparr>)) \<and>
-    (\<forall>x. pas_wellformed (aag\<lparr> pasSubject := pasDomainAbs aag x \<rparr>) \<and> pasDomainAbs aag x \<noteq> SilcLabel)"
+    (\<forall>l\<in>range (pasObjectAbs aag) \<union> {pasSubject aag} \<union> \<Union>(range (pasDomainAbs aag)) - {SilcLabel}.
+         pas_wellformed (aag\<lparr> pasSubject := l \<rparr>)) \<and>
+    (\<forall>d. SilcLabel \<notin> pasDomainAbs aag d) \<and>
+    pas_domains_distinct aag"
+
+lemma pas_wellformed_noninterference_domains_distinct:
+  "pas_wellformed_noninterference aag \<Longrightarrow> pas_domains_distinct aag"
+  by (simp add: pas_wellformed_noninterference_def)
 
 lemma pas_wellformed_noninterference_silc[intro!]:
-  "pas_wellformed_noninterference aag \<Longrightarrow> pasDomainAbs aag x \<noteq> SilcLabel"
-  apply (simp add: pas_wellformed_noninterference_def)
+  "pas_wellformed_noninterference aag \<Longrightarrow> SilcLabel \<notin> pasDomainAbs aag d"
+  apply (fastforce simp: pas_wellformed_noninterference_def)
   done
 
 section {* PAS subject update *}
@@ -165,8 +170,8 @@ lemma pas_refined_pasSubject_update':
   done
 
 lemma pas_wellformed_pasSubject_update:
-  "\<lbrakk>pas_wellformed_noninterference aag\<rbrakk> \<Longrightarrow>
-   pas_wellformed (aag\<lparr>pasSubject := pasDomainAbs aag x\<rparr>)"
+  "\<lbrakk>pas_wellformed_noninterference aag; l \<in> pasDomainAbs aag d\<rbrakk> \<Longrightarrow>
+   pas_wellformed (aag\<lparr>pasSubject := l\<rparr>)"
   by (auto simp: pas_wellformed_noninterference_def)
 
 lemmas pas_refined_pasSubject_update =
@@ -182,9 +187,10 @@ lemma silc_inv_pasSubject_update':
   by (auto simp: silc_inv_def silc_dom_equiv_def intra_label_cap_def cap_points_to_label_def)
 
 lemma silc_inv_pasSubject_update:
-  "\<lbrakk>silc_inv aag st s; pas_wellformed_noninterference aag\<rbrakk>
-   \<Longrightarrow> silc_inv (aag\<lparr>pasSubject := pasDomainAbs aag x\<rparr>) st s"
-  by (clarsimp intro!: silc_inv_pasSubject_update')
+  "\<lbrakk>silc_inv aag st s; pas_wellformed_noninterference aag; l \<in> pasDomainAbs aag d\<rbrakk>
+   \<Longrightarrow> silc_inv (aag\<lparr>pasSubject := l\<rparr>) st s"
+  apply (fastforce intro: silc_inv_pasSubject_update' dest: pas_wellformed_noninterference_silc)
+  done
 
 section {* PAS MayActivate update *}
 

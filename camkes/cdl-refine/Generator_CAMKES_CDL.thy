@@ -623,9 +623,7 @@ where
      pasSubject pas \<notin> {garbage, irq_label} \<and>
      \<not> pasMayActivate pas \<and>
      \<not> pasMayEditReadyQueues pas \<and>
-     \<not> pasMaySendIrqs pas \<and>
-     (\<forall>domain. (domain = 0 \<and> pasDomainAbs pas domain \<noteq> garbage) \<or>
-               (domain \<noteq> 0 \<and> pasDomainAbs pas domain = garbage))
+     \<not> pasMaySendIrqs pas
    }"
 
 text {*

@@ -262,8 +262,11 @@ declare hoare_post_taut [simp del]
 
 crunch pas_cur_domain[wp]: as_user "pas_cur_domain aag"
 
-definition guarded_pas_domain where
-"guarded_pas_domain aag \<equiv> \<lambda>s. cur_thread s \<noteq> idle_thread s \<longrightarrow> pasDomainAbs aag (cur_domain s) = pasObjectAbs aag (cur_thread s)"
+definition guarded_pas_domain
+  where
+  "guarded_pas_domain aag \<equiv>
+     \<lambda>s. cur_thread s \<noteq> idle_thread s \<longrightarrow>
+         pasObjectAbs aag (cur_thread s) \<in> pasDomainAbs aag (cur_domain s)"
 
 
 lemma guarded_pas_domain_lift:
@@ -832,36 +835,27 @@ lemma switch_to_thread_respects:
   apply (wp | simp add: clearExMonitor_def)+
   done
 
+text {*
+Variants of scheduling lemmas without is_subject assumption.
+See comment for @{thm tcb_sched_action_dequeue_integrity'}
+*}
+(* FIXME: replace switch_to_thread_respects above (used in infoflow/ADT_IF) *)
+lemma switch_to_thread_respects':
+  "\<lbrace>integrity aag X st and pas_refined aag
+    and (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag (tcb_domain (the (ekheap s t)))) \<rbrace>
+  switch_to_thread t
+  \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+  unfolding switch_to_thread_def arch_switch_to_thread_def
+  apply (simp add: spec_valid_def)
+  apply (wp tcb_sched_action_dequeue_integrity' | simp add: clearExMonitor_def)+
+  done
+
 lemma switch_to_idle_thread_respects:
   "\<lbrace>integrity aag X st\<rbrace>
     switch_to_idle_thread
   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   unfolding switch_to_idle_thread_def arch_switch_to_idle_thread_def
   by (wp | simp)+
-
-lemma max_non_empty_queue_is_subject:
-  "\<lbrakk>tcb_domain_map_wellformed aag s;
-    st_tcb_at (op = sta) (hd (max_non_empty_queue (ready_queues s (cur_domain s)))) s;
-    pas_cur_domain aag s; valid_queues s;ready_queues s (cur_domain s) prio \<noteq> [];
-    runnable sta\<rbrakk>
-   \<Longrightarrow> is_subject aag (hd (max_non_empty_queue (ready_queues s (cur_domain s))))"
-  apply (clarsimp simp: tcb_domain_map_wellformed_aux_def)
-  apply (erule_tac x="(hd (max_non_empty_queue (ready_queues s (cur_domain s))), cur_domain s)" in ballE)
-   apply simp
-  apply (clarsimp simp: valid_queues_def is_etcb_at_def)
-  apply (erule_tac x="cur_domain s" in allE)
-  apply (erule_tac x="Max {prio. ready_queues s (cur_domain s) prio \<noteq> []}" in allE)
-  apply clarsimp
-  apply (erule_tac x="hd (max_non_empty_queue (ready_queues s (cur_domain s)))" in ballE)
-   apply (clarsimp)
-   apply (erule notE, rule domtcbs)
-    apply force
-   apply (simp add: etcb_at_def)
-  apply (simp add: max_non_empty_queue_def)
-  apply (erule_tac P="hd A \<in> B" for A B in notE)
-  apply (rule Max_prop)
-   apply force+
-  done
 
 lemma choose_thread_respects_pasMayEditReadyQueues:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and valid_queues and K (pasMayEditReadyQueues aag ) \<rbrace>
@@ -875,24 +869,25 @@ lemma choose_thread_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and pas_cur_domain aag and einvs and valid_queues\<rbrace>
    choose_thread
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: choose_thread_def guarded_switch_to_def | wp switch_to_thread_respects switch_to_idle_thread_respects gts_wp)+
+  apply (simp add: choose_thread_def guarded_switch_to_def
+        | wp switch_to_thread_respects' switch_to_idle_thread_respects gts_wp)+
   apply (clarsimp simp: pas_refined_def)
   apply (clarsimp simp: tcb_domain_map_wellformed_aux_def)
-  apply (erule_tac x="(hd (max_non_empty_queue (ready_queues s (cur_domain s))), cur_domain s)" in ballE)
-   apply simp
   apply (clarsimp simp: valid_queues_def is_etcb_at_def)
   apply (erule_tac x="cur_domain s" in allE)
   apply (erule_tac x="Max {prio. ready_queues s (cur_domain s) prio \<noteq> []}" in allE)
   apply clarsimp
   apply (erule_tac x="hd (max_non_empty_queue (ready_queues s (cur_domain s)))" in ballE)
-   apply (clarsimp)
-   apply (erule notE, rule domtcbs)
-    apply force
-   apply (simp add: etcb_at_def)
-  apply (simp add: max_non_empty_queue_def)
-  apply (erule_tac P="hd A \<in> B" for A B in notE)
-  apply (rule Max_prop)
-   apply force+
+   apply (clarsimp simp: etcb_at_def)
+  (* thread we're switching to is in cur_domain *)
+  apply (rule_tac s = "cur_domain s" in subst)
+  apply (clarsimp simp: max_non_empty_queue_def)
+   apply (frule tcb_at_ekheap_dom[OF st_tcb_at_tcb_at])
+    apply (simp add: valid_sched_def)
+   apply (clarsimp simp: max_non_empty_queue_def)
+   apply (metis (mono_tags, lifting) setcomp_Max_has_prop hd_in_set)
+  (* pas_cur_domain *)
+  apply assumption
   done
 
 lemma guarded_switch_to_respects:
@@ -937,18 +932,23 @@ lemma next_domain_valid_sched:
 crunch current_ipc_buffer_register [wp]: tcb_sched_action "\<lambda>s. P (current_ipc_buffer_register s)"
    (wp: crunch_wps without_preemption_wp simp: crunch_simps current_ipc_buffer_register_def get_tcb_def)
 
-lemma valid_sched_action_switch_is_subject:
-  "\<lbrakk> scheduler_action s = switch_thread t ; valid_sched_action s ;
-     valid_etcbs s ; pas_refined aag s ; pas_cur_domain aag s \<rbrakk>
-   \<Longrightarrow> is_subject aag t"
-  apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_2_def
+text {*
+We need to use the domain of t instead of @{term "is_subject aag t"}
+because t's domain may contain multiple labels. See the comment for
+@{thm tcb_sched_action_dequeue_integrity'}
+*}
+lemma valid_sched_action_switch_subject_thread:
+   "\<lbrakk> scheduler_action s = switch_thread t ; valid_sched_action s ;
+      valid_etcbs s ; pas_refined aag s ; pas_cur_domain aag s \<rbrakk>
+    \<Longrightarrow> pasObjectAbs aag t \<in> pasDomainAbs aag (tcb_domain (the (ekheap s t))) \<and>
+        pasSubject aag \<in> pasDomainAbs aag (tcb_domain (the (ekheap s t)))"
+  apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_2_def
                         switch_in_cur_domain_2_def in_cur_domain_2_def valid_etcbs_def
-                        etcb_at_def st_tcb_at_def obj_at_def is_etcb_at_def split: option.splits)
-   apply force
-  apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
-  apply (drule_tac x="(t, cur_domain s)" in bspec)
-   apply (force intro: domtcbs)
-  apply clarsimp
+                        etcb_at_def st_tcb_at_def obj_at_def is_etcb_at_def)
+  apply (rule conjI)
+   apply (force simp: pas_refined_def tcb_domain_map_wellformed_aux_def
+                intro: domtcbs)
+  apply force
   done
 
 
@@ -972,17 +972,18 @@ lemma schedule_integrity:
   apply (rule hoare_pre)
   supply ethread_get_wp[wp del]
   apply (wp|wpc|simp only: schedule_choose_new_thread_def)+
-  apply (wpsimp wp: alternative_wp switch_to_thread_respects select_wp switch_to_idle_thread_respects
+  apply (wpsimp wp: alternative_wp switch_to_thread_respects' select_wp switch_to_idle_thread_respects
                  guarded_switch_to_lift choose_thread_respects gts_wp hoare_drop_imps
                  set_scheduler_action_cnt_valid_sched append_thread_queued enqueue_thread_queued
                  tcb_sched_action_enqueue_valid_blocked_except
+                 tcb_sched_action_append_integrity'
             wp_del: ethread_get_wp
     | wpc
     | simp add: allActiveTCBs_def schedule_choose_new_thread_def
     | rule hoare_pre_cont[where a=next_domain])+
   apply (auto simp: obj_at_def st_tcb_at_def not_cur_thread_2_def valid_sched_def
               valid_sched_action_def weak_valid_sched_action_def
-              valid_sched_action_switch_is_subject schedule_choose_new_thread_def)
+              valid_sched_action_switch_subject_thread schedule_choose_new_thread_def)
   done
 
 lemma  valid_sched_valid_sched_action:

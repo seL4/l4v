@@ -324,7 +324,9 @@ lemma modify_arm_hwasid_table_reads_respects:
           (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_hwasid_table := param\<rparr>\<rparr>))"
   apply(simp add: equiv_valid_def2)
   apply(rule modify_ev2)
-  apply(auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def intro: equiv_asids_triv)
+  (* FIXME: slow 5s *)
+  apply(auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
+             intro: equiv_asids_triv split: if_splits)
 done
 
 lemma modify_arm_asid_map_reads_respects:
@@ -332,7 +334,8 @@ lemma modify_arm_asid_map_reads_respects:
           (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_asid_map := param\<rparr>\<rparr>))"
   apply(simp add: equiv_valid_def2)
   apply(rule modify_ev2)
-  apply(auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def intro: equiv_asids_triv)
+  apply(auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
+             intro: equiv_asids_triv split: if_splits)
 done
 
 lemma modify_arm_next_asid_reads_respects:
@@ -340,7 +343,9 @@ lemma modify_arm_next_asid_reads_respects:
           (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_next_asid := param\<rparr>\<rparr>))"
   apply(simp add: equiv_valid_def2)
   apply(rule modify_ev2)
-  by(auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def intro: equiv_asids_triv)
+  apply(auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
+             intro: equiv_asids_triv split: if_splits)
+  done
 
 lemmas modify_arch_state_reads_respects =
   modify_arm_asid_map_reads_respects
@@ -851,6 +856,8 @@ definition labels_are_invisible where
 
 
 lemma equiv_but_for_reads_equiv:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "\<lbrakk>labels_are_invisible aag l L; equiv_but_for_labels aag L s s'\<rbrakk> \<Longrightarrow>
    reads_equiv aag s s'"
   apply(simp add: reads_equiv_def2)
@@ -862,11 +869,14 @@ lemma equiv_but_for_reads_equiv:
              |clarsimp simp: o_def)+)[1]
       apply(fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)+
     apply(fastforce simp: equiv_asids_def elim: states_equiv_forE elim: equiv_forD)
-   apply(fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)
+   apply (clarsimp simp: equiv_for_def states_equiv_for_def intersection_empty)
+   apply (metis domains_distinct[THEN pas_domains_distinct_inj])
   apply(fastforce simp: equiv_but_for_labels_def)
   done
 
 lemma equiv_but_for_affects_equiv:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "\<lbrakk>labels_are_invisible aag l L; equiv_but_for_labels aag L s s'\<rbrakk> \<Longrightarrow>
    affects_equiv aag l s s'"
   apply(subst affects_equiv_def2)
@@ -874,11 +884,14 @@ lemma equiv_but_for_affects_equiv:
   apply(rule states_equiv_forI)
          apply(fastforce intro!: equiv_forI elim!: states_equiv_forE equiv_forD)+
    apply(fastforce simp: equiv_asids_def elim!: states_equiv_forE elim!: equiv_forD)
-  apply(fastforce intro!: equiv_forI elim!: states_equiv_forE equiv_forD)
+  apply (clarsimp simp: equiv_for_def states_equiv_for_def intersection_empty)
+  apply (metis domains_distinct[THEN pas_domains_distinct_inj])
   done
 
 (* consider rewriting the return-value assumption using equiv_valid_rv_inv *)
 lemma ev2_invisible:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "\<lbrakk>labels_are_invisible aag l L;
     labels_are_invisible aag l L';
     modifies_at_most aag L Q f;
@@ -892,10 +905,10 @@ lemma ev2_invisible:
    apply blast
   apply(drule_tac s=s in modifies_at_mostD, assumption+)
   apply(drule_tac s=t in modifies_at_mostD, assumption+)
-  apply(frule (1) equiv_but_for_reads_equiv)
-  apply(frule_tac s=t in equiv_but_for_reads_equiv, assumption)
-  apply(drule (1) equiv_but_for_affects_equiv)
-  apply(drule_tac s=t in equiv_but_for_affects_equiv, assumption)
+  apply(frule (1) equiv_but_for_reads_equiv[OF domains_distinct])
+  apply(frule_tac s=t in equiv_but_for_reads_equiv[OF domains_distinct], assumption)
+  apply(drule (1) equiv_but_for_affects_equiv[OF domains_distinct])
+  apply(drule_tac s=t in equiv_but_for_affects_equiv[OF domains_distinct], assumption)
   apply(blast intro: reads_equiv_trans reads_equiv_sym affects_equiv_trans affects_equiv_sym)
   done
 
@@ -932,11 +945,13 @@ lemma get_tcb_not_asid_pool_at:
   by(fastforce simp: get_tcb_def asid_pool_at_kheap)
 
 lemma as_user_set_register_ev2:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "labels_are_invisible aag l (pasObjectAbs aag ` {thread,thread'}) \<Longrightarrow>
    equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (op =) \<top> \<top> (as_user thread (setRegister x y)) (as_user thread' (setRegister a b))"
   apply(simp add: as_user_def)
   apply(rule equiv_valid_2_guard_imp)
-   apply(rule_tac L="{pasObjectAbs aag thread}" and L'="{pasObjectAbs aag thread'}" and Q="\<top>" and Q'="\<top>" in ev2_invisible)
+   apply(rule_tac L="{pasObjectAbs aag thread}" and L'="{pasObjectAbs aag thread'}" and Q="\<top>" and Q'="\<top>" in ev2_invisible[OF domains_distinct])
         apply(simp add: labels_are_invisible_def)+
       apply((rule modifies_at_mostI | wp set_object_equiv_but_for_labels | simp add: split_def | fastforce dest: get_tcb_not_asid_pool_at)+)[2]
     apply(auto intro!: TrueI)
@@ -960,6 +975,8 @@ lemma reads_affects_equiv_get_tcb_eq:
   done
 
 lemma as_user_set_register_reads_respects':
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l \<top> (as_user thread (setRegister x y))"
   apply (case_tac "aag_can_read aag thread \<or> aag_can_affect aag l thread")
    apply (simp add: as_user_def fun_app_def split_def)
@@ -967,15 +984,17 @@ lemma as_user_set_register_reads_respects':
    apply (wp set_object_reads_respects select_f_ev gets_the_ev)
    apply (auto intro: reads_affects_equiv_get_tcb_eq det_setRegister)[1]
   apply(simp add: equiv_valid_def2)
-  apply(rule as_user_set_register_ev2)
+  apply(rule as_user_set_register_ev2[OF domains_distinct])
   apply(simp add: labels_are_invisible_def)
   done
 
 lemma set_message_info_reads_respects:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l \<top>
     (set_message_info thread info)"
   unfolding set_message_info_def fun_app_def
-  apply(rule as_user_set_register_reads_respects')
+  apply(rule as_user_set_register_reads_respects'[OF domains_distinct])
   done
 
 lemma equiv_valid_get_assert:
@@ -1017,6 +1036,8 @@ lemma set_mrs_reads_respects:
   done
 
 lemma perform_page_invocation_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (pas_refined aag and K (authorised_page_inv aag pgi) and valid_page_inv pgi and valid_vspace_objs and pspace_aligned and is_subject aag \<circ> cur_thread) (perform_page_invocation pgi)"
   unfolding perform_page_invocation_def fun_app_def when_def cleanCacheRange_PoU_def
   apply(rule equiv_valid_guard_imp)
@@ -1146,6 +1167,8 @@ lemma perform_asid_pool_invocation_reads_respects:
   done
 
 lemma arch_perform_invocation_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs and K (authorised_arch_inv aag ai) and valid_arch_inv ai and is_subject aag \<circ> cur_thread)
     (arch_perform_invocation ai)"
   unfolding arch_perform_invocation_def fun_app_def
@@ -1183,6 +1206,7 @@ lemma arm_asid_table_delete_ev2:
                              else rv' a\<rparr>\<rparr>))"
 
    apply(rule modify_ev2)
+   (* slow 15s *)
    apply(auto simp: reads_equiv_def2 affects_equiv_def2 intro!: states_equiv_forI elim!: states_equiv_forE intro!: equiv_forI elim!: equiv_forE intro!: equiv_asids_arm_asid_table_delete elim: is_subject_kheap_eq[simplified reads_equiv_def2 states_equiv_for_def, rotated])
   done
 

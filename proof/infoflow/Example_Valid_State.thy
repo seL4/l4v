@@ -928,9 +928,16 @@ where
 (* We include 2 domains, Low is associated to domain 0, High to domain 1, we default the rest of the possible domains to High *)
 
 definition Sys1PAS :: "(auth_graph_label subject_label) PAS" where
-  "Sys1PAS \<equiv> \<lparr> pasObjectAbs = Sys1AgentMap, pasASIDAbs = Sys1ASIDMap, pasIRQAbs = (\<lambda>_. partition_label IRQ0),
-              pasPolicy = Sys1AuthGraph, pasSubject = partition_label Low, pasMayActivate = True,
-              pasMayEditReadyQueues = True, pasMaySendIrqs = False, pasDomainAbs = (\<lambda>_. partition_label High) (0 := partition_label Low) \<rparr>"
+  "Sys1PAS \<equiv> \<lparr>
+    pasObjectAbs = Sys1AgentMap,
+    pasASIDAbs = Sys1ASIDMap,
+    pasIRQAbs = (\<lambda>_. partition_label IRQ0),
+    pasPolicy = Sys1AuthGraph,
+    pasSubject = partition_label Low,
+    pasMayActivate = True,
+    pasMayEditReadyQueues = True, pasMaySendIrqs = False,
+    pasDomainAbs = ((\<lambda>_. {partition_label High})(0 := {partition_label Low}))
+    \<rparr>"
 
 subsubsection {* Proof of pas_refined for Sys1 *}
 
@@ -996,11 +1003,16 @@ lemma thread_bounds_of_state_s0:
   apply (simp add: kh0_def kh0_obj_def)
   done
 
-lemma Sys1_wellformed:
-  "x \<in> range (pasObjectAbs Sys1PAS) - {SilcLabel} \<Longrightarrow> policy_wellformed (pasPolicy Sys1PAS) False irqs x"
+lemma Sys1_wellformed':
+  "policy_wellformed (pasPolicy Sys1PAS) False irqs x"
   apply (clarsimp simp: Sys1PAS_def Sys1AgentMap_simps policy_wellformed_def
                         Sys1AuthGraph_def)
   done
+
+corollary Sys1_wellformed:
+  "x \<in> range (pasObjectAbs aag) \<union> {pasSubject aag} \<union> \<Union>(range (pasDomainAbs aag)) - {SilcLabel} \<Longrightarrow>
+   policy_wellformed (pasPolicy Sys1PAS) False irqs x"
+  by (rule Sys1_wellformed')
 
 lemma Sys1_pas_wellformed:
   "pas_wellformed Sys1PAS"
@@ -1106,14 +1118,18 @@ lemma pasMaySendIrqs_Sys1PAS[simp]:
   "pasMaySendIrqs Sys1PAS = False"
   by(auto simp: Sys1PAS_def)
 
+lemma Sys1_pas_domains_distinct:
+  "pas_domains_distinct Sys1PAS"
+  apply (clarsimp simp: Sys1PAS_def pas_domains_distinct_def)
+  done
+
 lemma Sys1_pas_wellformed_noninterference:
   "pas_wellformed_noninterference Sys1PAS"
   apply (simp add: pas_wellformed_noninterference_def)
   apply (intro conjI ballI allI)
-    apply (simp add: Sys1_wellformed)
-   apply (simp add: policy_wellformed_def)
+    apply (blast intro: Sys1_wellformed)
    apply (clarsimp simp: Sys1PAS_def policy_wellformed_def Sys1AuthGraph_def)
-  apply (simp add: Sys1PAS_def)
+  apply (rule Sys1_pas_domains_distinct)
   done
 
 lemma silc_inv_s0:
@@ -1784,7 +1800,17 @@ text {* One invariant we need on s0 is that there exists
         an associated Haskell state satisfying the invariants.
         This does not yet exist.  *}
 
+(* FIXME: refactor with valid_initial_state.the_subject_of_aag_domain *)
+lemma the_subject_of_aag_domain:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
+  "l \<in> pasDomainAbs aag d \<Longrightarrow> the_elem (pasDomainAbs aag d) = l"
+  by (fastforce simp: the_elem_def intro: domains_distinct[THEN pas_domains_distinct_inj])
 
+lemma Sys1_current_subject_idemp:
+  "Sys1PAS\<lparr>pasSubject := the_elem (pasDomainAbs Sys1PAS (cur_domain s0_internal))\<rparr> = Sys1PAS"
+  apply (simp add: Sys1PAS_def s0_internal_def exst0_def)
+  done
 
 lemma Sys1_valid_initial_state_noenabled:
   assumes extras_s0: "step_restrict s0"
@@ -1796,20 +1822,21 @@ lemma Sys1_valid_initial_state_noenabled:
   assumes det_inv_s0: "det_inv KernelExit (cur_context s0_internal) s0_internal"
   shows "valid_initial_state_noenabled det_inv utf s0_internal Sys1PAS timer_irq s0_context"
   apply (unfold_locales, simp_all only: pasMaySendIrqs_Sys1PAS)
-                     apply (insert det_inv_invariant)[9]
-                     apply (erule(2) invariant_over_ADT_if.det_inv_abs_state)
-                     apply (erule invariant_over_ADT_if.det_inv_abs_state
-                            invariant_over_ADT_if.check_active_irq_if_Idle_det_inv
-                            invariant_over_ADT_if.check_active_irq_if_User_det_inv
-                            invariant_over_ADT_if.do_user_op_if_det_inv
-                            invariant_over_ADT_if.handle_preemption_if_det_inv
-                            invariant_over_ADT_if.kernel_entry_if_Interrupt_det_inv
-                            invariant_over_ADT_if.kernel_entry_if_det_inv
-                            invariant_over_ADT_if.kernel_exit_if_det_inv
-                            invariant_over_ADT_if.schedule_if_det_inv)+
-             apply (simp add: Sys1_pas_cur_domain)
-            apply (simp add: Sys1_pas_wellformed_noninterference)
+                      apply (insert det_inv_invariant)[9]
+                      apply (erule(2) invariant_over_ADT_if.det_inv_abs_state)
+                     apply ((erule invariant_over_ADT_if.det_inv_abs_state
+                                   invariant_over_ADT_if.check_active_irq_if_Idle_det_inv
+                                   invariant_over_ADT_if.check_active_irq_if_User_det_inv
+                                   invariant_over_ADT_if.do_user_op_if_det_inv
+                                   invariant_over_ADT_if.handle_preemption_if_det_inv
+                                   invariant_over_ADT_if.kernel_entry_if_Interrupt_det_inv
+                                   invariant_over_ADT_if.kernel_entry_if_det_inv
+                                   invariant_over_ADT_if.kernel_exit_if_det_inv
+                                   invariant_over_ADT_if.schedule_if_det_inv)+)[8]
+             apply (rule Sys1_pas_cur_domain)
+            apply (rule Sys1_pas_wellformed_noninterference)
            apply (simp only: einvs_s0)
+           apply (simp add: Sys1_current_subject_idemp)
            apply (simp add: only_timer_irq_inv_s0 silc_inv_s0 Sys1_pas_cur_domain
                             domain_sep_inv_s0 Sys1_pas_refined Sys1_guarded_pas_domain
                             idle_equiv_refl)

@@ -18,6 +18,8 @@ subsection "reads respects"
 
 (* invs comes from cap_delete_one *)
 lemma invoke_irq_handler_reads_respects_f:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and pas_refined aag and irq_handler_inv_valid irq_inv and K (authorised_irq_hdl_inv aag irq_inv)) (invoke_irq_handler irq_inv)"
   apply(case_tac irq_inv)
     apply(simp)
@@ -81,9 +83,11 @@ subsection "reads_respects_g"
 
 
 lemma invoke_irq_handler_reads_respects_f_g:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f_g aag l (silc_inv aag st and invs and pas_refined aag and irq_handler_inv_valid irq_inv and K (authorised_irq_hdl_inv aag irq_inv)) (invoke_irq_handler irq_inv)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_f_g])
-   apply(rule invoke_irq_handler_reads_respects_f)
+   apply(rule invoke_irq_handler_reads_respects_f[OF domains_distinct])
   apply(rule doesnt_touch_globalsI)
    apply(wp invoke_irq_handler_globals_equiv | simp)+
   apply(simp add: invs_valid_ko_at_arm invs_valid_global_objs)
