@@ -370,6 +370,8 @@ where
          of IdleEP \<Rightarrow> (case is_blocking of
               True \<Rightarrow> do
                   set_thread_state thread (BlockedOnReceive epptr reply);
+                  when (reply \<noteq> None) $
+                    set_reply_obj_ref reply_tcb_update (the reply) (Some thread);
                   set_endpoint epptr (RecvEP [thread])
                 od
               | False \<Rightarrow> do_nbrecv_failed_transfer thread)
