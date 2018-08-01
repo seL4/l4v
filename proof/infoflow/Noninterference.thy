@@ -255,7 +255,7 @@ lemma schedule_reads_affects_equiv_sameFor:
     (((uc,s),mode),((uc',s'),mode)) \<in> same_for aag (Partition l)"
   by (auto simp: scheduler_equiv_def scheduler_affects_equiv_def sameFor_def sameFor_subject_def
                  silc_dom_equiv_def reads_scheduler_def reads_lrefl domain_fields_equiv_def
-                 intersection_empty Bex_def
+                 disjoint_iff_not_equal Bex_def
            intro: globals_equiv_from_scheduler)
 
 
@@ -283,7 +283,7 @@ lemma sameFor_scheduler_affects_equiv:
                         reads_scheduler_def sameFor_scheduler_def
                         globals_equiv_to_exclusive_state_equiv)
   (* simplifying using sameFor_subject_def in assumptions causes simp to loop *)
-  apply (simp (no_asm_use) add: sameFor_subject_def intersection_empty Bex_def)
+  apply (simp (no_asm_use) add: sameFor_subject_def disjoint_iff_not_equal Bex_def)
   apply (blast intro: globals_equiv_to_scheduler_globals_frame_equiv
                       globals_equiv_to_exclusive_state_equiv globals_equiv_to_cur_thread_eq)
   done
@@ -1197,7 +1197,7 @@ lemma partitionIntegrity_subjectAffects_ready_queues:
      cur_thread s' \<noteq> idle_thread s' \<longrightarrow> is_subject aag (cur_thread s');
     ready_queues s d \<noteq> ready_queues s' d\<rbrakk> \<Longrightarrow>
    pasDomainAbs aag d \<inter> subjectAffects (pasPolicy aag) (pasSubject aag) \<noteq> {}"
-  apply (clarsimp simp: intersection_empty)
+  apply (clarsimp simp: disjoint_iff_not_equal)
   apply (frule valid_sched_valid_blocked[where s=s])
   apply (case_tac "pasSubject aag \<in> pasDomainAbs aag d")
    apply (metis affects_lrefl)
@@ -1214,21 +1214,20 @@ lemma partitionIntegrity_subjectAffects_ready_queues:
   apply clarsimp
   apply (frule(1) tcb_domain_wellformed)
   apply (rename_tac tcb_ptr tcbs tcb)
-  apply (rule_tac x = "pasObjectAbs aag tcb_ptr" in exI)
-  apply simp
-  apply (case_tac "scheduler_action s = switch_thread tcb_ptr")
-   apply (drule switch_within_domain)
+  apply (rule_tac x = "pasObjectAbs aag tcb_ptr" in bexI)
+   apply (case_tac "scheduler_action s = switch_thread tcb_ptr")
+    apply (drule switch_within_domain)
+      apply simp
      apply simp
-    apply simp
-   apply (fastforce dest: domains_distinct[THEN pas_domains_distinct_inj])
+    apply (fastforce dest: domains_distinct[THEN pas_domains_distinct_inj])
 
-  apply (case_tac "ekheap s tcb_ptr \<noteq> ekheap s' tcb_ptr")
-   apply (rule_tac s=s and s'=s' in partitionIntegrity_subjectAffects_eobj)
+   apply (case_tac "ekheap s tcb_ptr \<noteq> ekheap s' tcb_ptr")
+    apply (rule_tac s=s and s'=s' in partitionIntegrity_subjectAffects_eobj)
            apply (simp add: partitionIntegrity_def)+
-  apply (subgoal_tac "kheap s tcb_ptr \<noteq> kheap s' tcb_ptr")
-   apply (rule partitionIntegrity_subjectAffects_obj)
-           apply (fastforce simp add: partitionIntegrity_def valid_sched_def)+
-  apply (rule_tac threads="tcb_ptr # tcbs" in ready_queues_alters_kheap)
+   apply (subgoal_tac "kheap s tcb_ptr \<noteq> kheap s' tcb_ptr")
+    apply (rule partitionIntegrity_subjectAffects_obj)
+            apply (fastforce simp add: partitionIntegrity_def valid_sched_def)+
+   apply (rule_tac threads="tcb_ptr # tcbs" in ready_queues_alters_kheap)
                apply (fastforce simp add: partitionIntegrity_def valid_sched_def)+
   done
 
@@ -2269,7 +2268,7 @@ lemma tcb_sched_action_reads_respects_g':
          apply (wp gets_apply_ev')
           apply (clarsimp simp: reads_equiv_g_def)
           apply (elim reads_equivE affects_equivE equiv_forE)
-          apply (clarsimp simp: intersection_empty)
+          apply (clarsimp simp: disjoint_iff_not_equal)
           apply metis (* only one that works *)
          apply (wp | simp)+
    apply (intro conjI impI allI
@@ -2365,7 +2364,7 @@ lemma choose_thread_reads_respects_g:
    apply(fastforce simp: reads_equiv_g_def reads_equiv_def)
   apply(rule conjI)
    apply (clarsimp simp: reads_equiv_g_def reads_equiv_def2 states_equiv_for_def equiv_for_def
-                         intersection_empty)
+                         disjoint_iff_not_equal)
    apply (metis reads_lrefl)
   apply (simp add: invs_valid_idle)
   (* everything from here clagged from Syscall_AC.choose_thread_respects *)
@@ -3106,11 +3105,11 @@ lemma kernel_call_A_if_confidentiality:
                in use_ev[OF kernel_entry_if_reads_respects_f_g
                               [where st=s0_internal, OF current_domains_distinct]])
        apply assumption
-      apply(clarsimp simp: invs_if_def Invs_def current_aag_def schact_is_rct_def)
+      apply (clarsimp simp: invs_if_def Invs_def current_aag_def schact_is_rct_def)
       apply assumption
-     apply(clarsimp simp: invs_if_def Invs_def schact_is_rct_def)
-     apply(drule uwr_PSched_cur_domain)
-     apply(clarsimp simp: current_aag_def)
+     apply (clarsimp simp: invs_if_def Invs_def schact_is_rct_def)
+     apply (drule uwr_PSched_cur_domain)
+     apply (clarsimp simp: current_aag_def)
     apply simp
    apply fastforce
   apply simp
@@ -3848,7 +3847,7 @@ lemma kernel_entry_if_reads_respects_scheduler:
                   | simp add:  arch_tcb_update_aux2
                   | elim conjE)+)[3]
         apply ((wp | simp add:  arch_tcb_update_aux2 | elim conjE)+)[2]
-      apply (clarsimp simp: guarded_pas_domain_def intersection_empty)
+      apply (clarsimp simp: guarded_pas_domain_def disjoint_iff_not_equal)
      apply (( wp thread_set_invs_trivial guarded_pas_domain_lift hoare_vcg_all_lift
                   thread_set_pas_refined thread_set_not_state_valid_sched
             | simp add: tcb_cap_cases_def  arch_tcb_update_aux2)+)
@@ -3913,7 +3912,7 @@ lemma internal_state_s0: "internal_state_if s0 = s0_internal"
   apply (simp add: s0_def)
   done
 
-(* FIXME: wat *)
+(* FIXME: clarify the following comment *)
 (*Lets pretend PSched is labeled with SilcLabel*)
 fun label_for_partition where
    "label_for_partition (Partition a) = (OrdinaryLabel a)"
@@ -3972,7 +3971,7 @@ lemma scheduler_affects_equiv_uwr:
   apply (case_tac s)
   apply clarsimp
   apply (case_tac s')
-  apply (clarsimp simp: intersection_empty)
+  apply (clarsimp simp: disjoint_iff_not_equal)
   apply metis
   done
 

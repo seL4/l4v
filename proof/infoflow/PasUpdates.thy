@@ -83,7 +83,7 @@ section {* PAS wellformedness property for non-interference *}
 
 definition pas_wellformed_noninterference where
   "pas_wellformed_noninterference aag \<equiv>
-    (\<forall>l\<in>range (pasObjectAbs aag) \<union> {pasSubject aag} \<union> \<Union>(range (pasDomainAbs aag)) - {SilcLabel}.
+    (\<forall>l\<in>range (pasObjectAbs aag) \<union> \<Union>(range (pasDomainAbs aag)) - {SilcLabel}.
          pas_wellformed (aag\<lparr> pasSubject := l \<rparr>)) \<and>
     (\<forall>d. SilcLabel \<notin> pasDomainAbs aag d) \<and>
     pas_domains_distinct aag"

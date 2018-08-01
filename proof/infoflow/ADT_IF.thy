@@ -80,13 +80,14 @@ lemma big_stepsE:
 
 lemma Run_subset:
   "(\<And> ev. Stepf ev \<subseteq> Stepf' ev) \<Longrightarrow>
-  Run Stepf as \<subseteq> Run Stepf' as"
+   Run Stepf as \<subseteq> Run Stepf' as"
   apply(induct as)
    apply simp
   apply auto
   done
 
-lemma rtranclp_def2: "(R\<^sup>*\<^sup>* s0 s) = (R\<^sup>+\<^sup>+ s0 s \<or> s = s0)"
+lemma rtranclp_def2:
+  "(R\<^sup>*\<^sup>* s0 s) = (R\<^sup>+\<^sup>+ s0 s \<or> s = s0)"
   apply (safe)
    apply (drule rtranclpD)
    apply simp
@@ -352,9 +353,10 @@ locale Init_Fin_serial_weak = serial_system_weak +
      assumes s0_I: "Init A s0 \<subseteq> I"
 begin
 
-lemma enabled: "enabled_system A s0"
+lemma enabled:
+  "enabled_system A s0"
   apply (clarsimp simp: enabled_system_def)
-  apply (induct_tac jsa  rule: rev_induct)
+  apply (rename_tac jsa, induct_tac jsa rule: rev_induct)
    apply (clarsimp simp: execution_def steps_def)
    apply (fold steps_def)
    apply (rule_tac x="Fin A x" in exI)
@@ -394,7 +396,7 @@ lemma invariant_holds_steps:
   assumes start_I: "B \<subseteq> I"
   shows "steps (Simulation.Step A) B as \<subseteq> I"
   apply clarsimp
-  apply (induct as arbitrary: x rule: rev_induct)
+  apply (induct as rule: rev_induct)
    apply (simp add: steps_def)
    apply (rule set_mp)
    apply (rule start_I)
@@ -463,7 +465,8 @@ locale Init_Fin_serial = serial_system +
      assumes s0_I: "Init A s0 \<subseteq> I"
 begin
 
-lemma enabled: "enabled_system A s0"
+lemma enabled:
+  "enabled_system A s0"
   apply (clarsimp simp: enabled_system_def)
   apply (induct_tac jsa  rule: rev_induct)
    apply (clarsimp simp: execution_def steps_def)
@@ -871,12 +874,14 @@ lemma do_user_op_if_scheduler_action[wp]:
    \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   by (simp add: do_user_op_if_def | wp select_wp | wpc)+
 
-lemma do_user_op_silc_inv[wp]: "\<lbrace>silc_inv aag st\<rbrace> do_user_op_if f tc \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+lemma do_user_op_silc_inv[wp]:
+  "\<lbrace>silc_inv aag st\<rbrace> do_user_op_if f tc \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (simp add: do_user_op_if_def)
   apply (wp select_wp | wpc | simp)+
   done
 
-lemma do_user_op_pas_refined[wp]: "\<lbrace>pas_refined aag\<rbrace> do_user_op_if f tc \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+lemma do_user_op_pas_refined[wp]:
+  "\<lbrace>pas_refined aag\<rbrace> do_user_op_if f tc \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: do_user_op_if_def)
   apply (wp select_wp | wpc | simp)+
   done
@@ -1019,7 +1024,8 @@ lemma idle_globals_lift_scheduler:
    apply (erule i)
   done
 
-lemma invs_pd_not_idle_thread[intro]: "invs s \<Longrightarrow> arm_global_pd (arch_state s) \<noteq> idle_thread s"
+lemma invs_pd_not_idle_thread[intro]:
+  "invs s \<Longrightarrow> arm_global_pd (arch_state s) \<noteq> idle_thread s"
   by (fastforce simp: invs_def valid_state_def valid_global_objs_def
                       obj_at_def valid_idle_def pred_tcb_at_def empty_table_def)
 
@@ -1296,8 +1302,8 @@ lemma switch_to_idle_thread_guarded_pas_domain[wp]:
   apply (wp modify_wp dmo_wp hoare_vcg_imp_lift | wp_once | simp add: guarded_pas_domain_def)+
   done
 
-lemma choose_thread_guarded_pas_domain: "\<lbrace>pas_refined aag and valid_queues\<rbrace> choose_thread
-       \<lbrace>\<lambda>xb. guarded_pas_domain aag\<rbrace>"
+lemma choose_thread_guarded_pas_domain:
+  "\<lbrace>pas_refined aag and valid_queues\<rbrace> choose_thread \<lbrace>\<lambda>xb. guarded_pas_domain aag\<rbrace>"
   apply (simp add: choose_thread_def guarded_switch_to_def
         | wp switch_to_thread_respects switch_to_idle_thread_respects gts_wp
              switch_to_thread_guarded_pas_domain)+
@@ -2018,7 +2024,8 @@ lemma do_user_op_if_idle_equiv[wp]:
   unfolding do_user_op_if_def
   by (wpsimp wp: dmo_user_memory_update_idle_equiv dmo_device_memory_update_idle_equiv select_wp)
 
-lemma ct_active_not_idle': "ct_active s \<Longrightarrow> \<not> ct_idle s"
+lemma ct_active_not_idle':
+  "ct_active s \<Longrightarrow> \<not> ct_idle s"
   apply (clarsimp simp add: ct_in_state_def st_tcb_at_def obj_at_def)
   done
 
@@ -2138,7 +2145,6 @@ lemma pas_wellformed_cur[iff]:
  "pas_wellformed_noninterference (current_aag s)"
   apply (cut_tac policy_wellformed)
   apply (simp add: pas_wellformed_noninterference_def current_aag_def pas_domains_distinct_def)
-  using the_subject_of_aag_domain apply blast
   done
 
 declare policy_wellformed[iff]
@@ -2513,7 +2519,8 @@ lemma execution_restrict:
   apply (simp add: ADT_A_if_def)
   done
 
-lemma invs_if_full_invs_if: "invs_if s \<Longrightarrow> s \<in> full_invs_if"
+lemma invs_if_full_invs_if:
+  "invs_if s \<Longrightarrow> s \<in> full_invs_if"
   by (clarsimp simp add: full_invs_if_def invs_if_def Invs_def)
 
 lemma ADT_A_if_Step_system:
@@ -2850,7 +2857,8 @@ lemma preemption_point_irq_state_inv'[wp]:
     apply(wp | simp add: update_work_units_def irq_state_inv_def | fastforce)+
      done
 
-lemma validE_validE_E': "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f -,\<lbrace>E\<rbrace>"
+lemma validE_validE_E':
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f -,\<lbrace>E\<rbrace>"
   apply (rule validE_validE_E)
   apply (rule hoare_post_impErr)
   apply assumption
@@ -2862,8 +2870,10 @@ lemmas preemption_point_irq_state_next[wp] = validE_validE_E'[OF preemption_poin
 
 
 
-lemma hoare_add_postE: "\<lbrace>S\<rbrace> f \<lbrace>\<lambda>_. S'\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. S' s \<longrightarrow> Q r s\<rbrace>,\<lbrace>\<lambda>r s. S' s \<longrightarrow> E r s\<rbrace>
-       \<Longrightarrow> \<lbrace>P and S\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+lemma hoare_add_postE:
+  "\<lbrakk> \<lbrace>S\<rbrace> f \<lbrace>\<lambda>_. S'\<rbrace>;
+     \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. S' s \<longrightarrow> Q r s\<rbrace>,\<lbrace>\<lambda>r s. S' s \<longrightarrow> E r s\<rbrace>
+   \<rbrakk> \<Longrightarrow> \<lbrace>P and S\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   apply (clarsimp simp: validE_def)
   apply (rule hoare_add_post)
     apply assumption
@@ -3080,17 +3090,20 @@ lemma set_domain_irq_state_inv_triv[wp]:
   apply (wp irq_state_inv_triv)
   done
 
-lemma invoke_irq_control_noErr[wp]: "\<lbrace>\<top>\<rbrace> invoke_irq_control a -,\<lbrace>Q\<rbrace>"
+lemma invoke_irq_control_noErr[wp]:
+  "\<lbrace>\<top>\<rbrace> invoke_irq_control a -,\<lbrace>Q\<rbrace>"
   apply (cases a)
   apply (wp | simp add: arch_invoke_irq_control_def)+
   done
 
-lemma arch_perform_invocation_noErr[wp]: "\<lbrace>\<top>\<rbrace> arch_perform_invocation a -,\<lbrace>Q\<rbrace>"
+lemma arch_perform_invocation_noErr[wp]:
+  "\<lbrace>\<top>\<rbrace> arch_perform_invocation a -,\<lbrace>Q\<rbrace>"
   apply (simp add: arch_perform_invocation_def)
   apply wp
   done
 
-lemma use_validE_E: "\<lbrakk>(Inl r, s') \<in> fst (fa s); \<lbrace>P\<rbrace> fa -, \<lbrace>Q\<rbrace>; P s\<rbrakk> \<Longrightarrow> Q r s'"
+lemma use_validE_E:
+  "\<lbrakk>(Inl r, s') \<in> fst (fa s); \<lbrace>P\<rbrace> fa -, \<lbrace>Q\<rbrace>; P s\<rbrakk> \<Longrightarrow> Q r s'"
   apply (fastforce simp: validE_E_def validE_def valid_def)
   done
 
@@ -3582,11 +3595,13 @@ lemma ADT_A_if_Step_measure_if'':
   apply(clarsimp simp: kernel_exit_A_if_def split: if_splits)
   done
 
-lemma invs_if_domain_sep_invs[intro]: "invs_if ((a,s),b) \<Longrightarrow> domain_sep_inv False s0_internal s"
+lemma invs_if_domain_sep_invs[intro]:
+  "invs_if ((a,s),b) \<Longrightarrow> domain_sep_inv False s0_internal s"
   apply (simp add: invs_if_def Invs_def)
   done
 
-lemma invs_if_invs[intro]: "invs_if ((a,s),b) \<Longrightarrow> invs s"
+lemma invs_if_invs[intro]:
+  "invs_if ((a,s),b) \<Longrightarrow> invs s"
   apply (simp add: invs_if_def Invs_def)
   done
 
@@ -3626,26 +3641,27 @@ lemma ADT_A_if_Step_irq_masks:
        done
 
 
-lemma steps_preserves_equivalence: "\<lbrakk>(s', as) \<in> sub_big_steps A R s1;
-        \<forall>t t' as a. (t, as) \<in> sub_big_steps A R s1 \<longrightarrow>
-               (t, t') \<in> data_type.Step A a \<longrightarrow>
-               \<not> R s1 t' \<longrightarrow>
-               f t = f t'\<rbrakk> \<Longrightarrow>
-        f s1 = f s'"
+lemma steps_preserves_equivalence:
+  "\<lbrakk>(s', as) \<in> sub_big_steps A R s1;
+    \<forall>t t' as a. (t, as) \<in> sub_big_steps A R s1 \<longrightarrow>
+                (t, t') \<in> data_type.Step A a \<longrightarrow>
+                \<not> R s1 t' \<longrightarrow>
+               f t = f t'
+   \<rbrakk> \<Longrightarrow> f s1 = f s'"
   apply (erule sub_big_steps.induct)
   apply simp
   apply fastforce
   done
 
-lemma step_out_equivalent: "\<lbrakk>
-        (s', as) \<in> sub_big_steps A R s1;
-        (s', s2)\<in> data_type.Step A a;
-       g s2 = f (g s');
-        \<forall>t t' as a. (t, as) \<in> sub_big_steps A R s1 \<longrightarrow>
-               (t, t') \<in> data_type.Step A a \<longrightarrow>
-               \<not> R s1 t' \<longrightarrow>
-               f (g t) = f (g t')\<rbrakk> \<Longrightarrow>
-        f (g s1) = g s2"
+lemma step_out_equivalent:
+  "\<lbrakk> (s', as) \<in> sub_big_steps A R s1;
+     (s', s2) \<in> data_type.Step A a;
+     g s2 = f (g s');
+     \<forall>t t' as a. (t, as) \<in> sub_big_steps A R s1 \<longrightarrow>
+                 (t, t') \<in> data_type.Step A a \<longrightarrow>
+                 \<not> R s1 t' \<longrightarrow>
+                 f (g t) = f (g t')
+   \<rbrakk> \<Longrightarrow> f (g s1) = g s2"
   apply simp
   apply (erule steps_preserves_equivalence)
   apply simp+
@@ -3662,7 +3678,8 @@ lemma irq_state_back:
   apply simp
   done
 
-lemma sub_big_steps_not_related: "(s,a) \<in> sub_big_steps A R s1 \<Longrightarrow> \<not> R s1 s"
+lemma sub_big_steps_not_related:
+  "(s,a) \<in> sub_big_steps A R s1 \<Longrightarrow> \<not> R s1 s"
   apply (erule sub_big_steps.cases,simp+)
   done
 
@@ -3675,11 +3692,11 @@ lemma invs_if_sub_big_steps_ADT_A_if:
   done
 
 lemma small_step_irq_state_next_irq:
-       "\<lbrakk>invs_if s1;
-        (s',evs) \<in> sub_big_steps (ADT_A_if utf) big_step_R s1;
-        (s', s2) \<in> data_type.Step (ADT_A_if utf) a;
-        big_step_R\<^sup>*\<^sup>* s0 s1; snd s1 = KernelExit; interrupted_modes (snd s2)\<rbrakk> \<Longrightarrow>
-        next_irq_state_of_state (internal_state_if s1) = irq_state_of_state (internal_state_if s2)"
+  "\<lbrakk>invs_if s1;
+    (s',evs) \<in> sub_big_steps (ADT_A_if utf) big_step_R s1;
+    (s', s2) \<in> data_type.Step (ADT_A_if utf) a;
+    big_step_R\<^sup>*\<^sup>* s0 s1; snd s1 = KernelExit; interrupted_modes (snd s2)\<rbrakk> \<Longrightarrow>
+    next_irq_state_of_state (internal_state_if s1) = irq_state_of_state (internal_state_if s2)"
   apply (subgoal_tac "invs_if s'")
    apply (rule step_out_equivalent[where f="\<lambda>(states,mask). (next_irq_state (Suc states) mask,mask)"
                                      and g="\<lambda>s. (irq_state_of_state (internal_state_if s),
@@ -3714,25 +3731,25 @@ lemma small_step_irq_state_next_irq:
 
 (*Can probably be generalized*)
 lemma small_step_to_big_step:
-       assumes a: "(\<And>s' evs. \<lbrakk>
-        (s',evs) \<in> sub_big_steps (ADT_A_if utf) big_step_R s1;
-        (s', s2) \<in> data_type.Step (ADT_A_if utf) a;
-        big_step_R s1 s2\<rbrakk> \<Longrightarrow>
-        S)"
-        assumes b: "(s1, s2) \<in> data_type.Step (big_step_ADT_A_if utf) a"
+  assumes a:
+    "\<And>s' evs. \<lbrakk> (s',evs) \<in> sub_big_steps (ADT_A_if utf) big_step_R s1;
+                (s', s2) \<in> data_type.Step (ADT_A_if utf) a;
+                big_step_R s1 s2
+               \<rbrakk> \<Longrightarrow> S"
+  assumes b: "(s1, s2) \<in> data_type.Step (big_step_ADT_A_if utf) a"
   shows "S"
   apply (insert b)
   apply (simp add: big_step_ADT_A_if_def big_step_adt_def)
   apply (erule big_steps.cases)
   apply (rule_tac s'=s' and evs=as in a)
     apply simp+
-    done
+  done
 
 lemma big_step_irq_state_next_irq:
-       "\<lbrakk>invs_if s1; big_step_R\<^sup>*\<^sup>* s0 s1;
-         (s1, s2) \<in> data_type.Step (big_step_ADT_A_if utf) a;
-          snd s1 = KernelExit; i_s1 = internal_state_if s1; i_s2 = internal_state_if s2\<rbrakk> \<Longrightarrow>
-        next_irq_state_of_state i_s1 = irq_state_of_state i_s2"
+  "\<lbrakk>invs_if s1; big_step_R\<^sup>*\<^sup>* s0 s1;
+    (s1, s2) \<in> data_type.Step (big_step_ADT_A_if utf) a;
+    snd s1 = KernelExit; i_s1 = internal_state_if s1; i_s2 = internal_state_if s2\<rbrakk> \<Longrightarrow>
+   next_irq_state_of_state i_s1 = irq_state_of_state i_s2"
   apply simp
   apply (rule small_step_to_big_step)
   apply (rule small_step_irq_state_next_irq,(simp add: big_step_R_def)+)

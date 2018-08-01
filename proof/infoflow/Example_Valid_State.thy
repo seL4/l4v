@@ -1010,7 +1010,7 @@ lemma Sys1_wellformed':
   done
 
 corollary Sys1_wellformed:
-  "x \<in> range (pasObjectAbs aag) \<union> {pasSubject aag} \<union> \<Union>(range (pasDomainAbs aag)) - {SilcLabel} \<Longrightarrow>
+  "x \<in> range (pasObjectAbs Sys1PAS) \<union> \<Union>(range (pasDomainAbs Sys1PAS)) - {SilcLabel} \<Longrightarrow>
    policy_wellformed (pasPolicy Sys1PAS) False irqs x"
   by (rule Sys1_wellformed')
 
@@ -1113,6 +1113,11 @@ lemma Sys1_pas_refined:
 lemma Sys1_pas_cur_domain:
   "pas_cur_domain Sys1PAS s0_internal"
   by (simp add: s0_internal_def exst0_def Sys1PAS_def)
+
+lemma Sys1_current_subject_idemp:
+  "Sys1PAS\<lparr>pasSubject := the_elem (pasDomainAbs Sys1PAS (cur_domain s0_internal))\<rparr> = Sys1PAS"
+  apply (simp add: Sys1PAS_def s0_internal_def exst0_def)
+  done
 
 lemma pasMaySendIrqs_Sys1PAS[simp]:
   "pasMaySendIrqs Sys1PAS = False"
@@ -1799,18 +1804,6 @@ subsubsection {* Haskell state *}
 text {* One invariant we need on s0 is that there exists
         an associated Haskell state satisfying the invariants.
         This does not yet exist.  *}
-
-(* FIXME: refactor with valid_initial_state.the_subject_of_aag_domain *)
-lemma the_subject_of_aag_domain:
-  assumes domains_distinct: "pas_domains_distinct aag"
-  shows
-  "l \<in> pasDomainAbs aag d \<Longrightarrow> the_elem (pasDomainAbs aag d) = l"
-  by (fastforce simp: the_elem_def intro: domains_distinct[THEN pas_domains_distinct_inj])
-
-lemma Sys1_current_subject_idemp:
-  "Sys1PAS\<lparr>pasSubject := the_elem (pasDomainAbs Sys1PAS (cur_domain s0_internal))\<rparr> = Sys1PAS"
-  apply (simp add: Sys1PAS_def s0_internal_def exst0_def)
-  done
 
 lemma Sys1_valid_initial_state_noenabled:
   assumes extras_s0: "step_restrict s0"

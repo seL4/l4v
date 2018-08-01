@@ -325,9 +325,8 @@ lemma modify_arm_hwasid_table_reads_respects:
   apply(simp add: equiv_valid_def2)
   apply(rule modify_ev2)
   (* FIXME: slow 5s *)
-  apply(auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
-             intro: equiv_asids_triv split: if_splits)
-done
+  by(auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
+          intro: equiv_asids_triv split: if_splits)
 
 lemma modify_arm_asid_map_reads_respects:
   "reads_respects aag l \<top> (modify
@@ -869,7 +868,7 @@ lemma equiv_but_for_reads_equiv:
              |clarsimp simp: o_def)+)[1]
       apply(fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)+
     apply(fastforce simp: equiv_asids_def elim: states_equiv_forE elim: equiv_forD)
-   apply (clarsimp simp: equiv_for_def states_equiv_for_def intersection_empty)
+   apply (clarsimp simp: equiv_for_def states_equiv_for_def disjoint_iff_not_equal)
    apply (metis domains_distinct[THEN pas_domains_distinct_inj])
   apply(fastforce simp: equiv_but_for_labels_def)
   done
@@ -884,7 +883,7 @@ lemma equiv_but_for_affects_equiv:
   apply(rule states_equiv_forI)
          apply(fastforce intro!: equiv_forI elim!: states_equiv_forE equiv_forD)+
    apply(fastforce simp: equiv_asids_def elim!: states_equiv_forE elim!: equiv_forD)
-  apply (clarsimp simp: equiv_for_def states_equiv_for_def intersection_empty)
+  apply (clarsimp simp: equiv_for_def states_equiv_for_def disjoint_iff_not_equal)
   apply (metis domains_distinct[THEN pas_domains_distinct_inj])
   done
 
@@ -1204,11 +1203,13 @@ lemma arm_asid_table_delete_ev2:
                       \<lparr>arm_asid_table :=
                         \<lambda>a. if a = asid_high_bits_of base then None
                              else rv' a\<rparr>\<rparr>))"
-
-   apply(rule modify_ev2)
-   (* slow 15s *)
-   apply(auto simp: reads_equiv_def2 affects_equiv_def2 intro!: states_equiv_forI elim!: states_equiv_forE intro!: equiv_forI elim!: equiv_forE intro!: equiv_asids_arm_asid_table_delete elim: is_subject_kheap_eq[simplified reads_equiv_def2 states_equiv_for_def, rotated])
-  done
+  apply(rule modify_ev2)
+  (* slow 15s *)
+  by(auto simp: reads_equiv_def2 affects_equiv_def2
+          intro!: states_equiv_forI elim!: states_equiv_forE
+          intro!: equiv_forI elim!: equiv_forE
+          intro!: equiv_asids_arm_asid_table_delete
+          elim: is_subject_kheap_eq[simplified reads_equiv_def2 states_equiv_for_def, rotated])
 
 crunch states_equiv_for: invalidate_asid_entry "states_equiv_for P Q R S st"
 crunch cur_thread: invalidate_asid_entry "\<lambda>s. P (cur_thread s)"

@@ -1383,11 +1383,6 @@ lemma gets_is_original_cap_revrv':
   apply(fastforce simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist elim: reads_equivE)
   done
 
-(* FIXME: MOVE *)
-lemma intersection_empty:
-  "(A \<inter> B = {}) = (\<not>(\<exists>x. x \<in> A \<and> x \<in> B))"
-  by blast
-
 lemma gets_ready_queues_revrv:
   "reads_equiv_valid_rv_inv (affects_equiv aag l) aag
                             (equiv_for (aag_can_read_domain aag or aag_can_affect_domain aag l) id)
@@ -1395,7 +1390,7 @@ lemma gets_ready_queues_revrv:
   apply(rule equiv_valid_rv_guard_imp)
    apply(rule gets_evrv)
   (* NB: only clarsimp works here *)
-  apply(clarsimp simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist equiv_for_def intersection_empty
+  apply(clarsimp simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist equiv_for_def disjoint_iff_not_equal
                  elim!: reads_equivE affects_equivE)
   done
 
@@ -1405,7 +1400,7 @@ lemma gets_ready_queues_revrv':
   apply(rule equiv_valid_rv_guard_imp)
    apply(rule gets_evrv)
   (* NB: only force works here *)
-  apply(force simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist equiv_for_def intersection_empty
+  apply(force simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist equiv_for_def disjoint_iff_not_equal
               elim: reads_equivE)
   done
 

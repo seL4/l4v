@@ -991,7 +991,7 @@ lemma get_thread_state_reads_respects':
   done
 
 lemma activate_thread_reads_respects:
-  assumes domains_distinct: "pas_domains_distinct aag"
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
   "reads_respects aag l (cur_tcb and (\<lambda>s. aag_can_read_label aag (pasObjectAbs aag (cur_thread s)))) activate_thread"
   apply (simp add: activate_thread_def)
@@ -1001,8 +1001,7 @@ lemma activate_thread_reads_respects:
          | simp add: arch_activate_idle_thread_def
   )+
                apply (unfold as_user_def)
-               apply (wp domains_distinct
-                         set_object_reads_respects
+               apply (wp set_object_reads_respects
                          get_thread_state_reads_respects'
                       | simp add: setNextPC_def setRegister_def
                                   select_f_returns getRestartPC_def
