@@ -1274,7 +1274,7 @@ lemma guarded_pas_domain_arch_state_update[simp]:
   done
 
 lemma switch_to_thread_guarded_pas_domain:
-  "\<lbrace>\<lambda>s. pasDomainAbs aag (cur_domain s) = pasObjectAbs aag t\<rbrace>
+  "\<lbrace>\<lambda>s. pasObjectAbs aag t \<in> pasDomainAbs aag (cur_domain s)\<rbrace>
      switch_to_thread t
    \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
   apply (simp add: switch_to_thread_def)
@@ -1323,7 +1323,7 @@ lemma choose_thread_guarded_pas_domain: "\<lbrace>pas_refined aag and valid_queu
 
 lemma switch_within_domain:
   "\<lbrakk>scheduler_action s = switch_thread x;valid_sched s; pas_refined aag s\<rbrakk> \<Longrightarrow>
-       pasDomainAbs aag (cur_domain s) = pasObjectAbs aag x"
+   pasObjectAbs aag x \<in> pasDomainAbs aag (cur_domain s)"
   apply (clarsimp simp: valid_sched_def valid_sched_action_def switch_in_cur_domain_def
                         in_cur_domain_def etcb_at_def valid_etcbs_def st_tcb_at_def
                         is_etcb_at_def weak_valid_sched_action_def)
@@ -1630,18 +1630,6 @@ definition big_step_ADT_A_if
 where
   "big_step_ADT_A_if utf \<equiv> big_step_adt (ADT_A_if utf) big_step_R big_step_evmap"
 
-lemma guarded_active_ct_cur_domain:
-  "\<lbrakk>guarded_pas_domain aag s; ct_active s; invs s\<rbrakk>
-   \<Longrightarrow> pasObjectAbs aag (cur_thread s) = pasDomainAbs aag (cur_domain s)"
-  apply (fastforce simp add: guarded_pas_domain_def invs_def valid_state_def valid_idle_def
-                   ct_in_state_def pred_tcb_at_def obj_at_def)
-  done
-
-lemma ct_active_not_idle: "ct_active s \<Longrightarrow> invs s \<Longrightarrow> cur_thread s \<noteq> idle_thread s"
-  apply (clarsimp simp add: ct_in_state_def valid_state_def valid_idle_def
-                   pred_tcb_at_def obj_at_def invs_def)
-  done
-
 definition cur_context
 where
   "cur_context s = arch_tcb_context_get (tcb_arch (the (get_tcb (cur_thread s) s)))"
@@ -1709,7 +1697,7 @@ locale valid_initial_state_noenabled = invariant_over_ADT_if + Arch + (* FIXME: 
   fixes s0_context :: user_context
   defines
   "current_aag t \<equiv>
-  (initial_aag\<lparr> pasSubject := pasDomainAbs initial_aag (cur_domain t) \<rparr>)"
+  (initial_aag\<lparr> pasSubject := the_elem (pasDomainAbs initial_aag (cur_domain t)) \<rparr>)"
 
 (* Run the system from right where we exit the kernel for the first time
    to user-space.
@@ -1720,7 +1708,7 @@ locale valid_initial_state_noenabled = invariant_over_ADT_if + Arch + (* FIXME: 
   "s0 \<equiv> ((if ct_idle s0_internal then idle_context s0_internal else s0_context,s0_internal),
           KernelExit)"
   assumes cur_domain_subject_s0:
-  "pasDomainAbs initial_aag (cur_domain s0_internal) = pasSubject initial_aag"
+  "pasSubject initial_aag \<in> pasDomainAbs initial_aag (cur_domain s0_internal)"
   assumes policy_wellformed:
   "pas_wellformed_noninterference initial_aag"
   fixes Invs
@@ -2049,11 +2037,26 @@ context valid_initial_state begin
 
 interpretation Arch . (*FIXME arch_split*)
 
-subsection {* @{term ADT_A_if} is a step system with the invs_if invariant*}
-
-lemma current_aag_initial: "current_aag s0_internal = initial_aag"
-  apply (simp add: current_aag_def cur_domain_subject_s0)
+lemma domains_distinct:
+  "pas_domains_distinct initial_aag"
+  apply (rule pas_wellformed_noninterference_domains_distinct)
+  apply (rule policy_wellformed)
   done
+
+lemma current_domains_distinct:
+  "pas_domains_distinct (current_aag s)"
+  using domains_distinct
+  apply (simp add: current_aag_def pas_domains_distinct_def)
+  done
+
+lemmas the_subject_of_aag_domain = domain_has_the_label[OF domains_distinct]
+
+lemma current_aag_initial:
+  "current_aag s0_internal = initial_aag"
+  apply (simp add: current_aag_def the_subject_of_aag_domain cur_domain_subject_s0)
+  done
+
+subsection {* @{term ADT_A_if} is a step system with the invs_if invariant*}
 
 definition cur_thread_context_of :: "observable_if \<Rightarrow> user_context"
 where
@@ -2109,14 +2112,33 @@ lemma only_timer_irq_inv_irq_state_update[simp]:
   done
 
 lemma initial_aag_bak:
-  "initial_aag =
-        (current_aag s)\<lparr>pasSubject := pasDomainAbs (current_aag s) (cur_domain s0_internal)\<rparr>"
-  apply (simp add: current_aag_def cur_domain_subject_s0)
+  "initial_aag = (current_aag s)\<lparr>pasSubject := the_elem (pasDomainAbs (current_aag s) (cur_domain s0_internal))\<rparr>"
+  using current_aag_def cur_domain_subject_s0 the_subject_of_aag_domain
+  by simp
+
+(* By our locale assumptions, every domain has an associated label *)
+lemma the_label_of_domain_exists[intro, simp]:
+  "the_elem (pasDomainAbs initial_aag l) \<in> pasDomainAbs initial_aag l"
+  using domains_distinct[simplified pas_domains_distinct_def] the_subject_of_aag_domain
+  apply blast
   done
 
-lemma pas_wellformed_cur[iff]: "pas_wellformed_noninterference (current_aag s)"
+(* Corollary for current_aag *)
+lemma pas_cur_domain_current_aag:
+  "pas_cur_domain (current_aag s) s"
+  apply (simp add: current_aag_def the_label_of_domain_exists)
+  done
+
+lemma subject_current_aag:
+  "pasSubject (current_aag s) \<in> pasDomainAbs initial_aag (cur_domain s)"
+  apply (simp add: current_aag_def)
+  done
+
+lemma pas_wellformed_cur[iff]:
+ "pas_wellformed_noninterference (current_aag s)"
   apply (cut_tac policy_wellformed)
-  apply (simp add: pas_wellformed_noninterference_def current_aag_def)
+  apply (simp add: pas_wellformed_noninterference_def current_aag_def pas_domains_distinct_def)
+  using the_subject_of_aag_domain apply blast
   done
 
 declare policy_wellformed[iff]
@@ -2129,33 +2151,44 @@ lemma current_aag_lift:
   apply (rule hoare_lift_Pf3[where f="cur_domain", OF b a])
   done
 
-lemma silc_inv_cur: "silc_inv (current_aag s) st s = silc_inv initial_aag st s"
+lemma silc_inv_cur:
+  "silc_inv (current_aag s) st s = silc_inv initial_aag st s"
   apply (rule iffI)
    apply (subst initial_aag_bak[where s=s])
    apply (rule silc_inv_pasSubject_update)
-    apply (simp)+
+     apply simp+
+   apply (simp add: current_aag_def)
+   apply (subst the_subject_of_aag_domain[where l = "pasSubject initial_aag"])
+    apply (rule cur_domain_subject_s0)
+   apply (blast intro: cur_domain_subject_s0)
   apply (simp add: current_aag_def)
   apply (rule silc_inv_pasSubject_update)
-   apply (simp)+
+    apply blast+
   done
 
 lemma guarded_pas_domain_cur:
   "guarded_pas_domain (current_aag s) s = guarded_pas_domain initial_aag s"
   by (simp add: current_aag_def)
 
-lemma pas_refined_cur: "pas_refined (current_aag s) s = pas_refined initial_aag s"
+lemma pas_refined_cur:
+  "pas_refined (current_aag s) s = pas_refined initial_aag s"
   apply (rule iffI)
    apply (subst initial_aag_bak[where s=s])
-   apply (rule pas_refined_pasSubject_update)
-    apply simp+
+   apply (erule pas_refined_pasSubject_update)
+    apply simp
+   apply (simp add: current_aag_def)
+   apply (subst the_subject_of_aag_domain[where l = "pasSubject initial_aag"])
+    apply (rule cur_domain_subject_s0)
+   apply (blast intro: cur_domain_subject_s0)
   apply (simp add: current_aag_def)
   apply (rule pas_refined_pasSubject_update)
-   apply simp+
+    apply blast+
   done
 
-lemma subject_current_aag: "pasSubject (current_aag s) = pasDomainAbs initial_aag (cur_domain s)"
-  apply (simp add: current_aag_def)
-  done
+lemma pas_cur_domain_cur:
+  "pas_cur_domain initial_aag s \<Longrightarrow> pas_cur_domain (current_aag s) s"
+  using subject_current_aag current_aag_def
+  by auto
 
 lemma pasObjectAbs_current_aag:
   "pasObjectAbs (current_aag x) = pasObjectAbs initial_aag"
@@ -2176,12 +2209,11 @@ lemma pasPolicy_current_aag:
 
 
 lemma guarded_pas_is_subject_current_aag:
-  "\<lbrakk>guarded_pas_domain (current_aag s) s; invs s\<rbrakk>
-    \<Longrightarrow> (ct_active s \<longrightarrow> is_subject (current_aag s) (cur_thread s))"
+  "\<lbrakk>guarded_pas_domain (current_aag s) s; invs s\<rbrakk> \<Longrightarrow>
+   ct_active s \<longrightarrow> is_subject (current_aag s) (cur_thread s)"
   apply (clarsimp simp add: guarded_pas_domain_def current_aag_def)
   apply (rule sym)
-  apply (erule mp)
-  apply (rule ct_active_not_idle,assumption+)
+  apply (blast intro: the_elemI dest: domains_distinct[THEN pas_domains_distinct_inj] ct_active_not_idle)
   done
 
 lemma guarded_pas_domain_machine_state_update[simp]:

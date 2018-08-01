@@ -205,6 +205,7 @@ lemma valid_ntfn_WaitingNtfn_tl:
   done
 
 lemma update_waiting_ntfn_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes tl_drop_1[simp del]
   shows
   "reads_respects aag l (valid_objs and sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and ko_at (Notification ntfn) ntfnptr and (\<lambda>s. is_subject aag (cur_thread s)) and K (ntfn_obj ntfn = WaitingNtfn queue)) (update_waiting_ntfn ntfnptr queue bound_tcb badge)"
@@ -378,13 +379,15 @@ lemma read_queued_thread_reads_ntfn:
   done
 
 lemma not_etcb_at_not_cdom_can_read:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "\<lbrakk>\<not> etcb_at (\<lambda>etcb. tcb_domain etcb \<noteq> cur_domain s) t s;
    tcb_at t s; valid_etcbs s; pas_refined aag s; pas_cur_domain aag s\<rbrakk>
   \<Longrightarrow> aag_can_read aag t"
   apply (clarsimp simp: valid_etcbs_def tcb_at_st_tcb_at etcb_at_def is_etcb_at_def
                         pas_refined_def tcb_domain_map_wellformed_aux_def)
   apply (erule_tac x="(t, cur_domain s)" in ballE)
-   apply simp
+   apply (force dest: domains_distinct[THEN pas_domains_distinct_inj])
   apply (force intro: domtcbs)
   done
 
@@ -540,12 +543,14 @@ lemma gts_reads_respects:
 
 
 lemma ev2_invisible_simple:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "labels_are_invisible aag l L \<Longrightarrow>
        modifies_at_most aag L Q f \<Longrightarrow>
        reads_respects aag l Q (f :: det_ext state \<Rightarrow> (unit \<times> det_ext state) set \<times> bool)"
   apply (simp add: equiv_valid_def2)
   apply (rule equiv_valid_2_guard_imp)
-    apply (rule ev2_invisible)
+    apply (rule ev2_invisible[OF domains_distinct])
         by fastforce+
 
 lemma blocked_cancel_ipc_nosts_equiv_but_for_labels:
@@ -565,6 +570,8 @@ lemma blocked_cancel_ipc_nosts_equiv_but_for_labels:
   by (clarsimp simp: pred_tcb_at_def obj_at_def)
 
 lemma blocked_cancel_ipc_nosts_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (pas_refined aag
                           and st_tcb_at (\<lambda>st. \<exists>xa. st = (BlockedOnReceive x)) t
 
@@ -600,7 +607,7 @@ lemma blocked_cancel_ipc_nosts_reads_respects:
       apply (rule gen_asm_ev)
       apply (drule label_is_invisible[THEN iffD2])
       apply clarsimp
-      apply (rule ev2_invisible_simple,assumption)
+      apply (rule ev2_invisible_simple[OF domains_distinct],assumption)
       apply (simp add: get_blocking_object_def)
       apply (rule modifies_at_mostI)
       apply (rule hoare_pre)
@@ -655,6 +662,7 @@ lemma BlockedOnReceive_inj:
 
 
 lemma send_signal_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes set_thread_state_owned_reads_respects[wp del]
         cancel_ipc_pas_refined[wp del]
   shows
@@ -731,7 +739,7 @@ lemma send_signal_reads_respects:
     apply (rule gen_asm_ev)
     apply (drule (1) invisible_ntfn_invisible_receivers_and_receivers)
      apply simp
-     apply (rule ev2_invisible_simple,assumption)
+     apply (rule ev2_invisible_simple[OF domains_distinct],assumption)
      apply (rule modifies_at_mostI)
 
      apply ( simp split del: if_split
@@ -758,7 +766,7 @@ lemma send_signal_reads_respects:
      subgoal waiting_ntfn
        apply clarsimp
        apply (rule ccontr)
-       apply (frule (3) not_etcb_at_not_cdom_can_read[rotated 2])
+       apply (frule (3) not_etcb_at_not_cdom_can_read[OF domains_distinct, rotated 2])
         apply (rule tcb_at_ntfn_queue;assumption)
        apply(frule (7) read_queued_thread_reads_ntfn)
        using invisible
@@ -796,7 +804,7 @@ lemma send_signal_reads_respects:
             by (fastforce  split:thread_state.splits)
          apply (rule ccontr)
          apply (insert prems)
-         apply (frule (4) not_etcb_at_not_cdom_can_read)
+         apply (frule (4) not_etcb_at_not_cdom_can_read[OF domains_distinct])
          using bound_tcb_can_receive
          apply (fastforce simp: labels_are_invisible_def all_with_auth_to_def all_to_which_has_auth_def)
         apply (fastforce simp: pred_tcb_at_def receive_blocked_def obj_at_def)
@@ -809,6 +817,8 @@ lemma send_signal_reads_respects:
   done
 
 lemma receive_signal_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (valid_objs and pas_refined aag and
         (\<lambda>s. is_subject aag (cur_thread s)) and
         K ((\<forall>ntfnptr\<in>Access.obj_refs cap.
@@ -1245,9 +1255,11 @@ lemma send_blocked_threads_have_SyncSend_auth:
 
 (*MOVE*)
 lemma ev_invisible:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "\<lbrakk>labels_are_invisible aag l L; modifies_at_most aag L Q f; \<forall>s t. P s \<and> P t \<longrightarrow> (\<forall>(rva, s') \<in> fst (f s). \<forall>(rvb, t') \<in> fst(f t). W rva rvb)\<rbrakk> \<Longrightarrow>
   equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) W (P and Q) (P and Q) f f"
-  apply (rule ev2_invisible)
+  apply (rule ev2_invisible[OF domains_distinct])
   apply simp+
   done
 
@@ -1338,6 +1350,7 @@ lemma mapM_ev''':
   done
 
 lemma cancel_badged_sends_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes gts_st_tcb_at[wp del]
   shows
   "reads_respects aag l (pas_refined aag and valid_objs and (sym_refs \<circ> state_refs_of) and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag epptr)) (cancel_badged_sends epptr badge)"
@@ -1469,6 +1482,8 @@ lemma as_user_reads_respects:
   done
 
 lemma copy_mrs_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (K (aag_can_read_or_affect aag l sender \<and> aag_can_read_or_affect_ipc_buffer aag l sbuf \<and> unat n < 2 ^ (msg_align_bits - 2))) (copy_mrs sender sbuf receiver rbuf n)"
   unfolding copy_mrs_def fun_app_def
   apply(rule gen_asm_ev)
@@ -1537,6 +1552,8 @@ lemma get_message_info_reads_respects:
   done
 
 lemma do_normal_transfer_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (pas_refined aag and
           K (aag_can_read_or_affect aag l sender \<and>
              ipc_buffer_has_read_auth aag (pasObjectAbs aag sender) sbuf \<and>
@@ -1613,6 +1630,8 @@ lemma set_mrs_ret_eq:
 
 
 lemma set_mrs_reads_respects':
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (K (ipc_buffer_has_auth aag thread buf \<and>  (case buf of (Some buf') \<Rightarrow>
         is_aligned buf' msg_align_bits | _ \<Rightarrow> True))) (set_mrs thread buf msgs)"
   apply(case_tac "aag_can_read_or_affect aag l thread")
@@ -1621,7 +1640,7 @@ lemma set_mrs_reads_respects':
   apply(simp add: equiv_valid_def2)
   apply(rule equiv_valid_rv_guard_imp)
   apply(case_tac buf)
-   apply(rule_tac Q="\<top>" and P="\<top>" and L="{pasObjectAbs aag thread}" in ev_invisible)
+   apply(rule_tac Q="\<top>" and P="\<top>" and L="{pasObjectAbs aag thread}" in ev_invisible[OF domains_distinct])
       apply(clarsimp simp: labels_are_invisible_def)
      apply(rule modifies_at_mostI)
      apply(simp add: set_mrs_def)
@@ -1629,7 +1648,7 @@ lemma set_mrs_reads_respects':
     apply(simp)
     apply(rule set_mrs_ret_eq)
    apply(rename_tac buf')
-   apply(rule_tac Q="\<top>" and L="{pasObjectAbs aag thread} \<union> (pasObjectAbs aag) ` (ptr_range buf' msg_align_bits)" in ev_invisible)
+   apply(rule_tac Q="\<top>" and L="{pasObjectAbs aag thread} \<union> (pasObjectAbs aag) ` (ptr_range buf' msg_align_bits)" in ev_invisible[OF domains_distinct])
      apply(auto simp: labels_are_invisible_def ipc_buffer_has_auth_def dest: reads_read_page_read_thread simp: aag_can_affect_label_def)[1]
     apply(rule modifies_at_mostI)
     apply(wp set_mrs_equiv_but_for_labels | simp)+
@@ -1637,6 +1656,8 @@ lemma set_mrs_reads_respects':
   by simp
 
 lemma do_fault_transfer_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (K (aag_can_read_or_affect aag l sender \<and> ipc_buffer_has_auth aag receiver buf \<and>
     (case buf of None \<Rightarrow> True | Some buf' \<Rightarrow> is_aligned buf' msg_align_bits))) (do_fault_transfer badge sender receiver buf)"
   unfolding do_fault_transfer_def
@@ -1677,6 +1698,8 @@ lemma ptr_in_obj_range:
   done
 
 lemma do_ipc_transfer_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (valid_objs and valid_global_refs and pspace_distinct and pspace_aligned
                          and valid_arch_state and pas_refined aag and
                          K ((grant \<longrightarrow> (is_subject aag sender \<and>
@@ -1699,6 +1722,8 @@ crunch pas_cur_domain[wp]: set_extra_badge, do_ipc_transfer "pas_cur_domain aag"
   (wp: crunch_wps transfer_caps_loop_pres ignore: const_on_failure simp: crunch_simps)
 
 lemma complete_signal_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l ( K(aag_can_read aag ntfnptr \<or> aag_can_affect aag l ntfnptr))
      (complete_signal ntfnptr receiver)"
   unfolding complete_signal_def
@@ -1710,6 +1735,7 @@ lemma complete_signal_reads_respects:
   done
 
 lemma receive_ipc_base_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes do_nbrecv_failed_transfer_def[simp]
   shows "reads_respects aag l
      (valid_objs
@@ -1794,6 +1820,8 @@ lemma receive_ipc_base_reads_respects:
   done
 
 lemma receive_ipc_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (valid_objs and pspace_distinct and pspace_aligned and
                          valid_global_refs and valid_arch_state and sym_refs \<circ> state_refs_of and
                          pas_refined aag and pas_cur_domain aag and valid_cap cap and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag receiver \<and> (\<forall>epptr\<in>Access.obj_refs cap.
@@ -1870,6 +1898,8 @@ lemma receive_endpoint_reads_affects_queued:
   done
 
 lemma send_ipc_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (pas_refined aag and pas_cur_domain aag and valid_objs and pspace_distinct and
                          pspace_aligned and valid_arch_state and valid_global_refs and sym_refs \<circ> state_refs_of and
          (\<lambda>s. is_subject aag (cur_thread s)) and
@@ -1931,6 +1961,8 @@ lemma send_ipc_reads_respects:
 subsection "Faults"
 
 lemma send_fault_ipc_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag
         and valid_objs and pspace_distinct and pspace_aligned
         and valid_global_refs and valid_arch_state and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag thread \<and> valid_fault fault)) (send_fault_ipc thread fault)"
@@ -1975,6 +2007,8 @@ lemma send_fault_ipc_reads_respects:
 
 
 lemma handle_fault_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag
   and valid_objs and pspace_distinct and pspace_aligned
   and valid_global_refs and valid_arch_state and (\<lambda>s. is_subject aag (cur_thread s))
@@ -2016,6 +2050,8 @@ crunch valid_ko_at_arm[wp]: handle_fault_reply "valid_ko_at_arm"
 crunch pas_cur_domain[wp]: handle_fault_reply "pas_cur_domain aag"
 
 lemma do_reply_transfer_reads_respects_f:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f aag l (silc_inv aag st and invs and pas_refined aag and pas_cur_domain aag and tcb_at receiver and tcb_at sender and emptyable slot and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag sender \<and> is_subject aag receiver \<and> is_subject aag (fst slot))) (do_reply_transfer sender receiver slot)"
   unfolding do_reply_transfer_def
   apply (wp gets_cur_thread_ev[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
@@ -2044,6 +2080,8 @@ lemma do_reply_transfer_reads_respects_f:
   done
 
 lemma handle_reply_reads_respects_f:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f aag l (silc_inv aag st and invs and pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread) (handle_reply)"
   unfolding handle_reply_def
   apply (wp do_reply_transfer_reads_respects_f get_cap_wp reads_respects_f[OF get_cap_reads_respects, where Q="\<top>" and st=st] hoare_vcg_all_lift | wpc | blast)+
@@ -2068,6 +2106,8 @@ lemma handle_reply_reads_respects_f:
   done
 
 lemma reply_from_kernel_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (K (is_subject aag thread)) (reply_from_kernel thread x)"
   unfolding reply_from_kernel_def fun_app_def
   apply (wp set_message_info_reads_respects set_mrs_reads_respects
@@ -2548,23 +2588,27 @@ section "reads_respects_g"
 subsection "Notifications"
 
 lemma send_signal_reads_respects_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (pas_refined aag and pas_cur_domain aag and valid_etcbs and
       valid_objs and valid_global_objs and valid_arch_state and valid_global_refs and
       pspace_distinct and valid_idle and sym_refs \<circ> state_refs_of and ct_active and
       is_subject aag \<circ> cur_thread and K ((pasSubject aag, Notify, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag)) (send_signal ntfnptr badge)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
-    apply(rule send_signal_reads_respects)
+    apply(rule send_signal_reads_respects[OF domains_distinct])
    apply(rule doesnt_touch_globalsI)
    apply(wp send_signal_globals_equiv | simp)+
   done
 
 lemma receive_signal_reads_respects_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (valid_global_objs and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and pas_refined aag and (\<lambda>s. thread \<noteq> idle_thread s) and is_subject aag \<circ> cur_thread and K ((\<forall>ntfnptr\<in>Access.obj_refs cap.
           (pasSubject aag, Receive, pasObjectAbs aag ntfnptr)
           \<in> pasPolicy aag \<and>
       is_subject aag thread))) (receive_signal thread cap is_blocking)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
-    apply(rule receive_signal_reads_respects)
+    apply(rule receive_signal_reads_respects[OF domains_distinct])
    apply(rule doesnt_touch_globalsI)
    apply(wp receive_signal_globals_equiv | simp)+
   done
@@ -2572,6 +2616,8 @@ lemma receive_signal_reads_respects_g:
 subsection "Sycn IPC"
 
 lemma send_ipc_reads_respects_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (pas_refined aag and pas_cur_domain aag and valid_objs and valid_global_objs
      and valid_arch_state and valid_global_refs and pspace_distinct and pspace_aligned
      and valid_idle and sym_refs \<circ> state_refs_of and is_subject aag \<circ> cur_thread and (\<lambda> s. \<exists>ep. ko_at (Endpoint ep) epptr s \<and>
@@ -2581,17 +2627,19 @@ lemma send_ipc_reads_respects_g:
               (pasSubject aag, Grant, pasObjectAbs aag epptr)
               \<in> pasPolicy aag)) and K (is_subject aag thread \<and> (pasSubject aag, SyncSend, pasObjectAbs aag epptr) \<in> pasPolicy aag)) (send_ipc block call badge can_grant thread epptr)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
-    apply(rule send_ipc_reads_respects)
+    apply(rule send_ipc_reads_respects[OF domains_distinct])
    apply(rule doesnt_touch_globalsI)
    apply(wp send_ipc_globals_equiv | simp)+
   done
 
 lemma receive_ipc_reads_respects_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (valid_objs and valid_global_objs and valid_arch_state and valid_global_refs
     and pspace_distinct and pspace_aligned and (\<lambda>s. receiver \<noteq> idle_thread s) and sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_cap cap and is_subject aag \<circ> cur_thread and K (is_subject aag receiver \<and> (\<forall>epptr\<in>Access.obj_refs cap.
           (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))) (receive_ipc receiver cap is_blocking)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
-    apply(rule receive_ipc_reads_respects)
+    apply(rule receive_ipc_reads_respects[OF domains_distinct])
    apply(rule doesnt_touch_globalsI)
    apply(wp receive_ipc_globals_equiv | simp)+
   done
@@ -2600,21 +2648,25 @@ lemma receive_ipc_reads_respects_g:
 subsection "Faults"
 
 lemma send_fault_ipc_reads_respects_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_objs and valid_global_objs and valid_arch_state and valid_global_refs
     and pspace_distinct and pspace_aligned and valid_idle and is_subject aag \<circ> cur_thread and K (is_subject aag thread \<and> valid_fault fault)) (send_fault_ipc thread fault)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
-    apply(rule send_fault_ipc_reads_respects)
+    apply(rule send_fault_ipc_reads_respects[OF domains_distinct])
    apply(rule doesnt_touch_globalsI)
    apply(wp send_fault_ipc_globals_equiv | simp)+
   done
 
 
 lemma handle_fault_reads_respects_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag
     and valid_objs and valid_global_objs and valid_arch_state and valid_global_refs
     and pspace_distinct and pspace_aligned and valid_idle and is_subject aag \<circ> cur_thread and K (is_subject aag thread \<and> valid_fault fault)) (handle_fault thread fault)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
-    apply(rule handle_fault_reads_respects)
+    apply(rule handle_fault_reads_respects[OF domains_distinct])
    apply(rule doesnt_touch_globalsI)
    apply(wp handle_fault_globals_equiv | simp)+
   done
@@ -2630,31 +2682,37 @@ lemma handle_fault_reply_reads_respects_g:
   done
 
 lemma do_reply_transfer_reads_respects_f_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_f_g aag l (silc_inv aag st and invs and pas_refined aag and pas_cur_domain aag and tcb_at receiver and tcb_at sender and emptyable slot and is_subject aag \<circ> cur_thread and K (is_subject aag sender \<and> is_subject aag receiver \<and> is_subject aag (fst slot))) (do_reply_transfer sender receiver slot)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_f_g])
-    apply(rule do_reply_transfer_reads_respects_f)
+    apply(rule do_reply_transfer_reads_respects_f[OF domains_distinct])
    apply(rule doesnt_touch_globalsI)
    apply(wp do_reply_transfer_globals_equiv | simp)+
   apply(simp add: invs_def valid_state_def valid_pspace_def | blast)+
   done
 
 lemma handle_reply_reads_respects_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_f_g aag l (silc_inv aag st and invs and
         pas_refined aag and pas_cur_domain aag and
         is_subject aag \<circ> cur_thread) (handle_reply)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_f_g])
-    apply(rule handle_reply_reads_respects_f)
+    apply(rule handle_reply_reads_respects_f[OF domains_distinct])
    apply(rule doesnt_touch_globalsI)
    apply(wp handle_reply_globals_equiv | simp)+
   apply(simp add: invs_def valid_state_def valid_pspace_def | blast)+
   done
 
 lemma reply_from_kernel_reads_respects_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (valid_global_objs and
         valid_objs and valid_arch_state and valid_global_refs and pspace_distinct
         and pspace_aligned and (\<lambda>s. thread \<noteq> idle_thread s) and K (is_subject aag thread)) (reply_from_kernel thread x)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
-    apply(rule reply_from_kernel_reads_respects)
+    apply(rule reply_from_kernel_reads_respects[OF domains_distinct])
    apply(rule doesnt_touch_globalsI)
    apply(wp reply_from_kernel_globals_equiv | simp)+
   done

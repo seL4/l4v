@@ -72,6 +72,8 @@ done
 (* The contents of the delete_confidentiality locale *)
 
 lemma cap_delete_reads_respects_f:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and emptyable slot and pas_refined aag and K(is_subject aag (fst slot))) (cap_delete slot)"
   unfolding cap_delete_def
   apply (wp rec_del_reads_respects_f)
@@ -108,6 +110,7 @@ lemma next_revoke_eq':
   done
 
 lemma cap_revoke_spec_reads_respects_f:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del]
         drop_spec_ev[wp_split del] rec_del.simps[simp del]
         split_paired_All[simp del] split_paired_Ex[simp del]
@@ -160,13 +163,15 @@ qed
 lemmas cap_revoke_reads_respects_f = use_spec_ev[OF cap_revoke_spec_reads_respects_f]
 
 lemma cancel_badged_sends_reads_respects_f:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs
                            and is_subject aag \<circ> cur_thread and
                            K (is_subject aag ptr))
    (cancel_badged_sends ptr badge)"
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_f)
-    apply (rule cancel_badged_sends_reads_respects)
+    apply (rule cancel_badged_sends_reads_respects[OF domains_distinct])
    apply (wp cancel_badged_sends_silc_inv[where st=st] | simp | elim conjE, assumption)+
   apply (simp add: invs_valid_objs invs_sym_refs)
   done
@@ -188,6 +193,8 @@ lemma cap_revoke_only_timer_irq_inv:
   done
 
 lemma invoke_cnode_reads_respects_f:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f aag l
   (silc_inv aag st and only_timer_irq_inv irq st' and pas_refined aag and einvs
    and simple_sched_action
@@ -241,6 +248,8 @@ using equiv_valid_guard_imp[OF reads_respects_g]
     done
 
 lemma invoke_cnode_reads_respects_f_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_f_g aag l
   (silc_inv aag st and only_timer_irq_inv irq st' and pas_refined aag and einvs
    and simple_sched_action
@@ -249,7 +258,7 @@ lemma invoke_cnode_reads_respects_f_g:
    and authorised_cnode_inv aag ci) (invoke_cnode ci)"
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_f_g)
-    apply (rule invoke_cnode_reads_respects_f[where st=st])
+    apply (rule invoke_cnode_reads_respects_f[where st=st, OF domains_distinct])
    apply (rule doesnt_touch_globalsI)
    apply (wp invoke_cnode_globals_equiv)
    apply force+
@@ -257,13 +266,15 @@ lemma invoke_cnode_reads_respects_f_g:
 
 
 lemma arch_perform_invocation_reads_respects_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (ct_active and K (authorised_arch_inv aag ai)
               and is_subject aag \<circ> cur_thread and pas_refined aag and invs
               and authorised_for_globals_arch_inv ai and valid_arch_inv ai)
     (arch_perform_invocation ai)"
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_g)
-    apply (rule arch_perform_invocation_reads_respects)
+    apply (rule arch_perform_invocation_reads_respects[OF domains_distinct])
    apply (rule doesnt_touch_globalsI)
    apply (wp arch_perform_invocation_globals_equiv)
    apply (simp add: invs_valid_vs_lookup invs_def valid_state_def valid_pspace_def)+
@@ -275,6 +286,7 @@ definition authorised_for_globals_inv :: "invocation \<Rightarrow> ('z::state_ex
 definition authorised_invocation_extra where
   "authorised_invocation_extra aag invo \<equiv> case invo of InvokeTCB ti \<Rightarrow> authorised_tcb_inv_extra aag ti | _ \<Rightarrow> True"
 
+(* FIXME: MOVE *)
 lemma reads_respects_f_g':
   "\<lbrakk>reads_respects_g aag l P f; \<lbrace>silc_inv aag st and Q\<rbrace> f \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>\<rbrakk> \<Longrightarrow>
    reads_respects_f_g aag l (silc_inv aag st and P and Q) f"
@@ -296,6 +308,8 @@ lemma invoke_domain_reads_respects_f_g:
 by (clarsimp simp: equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
 
 lemma perform_invocation_reads_respects_f_g:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f_g aag l (
           silc_inv aag st
           and only_timer_irq_inv irq st'
@@ -455,11 +469,13 @@ lemma decode_invocation_authorised_globals_inv:
 done
 
 lemma set_thread_state_reads_respects_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (is_subject aag \<circ> cur_thread and valid_ko_at_arm)
     (set_thread_state ref ts)"
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_g)
-    apply (rule set_thread_state_reads_respects)
+    apply (rule set_thread_state_reads_respects[OF domains_distinct])
    apply (rule doesnt_touch_globalsI)
    apply (rule set_thread_state_globals_equiv)
   apply simp
@@ -506,6 +522,7 @@ lemma ct_active_not_idle: "invs s \<Longrightarrow> ct_active s \<Longrightarrow
   done
 
 lemma handle_invocation_reads_respects_g:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes gts_st_tcb[wp del] gts_st_tcb_at[wp del]
   notes get_message_info_reads_respects_g = reads_respects_g_from_inv[OF get_message_info_rev get_mi_inv]
   shows "reads_respects_f_g aag l
@@ -519,7 +536,8 @@ lemma handle_invocation_reads_respects_g:
             | intro impI | erule conjE
             | rule doesnt_touch_globalsI |
 
-            (wp syscall_requiv_f_g gts_inv
+            (wp
+            syscall_requiv_f_g gts_inv
             when_ev
             reads_respects_f_g'[OF lookup_extra_caps_reads_respects_g, where Q="\<top>" and st=st]
             reads_respects_f_g'[OF lookup_ipc_buffer_reads_respects_g, where Q="\<top>" and st=st]
@@ -550,7 +568,7 @@ lemma handle_invocation_reads_respects_g:
                apply (rule_tac Q'="\<lambda>r s. silc_inv aag st s \<and> invs s \<and> is_subject aag rv \<and> is_subject aag (cur_thread s) \<and> rv \<noteq> idle_thread s" in hoare_post_imp_R)
                 apply (wp pinv_invs perform_invocation_silc_inv)
                apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_state_ko_at_arm)
-              apply(wp reads_respects_f_g'[OF set_thread_state_reads_respects_g, where Q="\<top>" and st=st] | simp)+
+              apply(wp reads_respects_f_g'[OF set_thread_state_reads_respects_g[OF domains_distinct], where Q="\<top>" and st=st] | simp)+
 
              apply (simp add: o_def|
                     wp when_ev
@@ -607,10 +625,12 @@ lemma handle_invocation_reads_respects_g:
   done
 
 lemma delete_caller_cap_reads_respects_f:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_f aag l (silc_inv aag st and invs and pas_refined aag and
          K (is_subject aag (fst (x, tcb_cnode_index 3)))) (delete_caller_cap x)"
   unfolding delete_caller_cap_def
-  apply (rule cap_delete_one_reads_respects_f)
+  apply (rule cap_delete_one_reads_respects_f[OF domains_distinct])
   done
 
 lemma delete_caller_cap_globals_equiv:
@@ -657,7 +677,9 @@ lemma cte_wp_at_caps_of_state: "cte_wp_at \<top> a b \<Longrightarrow> cte_wp_at
 done
 
 lemma handle_recv_reads_respects_f:
+  assumes domains_distinct: "pas_domains_distinct aag"
   notes mywp =
+            domains_distinct
             cap_fault_on_failure_ev'
             receive_ipc_silc_inv[where st=st]
             reads_respects_f[OF receive_ipc_reads_respects, where st=st]
@@ -701,7 +723,7 @@ lemma handle_recv_reads_respects_f:
              apply(rule disjI1)
              apply(rule reads_ep[where auth=Receive])
               apply(fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)+
-        apply(wp reads_respects_f[OF handle_fault_reads_respects,where st=st])
+        apply(wp reads_respects_f[OF handle_fault_reads_respects[OF domains_distinct],where st=st])
         apply (wpsimp wp: get_simple_ko_wp get_cap_wp)+
         apply(rule VSpaceEntries_AI.hoare_vcg_all_liftE)
            apply (rule_tac Q="\<lambda>r s. silc_inv aag st s \<and> einvs s \<and> pas_refined aag s \<and>
@@ -738,11 +760,13 @@ lemma handle_recv_globals_equiv:
   done
 
 lemma handle_recv_reads_respects_f_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_f_g aag l (silc_inv aag st and einvs and ct_active and
         pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread) (handle_recv is_blocking)"
   apply (rule equiv_valid_guard_imp)
   apply (rule reads_respects_f_g)
-  apply (wp handle_recv_reads_respects_f[where st=st])
+  apply (wp handle_recv_reads_respects_f[where st=st, OF domains_distinct])
   apply (rule doesnt_touch_globalsI)
   apply (wp handle_recv_globals_equiv)
   apply simp+
@@ -872,8 +896,10 @@ crunch cur_thread[wp]: handle_yield "\<lambda>s. P (cur_thread s)"
 crunch cur_domain[wp]: handle_yield "\<lambda>s. P (cur_domain s)"
 
 lemma handle_yield_reads_respects:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (pas_refined aag) handle_yield"
-  apply (simp add: handle_yield_def | wp tcb_sched_action_reads_respects)+
+  apply (simp add: handle_yield_def | wp domains_distinct tcb_sched_action_reads_respects)+
   apply (simp add: reads_equiv_def)
   done
 
@@ -893,6 +919,8 @@ lemma equiv_valid_hoist_guard:
 
 (* we explicitly exclude the case where ev is Interrupt since this is a scheduler action *)
 lemma handle_event_reads_respects_f_g:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f_g aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and schact_is_rct and domain_sep_inv (pasMaySendIrqs aag) st' and (\<lambda>s. ev \<noteq> Interrupt \<and> (ct_active s)) and pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread and K (\<not> pasMaySendIrqs aag)) (handle_event ev)"
   apply(rule gen_asm_ev)
   apply(rule_tac Q="ev \<noteq> Interrupt" in equiv_valid_hoist_guard)
@@ -963,6 +991,8 @@ lemma get_thread_state_reads_respects':
   done
 
 lemma activate_thread_reads_respects:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (cur_tcb and (\<lambda>s. aag_can_read_label aag (pasObjectAbs aag (cur_thread s)))) activate_thread"
   apply (simp add: activate_thread_def)
   apply (wp set_thread_state_runnable_reads_respects
@@ -971,7 +1001,8 @@ lemma activate_thread_reads_respects:
          | simp add: arch_activate_idle_thread_def
   )+
                apply (unfold as_user_def)
-               apply (wp set_object_reads_respects
+               apply (wp domains_distinct
+                         set_object_reads_respects
                          get_thread_state_reads_respects'
                       | simp add: setNextPC_def setRegister_def
                                   select_f_returns getRestartPC_def
@@ -992,10 +1023,12 @@ lemma activate_thread_globals_equiv:
   done
 
 lemma activate_thread_reads_respects_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects_g aag l (invs and (\<lambda>s. aag_can_read_label aag (pasObjectAbs aag (cur_thread s)))) activate_thread"
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_g)
-    apply (rule activate_thread_reads_respects)
+    apply (rule activate_thread_reads_respects[OF domains_distinct])
    apply (rule doesnt_touch_globalsI)
    apply (rule hoare_pre)
    apply (rule activate_thread_globals_equiv)

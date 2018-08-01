@@ -151,7 +151,7 @@ lemma rec_del_preservation2':
   "s \<turnstile> \<lbrace>\<lambda>s. invs s \<and> P s \<and> Q s \<and> emptyable (slot_rdcall call) s \<and> valid_rec_del_call call s\<rbrace>
      rec_del call
    \<lbrace>\<lambda>rv s. P s \<and> Q s\<rbrace>,\<lbrace>\<lambda>rv s. P s \<and> Q s\<rbrace>"
-proof (induct arbitrary: st rule: rec_del.induct,
+proof (induct rule: rec_del.induct,
        simp_all only: rec_del_fails)
   case (1 slot exposed s)
   show ?case
@@ -469,6 +469,8 @@ lemmas gets_cur_thread_respects_f =
 crunch pas_cur_domain[wp]: setup_reply_master "pas_cur_domain aag"
 
 lemma restart_reads_respects_f:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f aag l (silc_inv aag st and pas_refined aag and pas_cur_domain aag and invs and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag t)) (restart t)"
   apply (rule gen_asm_ev | elim conjE)+
   apply (simp add: restart_def when_def)
@@ -549,7 +551,10 @@ lemma ethread_set_priority_pas_refined[wp]:
    apply (force intro: domtcbs)+
    done
 
-lemma set_priority_reads_respects: "reads_respects aag l
+lemma set_priority_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "reads_respects aag l
            (pas_refined aag and K (is_subject aag word))
            (set_priority word prio)"
   apply (simp add: set_priority_def thread_set_priority_def)
@@ -561,9 +566,11 @@ lemma set_priority_reads_respects: "reads_respects aag l
   done
 
 lemma set_mcpriority_reads_respects:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l \<top> (set_mcpriority x y)"
   unfolding set_mcpriority_def
-  by (rule thread_set_reads_respects)
+  by (rule thread_set_reads_respects[OF domains_distinct])
 
 lemma checked_cap_insert_only_timer_irq_inv:
   "\<lbrace>only_timer_irq_inv irq (st::det_ext state)\<rbrace>
@@ -619,10 +626,11 @@ lemma bind_notification_reads_respects:
 
 lemmas thread_get_reads_respects_f = reads_respects_f[OF thread_get_reads_respects, where Q="\<top>", simplified, OF thread_get_inv]
 
-lemmas reschedule_required_reads_respects_f = reads_respects_f[OF reschedule_required_reads_respects, where Q="\<top>", simplified, OF reschedule_required_ext_extended.silc_inv]
+lemmas reschedule_required_reads_respects_f = reads_respects_f[OF reschedule_required_reads_respects, where Q="\<top>", simplified, OF _ reschedule_required_ext_extended.silc_inv]
 crunch pas_refined[wp]: restart "pas_refined aag"
 
 lemma invoke_tcb_reads_respects_f:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes validE_valid[wp del]
         static_imp_wp [wp]
   shows
@@ -737,11 +745,13 @@ lemma invoke_tcb_reads_respects_f:
                    | rule conjI)+
 
 lemma invoke_tcb_reads_respects_f_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
 "reads_respects_f_g aag l (silc_inv aag st and only_timer_irq_inv irq st' and pas_refined aag and pas_cur_domain aag and einvs and simple_sched_action and Tcb_AI.tcb_inv_wf ti and (\<lambda>s. is_subject aag (cur_thread s)) and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti))
     (invoke_tcb ti)"
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_f_g)
-    apply(rule invoke_tcb_reads_respects_f)
+    apply(rule invoke_tcb_reads_respects_f[OF domains_distinct])
    apply(rule doesnt_touch_globalsI)
    apply(wp invoke_tcb_globals_equiv | clarsimp | assumption | force)+
   done

@@ -27,6 +27,44 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+section {* Scheduler domain constraint *}
+
+text {*
+  For the information flow theorem, we assume that every domain
+  contains threads of exactly one label, so that labels cannot leak
+  information through the scheduler.
+
+  Morally, domains that have no labels ought to be allowed as well,
+  but this definition is easier to reason about. In practice, we can
+  just put all empty domains into some dummy label to satisfy the
+  exactly-one requirement. See e.g. the mapping in Example_Valid_State.
+*}
+
+definition pas_domains_distinct :: "('a, 'b) PAS_scheme \<Rightarrow> bool"
+  where
+    "pas_domains_distinct aag \<equiv> \<forall>d. \<exists>l. pasDomainAbs aag d = {l}"
+
+lemma pas_domains_distinct_inj:
+  "\<lbrakk> pas_domains_distinct aag;
+     l1 \<in> pasDomainAbs aag d;
+     l2 \<in> pasDomainAbs aag d \<rbrakk> \<Longrightarrow>
+   l1 = l2"
+  apply (clarsimp simp: pas_domains_distinct_def)
+  apply (drule_tac x=d in spec)
+  apply auto
+  done
+
+lemma domain_has_unique_label:
+  "pas_domains_distinct aag \<Longrightarrow> \<exists>l. pasDomainAbs aag d = {l}"
+  by (simp add: pas_domains_distinct_def)
+
+lemma domain_has_the_label:
+  "pas_domains_distinct aag \<Longrightarrow> l \<in> pasDomainAbs aag d \<Longrightarrow> the_elem (pasDomainAbs aag d) = l"
+  apply (simp add: pas_domains_distinct_def)
+  apply (metis singletonD the_elem_eq)
+  done
+
+
 section {* Reading: subjectReads and associated equivalence properties *}
 
 subsection {* subjectReads *}
@@ -137,9 +175,12 @@ abbreviation aag_can_read_asid :: "'a PAS \<Rightarrow> asid \<Rightarrow> bool"
 where
   "aag_can_read_asid aag x \<equiv> (pasASIDAbs aag x) \<in> subjectReads (pasPolicy aag) (pasSubject aag)"
 
+(* FIXME: having an op\<noteq> in the definition causes clarsimp to spuriously
+   apply classical rules. Using @{term disjnt} may avoid this issue *)
 abbreviation aag_can_read_domain :: "'a PAS \<Rightarrow> domain \<Rightarrow> bool"
 where
-  "aag_can_read_domain aag x \<equiv> (pasDomainAbs aag x) \<in> subjectReads (pasPolicy aag) (pasSubject aag)"
+  "aag_can_read_domain aag x \<equiv>
+     pasDomainAbs aag x \<inter> subjectReads (pasPolicy aag) (pasSubject aag) \<noteq> {}"
 
 lemma aag_can_read_self:
   "is_subject aag x \<Longrightarrow> aag_can_read aag x"
@@ -350,7 +391,15 @@ abbreviation states_equiv_for_labels :: "'a PAS \<Rightarrow> ('a \<Rightarrow> 
 where
   "states_equiv_for_labels aag P \<equiv>
       states_equiv_for (\<lambda> x. P (pasObjectAbs aag x)) (\<lambda> x. P (pasIRQAbs aag x))
-                       (\<lambda> x. P (pasASIDAbs aag x))   (\<lambda> x. P (pasDomainAbs aag x))"
+                       (\<lambda> x. P (pasASIDAbs aag x))   (\<lambda> x. \<exists>l\<in>pasDomainAbs aag x. P l)"
+
+(* We need this to correctly complement the domain mapping, i.e. it's not true that
+     states_equiv_but_for_labels aag P = states_equiv_for_labels aag (not P) *)
+abbreviation states_equiv_but_for_labels :: "'a PAS \<Rightarrow> ('a \<Rightarrow> bool)\<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool"
+where
+  "states_equiv_but_for_labels aag P \<equiv>
+      states_equiv_for (\<lambda> x. \<not> P (pasObjectAbs aag x)) (\<lambda> x. \<not> P (pasIRQAbs aag x))
+                       (\<lambda> x. \<not> P (pasASIDAbs aag x))   (\<lambda> x. \<forall>l\<in>pasDomainAbs aag x. \<not> P l)"
 
 lemma states_equiv_forI:
   "\<lbrakk>equiv_for P kheap s s';
@@ -846,13 +895,15 @@ where
 abbreviation aag_can_affect_domain
 where
   "aag_can_affect_domain aag l \<equiv> \<lambda>x. aag_can_affect_label aag l \<and>
-                                      pasDomainAbs aag x \<in> subjectReads (pasPolicy aag) l"
+                                      pasDomainAbs aag x \<inter> subjectReads (pasPolicy aag) l \<noteq> {}"
 
 
 lemma affects_equiv_def2:
   "affects_equiv aag l s s' = states_equiv_for (aag_can_affect aag l) (aag_can_affect_irq aag l) (aag_can_affect_asid aag l) (aag_can_affect_domain aag l) s s'"
   apply(clarsimp simp: affects_equiv_def)
-  apply(auto intro!: states_equiv_forI equiv_for_trivial equiv_asids_trivial elim: states_equiv_forE)
+  apply(auto intro!: states_equiv_forI equiv_forI equiv_asids_trivial
+             dest: equiv_forD
+             elim!: states_equiv_forE)
   done
 
 lemma affects_equivE:
@@ -1142,7 +1193,7 @@ lemma states_equiv_for_guard_imp:
 lemma cur_subject_reads_equiv_affects_equiv:
   "pasSubject aag = l \<Longrightarrow>
    reads_equiv aag s s' \<Longrightarrow> affects_equiv aag l s s'"
-  apply(clarsimp simp: reads_equiv_def2 affects_equiv_def simp: states_equiv_for_def)
+  apply(auto simp: reads_equiv_def2 affects_equiv_def equiv_for_def states_equiv_for_def)
   done
 
 (* This lemma says that, if we prove reads_respects above for all l, we will
@@ -1332,14 +1383,20 @@ lemma gets_is_original_cap_revrv':
   apply(fastforce simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist elim: reads_equivE)
   done
 
+(* FIXME: MOVE *)
+lemma intersection_empty:
+  "(A \<inter> B = {}) = (\<not>(\<exists>x. x \<in> A \<and> x \<in> B))"
+  by blast
+
 lemma gets_ready_queues_revrv:
   "reads_equiv_valid_rv_inv (affects_equiv aag l) aag
                             (equiv_for (aag_can_read_domain aag or aag_can_affect_domain aag l) id)
                             \<top> (gets ready_queues)"
   apply(rule equiv_valid_rv_guard_imp)
    apply(rule gets_evrv)
-  apply(fastforce simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist equiv_for_def
-                  elim: reads_equivE affects_equivE)
+  (* NB: only clarsimp works here *)
+  apply(clarsimp simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist equiv_for_def intersection_empty
+                 elim!: reads_equivE affects_equivE)
   done
 
 
@@ -1347,7 +1404,9 @@ lemma gets_ready_queues_revrv':
   "reads_equiv_valid_rv_inv A aag (equiv_for (aag_can_read_domain aag) id) \<top> (gets ready_queues)"
   apply(rule equiv_valid_rv_guard_imp)
    apply(rule gets_evrv)
-  apply(fastforce simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist equiv_for_def elim: reads_equivE)
+  (* NB: only force works here *)
+  apply(force simp: equiv_for_comp[symmetric] equiv_for_or or_comp_dist equiv_for_def intersection_empty
+              elim: reads_equivE)
   done
 
 
@@ -1657,7 +1716,7 @@ section {* Constraining modifications to a set of label *}
 definition equiv_but_for_labels
 where
   "equiv_but_for_labels aag L s s' \<equiv>
-      states_equiv_for_labels aag (\<lambda>l. l \<notin> L) s s' \<and>
+      states_equiv_but_for_labels aag (\<lambda>l. l \<in> L) s s' \<and>
       cur_thread s = cur_thread s' \<and> cur_domain s = cur_domain s' \<and>
       scheduler_action s = scheduler_action s' \<and> work_units_completed s = work_units_completed s' \<and>
       equiv_irq_state (machine_state s) (machine_state s')"

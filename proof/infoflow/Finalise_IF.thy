@@ -128,6 +128,8 @@ lemma set_thread_state_ext_reads_respects:
   done
 
 lemma set_thread_state_reads_respects:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (\<lambda>s. is_subject aag (cur_thread s)) (set_thread_state ref ts)"
   unfolding set_thread_state_def fun_app_def
   apply (simp add: bind_assoc[symmetric]) (*Remove the currently not considered extended op*)
@@ -136,12 +138,15 @@ lemma set_thread_state_reads_respects:
      apply (rule set_thread_state_ext_reads_respects)
     apply(case_tac "aag_can_read aag ref \<or> aag_can_affect aag l ref")
      apply(wp set_object_reads_respects gets_the_ev)
-     apply(fastforce simp: get_tcb_def split: option.splits elim: reads_equivE affects_equivE equiv_forE)
+     apply(fastforce simp: get_tcb_def split: option.splits
+                     elim: reads_equivE affects_equivE equiv_forE)
     apply(simp add: equiv_valid_def2)
     apply(rule equiv_valid_rv_bind)
       apply(rule equiv_valid_rv_trivial)
       apply (wp | simp)+
-     apply(rule_tac P="\<top>" and P'="\<top>" and L="{pasObjectAbs aag ref}" and L'="{pasObjectAbs aag ref}" in ev2_invisible)
+     apply(rule_tac P="\<top>" and P'="\<top>" and L="{pasObjectAbs aag ref}"
+                    and L'="{pasObjectAbs aag ref}"
+                    in ev2_invisible[OF domains_distinct])
          apply (blast | simp add: labels_are_invisible_def)+
        apply(rule set_object_modifies_at_most)
       apply(rule set_object_modifies_at_most)
@@ -152,6 +157,8 @@ lemma set_thread_state_reads_respects:
    done
 
 lemma set_bound_notification_reads_respects:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (\<lambda>s. is_subject aag (cur_thread s)) (set_bound_notification ref ntfn)"
   unfolding set_bound_notification_def fun_app_def
   apply (rule pre_ev(5)[where Q=\<top>])
@@ -162,7 +169,7 @@ lemma set_bound_notification_reads_respects:
    apply(rule equiv_valid_rv_bind)
      apply(rule equiv_valid_rv_trivial)
      apply (wp | simp)+
-    apply(rule_tac P="\<top>" and P'="\<top>" and L="{pasObjectAbs aag ref}" and L'="{pasObjectAbs aag ref}" in ev2_invisible)
+    apply(rule_tac P="\<top>" and P'="\<top>" and L="{pasObjectAbs aag ref}" and L'="{pasObjectAbs aag ref}" in ev2_invisible[OF domains_distinct])
         apply (blast | simp add: labels_are_invisible_def)+
       apply(rule set_object_modifies_at_most)
      apply(rule set_object_modifies_at_most)
@@ -210,6 +217,8 @@ lemma set_thread_state_ext_runnable_reads_respects:
   done
 
 lemma set_thread_state_runnable_reads_respects:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "runnable ts \<Longrightarrow> reads_respects aag l \<top> (set_thread_state ref ts)"
   unfolding set_thread_state_def fun_app_def
   apply (simp add: bind_assoc[symmetric]) (*Remove the currently not considered extended op*)
@@ -223,7 +232,7 @@ lemma set_thread_state_runnable_reads_respects:
     apply(rule equiv_valid_rv_bind)
       apply(rule equiv_valid_rv_trivial)
       apply (wp | simp)+
-     apply(rule_tac P="\<top>" and P'="\<top>" and L="{pasObjectAbs aag ref}" and L'="{pasObjectAbs aag ref}" in ev2_invisible)
+     apply(rule_tac P="\<top>" and P'="\<top>" and L="{pasObjectAbs aag ref}" and L'="{pasObjectAbs aag ref}" in ev2_invisible[OF domains_distinct])
          apply (blast | simp add: labels_are_invisible_def)+
        apply(rule set_object_modifies_at_most)
       apply(rule set_object_modifies_at_most)
@@ -234,6 +243,8 @@ lemma set_thread_state_runnable_reads_respects:
    done
 
 lemma set_bound_notification_none_reads_respects:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l \<top> (set_bound_notification ref None)"
   unfolding set_bound_notification_def fun_app_def
   apply (rule pre_ev(5)[where Q=\<top>])
@@ -244,7 +255,7 @@ lemma set_bound_notification_none_reads_respects:
    apply(rule equiv_valid_rv_bind)
      apply(rule equiv_valid_rv_trivial)
      apply (wp | simp)+
-    apply(rule_tac P="\<top>" and P'="\<top>" and L="{pasObjectAbs aag ref}" and L'="{pasObjectAbs aag ref}" in ev2_invisible)
+    apply(rule_tac P="\<top>" and P'="\<top>" and L="{pasObjectAbs aag ref}" and L'="{pasObjectAbs aag ref}" in ev2_invisible[OF domains_distinct])
         apply (blast | simp add: labels_are_invisible_def)+
       apply(rule set_object_modifies_at_most)
      apply(rule set_object_modifies_at_most)
@@ -508,6 +519,8 @@ lemma bind_return_unit2:
 
 lemma mapM_x_ev2_invisible:
   assumes
+    domains_distinct: "pas_domains_distinct aag"
+  assumes
     mam: "\<And> ptr. modifies_at_most aag (L ptr) \<top> ((f::word32 \<Rightarrow> (unit,det_ext) s_monad) ptr)"
   assumes
     mam': "\<And> ptr. modifies_at_most aag (L' ptr) \<top> ((f'::word32 \<Rightarrow> (unit,det_ext) s_monad) ptr)"
@@ -526,7 +539,7 @@ lemma mapM_x_ev2_invisible:
    apply (rule_tac R'="op =" and P="\<lambda> s. labels_are_invisible aag l (L' a)" in equiv_valid_2_bind_pre)
         apply simp
        apply(rule gen_asm_ev2_l)
-       apply(rule equiv_valid_2_guard_imp[OF ev2_invisible], assumption+)
+       apply(rule equiv_valid_2_guard_imp[OF ev2_invisible[OF domains_distinct]], assumption+)
            apply(rule mam')
           apply(rule_tac P="\<top>" in modifies_at_mostI)
           apply(wp | simp)+
@@ -535,7 +548,7 @@ lemma mapM_x_ev2_invisible:
   apply (rule_tac R'="op =" and P'="\<lambda> s. labels_are_invisible aag l (L a)" in equiv_valid_2_bind_pre)
        apply simp
        apply(rule gen_asm_ev2_r)
-       apply(rule equiv_valid_2_guard_imp[OF ev2_invisible], assumption+)
+       apply(rule equiv_valid_2_guard_imp[OF ev2_invisible[OF domains_distinct]], assumption+)
           apply(rule_tac P="\<top>" in modifies_at_mostI)
           apply(wp | simp)+
          apply(rule mam)
@@ -556,6 +569,8 @@ lemma ev2_inv:
 
 lemma mapM_x_ev2_r_invisible:
   assumes
+    domains_distinct: "pas_domains_distinct aag"
+  assumes
     mam: "\<And> ptr. modifies_at_most aag (L ptr) \<top> ((f::word32 \<Rightarrow> (unit,det_ext) s_monad) ptr)"
   assumes
     inv: "\<And> P. invariant g P"
@@ -573,7 +588,7 @@ lemma mapM_x_ev2_r_invisible:
   apply (rule_tac R'="op =" and P'="\<lambda> s. labels_are_invisible aag l (L a)" in equiv_valid_2_bind_pre)
        apply simp
       apply(rule gen_asm_ev2_r)
-      apply(rule equiv_valid_2_guard_imp[OF ev2_invisible], assumption+)
+      apply(rule equiv_valid_2_guard_imp[OF ev2_invisible[OF domains_distinct]], assumption+)
           apply(rule_tac P="\<top>" in modifies_at_mostI)
           apply(wp | simp)+
          apply(rule mam)
@@ -599,6 +614,8 @@ lemma ev2_sym:
 
 lemma mapM_x_ev2_l_invisible:
   assumes
+    domains_distinct: "pas_domains_distinct aag"
+  assumes
     mam: "\<And> ptr. modifies_at_most aag (L ptr) \<top> ((f::word32 \<Rightarrow> (unit,det_ext) s_monad) ptr)"
   assumes
     inv: "\<And> P. invariant g P"
@@ -610,7 +627,7 @@ lemma mapM_x_ev2_l_invisible:
    (mapM_x f list) g"
   apply(rule ev2_sym[OF reads_equiv_sym affects_equiv_sym affects_equiv_sym])
       apply(simp_all)[4]
-  apply(rule mapM_x_ev2_r_invisible[OF mam inv])
+  apply(rule mapM_x_ev2_r_invisible[OF domains_distinct mam inv])
   done
 
 
@@ -659,7 +676,15 @@ lemma set_tcb_queue_reads_respects[wp]:
   "reads_respects aag l (\<lambda>_. True) (set_tcb_queue d prio queue)"
   unfolding equiv_valid_def2 equiv_valid_2_def
   apply (clarsimp simp: set_tcb_queue_def bind_def modify_def put_def get_def)
-  apply (rule conjI | rule affects_equiv_ready_queues_update reads_equiv_ready_queues_update, assumption | fastforce elim: affects_equivE reads_equivE simp: equiv_for_def)+
+   (* FIXME: cleanup *)
+  apply (rule conjI)
+   apply (rule reads_equiv_ready_queues_update, assumption)
+   apply (fastforce simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def)
+  apply (rule affects_equiv_ready_queues_update, assumption)
+  apply (clarsimp simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
+                        equiv_asids_def equiv_asid_def)
+  apply (rule ext)
+  apply force
   done
 
 lemma aag_can_read_self'[simp]:
@@ -667,9 +692,9 @@ lemma aag_can_read_self'[simp]:
   by (fastforce intro: reads_lrefl)
 
 lemma gets_apply_ready_queues_reads_respects:
-  "reads_respects aag l (\<lambda>_. pasDomainAbs aag d = pasSubject aag) (gets_apply ready_queues d)"
+  "reads_respects aag l (\<lambda>_. pasSubject aag \<in> pasDomainAbs aag d) (gets_apply ready_queues d)"
   apply (rule gets_apply_ev')
-  apply (fastforce elim: reads_equivE simp: equiv_for_def)
+  apply (force elim: reads_equivE simp: equiv_for_def)
   done
 
 (*
@@ -684,7 +709,7 @@ lemma set_tcb_queue_equiv_but_for_labels:
 *)
 
 lemma set_tcb_queue_modifies_at_most:
-  "modifies_at_most aag L (\<lambda>s. L = {pasDomainAbs aag d}) (set_tcb_queue d prio queue)"
+  "modifies_at_most aag L (\<lambda>s. pasDomainAbs aag d \<inter> L \<noteq> {}) (set_tcb_queue d prio queue)"
   apply (rule modifies_at_mostI)
   apply (simp add: set_tcb_queue_def modify_def, wp)
   apply (force simp: equiv_but_for_labels_def states_equiv_for_def equiv_for_def equiv_asids_def equiv_asid_def)
@@ -706,15 +731,17 @@ lemma equiv_valid_rv_trivial':
   by(auto simp: equiv_valid_2_def dest: state_unchanged[OF inv])
 
 lemma tcb_sched_action_reads_respects:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (pas_refined aag) (tcb_sched_action action thread)"
   apply (simp add: tcb_sched_action_def get_tcb_queue_def)
   apply (subst gets_apply)
   apply (case_tac "aag_can_read aag thread \<or> aag_can_affect aag l thread")
    apply (simp add: ethread_get_def)
    apply wp
-         apply (rule_tac Q="\<lambda>s. pasObjectAbs aag thread = pasDomainAbs aag (tcb_domain rv)" in equiv_valid_guard_imp)
+         apply (rule_tac Q="\<lambda>s. pasObjectAbs aag thread \<in> pasDomainAbs aag (tcb_domain rv)" in equiv_valid_guard_imp)
           apply (wp gets_apply_ev')
-          apply (fastforce elim: reads_equivE affects_equivE equiv_forE)
+          apply (fastforce simp: reads_equiv_def affects_equiv_def equiv_for_def states_equiv_for_def)
          apply (wp | simp)+
    apply (intro conjI impI allI
          | fastforce simp: get_etcb_def elim: reads_equivE affects_equivE equiv_forE)+
@@ -729,7 +756,7 @@ lemma tcb_sched_action_reads_respects:
       prefer 2
       apply (wp equiv_valid_rv_trivial, simp)
      apply (rule equiv_valid_2_bind)
-        apply (rule_tac P="\<top>" and P'="\<top>" and L="{pasObjectAbs aag thread}" and L'="{pasObjectAbs aag thread}" in ev2_invisible)
+        apply (rule_tac P="\<top>" and P'="\<top>" and L="{pasObjectAbs aag thread}" and L'="{pasObjectAbs aag thread}" in ev2_invisible[OF domains_distinct])
             apply (blast | simp add: labels_are_invisible_def)+
           apply (rule set_tcb_queue_modifies_at_most)
          apply (rule set_tcb_queue_modifies_at_most)
@@ -744,6 +771,8 @@ lemma tcb_sched_action_reads_respects:
   done
 
 lemma reschedule_required_reads_respects[wp]:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (pas_refined aag) reschedule_required"
   apply (simp add: reschedule_required_def | wp tcb_sched_action_reads_respects | wpc)+
   apply (simp add: reads_equiv_def)
@@ -757,6 +786,8 @@ lemma gets_cur_domain_ev:
   done
 
 lemma possible_switch_to_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l
     (pas_refined aag and pas_cur_domain aag and (\<lambda>s. is_subject aag (cur_thread s)))
     (possible_switch_to tptr)"
@@ -780,13 +811,15 @@ lemma possible_switch_to_reads_respects:
   apply (clarsimp simp: get_etcb_def pas_refined_def tcb_domain_map_wellformed_aux_def)
   apply (frule_tac x="(tptr, tcb_domain y)" in bspec, force intro: domtcbs)
   apply (erule notE, rule aag_can_read_self)
-  apply simp
+  apply (fastforce dest: domains_distinct[THEN pas_domains_distinct_inj])
   done
 
 crunch sched_act[wp]: set_simple_ko "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps)
 
 lemma cancel_all_ipc_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (pas_refined aag and K (is_subject aag epptr)) (cancel_all_ipc epptr)"
   unfolding cancel_all_ipc_def fun_app_def
   apply (wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects
@@ -995,6 +1028,8 @@ lemma set_notification_equiv_but_for_labels:
   done
 
 lemma cancel_all_signals_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (pas_refined aag and K (is_subject aag ntfnptr)) (cancel_all_signals ntfnptr)"
   unfolding cancel_all_signals_def
   apply ((wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects
@@ -1151,6 +1186,8 @@ lemma bound_tcb_at_eq:
   done
 
 lemma unbind_maybe_notification_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l
      (pas_refined aag and invs and K (is_subject aag ntfnptr))
      (unbind_maybe_notification ntfnptr)"
@@ -1180,6 +1217,8 @@ lemma unbind_notification_is_subj_reads_respects:
   done
 
 lemma fast_finalise_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l (pas_refined aag and invs and K (pas_cap_cur_auth aag cap) and
     K (fin \<longrightarrow> (case cap of EndpointCap r badge rights \<Rightarrow> is_subject aag r |
                            NotificationCap r badge rights \<Rightarrow> is_subject aag r |
@@ -1198,6 +1237,8 @@ lemma fast_finalise_reads_respects:
   done
 
 lemma cap_delete_one_reads_respects_f:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f aag l (silc_inv aag st and invs and pas_refined aag and K (is_subject aag (fst slot))) (cap_delete_one slot)"
   unfolding cap_delete_one_def fun_app_def
   apply(unfold unless_def when_def)
@@ -1290,6 +1331,8 @@ lemma thread_set_fault_empty_invs:
   done
 
 lemma thread_set_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l \<top> (thread_set x y)"
   unfolding thread_set_def fun_app_def
   apply(case_tac "aag_can_read aag y \<or> aag_can_affect aag l y")
@@ -1297,7 +1340,7 @@ lemma thread_set_reads_respects:
    apply(clarsimp, rule reads_affects_equiv_get_tcb_eq, simp+)[1]
   apply(simp add: equiv_valid_def2)
   apply(rule equiv_valid_rv_guard_imp)
-   apply(rule_tac L="{pasObjectAbs aag y}" and L'="{pasObjectAbs aag y}" in ev2_invisible)
+   apply(rule_tac L="{pasObjectAbs aag y}" and L'="{pasObjectAbs aag y}" in ev2_invisible[OF domains_distinct])
        apply (assumption | simp add: labels_are_invisible_def)+
      apply(rule modifies_at_mostI[where P="\<top>"] | wp set_object_equiv_but_for_labels | simp | (clarify, drule get_tcb_not_asid_pool_at))+
   done
@@ -1334,6 +1377,7 @@ lemma thread_set_tcb_at:
 lemmas [wp] = thread_set_fault_valid_global_refs
 
 lemma reply_cancel_ipc_reads_respects_f:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes gets_ev[wp del]
   shows
   "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and K (is_subject aag tptr)) (reply_cancel_ipc tptr)"
@@ -1353,6 +1397,8 @@ lemma reply_cancel_ipc_reads_respects_f:
   done
 
 lemma cancel_signal_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects aag l ((\<lambda>s. is_subject aag (cur_thread s)) and K (aag_can_read_label aag (pasObjectAbs aag ntfnptr) \<or>
         aag_can_affect aag l ntfnptr)) (cancel_signal threadptr ntfnptr)"
   unfolding cancel_signal_def
@@ -1367,6 +1413,8 @@ lemma cancel_signal_owned_reads_respects:
   done
 
 lemma cancel_ipc_reads_respects_f:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and
    (K (is_subject aag t)))
     (cancel_ipc t)"
@@ -1383,6 +1431,8 @@ lemma cancel_ipc_reads_respects_f:
 
 
 lemma suspend_reads_respects_f:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and
   (K (is_subject aag thread))) (suspend thread)"
   unfolding suspend_def
@@ -1421,6 +1471,8 @@ lemma arch_finalise_cap_reads_respects:
 done
 
 lemma deleting_irq_handler_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f aag l (silc_inv aag st and invs and pas_refined aag and K (is_subject_irq aag irq)) (deleting_irq_handler irq)"
   unfolding deleting_irq_handler_def
   apply(wp cap_delete_one_reads_respects_f
@@ -1429,6 +1481,8 @@ lemma deleting_irq_handler_reads_respects:
   done
 
 lemma finalise_cap_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and cte_wp_at (op = cap) slot and K (pas_cap_cur_auth aag cap)
     and K (final \<longrightarrow> (case cap of EndpointCap r badge rights \<Rightarrow> is_subject aag r |
                            NotificationCap r badge rights \<Rightarrow> is_subject aag r |
@@ -1544,6 +1598,7 @@ lemma finalise_cap_only_timer_irq_inv:
   done
 
 lemma rec_del_spec_reads_respects_f:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del]
         drop_spec_ev[wp_split del] rec_del.simps[simp del]
   shows
@@ -1711,6 +1766,8 @@ qed
 lemmas rec_del_reads_respects_f = use_spec_ev[OF rec_del_spec_reads_respects_f]
 
 lemma cap_delete_reads_respects:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
   "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and pas_refined aag and emptyable slot and K (is_subject aag (fst slot)))
     (cap_delete slot)"
   unfolding cap_delete_def

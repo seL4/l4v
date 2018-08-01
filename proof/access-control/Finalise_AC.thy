@@ -14,6 +14,29 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+text {*
+NB: the @{term is_subject} assumption is not appropriate for some of
+    the scheduler lemmas. This is because a scheduler domain may have
+    threads from multiple labels, hence the thread being acted upon
+    might not be in the same label as the current subject.
+
+    In some of the scheduling lemmas, we replace the @{term is_subject}
+    assumption with a statement that our current thread is in one of
+    the current subject's domains.
+*}
+
+lemma tcb_sched_action_dequeue_integrity':
+  "\<lbrace>integrity aag X st and pas_refined aag and
+    (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag (tcb_domain (the (ekheap s thread))))\<rbrace>
+    tcb_sched_action tcb_sched_dequeue thread
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  apply (simp add: tcb_sched_action_def)
+  apply wp
+  apply (clarsimp simp: integrity_def integrity_ready_queues_def pas_refined_def
+                        tcb_domain_map_wellformed_aux_def etcb_at_def get_etcb_def
+                  split: option.splits)
+  done
+
 lemma tcb_sched_action_dequeue_integrity[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and K (is_subject aag thread)\<rbrace>
     tcb_sched_action tcb_sched_dequeue thread
@@ -36,6 +59,18 @@ apply (clarsimp simp: integrity_def integrity_ready_queues_def pas_refined_def t
            split: option.splits)
 apply (metis append.simps) (* it says append.simps is unused, but refuses to prove the goal without *)
 done
+
+text {* See comment for @{thm tcb_sched_action_dequeue_integrity'} *}
+lemma tcb_sched_action_append_integrity':
+  "\<lbrace>integrity aag X st and
+    (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag (tcb_domain (the (ekheap s thread))))\<rbrace>
+    tcb_sched_action tcb_sched_append thread
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  apply (simp add: tcb_sched_action_def)
+  apply wp
+  apply (clarsimp simp: integrity_def integrity_ready_queues_def etcb_at_def
+                 split: option.splits)
+  done
 
 lemma tcb_sched_action_append_integrity[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and K (is_subject aag thread)\<rbrace>
