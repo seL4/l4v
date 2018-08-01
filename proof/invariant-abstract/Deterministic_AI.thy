@@ -3844,27 +3844,9 @@ lemmas transfer_caps_loop_ext_valid[wp] =
 crunch valid_list[wp]: tcb_sched_action,reschedule_required "valid_list"
   (simp: unless_def)
 
-crunch all_but_exst[wp]: reschedule_required "all_but_exst P"
-
-global_interpretation reschedule_required_ext_extended: is_extended "reschedule_required"
-  by (unfold_locales; wp)
-
-
 crunch valid_list[wp]: schedule_tcb "valid_list"
   (simp: unless_def)
 
-crunch all_but_exst[wp]: schedule_tcb "all_but_exst P"
-
-interpretation schedule_tcb_ext_extended: is_extended "schedule_tcb r"
-  by (unfold_locales; wp ARM.schedule_tcb_empty_fail)  (* RT FIXME: requialify *)
-
-crunch valid_list[wp]: set_thread_state_ext "valid_list"
-  (simp: unless_def)
-
-crunch all_but_exst[wp]: set_thread_state_ext "all_but_exst P"
-
-interpretation set_thread_state_ext_extended: is_extended "set_thread_state_ext r"
-  by (unfold_locales; wp)  (* RT FIXME: requialify *)
 (*
 crunch valid_list[wp]: reply_unlink_tcb, sched_context_donate, schedule_tcb valid_list
   (wp: crunch_wps maybeM_inv dxo_wp_weak mapM_x_wp set_object_def simp: valid_list_2_def ignore: set_object)
@@ -3884,9 +3866,7 @@ lemma update_sk_obj_ref_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> update_sk_obj_ref C f p v \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: update_sk_obj_ref_def)
 
-lemma set_thread_state_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> set_thread_state ref ts\<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: set_thread_state_def)
+crunch valid_list[wp]: set_thread_state valid_list
 
 lemma set_sched_context_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> set_sched_context ptr sc \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -3947,12 +3927,8 @@ lemma test_reschedule_cdt_cdt_list[wp]:
   by (wpsimp simp: test_reschedule_def
        wp: hoare_drop_imps)
 
-crunch all_but_exst[wp]: test_reschedule "all_but_exst P"
-
 crunch (empty_fail) empty_fail[wp]: test_reschedule
 
-interpretation test_reschedule_extended: is_extended "test_reschedule a"
-  by (unfold_locales; wp)
 (*
 interpretation
   test_reschedule: non_cdt_cdt_list_op "test_reschedule r"
@@ -3968,8 +3944,8 @@ lemma schedule_tcb_cdt_cdt_list[wp]:
   by (wpsimp simp: schedule_tcb_def)
 
 lemma set_thread_state_cdt_cdt_list[wp]:
-  "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> set_thread_state_ext p \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp simp: set_thread_state_ext_def)
+  "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> set_thread_state_act p \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
+  by (wpsimp simp: set_thread_state_act_def)
 
 lemma sts_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> set_thread_state t ts \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
@@ -4011,11 +3987,6 @@ lemma reply_remove_tcb_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> reply_remove_tcb r \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: reply_remove_tcb_def wp: gts_inv hoare_vcg_all_lift hoare_drop_imp)
 
-crunch all_but_exst[wp]: possible_switch_to "all_but_exst P"
-
-interpretation possible_switch_toe_extended: is_extended "possible_switch_to a"
-  by (unfold_locales; wp)
-
 lemma possible_switch_to_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> possible_switch_to r \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: possible_switch_to_def)
@@ -4033,12 +4004,7 @@ lemma ttcb_release_remove_cdt_cdt_list[wp]:
   by (wpsimp simp: tcb_release_remove_def
        wp: hoare_drop_imps)
 
-crunch all_but_exst[wp]: tcb_release_remove "all_but_exst P"
-
 crunch (empty_fail) empty_fail[wp]: tcb_release_remove
-
-interpretation tcb_release_remove_extended: is_extended "tcb_release_remove a"
-  by (unfold_locales; wp)
 
 lemma sched_context_unbind_tcb_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> sched_context_unbind_tcb r \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -4150,16 +4116,7 @@ lemma cap_revoke_valid_list[wp]:"\<lbrace>valid_list\<rbrace> cap_revoke a \<lbr
   apply (wp preemption_point_inv'|simp)+
   done
 
-crunch valid_list[wp]: ethread_set "valid_list"
-
 end
-
-crunch all_but_exst[wp]: ethread_set "all_but_exst P"
-
-crunch (empty_fail) empty_fail[wp]: ethread_set
-
-global_interpretation ethread_set_extended: is_extended "ethread_set a b"
-  by (unfold_locales; wp)
 
 lemma cancel_badged_sends_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> cancel_badged_sends a b \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -4175,42 +4132,19 @@ lemma invoke_cnode_valid_list[wp]:
 
 end
 
-crunch all_but_exst[wp]: get_tcb_obj_ref "all_but_exst P" (simp: ethread_get_def)
-
-crunch all_but_exst[wp]: sort_queue "all_but_exst P" (simp: ethread_get_def wp: mapM_wp)
-
 crunch valid_list[wp]: sort_queue valid_list
    (wp: mapM_wp)
 
 lemma (in Deterministic_AI_1) set_priority_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> set_priority a b \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: set_priority_def reorder_ntfn_def reorder_ep_def thread_set_priority_def ethread_set_def
-  wp: get_simple_ko_wp set_eobject_valid_list hoare_drop_imp)
+  by (wpsimp simp: set_priority_def reorder_ntfn_def reorder_ep_def thread_set_priority_def thread_set_def
+  wp: get_simple_ko_wp hoare_drop_imp)
 
 lemma set_mcpriority_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> set_mcpriority a b \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: set_mcpriority_def)
 
-
-global_interpretation possible_switch_to_extended: is_extended "possible_switch_to a"
-  by (unfold_locales; wp)
-
-crunch all_but_exst[wp]: sort_queue "all_but_exst P"
-  (simp: ethread_get_def wp: mapM_wp ignore: )
-
 crunch (empty_fail)empty_fail[wp]: set_priority,set_mcpriority
-
-crunch all_but_exst[wp]: thread_set_domain "all_but_exst P"
-
-global_interpretation thread_set_domain_extended: is_extended "thread_set_domain a b"
-  by (unfold_locales; wp)
-
-crunch all_but_exst[wp]: dec_domain_time "all_but_exst P" (simp: ethread_get_def)
-
-crunch (empty_fail) empty_fail[wp]: dec_domain_time
-
-global_interpretation dec_domain_time_extended: is_extended "dec_domain_time"
-  by (unfold_locales; wp)
 
 crunch valid_list[wp]: unbind_reply_in_ts,no_reply_in_ts valid_list
 
@@ -4243,22 +4177,14 @@ crunch valid_list[wp]: send_fault_ipc,handle_timeout valid_list
 
 end
 
-
-crunch all_but_exst[wp]: tcb_release_enqueue "all_but_exst P"
-  (simp: ethread_get_def get_tcb_sc_def get_sc_time_def get_tcb_obj_ref_def
-     wp: hoare_drop_imp mapM_wp' thread_get_inv)
-
 crunch (empty_fail) empty_fail[wp]: tcb_release_enqueue
 
-global_interpretation tcb_release_enqueue_extended: is_extended "tcb_release_enqueue r"
-  by (unfold_locales; wp)
-
 crunch valid_list[wp]: tcb_release_enqueue "valid_list"
-  (simp: ethread_get_def wp: get_object_wp mapM_wp hoare_drop_imp ignore: )
+  (simp: thread_get_def wp: get_object_wp mapM_wp hoare_drop_imp ignore: )
 
 lemma postpone_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> postpone r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-   by (wpsimp simp: postpone_def wp_del: postpone_inv wp: hoare_drop_imp)
+   by (wpsimp simp: postpone_def wp: hoare_drop_imp)
 
 lemma refill_split_check_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> refill_split_check spr usage \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -4287,22 +4213,17 @@ lemma check_budget_valid_list[wp]:
            wp: hoare_vcg_if_lift2 hoare_drop_imp get_sched_context_wp)
 
 crunch valid_list[wp]: check_budget_restart "valid_list"
-  (simp: ethread_get_def wp: hoare_drop_imp)
+  (simp: thread_get_def wp: hoare_drop_imp)
 
 crunch valid_list[wp]: handle_fault "valid_list"
-  (simp: ethread_get_def unless_def wp: get_object_wp)
+  (simp: thread_get_def unless_def wp: get_object_wp)
 
 end
 
 crunch valid_list[wp]: tcb_release_enqueue "valid_list"
-  (simp: ethread_get_def wp: get_object_wp mapM_wp hoare_drop_imp ignore: )
-
-crunch all_but_exst[wp]: test_possible_switch_to "all_but_exst P"
+  (simp: thread_get_def wp: get_object_wp mapM_wp hoare_drop_imp ignore: )
 
 crunch (empty_fail) empty_fail[wp]: test_possible_switch_to
-
-interpretation test_possible_switch_to_extended: is_extended "test_possible_switch_to a"
-  by (unfold_locales; wp)
 
 lemma test_possible_switch_to_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> test_possible_switch_to t \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -4336,13 +4257,13 @@ lemma restart_valid_list[wp]:
   by (wpsimp simp: restart_def wp: hoare_drop_imp)
 
 crunch valid_list[wp]: update_time_stamp "valid_list"
-  (simp: ethread_get_def wp: get_object_wp)
+  (wp: get_object_wp)
 
 crunch valid_list[wp]: reply_from_kernel "valid_list"
-  (simp: ethread_get_def unless_def wp: get_object_wp)
+  (wp: get_object_wp)
 
 crunch valid_list[wp]: sched_context_resume,suspend "valid_list"
-  (simp: ethread_get_def wp: get_object_wp hoare_drop_imp maybeM_inv)
+  (wp: get_object_wp hoare_drop_imp maybeM_inv)
 
 crunch valid_list[wp]: sched_context_bind_ntfn valid_list
 crunch valid_list[wp]: sched_context_unbind_reply valid_list (wp: mapM_x_wp')
@@ -4351,12 +4272,7 @@ crunch valid_list[wp]: invoke_sched_context valid_list
 
 crunch valid_list[wp]: refill_update,refill_new valid_list (wp: hoare_drop_imp)
 
-crunch all_but_exst[wp]: commit_domain_time "all_but_exst P"
-
 crunch (empty_fail) empty_fail[wp]: commit_domain_time
-
-interpretation commit_domain_time_extended: is_extended "commit_domain_time"
-  by (unfold_locales; wp)
 
 crunch valid_list[wp]: commit_time valid_list
 
@@ -4373,20 +4289,10 @@ end
 
 lemma delete_objects_valid_list[wp]: "\<lbrace>valid_list\<rbrace> delete_objects ptr bits \<lbrace>\<lambda>_.valid_list\<rbrace>"
   unfolding delete_objects_def
-  apply (wp | simp add: detype_def detype_ext_def wrap_ext_det_ext_ext_def)+
+  apply (wp | simp add: detype_def)+
   done
 
 lemmas mapM_x_def_bak = mapM_x_def[symmetric]
-
-lemma retype_region_ext_valid_list_ext[wp]: "\<lbrace>valid_list\<rbrace> retype_region_ext a b \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: retype_region_ext_def)
-
-crunch all_but_exst[wp]: retype_region_ext "all_but_exst P" (simp: ethread_get_def)
-
-crunch (empty_fail)empty_fail[wp]: retype_region_ext
-
-global_interpretation retype_region_ext_extended: is_extended "retype_region_ext a b"
-  by (unfold_locales; wp)
 
 crunch valid_list[wp]: invoke_irq_handler valid_list
 crunch valid_list[wp]: maybe_donate_sc valid_list (wp: maybeM_inv)

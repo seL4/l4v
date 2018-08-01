@@ -148,11 +148,6 @@ global_interpretation EmptyFail_AI_schedule_unit?: EmptyFail_AI_schedule_unit
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 *)
-global_interpretation EmptyFail_AI_schedule_det?: EmptyFail_AI_schedule_det
-  proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
 
 global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   proof goal_cases
@@ -164,7 +159,7 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
 crunch (empty_fail) empty_fail[wp]: possible_switch_to
 
 context Arch begin global_naming ARM
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_thread
+crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_thread, check_budget
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits
          bool.splits apiobject_type.splits aobject_type.splits notification.splits
@@ -181,11 +176,6 @@ global_interpretation EmptyFail_AI_call_kernel_unit?: EmptyFail_AI_call_kernel_u
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 *)
-global_interpretation EmptyFail_AI_call_kernel_det?: EmptyFail_AI_call_kernel_det
-  proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
 
 global_interpretation EmptyFail_AI_call_kernel?: EmptyFail_AI_call_kernel
   proof goal_cases

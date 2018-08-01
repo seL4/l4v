@@ -983,14 +983,29 @@ lemma sc_yf_sc_at_more_update[iff]:
   "sc_yf_sc_at P p (trans_state f s) = sc_yf_sc_at P p s"
   by (simp add: sc_yf_sc_at_def)
 
+lemma sc_yf_sc_at_release_queue_update[simp]:
+  "sc_yf_sc_at P p (release_queue_update f s) = sc_yf_sc_at P p s"
+  by (simp add: sc_yf_sc_at_def)
+
+lemma sc_yf_sc_at_ready_queues_update[simp]:
+  "sc_yf_sc_at P p (ready_queues_update f s) = sc_yf_sc_at P p s"
+  by (simp add: sc_yf_sc_at_def)
+
+lemma sc_yf_sc_at_scheduler_action_update[simp]:
+  "sc_yf_sc_at P p (scheduler_action_update f s) = sc_yf_sc_at P p s"
+  by (simp add: sc_yf_sc_at_def)
+
 lemma  sched_context_unbind_tcb_sc_yf_helper[wp]:
   "\<lbrace>\<lambda>s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
                             st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>
       sched_context_unbind_tcb scptr \<lbrace>\<lambda>rv s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
                             st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>"
-  apply (clarsimp simp: sched_context_unbind_tcb_def get_sc_obj_ref_def)
+  apply (clarsimp simp: sched_context_unbind_tcb_def get_sc_obj_ref_def tcb_release_remove_def
+                        tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
+                        reschedule_required_def set_scheduler_action_def is_schedulable_def
+                  cong: scheduler_action.case_cong)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  by wpsimp
+  by (wpsimp wp: thread_get_wp')
 
 lemma sched_context_unbind_all_tcbs_sc_yf_helper[wp]:
   "\<lbrace>\<lambda>s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
@@ -1583,12 +1598,12 @@ lemma st_tcb_at_idle_thread:
 
 lemma tcb_state_merge_tcb_state_default:
   "tcb_state (tcb_registers_caps_merge tcb tcb') = tcb_state tcb"
-  "tcb_state default_tcb = Structures_A.Inactive"
+  "tcb_state (default_tcb dm) = Structures_A.Inactive"
   by (auto simp add: tcb_registers_caps_merge_def default_tcb_def)
 
 lemma tcb_bound_notification_merge_tcb_state_default:
   "tcb_bound_notification (tcb_registers_caps_merge tcb tcb') = tcb_bound_notification tcb"
-  "tcb_bound_notification default_tcb = None"
+  "tcb_bound_notification (default_tcb dm) = None"
   by (auto simp add: tcb_registers_caps_merge_def default_tcb_def)
 
 (*Lift hoare triples from an instantiation to the nondeterministic hoare triple version.
@@ -1674,13 +1689,16 @@ lemma unbind_notification_sym_refs[wp]:
    apply (fastforce simp: obj_at_def pred_tcb_at_def ntfn_q_refs_of_def
                           state_refs_of_def
                     split: if_split_asm)
-  apply (auto simp: valid_obj_def obj_at_def symreftype_inverse'
-                    ntfn_q_refs_of_def tcb_ntfn_is_bound_def state_refs_of_def
-                    tcb_st_refs_of_def get_refs_def2
-              split: ntfn.splits thread_state.splits if_split_asm
-              dest!: sym_refs_bound_tcb_atD
-              elim!: obj_at_valid_objsE
-              intro!: ntfn_q_refs_no_NTFNBound)
-  done
+  by (auto simp: valid_obj_def obj_at_def symreftype_inverse'
+                 ntfn_q_refs_of_def tcb_ntfn_is_bound_def state_refs_of_def
+                 tcb_st_refs_of_def get_refs_def2
+          split: ntfn.splits thread_state.splits if_split_asm
+          dest!: sym_refs_bound_tcb_atD
+          elim!: obj_at_valid_objsE
+         intro!: ntfn_q_refs_no_NTFNBound)
+
+crunches test_reschedule
+  for kheap[wp]: "\<lambda>s. P (kheap s)"
+  and ob_at[wp]: "\<lambda>s. P (obj_at Q p s)"
 
 end

@@ -155,10 +155,13 @@ lemma is_up_8_32: "is_up (ucast :: word8 \<Rightarrow> word32)"
 
 
 crunches
-  schedule_tcb, cancel_all_ipc, cancel_all_signals, fast_finalise, set_cap, post_cap_deletion, sched_context_unbind_tcb,
+  schedule_tcb, cancel_all_ipc, cancel_all_signals, set_cap, post_cap_deletion, sched_context_unbind_tcb,
   sched_context_donate
   for mdb_inv[wp]: "\<lambda>s. P (cdt s)"
   (wp: crunch_wps ignore: tcb_release_remove test_reschedule)
+
+crunch mdb_inv[wp]: fast_finalise "\<lambda>s. P (cdt s)"
+  (wp: fast_finalise_lift crunch_wps maybeM_inv ignore: sched_context_donate)
 
 lemma cap_delete_one_still_derived:
   "\<lbrace>\<lambda>s. cte_wp_at (is_derived (cdt s) p' cap) p' s \<and> p \<noteq> p' \<and> valid_mdb s\<rbrace>
@@ -246,13 +249,13 @@ lemmas (in Interrupt_AI)
                                                              , simplified
                                                         ]
 
-crunch interrupt_states[wp]: sched_context_donate, reply_unlink_tcb "\<lambda>s. P (interrupt_states s)" 
+crunch interrupt_states[wp]: sched_context_donate, reply_unlink_tcb "\<lambda>s. P (interrupt_states s)"
   (wp: mapM_x_wp_inv maybeM_inv hoare_drop_imp hoare_vcg_if_lift2)
 
-crunch interrupt_states[wp]: update_waiting_ntfn, cancel_signal, blocked_cancel_ipc "\<lambda>s. P (interrupt_states s)" 
+crunch interrupt_states[wp]: update_waiting_ntfn, cancel_signal, blocked_cancel_ipc "\<lambda>s. P (interrupt_states s)"
   (wp: mapM_x_wp_inv maybeM_inv crunch_wps ignore: sched_context_donate)
 
-crunch interrupt_states[wp]: cancel_ipc "\<lambda>s. P (interrupt_states s)" 
+crunch interrupt_states[wp]: cancel_ipc "\<lambda>s. P (interrupt_states s)"
 
 lemma cancel_ipc_noreply_interrupt_states:
   "\<lbrace>\<lambda>s. st_tcb_at (\<lambda>st. \<forall>r. st \<noteq> BlockedOnReply r) t s \<and> P (interrupt_states s) \<rbrace>

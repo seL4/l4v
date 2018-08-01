@@ -110,6 +110,7 @@ lemma thread_set_hyp_refs_trivial [TcbAcc_AI_assms]:
          clarsimp simp: state_hyp_refs_of_def hyp_refs_of_def tcb_hyp_refs_def get_tcb_def x y[simplified tcb_arch_ref_def])
   done
 
+
 lemma mab_pb [simp]:
   "msg_align_bits \<le> pageBits"
   unfolding msg_align_bits pageBits_def by simp

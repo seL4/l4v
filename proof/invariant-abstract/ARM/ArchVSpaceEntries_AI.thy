@@ -408,7 +408,7 @@ lemma set_simple_ko_valid_pdpt_objs[wp]:
        set_simple_ko param_a param_b param_c \<lbrace>\<lambda>_ s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x\<rbrace> "
   by (set_simple_ko_method wp_thm: set_object_valid_pdpt simp_thm: get_object_def)
 
-crunch valid_pdpt_objs[wp]: set_thread_state_ext "valid_pdpt_objs"
+crunch valid_pdpt_objs[wp]: set_thread_state_act "valid_pdpt_objs"
   (wp: check_cap_inv crunch_wps simp: crunch_simps
        ignore: check_cap_at set_object)
 
@@ -440,7 +440,7 @@ crunch valid_pdpt_objs[wp]: set_extra_badge, transfer_caps_loop "valid_pdpt_objs
   (wp: transfer_caps_loop_pres)
 
 crunch valid_pdpt_objs[wp]: reply_unlink_tcb "valid_pdpt_objs"
-  (wp: get_simple_ko_wp  gts_wp ignore: set_thread_state_ext set_object)
+  (wp: get_simple_ko_wp  gts_wp ignore: set_object)
 
 lemma as_user_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> as_user t m \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
@@ -452,7 +452,7 @@ lemma as_user_valid_pdpt_objs[wp]:
 crunch valid_pdpt_objs[wp]: send_ipc, send_signal "valid_pdpt_objs"
   (wp: get_sched_context_wp mapM_wp' maybeM_inv hoare_vcg_if_lift2 hoare_drop_imps
   simp: zipWithM_x_mapM
-  ignore: set_thread_state_ext set_object test_reschedule)
+  ignore: set_object test_reschedule)
 
 crunch valid_pdpt_objs[wp]: send_ipc, send_signal "valid_pdpt_objs"
   (wp: transfer_caps_loop_pres)
@@ -706,13 +706,9 @@ lemma invoke_cnode_valid_pdpt_objs[wp]:
 crunch valid_pdpt_objs[wp]: test_possible_switch_to,set_priority "valid_pdpt_objs"
   (wp: maybeM_inv hoare_drop_imp)
 
-crunch valid_pdpt_objs[wp]: invoke_tcb "valid_pdpt_objs"
+crunch valid_pdpt_objs[wp]: invoke_tcb, invoke_domain "valid_pdpt_objs"
   (wp: check_cap_inv crunch_wps maybeM_inv simp: crunch_simps
        ignore: check_cap_at set_object tcb_release_enqueue test_possible_switch_to)
-
-lemma invoke_domain_valid_pdpt_objs[wp]:
-  "\<lbrace>valid_pdpt_objs\<rbrace> invoke_domain t d \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  by (simp add: invoke_domain_def set_domain_def | wp)+
 
 crunch valid_pdpt_objs[wp]: invoke_irq_handler "valid_pdpt_objs"
   (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps
@@ -1664,6 +1660,14 @@ lemma invocation_duplicates_valid_exst_update[simp]:
   apply (clarsimp simp add: invocation_duplicates_valid_def pti_duplicates_valid_def page_inv_duplicates_valid_def page_inv_entries_safe_def split: sum.splits invocation.splits arch_invocation.splits kernel_object.splits page_table_invocation.splits page_invocation.splits)+
   done
 
+lemma invocation_duplicates_valid_scheduler_action_update[simp]:
+  "invocation_duplicates_valid i (scheduler_action_update f s) = invocation_duplicates_valid i s"
+  by (cases i; simp add: invocation_duplicates_valid_def pti_duplicates_valid_def
+                         page_inv_duplicates_valid_def page_inv_entries_safe_def Let_def
+                  split: arch_invocation.splits page_table_invocation.splits
+                         page_invocation.splits sum.splits)
+
+crunch invocation_duplicates_valid[wp]: set_thread_state_act "invocation_duplicates_valid i"
 
 lemma set_thread_state_duplicates_valid[wp]:
   "\<lbrace>invocation_duplicates_valid i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. invocation_duplicates_valid i\<rbrace>"
@@ -1692,7 +1696,7 @@ lemma handle_invocation_valid_pdpt[wp]:
 
 crunch valid_pdpt[wp]: check_budget_restart,update_time_stamp "valid_pdpt_objs"
 
-crunch ct_active: set_thread_state_ext ct_active
+crunch ct_active: set_thread_state_act ct_active
   (wp: ignore: set_object)
 
 crunch valid_pdpt[wp]: sc_and_timer "valid_pdpt_objs"

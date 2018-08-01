@@ -46,6 +46,8 @@ definition all_but_exst where
                       (cur_thread s) (idle_thread s)
                       (consumed_time s) (cur_time s)
                       (cur_sc s) (reprogram_timer s)
+                      (scheduler_action s) (domain_list s) (domain_index s)
+                      (cur_domain s) (domain_time s) (ready_queues s) (release_queue s)
                       (machine_state s) (interrupt_irq_node s)
                       (interrupt_states s) (arch_state s))"
 
@@ -56,29 +58,19 @@ lemma ef_mk_ef: "empty_fail f \<Longrightarrow> mk_ef (f s) = f s"
   apply force
   done
 
-lemma all_but_obvious: "all_but_exst (\<lambda>a b c d e f1 f2 f3 f4 f g h i.
-                    x = \<lparr>kheap = a, cdt = b, is_original_cap = c,
-                     cur_thread = d, idle_thread = e,
-             consumed_time = f1, cur_time = f2,
-cur_sc = f3, reprogram_timer = f4,
-                     machine_state = f, interrupt_irq_node = g,
-                     interrupt_states = h, arch_state = i, exst = (exst x)\<rparr>) x"
+lemma all_but_obvious:
+  "all_but_exst (\<lambda>kheap cdt is_original_cap cur_thread idle_thread consumed_time cur_time cur_sc
+       reprogram_timer scheduler_action domain_list domain_index cur_domain domain_time
+       ready_queues release_queue  machine_state interrupt_irq_node interrupt_states arch_state.
+       x = \<lparr>kheap = kheap, cdt = cdt, is_original_cap = is_original_cap, cur_thread = cur_thread,
+            idle_thread = idle_thread, consumed_time = consumed_time, cur_time = cur_time,
+            cur_sc = cur_sc, reprogram_timer = reprogram_timer, scheduler_action = scheduler_action,
+            domain_list = domain_list, domain_index = domain_index, cur_domain = cur_domain,
+            domain_time = domain_time, ready_queues = ready_queues, release_queue = release_queue,
+            machine_state = machine_state, interrupt_irq_node = interrupt_irq_node,
+            interrupt_states = interrupt_states, arch_state = arch_state,
+         exst = (exst x)\<rparr>) x"
   apply (simp add: all_but_exst_def)
-  done
-
-lemma bluh: assumes a: "x =
-        \<lparr>kheap = kheap ba, cdt = cdt ba,
-           is_original_cap = is_original_cap ba,
-           cur_thread = cur_thread ba, idle_thread = idle_thread ba,
-           consumed_time = consumed_time ba, cur_time = cur_time ba,
-           cur_sc = cur_sc ba, reprogram_timer = reprogram_timer ba,
-           machine_state = machine_state ba,
-           interrupt_irq_node = interrupt_irq_node ba,
-           interrupt_states = interrupt_states ba,
-           arch_state = arch_state ba, exst = exst x\<rparr>"
-     shows "x\<lparr>exst := exst ba\<rparr> = ba"
-  apply (subst a)
-  apply simp
   done
 
 lemma valid_cs_trans_state[simp]: "valid_cs a b (trans_state g s) = valid_cs a b s"
@@ -142,13 +134,14 @@ locale is_extended' =
 
 context is_extended' begin
 
-lemmas v = use_valid[OF _ a, OF _ all_but_obvious,simplified all_but_exst_def, THEN bluh]
+lemmas v = use_valid[OF _ a, OF _ all_but_obvious,simplified all_but_exst_def]
 
-lemma ex_st: "(a,x :: det_ext state) \<in> fst (f s) \<Longrightarrow>
-       \<exists>e :: det_ext. x = (trans_state (\<lambda>_. e) s)"
+lemma ex_st:
+  "(a,x :: det_ext state) \<in> fst (f s) \<Longrightarrow> \<exists>e :: det_ext. x = (trans_state (\<lambda>_. e) s)"
   apply (drule v)
   apply (simp add: trans_state_update')
   apply (rule_tac x="exst x" in exI)
+  apply (cases s)
   apply simp
   done
 
@@ -244,6 +237,13 @@ locale is_extended = is_extended' +
 
 context is_extended begin
 
+lemma in_f_exst:
+  "(r, s') \<in> fst (f s) \<Longrightarrow> s\<lparr>exst := exst s'\<rparr> = s'"
+  apply (drule v)
+  apply (cases s)
+  apply simp
+  done
+
 lemma dxo_eq[simp]:
   "do_extended_op f = f"
   apply (simp add: do_extended_op_def all_but_exst_def
@@ -254,7 +254,7 @@ lemma dxo_eq[simp]:
   apply rule
    apply simp
    apply safe
-     apply (simp | force | frule v)+
+     apply (simp | force | frule in_f_exst)+
   done
 
 end
@@ -265,17 +265,10 @@ lemma all_but_exst_update[simp]:
   apply (simp add: all_but_exst_def)
   done
 
-crunch all_but_exst[wp]: set_scheduler_action,tcb_sched_action,
-                         cap_move_ext "all_but_exst P"
+crunch all_but_exst[wp]: cap_move_ext "all_but_exst P"
   (simp: Let_def)
 
 crunch (empty_fail) empty_fail[wp]: cap_move_ext
-
-global_interpretation set_scheduler_action_extended: is_extended "set_scheduler_action a"
-  by (unfold_locales; wp)
-
-global_interpretation tcb_sched_action_extended: is_extended "tcb_sched_action a b"
-  by (unfold_locales; wp)
 
 global_interpretation cap_move_ext: is_extended "cap_move_ext a b c d"
   by (unfold_locales; wp)
@@ -283,11 +276,6 @@ global_interpretation cap_move_ext: is_extended "cap_move_ext a b c d"
 
 lemmas rec_del_simps_ext =
     rec_del.simps [THEN ext[where f="rec_del args" for args]]
-
-
-lemma truncate_state_detype[simp]: "truncate_state (detype x s) = detype x (truncate_state s)"
-  apply (simp add: detype_def trans_state_def)
-  done
 
 lemmas in_use_frame_truncate[simp] = more_update.in_user_frame_update[where f="\<lambda>_.()"]
 
@@ -308,11 +296,6 @@ lemma guarded_sub_switch: "((),x) \<in> fst (guarded_switch_to word s) \<Longrig
                             thread_get_def
                             in_monad)
   done
-
-lemma truncate_state_updates[simp]:
-  "truncate_state (scheduler_action_update f s) = truncate_state s"
-  "truncate_state (ready_queues_update g s) = truncate_state s"
-  by (rule trans_state_update'')+
 
 lemma get_before_assert_opt:
   "do s \<leftarrow> assert_opt x; s' \<leftarrow> get; f s s' od

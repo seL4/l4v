@@ -2044,7 +2044,7 @@ lemma gsc_ntfn_sp:
   done
 
 lemma maybe_donate_sc_if_live_then_nonz_cap[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> ex_nonz_cap_to tptr s
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> ex_nonz_cap_to tptr s \<and> valid_objs s
         \<and> (\<forall>scptr ntfn. kheap s ntfnptr = Some (Notification ntfn) \<and> ntfn_sc ntfn = Some scptr
                         \<longrightarrow> ex_nonz_cap_to scptr s)\<rbrace>
    maybe_donate_sc tptr ntfnptr
@@ -2190,8 +2190,12 @@ lemma update_waiting_invs:
          apply (fastforce simp: obj_at_def is_ntfn elim!: ex_cap_to_after_update)
         apply (wpsimp wp: valid_irq_node_typ)
                       defer
-                      apply (clarsimp simp: not_idle_tcb_in_waitingntfn
-                                            ex_nonz_cap_to_tcb_in_waitingntfn)+
+                      apply (clarsimp simp: not_idle_tcb_in_waitingntfn)+
+         apply (erule (1) pspace_valid_objsE)
+         apply (clarsimp simp: valid_ntfn_def valid_obj_def valid_bound_obj_def
+                        split: list.splits option.splits;
+                cases q; force)
+        apply (clarsimp simp: ex_nonz_cap_to_tcb_in_waitingntfn)
        apply (fastforce simp: live_def live_ntfn_def elim!: if_live_then_nonz_capD2)
       apply (clarsimp simp: ex_nonz_cap_to_tcb_in_waitingntfn)
      apply clarsimp+
@@ -2378,7 +2382,7 @@ lemma sai_invs[wp]:
                   split: if_splits)
   done
 
-crunch typ_at[wp]: send_signal "\<lambda>(s::det_ext state). P (typ_at T t s)"
+crunch typ_at[wp]: send_signal "\<lambda>s. P (typ_at T t s)"
 (wp: hoare_drop_imps maybeM_inv)
 
 lemma ncof_invs [wp]:
@@ -2463,13 +2467,13 @@ lemmas (in Ipc_AI) transfer_caps_loop_cap_to[wp]
 crunch cap_to[wp]: set_extra_badge "ex_nonz_cap_to p"
 
 context Ipc_AI begin
+
 crunch cap_to[wp]: do_ipc_transfer "ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
-(*
-crunch it[wp]: receive_ipc "\<lambda>s::det_ext state. P (idle_thread s)"
-  (wp: hoare_drop_imps simp: crunch_simps zipWithM_x_mapM)
-*)
+crunch it[wp]: receive_ipc "\<lambda>s::'state_ext state. P (idle_thread s)"
+  (wp: hoare_drop_imps crunch_wps simp: crunch_simps zipWithM_x_mapM)
+
 end
 
 lemma schedule_tcb_Pmdb[wp]: "\<lbrace>\<lambda>s. P (cdt s)\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_ s. P (cdt s)\<rbrace>"
@@ -2659,8 +2663,8 @@ lemma schedule_tcb_cap_to[wp]:
   by (wpsimp simp: schedule_tcb_def)
 
 crunches complete_signal, do_nbrecv_failed_transfer, reply_push, receive_signal
-  for cap_to[wp]: "ex_nonz_cap_to p :: det_state \<Rightarrow> bool"
-  and typ_at[wp]: "\<lambda>s :: det_state. P (typ_at T p s)"
+  for cap_to[wp]: "ex_nonz_cap_to p"
+  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (ignore: set_object set_tcb_obj_ref
        wp: cap_insert_ex_cap hoare_drop_imps crunch_wps maybeM_inv
      simp: crunch_simps)
@@ -2678,35 +2682,10 @@ lemma cancel_ipc_cap_to:
            simp: ex_nonz_cap_to_def cte_wp_at_caps_of_state
        simp_del: split_paired_Ex)
 
-(* The purpose of the Ipc_AI_det locale is to prove theorems about functions that
-   only exist in the det_ext_monad, but which also depend on theorems proved in the
-   Ipc_AI or Ipc_AI_cont locales.
-   This locale is therefore _morally_ derived from a type-specialised Ipc_AI_cont.
-   However, instead of actually deriving from a type-specialised Ipc_AI_cont,
-   we take it as a locale assumption.
-   To explain why, first note that, as with other locales whose purpose is defer
-   proofs requiring architecture-specific details, we will eventually make an
-   unconditional global_interpretation of this locale, to obtain its theorems
-   in the global context.
-   If we had derived from a type-specialised Ipc_AI_cont, then this interpretation
-   would make copies of all the theorems in Ipc_AI_cont, but with specialised
-   types. These specialised copies would then break subsequent proofs which
-   expect the non-specialised theorem.
-   Internally, we would still like the Ipc_AI_det context to behave like a derived
-   locale. To achieve that, we need to perform a _local_ interpretation of Ipc_AI_cont
-   whenever we enter the Ipc_AI_cont context. *)
-
-locale Ipc_AI_det =
-  fixes some_t :: "'t itself"
-  assumes Ipc_AI_det: "Ipc_AI_cont TYPE(det_ext) TYPE('t)"
-
-context Ipc_AI_det begin
-
-interpretation Ipc_AI_cont "TYPE(det_ext)"
-  by (rule Ipc_AI_det)
+context Ipc_AI begin
 
 lemma receive_ipc_cap_to[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> receive_ipc thread cap is_blocking reply_cap  \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
+  "receive_ipc thread cap is_blocking reply_cap \<lbrace>ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   by (wpsimp simp: receive_ipc_def
                wp: hoare_drop_imps sort_queue_inv fail_wp cancel_ipc_cap_to
                    hoare_strengthen_post[OF get_endpoint_inv[where P="ex_nonz_cap_to p"]])
@@ -2770,7 +2749,8 @@ lemma maybe_donate_sc_pred_tcb_at:
    apply (case_tac sc_tcb; simp)
     apply (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def set_object_def
                         set_sc_obj_ref_def update_sched_context_def get_object_def get_tcb_def
-                        pred_tcb_at_def obj_at_def get_sc_obj_ref_def get_sched_context_def)
+                        pred_tcb_at_def obj_at_def get_sc_obj_ref_def get_sched_context_def
+                    wp: hoare_vcg_imp_lift hoare_vcg_all_lift)
     apply (fastforce simp: sc_tcb_sc_at_def obj_at_def)
    apply wpsimp
   apply wpsimp
@@ -2803,25 +2783,22 @@ crunch ct[wp]: set_mrs "\<lambda>s::'state_ext state. P (cur_thread s)"
 end
 
 crunches receive_signal
-  for typ_at[wp]: "\<lambda>s :: det_state. P (typ_at T p s)"
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (ignore: set_object set_tcb_obj_ref
        wp: cap_insert_ex_cap hoare_drop_imps crunch_wps maybeM_inv
      simp: crunch_simps)
 
 
-context Ipc_AI_det begin
-
-interpretation Ipc_AI_cont "TYPE(det_ext)"
-  by (rule Ipc_AI_det)
+context Ipc_AI begin
 
 lemma receive_ipc_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> receive_ipc thread cap is_blocking reply_cap \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+  "\<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace> receive_ipc thread cap is_blocking reply_cap \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   by (wpsimp simp: receive_ipc_def
                wp: hoare_drop_imps
                    hoare_strengthen_post[OF get_endpoint_inv[where P="\<lambda>s. P (typ_at T p s)"]])
 
 lemma ri_tcb [wp]:
-  "\<lbrace>tcb_at t' :: det_ext state \<Rightarrow> bool\<rbrace>
+  "\<lbrace>tcb_at t' :: 'state_ext state \<Rightarrow> bool\<rbrace>
     receive_ipc t cap is_blocking r
    \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
   by (simp add: tcb_at_typ, wp)

@@ -31,32 +31,12 @@ lemma cancel_signal_simple:
 
 crunch  typ_at: cancel_all_ipc "\<lambda>s. P (typ_at T p s)" (wp: crunch_wps mapM_x_wp)
 
-lemma cancel_all_helper:
-  " \<lbrace>valid_objs and
-    (\<lambda>s. \<forall>t \<in> set queue. st_tcb_at (\<lambda>st. \<not> halted st) t s) \<rbrace>
-     mapM_x (\<lambda>t. do y \<leftarrow> set_thread_state t Structures_A.Restart;
-                    do_extended_op (tcb_sched_enqueue_ext t) od) queue
-   \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  apply (rule hoare_strengthen_post)
-   apply (rule mapM_x_wp [where S="set queue", simplified])
-    apply (wp, simp, wp hoare_vcg_const_Ball_lift sts_st_tcb_at_cases, simp)
-    apply (clarsimp elim: pred_tcb_weakenE)
-    apply (erule(1) my_BallE)
-    apply (clarsimp simp: st_tcb_def2)
-    apply (frule(1) valid_tcb_objs)
-    apply (clarsimp simp: valid_tcb_def valid_tcb_state_def
-                          cte_wp_at_cases tcb_cap_cases_def
-                   dest!: get_tcb_SomeD)
-   apply simp+
-  done
-
-
-lemma set_thread_state_valid_objs_minorpre[wp]: (* FIXME: replace set_thread_state_valid_objs ? *)
+lemma set_thread_state_valid_objs_minorpre[wp]: (* FIXME: replace set_thread_state_valid_objs! *)
  "\<lbrace>valid_objs and valid_tcb_state st\<rbrace>
   set_thread_state thread st
   \<lbrace>\<lambda>r. valid_objs\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (wp, simp, (wp set_object_valid_objs)+)
+  apply (wpsimp wp: set_object_valid_objs)
   apply (clarsimp simp: obj_at_def get_tcb_def
                  split: Structures_A.kernel_object.splits option.splits)
   apply (simp add: valid_objs_def dom_def)
@@ -255,6 +235,8 @@ lemma sched_context_clear_replies_st_tcb_at[wp]:
                    update_sk_obj_ref_def
                wp: mapM_x_wp' hoare_drop_imp)
 
+crunch st_tcb_at[wp]: tcb_release_remove "st_tcb_at P t"
+
 lemma sched_context_unbind_all_tcbs_st_tcb_at[wp]:
   "\<lbrace>st_tcb_at P t\<rbrace> sched_context_unbind_all_tcbs scptr \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   by (wpsimp simp: sched_context_unbind_all_tcbs_def sched_context_unbind_tcb_def set_sc_obj_ref_def
@@ -392,9 +374,9 @@ lemma get_epq_sp:
   apply (cases ep)
   apply (wp|simp)+
   done
-crunches set_thread_state_ext
- for no_cdt[wp]: "\<lambda>s. P (cdt s)"
- and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+
+crunches set_thread_state_act
+ for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
 
 crunches reply_unlink_tcb
  for aligned[wp]: pspace_aligned
@@ -430,7 +412,7 @@ crunches reply_unlink_tcb
  and valid_mdb[wp]: "valid_mdb"
  and valid_ioc[wp]: "valid_ioc"
  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-  (simp: Let_def wp: hoare_drop_imps ignore: set_thread_state_ext)
+  (simp: Let_def wp: hoare_drop_imps)
 
 lemma sc_at[wp]: "\<lbrace>sc_at sc_ptr\<rbrace> reply_unlink_tcb rp \<lbrace>\<lambda>_. sc_at sc_ptr\<rbrace>"
   apply (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def set_simple_ko_def
@@ -444,11 +426,17 @@ lemma valid_idle[wp]:
   apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def get_tcb_rev)
   done
 
+lemma sts_only_idle:
+  "\<lbrace> K (\<not>idle st) and only_idle \<rbrace> set_thread_state t st \<lbrace>\<lambda>_. only_idle\<rbrace>"
+  unfolding set_thread_state_def
+  by (wpsimp simp: only_idle_def pred_tcb_at_def set_object_def obj_at_def)
+
 lemma only_idle[wp]:
   "\<lbrace>only_idle\<rbrace> reply_unlink_tcb rp \<lbrace>\<lambda>_. only_idle\<rbrace>"
-  by (wpsimp simp: reply_unlink_tcb_def set_thread_state_def set_object_def update_sk_obj_ref_def
-                   set_simple_ko_def get_object_def get_simple_ko_def get_thread_state_def
-                   thread_get_def only_idle_def pred_tcb_at_def obj_at_def)
+  unfolding reply_unlink_tcb_def
+  by (wpsimp wp: sts_only_idle
+           simp: thread_get_def only_idle_def pred_tcb_at_def set_simple_ko_def get_object_def
+                 get_simple_ko_def get_thread_state_def)
 
 lemma zombie_final[wp]: "\<lbrace>zombies_final\<rbrace> reply_unlink_tcb rp \<lbrace>\<lambda>_. zombies_final\<rbrace>"
   apply (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def set_simple_ko_def
@@ -650,6 +638,13 @@ lemma reply_unlink_sc_hyp_refs_of [wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> reply_unlink_sc scp rp \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
   by (wpsimp simp: reply_unlink_sc_def wp: get_simple_ko_wp)
 
+crunches test_reschedule, set_sc_obj_ref, get_sc_obj_ref
+  for hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+  and valid_idle[wp]: valid_idle
+  and it[wp]: "\<lambda>s. P (idle_thread s)"
+  and only_idle[wp]: only_idle
+  and valid_arch_state[wp]: valid_arch_state
+
 lemma sched_context_donate_hyp_refs_of [wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
   by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def wp: get_sched_context_wp)
@@ -659,72 +654,26 @@ lemma sched_context_donate_valid_idle [wp]:
         sc_tcb_sc_at (\<lambda>x. x \<noteq> Some (idle_thread s)) scp s\<rbrace>
    sched_context_donate scp tp \<lbrace>\<lambda>s. valid_idle\<rbrace>"
   by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def get_sched_context_def
-                      get_object_def sc_tcb_sc_at_def obj_at_def)
+                   get_object_def sc_tcb_sc_at_def obj_at_def)
 
-lemma sched_context_donate_only_idle [wp]:
-  "\<lbrace>only_idle\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. only_idle\<rbrace>"
-  by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def get_sched_context_def
-                   get_object_def)
-
-lemma sched_context_donate_valid_arch_state [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. valid_arch_state\<rbrace>"
-  by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def get_sched_context_def
-                   get_object_def)
+crunches sched_context_donate
+  for only_idle[wp]: only_idle
+  and valid_arch_state[wp]: valid_arch_state
+  and valid_irq_states[wp]: valid_irq_states
+  and valid_machine_state[wp]: valid_machine_state
+  and valid_vspace_objs[wp]: valid_vspace_objs
+  and valid_arch_caps[wp]: valid_arch_caps
+  and valid_global_objs[wp]: valid_global_objs
+  and valid_kernel_mappings[wp]: valid_kernel_mappings
+  and equal_kernel_mappings[wp]: equal_kernel_mappings
+  and valid_asid_map[wp]: valid_asid_map
+  and valid_global_vspace_mappings[wp]: valid_global_vspace_mappings
+  and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
+  (ignore: set_object set_tcb_obj_ref wp: crunch_wps simp: crunch_simps)
 
 lemma sched_context_donate_valid_irq_node [wp]:
   "\<lbrace>valid_irq_node\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. valid_irq_node\<rbrace>"
   by (wp valid_irq_node_typ)
-
-lemma sched_context_donate_valid_irq_states [wp]:
-  "\<lbrace>valid_irq_states\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. valid_irq_states\<rbrace>"
-  by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def get_sched_context_def
-               wp: get_object_wp)
-
-lemma sched_context_donate_valid_machine_state [wp]:
-  "\<lbrace>valid_machine_state\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. valid_machine_state\<rbrace>"
-  by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def get_sched_context_def
-               wp: get_object_wp)
-
-lemma sched_context_donate_valid_vspace_objs [wp]:
-  "\<lbrace>valid_vspace_objs\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. valid_vspace_objs\<rbrace>"
-  by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def get_sched_context_def
-               wp: get_object_wp)
-
-lemma sched_context_donate_valid_arch_caps [wp]:
-  "\<lbrace>valid_arch_caps\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. valid_arch_caps\<rbrace>"
-  by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def get_sched_context_def
-               wp: get_object_wp)
-
-lemma sched_context_donate_valid_global_objs [wp]:
-  "\<lbrace>valid_global_objs\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. valid_global_objs\<rbrace>"
-  by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def get_sched_context_def
-               wp: get_object_wp)
-
-lemma sched_context_donate_valid_kernel_mappings [wp]:
-  "\<lbrace>valid_kernel_mappings\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. valid_kernel_mappings\<rbrace>"
-  by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def get_sched_context_def
-               wp: get_object_wp)
-
-lemma sched_context_donate_equal_kernel_mappings [wp]:
-  "\<lbrace>equal_kernel_mappings\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. equal_kernel_mappings\<rbrace>"
-  by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def get_sched_context_def
-               wp: get_object_wp)
-
-lemma sched_context_donate_valid_asid_map [wp]:
-  "\<lbrace>valid_asid_map\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. valid_asid_map\<rbrace>"
-  by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def get_sched_context_def
-               wp: get_object_wp)
-
-lemma sched_context_donate_valid_global_vspace_mappings [wp]:
-  "\<lbrace>valid_global_vspace_mappings\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. valid_global_vspace_mappings\<rbrace>"
-  by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def get_sched_context_def
-               wp: get_object_wp)
-
-lemma sched_context_donate_cap_refs_respects_device_region [wp]:
-  "\<lbrace>cap_refs_respects_device_region\<rbrace> sched_context_donate scp tp
-   \<lbrace>\<lambda>s. cap_refs_respects_device_region\<rbrace>"
-  by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def get_sched_context_def
-               wp: get_object_wp)
 
 crunches reply_unlink_sc
   for cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
@@ -773,9 +722,9 @@ lemma reply_unlink_tcb_sc_tcb_sc_at [wp]:
    \<lbrace>\<lambda>_ s. sc_tcb_sc_at (P (idle_thread s)) scp' s\<rbrace>"
   apply (wpsimp simp: reply_unlink_tcb_def set_thread_state_def sc_tcb_sc_at_def set_object_def
                       update_sk_obj_ref_def set_simple_ko_def get_object_def get_simple_ko_def
-                      get_thread_state_def thread_get_def)
-  apply (auto simp: obj_at_def get_tcb_def)
-  done
+                      get_thread_state_def thread_get_def set_thread_state_act_def
+                      set_scheduler_action_def is_schedulable_def)
+  by (auto simp: obj_at_def get_tcb_def)
 
 lemma sc_tcb_sc_at_update:
   "sc_tcb_sc_at P p (trans_state f s) = sc_tcb_sc_at P p s"
@@ -839,6 +788,8 @@ lemma reply_unlink_sc_refs_of:
                   split: list.splits)
   done
 
+crunch refs_of[wp]: test_reschedule "\<lambda>s. P (state_refs_of s)"
+
 lemma sched_context_donate_refs_of:
   "\<lbrace>\<lambda>s. tcb_at tp s \<and>
         P (\<lambda>a. if a = scp then
@@ -898,6 +849,18 @@ lemma reply_unlink_sc_invs:
   "\<lbrace>\<lambda>s. invs s\<rbrace> reply_unlink_sc scp rp \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: reply_unlink_sc_sym_refs)
 
+lemma set_thread_state_act_inv:
+  "(\<And>s. P (s\<lparr>scheduler_action := choose_new_thread\<rparr>) = P s) \<Longrightarrow> set_thread_state_act t \<lbrace>P\<rbrace>"
+  by (wpsimp simp: set_thread_state_act_def set_scheduler_action_def is_schedulable_def)
+
+lemma state_refs_of_scheduler_action_kheap[simp]:
+  "state_refs_of (s\<lparr>scheduler_action := sa, kheap := h\<rparr>) = state_refs_of (s\<lparr>kheap := h\<rparr>)"
+  by (simp add: state_refs_of_def)
+
+lemma sc_tcb_sc_at_scheduler_action_kheap[simp]:
+  "sc_tcb_sc_at a b (s\<lparr>scheduler_action := sa, kheap := h\<rparr>) = sc_tcb_sc_at a b (s\<lparr>kheap := h\<rparr>)"
+  by (simp add: sc_tcb_sc_at_def obj_at_def)
+
 lemma reply_remove_tcb_invs:
   "\<lbrace>invs\<rbrace> reply_remove_tcb t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: reply_remove_tcb_def)
@@ -932,8 +895,8 @@ lemma reply_remove_tcb_invs:
    apply (rule hoare_vcg_conj_lift[rotated])
     apply wpsimp
    apply (wpsimp simp: reply_unlink_tcb_def set_thread_state_def)
-          apply (simp only: trans_state_update[symmetric] more_update.state_refs_update
-                            sc_tcb_sc_at_update more_update.pspace)
+          apply (wp add: set_thread_state_act_inv)
+          apply (simp cong: if_cong option.case_cong)
          apply (wpsimp simp: set_simple_ko_def set_object_def get_thread_state_def
                              thread_get_def obj_at_def
                          wp: get_object_wp get_simple_ko_wp)+
@@ -1140,7 +1103,7 @@ lemma suspend_invs_helper:
                                set_tcb_obj_ref tcb_yield_to_update t None
                             od) yt_opt;
       _ <- set_thread_state t Inactive;
-      do_extended_op (tcb_sched_action tcb_sched_dequeue t)
+      tcb_sched_action tcb_sched_dequeue t
    od
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_seq_ext[OF _ gyt_sp])
@@ -1212,7 +1175,7 @@ lemma reply_cancel_ipc_inactive [wp]:
 lemma suspend_invs:
   notes hoare_pre [wp_pre del]
   shows
-  "\<lbrace>invs\<rbrace> (suspend t :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs\<rbrace> suspend t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: suspend_def)
   apply (wp suspend_invs_helper)
    apply (clarsimp simp: cancel_ipc_def)
@@ -1318,12 +1281,12 @@ lemma reply_unlink_sc_bound_tcb_at [wp]:
 
 lemma sched_context_donate_bound_tcb_at [wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> sched_context_donate scptr tcbptr \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
-  apply (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def set_object_def
-                      set_sc_obj_ref_def update_sched_context_def get_object_def
-                      pred_tcb_at_def obj_at_def get_tcb_def get_sc_obj_ref_def
-                  wp: get_sched_context_wp)
-  apply auto
-  done
+  by (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def set_object_def
+                   set_sc_obj_ref_def update_sched_context_def get_object_def
+                   pred_tcb_at_def obj_at_def get_tcb_def get_sc_obj_ref_def
+                   test_reschedule_def reschedule_required_def set_scheduler_action_def
+                   tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
+               wp: get_sched_context_wp) auto
 
 lemma reply_remove_bound_tcb_at [wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> reply_remove rptr \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
@@ -1409,7 +1372,7 @@ lemma suspend_unlive_helper:
   shows
   "\<lbrace>bound_tcb_at (op = None) t and bound_sc_tcb_at (op = None) t and
     bound_yt_tcb_at (op = yt_opt) t\<rbrace>
-   maybeM (\<lambda>sc_ptr. do _ <- set_sc_obj_ref sc_yield_from_update sc_ptr None;
+   maybeM (\<lambda>sc_ptr. do set_sc_obj_ref sc_yield_from_update sc_ptr None;
                        set_tcb_obj_ref tcb_yield_to_update t None
                     od) yt_opt
    \<lbrace>\<lambda>rv. bound_tcb_at (op = None) t and bound_sc_tcb_at (op = None) t and
@@ -1425,6 +1388,8 @@ lemma set_thread_state_not_live0:
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live0) t\<rbrace>"
   by (wpsimp simp: set_thread_state_def set_object_def obj_at_def pred_tcb_at_def get_tcb_def)
 
+crunch obj_at[wp]: tcb_sched_action "\<lambda>s. P (obj_at Q p s)"
+
 lemma suspend_unlive:
   notes hoare_pre [wp_pre del]
   shows
@@ -1432,11 +1397,9 @@ lemma suspend_unlive:
     and st_tcb_at (Not \<circ> awaiting_reply) t\<rbrace>
    suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live0) t\<rbrace>"
-  apply (wpsimp simp: suspend_def)
-     apply (wpsimp wp: set_thread_state_not_live0)
-    apply (wpsimp wp: suspend_unlive_helper)
-   apply (wpsimp simp: get_tcb_obj_ref_def thread_get_def)
-  apply (wpsimp simp: pred_conj_def)
+  unfolding suspend_def
+  apply (wpsimp wp: set_thread_state_not_live0 suspend_unlive_helper
+              simp: get_tcb_obj_ref_def thread_get_def pred_conj_def)
    apply (rule hoare_conjI)
     apply (simp add: cancel_ipc_def)
     apply (rule hoare_seq_ext[OF _ gts_sp])
@@ -1457,9 +1420,8 @@ where
                               Some (TCB tcb) \<Rightarrow> get_refs TCBBound (tcb_bound_notification tcb)
                             | _ \<Rightarrow> {}"
 
-lemma bound_refs_of_tcb_trans:
-  "bound_refs_of_tcb (trans_state f s) x = bound_refs_of_tcb s x"
-  by (clarsimp simp:bound_refs_of_tcb_def trans_state_def)
+crunches possible_switch_to
+  for valid_irq_node[wp]: valid_irq_node
 
 lemma cancel_all_invs_helper:
   "\<lbrace>all_invs_but_sym_refs
@@ -1471,19 +1433,13 @@ lemma cancel_all_invs_helper:
                   \<and> sym_refs (\<lambda>x. state_hyp_refs_of s x)
                   \<and> (\<forall>x\<in>set q. st_tcb_at (Not \<circ> (halted or awaiting_reply)) x s))\<rbrace>
      mapM_x (\<lambda>t. do y \<leftarrow> set_thread_state t Structures_A.thread_state.Restart;
-                    do_extended_op (tcb_sched_enqueue_ext t) od) q
+                    possible_switch_to t od) q
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply (rule mapM_x_inv_wp2)
-   apply wpsimp
-  apply wp
-    apply (simp add:bound_refs_of_tcb_trans)
-   apply wp[1]
-   apply (rule hoare_pre, wp hoare_vcg_const_Ball_lift valid_irq_node_typ sts_only_idle)
-    apply (rule sts_st_tcb_at_cases)
-   apply (auto simp: valid_tcb_state_def idle_no_ex_cap o_def if_split_asm
-              elim!: rsubst[where P=sym_refs] st_tcb_weakenE
-             intro!: ext)
+  apply (rule mapM_x_inv_wp2, wpsimp)
+  apply (wpsimp wp: hoare_vcg_const_Ball_lift valid_irq_node_typ sts_only_idle sts_st_tcb_at_cases)
+  apply (auto simp: valid_tcb_state_def idle_no_ex_cap o_def if_split_asm
+             elim!: rsubst[where P=sym_refs] st_tcb_weakenE)
   done
 
 lemma ep_no_bound_refs:
@@ -1597,7 +1553,7 @@ lemma cancel_all_ipc_invs_helper':
                   reply_opt <- case st of BlockedOnReceive _ ro \<Rightarrow> return ro | _ \<Rightarrow> return None;
                   _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb (the reply_opt));
                   _ <- set_thread_state t Restart;
-                  do_extended_op (possible_switch_to t)
+                  possible_switch_to t
                 od) q
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
@@ -1659,9 +1615,9 @@ lemma cancel_all_ipc_invs_helper:
                                                                     | _ \<Rightarrow> return None;
                           _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb (the reply_opt));
                           _ <- set_thread_state t Restart;
-                          do_extended_op (possible_switch_to t)
+                          possible_switch_to t
                        od) q;
-      do_extended_op reschedule_required
+      reschedule_required
    od
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (subst bind_assoc[symmetric])
@@ -1725,7 +1681,7 @@ lemma cancel_all_ipc_st_tcb_at_helper':
                   reply_opt <- case st of BlockedOnReceive _ ro \<Rightarrow> return ro | _ \<Rightarrow> return None;
                   _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb (the reply_opt));
                   _ <- set_thread_state t Restart;
-                  do_extended_op (possible_switch_to t)
+                  possible_switch_to t
                 od) q
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (rule mapM_x_inv_wp2[unfolded pred_conj_def], assumption)
@@ -1734,7 +1690,7 @@ lemma cancel_all_ipc_st_tcb_at_helper':
          defer 4
          defer 4
          apply ((wpsimp wp: hoare_pre_cont, fastforce simp: st_tcb_at_def obj_at_def)+)[6]
-   apply wpsimp
+   apply (wpsimp wp: hoare_vcg_const_Ball_lift)
     apply (wpsimp wp: hoare_vcg_conj_lift hoare_vcg_const_Ball_lift sts_st_tcb_at_cases)
    apply (rename_tac ro, case_tac ro)
     apply (wpsimp simp: valid_tcb_state_def)
@@ -1780,9 +1736,9 @@ lemma cancel_all_ipc_st_tcb_at_helper:
                                                                     | _ \<Rightarrow> return None;
                           _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb (the reply_opt));
                           _ <- set_thread_state t Restart;
-                          do_extended_op (possible_switch_to t)
+                          possible_switch_to t
                        od) q;
-      do_extended_op reschedule_required
+      reschedule_required
    od
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (wpsimp wp: cancel_all_ipc_st_tcb_at_helper' hoare_vcg_const_Ball_lift)
@@ -2033,13 +1989,15 @@ lemma cancel_all_unlive_helper':
   apply (fastforce simp: get_tcb_SomeD is_ep)
   done
 
+crunch obj_at[wp]: possible_switch_to "\<lambda>s. P (obj_at Q p s)"
+
 lemma cancel_all_unlive_helper:
   "\<lbrace>obj_at (\<lambda>obj. \<not> live obj \<and> is_ep obj) ptr\<rbrace>
      mapM_x (\<lambda>t. do st <- get_thread_state t;
                     reply_opt <- case st of BlockedOnReceive _ ro \<Rightarrow> return ro | _ \<Rightarrow> return None;
                     _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb (the reply_opt));
                     _ <- set_thread_state t Restart;
-                    do_extended_op (possible_switch_to t)
+                    possible_switch_to t
                  od) q
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) ptr\<rbrace>"
   apply (rule hoare_strengthen_post [OF mapM_x_wp'])
@@ -2102,7 +2060,7 @@ lemma cancel_badged_sends_filterM_helper':
       filterM (\<lambda>t. do st \<leftarrow> get_thread_state t;
                       if blocking_ipc_badge st = badge
                       then do y \<leftarrow> set_thread_state t Structures_A.thread_state.Restart;
-                              y \<leftarrow> do_extended_op (possible_switch_to t);
+                              y \<leftarrow> possible_switch_to t;
                               return False
                       od
                       else return True

@@ -2947,6 +2947,10 @@ lemmas in_user_frame_update[iff] = in_user_frame_update
 lemmas in_device_frame_update[iff] = in_device_frame_update
 lemmas equal_kernel_mappings_update[iff] = equal_kernel_mappings_update
 
+lemma zombies_final_update[iff]:
+  "zombies_final (f s) = zombies_final s"
+  by (simp add: zombies_final_def is_final_cap'_def)
+
 end
 
 
@@ -3066,6 +3070,48 @@ interpretation more_update:
   by unfold_locales auto
 
 sublocale Arch \<subseteq> more_update: Arch_p_arch_idle_update_int_eq "trans_state f" ..
+
+interpretation scheduler_action_update:
+  p_arch_idle_update_int_eq "scheduler_action_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> scheduler_action_update: Arch_p_arch_idle_update_int_eq "scheduler_action_update f" ..
+
+interpretation domain_list_update:
+  p_arch_idle_update_int_eq "domain_list_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> domain_list_update: Arch_p_arch_idle_update_int_eq "domain_list_update f" ..
+
+interpretation domain_index_update:
+  p_arch_idle_update_int_eq "domain_index_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> domain_index_update: Arch_p_arch_idle_update_int_eq "domain_index_update f" ..
+
+interpretation cur_domain_update:
+  p_arch_idle_update_int_eq "cur_domain_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> cur_domain_update: Arch_p_arch_idle_update_int_eq "cur_domain_update f" ..
+
+interpretation domain_time_update:
+  p_arch_idle_update_int_eq "domain_time_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> domain_time_update: Arch_p_arch_idle_update_int_eq "domain_time_update f" ..
+
+interpretation ready_queues_update:
+  p_arch_idle_update_int_eq "ready_queues_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> ready_queues_update: Arch_p_arch_idle_update_int_eq "ready_queues_update f" ..
+
+interpretation release_queue_update:
+  p_arch_idle_update_int_eq "release_queue_update f"
+  by unfold_locales auto
+
+sublocale Arch \<subseteq> release_queue_update: Arch_p_arch_idle_update_int_eq "release_queue_update f" ..
 
 interpretation interrupt_update:
   p_arch_idle_update_eq "interrupt_states_update f"
@@ -3201,7 +3247,7 @@ lemma dom_empty_cnode: "dom (empty_cnode us) = {x. length x = us}"
   by (simp add: dom_def)
 
 lemma obj_at_default_cap_valid:
-  "\<lbrakk>obj_at (\<lambda>ko. ko = default_object ty dev us) x s;
+  "\<lbrakk>obj_at (\<lambda>ko. ko = default_object ty dev us dm) x s;
    ty = CapTableObject \<Longrightarrow> 0 < us;
    ty = SchedContextObject \<Longrightarrow> valid_sched_context_size us;
    ty \<noteq> Untyped; ty \<noteq> ArchObject ASIDPoolObj;

@@ -560,6 +560,4 @@ global_interpretation Ipc_AI_cont?: Ipc_AI_cont
   case 1 show ?case by (unfold_locales; (fact Ipc_AI_cont_assms)?)
   qed
 
-global_interpretation Ipc_AI_det?: Ipc_AI_det ..
-
 end

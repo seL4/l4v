@@ -60,6 +60,8 @@ requalify_facts
   state_hyp_refs_of_reply_update
   state_hyp_refs_of_tcb_state_update
   state_hyp_refs_of_tcb_bound_ntfn_update
+  state_hyp_refs_of_tcb_domain_update
+  state_hyp_refs_of_tcb_priority_update
   arch_valid_obj_same_type
   default_arch_object_not_live
   default_tcb_not_live
@@ -219,41 +221,18 @@ shows
   apply (simp add: xopv[simplified trans_state_update'])
 done
 
-(* RT: check if we can do crunch instead of the following lemma
-crunch ct[wp]: set_thread_state "\<lambda>s. P (cur_thread s)" *)
-lemma set_thread_state_ct[wp]:
-  " \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_thread_state param_a param_b
-             \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
-  apply (simp add: set_thread_state_def)
-  apply (wp | simp add: set_object_def)+
-  done
+crunches set_thread_state
+  for ct[wp]: "\<lambda>s. P (cur_thread s)"
 
-lemma sts_ep_at_inv[wp]:
-  "\<lbrace> ep_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
-  apply (simp add: set_thread_state_def)
-  apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_ep is_tcb get_tcb_def)
-  done
+crunches set_scheduler_action, is_schedulable
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
 
-lemma sts_ntfn_at_inv[wp]:
-  "\<lbrace> ntfn_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. ntfn_at ep \<rbrace>"
-  apply (simp add: set_thread_state_def)
-  apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_ntfn is_tcb get_tcb_def)
-  done
+lemma set_thread_state_typ_at[wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_thread_state t s \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  unfolding set_thread_state_def set_thread_state_act_def
+  by (wpsimp wp: set_object_typ_at)
 
-lemma sts_sc_at_inv[wp]:
-  "\<lbrace> sc_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. sc_at ep \<rbrace>"
-  apply (simp add: set_thread_state_def)
-  apply (wp | simp add: set_object_def)+
-  by (clarsimp simp: obj_at_def is_sc_obj_def is_tcb get_tcb_def split: kernel_object.splits)
-
-lemma sts_reply_at_inv[wp]:
-  "\<lbrace> reply_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. reply_at ep \<rbrace>"
-  apply (simp add: set_thread_state_def)
-  apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_reply is_tcb get_tcb_def)
-  done
+lemmas set_thread_state_typ_ats[wp] = abs_typ_at_lifts[OF set_thread_state_typ_at]
 
 lemma set_tcb_obj_ref_ep_at_inv[wp]:
   "\<lbrace> ep_at ep \<rbrace> set_tcb_obj_ref f t ntfn \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
@@ -1022,8 +1001,7 @@ lemma ep_redux_simps:
   "ntfn_q_refs_of (case xs of [] \<Rightarrow> Structures_A.IdleNtfn | y # ys \<Rightarrow> Structures_A.WaitingNtfn (y # ys))
         = (set xs \<times> {NTFNSignal})"
   by (fastforce split: list.splits option.splits
-                 simp: valid_ep_def valid_ntfn_def valid_bound_obj_def
-               intro!: ext)+
+                 simp: valid_ep_def valid_ntfn_def valid_bound_obj_def)+
 
 
 crunch arch[wp]: set_simple_ko "\<lambda>s. P (arch_state s)"
@@ -1178,6 +1156,19 @@ locale non_aobj_non_cap_non_mem_op = non_aobj_non_mem_op f + non_aobj_non_cap_op
 
 sublocale non_aobj_non_cap_non_mem_op < non_vspace_non_cap_non_mem_op ..
 
+lemma get_sched_context_wp[wp]:
+  "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) p s \<longrightarrow> P sc s\<rbrace> get_sched_context p \<lbrace>P\<rbrace>"
+  unfolding get_sched_context_def by (wpsimp wp: get_object_wp simp: obj_at_def)
+
+lemma get_tcb_ko_at:
+  "(get_tcb t s = Some tcb) = ko_at (TCB tcb) t s"
+  by (auto simp: obj_at_def get_tcb_def
+           split: option.splits Structures_A.kernel_object.splits)
+
+lemma stsa_caps_of_state[wp]:
+  "set_thread_state_act t \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
+  unfolding set_thread_state_act_def set_scheduler_action_def is_schedulable_def by wpsimp
+
 lemma shows
   sts_caps_of_state[wp]:
     "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_thread_state t st \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
@@ -1212,6 +1203,10 @@ lemma
 lemma set_sc_obj_ref_caps_of_state [wp]:
   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_sc_obj_ref f ptr val \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
   by (wpsimp simp: set_sc_obj_ref_def get_sched_context_def get_object_def set_object_def)
+
+crunch obj_at[wp]: set_thread_state_act "\<lambda>s. P (obj_at P' p' s)"
+crunch arch_state[wp]: set_thread_state "\<lambda>s. P (arch_state s)"
+crunch machine[wp]: set_thread_state "\<lambda>s. P (underlying_memory (machine_state s))"
 
 interpretation
   set_simple_ko: non_aobj_non_cap_non_mem_op "set_simple_ko c p ep" +
@@ -1398,23 +1393,12 @@ crunch valid_irq_states[wp]: set_cap "valid_irq_states"
 crunch valid_irq_states[wp]: thread_set "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
-(* RT: crunch?
-crunch valid_irq_states[wp]: set_thread_state "valid_irq_states"
-  (wp: crunch_wps simp: crunch_simps) *)
-lemma set_thread_state_valid_irq_states[wp]:
-     "\<lbrace>valid_irq_states\<rbrace>
-            set_thread_state t st \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
-  apply (simp add: set_thread_state_def)
-  apply (wp | simp add: set_object_def)+
-  done
+lemma valid_irq_states_scheduler_action[simp]:
+  "valid_irq_states (s\<lparr>scheduler_action := x\<rparr>) = valid_irq_states s"
+  by (simp add: valid_irq_states_def)
 
-crunch valid_irq_states[wp]: set_tcb_obj_ref "valid_irq_states"
-  (wp: crunch_wps simp: crunch_simps)
-crunch valid_irq_states[wp]: set_sc_obj_ref "valid_irq_states"
-  (wp: crunch_wps simp: crunch_simps)
-crunch valid_irq_states[wp]: set_reply "valid_irq_states"
-  (wp: crunch_wps simp: crunch_simps)
-crunch valid_irq_states[wp]: set_reply "valid_irq_states"
+crunch valid_irq_states[wp]: set_thread_state, set_tcb_obj_ref, set_sc_obj_ref, set_reply
+  "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_ntfn_minor_invs:
@@ -1882,10 +1866,6 @@ lemma update_sched_context_valid_ioc [wp]:
 
 crunch irq_node[wp]: update_sched_context "\<lambda>s. P (interrupt_irq_node s)"
 
-lemma get_sched_context_wp:
-  "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) ptr s \<longrightarrow> P sc s\<rbrace> get_sched_context ptr \<lbrace>P\<rbrace>"
-  by (wpsimp simp: get_sched_context_def get_object_def obj_at_def)
-
 lemma get_sched_context_sp:
   "\<lbrace>P\<rbrace> get_sched_context sc_ptr
    \<lbrace> \<lambda>r s. P s \<and> (\<exists>n. ko_at (SchedContext r n) sc_ptr s)\<rbrace>"
@@ -1900,11 +1880,6 @@ lemma assert_get_tcb_ko':
   by (clarsimp simp: valid_def in_monad gets_the_def get_tcb_def
                      obj_at_def
                split: option.splits Structures_A.kernel_object.splits)
-
-lemma get_tcb_ko_at:
-  "(get_tcb t s = Some tcb) = ko_at (TCB tcb) t s"
-  by (auto simp: obj_at_def get_tcb_def
-           split: option.splits Structures_A.kernel_object.splits)
 
 (* is_schedulable lemmas *)
 lemma is_schedulable_wp:

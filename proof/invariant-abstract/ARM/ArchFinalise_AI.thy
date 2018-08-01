@@ -500,7 +500,7 @@ lemma (* suspend_no_cap_to_obj_ref *)[wp,Finalise_AI_asms]:
                  dest!: obj_ref_none_no_asid[rule_format])
   done
 
-crunches blocked_cancel_ipc, cancel_signal
+crunches blocked_cancel_ipc, cancel_signal, test_reschedule
   for bound_sc_tcb_at[wp]:  "bound_sc_tcb_at P t"
 (ignore: set_object thread_set wp: mapM_x_wp_inv maybeM_inv get_simple_ko_wp)
 
@@ -527,9 +527,9 @@ lemma suspend_unlive':
   apply (simp add: suspend_def) thm suspend_unlive
   apply (wp get_object_wp hoare_drop_imp suspend_unlive_helper set_thread_state_not_live gbn_wp
             gbyt_bound_tcb | simp only: more_update.obj_at_update | wpc)+
-  apply (simp add: obj_at_def)
+  apply (simp add: obj_at_def) (*
   apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t" in hoare_strengthen_post)
-  apply (wp cancel_ipc_bound_tcb_at) (* thm reply_cancel_ipc_def
+  apply (wp cancel_ipc_bound_tcb_at)
   apply (auto simp: pred_tcb_def2 live_def hyp_live_def dest: refs_of_live)[1]
   done*) sorry
 
@@ -597,7 +597,7 @@ lemma reply_remove_unlive:
   "\<lbrace>K (x = reply)\<rbrace>
      reply_remove x
    \<lbrace>\<lambda> rv. obj_at (Not \<circ> live) reply\<rbrace>"
-  supply if_splits[split del]
+  supply if_split[split del]
   apply (simp add: reply_remove_def)
   apply (rule hoare_gen_asm[where P'=\<top>, simplified], simp)
   apply (rule_tac Q="\<lambda>rv s. obj_at (\<lambda>ko. \<not>live ko \<and> is_reply ko) reply s" in hoare_strengthen_post)
@@ -701,6 +701,11 @@ lemma ssc_bound_yt_tcb_at[wp]:
   apply (auto simp: pred_tcb_at_def obj_at_def get_tcb_def)
   done
 
+crunches tcb_release_remove, tcb_sched_action, reschedule_required
+  for bound_tcb_at[wp]: "bound_tcb_at P p"
+  and bound_yt_tcb_at[wp]: "bound_yt_tcb_at P p"
+  and bound_sc_tcb_at[wp]: "bound_sc_tcb_at P p"
+
 lemma sched_context_unbind_tcb_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> sched_context_unbind_tcb a \<lbrace>\<lambda>y. bound_tcb_at P t\<rbrace>"
   by (wpsimp simp: sched_context_unbind_tcb_def set_sc_obj_ref_def wp: get_sched_context_wp)
@@ -718,7 +723,7 @@ lemma sched_context_unbind_tcb_bound_sc_tcb_at_None:
          sched_context_unbind_tcb sc
    \<lbrace>\<lambda>_. bound_sc_tcb_at ((=) None) tcbptr\<rbrace>"
   apply (simp add: sched_context_unbind_tcb_def maybeM_def)
-  apply (wpsimp wp: ssc_bound_tcb_at_cases get_sched_context_wp)
+  apply (wpsimp wp: ssc_bound_tcb_at_cases get_sched_context_wp hoare_vcg_const_imp_lift)
   apply (clarsimp simp: obj_at_def)
   done
 

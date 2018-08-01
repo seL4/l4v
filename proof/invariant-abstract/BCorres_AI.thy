@@ -121,8 +121,24 @@ lemma is_final_cap_bcorres[wp]:
 lemma get_tcb_truncate[simp]: "get_tcb a (truncate_state s) = get_tcb a s"
   by (simp add: get_tcb_def)
 
-crunch (bcorres)bcorres[wp]: cancel_all_ipc, bind_notification truncate_state
-  (simp: gets_the_def ignore: gets_the)
+lemma in_release_queue_truncate[simp]:
+  "in_release_queue t (truncate_state s) = in_release_queue t s"
+  by (simp add: in_release_queue_def)
+
+lemma gets_the_tcb_bcorres[wp]:
+  "bcorres (gets_the (get_tcb t)) (gets_the (get_tcb t))"
+  unfolding gets_the_def by wpsimp
+
+lemma set_tcb_queue_bcorres[wp]:
+  "bcorres (set_tcb_queue d prio q) (set_tcb_queue d prio q)"
+  apply (simp add: set_tcb_queue_def)
+  apply wpsimp
+  apply (simp cong: if_cong)
+  done
+
+crunch (bcorres)bcorres[wp]:
+  tcb_sched_action, reschedule_required, possible_switch_to, cancel_all_ipc, bind_notification
+  truncate_state
 
 crunch (bcorres)bcorres[wp]: get_tcb_obj_ref, get_sk_obj_ref truncate_state
   (simp: gets_the_def ignore: gets_the)

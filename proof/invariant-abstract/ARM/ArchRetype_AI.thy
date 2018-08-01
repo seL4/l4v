@@ -645,7 +645,7 @@ lemma valid_untyped_helper [Retype_AI_assms]:
   and     cn   : "caps_no_overlap ptr sz s"
   and     vp   : "valid_pspace s"
   shows "valid_cap c
-           (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us) then Some (default_object ty dev us) else kheap s x\<rparr>)"
+           (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us) then Some (default_object ty dev us (cur_domain s)) else kheap s x\<rparr>)"
   (is "valid_cap c ?ns")
   proof -
   have obj_at_pres: "\<And>P x. obj_at P x s \<Longrightarrow> obj_at P x ?ns"
@@ -653,7 +653,7 @@ lemma valid_untyped_helper [Retype_AI_assms]:
    (erule pspace_no_overlapC [OF pn _ _ cover vp])
   note blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
         Int_atLeastAtMost atLeastatMost_empty_iff
-  have cover':"range_cover ptr sz (obj_bits (default_object ty dev us)) n"
+  have cover':"range_cover ptr sz (obj_bits (default_object ty dev us (cur_domain s))) n"
     using cover tyunt
     by (clarsimp simp: obj_bits_dev_irr)
 
@@ -716,10 +716,10 @@ end
 
 
 global_interpretation Retype_AI_valid_untyped_helper?: Retype_AI_valid_untyped_helper
-  proof goal_cases
+proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales; fact Retype_AI_assms)
-  qed
+  case 1 show ?case by (unfold_locales; (fact Retype_AI_assms))
+qed
 
 
 locale retype_region_proofs_arch
@@ -740,7 +740,7 @@ lemma valid_cap:
   proof -
   note blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
         Int_atLeastAtMost atLeastatMost_empty_iff
-  have cover':"range_cover ptr sz (obj_bits (default_object ty dev us)) n"
+  have cover':"range_cover ptr sz (obj_bits (default_object ty dev us (cur_domain s))) n"
     using cover tyunt
     by (clarsimp simp: obj_bits_dev_irr)
   show ?thesis
@@ -761,7 +761,7 @@ lemma valid_cap:
       apply (simp add: Int_ac p_assoc_help[symmetric])
      apply simp
      using cover tyunt
-     apply (simp add: obj_bits_api_def2 split: Structures_A.apiobject_type.splits)
+     apply (simp add: obj_bits_api_def2[where dm=0] split: Structures_A.apiobject_type.splits)
      apply clarsimp+
     apply (fastforce elim!: obj_at_pres)+
   done
@@ -780,13 +780,13 @@ lemma valid_arch_state:
                      valid_asid_table_def valid_global_pts_def)
 
 lemma vs_refs_default [simp]:
-  "vs_refs (default_object ty dev us) = {}"
+  "vs_refs (default_object ty dev us dm) = {}"
   by (simp add: default_object_def default_arch_object_def tyunt vs_refs_def
                 o_def pde_ref_def graph_of_def
            split: Structures_A.apiobject_type.splits aobject_type.splits)
 
 lemma vs_refs_pages_default [simp]:
-  "vs_refs_pages (default_object ty dev us) = {}"
+  "vs_refs_pages (default_object ty dev us dm) = {}"
   by (simp add: default_object_def default_arch_object_def tyunt vs_refs_pages_def
                 o_def pde_ref_pages_def pte_ref_pages_def graph_of_def
            split: Structures_A.apiobject_type.splits aobject_type.splits)
@@ -816,8 +816,8 @@ lemma vs_lookup_pages':
 lemma hyp_refs_eq:
   "ARM.state_hyp_refs_of s' = ARM.state_hyp_refs_of s"
   unfolding s'_def ps_def
-  apply (clarsimp intro!: ext simp: state_hyp_refs_of_def
-                    simp: orthr
+  apply (rule ext)
+  apply (clarsimp simp: state_hyp_refs_of_def orthr
                    split: option.splits)
   apply (cases ty, simp_all add: tyunt default_object_def default_tcb_def
                                  hyp_refs_of_def tcb_hyp_refs_def
@@ -849,10 +849,10 @@ proof
   fix p ao
   assume p: "(\<exists>\<rhd> p) s'"
   assume "ko_at (ArchObj ao) p s'"
-  hence "ko_at (ArchObj ao) p s \<or> ArchObj ao = default_object ty dev us"
+  hence "ko_at (ArchObj ao) p s \<or> ArchObj ao = default_object ty dev us (cur_domain s)"
     by (simp add: ps_def obj_at_def s'_def split: if_split_asm)
   moreover
-  { assume "ArchObj ao = default_object ty dev us" with tyunt
+  { assume "ArchObj ao = default_object ty dev us (cur_domain s)" with tyunt
     have "valid_vspace_obj ao s'" by (rule valid_vspace_obj_default)
   }
   moreover
@@ -981,7 +981,7 @@ lemma pspace_respects_device_regionD:
 
 
 lemma default_obj_dev:
-  "\<lbrakk>ty \<noteq> Untyped;default_object ty dev us = ArchObj (DataPage dev' sz)\<rbrakk> \<Longrightarrow> dev = dev'"
+  "\<lbrakk>ty \<noteq> Untyped; default_object ty dev us dm = ArchObj (DataPage dev' sz)\<rbrakk> \<Longrightarrow> dev = dev'"
   by (clarsimp simp: default_object_def default_arch_object_def
               split: apiobject_type.split_asm aobject_type.split_asm)
 
@@ -1122,7 +1122,7 @@ lemma pspace_respects_device_region:
                         split: if_split_asm )
       apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt])
        using cover tyunt
-       apply (simp add: obj_bits_api_def3 split: if_splits)
+       apply (simp add: obj_bits_api_def3[where dm="cur_domain s"] split: if_splits)
       apply (frule default_obj_dev[OF tyunt],simp)
       apply (drule(1) subsetD)
       apply (rule exE[OF dev])
@@ -1136,7 +1136,7 @@ lemma pspace_respects_device_region:
                        split: if_split_asm )
      apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt])
       using cover tyunt
-      apply (simp add: obj_bits_api_def4 split: if_splits)
+      apply (simp add: obj_bits_api_def4[where dm="cur_domain s"] split: if_splits)
      apply (frule default_obj_dev[OF tyunt],simp)
       apply (drule(1) subsetD)
       apply (rule exE[OF dev])

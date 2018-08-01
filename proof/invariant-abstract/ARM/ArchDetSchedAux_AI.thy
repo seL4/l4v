@@ -20,79 +20,98 @@ crunches init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
   and ct[wp]: "\<lambda>s. P (cur_thread s)"
   and st_tcb_at[wp]: "st_tcb_at Q t"
-  and valid_etcbs[wp, DetSchedAux_AI_assms]: valid_etcbs
   (wp: crunch_wps hoare_unless_wp valid_etcbs_lift)
 
 crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps dxo_wp_weak preemption_point_inv mapME_x_inv_wp
-   simp: crunch_simps do_machine_op_def detype_def mapM_x_defsym unless_def
-   ignore: freeMemory retype_region_ext)
-crunch ready_queues[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (ready_queues s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
-   simp: detype_def detype_ext_def crunch_simps
-          wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory)
-crunch scheduler_action[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (scheduler_action s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
-   simp: detype_def detype_ext_def crunch_simps
-         wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory)
-crunch cur_domain[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
-      simp: detype_def detype_ext_def whenE_def unless_def
-            wrap_ext_det_ext_ext_def mapM_x_defsym
+    simp: crunch_simps do_machine_op_def detype_def mapM_x_defsym unless_def
     ignore: freeMemory)
-crunch release_queue[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (release_queue s)"
+
+crunch ready_queues[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s::det_ext state. P (ready_queues s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
-      simp: detype_def detype_ext_def whenE_def unless_def
-            wrap_ext_det_ext_ext_def mapM_x_defsym
+    simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym
+  ignore: freeMemory)
+
+crunch scheduler_action[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s::det_ext state. P (scheduler_action s)"
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
+      simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym
     ignore: freeMemory)
-crunch idle_thread[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (idle_thread s)"
+
+crunch cur_domain[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s::det_ext state. P (cur_domain s)"
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
+      simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym
+    ignore: freeMemory)
+
+crunch release_queue[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s::det_ext state. P (release_queue s)"
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
+      simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym
+    ignore: freeMemory)
+
+crunch idle_thread[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s::det_ext state. P (idle_thread s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv dxo_wp_weak
-   simp: detype_def detype_ext_def crunch_simps
-         wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory retype_region_ext)
+      simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym
+    ignore: freeMemory)
 
 lemma tcb_sched_action_valid_idle_etcb:
-  "\<lbrace>valid_idle_etcb\<rbrace>
-     tcb_sched_action foo thread
-   \<lbrace>\<lambda>_. valid_idle_etcb\<rbrace>"
-  apply (rule valid_idle_etcb_lift)
-  apply (simp add: tcb_sched_action_def set_tcb_queue_def)
-  apply (wp | simp)+
-  done
+  "tcb_sched_action sa thread \<lbrace>valid_idle_etcb\<rbrace>"
+  by (rule tcb_sched_action_kheap)
 
-crunch ekheap[wp]: do_machine_op "\<lambda>s. P (ekheap s)"
+crunch ekheap[wp]: do_machine_op "\<lambda>s. P (etcbs_of s)"
 
 lemma delete_objects_etcb_at[wp, DetSchedAux_AI_assms]:
   "\<lbrace>\<lambda>s::det_ext state. etcb_at P t s\<rbrace> delete_objects a b \<lbrace>\<lambda>r s. etcb_at P t s\<rbrace>"
   apply (simp add: delete_objects_def)
-  apply (wp)
-  apply (simp add: detype_def detype_ext_def wrap_ext_det_ext_ext_def etcb_at_def|wp)+
+  apply (wpsimp simp: detype_def wrap_ext_det_ext_ext_def)
+  apply (simp add: etcbs_of'_def etcb_at'_def)
   done
 
-lemma delete_objects_bound_sc_tcb_at[wp, DetSchedAux_AI_assms]:
-  "\<lbrace>bound_sc_tcb_at P t and invs
-and K (t \<notin> {a..a + 2 ^ b - 1})\<rbrace>
- delete_objects a b \<lbrace>\<lambda>r s. bound_sc_tcb_at P t s\<rbrace>"
-  apply (wpsimp wp: delete_objects_st_tcb_at)
-  done
+declare delete_objects_st_tcb_at[wp, DetSchedAux_AI_assms]
 
 crunches reset_untyped_cap
-for etcb_at[wp]: "etcb_at P t"
-and valid_etcbs[wp]: valid_etcbs
+for etcb_at[wp]: "etcb_at P t :: det_ext state \<Rightarrow> _"
   (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps
-    simp: unless_def)
+   simp: unless_def)
+
+lemma foldr_kh_eq:
+  "foldr (\<lambda>p kh. kh(p \<mapsto> ko')) ptrs kh t = Some ko \<Longrightarrow>
+  if t \<in> set ptrs then ko = ko' else kh t = Some ko"
+  by (induct ptrs) (auto split: if_split_asm)
+
+lemma TCB_default_objectD[dest!]:
+  "\<lbrakk>  TCB tcb = default_object t dev c dm; t \<noteq> Untyped \<rbrakk> \<Longrightarrow> tcb = default_tcb dm"
+  by (simp add: default_object_def split: apiobject_type.splits)
+
+declare tcb_state_merge_tcb_state_default[simp]
+
+lemma retype_region_etcb_at[wp]:
+  "\<lbrace>etcb_at P t\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
+  apply (simp add: retype_region_def)
+  apply wp
+  apply (clarsimp simp add: pred_tcb_at_def obj_at_def simp del: fun_upd_apply)
+  apply (clarsimp simp: etcbs_of'_def etcb_at'_def etcb_of_def)
+  apply (drule foldr_kh_eq)
+  apply (auto simp: etcb_of_def split: if_split_asm option.splits elim!: rsubst[where P=P])
+  done
+
+lemma set_pd_etcbs[wp]:
+  "set_pd p pd \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace>"
+  unfolding set_pd_def
+  apply (wpsimp wp: set_object_wp get_object_wp)
+  apply (auto elim!: rsubst[where P=P] simp: etcbs_of'_def obj_at_def split: kernel_object.splits)
+  done
+
+crunch etcb_at[wp]: init_arch_objects "\<lambda>s. P (etcbs_of s)"
+  (wp: crunch_wps ignore: set_object)
 
 lemma invoke_untyped_etcb_at [DetSchedAux_AI_assms]:
-  "\<lbrace>(\<lambda>s :: det_ext state. etcb_at P t s) and valid_etcbs\<rbrace> invoke_untyped ui \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
+  "\<lbrace>\<lambda>s :: det_ext state. etcb_at P t s\<rbrace> invoke_untyped ui \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
   apply (cases ui)
   apply (simp add: mapM_x_def[symmetric] invoke_untyped_def whenE_def
            split del: if_split)
-  apply (wp retype_region_etcb_at mapM_x_wp'
+  apply (wp mapM_x_wp'
             create_cap_no_pred_tcb_at typ_at_pred_tcb_at_lift
             hoare_convert_imp[OF create_cap_no_pred_tcb_at]
-            hoare_convert_imp[OF _ init_arch_objects_exst]
+            hoare_convert_imp[OF _ init_arch_objects_etcb_at]
       | simp
       | (wp_once hoare_drop_impE_E))+
   done
@@ -137,42 +156,42 @@ and schedulable_tcb_at t
             empty_descendants_range_in)+))*)
   sorry
 
-crunch valid_blocked[wp, DetSchedAux_AI_assms]: init_arch_objects valid_blocked
+crunch valid_blocked[wp, DetSchedAux_AI_assms]: init_arch_objects "valid_blocked::det_ext state \<Rightarrow> _"
   (wp: valid_blocked_lift set_cap_typ_at)
 
 crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps do_machine_op_def detype_def mapM_x_defsym
-   ignore: freeMemory ignore: retype_region_ext)
+   ignore: freeMemory)
 
 crunch ready_queues[wp, DetSchedAux_AI_assms]:
   invoke_untyped "\<lambda>s :: det_ext state. P (ready_queues s)"
   (wp: crunch_wps
-   simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym
+   simp: detype_def wrap_ext_det_ext_ext_def mapM_x_defsym
    ignore: freeMemory)
 
 crunch scheduler_action[wp, DetSchedAux_AI_assms]:
   invoke_untyped "\<lambda>s :: det_ext state. P (scheduler_action s)"
   (wp: crunch_wps
-   simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym
+   simp: detype_def wrap_ext_det_ext_ext_def mapM_x_defsym
    ignore: freeMemory)
 
 crunch cur_domain[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s :: det_ext state. P (cur_domain s)"
   (wp: crunch_wps
-   simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym
+   simp: detype_def wrap_ext_det_ext_ext_def mapM_x_defsym
    ignore: freeMemory)
 
 crunch idle_thread[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps dxo_wp_weak hoare_unless_wp
-   simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory retype_region_ext)
+   simp: detype_def wrap_ext_det_ext_ext_def mapM_x_defsym
+   ignore: freeMemory)
 
-lemma perform_asid_control_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and valid_etcbs\<rbrace>
+lemma perform_asid_control_etcb_at:"\<lbrace>etcb_at P t::det_ext state \<Rightarrow> _\<rbrace>
           perform_asid_control_invocation aci
           \<lbrace>\<lambda>r s. st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
   apply (simp add: perform_asid_control_invocation_def)
   apply (rule hoare_pre)
    apply (wp | wpc | simp)+
-       apply (wp hoare_imp_lift_something typ_at_pred_tcb_at_lift)[1]
+       apply (wp hoare_convert_imp typ_at_pred_tcb_at_lift)[1]
       apply (rule hoare_drop_imps)
       apply (wp retype_region_etcb_at)+
   apply simp
@@ -182,7 +201,7 @@ lemma perform_asid_control_invocation_bound_sc_tcb_at:
   "\<lbrace>st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and bound_sc_tcb_at P t
     and ct_active and invs and valid_aci aci\<rbrace>
     perform_asid_control_invocation aci
-  \<lbrace>\<lambda>y. bound_sc_tcb_at P t\<rbrace>"
+  \<lbrace>\<lambda>_. bound_sc_tcb_at P t::det_ext state \<Rightarrow> _\<rbrace>"
   including no_pre
   apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
   apply (rename_tac word1 a b aa ba word2)
@@ -242,7 +261,7 @@ lemma perform_asid_control_invocation_schedulable_tcb_at:
   "\<lbrace>st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and schedulable_tcb_at t
     and ct_active and invs and valid_aci aci\<rbrace>
     perform_asid_control_invocation aci
-  \<lbrace>\<lambda>y. schedulable_tcb_at t\<rbrace>"
+  \<lbrace>\<lambda>_. schedulable_tcb_at t :: det_ext state \<Rightarrow> _\<rbrace>"
   including no_pre
   apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
   apply (rename_tac word1 a b aa ba word2)
@@ -300,8 +319,7 @@ lemma perform_asid_control_invocation_schedulable_tcb_at:
 
 crunches perform_asid_control_invocation
 for ct[wp]: "\<lambda>s. P (cur_thread s)"
-and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
-and valid_etcbs[wp]: valid_etcbs
+and idle_thread[wp]: "\<lambda>s::det_ext state. P (idle_thread s)"
 and valid_blocked[wp]: valid_blocked
  (wp: static_imp_wp)
 
@@ -310,12 +328,12 @@ for rqueues[wp]: "\<lambda>s :: det_ext state. P (ready_queues s)"
 and schedact[wp]: "\<lambda>s :: det_ext state. P (scheduler_action s)"
 and cur_domain[wp]: "\<lambda>s :: det_ext state. P (cur_domain s)"
 and release_queue[wp]: "\<lambda>s :: det_ext state. P (release_queue s)"
- (wp: crunch_wps simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def cap_insert_ext_def ignore: freeMemory)
+ (wp: crunch_wps simp: detype_def wrap_ext_det_ext_ext_def cap_insert_ext_def ignore: freeMemory)
 
 lemma perform_asid_control_invocation_valid_sched:
   "\<lbrace>ct_active and invs and valid_aci aci and valid_sched and valid_idle\<rbrace>
      perform_asid_control_invocation aci
-   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+   \<lbrace>\<lambda>_. valid_sched::det_ext state \<Rightarrow> _\<rbrace>"
   apply (rule hoare_pre)
    apply (rule_tac I="invs and ct_active and valid_aci aci" in valid_sched_tcb_state_preservation_gen)
           apply (wp perform_asid_control_invocation_st_tcb_at)
@@ -331,7 +349,8 @@ lemma perform_asid_control_invocation_valid_sched:
   apply simp
   done
 
-crunch valid_queues[wp]: init_arch_objects valid_queues (wp: valid_queues_lift)
+crunch valid_queues[wp]: init_arch_objects "valid_queues :: det_ext state \<Rightarrow> _"
+  (wp: valid_queues_lift crunch_wps)
 
 lemma set_pd_schedulable_tcb_at[wp]:
   "\<lbrace>schedulable_tcb_at t\<rbrace> set_pd ptr val \<lbrace>\<lambda>_. schedulable_tcb_at t\<rbrace>"
@@ -363,9 +382,11 @@ lemma set_asid_pool_schedulable_tcb_at[wp]:
 crunch schedulable_tcb_at[wp]: init_arch_objects "schedulable_tcb_at t"
   (wp: crunch_wps ignore: do_machine_op)
 
-crunch valid_sched_action[wp]: init_arch_objects valid_sched_action (wp: valid_sched_action_lift)
+crunch valid_sched_action[wp]: init_arch_objects "valid_sched_action :: det_ext state \<Rightarrow> _"
+  (wp: valid_sched_action_lift)
 
-crunch valid_sched[wp]: init_arch_objects valid_sched (wp: valid_sched_lift)
+crunch valid_sched[wp]: init_arch_objects "valid_sched :: det_ext state \<Rightarrow> _"
+  (wp: valid_sched_lift)
 
 end
 
