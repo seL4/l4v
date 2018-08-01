@@ -863,7 +863,7 @@ lemma sched_context_donate_refs_of:
   apply (erule rsubst[where P = P], rule ext, fastforce simp: sc_tcb_sc_at_def obj_at_def is_tcb)+
   done
 
-lemma reply_unlink_tcb_invs:
+lemma reply_unlink_tcb_invs_BlockedOnReply:
   "\<lbrace>\<lambda>s. invs s \<and> (\<exists>tptr. st_tcb_at (op = (BlockedOnReply (Some rptr))) tptr s)\<rbrace>
    reply_unlink_tcb rptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
@@ -916,7 +916,7 @@ lemma reply_remove_tcb_invs:
   apply (case_tac "hd replies = the rp_op \<and> caller_sc = None")
    defer
    apply (rule hoare_seq_ext[rotated])
-    apply (wpsimp wp: reply_unlink_tcb_invs)
+    apply (wpsimp wp: reply_unlink_tcb_invs_BlockedOnReply)
     apply fastforce
    apply (rule hoare_seq_ext[rotated])
     apply (wpsimp wp: reply_unlink_sc_invs)

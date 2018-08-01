@@ -171,15 +171,15 @@ lemma sts_Restart_invs[wp]:
   done
 
 lemma check_budget_restart_invs:
-  "\<lbrace>invs\<rbrace> check_budget_restart \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>\<lambda>s. invs s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace> check_budget_restart \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: check_budget_restart_def)
   apply (rule hoare_seq_ext[rotated])
-  apply (rule check_budget_invs)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gts_sp])
+   apply (wpsimp wp: check_budget_invs)
+  apply (wpsimp wp: gts_wp)
   apply (case_tac st; wpsimp)
-  by (drule invs_iflive,
-       clarsimp simp: if_live_then_nonz_cap_def pred_tcb_at_def obj_at_def live_def)+
+   apply (drule invs_iflive,
+          clarsimp simp: if_live_then_nonz_cap_def pred_tcb_at_def obj_at_def live_def)+
+  done
 
 lemma invoke_tcb_tcb[wp]:
   "invoke_tcb i \<lbrace>tcb_at tptr\<rbrace>"
@@ -478,7 +478,7 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
 lemmas si_invs[wp] = si_invs'[where Q=\<top>,OF hoare_TrueI hoare_TrueI hoare_TrueI hoare_TrueI,simplified]
 
 lemma (in Systemcall_AI_Pre2) pinv_invs[wp]:
-  "\<lbrace>invs and ct_active and valid_invocation i\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> valid_invocation i s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
     perform_invocation blocking call can_donate i \<lbrace>\<lambda>rv. invs :: det_ext state \<Rightarrow> _\<rbrace>"
   apply (case_tac i, simp_all)
        apply (wp tcbinv_invs send_signal_interrupt_states invoke_domain_invs

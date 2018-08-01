@@ -260,7 +260,14 @@ locale Ipc_AI =
     "\<And> ft t. make_arch_fault_msg ft t \<lbrace>cap_refs_respects_device_region :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_pred_tcb[wp]:
     "\<And> P (proj :: itcb \<Rightarrow> 't) ft t . make_arch_fault_msg ft t \<lbrace>pred_tcb_at proj P t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  assumes do_fault_transfer_invs[wp]:
+  assumes make_arch_fault_msg_bound_sc[wp]:
+    "\<And> P p ft t. make_arch_fault_msg ft t \<lbrace>bound_sc_tcb_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_reply_sc[wp]:
+    "\<And> P p ft t. make_arch_fault_msg ft t \<lbrace>reply_sc_reply_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_reply_tcb[wp]:
+    "\<And> P p ft t. make_arch_fault_msg ft t \<lbrace>reply_tcb_reply_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+
+assumes do_fault_transfer_invs[wp]:
     "\<And>receiver badge sender recv_buf.
       \<lbrace>invs and tcb_at receiver :: 'state_ext state \<Rightarrow> bool\<rbrace>
         do_fault_transfer badge sender receiver recv_buf

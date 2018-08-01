@@ -5383,11 +5383,12 @@ hoare_vcg_disj_lift
 simp: Let_def)
 
 
-sorry
+  sorry
 
 lemma handle_event_valid_sched:
   "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
       and (\<lambda>s. scheduler_action s = resume_cur_thread)
+      and (\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s)
 (*and simple_sched_action*)
 \<rbrace>
    handle_event e
@@ -5407,6 +5408,8 @@ apply (wp check_budget_restart_sched_action)
 apply (wp hoare_drop_imp)
 apply (wpsimp wp: update_time_stamp_invs update_time_stamp_valid_sched
         update_time_stamp_scheduler_action)
+
+(*
 apply clarsimp
 
 defer
@@ -5457,6 +5460,8 @@ apply (wpsimp wp: hoare_whenE_wp handle_invocation_valid_sched hoare_vcg_if_lift
     handle_fault_valid_sched)
 apply (wpsimp wp: hoare_drop_imp check_budget_restart_sched_action check_budget_restart_invs
 check_budget_restart_ct_active[simplified ct_in_state_def])
+*)
+
 (*
 apply (wpsimp wp: update_time_stamp_invs update_time_stamp_valid_sched
         update_time_stamp_scheduler_action)
@@ -5512,24 +5517,23 @@ lemma call_kernel_valid_list[wp]: "\<lbrace>valid_list\<rbrace> call_kernel e \<
   apply (simp add: call_kernel_def)
   by (wp | simp)+
 
+
 lemma call_kernel_valid_sched_helper:
-        "\<lbrace> \<lambda>s. (valid_sched and invs and
-                            (\<lambda>s. the irq \<in> non_kernel_IRQs \<longrightarrow>
-                                 scheduler_act_sane s \<and> ct_not_queued s))
-                            s \<and>
-                           invs s \<rbrace> check_budget \<lbrace>\<lambda>_. \<lambda>s. (valid_sched and invs and
-                            (\<lambda>s. the irq \<in> non_kernel_IRQs \<longrightarrow>
-                                  scheduler_act_sane s \<and> ct_not_queued s))
-                            s \<and>
-                           invs s \<rbrace>"
-  apply (clarsimp simp: check_budget_def ARM.non_kernel_IRQs_def) (* FIXME RT *)
-  by (wpsimp wp: hoare_vcg_conj_lift reschedule_preserves_valid_shed get_sched_context_wp
-                 hoare_drop_imps hoare_vcg_all_lift charge_budget_invs)
+  "\<lbrace>\<lambda>s. (valid_sched and invs and
+         (\<lambda>s. the irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)) s \<and>
+        invs s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
+   check_budget
+   \<lbrace>\<lambda>_. \<lambda>s. (valid_sched and invs and
+             (\<lambda>s. the irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)) s \<and>
+            invs s\<rbrace>"
+   apply (clarsimp simp: check_budget_def ARM.non_kernel_IRQs_def) (* FIXME RT *)
+   by (wpsimp wp: hoare_vcg_conj_lift reschedule_preserves_valid_shed get_sched_context_wp
+                  hoare_drop_imps hoare_vcg_all_lift charge_budget_invs)
 
 lemma call_kernel_valid_sched:
-  "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_active or ct_idle)
-      and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
-     call_kernel e
+  "\<lbrace>\<lambda>s. invs s \<and> valid_sched s \<and> (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) s \<and> (ct_active or ct_idle) s
+        \<and> (\<lambda>s. scheduler_action s = resume_cur_thread) s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
+   call_kernel e
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (simp add: call_kernel_def)
   apply (wp schedule_valid_sched activate_thread_valid_sched | simp)+
@@ -5538,15 +5542,19 @@ lemma call_kernel_valid_sched:
      apply (erule invs_valid_idle)
     apply (wp call_kernel_valid_sched_helper)
     apply (rule hoare_strengthen_post
-           [where Q="\<lambda>irq s. irq \<notin> Some ` non_kernel_IRQs \<and> valid_sched s \<and> invs s"])
+           [where Q="\<lambda>irq s. irq \<notin> Some ` non_kernel_IRQs \<and> valid_sched s \<and> invs s \<and>
+                             bound_sc_tcb_at bound (cur_thread s) s"])
      apply (wpsimp wp: getActiveIRQ_neq_non_kernel)
     apply auto[1]
-   apply (rule_tac Q="\<lambda>rv. valid_sched and invs" and
-                   E="\<lambda>rv. valid_sched and invs" in hoare_post_impErr)
+   apply (rule_tac Q="\<lambda>rv s. valid_sched s \<and> invs s" and
+                   E="\<lambda>rv s. valid_sched s \<and> invs s" in hoare_post_impErr)
      apply (rule valid_validE)
      apply (wp handle_event_valid_sched)
+(*
     apply (force intro: active_from_running)+
   done
+*)
+  sorry
 
 end
 
