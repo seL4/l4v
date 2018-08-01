@@ -8,17 +8,6 @@
  * @TAG(NICTA_GPL)
  *)
 
-text {*
-  This file is the toplevel file of the Infoflow theory (examples excluded)
-  This file roughly instantiate the different unwinding systems defined in
-  Noninterference_Base(_Alternative) with the actual kernel automaton defined
-  in ADT_IF.
-  Both Nonleakage and Noninterference are define in Noninterference_Base
-  The toplevel Nonleakage theorem is at the bottom of this file.
-  The Noninterference property does not hold on the kernel and is not proven despite
-  the name of the file, but a partial integrity result holds in integrity_part.
-*}
-
 theory Noninterference
 imports    "Noninterference_Base"
            "Noninterference_Base_Alternatives"
@@ -26,6 +15,24 @@ imports    "Noninterference_Base"
     "ADT_IF"
     "../access-control/ADT_AC"
 begin
+
+text {*
+
+The top-level information flow theorems. (There are also theories for
+example systems, which go on top of this one.)
+
+We will instantiate the various unwinding systems, defined in
+Noninterference_Base(_Alternative), with the actual kernel automaton
+from ADT_IF. Then we consider the @{term noninterference_system.Nonleakage}
+and @{term noninterference_system.Noninterference} properties over
+our kernel big steps.
+
+At the end of this file, we show the top-level Nonleakage theorem.
+The Noninterference property does not hold on the kernel and is not
+proven despite the name of the file, but a partial integrity result
+holds in integrity_part.
+
+*}
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -108,7 +115,7 @@ where
                                              (pasASIDAbs aag) (pasDomainAbs aag) d"
 
 text {*
-  We want @{term "sameFor aag d"} to be an equivalence relation always.
+  We want @{term sameFor} to be an equivalence relation always.
 *}
 lemma sameFor_refl: "refl (sameFor g ab irqab asidab domainab d)"
   by(auto intro!: refl_onI equiv_for_refl
