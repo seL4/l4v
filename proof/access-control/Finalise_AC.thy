@@ -21,7 +21,7 @@ NB: the @{term is_subject} assumption is not appropriate for some of
     might not be in the same label as the current subject.
 
     In some of the scheduling lemmas, we replace the @{term is_subject}
-    assumption with a statement that our current thread is in one of
+    assumption with a statement that the scheduled thread is in one of
     the current subject's domains.
 *}
 
@@ -57,7 +57,7 @@ apply (simp add: tcb_sched_action_def)
 apply wp
 apply (clarsimp simp: integrity_def integrity_ready_queues_def pas_refined_def tcb_domain_map_wellformed_aux_def tcb_at_def get_etcb_def tcb_sched_enqueue_def etcb_at_def
            split: option.splits)
-apply (metis append.simps) (* it says append.simps is unused, but refuses to prove the goal without *)
+apply (metis append.simps(2))
 done
 
 text {* See comment for @{thm tcb_sched_action_dequeue_integrity'} *}

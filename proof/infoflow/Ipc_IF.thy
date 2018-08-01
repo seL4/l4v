@@ -1287,11 +1287,6 @@ lemma send_endpoint_reads_affects_queued:
   apply(auto dest: read_sync_ep_read_senders)
   done
 
-lemma rewrite_huh:
-  "(do f; g od) = f >>= (\<lambda> x. g)"
-  apply simp
-  done
-
 (*
 lemma cancel_badged_sends_equiv_but_for_labels:
   "\<lbrace> pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of and

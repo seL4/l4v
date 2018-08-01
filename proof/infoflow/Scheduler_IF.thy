@@ -183,7 +183,7 @@ lemma scheduler_affects_equiv_trans[elim]:
 lemma scheduler_affects_equiv_sym[elim]:
   "scheduler_affects_equiv aag l s s' \<Longrightarrow> scheduler_affects_equiv aag l s' s"
   apply (simp add: scheduler_affects_equiv_def)
-  (* faster than combined method *)
+  (* faster than the one-liner *)
   apply (clarsimp simp: scheduler_globals_frame_equiv_sym states_equiv_for_sym silc_dom_equiv_sym)
   apply force
   done
@@ -381,7 +381,7 @@ lemma get_tcb_queue_reads_respects_scheduler[wp]:
   apply (subst gets_apply)
   apply (wp gets_apply_ev)
   apply (force simp: scheduler_affects_equiv_def states_equiv_for_def
-                     equiv_for_def intersection_empty)
+                     equiv_for_def disjoint_iff_not_equal)
   done
 
 lemma ethread_get_reads_respects_scheduler[wp]:
@@ -443,7 +443,8 @@ lemma silc_dom_equiv_trans_state[simp]:
 
 end
 
-lemma (in is_extended') silc_dom_equiv[wp]: "I (silc_dom_equiv aag st)"
+lemma (in is_extended') silc_dom_equiv[wp]:
+  "I (silc_dom_equiv aag st)"
   by (rule lift_inv,simp)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -580,33 +581,37 @@ lemma store_cur_thread_midstrength_reads_respects:
                         idle_equiv_def)
    done
 
-lemma globals_frame_equiv_as_states_equiv: "scheduler_globals_frame_equiv st s =
-         (states_equiv_for (\<lambda>x. x \<in> scheduler_affects_globals_frame s) \<bottom> \<bottom> \<bottom>
-  (s\<lparr>machine_state := machine_state st, arch_state := arch_state st\<rparr>) s)"
+lemma globals_frame_equiv_as_states_equiv:
+  "scheduler_globals_frame_equiv st s =
+   states_equiv_for
+     (\<lambda>x. x \<in> scheduler_affects_globals_frame s) \<bottom> \<bottom> \<bottom>
+     (s\<lparr>machine_state := machine_state st, arch_state := arch_state st\<rparr>) s"
   by (clarsimp simp add: states_equiv_for_def equiv_for_def
                          scheduler_globals_frame_equiv_def
                          equiv_asids_def)
 
-lemma silc_dom_equiv_as_states_equiv: "silc_dom_equiv aag st s =
-         (states_equiv_for (\<lambda>x. pasObjectAbs aag x = SilcLabel) \<bottom> \<bottom> \<bottom>
-  (s\<lparr>kheap := kheap st\<rparr>) s)"
+lemma silc_dom_equiv_as_states_equiv:
+  "silc_dom_equiv aag st s =
+   states_equiv_for
+     (\<lambda>x. pasObjectAbs aag x = SilcLabel) \<bottom> \<bottom> \<bottom>
+     (s\<lparr>kheap := kheap st\<rparr>) s"
   apply (clarsimp simp add: states_equiv_for_def equiv_for_def
                             silc_dom_equiv_def
                             equiv_asids_def)
   done
 
 lemma silc_dom_equiv_states_equiv_lift:
-     assumes a: "\<And>P Q R S st. \<lbrace>states_equiv_for P Q R S st\<rbrace> f \<lbrace>\<lambda>_. states_equiv_for P Q R S st\<rbrace>"
-     shows "\<lbrace>silc_dom_equiv aag st\<rbrace> f \<lbrace>\<lambda>_. silc_dom_equiv aag st\<rbrace>"
-    apply (simp add: silc_dom_equiv_as_states_equiv[abs_def])
-    apply (clarsimp simp add: valid_def)
-    apply (frule use_valid[OF _ a])
-     apply assumption
-    apply (simp add: states_equiv_for_def equiv_for_def equiv_asids_def)
-    done
+  assumes a: "\<And>P Q R S st. \<lbrace>states_equiv_for P Q R S st\<rbrace> f \<lbrace>\<lambda>_. states_equiv_for P Q R S st\<rbrace>"
+  shows "\<lbrace>silc_dom_equiv aag st\<rbrace> f \<lbrace>\<lambda>_. silc_dom_equiv aag st\<rbrace>"
+  apply (simp add: silc_dom_equiv_as_states_equiv[abs_def])
+  apply (clarsimp simp add: valid_def)
+  apply (frule use_valid[OF _ a])
+   apply assumption
+  apply (simp add: states_equiv_for_def equiv_for_def equiv_asids_def)
+  done
 
 lemma scheduler_affects_equiv_unobservable:
-  assumes a: "\<And>P Q R S X st. \<lbrace>states_equiv_for P Q R S st\<rbrace> f \<lbrace>\<lambda>_. states_equiv_for P Q R S st\<rbrace>"
+  assumes a: "\<And>P Q R S st. \<lbrace>states_equiv_for P Q R S st\<rbrace> f \<lbrace>\<lambda>_. states_equiv_for P Q R S st\<rbrace>"
   assumes c: "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> f \<lbrace>\<lambda>r s. P (cur_domain s)\<rbrace>"
   assumes e: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   assumes s: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> f \<lbrace>\<lambda>r s. P (scheduler_action s)\<rbrace>"
@@ -692,7 +697,8 @@ lemma silc_dom_lift:
   apply (wp a)
   done
 
-lemma dmo_silc_dom[wp]: "\<lbrace>silc_dom_equiv aag st\<rbrace> do_machine_op mop \<lbrace>\<lambda>_. silc_dom_equiv aag st\<rbrace>"
+lemma dmo_silc_dom[wp]:
+  "\<lbrace>silc_dom_equiv aag st\<rbrace> do_machine_op mop \<lbrace>\<lambda>_. silc_dom_equiv aag st\<rbrace>"
   by (wp silc_dom_lift)
 
 crunch kheap[wp]: guarded_switch_to, schedule "\<lambda>s :: det_state. P (kheap s)"
@@ -1011,7 +1017,8 @@ lemma midstrength_reads_respects_scheduler_cases:
   apply (fastforce dest: d domains_distinct[THEN pas_domains_distinct_inj])
   done
 
-lemma thread_get_weak_reads_respects_scheduler[wp]: "weak_reads_respects_scheduler aag l
+lemma thread_get_weak_reads_respects_scheduler[wp]:
+  "weak_reads_respects_scheduler aag l
      (K (pasObjectAbs aag t \<in> reads_scheduler aag l))
      (thread_get f t)"
   apply (rule gen_asm_ev)
@@ -1281,14 +1288,16 @@ lemma any_valid_thread:
   apply simp
   done
 
- lemma tcb_with_domain_at: "valid_queues s \<Longrightarrow> x \<in> set (ready_queues s d p) \<Longrightarrow>
-         \<exists>t. ekheap s x = Some t \<and> (tcb_domain t) = d"
+lemma tcb_with_domain_at:
+  "valid_queues s \<Longrightarrow> x \<in> set (ready_queues s d p) \<Longrightarrow>
+   \<exists>t. ekheap s x = Some t \<and> (tcb_domain t) = d"
    apply (fastforce simp add: valid_queues_def is_etcb_at_def etcb_at_def
                    split: option.splits)
    done
 
-lemma if_ev_bind: "\<lbrakk>b \<Longrightarrow> equiv_valid I A B P (f >>= s); \<not> b \<Longrightarrow> equiv_valid I A B Q (g >>= s)\<rbrakk>
-\<Longrightarrow> equiv_valid I A B (\<lambda>s. (b \<longrightarrow> P s) \<and> (\<not> b \<longrightarrow> Q s)) ((if b then f else g) >>= s)"
+lemma if_ev_bind:
+  "\<lbrakk>b \<Longrightarrow> equiv_valid I A B P (f >>= s); \<not> b \<Longrightarrow> equiv_valid I A B Q (g >>= s)\<rbrakk>
+   \<Longrightarrow> equiv_valid I A B (\<lambda>s. (b \<longrightarrow> P s) \<and> (\<not> b \<longrightarrow> Q s)) ((if b then f else g) >>= s)"
   apply simp
   done
 
@@ -1431,7 +1440,7 @@ lemma choose_thread_reads_respects_scheduler_other_domain:
    apply (frule(1) tcb_with_domain_at)
    apply clarsimp
    apply (frule(1) tcb_domain_wellformed)
-   apply (simp add: intersection_empty)
+   apply (force simp: disjoint_iff_not_equal)
   apply simp
   done
 
@@ -1533,10 +1542,12 @@ lemma schedule_choose_new_thread_read_respects_scheduler:
   unfolding schedule_choose_new_thread_def
   by (simp add: next_domain_snippit[OF domains_distinct])
 
-lemma get_thread_state_reads_respects_scheduler: "reads_respects_scheduler aag l
-      ((\<lambda>s. st_tcb_at \<top> rv s \<longrightarrow> pasObjectAbs aag rv \<in> reads_scheduler aag l \<or>
-           rv = idle_thread s)
-      and valid_idle) (get_thread_state rv)"
+lemma get_thread_state_reads_respects_scheduler:
+  "reads_respects_scheduler aag l
+     ((\<lambda>s. st_tcb_at \<top> rv s \<longrightarrow>
+             pasObjectAbs aag rv \<in> reads_scheduler aag l \<or> rv = idle_thread s)
+      and valid_idle)
+     (get_thread_state rv)"
   apply (clarsimp simp add: get_thread_state_def thread_get_def gets_the_def
                    gets_def get_def assert_opt_def get_tcb_def
                    bind_def return_def fail_def
@@ -1552,8 +1563,9 @@ lemma get_thread_state_reads_respects_scheduler: "reads_respects_scheduler aag l
   done
 
 lemma get_cur_thread_reads_respects_scheduler[wp]:
-  "reads_respects_scheduler aag l ((\<lambda>s. pasDomainAbs aag (cur_domain s) \<inter> reads_scheduler aag l \<noteq> {}))
-                            (gets cur_thread)"
+  "reads_respects_scheduler aag l
+     (\<lambda>s. pasDomainAbs aag (cur_domain s) \<inter> reads_scheduler aag l \<noteq> {})
+     (gets cur_thread)"
   by (clarsimp simp: scheduler_equiv_def scheduler_affects_equiv_def
                      domain_fields_equiv_def gets_def get_def bind_def return_def
                      equiv_valid_def2 equiv_valid_2_def)
@@ -1618,11 +1630,13 @@ lemma equiv_valid_2_unobservable:
   done
 
 
-lemma equiv_valid_2: "equiv_valid I A B P f \<Longrightarrow> equiv_valid_rv I A B (op =) P f"
+lemma equiv_valid_2:
+  "equiv_valid I A B P f \<Longrightarrow> equiv_valid_rv I A B (op =) P f"
   apply (simp add: equiv_valid_def2)
   done
 
-lemma ev_gets_const: "equiv_valid_inv I A (\<lambda>s. f s = x) (gets f)"
+lemma ev_gets_const:
+  "equiv_valid_inv I A (\<lambda>s. f s = x) (gets f)"
   apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def
                         gets_def get_def bind_def return_def)
   done
@@ -1689,7 +1703,7 @@ lemma reads_respects_scheduler_invisible_domain_switch:
   apply (intro impI conjI allI; (rule TrueI refl)?)
    apply (simp add: guarded_pas_domain_def)
    apply (subgoal_tac "cur_thread s \<noteq> idle_thread s")
-    apply (simp add: intersection_empty)
+    apply (force simp: disjoint_iff_not_equal)
    apply (clarsimp simp add: pred_tcb_at_def obj_at_def valid_state_def
                               valid_idle_def invs_def)+
   done
@@ -1754,7 +1768,7 @@ lemma choose_thread_unobservable:
   apply (frule(1) tcb_with_domain_at)
   apply clarsimp
   apply (frule(1) tcb_domain_wellformed)
-  apply (simp add: intersection_empty)
+  apply (force simp: disjoint_iff_not_equal)
   done
 
 lemma tcb_sched_action_scheduler_equiv[wp]:
@@ -2418,7 +2432,8 @@ lemma reads_respects_only_scheduler:
                       equiv_asid_def globals_equiv_scheduler_def)
 
 (*FIXME: MOVE do_machine_op distributing over binds/basic operations*)
-lemma dmo_distr: "do_machine_op (f >>= g) = ((do_machine_op f) >>= (\<lambda>x. (do_machine_op (g x))))"
+lemma dmo_distr:
+  "do_machine_op (f >>= g) = (do_machine_op f >>= (\<lambda>x. do_machine_op (g x)))"
   apply (clarsimp simp: do_machine_op_def bind_assoc)
   apply (clarsimp simp: gets_def simpler_modify_def select_f_def
                   bind_def get_def return_def)
@@ -2440,7 +2455,8 @@ lemma dmo_gets_distr:
                   bind_def get_def return_def)
   done
 
-lemma dmo_modify_distr: "do_machine_op (modify f) = modify (machine_state_update f)"
+lemma dmo_modify_distr:
+  "do_machine_op (modify f) = modify (machine_state_update f)"
   apply (clarsimp simp: do_machine_op_def bind_assoc)
   apply (clarsimp simp: gets_def simpler_modify_def select_f_def
                   bind_def get_def return_def)
@@ -2448,7 +2464,8 @@ lemma dmo_modify_distr: "do_machine_op (modify f) = modify (machine_state_update
   apply clarsimp
   done
 
-lemma dmo_return_distr: "do_machine_op (return x) = return x"
+lemma dmo_return_distr:
+  "do_machine_op (return x) = return x"
   apply (clarsimp simp: do_machine_op_def bind_assoc)
   apply (clarsimp simp: gets_def simpler_modify_def select_f_def
                   bind_def get_def return_def)
@@ -2508,7 +2525,8 @@ lemma thread_set_scheduler_equiv[wp]:
   apply (clarsimp simp: get_tcb_def equiv_for_def split: kernel_object.splits option.splits)
   done
 
-lemma arch_tcb_update_aux: "(tcb_arch_update f t) = tcb_arch_update (\<lambda>_. f (tcb_arch t)) t"
+lemma arch_tcb_update_aux:
+  "(tcb_arch_update f t) = tcb_arch_update (\<lambda>_. f (tcb_arch t)) t"
   by simp
 
 lemma thread_set_scheduler_affects_equiv[wp]:
@@ -2546,9 +2564,10 @@ lemma silc_inv_not_cur_thread:
   apply (case_tac ko,simp_all)
   done
 
-lemma get_tcb_scheduler_equiv: "\<lbrakk>pasObjectAbs aag rv \<in> reads_scheduler aag l;
-        scheduler_affects_equiv aag l s t\<rbrakk> \<Longrightarrow>
-        get_tcb rv s = get_tcb rv t"
+lemma get_tcb_scheduler_equiv:
+  "\<lbrakk>pasObjectAbs aag rv \<in> reads_scheduler aag l;
+    scheduler_affects_equiv aag l s t\<rbrakk> \<Longrightarrow>
+   get_tcb rv s = get_tcb rv t"
   apply (clarsimp simp: get_tcb_def scheduler_affects_equiv_def
                   states_equiv_for_def equiv_for_def
                   split: option.splits kernel_object.splits)
@@ -2744,7 +2763,8 @@ lemma agnostic_to_ev2:
   done
 qed
 
-lemma bind_return_ign: "\<lbrace>P\<rbrace> (f >>= (\<lambda>_. return x)) \<lbrace>\<lambda>_. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> (f >>= (\<lambda>_. return y)) \<lbrace>\<lambda>_. Q\<rbrace>"
+lemma bind_return_ign:
+  "\<lbrace>P\<rbrace> (f >>= (\<lambda>_. return x)) \<lbrace>\<lambda>_. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> (f >>= (\<lambda>_. return y)) \<lbrace>\<lambda>_. Q\<rbrace>"
   apply (fastforce simp: valid_def bind_def return_def)
   done
 
@@ -2767,18 +2787,21 @@ lemma thread_set_reads_respect_scheduler[wp]:
                   kernel_object.splits)+
   done
 
-lemma op_eq_unit_dc: "((op = ) :: unit \<Rightarrow> unit \<Rightarrow> bool) = (dc)"
+lemma op_eq_unit_dc:
+  "((op = ) :: unit \<Rightarrow> unit \<Rightarrow> bool) = (dc)"
   apply (rule ext)+
   apply simp
   done
 
-lemma cur_thread_idle': "valid_idle s \<Longrightarrow> only_idle s \<Longrightarrow> ct_idle s = (cur_thread s = idle_thread s)"
+lemma cur_thread_idle':
+  "valid_idle s \<Longrightarrow> only_idle s \<Longrightarrow> ct_idle s = (cur_thread s = idle_thread s)"
   apply (rule iffI)
   apply (clarsimp simp: only_idle_def ct_in_state_def )
   apply (clarsimp simp: valid_idle_def ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
-lemma cur_thread_idle: "invs s \<Longrightarrow> ct_idle s = (cur_thread s = idle_thread s)"
+lemma cur_thread_idle:
+  "invs s \<Longrightarrow> ct_idle s = (cur_thread s = idle_thread s)"
   apply (rule cur_thread_idle')
   apply (simp add: invs_def valid_state_def)+
   done
@@ -2802,7 +2825,7 @@ lemma context_update_cur_thread_snippit_unobservable:
     apply fastforce
    apply (clarsimp simp: guarded_pas_domain_def
                          silc_inv_not_cur_thread cur_thread_idle
-                         intersection_empty)+
+                         disjoint_iff_not_equal)+
   done
 
 lemma context_update_cur_thread_snippit_cur_domain:

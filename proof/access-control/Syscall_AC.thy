@@ -839,7 +839,6 @@ text {*
 Variants of scheduling lemmas without is_subject assumption.
 See comment for @{thm tcb_sched_action_dequeue_integrity'}
 *}
-(* FIXME: replace switch_to_thread_respects above (used in infoflow/ADT_IF) *)
 lemma switch_to_thread_respects':
   "\<lbrace>integrity aag X st and pas_refined aag
     and (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag (tcb_domain (the (ekheap s t)))) \<rbrace>
@@ -847,7 +846,8 @@ lemma switch_to_thread_respects':
   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   unfolding switch_to_thread_def arch_switch_to_thread_def
   apply (simp add: spec_valid_def)
-  apply (wp tcb_sched_action_dequeue_integrity' | simp add: clearExMonitor_def)+
+  apply (wp tcb_sched_action_dequeue_integrity'
+        | simp add: clearExMonitor_def)+
   done
 
 lemma switch_to_idle_thread_respects:
