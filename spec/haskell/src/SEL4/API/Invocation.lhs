@@ -39,9 +39,9 @@ The following type can specify any kernel object invocation. It contains physica
 
 > data Invocation
 >         = InvokeUntyped UntypedInvocation
->         | InvokeEndpoint (PPtr Endpoint) Word Bool
+>         | InvokeEndpoint (PPtr Endpoint) Word Bool Bool
 >         | InvokeNotification (PPtr Notification) Word
->         | InvokeReply (PPtr TCB) (PPtr CTE)
+>         | InvokeReply (PPtr TCB) (PPtr CTE) Bool
 >         | InvokeDomain (PPtr TCB) Domain
 >         | InvokeTCB TCBInvocation
 >         | InvokeCNode CNodeInvocation

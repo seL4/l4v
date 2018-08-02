@@ -64,7 +64,7 @@ defs createNewCaps_def:
           od)
         | Some EndpointObject \<Rightarrow> (do
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::endpoint)) 0;
-            return $ map (\<lambda> addr. EndpointCap addr 0 True True True) addrs
+            return $ map (\<lambda> addr. EndpointCap addr 0 True True True True) addrs
           od)
         | Some NotificationObject \<Rightarrow> (do
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::notification)) 0;

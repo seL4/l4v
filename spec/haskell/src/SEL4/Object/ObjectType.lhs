@@ -200,7 +200,8 @@ the bitmask bit that will allow the reissue of an IRQHandlerCap to this IRQ.
 > hasCancelSendRights :: Capability -> Bool
 > hasCancelSendRights (EndpointCap { capEPCanSend = True,
 >                                 capEPCanReceive = True,
->                                 capEPCanGrant = True }) = True
+>                                 capEPCanGrant = True,
+>                                 capEPCanGrantReply  = True }) = True
 > hasCancelSendRights _ = False
 
 \subsection{Comparing Capabilities}
@@ -323,13 +324,15 @@ The "maskCapRights" function restricts the operations that can be performed on a
 > maskCapRights r c@(EndpointCap {}) = c {
 >     capEPCanSend = capEPCanSend c && capAllowWrite r,
 >     capEPCanReceive = capEPCanReceive c && capAllowRead r,
->     capEPCanGrant = capEPCanGrant c && capAllowGrant r }
+>     capEPCanGrant = capEPCanGrant c && capAllowGrant r,
+>     capEPCanGrantReply = capEPCanGrantReply c && capAllowGrantReply r }
 
 > maskCapRights r c@(NotificationCap {}) = c {
 >     capNtfnCanSend = capNtfnCanSend c && capAllowWrite r,
 >     capNtfnCanReceive = capNtfnCanReceive c && capAllowRead r }
 
-> maskCapRights _ c@(ReplyCap {}) = c
+> maskCapRights r c@(ReplyCap {}) = c{
+>     capReplyCanGrant = capReplyCanGrant c && capAllowGrant r }
 
 > maskCapRights _ c@(CNodeCap {}) = c
 
@@ -365,7 +368,7 @@ New threads are placed in the current security domain, which must be the domain 
 >             return $! ThreadCap (PPtr $ fromPPtr regionBase)
 >         Just EndpointObject -> do
 >             placeNewObject regionBase (makeObject :: Endpoint) 0
->             return $! EndpointCap (PPtr $ fromPPtr regionBase) 0 True True True
+>             return $! EndpointCap (PPtr $ fromPPtr regionBase) 0 True True True True
 >         Just NotificationObject -> do
 >             placeNewObject (PPtr $ fromPPtr regionBase) (makeObject :: Notification) 0
 >             return $! NotificationCap (PPtr $ fromPPtr regionBase) 0 True True
@@ -393,12 +396,13 @@ The "decodeInvocation" function parses the message, determines the operation tha
 > decodeInvocation _ _ _ _ cap@(EndpointCap {capEPCanSend=True}) _ =
 >     return $ InvokeEndpoint
 >         (capEPPtr cap) (capEPBadge cap) (capEPCanGrant cap)
+>         (capEPCanGrantReply cap)
 >
 > decodeInvocation _ _ _ _ cap@(NotificationCap {capNtfnCanSend=True}) _ = do
 >     return $ InvokeNotification (capNtfnPtr cap) (capNtfnBadge cap)
 >
 > decodeInvocation _ _ _ slot cap@(ReplyCap {capReplyMaster=False}) _ = do
->     return $ InvokeReply (capTCBPtr cap) slot
+>     return $ InvokeReply (capTCBPtr cap) slot (capReplyCanGrant cap)
 >
 > decodeInvocation
 >         label args _ slot cap@(ThreadCap {}) extraCaps =
@@ -442,19 +446,20 @@ This function just dispatches invocations to the type-specific invocation functi
 >     invokeUntyped invok
 >     return $! []
 >
-> performInvocation block call (InvokeEndpoint ep badge canGrant) =
+> performInvocation block call (InvokeEndpoint ep badge canGrant canGrantReply) =
 >   withoutPreemption $ do
 >     thread <- getCurThread
->     sendIPC block call badge canGrant thread ep
+>     sendIPC block call badge canGrant canGrantReply thread ep
 >     return $! []
 >
 > performInvocation _ _ (InvokeNotification ep badge) = do
 >     withoutPreemption $ sendSignal ep badge
 >     return $! []
 >
-> performInvocation _ _ (InvokeReply thread slot) = withoutPreemption $ do
+> performInvocation _ _ (InvokeReply thread slot canGrant) =
+>   withoutPreemption $ do
 >     sender <- getCurThread
->     doReplyTransfer sender thread slot
+>     doReplyTransfer sender thread slot canGrant
 >     return $! []
 >
 > performInvocation _ _ (InvokeTCB invok) = invokeTCB invok

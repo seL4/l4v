@@ -36,10 +36,10 @@ This module specifies the behavior of notification objects.
 
 \subsection{Sending Signals}
 
-> -- helper function
+> -- helper function, FIXME redundant with Structure.isReceive
 > receiveBlocked :: ThreadState -> Bool
 > receiveBlocked st = case st of
->     BlockedOnReceive _ -> True
+>     BlockedOnReceive _ _ -> True
 >     _ -> False
 
 This function performs an signal operation, given a capability to a notification object, and a single machine word of message data (the badge). This operation will never block the signalling thread.

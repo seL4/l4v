@@ -572,7 +572,7 @@ The following function is called when a thread is restarted, to ensure that the 
 >     when (isNullCap $ cteCap oldCTE) $ do
 >         stateAssert (noReplyCapsFor thread)
 >             "setupReplyMaster: reply master must not exist"
->         let cap = ReplyCap { capTCBPtr = thread, capReplyMaster = True }
+>         let cap = ReplyCap { capTCBPtr = thread, capReplyMaster = True, capReplyCanGrant = True }
 >         let mdb = nullMDBNode { mdbRevocable = True, mdbFirstBadged = True }
 >         setCTE slot $ CTE cap mdb
 

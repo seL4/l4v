@@ -60,7 +60,7 @@ This is the type used to represent a capability.
 >             capEPPtr :: PPtr Endpoint,
 >             capEPBadge :: Word,
 >             capEPCanSend, capEPCanReceive :: Bool,
->             capEPCanGrant :: Bool }
+>             capEPCanGrant, capEPCanGrantReply :: Bool }
 >         | DomainCap
 >         | Zombie {
 >             capZombiePtr :: PPtr CTE,
@@ -70,7 +70,8 @@ This is the type used to represent a capability.
 >             capCap :: ArchCapability }
 >         | ReplyCap {
 >             capTCBPtr :: PPtr TCB,
->             capReplyMaster :: Bool }
+>             capReplyMaster :: Bool,
+>             capReplyCanGrant :: Bool }
 >         | UntypedCap {
 >             capIsDevice :: Bool,
 >             capPtr :: PPtr (),
@@ -351,7 +352,8 @@ A user thread may be in the following states:
 \item blocked on a synchronous IPC send or receive (which require the presence of additional data about the operation);
 
 >     = BlockedOnReceive {
->         blockingObject :: PPtr Endpoint }
+>         blockingObject :: PPtr Endpoint,
+>         blockingIPCCanGrant :: Bool }
 
 \item blocked waiting for a reply to a previously sent message;
 
@@ -377,6 +379,7 @@ A user thread may be in the following states:
 >         blockingObject :: PPtr Endpoint,
 >         blockingIPCBadge :: Word,
 >         blockingIPCCanGrant :: Bool,
+>         blockingIPCCanGrantReply :: Bool,
 >         blockingIPCIsCall :: Bool }
 
 \item ready to start executing at the current instruction (after a fault, an interrupted system call, or an explicitly set program counter);
@@ -433,11 +436,11 @@ Each entry in the domain schedule specifies a domain and a length (a number of t
 > dschLength = snd
 
 > isReceive :: ThreadState -> Bool
-> isReceive (BlockedOnReceive _) = True
+> isReceive (BlockedOnReceive _ _) = True
 > isReceive _ = False
 
 > isSend :: ThreadState -> Bool
-> isSend (BlockedOnSend _ _ _ _) = True
+> isSend (BlockedOnSend _ _ _ _ _) = True
 > isSend _ = False
 
 > isReply :: ThreadState -> Bool

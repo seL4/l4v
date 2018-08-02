@@ -2010,3 +2010,9 @@ case \x of (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler, irqW:triggerW:
 
 case \x of (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger) ->  ---> case \x of
   IssueIRQHandler irq destSlot srcSlot trigger => ->1
+
+case \x of EndpointCap { capEPCanSend = True, capEPCanGrant = canGrant, capEPCanGrantReply = canGrantReply } | (canGrant || canGrantReply) -> _ ->  ---> case \x of
+  EndpointCap epptr _ True _ canGrant canGrantReply =>
+     if canGrant \<or> canGrantReply then ->1
+     else ->2
+  | _ => ->2

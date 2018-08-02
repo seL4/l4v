@@ -179,10 +179,10 @@ The "Reply" system call attempts to perform an immediate IPC transfer to the thr
 >     callerSlot <- getThreadCallerSlot thread
 >     callerCap <- getSlotCap callerSlot
 >     case callerCap of
->         ReplyCap caller False -> do
+>         ReplyCap caller False canGrant -> do
 >             assert (caller /= thread)
 >                 "handleReply: caller must not be the current thread"
->             doReplyTransfer thread caller callerSlot
+>             doReplyTransfer thread caller callerSlot canGrant
 >         NullCap -> return ()
 >         _ -> fail "handleReply: invalid caller cap"
 
