@@ -95,19 +95,19 @@ where
            Structures_H.NullCap)"
 | "cap_relation Structures_A.DomainCap c                  = (c =
            Structures_H.DomainCap)"
-| "cap_relation (Structures_A.UntypedCap dev ref n f) c       = (c =
+| "cap_relation (Structures_A.UntypedCap dev ref n f) c   = (c =
            Structures_H.UntypedCap dev ref n f)"
 | "cap_relation (Structures_A.EndpointCap ref b r) c      = (c =
            Structures_H.EndpointCap ref b (AllowSend \<in> r)
-             (AllowRecv \<in> r) (AllowGrant \<in> r))"
-| "cap_relation (Structures_A.NotificationCap ref b r) c = (c =
+             (AllowRecv \<in> r) (AllowGrant \<in> r) (AllowGrantReply \<in> r))"
+| "cap_relation (Structures_A.NotificationCap ref b r) c  = (c =
            Structures_H.NotificationCap ref b (AllowSend \<in> r) (AllowRecv \<in> r))"
-| "cap_relation (Structures_A.CNodeCap ref n L) c    = (c =
+| "cap_relation (Structures_A.CNodeCap ref n L) c         = (c =
            Structures_H.CNodeCap ref n (of_bl L) (length L))"
 | "cap_relation (Structures_A.ThreadCap ref) c            = (c =
            Structures_H.ThreadCap ref)"
-| "cap_relation (Structures_A.ReplyCap ref master) c      = (c =
-           Structures_H.ReplyCap ref master)"
+| "cap_relation (Structures_A.ReplyCap ref master r) c    = (c =
+           Structures_H.ReplyCap ref master (AllowGrant \<in> r))"
 | "cap_relation (Structures_A.IRQControlCap) c            = (c =
            Structures_H.IRQControlCap)"
 | "cap_relation (Structures_A.IRQHandlerCap irq) c        = (c =
@@ -165,11 +165,11 @@ where
      = (ts' = Structures_H.IdleThreadState)"
 | "thread_state_relation (Structures_A.BlockedOnReply) ts'
      = (ts' = Structures_H.BlockedOnReply)"
-| "thread_state_relation (Structures_A.BlockedOnReceive oref) ts'
-     = (ts' = Structures_H.BlockedOnReceive oref)"
+| "thread_state_relation (Structures_A.BlockedOnReceive oref sp) ts'
+     = (ts' = Structures_H.BlockedOnReceive oref (receiver_can_grant sp))"
 | "thread_state_relation (Structures_A.BlockedOnSend oref sp) ts'
      = (ts' = Structures_H.BlockedOnSend oref (sender_badge sp)
-                   (sender_can_grant sp) (sender_is_call sp))"
+                   (sender_can_grant sp) (sender_can_grant_reply sp) (sender_is_call sp))"
 | "thread_state_relation (Structures_A.BlockedOnNotification oref) ts'
      = (ts' = Structures_H.BlockedOnNotification oref)"
 
@@ -456,10 +456,10 @@ where
 
 
 definition
-  (* NOTE: this map discards the Ident right, needed on endpoints only *)
   rights_mask_map :: "rights set \<Rightarrow> Types_H.cap_rights"
 where
- "rights_mask_map \<equiv> \<lambda>rs. CapRights (AllowWrite \<in> rs) (AllowRead \<in> rs) (AllowGrant \<in> rs)"
+ "rights_mask_map \<equiv> \<lambda>rs. CapRights (AllowWrite \<in> rs) (AllowRead \<in> rs) (AllowGrant \<in> rs)
+                                   (AllowGrantReply \<in> rs)"
 
 
 lemma obj_relation_cutsE:
