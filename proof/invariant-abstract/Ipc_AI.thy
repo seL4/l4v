@@ -2431,11 +2431,6 @@ lemma gts_eq_ts:
 
 declare lookup_cap_valid [wp]
 
-context Ipc_AI begin
-
-
-end
-
 
 definition
   "pspace_clear t s \<equiv> s \<lparr> kheap := (kheap s) (t := None) \<rparr>"
@@ -2542,7 +2537,7 @@ lemma invs_respects_device_region:
 end
 
 locale Ipc_AI_cont = Ipc_AI state_ext_t some_t
-  for state_ext_t :: "'state_ext::state_ext itself"  and some_t :: "'t itself"+
+  for state_ext_t :: "'state_ext::state_ext itself" and some_t :: "'t itself" +
   assumes do_ipc_transfer_pspace_respects_device_region[wp]:
     "\<And> t ep bg grt r.
       \<lbrace>pspace_respects_device_region :: 'state_ext state \<Rightarrow> bool\<rbrace>
@@ -2579,11 +2574,6 @@ lemma complete_signal_invs:
 
 crunch pspace_respects_device_region[wp]: as_user "pspace_respects_device_region"
   (simp: crunch_simps wp: crunch_wps set_object_pspace_respects_device_region pspace_respects_device_region_dmo)
-
-context Ipc_AI_cont begin
-
-
-end
 
 crunch ntfn_at[wp]: set_message_info "ntfn_at ntfn"
 
@@ -2668,21 +2658,64 @@ lemma schedule_tcb_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
   by (wpsimp simp: schedule_tcb_def)
 
+crunches complete_signal, do_nbrecv_failed_transfer, reply_push, receive_signal
+  for cap_to[wp]: "ex_nonz_cap_to p :: det_state \<Rightarrow> bool"
+  and typ_at[wp]: "\<lambda>s :: det_state. P (typ_at T p s)"
+  (ignore: set_object set_tcb_obj_ref
+       wp: cap_insert_ex_cap hoare_drop_imps crunch_wps maybeM_inv
+     simp: crunch_simps)
+
+crunches get_endpoint
+  for inv[wp]: "P"
+
+lemma sort_queue_inv:
+  "\<lbrace> P \<rbrace> sort_queue ls \<lbrace> \<lambda>rv. P \<rbrace>"
+  by (wpsimp simp: sort_queue_def wp: mapM_wp) auto
+
+lemma cancel_ipc_cap_to:
+  "\<lbrace>ex_nonz_cap_to p\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
+  by (wpsimp wp: cancel_ipc_caps_of_state
+           simp: ex_nonz_cap_to_def cte_wp_at_caps_of_state
+       simp_del: split_paired_Ex)
+
+(* The purpose of the Ipc_AI_det locale is to prove theorems about functions that
+   only exist in the det_ext_monad, but which also depend on theorems proved in the
+   Ipc_AI or Ipc_AI_cont locales.
+   This locale is therefore _morally_ derived from a type-specialised Ipc_AI_cont.
+   However, instead of actually deriving from a type-specialised Ipc_AI_cont,
+   we take it as a locale assumption.
+   To explain why, first note that, as with other locales whose purpose is defer
+   proofs requiring architecture-specific details, we will eventually make an
+   unconditional global_interpretation of this locale, to obtain its theorems
+   in the global context.
+   If we had derived from a type-specialised Ipc_AI_cont, then this interpretation
+   would make copies of all the theorems in Ipc_AI_cont, but with specialised
+   types. These specialised copies would then break subsequent proofs which
+   expect the non-specialised theorem.
+   Internally, we would still like the Ipc_AI_det context to behave like a derived
+   locale. To achieve that, we need to perform a _local_ interpretation of Ipc_AI_cont
+   whenever we enter the Ipc_AI_cont context. *)
+
+locale Ipc_AI_det =
+  fixes some_t :: "'t itself"
+  assumes Ipc_AI_det: "Ipc_AI_cont TYPE(det_ext) TYPE('t)"
+
+context Ipc_AI_det begin
+
+interpretation Ipc_AI_cont "TYPE(det_ext)"
+  by (rule Ipc_AI_det)
 
 lemma receive_ipc_cap_to[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> receive_ipc param_a param_b param_c param_d  \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
-  sorry
+  "\<lbrace>ex_nonz_cap_to p\<rbrace> receive_ipc thread cap is_blocking reply_cap  \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
+  by (wpsimp simp: receive_ipc_def
+               wp: hoare_drop_imps sort_queue_inv fail_wp cancel_ipc_cap_to
+                   hoare_strengthen_post[OF get_endpoint_inv[where P="ex_nonz_cap_to p"]])
 
-crunch cap_to[wp]: receive_signal "ex_nonz_cap_to p:: det_ext state \<Rightarrow> bool"
-  (wp: crunch_wps maybeM_inv ignore: set_object set_tcb_obj_ref)
-
+end
 
 crunch ex_nonz_cap_to[wp]: set_message_info "ex_nonz_cap_to p"
 
-
-lemma is_derived_not_Null [simp]:
-  "\<not>is_derived m p c NullCap"
-  by (auto simp add: is_derived_def cap_master_cap_simps dest: cap_master_cap_eqDs)
+lemmas is_derived_not_Null = derived_not_Null(1)
 
 crunch mdb[wp]: set_message_info valid_mdb
   (wp: select_wp crunch_wps mapM_wp')
@@ -2702,12 +2735,6 @@ lemma ep_queue_cap_to:
   apply (drule(1) bspec)
   apply (erule st_tcb_ex_cap, clarsimp+)
   done
-
-context Ipc_AI_cont begin
-
-
-
-end
 
 crunch pred_tcb_at[wp]: set_message_info "pred_tcb_at proj P t"
 
@@ -2775,26 +2802,24 @@ crunch ct[wp]: set_mrs "\<lambda>s::'state_ext state. P (cur_thread s)"
   (wp: case_option_wp mapM_wp simp: crunch_simps)
 end
 
-context Ipc_AI begin
+crunches receive_signal
+  for typ_at[wp]: "\<lambda>s :: det_state. P (typ_at T p s)"
+  (ignore: set_object set_tcb_obj_ref
+       wp: cap_insert_ex_cap hoare_drop_imps crunch_wps maybeM_inv
+     simp: crunch_simps)
+
+
+context Ipc_AI_det begin
+
+interpretation Ipc_AI_cont "TYPE(det_ext)"
+  by (rule Ipc_AI_det)
 
 lemma receive_ipc_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> receive_ipc thread cap is_blocking reply_cap \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: receive_ipc_def)
-  apply (case_tac cap; simp)
-  apply (case_tac reply_cap; simp)
-   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-   apply (rule hoare_seq_ext[OF _ gbn_sp])
-   apply (case_tac ntfnptr; simp)
-    apply (case_tac x; simp)
-      apply (case_tac is_blocking; simp)
-       apply wpsimp
-      apply (wpsimp simp: do_nbrecv_failed_transfer_def)
-     apply (rule hoare_seq_ext[OF _ assert_sp])
-  sorry
-(*
-crunch typ_at[wp]: receive_ipc "\<lambda>s::det_ext state. P (typ_at T p s)"
-  (wp: hoare_drop_imps maybeM_inv simp: crunch_simps)
-*)
+  by (wpsimp simp: receive_ipc_def
+               wp: hoare_drop_imps
+                   hoare_strengthen_post[OF get_endpoint_inv[where P="\<lambda>s. P (typ_at T p s)"]])
+
 lemma ri_tcb [wp]:
   "\<lbrace>tcb_at t' :: det_ext state \<Rightarrow> bool\<rbrace>
     receive_ipc t cap is_blocking r
@@ -2805,7 +2830,6 @@ end
 
 crunch typ_at[wp]: receive_signal "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps)
-
 
 lemma rai_tcb [wp]:
   "\<lbrace>tcb_at t'\<rbrace> receive_signal t cap is_blocking \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
@@ -2818,13 +2842,6 @@ lemmas transfer_caps_loop_pred_tcb_at[wp] =
 
 end
 
-
-context Ipc_AI begin
-
-
-
-end
-
 lemma ep_ntfn_cap_case_helper:
   "(case x of cap.EndpointCap ref bdg r \<Rightarrow> P ref bdg r
            |  cap.NotificationCap ref bdg r \<Rightarrow> Q ref bdg r
@@ -2834,71 +2851,8 @@ lemma ep_ntfn_cap_case_helper:
       R)"
   by (cases x, simp_all)
 
-context Ipc_AI begin
-
-end
-
-crunch pred_tcb_at[wp]: complete_signal "pred_tcb_at proj t p"
-
-context Ipc_AI begin
-
-lemma ri_makes_simple:
-  "\<lbrace>st_tcb_at simple t' and K (t \<noteq> t') :: det_ext state \<Rightarrow> bool\<rbrace>
-     receive_ipc t cap is_blocking r
-   \<lbrace>\<lambda>rv. st_tcb_at simple t'\<rbrace>" (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
-  apply (rule hoare_gen_asm)
-  apply (simp add: receive_ipc_def split_def)
-  apply (case_tac cap, simp_all)
-
-  apply (case_tac r; simp)
-   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-   apply (rule hoare_seq_ext [OF _ gbn_sp])
-   apply (case_tac ntfnptr; simp)
-    apply (case_tac x; simp)
-      apply (case_tac is_blocking; simp)
-       apply (wpsimp simp: set_thread_state_def set_object_def st_tcb_at_def obj_at_def)
-      apply (wpsimp simp: do_nbrecv_failed_transfer_def)
-     apply (rule hoare_seq_ext [OF _ assert_sp])
-     apply wpsimp
-            apply (wpsimp wp: sts_st_tcb_at_cases)
-            apply (wpsimp wp: sts_st_tcb_at_cases)
-          apply (wpsimp simp: thread_get_def)
-         apply wpsimp
-
-
-(*  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
-  apply (rule hoare_seq_ext [OF _ gbn_sp])
-  apply (rule hoare_seq_ext)
-   apply (rename_tac ep I DO x CARE NOT)
-   apply (rule_tac R="ko_at (Endpoint x) ep and ?pre" in hoare_vcg_if_split)
-    apply (wp complete_signal_invs)
-   apply (case_tac x, simp_all)
-     apply (rule hoare_pre, wpc)
-       apply (wp sts_st_tcb_at_cases, simp)
-      apply (simp add: do_nbrecv_failed_transfer_def, wp)
-     apply clarsimp
-    apply (rule hoare_seq_ext [OF _ assert_sp])
-    apply (rule hoare_seq_ext [where B="\<lambda>s. st_tcb_at simple t'"])
-     apply (rule hoare_seq_ext [OF _ gts_sp])
-     apply (rule hoare_pre)
-      apply (wp setup_caller_cap_makes_simple sts_st_tcb_at_cases
-                hoare_vcg_all_lift hoare_vcg_const_imp_lift
-                hoare_drop_imps
-           | wpc | simp)+
-     apply (fastforce simp: pred_tcb_at_def obj_at_def)
-    apply (wp, simp)
-   apply (wp sts_st_tcb_at_cases | rule hoare_pre, wpc | simp add: do_nbrecv_failed_transfer_def)+
-   apply (wp get_simple_ko_wp | wpc | simp)+
-  done*) sorry
-
-end
-
-lemma rai_makes_simple:
-  "\<lbrace>st_tcb_at simple t' and K (t \<noteq> t')\<rbrace>
-     receive_signal t cap is_blocking
-   \<lbrace>\<lambda>rv. st_tcb_at simple t'\<rbrace>"
-   by (rule rai_pred_tcb_neq)
-
+crunches complete_signal, update_sk_obj_ref, do_nbrecv_failed_transfer
+  for pred_tcb_at[wp]: "pred_tcb_at proj t p"
 
 lemma thread_set_Pmdb:
   "\<lbrace>\<lambda>s. P (cdt s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"

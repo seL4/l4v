@@ -79,9 +79,6 @@ lemma receive_ipc_idle_thread[wp]:
                          wp: reply_push_idle_thread hoare_drop_imp mapM_wp_inv)+
   done
 
-crunch cap_to[wp]: receive_ipc "ex_nonz_cap_to p :: det_ext state \<Rightarrow> bool"
-  (wp: cap_insert_ex_cap hoare_drop_imps maybeM_inv simp: crunch_simps ignore: set_object)
-
 lemma sort_queue_valid_ep_helper:
   "distinct list \<Longrightarrow> (a, b) \<in> set (zip list' list) \<Longrightarrow> (a', b) \<in> set (zip list' list) \<Longrightarrow> a = a'"
   apply (induct list arbitrary: list')
