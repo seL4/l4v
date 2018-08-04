@@ -50,7 +50,7 @@ ML {*
 write_speed_test_file 10 40
 *}
 
-ML {* Modifies_Proofs.sorry_modifies_proofs := false *}
+declare [[sorry_modifies_proofs = false]]
 
 install_C_file "modifies_speed.c"
 

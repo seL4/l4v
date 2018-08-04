@@ -49,8 +49,7 @@ sig
                                  typ list -> string -> theory
    (* string is the name of the locale where the theorems about Gamma live *)
 
-  val sorry_modifies_proofs : bool ref
-
+  val sorry_modifies_proofs : bool Config.T
   val calculate_modifies_proofs : bool Config.T
 end
 
@@ -60,12 +59,32 @@ struct
 open TermsTypes
 type csenv = ProgramAnalysis.csenv
 
-val sorry_modifies_proofs = ref false
-
 (* Config item to determine if "modifies" thms should be generated. *)
-val (calculate_modifies_proofs, calculate_modifies_proofs_setup) =
-    Attrib.config_bool (Binding.name "calculate_modifies_proofs") (K true)
-val _ = Context.>> (Context.map_theory calculate_modifies_proofs_setup)
+val calculate_modifies_proofs =
+  Attrib.setup_config_bool @{binding calculate_modifies_proofs} (K true)
+
+val sorry_modifies_proofs =
+  Attrib.setup_config_bool @{binding sorry_modifies_proofs} (K false);
+
+fun put_conditional conf VAR ctxt =
+  let
+    val v = can getenv_strict VAR
+    val ctxt' = Config.put_generic conf v ctxt
+  in
+    Output.tracing ("Set " ^ Config.name_of conf ^ " to " ^ Config.print_value (Config.Bool v));
+    ctxt'
+  end
+
+fun cond_sorry_modifies_proofs VAR ctxt =
+  let
+    val ctxt' = put_conditional sorry_modifies_proofs VAR ctxt
+  in
+    if Config.get_generic ctxt' sorry_modifies_proofs andalso
+       not (Config.get_generic ctxt' quick_and_dirty)
+    then warning "Setting sorry_modifies_proofs without quick_and_dirty."
+    else ();
+    ctxt'
+  end
 
 fun gen_modify_goalstring csenv fname modstrings = let
   fun foldthis (vname, vset) =
@@ -186,7 +205,7 @@ end
 
 fun munge_tactic ctxt goal msgf tac = let
   fun tacticfn {prems = _,context} st =
-      if !sorry_modifies_proofs then
+      if Config.get ctxt sorry_modifies_proofs then
          Skip_Proof.cheat_tac ctxt 1 st
       else
          tac context st
@@ -411,5 +430,11 @@ fun prove_all_modifies_goals thy csenv includeP tyargs globloc =
     end
   else
     thy
+
+val _ =
+  Outer_Syntax.command
+    @{command_keyword "cond_sorry_modifies_proofs"}
+    "set sorry_modifies_proof option, conditional on env variable"
+    (Parse.text >> (Toplevel.generic_theory o cond_sorry_modifies_proofs))
 
 end (* struct *)
