@@ -341,7 +341,7 @@ end
 
 *}
 
-ML {* Modifies_Proofs.sorry_modifies_proofs := true *} (* FIXME *)
+cond_sorry_modifies_proofs SORRY_MODIFIES_PROOFS
 
 local_setup {*
 SubstituteSpecs.take_all_actions

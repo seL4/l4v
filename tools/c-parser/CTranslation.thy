@@ -16,6 +16,7 @@ imports
   "IndirectCalls"
   "ModifiesProofs"
 keywords
+  "cond_sorry_modifies_proofs"
   "install_C_file"
   "install_C_types"
   "new_C_include_dir":: thy_decl

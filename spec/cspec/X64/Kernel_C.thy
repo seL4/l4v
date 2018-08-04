@@ -87,6 +87,8 @@ where
 
 lemmas ctcb_offset_defs = ctcb_offset_def ctcb_size_bits_def
 
+cond_sorry_modifies_proofs SORRY_MODIFIES_PROOFS
+
 install_C_file "../c/build/$L4V_ARCH/kernel_all.c_pp"
   [machinety=machine_state, ghostty=cghost_state]
 
