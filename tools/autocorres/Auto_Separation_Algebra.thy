@@ -8,6 +8,9 @@
  * @TAG(NICTA_BSD)
  *)
 
+(* Automatic instantiation of an AutoCorres C state space as a separation algebra.
+   FIXME: this is not quite finished. There are some proof tactics missing (see getter_rewrite etc)
+*)
 theory Auto_Separation_Algebra
 imports "AutoCorres" "../../lib/sep_algebra/Separation_Algebra"
 keywords "sep_instance" :: thy_goal
@@ -389,10 +392,10 @@ fun make_struct_rewrite (structs : HeapLiftBase.struct_info list) sep_info ctxt 
                                                   d <- gets g;
                                                   return (\<lambda>a. ?P c d )
                                                od )" (P)} setter
-           val getter_rewrite = Goal.prove ctxt ["f"] [] getter_rewrite_term (fn _ => Skip_Proof.cheat_tac ctxt 1)
-           val getter_rewrite' = Goal.prove ctxt ["f"] [] getter_rewrite_term' (fn _ => Skip_Proof.cheat_tac ctxt 1)
-           val setter_rewrite = Goal.prove ctxt ["f", "g"] [] setter_rewrite_term (fn _ => Skip_Proof.cheat_tac ctxt 1)
-           val setter_rewrite' = Goal.prove ctxt ["f", "g"] [] setter_rewrite_term' (fn _ => Skip_Proof.cheat_tac ctxt 1)
+           val getter_rewrite = Goal.prove ctxt ["f"] [] getter_rewrite_term (fn _ => Skip_Proof.cheat_tac ctxt 1) (* FIXME: unfinished *)
+           val getter_rewrite' = Goal.prove ctxt ["f"] [] getter_rewrite_term' (fn _ => Skip_Proof.cheat_tac ctxt 1) (* FIXME: unfinished *)
+           val setter_rewrite = Goal.prove ctxt ["f", "g"] [] setter_rewrite_term (fn _ => Skip_Proof.cheat_tac ctxt 1) (* FIXME: unfinished *)
+           val setter_rewrite' = Goal.prove ctxt ["f", "g"] [] setter_rewrite_term' (fn _ => Skip_Proof.cheat_tac ctxt 1) (* FIXME: unfinished *)
        in [setter_rewrite,setter_rewrite', getter_rewrite, getter_rewrite'] end;
      fun upd_sep_info_list info xs = info |> #sep_thms |> (fn x => x @ xs) |> upd_thms info
    in map make_struct_rewrite_inner structs |> List.concat |> upd_sep_info_list sep_info
