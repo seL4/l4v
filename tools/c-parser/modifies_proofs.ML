@@ -206,7 +206,9 @@ end
 fun munge_tactic ctxt goal msgf tac = let
   fun tacticfn {prems = _,context} st =
       if Config.get ctxt sorry_modifies_proofs then
-         Skip_Proof.cheat_tac ctxt 1 st
+         if Config.get ctxt quick_and_dirty
+         then Skip_Proof.cheat_tac ctxt 1 st
+         else error "Can skip modifies-proofs only in quick-and-dirty mode."
       else
          tac context st
   fun tacticmsg st t = case Seq.pull (tacticfn st t) of
