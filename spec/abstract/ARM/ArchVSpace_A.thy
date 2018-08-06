@@ -654,13 +654,6 @@ check_valid_ipc_buffer :: "vspace_ref \<Rightarrow> cap \<Rightarrow> (unit,'z::
   odE
 | _ \<Rightarrow> throwError IllegalOperation"
 
-text {* On the abstract level, capability and VM rights share the same type.
-  Nevertheless, a simple set intersection might lead to an invalid value like
-  @{term "{AllowWrite}"}.  Hence, @{const validate_vm_rights}. *}
-definition
-  mask_vm_rights :: "vm_rights \<Rightarrow> cap_rights \<Rightarrow> vm_rights" where
-  "mask_vm_rights V R \<equiv> validate_vm_rights (V \<inter> R)"
-
 text {* Decode a user argument word describing the kind of VM attributes a
 mapping is to have. *}
 definition
