@@ -95,7 +95,8 @@ lemma ball_tcb_cap_casesI:
   "\<lbrakk> P (tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>));
      P (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. is_valid_vtable_root or ((=) cap.NullCap)));
      P (tcb_reply, tcb_reply_update, (\<lambda>t st c. (is_master_reply_cap c
-                                                \<and> obj_ref_of c = t)
+                                                \<and> obj_ref_of c = t
+                                                \<and> AllowGrant \<in> cap_rights c)
                                              \<or> (halted st \<and> (c = cap.NullCap))));
      P (tcb_caller, tcb_caller_update, (\<lambda>_ st. case st of
                                        Structures_A.BlockedOnReceive e data \<Rightarrow>

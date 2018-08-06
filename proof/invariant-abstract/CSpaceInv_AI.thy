@@ -309,8 +309,10 @@ lemma valid_tcb_state_update:
                      tcb_caller t = cap.NullCap
                    \<and> is_master_reply_cap (tcb_reply t)
                    \<and> obj_ref_of (tcb_reply t) = p
+                   \<and> AllowGrant \<in> cap_rights (tcb_reply t)
               | _ \<Rightarrow> is_master_reply_cap (tcb_reply t)
-                   \<and> obj_ref_of (tcb_reply t) = p  \<rbrakk> \<Longrightarrow>
+                   \<and> obj_ref_of (tcb_reply t) = p
+                   \<and> AllowGrant \<in> cap_rights (tcb_reply t) \<rbrakk> \<Longrightarrow>
    valid_tcb p (t\<lparr>tcb_state := st\<rparr>) s"
   by (simp add: valid_tcb_def valid_tcb_state_def ran_tcb_cap_cases
          split: Structures_A.thread_state.splits)

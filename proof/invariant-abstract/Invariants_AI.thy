@@ -350,8 +350,7 @@ where
   | Zombie r b n \<Rightarrow> (case b of None \<Rightarrow> n \<le> 5
                                           | Some b \<Rightarrow> n \<le> 2 ^ b \<and> b \<noteq> 0)
   | ArchObjectCap ac \<Rightarrow> wellformed_acap ac
-  | ReplyCap t master rights \<Rightarrow>
-      (master \<longrightarrow> AllowGrant \<in> rights) \<and> AllowWrite \<in> rights \<and> AllowRead \<notin> rights \<and>
+  | ReplyCap t master rights \<Rightarrow> AllowWrite \<in> rights \<and> AllowRead \<notin> rights \<and>
       AllowGrantReply \<notin> rights
   | _ \<Rightarrow> True"
 
@@ -387,7 +386,7 @@ where
          cap_table_at bits r s \<and> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | ThreadCap r \<Rightarrow> tcb_at r s
   | DomainCap \<Rightarrow> True
-  | ReplyCap r m rights \<Rightarrow> tcb_at r s \<and>  (m \<longrightarrow> AllowGrant \<in> rights)
+  | ReplyCap r m rights \<Rightarrow> tcb_at r s
                         \<and> AllowWrite \<in> rights \<and> AllowRead \<notin> rights \<and> AllowGrantReply \<notin> rights
   | IRQControlCap \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
@@ -468,7 +467,8 @@ where
     tcb_cnode_index 1 \<mapsto> (tcb_vtable, tcb_vtable_update,
                           (\<lambda>_ _. is_valid_vtable_root or ((=) NullCap))),
     tcb_cnode_index 2 \<mapsto> (tcb_reply, tcb_reply_update,
-                          (\<lambda>t st c. (is_master_reply_cap c \<and> obj_ref_of c = t)
+                          (\<lambda>t st c. (is_master_reply_cap c \<and> obj_ref_of c = t
+                                     \<and> AllowGrant \<in> cap_rights c)
                                   \<or> (halted st \<and> (c = NullCap)))),
     tcb_cnode_index 3 \<mapsto> (tcb_caller, tcb_caller_update,
                           (\<lambda>_ st. case st of
@@ -1240,7 +1240,7 @@ lemma tcb_cap_cases_simps[simp]:
    Some (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. is_valid_vtable_root or ((=) NullCap)))"
   "tcb_cap_cases (tcb_cnode_index 2) =
    Some (tcb_reply, tcb_reply_update,
-         (\<lambda>t st c. (is_master_reply_cap c \<and> obj_ref_of c = t) \<or>
+         (\<lambda>t st c. (is_master_reply_cap c \<and> obj_ref_of c = t \<and> AllowGrant \<in> cap_rights c) \<or>
                    (halted st \<and> (c = NullCap))))"
   "tcb_cap_cases (tcb_cnode_index 3) =
    Some (tcb_caller, tcb_caller_update,
@@ -1257,7 +1257,8 @@ lemma ran_tcb_cap_cases:
     {(tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>)),
      (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. is_valid_vtable_root or ((=) NullCap))),
      (tcb_reply, tcb_reply_update, (\<lambda>t st c.
-                                       (is_master_reply_cap c \<and> obj_ref_of c = t)
+                                       (is_master_reply_cap c \<and> obj_ref_of c = t
+                                        \<and> AllowGrant \<in> cap_rights c)
                                      \<or> (halted st \<and> (c = NullCap)))),
      (tcb_caller, tcb_caller_update, (\<lambda>_ st. case st of
                                        Structures_A.BlockedOnReceive e data \<Rightarrow>

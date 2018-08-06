@@ -236,7 +236,7 @@ definition
      EndpointCap oref badge cr \<Rightarrow> EndpointCap oref badge cr'
    | NotificationCap oref badge cr
      \<Rightarrow> NotificationCap oref badge (cr' - {AllowGrant, AllowGrantReply})
-   | ReplyCap t False cr \<Rightarrow> ReplyCap t False (cr' - {AllowRead, AllowGrantReply} \<union> {AllowWrite})
+   | ReplyCap t m cr \<Rightarrow> ReplyCap t m (cr' - {AllowRead, AllowGrantReply} \<union> {AllowWrite})
    | ArchObjectCap acap \<Rightarrow> ArchObjectCap (acap_rights_update cr' acap)
    | _ \<Rightarrow> cap"
 
