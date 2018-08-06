@@ -432,7 +432,7 @@ where
      return (NullCap, NullCap)
   od
   | (IOPortCap f l, True) \<Rightarrow> return (NullCap, (ArchObjectCap (IOPortCap f l)))
-  (* FIXME: IOSpaceCap and IOPageTableCap *)
+  (* FIXME x64-vtd: IOSpaceCap and IOPageTableCap for arch_finalise_cap *)
   | _ \<Rightarrow> return (NullCap, NullCap)"
 
 
