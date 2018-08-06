@@ -16,30 +16,32 @@ begin
 
 context Arch begin global_naming RISCV64_A
 
-text {*
-  This is not a specification of true kernel
-  initialisation. This theory describes a dummy initial state only, to
-  show that the invariants and refinement relation are consistent.
-*}
+text \<open>
+  This is not a specification of true kernel initialisation. This theory describes a dummy
+  initial state only, to show that the invariants and refinement relation are consistent.
+\<close>
 
 definition riscv_global_pt_ptr :: obj_ref
-where
+  where
   "riscv_global_pt_ptr = kernel_base + 0x1000"
 
 definition init_irq_node_ptr :: obj_ref
-where
+  where
   "init_irq_node_ptr = kernel_base + 0x2000"
 
-definition
+definition init_arch_state :: arch_state
+  where
   "init_arch_state \<equiv> \<lparr>
      riscv_asid_table = Map.empty,
      riscv_global_pt = riscv_global_pt_ptr
    \<rparr>"
 
-definition
+definition init_global_pt :: kernel_object
+  where
   "init_global_pt \<equiv> ArchObj $ PageTable (\<lambda>_. InvalidPTE)"
 
-definition
+definition init_kheap :: kheap
+  where
   "init_kheap \<equiv>
     (\<lambda>x. if \<exists>irq :: irq. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
            then Some (CNode 0 (empty_cnode 0))
@@ -62,15 +64,18 @@ definition
       riscv_global_pt_ptr \<mapsto> init_global_pt
     )"
 
-definition
+definition init_cdt :: cdt
+  where
   "init_cdt \<equiv> Map.empty"
 
-definition
+definition init_ioc :: "cslot_ptr \<Rightarrow> bool"
+  where
   "init_ioc \<equiv>
    \<lambda>(a,b). (\<exists>obj. init_kheap a = Some obj \<and>
                   (\<exists>cap. cap_of obj b = Some cap \<and> cap \<noteq> cap.NullCap))"
 
-definition
+definition init_A_st :: "'z::state_ext state"
+  where
   "init_A_st \<equiv> \<lparr>
     kheap = init_kheap,
     cdt = init_cdt,

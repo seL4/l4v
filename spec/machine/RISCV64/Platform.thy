@@ -23,58 +23,60 @@ context Arch begin global_naming RISCV64
 type_synonym irq = word32
 type_synonym paddr = word64
 
-
 abbreviation (input) "toPAddr \<equiv> id"
 abbreviation (input) "fromPAddr \<equiv> id"
 
-definition
-  kernelBase :: word64 where
+definition kernelBase :: word64
+  where
   "kernelBase = 0xFFFFFFFF80000000"
 
-definition
-  paddrLoad :: word64 where
+definition paddrLoad :: word64
+  where
   "paddrLoad = 0xC0000000"
 
-definition
-  kernelBaseOffset :: word64 where
+definition kernelBaseOffset :: word64
+  where
   "kernelBaseOffset = kernelBase - paddrLoad"
 
-definition
-  pptrBase :: word64 where
+definition pptrBase :: word64
+  where
   "pptrBase = 0xFFFFFFC000000000"
 
-definition
-  pptrUserTop :: word64 where
+definition pptrUserTop :: word64
+  where
   "pptrUserTop \<equiv> pptrBase"
 
-definition
-  baseOffset :: word64 where
-  "baseOffset = pptrBase - 0x80000000 (* PADDR_BASE *)"
+definition pAddr_base :: word64
+  where
+  "pAddr_base \<equiv> 0x80000000"
 
-definition
-  ptrFromPAddr :: "paddr \<Rightarrow> word64" where
+definition baseOffset :: word64
+  where
+  "baseOffset = pptrBase - pAddr_base"
+
+definition ptrFromPAddr :: "paddr \<Rightarrow> word64"
+  where
   "ptrFromPAddr paddr \<equiv> paddr + baseOffset"
 
-definition
-  addrFromPPtr :: "word64 \<Rightarrow> paddr" where
+definition addrFromPPtr :: "word64 \<Rightarrow> paddr"
+  where
   "addrFromPPtr pptr \<equiv> pptr - baseOffset"
 
-definition
-  addrFromKPPtr :: "word64 \<Rightarrow> paddr" where
+definition addrFromKPPtr :: "word64 \<Rightarrow> paddr"
+  where
   "addrFromKPPtr pptr \<equiv> pptr - kernelBaseOffset"
 
-definition
-  minIRQ :: "irq" where
+definition minIRQ :: "irq"
+  where
   "minIRQ \<equiv> 0"
 
-definition
-  maxIRQ :: "irq" where
+definition maxIRQ :: "irq"
+  where
   "maxIRQ \<equiv> 5"
 
-(* not implemented on this platform *)
-definition
-  pageColourBits :: nat where
-  "pageColourBits \<equiv> undefined"
+definition pageColourBits :: nat
+  where
+  "pageColourBits \<equiv> undefined" \<comment> \<open>not implemented on this platform\<close>
 
 end
 end

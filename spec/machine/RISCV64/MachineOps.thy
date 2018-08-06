@@ -19,176 +19,157 @@ begin
 
 section "Wrapping and Lifting Machine Operations"
 
-text {*
-  Most of the machine operations below work on the underspecified
-  part of the machine state @{typ machine_state_rest} and cannot fail.
-  We could express the latter by type (leaving out the failure flag),
-  but if we later wanted to implement them,
-  we'd have to set up a new hoare-logic
-  framework for that type. So instead, we provide a wrapper for these
-  operations that explicitly ignores the fail flag and sets it to
-  False. Similarly, these operations never return an empty set of
-  follow-on states, which would require the operation to fail.
-  So we explicitly make this (non-existing) case a null operation.
+text \<open>
+  Most of the machine operations below work on the underspecified part of the machine state @{typ
+  machine_state_rest} and cannot fail. We could express the latter by type (leaving out the failure
+  flag), but if we later wanted to implement them, we'd have to set up a new Hoare logic framework
+  for that type. So instead, we provide a wrapper for these operations that explicitly ignores the
+  fail flag and sets it to False. Similarly, these operations never return an empty set of follow-on
+  states, which would require the operation to fail. So we explicitly make this (non-existing) case
+  a null operation.
 
   All this is done only to avoid a large number of axioms (2 for each operation).
-*}
+\<close>
 
 context Arch begin global_naming RISCV64
 
 section "The Operations"
 
-definition
-  loadWord :: "machine_word \<Rightarrow> machine_word machine_monad"
-  where "loadWord p \<equiv> do m \<leftarrow> gets underlying_memory;
-                         assert (p && mask 3 = 0);
-                         return (word_rcat (map (\<lambda>i. m (p + (7 - of_int i))) [0 .. 7]))
-                      od"
+subsection "Memory"
 
-definition
-  storeWord :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-  where "storeWord p w \<equiv> do
-                            assert (p && mask 3 = 0);
-                            modify (underlying_memory_update (
-                                      fold (\<lambda>i m. m((p + (of_int i)) := word_rsplit w ! (7 - nat i))) [0 .. 7]))
-                         od"
+definition loadWord :: "machine_word \<Rightarrow> machine_word machine_monad"
+  where
+  "loadWord p \<equiv> do
+     m \<leftarrow> gets underlying_memory;
+     assert (p && mask 3 = 0);
+     return (word_rcat (map (\<lambda>i. m (p + (7 - of_int i))) [0 .. 7]))
+   od"
+
+definition storeWord :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+  where
+  "storeWord p w \<equiv> do
+     assert (p && mask 3 = 0);
+     modify (underlying_memory_update
+              (fold (\<lambda>i m. m((p + (of_int i)) := word_rsplit w ! (7 - nat i))) [0 .. 7]))
+   od"
 
 lemma upto0_7_def:
   "[0..7] = [0,1,2,3,4,5,6,7]" by eval
 
 lemma loadWord_storeWord_is_return:
   "p && mask 3 = 0 \<Longrightarrow> (do w \<leftarrow> loadWord p; storeWord p w od) = return ()"
-  apply (rule ext)
-  by (simp add: loadWord_def storeWord_def bind_def assert_def return_def
-    modify_def gets_def get_def eval_nat_numeral put_def upto0_7_def
-    word_rsplit_rcat_size word_size)
+  by (auto simp: loadWord_def storeWord_def bind_def assert_def return_def word_rsplit_rcat_size
+                 modify_def gets_def get_def eval_nat_numeral put_def upto0_7_def word_size)
 
-consts'
-  memory_regions :: "(paddr \<times> paddr) list"
-definition
-  getMemoryRegions :: "(paddr * paddr) list machine_monad"
-where
+consts' memory_regions :: "(paddr \<times> paddr) list"
+definition getMemoryRegions :: "(paddr * paddr) list machine_monad"
+  where
   "getMemoryRegions \<equiv> return memory_regions"
 
 text {* This instruction is required in the simulator, only. *}
-definition
-  storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-where
+definition storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+  where
   "storeWordVM w p \<equiv> return ()"
 
-consts'
-  configureTimer_impl :: "unit machine_rest_monad"
-  configureTimer_val :: "machine_state \<Rightarrow> irq"
-definition
-  configureTimer :: "irq machine_monad"
-where
-  "configureTimer \<equiv> do
-    machine_op_lift configureTimer_impl;
-    gets configureTimer_val
-  od"
 
-consts'
-  initTimer_impl :: "unit machine_rest_monad"
-definition
-  initTimer :: "unit machine_monad"
-where
+subsection "Timer"
+
+consts' configureTimer_impl :: "unit machine_rest_monad"
+consts' configureTimer_val :: "machine_state \<Rightarrow> irq"
+definition configureTimer :: "irq machine_monad"
+  where
+  "configureTimer \<equiv> do
+     machine_op_lift configureTimer_impl;
+     gets configureTimer_val
+   od"
+
+consts' initTimer_impl :: "unit machine_rest_monad"
+definition initTimer :: "unit machine_monad"
+  where
   "initTimer \<equiv> machine_op_lift initTimer_impl"
 
-consts'
-  resetTimer_impl :: "unit machine_rest_monad"
-definition
-  resetTimer :: "unit machine_monad"
-where
+consts' resetTimer_impl :: "unit machine_rest_monad"
+definition resetTimer :: "unit machine_monad"
+  where
   "resetTimer \<equiv> machine_op_lift resetTimer_impl"
 
-definition
-  debugPrint :: "unit list \<Rightarrow> unit machine_monad"
-where
+
+subsection "Debug"
+
+definition debugPrint :: "unit list \<Rightarrow> unit machine_monad"
+  where
   debugPrint_def[simp]:
- "debugPrint \<equiv> \<lambda>message. return ()"
+  "debugPrint \<equiv> \<lambda>message. return ()"
 
 
-\<comment> \<open>Interrupt controller operations\<close>
+subsection \<open>Interrupt Controller\<close>
 
-text {*
-  Interrupts that cannot occur while the kernel is running (e.g. at preemption points),
-  but that can occur from user mode. Empty on plain x86-64.
-*}
-definition
+text {* Interrupts that cannot occur while the kernel is running (e.g. at preemption points), but
+that can occur from user mode. Empty on RISCV64. *}
+definition non_kernel_IRQs :: "irq set"
+  where
   "non_kernel_IRQs = {}"
 
-text {*
-  @{term getActiveIRQ} is now derministic.
-  It 'updates' the irq state to the reflect the passage of
-  time since last the irq was gotten, then it gets the active
-  IRQ (if there is one).
-*}
-definition
-  getActiveIRQ :: "bool \<Rightarrow> (irq option) machine_monad"
-where
+text {* @{term getActiveIRQ} is oracle-based and deterministic to allow information flow proofs. It
+updates the IRQ state to the reflect the passage of time since last the IRQ, then it gets the active
+IRQ (if there is one). *}
+definition getActiveIRQ :: "bool \<Rightarrow> (irq option) machine_monad"
+  where
   "getActiveIRQ in_kernel \<equiv> do
-    is_masked \<leftarrow> gets $ irq_masks;
-    modify (\<lambda>s. s \<lparr> irq_state := irq_state s + 1 \<rparr>);
-    active_irq \<leftarrow> gets $ irq_oracle \<circ> irq_state;
-    if is_masked active_irq \<or> active_irq = 0xFF \<or> (in_kernel \<and> active_irq \<in> non_kernel_IRQs)
-    then return None
-    else return ((Some active_irq) :: irq option)
-  od"
+     is_masked \<leftarrow> gets $ irq_masks;
+     modify (\<lambda>s. s \<lparr> irq_state := irq_state s + 1 \<rparr>);
+     active_irq \<leftarrow> gets $ irq_oracle \<circ> irq_state;
+     if is_masked active_irq \<or> active_irq = 0xFF \<or> (in_kernel \<and> active_irq \<in> non_kernel_IRQs)
+     then return None
+     else return ((Some active_irq) :: irq option)
+   od"
 
-definition
-  maskInterrupt :: "bool \<Rightarrow> irq \<Rightarrow> unit machine_monad"
-where
-  "maskInterrupt m irq \<equiv>
-  modify (\<lambda>s. s \<lparr> irq_masks := (irq_masks s) (irq := m) \<rparr>)"
+definition maskInterrupt :: "bool \<Rightarrow> irq \<Rightarrow> unit machine_monad"
+  where
+  "maskInterrupt m irq \<equiv> modify (\<lambda>s. s \<lparr> irq_masks := (irq_masks s) (irq := m) \<rparr>)"
 
-definition
-  ackInterrupt :: "irq \<Rightarrow> unit machine_monad"
-where
+definition ackInterrupt :: "irq \<Rightarrow> unit machine_monad"
+  where
   "ackInterrupt \<equiv> \<lambda>irq. return ()"
 
-definition
-  setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad"
-where
+definition setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad"
+  where
   "setInterruptMode \<equiv> \<lambda>irq levelTrigger polarityLow. return ()"
 
-section "Memory Clearance"
+
+subsection "Clearing Memory"
 
 text {* Clear memory contents to recycle it as user memory *}
-definition
-  clearMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
-where
+definition clearMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
+  where
   "clearMemory ptr bytelength \<equiv>
-   mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size .e. ptr + (of_nat bytelength) - 1]"
+     mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size .e. ptr + (of_nat bytelength) - 1]"
 
-definition
-  clearMemoryVM :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
-where
+text {* Haskell simulator interface stub. *}
+definition clearMemoryVM :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
+  where
   "clearMemoryVM ptr bits \<equiv> return ()"
 
 text {*
-  Initialize memory to be used as user memory.
-  Note that zeroing out the memory is redundant in the specifications.
-  In any case, we cannot abstract from the call to cleanCacheRange,
-  which appears in the implementation.
+  Initialize memory to be used as user memory. Note that zeroing out the memory is redundant
+  in the specifications. In any case, we cannot abstract from the call to cleanCacheRange, which
+  appears in the implementation.
 *}
 abbreviation (input) "initMemory == clearMemory"
 
 text {*
-  Free memory that had been initialized as user memory.
-  While freeing memory is a no-op in the implementation,
-  we zero out the underlying memory in the specifications to avoid garbage.
-  If we know that there is no garbage,
-  we can compute from the implementation state
-  what the exact memory content in the specifications is.
+  Free memory that had been initialized as user memory. While freeing memory is a no-op in the
+  implementation, we zero out the underlying memory in the specifications to avoid garbage. If we
+  know that there is no garbage, we can compute from the implementation state what the exact memory
+  content in the specifications is.
 *}
-definition
-  freeMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
-where
+definition freeMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
+  where
   "freeMemory ptr bits \<equiv>
    mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size  .e.  ptr + 2 ^ bits - 1]"
 
 
-section "User Monad"
+subsection "User Monad and Registers"
 
 type_synonym user_regs = "register \<Rightarrow> machine_word"
 
@@ -196,64 +177,62 @@ datatype user_context = UserContext (user_regs : user_regs)
 
 type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"
 
-definition
-  getRegister :: "register \<Rightarrow> machine_word user_monad"
-where
+
+definition getRegister :: "register \<Rightarrow> machine_word user_monad"
+  where
   "getRegister r \<equiv> gets (\<lambda>s. user_regs s r)"
 
-definition
-  modify_registers :: "(user_regs \<Rightarrow> user_regs) \<Rightarrow> user_context \<Rightarrow> user_context"
-where
+definition modify_registers :: "(user_regs \<Rightarrow> user_regs) \<Rightarrow> user_context \<Rightarrow> user_context"
+  where
   "modify_registers f uc \<equiv> UserContext (f (user_regs uc))"
 
-definition
-  setRegister :: "register \<Rightarrow> machine_word \<Rightarrow> unit user_monad"
-where
+definition setRegister :: "register \<Rightarrow> machine_word \<Rightarrow> unit user_monad"
+  where
   "setRegister r v \<equiv> modify (\<lambda>s. UserContext ((user_regs s) (r := v)))"
 
-definition
+definition getRestartPC :: "machine_word user_monad"
+  where
   "getRestartPC \<equiv> getRegister SEPC"
 
-definition
+definition setNextPC :: "machine_word \<Rightarrow> unit user_monad"
+  where
   "setNextPC \<equiv> setRegister NEXTPC"
 
-consts'
-  initL2Cache_impl :: "unit machine_rest_monad"
-definition
-  initL2Cache :: "unit machine_monad"
-where
+
+subsection "Caches, Barriers, and Flushing"
+
+consts' initL2Cache_impl :: "unit machine_rest_monad"
+definition initL2Cache :: "unit machine_monad"
+  where
   "initL2Cache \<equiv> machine_op_lift initL2Cache_impl"
 
-consts'
-  hwASIDFlush_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-definition
-  hwASIDFlush :: "machine_word \<Rightarrow> unit machine_monad"
-where
+consts' hwASIDFlush_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition hwASIDFlush :: "machine_word \<Rightarrow> unit machine_monad"
+  where
   "hwASIDFlush asid \<equiv> machine_op_lift (hwASIDFlush_impl asid)"
 
-consts'
-  sfence_impl :: "unit machine_rest_monad"
-definition
-  sfence :: "unit machine_monad"
-where
+consts' sfence_impl :: "unit machine_rest_monad"
+definition sfence :: "unit machine_monad"
+  where
   "sfence \<equiv> machine_op_lift sfence_impl"
 
 lemmas cache_machine_op_defs = sfence_def hwASIDFlush_def
 
-consts'
-  sbadaddr_val :: "machine_state \<Rightarrow> machine_word"
-definition
-  read_sbadaddr :: "machine_word machine_monad"
-where
+
+subsection "Faults"
+
+consts' sbadaddr_val :: "machine_state \<Rightarrow> machine_word"
+definition read_sbadaddr :: "machine_word machine_monad"
+  where
   "read_sbadaddr = gets sbadaddr_val"
 
-consts'
-  setVSpaceRoot_impl :: "paddr \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
-definition
-  setVSpaceRoot :: "paddr \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-where
+
+subsection "Virtual Memory"
+
+consts' setVSpaceRoot_impl :: "paddr \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition setVSpaceRoot :: "paddr \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+  where
   "setVSpaceRoot pt asid \<equiv> machine_op_lift $ setVSpaceRoot_impl pt asid"
 
 end
-
 end

@@ -19,15 +19,17 @@ begin
 
 context Arch begin global_naming RISCV64_A
 
-text {*
-This theory provides architecture-specific definitions and datatypes
-including architecture-specific capabilities and objects.
-*}
+text \<open>
+  This theory provides architecture-specific definitions and datatypes including
+  architecture-specific capabilities and objects.
+\<close>
 
-section {* Architecture-specific capabilities *}
+section \<open>Architecture-specific capabilities\<close>
 
-text {* The RISCV64 kernel supports capabilities for ASID pools and an ASID controller capability,
-along with capabilities for virtual memory mappings. *}
+text \<open>
+  The RISCV64 kernel supports capabilities for ASID pools and an ASID controller capability,
+  along with capabilities for virtual memory mappings.
+\<close>
 
 datatype arch_cap =
     ASIDPoolCap (acap_obj : obj_ref) (acap_asid_base : asid)
@@ -41,15 +43,15 @@ datatype arch_cap =
   | PageTableCap (acap_obj : obj_ref) (acap_map_data : "(asid \<times> vspace_ref) option")
 
 
-text {* Update the mapping data saved in a frame or page table capability. *}
+text \<open>Update the mapping data saved in a frame or page table capability.\<close>
 definition update_map_data :: "arch_cap \<Rightarrow> (asid \<times> vspace_ref) option \<Rightarrow> arch_cap"
-where
+  where
   "update_map_data cap m \<equiv> case cap of
      FrameCap p R sz dev _  \<Rightarrow> FrameCap p R sz dev m
    | PageTableCap p _ \<Rightarrow> PageTableCap p m"
 
 
-section {* Architecture-specific objects *}
+section \<open>Architecture-specific objects\<close>
 
 (* This datatype does not match up with the executable spec directly:
    This one here models all "things" one can set on a page or page table entry.
@@ -59,7 +61,7 @@ datatype vm_attribute = Global | Execute | User
 type_synonym vm_attributes = "vm_attribute set"
 
 definition page_only_attrs :: "vm_attributes"
-where
+  where
   "page_only_attrs = {Global}"
 
 datatype pte =
@@ -80,72 +82,72 @@ datatype arch_kernel_obj =
   | DataPage bool vmpage_size
 
 definition pte_bits :: nat
-where
+  where
   "pte_bits = word_size_bits"
 
 definition table_size :: nat
-where
+  where
   "table_size = ptTranslationBits + pte_bits"
 
 definition pt_bits :: "nat"
-where
+  where
   "pt_bits \<equiv> table_size"
 
 primrec arch_obj_size :: "arch_cap \<Rightarrow> nat"
-where
+  where
   "arch_obj_size (ASIDPoolCap _ _) = pageBits"
 | "arch_obj_size ASIDControlCap = 0"
 | "arch_obj_size (FrameCap _ _ sz _ _) = pageBitsForSize sz"
 | "arch_obj_size (PageTableCap _ _ ) = table_size"
 
 fun arch_cap_is_device :: "arch_cap \<Rightarrow> bool"
-where
+  where
   "arch_cap_is_device (FrameCap _ _ _ is_dev _) = is_dev"
 | "arch_cap_is_device _ = False"
 
 definition cte_level_bits :: nat
-where
+  where
   "cte_level_bits \<equiv> 5"
 
 definition tcb_bits :: nat
-where
+  where
   "tcb_bits \<equiv> 11"
 
 definition endpoint_bits :: nat
-where
+  where
   "endpoint_bits \<equiv> 4"
 
 definition ntfn_bits :: nat
-where
+  where
   "ntfn_bits \<equiv> 5"
 
 definition untyped_min_bits :: nat
-where
+  where
   "untyped_min_bits \<equiv> 4"
 
 definition untyped_max_bits :: nat
-where
+  where
   "untyped_max_bits \<equiv> 47"
 
 primrec arch_kobj_size :: "arch_kernel_obj \<Rightarrow> nat"
-where
+  where
   "arch_kobj_size (ASIDPool _) = pageBits"
 | "arch_kobj_size (PageTable _) = table_size"
 | "arch_kobj_size (DataPage _ sz) = pageBitsForSize sz"
 
 fun aobj_ref :: "arch_cap \<rightharpoonup> obj_ref"
-where
+  where
   "aobj_ref ASIDControlCap = None"
 | "aobj_ref c = Some (acap_obj c)"
 
 definition acap_rights_update :: "cap_rights \<Rightarrow> arch_cap \<Rightarrow> arch_cap"
-where
+  where
   "acap_rights_update R acap \<equiv>
     case acap of
       FrameCap ref cR sz dev as \<Rightarrow> FrameCap ref (validate_vm_rights R) sz dev as
     | _ \<Rightarrow> acap"
 
-section {* Architecture-specific object types and default objects *}
+section \<open>Architecture-specific object types and default objects\<close>
 
 datatype aobject_type =
     SmallPageObj
@@ -155,11 +157,11 @@ datatype aobject_type =
   | ASIDPoolObj
 
 definition arch_is_frame_type :: "aobject_type \<Rightarrow> bool"
-where
+  where
   "arch_is_frame_type aobj \<equiv> aobj \<noteq> PageTableObj"
 
 definition arch_default_cap :: "aobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> arch_cap"
-where
+  where
   "arch_default_cap tp r n dev \<equiv> case tp of
      SmallPageObj \<Rightarrow> FrameCap r vm_read_write RISCVSmallPage dev None
    | LargePageObj \<Rightarrow> FrameCap r vm_read_write RISCVLargePage dev None
@@ -168,7 +170,7 @@ where
    | ASIDPoolObj  \<Rightarrow> ASIDPoolCap r 0" (* unused, but nicer properties when defined *)
 
 definition default_arch_object :: "aobject_type \<Rightarrow> bool \<Rightarrow> nat \<Rightarrow> arch_kernel_obj"
-where
+  where
   "default_arch_object tp dev n \<equiv> case tp of
      SmallPageObj \<Rightarrow> DataPage dev RISCVSmallPage
    | LargePageObj \<Rightarrow> DataPage dev RISCVLargePage
@@ -182,7 +184,7 @@ end
 
 qualify RISCV64_A (in Arch)
 
-section {* Architecture-specific state *}
+section \<open>Architecture-specific state\<close>
 
 record arch_state =
   riscv_asid_table :: "asid_high_index \<rightharpoonup> obj_ref"
@@ -201,14 +203,14 @@ datatype aa_type =
   | ADeviceData vmpage_size
 
 definition aa_type :: "arch_kernel_obj \<Rightarrow> aa_type"
-where
+  where
   "aa_type ao \<equiv> case ao of
      PageTable pt    \<Rightarrow> APageTable
    | DataPage dev sz \<Rightarrow> if dev then ADeviceData sz else AUserData sz
    | ASIDPool f      \<Rightarrow> AASIDPool"
 
 definition badge_bits :: nat
-where
+  where
   "badge_bits \<equiv> 64"
 
 end
@@ -225,37 +227,33 @@ end_qualify
 
 context Arch begin global_naming RISCV64_A
 
-definition
-  default_arch_tcb :: arch_tcb where
+definition default_arch_tcb :: arch_tcb
+  where
   "default_arch_tcb \<equiv> \<lparr>tcb_context = new_context\<rparr>"
 
-text \<open> Accessors for @{text "tcb_context"} inside @{text "arch_tcb"}.
-  These are later used to implement @{text as_user}, i.e.\ need to be
-  compatible with @{text user_monad}.\<close>
-definition
-  arch_tcb_context_set :: "user_context \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
-where
+text \<open>
+  Accessors for @{text "tcb_context"} inside @{text "arch_tcb"}. These are later used to
+  implement @{text as_user}, i.e.\ need to be compatible with @{text user_monad}.
+\<close>
+definition arch_tcb_context_set :: "user_context \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
+  where
   "arch_tcb_context_set uc a_tcb \<equiv> a_tcb \<lparr> tcb_context := uc \<rparr>"
 
-definition
-  arch_tcb_context_get :: "arch_tcb \<Rightarrow> user_context"
-where
+definition arch_tcb_context_get :: "arch_tcb \<Rightarrow> user_context"
+  where
   "arch_tcb_context_get a_tcb \<equiv> tcb_context a_tcb"
 
 text \<open>
- Accessors for the user register part of the @{text "arch_tcb"}.
- (Because @{typ "register \<Rightarrow> machine_word"} may not be equal to @{typ user_context}).
+  Accessors for the user register part of the @{text "arch_tcb"}.
+  (Because @{typ "register \<Rightarrow> machine_word"} might not be equal to @{typ user_context}).
 \<close>
-definition
-  arch_tcb_set_registers :: "(register \<Rightarrow> machine_word) \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
-where
+definition arch_tcb_set_registers :: "(register \<Rightarrow> machine_word) \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
+  where
   "arch_tcb_set_registers regs a_tcb \<equiv> a_tcb \<lparr> tcb_context := UserContext regs \<rparr>"
 
-definition
-  arch_tcb_get_registers :: "arch_tcb \<Rightarrow> register \<Rightarrow> machine_word"
-where
+definition arch_tcb_get_registers :: "arch_tcb \<Rightarrow> register \<Rightarrow> machine_word"
+  where
   "arch_tcb_get_registers a_tcb \<equiv> user_regs (tcb_context a_tcb)"
 
 end
-
 end

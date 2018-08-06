@@ -18,25 +18,27 @@ begin
 
 context Arch begin global_naming RISCV64_A
 
-text {* This is a placeholder function. We may wish to extend the specification
-  with explicitly tagging kernel data regions in memory. *}
-definition
-  reserve_region :: "obj_ref \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad" where
+text \<open>
+  This is a placeholder function. We may wish to extend the specification
+  with explicitly tagging kernel data regions in memory.
+\<close>
+definition reserve_region :: "obj_ref \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
+  where
   "reserve_region ptr byteLength is_kernel \<equiv> return ()"
 
-text {* Initialise architecture-specific objects. *}
+text \<open>Initialise architecture-specific objects.\<close>
 
-definition
-  init_arch_objects :: "apiobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> obj_ref list
-   \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+definition init_arch_objects ::
+  "apiobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> obj_ref list \<Rightarrow> (unit,'z::state_ext) s_monad"
+  where
   "init_arch_objects new_type ptr num_objects obj_sz refs \<equiv> return ()"
 
-definition
-  empty_context :: user_context where
+definition empty_context :: user_context
+  where
   "empty_context \<equiv> UserContext (\<lambda>_. 0)"
 
-definition init_arch_tcb :: arch_tcb where
+definition init_arch_tcb :: arch_tcb
+  where
   "init_arch_tcb \<equiv> \<lparr> tcb_context = empty_context \<rparr>"
 
 end

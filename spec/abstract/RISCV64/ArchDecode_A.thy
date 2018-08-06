@@ -23,51 +23,49 @@ context Arch begin global_naming RISCV64_A
 section "Helper definitions"
 
 definition check_vp_alignment :: "vmpage_size \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) se_monad"
-where
+  where
   "check_vp_alignment sz vptr \<equiv>
      unlessE (is_aligned vptr (pageBitsForSize sz)) $ throwError AlignmentError"
 
 definition page_base :: "vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vspace_ref"
-where
+  where
   "page_base vaddr vmsize \<equiv> vaddr && ~~ mask (pageBitsForSize vmsize)"
-
-abbreviation (input) args_at_least :: "nat \<Rightarrow> data list \<Rightarrow> (unit,'z::state_ext) se_monad"
-where
-  "args_at_least n args \<equiv>  whenE (n > length args) $ throwError TruncatedMessage"
 
 
 section "Architecture-specific Decode Functions"
 
 definition arch_decode_irq_control_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list \<Rightarrow> (arch_irq_control_invocation,'z::state_ext) se_monad"
-where
+  where
   "arch_decode_irq_control_invocation label args src_slot cps \<equiv>
      throwError IllegalOperation"
 
 definition attribs_from_word :: "machine_word \<Rightarrow> vm_attributes"
-where
+  where
   "attribs_from_word w \<equiv> if \<not> w!!0 then {Execute} else {}"
 
 definition user_attr :: "vm_rights \<Rightarrow> vm_attributes"
-where
+  where
   "user_attr R \<equiv> if R \<noteq> vm_kernel_only then {User} else {}"
 
 definition make_user_pte :: "vspace_ref \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> pte"
-where
+  where
   "make_user_pte addr attr rights =
      PagePTE (addr >> pageBits) (attr \<union> user_attr rights) rights"
 
 definition check_slot :: "obj_ref \<Rightarrow> (pte \<Rightarrow> bool) \<Rightarrow> (unit,'z::state_ext) se_monad"
-where
+  where
   "check_slot slot test = doE
      pte \<leftarrow> liftE $ get_pte slot;
      unlessE (test pte) $ throwError DeleteFirst
    odE"
 
-definition decode_fr_inv_map ::
+type_synonym 'z arch_decoder =
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
-     (arch_invocation,'z::state_ext) se_monad"
-where
+    (arch_invocation,'z) se_monad"
+
+definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
+  where
   "decode_fr_inv_map label args cte cap extra_caps \<equiv> case cap of
      FrameCap p R pgsz dev mapped_address \<Rightarrow>
        if length args > 2 \<and> length extra_caps > 0
@@ -98,10 +96,8 @@ where
          odE
        else throwError TruncatedMessage"
 
-definition decode_fr_inv_remap ::
-  "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
-     (arch_invocation,'z::state_ext) se_monad"
-where
+definition decode_fr_inv_remap :: "'z::state_ext arch_decoder"
+  where
   "decode_fr_inv_remap label args cte cap extra_caps \<equiv> case cap of
      FrameCap p R pgsz dev mapped_address \<Rightarrow>
        if length args > 1 \<and> length extra_caps > 0
@@ -129,10 +125,8 @@ where
        odE
      else throwError TruncatedMessage"
 
-definition decode_frame_invocation ::
-  "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
-     (arch_invocation,'z::state_ext) se_monad"
-where
+definition decode_frame_invocation :: "'z::state_ext arch_decoder"
+  where
   "decode_frame_invocation label args cte cap extra_caps \<equiv>
      if invocation_type label = ArchInvocationLabel RISCVPageMap
      then decode_fr_inv_map label args cte cap extra_caps
@@ -144,10 +138,8 @@ where
      then returnOk $ InvokePage $ PageGetAddr (acap_obj cap)
      else throwError IllegalOperation"
 
-definition decode_pt_inv_map ::
-  "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
-     (arch_invocation,'z::state_ext) se_monad"
-where
+definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
+  where
   "decode_pt_inv_map label args cte cap extra_caps \<equiv> case cap of
      PageTableCap p mapped_address \<Rightarrow>
        if length args > 1 \<and> length extra_caps > 0
@@ -172,10 +164,8 @@ where
          odE
        else throwError TruncatedMessage"
 
-definition decode_page_table_invocation ::
-  "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
-     (arch_invocation,'z::state_ext) se_monad"
-where
+definition decode_page_table_invocation :: "'z::state_ext arch_decoder"
+  where
   "decode_page_table_invocation label args cte cap extra_caps \<equiv>
      if invocation_type label = ArchInvocationLabel RISCVPageTableMap
      then decode_pt_inv_map label args cte cap extra_caps
@@ -187,10 +177,8 @@ where
      odE
      else throwError IllegalOperation"
 
-definition decode_asid_control_invocation ::
-  "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
-     (arch_invocation,'z::state_ext) se_monad"
-where
+definition decode_asid_control_invocation :: "'z::state_ext arch_decoder"
+  where
   "decode_asid_control_invocation label args cte cap extra_caps \<equiv>
      if invocation_type label = ArchInvocationLabel RISCVASIDControlMakePool
      then if length args > 1 \<and> length extra_caps > 1
@@ -220,10 +208,8 @@ where
      else throwError TruncatedMessage
      else throwError IllegalOperation"
 
-definition decode_asid_pool_invocation ::
-  "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
-     (arch_invocation,'z::state_ext) se_monad"
-where
+definition decode_asid_pool_invocation :: "'z::state_ext arch_decoder"
+  where
   "decode_asid_pool_invocation label args cte cap extra_caps \<equiv>
      if invocation_type label = ArchInvocationLabel RISCVASIDPoolAssign
      then if length extra_caps > 0
@@ -250,7 +236,7 @@ where
 definition arch_decode_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
     (arch_invocation,'z::state_ext) se_monad"
-where
+  where
   "arch_decode_invocation label args x_slot cte cap extra_caps \<equiv> case cap of
      PageTableCap _ _   \<Rightarrow> decode_page_table_invocation label args cte cap extra_caps
    | FrameCap _ _ _ _ _ \<Rightarrow> decode_frame_invocation label args cte cap extra_caps
@@ -261,7 +247,7 @@ where
 section "Interface Functions used in Decode"
 
 definition arch_data_to_obj_type :: "nat \<Rightarrow> aobject_type option"
-where
+  where
   "arch_data_to_obj_type n \<equiv>
      if      n = 0 then Some SmallPageObj
      else if n = 1 then Some LargePageObj
@@ -270,7 +256,7 @@ where
      else None"
 
 definition arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
-where
+  where
   "arch_check_irq irq \<equiv> throwError IllegalOperation"
 
 end
