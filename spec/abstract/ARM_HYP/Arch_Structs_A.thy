@@ -18,7 +18,7 @@ theory Arch_Structs_A
 imports
   "../../design/$L4V_ARCH/Arch_Structs_B"
   "../ExceptionTypes_A"
-  ArchVMRights_A
+  "../VMRights_A"
 begin
 
 context Arch begin global_naming ARM_A
