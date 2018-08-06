@@ -177,7 +177,7 @@ where
     s \<leftarrow> get;
     rq1 \<leftarrow> return $ takeWhile (\<lambda>t. the (fun_of_m (refill_ready_tcb t) s)) rq;
     rq2 \<leftarrow> return $ drop (length rq1) rq;
-    modify $ release_queue_update (K rq);
+    modify $ release_queue_update (K rq2);
     mapM_x (\<lambda>t. do
       possible_switch_to t;
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>)

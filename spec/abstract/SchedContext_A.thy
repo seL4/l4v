@@ -153,8 +153,9 @@ definition
   refill_absolute_max :: "cap \<Rightarrow> nat"
 where
   "refill_absolute_max cap =
-    (case cap of SchedContextCap _ sc \<Rightarrow> (sc - core_sched_context_bytes) div refill_size_bytes
-    | _ \<Rightarrow> 0) "  (* RT: is "sc" correct? *)
+    (case cap of SchedContextCap _ sc \<Rightarrow>
+        (nat (1 << sc) - core_sched_context_bytes) div refill_size_bytes + MIN_REFILLS
+    | _ \<Rightarrow> 0) "
 
 definition
   set_refills :: "obj_ref \<Rightarrow> refill list \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -360,13 +361,12 @@ definition
 where
   "refill_update sc_ptr new_period new_budget new_max_refills = do
      sc \<leftarrow> get_sched_context sc_ptr;
-     current \<leftarrow> gets cur_time;
      refill_hd \<leftarrow> return $ hd (sc_refills sc);
 
      cur_time \<leftarrow> gets cur_time;
      ready \<leftarrow> return $ (r_time refill_hd) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr; *)
 
-     new_time \<leftarrow> return $ if ready then current else (r_time refill_hd);
+     new_time \<leftarrow> return $ if ready then cur_time else (r_time refill_hd);
      if (r_amount refill_hd \<ge> new_budget)
      then do
        set_sched_context sc_ptr (sc\<lparr>sc_period := new_period, sc_refill_max := new_max_refills,
