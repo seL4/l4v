@@ -18,16 +18,16 @@ begin
 context Arch begin global_naming RISCV64_A
 
 definition cnode_guard_size_bits :: "nat"
-where
+  where
   "cnode_guard_size_bits \<equiv> 6"
 
 definition cnode_padding_bits :: "nat"
-where
+  where
   "cnode_padding_bits \<equiv> 0"
 
-text {* On a user request to modify a CNode capability, extract new guard bits and guard. *}
+text \<open>On a user request to modify a CNode capability, extract new guard bits and guard.\<close>
 definition update_cnode_cap_data :: "data \<Rightarrow> nat \<times> data"
-where
+  where
   "update_cnode_cap_data w \<equiv>
     let
       guard_bits = 58;
@@ -35,15 +35,17 @@ where
       guard'' = (w >> (cnode_padding_bits + cnode_guard_size_bits)) && mask guard_bits
     in (guard_size', guard'')"
 
-text {* For some purposes capabilities to physical objects are treated differently to others. *}
+text \<open>For some purposes capabilities to physical objects are treated differently to others.\<close>
 definition arch_is_physical :: "arch_cap \<Rightarrow> bool"
-where
+  where
   "arch_is_physical cap \<equiv> case cap of ASIDControlCap \<Rightarrow> False | _ \<Rightarrow> True"
 
-text {* Check whether the second capability is to the same object or an object
-contained in the region of the first one. *}
+text \<open>
+  Check whether the second capability is to the same object or an object
+  contained in the region of the first one.
+\<close>
 fun arch_same_region_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
-where
+  where
   "arch_same_region_as (FrameCap r _ sz _ _) c' =
    (is_FrameCap c' \<and>
      (let
@@ -57,9 +59,9 @@ where
 | "arch_same_region_as (ASIDPoolCap r _) c' = (\<exists>r' d'. c' = ASIDPoolCap r' d' \<and> r = r')"
 
 
-text {* Check whether two arch capabilities are to the same object. *}
+text \<open>Check whether two arch capabilities are to the same object.\<close>
 definition same_aobject_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
-where
+  where
   "same_aobject_as cap cap' \<equiv>
      case (cap, cap') of
        (FrameCap ref _ sz dev _, FrameCap ref' _ sz' dev' _) \<Rightarrow>
@@ -69,7 +71,7 @@ where
 declare same_aobject_as_def[simp]
 
 definition arch_is_cap_revocable :: "cap \<Rightarrow> cap \<Rightarrow> bool"
-where
+  where
   "arch_is_cap_revocable new_cap src_cap \<equiv> False"
 
 end

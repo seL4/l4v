@@ -8,10 +8,6 @@
  * @TAG(DATA61_GPL)
  *)
 
-(*
-Arch specific object invocations
-*)
-
 chapter "RISCV64 Object Invocations"
 
 theory ArchInvocation_A
@@ -20,8 +16,8 @@ begin
 
 context Arch begin global_naming RISCV64_A
 
-text {* These datatypes encode the arguments to the various possible RISCV64-specific system calls.
-Selectors are defined for various fields for convenience elsewhere. *}
+text \<open>These datatypes encode the arguments to the various possible RISCV64-specific system calls.
+Selectors are defined for various fields for convenience elsewhere.\<close>
 datatype page_table_invocation =
     PageTableMap
       (pt_inv_cap : arch_cap)
@@ -61,7 +57,7 @@ datatype arch_copy_register_sets =
     RISCVNoExtraRegisters
 
 definition ArchDefaultExtraRegisters :: arch_copy_register_sets
-where
+  where
   "ArchDefaultExtraRegisters = RISCVNoExtraRegisters"
 
 datatype arch_irq_control_invocation =

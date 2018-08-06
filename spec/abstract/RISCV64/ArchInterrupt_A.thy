@@ -8,17 +8,14 @@
  * @TAG(DATA61_GPL)
  *)
 
-(*
-Formalisation of interrupt handling.
-*)
-
 chapter "Arch-specific Interrupts"
 
 theory ArchInterrupt_A
 imports "../Ipc_A"
 begin
 
-definition handle_reserved_irq :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad" where
+definition handle_reserved_irq :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad"
+  where
   "handle_reserved_irq irq = return ()"
 
 end

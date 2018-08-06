@@ -8,12 +8,7 @@
  * @TAG(DATA61_GPL)
  *)
 
-(*
-Arch Functions for cancelling IPC.
-*)
-
-chapter {* Arch IPC Cancelling *}
-
+chapter \<open>Arch IPC Cancelling\<close>
 
 theory ArchIpcCancel_A
 imports "../CSpaceAcc_A"
@@ -21,23 +16,20 @@ begin
 
 context Arch begin global_naming RISCV64_A
 
-text {* Actions to be taken after a cap is deleted *}
-definition
-  arch_post_cap_deletion :: "arch_cap \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+text \<open>Actions to be taken after a cap is deleted\<close>
+definition arch_post_cap_deletion :: "arch_cap \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  where
   "arch_post_cap_deletion ac \<equiv> return ()"
 
-text {* Arch specific generic object references not covered by generic references *}
+text \<open>Arch specific generic object references not covered by generic references\<close>
 datatype arch_gen_obj_ref = unit
 
-definition
-  arch_gen_obj_refs :: "arch_cap \<Rightarrow> arch_gen_obj_ref set"
-where
+definition arch_gen_obj_refs :: "arch_cap \<Rightarrow> arch_gen_obj_ref set"
+  where
   "arch_gen_obj_refs ac \<equiv> {}"
 
-definition
-  arch_cap_cleanup_opt :: "arch_cap \<Rightarrow> cap"
-where
+definition arch_cap_cleanup_opt :: "arch_cap \<Rightarrow> cap"
+  where
   "arch_cap_cleanup_opt ac \<equiv> NullCap"
 
 end

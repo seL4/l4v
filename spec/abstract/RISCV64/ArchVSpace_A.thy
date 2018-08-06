@@ -8,10 +8,6 @@
  * @TAG(DATA61_GPL)
  *)
 
-(*
-Higher level functions for manipulating virtual address spaces
-*)
-
 chapter "RISCV64 VSpace Functions"
 
 theory ArchVSpace_A
@@ -20,10 +16,12 @@ begin
 
 context Arch begin global_naming RISCV64_A
 
-text {* Look up a thread's IPC buffer and check that the thread has the
-authority to read or (in the receiver case) write to it. *}
+text \<open>
+  Look up a thread's IPC buffer and check that the thread has the authority to read or (in the
+  receiver case) write to it.
+\<close>
 definition lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
-where
+  where
   "lookup_ipc_buffer is_receiver thread \<equiv> do
      buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer thread;
      buffer_frame_slot \<leftarrow> return (thread, tcb_cnode_index 4);
@@ -36,9 +34,9 @@ where
      | _ \<Rightarrow> return None
    od"
 
-text {* Locate the top-level page table associated with a given virtual ASID. *}
+text \<open>Locate the top-level page table associated with a given virtual ASID.\<close>
 definition find_vspace_for_asid :: "asid \<Rightarrow> (obj_ref,'z::state_ext) lf_monad"
-where
+  where
   "find_vspace_for_asid asid \<equiv> doE
     assertE (asid > 0);
     asid_table \<leftarrow> liftE $ gets (riscv_asid_table o arch_state);
@@ -52,20 +50,23 @@ where
     | None \<Rightarrow> throwError InvalidRoot
   odE"
 
-text {* Locate the top-level page table and check that this process succeeds and
-returns a pointer to a real page table. *}
+text \<open>
+  Locate the top-level page table and check that this process succeeds and returns a pointer
+  to a real page table.
+\<close>
 definition find_vspace_for_asid_assert :: "asid \<Rightarrow> (obj_ref,'z::state_ext) s_monad"
-where
+  where
   "find_vspace_for_asid_assert asid \<equiv> do
      pt \<leftarrow> find_vspace_for_asid asid <catch> K fail;
      get_pt pt;
      return pt
    od"
 
-text {* Format a VM fault message to be passed to a thread's supervisor after
-it encounters a page fault. *}
+text \<open>
+  Format a VM fault message to be passed to a thread's supervisor after it encounters a page fault.
+\<close>
 fun handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit,'z::state_ext) f_monad"
-where
+  where
   "handle_vm_fault thread fault_type = doE
     addr \<leftarrow> liftE $ do_machine_op read_sbadaddr;
     let
@@ -92,10 +93,12 @@ where
           odE
   odE"
 
-text {* Switch into the address space of a given thread or the global address
-space if none is correctly configured. *}
+text \<open>
+  Switch into the address space of a given thread or the global address space if none is correctly
+  configured.
+\<close>
 definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "set_vm_root tcb \<equiv> do
     thread_root_slot \<leftarrow> return (tcb, tcb_cnode_index 1);
     thread_root \<leftarrow> get_cap thread_root_slot;
@@ -114,7 +117,7 @@ where
 
 
 definition delete_asid_pool :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "delete_asid_pool base ptr \<equiv> do
      assert (asid_low_bits_of base = 0);
      asid_table \<leftarrow> gets (riscv_asid_table \<circ> arch_state);
@@ -129,7 +132,7 @@ where
 
 
 definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "delete_asid asid pt \<equiv> do
      asid_table \<leftarrow> gets (riscv_asid_table \<circ> arch_state);
      case asid_table (asid_high_bits_of asid) of
@@ -147,7 +150,7 @@ where
    od"
 
 definition unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "unmap_page_table asid vaddr pt \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
      pt_slot \<leftarrow> lookup_pt_from_level max_pt_level top_level_pt vaddr pt;
@@ -156,9 +159,9 @@ where
    odE <catch> (K $ return ())"
 
 
-text {* Unmap a mapped page if the given mapping details are still current. *}
+text \<open>Unmap a mapped page if the given mapping details are still current.\<close>
 definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "unmap_page pgsz asid vptr pptr \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
      (bits_left, slot) \<leftarrow> liftE $ lookup_pt_slot top_level_pt vptr;
@@ -170,11 +173,13 @@ where
    odE <catch> (K $ return ())"
 
 
-text {* Page table structure capabilities cannot be copied until they have an ASID and location
-assigned. This is because they cannot have multiple current ASIDs and cannot be shared between
-address spaces or virtual locations. *}
+text \<open>
+  Page table structure capabilities cannot be copied until they have an ASID and location
+  assigned. This is because they cannot have multiple current ASIDs and cannot be shared between
+  address spaces or virtual locations.
+\<close>
 definition arch_derive_cap :: "arch_cap \<Rightarrow> (cap,'z::state_ext) se_monad"
-where
+  where
   "arch_derive_cap c \<equiv>
      case c of
        PageTableCap _ (Some x) \<Rightarrow> returnOk (ArchObjectCap c)
@@ -183,15 +188,15 @@ where
      | ASIDControlCap \<Rightarrow> returnOk (ArchObjectCap c)
      | ASIDPoolCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)"
 
-text {* No user-modifiable data is stored in RISCV64-specific capabilities. *}
+text \<open>No user-modifiable data is stored in RISCV64-specific capabilities.\<close>
 definition arch_update_cap_data :: "bool \<Rightarrow> data \<Rightarrow> arch_cap \<Rightarrow> cap"
-where
+  where
   "arch_update_cap_data preserve data c \<equiv> ArchObjectCap c"
 
 
-text {* Actions that must be taken on finalisation of RISCV64-specific capabilities. *}
+text \<open>Actions that must be taken on finalisation of RISCV64-specific capabilities.\<close>
 definition arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap \<times> cap,'z::state_ext) s_monad"
-where
+  where
   "arch_finalise_cap c x \<equiv> case (c, x) of
      (ASIDPoolCap ptr b, True) \<Rightarrow>  do
        delete_asid_pool b ptr;
@@ -212,32 +217,34 @@ where
    | _ \<Rightarrow> return (NullCap, NullCap)"
 
 
-text {* A thread's virtual address space capability must be to a mapped page table to be valid on
-the RISCV64 architecture. *}
+text \<open>
+  A thread's virtual address space capability must be to a mapped page table to be valid on
+  the RISCV64 architecture.
+\<close>
 definition is_valid_vtable_root :: "cap \<Rightarrow> bool"
-where
+  where
   "is_valid_vtable_root c \<equiv>
      case c of ArchObjectCap (FrameCap _ _ _ _ (Some _)) \<Rightarrow> True | _ \<Rightarrow> False"
 
-text {* Make numeric value of @{const msg_align_bits} visible. *}
+text \<open>Make numeric value of @{const msg_align_bits} visible.\<close>
 lemmas msg_align_bits = msg_align_bits'[unfolded word_size_bits_def, simplified]
 
 definition check_valid_ipc_buffer :: "vspace_ref \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) se_monad"
-where
+  where
   "check_valid_ipc_buffer vptr c \<equiv>
      case c of
        ArchObjectCap (FrameCap _ _ _ False _) \<Rightarrow>
          whenE (\<not> is_aligned vptr msg_align_bits) $ throwError AlignmentError
      | _ \<Rightarrow> throwError IllegalOperation"
 
-text {* A pointer is inside a user frame if its top bits point to a @{text DataPage}. *}
+text \<open>A pointer is inside a user frame if its top bits point to a @{const DataPage}.\<close>
 definition in_user_frame :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
+  where
   "in_user_frame p s \<equiv>
      \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) = Some (ArchObj (DataPage False sz))"
 
 definition prepare_thread_delete :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "prepare_thread_delete thread_ptr \<equiv> return ()"
 
 end

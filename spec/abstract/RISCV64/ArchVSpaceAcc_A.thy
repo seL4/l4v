@@ -8,10 +8,6 @@
  * @TAG(DATA61_GPL)
  *)
 
-(*
-Accessor functions for architecture specific parts of the specification.
-*)
-
 chapter "Accessing the RISCV64 VSpace"
 
 theory ArchVSpaceAcc_A
@@ -20,39 +16,39 @@ begin
 
 context Arch begin global_naming RISCV64_A
 
-text {*
-  This part of the specification is fairly concrete as the machine architecture
-  is visible to the user in seL4 and therefore needs to be described.
-  The abstraction compared to the implementation is in the data types for
-  kernel objects. The interface which is rich in machine details remains the same.
-*}
+text \<open>
+  This part of the specification is fairly concrete as the machine architecture is visible to
+  the user in seL4 and therefore needs to be described. The abstraction compared to the
+  implementation is in the data types for kernel objects. The interface which is rich in machine
+  details remains the same.
+\<close>
 
 section "Encodings"
 
-text {* The high bits of a virtual ASID. *}
+text \<open>The high bits of a virtual ASID.\<close>
 definition asid_high_bits_of :: "asid \<Rightarrow> asid_high_index"
-where
+  where
   "asid_high_bits_of asid \<equiv> ucast (asid >> asid_low_bits)"
 
-text {* The low bits of a virtual ASID. *}
+text \<open>The low bits of a virtual ASID.\<close>
 definition asid_low_bits_of :: "asid \<Rightarrow> asid_low_index"
-where
+  where
   "asid_low_bits_of asid \<equiv> ucast asid"
 
 lemmas asid_bits_of_defs = asid_high_bits_of_def asid_low_bits_of_def
 
 section "Kernel Heap Accessors"
 
-text {* Manipulate ASID pools, page directories and page tables in the kernel heap. *}
+text \<open>Manipulate ASID pools, page directories and page tables in the kernel heap.\<close>
 definition get_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref, 'z::state_ext) s_monad"
-where
+  where
   "get_asid_pool ptr \<equiv> do
      kobj \<leftarrow> get_object ptr;
      case kobj of ArchObj (ASIDPool pool) \<Rightarrow> return pool | _ \<Rightarrow> fail
    od"
 
 definition set_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref) \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+  where
   "set_asid_pool ptr pool \<equiv> do
      v \<leftarrow> get_object ptr;
      assert (case v of ArchObj (ASIDPool p) \<Rightarrow> True | _ \<Rightarrow> False);
@@ -60,23 +56,23 @@ where
    od"
 
 definition get_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte,'z::state_ext) s_monad"
-where
+  where
   "get_pt ptr \<equiv> do
      kobj \<leftarrow> get_object ptr;
      case kobj of ArchObj (PageTable pt) \<Rightarrow> return pt | _ \<Rightarrow> fail
    od"
 
 definition set_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte) \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "set_pt ptr pt \<equiv> do
     v \<leftarrow> get_object ptr;
     assert (case v of ArchObj (PageTable _) \<Rightarrow> True | _ \<Rightarrow> False);
     set_object ptr (ArchObj (PageTable pt))
   od"
 
-text {* The following function takes a pointer to a PTE in kernel memory and returns the PTE. *}
+text \<open>The following function takes a pointer to a PTE in kernel memory and returns the PTE.\<close>
 definition get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad"
-where
+  where
   "get_pte ptr \<equiv> do
      base \<leftarrow> return $ ptr && ~~mask pt_bits;
      offset \<leftarrow> return $ (ptr && mask pt_bits) >> pte_bits;
@@ -85,7 +81,7 @@ where
    od"
 
 definition store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "store_pte p pte \<equiv> do
     base \<leftarrow> return $ p && ~~mask pt_bits;
     offset \<leftarrow> return $ (p && mask pt_bits) >> pte_bits;
@@ -98,23 +94,24 @@ where
 section "Basic Operations"
 
 definition max_pt_level :: nat
-where
+  where
   "max_pt_level = 2"
 
 definition pt_bits_left :: "nat \<Rightarrow> nat"
-where
+  where
   "pt_bits_left level = ptTranslationBits * level + pageBits"
 
 definition pt_index :: "nat \<Rightarrow> vspace_ref \<Rightarrow> machine_word"
-where
+  where
   "pt_index level vptr \<equiv> (vptr >> pt_bits_left level) && mask ptTranslationBits"
 
-text {* The kernel window is mapped into every virtual address space from the
-@{term pptr_base} pointer upwards. This function copies the mappings which
-create the kernel window into a new top-level page table object. *}
-
+text \<open>
+  The kernel window is mapped into every virtual address space from the @{term pptr_base}
+  pointer upwards. This function copies the mappings which create the kernel window into a new
+  top-level page table object.
+\<close>
 definition copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "copy_global_mappings new_pm \<equiv> do
     global_pt \<leftarrow> gets (riscv_global_pt \<circ> arch_state);
     base \<leftarrow> return $ pt_index max_pt_level pptr_base;
@@ -126,24 +123,23 @@ where
     od) [base  .e.  pt_size - 1]
   od"
 
-text {* Walk page tables in software. *}
+text \<open>Walk page tables in software.\<close>
 
 definition pptr_from_pte :: "pte \<Rightarrow> vspace_ref"
-where
+  where
   "pptr_from_pte pte \<equiv> ptrFromPAddr (pte_ppn pte << pt_bits)"
 
 definition pt_slot_index :: "nat \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
-where
+  where
   "pt_slot_index level pt_ptr vptr = pt_ptr + (pt_index level vptr << pte_bits)"
 
 definition pte_at_index :: "nat \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (pte, 'z::state_ext) s_monad"
-where
+  where
   "pte_at_index level pt_ptr vptr \<equiv> get_pte (pt_slot_index level pt_ptr vptr)"
 
-fun
-  lookup_pt_slot_from_level :: "nat \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow>
-    (nat \<times> vspace_ref, 'z::state_ext) s_monad"
-where
+fun lookup_pt_slot_from_level ::
+  "nat \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (nat \<times> vspace_ref, 'z::state_ext) s_monad"
+  where
   "lookup_pt_slot_from_level level pt_ptr vptr = do
      pte \<leftarrow> pte_at_index level pt_ptr vptr;
      ptr \<leftarrow> return (pptr_from_pte pte);
@@ -153,13 +149,12 @@ where
    od"
 
 definition lookup_pt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (nat \<times> vspace_ref, 'z::state_ext) s_monad"
-where
+  where
   "lookup_pt_slot = lookup_pt_slot_from_level max_pt_level"
 
-fun
-  lookup_pt_from_level :: "nat \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow>
-    (machine_word, 'z::state_ext) lf_monad"
-where
+fun lookup_pt_from_level ::
+  "nat \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (machine_word, 'z::state_ext) lf_monad"
+  where
   "lookup_pt_from_level level pt_ptr vptr target_pt_ptr = doE
      unlessE (0 < level) $ throwError InvalidRoot;
      pte <- liftE $ pte_at_index level pt_ptr vptr;

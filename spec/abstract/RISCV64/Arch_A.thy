@@ -17,15 +17,15 @@ begin
 context Arch begin global_naming RISCV64_A
 
 definition page_bits :: nat
-where
+  where
   "page_bits \<equiv> pageBits"
 
 definition arch_invoke_irq_control :: "arch_irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
-where
+  where
   "arch_invoke_irq_control aic \<equiv> returnOk ()"
 
 definition arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "arch_switch_to_thread t \<equiv> do
     set_vm_root t;
     buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer t;
@@ -33,29 +33,31 @@ where
   od"
 
 definition arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad"
-where
+  where
   "arch_switch_to_idle_thread \<equiv> do
     thread \<leftarrow> gets idle_thread;
     set_vm_root thread
   od"
 
 definition arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "arch_activate_idle_thread t \<equiv> return ()"
 
 definition store_asid_pool_entry :: "obj_ref \<Rightarrow> asid \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
+  where
   "store_asid_pool_entry pool_ptr asid ptr \<equiv> do
     pool \<leftarrow> get_asid_pool pool_ptr;
     pool' \<leftarrow> return $ pool(asid_low_bits_of asid := ptr);
     set_asid_pool pool_ptr pool'
   od"
 
-text {* The ASIDControl capability confers the authority to create a new ASID
-pool object. This operation creates the new ASID pool, provides a capability
-to it and connects it to the global virtual ASID table. *}
+text \<open>
+  The ASIDControl capability confers the authority to create a new ASID pool object. This
+  operation creates the new ASID pool, provides a capability to it and connects it to the global
+  virtual ASID table.
+\<close>
 definition perform_asid_control_invocation :: "asid_control_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "perform_asid_control_invocation iv \<equiv> case iv of
      MakePool frame slot parent base \<Rightarrow> do
        delete_objects frame pageBits;
@@ -69,9 +71,9 @@ where
        modify (\<lambda>s. s \<lparr>arch_state := (arch_state s) \<lparr>riscv_asid_table := asid_table'\<rparr>\<rparr>)
      od"
 
-text {* The ASIDPool capability confers the authority to assign an ASID to a top-level page table. *}
+text \<open>The ASIDPool capability confers the authority to assign an ASID to a top-level page table.\<close>
 definition perform_asid_pool_invocation :: "asid_pool_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "perform_asid_pool_invocation iv \<equiv> case iv of
      Assign asid pool_ptr ct_slot \<Rightarrow> do
        pt_cap \<leftarrow> get_cap ct_slot;
@@ -85,7 +87,7 @@ where
      od"
 
 definition perform_pg_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "perform_pg_inv_unmap cap ct_slot \<equiv> do
      assert $ is_FrameCap cap;
      case acap_map_data cap of
@@ -96,7 +98,7 @@ where
    od"
 
 definition perform_pg_inv_map :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> pte \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "perform_pg_inv_map cap ct_slot pte slot \<equiv> do
      set_cap (ArchObjectCap cap) ct_slot;
      store_pte slot pte;
@@ -104,14 +106,14 @@ where
    od"
 
 definition perform_pg_inv_remap :: "pte \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "perform_pg_inv_remap pte slot \<equiv> do
      store_pte slot pte;
      do_machine_op sfence
    od"
 
 definition perform_pg_inv_get_addr :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "perform_pg_inv_get_addr ptr \<equiv> do
      paddr \<leftarrow> return $ fromPAddr $ addrFromPPtr ptr;
      ct \<leftarrow> gets cur_thread;
@@ -120,9 +122,9 @@ where
      set_message_info ct msg_info
    od"
 
-text {* The Frame capability confers the authority to map, remap, and unmap memory. *}
+text \<open>The Frame capability confers the authority to map, remap, and unmap memory.\<close>
 definition perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "perform_page_invocation iv \<equiv> case iv of
      PageMap cap ct_slot (pte,slot) \<Rightarrow> perform_pg_inv_map cap ct_slot pte slot
    | PageRemap (pte,slot) \<Rightarrow> perform_pg_inv_remap pte slot
@@ -131,7 +133,7 @@ where
 
 
 definition perform_pt_inv_map :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> pte \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "perform_pt_inv_map cap ct_slot pte slot = do
      set_cap (ArchObjectCap cap) ct_slot;
      store_pte slot pte;
@@ -139,7 +141,7 @@ where
    od"
 
 definition perform_pt_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+  where
   "perform_pt_inv_unmap cap ct_slot = do
      assert $ is_PageTableCap cap;
      case acap_map_data cap of
@@ -154,20 +156,20 @@ where
      set_cap (ArchObjectCap $ update_map_data old_cap None) ct_slot
    od"
 
-text {* PageTable capabilities confer the authority to map and unmap page tables. *}
-definition
-  perform_page_table_invocation :: "page_table_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
+text \<open>PageTable capabilities confer the authority to map and unmap page tables.\<close>
+definition perform_page_table_invocation :: "page_table_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
+  where
   "perform_page_table_invocation iv \<equiv> case iv of
      PageTableMap cap ct_slot pte slot \<Rightarrow> perform_pt_inv_map cap ct_slot pte slot
    | PageTableUnmap cap ct_slot \<Rightarrow> perform_pt_inv_unmap cap ct_slot"
 
 abbreviation arch_no_return :: "(unit, 'z::state_ext) s_monad \<Rightarrow> (data list, 'z::state_ext) s_monad"
-where
+  where
   "arch_no_return oper \<equiv> do oper; return [] od"
 
-text {* Top level system call dispatcher for all RISCV64-specific system calls. *}
+text \<open>Top level system call dispatcher for all RISCV64-specific system calls.\<close>
 definition arch_perform_invocation :: "arch_invocation \<Rightarrow> (data list,'z::state_ext) p_monad"
-where
+  where
   "arch_perform_invocation i \<equiv> liftE $ case i of
      InvokePageTable oper \<Rightarrow> arch_no_return $ perform_page_table_invocation oper
    | InvokePage oper \<Rightarrow> arch_no_return $ perform_page_invocation oper
