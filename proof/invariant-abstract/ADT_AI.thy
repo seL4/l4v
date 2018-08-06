@@ -248,6 +248,9 @@ text {*
   (see also thm in Refine.thy).
 *}
 
+(* FIXME: The IPC buffer pointer and TLS_BASE are stored in registers
+   in restore_user_context, which is currently invisible to verification.
+   The effect should be modelled in the ADT. *)
 definition
   kernel_entry :: "event \<Rightarrow> user_context \<Rightarrow> (user_context,'z::state_ext_sched) s_monad"
   where

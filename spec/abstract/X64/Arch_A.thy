@@ -49,9 +49,6 @@ definition
 
 text {* Switch to a thread's virtual address space context. *}
 
-(* FIXME x64: The IPC buffer pointer and TLS_BASE are stored in GS and FS register
-   in restore_user_context, which is invisible to verification.
-   Should these operations be visible? *)
 definition
   arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_switch_to_thread t \<equiv> set_vm_root t"
