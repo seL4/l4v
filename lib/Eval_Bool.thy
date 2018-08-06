@@ -105,6 +105,8 @@ fun get_const_defs thy nm = Sign.consts_of thy
   |> filter (fn s => case Long_Name.explode s of
         [_, nm', _] => nm' = nm | _ => false)
   |> map_filter (try (suffix "_def" #> Global_Theory.get_thm thy))
+  |> filter (Thm.strip_shyps #> Thm.shyps_of #> null)
+  |> tap (fn xs => tracing ("Installing " ^ string_of_int (length xs) ^ " code defs"))
 
 fun setup nm thy = fold (fn t => Code.add_eqn_global (t, true))
     (get_const_defs thy nm) thy
