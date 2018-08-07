@@ -32,11 +32,11 @@ definition trace_schematic_insts__container :: "'a \<Rightarrow> bool \<Rightarr
   "trace_schematic_insts__container a b \<equiv> True"
 
 lemma trace_schematic_insts__container_add:
-  "Pure.prop PROP P \<equiv> PROP Pure.prop (trace_schematic_insts__container a b \<Longrightarrow> PROP P)"
+  "Pure.prop PROP P \<equiv> PROP Pure.prop (trace_schematic_insts__container True xs \<Longrightarrow> PROP P)"
   by (simp add: trace_schematic_insts__container_def)
 
 lemma trace_schematic_insts__container_remove:
-  "PROP Pure.prop (trace_schematic_insts__container a b \<Longrightarrow> PROP P) \<equiv> Pure.prop (PROP P)"
+  "PROP Pure.prop (trace_schematic_insts__container True xs \<Longrightarrow> PROP P) \<equiv> Pure.prop (PROP P)"
   by (simp add: trace_schematic_insts__container_def)
 
 ML \<open>
@@ -54,30 +54,30 @@ fun skip_dummy_state (method: Method.method) : Method.method =
 fun rewrite_state_concl (eqn: thm) (st: thm) : thm =
   Conv.fconv_rule (Conv.concl_conv (Thm.nprems_of st) (K eqn)) st
 
-fun cconcl_of (st: thm) : cterm =
+(* Strip the @{term Prop.prop} that wraps proof state conclusions *)
+fun strip_prop (ct: cterm): cterm = case Thm.term_of ct of
+        Const ("Pure.prop", @{typ "prop \<Rightarrow> prop"}) $ _ => Thm.dest_arg ct
+      | _ => raise CTERM ("strip_prop: head is not Pure.prop", [ct])
+
+fun cconcl_of (st: thm): cterm =
   funpow (Thm.nprems_of st) Thm.dest_arg (Thm.cprop_of st)
+  |> strip_prop
 
-fun fst_ord ord ((a, _), (b, _)) = ord (a, b)
+fun vars_of_term (t: term): (indexname * typ) list =
+  Term.add_vars t []
+  |> sort_distinct Term_Ord.var_ord
 
-(* Get schematic vars in term *)
-fun vars_of_term (t: term): (indexname * typ) list = let
-  fun descend (f $ x) = descend f @ descend x
-    | descend (Var v) = [v]
-    | descend (Abs (_, _, t)) = descend t
-    | descend _ = []
-  in descend t |> sort_distinct (fst_ord (prod_ord string_ord int_ord)) end
+fun type_vars_of_term (t: term): (indexname * sort) list =
+  Term.add_tvars t []
+  |> sort_distinct Term_Ord.tvar_ord
 
-fun type_vars_of_term (t: term): (indexname * sort) list = let
-  fun descend_t (Type (_, tys)) = List.concat (map descend_t tys)
-    | descend_t (TFree _) = []
-    | descend_t (TVar tv) = [tv]
-  fun descend (Const (_, ty)) = descend_t ty
-    | descend (Var (_, ty)) = descend_t ty
-    | descend (Free (_, ty)) = descend_t ty
-    | descend (f $ x) = descend f @ descend x
-    | descend (Abs (_, ty, t)) = descend_t ty @ descend t
-    | descend _ = []
-  in descend t |> sort_distinct (fst_ord (prod_ord string_ord int_ord)) end
+(* Create annotation list *)
+fun make_schematics_container ts =
+      fold (fn t => fn container =>
+              Const (@{const_name trace_schematic_insts__container},
+                    fastype_of t --> @{typ "bool \<Rightarrow> bool"}) $
+                t $ container)
+        (rev ts) @{term "True"}
 
 (* Retrieve annotation list *)
 fun dest_schematics_container
@@ -97,38 +97,42 @@ fun trace_schematic_insts
   : Method.method
   = fn facts => fn (ctxt, st) =>
     let val tvars = map TVar (type_vars_of_term (Thm.prop_of st))
-        val tvar_list = fold (fn tvar => fn t =>
-                Const (@{const_name trace_schematic_insts__container},
-                       tvar --> @{typ "bool \<Rightarrow> bool"}) $
-                  Const (@{const_name undefined}, tvar) $ t)
-                (rev tvars) @{term "True"}
-
+        val tvar_carriers = map (fn tvar => Const (@{const_name undefined}, tvar)) tvars
         val vars = map Var (vars_of_term (Thm.prop_of st))
-        val var_list = fold (fn var => fn t =>
-                Const (@{const_name trace_schematic_insts__container},
-                       fastype_of var --> @{typ "bool \<Rightarrow> bool"}) $ var $ t)
-                (rev vars) tvar_list
+        val container = make_schematics_container (vars @ tvar_carriers)
 
-        (* FIXME: infer_instantiate' may be slow/unsafe? *)
-        val add_schematics_eqn = Drule.infer_instantiate' ctxt
-              (map SOME [cconcl_of st |> Thm.dest_arg, @{cterm "True"},
-                         Thm.cterm_of ctxt var_list])
+        (* FIXME: this might affect st's maxidx *)
+        val add_schematics_eqn = Thm.instantiate
+              ([],
+               [((("P", 0), @{typ prop}), cconcl_of st),
+                ((("xs", 0), @{typ bool}), Thm.cterm_of ctxt container)])
               @{thm trace_schematic_insts__container_add}
+        (* Now stash it into st *)
         val annotated_st = rewrite_state_concl add_schematics_eqn st
-    in method facts (ctxt, annotated_st)
+    in (* Run the method *)
+       method facts (ctxt, annotated_st)
        |> Seq.map_result (fn (ctxt', annotated_st') => let
-            val st'_concl = cconcl_of annotated_st' |> Thm.dest_arg
-            (* get annotations *)
-            val st'_annotations = st'_concl |> Thm.dest_arg1 |> Thm.dest_arg
-            val annotations = Thm.term_of st'_annotations |> dest_schematics_container
+            val st'_concl = cconcl_of annotated_st'
+            (* Retrieve the stashed list, now with unifications *)
+            val st'_annotations =
+                  st'_concl
+                  |> Thm.dest_implies |> fst
+                  |> Thm.dest_arg (* strip Trueprop *)
+            val container' = Thm.term_of st'_annotations |> dest_schematics_container
+            val (var_annotations, tvar_annotations) = chop (length vars) container'
+            (* Report the list *)
             (* TODO: provide attached Bounds as well? *)
-            val (var_annotations, tvar_annotations) = chop (length vars) annotations
             val _ = callback (vars ~~ var_annotations) (tvars ~~ map fastype_of tvar_annotations)
 
-            (* restore original concl *)
-            val st'_real_concl = st'_concl |> Thm.dest_arg
-            val dest_schematics_eqn = Drule.infer_instantiate' ctxt'
-                  (map SOME [@{cterm "True"}, Thm.dest_arg st'_annotations, st'_real_concl])
+            (* Restore original conclusion of st *)
+            val st'_real_concl =
+                  st'_concl
+                  |> Thm.dest_implies |> snd
+            val dest_schematics_eqn = Thm.instantiate
+                  ([],
+                   [((("P", 0), @{typ prop}), st'_real_concl),
+                    ((("xs", 0), @{typ bool}),
+                     Thm.dest_arg st'_annotations (* strip outer "t_s_i__c True" *))])
                   @{thm trace_schematic_insts__container_remove}
             val st' = rewrite_state_concl dest_schematics_eqn annotated_st'
        in (ctxt', st') end)
@@ -152,7 +156,7 @@ method_setup trace_schematic_insts = \<open>
                   Syntax.string_of_typ ctxt inst ^ "\n")
             tvar_insts
         val all_insts = String.concat (vars_lines @ tvars_lines)
-        (* TODO: add a quiet flag for when nothing was instantiated *)
+        (* TODO: add a quiet flag, to suppress output when nothing was instantiated *)
         in title ^ "\n" ^ (if all_insts = "" then "  (no instantiations)\n" else all_insts)
            |> tracing
         end
