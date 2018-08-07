@@ -18,6 +18,7 @@ imports
   Rule_By_Method
   Eisbach_Methods
   Time_Methods_Cmd
+  Trace_Schematic_Insts
   Insulin
   ShowTypes
   AutoLevity_Hooks
