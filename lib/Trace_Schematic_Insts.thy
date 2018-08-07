@@ -11,13 +11,11 @@
 theory Trace_Schematic_Insts
 imports
   Main
-  "Word_Lib/Word_Lib"
 begin
 
 text \<open>
-  Combinator to trace schematic variables that are unified by a given method.
+  See Trace_Schematic_Insts_Test for tests and examples.
 \<close>
-
 
 text \<open>
   We use this to stash a list of the schematics in the conclusion of
@@ -168,49 +166,5 @@ method_setup trace_schematic_insts = \<open>
     )
   end
 \<close> "Method combinator to trace schematic variable and type instantiations"
-
-
-section \<open>Examples\<close>
-experiment begin
-
-text \<open>Schematic variables\<close>
-lemma "\<lbrakk> \<forall>x. P x \<rbrakk> \<Longrightarrow> P x"
-  apply (drule spec)
-  apply (trace_schematic_insts \<open>assumption\<close>)
-  done
-
-definition foo :: "'a \<Rightarrow> bool"
-  where "foo x = True"
-
-lemma fooI1:
-  "foo 0 \<Longrightarrow> foo x"
-  by (simp add: foo_def)
-
-lemma fooI2:
-  "foo x \<Longrightarrow> foo 0"
-  by (simp add: foo_def)
-
-lemma fooI2':
-  "foo x \<Longrightarrow> foo (0 :: nat)"
-  by (erule fooI2)
-
-text \<open>Schematic type variables\<close>
-lemma "foo x \<Longrightarrow> foo y"
-  apply (rule fooI1)
-  apply (trace_schematic_insts \<open>erule fooI2'\<close>)
-  done
-
-text \<open>When backtracking, every recursive invocation is traced\<close>
-lemma "\<lbrakk> \<forall>x. Q x \<longrightarrow> R x; \<forall>x. P x \<longrightarrow> Q x; P x; P y \<longrightarrow> R x \<rbrakk> \<Longrightarrow> R x"
-  apply (drule spec)
-  apply (drule spec)
-  apply (trace_schematic_insts impE1 \<open>erule impE\<close>,
-         trace_schematic_insts impE2 \<open>erule impE\<close>,
-         (trace_schematic_insts "try assumption" \<open>assumption\<close>)+; fail)
-  done
-
-end
-
-(* TODO: proper test suite *)
 
 end
