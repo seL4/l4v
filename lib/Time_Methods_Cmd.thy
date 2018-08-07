@@ -101,6 +101,6 @@ in
         |> Time_Methods.skip_dummy_state
       end)
 end
-\<close>
+\<close> "Compare running time of several methods on the current proof state"
 
 end
