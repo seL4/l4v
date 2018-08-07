@@ -11,7 +11,7 @@
 theory Time_Methods_Cmd_Test imports
   Time_Methods_Cmd
   Eisbach_Methods
-  "~~/src/HOL/Sublist"
+  "~~/src/HOL/Library/Sublist"
 begin
 
 text \<open>
