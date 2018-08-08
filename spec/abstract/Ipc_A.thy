@@ -590,7 +590,8 @@ where
              set_thread_state receiver (if restart then Restart else Inactive);
 
             sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
-            when (sc_opt \<noteq> None \<and> runnable state) $ do
+            state2 \<leftarrow> get_thread_state receiver;
+            when (sc_opt \<noteq> None \<and> runnable state2) $ do
               sc_ptr \<leftarrow> assert_opt sc_opt;
               refill_unblock_check sc_ptr;
               sc \<leftarrow> get_sched_context sc_ptr;
