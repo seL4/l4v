@@ -67,7 +67,8 @@ fun trace_schematic_assert ctxt test_name tac expected_vars expected_tvars =
   let
     fun skip_dummy_state tac = fn st =>
         case Thm.prop_of st of
-            Const ("Pure.prop", _) $ (Const ("Pure.term", _) $ Const ("Pure.dummy_pattern", _)) =>
+            Const (@{const_name Pure.prop}, _) $
+              (Const (@{const_name Pure.term}, _) $ Const (@{const_name Pure.dummy_pattern}, _)) =>
               Seq.succeed st
           | _ => tac st
 
