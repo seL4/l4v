@@ -1311,8 +1311,8 @@ wp: sched_context_yield_to_invs)
       valid_cap_def idle_no_ex_cap split: cap.split_asm)+
    apply (frule invs_valid_global_refs)
    apply (frule invs_valid_objs, clarsimp simp: idle_no_ex_cap)
-   apply (frule invs_valid_global_refs)
-   apply (frule invs_valid_objs, clarsimp simp: idle_no_ex_cap)
+(*   apply (frule invs_valid_global_refs)
+   apply (frule invs_valid_objs, clarsimp simp: idle_no_ex_cap) *)
   done
 
 lemma update_sc_badge_invs:

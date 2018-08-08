@@ -489,7 +489,8 @@ lemma (in Systemcall_AI_Pre2) pinv_invs[wp]:
 
 lemma do_reply_transfer_typ_at[wp]:
   "do_reply_transfer s r \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
-  unfolding do_reply_transfer_def by (wpsimp wp: gts_wp)
+  unfolding do_reply_transfer_def
+  by (wpsimp wp: gts_wp hoare_vcg_if_lift2 hoare_drop_imps hoare_vcg_all_lift split_del: if_split)
 
 crunch typ_at[wp]: invoke_irq_handler "\<lambda>s. P (typ_at T p s)"
 
@@ -1332,7 +1333,7 @@ lemma do_reply_transfer_st_tcb_at_active:
             hoare_drop_imps thread_set_no_change_tcb_state
             do_ipc_transfer_non_null_cte_wp_at2)
   apply (wp hoare_allI hoare_drop_imp)+
-  apply (fastforce simp add: st_tcb_def2)
+(*  apply (fastfo rce simp add: st_tcb_def2)*)
   sorry
 
 lemma hc_invs[wp]:
