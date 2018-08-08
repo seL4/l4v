@@ -41,6 +41,9 @@ lemma akernel_invs:
   (call_kernel e) :: (unit,det_ext) s_monad
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
   unfolding call_kernel_def
+  apply (wpsimp wp: activate_invs check_budget_invs simp: active_from_running) (* doesnt use getActiveIRQ_wp *)
+    apply (rule_tac Q="\<lambda>rv s. invs s \<and> bound_sc_tcb_at (\<lambda>a. a \<noteq> None) (cur_thread s) s" in hoare_strengthen_post)
+     apply wpsimp+
   sorry
 
 (* FIXME: move *)

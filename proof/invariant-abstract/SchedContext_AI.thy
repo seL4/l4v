@@ -912,7 +912,7 @@ lemma set_tcb_yt_update_bound_sc_tcb_at[wp]:
   by (wpsimp simp: set_tcb_obj_ref_def set_object_def pred_tcb_at_def obj_at_def get_tcb_rev)
 
 lemma sched_context_bind_tcb_invs[wp]:
-  "\<lbrace>invs and (\<lambda>s. tcb \<noteq> idle_thread s)
+  "\<lbrace>invs
     and bound_sc_tcb_at (op = None) tcb and ex_nonz_cap_to tcb
     and sc_tcb_sc_at (op = None) sc and ex_nonz_cap_to sc\<rbrace>
       sched_context_bind_tcb sc tcb \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -925,17 +925,18 @@ lemma sched_context_bind_tcb_invs[wp]:
   apply (clarsimp simp: obj_at_def is_sc_obj_def pred_tcb_at_def refs_of_sc_def get_refs_def2)
   apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
   apply safe
-    apply (erule (1) valid_objsE)
-    apply (clarsimp simp: valid_obj_def valid_sched_context_def obj_at_def is_tcb)
-   apply (frule valid_objs_valid_sched_context_size, fastforce)
-   apply assumption
-  apply (erule delta_sym_refs)
-   apply (clarsimp simp: state_refs_of_def obj_at_def refs_of_sc_def split: if_splits)
-  apply (clarsimp simp: state_refs_of_def refs_of_tcb_def get_refs_def2 image_iff
-      tcb_st_refs_of_def sc_tcb_sc_at_def obj_at_def
-      dest!: symreftype_inverse' split: if_splits)
-   apply (clarsimp split: thread_state.split_asm if_split_asm)
-  apply (clarsimp simp: refs_of_sc_def get_refs_def2 image_iff)
+     apply (erule (1) valid_objsE)
+     apply (clarsimp simp: valid_obj_def valid_sched_context_def obj_at_def is_tcb)
+    apply (frule valid_objs_valid_sched_context_size, fastforce)
+    apply assumption
+   apply (erule delta_sym_refs)
+    apply (clarsimp simp: state_refs_of_def obj_at_def refs_of_sc_def split: if_splits)
+   apply (clarsimp simp: state_refs_of_def refs_of_tcb_def get_refs_def2 image_iff
+                         tcb_st_refs_of_def sc_tcb_sc_at_def obj_at_def
+                  dest!: symreftype_inverse' split: if_splits)
+    apply (clarsimp split: thread_state.split_asm if_split_asm)
+   apply (clarsimp simp: refs_of_sc_def get_refs_def2 image_iff)
+  apply (clarsimp simp: idle_no_ex_cap)
   done
 
 lemma sched_context_unbind_tcb_invs[wp]:
@@ -1007,7 +1008,7 @@ proof -
   fix a :: "32 word" and repliesa :: "32 word list" and s :: "'a state"
   have "\<forall>f w. f(w := ((state_refs_of s)
                     (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) w
-           - {p \<in> ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) w. 
+           - {p \<in> ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) w.
             snd p = ReplySchedContext}) = f(w := state_refs_of s w - {p \<in> state_refs_of s w. snd p = ReplySchedContext})"
     by (simp add: Collect_Diff_restrict_simp)
   then show "foldl (\<lambda>f w. f (w := state_refs_of s w - {p \<in> state_refs_of s w. snd p = ReplySchedContext})) ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) repliesa = foldl (\<lambda>f w. f (w := ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) w - {p \<in> ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) w. snd p = ReplySchedContext})) ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) repliesa"

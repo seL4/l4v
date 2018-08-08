@@ -242,8 +242,144 @@ lemma sched_context_bind_tcb_no_cap_to_obj_ref[wp]:
   "sched_context_bind_tcb t s \<lbrace>no_cap_to_obj_with_diff_ref c S\<rbrace>"
   by (rule no_cap_to_obj_with_diff_ref_lift) wpsimp
 
+lemma sort_queue_valid_ntfn_rv:
+  "\<lbrace>valid_ntfn ntfn and K (ntfn_obj ntfn = WaitingNtfn q)\<rbrace>
+    sort_queue q
+   \<lbrace>\<lambda>rv. valid_ntfn (ntfn\<lparr>ntfn_obj := WaitingNtfn rv\<rparr>)\<rbrace>"
+  apply (clarsimp simp: valid_def sort_queue_def bind_def return_def)
+  apply (case_tac q; clarsimp simp: valid_ntfn_def split: option.splits)
+   apply (case_tac a, clarsimp simp: in_monad mapM_Cons)
+   apply (clarsimp simp del: sort_key_simps(2) zip_Cons_Cons)
+   apply (rule conjI, clarsimp)
+  sorry
+
+lemma reorder_ntfn_invs[wp]:
+  "\<lbrace>invs\<rbrace> reorder_ntfn ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (wpsimp simp: reorder_ntfn_def live_def live_ntfn_def
+                  wp: set_ntfn_minor_invs sort_queue_valid_ntfn_rv get_simple_ko_wp)
+  apply (clarsimp simp: ntfn_queue_def split: ntfn.splits)
+  apply (rule conjI, clarsimp simp: obj_at_def)
+  apply (rule obj_at_valid_objsE, assumption, fastforce)
+  apply (frule if_live_then_nonz_capD[OF invs_iflive], assumption)
+   by (auto dest!: not_idle_tcb_in_waitingntfn
+             simp: valid_obj_def live_def live_ntfn_def)
+
+
+lemma set_ep_minor_invs:
+  "\<lbrace>invs and obj_at (\<lambda>ko. refs_of ko = ep_q_refs_of val) ptr
+         and valid_ep val
+         and (\<lambda>s. \<forall>typ. (idle_thread s, typ) \<notin> ep_q_refs_of val)
+         and (\<lambda>s. live (Endpoint val) \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
+     set_endpoint ptr val
+   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
+          wp: valid_irq_node_typ simp_del: fun_upd_apply)
+  apply (clarsimp simp: state_refs_of_def obj_at_def ext elim!: rsubst[where P = sym_refs])
+  done
+
+lemma reorder_ep_invs[wp]:
+  "\<lbrace>invs\<rbrace> reorder_ep ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (wpsimp simp: reorder_ep_def live_def
+                  wp: set_ep_minor_invs sort_queue_valid_ntfn_rv get_simple_ko_wp)
+  sorry
+
+
+crunch invs[wp]: thread_set_priority invs
+
+lemma set_priority_invs[wp]:
+  "\<lbrace>invs\<rbrace> set_priority a prio \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (clarsimp simp: set_priority_def reorder_ntfn_def)
+  apply wpsimp
+  done
+
+crunch caps_of_state[wp]: set_priority "\<lambda>s. P (caps_of_state s)"
+  (wp: crunch_wps maybeM_inv simp: crunch_simps)
+
+crunches set_priority
+  for typ_at[wp]:  "\<lambda>s. P (typ_at T p s)"
+  and no_cap_to[wp]: "no_cap_to_obj_with_diff_ref a S"
+  (wp: crunch_wps no_cap_to_obj_with_diff_ref_lift maybeM_inv simp: crunch_simps ignore: set_object)
+
+lemma sc_tcb_sc_at_ready_queues_update[simp]:
+  "sc_tcb_sc_at P t s \<Longrightarrow> sc_tcb_sc_at P t (ready_queues_update f s)"
+  by (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
+
+lemma sc_tcb_sc_at_sch_act_update[simp]:
+  "sc_tcb_sc_at P t s \<Longrightarrow> sc_tcb_sc_at P t (scheduler_action_update f s)"
+  by (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
+
+lemma sc_tcb_sc_at_ekh_act_update[simp]:
+  "sc_tcb_sc_at P t s \<Longrightarrow> sc_tcb_sc_at P t (ekheap_update f s)"
+  by (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
+
+
+(* FIXME move: KHeap_AI *)
+lemma set_notification_obj_at_impossible:
+  "\<forall>ep. \<not> (P (Notification ep)) \<Longrightarrow>
+    \<lbrace>\<lambda>s. Q (obj_at P p s)\<rbrace> set_notification ptr endp \<lbrace>\<lambda>rv s. Q (obj_at P p s)\<rbrace>"
+  apply (simp add: set_simple_ko_def set_object_def cong: kernel_object.case_cong)
+  apply (wpsimp wp: get_object_wp set_object_at_obj)
+  apply (clarsimp simp: obj_at_def split: option.splits)
+  done
+
+lemma reorder_ntfn_sc_tcb_sc_at[wp]:
+  "\<lbrace>sc_tcb_sc_at P t\<rbrace> reorder_ntfn a \<lbrace>\<lambda>rv. sc_tcb_sc_at P t\<rbrace>"
+  by (wpsimp simp: reorder_ntfn_def sc_tcb_sc_at_def
+                  wp: set_notification_obj_at_impossible get_simple_ko_wp)
+
+lemma reorder_ep_sc_tcb_sc_at[wp]:
+  "\<lbrace>sc_tcb_sc_at P t\<rbrace> reorder_ep a \<lbrace>\<lambda>rv. sc_tcb_sc_at P t\<rbrace>"
+  by (wpsimp simp: reorder_ep_def sc_tcb_sc_at_def
+                  wp: set_endpoint_obj_at_impossible get_simple_ko_wp)
+
+crunches tcb_sched_action, reschedule_required
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
+  and sc_tcb_sc_at[wp]: "sc_tcb_sc_at P t"
+
+crunches set_priority
+  for valid_cap[wp]: "valid_cap cap"
+  and no_cap_to_diff_ref[wp]: "no_cap_to_obj_with_diff_ref a S"
+  and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
+  and ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
+  and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  and pred_tcb_at[wp]: "pred_tcb_at proj P t"
+  and sc_tcb_sc_at[wp]: "sc_tcb_sc_at P t"
+  (wp: valid_cap_typ crunch_wps maybeM_inv no_cap_to_obj_with_diff_ref_lift reschedule_required_pred_tcb_at
+   simp: crunch_simps cte_wp_at_caps_of_state)
+
+lemma fold_is_tcb_obj_at[simp]:
+  "obj_at (\<lambda>ko. \<exists>t. ko = TCB t) p s = tcb_at p s"
+  by (clarsimp simp: is_tcb obj_at_def)
+
+lemma horridly_specific_rewrite:
+  "(obj_at (\<lambda>ko. \<exists>tcb. (tcb_sched_context tcb = Some xa \<longrightarrow> ko = TCB tcb) \<and>
+                   (tcb_sched_context tcb \<noteq> Some xa \<longrightarrow>
+                        ex_nonz_cap_to xa s \<and> ex_nonz_cap_to a s \<and> ko = TCB tcb
+                     \<and> sc_tcb_sc_at (op = None) xa s \<and> bound_sc_tcb_at (op = None) a s)) a s) =
+   (tcb_at a s \<and> (bound_sc_tcb_at (\<lambda>sc. sc \<noteq> Some xa) a s \<longrightarrow>
+                        (ex_nonz_cap_to xa s \<and> ex_nonz_cap_to a s \<and>
+                         sc_tcb_sc_at (op = None) xa s \<and> bound_sc_tcb_at (op = None) a s)))"
+  by (auto simp: obj_at_def is_tcb pred_tcb_at_def)
+
+lemma thread_set_mcp_ex_nonz_cap_to[wp]:
+  "\<lbrace>ex_nonz_cap_to a\<rbrace> thread_set (tcb_mcpriority_update g) t \<lbrace>\<lambda>rv. ex_nonz_cap_to a\<rbrace>"
+  by (wpsimp wp: ex_nonz_cap_to_pres thread_set_cte_wp_at_trivial simp: tcb_cap_cases_def)
+
+lemma thread_set_mcp_sc_tcb_sc_at[wp]:
+  "\<lbrace>sc_tcb_sc_at P a\<rbrace> thread_set (tcb_mcpriority_update g) t \<lbrace>\<lambda>rv. sc_tcb_sc_at P a\<rbrace>"
+  by (wpsimp wp: thread_set_obj_at_impossible simp: sc_tcb_sc_at_def)
+
+lemma is_cnode_or_valid_arch_simps[simp]:
+  "is_cnode_or_valid_arch (CNodeCap r bits ga)"
+  "is_cnode_or_valid_arch (ArchObjectCap (PageDirectoryCap r (Some ab)))"
+  by (simp add: is_cnode_or_valid_arch_def is_cap_simps)+
+
+lemma is_nondevice_page_cap_simps[simp]:
+  "is_nondevice_page_cap (ArchObjectCap (PageCap False x32 x33 x34 x35))"
+  by (simp add: is_cap_simps')
+
 lemma tc_invs[Tcb_AI_asms]:
-  "\<lbrace>invs and tcb_at a
+  "\<lbrace>invs and tcb_at a and ex_nonz_cap_to a
        and (case_option \<top> (valid_cap o fst) e)
        and (case_option \<top> (valid_cap o fst) f)
        and (case_option \<top> (valid_cap o fst) fh)
@@ -256,27 +392,35 @@ lemma tc_invs[Tcb_AI_asms]:
        and (case_option \<top> (case_option \<top> (cte_at o snd) o snd) g)
        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) e)
        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) f)
+       and (case_option \<top> (no_cap_to_obj_dr_emp o fst) fh)
+       and (case_option \<top> (no_cap_to_obj_dr_emp o fst) th)
        and (case_option \<top> (case_option \<top> (no_cap_to_obj_dr_emp o fst) o snd) g)
        (* only set prio \<le> mcp of authorising thread *)
        and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) auth s) pr)
        (* only set mcp \<le> mcp of authorising thread *)
        and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp)
+       and (case_option \<top> (case_option \<top> (\<lambda>sc. bound_sc_tcb_at (op = None) a and ex_nonz_cap_to sc and sc_tcb_sc_at (op = None) sc)) sc)
        and K (case_option True (is_cnode_cap o fst) e)
        and K (case_option True (is_valid_vtable_root o fst) f)
        and K (case_option True (\<lambda>v. case_option True
                           ((swp valid_ipc_buffer_cap (fst v)
                              and is_arch_cap and is_cnode_or_valid_arch)
-                                o fst) (snd v)) g)\<rbrace>
+                                o fst) (snd v)) g)
+       and K (case_option True ((is_cnode_or_valid_arch and (is_ep_cap or (op = NullCap))) o fst) fh)
+       and K (case_option True ((is_cnode_or_valid_arch and (is_ep_cap or (op = NullCap))) o fst) th)\<rbrace>
       invoke_tcb (ThreadControl a sl fh th mcp pr e f g sc)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_gen_asm)+
-  apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
+  apply (simp add: split_def set_mcpriority_def install_tcb_cap_def cong: option.case_cong)
   apply (rule hoare_vcg_precond_imp)
-  apply ((simp only: simp_thms
+   apply wp
+  apply (((simp only: simp_thms
+        | (simp add: conj_comms del: hoare_True_E_R,
+                  strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
         | rule wp_split_const_if wp_split_const_if_R
                    hoare_vcg_all_lift_R
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
-                   hoare_vcg_R_conj allI
+                   hoare_vcg_R_conj allI hoare_vcg_imp_lift'
         | (wp out_invs_trivial case_option_wpE cap_delete_deletes
              cap_delete_valid_cap cap_insert_valid_cap out_cte_at
              cap_insert_cte_at cap_delete_cte_at out_valid_cap
@@ -288,32 +432,33 @@ lemma tc_invs[Tcb_AI_asms]:
              check_cap_inv [where P="tcb_cap_valid c p" for c p]
              check_cap_inv[where P="cte_at p0" for p0]
              check_cap_inv[where P="tcb_at p0" for p0]
-             thread_set_cte_at
+             thread_set_cte_at tcb_at_typ_at
              thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
              thread_set_no_cap_to_trivial[OF ball_tcb_cap_casesI]
+             thread_set_no_change_tcb_sched_context
              checked_insert_no_cap_to
+             checked_insert_tcb_invs
              out_no_cap_to_trivial[OF ball_tcb_cap_casesI]
              thread_set_ipc_tcb_cap_valid
              static_imp_wp static_imp_conj_wp
              sched_context_unbind_tcb_invs
              TcbAcc_AI.gbn_wp)[1]
-        | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
+        | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified] horridly_specific_rewrite not_pred_tcb tcb_at_typ
                del: hoare_True_E_R
         | wpc
         | strengthen use_no_cap_to_obj_asid_strg
-                     tcb_cap_valid_ep_strgs
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
-                     tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"]))
- (*
-    apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified] is_nondevice_page_cap_arch_def
-                        is_cap_simps is_valid_vtable_root_def is_nondevice_page_cap_simps
-                        is_cnode_or_valid_arch_def tcb_cap_valid_def
+                     tcb_cap_valid_ep_strgs
+                     tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"]))+)
+ (* FIXME RT: needs preconditions for sched_context_bind and sched_context_unbind *)
+  apply (intro conjI impI; clarsimp?;
+    (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
+                        is_cap_simps is_valid_vtable_root_def
+                        tcb_cap_valid_def
                         invs_valid_objs cap_asid_def vs_cap_ref_def
-                 split: option.split_asm )+
-      apply (simp add: case_bool_If valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
-                       is_nondevice_page_cap_arch_def
-                split: arch_cap.splits if_splits)+
-  done *) sorry
+                        case_bool_If valid_ipc_buffer_cap_def
+                       | split arch_cap.splits if_splits option.split_asm)+)
+  done
 
 
 lemma check_valid_ipc_buffer_inv:

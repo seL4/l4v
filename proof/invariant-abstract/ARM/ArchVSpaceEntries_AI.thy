@@ -1708,11 +1708,11 @@ crunch valid_pdpt[wp]: activate_thread,switch_to_thread,
 crunch valid_pdpt[wp]: awaken "valid_pdpt_objs"
   (wp: hoare_drop_imp mapM_x_wp')
 
-(*
-crunch valid_pdpt[wp]: handle_event "valid_pdpt_objs"
+crunch valid_pdpt[wp]: handle_call, handle_recv, handle_send, handle_yield, handle_interrupt "valid_pdpt_objs"
   (wp: hoare_vcg_if_lift2 hoare_drop_imps crunch_wps
    simp: crunch_simps Let_def whenE_def liftE_def
-   ignore: check_budget_restart)*)
+   ignore: check_budget_restart)
+
 
 lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (unit,det_ext) s_monad \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
@@ -1725,11 +1725,12 @@ lemma call_kernel_valid_pdpt[wp]:
    \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def)
       apply (rule hoare_pre)
-       apply (wp | simp add: if_apply_def2 | wpc
+       apply (wp | simp add: if_apply_def2 whenE_def | wpc
                  | rule conjI | clarsimp simp: ct_in_state_def
                  | erule pred_tcb_weakenE
                  | wp_once hoare_drop_imps)+
-  sorry
+  sorry (* call_kernel_valid_pdpt: needs check_budget_restart preserves valid_pdpt_objs, and possibly ct_active
+               - which may be problematic, not too sure *)
 
 end
 
