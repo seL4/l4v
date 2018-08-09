@@ -653,11 +653,6 @@ record captransfer =
   ct_receive_index :: cap_ref
   ct_receive_depth :: data
 
-definition
-  captransfer_size :: "nat" -- "in words"
-where
-  "captransfer_size \<equiv> 3"
-
 text {* A thread's IPC buffer capability must be to a page that is capable of
 containing the IPC buffer without the end of the buffer spilling into another
 page. *}
