@@ -119,7 +119,7 @@ lemma load_ct_corres:
   shows
   "corres ct_relation \<top> (valid_ipc_buffer_ptr' buffer) (load_cap_transfer buffer) (loadCapTransfer buffer)"
   apply (simp add: load_cap_transfer_def loadCapTransfer_def
-                   captransfer_from_words_def captransfer_size_def
+                   captransfer_from_words_def
                    capTransferDataSize_def capTransferFromWords_def
                    msgExtraCapBits_def word_size add.commute add.left_commute
                    msg_max_length_def msg_max_extra_caps_def word_size_def
