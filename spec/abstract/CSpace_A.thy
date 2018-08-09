@@ -271,17 +271,6 @@ section {* Transferring capabilities *}
 text {* These functions are used in interpreting from user arguments the manner
 in which a capability transfer should take place. *}
 
-record captransfer =
-  ct_receive_root :: cap_ref
-  ct_receive_index :: cap_ref
-  ct_receive_depth :: data
-
-
-definition
-  captransfer_size :: "nat" \<comment> \<open>in words\<close>
-where
-  "captransfer_size \<equiv> 3"
-
 definition
   captransfer_from_words :: "machine_word \<Rightarrow> (captransfer,'z::state_ext) s_monad"
 where
