@@ -842,25 +842,25 @@ FIXME ARMHYP consider moving to platform code?
 
 #endif
 
+> usToTicks :: Word64 -> Word64
+> usToTicks _ = undefined
+
+> ticks_to_us :: Word64 -> Word64
+> ticks_to_us _ = undefined
+
 TODO: Check the value later. Maybe it is 1
 
 > timerPrecision :: Word64
 > timerPrecision = usToTicks 2
-
-> usToTicks :: Word64 -> Word64
-> usToTicks _ = undefined
-
-> ticksToUs :: Word64 -> Word64
-> ticksToUs _ = undefined
 
 > getCurrentTime :: MachineMonad Word64
 > getCurrentTime = do
 >     cbptr <- ask
 >     liftIO $ Platform.getCurrentTime cbptr
 
-> maxUsToTicks :: Word64
-> maxUsToTicks = undefined
+> max_us_to_ticks :: Word64
+> max_us_to_ticks = undefined
 
-> maxTicksToUs :: Word64
-> maxTicksToUs = undefined
+> max_ticks_to_us :: Word64
+> max_ticks_to_us = undefined
 

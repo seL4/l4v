@@ -45,7 +45,6 @@ The architecture-specific definitions are imported qualified with the "Arch" pre
 > import Data.WordLib
 > import Control.Monad
 > import Control.Monad.State
-> import Data.Word(Word64)
 
 \end{impdetails}
 
@@ -76,7 +75,7 @@ The top-level kernel state structure is called "KernelState". It contains:
 \item the active security domain and the number to ticks remaining before it changes;
 
 >         ksCurDomain :: Domain,
->         ksDomainTime :: Word64,
+>         ksDomainTime :: Time,
 
 \item an array of ready queues, indexed by thread priority and domain (see "getQueue");
 
@@ -237,7 +236,7 @@ These functions access and modify the current domain and the number of ticks rem
 > getCurDomain :: Kernel Domain
 > getCurDomain = gets ksCurDomain
 
-> usToMs :: Word64
+> usToMs :: Time
 > usToMs = 1000
 
 > nextDomain :: Kernel ()
@@ -250,10 +249,10 @@ These functions access and modify the current domain and the number of ticks rem
 >           ksDomainTime = usToTicks ((dschLength next) * usToMs),
 >           ksReprogramTimer = True })
 
-> getDomainTime :: Kernel Word64
+> getDomainTime :: Kernel Time
 > getDomainTime = gets ksDomainTime
 
-> setDomainTime :: Word64 -> Kernel ()
+> setDomainTime :: Time -> Kernel ()
 > setDomainTime domainTime = modify (\ks -> ks { ksDomainTime = domainTime })
 
 > getCurTime :: Kernel Time
@@ -290,17 +289,17 @@ A new kernel state structure contains an empty physical address space, a set of 
 >         ksReadyQueues =
 >             funPartialArray (const [])
 >                             ((0, 0), (fromIntegral numDomains, maxPriority)),
+>         ksReleaseQueue = [],
 >         ksReadyQueuesL1Bitmap = funPartialArray (const 0) (0, fromIntegral numDomains),
 >         ksReadyQueuesL2Bitmap =
 >             funPartialArray (const 0)
 >                 ((0, 0), (fromIntegral numDomains, l2BitmapSize)),
->         ksReleaseQueue = [],
 >         ksCurThread = error "No initial thread",
 >         ksIdleThread = error "Idle thread has not been created",
->         ksReprogramTimer = False,
 >         ksConsumedTime = 0,
 >         ksCurTime = 0,
 >         ksCurSc = error "No initial scheduling context",
+>         ksReprogramTimer = False,
 >         ksSchedulerAction = error "scheduler action has not been set",
 >         ksInterruptState = error "Interrupt controller is uninitialised",
 >         ksWorkUnitsCompleted = 0,

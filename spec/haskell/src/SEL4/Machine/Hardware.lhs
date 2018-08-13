@@ -223,26 +223,26 @@ The constant "nullPointer" is a physical pointer guaranteed to be invalid.
 > nullPointer :: PPtr a
 > nullPointer = PPtr 0
 
-> kernelWCETUs :: Word64
-> kernelWCETTicks :: Word64
+> kernelWCET_us :: Word64
+> kernelWCET_ticks :: Word64
 
-> kernelWCETUs = 10
-> kernelWCETTicks = Arch.usToTicks kernelWCETUs
+> kernelWCET_us = 10
+> kernelWCET_ticks = Arch.usToTicks kernelWCET_us
 
 > timerPrecision :: Word64
 > timerPrecision = Arch.timerPrecision
 
-> maxUsToTicks :: Word64
-> maxUsToTicks = Arch.maxUsToTicks
+> max_us_to_ticks :: Word64
+> max_us_to_ticks = Arch.max_us_to_ticks
 
-> maxTicksToUs :: Word64
-> maxTicksToUs = Arch.maxTicksToUs
+> max_ticks_to_us :: Word64
+> max_ticks_to_us = Arch.max_ticks_to_us
 
 > getCurrentTime :: MachineMonad Word64
 > getCurrentTime = Arch.getCurrentTime
 
-> ticksToUs :: Word64 -> Word64
-> ticksToUs = Arch.usToTicks
+> ticks_to_us :: Word64 -> Word64
+> ticks_to_us = Arch.ticks_to_us
 
 > usToTicks :: Word64 -> Word64
 > usToTicks = Arch.usToTicks

@@ -10,12 +10,12 @@
 
 This module contains functions that determine how recoverable faults encountered by user-level threads are propagated to the appropriate fault handlers.
 
-> module SEL4.Kernel.FaultHandler (handleFault, handleTimeout, isValidTimeoutHandler, isValidFaultHandler) where
+> module SEL4.Kernel.FaultHandler (handleFault, handleTimeout, hasValidTimeoutHandler, isValidFaultHandler) where
 
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.API.Failures #-}
-% {-# BOOT-EXPORTS: handleFault handleTimeout isValidFaultHandler isValidTimeoutHandler #-}
+% {-# BOOT-EXPORTS: handleFault handleTimeout isValidFaultHandler hasValidTimeoutHandler #-}
 
 > import SEL4.API.Failures
 > import SEL4.Machine
@@ -35,8 +35,8 @@ This module contains functions that determine how recoverable faults encountered
 >         NullCap -> True
 >         _ -> False
 
-> isValidTimeoutHandler :: PPtr TCB -> Kernel Bool
-> isValidTimeoutHandler tptr = do
+> hasValidTimeoutHandler :: PPtr TCB -> Kernel Bool
+> hasValidTimeoutHandler tptr = do
 >     tcb <- getObject tptr
 >     case cteCap (tcbTimeoutHandler tcb) of
 >         EndpointCap {} -> return True
@@ -61,7 +61,7 @@ When a thread faults, the kernel attempts to send a fault IPC to the fault handl
 
 > handleTimeout :: PPtr TCB -> Fault -> Kernel ()
 > handleTimeout tptr timeout = do
->     valid <- isValidTimeoutHandler tptr
+>     valid <- hasValidTimeoutHandler tptr
 >     assert valid "no valid timeout handler"
 >     tcb <- getObject tptr
 >     sendFaultIPC tptr (cteCap (tcbTimeoutHandler tcb)) timeout False `catchFailure` const (return False)

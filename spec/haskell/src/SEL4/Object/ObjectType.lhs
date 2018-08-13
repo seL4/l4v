@@ -134,10 +134,13 @@ When the last capability to an endpoint is deleted, any IPC operations currently
 >         cancelAllSignals ptr
 >     return (NullCap, NullCap)
 
-> finaliseCap (ReplyCap { capReplyPtr = ptr }) final _ = do
+> finaliseCap (ReplyCap { capReplyPtr = rptr }) final _ = do
 >     when final $ do
->         tptrOpt <- getReplyTCB ptr
->         when (tptrOpt /= Nothing) $ replyClear ptr
+>         tptrOpt <- getReplyTCB rptr
+>         scptrOpt <- getReplySc rptr
+>         if tptrOpt /= Nothing
+>             then cancelIPC $ fromJust tptrOpt
+>             else when (scptrOpt /= Nothing) $ replyUnlinkSc (fromJust scptrOpt) rptr
 >     return (NullCap, NullCap)
 
 No action need be taken for Null or Domain capabilities.
@@ -162,9 +165,10 @@ Threads are treated as special capability nodes; they also become zombies when t
 >     tcb <- getObject tptr
 >     when (tcbSchedContext tcb /= Nothing) $ do
 >         let scPtr = fromJust $ tcbSchedContext tcb
->         sc <- getSchedContext scPtr
->         schedContextCompleteYieldTo $ fromJust $ scYieldFrom sc
 >         schedContextUnbindTCB scPtr
+>         sc <- getSchedContext scPtr
+>         when (scYieldFrom sc /= Nothing) $ do
+>             schedContextCompleteYieldTo $ fromJust $ scYieldFrom sc
 >     suspend tptr
 >     Arch.prepareThreadDelete tptr
 >     return (Zombie cte_ptr ZombieTCB 5, NullCap)
@@ -172,18 +176,11 @@ Threads are treated as special capability nodes; they also become zombies when t
 > finaliseCap (SchedContextCap { capSchedContextPtr = scPtr }) True _ = do
 >     schedContextUnbindAllTCBs scPtr
 >     schedContextUnbindNtfn scPtr
-
->     sc <- getSchedContext scPtr
->     replyPtrOpt <- return $ scReply sc
->     when (replyPtrOpt /= Nothing) $ do
->         replyPtr <- return $ fromJust replyPtrOpt
->         reply <- getReply replyPtr
->         setReply replyPtr (reply { replyNext = Nothing, replySc = Nothing })
->         setSchedContext scPtr (sc { scReply = Nothing })
-
->     sc <- getSchedContext scPtr
->     when (scYieldFrom sc /= Nothing) $ do
->         schedContextCompleteYieldTo $ fromJust $ scYieldFrom sc
+>     replies <- liftM scReplies $ getSchedContext scPtr
+>     mapM_ (replyUnlinkSc scPtr) replies
+>     tptrOpt <- liftM scYieldFrom $ getSchedContext scPtr
+>     when (tptrOpt /= Nothing) $ do
+>         schedContextCompleteYieldTo $ fromJust tptrOpt
 >     return (NullCap, NullCap)
 
 > finaliseCap SchedControlCap _ _ = return (NullCap, NullCap)
@@ -398,29 +395,29 @@ New threads are placed in the current security domain, which must be the domain 
 >             curdom <- getCurDomain
 >             threadSet (\t -> t { tcbDomain = curdom })
 >                 (PPtr $ fromPPtr regionBase)
->             return $! ThreadCap (PPtr $ fromPPtr regionBase)
+>             return $ ThreadCap (PPtr $ fromPPtr regionBase)
 >         Just EndpointObject -> do
 >             placeNewObject regionBase (makeObject :: Endpoint) 0
->             return $! EndpointCap (PPtr $ fromPPtr regionBase) 0 True True True
+>             return $ EndpointCap (PPtr $ fromPPtr regionBase) 0 True True True
 >         Just NotificationObject -> do
 >             placeNewObject (PPtr $ fromPPtr regionBase) (makeObject :: Notification) 0
->             return $! NotificationCap (PPtr $ fromPPtr regionBase) 0 True True
+>             return $ NotificationCap (PPtr $ fromPPtr regionBase) 0 True True
 >         Just SchedContextObject -> do
->             placeNewObject regionBase (makeObject :: SchedContext) 0
->             return $! SchedContextCap (PPtr $ fromPPtr regionBase) userSize
+>             placeNewObject regionBase ((makeObject :: SchedContext) { scSizeBits = userSize }) 0
+>             return $ SchedContextCap (PPtr $ fromPPtr regionBase) userSize
 >         Just ReplyObject -> do
 >             placeNewObject regionBase (makeObject :: Reply) 0
->             return $! ReplyCap (PPtr $ fromPPtr regionBase)
+>             return $ ReplyCap (PPtr $ fromPPtr regionBase)
 >         Just CapTableObject -> do
 >             placeNewObject (PPtr $ fromPPtr regionBase) (makeObject :: CTE) userSize
 >             modify (\ks -> ks { gsCNodes =
 >               funupd (gsCNodes ks) (fromPPtr regionBase) (Just userSize)})
->             return $! CNodeCap (PPtr $ fromPPtr regionBase) userSize 0 0
+>             return $ CNodeCap (PPtr $ fromPPtr regionBase) userSize 0 0
 >         Just Untyped ->
->             return $! UntypedCap isDevice (PPtr $ fromPPtr regionBase) userSize 0
+>             return $ UntypedCap isDevice (PPtr $ fromPPtr regionBase) userSize 0
 >         Nothing -> do
 >             archCap <- Arch.createObject t regionBase userSize isDevice
->             return $! ArchObjectCap archCap
+>             return $ ArchObjectCap archCap
 
 \subsection{Invoking Objects}
 
@@ -439,8 +436,8 @@ The "decodeInvocation" function parses the message, determines the operation tha
 > decodeInvocation _ _ _ _ cap@(NotificationCap {capNtfnCanSend=True}) _ = do
 >     return $ InvokeNotification (capNtfnPtr cap) (capNtfnBadge cap)
 >
-> decodeInvocation _ _ _ _ (ReplyCap reply) _ = do
->     return $ InvokeReply reply
+> decodeInvocation _ _ _ _ cap@(ReplyCap {}) _ = do
+>     return $ InvokeReply (capReplyPtr cap)
 >
 > decodeInvocation
 >         label args _ slot cap@(ThreadCap {}) extraCaps =
@@ -488,50 +485,50 @@ This function just dispatches invocations to the type-specific invocation functi
 > 
 > performInvocation _ _ _ (InvokeUntyped invok) = do
 >     invokeUntyped invok
->     return $! []
+>     return $ []
 > 
 > performInvocation block call canDonate (InvokeEndpoint ep badge canGrant) =
 >   withoutPreemption $ do
 >     thread <- getCurThread
 >     sendIPC block call badge canGrant canDonate thread ep
->     return $! []
+>     return $ []
 > 
 > performInvocation _ _ _ (InvokeNotification ep badge) = do
 >     withoutPreemption $ sendSignal ep badge 
->     return $! []
+>     return $ []
 >
 > performInvocation _ _ _ (InvokeReply reply) = withoutPreemption $ do
 >     sender <- getCurThread
 >     doReplyTransfer sender reply
->     return $! []
+>     return $ []
 >
 > performInvocation _ _ _ (InvokeTCB invok) = invokeTCB invok
 >
 > performInvocation _ _ _ (InvokeDomain thread domain) = withoutPreemption $ do
 >     setDomain thread domain
->     return $! []
+>     return $ []
 > 
 > performInvocation _ _ _ (InvokeCNode invok) = do
 >     invokeCNode invok
->     return $! []
+>     return $ []
 > 
 > performInvocation _ _ _ (InvokeIRQControl invok) = do
 >     performIRQControl invok
->     return $! []
+>     return $ []
 > 
 > performInvocation _ _ _ (InvokeIRQHandler invok) = do
 >     withoutPreemption $ invokeIRQHandler invok
->     return $! []
+>     return $ []
 > 
 
 > performInvocation _ _ _ (InvokeSchedContext invok) = do
 >     withoutPreemption $ ignoreFailure (invokeSchedContext invok)
->     return $! []
+>     return $ []
 >
 
 > performInvocation _ _ _ (InvokeSchedControl invok) = do
 >     withoutPreemption $ ignoreFailure (invokeSchedControlConfigure invok)
->     return $! []
+>     return $ []
 >
 > performInvocation _ _ _ (InvokeArchObject invok) = Arch.performInvocation invok
 

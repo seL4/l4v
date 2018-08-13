@@ -117,6 +117,8 @@ Interrupt handling is performed by "handleInterrupt", defined in \autoref{sec:ob
 
 > handleEvent Interrupt = withoutPreemption $ do
 >     active <- doMachineOp (getActiveIRQ False)
+>     updateTimeStamp
+>     checkBudget
 >     case active of
 >         Just irq -> handleInterrupt irq
 >         Nothing -> doMachineOp $ debugPrint "spurious interrupt"
@@ -199,19 +201,17 @@ The "Recv" system call blocks waiting to receive a message through a specified e
 >     epCptr <- getCapReg capRegister
 >     (do
 >         epCap <- capFaultOnFailure epCptr True (lookupCap thread epCptr)
->         flt <- throw $ CapFault epCptr True (MissingCapability 0)
 >         case epCap of
->             EndpointCap { capEPCanReceive = epCanReceive } -> do
->                 when (not epCanReceive) flt
+>             EndpointCap { capEPCanReceive = True } -> do
 >                 replyCap <- if canReply then lookupReply else return NullCap
 >                 withoutFailure $ receiveIPC thread epCap isBlocking replyCap
 >             NotificationCap { capNtfnCanReceive = True, capNtfnPtr = ntfnPtr } -> do
 >                 ntfn <- withoutFailure $ getNotification ntfnPtr
->                 boundTCB <- return $ ntfnBoundTCB ntfn
->                 if boundTCB == Just thread || boundTCB == Nothing
+>                 if ntfnBoundTCB ntfn == Just thread || ntfnBoundTCB ntfn == Nothing
 >                     then withoutFailure $ receiveSignal thread epCap isBlocking
->                     else flt
->             _ -> flt) `catchFailure` handleFault thread
+>                     else throw $ CapFault epCptr True (MissingCapability 0)
+>             _ -> throw $ CapFault epCptr True (MissingCapability 0))
+>       `catchFailure` handleFault thread
 
 \subsubsection{Yield System Call}
 

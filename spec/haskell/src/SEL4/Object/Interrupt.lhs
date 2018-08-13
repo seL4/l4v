@@ -227,7 +227,7 @@ The following functions are used within this module to access the global interru
 > setNextTimerInterrupt threadTime = do
 >     curTm <- getCurTime
 >     domainTm <- getDomainTime
->     newDomainTm <- return $! curTm + domainTm
+>     newDomainTm <- return $ curTm + domainTm
 >     doMachineOp $ setDeadline (min threadTime newDomainTm - timerPrecision)
 
 > setNextInterrupt :: Kernel ()

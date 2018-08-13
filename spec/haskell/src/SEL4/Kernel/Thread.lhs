@@ -37,7 +37,7 @@ We use the C preprocessor to select a target architecture.
 > import SEL4.Object.SchedContext
 > import SEL4.Object.Structures
 > import SEL4.Kernel.VSpace
-> import {-# SOURCE #-} SEL4.Kernel.FaultHandler(handleTimeout, isValidTimeoutHandler)
+> import {-# SOURCE #-} SEL4.Kernel.FaultHandler(handleTimeout, hasValidTimeoutHandler)
 > import {-# SOURCE #-} SEL4.Kernel.Init
 
 > import Data.Bits hiding (countLeadingZeros)
@@ -84,21 +84,19 @@ The "activateThread" function is used to prepare a thread to run. If the thread 
 
 > activateThread :: Kernel ()
 > activateThread = do
->         thread <- getCurThread
->         state <- getThreadState thread
->         scPtrOpt <- threadGet tcbYieldTo thread
->         when (scPtrOpt /= Nothing) $ do
->             schedContextCompleteYieldTo thread
->             assert (state == Running) "activateThread: thread state must be Running when tcbYieldTo is not Nothing"
->         case state of
->             Running -> return ()
->             Restart -> do
->                 pc <- asUser thread $ getRestartPC
->                 asUser thread $ setNextPC pc
->                 setThreadState Running thread
->             IdleThreadState -> do
->                 Arch.activateIdleThread thread
->             _ -> fail $ "Current thread is blocked, state: " ++ show state
+>     thread <- getCurThread
+>     ytOpt <- threadGet tcbYieldTo thread
+>     when (ytOpt /= Nothing) $ schedContextCompleteYieldTo thread
+>     state <- getThreadState thread
+>     case state of
+>         Running -> return ()
+>         Restart -> do
+>             pc <- asUser thread $ getRestartPC
+>             asUser thread $ setNextPC pc
+>             setThreadState Running thread
+>         IdleThreadState -> do
+>             Arch.activateIdleThread thread
+>         _ -> fail $ "Current thread is blocked, state: " ++ show state          
 
 \subsection{Thread State}
 
@@ -133,7 +131,7 @@ Note that the idle thread is not considered runnable; this is to prevent it bein
 >         else do
 >             sc <- getSchedContext $ fromJust $ tcbSchedContext tcb
 >             runnable <- isRunnable tcbPtr
->             return $! runnable && scRefillMax sc > 0 && not inReleaseQ
+>             return $ runnable && scRefillMax sc > 0 && not inReleaseQ
 
 \subsubsection{Suspending a Thread}
 
@@ -223,13 +221,14 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 >                             scPtrOpt <- threadGet tcbSchedContext receiver
 >                             when (scPtrOpt /= Nothing && runnable) $ do
 >                                 let scPtr = fromJust scPtrOpt
+>                                 refillUnblockCheck scPtr
 >                                 ready <- refillReady scPtr
 >                                 sufficient <- refillSufficient scPtr 0
 >                                 if ready && sufficient
 >                                     then possibleSwitchTo receiver
 >                                     else do
 >                                         sc <- getSchedContext scPtr
->                                         isHandlerValid <- isValidTimeoutHandler receiver
+>                                         isHandlerValid <- hasValidTimeoutHandler receiver
 >                                         case (isHandlerValid, fault) of
 >                                             (False, _) -> postpone scPtr
 >                                             (_, Timeout _) -> postpone scPtr
@@ -344,6 +343,14 @@ has the highest runnable priority in the system on kernel entry (unless idle).
 >     if curThread /= idleThread
 >     then return (targetPrio < curPrio)
 >     else return True
+
+> scAndTimer :: Kernel ()
+> scAndTimer = do
+>     switchSchedContext
+>     reprogram <- getReprogramTimer
+>     when reprogram $ do
+>         setNextInterrupt
+>         setReprogramTimer False
 
 > schedule :: Kernel ()
 > schedule = do
@@ -546,7 +553,7 @@ candidates are enqueued.
 >                   then do
 >                       rescheduleRequired
 >                       tcbSchedEnqueue target
->                 else setSchedulerAction $ SwitchToThread target
+>                   else setSchedulerAction $ SwitchToThread target
 
 In most cases, the current thread has just sent a message to the woken thread, so we switch if the woken thread has the same or higher priority than the current thread; that is, whenever the priorities permit the switch.
 
@@ -682,7 +689,7 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 > initTCB = (makeObject::TCB){ tcbPriority=maxBound }
 
 > endTimeslice :: Bool -> Kernel ()
-> endTimeslice canTimeoutFault = do
+> endTimeslice canTimeout = do
 >     ct <- getCurThread
 >     it <- getIdleThread
 >     when (ct /= it) $ do
@@ -690,8 +697,8 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 >         sc <- getSchedContext scPtr
 >         ready <- refillReady scPtr
 >         sufficient <- refillSufficient scPtr 0
->         valid <- isValidTimeoutHandler ct
->         if (canTimeoutFault && valid)
+>         valid <- hasValidTimeoutHandler ct
+>         if (canTimeout && valid)
 >             then handleTimeout ct $ Timeout $ scBadge sc
 >             else
 >                 if ready && sufficient
@@ -703,7 +710,7 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 > inReleaseQueue :: PPtr TCB -> Kernel Bool
 > inReleaseQueue tcbPtr = do
 >     releaseQueue <- getReleaseQueue
->     return $! member tcbPtr (fromList releaseQueue)
+>     return $ elem tcbPtr releaseQueue
 
 > tcbReleaseRemove :: PPtr TCB -> Kernel ()
 > tcbReleaseRemove tcbPtr = do

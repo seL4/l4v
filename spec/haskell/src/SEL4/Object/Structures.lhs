@@ -163,8 +163,8 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 > objBitsKO (KOUserDataDevice) = pageBits
 > objBitsKO (KOKernelData) = pageBits
 > objBitsKO (KOArch a) = archObjSize a
-> objBitsKO (KOSchedContext sc) = scSize sc
-> objBitsKO (KOReply _) = 4
+> objBitsKO (KOSchedContext sc) = scSizeBits sc
+> objBitsKO (KOReply _) = replySizeBits
 
 \subsubsection{Synchronous Endpoint}
 
@@ -211,15 +211,11 @@ list of pointers to waiting threads;
 >     scBadge :: Word,
 >     scYieldFrom :: Maybe (PPtr TCB),
 >     scRefillMax :: Int,
->     scRefillHead :: Int,
->     scRefillTail :: Int,
->     scReply :: Maybe (PPtr Reply),
->     scSize :: Int }
+>     scReplies :: [PPtr Reply],
+>     scSizeBits :: Int }
 
 > data Reply = Reply {
 >     replyTCB :: Maybe (PPtr TCB),
->     replyPrev :: Maybe (PPtr Reply),
->     replyNext :: Maybe (PPtr Reply),
 >     replySc :: Maybe (PPtr SchedContext) }
 
 > minRefills :: Int
