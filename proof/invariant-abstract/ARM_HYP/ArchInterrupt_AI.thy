@@ -14,10 +14,18 @@ begin
 
 context Arch begin global_naming ARM_HYP
 
-defs arch_irq_control_inv_valid_def:
-  "arch_irq_control_inv_valid irq_inv \<equiv> \<bottom>"
+primrec arch_irq_control_inv_valid_real ::
+  "arch_irq_control_invocation \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
+  where
+  "arch_irq_control_inv_valid_real (ArchIRQControlIssue irq dest_slot src_slot trigger)
+    = (cte_wp_at ((=) cap.NullCap) dest_slot and
+      cte_wp_at ((=) cap.IRQControlCap) src_slot and
+      ex_cte_cap_wp_to is_cnode_cap dest_slot and
+      real_cte_at dest_slot and
+      K (irq \<le> maxIRQ))"
 
-declare arch_irq_control_inv_valid_def [simp]
+defs arch_irq_control_inv_valid_def:
+  "arch_irq_control_inv_valid \<equiv> arch_irq_control_inv_valid_real"
 
 named_theorems Interrupt_AI_asms
 
@@ -28,7 +36,7 @@ lemma (* decode_irq_control_invocation_inv *)[Interrupt_AI_asms]:
   apply (wp | simp)+
   done
 
-lemma (* decode_irq_control_valid *)[Interrupt_AI_asms]:
+lemma decode_irq_control_valid [Interrupt_AI_asms]:
   "\<lbrace>\<lambda>s. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> cap)
         \<and> (\<forall>cap \<in> set caps. is_cnode_cap cap \<longrightarrow>
                 (\<forall>r \<in> cte_refs cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s))
@@ -39,14 +47,11 @@ lemma (* decode_irq_control_valid *)[Interrupt_AI_asms]:
                    whenE_def arch_check_irq_def
                    arch_decode_irq_control_invocation_def
                  split del: if_split cong: if_cong)
-  apply (rule hoare_pre)
-   apply (wp ensure_empty_stronger | simp add: cte_wp_at_eq_simp
-                 | wp_once hoare_drop_imps)+
-  apply (clarsimp simp: linorder_not_less word_le_nat_alt unat_ucast
-                        maxIRQ_def)
-  apply (cut_tac mod_le[where b = "2^10" and c = "2^16" and a = "unat (args ! 0)" ,simplified])
-  apply (cases caps, auto)
-  done
+  apply (wpsimp wp: ensure_empty_stronger simp: cte_wp_at_eq_simp arch_irq_control_inv_valid_def
+        | wp_once hoare_drop_imps)+
+  apply (clarsimp simp: linorder_not_less word_le_nat_alt unat_ucast maxIRQ_def)
+  apply (cases caps ; fastforce simp: cte_wp_at_eq_simp)
+done
 
 lemma get_irq_slot_different_ARCH[Interrupt_AI_asms]:
   "\<lbrace>\<lambda>s. valid_global_refs s \<and> ex_cte_cap_wp_to is_cnode_cap ptr s\<rbrace>
@@ -154,10 +159,18 @@ qed
 lemma (* invoke_irq_control_invs *) [Interrupt_AI_asms]:
   "\<lbrace>invs and irq_control_inv_valid i\<rbrace> invoke_irq_control i \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (cases i, simp_all)
-  apply (rule hoare_pre)
    apply (wp cap_insert_simple_invs
-             | simp add: IRQHandler_valid is_cap_simps  no_cap_to_obj_with_diff_IRQHandler_ARCH
-             | strengthen real_cte_tcb_valid)+
+          | simp add: IRQHandler_valid is_cap_simps  no_cap_to_obj_with_diff_IRQHandler_ARCH
+          | strengthen real_cte_tcb_valid)+
+   apply (clarsimp simp: cte_wp_at_caps_of_state
+                         is_simple_cap_def is_cap_simps is_pt_cap_def
+                         safe_parent_for_def
+                         ex_cte_cap_to_cnode_always_appropriate_strg)
+  apply (case_tac x2)
+  apply (simp add: arch_irq_control_inv_valid_def)
+  apply (wp cap_insert_simple_invs
+         | simp add: IRQHandler_valid is_cap_simps  no_cap_to_obj_with_diff_IRQHandler_ARCH
+         | strengthen real_cte_tcb_valid)+
   apply (clarsimp simp: cte_wp_at_caps_of_state
                         is_simple_cap_def is_cap_simps is_pt_cap_def
                         safe_parent_for_def
@@ -245,6 +258,16 @@ lemma (* handle_interrupt_invs *) [Interrupt_AI_asms]:
                 simp: get_irq_state_def
            | rule conjI)+
  done
+
+lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_asms]:
+  "\<lbrace>arch_irq_control_inv_valid i\<rbrace>
+       set_thread_state t st
+   \<lbrace>\<lambda>rv. arch_irq_control_inv_valid i\<rbrace>"
+  apply (simp add: arch_irq_control_inv_valid_def)
+  apply (cases i)
+   apply (clarsimp)
+   apply (wp ex_cte_cap_to_pres | simp add: cap_table_at_typ)+
+  done
 
 end
 

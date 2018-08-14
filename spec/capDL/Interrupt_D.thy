@@ -36,6 +36,19 @@ where
   "
 
 definition
+  arch_decode_irq_control_invocation :: "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow>
+      cdl_arch_irq_control_intent \<Rightarrow> cdl_irq_control_invocation except_monad"
+where
+  "arch_decode_irq_control_invocation target target_ref caps intent \<equiv> case intent of
+      ARMIrqControlIssueIrqHandlerIntent irq index depth \<Rightarrow>
+        doE
+          root \<leftarrow> throw_on_none $ get_index caps 0;
+          cnode_cap \<leftarrow> returnOk $ fst root;
+          dest_slot_cap_ref \<leftarrow> lookup_slot_for_cnode_op cnode_cap index (unat depth);
+          returnOk $ IssueIrqHandler irq target_ref dest_slot_cap_ref
+        odE \<sqinter> throw"
+
+definition
   decode_irq_control_invocation :: "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow>
       cdl_irq_control_intent \<Rightarrow> cdl_irq_control_invocation except_monad"
 where
@@ -49,8 +62,7 @@ where
           dest_slot_cap_ref \<leftarrow> lookup_slot_for_cnode_op cnode_cap index (unat depth);
           returnOk $ IssueIrqHandler irq target_ref dest_slot_cap_ref
         odE \<sqinter> throw
-    | IrqControlArchIrqControlIntent \<Rightarrow> throw
-  "
+    | ArchIrqControlIssueIrqHandlerIntent arch_intent \<Rightarrow> arch_decode_irq_control_invocation target target_ref caps arch_intent"
 
 definition
   decode_irq_handler_invocation :: "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow>
@@ -83,6 +95,15 @@ where
               | _                    \<Rightarrow> throw;
         returnOk $ SetIrqHandler irq endpoint_cap endpoint_cap_ref
       odE \<sqinter> throw
+  "
+
+definition
+  arch_invoke_irq_control :: "arch_cdl_irq_control_invocation \<Rightarrow> unit k_monad"
+where
+  "arch_invoke_irq_control params \<equiv> case params of
+      (* Create a new IRQ handler cap. *)
+      ARMIssueIrqHandler irq control_slot dest_slot trigger \<Rightarrow>
+        insert_cap_child (IrqHandlerCap irq) control_slot dest_slot
   "
 
 definition

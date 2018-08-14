@@ -25,8 +25,14 @@ This module defines the machine-specific interrupt handling routines.
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.API.Failures
+> import SEL4.API.Types
+> import SEL4.API.InvocationLabels
 > import SEL4.API.Invocation.ARM as ArchInv
-> import {-# SOURCE #-} SEL4.Object.Interrupt (setIRQState)
+> import SEL4.API.InvocationLabels.ARM as ArchLabels
+> import {-# SOURCE #-} SEL4.Object.Interrupt (setIRQState, isIRQActive)
+> import {-# SOURCE #-} SEL4.Kernel.CSpace
+> import {-# SOURCE #-} SEL4.Object.CNode
+> import qualified SEL4.Machine.Hardware.ARM as Arch
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > import SEL4.Object.VCPU.TARGET (vgicMaintenance)
 > import SEL4.Machine.Hardware.ARM.PLATFORM (irqVGICMaintenance, irqSMMU)
@@ -34,12 +40,31 @@ This module defines the machine-specific interrupt handling routines.
 
 \end{impdetails}
 
+
 > decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
->     KernelF SyscallError ArchInv.IRQControlInvocation
-> decodeIRQControlInvocation _ _ _ _ = throw IllegalOperation
+>         KernelF SyscallError ArchInv.IRQControlInvocation
+> decodeIRQControlInvocation label args srcSlot extraCaps =
+>     case (invocationType label, args, extraCaps) of
+>         (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler, irqW:triggerW:index:depth:_, cnode:_) -> do
+>             checkIRQ irqW
+>             let irq = toEnum (fromIntegral irqW) :: IRQ
+>             irqActive <- withoutFailure $ isIRQActive irq
+>             when irqActive $ throw RevokeFirst
+>
+>             destSlot <- lookupTargetSlot cnode
+>                 (CPtr index) (fromIntegral depth)
+>             ensureEmptySlot destSlot
+>             return $ ArchInv.IssueIRQHandler irq destSlot srcSlot (triggerW /= 0)
+>         (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler,_,_) -> throw TruncatedMessage
+>         _ -> throw IllegalOperation
 
 > performIRQControl :: ArchInv.IRQControlInvocation -> KernelP ()
-> performIRQControl _ = fail "performIRQControl: not defined"
+> performIRQControl (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger) = withoutPreemption $ do
+>     doMachineOp $ Arch.setIRQTrigger irq trigger
+>     -- do same thing as generic path in performIRQControl in Interrupt.lhs
+>     setIRQState IRQSignal (IRQ irq)
+>     cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot
+>     return ()
 
 > checkIRQ :: Word -> KernelF SyscallError ()
 > checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)

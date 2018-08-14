@@ -665,27 +665,29 @@ lemma sts_mcpriority_tcb_at_ct'[wp]:
 lemma sts_valid_inv'[wp]:
   "\<lbrace>valid_invocation' i\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_invocation' i\<rbrace>"
   apply (case_tac i, simp_all add: sts_valid_untyped_inv' sts_valid_arch_inv')
-        apply (wp | simp)+
-        defer
-    apply (rename_tac cnode_invocation)
-    apply (case_tac cnode_invocation, simp_all add: cte_wp_at_ctes_of)
-          apply (wp | simp)+
-   apply (rename_tac irqcontrol_invocation)
-   apply (case_tac irqcontrol_invocation, simp_all)
-   apply (wp | simp add: irq_issued'_def)+
-  apply (rename_tac irqhandler_invocation)
-  apply (case_tac irqhandler_invocation, simp_all)
-  apply (wp hoare_vcg_ex_lift ex_cte_cap_to'_pres | simp)+
-     apply (rename_tac tcbinvocation)
-     apply (case_tac tcbinvocation,
-            simp_all add: setThreadState_tcb',
-            auto  intro!: hoare_vcg_conj_lift hoare_vcg_disj_lift
-               simp only: imp_conv_disj simp_thms pred_conj_def,
-            auto  intro!: hoare_vcg_prop
-                          sts_cap_to' sts_cte_cap_to'
-                          setThreadState_typ_ats
-                   split: option.splits)[1]
-  apply (wp sts_bound_tcb_at' hoare_vcg_all_lift hoare_vcg_const_imp_lift)+
+         apply (wp | simp)+
+     defer
+     apply (rename_tac cnode_invocation)
+     apply (case_tac cnode_invocation, simp_all add: cte_wp_at_ctes_of)
+           apply (wp | simp)+
+    apply (rename_tac irqcontrol_invocation)
+    apply (case_tac irqcontrol_invocation, simp_all)
+     apply (rename_tac arch_irqhandler_issue)
+     apply (case_tac arch_irqhandler_issue)
+     apply (wp | simp add: irq_issued'_def)+
+   apply (rename_tac irqhandler_invocation)
+   apply (case_tac irqhandler_invocation, simp_all)
+     apply (wp hoare_vcg_ex_lift ex_cte_cap_to'_pres | simp)+
+  apply (rename_tac tcbinvocation)
+  apply (case_tac tcbinvocation,
+      simp_all add: setThreadState_tcb',
+      auto  intro!: hoare_vcg_conj_lift hoare_vcg_disj_lift
+      simp only: imp_conv_disj simp_thms pred_conj_def,
+      auto  intro!: hoare_vcg_prop
+      sts_cap_to' sts_cte_cap_to'
+      setThreadState_typ_ats
+      split: option.splits)[1]
+    apply (wp sts_bound_tcb_at' hoare_vcg_all_lift hoare_vcg_const_imp_lift)+
   done
 
 (* FIXME: move to TCB *)

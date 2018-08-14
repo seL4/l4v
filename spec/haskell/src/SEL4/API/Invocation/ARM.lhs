@@ -24,7 +24,7 @@ This module makes use of the GHC extension allowing data types with no construct
 
 > import Prelude hiding (Word)
 > import SEL4.Machine
-> import SEL4.Machine.Hardware.ARM hiding (PAddr)
+> import SEL4.Machine.Hardware.ARM hiding (PAddr, IRQ)
 > import SEL4.Object.Structures
 > import SEL4.API.InvocationLabels
 > import SEL4.API.InvocationLabels.ARM
@@ -178,10 +178,15 @@ The ARM platform presently does not support an IO space invocations.
 
 \subsection{Interrupt Control}
 
-The ARM platform presently does not require any additional interrupt control calls.
+The ARM platform requires an interrupt control call to record whether the interrupt was edge or level-triggered.
 
-> data IRQControlInvocation = ARMNoArchIRQControl
->     deriving Show
+> data IRQControlInvocation
+>     = IssueIRQHandler {
+>         issueHandlerIRQ :: IRQ,
+>         issueHandlerSlot,
+>         issueHandlerControllerSlot :: PPtr CTE,
+>         issueHandlerTrigger :: Bool }
+>     deriving (Show, Eq)
 
 \subsection{Additional Register Subsets}
 

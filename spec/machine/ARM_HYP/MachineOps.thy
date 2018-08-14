@@ -65,6 +65,14 @@ where
     gets getKernelDevices_val
   od"
 
+consts'
+  setIRQTrigger_impl :: "irq \<Rightarrow> bool \<Rightarrow> unit machine_rest_monad"
+
+definition
+  setIRQTrigger :: "irq \<Rightarrow> bool \<Rightarrow> unit machine_monad"
+where
+  "setIRQTrigger irq trigger \<equiv> machine_op_lift (setIRQTrigger_impl irq trigger)"
+
 definition
   loadWord :: "machine_word \<Rightarrow> machine_word machine_monad"
   where "loadWord p \<equiv> do m \<leftarrow> gets underlying_memory;
@@ -278,6 +286,9 @@ definition
   initIRQController :: "unit machine_monad"
 where "initIRQController \<equiv> machine_op_lift initIRQController_impl"
 
+definition
+  IRQ :: "irq \<Rightarrow> irq"
+where "IRQ \<equiv> id"
 
 consts'
   writeContextID_impl :: "unit machine_rest_monad"

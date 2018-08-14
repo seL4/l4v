@@ -100,10 +100,6 @@ where
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma data_to_bool_toBool[simp]:
-  "data_to_bool dat = toBool dat"
-  by (auto simp: data_to_bool_def toBool_def)
-
 lemma decode_irq_handler_corres:
   "\<lbrakk> list_all2 cap_relation (map fst caps) (map fst caps');
     list_all2 (\<lambda>p pa. snd pa = cte_map (snd p)) caps caps' \<rbrakk> \<Longrightarrow>

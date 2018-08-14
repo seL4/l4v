@@ -461,11 +461,6 @@ definition
   else liftME ArchIRQControl $ arch_decode_irq_control_invocation label args src_slot cps)"
 
 definition
-  data_to_bool :: "data \<Rightarrow> bool"
-where
-  "data_to_bool d \<equiv> d \<noteq> 0"
-
-definition
   decode_irq_handler_invocation :: "data \<Rightarrow> irq \<Rightarrow> (cap \<times> cslot_ptr) list
                                      \<Rightarrow> (irq_handler_invocation,'z::state_ext) se_monad" where
  "decode_irq_handler_invocation label irq cps \<equiv>

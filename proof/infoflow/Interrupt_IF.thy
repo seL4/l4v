@@ -45,26 +45,45 @@ lemma invoke_irq_handler_reads_respects_f:
   apply(auto simp: authorised_irq_hdl_inv_def)[1]
   done
 
-lemma invoke_irq_control_reads_respects:
-  "reads_respects aag l (K (authorised_irq_ctl_inv aag irq_ctl_inv)) (invoke_irq_control irq_ctl_inv)"
-  apply(case_tac irq_ctl_inv)
-   apply(wp cap_insert_reads_respects set_irq_state_reads_respects | simp)+
-   apply(clarsimp simp: authorised_irq_ctl_inv_def)
-  apply(simp)
-  apply(unfold arch_invoke_irq_control_def)
-  apply(wp)
+lemma arch_invoke_irq_control_reads_respects:
+  "reads_respects aag l (K (arch_authorised_irq_ctl_inv aag irq_ctl_inv)) (arch_invoke_irq_control irq_ctl_inv)"
+  apply (case_tac irq_ctl_inv)
+  apply (simp add: setIRQTrigger_def)
+  apply (wp cap_insert_reads_respects set_irq_state_reads_respects dmo_mol_reads_respects | simp)+
+  apply (clarsimp simp: arch_authorised_irq_ctl_inv_def)
   done
 
+lemma invoke_irq_control_reads_respects:
+  "reads_respects aag l (K (authorised_irq_ctl_inv aag irq_ctl_inv)) (invoke_irq_control irq_ctl_inv)"
+  apply (case_tac irq_ctl_inv)
+   apply (wp cap_insert_reads_respects set_irq_state_reads_respects | simp)+
+   apply (clarsimp simp: authorised_irq_ctl_inv_def)
+  apply (simp add: authorised_irq_ctl_inv_def)
+  apply (rule arch_invoke_irq_control_reads_respects[simplified])
+  done
 
 subsection "globals equiv"
 
 crunch valid_ko_at_arm[wp]:  set_irq_state "valid_ko_at_arm"
 
-lemma invoke_irq_control_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_global_objs \<rbrace> invoke_irq_control a \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+lemma arch_invoke_irq_control_globals_equiv:
+  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_global_objs \<rbrace> arch_invoke_irq_control a
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct a)
-   apply (wp set_irq_state_valid_ko_at_arm set_irq_state_globals_equiv cap_insert_globals_equiv'' set_irq_state_valid_global_objs | simp add: arch_invoke_irq_control_def)+
-done
+  apply (simp add: setIRQTrigger_def)
+  apply (wp set_irq_state_valid_ko_at_arm set_irq_state_globals_equiv cap_insert_globals_equiv''
+            set_irq_state_valid_global_objs dmo_mol_globals_equiv
+        | simp)+
+  done
+
+lemma invoke_irq_control_globals_equiv:
+  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_global_objs \<rbrace> invoke_irq_control a
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  apply (induct a)
+   apply (wp set_irq_state_valid_ko_at_arm set_irq_state_globals_equiv cap_insert_globals_equiv''
+             set_irq_state_valid_global_objs arch_invoke_irq_control_globals_equiv
+          | simp)+
+  done
 
 crunch valid_ko_at_arm[wp]: cap_delete_one "valid_ko_at_arm" (simp: unless_def)
 crunch valid_global_objs[wp]: cap_delete_one "valid_global_objs" (wp: dxo_wp_weak simp: unless_def ignore: empty_slot_ext)

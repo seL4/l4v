@@ -2687,19 +2687,32 @@ lemma new_irq_handler_caps_are_intra_label:
 crunch silc_inv[wp]: set_irq_state "silc_inv aag st"
   (wp: silc_inv_triv)
 
+lemma arch_invoke_irq_control_silc_inv:
+  "\<lbrace>silc_inv aag st and pas_refined aag and arch_irq_control_inv_valid arch_irq_cinv and
+         K (arch_authorised_irq_ctl_inv aag arch_irq_cinv) \<rbrace>
+      arch_invoke_irq_control arch_irq_cinv
+   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  unfolding arch_authorised_irq_ctl_inv_def
+  apply(rule hoare_gen_asm)
+  apply(case_tac arch_irq_cinv)
+  apply(wp cap_insert_silc_inv'' hoare_vcg_ex_lift slots_holding_overlapping_caps_lift
+        | simp add: authorised_irq_ctl_inv_def arch_irq_control_inv_valid_def)+
+  apply(fastforce dest: new_irq_handler_caps_are_intra_label)
+  done
+
 lemma invoke_irq_control_silc_inv:
   "\<lbrace>silc_inv aag st and pas_refined aag and irq_control_inv_valid blah and
          K (authorised_irq_ctl_inv aag blah) \<rbrace>
       invoke_irq_control blah
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  apply(rule hoare_gen_asm)
+  unfolding authorised_irq_ctl_inv_def
   apply(case_tac blah)
+   apply(rule hoare_gen_asm)
    apply(wp cap_insert_silc_inv'' hoare_vcg_ex_lift slots_holding_overlapping_caps_lift
-        | simp add: authorised_irq_ctl_inv_def)+
+         | simp add: authorised_irq_ctl_inv_def)+
    apply(fastforce dest: new_irq_handler_caps_are_intra_label)
-  apply simp
+  apply (simp, rule arch_invoke_irq_control_silc_inv[simplified])
   done
-
 
 crunch silc_inv[wp]: receive_signal "silc_inv aag st"
 

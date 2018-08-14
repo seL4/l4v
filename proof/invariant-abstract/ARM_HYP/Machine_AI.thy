@@ -521,6 +521,9 @@ context notes no_irq[wp] begin
 lemma no_irq_ackInterrupt: "no_irq (ackInterrupt irq)"
   by (wp | clarsimp simp: no_irq_def ackInterrupt_def)+
 
+lemma no_irq_setIRQTrigger: "no_irq (setIRQTrigger irq bool)"
+  by (wp | clarsimp simp: no_irq_def setIRQTrigger_def)+
+
 lemma no_irq_loadWord: "no_irq (loadWord x)"
   apply (clarsimp simp: no_irq_def)
   apply (rule loadWord_inv)

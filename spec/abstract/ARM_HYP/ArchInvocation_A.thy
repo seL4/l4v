@@ -85,8 +85,8 @@ datatype arch_copy_register_sets = ARMNoExtraRegisters
 
 definition "ArchDefaultExtraRegisters \<equiv> ARMNoExtraRegisters"
 
-\<comment> \<open>There are no additional interrupt control operations on ARM.\<close>
-typedecl arch_irq_control_invocation
+datatype arch_irq_control_invocation =
+    ArchIRQControlIssue irq cslot_ptr cslot_ptr bool
 
 end
 

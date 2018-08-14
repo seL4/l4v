@@ -2000,3 +2000,13 @@ case \x of cap@(FrameCap {}) -> cap@(PageTableCap {}) -> cap@(ASIDControlCap {})
   else if isASIDPoolCap cap
   then ->4
   else undefined
+
+case \x of (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler, irqW:triggerW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler,_,_) -> _ ->  ---> let (label, args, extraCaps) = \x in
+    case (label, args, extraCaps) of
+      (ArchInvocationLabel ARMIRQIssueIRQHandler,
+        irqW#triggerW#index#depth#_, cnode#_) => ->1
+    | (ArchInvocationLabel ARMIRQIssueIRQHandler, _, _) => ->2
+    | _ => ->3
+
+case \x of (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger) ->  ---> case \x of
+  IssueIRQHandler irq destSlot srcSlot trigger => ->1

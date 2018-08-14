@@ -411,15 +411,23 @@ lemma transform_intent_thread_cap_None:
 
 lemma transform_intent_irq_control_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.IRQControlCap\<rbrakk>
-      \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
+      \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>,
+          \<lbrace>\<lambda>x. (=) s\<rbrace>"
   including no_pre
   apply (clarsimp simp:Decode_A.decode_invocation_def)
-    apply wp
-  apply (clarsimp simp:decode_irq_control_invocation_def arch_decode_irq_control_invocation_def split del:if_splits)
+  apply wp
+  apply (clarsimp simp:decode_irq_control_invocation_def arch_decode_irq_control_invocation_def
+                  split del:if_splits)
   apply (case_tac "invocation_type label")
-    apply (clarsimp, wp)+
-    apply (clarsimp simp:transform_intent_issue_irq_handler_def transform_intent_def split:list.split_asm split del:if_splits,wp+)
-    apply (clarsimp simp:arch_decode_irq_control_invocation_def, wp)+
+                      apply (clarsimp, wp)+
+       apply (clarsimp simp:transform_intent_issue_irq_handler_def transform_intent_def
+                       split:list.split_asm split del:if_splits,wp+)
+      apply (clarsimp, wp)+
+  apply (rename_tac arch_label)
+  apply (case_tac "arch_label")
+                  apply (clarsimp, wp)+
+  apply (clarsimp simp:arch_transform_intent_issue_irq_handler_def transform_intent_def
+                  split:list.split_asm split del:if_splits,wp+)
   done
 
 lemma transform_intent_irq_handler_None:
@@ -730,18 +738,31 @@ lemma perform_invocation_corres:
         apply (rule hoare_triv[of \<top>], rule hoare_post_taut)+
         apply clarsimp+
 
-(* invoke_irq *)
+(* invoke_irq_control *)
+    subgoal for irq_control_invocation
     apply (simp add:liftE_def bindE_def)
-    apply (rename_tac irq_control_invocation)
     apply (case_tac irq_control_invocation)
-    apply (rule corres_guard_imp)
-    apply (rule corres_split[where r'=dc])
-      apply (rule_tac F = "\<exists>x. rv' = Inr x" in corres_gen_asm2)
-      apply (rule corres_trivial)
-      apply (clarsimp simp:lift_def returnOk_def)
-      apply (rule dcorres_invoke_irq_control)
+     (* generic *)
+     apply (rule corres_guard_imp)
+       apply (rule corres_split[where r'=dc])
+          apply (rule_tac F = "\<exists>x. rv' = Inr x" in corres_gen_asm2)
+          apply (rule corres_trivial)
+          apply (clarsimp simp:lift_def returnOk_def)
+         apply (rule dcorres_invoke_irq_control)
         apply (rule hoare_triv[of \<top>], rule hoare_post_taut)+
-    apply ((wp|simp add: liftE_def)+)[4]
+       apply ((wp|simp add: liftE_def)+)
+    (* arch *)
+    apply (rename_tac arch_label)
+    apply (case_tac arch_label)
+     apply (rule corres_guard_imp)
+       apply (rule corres_split[where r'=dc])
+          apply (rule_tac F = "\<exists>x. rv' = Inr x" in corres_gen_asm2)
+          apply (rule corres_trivial)
+          apply (clarsimp simp:lift_def returnOk_def)
+         apply (rule dcorres_arch_invoke_irq_control[simplified])
+        apply (rule hoare_triv[of \<top>], rule hoare_post_taut)
+       apply ((wp|simp add: liftE_def)+)
+   done
 
 (* invoke_irq_handler *)
     apply (clarsimp simp:liftE_bindE,simp add:liftE_def returnOk_def)

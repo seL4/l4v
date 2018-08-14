@@ -75,13 +75,14 @@ crunch irq_state_of_state[wp]: retype_region,create_cap,delete_objects "\<lambda
     simp: freeMemory_def storeWord_def clearMemory_def machine_op_lift_def machine_rest_lift_def mapM_x_defsym)
 
 crunch irq_state_of_state[wp]: invoke_irq_control "\<lambda>s. P (irq_state_of_state s)"
+  (wp: dmo_wp crunch_wps
+   simp: crunch_simps setIRQTrigger_def machine_op_lift_def machine_rest_lift_def)
 
 crunch irq_state_of_state[wp]: invoke_irq_handler "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp simp: maskInterrupt_def)
 
 crunch irq_state'[wp]: cleanCacheRange_PoU "\<lambda> s. P (irq_state s)"
   (wp: crunch_wps ignore: ignore_failure)
-
 
 crunch irq_state_of_state[wp]: arch_perform_invocation "\<lambda>(s::det_state). P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp simp: set_current_pd_def invalidateLocalTLB_ASID_def invalidateLocalTLB_VAASID_def cleanByVA_PoU_def do_flush_def cache_machine_op_defs do_flush_defs wp: crunch_wps simp: crunch_simps ignore: ignore_failure)

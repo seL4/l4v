@@ -17,21 +17,41 @@ begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
+  arch_authorised_irq_ctl_inv :: "'a PAS \<Rightarrow> Invocations_A.arch_irq_control_invocation \<Rightarrow> bool"
+where
+  "arch_authorised_irq_ctl_inv aag cinv \<equiv>
+     case cinv of
+         (ArchIRQControlIssue word x1 x2 trigger) \<Rightarrow>
+                                 is_subject aag (fst x1) \<and> is_subject aag (fst x2) \<and>
+                                 (pasSubject aag, Control, pasIRQAbs aag word) \<in> pasPolicy aag"
+
+definition
   authorised_irq_ctl_inv :: "'a PAS \<Rightarrow> Invocations_A.irq_control_invocation \<Rightarrow> bool"
 where
   "authorised_irq_ctl_inv aag cinv \<equiv>
      case cinv of
          IRQControl word x1 x2 \<Rightarrow> is_subject aag (fst x1) \<and> is_subject aag (fst x2) \<and>
                                   (pasSubject aag, Control, pasIRQAbs aag word) \<in> pasPolicy aag
-        | _ \<Rightarrow> True"
+        | ArchIRQControl acinv \<Rightarrow> arch_authorised_irq_ctl_inv aag acinv"
+
+lemma arch_invoke_irq_control_pas_refined:
+  "\<lbrace>pas_refined aag and K (arch_authorised_irq_ctl_inv aag irq_ctl_inv)\<rbrace>
+     arch_invoke_irq_control irq_ctl_inv
+   \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
+  apply (cases irq_ctl_inv; simp)
+  apply (wpsimp wp: cap_insert_pas_refined)
+  apply (clarsimp simp: clas_no_asid cap_links_irq_def arch_authorised_irq_ctl_inv_def aag_cap_auth_def)
+  done
 
 lemma invoke_irq_control_pas_refined:
   "\<lbrace>pas_refined aag and K (authorised_irq_ctl_inv aag irq_ctl_inv)\<rbrace>
      invoke_irq_control irq_ctl_inv
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply (cases irq_ctl_inv, simp_all add: arch_invoke_irq_control_def)
+  apply (cases irq_ctl_inv; simp)
   apply (wpsimp wp: cap_insert_pas_refined)
   apply (clarsimp simp: clas_no_asid cap_links_irq_def authorised_irq_ctl_inv_def aag_cap_auth_def)
+  apply (simp add: authorised_irq_ctl_inv_def)
+  apply (rule arch_invoke_irq_control_pas_refined[simplified])
   done
 
 definition
@@ -57,8 +77,17 @@ lemma invoke_irq_control_respects:
      invoke_irq_control irq_ctl_inv
    \<lbrace>\<lambda>y. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (cases irq_ctl_inv, simp_all add: arch_invoke_irq_control_def authorised_irq_ctl_inv_def)
-  apply (wp cap_insert_integrity_autarch aag_Control_into_owns_irq | simp | blast)+
+  apply (cases irq_ctl_inv)
+  subgoal \<comment>\<open>generic case\<close>
+    apply (simp add: authorised_irq_ctl_inv_def)
+    apply (wp cap_insert_integrity_autarch aag_Control_into_owns_irq | simp | blast)+
+    done
+  subgoal for arch_irq_ctl_inv \<comment>\<open>arch case\<close>
+    apply (simp add: arch_authorised_irq_ctl_inv_def authorised_irq_ctl_inv_def)
+    apply (case_tac arch_irq_ctl_inv, clarsimp simp add: setIRQTrigger_def)
+    apply (wp cap_insert_integrity_autarch aag_Control_into_owns_irq dmo_mol_respects do_machine_op_pas_refined | simp)+
+    apply auto
+    done
   done
 
 lemma integrity_irq_masks [iff]:
@@ -76,25 +105,24 @@ lemma invoke_irq_handler_respects:
   apply (wp cap_insert_integrity_autarch get_irq_slot_owns dmo_wp | simp add: maskInterrupt_def )+
   done
 
-
-lemma decode_irq_control_invocation_authorised [wp]:
+lemma decode_irq_control_invocation_authorised[wp]:
   "\<lbrace>pas_refined aag and K (is_subject aag (fst slot) \<and> (\<forall>cap \<in> set caps. pas_cap_cur_auth aag cap) \<and>
                          (args \<noteq> [] \<longrightarrow> (pasSubject aag, Control, pasIRQAbs aag (ucast (args ! 0))) \<in> pasPolicy aag))\<rbrace>
   decode_irq_control_invocation info_label args slot caps
   \<lbrace>\<lambda>x s. authorised_irq_ctl_inv aag x\<rbrace>, -"
-  unfolding decode_irq_control_invocation_def authorised_irq_ctl_inv_def arch_check_irq_def
+  unfolding decode_irq_control_invocation_def arch_decode_irq_control_invocation_def authorised_irq_ctl_inv_def arch_authorised_irq_ctl_inv_def arch_check_irq_def
   apply (rule hoare_gen_asmE)
   apply (rule hoare_pre)
    apply (simp add: Let_def split del: if_split cong: if_cong)
-   apply (wp whenE_throwError_wp hoare_vcg_imp_lift hoare_drop_imps
+   apply (wp whenE_throwError_wp hoare_vcg_imp_lift hoare_drop_imps)+
+        apply (wp whenE_throwError_wp hoare_vcg_imp_lift hoare_drop_imps
               | strengthen  aag_Control_owns_strg
               | simp add: o_def del: hoare_True_E_R)+
   apply (cases args, simp_all)
   apply (cases caps, simp_all)
-    apply (simp add: ucast_mask_drop)
-  apply (auto simp: is_cap_simps cap_auth_conferred_def
-                 pas_refined_wellformed
-                 pas_refined_all_auth_is_owns aag_cap_auth_def)
+  apply (simp add: ucast_mask_drop)
+  apply (auto simp: is_cap_simps cap_auth_conferred_def pas_refined_wellformed
+                    pas_refined_all_auth_is_owns aag_cap_auth_def)
   done
 
 lemma decode_irq_handler_invocation_authorised [wp]:

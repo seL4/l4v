@@ -1487,7 +1487,6 @@ lemma invokeIRQControl_valid_duplicates'[wp]:
   apply (simp add:performIRQControl_def )
   apply (rule hoare_pre)
   apply (wp|wpc | simp add:ARM_HYP_H.performIRQControl_def)+
-  apply fastforce
  done
 
 lemma invokeIRQHandler_valid_duplicates'[wp]:

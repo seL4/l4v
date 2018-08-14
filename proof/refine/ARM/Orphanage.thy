@@ -2100,6 +2100,8 @@ lemma invokeIRQControl_no_orphans [wp]:
    performIRQControl i
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (cases i, simp_all add: performIRQControl_def ARM_H.performIRQControl_def)
+  apply (rename_tac archinv)
+  apply (case_tac archinv)
   apply (wp | clarsimp)+
   done
 
