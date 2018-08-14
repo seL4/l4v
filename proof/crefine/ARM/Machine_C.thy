@@ -232,6 +232,11 @@ assumes ackInterrupt_ccorres:
            (doMachineOp (ackInterrupt irq))
            (Call ackInterrupt_'proc)"
 
+assumes setIRQTrigger_ccorres:
+  "ccorres dc xfdc \<top> (UNIV \<inter> {s. irq_' s = ucast irq} \<inter> {s. trigger_' s = (from_bool trigger)}) hs
+          (doMachineOp (setIRQTrigger irq trigger))
+          (Call setIRQTrigger_'proc )"
+
 context kernel_m begin
 
 lemma index_xf_for_sequence:

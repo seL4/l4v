@@ -171,6 +171,9 @@ The following functions define the ARM-specific interface between the kernel and
 >     cbptr <- ask
 >     liftIO $ Platform.initIRQController cbptr
 
+> setIRQTrigger :: IRQ -> Bool -> MachineMonad ()
+> setIRQTrigger irq trigger = error "ARM machine callback unimplemented"
+
 > resetTimer :: MachineMonad ()
 > resetTimer = do
 >     cbptr <- ask

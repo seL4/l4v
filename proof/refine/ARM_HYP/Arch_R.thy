@@ -2157,7 +2157,7 @@ lemma arch_decodeInvocation_wf[wp]:
                arch_kernel_object.splits)
             apply ((wp whenE_throwError_wp isFinalCapability_inv
                     | wpc | simp add: valid_arch_inv'_def valid_pti'_def if_apply_def2
-                    | rule hoare_drop_imp)+)[18]
+                    | rule hoare_drop_imp)+)[19]
 
    apply (clarsimp simp: linorder_not_le isCap_simps
                          cte_wp_at_ctes_of diminished_arch_update')

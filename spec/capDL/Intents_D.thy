@@ -134,11 +134,15 @@ datatype cdl_irq_handler_intent =
     (* Clear: (target) *)
  |  IrqHandlerClearIntent
 
+datatype cdl_arch_irq_control_intent =
+    (* ArchIssueIrqHandler: (target), irq, (root), index, depth *)
+    ARMIrqControlIssueIrqHandlerIntent "10 word" word32 word32
+
 datatype cdl_irq_control_intent =
     (* IssueIrqHandler: (target), irq, (root), index, depth *)
     IrqControlIssueIrqHandlerIntent "10 word" word32 word32
     (* InterruptControl *)
- |  IrqControlArchIrqControlIntent
+ |  ArchIrqControlIssueIrqHandlerIntent cdl_arch_irq_control_intent
 
 datatype cdl_page_table_intent =
     (* Map: (target), (pd), vaddr, attr *)

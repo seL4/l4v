@@ -39,8 +39,12 @@ datatype cdl_tcb_invocation =
   | NotificationControl cdl_object_id "cdl_object_id option"
   | SetTLSBase cdl_object_id
 
+datatype arch_cdl_irq_control_invocation =
+    ARMIssueIrqHandler cdl_irq cdl_cap_ref cdl_cap_ref bool
+
 datatype cdl_irq_control_invocation =
     IssueIrqHandler cdl_irq cdl_cap_ref cdl_cap_ref
+  | ArchIssueIrqHandler arch_cdl_irq_control_invocation
 
 datatype cdl_irq_handler_invocation =
     AckIrq cdl_irq

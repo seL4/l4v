@@ -415,6 +415,9 @@ lemma decode_tcb_corres:
 
   (* ARMASIDPoolAssign *)
   apply (clarsimp simp: transform_intent_def)
+
+  (* ARMIRQIssueIRQHandler *)
+  apply (clarsimp simp: transform_intent_def)
   done
 
 (* If the argument to "as_user" is idempotent, then so is the call. *)

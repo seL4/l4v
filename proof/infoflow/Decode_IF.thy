@@ -286,6 +286,29 @@ lemma is_irq_active_rev:
   apply (wp get_irq_state_rev)
   done
 
+lemma arch_decode_irq_control_invocation_rev:
+  "reads_equiv_valid_inv A aag (pas_refined aag and
+   K (is_subject aag (fst slot) \<and>
+      (\<forall>cap\<in>set caps. pas_cap_cur_auth aag cap) \<and>
+      (args \<noteq> [] \<longrightarrow>
+       (pasSubject aag, Control, pasIRQAbs aag (ucast (args ! 0)))
+       \<in> pasPolicy aag))) (arch_decode_irq_control_invocation label args slot caps)"
+  unfolding arch_decode_irq_control_invocation_def arch_check_irq_def
+  apply (wp ensure_empty_rev lookup_slot_for_cnode_op_rev
+            is_irq_active_rev whenE_inv
+        | wp_once hoare_drop_imps
+        | simp add: Let_def)+
+  apply safe
+       apply simp+
+    apply(blast intro: aag_Control_into_owns_irq )
+   apply(drule_tac x="caps ! 0" in bspec)
+    apply(fastforce intro: bang_0_in_set)
+   apply(drule (1) is_cnode_into_is_subject)
+   apply(erule (1) impE)
+   apply(blast dest: prop_of_obj_ref_of_cnode_cap)
+  apply(fastforce dest: is_cnode_into_is_subject intro: bang_0_in_set)
+  done
+
 lemma decode_irq_control_invocation_rev:
   "reads_equiv_valid_inv A aag (pas_refined aag and
    K (is_subject aag (fst slot) \<and>
@@ -295,9 +318,9 @@ lemma decode_irq_control_invocation_rev:
        \<in> pasPolicy aag))) (decode_irq_control_invocation label args slot caps)"
   unfolding decode_irq_control_invocation_def arch_check_irq_def
   apply (wp ensure_empty_rev lookup_slot_for_cnode_op_rev
-            is_irq_active_rev whenE_inv
-        | wp_once hoare_drop_imps
-        | simp add: Let_def arch_decode_irq_control_invocation_def)+
+            is_irq_active_rev whenE_inv arch_decode_irq_control_invocation_rev
+         | wp_once hoare_drop_imps
+         | simp add: Let_def)+
   apply safe
        apply simp+
     apply(blast intro: aag_Control_into_owns_irq )

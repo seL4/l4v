@@ -183,12 +183,21 @@ lemma cap_delete_irq_masks:
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>,\<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   by (simp add: cap_delete_def) (wpsimp wp: rec_del_irq_masks)
 
+lemma arch_invoke_irq_control_irq_masks:
+  "\<lbrace>domain_sep_inv False st and arch_irq_control_inv_valid invok\<rbrace>
+   arch_invoke_irq_control invok
+   \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
+  apply(case_tac invok)
+  apply(clarsimp simp: arch_irq_control_inv_valid_def domain_sep_inv_def valid_def)
+  done
+
 lemma invoke_irq_control_irq_masks:
   "\<lbrace>domain_sep_inv False st and irq_control_inv_valid invok\<rbrace>
    invoke_irq_control invok
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   apply(case_tac invok)
-   apply(clarsimp simp: irq_control_inv_valid_def domain_sep_inv_def valid_def)+
+   apply(clarsimp simp: irq_control_inv_valid_def domain_sep_inv_def valid_def)
+  apply (clarsimp simp: arch_invoke_irq_control_irq_masks)
   done
 
 crunch irq_masks[wp]: arch_perform_invocation, bind_notification "\<lambda>s. P (irq_masks_of_state s)"

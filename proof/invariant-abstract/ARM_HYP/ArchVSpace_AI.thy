@@ -670,6 +670,8 @@ lemmas cleanCaches_PoU_irq_masks = no_irq[OF no_irq_cleanCaches_PoU]
 
 lemmas ackInterrupt_irq_masks = no_irq[OF no_irq_ackInterrupt]
 
+lemmas setIRQTrigger_irq_masks = no_irq[OF no_irq_setIRQTrigger]
+
 lemma invalidate_I_PoU_underlying_memory[wp]:
   "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace>
    invalidate_I_PoU
@@ -2736,6 +2738,18 @@ lemma vcpu_switch_invs[wp]:
    apply (wpsimp simp: cur_vcpu_at_def | strengthen invs_current_vcpu_update')+
    apply (clarsimp simp: invs_def valid_state_def valid_arch_state_def obj_at_conj_distrib)
   apply (wpsimp simp: cur_vcpu_at_def | strengthen invs_current_vcpu_update')+
+  done
+
+crunch device_state_inv[wp]: setIRQTrigger "\<lambda>ms. P (device_state ms)"
+
+lemma dmo_setIRQTrigger_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op (setIRQTrigger irq b) \<lbrace>\<lambda>y. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: setIRQTrigger_def machine_op_lift_def
+                           machine_rest_lift_def split_def | wp)+)[3]
+  apply(erule (1) use_valid[OF _ setIRQTrigger_irq_masks])
   done
 
 lemma svr_invs [wp]:

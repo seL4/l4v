@@ -13,7 +13,7 @@ imports "../RetypeDecls_H" "../CNode_H" "../InterruptDecls_H" ArchInterruptDecls
 begin
 context Arch begin global_naming ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/Object/Interrupt/ARM.lhs Arch= CONTEXT ARM_HYP_H bodies_only ArchInv=ArchRetypeDecls_H NOT initInterruptController
+#INCLUDE_HASKELL SEL4/Object/Interrupt/ARM.lhs Arch= CONTEXT ARM_HYP_H bodies_only ArchInv= NOT initInterruptController
 
 definition initInterruptController :: "unit kernel"
   where "initInterruptController \<equiv> (do

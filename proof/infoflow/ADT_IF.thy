@@ -3090,10 +3090,16 @@ lemma set_domain_irq_state_inv_triv[wp]:
   apply (wp irq_state_inv_triv)
   done
 
+lemma arch_invoke_irq_control_noErr[wp]:
+  "\<lbrace>\<top>\<rbrace> arch_invoke_irq_control a -,\<lbrace>Q\<rbrace>"
+  apply (cases a)
+  apply (wp | simp)+
+  done
+
 lemma invoke_irq_control_noErr[wp]:
   "\<lbrace>\<top>\<rbrace> invoke_irq_control a -,\<lbrace>Q\<rbrace>"
   apply (cases a)
-  apply (wp | simp add: arch_invoke_irq_control_def)+
+  apply (wp | simp add: arch_invoke_irq_control_noErr)+
   done
 
 lemma arch_perform_invocation_noErr[wp]:

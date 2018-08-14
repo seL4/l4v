@@ -902,13 +902,28 @@ lemma invoke_control_domain_sep_inv:
     invoke_irq_control blah
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   including no_pre
-  apply(case_tac blah)
-    apply(wp cap_insert_domain_sep_inv' | simp )+
-   apply(case_tac irqs)
-    apply(simp add: set_irq_state_def, wp, simp)
-    apply(fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def)
-   apply(fastforce simp: valid_def domain_sep_inv_def)
-  apply(wp | simp)+
+  apply (case_tac blah)
+   apply (case_tac irqs)
+    apply (wp cap_insert_domain_sep_inv' | simp )+
+    apply (simp add: set_irq_state_def, wp, simp)
+    apply (fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def)
+   apply (fastforce simp: valid_def domain_sep_inv_def)
+  apply (wp | simp)+
+  apply (case_tac x2)
+  apply (simp)
+  apply (rule hoare_seq_ext[where B="\<lambda>_. domain_sep_inv irqs st and irq_control_inv_valid blah"])
+   apply simp
+   apply (case_tac irqs)
+    prefer 2
+    apply (fastforce simp: valid_def domain_sep_inv_def arch_irq_control_inv_valid_def)
+   apply (wp cap_insert_domain_sep_inv' | simp )+
+   apply (simp add: set_irq_state_def, wp, simp)
+   apply (fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def)
+  apply wpsimp
+  apply (simp add: arch_irq_control_inv_valid_def)
+  apply (rule hoare_pre)
+   apply (wpsimp wp: do_machine_op_domain_sep_inv)
+  apply clarsimp
   done
 
 

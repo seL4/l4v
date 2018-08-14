@@ -230,6 +230,15 @@ where
     | _ \<Rightarrow> Nothing"
 
 definition
+  arch_transform_intent_issue_irq_handler :: "word32 list \<Rightarrow> cdl_irq_control_intent option"
+where
+  "arch_transform_intent_issue_irq_handler args \<equiv>
+   case args of
+      irqW#trigger#index#depth#_ \<Rightarrow>
+         Some (IrqControlIssueIrqHandlerIntent ((ucast irqW)::10 word) index depth)
+    | _ \<Rightarrow> Nothing"
+
+definition
   transform_intent_page_table_map :: "word32 list \<Rightarrow> cdl_page_table_intent option"
 where
   "transform_intent_page_table_map args =
@@ -370,6 +379,9 @@ definition
                           map_option AsidControlIntent
                                   (transform_cnode_index_and_depth AsidControlMakePoolIntent args)
     | ArchInvocationLabel ARMASIDPoolAssign \<Rightarrow> Some (AsidPoolIntent AsidPoolAssignIntent )
+    | ArchInvocationLabel ARMIRQIssueIRQHandler \<Rightarrow>
+                          map_option IrqControlIntent
+                                   (arch_transform_intent_issue_irq_handler args)
     | DomainSetSet \<Rightarrow> map_option DomainIntent (transform_intent_domain args)"
 
 lemmas transform_intent_tcb_defs =
