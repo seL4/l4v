@@ -604,9 +604,6 @@ end
 context state_rel begin
 
 definition
-  "unwrap_or def opt \<equiv> case opt of Some x \<Rightarrow> x | None \<Rightarrow> def"
-
-definition
   "carch_state_to_H cstate \<equiv>
    X64KernelState
       (array_map_conv (\<lambda>x. if x=NULL then None else Some (ptr_val x))
@@ -621,7 +618,7 @@ definition
       (cioport_bitmap_to_H (the (clift (t_hrs_' cstate) (Ptr (symbol_table ''x86KSAllocatedIOPorts'')))))
       (ucast (num_ioapics_' cstate))
       (* Map IRQ states to their Haskell equivalent, and out-of-bounds entries to X64IRQFree *)
-      (unwrap_or X64IRQFree o
+      (case_option X64IRQFree id \<circ>
           (array_map_conv
             (\<lambda>x. map_option x86_irq_state_to_H (x86_irq_state_lift x))
             maxIRQ (x86KSIRQState_' cstate)))"
@@ -653,7 +650,7 @@ lemma carch_state_to_H_correct:
    prefer 2
    apply (rule ext)
    apply (clarsimp simp: x64_irq_state_relation_def array_relation_def array_map_conv_def
-                         array_to_map_def unwrap_or_def)
+                         array_to_map_def)
    using valid[simplified valid_arch_state'_def valid_x64_irq_state'_def]
    apply (case_tac "x \<le> maxIRQ"; fastforce split: option.split)
   apply (clarsimp simp: global_ioport_bitmap_relation_def)
