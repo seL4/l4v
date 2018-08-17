@@ -357,6 +357,47 @@ lemma getSlotCap_h_val_ccorres [corres]:
   apply simp
   done
 
+lemma ccorres_pre_gets_x86KSASIDTable_ksArchState:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>rv. x64KSASIDTable (ksArchState s) = rv  \<longrightarrow> P rv s))
+                  {s. \<forall>rv. s \<in> P' rv } hs
+                  (gets (x64KSASIDTable \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (rule gets_sp)
+     apply (clarsimp simp: empty_fail_def simpler_gets_def)
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply clarsimp
+  done
+
+lemma ccorres_pre_gets_x86KSASIDTable_ksArchState':
+  assumes cc: "\<And>rv. ccorres r xf (P and (\<lambda>s. rv = (x64KSASIDTable \<circ> ksArchState) s)) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf P {s. \<forall>rv. s \<in> P' rv } hs
+                   (gets (x64KSASIDTable \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (rule gets_sp)
+     apply (clarsimp simp: empty_fail_def simpler_gets_def)
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply clarsimp
+  done
 
 end
 end
