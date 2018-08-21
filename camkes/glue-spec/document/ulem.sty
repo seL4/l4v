@@ -6,7 +6,7 @@
 %  In LaTeX ulem replaces italics with underlining in \em-phasized text.
 %  It is most suitable for simple text such as {\em ibid.} or \emph{\LaTeX:
 %  A Document Preparation System} that may need to be underlined in a
-%  manuscript submitted for publication.  A declaration of \normalem (or 
+%  manuscript submitted for publication.  A declaration of \normalem (or
 %  the \usepackage option "normalem") restores the normal \em behavior.
 %
 %  Full instructions appear in ulem.ltx (ulem.pdf).  In summary:
@@ -28,19 +28,19 @@
 %  Copyright (c) 1989-2011 by Donald Arseneau (Vancouver, Canada; asnd@triumf.ca)
 %
 %  This software may be freely transmitted, reproduced, or modified for any
-%  purpose provided that this copyright notice is left intact.  
+%  purpose provided that this copyright notice is left intact.
 %  (Small excerpts may be taken and used without any restriction.)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  Defend against multiple loading.
-\expandafter \ifx \csname UL@box\endcsname \relax \else 
+\expandafter \ifx \csname UL@box\endcsname \relax \else
  \immediate\write16{ulem.sty refuses to load twice. }\endinput \fi
 
 %  Set catcode of @ in case it isn't a "letter" already
 \chardef\ULthickness\catcode\string`\@ % hold catcode temporarily
 \catcode\string`\@=11
 
-\def\uline{\relax \ifmmode\expandafter\underline 
+\def\uline{\relax \ifmmode\expandafter\underline
            \else \bgroup\expandafter\ULset\fi}
 
 \newbox\UL@box
@@ -75,7 +75,7 @@
 
 %   \UL@on sets the engine of underline running, and tells it
 %   where to stop.
-\long\def\UL@on#1{\leavevmode\UL@ender \let\UL@on\UL@onin 
+\long\def\UL@on#1{\leavevmode\UL@ender \let\UL@on\UL@onin
   \everymath{\UL@hrest}\everyvbox{\UL@hrest}\let\hskip\UL@hskip
   \let\\\UL@cr \let\-\UL@dischyp \let\newline\UL@newline \let\ \UL@space
   \def\hfil{\hskip\z@ plus1fil\relax}\def\hfill{\hskip\z@ plus1fill\relax}%
@@ -85,7 +85,7 @@
 
 %   This is what \ULon does when it appears nested in an inner place.
 \def\UL@onin#1{\leavevmode\UL@ender % when nested, do multiple underlining
-  \UL@height\ULthickness \advance\ULdepth\thr@@\UL@height 
+  \UL@height\ULthickness \advance\ULdepth\thr@@\UL@height
   \advance\UL@height-\ULdepth \setbox\UL@box\hbox{{#1}}%
   \let\UL@start\relax\UL@putbox\egroup}
 % \UL@putbox is disabled in inner mode, so re-enable it by changing \UL@start
@@ -162,7 +162,7 @@
 % (in registration) for a distance of the hyphen's width.
 \def\UL@dischyp{\global\setbox\UL@hyphenbox\hbox
    {\ifnum \hyphenchar\font<\z@ \string-\else \char\hyphenchar\font \fi}%
-   \kern\wd\UL@hyphenbox \LA@penalty\@M 
+   \kern\wd\UL@hyphenbox \LA@penalty\@M
    \UL@stop \kern-\wd\UL@hyphenbox
    \discretionary{\box\UL@hyphenbox}{}{}\UL@start}
 
@@ -197,7 +197,7 @@
 \def\UL@crb[#1]{\UL@vad{\vskip#1}\UL@newline}
 
 \def\UL@newline{\ifx\UL@start\@empty % (\UL@cr may have \UL@stop-ed already)
-  \unskip \ifx\ \LA@space \else \UL@stop \unskip\unskip\unskip \fi\fi 
+  \unskip \ifx\ \LA@space \else \UL@stop \unskip\unskip\unskip \fi\fi
   \LA@hskip \z@\@plus.0001fil\LA@penalty -\@M \UL@start}
 
 % That concludes the basic underlining.  To put various other objects
@@ -205,7 +205,7 @@
 % to set the overlay material in a box, and use leaders of that box for
 % overlaying the text.  Here, the meaning of \UL@pixel is changed so
 % that  `pixel' size = box size.  Note that we generally need \leaders
-% (not \cleaders) for text, because an underline will be a patchwork 
+% (not \cleaders) for text, because an underline will be a patchwork
 % of small \leaders, and the characters must stay in registration.
 % However, we "hook" the leaders command so specific applications can
 % reassign it (\let\ULleaders\xleaders or \let\ULleaders\cleaders).
@@ -246,21 +246,21 @@
 %
 \def\xout{\bgroup \markoverwith{\hbox to.35em{\hss/\hss}}\ULon}
 
-\def\dotuline{\bgroup 
+\def\dotuline{\bgroup
   \UL@setULdepth
   \markoverwith{\begingroup
-     \advance\ULdepth0.08ex 
+     \advance\ULdepth0.08ex
      \lower\ULdepth\hbox{\kern.1em .\kern.04em}%
      \endgroup}%
   \ULon}
 
-\def\dashuline{\bgroup 
+\def\dashuline{\bgroup
   \UL@setULdepth
   \markoverwith{\kern.13em
   \vtop{\kern\ULdepth \hrule width .3em}%
   \kern.13em}\ULon}
 
-% A command to declare that an underline command should be used in 
+% A command to declare that an underline command should be used in
 % place of a particular font selection:
 % \useunder {underline_command}{font_declaration}{font_command}
 % e.g.: \useunder{\uuline}{\bfseries}{\textbf}
@@ -327,7 +327,7 @@
   \addto@hook\UL@hook{\let\marginpar\UL@marpar}
 \fi
 
-\catcode`@=\ULthickness % Scratch meaning: restore catcode of @ 
+\catcode`@=\ULthickness % Scratch meaning: restore catcode of @
 
 \def\ULthickness{.4pt}% can change this with \renewcommand
 \newdimen\ULdepth  \ULdepth=\maxdimen
@@ -370,7 +370,7 @@ the underlining:  \-, \ , ~, \\, \newline, \linebreak, \nolinebreak,
 \penalty, \hskip, \hspace, \hfil, \hfill, \hss.  Displayed math and \par
 are deliberately not supported to aid in the detection of runaway arguments
 (missing braces).  The special commands do have a problem: they end a
-group so any local assignments are lost.  
+group so any local assignments are lost.
 
 The underlines continue between words, and stretch just like ordinary
 spaces do.  Since spaces delimit words, there may be some difficulty
@@ -493,11 +493,11 @@ In plain TeX there is no \textbf so you should use \useunder{\UWave}{\bf}{}.
 You can even skip a step and define the underline or overprint with \useunder:
 \useunder{\bgroup\markoverwith{!}\ULon}{\sf}{}
 
-Some commands, such as \\ and \hskip are given special treatment, but 
-others (like \marginpar) are not.  Support for others can be added by 
-assigning special meanings in the token register \UL@hook.  (In LaTeX do 
-\addto@hook\UL@hook{\let\command\ULversion}.)  The UL versions of commands 
-should be modelled on \UL@hskip or \UL@cr, and should include the test 
+Some commands, such as \\ and \hskip are given special treatment, but
+others (like \marginpar) are not.  Support for others can be added by
+assigning special meanings in the token register \UL@hook.  (In LaTeX do
+\addto@hook\UL@hook{\let\command\ULversion}.)  The UL versions of commands
+should be modelled on \UL@hskip or \UL@cr, and should include the test
 "\ifx\ \LA@space".  For example, support for "\marginpar" is added through
 the hook mechanism.
 
