@@ -44,6 +44,7 @@ requalify_consts
   ackInterrupt
   resetTimer
   debugPrint
+  deadlineIRQ
 
 end
 

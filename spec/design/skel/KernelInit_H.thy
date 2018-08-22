@@ -51,10 +51,10 @@ where "syncBIFrame \<equiv> returnOk ()"
 #INCLUDE_HASKELL SEL4/Kernel/Init.lhs bodies_only NOT isAligned funArray newKernelState distinct rangesBy InitData doKernelOp runInit noInitFailure coverOf foldME
 
 consts
-  newKSDomSchedule :: "(domain \<times> machine_word) list"
+  newKSDomSchedule :: "(domain \<times> time) list"
   newKSDomScheduleIdx :: nat
   newKSCurDomain :: domain
-  newKSDomainTime :: machine_word
+  newKSDomainTime :: time
   newKernelState :: "machine_word \<Rightarrow> kernel_state"
 
 defs
@@ -70,10 +70,15 @@ newKernelState_def:
         ksCurDomain = newKSCurDomain,
         ksDomainTime = newKSDomainTime,
         ksReadyQueues = const [],
+        ksReleaseQueue = [],
         ksReadyQueuesL1Bitmap = const 0,
         ksReadyQueuesL2Bitmap = const 0,
         ksCurThread = error [],
         ksIdleThread = error [],
+        ksConsumedTime = 0,
+        ksCurTime = 0,
+        ksCurSc = error [],
+        ksReprogramTimer = False,
         ksSchedulerAction = ResumeCurrentThread,
         ksInterruptState = error [],
         ksWorkUnitsCompleted = 0,

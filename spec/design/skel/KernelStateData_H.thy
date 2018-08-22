@@ -27,6 +27,9 @@ context begin interpretation Arch .
 requalify_types
   vmpage_size
 
+requalify_consts
+  usToTicks
+
 end
 
 requalify_types (in Arch)
@@ -35,8 +38,8 @@ requalify_types (in Arch)
 subsection "The Kernel State"
 
 type_synonym ready_queue = "machine_word list"
-translations
-(type) "machine_word list" <= (type) "ready_queue"
+
+type_synonym release_queue = "machine_word list"
 
 text {* We pull a fast one on haskell here ... although Haskell expects
 a KernelMonad which is a StateT monad in KernelData that wraps a MachineMonad,
@@ -50,14 +53,19 @@ record kernel_state =
   gsUntypedZeroRanges  :: "(machine_word \<times> machine_word) set"
   gsMaxObjectSize      :: nat
   ksDomScheduleIdx     :: nat
-  ksDomSchedule        :: "(domain \<times> machine_word) list"
+  ksDomSchedule        :: "(domain \<times> time) list"
   ksCurDomain          :: domain
-  ksDomainTime         :: machine_word
+  ksDomainTime         :: time
   ksReadyQueues        :: "domain \<times> priority \<Rightarrow> ready_queue"
+  ksReleaseQueue       :: release_queue
   ksReadyQueuesL1Bitmap :: "domain \<Rightarrow> machine_word"
   ksReadyQueuesL2Bitmap :: "domain \<times> nat \<Rightarrow> machine_word"
   ksCurThread          :: machine_word
   ksIdleThread         :: machine_word
+  ksConsumedTime       :: time
+  ksCurTime            :: time
+  ksCurSc              :: machine_word
+  ksReprogramTimer     :: bool
   ksSchedulerAction    :: scheduler_action
   ksInterruptState     :: interrupt_state
   ksWorkUnitsCompleted :: machine_word

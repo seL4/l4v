@@ -23,7 +23,6 @@ context begin interpretation Arch .
 requalify_consts
   mapKernelWindow
   activateGlobalVSpace
-  configureTimer
   initL2Cache
   initIRQController
 

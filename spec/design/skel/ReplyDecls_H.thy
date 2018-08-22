@@ -8,17 +8,15 @@
  * @TAG(GD_GPL)
  *)
 
-chapter "Function Declarations for TCBs"
+chapter "Function Declarations for Replies"
 
-theory TCBDecls_H
-imports FaultMonad_H Invocations_H
+theory ReplyDecls_H
+
+imports
+  FaultMonad_H
+
 begin
 
-context begin interpretation Arch .
-requalify_types
-  user_monad
-end
-
-#INCLUDE_HASKELL SEL4/Object/TCB.lhs decls_only NOT archThreadGet archThreadSet takeWhileM sort_key
+#INCLUDE_HASKELL SEL4/Object/Reply.lhs decls_only
 
 end

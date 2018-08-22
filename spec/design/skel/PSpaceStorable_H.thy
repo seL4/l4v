@@ -37,6 +37,8 @@ datatype
   | NotificationT
   | CTET
   | TCBT
+  | SchedContextT
+  | ReplyT
   | UserDataT
   | UserDataDeviceT
   | KernelDataT
@@ -49,6 +51,8 @@ where
 | "koTypeOf (KONotification e) = NotificationT"
 | "koTypeOf (KOCTE e) = CTET"
 | "koTypeOf (KOTCB e) = TCBT"
+| "koTypeOf (KOSchedContext e) = SchedContextT"
+| "koTypeOf (KOReply e) = ReplyT"
 | "koTypeOf (KOUserData) = UserDataT"
 | "koTypeOf (KOUserDataDevice) = UserDataDeviceT"
 | "koTypeOf (KOKernelData) = KernelDataT"

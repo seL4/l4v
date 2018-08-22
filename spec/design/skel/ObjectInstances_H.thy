@@ -56,6 +56,48 @@ instance
 
 end
 
+instantiation reply :: pre_storable
+begin
+
+definition
+  projectKO_opt_reply:
+  "projectKO_opt e \<equiv> case e of KOReply e \<Rightarrow> Some e | _ \<Rightarrow> None"
+
+definition
+  injectKO_reply [simp]:
+  "injectKO e \<equiv> KOReply e"
+
+definition
+  koType_reply [simp]:
+  "koType (t::reply itself) \<equiv> ReplyT"
+
+instance
+  by (intro_classes,
+      auto simp: projectKO_opt_reply split: kernel_object.splits)
+
+end
+
+instantiation sched_context :: pre_storable
+begin
+
+definition
+  projectKO_opt_sc:
+  "projectKO_opt e \<equiv> case e of KOSchedContext e \<Rightarrow> Some e | _ \<Rightarrow> None"
+
+definition
+  injectKO_sc [simp]:
+  "injectKO e \<equiv> KOSchedContext e"
+
+definition
+  koType_sc [simp]:
+  "koType (t::sched_context itself) \<equiv> SchedContextT"
+
+instance
+  by (intro_classes,
+      auto simp: projectKO_opt_sc split: kernel_object.splits)
+
+end
+
 instantiation notification :: pre_storable
 begin
 
@@ -190,6 +232,66 @@ instance
 
 end
 
+instantiation reply :: pspace_storable
+begin
+
+(* endpoint extra instance defs *)
+
+
+definition
+  makeObject_reply: "(makeObject :: reply)  \<equiv> Reply Nothing Nothing"
+
+definition
+  loadObject_reply[simp]:
+ "(loadObject p q n obj) :: reply kernel \<equiv>
+    loadObject_default p q n obj"
+
+definition
+  updateObject_reply[simp]:
+ "updateObject (val :: reply) \<equiv>
+    updateObject_default val"
+
+
+instance
+  apply (intro_classes)
+  apply simp
+  apply (case_tac ko, auto simp: projectKO_opt_reply updateObject_default_def
+                                 in_monad projectKO_eq2
+                           split: kernel_object.splits)
+  done
+
+end
+
+instantiation sched_context :: pspace_storable
+begin
+
+(* sched_context extra instance defs *)
+
+
+definition
+  makeObject_sc: "(makeObject :: sched_context) \<equiv> SchedContext 0 0 Nothing Nothing
+    [Refill 0 0, Refill 0 0] 0 Nothing 0 [] 0"
+
+definition
+  loadObject_sc[simp]:
+  "(loadObject p q n obj) :: sched_context kernel \<equiv>
+     loadObject_default p q n obj"
+
+definition
+  updateObject_sc[simp]:
+  "updateObject (val :: sched_context) \<equiv>
+     updateObject_default val"
+
+
+instance
+  apply (intro_classes)
+  apply simp
+  apply (case_tac ko, auto simp: projectKO_opt_sc updateObject_default_def
+                                 in_monad projectKO_eq2
+                           split: kernel_object.splits)
+  done
+
+end
 
 instantiation notification :: pspace_storable
 begin

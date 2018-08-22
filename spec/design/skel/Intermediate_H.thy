@@ -58,7 +58,7 @@ defs createNewCaps_def:
     (case toAPIType t of
           Some TCBObject \<Rightarrow> (do
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::tcb)) 0;
-            curdom \<leftarrow> curDomain;
+            curdom \<leftarrow> getCurDomain;
             mapM_x (\<lambda>tptr. threadSet (tcbDomain_update (\<lambda>_. curdom)) tptr) addrs;
             return $ map (\<lambda> addr. ThreadCap addr) addrs
           od)
@@ -69,6 +69,15 @@ defs createNewCaps_def:
         | Some NotificationObject \<Rightarrow> (do
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::notification)) 0;
             return $ map (\<lambda> addr. NotificationCap addr 0 True True) addrs
+          od)
+        | Some SchedContextObject \<Rightarrow> (do
+            addrs \<leftarrow> createObjects regionBase numObjects
+              (injectKO (scSizeBits_update (\<lambda> x. userSize) (makeObject ::sched_context))) 0;
+            return $ map (\<lambda> addr. SchedContextCap addr userSize) addrs
+          od)
+        | Some ReplyObject \<Rightarrow> (do
+            addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::reply)) 0;
+            return $ map (\<lambda> addr. ReplyCap addr) addrs
           od)
         | Some ArchTypes_H.CapTableObject \<Rightarrow> (do
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject ::cte)) userSize;
