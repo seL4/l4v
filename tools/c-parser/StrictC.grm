@@ -324,6 +324,12 @@ fun sort_toks (bases, sgnmods) dsl =
 fun extract_fnspecs (dsl : decl_specifier list) : fnspec list =
     List.mapPartial (fn FunSpec fs => SOME (node fs) | _ => NONE) dsl
 
+fun extract_fnspec_attrs (fs : fnspec list) : gcc_attribute list =
+  case fs of
+      [] => []
+    | gcc_attribs gcc_as::rest => gcc_as @ extract_fnspec_attrs rest
+    | _ :: rest => extract_fnspec_attrs rest
+
 fun extract_type (dsl : decl_specifier list wrap) : expr ctype wrap = let
   val (bases : type_specifier wrap list,
        sgnmods : typespectok wrap list) = sort_toks ([], []) (node dsl)
@@ -519,6 +525,7 @@ let
                | SOME es => [wrap(EnumDecl (node es), left es, right es)]
   val fnspecs = extract_fnspecs (node dsl)
   val storage_specs = extract_storage_specs (node dsl)
+  val fnspec_attrs = extract_fnspec_attrs fnspecs
 
   fun handle_declarator idw = let
     val (d : addecl wrap, iopt : initializer option) = node idw
@@ -552,7 +559,8 @@ let
                 errorStr'(left idw, right idw, "Don't initialise externs")
               else ()
         in
-          wrap(VarDecl(finaltype, nm, storage_specs, iopt, attrs),
+          wrap(VarDecl(finaltype, nm, storage_specs, iopt,
+                       fnspec_attrs @ attrs ),
                left idw, right idw)
         end
   end
@@ -785,7 +793,7 @@ end
         | constant   of literalconstant
         | idlist of string wrap list
 
-        | attribute of gcc_attribute option
+        | attribute of gcc_attribute
         | attribute_specifier of gcc_attribute list wrap
         | attribute_list of gcc_attribute list
         | attribute_parameter_list1 of expr list
@@ -895,11 +903,9 @@ attribute_specifier
 
 attribute_list
 :               ([])
-| attribute     (case attribute of NONE => [] | SOME a => [a])
+| attribute     ([attribute])
 | attribute YCOMMA attribute_list
-                (case attribute of NONE => attribute_list
-                                 | SOME a => a :: attribute_list)
-
+                (attribute :: attribute_list)
 
 attribute
 : ID            (let val idstr = if String.isPrefix "__" ID andalso
@@ -910,13 +916,13 @@ attribute
                                    String.substring(ID,2,size ID - 4)
                                  else ID
                  in
-                   SOME (GCC_AttribID idstr)
+                   GCC_AttribID idstr
                  end)
-| CONST         (SOME (GCC_AttribID "const"))
+| CONST         (GCC_AttribID "const")
 | ID LPAREN RPAREN
-                (SOME (GCC_AttribFn (ID, [])))
+                (GCC_AttribFn (ID, []))
 | ID LPAREN attribute_parameter_list1 RPAREN
-                (SOME (GCC_AttribFn (ID, attribute_parameter_list1)))
+                (GCC_AttribFn (ID, attribute_parameter_list1))
 
 attribute_parameter_list1
 : rexpression   ([rexpression])
