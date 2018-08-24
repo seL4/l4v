@@ -179,7 +179,7 @@ block.  In other words, the following
      while (x < y) { ... }
    }
 \end{verbatim}
-used to be illegal, but is now legal C.  This means that a block has
+is legal in C99.  This means that a block has
 to take a list of \texttt{block_item} values as an argument, where a
 \texttt{block_item} is either a statement or a declaration.
 
@@ -497,7 +497,8 @@ precision integers, and then worry about whether or not these integers
 can be pushed into and pulled out of memory.  All of the arithmetic
 performed by the programs we verify is done at fixed widths,
 respecting the underlying machine's operations.
-Additionally, using the techniques from Section~\ref{sec:undefined-behaviour}, we trap the undefined behaviour caused by overflow on signed values.
+Additionally, using the techniques from Section~\ref{sec:undefined-behaviour},
+we trap the undefined behaviour caused by overflow on signed values.
 
 \subsection{Pointers}
 \label{sec:pointers}
@@ -546,15 +547,28 @@ that appears above is an Isabelle \emph{type}, not a term.
 If type $\tau$ is a \texttt{mem_type}, then an array of $\tau$ values
 will also be a \texttt{mem_type}, as long as the size of the array is
 not so large that the array would not fit into memory.  This condition
-is discharged as the \strictc{} program is translated.  For technical
-reasons due to the implementation of type classes, the restriction on
-sizes is implemented with two restrictions that must both be met:
+is discharged as the \strictc{} program is translated.
+
+For technical reasons due to the implementation of type classes in
+Isabelle, we need to fix separate limits, ahead of time, on the
+number of elements in an array and the size of each element.
+Currently, for 32-bit ARM, our model fixes a maximum of:
+
 \begin{itemize}
-\item arrays must not have more than $2^{13}$ ($8192$) elements; and
-\item array elements must not have sizes greater than $2^{19}$ bytes ($512$~kB)
+\item $2^{13}$ (8192) elements in each array; and
+\item $2^{19}$ bytes ($512$~KiB) in each array element
 \end{itemize}
-This is not ideal.
-One would prefer to be able to multiply the size of the element type by the number of the elements, but the type system does not permit this (for good technical reasons).
+
+For x86-64, the limits are:
+
+\begin{itemize}
+\item $2^{20}$ ($1048576$) elements in each array; and
+\item $2^{26}$ bytes ($64$~MiB) in each array element
+\end{itemize}
+
+One would prefer to be able to multiply the size of the element type by
+the number of the elements, but the type system does not permit this
+(for good technical reasons).
 
 \subsection{C \texttt{struct} Types}
 \label{sec:structs}
