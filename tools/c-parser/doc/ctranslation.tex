@@ -774,14 +774,14 @@ Isabelle word if necessary.
 There are three classes of under-specification in the C standard.
 Those classed as \emph{implementation defined} are behaviours or
 values that are supposed to be fixed and documented by particular
-implementations.  For example, the number of bits in a byte (a number
-that must be at least eight), is a fixed value that implementations
+implementations.  For example, the number of bits in an \texttt{int}
+(a number that must be at least $16$), is a fixed value that implementations
 are allowed to choose themselves.  Because \strictc{} targets a
 particular architecture, most implementation-defined aspects of C can
 be ``baked into'' the translation.  (The design attempts to have the
 translation sources be easy to modify to account for different
-architectures; see for example the \texttt{IntInfo} structure in
-\MLfile{termstypes}.)
+architectures; see for example the \texttt{ImplementationNumbers}
+structure in each of the \MLfile{TargetNumbers} files.)
 
 The second class of under-specification comprises \emph{unspecified}
 behaviours.  The most important of these is the order of evaluation of
