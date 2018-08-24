@@ -141,17 +141,19 @@ All strings in the statement declaration correspond to Isabelle terms
 These will be parsed as such later in the translation
 process, but are just uninterpreted strings when the C parser
 finishes.
-
-The statement type illuminates \strictc's most radical departure from
-ISO~C: the movement of assignment and function calls from the category
-of expression to statement.\footnote{As is not documented but should be, function calls may seem
-  as if they are permitted inside expressions, but are not really.}
-This change syntactically enforces the requirement that expressions must be
-side-effect free.  Both forms must occur at the top-level.  Function
-calls can return their results into l-values, have the return value
-ignored, or have the return value itself \texttt{return}-ed.  The
-first option corresponds to having the \texttt{expr~option} argument be
-\texttt{SOME~e} in the \texttt{AssignFnCall} constructor, the second
+%% FIXME: this had been here for a long time but is not currently true.
+%%        See VER-503 and l4v PR #329
+%The statement type illuminates \strictc's most radical departure from
+%ISO~C: the movement of assignment and function calls from the category
+%of expression to statement.
+%\footnote{As is not documented but should be, function calls may seem
+%as if they are permitted inside expressions, but are not really.}
+%This change syntactically enforces the requirement that expressions must be
+%side-effect free.  Both forms must occur at the top-level.
+Function calls can return their results into l-values, have the return
+value ignored, or have the return value itself \texttt{return}-ed.
+The first option corresponds to having the \texttt{expr~option} argument
+be \texttt{SOME~e} in the \texttt{AssignFnCall} constructor, the second
 would have that parameter be \texttt{NONE}, and the last is handled by
 the \texttt{ReturnFnCall} constructor.
 
@@ -785,10 +787,24 @@ structure in each of the \MLfile{TargetNumbers} files.)
 
 The second class of under-specification comprises \emph{unspecified}
 behaviours.  The most important of these is the order of evaluation of
-arguments to operators and function calls.  Our translation completely
-bypasses this problem by removing side effects from expressions,
-meaning that expressions can be evaluated in any order because they
-will all derive values based on the same underlying state.
+arguments to operators and function calls.
+%% FIXME: not true currently. See previous FIXME
+%Our translation completely
+%bypasses this problem by removing side effects from expressions,
+%meaning that expressions can be evaluated in any order because they
+%will all derive values based on the same underlying state.
+Therefore, one should avoid writing code that depends on unspecified
+evaluation order. Otherwise, the compiled executable might have
+different semantics compared to the Simpl specification that we
+generate. For example:
+\begin{verbatim}
+   int x = f() + g();
+\end{verbatim}
+where \texttt{f} and \texttt{g} both have side effects, is currently
+allowed but should be avoided. In the future, we plan to forbid or
+restrict programs that may have unspecified evaluation order.
+The standalone analysis tool can check for this problem using the
+\texttt{--embedded\_fncalls} option.
 
 The third class of under-specification is \emph{undefined behaviour}.
 In essence, undefined behaviours are runtime errors (such as
