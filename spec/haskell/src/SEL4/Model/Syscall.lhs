@@ -18,7 +18,7 @@ This module contains utility functions used in system call implementations.
 > import SEL4.Model.StateData
 > import SEL4.Model.Failures
 > import SEL4.Model.Preemption
-> import Control.Monad.Error
+> import Control.Monad.Except
 
 \end{impdetails}
 
@@ -30,11 +30,11 @@ The "syscall" function lifts code into the appropriate monads, and handles fault
 >         (a -> KernelF SyscallError b) -> (SyscallError -> Kernel c) ->
 >         (b -> KernelP c) -> KernelP c
 > syscall mFault hFault mError hError mFinalise = do
->     rFault <- withoutPreemption $ runErrorT mFault
+>     rFault <- withoutPreemption $ runExceptT mFault
 >     case rFault of
 >         Left f -> withoutPreemption $ hFault f
 >         Right a -> do
->             rError <- withoutPreemption $ runErrorT $ mError a
+>             rError <- withoutPreemption $ runExceptT $ mError a
 >             case rError of
 >                 Left e -> withoutPreemption $ hError e
 >                 Right b -> mFinalise b
