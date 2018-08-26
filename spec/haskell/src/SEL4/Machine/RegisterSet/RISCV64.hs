@@ -8,6 +8,7 @@
 
 -- This module defines the RISCV 64-bit register set.
 
+{-# LANGUAGE FlexibleContexts #-}
 module SEL4.Machine.RegisterSet.RISCV64 where
 
 import Prelude hiding (Word)
