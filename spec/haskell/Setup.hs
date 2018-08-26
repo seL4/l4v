@@ -3,7 +3,7 @@ module Main where
 import Distribution.Simple
 import Distribution.Simple.Setup
 import Distribution.PackageDescription
-import Distribution.PackageDescription.Parse
+import Distribution.PackageDescription.Parsec
 import Distribution.Verbosity
 import Control.Monad
 import Data.List
@@ -57,7 +57,7 @@ readDescHook targetName = do
          putStrLn "Please specify a target: --configure-option=\"<target>\""
          printKnownTargets
          fail "No target"
-    dscp <- readPackageDescription normal "SEL4.cabal"
+    dscp <- readGenericPackageDescription normal "SEL4.cabal"
     pkg_lib_upd <- case condLibrary dscp of
       Just CondNode {condTreeData = lib,condTreeConstraints = cons,condTreeComponents=comp} -> do
         bi_upd <- do
