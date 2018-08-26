@@ -31,7 +31,7 @@ This is the top-level module; it defines the interface between the kernel and th
 > import SEL4.Object.Structures
 > import SEL4.Object.TCB(asUser)
 > import SEL4.Object.Interrupt(handleInterrupt)
-> import Control.Monad.Error
+> import Control.Monad.Except
 > import Data.Maybe
 
 \subsection{Kernel Entry Point}
@@ -43,7 +43,7 @@ faults, and system calls; the set of possible events is defined in
 
 > callKernel :: Event -> Kernel ()
 > callKernel ev = do
->     runErrorT $ handleEvent ev
+>     runExceptT $ handleEvent ev
 >         `catchError` (\_ -> withoutPreemption $ do
 >                       irq <- doMachineOp (getActiveIRQ True)
 >                       when (isJust irq) $ handleInterrupt (fromJust irq))
