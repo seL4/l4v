@@ -42,7 +42,7 @@ hypervisor extensions on ARM.
 > import {-# SOURCE #-} SEL4.Object.TCB
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 
-> import Data.Bits
+> import Data.Bits hiding (countTrailingZeros)
 > import Data.Word(Word8, Word16, Word32)
 > import Data.Array
 > import Data.Maybe
