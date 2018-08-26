@@ -14,6 +14,7 @@
 
 module SEL4.Object.Structures.RISCV64 where
 
+import Prelude hiding (Word)
 import SEL4.Machine.RegisterSet
 import SEL4.Machine.Hardware.RISCV64
 import Data.Array

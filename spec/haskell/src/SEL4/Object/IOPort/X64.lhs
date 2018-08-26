@@ -16,6 +16,7 @@ This module defines IO port routines, specific to x64.
 > {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.Object.Instances() SEL4.API.Failures SEL4.API.Invocation.X64%ArchInv #-}
 > {-# BOOT-EXPORTS: performX64PortInvocation decodeX64PortInvocation #-}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine
 > import SEL4.API.Types
 > import SEL4.API.Failures

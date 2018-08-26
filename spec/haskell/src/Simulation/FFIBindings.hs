@@ -66,6 +66,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 module Simulation.FFIBindings where
 
+import Prelude hiding (Word)
 import Foreign.Marshal.Alloc
 import Foreign.Marshal.Array
 import Foreign.Storable

@@ -20,6 +20,7 @@ This module defines the low-level ARM hardware interface.
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine.RegisterSet
 
 > import Control.Monad.Reader

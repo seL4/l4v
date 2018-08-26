@@ -10,6 +10,7 @@
 
 > module SEL4.Config where
 
+> import Prelude hiding (Word)
 > import SEL4.Machine.RegisterSet
 
 This module contains configuration parameters that may be set at compile time to suit different applications.

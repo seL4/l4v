@@ -8,6 +8,7 @@
 
 module SEL4.API.Faults.RISCV64 where
 
+import Prelude hiding (Word)
 import SEL4.Machine
 import SEL4.Model
 import SEL4.Object.Structures

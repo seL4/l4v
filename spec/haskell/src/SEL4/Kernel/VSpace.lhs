@@ -27,6 +27,7 @@ We use the C preprocessor to select a target architecture.
 % {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.API.Failures #-}
 % {-# BOOT-EXPORTS: lookupIPCBuffer isValidVTableRoot checkValidIPCBuffer #-}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine
 > import SEL4.Model
 > import SEL4.Object

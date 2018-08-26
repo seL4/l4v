@@ -19,6 +19,7 @@ This module specifies the behavior of notification objects.
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine
 > import SEL4.Model
 > import SEL4.Object.Structures

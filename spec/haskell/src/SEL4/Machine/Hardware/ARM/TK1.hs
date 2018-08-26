@@ -14,6 +14,7 @@
 -- FIXME ARMHYP TODO review other constants against C!
 module SEL4.Machine.Hardware.ARM.TK1 where
 
+import Prelude hiding (Word)
 import SEL4.Machine.RegisterSet
 import Foreign.Ptr
 import Data.Bits

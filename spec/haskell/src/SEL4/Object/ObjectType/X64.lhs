@@ -13,6 +13,7 @@ This module contains operations on machine-specific object types for x64.
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.Hardware.X64
 > import SEL4.Model

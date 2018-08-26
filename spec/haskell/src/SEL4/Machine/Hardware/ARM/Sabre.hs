@@ -12,6 +12,7 @@
 
 module SEL4.Machine.Hardware.ARM.Sabre where
 
+import Prelude hiding (Word)
 import SEL4.Machine.RegisterSet
 import SEL4.Machine.Hardware.ARM.Callbacks
 import SEL4.Machine.Hardware.GICInterface hiding (IRQ, maskInterrupt)

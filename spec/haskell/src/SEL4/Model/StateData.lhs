@@ -27,6 +27,7 @@ We use the C preprocessor to select a target architecture.
 
 The architecture-specific definitions are imported qualified with the "Arch" prefix.
 
+> import Prelude hiding (Word)
 > import qualified SEL4.Model.StateData.TARGET as Arch
 
 \begin{impdetails}

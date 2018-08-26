@@ -20,6 +20,7 @@ This module defines the ARM register set.
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import qualified Data.Word
 > import Data.Array
 > import Data.Helpers

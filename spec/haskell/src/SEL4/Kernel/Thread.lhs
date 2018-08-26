@@ -25,6 +25,7 @@ We use the C preprocessor to select a target architecture.
 % {-# BOOT-IMPORTS: SEL4.Model SEL4.Machine SEL4.Object.Structures SEL4.Object.Instances() SEL4.API.Types #-}
 % {-# BOOT-EXPORTS: setDomain setMCPriority setPriority getThreadState setThreadState setBoundNotification getBoundNotification doIPCTransfer isRunnable restart suspend  doReplyTransfer tcbSchedEnqueue tcbSchedDequeue rescheduleRequired timerTick possibleSwitchTo #-}
 
+> import Prelude hiding (Word)
 > import SEL4.Config
 > import SEL4.API.Types
 > import SEL4.API.Faults

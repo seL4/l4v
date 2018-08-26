@@ -25,6 +25,7 @@ We use the C preprocessor to select a target architecture.
 > {-# BOOT-IMPORTS: SEL4.Machine SEL4.API.Types SEL4.Model SEL4.Object.Structures #-}
 > {-# BOOT-EXPORTS: createObject #-}
 
+> import Prelude hiding (Word)
 > import SEL4.API.Types
 > import SEL4.API.Failures
 > import SEL4.API.Invocation
