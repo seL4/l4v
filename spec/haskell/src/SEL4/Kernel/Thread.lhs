@@ -36,7 +36,7 @@ We use the C preprocessor to select a target architecture.
 > import SEL4.Kernel.VSpace
 > import {-# SOURCE #-} SEL4.Kernel.Init
 
-> import Data.Bits
+> import Data.Bits hiding (countLeadingZeros)
 > import Data.Array
 > import Data.WordLib
 
