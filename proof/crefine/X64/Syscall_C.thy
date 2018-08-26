@@ -468,7 +468,7 @@ lemma handleInvocation_def2:
                            | Inl (Inr preempt) \<Rightarrow> throwError preempt
                od
    od"
-  apply (simp add: handleInvocation_def Syscall_H.syscall_def runErrorT_def
+  apply (simp add: handleInvocation_def Syscall_H.syscall_def runExceptT_def
                    liftE_bindE cong: sum.case_cong)
   apply (rule ext, (rule bind_apply_cong [OF refl])+)
   apply (clarsimp simp: bind_assoc split: sum.split)
