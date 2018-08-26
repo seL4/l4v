@@ -10,6 +10,7 @@
 
 module SEL4.Object.ObjectType.RISCV64 where
 
+import Prelude hiding (Word)
 import SEL4.Machine.RegisterSet
 import SEL4.Machine.Hardware.RISCV64
 import SEL4.Model

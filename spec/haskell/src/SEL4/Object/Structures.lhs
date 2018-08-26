@@ -27,6 +27,7 @@ This module uses the C preprocessor to select a target architecture.
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Config (numPriorities, numDomains)
 > import SEL4.Machine
 > import SEL4.API.Types

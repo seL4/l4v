@@ -13,6 +13,7 @@ This module defines the handling of the x64 hardware-defined page tables.
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.API.Types
 > import SEL4.API.Failures
 > import SEL4.API.Failures.X64

@@ -14,6 +14,7 @@ This module defines the encoding of arch-specific faults.
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine
 
 \end{impdetails}

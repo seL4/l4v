@@ -22,6 +22,7 @@ This module makes use of the GHC extension allowing data types with no construct
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine
 > import qualified SEL4.API.InvocationLabels.TARGET as ArchLabels
 

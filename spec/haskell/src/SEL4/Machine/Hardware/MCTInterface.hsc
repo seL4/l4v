@@ -12,6 +12,7 @@
 {-# LANGUAGE CPP, GeneralizedNewtypeDeriving #-}
 module SEL4.Machine.Hardware.MCTInterface where
 
+import Prelude hiding (Word)
 import Foreign.Ptr (Ptr)
 import Data.Bits
 

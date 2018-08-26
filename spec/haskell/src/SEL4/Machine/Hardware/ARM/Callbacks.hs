@@ -12,6 +12,7 @@
 
 module SEL4.Machine.Hardware.ARM.Callbacks where
 
+import Prelude hiding (Word)
 import SEL4.Machine.RegisterSet
 import Foreign.Ptr
 import Data.Bits

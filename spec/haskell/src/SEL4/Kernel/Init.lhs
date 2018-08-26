@@ -20,6 +20,7 @@ This module contains functions that create a new kernel state and set up the add
 % {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.API.Failures SEL4.Object.Structures SEL4.API.Types Control.Monad.State Control.Monad.Error #-}
 % {-# BOOT-EXPORTS: #InitData KernelInitState KernelInit allocRegion allocFrame provideCap doKernelOp noInitFailure #-}
 
+> import Prelude hiding (Word)
 > import SEL4.Config
 > import SEL4.API.Types
 > import SEL4.API.Failures

@@ -29,6 +29,7 @@ creating the "Capability" objects used at higher levels of the kernel.
 > {-# BOOT-IMPORTS: SEL4.Machine SEL4.API.Types SEL4.API.Failures SEL4.Model SEL4.Object.Structures SEL4.API.Invocation #-}
 > {-# BOOT-EXPORTS: ensureNoChildren getSlotCap locateSlotTCB locateSlotCNode locateSlotCap locateSlotBasic ensureEmptySlot insertInitCap cteInsert cteDelete cteDeleteOne decodeCNodeInvocation invokeCNode getCTE updateCap isFinalCapability createNewObjects updateFreeIndex #-}
 
+> import Prelude hiding (Word)
 > import SEL4.API.Types
 > import SEL4.API.Failures
 > import SEL4.API.Invocation

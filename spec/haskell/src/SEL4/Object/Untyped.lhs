@@ -16,6 +16,7 @@ This module defines the behavior of untyped objects.
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Config
 > import SEL4.API.Types
 > import SEL4.API.Failures

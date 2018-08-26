@@ -16,6 +16,7 @@ This module contains functions for maintaining the bootinfo structure that is pa
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import Data.Bits
 > import Control.Monad.State
 

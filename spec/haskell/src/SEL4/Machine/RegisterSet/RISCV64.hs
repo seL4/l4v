@@ -10,6 +10,7 @@
 
 module SEL4.Machine.RegisterSet.RISCV64 where
 
+import Prelude hiding (Word)
 import qualified Data.Word
 import Data.Array
 import Data.Bits

@@ -12,6 +12,7 @@
 {-# LANGUAGE CPP, GeneralizedNewtypeDeriving #-}
 module SEL4.Machine.Hardware.GICInterface where
 
+import Prelude hiding (Word)
 import Foreign.Ptr (Ptr)
 import Data.Array
 import Data.Bits

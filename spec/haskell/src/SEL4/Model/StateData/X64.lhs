@@ -13,6 +13,7 @@ This module contains the architecture-specific kernel global data for the X86-64
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine
 > import SEL4.Machine.Hardware.X64 (PML4E(..),PDPTE(..),PDE(..),PTE(..),IOPort)
 > import SEL4.Object.Structures.X64

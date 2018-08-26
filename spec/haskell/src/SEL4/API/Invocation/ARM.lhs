@@ -22,6 +22,7 @@ This module makes use of the GHC extension allowing data types with no construct
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine
 > import SEL4.Machine.Hardware.ARM hiding (PAddr)
 > import SEL4.Object.Structures

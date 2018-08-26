@@ -13,6 +13,7 @@ This module contains the architecture-specific thread switch code for X86-64bit.
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine
 > import SEL4.Model.StateData
 > import SEL4.Object.Structures
