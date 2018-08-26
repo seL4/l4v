@@ -24,6 +24,7 @@ This module contains the data structure and operations for the physical memory m
 % {-# BOOT-IMPORTS: Data.Map SEL4.Object.Structures SEL4.Machine.RegisterSet #-}
 % {-# BOOT-EXPORTS: PSpace #PRegion newPSpace #-}
 
+> import Prelude hiding (Word)
 > import SEL4.Model.StateData
 > import SEL4.Object.Structures
 

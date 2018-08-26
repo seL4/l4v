@@ -19,6 +19,7 @@ This module defines the low-level x64 hardware interface.
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine.RegisterSet
 
 > import Foreign.Ptr

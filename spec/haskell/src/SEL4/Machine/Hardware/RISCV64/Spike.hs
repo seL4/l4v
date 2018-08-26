@@ -10,6 +10,7 @@
 
 module SEL4.Machine.Hardware.RISCV64.Spike where
 
+import Prelude hiding (Word)
 import SEL4.Machine.RegisterSet
 import Foreign.Ptr
 import Data.Bits

@@ -29,6 +29,8 @@ We use the C preprocessor to select a target architecture.
 > {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures #-}
 > {-# BOOT-EXPORTS: setIRQState isIRQActive #-}
 
+> import Prelude hiding (Word)
+
 The architecture-specific definitions are imported qualified with the "Arch" prefix.
 
 > import qualified SEL4.Object.Interrupt.TARGET as Arch

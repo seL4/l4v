@@ -16,6 +16,7 @@
 
 module SEL4.Object.TCB.RISCV64 where
 
+import Prelude hiding (Word)
 import SEL4.Machine(PPtr)
 import SEL4.Model
 import SEL4.Object.Structures

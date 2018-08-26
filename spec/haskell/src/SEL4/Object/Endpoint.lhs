@@ -21,6 +21,7 @@ This module specifies the contents and behaviour of a synchronous IPC endpoint.
 % {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures #-}
 % {-# BOOT-EXPORTS: cancelIPC #-}
 
+> import Prelude hiding (Word)
 > import SEL4.API.Types
 > import SEL4.Machine
 > import SEL4.Model

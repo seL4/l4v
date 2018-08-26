@@ -20,6 +20,7 @@ This module contains the architecture-specific kernel global data for the ARM ar
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine
 > import SEL4.Machine.Hardware.ARM
 >     (HardwareASID(..), PTE(..), PDE(..), ptBits, pdBits)

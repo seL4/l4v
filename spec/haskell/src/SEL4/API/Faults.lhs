@@ -20,6 +20,7 @@ This module specifies the mechanisms used by the seL4 kernel to handle faults an
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.API.Types
 > import SEL4.API.Failures
 > import SEL4.Machine

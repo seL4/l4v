@@ -16,6 +16,7 @@ This module defines the machine-specific interrupt handling routines for x64.
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine
 > import SEL4.Model
 > import SEL4.Model.StateData.X64

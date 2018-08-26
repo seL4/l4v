@@ -10,6 +10,7 @@
 
 module SEL4.API.Failures.RISCV64 where
 
+import Prelude hiding (Word)
 import SEL4.Machine
 
 -- note that typically the first word of vmFaultArchData corresponds to

@@ -24,6 +24,7 @@ We use the C preprocessor to select a target architecture. Also, this file makes
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine.RegisterSet
 > import Control.Monad(liftM)
 

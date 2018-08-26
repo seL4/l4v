@@ -22,6 +22,7 @@ There are presently no ARM-specific register subsets defined, but in future this
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine(PPtr)
 > import SEL4.Model
 > import SEL4.Object.Structures

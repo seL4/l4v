@@ -12,6 +12,7 @@
 
 module SEL4.Machine.Hardware.RISCV64 where
 
+import Prelude hiding (Word)
 import SEL4.Machine.RegisterSet
 
 import Foreign.Ptr

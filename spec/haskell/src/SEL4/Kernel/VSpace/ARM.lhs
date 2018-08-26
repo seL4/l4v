@@ -26,6 +26,7 @@ FIXME ARMHYP this is so that disabling SMMU results in successful compile
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.API.Types
 > import SEL4.API.Failures
 > import SEL4.API.Failures.ARM

@@ -22,6 +22,7 @@ We use the C preprocessor to select a target architecture. Also, this file makes
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import Data.Bits
 > import Data.Array
 > import Data.Helpers

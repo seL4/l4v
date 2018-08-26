@@ -13,6 +13,7 @@ This module defines the x86 64-bit register set.
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import qualified Data.Word
 > import Data.Array
 > import Data.Bits

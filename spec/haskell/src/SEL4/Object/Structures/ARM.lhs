@@ -22,6 +22,7 @@ This module makes use of the GHC extension allowing declaration of types with no
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.Hardware.ARM
 > import Data.Array

@@ -12,6 +12,7 @@
 
 module SEL4.API.Invocation.RISCV64 where
 
+import Prelude hiding (Word)
 import SEL4.Machine
 import SEL4.Machine.Hardware.RISCV64 as Arch hiding (PAddr, IRQ)
 import SEL4.Object.Structures
