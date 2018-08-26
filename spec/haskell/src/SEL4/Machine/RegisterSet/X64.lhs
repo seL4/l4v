@@ -7,6 +7,8 @@
 % @TAG(GD_GPL)
 %
 
+> {-# LANGUAGE FlexibleContexts #-}
+
 This module defines the x86 64-bit register set.
 
 > module SEL4.Machine.RegisterSet.X64 where

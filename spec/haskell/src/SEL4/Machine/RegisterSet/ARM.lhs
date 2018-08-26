@@ -10,7 +10,7 @@
 
 \begin{impdetails}
 
-> {-# LANGUAGE CPP, GeneralizedNewtypeDeriving #-}
+> {-# LANGUAGE CPP, GeneralizedNewtypeDeriving, FlexibleContexts #-}
 
 \end{impdetails}
 
