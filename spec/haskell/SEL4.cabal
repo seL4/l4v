@@ -94,15 +94,15 @@ Library
                             Data.Helpers
                             Data.WordLib
 
-                            SEL4.Machine.Hardware.GICInterface
-                            SEL4.Machine.Hardware.MCTInterface
-                            SEL4.Machine.Hardware.MPTimerInterface
     if flag(ArchArm)
         other-modules:
                             SEL4.Machine.Hardware.ARM.KZM
                             SEL4.Machine.Hardware.ARM.Exynos4210
                             SEL4.Machine.Hardware.ARM.Sabre
                             SEL4.Machine.Hardware.ARM.Callbacks
+                            SEL4.Machine.Hardware.GICInterface
+                            SEL4.Machine.Hardware.MCTInterface
+                            SEL4.Machine.Hardware.MPTimerInterface
 
                             SEL4.API.Types.ARM
                             SEL4.API.InvocationLabels.ARM
@@ -150,6 +150,8 @@ Library
                             SEL4.API.Types.X64
                             SEL4.API.InvocationLabels.X64
                             SEL4.API.Invocation.X64
+                            SEL4.API.Failures.X64
+                            SEL4.API.Faults.X64
                             SEL4.Kernel.VSpace.X64
                             SEL4.Kernel.Thread.X64
                             SEL4.Kernel.Hypervisor.X64
@@ -170,6 +172,8 @@ Library
                             SEL4.API.Types.RISCV64
                             SEL4.API.InvocationLabels.RISCV64
                             SEL4.API.Invocation.RISCV64
+                            SEL4.API.Failures.RISCV64
+                            SEL4.API.Faults.RISCV64
                             SEL4.Kernel.VSpace.RISCV64
                             SEL4.Kernel.Thread.RISCV64
                             SEL4.Kernel.Hypervisor.RISCV64
