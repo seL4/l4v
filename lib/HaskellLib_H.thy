@@ -177,14 +177,14 @@ definition
  "catMaybes \<equiv> (map the) \<circ> (filter isJust)"
 
 definition
- "runErrorT \<equiv> id"
+ "runExceptT \<equiv> id"
 
 declare Just_def[simp] Nothing_def[simp] fromJust_def[simp]
       isJust_def[simp] tail_def[simp] head_def[simp]
       error_def[simp] reverse_def[simp] isNothing_def[simp]
       maybeApply_def[simp] maybe_def[simp]
       foldR_def[simp] elem_def[simp] notElem_def[simp]
-      catMaybes_def[simp] runErrorT_def[simp]
+      catMaybes_def[simp] runExceptT_def[simp]
 
 definition
  "headM L \<equiv> (case L of (h # t) \<Rightarrow> return h | _ \<Rightarrow> fail)"
