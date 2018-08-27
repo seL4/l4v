@@ -30,7 +30,7 @@ cparser_tools: stp_all
 # Setup heaps we use.
 HEAPS += Simpl-VCG CParser
 
-# l4v root dir. Will be "." if this is a separate C parser release.
+# l4v root dir. Will be ".." if this is a separate C parser release.
 L4V_ROOT_DIR = ../..
 
 # Path to Isabelle

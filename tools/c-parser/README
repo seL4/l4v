@@ -19,6 +19,9 @@ To use:
 3. Load ('install') C files into your theories with the Isar command
    install_C_file.
 
+See docs/ctranslation.pdf for more information about the options
+and C language semantics that this tool provides.
+
 See many examples in the testfiles directory.  For example,
 breakcontinue.thy is a fairly involved demonstration of doing things
 the hard way.

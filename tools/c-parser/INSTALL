@@ -1,5 +1,3 @@
-#
-#
 # Copyright 2014, NICTA
 #
 # This software may be distributed and modified according to the terms of
@@ -7,27 +5,52 @@
 # See "LICENSE_BSD2.txt" for details.
 #
 # @TAG(NICTA_BSD)
-#
-#
-# Installation Instructions for the C-Parser
+
+# Installation instructions for the C parser
+
+NB: These instructions apply to the stand-alone release of the C parser.
+If this is in an L4.verified checkout, see the top-level README instead.
 
 This code requires Isabelle2018 and the MLton SML compiler.
 
+The C parser supports multiple target architectures:
+
+    - ARM
+    - ARM_HYP
+    - X64
+
+These platforms differ in integer sizes and various other details.
+Choose your desired architecture using the L4V_ARCH environment variable:
+
+    export L4V_ARCH=ARM
+
 To build the main heap CParser, use the following command in this directory (src/c-parser).
 
-    isabelle env make -f IsaMakefile CParser
+    isabelle env make CParser
 
 You can also build a regression test with the command
 
-    isabelle env make -f IsaMakefile CParserTest
+    isabelle env make cparser_test
 
-## Other Tools
+The regression test may require a lot of memory to run. If your computer has
+enough memory, configure your etc/settings file to use a 64-bit runtime:
+
+    ML_PLATFORM=$ISABELLE_PLATFORM64
+    ML_HOME=$(dirname "${ML_HOME}")/$ML_PLATFORM
+
+## Loading the parser
+
+The ROOTS file for the parser is in the src directory.
+Run Isabelle with this directory as an argument, e.g.:
+
+    isabelle jedit -d src -l CParser foo.thy
+
+If that worked, then the C parser has been loaded successfully.
+See the README and PDF documentation for further instructions.
+
+## Other tools
 
 There are two executables that can be built in the standalone-parser directory:
 
     make standalone-cparser
     make standalone-tokenizer
-
-## Using the C Parser
-
-Theories wishing to use the parser must have CTranslation as an ancestor.

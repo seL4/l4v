@@ -20,7 +20,6 @@ case $(uname) in
 esac
 
 
-
 warn ()
 {
   echo "$1" >&2
@@ -42,6 +41,7 @@ fi
 # Get the directory that this script is running in.
 CPARSER_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 TOPLEVEL_DIR=$( git -C ${CPARSER_DIR} rev-parse --show-toplevel)
+RELEASE_ARCHS='ARM ARM_HYP X64'
 pushd "${TOPLEVEL_DIR}"
 
 # Ensure that our working directory is clean.
@@ -90,11 +90,32 @@ git -C "${TOPLEVEL_DIR}" ls-files -z | tr '\0' '\n' |
    tar -v -T - -c -f - -l |
   (cd "$outputdir/src" ; tar xf -)
 
+echo "Getting theory dependencies"
+CPARSER_DEPS=$(tempfile)
+for ARCH in $RELEASE_ARCHS; do
+    L4V_ARCH=$ARCH misc/scripts/thydeps -I ./isabelle -d . -b . -r CParser
+done |
+    sort -u >"$CPARSER_DEPS"
+
+if grep -q -vE '^(lib/|tools/c-parser/)' "$CPARSER_DEPS"; then
+    echo >&2 'unexpected dependencies outside lib/ and tools/c-parser/:'
+    grep >&2 -vE '^(lib/|tools/c-parser/)' "$CPARSER_DEPS"
+    exit 1
+fi
+
 echo "Copying misc files"
-find tools/c-parser/CTranslation.thy tools/c-parser/testfiles -name '*.thy' |
-    xargs '-d\n' misc/scripts/thydeps -T text -o - |
-    grep '^lib/' |
+grep '^lib/' "$CPARSER_DEPS" |
     xargs '-d\n' cp -v --parents -t "$outputdir/src"
+
+# other misc files
+cp -v --parents -t "$outputdir/src" \
+   lib/Word_Lib/ROOT
+
+echo "Creating ROOTS file"
+cat >"$outputdir/src/ROOTS" <<EOF
+lib/Word_Lib
+c-parser
+EOF
 
 echo "Rearranging directories"
 /bin/mv -v "$outputdir/src/tools/c-parser/README" "$outputdir"
@@ -105,13 +126,13 @@ echo "Removing files"
 /bin/rm -v "$outputdir/src/c-parser/testfiles/many_local_vars".{c,thy}
 
 echo "Executing gen_isabelle_root to generate testfiles/\$L4V_ARCH/ROOT."
-for L4V_ARCH in ARM ARM_HYP RISCV64 X64; do
+for L4V_ARCH in $RELEASE_ARCHS; do
     python misc/scripts/gen_isabelle_root.py -i "$outputdir/src/c-parser/testfiles" -i "$outputdir/src/c-parser/testfiles/${L4V_ARCH}" -o "$outputdir/src/c-parser/testfiles/$L4V_ARCH/ROOT" -s CParserTest -b CParser ||
         die "gen_isabelle_root failed."
 done
 
 echo "Executing gen_isabelle_root to generate testfiles/all_tests_\$L4V_ARCH.thy."
-for L4V_ARCH in ARM ARM_HYP RISCV64 X64; do
+for L4V_ARCH in $RELEASE_ARCHS; do
     python misc/scripts/gen_isabelle_root.py -T -o "$outputdir/src/c-parser/all_tests_${L4V_ARCH}.thy" -b CParser -i "$outputdir/src/c-parser/testfiles" -i "$outputdir/src/c-parser/testfiles/${L4V_ARCH}" ||
         die "gen_isabelle_root failed."
 done
@@ -130,17 +151,8 @@ if ! grep -q '^L4V_ROOT_DIR = ' "$outputdir/src/c-parser/Makefile"; then
     die "failed to process c-parser/Makefile"
 fi
 sed $SEDIOPT \
-    -e 's/^L4V_ROOT_DIR = .*$/L4V_ROOT_DIR = ./' \
+    -e 's/^L4V_ROOT_DIR = .*$/L4V_ROOT_DIR = ../' \
     "$outputdir/src/c-parser/Makefile"
-
-
-# We are moving the c-parser directory from the "tools/c-parser" directory to
-# the "c-parser" directory. Here we carry out a hack to fixup import paths of
-# the form "../../lib/A" by converting them into "../lib/A".
-echo "Fixing import paths."
-pushd "$outputdir/src/c-parser"
-find -name '*.thy' -execdir sed $SEDIOPT -E -e 's&\.\./lib/&lib/&g' '{}' ';'
-popd
 
 echo "Generating standalone-parser/table.ML"
 pushd "$TOPLEVEL_DIR/tools/c-parser" > /dev/null
