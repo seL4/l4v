@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+#
+# Copyright 2018, Data61
+# Commonwealth Scientific and Industrial Research Organisation (CSIRO)
+# ABN 41 687 119 230.
+#
+# This software may be distributed and modified according to the terms of
+# the BSD 2-Clause license. Note that NO WARRANTY is provided.
+# See "LICENSE_BSD2.txt" for details.
+#
+# @TAG(DATA61_BSD)
+#
+
+'''
+Find the set of theory files that the given theories depend on.
+Basically a thin wrapper around 'isabelle build -l'.
+
+The main use for this script is to extract dependent theory files
+for stand-alone releases of the C parser and AutoCorres.
+'''
+
+import argparse
+import os
+import re
+import subprocess
+
+def run_isabelle_tool(isabelle_dir, cmdline, ignore_exit_code=False):
+    '''Run Isabelle with given command (e.g. ['build', '-l', 'HOL']).
+       The first argument should be the Isabelle directory.
+       If the command succeeded, return its standard output.'''
+    isabelle_exe = os.path.join(isabelle_dir, 'bin', 'isabelle')
+    try:
+        return subprocess.check_output([isabelle_exe] + cmdline)
+    except subprocess.CalledProcessError as e:
+        if ignore_exit_code:
+            return e.output
+        else:
+            raise
+
+def session_theory_deps(isabelle_dir, ROOT_dirs, sessions):
+    '''For the given sessions, retrieve the dependent sessions
+       and theory files (including the given sessions).
+       Returns a dict keyed by session name, containing lists of
+       theory file paths.'''
+
+    cmdline = ['build', '-l', '-n']
+    for d in ROOT_dirs:
+        cmdline += ['-d', d]
+    cmdline += sessions
+
+    deps = {}
+    this_session = None
+    session_name_re = r'[a-zA-Z0-9-_]+'
+    # `isabelle build` returns 1 if the session hasn't been built,
+    # even for a dry-run, so ignore the exit code
+    for l in run_isabelle_tool(
+            isabelle_dir, cmdline, ignore_exit_code=True).splitlines():
+        l = l.decode('utf-8')
+        # 'Session HOL/HOL-Word (main timing)'
+        m = re.match(r'Session (' + session_name_re + ')/(' + session_name_re + ')(?: \(.*\))?', l)
+        if m:
+            # start processing next session
+            _, session = m.groups()
+            this_session = session
+            assert session not in deps
+            deps[session] = []
+            continue
+
+        # '  /path/to/proof.thy'
+        if l.startswith('  '):
+            # another file in session
+            deps[this_session].append(l[2:])
+            continue
+
+        # There are some other junk lines, like '... elapsed time',
+        # which we ignore
+
+    return deps
+
+def theory_deps_in_dirs(isabelle_dir, ROOT_dirs, sessions, base_dirs):
+    '''Get dependent sessions and theories like session_theory_deps,
+       but only report theory files and sessions that involve one of
+       the given directories.'''
+    full_deps = session_theory_deps(isabelle_dir, ROOT_dirs, sessions)
+
+    if not base_dirs:
+        # no filtering
+        return full_deps
+
+    deps = {}
+    # remove unwanted theories
+    for session in full_deps:
+        session_trimmed_deps = []
+        for f in full_deps[session]:
+            keep = False
+            for base in base_dirs:
+                relpath = os.path.relpath(f, base)
+                if not relpath.startswith('../'):
+                    keep = True
+                    break
+            if keep:
+                session_trimmed_deps.append(f)
+        # if session has no wanted theories, also drop it
+        if session_trimmed_deps:
+            deps[session] = session_trimmed_deps
+    return deps
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Extract theory file dependencies of Isabelle sessions')
+    parser.add_argument('-d', metavar='DIR', action='append', default=[],
+        help='Directories containing ROOT or ROOTS files (default: .)')
+    parser.add_argument('-b', metavar='DIR', action='append', default=[],
+        help='Show theory files from these directories (default: all)')
+    parser.add_argument('-I', metavar='DIR', required=True,
+        help='Path to Isabelle system')
+    parser.add_argument('-r', action='store_true',
+        help='Print relative paths to -b directory (only one dir allowed)')
+    parser.add_argument('sessions', metavar='SESSIONS', nargs='+',
+        help='Isabelle session names')
+
+    opts = parser.parse_args()
+    if not opts.d:
+        opts.d = ['.']
+
+    # use absolute paths and resolve symlinks, to match `isabelle build -l`
+    opts.b = [os.path.realpath(d) for d in opts.b]
+    if opts.r and len(opts.b) != 1:
+        parser.error('must have exactly one directory for -b to use -r')
+
+    if not os.path.isdir(opts.I):
+        parser.error('expected a directory for -I option')
+    expected_isabelle = os.path.join(opts.I, 'bin', 'isabelle')
+    if not os.path.exists(expected_isabelle):
+        parser.error('Isabelle executable not found: %r' % expected_isabelle)
+
+    deps = theory_deps_in_dirs(opts.I, opts.d, opts.sessions, opts.b)
+    for session in deps:
+        for theory in deps[session]:
+            if opts.r:
+                theory = os.path.relpath(theory, opts.b[0])
+            print(theory)
+
+if __name__ == '__main__':
+    main()
