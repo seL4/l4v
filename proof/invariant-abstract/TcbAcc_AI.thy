@@ -849,9 +849,9 @@ lemma set_thread_state_tcb[wp]:
   "\<lbrace>tcb_at t\<rbrace> set_thread_state ts t' \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
   by (simp add: tcb_at_typ, wp)
 
-lemma set_tcb_obj_ref_tcb[wp]:
-  "\<lbrace>tcb_at t\<rbrace> set_tcb_obj_ref f t' ntfn \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
-  by (simp add: tcb_at_typ, wp)
+lemma set_tcb_obj_ref_tcb_at[wp]:
+  "\<lbrace>tcb_at t\<rbrace> set_tcb_obj_ref f t' obj \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
+  by (wpsimp simp: tcb_at_typ)
 
 lemma set_thread_state_cte_wp_at [wp]:
   "\<lbrace>cte_wp_at P c\<rbrace> set_thread_state st p' \<lbrace>\<lambda>rv. cte_wp_at P c\<rbrace>"

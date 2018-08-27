@@ -96,14 +96,14 @@ lemma derive_cap_is_derived [Ipc_AI_assms]:
                                      cap_asid_def
                     | fold validE_R_def
                     | erule cte_wp_at_weakenE
-                    | simp split: cap.split_asm)+)[11]
-(*  apply(wp, simp add: o_def)
-  apply(wp hoare_drop_imps arch_derive_cap_is_derived)
-  apply(clarify, drule cte_wp_at_eqD, clarify)
-  apply(frule(1) cte_wp_at_valid_objs_valid_cap)
-  apply(erule cte_wp_at_weakenE)
-  apply(clarsimp simp: valid_cap_def)
-  done *) sorry
+                    | simp split: cap.split_asm)+)[13]
+  apply (wp, simp add: o_def)
+  apply (wp hoare_drop_imps arch_derive_cap_is_derived)
+  apply (clarify, drule cte_wp_at_eqD, clarify)
+  apply (frule (1) cte_wp_at_valid_objs_valid_cap)
+  apply (erule cte_wp_at_weakenE)
+  apply (clarsimp simp: valid_cap_def)
+  done
 
 lemma is_derived_cap_rights [simp, Ipc_AI_assms]:
   "is_derived m p (cap_rights_update R c) = is_derived m p c"
@@ -278,19 +278,15 @@ lemma make_arch_fault_msg_inv[wp]: "\<lbrace>P\<rbrace> make_arch_fault_msg f t 
   apply wp
   done
 
-lemma make_fault_message_inv[wp, Ipc_AI_assms]:
-  "\<lbrace>P\<rbrace> make_fault_msg ft t \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (cases ft, simp_all split del: if_split)
-     apply (wp as_user_inv getRestartPC_inv mapM_wp'
-              | simp add: getRegister_def)+
-  sorry
+crunches make_fault_msg
+  for invs[wp]: invs
+  and tcb_at[wp]: "tcb_at t"
 
 lemma do_fault_transfer_invs[wp, Ipc_AI_assms]:
   "\<lbrace>invs and tcb_at receiver\<rbrace>
       do_fault_transfer badge sender receiver recv_buf
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (simp add: do_fault_transfer_def split_def | wp
-    | clarsimp split: option.split)+
+  by (simp add: do_fault_transfer_def split_def | wp | clarsimp split: option.split)+
 
 lemma lookup_ipc_buffer_in_user_frame[wp, Ipc_AI_assms]:
   "\<lbrace>valid_objs and tcb_at t\<rbrace> lookup_ipc_buffer b t

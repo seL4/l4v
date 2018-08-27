@@ -932,13 +932,13 @@ lemma (* cap_delete_one_invs *) [Finalise_AI_asms,wp]:
   done
 
 end
-(*
+
 interpretation Finalise_AI_2?: Finalise_AI_2
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales; fact Finalise_AI_asms)?)
   qed
-*)
+
 context Arch begin global_naming ARM
 
 crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"
@@ -1557,23 +1557,16 @@ lemma unbind_from_sc_invs[wp]:
 lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
   shows "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv (s(*::det_ext state*)). invs s\<rbrace>"
   apply (cases cap, simp_all split del: if_split)
-         apply (wp cancel_all_ipc_invs cancel_all_signals_invs unbind_notification_invs
-                   unbind_maybe_notification_invs get_simple_ko_wp suspend_invs
-                   sched_context_unbind_yield_from_invs sched_context_clear_replies_invs
-                  | simp add: o_def split del: if_split cong: if_cong
-                  | wpc
-                  | solves \<open>clarsimp\<close> )+
-  sorry (* finalise_cap_invs: needs det_ext shenanigans with the Finalise_AI locales
-
-      apply clarsimp (* thread *)
-      apply (frule cte_wp_at_valid_objs_valid_cap, clarsimp)
-      apply (clarsimp simp: valid_cap_def)
-      apply (frule(1) valid_global_refsD[OF invs_valid_global_refs])
-       apply (simp add: global_refs_def, rule disjI1, rule refl)
-      apply (simp add: cap_range_def)
-     apply (wp deleting_irq_handler_invs  | simp | intro conjI impI)+
-  apply (auto dest: cte_wp_at_valid_objs_valid_cap)
-  done*)
+               apply (wp cancel_all_ipc_invs cancel_all_signals_invs unbind_notification_invs
+                         unbind_maybe_notification_invs get_simple_ko_wp suspend_invs
+                         sched_context_unbind_yield_from_invs sched_context_clear_replies_invs
+                     | simp add: o_def split del: if_split cong: if_cong
+                     | wpc
+                     | solves \<open>clarsimp\<close> )+
+  apply clarsimp
+  apply (frule cte_wp_at_valid_objs_valid_cap, clarsimp)
+  apply (clarsimp simp: valid_cap_def)
+  done
 
 lemma (* finalise_cap_irq_node *)[Finalise_AI_asms]:
 "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> finalise_cap a b \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"

@@ -38,8 +38,8 @@ lemma akernel_invs_det_ext:
 
 lemma akernel_invs:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
-  (call_kernel e) :: (unit,det_ext) s_monad
-  \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
+  (call_kernel e)
+  \<lbrace>\<lambda>rv s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   unfolding call_kernel_def
   apply (wpsimp wp: activate_invs check_budget_invs simp: active_from_running) (* doesnt use getActiveIRQ_wp *)
     apply (rule_tac Q="\<lambda>rv s. invs s \<and> bound_sc_tcb_at (\<lambda>a. a \<noteq> None) (cur_thread s) s" in hoare_strengthen_post)
@@ -73,7 +73,7 @@ lemma kernel_entry_invs:
   apply (wp akernel_invs thread_set_invs_trivial thread_set_ct_in_state select_wp
          ct_running_machine_op static_imp_wp hoare_vcg_disj_lift
       | clarsimp simp add: tcb_cap_cases_def)+
-  sorry
+  done
 
 (* FIXME: move to Lib.thy *)
 lemma Collect_subseteq:

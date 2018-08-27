@@ -266,8 +266,7 @@ locale Ipc_AI =
     "\<And> P p ft t. make_arch_fault_msg ft t \<lbrace>reply_sc_reply_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_reply_tcb[wp]:
     "\<And> P p ft t. make_arch_fault_msg ft t \<lbrace>reply_tcb_reply_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-
-assumes do_fault_transfer_invs[wp]:
+  assumes do_fault_transfer_invs[wp]:
     "\<And>receiver badge sender recv_buf.
       \<lbrace>invs and tcb_at receiver :: 'state_ext state \<Rightarrow> bool\<rbrace>
         do_fault_transfer badge sender receiver recv_buf
@@ -2215,6 +2214,7 @@ lemma update_waiting_invs:
   done
 
 
+(* FIXME: remove from all arches. *)
 lemma cancel_ipc_ex_nonz_tcb_cap:
   "\<lbrace>\<lambda>s. \<exists>ptr. cte_wp_at ((=) (cap.ThreadCap p)) ptr s\<rbrace>
      cancel_ipc t
@@ -2233,20 +2233,18 @@ lemma valid_cap_tcb_at_tcb_or_zomb:
        \<Longrightarrow> is_thread_cap cap \<or> is_zombie cap"
   by (rule obj_ref_is_tcb)
 
+lemma cancel_ipc_cap_to:
+  "\<lbrace>ex_nonz_cap_to p\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
+  by (wpsimp wp: cancel_ipc_caps_of_state
+           simp: ex_nonz_cap_to_def cte_wp_at_caps_of_state
+       simp_del: split_paired_Ex)
 
+(* FIXME: remove from all arches. *)
 lemma cancel_ipc_ex_nonz_cap_to_tcb:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to p s \<and> valid_objs s \<and> tcb_at p s\<rbrace>
      cancel_ipc t
    \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
-  apply (wp cancel_ipc_ex_nonz_tcb_cap)
-  apply (clarsimp simp: ex_nonz_cap_to_def)
-  apply (drule cte_wp_at_norm, clarsimp)
-  apply (frule(1) cte_wp_at_valid_objs_valid_cap, clarsimp)
-  apply (drule valid_cap_tcb_at_tcb_or_zomb[where t=p])
-    apply (simp add: zobj_refs_to_obj_refs)
-   apply assumption
-  apply (fastforce simp: is_cap_simps)
-  done
+  by (wpsimp wp: cancel_ipc_cap_to)
 
 
 lemma cancel_ipc_simple2:
@@ -2676,19 +2674,17 @@ lemma sort_queue_inv:
   "\<lbrace> P \<rbrace> sort_queue ls \<lbrace> \<lambda>rv. P \<rbrace>"
   by (wpsimp simp: sort_queue_def wp: mapM_wp) auto
 
-lemma cancel_ipc_cap_to:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
-  by (wpsimp wp: cancel_ipc_caps_of_state
-           simp: ex_nonz_cap_to_def cte_wp_at_caps_of_state
-       simp_del: split_paired_Ex)
-
 context Ipc_AI begin
+
+lemma hoare_drop_imp_under_All:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q rv s x\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. D rv s x \<longrightarrow> Q rv s x\<rbrace>"
+  by (auto elim: hoare_strengthen_post)
 
 lemma receive_ipc_cap_to[wp]:
   "receive_ipc thread cap is_blocking reply_cap \<lbrace>ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   by (wpsimp simp: receive_ipc_def
                wp: hoare_drop_imps sort_queue_inv fail_wp cancel_ipc_cap_to
-                   hoare_strengthen_post[OF get_endpoint_inv[where P="ex_nonz_cap_to p"]])
+                   hoare_drop_imp_under_All)
 
 end
 
@@ -2793,9 +2789,7 @@ context Ipc_AI begin
 
 lemma receive_ipc_typ_at[wp]:
   "\<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace> receive_ipc thread cap is_blocking reply_cap \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: receive_ipc_def
-               wp: hoare_drop_imps
-                   hoare_strengthen_post[OF get_endpoint_inv[where P="\<lambda>s. P (typ_at T p s)"]])
+  by (wpsimp simp: receive_ipc_def wp: hoare_drop_imps hoare_drop_imp_under_All)
 
 lemma ri_tcb [wp]:
   "\<lbrace>tcb_at t' :: 'state_ext state \<Rightarrow> bool\<rbrace>
