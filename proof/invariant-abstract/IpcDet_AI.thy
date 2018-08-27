@@ -1447,7 +1447,7 @@ lemma si_invs'_helper_no_reply:
   assumes reply_unlink_tcb_Q[wp]: "\<And>a. \<lbrace>Q\<rbrace> reply_unlink_tcb a \<lbrace>\<lambda>_. Q\<rbrace>"
   shows
   "\<lbrace>\<lambda>s. st_tcb_at active tptr s \<and>
-        st_tcb_at (\<lambda>st. \<exists>epptr. st = BlockedOnReceive epptr None) dest s \<and> reply = None \<and>
+        st_tcb_at (\<lambda>st. \<exists>epptr. st = BlockedOnReceive epptr None) dest s \<and>
         all_invs_but_sym_refs s \<and>
         valid_replies s \<and>
         sym_refs (\<lambda>x. if x = dest
@@ -1459,8 +1459,7 @@ lemma si_invs'_helper_no_reply:
      sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
      fault <- thread_get tcb_fault tptr;
      y <- if call \<or> (\<exists>y. fault = Some y)
-          then when (cg \<and> (\<exists>y. reply = Some y))
-                 (reply_push tptr dest (the reply) can_donate)
+          then return ()
           else when (can_donate \<and> sc_opt = None)
                  (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
                      sched_context_donate (the caller_sc_opt) dest
@@ -1472,8 +1471,6 @@ lemma si_invs'_helper_no_reply:
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (case_tac "call \<or> (\<exists>y. fault = Some y)"; simp)
-   apply (clarsimp simp: when_def)
-   apply (intro conjI)
     apply wpsimp
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                    wp: sts_only_idle valid_irq_node_typ sts_valid_replies_simple
@@ -1632,11 +1629,10 @@ lemma si_invs'_helper:
         sym_refs (state_hyp_refs_of s)\<rbrace>
    do recv_state <- get_thread_state dest;
       reply <- case recv_state of BlockedOnReceive x reply \<Rightarrow>
-                      do do_ipc_transfer tptr (Some epptr) ba cg dest;
-                         maybeM reply_unlink_tcb reply;
                          return reply
-                      od
                | _ \<Rightarrow> fail;
+      y \<leftarrow> do_ipc_transfer tptr (Some epptr) ba cg dest;
+      y \<leftarrow> maybeM reply_unlink_tcb reply;
       sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
       fault <- thread_get tcb_fault tptr;
       y <- if call \<or> (\<exists>y. fault = Some y)
@@ -1654,7 +1650,7 @@ lemma si_invs'_helper:
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (case_tac recv_state; simp)
   apply (rename_tac r)
-  apply (case_tac r; simp)
+  apply (case_tac r, simp)
    apply (wpsimp wp: si_invs'_helper_no_reply wp_del: maybeM_inv)
     apply (wpsimp wp: valid_irq_node_typ do_ipc_transfer_bound_sc)
    apply clarsimp
