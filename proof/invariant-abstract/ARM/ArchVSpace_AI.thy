@@ -1723,10 +1723,10 @@ lemma svr_invs [wp]:
   apply(simp add: invs_valid_objs)
   done
 
-crunch pred_tcb_at[wp]: arm_context_switch "pred_tcb_at proj P t"
+crunch pred_tcb_at[wp]: arm_context_switch "\<lambda>s. Q (pred_tcb_at proj P t s)"
 
 lemma svr_pred_st_tcb[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_vm_root t \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  "set_vm_root t \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   unfolding set_vm_root_def by (wpsimp wp: get_cap_wp)
 
 crunch typ_at [wp]: set_vm_root "\<lambda>s. P (typ_at T p s)"
@@ -2080,7 +2080,6 @@ lemma vs_refs_pdI2:
   "\<lbrakk>pd r = PageTablePDE x a b; r \<notin> kernel_mapping_slots\<rbrakk>
    \<Longrightarrow> (VSRef (ucast r) (Some APageDirectory), ptrFromPAddr x) \<in> vs_refs (ArchObj (PageDirectory pd))"
   by (auto simp: vs_refs_def pde_ref_def graph_of_def)
-
 
 lemma set_pd_invs_map:
   "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pde (pd i)) and

@@ -441,7 +441,9 @@ lemma store_pde_vms[wp]:
  "\<lbrace>valid_machine_state\<rbrace> store_pde ptr pde \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   by (simp add: store_pde_def, wp) clarsimp
 
-crunch valid_irq_states[wp]: store_pde "valid_irq_states"
+crunches store_pde
+  for valid_irq_states[wp]: "valid_irq_states"
+  and valid_replies[wp]: "valid_replies_pred P"
 
 lemma copy_global_invs_mappings_restricted:
   "\<lbrace>(\<lambda>s. all_invs_but_equal_kernel_mappings_restricted (insert pd S) s)
@@ -1304,7 +1306,8 @@ lemma invs_irq_state_independent:
       valid_asid_map_def vspace_at_asid_def
       pspace_in_kernel_window_def cap_refs_in_kernel_window_def
       cur_tcb_def sym_refs_def state_refs_of_def
-      swp_def valid_irq_states_def)
+      swp_def valid_irq_states_def
+      valid_replies_kheap_eq[of "machine_state_update _ s" s])
 
 crunch irq_masks_inv[wp]: cleanByVA_PoU, storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
   (ignore: cacheRangeOp wp: crunch_wps)

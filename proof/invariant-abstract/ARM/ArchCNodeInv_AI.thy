@@ -483,6 +483,7 @@ lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
          and cte_wp_at ((=) cap) slot\<rbrace>
     finalise_cap cap ex
    \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
+  supply if_cong[cong]
   apply (case_tac cap, simp_all)
             apply (wp unbind_notification_valid_objs
                  | clarsimp simp: o_def valid_cap_def cap_table_at_typ

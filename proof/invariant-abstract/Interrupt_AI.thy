@@ -160,8 +160,10 @@ crunches test_reschedule,
   for mdb_inv[wp]: "\<lambda>s. P (cdt s)"
   (wp: crunch_wps simp: crunch_simps ignore: tcb_release_remove test_reschedule)
 
+context notes if_cong[cong] begin
 crunch mdb_inv[wp]: fast_finalise "\<lambda>s. P (cdt s)"
   (wp: crunch_wps maybeM_inv ignore: sched_context_donate)
+end
 
 lemma cap_delete_one_still_derived:
   "\<lbrace>\<lambda>s. cte_wp_at (is_derived (cdt s) p' cap) p' s \<and> p \<noteq> p' \<and> valid_mdb s\<rbrace>

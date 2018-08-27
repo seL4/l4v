@@ -144,17 +144,15 @@ lemma thread_set_tcb[wp]:
   "\<lbrace>tcb_at t\<rbrace> thread_set t' f \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
   by (simp add: thread_set_typ_at [where P="\<lambda>s. s"] tcb_at_typ)
 
-lemma thread_set_no_change_tcb_pred:
-  assumes x: "\<And>tcb. proj (tcb_to_itcb (f tcb))    = proj (tcb_to_itcb tcb)"
-  shows      "\<lbrace>pred_tcb_at proj P t\<rbrace> thread_set f t' \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
-  apply (simp add: thread_set_def pred_tcb_at_def)
-  apply wp
-   apply (rule set_object_at_obj)
-  apply wp
-  apply (clarsimp simp: obj_at_def)
+lemma thread_set_no_change_tcb_pred_gen:
+  assumes "\<And>tcb. proj (tcb_to_itcb (f tcb)) = proj (tcb_to_itcb tcb)"
+  shows "thread_set f t' \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
+  apply (wpsimp simp: thread_set_def pred_tcb_at_def obj_at_def wp: set_object_wp)
   apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: x)
+  apply (clarsimp simp: assms)
   done
+
+lemmas thread_set_no_change_tcb_pred = thread_set_no_change_tcb_pred_gen[where Q="\<lambda>x. x"]
 
 lemmas thread_set_no_change_tcb_state=thread_set_no_change_tcb_pred[where proj="itcb_state",simplified]
 
@@ -166,16 +164,7 @@ lemmas thread_set_no_change_tcb_sched_context =
 lemmas thread_set_no_change_tcb_yield_to =
    thread_set_no_change_tcb_pred[where proj="itcb_yield_to", simplified]
 
-lemma thread_set_no_change_tcb_pred_converse:
-  assumes x: "\<And>tcb. proj (tcb_to_itcb (f tcb)) = proj (tcb_to_itcb tcb)"
-  shows      "\<lbrace>\<lambda>s. \<not> pred_tcb_at proj P t s\<rbrace> thread_set f t' \<lbrace>\<lambda>rv s. \<not> pred_tcb_at proj P t s\<rbrace>"
-  apply (clarsimp simp: thread_set_def pred_tcb_at_def set_object_def in_monad
-                        gets_the_def valid_def)
-  apply (erule notE)
-  apply (clarsimp simp: obj_at_def split: if_split_asm)
-  apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: x)
-  done
+lemmas thread_set_no_change_tcb_pred_converse = thread_set_no_change_tcb_pred_gen[where Q="\<lambda>x. \<not>x"]
 
 lemmas thread_set_no_change_tcb_state_converse=
   thread_set_no_change_tcb_pred_converse[where proj="itcb_state", simplified]
@@ -322,6 +311,49 @@ lemma thread_set_iflive_trivial:
   apply (clarsimp simp: live_def hyp_live_tcb_def z y w t a)
   done
 
+lemma thread_set_obj_at_impossible:
+  "\<lbrakk> \<And>tcb. \<not> P' (TCB tcb) \<rbrakk> \<Longrightarrow> thread_set f t \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  apply (simp add: thread_set_def set_object_def)
+  apply wp
+  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (clarsimp simp: obj_at_def)
+  done
+
+lemma thread_set_wp:
+  "\<lbrace> \<lambda>s. \<forall>tcb. get_tcb t s = Some tcb \<longrightarrow> Q (s\<lparr>kheap := kheap s(t \<mapsto> TCB (f tcb))\<rparr>) \<rbrace>
+    thread_set f t
+   \<lbrace> \<lambda>_. Q \<rbrace>"
+  by (wpsimp simp: thread_set_def wp: set_object_wp)
+
+lemma tcb_agnostic_predE:
+  "P (P' (TCB tcb)) \<Longrightarrow> tcb_agnostic_pred P' \<Longrightarrow> P (P' (TCB tcb'))"
+  by (fastforce simp: tcb_agnostic_pred_def)
+
+global_interpretation thread_set: tcb_op "thread_set f t_ptr"
+  by unfold_locales (wpsimp wp: thread_set_wp simp: obj_at_def get_tcb_ko_at tcb_agnostic_predE)
+
+lemma sts_obj_at_impossible':
+  "(\<And>tcb. \<not> P' (TCB tcb)) \<Longrightarrow> set_thread_state t st \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  unfolding set_thread_state_def
+  by (wpsimp wp: thread_set_obj_at_impossible
+           simp: set_object_def obj_at_def get_tcb_def
+          split: kernel_object.splits option.splits)
+
+lemmas sts_obj_at_impossible = sts_obj_at_impossible'[where P= id, simplified]
+
+global_interpretation set_thread_state: non_reply_op "set_thread_state t st"
+  by unfold_locales (fastforce simp: reply_at_ppred_def intro: sts_obj_at_impossible')
+
+lemma (in non_reply_op) non_reply_ko_at_Reply[wp]:
+  "f \<lbrace> \<lambda>s. P (ko_at (Reply reply_obj) reply_ptr s) \<rbrace>"
+  by (wpsimp simp: simple_obj_at_ko_at[symmetric])
+
+lemma thread_set_valid_replies_trivial:
+  assumes st: "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
+  shows "thread_set f t \<lbrace> valid_replies_pred P \<rbrace>"
+  supply get_tcb_SomeD[dest!]
+  by (wpsimp wp: valid_replies_lift thread_set_wp
+           simp: sk_obj_at_pred_def obj_at_def pred_tcb_at_def st)
 
 lemma thread_set_ifunsafe_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
@@ -404,15 +436,6 @@ lemma thread_set_global_refs_triv:
   done
 
 crunch interrupt_states[wp]: thread_set "\<lambda>s. P (interrupt_states s)"
-
-lemma thread_set_obj_at_impossible:
-  "\<lbrakk> \<And>tcb. \<not> (P (TCB tcb)) \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. obj_at P p s\<rbrace> thread_set f t \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
-  apply wp
-  apply (clarsimp dest!: get_tcb_SomeD)
-  apply (clarsimp simp: obj_at_def)
-  done
-
 
 lemma tcb_not_empty_table:
   "\<not> empty_table S (TCB tcb)"
@@ -530,6 +553,7 @@ lemma thread_set_invs_trivial:
              thread_set_valid_idle_trivial
              thread_set_global_refs_triv
              thread_set_valid_ioc_trivial
+             thread_set_valid_replies_trivial
              valid_irq_node_typ valid_irq_handlers_lift
              thread_set_caps_of_state_trivial
              thread_set_arch_caps_trivial thread_set_only_idle
@@ -733,8 +757,8 @@ lemma as_user_ex_nonz_cap_to[wp]:
   by (wp ex_nonz_cap_to_pres)
 
 lemma as_user_pred_tcb_at [wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> as_user t' m \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
-  by (wp as_user_wp_thread_set_helper thread_set_no_change_tcb_pred
+  "as_user t' m \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
+  by (wp as_user_wp_thread_set_helper thread_set_no_change_tcb_pred_gen
       | simp add: tcb_to_itcb_def)+
 
 lemma ct_in_state_thread_state_lift:
@@ -1383,10 +1407,10 @@ lemma set_tcb_obj_ref_thread_set:
   "set_tcb_obj_ref f p sc = thread_set (f (\<lambda>_. sc)) p"
   by (simp add: set_tcb_obj_ref_def thread_set_def bind_assoc)
 
-crunch pred_tcb_at[wp]: set_thread_state_act "pred_tcb_at proj P t"
+crunch pred_tcb_at[wp]: set_thread_state_act "\<lambda>s. Q (pred_tcb_at proj P t s)"
 
 lemma sts_st_tcb_at_neq:
-  "\<lbrace>pred_tcb_at proj P t and K (t\<noteq>t')\<rbrace> set_thread_state t' st \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  "\<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s) \<and> (t\<noteq>t')\<rbrace> set_thread_state t' st \<lbrace>\<lambda>_ s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: set_thread_state_def set_object_def)
   apply (wp|simp)+
   apply (clarsimp cong: if_cong)
@@ -1395,7 +1419,7 @@ lemma sts_st_tcb_at_neq:
   done
 
 lemma sbn_st_tcb_at_neq:
-  "\<lbrace>pred_tcb_at proj P t and K (t\<noteq>t')\<rbrace> set_tcb_obj_ref f t' new \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  "\<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s) \<and> (t\<noteq>t')\<rbrace> set_tcb_obj_ref f t' new \<lbrace>\<lambda>_ s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: set_tcb_obj_ref_def set_object_def)
   apply (wp, simp)
   apply (clarsimp cong: if_cong)
@@ -1403,17 +1427,18 @@ lemma sbn_st_tcb_at_neq:
   apply (simp add: pred_tcb_at_def obj_at_def)
   done
 
+lemma sts_st_tcb_at_cases_strong:
+  "\<lbrace>\<lambda>s. tcb_at t s \<longrightarrow> (t = t' \<longrightarrow> P (P' ts)) \<and> (t \<noteq> t' \<longrightarrow> P (st_tcb_at P' t' s))\<rbrace>
+     set_thread_state t ts
+   \<lbrace>\<lambda>rv s. P (st_tcb_at P' t' s) \<rbrace>"
+  by (wpsimp simp: set_thread_state_def wp: set_object_wp)
+     (fastforce simp: get_tcb_ko_at pred_tcb_at_def obj_at_def is_tcb)
 
 lemma sts_st_tcb_at_cases:
-  "\<lbrace>\<lambda>s. ((t = t') \<longrightarrow> P ts) \<and> ((t \<noteq> t') \<longrightarrow> st_tcb_at P t' s)\<rbrace>
+  "\<lbrace>\<lambda>s. (t = t' \<longrightarrow> P ts) \<and> (t \<noteq> t' \<longrightarrow> st_tcb_at P t' s)\<rbrace>
      set_thread_state t ts
    \<lbrace>\<lambda>rv. st_tcb_at P t'\<rbrace>"
-  apply (cases "t = t'", simp_all)
-   apply (wp sts_st_tcb_at')
-   apply simp
-  apply (wp sts_st_tcb_at_neq)
-  apply simp
-  done
+  by (wpsimp wp: sts_st_tcb_at_cases_strong)
 
 lemma sbn_bound_tcb_at_cases:
   "\<lbrace>\<lambda>s. ((t = t') \<longrightarrow> P ntfn) \<and> ((t \<noteq> t') \<longrightarrow> bound_tcb_at P t' s)\<rbrace>
@@ -1449,24 +1474,24 @@ lemma syt_bound_tcb_at_cases:
   done
 
 lemma sbn_st_tcb_at[wp]:
-  "\<lbrace>st_tcb_at P t\<rbrace> set_tcb_obj_ref tcb_bound_notification_update tcb ntfn \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  "set_tcb_obj_ref tcb_bound_notification_update tcb ntfn \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
   apply (simp add: set_tcb_obj_ref_def set_object_def)
-  apply wp
-  apply (auto simp: pred_tcb_at_def obj_at_def get_tcb_def)
+  apply wpsimp
+  apply (auto simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
   done
 
 lemma ssc_st_tcb_at[wp]:
-  "\<lbrace>st_tcb_at P t\<rbrace> set_tcb_obj_ref tcb_sched_context_update tcb ntfn \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  "set_tcb_obj_ref tcb_sched_context_update tcb ntfn \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
   apply (simp add: set_tcb_obj_ref_def set_object_def)
-  apply wp
-  apply (auto simp: pred_tcb_at_def obj_at_def get_tcb_def)
+  apply wpsimp
+  apply (auto simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
   done
 
 lemma syt_st_tcb_at[wp]:
-  "\<lbrace>st_tcb_at P t\<rbrace> set_tcb_obj_ref tcb_yield_to_update tcb ntfn \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  "set_tcb_obj_ref tcb_yield_to_update tcb ntfn \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
   apply (simp add: set_tcb_obj_ref_def set_object_def)
-  apply wp
-  apply (auto simp: pred_tcb_at_def obj_at_def get_tcb_def)
+  apply wpsimp
+  apply (auto simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
   done
 
 crunches set_thread_state
@@ -1598,17 +1623,12 @@ lemmas set_tcb_yield_to_valid_irq_nodes[wp]
     = valid_irq_handlers_lift [OF set_tcb_yt_caps_of_state
                                   set_tcb_obj_ref_interrupt_states]
 
-
-lemma sts_obj_at_impossible:
-  "(\<And>tcb. \<not> P (TCB tcb)) \<Longrightarrow> \<lbrace>obj_at P p\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
-  unfolding set_thread_state_def
-  by (wpsimp wp: thread_set_obj_at_impossible
-              simp: set_object_def obj_at_def get_tcb_def split: kernel_object.splits)
-
-lemma sbn_obj_at_impossible:
-  "(\<And>tcb. \<not> P (TCB tcb)) \<Longrightarrow> \<lbrace>obj_at P p\<rbrace> set_tcb_obj_ref f t ntfn \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
+lemma sbn_obj_at_impossible':
+  "(\<And>tcb. \<not> P' (TCB tcb)) \<Longrightarrow> set_tcb_obj_ref f t ntfn \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
   unfolding set_tcb_obj_ref_thread_set
   by (wp thread_set_obj_at_impossible, simp)
+
+lemmas sbn_obj_at_impossible = sbn_obj_at_impossible'[where P= id, simplified]
 
 crunch only_idle[wp]: set_thread_state_act only_idle
 
@@ -1778,6 +1798,81 @@ lemma set_tcb_yield_to_valid_ioc[wp]:
                         if_split_asm)
   done
 
+global_interpretation set_scheduler_action: non_heap_op "set_scheduler_action a"
+  by unfold_locales wp
+
+global_interpretation set_thread_state_act: non_heap_op "set_thread_state_act t"
+  by unfold_locales wp
+
+fun replies_blocked_of_tcb_st :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> (obj_ref \<times> obj_ref) set"
+  where
+  "replies_blocked_of_tcb_st t (BlockedOnReply (Some r)) = {(r,t)}"
+| "replies_blocked_of_tcb_st t _ = {}"
+
+context
+  fixes t tcb and s :: "'z::state_ext state"
+  assumes kheap_t: "kheap s t = Some (TCB tcb)"
+begin
+
+abbreviation (input)
+  "replies_blocked_tcb_st_upd st st' \<equiv>
+    replies_blocked_of_tcb_st t st' \<union> (replies_blocked s - replies_blocked_of_tcb_st t st)"
+
+lemma replies_blocked_tcb_st_upd:
+  "replies_blocked (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_state := st\<rparr>))\<rparr>)
+    = replies_blocked_tcb_st_upd (tcb_state tcb) st"
+  using kheap_t apply -
+  by (rule replies_blocked_of_tcb_st.cases[of "(t,st)"]
+      ; rule replies_blocked_of_tcb_st.cases[of "(t,tcb_state tcb)"]
+      ; fastforce simp: replies_blocked_def pred_tcb_at_def obj_at_def split: if_splits)
+
+lemma replies_with_sc_tcb_st_upd:
+  "replies_with_sc (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_state := st\<rparr>))\<rparr>) = replies_with_sc s"
+  by (rule set_eqI; clarsimp simp: kheap_t replies_with_sc_def reply_sc_reply_at_def obj_at_def)
+
+lemmas valid_replies_tcb_st_upd =
+  replies_blocked_tcb_st_upd replies_with_sc_tcb_st_upd
+
+end
+
+lemma sts_valid_replies:
+  "\<lbrace> \<lambda>s. \<forall>st'. st_tcb_at ((=) st') t s
+               \<longrightarrow> P (replies_with_sc s) (replies_blocked_tcb_st_upd t s st' st) \<rbrace>
+    set_thread_state t st
+   \<lbrace> \<lambda>rv. valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: set_thread_state_def wp: set_object_wp)
+     (auto simp: get_tcb_ko_at pred_tcb_at_def obj_at_def valid_replies_tcb_st_upd)
+
+lemma tcb_st_refs_of_eq_imp_blocked_replies_eq:
+  assumes "tcb_st_refs_of st' = tcb_st_refs_of st"
+  shows "replies_blocked_of_tcb_st s st' = replies_blocked_of_tcb_st s st"
+  using assms by (clarsimp simp: tcb_st_refs_of_def split: thread_state.splits if_splits)
+
+lemma obj_at_split:
+  "obj_at P p s \<Longrightarrow> obj_at Q p s \<Longrightarrow> obj_at (\<lambda>st. P st \<and> Q st) p s"
+  by (auto simp: obj_at_def)
+
+lemma pred_tcb_at_split:
+  "pred_tcb_at proj P t s \<Longrightarrow> pred_tcb_at proj Q t s \<Longrightarrow> pred_tcb_at proj (\<lambda>st. P st \<and> Q st) t s"
+  by (auto simp: pred_tcb_at_def obj_at_def)
+
+lemma pred_tcb_at_constE:
+  "pred_tcb_at proj P p s \<Longrightarrow> (\<And>st. P st \<Longrightarrow> Q) \<Longrightarrow> Q"
+  by (clarsimp simp: pred_tcb_at_def obj_at_def)
+
+lemma pred_tcb_at_eq_commute:
+  "pred_tcb_at proj ((=) v) p s = pred_tcb_at proj (\<lambda>x. x = v) p s"
+  by (auto simp: pred_tcb_at_def obj_at_def)
+
+lemma tcb_st_refs_of_eq:
+  assumes st: "st_tcb_at P t s"
+  assumes P: "\<And>st'. P st' \<Longrightarrow> tcb_st_refs_of st' = tcb_st_refs_of st"
+  assumes st': "st_tcb_at ((=) st') t s"
+  shows "replies_blocked_of_tcb_st t st' = replies_blocked_of_tcb_st t st"
+  apply (rule tcb_st_refs_of_eq_imp_blocked_replies_eq)
+  apply (rule pred_tcb_at_split[THEN pred_tcb_at_constE, OF st st' P])
+  by auto
+
 lemma sts_invs_minor:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st) t
      and (\<lambda>s. \<not> halted st \<longrightarrow> ex_nonz_cap_to t s)
@@ -1789,16 +1884,15 @@ lemma sts_invs_minor:
      set_thread_state t st
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
-   apply (wp valid_irq_node_typ sts_only_idle)
-  apply clarsimp
+   apply (wp valid_irq_node_typ sts_only_idle sts_valid_replies)
+  apply (clarsimp simp: tcb_st_refs_of_eq, clarsimp simp: image_Un le_supI2)
   apply (rule conjI, simp add: pred_tcb_at_def, erule(1) obj_at_valid_objsE)
    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_tcb_state_def doubleton_eq_iff
                   split: thread_state.splits if_split_asm)
   apply (clarsimp elim!: rsubst[where P=sym_refs]
                  intro!: ext
                   dest!: st_tcb_at_state_refs_ofD)
-  apply (auto simp: get_refs_def split: option.splits)
-  done
+  by (auto simp: get_refs_def split: option.splits)
 
 lemma sts_invs_minor2:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st \<and> \<not> awaiting_reply st') t
@@ -1808,16 +1902,45 @@ lemma sts_invs_minor2:
      set_thread_state t st
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply (wp valid_irq_node_typ sts_only_idle)
-  apply clarsimp
+  apply (wp valid_irq_node_typ sts_only_idle sts_valid_replies)
+  apply (clarsimp simp: tcb_st_refs_of_eq, clarsimp simp: image_Un le_supI2)
   apply (rule conjI, simp add: pred_tcb_at_def, erule(1) obj_at_valid_objsE)
    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_tcb_state_def doubleton_eq_iff
                   split: thread_state.splits if_split_asm)
   apply (clarsimp elim!: rsubst[where P=sym_refs]
                  intro!: ext
                   dest!: st_tcb_at_state_refs_ofD)
-  apply (auto simp: get_refs_def split: option.splits)
-  done
+  by (auto simp: get_refs_def split: option.splits)
+
+global_interpretation set_tcb_bound_notification:
+  tcb_op "set_tcb_obj_ref tcb_bound_notification_update t ntfn"
+  apply unfold_locales
+  apply (wpsimp simp: set_tcb_obj_ref_def wp: set_object_wp)
+  by (clarsimp simp: get_tcb_ko_at obj_at_def tcb_agnostic_predE)
+
+global_interpretation set_tcb_sc:
+  tcb_op "set_tcb_obj_ref tcb_sched_context_update t sc"
+  apply unfold_locales
+  apply (wpsimp simp: set_tcb_obj_ref_def wp: set_object_wp)
+  by (clarsimp simp: get_tcb_ko_at obj_at_def tcb_agnostic_predE)
+
+global_interpretation set_tcb_yt:
+  tcb_op "set_tcb_obj_ref tcb_yield_to_update t yt"
+  apply unfold_locales
+  apply (wpsimp simp: set_tcb_obj_ref_def wp: set_object_wp)
+  by (clarsimp simp: get_tcb_ko_at obj_at_def tcb_agnostic_predE)
+
+lemma set_tcb_bound_ntfn_valid_replies[wp]:
+  "set_tcb_obj_ref tcb_bound_notification_update t sc \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: valid_replies_lift)
+
+lemma set_tcb_sc_valid_replies[wp]:
+  "set_tcb_obj_ref tcb_sched_context_update t sc \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: valid_replies_lift)
+
+lemma set_tcb_yt_valid_replies[wp]:
+  "set_tcb_obj_ref tcb_yield_to_update t sc \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: valid_replies_lift)
 
 lemma sbn_invs_minor:
   "\<lbrace>bound_tcb_at (\<lambda>ntfn'. get_refs TCBBound ntfn' = get_refs TCBBound ntfn) t
@@ -2112,9 +2235,9 @@ lemma set_mrs_thread_set_dmo:
   done
 
 lemma set_mrs_pred_tcb_at [wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_mrs r t' mrs \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+  "set_mrs r t' mrs \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (rule set_mrs_thread_set_dmo)
-   apply (rule thread_set_no_change_tcb_pred)
+   apply (rule thread_set_no_change_tcb_pred_gen)
    apply (simp add: tcb_to_itcb_def)
   apply wp
   done
@@ -2255,12 +2378,18 @@ lemma thread_set_domain_valid_ioports[wp]:
   unfolding thread_set_domain_def
   by (wpsimp wp: valid_ioports_lift thread_set_caps_of_state_trivial2 simp: tcb_cap_cases_def)
 
+global_interpretation thread_set_domain: tcb_op "thread_set_domain t d"
+  by (simp add: thread_set_domain_def thread_set.tcb_op_axioms)
+
+lemma thread_set_domain_valid_replies[wp]:
+  "thread_set_domain t d \<lbrace> valid_replies_pred P \<rbrace>"
+  by (simp add: thread_set_domain_def thread_set_valid_replies_trivial)
+
 lemma thread_set_domain_invs[wp]:
   "thread_set_domain t d \<lbrace>invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   by (wpsimp wp: valid_mdb_lift hoare_vcg_all_lift hoare_vcg_imp_lift
            simp: valid_ioc_def valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
-
 
 lemma thread_set_priority_caps_of_state[wp]:
   "thread_set_priority t d \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
@@ -2356,10 +2485,22 @@ lemma thread_set_priority_valid_ioports[wp]:
   unfolding thread_set_priority_def
   by (wpsimp wp: valid_ioports_lift thread_set_caps_of_state_trivial2 simp: tcb_cap_cases_def)
 
+global_interpretation thread_set_priority: tcb_op "thread_set_priority t p"
+  by (simp add: thread_set_priority_def thread_set.tcb_op_axioms)
+
+lemma thread_set_priority_valid_replies[wp]:
+  "thread_set_priority t d \<lbrace> valid_replies_pred P \<rbrace>"
+  by (simp add: thread_set_priority_def thread_set_valid_replies_trivial)
+
 lemma thread_set_priority_invs[wp]:
   "thread_set_priority t d \<lbrace>invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   by (wpsimp wp: valid_mdb_lift hoare_vcg_all_lift hoare_vcg_imp_lift
            simp: valid_ioc_def valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
+
+lemma gts_wp:
+  "\<lbrace>\<lambda>s. \<forall>st. st_tcb_at ((=) st) t s \<longrightarrow> P st s\<rbrace> get_thread_state t \<lbrace>P\<rbrace>"
+  unfolding get_thread_state_def
+  by (wpsimp wp: thread_get_wp' simp: pred_tcb_at_def obj_at_def)
 
 end

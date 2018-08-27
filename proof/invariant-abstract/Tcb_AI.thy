@@ -622,26 +622,28 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
      thread_set (tcb_ipc_buffer_update f) t
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply (rule hoare_pre)
-   apply (wp thread_set_valid_objs''
-             thread_set_refs_trivial
-             thread_set_hyp_refs_trivial
-             thread_set_iflive_trivial
-             thread_set_mdb
-             thread_set_ifunsafe_trivial
-             thread_set_cur_tcb
-             thread_set_zombies_trivial
-             thread_set_valid_idle_trivial
-             thread_set_global_refs_triv
-             valid_irq_node_typ valid_irq_handlers_lift
-             thread_set_caps_of_state_trivial valid_ioports_lift
-             thread_set_arch_caps_trivial
-             thread_set_only_idle
-             thread_set_cap_refs_in_kernel_window
-             thread_set_valid_ioc_trivial
-             thread_set_cap_refs_respects_device_region
-              | simp add: ran_tcb_cap_cases
-              | rule conjI | erule disjE)+
+  apply (wp thread_set_valid_objs''
+            thread_set_refs_trivial
+            thread_set_hyp_refs_trivial
+            thread_set_iflive_trivial
+            thread_set_mdb
+            thread_set_ifunsafe_trivial
+            thread_set_cur_tcb
+            thread_set_zombies_trivial
+            thread_set_valid_idle_trivial
+            thread_set_global_refs_triv
+            valid_irq_node_typ valid_irq_handlers_lift
+            thread_set_caps_of_state_trivial
+            valid_ioports_lift
+            thread_set_arch_caps_trivial
+            thread_set_only_idle
+            thread_set_cap_refs_in_kernel_window
+            thread_set_valid_ioc_trivial
+            thread_set_cap_refs_respects_device_region
+            thread_set_valid_replies_trivial
+         | simp add: ran_tcb_cap_cases
+         | rule conjI
+         | erule disjE)+
   apply (clarsimp simp: valid_tcb_def dest!: get_tcb_SomeD)
   apply (rule conjI, simp add: ran_tcb_cap_cases)
   apply (cut_tac P="(=) v" and t="(t, tcb_cnode_index 2)" for v
@@ -709,24 +711,27 @@ lemma set_mcpriority_invs[wp]:
   "\<lbrace>invs and tcb_at t\<rbrace> set_mcpriority t x \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding set_mcpriority_def
   by (wp thread_set_valid_objs''
-             thread_set_refs_trivial
-             thread_set_hyp_refs_trivial
-             thread_set_iflive_trivial
-             thread_set_mdb
-             thread_set_ifunsafe_trivial
-             thread_set_cur_tcb
-             thread_set_zombies_trivial
-             thread_set_valid_idle_trivial
-             thread_set_global_refs_triv
-             valid_irq_node_typ valid_irq_handlers_lift
-             thread_set_caps_of_state_trivial
-             thread_set_arch_caps_trivial
-             thread_set_only_idle
-             thread_set_cap_refs_in_kernel_window
-             thread_set_valid_ioc_trivial valid_ioports_lift
-             thread_set_cap_refs_respects_device_region
-              | simp add: ran_tcb_cap_cases invs_def valid_state_def valid_pspace_def
-              | rule conjI | erule disjE)+
+         thread_set_refs_trivial
+         thread_set_hyp_refs_trivial
+         thread_set_iflive_trivial
+         thread_set_mdb
+         thread_set_ifunsafe_trivial
+         thread_set_cur_tcb
+         thread_set_zombies_trivial
+         thread_set_valid_idle_trivial
+         thread_set_global_refs_triv
+         valid_irq_node_typ valid_irq_handlers_lift
+         thread_set_caps_of_state_trivial
+         thread_set_arch_caps_trivial
+         thread_set_only_idle
+         thread_set_cap_refs_in_kernel_window
+         thread_set_valid_ioc_trivial
+         valid_ioports_lift
+         thread_set_cap_refs_respects_device_region
+         thread_set_valid_replies_trivial
+      | simp add: ran_tcb_cap_cases invs_def valid_state_def valid_pspace_def
+      | rule conjI
+      | erule disjE)+
 
 
 context Tcb_AI begin
@@ -854,6 +859,10 @@ lemma set_ntfn_obj_ref_some_state_refs[wp]:
   apply (case_tac "ntfn_obj ntfn"; simp add: state_refs_of_def)
   done
 
+lemma set_ntfn_obj_ref_valid_replies[wp]:
+  "set_ntfn_obj_ref update ref new \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: valid_replies_lift)
+
 lemma bind_notification_invs:
   "\<lbrace>bound_tcb_at ((=) None) tcbptr
     and obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_bound_tcb ntfn = None
@@ -863,6 +872,7 @@ lemma bind_notification_invs:
     and ex_nonz_cap_to tcbptr\<rbrace>
      bind_notification tcbptr ntfnptr
    \<lbrace>\<lambda>_. invs\<rbrace>"
+  supply if_weak_cong[cong del]
   apply (simp add: bind_notification_def invs_def valid_state_def valid_pspace_def)
   apply (wpsimp wp: ntfn_at_typ_at update_sk_obj_ref_typ_at valid_irq_node_typ valid_ioports_lift)
   apply (clarsimp simp: obj_at_def pred_tcb_at_def is_ntfn)
@@ -1166,6 +1176,7 @@ lemma (in Tcb_AI) decode_set_ipc_wf[wp]:
                           \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
      decode_set_ipc_buffer args (cap.ThreadCap t) slot excaps
    \<lbrace>tcb_inv_wf\<rbrace>,-"
+  supply if_weak_cong[cong del]
   apply (simp   add: decode_set_ipc_buffer_def whenE_def split_def
           split del: if_split)
   apply (rule hoare_pre, wp check_valid_ipc_buffer_wp)
@@ -1177,6 +1188,7 @@ lemma (in Tcb_AI) decode_set_ipc_wf[wp]:
 
 lemma decode_set_ipc_is_tc[wp]:
   "\<lbrace>\<top>\<rbrace> decode_set_ipc_buffer args cap slot excaps \<lbrace>\<lambda>rv s. is_thread_control rv\<rbrace>,-"
+  supply if_weak_cong[cong del]
   apply (rule hoare_pre)
   apply (simp    add: decode_set_ipc_buffer_def split_def
            split del: if_split
@@ -1334,6 +1346,7 @@ lemma decode_tcb_conf_wf[wp]:
 
 lemma decode_tcb_conf_inv[wp]:
   "\<lbrace>P::'state_ext state \<Rightarrow> bool\<rbrace> decode_tcb_configure args cap slot extras \<lbrace>\<lambda>rv. P\<rbrace>"
+  supply if_weak_cong[cong del]
   apply (clarsimp simp add: decode_tcb_configure_def decode_update_sc_def Let_def whenE_def
                  split del: if_split)
   apply (wpsimp wp: hoare_drop_imps)
@@ -1448,6 +1461,7 @@ end
 
 lemma set_domain_invs[wp]:
   "set_domain t d \<lbrace>invs\<rbrace>"
+  supply if_weak_cong[cong del]
   by (simp add: set_domain_def | wp)+
 
 lemma invoke_domain_invs:
@@ -1460,6 +1474,7 @@ lemma set_domain_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
      set_domain t d
    \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  supply if_weak_cong[cong del]
   by (simp add: set_domain_def | wp)+
 
 lemma invoke_domain_typ_at[wp]:

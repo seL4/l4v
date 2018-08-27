@@ -760,6 +760,7 @@ lemma aci_invs':
         apply (auto simp: cte_wp_at_caps_of_state)
         done
   show ?thesis
+  supply if_cong[cong]
   apply (clarsimp simp: perform_asid_control_invocation_def valid_aci_def
     split: asid_control_invocation.splits)
   apply (rename_tac word1 a b aa ba word2)
@@ -1297,6 +1298,7 @@ lemma arch_decode_inv_wf[wp]:
     (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s)\<rbrace>
      arch_decode_invocation label args cap_index slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
+  supply if_cong[cong]
   apply (cases arch_cap)
       apply (rename_tac word1 word2)
       apply (simp add: arch_decode_invocation_def Let_def split_def cong: if_cong split del: if_split)

@@ -2213,8 +2213,6 @@ lemma cap_move_valid_list [wp]:
   apply (rule mdb_move_abs_simple.intro; simp)
   done
 
-declare if_cong[cong]
-
 
 lemma next_sib_share_parent:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
@@ -3134,6 +3132,7 @@ lemma empty_slot_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace>
      empty_slot sl irqopt
    \<lbrace>\<lambda>rv. valid_list\<rbrace>"
+  supply if_cong[cong]
   apply (simp add: empty_slot_def)
   apply (simp add: set_cdt_def update_cdt_list_def set_cdt_list_def
                    empty_slot_ext_def bind_assoc cong: if_cong)
@@ -3342,6 +3341,7 @@ lemma valid_list_post:
   shows "valid_list_2 t' n"
   proof -
     from valid_list show ?thesis
+    supply if_weak_cong[cong del]
     apply (simp add: t'_def t''_def n_def n'_def cong: option.case_cong)
     by (simp add: replace_distinct[OF parent_not_next_child]
                      replace_distinct list_replace_set
@@ -3478,6 +3478,7 @@ lemma next_sib:
       else if next_sib p t m = Some src then Some dest
       else if next_sib p t m = Some dest then Some src
       else next_sib p t m)"
+  supply if_cong[cong]
   apply simp
   apply (intro impI conjI allI,simp_all)
   by ((intro impI conjI allI
@@ -3791,6 +3792,7 @@ lemma cap_swap_valid_list [wp]:
   "\<lbrace>valid_list\<rbrace>
   cap_swap c a c' b
   \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  supply if_weak_cong[cong del]
   apply (simp only: cap_swap_def cap_swap_ext_extended.dxo_eq)
   apply (simp only: cap_swap_ext_def update_cdt_list_def set_cdt_list_def set_cdt_def bind_assoc)
   apply wp
@@ -3940,6 +3942,7 @@ interpretation
 *)
 lemma sched_context_donate_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> sched_context_donate sc_ptr tcb_ptr\<lbrace>\<lambda>_.valid_list\<rbrace>"
+  supply if_cong[cong]
   by (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def set_sc_obj_ref_def
       wp: get_sc_obj_ref_inv hoare_drop_imp)
 
@@ -3979,6 +3982,7 @@ lemma reply_unlink_sc_cdt_cdt_list[wp]:
 
 lemma sched_context_donate_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> sched_context_donate sc r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
+  supply if_cong[cong]
   by (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def set_sc_obj_ref_def
        wp: set_object_wp hoare_drop_imp)
 
@@ -4096,6 +4100,7 @@ locale Deterministic_AI_1 =
     "\<And>t ptr. \<lbrace>valid_list\<rbrace> arch_post_modify_registers t ptr \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes make_arch_fault_msg_valid_list[wp]:
     "\<And>afault thread. \<lbrace>valid_list\<rbrace> make_arch_fault_msg afault thread \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  notes if_cong[cong]
 
 context Deterministic_AI_1 begin
 
@@ -4192,7 +4197,7 @@ lemma postpone_valid_list[wp]:
 
 lemma refill_split_check_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> refill_split_check spr usage \<lbrace>\<lambda>_.valid_list\<rbrace>"
-   by (wpsimp simp: refill_split_check_def set_refills_def Let_def wp: hoare_drop_imp)
+  by (wpsimp simp: refill_split_check_def set_refills_def Let_def wp: hoare_drop_imp cong: if_cong)
 
 crunch valid_list: set_refills,refill_full,refill_ready,refill_capacity,refill_size valid_list
 
@@ -4260,6 +4265,8 @@ lemma restart_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> restart t \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: restart_def wp: hoare_drop_imp)
 
+context notes if_cong[cong] begin
+
 crunch valid_list[wp]: update_time_stamp "valid_list"
   (wp: get_object_wp)
 
@@ -4280,7 +4287,10 @@ crunch (empty_fail) empty_fail[wp]: commit_domain_time
 
 crunch valid_list[wp]: commit_time valid_list
 
+end
+
 context Deterministic_AI_1 begin
+
 crunch valid_list[wp]: invoke_tcb "valid_list"
  (wp: maybeM_inv hoare_drop_imp check_cap_inv mapM_x_wp')
 
@@ -4391,6 +4401,7 @@ lemma (in mdb_insert_abs) cap_insert_ext_det_def2:
       Some p \<Rightarrow> list (
         src_slot := if src_parent then [dest_slot] @ (list src_slot) else list src_slot,
         p := if src_parent then list p else list_insert_after (list p) src_slot dest_slot))) src_parent src dest src_p dest_p e"
+  supply if_cong[cong]
   apply (simp add: cap_insert_ext_def update_cdt_list_bind)
   apply (rule update_list_eq)
   apply (simp split del: if_split cong: option.case_cong)
@@ -4409,6 +4420,7 @@ lemma (in mdb_empty_abs') empty_slot_ext_det_def2:
        empty_slot_ext slot slot_p e = (
     update_cdt_list (\<lambda>list. case (m slot) of None \<Rightarrow> list (slot := []) |
       Some p \<Rightarrow> list (p := list_replace_list (list p) slot (list slot), slot := []))) e"
+  supply if_cong[cong]
   apply (simp add: empty_slot_ext_def update_cdt_list_bind)
   apply (rule update_list_eq)
   apply (simp cong: option.case_cong)

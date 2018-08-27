@@ -88,7 +88,7 @@ crunch irq_node[wp]: set_reply "\<lambda>s. P (interrupt_irq_node s)"
 
 text {* set_sc_obj_ref/get_sc_obj_ref *}
 
-lemma get_sc_obj_ref_inv[simp]:
+lemma get_sc_obj_ref_inv[simp, wp]:
   "\<lbrace>P\<rbrace> get_sc_obj_ref f t \<lbrace>\<lambda>r. P\<rbrace>"
   by (wpsimp simp: get_sc_obj_ref_def get_sched_context_def get_object_def)
 
@@ -454,7 +454,7 @@ crunches set_thread_state_act
  and distinct[wp]: pspace_distinct
  and sc_at[wp]: "sc_at sc_ptr"
  and tcb_at[wp]: "tcb_at tptr"
- and st_tcb_at[wp]: "st_tcb_at P tptr"
+ and st_tcb_at[wp]: "\<lambda>s. Q( st_tcb_at P tptr s)"
  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
  and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
@@ -566,7 +566,7 @@ crunches tcb_sched_action,reschedule_required,possible_switch_to,tcb_release_enq
  and distinct[wp]: pspace_distinct
  and sc_at[wp]: "sc_at sc_ptr"
  and tcb_at[wp]: "tcb_at tptr"
- and st_tcb_at[wp]: "st_tcb_at P tptr"
+ and st_tcb_at[wp]: "\<lambda>s. Q (st_tcb_at P tptr s)"
  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
  and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
@@ -1131,7 +1131,7 @@ lemma sort_queue_notin_inv: "\<lbrace>K (t \<notin> set ls) and P t\<rbrace> sor
   done
 
 lemma sched_context_donate_st_tcb_at[wp]:
-  "\<lbrace>st_tcb_at P t\<rbrace> sched_context_donate sc_ptr tcb_ptr \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+  "sched_context_donate sc_ptr tcb_ptr \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
   by (wpsimp simp: sched_context_donate_def set_sc_obj_ref_def get_sc_obj_ref_def test_reschedule_def
                wp: weak_if_wp hoare_drop_imp)
 

@@ -602,8 +602,7 @@ crunch typ_at[wp]: deleting_irq_handler "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp:crunch_simps unless_def assertE_def)
 
 context Finalise_AI_1 begin
-context begin
-  declare if_cong[cong]
+context notes if_cong[cong] begin
   crunch typ_at[wp]: finalise_cap "\<lambda>(s :: 'a state). P (typ_at T p s)"
   (wp: maybeM_inv get_simple_ko_wp simp: crunch_simps)
 end
@@ -632,6 +631,7 @@ lemma tcb_st_refs_no_TCBBound:
 
 lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
   "\<lbrace>invs\<rbrace> unbind_maybe_notification ntfnptr \<lbrace>\<lambda>rv. invs\<rbrace>"
+  supply if_cong[cong]
   apply (simp add: unbind_maybe_notification_def invs_def valid_state_def valid_pspace_def
                    get_sk_obj_ref_def update_sk_obj_ref_def maybeM_def)
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
@@ -853,65 +853,7 @@ lemma list_all_remove1: "list_all P ls \<Longrightarrow> list_all P (remove1 x l
   apply (case_tac ls, simp)
   by auto
 
-
-lemma reply_unlink_sc_invs[wp]: "\<lbrace>invs\<rbrace> reply_unlink_sc scptr rptr \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (clarsimp simp: reply_unlink_sc_def liftM_def assert_def)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (rule hoare_seq_ext[OF _ hoare_if])
-    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-      wp: valid_irq_node_typ valid_sc_typ_list_all_reply hoare_drop_imp valid_ioports_lift)
-   apply (wpsimp split_del: if_split)+
-   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def split del: if_split)
-   defer
-   apply wpsimp
-  apply (frule (2) reply_sc_refs)
-   apply (simp add: obj_at_def)
-  apply (clarsimp simp: valid_objs_def split del: if_split)
-  apply (frule_tac x=scptr in bspec, fastforce)
-  apply (frule_tac x=rptr in bspec, fastforce simp: obj_at_def)
-  apply (clarsimp simp: valid_obj_def valid_sched_context_def obj_at_def valid_reply_def
-      split del: if_split)
-  apply (drule list_all_remove1[where x=rptr], clarsimp split del: if_split)
-  apply safe
-    apply (drule if_live_then_nonz_capD2[where p=scptr], simp)
-     apply (drule sym_refs_obj_atD[where p=rptr, rotated])
-      apply (clarsimp simp: obj_at_def, simp)
-     apply (clarsimp simp: state_refs_of_def get_refs_def2)
-     apply (drule_tac x="(scptr, ReplySchedContext)" in bspec)
-      apply fastforce
-     apply (clarsimp simp: split_def obj_at_def get_refs_def2 live_def live_sc_def)
-    apply clarsimp
-   apply (drule if_live_then_nonz_capD2[where p=rptr], simp)
-    apply (clarsimp simp: live_def live_reply_def, simp)
-  apply (erule delta_sym_refs)
-   apply (clarsimp split: if_split_asm list.split_asm simp: image_iff
-      split del: if_split simp del: refs_of_simps)
-    apply (erule disjE)
-     apply (clarsimp simp: state_refs_of_def refs_of_simps get_refs_def2 image_iff is_reply
-      dest!: symreftype_inverse' split del: if_split dest!: set_remove1)
-     apply (rename_tac y ys reply)
-     apply (subgoal_tac "y \<in> set (sc_replies sc)")
-      apply clarsimp
-     apply (metis cons_set_intro set_remove1)
-    apply (clarsimp simp: state_refs_of_def refs_of_simps get_refs_def2 image_iff is_reply
-      dest!: symreftype_inverse' split del: if_split dest!: set_remove1)
-    apply (rename_tac y r rs reply)
-    apply (subgoal_tac "y \<in> set (sc_replies sc)")
-     apply clarsimp
-    apply (metis (mono_tags, hide_lams) set_remove1_subset set_rev_mp set_subset_Cons)
-   apply (clarsimp split: if_split_asm list.splits split del: if_split)
-   apply (clarsimp simp: state_refs_of_def get_refs_def2 split del: if_split)
-  apply (clarsimp split: if_split_asm list.splits simp: get_refs_def2 split del: if_split)
-      apply (clarsimp simp: state_refs_of_def get_refs_def2)
-     apply (case_tac "sc_replies sc"; clarsimp simp: state_refs_of_def get_refs_def2 split: if_split_asm)
-    apply (clarsimp simp: state_refs_of_def get_refs_def2 image_iff)
-   apply (case_tac "sc_replies sc"; clarsimp simp: state_refs_of_def get_refs_def2 split: if_split_asm)
-  apply (rule conjI; rule impI)
-   apply (fastforce simp: state_refs_of_def get_refs_def2)
-  apply (clarsimp simp: state_refs_of_def get_refs_def2 image_iff split del: if_split split: if_split_asm)
-  apply (clarsimp simp: image_iff get_refs_def2 is_reply split: option.splits)
-   by (case_tac "sc_replies sc"; fastforce split: if_split_asm)
+declare reply_unlink_sc_invs[wp]
 
 lemma  sched_context_clear_replies_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_clear_replies scptr \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -1213,6 +1155,7 @@ lemma (in Finalise_AI_1) finalise_cap_equal_cap[wp]:
   "\<lbrace>cte_wp_at ((=) cap) sl\<rbrace>
      finalise_cap cap fin
    \<lbrace>\<lambda>rv. cte_wp_at ((=) cap) sl :: 'a state \<Rightarrow> bool\<rbrace>"
+  supply if_cong[cong]
   apply (cases cap, simp_all split del: if_split)
     apply (wp suspend_cte_wp_at_preserved
                  deleting_irq_handler_cte_preserved prepare_thread_delete_cte_wp_at
@@ -1372,6 +1315,7 @@ lemma unbind_maybe_notification_cte_cap_to[wp]:
 
 lemma (in Finalise_AI_3) finalise_cap_cte_cap_to[wp]:
   "\<lbrace>ex_cte_cap_wp_to P sl :: 'a state \<Rightarrow> bool\<rbrace> finalise_cap cap fin \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P sl\<rbrace>"
+  supply if_cong[cong]
   apply (cases cap, simp_all add: ex_cte_cap_wp_to_def split del: if_split)
        apply (wp hoare_vcg_ex_lift hoare_drop_imps
                  prepare_thread_delete_cte_preserved_irqn
@@ -1528,16 +1472,6 @@ lemma cap_not_in_valid_global_refs:
   apply (erule_tac x=a in allE, erule_tac x=b in allE)
   apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_def)
   apply blast
-  done
-
-(* FIXME: move *)
-lemma gts_wp:
-  "\<lbrace>\<lambda>s. \<forall>st. st_tcb_at ((=) st) t s \<longrightarrow> P st s\<rbrace> get_thread_state t \<lbrace>P\<rbrace>"
-  unfolding get_thread_state_def
-  apply (wp thread_get_wp')
-  apply clarsimp
-  apply (drule spec, erule mp)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
 lemma gbn_wp':

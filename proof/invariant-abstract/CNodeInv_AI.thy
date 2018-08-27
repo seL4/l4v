@@ -1618,6 +1618,15 @@ lemma cap_refs_respects_device_region_original_cap[wp]:
                 (s\<lparr>is_original_cap := ocp\<rparr>) = cap_refs_respects_device_region s"
   by (simp add:cap_refs_respects_device_region_def)
 
+crunches set_cdt
+  for obj_at[wp]: "\<lambda>s. P (obj_at P' p s)"
+
+global_interpretation cap_swap: cspace_op "cap_swap c a c' b"
+  supply if_split[split del]
+  apply unfold_locales
+  apply (wpsimp simp: cap_swap_def wp: set_cap.cspace_agnostic_obj_at)
+  done
+
 context CNodeInv_AI begin
 lemma cap_swap_cap_refs_respects_device_region[wp]:
   "\<lbrace>cap_refs_respects_device_region and cte_wp_at (weak_derived c) a and cte_wp_at (weak_derived c') b\<rbrace>
@@ -1653,11 +1662,6 @@ lemma cap_swap_cap_refs_respects_device_region[wp]:
   apply fastforce
   done
 
-lemma cap_swap_aobj_at:
-  "arch_obj_pred P' \<Longrightarrow>
-  \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> cap_swap c (a, b) c' (aa, ba) \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
-  unfolding cap_swap_def set_cdt_def by (wpsimp wp: set_cap.aobj_at)
-
 lemma cap_swap_invs[wp]:
   "\<And>c' a c b.
   \<lbrace>invs and ex_cte_cap_wp_to (appropriate_cte_cap c') a
@@ -1671,7 +1675,7 @@ lemma cap_swap_invs[wp]:
    cap_swap c a c' b \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   apply (wp valid_arch_state_lift_aobj_at
-            cap_swap_typ_at valid_irq_node_typ cap_swap_aobj_at
+            cap_swap_typ_at valid_irq_node_typ cap_swap.aobj_at
          | simp
          | erule disjE
          | clarsimp simp: cte_wp_at_caps_of_state copy_of_cte_refs weak_derived_def
@@ -2164,9 +2168,6 @@ lemma cap_swap_fd_st_tcb_at[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> cap_swap_for_delete sl sl' \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   unfolding cap_swap_for_delete_def
   by (wp, simp)
-
-
-declare if_cong[cong]
 
 
 lemma cases2 [case_names pos_pos neg_pos pos_neg neg_neg]:
@@ -2715,14 +2716,7 @@ lemma zombies_final_injective:
   apply (simp add: inj_eq)
   done
 
-
-lemma set_cdt_caps_of_state[wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_cdt p \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  apply (simp add: set_cdt_def)
-  apply wp
-  apply (simp add: caps_of_state_cte_wp_at)
-  done
-
+lemmas set_cdt_caps_of_state[wp] = set_cdt_caps_of_state[of P p for P p]
 
 lemma cap_move_caps_of_state:
   notes fun_upd_apply [simp del]

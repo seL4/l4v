@@ -471,6 +471,7 @@ crunches set_thread_state_act
 
 lemma sts_ex_nonz_cap_to_ct[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
+  supply if_weak_cong[cong del]
   apply (wpsimp simp: set_thread_state_def set_object_def)
   apply (clarsimp dest!: get_tcb_SomeD)
   by (rule ex_cap_to_after_update; clarsimp simp: obj_at_def ran_tcb_cap_cases)
@@ -481,6 +482,7 @@ lemma set_sc_obj_ref_ex_nonz_cap_to_ct[wp]:
 
 lemma set_tcb_yt_ex_nonz_cap_to_ct[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> set_tcb_obj_ref tcb_yield_to_update p v \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
+  supply if_weak_cong[cong del]
   apply (wpsimp simp: set_tcb_obj_ref_def set_object_def)
   apply (clarsimp dest!: get_tcb_SomeD)
   by (rule ex_cap_to_after_update; clarsimp simp: obj_at_def ran_tcb_cap_cases)
@@ -520,8 +522,12 @@ lemma complete_yield_to_no_st_refs_ct[wp]:
  wp: set_thread_state_st_tcb_at set_sc_obj_ref_no_st_refs_ct hoare_drop_imp)
 *)
 crunches refill_unblock_check
-for arch_state[wp]: "\<lambda>s. P (arch_state s)"
-  (wp: crunch_wps)
+  for arch_state[wp]: "\<lambda>s. P (arch_state s)"
+  (wp: crunch_wps hoare_vcg_if_lift2)
+
+lemma refill_unblock_check_valid_replies[wp]:
+  "refill_unblock_check sc_ptr \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: valid_replies_state_refs_lift)
 
 lemma sched_context_yield_to_invs:
   notes refs_of_simps [simp del]
@@ -873,6 +879,7 @@ where
 lemma refill_split_check_valid_refills[wp]: (* applicable only when sc is not round_robin *)
   "\<lbrace>valid_refills scptr budget and sc_at_period (\<lambda>p. p \<noteq> 0) p\<rbrace>
       refill_split_check p consumed \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
+  supply if_weak_cong[cong del]
   apply (unfold refill_split_check_def)
   apply (simp add: Let_def set_refills_def set_sched_context_def sc_at_period_def obj_at_def
       del: schedule_used.simps split del: if_split)
@@ -1041,6 +1048,7 @@ lemma refill_split_check_sc_at_period[wp]:
 lemma refill_budget_check_valid_refills[wp]:
    "\<lbrace>valid_refills scptr budget and sc_at_period (\<lambda>p. p \<noteq> 0) p\<rbrace>
       refill_budget_check p usage capacity \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
+  supply if_weak_cong[cong del]
   apply (clarsimp simp: refill_budget_check_def)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (rule hoare_seq_ext[OF _ assert_sp])
@@ -1229,6 +1237,7 @@ crunch valid_refills[wp]: handle_timeout "valid_refills scp budget :: 'state_ext
 
 lemma end_timeslice_valid_refills[wp]:
   "end_timeslice canTimeout \<lbrace>valid_refills scptr budget :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  supply if_weak_cong[cong del]
   apply (clarsimp simp: end_timeslice_def)
   by (wpsimp simp: end_timeslice_def wp: hoare_drop_imps split_del: if_split)
 
@@ -1295,16 +1304,20 @@ lemma invoke_sched_context_typ_at[wp]:
       wpsimp wp: dxo_wp_weak mapM_x_wp get_sched_context_wp
        simp: invoke_sched_context_def sched_context_bind_ntfn_def)
 
+context notes if_weak_cong[cong del] begin
 crunch typ_at[wp]: charge_budget "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imp maybeM_inv simp: Let_def)
+end
 
 lemma check_budget_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> check_budget \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   by (wpsimp simp: check_budget_def split_del: if_split
             wp: hoare_vcg_if_lift2 hoare_drop_imp)
 
+context notes if_weak_cong[cong del] begin
 crunch typ_at[wp]: commit_time "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imp simp: Let_def)
+end
 
 crunch typ_at[wp]: tcb_release_remove "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imp simp: Let_def)
@@ -1326,15 +1339,14 @@ lemma invoke_sched_control_tcb[wp]:
 
 lemma invoke_sched_context_invs[wp]:
   "\<lbrace>invs and valid_sched_context_inv i\<rbrace> invoke_sched_context i \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply_trace (cases i;
-      wpsimp simp: invoke_sched_context_def set_consumed_def valid_sched_context_inv_def
-wp: sched_context_yield_to_invs)
+  apply (cases i;
+         wpsimp simp: invoke_sched_context_def set_consumed_def valid_sched_context_inv_def
+                  wp: sched_context_yield_to_invs)
    apply (clarsimp simp: obj_at_def sc_tcb_sc_at_def sc_ntfn_sc_at_def is_sc_obj_def is_tcb
-      valid_cap_def idle_no_ex_cap split: cap.split_asm)+
-   apply (frule invs_valid_global_refs)
-   apply (frule invs_valid_objs, clarsimp simp: idle_no_ex_cap)
-(*   apply (frule invs_valid_global_refs)
-   apply (frule invs_valid_objs, clarsimp simp: idle_no_ex_cap) *)
+                         valid_cap_def idle_no_ex_cap
+                  split: cap.split_asm)+
+  apply (frule invs_valid_global_refs)
+  apply (frule invs_valid_objs, clarsimp simp: idle_no_ex_cap)
   done
 
 lemma update_sc_badge_invs:
@@ -1343,13 +1355,12 @@ lemma update_sc_badge_invs:
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
                 simp_del: fun_upd_apply wp: valid_ioports_lift)
   apply safe
-    apply (fastforce simp: valid_objs_def valid_obj_def)
+    apply (fastforce elim: valid_sched_context_objsI)
    apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def live_def)
   by (clarsimp simp: state_refs_of_def refs_of_def fun_upd_idem)
 
 (* FIXME copied from Syscall_AI *)
 lemmas si_invs = si_invs'[where Q=\<top>,OF hoare_TrueI hoare_TrueI hoare_TrueI hoare_TrueI,simplified]
-thm si_invs
 
 lemma send_ipc_invs_for_timeout:
   "\<lbrace>invs and st_tcb_at active tptr and ex_nonz_cap_to tptr
@@ -1404,12 +1415,12 @@ lemma thread_set_timeout_fault_valid_irq_handlers[wp]:
 lemma thread_set_timeout_fault_invs[wp]:
  "\<lbrace>invs\<rbrace> thread_set (tcb_fault_update (\<lambda>_. Some (Timeout badge))) tptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: invs_def valid_pspace_def valid_state_def ran_tcb_cap_cases valid_fault_def
-           wp: thread_set_refs_trivial thread_set_hyp_refs_trivial thread_set_valid_objs_triv
-               thread_set_iflive_trivial thread_set_zombies_trivial thread_set_valid_ioc_trivial
-               thread_set_valid_idle_trivial thread_set_only_idle thread_set_ifunsafe_trivial
-               thread_set_global_refs_triv valid_irq_node_typ thread_set_arch_caps_trivial
-               thread_set_cap_refs_in_kernel_window thread_set_cap_refs_respects_device_region
-               valid_ioports_lift thread_set_caps_of_state_trivial)
+               wp: thread_set_refs_trivial thread_set_hyp_refs_trivial thread_set_valid_objs_triv
+                   thread_set_iflive_trivial thread_set_zombies_trivial thread_set_valid_ioc_trivial
+                   thread_set_valid_idle_trivial thread_set_only_idle thread_set_ifunsafe_trivial
+                   thread_set_global_refs_triv valid_irq_node_typ thread_set_arch_caps_trivial
+                   thread_set_cap_refs_in_kernel_window thread_set_cap_refs_respects_device_region
+                   valid_ioports_lift thread_set_caps_of_state_trivial thread_set_valid_replies_trivial)
 
 lemma send_fault_ipc_invs_timeout:
   "\<lbrace>invs and st_tcb_at active tptr and ex_nonz_cap_to tptr
@@ -1534,6 +1545,7 @@ crunch ct_active[wp]: refill_full ct_active
 lemma refill_split_check_ex_nonz_cap_to_ct[wp]:
     "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> refill_split_check sc_ptr usage
        \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
+  supply if_weak_cong[cong del]
   by (wpsimp simp: refill_split_check_def set_refills_def Let_def
       wp: get_sched_context_wp get_refills_wp hoare_drop_imp)
 
@@ -1626,6 +1638,7 @@ lemma refill_split_check_bound_sc:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
    refill_split_check sc_ptr usage
    \<lbrace>\<lambda>rv s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
+  supply if_weak_cong[cong del]
   by (wpsimp simp: refill_split_check_def set_refills_def Let_def get_sched_context_def
                    get_object_def
                wp: update_sched_context_bound_sc)
@@ -1755,7 +1768,7 @@ end
 
 lemma sts_valid_sched_control_inv:
   "\<lbrace>valid_sched_control_inv sci\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_sched_control_inv sci\<rbrace>"
-  by (cases sci; wpsimp simp: obj_at_def  get_tcb_rev wp: sts_obj_at_impossible)
+  by (cases sci; wpsimp wp: sts_obj_at_impossible)
 
 lemma decode_sched_context_inv_inv:
   "\<lbrace>P\<rbrace> decode_sched_context_invocation label sc_ptr excaps args \<lbrace>\<lambda>rv. P\<rbrace>"

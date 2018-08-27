@@ -300,6 +300,26 @@ lemma set_refills_hyp_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> set_refills ptr refills  \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   by (wpsimp simp: set_refills_def)
 
+global_interpretation update_sched_context: non_reply_op "update_sched_context ptr f"
+  by unfold_locales (wpsimp simp: update_sched_context_def reply_at_pred_def obj_at_def
+                              wp: set_object_wp get_object_wp)
+
+global_interpretation set_sched_context: non_reply_op "set_sched_context ptr sc"
+  by unfold_locales (wpsimp simp: set_sched_context_def reply_at_pred_def obj_at_def
+                              wp: set_object_wp get_object_wp)
+
+lemma update_sched_context_valid_replies[wp]:
+  "update_sched_context ptr f \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: valid_replies_lift)
+
+lemma set_sched_context_valid_replies[wp]:
+  "set_sched_context ptr f \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: valid_replies_lift)
+
+lemma set_refills_valid_replies[wp]:
+  "set_refills ptr refills \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: set_refills_def)
+
 lemma set_refills_invs[wp]:
   "\<lbrace>invs and K (length refills \<ge> 1)\<rbrace> set_refills ptr refills \<lbrace>\<lambda>_. invs\<rbrace> "
   apply (wpsimp simp: set_refills_def invs_def valid_state_def valid_pspace_def
@@ -410,7 +430,7 @@ lemma set_sc_consumed_invs:
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
                 simp_del: fun_upd_apply wp: valid_ioports_lift)
   apply safe
-    apply (fastforce simp: valid_objs_def valid_obj_def)
+    apply (fastforce simp: valid_obj_def)
    apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def live_def)
   by (clarsimp simp: state_refs_of_def refs_of_def fun_upd_idem)
 
@@ -460,6 +480,19 @@ lemma cur_tcb_domain_time_update[simp]:
   "cur_tcb (domain_time_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
 
+
+lemma commit_domain_time_valid_replies[wp]:
+  "commit_domain_time \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: commit_domain_time_def)
+
+lemma refill_split_check_valid_replies[wp]:
+  "refill_split_check sc_ptr usage \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: refill_split_check_def Let_def split_del: if_split)
+
+lemma commit_time_valid_replies[wp]:
+  "commit_time \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: commit_time_def)
+
 lemma
   notes fun_upd_apply[simp del]
   shows commit_time_invs: "\<lbrace>invs\<rbrace> commit_time \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -505,20 +538,6 @@ lemma ct_in_state_cur_time_update[iff]:
 lemma ct_in_state_cur_sc_update[iff]:
   "ct_in_state st (cur_sc_update f s) = ct_in_state st s"
   by (simp add: ct_in_state_def)
-
-lemma update_sched_context_st_tcb_at[wp]:
- "update_sched_context ptr f \<lbrace>\<lambda>s. P (st_tcb_at Q t s)\<rbrace>"
-  unfolding update_sched_context_def
-  apply (wpsimp wp: set_object_wp get_object_wp)
-  apply (auto elim!: rsubst[where P=P] simp: obj_at_def st_tcb_at_def)
-  done
-
-lemma update_sched_context_pred_tcb[wp]:
- "update_sched_context ptr f \<lbrace>\<lambda>s. P (pred_tcb_at prj Q t s)\<rbrace>"
-  unfolding update_sched_context_def
-  apply (wpsimp wp: set_object_wp get_object_wp)
-  apply (auto elim!: rsubst[where P=P] simp: obj_at_def pred_tcb_at_def)
-  done
 
 crunch pred_tcb_at[wp]: commit_time "\<lambda>s. P (pred_tcb_at proj f t s)"
   (simp: crunch_simps)
@@ -663,11 +682,10 @@ lemma ssc_refs_of_Some[wp]:
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
   apply (wpsimp simp: set_object_def wp: gets_the_wp)
-  apply (fastforce elim!: rsubst[where P=P] dest!: get_tcb_SomeD
-                   simp: state_refs_of_def conj_disj_distribR get_refs_def2
-                         get_tcb_rev pred_tcb_def2 mem_Times_iff tcb_st_refs_of_def
-                 intro!: ext split: thread_state.splits)
-  done
+  by (fastforce elim!: rsubst[where P=P] dest!: get_tcb_SomeD
+                 simp: state_refs_of_def conj_disj_distribR get_refs_def2
+                       get_tcb_rev pred_tcb_def2 mem_Times_iff tcb_st_refs_of_def
+               intro!: ext split: thread_state.splits)
 
 lemma ssc_refs_of_None[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= {x \<in> state_refs_of s t. snd x \<noteq> TCBSchedContext}))\<rbrace>
@@ -675,11 +693,10 @@ lemma ssc_refs_of_None[wp]:
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
   apply (wpsimp simp: set_object_def wp: gets_the_wp)
-  apply (fastforce elim!: rsubst[where P=P] dest!: get_tcb_SomeD
-                   simp: state_refs_of_def conj_disj_distribR get_refs_def2
-                         get_tcb_rev pred_tcb_def2 mem_Times_iff tcb_st_refs_of_def
-                 intro!: ext split: thread_state.splits)
-  done
+  by (fastforce elim!: rsubst[where P=P] dest!: get_tcb_SomeD
+                 simp: state_refs_of_def conj_disj_distribR get_refs_def2
+                       get_tcb_rev pred_tcb_def2 mem_Times_iff tcb_st_refs_of_def
+               intro!: ext split: thread_state.splits)
 
 
 lemma zombies_kheap_update:
@@ -691,6 +708,19 @@ lemma zombies_kheap_update:
 
 
 text {* bind/unbind invs lemmas *}
+
+global_interpretation set_sc_obj_ref: non_reply_op "set_sc_obj_ref f ref new"
+  by (simp add: set_sc_obj_ref_def) unfold_locales
+
+global_interpretation set_ntfn_obj_ref: non_reply_op "set_ntfn_obj_ref f ref new"
+  by unfold_locales (auto intro: update_sk_obj_ref_sk_obj_at_pred)
+
+global_interpretation sched_context_bind_ntfn: non_reply_op "sched_context_bind_ntfn sc ntfn"
+  by unfold_locales (wpsimp simp: sched_context_bind_ntfn_def)
+
+lemma set_sc_obj_ref_valid_replie[wp]:
+  "set_sc_obj_ref f ref new \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: set_sc_obj_ref_def)
 
 lemma sched_context_bind_ntfn_invs[wp]:
   "\<lbrace>invs and ex_nonz_cap_to sc and ex_nonz_cap_to ntfn
@@ -737,9 +767,8 @@ lemma sched_context_unbind_ntfn_invs[wp]:
    apply (simp add: obj_at_def, elim conjE)
   apply (erule delta_sym_refs)
    apply (fastforce simp: obj_at_def refs_of_ntfn_def refs_of_simps split: if_splits)
-  apply ((fastforce split: if_split_asm ntfn.splits dest!: symreftype_inverse'
+  by ((fastforce split: if_split_asm ntfn.splits dest!: symreftype_inverse'
         simp: obj_at_def get_refs_def2 refs_of_ntfn_def ntfn_q_refs_of_def image_iff refs_of_simps)+)
-  done
 
 
 lemma is_schedulable_inv[wp]: "\<lbrace>P\<rbrace> is_schedulable x inq \<lbrace> \<lambda>_. P\<rbrace>"
@@ -801,9 +830,49 @@ lemma set_tcb_yt_update_bound_sc_tcb_at[wp]:
   "\<lbrace>bound_sc_tcb_at P t\<rbrace> set_tcb_obj_ref tcb_yield_to_update scp tcb \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
   by (wpsimp simp: set_tcb_obj_ref_def set_object_def pred_tcb_at_def obj_at_def get_tcb_rev)
 
+lemma set_tcb_queue_valid_replies[wp]:
+  "set_tcb_queue d prio queue \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: set_tcb_queue_def)
+
 crunches sched_context_bind_tcb, update_sk_obj_ref
-for arch_state[wp]: "\<lambda>s. P (arch_state s)"
+  for arch_state[wp]: "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps)
+
+crunches get_tcb_queue, get_sc_time, get_sc_obj_ref
+  for inv[wp]: "P"
+  (wp: hoare_drop_imps)
+
+lemma tcb_sched_action_valid_replies[wp]:
+  "tcb_sched_action act tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: tcb_sched_action_def)
+
+lemma set_scheduler_action_valid_replies[wp]:
+  "set_scheduler_action action \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: set_scheduler_action_def)
+
+lemma reschedule_required_valid_replies[wp]:
+  "reschedule_required \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: reschedule_required_def)
+
+lemma possible_switch_to_valid_replies[wp]:
+  "possible_switch_to tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: possible_switch_to_def)
+
+lemma test_possible_switch_to_valid_replies[wp]:
+  "test_possible_switch_to tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: test_possible_switch_to_def)
+
+lemma tcb_release_enqueue_valid_replies[wp]:
+  "tcb_release_enqueue tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: tcb_release_enqueue_def wp: mapM_wp')
+
+lemma postpone_valid_replies[wp]:
+  "postpone sc_ptr \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: postpone_def wp: hoare_drop_imps)
+
+lemma sched_context_resume_valid_replies[wp]:
+  "sched_context_resume sc_ptr \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: sched_context_resume_def)
 
 lemma sched_context_bind_tcb_invs[wp]:
   "\<lbrace>invs
@@ -832,6 +901,10 @@ lemma sched_context_bind_tcb_invs[wp]:
    apply (clarsimp simp: refs_of_sc_def get_refs_def2 image_iff)
   apply (clarsimp simp: idle_no_ex_cap)
   done
+
+lemma sched_context_unbind_valid_replies[wp]:
+  "tcb_release_remove tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: tcb_release_remove_def)
 
 lemma sched_context_unbind_tcb_invs[wp]:
   notes refs_of_simps[simp del]
@@ -909,6 +982,34 @@ proof -
     by presburger
 qed
 
+definition if_Some :: "'a option \<Rightarrow> 'b \<Rightarrow> 'b set"
+  where
+  "if_Some opt r \<equiv> case opt of None \<Rightarrow> {} | _ \<Rightarrow> {r}"
+
+lemmas if_Some_simps[simp] = if_Some_def [split_simps option.split]
+
+lemma set_reply_valid_replies:
+  "\<lbrace>\<lambda>s. \<forall>sc'. reply_sc_reply_at ((=) sc') r s
+                \<longrightarrow> P (replies_with_sc s - if_Some sc' r \<union> (if_Some (reply_sc reply) r))
+                      (replies_blocked s)\<rbrace>
+    set_reply r reply
+   \<lbrace>\<lambda>rv. valid_replies_pred P \<rbrace>"
+  apply (rule hoare_lift_Pf2[where f=replies_blocked])
+   prefer 2
+   apply (wp replies_blocked_lift)
+  apply (wpsimp wp: set_simple_ko_wps)
+  apply (clarsimp simp: reply_sc_reply_at_def pred_tcb_at_def obj_at_def is_reply)
+  apply (erule_tac P="\<lambda>y. P y x" in rsubst)
+  apply (auto simp: replies_with_sc_def reply_sc_reply_at_def obj_at_def if_Some_def split: option.split)
+  done
+
+lemma set_reply_sc_valid_replies:
+  "\<lbrace>\<lambda>s. \<forall>sc'. reply_sc_reply_at ((=) sc') r s
+                \<longrightarrow> P (replies_with_sc s - if_Some sc' r \<union> if_Some sc r) (replies_blocked s)\<rbrace>
+    set_reply_obj_ref reply_sc_update r sc
+   \<lbrace> \<lambda>rv. valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: update_sk_obj_ref_def wp: set_reply_valid_replies)
+
 lemma sched_context_unbind_reply_invs[wp]:
   notes refs_of_simps[simp del] fun_upd_apply[simp del]
   shows
@@ -916,13 +1017,15 @@ lemma sched_context_unbind_reply_invs[wp]:
   apply (simp add: sched_context_unbind_reply_def)
   apply (wpsimp wp: mapM_x_set_reply_sc_refs_of valid_irq_node_typ hoare_vcg_conj_lift valid_ioports_lift
       simp: invs_def valid_state_def valid_pspace_def)
-                      prefer 8
+                      apply (find_goal \<open>match conclusion in \<open>\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>rv s. sym_refs (f s)\<rbrace>\<close> for f \<Rightarrow> \<open>-\<close>\<close>)
                       apply (rule hoare_strengthen_post)
                       apply (rule mapM_x_set_reply_sc_refs_of)
                       apply simp
                       apply (wpsimp wp: mapM_x_wp' set_reply_sc_iflive valid_irq_node_typ
-                                        get_sched_context_wp get_simple_ko_wp valid_ioports_lift)+
-  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
+                                        set_reply_sc_valid_replies valid_ioports_lift
+                                        get_sched_context_wp get_simple_ko_wp
+                                  simp: subset_eq)+
+  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def subset_eq)
   apply (frule sym_refs_ko_atD[where p=sc_ptr, rotated])
    apply (simp add: obj_at_def, elim conjE)
   apply (simp (no_asm) add: foldl_fun_upd)

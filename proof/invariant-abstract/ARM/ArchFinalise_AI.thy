@@ -1163,6 +1163,7 @@ lemma flush_table_empty:
   "\<lbrace>\<lambda>s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>
     flush_table ac aa b word
    \<lbrace>\<lambda>rv s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>"
+  supply if_cong[cong]
   apply (clarsimp simp: flush_table_def set_vm_root_def)
   apply (wp do_machine_op_obj_at arm_context_switch_empty hoare_whenE_wp
     | wpc
@@ -1356,8 +1357,10 @@ lemma replaceable_reset_pd:
   apply simp_all
   done
 
+context notes if_cong[cong] begin
 crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
    (wp: crunch_wps simp: crunch_simps)
+end
 
 crunch obj_at[wp]: set_vm_root, invalidate_tlb_by_asid "\<lambda>s. P' (obj_at P p s)"
   (wp: hoare_whenE_wp simp: crunch_simps)
@@ -1730,6 +1733,7 @@ lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
 
 lemma (* finalise_cap_irq_node *)[Finalise_AI_asms]:
 "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> finalise_cap a b \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
+  supply if_cong[cong]
   apply (case_tac a,simp_all)
   apply (wp hoare_drop_imps| clarsimp)+
   done
@@ -1810,6 +1814,7 @@ lemma (* dmo_replaceable_or_arch_update *) [Finalise_AI_asms,wp]:
   \<lbrace>\<lambda>r s. replaceable_or_arch_update s slot cap cap'\<rbrace>"
   unfolding replaceable_or_arch_update_def replaceable_def no_cap_to_obj_with_diff_ref_def
             replaceable_final_arch_cap_def replaceable_non_final_arch_cap_def
+  supply if_cong[cong]
   apply (rule hoare_pre)
   apply (wps dmo_tcb_cap_valid_ARCH do_machine_op_reachable_pg_cap)
   apply (rule hoare_vcg_prop)
@@ -2129,11 +2134,13 @@ crunch aligned[wp]: invalidate_tlb_by_asid "pspace_aligned"
 
 crunch valid_arch_state[wp]: invalidate_tlb_by_asid "valid_arch_state"
 
+context notes if_cong[cong] begin
 crunch valid_cap [wp]: unmap_page_table, invalidate_tlb_by_asid,
   page_table_mapped, store_pte, delete_asid_pool, copy_global_mappings,
   arch_finalise_cap
   "valid_cap c"
   (wp: mapM_wp_inv mapM_x_wp' simp: crunch_simps)
+end
 
 global_naming Arch
 

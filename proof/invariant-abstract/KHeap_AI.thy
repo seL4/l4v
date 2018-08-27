@@ -357,6 +357,86 @@ lemma set_object_ko_at:
   apply (simp add: obj_at_def)
   done
 
+
+lemma inj_Reply:
+  "inj Reply"
+  by (auto intro: injI)
+
+lemmas inj_simple_kos[simp, intro!] =
+  inj_Endpoint inj_Notification inj_Reply
+
+lemma set_simple_ko_wp:
+  "\<lbrace> \<lambda>s. inj C \<and> (simple_obj_at C \<top> p s \<longrightarrow> Q (s\<lparr>kheap := kheap s(p \<mapsto> C r)\<rparr>)) \<rbrace>
+    set_simple_ko C p r
+   \<lbrace> \<lambda>rv. Q \<rbrace>"
+  apply (wpsimp simp: simple_obj_at_def set_simple_ko_def wp: set_object_wp get_object_wp)
+  apply (clarsimp split: option.splits simp: proj_inj obj_at_def)
+  by fastforce
+
+lemmas set_simple_ko_wps' =
+  set_simple_ko_wp[where C=Reply]
+  set_simple_ko_wp[where C=Notification]
+  set_simple_ko_wp[where C=Endpoint]
+
+lemmas set_simple_ko_wps =
+  set_simple_ko_wps'[simplified simple_obj_at_obj_at, simplified]
+
+lemma get_sk_obj_ref_wp:
+  "\<lbrace> \<lambda>s. \<forall>obj. ko_at (C obj) p s \<longrightarrow> Q (f obj) s \<rbrace> get_sk_obj_ref C f p \<lbrace> Q \<rbrace>"
+  by (wpsimp simp: get_sk_obj_ref_def wp: get_simple_ko_wp)
+
+lemma get_sk_obj_ref_sp:
+  "\<lbrace> P \<rbrace> get_sk_obj_ref C proj p \<lbrace> \<lambda>rv s. P s \<and> sk_obj_at_pred C proj (\<lambda>f. f = rv) p s \<rbrace>"
+  by (wpsimp wp: get_sk_obj_ref_wp simp: obj_at_def sk_obj_at_pred_def) blast
+
+lemma update_sk_obj_ref_wp:
+  "\<lbrace> \<lambda>s. inj C \<and> (\<forall>obj. ko_at (C obj) p s \<longrightarrow> Q (s\<lparr>kheap := kheap s(p \<mapsto> C (f (K v) obj))\<rparr>)) \<rbrace>
+    update_sk_obj_ref C f p v
+   \<lbrace> \<lambda>rv. Q \<rbrace>"
+  by (wpsimp simp: update_sk_obj_ref_def wp: set_simple_ko_wp get_simple_ko_wp)
+
+lemmas update_sk_obj_ref_wps' =
+  update_sk_obj_ref_wp[where C=Reply]
+  update_sk_obj_ref_wp[where C=Notification]
+  update_sk_obj_ref_wp[where C=Endpoint]
+
+lemmas update_sk_obj_ref_wps =
+  update_sk_obj_ref_wps'[simplified simple_obj_at_obj_at, simplified]
+
+lemma sk_obj_at_pred_valid_lift:
+  assumes "\<And>P'. f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (sk_obj_at_pred C proj P' p s)\<rbrace>"
+  by (simp add: sk_obj_at_pred_def assms)
+
+lemma set_reply_reply_sc_update_reply_tcb_reply_at:
+  "\<lbrace>\<lambda>s. (r = p \<longrightarrow> P (P' (reply_tcb reply))) \<and> (r \<noteq> p \<longrightarrow> P (reply_tcb_reply_at P' p s)) \<rbrace>
+    set_reply r (reply_sc_update f reply)
+   \<lbrace>\<lambda>rv s. P (reply_tcb_reply_at P' p s)\<rbrace>"
+  by (wpsimp wp: set_simple_ko_wps simp: reply_tcb_reply_at_def obj_at_def)
+
+lemma set_reply_reply_tcb_update_reply_sc_reply_at:
+  "\<lbrace>\<lambda>s. (r = p \<longrightarrow> P (P' (reply_sc reply))) \<and> (r \<noteq> p \<longrightarrow> P (reply_sc_reply_at P' p s)) \<rbrace>
+    set_reply r (reply_tcb_update f reply)
+   \<lbrace>\<lambda>_ s. P (reply_sc_reply_at P' p s) \<rbrace>"
+  by (wpsimp wp: set_simple_ko_wps simp: reply_sc_reply_at_def obj_at_def)
+
+lemma reply_tcb_reply_at_weakenE:
+  assumes "reply_tcb_reply_at P p s"
+  assumes "\<And>reply. ko_at (Reply reply) p s \<Longrightarrow> P (reply_tcb reply) \<Longrightarrow> Q (reply_tcb reply)"
+  shows "reply_tcb_reply_at Q p s"
+  using assms by (auto simp: reply_tcb_reply_at_def obj_at_def)
+
+lemma reply_at_ppred_reply_at:
+  "reply_at_ppred proj P r s \<Longrightarrow> reply_at r s"
+  by (clarsimp simp: reply_at_ppred_def obj_at_def is_reply_def)
+
+lemmas reply_tcb_reply_at = reply_at_ppred_reply_at[of reply_tcb]
+lemmas reply_sc_reply_at = reply_at_ppred_reply_at[of reply_sc]
+
+lemma set_simple_ko_at:
+  "\<lbrace>K (inj C)\<rbrace> set_simple_ko C ptr obj \<lbrace>\<lambda>rv. ko_at (C obj) ptr\<rbrace>"
+  by (wpsimp wp: set_simple_ko_wp simp: obj_at_def)
+
 lemma get_simple_ko_sp:
   "\<lbrace>P\<rbrace> get_simple_ko f p \<lbrace>\<lambda>ep. ko_at (f ep) p and P\<rbrace>"
   by get_simple_ko_method
@@ -913,18 +993,23 @@ lemma as_user_no_del_ep[wp]:
   by (simp add: ep_at_typ, rule as_user_typ_at)
 
 lemma set_simple_ko_tcb[wp]:
-  "\<lbrace> tcb_at t \<rbrace>
-   set_simple_ko f ep v
-   \<lbrace> \<lambda>rv. tcb_at t \<rbrace>"
+  "set_simple_ko f ep v \<lbrace> \<lambda>s. P (tcb_at t s) \<rbrace>"
   by (simp add: tcb_at_typ) wp
 
+lemma set_simple_ko_wp':
+  "\<lbrace> \<lambda>s. Q (s\<lparr>kheap := kheap s(p \<mapsto> C r)\<rparr>) \<rbrace>
+    set_simple_ko C p r
+   \<lbrace> \<lambda>rv. Q \<rbrace>"
+  by (wpsimp simp: simple_obj_at_def set_simple_ko_def wp: set_object_wp get_object_wp)
 
-lemma set_simple_ko_pred_tcb_at [wp]:
-  "\<lbrace> pred_tcb_at proj f t \<rbrace>
-   set_simple_ko g ep v
-   \<lbrace> \<lambda>rv. pred_tcb_at proj f t \<rbrace>"
-  by(set_simple_ko_method wp_thm: set_object_at_obj2 simp_thm: pred_tcb_at_def)
-
+lemma set_simple_ko_pred_tcb_at[wp]:
+  "set_simple_ko g ep v \<lbrace> \<lambda>s. P (pred_tcb_at proj f t s) \<rbrace>"
+  unfolding set_simple_ko_def
+  apply (wpsimp wp: set_object_wp)
+  apply (safe;
+         erule rsubst[where P=P];
+         clarsimp split: option.splits simp: pred_tcb_at_def obj_at_def)
+  done
 
 lemma set_endpoint_ep_at[wp]:
   "\<lbrace>ep_at ptr'\<rbrace> set_endpoint ptr val \<lbrace>\<lambda>rv. ep_at ptr'\<rbrace>"
@@ -1021,18 +1106,6 @@ lemma obj_at_ko_atE:
 crunch interrupt_states[wp]: set_simple_ko "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
-lemma set_object_non_arch:
-  "arch_obj_pred P' \<Longrightarrow>
-   \<lbrace>(\<lambda>s. P (obj_at P' p' s)) and K(non_arch_obj ko) and obj_at non_arch_obj p \<rbrace>
-    set_object p ko
-   \<lbrace>\<lambda>r s. P (obj_at P' p' s)\<rbrace>"
-  unfolding set_object_def
-  apply wp
-  apply clarsimp
-  apply (erule_tac P=P in rsubst)
-  apply (clarsimp simp: obj_at_def)
-  by (rule arch_obj_predE)
-
 lemma set_object_non_pagetable:
   "vspace_obj_pred P' \<Longrightarrow>
    \<lbrace>(\<lambda>s. P (obj_at P' p' s)) and K(non_vspace_obj ko) and obj_at non_vspace_obj p \<rbrace>
@@ -1055,30 +1128,327 @@ lemma set_object_memory[wp]:
 
 end
 
-locale non_aobj_op = fixes f
-  assumes aobj_at: "\<And>P P' p. arch_obj_pred P' \<Longrightarrow>
-                              \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>" and
-          arch_state[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
+(* P ignores all changes to TCBs *)
+definition tcb_agnostic_pred ::
+  "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool"
+  where
+  "tcb_agnostic_pred P \<equiv> \<forall>tcb tcb'. P (TCB tcb) \<longrightarrow> P (TCB tcb')"
 
-context non_aobj_op begin
+(* P ignores changes to caps in TCBs *)
+definition tcb_cnode_agnostic_pred ::
+  "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool"
+  where
+  "tcb_cnode_agnostic_pred P \<equiv>
+    \<forall>tcb c v i f t. P (TCB tcb)
+                    \<longrightarrow> P (TCB (tcb\<lparr> tcb_ctable := c,
+                                     tcb_vtable := v,
+                                     tcb_ipcframe := i,
+                                     tcb_fault_handler := f,
+                                     tcb_timeout_handler := t \<rparr>))"
 
-lemma valid_arch_state[wp]:"\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift_aobj_at; wp aobj_at; simp)
+(* P ignores changes to caps in well-formed CNodes *)
+definition cnode_agnostic_pred ::
+  "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool"
+  where
+  "cnode_agnostic_pred P \<equiv>
+    \<forall>bits f f'. well_formed_cnode_n bits f \<and> well_formed_cnode_n bits f'
+                \<longrightarrow> P (CNode bits f) = P (CNode bits f')"
+
+(* P ignores changes to caps in both well-formed CNodes and TCBs *)
+abbreviation cspace_agnostic_pred ::
+  "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool"
+  where
+  "cspace_agnostic_pred \<equiv> \<lambda>P. cnode_agnostic_pred P \<and> tcb_cnode_agnostic_pred P"
+
+abbreviation tcb_cspace_agnostic_pred ::
+  "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool"
+  where
+  "tcb_cspace_agnostic_pred \<equiv> \<lambda>P. tcb_agnostic_pred P \<and> cnode_agnostic_pred P"
+
+lemmas cspace_agnostic_pred_def =
+  cnode_agnostic_pred_def tcb_cnode_agnostic_pred_def
+
+lemmas tcb_cspace_agnostic_pred_def =
+  tcb_agnostic_pred_def cnode_agnostic_pred_def
+
+lemma cspace_arch_obj_pred_imps:
+  assumes "arch_obj_pred P"
+  shows cnode_arch_obj_pred_imp: "cnode_agnostic_pred P"
+    and tcb_cnode_arch_obj_pred_imp: "tcb_cnode_agnostic_pred P"
+    and cspace_arch_obj_pred_imp: "cspace_agnostic_pred P"
+    and tcb_arch_obj_pred_imp: "tcb_agnostic_pred P"
+    and tcb_cspace_arch_obj_pred_imp: "tcb_cspace_agnostic_pred P"
+  using assms by (auto simp: arch_obj_pred_def tcb_cnode_agnostic_pred_def
+                             cnode_agnostic_pred_def tcb_agnostic_pred_def)
+
+(* properties of functions f which preserve all objects *)
+locale non_heap_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes any_obj_at[wp]: "\<And>P P' p. f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+
+(* properties of functions f which preserve all objects except CNodes and/or TCBs *)
+locale cnode_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes cnode_agnostic_obj_at: "\<And>P P' p. cnode_agnostic_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+
+locale tcb_cnode_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes tcb_cnode_agnostic_obj_at: "\<And>P P' p. tcb_cnode_agnostic_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+
+locale cspace_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes cspace_agnostic_obj_at: "\<And>P P' p. cspace_agnostic_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+
+locale tcb_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes tcb_agnostic_obj_at: "\<And>P P' p. tcb_agnostic_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+
+locale tcb_cspace_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes tcb_cspace_agnostic_obj_at:
+            "\<And>P P' p. tcb_cspace_agnostic_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+
+(* properties of functions which preserve all arch objects *)
+locale non_aobj_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes aobj_at: "\<And>P P' p. arch_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+
+(* properties of functions which preserve all vspace objects *)
+locale non_vspace_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes vsobj_at: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+
+(* properties of functions which preserve (fields of) all reply objects *)
+locale non_reply_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes reply_obj_at[wp]: "\<And>P P' p. f \<lbrace>\<lambda>s. P (reply_at_pred P' p s)\<rbrace>"
+
+locale non_reply_tcb_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes reply_tcb_obj_at[wp]: "\<And>P P' p. f \<lbrace>\<lambda>s. P (reply_tcb_reply_at P' p s)\<rbrace>"
+
+locale non_reply_sc_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes reply_sc_obj_at[wp]: "\<And>P P' p. f \<lbrace>\<lambda>s. P (reply_sc_reply_at P' p s)\<rbrace>"
+
+locale reply_at_pres =
+  fixes f  :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes reply_at[wp]: "\<And>P p. f \<lbrace>\<lambda>s. P (reply_at p s)\<rbrace>"
+
+(* properties of functions which preserve (parts of) all scheduling context objects *)
+locale non_sc_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes sc_obj_at[wp]: "\<And>P N P' p. f \<lbrace>\<lambda>s. P (sc_at_pred_n N id P' p s)\<rbrace>"
+
+locale non_sc_ntfn_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes sc_ntfn_obj_at[wp]: "\<And>P N P' p. f \<lbrace>\<lambda>s. P (sc_at_pred_n N sc_ntfn P' p s)\<rbrace>"
+
+locale non_sc_tcb_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes sc_tcb_obj_at[wp]: "\<And>P N P' p. f \<lbrace>\<lambda>s. P (sc_at_pred_n N sc_tcb P' p s)\<rbrace>"
+
+locale non_sc_yield_from_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes sc_yf_obj_at[wp]: "\<And>P N P' p. f \<lbrace>\<lambda>s. P (sc_at_pred_n N sc_yield_from P' p s)\<rbrace>"
+
+locale non_sc_replies_op =
+  fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes sc_replies_obj_at[wp]: "\<And>P N P' p. f \<lbrace>\<lambda>s. P (sc_at_pred_n N sc_replies P' p s)\<rbrace>"
+
+locale sc_obj_at_pres =
+  fixes f  :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes sc_obj_at_pres[wp]: "\<And>P n p. f \<lbrace>\<lambda>s. P (sc_obj_at n p s)\<rbrace>"
+
+locale sc_at_pres =
+  fixes f  :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes sc_at[wp]: "\<And>P p. f \<lbrace>\<lambda>s. P (sc_at p s)\<rbrace>"
+
+locale typ_at_pres =
+  fixes f  :: "('state_ext::state_ext state, 'a) nondet_monad"
+  assumes typ_at[wp]: "\<And>P t p. f \<lbrace>\<lambda>s. P (typ_at t p s)\<rbrace>"
+
+lemma is_sc_obj:
+  "is_sc_obj n ko = (valid_sched_context_size n \<and> (\<exists>sc. ko = SchedContext sc n))"
+  by (cases ko) (auto simp add: is_sc_obj_def)
+
+lemma sk_obj_at_pred_id_lift:
+  assumes h: "\<And>P Q. f \<lbrace>\<lambda>s. P (sk_obj_at_pred C (\<lambda>obj. obj) Q p s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (sk_obj_at_pred C proj Q p s)\<rbrace>"
+  using h[where P=P and Q="Q \<circ> proj"] by (simp add: sk_obj_at_pred_def)
+
+lemma sc_at_pred_lift:
+  assumes h: "\<And>P Q. f \<lbrace>\<lambda>s. P (sc_at_pred_n N id Q p s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (sc_at_pred_n N proj Q p s)\<rbrace>"
+  using h[where P=P and Q="Q \<circ> proj"] by (simp add: sc_at_pred_n_def)
+
+lemma reply_at_ppred_lift:
+  assumes "f \<lbrace>\<lambda>s. P (reply_at_ppred proj \<top> p s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (reply_at p s)\<rbrace>"
+  apply (rule hoare_weaken_pre, rule hoare_strengthen_post, rule assms)
+  apply (all \<open>rule_tac f=P in bool_to_bool_cases\<close>)
+  by (auto simp: reply_at_ppred_def obj_at_def is_reply)
+
+lemma sc_obj_at_pred_v_lift:
+  assumes "f \<lbrace>\<lambda>s. P (sc_at_pred_n (((=) n) and valid_sched_context_size) proj \<top> p s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (sc_obj_at n p s)\<rbrace>"
+  apply (rule hoare_weaken_pre, rule hoare_strengthen_post, rule assms)
+  apply (all \<open>rule_tac f=P in bool_to_bool_cases\<close>)
+  by (auto simp: sc_at_pred_n_def obj_at_def is_sc_obj)
+
+lemma sc_at_pred_v_lift:
+  assumes "f \<lbrace>\<lambda>s. P (sc_at_pred_v proj \<top> p s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (sc_at p s)\<rbrace>"
+  apply (rule hoare_weaken_pre, rule hoare_strengthen_post, rule assms)
+  apply (all \<open>rule_tac f=P in bool_to_bool_cases\<close>)
+  by (auto simp: sc_at_pred_v_def obj_at_def is_sc_obj)
+
+lemma (in non_reply_op) reply_at_ppred:
+  "f \<lbrace> \<lambda>s. P (reply_at_ppred proj P' p s) \<rbrace>"
+  apply (rule hoare_weaken_pre, rule hoare_strengthen_post)
+  apply (rule reply_obj_at[where P=P and P'="P' \<circ> proj" and p=p])
+  by (auto simp: reply_at_ppred_def)
+
+sublocale cnode_op < cspace_op
+  by unfold_locales (simp add: cnode_agnostic_obj_at)
+
+sublocale tcb_cnode_op < cspace_op
+  by unfold_locales (simp add: tcb_cnode_agnostic_obj_at)
+
+sublocale tcb_cnode_op < tcb_op
+  by unfold_locales (fastforce simp: tcb_agnostic_pred_def tcb_cnode_agnostic_pred_def
+                                     tcb_cnode_agnostic_obj_at)
+
+sublocale tcb_op < tcb_cspace_op
+  by unfold_locales (simp add: tcb_agnostic_obj_at)
+
+sublocale cspace_op < tcb_cspace_op
+  by unfold_locales (fastforce simp: cspace_agnostic_obj_at tcb_agnostic_pred_def
+                                     cnode_agnostic_pred_def tcb_cnode_agnostic_pred_def)
+
+sublocale tcb_cspace_op < non_aobj_op
+  by unfold_locales (intro tcb_cspace_agnostic_obj_at tcb_cspace_arch_obj_pred_imp)
+
+sublocale non_aobj_op < non_vspace_op
+  by unfold_locales (intro aobj_at vspace_pred_imp)
+
+sublocale tcb_cspace_op < non_reply_op
+  by unfold_locales (simp add: reply_at_ppred_def tcb_cspace_agnostic_obj_at
+                               tcb_cspace_agnostic_pred_def)
+
+sublocale non_reply_op < non_reply_tcb_op
+  by unfold_locales (rule sk_obj_at_pred_id_lift[OF reply_obj_at])
+
+sublocale non_reply_op < non_reply_sc_op
+  by unfold_locales (rule sk_obj_at_pred_id_lift[OF reply_obj_at])
+
+sublocale non_reply_sc_op < reply_at_pres
+  by unfold_locales (rule reply_at_ppred_lift[OF reply_sc_obj_at])
+
+sublocale non_reply_tcb_op < reply_at_pres
+  by unfold_locales (rule reply_at_ppred_lift[OF reply_tcb_obj_at])
+
+sublocale tcb_cspace_op < non_sc_op
+  by unfold_locales (simp add: sc_at_pred_n_def tcb_cspace_agnostic_obj_at
+                               tcb_cspace_agnostic_pred_def)
+
+sublocale non_sc_op < non_sc_ntfn_op
+  by unfold_locales (rule sc_at_pred_lift[OF sc_obj_at])
+
+sublocale non_sc_op < non_sc_tcb_op
+  by unfold_locales (rule sc_at_pred_lift[OF sc_obj_at])
+
+sublocale non_sc_op < non_sc_yield_from_op
+  by unfold_locales (rule sc_at_pred_lift[OF sc_obj_at])
+
+sublocale non_sc_op < non_sc_replies_op
+  by unfold_locales (rule sc_at_pred_lift[OF sc_obj_at])
+
+sublocale non_sc_ntfn_op < sc_obj_at_pres
+  by unfold_locales (rule sc_obj_at_pred_v_lift[OF sc_ntfn_obj_at])
+
+sublocale non_sc_tcb_op < sc_obj_at_pres
+  by unfold_locales (rule sc_obj_at_pred_v_lift[OF sc_tcb_obj_at])
+
+sublocale non_sc_yield_from_op < sc_obj_at_pres
+  by unfold_locales (rule sc_obj_at_pred_v_lift[OF sc_yf_obj_at])
+
+sublocale non_sc_replies_op < sc_obj_at_pres
+  by unfold_locales (rule sc_obj_at_pred_v_lift[OF sc_replies_obj_at])
+
+sublocale sc_obj_at_pres < sc_at_pres
+  apply unfold_locales
+  apply (clarsimp simp: valid_def obj_at_def)
+  apply (rule_tac f=P in bool_to_bool_cases; clarsimp)
+   apply (rule revcut_rl, rule_tac P=id and n=n and p=p in sc_obj_at_pres)
+   apply (clarsimp simp: valid_def)
+   apply (drule_tac x=s in spec, drule mp, simp add: obj_at_def)
+   apply (drule_tac x="(a,b)" in bspec; clarsimp simp: obj_at_def is_sc_obj)
+  apply (rule revcut_rl, rule_tac P=Not and n=n and p=p in sc_obj_at_pres)
+  apply (clarsimp simp: valid_def)
+  apply (drule_tac x=s in spec, drule mp, clarsimp simp: obj_at_def)
+  apply (drule_tac x="(a,b)" in bspec; clarsimp simp: obj_at_def)
+  done
+
+sublocale tcb_cspace_op < typ_at_pres
+  by unfold_locales (simp add: tcb_cspace_agnostic_obj_at tcb_cspace_agnostic_pred_def a_type_def)
+
+sublocale typ_at_pres < sc_obj_at_pres
+  by unfold_locales (wpsimp simp: sc_obj_at_typ)
+
+sublocale typ_at_pres < reply_at_pres
+  by unfold_locales (wpsimp simp: reply_at_typ)
+
+sublocale non_heap_op < cnode_op
+  by unfold_locales (rule any_obj_at)
+
+sublocale non_heap_op < tcb_cnode_op
+  by unfold_locales (rule any_obj_at)
+
+lemma update_sk_obj_ref_sk_obj_at_pred:
+  assumes "inj C"
+  assumes "\<And>obj obj'. C obj \<noteq> C' obj'"
+  shows"update_sk_obj_ref C f ref new \<lbrace> \<lambda>s. P (sk_obj_at_pred C' proj P' p s) \<rbrace>"
+  by (wp update_sk_obj_ref_wp)
+     (clarsimp simp: sk_obj_at_pred_def obj_at_def assms)
+
+lemma set_simple_ko_sk_obj_at_pred:
+  assumes "inj C"
+  assumes "\<And>obj obj'. C obj \<noteq> C' obj'"
+  shows"set_simple_ko C ptr ep \<lbrace> \<lambda>s. P (sk_obj_at_pred C' proj P' p s) \<rbrace>"
+  by (wp set_simple_ko_wp)
+     (clarsimp simp: sk_obj_at_pred_def obj_at_def assms)
+
+context typ_at_pres begin
+
+lemma ntfn_at_pres[wp]:
+  "f \<lbrace>ntfn_at p\<rbrace>"
+  by (wpsimp simp: ntfn_at_typ)
+
+lemma ep_at_pres[wp]:
+  "f \<lbrace>ep_at p\<rbrace>"
+  by (wpsimp simp: ep_at_typ)
+
+lemma tcb_at_pres[wp]:
+  "f \<lbrace>tcb_at p\<rbrace>"
+  by (wpsimp simp: tcb_at_typ)
 
 end
 
+locale non_astate_op =
+  fixes f
+  assumes arch_state[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
 
-locale non_vspace_op = fixes f
-  assumes vsobj_at: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow>
-                              \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>" and
-          arch_state'[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
+locale non_aobj_non_astate_op = non_aobj_op f + non_astate_op f for f
+locale non_vspace_non_astate_op = non_vspace_op f + non_astate_op f for f
 
-sublocale non_aobj_op < non_vspace_op
-  apply (unfold_locales)
-  apply (auto simp: vspace_pred_imp arch_state aobj_at)
-  done
+sublocale non_aobj_non_astate_op < non_vspace_non_astate_op ..
 
-context non_vspace_op begin
+lemma (in non_aobj_non_astate_op) valid_arch_state[wp]:
+  "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  by (rule valid_arch_state_lift_aobj_at; wp aobj_at; simp)
+
+context non_vspace_non_astate_op begin
 
 lemma valid_vspace_obj[wp]:"\<lbrace>valid_vspace_objs\<rbrace> f \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   by (rule valid_vspace_objs_lift_weak; wp vsobj_at; simp)
@@ -1115,44 +1485,38 @@ end
 
 locale non_mem_op =
   fixes f
-  assumes memory[wp]: "\<And>P. \<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (underlying_memory (machine_state s))\<rbrace>"
+  assumes memory[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace>"
 
-(* non_vspace_op version *)
-locale non_vspace_non_mem_op = non_vspace_op f + non_mem_op f for f
-begin
+locale non_aobj_non_astate_non_mem_op = non_aobj_non_astate_op f + non_mem_op f for f
+locale non_vspace_non_astate_non_mem_op = non_vspace_non_astate_op f + non_mem_op f for f
+locale cspace_non_astate_non_mem_op = cspace_op f + non_astate_op f + non_mem_op f for f
 
-lemma valid_machine_state[wp]: "\<lbrace>valid_machine_state\<rbrace> f \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
+sublocale non_aobj_non_astate_non_mem_op < non_vspace_non_astate_non_mem_op ..
+sublocale cspace_non_astate_non_mem_op < non_aobj_non_astate_non_mem_op ..
+
+
+lemma (in non_vspace_non_astate_non_mem_op) valid_machine_state[wp]:
+  "f \<lbrace>valid_machine_state\<rbrace>"
   unfolding valid_machine_state_def
   by (wp hoare_vcg_disj_lift hoare_vcg_all_lift vsobj_at memory)
 
-end
-
-
-locale non_aobj_non_mem_op = non_aobj_op f + non_mem_op f for f
-
-sublocale non_aobj_non_mem_op < non_vspace_non_mem_op ..
-
-(* non_vspace_op version *)
 
 locale non_cap_op =
   fixes f
-  assumes caps[wp]: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  assumes caps[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
 
-locale non_vspace_non_cap_op = non_vspace_op f + non_cap_op f for f
-begin
-
-lemma valid_arch_caps[wp]: "\<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>"
-  by (rule valid_arch_caps_lift_weak[OF arch_state' vsobj_at caps])
-
-end
-
-locale non_aobj_non_cap_op = non_aobj_op f + non_cap_op f for f
+locale non_vspace_non_cap_op = non_vspace_non_astate_op f + non_cap_op f for f
+locale non_aobj_non_cap_op = non_aobj_non_astate_op f + non_cap_op f for f
 
 sublocale non_aobj_non_cap_op < non_vspace_non_cap_op ..
 
-(* non_vspace_op version *)
-locale non_vspace_non_cap_non_mem_op = non_vspace_non_mem_op f + non_vspace_non_cap_op f for f
-locale non_aobj_non_cap_non_mem_op = non_aobj_non_mem_op f + non_aobj_non_cap_op f for f
+lemma (in non_vspace_non_cap_op) valid_arch_caps[wp]:
+  "\<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>"
+  by (rule valid_arch_caps_lift_weak[OF arch_state vsobj_at caps])
+
+(* non_vspace_non_astate_op version *)
+locale non_vspace_non_cap_non_mem_op = non_vspace_non_astate_non_mem_op f + non_vspace_non_cap_op f for f
+locale non_aobj_non_cap_non_mem_op = non_aobj_non_astate_non_mem_op f + non_aobj_non_cap_op f for f
 
 sublocale non_aobj_non_cap_non_mem_op < non_vspace_non_cap_non_mem_op ..
 
@@ -1171,15 +1535,15 @@ lemma stsa_caps_of_state[wp]:
 
 lemma shows
   sts_caps_of_state[wp]:
-    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_thread_state t st \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
+    "set_thread_state t st \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>" and
   set_bound_caps_of_state[wp]:
-    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_tcb_obj_ref tcb_bound_notification_update t e \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
+    "set_tcb_obj_ref tcb_bound_notification_update t e \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>" and
   set_tcb_sc_caps_of_state[wp]:
-    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_tcb_obj_ref tcb_sched_context_update t sc \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
+    "set_tcb_obj_ref tcb_sched_context_update t sc \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>" and
   set_tcb_yt_caps_of_state[wp]:
-    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_tcb_obj_ref tcb_yield_to_update t sc \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
+    "set_tcb_obj_ref tcb_yield_to_update t sc \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>" and
   as_user_caps_of_state[wp]:
-    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> as_user p f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+    "as_user p f \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
 
   unfolding set_thread_state_def set_tcb_obj_ref_def as_user_def set_object_def
             set_mrs_def
@@ -1208,27 +1572,105 @@ crunch obj_at[wp]: set_thread_state_act "\<lambda>s. P (obj_at P' p' s)"
 crunch arch_state[wp]: set_thread_state "\<lambda>s. P (arch_state s)"
 crunch machine[wp]: set_thread_state "\<lambda>s. P (underlying_memory (machine_state s))"
 
+lemma set_object_cspace:
+  "cspace_agnostic_pred P' \<Longrightarrow>
+   \<lbrace>\<lambda>s. P (obj_at P' p' s) \<and> obj_at (\<lambda>ko'. P' ko' \<longleftrightarrow>  P' ko) p s \<rbrace>
+    set_object p ko
+   \<lbrace>\<lambda>r s. P (obj_at P' p' s)\<rbrace>"
+  by (wpsimp simp: set_object_def obj_at_def)
+
+lemma set_object_non_arch:
+  "arch_obj_pred P' \<Longrightarrow>
+   \<lbrace>(\<lambda>s. P (obj_at P' p' s)) and K (non_arch_obj ko) and obj_at non_arch_obj p \<rbrace>
+    set_object p ko
+   \<lbrace>\<lambda>r s. P (obj_at P' p' s)\<rbrace>"
+  by (wpsimp wp: set_object_cspace simp: obj_at_def cspace_arch_obj_pred_imp)
+     (rule arch_obj_predE)
+
 interpretation
   set_simple_ko: non_aobj_non_cap_non_mem_op "set_simple_ko c p ep" +
   sts: non_aobj_non_cap_non_mem_op "set_thread_state p st" +
   sbn: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_bound_notification_update p b" +
   as_user: non_aobj_non_cap_non_mem_op "as_user p g" +
-  thread_set: non_aobj_non_mem_op "thread_set f p" +
+  thread_set: non_aobj_non_astate_non_mem_op "thread_set f p" +
   set_tcb_sched_context: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_sched_context_update p sc" +
   set_sched_context: non_aobj_non_cap_non_mem_op "set_sched_context p sc'" +
   update_sched_context: non_aobj_non_cap_non_mem_op "update_sched_context p update" +
-  set_tcb_yt: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_yield_to_update p sc" +
-  set_cap: non_aobj_non_mem_op "set_cap cap p'"
+  set_tcb_yt: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_yield_to_update p sc"
   apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
   unfolding set_simple_ko_def set_thread_state_def set_sc_obj_ref_def
             set_tcb_obj_ref_def thread_set_def set_cap_def[simplified split_def]
             as_user_def set_mrs_def set_sched_context_def update_sched_context_def
   apply -
+  supply validNF_prop[wp_unsafe del]
   apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp split del: if_split)+\<close>)
   apply (auto simp: obj_at_def[abs_def] partial_inv_def the_equality
                split: Structures_A.kernel_object.splits)[1]
   by ((fastforce simp: obj_at_def[abs_def] a_type_def
                split: Structures_A.kernel_object.splits option.splits)+)
+
+lemma cnode_agnostic_predE:
+  assumes P: "P (CNode bits ct)"
+  assumes pred: "cnode_agnostic_pred P"
+  assumes wf: "well_formed_cnode_n bits ct"
+  assumes wf': "well_formed_cnode_n bits ct'"
+  shows "P (CNode bits ct')"
+  using P wf wf' pred[unfolded cnode_agnostic_pred_def
+                      , THEN spec[of _ bits]
+                      , THEN spec[of _ ct]
+                      , THEN spec[of _ ct']]
+  by simp
+
+lemma well_formed_cnode_n_updateE:
+  assumes "well_formed_cnode_n bits ct"
+  assumes "dom ct' = dom ct"
+  shows "well_formed_cnode_n bits ct'"
+  using assms by (simp add: well_formed_cnode_n_def)
+
+lemma cnode_agnostic_predE':
+  assumes P: "P (CNode bits ct)"
+  assumes pred: "cnode_agnostic_pred P"
+  assumes wf: "well_formed_cnode_n bits ct \<or> well_formed_cnode_n bits ct'"
+  assumes dom: "dom ct' = dom ct"
+  shows "P (CNode bits ct')"
+  apply (rule revcut_rl[where V="well_formed_cnode_n bits ct"])
+   apply (rule disjE[OF wf], assumption, erule well_formed_cnode_n_updateE[OF _ dom[symmetric]])
+  apply (rule cnode_agnostic_predE[OF P pred], assumption)
+  apply (erule well_formed_cnode_n_updateE[OF _ dom])
+  done
+
+lemma tcb_cnode_agnostic_predE:
+  assumes P: "P (TCB tcb)"
+  assumes pred: "tcb_cnode_agnostic_pred P"
+  assumes eq: "tcb_state tcb' = tcb_state tcb"
+              "tcb_ipc_buffer tcb' = tcb_ipc_buffer tcb"
+              "tcb_fault tcb' = tcb_fault tcb"
+              "tcb_bound_notification tcb' = tcb_bound_notification tcb"
+              "tcb_mcpriority tcb' = tcb_mcpriority tcb"
+              "tcb_sched_context tcb' = tcb_sched_context tcb"
+              "tcb_yield_to tcb' = tcb_yield_to tcb"
+              "tcb_priority tcb' = tcb_priority tcb"
+              "tcb_domain tcb' = tcb_domain tcb"
+              "tcb_arch tcb' = tcb_arch tcb"
+  shows "P (TCB tcb')"
+  apply (rule subst[OF tcb.equality[of tcb', symmetric], rotated -1])
+  apply (rule pred[unfolded tcb_cnode_agnostic_pred_def
+           , THEN spec[of _ tcb]
+           , THEN spec[of _ "tcb_ctable tcb'"]
+           , THEN spec[of _ "tcb_vtable tcb'"]
+           , THEN spec[of _ "tcb_ipcframe tcb'"]
+           , THEN spec[of _ "tcb_fault_handler tcb'"]
+           , THEN spec[of _ "tcb_timeout_handler tcb'"]
+           , THEN mp[OF _ P]])
+  by (auto simp: eq)
+
+global_interpretation set_cap: cspace_non_astate_non_mem_op "set_cap cap p'"
+  apply unfold_locales
+  apply (all \<open>wpsimp simp: set_cap_def[simplified split_def]
+                       wp: set_object_cspace get_object_wp\<close>)
+  by (auto simp: obj_at_def a_type_def
+          split: kernel_object.splits option.splits if_splits
+           elim: cnode_agnostic_predE' tcb_cnode_agnostic_predE)
 
 lemmas set_cap_arch[wp] = set_cap.arch_state
 
@@ -1401,6 +1843,13 @@ crunch valid_irq_states[wp]: set_thread_state, set_tcb_obj_ref, set_sc_obj_ref, 
   "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
+global_interpretation set_notification: non_reply_op "set_notification ptr val"
+  by unfold_locales (wpsimp wp: set_simple_ko_sk_obj_at_pred)
+
+lemma set_ntfn_valid_replies[wp]:
+  "set_notification ptr val \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: valid_replies_lift)
+
 lemma set_ntfn_minor_invs:
   "\<lbrace>invs and obj_at (\<lambda>ko. refs_of ko = refs_of_ntfn val) ptr
          and valid_ntfn val
@@ -1518,7 +1967,7 @@ lemma dmo_cap_to[wp]:
   by (simp add: ex_nonz_cap_to_def, wp hoare_vcg_ex_lift)
 
 lemma dmo_st_tcb [wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> do_machine_op f \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  "do_machine_op f \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply (wp select_wp)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
@@ -1689,11 +2138,8 @@ lemma set_sched_context_tcb [wp]:
   by (simp add: tcb_at_typ) wp
 
 lemma set_sched_context_pred_tcb_at [wp]:
-  "\<lbrace> pred_tcb_at proj f t \<rbrace>
-   set_sched_context ptr val
-   \<lbrace> \<lambda>rv. pred_tcb_at proj f t \<rbrace>"
-  by (wpsimp simp: set_sched_context_def set_object_def get_object_def pred_tcb_at_def
-                   obj_at_def)
+  "set_sched_context ptr val \<lbrace>\<lambda>s. Q (pred_tcb_at proj f t s)\<rbrace>"
+  by (wpsimp simp: set_sched_context_def set_object_def get_object_def pred_tcb_at_def obj_at_def)
 
 lemma set_sc_sc_at [wp]:
   "\<lbrace>sc_at ptr'\<rbrace> set_sched_context ptr val \<lbrace>\<lambda>rv. sc_at ptr'\<rbrace>"
@@ -1824,11 +2270,8 @@ lemma update_sched_context_tcb [wp]:
   by (simp add: tcb_at_typ) wp
 
 lemma update_sched_context_pred_tcb_at [wp]:
-  "\<lbrace> pred_tcb_at proj f t \<rbrace>
-   update_sched_context ptr update
-   \<lbrace> \<lambda>rv. pred_tcb_at proj f t \<rbrace>"
-  by (wpsimp simp: update_sched_context_def set_object_def get_object_def pred_tcb_at_def
-                   obj_at_def)
+  "update_sched_context ptr update \<lbrace> \<lambda>s. P (pred_tcb_at proj f t s) \<rbrace>"
+  by (wpsimp simp: update_sched_context_def set_object_def get_object_def pred_tcb_at_def obj_at_def)
 
 lemma update_sc_sc_at [wp]:
   "\<lbrace>sc_at ptr'\<rbrace> update_sched_context ptr f \<lbrace>\<lambda>rv. sc_at ptr'\<rbrace>"
@@ -1933,5 +2376,47 @@ lemma set_endpoint_obj_at_impossible:
   apply (wpsimp wp: get_object_wp set_object_at_obj)
   apply (clarsimp simp: obj_at_def split: option.splits)
   done
+
+global_interpretation return: non_heap_op "return x"
+  by unfold_locales wp
+
+context cspace_op begin
+
+lemma cspace_pred_tcb_at[wp]:
+  "f \<lbrace> \<lambda>s. P (pred_tcb_at proj P' p s) \<rbrace>"
+  by (auto intro: cspace_agnostic_obj_at
+            simp: pred_tcb_at_def cspace_agnostic_pred_def tcb_to_itcb_def)
+
+lemma cspace_valid_replies[wp]:
+  "f \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wp valid_replies_lift)
+
+end
+
+lemma (in non_reply_sc_op) replies_with_sc[wp]:
+  "f \<lbrace> \<lambda>s. P (replies_with_sc s) \<rbrace>"
+  by (wp replies_with_sc_lift)
+
+context pspace_update_eq begin
+
+lemma sk_obj_at_pred_update[iff]:
+  "sk_obj_at_pred C proj P p (f s) = sk_obj_at_pred C proj P p s"
+  by (simp add: sk_obj_at_pred_def)
+
+lemma replies_with_sc_no_kheap_update[simp]:
+  "replies_with_sc (f s) = replies_with_sc s"
+  by (simp add: replies_with_sc_def pspace)
+
+lemma replies_blocked_no_kheap_update[simp]:
+  "replies_blocked (f s) = replies_blocked s"
+  by (simp add: replies_blocked_def pspace)
+
+end
+
+lemma get_sc_obj_ref_wp:
+  "\<lbrace> \<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) sc_ptr s \<longrightarrow> P (proj sc) s \<rbrace>
+    get_sc_obj_ref proj sc_ptr
+   \<lbrace> P \<rbrace>"
+  by (wpsimp simp: get_sc_obj_ref_def)
 
 end

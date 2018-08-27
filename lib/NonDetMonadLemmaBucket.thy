@@ -144,24 +144,31 @@ lemma hoare_vcg_conj_liftE_R:
   apply blast
   done
 
-lemma zipWithM_x_inv:
+lemma zipWithM_x_inv':
   assumes x: "\<And>x y. \<lbrace>P\<rbrace> m x y \<lbrace>\<lambda>rv. P\<rbrace>"
-  shows      "length xs = length ys \<Longrightarrow> \<lbrace>P\<rbrace> zipWithM_x m xs ys \<lbrace>\<lambda>rv. P\<rbrace>"
-proof (induct xs ys rule: list_induct2)
+  shows      "\<lbrace>P\<rbrace> zipWithM_x m xs ys \<lbrace>\<lambda>rv. P\<rbrace>"
+proof (induct xs arbitrary: ys)
   case Nil
   show ?case
     by (simp add: zipWithM_x_def sequence_x_def zipWith_def)
 next
-  case (Cons a as b bs)
+  case (Cons x xs)
   have zipWithM_x_Cons:
     "\<And>m x xs y ys. zipWithM_x m (x # xs) (y # ys)
                  = do m x y; zipWithM_x m xs ys od"
     by (simp add: zipWithM_x_def sequence_x_def zipWith_def)
-  have IH: "\<lbrace>P\<rbrace> zipWithM_x m as bs \<lbrace>\<lambda>rv. P\<rbrace>"
-    by fact
+  have zipWithM_x_Nil:
+    "\<And>m xs. zipWithM_x m xs [] = return ()"
+    by (simp add: zipWithM_x_def sequence_x_def zipWith_def)
   show ?case
-    by (simp add: zipWithM_x_Cons) (wp IH x)
+    by (cases ys; wpsimp simp: zipWithM_x_Nil zipWithM_x_Cons wp: Cons x)
 qed
+
+(* For compatibility with existing proofs. *)
+lemma zipWithM_x_inv:
+  assumes x: "\<And>x y. \<lbrace>P\<rbrace> m x y \<lbrace>\<lambda>rv. P\<rbrace>"
+  shows      "length xs = length ys \<Longrightarrow> \<lbrace>P\<rbrace> zipWithM_x m xs ys \<lbrace>\<lambda>rv. P\<rbrace>"
+  by (rule zipWithM_x_inv', rule x)
 
 lemma K_valid[wp]:
   "\<lbrace>K P\<rbrace> f \<lbrace>\<lambda>_. K P\<rbrace>"
@@ -1725,6 +1732,12 @@ lemma hoare_in_monad_post :
   apply (simp add: state_unchanged [OF x])
   done
 
+lemma hoare_vcg_set_pred_lift:
+  assumes "\<And>P x. m \<lbrace> \<lambda>s. P (f x s) \<rbrace>"
+  shows "m \<lbrace> \<lambda>s. P {x. f x s} \<rbrace>"
+  using assms[where P="\<lambda>x . x"] assms[where P=Not] use_valid
+  by (fastforce simp: valid_def elim!: rsubst[where P=P])
+
 lemma mapM_gets:
   assumes P: "\<And>x. m x = gets (f x)"
   shows      "mapM m xs = gets (\<lambda>s. map (\<lambda>x. f x s) xs)"
@@ -2396,6 +2409,13 @@ lemma hoare_gen_asm_conj:
   "(P \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. P' s \<and> P\<rbrace> f \<lbrace>Q\<rbrace>"
   by (fastforce simp: valid_def)
 
+(* Might be useful for forward reasoning, when P is known. *)
+lemma hoare_gen_asm'':
+  "(\<And>s. P s \<Longrightarrow> S)
+    \<Longrightarrow> (S \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>)
+    \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
+  by (simp add: valid_def)
+
 
 lemma hoare_add_K:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P s \<and> I\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> I\<rbrace>"
@@ -2422,6 +2442,13 @@ lemma hoare_rv_split:
   apply (clarsimp simp: valid_def)
   apply (case_tac a, fastforce+)
   done
+
+(* Might be useful for forward reasoning, when P is known. *)
+lemma hoare_when_cases:
+  "(\<And>s. \<not>B \<Longrightarrow> P s \<Longrightarrow> Q s)
+    \<Longrightarrow> (B \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> \<lambda>r. Q \<rbrace>)
+    \<Longrightarrow> \<lbrace> P \<rbrace> when B f \<lbrace> \<lambda>r. Q \<rbrace>"
+  by (cases B; simp; wpsimp)
 
 lemma case_option_find_give_me_a_map:
   "case_option a return (find f xs)

@@ -614,14 +614,6 @@ lemma set_cap_cur [wp]:
   apply (clarsimp simp: cur_tcb_def obj_at_def is_tcb)
   done
 
-lemma set_cap_pred_tcb [wp]:
- "\<lbrace>pred_tcb_at proj P t\<rbrace> set_cap c p \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
-  apply (simp add: set_cap_def set_object_def split_def)
-  apply (wp get_object_wp | wpc)+
-  apply (auto simp: pred_tcb_at_def obj_at_def tcb_to_itcb_def)
-  done
-
-
 lemma set_cap_live[wp]:
   "\<lbrace>\<lambda>s. P (obj_at live p' s)\<rbrace>
      set_cap cap p \<lbrace>\<lambda>rv s. P (obj_at live p' s)\<rbrace>"
@@ -2012,7 +2004,7 @@ lemma set_untyped_cap_as_full_tcb_cap_valid:
     apply (case_tac "tcb_at (fst dest) s")
       apply clarsimp
       apply (intro conjI impI allI)
-      apply (drule use_valid[OF _ set_cap_pred_tcb],simp+)
+      apply (drule use_valid[OF _ set_cap.cspace_pred_tcb_at[of "\<lambda>x. x"]], simp+)
         apply (clarsimp simp: valid_ipc_buffer_cap_def is_cap_simps)
         apply (fastforce simp: tcb_at_def obj_at_def is_tcb)
     apply (clarsimp simp: tcb_at_typ)
@@ -2033,7 +2025,7 @@ lemma cap_insert_objs [wp]:
     | simp split del: if_split)+
   done
 
-crunch pred_tcb_at[wp]: cap_insert, set_cdt "pred_tcb_at proj P t"
+crunch pred_tcb_at[wp]: cap_insert, set_cdt "\<lambda>s. Q (pred_tcb_at proj P t s)"
   (wp: hoare_drop_imps)
 
 

@@ -295,7 +295,7 @@ lemma horridly_specific_rewrite:
   "(obj_at (\<lambda>ko. \<exists>tcb. (tcb_sched_context tcb = Some xa \<longrightarrow> ko = TCB tcb) \<and>
                    (tcb_sched_context tcb \<noteq> Some xa \<longrightarrow>
                         ex_nonz_cap_to xa s \<and> ex_nonz_cap_to a s \<and> ko = TCB tcb
-                     \<and> sc_tcb_sc_at ((=) None) xa s \<and> bound_sc_tcb_at ((=) None) a s)) a s) =
+                     \<and> bound_sc_tcb_at ((=) None) a s \<and> sc_tcb_sc_at ((=) None) xa s)) a s) =
    (tcb_at a s \<and> (bound_sc_tcb_at (\<lambda>sc. sc \<noteq> Some xa) a s \<longrightarrow>
                         (ex_nonz_cap_to xa s \<and> ex_nonz_cap_to a s \<and>
                          sc_tcb_sc_at ((=) None) xa s \<and> bound_sc_tcb_at ((=) None) a s)))"
@@ -336,9 +336,11 @@ lemma finalise_cap_ep:
 
 lemma cap_delete_ep:
   "\<lbrace>cte_wp_at (is_ep_cap or (=) NullCap) slot and cte_wp_at P p and K (slot \<noteq> p)\<rbrace>
-  cap_delete slot \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>, -"
+    cap_delete slot
+   \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>, -"
   apply (simp add: cap_delete_def rec_del_CTEDeleteCall)
   apply (subst rec_del_FinaliseSlot)
+  apply (simp cong: if_cong)
   apply (wp empty_slot_cte_wp_elsewhere|wpc)+
        apply (rule hoare_FalseE_R) (* `else` case will not be taken *)
       apply wpsimp+
@@ -392,9 +394,9 @@ lemma tc_invs[Tcb_AI_asms]:
        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) fh)
        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) th)
        and (case_option \<top> (case_option \<top> (no_cap_to_obj_dr_emp o fst) o snd) g)
-       (* only set prio \<le> mcp of authorising thread *)
+       \<comment> \<open>only set prio \<le> mcp of authorising thread\<close>
        and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) auth s) pr)
-       (* only set mcp \<le> mcp of authorising thread *)
+       \<comment> \<open>only set mcp \<le> mcp of authorising thread\<close>
        and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp)
        and (case_option \<top> (case_option \<top> (\<lambda>sc. bound_sc_tcb_at ((=) None) a and ex_nonz_cap_to sc and sc_tcb_sc_at ((=) None) sc)) sc)
        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
@@ -409,6 +411,7 @@ lemma tc_invs[Tcb_AI_asms]:
        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) th)\<rbrace>
       invoke_tcb (ThreadControl a sl fh th mcp pr e f g sc)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
+  supply if_cong[cong]
   apply (rule hoare_gen_asm)+
   apply (simp add: split_def set_mcpriority_def install_tcb_cap_def cong: option.case_cong)
   apply wp
@@ -449,7 +452,8 @@ lemma tc_invs[Tcb_AI_asms]:
              static_imp_wp static_imp_conj_wp
              sched_context_unbind_tcb_invs
              TcbAcc_AI.gbn_wp)[1]
-        | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified] horridly_specific_rewrite not_pred_tcb tcb_at_typ
+        | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
+                    horridly_specific_rewrite not_pred_tcb tcb_at_typ
                del: hoare_True_E_R
         | wpc
         | strengthen use_no_cap_to_obj_asid_strg

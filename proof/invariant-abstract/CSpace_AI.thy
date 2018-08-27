@@ -3491,6 +3491,9 @@ lemma set_untyped_cap_as_full_cap_zombies_final:
   apply simp
   done
 
+global_interpretation set_untyped_cap_as_full: cspace_op "set_untyped_cap_as_full src_cap cap src"
+  by (simp add: set_untyped_cap_as_full_def set_cap.cspace_op_axioms return.cspace_op_axioms)
+
 (* FIXME: MOVE *)
 lemma set_untyped_cap_as_full_valid_pspace:
   "\<lbrace>valid_pspace and cte_wp_at ((=) src_cap) src\<rbrace>
@@ -3592,10 +3595,15 @@ lemma set_untyped_cap_as_full_valid_global_refs[wp]:
   done
 
 
-lemma cap_insert_aobj_at:
-  "arch_obj_pred P' \<Longrightarrow> \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
+lemma cap_insert_cspace_agnostic_obj_at:
+  assumes "cspace_agnostic_pred P'"
+  shows "\<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
+  using assms
   unfolding cap_insert_def update_cdt_def set_cdt_def set_untyped_cap_as_full_def
-  by (wpsimp wp: set_cap.aobj_at get_cap_wp)
+  by (wpsimp wp: set_cap.cspace_agnostic_obj_at get_cap_wp)
+
+lemmas cap_insert_aobj_at =
+  cap_insert_cspace_agnostic_obj_at[OF cspace_arch_obj_pred_imp]
 
 lemma cap_insert_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
@@ -4006,6 +4014,7 @@ lemma set_cap_tcb_ipc_buffer:
   apply (clarsimp simp: obj_at_def)
   done
 
+lemmas set_cap_pred_tcb = set_cap.cspace_pred_tcb_at[of "\<lambda>x. x"]
 
 lemmas set_cap_tcb_cap[wp]
   = tcb_cap_valid_typ_st [OF set_cap_typ_at set_cap_pred_tcb set_cap_tcb_ipc_buffer]
@@ -4623,5 +4632,23 @@ proof -
     apply clarsimp
     done
 qed
+
+lemma set_cdt_wp:
+  "\<lbrace> \<lambda>s. Q (s\<lparr>cdt := c\<rparr>) \<rbrace> set_cdt c \<lbrace> \<lambda>r. Q \<rbrace>"
+  by (wpsimp simp: set_cdt_def)
+
+lemma update_cdt_wp:
+  "\<lbrace> \<lambda>s. Q (s\<lparr>cdt := f (cdt s)\<rparr>) \<rbrace> update_cdt f \<lbrace> \<lambda>r. Q \<rbrace>"
+  by (wpsimp simp: update_cdt_def wp: set_cdt_wp)
+
+global_interpretation update_cdt: non_reply_op "update_cdt f"
+  by unfold_locales (wpsimp wp: update_cdt_wp)
+
+global_interpretation cap_insert: non_reply_op "cap_insert cap src dest"
+  by unfold_locales (wpsimp simp: cap_insert_def wp: hoare_drop_imps split_del: if_split)
+
+lemma cap_insert_valid_replies[wp]:
+  "cap_insert cap src dest \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: valid_replies_lift)
 
 end

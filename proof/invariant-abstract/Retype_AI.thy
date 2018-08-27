@@ -25,8 +25,6 @@ requalify_consts
   clearMemoryVM
 end
 
-declare global_refs_kheap[simp]
-
 
 locale Retype_AI_clearMemoryVM =
   assumes clearMemoryVM_return [simp]: "\<And> a b. clearMemoryVM a b = return ()"
@@ -1733,12 +1731,17 @@ lemma zombies: "zombies_final s'"
   by (clarsimp simp: final_retype is_zombie_def cte_retype not_final_NullCap
               elim!: zombies_finalD [OF _ zombies_s])
 
+lemma valid_replies:
+  "valid_replies s'"
+  by (rule valid_replies_state_refs_eq[THEN iffD2]
+      , rule refs_eq
+      , rule valid_pspaceE[OF vp])
+
 end
 
 lemma (in retype_region_proofs_gen) valid_pspace: "valid_pspace s'"
   using vp by (simp add: valid_pspace_def valid_objs psp_al psp_dist
-                         iflive zombies refs_eq hyp_refs_eq)
-
+                         iflive zombies refs_eq hyp_refs_eq valid_replies)
 
 (* I have the feeling I'm making this unnecessarily hard,
    but I can't put my finger on where. *)

@@ -2919,8 +2919,6 @@ lemma cancel_signal_valid_sched[wp]:
   apply (wpsimp wp: set_thread_state_not_runnable_valid_sched hoare_drop_imps)
   done
 
-lemmas set_endpoint_reply_tcb_inv = set_endpoint_reply_tcb
-
 crunch st_tcb_at_not_runnable[wp]: reply_cancel_ipc "st_tcb_at (\<lambda>st. \<not>runnable st) t"
   (wp: crunch_wps select_wp sts_st_tcb_at_cases thread_set_no_change_tcb_state maybeM_inv
    simp: crunch_simps unless_def fast_finalise.simps wp_del: reply_remove_st_tcb_at)
@@ -4144,7 +4142,7 @@ lemma cancel_badged_sends_filterM_st_tcb_at[wp]:
   apply (rule rev_induct[where xs=xs])
    apply simp
   apply (clarsimp simp: filterM_append)
-  by (wpsimp wp: set_thread_state_st_tcb_at | simp)+
+  by (wpsimp wp: set_thread_state_st_tcb_at hoare_drop_imps | simp)+
 
 lemma cancel_badged_sends_filterM_weak_valid_sched_action[wp]:
    "\<lbrace>weak_valid_sched_action and (\<lambda>s. \<forall>x\<in> (set xs). schedulable_tcb_at x s)\<rbrace>
@@ -4460,7 +4458,7 @@ lemma handle_timeout_not_queued[wp]:
    and*) \<rbrace>
      handle_timeout tptr (Timeout badge) \<lbrace>\<lambda>_. not_queued t::det_state \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: handle_timeout_def)
-  apply_trace (wpsimp simp:  wp: send_fault_ipc_not_queued_timeout)
+  apply (wpsimp simp:  wp: send_fault_ipc_not_queued_timeout)
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (case_tac "tcb_timeout_handler y"; clarsimp)
 (*  apply (auto simp: tcb_cnode_map_def caps_of_state_tcb_index_trans)
@@ -4575,12 +4573,6 @@ crunches update_sk_obj_ref
 for ct_not_in_q[wp]: ct_not_in_q
 and schedulable_tcb_at[wp]: "schedulable_tcb_at t"
   (wp: crunch_wps ignore: set_object )
-
-lemma set_reply_obj_ref_sc_tcb_sc_at[wp]:
-  "\<lbrace>sc_tcb_sc_at P t\<rbrace> set_reply_obj_ref f ref new \<lbrace>\<lambda>_. sc_tcb_sc_at P t\<rbrace>"
-  apply (wpsimp simp: update_sk_obj_ref_def set_simple_ko_def set_object_def
-                wp: get_simple_ko_wp get_object_wp)
-  by (clarsimp simp: a_type_def partial_inv_def sc_tcb_sc_at_def obj_at_def)
 
 (*
 lemma reply_push_valid_sched:

@@ -88,6 +88,7 @@ lemma derive_cap_is_derived [Ipc_AI_assms]:
   \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow>
           cte_wp_at (is_derived (cdt s) slot rv) slot s\<rbrace>, -"
   unfolding derive_cap_def
+  supply if_cong[cong]
   apply (cases c', simp_all add: is_cap_simps)
           apply ((wp ensure_no_children_wp
                     | clarsimp simp: is_derived_def is_cap_simps

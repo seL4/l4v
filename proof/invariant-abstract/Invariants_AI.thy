@@ -253,40 +253,105 @@ abbreviation "mcpriority_tcb_at \<equiv> pred_tcb_at itcb_mcpriority"
 lemma st_tcb_at_def: "st_tcb_at test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
   by (simp add: pred_tcb_at_def)
 
-(* sc_at / reply_at  *)
-definition
-  sc_ntfn_sc_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "sc_ntfn_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_ntfn sc))"
+(* sc with property at *)
+definition sc_at_pred_n ::
+  "(nat \<Rightarrow> bool) \<Rightarrow> (sched_context \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  where
+  "sc_at_pred_n N proj P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> N n \<and> P (proj sc))"
 
-definition
-  sc_tcb_sc_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "sc_tcb_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_tcb sc))"
+(* for compatibility with existing sc_*_sc_at predicates *)
+abbreviation "sc_at_pred \<equiv> sc_at_pred_n (\<lambda>_. True)"
 
-definition
-  sc_yf_sc_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "sc_yf_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_yield_from sc))"
+abbreviation "sc_ntfn_sc_at \<equiv> sc_at_pred sc_ntfn"
+abbreviation "sc_tcb_sc_at \<equiv> sc_at_pred sc_tcb"
+abbreviation "sc_yf_sc_at \<equiv> sc_at_pred sc_yield_from"
+abbreviation "sc_replies_sc_at \<equiv> sc_at_pred sc_replies"
 
-definition
-  sc_replies_sc_at :: "(obj_ref list \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "sc_replies_sc_at P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (sc_replies sc))"
+lemma sc_at_pred_def:
+  "sc_at_pred proj P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (proj sc))"
+  by (simp add: sc_at_pred_n_def)
 
-definition
-  reply_sc_reply_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "reply_sc_reply_at P \<equiv> obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> P (reply_sc r))"
+lemmas sc_ntfn_sc_at_def = sc_at_pred_def[of sc_ntfn]
+lemmas sc_tcb_sc_at_def = sc_at_pred_def[of sc_tcb]
+lemmas sc_yf_sc_at_def = sc_at_pred_def[of sc_yield_from]
+lemmas sc_replies_sc_at_def = sc_at_pred_def[of sc_replies]
 
-definition
-  reply_tcb_reply_at :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "reply_tcb_reply_at P \<equiv> obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> P (reply_tcb r))"
+(* for compatibility with existing sc_at predicate *)
+abbreviation "sc_at_pred_v \<equiv> sc_at_pred_n valid_sched_context_size"
+
+abbreviation "sc_ntfn_sc_at_v \<equiv> sc_at_pred_v sc_ntfn"
+abbreviation "sc_tcb_sc_at_v \<equiv> sc_at_pred_v sc_tcb"
+abbreviation "sc_yf_sc_at_v \<equiv> sc_at_pred_v sc_yield_from"
+abbreviation "sc_replies_sc_at_v \<equiv> sc_at_pred_v sc_replies"
+
+lemmas sc_at_pred_v_def = sc_at_pred_n_def[of valid_sched_context_size]
+
+lemmas sc_ntfn_sc_at_v_def = sc_at_pred_v_def[of sc_ntfn]
+lemmas sc_tcb_sc_at_v_def = sc_at_pred_v_def[of sc_tcb]
+lemmas sc_yf_sc_at_v_def = sc_at_pred_v_def[of sc_yield_from]
+lemmas sc_replies_sc_at_v_def = sc_at_pred_v_def[of sc_replies]
+
+(* Simple kernel object with projected property at p *)
+definition sk_obj_at_pred ::
+  "('u \<Rightarrow> kernel_object) \<Rightarrow> ('u \<Rightarrow> 'f) \<Rightarrow> ('f \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  where
+  "sk_obj_at_pred C proj P \<equiv> obj_at (\<lambda>ko. \<exists>r. ko = C r \<and> P (proj r))"
+
+(* reply with projected property at p *)
+abbreviation "reply_at_ppred \<equiv> sk_obj_at_pred Reply"
+abbreviation "reply_sc_reply_at \<equiv> reply_at_ppred reply_sc"
+abbreviation "reply_tcb_reply_at \<equiv> reply_at_ppred reply_tcb"
+
+lemmas reply_at_ppred_def = sk_obj_at_pred_def[of Reply]
+lemmas reply_sc_reply_at_def = reply_at_ppred_def[of reply_sc]
+lemmas reply_tcb_reply_at_def = reply_at_ppred_def[of reply_tcb]
+
+abbreviation simple_obj_at ::
+  "('u \<Rightarrow> kernel_object) \<Rightarrow> ('u \<Rightarrow> bool) \<Rightarrow> 32 word \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
+  where
+  "simple_obj_at C \<equiv> sk_obj_at_pred C (\<lambda>obj. obj)"
+
+lemma sk_obj_at_pred_def2:
+  "sk_obj_at_pred C proj P \<equiv> \<lambda>p s. \<exists>obj. kheap s p = Some (C obj) \<and> P (proj obj)"
+  by (intro eq_reflection ext) (auto simp: sk_obj_at_pred_def obj_at_def)
+
+lemmas simple_obj_at_def =
+  sk_obj_at_pred_def2[where proj="\<lambda>obj. obj", simplified]
+
+lemma simple_obj_at_id:
+  "simple_obj_at (\<lambda>ko. ko) = obj_at"
+  by (intro ext; simp add: sk_obj_at_pred_def)
+
+lemma simple_obj_at_ko_at:
+  "simple_obj_at C ((=) obj) = ko_at (C obj)"
+  by (intro ext; simp add: simple_obj_at_def obj_at_def)
+
+abbreviation "reply_at_pred \<equiv> simple_obj_at Reply"
+abbreviation "ntfn_at_pred \<equiv> simple_obj_at Notification"
+abbreviation "ep_at_pred \<equiv> simple_obj_at Endpoint"
+
+lemmas reply_at_pred_def = simple_obj_at_def[of Reply]
+lemmas ntfn_at_pred_def = simple_obj_at_def[of Notification]
+lemmas ep_at_pred_def = simple_obj_at_def[of Endpoint]
+
+lemma simple_obj_at_obj_at:
+  "reply_at_pred \<top> = reply_at"
+  "ntfn_at_pred \<top> = ntfn_at"
+  "ep_at_pred \<top> = ep_at"
+  by (intro ext iffI
+      ; clarsimp simp: obj_at_def simple_obj_at_def inj_def is_reply_def is_ntfn_def is_ep_def
+      ; case_tac ko
+      ; simp)+
+
+lemma sc_at_pred_sc_at:
+  "sc_at_pred_v id \<top> = sc_at"
+  apply (intro ext iffI; clarsimp simp: sc_at_pred_n_def obj_at_def is_sc_obj_def
+                                 split: kernel_object.splits)
+  apply (case_tac ko; clarsimp)
+  done
 
 
 text {* cte with property at *}
-
 definition
   cte_wp_at :: "(cap \<Rightarrow> bool) \<Rightarrow> cslot_ptr \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -604,10 +669,7 @@ definition
   valid_reply :: "reply \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_reply reply s \<equiv>
-     valid_bound_tcb (reply_tcb reply) s
-     \<and> valid_bound_sc (reply_sc reply) s
-     (*\<and> (reply_tcb reply = None \<longrightarrow> reply_sc reply = None) *) (* FIXME RT: this should be true but don't yet
-                                                                            know how to prove it *)"
+     valid_bound_tcb (reply_tcb reply) s \<and> valid_bound_sc (reply_sc reply) s"
 
 
 definition
@@ -924,14 +986,57 @@ where
  "zombies_final \<equiv>
   \<lambda>s. \<forall>p. cte_wp_at is_zombie p s \<longrightarrow> cte_wp_at (\<lambda>cap. is_final_cap' cap s) p s"
 
+(* Pointers to Reply objects r and threads which are BlockedOnReply. *)
+definition replies_blocked ::
+  "'z::state_ext state \<Rightarrow> (obj_ref \<times> obj_ref) set"
+  where
+  "replies_blocked s \<equiv> {(r,t). st_tcb_at (\<lambda>st. st = BlockedOnReply (Some r)) t s}"
+
+(* Pointers to Reply pointers which have an associated scheduling context. *)
+definition replies_with_sc ::
+  "'z::state_ext state \<Rightarrow> obj_ref set"
+  where
+  "replies_with_sc s \<equiv> {r. reply_sc_reply_at (\<lambda>sc. sc \<noteq> None) r s}"
+
+(* Many funcitons will not change either of these sets: *)
+abbreviation
+  "valid_replies_pred P == \<lambda>s. P (replies_with_sc s) (replies_blocked s)"
+
+(* For every Reply object with an associated scheduling context,
+   there must be a thread which is BlockedOnReply with that Reply. *)
+abbreviation valid_replies ::
+  "'z::state_ext state \<Rightarrow> bool"
+  where
+  "valid_replies \<equiv> \<lambda>s. replies_with_sc s \<subseteq> fst ` replies_blocked s"
+
 definition
   valid_pspace :: "'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_pspace \<equiv> valid_objs and pspace_aligned and
-                  pspace_distinct and if_live_then_nonz_cap
-                  and zombies_final
-                  and (\<lambda>s. sym_refs (state_refs_of s))
-                  and (\<lambda>s. sym_refs (state_hyp_refs_of s))"
+  "valid_pspace \<equiv> valid_objs
+                   and pspace_aligned
+                   and pspace_distinct
+                   and if_live_then_nonz_cap
+                   and zombies_final
+                   and valid_replies
+                   and (\<lambda>s. sym_refs (state_refs_of s))
+                   and (\<lambda>s. sym_refs (state_hyp_refs_of s))"
+
+lemmas valid_replies_def =
+  replies_with_sc_def replies_blocked_def
+
+lemma valid_replies_def2:
+  "valid_replies s \<equiv>
+    \<forall>r. reply_sc_reply_at (\<lambda>sc. sc \<noteq> None) r s
+        \<longrightarrow> (\<exists>t. st_tcb_at (\<lambda>st. st = BlockedOnReply (Some r)) t s)"
+  by (rule eq_reflection) (fastforce simp: valid_replies_def image_iff)
+
+lemma valid_repliesD:
+  assumes valid_replies: "valid_replies s"
+  assumes P: "\<And>sc. P sc \<longleftrightarrow> sc \<noteq> None"
+  assumes reply_sc: "reply_sc_reply_at P r s"
+  shows "\<exists>t. st_tcb_at (\<lambda>st. st = BlockedOnReply (Some r)) t s"
+  using valid_replies reply_sc[unfolded P]
+  by (clarsimp simp: valid_replies_def2)
 
 definition
   null_filter :: "('a \<Rightarrow> cap option) \<Rightarrow> ('a \<Rightarrow> cap option)"
@@ -1156,7 +1261,8 @@ abbreviation
 abbreviation
   "ct_idle \<equiv> ct_in_state idle"
 
-abbreviation(input)
+(* Also excludes valid_replies. *)
+abbreviation (input)
  "all_invs_but_sym_refs
     \<equiv> valid_objs and pspace_aligned and pspace_distinct and valid_ioc
        and if_live_then_nonz_cap and zombies_final
@@ -1169,8 +1275,7 @@ abbreviation(input)
        and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
-       and cur_tcb"
-
+       and cur_tcb and valid_replies"
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Lemmas"
@@ -1911,10 +2016,13 @@ lemma valid_objs_pspaceI:
   unfolding valid_objs_def
   by (auto intro: valid_obj_pspaceI dest!: bspec [OF _ domI])
 
+lemma state_refs_of_kheap_eq:
+  "kheap s = kheap s' \<Longrightarrow> state_refs_of s = state_refs_of s'"
+  by (simp add: state_refs_of_def)
+
 lemma state_refs_of_pspaceI:
   "\<lbrakk> P (state_refs_of s); kheap s = kheap s' \<rbrakk> \<Longrightarrow> P (state_refs_of s')"
-  unfolding state_refs_of_def
-  by simp
+  by (elim rsubst[of P] state_refs_of_kheap_eq)
 
 lemma distinct_pspaceI:
   "pspace_distinct s \<Longrightarrow> kheap s = kheap s' \<Longrightarrow> pspace_distinct s'"
@@ -1970,6 +2078,51 @@ lemma zombies_final_pspaceI:
   using x unfolding zombies_final_def is_final_cap'_def2
   by (simp only: cte_wp_at_pspace [OF y])
 
+lemma replies_with_sc_def2:
+  "replies_with_sc s \<equiv> {r. \<exists>sc. (sc, ReplySchedContext) \<in> state_refs_of s r}"
+  by (intro eq_reflection set_eqI iffI
+      ; fastforce simp: replies_with_sc_def reply_sc_reply_at_def obj_at_def
+                        state_refs_of_def refs_of_rev
+                 split: option.splits)
+
+lemma replies_with_sc_state_refs_eq:
+  "state_refs_of s' = state_refs_of s \<Longrightarrow> replies_with_sc s' = replies_with_sc s"
+  by (simp add: replies_with_sc_def2)
+
+(* This only happens to be true because the tcb_st_refs_of BlockedOnReply can be distinguished
+   from those of BlockedOnReceive by the presence or absence of an endpoint reference with ref
+   type TCBBlockedRecv. *)
+lemma replies_blocked_def2:
+  "replies_blocked s \<equiv> {(r,t). (r, TCBReply) \<in> state_refs_of s t
+                                \<and> (\<forall>ep. (ep, TCBBlockedRecv) \<notin> state_refs_of s t)}"
+  by (intro eq_reflection set_eqI iffI
+      ; fastforce simp: replies_blocked_def pred_tcb_at_def obj_at_def
+                        state_refs_of_def get_refs_def2 refs_of_rev
+                 split: option.splits)+
+
+lemma replies_blocked_state_refs_eq:
+  "state_refs_of s' = state_refs_of s \<Longrightarrow> replies_blocked s' = replies_blocked s"
+  by (simp add: replies_blocked_def2)
+
+lemma valid_replies_state_refs_eq:
+  assumes "state_refs_of s' = state_refs_of s"
+  shows "valid_replies s' = valid_replies s"
+  using replies_blocked_state_refs_eq[OF assms] replies_with_sc_state_refs_eq[OF assms]
+  by simp
+
+lemmas replies_blocked_kheap_eq =
+  replies_blocked_state_refs_eq[OF state_refs_of_kheap_eq]
+
+lemmas replies_with_sc_kheap_eq =
+  replies_with_sc_state_refs_eq[OF state_refs_of_kheap_eq]
+
+lemmas valid_replies_kheap_eq =
+  valid_replies_state_refs_eq[OF state_refs_of_kheap_eq]
+
+lemma valid_replies_pspaceI:
+  "valid_replies s \<Longrightarrow> kheap s' = kheap s \<Longrightarrow> valid_replies s'"
+  by (rule valid_replies_kheap_eq[THEN iffD2])
+
 lemma pspace_pspace_update:
   "kheap (kheap_update (\<lambda>a. ps) s) = ps" by simp
 
@@ -1978,7 +2131,7 @@ lemma valid_pspace_eqI:
   unfolding valid_pspace_def
   by (auto simp: pspace_aligned_def
            intro: valid_objs_pspaceI state_refs_of_pspaceI state_hyp_refs_of_pspaceI
-                  distinct_pspaceI iflive_pspaceI
+                  distinct_pspaceI iflive_pspaceI valid_replies_pspaceI[THEN subsetD]
                   ifunsafe_pspaceI zombies_final_pspaceI)
 
 lemma cte_wp_caps_of_lift:
@@ -2036,7 +2189,7 @@ text {* Lemmas about well-formed states *}
 
 lemma valid_pspaceI [intro]:
   "\<lbrakk> valid_objs s; pspace_aligned s; sym_refs (state_refs_of s); sym_refs (state_hyp_refs_of s);
-     pspace_distinct s; if_live_then_nonz_cap s; zombies_final s \<rbrakk>
+     pspace_distinct s; if_live_then_nonz_cap s; zombies_final s; valid_replies s \<rbrakk>
      \<Longrightarrow> valid_pspace s"
   unfolding valid_pspace_def by simp
 
@@ -2045,7 +2198,7 @@ lemma valid_pspaceE [elim?]:
   and     rl: "\<lbrakk> valid_objs s; pspace_aligned s;
                  sym_refs (state_refs_of s);  sym_refs (state_hyp_refs_of s);
                  pspace_distinct s; if_live_then_nonz_cap s;
-                 zombies_final s \<rbrakk> \<Longrightarrow> R"
+                 zombies_final s; valid_replies s \<rbrakk> \<Longrightarrow> R"
   shows    R
   using vp
   unfolding valid_pspace_def by (auto intro: rl)
@@ -3629,6 +3782,10 @@ lemma invs_hyp_sym_refs [elim!]: (* ARMHYP move and requalify *)
   "invs s \<Longrightarrow> sym_refs (state_hyp_refs_of s)"
   by (simp add: invs_def valid_state_def valid_pspace_def)
 
+lemma invs_valid_replies[elim!]:
+  "invs s \<Longrightarrow> valid_replies s"
+  by (fastforce dest!: invs_valid_pspace simp: valid_pspace_def)
+
 lemma invs_vobjs_strgs:
   "invs s \<longrightarrow> valid_objs s"
   by auto
@@ -3698,10 +3855,12 @@ lemma get_irq_slot_real_cte:
   done
 
 lemma all_invs_but_sym_refs_check:
-  "(all_invs_but_sym_refs and sym_refs \<circ> state_refs_of and sym_refs o state_hyp_refs_of) = invs"
+  "(all_invs_but_sym_refs and sym_refs \<circ> state_refs_of
+                          and sym_refs o state_hyp_refs_of
+                          and valid_replies)
+    = invs"
   by (simp add: invs_def valid_state_def valid_pspace_def
                 o_def pred_conj_def conj_comms)
-
 
 lemma invs_valid_asid_map[elim!]:
   "invs s \<Longrightarrow> valid_asid_map s"
@@ -3841,5 +4000,79 @@ lemma max_ipc_length_unfold:
   by (simp add: max_ipc_length_def cap_transfer_data_size_def msg_max_length_def msg_max_extra_caps_def)
 
 lemmas if_live_then_nonz_cap_invs = if_live_then_nonz_capD2[OF invs_iflive]
+
+lemma replies_with_sc_lift:
+  assumes "\<And>P r. f \<lbrace>\<lambda>s. P (reply_sc_reply_at (\<lambda>sc. sc \<noteq> None) r s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (replies_with_sc s)\<rbrace>"
+  unfolding replies_with_sc_def
+  by (wp hoare_vcg_set_pred_lift assms)
+
+lemma replies_blocked_lift:
+  assumes "\<And>P r t. f \<lbrace>\<lambda>s. P (st_tcb_at (\<lambda>st. st = BlockedOnReply (Some r)) t s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (replies_blocked s)\<rbrace>"
+  unfolding replies_blocked_def
+  apply (rule hoare_vcg_set_pred_lift)
+  apply (rule_tac P=P in P_bool_lift; wpsimp wp: assms hoare_vcg_ex_lift hoare_vcg_all_lift)
+  done
+
+lemma valid_replies_lift:
+  assumes [wp]: "\<And>P r. f \<lbrace> \<lambda>s. P (reply_sc_reply_at (\<lambda>sc. sc \<noteq> None) r s) \<rbrace>"
+  assumes [wp]: "\<And>P r t. f \<lbrace> \<lambda>s. P (st_tcb_at (\<lambda>st. st = BlockedOnReply (Some r)) t s) \<rbrace>"
+  shows "f \<lbrace> valid_replies_pred P \<rbrace>"
+  by (rule hoare_lift_Pf[where f=replies_blocked]; wp replies_with_sc_lift replies_blocked_lift)
+
+(* A weaker statement than valid_replies_lift, but useful since we already
+   prove preservation of state_refs_of for many functions. *)
+lemma valid_replies_state_refs_lift:
+  assumes "\<And>P. f \<lbrace> \<lambda>s. P (state_refs_of s) \<rbrace>"
+  shows "f \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: replies_with_sc_def2 replies_blocked_def2 wp: assms)
+
+context
+  fixes P r t s
+  assumes eq: "\<And>st. P st \<longleftrightarrow> st = BlockedOnReply (Some r)"
+  assumes tcb: "st_tcb_at P t s"
+begin
+
+lemma in_replies_blockedI':
+  "(r, t) \<in> replies_blocked s"
+  using tcb[unfolded eq] by (simp add: replies_blocked_def)
+
+lemma in_replies_blockedI'':
+  "r \<in> fst ` replies_blocked s"
+  by (rule imageI[where f=fst, OF in_replies_blockedI', simplified])
+
+end
+
+lemmas in_replies_blockedI =
+  in_replies_blockedI'[OF refl]
+  in_replies_blockedI''[OF refl]
+  in_replies_blockedI'[OF eq_commute]
+  in_replies_blockedI''[OF eq_commute]
+
+lemma valid_tcb_state:
+  "valid_tcb p tcb s \<Longrightarrow> valid_tcb_state (tcb_state tcb) s"
+  by (simp add: valid_tcb_def)
+
+lemma valid_reply_tcb:
+  "valid_reply reply_obj s \<Longrightarrow> valid_bound_tcb (reply_tcb reply_obj) s"
+  by (simp add: valid_reply_def)
+
+lemma st_tcb_atI:
+  "kheap s p = Some (TCB tcb) \<Longrightarrow> P (tcb_state tcb) \<Longrightarrow> st_tcb_at P p s"
+  by (simp add: pred_tcb_at_def obj_at_def)
+
+lemma reply_sc_reply_atI:
+  "\<lbrakk> kheap s r = Some (Reply reply); P (reply_sc reply) \<rbrakk> \<Longrightarrow> reply_sc_reply_at P r s"
+  by (simp add: reply_sc_reply_at_def obj_at_def)
+
+lemma
+  shows ko_atI: "kheap s p = Some ko \<Longrightarrow> ko_at ko p s"
+  and   ko_atD: "ko_at ko p s \<Longrightarrow> kheap s p = Some ko"
+  by (auto simp: obj_at_def)
+
+lemma not_pred_tcb_at_strengthen:
+  "pred_tcb_at proj (Not \<circ> P) p s \<Longrightarrow> \<not> pred_tcb_at proj P p s"
+  by (clarsimp simp: pred_tcb_at_def obj_at_def)
 
 end

@@ -95,7 +95,8 @@ lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
   apply (wp do_machine_op_valid_cap)
   apply (auto simp: valid_cap_def valid_untyped_def
              split: cap.splits option.splits arch_cap.splits
-         split del: if_split)
+         split del: if_split
+              cong: if_cong)
   done
 
 crunch valid_global_refs[Interrupt_AI_asms]: set_irq_state "valid_global_refs"
@@ -129,12 +130,13 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
    apply (auto simp: cte_wp_at_caps_of_state)
    done
   show ?thesis
+  supply if_cong[cong]
   apply (cases i, simp_all)
     apply (wp maskInterrupt_invs_ARCH)
     apply simp
    apply (rename_tac irq cap prod)
    apply (rule hoare_pre)
-    apply_trace (wp valid_cap_typ [OF cap_delete_one_typ_at])
+    apply (wp valid_cap_typ [OF cap_delete_one_typ_at])
      apply (strengthen real_cte_tcb_valid)
      apply (wp real_cte_at_typ_valid [OF cap_delete_one_typ_at])
      apply (rule_tac Q="\<lambda>rv s. is_ntfn_cap cap \<and> invs s

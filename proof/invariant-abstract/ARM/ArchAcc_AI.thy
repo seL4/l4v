@@ -193,22 +193,25 @@ lemma set_asid_pool_cte_wp_at:
              simp: cte_wp_at_after_update)
 
 lemma set_pt_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pt ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  "set_pt ptr val \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: set_pt_def set_object_def)
+  supply rsubst[where P=Q, elim!]
   apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
 
 
 lemma set_pd_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pd ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  "set_pd ptr val \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: set_pd_def set_object_def)
+  supply rsubst[where P=Q, elim!]
   apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
 
 
 lemma set_asid_pool_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  "set_asid_pool ptr val \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
+  supply rsubst[where P=Q, elim!]
   apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
 
@@ -1586,6 +1589,20 @@ crunch valid_irq_states[wp]: set_pt "valid_irq_states"
 crunch valid_irq_states[wp]: set_pd "valid_irq_states"
   (wp: crunch_wps)
 
+lemma set_pt_reply_at_ppred[wp]:
+  "set_pt p pt \<lbrace> \<lambda>s. P (reply_at_pred P' r s) \<rbrace>"
+  by (wpsimp simp: set_pt_def wp: set_object_wp get_object_wp)
+     (fastforce elim!: bool_to_boolE[of P]
+                 simp: obj_at_def reply_at_ppred_def
+                split: kernel_object.splits if_splits)
+
+sublocale set_pt: non_reply_op "set_pt p pt"
+  by unfold_locales wp
+
+lemma set_pt_valid_replies[wp]:
+  "set_pt p pt \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: valid_replies_lift)
+
 lemma set_pt_invs:
   "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pte (pt i)) and
     (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_vspace_obj (PageTable pt) s) and
@@ -2078,6 +2095,20 @@ lemma cur_tcb_more_update[iff]:
   "cur_tcb (trans_state f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
 
+lemma set_asid_pool_reply_at_ppred[wp]:
+  "set_asid_pool p pt \<lbrace> \<lambda>s. P (reply_at_pred P' r s) \<rbrace>"
+  by (wpsimp simp: set_asid_pool_def wp: set_object_wp get_object_wp)
+     (fastforce elim!: bool_to_boolE[of P]
+                 simp: obj_at_def reply_at_ppred_def
+                split: kernel_object.splits if_splits)
+
+sublocale set_asid_pool: non_reply_op "set_asid_pool p pt"
+  by unfold_locales wp
+
+lemma set_asid_pool_valid_replies[wp]:
+  "set_asid_pool p pt \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: valid_replies_lift)
+
 lemma set_asid_pool_invs_restrict:
   "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and
     (\<lambda>s. \<forall>asid. asid \<le> mask asid_bits \<longrightarrow> ucast asid \<notin> S \<longrightarrow>
@@ -2087,7 +2118,7 @@ lemma set_asid_pool_invs_restrict:
   apply (simp add: invs_def valid_state_def valid_pspace_def
                    valid_arch_caps_def)
   apply (wp valid_irq_node_typ set_asid_pool_typ_at
-            set_asid_pool_vspace_objs_unmap  valid_irq_handlers_lift
+            set_asid_pool_vspace_objs_unmap valid_irq_handlers_lift
             set_asid_pool_vs_lookup_unmap set_asid_pool_restrict_asid_map)
   apply simp_all
   done
@@ -3199,6 +3230,20 @@ lemma vs_refs_pages_subset2:
   done
   done
 
+lemma set_pd_reply_at_ppred[wp]:
+  "set_pd p pt \<lbrace> \<lambda>s. P (reply_at_pred P' r s) \<rbrace>"
+  by (wpsimp simp: set_pd_def wp: set_object_wp get_object_wp)
+     (fastforce elim!: bool_to_boolE[of P]
+                 simp: obj_at_def reply_at_ppred_def
+                split: kernel_object.splits if_splits)
+
+sublocale set_pd: non_reply_op "set_pd p pt"
+  by unfold_locales wp
+
+lemma set_pd_valid_replies[wp]:
+  "set_pd p pt \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: valid_replies_lift)
+
 lemma set_pd_invs_unmap:
   "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pde (pd i)) and
     (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_vspace_obj (PageDirectory pd) s) and
@@ -3222,7 +3267,7 @@ lemma set_pd_invs_unmap:
              valid_irq_handlers_lift
              set_pd_unmap_mappings set_pd_equal_kernel_mappings_triv)
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_arch_caps_def
-    del: disjCI)
+                   del: disjCI)
   done
 
 

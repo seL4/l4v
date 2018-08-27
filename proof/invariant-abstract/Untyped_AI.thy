@@ -3013,7 +3013,7 @@ lemma set_original_valid_ioc[wp]:
   apply (cases tp; simp)
   done
 
-interpretation create_cap: non_vspace_non_mem_op "create_cap tp sz p slot dev"
+interpretation create_cap: non_vspace_non_astate_non_mem_op "create_cap tp sz p slot dev"
   apply (cases slot)
   apply (simp add: create_cap_def set_cdt_def)
   apply unfold_locales
@@ -3043,6 +3043,8 @@ lemma create_cap_refs_respects_device:
   apply (fastforce simp: is_cap_simps)
   done
 
+global_interpretation create_cap: cspace_non_astate_non_mem_op "create_cap tp sz p dev refs"
+  by unfold_locales (wpsimp simp: create_cap_def wp: set_cap.cspace_agnostic_obj_at set_cdt_wp)
 lemma (in Untyped_AI_nonempty_table) create_cap_invs[wp]:
   "\<lbrace>invs
       and cte_wp_at (\<lambda>c. is_untyped_cap c \<and> cap_is_device (default_cap tp oref sz dev)  = cap_is_device c
