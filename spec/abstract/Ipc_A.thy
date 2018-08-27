@@ -292,12 +292,10 @@ where
                                                      | _ \<Rightarrow> RecvEP queue);
                 recv_state \<leftarrow> get_thread_state dest;
                 reply \<leftarrow> case recv_state
-                  of (BlockedOnReceive _ reply) \<Rightarrow> do
-                      do_ipc_transfer thread (Some epptr) badge can_grant dest;
-                      maybeM reply_unlink_tcb reply;
-                      return reply
-                    od
+                  of (BlockedOnReceive _ reply) \<Rightarrow> return reply
                   | _ \<Rightarrow> fail;
+                do_ipc_transfer thread (Some epptr) badge can_grant dest;
+                maybeM reply_unlink_tcb reply;
                 sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
 
                 fault \<leftarrow> thread_get tcb_fault thread;
