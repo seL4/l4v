@@ -47,7 +47,7 @@ class FirstError {
         if (first_error_pos >= 0) {
             textArea.setCaretPosition(first_error_pos);
         } else {
-            msg("No errors detected in theory " + model.get().node_name() + " (at present).");
+            textArea.setCaretPosition(textArea.getBufferLength());
         }
     }
 }
