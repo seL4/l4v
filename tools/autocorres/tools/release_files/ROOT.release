@@ -9,12 +9,16 @@
  *)
 
 session AutoCorres = CParser +
+  sessions
+    "HOL-Eisbach"
+    Lib
+    CLib
   theories
     "AutoCorres"
 
 session AutoCorresTest = AutoCorres +
   sessions
     "HOL-Number_Theory"
+    AutoCorres
   theories
     "tests/AutoCorresTest"
-
