@@ -9,15 +9,16 @@
 # @TAG(NICTA_BSD)
 #
 
-import os
-import errno
-import subprocess
 import argparse
-import shutil
-import tempfile
-import glob
-import time
+import errno
 import fnmatch
+import glob
+import os
+import re
+import shutil
+import subprocess
+import tempfile
+import time
 
 # Create a temporary directory
 class TempDir():
@@ -72,7 +73,7 @@ def read_manifest(filename, base):
                 base_dir = os.path.split(pattern)[0]
                 g = glob.glob(os.path.join(base, pattern))
                 if len(g) == 0:
-                    print ("Warning: Pattern '%s' matches 0 files." % pattern)
+                    print("Warning: Pattern '%s' matches 0 files." % pattern)
                 results += [(base_dir, x) for x in g]
     return results
 
@@ -119,14 +120,19 @@ parser.add_argument('--no-cleanup', action='store_true',
         help='Don''t delete temporary directories.', default=False)
 parser.add_argument('-r', '--repository', metavar='REPO',
         type=str, help='Path to the L4.verified repository base.', default=None)
+parser.add_argument('--archs', metavar='ARCH,...',
+        type=str, default='ARM,ARM_HYP,X64',
+        help='L4V_ARCHs to include (comma-separated)')
 args = parser.parse_args()
 
+args.archs = args.archs.split(',')
+
 # Setup output filename if the user used the default.
-if args.output == None:
+if args.output is None:
     args.output = "autocorres-%s.tar.gz" % args.version
 
 # If no repository was specified, assume it is in the cwd.
-if args.repository == None:
+if args.repository is None:
     try:
         args.repository = subprocess.check_output([
             "git", "rev-parse", "--show-toplevel"]).strip()
@@ -151,6 +157,13 @@ if not os.path.exists(args.isabelle_tar) or not args.isabelle_tar.endswith(".tar
     parser.error("Expected a path to the official Isabelle release.")
 args.isabelle_tar = os.path.abspath(args.isabelle_tar)
 
+# Tools for theory dependencies.
+thydeps_tool = os.path.join(args.repository, 'misc', 'scripts', 'thydeps')
+repo_isabelle_dir = os.path.join(args.repository, 'isabelle')
+
+# User's preferred shell, if any.
+user_shell = os.environ.get('SHELL', '/bin/sh')
+
 # Create temp dir.
 with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
     # Generate base directory.
@@ -159,42 +172,31 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
     os.mkdir(target_dir)
 
     # Copy autocorres files.
-    print "Copying files..."
+    print("Copying files...")
     ac_files = copy_manifest(target_dir,
                              os.path.join(release_files_dir, "AUTOCORRES_FILES"),
                              os.path.join(args.repository, "tools", "autocorres"), "autocorres")
 
-    # Copy lib files.
-    lib_files = copy_manifest(target_dir,
-                              os.path.join(release_files_dir, "LIB_FILES"),
-                              os.path.join(args.repository, "lib"), "lib")
+    # Copy theories from dependent sessions in the lib directory.
+    lib_deps = ''
+    for arch in args.archs:
+        lib_deps += subprocess.check_output(
+            [thydeps_tool, '-I', repo_isabelle_dir, '-d', '.', '-d', 'tools/autocorres/tests',
+             '-b', 'lib', '-r',
+             'AutoCorresTest'],
+            cwd=args.repository, env=dict(os.environ, L4V_ARCH=arch))
+    lib_deps = sorted(set(lib_deps.splitlines()))
 
-    # Double-check our theory dependencies.
-    thydeps_tool = os.path.join(args.repository, 'misc/scripts/thydeps')
-    if os.path.exists(thydeps_tool):
-        print "Checking theory dependencies..."
-        included_thys = [os.path.join(dir, file)
-                         for dir, file in lib_files if file.endswith('.thy')]
-        included_thys += [os.path.join(dir, file)
-                          for dir, file in ac_files if file.endswith('.thy')]
-        thy_deps = ''
-        for arch in ["ARM","X64"]:
-            thy_deps += subprocess.check_output([thydeps_tool, '-T', 'text', '-o', '-'] + included_thys,
-                                                cwd=args.repository, env=dict(os.environ, L4V_ARCH=arch))
-        thy_deps = sorted(set(thy_deps.splitlines()))
-        needed_files = [os.path.join(args.repository, f)
-                        for f in thy_deps if f.startswith('lib') or f.startswith('tools/autocorres')]
-
-        manifest_files = [os.path.join(dir, file) for dir, file in ac_files + lib_files]
-        missing_files = [f for f in needed_files if f not in manifest_files]
-        if missing_files:
-            print "Warning: missing dependencies from release manifest:"
-            for f in missing_files:
-                print("  - %s" % f)
-    else:
-        print "Warning: cannot check theory dependencies: missing tool misc/scripts/thydeps"
+    for f in lib_deps:
+        f_src = os.path.join(args.repository, 'lib', f)
+        f_dest = os.path.join(target_dir, 'lib', os.path.relpath(f, args.repository))
+        mkdir_p(os.path.dirname(f_dest))
+        shutil.copyfile(f_src, f_dest)
 
     # Copy various other files.
+    shutil.copyfile(
+            os.path.join(args.repository, 'lib', 'Word_Lib', 'ROOT'),
+            os.path.join(target_dir, 'lib', 'Word_Lib', 'ROOT'))
     shutil.copyfile(
             os.path.join(release_files_dir, "ROOT.release"),
             os.path.join(target_dir, "autocorres", "ROOT"))
@@ -213,6 +215,40 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
     shutil.copyfile(
             os.path.join(args.repository, "LICENSE_BSD2.txt"),
             os.path.join(target_dir, "LICENSE_BSD2.txt"))
+    shutil.copyfile(
+            os.path.join(args.repository, "LICENSE_GPLv2.txt"),
+            os.path.join(target_dir, "LICENSE_GPLv2.txt"))
+
+    # Extract dependent sessions in lib. FIXME: rather kludgy
+    print('Extracting sessions from lib/ROOT...')
+
+    # Set up ROOT for the tests dir, for the thydeps tool
+    subprocess.check_call(
+        ['make', 'tests/ROOT'],
+        cwd=os.path.join(args.repository, 'tools', 'autocorres'))
+
+    lib_sessions = ['Lib', 'CLib']
+    lib_ROOT = os.path.join(args.repository, 'lib', 'ROOT')
+    with open(lib_ROOT, 'r') as lib_root:
+        data = lib_root.read()
+        # Split out session specs. Assume ROOT file has standard indentation.
+        chunks = data.split('\nsession ')
+        # This will have the license header, etc.
+        header = chunks[0]
+        # Remaining sections. Try to remove comments
+        sessions = ['session ' + re.sub(r'\(\*.*?\*\)', '', x, flags=re.DOTALL)
+                    for x in chunks[1:]]
+
+        new_root = header
+        wanted_specs = {}
+        for wanted in lib_sessions:
+            spec = [spec for spec in sessions if spec.startswith('session %s ' % wanted)]
+            if len(spec) != 1:
+                print('error: %s session not found in %r' % (wanted, lib_ROOT))
+            new_root += '\n' + spec[0]
+
+        with open(os.path.join(target_dir, 'lib', 'ROOT'), 'w') as root_f:
+            root_f.write(new_root)
 
     # For the examples, generate ".thy" files where appropriate, and also
     # generate an "All.thy" which contains all the examples.
@@ -220,12 +256,22 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
         thy_file = os.path.splitext(c_file)[0] + ".thy"
         base_name = os.path.splitext(os.path.basename(c_file))[0]
         with open(thy_file, "w") as f:
-            f.write('theory %s\n' % base_name)
-            f.write('imports "../../AutoCorres"\n')
-            f.write('begin\n\n')
-            f.write('install_C_file "%s"\n\n' % os.path.basename(c_file))
-            f.write('autocorres "%s"\n\n' % os.path.basename(c_file))
-            f.write('end\n')
+            f.write('''
+theory %s
+imports
+  "AutoCorres.AutoCorres"
+begin
+
+install_C_file "%s"
+
+autocorres "%s"
+
+end
+            '''.strip() % (base_name,
+                           os.path.basename(c_file),
+                           os.path.basename(c_file)
+            ))
+
     for f in glob.glob(os.path.join(target_dir, "autocorres", "tests", "parse-tests", "*.c")):
         gen_thy_file(f)
     subprocess.check_call([
@@ -242,70 +288,70 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
         with open(filename) as f:
             data = f.read()
         new_data = data.replace(old_string, new_string)
+        if new_data != data:
+            print('    replaced ../../lib with ../lib in %r' % filename)
         with open(filename, "w") as f:
             f.write(new_data)
     for f in rglob(os.path.join(target_dir, "autocorres"), "*.thy"):
         inplace_replace_string(f, "../../lib/", "../lib/")
-    for f in rglob(os.path.join(target_dir, "lib"), "*.thy"):
-        inplace_replace_string(f, "../tools/c-parser/", "../c-parser/")
-
-    # The l4v tests already check license headers, so these are no longer needed
-
-    ## Check licenses
-    #print "Checking licenses..."
-    #subprocess.check_call([
-    #    os.path.join(args.repository, "misc", "license-tool", "check_license.py"),
-    #    "--exclude", os.path.join(release_files_dir, "licenses-ignore"),
-    #    os.path.join(target_dir)])
-
-    ## Expand licenses.
-    #print "Expanding licenses..."
-    #subprocess.check_call([
-    #    os.path.join(args.repository, "misc", "license-tool", "expand_license.py"),
-    #    os.path.join(release_files_dir, "licenses"),
-    #    os.path.join(target_dir)])
 
     # Extract the C parser
-    print "Extracting C parser..."
+    print("Extracting C parser...")
     # We want to mix the C parser directory structure around a little.
     with TempDir() as c_parser_working_dir:
         subprocess.check_call(["tar", "-xz", "-C", c_parser_working_dir, "--strip-components=1", "-f", args.cparser_tar])
         # The C parser uses mllex and mlyacc to generate its grammar. We build
         # the grammar files so that our release won't have a dependency on mlton.
-        print "Generating C parser grammar files..."
+        print("Generating C parser grammar files...")
         subprocess.check_call(['make', 'c-parser-deps'], cwd=os.path.join(c_parser_working_dir, "src", "c-parser"))
         shutil.move(os.path.join(c_parser_working_dir, "src", "c-parser"), os.path.join(target_dir, "c-parser"))
         shutil.move(os.path.join(c_parser_working_dir, "README"), os.path.join(target_dir, "c-parser", "README"))
         shutil.move(os.path.join(c_parser_working_dir, "doc", "ctranslation.pdf"), os.path.join(target_dir, "c-parser", "doc", "ctranslation.pdf"))
 
-    # Patch the release.
-    def do_patch(patch_file):
-        subprocess.check_call(["patch", "-p", "1", "-r", "-", "--no-backup-if-mismatch", "--quiet",
-            "-i", patch_file], cwd=target_dir)
-    for i in sorted(glob.glob(os.path.join(release_files_dir, "*.patch"))):
-        do_patch(i)
+    # Double-check our theory dependencies.
+    if os.path.exists(thydeps_tool):
+        print("Checking theory dependencies...")
+        thy_deps = ''
+        for arch in args.archs:
+            thy_deps += subprocess.check_output(
+                [thydeps_tool, '-I', repo_isabelle_dir, '-b', '.', '-r',
+                 'AutoCorres', 'AutoCorresTest'],
+                cwd=target_dir, env=dict(os.environ, L4V_ARCH=arch))
+        thy_deps = sorted(set(thy_deps.splitlines()))
+        needed_files = [os.path.join(args.repository, f)
+                        for f in thy_deps
+                        if f.startswith('tools/autocorres')]
+
+        manifest_files = [os.path.join(dir, file) for dir, file in ac_files]
+        missing_files = [f for f in needed_files if f not in manifest_files]
+        if missing_files:
+            print("Warning: missing dependencies from release manifest:")
+            for f in missing_files:
+                print("  - %s" % f)
+    else:
+        print("Warning: cannot check theory dependencies: missing tool %r" % thydeps_tool)
 
     # Check for bad strings.
-    print "Searching for bad strings..."
-    for s in ["davidg", "dgreenaway", "jlim", "jalim", "autorefine", "@LICENSE"]:
+    print("Searching for bad strings...")
+    for s in ["davidg", "dgreenaway", "jlim", "jalim", "autorefine"]:
         ret = subprocess.call(["grep", "-i", "-r", s, base_dir])
         if not ret:
             raise Exception("Found a bad string")
 
     # Set modified date of everything.
-    print "Setting file modification/access dates..."
+    print("Setting file modification/access dates...")
     target_time = int(time.mktime(time.localtime()))
     for (root, dirs, files) in os.walk(base_dir, followlinks=False):
         for i in dirs + files:
             os.utime(os.path.join(root, i), (target_time, target_time))
 
     # Extract the Isabelle release
-    print "Extracting Isabelle..."
-    isabelle_dir = os.path.join(base_dir, "isabelle")
-    mkdir_p(isabelle_dir)
-    subprocess.check_call(["tar", "-xz", "-C", isabelle_dir, "--strip-components=1", "-f", args.isabelle_tar])
-    isabelle_bin = os.path.join(isabelle_dir, "bin", "isabelle")
-    assert os.path.exists(isabelle_bin)
+    print("Extracting Isabelle...")
+    base_isabelle_dir = os.path.join(base_dir, "isabelle")
+    mkdir_p(base_isabelle_dir)
+    subprocess.check_call(["tar", "-xz", "-C", base_isabelle_dir, "--strip-components=1", "-f", args.isabelle_tar])
+    base_isabelle_bin = os.path.join(base_isabelle_dir, "bin", "isabelle")
+    assert os.path.exists(base_isabelle_bin)
 
     # Build the documentation.
     def build_docs(tree, isabelle_bin):
@@ -316,42 +362,43 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
             # Build the docs.
             try:
                 subprocess.check_call(
-                    [isabelle_bin, "build", "-c", "-d", ".", "-d", "./autocorres/doc/quickstart", "AutoCorresQuickstart"],
+                    [isabelle_bin, "build", "-c", "-d", ".", "-d", "./autocorres/doc/quickstart", "-v", "AutoCorresQuickstart"],
                     cwd=os.path.join(doc_build_dir, "doc"), env=dict(os.environ, L4V_ARCH="ARM"))
             except subprocess.CalledProcessError:
-                print "Building documentation failed."
+                print("Building documentation failed.")
                 if args.browse:
-                    subprocess.call("zsh", cwd=target_dir)
+                    subprocess.call(user_shell, cwd=target_dir)
 
             # Copy the generated PDF into our output.
             shutil.copyfile(
                     os.path.join(doc_build_dir, "doc", "autocorres", "doc", "quickstart", "output", "document.pdf"),
                     os.path.join(tree, "quickstart.pdf"))
-    print "Building documentation..."
-    build_docs(target_dir, isabelle_bin)
+    print("Building documentation...")
+    build_docs(target_dir, base_isabelle_bin)
 
     # Compress everything up.
     if args.output != None:
-        print "Creating tarball..."
+        print("Creating tarball...")
         subprocess.check_call(["tar", "-cz", "--numeric-owner",
-            "--owner", "root", "--group", "root",
+            "--owner", "nobody", "--group", "nogroup",
             "-C", base_dir, "-f", args.output, target_dir_name])
 
     # Run a test if requested.
     if args.test:
-        print "Testing release..."
+        print("Testing release...")
         try:
-            subprocess.check_call([isabelle_bin, "version"], cwd=target_dir)
-            for arch in ["ARM","X64"]:
-                subprocess.check_call([isabelle_bin, "build", "-d", ".", "AutoCorres", "AutoCorresTest"],
+            subprocess.check_call([base_isabelle_bin, "version"], cwd=target_dir)
+            for arch in args.archs:
+                subprocess.check_call([base_isabelle_bin, "build", "-d", ".", "-v",
+                                       "AutoCorres", "AutoCorresTest"],
                                       cwd=target_dir, env=dict(os.environ, L4V_ARCH=arch))
         except subprocess.CalledProcessError:
-            print "Test failed"
+            print("Test failed")
             if args.browse:
-                subprocess.call("zsh", cwd=target_dir)
+                subprocess.call(user_shell, cwd=target_dir)
 
     # Open a shell in the directory if requested.
     if args.browse:
-        print "Opening shell..."
-        subprocess.call("zsh", cwd=target_dir)
+        print("Opening shell...")
+        subprocess.call(user_shell, cwd=target_dir)
 
