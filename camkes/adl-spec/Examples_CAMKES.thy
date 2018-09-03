@@ -149,8 +149,8 @@ where
       components = [(''echo'', echo),(''client'', client)],
       connections = [(''simple'', \<lparr>
         conn_type = seL4RPC,
-        conn_from = (''client'', ''s''),
-        conn_to = (''echo'', ''s'')
+        conn_from = [(''client'', ''s'')],
+        conn_to = [(''echo'', ''s'')]
       \<rparr>)]
     \<rparr>,
     configuration = None
@@ -234,8 +234,8 @@ where
       components = [(''source'', emitter), (''sink'', consumer)],
       connections = [(''simpleEvent1'', \<lparr>
         conn_type = seL4Asynch,
-        conn_from = (''source'', ''event''),
-        conn_to = (''sink'', ''event'')
+        conn_from = [(''source'', ''event'')],
+        conn_to = [(''sink'', ''event'')]
       \<rparr>)]
     \<rparr>,
     configuration = None
@@ -291,12 +291,12 @@ where
       components = [(''comp1'', data_client), (''comp2'', data_client)],
       connections = [(''simple1'', \<lparr>
         conn_type = seL4SharedData,
-        conn_from = (''comp1'', ''d1''),
-        conn_to = (''comp2'', ''d2'')
+        conn_from = [(''comp1'', ''d1'')],
+        conn_to = [(''comp2'', ''d2'')]
       \<rparr>), (''simple2'', \<lparr>
         conn_type = seL4SharedData,
-        conn_from = (''comp2'', ''d1''),
-        conn_to = (''comp1'', ''d2'')
+        conn_from = [(''comp2'', ''d1'')],
+        conn_to = [(''comp1'', ''d2'')]
       \<rparr>)]
     \<rparr>,
     configuration = None
@@ -389,16 +389,16 @@ definition
 where
   "channel1 \<equiv> \<lparr>
     conn_type = seL4RPC,
-    conn_from = (''client1'', ''d''),
-    conn_to = (''manager'', ''domain1'')
+    conn_from = [(''client1'', ''d'')],
+    conn_to = [(''manager'', ''domain1'')]
   \<rparr>"
 definition
   channel2 :: connection
 where
   "channel2 \<equiv> \<lparr>
     conn_type = seL4RPC,
-    conn_from = (''client2'', ''d''),
-    conn_to = (''manager'', ''domain2'')
+    conn_from = [(''client2'', ''d'')],
+    conn_to = [(''manager'', ''domain2'')]
   \<rparr>"
 
 definition
@@ -533,11 +533,11 @@ lemma "\<not>wellformed_assembly \<lparr> composition = \<lparr>
       attributes = undefined \<rparr>)],
     connections = [(''bar'', \<lparr>
       conn_type = undefined,
-      conn_from = (''foo'', ''bar''),
+      conn_from = [(''foo'', ''bar'')],
       conn_to = undefined \<rparr>),
     (''baz'', \<lparr>
       conn_type = undefined,
-      conn_from = (''foo'', ''bar''),
+      conn_from = [(''foo'', ''bar'')],
       conn_to = undefined \<rparr>)]
   \<rparr>, configuration = undefined \<rparr>"
   by (simp add:wellformed_assembly_def wellformed_composition_def refs_valid_components_def

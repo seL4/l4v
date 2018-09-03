@@ -13,6 +13,7 @@ theory Generator_CAMKES_CDL imports
   "CamkesAdlSpec.Library_CAMKES"
   "DSpec.Syscall_D"
   Types_CAMKES_CDL
+  Policy_CAMKES_CDL
   "DPolicy.Dpolicy"
 begin
 
@@ -362,16 +363,16 @@ definition
 where
   "cap_map spec instance \<equiv> map_of (enumerate (cap_offset spec instance) (concat (
      map (\<lambda>(n, c, _). if conn_type c = seL4RPC then (
-                        if fst (conn_from c) = instance then
+                        if instance \<in> fst ` set (conn_from c) then
                           [Types_D.EndpointCap (the_id_of n) 0 RW]
-                        else if fst (conn_to c) = instance then
+                        else if instance \<in> fst ` set (conn_to c) then
                           [Types_D.EndpointCap (the_id_of n) 0 RW]
                         else
                           [])
                       else if conn_type c = seL4Asynch then (
-                        if fst (conn_from c) = instance then
+                        if instance \<in> fst ` set (conn_from c) then
                           [Types_D.NotificationCap (the_id_of n) 0 W]
-                        else if fst (conn_to c) = instance then
+                        else if instance \<in> fst ` set (conn_to c) then
                           [Types_D.NotificationCap (the_id_of n) 0 R]
                         else
                           [])
@@ -517,57 +518,6 @@ where
 
      ) id of Some l \<Rightarrow> l | None \<Rightarrow> garbage)"
 
-abbreviation "edge_subject \<equiv> fst"
-abbreviation "edge_auth \<equiv> fst o snd"
-abbreviation "edge_object \<equiv> snd o snd"
-
-text {*
-  A policy describing the authority between labels in a CapDL system. Note that the only meaningful
-  relationships here are the authority implied by endpoints. TODO: shared memory.
-*}
-definition
-  policy_of :: "camkes_state \<Rightarrow> cdl_heap \<Rightarrow> irqs \<Rightarrow> label auth_graph"
-where
-  "policy_of spec extra irqs \<equiv>
-     (* Every label has every authority over itself. *)
-     {edge. edge_subject edge = edge_object edge} \<union>
-
-     (* Senders on seL4RPC connections. *)
-     {edge. \<exists>from. from \<in> fst ` set (components (composition spec)) \<and>
-                   (\<exists>conn \<in> set (connections (composition spec)).
-                      fst (conn_from (snd conn)) = from \<and>
-                      conn_type (snd conn) = seL4RPC \<and>
-                      edge_object edge = fst conn) \<and>
-                    edge_subject edge = from \<and>
-                    edge_auth edge \<in> {Receive, Reset, SyncSend}} \<union>
-
-     (* Receivers on seL4RPC connections. *)
-     {edge. \<exists>to. to \<in> fst ` set (components (composition spec)) \<and>
-                 (\<exists>conn \<in> set (connections (composition spec)).
-                    fst (conn_to (snd conn)) = to \<and>
-                    conn_type (snd conn) = seL4RPC \<and>
-                    edge_object edge = fst conn) \<and>
-                  edge_subject edge = to \<and>
-                  edge_auth edge \<in> {Receive, Reset, SyncSend}} \<union>
-
-     (* Senders on seL4Asynch connections. *)
-     {edge. \<exists>from. from \<in> fst ` set (components (composition spec)) \<and>
-                   (\<exists>conn \<in> set (connections (composition spec)).
-                      fst (conn_from (snd conn)) = from \<and>
-                      conn_type (snd conn) = seL4Asynch \<and>
-                      edge_object edge = fst conn) \<and>
-                    edge_subject edge = from \<and>
-                    edge_auth edge \<in> {Notify, Reset}} \<union>
-
-     (* Receivers on seL4Asynch connections. *)
-     {edge. \<exists>to. to \<in> fst ` set (components (composition spec)) \<and>
-                 (\<exists>conn \<in> set (connections (composition spec)).
-                    fst (conn_to (snd conn)) = to \<and>
-                    conn_type (snd conn) = seL4Asynch \<and>
-                    edge_object edge = fst conn) \<and>
-                  edge_subject edge = to \<and>
-                  edge_auth edge \<in> {Receive, Reset}}"
-
 lemma pw_decompose:
   "\<lbrakk>\<forall>agent. (\<forall>agent'. (agent, Control, agent') \<in> aag \<longrightarrow> agent = agent')
          \<and> (\<forall>a. (agent, a, agent) \<in> aag);
@@ -575,7 +525,7 @@ lemma pw_decompose:
     \<Longrightarrow> \<forall>agent. policy_wellformed aag False irqs agent"
   by (clarsimp simp:policy_wellformed_def)
 
-lemma no_trans_grant: "subj = obj \<or> (subj, Grant, obj) \<notin> policy_of spec extras irqs"
+lemma no_trans_grant: "subj = obj \<or> (subj, Grant, obj) \<notin> policy_of spec"
   by (clarsimp simp:policy_of_def)
 
 lemma pw_control:
@@ -599,16 +549,18 @@ lemma pw_same_label:
    by assumption+
 
 lemma policy_wf: "wellformed_assembly spec \<Longrightarrow>
-    \<forall>agent. policy_wellformed (policy_of spec extras irqs) False {irq_label} agent"
+    \<forall>agent. policy_wellformed (policy_of spec) False {irq_label} agent"
   apply (clarsimp simp:policy_wellformed_def)
   apply (rule conjI)
    apply (clarsimp simp:policy_of_def)
   apply (rule conjI)
    apply (clarsimp simp:policy_of_def)
+(*
   apply clarsimp
   apply (rename_tac subj subj' obj)
   apply (cut_tac subj=subj and obj=obj and spec=spec and extras=extras and irqs=irqs in no_trans_grant)
   apply clarsimp
+*)
   oops
 
 (* TODO *)
@@ -619,7 +571,7 @@ where
      pasObjectAbs pas = poa_of spec extra irqs \<and>
      (\<forall>asid. pasASIDAbs pas asid = garbage) \<and>
      (\<forall>irq. pasIRQAbs pas irq = irq_label) \<and>
-     pasPolicy pas = policy_of spec extra irqs \<and>
+     pasPolicy pas = policy_of spec \<and>
      pasSubject pas \<notin> {garbage, irq_label} \<and>
      \<not> pasMayActivate pas \<and>
      \<not> pasMayEditReadyQueues pas \<and>
@@ -752,7 +704,7 @@ lemma only_endpoint_caps:
   apply clarsimp
   apply (rename_tac connection irrelevant)
   apply (case_tac "conn_type connection = seL4RPC", simp_all)
-   by (case_tac "from_component connection = xs", simp_all)+
+   by (case_tac "xs \<in> set (from_components connection)", simp_all)+
 
 lemma valid_only_empty_cnodes:
   "valid_irqs spec extra irqs \<Longrightarrow> \<forall>obj \<in> ran (irqs_objects irqs). case obj of

@@ -46,6 +46,29 @@ where
   "seL4RPCSimple \<equiv> seL4RPC"
 lemma[simp]: "wellformed_connector seL4RPCSimple"
   by (simp add:seL4RPCSimple_def)
+
+definition
+  seL4RPCCall :: connector
+where
+  "seL4RPCCall \<equiv> seL4RPC"
+lemma[simp]: "wellformed_connector seL4RPCCall"
+  by (simp add:seL4RPCCall_def)
+
+definition
+  seL4Notification :: connector
+where
+  "seL4Notification \<equiv> seL4Asynch"
+lemma[simp]: "wellformed_connector seL4Notification"
+  by (simp add:seL4Notification_def)
+
+lemmas connector_simps =
+  seL4SharedData_def
+  seL4RPC_def
+  seL4Asynch_def
+  seL4RPCSimple_def
+  seL4RPCCall_def
+  seL4Notification_def
+
 (*>*)
 
 (*<*)end(*>*)

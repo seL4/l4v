@@ -19,6 +19,7 @@ session CamkesAdlSpec (Camkes) in "adl-spec" = HOL +
   theories
     "Wellformed_CAMKES"
     "Examples_CAMKES"
+    "ConnectorProperties_CAMKES"
   document_files
     "imgs/compilation.pdf"
     "imgs/composite-passthrough.pdf"
@@ -50,6 +51,7 @@ session CamkesCdlBase (Camkes) in "adl-spec" = DPolicy +
 session CamkesCdlRefine (Camkes) in "cdl-refine" = CamkesCdlBase +
   theories
     Generator_CAMKES_CDL
+    Policy_CAMKES_CDL
 
 session CamkesGlueSpec (Camkes) in "glue-spec" = HOL +
   options [document = pdf]
