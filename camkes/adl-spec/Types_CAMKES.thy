@@ -282,8 +282,8 @@ text {*
 *}
 record connection =
   conn_type   :: connector
-  conn_from   :: "(adl_symbol \<times> adl_symbol)"
-  conn_to     :: "(adl_symbol \<times> adl_symbol)"
+  conn_from   :: "(adl_symbol \<times> adl_symbol) list"
+  conn_to     :: "(adl_symbol \<times> adl_symbol) list"
 
 text {*
   A composition block is used to contain all components of the system and the

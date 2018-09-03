@@ -24,13 +24,13 @@ where (* Assumes the filter will return a unique element. *)
   "lookup xs x = snd (hd (filter (\<lambda>y. (x = (fst y))) xs))"
 
 (* For accessing properties of a connection. *)
-abbreviation "from_component conn \<equiv> (fst (conn_from conn))"
-abbreviation "from_interface conn  \<equiv> (snd (conn_from conn))"
-abbreviation "to_component conn   \<equiv> (fst (conn_to conn))"
-abbreviation "to_interface conn    \<equiv> (snd (conn_to conn))"
+abbreviation "from_components conn  \<equiv> map fst (conn_from conn)"
+abbreviation "from_interfaces conn  \<equiv> map snd (conn_from conn)"
+abbreviation "to_components conn    \<equiv> map fst (conn_to conn)"
+abbreviation "to_interfaces conn    \<equiv> map snd (conn_to conn)"
 
 (* For finding ''interfaces'' within a component. *)
-abbreviation "in_map s xs \<equiv> (s \<in> (fst ` (set xs)))"
+abbreviation "in_map conns xs \<equiv> (\<exists>s\<in>set conns. s \<in> (fst ` (set xs)))"
 
 abbreviation "does_provide c s \<equiv> (in_map s (provides c))"
 abbreviation "does_require c s \<equiv> (in_map s (requires c))"

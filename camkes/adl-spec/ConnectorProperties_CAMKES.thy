@@ -8,6 +8,8 @@
  * @TAG(NICTA_GPL)
  *)
 
+(* FIXME: unused *)
+
 theory ConnectorProperties_CAMKES imports
   Types_CAMKES
   Library_CAMKES
@@ -36,8 +38,8 @@ where
     (\<exists>y \<in> set (map fst (components (composition sys))). y = t) \<and>
     (f = t \<or>
     (\<exists>c \<in> set (map snd (connections (composition sys))).
-       fst (conn_from c) = f \<and>
-       fst (conn_to c) = t \<and>
+       f \<in> set (from_components c) \<and>
+       t \<in> set (to_components c) \<and>
        communication_mode (conn_type c) \<in> {Outgoing, Bidirectional}))"
 
 definition

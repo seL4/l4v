@@ -158,8 +158,7 @@ definition
 where
   "refs_valid_procedures component_instance procedures conns \<equiv>
     \<forall>x \<in> set procedures.
-     (\<exists>1 y \<in> conns. from_component (snd y) = component_instance \<and>
-                    from_interface (snd y) = fst x)"
+     (\<exists>1 y \<in> conns. (\<exists>1 z \<in> conn_from (snd y). z = (component_instance, fst x)))"
 
 text {*
   For events and dataports, an interface can be left unconnected in a system with no
@@ -180,26 +179,34 @@ text {*
 definition
   refs_valid_connection :: "connection \<Rightarrow> (adl_symbol \<times> component) list \<Rightarrow> bool"
 where
-  "refs_valid_connection x component_list \<equiv> wellformed_connector (conn_type x) \<and>
-  (case conn_type x of
+  "refs_valid_connection conn component_list \<equiv>
+  wellformed_connector (conn_type conn) \<and>
+  (case conn_type conn of
     SyncConnector _ \<Rightarrow>
-        (* Corresponding procedures exist. *)
-      (\<exists>1 y \<in> component_list. to_component x = fst y \<and>
-                              does_provide (snd y) (to_interface x)) \<and>
-      (\<exists>1 y \<in> component_list. from_component x = fst y \<and>
-                              does_require (snd y) (from_interface x))
-   |AsyncConnector _ \<Rightarrow>
-        (* Corresponding events exist. *)
-      (\<exists>1 y \<in> component_list. to_component x = fst y \<and>
-                              does_consume (snd y) (to_interface x)) \<and>
-      (\<exists>1 y \<in> component_list. from_component x = fst y \<and>
-                              does_emit (snd y) (from_interface x))
-   |MemoryConnector _ \<Rightarrow>
-        (* Corresponding dataports exist. *)
-      (\<exists>1 y \<in> component_list. to_component x = fst y \<and>
-                              has_dataport (snd y) (to_interface x)) \<and>
-      (\<exists>1 y \<in> component_list. from_component x = fst y \<and>
-                              has_dataport (snd y) (from_interface x)))"
+      (* Corresponding procedures exist. *)
+        (\<forall>to \<in> set (to_components conn).
+           \<exists>1comp \<in> component_list.
+             fst comp = to \<and> does_provide (snd comp) (to_interfaces conn))
+      \<and> (\<forall>from \<in> set (from_components conn).
+           \<exists>1comp \<in> component_list.
+             fst comp = from \<and> does_require (snd comp) (from_interfaces conn))
+  | AsyncConnector _ \<Rightarrow>
+      (* Corresponding events exist. *)
+        (\<forall>to \<in> set (to_components conn).
+           \<exists>1comp \<in> component_list.
+             fst comp = to \<and> does_consume (snd comp) (to_interfaces conn))
+      \<and> (\<forall>from \<in> set (from_components conn).
+           \<exists>1comp \<in> component_list.
+             fst comp = from \<and> does_emit (snd comp) (from_interfaces conn))
+  | MemoryConnector _ \<Rightarrow>
+      (* Corresponding dataports exist. *)
+        (\<forall>to \<in> set (to_components conn).
+           \<exists>1comp \<in> component_list.
+             fst comp = to \<and> has_dataport (snd comp) (to_interfaces conn))
+      \<and> (\<forall>from \<in> set (from_components conn).
+           \<exists>1comp \<in> component_list.
+             fst comp = from \<and> has_dataport (snd comp) (from_interfaces conn))
+  )"
 
 definition
   refs_valid_connections ::
@@ -228,7 +235,8 @@ where
     (\<exists>x \<in> set (components c). control (snd x)) \<and>
      (* All references resolve. *)
     refs_valid_composition c \<and>
-     (* No namespace collisions. *)
+     (* All connectors and components have distinct names.
+        These names will correspond to integrity policy labels. *)
     distinct (map fst (components c) @ map fst (connections c)) \<and>
      (* All components are valid. *)
     (\<forall>x \<in> set (components c). wellformed_component (snd x)) \<and>
@@ -250,7 +258,8 @@ definition
   wellformed_assembly :: "assembly \<Rightarrow> bool"
 where
   "wellformed_assembly a \<equiv>
-    wellformed_composition (composition a) \<and> (case (configuration a) of
+    wellformed_composition (composition a) \<and>
+    (case (configuration a) of
       None \<Rightarrow> True
     | Some x \<Rightarrow> wellformed_configuration x)"
 
