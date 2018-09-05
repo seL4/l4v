@@ -107,6 +107,7 @@ definition
 consts' kernelWCET_us :: "64 word"
 consts' maxTimer_us :: "64 word"
 consts' timerPrecision :: "64 word"
+consts' max_ticks_to_us :: "64 word"
 (*
 consts' us_to_ticks :: "64 word \<Rightarrow> 64 word"
 *)
@@ -124,6 +125,9 @@ and
   us_to_ticks_zero[iff]: "us_to_ticks 0 = 0"
 and
   us_to_ticks_nonzero: "y \<noteq> 0 \<Longrightarrow> us_to_ticks y \<noteq> 0"
+
+axiomatization
+  ticks_to_us :: "64 word \<Rightarrow> 64 word"
 
 end_qualify
 
