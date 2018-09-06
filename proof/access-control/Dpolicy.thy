@@ -10,7 +10,7 @@
 
 theory Dpolicy
 imports
-  Access
+  "Access.Access"
   "DRefine.Refine_D"
   "DBaseRefine.Include_D"
 begin
