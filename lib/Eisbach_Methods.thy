@@ -145,6 +145,52 @@ method focus_concl methods m =
   ((fails \<open>erule thin_rl\<close>, match conclusion in _ \<Rightarrow> \<open>m\<close>)
   | match premises (local) in H:_ (multi) \<Rightarrow> \<open>m\<close>)
 
+text \<open>
+  @{text repeat} applies a method a specific number of times,
+  like a bounded version of the '+' combinator.
+
+  usage:
+    apply (repeat n \<open>text\<close>)
+
+  - Applies the method \<open>text\<close> to the current proof state n times.
+  - Fails if \<open>text\<close> can't be applied n times.
+\<close>
+
+ML {*
+  fun repeat_tac count tactic =
+    if count = 0
+    then all_tac
+    else tactic THEN (repeat_tac (count - 1) tactic)
+*}
+
+method_setup repeat = \<open>
+  Scan.lift Parse.nat -- Method.text_closure >> (fn (count, text) => fn ctxt => fn facts =>
+    let val tactic = method_evaluate text ctxt facts
+    in SIMPLE_METHOD (repeat_tac count tactic) facts end)
+\<close>
+
+notepad begin
+  fix A B C
+  assume assms: A B C
+
+  text \<open>repeat: simple repeated application.\<close>
+  have "A \<and> B \<and> C \<and> True"
+    text \<open>repeat: fails if method can't be applied the specified number of times.\<close>
+    apply (fails \<open>repeat 4 \<open>rule conjI, rule assms\<close>\<close>)
+    apply (repeat 3 \<open>rule conjI, rule assms\<close>)
+    by (rule TrueI)
+
+  text \<open>repeat: application with subgoals.\<close>
+  have "A \<and> A" "B \<and> B" "C \<and> C"
+    apply -
+      text \<open>We have three subgoals. This @{text repeat} call consumes two of them.\<close>
+      apply (repeat 2 \<open>rule conjI, (rule assms)+\<close>)
+    text \<open>One subgoal remaining...\<close>
+    apply (rule conjI, (rule assms)+)
+    done
+
+end
+
 section \<open>Advanced combinators\<close>
 
 subsection \<open>Protecting goal elements (assumptions or conclusion) from methods\<close>
