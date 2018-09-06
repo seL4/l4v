@@ -3454,7 +3454,10 @@ lemma awaken_valid_sched:
   unfolding awaken_def
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (wpsimp wp: awaken_valid_sched_helper)
-  by (auto simp: in_release_queue_def dest!: set_takeWhileD)
+  apply (auto simp: valid_sched_2_def valid_sched_action_2_def weak_valid_sched_action_2_def
+                    in_release_queue_def
+             dest!: in_set_dropD set_takeWhileD)
+  done
 
 crunches sc_and_timer
 for valid_idle[wp]: "valid_idle::det_ext state \<Rightarrow> bool"

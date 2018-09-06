@@ -587,16 +587,16 @@ where
 
 
 definition
-  valid_extra_refills :: "nat \<Rightarrow> nat \<Rightarrow> bool"
+  valid_refills_number :: "nat \<Rightarrow> nat \<Rightarrow> bool"
 where
-  "valid_extra_refills mrefills n \<equiv>
-    mrefills \<le> (n - core_sched_context_bytes) div refill_size_bytes"
+  "valid_refills_number mrefills n \<equiv>
+    mrefills \<le> (nat (1 << n) - core_sched_context_bytes) div refill_size_bytes + MIN_REFILLS"
 
 primrec
   valid_sched_control_inv :: "sched_control_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
     "valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)
-     = (obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> valid_extra_refills mrefills n) scptr
+     = (obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> valid_refills_number mrefills n) scptr
         and ex_nonz_cap_to scptr and K (MIN_REFILLS \<le> mrefills) (* mrefills = MIN_REFILLS + extra_refills *)
         and K (budget \<le> us_to_ticks maxTimer_us \<and> budget \<ge> MIN_BUDGET)
         and K (period \<le> us_to_ticks maxTimer_us \<and> budget \<ge> MIN_BUDGET)
@@ -1833,7 +1833,7 @@ lemma decode_sched_control_inv_wf:
    apply (drule hd_in_set, simp)
   apply (clarsimp simp add: valid_cap_def obj_at_def is_sc_obj_def split: cap.split_asm)
   apply (case_tac ko; simp)
-  apply (clarsimp simp: valid_extra_refills_def refill_absolute_max_def MIN_REFILLS_def
+  apply (clarsimp simp: valid_refills_number_def refill_absolute_max_def MIN_REFILLS_def
                         us_to_ticks_mono[simplified mono_def] MIN_BUDGET_def
                         MIN_BUDGET_US_def ARM.kernelWCET_ticks_def)
   done
