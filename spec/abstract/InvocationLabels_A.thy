@@ -24,6 +24,14 @@ definition
   invocation_type :: "data \<Rightarrow> invocation_label"
 where
  "invocation_type x \<equiv> if \<exists>(v :: invocation_label). fromEnum v = data_to_nat x
-                      then toEnum (data_to_nat x) else InvalidInvocation"
+                      then toEnum (data_to_nat x) else GenInvocationLabel InvalidInvocation"
+
+definition
+  gen_invocation_type :: "data \<Rightarrow> gen_invocation_labels"
+where
+ "gen_invocation_type x \<equiv>
+   case invocation_type x of
+     GenInvocationLabel l \<Rightarrow> l
+   | ArchInvocationLabel _ \<Rightarrow> InvalidInvocation"
 
 end
