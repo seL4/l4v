@@ -65,7 +65,7 @@ There is a single, global interrupt controller object; a capability to it is pro
 > decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
 >         KernelF SyscallError IRQControlInvocation
 > decodeIRQControlInvocation label args srcSlot extraCaps =
->     case (invocationType label, args, extraCaps) of
+>     case (genInvocationType label, args, extraCaps) of
 >         (IRQIssueIRQHandler, irqW:index:depth:_, cnode:_) -> do
 >             Arch.checkIRQ irqW
 >             let irq = toEnum (fromIntegral irqW) :: IRQ
@@ -96,7 +96,7 @@ An IRQ handler capability allows a thread possessing it to set an endpoint which
 > decodeIRQHandlerInvocation :: Word -> IRQ -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError IRQHandlerInvocation
 > decodeIRQHandlerInvocation label irq extraCaps =
->     case (invocationType label,extraCaps) of
+>     case (genInvocationType label,extraCaps) of
 >         (IRQAckIRQ,_) -> return $ AckIRQ irq
 >         (IRQSetIRQHandler,(cap,slot):_) -> case cap of
 >                 NotificationCap { capNtfnCanSend = True } ->
