@@ -10,7 +10,6 @@
 
 theory KernelInc_C
 imports
-  "$L4V_ARCH/Kernel_C"
   "Substitute"
   "c/build/$L4V_ARCH/generated/arch/object/structures_defs"
   "c/build/$L4V_ARCH/generated/arch/object/structures_proofs"

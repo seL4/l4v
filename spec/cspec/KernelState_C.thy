@@ -12,7 +12,6 @@ theory KernelState_C
 imports
   "Word_Lib.WordSetup"
   "CLib.BitFieldProofsLib"
-  "$L4V_ARCH/Kernel_C"
   "Substitute"
 begin
 
