@@ -11,7 +11,7 @@
 theory Substitute
 
 imports
-  "$L4V_ARCH/Kernel_C"
+  "CKernel.Kernel_C"
   "AsmRefine.GlobalsSwap"
 begin
 
