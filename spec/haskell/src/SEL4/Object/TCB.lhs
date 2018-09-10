@@ -90,7 +90,8 @@ There are eleven types of invocation for a thread control block. All require wri
 >         TCBConfigure -> decodeTCBConfigure args cap slot extraCaps
 >         TCBSetPriority -> decodeSetPriority args cap extraCaps
 >         TCBSetMCPriority -> decodeSetMCPriority args cap extraCaps
->         TCBSetSchedParams -> decodeSetSchedParams args cap extraCaps
+>         TCBSetSchedParams -> decodeSetSchedParams args cap slot extraCaps
+>         TCBSetTimeoutEndpoint -> decodeSetTimeoutEndpoint cap slot extraCaps
 >         TCBSetIPCBuffer -> decodeSetIPCBuffer args cap slot extraCaps
 >         TCBSetSpace -> decodeSetSpace args cap slot extraCaps
 >         TCBBindNotification -> decodeBindNotification cap extraCaps
@@ -179,28 +180,28 @@ For both of these operations, the first argument is a flags field. The lowest bi
 
 \subsubsection{The Configure Call}
 
-The "Configure" call is a batched call to "SetIPCParams" and "SetSpace".
+The "Configure" call is a batched call to "SetIPCParams" and a subset of
+"SetSpace" (subset, because invocations are limited to 3 caps).
 
 > decodeTCBConfigure :: [Word] -> Capability -> PPtr CTE ->
 >         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
 > decodeTCBConfigure
 >     (cRootData:vRootData:buffer:_)
->     cap slot ((fhCap,fhSlot):(thCap,thSlot):(scCap, _):cRoot:vRoot:bufferFrame:_)
+>     cap slot (cRoot:vRoot:bufferFrame:_)
 >   = do
 >     setIPCParams <- decodeSetIPCBuffer [buffer] cap slot [bufferFrame]
->     setSpace <- decodeSetSpace [cRootData, vRootData] cap slot [(fhCap,fhSlot), (thCap, thSlot), cRoot, vRoot]
->     updateSc <- decodeUpdateSc cap slot scCap
+>     setSpace <- decodeCVSpace [cRootData, vRootData] cap slot [cRoot, vRoot]
 >     return $ ThreadControl {
 >         tcThread = capTCBPtr cap,
 >         tcThreadCapSlot = tcThreadCapSlot setSpace,
->         tcNewFaultHandler = tcNewFaultHandler setSpace,
->         tcNewTimeoutHandler = tcNewTimeoutHandler setSpace,
+>         tcNewFaultHandler = Nothing,
+>         tcNewTimeoutHandler = Nothing,
 >         tcNewMCPriority = Nothing,
 >         tcNewPriority = Nothing,
 >         tcNewCRoot = tcNewCRoot setSpace,
 >         tcNewVRoot = tcNewVRoot setSpace,
 >         tcNewIPCBuffer = tcNewIPCBuffer setIPCParams,
->         tcNewSc = tcNewSc updateSc }
+>         tcNewSc = Nothing }
 > decodeTCBConfigure _ _ _ _ = throw TruncatedMessage
 
 \subsubsection{Check priorities}
@@ -255,28 +256,57 @@ Setting the thread's priority is only allowed if the new priority is lower than 
 >         tcNewSc = Nothing }
 > decodeSetMCPriority _ _ _ = throw TruncatedMessage
 
-The "SetSchedParams" call sets both the priority and the MCP in a single call.
 
-> decodeSetSchedParams :: [Word] -> Capability -> [(Capability, PPtr CTE)] ->
->         KernelF SyscallError TCBInvocation
-> decodeSetSchedParams (newMCP:newPrio:_) cap ((authCap, _):_) = do
+\subsubsection{The Set Timeout Endpoint Call}
+
+> decodeSetTimeoutEndpoint :: Capability -> PPtr CTE ->
+>         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
+> decodeSetTimeoutEndpoint cap slot ((thCap, thSlot):_) = do
+>     timeoutHandler <- if isValidFaultHandler thCap
+>         then return (thCap, thSlot)
+>         else throw $ InvalidCapability 1
+>     return $ ThreadControl {
+>         tcThread = capTCBPtr cap,
+>         tcThreadCapSlot = slot,
+>         tcNewFaultHandler = Nothing,
+>         tcNewTimeoutHandler = Just timeoutHandler,
+>         tcNewMCPriority = Nothing,
+>         tcNewPriority = Nothing,
+>         tcNewCRoot = Nothing,
+>         tcNewVRoot = Nothing,
+>         tcNewIPCBuffer = Nothing,
+>         tcNewSc = Nothing }
+> decodeSetTimeoutEndpoint _ _ _ = throw TruncatedMessage
+
+
+\subsubsection{The Set Scheduling Parameters Call}
+
+The "SetSchedParams" call sets the priority, the MCP, and the fault handler in
+a single call.
+
+> decodeSetSchedParams :: [Word] -> Capability -> PPtr CTE ->
+>         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
+> decodeSetSchedParams (newMCP:newPrio:_) cap slot
+>   ((authCap, _):(scCap,_):fhArg:_) = do
 >     authTCB <- case authCap of
 >         ThreadCap { capTCBPtr = tcbPtr } -> return tcbPtr
 >         _ -> throw $ InvalidCapability 1
 >     checkPrio newMCP authTCB
 >     checkPrio newPrio authTCB
+>     updateSc <- decodeUpdateSc cap slot scCap
+>     updateFH <- decodeFaultEP 3 cap slot fhArg
 >     return $! ThreadControl {
 >         tcThread = capTCBPtr cap,
->         tcThreadCapSlot = 0,
->         tcNewFaultHandler = Nothing,
+>         tcThreadCapSlot = slot,
+>         tcNewFaultHandler = tcNewFaultHandler updateFH,
 >         tcNewTimeoutHandler = Nothing,
 >         tcNewMCPriority = Just $ (fromIntegral newMCP, authTCB),
 >         tcNewPriority = Just $ (fromIntegral newPrio, authTCB),
 >         tcNewCRoot = Nothing,
 >         tcNewVRoot = Nothing,
 >         tcNewIPCBuffer = Nothing,
->         tcNewSc = Nothing }
-> decodeSetSchedParams _ _ _ = throw TruncatedMessage
+>         tcNewSc = tcNewSc updateSc }
+> decodeSetSchedParams _ _ _ _ = throw TruncatedMessage
 
 \subsubsection{The Set IPC Buffer Call}
 
@@ -305,20 +335,23 @@ The two thread parameters related to IPC and system call handling are the IPC bu
 >         tcNewSc = Nothing }
 > decodeSetIPCBuffer _ _ _ _ = throw TruncatedMessage
 
+
 \subsubsection{The Set Space Call}
 \label{sec:object.tcb.decode.setspace}
 
 Setting the capability space and virtual address space roots is similar to a pair of CNode Insert operation, except that any previous root is implicitly deleted rather than causing an error, and the new roots must be valid capabilities of the appropriate types. The fault endpoint, like the result endpoint, is not checked for validity at this point; messages sent to it will be silently dropped if it is not valid.
 
-If an existing root capability is valid and final --- that is, it is the only existing capability for the root object --- then it cannot be changed with this call.
-\begin{impdetails}
-This is to ensure that the source capability is not made invalid by the deletion of the old root.
-\end{impdetails}
+If an existing root capability is valid and final --- that is, it is the only
+existing capability for the root object --- then it cannot be changed with this
+call. This is to ensure that the source capability is not made invalid by the
+deletion of the old root.
 
-> decodeSetSpace :: [Word] -> Capability -> PPtr CTE ->
+The full SetSpace call also batches setting the fault handler endpoint.
+
+
+> decodeCVSpace :: [Word] -> Capability -> PPtr CTE ->
 >         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
-> decodeSetSpace (cRootData:vRootData:_) cap slot (fhArg:thArg:cRootArg:vRootArg:_)
->         = do
+> decodeCVSpace (cRootData:vRootData:_) cap slot (cRootArg:vRootArg:_) = do
 >     canChangeCRoot <- withoutFailure $ liftM not $
 >         slotCapLongRunningDelete =<< getThreadCSpaceRoot (capTCBPtr cap)
 >     canChangeVRoot <- withoutFailure $ liftM not $
@@ -339,28 +372,59 @@ This is to ensure that the source capability is not made invalid by the deletion
 >     vRoot <- if isValidVTableRoot vRootCap'
 >         then return (vRootCap', vRootSlot)
 >         else throw IllegalOperation
->     let (fhCap, fhSlot) = fhArg
->     faultHandler <- if isValidFaultHandler fhCap
->         then return (fhCap, fhSlot)
->         else throw $ InvalidCapability 1
->     let (thCap, thSlot) = thArg
->     timeoutHandler <- if isValidFaultHandler thCap
->         then return (thCap, thSlot)
->         else throw $ InvalidCapability 2
 >     return $ ThreadControl {
 >         tcThread = capTCBPtr cap,
 >         tcThreadCapSlot = slot,
->         tcNewFaultHandler = Just faultHandler,
->         tcNewTimeoutHandler = Just timeoutHandler,
+>         tcNewFaultHandler = Nothing,
+>         tcNewTimeoutHandler = Nothing,
 >         tcNewMCPriority = Nothing,
 >         tcNewPriority = Nothing,
 >         tcNewCRoot = Just cRoot,
 >         tcNewVRoot = Just vRoot,
 >         tcNewIPCBuffer = Nothing,
 >         tcNewSc = Nothing }
+> decodeCVSpace _ _ _ _ = throw TruncatedMessage
+
+> decodeFaultEP :: Int -> Capability -> PPtr CTE ->
+>         (Capability, PPtr CTE) -> KernelF SyscallError TCBInvocation
+> decodeFaultEP pos cap slot (fhCap, fhSlot) = do
+>     faultHandler <- if isValidFaultHandler fhCap
+>         then return (fhCap, fhSlot)
+>         else throw $ InvalidCapability pos
+>     return $ ThreadControl {
+>         tcThread = capTCBPtr cap,
+>         tcThreadCapSlot = slot,
+>         tcNewFaultHandler = Just faultHandler,
+>         tcNewTimeoutHandler = Nothing,
+>         tcNewMCPriority = Nothing,
+>         tcNewPriority = Nothing,
+>         tcNewCRoot = Nothing,
+>         tcNewVRoot = Nothing,
+>         tcNewIPCBuffer = Nothing,
+>         tcNewSc = Nothing }
+
+> decodeSetSpace :: [Word] -> Capability -> PPtr CTE ->
+>         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
+> decodeSetSpace (cRootData:vRootData:_) cap slot (fhArg:cRootArg:vRootArg:_)
+>         = do
+>     setSpace <- decodeCVSpace [cRootData,vRootData] cap slot
+>                               [cRootArg,vRootArg]
+>     setFH <- decodeFaultEP 1 cap slot fhArg
+>     return $ ThreadControl {
+>         tcThread = capTCBPtr cap,
+>         tcThreadCapSlot = slot,
+>         tcNewFaultHandler = tcNewFaultHandler setFH,
+>         tcNewTimeoutHandler = Nothing,
+>         tcNewMCPriority = Nothing,
+>         tcNewPriority = Nothing,
+>         tcNewCRoot = tcNewCRoot setSpace,
+>         tcNewVRoot = tcNewVRoot setSpace,
+>         tcNewIPCBuffer = Nothing,
+>         tcNewSc = Nothing }
 > decodeSetSpace _ _ _ _ = throw TruncatedMessage
 
-> decodeUpdateSc :: Capability -> PPtr CTE -> Capability -> 
+
+> decodeUpdateSc :: Capability -> PPtr CTE -> Capability ->
 >     KernelF SyscallError TCBInvocation
 > decodeUpdateSc cap slot scCap =
 >     case scCap of
@@ -380,9 +444,9 @@ This is to ensure that the source capability is not made invalid by the deletion
 >             unless (isSchedContextCap scCap) $ throw (InvalidCapability 0)
 >             scPtr <- return $! capSchedContextPtr scCap
 >             scPtr' <- withoutFailure $ threadGet tcbSchedContext tcbPtr
->             when (scPtr' /= Nothing && scPtr' /= Just scPtr) $ throw IllegalOperation
+>             when (scPtr' /= Nothing) $ throw IllegalOperation
 >             sc <- withoutFailure $ getSchedContext scPtr
->             when (scTCB sc /= Nothing && scTCB sc /= Just tcbPtr) $ throw IllegalOperation
+>             when (scTCB sc /= Nothing) $ throw IllegalOperation
 >             return $! ThreadControl {
 >                 tcThread = tcbPtr,
 >                 tcThreadCapSlot = slot,
@@ -394,6 +458,7 @@ This is to ensure that the source capability is not made invalid by the deletion
 >                 tcNewVRoot = Nothing,
 >                 tcNewIPCBuffer = Nothing,
 >                 tcNewSc = Just (Just scPtr) }
+
 
 \subsubsection{Decode Bound Notification Invocations}
 
@@ -505,10 +570,10 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 >             Just (Just scPtr) -> do
 >                 sc' <- threadGet tcbSchedContext target
 >                 when (sc' /= Just scPtr) $ schedContextBindTCB scPtr target
->         installTCBCap target (ThreadCap target) slot 0 croot
->         installTCBCap target (ThreadCap target) slot 1 vroot
 >         installTCBCap target (ThreadCap target) slot 3 faultHandler
 >         installTCBCap target (ThreadCap target) slot 4 timeoutHandler
+>         installTCBCap target (ThreadCap target) slot 0 croot
+>         installTCBCap target (ThreadCap target) slot 1 vroot
 >         maybe (return ())
 >             (\(ptr, frame) -> do
 >                 bufferSlot <- withoutPreemption $ getThreadBufferSlot target

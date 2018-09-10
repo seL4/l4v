@@ -42,6 +42,7 @@ The following type enumerates all the kinds of invocations that clients can requ
 >         | TCBSetPriority
 >         | TCBSetMCPriority
 >         | TCBSetSchedParams
+>         | TCBSetTimeoutEndpoint
 >         | TCBSetIPCBuffer
 >         | TCBSetSchedContext
 >         | TCBSetSpace
@@ -87,35 +88,36 @@ The following type enumerates all the kinds of invocations that clients can requ
 >          TCBSetPriority -> 6
 >          TCBSetMCPriority -> 7
 >          TCBSetSchedParams -> 8
->          TCBSetIPCBuffer -> 9
->          TCBSetSpace -> 10
->          TCBSuspend -> 11
->          TCBResume -> 12
->          TCBBindNotification -> 13
->          TCBUnbindNotification -> 14
->          TCBSetTLSBase -> 15
->          CNodeRevoke -> 16
->          CNodeDelete -> 17
->          CNodeCancelBadgedSends -> 18
->          CNodeCopy -> 19
->          CNodeMint -> 20
->          CNodeMove -> 21
->          CNodeMutate -> 22
->          CNodeRotate -> 23
->          IRQIssueIRQHandler -> 24
->          IRQAckIRQ -> 25
->          IRQSetIRQHandler -> 26
->          IRQClearIRQHandler -> 27
->          TCBSetSchedContext -> 28
->          SchedControlConfigure -> 29
->          SchedContextConsumed -> 30
->          SchedContextBind -> 31
->          SchedContextUnbind -> 32
->          SchedContextUnbindObject -> 33
->          SchedContextYieldTo -> 34
+>          TCBSetTimeoutEndpoint -> 9
+>          TCBSetIPCBuffer -> 10
+>          TCBSetSpace -> 11
+>          TCBSuspend -> 12
+>          TCBResume -> 13
+>          TCBBindNotification -> 14
+>          TCBUnbindNotification -> 15
+>          TCBSetTLSBase -> 16
+>          CNodeRevoke -> 17
+>          CNodeDelete -> 18
+>          CNodeCancelBadgedSends -> 19
+>          CNodeCopy -> 20
+>          CNodeMint -> 21
+>          CNodeMove -> 22
+>          CNodeMutate -> 23
+>          CNodeRotate -> 24
+>          IRQIssueIRQHandler -> 25
+>          IRQAckIRQ -> 26
+>          IRQSetIRQHandler -> 27
+>          IRQClearIRQHandler -> 28
+>          TCBSetSchedContext -> 29
+>          SchedControlConfigure -> 30
+>          SchedContextConsumed -> 31
+>          SchedContextBind -> 32
+>          SchedContextUnbind -> 33
+>          SchedContextUnbindObject -> 34
+>          SchedContextYieldTo -> 35
 >          DomainSetSet -> apiMax
 >          ArchInvocationLabel a -> apiMax + 1 + fromEnum a
->          where apiMax = 35
+>          where apiMax = 36
 >     toEnum n
 >         | n == 0 = InvalidInvocation
 >         | n == 1 = UntypedRetype
@@ -126,36 +128,37 @@ The following type enumerates all the kinds of invocations that clients can requ
 >         | n == 6 = TCBSetMCPriority
 >         | n == 7 = TCBSetPriority
 >         | n == 8 = TCBSetSchedParams
->         | n == 9 = TCBSetIPCBuffer
->         | n == 10 = TCBSetSpace
->         | n == 11 = TCBSuspend
->         | n == 12 = TCBResume
->         | n == 13 = TCBBindNotification
->         | n == 14 = TCBUnbindNotification
->         | n == 15 = TCBSetTLSBase
->         | n == 16 = CNodeRevoke
->         | n == 17 = CNodeDelete
->         | n == 18 = CNodeCancelBadgedSends
->         | n == 19 = CNodeCopy
->         | n == 20 = CNodeMint
->         | n == 21 = CNodeMove
->         | n == 22 = CNodeMutate
->         | n == 23 = CNodeRotate
->         | n == 24 = IRQIssueIRQHandler
->         | n == 25 = IRQAckIRQ
->         | n == 26 = IRQSetIRQHandler
->         | n == 27 = IRQClearIRQHandler
->         | n == 28 = TCBSetSchedContext
->         | n == 29 = SchedControlConfigure
->         | n == 30 = SchedContextConsumed
->         | n == 31 = SchedContextBind
->         | n == 32 = SchedContextUnbind
->         | n == 33 = SchedContextUnbindObject
->         | n == 34 = SchedContextYieldTo
->         | n == 35 = DomainSetSet
+>         | n == 9 = TCBSetTimeoutEndpoint
+>         | n == 10 = TCBSetIPCBuffer
+>         | n == 11 = TCBSetSpace
+>         | n == 12 = TCBSuspend
+>         | n == 13 = TCBResume
+>         | n == 14 = TCBBindNotification
+>         | n == 15 = TCBUnbindNotification
+>         | n == 16 = TCBSetTLSBase
+>         | n == 17 = CNodeRevoke
+>         | n == 18 = CNodeDelete
+>         | n == 19 = CNodeCancelBadgedSends
+>         | n == 20 = CNodeCopy
+>         | n == 21 = CNodeMint
+>         | n == 22 = CNodeMove
+>         | n == 23 = CNodeMutate
+>         | n == 24 = CNodeRotate
+>         | n == 25 = IRQIssueIRQHandler
+>         | n == 26 = IRQAckIRQ
+>         | n == 27 = IRQSetIRQHandler
+>         | n == 28 = IRQClearIRQHandler
+>         | n == 29 = TCBSetSchedContext
+>         | n == 30 = SchedControlConfigure
+>         | n == 31 = SchedContextConsumed
+>         | n == 32 = SchedContextBind
+>         | n == 33 = SchedContextUnbind
+>         | n == 34 = SchedContextUnbindObject
+>         | n == 35 = SchedContextYieldTo
+>         | n == 36 = DomainSetSet
 >         | n > apiMax = ArchInvocationLabel $ toEnum (n - 1 - apiMax)
 >         | otherwise = error "toEnum out of range for InvocationLabel"
->         where apiMax = 35
+>         where apiMax = 36
 
 Decode the invocation type requested by a particular message label.
 
