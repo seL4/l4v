@@ -135,14 +135,14 @@ where
    od"
 
 definition
-  install_tcb_cap :: "obj_ref \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> nat \<Rightarrow> (cap \<times> cslot_ptr) option \<Rightarrow> (unit, 'z::state_ext) p_monad"
+  install_tcb_cap :: "obj_ref \<Rightarrow> cslot_ptr \<Rightarrow> nat \<Rightarrow> (cap \<times> cslot_ptr) option \<Rightarrow> (unit, 'z::state_ext) p_monad"
 where
-  "install_tcb_cap target tcap slot n slot_opt \<equiv> (* do we need tcap?; tcap = ThreadCap target *)
+  "install_tcb_cap target slot n slot_opt \<equiv>
      case slot_opt of None \<Rightarrow> returnOk ()
      | Some (new_cap, src_slot) \<Rightarrow> doE
       cap_delete (target, tcb_cnode_index n);
       liftE $ check_cap_at new_cap src_slot
-            $ check_cap_at tcap slot
+            $ check_cap_at (ThreadCap target) slot
             $ cap_insert new_cap src_slot (target, tcb_cnode_index n)
     odE"
 
@@ -171,10 +171,10 @@ where
         sc' \<leftarrow> get_tcb_obj_ref tcb_sched_context target;
         when (sc' \<noteq> Some sc_ptr) $ sched_context_bind_tcb sc_ptr target
      od;
-    install_tcb_cap target (ThreadCap target) slot 0 croot;
-    install_tcb_cap target (ThreadCap target) slot 1 vroot;
-    install_tcb_cap target (ThreadCap target) slot 3 fault_handler;
-    install_tcb_cap target (ThreadCap target) slot 4 timeout_handler;
+    install_tcb_cap target slot 3 fault_handler;
+    install_tcb_cap target slot 4 timeout_handler;
+    install_tcb_cap target slot 0 croot;
+    install_tcb_cap target slot 1 vroot;
     (case buffer of None \<Rightarrow> returnOk ()
      | Some (ptr, frame) \<Rightarrow> doE
       cap_delete (target, tcb_cnode_index 2);
