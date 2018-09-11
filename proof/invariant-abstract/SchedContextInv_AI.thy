@@ -1080,7 +1080,8 @@ lemma commit_time_valid_refills[wp]:
       simp_del: fun_upd_apply)
        apply (wpsimp simp: set_refills_def set_object_def update_sched_context_def
       wp: get_object_wp get_sched_context_wp )
-      apply (wpsimp simp: sc_valid_refills_def wp: refill_split_check_valid_refills get_sched_context_wp)
+      apply (wpsimp simp: sc_valid_refills_def
+         wp: hoare_drop_imp hoare_vcg_all_lift refill_split_check_valid_refills get_sched_context_wp)
      apply (wpsimp wp: get_sched_context_wp)+
   apply (rule conjI; clarsimp split del: if_split)
    apply (rule conjI; clarsimp split del: if_split)
@@ -1459,7 +1460,7 @@ lemma handle_timeout_Timeout_invs:
 lemma end_timeslice_invs:
   "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
       end_timeslice t \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wpsimp simp: end_timeslice_def ct_in_state_def
+  apply (wpsimp simp: end_timeslice_def ct_in_state_def get_tcb_queue_def
           wp: handle_timeout_Timeout_invs hoare_drop_imp)
   done
 
@@ -1568,6 +1569,7 @@ lemma ct_in_state_release_queue_update[simp]:
 crunch ct_active[wp]: tcb_sched_action ct_active
 
 crunch ct_active[wp]: reschedule_required ct_active
+  (wp: crunch_wps)
 
 crunch ct_active[wp]: tcb_sched_action, tcb_release_remove,test_reschedule ct_active
 
@@ -1684,7 +1686,8 @@ lemma tcb_sched_action_bound_sc:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
    tcb_sched_action action thread
    \<lbrace>\<lambda>rv s. bound_sc_tcb_at bound (cur_thread s) s\<rbrace>"
-  by (wpsimp simp: tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def)
+  by (wpsimp simp: tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
+         wp: hoare_drop_imp hoare_vcg_all_lift)
 
 lemma tcb_release_remove_bound_sc:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s\<rbrace>

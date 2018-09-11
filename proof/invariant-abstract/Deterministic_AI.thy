@@ -3844,7 +3844,7 @@ lemmas transfer_caps_loop_ext_valid[wp] =
   transfer_caps_loop_pres[OF cap_insert_valid_list set_extra_badge_valid_list]
 
 crunch valid_list[wp]: tcb_sched_action,reschedule_required,tcb_release_remove "valid_list"
-  (simp: unless_def)
+  (simp: unless_def thread_get_def wp: hoare_drop_imp)
 
 crunch valid_list[wp]: schedule_tcb "valid_list"
   (simp: unless_def)
@@ -3914,11 +3914,11 @@ lemma set_tcb_queue_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> set_tcb_queue d prio queue \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
   by (wpsimp simp: set_tcb_queue_def)
 
-crunch cdt_cdt_list[wp]: get_sc_obj_ref, get_tcb_queue "P (cdt s) (cdt_list s)"
+crunch cdt_cdt_list[wp]: get_sc_obj_ref, get_tcb_queue "\<lambda>s. P (cdt s) (cdt_list s)"
 
 lemma tcb_sched_action_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> tcb_sched_action action thread \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp simp: tcb_sched_action_def)
+  by (wpsimp simp: tcb_sched_action_def thread_get_def)
 
 lemma tcb_release_remove_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> tcb_release_remove t \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
@@ -3926,7 +3926,7 @@ lemma tcb_release_remove_cdt_cdt_list[wp]:
 
 lemma reschedule_required_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reschedule_required \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp simp: reschedule_required_def)
+  by (wpsimp simp: reschedule_required_def thread_get_def wp: hoare_drop_imp)
 
 lemma test_reschedule_cdt_cdt_list[wp]:
    "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> test_reschedule r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
@@ -4240,7 +4240,8 @@ lemma test_possible_switch_to_valid_list[wp]:
 
 lemma sched_context_resume_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> sched_context_resume scp \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: sched_context_resume_def wp: get_sched_context_wp)
+  by (wpsimp simp: sched_context_resume_def get_tcb_queue_def thread_get_def
+          wp: get_sched_context_wp hoare_drop_imp hoare_vcg_if_lift2)
 
 crunch valid_list[wp]: blocked_cancel_ipc,cancel_signal "valid_list"
   (wp: crunch_wps)
@@ -4286,6 +4287,7 @@ crunch valid_list[wp]: refill_update,refill_new valid_list (wp: hoare_drop_imp)
 crunch (empty_fail) empty_fail[wp]: commit_domain_time
 
 crunch valid_list[wp]: commit_time valid_list
+  (wp: crunch_wps)
 
 end
 

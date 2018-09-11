@@ -65,11 +65,11 @@ lemma findM_inv:
   shows      "\<lbrace>P\<rbrace> findM m xs \<lbrace>\<lambda>rv. P\<rbrace>"
   by (rule findM_inv', simp_all add: x)
 
-
+(*
 lemma allActiveTCBs_gets:
   "allActiveTCBs = gets (\<lambda>state. {x. getActiveTCB x state \<noteq> None})"
   by (simp add: allActiveTCBs_def gets_def)
-
+*)
 
 lemma postfix_tails:
   "\<lbrakk> suffix (xs # ys) (tails zs) \<rbrakk>
@@ -123,7 +123,7 @@ lemmas do_machine_op_tcb[wp] =
 lemma (in Schedule_AI) stt_tcb [wp]:
   "\<lbrace>tcb_at t\<rbrace> switch_to_thread t \<lbrace>\<lambda>_. (tcb_at t :: 'a state \<Rightarrow> bool)\<rbrace>"
   apply (simp add: switch_to_thread_def)
-  apply (wp | simp)+
+  apply (wp hoare_drop_imps | simp)+
    done
 
 lemma (in Schedule_AI) stt_invs [wp]:
@@ -134,9 +134,11 @@ lemma (in Schedule_AI) stt_invs [wp]:
     apply (rule_tac Q="\<lambda>_. invs and tcb_at t'" in hoare_strengthen_post, wp)
     apply (clarsimp simp: invs_def valid_state_def valid_idle_def
                           valid_irq_node_def valid_machine_state_def)
-    apply (fastforce simp: cur_tcb_def obj_at_def
-                     elim: valid_pspace_eqI ifunsafe_pspaceI)
-   apply wp+
+              apply (fastforce simp: cur_tcb_def obj_at_def
+                               elim: valid_pspace_eqI ifunsafe_pspaceI)
+             apply wp+
+     apply (wp hoare_drop_imp hoare_vcg_all_lift)
+    apply wp+
   apply clarsimp
   apply (simp add: is_tcb_def)
   done
@@ -148,7 +150,7 @@ lemma (in Schedule_AI) stt_activatable:
      apply (rule hoare_post_imp [OF _ arch_stt_runnable])
      apply (clarsimp elim!: pred_tcb_weakenE)
     apply (rule assert_inv)
-   apply wp
+   apply (wp hoare_drop_imp)+
   apply assumption
   done
 

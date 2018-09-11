@@ -35,14 +35,258 @@ lemma set_cap_etcbs[wp]:
 crunch etcbs[wp]: create_cap, cap_insert "\<lambda>s. P (etcbs_of s)"
   (wp: dxo_wp_weak crunch_wps)
 
-crunch valid_queues[wp]: create_cap,cap_insert valid_queues
-  (wp: valid_queues_lift ignore: set_object update_cdt)
+lemma test_sc_refill_max_cdt_update[simp]:
+  "test_sc_refill_max t (s\<lparr>cdt := param_a\<rparr>) = test_sc_refill_max t s"
+  by (clarsimp simp: test_sc_refill_max_def)
 
-(*
-crunch_ignore
-  (del: cap_swap_ext cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext
-        preemption_point)
-*)
+lemma test_sc_refill_max_cdt_list_update[simp]:
+  "test_sc_refill_max t (s\<lparr>cdt_list := param_a\<rparr>) = test_sc_refill_max t s"
+  by (clarsimp simp: test_sc_refill_max_def)
+
+lemma test_sc_refill_max_is_original_cap_update[simp]:
+  "test_sc_refill_max t (s\<lparr>is_original_cap := param_a\<rparr>) = test_sc_refill_max t s"
+  by (clarsimp simp: test_sc_refill_max_def)
+
+lemma active_sc_tcb_at_cdt_update[simp]:
+  "active_sc_tcb_at t (s\<lparr>cdt := param_a\<rparr>) = active_sc_tcb_at t s"
+  by (clarsimp simp: active_sc_tcb_at_def)
+
+lemma active_sc_tcb_at_cdt_list_update[simp]:
+  "active_sc_tcb_at t (s\<lparr>cdt_list := param_a\<rparr>) = active_sc_tcb_at t s"
+  by (clarsimp simp: active_sc_tcb_at_def)
+
+lemma active_sc_tcb_at_is_original_cap_update[simp]:
+  "active_sc_tcb_at t (s\<lparr>is_original_cap := param_a\<rparr>) = active_sc_tcb_at t s"
+  by (clarsimp simp: active_sc_tcb_at_def)
+
+lemma is_refill_sufficient_cdt_update[simp]:
+  "is_refill_sufficient t u (s\<lparr>cdt := param_a\<rparr>) = is_refill_sufficient t u s"
+  by (clarsimp simp: is_refill_sufficient_def)
+
+lemma is_refill_sufficient_cdt_list_update[simp]:
+  "is_refill_sufficient t u (s\<lparr>cdt_list := param_a\<rparr>) = is_refill_sufficient t u s"
+  by (clarsimp simp: is_refill_sufficient_def)
+
+lemma is_refill_sufficient_is_original_cap_update[simp]:
+  "is_refill_sufficient t u (s\<lparr>is_original_cap := param_a\<rparr>) = is_refill_sufficient t u s"
+  by (clarsimp simp: is_refill_sufficient_def)
+
+lemma is_refill_ready_cdt_update[simp]:
+  "is_refill_ready t (s\<lparr>cdt := param_a\<rparr>) = is_refill_ready t s"
+  by (clarsimp simp: is_refill_ready_def)
+
+lemma is_refill_ready_cdt_list_update[simp]:
+  "is_refill_ready t (s\<lparr>cdt_list := param_a\<rparr>) = is_refill_ready t s"
+  by (clarsimp simp: is_refill_ready_def)
+
+lemma is_refill_ready_is_original_cap_update[simp]:
+  "is_refill_ready t (s\<lparr>is_original_cap := param_a\<rparr>) = is_refill_ready t s"
+  by (clarsimp simp: is_refill_ready_def)
+
+lemma test_sc_refill_max_scheduler_action_update[simp]:
+  "test_sc_refill_max t (s\<lparr>scheduler_action := param_a\<rparr>) = test_sc_refill_max t s"
+  by (clarsimp simp: test_sc_refill_max_def)
+
+lemma active_sc_tcb_at_scheduler_action_update[simp]:
+  "active_sc_tcb_at t (s\<lparr>scheduler_action := param_a\<rparr>) = active_sc_tcb_at t s"
+  by (clarsimp simp: active_sc_tcb_at_def)
+
+lemma test_sc_refill_max_ready_queues_update[simp]:
+  "test_sc_refill_max t (s\<lparr>ready_queues := param_a\<rparr>) = test_sc_refill_max t s"
+  by (clarsimp simp: test_sc_refill_max_def)
+
+lemma active_sc_tcb_at_ready_queues_update[simp]:
+  "active_sc_tcb_at t (s\<lparr>ready_queues := param_a\<rparr>) = active_sc_tcb_at t s"
+  by (clarsimp simp: active_sc_tcb_at_def)
+
+lemma test_sc_refill_max_release_queue_update[simp]:
+  "test_sc_refill_max t (s\<lparr>release_queue := param_a\<rparr>) = test_sc_refill_max t s"
+  by (clarsimp simp: test_sc_refill_max_def)
+
+lemma active_sc_tcb_at_release_queue_update[simp]:
+  "active_sc_tcb_at t (s\<lparr>release_queue := param_a\<rparr>) = active_sc_tcb_at t s"
+  by (clarsimp simp: active_sc_tcb_at_def)
+
+lemma test_sc_refill_max_reprogram_timer_update[simp]:
+  "test_sc_refill_max t (s\<lparr>reprogram_timer := param_a\<rparr>) = test_sc_refill_max t s"
+  by (clarsimp simp: test_sc_refill_max_def)
+
+lemma active_sc_tcb_at_reprogram_timer_update[simp]:
+  "active_sc_tcb_at t (s\<lparr>reprogram_timer := param_a\<rparr>) = active_sc_tcb_at t s"
+  by (clarsimp simp: active_sc_tcb_at_def)
+
+lemma test_sc_refill_max_consumed_time_update[simp]:
+  "test_sc_refill_max t (s\<lparr>consumed_time := param_a\<rparr>) = test_sc_refill_max t s"
+  by (clarsimp simp: test_sc_refill_max_def)
+
+lemma active_sc_tcb_at_consumed_time_update[simp]:
+  "active_sc_tcb_at t (s\<lparr>consumed_time := param_a\<rparr>) = active_sc_tcb_at t s"
+  by (clarsimp simp: active_sc_tcb_at_def)
+
+lemma test_sc_refill_max_machine_state_update[simp]:
+  "test_sc_refill_max t (s\<lparr>machine_state := param_a\<rparr>) = test_sc_refill_max t s"
+  by (clarsimp simp: test_sc_refill_max_def)
+
+lemma active_sc_tcb_at_machine_state_update[simp]:
+  "active_sc_tcb_at t (s\<lparr>machine_state := param_a\<rparr>) = active_sc_tcb_at t s"
+  by (clarsimp simp: active_sc_tcb_at_def)
+
+lemma test_sc_refill_max_trans_state_update[simp]:
+  "test_sc_refill_max t (trans_state f s) = test_sc_refill_max t s"
+  by (clarsimp simp: test_sc_refill_max_def)
+
+lemma active_sc_tcb_at_trans_state_update[simp]:
+  "active_sc_tcb_at t (trans_state f s) = active_sc_tcb_at t s"
+  by (clarsimp simp: active_sc_tcb_at_def)
+
+lemma is_refill_sufficient_scheduler_action_update[simp]:
+  "is_refill_sufficient t u (s\<lparr>scheduler_action := param_a\<rparr>) = is_refill_sufficient t u s"
+  by (clarsimp simp: is_refill_sufficient_def)
+
+lemma is_refill_ready_scheduler_action_update[simp]:
+  "is_refill_ready t (s\<lparr>scheduler_action := param_a\<rparr>) = is_refill_ready t s"
+  by (clarsimp simp: is_refill_ready_def)
+
+lemma is_refill_sufficient_ready_queues_update[simp]:
+  "is_refill_sufficient t u (s\<lparr>ready_queues := param_a\<rparr>) = is_refill_sufficient t u s"
+  by (clarsimp simp: is_refill_sufficient_def)
+
+lemma is_refill_ready_ready_queues_update[simp]:
+  "is_refill_ready t (s\<lparr>ready_queues := param_a\<rparr>) = is_refill_ready t s"
+  by (clarsimp simp: is_refill_ready_def)
+
+lemma is_refill_sufficient_release_queue_update[simp]:
+  "is_refill_sufficient t u (s\<lparr>release_queue := param_a\<rparr>) = is_refill_sufficient t u s"
+  by (clarsimp simp: is_refill_sufficient_def)
+
+lemma is_refill_ready_release_queue_update[simp]:
+  "is_refill_ready t (s\<lparr>release_queue := param_a\<rparr>) = is_refill_ready t s"
+  by (clarsimp simp: is_refill_ready_def)
+
+lemma is_refill_sufficient_reprogram_timer_update[simp]:
+  "is_refill_sufficient t u (s\<lparr>reprogram_timer := param_a\<rparr>) = is_refill_sufficient t u s"
+  by (clarsimp simp: is_refill_sufficient_def)
+
+lemma is_refill_ready_reprogram_timer_update[simp]:
+  "is_refill_ready t (s\<lparr>reprogram_timer := param_a\<rparr>) = is_refill_ready t s"
+  by (clarsimp simp: is_refill_ready_def)
+
+lemma is_refill_sufficient_consumed_time_update[simp]:
+  "is_refill_sufficient t u (s\<lparr>consumed_time := param_a\<rparr>) = is_refill_sufficient t u s"
+  by (clarsimp simp: is_refill_sufficient_def)
+
+lemma is_refill_ready_consumed_time_update[simp]:
+  "is_refill_ready t (s\<lparr>consumed_time := param_a\<rparr>) = is_refill_ready t s"
+  by (clarsimp simp: is_refill_ready_def)
+
+lemma is_refill_sufficient_trans_state_update[simp]:
+  "is_refill_sufficient t u (trans_state f s) = is_refill_sufficient t u s"
+  by (clarsimp simp: is_refill_sufficient_def)
+
+lemma is_refill_ready_trans_state_update[simp]:
+  "is_refill_ready t (trans_state f s) = is_refill_ready t s"
+  by (clarsimp simp: is_refill_ready_def)
+
+lemma set_mrs_active_sc_tcb_at [wp]:
+  "\<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace>
+     set_mrs r t' mrs \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
+  apply (rule set_mrs_thread_set_dmo)
+   apply (wpsimp wp: active_sc_tcb_at_thread_set_no_change)
+  apply wp
+  done
+
+lemma set_mrs_budget_sufficient [wp]:
+  "\<lbrace>budget_sufficient t\<rbrace> set_mrs r t' mrs \<lbrace>\<lambda>rv. budget_sufficient t::det_state \<Rightarrow> _\<rbrace>"
+  apply (rule set_mrs_thread_set_dmo)
+   apply (wpsimp wp: budget_sufficient_thread_set_no_change)
+  apply wp
+  done
+
+lemma set_mrs_budget_ready [wp]:
+  "\<lbrace>budget_ready t\<rbrace> set_mrs r t' mrs \<lbrace>\<lambda>rv. budget_ready t::det_state \<Rightarrow> _\<rbrace>"
+  apply (rule set_mrs_thread_set_dmo)
+   apply (wpsimp wp: budget_ready_thread_set_no_change)
+  apply wp
+  done
+
+lemma set_cap_test_sc_refill_max[wp]:
+ "\<lbrace>test_sc_refill_max t\<rbrace> set_cap c p \<lbrace>\<lambda>rv. test_sc_refill_max t\<rbrace>"
+  apply (simp add: set_cap_def set_object_def split_def)
+  apply (wp get_object_wp | wpc)+
+  apply (clarsimp simp: test_sc_refill_max_def obj_at_def
+       | intro impI conjI | rule_tac x=scp in exI)+
+  done
+
+lemma set_cap_active_sc_tcb_at[wp]:
+ "\<lbrace>\<lambda>s:: det_ext state. P (active_sc_tcb_at t s)\<rbrace> set_cap c p \<lbrace>\<lambda>rv. \<lambda>s:: det_ext state. P (active_sc_tcb_at t s)\<rbrace>"
+  apply (simp add: set_cap_def set_object_def split_def)
+  apply (wp get_object_wp | wpc)+
+  apply (clarsimp simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def test_sc_refill_max_def
+           elim!: rsubst[where P=P]
+       | intro impI conjI iffI | rule_tac x=scp in exI)+
+  done
+
+lemma set_cap_is_refill_ready[wp]:
+ "\<lbrace>is_refill_ready t\<rbrace> set_cap c p \<lbrace>\<lambda>rv. is_refill_ready t\<rbrace>"
+  apply (simp add: set_cap_def set_object_def split_def)
+  apply (wp get_object_wp | wpc)+
+  apply (clarsimp simp: is_refill_ready_def obj_at_def
+       | intro impI conjI | rule_tac x=scp in exI)+
+  done
+
+lemma set_cap_is_refill_sufficient[wp]:
+ "\<lbrace>is_refill_sufficient t u\<rbrace> set_cap c p \<lbrace>\<lambda>rv. is_refill_sufficient t u\<rbrace>"
+  apply (simp add: set_cap_def set_object_def split_def)
+  apply (wp get_object_wp | wpc)+
+  apply (clarsimp simp: is_refill_sufficient_def obj_at_def
+       | intro impI conjI | rule_tac x=scp in exI)+
+  done
+
+lemma set_cap_budget_sufficient[wp]:
+ "\<lbrace>budget_sufficient t\<rbrace> set_cap c p \<lbrace>\<lambda>rv. budget_sufficient t\<rbrace>"
+  apply (simp add: set_cap_def set_object_def split_def)
+  apply (wp get_object_wp | wpc)+
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_sufficient_def
+       | intro impI conjI | rule_tac x=scp in exI)+
+  done
+
+lemma set_cap_budget_ready[wp]:
+ "\<lbrace>budget_ready t\<rbrace> set_cap c p \<lbrace>\<lambda>rv. budget_ready t\<rbrace>"
+  apply (simp add: set_cap_def set_object_def split_def)
+  apply (wp get_object_wp | wpc)+
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_ready_def
+       | intro impI conjI | rule_tac x=scp in exI)+
+  done
+
+crunch_ignore (del: create_cap_ext)
+
+lemma budget_ready_cdt_list_update[simp]:
+  "budget_ready t (s\<lparr>cdt_list := param_a\<rparr>) = budget_ready t s"
+  by (clarsimp simp: is_refill_ready_def)
+
+lemma budget_sufficient_cdt_list_update[simp]:
+  "budget_sufficient t (s\<lparr>cdt_list := param_a\<rparr>) = budget_sufficient t s"
+  by (clarsimp simp: is_refill_sufficient_def)
+
+crunches create_cap_ext,cap_insert_ext
+for active_sc_tcb_at[wp]: "\<lambda>s:: det_ext state. P (active_sc_tcb_at t s)"
+and is_refill_sufficient[wp]: "is_refill_sufficient t u:: det_state \<Rightarrow> bool"
+and budget_sufficient[wp]: "budget_sufficient t:: det_state \<Rightarrow> bool"
+and is_refill_ready[wp]: "is_refill_ready t:: det_state \<Rightarrow> bool"
+and budget_ready[wp]: "budget_ready t:: det_state \<Rightarrow> bool"
+ (simp: crunch_simps wp: hoare_drop_imps valid_ready_qs_lift)
+
+crunches create_cap,cap_insert
+for active_sc_tcb_at[wp]: "\<lambda>s:: det_ext state. P (active_sc_tcb_at t s)"
+and is_refill_sufficient[wp]: "is_refill_sufficient t u:: det_state \<Rightarrow> bool"
+and budget_sufficient[wp]: "budget_sufficient t:: det_state \<Rightarrow> bool"
+and is_refill_ready[wp]: "is_refill_ready t:: det_state \<Rightarrow> bool"
+and budget_ready[wp]: "budget_ready t:: det_state \<Rightarrow> bool"
+ (simp: crunch_simps wp: hoare_drop_imps)
+
+crunches create_cap,cap_insert
+for valid_ready_qs[wp]: "valid_ready_qs:: det_state \<Rightarrow> _"
+ (simp: crunch_simps wp: hoare_drop_imps valid_ready_qs_lift)
 
 lemma typ_at_pred_tcb_at_lift:
   assumes typ_lift: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>r s. P (typ_at T p s)\<rbrace>"
@@ -98,9 +342,15 @@ locale DetSchedAux_AI_det_ext = DetSchedAux_AI "TYPE(det_ext)" +
       \<lbrace>(\<lambda>s :: det_ext state. etcb_at P t s)\<rbrace>
         invoke_untyped ui
       \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
-  assumes invoke_untyped_schedulable_tcb_at[wp]:
+  assumes invoke_untyped_active_sc_tcb_at[wp]:  (* are the preconditions correct? *)
     "\<And>i t. \<lbrace>\<lambda>s :: det_ext state. (invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
-       and schedulable_tcb_at t and ct_active and valid_untyped_inv i) s\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. schedulable_tcb_at t s\<rbrace>"
+       and active_sc_tcb_at t and ct_active and valid_untyped_inv i) s\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. active_sc_tcb_at t s\<rbrace>"
+  assumes invoke_untyped_budget_sufficient[wp]: (* check precondition *)
+    "\<And>t i. \<lbrace>\<lambda>s::det_ext state. (invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
+       and budget_sufficient t  and ct_active and valid_untyped_inv i)s\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. budget_sufficient t s\<rbrace>"
+  assumes invoke_untyped_budget_ready[wp]: (* check precondition *)
+    "\<And>t i. \<lbrace>\<lambda>s::det_ext state. (invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
+       and budget_ready t  and ct_active and valid_untyped_inv i) s\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. budget_ready t s\<rbrace>"
   assumes invoke_untyped_cur_domain[wp]:
     "\<And>P i. \<lbrace>\<lambda>s::det_ext state. P (cur_domain s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
   assumes invoke_untyped_ready_queues[wp]:
@@ -116,19 +366,24 @@ locale DetSchedAux_AI_det_ext = DetSchedAux_AI "TYPE(det_ext)" +
 
 lemmas mapM_x_defsym = mapM_x_def[symmetric]
 
-crunch valid_blocked[wp]: create_cap,cap_insert,set_cap valid_blocked
-  (wp: valid_blocked_lift set_cap_typ_at)
+crunches update_cdt_list,set_cdt
+for st_tcb_at[wp]: "\<lambda>s. P (st_tcb_at t ts s)"
+and typ_at[wp]: "\<lambda>s. P (typ_at T t s)"
+and active_sc_tcb_at'[wp]: "\<lambda>s. P (active_sc_tcb_at t s)"
+
+
+crunch valid_blocked[wp]: create_cap,cap_insert,set_cap "valid_blocked::det_state \<Rightarrow> _"
+  (wp: crunch_wps valid_blocked_lift set_cap_typ_at hoare_drop_imps simp: crunch_simps)
 
 lemma valid_blocked_fold_update:
-  "\<lbrakk> valid_blocked_2 queues kh sa ct; type \<noteq> apiobject_type.Untyped \<rbrakk> \<Longrightarrow>
-  valid_blocked_2 queues (foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits dm)) ptrs kh) sa ct"
+  "\<lbrakk> valid_blocked_2 queues rlq kh sa ct; type \<noteq> apiobject_type.Untyped \<rbrakk> \<Longrightarrow>
+  valid_blocked_2 queues rlq (foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits dm)) ptrs kh) sa ct"
   apply (induct ptrs)
    apply simp
   apply (case_tac type)
-         apply simp
-        apply (clarsimp,
-               clarsimp simp: valid_blocked_def st_tcb_at_kh_def obj_at_kh_def obj_at_def
-                              default_object_def default_tcb_def)+
+        apply (fastforce simp: valid_blocked_def st_tcb_at_kh_def default_sched_context_def
+                              default_object_def default_tcb_def active_sc_tcb_at_defs
+              split: option.splits if_splits)+
   done
 
 lemma retype_region_valid_blocked[wp]:
@@ -143,10 +398,11 @@ lemma delete_objects_valid_blocked[wp]:
   "\<lbrace>valid_blocked\<rbrace> delete_objects a b \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: delete_objects_def)
   apply (wpsimp simp: detype_def wrap_ext_det_ext_ext_def do_machine_op_def)
-  apply (simp add: valid_blocked_def st_tcb_at_kh_def obj_at_kh_def obj_at_def is_etcb_at_def)
+  apply (fastforce simp add: valid_blocked_def st_tcb_at_kh_def
+                   is_etcb_at_def active_sc_tcb_at_defs split: option.splits)
   done
 
-crunch valid_blocked[wp]: reset_untyped_cap "valid_blocked"
+crunch valid_blocked[wp]: reset_untyped_cap "valid_blocked::det_state \<Rightarrow> _"
   (wp: preemption_point_inv mapME_x_inv_wp crunch_wps
    simp: unless_def)
 
@@ -169,7 +425,9 @@ lemma st_tcb_at_is_etcb:
 lemma valid_sched_tcb_state_preservation:
   assumes st_tcb: "\<And>P t. \<lbrace>I and ct_active and st_tcb_at (P and Not o inactive and Not o idle) t\<rbrace> f \<lbrace>\<lambda>_.st_tcb_at P t\<rbrace>"
   assumes stuff: "\<And>P t. \<lbrace>etcb_at P t\<rbrace> f \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
-  assumes bound_sc: "\<And>t. \<lbrace>\<lambda>s. schedulable_tcb_at t s\<rbrace> f \<lbrace>\<lambda>rv s. schedulable_tcb_at t s\<rbrace>"
+  assumes bound_sc: "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
+  assumes budget_s: "\<And>t. \<lbrace>\<lambda>s. budget_sufficient t s\<rbrace> f \<lbrace>\<lambda>rv s. budget_sufficient t s\<rbrace>"
+  assumes budget_r: "\<And>t. \<lbrace>\<lambda>s. budget_ready t s\<rbrace> f \<lbrace>\<lambda>rv s. budget_ready t s\<rbrace>"
   assumes cur_thread: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   assumes idle_thread: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   assumes valid_blocked: "\<lbrace>valid_blocked\<rbrace> f \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
@@ -184,14 +442,15 @@ lemma valid_sched_tcb_state_preservation:
   apply (frule_tac P1="\<lambda>sa rq cdom rlq. rq = ready_queues s \<and> sa = scheduler_action s \<and> cdom = cur_domain s \<and> rlq = release_queue s" in use_valid[OF _ valid_others])
    apply simp
   apply (rule conjI)
-   apply (clarsimp simp add: valid_queues_def)
+   apply (clarsimp simp add: valid_ready_qs_def)
    apply (drule_tac x=d in spec)
    apply (drule_tac x=p in spec)
    apply clarsimp
    apply (drule_tac x=t in bspec)
     apply simp
    apply clarsimp
-   apply (subgoal_tac "st_tcb_at runnable t b")
+   apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b
+                          \<and> budget_sufficient t b \<and> budget_ready t b")
     apply simp
     apply (rule conjI)
      apply (fastforce simp: st_tcb_at_is_etcb)
@@ -199,17 +458,35 @@ lemma valid_sched_tcb_state_preservation:
      apply simp
     apply (simp add: pred_tcb_at_def obj_at_def)
     apply force
-   apply (rule_tac use_valid[OF _ st_tcb],assumption)
+   apply (rule_tac conjI[OF use_valid[OF _ st_tcb]
+        conjI[OF use_valid[OF _ bound_sc]
+          conjI[OF use_valid[OF _ budget_s] use_valid[OF _ budget_r]]]], assumption)
+         apply simp
+         apply (erule pred_tcb_weakenE)
+         apply simp
+         apply (case_tac "itcb_state tcb")
+                apply simp+
+  apply (frule_tac P1="\<lambda>ct. ct = (cur_thread s)" in use_valid[OF _ cur_thread])
    apply simp
-   apply (erule pred_tcb_weakenE)
-   apply simp
-   apply (case_tac "itcb_state tcb")
-          apply simp+
+  apply (rule conjI)
+   apply (clarsimp simp add: valid_release_q_def)
+   apply (drule_tac x=t in bspec)
+    apply simp
+   apply clarsimp
+   apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b")
+    apply simp
+    apply (fastforce simp: st_tcb_at_is_etcb)
+   apply (rule_tac conjI[OF use_valid[OF _ st_tcb]
+        use_valid[OF _ bound_sc]], assumption)
+     apply simp
+     apply (erule pred_tcb_weakenE)
+     apply simp
+     apply (case_tac "itcb_state tcb")
+            apply simp+
   apply (frule_tac P1="\<lambda>ct. ct = (cur_thread s)" in use_valid[OF _ cur_thread])
    apply simp
   apply (rule conjI)
    apply simp
-  apply simp
   apply (clarsimp simp add: valid_sched_action_def is_activatable_def weak_valid_sched_action_def)
   apply (rule conjI)
    apply clarsimp
@@ -230,7 +507,6 @@ lemma valid_sched_tcb_state_preservation:
    apply (case_tac "itcb_state tcb", simp+)
    apply (rule_tac use_valid[OF _ bound_sc],assumption)
    apply simp
-  apply (rule conjI)
    apply (clarsimp simp: switch_in_cur_domain_def in_cur_domain_def)
    apply (rule use_valid[OF _ stuff, rule_format], assumption)
     apply simp
@@ -265,9 +541,11 @@ lemma valid_sched_tcb_state_preservation_gen:
   assumes st_tcb: "\<And>P t. \<lbrace>I and ct_active and st_tcb_at (P and Not o inactive and Not o idle) t\<rbrace> f \<lbrace>\<lambda>_.st_tcb_at P t\<rbrace>"
   assumes stuff: "\<And>P t. \<lbrace>etcb_at P t\<rbrace> f \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
   assumes bound_sc:
-            "\<And>t. \<lbrace>I and ct_active and st_tcb_at (Not o inactive and Not o idle) t and schedulable_tcb_at t\<rbrace>
-                                 f \<lbrace>\<lambda>_.schedulable_tcb_at t\<rbrace>"
+            "\<And>t. \<lbrace>I and ct_active and st_tcb_at (Not o inactive and Not o idle) t and active_sc_tcb_at t\<rbrace>
+                                 f \<lbrace>\<lambda>_.active_sc_tcb_at t\<rbrace>"  (* is this correct? *)
 (*  assumes bound_sc: "\<And>Q t. \<lbrace>\<lambda>s. bound_sc_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. bound_sc_tcb_at Q t s\<rbrace>"*)
+  assumes budget_s: "\<And>t. \<lbrace>I and st_tcb_at (Not o inactive and Not o idle) t and budget_sufficient t\<rbrace> f \<lbrace>\<lambda>r. budget_sufficient t\<rbrace>"
+  assumes budget_r: "\<And>t. \<lbrace>I and st_tcb_at (Not o inactive and Not o idle) t and budget_ready t\<rbrace> f \<lbrace>\<lambda>r. budget_ready t\<rbrace>"
   assumes cur_thread: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   assumes idle_thread: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   assumes valid_blocked: "\<lbrace>valid_blocked\<rbrace> f \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
@@ -282,14 +560,15 @@ lemma valid_sched_tcb_state_preservation_gen:
   apply (frule_tac P1="\<lambda>sa rq cdom rlq. rq = ready_queues s \<and> sa = scheduler_action s \<and> cdom = cur_domain s \<and> rlq = release_queue s" in use_valid[OF _ valid_others])
    apply simp
   apply (rule conjI)
-   apply (clarsimp simp add: valid_queues_def)
+   apply (clarsimp simp add: valid_ready_qs_def)
    apply (drule_tac x=d in spec)
    apply (drule_tac x=p in spec)
    apply clarsimp
    apply (drule_tac x=t in bspec)
     apply simp
    apply clarsimp
-   apply (subgoal_tac "st_tcb_at runnable t b")
+   apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b
+                          \<and> budget_sufficient t b \<and> budget_ready t b")
     apply simp
     apply (rule conjI)
      apply (fastforce simp: st_tcb_at_is_etcb)
@@ -297,17 +576,25 @@ lemma valid_sched_tcb_state_preservation_gen:
      apply simp
     apply (simp add: pred_tcb_at_def obj_at_def)
     apply force
-   apply (rule_tac use_valid[OF _ st_tcb],assumption)
-   apply simp
-   apply (erule pred_tcb_weakenE)
-   apply simp
-   apply (case_tac "itcb_state tcb")
-          apply simp+
-  apply (frule_tac P1="\<lambda>ct. ct = (cur_thread s)" in use_valid[OF _ cur_thread])
-   apply simp
+   apply (rule_tac conjI[OF use_valid[OF _ st_tcb]
+        conjI[OF use_valid[OF _ bound_sc]
+          conjI[OF use_valid[OF _ budget_s] use_valid[OF _ budget_r]]]], assumption)
+         apply simp
+         apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[7]
   apply (rule conjI)
-   apply simp
-  apply simp
+   apply (clarsimp simp add: valid_release_q_def)
+   apply (drule_tac x=t in bspec)
+    apply simp
+   apply clarsimp
+   apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b")
+    apply simp
+    apply (fastforce simp: st_tcb_at_is_etcb)
+   apply (rule_tac conjI[OF use_valid[OF _ st_tcb]
+        use_valid[OF _ bound_sc]], assumption)
+     apply simp
+     apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[3]
+  apply (frule_tac P1="\<lambda>ct. ct = (cur_thread s)" in use_valid[OF _ cur_thread])
+   apply simp+
   apply (clarsimp simp add: valid_sched_action_def is_activatable_def weak_valid_sched_action_def)
   apply (rule conjI)
    apply clarsimp
@@ -390,41 +677,6 @@ lemma invoke_untyped_valid_sched:
 end
 
 lemmas hoare_imp_lift_something = hoare_convert_imp
-
-lemma schedulable_tcb_at_cde_update[simp]:
-  "schedulable_tcb_at t (s\<lparr>cdt := param_a\<rparr>) = schedulable_tcb_at t s"
-  by (clarsimp simp: schedulable_tcb_at_def)
-
-lemma schedulable_tcb_at_cde_list_update[simp]:
-  "schedulable_tcb_at t (s\<lparr>cdt_list := param_a\<rparr>) = schedulable_tcb_at t s"
-  by (clarsimp simp: schedulable_tcb_at_def)
-
-lemma schedulable_tcb_at_is_original_cap_update[simp]:
-  "schedulable_tcb_at t (s\<lparr>is_original_cap := param_a\<rparr>) = schedulable_tcb_at t s"
-  by (clarsimp simp: schedulable_tcb_at_def)
-
-lemma set_mrs_schedulable_tcb_at [wp]:
-  "\<lbrace>schedulable_tcb_at t\<rbrace> set_mrs r t' mrs \<lbrace>\<lambda>rv. schedulable_tcb_at t\<rbrace>"
-  apply (rule set_mrs_thread_set_dmo)
-   apply (wpsimp wp: schedulable_tcb_at_thread_set_no_change)
-  apply wp
-  done
-
-lemma set_cap_schedulable_tcb_at[wp]:
- "\<lbrace>schedulable_tcb_at t\<rbrace> set_cap c p \<lbrace>\<lambda>rv. schedulable_tcb_at t\<rbrace>"
-  apply (simp add: set_cap_def set_object_def split_def)
-  apply (wp get_object_wp | wpc)+
-  apply (clarsimp simp: schedulable_tcb_at_def pred_tcb_at_def obj_at_def
-       | intro impI conjI | rule_tac x=scp in exI)+
-  done
-
-crunch_ignore (del: create_cap_ext)
-
-crunch schedulable_tcb_at[wp]: create_cap,cap_insert_ext "schedulable_tcb_at t :: det_ext state \<Rightarrow> bool"
-  (simp: crunch_simps)
-
-crunch schedulable_tcb_at[wp]: cap_insert "schedulable_tcb_at t :: det_ext state \<Rightarrow> bool"
-  (simp: crunch_simps wp: hoare_drop_imps)
 
 crunch valid_sched_action[wp]: create_cap,cap_insert "valid_sched_action :: det_ext state \<Rightarrow> bool"
   (wp: valid_sched_action_lift ignore: create_cap_ext)

@@ -84,25 +84,33 @@ lemma invs_cur_domain_update[simp]:
   by (simp add: invs_def valid_state_def valid_mdb_def mdb_cte_at_def valid_ioc_def
                 valid_irq_states_def valid_machine_state_def cur_tcb_def)
 
-lemma schedule_choose_new_thread_ct_activatable[wp]:
-  "\<lbrace> invs \<rbrace> schedule_choose_new_thread \<lbrace>\<lambda>_. ct_in_state activatable \<rbrace>"
+lemma choose_thread_ct_activatable[wp]:
+  "\<lbrace> invs \<rbrace> choose_thread \<lbrace>\<lambda>_. ct_in_state activatable \<rbrace>"
 proof -
   have P: "\<And>t s. ct_in_state activatable (cur_thread_update (\<lambda>_. t) s) = st_tcb_at activatable t s"
     by (fastforce simp: ct_in_state_def st_tcb_at_def intro: obj_at_pspaceI)
   show ?thesis
-    supply option.splits[split]
-    unfolding schedule_choose_new_thread_def choose_thread_def guarded_switch_to_def
-    apply (simp add: P set_scheduler_action_def guarded_switch_to_def choose_thread_def
-                             next_domain_def Let_def tcb_sched_action_def set_tcb_queue_def
-                             get_tcb_queue_def thread_get_def bind_assoc)
-    by (wpsimp wp: stt_activatable stit_activatable gts_wp is_schedulable_wp
-             simp: is_schedulable_opt_def get_tcb_ko_at st_tcb_at_def obj_at_def)
+    unfolding choose_thread_def guarded_switch_to_def
+    apply (wpsimp wp: stit_activatable stt_activatable split_del: if_split wp_del: get_sched_context_wp)
+            apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift)
+           apply (wpsimp wp: assert_wp)
+          apply (wpsimp simp: thread_get_def)+
+        apply (wpsimp wp: is_schedulable_wp)
+       apply (wpsimp wp: hoare_vcg_all_lift)+
+    apply (clarsimp simp: is_schedulable_opt_def pred_tcb_at_def obj_at_def
+        dest!: get_tcb_SomeD split: option.splits)
+    done
 qed
+
+lemma schedule_choose_new_thread_ct_activatable[wp]:
+  "\<lbrace> invs \<rbrace> schedule_choose_new_thread \<lbrace>\<lambda>_. ct_in_state activatable \<rbrace>"
+    unfolding schedule_choose_new_thread_def by wpsimp
 
 lemma guarded_switch_to_ct_in_state_activatable[wp]:
   "\<lbrace>\<top>\<rbrace> guarded_switch_to t \<lbrace>\<lambda>a. ct_in_state activatable\<rbrace>"
   unfolding guarded_switch_to_def
-  apply (wpsimp wp: hoare_vcg_imp_lift gts_wp is_schedulable_wp stt_activatable)
+  apply (wpsimp wp: hoare_vcg_imp_lift gts_wp is_schedulable_wp stt_activatable assert_wp
+             simp: thread_get_def)
   apply (clarsimp simp: is_schedulable_opt_def get_tcb_ko_at st_tcb_at_def obj_at_def
                  split: option.splits)
   done

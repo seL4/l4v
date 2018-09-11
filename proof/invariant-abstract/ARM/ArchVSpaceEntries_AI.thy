@@ -1718,7 +1718,7 @@ crunch valid_pdpt[wp]: handle_call, handle_recv, handle_send, handle_yield, hand
 
 
 lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (unit,det_ext) s_monad \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
-  apply (simp add: schedule_def allActiveTCBs_def)
+  apply (simp add: schedule_def)
   apply (wpsimp wp: alternative_wp select_wp hoare_drop_imps)
   done
 

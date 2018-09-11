@@ -484,6 +484,10 @@ lemma cur_tcb_domain_time_update[simp]:
 lemma commit_domain_time_valid_replies[wp]:
   "commit_domain_time \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp simp: commit_domain_time_def)
+(* FIXME: move *)
+lemma valid_sched_context_domain_time_update[simp]:
+  "valid_sched_context p (domain_time_update f s) = valid_sched_context p s"
+  by (simp add: valid_sched_context_def valid_bound_obj_def split: option.splits)
 
 lemma refill_split_check_valid_replies[wp]:
   "refill_split_check sc_ptr usage \<lbrace> valid_replies_pred P \<rbrace>"
@@ -493,16 +497,51 @@ lemma commit_time_valid_replies[wp]:
   "commit_time \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp simp: commit_time_def)
 
-lemma
-  notes fun_upd_apply[simp del]
-  shows commit_time_invs: "\<lbrace>invs\<rbrace> commit_time \<lbrace>\<lambda>rv. invs\<rbrace>"
+lemma update_sched_context_valid_objs_same_eq:
+  "\<lbrace>\<lambda>s. valid_objs s \<and> (\<forall>sc. valid_sched_context sc s = valid_sched_context (f sc) s)\<rbrace>
+     update_sched_context ref f \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def get_object_def wp: set_object_valid_objs)
+  apply (auto simp: valid_obj_def valid_sched_context_def a_type_def obj_at_def)
+  done
+
+lemma commit_times_invs_helper:
+  " \<lbrace>(\<lambda>s. invs s \<and>
+             consumed_time s = consumed \<and>
+             cur_sc s = csc \<and> sc_at csc s)\<rbrace>
+       do x <- get_sched_context csc;
+          xa <- gets cur_time;
+          xb <- assert (sufficient_refills consumed (sc_refills x));
+          y <- assert (r_time (refill_hd x) \<le> xa + kernelWCET_ticks);
+          y <- commit_domain_time;
+          y <-
+          update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed sc + consumed\<rparr>);
+          modify (consumed_time_update (\<lambda>_. 0))
+       od 
+       \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: commit_time_def invs_def valid_state_def valid_pspace_def
       set_refills_def is_round_robin_def consumed_time_update_arch.state_refs_update
       commit_domain_time_def
-      wp: valid_irq_node_typ static_imp_wp get_sched_context_wp hoare_vcg_conj_lift
-          update_sched_context_valid_objs_same update_sched_context_iflive_same
-          update_sched_context_refs_of_same hoare_drop_imp valid_ioports_lift)
-  apply (clarsimp simp: valid_sched_context_def live_sc_def)
+      wp: valid_irq_node_typ update_sched_context_refs_of_same
+          update_sched_context_valid_objs_same_eq update_sched_context_iflive_same)
+  done
+
+lemma
+  notes fun_upd_apply[simp del]
+  shows commit_time_invs: "\<lbrace>invs\<rbrace> commit_time \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (clarsimp simp: commit_time_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (case_tac "0 < consumed"; clarsimp split del: if_split simp: bind_assoc)
+   apply (wpsimp wp: commit_times_invs_helper hoare_vcg_ex_lift)
+   apply (clarsimp simp: obj_at_def is_sc_obj_def)
+   apply (frule invs_valid_objs)
+   apply (frule (1) valid_sched_context_size_objsI, simp)
+  apply (wpsimp simp: commit_time_def invs_def valid_state_def valid_pspace_def
+      set_refills_def is_round_robin_def consumed_time_update_arch.state_refs_update
+      commit_domain_time_def
+      wp: valid_irq_node_typ update_sched_context_refs_of_same
+          update_sched_context_valid_objs_same_eq update_sched_context_iflive_same)
   done
 
 crunches switch_sched_context
@@ -512,9 +551,12 @@ crunches switch_sched_context
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps hoare_vcg_if_lift2 simp: Let_def ignore: commit_domain_time)
 
+crunch inv[wp]: refill_capacity,refill_sufficient,refill_ready "\<lambda>s. P s"
+
 lemma switch_sched_context_invs[wp]:
   "\<lbrace>invs\<rbrace> switch_sched_context \<lbrace>\<lambda>_. invs \<rbrace>"
-  by (wpsimp simp: switch_sched_context_def rollback_time_def
+  by (wpsimp simp: switch_sched_context_def rollback_time_def get_tcb_queue_def
+                   get_sc_obj_ref_def
          wp: hoare_if gbn_inv commit_time_invs refill_unblock_check_invs
              hoare_drop_imp hoare_vcg_if_lift2)
 
@@ -540,7 +582,7 @@ lemma ct_in_state_cur_sc_update[iff]:
   by (simp add: ct_in_state_def)
 
 crunch pred_tcb_at[wp]: commit_time "\<lambda>s. P (pred_tcb_at proj f t s)"
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma set_sched_context_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> set_sched_context p sc \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
@@ -567,7 +609,7 @@ lemma ct_in_state_domain_time_update[simp]:
   by (simp add: ct_in_state_def)
 
 crunch ct_in_state[wp]: commit_time "ct_in_state t"
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma rollback_time_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> rollback_time \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
@@ -580,7 +622,8 @@ lemma refill_unblock_check_ct_in_state[wp]:
 
 lemma switch_sched_context_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> switch_sched_context \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
-  by (wpsimp simp: switch_sched_context_def wp: hoare_drop_imp hoare_vcg_if_lift2)
+  by (wpsimp simp: switch_sched_context_def get_tcb_queue_def get_sc_obj_ref_def
+             wp: hoare_drop_imp hoare_vcg_if_lift2)
 
 (* FIXME Move *)
 context Arch begin global_naming ARM
@@ -604,11 +647,9 @@ lemma set_next_interrupt_activatable:
 
 lemma sc_and_timer_activatable:
   "\<lbrace>ct_in_state activatable\<rbrace> sc_and_timer \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
-  apply (wpsimp simp: sc_and_timer_def switch_sched_context_def
+  apply (wpsimp simp: sc_and_timer_def switch_sched_context_def get_tcb_queue_def get_sc_obj_ref_def
            wp: hoare_drop_imp modify_wp hoare_vcg_if_lift2 set_next_interrupt_activatable)
   done
-
-crunch inv[wp]: refill_capacity,refill_sufficient,refill_ready "\<lambda>s. P s"
 
 lemma refill_add_tail_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> refill_add_tail sc_ptr rfl \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
@@ -1062,7 +1103,7 @@ lemma postpone_invs[wp]:
 
 lemma sched_context_resume_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_resume scptr \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (wpsimp simp: sched_context_resume_def refill_sufficient_def refill_ready_def is_schedulable_def
+  by (wpsimp simp: sched_context_resume_def get_tcb_queue_def get_sc_obj_ref_def is_schedulable_def
        wp: hoare_vcg_if_lift2 get_refills_wp hoare_vcg_all_lift get_sched_context_wp thread_get_wp)
 
 lemma refill_add_tail_invs[wp]:
@@ -1123,7 +1164,8 @@ lemma invs_scheduler_action_update[simp]:
 
 lemma tcb_sched_action_invs[wp]:
   "\<lbrace>invs\<rbrace> tcb_sched_action action thread \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp simp: tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def)
+  by (wpsimp simp: tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
+             wp: hoare_drop_imps hoare_vcg_all_lift)
 
 lemma set_scheduler_action_invs[wp]:
   "\<lbrace>invs\<rbrace> set_scheduler_action action \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -1131,7 +1173,7 @@ lemma set_scheduler_action_invs[wp]:
 
 lemma reschedule_required_invs[wp]:
   "\<lbrace>invs\<rbrace> reschedule_required \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp simp: reschedule_required_def)
+  by (wpsimp simp: reschedule_required_def wp: hoare_drop_imps hoare_vcg_all_lift)
 
 lemma possible_switch_to_invs[wp]:
   "\<lbrace>invs\<rbrace> possible_switch_to target \<lbrace>\<lambda>rv. invs\<rbrace>"

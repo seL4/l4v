@@ -36,6 +36,7 @@ crunch domain_list_inv[wp]:
 
 crunch domain_list_inv[wp]:
   schedule_tcb, set_thread_state "\<lambda>s. P (domain_list s)"
+  (wp: crunch_wps)
 
 (*
   FIXME: cleanup
@@ -169,7 +170,8 @@ crunch domain_list_inv[wp]: awaken "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imp dxo_wp_weak mapM_x_wp simp: Let_def)
 
 crunch domain_list_inv[wp]: commit_time "\<lambda>s. P (domain_list s)"
-  (simp: Let_def wp: get_sched_context_wp get_refills_wp)
+  (simp: Let_def wp: get_sched_context_wp get_refills_wp wp: crunch_wps)
+
 
 crunch domain_list_inv[wp]: set_next_interrupt, switch_sched_context
   "\<lambda>s::det_state. P (domain_list s)"
@@ -597,7 +599,8 @@ lemma commit_domain_time_domain_time_left:
 lemma commit_time_domain_time_left[wp]:
   "\<lbrace> valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace> commit_time \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
   by (wpsimp simp: commit_time_def Let_def
-           wp: commit_domain_time_domain_time_left get_sched_context_wp)
+           wp: commit_domain_time_domain_time_left get_sched_context_wp hoare_vcg_all_lift
+               hoare_drop_imp)
 
 lemma invoke_sched_control_configure_domain_time_inv[wp]:
   "\<lbrace>valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace>
@@ -713,7 +716,7 @@ lemma reschedule_required_valid_domain_time:
   "\<lbrace> \<top> \<rbrace> reschedule_required
    \<lbrace>\<lambda>x s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
   unfolding reschedule_required_def set_scheduler_action_def
-  by (wp hoare_vcg_imp_lift | simp | wpc)+
+  by (wpsimp wp: hoare_vcg_imp_lift is_schedulable_wp simp: thread_get_def)
 
 crunch domain_time_inv[wp]: set_next_interrupt "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps)

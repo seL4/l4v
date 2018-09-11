@@ -246,8 +246,7 @@ lemmas resolve_address_bits_empty_fail[wp] =
 
 crunch (empty_fail) empty_fail[wp]:
   lookup_slot_for_cnode_op, decode_untyped_invocation, range_check,
-  lookup_source_slot, lookup_pivot_slot, cap_swap_for_delete, is_final_cap, set_cap,
-  allActiveTCBs
+  lookup_source_slot, lookup_pivot_slot, cap_swap_for_delete, is_final_cap, set_cap
 
 locale EmptyFail_AI_load_word =
   fixes state_ext_t :: "'state_ext::state_ext itself"

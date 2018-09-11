@@ -502,7 +502,7 @@ lemma (* suspend_no_cap_to_obj_ref *)[wp,Finalise_AI_asms]:
 
 crunches blocked_cancel_ipc, cancel_signal, test_reschedule, tcb_release_remove
   for bound_sc_tcb_at[wp]:  "bound_sc_tcb_at P t"
-(ignore: set_object thread_set wp: mapM_x_wp_inv maybeM_inv get_simple_ko_wp)
+(ignore: set_object thread_set wp: mapM_x_wp_inv maybeM_inv get_simple_ko_wp crunch_wps)
 
 lemma sched_context_donate_bound_sc_tcb_at_None:
   "\<lbrace>bound_sc_tcb_at ((=) None) t and K (caller_tcb \<noteq> t)\<rbrace>
@@ -744,6 +744,7 @@ crunches tcb_release_remove, tcb_sched_action, reschedule_required
   for bound_tcb_at[wp]: "bound_tcb_at P p"
   and bound_yt_tcb_at[wp]: "bound_yt_tcb_at P p"
   and bound_sc_tcb_at[wp]: "bound_sc_tcb_at P p"
+  (wp: crunch_wps)
 
 lemma sched_context_unbind_tcb_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> sched_context_unbind_tcb a \<lbrace>\<lambda>y. bound_tcb_at P t\<rbrace>"

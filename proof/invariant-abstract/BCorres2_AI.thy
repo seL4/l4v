@@ -280,14 +280,15 @@ lemma alternative_second:"x \<in> fst (g s) \<Longrightarrow> x \<in> fst ((f \<
 lemma trans_state_twice[simp]: "trans_state (\<lambda>_. e) (trans_state f s) = trans_state (\<lambda>_. e) s"
   by (rule trans_state_update'')
 
+(* don't think this is used anywhere
 lemma guarded_sub_switch: "((),x) \<in> fst (guarded_switch_to word s) \<Longrightarrow>
        \<exists>s'. ((),x) \<in> fst (switch_to_thread word s')
        \<and> (True, s') \<in> fst (is_schedulable word (in_release_queue word s) s)"
-  apply (fastforce simp add: guarded_switch_to_def bind_def
-                            get_thread_state_def
-                            thread_get_def
+  apply (clarsimp simp add: guarded_switch_to_def bind_def
+                            get_thread_state_def get_sched_context_def
+                            thread_get_def get_object_def
                             in_monad)
-  done
+  *)
 
 lemma get_before_assert_opt:
   "do s \<leftarrow> assert_opt x; s' \<leftarrow> get; f s s' od
@@ -300,8 +301,8 @@ lemma get_outside_alternative:
   "alternative (get >>= f) g
     = do s \<leftarrow> get; alternative (f s) g od"
   by (simp add: alternative_def exec_get fun_eq_iff)
-
+(*
 lemmas schedule_unfold_all = schedule_def allActiveTCBs_def
                         get_thread_state_def thread_get_def getActiveTCB_def
-
+*)
 end

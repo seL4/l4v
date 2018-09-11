@@ -1464,6 +1464,13 @@ lemma si_invs'_helper_no_reply:
                  (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
                      sched_context_donate (the caller_sc_opt) dest
                   od);
+     new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
+     test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
+              | Some scp \<Rightarrow> do sufficient <- refill_sufficient scp 0;
+                               ready <- refill_ready scp;
+                               return (sufficient \<and> ready)
+              od;
+     y <- assert test;
      y <- set_thread_state dest Running;
      possible_switch_to dest
   od
@@ -1471,15 +1478,17 @@ lemma si_invs'_helper_no_reply:
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (case_tac "call \<or> (\<exists>y. fault = Some y)"; simp)
-    apply wpsimp
-   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
+   apply (rule hoare_seq_ext[OF _ gbn_inv])
+   apply wpsimp
+      apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                    wp: sts_only_idle valid_irq_node_typ sts_valid_replies_simple
                        valid_ioports_lift)
    apply (apply_conjunct \<open>erule st_tcb_weakenE, fastforce\<close>)
    apply (subgoal_tac "ex_nonz_cap_to dest s")
     apply (clarsimp simp: idle_no_ex_cap)
    apply (fastforce simp: st_tcb_at_def live_def elim!: if_live_then_nonz_capD)
-  apply (simp add: when_def)
+
+  apply (simp add: when_def bind_assoc)
   apply (intro conjI)
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                    wp: sts_only_idle valid_irq_node_typ sts_valid_replies_simple
@@ -1550,60 +1559,66 @@ lemma si_invs'_helper_some_reply:
                   (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
                       sched_context_donate (the caller_sc_opt) dest
                    od);
+      new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
+      test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
+              | Some scp \<Rightarrow> do sufficient <- refill_sufficient scp 0;
+                               ready <- refill_ready scp;
+                               return (sufficient \<and> ready)
+                            od;
+      y <- assert test;
       y <- set_thread_state dest Running;
       possible_switch_to dest
    od
    \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>"
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
-  apply (case_tac "call \<or> fault \<noteq> None"; simp)
-   apply (clarsimp simp: when_def)
-   apply (intro conjI)
-    apply (wpsimp wp: sts_invs_minor2_concise wp_del: reply_push_st_tcb_at)
-     apply (rule hoare_vcg_conj_lift)
-      apply (rule hoare_strengthen_post)
-       apply (rule reply_push_st_tcb_at_Inactive)
-      apply (clarsimp simp: st_tcb_at_def obj_at_def)
-     apply (wpsimp wp: reply_push_invs reply_push_ex_nonz_cap_to
-                       reply_push_valid_objs)
-    apply (fastforce simp: st_tcb_at_def obj_at_def invs_def valid_state_def valid_pspace_def
-                           idle_no_ex_cap is_tcb)
-   apply (case_tac cg; simp)
-   apply (wpsimp simp: st_tcb_at_def obj_at_def invs_def valid_state_def valid_pspace_def
-                       idle_no_ex_cap
-                   wp: sts_invs_minor2_concise)
-  apply (simp add: when_def)
-  apply (intro conjI)
-   apply (wpsimp simp: get_tcb_obj_ref_def thread_get_def
-                   wp: sts_invs_minor2_concise sched_context_donate_invs)
-   apply (rename_tac tcb)
-   apply (subgoal_tac "sc_at (the (tcb_sched_context tcb)) s")
-    apply (intro conjI)
-          apply (clarsimp simp: st_tcb_at_def obj_at_def)
-         apply (clarsimp simp: st_tcb_at_def obj_at_def is_tcb)
-        apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
-        apply (subgoal_tac "obj_at live (the (tcb_sched_context tcb)) s")
-         apply (erule (2) if_live_then_nonz_capD)
-        apply (clarsimp simp: obj_at_def)
-        apply (clarsimp simp: pred_tcb_at_def obj_at_def is_sc_obj_def
-                       split: kernel_object.splits)
-        apply (frule (1) sym_refs_ko_atD[unfolded obj_at_def, simplified])
-        apply (fastforce simp: get_tcb_def get_refs_def2 live_def live_sc_def)
-       apply clarsimp
-      apply (clarsimp simp: invs_def valid_state_def valid_pspace_def idle_no_ex_cap)
-     apply clarsimp
-    apply (clarsimp simp: st_tcb_at_def obj_at_def is_tcb)
-   apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def invs_def valid_state_def
-                         valid_pspace_def)
-   apply (subgoal_tac "valid_obj tptr (TCB tcb) s")
-    apply (clarsimp simp: valid_obj_def valid_tcb_def is_sc_obj_def obj_at_def)
-   apply fastforce
-  apply (wpsimp wp: sts_invs_minor2_concise)
-  apply (clarsimp simp: st_tcb_at_def obj_at_def invs_def valid_state_def valid_pspace_def
-                        idle_no_ex_cap)
-  done
-
-lemma not_sk_obj_at_pred:
+  apply (case_tac "call \<or> fault \<noteq> None"; clarsimp)
+   apply wpsimp
+        apply (strengthen invs_valid_objs, clarsimp cong: conj_cong)
+        apply (wpsimp wp: sts_invs_minor2_concise)
+       apply wpsimp
+      apply (wpsimp wp: hoare_drop_imp)
+     apply (wpsimp simp: get_tcb_obj_ref_def)
+    apply (wpsimp wp: hoare_vcg_conj_lift wp_del: reply_push_st_tcb_at)
+     apply (rule_tac Q="\<lambda>_. st_tcb_at ((=) Inactive) dest" in hoare_strengthen_post)
+      apply (wpsimp wp: reply_push_st_tcb_at_Inactive)
+     apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+    apply (wpsimp wp: reply_push_invs)
+   apply (rule conjI; clarsimp simp: pred_tcb_at_def obj_at_def)
+   apply (frule invs_valid_objs)
+   apply (frule invs_valid_global_refs)
+   apply (drule (1) idle_no_ex_cap, clarsimp)
+  apply wpsimp
+       apply (strengthen invs_valid_objs, clarsimp cong: conj_cong)
+       apply (wpsimp wp: sts_invs_minor2_concise)
+      apply wpsimp
+     apply (wpsimp wp: hoare_drop_imp)
+    apply (wpsimp simp: get_tcb_obj_ref_def)
+   apply (wpsimp wp: hoare_vcg_conj_lift sched_context_donate_invs
+      simp: get_tcb_obj_ref_def thread_get_def)
+  apply (subgoal_tac "dest \<noteq> idle_thread s")
+   apply (clarsimp simp:)
+   apply (clarsimp simp: is_tcb pred_tcb_at_def obj_at_def reply_sc_reply_at_def is_sc_obj_def)
+   apply (clarsimp simp: get_tcb_rev dest!: get_tcb_SomeD)
+   apply (frule invs_valid_objs)
+   apply (erule (1) valid_objsE[where x=tptr])
+   apply (clarsimp simp: valid_obj_def valid_tcb_def obj_at_def is_sc_obj_def)
+   apply (case_tac ko; clarsimp)
+   apply (frule invs_iflive)
+   apply (erule (1) if_live_then_nonz_capD2)
+   apply (frule invs_sym_refs)
+   apply (frule invs_valid_objs)
+   apply (drule (2) Arch.bound_sc_tcb_bound_sc_at) (* why is this in arch? *)
+    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+    apply (rule_tac x="TCB tcb" in exI, clarsimp, simp)
+   apply (clarsimp simp: live_def live_sc_def)
+  apply clarsimp
+  apply (frule invs_valid_objs)
+  apply (frule invs_valid_global_refs)
+  apply (drule (1) idle_no_ex_cap)
+  by simp
+  
+  lemma not_sk_obj_at_pred:
   "\<not> sk_obj_at_pred C proj' P' p s \<Longrightarrow> sk_obj_at_pred C proj P p s
     \<Longrightarrow> sk_obj_at_pred C proj' (\<lambda>x. \<not> (P' x)) p s"
   by (fastforce simp: sk_obj_at_pred_def obj_at_def)
@@ -1642,6 +1657,13 @@ lemma si_invs'_helper:
                   (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
                       sched_context_donate (the caller_sc_opt) dest
                    od);
+      new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
+      test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
+              | Some scp \<Rightarrow> do sufficient <- refill_sufficient scp 0;
+                               ready <- refill_ready scp;
+                               return (sufficient \<and> ready)
+                            od;
+      y <- assert test;
       y <- set_thread_state dest Running;
       possible_switch_to dest
    od

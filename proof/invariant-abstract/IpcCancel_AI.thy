@@ -165,6 +165,7 @@ lemma reply_tcb_reply_at_rlq_update[simp]:
 
 crunches test_reschedule, tcb_release_remove
   for reply_tcb_reply_at[wp]: "\<lambda>s. P (reply_at_pred P' p s)"
+  (wp: crunch_wps)
 
 global_interpretation sched_context_donate: non_reply_op "sched_context_donate scp tp"
   by unfold_locales (wpsimp simp: sched_context_donate_def
@@ -1429,7 +1430,22 @@ lemma reply_unlink_tcb_bound_tcb_at[wp]:
   by (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def wp: hoare_drop_imp)
 
 crunch bound_tcb_at[wp]: cancel_all_ipc, empty_slot, is_final_cap, get_cap "bound_tcb_at P t"
-  (wp: mapM_x_wp_inv)
+  (wp: mapM_x_wp_inv crunch_wps)
+
+lemma in_release_queue_ready_queues_update[simp]:
+  "in_release_queue t (ready_queues_update f s) = in_release_queue t s"
+  by (clarsimp simp: in_release_queue_def)
+
+lemma set_tcb_sc_bound_tcb_at [wp]:
+  "\<lbrace>bound_tcb_at P t\<rbrace>
+     set_tcb_obj_ref tcb_sched_context_update ref new \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
+  apply (wpsimp simp: set_tcb_obj_ref_def set_object_def)
+  by (clarsimp simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
+
+lemma tcb_release_remove_bound_tcb_at [wp]:
+  "\<lbrace>bound_tcb_at P t\<rbrace>
+     tcb_release_remove tptr \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
+  by (wpsimp simp: tcb_release_remove_def)
 
 lemma sched_context_donate_bound_tcb_at [wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> sched_context_donate scptr tcbptr \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
@@ -1440,6 +1456,8 @@ lemma sched_context_donate_bound_tcb_at [wp]:
                    test_reschedule_def reschedule_required_def set_scheduler_action_def
                    tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def tcb_release_remove_def
                wp: get_sched_context_wp) auto
+(*  by (wpsimp simp: sched_context_donate_def set_sc_obj_ref_def get_sc_obj_ref_def test_reschedule_def
+               wp: weak_if_wp hoare_drop_imp)*)
 
 lemma reply_remove_bound_tcb_at [wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> reply_remove rptr \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
@@ -1578,6 +1596,7 @@ where
 
 crunches possible_switch_to
   for valid_irq_node[wp]: valid_irq_node
+  (wp: crunch_wps)
 
 lemma replies_blocked_tcb_st_empty:
   "\<not> awaiting_reply st \<Longrightarrow> replies_blocked_of_tcb_st t st = {}"
@@ -2196,6 +2215,7 @@ lemma cancel_all_unlive_helper':
   done
 
 crunch obj_at[wp]: possible_switch_to "\<lambda>s. P (obj_at Q p s)"
+  (wp: crunch_wps)
 
 lemma cancel_all_unlive_helper:
   "\<lbrace>obj_at (\<lambda>obj. \<not> live obj \<and> is_ep obj) ptr\<rbrace>

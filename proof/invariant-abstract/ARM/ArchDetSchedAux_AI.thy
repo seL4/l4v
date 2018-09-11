@@ -16,11 +16,35 @@ context Arch begin global_naming ARM
 
 named_theorems DetSchedAux_AI_assms
 
+lemma set_pd_active_sc_tcb_at[wp]:
+  "\<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace> set_pd param_a param_b \<lbrace>\<lambda>_ s. P (active_sc_tcb_at t s)\<rbrace>"
+  apply (clarsimp simp: set_pd_def)
+  apply (wpsimp simp: set_object_def active_sc_tcb_at_def pred_tcb_at_def obj_at_def wp: get_object_wp)
+  apply (intro conjI impI allI; clarsimp elim!: rsubst[where P=P])
+  apply (intro iffI; clarsimp simp: test_sc_refill_max_def split: option.splits if_split_asm)
+  by (case_tac y; fastforce)+
+
+lemma set_pd_budget_sufficient[wp]:
+  "\<lbrace>budget_sufficient t\<rbrace> set_pd param_a param_b \<lbrace>\<lambda>_. budget_sufficient t\<rbrace>"
+  apply (clarsimp simp: set_pd_def)
+  apply (wpsimp simp: set_object_def pred_tcb_at_def obj_at_def wp: get_object_wp)
+  by (intro conjI impI allI;
+      clarsimp simp: obj_at_def is_refill_sufficient_def split: kernel_object.splits)
+
+lemma set_pd_budget_ready[wp]:
+  "\<lbrace>budget_ready t\<rbrace> set_pd param_a param_b \<lbrace>\<lambda>_. budget_ready t\<rbrace>"
+  apply (clarsimp simp: set_pd_def)
+  apply (wpsimp simp: set_object_def  pred_tcb_at_def obj_at_def wp: get_object_wp)
+  by (intro conjI impI allI; clarsimp simp: obj_at_def is_refill_ready_def split: kernel_object.splits)
+
 crunches init_arch_objects
-  for exst[wp]: "\<lambda>s. P (exst s)"
-  and ct[wp]: "\<lambda>s. P (cur_thread s)"
-  and st_tcb_at[wp]: "st_tcb_at Q t"
-  (wp: crunch_wps hoare_unless_wp)
+for exst[wp]: "\<lambda>s. P (exst s)"
+and ct[wp]:  "\<lambda>s. P (cur_thread s)"
+and st_tcb_at[wp]:  "st_tcb_at Q t"
+and active_sc_tcb_at[wp]:  "\<lambda>s. P (active_sc_tcb_at t s)"
+and budget_sufficient[wp]:  "budget_sufficient t"
+and budget_ready[wp]:  "budget_ready t"
+ (wp: mapM_x_wp' crunch_wps hoare_unless_wp)
 
 crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps dxo_wp_weak preemption_point_inv mapME_x_inv_wp
@@ -28,6 +52,11 @@ crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s
     ignore: freeMemory)
 
 crunch ready_queues[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s::det_ext state. P (ready_queues s)"
+  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
+    simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym
+  ignore: freeMemory)
+
+crunch release_queue[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s::det_ext state. P (release_queue s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
     simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym
   ignore: freeMemory)
@@ -137,12 +166,33 @@ and bound_sc_tcb_at Q t
   done
 
 (* FIXME: move *)
-lemma schedulable_tcb_at_def2:
-  "schedulable_tcb_at t = (\<lambda>s.
+lemma active_sc_tcb_at_def2:
+  "active_sc_tcb_at t = (\<lambda>s.
           (\<exists>scp. bound_sc_tcb_at (\<lambda>sc. sc = Some scp) t s
                 \<and> obj_at (\<lambda>obj. \<exists>sc n. obj = SchedContext sc n
                              \<and> 0 < sc_refill_max sc) scp s))"
-  by (auto simp: pred_tcb_at_def schedulable_tcb_at_def obj_at_def)
+  apply (auto simp: pred_tcb_at_def active_sc_tcb_at_def obj_at_def test_sc_refill_max_def
+            split: option.splits intro!: ext)
+  apply (case_tac y; clarsimp)
+  by fastforce
+
+(* FIXME: move *)
+lemma budget_sufficient_def2:
+  "budget_sufficient t = (\<lambda>s.
+          (\<exists>scp. bound_sc_tcb_at (\<lambda>sc. sc = Some scp) t s
+                \<and> obj_at (\<lambda>obj. \<exists>sc n. obj = SchedContext sc n
+                             \<and> sufficient_refills 0 (sc_refills sc)) scp s))"
+  by (auto simp: pred_tcb_at_def obj_at_def is_refill_sufficient_def
+            split: option.splits intro!: ext)
+
+(* FIXME: move *)
+lemma budget_ready_def2:
+  "budget_ready t = (\<lambda>s.
+          (\<exists>scp. bound_sc_tcb_at (\<lambda>sc. sc = Some scp) t s
+                \<and> obj_at (\<lambda>obj. \<exists>sc n. obj = SchedContext sc n
+                             \<and> (r_time (refill_hd sc)) \<le> (cur_time s) + kernelWCET_ticks) scp s))"
+  by (auto simp: pred_tcb_at_def obj_at_def is_refill_ready_def
+            split: option.splits intro!: ext)
 
 (* FIEXME: move? *)
 lemma init_arch_objects_obj_at_impossible:
@@ -153,33 +203,23 @@ lemma init_arch_objects_obj_at_impossible:
                   wp: mapM_x_wp' get_object_wp get_pde_wp)
   done
 
-(* FIXME: move? *)
-lemma init_arch_objects_schedulable_tcb_at[wp]:
-  "\<lbrace>schedulable_tcb_at t\<rbrace>
-     init_arch_objects a b c d e
-   \<lbrace>\<lambda>rv. schedulable_tcb_at t\<rbrace>"
-  apply (rule hoare_pre)
-   apply (clarsimp simp: schedulable_tcb_at_def2)
-   apply (wpsimp wp: hoare_vcg_ex_lift init_arch_objects_obj_at_impossible)
-  apply (clarsimp simp: schedulable_tcb_at_def2)
-  done
-
-lemma retype_region_schedulable_tcb_at:
+lemma retype_region_active_sc_tcb_at:
   "\<lbrace>\<lambda>s. pspace_no_overlap (up_aligned_area ptr' sz) s \<and>
       range_cover ptr' sz (obj_bits_api ty us) n \<and>
       valid_objs s \<and> pspace_aligned s
-      \<and> schedulable_tcb_at t s\<rbrace>
+      \<and> active_sc_tcb_at t s\<rbrace>
      retype_region ptr' n us ty dev
-   \<lbrace>\<lambda>rv. schedulable_tcb_at t\<rbrace>"
-  apply (clarsimp simp: schedulable_tcb_at_def2)
+   \<lbrace>\<lambda>rv. active_sc_tcb_at t\<rbrace>"
+  apply (clarsimp simp: active_sc_tcb_at_def2)
   apply (wpsimp wp: retype_region_obj_at_other3 hoare_vcg_ex_lift
                     retype_region_st_tcb_at)
   by auto
 
 lemma reset_untyped_cap_sched_context_at:
-  "\<lbrace>invs and obj_at (\<lambda>obj. (\<exists>sc n. (obj = SchedContext sc n) \<and> P sc n)) t and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot\<rbrace>
+  "\<lbrace>invs and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot
+    and obj_at (\<lambda>obj. (\<exists>sc n. (obj = SchedContext sc n) \<and> P sc)) t\<rbrace>
     reset_untyped_cap slot
-  \<lbrace>\<lambda>_. obj_at (\<lambda>obj. (\<exists>sc n. (obj = SchedContext sc n) \<and> P sc n)) t\<rbrace>, \<lbrace>\<lambda>_. obj_at (\<lambda>obj. (\<exists>sc n. (obj = SchedContext sc n) \<and> P sc n)) t\<rbrace>"
+  \<lbrace>\<lambda>_. obj_at (\<lambda>obj. (\<exists>sc n. (obj = SchedContext sc n) \<and> P sc)) t\<rbrace>, \<lbrace>\<lambda>_. obj_at (\<lambda>obj. (\<exists>sc n. (obj = SchedContext sc n) \<and> P sc)) t\<rbrace>"
   apply (simp add: reset_untyped_cap_def)
   apply (rule hoare_pre)
    apply (wp mapME_x_inv_wp preemption_point_inv set_cap_obj_at_impossible | simp add: unless_def
@@ -190,27 +230,115 @@ lemma reset_untyped_cap_sched_context_at:
                     bits_of_def is_cap_simps caps_of_def cap_of_def)
   done
 
-lemma reset_untyped_cap_schedulable_tcb_at:
-  "\<lbrace>invs and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot
-         and schedulable_tcb_at t\<rbrace>
-     reset_untyped_cap slot
-   \<lbrace>\<lambda>rv. schedulable_tcb_at t\<rbrace>, \<lbrace>\<lambda>rv. schedulable_tcb_at t\<rbrace>"
-  apply (clarsimp simp: schedulable_tcb_at_def2)
-  apply (wpsimp wp: reset_untyped_cap_bound_sc_tcb_at hoare_vcg_ex_lift
-                    reset_untyped_cap_sched_context_at)
-  sorry (* not entirely sure why this doesnt work *)
+lemma active_sc_tcb_at_machine_state_update_kheap[simp]:
+  "active_sc_tcb_at t (s\<lparr>machine_state := f, kheap:=g\<rparr>) = active_sc_tcb_at t (s\<lparr>kheap:=g\<rparr>)"
+  by (clarsimp simp: active_sc_tcb_at_defs)
 
-lemma invoke_untyped_schedulable_tcb_at[wp,DetSchedAux_AI_assms]:
+lemma reset_untyped_cap_active_sc_tcb_at:
+  "\<lbrace>invs and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot
+    and (\<lambda>s. bound_sc_tcb_at (\<lambda>p. \<exists>scp. p = Some scp
+      \<and> cte_wp_at (\<lambda>cp. scp \<notin> cap_range cp \<and> is_untyped_cap cp) slot s) t s)
+         and active_sc_tcb_at t\<rbrace>
+     reset_untyped_cap slot
+   \<lbrace>\<lambda>rv. active_sc_tcb_at t\<rbrace>, \<lbrace>\<lambda>rv. active_sc_tcb_at t::det_state \<Rightarrow> _\<rbrace>"
+  apply (simp add: active_sc_tcb_at_def2)
+  apply (wpsimp wp: hoare_vcg_ex_lift hoare_vcg_conj_lift
+      reset_untyped_cap_sched_context_at[where P="\<lambda>sc. 0 < sc_refill_max sc", simplified]
+      reset_untyped_cap_bound_sc_tcb_at)
+  apply (rule_tac x=scp in exI)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  done
+
+(* do we need something like this? 
+lemma obj_ref_ex_cap:
+   "\<lbrakk>invs s; tcb_sched_context tcb = Some scp;
+    kheap s t  = Some (TCB tcb)\<rbrakk> \<Longrightarrow> ex_nonz_cap_to scp s"
+  *)
+
+(* FIXME: Move to Invariants_AI *)
+lemma sym_ref_tcb_sc: "\<lbrakk> sym_refs (state_refs_of s); kheap s tp = Some (TCB tcb);
+   tcb_sched_context tcb = Some scp \<rbrakk> \<Longrightarrow>
+  \<exists>sc n. kheap s scp = Some (SchedContext sc n) \<and> sc_tcb sc = Some tp"
+  apply (drule sym_refs_obj_atD[rotated, where p=tp])
+   apply (clarsimp simp: obj_at_def, simp)
+  apply (clarsimp simp: state_refs_of_def get_refs_def2 elim!: sym_refsE)
+  apply (drule_tac x="(scp, TCBSchedContext)" in bspec)
+   apply fastforce
+  apply (clarsimp simp: obj_at_def)
+  apply (case_tac koa; clarsimp simp: get_refs_def2)
+  done
+
+
+lemma invoke_untyped_active_sc_tcb_at[wp,DetSchedAux_AI_assms]:
   "\<lbrace>invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
-and schedulable_tcb_at t
+and active_sc_tcb_at t
          and ct_active and valid_untyped_inv ui\<rbrace>
      invoke_untyped ui
-   \<lbrace>\<lambda>rv. \<lambda>s :: det_ext state . schedulable_tcb_at t s\<rbrace>"
+   \<lbrace>\<lambda>rv. \<lambda>s :: det_ext state . active_sc_tcb_at t s\<rbrace>"
+  apply (rule hoare_pre, rule invoke_untyped_Q, (wp init_arch_objects_wps | simp)+)
+     apply (rule hoare_name_pre_state, clarsimp)
+     apply (wp retype_region_active_sc_tcb_at, auto)[1]
+    apply (wp reset_untyped_cap_st_tcb_at reset_untyped_cap_active_sc_tcb_at| simp)+
+  apply (cases ui, clarsimp simp: active_sc_tcb_at_def)
+  apply (rule conjI)
+   apply (frule(1) st_tcb_ex_cap[OF _ invs_iflive])
+    apply (clarsimp split: Structures_A.thread_state.splits)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+   apply (drule ex_nonz_cap_to_overlap,
+      ((simp add:cte_wp_at_caps_of_state
+          is_cap_simps descendants_range_def2
+          empty_descendants_range_in)+)[5])
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (subgoal_tac "ex_nonz_cap_to scp s")
+   apply (drule ex_nonz_cap_to_overlap,
+      ((simp add:cte_wp_at_caps_of_state
+          is_cap_simps descendants_range_def2
+          empty_descendants_range_in)+)[5])
+  apply (frule invs_sym_refs)
+  apply (drule (2) sym_ref_tcb_sc)
+  apply clarsimp
+  apply (frule invs_iflive)
+  apply (erule (1) if_live_then_nonz_capD2)
+  apply (clarsimp simp: live_def live_sc_def)
+  done
+
+lemma retype_region_budget_sufficient:
+  "\<lbrace>(\<lambda>s. pspace_no_overlap (up_aligned_area ptr' sz) s \<and>
+      range_cover ptr' sz (obj_bits_api ty us) n \<and>
+      valid_objs s \<and> pspace_aligned s)
+     and budget_sufficient t\<rbrace>
+     retype_region ptr' n us ty dev
+   \<lbrace>\<lambda>rv. budget_sufficient t\<rbrace>"
+  apply (clarsimp simp: budget_sufficient_def2)
+  apply (wpsimp wp: retype_region_obj_at_other3 hoare_vcg_ex_lift
+                    retype_region_st_tcb_at)
+  by auto
+
+lemma reset_untyped_cap_budget_sufficient:
+  "\<lbrace>invs and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot
+   and (\<lambda>s. bound_sc_tcb_at (\<lambda>p. \<exists>scp. p = Some scp
+      \<and> cte_wp_at (\<lambda>cp. scp \<notin> cap_range cp \<and> is_untyped_cap cp) slot s) t s)
+         and budget_sufficient t\<rbrace>
+     reset_untyped_cap slot
+   \<lbrace>\<lambda>rv. budget_sufficient t\<rbrace>, \<lbrace>\<lambda>rv. budget_sufficient t::det_state \<Rightarrow> _\<rbrace>"
+  apply (simp add: budget_sufficient_def2)
+  apply (wpsimp wp: hoare_vcg_ex_lift hoare_vcg_conj_lift
+      reset_untyped_cap_sched_context_at[where P="\<lambda>sc. sufficient_refills 0 (sc_refills sc)", simplified]
+      reset_untyped_cap_bound_sc_tcb_at)
+  apply (rule_tac x=scp in exI)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  done
+
+lemma invoke_untyped_budget_sufficient[wp,DetSchedAux_AI_assms]:
+  "\<lbrace>invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and
+       budget_sufficient t and ct_active and valid_untyped_inv ui\<rbrace>
+     invoke_untyped ui
+   \<lbrace>\<lambda>rv. \<lambda>s :: det_ext state . budget_sufficient t s\<rbrace>"
   apply (rule hoare_pre, rule invoke_untyped_Q,
     (wp init_arch_objects_wps | simp)+)
      apply (rule hoare_name_pre_state, clarsimp)
-     apply (wp retype_region_schedulable_tcb_at, auto)[1]
-    apply (wp reset_untyped_cap_st_tcb_at reset_untyped_cap_schedulable_tcb_at| simp)+
+     apply (wp retype_region_budget_sufficient, auto)[1]
+    apply (wp reset_untyped_cap_st_tcb_at reset_untyped_cap_budget_sufficient| simp)+
   apply (cases ui, clarsimp)
   apply (frule(1) st_tcb_ex_cap[OF _ invs_iflive])
    apply (clarsimp split: Structures_A.thread_state.splits)
@@ -218,9 +346,147 @@ and schedulable_tcb_at t
     ((simp add:cte_wp_at_caps_of_state
             is_cap_simps descendants_range_def2
             empty_descendants_range_in)+))
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (subgoal_tac "ex_nonz_cap_to scp s")
+   apply (drule ex_nonz_cap_to_overlap,
+      ((simp add:cte_wp_at_caps_of_state
+          is_cap_simps descendants_range_def2
+          empty_descendants_range_in)+)[5])
+  apply (frule invs_sym_refs)
+  apply (drule (2) sym_ref_tcb_sc)
+  apply clarsimp
+  apply (frule invs_iflive)
+  apply (erule (1) if_live_then_nonz_capD2)
+  apply (clarsimp simp: live_def live_sc_def)
   done
 
-crunch valid_blocked[wp, DetSchedAux_AI_assms]: init_arch_objects "valid_blocked::det_ext state \<Rightarrow> _"
+lemma set_cap_obj_at_impossible_cur_time:
+  "\<lbrace>\<lambda>s. P (obj_at (P' (cur_time s)) p s) \<and> (\<forall>ko. P' (cur_time s) ko \<longrightarrow> caps_of ko = {})\<rbrace>
+     set_cap cap ptr
+   \<lbrace>\<lambda>rv s. P (obj_at (P' (cur_time s)) p s)\<rbrace>"
+  apply (simp add: set_cap_def split_def set_object_def)
+  apply (wp get_object_wp | wpc)+
+  apply (clarsimp simp: obj_at_def)
+  apply (subgoal_tac "\<forall>sz cs. well_formed_cnode_n sz cs \<longrightarrow> \<not> P' (cur_time s) (CNode sz cs)")
+   apply (subgoal_tac "\<forall>tcb. \<not> P' (cur_time s) (TCB tcb)")
+    apply (clarsimp simp: fun_upd_def[symmetric] wf_cs_insert dom_def)
+    apply auto[1]
+   apply (auto simp:caps_of_def cap_of_def ran_tcb_cnode_map wf_cs_ran_nonempty)
+  done
+
+lemma do_machine_op_obj_at_cur_time:
+  "\<lbrace>\<lambda>s. P (obj_at (Q (cur_time s)) p s)\<rbrace> do_machine_op f \<lbrace>\<lambda>_ s. P (obj_at (Q (cur_time s)) p s)\<rbrace>"
+  by (rule hoare_lift_Pf[where f=cur_time], wpsimp+)
+
+lemma retype_region_obj_at_other_cur_time:
+  assumes ptrv: "ptr \<notin> set (retype_addrs ptr' ty n us)"
+  shows "\<lbrace>\<lambda>s. obj_at (P (cur_time s)) ptr s\<rbrace> retype_region ptr' n us ty dev \<lbrace>\<lambda>r s. obj_at (P (cur_time s)) ptr s\<rbrace>"
+  using ptrv unfolding retype_region_def retype_addrs_def
+  apply (simp only: foldr_upd_app_if fun_app_def K_bind_def)
+  apply (wpsimp simp: obj_at_def)
+  done
+
+lemma retype_region_obj_at_other2_cur_time:
+  "\<lbrace>\<lambda>s. ptr \<notin> set (retype_addrs ptr' ty n us)
+       \<and> obj_at (P (cur_time s)) ptr s\<rbrace> retype_region ptr' n us ty dev \<lbrace>\<lambda>rv s. obj_at (P (cur_time s)) ptr s\<rbrace>"
+  by (rule hoare_assume_pre) (wpsimp wp: retype_region_obj_at_other_cur_time)
+
+lemma retype_region_obj_at_other3_cur_time:
+  "\<lbrace>\<lambda>s. pspace_no_overlap_range_cover ptr sz s \<and> obj_at (P (cur_time s)) p s \<and> range_cover ptr sz (obj_bits_api ty us) n
+           \<and> valid_objs s \<and> pspace_aligned s\<rbrace>
+     retype_region ptr n us ty dev
+   \<lbrace>\<lambda>rv s. obj_at (P (cur_time s)) p s\<rbrace>"
+  apply (rule hoare_pre)
+   apply (rule retype_region_obj_at_other2_cur_time)
+  apply clarsimp
+  apply (drule subsetD [rotated, OF _ retype_addrs_subset_ptr_bits])
+   apply simp
+  apply (drule(3) pspace_no_overlap_obj_not_in_range)
+  apply (simp add: field_simps)
+  done
+
+lemma retype_region_budget_ready:
+  "\<lbrace>(\<lambda>s. pspace_no_overlap (up_aligned_area ptr' sz) s \<and>
+      range_cover ptr' sz (obj_bits_api ty us) n \<and>
+      valid_objs s \<and> pspace_aligned s)
+     and budget_ready t\<rbrace>
+     retype_region ptr' n us ty dev
+   \<lbrace>\<lambda>rv. budget_ready t\<rbrace>"
+  apply (clarsimp simp: budget_ready_def2)
+  apply (wpsimp wp: retype_region_obj_at_other3_cur_time hoare_vcg_ex_lift
+                    retype_region_st_tcb_at)
+  by auto
+
+lemma cur_time_detype[simp]: "cur_time (detype S s) = cur_time s"
+  by (simp add: detype_def)
+
+lemma reset_untyped_cap_sched_context_at_cur_time:
+  "\<lbrace>invs and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot
+    and (\<lambda>s. obj_at (\<lambda>obj. (\<exists>sc n. (obj = SchedContext sc n) \<and> (P (cur_time s) sc))) t s)\<rbrace>
+    reset_untyped_cap slot
+  \<lbrace>\<lambda>_ s. obj_at (\<lambda>obj. (\<exists>sc n. (obj = SchedContext sc n) \<and> P (cur_time s) sc)) t s\<rbrace>,
+             \<lbrace>\<lambda>_ s. obj_at (\<lambda>obj. (\<exists>sc n. (obj = SchedContext sc n) \<and> P (cur_time s) sc)) t s\<rbrace>"
+  apply (simp add: reset_untyped_cap_def)
+  apply (rule hoare_pre)
+   apply (wp mapME_x_inv_wp preemption_point_inv set_cap_obj_at_impossible_cur_time
+             do_machine_op_obj_at_cur_time
+     | simp add: unless_def
+     | solves \<open>auto simp: caps_of_def cap_of_def\<close>)+
+    apply (simp add: delete_objects_def)
+    apply (wp get_cap_wp hoare_vcg_const_imp_lift do_machine_op_obj_at_cur_time | simp)+
+  apply (auto simp: cte_wp_at_caps_of_state cap_range_def
+                    bits_of_def is_cap_simps caps_of_def cap_of_def)
+  done
+
+lemma reset_untyped_cap_budget_ready:
+  "\<lbrace>invs and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot
+   and (\<lambda>s. bound_sc_tcb_at (\<lambda>p. \<exists>scp. p = Some scp
+      \<and> cte_wp_at (\<lambda>cp. scp \<notin> cap_range cp \<and> is_untyped_cap cp) slot s) t s)
+         and budget_ready t\<rbrace>
+     reset_untyped_cap slot
+   \<lbrace>\<lambda>rv. budget_ready t\<rbrace>, \<lbrace>\<lambda>rv. budget_ready t::det_state \<Rightarrow> _\<rbrace>"
+  apply (simp add: budget_ready_def2)
+  apply (wpsimp wp: hoare_vcg_ex_lift hoare_vcg_conj_lift
+      reset_untyped_cap_sched_context_at_cur_time[where P="\<lambda>x sc. r_time (refill_hd sc) \<le> x + kernelWCET_ticks", simplified]
+      reset_untyped_cap_bound_sc_tcb_at)
+  apply (rule_tac x=scp in exI)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  done
+
+lemma invoke_untyped_budget_ready[wp,DetSchedAux_AI_assms]:
+  "\<lbrace>invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and
+budget_ready t
+         and ct_active and valid_untyped_inv ui\<rbrace>
+     invoke_untyped ui
+   \<lbrace>\<lambda>rv. \<lambda>s :: det_ext state . budget_ready t s\<rbrace>"
+  apply (rule hoare_pre, rule invoke_untyped_Q,
+    (wp init_arch_objects_wps | simp)+)
+     apply (rule hoare_name_pre_state, clarsimp)
+     apply (wp retype_region_budget_ready, auto)[1]
+    apply (wp reset_untyped_cap_st_tcb_at reset_untyped_cap_budget_ready | simp)+
+  apply (cases ui, clarsimp)
+  apply (frule(1) st_tcb_ex_cap[OF _ invs_iflive])
+   apply (clarsimp split: Structures_A.thread_state.splits)
+  apply (drule ex_nonz_cap_to_overlap,
+    ((simp add:cte_wp_at_caps_of_state
+            is_cap_simps descendants_range_def2
+            empty_descendants_range_in)+))
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (subgoal_tac "ex_nonz_cap_to scp s")
+   apply (drule ex_nonz_cap_to_overlap,
+      ((simp add:cte_wp_at_caps_of_state
+          is_cap_simps descendants_range_def2
+          empty_descendants_range_in)+)[5])
+  apply (frule invs_sym_refs)
+  apply (drule (2) sym_ref_tcb_sc)
+  apply clarsimp
+  apply (frule invs_iflive)
+  apply (erule (1) if_live_then_nonz_capD2)
+  apply (clarsimp simp: live_def live_sc_def)
+  done
+
+crunch valid_blocked[wp, DetSchedAux_AI_assms]:
+  init_arch_objects "valid_blocked::det_ext state \<Rightarrow> _"
   (wp: valid_blocked_lift set_cap_typ_at)
 
 crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s)"
@@ -229,6 +495,12 @@ crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s
 
 crunch ready_queues[wp, DetSchedAux_AI_assms]:
   invoke_untyped "\<lambda>s :: det_ext state. P (ready_queues s)"
+  (wp: crunch_wps
+   simp: detype_def wrap_ext_det_ext_ext_def mapM_x_defsym
+   ignore: freeMemory)
+
+crunch release_queue[wp, DetSchedAux_AI_assms]:
+  invoke_untyped "\<lambda>s :: det_ext state. P (release_queue s)"
   (wp: crunch_wps
    simp: detype_def wrap_ext_det_ext_ext_def mapM_x_defsym
    ignore: freeMemory)
@@ -320,11 +592,11 @@ lemma perform_asid_control_invocation_bound_sc_tcb_at:
   apply (auto simp:page_bits_def detype_clear_um_independent)
   done
 
-lemma perform_asid_control_invocation_schedulable_tcb_at:
-  "\<lbrace>st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and schedulable_tcb_at t
+lemma perform_asid_control_invocation_active_sc_tcb_at:
+  "\<lbrace>st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and active_sc_tcb_at t
     and ct_active and invs and valid_aci aci\<rbrace>
     perform_asid_control_invocation aci
-  \<lbrace>\<lambda>_. schedulable_tcb_at t :: det_ext state \<Rightarrow> _\<rbrace>"
+  \<lbrace>\<lambda>_. active_sc_tcb_at t :: det_ext state \<Rightarrow> _\<rbrace>"
   including no_pre
   apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
   apply (rename_tac word1 a b aa ba word2)
@@ -380,10 +652,34 @@ lemma perform_asid_control_invocation_schedulable_tcb_at:
   apply (auto simp:page_bits_def detype_clear_um_independent)*)
   sorry
 
+lemma perform_asid_control_invocation_budget_sufficient:
+  "\<lbrace>(*st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and*)
+ budget_sufficient t
+(*    and ct_active and invs and valid_aci aci*)\<rbrace>
+    perform_asid_control_invocation aci
+  \<lbrace>\<lambda>_. budget_sufficient t :: det_ext state \<Rightarrow> _\<rbrace>"
+  including no_pre
+  apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
+  apply (rename_tac word1 a b aa ba word2)
+  apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at set_cap_no_overlap|simp)+
+sorry
+
+lemma perform_asid_control_invocation_budget_ready:
+  "\<lbrace>(*st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and*)
+ budget_ready t
+(*    and ct_active and invs and valid_aci aci*)\<rbrace>
+    perform_asid_control_invocation aci
+  \<lbrace>\<lambda>_. budget_ready t :: det_ext state \<Rightarrow> _\<rbrace>"
+  including no_pre
+  apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
+  apply (rename_tac word1 a b aa ba word2)
+  apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at set_cap_no_overlap|simp)+
+sorry
+
 crunches perform_asid_control_invocation
 for ct[wp]: "\<lambda>s. P (cur_thread s)"
 and idle_thread[wp]: "\<lambda>s::det_ext state. P (idle_thread s)"
-and valid_blocked[wp]: valid_blocked
+and valid_blocked[wp]: "valid_blocked::det_state \<Rightarrow> _"
  (wp: static_imp_wp)
 
 crunches perform_asid_control_invocation
@@ -401,7 +697,10 @@ lemma perform_asid_control_invocation_valid_sched:
    apply (rule_tac I="invs and ct_active and valid_aci aci" in valid_sched_tcb_state_preservation_gen)
           apply (wp perform_asid_control_invocation_st_tcb_at)
           apply simp
-         apply (wpsimp wp: perform_asid_control_etcb_at perform_asid_control_invocation_schedulable_tcb_at)+
+         apply (wpsimp wp: perform_asid_control_etcb_at
+                           perform_asid_control_invocation_budget_sufficient
+                           perform_asid_control_invocation_budget_ready
+                           perform_asid_control_invocation_active_sc_tcb_at)+
     apply (rule hoare_strengthen_post, rule aci_invs)
     apply (simp add: invs_def valid_state_def)
    apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s"])
@@ -412,38 +711,65 @@ lemma perform_asid_control_invocation_valid_sched:
   apply simp
   done
 
-crunch valid_queues[wp]: init_arch_objects "valid_queues :: det_ext state \<Rightarrow> _"
-  (wp: valid_queues_lift crunch_wps)
+crunch valid_ready_qs[wp]: init_arch_objects "valid_ready_qs :: det_ext state \<Rightarrow> _"
+  (wp: valid_ready_qs_lift crunch_wps)
 
-lemma set_pd_schedulable_tcb_at[wp]:
-  "\<lbrace>schedulable_tcb_at t\<rbrace> set_pd ptr val \<lbrace>\<lambda>_. schedulable_tcb_at t\<rbrace>"
-  apply (simp add: set_pd_def set_object_def)
-  apply (wpsimp wp: get_object_wp)
-  apply (clarsimp simp: schedulable_tcb_at_def pred_tcb_at_def obj_at_def)
-  apply (case_tac "t=ptr"; clarsimp)
-  apply (rule_tac x=scp in exI, clarsimp)
-  done
-
-lemma set_pt_schedulable_tcb_at[wp]:
-  "\<lbrace>schedulable_tcb_at t\<rbrace> set_pt ptr val \<lbrace>\<lambda>_. schedulable_tcb_at t\<rbrace>"
+lemma set_pt_active_sc_tcb_at[wp]:
+  "\<lbrace>active_sc_tcb_at t\<rbrace> set_pt ptr val \<lbrace>\<lambda>_. active_sc_tcb_at t\<rbrace>"
   apply (simp add: set_pt_def set_object_def)
   apply (wpsimp wp: get_object_wp)
-  apply (clarsimp simp: schedulable_tcb_at_def pred_tcb_at_def obj_at_def)
-  apply (case_tac "t=ptr"; clarsimp)
-  apply (rule_tac x=scp in exI, clarsimp)
+  apply (clarsimp simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def test_sc_refill_max_def)
+  apply (case_tac "t=ptr"; clarsimp simp: )
+  apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
   done
 
-lemma set_asid_pool_schedulable_tcb_at[wp]:
-  "\<lbrace>schedulable_tcb_at t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. schedulable_tcb_at t\<rbrace>"
+lemma set_asid_pool_active_sc_tcb_at[wp]:
+  "\<lbrace>active_sc_tcb_at t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. active_sc_tcb_at t\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wpsimp wp: get_object_wp)
-  apply (clarsimp simp: schedulable_tcb_at_def pred_tcb_at_def obj_at_def)
+  apply (clarsimp simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def test_sc_refill_max_def)
   apply (case_tac "t=ptr"; clarsimp)
-  apply (rule_tac x=scp in exI, clarsimp)
+  apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
   done
 
-crunch schedulable_tcb_at[wp]: init_arch_objects "schedulable_tcb_at t"
+crunch active_sc_tcb_at[wp]: init_arch_objects "active_sc_tcb_at t"
   (wp: crunch_wps ignore: do_machine_op)
+
+lemma set_pt_budget_ready[wp]:
+  "\<lbrace>budget_ready t\<rbrace> set_pt ptr val \<lbrace>\<lambda>_. budget_ready t\<rbrace>"
+  apply (simp add: set_pt_def set_object_def)
+  apply (wpsimp wp: get_object_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_ready_def)
+  apply (case_tac "t=ptr"; clarsimp simp: )
+  apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
+  done
+
+lemma set_asid_pool_budget_ready[wp]:
+  "\<lbrace>budget_ready t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. budget_ready t\<rbrace>"
+  apply (simp add: set_asid_pool_def set_object_def)
+  apply (wpsimp wp: get_object_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_ready_def)
+  apply (case_tac "t=ptr"; clarsimp)
+  apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
+  done
+
+lemma set_pt_budget_sufficient[wp]:
+  "\<lbrace>budget_sufficient t\<rbrace> set_pt ptr val \<lbrace>\<lambda>_. budget_sufficient t\<rbrace>"
+  apply (simp add: set_pt_def set_object_def)
+  apply (wpsimp wp: get_object_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_sufficient_def)
+  apply (case_tac "t=ptr"; clarsimp simp: )
+  apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
+  done
+
+lemma set_asid_pool_budget_sufficient[wp]:
+  "\<lbrace>budget_sufficient t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. budget_sufficient t\<rbrace>"
+  apply (simp add: set_asid_pool_def set_object_def)
+  apply (wpsimp wp: get_object_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_sufficient_def)
+  apply (case_tac "t=ptr"; clarsimp)
+  apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
+  done
 
 crunch valid_sched_action[wp]: init_arch_objects "valid_sched_action :: det_ext state \<Rightarrow> _"
   (wp: valid_sched_action_lift)

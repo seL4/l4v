@@ -1630,5 +1630,6 @@ lemma unbind_notification_sym_refs[wp]:
 crunches test_reschedule
   for kheap[wp]: "\<lambda>s. P (kheap s)"
   and ob_at[wp]: "\<lambda>s. P (obj_at Q p s)"
+  (wp: crunch_wps)
 
 end
