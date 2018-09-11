@@ -325,7 +325,7 @@ crunch domain_list_inv[wp]: cancel_badged_sends "\<lambda>s. P (domain_list s)"
 lemma maybe_donate_sc_domain_list_inv[wp]:
   "\<lbrace>(\<lambda>s :: det_state. P (domain_list s))\<rbrace>
   maybe_donate_sc tcb_ptr ntfn_ptr \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
-  by (wpsimp simp: maybe_donate_sc_def get_sk_obj_ref_def wp: hoare_vcg_if_lift2 )
+  by (wpsimp simp: maybe_donate_sc_def get_sk_obj_ref_def wp: hoare_vcg_if_lift2 maybeM_inv)
 
 crunch domain_list_inv[wp]: send_signal "\<lambda>s::det_state. P (domain_list s)"
   (wp: hoare_drop_imps mapM_x_wp_inv select_wp maybeM_inv simp: crunch_simps unless_def)

@@ -3997,7 +3997,7 @@ lemma cancel_all_signals_valid_list[wp]:
 
 lemma unbind_maybe_notification_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> unbind_maybe_notification r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: unbind_maybe_notification_def get_sk_obj_ref_def)
+  by (wpsimp simp: unbind_maybe_notification_def get_sk_obj_ref_def wp: maybeM_inv)
 
 lemma ttcb_release_remove_cdt_cdt_list[wp]:
    "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> tcb_release_remove r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
@@ -4024,7 +4024,7 @@ lemma sched_context_unbind_ntfn_valid_list[wp]:
 
 lemma sched_context_maybe_unbind_ntfn_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> sched_context_maybe_unbind_ntfn r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: sched_context_maybe_unbind_ntfn_def get_sk_obj_ref_def)
+  by (wpsimp simp: sched_context_maybe_unbind_ntfn_def get_sk_obj_ref_def wp: maybeM_inv)
 
 crunch valid_list[wp]: set_message_info valid_list
 
@@ -4138,7 +4138,7 @@ crunch valid_list[wp]: sort_queue valid_list
 lemma (in Deterministic_AI_1) set_priority_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> set_priority a b \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: set_priority_def reorder_ntfn_def reorder_ep_def thread_set_priority_def thread_set_def
-  wp: get_simple_ko_wp hoare_drop_imp)
+               wp: get_simple_ko_wp hoare_drop_imp hoare_vcg_all_lift)
 
 lemma set_mcpriority_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> set_mcpriority a b \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -4474,8 +4474,7 @@ lemma next_slot_setD:
   (\<exists>p q. (slot \<in> descendants_of p m \<or> p = slot) \<and> q \<in> next_sib_set p t m \<and> next \<in> descendants_of q m \<union> {q})"
   apply(subst(asm) next_slot_set_def)
   apply(simp)
-  apply(induct_tac "next" slot rule: trancl.induct)
-    apply(assumption)
+  apply(induct "next" slot rule: trancl.induct)
    apply(simp add: next_slot_def split: if_split_asm)
     apply(simp add: next_child_def valid_list_2_def descendants_of_def cdt_parent_defs)
     apply(case_tac "t b", simp, fastforce)
@@ -5568,4 +5567,3 @@ lemma next_sib_def2:
   done
 
 end
-

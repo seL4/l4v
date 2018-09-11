@@ -187,7 +187,7 @@ lemma sts_Restart_invs[wp]:
            simp: invs_def valid_state_def valid_pspace_def)
   done
 
-lemma check_budget_restart_invs:
+lemma check_budget_restart_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace> check_budget_restart \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: check_budget_restart_def)
   apply (rule hoare_seq_ext[rotated])
@@ -1370,12 +1370,13 @@ lemma he_invs[wp]:
   apply (case_tac e, simp_all)
       apply (rename_tac syscall)
       apply (case_tac syscall, simp_all)
+  sorry (*
       apply (((rule hoare_pre, wp hvmf_active) |
                  wpc | wp hoare_drop_imps hoare_vcg_all_lift |
                  simp add: if_apply_def2 |
                  fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
                          elim!: st_tcb_ex_cap)+)
-  sorry
+ *)
 
 end
 

@@ -950,10 +950,10 @@ lemma  sched_context_clear_ntfn_sc_yf_helper[wp]:
   apply (clarsimp simp: sched_context_unbind_ntfn_def get_sc_obj_ref_def)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (wpsimp wp: hoare_drop_imp get_object_wp get_simple_ko_wp
-      simp: set_sc_obj_ref_def update_sk_obj_ref_def set_simple_ko_def
-      update_sched_context_def set_object_def)
-   apply (clarsimp simp: sc_yf_sc_at_def obj_at_def pred_tcb_at_def split: if_split_asm split del: if_split)
-by (case_tac "p=scptr"; fastforce) clarsimp
+              simp: set_sc_obj_ref_def update_sk_obj_ref_def set_simple_ko_def
+                    update_sched_context_def set_object_def)
+  apply (clarsimp simp: sc_yf_sc_at_def obj_at_def pred_tcb_at_def split: if_split_asm split del: if_split)
+  by (case_tac "p=scptr"; fastforce)
 
 lemma  tcb_sched_context_sc_yf_helper[wp]:
   "\<lbrace>\<lambda>s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>

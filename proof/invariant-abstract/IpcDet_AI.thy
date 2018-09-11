@@ -230,6 +230,7 @@ lemma si_blk_makes_simple:
   apply (rule hoare_seq_ext [OF _ set_simple_ko_pred_tcb_at])
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (case_tac recv_state; simp)
+  supply maybeM_inv[wp]
   apply (wpsimp wp: sts_st_tcb_at_cases hoare_drop_imp)
     apply (intro conjI, wpsimp+)
    apply (intro conjI, wpsimp+)

@@ -3543,9 +3543,9 @@ lemma only_idle_lift:
    apply (rule assms)+
   done
 
-lemma maybeM_inv[wp]:
+lemma maybeM_inv:
   "\<forall>a. \<lbrace>P\<rbrace> f a \<lbrace>\<lambda>_. P\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> maybeM f opt \<lbrace>\<lambda>_. P\<rbrace>"
-  by (wpsimp simp: maybeM_def; fastforce)
+  by (wpsimp wp: maybeM_wp; fastforce)
 
 lemma cap_rights_update_id [intro!, simp]:
   "wellformed_cap c \<Longrightarrow> cap_rights_update (cap_rights c) c = c"

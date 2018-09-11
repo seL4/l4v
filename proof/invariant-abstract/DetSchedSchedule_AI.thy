@@ -2965,7 +2965,8 @@ lemma sched_context_unbind_ntfn_valid_sched[wp]:
 lemma sched_context_maybe_unbind_ntfn_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> sched_context_maybe_unbind_ntfn scptr \<lbrace>\<lambda>rv. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: sched_context_maybe_unbind_ntfn_def set_sc_obj_ref_def
-                   update_sk_obj_ref_def get_sk_obj_ref_def)
+                   update_sk_obj_ref_def get_sk_obj_ref_def
+               wp: hoare_drop_imps)
 
 (* FIXME: Move *)
 lemma sym_ref_tcb_reply_Receive:
@@ -3328,7 +3329,7 @@ lemma thread_set_priority_valid_sched[wp]:
 lemma set_priority_valid_sched[wp]:
   "\<lbrace>valid_sched and not_cur_thread tptr\<rbrace> set_priority tptr prio \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   unfolding set_priority_def
-  apply (wpsimp wp: gts_wp hoare_vcg_if_lift
+  apply (wpsimp wp: maybeM_inv gts_wp hoare_vcg_if_lift
               hoare_vcg_all_lift hoare_vcg_imp_lift
              tcb_dequeue_not_queued hoare_vcg_disj_lift
              tcb_sched_action_enqueue_valid_blocked
@@ -3356,7 +3357,7 @@ crunch simple_sched_action[wp]: sort_queue simple_sched_action
 
 lemma set_priority_simple_sched_action[wp]:
   "\<lbrace>simple_sched_action\<rbrace> set_priority param_a param_b \<lbrace>\<lambda>_. simple_sched_action\<rbrace>"
-  by (wpsimp simp: set_priority_def)
+  by (wpsimp simp: set_priority_def wp: maybeM_inv)
 
 
 
@@ -3593,7 +3594,7 @@ lemma bind_notification_valid_sched[wp]:
 
 lemma suspend_it_det_ext[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> suspend param_a \<lbrace>\<lambda>_ s::det_ext state. P (idle_thread s)\<rbrace>"
-  by (wpsimp simp: suspend_def)
+  by (wpsimp simp: suspend_def wp: hoare_drop_imps)
 
 context DetSchedSchedule_AI begin
 lemma invoke_tcb_valid_sched:

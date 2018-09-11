@@ -2180,7 +2180,7 @@ lemma update_waiting_invs:
                   wp: valid_irq_node_typ sts_only_idle)
    apply (wpsimp simp: valid_tcb_state_def conj_comms)
    apply (wpsimp simp: maybe_donate_sc_def
-                   wp: hoare_vcg_conj_lift sym_refs_helper_update_waiting_invs)
+                   wp: hoare_vcg_conj_lift sym_refs_helper_update_waiting_invs hoare_drop_imps)
   apply (simp add: invs_def valid_state_def valid_pspace_def obj_at_def)
   apply wpsimp
         apply (rule hoare_conjI)
@@ -2273,13 +2273,13 @@ crunch idle[wp]: cancel_ipc "\<lambda>s. P (idle_thread s)"
 
 lemma maybe_donate_sc_sc_tcb_at [wp]:
   "\<lbrace>st_tcb_at P tcb_ptr'\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr \<lbrace>\<lambda>rv. st_tcb_at P tcb_ptr'\<rbrace>"
-  by (wpsimp simp: maybe_donate_sc_def get_sc_obj_ref_def get_sk_obj_ref_def)
+  by (wpsimp simp: maybe_donate_sc_def get_sc_obj_ref_def get_sk_obj_ref_def wp: maybeM_inv)
 
 lemma maybe_donate_sc_not_idle_thread [wp]:
   "\<lbrace>\<lambda>s. tcb_ptr' \<noteq> idle_thread s\<rbrace>
    maybe_donate_sc tcb_ptr ntfn_ptr
    \<lbrace>\<lambda>rv s. tcb_ptr' \<noteq> idle_thread s\<rbrace>"
-  by (wpsimp simp: maybe_donate_sc_def)
+  by (wpsimp simp: maybe_donate_sc_def wp: hoare_drop_imps)
 
 lemma maybe_donate_sc_sym_refs:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of s)\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr

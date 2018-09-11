@@ -716,7 +716,7 @@ lemma sched_context_unbind_tcb_bound_yt_tcb_at[wp]:
 
 lemma unbind_from_sc_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> unbind_from_sc x \<lbrace>\<lambda>rv. bound_tcb_at P t\<rbrace>"
-  by (wpsimp simp: unbind_from_sc_def)
+  by (wpsimp simp: unbind_from_sc_def wp: hoare_drop_imps hoare_vcg_all_lift)
 
 lemma sched_context_unbind_tcb_bound_sc_tcb_at_None:
   "\<lbrace>\<lambda>s. obj_at (\<lambda>obj. \<exists>n na. obj = SchedContext n na \<and> sc_tcb n = Some tcbptr) sc s \<rbrace>
@@ -1552,7 +1552,7 @@ crunch invs[wp]: prepare_thread_delete invs
 
 lemma unbind_from_sc_invs[wp]:
   "\<lbrace>invs\<rbrace> unbind_from_sc t \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp wp: complete_yield_to_invs simp: unbind_from_sc_def)
+  by (wpsimp wp: complete_yield_to_invs hoare_vcg_all_lift hoare_drop_imps simp: unbind_from_sc_def)
 
 lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
   shows "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv (s(*::det_ext state*)). invs s\<rbrace>"

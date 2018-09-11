@@ -476,7 +476,7 @@ lemma sched_context_unbind_tcb_valid_objs[wp]:
 
 lemma unbind_from_sc_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> unbind_from_sc t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  by (wpsimp simp: unbind_from_sc_def)
+  by (wpsimp simp: unbind_from_sc_def wp: maybeM_inv)
 
 lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
   "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s)

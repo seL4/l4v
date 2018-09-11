@@ -70,7 +70,7 @@ lemma get_ntfn_valid_ntfn_minor[wp]: (* FIXME: replace get_ntfn_valid_ntfn ? *)
 lemma unbind_notification_valid_objs:
   "\<lbrace>valid_objs\<rbrace>
    unbind_notification ptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  apply (wpsimp simp: unbind_notification_def update_sk_obj_ref_def)
+  apply (wpsimp simp: unbind_notification_def update_sk_obj_ref_def wp: maybeM_inv)
      apply (rule hoare_strengthen_post)
       apply (wpsimp simp: valid_ntfn_def split: ntfn.splits)+
   done
@@ -130,11 +130,11 @@ lemma reply_unlink_tcb_st_tcb_at_tcb:
 
 lemma unbind_notification_st_tcb_at[wp]:
   "\<lbrace>st_tcb_at P t\<rbrace> unbind_notification t' \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
-  by (wpsimp simp: unbind_notification_def update_sk_obj_ref_def)
+  by (wpsimp simp: unbind_notification_def update_sk_obj_ref_def wp: maybeM_inv)
 
 lemma unbind_maybe_notification_st_tcb_at[wp]:
   "\<lbrace>st_tcb_at P t\<rbrace> unbind_maybe_notification r \<lbrace>\<lambda>rv. st_tcb_at P t \<rbrace>"
-  by (wpsimp simp: unbind_maybe_notification_def update_sk_obj_ref_def get_sk_obj_ref_def)
+  by (wpsimp simp: unbind_maybe_notification_def update_sk_obj_ref_def get_sk_obj_ref_def wp: maybeM_inv)
 
 
 lemma cancel_all_signals_st_tcb_at:
@@ -204,7 +204,8 @@ lemma cancel_signal_st_tcb_at_general:
 lemma sched_context_maybe_unbind_ntfn_st_tcb_at[wp]:
   "\<lbrace>st_tcb_at P t\<rbrace> sched_context_maybe_unbind_ntfn ntfnptr \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
    by (wpsimp simp: sched_context_maybe_unbind_ntfn_def sched_context_unbind_ntfn_def
-                    set_sc_obj_ref_def update_sk_obj_ref_def get_sc_obj_ref_def get_sk_obj_ref_def)
+                    set_sc_obj_ref_def update_sk_obj_ref_def get_sc_obj_ref_def get_sk_obj_ref_def
+                wp: hoare_drop_imps)
 
 lemma sched_context_unbind_ntfn_st_tcb_at[wp]:
   "\<lbrace>st_tcb_at P t\<rbrace> sched_context_unbind_ntfn scptr \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
@@ -306,7 +307,7 @@ crunch typ_at[wp]: get_notification
 lemma unbind_maybe_notification_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
      unbind_maybe_notification t \<lbrace>\<lambda>_ (s::'a state). P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: unbind_maybe_notification_def)
+  by (wpsimp simp: unbind_maybe_notification_def wp: hoare_drop_imps)
 
 lemma cancel_ipc_tcb [wp]:
   "\<lbrace>tcb_at t\<rbrace> cancel_ipc t' \<lbrace>\<lambda>rv. (tcb_at t) :: 'a state \<Rightarrow> bool\<rbrace>"
@@ -1197,7 +1198,7 @@ context IpcCancel_AI begin
 
 lemma suspend_typ_at [wp]:
   "\<lbrace>\<lambda>(s::'a state). P (typ_at T p s)\<rbrace> suspend t \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: suspend_def)
+  by (wpsimp simp: suspend_def wp: hoare_drop_imps)
 
 
 lemma suspend_valid_cap:
@@ -1260,7 +1261,7 @@ lemma set_sc_yield_from_update_cte_wp_at [wp]:
 lemma (in delete_one_pre) suspend_cte_wp_at_preserved:
   "(\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap) \<Longrightarrow>
   \<lbrace>cte_wp_at P p\<rbrace> (suspend tcb :: (unit,'a) s_monad) \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>"
-  by (simp add: suspend_def) (wpsimp wp: cancel_ipc_cte_wp_at_preserved)
+  by (simp add: suspend_def) (wpsimp wp: cancel_ipc_cte_wp_at_preserved hoare_drop_imps)
 
 lemma set_thread_state_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
