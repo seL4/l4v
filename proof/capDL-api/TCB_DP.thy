@@ -324,7 +324,7 @@ lemma invoke_tcb_threadcontrol_wp':
   apply (frule sep_map_c_asid_reset[where ptr="(target_tcb, tcb_vspace_slot)" and cap=vrt_cap])
   apply (frule sep_map_c_asid_reset[where ptr="(target_tcb,tcb_ipcbuffer_slot)" and cap=ipcbuff_cap])
   apply (clarsimp simp: sep_conj_assoc pred_conj_def cong:cap_type_bad_cong
-     | sep_cancel add: | safe)+
+     | sep_cancel | safe)+
   apply (frule sep_map_c_asid_reset[where ptr="(target_tcb,tcb_cspace_slot)" and cap=crt_cap])
   apply simp
 done

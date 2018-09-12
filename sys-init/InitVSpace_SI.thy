@@ -1153,7 +1153,7 @@ lemma init_vspace_sep:
   apply (clarsimp simp: init_vspace_def sep_conj_assoc)
   apply (wp sep_wp: map_map_page_directory_page_tables_wp [where t=t]
                     map_map_page_directory_wp [where t=t], simp+)
-  apply (sep_safe+, sep_solve)
+  apply (sep_solve)
   done
 
 lemma init_pd_asids_sep:

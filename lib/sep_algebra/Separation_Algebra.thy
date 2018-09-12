@@ -1024,13 +1024,23 @@ lemma sep_map_set_conj_set_disjoint:
   apply simp
   by (metis Collect_disj_eq)
 
+
+text {*
+  Separation algebra with positivity
+  *}
+
+class positive_sep_algebra = stronger_sep_algebra +
+  assumes sep_disj_positive : "a ## a \<Longrightarrow> a + a = b \<Longrightarrow> a = b"
+
+
+
 section {* Separation Algebra with a Cancellative Monoid *}
 
 text {*
   Separation algebra with a cancellative monoid. The results of being a precise
   assertion (distributivity over separating conjunction) require this.
   *}
-class cancellative_sep_algebra = sep_algebra +
+class cancellative_sep_algebra = positive_sep_algebra +
   assumes sep_add_cancelD: "\<lbrakk> x + z = y + z ; x ## z ; y ## z \<rbrakk> \<Longrightarrow> x = y"
 begin
 
@@ -1117,6 +1127,10 @@ qed
 
 lemma strictly_precise: "strictly_exact P \<Longrightarrow> precise P"
   by (metis precise_def strictly_exactD)
+
+lemma sep_disj_positive_zero[simp]: "x ## y \<Longrightarrow> x + y = 0 \<Longrightarrow> x = 0 \<and> y = 0"
+  by (metis (full_types) disjoint_zero_sym sep_add_cancelD sep_add_disjD
+                         sep_add_zero_sym sep_disj_positive)
 
 end
 
