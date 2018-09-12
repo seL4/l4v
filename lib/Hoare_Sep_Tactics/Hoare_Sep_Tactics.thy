@@ -10,8 +10,8 @@
 
 theory Hoare_Sep_Tactics
 imports
-  "Lib.NonDetMonadVCG"
-  "Sep_Algebra.Sep_Algebra_L4v"
+  Lib.NonDetMonadVCG
+  Sep_Algebra.Sep_Algebra_L4v
 begin
 
 (* FIXME: needs cleanup *)
@@ -93,8 +93,6 @@ schematic_goal strong_sep_impl_sep_wp':
  apply (erule_tac x=r in allE)
  apply (sep_solve)
 done
-
-thm strong_sep_impl_sep_wp'
 
 lemma strong_sep_impl_sep_wp'':
     "\<And>sep_lift.

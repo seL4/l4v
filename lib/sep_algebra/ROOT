@@ -19,6 +19,7 @@ session Sep_Algebra (lib) = Word_Lib +
   theories
     "Generic_Separation_Algebras"
     "MonadSep"
+    "Sep_Forward"
     "Sep_Cancel_Example"
     "Sep_Eq"
     "Sep_Heap_Instance"

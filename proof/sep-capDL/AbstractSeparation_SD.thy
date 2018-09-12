@@ -124,9 +124,9 @@ instantiation "sep_state" :: cancellative_sep_algebra
 begin
 
 instance
-  apply standard
-  apply (simp add: sep_disj_sep_state_def sep_state_disj_def zero_sep_state_def
+  apply (standard; simp add: sep_disj_sep_state_def sep_state_disj_def zero_sep_state_def
                    plus_sep_state_def sep_state_add_def)
+  apply (metis map_add_subsumed1 map_le_refl sep_heap.simps sep_irq_node.simps sep_state.exhaust)
   by (metis map_add_left_eq sep_heap.simps sep_irq_node.simps sep_state.exhaust)
 end
 

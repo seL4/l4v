@@ -275,7 +275,7 @@ lemma swap_cap_wp:
     swap_cap cap' src cap dest
    \<lbrace>\<lambda>_.<dest \<mapsto>c cap' \<and>* src \<mapsto>c cap \<and>* R>\<rbrace>"
   apply (clarsimp simp add: swap_cap_def)
-  apply (wp sep_wand: swap_parents_wp set_cap_wp)
+  apply (wp add: swap_parents_wp sep_wand: set_cap_wp)
   apply (sep_solve)
   done
 
