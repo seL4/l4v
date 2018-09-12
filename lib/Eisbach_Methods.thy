@@ -17,6 +17,7 @@ imports
   "subgoal_focus/Subgoal_Methods"
   "HOL-Eisbach.Eisbach_Tools"
   Rule_By_Method
+  Local_Method
 begin
 
 

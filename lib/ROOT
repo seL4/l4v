@@ -75,6 +75,7 @@ session Lib (lib) = Word_Lib +
     EquivValid
     SplitRule
     Time_Methods_Cmd_Test
+    Local_Method_Tests
     DataMap
     Corres_Method
     Conjuncts
