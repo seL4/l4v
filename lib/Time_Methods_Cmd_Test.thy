@@ -20,10 +20,16 @@ text \<open>
 
   Usage:
 
-    apply (time_methods [(no_check)]
+    apply (time_methods [(no_check)] [(skip_fail)]
         [name1:] \<open>method1\<close>
         [name2:] \<open>method2\<close>
         ...)
+
+  Options:
+
+    no_check: Don't check that the outputs of each method match.
+
+    skip_fail: Don't print anything for failed methods.
 \<close>
 
 experiment begin
@@ -151,7 +157,7 @@ experiment begin
     apply (tactic \<open>
             let val method = SIMPLE_METHOD (simp_tac @{context} 1)
                 fun dummy_callback _ _ = ()
-            in (fn st => Time_Methods.time_methods false dummy_callback [(NONE, method)] [] st
+            in (fn st => Time_Methods.time_methods false false dummy_callback [(NONE, method)] [] st
                       |> (fn ([timing], st') => (tracing (Timing.message timing); st')))
                |> Method.NO_CONTEXT_TACTIC @{context}
             end\<close>)
@@ -170,7 +176,7 @@ experiment begin
         val methods = @{thms disjI1 disjI2}
               |> map (fn rule => (NONE, SIMPLE_METHOD (resolve_tac @{context} [rule] 1)))
         fun dummy_callback _ _ = ()
-      in (fn st => Time_Methods.time_methods false dummy_callback methods [] st
+      in (fn st => Time_Methods.time_methods false false dummy_callback methods [] st
                    |> (fn (timing, st') => error "test failed: shouldn't reach here")
                    handle THM _ => Seq.succeed (Seq.Result st)) (* should reach here *)
          |> Method.NO_CONTEXT_TACTIC @{context}
@@ -183,6 +189,22 @@ experiment begin
     apply (fails \<open>time_methods \<open>simp\<close>\<close>)
     oops
 
+  text \<open>Check that we skip failing methods when skip_fail set\<close>
+  lemma "A \<and> B \<Longrightarrow> A"
+    apply (
+        ( \<comment> \<open>roughly corresponds to "time_methods (skip_fail) \<open>fail\<close>",
+              but errors if it calls the output callback\<close>
+          tactic \<open>
+            let
+              fun timing_callback _ _ = error "test failed: shouldn't reach here"
+              val methods = [(NONE, SIMPLE_METHOD no_tac)]
+            in
+              (fn st =>
+                #2 (Time_Methods.time_methods false true timing_callback methods [] st))
+              |> Method.NO_CONTEXT_TACTIC @{context}
+            end\<close>)
+      | time_methods (skip_fail) good_simp: \<open>simp\<close>)
+    done
 end
 
 end
