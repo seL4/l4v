@@ -29,6 +29,7 @@ structure Time_Methods = struct
    * Also returns the list of timings at the end. *)
   fun time_methods
         (no_check: bool)
+        (skip_fail: bool)
         (callback: (int * string option -> Timing.timing -> unit))
         (maybe_named_methods: (string option * Method.method) list)
         (* like Method.method but also returns timing list *)
@@ -46,7 +47,10 @@ structure Time_Methods = struct
         val results = tag_list 1 maybe_named_methods
               |> map (fn (idx1, (maybe_name, method)) =>
                   let val (time, (st', results)) = run method
-                      val _ = callback (idx1, maybe_name) time
+                      val _ =
+                        if Option.isSome st' orelse not skip_fail
+                        then callback (idx1, maybe_name) time
+                        else ()
                       val name = Option.getOpt (maybe_name, "[method " ^ string_of_int idx1 ^ "]")
                   in {name = name, state = st', results = results, time = time} end)
 
@@ -76,14 +80,16 @@ end
 
 method_setup time_methods = \<open>
 let
-  val parse_no_check = Scan.lift (Scan.optional (Args.parens (Parse.reserved "no_check") >> K true) false)
+  fun scan_flag name = Scan.lift (Scan.optional (Args.parens (Parse.reserved name) >> K true) false)
+  val parse_no_check = scan_flag "no_check"
+  val parse_skip_fail = scan_flag "skip_fail"
   val parse_maybe_name = Scan.option (Scan.lift (Parse.liberal_name --| Parse.$$$ ":"))
   fun auto_name (idx1, maybe_name) =
         Option.getOpt (maybe_name, "[method " ^ string_of_int idx1 ^ "]")
 in
-  parse_no_check --
+  parse_no_check -- parse_skip_fail --
   Scan.repeat1 (parse_maybe_name -- Method.text_closure) >>
-  (fn (no_check, maybe_named_methods_text) => fn ctxt =>
+  (fn ((no_check, skip_fail), maybe_named_methods_text) => fn ctxt =>
       let
         val max_length = tag_list 1 (map fst maybe_named_methods_text)
                          |> map (String.size o auto_name)
@@ -94,7 +100,7 @@ in
         fun timing_callback id time = warning (pad_name (auto_name id ^ ": ") ^ Timing.message time)
         val maybe_named_methods = maybe_named_methods_text
               |> map (apsnd (fn method_text => Method.evaluate method_text ctxt))
-        val timed_method = Time_Methods.time_methods no_check timing_callback maybe_named_methods
+        val timed_method = Time_Methods.time_methods no_check skip_fail timing_callback maybe_named_methods
         fun method_discard_times facts st = snd (timed_method facts st)
       in
         method_discard_times
