@@ -65,7 +65,7 @@ begin
   lemma "A \<Longrightarrow> B \<Longrightarrow> A \<and> B"
     supply_local_method foo = simp
     apply (fails \<open>local_method bar\<close>)
-    sorry
+    oops
 
   text \<open>Doesn't persist between subgoals\<close>
   lemma "A \<Longrightarrow> B \<Longrightarrow> A \<and> B"
@@ -75,7 +75,7 @@ begin
      apply (local_method my_simp)
      done
     apply (fails \<open>local_method my_simp\<close>)
-    sorry
+    oops
 
   text \<open>Does see top-level method definitions\<close>
   method foo = simp
