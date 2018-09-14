@@ -24,7 +24,7 @@ end
 
 abbreviation
   "idle st \<equiv> st = Structures_A.IdleThreadState"
-
+(*
 text {* Gets the TCB at an address if the thread can be scheduled. *}
 definition
   getActiveTCB :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> tcb option"
@@ -41,13 +41,25 @@ definition
     state \<leftarrow> get;
     return {x. getActiveTCB x state \<noteq> None}
    od"
-
+*)
 text {* Switches the current thread to the specified one. *}
 definition
   switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "switch_to_thread t \<equiv> do
      state \<leftarrow> get;
      assert (get_tcb t state \<noteq> None);
+
+     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
+     scp \<leftarrow> assert_opt sc_opt; (* must have an sc *)
+     inq \<leftarrow> gets $ in_release_queue t;
+     assert (\<not> inq);  (* not in release q *)
+     sc \<leftarrow> get_sched_context scp;
+     curtime \<leftarrow> gets cur_time;
+     sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
+     ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; (* refill_ready sc_ptr *)
+     assert sufficient;
+     assert ready;   (* asserting ready & sufficient *)
+
      arch_switch_to_thread t;
      tcb_sched_action (tcb_sched_dequeue) t;
      modify (\<lambda>s. s \<lparr> cur_thread := t \<rparr>)
@@ -58,7 +70,15 @@ definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_m
   "guarded_switch_to thread \<equiv> do
      inq \<leftarrow> gets $ in_release_queue thread;
      sched \<leftarrow> is_schedulable thread inq;
+     sc_opt \<leftarrow> thread_get tcb_sched_context thread;
+     scp \<leftarrow> assert_opt sc_opt;
      assert sched;
+     sc \<leftarrow> get_sched_context scp;
+     curtime \<leftarrow> gets cur_time;
+     sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
+     ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; (* refill_ready sc_ptr *)
+     assert sufficient;
+     assert ready;   (* asserting ready & sufficient *)
      switch_to_thread thread
    od"
 
@@ -127,18 +147,35 @@ where
     cur_sc \<leftarrow> gets cur_sc;
     cur_th \<leftarrow> gets cur_thread;
     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context cur_th;
-    sc \<leftarrow> assert_opt sc_opt;
-    when (sc \<noteq> cur_sc) $ do
+    scp \<leftarrow> assert_opt sc_opt;
+    when (scp \<noteq> cur_sc) $ do
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
-      refill_unblock_check sc
-    od;
+      refill_unblock_check scp;
+      sc \<leftarrow> get_sched_context scp;
+      curtime \<leftarrow> gets cur_time;
+      sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
+      ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; (* refill_ready sc_ptr *)
+      assert sufficient;
+      assert ready   (* asserting ready & sufficient *)
+     od;
     reprogram \<leftarrow> gets reprogram_timer;
     if reprogram
     then
       commit_time
     else
       rollback_time;
-    modify (\<lambda>s. s\<lparr> cur_sc:= sc \<rparr>)
+
+   (* the C code asserts ((ready & sufficient cur_sc) \<or> not in ready q) here *)
+      sc_tcb_opt \<leftarrow> get_sc_obj_ref sc_tcb cur_sc;
+      ct \<leftarrow> assert_opt sc_tcb_opt;
+      d \<leftarrow> thread_get tcb_domain ct;
+      prio \<leftarrow> thread_get tcb_priority ct;
+      queue \<leftarrow> get_tcb_queue d prio;
+      sufficient \<leftarrow> refill_sufficient cur_sc 0;
+      ready \<leftarrow> refill_ready cur_sc;
+      assert ((ready \<and> sufficient) \<or>\<not>(ct \<in> set queue));
+
+    modify (\<lambda>s. s\<lparr> cur_sc:= scp \<rparr>)
   od"
 
 definition
@@ -166,7 +203,9 @@ where
   "refill_ready_tcb t = do
      sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
      sc_ptr \<leftarrow> assert_opt sc_opt;
-     refill_ready sc_ptr
+     ready \<leftarrow> refill_ready sc_ptr;
+     sufficient \<leftarrow> refill_sufficient sc_ptr 0;
+     return (ready \<and> sufficient)
    od"
 
 definition
@@ -179,6 +218,7 @@ where
     rq2 \<leftarrow> return $ drop (length rq1) rq;
     modify $ release_queue_update (K rq2);
     mapM_x (\<lambda>t. do
+      (* the C code asserts refill_sufficient here \<rightarrow> we guarantee this inside refill_ready_tcb for now *)
       possible_switch_to t;
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>)
     od) rq1
@@ -234,11 +274,11 @@ definition
             return ()
          od
        | choose_new_thread \<Rightarrow> do
-           when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct);
+           when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct); (* schedulable *)
            schedule_choose_new_thread
          od
        | switch_thread candidate \<Rightarrow> do
-           when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct);
+           when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct); (* schedulable *)
 
            it \<leftarrow> gets idle_thread;
            target_prio \<leftarrow> thread_get tcb_priority candidate;
@@ -314,7 +354,7 @@ where
       if (prios < ct_prios)
       then do
         tcb_sched_action tcb_sched_dequeue tcb_ptr;
-        tcb_sched_action tcb_sched_enqueue tcb_ptr
+        tcb_sched_action tcb_sched_enqueue tcb_ptr (* schedulable & dequeud & sufficient & ready *)
       od
       else do
         flag \<leftarrow> return False;

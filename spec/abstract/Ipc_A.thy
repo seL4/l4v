@@ -305,6 +305,14 @@ where
                    thread_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context thread;
                    sched_context_donate (the thread_sc) dest
                 od;
+                new_sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
+                test \<leftarrow> case new_sc_opt of Some scp \<Rightarrow> do
+                            sufficient \<leftarrow> refill_sufficient scp 0;
+                            ready \<leftarrow> refill_ready scp;
+                            return (sufficient \<and> ready)
+                        od
+                        | _ \<Rightarrow> return True;  (* why does C allow dest to have no sc? *)
+                assert test;
                 set_thread_state dest Running;
                 possible_switch_to dest
               od
@@ -408,6 +416,7 @@ where
               else do
                 set_thread_state sender Running;
                 possible_switch_to sender
+              (* the C code has a test here for (refiil_sufficient sender'sc \<or> sender's sc is None) *)
               od
             od
    od"
@@ -649,8 +658,14 @@ where
        if canTimeout \<and> (is_ep_cap (tcb_timeout_handler tcb)) then
          handle_timeout ct (Timeout (sc_badge csc))
        else if ready \<and> sufficient then do
-         cur \<leftarrow> gets cur_thread;
-         tcb_sched_action tcb_sched_append cur
+
+       (* C code assets cur_thread not to be in ready q at this point *)
+         d \<leftarrow> thread_get tcb_domain ct;
+         prio \<leftarrow> thread_get tcb_priority ct;
+         queue \<leftarrow> get_tcb_queue d prio;
+         assert (\<not>(ct \<in> set queue));
+
+         tcb_sched_action tcb_sched_append ct (* not_queued & ready & sufficient & runnable *)
        od
        else
          postpone sc_ptr
@@ -688,6 +703,7 @@ where
      csc \<leftarrow> gets cur_sc;
      consumed \<leftarrow> gets consumed_time;
      sc \<leftarrow> get_sched_context csc;
+    (* maybe assert refill_ready? *)
      capacity \<leftarrow> refill_capacity csc consumed;
 
      full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc); (* = refill_full csc *)

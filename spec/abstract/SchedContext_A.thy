@@ -38,12 +38,6 @@ where
     get_sched_context sc_ptr
   od"
 
-abbreviation
-  "refill_hd sc \<equiv> hd (sc_refills sc)"
-
-abbreviation
-  "refill_tl sc \<equiv> last (sc_refills sc)" (** condition? **)
-
 definition
   get_sc_time :: "obj_ref \<Rightarrow> (time, 'z::state_ext) s_monad"
 where
@@ -65,51 +59,6 @@ where
      qst \<leftarrow> return $ zip qs times;
      qst' \<leftarrow> return $ filter (\<lambda>(_,t'). t' \<le> time) qst @ [(tcb_ptr,time)] @ filter (\<lambda>(_,t'). \<not>t' \<le> time) qst;
      modify (\<lambda>s. s\<lparr>release_queue := map fst qst'\<rparr>)
-  od"
-
-definition
-  refills_capacity :: "time \<Rightarrow> refill list \<Rightarrow> time"
-where
-  "refills_capacity usage refills \<equiv>
-  if r_amount (hd refills) < usage then 0 else r_amount (hd refills) - usage"
-
-definition
-  get_refills :: "obj_ref \<Rightarrow> (refill list, 'z::state_ext) s_monad"
-where
-  "get_refills sc_ptr = do
-    sc \<leftarrow> get_sched_context sc_ptr;
-    return $ sc_refills sc
-  od"
-
-definition
-  refill_capacity :: "obj_ref \<Rightarrow> time \<Rightarrow> (time, 'z::state_ext) s_monad"
-where
-  "refill_capacity sc_ptr usage = do
-    refills \<leftarrow> get_refills sc_ptr;
-    return $ refills_capacity usage refills
-  od"
-
-definition
-  sufficient_refills :: "time \<Rightarrow> refill list \<Rightarrow> bool"
-where
-  "sufficient_refills usage refills = (MIN_BUDGET \<le> refills_capacity usage refills)"
-
-definition
-  refill_sufficient :: "obj_ref \<Rightarrow> time \<Rightarrow> (bool, 'z::state_ext) s_monad"
-where
-  "refill_sufficient sc_ptr usage = do
-    refills \<leftarrow> get_refills sc_ptr;
-    return $ sufficient_refills usage refills
-  od"
-
-definition
-  refill_ready :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad"
-where
-  "refill_ready sc_ptr = do
-    cur_time \<leftarrow> gets cur_time;
-    sc \<leftarrow> get_sched_context sc_ptr;
-    sc_time \<leftarrow> return $ r_time (refill_hd sc);
-    return $ sc_time \<le> cur_time + kernelWCET_ticks
   od"
 
 definition
@@ -260,7 +209,7 @@ where
   "refill_unblock_check sc_ptr = do
     robin \<leftarrow> is_round_robin sc_ptr;
     when (\<not> robin ) $ do
-      ct \<leftarrow> gets cur_time;
+      ct \<leftarrow> gets cur_time; (* do we need to check refill_ready here? *)
       modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
       refills \<leftarrow> get_refills sc_ptr;
       refills' \<leftarrow> return $ refills_merge_prefix ((hd refills)\<lparr>r_time := ct\<rparr> # tl refills);
@@ -409,8 +358,16 @@ where
        ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr *)
 
        sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
+       when (runnable ts \<and> 0 < sc_refill_max sc \<and> \<not>(ready \<and> sufficient)) $ do
 
-       when (runnable ts \<and> 0 < sc_refill_max sc \<and> \<not>(ready \<and> sufficient)) $ postpone sc_ptr
+       (* C code also asserts that tptr is not in ready q *)
+         d \<leftarrow> thread_get tcb_domain tptr;
+         prio \<leftarrow> thread_get tcb_priority tptr;
+         queue \<leftarrow> get_tcb_queue d prio;
+         assert (\<not>(tptr \<in> set queue));
+
+         postpone sc_ptr
+       od
      od
    od"
 
@@ -538,12 +495,23 @@ where
     csc \<leftarrow> gets cur_sc;
     sc \<leftarrow> get_sched_context csc;
     when (0 < consumed) $ do
+      curtime \<leftarrow> gets cur_time;
+      sufficient \<leftarrow> return $ sufficient_refills consumed (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
+      ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; (* refill_ready sc_ptr *)
+      assert sufficient;
+      assert ready;   (* asserting ready & sufficient *)
       robin \<leftarrow> return (sc_period sc = 0); (* is_round_robin csc;*)
       if robin then
         let new_hd = ((refill_hd sc) \<lparr> r_time := r_time (refill_hd sc) - consumed \<rparr>);
             new_tl = ((refill_tl sc) \<lparr> r_time := r_time (refill_tl sc) + consumed \<rparr>) in
         set_refills csc (new_hd # [new_tl])
-      else refill_split_check csc consumed
+      else refill_split_check csc consumed;
+      sc2 \<leftarrow> get_sched_context csc;
+      curtime2 \<leftarrow> gets cur_time;
+      sufficient2 \<leftarrow> return $ sufficient_refills consumed (sc_refills sc2); (* refill_sufficient sc_ptr 0 *)
+      ready2 \<leftarrow> return $ (r_time (refill_hd sc2)) \<le> curtime2 + kernelWCET_ticks; (* refill_ready sc_ptr *)
+      assert sufficient2;
+      assert ready2   (* asserting ready & sufficient again *)
     od;
     commit_domain_time; (***)
     update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);

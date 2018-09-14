@@ -264,8 +264,9 @@ definition
      cur \<leftarrow> gets cur_thread;
      tcb_sched_action tcb_sched_dequeue tptr;
      thread_set_domain tptr new_dom;
-     ts \<leftarrow> get_thread_state tptr;
-     when (runnable ts) $ tcb_sched_action tcb_sched_enqueue tptr;
+     in_release_q \<leftarrow> gets $ in_release_queue tptr;
+     sched \<leftarrow> is_schedulable tptr in_release_q;
+     when sched $ tcb_sched_action tcb_sched_enqueue tptr; (* schedulable & dequeued *)
      when (tptr = cur) $ reschedule_required
    od"
 

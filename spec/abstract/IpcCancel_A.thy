@@ -358,13 +358,15 @@ text {* Set new priority for a TCB *}
 definition
   set_priority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "set_priority tptr prio \<equiv> do
+     ts \<leftarrow> get_thread_state tptr;
+     in_release_q \<leftarrow> gets $ in_release_queue tptr;
+     sched \<leftarrow> is_schedulable tptr in_release_q;
      tcb_sched_action tcb_sched_dequeue tptr;
      thread_set_priority tptr prio;
-     ts \<leftarrow> get_thread_state tptr;
-     when (runnable ts) $ do
-       tcb_sched_action tcb_sched_enqueue tptr;
-       cur \<leftarrow> gets cur_thread;
-       when (tptr = cur) $ reschedule_required
+       when sched $ do
+         tcb_sched_action tcb_sched_enqueue tptr; (* schedulable & dequeued *)
+         cur \<leftarrow> gets cur_thread;
+         when (tptr = cur) $ reschedule_required
      od;
      maybeM (reorder_ep) (ep_blocked ts);
      maybeM (reorder_ntfn) (ntfn_blocked ts)
@@ -379,9 +381,9 @@ definition
      cur_dom \<leftarrow> gets cur_domain;
      target_dom \<leftarrow> thread_get tcb_domain target;
      action \<leftarrow> gets scheduler_action;
-
+     (* not in release queue & active_sc *)
      if (target_dom \<noteq> cur_dom) then
-       tcb_sched_action tcb_sched_enqueue target
+       tcb_sched_action tcb_sched_enqueue target (* not in cur_domain *)
      else if (action \<noteq> resume_cur_thread) then
        do
          reschedule_required;

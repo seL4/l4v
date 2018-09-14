@@ -308,6 +308,70 @@ where
            \<and> \<not>in_release_q))"
 
 definition
+  is_schedulable_bool :: "obj_ref \<Rightarrow> bool \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "is_schedulable_bool tcb_ptr in_release_q \<equiv> \<lambda>s.
+    case tcb_sched_context (the (get_tcb tcb_ptr s)) of None => False
+      | Some sc_ptr =>
+           (runnable (tcb_state (the (get_tcb tcb_ptr s))) \<and> (test_sc_refill_max sc_ptr s)
+           \<and> \<not>in_release_q)"
+
+(* refill checks *)
+
+abbreviation
+  "refill_hd sc \<equiv> hd (sc_refills sc)"
+
+abbreviation
+  "refill_tl sc \<equiv> last (sc_refills sc)" (** condition? **)
+
+definition
+  refills_capacity :: "time \<Rightarrow> refill list \<Rightarrow> time"
+where
+  "refills_capacity usage refills \<equiv>
+  if r_amount (hd refills) < usage then 0 else r_amount (hd refills) - usage"
+
+definition
+  get_refills :: "obj_ref \<Rightarrow> (refill list, 'z::state_ext) s_monad"
+where
+  "get_refills sc_ptr = do
+    sc \<leftarrow> get_sched_context sc_ptr;
+    return $ sc_refills sc
+  od"
+
+definition
+  refill_capacity :: "obj_ref \<Rightarrow> time \<Rightarrow> (time, 'z::state_ext) s_monad"
+where
+  "refill_capacity sc_ptr usage = do
+    refills \<leftarrow> get_refills sc_ptr;
+    return $ refills_capacity usage refills
+  od"
+
+definition
+  sufficient_refills :: "time \<Rightarrow> refill list \<Rightarrow> bool"
+where
+  "sufficient_refills usage refills = (MIN_BUDGET \<le> refills_capacity usage refills)"
+
+definition
+  refill_sufficient :: "obj_ref \<Rightarrow> time \<Rightarrow> (bool, 'z::state_ext) s_monad"
+where
+  "refill_sufficient sc_ptr usage = do
+    refills \<leftarrow> get_refills sc_ptr;
+    return $ sufficient_refills usage refills
+  od"
+
+definition
+  refill_ready :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad"
+where
+  "refill_ready sc_ptr = do
+    cur_time \<leftarrow> gets cur_time;
+    sc \<leftarrow> get_sched_context sc_ptr;
+    sc_time \<leftarrow> return $ r_time (refill_hd sc);
+    return $ sc_time \<le> cur_time + kernelWCET_ticks
+  od"
+
+(* end refill checks *)
+
+definition
   get_tcb_queue :: "domain \<Rightarrow> priority \<Rightarrow> (ready_queue, 'z::state_ext) s_monad" where
   "get_tcb_queue d prio \<equiv> do
      queues \<leftarrow> gets ready_queues;
@@ -321,7 +385,8 @@ definition
       (\<lambda>d' p. if d' = d \<and> p = prio then queue else ready_queues es d' p)\<rparr>)"
 
 definition
-  tcb_sched_action :: "(obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list) \<Rightarrow> obj_ref  \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  tcb_sched_action :: "(obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list) \<Rightarrow> obj_ref
+                        \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "tcb_sched_action action thread \<equiv> do
      d \<leftarrow> thread_get tcb_domain thread;
@@ -332,11 +397,14 @@ where
 
 definition
   tcb_sched_enqueue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
-  "tcb_sched_enqueue thread queue \<equiv> if (thread \<notin> set queue) then thread # queue else queue"
+  "tcb_sched_enqueue thread queue\<equiv>
+      if (thread \<notin> set queue) then thread # queue else queue"
+  (* the C code does not require the ready condition; why? *)
 
 definition
   tcb_sched_append :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
-  "tcb_sched_append thread queue \<equiv> if (thread \<notin> set queue) then queue @ [thread] else queue"
+  "tcb_sched_append thread queue\<equiv>
+      if (thread \<notin> set queue) then queue @ [thread] else queue"
 
 definition
   tcb_sched_dequeue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
@@ -356,7 +424,7 @@ where
 definition
   tcb_release_remove :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "tcb_release_remove tcb_ptr = modify (release_queue_update (tcb_sched_dequeue tcb_ptr))"
+  "tcb_release_remove tcb_ptr = modify (release_queue_update (\<lambda>q. tcb_sched_dequeue tcb_ptr q))"
 
 definition
   set_scheduler_action :: "scheduler_action \<Rightarrow> (unit, 'z::state_ext) s_monad" where
@@ -371,6 +439,7 @@ definition
   thread_set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "thread_set_domain tptr domain \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_domain := domain\<rparr>) tptr"
 
+
 definition reschedule_required :: "(unit, 'z::state_ext) s_monad" where
   "reschedule_required \<equiv> do
      action \<leftarrow> gets scheduler_action;
@@ -378,7 +447,16 @@ definition reschedule_required :: "(unit, 'z::state_ext) s_monad" where
        switch_thread t \<Rightarrow> do
          in_release_q \<leftarrow> gets $ in_release_queue t;
          sched \<leftarrow> is_schedulable t in_release_q;
-         when sched $ tcb_sched_action (tcb_sched_enqueue) t
+         when sched $ do
+           sc_opt \<leftarrow> thread_get tcb_sched_context t;
+           scp \<leftarrow> assert_opt sc_opt;
+           sc \<leftarrow> get_sched_context scp;
+           curtime \<leftarrow> gets cur_time;
+           sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
+           ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks; (* refill_ready sc_ptr *)
+           assert (sufficient & ready);
+           tcb_sched_action (tcb_sched_enqueue) t
+         od
        od
      | _ \<Rightarrow> return ();
      set_scheduler_action choose_new_thread
