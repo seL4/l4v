@@ -29,7 +29,6 @@ session Lib (lib) = Word_Lib +
     MonadEq
     SimpStrategy
     Extract_Conjunct
-    Apply_Debug_Test
     GenericLib
     ProvePart
     Corres_Adjust_Preconds
@@ -38,7 +37,6 @@ session Lib (lib) = Word_Lib +
     Value_Abbreviation
     Eisbach_Methods
     HaskellLib_H
-    AutoLevity_Test
     Eval_Bool
     Bisim_UL
     Extend_Locale
@@ -54,7 +52,6 @@ session Lib (lib) = Word_Lib +
     ListLibLemmas
     Time_Methods_Cmd
     Apply_Debug
-    Match_Abbreviation_Test
     MonadicRewrite
     HaskellLemmaBucket
     "ml-helpers/TermPatternAntiquote"
@@ -74,8 +71,6 @@ session Lib (lib) = Word_Lib +
     SpecValid_R
     EquivValid
     SplitRule
-    Time_Methods_Cmd_Test
-    Local_Method_Tests
     DataMap
     Corres_Method
     Conjuncts
@@ -151,6 +146,11 @@ session LibTest (lib) = Refine +
     ExecSpec
   theories
     WPTutorial
+    Match_Abbreviation_Test
+    Apply_Debug_Test
+    AutoLevity_Test
+    Time_Methods_Cmd_Test
+    Local_Method_Tests
   (* use virtual memory function as an example, only makes sense on ARM: *)
   theories [condition = "L4V_ARCH_IS_ARM"]
     Corres_Test
