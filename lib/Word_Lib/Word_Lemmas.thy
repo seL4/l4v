@@ -404,6 +404,9 @@ lemma set_enum_word8_def:
                             244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255}"
   by eval
 
+lemma set_strip_insert: "\<lbrakk> x \<in> insert a S; x \<noteq> a \<rbrakk> \<Longrightarrow> x \<in> S"
+  by simp
+
 lemma word8_exhaust:
   fixes x :: word8
   shows "\<lbrakk>x \<noteq> 0; x \<noteq> 1; x \<noteq> 2; x \<noteq> 3; x \<noteq> 4; x \<noteq> 5; x \<noteq> 6; x \<noteq> 7; x \<noteq> 8; x \<noteq> 9; x \<noteq> 10; x \<noteq> 11; x \<noteq>
@@ -431,8 +434,11 @@ lemma word8_exhaust:
           230; x \<noteq> 231; x \<noteq> 232; x \<noteq> 233; x \<noteq> 234; x \<noteq> 235; x \<noteq> 236; x \<noteq> 237; x \<noteq> 238; x \<noteq> 239; x \<noteq>
           240; x \<noteq> 241; x \<noteq> 242; x \<noteq> 243; x \<noteq> 244; x \<noteq> 245; x \<noteq> 246; x \<noteq> 247; x \<noteq> 248; x \<noteq> 249; x \<noteq>
           250; x \<noteq> 251; x \<noteq> 252; x \<noteq> 253; x \<noteq> 254; x \<noteq> 255\<rbrakk> \<Longrightarrow> P"
-  by (subgoal_tac "x \<in> set enum", subst (asm) set_enum_word8_def, simp, simp)
-
+  apply (subgoal_tac "x \<in> set enum", subst (asm) set_enum_word8_def)
+    apply (drule set_strip_insert, assumption)+
+   apply (erule emptyE)
+  apply (subst enum_UNIV, rule UNIV_I)
+  done
 
 lemma upto_enum_red':
   assumes lt: "1 \<le> X"
