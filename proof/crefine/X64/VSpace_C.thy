@@ -248,6 +248,7 @@ where
        | vmfault_type.X64InstructionFault \<Rightarrow> scast Kernel_C.X86InstructionFault"
 
 lemmas mask_64_id[simp] = mask_len_id[where 'a=64, folded word_bits_def]
+                          mask_len_id[where 'a=64, simplified]
 
 (* FIXME: automate this *)
 lemma seL4_Fault_VMFault_new'_spec:

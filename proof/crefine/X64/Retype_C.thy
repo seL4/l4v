@@ -21,11 +21,8 @@ instance cte_C :: array_outer_max_size
   by intro_classes simp
 
 lemma sint_eq_uint:
-  "unat (a::machine_word) < 2^ 63 \<Longrightarrow> sint a = uint a"
-  apply (rule sint_eq_uintI)
-  apply (clarsimp simp:uint_nat word_bits_def
-    zless_nat_eq_int_zless[symmetric])
-  done
+  "unat (a::machine_word) < 2 ^ 63 \<Longrightarrow> sint a = uint a"
+  by (fastforce simp: unat_ucast_less_no_overflow_simp sint_eq_uint not_msb_from_less)
 
 lemma sle_positive: "\<lbrakk> b < 0x8000000000000000; (a :: machine_word) \<le> b \<rbrakk> \<Longrightarrow> a <=s b"
   apply (simp add:word_sle_def)
@@ -231,7 +228,7 @@ lemma memzero_spec:
        apply clarsimp
        apply (rule aligned_sub_aligned [where n=3], simp_all add: is_aligned_def word_bits_def)[1]
       apply clarsimp
-      apply (rule aligned_add_aligned_simple, simp_all add: is_aligned_def word_bits_def)[1]
+      apply (rule is_aligned_add, simp_all add: is_aligned_def word_bits_def)[1]
      apply (erule order_trans[rotated])
      apply (clarsimp simp: subset_iff)
      apply (erule subsetD[OF intvl_sub_offset, rotated])
@@ -995,7 +992,7 @@ proof -
     apply simp
     done
 
-  note al_sub = aligned_sub_aligned_simple[OF al align word_bits]
+  note al_sub = aligned_sub_aligned_simple[OF al align]
 
   have yuck: "of_nat b * 2 ^ n \<noteq> (0 :: machine_word)"
     using of_nat_neq_0[where k="b * 2 ^ n" and 'a=machine_word_len] b card
@@ -2912,7 +2909,7 @@ lemma insertNewCap_ccorres_helper:
   apply (rule conjI)
    apply (erule (2) cmap_relation_updI)
    apply (simp add: ccap_relation_def ccte_relation_def cte_lift_def)
-    subgoal by (simp add: cte_to_H_def map_option_Some_eq2 mdb_node_to_H_def to_bool_mask_to_bool_bf is_aligned_neg_mask
+    subgoal by (simp add: cte_to_H_def map_option_Some_eq2 mdb_node_to_H_def to_bool_mask_to_bool_bf is_aligned_neg_mask_weaken
       c_valid_cte_def true_def canonical_address_sign_extended sign_extended_iff_sign_extend cteSizeBits_def
       split: option.splits)
    subgoal by simp
@@ -6558,7 +6555,7 @@ proof -
          apiGetObjectSize_def cteSizeBits_def
          objBits_simps field_simps is_aligned_power2
          addr_card_wb is_aligned_weaken[where y=2]
-         is_aligned_neg_mask
+         is_aligned_neg_mask_weaken
         split: option.splits)
       apply (rule conjI)
        apply (frule range_cover.aligned)
@@ -7322,7 +7319,7 @@ lemma tcb_ctes_typ_region_bytes:
   apply (subst valid_footprint_typ_region_bytes)
    apply (simp add: uinfo_array_tag_n_m_def typ_uinfo_t_def typ_info_word)
   apply (clarsimp simp only: map_comp_Some_iff projectKOs
-                        pspace_no_overlap'_def is_aligned_neg_mask
+                        pspace_no_overlap'_def is_aligned_neg_mask_weaken
                         field_simps upto_intvl_eq[symmetric])
   apply (elim allE, drule(1) mp)
   apply simp

@@ -294,10 +294,9 @@ lemma removeFromBitmap_valid_queues_no_bitmap_except[wp]:
 lemma removeFromBitmap_bitmapQ:
   "\<lbrace> \<lambda>s. True \<rbrace> removeFromBitmap d p \<lbrace>\<lambda>_ s. \<not> bitmapQ d p s \<rbrace>"
   unfolding bitmapQ_defs bitmap_fun_defs
-  apply (wp| clarsimp simp: bitmap_fun_defs)+
-  apply (clarsimp simp: bitmapQ_def  ucast_and_mask[symmetric] is_up unat_ucast_upcast)
+  apply (wp | clarsimp simp: bitmap_fun_defs wordRadix_def)+
   apply (subst (asm) complement_nth_w2p, simp_all)
-  apply (fastforce intro!: order_less_le_trans[OF word_unat_mask_lt] simp: word_size wordRadix_def')
+  apply (fastforce intro!: order_less_le_trans[OF word_unat_mask_lt] simp: word_size)
   done
 
 lemma removeFromBitmap_valid_bitmapQ[wp]:
@@ -1766,14 +1765,17 @@ lemma bitmapQ_lookupBitmapPriority_simp: (* neater unfold, actual unfold is real
   apply (frule test_bit_size[where n="word_log2 (ksReadyQueuesL2Bitmap _ _)"])
   apply (clarsimp simp: numPriorities_def wordBits_def word_size)
   apply (subst prioToL1Index_l1IndexToPrio_or_id)
-    apply (simp add: wordRadix_def' unat_of_nat word_size)
-   apply (simp add: wordRadix_def' unat_of_nat word_size l2BitmapSize_def')
+    apply (subst unat_of_nat_eq)
+    apply (fastforce intro: unat_less_helper word_log2_max[THEN order_less_le_trans]
+                      simp: wordRadix_def word_size l2BitmapSize_def')+
   apply (subst prioToL1Index_l1IndexToPrio_or_id)
-    apply (simp add: wordRadix_def' unat_of_nat word_size)
-   apply (simp add: wordRadix_def' unat_of_nat word_size l2BitmapSize_def')
+    apply (fastforce intro: unat_less_helper word_log2_max of_nat_mono_maybe
+                      simp: wordRadix_def word_size l2BitmapSize_def')+
   apply (simp add: word_ao_dist)
   apply (subst less_mask_eq)
    apply (fastforce intro: word_of_nat_less simp: wordRadix_def' unat_of_nat word_size)+
+  apply (subst unat_of_nat_eq)
+   apply (fastforce intro: word_log2_max[THEN order_less_le_trans] simp: word_size)+
   done
 
 lemma bitmapQ_from_bitmap_lookup:

@@ -3492,8 +3492,7 @@ lemma createNewCaps_distinct:
      apply (rule notI)
      apply (erule(3) ptr_add_distinct_helper)
       apply (simp add:range_cover_def word_bits_def)
-     apply (erule range_cover.range_cover_n_le(1)
-       [where 'a=32, folded word_bits_def])
+     apply (erule range_cover.range_cover_n_le(1))
     apply (clarsimp simp: ptr_add_def word_unat_power[symmetric])
     apply (rule is_aligned_add_multI[OF _ le_refl refl])
      apply (simp add:range_cover_def)
@@ -3569,8 +3568,7 @@ lemma createNewCaps_ranges:
      apply (rule notI)
      apply (erule(3) ptr_add_distinct_helper)
       apply (simp add:range_cover_def word_bits_def)
-     apply (erule range_cover.range_cover_n_le(1)
-       [where 'a=32, folded word_bits_def])
+     apply (erule range_cover.range_cover_n_le(1))
     apply (clarsimp simp: ptr_add_def word_unat_power[symmetric])
     apply (rule is_aligned_add_multI[OF _ le_refl refl])
      apply (simp add:range_cover_def)+
@@ -5814,6 +5812,9 @@ lemma capRange_subset_capBits:
     \<Longrightarrow> capRange cap \<subseteq> capRange cap'
     \<Longrightarrow> capRange cap \<noteq> {}
     \<Longrightarrow> capBits cap \<le> capBits cap'"
+  supply
+    is_aligned_neg_mask_eq[simp del]
+    is_aligned_neg_mask_weaken[simp del]
   apply (simp add: capRange_def capAligned_def is_aligned_no_overflow
             split: if_split_asm del: atLeastatMost_subset_iff)
   apply (frule_tac c="capUntypedPtr cap" in subsetD)

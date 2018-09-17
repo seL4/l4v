@@ -398,7 +398,6 @@ lemma lookup_fp_ccorres':
         apply (rule word_le_minus_mono, simp_all add: word_le_sub1 word_sub_le_iff)[1]
         apply (rule order_trans, rule word_and_le1, simp)
        apply (simp add: word_bits_def)
-      apply simp
       done
 
     have valid_cnode_bits_0:
@@ -877,7 +876,7 @@ lemma heap_relation_user_word_at_cross_over:
    apply (rule order_trans[rotated])
     apply (rule_tac x="p && mask pageBits" and y=4 in intvl_sub_offset)
     apply (cut_tac y=p and a="mask pageBits && (~~ mask 2)" in word_and_le1)
-    apply (subst(asm) word_bw_assocs[symmetric], subst(asm) aligned_neg_mask,
+    apply (subst(asm) word_bw_assocs[symmetric], subst(asm) is_aligned_neg_mask_eq,
            erule is_aligned_andI1)
     apply (simp add: word_le_nat_alt mask_def pageBits_def)
    apply simp
@@ -2749,8 +2748,8 @@ proof -
    apply (clarsimp simp: objBits_defs)
    apply (safe del: notI disjE)[1]
      apply (rule not_sym, clarsimp)
-     apply (drule aligned_sub_aligned[where x="x + 0x10" and y=x for x])
-       apply (erule tcbs_of_aligned')
+     apply (drule aligned_sub_aligned[where a="x + 0x10" and b=x for x])
+       apply (erule tcbs_of_aligned'[unfolded tcbBlockSizeBits_def, simplified])
        apply (simp add:invs_pspace_aligned')
       apply (simp add: objBits_defs)
      apply (simp add: objBits_defs is_aligned_def dvd_def)

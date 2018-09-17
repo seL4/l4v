@@ -2037,7 +2037,7 @@ lemma flushPage_ccorres:
   apply (rule conjI, clarsimp+)
   apply (clarsimp simp: pde_stored_asid_def to_bool_def cong: conj_cong
                         ucast_ucast_mask)
-  apply (drule aligned_neg_mask)
+  apply (drule is_aligned_neg_mask_eq)
   apply (simp add: pde_pde_invalid_lift_def pde_lift_def mask_def[where n=8]
                    word_bw_assocs mask_def[where n=pageBits])
   apply (simp add: pageBits_def mask_eq_iff_w2p word_size)
@@ -2253,7 +2253,7 @@ lemma large_ptSlot_array_constraint:
   apply (simp add: shiftr_shiftl1)
   apply (rule conjI, rule trans,
          rule word_plus_and_or_coroll2[symmetric, where w="mask ptBits"])
-   apply (simp, rule aligned_neg_mask[THEN sym], rule is_aligned_andI1,
+   apply (simp, rule is_aligned_neg_mask_eq[THEN sym], rule is_aligned_andI1,
           erule is_aligned_weaken, simp)
   apply (clarsimp simp add: le_diff_conv2)
   apply (erule order_trans[rotated], simp)

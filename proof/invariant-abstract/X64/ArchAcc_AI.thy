@@ -1265,7 +1265,7 @@ method hammer =
 
 lemma is_aligned_addrFromPPtr_eq: "n \<le> 39 \<Longrightarrow> is_aligned (addrFromPPtr p) n = is_aligned p n"
   apply (simp add: addrFromPPtr_def; rule iffI)
-   apply (drule aligned_sub_aligned[where y="-pptrBase"]; hammer)
+   apply (drule aligned_sub_aligned[where b="-pptrBase"]; hammer)
   apply (erule aligned_sub_aligned; hammer)
   done
 

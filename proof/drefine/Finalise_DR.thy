@@ -770,7 +770,6 @@ lemma page_table_aligned:
   apply (drule_tac x = oid in bspec)
     apply clarsimp
   apply (clarsimp simp:obj_bits_def arch_kobj_size_def pt_bits_def pageBits_def)
-  apply (simp add:is_aligned_neg_mask_eq)
 done
 
 lemma invalidateLocalTLB_VAASID_underlying_memory[wp]:
@@ -1760,6 +1759,8 @@ lemma dcorres_unmap_large_section:
      (delete_cap_simple (cdl_lookup_pd_slot ptr v))
      (mapM (swp store_pde ARM_A.pde.InvalidPDE)
            (map (\<lambda>x. x + lookup_pd_slot ptr v) [0 , 4 .e. 0x3C]))"
+  supply is_aligned_neg_mask_eq[simp del]
+         is_aligned_neg_mask_weaken[simp del]
   apply (subst mapM_Cons_split)
    apply (simp add:upto_enum_step_def upto_enum_def)
   apply (simp add:store_pte_def PageTableUnmap_D.unmap_page_def)
@@ -1882,6 +1883,8 @@ lemma dcorres_unmap_large_page:
           and pt_page_relation (ptr && ~~ mask pt_bits) pg_id ptr {ARMLargePage})
      (delete_cap_simple (transform_pt_slot_ref ptr))
      (mapM (swp store_pte ARM_A.pte.InvalidPTE) (map (\<lambda>x. x + ptr) [0 , 4 .e. 0x3C]))"
+  supply is_aligned_neg_mask_eq[simp del]
+         is_aligned_neg_mask_weaken[simp del]
   apply (subst mapM_Cons_split)
    apply (simp add:upto_enum_step_def upto_enum_def)
   apply (simp add: PageTableUnmap_D.unmap_page_def)

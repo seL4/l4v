@@ -1787,7 +1787,7 @@ lemma reset_name_seq_bound_helper:
   apply (simp add: shiftr_div_2n')
   apply (simp only: linorder_not_less[symmetric], erule notE)
   apply (rule order_le_less_trans[OF div_le_mono])
-   apply (rule_tac n="v * 2 ^ sz" for v in unat_le_helper,
+   apply (rule_tac b="v * 2 ^ sz" for v in unat_le_helper,
      simp, rule order_refl)
   apply simp
   done
@@ -2080,7 +2080,7 @@ lemma resetUntypedCap_ccorres:
                                     is_aligned_mask_out_add_eq_sub[OF is_aligned_weaken]
                                     if_split[where P="\<lambda>z. a \<le> z" for a])
               apply (strengthen is_aligned_mult_triv2[THEN is_aligned_weaken]
-                  aligned_sub_aligned[OF _ _ order_refl]
+                  aligned_sub_aligned
                   aligned_intvl_offset_subset_ran
                   unat_le_helper Aligned.is_aligned_neg_mask)
               apply (simp add: order_less_imp_le reset_chunk_bits_def untypedBits_defs)

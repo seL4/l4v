@@ -410,15 +410,12 @@ lemma pde_at_aligned_vptr:  (* ARMHYP *) (* 0x3C \<rightarrow> 0x78?, 24 \<right
        apply simp+
     apply (rule sym, rule add_mask_lower_bits)
      apply (simp add: vspace_bits_defs)
-    apply simp
-    apply (subst upper_bits_unset_is_l2p_32[unfolded word_bits_conv])
+    apply (subst upper_bits_unset_is_l2p)
      apply (simp add: vspace_bits_defs)
     apply (rule shiftl_less_t2n)
      apply (rule shiftr_less_t2n')
-      apply (simp add: vspace_bits_defs)
-      apply (rule word_eqI)
-      apply (simp add: word_size)
-     by (simp add: vspace_bits_defs)+
+      apply (simp add: vspace_bits_defs)+
+   done
 by (simp add: vspace_bits_defs)
 
 lemma pde_shifting:  (* ARMHYP >> 20? *)
@@ -2242,9 +2239,7 @@ lemma lookup_pt_slot_looks_up [wp]: (* ARMHYP *)
       apply (subst is_aligned_add_or, (simp add: vspace_bits_defs)+)
       apply (subst word_ao_dist)
       apply (subst mask_out_sub_mask [where x="(vptr >> 12) && 0x1FF << 3"])
-      apply (subst less_mask_eq, simp+)
-      apply (subst is_aligned_neg_mask_eq, simp)
-      apply clarsimp
+      apply (fastforce simp: less_mask_eq)
    apply (rule shiftl_less_t2n, simp add: vspace_bits_defs)
     apply (rule and_mask_less'[where n=9, unfolded mask_def, simplified], (simp )+)
   apply (simp add: vspace_bits_defs mask_def)

@@ -1197,7 +1197,7 @@ lemma pointerInUserData_c_guard:
    apply (rule order_trans [rotated])
     apply (rule_tac x="ptr && mask pageBits" and y=8 and z=4096 in intvl_sub_offset)
     apply (cut_tac y=ptr and a="mask pageBits && (~~ mask 3)" in word_and_le1)
-    apply (subst(asm) word_bw_assocs[symmetric], subst(asm) aligned_neg_mask,
+    apply (subst(asm) word_bw_assocs[symmetric], subst(asm) is_aligned_neg_mask_eq,
            erule is_aligned_andI1)
     apply (simp add: word_le_nat_alt mask_def pageBits_def)
    apply (subst word_plus_and_or_coroll2 [where w="~~ mask pageBits", simplified])

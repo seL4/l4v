@@ -384,7 +384,6 @@ lemma pde_at_aligned_vptr:
     apply (rule shiftl_less_t2n)
      apply (rule shiftr_less_t2n')
       apply (simp add: pd_bits_def pageBits_def)
-      apply word_eqI_solve
      by (simp add: pd_bits_def pageBits_def)+
   apply simp
   done
@@ -2210,7 +2209,7 @@ lemma lookup_pt_slot_looks_up [wp]:
       apply (subst is_aligned_add_or, (simp add: pt_bits_def pageBits_def)+)
       apply (subst word_ao_dist)
       apply (subst mask_out_sub_mask [where x="(vptr >> 12) && 0xFF << 2"])
-      apply (subst less_mask_eq, simp+)
+      apply (subst less_mask_eq, simp)
       apply (subst is_aligned_neg_mask_eq, simp)
       apply (clarsimp simp: valid_arch_state_def valid_global_pts_def)
      apply (rule shiftl_less_t2n, simp)

@@ -982,7 +982,7 @@ lemma invokeTCB_ThreadControl_ccorres:
               threadSet_cap_to' static_imp_wp | simp)+
    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
   apply (clarsimp simp: inQ_def)
-  apply (subst is_aligned_neg_mask [OF _ order_refl])
+  apply (subst is_aligned_neg_mask_eq)
    apply (simp add: tcb_ptr_to_ctcb_ptr_def)
    apply (rule aligned_add_aligned)
      apply (fastforce simp add: obj_at'_def projectKOs objBits_simps')
@@ -3832,7 +3832,7 @@ lemma bindNTFN_alignment_junk:
   "\<lbrakk> is_aligned tcb tcbBlockSizeBits; bits \<le> ctcb_size_bits \<rbrakk>
     \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr tcb) && ~~ mask bits = ptr_val (tcb_ptr_to_ctcb_ptr tcb)"
   apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def projectKOs)
-  apply (rule aligned_neg_mask)
+  apply (rule is_aligned_neg_mask_eq)
   apply (erule aligned_add_aligned)
    apply (erule is_aligned_weaken[rotated])
    by (auto simp add: is_aligned_def objBits_defs ctcb_offset_defs)

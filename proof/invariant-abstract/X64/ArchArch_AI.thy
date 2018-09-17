@@ -650,6 +650,9 @@ lemma perform_asid_control_invocation_st_tcb_at:
     and ct_active and invs and valid_aci aci\<rbrace>
     perform_asid_control_invocation aci
   \<lbrace>\<lambda>y. st_tcb_at P t\<rbrace>"
+  supply
+    is_aligned_neg_mask_eq[simp del]
+    is_aligned_neg_mask_weaken[simp del]
   apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
   apply (rename_tac word1 a b aa ba word2)
   apply (rule hoare_name_pre_state)
@@ -1450,7 +1453,6 @@ lemma decode_page_table_invocation_wf[wp]:
   apply (rule conjI)
    apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce,
           clarsimp simp: valid_cap_simps cap_aligned_def order_le_less_trans[OF word_and_le2])
-   apply (fastforce intro!: is_aligned_andI2 simp: bit_simps is_aligned_mask)
   apply (frule empty_table_pt_capI; clarsimp)
   apply (clarsimp simp: vspace_at_asid_def; drule (2) vs_lookup_invs_ref_is_unique; clarsimp)
   apply (clarsimp simp: get_pd_index_def get_pdpt_index_def get_pml4_index_def)
@@ -1487,7 +1489,6 @@ lemma decode_page_directory_invocation_wf[wp]:
    apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce,
             clarsimp simp: wellformed_mapdata_def vmsz_aligned_def valid_cap_def cap_aligned_def
                            order_le_less_trans[OF word_and_le2])
-   apply (fastforce intro!: is_aligned_andI2 simp: bit_simps is_aligned_mask)
   apply (frule valid_table_caps_pdD; clarsimp)
   apply (clarsimp simp: vspace_at_asid_def; drule (2) vs_lookup_invs_ref_is_unique; clarsimp)
   apply (clarsimp simp: pdpte_ref_pages_def get_pd_index_def get_pdpt_index_def get_pml4_index_def)
@@ -1522,7 +1523,6 @@ lemma decode_pdpt_invocation_wf[wp]:
   apply (rule conjI)
    apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce,
           clarsimp simp: valid_cap_simps cap_aligned_def order_le_less_trans[OF word_and_le2])
-   apply (fastforce intro!: is_aligned_andI2 simp: bit_simps is_aligned_mask)
   apply (frule valid_table_caps_pdptD; clarsimp)
   apply (clarsimp simp: vspace_at_asid_def; drule (2) vs_lookup_invs_ref_is_unique; clarsimp)
   apply (rule conjI, fastforce simp: pml4e_at_shifting_magic)

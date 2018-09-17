@@ -1048,7 +1048,6 @@ lemma real_cte_tcbCallerSlot:
     apply (erule is_aligned_no_wrap')
     apply simp
    apply (subst field_simps[symmetric], rule is_aligned_no_overflow3, assumption, simp_all)
-  apply (simp add: word_bits_def)
   done
 
 lemma handleReply_ccorres:
@@ -1070,7 +1069,7 @@ lemma handleReply_ccorres:
        apply (rule ccorres_from_vcg)
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: return_def word_sle_def)
-       apply (frule aligned_neg_mask)
+       apply (frule is_aligned_neg_mask_eq)
        apply (frule tcb_at_invs')
        apply (simp add: mask_def tcbCallerSlot_def
               cte_level_bits_def size_of_def
@@ -1157,7 +1156,7 @@ lemma deleteCallerCap_ccorres [corres]:
        apply (rule ccorres_from_vcg)
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: return_def word_sle_def)
-       apply (frule aligned_neg_mask)
+       apply (frule is_aligned_neg_mask_eq)
        apply (simp add: mask_def tcbCallerSlot_def Kernel_C.tcbCaller_def
               cte_level_bits_def size_of_def)
        apply (drule ptr_val_tcb_ptr_mask2)

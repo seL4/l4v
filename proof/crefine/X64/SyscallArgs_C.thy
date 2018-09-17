@@ -1121,8 +1121,8 @@ lemma valid_ipc_buffer_ptr_array:
     simp add: word_shift_by_3 shiftr_shiftl1
               is_aligned_andI1[OF is_aligned_weaken])
   apply (simp add: add.commute word_plus_and_or_coroll2)
-  apply (cut_tac x="(ptr_val p && mask pageBits ) >> 3"
-        and n="2 ^ (pageBits - 3) - 2 ^ (msg_align_bits - 3)" in unat_le_helper)
+  apply (cut_tac a="(ptr_val p && mask pageBits ) >> 3"
+        and b="2 ^ (pageBits - 3) - 2 ^ (msg_align_bits - 3)" in unat_le_helper)
    apply (simp add: pageBits_def msg_align_bits mask_def is_aligned_mask)
    apply word_bitwise
    apply simp

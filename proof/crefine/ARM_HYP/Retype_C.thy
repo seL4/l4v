@@ -209,7 +209,7 @@ lemma memzero_spec:
        apply clarsimp
        apply (rule aligned_sub_aligned [where n=2], simp_all add: is_aligned_def word_bits_def)[1]
       apply clarsimp
-      apply (rule aligned_add_aligned_simple, simp_all add: is_aligned_def word_bits_def)[1]
+      apply (rule is_aligned_add, simp_all add: is_aligned_def word_bits_def)[1]
      apply (erule order_trans[rotated])
      apply (clarsimp simp: subset_iff)
      apply (erule subsetD[OF intvl_sub_offset, rotated])
@@ -965,7 +965,7 @@ proof -
     apply simp
     done
 
-  note al_sub = aligned_sub_aligned_simple[OF al align word_bits]
+  note al_sub = aligned_sub_aligned_simple[OF al align]
 
   have yuck: "of_nat b * 2 ^ n \<noteq> (0 :: word32)"
     using of_nat_neq_0[where k="b * 2 ^ n" and 'a=32] b card
@@ -2922,7 +2922,7 @@ proof (rule ext)
     hence "x \<in> {ptr..(ptr && ~~ mask (objBitsKO ko)) + 2 ^ objBitsKO ko - 1}"
       apply (rule ssubst)
       apply (insert al)
-      apply (clarsimp simp: is_aligned_def)
+      apply (clarsimp simp: assms)
       done
     hence "ksPSpace \<sigma> x = None" using pno
       apply -
@@ -5653,7 +5653,7 @@ proof -
       apply (clarsimp split: if_splits simp: objBitsKO_vcpu)
       apply (erule_tac x=x in ballE; (simp add: dom_def)?)
      apply (simp add: pspace_distinct'_def)
-     apply (clarsimp split: if_splits simp: objBitsKO_vcpu ps_clear_ksPSpace_upd_same)
+     apply (clarsimp split: if_splits simp: objBitsKO_vcpu)
       apply (subst ps_clear_ksPSpace_upd_same[simplified fun_upd_def])
       apply (rule ps_clear_entire_slotI)
       apply (drule (1) pspace_no_overlap_disjoint'[where n=vcpu_bits])
@@ -5786,6 +5786,8 @@ lemma placeNewObject_vcpu_ccorres:
 
 lemma Arch_createObject_ccorres:
   assumes t: "toAPIType newType = None"
+  notes is_aligned_neg_mask_eq[simp del]
+    and is_aligned_neg_mask_weaken[simp del]
   shows "ccorres (\<lambda>a b. ccap_relation (ArchObjectCap a) b) ret__struct_cap_C_'
      (createObject_hs_preconds regionBase newType userSize deviceMemory)
      (createObject_c_preconds regionBase newType userSize deviceMemory)
@@ -5829,7 +5831,7 @@ proof -
                                 APIType_capBits_def pageBits_def)
          apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
                     framesize_to_H_def cap_to_H_simps cap_small_frame_cap_lift
-                    vmrights_to_H_def mask_def vm_rights_defs)
+                    vmrights_to_H_def vm_rights_defs is_aligned_neg_mask_eq, simp add: mask_def)
 
         \<comment> \<open>Page objects: could possibly fix the duplication here\<close>
         apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
@@ -6175,13 +6177,11 @@ proof -
              apply vcg
             apply (rule conseqPre, vcg, clarsimp)
            apply simp
-          apply (clarsimp simp: ccap_relation_def cap_to_H_def
-                     getObjectSize_def ARM_HYP_H.getObjectSize_def
-                     apiGetObjectSize_def Collect_const_mem
-                     cap_untyped_cap_lift to_bool_eq_0 true_def
+          apply (clarsimp simp: ccap_relation_def cap_to_H_def ARM_HYP_H.getObjectSize_def
+                     apiGetObjectSize_def cap_untyped_cap_lift to_bool_eq_0 true_def
                      aligned_add_aligned
                    split: option.splits)
-          apply (subst aligned_neg_mask [OF is_aligned_weaken])
+          apply (subst is_aligned_neg_mask_eq [OF is_aligned_weaken])
             apply (erule range_cover.aligned)
            apply (clarsimp simp:APIType_capBits_def untypedBits_defs)
           apply (clarsimp simp: cap_untyped_cap_lift_def)
@@ -6240,8 +6240,8 @@ proof -
          apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def ctcb_offset_defs
                                tcb_ptr_to_ctcb_ptr_def
                                invs_valid_objs' invs_urz isFrameType_def)
-         apply (subst  is_aligned_neg_mask)
-           apply (rule aligned_add_aligned_simple [where n=8])
+         apply (subst is_aligned_neg_mask_weaken)
+           apply (rule is_aligned_add[where n=8])
              apply (clarsimp elim!: is_aligned_weaken
                              dest!: range_cover.aligned)
             apply (clarsimp simp: is_aligned_def)
@@ -6333,7 +6333,7 @@ proof -
                   ntfnSizeBits_def word_bits_conv)
       apply (clarsimp simp: Kernel_C_defs object_type_from_H_def
                  toAPIType_def ARM_HYP_H.toAPIType_def nAPIObjects_def
-                 word_sle_def word_sless_def zero_le_sint
+                 word_sle_def word_sless_def zero_le_sint_32
                intro!: ccorres_cond_empty ccorres_cond_univ ccorres_rhs_assoc
                        ccorres_move_c_guards ccorres_Guard_Seq)
       apply (rule_tac
@@ -6473,6 +6473,9 @@ lemma pspace_no_overlap_induce_endpoint:
     is_aligned ptr bits; bits < word_bits;
     pspace_no_overlap' ptr bits s\<rbrakk>
    \<Longrightarrow> {ptr_val xa..+size_of TYPE(endpoint_C)} \<inter> {ptr..+2 ^ bits} = {}"
+  supply
+    is_aligned_neg_mask_eq[simp del]
+    is_aligned_neg_mask_weaken[simp del]
   apply (clarsimp simp: cpspace_relation_def)
   apply (clarsimp simp: cmap_relation_def)
   apply (subgoal_tac "xa\<in>ep_Ptr ` dom (map_to_eps (ksPSpace s))")
@@ -6492,8 +6495,8 @@ lemma pspace_no_overlap_induce_endpoint:
     apply (simp add: objBits_simps' archObjSize_def
               split: arch_kernel_object.split_asm)
    apply (simp add: word_bits_conv)
-  apply (simp add: objBits_simps' archObjSize_def
-            split: arch_kernel_object.split_asm)
+  apply (simp add: objBits_simps' archObjSize_def is_aligned_neg_mask_eq
+            split: arch_kernel_object.split_asm, safe)
   done
 
 lemma pspace_no_overlap_induce_notification:
@@ -6557,7 +6560,7 @@ lemma pspace_no_overlap_induce_vcpu:
    apply (simp add: word_bits_def)+
   (* prevent intersection in assumption becoming predicates *)
   supply Int_atLeastAtMost[simp del]
-  apply (frule(1) pspace_no_overlapD', simp)
+  apply (frule(1) pspace_no_overlapD')
   apply (drule(1) pspace_alignedD')
   apply (clarsimp simp: image_def projectKO_opt_vcpu map_comp_def
                  split: option.splits kernel_object.split_asm  arch_kernel_object.split_asm)
@@ -6677,7 +6680,9 @@ lemma pspace_no_overlap_induce_user_data:
   apply (subst intvl_range_conv, simp, simp)
   apply (clarsimp simp: field_simps)
   apply (simp add: p_assoc_help)
-  apply (clarsimp simp: objBits_simps archObjSize_def pageBits_def split:arch_kernel_object.split_asm)+
+  apply (clarsimp simp: objBits_simps archObjSize_def pageBits_def
+                        is_aligned_no_overflow field_simps
+                 split: arch_kernel_object.split_asm)
   done
 
 lemma pspace_no_overlap_induce_device_data:
@@ -6704,7 +6709,8 @@ lemma pspace_no_overlap_induce_device_data:
   apply (subst intvl_range_conv, simp, simp)
   apply (clarsimp simp: field_simps)
   apply (simp add: p_assoc_help)
-  apply (clarsimp simp: objBits_simps archObjSize_def pageBits_def split:arch_kernel_object.split_asm)+
+  apply (fastforce simp: objBits_simps archObjSize_def pageBits_def field_simps
+                   split:arch_kernel_object.split_asm)
   done
 
 lemma typ_region_bytes_dom:
@@ -7090,10 +7096,9 @@ lemma tcb_ctes_typ_region_bytes:
   apply (subst valid_footprint_typ_region_bytes)
    apply (simp add: uinfo_array_tag_n_m_def typ_uinfo_t_def typ_info_word)
   apply (clarsimp simp only: map_comp_Some_iff projectKOs
-                        pspace_no_overlap'_def is_aligned_neg_mask
+                        pspace_no_overlap'_def is_aligned_neg_mask_eq simp_thms
                         field_simps upto_intvl_eq[symmetric])
   apply (elim allE, drule(1) mp)
-  apply simp
   apply (drule(1) pspace_alignedD')
   apply (erule disjoint_subset[rotated])
   apply (simp add: upto_intvl_eq[symmetric])
@@ -7446,7 +7451,7 @@ lemma createObject_idlethread_range:
      apply (rule hoare_strengthen_post[OF createNewCaps_idlethread_ranges[where sz = "APIType_capBits ty us"]])
     apply assumption
    apply clarsimp
-  apply (clarsimp simp:word_bits_conv range_cover_full)
+  apply (clarsimp simp: word_bits_conv range_cover_full)
   done
 
 lemma caps_overlap_reserved_empty'[simp]:
@@ -8156,7 +8161,6 @@ lemma createObject_untyped_region_is_zero_bytes:
                    cap_untyped_cap_lift_def object_type_from_H_def)
   apply (simp add: untypedZeroRange_def split: if_split)
   apply (clarsimp simp: getFreeRef_def Let_def object_type_to_H_def untypedBits_defs)
-  apply (simp add: is_aligned_neg_mask_eq[OF is_aligned_weaken])
   apply (simp add:  APIType_capBits_def
                    less_mask_eq word_less_nat_alt)
   done

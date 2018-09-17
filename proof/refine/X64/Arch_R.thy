@@ -74,6 +74,9 @@ lemma createObject_typ_at':
          pspace_aligned' s \<and> pspace_no_overlap' ptr (objBitsKO ty) s\<rbrace>
    createObjects' ptr (Suc 0) ty 0
    \<lbrace>\<lambda>rv s. typ_at' otype ptr s\<rbrace>"
+  supply
+    is_aligned_neg_mask_eq[simp del]
+    is_aligned_neg_mask_weaken[simp del]
   apply (clarsimp simp:createObjects'_def alignError_def split_def | wp hoare_unless_wp | wpc )+
   apply (clarsimp simp:obj_at'_def ko_wp_at'_def typ_at'_def pspace_distinct'_def)+
   apply (subgoal_tac "ps_clear ptr (objBitsKO ty)
@@ -132,6 +135,9 @@ lemma pac_corres:
          (invs' and ct_active' and valid_aci' i')
          (perform_asid_control_invocation i)
          (performASIDControlInvocation i')"
+  supply
+    is_aligned_neg_mask_eq[simp del]
+    is_aligned_neg_mask_weaken[simp del]
   apply (cases i)
   apply (rename_tac word1 prod1 prod2 word2)
   apply (clarsimp simp: asid_ci_map_def)

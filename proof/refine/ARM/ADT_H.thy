@@ -208,7 +208,6 @@ lemma
     apply (erule_tac x=y in allE)
     apply (clarsimp split: if_split_asm)
     apply (rule_tac x="(y && ~~ mask pt_bits)" in exI, simp)
-    apply (simp add: is_aligned_mask mask_AND_NOT_mask)
     apply (simp add: range_composition[symmetric])
     apply (rule_tac x="ucast (y >> 2)" in range_eqI)
     apply (simp add: pt_bits_def pageBits_def)
@@ -222,7 +221,6 @@ lemma
    apply (erule_tac x=y in allE)
    apply clarsimp
    apply (rule_tac x="(y && ~~ mask pd_bits)" in exI, simp)
-   apply (simp add: is_aligned_mask mask_AND_NOT_mask)
    apply (simp add: range_composition[symmetric])
    apply (rule_tac x="ucast (y >> 2)" in range_eqI)
    apply (simp add: pd_bits_def pageBits_def)

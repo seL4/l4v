@@ -1544,7 +1544,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     apply (simp add: valid_untyped'_def capAligned_def)
     apply (elim conjE)
     apply (drule_tac x="p && ~~ mask pageBits" in spec)
-    apply (cut_tac x=p in is_aligned_neg_mask[of pageBits pageBits, simplified])
+    apply (cut_tac x=p in is_aligned_neg_mask[of pageBits pageBits, OF le_refl])
     apply (clarsimp simp: mask_2pm1 ko_wp_at'_def obj_range'_def objBitsKO_def)
     apply (frule is_aligned_no_overflow'[of base bits])
     apply (frule is_aligned_no_overflow'[of _ pageBits])
@@ -2445,6 +2445,9 @@ lemma not_in_new_cap_addrs:
     pspace_no_overlap' ptr (objBitsKO obj + us) s;
     ksPSpace s dest = Some ko;pspace_aligned' s\<rbrakk>
    \<Longrightarrow> dest \<notin> set (new_cap_addrs (2 ^ us) ptr obj)"
+  supply
+   is_aligned_neg_mask_eq[simp del]
+   is_aligned_neg_mask_weaken[simp del]
   apply (rule ccontr)
   apply simp
   apply (drule(1) pspace_no_overlapD'[rotated])
@@ -3681,8 +3684,7 @@ lemma pspace_no_overlapD2':
     apply clarsimp
     apply (subst is_aligned_neg_mask_eq[symmetric])
     apply simp
-   apply (rule is_aligned_no_overflow)
-   apply (simp add:is_aligned_neg_mask)
+   apply (simp add: is_aligned_no_overflow)
    done
 
 lemma caps_overlap_reserved'_subseteq:
@@ -4279,7 +4281,7 @@ lemma no_overlap_check:
   apply (erule order_trans)
   apply (frule range_cover_cell_subset[where x = "of_nat n - 1"])
    apply (rule gt0_iff_gem1[THEN iffD1])
-   apply (simp add:word_gt_0)
+   apply (simp add: Word.word_gt_0)
    apply (rule range_cover_not_zero)
     apply simp
    apply assumption
@@ -4287,7 +4289,7 @@ lemma no_overlap_check:
   apply (erule impE)
    apply (frule range_cover_subset_not_empty[rotated,where x = "of_nat n - 1"])
    apply (rule gt0_iff_gem1[THEN iffD1])
-   apply (simp add:word_gt_0)
+   apply (simp add: Word.word_gt_0)
    apply (rule range_cover_not_zero)
     apply simp
    apply assumption

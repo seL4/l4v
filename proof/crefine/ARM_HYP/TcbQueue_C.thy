@@ -857,7 +857,7 @@ next
   with valid_ep(1) have "tcb_at' (ctcb_ptr_to_tcb_ptr (getNext tcb)) s" ..
   hence "is_aligned (ctcb_ptr_to_tcb_ptr (getNext tcb)) tcbBlockSizeBits" by (rule tcb_aligned')
   hence "is_aligned (ptr_val (getNext tcb)) ctcb_size_bits" by (rule ctcb_ptr_to_tcb_ptr_aligned)
-  thus ?thesis using bits by (simp add: is_aligned_neg_mask)
+  thus ?thesis using bits by simp
 qed
 
 lemma tcb_queue_relation_prev_mask:
@@ -882,7 +882,7 @@ next
   with valid_ep(1) have "tcb_at' (ctcb_ptr_to_tcb_ptr (getPrev tcb)) s" ..
   hence "is_aligned (ctcb_ptr_to_tcb_ptr (getPrev tcb)) tcbBlockSizeBits" by (rule tcb_aligned')
   hence "is_aligned (ptr_val (getPrev tcb)) ctcb_size_bits" by (rule ctcb_ptr_to_tcb_ptr_aligned)
-  thus ?thesis using bits by (simp add: is_aligned_neg_mask)
+  thus ?thesis using bits by simp
 qed
 
 lemma tcb_queue_relation'_next_mask:

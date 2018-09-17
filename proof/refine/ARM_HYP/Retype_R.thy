@@ -631,8 +631,7 @@ lemma cte_wp_at_retype':
       apply (rule order_trans_rules(17))
        apply (clarsimp cong: if_cong)
       apply (rule word_and_le2)
-     apply (drule mask_in_range[where bits=tcbBlockSizeBits and ptr'=p])
-     apply simp
+     apply (simp add: word_le_mask_out_plus_2sz)
     apply simp
    apply (clarsimp elim!: obj_atE' simp: pn)
   apply (clarsimp elim!: obj_atE' simp: pn)

@@ -1247,7 +1247,6 @@ lemma ensure_safe_mapping_ensures[wp]:
        \<Longrightarrow> pt a = pte.InvalidPTE"
       apply (drule(1) valid_entriesD[rotated])
       apply (case_tac "pt a"; simp add:mask_lower_twice is_aligned_neg_mask split:if_splits)
-      apply fastforce
       done
     have invalid_pdeI:
       "\<And>a pd x y z. \<lbrakk>valid_pd_entries pd; (a && ~~ mask 4) \<noteq> a;
@@ -1257,7 +1256,6 @@ lemma ensure_safe_mapping_ensures[wp]:
       apply (case_tac "pd a",
         simp_all add:mask_lower_twice is_aligned_neg_mask
         split:if_splits)
-      apply fastforce
       done
     have inj[simp]:
       "\<And>p. is_aligned (p::word32) 6 \<Longrightarrow> inj_on (\<lambda>x. toEnum x * 4 + p) {Suc 0..<16}"

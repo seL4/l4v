@@ -586,38 +586,15 @@ lemma rf_sr_asidTable_None:
   done
 
 lemma leq_asid_bits_shift:
-  "x \<le> mask asid_bits \<Longrightarrow> (x::word32) >> asid_low_bits \<le> mask asid_high_bits"
-  apply (rule word_leI)
-  apply (simp add: nth_shiftr word_size)
-  apply (rule ccontr)
-  apply (clarsimp simp: linorder_not_less asid_high_bits_def asid_low_bits_def)
-  apply (simp add: mask_def)
-  apply (simp add: upper_bits_unset_is_l2p_32 [symmetric])
-  apply (simp add: asid_bits_def word_bits_def)
-  apply (erule_tac x="n+10" in allE)
-  apply (simp add: linorder_not_less)
-  apply (drule test_bit_size)
-  apply (simp add: word_size)
-  done
+  "x \<le> mask asid_bits
+   \<Longrightarrow> (x :: word32) >> asid_low_bits \<le> mask asid_high_bits"
+  by (simp add: leq_mask_shift asid_bits_def asid_low_bits_def asid_high_bits_def)
 
 lemma ucast_asid_high_bits_is_shift:
-  "asid \<le> mask asid_bits \<Longrightarrow> ucast (asid_high_bits_of asid) = (asid >> asid_low_bits)"
-  apply (simp add: mask_def upper_bits_unset_is_l2p_32 [symmetric])
-  apply (simp add: asid_high_bits_of_def)
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_shiftr nth_ucast asid_low_bits_def asid_bits_def word_bits_def)
-  apply (erule_tac x="n+10" in allE)
-  apply simp
-  apply (case_tac "n < 7", simp) (*asid_low_bits*)
-  apply (simp add: linorder_not_less)
-  apply (rule notI)
-  apply (frule test_bit_size)
-  apply (simp add: word_size)
-  done
-
-
-
-
+  "asid \<le> mask asid_bits
+   \<Longrightarrow> ucast (asid_high_bits_of asid) = (asid >> asid_low_bits)"
+  unfolding asid_bits_def asid_low_bits_def asid_high_bits_of_def
+  by (rule ucast_ucast_eq_mask_shift, simp)
 
 lemma cap_small_frame_cap_get_capFMappedASID_spec:
   "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. cap_get_tag \<acute>cap = scast cap_small_frame_cap\<rbrace>
@@ -1927,15 +1904,12 @@ lemma vcpu_restore_ccorres:
                apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_lr_ccorres)
 
               apply (clarsimp simp: virq_to_H_def ko_at_vcpu_at'D dc_def upt_Suc)
-              apply (rule conjI)
-
+              apply (rule conjI[rotated])
   subgoal (* FIXME extract into separate lemma *)
-    by (subst scast_eq_ucast, rule not_msb_from_less)
-       (fastforce simp: word_less_nat_alt unat_of_nat_eq elim: order_less_le_trans)+
+    by (fastforce simp: word_less_nat_alt unat_of_nat_eq elim: order_less_le_trans)
 
                 apply (frule (1) vcpu_at_rf_sr)
-                apply (clarsimp simp: typ_heap_simps cvcpu_relation_regs_def cvgic_relation_def virq_to_H_def)
-                apply (fastforce simp: word_less_nat_alt unat_of_nat_eq elim: order_less_le_trans)+
+                apply (clarsimp simp: typ_heap_simps cvcpu_relation_regs_def cvgic_relation_def virq_to_H_def unat_of_nat)
                apply (simp add: word_less_nat_alt upt_Suc)
               apply vcg
               apply clarsimp
@@ -2870,7 +2844,7 @@ lemma flushPage_ccorres:
   apply (rule conjI, clarsimp+)
   apply (clarsimp simp: pde_stored_asid_def to_bool_def cong: conj_cong
                         ucast_ucast_mask)
-  apply (drule aligned_neg_mask)
+  apply (drule is_aligned_neg_mask_eq)
   apply (simp add: pde_pde_invalid_lift_def pde_lift_def mask_def[where n=8]
                    word_bw_assocs mask_def[where n=pageBits])
   apply (simp add: pageBits_def mask_eq_iff_w2p word_size)
@@ -3045,7 +3019,7 @@ lemma large_ptSlot_array_constraint:
   apply (simp add: shiftr_shiftl1)
   apply (rule conjI, rule trans,
          rule word_plus_and_or_coroll2[symmetric, where w="mask ptBits"])
-   apply (simp, rule aligned_neg_mask[THEN sym], rule is_aligned_andI1,
+   apply (simp, rule is_aligned_neg_mask_eq[THEN sym], rule is_aligned_andI1,
           erule is_aligned_weaken, simp)
   apply (clarsimp simp add: le_diff_conv2)
   apply (erule order_trans[rotated], simp)
@@ -3559,7 +3533,7 @@ lemma ccap_relation_mapped_asid_0:
    apply (clarsimp simp: cap_lift_frame_cap cap_to_H_def
                          generic_frame_cap_get_capFMappedASID_CL_def
                    split: if_split_asm)
-   apply (drule word_aligend_0_sum [where n=asid_low_bits])
+   apply (drule word_aligned_0_sum [where n=asid_low_bits])
       apply fastforce
      apply (simp add: mask_def asid_low_bits_def word_and_le1)
     apply (simp add: asid_low_bits_def word_bits_def)
@@ -3575,7 +3549,7 @@ lemma ccap_relation_mapped_asid_0:
   apply (clarsimp simp: cap_lift_small_frame_cap cap_to_H_def
                         generic_frame_cap_get_capFMappedASID_CL_def
                   split: if_split_asm)
-  apply (drule word_aligend_0_sum [where n=asid_low_bits])
+  apply (drule word_aligned_0_sum [where n=asid_low_bits])
      apply fastforce
     apply (simp add: mask_def asid_low_bits_def word_and_le1)
    apply (simp add: asid_low_bits_def word_bits_def)
@@ -3779,13 +3753,13 @@ lemma makeUserPDE_spec:
     apply (clarsimp simp: Kernel_C.ARMSection_def Kernel_C.ARMSmallPage_def
        Kernel_C.ARMLargePage_def)
     apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
-      split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask)
+      split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
    apply (simp only: pde_pde_section_lift pde_pde_section_lift_def)
    apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def hap_from_vm_rights_mask)
    apply (clarsimp simp: Kernel_C.ARMSection_def Kernel_C.ARMSmallPage_def
        Kernel_C.ARMLargePage_def is_aligned_neg_mask_eq)
     apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
-      split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask)
+      split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
   apply (clarsimp)
   apply (intro conjI impI allI)
    apply (simp add:pde_pde_section_lift pde_pde_section_lift_def)
@@ -3794,14 +3768,14 @@ lemma makeUserPDE_spec:
     apply (clarsimp simp: Kernel_C.ARMSuperSection_def Kernel_C.ARMSmallPage_def
        Kernel_C.ARMLargePage_def is_aligned_neg_mask_eq)+
    apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
-     split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask)
+     split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
   apply (simp add:pde_pde_section_lift pde_pde_section_lift_def)
   apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def hap_from_vm_rights_mask)
   apply (drule is_aligned_weaken[where y = 21])
    apply (clarsimp simp: Kernel_C.ARMSuperSection_def Kernel_C.ARMSmallPage_def
        Kernel_C.ARMLargePage_def is_aligned_neg_mask_eq)+
    apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
-     split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask)
+     split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
   done
 
 lemma makeUserPTE_spec:
@@ -3839,7 +3813,7 @@ lemma makeUserPTE_spec:
   apply (intro conjI impI allI
          ; clarsimp simp: pte_lift_def pte_pte_small_lift_def pte_tag_defs)
    apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
-     split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask)+
+     split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)+
   done
 
 lemma vmAttributesFromWord_spec:

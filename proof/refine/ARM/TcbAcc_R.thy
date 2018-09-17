@@ -2822,7 +2822,7 @@ lemma prioToL1Index_bit_set:
 
 lemma prioL2Index_bit_set:
   fixes p :: priority
-  shows "((2::32 word) ^ unat (ucast p && (mask wordRadix :: machine_word))) !! unat (p && mask wordRadix)"
+  shows "((2::32 word) ^ unat (p && mask wordRadix)) !! unat (p && mask wordRadix)"
   apply (simp add: nth_w2p wordRadix_def ucast_and_mask[symmetric] unat_ucast_upcast is_up)
   apply (rule unat_less_helper)
   apply (insert and_mask_less'[where w=p and n=wordRadix], simp add: wordRadix_def)

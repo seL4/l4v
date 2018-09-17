@@ -1529,7 +1529,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     apply (simp add: valid_untyped'_def capAligned_def)
     apply (elim conjE)
     apply (drule_tac x="p && ~~ mask pageBits" in spec)
-    apply (cut_tac x=p in is_aligned_neg_mask[of pageBits pageBits, simplified])
+    apply (cut_tac x=p in is_aligned_neg_mask[OF le_refl])
     apply (clarsimp simp: mask_2pm1 ko_wp_at'_def obj_range'_def objBitsKO_def)
     apply (frule is_aligned_no_overflow'[of base bits])
     apply (frule is_aligned_no_overflow'[of _ pageBits])
@@ -2430,6 +2430,9 @@ lemma not_in_new_cap_addrs:
     pspace_no_overlap' ptr (objBitsKO obj + us) s;
     ksPSpace s dest = Some ko;pspace_aligned' s\<rbrakk>
    \<Longrightarrow> dest \<notin> set (new_cap_addrs (2 ^ us) ptr obj)"
+  supply
+    is_aligned_neg_mask_eq[simp del]
+    is_aligned_neg_mask_weaken[simp del]
   apply (rule ccontr)
   apply simp
   apply (drule(1) pspace_no_overlapD'[rotated])
@@ -4116,8 +4119,7 @@ lemma pspace_no_overlapD2':
     apply clarsimp
     apply (subst is_aligned_neg_mask_eq[symmetric])
     apply simp
-   apply (rule is_aligned_no_overflow)
-   apply (simp add:is_aligned_neg_mask)
+   apply (simp add: is_aligned_no_overflow)
    done
 
 lemma caps_overlap_reserved'_subseteq:
@@ -5997,7 +5999,7 @@ lemma createNewObjects_def2:
       show ?case
       apply simp
       using snoc.prems
-      apply (subst upto_enum_inc_1)
+      apply (subst upto_enum_inc_1_len)
        apply (rule word_of_nat_less)
        apply (simp add:word_bits_def minus_one_norm)
       apply (subst append_Cons[symmetric])
@@ -6275,7 +6277,7 @@ lemma createNewObjects_Cons:
       = [0.e.of_nat (length dest - 1)] @ [of_nat (length dest)]"
       apply (cases dest)
       apply clarsimp+
-      apply (rule upto_enum_inc_1)
+      apply (rule upto_enum_inc_1_len)
       apply (rule word_of_nat_less)
       apply (simp add: word_bits_conv minus_one_norm)
       done

@@ -650,6 +650,9 @@ lemma perform_asid_control_invocation_st_tcb_at:
     and ct_active and invs and valid_aci aci\<rbrace>
     perform_asid_control_invocation aci
   \<lbrace>\<lambda>y. st_tcb_at P t\<rbrace>"
+  supply
+    is_aligned_neg_mask_eq[simp del]
+    is_aligned_neg_mask_weaken[simp del]
   apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
   apply (rename_tac word1 a b aa ba word2)
   apply (rule hoare_name_pre_state)
@@ -1711,8 +1714,6 @@ lemma arch_decode_inv_wf[wp]:
                             pt_bits_def pageBits_def
                             linorder_not_le
                             order_le_less_trans[OF word_and_le2])
-      apply (rule is_aligned_andI2)
-      apply (simp add: is_aligned_mask)
      apply (rule conjI)
       apply (clarsimp simp add: cte_wp_at_caps_of_state)
       apply (drule (1) caps_of_state_valid[rotated])

@@ -1961,7 +1961,7 @@ lemma user_word_at_cross_over:
    apply (rule order_trans[rotated])
     apply (rule_tac x="p && mask pageBits" and y=8 in intvl_sub_offset)
     apply (cut_tac y=p and a="mask pageBits && (~~ mask 3)" in word_and_le1)
-    apply (subst(asm) word_bw_assocs[symmetric], subst(asm) aligned_neg_mask,
+    apply (subst(asm) word_bw_assocs[symmetric], subst(asm) is_aligned_neg_mask_eq,
            erule is_aligned_andI1)
     apply (simp add: word_le_nat_alt mask_def pageBits_def)
    apply simp

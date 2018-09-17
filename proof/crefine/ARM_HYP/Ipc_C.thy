@@ -4885,7 +4885,6 @@ lemma setupCallerCap_ccorres [corres]:
                              cap_to_H_simps cap_reply_cap_lift_def
                              false_def tcbSlots Kernel_C.tcbCaller_def
                              size_of_def cte_level_bits_def ctcb_size_bits_def)
-        apply (simp add: is_aligned_neg_mask)
        apply (wp getCTE_wp')
       apply (simp add: tcbSlots Kernel_C.tcbCaller_def
                        size_of_def cte_level_bits_def
@@ -5024,9 +5023,8 @@ lemma sendIPC_dequeue_ccorres_helper:
                            split: endpoint.splits list.splits
                        split del: if_split)
             apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
-             apply (clarsimp simp: is_aligned_neg_mask
-                            dest!: is_aligned_tcb_ptr_to_ctcb_ptr
-                        split del: if_split)
+             apply (clarsimp dest!: is_aligned_tcb_ptr_to_ctcb_ptr
+                         split del: if_split)
             apply (clarsimp split: if_split)
            apply simp
           \<comment> \<open>ntfn relation\<close>
@@ -5375,7 +5373,7 @@ lemma sendIPC_enqueue_ccorres_helper:
            apply (rule cpspace_relation_ep_update_ep', assumption+)
             apply (clarsimp simp: cendpoint_relation_def Let_def
                                   mask_def [where n=2] EPState_Send_def)
-            apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask)
+            apply (clarsimp simp: tcb_queue_relation'_def)
            apply (simp add: isSendEP_def isRecvEP_def)
           \<comment> \<open>ntfn relation\<close>
           apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
@@ -5415,7 +5413,7 @@ lemma sendIPC_enqueue_ccorres_helper:
            apply (clarsimp simp: cendpoint_relation_def Let_def
                                  mask_def [where n=2] EPState_Send_def
                           split: if_split)
-           apply (fastforce simp: tcb_queue_relation'_def is_aligned_neg_mask
+           apply (fastforce simp: tcb_queue_relation'_def
                                  valid_ep'_def
                            dest: tcb_queue_relation_next_not_NULL)
           apply (simp add: isSendEP_def isRecvEP_def)
@@ -5661,7 +5659,7 @@ lemma sendIPC_ccorres [corres]:
        apply (clarsimp simp: st_tcb_at_refs_of_rev' isBlockedOnReceive_def)
        apply (auto split: list.splits elim!: pred_tcb'_weakenE)[1]
       apply (subgoal_tac "state_refs_of' s epptr = {}")
-       apply (clarsimp simp: obj_at'_def is_aligned_neg_mask objBits_simps'
+       apply (clarsimp simp: obj_at'_def objBits_simps'
                              projectKOs invs'_def valid_state'_def
                              st_tcb_at'_def valid_tcb_state'_def ko_wp_at'_def
                              isBlockedOnSend_def projectKO_opt_tcb
@@ -5809,7 +5807,7 @@ lemma receiveIPC_enqueue_ccorres_helper:
             apply (clarsimp simp: cendpoint_relation_def Let_def
                                   mask_def [where n=2] EPState_Recv_def
                            split: if_split)
-            apply (fastforce simp: tcb_queue_relation'_def is_aligned_neg_mask
+            apply (fastforce simp: tcb_queue_relation'_def
                                   valid_ep'_def
                             dest: tcb_queue_relation_next_not_NULL)
            apply (simp add: isSendEP_def isRecvEP_def)
@@ -5849,7 +5847,7 @@ lemma receiveIPC_enqueue_ccorres_helper:
           apply (rule cpspace_relation_ep_update_ep', assumption+)
            apply (clarsimp simp: cendpoint_relation_def Let_def
                                  mask_def [where n=2] EPState_Recv_def)
-           apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask)
+           apply (clarsimp simp: tcb_queue_relation'_def)
           apply (simp add: isSendEP_def isRecvEP_def)
          \<comment> \<open>ntfn relation\<close>
          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
@@ -5982,9 +5980,8 @@ lemma receiveIPC_dequeue_ccorres_helper:
                            split: endpoint.splits list.splits
                        split del: if_split)
             apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
-             apply (clarsimp simp: is_aligned_neg_mask
-                            dest!: is_aligned_tcb_ptr_to_ctcb_ptr
-                        split del: if_split)
+             apply (clarsimp dest!: is_aligned_tcb_ptr_to_ctcb_ptr
+                         split del: if_split)
             apply (clarsimp split: if_split)
            apply simp
           \<comment> \<open>ntfn relation\<close>
@@ -6403,7 +6400,7 @@ lemma receiveIPC_ccorres [corres]:
              apply (rename_tac list)
              apply (subgoal_tac "state_refs_of' s (capEPPtr cap) = (set list) \<times> {EPRecv}
                                  \<and> thread \<notin> (set list)")
-              subgoal by (fastforce simp: obj_at'_def is_aligned_neg_mask objBits_simps'
+              subgoal by (fastforce simp: obj_at'_def objBits_simps'
                                           projectKOs invs'_def valid_state'_def st_tcb_at'_def
                                           valid_tcb_state'_def ko_wp_at'_def invs_valid_objs'
                                           isBlockedOnReceive_def projectKO_opt_tcb
@@ -6416,7 +6413,7 @@ lemma receiveIPC_ccorres [corres]:
              apply (drule(1) bspec)+
              apply (case_tac "tcbState obj", simp_all add: tcb_bound_refs'_def)[1]
             apply (subgoal_tac "state_refs_of' s (capEPPtr cap) = {}")
-             subgoal by (fastforce simp: obj_at'_def is_aligned_neg_mask objBits_simps'
+             subgoal by (fastforce simp: obj_at'_def objBits_simps'
                                          projectKOs invs'_def valid_state'_def st_tcb_at'_def
                                          valid_tcb_state'_def ko_wp_at'_def invs_valid_objs'
                                          isBlockedOnReceive_def projectKO_opt_tcb
@@ -6570,9 +6567,8 @@ lemma sendSignal_dequeue_ccorres_helper:
                           split: Structures_H.notification.splits list.splits
                       split del: if_split)
            apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
-            apply (clarsimp simp: is_aligned_neg_mask
-                           dest!: is_aligned_tcb_ptr_to_ctcb_ptr
-                       split del: if_split)
+            apply (clarsimp dest!: is_aligned_tcb_ptr_to_ctcb_ptr
+                        split del: if_split)
            apply (clarsimp split: if_split)
           apply simp
          \<comment> \<open>queue relation\<close>
@@ -6875,7 +6871,10 @@ lemma ntfnBound_state_refs_equivalence:
 
 
 lemma receiveSignal_enqueue_ccorres_helper:
-  notes option.case_cong_weak [cong]
+  notes
+    option.case_cong_weak [cong]
+    is_aligned_neg_mask_eq[simp del]
+    is_aligned_neg_mask_weaken[simp del]
   shows
   "ccorres dc xfdc (valid_pspace'
                 and (\<lambda>s. sym_refs ((state_refs_of' s)(ntfnptr := set queue \<times> {NTFNSignal} \<union> {r \<in> state_refs_of' s ntfnptr. snd r = NTFNBound})))
@@ -6951,7 +6950,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
             apply (case_tac "ntfn", simp_all)[1]
            apply (clarsimp simp: cnotification_relation_def Let_def
                                  mask_def [where n=2] NtfnState_Waiting_def)
-           subgoal by (fastforce simp: tcb_queue_relation'_def is_aligned_neg_mask
+           subgoal by (fastforce simp: tcb_queue_relation'_def is_aligned_neg_mask_weaken
                                  valid_ntfn'_def
                            dest: tcb_queue_relation_next_not_NULL)
           apply (simp add: isWaitingNtfn_def)
@@ -6993,7 +6992,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
           apply (clarsimp simp: cnotification_relation_def Let_def
                                 mask_def [where n=2] NtfnState_Waiting_def
                          split: if_split)
-          apply (fastforce simp: tcb_queue_relation'_def is_aligned_neg_mask)
+          apply (fastforce simp: tcb_queue_relation'_def is_aligned_neg_mask_weaken)
          apply (simp add: isWaitingNtfn_def)
         \<comment> \<open>queue relation\<close>
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
@@ -7153,7 +7152,7 @@ lemma receiveSignal_ccorres [corres]:
                   split: ntfn.splits)
     apply (subgoal_tac "state_refs_of' s (capNtfnPtr cap) =
                              {r \<in> state_refs_of' s (capNtfnPtr cap). snd r = NTFNBound}")
-     subgoal by (fastforce simp: obj_at'_def is_aligned_neg_mask objBits_simps'
+     subgoal by (fastforce simp: obj_at'_def objBits_simps'
                                  projectKOs invs'_def valid_state'_def st_tcb_at'_def
                                  valid_tcb_state'_def ko_wp_at'_def
                                  isBlockedOnNotification_def projectKO_opt_tcb
@@ -7164,7 +7163,7 @@ lemma receiveSignal_ccorres [corres]:
    apply (subgoal_tac "state_refs_of' s (capNtfnPtr cap) = (set list) \<times> {NTFNSignal}
                                        \<union> {r \<in> state_refs_of' s (capNtfnPtr cap). snd r = NTFNBound}
                               \<and> thread \<notin> (set list)")
-    subgoal by (fastforce simp: obj_at'_def is_aligned_neg_mask objBits_simps'
+    subgoal by (fastforce simp: obj_at'_def objBits_simps'
                                 projectKOs invs'_def valid_state'_def st_tcb_at'_def
                                 valid_tcb_state'_def ko_wp_at'_def
                                 isBlockedOnNotification_def projectKO_opt_tcb

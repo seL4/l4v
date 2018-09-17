@@ -1665,7 +1665,7 @@ lemma irq_opt_relation_Some_ucast':
     apply simp+
   apply (rule word_eqI[rule_format])
   apply (drule_tac f = "%x. (x !! n)" in arg_cong)
-  apply (simp add:nth_ucast and_bang word_size)
+  apply (simp add:nth_ucast word_size)
 done
 
 lemma ccap_relation_IRQHandler_mask:
@@ -2718,19 +2718,20 @@ lemma finaliseCap_ccorres:
     apply (subgoal_tac "P" for P)
      apply (subst add.commute, subst unatSuc, assumption)+
      apply (intro impI, rule conjI)
-      apply (rule word_eqI)
-      apply (simp add: word_size word_ops_nth_size nth_w2p
-                       less_Suc_eq_le is_aligned_nth)
-      apply (safe, simp_all)[1]
-     apply (simp add: shiftL_nat ccap_relation_NullCap_iff)
-     apply (rule trans, rule unat_power_lower32[symmetric])
-      apply (simp add: word_bits_conv)
-     apply (rule unat_cong, rule word_eqI)
-     apply (simp add: word_size word_ops_nth_size nth_w2p
-                      is_aligned_nth less_Suc_eq_le)
-     apply (safe, simp_all)[1]
-    apply (subst add.commute, subst eq_diff_eq[symmetric])
-    apply (clarsimp simp: minus_one_norm)
+      subgoal
+        apply (subst word_bool_alg.conj_disj_distrib2)
+        apply (subst zero_OR_eq, fastforce)
+        by (fastforce simp: is_aligned_neg_mask_weaken)
+     subgoal
+       apply (simp add: shiftL_nat ccap_relation_NullCap_iff)
+       apply (rule trans, rule unat_power_lower32[symmetric])
+        apply (simp add: word_bits_conv)
+       apply (rule unat_cong, rule word_eqI)
+       apply (simp add: word_size word_ops_nth_size nth_w2p is_aligned_nth less_Suc_eq_le)
+       by auto[1]
+    subgoal
+      apply (subst add.commute, subst eq_diff_eq[symmetric])
+      by (clarsimp simp: minus_one_norm)
    apply (rule ccorres_if_lhs)
     apply (simp add: Let_def getThreadCSpaceRoot_def locateSlot_conv
                      Collect_True Collect_False

@@ -2040,7 +2040,8 @@ lemma unmap_page_table_corres:
       apply (rule corres_trivial, simp)
      apply (wp page_table_mapped_wp)
     apply (wp hoare_drop_imps)[1]
-   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_arch_caps_def word_gt_0)
+   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_arch_caps_def
+                         Word.word_gt_0)
    apply (frule (1) page_directory_pde_at_lookupI)
    apply (auto elim: simp: empty_table_def valid_pde_mappings_def pde_ref_def obj_at_def
                      vs_refs_pages_def graph_of_def split: if_splits)

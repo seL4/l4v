@@ -4172,6 +4172,14 @@ crunches possibleSwitchTo
    and ioports'[wp]: valid_ioports'
   (wp: valid_ioports_lift' possibleSwitchTo_ctes_of crunch_wps ignore: constOnFailure)
 
+(* FIXME: move to Lib *)
+lemma nonempty_cross_distinct_singleton_elim:
+  "\<lbrakk> x \<times> {a} = y \<times> {b};
+     x \<noteq> {} \<or> y \<noteq> {};
+     a \<noteq> b \<rbrakk>
+   \<Longrightarrow> P"
+  by blast
+
 (* t = ksCurThread s *)
 lemma ri_invs' [wp]:
   "\<lbrace>invs' and sch_act_not t
@@ -4214,10 +4222,7 @@ lemma ri_invs' [wp]:
       apply (clarsimp simp: set_eq_subset)
      apply (rule conjI, erule delta_sym_refs)
        apply (clarsimp split: if_split_asm)
-        apply (rename_tac list one two three fur five six seven eight nine ten)
-        apply (subgoal_tac "set list \<times> {EPRecv} \<noteq> {}")
-         apply safe[1]
-                apply (auto dest!: symreftype_inverse')[10]
+        apply ((case_tac tp; fastforce elim: nonempty_cross_distinct_singleton_elim)+)[2]
       apply (clarsimp split: if_split_asm)
      apply (fastforce simp: valid_pspace'_def global'_no_ex_cap idle'_not_queued)
    \<comment> \<open>endpoint = IdleEP\<close>

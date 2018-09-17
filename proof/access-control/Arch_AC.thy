@@ -746,7 +746,7 @@ lemma perform_asid_control_invocation_respects:
                         range_cover_def obj_bits_api_def default_arch_object_def
                         pageBits_def word_bits_def)
   apply(subst is_aligned_neg_mask_eq[THEN sym], assumption)
-  apply(simp add: mask_neg_mask_is_zero)
+  apply(simp add: mask_neg_mask_is_zero mask_zero)
   done
 
 lemma pas_refined_cdt:
@@ -905,7 +905,7 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
    apply(rule conjI)
     apply(clarsimp simp: range_cover_def obj_bits_api_def default_arch_object_def)
     apply(subst is_aligned_neg_mask_eq[THEN sym], assumption)
-    apply(simp add: mask_neg_mask_is_zero pageBits_def)
+    apply(simp add: mask_neg_mask_is_zero pageBits_def mask_zero)
    apply(clarsimp simp: aag_cap_auth_def pas_refined_refl)
    apply(drule_tac x=x in bspec)
     apply(simp add: is_aligned_no_overflow)

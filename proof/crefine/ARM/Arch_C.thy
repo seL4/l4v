@@ -587,8 +587,7 @@ shows
   apply (clarsimp simp: ccap_relation_def)
   apply (clarsimp simp: cap_asid_pool_cap_lift)
   apply (clarsimp simp: cap_to_H_def)
-  apply (simp add: is_aligned_neg_mask pageBits_def)
-  apply (drule word_le_mask_eq, simp)
+  apply (drule word_le_mask_eq)
   apply (simp add: asid_bits_def)
   done
 
@@ -910,7 +909,7 @@ lemma decodeARMPageTableInvocation_ccorres:
   apply (simp add: cpde_relation_def Let_def pde_lift_pde_coarse
                    pde_pde_coarse_lift_def word_bw_assocs)
   apply (thin_tac "P" for P)+
-  apply (subst is_aligned_neg_mask [OF _ order_refl],
+  apply (subst is_aligned_neg_mask_eq,
         rule is_aligned_addrFromPPtr_n,
         rule is_aligned_andI2,
         simp add: is_aligned_def mask_def,
@@ -1805,7 +1804,7 @@ lemma array_assertion_abs_pde_16_no_lookup:
   apply (cases ptr, simp add: shiftr_shiftl1)
   apply (rule conjI, rule trans,
          rule word_plus_and_or_coroll2[symmetric, where w="mask pdBits"])
-   apply (simp, rule aligned_neg_mask[THEN sym], rule is_aligned_andI1,
+   apply (simp, rule is_aligned_neg_mask_eq[THEN sym], rule is_aligned_andI1,
           erule is_aligned_weaken, simp)
   apply (rule order_trans, erule add_mono[OF order_refl], simp)
   apply (rule unat_le_helper)
@@ -2286,11 +2285,11 @@ lemma generic_frame_cap_set_capFMappedAddress_ccap_relation:
     apply (subst field_simps, simp add: word_plus_and_or_coroll2)
    apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def)
    apply (subst field_simps, simp add: word_plus_and_or_coroll2)
-   apply (rule sym, erule is_aligned_neg_mask)
+   apply (rule sym, erule is_aligned_neg_mask_weaken)
    apply (simp add: pageBitsForSize_def split: if_split)
   apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def)
   apply (subst field_simps, simp add: word_plus_and_or_coroll2)
-  apply (rule sym, erule is_aligned_neg_mask)
+  apply (rule sym, erule is_aligned_neg_mask_weaken)
   apply (simp add: pageBitsForSize_def split: if_split)
   done
 
@@ -2542,7 +2541,10 @@ lemma two_nat_power_pageBitsForSize_le:
   by (cases vsz, simp_all add: pageBits_def)
 
 lemma decodeARMFrameInvocation_ccorres:
-  notes if_cong[cong] tl_drop_1[simp]
+  notes
+    if_cong[cong]
+    is_aligned_neg_mask_eq[simp del]
+    is_aligned_neg_mask_weaken[simp del]
   shows
   "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps;
           isPageCap cp \<rbrakk>
@@ -2603,7 +2605,7 @@ lemma decodeARMFrameInvocation_ccorres:
 
 
         apply (clarsimp simp:list_length_less )
-        apply (drule unat_less_iff32[where c =2])
+        apply (drule unat_less_iff[where c=2])
          apply (simp add:word_bits_def)
         apply simp
        apply (simp add: throwError_bind invocationCatch_def)
@@ -3174,26 +3176,35 @@ lemma decodeARMFrameInvocation_ccorres:
                          mask_def[where n=asid_bits]
                          linorder_not_le simp del: less_1_simp)
    apply (subgoal_tac "extraCaps \<noteq> [] \<longrightarrow> (s \<turnstile>' fst (extraCaps ! 0))")
-    apply ((clarsimp simp: ct_in_state'_def vmsz_aligned'_def isCap_simps
-                           valid_cap'_def page_directory_at'_def
-                           sysargs_rel_to_n linorder_not_less
-                           excaps_map_def valid_tcb_state'_def
-                 simp del: less_1_simp
-              | rule conjI | erule pred_tcb'_weakenE disjE
-      | erule(3) is_aligned_no_overflow3[OF vmsz_aligned_addrFromPPtr(3)[THEN iffD2]]
-      | drule st_tcb_at_idle_thread' interpret_excaps_eq
-      | erule order_le_less_trans[rotated] order_trans[where x=63, rotated]
-      | rule order_trans[where x=63, OF _ two_nat_power_pageBitsForSize_le, unfolded pageBits_def]
-      | clarsimp simp: neq_Nil_conv
-      | (drule_tac p2 = v0 in is_aligned_weaken[OF vmsz_aligned_addrFromPPtr(3)[THEN iffD2]
-      , where y = 5,OF _ le_trans[OF  _ pbfs_atleast_pageBits]],simp add:pageBits_def)
-      , drule_tac w = b in is_aligned_weaken[
-      where y = 5,OF _ le_trans[OF  _ pbfs_atleast_pageBits]]
-      ,simp add:pageBits_def
-      ,simp add:mask_add_aligned,simp add:field_simps,simp add:mask_add_aligned)
-     +)[1]
-   apply (clarsimp simp: neq_Nil_conv excaps_in_mem_def slotcap_in_mem_def
-                         linorder_not_le)
+    subgoal
+      apply ((clarsimp simp: ct_in_state'_def vmsz_aligned'_def isCap_simps
+                             valid_cap'_def page_directory_at'_def
+                             sysargs_rel_to_n linorder_not_less
+                             excaps_map_def valid_tcb_state'_def
+                   simp del: less_1_simp
+                | rule conjI | erule pred_tcb'_weakenE disjE
+        | erule(3) is_aligned_no_overflow3[OF vmsz_aligned_addrFromPPtr(3)[THEN iffD2]]
+        | drule st_tcb_at_idle_thread' interpret_excaps_eq
+        | erule order_le_less_trans[rotated] order_trans[where x=63, rotated]
+        | rule order_trans[where x=63, OF _ two_nat_power_pageBitsForSize_le, unfolded pageBits_def]
+        | clarsimp simp: neq_Nil_conv
+        | solves \<open>
+            rule word_plus_mono_right[OF word_less_sub_1],
+            simp,
+            subst (asm) vmsz_aligned_addrFromPPtr(3)[symmetric],
+            erule is_aligned_no_wrap',
+            clarsimp\<close>
+        | solves \<open>
+            frule vmsz_aligned_addrFromPPtr(3)[THEN iffD2],
+            (subst mask_add_aligned mask_add_aligned_right,
+              erule is_aligned_weaken,
+              rule order_trans[OF _ pbfs_atleast_pageBits[simplified pageBits_def]],
+              simp)+,
+            simp\<close>
+       )+)[1]
+     done
+  apply (clarsimp simp: neq_Nil_conv excaps_in_mem_def slotcap_in_mem_def
+                        linorder_not_le)
    apply (erule ctes_of_valid', clarsimp)
   apply (clarsimp simp: if_1_0_0 rf_sr_ksCurThread "StrictC'_thread_state_defs"
                         mask_eq_iff_w2p word_size word_less_nat_alt
@@ -3447,7 +3458,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
     apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
        apply vcg
       apply (clarsimp simp:list_length_less )
-      apply (drule unat_less_iff32[where c =2])
+      apply (drule unat_less_iff[where c=2])
        apply (simp add:word_bits_def)
       apply simp
      apply (simp add: throwError_bind invocationCatch_def)

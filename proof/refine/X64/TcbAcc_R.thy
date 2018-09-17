@@ -2840,7 +2840,7 @@ lemma addToBitmap_bitmapQ:
   unfolding addToBitmap_def
              modifyReadyQueuesL1Bitmap_def modifyReadyQueuesL2Bitmap_def
              getReadyQueuesL1Bitmap_def getReadyQueuesL2Bitmap_def
-  by (wp, clarsimp simp: bitmap_fun_defs bitmapQ_def prioToL1Index_bit_set prioL2Index_bit_set)
+  by (wpsimp simp: bitmap_fun_defs bitmapQ_def prioToL1Index_bit_set prioL2Index_bit_set)
 
 lemma addToBitmap_valid_queues_no_bitmap_except:
 " \<lbrace> valid_queues_no_bitmap_except t \<rbrace>

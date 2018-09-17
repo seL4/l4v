@@ -914,7 +914,7 @@ shows
   apply (clarsimp simp: ccap_relation_def)
   apply (clarsimp simp: cap_asid_pool_cap_lift)
   apply (clarsimp simp: cap_to_H_def)
-  apply (simp add: is_aligned_neg_mask pageBits_def)
+  apply (clarsimp simp: asid_bits_def)
   apply (drule word_le_mask_eq, simp)
   apply (simp add: asid_bits_def sign_extend_canonical_address)
   done
@@ -990,7 +990,7 @@ lemma addrFromPPtr_mask_middle_pml4ShiftBits:
    addrFromPPtr p && (mask pml4ShiftBits << pageBits) = addrFromPPtr p"
   apply (clarsimp simp: mask_shiftl_decompose kernel_mappings_def)
   apply (subst word_bool_alg.conj.assoc[symmetric])
-  apply (subst is_aligned_neg_mask[OF _ order_refl])
+  apply (subst is_aligned_neg_mask_eq)
    apply (rule aligned_already_mask)
    apply (erule is_aligned_addrFromPPtr)
   apply (clarsimp simp: addrFromPPtr_def X64.pptrBase_def pptr_base_def bit_simps)
@@ -1957,7 +1957,7 @@ lemma vmsz_aligned_addrFromPPtr':
    apply (erule(1) aligned_sub_aligned)
     apply (simp add: pageBitsForSize_def word_bits_def split: vmpage_size.split)
   apply (simp add: pageBitsForSize_def X64.pptrBase_def is_aligned_def bit_simps
-            split: vmpage_size.split)
+            split: vmpage_size.split)+
   done
 
 lemmas vmsz_aligned_addrFromPPtr
@@ -2140,7 +2140,7 @@ lemma addrFromPPtr_mask_middle_shiftBits:
    addrFromPPtr p && (mask (shiftBitsForSize sz) << (pageBitsForSize sz)) = addrFromPPtr p"
   apply (clarsimp simp: mask_shiftl_decompose kernel_mappings_def)
   apply (subst word_bool_alg.conj.assoc[symmetric])
-  apply (subst is_aligned_neg_mask[OF _ order_refl])
+  apply (subst is_aligned_neg_mask_eq)
    apply (rule aligned_already_mask)
    apply (clarsimp simp: is_aligned_addrFromPPtr_pageBitsForSize)
   apply (clarsimp simp: addrFromPPtr_def X64.pptrBase_def pptr_base_def bit_simps)

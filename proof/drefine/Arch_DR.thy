@@ -1726,6 +1726,8 @@ done
 lemma invoke_asid_control_corres:
   assumes "arch_invocation_relation (cdl_invocation.InvokeAsidControl asid_inv)
       (arch_invocation.InvokeASIDControl asid_inv')"
+  notes is_aligned_neg_mask_eq[simp del]
+        is_aligned_neg_mask_weaken[simp del]
   shows
   "dcorres dc \<top>
     (invs and ct_active and valid_aci asid_inv' and valid_etcbs)

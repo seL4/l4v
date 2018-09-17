@@ -88,7 +88,7 @@ lemma createObject_typ_at':
   apply (subgoal_tac "x \<in> {x..x + 2 ^ objBitsKO y - 1}")
    apply (fastforce simp:is_aligned_neg_mask_eq p_assoc_help)
   apply (drule(1) pspace_alignedD')
-  apply (clarsimp simp: is_aligned_no_wrap' p_assoc_help)
+  apply (fastforce simp: is_aligned_no_wrap' p_assoc_help)
   done
 
 lemma retype_region2_ext_retype_region_ArchObject:
@@ -132,6 +132,9 @@ lemma pac_corres:
          (invs' and ct_active' and valid_aci' i')
          (perform_asid_control_invocation i)
          (performASIDControlInvocation i')"
+  supply
+   is_aligned_neg_mask_eq[simp del]
+   is_aligned_neg_mask_weaken[simp del]
   apply (cases i)
   apply (rename_tac word1 prod1 prod2 word2)
   apply (clarsimp simp: asid_ci_map_def)

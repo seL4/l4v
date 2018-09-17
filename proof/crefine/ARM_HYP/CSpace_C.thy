@@ -592,7 +592,7 @@ lemma cteInsert_ccorres_mdb_helper:
   apply (rule allI)
   apply (rule conseqPre)
   apply vcg
-  apply (clarsimp simp: return_def)
+  apply (clarsimp simp: return_def mask_1_eq_1[simplified])
   apply (simp add: cmdbnode_relation_def)
   done
 
@@ -633,7 +633,7 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
      apply (erule (2) cspace_cte_relation_upd_mdbI)
      apply (simp add: cmdbnode_relation_def)
 
-     subgoal for _ s' by (cases "v32_' s' = 0"; simp)
+     subgoal for _ s' by (cases "v32_' s' = 0"; clarsimp intro: word_gt_0)
 
     apply (erule_tac t = s'a in ssubst)
     apply simp
@@ -681,7 +681,8 @@ lemma ccorres_updateMDB_set_mdbPrev [corres]:
     apply (erule (2) cspace_cte_relation_upd_mdbI)
     apply (simp add: cmdbnode_relation_def)
 
-    subgoal for _ s' by (cases "v32_' s' = 0"; simp)
+    subgoal for _ s' by (cases "v32_' s' = 0"; clarsimp intro: word_gt_0)
+
    apply (erule_tac t = s'a in ssubst)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
                     h_t_valid_clift_Some_iff typ_heap_simps')
@@ -1004,12 +1005,12 @@ lemma setUntypedCapAsFull_ccorres [corres]:
         apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
        apply assumption
       apply (clarsimp simp: max_free_index_def shiftL_nat valid_cap'_def capAligned_def)
-     apply (simp add:power_minus_is_div unat_sub word_le_nat_alt t2p_shiftr)
+     apply (simp add:power_minus_is_div unat_sub word_le_nat_alt t2p_shiftr_32)
      apply clarsimp
      apply (erule cte_wp_at_weakenE', simp)
     apply clarsimp
     apply (drule valid_cap_untyped_inv)
-    apply (clarsimp simp:max_free_index_def t2p_shiftr unat_sub word_le_nat_alt)
+    apply (clarsimp simp:max_free_index_def t2p_shiftr_32 unat_sub word_le_nat_alt)
    apply (clarsimp simp:field_simps)
    apply (rule word_less_imp_diff_less)
     apply (subst (asm) eq_commute, fastforce simp: unat_sub word_le_nat_alt)

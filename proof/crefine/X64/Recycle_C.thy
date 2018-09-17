@@ -334,7 +334,7 @@ lemma clearMemory_PageCap_ccorres:
     apply assumption
    apply (subst heap_to_user_data_update_region)
     apply (drule map_to_user_data_aligned, clarsimp)
-    apply (rule aligned_range_offset_mem_helper[where m=pageBits], simp_all)[1]
+    apply (rule aligned_range_offset_mem[where m=pageBits], simp_all)[1]
     apply (rule pbfs_atleast_pageBits)
    apply (erule cmap_relation_If_upd)
      apply (clarsimp simp: cuser_user_data_relation_def order_less_le_trans[OF unat_lt2p])
@@ -348,7 +348,7 @@ lemma clearMemory_PageCap_ccorres:
       apply (simp add: subtract_mask(2)[symmetric])
       apply (cut_tac w="xa - ptr" and n=pageBits in and_not_mask[symmetric])
       apply (simp add: shiftl_t2n field_simps pageBits_def)
-      apply (subst aligned_neg_mask, simp_all)[1]
+      apply (subst is_aligned_neg_mask_eq, simp_all)[1]
       apply (erule aligned_sub_aligned, simp_all add: word_bits_def)[1]
       apply (erule is_aligned_weaken)
       apply (rule pbfs_atleast_pageBits[unfolded pageBits_def])
@@ -361,7 +361,7 @@ lemma clearMemory_PageCap_ccorres:
      apply (simp add: word_bits_def word_size)
     apply (rule IntI)
      apply (clarsimp simp del: atLeastAtMost_iff)
-     apply (subst aligned_range_offset_mem_helper, assumption, simp_all)[1]
+     apply (subst aligned_range_offset_mem, assumption, simp_all)[1]
      apply (rule order_le_less_trans[rotated], erule shiftl_less_t2n [OF of_nat_power],
                  simp_all add: word_bits_def)[1]
       apply (insert pageBitsForSize_32 [of sz])[1]
@@ -1056,7 +1056,7 @@ lemma cancelBadgedSends_ccorres:
               apply (erule(1) cpspace_relation_ep_update_ep2)
                apply (simp add: cendpoint_relation_def Let_def)
                apply (subgoal_tac "tcb_at' (last (a # list)) \<sigma> \<and> tcb_at' a \<sigma>")
-                apply (clarsimp simp: is_aligned_neg_mask [OF is_aligned_tcb_ptr_to_ctcb_ptr[where P=\<top>]])
+                apply (clarsimp simp: is_aligned_neg_mask_eq[OF is_aligned_tcb_ptr_to_ctcb_ptr[where P=\<top>]])
                 apply (simp add: tcb_queue_relation'_def EPState_Send_def mask_def)
                 apply (drule (1) tcb_and_not_mask_canonical[where n=2])
                  apply (simp (no_asm) add: tcbBlockSizeBits_def)

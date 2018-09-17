@@ -609,8 +609,7 @@ shows
   apply (clarsimp simp: ccap_relation_def)
   apply (clarsimp simp: cap_asid_pool_cap_lift)
   apply (clarsimp simp: cap_to_H_def)
-  apply (simp add: is_aligned_neg_mask pageBits_def)
-  apply (drule word_le_mask_eq, simp)
+  apply (drule word_le_mask_eq)
   apply (simp add: asid_bits_def)
   done
 
@@ -922,8 +921,7 @@ lemma decodeARMPageTableInvocation_ccorres:
                         shiftr_shiftl1 mask_def[where n=17])
   apply (clarsimp simp: cpde_relation_def Let_def pde_lift_pde_coarse
                         pde_pde_coarse_lift_def word_bw_assocs page_table_at'_def table_bits_defs)
-  apply (subst is_aligned_neg_mask [OF _ order_refl]
-         , erule is_aligned_addrFromPPtr_n)
+  apply (subst is_aligned_neg_mask_eq, erule is_aligned_addrFromPPtr_n)
    apply fastforce+
   done
 
@@ -1685,8 +1683,6 @@ lemma performPageInvocationMapPTE_ccorres:
                apply (clarsimp simp: pte_lifts split: if_split)
                apply (rule conjI)
                 apply (clarsimp simp: cpte_relation_def pte_pte_small_lift_def split del: split_of_bool)
-                apply (rule is_aligned_neg_mask_eq)
-                apply (erule is_aligned_weaken, simp)
                apply (clarsimp simp: addPTEOffset_def)
                apply (clarsimp simp: cpte_relation_def pte_pte_small_lift_def split del: split_of_bool)
                apply (clarsimp simp: gen_framesize_to_H_def ARMSmallPage_def addPAddr_def fromPAddr_def)
@@ -1711,10 +1707,6 @@ lemma performPageInvocationMapPTE_ccorres:
               apply (case_tac a; clarsimp simp: isLargePagePTE_def)
               apply (clarsimp simp: cpte_relation_def pte_lift_small split del: split_of_bool)
               apply (clarsimp simp: pte_lifts split del: split_of_bool)
-              apply (rule context_conjI)
-               apply (rule is_aligned_neg_mask_eq)
-               apply (erule is_aligned_weaken, simp)
-              apply simp
              apply clarsimp
              apply (rule conjI, clarsimp)
               apply (clarsimp split: if_split_asm)
@@ -1724,8 +1716,6 @@ lemma performPageInvocationMapPTE_ccorres:
               apply (case_tac a; clarsimp simp: isLargePagePTE_def)
               apply (clarsimp simp: cpte_relation_def pte_lift_small split del: split_of_bool)
               apply (clarsimp simp: pte_lifts split del: split_of_bool)
-              apply (rule is_aligned_neg_mask_eq)
-              apply (erule is_aligned_weaken, simp)
              apply (clarsimp split: if_split)
              apply (rule conjI, clarsimp)
               apply unat_arith
@@ -1986,7 +1976,7 @@ lemma array_assertion_abs_pde_16_no_lookup:
   apply (cases ptr, simp add: shiftr_shiftl1)
   apply (rule conjI, rule trans,
          rule word_plus_and_or_coroll2[symmetric, where w="mask pdBits"])
-   apply (simp, rule aligned_neg_mask[THEN sym], rule is_aligned_andI1,
+   apply (simp, rule is_aligned_neg_mask_eq[THEN sym], rule is_aligned_andI1,
           erule is_aligned_weaken, simp)
   apply (rule order_trans, erule add_mono[OF order_refl], simp)
   apply (rule unat_le_helper)
@@ -2078,8 +2068,6 @@ lemma performPageInvocationMapPDE_ccorres:
                 apply (case_tac h_pde; clarsimp simp: isSuperSectionPDE_def)
                 apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
                 apply (clarsimp simp: pde_lifts split del: split_of_bool)
-                apply (rule is_aligned_neg_mask_eq)
-                apply (erule is_aligned_weaken, simp)
                apply (clarsimp simp: Kernel_C.ARMSection_def mask_def[of 2])
                apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def
                                      upt_conv_Cons[where i=0] of_nat_gt_0
@@ -2089,8 +2077,6 @@ lemma performPageInvocationMapPDE_ccorres:
                apply (clarsimp simp: pde_lifts split: if_split)
                apply (rule conjI)
                 apply (clarsimp simp: cpde_relation_def pde_pde_section_lift_def split del: split_of_bool)
-                apply (rule is_aligned_neg_mask_eq)
-                apply (erule is_aligned_weaken, simp)
                apply (clarsimp simp: addPDEOffset_def)
                apply (clarsimp simp: cpde_relation_def pde_pde_section_lift_def split del: split_of_bool)
                apply (clarsimp simp: gen_framesize_to_H_def ARMLargePage_def ARMSection_def ARMSmallPage_def addPAddr_def fromPAddr_def)
@@ -2113,28 +2099,18 @@ lemma performPageInvocationMapPDE_ccorres:
                apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
                apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
                apply (clarsimp simp: pde_lifts split del: split_of_bool cong: conj_cong)
-               apply (rule is_aligned_neg_mask_eq)
-               apply (erule is_aligned_weaken, simp)
               apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
               apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
               apply (clarsimp simp: pde_lifts split del: split_of_bool)
-              apply (rule context_conjI)
-               apply (rule is_aligned_neg_mask_eq)
-               apply (erule is_aligned_weaken, simp)
-              apply simp
              apply clarsimp
              apply (rule conjI, clarsimp)
               apply (clarsimp split: if_split_asm)
                apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
                apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
                apply (clarsimp simp: pde_lifts split del: split_of_bool)
-               apply (rule is_aligned_neg_mask_eq)
-               apply (erule is_aligned_weaken, simp)
               apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
               apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
               apply (clarsimp simp: pde_lifts split del: split_of_bool)
-              apply (rule is_aligned_neg_mask_eq)
-              apply (erule is_aligned_weaken, simp)
              apply (clarsimp split: if_split)
              apply (rule conjI, clarsimp)
               apply unat_arith
@@ -2143,8 +2119,6 @@ lemma performPageInvocationMapPDE_ccorres:
               apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
               apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
               apply (clarsimp simp: pde_lifts split del: split_of_bool)
-              apply (rule is_aligned_neg_mask_eq)
-              apply (erule is_aligned_weaken, simp)
              apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
              apply (clarsimp simp: cpde_relation_def addPDEOffset_def pde_lift_section split del: split_of_bool)
              apply (clarsimp simp: pde_lifts split del: split_of_bool)
@@ -2311,8 +2285,6 @@ lemma performPageInvocationRemapPDE_ccorres:
               apply (case_tac h_pde; clarsimp simp: isSuperSectionPDE_def)
               apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
               apply (clarsimp simp: pde_lifts split del: split_of_bool)
-              apply (rule is_aligned_neg_mask_eq)
-              apply (erule is_aligned_weaken, simp)
              apply (clarsimp simp: Kernel_C.ARMSection_def mask_def[of 2])
              apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def
                                    upt_conv_Cons[where i=0] of_nat_gt_0
@@ -2322,8 +2294,6 @@ lemma performPageInvocationRemapPDE_ccorres:
              apply (clarsimp simp: pde_lifts split: if_split)
              apply (rule conjI)
               apply (clarsimp simp: cpde_relation_def pde_pde_section_lift_def split del: split_of_bool)
-              apply (rule is_aligned_neg_mask_eq)
-              apply (erule is_aligned_weaken, simp)
              apply (clarsimp simp: addPDEOffset_def)
              apply (clarsimp simp: cpde_relation_def pde_pde_section_lift_def split del: split_of_bool)
              apply (clarsimp simp: gen_framesize_to_H_def ARMLargePage_def ARMSection_def ARMSmallPage_def addPAddr_def fromPAddr_def)
@@ -2346,28 +2316,18 @@ lemma performPageInvocationRemapPDE_ccorres:
              apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
              apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
              apply (clarsimp simp: pde_lifts split del: split_of_bool cong: conj_cong)
-             apply (rule is_aligned_neg_mask_eq)
-             apply (erule is_aligned_weaken, simp)
             apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
             apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
             apply (clarsimp simp: pde_lifts split del: split_of_bool)
-            apply (rule context_conjI)
-             apply (rule is_aligned_neg_mask_eq)
-             apply (erule is_aligned_weaken, simp)
-            apply simp
            apply clarsimp
            apply (rule conjI, clarsimp)
             apply (clarsimp split: if_split_asm)
              apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
              apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
              apply (clarsimp simp: pde_lifts split del: split_of_bool)
-             apply (rule is_aligned_neg_mask_eq)
-             apply (erule is_aligned_weaken, simp)
             apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
             apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
             apply (clarsimp simp: pde_lifts split del: split_of_bool)
-            apply (rule is_aligned_neg_mask_eq)
-            apply (erule is_aligned_weaken, simp)
            apply (clarsimp split: if_split)
            apply (rule conjI, clarsimp)
             apply unat_arith
@@ -2376,8 +2336,6 @@ lemma performPageInvocationRemapPDE_ccorres:
             apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
             apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
             apply (clarsimp simp: pde_lifts split del: split_of_bool)
-            apply (rule is_aligned_neg_mask_eq)
-            apply (erule is_aligned_weaken, simp)
            apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
            apply (clarsimp simp: cpde_relation_def addPDEOffset_def pde_lift_section split del: split_of_bool)
            apply (clarsimp simp: pde_lifts split del: split_of_bool)
@@ -2553,8 +2511,6 @@ lemma performPageInvocationRemapPTE_ccorres:
              apply (clarsimp simp: pte_lifts split: if_split)
              apply (rule conjI)
               apply (clarsimp simp: cpte_relation_def pte_pte_small_lift_def split del: split_of_bool)
-              apply (rule is_aligned_neg_mask_eq)
-              apply (erule is_aligned_weaken, simp)
              apply (clarsimp simp: addPTEOffset_def)
              apply (clarsimp simp: cpte_relation_def pte_pte_small_lift_def split del: split_of_bool)
              apply (clarsimp simp: gen_framesize_to_H_def ARMSmallPage_def addPAddr_def fromPAddr_def)
@@ -2579,10 +2535,6 @@ lemma performPageInvocationRemapPTE_ccorres:
             apply (case_tac a; clarsimp simp: isLargePagePTE_def)
             apply (clarsimp simp: cpte_relation_def pte_lift_small split del: split_of_bool)
             apply (clarsimp simp: pte_lifts split del: split_of_bool)
-            apply (rule context_conjI)
-             apply (rule is_aligned_neg_mask_eq)
-             apply (erule is_aligned_weaken, simp)
-            apply simp
            apply clarsimp
            apply (rule conjI, clarsimp)
             apply (clarsimp split: if_split_asm)
@@ -2592,8 +2544,6 @@ lemma performPageInvocationRemapPTE_ccorres:
             apply (case_tac a; clarsimp simp: isLargePagePTE_def)
             apply (clarsimp simp: cpte_relation_def pte_lift_small split del: split_of_bool)
             apply (clarsimp simp: pte_lifts split del: split_of_bool)
-            apply (rule is_aligned_neg_mask_eq)
-            apply (erule is_aligned_weaken, simp)
            apply (clarsimp split: if_split)
            apply (rule conjI, clarsimp)
             apply unat_arith
@@ -2798,18 +2748,10 @@ lemma generic_frame_cap_set_capFMappedAddress_ccap_relation:
                           shiftr_asid_low_bits_mask_asid_high_bits
                           and_not_mask[symmetric] shiftr_asid_low_bits_mask_eq_0
                    split: if_split)
-     apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def)
-     apply (subst field_simps, simp add: word_plus_and_or_coroll2)
-    apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def)
-    apply (subst field_simps, simp add: word_plus_and_or_coroll2)
-   apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def)
-   apply (subst field_simps, simp add: word_plus_and_or_coroll2)
-   apply (rule sym, erule is_aligned_neg_mask)
-   apply (simp add: pageBitsForSize_def split: if_split)
-  apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def)
-  apply (subst field_simps, simp add: word_plus_and_or_coroll2)
-  apply (rule sym, erule is_aligned_neg_mask)
-  apply (simp add: pageBitsForSize_def split: if_split)
+     apply (fastforce simp: vmsz_aligned'_def gen_framesize_to_H_def word_plus_and_or_coroll2
+                            pageBitsForSize_def is_aligned_neg_mask_weaken
+                            is_aligned_neg_mask_eq field_simps
+                     split: if_split_asm vmpage_size.splits)+
   done
 
 lemma slotcap_in_mem_valid:
@@ -3066,7 +3008,8 @@ lemma resolveVAddr_ccorres:
        (* 4 subgoals *)
        apply (fastforce simp: cpte_relation_def pte_pte_small_lift_def pte_lift_def Let_def mask_def
                               valid_mapping'_def  true_def framesize_from_H_simps page_base_def
-                        split: if_splits intro!: resolve_ret_rel_Some  dest!: aligned_neg_mask)+
+                        split: if_splits intro!: resolve_ret_rel_Some
+                        dest!: is_aligned_neg_mask_eq)+
        done
     apply (rule guard_is_UNIVI)
     apply (clarsimp simp: typ_heap_simps)
@@ -3087,7 +3030,8 @@ lemma resolveVAddr_ccorres:
      subgoal
        apply (fastforce simp: cpte_relation_def pte_pte_small_lift_def pte_lift_def Let_def mask_def
                               valid_mapping'_def  true_def framesize_from_H_simps
-                        split: if_splits intro!: resolve_ret_rel_Some  dest!: aligned_neg_mask)+
+                        split: if_splits intro!: resolve_ret_rel_Some
+                        dest!: is_aligned_neg_mask_eq)+
        done
      subgoal
        apply (rule conjI; clarsimp simp: ARMSuperSection_def mask_def)
@@ -3187,14 +3131,14 @@ lemma decodeARMFrameInvocation_ccorres:
                   del: Collect_const
                  cong: StateSpace.state.fold_congs globals.fold_congs
                       if_cong invocation_label.case_cong arch_invocation_label.case_cong list.case_cong)
-      apply (simp add: if_1_0_0 split_def case_option_If2 if_to_top_of_bind
+      apply (simp add: split_def case_option_If2 if_to_top_of_bind
                   del: Collect_const cong: if_cong invocation_label.case_cong arch_invocation_label.case_cong)
       apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
          apply vcg
 
 
         apply (clarsimp simp:list_length_less )
-        apply (drule unat_less_iff32[where c =2])
+        apply (drule unat_less_iff[where c =2])
          apply (simp add:word_bits_def)
         apply simp
        apply (simp add: throwError_bind invocationCatch_def)
@@ -3765,30 +3709,68 @@ lemma decodeARMFrameInvocation_ccorres:
                          mask_def[where n=asid_bits]
                          linorder_not_le simp del: less_1_simp)
    apply (subgoal_tac "extraCaps \<noteq> [] \<longrightarrow> (s \<turnstile>' fst (extraCaps ! 0))")
-    (* FIXME yuck; slow, likely partly redundant and runs for ~1.5min hence timing check *)
-    apply (timeit \<open>(
-             (clarsimp simp: ct_in_state'_def vmsz_aligned'_def isCap_simps
-                             valid_cap'_def page_directory_at'_def
-                             sysargs_rel_to_n linorder_not_less
+
+    subgoal
+      (* FIXME: this is big, ugly, and fragile - and so are the goals produced by
+                `simplify_and_expand`. Figure out how to clean this up. *)
+
+      supply_local_method simplify_and_expand =
+            ( clarsimp simp: ct_in_state'_def vmsz_aligned'_def isCap_simps valid_cap'_def
+                             page_directory_at'_def sysargs_rel_to_n linorder_not_less
                              excaps_map_def valid_tcb_state'_def
                    simp del: less_1_simp
-           | rule conjI | erule pred_tcb'_weakenE disjE
-           | erule(3) is_aligned_no_overflow3[OF vmsz_aligned_addrFromPPtr(3)[THEN iffD2]]
-           | drule st_tcb_at_idle_thread' interpret_excaps_eq
-           | erule order_le_less_trans[rotated] order_trans[where x=127, rotated]
-           | rule order_trans[where x=127, OF _ two_nat_power_pageBitsForSize_le, unfolded pageBits_def]
-           | clarsimp simp: neq_Nil_conv
-           | ((drule_tac p2 = v0 in is_aligned_weaken[OF vmsz_aligned_addrFromPPtr(3)[THEN iffD2],
-                where y = 7,OF _ le_trans[OF  _ pbfs_atleast_pageBits]],simp add:pageBits_def)
-              , drule_tac w = b in is_aligned_weaken[
-                where y = 7,OF _ le_trans[OF  _ pbfs_atleast_pageBits]]
-              , simp add: pageBits_def
-              , simp add: mask_add_aligned, simp add: field_simps, simp add: mask_add_aligned)
-           | simp add: mask_add_aligned_right[OF is_aligned_pageBitsForSize_minimum, simplified pageBits_def]
-                       mask_add_aligned[OF is_aligned_pageBitsForSize_minimum, simplified pageBits_def]
-                       vmsz_aligned_addrFromPPtr
-           | fastforce simp add: ptrFromPAddr_add_left is_aligned_no_overflow3[rotated -1]
-           )+)[1]\<close>)
+            | rule conjI
+            | erule pred_tcb'_weakenE disjE
+            | drule st_tcb_at_idle_thread' interpret_excaps_eq)+
+
+      supply_local_method neq_Nil_conv =
+            (local_method simplify_and_expand, clarsimp simp: neq_Nil_conv)
+
+      supply_local_method trans =
+            ( local_method simplify_and_expand
+            | erule order_le_less_trans[rotated] order_trans[where x=127, rotated]
+            | rule order_trans[where x=127, OF _ two_nat_power_pageBitsForSize_le,
+                               unfolded pageBits_def])+
+
+      supply_local_method lift_le =
+            (clarsimp simp: neq_Nil_conv,
+             rule is_aligned_no_overflow3[where n = "pageBitsForSize _"],
+             subst vmsz_aligned_addrFromPPtr,
+             assumption,
+             clarsimp+)
+
+      supply_local_method lift_add =
+            (local_method simplify_and_expand,
+             clarsimp simp: neq_Nil_conv,
+             simp add: mask_add_aligned_right[OF is_aligned_pageBitsForSize_minimum,
+                                              simplified pageBits_def]
+                       mask_add_aligned[OF is_aligned_pageBitsForSize_minimum,
+                                        simplified pageBits_def]
+                       vmsz_aligned_addrFromPPtr,
+             fastforce simp add: ptrFromPAddr_add_left is_aligned_no_overflow3[rotated -1])
+
+      apply (local_method simplify_and_expand)
+         subgoal by (local_method trans)
+        subgoal by (local_method trans)
+       subgoal by (local_method neq_Nil_conv)
+      apply (local_method simplify_and_expand)
+         subgoal by (local_method trans)
+        subgoal by (local_method trans)
+       subgoal by (local_method neq_Nil_conv)
+      apply (local_method simplify_and_expand)
+        subgoal by (local_method lift_le)
+       subgoal by (local_method lift_add)
+      apply (local_method simplify_and_expand)
+        subgoal by (local_method lift_le)
+       subgoal by (local_method lift_add)
+      apply (local_method simplify_and_expand)
+        subgoal by (local_method lift_le)
+       subgoal by (local_method lift_add)
+      apply (local_method simplify_and_expand)
+        subgoal by (local_method lift_le)
+       subgoal by (local_method lift_add)
+      by (local_method simplify_and_expand)
+
    apply (clarsimp simp: neq_Nil_conv excaps_in_mem_def slotcap_in_mem_def
                          linorder_not_le)
    apply (erule ctes_of_valid', clarsimp)
@@ -4039,17 +4021,16 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
                del: Collect_const cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule ccorres_Cond_rhs)
     apply (simp add: list_case_If2 if3_fold2 isPDFlush_fold
-      del: Collect_const
-      cong: StateSpace.state.fold_congs globals.fold_congs
-      if_cong list.case_cong)
-    apply (simp add: if_1_0_0 split_def if_to_top_of_bind
-                  del: Collect_const cong: if_cong)
+                del: Collect_const
+                cong: StateSpace.state.fold_congs globals.fold_congs if_cong list.case_cong)
+    apply (simp add: split_def if_to_top_of_bind
+                del: Collect_const cong: if_cong)
     apply (rule ccorres_rhs_assoc)+
     apply csymbr+
     apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
        apply vcg
       apply (clarsimp simp:list_length_less )
-      apply (drule unat_less_iff32[where c =2])
+      apply (drule unat_less_iff[where c =2])
        apply (simp add:word_bits_def)
       apply simp
      apply (simp add: throwError_bind invocationCatch_def)
@@ -5393,10 +5374,6 @@ lemma invokeVCPUInjectIRQ_ccorres:
      apply (rule allI, rule conseqPre, vcg, clarsimp simp: dc_def return_def)
     apply wpsimp+
   apply (clarsimp simp: unat_of_nat_eq word_of_nat_less)
-  apply (rule conjI, fastforce dest: vcpu_at_ko elim: ko_at'_not_NULL)
-  apply (subst scast_eq_ucast)
-   apply (rule not_msb_from_less)
-   apply (fastforce intro: word_of_nat_less)+
   done
 
 (* Note: only works for virqEOIIRQEN = 1 because that is the only type we are using *)

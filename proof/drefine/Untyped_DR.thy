@@ -299,7 +299,6 @@ lemma freeMemory_dcorres:
   apply (erule_tac x="(p && ~~ mask (pageBitsForSize sz))" in allE)
   apply clarsimp
   apply (thin_tac "length xs = y" for xs y)
-  apply (clarsimp simp:is_aligned_neg_mask_eq)
   apply (erule impE)
    apply (simp add:mask_def[unfolded shiftl_t2n,simplified,symmetric] p_assoc_help)
    apply (erule order_trans[OF word_and_le2])
@@ -319,6 +318,8 @@ lemma freeMemory_dcorres:
    however, requires a stronger version of lemma detype_invariants. *)
 lemma delete_objects_dcorres:
   notes order_class.Icc_eq_Icc [simp del]
+        is_aligned_neg_mask_eq[simp del]
+        is_aligned_neg_mask_weaken[simp del]
   assumes S: "S = {ptr..ptr + 2 ^ bits - 1}"
   shows "dcorres dc \<top>
       (\<lambda>s. invs s \<and> ct_active s \<and> (\<exists>cref dev idx.
@@ -346,13 +347,12 @@ lemma delete_objects_dcorres:
   apply fastforce
   apply (frule cte_wp_valid_cap, clarsimp)
   apply (intro conjI)
-  apply (erule pspace_no_overlap_detype)
-  apply clarsimp+
-  apply (frule invs_untyped_children)
-  apply (drule_tac detype_invariants, simp_all)
-    apply (clarsimp simp:empty_descendants_range_in descendants_range_def2) +
-  apply (simp add: invs_def valid_state_def valid_pspace_def
-                   detype_clear_um_independent valid_etcbs_def)
+    apply (erule pspace_no_overlap_detype)
+     apply clarsimp+
+   apply (frule invs_untyped_children)
+   apply (drule_tac detype_invariants, simp_all)
+   apply (clarsimp simp: empty_descendants_range_in descendants_range_def2 invs_def valid_state_def
+                         valid_pspace_def detype_clear_um_independent valid_etcbs_def)
   apply (simp add: invs_def valid_state_def valid_pspace_def detype_clear_um_independent valid_etcbs_def
                    is_etcb_at_def detype_def detype_ext_def st_tcb_at_kh_def obj_at_kh_def obj_at_def)
   done

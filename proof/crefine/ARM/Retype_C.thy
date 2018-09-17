@@ -199,7 +199,7 @@ lemma memzero_spec:
        apply clarsimp
        apply (rule aligned_sub_aligned [where n=2], simp_all add: is_aligned_def word_bits_def)[1]
       apply clarsimp
-      apply (rule aligned_add_aligned_simple, simp_all add: is_aligned_def word_bits_def)[1]
+      apply (rule is_aligned_add, simp_all add: is_aligned_def word_bits_def)[1]
      apply (erule order_trans[rotated])
      apply (clarsimp simp: subset_iff)
      apply (erule subsetD[OF intvl_sub_offset, rotated])
@@ -963,7 +963,7 @@ proof -
     apply simp
     done
 
-  note al_sub = aligned_sub_aligned_simple[OF al align word_bits]
+  note al_sub = aligned_sub_aligned_simple[OF al align]
 
   have yuck: "of_nat b * 2 ^ n \<noteq> (0 :: word32)"
     using of_nat_neq_0[where k="b * 2 ^ n" and 'a=32] b card
@@ -5709,7 +5709,7 @@ proof -
                                 cap_untyped_cap_lift to_bool_eq_0 true_def
                                 aligned_add_aligned
                          split: option.splits)
-          apply (subst aligned_neg_mask [OF is_aligned_weaken])
+          apply (subst is_aligned_neg_mask_eq [OF is_aligned_weaken])
             apply (erule range_cover.aligned)
            apply (clarsimp simp:APIType_capBits_def untypedBits_defs)
           apply (clarsimp simp: cap_untyped_cap_lift_def)
@@ -5765,8 +5765,8 @@ proof -
          apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def ctcb_offset_defs
                                tcb_ptr_to_ctcb_ptr_def
                                invs_valid_objs' invs_urz isFrameType_def)
-         apply (subst  is_aligned_neg_mask)
-           apply (rule aligned_add_aligned_simple[where n=ctcb_size_bits, unfolded ctcb_size_bits_def])
+         apply (subst is_aligned_neg_mask_weaken)
+           apply (rule is_aligned_add[where n=ctcb_size_bits, unfolded ctcb_size_bits_def])
              apply (clarsimp elim!: is_aligned_weaken
                              dest!: range_cover.aligned)
             apply (clarsimp simp: is_aligned_def)
@@ -5855,7 +5855,7 @@ proof -
       apply (clarsimp simp: getObjectSize_def objBits_simps apiGetObjectSize_def
                             ntfnSizeBits_def word_bits_conv)
       apply (clarsimp simp: Kernel_C_defs object_type_from_H_def toAPIType_def nAPIObjects_def
-                            word_sle_def word_sless_def zero_le_sint
+                            word_sle_def word_sless_def zero_le_sint_32
                     intro!: ccorres_cond_empty ccorres_cond_univ ccorres_rhs_assoc
                             ccorres_move_c_guards ccorres_Guard_Seq)
       apply (rule_tac
@@ -6566,8 +6566,8 @@ lemma tcb_ctes_typ_region_bytes:
   apply (subst valid_footprint_typ_region_bytes)
    apply (simp add: uinfo_array_tag_n_m_def typ_uinfo_t_def typ_info_word)
   apply (clarsimp simp only: map_comp_Some_iff projectKOs
-                        pspace_no_overlap'_def is_aligned_neg_mask
-                        field_simps upto_intvl_eq[symmetric])
+                             pspace_no_overlap'_def is_aligned_neg_mask_eq
+                             field_simps upto_intvl_eq[symmetric])
   apply (elim allE, drule(1) mp)
   apply simp
   apply (drule(1) pspace_alignedD')
@@ -7629,7 +7629,6 @@ lemma createObject_untyped_region_is_zero_bytes:
                    cap_untyped_cap_lift_def object_type_from_H_def)
   apply (simp add: untypedZeroRange_def split: if_split)
   apply (clarsimp simp: getFreeRef_def Let_def object_type_to_H_def untypedBits_defs)
-  apply (simp add: is_aligned_neg_mask_eq[OF is_aligned_weaken])
   apply (simp add:  APIType_capBits_def
                    less_mask_eq word_less_nat_alt)
   done

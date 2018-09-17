@@ -6682,6 +6682,8 @@ lemma ntfnBound_state_refs_equivalence:
 
 lemma receiveSignal_enqueue_ccorres_helper:
   notes option.case_cong_weak [cong]
+        is_aligned_neg_mask_eq[simp del]
+        is_aligned_neg_mask_weaken[simp del]
   shows
   "ccorres dc xfdc (valid_pspace'
                 and (\<lambda>s. sym_refs ((state_refs_of' s)(ntfnptr := set queue \<times> {NTFNSignal} \<union> {r \<in> state_refs_of' s ntfnptr. snd r = NTFNBound})))
@@ -6757,7 +6759,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
             apply (case_tac "ntfn", simp_all)[1]
            apply (clarsimp simp: cnotification_relation_def Let_def
                                  mask_def [where n=2] NtfnState_Waiting_def)
-           subgoal by (fastforce simp: tcb_queue_relation'_def is_aligned_neg_mask
+           subgoal by (fastforce simp: tcb_queue_relation'_def is_aligned_neg_mask_weaken
                                  valid_ntfn'_def
                            dest: tcb_queue_relation_next_not_NULL)
           apply (simp add: isWaitingNtfn_def)
@@ -6799,7 +6801,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
           apply (clarsimp simp: cnotification_relation_def Let_def
                                 mask_def [where n=2] NtfnState_Waiting_def
                          split: if_split)
-          apply (fastforce simp: tcb_queue_relation'_def is_aligned_neg_mask)
+          apply (fastforce simp: tcb_queue_relation'_def is_aligned_neg_mask_weaken)
          apply (simp add: isWaitingNtfn_def)
         \<comment> \<open>queue relation\<close>
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)

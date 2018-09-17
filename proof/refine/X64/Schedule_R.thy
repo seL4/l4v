@@ -291,7 +291,6 @@ lemma removeFromBitmap_bitmapQ:
   "\<lbrace> \<lambda>s. True \<rbrace> removeFromBitmap d p \<lbrace>\<lambda>_ s. \<not> bitmapQ d p s \<rbrace>"
   unfolding bitmapQ_defs bitmap_fun_defs
   apply (wp| clarsimp simp: bitmap_fun_defs)+
-  apply (clarsimp simp: bitmapQ_def  ucast_and_mask[symmetric] is_up unat_ucast_upcast)
   apply (subst (asm) complement_nth_w2p, simp_all)
   apply (fastforce intro!: order_less_le_trans[OF word_unat_mask_lt] simp: word_size wordRadix_def')
   done

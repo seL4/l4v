@@ -297,7 +297,6 @@ lemma removeFromBitmap_bitmapQ:
   "\<lbrace> \<lambda>s. True \<rbrace> removeFromBitmap d p \<lbrace>\<lambda>_ s. \<not> bitmapQ d p s \<rbrace>"
   unfolding bitmapQ_defs bitmap_fun_defs
   apply (wp| clarsimp simp: bitmap_fun_defs)+
-  apply (clarsimp simp: bitmapQ_def  ucast_and_mask[symmetric] is_up unat_ucast_upcast)
   apply (subst (asm) complement_nth_w2p, simp_all)
   apply (fastforce intro!: order_less_le_trans[OF word_unat_mask_lt] simp: word_size wordRadix_def')
   done
@@ -1826,6 +1825,7 @@ lemma bitmapQ_lookupBitmapPriority_simp: (* neater unfold, actual unfold is real
      ksReadyQueuesL2Bitmap s (d, invertL1Index (word_log2 (ksReadyQueuesL1Bitmap s d))) !!
        word_log2 (ksReadyQueuesL2Bitmap s (d, invertL1Index (word_log2 (ksReadyQueuesL1Bitmap s d)))))"
   unfolding bitmapQ_def lookupBitmapPriority_def
+  supply word_log2_max_word32[simp del]
   apply (drule word_log2_nth_same, clarsimp)
   apply (drule (1) bitmapQ_no_L1_orphansD, clarsimp)
   apply (drule word_log2_nth_same, clarsimp)

@@ -411,7 +411,6 @@ shows
   apply (subgoal_tac "x + y \<le> x + mask (obj_bits ko)", simp)
   apply (rule word_add_le_mono2)
    apply (simp add: mask_def plus_one_helper)
-  apply (thin_tac "~ P" for P)+
   apply (thin_tac "(x::'a::len word) < y" for x y)+
   apply (thin_tac "x = Some y" for x y)+
   apply (thin_tac "x && mask (obj_bits ko') = 0" for x)
@@ -570,7 +569,7 @@ proof -
         apply (frule_tac y="n*2^pageBits" in pspace_aligned_distinct_None'
                                                 [OF pspace_aligned pspace_distinct])
          apply simp
-         apply (rule conjI, clarsimp simp add: word_gt_0)
+         apply (rule conjI, clarsimp simp add: Word.word_gt_0)
          apply (simp add: is_aligned_mask)
          apply (clarsimp simp add: pageBits_def mask_def)
          apply (case_tac vmpage_size; simp)
@@ -596,7 +595,7 @@ proof -
        apply (frule_tac y="n*2^pageBits" in pspace_aligned_distinct_None'
                                                [OF pspace_aligned pspace_distinct])
         apply simp
-        apply (rule conjI, clarsimp simp add: word_gt_0)
+        apply (rule conjI, clarsimp simp add: Word.word_gt_0)
         apply (simp add: is_aligned_mask)
         apply (clarsimp simp add: pageBits_def mask_def)
         apply (case_tac vmpage_size; simp)
@@ -718,7 +717,7 @@ proof -
                  (simp add: vspace_bits_defs)+)
           apply (cut_tac x=ya and n="2^12" in
                       ucast_less_shiftl3_helper[where 'a=32,simplified word_bits_conv], simp+)
-          apply (clarsimp simp add: word_gt_0)
+          apply (clarsimp simp add: Word.word_gt_0)
          apply clarsimp
          apply (subgoal_tac "ucast ya << 3 = 0")
           prefer 2
@@ -760,7 +759,7 @@ proof -
                (simp add: vspace_bits_defs)+)
         apply (cut_tac x=ya and n="2^14" in
                   ucast_less_shiftl3_helper[where 'a=32, simplified word_bits_conv], simp+)
-        apply (clarsimp simp add: word_gt_0)
+        apply (clarsimp simp add: Word.word_gt_0)
        apply clarsimp
        apply (subgoal_tac "ucast ya << 3 = 0")
         prefer 2

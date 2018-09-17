@@ -2145,7 +2145,7 @@ lemma perform_asid_control_invocation_globals_equiv:
      apply(simp add: is_aligned_neg_mask_eq empty_descendants_range_in)
     apply(clarsimp simp: range_cover_def)
     apply(subst is_aligned_neg_mask_eq[THEN sym], assumption)
-    apply(simp add: mask_neg_mask_is_zero pageBits_def)
+    apply(simp add: mask_neg_mask_is_zero pageBits_def mask_zero)
    apply(wp add: delete_objects_invs_ex delete_objects_pspace_no_overlap[where dev=False]
             delete_objects_globals_equiv delete_objects_valid_ko_at_arm
             hoare_vcg_ex_lift

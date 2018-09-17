@@ -2548,10 +2548,10 @@ lemma perform_asid_control_invocation_silc_inv:
     apply(erule_tac t=x in ssubst)
     apply(simp add: mask_AND_NOT_mask)
    apply simp
-  apply(simp add: is_aligned_neg_mask_eq' p_assoc_help)
+  apply(simp add: p_assoc_help)
   apply(clarsimp simp: cap_points_to_label_def)
   apply(erule bspec)
-  apply(fastforce intro: is_aligned_no_wrap' simp: is_aligned_neg_mask_eq' blah)
+  apply(fastforce intro: is_aligned_no_wrap' simp: blah)
   done
 
 
@@ -3086,17 +3086,17 @@ lemma invoke_tcb_silc_inv:
                   tcb_at_st_tcb_at
         |strengthen use_no_cap_to_obj_asid_strg)+
   apply (rule hoare_pre)
-  apply (simp add: option_update_thread_def tcb_cap_cases_def
-        | wp hoare_vcg_all_lift
-             thread_set_tcb_fault_handler_update_invs
-             thread_set_pas_refined thread_set_emptyable
-             thread_set_valid_cap thread_set_not_state_valid_sched
-             thread_set_cte_at  thread_set_no_cap_to_trivial
-        | wpc)+
-  apply (clarsimp simp: authorised_tcb_inv_def emptyable_def)
-  apply (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
-        | intro impI
-        | rule conjI)+
+         (* This can take up to several minutes *)
+         apply (simp add: option_update_thread_def tcb_cap_cases_def
+               |wp hoare_vcg_all_lift thread_set_tcb_fault_handler_update_invs
+                   thread_set_pas_refined thread_set_emptyable thread_set_valid_cap
+                   thread_set_not_state_valid_sched thread_set_cte_at
+                   thread_set_no_cap_to_trivial
+               |wpc)+
+   apply (clarsimp simp: authorised_tcb_inv_def emptyable_def)
+   apply (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
+         |intro impI
+         |rule conjI)+
   done
 
 lemma perform_invocation_silc_inv:

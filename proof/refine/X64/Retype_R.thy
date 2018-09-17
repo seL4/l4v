@@ -605,7 +605,7 @@ lemma cte_wp_at_retype':
               "pspace_distinct' (ksPSpace_update (\<lambda>x xa. if xa \<in> set addrs then Some obj else ksPSpace s xa) s)"
       and al: "\<forall>x \<in> set addrs. is_aligned x (objBitsKO obj)"
       and pn: "\<forall>x \<in> set addrs. ksPSpace s x = None"
-   shows
+  shows
   "cte_wp_at' P p (ksPSpace_update (\<lambda>x xa. if xa \<in> set addrs then Some obj else ksPSpace s xa) s)
       = (if tp = Inr (APIObjectType ArchTypes_H.CapTableObject) \<and> p \<in> set addrs
            \<or> tp = Inr (APIObjectType ArchTypes_H.TCBObject)
@@ -633,8 +633,7 @@ lemma cte_wp_at_retype':
       apply (rule order_trans_rules(17))
        apply (clarsimp cong: if_cong)
       apply (rule word_and_le2)
-     apply (drule mask_in_range[where bits = tcbBlockSizeBits and ptr' = p])
-     apply simp
+     apply (simp add: word_neg_and_le[simplified field_simps])
     apply simp
    apply (clarsimp elim!: obj_atE' simp: pn)
   apply (clarsimp elim!: obj_atE' simp: pn)

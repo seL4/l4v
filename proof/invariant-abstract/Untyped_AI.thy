@@ -384,6 +384,8 @@ qed
 lemma range_cover_stuff:
   notes unat_power_lower_machine = unat_power_lower[where 'a=machine_word_len]
   notes unat_of_nat_machine = unat_of_nat_eq[where 'a=machine_word_len]
+  notes is_aligned_neg_mask_eq[simp del]
+  notes is_aligned_neg_mask_weaken[simp del]
   shows
   "\<lbrakk>0 < n;n \<le> unat ((2::machine_word) ^ sz - of_nat rv >> bits);
   rv \<le> 2^ sz; sz < word_bits; is_aligned w sz\<rbrakk> \<Longrightarrow>
@@ -1386,6 +1388,7 @@ lemma retype_ret_valid_caps:
  done
 end
 
+(* FIXME: move to Lib *)
 lemma set_zip_helper:
   "t \<in> set (zip xs ys) \<Longrightarrow> fst t \<in> set xs \<and> snd t \<in> set ys"
   by (clarsimp simp add: set_zip)
@@ -2679,8 +2682,7 @@ lemma caps_of_state_pspace_no_overlapD:
   apply (clarsimp simp: valid_cap_simps cap_aligned_def)
   apply (cut_tac neg_mask_add_aligned[where p=ptr and q="of_nat idx" and n=sz])
     apply (rule cte_wp_at_pspace_no_overlapI[where idx=idx and cref=cref], simp_all)
-    apply (simp add: cte_wp_at_caps_of_state is_aligned_neg_mask_eq)
-   apply (simp add: is_aligned_neg_mask_eq)
+    apply (simp add: cte_wp_at_caps_of_state)
    apply (simp add: mask_out_sub_mask)
    apply (subst unat_of_nat_word_bits, erule order_less_le_trans, simp_all)
   apply (rule word_of_nat_less)
@@ -2741,8 +2743,8 @@ lemma reset_untyped_cap_invs_etc:
   apply (clarsimp simp: cte_wp_at_caps_of_state bits_of_def split del: if_split)
   apply (subgoal_tac "is_aligned ptr sz")
    prefer 2
-   apply (frule caps_of_state_valid_cap, clarsimp+)
-   apply (clarsimp simp: valid_cap_def cap_aligned_def)
+   apply (frule caps_of_state_valid_cap, clarsimp)
+   apply auto[1]
   apply (cases "idx = 0")
    apply (clarsimp simp: free_index_of_def)
    apply wp
@@ -3366,7 +3368,7 @@ lemma retype_region_refs_distinct[wp]:
           | drule subsetD [OF obj_refs_default_cap]
                   less_two_pow_divD)+
    apply (simp add: range_cover_def word_bits_def)
-  apply (erule range_cover.range_cover_n_le[where 'a=machine_word_len, folded word_bits_def])
+  apply (erule range_cover.range_cover_n_le[where 'a=machine_word_len])
   done
 
 

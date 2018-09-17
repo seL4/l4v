@@ -1076,7 +1076,6 @@ lemma real_cte_tcbCallerSlot:
     apply (erule is_aligned_no_wrap')
     apply simp
    apply (subst field_simps[symmetric], rule is_aligned_no_overflow3, assumption, simp_all)
-  apply (simp add: word_bits_def)
   done
 
 lemma handleReply_ccorres:
@@ -1098,7 +1097,7 @@ lemma handleReply_ccorres:
        apply (rule ccorres_from_vcg)
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: return_def word_sle_def)
-       apply (frule aligned_neg_mask)
+       apply (frule is_aligned_neg_mask_eq)
        apply (frule tcb_at_invs')
        apply (simp add: mask_def tcbCallerSlot_def
               cte_level_bits_def size_of_def
@@ -1185,7 +1184,7 @@ lemma deleteCallerCap_ccorres [corres]:
        apply (rule ccorres_from_vcg)
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: return_def word_sle_def)
-       apply (frule aligned_neg_mask)
+       apply (frule is_aligned_neg_mask_eq)
        apply (simp add: mask_def tcbCallerSlot_def Kernel_C.tcbCaller_def
               cte_level_bits_def size_of_def)
        apply (drule ptr_val_tcb_ptr_mask2)
@@ -1834,12 +1833,12 @@ proof -
 
   have unat_of_nat_ctz_plus_32s[simp]:
     "unat (of_nat (word_ctz w) + (0x20 :: int_sword)) = word_ctz w + 32" for w :: machine_word
-    apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_word_ctz_smw)
+    apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_ctz_smw)
     using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
 
   have unat_of_nat_ctz_plus_32[simp]:
     "unat (of_nat (word_ctz w) + (0x20 :: machine_word)) = word_ctz w + 32" for w :: machine_word
-    apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_word_ctz_mw)
+    apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_ctz_mw)
     using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
 
   have eisr_calc_signed_limits:
@@ -1853,10 +1852,10 @@ proof -
                           word_sless_alt word_sle_def word_size uint_nat
                     split: if_splits)
     apply (cut_tac not_msb_from_less[where v="of_nat (word_ctz eisr0) :: int_sword"])
-     apply (clarsimp simp: word_less_alt unat_of_nat_word_ctz_mw unat_of_nat_word_ctz_smw
+     apply (clarsimp simp: word_less_alt unat_of_nat_ctz_mw unat_of_nat_ctz_smw
                            uint_nat)
      apply (cut_tac not_msb_from_less[where v="of_nat (word_ctz eisr1 + 32) :: int_sword"])
-     apply (clarsimp simp: word_less_alt unat_of_nat_word_ctz_mw unat_of_nat_word_ctz_smw
+     apply (clarsimp simp: word_less_alt unat_of_nat_ctz_mw unat_of_nat_ctz_smw
                            uint_nat)+
     done
 
@@ -1870,7 +1869,7 @@ proof -
   have of_nat_word_ctz_0x21helper[simp]:
     "0x21 + of_nat (word_ctz w) \<noteq> (0 :: int_sword)" for w :: machine_word
     apply (subst unat_arith_simps, simp)
-    apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_word_ctz_smw)
+    apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_ctz_smw)
     using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
 
   show ?thesis
@@ -1915,7 +1914,7 @@ proof -
             subgoal for _ _ eisr0 eisr1
               using word_ctz_not_minus_1[where w=eisr1] word_ctz_not_minus_1[where w=eisr0]
               by (clarsimp split: if_splits simp: eisr_calc_def word_le_nat_alt unat_of_nat_eq
-                                                  unat_of_nat_word_ctz_mw of_nat_eq_signed_scast)
+                                                  unat_of_nat_ctz_mw of_nat_eq_signed_scast)
 
            apply (rule ccorres_Cond_rhs_Seq)
             (* handle fault branch *)
@@ -1984,7 +1983,7 @@ proof -
                        apply (rule ccorres_move_const_guards)+
                        apply (rule vgicUpdateLR_ccorres_armHSCurVCPU ; clarsimp simp: word_ctz_le)
                         apply (fastforce dest: word_ctz_less
-                                         simp: eisr_calc_def unat_of_nat_word_ctz_smw)
+                                         simp: eisr_calc_def unat_of_nat_ctz_smw)
                        apply (erule eisr_calc_le)
                       apply (rule ccorres_return_Skip)
                      apply clarsimp
@@ -2003,7 +2002,7 @@ proof -
                                            seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def Let_def
                                            eisr_calc_def mask_eq_iff
                                      split: if_splits)
-                     apply (fastforce simp: uint_nat unat_of_nat_word_ctz_mw
+                     apply (fastforce simp: uint_nat unat_of_nat_ctz_mw
                                       dest: word_ctz_less[where w=eisr1] word_ctz_less[where w=eisr0])+
                      done
 

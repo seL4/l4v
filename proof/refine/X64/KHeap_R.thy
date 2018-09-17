@@ -811,6 +811,9 @@ lemma map_to_ctes_upd_tcb:
                   \<and> getF tcb \<noteq> getF tcb'
            then (case tcb_cte_cases (x - p) of Some (getF, setF) \<Rightarrow> Some (getF tcb))
            else map_to_ctes s x)"
+  supply
+    is_aligned_neg_mask_eq[simp del]
+    is_aligned_neg_mask_weaken[simp del]
   apply (subgoal_tac "p && ~~ (mask tcbBlockSizeBits) = p")
    apply (rule ext)
    apply (simp    add: map_to_ctes_def Let_def dom_fun_upd2

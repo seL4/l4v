@@ -1811,7 +1811,7 @@ lemma reset_name_seq_bound_helper:
   apply (simp add: shiftr_div_2n')
   apply (simp only: linorder_not_less[symmetric], erule notE)
   apply (rule order_le_less_trans[OF div_le_mono])
-   apply (rule_tac n="v * 2 ^ sz" for v in unat_le_helper,
+   apply (rule_tac b="v * 2 ^ sz" for v in word_unat_less_le,
      simp, rule order_refl)
   apply simp
   done
@@ -1925,7 +1925,7 @@ lemma resetUntypedCap_ccorres:
   using [[ceqv_simpl_sequence = true]]
   apply (cinit lift: srcSlot_')
    apply (simp add: liftE_bindE getSlotCap_def
-                    Collect_True extra_sle_sless_unfolds)
+                    Collect_True)
    apply (rule ccorres_getCTE, rename_tac cte)
    apply (rule ccorres_move_c_guard_cte)
    apply (rule ccorres_symb_exec_r)
@@ -2103,7 +2103,7 @@ lemma resetUntypedCap_ccorres:
                                     is_aligned_mask_out_add_eq_sub[OF is_aligned_weaken]
                                     if_split[where P="\<lambda>z. a \<le> z" for a])
               apply (strengthen is_aligned_mult_triv2[THEN is_aligned_weaken]
-                  aligned_sub_aligned[OF _ _ order_refl]
+                  Aligned.aligned_sub_aligned[OF _ _ order_refl]
                   aligned_intvl_offset_subset_ran
                   unat_le_helper Aligned.is_aligned_neg_mask)
               apply (simp add: order_less_imp_le reset_chunk_bits_def)
@@ -3362,7 +3362,7 @@ shows
                                           from_bool_0 ccap_relation_isDeviceCap2
                                    split: if_split)
                     apply (intro conjI impI;
-                           clarsimp simp: not_less shiftr_overflow unat_of_nat_APIType_capBits
+                           clarsimp simp: not_less shiftr_eq_0 unat_of_nat_APIType_capBits
                                           wordBits_def word_size word_bits_def)
                    apply simp
                   apply simp

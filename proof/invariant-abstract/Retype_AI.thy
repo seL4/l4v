@@ -442,10 +442,10 @@ lemma retype_addrs_subset_ptr_bits:
    apply (rule iffD2[OF word_less_nat_alt])
    apply (rule le_less_trans[OF unat_plus_gt])
     using cover
-   apply (clarsimp simp:unat_power_lower range_cover_def)
+   apply (clarsimp simp: range_cover_def)
   apply (insert cover)
-  apply (rule is_aligned_no_wrap'[OF is_aligned_neg_mask,OF le_refl ])
-   apply (simp add:range_cover_def)+
+  apply (rule is_aligned_no_wrap'[where sz=sz])
+   apply (simp add: range_cover_def)+
 done
 
 
@@ -732,7 +732,7 @@ lemma range_cover_cell_subset:
      apply (erule less_le_trans[rotated])
      apply (clarsimp simp:range_cover.unat_of_nat_n[OF cover])
     apply (simp add:range_cover_def p_assoc_help[symmetric])+
-  apply (rule is_aligned_no_overflow[OF is_aligned_neg_mask ,OF le_refl])
+  apply (simp add: is_aligned_no_overflow)
   done
  qed
 
@@ -752,27 +752,27 @@ lemma is_aligned_ptr_add_helper:
 lemma range_cover_no_0:
   "\<lbrakk> ptr \<noteq> 0; range_cover (ptr :: 'a :: len word) sz sbit n;p < n\<rbrakk> \<Longrightarrow>
    ptr + of_nat p * 2 ^ sbit \<noteq> 0"
-  apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz"])
+  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
   apply (case_tac  "(ptr && ~~ mask sz) \<noteq> 0")
-    apply (subst add.commute)
-    apply (subst add.assoc)
-    apply (rule aligned_offset_non_zero)
-      apply (rule is_aligned_neg_mask[OF le_refl])
-     apply (simp add:word_less_nat_alt)
-     apply (rule le_less_trans[OF unat_plus_gt])
-     apply (rule less_le_trans[OF range_cover.range_cover_compare])
-       apply simp
-    apply ((simp add:range_cover_def)+)[3]
+   apply (subst add.commute)
+   apply (subst add.assoc)
+   apply (rule aligned_offset_non_zero)
+     apply (rule is_aligned_neg_mask[OF le_refl])
+    apply (simp add:word_less_nat_alt)
+    apply (rule le_less_trans[OF unat_plus_gt])
+    apply (rule less_le_trans[OF range_cover.range_cover_compare])
+      apply simp
+     apply ((simp add:range_cover_def)+)[3]
   apply (subgoal_tac "(ptr && mask sz) \<noteq> 0")
    apply (rule unat_gt_0[THEN iffD1])
    apply (simp add:not_less)
    apply (subst iffD1[OF unat_add_lem])
-     apply (rule less_le_trans[OF range_cover.range_cover_compare])
-       apply simp+
-     apply (simp add:range_cover_def word_bits_def)
+    apply (rule less_le_trans[OF range_cover.range_cover_compare])
+      apply simp+
+    apply (simp add:range_cover_def word_bits_def)
    apply simp
-  apply (rule disjI1)
-    apply unat_arith
+   apply (rule disjI1)
+   apply unat_arith
   apply (rule ccontr)
   apply (subst (asm) word_plus_and_or_coroll2[symmetric,where w = "mask sz" and t = ptr])
   apply (clarsimp simp:not_less)
@@ -1228,6 +1228,9 @@ lemma retype_region_cur_tcb[wp]:
      and valid_objs and pspace_aligned\<rbrace>
      retype_region ptr n us ty dev
    \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
+  supply
+    is_aligned_neg_mask_eq[simp del]
+    is_aligned_neg_mask_weaken[simp del]
   apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>tp. tcb_at tp s \<and> cur_thread s = tp"])
    apply (simp add: cur_tcb_def)
   apply (wpsimp wp: hoare_vcg_ex_lift retype_region_obj_at_other3 simp: retype_region_def)
