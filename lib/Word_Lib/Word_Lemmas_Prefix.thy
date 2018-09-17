@@ -17,6 +17,7 @@ section "Word Lemmas that use List Prefix-Order"
 theory Word_Lemmas_Prefix
 imports
   Word_Lemmas
+  Word_Lemmas_Internal
   "HOL-Library.Prefix_Order"
 begin
 
