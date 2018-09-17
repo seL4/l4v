@@ -3490,6 +3490,7 @@ definition
  "cfault_rel2 \<equiv> \<lambda>ft exnvar err. exnvar = (scast EXCEPTION_FAULT :: machine_word) \<and>
                    cfault_rel (Some ft) (errfault err) (errlookup_fault err)"
 
+(* FIXME: move to Lib *)
 lemma takeWhile_eq:
   "\<lbrakk> \<And>m. \<lbrakk> m < length ys \<rbrakk> \<Longrightarrow> P (xs ! m);
        length ys < length xs \<Longrightarrow> \<not> P (xs ! length ys);

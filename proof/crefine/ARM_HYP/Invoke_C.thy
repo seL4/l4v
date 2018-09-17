@@ -1785,6 +1785,7 @@ lemma name_seq_bound_helper:
   apply (rule ccontr, simp add: linorder_not_le)
   done
 
+(* FIXME: what's being proven here? it's a pure word lemma - should it go in Word_Lib? *)
 lemma reset_name_seq_bound_helper:
   fixes sz
   fixes v :: "('a :: len) word"

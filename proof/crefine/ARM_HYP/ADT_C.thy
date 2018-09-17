@@ -352,6 +352,7 @@ lemma projectKO_opt_UserData [simp]:
   "projectKO_opt KOUserData = Some UserData"
   by (simp add: projectKO_opts_defs)
 
+(* FIXME: rewrite using ucast_ucast_mask_shift *)
 lemma ucast_ucast_mask_pageBits_shift:
   "ucast (ucast (p && mask pageBits >> 2) :: 10 word) = p && mask pageBits >> 2"
   apply (rule word_eqI)
@@ -362,6 +363,7 @@ definition
 "processMemory s \<equiv> (ksMachineState s) \<lparr>underlying_memory := option_to_0 \<circ> (user_mem' s)\<rparr>"
 
 
+(* FIXME: rewrite using unat_ucast_mask_shift *)
 lemma unat_ucast_mask_pageBits_shift:
   "unat (ucast (p && mask pageBits >> 2) :: 10 word) = unat ((p::word32) && mask pageBits >> 2)"
   apply (simp only: unat_ucast)
@@ -373,6 +375,7 @@ lemma unat_ucast_mask_pageBits_shift:
   apply (simp add: pageBits_def mask_def)
   done
 
+(* FIXME: rewrite using mask_shift_sum *)
 lemma mask_pageBits_shift_sum:
   "unat n = unat (p && mask 2) \<Longrightarrow>
   (p && ~~ mask pageBits) + (p && mask pageBits >> 2) * 4 + n = (p::word32)"

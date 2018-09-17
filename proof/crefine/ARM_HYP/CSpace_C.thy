@@ -157,6 +157,7 @@ lemma Arch_maskCapRights_ccorres [corres]:
    apply (cases arch_cap)
        by (fastforce simp add: cap_get_tag_isCap isCap_simps  simp del: not_ex omgwtfbbq)+
 
+(* FIXME: move to Wellformed_C (or move to_bool_bf out of Wellformed_C) *)
 lemma to_bool_mask_to_bool_bf:
   "to_bool (x && mask (Suc 0)) = to_bool_bf (x::word32)"
   apply (simp add: to_bool_bf_def to_bool_def)

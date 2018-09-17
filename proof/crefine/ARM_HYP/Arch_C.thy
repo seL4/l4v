@@ -1590,10 +1590,12 @@ lemma pte_sadness:
   apply (cases pte', cases pte, simp)
   done
 
+(* FIXME: move to Lib *)
 lemma hd_in_zip_set:
    "slots \<noteq> [] \<Longrightarrow> (hd slots, 0) \<in> set (zip slots [0.e.of_nat (length slots - Suc 0)::machine_word])"
    by (cases slots; simp add: upto_enum_word upto_0_to_n2 del: upt_Suc)
 
+(* FIXME: move to Lib *)
 lemma last_in_zip_set:
   "\<lbrakk> slots \<noteq> []; length js = length slots \<rbrakk> \<Longrightarrow> (last slots, last js) \<in> set (zip slots js)"
    apply (simp add: in_set_zip last_conv_nth)
@@ -1845,6 +1847,7 @@ lemma pde_align_ptBits:
   apply (simp add: table_bits_defs)
   done
 
+(* FIXME: consider generalising and moving to Word_Lemmas *)
 lemma vaddr_segment_nonsense3_folded:
   "is_aligned (p :: word32) pageBits \<Longrightarrow>
    (p + ((vaddr >> pageBits) && mask (pt_bits - pte_bits) << pte_bits) && ~~ mask pt_bits) = p"
@@ -1897,6 +1900,7 @@ lemma createMappingEntries_valid_pte_slots'2:
    apply (wp | simp add:valid_pte_slots'2_def)+
   done
 
+(* FIXME: rewrite using 'unat_shiftr_shiftl_mask_zero *)
 (* FIXME: move *)
 (* this one is specialised to a PDE for a supersection *)
 lemma vaddr_segment_nonsense6:
@@ -2711,6 +2715,7 @@ lemma framesize_from_H_eq_eq:
 
 lemmas framesize_from_H_eq_eqs = framesize_from_H_eq_eq trans [OF eq_commute framesize_from_H_eq_eq]
 
+(* FIXME: generalise, move to Word_Lib, and/or rewrite using 'shift_then_mask_eq_shift_low_bits' *)
 lemma shiftr_asid_low_bits_mask_asid_high_bits:
   "(asid :: word32) \<le> mask asid_bits
       \<Longrightarrow> (asid >> asid_low_bits) && mask asid_high_bits = asid >> asid_low_bits"
@@ -2721,6 +2726,7 @@ lemma shiftr_asid_low_bits_mask_asid_high_bits:
   apply (simp add: asid_bits_def)
   done
 
+(* FIXME: generalise, move to Word_Lib, and/or rewrite using 'leq_low_bits_iff_zero' *)
 lemma shiftr_asid_low_bits_mask_eq_0:
   "\<lbrakk> (asid :: word32) \<le> mask asid_bits; asid >> asid_low_bits = 0 \<rbrakk>
         \<Longrightarrow> (asid && mask asid_low_bits = 0) = (asid = 0)"
@@ -2779,7 +2785,7 @@ lemma ivc_label_flush_case:
   = D"
   by (auto split: invocation_label.split arch_invocation_label.split)
 
-
+(* FIXME: move to Lib *)
 lemma list_length_less:
   "(args = [] \<or> length args \<le> Suc 0) = (length args < 2)"
   by (case_tac args,simp_all)
@@ -2875,6 +2881,7 @@ lemma setVMRootForFlush_ccorres2:
   apply (auto simp: cap_get_tag_isCap_ArchObject2)
   done
 
+(* FIXME: move to Lib *)
 lemma at_least_2_args:
   "\<not>  length args < 2 \<Longrightarrow> \<exists>a b c. args = a#b#c"
   apply (case_tac args)
@@ -3855,6 +3862,8 @@ lemma maskCapRights_eq_Untyped [simp]:
   done
 
 
+(* FIXME: generalise, move to Word_Lib, and/or rewrite using
+   'leq_high_bits_shiftr_low_bits_leq_bits' *)
 lemma le_mask_asid_bits_helper:
   "x \<le> 2 ^ asid_high_bits - 1 \<Longrightarrow> (x::word32) << asid_low_bits \<le> mask asid_bits"
   apply (simp add: mask_def)
@@ -3976,6 +3985,7 @@ lemma framesize_from_H_mask2:
       Kernel_C.ARMSuperSection_def)+
   done
 
+(* FIXME: move to Lib *)
 lemma rel_option_alt_def:
   "rel_option f a b = (
       (a = None \<and>  b = None)
