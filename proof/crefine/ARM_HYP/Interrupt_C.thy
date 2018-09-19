@@ -312,7 +312,7 @@ lemma invokeIRQControl_expanded_ccorres:
      apply csymbr
      apply (rule ccorres_add_return2)
      apply (ctac (no_vcg) add: cteInsert_ccorres)
-      apply (rule_tac P=⊤ and P'=UNIV in ccorres_from_vcg_throws)
+      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
       apply (rule allI, rule conseqPre, vcg)
       apply (clarsimp simp: return_def)
      apply wp+

@@ -113,7 +113,8 @@ where
       (* Create a new IRQ handler cap. *)
       IssueIrqHandler irq control_slot dest_slot \<Rightarrow>
         insert_cap_child (IrqHandlerCap irq) control_slot dest_slot
-  "
+    | ArchIssueIrqHandler arch_inv \<Rightarrow>
+        arch_invoke_irq_control arch_inv"
 
 definition
   invoke_irq_handler :: "cdl_irq_handler_invocation \<Rightarrow> unit k_monad"

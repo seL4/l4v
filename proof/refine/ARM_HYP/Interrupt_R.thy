@@ -173,9 +173,9 @@ lemma whenE_rangeCheck_eq:
 
 (* 125 = maxIRQ *)
 lemma unat_ucast_ucast_shenanigans[simp]:
-  "unat (yf :: machine_word) ≤ (125::nat) ⟹ ucast ((ucast yf) :: word8) = yf"
-  apply (subgoal_tac "unat yf ≤ unat 125")
-   apply (thin_tac "unat yf ≤ 125")
+  "unat (yf :: machine_word) \<le> (125::nat) \<Longrightarrow> ucast ((ucast yf) :: word8) = yf"
+  apply (subgoal_tac "unat yf \<le> unat 125")
+   apply (thin_tac "unat yf \<le> 125")
    apply (subst (asm) word_le_nat_alt[symmetric])
    apply (simp add: ucast_ucast_mask mask_def)
   by (word_bitwise, auto)
@@ -187,15 +187,15 @@ crunches arch_check_irq, checkIRQ
   for inv: "P"
   (simp: crunch_simps)
 
-lemma arch_check_irq_valid_maxIRQ:
+lemma arch_check_irq_maxIRQ_valid:
   "\<lbrace>\<top>\<rbrace> arch_check_irq y \<lbrace>\<lambda>_. (\<lambda>s. unat y \<le> unat maxIRQ)\<rbrace>, -"
   unfolding arch_check_irq_def
   apply (wpsimp simp: validE_R_def wp: whenE_throwError_wp)
   by (metis unat_ucast_10_32 word_le_nat_alt word_le_not_less)
 
-lemma arch_check_irq_valid_maxIRQ':
+lemma arch_check_irq_maxIRQ_valid':
   "\<lbrace>\<top>\<rbrace> arch_check_irq y \<lbrace>\<lambda>_ _. unat y \<le> unat maxIRQ\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
-  by (wp arch_check_irq_valid_maxIRQ)
+  by (wp arch_check_irq_maxIRQ_valid)
 
 lemma arch_decode_irq_control_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
@@ -216,11 +216,11 @@ lemma arch_decode_irq_control_corres:
               clarsimp simp: length_Suc_conv list_all2_Cons1 whenE_rangeCheck_eq
                              liftE_bindE split_def)
    prefer 2 apply (auto split: list.split)[1]
-  \<comment> \<open> ARM_HYP_HYPIRQIssueIRQHandler \<close>
+  \<comment> \<open> ARM_HYPIRQIssueIRQHandler \<close>
   apply (rule conjI, clarsimp)
    apply (rule corres_guard_imp)
      apply (rule corres_splitEE[OF _ arch_check_irq_corres])
-       apply (rule_tac F="unat y ≤ unat maxIRQ" in corres_gen_asm)
+       apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
        apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
        apply (rule corres_split_eqr[OF _ is_irq_active_corres])
          apply (rule whenE_throwError_corres, clarsimp, clarsimp)
@@ -256,11 +256,11 @@ lemma decode_irq_control_corres:
   apply (rule conjI, clarsimp)
    apply (rule conjI, clarsimp)
     apply (cases caps, simp split: list.split)
-    apply (case_tac "∃n. length args = Suc (Suc (Suc n))")
+    apply (case_tac "\<exists>n. length args = Suc (Suc (Suc n))")
      apply (clarsimp simp: list_all2_Cons1 Let_def split_def liftE_bindE
                            length_Suc_conv checkIRQ_def )
      defer
-     apply (subgoal_tac "length args ≤ 2", clarsimp split: list.split)
+     apply (subgoal_tac "length args \<le> 2", clarsimp split: list.split)
      apply arith
     apply (simp add: minIRQ_def o_def)
     apply (auto intro!: corres_guard_imp[OF arch_decode_irq_control_corres])[1]
@@ -271,7 +271,7 @@ lemma decode_irq_control_corres:
   apply (simp add: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def[symmetric])
   apply (rule corres_guard_imp)
     apply (rule whenE_throwError_corres, clarsimp, clarsimp)
-    apply (rule_tac F="unat y ≤ unat maxIRQ" in corres_gen_asm)
+    apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
     apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
     apply (rule corres_split_eqr[OF _ is_irq_active_corres])
       apply (rule whenE_throwError_corres, clarsimp, clarsimp)
@@ -581,7 +581,6 @@ lemma arch_invoke_irq_control_invs'[wp]:
 
 lemma invoke_irq_control_invs'[wp]:
   "\<lbrace>invs' and irq_control_inv_valid' i\<rbrace> performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  "⦃invs' and irq_control_inv_valid' i⦄ performIRQControl i ⦃λrv. invs'⦄"
   apply (cases i, simp_all add: performIRQControl_def)
   apply (rule hoare_pre)
    apply (wp cteInsert_simple_invs | simp add: cte_wp_at_ctes_of)+
