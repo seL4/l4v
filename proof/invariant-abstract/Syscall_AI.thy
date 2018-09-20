@@ -504,11 +504,9 @@ lemma do_reply_invs[wp]:
 lemma pinv_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> valid_invocation i s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
     perform_invocation blocking call can_donate i \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  apply (case_tac i, simp_all)
-       apply (wp tcbinv_invs send_signal_interrupt_states invoke_domain_invs
-         | clarsimp simp:ct_in_state_def
-         | erule st_tcb_ex_cap
-         | fastforce simp:ct_in_state_def | rule conjI)+
+  apply (cases i; wpsimp wp: tcbinv_invs send_signal_interrupt_states invoke_domain_invs)
+  apply (clarsimp simp: ct_in_state_def)
+  apply (erule st_tcb_ex_cap; fastforce)
   done
 
 end
@@ -724,7 +722,6 @@ lemma cnode_diminished_strg:
 lemma invs_valid_arch_caps[elim!]:
   "invs s \<Longrightarrow> valid_arch_caps s"
   by (clarsimp simp: invs_def valid_state_def)
-
 
 context Syscall_AI begin
 

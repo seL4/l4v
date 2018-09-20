@@ -2213,6 +2213,23 @@ lemma update_waiting_invs:
   apply (clarsimp simp: st_in_waitingntfn)
   done
 
+lemma not_idle_tcb_in_SendEp:
+  "\<lbrakk> kheap s ptr = Some (Endpoint (SendEP q)); valid_idle s; sym_refs (state_refs_of s); t\<in>set q \<rbrakk>
+  \<Longrightarrow> t \<noteq> idle_thread s"
+  apply (clarsimp simp: sym_refs_def)
+  apply (erule_tac x = ptr in allE)
+  apply (drule_tac x = "(idle_thread s, EPSend)" in bspec)
+   apply (auto simp: state_refs_of_def valid_idle_def obj_at_def pred_tcb_at_def)
+  done
+
+lemma not_idle_tcb_in_RecvEp:
+  "\<lbrakk> kheap s ptr = Some (Endpoint (RecvEP q)); valid_idle s; sym_refs (state_refs_of s); t\<in>set q \<rbrakk>
+  \<Longrightarrow> t \<noteq> idle_thread s"
+  apply (clarsimp simp: sym_refs_def)
+  apply (erule_tac x = ptr in allE)
+  apply (drule_tac x = "(idle_thread s, EPRecv)" in bspec)
+   apply (auto simp: state_refs_of_def valid_idle_def obj_at_def pred_tcb_at_def)
+  done
 
 (* FIXME: remove from all arches. *)
 lemma cancel_ipc_ex_nonz_tcb_cap:

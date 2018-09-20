@@ -1402,7 +1402,7 @@ lemma arch_decode_inv_wf[wp]:
      apply (clarsimp simp: neq_Nil_conv invs_vspace_objs)
      apply (frule diminished_cte_wp_at_valid_cap[where p="(a, b)" for a b], clarsimp)
      apply (frule diminished_cte_wp_at_valid_cap[where p=slot], clarsimp)
-     apply (clarsimp simp: cte_wp_at_caps_of_state mask_cap_def conj_ac
+     apply (clarsimp simp: cte_wp_at_caps_of_state mask_cap_def
                            diminished_def[where cap="ArchObjectCap (PageCap d x y z w)" for d x y z w]
                            linorder_not_le aligned_sum_less_kernel_base
                     dest!: diminished_pd_capD)
@@ -1540,8 +1540,7 @@ lemma arch_decode_inv_wf[wp]:
     apply (simp add: linorder_not_le, drule minus_one_helper3)
     apply (drule le_shiftr[where n=20], drule(1) order_trans)
     apply (simp add: kernel_base_def)
-   apply (simp add: valid_arch_inv_def valid_pti_def)
-   apply (clarsimp simp: cte_wp_at_def is_arch_diminished_def is_cap_simps)
+   apply (clarsimp simp: cte_wp_at_def is_arch_diminished_def is_cap_simps valid_arch_inv_def valid_pti_def)
   apply (simp add: arch_decode_invocation_def Let_def  split del: if_split)
   apply (cases "isPDFlushLabel (invocation_type label)")
    apply (simp split del: if_split)
@@ -1620,6 +1619,5 @@ end
 
 declare invoke_arch_invs[wp]
 declare arch_decode_inv_wf[wp]
-
 
 end

@@ -1116,27 +1116,6 @@ lemma valid_fault_handler_eq:
   (is_ep_cap cap \<and> {AllowGrant, AllowSend} \<subseteq> cap_rights cap \<or> cap = NullCap)"
   by (auto simp: valid_fault_handler_def split: cap.splits)
 
-(* FIXME: move to VCG def *)
-(* I cannot believe we that don't have these yet *)
-lemma whenE_R_wp[wp]:
-  "(P \<Longrightarrow> \<lbrace>R\<rbrace> f -, \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> R s\<rbrace> whenE P f -,\<lbrace>Q\<rbrace>"
-  by (wpsimp simp: whenE_def|rule conjI)+
-
-(* FIXME: move to VCG def *)
-lemma whenE_E_wp[wp]:
-  "\<lbrace>R\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. (P \<longrightarrow> R s) \<and> (\<not>P \<longrightarrow> Q () s)\<rbrace> whenE P f \<lbrace>Q\<rbrace>,-"
-  by (wpsimp simp: whenE_def)
-
-(* FIXME: move to VCG def *)
-lemma unlessE_R_wp[wp]:
-  "(\<not>P \<Longrightarrow> \<lbrace>R\<rbrace> f -, \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. \<not>P \<longrightarrow> R s\<rbrace> unlessE P f -,\<lbrace>Q\<rbrace>"
-  by (wpsimp simp: unlessE_def|rule conjI)+
-
-(* FIXME: move to VCG def *)
-lemma unlessE_E_wp[wp]:
-  "\<lbrace>R\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. (\<not>P \<longrightarrow> R s) \<and> (P \<longrightarrow> Q () s)\<rbrace> unlessE P f \<lbrace>Q\<rbrace>,-"
-  by (wpsimp simp: unlessE_def)
-
 lemma valid_fault_handler:
   "valid_fault_handler cap \<Longrightarrow> is_ep_cap cap \<or> NullCap = cap"
   by (auto simp: valid_fault_handler_eq)
@@ -1147,15 +1126,6 @@ lemma decode_update_sc_inv[wp]:
 
 context Tcb_AI
 begin
-
-lemma decode_udpate_sc:
-  "\<lbrace>tcb_inv_wf (ThreadControl t slot fh to None None nr nv nb None)\<rbrace>
-   decode_update_sc (ThreadCap t) slot c
-   \<lbrace>\<lambda>update_sc. tcb_inv_wf (ThreadControl t slot fh to None None nr nv nb (tc_new_sc update_sc))\<rbrace>,-"
-  unfolding decode_update_sc_def
-  apply (wpsimp wp: whenE_throwError_wp get_sched_context_wp TcbAcc_AI.gbn_wp simp: unlessE_whenE)
-  apply (clarsimp simp: obj_at_def is_tcb)
-  oops
 
 lemma decode_set_sched_params_wf[wp]:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t and
@@ -1667,11 +1637,6 @@ lemma mapM_priorities:
   apply (clarsimp simp: obj_at_def is_tcb)
   done
 
-(* FIXME: move to Lib *)
-lemma sort_key_Nil_eq:
-  "(sort_key f xs = []) = (xs = [])"
-  by (induct xs) auto
-
 lemma sort_queue_wp:
   "\<lbrace>\<lambda>s. (\<forall>t\<in>set qs. tcb_at t s) \<longrightarrow>
         P (map snd (sort_key (\<lambda>x. 0xFF - fst x)
@@ -1680,12 +1645,6 @@ lemma sort_queue_wp:
   unfolding sort_queue_def
   by (wpsimp wp: mapM_priorities)
 
-(* FIXME: move *)
-lemma snd_set_zip:
-  "length xs = length ys \<Longrightarrow> snd ` set (zip xs ys) = set ys"
-  by (metis list.set_map map_snd_zip)
-
-(* FIXME: move *)
 lemma inj_on_snd_set_zip_map:
   "distinct xs \<Longrightarrow> inj_on snd (set (zip (map f xs) xs))"
   using distinct_map by fastforce
@@ -1720,29 +1679,6 @@ lemma set_ep_minor_invs:
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
           wp: valid_irq_node_typ simp_del: fun_upd_apply)
   apply (clarsimp simp: state_refs_of_def obj_at_def ext elim!: rsubst[where P = sym_refs])
-  done
-
-(* FIXME: move *)
-lemmas if_live_then_nonz_cap_invs = if_live_then_nonz_capD2[OF invs_iflive]
-
-(* FIXME: move *)
-lemma not_idle_tcb_in_SendEp:
-  "\<lbrakk> kheap s ptr = Some (Endpoint (SendEP q)); valid_idle s; sym_refs (state_refs_of s); t\<in>set q \<rbrakk>
-  \<Longrightarrow> t \<noteq> idle_thread s"
-  apply (clarsimp simp: sym_refs_def)
-  apply (erule_tac x = ptr in allE)
-  apply (drule_tac x = "(idle_thread s, EPSend)" in bspec)
-   apply (auto simp: state_refs_of_def valid_idle_def obj_at_def pred_tcb_at_def)
-  done
-
-(* FIXME: move *)
-lemma not_idle_tcb_in_RecvEp:
-  "\<lbrakk> kheap s ptr = Some (Endpoint (RecvEP q)); valid_idle s; sym_refs (state_refs_of s); t\<in>set q \<rbrakk>
-  \<Longrightarrow> t \<noteq> idle_thread s"
-  apply (clarsimp simp: sym_refs_def)
-  apply (erule_tac x = ptr in allE)
-  apply (drule_tac x = "(idle_thread s, EPRecv)" in bspec)
-   apply (auto simp: state_refs_of_def valid_idle_def obj_at_def pred_tcb_at_def)
   done
 
 lemma reorder_ep_invs[wp]:

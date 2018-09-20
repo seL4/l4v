@@ -2497,4 +2497,12 @@ lemma rsubst:
 lemma ex_impE: "((\<exists>x. P x) \<longrightarrow> Q) \<Longrightarrow> P x \<Longrightarrow> Q"
   by blast
 
+lemma sort_key_Nil_eq:
+  "(sort_key f xs = []) = (xs = [])"
+  by (induct xs) auto
+
+lemma snd_set_zip:
+  "length xs = length ys \<Longrightarrow> snd ` set (zip xs ys) = set ys"
+  by (metis list.set_map map_snd_zip)
+
 end

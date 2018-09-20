@@ -1731,6 +1731,25 @@ lemma hoare_drop_impE_E:
 
 lemmas hoare_drop_imps = hoare_drop_imp hoare_drop_impE_R hoare_drop_impE_E
 
+lemma whenE_R_wp[wp]:
+  "(P \<Longrightarrow> \<lbrace>R\<rbrace> f -, \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> R s\<rbrace> whenE P f -,\<lbrace>Q\<rbrace>"
+  apply (clarsimp simp: whenE_def)
+  by (wpsimp simp: whenE_def)
+
+lemma whenE_E_wp[wp]:
+  "\<lbrace>R\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. (P \<longrightarrow> R s) \<and> (\<not>P \<longrightarrow> Q () s)\<rbrace> whenE P f \<lbrace>Q\<rbrace>,-"
+  by (wpsimp simp: whenE_def)
+
+lemma unlessE_R_wp[wp]:
+  "(\<not>P \<Longrightarrow> \<lbrace>R\<rbrace> f -, \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. \<not>P \<longrightarrow> R s\<rbrace> unlessE P f -,\<lbrace>Q\<rbrace>"
+  apply (clarsimp simp: unlessE_def)
+  by (wpsimp simp: unlessE_def|rule conjI)+
+
+lemma unlessE_E_wp[wp]:
+  "\<lbrace>R\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. (\<not>P \<longrightarrow> R s) \<and> (P \<longrightarrow> Q () s)\<rbrace> unlessE P f \<lbrace>Q\<rbrace>,-"
+  by (wpsimp simp: unlessE_def)
+
+
 lemma bind_det_exec:
   "fst (a s) = {(r,s')} \<Longrightarrow> fst ((a >>= b) s) = fst (b r s')"
   by (simp add: bind_def)

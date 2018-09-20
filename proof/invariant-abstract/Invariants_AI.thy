@@ -3840,4 +3840,6 @@ lemma max_ipc_length_unfold:
   "max_ipc_length = 128"
   by (simp add: max_ipc_length_def cap_transfer_data_size_def msg_max_length_def msg_max_extra_caps_def)
 
+lemmas if_live_then_nonz_cap_invs = if_live_then_nonz_capD2[OF invs_iflive]
+
 end

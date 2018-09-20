@@ -1723,7 +1723,13 @@ lemma svr_invs [wp]:
   apply(simp add: invs_valid_objs)
   done
 
-crunch pred_tcb_at[wp]: set_vm_root "pred_tcb_at proj P t"
+crunch pred_tcb_at[wp]: arm_context_switch "pred_tcb_at proj P t"
+
+lemma svr_pred_st_tcb[wp]:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_vm_root t \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  unfolding set_vm_root_def by (wpsimp wp: get_cap_wp)
+
+crunch typ_at [wp]: set_vm_root "\<lambda>s. P (typ_at T p s)"
   (simp: crunch_simps)
 
 lemmas set_vm_root_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_typ_at]
