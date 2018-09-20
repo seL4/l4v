@@ -24,8 +24,10 @@ fun try_attribute_cmd (warn, attr_srcs) (ctxt, thm) =
     val attrs = map (attribute_generic ctxt) attr_srcs
     val (th', context') =
       fold (uncurry o Thm.apply_attribute) attrs (thm, ctxt)
-      handle THM ex =>
-        (if warn then warning ("TRY: ignoring exception: THM " ^ (@{make_string} ex)) else ();
+      handle e =>
+        (if Exn.is_interrupt e then Exn.reraise e
+         else if warn then warning ("TRY: ignoring exception: " ^ (@{make_string} e))
+         else ();
         (thm, ctxt))
   in (SOME context', SOME th') end
 
@@ -98,6 +100,10 @@ experiment begin
   \<close>
   lemmas yet_another_group = eq1 TrueI eq2 ineq
   thm yet_another_group[TRY (warn) [symmetric]]
+
+  text \<open>@{attribute TRY} should handle pretty much anything it might encounter.\<close>
+  thm eq1[TRY (warn) [where x=5]]
+  thm eq1[TRY (warn) [OF refl]]
 end
 
 end
