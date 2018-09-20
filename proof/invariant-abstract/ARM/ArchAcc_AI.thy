@@ -2385,15 +2385,6 @@ lemma pd_aligned:
   done
 
 
-lemma shiftr_less_t2n3:
-  "\<lbrakk>(2 :: 'a word) ^ (n + m) = 0; m < len_of TYPE('a)\<rbrakk>
-   \<Longrightarrow> (x :: 'a :: len word) >> n < 2 ^ m"
-  apply (rule shiftr_less_t2n')
-   apply (simp add: mask_def power_overflow)
-  apply simp
-  done
-
-
 lemma shiftr_shiftl_mask_pd_bits:
   "(((vptr :: word32) >> 20) << 2) && mask pd_bits = (vptr >> 20) << 2"
   apply (rule iffD2 [OF mask_eq_iff_w2p])
@@ -2430,12 +2421,6 @@ lemma shiftr_20_less:
   "((ucast (x >> 20) :: 12 word) \<le> ucast (y >> 20)) = ((x >> 20 :: word32) \<le> y >> 20)"
   by (simp add: word_less_nat_alt word_le_nat_alt shiftr_20_unat_ucast)+
 
-
-lemma shiftr_eqD:
-  "\<lbrakk> x >> n = y >> n; is_aligned x n; is_aligned y n \<rbrakk> \<Longrightarrow> x = y"
-  apply (drule arg_cong[where f="\<lambda>v. v << n"])
-  apply (simp add: and_not_mask[symmetric] is_aligned_neg_mask_eq)
-  done
 
 lemma kernel_base_ge_observation:
   "(kernel_base \<le> x) = (x && ~~ mask 29 = kernel_base)"

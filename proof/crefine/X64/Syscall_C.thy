@@ -1599,106 +1599,6 @@ lemma getIRQSlot_ccorres3:
    apply wp+
   done
 
-lemma ucast_eq_0[OF refl]:
-  "c = ucast \<Longrightarrow> is_up c \<Longrightarrow> (c x = 0) = (x = 0)"
-  apply (frule(1) inj_ucast)
-  apply (drule inj_eq[where x=x and y=0], simp)
-  done
-
-
-lemma is_up_compose':
-  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
-  and uc' :: "'b word \<Rightarrow> ('c::len) sword"
-  shows
-  "\<lbrakk>is_up uc; is_up uc'\<rbrakk> \<Longrightarrow> is_up (uc' \<circ> uc)"
-  unfolding is_up_def by (simp add: Word.target_size Word.source_size)
-
-
-lemma is_up_compose:
-  shows
-  "\<lbrakk>is_up uc; is_up uc'\<rbrakk> \<Longrightarrow> is_up (uc' \<circ> uc)"
-  unfolding is_up_def by (simp add: Word.target_size Word.source_size)
-
-lemma uint_is_up_compose:
-  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
-  and uc' :: "'b word \<Rightarrow> ('c::len) sword"
-  assumes "uc = ucast"
-  and "uc' = ucast"
-  and " uuc = uc' \<circ> uc"
-  shows
-  "\<lbrakk> is_up uc; is_up uc' \<rbrakk> \<Longrightarrow> uint (uuc b) = uint b"
-  apply (simp add: assms)
-  apply (frule is_up_compose)
-   apply (simp_all )
-  apply (simp only: Word.uint_up_ucast)
-  done
-
-
-lemma uint_is_up_compose_pred:
-  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
-  and uc' :: "'b word \<Rightarrow> ('c::len) sword"
-  assumes "uc = ucast"
-  and "uc' = ucast"
-  and " uuc = uc' \<circ> uc"
-  shows
-  "\<lbrakk> is_up uc; is_up uc' \<rbrakk> \<Longrightarrow> P (uint (uuc b)) \<longleftrightarrow> P( uint b)"
-  apply (simp add: assms)
-  apply (frule is_up_compose)
-   apply (simp_all )
-  apply (simp only: Word.uint_up_ucast)
- done
-
-lemma is_down_up_sword:
-  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) sword"
-  shows "\<lbrakk>uc = ucast; len_of TYPE('a) < len_of TYPE('b) \<rbrakk> \<Longrightarrow> is_up uc = (\<not> is_down uc)"
-  by (simp add: target_size source_size  is_up_def is_down_def )
-
-lemma is_not_down_compose:
-  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
-  and uc' :: "'b word \<Rightarrow> ('c::len) sword"
-  shows
-  "\<lbrakk>uc = ucast; uc' = ucast; len_of TYPE('a) < len_of TYPE('c)\<rbrakk> \<Longrightarrow> \<not> is_down (uc' \<circ> uc)  "
-  unfolding is_down_def
-  by (simp add: Word.target_size Word.source_size)
-
-
-lemma sint_ucast_uint:
-  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
-  and uc' :: "'b word \<Rightarrow> ('c::len) sword"
-  assumes "uc = ucast" and " uc' = ucast" and "uuc=uc' \<circ> uc " and "len_of TYPE('a) < len_of TYPE('c signed)"
-  shows
-  "\<lbrakk> is_up uc; is_up uc'\<rbrakk> \<Longrightarrow> sint (uuc b) = uint b"
-  apply (simp add: assms)
-  apply (frule is_up_compose')
-   apply simp_all
-  apply (simp add: ucast_ucast_b)
-  apply (rule sint_ucast_eq_uint)
-  apply (insert assms)
-  apply (simp add: is_down_def target_size source_size)
-  done
-
-lemma sint_ucast_uint_pred:
-  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
-  and uc' :: "'b word \<Rightarrow> ('c::len) sword"
-  and uuc :: "'a word \<Rightarrow> 'c sword"
-  assumes "uc = ucast" and " uc' = ucast" and "uuc=uc' \<circ> uc " and "len_of TYPE('a) < len_of TYPE('c )"
-  shows "\<lbrakk>is_up uc; is_up uc'\<rbrakk> \<Longrightarrow> P (uint b) \<longleftrightarrow> P (sint (uuc b))"
-  apply (simp add: assms )
-  apply (insert sint_ucast_uint[where uc=uc and uc'=uc' and uuc=uuc and b = b])
-  apply (simp add: assms)
- done
-
-lemma sint_uucast_uint_uucast_pred:
-  fixes uc :: "('a::len) word \<Rightarrow> ('b::len) word"
-  and uc' :: "'b word \<Rightarrow> ('c::len) sword"
-  assumes "uc = ucast" and " uc' = ucast" and "uuc=uc' \<circ> uc " and "len_of TYPE('a) < len_of TYPE('c )"
-  shows "\<lbrakk>is_up uc; is_up uc'\<rbrakk> \<Longrightarrow> P (uint(uuc b)) \<longleftrightarrow> P (sint (uuc b))"
-  apply (simp add: assms )
-  apply (insert sint_ucast_uint[where uc=uc and uc'=uc' and uuc=uuc and b = b])
-  apply (insert uint_is_up_compose_pred[where uc=uc and uc'=uc' and uuc=uuc and b=b])
-  apply (simp add: assms uint_is_up_compose_pred)
- done
-
 lemma scast_maxIRQ_less_eq:
   fixes b :: irq
   shows "(Kernel_C.maxIRQ <s ucast b) = (scast Kernel_C.maxIRQ < b)"
@@ -1729,17 +1629,6 @@ lemma ctzl_spec:
   apply (simp add: mex_def meq_def)
   done
 
-(* FIXME move *)
-lemma word_ctz_le:
-  "word_ctz (w :: ('a::len word)) \<le> LENGTH('a)"
-  apply (clarsimp simp: word_ctz_def)
-  apply (rule nat_le_Suc_less_imp[where y="LENGTH('a) + 1" , simplified])
-  apply (rule order_le_less_trans[OF List.length_takeWhile_le])
-  apply (subst length_rev)
-  apply (subst word_size_bl[symmetric])
-  apply (clarsimp simp: word_size)
-  done
-
 lemma dmo_machine_valid_lift:
   "(\<And>s f m. P s = P (ksMachineState_update f s)) \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp f' \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (wpsimp simp: split_def doMachineOp_def machine_op_lift_def machine_rest_lift_def in_monad)
@@ -1765,21 +1654,6 @@ lemma ccorres_return_void_C_Seq:
  done
 
 
-(* FIXME: move to WordLib *)
-lemma word_nth_neq:
-  "n < LENGTH('a) \<Longrightarrow> (~~x::'a::len word) !! n = (\<not> x!!n)"
-  by (simp add: word_size word_ops_nth_size)
-
-(* sigh *)
-lemma signed_unat_minus_one_32:
-  "unat (-1 :: 32 signed word) = 4294967295"
-  by (simp del: word_pow_0 diff_0 add: unat_sub_if' minus_one_word)
-
-(* FIXME: move to Word_Lib *)
-lemma scast_of_nat_to_signed [simp]:
-  "scast (of_nat x :: 'a::len word) = (of_nat x :: 'a signed word)"
-  by (metis cast_simps(23) scast_scast_id(2))
-
 lemma scast_specific_plus64:
   "scast (of_nat (word_ctz x) + 0x20 :: 64 signed word) = of_nat (word_ctz x) + (0x20 :: machine_word)"
   by (simp add: scast_down_add is_down_def target_size_def source_size_def word_size)
@@ -1787,55 +1661,6 @@ lemma scast_specific_plus64:
 lemma scast_specific_plus64_signed:
   "scast (of_nat (word_ctz x) + 0x20 :: machine_word) = of_nat (word_ctz x) + (0x20 :: 64 signed word)"
   by (simp add: scast_down_add is_down_def target_size_def source_size_def word_size)
-
-(* FIXME: move to Word_Lib *)
-lemma and_mask_cases:
-  fixes x :: "'a :: len word"
-  assumes len: "n < LENGTH('a)"
-  shows "x && mask n \<in> of_nat ` set [0 ..< 2^n]"
-proof -
-  have "x && mask n \<in> {0..2^n-1}"
-    by (simp add: mask_def word_and_le1)
-  also
-  have "... = of_nat ` {0 .. 2^n - 1}"
-    apply (rule set_eqI, rule iffI)
-     apply (clarsimp simp: image_iff)
-     apply (rule_tac x="unat x" in bexI; simp)
-      using len
-      apply (simp add: word_le_nat_alt unat_2tp_if unat_minus_one)
-    using len
-    apply (clarsimp simp: word_le_nat_alt unat_2tp_if unat_minus_one)
-    apply (subst unat_of_nat_eq; simp add: nat_le_Suc_less)
-    apply (erule less_le_trans)
-    apply simp
-    done
-  also have "{0::nat .. 2^n - 1} = set [0 ..< 2^n]" by (auto simp: nat_le_Suc_less)
-  finally show ?thesis .
-qed
-
-lemma two_bits_cases:
-  "\<lbrakk> (x::machine_word) && 3 = 0 \<Longrightarrow> P; x && 3 = 1 \<Longrightarrow> P; x && 3 = 2 \<Longrightarrow> P; x && 3 = 3 \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
-  using and_mask_cases [of 2 x] by (auto simp: upt_conv_Cons mask_def)
-
-lemma sint_ctz_64:
-  "0 \<le> sint (of_nat (word_ctz (x::machine_word))::64 signed word) \<and> sint (of_nat (word_ctz x)::64 signed word) \<le> 64"
-proof -
-  have uint64: "64 = uint (64::64 signed word)" by simp
-  from word_ctz_le[of x]
-  have "word_ctz x \<le> 64" by (auto)
-  then show ?thesis
-    apply -
-    apply (rule conjI)
-     apply (subst Word_Lemmas.sint_eq_uint)
-      apply (simp add: msb_big word_le_nat_alt unat_of_nat)
-     apply simp
-    apply (subst Word_Lemmas.sint_eq_uint)
-     apply (simp add: msb_big word_le_nat_alt unat_of_nat)
-    apply (subst uint64)
-    apply (subst un_ui_le[symmetric])
-    apply (simp add: unat_of_nat)
-    done
-qed
 
 lemma ccorres_handleReservedIRQ:
   "ccorres dc xfdc

@@ -575,13 +575,6 @@ lemma revokable_ccorres:
   by (revokable'_hammer | fastforce simp: isCap_simps)+
 
 
-lemma from_bool_mask_simp [simp]:
-  "((from_bool r) :: word32) && mask (Suc 0) = from_bool r"
-  unfolding from_bool_def
-  apply (rule less_mask_eq)
-  apply (clarsimp split: bool.splits)
-  done
-
 lemma cteInsert_ccorres_mdb_helper:
   "\<lbrakk>cmdbnode_relation rva srcMDB; from_bool rvc = (newCapIsRevocable :: word32); srcSlot = Ptr src\<rbrakk>
        \<Longrightarrow> ccorres cmdbnode_relation newMDB_' (K (is_aligned src 3))
@@ -824,12 +817,6 @@ lemma valid_cap_untyped_inv:
   apply (clarsimp simp:valid_cap'_def capAligned_def)
   done
 
-lemma and_and_mask_simple: "(y && mask n) = mask n \<Longrightarrow> ((x && y) && mask n) = x && mask n"
-  by (simp add: word_bool_alg.conj.assoc)
-
-lemma and_and_mask_simple_not: "(y && mask n) = 0 \<Longrightarrow> ((x && y) && mask n) = 0"
-  by (simp add: word_bool_alg.conj.assoc)
-
 lemma update_freeIndex':
   assumes i'_align: "is_aligned (of_nat i' :: machine_word) minUntypedSizeBits"
   assumes sz_bound: "sz \<le> maxUntypedSizeBits"
@@ -917,16 +904,6 @@ lemma ccorres_cases:
   apply (cases P, auto simp: P notP)
   done
 
-(* FIXME: move *)
-lemma word_and_le': "\<lbrakk> b \<le> c \<rbrakk> \<Longrightarrow> (a :: word32) && b \<le> c"
-  apply (metis word_and_le1 order_trans)
-  done
-
-(* FIXME: move *)
-lemma word_and_less': "\<lbrakk> b < c \<rbrakk> \<Longrightarrow> (a :: word32) && b < c"
-  apply (metis word_and_le1 xtr7)
-  done
-
 lemma capBlockSize_CL_maxSize:
   " \<lbrakk> cap_get_tag c = scast cap_untyped_cap \<rbrakk> \<Longrightarrow> capBlockSize_CL (cap_untyped_cap_lift c) < 0x20"
   apply (clarsimp simp: cap_untyped_cap_lift_def)
@@ -934,16 +911,6 @@ lemma capBlockSize_CL_maxSize:
   apply (clarsimp simp: cap_untyped_cap_def cap_null_cap_def)
   apply (rule word_and_less')
   apply (simp add: mask_def)
-  done
-
-lemma t2p_shiftr:
-  "\<lbrakk>b\<le> a;a < word_bits \<rbrakk> \<Longrightarrow> (2::word32) ^ a >> b = 2 ^ (a - b)"
-  apply (subst shiftr_w2p)
-   apply (simp add:word_bits_def)
-  apply (subst shiftr_w2p[where x = "a - b"])
-   apply (simp add:word_bits_def)
-  apply (simp only:word_bits_def[symmetric])
-  apply (simp add:shiftr_shiftr)
   done
 
 lemma setUntypedCapAsFull_ccorres [corres]:
@@ -1107,9 +1074,6 @@ lemma ccorres_move_ptr_safe_Seq:
   done
 
 lemmas ccorres_move_guard_ptr_safe = ccorres_move_ptr_safe_Seq ccorres_move_ptr_safe
-
-lemma scast_1_32 [simp]: "scast (1 :: 32 signed word) = (1 :: 32 word)"
-  by simp
 
 lemma cteInsert_ccorres:
   "ccorres dc xfdc (cte_wp_at' (\<lambda>scte. capMasterCap (cteCap scte) = capMasterCap cap
@@ -3438,31 +3402,6 @@ lemma cap_get_tag_isArchCap_unfolded_H_cap:
   "ccap_relation (capability.ArchObjectCap a_cap) cap' \<Longrightarrow>
    (isArchCap_tag (cap_get_tag cap'))"
   apply (frule cap_get_tag_isCap(11), simp)
-  done
-
-lemma ucast_ucast_mask_eq:
-  "\<lbrakk> (ucast :: ('a :: len) word \<Rightarrow> ('b :: len) word) x = y;
-        x && mask (len_of TYPE('b)) = x \<rbrakk>
-    \<Longrightarrow> x = ucast y"
-  apply (drule_tac f="ucast :: 'b word \<Rightarrow> 'a word" in arg_cong)
-  apply (simp add: ucast_ucast_mask)
-  done
-
-lemma ucast_up_eq:
-  "\<lbrakk> ucast x = (ucast y::'b::len word);
-    len_of TYPE('a) \<le> len_of TYPE ('b) \<rbrakk>
-  \<Longrightarrow> ucast x = (ucast y::'a::len word)"
-  apply (subst (asm) bang_eq)
-  apply (fastforce simp: nth_ucast word_size intro: word_eqI)
-  done
-
-lemma ucast_up_neq:
-  "\<lbrakk> ucast x \<noteq> (ucast y::'b::len word);
-    len_of TYPE('b) \<le> len_of TYPE ('a) \<rbrakk>
-  \<Longrightarrow> ucast x \<noteq> (ucast y::'a::len word)"
-  apply (clarsimp)
-  apply (drule ucast_up_eq)
-    apply simp+
   done
 
 lemma sameRegionAs_spec:

@@ -914,15 +914,6 @@ lemma cspace_cte_relation_upd_mdbI:
   apply simp
 done
 
-(* FIXME: move, generic *)
-lemma aligned_neg_mask [simp]:
-  "is_aligned x n \<Longrightarrow> x && ~~ mask n = x"
-  apply (erule is_aligned_get_word_bits)
-   apply (rule iffD2 [OF mask_in_range])
-    apply assumption
-   apply simp
-  apply (simp add: power_overflow NOT_mask)
-  done
 
 lemma mdb_node_to_H_mdbPrev_update[simp]:
   "mdb_node_to_H (mdbPrev_CL_update (\<lambda>_. x) m)
@@ -1947,13 +1938,6 @@ lemma ko_at_projectKO_opt:
   "ko_at' ko p s \<Longrightarrow> (projectKO_opt \<circ>\<^sub>m ksPSpace s) p = Some ko"
   by (clarsimp elim!: obj_atE' simp: projectKOs)
 
-lemma int_and_leR:
-  "0 \<le> b \<Longrightarrow> a AND b \<le> (b :: int)"
-  by (clarsimp simp: int_and_le bin_sign_def split: if_split_asm)
-
-lemma int_and_leL:
-  "0 \<le> a \<Longrightarrow> a AND b \<le> (a :: int)"
-  by (metis int_and_leR int_and_comm)
 
 lemma user_word_at_cross_over:
   "\<lbrakk> user_word_at x p s; (s, s') \<in> rf_sr; p' = Ptr p \<rbrakk>
@@ -2080,8 +2064,6 @@ lemma device_word_at_cross_over:
   done
 *)
 
-(* FIXME: move to GenericLib *)
-lemmas unat32_eq_of_nat = unat_eq_of_nat[where 'a=32, folded word_bits_def]
 
 lemma memory_cross_over:
   "\<lbrakk>(\<sigma>, s) \<in> rf_sr; pspace_aligned' \<sigma>; pspace_distinct' \<sigma>;

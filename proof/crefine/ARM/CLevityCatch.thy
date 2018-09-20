@@ -149,16 +149,6 @@ lemma asUser_get_registers:
                         obj_at'_def)
   done
 
-(* FIXME: should fall through to LemmaBucket or alike *)
-lemma is_aligned_neg_mask2 [simp]:
-  "is_aligned (a && ~~ mask n) n"
-  apply (cases "n < len_of TYPE('a)")
-   apply (simp add: and_not_mask)
-   apply (subst shiftl_t2n)
-   apply (rule is_aligned_mult_triv1)
-  apply (simp add: not_less NOT_mask power_overflow)
-  done
-
 lemma projectKO_user_data_device:
   "(projectKO_opt ko = Some (t :: user_data_device)) = (ko = KOUserDataDevice)"
   by (cases ko)

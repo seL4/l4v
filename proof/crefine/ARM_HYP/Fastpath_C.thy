@@ -334,9 +334,7 @@ lemma ccorres_abstract_all:
   apply simp
   done
 
-lemma of_int_sint_scast [simp]:
-  "of_int (sint (x :: 'a::len word)) = (scast x :: 'b::len word)"
-  by (metis scast_def word_of_int)
+declare of_int_sint_scast[simp]
 
 lemma stateAssert_bind_out_of_if:
   "If P f (stateAssert Q xs >>= g) = stateAssert (\<lambda>s. \<not> P \<longrightarrow> Q s) [] >>= (\<lambda>_. If P f (g ()))"

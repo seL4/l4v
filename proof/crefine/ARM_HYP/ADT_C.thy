@@ -288,19 +288,7 @@ definition
 
 
 
-(* FIXME: move *)
-lemma not_neq:
-  "(\<not> a \<noteq> b) = (a = b)"
-  by simp
-
-lemma max_word_neq_0[simp]: "max_word \<noteq> 0"
-  apply (rule ccontr)
-  apply (cut_tac max_word_minus[where 'a = 'a])
-  apply (case_tac "len_of TYPE('a)")
-   apply clarsimp
-  apply (subst(asm) not_neq)
-  apply (metis eq_iff_diff_eq_0 max_word_def max_word_eq word_pow_0 zero_neq_one)
-  done
+declare max_word_neq_0[simp]
 
 lemma csch_act_rel_to_H:
   "(\<forall>t. a = SwitchToThread t \<longrightarrow> is_aligned t tcbBlockSizeBits) \<Longrightarrow>
@@ -620,9 +608,6 @@ definition
              (the_inv_map (array_map_conv (\<lambda>x. if x=0 then None else Some x)
                              0xFF hw_asid_table) asid))"
 
-(* FIXME: move *)
-lemma word_le_p2m1:
-  "(w::'a::len word) <= 2 ^ len_of TYPE('a) - 1" by (simp add: p2len)
 
 (* FIXME: move *)
 lemma ran_map_comp_subset: "ran (map_comp f g) <= (ran f)"

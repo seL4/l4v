@@ -649,9 +649,6 @@ lemma lookup_pd_slot_mask_6_gumpf:
   apply (clarsimp simp: xor3_simps carry_simps)
   done
 
-lemma neg_mask_combine:
-  "~~ mask a && ~~ mask b = ~~ mask (max a b)"
-  by (auto simp: word_ops_nth_size word_size intro!: word_eqI)
 
 lemma vs_lookup_pages1I:
   "\<lbrakk> ko_at ko p s; (r, p') \<in> vs_refs_pages ko;

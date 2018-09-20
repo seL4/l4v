@@ -1177,32 +1177,6 @@ lemma range_cover_plus_us:
    apply simp+
   done
 
-lemma mask_sub: "n \<le> m \<Longrightarrow> mask m - mask n = mask m && ~~ mask n"
-  apply (simp add: field_simps)
-  apply (subst word_plus_and_or_coroll)
-   apply word_eqI_solve
-  apply word_eqI_solve
-  done
-
-lemma  neg_mask_diff_bound:
-  "sz'\<le> sz \<Longrightarrow>(ptr && ~~ mask sz') - (ptr && ~~ mask sz) \<le> 2 ^ sz - 2 ^ sz'"
-  (is "_ \<Longrightarrow> ?lhs \<le> ?rhs")
-proof -
-  assume lt: "sz' \<le> sz"
-  hence "?lhs = ptr && (mask sz && (~~ mask sz'))"
-    apply (simp add: mask_out_sub_mask field_simps mask_and_mask min.absorb2)
-    apply (simp add: mask_sub)
-    apply (subst word_plus_and_or_coroll)
-     apply word_eqI_solve
-    apply word_eqI_solve
-    done
-  also have "\<dots> \<le> ?rhs" using lt
-    apply (simp add: mask_sub[symmetric])
-    apply (simp add: mask_def field_simps word_and_le1)
-    done
-  finally show ?thesis by simp
-qed
-
 
 lemma caps_overlap_reserved_subseteq:
   "\<lbrakk>caps_overlap_reserved B s; A\<subseteq> B\<rbrakk> \<Longrightarrow> caps_overlap_reserved A s"
@@ -1249,33 +1223,6 @@ lemma range_cover_tail_mask:
      apply simp
     apply (drule range_cover.sz)
    apply (simp add:word_arith_nat_Suc shiftl_t2n power_add[symmetric] field_simps)
-  apply simp
-  done
-
-
-lemma shift_distinct_helper:
-  "\<lbrakk> (x :: 'a :: len word) < bnd; y < bnd; x \<noteq> y; x << n = y << n; n < len_of TYPE('a);
-      bnd - 1 \<le> 2 ^ ((len_of TYPE('a)) - n) - 1 \<rbrakk>
-    \<Longrightarrow> P"
-  apply (cases "n = 0")
-   apply simp
-  apply (drule word_plus_mono_right[where x=1])
-   apply simp_all
-   apply (subst word_le_sub1)
-    apply (rule power_not_zero)
-    apply simp
-   apply simp
-  apply (drule(1) order_less_le_trans)+
-  apply (clarsimp simp: bang_eq)
-  apply (drule_tac x="na + n" in spec)
-  apply (simp add: nth_shiftl)
-  apply (case_tac "na + n < len_of TYPE('a)", simp_all)
-  apply safe
-   apply (drule(1) nth_bounded)
-    apply simp
-   apply simp
-  apply (drule(1) nth_bounded)
-   apply simp
   apply simp
   done
 
@@ -1371,32 +1318,5 @@ lemma not_emptyI:
   "\<And>x A B. \<lbrakk>x\<in>A; x\<in>B\<rbrakk> \<Longrightarrow> A \<inter> B\<noteq> {}"
   by auto
 
-lemma pre_helper2:
-  "\<And>base n bits x. \<lbrakk> is_aligned (base :: machine_word) n; n < word_bits; bits \<le> n; x < 2 ^ (n - bits) \<rbrakk>
-             \<Longrightarrow> base + x * 2^bits \<in> {base .. base + 2 ^ n  - 1}"
-  apply (subgoal_tac "x * 2^bits < 2 ^ n")
-   apply simp
-   apply (rule context_conjI)
-    apply (erule(1) is_aligned_no_wrap')
-   apply (subst add_diff_eq[symmetric])
-   apply (rule word_plus_mono_right)
-    apply simp
-   apply (erule is_aligned_no_wrap')
-   apply simp
-  apply (drule_tac k="2^bits" in word_mult_less_mono1)
-    apply (simp add: p2_gt_0 word_bits_def)
-   apply (subst unat_power_lower, simp add: word_bits_def)+
-   apply (simp only: power_add[symmetric])
-   apply (rule power_strict_increasing)
-    apply (simp add: word_bits_def)
-   apply simp
-  apply (simp add: power_add[symmetric])
-  done
-
-lemma of_bl_length2:
-  "length xs + c < LENGTH('a) \<Longrightarrow> of_bl xs * 2^c < (2::'a::len word) ^ (length xs + c)"
-  apply (simp add: power_add)
-  apply (rule word_mult_less_mono1[OF of_bl_length])
-  by (auto simp add: p2_gt_0 power_add[symmetric])
 
 end

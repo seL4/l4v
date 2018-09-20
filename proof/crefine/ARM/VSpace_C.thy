@@ -34,15 +34,6 @@ lemma empty_fail_findPDForASIDAssert[iff]:
   apply (intro empty_fail_bind, simp_all split: sum.split)
   done
 
-(* FIXME: move *)
-lemma mask_AND_less_0:
-  "\<lbrakk>x && mask n = 0; m \<le> n\<rbrakk> \<Longrightarrow> x && mask m = 0"
-  apply (case_tac "len_of TYPE('a) \<le> n")
-   apply (clarsimp simp: ge_mask_eq)
-  apply (erule is_aligned_AND_less_0)
-  apply (clarsimp simp: mask_2pm1 two_power_increasing)
-  done
-
 end
 
 context kernel_m begin
@@ -465,10 +456,6 @@ definition
   case fault of
     vmfault_type.ARMDataAbort \<Rightarrow> (scast Kernel_C.ARMDataAbort :: word32)
   | vmfault_type.ARMPrefetchAbort \<Rightarrow> scast Kernel_C.ARMPrefetchAbort"
-
-lemma mask_32_id [simp]:
-  "(x::word32) && mask 32 = x"
-  using uint_lt2p [of x] by (simp add: mask_eq_iff)
 
 lemma handleVMFault_ccorres:
   "ccorres ((\<lambda>a ex v. ex = scast EXCEPTION_FAULT \<and> (\<exists>vf.
@@ -1263,12 +1250,6 @@ crunch armKSNextASID[wp]: invalidateASID
     "\<lambda>s. P (armKSNextASID (ksArchState s))"
 crunch armKSNextASID[wp]: invalidateHWASIDEntry
     "\<lambda>s. P (armKSNextASID (ksArchState s))"
-
-lemma scast_ucast_down_same:
-  "(scast :: word32 \<Rightarrow> word8) = (ucast :: word32 \<Rightarrow> word8)"
-  apply (rule down_cast_same [symmetric])
-  apply (simp add: is_down_def target_size_def source_size_def word_size)
-  done
 
 end
 
@@ -2751,22 +2732,6 @@ lemma diminished_PageCap:
   done
 
 (* FIXME: move *)
-lemma aligend_mask_disjoint:
-  "\<lbrakk>is_aligned (a :: word32) n; b \<le> mask n; n < word_bits\<rbrakk> \<Longrightarrow> a && b = 0"
-  apply (rule word_eqI)
-  apply (clarsimp simp: is_aligned_nth word_size mask_def simp del: word_less_sub_le)
-  apply (drule le2p_bits_unset_32[OF word_less_sub_1])
-  apply (case_tac "na < n")
-   apply simp
-  apply (simp add: linorder_not_less word_bits_def)
-  done
-
-(* FIXME: move *)
-lemma word_aligend_0_sum:
-  "\<lbrakk> a + b = 0; is_aligned (a :: word32) n; b \<le> mask n; n < word_bits \<rbrakk> \<Longrightarrow> a = 0 \<and> b = 0"
-  by (simp add: word_plus_and_or_coroll aligend_mask_disjoint word_or_zero)
-
-(* FIXME: move *)
 lemma ccap_relation_mapped_asid_0:
   "ccap_relation (ArchObjectCap (PageCap d v0 v1 v2 v3)) cap
   \<Longrightarrow> (generic_frame_cap_get_capFMappedASID_CL (cap_lift cap) \<noteq> 0 \<longrightarrow> v3 \<noteq> None) \<and>
@@ -2791,7 +2756,7 @@ lemma ccap_relation_mapped_asid_0:
    apply (clarsimp simp: cap_lift_frame_cap cap_to_H_def
                          generic_frame_cap_get_capFMappedASID_CL_def
                    split: if_split_asm)
-   apply (drule word_aligend_0_sum [where n=asid_low_bits])
+   apply (drule word_aligned_0_sum [where n=asid_low_bits])
       apply fastforce
      apply (simp add: mask_def asid_low_bits_def word_and_le1)
     apply (simp add: asid_low_bits_def word_bits_def)
@@ -2807,7 +2772,7 @@ lemma ccap_relation_mapped_asid_0:
   apply (clarsimp simp: cap_lift_small_frame_cap cap_to_H_def
                         generic_frame_cap_get_capFMappedASID_CL_def
                   split: if_split_asm)
-  apply (drule word_aligend_0_sum [where n=asid_low_bits])
+  apply (drule word_aligned_0_sum [where n=asid_low_bits])
      apply fastforce
     apply (simp add: mask_def asid_low_bits_def word_and_le1)
    apply (simp add: asid_low_bits_def word_bits_def)
@@ -2977,16 +2942,6 @@ lemma ap_from_vm_rights_mask:
   "ap_from_vm_rights R && 3 = (ap_from_vm_rights R :: word32)"
   by (simp add: ap_from_vm_rights_def split: vmrights.splits)
 
-lemma mask_eq1_nochoice:
-  "(x:: word32) && 1 = x \<Longrightarrow> x = 0 \<or> x = 1"
-  apply (simp add:mask_eq_iff[where n = 1,unfolded mask_def,simplified])
-  apply (drule word_2p_lem[where n = 1 and w = x,symmetric,simplified,THEN iffD1,rotated])
-   apply (simp add:word_size)
-  apply word_bitwise
-  apply clarsimp
-  done
-
-
 definition
   "shared_bit_from_cacheable cacheable \<equiv> if cacheable = 0x1 then 0 else 1"
 
@@ -3143,11 +3098,6 @@ lemma cap_lift_PDCap_Base:
   apply (simp add: cap_page_directory_cap_lift_def)
   apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits if_splits)
   done
-
-(* FIXME: move *)
-lemma word_le_mask_eq:
-  "\<lbrakk> x \<le> mask n; n < word_bits \<rbrakk> \<Longrightarrow> x && mask n = (x::word32)"
-  by (rule le_mask_imp_and_mask)
 
 declare mask_Suc_0[simp]
 

@@ -920,16 +920,6 @@ lemma cspace_cte_relation_upd_mdbI:
   apply simp
 done
 
-(* FIXME: move, generic *)
-lemma aligned_neg_mask [simp]:
-  "is_aligned x n \<Longrightarrow> x && ~~ mask n = x"
-  apply (erule is_aligned_get_word_bits)
-   apply (rule iffD2 [OF mask_in_range])
-    apply assumption
-   apply simp
-  apply (simp add: power_overflow NOT_mask)
-  done
-
 lemma mdb_node_to_H_mdbPrev_update[simp]:
   "mdb_node_to_H (mdbPrev_CL_update (\<lambda>_. x) m)
   = mdbPrev_update (\<lambda>_. x) (mdb_node_to_H m)"
@@ -1934,14 +1924,6 @@ lemma rf_sr_heap_device_data_relation:
 lemma ko_at_projectKO_opt:
   "ko_at' ko p s \<Longrightarrow> (projectKO_opt \<circ>\<^sub>m ksPSpace s) p = Some ko"
   by (clarsimp elim!: obj_atE' simp: projectKOs)
-
-lemma int_and_leR:
-  "0 \<le> b \<Longrightarrow> a AND b \<le> (b :: int)"
-  by (clarsimp simp: int_and_le bin_sign_def split: if_split_asm)
-
-lemma int_and_leL:
-  "0 \<le> a \<Longrightarrow> a AND b \<le> (a :: int)"
-  by (metis int_and_leR int_and_comm)
 
 lemma word_shift_by_3:
   "x * 8 = (x::'a::len word) << 3"

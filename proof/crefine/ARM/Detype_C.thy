@@ -1320,18 +1320,6 @@ lemma ccorres_stateAssert_after:
   apply fastforce
   done
 
-lemma aligned_range_offset_mem_helper:
-  "\<lbrakk> is_aligned (x :: 'a :: len word) m; y < 2 ^ m; is_aligned p n;
-              n \<ge> m; n < len_of TYPE('a) \<rbrakk>
-       \<Longrightarrow> (x + y \<in> {p .. p + 2 ^ n - 1}) = (x \<in> {p .. p + 2 ^ n - 1})"
-  apply (simp only: mask_in_range[symmetric]
-                    is_aligned_add_or)
-  apply (simp add: word_ao_dist, simp add: mask_out_sub_mask)
-  apply (subst less_mask_eq, erule order_less_le_trans)
-   apply (simp add: two_power_increasing)
-  apply simp
-  done
-
 lemma heap_to_user_data_update_region:
   assumes foo: "\<And>x y v. \<lbrakk> map_to_user_data psp x = Some y;
                            v < 2 ^ pageBits \<rbrakk> \<Longrightarrow> (x + v \<in> S) = (x \<in> S)"
@@ -1487,42 +1475,6 @@ lemma untyped_cap_rf_sr_ptr_bits_domain:
                         valid_cap'_def capAligned_def)
   apply (simp only: upto_intvl_eq)
   apply blast
-  done
-
-lemma aligned_ranges_subset_or_disjoint_coroll:
-  "\<lbrakk> is_aligned (p :: 'a :: len word) n; is_aligned (p' :: 'a :: len word) n';
-        p && ~~ mask n' \<noteq> p'; p' && ~~ mask n \<noteq> p \<rbrakk>
-     \<Longrightarrow> {p .. p + 2 ^ n - 1} \<inter> {p' .. p' + 2 ^ n' - 1} = {}"
-  using aligned_ranges_subset_or_disjoint
-  apply (simp only: mask_in_range)
-  apply (subgoal_tac "p \<in> {p .. p + 2 ^ n - 1} \<and> p' \<in> {p' .. p' + 2 ^ n' - 1}")
-   apply blast
-  apply simp
-  done
-
-lemma neg_mask_twice:
-  "x && ~~ mask n && ~~ mask m = x && ~~ mask (max n m)"
-  by (metis word_bw_assocs neg_mask_combine)
-
-lemma multiple_mask_trivia: "n \<ge> m
-    \<Longrightarrow> (x && ~~ mask n) + (x && mask n && ~~ mask m) = x && ~~ mask m"
-  apply (rule trans[rotated], rule_tac w="mask n" in word_plus_and_or_coroll2)
-  apply (simp add: word_bw_assocs word_bw_comms word_bw_lcs neg_mask_twice
-                   max_absorb2)
-  done
-
-lemma distinct_aligned_addresses_accumulate:
-  "is_aligned p n \<Longrightarrow> is_aligned ptr bits
-    \<Longrightarrow> n \<ge> m \<Longrightarrow> n < size p \<Longrightarrow> m \<le> bits
-    \<Longrightarrow> (\<forall>y<2 ^ (n - m). p + (y << m) \<notin> {ptr..ptr + 2 ^ bits - 1})
-    \<Longrightarrow> {p .. p + 2 ^ n - 1} \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
-  apply safe
-  apply (simp only: mask_in_range[symmetric])
-  apply (drule_tac x="(x && mask n) >> m" in spec)
-  apply (simp add: shiftr_shiftl1 word_bw_assocs)
-  apply (drule mp, rule shiftr_less_t2n)
-   apply (subst add_diff_inverse, simp, rule and_mask_less', simp add: word_size)
-  apply (clarsimp simp: multiple_mask_trivia word_bw_assocs neg_mask_twice max_absorb2)
   done
 
 lemma offs_in_intvl_iff:
@@ -1915,7 +1867,7 @@ proof -
     apply (case_tac "pageBits \<le> bits")
      apply (simp add: objBitsKO_def projectKOs  split: kernel_object.splits)
      apply clarsimp
-     apply (rule aligned_range_offset_mem_helper
+     apply (rule aligned_range_offset_mem
        [where 'a=32, folded word_bits_def, simplified, OF _ _ al _ wb])
        apply assumption+
     apply (rule iffI[rotated], simp)
@@ -1968,7 +1920,7 @@ proof -
     apply (case_tac "pageBits \<le> bits")
      apply (simp add: objBitsKO_def projectKOs  split: kernel_object.splits)
      apply clarsimp
-     apply (rule aligned_range_offset_mem_helper
+     apply (rule aligned_range_offset_mem
        [where 'a=32, folded word_bits_def, simplified, OF _ _ al _ wb])
        apply assumption+
     apply (rule iffI[rotated], simp)

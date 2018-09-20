@@ -770,12 +770,6 @@ lemma ccap_relation_get_capZombiePtr_CL:
   apply simp
   done
 
-lemma double_neg_mask:
-  "(~~ mask n) && (~~ mask m) = (~~ mask (max n m))"
-  apply (rule word_eqI)
-  apply (simp add: word_size word_ops_nth_size)
-  apply fastforce
-  done
 
 lemma modify_gets_helper:
   "do y \<leftarrow> modify (ksPSpace_update (\<lambda>_. ps)); ps' \<leftarrow> gets ksPSpace; f ps' od

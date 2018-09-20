@@ -1390,87 +1390,6 @@ lemma set_zip_helper:
   "t \<in> set (zip xs ys) \<Longrightarrow> fst t \<in> set xs \<and> snd t \<in> set ys"
   by (clarsimp simp add: set_zip)
 
-lemma two_power_increasing_less_1:
-  "\<lbrakk> n \<le> m; m \<le> len_of TYPE('a)\<rbrakk> \<Longrightarrow> (2 :: 'a  :: len word) ^ n - 1 \<le> 2 ^ m - 1"
-  apply (cases "m = len_of TYPE('a)")
-   apply simp
-  apply (rule word_sub_mono)
-     apply (simp add: word_le_nat_alt)
-    apply simp
-   apply (rule order_less_imp_le)
-   apply (rule word_power_less_1)
-   apply simp
-  apply (rule order_less_imp_le)
-  apply (rule word_power_less_1)
-  apply simp
-  done
-
-
-lemma word_sub_mono3:
-  "\<lbrakk> x + y \<le> x + z; (x :: ('a :: len) word) \<le> x + y; x \<le> x + z \<rbrakk> \<Longrightarrow> y \<le> z"
-  apply (subst(asm) add.commute)
-  apply (subst(asm) add.commute,
-         erule word_sub_mono2)
-    apply simp
-   apply (subst add.commute, subst olen_add_eqv, simp add: add.commute)
-  apply (subst add.commute, subst olen_add_eqv, simp add: add.commute)
-  done
-
-
-lemma word_sub_mono4:
-  "\<lbrakk> y + x \<le> z + x; (y :: ('a :: len) word) \<le> y + x; z \<le> z + x \<rbrakk> \<Longrightarrow> y \<le> z"
-  apply (subst(asm) add.commute)
-  apply (subst(asm) add.commute,
-         erule word_sub_mono2)
-    apply simp
-   apply (simp add: add.commute)+
-  done
-
-
-lemma eq_or_less_helperD:
-  "\<lbrakk> n = unat (2 ^ m - 1 :: 'a :: len word) \<or> n < unat (2 ^ m - 1 :: 'a word); m < len_of TYPE('a) \<rbrakk> \<Longrightarrow> n < 2 ^ m"
-  apply (simp add: unat_sub word_1_le_power)
-  apply (subgoal_tac "2 ^ m \<ge> (1 :: nat)")
-   apply arith
-  apply simp
-  done
-
-
-lemma of_nat_shift_distinct_helper:
-  "\<lbrakk> x < bnd; y < bnd; x \<noteq> y; (of_nat x :: 'a :: len word) << n = of_nat y << n;
-        n < len_of TYPE('a); bnd \<le> 2 ^ (len_of TYPE('a) - n) \<rbrakk>
-     \<Longrightarrow> P"
-  apply (cases "n = 0")
-   apply (simp add: word_unat.Abs_inject unats_def)
-  apply (subgoal_tac "bnd < 2 ^ len_of TYPE('a)")
-   apply (erule(1) shift_distinct_helper[rotated, rotated, rotated])
-      defer
-      apply (erule(1) of_nat_mono_maybe[rotated])
-     apply (erule(1) of_nat_mono_maybe[rotated])
-    apply (simp add: word_unat.Abs_inject unats_def)
-   apply (erule order_le_less_trans)
-   apply (rule power_strict_increasing)
-    apply simp
-   apply simp
-  apply (simp add: word_less_nat_alt)
-  apply (simp add: unat_minus_one [OF of_nat_neq_0]
-                   word_unat.Abs_inverse unats_def)
-  done
-
-
-lemmas of_nat_shift_distinct_helper_machine = of_nat_shift_distinct_helper[where 'a=machine_word_len, folded word_bits_def]
-
-
-lemma ptr_add_distinct_helper:
-  "\<lbrakk> ptr_add (p :: machine_word) (x * 2 ^ n) = ptr_add p (y * 2 ^ n); x \<noteq> y;
-     x < bnd; y < bnd; n < word_bits;
-     bnd \<le> 2 ^ (word_bits - n) \<rbrakk>
-     \<Longrightarrow> P"
-  apply (clarsimp simp: ptr_add_def word_unat_power[symmetric]
-                        shiftl_t2n[symmetric, simplified mult.commute])
-  apply (erule(5) of_nat_shift_distinct_helper_machine)
-  done
-
 
 lemma ex_cte_cap_protects:
   "\<lbrakk> ex_cte_cap_wp_to P p s; cte_wp_at ((=) (cap.UntypedCap dev ptr bits idx)) p' s;
@@ -2054,43 +1973,9 @@ lemma caps_of_state_no_overlapD:
 
 lemma op_equal: "(\<lambda>x. x = c) = ((=) c)" by (rule ext) auto
 
-
-lemma mask_out_eq_0:
-  "\<lbrakk>idx < 2^ sz;sz<word_bits\<rbrakk> \<Longrightarrow> ((of_nat idx)::machine_word) && ~~ mask sz = 0"
-  apply (clarsimp simp: mask_out_sub_mask)
-  apply (subst less_mask_eq[symmetric])
-   apply (erule(1) of_nat_power[where 'a=machine_word_len, folded word_bits_def])
-  apply simp
-  done
-
-
 lemma descendants_range_in_subseteq:
   "\<lbrakk>descendants_range_in A p ms ;B\<subseteq> A\<rbrakk> \<Longrightarrow> descendants_range_in B p ms"
   by (auto simp: descendants_range_in_def cte_wp_at_caps_of_state dest!: bspec)
-
-
-(* FIXME: move *)
-lemma is_aligned_neg_mask_eq':
-  "is_aligned ptr sz = (ptr && ~~ mask sz = ptr)"
-   apply (rule iffI)
-    apply (erule is_aligned_neg_mask_eq)
-   apply (simp add: is_aligned_mask)
-   apply (drule sym)
-   apply (subst (asm) word_plus_and_or_coroll2[symmetric,where w = "mask sz"])
-   apply simp
-   done
-
-
-(* FIXME: move *)
-lemma neg_mask_mask_unat:
-  "sz < word_bits \<Longrightarrow>
-   unat ((ptr::machine_word) && ~~ mask sz)  + unat (ptr && mask sz) = unat ptr"
-  apply (subst unat_plus_simple[THEN iffD1,symmetric])
-  apply (rule is_aligned_no_wrap'[OF is_aligned_neg_mask[OF le_refl]])
-  apply (rule and_mask_less')
-    apply (simp add: word_bits_def)
-  apply (simp add: word_plus_and_or_coroll2 field_simps)
-  done
 
 
 lemma cte_wp_at_pspace_no_overlapI:

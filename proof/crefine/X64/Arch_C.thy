@@ -1472,9 +1472,7 @@ lemma ptr_add_uint_of_nat [simp]:
     "a  +\<^sub>p uint (of_nat b :: machine_word) = a  +\<^sub>p (int b)"
   by (clarsimp simp: CTypesDefs.ptr_add_def)
 
-(* FIXME: move *)
-lemma int_unat [simp]: "int (unat x) = uint x"
-  by (clarsimp simp: unat_def)
+declare int_unat[simp]
 
 lemma obj_at_pte_aligned:
   "obj_at' (\<lambda>a::X64_H.pte. True) ptr s ==> is_aligned ptr word_size_bits"
@@ -1498,10 +1496,6 @@ lemma addrFromPPtr_mask_6:
   apply word_bitwise
   apply (simp add:mask_def)
   done
-
-lemma word_add_format:
-  "(-1::machine_word) + b + c = b + (c - 1)"
-  by simp
 
 lemma cpde_relation_invalid:
  "cpde_relation pdea pde \<Longrightarrow> (pde_get_tag pde = scast pde_pde_pt \<and> pde_pde_pt_CL.present_CL (pde_pde_pt_lift pde) = 0) = isInvalidPDE pdea"
@@ -2043,15 +2037,6 @@ lemma at_least_2_args:
   apply simp
   done
 
-lemma is_aligned_no_overflow3:
- "\<lbrakk>is_aligned (a::machine_word) n; n < word_bits ;b< 2^n; c \<le> 2^ n; b< c \<rbrakk>
-  \<Longrightarrow> a + b \<le> a + (c - 1)"
-  apply (rule word_plus_mono_right)
-   apply (simp add:minus_one_helper3)
-  apply (erule is_aligned_no_wrap')
-  apply (auto simp:word64_less_sub_le)
-  done
-
 definition
   to_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a option"
 where
@@ -2074,29 +2059,12 @@ lemma two_nat_power_pageBitsForSize_le:
   "(2 :: nat) ^ pageBits \<le> 2 ^ pageBitsForSize vsz"
   by (cases vsz, simp_all add: pageBits_def bit_simps)
 
-lemma unat_sub_le_strg:
-  "unat v \<le> v2 \<and> x \<le> v \<and> y \<le> v \<and> y < (x :: ('a :: len) word)
-    \<longrightarrow> unat (x + (- 1 - y)) \<le> v2"
-  apply clarsimp
-  apply (erule order_trans[rotated])
-  apply (fold word_le_nat_alt)
-  apply (rule order_trans[rotated], assumption)
-  apply (rule order_trans[rotated], rule word_sub_le[where y="y + 1"])
-   apply (erule Word.inc_le)
-  apply (simp add: field_simps)
-  done
-
 (* FIXME: move *)
 lemma is_aligned_pageBitsForSize_minimum:
   "\<lbrakk> is_aligned p (pageBitsForSize sz) ; n \<le> pageBits \<rbrakk> \<Longrightarrow> is_aligned p n"
   apply (cases sz; clarsimp simp: pageBits_def)
   apply (erule is_aligned_weaken, simp)+
   done
-
-(* FIXME: move *)
-lemma mask_add_aligned_right:
-  "is_aligned p n \<Longrightarrow> (q + p) && mask n = q && mask n"
-  by (simp add: mask_add_aligned add.commute)
 
 lemma ptrFromPAddr_add_left:
   "ptrFromPAddr (x + y) = ptrFromPAddr x + y"

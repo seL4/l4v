@@ -716,49 +716,6 @@ lemma get_object_ret:
   by (wp, clarsimp elim!: obj_atE)+
 
 
-lemma mask_in_range:
-  "is_aligned ptr bits \<Longrightarrow>
-    (ptr' && (~~ mask bits) = ptr) = (ptr' \<in> {ptr .. ptr + 2 ^ bits - 1})"
-  apply (erule is_aligned_get_word_bits)
-   defer
-   apply (simp add: power_overflow mask_def)
-  apply (rule iffI)
-   apply (drule sym)
-   apply (simp add: word_and_le2)
-   apply (subst field_simps[symmetric], subst mask_2pm1[symmetric])
-   apply (subst word_plus_and_or_coroll)
-    apply (rule word_eqI, clarsimp simp: word_ops_nth_size)
-   apply (subgoal_tac "ptr' && ~~ mask bits || mask bits = ptr' || mask bits")
-    apply (simp add: le_word_or2)
-   apply (rule word_eqI, clarsimp simp: word_ops_nth_size word_size)
-   apply fastforce
-  apply (subgoal_tac "\<exists>x. ptr' = ptr || x \<and> x && mask bits = x")
-   apply (rule word_eqI)
-   apply (clarsimp simp: word_ops_nth_size word_size is_aligned_mask)
-   apply (drule_tac x=n in word_eqD)+
-   apply (simp add: word_ops_nth_size word_size
-                    is_aligned_mask)
-   apply safe[1]
-  apply (subgoal_tac "\<exists>x. ptr' = ptr + x")
-   apply clarsimp
-   apply (drule(1) word_le_minus_mono_left[where x=ptr])
-   apply simp
-   apply (subst conj_commute)
-   apply (rule exI, rule context_conjI[OF _ word_plus_and_or_coroll])
-    apply (subst mask_eq_iff_w2p)
-     apply (simp add: word_bits_conv word_size)
-    apply (rule minus_one_helper5)
-     apply simp
-    apply simp
-   apply (simp add: is_aligned_mask)
-   apply (rule word_eqI)
-   apply (drule_tac x=n in word_eqD)+
-   apply (clarsimp simp: word_ops_nth_size word_size)
-  apply (rule exI[where x="ptr' - ptr"])
-  apply simp
-  done
-
-
 lemma captable_case_helper:
   "\<lbrakk> \<forall>sz cs. ob \<noteq> CNode sz cs \<rbrakk> \<Longrightarrow> (case ob of CNode sz cs \<Rightarrow> P sz cs | _ \<Rightarrow> Q) = Q"
   by (case_tac ob, simp_all add: not_ex[symmetric])

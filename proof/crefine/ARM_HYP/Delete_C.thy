@@ -358,13 +358,6 @@ lemma valid_Zombie_number_word_bits:
   apply simp
   done
 
-lemma of_nat_less_t2n:
-  "of_nat i < (2 :: ('a :: len) word) ^ n
-    \<Longrightarrow> n < len_of TYPE('a) \<and> unat (of_nat i :: 'a word) < 2 ^ n"
-  apply (cases "n < len_of TYPE('a)")
-   apply (simp add: word_less_nat_alt)
-  apply (simp add: power_overflow)
-  done
 
 lemma ccorres_cutMon_locateSlotCap_Zombie:
   "\<lbrakk> (capZombiePtr cap + 2 ^ cte_level_bits * n, s) \<in> fst (locateSlotCap cap n s)

@@ -1662,12 +1662,6 @@ lemma range_cover_compare_bound_word:
   apply (simp add: range_cover.sz range_cover.unat_of_nat_shift)
   done
 
-lemma from_to_bool_last_bit:
-  "from_bool (to_bool (x && 1)) = x && 1"
-  apply (simp add: from_bool_def to_bool_and_1
-            split: bool.split)
-  apply (safe intro!: word_eqI, auto)
-  done
 
 lemma isUntypedCap_ccap_relation_helper:
   "ccap_relation cap ccap
@@ -1791,19 +1785,6 @@ lemma name_seq_bound_helper:
   apply (rule ccontr, simp add: linorder_not_le)
   done
 
-lemma word_two_power_neg_ineq:
-  "2 ^ m \<noteq> (0 :: 'a word) \<Longrightarrow> 2 ^ n \<le> - (2 ^ m :: ('a :: len) word)"
-  apply (cases "n < len_of TYPE('a)", simp_all add: power_overflow)
-  apply (cases "m < len_of TYPE('a)", simp_all add: power_overflow)
-  apply (simp add: word_le_nat_alt Aligned.unat_minus word_size)
-  apply (cases "len_of TYPE('a)", simp_all)
-  apply (simp add: less_Suc_eq_le)
-  apply (drule power_increasing[where a=2 and n=n]
-               power_increasing[where a=2 and n=m], simp)+
-  apply (drule(1) add_le_mono)
-  apply simp
-  done
-
 lemma reset_name_seq_bound_helper:
   fixes sz
   fixes v :: "('a :: len) word"
@@ -1900,24 +1881,6 @@ lemma ccorres_req_Ex:
   apply (rule ccorresI', simp)
   done
 
-lemma is_aligned_mask_out_add_eq:
-  "is_aligned p n
-    \<Longrightarrow> (p + x) && ~~ mask n = p + (x && ~~ mask n)"
-  by (simp add: mask_out_sub_mask mask_add_aligned)
-
-lemmas is_aligned_mask_out_add_eq_sub
-    = is_aligned_mask_out_add_eq[where x="a - b" for a b, simplified field_simps]
-
-lemma aligned_bump_down:
-  "is_aligned x n
-    \<Longrightarrow> (x - 1) && ~~ mask n = x - 2 ^ n"
-  apply (frule is_aligned_mask_out_add_eq[where x="-1"])
-  apply (simp add: NOT_mask)
-  done
-
-lemma nat_diff_diff_le_lhs:
-  "a + c - b \<le> d \<Longrightarrow> a - (b - c) \<le> (d :: nat)"
-  by arith
 
 lemma region_actually_is_bytes_subset_t_hrs:
   "region_actually_is_bytes ptr sz s'
@@ -2916,49 +2879,6 @@ lemma  object_type_from_to_H:
   apply (simp add:from_to_enum)
   done
 
-lemma shiftR_gt0_le32:
-  "\<lbrakk>0 < unat (of_nat (shiftR a b ));a < 2 ^ word_bits\<rbrakk> \<Longrightarrow> b< 32"
-  apply (rule ccontr)
-  apply (clarsimp simp:not_less shiftR_nat)
-  apply (subst (asm) div_less)
-   apply (erule less_le_trans)
-   apply (rule power_increasing)
-    apply (simp add:word_bits_def)+
-  done
-
-lemma shiftr_overflow:
-  "32\<le> a \<Longrightarrow> (b::word32) >> a = 0"
-  apply (word_bitwise)
-  apply simp
-  done
-
-lemma impI':
-  "(\<not> B \<Longrightarrow> \<not> A) \<Longrightarrow> A \<longrightarrow> B"
-  by auto
-
-lemma base_length_minus_one_inequality:
-  assumes foo: "wbase \<le> 2 ^ sz - 1"
-    "1 \<le> (wlength :: ('a :: len) word)"
-    "wlength \<le> 2 ^ sz - wbase"
-    "sz < len_of TYPE ('a)"
-  shows "wbase \<le> wbase + wlength - 1"
-proof -
-
-  note sz_less = power_strict_increasing[OF foo(4), where a=2]
-
-  from foo have plus: "unat wbase + unat wlength < 2 ^ len_of TYPE('a)"
-    apply -
-    apply (rule order_le_less_trans[rotated], rule sz_less, simp)
-    apply (simp add: unat_arith_simps split: if_split_asm)
-    done
-
-  from foo show ?thesis
-   by (simp add: unat_arith_simps plus)
-qed
-
-lemma unat_2tp_if:
-  "unat (2 ^ n :: ('a :: len) word) = (if n < len_of TYPE ('a) then 2 ^ n else 0)"
-  by (split if_split, simp_all add: power_overflow)
 
 lemma ctes_of_ex_cte_cap_to':
   "ctes_of s p = Some cte \<Longrightarrow> \<forall>r \<in> cte_refs' (cteCap cte) (irq_node' s). ex_cte_cap_to' r s"

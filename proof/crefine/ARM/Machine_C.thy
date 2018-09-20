@@ -244,31 +244,9 @@ lemma index_xf_for_sequence:
           \<and> globals (index_'_update f s) = globals s"
   by simp
 
-lemma upto_enum_word_nth:
-  "\<lbrakk>i \<le> j; k \<le> unat (j - i)\<rbrakk> \<Longrightarrow> [i .e. j] ! k = i + of_nat k"
-  apply (clarsimp simp: upto_enum_def nth_upt nth_append)
-  apply (clarsimp simp: toEnum_of_nat word_le_nat_alt[symmetric])
-  apply (rule conjI, clarsimp)
-   apply (subst toEnum_of_nat, unat_arith)
-   apply unat_arith
-  apply (clarsimp simp: not_less unat_sub[symmetric])
-  apply unat_arith
-  done
-
-lemma upto_enum_step_nth:
-  "\<lbrakk>a \<le> c; n \<le> unat ((c - a) div (b - a))\<rbrakk> \<Longrightarrow> [a, b .e. c] ! n = a + of_nat n * (b - a)"
-  apply (clarsimp simp: upto_enum_step_def not_less[symmetric])
-  apply (subst upto_enum_word_nth)
-    apply (auto simp: not_less word_of_nat_le)
-  done
-
 lemma lineStart_le_mono:
   "x \<le> y \<Longrightarrow> lineStart x \<le> lineStart y"
   by (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1 neg_mask_mono_le)
-
-lemma neg_mask_add:
-  "y && mask n = 0 \<Longrightarrow> x + y && ~~ mask n = (x && ~~ mask n) + y"
-  by (clarsimp simp: mask_out_sub_mask mask_eqs(7)[symmetric] mask_twice)
 
 lemma lineStart_sub:
   "\<lbrakk> x && mask 5 = y && mask 5\<rbrakk> \<Longrightarrow> lineStart (x - y) = lineStart x - lineStart y"
@@ -277,14 +255,6 @@ lemma lineStart_sub:
   apply (clarsimp simp: mask_eqs(8)[symmetric])
   done
 
-
-lemma minus_minus_swap:
-  "\<lbrakk> a \<le> c; b \<le> d; b \<le> a; d \<le> c\<rbrakk> \<Longrightarrow> (d :: nat) - b = c - a \<Longrightarrow> a - b = c - d"
-  by arith
-
-lemma minus_minus_swap':
-  "\<lbrakk> c \<le> a; d \<le> b; b \<le> a; d \<le> c\<rbrakk> \<Longrightarrow> (b :: nat) - d = a - c \<Longrightarrow> a - b = c - d"
-  by arith
 
 lemma lineStart_mask:
   "lineStart x && mask 5 = 0"
@@ -342,42 +312,13 @@ lemma cachRangeOp_corres_helper:
 
 definition "lineIndex x \<equiv> lineStart x >> cacheLineBits"
 
-
-lemma shiftr_shiftl_shiftr[simp]:
-  "x >> a << a >> a = (x :: ('a :: len) word) >> a"
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_shiftr nth_shiftl)
-  apply safe
-  apply (drule test_bit_size)
-  apply (simp add: word_size)
-  done
-
 lemma lineIndex_def2:
   "lineIndex x = x >> cacheLineBits"
   by (simp add: lineIndex_def lineStart_def)
 
-
 lemma lineIndex_le_mono:
   "x \<le> y \<Longrightarrow> lineIndex x \<le> lineIndex y"
   by (clarsimp simp: lineIndex_def2 cacheLineBits_def le_shiftr)
-
-lemma add_right_shift:
-  "\<lbrakk>x && mask n = 0; y && mask n = 0; x \<le> x + y \<rbrakk>
-    \<Longrightarrow> (x + y :: ('a :: len) word) >> n = (x >> n) + (y >> n)"
-  apply (simp add: no_olen_add_nat is_aligned_mask[symmetric])
-  apply (simp add: unat_arith_simps shiftr_div_2n' split del: if_split)
-  apply (subst if_P)
-   apply (erule order_le_less_trans[rotated])
-   apply (simp add: add_mono)
-  apply (simp add: shiftr_div_2n' is_aligned_def)
-  done
-
-lemma sub_right_shift:
-  "\<lbrakk>x && mask n = 0; y && mask n = 0; y \<le> x \<rbrakk>
-    \<Longrightarrow> (x - y) >> n = (x >> n :: ('a :: len) word) - (y >> n)"
-  using add_right_shift[where x="x - y" and y=y and n=n]
-  by (simp add: aligned_sub_aligned is_aligned_mask[symmetric]
-                word_sub_le)
 
 lemma lineIndex_lineStart_diff:
   "w1 \<le> w2 \<Longrightarrow> (unat (lineStart w2 - lineStart w1) div 32) = unat (lineIndex w2 - lineIndex w1)"

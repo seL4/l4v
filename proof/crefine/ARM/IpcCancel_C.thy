@@ -12,18 +12,6 @@ theory IpcCancel_C
 imports SyscallArgs_C
 begin
 
-lemma unat_of_nat_shiftl_or_8_32: (* FIXME generalise *)
-  "\<lbrakk> x * 2 ^ n < 256 ; y < 256 \<rbrakk>
-   \<Longrightarrow> unat (((of_nat x << n) :: 8 word)  || of_nat y :: 8 word) = unat (((of_nat x << n):: machine_word) || of_nat y :: machine_word)"
-  apply (subst unat_ucast_upcast[where 'b=8 and 'a=32,symmetric])
-   apply (simp add: is_up)
-  apply (subst ucast_or_distrib)
-  apply (subst of_nat_shiftl)
-  apply (subst ucast_of_nat_small, simp)
-  apply (subst ucast_of_nat_small, simp)
-  apply (simp add: of_nat_shiftl)
-  done
-
 context kernel_m
 begin
 
@@ -2189,16 +2177,6 @@ lemma ksReadyQueuesL1Bitmap_word_log2_max:
     \<Longrightarrow> word_log2 (ksReadyQueuesL1Bitmap s d) < l2BitmapSize"
     unfolding valid_queues_def
     by (fastforce dest: word_log2_nth_same bitmapQ_no_L1_orphansD)
-
-lemma word_log2_max_word32[simp]:
-  "word_log2 (w :: 32 word) < 32"
-  using word_log2_max[where w=w]
-  by (simp add: word_size)
-
-lemma word_log2_max_word8[simp]:
-  "word_log2 (w :: 8 word) < 8"
-  using word_log2_max[where w=w]
-  by (simp add: word_size)
 
 lemma rf_sr_ksReadyQueuesL2Bitmap_simp:
   "\<lbrakk> (\<sigma>, s') \<in> rf_sr ; d \<le> maxDomain ; valid_queues \<sigma> ; ksReadyQueuesL1Bitmap \<sigma> d \<noteq> 0 \<rbrakk>

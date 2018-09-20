@@ -1307,16 +1307,6 @@ lemma findPDForASID_nonzero:
   apply (wp | wpc | simp only: o_def simp_thms)+
   done
 
-lemma unat_shiftr_le_bound:
-  "2 ^ (len_of TYPE('a :: len) - n) - 1 \<le> bnd \<Longrightarrow> 0 < n
-    \<Longrightarrow> unat ((x :: 'a word) >> n) \<le> bnd"
-  apply (erule order_trans[rotated], simp)
-  apply (rule nat_le_Suc_less_imp)
-  apply (rule unat_less_helper, simp)
-  apply (rule shiftr_less_t2n3)
-   apply simp
-  apply simp
-  done
 
 lemma pageTableMapped_ccorres:
   "ccorres (\<lambda>rv rv'. rv' = option_to_ptr rv \<and> rv \<noteq> Some 0) ret__ptr_to_struct_pde_C_'
@@ -1589,10 +1579,6 @@ lemma cteDeleteOne_ccorres:
   apply (auto simp: o_def)
   done
 
-(* FIXME : move *)
-lemma of_int_uint_ucast:
-   "of_int (uint (x :: 'a::len word)) = (ucast x :: 'b::len word)"
-  by (metis ucast_def word_of_int)
 
 lemma getIRQSlot_ccorres_stuff:
   "\<lbrakk> (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow>
@@ -1657,11 +1643,6 @@ lemma Zombie_new_spec:
   apply (simp add: word_add_less_mono1[where k=1 and j="0x1F", simplified])
   done
 
-lemma mod_mask_drop:
-  "\<lbrakk> m = 2 ^ n; 0 < m; mask n && msk = mask n \<rbrakk> \<Longrightarrow>
-    (x mod m) && msk = x mod m"
-  by (simp add: word_mod_2p_is_mask
-                word_bw_assocs)
 
 lemma irq_opt_relation_Some_ucast:
   "\<lbrakk> x && mask 10 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: word32) \<rbrakk>
@@ -1673,23 +1654,8 @@ lemma irq_opt_relation_Some_ucast:
   apply (clarsimp simp: word_le_nat_alt Kernel_C.maxIRQ_def)
   done
 
-lemma upcast_ucast_id:
-    "len_of TYPE('a) \<le> len_of TYPE('b) \<Longrightarrow>
-    ((ucast (a :: 'a::len word) :: 'b ::len word) = ucast b) \<Longrightarrow> (a = b)"
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size)
-  apply (drule_tac f = "%x. (x !! n)" in arg_cong)
-    apply (simp add:nth_ucast)
-  done
+lemmas upcast_ucast_id = Word_Lemmas.ucast_up_inj
 
-lemma mask_eq_ucast_eq:
-  "\<lbrakk> x && mask (len_of TYPE('a)) = (x :: ('c :: len word));
-     len_of TYPE('a) \<le> len_of TYPE('b)\<rbrakk>
-    \<Longrightarrow> ucast (ucast x :: ('a :: len word)) = (ucast x :: ('b :: len word))"
-  apply (rule word_eqI)
-  apply (drule_tac f = "\<lambda>x. (x !! n)" in arg_cong)
-  apply (auto simp:nth_ucast word_size)
-  done
 
 lemma irq_opt_relation_Some_ucast':
   "\<lbrakk> x && mask 10 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: word32) \<rbrakk>

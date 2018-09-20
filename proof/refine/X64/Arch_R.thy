@@ -533,10 +533,6 @@ lemma page_base_corres[simp]:
   "pageBase vaddr vmsize = page_base vaddr vmsize"
   by (clarsimp simp: pageBase_def page_base_def)
 
-lemma neg_mask_combine:
-  "~~ mask a && ~~ mask b = ~~ mask (max a b)"
-  by (auto simp: word_ops_nth_size word_size intro!: word_eqI)
-
 lemma vs_lookup_pages1I:
   "\<lbrakk> ko_at ko p s; (r, p') \<in> vs_refs_pages ko;
           rs' = r # rs \<rbrakk> \<Longrightarrow> ((rs,p) \<unrhd>1 (rs',p')) s"

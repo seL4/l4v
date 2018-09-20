@@ -113,16 +113,6 @@ lemma mask_64_max_word [simp]:
 declare ucast_id [simp]
 declare resolveAddressBits.simps [simp del]
 
-lemma if_then_1_else_0:
-  "((if P then 1 else 0) = (0 :: machine_word)) = (\<not> P)"
-  by (simp del:  word_neq_0_conv)
-
-lemma if_then_0_else_1:
-  "((if P then 0 else 1) = (0 :: machine_word)) = (P)"
-  by (simp del:  word_neq_0_conv)
-
-lemmas if_then_simps = if_then_0_else_1 if_then_1_else_0
-
 lemma rightsFromWord_wordFromRights:
   "rightsFromWord (wordFromRights rghts) = rghts"
   apply (cases rghts)
@@ -154,12 +144,6 @@ lemma wordFromRights_rightsFromWord:
            intro!: word_eqI)
   done
 
-
-lemma le_32_mask_eq:
-  " (bits::machine_word) \<le> 32 \<Longrightarrow> bits && mask 6 = bits  "
-  apply (rule less_mask_eq) apply simp
-  apply (erule le_less_trans) apply simp
-done
 
 (* FIXME: move, duplicated in CSpace_C *)
 lemma ccorres_cases:
@@ -638,22 +622,6 @@ lemma tcb_aligned':
   apply (drule obj_at_aligned')
    apply (simp add: objBits_simps)
   apply (simp add: objBits_simps)
-  done
-
-(* FIXME: FROM ArchAcc.thy *)
-lemma add_mask_lower_bits:
-  "\<lbrakk> is_aligned (x :: 'a :: len word) n; \<forall>n' \<ge> n. n' < len_of TYPE('a) \<longrightarrow> \<not> p !! n' \<rbrakk> \<Longrightarrow> x + p && ~~mask n = x"
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: word_size is_aligned_nth)
-   apply (erule_tac x=na in allE)+
-   apply simp
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size is_aligned_nth nth_mask word_ops_nth_size)
-  apply (erule_tac x=na in allE)+
-  apply (case_tac "na < n")
-   apply simp
-  apply simp
   done
 
 lemma tcb_ptr_to_ctcb_ptr_mask [simp]:

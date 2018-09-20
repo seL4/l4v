@@ -831,11 +831,6 @@ proof -
   thus ?thesis by simp
 qed
 
-(* FIXME: name clash with Aligned.is_aligned_neg_mask. *)
-(* FIXME: superceded by GenericLib.is_aligned_neg_mask_eq.  Remove! *)
-lemma is_aligned_neg_mask:
-  "\<lbrakk> is_aligned p n; m \<le> n \<rbrakk> \<Longrightarrow> p && ~~ mask m = p"
-  by (simp add: is_aligned_nth)
 
 lemma ctcb_size_bits_ge_4: "4 \<le> ctcb_size_bits"
   by (simp add: ctcb_size_bits_def)

@@ -66,15 +66,6 @@ lemma empty_fail_findVSpaceForASIDAssert[iff]:
   apply (intro empty_fail_bind, simp_all split: sum.split)
   done
 
-(* FIXME: move *)
-lemma mask_AND_less_0:
-  "\<lbrakk>x && mask n = 0; m \<le> n\<rbrakk> \<Longrightarrow> x && mask m = 0"
-  apply (case_tac "len_of TYPE('a) \<le> n")
-   apply (clarsimp simp: ge_mask_eq)
-  apply (erule is_aligned_AND_less_0)
-  apply (clarsimp simp: mask_2pm1 two_power_increasing)
-  done
-
 end
 
 context kernel_m begin
@@ -256,9 +247,7 @@ where
          vmfault_type.X64DataFault \<Rightarrow> scast Kernel_C.X86DataFault
        | vmfault_type.X64InstructionFault \<Rightarrow> scast Kernel_C.X86InstructionFault"
 
-lemma mask_64_id [simp]:
-  "(x::machine_word) && mask 64 = x"
-  using uint_lt2p [of x] by (simp add: mask_eq_iff)
+lemmas mask_64_id[simp] = mask_len_id[where 'a=64, folded word_bits_def]
 
 (* FIXME: automate this *)
 lemma seL4_Fault_VMFault_new'_spec:
@@ -1071,12 +1060,6 @@ lemma ccorres_from_vcg_might_throw:
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-
-lemma scast_ucast_down_same:
-  "(scast :: word32 \<Rightarrow> word8) = (ucast :: word32 \<Rightarrow> word8)"
-  apply (rule down_cast_same [symmetric])
-  apply (simp add: is_down_def target_size_def source_size_def word_size)
-  done
 
 end
 
@@ -2107,22 +2090,6 @@ lemma diminished_PageCap:
   apply (simp add: isPageCap_def split: arch_capability.splits)
   done
 
-(* FIXME: move *)
-lemma aligend_mask_disjoint:
-  "\<lbrakk>is_aligned (a :: machine_word) n; b \<le> mask n; n < word_bits\<rbrakk> \<Longrightarrow> a && b = 0"
-  apply (rule word_eqI)
-  apply (clarsimp simp: is_aligned_nth word_size mask_def simp del: word_less_sub_le)
-  apply (drule le2p_bits_unset_64[OF word_less_sub_1])
-  apply (case_tac "na < n")
-   apply simp
-  apply (simp add: linorder_not_less word_bits_def)
-  done
-
-(* FIXME: move *)
-lemma word_aligend_0_sum:
-  "\<lbrakk> a + b = 0; is_aligned (a :: machine_word) n; b \<le> mask n; n < word_bits \<rbrakk> \<Longrightarrow> a = 0 \<and> b = 0"
-  by (simp add: word_plus_and_or_coroll aligend_mask_disjoint word_or_zero)
-
 lemma ccap_relation_mapped_asid_0:
   "\<lbrakk>ccap_relation (ArchObjectCap (PageCap d v0 v1 v2 v3 v4)) cap\<rbrakk>
   \<Longrightarrow> (capFMappedASID_CL (cap_frame_cap_lift cap) \<noteq> 0 \<longrightarrow> v4 \<noteq> None) \<and>
@@ -2317,15 +2284,6 @@ lemma writable_from_vm_rights_mask:
   "ucast ((writable_from_vm_rights R) :: 32 word) && 1 = (writable_from_vm_rights R :: machine_word)"
   by (simp add: writable_from_vm_rights_def split: vmrights.splits)
 
-lemma mask_eq1_nochoice:
-  "(x:: word32) && 1 = x \<Longrightarrow> x = 0 \<or> x = 1"
-  apply (simp add:mask_eq_iff[where n = 1,unfolded mask_def,simplified])
-  apply (drule word_2p_lem[where n = 1 and w = x,symmetric,simplified,THEN iffD1,rotated])
-   apply (simp add:word_size)
-  apply word_bitwise
-  apply clarsimp
-  done
-
 lemma makeUserPTE_spec:
   "\<forall>s. \<Gamma> \<turnstile>
   \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0\<rbrace>
@@ -2441,11 +2399,6 @@ lemma cap_lift_PML4Cap_Base:
   apply (simp add: cap_pml4_cap_lift_def)
   apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits if_splits)
   done
-
-(* FIXME: move *)
-lemma word_le_mask_eq:
-  "\<lbrakk> x \<le> mask n; n < word_bits \<rbrakk> \<Longrightarrow> x && mask n = (x::machine_word)"
-  by (rule le_mask_imp_and_mask)
 
 declare mask_Suc_0[simp]
 

@@ -1449,9 +1449,8 @@ lemma ptr_add_uint_of_nat [simp]:
     "a  +\<^sub>p uint (of_nat b :: word32) = a  +\<^sub>p (int b)"
   by (clarsimp simp: CTypesDefs.ptr_add_def)
 
-(* FIXME: move *)
-lemma int_unat [simp]: "int (unat x) = uint x"
-  by (clarsimp simp: unat_def)
+
+declare int_unat[simp]
 
 definition
  "valid_pte_slots'2 slots \<equiv>
@@ -1514,9 +1513,6 @@ lemma addrFromPPtr_mask_6:
   apply (simp add:mask_def)
   done
 
-lemma word_add_format:
-  "(-1::32 word) + b + c = b + (c - 1)"
-  by simp
 
 lemma pteCheckIfMapped_ccorres:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_' \<top>
@@ -1563,19 +1559,6 @@ lemma pdeCheckIfMapped_ccorres:
                              split: if_split)
   done
 
-lemma mapping_two_power_16_64_inequality:
-  assumes sz: "sz \<le> 4" and len: "unat (len :: word32) = 2 ^ sz"
-  shows "unat (len * 8 - 1) \<le> 127"
-proof -
-  have len2: "len = 2 ^ sz"
-    apply (rule word_unat.Rep_eqD, simp only: len)
-    using sz
-    apply simp
-    done
-
-  show ?thesis using two_power_increasing_less_1[where 'a=32 and n="sz + 3" and m=7]
-    by (simp add: word_le_nat_alt sz len2 field_simps)
-qed
 
 lemma array_assertion_abs_pte_16_mv_aligned:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> (page_table_at' (ptr_val ptPtr && ~~ mask ptBits) s)
@@ -2859,17 +2842,6 @@ lemma list_length_less:
   "(args = [] \<or> length args \<le> Suc 0) = (length args < 2)"
   by (case_tac args,simp_all)
 
-lemma unat_less_iff32:
-  "\<lbrakk>unat (a::32 word) = b;c < 2^word_bits\<rbrakk>
-   \<Longrightarrow> (a < of_nat c) = (b < c)"
-  apply (rule iffI)
-    apply (drule unat_less_helper)
-    apply simp
-  apply (simp add:unat32_eq_of_nat)
-  apply (rule of_nat_mono_maybe)
-   apply (simp add:word_bits_def)
-  apply simp
-  done
 
 lemma injection_handler_whenE:
   "injection_handler Inl (whenE a b)
@@ -2972,14 +2944,6 @@ lemma at_least_2_args:
   apply simp
   done
 
-lemma is_aligned_no_overflow3:
- "\<lbrakk>is_aligned (a::32 word) n; n < word_bits ;b< 2^n; c \<le> 2^ n; b< c \<rbrakk>
-  \<Longrightarrow> a + b \<le> a + (c - 1)"
-  apply (rule word_plus_mono_right)
-   apply (simp add:minus_one_helper3)
-  apply (erule is_aligned_no_wrap')
-  apply (auto simp:word32_less_sub_le)
-  done
 
 definition
   to_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a option"
@@ -3156,17 +3120,6 @@ lemma two_nat_power_pageBitsForSize_le:
   "(2 :: nat) ^ pageBits \<le> 2 ^ pageBitsForSize vsz"
   by (cases vsz, simp_all add: pageBits_def)
 
-lemma unat_sub_le_strg:
-  "unat v \<le> v2 \<and> x \<le> v \<and> y \<le> v \<and> y < (x :: ('a :: len) word)
-    \<longrightarrow> unat (x + (- 1 - y)) \<le> v2"
-  apply clarsimp
-  apply (erule order_trans[rotated])
-  apply (fold word_le_nat_alt)
-  apply (rule order_trans[rotated], assumption)
-  apply (rule order_trans[rotated], rule word_sub_le[where y="y + 1"])
-   apply (erule Word.inc_le)
-  apply (simp add: field_simps)
-  done
 
 (* FIXME: move *)
 lemma is_aligned_pageBitsForSize_minimum:
@@ -3174,11 +3127,6 @@ lemma is_aligned_pageBitsForSize_minimum:
   apply (cases sz; clarsimp simp: pageBits_def)
   apply (erule is_aligned_weaken, simp)+
   done
-
-(* FIXME: move *)
-lemma mask_add_aligned_right:
-  "is_aligned p n \<Longrightarrow> (q + p) && mask n = q && mask n"
-  by (simp add: mask_add_aligned add.commute)
 
 lemma ptrFromPAddr_add_left:
   "ptrFromPAddr (x + y) = ptrFromPAddr x + y"

@@ -2421,14 +2421,6 @@ lemma decodeWriteRegisters_ccorres:
 lemma excaps_map_Nil: "(excaps_map caps = []) = (caps = [])"
   by (simp add: excaps_map_def)
 
-(* FIXME: move *)
-lemma and_eq_0_is_nth:
-  fixes x :: "('a :: len) word"
-  shows "y = 1 << n \<Longrightarrow> ((x && y) = 0) = (\<not> (x !! n))"
-  by (metis (poly_guards_query) and_eq_0_is_nth)
-
-(* FIXME: move *)
-lemmas and_neq_0_is_nth = arg_cong [where f=Not, OF and_eq_0_is_nth, simplified]
 
 lemma decodeCopyRegisters_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
@@ -2554,10 +2546,6 @@ lemma decodeCopyRegisters_ccorres:
     word_and_1_shiftl [where n=3,simplified] cap_get_tag_isCap[symmetric] split: if_split_asm)
   done
 
-(* FIXME: move *)
-lemma ucast_le_ucast_8_32:
-  "(ucast x \<le> (ucast y :: word32)) = (x \<le> (y :: word8))"
-  by (simp add: word_le_nat_alt)
 
 (* FIXME: move *)
 lemma ccap_relation_gen_framesize_to_H:
@@ -2817,9 +2805,6 @@ lemma getSyscallArg_ccorres_foo':
   apply (clarsimp simp: return_def unif_rrel_def split: xstate.splits)
   done
 
-lemma scast_mask_8:
-  "scast (mask 8 :: sword32) = (mask 8 :: word32)"
-  by (clarsimp simp: mask_def)
 
 lemma tcb_at_capTCBPtr_CL:
   "ccap_relation cp cap \<Longrightarrow> valid_cap' cp s
@@ -3543,13 +3528,6 @@ lemma decodeSetPriority_ccorres:
    apply (clarsimp simp: unat_eq_0 le_max_word_ucast_id cap_get_tag_isCap_unfolded_H_cap isCap_simps)+
   done
 
-lemma ucast_le_8_32_equiv:
-  "x \<le> UCAST (8 \<rightarrow> 32) max_word \<Longrightarrow>
-  (UCAST (32 \<rightarrow> 8) x \<le> y) = (x \<le> UCAST (8 \<rightarrow> 32) y)"
-  apply (rule iffI)
-   apply (word_bitwise; simp)
-  apply (simp add: le_ucast_ucast_le)
-  done
 
 lemma mcpriority_tcb_at'_le_ucast:
   "pred_tcb_at' itcbMCP (\<lambda>mcp. x \<le> UCAST(8 \<rightarrow> 32) mcp) v s \<Longrightarrow>

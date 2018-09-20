@@ -2014,15 +2014,6 @@ lemma ucast_ucast_id:
   by (auto intro: ucast_up_ucast_id simp: is_up_def source_size_def target_size_def word_size)
 
 
-lemma shiftr_less_t2n3:
-  "\<lbrakk>(2 :: 'a word) ^ (n + m) = 0; m < len_of TYPE('a)\<rbrakk>
-   \<Longrightarrow> (x :: 'a :: len word) >> n < 2 ^ m"
-  apply (rule shiftr_less_t2n')
-   apply (simp add: mask_def power_overflow)
-  apply simp
-  done
-
-
 lemma shiftr_shiftl_mask_pml4_bits:
   "((get_pml4_index vptr) << word_size_bits) && mask pml4_bits = (get_pml4_index vptr) << word_size_bits"
   apply (rule iffD2 [OF mask_eq_iff_w2p])
@@ -2054,12 +2045,6 @@ lemma shiftr_20_unat_ucast:
   apply (rule unat_less_power)
    apply (simp add: word_bits_def)
   apply (simp add: bit_simps get_pml4_index_def)
-  done
-
-lemma shiftr_eqD:
-  "\<lbrakk> x >> n = y >> n; is_aligned x n; is_aligned y n \<rbrakk> \<Longrightarrow> x = y"
-  apply (drule arg_cong[where f="\<lambda>v. v << n"])
-  apply (simp add: and_not_mask[symmetric] is_aligned_neg_mask_eq)
   done
 
 lemma mask_out_first_mask_some:

@@ -1483,15 +1483,6 @@ lemma mapM_only_length:
      (rule mapM_discarded)
 
 
-lemma length_upto_enum_cases:
-  fixes a :: word32
-  shows "length [a .e. b] = (if a \<le> b then Suc (unat b) - unat a else 0)"
-  apply (case_tac "a \<le> b")
-   apply (clarsimp simp: length_upto_enum)
-  apply (clarsimp simp: upto_enum_def)
-  apply unat_arith
-  done
-
 (* FIXME move *)
 lemma copyMRs_ccorres [corres]:
 notes
@@ -1657,16 +1648,7 @@ lemma setMR_tcbFault_obj_at:
   apply simp
   done
 
-(* FIXME move *)
-lemma from_bool_to_bool_and_1 [simp]:
-  assumes r_size: "1 < size r"
-  shows "from_bool (to_bool (r && 1)) = r && 1"
-proof -
-  from r_size have "r && 1 < 2"
-    by (simp add: and_mask_less_size [where n=1, unfolded mask_def, simplified])
-  thus ?thesis
-    by (fastforce simp add: from_bool_def to_bool_def dest: word_less_cases)
-qed
+declare from_bool_to_bool_and_1[simp]
 
 (* FIXME move to Corres_C and remove from Tcb_C *)
 lemma ccorres_abstract_known:
@@ -2846,10 +2828,7 @@ lemma ccorres_if_cond_throws_break2:
   apply clarsimp
   done
 
-(* FIXME : move *)
-lemma scast_bit_test [simp]:
-    "scast ((1 :: 'a::len signed word) << n) = (1 :: 'a word) << n"
-  by (clarsimp simp: word_eq_iff)
+declare scast_bit_test[simp]
 
 (* FIXME: move *)
 lemma ccorres_split_when_throwError_cond_break:
@@ -2913,9 +2892,6 @@ lemma ccap_relation_inject:
    apply (auto simp:ccap_relation_def split:option.splits)
   done
 
-lemma t2n_mask_eq_if:
-  "(2 ^ n && mask m) = (if n < m then 2 ^ n else 0)"
-  by (rule word_eqI, auto simp add: word_size nth_w2p split: if_split)
 
 lemma transferCapsLoop_ccorres:
   assumes conds:

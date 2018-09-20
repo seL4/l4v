@@ -25,50 +25,6 @@ instance virq_C :: array_inner_packed
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma sint_eq_uintI:
-  "uint (a::word32) < 2^ (word_bits - 1) \<Longrightarrow> sint a = uint a"
-  apply (rule word_sint.Abs_inverse')
-   apply (subst word_bits_def[symmetric])
-   apply (simp add:sints_def)
-   apply (simp add:range_sbintrunc)
-   apply (simp add:word_bits_def)
-   apply (rule order_trans[where y =0])
-    apply simp
-   apply simp
-  apply simp
-  done
-
-lemma sint_eq_uint:
-  "unat (a::word32) < 2^ 31 \<Longrightarrow> sint a = uint a"
-  apply (rule sint_eq_uintI)
-  apply (clarsimp simp:uint_nat word_bits_def
-    zless_nat_eq_int_zless[symmetric])
-  done
-
-lemma sle_positive: "\<lbrakk> b < 0x80000000; (a :: word32) \<le> b \<rbrakk> \<Longrightarrow> a <=s b"
-  apply (simp add:word_sle_def)
-  apply (subst sint_eq_uint)
-   apply (rule unat_less_helper)
-   apply simp
-  apply (subst sint_eq_uint)
-   apply (rule unat_less_helper)
-   apply simp
-  apply (clarsimp simp:word_le_def)
-  done
-
-lemma sless_positive: "\<lbrakk> b < 0x80000000; (a :: word32) < b \<rbrakk> \<Longrightarrow> a <s b"
-  apply (clarsimp simp: word_sless_def)
-  apply (rule conjI)
-   apply (erule sle_positive)
-   apply simp
-  apply simp
-  done
-
-lemma zero_le_sint: "\<lbrakk> 0 \<le> (a :: word32); a < 0x80000000 \<rbrakk> \<Longrightarrow> 0 \<le> sint a"
-  apply (subst sint_eq_uint)
-   apply (simp add:unat_less_helper)
-  apply simp
-  done
 
 lemma map_option_byte_to_word_heap:
   assumes disj: "\<And>(off :: 10 word) x. x<4 \<Longrightarrow> p + ucast off * 4 + x \<notin> S "
@@ -122,16 +78,6 @@ lemma
    apply clarsimp
   apply (rule intvl_self)
   apply simp
-  done
-
-lemma aligned_add_aligned_simple:
-    "\<lbrakk> is_aligned a n; is_aligned b n; n < word_bits \<rbrakk> \<Longrightarrow> is_aligned (a + b) n"
-  apply (rule aligned_add_aligned [where n=n], auto)
-  done
-
-lemma aligned_sub_aligned_simple:
-    "\<lbrakk> is_aligned a n; is_aligned b n; n < word_bits \<rbrakk> \<Longrightarrow> is_aligned (a - b) n"
-  apply (rule aligned_sub_aligned [where n=n], auto)
   done
 
 lemma heap_update_list_append3:
@@ -203,16 +149,6 @@ lemma to_bytes_word32_0:
   apply (simp add: to_bytes_def typ_info_word word_rsplit_same word_rsplit_0)
   done
 
-lemma const_less_word: "\<lbrakk> (a :: word32) - 1 < b; a \<noteq> b \<rbrakk> \<Longrightarrow> a < b"
-  apply (metis less_1_simp word_le_less_eq)
-  done
-
-lemma const_le_unat_word: "\<lbrakk> b < 2 ^ word_bits; of_nat b \<le> a \<rbrakk> \<Longrightarrow> b \<le> unat (a :: word32)"
-  apply (clarsimp simp: word_le_def uint_nat)
-  apply (subst (asm) unat_of_nat32)
-   apply (clarsimp simp: word_bits_def)
-  apply clarsimp
-  done
 
 lemma globals_list_distinct_subset:
   "\<lbrakk> globals_list_distinct D symtab xs; D' \<subseteq> D \<rbrakk>
@@ -300,15 +236,6 @@ lemma memzero_spec:
   apply clarsimp
   done
 
-lemma is_aligned_and_2_to_k:
-  assumes  mask_2_k: "(n && 2 ^ k - 1) = 0"
-  shows "is_aligned (n :: word32) k"
-proof (subst is_aligned_mask)
-  have "mask k = (2 :: word32) ^ k - 1"
-   by (clarsimp simp: mask_def)
-  thus "n && mask k = 0" using mask_2_k
-   by simp
-qed
 
 lemma memset_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. ptr_val \<acute>s \<noteq> 0 \<and> ptr_val \<acute>s \<le> ptr_val \<acute>s + (\<acute>n - 1)
@@ -373,10 +300,6 @@ lemma memset_spec:
   apply (metis diff_0_right word_gt_0)
   done
 
-lemma is_aligned_power2: "b \<le> a \<Longrightarrow> is_aligned (2 ^ a) b"
-  apply (metis Word_Lemmas.is_aligned_0' is_aligned_triv
-      is_aligned_weaken le_def power_overflow)
-  done
 
 declare snd_get[simp]
 
@@ -1946,9 +1869,6 @@ lemma h_t_valid_ptr_retyps_gen_disjoint:
   apply simp
   done
 
-lemma word_gt_0:
-  "x \<noteq> 0 \<Longrightarrow> 0<(x::word32)"
-  by (rule ccontr,unat_arith)
 
 lemma range_cover_intvl:
 assumes cover: "range_cover (ptr :: 'a :: len word) sz us n"
@@ -2853,15 +2773,6 @@ lemma insertNewCap_ccorres1:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
-lemma createNewCaps_guard_helper:
-  fixes x :: word32
-  shows "\<lbrakk> unat x = c; b < 2 ^ word_bits \<rbrakk> \<Longrightarrow> (n < of_nat b \<and> n < x) = (n < of_nat (min (min b c) c))"
-  apply (erule subst)
-  apply (simp add: min.assoc)
-  apply (rule iffI)
-   apply (simp add: min_def word_less_nat_alt split: if_split)
-  apply (simp add: min_def word_less_nat_alt not_le unat_of_nat32 split: if_split_asm)
-  done
 
 end
 
@@ -4176,11 +4087,6 @@ lemma pageBitsForSize_mess_multi:
   apply (case_tac sz,simp+)
   done
 
-lemma word_le_mask_out_plus_2sz:
-  "x \<le> (x && ~~ mask sz) + 2 ^ sz - 1"
-  using mask_in_range[where ptr'=x and bits=sz,
-    OF is_aligned_neg_mask2[where a=x]]
-  by simp
 
 lemma createObjects_ccorres_user_data:
   defines "ko \<equiv> KOUserData"
@@ -4472,15 +4378,6 @@ lemma copyGlobalMappings_ccorres:
   apply simp
   done
 
-lemma add_mult_aligned_neg_mask:
-  "\<lbrakk> m && (2 ^ n - 1) = (0 :: word32) \<rbrakk> \<Longrightarrow>
-     (x + y * m) && ~~ mask n = (x && ~~ mask n) + y * m"
-  apply (subgoal_tac "is_aligned (y * m) n")
-   apply (subst field_simps, subst mask_out_add_aligned[symmetric], assumption)
-   apply (simp add: field_simps)
-  apply (simp add: is_aligned_mask mask_2pm1[symmetric])
-  apply (simp add:mask_eqs(5)[symmetric])
-  done
 
 lemma getObjectSize_symb:
   "\<forall>s. \<Gamma> \<turnstile> {s. t_' s = object_type_from_H newType \<and> userObjSize_' s = sz} Call getObjectSize_'proc
@@ -4513,34 +4410,6 @@ lemma ccorres_only_change_locals:
   apply auto
   done
 
-lemma upt_enum_offset_trivial:
-    "\<lbrakk>x < 2 ^ word_bits - 1 ; n \<le> unat x \<rbrakk> \<Longrightarrow> ([(0::word32) .e. x] ! n) = of_nat n"
-  proof (induct x arbitrary:n)
-   case 1
-   show ?case using 1 by simp
-  next
-   case (2 x)
-   have nbound: "n \<le> Suc (unat x)" using "2.prems"
-     apply -
-     apply (erule le_trans)
-     apply (rule le_trans[OF unat_plus_gt])
-     apply simp
-     done
-
-   show ?case using "2.prems" nbound
-     apply (case_tac "x < 2 ^ word_bits - 1")
-      apply (subgoal_tac "[(0::word32) .e. 1 + x] = [0 .e. x] @ [1+x]")
-       apply (clarsimp simp:nth_append split:if_splits)
-       apply (erule "2.hyps")
-       apply (simp)
-      apply (rule upto_enum_inc_1)
-      apply simp
-     apply (simp add:not_less)
-     apply (subgoal_tac "x \<le> 2^ word_bits - 1")
-      apply (clarsimp simp: word_bits_def)
-     apply (simp add:max_word_def word_bits_def)
-     done
-   qed
 
 lemma getObjectSize_max_size:
   "\<lbrakk> newType =  APIObjectType apiobject_type.Untyped \<longrightarrow> x < 32;
@@ -5232,11 +5101,6 @@ lemma ccorres_apiType_split:
   apply (case_tac apiType, simp_all)
   done
 
-lemma is_aligned_obvious_no_wrap':
-  "\<lbrakk> is_aligned ptr sz; x = 2 ^ sz - 1 \<rbrakk> \<Longrightarrow> ptr \<le> ptr + x"
-  apply simp
-  apply (clarsimp simp: field_simps)
-  done
 
 lemma range_cover_simpleI:
   "\<lbrakk> is_aligned (ptr :: 'a :: len word) a; a < len_of TYPE('a); c = Suc 0 \<rbrakk>
@@ -5244,9 +5108,6 @@ lemma range_cover_simpleI:
   apply (clarsimp simp: range_cover_def)
   apply (metis shiftr_0 is_aligned_mask unat_0)
   done
-
-lemma mask_zero: "is_aligned x a \<Longrightarrow> x && mask a = 0"
-  by (metis is_aligned_mask)
 
 lemma range_coverI:
   "\<lbrakk>is_aligned (ptr :: 'a :: len word) a; b \<le> a; a < len_of TYPE('a);
@@ -5382,17 +5243,6 @@ lemma cond_second_eq_seq_ccorres:
   apply (auto elim!: exec_Normal_elim_cases intro: exec.Seq exec.CondTrue exec.CondFalse)
   done
 
-lemma fold_eq_0_to_bool:
-  "(v = 0) = (\<not> to_bool v)"
-  by (simp add: to_bool_def)
-
-lemma is_aligned_neg_mask_eq_concrete:
-  "is_aligned p n
-    \<Longrightarrow> msk && ~~ mask n = ~~ mask n
-    \<Longrightarrow> p && msk = p"
-  apply (drule is_aligned_neg_mask_eq)
-  apply (metis word_bw_assocs word_bw_comms)
-  done
 
 lemma cvariable_array_ptr_kill:
   "cvariable_array_map_relation m ns ptrfun htd
@@ -6171,9 +6021,6 @@ proof -
     done
 qed
 
-lemma add_ge0_weak:
-  "\<lbrakk>0 \<le> (a::int);0\<le> (b::int)\<rbrakk> \<Longrightarrow> 0 \<le> a + b"
-  by simp
 
 (* FIXME: with the current state of affairs, we could simplify gs_new_cnodes *)
 lemma gsCNodes_update_ccorres:
@@ -7742,12 +7589,6 @@ lemma createObject_ex_cte_cap_wp_to:
   apply simp
   done
 
-lemma word_eq_zeroI: "a \<le> a - 1 \<Longrightarrow> a = (0::word32)"
-  apply (rule ccontr)
-  apply (subst (asm) le_m1_iff_lt[THEN iffD1])
-   apply unat_arith
-  apply simp
-  done
 
 lemma range_cover_one:
   "\<lbrakk>is_aligned (ptr :: 'a :: len word) us; us\<le> sz;sz < len_of TYPE('a)\<rbrakk>
@@ -7927,9 +7768,6 @@ lemma insertNewCap_cte_wp_at_other:
   apply (clarsimp simp:cte_wp_at_ctes_of)
   done
 
-lemma less_diff_gt0:
-  "a < b \<Longrightarrow> (0::word32) < b - a"
-  by unat_arith
 
 lemma range_cover_bound3:
   "\<lbrakk>range_cover ptr sz us n; x < of_nat n\<rbrakk>
@@ -8180,17 +8018,6 @@ lemma createObject_preserves_bytes:
      rule intvl_start_le intvl_sub_offset, simp)+
   done
 
-lemma bits_2_subtract_ineq_helper:
-  "i < (n :: ('a :: len) word)
-    \<Longrightarrow> 2 ^ bits + 2 ^ bits * unat (n - (1 + i)) = unat (n - i) * 2 ^ bits"
-  apply (simp add: unat_sub minus_one_helper2)
-  apply (subst unatSuc)
-   apply clarsimp
-   apply unat_arith
-  apply (simp only: mult_Suc_right[symmetric])
-  apply (rule trans[OF mult.commute], rule arg_cong2[where f="( * )"], simp_all)
-  apply (simp add: word_less_nat_alt)
-  done
 
 lemma offset_intvl_first_chunk_subsets:
   "range_cover (p :: addr) sz bits n

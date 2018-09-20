@@ -1605,11 +1605,6 @@ lemma cteDeleteOne_ccorres:
   apply (auto simp: o_def)
   done
 
-(* FIXME : move *)
-lemma of_int_uint_ucast:
-   "of_int (uint (x :: 'a::len word)) = (ucast x :: 'b::len word)"
-  by (metis ucast_def word_of_int)
-
 lemma getIRQSlot_ccorres_stuff:
   "\<lbrakk> (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow>
    CTypesDefs.ptr_add (intStateIRQNode_' (globals s')) (uint (irq :: 8 word))
@@ -1676,12 +1671,6 @@ lemma Zombie_new_spec:
   apply (simp add: word_add_less_mono1[where k=1 and j="0x3F", simplified])
   done
 
-lemma mod_mask_drop:
-  "\<lbrakk> m = 2 ^ n; 0 < m; mask n && msk = mask n \<rbrakk> \<Longrightarrow>
-    (x mod m) && msk = x mod m"
-  by (simp add: word_mod_2p_is_mask
-                word_bw_assocs)
-
 lemma irq_opt_relation_Some_ucast:
   "\<lbrakk> x && mask 8 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: 8 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
     \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast ((ucast x):: 8 word))"
@@ -1692,23 +1681,7 @@ lemma irq_opt_relation_Some_ucast:
   apply (clarsimp simp: word_le_nat_alt Kernel_C.maxIRQ_def)
   done
 
-lemma upcast_ucast_id:
-    "len_of TYPE('a) \<le> len_of TYPE('b) \<Longrightarrow>
-    ((ucast (a :: 'a::len word) :: 'b ::len word) = ucast b) \<Longrightarrow> (a = b)"
-  apply (rule word_eqI[rule_format])
-  apply (simp add:word_size)
-  apply (drule_tac f = "%x. (x !! n)" in arg_cong)
-    apply (simp add:nth_ucast)
-  done
-
-lemma mask_eq_ucast_eq:
-  "\<lbrakk> x && mask (len_of TYPE('a)) = (x :: ('c :: len word));
-     len_of TYPE('a) \<le> len_of TYPE('b)\<rbrakk>
-    \<Longrightarrow> ucast (ucast x :: ('a :: len word)) = (ucast x :: ('b :: len word))"
-  apply (rule word_eqI)
-  apply (drule_tac f = "\<lambda>x. (x !! n)" in arg_cong)
-  apply (auto simp:nth_ucast word_size)
-  done
+lemmas upcast_ucast_id = Word_Lemmas.ucast_up_inj
 
 lemma irq_opt_relation_Some_ucast':
   "\<lbrakk> x && mask 8 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: 8 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: machine_word) \<rbrakk>

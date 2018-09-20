@@ -851,13 +851,6 @@ lemma (in Tcb_AI) tcbinv_invs:
   apply wpsimp
   done
 
-lemma inj_ucast: "\<lbrakk> uc = ucast; is_up uc \<rbrakk> \<Longrightarrow> inj uc"
-  apply simp
-  apply (rule inj_on_inverseI)
-  apply (rule ucast_up_ucast_id)
-  apply assumption
-  done
-
 
 lemma range_check_inv[wp]:
   "\<lbrace>P\<rbrace> range_check a b c \<lbrace>\<lambda>rv. P\<rbrace>"

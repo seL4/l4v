@@ -279,11 +279,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
   apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')
   done
 
-lemma mask_of_mask[simp]:
-"mask (n::nat) && mask (m::nat) = mask (min m n)"
-  apply (rule word_eqI)
-  apply (auto simp:word_size)
-  done
+declare mask_of_mask[simp]
 
 lemma ucast_maxIRQ_le_eq:
   "UCAST(8 \<rightarrow> 64) irq \<le> SCAST(32 signed \<rightarrow> 64) Kernel_C.maxIRQ \<Longrightarrow>
@@ -972,26 +968,6 @@ lemma Arch_checkIRQ_ccorres:
 lemma checkIRQ_wp:
   "\<lbrace>\<lambda>s. Q s\<rbrace> checkIRQ irq \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. Q\<rbrace>"
   by (simp add: checkIRQ_def) wpsimp
-
-lemma toEnum_of_ucast:
-  "len_of TYPE('b) \<le> len_of TYPE('a) \<Longrightarrow>
-  (toEnum (unat (b::('b :: len word))):: ('a :: len word)) = of_nat (unat b)"
-  apply (subst toEnum_of_nat)
-   apply (rule less_le_trans[OF unat_lt2p])
-   apply (simp add:power2_nat_le_eq_le)
-  apply simp
-  done
-
-lemma unat_ucast_mask:
-  "len_of TYPE('b) \<le> len_of TYPE('a) \<Longrightarrow> (unat (ucast (a :: ('a :: len) word) :: ('b :: len) word)) = unat (a && mask (len_of TYPE('b)))"
-  apply (subst ucast_mask_drop[symmetric])
-   apply (rule le_refl)
-  apply (simp add:unat_ucast)
-  apply (subst nat_mod_eq')
-   apply (rule less_le_trans[OF word_unat_mask_lt le_refl])
-   apply (simp add: word_size)
-  apply simp
-  done
 
 (* FIXME x64: this could change when Arch_checkIRQ definition changes *)
 lemma decodeIRQControlInvocation_ccorres:

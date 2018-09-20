@@ -1187,36 +1187,6 @@ lemma index_msgRegisters_less:
   using index_msgRegisters_less'
   by (simp_all add: word_sless_msb_less)
 
-(* FIXME: move *)
-lemma ucast_nat_def':
-  "of_nat (unat x) = (ucast :: ('a :: len) word \<Rightarrow> ('b :: len) signed word) x"
-  by (simp add: ucast_def word_of_int_nat unat_def)
-
-(* FIXME: move *)
-lemma ucast_add:
-     "ucast (a + (b :: 'a :: len word)) = ucast a + (ucast b :: ('a signed word))"
-  apply (case_tac "len_of TYPE('a) = 1")
-   apply (clarsimp simp: ucast_def)
-   apply (metis (hide_lams, mono_tags) One_nat_def len_signed plus_word.abs_eq uint_word_arith_bintrs(1) word_ubin.Abs_norm)
-  apply (clarsimp simp: ucast_def)
-  apply (metis le_refl len_signed plus_word.abs_eq uint_word_arith_bintrs(1) wi_bintr)
-  done
-
-(* FIXME: move *)
-lemma ucast_minus:
-     "ucast (a - (b :: 'a :: len word)) = ucast a - (ucast b :: ('a signed word))"
-  apply (insert ucast_add [where a=a and b="-b"])
-  apply (metis (no_types, hide_lams) add_diff_eq diff_add_cancel ucast_add is_num_normalize)
-  done
-
-(* FIXME : move *)
-lemma scast_ucast_add_one [simp]:
-  "scast (ucast (x :: 'a::len word) + (1 :: 'a signed word)) = x + 1"
-  apply (subst ucast_1 [symmetric])
-  apply (subst ucast_add [symmetric])
-  apply clarsimp
-  done
-
 lemma valid_ipc_buffer_ptr_array:
   "valid_ipc_buffer_ptr' (ptr_val p) s \<Longrightarrow> (s, s') \<in> rf_sr
     \<Longrightarrow> n \<le> 2 ^ (msg_align_bits - 2)

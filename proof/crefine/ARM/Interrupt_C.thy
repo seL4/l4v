@@ -279,11 +279,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
   apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')
   done
 
-lemma mask_of_mask[simp]:
-"mask (n::nat) && mask (m::nat) = mask (min m n)"
-  apply (rule word_eqI)
-  apply (auto simp:word_size)
-  done
+declare mask_of_mask[simp]
 
 lemma ucast_maxIRQ_le_eq:
   "UCAST(10 \<rightarrow> 32) irq \<le> SCAST(32 signed \<rightarrow> 32) Kernel_C.maxIRQ \<Longrightarrow>
