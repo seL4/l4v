@@ -168,15 +168,19 @@ definition
   reply_remove :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where (* reply_tcb must be in BlockedOnReply *)
   "reply_remove r = do
+
     reply \<leftarrow> get_reply r;
     caller \<leftarrow> assert_opt $ reply_tcb reply;
-    sc_ptr \<leftarrow> assert_opt $ reply_sc reply;
-    replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
-    caller_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context caller;
-    reply_unlink_tcb r;
-    reply_unlink_sc sc_ptr r;
-    when (hd replies = r \<and> caller_sc = None) $ sched_context_donate sc_ptr caller
-  od" (* the r.caller is in Inactive on return *)
+    r_sc_opt \<leftarrow> return $ reply_sc reply;
+    case r_sc_opt of None \<Rightarrow> return ()
+      | Some sc_ptr \<Rightarrow> do
+         replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
+         caller_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context caller;
+         reply_unlink_sc sc_ptr r;
+         when (hd replies = r \<and> caller_sc = None) $ sched_context_donate sc_ptr caller
+      od;
+    reply_unlink_tcb r  (* FIXME check the c code ! *)
+   od" (* the r.caller is in Inactive on return *)
 
 text {* Remove a specific tcb, and the reply it is blocking on, from the call stack. *}
 definition
