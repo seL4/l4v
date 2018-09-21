@@ -666,7 +666,7 @@ lemma do_ipc_transfer_bound_sc:
   "\<lbrace>bound_sc_tcb_at P t\<rbrace> do_ipc_transfer sender ep badge grant receiver \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
   by (wpsimp simp: do_ipc_transfer_def
                wp: do_normal_transfer_bound_sc do_fault_transfer_bound_sc)
-
+(*
 lemma sched_context_donate_sym_refs:
   "\<lbrace>\<lambda>s. valid_objs s \<and> sym_refs (state_refs_of s) \<and> tcb_at tcb_ptr s \<and>
         bound_sc_tcb_at (op = None) tcb_ptr s\<rbrace>
@@ -690,7 +690,7 @@ lemma sched_context_donate_sym_refs:
       apply (fastforce simp: state_refs_of_def is_tcb get_refs_def2)
      apply (clarsimp simp: get_refs_def2)
     apply (fastforce simp: sc_tcb_sc_at_def obj_at_def state_refs_of_def get_refs_def2)
-   apply (clarsimp, intro conjI)
+   apply (clarsimp, intro conjI) (*(2)*)
     apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def is_tcb)
    apply (clarsimp, intro conjI)
     apply (fastforce simp: sc_tcb_sc_at_def valid_obj_def valid_sched_context_def
@@ -734,7 +734,7 @@ lemma sched_context_donate_invs:
   apply (case_tac ko; simp)
   apply (frule (1) sym_refs_ko_atD[unfolded obj_at_def, simplified])
   apply (fastforce simp: valid_obj_def valid_sched_context_def is_tcb obj_at_def live_def)
-  done
+  done *) (* Moved to IpcCancel_AI *)
 
 lemma sched_context_donate_sym_refs_BlockedOnReceive:
   "\<lbrace>\<lambda>s. valid_objs s \<and>

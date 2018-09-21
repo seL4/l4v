@@ -3981,7 +3981,7 @@ lemma sched_context_donate_cdt_cdt_list[wp]:
 lemma reply_remove_cdt_cdt_list[wp]:
    "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reply_remove r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
   by (wpsimp simp: reply_remove_def
-       wp: hoare_drop_imps)
+       wp: hoare_drop_imps hoare_vcg_all_lift)
 
 lemma reply_remove_tcb_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> reply_remove_tcb r \<lbrace>\<lambda>_.valid_list\<rbrace>"

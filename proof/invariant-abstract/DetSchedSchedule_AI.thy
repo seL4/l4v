@@ -2045,7 +2045,7 @@ crunch ct_not_in_q[wp]: reply_unlink_tcb ct_not_in_q
 lemma reply_remove_ct_not_in_q[wp]:
   "\<lbrace>ct_not_in_q\<rbrace> reply_remove r \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
   apply (simp add: reply_remove_def)
-  apply (wpsimp wp: hoare_drop_imp)
+  apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift)
   done
 
 lemma etcbs_of'_non_tcb_update:
@@ -2752,8 +2752,9 @@ lemma reply_remove_valid_sched:
   apply (clarsimp simp: reply_remove_def liftM_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_seq_ext[OF _ assert_opt_inv])
-  apply (clarsimp simp: assert_opt_def)
-  apply (case_tac "reply_sc reply"; clarsimp)
+  apply (case_tac "reply_sc reply"; clarsimp simp: bind_assoc)
+   apply (wpsimp wp: reply_unlink_tcb_simple_valid_sched)
+  apply (case_tac "reply_sc reply"; clarsimp simp: liftM_def)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (wpsimp wp: sched_context_donate_simple_valid_sched hoare_vcg_if_lift2 hoare_drop_imps
@@ -3101,9 +3102,10 @@ lemma reply_remove_not_queued[wp]:
   apply (clarsimp simp: reply_remove_def assert_opt_def liftM_def get_tcb_obj_ref_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (case_tac "reply_tcb reply"; clarsimp)
-  apply (case_tac "reply_sc reply"; clarsimp)
+  apply (case_tac "reply_sc reply"; clarsimp simp: bind_assoc liftM_def)
+  apply wpsimp
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (rule hoare_seq_ext[OF _ thread_get_sp])
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (wpsimp simp: wp: hoare_vcg_if_lift2)
     apply (rule_tac Q="\<lambda>_. not_queued t and scheduler_act_not t" in hoare_strengthen_post)
   by wpsimp+
@@ -4753,7 +4755,8 @@ lemma reply_remove_schedulable_tcb_at:
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (case_tac "reply_tcb reply"; clarsimp)
   apply (rename_tac caller)
-  apply (case_tac "reply_sc reply"; clarsimp)
+  apply (case_tac "reply_sc reply"; clarsimp simp: bind_assoc liftM_def)
+   apply wpsimp
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (rule hoare_seq_ext[OF _ gsc_sp])
    apply (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp
