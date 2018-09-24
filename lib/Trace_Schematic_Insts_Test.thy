@@ -24,7 +24,7 @@ section \<open>Examples\<close>
 
 text \<open>Schematic variables\<close>
 lemma "\<lbrakk> \<forall>x. P x \<rbrakk> \<Longrightarrow> P x"
-  apply (drule spec) -- \<open>introduces schematic var "?x"\<close>
+  apply (drule spec) \<comment> \<open>introduces schematic var "?x"\<close>
   apply (trace_schematic_insts \<open>assumption\<close>)
   done
 
@@ -45,7 +45,7 @@ lemma fooI2':
 
 text \<open>Schematic type variables\<close>
 lemma "foo x \<Longrightarrow> foo y"
-  apply (rule fooI1) -- \<open>introduces schematic type "0 :: ?'a"\<close>
+  apply (rule fooI1) \<comment> \<open>introduces schematic type "0 :: ?'a"\<close>
   apply (trace_schematic_insts \<open>erule fooI2'\<close>)
   done
 
