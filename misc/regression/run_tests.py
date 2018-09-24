@@ -393,6 +393,13 @@ def print_tests(msg, tests, verbose):
             print('  #> ' + t.command)
             print('  -- depends: %s' % list(t.depends))
 
+def print_test_deps(tests):
+    print('digraph "tests" {')
+    for t in tests:
+        for t_dep in t.depends:
+            print('  "%s" -> "%s";' % (t_dep, t.name))
+    print('}')
+
 #
 # Run tests.
 #
@@ -421,6 +428,8 @@ def main():
             help="remove the given test and tests that depend on it")
     parser.add_argument("-v", "--verbose", action="store_true",
             help="print test output or list more details")
+    parser.add_argument("--dot", action="store_true",
+            help="for -l or -L, output test dependencies in GraphViz format")
     parser.add_argument("--junit-report", metavar="FILE",
             help="write JUnit-style test report")
     parser.add_argument("--stuck-timeout", type=int, default=600, metavar='N',
@@ -450,7 +459,10 @@ def main():
 
     # List test names if requested.
     if args.list:
-        print_tests('total', all_tests, args.verbose)
+        if args.dot:
+            print_test_deps(all_tests)
+        else:
+            print_tests('total', all_tests, args.verbose)
         sys.exit(0)
 
     # Calculate which tests should be run.
@@ -503,7 +515,10 @@ def main():
         sys.stderr.write("Warning: These tests are excluded/removed, but do not exist: %s\n" % (", ".join(sorted(bad_names))))
 
     if args.dry_run:
-        print_tests('selected', tests_to_run, args.verbose)
+        if args.dot:
+            print_test_deps(tests_to_run)
+        else:
+            print_tests('selected', tests_to_run, args.verbose)
         sys.exit(0)
 
     # Run the tests.
