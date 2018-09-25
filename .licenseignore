@@ -68,6 +68,8 @@ spec/haskell/src/SEL4/Kernel/Thread.lhs-boot
 spec/haskell/src/SEL4/Object/Interrupt.lhs-boot
 spec/haskell/src/SEL4/Object/CNode.lhs-boot
 spec/haskell/src/SEL4/Object/Endpoint.lhs-boot
+spec/haskell/src/SEL4/Object/Reply.lhs-boot
+spec/haskell/src/SEL4/Object/Notification.lhs-boot
 spec/haskell/src/SEL4/Object/ObjectType.lhs-boot
 spec/haskell/src/SEL4/Object/Structures.lhs-boot
 spec/haskell/src/SEL4/Object/TCB.lhs-boot
