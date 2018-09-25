@@ -37,7 +37,7 @@
  *)
 
 theory Trace_Attribs (* FIXME: bitrotted *)
-imports HOL
+imports HOL.HOL
 keywords
   "diff_attributes" :: thy_decl
   and "save_attributes" :: thy_decl
@@ -77,10 +77,10 @@ let
             map snd (#congs (ss ctxt) |> distinct cong_rules_eq))),
 
       (* Classical rules. *)
-      ("intro",  fn ctxt => get_attrib_set ctxt pure_names (Item_Net.content (#safeIs (cs ctxt)))),
-      ("intro?", fn ctxt => get_attrib_set ctxt pure_names (Item_Net.content (#hazIs (cs ctxt)))),
-      ("elim",   fn ctxt => get_attrib_set ctxt pure_names (Item_Net.content (#safeEs (cs ctxt)))),
-      ("elim?",  fn ctxt => get_attrib_set ctxt pure_names (Item_Net.content (#hazEs (cs ctxt))))
+      ("intro",  fn ctxt => get_attrib_set ctxt pure_names (Item_Net.content (#safeIs (cs ctxt)) |> map #1)),
+      ("intro?", fn ctxt => get_attrib_set ctxt pure_names (Item_Net.content (#unsafeIs (cs ctxt)) |> map #1)),
+      ("elim",   fn ctxt => get_attrib_set ctxt pure_names (Item_Net.content (#safeEs (cs ctxt)) |> map #1)),
+      ("elim?",  fn ctxt => get_attrib_set ctxt pure_names (Item_Net.content (#unsafeEs (cs ctxt)) |> map #1))
   ]
 in
    Attrib_Fetchers.map (fold Symtab.update attrib_sets)
@@ -104,8 +104,7 @@ let
     |> Config.put Name_Space.names_long true
 in
   Print_Mode.setmp ["xsymbols"]
-   (fn _ => Display.pretty_thm ctxt0 thm
-            |> Pretty.str_of
+   (fn _ => Syntax.string_of_term ctxt0 (Thm.prop_of thm)
             |> YXML.parse_body
             |> XML.content_of) ()
 end
@@ -131,7 +130,7 @@ ML {*
 Outer_Syntax.command @{command_keyword "diff_attributes"}
   "Show commands needed to make the current theory file's simpset closer to its old version."
   (Scan.succeed (
-    Toplevel.unknown_theory o Toplevel.keep (fn state =>
+    (*Toplevel.unknown_theory o*) Toplevel.keep (fn state =>
       let
         val ctxt = Toplevel.context_of state
         val thy = Proof_Context.theory_of ctxt
@@ -152,7 +151,7 @@ ML {*
 Outer_Syntax.command @{command_keyword "save_attributes"}
   "Create a .trace_attribs file for the current theory."
   (Scan.succeed (
-    Toplevel.unknown_theory o Toplevel.keep (fn state =>
+    (*Toplevel.unknown_theory o*) Toplevel.keep (fn state =>
       let
         val ctxt = Toplevel.context_of state
         val thy = Proof_Context.theory_of ctxt

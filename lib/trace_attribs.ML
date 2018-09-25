@@ -131,9 +131,10 @@ let
   fun guess_name_from_introspection filter thm =
   let
     fun thms_of (PBody {thms,...}) = thms
-    fun proof_body_descend' (_,("",_,body)) =
-          fold (append o proof_body_descend') (thms_of (Future.join body)) []
-      | proof_body_descend' (_,(nm,t,_)) = [(nm,t)]
+    fun proof_body_descend' (_,node) =
+          if Proofterm.thm_node_name node = ""
+          then fold (append o proof_body_descend') (thms_of (Future.join (Proofterm.thm_node_body node))) []
+          else [(Proofterm.thm_node_name node, Proofterm.thm_node_prop node)]
     fun used_facts thm =
         fold (append o proof_body_descend')
           (thms_of (Thm.proof_body_of thm)) []
@@ -261,9 +262,9 @@ let
     try (fn rl =>
       zero_var_indexes
       (let val rl' = Seq.hd (TRYALL (fn i => fn st =>
-         rtac (lift_meta_eq_to_obj_eq i st) i st) rl)
+         resolve_tac ctxt [lift_meta_eq_to_obj_eq ctxt i st] i st) rl)
        in mk_meta_eq rl' handle THM _ =>
-         if can Logic.dest_equals (concl_of rl') then rl'
+         if can Logic.dest_equals (Thm.concl_of rl') then rl'
          else error "Conclusion of congruence rules must be =-equality"
      end)) thm
 
