@@ -17,6 +17,7 @@ imports
   (* Solves_Tac *)
   Rule_By_Method
   Eisbach_Methods
+  TSubst
   Time_Methods_Cmd
   Try_Attribute
   Trace_Schematic_Insts

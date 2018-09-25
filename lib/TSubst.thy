@@ -8,44 +8,59 @@
  * @TAG(NICTA_BSD)
  *)
 
-theory TSubst (* FIXME: bitrotted *)
-imports Main
+theory TSubst
+imports
+  Main
 begin
 
-
-method_setup tsubst =
-  {* Scan.lift (Args.mode "asm" -- Scan.optional (Args.parens (Scan.repeat Parse.nat)) [0] -- Parse.term) >> (fn ((asm,occs),t) => (fn ctxt =>
+method_setup tsubst = \<open>
+  Scan.lift (Args.mode "asm" --
+             Scan.optional (Args.parens (Scan.repeat Parse.nat)) [0] --
+             Parse.term)
+   >> (fn ((asm,occs),t) => (fn ctxt =>
   Method.SIMPLE_METHOD (Subgoal.FOCUS_PARAMS (fn focus => (fn thm =>
   let
+    (* This code used to use Thm.certify_inst in 2014, which was removed.
+       The following is just a best guess for what it did. *)
+    fun certify_inst ctxt (typ_insts, term_insts) =
+          (typ_insts
+           |> map (fn (tvar, inst) =>
+                  (Thm.ctyp_of ctxt (TVar tvar),
+                   Thm.ctyp_of ctxt inst)),
+           term_insts
+           |> map (fn (var, inst) =>
+                  (Thm.cterm_of ctxt (Var var),
+                   Thm.cterm_of ctxt inst)))
+
     val ctxt' = #context focus
-    val thy = Proof_Context.theory_of ctxt'
 
     val ((_, schematic_terms), ctxt2) =
       Variable.import_inst true [(#concl focus) |> Thm.term_of] ctxt'
-      |>> Thm.certify_inst thy
+      |>> certify_inst ctxt'
 
-    val ctxt3 = fold (fn (t,t') => Variable.bind_term (Thm.term_of t |> Term.dest_Var |> fst,SOME (t' |> Thm.term_of))) schematic_terms ctxt2
+    val ctxt3 = fold (fn (t,t') => Variable.bind_term (Thm.term_of t |> Term.dest_Var |> fst, (t' |> Thm.term_of))) schematic_terms ctxt2
 
 
     val athm = Syntax.read_term ctxt3 t
-          |> Object_Logic.ensure_propT thy
-          |> Thm.cterm_of thy
+          |> Object_Logic.ensure_propT ctxt'
+          |> Thm.cterm_of ctxt'
           |> Thm.trivial
 
-    val thm' = Thm.instantiate ([],schematic_terms) thm
+    val thm' = Thm.instantiate ([], map (apfst (Thm.term_of #> dest_Var)) schematic_terms) thm
 
   in
     (if asm then EqSubst.eqsubst_asm_tac else EqSubst.eqsubst_tac)
       ctxt3 occs [athm] 1 thm'
       |> Seq.map (singleton (Variable.export ctxt3 ctxt'))
-     end)) ctxt 1))) *}
+     end)) ctxt 1)))
+  \<close> "direct substitution for schematic variables"
 
 schematic_goal
   assumes a: "\<And>x y. P x \<Longrightarrow> P y"
   fixes x :: 'b
   shows "\<And>x ::'a :: type. ?Q x \<Longrightarrow> P x \<and> ?Q x"
   apply (tsubst (asm) "?Q x = (P x \<and> P x)")
-  apply (rule refl)
+   apply (rule refl)
   apply (tsubst "P x = P y",simp add:a)+
   apply (tsubst (2) "P y = P x", simp add:a)
   apply (clarsimp simp: a)
