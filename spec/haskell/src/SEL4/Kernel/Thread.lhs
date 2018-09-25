@@ -96,7 +96,7 @@ The "activateThread" function is used to prepare a thread to run. If the thread 
 >             setThreadState Running thread
 >         IdleThreadState -> do
 >             Arch.activateIdleThread thread
->         _ -> fail $ "Current thread is blocked, state: " ++ show state          
+>         _ -> fail $ "Current thread is blocked, state: " ++ show state
 
 \subsection{Thread State}
 
@@ -557,7 +557,7 @@ candidates are enqueued.
 
 In most cases, the current thread has just sent a message to the woken thread, so we switch if the woken thread has the same or higher priority than the current thread; that is, whenever the priorities permit the switch.
 
- 
+
 \subsubsection{Cancelling Stored Scheduler Action}
 
 This function is called when the system state has changed sufficiently that the stored scheduler action may be invalid. It safely discards any stored state and organises for a full reschedule to be performed.

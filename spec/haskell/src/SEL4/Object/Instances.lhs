@@ -47,7 +47,7 @@ The following are the instances of "Storable" for the four main types of kernel 
 
 \subsubsection{Notification objects}
 
-> instance PSpaceStorable Notification where 
+> instance PSpaceStorable Notification where
 >     makeObject = NTFN IdleNtfn Nothing Nothing
 >     injectKO   = KONotification
 >     projectKO o = case o of

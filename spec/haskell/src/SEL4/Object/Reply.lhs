@@ -72,7 +72,7 @@ This module specifies the behavior of reply objects.
 >         assert (scCallee == Nothing) "callee must have no scheduling context"
 >         scKoCaller <- getSchedContext $ fromJust scCaller
 >         setSchedContext (fromJust scCaller)
->             (scKoCaller { scReplies = [replyPtr] ++ scReplies scKoCaller })  
+>             (scKoCaller { scReplies = [replyPtr] ++ scReplies scKoCaller })
 >         setReplySc scCaller replyPtr
 >         schedContextDonate (fromJust scCaller) callee
 

@@ -960,7 +960,7 @@ lemma sched_context_donate_invs:
   apply (case_tac ko; simp)
   apply (frule (1) sym_refs_ko_atD[unfolded obj_at_def, simplified])
   apply (fastforce simp: valid_obj_def valid_sched_context_def is_tcb obj_at_def live_def)
-  done 
+  done
 
 lemma reply_unlink_sc_pred_tcb_at [wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> reply_unlink_sc scp rp \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"

@@ -482,19 +482,19 @@ The "invoke" function performs the operation itself. It cannot throw faults, but
 This function just dispatches invocations to the type-specific invocation functions.
 
 > performInvocation :: Bool -> Bool -> Bool -> Invocation -> KernelP [Word]
-> 
+>
 > performInvocation _ _ _ (InvokeUntyped invok) = do
 >     invokeUntyped invok
 >     return $ []
-> 
+>
 > performInvocation block call canDonate (InvokeEndpoint ep badge canGrant) =
 >   withoutPreemption $ do
 >     thread <- getCurThread
 >     sendIPC block call badge canGrant canDonate thread ep
 >     return $ []
-> 
+>
 > performInvocation _ _ _ (InvokeNotification ep badge) = do
->     withoutPreemption $ sendSignal ep badge 
+>     withoutPreemption $ sendSignal ep badge
 >     return $ []
 >
 > performInvocation _ _ _ (InvokeReply reply) = withoutPreemption $ do
@@ -507,19 +507,19 @@ This function just dispatches invocations to the type-specific invocation functi
 > performInvocation _ _ _ (InvokeDomain thread domain) = withoutPreemption $ do
 >     setDomain thread domain
 >     return $ []
-> 
+>
 > performInvocation _ _ _ (InvokeCNode invok) = do
 >     invokeCNode invok
 >     return $ []
-> 
+>
 > performInvocation _ _ _ (InvokeIRQControl invok) = do
 >     performIRQControl invok
 >     return $ []
-> 
+>
 > performInvocation _ _ _ (InvokeIRQHandler invok) = do
 >     withoutPreemption $ invokeIRQHandler invok
 >     return $ []
-> 
+>
 
 > performInvocation _ _ _ (InvokeSchedContext invok) = do
 >     withoutPreemption $ ignoreFailure (invokeSchedContext invok)

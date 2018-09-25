@@ -141,7 +141,7 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 >     | KOReply Reply
 
 > kernelObjectTypeName :: KernelObject -> String
-> kernelObjectTypeName o = 
+> kernelObjectTypeName o =
 >     case o of
 >         KOEndpoint   _ -> "Endpoint"
 >         KONotification  _ -> "Notification"

@@ -118,7 +118,7 @@ Empty receive endpoints are invalid.
 
 The IPC receive operation is essentially the same as the send operation, but with the send and receive states swapped. There are a few other differences: the badge must be retrieved from the TCB when completing an operation, and is not set when adding a TCB to the queue; also, the operation always blocks if no partner is immediately available; lastly, the receivers thread state does not need updating to Running however the senders state may.
 
-> isActive :: Notification -> Bool 
+> isActive :: Notification -> Bool
 > isActive (NTFN (ActiveNtfn _) _ _) = True
 > isActive _ = False
 

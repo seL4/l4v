@@ -2079,11 +2079,11 @@ case \x of (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) ->
         )
     else if isArchObjectCap a \<and> isArchObjectCap b
     then (case (a, b) of
-        (ArchObjectCap a, ArchObjectCap b) \<Rightarrow> ->13 
+        (ArchObjectCap a, ArchObjectCap b) \<Rightarrow> ->13
         )
     else ->14
 
-case \x of NullCap -> DomainCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(NotificationCap {}) -> c@(ReplyCap {}) -> c@(CNodeCap {}) -> c@(ThreadCap {}) -> c@IRQControlCap -> c@(IRQHandlerCap {}) -> c@(SchedContextCap {}) -> c@SchedControlCap -> (ArchObjectCap {capCap = aoCap}) -> c@(Zombie {}) ->  ---> let c = \x; aoCap = capCap \x in 
+case \x of NullCap -> DomainCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(NotificationCap {}) -> c@(ReplyCap {}) -> c@(CNodeCap {}) -> c@(ThreadCap {}) -> c@IRQControlCap -> c@(IRQHandlerCap {}) -> c@(SchedContextCap {}) -> c@SchedControlCap -> (ArchObjectCap {capCap = aoCap}) -> c@(Zombie {}) ->  ---> let c = \x; aoCap = capCap \x in
     if isNullCap c
     then ->1
     else if isDomainCap c
@@ -2103,16 +2103,16 @@ case \x of NullCap -> DomainCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@
     else if isIRQControlCap c
     then ->9
     else if isIRQHandlerCap c
-    then ->10 
+    then ->10
     else if isSchedContextCap c
     then ->11
     else if isSchedControlCap c
     then ->12
     else if isArchObjectCap c
-    then ->13 
+    then ->13
     else if isZombie c
-    then ->14 
-    else undefined 
+    then ->14
+    else undefined
 
 case \x of (Zombie {}) -> (IRQControlCap) -> cap@(UntypedCap {}) -> (ArchObjectCap cap) -> cap ->  ---> let cap = \x in
     if isZombie cap
@@ -2193,5 +2193,5 @@ case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(NotificationCap {capNtf
         in ->11
     else if isArchObjectCap cap
     then let cap = capCap cap
-        in ->12 
+        in ->12
     else ->13

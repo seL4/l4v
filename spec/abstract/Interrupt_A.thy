@@ -69,7 +69,7 @@ delivered. *}
 
 definition
   handle_interrupt :: "irq \<Rightarrow> (unit, 'z::state_ext) s_monad" where
- "handle_interrupt irq \<equiv> 
+ "handle_interrupt irq \<equiv>
    if (irq > maxIRQ) then do_machine_op $ do
     maskInterrupt True irq;
     ackInterrupt irq
@@ -81,7 +81,7 @@ definition
        slot \<leftarrow> get_irq_slot irq;
        cap \<leftarrow> get_cap slot;
        when (is_ntfn_cap cap \<and> AllowSend \<in> cap_rights cap)
-         $ send_signal (obj_ref_of cap) (cap_ep_badge cap); 
+         $ send_signal (obj_ref_of cap) (cap_ep_badge cap);
        do_machine_op $ maskInterrupt True irq
      od
    | IRQTimer \<Rightarrow> do

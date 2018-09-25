@@ -583,7 +583,7 @@ lemma reply_unlink_tcb_not_live:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> reply_sc r = None) reply\<rbrace>
      reply_unlink_tcb reply
    \<lbrace>\<lambda>rv. obj_at (\<lambda>ko. \<not> live ko \<and> is_reply ko) reply\<rbrace>"
-  apply (wpsimp wp: sts_obj_at_impossible simple_obj_set_prop_at gts_wp get_simple_ko_wp 
+  apply (wpsimp wp: sts_obj_at_impossible simple_obj_set_prop_at gts_wp get_simple_ko_wp
               simp: reply_unlink_tcb_def is_reply)
   by (clarsimp simp: obj_at_def live_def live_reply_def)
 

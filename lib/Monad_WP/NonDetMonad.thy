@@ -522,7 +522,7 @@ definition
 where
   "maybeM f y \<equiv> case y of Some x \<Rightarrow> f x | None \<Rightarrow> return ()"
 
-text {* 
+text {*
   Run a sequence of monads from left to right, ignoring return values. *}
 definition
   sequence_x :: "('s, 'a) nondet_monad list \<Rightarrow> ('s, unit) nondet_monad"

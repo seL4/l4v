@@ -40,7 +40,7 @@ The following type can specify any kernel object invocation. It contains physica
 > data Invocation
 >         = InvokeUntyped UntypedInvocation
 >         | InvokeEndpoint (PPtr Endpoint) Word Bool
->         | InvokeNotification (PPtr Notification) Word 
+>         | InvokeNotification (PPtr Notification) Word
 >         | InvokeReply (PPtr Reply)
 >         | InvokeDomain (PPtr TCB) Domain
 >         | InvokeTCB TCBInvocation
@@ -69,7 +69,7 @@ The following data type defines the set of possible TCB invocation operations. T
 >             tcNewCRoot, tcNewVRoot :: Maybe (Capability, PPtr CTE),
 >             tcNewIPCBuffer :: Maybe (VPtr, Maybe (Capability, PPtr CTE)),
 >             tcNewSc :: Maybe (Maybe (PPtr SchedContext)) }
->         | NotificationControl { 
+>         | NotificationControl {
 >             notificationTCB :: PPtr TCB,
 >             notificationPtr :: Maybe (PPtr Notification) }
 >         | WriteRegisters {

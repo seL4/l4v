@@ -69,7 +69,7 @@ This module uses the C preprocessor to select a target architecture.
 > getTCBSc :: PPtr TCB -> Kernel SchedContext
 > getTCBSc tcbPtr = do
 >     scOpt <- threadGet tcbSchedContext tcbPtr
->     assert (scOpt /= Nothing) "getTCBSc: SchedContext pointer must not be Nothing" 
+>     assert (scOpt /= Nothing) "getTCBSc: SchedContext pointer must not be Nothing"
 >     getSchedContext $ fromJust scOpt
 
 > refillHd :: SchedContext -> Refill
