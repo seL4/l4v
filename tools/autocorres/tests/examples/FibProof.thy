@@ -23,7 +23,7 @@ imports
   "AutoCorres.AutoCorres"
 begin
 
-external_file "factorial.c"
+external_file "fib.c"
 
 (*
  * The venerable Fibonacci function.
