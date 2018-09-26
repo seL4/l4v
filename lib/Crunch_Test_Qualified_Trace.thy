@@ -9,7 +9,7 @@
  *)
 
 theory Crunch_Test_Qualified_Trace
-imports Crunch_Instances_Trace
+imports Lib.Crunch_Instances_Trace
 begin
 
 definition "foo_const \<equiv> return ()"

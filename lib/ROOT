@@ -20,10 +20,6 @@ session Lib (lib) = Word_Lib +
     AddUpdSimps
     EmptyFailLib
     List_Lib
-    Crunch_Test_NonDet
-    Crunch_Test_Qualified_NonDet
-    Crunch_Test_Qualified_Trace
-    Crunch_Test_Trace
     SubMonadLib
     Simulation
     MonadEq
@@ -145,6 +141,10 @@ session LibTest (lib) = Refine +
     ASpec
     ExecSpec
   theories
+    Crunch_Test_NonDet
+    Crunch_Test_Qualified_NonDet
+    Crunch_Test_Qualified_Trace
+    Crunch_Test_Trace
     WPTutorial
     Match_Abbreviation_Test
     Apply_Debug_Test

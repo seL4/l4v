@@ -10,10 +10,10 @@
 
 theory Crunch_Test_NonDet
 imports
-  Crunch_Instances_NonDet
+  Lib.Crunch_Instances_NonDet
   Crunch_Test_Qualified_NonDet
-  GenericLib
-  Defs
+  Lib.GenericLib
+  Lib.Defs
 begin
 
 text {* Test cases for crunch *}

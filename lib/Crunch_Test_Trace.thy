@@ -10,9 +10,9 @@
 
 theory Crunch_Test_Trace (* FIXME: not tested *)
 imports
-  Crunch_Instances_Trace
+  Lib.Crunch_Instances_Trace
   Crunch_Test_Qualified_Trace
-  Defs
+  Lib.Defs
 begin
 
 text {* Test cases for crunch *}

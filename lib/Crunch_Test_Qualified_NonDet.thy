@@ -9,7 +9,7 @@
  *)
 
 theory Crunch_Test_Qualified_NonDet
-imports Crunch_Instances_NonDet
+imports Lib.Crunch_Instances_NonDet
 begin
 
 definition "foo_const \<equiv> return ()"
