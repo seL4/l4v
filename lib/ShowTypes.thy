@@ -1,6 +1,14 @@
 (*
- * @TAG(NICTA_BSD)
+ * Copyright 2016, NICTA
  *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ *)
+
+(*
  * ShowTypes: show "hidden" type constraints in terms.
  * This is a simple utility around Sledgehammer's type annotation code.
  *
