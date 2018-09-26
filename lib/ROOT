@@ -149,6 +149,8 @@ session LibTest (lib) = Refine +
     Match_Abbreviation_Test
     Apply_Debug_Test
     AutoLevity_Test
+    Insulin_Test
+    ShowTypes_Test
     Time_Methods_Cmd_Test
     Trace_Schematic_Insts_Test
     Local_Method_Tests

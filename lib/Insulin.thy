@@ -50,8 +50,10 @@
  *)
 
 theory Insulin
-  imports Main
-  keywords "desugar_term" "desugar_thm" "desugar_goal" :: diag
+imports
+  Pure
+keywords
+  "desugar_term" "desugar_thm" "desugar_goal" :: diag
 begin
 
 (*
