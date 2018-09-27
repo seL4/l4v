@@ -154,6 +154,7 @@ session LibTest (lib) = Refine +
     Time_Methods_Cmd_Test
     Trace_Schematic_Insts_Test
     Local_Method_Tests
+    Qualify_Test
   (* use virtual memory function as an example, only makes sense on ARM: *)
   theories [condition = "L4V_ARCH_IS_ARM"]
     Corres_Test
