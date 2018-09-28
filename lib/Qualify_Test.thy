@@ -23,17 +23,24 @@ section \<open>datatype\<close>
 
 datatype leaky = leaky
 
-(* leaks out *)
+text \<open>
+  By default, the datatype package adds constant names to the unqualified global namespace.
+  Let's check that this is the case.
+\<close>
 ML \<open>
   if can dest_Const @{term leaky}
   then ()
   else error "Qualify_Test failed: datatype leaky baseline"
 \<close>
 
+text \<open>
+  When we wrap the @{command datatype} command in @{command qualify}\<dots>@{command end_qualify},
+  the unqualified names should be removed.
+\<close>
 qualify qualify_test
   datatype nonleaky = nonleaky
 
-  (* still leaks out *)
+  (* unqualified name still exists here *)
   ML \<open>
     if can dest_Const @{term nonleaky}
     then ()
@@ -41,21 +48,26 @@ qualify qualify_test
   \<close>
 end_qualify
 
-(* qualified *)
-ML \<open>
-  if can dest_Const @{term qualify_test.nonleaky}
-  then ()
-  else error "Qualify_Test failed: datatype nonleaky baseline 2"
-\<close>
-
+(* but not here *)
 ML \<open>
   if can dest_Free @{term nonleaky}
   then ()
   else error "Qualify_Test failed: datatype nonleaky test"
 \<close>
 
+(* qualified name exists *)
+ML \<open>
+  if can dest_Const @{term qualify_test.nonleaky}
+  then ()
+  else error "Qualify_Test failed: datatype nonleaky baseline 2"
+\<close>
+
 
 section \<open>instantiation\<close>
+
+text \<open>
+  We can also qualify fact names from class instantiations.
+\<close>
 
 instantiation leaky :: ord begin
   definition less_leaky:
@@ -63,7 +75,9 @@ instantiation leaky :: ord begin
   instance by intro_classes
 end
 
-(* leaks out *)
+text \<open>
+  By default, fact names are added to the unqualified global namespace.
+\<close>
 ML \<open>
   if can (Proof_Context.get_thm @{context}) "less_leaky"
   then ()
@@ -77,7 +91,7 @@ qualify qualify_test
     instance by intro_classes
   end
 
-  (* still leaks out *)
+  (* unqualified name still exists here *)
   ML \<open>
     if can (Proof_Context.get_thm @{context}) "less_nonleaky"
     then ()
@@ -85,17 +99,18 @@ qualify qualify_test
   \<close>
 end_qualify
 
-(* qualified *)
-ML \<open>
-  if can (Proof_Context.get_thm @{context}) "qualify_test.less_nonleaky"
-  then ()
-  else error "Qualify_Test failed: instantiation nonleaky baseline 2"
-\<close>
-
+(* but not here *)
 ML \<open>
   if can (Proof_Context.get_thm @{context}) "less_nonleaky"
   then error "Qualify_Test failed: instantiation nonleaky test"
   else ()
+\<close>
+
+(* qualified name exists *)
+ML \<open>
+  if can (Proof_Context.get_thm @{context}) "qualify_test.less_nonleaky"
+  then ()
+  else error "Qualify_Test failed: instantiation nonleaky baseline 2"
 \<close>
 
 end
