@@ -8,6 +8,12 @@
  * @TAG(NICTA_BSD)
  *)
 
+(*
+ * Term subst method: substitution with a given term as the equation.
+ * The equation will be added as a subgoal.
+ * See example at the end of this file.
+ *)
+
 theory TSubst
 imports
   Main
@@ -53,7 +59,7 @@ method_setup tsubst = \<open>
       ctxt3 occs [athm] 1 thm'
       |> Seq.map (singleton (Variable.export ctxt3 ctxt'))
      end)) ctxt 1)))
-  \<close> "direct substitution for schematic variables"
+  \<close> "subst, with term instead of theorem as equation"
 
 schematic_goal
   assumes a: "\<And>x y. P x \<Longrightarrow> P y"
