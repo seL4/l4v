@@ -9,8 +9,14 @@
  *)
 
 theory Orphanage
-imports Refine
+imports Refine.Refine
 begin
+
+text \<open>
+  Proof that calling the kernel never leaves threads orphaned.
+  More specifically, every active thread must be the current thread,
+  or about to be switched to, or be in a scheduling queue.
+\<close>
 
 (*FIXME: arch_split: move up? *)
 context Arch begin

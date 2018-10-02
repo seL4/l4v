@@ -9,7 +9,7 @@
  *)
 
 theory Orphanage
-imports Refine
+imports Refine.Refine
 begin
 
 (*FIXME: arch_split: move up? *)

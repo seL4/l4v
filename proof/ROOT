@@ -48,6 +48,13 @@ session Refine = BaseRefine +
     "refine/$L4V_ARCH/Refine"
     "refine/$L4V_ARCH/RAB_FN"
     "refine/$L4V_ARCH/EmptyFail_H"
+
+(*
+ * This theory is in a separate session because the proofs currently
+ * only work for ARM.
+ *)
+session RefineOrphanage = Refine +
+  description {* Proof that the kernel does not orphan threads. *}
   theories [condition = "L4V_ARCH_IS_ARM"]
     "refine/$L4V_ARCH/Orphanage"
 
