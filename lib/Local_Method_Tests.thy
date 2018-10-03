@@ -10,7 +10,7 @@
 
 theory Local_Method_Tests
 imports
-  Eisbach_Methods
+  Lib.Eisbach_Methods
 begin
 
 text \<open>

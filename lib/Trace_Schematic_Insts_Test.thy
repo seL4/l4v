@@ -10,7 +10,7 @@
 
 theory Trace_Schematic_Insts_Test
 imports
-  Trace_Schematic_Insts
+  Lib.Trace_Schematic_Insts
 begin
 
 text \<open>

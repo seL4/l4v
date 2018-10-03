@@ -10,7 +10,9 @@
  *)
 
 theory AutoLevity_Test
-imports AutoLevity_Base AutoLevity_Hooks
+imports
+  Lib.AutoLevity_Base
+  Lib.AutoLevity_Hooks
 begin
 locale foo = fixes z assumes Z:"z" begin
 ML \<open>Method.finish_text\<close>

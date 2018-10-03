@@ -10,7 +10,9 @@
  *)
 
 theory Apply_Debug_Test
-imports Apply_Debug Apply_Trace_Cmd
+imports
+  Lib.Apply_Debug
+  Lib.Apply_Trace_Cmd
 begin
 
 chapter \<open>Apply_Debug\<close>

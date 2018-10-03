@@ -11,9 +11,8 @@
 theory Match_Abbreviation_Test
 
 imports
-  Match_Abbreviation
-  "Monad_WP/NonDetMonad"
-
+  Lib.Match_Abbreviation
+  Lib.NonDetMonad
 begin
 
 experiment

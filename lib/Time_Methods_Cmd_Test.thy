@@ -9,8 +9,8 @@
  *)
 
 theory Time_Methods_Cmd_Test imports
-  Time_Methods_Cmd
-  Eisbach_Methods
+  Lib.Time_Methods_Cmd
+  Lib.Eisbach_Methods
   "HOL-Library.Sublist"
 begin
 
