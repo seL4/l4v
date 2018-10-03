@@ -55,7 +55,7 @@ session Refine = BaseRefine +
  *)
 session RefineOrphanage = Refine +
   description {* Proof that the kernel does not orphan threads. *}
-  theories [condition = "L4V_ARCH_IS_ARM"]
+  theories
     "refine/$L4V_ARCH/Orphanage"
 
 session BaseRefine2 = BaseRefine +
