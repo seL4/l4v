@@ -115,6 +115,7 @@ where
     when (from_opt \<noteq> None) $ do
       from_tptr \<leftarrow> assert_opt $ from_opt;
       tcb_sched_action tcb_sched_dequeue from_tptr;
+      tcb_release_remove from_tptr;
       set_tcb_obj_ref tcb_sched_context_update from_tptr None;
       test_reschedule from_tptr
     od;
