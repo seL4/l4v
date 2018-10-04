@@ -177,7 +177,11 @@ lemma reply_tcb_reply_at_rdq_update[simp]:
   "reply_tcb_reply_at P t (s\<lparr>ready_queues := sa\<rparr>) = reply_tcb_reply_at P t s"
   by (clarsimp simp: reply_tcb_reply_at_def)
 
-crunches test_reschedule
+lemma reply_tcb_reply_at_rlq_update[simp]:
+  "reply_tcb_reply_at P t (release_queue_update f s) = reply_tcb_reply_at P t s"
+  by (clarsimp simp: reply_tcb_reply_at_def)
+
+crunches test_reschedule,tcb_release_remove
 for reply_tcb_reply_at[wp]: "reply_tcb_reply_at P t"
 
 lemma sched_context_donate_reply_tcb_reply_at [wp]:
@@ -1359,7 +1363,7 @@ lemma sched_context_donate_bound_tcb_at [wp]:
                    set_sc_obj_ref_def update_sched_context_def get_object_def
                    pred_tcb_at_def obj_at_def get_tcb_def get_sc_obj_ref_def
                    test_reschedule_def reschedule_required_def set_scheduler_action_def
-                   tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
+                   tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def tcb_release_remove_def
                wp: get_sched_context_wp) auto
 
 lemma reply_remove_bound_tcb_at [wp]:

@@ -2760,7 +2760,7 @@ lemma maybe_donate_sc_pred_tcb_at:
     apply wpsimp
    apply (rule hoare_seq_ext[OF _ gsct_sp])
    apply (case_tac sc_tcb; simp)
-    apply (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def set_object_def
+    apply (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def set_object_def tcb_release_remove_def
                         set_sc_obj_ref_def update_sched_context_def get_object_def get_tcb_def
                         pred_tcb_at_def obj_at_def get_sc_obj_ref_def get_sched_context_def
                     wp: hoare_vcg_imp_lift hoare_vcg_all_lift)

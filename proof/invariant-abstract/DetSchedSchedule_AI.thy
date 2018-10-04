@@ -167,13 +167,28 @@ lemma tcb_sched_action_dequeue_ct_not_in_q[wp]:
                    split: option.splits)
   done
 
-crunch is_activatable[wp]: tcb_sched_action "is_activatable t"
+crunches tcb_sched_action,tcb_release_remove
+for is_activatable[wp]: "is_activatable t"
+and is_activatable_ct[wp]: "\<lambda>s. is_activatable (cur_thread s) s"
+and ct_in_cur_domain[wp]: ct_in_cur_domain
+and switch_in_cur_domain[wp]: switch_in_cur_domain
 
 crunch weak_valid_sched_action[wp]: tcb_sched_action "weak_valid_sched_action"
 
-crunch valid_sched_action[wp]: tcb_sched_action valid_sched_action
+lemma tcb_release_remove_weak_valid_sched_action[wp]:
+  "\<lbrace>weak_valid_sched_action\<rbrace>
+     tcb_release_remove thread
+   \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
+  by (clarsimp simp: schedulable_tcb_at_def tcb_release_remove_def weak_valid_sched_action_def
+               tcb_sched_dequeue_def)
 
-crunch ct_in_cur_domain[wp]: tcb_sched_action ct_in_cur_domain
+lemma tcb_release_remove_valid_sched_action[wp]:
+  "\<lbrace>valid_sched_action\<rbrace>
+     tcb_release_remove thread
+   \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
+  by (wpsimp simp: valid_sched_action_def)
+
+crunch valid_sched_action[wp]: tcb_sched_action valid_sched_action
 
 lemma tcb_sched_action_enqueue_valid_blocked:
   "\<lbrace>valid_blocked_except thread\<rbrace>
@@ -413,6 +428,10 @@ lemma tcb_sched_action_schedulable_tcb_at[wp]:
   "\<lbrace>schedulable_tcb_at t\<rbrace> tcb_sched_action action thread  \<lbrace>\<lambda>rv. schedulable_tcb_at t\<rbrace>"
   by (wpsimp simp: tcb_sched_action_def schedulable_tcb_at_def)
 
+lemma tcb_release_remove_schedulable_tcb_at[wp]:
+  "\<lbrace>schedulable_tcb_at t\<rbrace> tcb_release_remove thread  \<lbrace>\<lambda>rv. schedulable_tcb_at t\<rbrace>"
+  by (wpsimp simp: tcb_release_remove_def schedulable_tcb_at_def)
+
 (* reschedule_required *)
 
 lemma reschedule_required_valid_queues[wp]:
@@ -566,7 +585,7 @@ lemma reschedule_required_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane\<rbrace> reschedule_required \<lbrace>\<lambda>_. scheduler_act_sane\<rbrace>"
   by (wpsimp simp: reschedule_required_def set_scheduler_action_def)
 
-crunch scheduler_act_not[wp]: reschedule_required,test_reschedule,set_tcb_obj_ref "scheduler_act_not t"
+crunch scheduler_act_not[wp]: reschedule_required,test_reschedule,set_tcb_obj_ref,tcb_release_remove "scheduler_act_not t"
   (wp: set_scheduler_action_wp)
 
 (* misc *)
@@ -2411,7 +2430,7 @@ crunches reply_unlink_sc,tcb_release_remove
   and ready_queue[wp]: "\<lambda>s. P (ready_queues s)"
   (simp: zipWithM_x_mapM wp: mapM_wp' hoare_drop_imp)
 
-crunches test_reschedule
+crunches test_reschedule,tcb_release_remove
   for etcbs[wp]: "\<lambda>s. P (etcbs_of s)"
   and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
   (simp: zipWithM_x_mapM wp: mapM_wp' hoare_drop_imp)
@@ -2520,6 +2539,10 @@ for valid_queues[wp]: "valid_queues::det_state \<Rightarrow> _"
 and valid_sched[wp]: "valid_sched::det_state \<Rightarrow> _"
   (wp: hoare_drop_imps hoare_vcg_if_lift2)
 
+crunches test_reschedule,set_sc_obj_ref,tcb_release_remove
+for valid_queues[wp]: "valid_queues::det_state \<Rightarrow> _"
+  (wp: hoare_drop_imps hoare_vcg_if_lift2)
+
 lemma sched_context_donate_valid_queues[wp]:
   "\<lbrace>valid_queues\<rbrace> sched_context_donate scptr tptr \<lbrace>\<lambda>rv. valid_queues::det_state \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: sched_context_donate_def)
@@ -2543,6 +2566,15 @@ and weak_valid_sched_action: "weak_valid_sched_action::det_state \<Rightarrow> _
 and switch_in_cur_domain[wp]: "switch_in_cur_domain::det_state \<Rightarrow> _"
 and cur_activatable[wp]: "\<lambda>s::det_state. is_activatable (cur_thread s) s"
 
+crunches tcb_release_remove
+for valid_queues[wp]: "valid_queues::det_state \<Rightarrow> _"
+and valid_blocked[wp]: "valid_blocked::det_state \<Rightarrow> _"
+and ct_in_cur_domain[wp]: "ct_in_cur_domain::det_state \<Rightarrow> _"
+and valid_sched_action: "valid_sched_action::det_state \<Rightarrow> _"
+and weak_valid_sched_action: "weak_valid_sched_action::det_state \<Rightarrow> _"
+and switch_in_cur_domain[wp]: "switch_in_cur_domain::det_state \<Rightarrow> _"
+and cur_activatable[wp]: "\<lambda>s::det_state. is_activatable (cur_thread s) s"
+
 lemma set_sc_tcb_weak_valid_sched_action[wp]:
   "\<lbrace>weak_valid_sched_action\<rbrace>
      set_sc_obj_ref sc_tcb_update ref tptr \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
@@ -2558,6 +2590,11 @@ lemma set_sc_tcb_valid_sched_action[wp]:
 lemma set_sc_tcb_sched_context_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace>
      set_sc_obj_ref sc_tcb_update ref tptr \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
+  by (wpsimp simp: valid_sched_def)
+
+lemma tcb_release_remove_valid_sched[wp]:
+  "\<lbrace>valid_sched\<rbrace>
+     tcb_release_remove tptr \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: valid_sched_def)
 
 crunch sched_act_not[wp]: set_simple_ko "scheduler_act_not t"
@@ -2613,6 +2650,7 @@ crunches set_mrs,set_message_info
 
 crunches do_machine_op
 for ready_queue[wp]: "\<lambda>s. P (ready_queues s)"
+and release_queue[wp]: "\<lambda>s. P (release_queue s)"
   (ignore: set_object do_machine_op simp: zipWithM_x_mapM wp: mapM_wp')
 
 lemma set_mrs_valid_sched[wp]:
@@ -3087,7 +3125,7 @@ for not_queued[wp]: "not_queued t"
 and  scheduler_act_not[wp]: "scheduler_act_not t"
   (wp: hoare_drop_imp)
 
-crunches test_reschedule
+crunches test_reschedule,tcb_release_remove
 for not_queued[wp]: "not_queued t"
   (wp: hoare_vcg_if_lift2)
 
@@ -3882,12 +3920,25 @@ crunches sched_context_donate
 for ct_in_cur_domain[wp]: "ct_in_cur_domain :: det_state \<Rightarrow> _"
   (wp: maybeM_wp hoare_drop_imp maybeM_wp hoare_vcg_if_lift2 ignore: sched_context_donate)
 
-crunches test_reschedule
+crunches test_reschedule,tcb_release_remove
 for ct_not_in_q[wp]: ct_not_in_q
 and ct_active[wp]: ct_active
 and schedulable_tcb_at[wp]: "schedulable_tcb_at t"
 and obj_at[wp]: "obj_at P p"
   (wp: crunch_wps ignore: set_object )
+
+lemma set_tcb_queue_get_tcb[wp]:
+ "\<lbrace>\<lambda>s. get_tcb t s = x\<rbrace> set_tcb_queue param_a param_b param_c \<lbrace>\<lambda>_ s. get_tcb t s = x\<rbrace> "
+  by (clarsimp simp: set_tcb_queue_def get_tcb_def)
+
+lemma get_tcb_release_queue_update[simp]: "get_tcb t (release_queue_update f s) = get_tcb t s"
+  by (clarsimp simp: get_tcb_def)
+
+lemma get_tcb_scheduler_action_update[simp]: "get_tcb t (scheduler_action_update f s) = get_tcb t s"
+  by (clarsimp simp: get_tcb_def)
+
+crunches test_reschedule,tcb_release_remove
+for get_tcb[wp]: "\<lambda>s. get_tcb t s = x"
 
 lemma sched_context_donate_schedulable_tcb_at_neq:
   "\<lbrace>schedulable_tcb_at t and K (t \<noteq> tcb_ptr) and sc_tcb_sc_at (\<lambda>tp. tp \<noteq> Some t) sc_ptr\<rbrace>
@@ -3913,6 +3964,7 @@ lemma helper: "\<lbrace>\<lambda>s. (
           when (\<exists>y. sc_tcb sc = Some y)
            (do from_tptr <- assert_opt (sc_tcb sc);
                y <- tcb_sched_action tcb_sched_dequeue from_tptr;
+               y <- tcb_release_remove from_tptr;
                y <- set_tcb_obj_ref tcb_sched_context_update from_tptr None;
                test_reschedule from_tptr
             od) \<lbrace>\<lambda>_ s. obj_at
@@ -3920,7 +3972,8 @@ lemma helper: "\<lbrace>\<lambda>s. (
                              0 < sc_refill_max sc \<and> sc_tcb sc \<noteq> Some tcb_ptr)
                  sc_ptr
                 s\<rbrace>"
-  apply (wpsimp simp: set_tcb_obj_ref_def tcb_sched_action_def wp: set_object_obj)
+  apply (wpsimp simp: set_tcb_obj_ref_def tcb_sched_action_def
+                wp: set_object_obj hoare_vcg_imp_lift)
   by (clarsimp simp: etcb_at_def pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD split: option.split)
 
 lemma sched_context_donate_schedulable_tcb_at_eq:
@@ -5625,6 +5678,10 @@ lemma test_reschedule_ct_not_queued[wp]:
   "\<lbrace>ct_not_queued and scheduler_act_sane\<rbrace>
      test_reschedule tptr \<lbrace>\<lambda>_. ct_not_queued\<rbrace>"
   by (wpsimp simp: test_reschedule_def wp: reschedule_required_not_queued)
+
+crunches tcb_release_remove
+for ct_not_queued[wp]: ct_not_queued
+and scheduler_act_sane[wp]: scheduler_act_sane
 
 lemma sched_context_donate_ct_not_queued[wp]:
   "\<lbrace>ct_not_queued and scheduler_act_sane\<rbrace> sched_context_donate sc_ptr tptr \<lbrace>\<lambda>_. ct_not_queued::det_state \<Rightarrow> _\<rbrace>"

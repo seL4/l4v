@@ -500,7 +500,7 @@ lemma (* suspend_no_cap_to_obj_ref *)[wp,Finalise_AI_asms]:
                  dest!: obj_ref_none_no_asid[rule_format])
   done
 
-crunches blocked_cancel_ipc, cancel_signal, test_reschedule
+crunches blocked_cancel_ipc, cancel_signal, test_reschedule, tcb_release_remove
   for bound_sc_tcb_at[wp]:  "bound_sc_tcb_at P t"
 (ignore: set_object thread_set wp: mapM_x_wp_inv maybeM_inv get_simple_ko_wp)
 
@@ -602,6 +602,8 @@ lemma reply_unlink_tcb_no_sc:
   apply (wpsimp simp: reply_unlink_tcb_def is_reply
                   wp: sts_obj_at_impossible simple_obj_set_prop_at gts_wp get_simple_ko_wp)
   by (clarsimp simp: obj_at_def live_def live_reply_def)
+
+crunch obj_at[wp]: tcb_release_remove "\<lambda>s. P (obj_at Q p s)"
 
 lemma reply_remove_unlive:
   "\<lbrace>K (rp = rp')\<rbrace>

@@ -560,7 +560,7 @@ lemma valid_machine_state_release_queue_update[simp]:
   "valid_machine_state (release_queue_update f s) = valid_machine_state s"
   by (simp add: valid_machine_state_def)
 
-crunches tcb_sched_action,reschedule_required,possible_switch_to,tcb_release_enqueue
+crunches tcb_sched_action,reschedule_required,possible_switch_to,tcb_release_enqueue,tcb_release_remove
  for aligned[wp]: pspace_aligned
  and it[wp]: "\<lambda>s. P (idle_thread s)"
  and distinct[wp]: pspace_distinct
@@ -756,6 +756,12 @@ crunches test_reschedule
   for ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
   and if_live_then_nonz_cap[wp]: if_live_then_nonz_cap
 
+lemma set_sc_ex_nonz_cap_to[wp]:
+  "\<lbrace>\<lambda>s. ex_nonz_cap_to p s\<rbrace>
+   set_tcb_obj_ref tcb_sched_context_update t new
+   \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
+  by (wp ex_nonz_cap_to_pres)
+
 lemma sched_context_donate_iflive[wp]:
   "\<lbrace>\<lambda>s.  if_live_then_nonz_cap s \<and>
          ex_nonz_cap_to scp s \<and>
@@ -763,16 +769,7 @@ lemma sched_context_donate_iflive[wp]:
          valid_objs s\<rbrace>
    sched_context_donate scp tcbp
    \<lbrace>\<lambda>_ s. if_live_then_nonz_cap s\<rbrace>"
-  apply (unfold sched_context_donate_def)
-  apply (wpsimp simp: set_sc_obj_ref_def set_object_def get_tcb_def set_tcb_obj_ref_def is_sc_obj_def
-                      obj_at_def tcb_cap_cases_def ex_cap_to_after_update get_sc_obj_ref_def
-                      tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
-                  wp: get_sched_context_wp hoare_vcg_conj_lift weak_if_wp thread_get_wp
-                 split: kernel_object.splits option.splits |
-         (subst trans_state_update[symmetric] ex_nonz_cap_to_more_update)+)+
-  apply (drule valid_objs_valid_sched_context, fastforce)
-  apply (clarsimp simp: valid_sched_context_def obj_at_def is_tcb)
-  done
+  by (wpsimp simp: sched_context_donate_def get_sc_obj_ref_def)
 
 lemma sched_context_donate_valid_ioc[wp]:
       "\<lbrace>valid_ioc\<rbrace> sched_context_donate scp tcbp

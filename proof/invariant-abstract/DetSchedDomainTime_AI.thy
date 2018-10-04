@@ -400,7 +400,7 @@ section {* Preservation of domain time remaining *}
 crunch domain_time_inv[wp]: do_user_op "\<lambda>s. P (domain_time s)"
   (wp: select_wp)
 
-crunch domain_time_inv[wp]: schedule_tcb "\<lambda>s. P (domain_time s)"
+crunch domain_time_inv[wp]: schedule_tcb,tcb_release_remove "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps)
 
 crunch domain_time_inv[wp]: set_thread_state,store_word_offs "\<lambda>s. P (domain_time s)"

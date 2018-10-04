@@ -3841,7 +3841,7 @@ crunch valid_list[wp]: set_extra_badge valid_list
 lemmas transfer_caps_loop_ext_valid[wp] =
   transfer_caps_loop_pres[OF cap_insert_valid_list set_extra_badge_valid_list]
 
-crunch valid_list[wp]: tcb_sched_action,reschedule_required "valid_list"
+crunch valid_list[wp]: tcb_sched_action,reschedule_required,tcb_release_remove "valid_list"
   (simp: unless_def)
 
 crunch valid_list[wp]: schedule_tcb "valid_list"
@@ -3918,6 +3918,10 @@ lemma tcb_sched_action_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> tcb_sched_action action thread \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
   by (wpsimp simp: tcb_sched_action_def)
 
+lemma tcb_release_remove_cdt_cdt_list[wp]:
+  "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> tcb_release_remove t \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
+  by (wpsimp simp: tcb_release_remove_def)
+
 lemma reschedule_required_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reschedule_required \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
   by (wpsimp simp: reschedule_required_def)
@@ -3927,7 +3931,7 @@ lemma test_reschedule_cdt_cdt_list[wp]:
   by (wpsimp simp: test_reschedule_def
        wp: hoare_drop_imps)
 
-crunch (empty_fail) empty_fail[wp]: test_reschedule
+crunch (empty_fail) empty_fail[wp]: test_reschedule,tcb_release_remove
 
 (*
 interpretation
