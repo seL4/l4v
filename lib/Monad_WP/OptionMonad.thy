@@ -14,8 +14,10 @@
  *     Option monad while loop formalisation.
  *)
 
-theory OptionMonad
-imports "../Lib" (* FIXME: reduce dependencies *)
+theory OptionMonad (* FIXME: this is really a Reader_Option_Monad *)
+  imports
+    "../Lib" (* FIXME: reduce dependencies *)
+    "Less_Monad_Syntax"
 begin
 
 type_synonym ('s,'a) lookup = "'s \<Rightarrow> 'a option"
@@ -43,6 +45,10 @@ definition
   obind :: "('s,'a) lookup \<Rightarrow> ('a \<Rightarrow> ('s,'b) lookup) \<Rightarrow> ('s,'b) lookup" (infixl "|>>" 53)
 where
   "f |>> g \<equiv> \<lambda>s. case f s of None \<Rightarrow> None | Some x \<Rightarrow> g x s"
+
+(* Enable "do { .. }" syntax *)
+adhoc_overloading
+  Monad_Syntax.bind obind
 
 definition
   "ofail = K None"
@@ -331,7 +337,7 @@ lemma owhile_rule:
   assumes "wf M"
   assumes less: "\<And>r r'. \<lbrakk>I r s; C r s; B r s = Some r'\<rbrakk> \<Longrightarrow> (r',r) \<in> M"
   assumes step: "\<And>r r'. \<lbrakk>I r s; C r s; B r s = Some r'\<rbrakk> \<Longrightarrow> I r' s"
-  assumes fail: "\<And>r r'. \<lbrakk>I r s; C r s; B r s = None\<rbrakk> \<Longrightarrow> Q None"
+  assumes fail: "\<And>r. \<lbrakk>I r s; C r s; B r s = None\<rbrakk> \<Longrightarrow> Q None"
   assumes final: "\<And>r. \<lbrakk>I r s; \<not>C r s\<rbrakk> \<Longrightarrow> Q (Some r)"
   shows "Q (owhile C B r s)"
 proof -

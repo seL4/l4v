@@ -232,6 +232,15 @@ definition
  "gets_the f \<equiv> gets f >>= assert_opt"
 
 
+text \<open>
+  Get a map (such as a heap) from the current state and apply an argument to the map.
+  Fail if the map returns @{const None}, otherwise return the value.
+\<close>
+definition
+  gets_map :: "('s \<Rightarrow> 'a \<Rightarrow> 'b option) \<Rightarrow> 'a \<Rightarrow> ('s, 'b) nondet_monad" where
+  "gets_map f p \<equiv> gets f >>= (\<lambda>m. assert_opt (m p))"
+
+
 subsection {* The Monad Laws *}
 
 text {* A more expanded definition of @{text bind} *}

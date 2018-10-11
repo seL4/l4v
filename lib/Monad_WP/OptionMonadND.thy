@@ -16,7 +16,7 @@ imports
   NonDetMonadLemmas
 begin
 
-(* FIXME: better concrete syntax? *)
+(* FIXME: remove this syntax, standardise on do {..} instead *)
 (* Syntax defined here so we can reuse NonDetMonad definitions *)
 syntax
   "_doO" :: "[dobinds, 'a] => 'a"  ("(DO (_);//   (_)//OD)" 100)
@@ -36,28 +36,24 @@ definition
   ocatch :: "('s,('e + 'a)) lookup \<Rightarrow> ('e \<Rightarrow> ('s,'a) lookup) \<Rightarrow> ('s, 'a) lookup"
   (infix "<ocatch>" 10)
 where
-  "f <ocatch> handler \<equiv>
-     DO x \<leftarrow> f;
-        case x of
-          Inr b \<Rightarrow> oreturn b
-        | Inl e \<Rightarrow> handler e
-     OD"
+  "f <ocatch> handler \<equiv> do {
+     x \<leftarrow> f;
+     case x of Inr b \<Rightarrow> oreturn b | Inl e \<Rightarrow> handler e
+   }"
 
 
 definition
   odrop :: "('s, 'e + 'a) lookup \<Rightarrow> ('s, 'a) lookup"
 where
-  "odrop f \<equiv>
-     DO x \<leftarrow> f;
-        case x of
-          Inr b \<Rightarrow> oreturn b
-        | Inl e \<Rightarrow> ofail
-     OD"
+  "odrop f \<equiv> do {
+     x \<leftarrow> f;
+     case x of Inr b \<Rightarrow> oreturn b | Inl e \<Rightarrow> ofail
+   }"
 
 definition
   osequence_x :: "('s, 'a) lookup list \<Rightarrow> ('s, unit) lookup"
 where
-  "osequence_x xs \<equiv> foldr (\<lambda>x y. DO _ <- x; y OD) xs (oreturn ())"
+  "osequence_x xs \<equiv> foldr (\<lambda>x y. do { x; y }) xs (oreturn ())"
 
 definition
   osequence :: "('s, 'a) lookup list \<Rightarrow> ('s, 'a list) lookup"

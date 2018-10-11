@@ -804,6 +804,22 @@ lemma no_fail_returnOK [simp, wp]:
   "no_fail \<top> (returnOk x)"
   by (simp add: returnOk_def)
 
+lemma no_fail_bind [wp]:
+  assumes f: "no_fail P f"
+  assumes g: "\<And>rv. no_fail (R rv) (g rv)"
+  assumes v: "\<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>"
+  shows "no_fail (P and Q) (f >>= (\<lambda>rv. g rv))"
+  apply (clarsimp simp: no_fail_def bind_def)
+  apply (rule conjI)
+   prefer 2
+   apply (erule no_failD [OF f])
+  apply clarsimp
+  apply (drule (1) use_valid [OF _ v])
+  apply (drule no_failD [OF g])
+  apply simp
+  done
+
+
 text {* Empty results implies non-failure *}
 
 lemma empty_fail_modify [simp, wp]:
@@ -861,6 +877,10 @@ lemma empty_fail_assert_opt [simp]:
 lemma empty_fail_mk_ef:
   "empty_fail (mk_ef o m)"
   by (simp add: empty_fail_def mk_ef_def)
+
+lemma empty_fail_gets_map[simp]:
+  "empty_fail (gets_map f p)"
+  unfolding gets_map_def by simp
 
 subsection "Failure"
 
@@ -1802,6 +1822,30 @@ lemma select_throwError_wp:
   "\<lbrace>\<lambda>s. \<forall>x\<in>S. Q x s\<rbrace> select S >>= throwError -, \<lbrace>Q\<rbrace>"
   by (simp add: bind_def throwError_def return_def select_def validE_E_def
                 validE_def valid_def)
+
+lemma assert_opt_wp[wp]:
+  "\<lbrace>\<lambda>s. x \<noteq> None \<longrightarrow> Q (the x) s\<rbrace> assert_opt x \<lbrace>Q\<rbrace>"
+  by (case_tac x, (simp add: assert_opt_def | wp)+)
+
+lemma gets_the_wp[wp]:
+  "\<lbrace>\<lambda>s. (f s \<noteq> None) \<longrightarrow> Q (the (f s)) s\<rbrace> gets_the f \<lbrace>Q\<rbrace>"
+  by (unfold gets_the_def, wp)
+
+lemma gets_the_wp':
+  "\<lbrace>\<lambda>s. \<forall>rv. f s = Some rv \<longrightarrow> Q rv s\<rbrace> gets_the f \<lbrace>Q\<rbrace>"
+  unfolding gets_the_def by wpsimp
+
+lemma gets_map_wp:
+  "\<lbrace>\<lambda>s. f s p \<noteq> None \<longrightarrow> Q (the (f s p)) s\<rbrace> gets_map f p \<lbrace>Q\<rbrace>"
+  unfolding gets_map_def by wpsimp
+
+lemma gets_map_wp'[wp]:
+  "\<lbrace>\<lambda>s. \<forall>rv. f s p = Some rv \<longrightarrow> Q rv s\<rbrace> gets_map f p \<lbrace>Q\<rbrace>"
+  unfolding gets_map_def by wpsimp
+
+lemma no_fail_gets_map[wp]:
+  "no_fail (\<lambda>s. f s p \<noteq> None) (gets_map f p)"
+  unfolding gets_map_def by wpsimp
 
 
 section "validNF Rules"

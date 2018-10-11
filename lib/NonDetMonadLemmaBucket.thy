@@ -73,22 +73,6 @@ lemma hoare_vcg_if_lift:
   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv. if P then X rv else Y rv\<rbrace>"
   by (auto simp: valid_def split_def)
 
-
-lemma no_fail_bind [wp]:
-  assumes f: "no_fail P f"
-  assumes g: "\<And>rv. no_fail (R rv) (g rv)"
-  assumes v: "\<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>"
-  shows "no_fail (P and Q) (f >>= (\<lambda>rv. g rv))"
-  apply (clarsimp simp: no_fail_def bind_def)
-  apply (rule conjI)
-   prefer 2
-   apply (erule no_failD [OF f])
-  apply clarsimp
-  apply (drule (1) use_valid [OF _ v])
-  apply (drule no_failD [OF g])
-  apply simp
-  done
-
 lemma hoare_lift_Pf2:
   assumes P: "\<And>x. \<lbrace>Q x\<rbrace> m \<lbrace>\<lambda>_. P x\<rbrace>"
   assumes f: "\<And>P. \<lbrace>\<lambda>s. P (f s)\<rbrace> m \<lbrace>\<lambda>_ s. P (f s)\<rbrace>"
@@ -1111,13 +1095,6 @@ lemma assert_opt_inv: "\<lbrace>P\<rbrace> assert_opt Q \<lbrace>\<lambda>r. P\<
 lemma let_into_return:
   "(let f = x in m f) = (do f \<leftarrow> return x; m f od)"
   by simp
-
-lemma assert_opt_wp [wp]: "\<lbrace>\<lambda>s. (x \<noteq> None) \<longrightarrow> Q (the x) s\<rbrace> assert_opt x \<lbrace>Q\<rbrace>"
-  by (case_tac x, (simp add: assert_opt_def | wp)+)
-
-lemma gets_the_wp [wp]:
-  "\<lbrace>\<lambda>s. (f s \<noteq> None) \<longrightarrow> Q (the (f s)) s\<rbrace> gets_the f \<lbrace>Q\<rbrace>"
-  by (unfold gets_the_def, wp)
 
 definition
   injection_handler :: "('a \<Rightarrow> 'b) \<Rightarrow> ('s, 'a + 'c) nondet_monad
