@@ -15,10 +15,10 @@ imports
 begin
 
 definition s_bcorres_underlying where
-"s_bcorres_underlying t f g s \<equiv> (\<lambda>(x,y). (x, t y)) ` (fst (f s)) \<subseteq> (fst (g (t s)))"
+  "s_bcorres_underlying t f g s \<equiv> (\<lambda>(x,y). (x, t y)) ` (fst (f s)) \<subseteq> (fst (g (t s)))"
 
 definition bcorres_underlying where
-"bcorres_underlying t f g \<equiv> \<forall>s. s_bcorres_underlying t f g s"
+  "bcorres_underlying t f g \<equiv> \<forall>s. s_bcorres_underlying t f g s"
 
 lemma wpc_helper_bcorres:
   "bcorres_underlying t f g \<Longrightarrow>  wpc_helper (P, P') (Q, Q') (bcorres_underlying t f g)"
@@ -31,122 +31,116 @@ lemma wpc_helper_s_bcorres:
 wpc_setup "\<lambda>f. bcorres_underlying t f g" wpc_helper_bcorres
 wpc_setup "\<lambda>f. s_bcorres_underlying t f g s" wpc_helper_bcorres
 
-lemma s_bcorres_underlying_split[wp_split]: "(\<And>r s'. (r,s') \<in> fst (f s) \<Longrightarrow>  (s_bcorres_underlying t (g r) (g' r) s')) \<Longrightarrow>  s_bcorres_underlying t f f' s \<Longrightarrow>  s_bcorres_underlying t (f >>= g) (f' >>= g') s"
-  apply (simp add: s_bcorres_underlying_def)
-  apply clarsimp
-  apply (simp add: bind_def split_def)
-  apply (simp add: split_def image_def)
-  apply force
-   done
+lemma s_bcorres_underlying_split[wp_split]:
+  "(\<And>r s'. (r,s') \<in> fst (f s) \<Longrightarrow>  (s_bcorres_underlying t (g r) (g' r) s')) \<Longrightarrow>
+   s_bcorres_underlying t f f' s \<Longrightarrow>
+   s_bcorres_underlying t (f >>= g) (f' >>= g') s"
+  by (clarsimp simp: s_bcorres_underlying_def bind_def) force
 
-lemma bcorres_underlying_split[wp_split]: "(\<And>r. (bcorres_underlying t (g r) (g' r))) \<Longrightarrow> bcorres_underlying t f f' \<Longrightarrow>  bcorres_underlying t (f >>= g) (f' >>= g')"
-  apply (simp add: bcorres_underlying_def s_bcorres_underlying_split)
-  done
+lemma bcorres_underlying_split[wp_split]:
+  "(\<And>r. (bcorres_underlying t (g r) (g' r))) \<Longrightarrow>
+   bcorres_underlying t f f' \<Longrightarrow>
+   bcorres_underlying t (f >>= g) (f' >>= g')"
+  by (simp add: bcorres_underlying_def s_bcorres_underlying_split)
 
-lemma get_s_bcorres_underlying[wp]: "s_bcorres_underlying t (f s) (f' (t s)) s  \<Longrightarrow> s_bcorres_underlying t (get >>= f) (get >>= f') s"
-  apply (simp add: gets_def s_bcorres_underlying_def get_def bind_def return_def)
-  done
+lemma get_s_bcorres_underlying[wp]:
+  "s_bcorres_underlying t (f s) (f' (t s)) s \<Longrightarrow> s_bcorres_underlying t (get >>= f) (get >>= f') s"
+  by (simp add: gets_def s_bcorres_underlying_def get_def bind_def return_def)
 
-lemma get_bcorres[wp]: "(\<And>x. bcorres_underlying t (f x) (f' (t x)))  \<Longrightarrow> bcorres_underlying t (get >>= f) (get >>= f')"
-  apply (simp add: bcorres_underlying_def get_s_bcorres_underlying)
-  done
+lemma get_bcorres[wp]:
+  "(\<And>x. bcorres_underlying t (f x) (f' (t x))) \<Longrightarrow> bcorres_underlying t (get >>= f) (get >>= f')"
+  by (simp add: bcorres_underlying_def get_s_bcorres_underlying)
 
-lemma gets_s_bcorres_underlying[wp]: "x' (t s) = x s \<Longrightarrow>  s_bcorres_underlying t (gets x) (gets x') s"
-  apply (simp add: s_bcorres_underlying_def gets_def get_def bind_def return_def)
-  done
+lemma gets_s_bcorres_underlying[wp]:
+  "x' (t s) = x s \<Longrightarrow>  s_bcorres_underlying t (gets x) (gets x') s"
+  by (simp add: s_bcorres_underlying_def gets_def get_def bind_def return_def)
 
-lemma gets_bcorres_underlying[wp]: "(\<And>s. x' (t s) = x s) \<Longrightarrow> bcorres_underlying t (gets x) (gets x')"
-  apply (simp add: bcorres_underlying_def gets_s_bcorres_underlying)
-  done
+lemma gets_bcorres_underlying[wp]:
+  "(\<And>s. x' (t s) = x s) \<Longrightarrow> bcorres_underlying t (gets x) (gets x')"
+  by (simp add: bcorres_underlying_def gets_s_bcorres_underlying)
 
+lemma gets_map_bcorres_underlying[wp]:
+  "(\<And>s. f' (t s) p = f s p) \<Longrightarrow> bcorres_underlying t (gets_map f p) (gets_map f' p)"
+  by (simp add: gets_map_def bcorres_underlying_def s_bcorres_underlying_def simpler_gets_def
+                bind_def assert_opt_def fail_def return_def
+        split: option.splits)
 
-lemma gets_bcorres_underlying': "(\<And>xa. bcorres_underlying t (f (x xa)) (f' (x' (t xa)))) \<Longrightarrow> bcorres_underlying t (gets x >>= f) (gets x' >>= f')"
-  apply (simp add: gets_def)
-  apply wp
-  apply simp
-  done
+lemma gets_bcorres_underlying':
+  "(\<And>xa. bcorres_underlying t (f (x xa)) (f' (x' (t xa)))) \<Longrightarrow>
+  bcorres_underlying t (gets x >>= f) (gets x' >>= f')"
+  by (wpsimp simp: gets_def)
 
-lemma assert_bcorres_underlying[wp]: "f = f' \<Longrightarrow>  bcorres_underlying t (assert f) (assert f')"
-  apply (simp add: assert_def bcorres_underlying_def return_def s_bcorres_underlying_def fail_def)
-  done
+lemma assert_bcorres_underlying[wp]:
+  "f = f' \<Longrightarrow> bcorres_underlying t (assert f) (assert f')"
+  by (simp add: assert_def bcorres_underlying_def return_def s_bcorres_underlying_def fail_def)
 
-lemma return_bcorres[wp]: "bcorres_underlying t (return x) (return x)"
-  apply (simp add:return_def bcorres_underlying_def s_bcorres_underlying_def)
-  done
+lemma return_bcorres[wp]:
+  "bcorres_underlying t (return x) (return x)"
+  by (simp add:return_def bcorres_underlying_def s_bcorres_underlying_def)
 
-lemma drop_sbcorres_underlying: "bcorres_underlying t f g \<Longrightarrow> s_bcorres_underlying t f g s"
-  apply (simp add: bcorres_underlying_def)
-  done
+lemma drop_sbcorres_underlying:
+  "bcorres_underlying t f g \<Longrightarrow> s_bcorres_underlying t f g s"
+  by (simp add: bcorres_underlying_def)
 
-lemma use_sbcorres_underlying: "(\<And>s. s_bcorres_underlying t f g s) \<Longrightarrow>  bcorres_underlying t f g"
-  apply (simp add: bcorres_underlying_def)
-  done
+lemma use_sbcorres_underlying:
+  "(\<And>s. s_bcorres_underlying t f g s) \<Longrightarrow> bcorres_underlying t f g"
+  by (simp add: bcorres_underlying_def)
 
-lemma bcorres_underlying_throwError[wp]: "bcorres_underlying t (throwError a) (throwError a)"
-  apply (simp add: throwError_def)
-  apply wp
-  done
+lemma bcorres_underlying_throwError[wp]:
+  "bcorres_underlying t (throwError a) (throwError a)"
+  by (wpsimp simp: throwError_def)
 
+lemma s_bcorres_underlying_splitE[wp_split]:
+  "(\<And>r s'. (Inr r,s') \<in> fst (f s) \<Longrightarrow> s_bcorres_underlying t (g r) (g' r) s') \<Longrightarrow>
+   s_bcorres_underlying t f f' s \<Longrightarrow>
+   s_bcorres_underlying t (f >>=E g) (f' >>=E g') s"
+  by (wpsimp simp: bindE_def lift_def split: sum.splits | rule conjI drop_sbcorres_underlying)+
 
-lemma s_bcorres_underlying_splitE[wp_split]: "(\<And>r s'. (Inr r,s') \<in> fst (f s)  \<Longrightarrow>  (s_bcorres_underlying t (g r) (g' r) s')) \<Longrightarrow>  s_bcorres_underlying t f f' s \<Longrightarrow> s_bcorres_underlying t (f >>=E g) (f' >>=E g') s"
-  apply (simp add: bindE_def)
-  apply (wp | simp)+
-  apply (simp add: lift_def)
-  apply (case_tac r)
-  apply simp
-  apply (rule drop_sbcorres_underlying)
-  apply (wp | simp)+
-  done
+lemma get_s_bcorres_underlyingE[wp]:
+  "s_bcorres_underlying t (f s) (f' (t s)) s \<Longrightarrow>
+   s_bcorres_underlying t (liftE get >>=E f) (liftE get >>=E f') s"
+  by (simp add: gets_def s_bcorres_underlying_def get_def bindE_def bind_def return_def liftE_def lift_def)
 
-
-lemma get_s_bcorres_underlyingE[wp]: "s_bcorres_underlying t (f s) (f' (t s)) s \<Longrightarrow> s_bcorres_underlying t ( liftE (get) >>=E f) ( liftE (get) >>=E f') s"
-  apply (simp add: gets_def s_bcorres_underlying_def get_def bindE_def bind_def return_def liftE_def lift_def)
-  done
-
-
-lemma bcorres_underlying_splitE[wp_split]: "(\<And>r. (bcorres_underlying t (g r) (g' r))) \<Longrightarrow>  bcorres_underlying t f f' \<Longrightarrow>  bcorres_underlying t (f >>=E g) (f' >>=E g')"
-  apply (simp add: bcorres_underlying_def s_bcorres_underlying_splitE)
-  done
+lemma bcorres_underlying_splitE[wp_split]:
+  "(\<And>r. bcorres_underlying t (g r) (g' r)) \<Longrightarrow>
+   bcorres_underlying t f f' \<Longrightarrow>
+   bcorres_underlying t (f >>=E g) (f' >>=E g')"
+  by (simp add: bcorres_underlying_def s_bcorres_underlying_splitE)
 
 lemmas return_s_bcorres_underlying[wp] = drop_sbcorres_underlying[OF return_bcorres]
 
-lemma liftE_s_bcorres_underlying[wp]: "s_bcorres_underlying t f f' s \<Longrightarrow>  s_bcorres_underlying t (liftE f) (liftE f') s"
-  apply (simp add: liftE_def)
-  apply (wp | simp)+
-  done
+lemma liftE_s_bcorres_underlying[wp]:
+  "s_bcorres_underlying t f f' s \<Longrightarrow> s_bcorres_underlying t (liftE f) (liftE f') s"
+  by (wpsimp simp: liftE_def)
 
-lemma liftE_bcorres_underlying[wp]: "bcorres_underlying t f f' \<Longrightarrow>  bcorres_underlying t (liftE f) (liftE f')"
-  apply (simp add: bcorres_underlying_def liftE_s_bcorres_underlying)
-  done
+lemma liftE_bcorres_underlying[wp]:
+  "bcorres_underlying t f f' \<Longrightarrow>  bcorres_underlying t (liftE f) (liftE f')"
+  by (simp add: bcorres_underlying_def liftE_s_bcorres_underlying)
 
-lemma returnOk_bcorres_underlying[wp]: "bcorres_underlying t (returnOk x) (returnOk x)"
-  apply (simp add: returnOk_def)
-  apply wp
-  done
+lemma returnOk_bcorres_underlying[wp]:
+  "bcorres_underlying t (returnOk x) (returnOk x)"
+  by (wpsimp simp: returnOk_def)
 
-lemma whenE_s_bcorres_underlying[wp]: "(P = P' \<Longrightarrow> P \<Longrightarrow> s_bcorres_underlying t f f' s) \<Longrightarrow> P = P'  \<Longrightarrow> s_bcorres_underlying t (whenE P f) (whenE P' f') s"
-  apply (clarsimp simp add: whenE_def)
-  apply (rule drop_sbcorres_underlying)
-  apply wp
-  done
+lemma whenE_s_bcorres_underlying[wp]:
+  "\<lbrakk> \<lbrakk>P = P'; P\<rbrakk> \<Longrightarrow> s_bcorres_underlying t f f' s; P = P' \<rbrakk> \<Longrightarrow>
+   s_bcorres_underlying t (whenE P f) (whenE P' f') s"
+  by (wpsimp simp: whenE_def|rule drop_sbcorres_underlying)+
 
-lemma select_s_bcorres_underlying[wp]: "A \<subseteq> B \<Longrightarrow>  s_bcorres_underlying t (select A) (select B) s"
-  apply (simp add: s_bcorres_underlying_def select_def image_def)
-  apply blast
-  done
+lemma select_s_bcorres_underlying[wp]:
+  "A \<subseteq> B \<Longrightarrow> s_bcorres_underlying t (select A) (select B) s"
+  by (simp add: s_bcorres_underlying_def select_def image_def) blast
 
-lemma fail_s_bcorres_underlying[wp]: "s_bcorres_underlying t fail fail s"
-  apply (simp add: s_bcorres_underlying_def fail_def)
-  done
+lemma fail_s_bcorres_underlying[wp]:
+  "s_bcorres_underlying t fail fail s"
+  by (simp add: s_bcorres_underlying_def fail_def)
 
-lemma fail_bcorres_underlying[wp]: "bcorres_underlying t fail fail"
-  apply (simp add: bcorres_underlying_def fail_s_bcorres_underlying)
-  done
+lemma fail_bcorres_underlying[wp]:
+  "bcorres_underlying t fail fail"
+  by (simp add: bcorres_underlying_def fail_s_bcorres_underlying)
 
-lemma assertE_bcorres_underlying[wp]: "bcorres_underlying t (assertE P) (assertE P)"
-  apply (clarsimp simp add: assertE_def returnOk_def)
-  apply (intro impI conjI; wp)
-  done
+lemma assertE_bcorres_underlying[wp]:
+  "bcorres_underlying t (assertE P) (assertE P)"
+  by (wpsimp simp: assertE_def returnOk_def|rule conjI)+
 
 lemmas assertE_s_bcorres_underlying[wp] = drop_sbcorres_underlying[OF assertE_bcorres_underlying]
 
@@ -159,86 +153,123 @@ lemma when_bcorres_underlying[wp]:
   by (simp add: bcorres_underlying_def when_s_bcorres_underlying)
 
 lemma put_bcorres_underlying[wp]:
-  "t f = f' \<Longrightarrow>  bcorres_underlying t (put f) (put f')"
-  apply (simp add: bcorres_underlying_def s_bcorres_underlying_def put_def)
-  done
+  "t f = f' \<Longrightarrow> bcorres_underlying t (put f) (put f')"
+  by (simp add: bcorres_underlying_def s_bcorres_underlying_def put_def)
 
-lemma modify_bcorres_underlying[wp]: "(\<And>x. t (f x) = f' (t x)) \<Longrightarrow> bcorres_underlying t (modify f) (modify f')"
-  apply (simp add: modify_def)
-  apply wp
-  apply simp
-  done
+lemma modify_bcorres_underlying[wp]:
+  "(\<And>x. t (f x) = f' (t x)) \<Longrightarrow> bcorres_underlying t (modify f) (modify f')"
+  by (wpsimp simp: modify_def)
 
 lemma liftM_bcorres_underlying[wp]:
   "bcorres_underlying t m m' \<Longrightarrow> bcorres_underlying t (liftM f m) (liftM f m')"
-  apply (simp add: liftM_def)
-  apply (wp | simp)+
-  done
+  by (wpsimp simp: liftM_def)
 
 lemma sequence_x_bcorres_underlying[wp]:
   "(\<And>x. bcorres_underlying t (f x) (f' x)) \<Longrightarrow>
-    bcorres_underlying t (sequence_x (map f xs)) (sequence_x (map f' xs))"
-  apply (induct xs)
-    apply (simp add: sequence_x_def | wp)+
-  done
-
+   bcorres_underlying t (sequence_x (map f xs)) (sequence_x (map f' xs))"
+  by (induct xs; wpsimp simp: sequence_x_def)
 
 lemma sequence_bcorres_underlying[wp]:
   "(\<And>x. bcorres_underlying t (f x) (f' x)) \<Longrightarrow>
-    bcorres_underlying t (sequence (map f xs)) (sequence (map f' xs))"
-  apply (induct xs)
-    apply (simp add: sequence_def | wp)+
-  done
+   bcorres_underlying t (sequence (map f xs)) (sequence (map f' xs))"
+  by (induct xs; wpsimp simp: sequence_def)
 
 lemma mapM_x_bcorres_underlying[wp]:
   "(\<And>x. bcorres_underlying t (f x) (f' x)) \<Longrightarrow> bcorres_underlying t (mapM_x f xs) (mapM_x f' xs)"
-  apply (simp add: mapM_x_def | wp)+
-  done
+  by (wpsimp simp: mapM_x_def)
 
 lemma mapM_bcorres_underlying[wp]:
   "(\<And>x. bcorres_underlying t (f x) (f' x)) \<Longrightarrow> bcorres_underlying t (mapM f xs) (mapM f' xs)"
   by (simp add: mapM_def | wp)+
 
-lemma gets_s_bcorres_underlyingE': "s_bcorres_underlying t (f (x s)) (f' (x' (t s))) s \<Longrightarrow> s_bcorres_underlying t (liftE (gets x) >>=E f) (liftE (gets x') >>=E f') s"
+lemma gets_s_bcorres_underlyingE':
+  "s_bcorres_underlying t (f (x s)) (f' (x' (t s))) s \<Longrightarrow>
+   s_bcorres_underlying t (liftE (gets x) >>=E f) (liftE (gets x') >>=E f') s"
   by (simp add: gets_def liftE_def lift_def bindE_def) wp
 
 lemma bcorres_underlying_filterM[wp]:
   "(\<And>x. bcorres_underlying t (a x) (a' x)) \<Longrightarrow> bcorres_underlying t (filterM a b) (filterM a' b)"
-  apply (induct b)
-   apply (simp add: filterM_def)
-   apply (wp | simp)+
-  done
+  by (induct b; wpsimp simp: filterM_def)
 
 lemma option_rec_bcorres_underlying[wp_split]:
-  "(\<And>x y. bcorres_underlying t (g x y) (g' x y)) \<Longrightarrow> (\<And>x. bcorres_underlying t (f x) (f' x))
-    \<Longrightarrow> bcorres_underlying t (rec_option f g a b) (rec_option f' g' a b)"
-  by (cases a,simp+)
+  "(\<And>x y. bcorres_underlying t (g x y) (g' x y)) \<Longrightarrow>
+   (\<And>x. bcorres_underlying t (f x) (f' x)) \<Longrightarrow>
+   bcorres_underlying t (rec_option f g a b) (rec_option f' g' a b)"
+  by (cases a, simp+)
 
-lemma bcorres_underlying_mapME[wp]: "(\<And>x. bcorres_underlying t (f x) (f' x)) \<Longrightarrow>  bcorres_underlying t (mapME f r) (mapME f' r)"
-  apply (induct r)
-   apply (simp add: mapME_def sequenceE_def | wp)+
-  done
+lemma bcorres_underlying_mapME[wp]:
+  "(\<And>x. bcorres_underlying t (f x) (f' x)) \<Longrightarrow> bcorres_underlying t (mapME f r) (mapME f' r)"
+  by (induct r; wpsimp simp: mapME_def sequenceE_def)
 
-lemma handle2_bcorres_underlying[wp]: "bcorres_underlying t f f' \<Longrightarrow>  (\<And>x. bcorres_underlying t (g x) (g' x)) \<Longrightarrow>  bcorres_underlying t (f <handle2> g) (f' <handle2> g')"
-  apply (simp add: handleE'_def)
-  apply (wp | wpc | simp)+
-  done
+lemma handle2_bcorres_underlying[wp]:
+  "bcorres_underlying t f f' \<Longrightarrow>
+   (\<And>x. bcorres_underlying t (g x) (g' x)) \<Longrightarrow>
+   bcorres_underlying t (f <handle2> g) (f' <handle2> g')"
+  by (wpsimp simp: handleE'_def)
 
-lemma liftME_bcorres_underlying[wp]: "bcorres_underlying t f f' \<Longrightarrow> bcorres_underlying t (liftME a f) (liftME a f')"
-  apply (simp add: liftME_def)
-  apply (wp | simp)+
-  done
+lemma liftME_bcorres_underlying[wp]:
+  "bcorres_underlying t f f' \<Longrightarrow> bcorres_underlying t (liftME a f) (liftME a f')"
+  by (wpsimp simp: liftME_def)
 
-lemma zipWithM_x_bcorres[wp]: "(\<And>x y. bcorres_underlying t (f x y) (f' x y) ) \<Longrightarrow>  bcorres_underlying t (zipWithM_x f xs ys) (zipWithM_x f' xs ys)"
-  apply (simp add: zipWithM_x_def)
-  apply (simp add: zipWith_def split_def)
-  apply (wp | simp)+
-  done
+lemma zipWithM_x_bcorres[wp]:
+  "(\<And>x y. bcorres_underlying t (f x y) (f' x y) ) \<Longrightarrow>
+   bcorres_underlying t (zipWithM_x f xs ys) (zipWithM_x f' xs ys)"
+  by (wpsimp simp: zipWithM_x_def zipWith_def split_def)
 
-lemma mapME_x_bcorres_underlying[wp]: "(\<And>x. bcorres_underlying t (f x) (f' x)) \<Longrightarrow> bcorres_underlying t (mapME_x f xs) (mapME_x f' xs)"
-  apply (induct xs)
-  apply (wp | simp add: mapME_x_def sequenceE_x_def)+
-  done
+lemma mapME_x_bcorres_underlying[wp]:
+  "(\<And>x. bcorres_underlying t (f x) (f' x)) \<Longrightarrow> bcorres_underlying t (mapME_x f xs) (mapME_x f' xs)"
+  by (induct xs; wpsimp simp: mapME_x_def sequenceE_x_def)
+
+lemma liftE_bind_bcorres[wp]:
+  "bcorres_underlying t (f >>= g) (f' >>= g') \<Longrightarrow>
+   bcorres_underlying t (liftE f >>=E g) (liftE f' >>=E g')"
+  by (simp add: gets_def bcorres_underlying_def s_bcorres_underlying_def get_def bind_def return_def
+                split_def liftE_def bindE_def lift_def)
+
+lemma select_f_bcorres[wp]: "bcorres_underlying t (select_f f) (select_f f)"
+  by (fastforce simp: select_f_def bcorres_underlying_def s_bcorres_underlying_def)
+
+lemma bcorres_underlying_if[wp]:
+  "(b \<Longrightarrow> bcorres_underlying t f f') \<Longrightarrow>
+   (\<not>b \<Longrightarrow> bcorres_underlying t g g') \<Longrightarrow>
+   bcorres_underlying t (if b then f else g) (if b then f' else g')"
+  by (case_tac b; simp)
+
+lemma assert_opt_bcorres_underlying[wp]:
+  "bcorres_underlying t (assert_opt f) (assert_opt f)"
+  by (wpsimp simp: assert_opt_def)
+
+lemma unlessb_corres_underlying[wp]:
+  "bcorres_underlying t f f' \<Longrightarrow> bcorres_underlying t (unless a f) (unless a f')"
+  by (wpsimp simp: unless_def)
+
+lemma select_bcorres_underlying[wp]:
+  "A \<subseteq> B \<Longrightarrow> bcorres_underlying t (select A) (select B)"
+  by (fastforce simp: bcorres_underlying_def select_def s_bcorres_underlying_def)
+
+lemma catch_bcorres[wp]:
+  "bcorres_underlying t f f' \<Longrightarrow>
+   (\<And>x. bcorres_underlying t (g x) (g' x)) \<Longrightarrow>
+   bcorres_underlying t (f <catch> g) (f' <catch> g')"
+  unfolding catch_def by wpsimp
+
+lemma whenE_bcorres_underlying[wp]:
+  "\<lbrakk> \<lbrakk>P = P'; P\<rbrakk> \<Longrightarrow> bcorres_underlying t f f'; P = P' \<rbrakk> \<Longrightarrow>
+  bcorres_underlying t (whenE P f) (whenE P' f')"
+  unfolding whenE_def by wpsimp
+
+lemma unlessE_bcorres[wp]:
+  "bcorres_underlying t f f' \<Longrightarrow> bcorres_underlying t (unlessE P f) (unlessE P f')"
+  by (wpsimp simp: unlessE_def)
+
+lemma alternative_bcorres[wp]:
+  "\<lbrakk> bcorres_underlying t f f';  bcorres_underlying t g g' \<rbrakk> \<Longrightarrow>
+  bcorres_underlying t (f \<sqinter> g) (f' \<sqinter> g')"
+  by (fastforce simp: alternative_def bcorres_underlying_def s_bcorres_underlying_def)
+
+lemma gets_the_bcorres_underlying[wp]:
+  "(\<And>s. f' (t s) = f s) \<Longrightarrow> bcorres_underlying t (gets_the f) (gets_the f')"
+  by (wpsimp simp: gets_the_def)
 
 ML {*
 structure CrunchBCorresInstance : CrunchInstance =
