@@ -194,7 +194,7 @@ where
 | "handle_fault_reply (Timeout badge) thread label msg = do
      t \<leftarrow> arch_get_sanitise_register_info thread;
      as_user thread $ zipWithM_x
-         (\<lambda>r v. set_register r $ sanitise_register t r v)
+         (\<lambda>r v. setRegister r $ sanitise_register t r v)
          timeoutMessage msg;
      return (label = 0)
    od"
@@ -624,7 +624,7 @@ where
  "reply_from_kernel thread x \<equiv> do
     (label, msg) \<leftarrow> return x;
     buf \<leftarrow> lookup_ipc_buffer True thread;
-    as_user thread $ set_register badge_register 0;
+    as_user thread $ setRegister badge_register 0;
     len \<leftarrow> set_mrs thread buf msg;
     set_message_info thread $ MI len 0 0 label
   od"

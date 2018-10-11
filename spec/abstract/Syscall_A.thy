@@ -228,7 +228,7 @@ definition
 where
   "get_cap_reg reg = do
     ct \<leftarrow> gets cur_thread;
-    liftM data_to_cptr $ as_user ct $ get_register reg
+    liftM data_to_cptr $ as_user ct $ getRegister reg
   od"
 
 definition

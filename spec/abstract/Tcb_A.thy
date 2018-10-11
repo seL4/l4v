@@ -254,7 +254,7 @@ where
   (liftE $ do
     as_user tcb $ setRegister tlsBaseRegister tls_base;
     cur \<leftarrow> gets cur_thread;
-    when (tcb = cur) (do_extended_op reschedule_required);
+    when (tcb = cur) reschedule_required;
     return []
   od)"
 

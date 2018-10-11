@@ -558,6 +558,32 @@ where
 
 
 text {* Object types: *}
+
+datatype a_type =
+    ATCB
+  | AEndpoint
+  | ANTFN
+  | ASchedContext nat
+  | AReply
+  | ACapTable nat
+  | AGarbage nat -- "number of bytes of garbage"
+  | AArch aa_type
+
+definition
+  a_type :: "kernel_object \<Rightarrow> a_type"
+where
+ "a_type ob \<equiv> case ob of
+           CNode sz cspace           \<Rightarrow> if well_formed_cnode_n sz cspace
+                                        then ACapTable sz else AGarbage (cte_level_bits + sz)
+         | TCB tcb                   \<Rightarrow> ATCB
+         | Endpoint endpoint         \<Rightarrow> AEndpoint
+         | SchedContext sc n         \<Rightarrow> if valid_sched_context_size n
+                                        then ASchedContext n else AGarbage n
+         | Reply r                   \<Rightarrow> AReply
+         | Notification notification \<Rightarrow> ANTFN
+         | ArchObj ao                \<Rightarrow> AArch (aa_type ao)"
+
+
 section {* Kernel State *}
 
 text {* The kernel's heap is a partial function containing kernel objects. *}
@@ -793,73 +819,5 @@ proof -
   thus ?thesis unfolding msg_align_bits_def max_ipc_length_def by simp
 qed
 
-
-section "simple kernel objects"
-(* to be used for abstraction unifying kernel objects other than TCB, CNode, and SchedContext *)
-
-context begin interpretation Arch .
-
-requalify_types
-  aa_type
-requalify_consts
-  aa_type
-
-end
-
-text {* An alternative formulation that allows abstraction over type: *}
-
-datatype a_type =
-    ATCB
-  | AEndpoint
-  | ANTFN
-  | ASchedContext nat
-  | AReply
-  | ACapTable nat
-  | AGarbage nat -- "number of bytes of garbage"
-  | AArch aa_type
-
-definition
-  a_type :: "kernel_object \<Rightarrow> a_type"
-where
- "a_type ob \<equiv> case ob of
-           CNode sz cspace           \<Rightarrow> if well_formed_cnode_n sz cspace
-                                        then ACapTable sz else AGarbage (cte_level_bits + sz)
-         | TCB tcb                   \<Rightarrow> ATCB
-         | Endpoint endpoint         \<Rightarrow> AEndpoint
-         | SchedContext sc n         \<Rightarrow> if valid_sched_context_size n
-                                        then ASchedContext n else AGarbage n
-         | Reply r                   \<Rightarrow> AReply
-         | Notification notification \<Rightarrow> ANTFN
-         | ArchObj ao                \<Rightarrow> AArch (aa_type ao)"
-
-(***)
-
-definition
-  partial_inv :: "('a \<Rightarrow> 'b) \<Rightarrow> ('b \<Rightarrow> 'a option)"
-where
-  "partial_inv f x = (if \<exists>!y. f y = x then Some (THE y. f y = x) else None)"
-
-lemma proj_inj: "inj f \<Longrightarrow> (partial_inv f ko = Some v) = (f v = ko)"
-  by (auto simp: partial_inv_def the_equality injD)
-
-lemma inj_Endpoint: "inj Endpoint" by (auto intro: injI)
-lemma inj_Notification: "inj Notification"  by (auto intro: injI)
-
-lemmas proj_inj_ep[simp] = proj_inj[OF inj_Endpoint]
-lemma proj_ko_type_ep[simp]: "(\<exists>v. partial_inv Endpoint  ko = Some (v::endpoint)) = (a_type ko = AEndpoint)"
-  by (cases ko; auto simp: partial_inv_def a_type_def)
-
-lemmas proj_inj_ntfn[simp] = proj_inj[OF inj_Notification]
-lemma proj_ko_type_ntfn[simp]:
-  "(\<exists>v. partial_inv Notification  ko = Some (v::notification)) = (a_type ko = ANTFN)"
-  by (cases ko; auto simp: partial_inv_def a_type_def)
-
-lemma proj_inj_reply[simp]: "(partial_inv Reply ko = Some v) = (Reply v = ko)"
-  by (auto simp: partial_inv_def)
-lemma proj_ko_type_reply[simp]: "(\<exists>v. partial_inv Reply  ko = Some (v::reply)) = (a_type ko = AReply)"
-  by (cases ko; auto simp: partial_inv_def a_type_def)
-
-abbreviation
-  "is_simple_type \<equiv> (\<lambda>ob. a_type ob \<in> {AEndpoint, ANTFN, AReply})"
 
 end
