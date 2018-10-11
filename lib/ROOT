@@ -98,15 +98,6 @@ session Lib (lib) = Word_Lib +
     "Monad_WP/NonDetMonad"
     "Monad_WP/NonDetMonadLemmas"
 
-(* bitrotted:
-    AdjustSchematic
-    ExpandAll
-    TSubst
-    Trace_Attribs
-    StringOrd
-    "ml-helpers/TacticAPI"
-*)
-
 session CLib (lib) in clib = CParser +
   sessions
     "HOL-Library"
