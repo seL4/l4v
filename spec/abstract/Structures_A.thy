@@ -439,6 +439,9 @@ lemmas kernel_object_cases_asm =
 kernel_object.induct[where kernel_object=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x,
   simplified, rule_format, rotated -1]
 
+definition aobj_of :: "kernel_object \<Rightarrow> arch_kernel_obj option"
+  where
+  "aobj_of ko \<equiv> case ko of ArchObj aobj \<Rightarrow> Some aobj | _ \<Rightarrow> None"
 
 text {* Checks whether a cnode's contents are well-formed. *}
 
