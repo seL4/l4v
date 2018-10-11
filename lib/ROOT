@@ -69,6 +69,7 @@ session Lib (lib) = Word_Lib +
     EquivValid
     SplitRule
     DataMap
+    FastMap
     Corres_Method
     Conjuncts
     DetWPLib
@@ -144,6 +145,7 @@ session LibTest (lib) = Refine +
     Insulin_Test
     ShowTypes_Test
     Time_Methods_Cmd_Test
+    FastMap_Test
     Trace_Schematic_Insts_Test
     Local_Method_Tests
     Qualify_Test
