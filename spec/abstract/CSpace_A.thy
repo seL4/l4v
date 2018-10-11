@@ -160,14 +160,14 @@ where
   (case cap of
      CNodeCap oref radix_bits guard  \<Rightarrow>
      if radix_bits + size guard = 0 then
-       fail (* nothing is translated: table broken *)
+       fail \<comment> \<open>nothing is translated: table broken\<close>
      else doE
        whenE (\<not> guard \<le> cref)
-             (* guard does not match *)
+             \<comment> \<open>guard does not match\<close>
              (throwError $ GuardMismatch (size cref) guard);
 
        whenE (size cref < radix_bits + size guard)
-             (* not enough bits to resolve: table malformed *)
+             \<comment> \<open>not enough bits to resolve: table malformed\<close>
              (throwError $ DepthMismatch (size cref) (radix_bits+size guard));
 
        offset \<leftarrow> returnOk $ take radix_bits (drop (size guard) cref);
@@ -352,13 +352,13 @@ where
     slot1_p \<leftarrow> gets (\<lambda>s. cdt s slot1);
     slot2_p \<leftarrow> gets (\<lambda>s. cdt s slot2);
     cdt \<leftarrow> gets cdt;
-    (* update children: *)
+    \<comment> \<open>update children:\<close>
     cdt' \<leftarrow> return (\<lambda>n. if cdt n = Some slot1
                         then Some slot2
                         else if cdt n = Some slot2
                         then Some slot1
                         else cdt n);
-    (* update parents: *)
+    \<comment> \<open>update parents:\<close>
     set_cdt (cdt' (slot1 := cdt' slot2, slot2 := cdt' slot1));
     do_extended_op (cap_swap_ext slot1 slot2 slot1_p slot2_p);
     is_original \<leftarrow> gets is_original_cap;
@@ -485,12 +485,13 @@ lemma fast_finalise_def2:
      result \<leftarrow> finalise_cap cap final;
      assert (result = (NullCap, NullCap))
    od"
-  by (cases cap, simp_all add: liftM_def K_def assert_def can_fast_finalise_def)
+  supply K_def[simp]
+  by (cases cap, simp_all add: liftM_def assert_def can_fast_finalise_def)
 
 text {* The finalisation process on a Zombie or Null capability is finished for
 all Null capabilities and for Zombies that cover no slots or only the slot they
 are currently stored in. *}
-fun
+primrec (nonexhaustive)
   cap_removeable :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> bool"
 where
   "cap_removeable NullCap slot = True"

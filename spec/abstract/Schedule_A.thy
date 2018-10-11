@@ -135,33 +135,33 @@ definition
            it \<leftarrow> gets idle_thread;
            target_prio \<leftarrow> ethread_get tcb_priority candidate;
 
-           (* Infoflow does not like asking about the idle thread's priority or domain. *)
+           \<comment> \<open>Infoflow does not like asking about the idle thread's priority or domain.\<close>
            ct_prio \<leftarrow> ethread_get_when (ct \<noteq> it) tcb_priority ct;
-           (* When to look at the bitmaps.
-              This optimisation used in C fast path, but there we know cur_thread is not idle. *)
+           \<comment> \<open>When to look at the bitmaps. This optimisation is used in the C fast path,
+              but there we know @{text cur_thread} is not idle.\<close>
            fastfail \<leftarrow> schedule_switch_thread_fastfail ct it ct_prio target_prio;
 
            cur_dom \<leftarrow> gets cur_domain;
            highest \<leftarrow> gets (is_highest_prio cur_dom target_prio);
            if (fastfail \<and> \<not>highest)
            then do
-               (* candidate is not best candidate, choose a new thread *)
+               \<comment> \<open>Candidate is not best candidate, choose a new thread\<close>
                tcb_sched_action tcb_sched_enqueue candidate;
                set_scheduler_action choose_new_thread;
                schedule_choose_new_thread
              od
            else if (ct_runnable \<and> ct_prio = target_prio)
            then do
-               (* current thread was runnable and candidate is not strictly better
+               \<comment> \<open>Current thread was runnable and candidate is not strictly better
                   want current thread to run next, so append the candidate to end of queue
-                  and choose again *)
+                  and choose again\<close>
                tcb_sched_action tcb_sched_append candidate;
                set_scheduler_action choose_new_thread;
                schedule_choose_new_thread
              od
            else do
              guarded_switch_to candidate;
-             (* duplication assists in wp proof under different sched. actions *)
+             \<comment> \<open>Duplication assists in wp proof under different scheduler actions\<close>
              set_scheduler_action resume_cur_thread
            od
         od)

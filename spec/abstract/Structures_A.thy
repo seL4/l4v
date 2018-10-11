@@ -469,7 +469,7 @@ where
 | "obj_size (ArchObjectCap a) = 1 << arch_obj_size a"
 
 
-text {* An alternative formulation that allows abstraction over type: *}
+text {* Object types: *}
 
 datatype a_type =
     ATCB
@@ -628,7 +628,8 @@ primrec (nonexhaustive)
 where
   "cap_bits_untyped (UntypedCap dev r s f) = s"
 
-definition
+definition tcb_cnode_map :: "tcb \<Rightarrow> cnode_index \<Rightarrow> cap option"
+  where
   "tcb_cnode_map tcb \<equiv>
    [tcb_cnode_index 0 \<mapsto> tcb_ctable tcb,
     tcb_cnode_index 1 \<mapsto> tcb_vtable tcb,
@@ -636,9 +637,9 @@ definition
     tcb_cnode_index 3 \<mapsto> tcb_caller tcb,
     tcb_cnode_index 4 \<mapsto> tcb_ipcframe tcb]"
 
-definition
-  "cap_of kobj \<equiv>
-   case kobj of CNode _ cs \<Rightarrow> cs | TCB tcb \<Rightarrow> tcb_cnode_map tcb | _ \<Rightarrow> Map.empty"
+definition cap_of :: "kernel_object \<Rightarrow> cnode_index \<Rightarrow> cap option"
+  where
+  "cap_of kobj \<equiv> case kobj of CNode _ cs \<Rightarrow> cs | TCB tcb \<Rightarrow> tcb_cnode_map tcb | _ \<Rightarrow> Map.empty"
 
 text {* The set of all caps contained in a kernel object. *}
 

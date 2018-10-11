@@ -109,7 +109,7 @@ definition
        do_extended_op timer_tick;
        do_machine_op resetTimer
      od
-   | IRQInactive \<Rightarrow> fail (* not meant to be able to get IRQs from inactive lines *)
+   | IRQInactive \<Rightarrow> fail \<comment> \<open>not meant to be able to get IRQs from inactive lines\<close>
    | IRQReserved \<Rightarrow> handle_reserved_irq irq;
    do_machine_op $ ackInterrupt irq
    od"
