@@ -520,18 +520,31 @@ lemma set_thread_state_not_live:
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
   by (wpsimp simp: set_thread_state_def set_object_def obj_at_def pred_tcb_at_def get_tcb_def live_def hyp_live_def)
 
+lemma if_extract_from_both:
+  "(if P then Q and R else Q) = (Q and (if P then R else \<top>))"
+  by (clarsimp split: if_splits)
+
+lemma cancel_ipc_bound_sc_tcb_at_None:
+  "\<lbrace>bound_sc_tcb_at ((=) None) t\<rbrace> cancel_ipc a \<lbrace>\<lambda>rv. bound_sc_tcb_at ((=) None) t\<rbrace>"
+  apply (wpsimp simp: cancel_ipc_def reply_cancel_ipc_def reply_remove_tcb_def
+                      reply_remove_def if_extract_from_both
+           split_del: if_splits
+                  wp: blocked_cancel_ipc_bound_sc_tcb_at reply_unlink_tcb_bound_sc_tcb_at hoare_vcg_if_lift
+                       reply_unlink_sc_pred_tcb_at hoare_vcg_const_imp_lift
+                      get_simple_ko_wp gts_wp hoare_vcg_all_lift thread_set_no_change_tcb_sched_context static_imp_wp
+             | wp_once )+
+  sorry (* FIXME: not actually true *)
+
+
 lemma suspend_unlive':
   "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t\<rbrace>
       suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
-  apply (simp add: suspend_def) thm suspend_unlive
-  apply (wp get_object_wp hoare_drop_imp suspend_unlive_helper set_thread_state_not_live gbn_wp
-            gbyt_bound_tcb | simp only: more_update.obj_at_update | wpc)+
-  apply (simp add: obj_at_def) (*
-  apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t" in hoare_strengthen_post)
-  apply (wp cancel_ipc_bound_tcb_at)
-  apply (auto simp: pred_tcb_def2 live_def hyp_live_def dest: refs_of_live)[1]
-  done*) sorry
+  unfolding suspend_def
+  apply (wpsimp wp: get_object_wp suspend_unlive_helper set_thread_state_not_live gbyt_bound_tcb
+                    cancel_ipc_bound_sc_tcb_at_None
+            wp_del: maybeM_wp)
+  done
 
 lemma unbind_maybe_notification_not_live_helper:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_sc ntfn = None) ptr\<rbrace>
@@ -568,8 +581,6 @@ lemma sc_unbind_not_live_helper:
                                  ntfn_bound_tcb ntfn = None \<and>
                                  ntfn_sc ntfn = None) ptr\<rbrace>"
   by (wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc)
-
-
 
 lemma reply_unlink_sc_not_live:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> reply_tcb r = None) reply\<rbrace>
@@ -611,7 +622,7 @@ lemma reply_remove_unlive:
    \<lbrace>\<lambda> rv. obj_at (Not \<circ> live) rp'\<rbrace>"
   supply if_split[split del]
   apply (simp add: reply_remove_def assert_opt_def)
-apply (rule hoare_gen_asm[where P'=\<top>, simplified])
+  apply (rule hoare_gen_asm[where P'=\<top>, simplified])
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (case_tac "reply_tcb reply"; clarsimp)
   apply (case_tac "reply_sc reply"; clarsimp simp: bind_assoc)
@@ -626,8 +637,8 @@ apply (rule hoare_gen_asm[where P'=\<top>, simplified])
     apply (rename_tac replies)
     apply (case_tac "hd replies = rp"; clarsimp)
      apply (wpsimp wp: reply_unlink_tcb_not_live sbn_obj_at_impossible set_sc_obj_ref_obj_at_impossible
-      hoare_vcg_all_lift hoare_drop_imps hoare_vcg_if_lift2 reply_unlink_sc_None
-      simp: sched_context_donate_def get_sc_obj_ref_def obj_at_def is_reply)
+                       hoare_vcg_all_lift hoare_drop_imps hoare_vcg_if_lift2 reply_unlink_sc_None
+                 simp: sched_context_donate_def get_sc_obj_ref_def obj_at_def is_reply)
     apply (wpsimp wp: reply_unlink_tcb_not_live reply_unlink_sc_None simp: is_reply obj_at_def)
    apply (clarsimp simp: obj_at_def is_reply split: if_splits)
   apply (rule_tac Q="\<lambda>rv s. obj_at (\<lambda>ko. \<not>live ko \<and> is_reply ko) rp s" in hoare_post_imp)
@@ -756,7 +767,7 @@ lemma sched_context_unbind_tcb_bound_sc_tcb_at_None:
   done
 
 lemma sched_context_unbind_tcb_not_ko_at:
-  "\<lbrace>\<lambda>s. \<not> ko_at ko t s\<rbrace> sched_context_unbind_tcb sc \<lbrace>\<lambda>rv s. \<not>ko_at ko t s\<rbrace>"
+  "\<lbrace>\<lambda>s. \<not> (ko_at ko t s)\<rbrace> sched_context_unbind_tcb sc \<lbrace>\<lambda>rv s. \<not> (ko_at ko t s)\<rbrace>"
   sorry
 
 lemma bound_sc_tcb_bound_sc_at:
@@ -811,33 +822,46 @@ lemma unbind_from_sc_no_cap_to_obj_ref[wp]:
   apply (wp)
   done
 
-lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
-  "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> valid_mdb s
-        \<and> cte_wp_at ((=) cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s)
-        \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)
-        \<and> (is_arch_cap cap \<longrightarrow> pspace_aligned s \<and>
-                               valid_vspace_objs s \<and>
-                               valid_arch_state s)\<rbrace>
-     finalise_cap cap x
-   \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
-(*
-  apply (cases "is_arch_cap cap")
-   apply (clarsimp simp: is_cap_simps)
-   apply wp
-*)
-  including no_pre
-  apply (cases cap, simp_all add: replaceable_def reachable_pg_cap_def
-                       split del: if_split)
-            prefer 10
-            (* TS: this seems to be necessary for deleting_irq_handler,
-                   kind of nasty, not sure how to sidestep *)
-            apply (rule hoare_pre)
-            apply ((wp suspend_unlive'[unfolded o_def]
-                      suspend_final_cap[where sl=sl]
-                      unbind_maybe_notification_not_bound
-                      get_simple_ko_ko_at hoare_vcg_conj_lift
-                      unbind_notification_valid_objs
-                   | clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
+lemma complete_yield_to_not_live:
+  "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_yield_from sc = Some tcb \<and> sc_tcb sc = None
+                                               \<and> sc_ntfn sc = None \<and> sc_replies sc = []) sc
+    and valid_objs and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
+     complete_yield_to tcb
+   \<lbrace>\<lambda>yc a. obj_at (Not \<circ> live) sc a\<rbrace>"
+  apply (clarsimp simp: complete_yield_to_def)
+  apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def set_object_def set_tcb_obj_ref_def
+                  wp: get_object_wp hoare_vcg_all_lift | wp_once hoare_drop_imps)+
+  sorry
+
+lemma sched_context_unbind_yield_from_not_live:
+  "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_tcb sc = None \<and> sc_ntfn sc = None \<and> sc_replies sc = []) sc
+     and invs\<rbrace>
+       sched_context_unbind_yield_from sc
+   \<lbrace>\<lambda>yc a. obj_at (Not \<circ> live) sc a\<rbrace>"
+  apply (clarsimp simp: sched_context_unbind_yield_from_def)
+  apply (wpsimp wp: complete_yield_to_not_live)
+  apply (auto simp: obj_at_def live_def live_sc_def)
+  done
+
+lemma reply_unlink_sc_removes_reply:
+  "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_replies sc = replies) sc_ptr \<rbrace>
+      reply_unlink_sc sc_ptr reply_ptr
+   \<lbrace>\<lambda>rv. obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_replies sc = (remove1 reply_ptr replies)) sc_ptr\<rbrace>"
+  apply (clarsimp simp: reply_unlink_sc_def)
+  apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
+                  wp: set_object_at_obj3 get_object_wp hoare_vcg_all_lift hoare_drop_imps)
+  by (clarsimp simp: obj_at_def)
+
+lemma sched_context_clear_replies_clears:
+  "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. (ko = SchedContext sc n) \<and> sc_tcb sc = None \<and> sc_ntfn sc = None) sc\<rbrace>
+     sched_context_clear_replies sc
+   \<lbrace>\<lambda>yb. obj_at (\<lambda>ko. \<exists>sc. (\<exists>n. ko = SchedContext sc n) \<and> sc_tcb sc = None \<and> sc_ntfn sc = None \<and> sc_replies sc = []) sc\<rbrace>"
+  unfolding sched_context_clear_replies_def
+  (* this needs a proof that reply_unlink_sc scp rp removes rp from (sc_replies scp) and then possibly an induction
+     proof to show that mapM_x reply_unlink_sc results in the list being empty *)
+  sorry
+
+method hammer = ((clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
                                      ran_tcb_cap_cases is_cap_simps
                                      cap_range_def prepare_thread_delete_def
                                      can_fast_finalise_def
@@ -849,62 +873,170 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                    | simp cong: conj_cong
                    | simp cong: rev_conj_cong add: no_cap_to_obj_with_diff_ref_Null
                    | (strengthen tcb_cap_valid_imp_NullCap tcb_cap_valid_imp', wp)
-                   | rule conjI
+                   (*| rule conjI*)
                    | erule cte_wp_at_weakenE tcb_cap_valid_imp'[rule_format, rotated -1]
                    | erule(1) no_cap_to_obj_with_diff_ref_finalI_ARCH
-                   | (wp_once hoare_drop_imps,
-                       wp_once cancel_all_ipc_unlive[unfolded o_def]
-                           cancel_all_signals_unlive[unfolded o_def])
                    | ((wp_once hoare_drop_imps)?,
                       (wp_once hoare_drop_imps)?,
                       wp_once deleting_irq_handler_empty)
-                   | wpc
-                   | simp add: valid_cap_simps is_nondevice_page_cap_simps)+)
-  apply (rule hoare_chain)
-(*    apply (rule arch_finalise_cap_replaceable[where sl=sl])
+                   | simp add: valid_cap_simps is_nondevice_page_cap_simps)+)[1]
+
+lemma sched_context_clear_replies_valid_objs[wp]:
+  "\<lbrace>valid_objs\<rbrace> sched_context_clear_replies scptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  apply (clarsimp simp: sched_context_clear_replies_def liftM_def)
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  by (wpsimp wp: mapM_x_wp' reply_unlink_sc_valid_objs)
+
+lemma mapM_x_wp_pre:
+  assumes a: "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P and Q\<rbrace> f x \<lbrace>\<lambda>rv. Q\<rbrace>"
+  assumes b: "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
+  shows "\<lbrace>P and Q\<rbrace> mapM_x f xs \<lbrace>\<lambda>rv. Q\<rbrace>"
+  apply (rule hoare_post_imp[where Q="\<lambda>rv. P and Q"], clarsimp)
+  apply (wpsimp wp: mapM_x_wp' a b)
+  done
+
+lemma sched_context_clear_replies_sym_refs[wp]:
+  "\<lbrace>\<lambda>s. valid_objs s \<and> sym_refs (state_refs_of s)\<rbrace> sched_context_clear_replies scptr \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
+  apply (clarsimp simp: sched_context_clear_replies_def liftM_def)
+  apply (wpsimp wp: mapM_x_wp_pre[where P="valid_objs"] reply_unlink_sc_sym_refs)
+  done
+
+lemma sched_context_unbind_ntfn_unbinds:
+  "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_tcb sc = None) sc \<rbrace>
+      sched_context_unbind_ntfn sc
+   \<lbrace>\<lambda>rv. obj_at (\<lambda>ko. \<exists>sc. (\<exists>n. ko = SchedContext sc n) \<and> sc_tcb sc = None \<and> sc_ntfn sc = None) sc\<rbrace>"
+  unfolding sched_context_unbind_ntfn_def
+  apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def set_object_def update_sk_obj_ref_def
+                      set_simple_ko_def get_sc_obj_ref_def
+                  wp: get_object_wp get_simple_ko_wp )
+  by (auto simp: obj_at_def)
+
+lemma sched_context_unbind_ntfn_valid_objs[wp]:
+  notes refs_of_simps[simp del]
+  shows
+  "\<lbrace>valid_objs\<rbrace> sched_context_unbind_ntfn sc \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  apply (simp add: sched_context_unbind_ntfn_def get_sc_obj_ref_def)
+  apply (wpsimp simp: update_sk_obj_ref_def
+                  wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp get_sched_context_wp
+                      valid_ioports_lift)
+  apply (clarsimp simp: obj_at_def is_ntfn sc_ntfn_sc_at_def)
+  apply (frule valid_objs_valid_sched_context_size, fastforce)
+  apply (erule_tac x=x in valid_objsE, simp)
+  apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def is_sc_obj_def split: ntfn.splits)
+  done
+
+lemma sched_context_unbind_ntfn_sym_refs[wp]:
+  notes refs_of_simps[simp del]
+  shows
+  "\<lbrace>\<lambda>s. valid_objs s \<and> sym_refs (state_refs_of s)\<rbrace> sched_context_unbind_ntfn sc \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s) \<rbrace>"
+  apply (simp add: sched_context_unbind_ntfn_def get_sc_obj_ref_def)
+  apply (wpsimp simp: update_sk_obj_ref_def
+                  wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp get_sched_context_wp
+                      valid_ioports_lift)
+  apply (clarsimp simp: obj_at_def is_ntfn sc_ntfn_sc_at_def)
+  apply (frule sym_refs_ko_atD[where p=sc, rotated], fastforce simp: obj_at_def)
+  apply (frule sym_refs_ko_atD[where ko="Notification x" for x, rotated], fastforce simp: obj_at_def)
+  apply (erule delta_sym_refs)
+   apply (fastforce simp: obj_at_def refs_of_ntfn_def refs_of_simps split: if_splits)
+  by (fastforce split: if_split_asm ntfn.splits
+                dest!: symreftype_inverse'
+                 simp: obj_at_def get_refs_def2 refs_of_ntfn_def ntfn_q_refs_of_def image_iff refs_of_simps)
+
+lemma sched_context_unbind_all_tcbs_unbinds:
+  "\<lbrace>sc_at sc and K (sc \<noteq> idle_sc_ptr)\<rbrace>
+       sched_context_unbind_all_tcbs sc
+   \<lbrace>\<lambda>y a. obj_at (\<lambda>ko. \<exists>sc. (\<exists>n. ko = SchedContext sc n) \<and> sc_tcb sc = None) sc a\<rbrace>"
+  apply (clarsimp simp: sched_context_unbind_all_tcbs_def sched_context_unbind_tcb_def)
+  apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
+                  wp: set_object_at_obj3)
+  by (auto simp: obj_at_def)
+
+lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
+  "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s
+        \<and> cte_wp_at ((=) cap) sl s \<and> invs s
+        \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)
+        \<and> (is_arch_cap cap \<longrightarrow> pspace_aligned s \<and>
+                               valid_vspace_objs s \<and>
+                               valid_arch_state s)\<rbrace>
+     finalise_cap cap x
+   \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
+  apply (cases "is_arch_cap cap")
+   apply (clarsimp simp: is_cap_simps)
+   apply wp
    apply (clarsimp simp: replaceable_def reachable_pg_cap_def
                          o_def cap_range_def valid_arch_state_def
                          ran_tcb_cap_cases is_cap_simps
-(*
                          gen_obj_refs_subset vs_cap_ref_def)
-  apply ((cases cap;
-      simp add: replaceable_def reachable_pg_cap_def
-                       split del: if_split;
-      rule hoare_pre),
-
-    (wp suspend_unlive'[unfolded o_def]
-        suspend_final_cap[where sl=sl]
-        unbind_maybe_notification_not_bound
-        get_simple_ko_ko_at hoare_vcg_conj_lift
-        unbind_notification_valid_objs
-      | clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
-                       ran_tcb_cap_cases is_cap_simps
-                       cap_range_def prepare_thread_delete_def
-                       can_fast_finalise_def
-                       gen_obj_refs_subset
-                       vs_cap_ref_def
-                       valid_ipc_buffer_cap_def
-                dest!: tcb_cap_valid_NullCapD
-                split: Structures_A.thread_state.split_asm
-      | simp cong: conj_cong
-      | simp cong: rev_conj_cong add: no_cap_to_obj_with_diff_ref_Null
-      | (strengthen tcb_cap_valid_imp_NullCap tcb_cap_valid_imp', wp)
-      | rule conjI
-      | erule cte_wp_at_weakenE tcb_cap_valid_imp'[rule_format, rotated -1]
-      | erule(1) no_cap_to_obj_with_diff_ref_finalI_ARCH
-      | (wp_once hoare_drop_imps,
-          wp_once cancel_all_ipc_unlive[unfolded o_def]
-              cancel_all_signals_unlive[unfolded o_def])
-      | ((wp_once hoare_drop_imps)?,
-         (wp_once hoare_drop_imps)?,
-         wp_once deleting_irq_handler_empty)
-      | wpc
-      | simp add: valid_cap_simps is_nondevice_page_cap_simps)+)
+  apply (cases cap, simp_all add: replaceable_def reachable_pg_cap_def
+                       split del: if_split)
+               -- "NullCap"
+               apply (rule hoare_pre)
+                apply (wpsimp, clarsimp)
+              -- "untyped"
+              apply (wpsimp)
+              apply hammer
+             -- "endpoint"
+             apply wpsimp
+              apply hammer
+              apply ((wpsimp
+                   | hammer
+                   | (wp_once hoare_drop_imps,
+                      wp_once reply_unlink_sc_not_live'[unfolded o_def]
+                              cancel_all_ipc_unlive[unfolded o_def]
+                              cancel_all_signals_unlive[unfolded o_def]))+)[2]
+            -- "ntfn"
+            apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc
+                    | hammer
+                    | (wp_once hoare_drop_imps, wp_once reply_unlink_sc_not_live'[unfolded o_def]
+                            cancel_all_ipc_unlive[unfolded o_def]
+                            cancel_all_signals_unlive[unfolded o_def]))+)[1]
+           -- "reply"
+           apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc | hammer)+)[1]
+              apply (rule_tac t=y and s= "the (reply_tcb reply)" in subst, simp)
+              apply (wp_once hoare_drop_imps, rule hoare_vcg_conj_lift,
+                      wp_once cancel_ipc_unlive_reply'[unfolded o_def], hammer)
+             apply ((wpsimp | hammer)+)[1]
+             apply (wp_once hoare_drop_imps, rule hoare_vcg_conj_lift,
+                       wp_once reply_unlink_sc_not_live'[unfolded o_def], hammer)
+            apply (wpsimp wp: get_simple_ko_wp)
+           apply (auto simp: obj_at_def is_cap_simps ran_tcb_cap_cases valid_ipc_buffer_cap_def
+                             live_def live_reply_def vs_cap_ref_def no_cap_to_obj_with_diff_ref_Null
+                      intro: valid_NullCapD)[1]
+          --"Cnode"
+          apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc
+                 | hammer)+)[1]
+          apply (rule conjI)
+           apply (clarsimp simp: obj_at_def)
+           apply (case_tac ko; clarsimp simp: is_cap_table_def[split_simps kernel_object.split] live_def)
+          apply (rule conjI, clarsimp)
+           apply (erule tcb_cap_valid_imp'[rule_format, rotated -1])
+           apply hammer
+          apply hammer
+         -- "tcb"
+         apply ((wpsimp wp: suspend_final_cap suspend_unlive'[unfolded o_def] unbind_from_sc_bound_sc_tcb_at
+                            unbind_notification_valid_objs
+                 | hammer | rule conjI)+)[1]
+        -- "domain"
+        apply ((wpsimp | hammer)+)[1]
+       -- "schedcontext"
+       apply ((wpsimp wp: sched_context_clear_replies_clears sched_context_unbind_ntfn_unbinds
+                          sched_context_unbind_all_tcbs_unbinds
+        | hammer
+        | wp_once hoare_drop_imps, wp_once hoare_vcg_conj_lift,
+          wp_once sched_context_unbind_yield_from_not_live[unfolded o_def])+)[1]
+       apply (rule conjI, fastforce simp: obj_at_def)
+       subgoal sorry (* need to prove there are no caps to idle_sc_ptr *)
+      -- "schedcontrol"
+      apply ((wpsimp | hammer)+)[1]
+     -- "irqcontrol"
+     apply ((wpsimp | hammer)+)[1]
+    -- "irqhandler"
+    apply ((wpsimp | hammer)+)[1]
+   -- "zombie"
+   apply ((wpsimp | hammer)+)[1]
+  -- "arch"
+  apply (clarsimp simp: is_cap_simps)
   done
-*)
-                         gen_obj_refs_subset vs_cap_ref_def)+
-  apply (fastforce split: option.splits vmpage_size.splits)
-  done*) sorry
 
 lemma (* deleting_irq_handler_cte_preserved *)[Finalise_AI_asms]:
   assumes x: "\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap"
@@ -933,7 +1065,7 @@ context Arch begin global_naming ARM
 lemma fast_finalise_replaceable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s
      \<and> cte_wp_at ((=) cap) sl s \<and> valid_asid_table (arm_asid_table (arch_state s)) s
-     \<and> valid_mdb s \<and> valid_objs s \<and> sym_refs (state_refs_of s)\<rbrace>
+     \<and> invs s\<rbrace>
      fast_finalise cap x
    \<lbrace>\<lambda>rv s. cte_wp_at (replaceable s sl cap.NullCap) sl s\<rbrace>"
   apply (cases "cap_irqs cap = {}")

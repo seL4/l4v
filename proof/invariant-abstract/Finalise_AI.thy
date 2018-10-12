@@ -121,8 +121,8 @@ locale Finalise_AI_1 =
      \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref cap S\<rbrace>"
   assumes finalise_cap_replaceable:
     "\<And> cap x sl.
-    \<lbrace>\<lambda>(s :: 'a state). s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> valid_mdb s
-          \<and> cte_wp_at ((=) cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s)
+    \<lbrace>\<lambda>(s :: 'a state). s \<turnstile> cap \<and> x = is_final_cap' cap s
+          \<and> cte_wp_at ((=) cap) sl s \<and> invs s
           \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)
           \<and> (is_arch_cap cap \<longrightarrow> pspace_aligned s \<and>
                                  valid_vspace_objs s \<and>
