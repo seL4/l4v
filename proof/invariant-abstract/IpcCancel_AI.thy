@@ -863,7 +863,7 @@ lemma reply_unlink_tcb_invs_BlockedOnReply:
   done
 
 lemma reply_unlink_sc_sym_refs:
-  "\<lbrace>\<lambda>s. invs s \<and> sym_refs (state_refs_of s)\<rbrace> reply_unlink_sc scp rp
+  "\<lbrace>\<lambda>s. valid_objs s \<and> sym_refs (state_refs_of s)\<rbrace> reply_unlink_sc scp rp
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (wpsimp simp: reply_unlink_sc_def get_simple_ko_def get_object_def get_sched_context_def)
   apply (rename_tac sc n reply)
