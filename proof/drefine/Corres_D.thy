@@ -20,8 +20,7 @@ begin
 
 lemma truncate_state_unit[simp]: "truncate_state s = s" by simp
 
-lemma do_extended_return_unit[simp]: "do_extended_op f = (return () :: (unit, unit) s_monad)"
-  by (clarsimp simp: do_extended_op_def wrap_ext_op_unit_def mk_ef_def select_f_def bind_def get_def return_def modify_def put_def)
+declare dxo_noop[simp]
 
 lemma select_ext_select[simp]: "select_ext a S = (select S :: ('b, unit) s_monad)"
   by (rule ext)

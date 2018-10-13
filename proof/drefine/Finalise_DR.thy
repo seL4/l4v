@@ -16,8 +16,6 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-declare dxo_wp_weak[wp del]
-
 definition
  "transform_pd_slot_ref x
      = (x && ~~ mask pd_bits,
@@ -299,9 +297,8 @@ lemma caps_of_state_transform_opt_cap_no_idle:
   by (clarsimp simp: opt_cap_def transform_cslot_ptr_def
                         slots_of_def opt_object_def restrict_map_def
                         transform_def object_slots_def transform_objects_def
-                        valid_irq_node_def obj_at_def is_cap_table_def
+                        valid_irq_node_def obj_at_def is_cap_table_def tcb_cap_cases_def
                         transform_tcb_def tcb_slot_defs infer_tcb_bound_notification_def
-                        tcb_pending_op_slot_def tcb_cap_cases_def tcb_boundntfn_slot_def
                         bl_to_bin_tcb_cnode_index bl_to_bin_tcb_cnode_index_le0
                  split: if_split_asm option.splits)
 
@@ -402,7 +399,7 @@ lemma finalise_cancel_ipc:
                      apply (simp add: when_def dc_def[symmetric])
                      apply (rule set_thread_state_corres)
                     apply (wp sts_only_idle sts_st_tcb_at' valid_ep_queue_subset
-                        | clarsimp simp:not_idle_thread_def valid_simple_obj_def a_type_def)+
+                        | clarsimp simp:not_idle_thread_def a_type_def)+
           apply (simp add:get_blocking_object_def | wp)+
       apply (clarsimp dest!:get_tcb_rev simp:invs_def ep_at_def2[symmetric, simplified])
       apply (frule(1) valid_tcb_if_valid_state)
@@ -423,7 +420,7 @@ lemma finalise_cancel_ipc:
                     unfolding K_bind_def
                     apply (rule set_thread_state_corres)
                    apply (wp sts_only_idle sts_st_tcb_at' valid_ep_queue_subset
-                     | clarsimp simp:not_idle_thread_def valid_simple_obj_def a_type_def)+
+                     | clarsimp simp:not_idle_thread_def a_type_def)+
          apply (simp add:get_blocking_object_def | wp)+
      apply (clarsimp dest!:get_tcb_rev simp:invs_def ep_at_def2[symmetric, simplified])
      apply (frule(1) valid_tcb_if_valid_state)
@@ -435,7 +432,7 @@ lemma finalise_cancel_ipc:
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF _ thread_set_fault_corres])
          apply (rule corres_symb_exec_r)
-            apply (simp add:when_False revoke_cap_simple.simps )
+            apply (simp add: revoke_cap_simple.simps)
             apply (subst transform_tcb_slot_simp[symmetric])
             apply (rule dcorres_revoke_the_cap_corres)
            apply (wp thread_set_invs_trivial[OF ball_tcb_cap_casesI]
@@ -454,8 +451,7 @@ lemma finalise_cancel_ipc:
                unfolding K_bind_def
                apply (rule set_thread_state_corres)
               including no_pre
-              apply (wpsimp wp: set_simple_ko_valid_objs
-                  simp: valid_simple_obj_def not_idle_thread_def a_type_def)+
+              apply (wpsimp wp: set_simple_ko_valid_objs simp: not_idle_thread_def a_type_def)+
            apply (clarsimp simp:valid_def fail_def return_def split:Structures_A.ntfn.splits)+
            apply (clarsimp simp:invs_def ntfn_at_def2[symmetric, simplified])
            apply (frule(1) valid_tcb_if_valid_state)
@@ -631,17 +627,17 @@ lemma arch_obj_not_idle:
 
 lemma asid_pool_at_rev:
   "\<lbrakk> kheap s a = Some (ArchObj (arch_kernel_obj.ASIDPool fun)) \<rbrakk> \<Longrightarrow> asid_pool_at a s"
-  apply (clarsimp simp:obj_at_def valid_idle_def st_tcb_at_def)
-  apply (clarsimp simp:a_type_def
-    split:arch_kernel_obj.splits Structures_A.kernel_object.split_asm if_splits arch_kernel_object.splits)
-done
+  apply (clarsimp simp: obj_at_def valid_idle_def st_tcb_at_def)
+  apply (clarsimp simp: a_type_def
+                 split: arch_kernel_obj.splits Structures_A.kernel_object.split_asm if_splits)
+  done
 
 lemma asid_pool_not_idle:
   "\<lbrakk> valid_idle s; asid_pool_at a s \<rbrakk> \<Longrightarrow> not_idle_thread a s"
   apply (clarsimp simp:obj_at_def valid_idle_def pred_tcb_at_def)
   apply (clarsimp simp: not_idle_thread_def
-    split: if_splits arch_kernel_object.splits)
-done
+                 split: if_splits)
+  done
 
 lemma opt_object_asid_pool:
   "\<lbrakk> valid_idle s; kheap s a = Some (ArchObj (arch_kernel_obj.ASIDPool fun)) \<rbrakk> \<Longrightarrow>
@@ -841,37 +837,33 @@ lemma transform_cap_not_new_invented:
 lemma page_table_not_idle:
   "\<lbrakk>valid_idle s;page_table_at a s\<rbrakk> \<Longrightarrow> not_idle_thread a s"
   apply (clarsimp simp:obj_at_def valid_idle_def pred_tcb_at_def)
-  apply (clarsimp simp: not_idle_thread_def
-    split: if_splits arch_kernel_object.splits)
-done
+  apply (clarsimp simp: not_idle_thread_def split: if_splits)
+  done
 
 lemma page_directory_not_idle:
   "\<lbrakk>valid_idle s;page_directory_at a s\<rbrakk> \<Longrightarrow> not_idle_thread a s"
   apply (clarsimp simp:obj_at_def valid_idle_def pred_tcb_at_def)
-  apply (clarsimp simp: not_idle_thread_def
-    split: if_splits arch_kernel_object.splits)
-done
+  apply (clarsimp simp: not_idle_thread_def split: if_splits)
+  done
 
 lemma page_table_at_rev:
   "\<lbrakk>kheap s a = Some (ArchObj (arch_kernel_obj.PageTable fun))\<rbrakk> \<Longrightarrow> page_table_at a s"
   apply (clarsimp simp:obj_at_def valid_idle_def pred_tcb_at_def)
-  apply (clarsimp simp:a_type_def
-    split:arch_kernel_obj.splits Structures_A.kernel_object.split_asm if_splits arch_kernel_object.splits)
-done
+  apply (clarsimp simp:a_type_def split: if_splits)
+  done
 
 lemma page_directory_at_rev:
   "\<lbrakk>kheap s a = Some (ArchObj (arch_kernel_obj.PageDirectory fun))\<rbrakk> \<Longrightarrow> page_directory_at a s"
   apply (clarsimp simp:obj_at_def valid_idle_def st_tcb_at_def)
-  apply (clarsimp simp:a_type_def
-    split:arch_kernel_obj.splits Structures_A.kernel_object.split_asm if_splits arch_kernel_object.splits)
-done
+  apply (clarsimp simp:a_type_def split: if_splits)
+  done
 
 lemma mask_pd_bits_less':
   "uint ((ptr::word32) && mask pd_bits >> (2::nat)) < (4096::int)"
   apply (clarsimp simp:pd_bits_def pageBits_def)
   using shiftr_less_t2n'[where m = 12 and x ="(ptr && mask 14)" and n =2 ,simplified,THEN iffD1[OF word_less_alt]]
-  apply (clarsimp simp:mask_twice )
-done
+  apply (clarsimp simp:mask_twice)
+  done
 
 lemma mask_pd_bits_less:
   "nat (uint ((y::word32) && mask pd_bits >> 2)) < 4096"
@@ -1316,7 +1308,7 @@ lemma zip_map_eqv:
   "(y, x) \<in> set (zip (map g xs) (map f xs)) = (\<exists>t. (y = g t \<and> x = f t \<and> t \<in> set xs))"
   apply (clarsimp simp:zip_map1 zip_map2)
   apply (rule iffI)
-    apply fastforce
+   apply (fastforce simp: in_set_zip)
   apply (clarsimp simp:set_zip_same)
   using imageI[where f ="(\<lambda>(a, b). (a, f b)) \<circ> (\<lambda>(x, y). (g x, y))",simplified]
   apply clarify
@@ -1654,7 +1646,7 @@ lemma store_pde_non_sense_wp:
     \<and> (\<forall>slot\<in>set xs. f (ucast (slot && mask pd_bits >> 2)) = ARM_A.pde.InvalidPDE))\<rbrace>"
   apply (simp add:store_pde_def get_object_def get_pde_def set_pd_def set_object_def)
   apply wp
-  apply (clarsimp simp:obj_at_def split:Structures_A.kernel_object.splits arch_kernel_object.splits)
+  apply (clarsimp simp:obj_at_def split:Structures_A.kernel_object.splits)
   done
 
 lemma dcorres_store_invalid_pde_tail_super_section:
@@ -1692,11 +1684,9 @@ lemma store_pte_non_sense_wp:
   store_pte x ARM_A.pte.InvalidPTE
    \<lbrace>\<lambda>r s. (\<exists>f. ko_at (ArchObj (arch_kernel_obj.PageTable f)) (slot && ~~ mask pt_bits) s
     \<and> (\<forall>slot\<in>set xs. f (ucast (slot && mask pt_bits >> 2)) = ARM_A.pte.InvalidPTE))\<rbrace>"
-  apply (simp add:store_pte_def get_object_def
-    get_pte_def set_pt_def set_object_def)
+  apply (simp add:store_pte_def get_object_def get_pte_def set_pt_def set_object_def)
   apply wp
-  apply (clarsimp simp:obj_at_def
-    split:Structures_A.kernel_object.splits arch_kernel_object.splits)
+  apply (clarsimp simp:obj_at_def split: Structures_A.kernel_object.splits)
   done
 
 lemma dcorres_store_invalid_pte_tail_large_page:
@@ -1759,21 +1749,19 @@ lemma dcorres_unmap_large_section:
      (delete_cap_simple (cdl_lookup_pd_slot ptr v))
      (mapM (swp store_pde ARM_A.pde.InvalidPDE)
            (map (\<lambda>x. x + lookup_pd_slot ptr v) [0 , 4 .e. 0x3C]))"
-  supply is_aligned_neg_mask_eq[simp del]
-         is_aligned_neg_mask_weaken[simp del]
+  supply is_aligned_neg_mask_eq[simp del] is_aligned_neg_mask_weaken[simp del]
   apply (subst mapM_Cons_split)
    apply (simp add:upto_enum_step_def upto_enum_def)
   apply (simp add:store_pte_def PageTableUnmap_D.unmap_page_def)
   apply (rule corres_dummy_return_l)
-  apply (simp add:upto_enum_step_def transform_pt_slot_ref_def
-    upto_enum_def hd_map_simp dcorres_lookup_pd_slot)+
+  apply (simp add: upto_enum_step_def transform_pt_slot_ref_def upto_enum_def hd_map_simp
+                   dcorres_lookup_pd_slot)+
   apply (rule corres_guard_imp)
     apply (simp add:transform_pd_slot_ref_def)
     apply (rule corres_dummy_return_l)
     apply (rule corres_split[OF _ dcorres_store_invalid_pde_super_section[where pg_id = pg_id]])
       apply(rule corres_dummy_return_l)
-      apply (rule_tac r'=dc
-         in corres_split[OF corres_free_return[where P=\<top> and P'=\<top>]])
+      apply (rule_tac r'=dc in corres_split[OF corres_free_return[where P=\<top> and P'=\<top>]])
         apply (rule dcorres_store_invalid_pde_tail_super_section[where slot = ptr])
        apply wp+
     apply (wp store_pde_non_sense_wp)
@@ -1782,34 +1770,35 @@ lemma dcorres_unmap_large_section:
   apply (rule conjI)
    apply (rule less_kernel_base_mapping_slots)
     apply (simp add:pd_bits_def pageBits_def)+
-  apply (rule conjI,fastforce) \<comment> \<open>valid_idle\<close>
+  apply (rule conjI, fastforce) \<comment> \<open>valid_idle\<close>
   apply (rule conj_comms[THEN iffD1])
   apply (rule context_conjI)
-   apply (clarsimp simp:tl_map field_simps)
+   apply (clarsimp simp: tl_map tl_upt)
+   apply (clarsimp simp: field_simps)
    apply (subst mask_lower_twice[symmetric,where n = 6])
     apply (simp add:pd_bits_def pageBits_def)
-    apply (subst is_aligned_add_helper)
+   apply (subst is_aligned_add_helper)
      apply (erule(1) lookup_pd_slot_aligned_6)
     apply (simp add:upto_0_to_n)
     apply (rule word_less_power_trans_ofnat[where k = 2 and m = 6,simplified])
      apply simp
     apply simp
-   apply (simp add:lookup_pd_slot_def is_aligned_neg_mask_eq
-     pd_shifting[unfolded pd_bits_def pageBits_def,simplified])
+   apply (simp add: lookup_pd_slot_def is_aligned_neg_mask_eq
+                    pd_shifting[unfolded pd_bits_def pageBits_def,simplified])
   apply (clarsimp simp:pd_super_section_relation_def obj_at_def)
-  apply (simp add:lookup_pd_slot_pd[unfolded pd_bits_def pageBits_def,simplified]
-     is_aligned_neg_mask_eq
-     pd_shifting[unfolded pd_bits_def pageBits_def,simplified])
-  apply (rule ballI)
-  apply (drule(1) bspec)
-  apply (clarsimp simp:tl_map field_simps upto_0_to_n)
+  apply (simp add: lookup_pd_slot_pd[unfolded pd_bits_def pageBits_def,simplified]
+                   is_aligned_neg_mask_eq pd_shifting[unfolded pd_bits_def pageBits_def,simplified])
+  apply (rule ballI, drule (1) bspec)
+  supply is_aligned_neg_mask2[simp del]
+  apply (clarsimp simp: upto_0_to_n tl_map)
+  apply (frule (1) lookup_pd_slot_aligned_6[unfolded pd_bits_def pageBits_def,simplified])
   apply (drule(1) valid_pdpt_objs_pdD)
   apply clarsimp
-  apply (frule(1) lookup_pd_slot_aligned_6[unfolded pd_bits_def pageBits_def,simplified])
+  apply (frule (1) lookup_pd_slot_aligned_6[unfolded pd_bits_def pageBits_def,simplified])
   apply (rename_tac pd rights attr ref s slot)
   apply (drule_tac x = "(ucast (lookup_pd_slot ptr v + of_nat slot * 4 && mask pd_bits >> 2))"
-    and y = "ucast (lookup_pd_slot ptr v && mask pd_bits >> 2)"
-    in valid_entriesD[rotated])
+               and y = "ucast (lookup_pd_slot ptr v && mask pd_bits >> 2)"
+                in valid_entriesD[rotated])
    apply (rule ccontr)
    apply simp
    apply (drule_tac x="ucast v" for v in arg_cong[where f = "ucast::(12 word\<Rightarrow>word32)"])
@@ -1827,14 +1816,14 @@ lemma dcorres_unmap_large_section:
    apply (simp add:shiftr_shiftl1)
    apply (subst (asm) is_aligned_neg_mask_eq[where n = 2])
     apply (erule is_aligned_andI1[OF aligned_add_aligned])
-     apply (simp add:shiftl_t2n[symmetric,where n =2,
-       simplified field_simps,simplified] is_aligned_shiftl_self)
+     apply (simp add: shiftl_t2n[symmetric,where n =2, simplified field_simps,simplified]
+                      is_aligned_shiftl_self)
     apply simp
    apply (subst (asm) is_aligned_neg_mask_eq[where n = 2])
     apply (erule is_aligned_andI1[OF is_aligned_weaken])
     apply simp
    apply (subst (asm) and_mask_plus)
-       apply (erule(1) lookup_pd_slot_aligned_6)
+       apply (erule lookup_pd_slot_aligned_6, simp)
       apply (simp add:pd_bits_def pageBits_def)+
     apply (simp add:shiftl_t2n[symmetric,where n =2,simplified field_simps,simplified])
     apply (rule shiftl_less_t2n[where m = 6,simplified])
@@ -1849,9 +1838,9 @@ lemma dcorres_unmap_large_section:
    apply fastforce
   apply (rule ccontr)
   apply (erule_tac x = "ucast (lookup_pd_slot ptr v + of_nat slot * 4 && mask pd_bits >> 2)"
-    in in_empty_interE)
+                   in in_empty_interE)
    apply (rule non_invalid_in_pde_range)
-   apply (simp add:pd_bits_def pageBits_def)
+   apply (simp add: pd_bits_def pageBits_def field_simps)
   apply (simp add: ucast_neg_mask)
   apply (simp add:is_aligned_shiftr)
   apply (rule arg_cong[where f = ucast])
@@ -1889,27 +1878,25 @@ lemma dcorres_unmap_large_page:
    apply (simp add:upto_enum_step_def upto_enum_def)
   apply (simp add: PageTableUnmap_D.unmap_page_def)
   apply (rule corres_dummy_return_l)
-  apply (simp add:upto_enum_step_def transform_pt_slot_ref_def
-    upto_enum_def hd_map_simp)+
+  apply (simp add:upto_enum_step_def transform_pt_slot_ref_def upto_enum_def hd_map_simp)+
   apply (rule corres_guard_imp)
     apply(rule corres_dummy_return_l)
     apply (rule corres_split[OF _ dcorres_store_invalid_pte[where pg_id = pg_id]])
       apply(rule corres_dummy_return_l)
-      apply (rule_tac r'=dc
-         in corres_split[OF corres_free_return[where P=\<top> and P'=\<top>]])
+      apply (rule_tac r'=dc in corres_split[OF corres_free_return[where P=\<top> and P'=\<top>]])
         apply (rule dcorres_store_invalid_pte_tail_large_page[where slot = ptr])
-        apply wp+
-      apply (wp store_pte_non_sense_wp)
-     apply simp
+       apply wp+
+    apply (wp store_pte_non_sense_wp)
+   apply simp
   apply (clarsimp simp:unat_def pt_page_relation_univ)
   apply (rule conjI,fastforce)
   apply (rule conj_comms[THEN iffD1])
   apply (rule context_conjI)
-    apply (clarsimp simp:tl_map drop_map)
-    apply (simp add:field_simps)
-    apply (subst mask_lower_twice[symmetric,where n = 6])
-     apply (simp add:pt_bits_def pageBits_def)
-    apply (subst is_aligned_add_helper)
+   apply (clarsimp simp:tl_map drop_map tl_upt)
+   apply (simp add:field_simps)
+   apply (subst mask_lower_twice[symmetric,where n = 6])
+    apply (simp add:pt_bits_def pageBits_def)
+   apply (subst is_aligned_add_helper)
      apply simp
     apply (simp add:upto_0_to_n)
     apply (rule word_less_power_trans_ofnat[where k = 2 and m = 6,simplified])
@@ -1922,8 +1909,8 @@ lemma dcorres_unmap_large_page:
   apply (simp add: field_simps)
   apply (drule(1) valid_pdpt_objs_ptD,clarify)
   apply (drule_tac x = "(ucast (ptr + of_nat x * 4 && mask pt_bits >> 2))"
-    and y = "ucast (ptr && mask pt_bits >> 2)"
-    in valid_entriesD[rotated])
+               and y = "ucast (ptr && mask pt_bits >> 2)"
+                in valid_entriesD[rotated])
    apply (rule ccontr)
    apply simp
    apply (drule_tac x="ucast v" for v in arg_cong[where f = "ucast::(word8\<Rightarrow>word32)"])
@@ -1941,8 +1928,8 @@ lemma dcorres_unmap_large_page:
    apply (simp add:shiftr_shiftl1)
    apply (subst (asm) is_aligned_neg_mask_eq[where n = 2])
     apply (erule is_aligned_andI1[OF aligned_add_aligned])
-     apply (simp add:shiftl_t2n[symmetric,where n =2,
-       simplified field_simps,simplified] is_aligned_shiftl_self)
+     apply (simp add: shiftl_t2n[symmetric, where n=2, simplified field_simps, simplified]
+                      is_aligned_shiftl_self)
     apply simp
    apply (subst (asm) is_aligned_neg_mask_eq[where n = 2])
     apply (erule is_aligned_andI1[OF is_aligned_weaken])
@@ -1961,23 +1948,22 @@ lemma dcorres_unmap_large_page:
      apply fastforce
     apply simp
    apply fastforce
-  apply (clarsimp split:if_splits
-    ARM_A.pte.split_asm)
-  apply (rule ccontr)
-  apply (erule_tac x = "ucast (ptr + of_nat x * 4 && mask pt_bits >> 2)"
-    in in_empty_interE)
-   apply (rule non_invalid_in_pte_range)
-   apply simp
-  apply (simp add: ucast_neg_mask)
-  apply (rule arg_cong[where f = ucast])
-  apply (rule shiftr_eq_neg_mask_eq)
-  apply (simp add:shiftr_shiftr shiftr_over_and_dist)
-  apply (subst aligned_shift')
-     apply (simp add:shiftl_t2n[symmetric,where n =2,simplified field_simps,simplified])
-     apply (rule shiftl_less_t2n[where m = 6,simplified])
-      apply (simp add:word_of_nat_less)
-     apply simp+
-done
+  apply (clarsimp split:if_splits pte.split_asm)
+   apply (rule ccontr)
+   apply (erule_tac x = "ucast (ptr + of_nat x * 4 && mask pt_bits >> 2)" in in_empty_interE)
+    apply (rule non_invalid_in_pte_range)
+    apply simp
+   apply (simp add: ucast_neg_mask)
+   apply (rule arg_cong[where f = ucast])
+   apply (rule shiftr_eq_neg_mask_eq)
+   apply (simp add:shiftr_shiftr shiftr_over_and_dist)
+   apply (subst aligned_shift')
+      apply (simp add:shiftl_t2n[symmetric,where n =2,simplified field_simps,simplified])
+      apply (rule shiftl_less_t2n[where m = 6,simplified])
+       apply (simp add:word_of_nat_less)
+      apply (simp+)[4]
+  apply (simp add: is_aligned_shiftr)
+  done
 
 end
 
@@ -2722,8 +2708,7 @@ where "remainder_cap final c\<equiv> case c of
 
 lemma finalise_cap_remainder:
   "\<lbrace>\<top>\<rbrace>CSpace_A.finalise_cap cap final \<lbrace>\<lambda>r s. fst (r) = (remainder_cap final cap) \<rbrace>"
-  apply (case_tac cap)
-    apply (simp_all add:CSpace_A.finalise_cap.simps remainder_cap_def)
+  apply (case_tac cap; simp add: remainder_cap_def)
              apply (wp|clarsimp)+
             apply (fastforce simp:valid_def)
            apply (simp add: liftM_def |clarify)+
@@ -2806,7 +2791,7 @@ lemma zombie_cap_has_all:
   apply (clarsimp simp:valid_cap_def tcb_at_def dest!:get_tcb_SomeD)
   apply (drule_tac p = "(interrupt_irq_node s word,[])" in caps_of_state_cteD)
   apply (clarsimp simp:cte_wp_at_cases)
-  apply (clarsimp simp:obj_at_def is_tcb_def tcb_cap_cases_def tcb_cnode_index_def to_bl_1 split:if_splits)
+  apply (clarsimp simp:obj_at_def tcb_cap_cases_def tcb_cnode_index_def to_bl_1 split:if_splits)
   apply (drule valid_globals_irq_node[OF _ caps_of_state_cteD])
    apply simp
   apply (fastforce simp:cap_range_def)
@@ -3276,8 +3261,8 @@ lemma cutMon_validE_R_drop:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> cutMon R f \<lbrace>Q\<rbrace>,-"
   by (simp add: validE_R_def validE_def cutMon_valid_drop)
 
-crunch idle_thread [wp]: cap_swap_for_delete "\<lambda>s. P (idle_thread s)"
-(wp: dxo_wp_weak)
+crunch idle_thread [wp]: cap_swap_for_delete "\<lambda>s::'a::state_ext state. P (idle_thread s)"
+  (wp: dxo_wp_weak)
 
 crunch idle_thread [wp]: finalise_cap "\<lambda>s. P (idle_thread s)"
  (wp: crunch_wps simp: crunch_simps)
@@ -3288,12 +3273,10 @@ lemma preemption_point_idle_thread[wp]: "\<lbrace> \<lambda>s. P (idle_thread s)
   done
 
 lemma rec_del_idle_thread[wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> rec_del args \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> rec_del args \<lbrace>\<lambda>rv s::'a::state_ext state. P (idle_thread s)\<rbrace>"
   by (wp rec_del_preservation | simp)+
 
-lemma gets_constant:
-  "gets (\<lambda>_. x) = return x"
-  by (simp add: return_def simpler_gets_def)
+lemmas gets_constant = gets_to_return
 
 lemma monadic_rewrite_gets_the_gets:
   "monadic_rewrite F E (\<lambda>s. f s \<noteq> None) (gets_the f) (gets (the o f))"

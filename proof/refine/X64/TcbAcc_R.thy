@@ -2283,11 +2283,6 @@ lemma thread_get_isRunnable_corres: "corres (=) (tcb_at t) (tcb_at' t) (thread_g
   apply (case_tac "tcb_state x",simp_all)
   done
 
-
-lemma corres_return_trivial: "corres_underlying srel nf' nf dc \<top> \<top> (return a) (return b)"
-  apply (simp add: corres_underlying_def return_def)
-  done
-
 lemma sts_corres:
   "thread_state_relation ts ts' \<Longrightarrow>
    corres dc

@@ -540,7 +540,7 @@ lemma get_irq_slot_ex_cte_cap_wp_to:
   apply clarsimp
   done
 
-crunch is_original[wp] : fast_finalise "\<lambda>s. is_original_cap s slot"
+crunch is_original[wp] : fast_finalise "\<lambda>s::'z::state_ext state. is_original_cap s slot"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps)
 
 lemma cap_delete_one_original:
@@ -564,6 +564,7 @@ lemma cte_wp_at_neq_slot_set_cap:
 lemma cte_wp_at_neq_slot_cap_delete_one:
   "slot\<noteq> slot' \<Longrightarrow> \<lbrace>cte_wp_at P slot\<rbrace> cap_delete_one slot'
             \<lbrace>\<lambda>rv. cte_wp_at P slot\<rbrace>"
+  supply send_signal_interrupt_states [wp_unsafe del] validNF_prop [wp_unsafe del]
   apply (clarsimp simp:cap_delete_one_def unless_def)
   apply (wp hoare_when_wp)
       apply (clarsimp simp:empty_slot_def)
@@ -624,7 +625,7 @@ lemma dcorres_invoke_irq_handler:
      apply (wp get_irq_slot_not_idle_wp get_irq_slot_ex_cte_cap_wp_to)
      apply (wp get_irq_slot_different get_irq_slot_not_idle_wp)
     apply simp+
-   apply (clarsimp simp:invs_valid_idle invs_irq_node interrupt_derived_def)
+   apply (clarsimp simp:invs_valid_idle interrupt_derived_def)
    apply (frule_tac p = "(a,b)" in if_unsafe_then_capD)
      apply clarsimp+
     apply (clarsimp simp: cte_wp_at_caps_of_state invs_valid_global_refs is_cap_simps

@@ -434,9 +434,6 @@ lemma transform_full_intent_kheap_update_eq:
   "\<lbrakk> q \<noteq> u' \<rbrakk> \<Longrightarrow> transform_full_intent (machine_state (s\<lparr>kheap := kheap s(u' \<mapsto> x')\<rparr>)) q = transform_full_intent (machine_state s) q"
   by simp
 
-(* Various WP rules. *)
-crunch tcb_at [wp]: "IpcCancel_A.suspend" "tcb_at t" (wp: set_cap_tcb)
-
 (* Suspend functions correspond. *)
 lemma suspend_corres:
   "dcorres dc \<top> (tcb_at obj_id and not_idle_thread obj_id and invs and valid_etcbs)
@@ -644,7 +641,7 @@ lemma invoke_tcb_corres_write_regs:
             apply (clarsimp simp: when_def)
             apply (clarsimp simp: dc_def, rule restart_corres [unfolded dc_def])
            apply (clarsimp simp: when_def)
-          apply (wpsimp wp: hoare_when_wp restart_invs')+
+          apply (wpsimp wp: hoare_when_wp)+
          apply (rule corrupt_tcb_intent_as_user_corres)
         apply (wp wp_post_taut | simp add:invs_def valid_state_def | fastforce)+
   done
@@ -692,8 +689,9 @@ lemma invoke_tcb_corres_copy_regs_loop:
      apply (wp|simp)+
   done
 
-crunch idle_thread_constant [wp]: "Tcb_A.restart", "IpcCancel_A.suspend" "\<lambda>s. P (idle_thread s)"
-(wp: dxo_wp_weak)
+crunch idle_thread_constant[wp]:
+  "Tcb_A.restart", "IpcCancel_A.suspend" "\<lambda>s::'z::state_ext state. P (idle_thread s)"
+  (wp: dxo_wp_weak)
 
 lemma not_idle_after_restart [wp]:
   "\<lbrace>invs and not_idle_thread obj_id' :: det_state \<Rightarrow> bool\<rbrace> Tcb_A.restart obj_id'
@@ -776,7 +774,7 @@ lemma invoke_tcb_corres_copy_regs:
          apply (rule corres_alternate2)
          apply (rule corres_free_return [where P="\<top>" and P'="\<top>"])
         apply (wp wp_post_taut)
-       apply (clarsimp simp:conj_comms pred_conj_def split del: if_splits cong: if_cong)
+       apply (clarsimp simp:conj_comms pred_conj_def cong: if_cong)
        apply (wpsimp simp: not_idle_thread_def | rule conjI | strengthen invs_cur)+
       apply (rule corres_cases [where R="a"])
        apply (clarsimp simp: when_def)
@@ -786,7 +784,7 @@ lemma invoke_tcb_corres_copy_regs:
       apply (rule corres_alternate2)
       apply (rule corres_free_return [where P="\<top>" and P'="\<top>"])
      apply clarsimp
-    apply (clarsimp simp:conj_comms pred_conj_def split del: if_splits cong: if_cong)
+    apply (clarsimp simp:conj_comms pred_conj_def cong: if_cong)
     apply (clarsimp simp:not_idle_thread_def invs_valid_objs dest!: idle_no_ex_cap
            | wp suspend_nonz_cap_to_tcb | rule conjI |strengthen invs_cur)+
   done
@@ -946,8 +944,6 @@ lemma dcorres_tcb_empty_slot:
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   done
 
-crunch valid_etcbs[wp]: cap_delete "valid_etcbs"
-
 lemma dcorres_idempotent_as_user_strong:
   assumes prem: "\<And>tcb ms ref etcb P.
                  \<lbrace> \<lambda>cxt. P (transform_tcb ms ref (tcb\<lparr>tcb_arch:=arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>) etcb)\<rbrace>
@@ -969,7 +965,7 @@ lemma dcorres_idempotent_as_user_strong:
 
 lemma TPIDRURW_notin_msg_registers[simp]:
  "TPIDRURW \<notin> set msg_registers"
-  apply (auto simp: msgRegisters_def frameRegisters_def gpRegisters_def ARM.msgRegisters_def
+  apply (auto simp: msgRegisters_def frameRegisters_def gpRegisters_def
                     syscallMessage_def exceptionMessage_def msg_registers_def)
   apply (rule ccontr)
   apply clarsimp
@@ -1610,8 +1606,7 @@ lemma invoke_tcb_corres_thread_control:
    apply (clarsimp simp del:split_paired_All split:option.splits)
   apply clarsimp
   apply (drule ex_cte_cap_wp_to_not_idle)+
-      apply (clarsimp simp:invs_def valid_state_def valid_pspace_def)+
-  done
+      by (clarsimp simp:invs_def valid_state_def valid_pspace_def)+
 
 lemma invoke_tcb_corres_suspend:
   "\<lbrakk> t' = tcb_invocation.Suspend obj_id';

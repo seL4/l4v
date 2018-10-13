@@ -3420,4 +3420,8 @@ proof -
   thus ?thesis by (rule rtrancl_mono)
 qed
 
+lemma max_ipc_length_unfold:
+  "max_ipc_length = 128"
+  by (simp add: max_ipc_length_def cap_transfer_data_size_def msg_max_length_def msg_max_extra_caps_def)
+
 end

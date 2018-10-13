@@ -381,7 +381,7 @@ lemma nat2p: "nat (2^(x::nat)) = 2^(x::nat)"
 
 lemma nat_to_bl_to_bin:
   "nat_to_bl bits n = Some xs \<Longrightarrow> n = nat (bl_to_bin xs)"
-  by (clarsimp simp:nat_to_bl_def bin_bl_bin' bintrunc_mod2p)
+  by (clarsimp simp:nat_to_bl_def bin_bl_bin' bintrunc_mod2p split: if_split_asm)
 
 lemma cap_counts_inv:
 assumes "\<And>cap. P cap\<Longrightarrow> cap_counts cap"
@@ -396,8 +396,7 @@ shows "\<lbrakk>opt_cap_wp_at P slot (transform s);valid_objs s; valid_etcbs s\<
        apply (frule assms)
        apply (clarsimp simp: cte_wp_at_cases transform_object_def transform_tcb_def
                              tcb_pending_op_slot_def tcb_boundntfn_slot_def
-                       split: Structures_A.kernel_object.splits nat.splits
-                              arch_kernel_object.splits if_splits
+                       split: Structures_A.kernel_object.splits nat.splits if_splits
               | drule(1) valid_etcbs_tcb_etcb)+
          apply (clarsimp simp: cap_counts_def infer_tcb_bound_notification_def split:option.splits)
              apply (clarsimp simp:cap_counts_def infer_tcb_pending_op_def split:Structures_A.thread_state.splits nat.splits)
@@ -589,7 +588,7 @@ lemma get_object_corres:
   apply (clarsimp simp: opt_object_def transform_def transform_objects_def
                         not_idle_thread_def obj_at_def)
   apply (clarsimp simp: transform_object_def
-                 split: Structures_A.kernel_object.split)
+                 split: Structures_A.kernel_object.splits)
   done
 
 lemma nat_to_bl_id2:
@@ -668,8 +667,7 @@ lemma get_ipc_buffer_words_caps_cong:
         cap_rights (tcb_ipcframe tcb) = cap_rights (tcb_ipcframe tcb')\<rbrakk>
   \<Longrightarrow> get_ipc_buffer_words ms tcb ns = get_ipc_buffer_words ms tcb' ns"
   apply (clarsimp simp: get_ipc_buffer_words_def is_cap_simps)
-  apply (auto split: cap.splits arch_cap.splits)
-  done
+  by (auto split: cap.splits arch_cap.splits)
 
 lemma transform_full_intent_caps_cong:
   "\<lbrakk> arch_tcb_context_get (tcb_arch tcb) = arch_tcb_context_get (tcb_arch tcb');
@@ -702,9 +700,8 @@ lemma transform_full_intent_same_cap:
     apply simp
    apply (simp add: is_cap_simps)
    apply (cases "tcb_ipcframe tcb", simp_all)
-              apply (simp add:transform_cap_def is_cap_simps
-                          split:cap.splits if_split_asm arch_cap.splits)+
-  done
+              by (simp add:transform_cap_def is_cap_simps
+                     split:cap.splits if_split_asm arch_cap.splits)+
 
 lemma set_cap_corres:
 assumes "cap = transform_cap cap'"  "slot = transform_cslot_ptr slot'"
@@ -786,10 +783,9 @@ proof -
   apply (simp add: bl_to_bin_tcb_cnode_index tcb_slot_defs)
   apply (rule conjI)
    apply (clarsimp simp: bl_to_bin_tcb_cnode_index)
-  apply (rule conjI ext dcorres_set_object_tcb|simp|
+  by (rule conjI ext dcorres_set_object_tcb|simp|
          clarsimp simp: transform_tcb_def tcb_slot_defs corres_free_fail
                   cong: transform_full_intent_caps_cong_weak)+
-  done
 qed
 
 lemma tcb_slot_pending_ipc_neq [simp]:
@@ -1620,14 +1616,13 @@ done
 lemma ep_not_waiting_ntfn:
   "\<lbrakk> valid_objs s;kheap s epptr = Some (kernel_object.Endpoint ep) \<rbrakk>
        \<Longrightarrow> ntfn_waiting_set epptr s = {}"
-   apply (rule set_eqI)
-   apply (clarsimp simp:ntfn_waiting_set_def)
-   apply (simp add:valid_objs_def)
-   apply (drule_tac x= x in bspec)
-     apply (clarsimp simp:dom_def)
-   apply (clarsimp simp:valid_obj_def valid_tcb_def valid_tcb_state_def obj_at_def is_ntfn_def
-     split:Structures_A.kernel_object.splits)
-done
+  apply (rule set_eqI)
+  apply (clarsimp simp:ntfn_waiting_set_def)
+  apply (simp add:valid_objs_def)
+  apply (drule_tac x= x in bspec)
+   apply (clarsimp simp:dom_def)
+  by (clarsimp simp:valid_obj_def valid_tcb_def valid_tcb_state_def obj_at_def is_ntfn_def
+              split:Structures_A.kernel_object.splits)
 
 
 (* Following 2 lemmas is useful, it tells us that under certain condition, we can get valid_ep and valid_ntfn,
@@ -2199,11 +2194,12 @@ lemma fast_finalise_recv_ep:
      apply (drule get_tcb_rev)+
      apply  (clarsimp simp:lift_simp not_idle_thread_def)
      apply (drule(1) valid_etcbs_get_tcb_get_etcb)+
-     apply (auto simp: transform_tcb_def remove_pending_operation_def infer_tcb_pending_op_def restrict_map_def tcb_slots infer_tcb_bound_notification_def
-                            map_add_def is_tcb get_tcb_def get_etcb_def is_etcb_at_def
-                      cong: transform_full_intent_cong split: option.splits)[1]
+     apply (auto simp: transform_tcb_def remove_pending_operation_def infer_tcb_pending_op_def
+                       restrict_map_def tcb_slots infer_tcb_bound_notification_def
+                       map_add_def get_tcb_def get_etcb_def is_etcb_at_def is_tcb
+                 cong: transform_full_intent_cong split: option.splits)[1]
     apply (clarsimp simp:not_idle_thread_def | wp)+
-    apply (frule_tac a = "idle_thread s" in pending_thread_in_recv_not_idle)
+    apply (frule_tac pending_thread_in_recv_not_idle)
        apply (simp add:not_idle_thread_def)+
   apply (frule ep_not_idle)
    apply (fastforce simp:obj_at_def is_ep_def)
@@ -2617,7 +2613,7 @@ lemma unbind_maybe_notification_valid_state[wp]:
                              live_def hyp_live_def a_type_def))
   apply (clarsimp simp: if_split)
   apply (rule delta_sym_refs, assumption)
-   apply (fastforce simp: obj_at_def is_tcb
+   apply (fastforce simp: obj_at_def
                    dest!: pred_tcb_at_tcb_at ko_at_state_refs_ofD
                    split: if_split_asm)
   apply (clarsimp split: if_split_asm)

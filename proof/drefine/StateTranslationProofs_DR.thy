@@ -83,7 +83,8 @@ done
 
 lemma msg_registers_lt_msg_max_length [simp]:
   "length msg_registers < msg_max_length"
-  by (simp add: msgRegisters_unfold msg_max_length_def)
+  by (simp add: msg_registers_def msgRegisters_def upto_enum_def
+                fromEnum_def enum_register msg_max_length_def)
 
 lemma get_tcb_mrs_update_state :
   "get_tcb_mrs ms (tcb_state_update f tcb) = get_tcb_mrs ms tcb"
@@ -277,12 +278,9 @@ proof -
     done
   show ?thesis
     apply (simp add: map_lift_over_def Q del: inj_on_insert)
-    apply (safe intro!: ext)
-     apply (simp_all add: Q[THEN inv_into_f_f] domI
-                cong del: imp_cong)
-    apply (auto simp add: Q[THEN inv_into_f_f] domI
-                          inj_on_eq_iff[OF inj_f] ranI
-                simp del: inj_on_insert)
+    apply (safe; rule ext; simp add: Q[THEN inv_into_f_f] domI cong del: imp_cong)
+     apply (auto simp add: Q[THEN inv_into_f_f] domI inj_on_eq_iff[OF inj_f] ranI
+                 simp del: inj_on_insert)
     done
 qed
 

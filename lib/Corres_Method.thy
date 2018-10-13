@@ -40,15 +40,6 @@ method no_schematic_concl = (fails \<open>rule my_true\<close>)
 
 end
 
-lemma corres_name_pre:
-  "\<lbrakk> \<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk>
-                 \<Longrightarrow> corres_underlying sr nf nf' r ((=) s) ((=) s') f g \<rbrakk>
-        \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
-  apply (simp add: corres_underlying_def split_def
-                   Ball_def)
-  apply blast
-  done
-
 definition
   "corres_underlyingK sr nf nf' F r Q Q' f g \<equiv>
     F \<longrightarrow> corres_underlying sr nf nf' r Q Q' f g"

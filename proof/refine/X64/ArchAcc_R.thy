@@ -1134,15 +1134,6 @@ lemma lookup_pml4_slot_corres [simp]:
   "lookupPML4Slot pml4 vptr = lookup_pml4_slot pml4 vptr"
   by (simp add: lookupPML4Slot_def lookup_pml4_slot_def bit_simps)
 
-lemma corres_name_pre:
-  "\<lbrakk> \<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
-                 \<Longrightarrow> corres rvr ((=) s) ((=) s') f g \<rbrakk>
-        \<Longrightarrow> corres rvr P P' f g"
-  apply (simp add: corres_underlying_def split_def
-                   Ball_def)
-  apply blast
-  done
-
 defs checkPML4At_def:
   "checkPML4At pd \<equiv> stateAssert (page_map_l4_at' pd) []"
 

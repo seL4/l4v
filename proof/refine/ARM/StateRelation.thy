@@ -551,10 +551,6 @@ where
        | PageTableObj     \<Rightarrow> PageTableObject
        | PageDirectoryObj \<Rightarrow> PageDirectoryObject)"
 
-lemma get_tcb_at: "tcb_at t s \<Longrightarrow> (\<exists>tcb. get_tcb t s = Some tcb)"
-  by (simp add: tcb_at_def)
-
-
 definition
   state_relation :: "(det_state \<times> kernel_state) set"
 where

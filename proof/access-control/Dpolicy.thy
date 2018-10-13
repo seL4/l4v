@@ -306,6 +306,10 @@ where
     cdl_cap.UntypedCap _ _ _ \<Rightarrow> True
   | _ \<Rightarrow> False"
 
+lemma valid_sched_etcbs[elim]:
+  "valid_sched s \<Longrightarrow> valid_etcbs s"
+  by (simp add: valid_sched_def)
+
 lemma caps_of_state_transform_opt_cap_rev:
   "\<lbrakk> einvs s; opt_cap ptr (transform s) = Some cap;
      is_real_cap cap; \<not> is_thread_state_cap cap; \<not> is_null_cap cap; \<not> is_bound_ntfn_cap cap \<rbrakk> \<Longrightarrow>

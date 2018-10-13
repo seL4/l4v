@@ -1154,4 +1154,53 @@ lemma (in strengthen_implementation) wpfix_strengthen_corres_guard_imp:
 lemmas wpfix_strengthen_corres_guard_imp[wp_fix_strgs]
     = strengthen_implementation.wpfix_strengthen_corres_guard_imp
 
+lemma corres_name_pre:
+  "\<lbrakk> \<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk>
+                 \<Longrightarrow> corres_underlying sr nf nf' r ((=) s) ((=) s') f g \<rbrakk>
+        \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  apply (simp add: corres_underlying_def split_def
+                   Ball_def)
+  apply blast
+  done
+
+lemma corres_return_trivial:
+  "corres_underlying srel nf' nf dc \<top> \<top> (return a) (return b)"
+  by (simp add: corres_underlying_def return_def)
+
+lemma mapME_x_corres_same_xs:
+  assumes x: "\<And>x. x \<in> set xs
+      \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> dc) (P x) (P' x) (m x) (m' x)"
+  assumes y: "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>y \<in> set xs. P y s\<rbrace> m x \<lbrace>\<lambda>_ s. \<forall>y \<in> set xs. P y s\<rbrace>,-"
+             "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>y \<in> set xs. P' y s\<rbrace> m' x \<lbrace>\<lambda>_ s. \<forall>y \<in> set xs. P' y s\<rbrace>,-"
+  assumes z: "xs = ys"
+  shows      "corres_underlying sr nf nf' (f \<oplus> dc) (\<lambda>s. \<forall>x \<in> set xs. P x s) (\<lambda>s. \<forall>y \<in> set ys. P' y s)
+                              (mapME_x m xs) (mapME_x m' ys)"
+  apply (subgoal_tac "set ys \<subseteq> set xs
+        \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> dc) (\<lambda>s. \<forall>x \<in> set xs. P x s) (\<lambda>s. \<forall>y \<in> set xs. P' y s)
+                              (mapME_x m ys) (mapME_x m' ys)")
+   apply (simp add: z)
+proof (induct ys)
+  case Nil
+  show ?case
+    by (simp add: mapME_x_def sequenceE_x_def returnOk_def)
+next
+  case (Cons z zs)
+    from Cons have IH:
+      "corres_underlying sr nf nf' (f \<oplus> dc) (\<lambda>s. \<forall>x\<in>set xs. P x s) (\<lambda>s. \<forall>y\<in>set xs. P' y s)
+                       (mapME_x m zs) (mapME_x m' zs)"
+      by (simp add: dc_def)
+    from Cons have in_set:
+      "z \<in> set xs" "set zs \<subseteq> set xs" by auto
+  thus ?case
+    apply (simp add: mapME_x_def sequenceE_x_def)
+    apply (fold mapME_x_def sequenceE_x_def dc_def)
+    apply (rule corres_guard_imp)
+      apply (rule corres_splitEE)
+         apply (rule IH)
+        apply (rule x, simp)
+       apply (wp y | simp)+
+    done
+qed
+
+
 end

@@ -135,6 +135,8 @@ lemma get_tcb_SomeD: "get_tcb t s = Some v \<Longrightarrow> kheap s t = Some (T
   apply (case_tac a, simp_all)
   done
 
+lemma get_tcb_at: "tcb_at t s \<Longrightarrow> (\<exists>tcb. get_tcb t s = Some tcb)"
+  by (simp add: tcb_at_def)
 
 lemma typ_at_same_type:
   assumes "typ_at T p s" "a_type k = a_type ko" "kheap s p' = Some ko"

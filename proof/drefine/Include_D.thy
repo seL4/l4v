@@ -17,7 +17,7 @@
 theory Include_D
 imports
   "DSpec.Syscall_D"
-  "Refine.Refine"
+  "AInvs.ArchDetSchedSchedule_AI"
   "Lib.MonadicRewrite"
 begin
 

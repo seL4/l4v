@@ -475,6 +475,8 @@ lemma set_scheduler_action_transform:
   "\<lbrace>\<lambda>ps. transform ps = cs\<rbrace> set_scheduler_action a \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
   by (clarsimp simp: set_scheduler_action_def etcb_at_def| wp )+
 
+crunch valid_idle_etcb[wp]: set_scheduler_action valid_idle_etcb
+
 (* RHS copy-pasted from schedule_dcorres switch_thread case *)
 lemma schedule_switch_thread_dcorres:
       "dcorres dc \<top>

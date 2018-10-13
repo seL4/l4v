@@ -2032,6 +2032,8 @@ lemma tcb_sched_action_enqueue_valid_blocked_except:
 
 crunch scheduler_action[wp]: tcb_sched_action "\<lambda>s. P (scheduler_action s)"
 
+crunch valid_etcbs[wp]: possible_switch_to "valid_etcbs"
+
 lemma possible_switch_to_valid_sched':
   "\<lbrace>valid_sched_except_blocked and valid_blocked_except target and st_tcb_at runnable target
       and not_cur_thread target and (\<lambda>s. target \<noteq> idle_thread s)\<rbrace>

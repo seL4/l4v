@@ -1492,12 +1492,6 @@ lemmas absCDT_correct = absCDT_correct'(1)
 lemmas cdt_simple_rel =  absCDT_correct'(2)
 
 
-lemma has_parent_cte_at:"valid_mdb s \<Longrightarrow> (cdt s) c = Some p \<Longrightarrow> cte_at c s"
-  apply (rule cte_wp_cte_at)
-  apply (simp add: valid_mdb_def mdb_cte_at_def del: split_paired_All)
-  apply blast
-  done
-
 lemma has_child_cte_at:"valid_mdb s \<Longrightarrow> (cdt s) c = Some p \<Longrightarrow> cte_at p s"
   apply (rule cte_wp_cte_at)
   apply (simp add: valid_mdb_def mdb_cte_at_def del: split_paired_All)

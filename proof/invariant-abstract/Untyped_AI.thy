@@ -3907,6 +3907,24 @@ lemma sts_valid_untyped_inv:
   apply clarsimp
   done
 
+lemma update_untyped_cap_valid_objs:
+  "\<lbrace> valid_objs and valid_cap cap
+      and cte_wp_at (is_untyped_cap) p and K (is_untyped_cap cap)\<rbrace>
+    set_cap cap p \<lbrace> \<lambda>rv. valid_objs \<rbrace>"
+  apply (wp set_cap_valid_objs)
+  apply (clarsimp simp: is_cap_simps cte_wp_at_caps_of_state)
+  apply (drule tcb_cap_valid_caps_of_stateD, simp+)
+  apply (simp add: tcb_cap_valid_untyped_to_thread)
+  done
+
+lemma valid_untyped_pspace_no_overlap:
+  "pspace_no_overlap {ptr .. ptr + 2 ^ sz - 1} s
+    \<Longrightarrow> valid_untyped (cap.UntypedCap dev ptr sz idx) s"
+  apply (clarsimp simp: valid_untyped_def split del: if_split)
+  apply (drule(1) pspace_no_overlap_obj_range)
+  apply simp
+  done
+
 (* FIXME: move *)
 lemma snd_set_zip_in_set:
   "x\<in> snd ` set (zip a b) \<Longrightarrow> x\<in> set b"

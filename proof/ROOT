@@ -123,7 +123,7 @@ session AutoCorresCRefine = CRefine +
  * CapDL Refinement
  *)
 
-session DBaseRefine = Refine +
+session DBaseRefine = AInvs +
   sessions
     DSpec
   theories

@@ -4612,41 +4612,6 @@ lemma cNodeNoOverlap_empty:
    apply wp+
   done
 
-lemma mapME_x_corres_same_xs:
-  assumes x: "\<And>x. x \<in> set xs
-      \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> dc) (P x) (P' x) (m x) (m' x)"
-  assumes y: "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>y \<in> set xs. P y s\<rbrace> m x \<lbrace>\<lambda>_ s. \<forall>y \<in> set xs. P y s\<rbrace>,-"
-             "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>y \<in> set xs. P' y s\<rbrace> m' x \<lbrace>\<lambda>_ s. \<forall>y \<in> set xs. P' y s\<rbrace>,-"
-  assumes z: "xs = ys"
-  shows      "corres_underlying sr nf nf' (f \<oplus> dc) (\<lambda>s. \<forall>x \<in> set xs. P x s) (\<lambda>s. \<forall>y \<in> set ys. P' y s)
-                              (mapME_x m xs) (mapME_x m' ys)"
-  apply (subgoal_tac "set ys \<subseteq> set xs
-        \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> dc) (\<lambda>s. \<forall>x \<in> set xs. P x s) (\<lambda>s. \<forall>y \<in> set xs. P' y s)
-                              (mapME_x m ys) (mapME_x m' ys)")
-   apply (simp add: z)
-proof (induct ys)
-  case Nil
-  show ?case
-    by (simp add: mapME_x_def sequenceE_x_def returnOk_def)
-next
-  case (Cons z zs)
-    from Cons have IH:
-      "corres_underlying sr nf nf' (f \<oplus> dc) (\<lambda>s. \<forall>x\<in>set xs. P x s) (\<lambda>s. \<forall>y\<in>set xs. P' y s)
-                       (mapME_x m zs) (mapME_x m' zs)"
-      by (simp add: dc_def)
-    from Cons have in_set:
-      "z \<in> set xs" "set zs \<subseteq> set xs" by auto
-  thus ?case
-    apply (simp add: mapME_x_def sequenceE_x_def)
-    apply (fold mapME_x_def sequenceE_x_def dc_def)
-    apply (rule corres_guard_imp)
-      apply (rule corres_splitEE)
-         apply (rule IH)
-        apply (rule x, simp)
-       apply (wp y | simp)+
-    done
-qed
-
 lemma resetChunkBits_eq[simp]:
   "resetChunkBits = reset_chunk_bits"
   by (simp add: resetChunkBits_def reset_chunk_bits_def)
@@ -4702,24 +4667,6 @@ lemma reset_addrs_same:
    apply clarsimp
    apply (rule order_le_less_trans, rule div_mult_le, simp)
   apply (simp add: Suc_le_eq td_gal_lt[symmetric] power_add[symmetric])
-  done
-
-lemma update_untyped_cap_valid_objs:
-  "\<lbrace> valid_objs and valid_cap cap
-      and cte_wp_at (is_untyped_cap) p and K (is_untyped_cap cap)\<rbrace>
-    set_cap cap p \<lbrace> \<lambda>rv. valid_objs \<rbrace>"
-  apply (wp set_cap_valid_objs)
-  apply (clarsimp simp: is_cap_simps cte_wp_at_caps_of_state)
-  apply (drule tcb_cap_valid_caps_of_stateD, simp+)
-  apply (simp add: tcb_cap_valid_untyped_to_thread)
-  done
-
-lemma valid_untyped_pspace_no_overlap:
-  "pspace_no_overlap {ptr .. ptr + 2 ^ sz - 1} s
-    \<Longrightarrow> valid_untyped (cap.UntypedCap dev ptr sz idx) s"
-  apply (clarsimp simp: valid_untyped_def split del: if_split)
-  apply (drule(1) pspace_no_overlap_obj_range)
-  apply simp
   done
 
 lemmas descendants_of_null_filter' = null_filter_descendants_of'[OF null_filter_simp']

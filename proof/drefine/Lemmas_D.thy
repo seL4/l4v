@@ -21,7 +21,6 @@ imports
   MoreHOL
   MoreCorres
   "ExecSpec.InvocationLabels_H"
-  "Refine.EmptyFail"
 begin
 
 no_notation bind_drop (infixl ">>" 60)
@@ -40,5 +39,12 @@ lemma pick_singleton[simp]:
    apply fastforce
   apply fastforce
   done
+
+(* FIXME: eventually move to AInvs *)
+lemma is_tcb_TCB[simp]: "is_tcb (TCB t)"
+  by (simp add: is_tcb)
+
+declare dxo_wp_weak[wp del]
+declare is_aligned_no_overflow[simp]
 
 end

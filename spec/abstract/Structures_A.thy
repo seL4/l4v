@@ -657,22 +657,24 @@ text {* A thread's IPC buffer capability must be to a page that is capable of
 containing the IPC buffer without the end of the buffer spilling into another
 page. *}
 definition cap_transfer_data_size :: nat
-where
+  where
   "cap_transfer_data_size \<equiv> 3"
 
 definition msg_max_length :: nat
-where
+  where
   "msg_max_length \<equiv> 120"
 
 definition msg_max_extra_caps :: nat
-where
+  where
   "msg_max_extra_caps \<equiv> 3"
 
+definition max_ipc_length :: nat
+  where
+  "max_ipc_length \<equiv> cap_transfer_data_size + msg_max_length + msg_max_extra_caps + 2"
+
 definition msg_align_bits :: nat
-where
-  "msg_align_bits \<equiv>
-     word_size_bits +
-     (LEAST n. cap_transfer_data_size + msg_max_length + msg_max_extra_caps + 2 \<le> 2 ^ n)"
+  where
+  "msg_align_bits \<equiv> word_size_bits + (LEAST n. max_ipc_length \<le> 2 ^ n)"
 
 lemma msg_align_bits':
   "msg_align_bits = word_size_bits + 7"
@@ -689,7 +691,7 @@ proof -
     thus "7 \<le> y"
       by (rule power_le_imp_le_exp [rotated], simp)
   qed
-  thus ?thesis unfolding msg_align_bits_def by simp
+  thus ?thesis unfolding msg_align_bits_def max_ipc_length_def by simp
 qed
 
 end

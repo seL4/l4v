@@ -821,7 +821,7 @@ where
 
                  cdl_tcb_fault_endpoint = (of_bl (tcb_fault_handler tcb)),
 
-                (* Decode the thread's intent. *)
+                 \<comment> \<open>Decode the thread's intent.\<close>
                  cdl_tcb_intent = transform_full_intent ms ptr tcb,
                  cdl_tcb_has_fault = (tcb_has_fault tcb),
                  cdl_tcb_domain = tcb_domain etcb
@@ -917,7 +917,7 @@ definition
                 cdl_cnode_caps = transform_cnode_contents sz c,
                 cdl_cnode_size_bits = sz
                 \<rparr>
-         | Structures_A.TCB tcb \<Rightarrow> case opt_etcb of Some etcb \<Rightarrow> transform_tcb ms ref tcb etcb | None \<Rightarrow> undefined
+         | Structures_A.TCB tcb \<Rightarrow> (case opt_etcb of Some etcb \<Rightarrow> transform_tcb ms ref tcb etcb | None \<Rightarrow> undefined)
          | Structures_A.Endpoint _ \<Rightarrow> Types_D.Endpoint
          | Structures_A.Notification _ \<Rightarrow> Types_D.Notification
          | Structures_A.ArchObj (ARM_A.ASIDPool ap) \<Rightarrow>
@@ -999,7 +999,7 @@ lemma evalMonad_bind:
   apply (simp add: evalMonad_def)
   apply (clarsimp simp: bind_def)
   apply (insert det)
-  apply (clarsimp simp: det_or_fail_def)
+  apply (clarsimp simp: det_or_fail_def split: if_split_asm)
   apply (erule_tac x=s in allE)
   apply clarsimp
   apply (subgoal_tac "b = s")

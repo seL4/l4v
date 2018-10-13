@@ -3613,4 +3613,14 @@ lemma real_cte_halted_if_tcb[simp]:
   "real_cte_at (a, b) s \<Longrightarrow> halted_if_tcb a s"
   by (clarsimp simp: halted_if_tcb_def obj_at_def is_cap_table is_tcb)
 
+lemma descendants_of_empty:
+  "x \<notin> descendants_of cref Map.empty"
+  by (simp add: descendants_of_def cdt_parent_rel_def is_cdt_parent_def)
+
+lemma has_parent_cte_at:"valid_mdb s \<Longrightarrow> (cdt s) c = Some p \<Longrightarrow> cte_at c s"
+  apply (rule cte_wp_cte_at)
+  apply (simp add: valid_mdb_def mdb_cte_at_def del: split_paired_All)
+  apply blast
+  done
+
 end
