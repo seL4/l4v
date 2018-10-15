@@ -13,7 +13,6 @@
 theory FastMap
 imports
   LemmaBucket
-  Qualify
 begin
 
 text \<open>
@@ -68,8 +67,7 @@ text \<open>
  *     This one probably calls for a wizard.
  *)
 
-locale FastMap
-qualify FastMap
+locale FastMap begin
 
 text \<open>
   Binary lookup tree. This is largely an implementation detail, so we
@@ -295,32 +293,17 @@ lemma list_all_dest:
   "list_all P ((x, y) # z # xs) \<equiv> (P (x, y) \<and> list_all P (z # xs))"
   by auto
 
-(* Tail-recursive list conversion.
- * FIXME: unused; we currently use the default simp rules with manual convs *)
-experiment begin
-primrec lookup_tree_to_map_append where
-  "lookup_tree_to_map_append Leaf xs = xs"
-| "lookup_tree_to_map_append (Node k v lt rt) xs =
-     lookup_tree_to_map_append lt ((k, v) # lookup_tree_to_map_append rt xs)"
-
-lemma lookup_tree_to_map_append:
-  "lookup_tree_to_map tree @ xs = lookup_tree_to_map_append tree xs"
-  apply (induct tree arbitrary: xs; fastforce)
-  done
-
-lemma lookup_tree_to_map_eval:
-  "lookup_tree_to_map tree = lookup_tree_to_map_append tree []"
-  by (simp add: lookup_tree_to_map_append[symmetric])
-end
-
 (* Install lookup rules that don't depend on if_cong/if_weak_cong setup *)
-lemma lookup_tree_simps'[simp]:
+lemma lookup_tree_simps':
   "lookup_tree Leaf fn x = None"
   "fn x = fn y \<Longrightarrow> lookup_tree (Node y v l r) fn x = Some v"
   "fn x < fn y \<Longrightarrow> lookup_tree (Node y v l r) fn x = lookup_tree l fn x"
   "fn x > fn y \<Longrightarrow> lookup_tree (Node y v l r) fn x = lookup_tree r fn x"
   by auto
-declare lookup_tree.simps[simp del]
+end
+
+declare FastMap.lookup_tree_simps'[simp]
+declare FastMap.lookup_tree.simps[simp del]
 
 ML \<open>
 structure FastMap = struct
@@ -358,12 +341,12 @@ fun build_tree ord xs = case xs of [] => error "build_tree : empty"
   | (idx, v) :: _ => let
     val idxT = fastype_of idx
     val vT = fastype_of v
-    val treeT = Type (@{type_name Tree}, [idxT, vT])
-    val mk_leaf = Const (@{const_name Leaf}, treeT)
-    val node = Const (@{const_name Node},
+    val treeT = Type (@{type_name FastMap.Tree}, [idxT, vT])
+    val mk_leaf = Const (@{const_name FastMap.Leaf}, treeT)
+    val node = Const (@{const_name FastMap.Node},
         idxT --> vT --> treeT --> treeT --> treeT)
     fun mk_node a b l r = node $ a $ b $ l $ r
-    val lookup = Const (@{const_name lookup_tree},
+    val lookup = Const (@{const_name FastMap.lookup_tree},
         treeT --> fastype_of ord --> idxT
             --> Type (@{type_name option}, [vT]))
   in
@@ -405,10 +388,10 @@ fun prove_tree_valid tree_name mappings kT keyT tree_term get_key simp_ctxt ctxt
     val tree_valid_prop =
           HOLogic.mk_Trueprop (
             Const (@{const_name fst}, valid_resultT --> HOLogic.boolT) $
-            (Const (@{const_name lookup_tree_valid}, (kT --> keyT) --> treeT --> valid_resultT) $
+            (Const (@{const_name FastMap.lookup_tree_valid}, (kT --> keyT) --> treeT --> valid_resultT) $
                get_key $ tree_term))
     val solver = simp_tac (put_simpset HOL_basic_ss ctxt
-                           addsimps (@{thms prod.sel lookup_tree_valid_simps'} @ key_ord_thms)) 1
+                           addsimps (@{thms prod.sel FastMap.lookup_tree_valid_simps'} @ key_ord_thms)) 1
   in Goal.prove ctxt [] [] tree_valid_prop (K solver) end
 
 fun solve_simp_tac name ctxt = SUBGOAL (fn (t, i) =>
@@ -450,8 +433,8 @@ fun convert_tree_to_map kT valT mappings lookup_const tree_def tree_valid_thm si
             (fo_rewr_conv @{thm append.simps(2)} then_conv'
              (fn () => rhs_conv (append_conv ())))
     fun to_map_conv () =
-            fo_rewr_conv @{thm lookup_tree_to_map.simps(1)} else_conv
-            (fo_rewr_conv @{thm lookup_tree_to_map.simps(2)[simplified append.simps]} then_conv'
+            fo_rewr_conv @{thm FastMap.lookup_tree_to_map.simps(1)} else_conv
+            (fo_rewr_conv @{thm FastMap.lookup_tree_to_map.simps(2)[simplified append.simps]} then_conv'
              (fn () => lhs_conv (to_map_conv ())) then_conv'
              (fn () => rhs_conv (rhs_conv (to_map_conv ()))) then_conv
              append_conv ())
@@ -459,7 +442,7 @@ fun convert_tree_to_map kT valT mappings lookup_const tree_def tree_valid_thm si
 
   val solver =
         TIMED "unfold" (Conv.gconv_rule (Conv.arg_conv (lhs_conv (lhs_conv (K tree_def)))) 1 #> Seq.succeed) THEN
-        TIMED "main rule" (resolve_tac ctxt @{thms lookup_tree_to_map_of_gen} 1) THEN
+        TIMED "main rule" (resolve_tac ctxt @{thms FastMap.lookup_tree_to_map_of_gen} 1) THEN
           TIMED "solve inj" (solve_simp_tac "convert_tree_to_map" (simp_ctxt ctxt @{thms simp_thms} @{thms inj_def}) 1) THEN
          TIMED "resolve valid" (resolve_tac ctxt [tree_valid_thm] 1) THEN
         TIMED "convert tree" (Conv.gconv_rule (Conv.arg_conv (lhs_conv lookup_tree_to_map_eval)) 1 #> Seq.succeed) THEN
@@ -491,14 +474,14 @@ fun tree_domain kT mappings lookup_const tree_map_eqn ctxt =
   domain_range_common
     @{const_name dom} kT (map fst mappings) lookup_const tree_map_eqn
     (* like (subst dom_map_of_conv_list) but faster *)
-    (resolve_tac ctxt @{thms dom_map_of_conv_list[THEN trans]} 1)
+    (resolve_tac ctxt @{thms FastMap.dom_map_of_conv_list[THEN trans]} 1)
     ctxt;
 
 fun tree_range valT mappings lookup_const tree_map_eqn map_distinct_thm ctxt =
   domain_range_common
     @{const_name ran} valT (map snd mappings) lookup_const tree_map_eqn
     (* like (subst ran_map_of_conv_list) but faster *)
-    (resolve_tac ctxt @{thms ran_map_of_conv_list[THEN trans]} 1 THEN
+    (resolve_tac ctxt @{thms FastMap.ran_map_of_conv_list[THEN trans]} 1 THEN
      resolve_tac ctxt [map_distinct_thm] 1)
     ctxt;
 
@@ -568,8 +551,8 @@ fun define_map
     val _ = tracing (#map_name name_opts ^ ": obtaining lookup rules")
     val start = Timing.start ()
     val combined_lookup_thm =
-          (convert_thm RS @{thm map_of_lookups})
-          |> Conv.fconv_rule (Conv.top_conv (K (Conv.try_conv (fo_rewrs_conv @{thms list_all_dest}))) ctxt)
+          (convert_thm RS @{thm FastMap.map_of_lookups})
+          |> Conv.fconv_rule (Conv.top_conv (K (Conv.try_conv (fo_rewrs_conv @{thms FastMap.list_all_dest}))) ctxt)
     val _ = tracing ("  splitting... " ^ Timing.message (Timing.result start))
     val lookup_thms = HOLogic.conj_elims ctxt combined_lookup_thm
                       |> map (Conv.fconv_rule (Conv.arg_conv (Conv.rewr_conv @{thm prod.case[THEN eq_reflection]})))
@@ -597,7 +580,5 @@ fun define_map
 
 end
 \<close>
-
-end_qualify
 
 end
