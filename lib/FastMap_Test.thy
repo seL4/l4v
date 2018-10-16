@@ -441,4 +441,36 @@ experiment begin
     by (rule string_map_to_lookup_list)
 end
 
+
+
+section \<open>Small inputs\<close>
+experiment begin
+  text \<open>
+    Note that the current interface doesn't support empty mappings,
+    because it would have no input values to derive the correct map
+    type. This tests 1-to-4-element mappings.
+  \<close>
+
+  local_setup \<open>
+    create_int_map "small_test_map_1" 1 @{typ nat}
+  \<close>
+  lemma
+    "small_test_map_1 \<equiv> FastMap.lookup_tree id (FastMap.Node 0 ''0'' FastMap.Leaf FastMap.Leaf)"
+    by (rule small_test_map_1_def)
+  lemma
+    "small_test_map_1 = map_of [(0, ''0'')]"
+    by (rule small_test_map_1_to_lookup_list)
+  lemma
+    "small_test_map_1 0 = Some ''0''"
+    by (rule small_test_map_1_lookups)
+
+  local_setup \<open>
+      create_int_map "small_test_map_2" 2 @{typ nat}
+      #>
+      create_int_map "small_test_map_3" 3 @{typ nat}
+      #>
+      create_int_map "small_test_map_4" 4 @{typ nat}
+  \<close>
+end
+
 end
