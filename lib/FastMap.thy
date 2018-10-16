@@ -83,33 +83,36 @@ text \<open>
 
   We could reuse HOL.Tree instead, but the proofs would need changing.
 \<close>
-datatype ('k, 'v) Tree = Leaf | Node 'k 'v "('k, 'v) Tree" "('k, 'v) Tree"
+datatype ('k, 'v) Tree =
+    Leaf
+  | Node 'k 'v "('k, 'v) Tree" "('k, 'v) Tree"
 
-primrec
-  lookup_tree :: "('k \<Rightarrow> 'ok :: linorder) \<Rightarrow> ('k, 'v) Tree \<Rightarrow> 'k \<Rightarrow> 'v option"
-where
-  "lookup_tree key Leaf x = None"
-| "lookup_tree key (Node k v l r) x =
-     (if key x = key k then Some v
-      else if key x < key k then lookup_tree key l x
-      else lookup_tree key r x)"
+primrec lookup_tree :: "('k \<Rightarrow> 'ok :: linorder) \<Rightarrow> ('k, 'v) Tree \<Rightarrow> 'k \<Rightarrow> 'v option"
+  where
+    "lookup_tree key Leaf x = None"
+  | "lookup_tree key (Node k v l r) x =
+       (if key x = key k then Some v
+        else if key x < key k then lookup_tree key l x
+        else lookup_tree key r x)"
 
 text \<open>
   Predicate for well-formed lookup trees.
   This states that the keys are distinct and appear in ascending order.
   It also returns the lowest and highest keys in the tree (or None for empty trees).
 \<close>
-primrec lookup_tree_valid where
-  "lookup_tree_valid (key :: ('k \<Rightarrow> 'ok :: linorder)) Leaf = (True, None)"
-| "lookup_tree_valid key (Node k v lt rt) =
-     (let (lt_valid, lt_range) = lookup_tree_valid key lt;
-          (rt_valid, rt_range) = lookup_tree_valid key rt;
-          lt_low = (case lt_range of None \<Rightarrow> k | Some (low, high) \<Rightarrow> low);
-          rt_high = (case rt_range of None \<Rightarrow> k | Some (low, high) \<Rightarrow> high)
-      in (lt_valid \<and> rt_valid \<and>
-          (case lt_range of None \<Rightarrow> True | Some (low, high) \<Rightarrow> key high < key k) \<and>
-          (case rt_range of None \<Rightarrow> True | Some (low, high) \<Rightarrow> key k < key low),
-          Some (lt_low, rt_high)))"
+primrec lookup_tree_valid ::
+        "('k \<Rightarrow> 'ok :: linorder) \<Rightarrow> ('k, 'v) Tree \<Rightarrow> bool \<times> ('k \<times> 'k) option"
+  where
+    "lookup_tree_valid key Leaf = (True, None)"
+  | "lookup_tree_valid key (Node k v lt rt) =
+       (let (lt_valid, lt_range) = lookup_tree_valid key lt;
+            (rt_valid, rt_range) = lookup_tree_valid key rt;
+            lt_low = (case lt_range of None \<Rightarrow> k | Some (low, high) \<Rightarrow> low);
+            rt_high = (case rt_range of None \<Rightarrow> k | Some (low, high) \<Rightarrow> high)
+        in (lt_valid \<and> rt_valid \<and>
+            (case lt_range of None \<Rightarrow> True | Some (low, high) \<Rightarrow> key high < key k) \<and>
+            (case rt_range of None \<Rightarrow> True | Some (low, high) \<Rightarrow> key k < key low),
+            Some (lt_low, rt_high)))"
 
 lemma lookup_tree_valid_simps':
   "lookup_tree_valid key Leaf = (True, None)"
@@ -164,10 +167,11 @@ text \<open>
   Flatten a lookup tree into an assoc-list.
   As long as the tree is well-formed, both forms are equivalent.
 \<close>
-primrec lookup_tree_to_list where
-  "lookup_tree_to_list Leaf = []"
-| "lookup_tree_to_list (Node k v lt rt) =
-      lookup_tree_to_list lt @ [(k, v)] @ lookup_tree_to_list rt"
+primrec lookup_tree_to_list :: "('k, 'v) Tree \<Rightarrow> ('k \<times> 'v) list"
+  where
+    "lookup_tree_to_list Leaf = []"
+  | "lookup_tree_to_list (Node k v lt rt) =
+        lookup_tree_to_list lt @ [(k, v)] @ lookup_tree_to_list rt"
 
 lemma lookup_tree_to_list_range:
   "lookup_tree_valid key tree = (True, Some (low, high)) \<Longrightarrow>
