@@ -53,14 +53,14 @@ experiment begin
   thm simple_test_map_def
 
   text \<open>Default theorem names are generated based on the map name\<close>
-  thm simple_test_map_tree_to_map
+  thm simple_test_map_to_lookup_list
   thm simple_test_map_lookups
   thm simple_test_map_domain simple_test_map_range simple_test_map_keys_distinct
 
 
   subsection \<open>Check the generated theorems\<close>
   lemma "simple_test_map = map_of [(0, 0), (1, 1), (2, 1), (3, 2), (4, 3), (5, 5)]"
-    by (rule simple_test_map_tree_to_map)
+    by (rule simple_test_map_to_lookup_list)
 
   lemma
     "simple_test_map 0 = Some 0"
@@ -129,7 +129,14 @@ experiment begin
                       cong: if_cong cong del: if_weak_cong\<close>
             (* This simulates using a functional map instead of FastMap *)
             fun_map:
-                \<open>simp add: simple_test_map_100_tree_to_map\<close>)
+                \<open>simp add: simple_test_map_100_to_lookup_list\<close>
+            (* Strangely, this is much faster, even though it uses the same rules
+               (and even has the same simp trace) *)
+            fun_map_minimal:
+                \<open>simp only: simple_test_map_100_to_lookup_list
+                            map_of.simps fun_upd_apply prod.sel
+                            rel_simps simp_thms if_True if_False
+                      cong: if_weak_cong\<close>)
 
   text \<open>Domain and range theorems\<close>
   lemma "dom simple_test_map_100 = {0 .. 99}"
@@ -200,7 +207,7 @@ experiment begin
   lemma slow_map_alt_def:
     "slow_map = fast_map"
     unfolding slow_map_def
-    unfolding fast_map_tree_to_map
+    unfolding fast_map_to_lookup_list
     apply (simp only: FastMap.map_of_rev[symmetric] fast_map_keys_distinct)
     apply (simp only: rev.simps append.simps map_of.simps prod.sel)
     done
@@ -431,7 +438,7 @@ experiment begin
   schematic_goal "(dom string_map = (?x :: string set))"
     by (rule string_map_domain)
   schematic_goal "string_map = map_of (?binds :: (string \<times> nat) list)"
-    by (rule string_map_tree_to_map)
+    by (rule string_map_to_lookup_list)
 end
 
 end
