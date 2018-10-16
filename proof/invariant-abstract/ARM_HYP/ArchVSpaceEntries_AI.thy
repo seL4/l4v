@@ -1547,7 +1547,8 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
 qed
 
 lemma decode_invocation_valid_pdpt[wp]:
-  "\<lbrace>invs and valid_cap cap and valid_pdpt_objs\<rbrace> decode_invocation label args cap_index slot cap excaps
+  "\<lbrace>invs and valid_cap cap and valid_pdpt_objs\<rbrace>
+     decode_invocation label args cap_index slot cap excaps
    \<lbrace>invocation_duplicates_valid\<rbrace>,-"
   apply (simp add: decode_invocation_def split del: if_split)
   apply (rule hoare_pre)

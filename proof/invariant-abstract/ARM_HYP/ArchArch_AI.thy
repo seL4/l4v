@@ -1349,7 +1349,7 @@ lemma create_mapping_entries_same_refs:
     apply (rule conjI, simp add: mask_def)
     apply (clarsimp simp: cte_wp_at_caps_of_state diminished_def
                           mask_cap_def cap_rights_update_def)
-    apply (clarsimp split: Structures_A.cap.splits )
+    apply (clarsimp split: Structures_A.cap.splits bool.splits)
     apply (clarsimp simp: acap_rights_update_def split: arch_cap.splits)
     apply (frule (1) vs_lookup_and_unique_refs)
         apply (simp_all add: table_cap_ref_def obj_refs_def)[4]
@@ -1375,7 +1375,7 @@ lemma create_mapping_entries_same_refs:
                     pageBits_def pt_bits_def pte_bits_def pde_bits_def)
    apply (clarsimp simp: cte_wp_at_caps_of_state diminished_def
                          mask_cap_def cap_rights_update_def)
-   apply (clarsimp split: Structures_A.cap.splits )
+   apply (clarsimp split: Structures_A.cap.splits bool.splits)
    apply (clarsimp simp: acap_rights_update_def split: arch_cap.splits)
    apply (frule (1) vs_lookup_and_unique_refs)
        apply (simp_all add: table_cap_ref_def obj_refs_def)[4]
@@ -1417,7 +1417,7 @@ lemma diminished_pd_capD:
   "diminished (ArchObjectCap (PageDirectoryCap a b)) cap
    \<Longrightarrow> cap = (ArchObjectCap (PageDirectoryCap a b))"
   apply (clarsimp simp: diminished_def mask_cap_def cap_rights_update_def)
-  apply (clarsimp simp: acap_rights_update_def split: cap.splits arch_cap.splits)
+  apply (clarsimp simp: acap_rights_update_def split: cap.splits arch_cap.splits bool.splits)
   done
 
 
@@ -1432,7 +1432,7 @@ lemma cte_wp_at_page_cap_weaken:
   "cte_wp_at (diminished (ArchObjectCap (PageCap dev word seta vmpage_size None))) slot s \<Longrightarrow>
    cte_wp_at (\<lambda>a. \<exists>dev p R sz m. a = ArchObjectCap (PageCap dev p R sz m)) slot s"
   apply (clarsimp simp: cte_wp_at_def diminished_def mask_cap_def cap_rights_update_def)
-  apply (clarsimp simp: acap_rights_update_def split: cap.splits arch_cap.splits)
+  apply (clarsimp simp: acap_rights_update_def split: cap.splits arch_cap.splits bool.splits)
   done
 
 
@@ -1839,7 +1839,7 @@ lemma get_cap_diminished:
   apply (frule (1) caps_of_state_valid_cap)
   apply (clarsimp simp add: valid_cap_def2 wellformed_cap_def mask_cap_def
              cap_rights_update_def acap_rights_update_def
-           split: cap.splits arch_cap.splits)
+           split: cap.splits arch_cap.splits bool.splits)
     apply fastforce+
   apply (clarsimp simp add: wellformed_acap_def
            split: cap.splits arch_cap.splits)

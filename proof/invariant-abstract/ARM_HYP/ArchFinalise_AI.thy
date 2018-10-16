@@ -1400,6 +1400,7 @@ lemma tcb_cap_valid_pagetable:
   apply (rule ext)
   apply (simp add: tcb_cap_valid_def tcb_cap_cases_def is_nondevice_page_cap_arch_def
                    is_cap_simps valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
+                   is_valid_vtable_root_def
             split: Structures_A.thread_state.split)
   done
 

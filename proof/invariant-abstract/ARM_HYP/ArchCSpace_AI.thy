@@ -190,9 +190,9 @@ lemma is_derived_is_cap:
   \<and> (is_zombie cap = is_zombie cap')
   \<and> (is_arch_cap cap = is_arch_cap cap')"
   apply (clarsimp simp: is_derived_def is_derived_arch_def split: if_split_asm)
-  apply (clarsimp simp: cap_master_cap_def is_cap_simps
-    split: cap.splits arch_cap.splits)+
-  done
+  by (clarsimp simp: cap_master_cap_def is_cap_simps
+              split: cap.splits arch_cap.splits)+
+
 
 (* FIXME: move to CSpace_I near lemma vs_lookup1_tcb_update *)
 lemma vs_lookup_pages1_tcb_update:
@@ -375,7 +375,7 @@ lemma mask_cap_valid[simp, CSpace_AI_assms]:
   apply (cases c, simp_all add: valid_cap_def mask_cap_def
                              cap_rights_update_def
                              cap_aligned_def
-                             acap_rights_update_def)
+                             acap_rights_update_def split:bool.splits)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
   apply (rename_tac arch_cap)
   by (case_tac arch_cap, simp_all)
@@ -384,14 +384,14 @@ lemma mask_cap_objrefs[simp, CSpace_AI_assms]:
   "obj_refs (mask_cap rs cap) = obj_refs cap"
   by (cases cap, simp_all add: mask_cap_def cap_rights_update_def
                                acap_rights_update_def
-                        split: arch_cap.split)
+                        split: arch_cap.split bool.splits)
 
 
 lemma mask_cap_zobjrefs[simp, CSpace_AI_assms]:
   "zobj_refs (mask_cap rs cap) = zobj_refs cap"
   by (cases cap, simp_all add: mask_cap_def cap_rights_update_def
                                acap_rights_update_def
-                        split: arch_cap.split)
+                        split: arch_cap.split bool.splits)
 
 
 lemma derive_cap_valid_cap [CSpace_AI_assms]:
@@ -407,7 +407,7 @@ lemma valid_cap_update_rights[simp, CSpace_AI_assms]:
   "valid_cap cap s \<Longrightarrow> valid_cap (cap_rights_update cr cap) s"
   apply (case_tac cap,
          simp_all add: cap_rights_update_def valid_cap_def cap_aligned_def
-                       acap_rights_update_def)
+                       acap_rights_update_def split:bool.splits)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all)
@@ -563,8 +563,8 @@ lemma is_cap_simps':
   "is_ntfn_cap cap = (\<exists>r b R. cap = cap.NotificationCap r b R)"
   "is_zombie cap = (\<exists>r b n. cap = cap.Zombie r b n)"
   "is_arch_cap cap = (\<exists>a. cap = cap.ArchObjectCap a)"
-  "is_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x False)"
-  "is_master_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x True)"
+  "is_reply_cap cap = (\<exists>x R. cap = cap.ReplyCap x False R)"
+  "is_master_reply_cap cap = (\<exists>x R. cap = cap.ReplyCap x True R)"
   "is_nondevice_page_cap cap = (\<exists> u v w x. cap = ArchObjectCap (PageCap False u v w x))"
   apply (auto simp: is_zombie_def is_arch_cap_def is_nondevice_page_cap_def
                               is_reply_cap_def is_master_reply_cap_def is_nondevice_page_cap_arch_def
