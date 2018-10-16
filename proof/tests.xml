@@ -36,8 +36,8 @@
         <test name="CRefine" cpu-timeout="28800">make CRefine</test>
     </sequence>
 
-    <!-- DSpec / DRefine -->
-    <sequence depends="Refine">
+    <!-- DRefine -->
+    <sequence depends="AInvs">
         <test name="DBaseRefine">make DBaseRefine</test>
         <test name="DRefine" cpu-timeout="7200">make DRefine</test>
     </sequence>
