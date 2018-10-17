@@ -148,7 +148,7 @@ crunch_ignore (empty_fail)
         assert_opt mapM mapM_x sequence_x catch handleE do_extended_op
         cap_insert_ext empty_slot_ext create_cap_ext cap_swap_ext cap_move_ext
         reschedule_required possible_switch_to set_thread_state_act
-        OR_choice OR_choiceE timer_tick getRegister lookup_error_on_failure
+        OR_choice OR_choiceE getRegister lookup_error_on_failure
         mapME_x const_on_failure liftME mapME do_machine_op select
         empty_on_failure unify_failure zipWithM_x throw_on_false
         decode_tcb_invocation without_preemption as_user syscall
@@ -258,6 +258,8 @@ locale EmptyFail_AI_load_word =
     "\<And>p offset v. empty_fail (store_word_offs p offset v:: (unit, 'state_ext) s_monad)"
   assumes storeWord_empty_fail[wp]:
     "\<And>p w. empty_fail (storeWord p w)"
+  assumes setRegister_empty_fail[wp]:
+    "\<And>x xa. empty_fail (setRegister x xa)"
 
 
 

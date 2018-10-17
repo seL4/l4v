@@ -1742,6 +1742,12 @@ lemma set_bound_notification_valid_ioc[wp]:
                         if_split_asm)
   done
 
+lemma set_tcb_obj_ref_valid_ioports[wp]:
+  "\<lbrace>valid_ioports\<rbrace> set_tcb_obj_ref tcb_yield_to_update t ntfn \<lbrace>\<lambda>_. valid_ioports\<rbrace>"
+  "\<lbrace>valid_ioports\<rbrace> set_tcb_obj_ref tcb_bound_notification_update t ntfn \<lbrace>\<lambda>_. valid_ioports\<rbrace>"
+  "\<lbrace>valid_ioports\<rbrace> set_tcb_obj_ref tcb_sched_context_update t ntfn \<lbrace>\<lambda>_. valid_ioports\<rbrace>"
+  by (wpsimp wp: valid_ioports_lift)+
+
 lemma set_tcb_sched_context_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> set_tcb_obj_ref tcb_sched_context_update t ntfn \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
@@ -1755,7 +1761,7 @@ lemma set_tcb_sched_context_valid_ioc[wp]:
                         if_split_asm)
   done
 
-crunches set_thread_state, set_bound_notification
+crunches set_thread_state, set_sc_obj_ref
   for valid_ioports[wp]: valid_ioports
   (wp: valid_ioports_lift)
 
@@ -2188,7 +2194,7 @@ lemma thread_set_domain_if_live_then_nonz_cap[wp]:
 lemma thread_set_domain_zombies_final[wp]:
   "thread_set_domain t d \<lbrace>zombies_final\<rbrace>"
   unfolding thread_set_domain_def thread_set_def
-  by (wpsimp simp: tcb_cap_cases_def)
+  by (wpsimp simp: tcb_cap_cases_def) auto
 
 lemma thread_set_domain_refs_of[wp]:
   "thread_set_domain t d \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
@@ -2224,7 +2230,7 @@ lemma thread_set_domain_valid_idle[wp]:
 lemma thread_set_domain_if_unsafe_then_cap[wp]:
   "thread_set_domain t d \<lbrace>if_unsafe_then_cap\<rbrace>"
   unfolding thread_set_domain_def thread_set_def
-  by (wpsimp simp: tcb_cap_cases_def)
+  by (wpsimp simp: tcb_cap_cases_def) auto
 
 lemma thread_set_domain_valid_irq_node[wp]:
   "thread_set_domain t d \<lbrace>valid_irq_node\<rbrace>"
@@ -2242,14 +2248,18 @@ lemma thread_set_domain_valid_irq_handlers[wp]:
 lemma thread_set_domain_valid_arch_caps[wp]:
   "thread_set_domain t d \<lbrace>valid_arch_caps\<rbrace>"
   unfolding thread_set_domain_def
-  by (wpsimp wp: thread_set_arch_caps_trivial simp: tcb_cap_cases_def)
+  by (wpsimp wp: thread_set_arch_caps_trivial simp: tcb_cap_cases_def) auto
+
+lemma thread_set_domain_valid_ioports[wp]:
+  "thread_set_domain t d \<lbrace>valid_ioports\<rbrace>"
+  unfolding thread_set_domain_def
+  by (wpsimp wp: valid_ioports_lift thread_set_caps_of_state_trivial2 simp: tcb_cap_cases_def)
 
 lemma thread_set_domain_invs[wp]:
   "thread_set_domain t d \<lbrace>invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   by (wpsimp wp: valid_mdb_lift hoare_vcg_all_lift hoare_vcg_imp_lift
            simp: valid_ioc_def valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
-
 
 
 lemma thread_set_priority_caps_of_state[wp]:
@@ -2285,7 +2295,7 @@ lemma thread_set_priority_if_live_then_nonz_cap[wp]:
 lemma thread_set_priority_zombies_final[wp]:
   "thread_set_priority t d \<lbrace>zombies_final\<rbrace>"
   unfolding thread_set_priority_def thread_set_def
-  by (wpsimp simp: tcb_cap_cases_def)
+  by (wpsimp simp: tcb_cap_cases_def) auto
 
 lemma thread_set_priority_refs_of[wp]:
   "thread_set_priority t d \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
@@ -2321,7 +2331,7 @@ lemma thread_set_priority_valid_idle[wp]:
 lemma thread_set_priority_if_unsafe_then_cap[wp]:
   "thread_set_priority t d \<lbrace>if_unsafe_then_cap\<rbrace>"
   unfolding thread_set_priority_def thread_set_def
-  by (wpsimp simp: tcb_cap_cases_def)
+  by (wpsimp simp: tcb_cap_cases_def) auto
 
 lemma thread_set_priority_valid_irq_node[wp]:
   "thread_set_priority t d \<lbrace>valid_irq_node\<rbrace>"
@@ -2339,7 +2349,12 @@ lemma thread_set_priority_valid_irq_handlers[wp]:
 lemma thread_set_priority_valid_arch_caps[wp]:
   "thread_set_priority t d \<lbrace>valid_arch_caps\<rbrace>"
   unfolding thread_set_priority_def
-  by (wpsimp wp: thread_set_arch_caps_trivial simp: tcb_cap_cases_def)
+  by (wpsimp wp: thread_set_arch_caps_trivial simp: tcb_cap_cases_def) auto
+
+lemma thread_set_priority_valid_ioports[wp]:
+  "thread_set_priority t d \<lbrace>valid_ioports\<rbrace>"
+  unfolding thread_set_priority_def
+  by (wpsimp wp: valid_ioports_lift thread_set_caps_of_state_trivial2 simp: tcb_cap_cases_def)
 
 lemma thread_set_priority_invs[wp]:
   "thread_set_priority t d \<lbrace>invs\<rbrace>"

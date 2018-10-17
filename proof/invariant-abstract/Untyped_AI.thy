@@ -1174,7 +1174,6 @@ lemma create_cap_mdb[wp]:
           apply (drule(1) descendants_rangeD)
           apply (clarsimp simp del: split_paired_All simp: cap_range_def)
           apply blast
-(*
          apply (erule(1) mdb_insert_abs.descendants_inc)
           apply simp
          apply (clarsimp simp: is_cap_simps cap_range_def cap_class_default_cap)
@@ -1197,53 +1196,7 @@ lemma create_cap_mdb[wp]:
            apply assumption+
       apply (simp add: ut_revocable_def del: split_paired_All)
      apply (simp add: irq_revocable_def del: split_paired_All)
-    apply (simp add: reply_master_revocable_def del: split_paired_All)
-   apply (simp add: reply_mdb_def)
-   apply (subgoal_tac "\<And>t m. default_cap tp oref sz dev \<noteq> cap.ReplyCap t m")
-    apply (rule conjI)
-     apply (fastforce simp: reply_caps_mdb_def descendants_of_def
-                            mdb_insert_abs.parency
-                  simp del: split_paired_All split_paired_Ex
-                     elim!: allEI exEI)
-    apply (fastforce simp: reply_masters_mdb_def descendants_of_def
-                           mdb_insert_abs.parency
-                 simp del: split_paired_All split_paired_Ex
-                    elim!: allEI)
-   apply (cases tp, simp_all)[1]
   apply (erule valid_arch_mdb_untypeds)
-*)
-         apply (drule_tac x=ptr in spec)
-         apply (drule_tac x=cref in spec)
-         apply (simp del: split_paired_All)
-         apply (frule(1) inter_non_emptyD[rotated])
-         apply (drule_tac c = cap and c' = capa in untyped_incD2)
-             apply simp+
-         apply (clarsimp simp add: descendants_of_def simp del: split_paired_All)
-         apply (drule(1) descendants_rangeD)
-         apply (clarsimp simp del: split_paired_All simp: cap_range_def)
-         apply blast
-        apply (erule(1) mdb_insert_abs.descendants_inc)
-         apply simp
-        apply (clarsimp simp: is_cap_simps cap_range_def cap_class_default_cap)
-       apply (clarsimp simp: no_mloop_def)
-       apply (frule_tac p = "(a,b)" and p'="(a,b)" in mdb_insert_abs.parency)
-       apply (simp split: if_split_asm)
-       apply (erule disjE)
-        apply (drule_tac m = "cdt s" in mdb_cte_at_Null_descendants)
-         apply (clarsimp simp: untyped_mdb_def)
-        apply (clarsimp simp: descendants_of_def simp del: split_paired_All)
-       apply clarsimp
-      apply (rule mdb_create_cap.untyped_inc')
-           apply (rule mdb_create_cap.intro)
-             apply (rule vo_abs.intro)
-              apply (rule vmdb_abs.intro)
-              apply (simp add: valid_mdb_def swp_def cte_wp_at_caps_of_state)
-             apply (erule vo_abs_axioms.intro)
-            apply assumption
-           apply (erule (2) mdb_create_cap_axioms.intro)
-          apply assumption+
-     apply (simp add: ut_revocable_def del: split_paired_All)
-    apply (simp add: irq_revocable_def del: split_paired_All)
   done
 
 lemma create_cap_descendants_range[wp]:
@@ -1809,34 +1762,10 @@ lemma set_cap_valid_mdb_simple:
   thus "ut_revocable (is_original_cap s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
   using cstate
   by (fastforce simp: ut_revocable_def)
-(*
   assume "valid_arch_mdb (is_original_cap s) (caps_of_state s)"
   thus "valid_arch_mdb (is_original_cap s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
   using cstate
   by (fastforce elim!: valid_arch_mdb_untypeds)
-  assume "reply_caps_mdb (cdt s) (caps_of_state s)"
-  thus "reply_caps_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
-  using cstate
-  apply (simp add: reply_caps_mdb_def del: split_paired_All split_paired_Ex)
-  apply (intro allI impI conjI)
-   apply (drule spec)+
-   apply (erule(1) impE)
-  apply (erule exE)
-  apply (rule_tac x = ptr' in exI)
-  apply simp+
-  apply clarsimp
-  done
-  assume "reply_masters_mdb (cdt s) (caps_of_state s)"
-  thus "reply_masters_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
-   apply (simp add: reply_masters_mdb_def del: split_paired_All split_paired_Ex)
-   apply (intro allI impI ballI)
-   apply (erule exE)
-   apply (elim allE impE)
-    apply simp
-   using cstate
-   apply clarsimp
-   done
-*)
   assume misc:
     "mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
     "descendants_inc (cdt s) (caps_of_state s)"

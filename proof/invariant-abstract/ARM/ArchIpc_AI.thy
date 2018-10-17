@@ -97,7 +97,6 @@ lemma derive_cap_is_derived [Ipc_AI_assms]:
                     | fold validE_R_def
                     | erule cte_wp_at_weakenE
                     | simp split: cap.split_asm)+)[13]
-  apply (wp, simp add: o_def)
   apply (wp hoare_drop_imps arch_derive_cap_is_derived)
   apply (clarify, drule cte_wp_at_eqD, clarify)
   apply (frule (1) cte_wp_at_valid_objs_valid_cap)
@@ -121,20 +120,8 @@ lemma is_derived_cap_rights [simp, Ipc_AI_assms]:
 
 lemma data_to_message_info_valid [Ipc_AI_assms]:
   "valid_message_info (data_to_message_info w)"
-(*
   by (simp add: valid_message_info_def data_to_message_info_def  word_and_le1 msg_max_length_def
                 msg_max_extra_caps_def Let_def not_less mask_def)
-*)
-  apply (simp add: valid_message_info_def data_to_message_info_def)
-  apply (rule conjI)
-   apply (simp add: word_and_le1 msg_max_length_def msg_max_extra_caps_def Let_def not_less)+
-  apply (subgoal_tac "(w >> 7) && 3 \<le> 3")
-   apply (subgoal_tac "(3 :: 32 word) \<le> 7")
-    apply (clarsimp simp: order.trans)
-   apply simp
-  apply (clarsimp simp: word_and_le1)
-  done
-
 
 lemma get_extra_cptrs_length[wp, Ipc_AI_assms]:
   "\<lbrace>\<lambda>s . valid_message_info mi\<rbrace>

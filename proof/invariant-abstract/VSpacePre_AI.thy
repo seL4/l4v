@@ -198,21 +198,8 @@ lemma arch_update_cap_valid_mdb:
   apply (rule conjI)
    apply (clarsimp simp: ut_revocable_def)
    apply (clarsimp simp: is_arch_update_def is_cap_simps)
-(*
-  apply (rule conjI)
-   apply (clarsimp simp: irq_revocable_def is_arch_update_def is_cap_simps simp del: split_paired_All)
-  apply (rule conjI)
-   apply (clarsimp simp: reply_master_revocable_def is_arch_update_def is_cap_simps)
-  apply (clarsimp simp: reply_mdb_def is_arch_update_def)
-  apply (rule conjI)
-   apply (clarsimp simp: reply_caps_mdb_def is_cap_simps cap_master_cap_def
-               simp del: split_paired_Ex split_paired_All)
-   apply (fastforce elim!: exEI)
-  apply (rule conjI, clarsimp simp: is_cap_simps cap_master_cap_def reply_masters_mdb_def)
-  by (erule (2) valid_arch_mdb_same_master_cap[simplified fun_upd_def])
-*)
   apply (clarsimp simp: irq_revocable_def is_arch_update_def is_cap_simps simp del: split_paired_All)
-  done
+  by (erule (2) valid_arch_mdb_same_master_cap[simplified fun_upd_def])
 
 
 lemma set_cap_arch_obj:

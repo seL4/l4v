@@ -162,7 +162,7 @@ lemma restart_invs[wp]:
 
 lemma restart_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> Tcb_A.restart t \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: Tcb_A.restart_def wp: thread_get_typ_at cancel_ipc_typ_at
+  by (wpsimp simp: Tcb_A.restart_def wp: thread_get_wp cancel_ipc_typ_at
       | rule hoare_strengthen_post[where Q="\<lambda>rv s. P (typ_at T p s)"])+
 
 lemma restart_tcb[wp]:
@@ -794,7 +794,7 @@ where
 end
 
 crunch ex_nonz_cap_to[wp]: unbind_notification "ex_nonz_cap_to t"
- (wp: maybeM_inv)
+ (wp: maybeM_inv ignore: set_tcb_obj_ref)
 
 lemma sbn_has_reply[wp]:
   "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> set_tcb_obj_ref tcb_bound_notification_update tcb ntfnptr \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
@@ -864,48 +864,7 @@ lemma bind_notification_invs:
      bind_notification tcbptr ntfnptr
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: bind_notification_def invs_def valid_state_def valid_pspace_def)
-(*
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (wp valid_irq_node_typ set_simple_ko_valid_objs simple_obj_set_prop_at valid_ioports_lift
-         | clarsimp simp:idle_no_ex_cap split del: if_split)+
-  apply (intro conjI;
-    (clarsimp simp: is_ntfn idle_no_ex_cap elim!: obj_at_weakenE)?)
-   apply (erule (1) obj_at_valid_objsE)
-   apply (clarsimp simp: valid_obj_def valid_ntfn_def pred_tcb_at_tcb_at
-                  elim!: obj_atE
-                  split: ntfn.splits)
-  apply (rule conjI)
-   apply (clarsimp simp: obj_at_def pred_tcb_at_def2)
-  apply (rule impI, erule delta_sym_refs)
-   apply (fastforce dest!: symreftype_inverse'
-                     simp: ntfn_q_refs_of_def obj_at_def
-                    split: ntfn.splits if_split_asm)
-  apply (fastforce simp: state_refs_of_def pred_tcb_at_def2 obj_at_def
-                         tcb_st_refs_of_def
-                  split: thread_state.splits if_split_asm)
-  done
-*)
-(*  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (wp valid_irq_node_typ set_simple_ko_valid_objs simple_obj_set_prop_at
-         | clarsimp simp:idle_no_ex_cap)+
-            apply (clarsimp simp: obj_at_def is_ntfn)
-           apply (wp | clarsimp)+
-         apply (rule conjI, rule impI)
-          apply (clarsimp simp: obj_at_def pred_tcb_at_def2)
-         apply (rule impI, erule delta_sym_refs)
-          apply (fastforce dest!: symreftype_inverse'
-                            simp: ntfn_q_refs_of_def obj_at_def
-                           split: ntfn.splits if_split_asm)
-         apply (fastforce simp: state_refs_of_def pred_tcb_at_def2 obj_at_def
-                               tcb_st_refs_of_def
-                        split: thread_state.splits if_split_asm)
-        apply (wp | clarsimp simp: is_ntfn)+
-  apply (erule (1) obj_at_valid_objsE)
-  apply (clarsimp simp: valid_obj_def valid_ntfn_def pred_tcb_at_tcb_at
-                 elim!: obj_atE
-                 split: ntfn.splits)
-  done*) sorry
-  apply (wpsimp wp: ntfn_at_typ_at update_sk_obj_ref_typ_at valid_irq_node_typ)
+  apply (wpsimp wp: ntfn_at_typ_at update_sk_obj_ref_typ_at valid_irq_node_typ valid_ioports_lift)
   apply (clarsimp simp: obj_at_def pred_tcb_at_def is_ntfn)
   apply (rule conjI, clarsimp simp: obj_at_def)
   apply clarsimp
@@ -950,6 +909,7 @@ lemma (in Tcb_AI) tcbinv_invs:
     apply ((wp unbind_notification_invs get_simple_ko_wp | simp)+)[2]
   apply (wp bind_notification_invs)
   apply clarsimp
+  apply wpsimp
   done
 
 
@@ -1251,10 +1211,10 @@ lemma derive_cap_ep_cte_wp_at:
   apply auto
   done
 *)
-
-lemma derive_cap_cnode[wp]:
+thm arch_derive_is_arch
+lemma derive_cap_cnode[wp]:  (* FIXME arch refactor *)
   "\<lbrace>\<lambda>s. is_cnode_cap cap\<rbrace> derive_cap slot cap  \<lbrace>\<lambda>rv s. is_cnode_cap rv\<rbrace>, -"
-  by (wpsimp simp: derive_cap_def comp_def valid_fault_handler_def) auto
+  by (wpsimp simp: derive_cap_def comp_def valid_fault_handler_def ARM_A.arch_derive_cap_def) auto
 
 
 lemma decode_cv_space_inv[wp]:
@@ -1462,7 +1422,7 @@ lemma decode_set_timeout_ep_tc_inv[wp]:
                           \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
   decode_set_timeout_ep (ThreadCap t) slot extras \<lbrace>tcb_inv_wf\<rbrace>, -"
   unfolding decode_set_timeout_ep_def
-  by (wpsimp simp: valid_fault_handler neq_Nil_conv)
+  by (wpsimp simp: neq_Nil_conv) (drule valid_fault_handler, clarsimp)
 
 lemma decode_tcb_inv_wf:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t
@@ -1618,13 +1578,14 @@ lemma thread_set_priority_sc_tcb_sc_at[wp]:
 crunches set_priority
   for valid_cap[wp]: "valid_cap cap"
   and no_cap_to_diff_ref[wp]: "no_cap_to_obj_with_diff_ref a S"
-  and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
+  and cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   and ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
   and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   and pred_tcb_at[wp]: "pred_tcb_at proj P t"
   and sc_tcb_sc_at[wp]: "sc_tcb_sc_at P t"
-  (wp: valid_cap_typ crunch_wps maybeM_inv no_cap_to_obj_with_diff_ref_lift reschedule_required_pred_tcb_at
-   simp: crunch_simps cte_wp_at_caps_of_state)
+  (wp: valid_cap_typ crunch_wps no_cap_to_obj_with_diff_ref_lift reschedule_required_pred_tcb_at
+   simp: crunch_simps cte_wp_at_caps_of_state ignore: set_simple_ko
+ wp_del: sort_queue_rv_wf')
 
 lemma mapM_priorities:
   "\<lbrace>\<lambda>s. (\<forall>t \<in> set qs. tcb_at t s) \<longrightarrow> P (map (tcb_priority o un_TCB o the o kheap s) qs) s\<rbrace>
@@ -1677,7 +1638,7 @@ lemma set_ep_minor_invs:
      set_endpoint ptr val
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-          wp: valid_irq_node_typ simp_del: fun_upd_apply)
+          wp: valid_irq_node_typ valid_ioports_lift simp_del: fun_upd_apply)
   apply (clarsimp simp: state_refs_of_def obj_at_def ext elim!: rsubst[where P = sym_refs])
   done
 

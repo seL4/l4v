@@ -519,6 +519,9 @@ lemma complete_yield_to_no_st_refs_ct[wp]:
   by (wpsimp simp: complete_yield_to_def
  wp: set_thread_state_st_tcb_at set_sc_obj_ref_no_st_refs_ct hoare_drop_imp)
 *)
+crunches refill_unblock_check
+for arch_state[wp]: "\<lambda>s. P (arch_state s)"
+  (wp: crunch_wps)
 
 lemma sched_context_yield_to_invs:
   notes refs_of_simps [simp del]
@@ -536,7 +539,7 @@ lemma sched_context_yield_to_invs:
    apply (wpsimp wp: complete_yield_to_invs)
    apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def get_sc_obj_ref_def split_del: if_split
-      wp: valid_irq_node_typ hoare_vcg_if_lift2 thread_get_inv hoare_drop_imp)
+      wp: valid_irq_node_typ hoare_vcg_if_lift2 thread_get_inv hoare_drop_imp valid_ioports_lift)
    apply (rule conjI)
     apply (clarsimp simp: cur_tcb_def)
    apply (rule conjI)
@@ -1163,7 +1166,7 @@ lemma as_user_valid_refills[wp]:
 
 crunch valid_refills[wp]: set_message_info "valid_refills scp budget"
 crunch valid_refills[wp]: set_cdt,set_original,set_extra_badge "valid_refills scp budget"
-  (simp: valid_refills_def)
+  (simp: valid_refills_def wp_del: set_original_wp)
 
 
 lemma set_cap_valid_refills [wp]:
@@ -1172,6 +1175,9 @@ lemma set_cap_valid_refills [wp]:
   apply (wpsimp simp: set_object_def wp: get_object_wp)
   apply (fastforce simp: valid_refills_def obj_at_def)
   done
+
+crunch valid_refills[wp]: update_cdt,set_untyped_cap_as_full "valid_refills scp budget"
+  (wp: hoare_drop_imps crunch_wps simp: crunch_simps ignore: set_original)
 
 crunch valid_refills[wp]: cap_insert "valid_refills scp budget"
   (wp: hoare_drop_imps)
@@ -1335,7 +1341,7 @@ lemma update_sc_badge_invs:
   "\<lbrace>invs and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
       set_sched_context p (sc\<lparr>sc_badge := i \<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
-                simp_del: fun_upd_apply)
+                simp_del: fun_upd_apply wp: valid_ioports_lift)
   apply safe
     apply (fastforce simp: valid_objs_def valid_obj_def)
    apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def live_def)
@@ -1368,6 +1374,7 @@ lemma thread_set_cap_to:
   \<Longrightarrow> \<lbrace>ex_nonz_cap_to p\<rbrace> thread_set f tptr \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
   apply (clarsimp simp add: ex_nonz_cap_to_def)
   apply (wpsimp wp: hoare_ex_wp thread_set_cte_wp_at_trivial)
+  apply auto
   done
 
 lemma thread_set_timeout_fault_valid_mdb[wp]:
@@ -1401,7 +1408,8 @@ lemma thread_set_timeout_fault_invs[wp]:
                thread_set_iflive_trivial thread_set_zombies_trivial thread_set_valid_ioc_trivial
                thread_set_valid_idle_trivial thread_set_only_idle thread_set_ifunsafe_trivial
                thread_set_global_refs_triv valid_irq_node_typ thread_set_arch_caps_trivial
-               thread_set_cap_refs_in_kernel_window thread_set_cap_refs_respects_device_region)
+               thread_set_cap_refs_in_kernel_window thread_set_cap_refs_respects_device_region
+               valid_ioports_lift thread_set_caps_of_state_trivial)
 
 lemma send_fault_ipc_invs_timeout:
   "\<lbrace>invs and st_tcb_at active tptr and ex_nonz_cap_to tptr
@@ -1452,7 +1460,8 @@ lemma sched_context_nonref_update_invs[wp]:
   "\<lbrace> invs and obj_at (\<lambda>ko. \<exists>n. ko = SchedContext sc n) scp \<rbrace>
     set_sched_context scp (sc\<lparr> sc_period := period, sc_refill_max := m, sc_refills := r0#rs\<rparr>)
       \<lbrace> \<lambda>_. invs \<rbrace> "
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def simp_del: refs_of_defs)
+  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def simp_del: refs_of_defs
+                wp: valid_ioports_lift)
   apply (intro conjI)
     apply (erule (1) obj_at_valid_objsE)
     apply (clarsimp simp: valid_obj_def valid_sched_context_def)
@@ -1466,7 +1475,8 @@ lemma sched_context_refill_update_invs:
   "\<lbrace> invs and obj_at (\<lambda>ko. \<exists>n. ko = SchedContext sc n) scp \<rbrace>
     set_sched_context scp (sc\<lparr> sc_refills := r0#rs\<rparr>)
       \<lbrace> \<lambda>_. invs \<rbrace> "
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def simp_del: refs_of_defs)
+  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def simp_del: refs_of_defs
+                wp: valid_ioports_lift)
   apply (intro conjI)
     apply (erule (1) obj_at_valid_objsE)
     apply (clarsimp simp: valid_obj_def valid_sched_context_def)

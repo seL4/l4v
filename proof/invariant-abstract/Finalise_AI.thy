@@ -824,7 +824,7 @@ lemma sched_context_maybe_unbind_ntfn_invs[wp]:
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def update_sk_obj_ref_def
                       sched_context_maybe_unbind_ntfn_def maybeM_def get_sk_obj_ref_def
                   wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp
-                      get_sched_context_wp)
+                      get_sched_context_wp valid_ioports_lift)
   apply (clarsimp simp: obj_at_def)
   apply (rule valid_objsE, assumption+, clarsimp simp: valid_obj_def)
   apply (clarsimp simp: valid_ntfn_def obj_at_def dest!: is_sc_objD)
@@ -860,7 +860,7 @@ lemma reply_unlink_sc_invs[wp]: "\<lbrace>invs\<rbrace> reply_unlink_sc scptr rp
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_seq_ext[OF _ hoare_if])
     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-      wp: valid_irq_node_typ valid_sc_typ_list_all_reply hoare_drop_imp)
+      wp: valid_irq_node_typ valid_sc_typ_list_all_reply hoare_drop_imp valid_ioports_lift)
    apply (wpsimp split_del: if_split)+
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def split del: if_split)
    defer
@@ -1188,9 +1188,6 @@ lemma reply_unlink_sc_cte_wp_at:
 crunch cte_wp_at[wp]: reply_unlink_tcb,unbind_from_sc "cte_wp_at P p"
   (wp: maybeM_inv hoare_drop_imp ignore: get_simple_ko)
 
-crunch cte_wp_at[wp]: fast_finalise "cte_wp_at P p"
-  (rule: fast_finalise_lift wp: maybeM_inv ignore: set_tcb_obj_ref)
-
 lemma cap_delete_one_cte_wp_at_preserved:
   assumes x: "\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap"
   shows "\<lbrace>cte_wp_at P p\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv s. cte_wp_at P p s\<rbrace>"
@@ -1210,8 +1207,7 @@ crunch cte_wp_at[wp]: reply_cancel_ipc "cte_wp_at P p"
 crunch cte_wp_at[wp]: cancel_ipc "cte_wp_at P p"
 
 crunch cte_wp_at[wp]: fast_finalise "cte_wp_at P p"
-  (wp:fast_finalise_lift maybeM_inv mapM_x_wp hoare_vcg_if_lift2 hoare_drop_imp
-   ignore: set_tcb_obj_ref cancel_ipc simp: crunch_simps)
+  (wp: crunch_wps ignore: set_tcb_obj_ref simp: crunch_simps)
 
 lemma (in Finalise_AI_1) finalise_cap_equal_cap[wp]:
   "\<lbrace>cte_wp_at ((=) cap) sl\<rbrace>

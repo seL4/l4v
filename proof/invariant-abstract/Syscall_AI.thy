@@ -191,7 +191,7 @@ lemma check_budget_restart_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace> check_budget_restart \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: check_budget_restart_def)
   apply (rule hoare_seq_ext[rotated])
-   apply (wpsimp wp: check_budget_invs)
+   apply (rule check_budget_invs[simplified])
   apply (wpsimp wp: gts_wp)
   apply (case_tac st; wpsimp)
    apply (drule invs_iflive,
@@ -199,8 +199,8 @@ lemma check_budget_restart_invs[wp]:
   done
 
 lemma invoke_tcb_tcb[wp]:
-  "invoke_tcb i \<lbrace>tcb_at tptr\<rbrace>"
-  by (simp add: tcb_at_typ invoke_tcb_typ_at [where P=id, simplified])
+  "invoke_tcb i \<lbrace>tcb_at tptr::det_state\<Rightarrow>_\<rbrace>"
+  by (simp add: tcb_at_typ, rule invoke_tcb_typ_at [where P=id, simplified])
 
 lemma invoke_domain_tcb[wp]:
   "\<lbrace>tcb_at tptr\<rbrace> invoke_domain thread domain \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
@@ -417,7 +417,7 @@ lemma do_reply_invs[wp]:
   "\<lbrace>tcb_at t and reply_at r and (* RT might need more precondition *)
     invs\<rbrace>
      do_reply_transfer t r
-   \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+   \<lbrace>\<lambda>rv. invs :: det_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wpsimp wp: sts_invs_minor handle_timeout_Timeout_invs)
                     apply (wp hoare_drop_imps hoare_vcg_all_lift refill_unblock_check_invs)
@@ -503,7 +503,7 @@ lemma do_reply_invs[wp]:
 
 lemma pinv_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> valid_invocation i s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
-    perform_invocation blocking call can_donate i \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+    perform_invocation blocking call can_donate i \<lbrace>\<lambda>rv. invs :: det_ext state \<Rightarrow> _\<rbrace>"
   apply (cases i; wpsimp wp: tcbinv_invs send_signal_interrupt_states invoke_domain_invs)
   apply (clarsimp simp: ct_in_state_def)
   apply (erule st_tcb_ex_cap; fastforce)
@@ -524,13 +524,13 @@ locale Syscall_AI = Systemcall_AI_Pre:Systemcall_AI_Pre _ state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself" +
   assumes invoke_irq_control_typ_at[wp]:
     "\<And>P T p irq_inv.
-      \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace> invoke_irq_control irq_inv \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+      \<lbrace>\<lambda>s::det_ext state. P (typ_at T p s)\<rbrace> invoke_irq_control irq_inv \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   assumes obj_refs_cap_rights_update[simp]:
     "\<And>rs cap. obj_refs (cap_rights_update rs cap) = obj_refs cap"
   assumes table_cap_ref_mask_cap:
     "\<And>R cap. table_cap_ref (mask_cap R cap) = table_cap_ref cap"
   assumes diminished_no_cap_to_obj_with_diff_ref:
-    "\<And>cap p (s::'state_ext state) S.
+    "\<And>cap p (s::det_ext state) S.
       \<lbrakk> cte_wp_at (diminished cap) p s; valid_arch_caps s \<rbrakk>
         \<Longrightarrow> no_cap_to_obj_with_diff_ref cap S s"
   assumes hv_invs[wp]:
@@ -560,17 +560,8 @@ context Syscall_AI begin
 lemma pinv_tcb[wp]:
   "\<And>tptr blocking call can_donate i.
     \<lbrace>invs and st_tcb_at active tptr and ct_active and valid_invocation i\<rbrace>
-(*
-      perform_invocation blocking can_donate call i
-    \<lbrace>\<lambda>rv. tcb_at tptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  apply (case_tac i, simp_all split:option.splits,
-    (wp invoke_arch_tcb
-              | simp | clarsimp elim!: st_tcb_at_tcb_at
-              | wp_once tcb_at_typ_at)+
-    )
-    *)
       perform_invocation blocking call can_donate i
-    \<lbrace>\<lambda>rv. tcb_at tptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+    \<lbrace>\<lambda>rv. tcb_at tptr :: det_ext state \<Rightarrow> bool\<rbrace>"
   apply (case_tac i, simp_all split:option.splits)
              apply (wpsimp simp: st_tcb_at_tcb_at)+
             apply ((wpsimp wp: tcb_at_typ_at simp: st_tcb_at_tcb_at)+)[3]
@@ -728,7 +719,7 @@ context Syscall_AI begin
 lemma decode_inv_wf[wp]:
   "\<lbrace>valid_cap cap and invs and cte_wp_at (diminished cap) slot
            and ex_cte_cap_to slot
-           and (\<lambda>s::'state_ext state. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)
+           and (\<lambda>s::det_ext state. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)
            and (\<lambda>s. \<forall>r\<in>cte_refs cap (interrupt_irq_node s). ex_cte_cap_to r s)
            and (\<lambda>s. \<forall>cap \<in> set excaps. \<forall>r\<in>cte_refs (fst cap) (interrupt_irq_node s). ex_cte_cap_to r s)
            and (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> (fst x))
@@ -1067,7 +1058,7 @@ lemma hoare_vcg_const_imp_lift_E[wp]:
 context Syscall_AI begin
 
 lemma hinv_invs':
-  fixes Q :: "'state_ext state \<Rightarrow> bool" and calling blocking
+  fixes Q :: "det_ext state \<Rightarrow> bool" and calling blocking
   assumes perform_invocation_Q[wp]:
     "\<And>block class can_donate i.
       \<lbrace>invs and Q and ct_active and valid_invocation i\<rbrace>
@@ -1116,7 +1107,7 @@ lemma hinv_tcb[wp]:
   "\<And>t calling blocking can_donate cptr.
     \<lbrace>st_tcb_at active t and invs and ct_active\<rbrace>
       handle_invocation calling blocking can_donate cptr
-    \<lbrace>\<lambda>rv. tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+    \<lbrace>\<lambda>rv. tcb_at t :: det_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: handle_invocation_def split_def
                    ts_Restart_case_helper
                    liftE_liftM_liftME liftME_def bindE_assoc)
@@ -1134,12 +1125,12 @@ lemma get_cap_reg_inv[wp]: "\<lbrace>P\<rbrace> get_cap_reg r \<lbrace>\<lambda>
 lemma hs_tcb_on_err:
   "\<lbrace>st_tcb_at active t and invs and ct_active\<rbrace>
      handle_send blocking
-   -,\<lbrace>\<lambda>e. tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+   -,\<lbrace>\<lambda>e. tcb_at t :: det_ext state \<Rightarrow> bool\<rbrace>"
   apply (unfold handle_send_def whenE_def fun_app_def)
   apply (wpsimp | rule hoare_strengthen_post [OF hinv_tcb])+
   done
 
-lemma hs_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_send blocking \<lbrace>\<lambda>r. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+lemma hs_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_send blocking \<lbrace>\<lambda>r. invs :: det_ext state \<Rightarrow> bool\<rbrace>"
   apply (rule validE_valid)
   apply (simp add: handle_send_def whenE_def)
   apply (wp | simp add: ct_in_state_def tcb_at_invs)+
@@ -1347,7 +1338,7 @@ lemma do_reply_transfer_st_tcb_at_active:
   sorry
 
 lemma hc_invs[wp]:
-  "\<lbrace>invs and ct_active\<rbrace> handle_call \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  "\<lbrace>invs and ct_active\<rbrace> handle_call \<lbrace>\<lambda>rv. invs :: det_ext state \<Rightarrow> bool\<rbrace>"
   by (simp add: handle_call_def) wpsimp
 
 end

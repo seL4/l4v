@@ -1107,21 +1107,7 @@ lemma valid_mdb_rep2:
     apply (auto simp: is_cap_simps)[1]
     apply (simp add: irq_revocable_def null_filter_def del: split_paired_All)
     apply auto[1]
-(*
-   apply (rule arg_cong2 [where f="(\<and>)"])
-    apply (simp add: reply_master_revocable_def null_filter_def del: split_paired_All)
-    apply (auto simp: is_cap_simps)[1]
-   apply (simp add: reply_mdb_def null_filter_def)
-   apply (rule arg_cong2 [where f="(\<and>)"])
-    apply (simp add: reply_caps_mdb_def
-                del: split_paired_Ex split_paired_All)
-    apply (fastforce intro!: iffI elim!: allEI exEI
-                  simp del: split_paired_Ex split_paired_All)
-   apply (rule arg_cong2 [where f="(\<and>)"])
-    apply (fastforce simp: reply_masters_mdb_def intro!: iffI elim!: allEI
-                 simp del: split_paired_All split: if_split_asm)
-   apply (fastforce simp: valid_arch_mdb_null_filter[simplified null_filter_def])
-*)
+   apply ((fastforce simp: valid_arch_mdb_null_filter[simplified null_filter_def])+)[2]
   apply (rule arg_cong[where f=All, OF ext])+
   apply ((clarsimp simp: cte_wp_at_caps_of_state null_filter_def
                | rule conjI iffI

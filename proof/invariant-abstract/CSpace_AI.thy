@@ -2196,42 +2196,6 @@ lemma cap_insert_mdb [wp]:
    apply (rule conjI)
     apply (simp add: no_mloop_def mdb_insert_abs.parency)
     apply (intro allI impI conjI)
-(*
-            apply (rule_tac m1 = "caps_of_state s(dest\<mapsto> cap)"
-                        and src1 = src in iffD2[OF untyped_mdb_update_free_index,rotated,rotated])
-              apply (simp add:fun_upd_twist)+
-           apply (drule_tac cs' = "caps_of_state s(src \<mapsto> max_free_index_update capa)" in descendants_inc_minor)
-             apply (clarsimp simp:cte_wp_at_caps_of_state swp_def)
-            apply clarsimp
-           apply (subst upd_commute)
-            apply simp
-           apply (erule(1) mdb_insert_abs.descendants_inc)
-            apply simp
-           apply (clarsimp dest!:is_derived_cap_class_range)
-          apply (rule notI)
-          apply (simp add: mdb_insert_abs.dest_no_parent_trancl)
-         apply (erule mdb_insert_abs.untyped_inc_simple)
-                apply (rule_tac m = "caps_of_state s" and src = src in untyped_inc_update_free_index)
-                  apply (simp add:fun_upd_twist)+
-              apply (frule_tac p = src in caps_of_state_valid,assumption)
-              apply (clarsimp simp:valid_cap_def)
-             apply clarsimp+
-            apply (clarsimp simp:is_cap_simps)+
-          apply (simp add:is_derived_def)
-         apply (clarsimp simp:is_cap_simps)
-        apply (clarsimp simp:ut_revocable_def is_cap_simps is_cap_revocable_def)
-       apply (clarsimp simp: irq_revocable_def is_cap_revocable_def)
-       apply (intro impI conjI)
-        apply (clarsimp simp:is_cap_simps free_index_update_def)+
-      apply (clarsimp simp: reply_master_revocable_def is_derived_def is_master_reply_cap_def is_cap_revocable_def)
-     apply clarsimp
-     apply (rule_tac m1 = "caps_of_state s(dest\<mapsto> cap)"
-                   and src1 = src in reply_mdb_update_free_index[THEN iffD2])
-       apply ((simp add:fun_upd_twist)+)[3]
-    apply (clarsimp simp:is_cap_simps is_cap_revocable_def)
-    apply (rule valid_arch_mdb_updates, simp add: is_cap_simps)
-    apply simp
-*)
            apply (rule_tac m1 = "caps_of_state s(dest\<mapsto> cap)"
                      and src1 = src in iffD2[OF untyped_mdb_update_free_index,rotated,rotated])
              apply (simp add:fun_upd_twist)+
@@ -2254,40 +2218,19 @@ lemma cap_insert_mdb [wp]:
            apply (clarsimp simp:is_cap_simps)+
          apply (simp add:is_derived_def)
         apply (clarsimp simp:is_cap_simps)
-       apply (clarsimp simp:ut_revocable_def is_cap_simps revokable_def)
+       apply (clarsimp simp:ut_revocable_def is_cap_simps is_cap_revocable_def)
       apply (clarsimp simp: irq_revocable_def)
       apply (intro impI conjI)
-       apply (clarsimp simp:is_cap_simps free_index_update_def)+
+       apply ((clarsimp simp:is_cap_simps free_index_update_def)+)[2]
+       apply (clarsimp simp:is_cap_simps is_cap_revocable_def)
+      apply (rule valid_arch_mdb_updates, simp add: is_cap_simps)
      apply (clarsimp simp: is_derived_def)
 (* upto here *)
    apply (simp add: no_mloop_def mdb_insert_abs.parency)
    apply (intro impI conjI allI)
-(*
          apply (erule(1) mdb_insert_abs.descendants_inc)
           apply simp
-         apply (clarsimp dest!:is_derived_cap_class_range)
-        apply (rule notI)
-        apply (simp add: mdb_insert_abs.dest_no_parent_trancl)
-       apply (frule_tac p = src in caps_of_state_valid,assumption)
-       apply (erule mdb_insert_abs.untyped_inc)
-            apply simp+
-          apply (simp add:valid_cap_def)
-         apply simp+
-       apply (clarsimp simp:is_derived_def is_cap_simps cap_master_cap_simps dest!:cap_master_cap_eqDs)
-      apply (clarsimp simp:ut_revocable_def is_cap_simps,simp add:is_cap_revocable_def)
-     apply (clarsimp simp: irq_revocable_def is_cap_revocable_def)
-    apply (clarsimp simp: reply_master_revocable_def is_derived_def is_master_reply_cap_def is_cap_revocable_def)
-   apply (erule (1) valid_arch_mdb_updates)
-*)
-        apply (erule(1) mdb_insert_abs.descendants_inc)
-        apply simp
-       apply (simp add: is_derived_cap_class_range is_derived_def)
-      apply (clarsimp simp: mdb_insert_abs.dest_no_parent_trancl)
-     apply (erule mdb_insert_abs.untyped_inc)
-          apply simp
-         apply simp
- sorry
-(*        apply (clarsimp dest!:is_derived_cap_class_range)
+        apply (clarsimp dest!:is_derived_cap_class_range)
        apply (rule notI)
        apply (simp add: mdb_insert_abs.dest_no_parent_trancl)
       apply (frule_tac p = src in caps_of_state_valid,assumption)
@@ -2295,97 +2238,18 @@ lemma cap_insert_mdb [wp]:
            apply simp+
          apply (simp add:valid_cap_def)
         apply simp+
-      apply (clarsimp simp:is_derived_def is_cap_simps cap_master_cap_simps dest!:cap_master_cap_eqDs)
-     apply (clarsimp simp:ut_revocable_def is_cap_simps,simp add:revokable_def)
-    apply (clarsimp simp: irq_revocable_def)
-   apply (clarsimp simp: is_derived_def)
-(* upto here *)
-  apply (clarsimp)
         apply (clarsimp simp: valid_cap_aligned
                        dest!: caps_of_state_valid_cap)
-       apply simp
       apply (simp add: is_derived_def)
      apply (case_tac capa; clarsimp)
      apply (simp add: cap_master_cap_simps(7))
      apply (frule sym, frule cap_master_cap_eqDs1(10), erule exE)
      apply simp
-    apply (clarsimp simp: ut_revocable_def is_cap_simps, simp add:revokable_def)
+    apply (clarsimp simp: ut_revocable_def is_cap_simps, simp add:is_cap_revocable_def)
    apply (simp add: irq_revocable_def)
   apply clarsimp
-  apply (intro impI conjI allI)
-(*                   apply (rule_tac m1 = "caps_of_state s(dest\<mapsto> cap)"
-                              and src1 = src in iffD2[OF untyped_mdb_update_free_index,rotated,rotated])
-                     apply (frule mdb_insert_abs_sib.untyped_mdb_sib)
-                      apply (simp add:fun_upd_twist)+
-                  apply (drule_tac cs' = "caps_of_state s(src \<mapsto> max_free_index_update capa)" in descendants_inc_minor)
-                    apply (clarsimp simp:cte_wp_at_caps_of_state swp_def)
-                   apply clarsimp
-                  apply (subst upd_commute)
-                   apply simp
-                  apply (erule(1) mdb_insert_abs_sib.descendants_inc)
-                   apply simp
-                  apply (clarsimp dest!:is_derived_cap_class_range)
-                 apply (simp add: no_mloop_def)
-                 apply (simp add: mdb_insert_abs_sib.parent_n_eq)
-                 apply (simp add: mdb_insert_abs.dest_no_parent_trancl)
-                apply (rule_tac m = "caps_of_state s(dest\<mapsto> cap)" and src = src in untyped_inc_update_free_index)
-                  apply (simp add:fun_upd_twist)+
-                apply (frule(3) mdb_insert_abs_sib.untyped_inc)
-                  apply (frule_tac p = src in caps_of_state_valid,assumption)
-                  apply (simp add:valid_cap_def)
-                 apply (simp add:valid_cap_def,
-                          clarsimp simp:ut_revocable_def,case_tac src,
-                          clarsimp,simp)
-               apply (clarsimp simp:ut_revocable_def is_cap_simps is_cap_revocable_def)
-              apply (clarsimp simp: irq_revocable_def is_cap_revocable_def)
-              apply (intro impI conjI)
-               apply (clarsimp simp:is_cap_simps free_index_update_def)+
-             apply (clarsimp simp: reply_master_revocable_def is_derived_def is_master_reply_cap_def is_cap_revocable_def)
-            apply (rule_tac m1 = "caps_of_state s(dest\<mapsto> cap)"
-                      and src1 = src in iffD2[OF reply_mdb_update_free_index,rotated,rotated])
-              apply (frule mdb_insert_abs_sib.reply_mdb_sib,simp+)
-               apply (clarsimp simp:ut_revocable_def,case_tac src,clarsimp,simp)
-             apply (simp add:fun_upd_twist)+
-(*
            apply (erule (1) valid_arch_mdb_updates, clarsimp)
-          apply (frule mdb_insert_abs_sib.untyped_mdb_sib)
-              apply (simp add:fun_upd_twist)+
-         apply (erule(1) mdb_insert_abs_sib.descendants_inc)
-          apply simp
-         apply (clarsimp dest!: is_derived_cap_class_range)
-        apply (simp add: no_mloop_def)
-        apply (simp add: mdb_insert_abs_sib.parent_n_eq)
-        apply (simp add: mdb_insert_abs.dest_no_parent_trancl)
-       apply (frule(3) mdb_insert_abs_sib.untyped_inc)
-         apply (simp add:valid_cap_def)
-        apply (case_tac src,clarsimp simp:ut_revocable_def)
-       apply simp
-      apply (clarsimp simp:ut_revocable_def is_cap_simps,simp add: is_cap_revocable_def)
-     apply (clarsimp simp: irq_revocable_def is_cap_revocable_def)
-    apply (clarsimp simp: reply_master_revocable_def is_derived_def is_master_reply_cap_def)
-   apply (frule mdb_insert_abs_sib.reply_mdb_sib,simp+)
-    apply (clarsimp simp:reply_master_revocable_def,case_tac src,clarsimp)
-   apply simp
-  apply (erule (1) valid_arch_mdb_updates)
-  done
-*)
-        apply (erule(1) mdb_insert_abs_sib.descendants_inc)
-         apply simp
-        apply (clarsimp dest!: is_derived_cap_class_range)
-       apply (simp add: no_mloop_def)
-       apply (simp add: mdb_insert_abs_sib.parent_n_eq)
-       apply (simp add: mdb_insert_abs.dest_no_parent_trancl)
-      apply (frule(3) mdb_insert_abs_sib.untyped_inc)
-        apply (simp add:valid_cap_def)
-       apply (case_tac src,clarsimp simp:ut_revocable_def)
-      apply simp
-     apply (clarsimp simp:ut_revocable_def is_cap_simps,simp add: revokable_def)
-    apply (clarsimp simp: irq_revocable_def)
-   apply (clarsimp simp: reply_master_revocable_def is_derived_def is_master_reply_cap_def)
-  apply (frule mdb_insert_abs_sib.reply_mdb_sib,simp+)
-   apply (clarsimp simp:reply_master_revocable_def,case_tac src,clarsimp)
-  apply simp
-  done*)
+  apply (intro impI conjI allI)
              apply (rule_tac m1 = "caps_of_state s(dest\<mapsto> cap)" and src1 = src
                              in iffD2[OF untyped_mdb_update_free_index, rotated, rotated])
                apply (frule mdb_insert_abs_sib.untyped_mdb_sib)
@@ -2410,12 +2274,15 @@ lemma cap_insert_mdb [wp]:
             apply (simp add: valid_cap_def)
            apply (simp add: valid_cap_def, clarsimp simp: ut_revocable_def, case_tac src,
                   clarsimp, simp)
-         apply (clarsimp simp: ut_revocable_def is_cap_simps revokable_def)
-        apply (clarsimp simp: irq_revocable_def)
+         apply (clarsimp simp: ut_revocable_def is_cap_simps is_cap_revocable_def)
+        apply (clarsimp simp: irq_revocable_def is_cap_revocable_def)
         apply (intro impI conjI)
-         apply (clarsimp simp: is_cap_simps free_index_update_def)+
+         apply ((clarsimp simp: is_cap_simps free_index_update_def is_cap_revocable_def)+)[2]
        apply (frule mdb_insert_abs_sib.untyped_mdb_sib)
            apply (simp add: fun_upd_twist)+
+           apply (erule (1) valid_arch_mdb_updates, clarsimp)
+          apply (frule mdb_insert_abs_sib.untyped_mdb_sib)
+              apply (simp add:fun_upd_twist)+
       apply (erule(1) mdb_insert_abs_sib.descendants_inc)
        apply simp
       apply (clarsimp dest!: is_derived_cap_class_range)
@@ -2426,8 +2293,9 @@ lemma cap_insert_mdb [wp]:
       apply (simp add: valid_cap_def)
      apply (case_tac src, clarsimp simp: ut_revocable_def)
     apply simp
-   apply (clarsimp simp: ut_revocable_def is_cap_simps, simp add: revokable_def)
+   apply (clarsimp simp: ut_revocable_def is_cap_simps, simp add: is_cap_revocable_def)
   apply (clarsimp simp: irq_revocable_def)
+  apply (erule (1) valid_arch_mdb_updates)
   done
 
 
@@ -3462,23 +3330,11 @@ lemma cap_move_mdb [wp]:
    apply (erule (4) mdb_move_abs_gen.untyped_inc)
   apply (rule conjI)
    apply (simp add: ut_revocable_def weak_derived_is_untyped del: split_paired_All)
-(*
   apply (rule conjI)
-   apply (simp add: irq_revocable_def del: split_paired_All)
-   apply clarsimp
-   apply (metis surj_pair)
-  apply (rule conjI)
-   apply (simp add: reply_master_revocable_def del: split_paired_All)
-   apply (drule_tac x=src in spec, drule_tac x=capa in spec)
-   apply (intro impI)
-   apply (simp add: weak_derived_is_reply_master)
-  apply (rule conjI, erule (4) mdb_move_abs.reply_mdb)
-  apply (erule (2) valid_arch_mdb_updates)
-*)
   apply (simp add: irq_revocable_def del: split_paired_All)
   apply clarsimp
   apply (metis surj_pair)
-(* here *)
+  apply (erule (2) valid_arch_mdb_updates)
   done
 
 end
@@ -4202,11 +4058,6 @@ locale CSpace_AI
         \<Longrightarrow> (is_physical cap \<and> cap_range cap \<noteq> {} \<and> cap_range cap \<subseteq> cap_range pcap)"
   assumes same_region_as_cap_class:
     "\<And>a b. same_region_as a b \<Longrightarrow> cap_class a = cap_class b"
-  assumes setup_reply_master_ioports[wp]:
-    "\<And>t.
-      \<lbrace>valid_ioports\<rbrace>
-        setup_reply_master t
-      \<lbrace>\<lambda>rv. valid_ioports :: 'state_ext state \<Rightarrow> bool\<rbrace>"
 
 
 lemma lookup_cap_valid:
@@ -4444,7 +4295,6 @@ lemma tcb_at_st_tcb_at: "tcb_at = st_tcb_at \<top>"
   apply (rule arg_cong[where f=Ex], rule ext)
   apply (case_tac ko, simp_all)
   done
-*)
 
 
 lemma appropriate_cte_cap_def2:
@@ -4716,6 +4566,7 @@ lemma cap_insert_simple_mdb:
    apply (simp add:is_simple_cap_def)+
    apply (clarsimp simp: ut_revocable_def is_simple_cap_def)
    apply (clarsimp simp: irq_revocable_def is_simple_cap_def)
+  apply (erule (2) valid_arch_mdb_simple)
   done
 
 end

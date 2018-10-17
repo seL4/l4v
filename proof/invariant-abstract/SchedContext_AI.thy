@@ -36,6 +36,7 @@ crunches commit_domain_time,set_next_interrupt,set_refills,refill_split_check
   and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
   and cur_time[wp]: "\<lambda>s. P (cur_time s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  and arch_state[wp]: "\<lambda>s. P (arch_state s)"
   and cur_sc_cur_thread[wp]: "\<lambda>s. P (cur_sc s) (cur_thread s)"
   (wp: crunch_wps simp: Let_def)
 
@@ -407,7 +408,7 @@ lemma set_sc_consumed_invs:
   "\<lbrace>invs and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
       set_sched_context p (sc\<lparr>sc_consumed := i \<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
-                simp_del: fun_upd_apply)
+                simp_del: fun_upd_apply wp: valid_ioports_lift)
   apply safe
     apply (fastforce simp: valid_objs_def valid_obj_def)
    apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def live_def)
@@ -467,7 +468,7 @@ lemma
       commit_domain_time_def
       wp: valid_irq_node_typ static_imp_wp get_sched_context_wp hoare_vcg_conj_lift
           update_sched_context_valid_objs_same update_sched_context_iflive_same
-          update_sched_context_refs_of_same hoare_drop_imp)
+          update_sched_context_refs_of_same hoare_drop_imp valid_ioports_lift)
   apply (clarsimp simp: valid_sched_context_def live_sc_def)
   done
 
@@ -651,7 +652,7 @@ lemma set_sched_context_minor_invs: (* minor? *)
      set_sched_context ptr val
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-          wp: valid_irq_node_typ simp_del: fun_upd_apply)
+          wp: valid_irq_node_typ valid_ioports_lift simp_del: fun_upd_apply)
   apply (clarsimp simp: state_refs_of_def obj_at_def ext elim!: rsubst[where P = sym_refs])
   done
 
@@ -698,7 +699,8 @@ lemma sched_context_bind_ntfn_invs[wp]:
       sched_context_bind_ntfn sc ntfn \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: sched_context_bind_ntfn_def invs_def valid_state_def
       valid_pspace_def update_sk_obj_ref_def
-       wp: get_simple_ko_wp valid_irq_node_typ set_simple_ko_valid_objs simple_obj_set_prop_at)
+       wp: get_simple_ko_wp valid_irq_node_typ set_simple_ko_valid_objs simple_obj_set_prop_at
+           valid_ioports_lift)
   apply (clarsimp simp: obj_at_def is_ntfn sc_ntfn_sc_at_def)
   apply (case_tac "sc=ntfn", simp)
   apply safe
@@ -718,7 +720,8 @@ lemma sched_context_unbind_ntfn_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_unbind_ntfn sc \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: sched_context_unbind_ntfn_def maybeM_def get_sc_obj_ref_def)
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def update_sk_obj_ref_def
-      wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp get_sched_context_wp)
+      wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp get_sched_context_wp
+          valid_ioports_lift)
   apply (clarsimp simp: obj_at_def is_ntfn sc_ntfn_sc_at_def)
   apply (case_tac "sc=x", simp)
   apply safe
@@ -798,6 +801,10 @@ lemma set_tcb_yt_update_bound_sc_tcb_at[wp]:
   "\<lbrace>bound_sc_tcb_at P t\<rbrace> set_tcb_obj_ref tcb_yield_to_update scp tcb \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
   by (wpsimp simp: set_tcb_obj_ref_def set_object_def pred_tcb_at_def obj_at_def get_tcb_rev)
 
+crunches sched_context_bind_tcb, update_sk_obj_ref
+for arch_state[wp]: "\<lambda>s. P (arch_state s)"
+  (wp: crunch_wps)
+
 lemma sched_context_bind_tcb_invs[wp]:
   "\<lbrace>invs
     and bound_sc_tcb_at (op = None) tcb and ex_nonz_cap_to tcb
@@ -806,7 +813,7 @@ lemma sched_context_bind_tcb_invs[wp]:
   apply (wpsimp simp: sched_context_bind_tcb_def invs_def valid_state_def
       valid_pspace_def set_sc_obj_ref_def
       wp: valid_irq_node_typ obj_set_prop_at get_sched_context_wp ssc_refs_of_Some
-          update_sched_context_valid_objs_same
+          update_sched_context_valid_objs_same valid_ioports_lift
           update_sched_context_iflive_update
           update_sched_context_refs_of_update)
   apply (clarsimp simp: obj_at_def is_sc_obj_def pred_tcb_at_def refs_of_sc_def get_refs_def2)
@@ -832,7 +839,7 @@ lemma sched_context_unbind_tcb_invs[wp]:
   apply (wpsimp simp: sched_context_unbind_tcb_def invs_def valid_state_def
                       valid_pspace_def sc_tcb_sc_at_def obj_at_def is_tcb
           simp_del: fun_upd_apply
-          wp: valid_irq_node_typ obj_set_prop_at get_sched_context_wp)
+          wp: valid_irq_node_typ obj_set_prop_at get_sched_context_wp valid_ioports_lift)
   apply (rename_tac sc n tptr)
   apply (frule sym_refs_ko_atD[where p=sc_ptr, rotated])
    apply (simp add: obj_at_def, elim conjE)
@@ -907,14 +914,14 @@ lemma sched_context_unbind_reply_invs[wp]:
   shows
   "\<lbrace>invs\<rbrace> sched_context_unbind_reply sc_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: sched_context_unbind_reply_def)
-  apply (wpsimp wp: mapM_x_set_reply_sc_refs_of valid_irq_node_typ hoare_vcg_conj_lift
+  apply (wpsimp wp: mapM_x_set_reply_sc_refs_of valid_irq_node_typ hoare_vcg_conj_lift valid_ioports_lift
       simp: invs_def valid_state_def valid_pspace_def)
                       prefer 8
                       apply (rule hoare_strengthen_post)
-                      apply (wp mapM_x_set_reply_sc_refs_of)
+                      apply (rule mapM_x_set_reply_sc_refs_of)
                       apply simp
                       apply (wpsimp wp: mapM_x_wp' set_reply_sc_iflive valid_irq_node_typ
-                                        get_sched_context_wp get_simple_ko_wp)+
+                                        get_sched_context_wp get_simple_ko_wp valid_ioports_lift)+
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
   apply (frule sym_refs_ko_atD[where p=sc_ptr, rotated])
    apply (simp add: obj_at_def, elim conjE)
@@ -948,7 +955,7 @@ crunches postpone
 
 lemma postpone_invs[wp]:
   "postpone t \<lbrace>invs\<rbrace>"
-  by (wpsimp simp: invs_def valid_state_def valid_pspace_def)
+  by (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
 
 lemma sched_context_resume_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_resume scptr \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -970,7 +977,7 @@ lemma set_sc_othres_invs:
               sc_refills := r#refills,
               sc_refill_max := max_refills\<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
-      simp_del: fun_upd_apply)
+      simp_del: fun_upd_apply wp: valid_ioports_lift)
   apply safe
     apply (drule valid_objs_valid_sched_context, fastforce)
     apply (clarsimp simp: valid_sched_context_def)

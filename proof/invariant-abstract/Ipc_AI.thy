@@ -20,7 +20,6 @@ requalify_facts
   set_mi_invs
   as_user_hyp_refs_of
   valid_arch_arch_tcb_set_registers
-  setup_caller_cap_ioports
   set_mrs_ioports
   as_user_ioports
   set_message_info_ioports
@@ -29,12 +28,12 @@ requalify_facts
   make_arch_fault_msg_ioports
   arch_derive_cap_notzombie
   arch_derive_cap_notIRQ
+  set_sched_context_ioports
 
 end
 
 declare set_mi_invs[wp]
 declare as_user_hyp_refs_of[wp]
-declare setup_caller_cap_ioports[wp]
 
 declare if_cong[cong del]
 
@@ -2033,7 +2032,15 @@ crunches maybe_donate_sc
   and valid_mdb[wp]: valid_mdb
   and cte_wp_at[wp]: "cte_wp_at P c"
   and zombies_final[wp]: zombies_final
+  and arch_state[wp]: "\<lambda>s. P (arch_state s)"
+  and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
+  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and typ_at[wp]: "\<lambda>s. P (typ_at T t s)"
   (wp: maybeM_inv)
+
+crunch typ_at[wp]: send_signal "\<lambda>s. P (typ_at T t s)"
+(wp: hoare_drop_imps maybeM_inv)
 
 lemma gsc_ntfn_sp:
   "\<lbrace>P\<rbrace> get_ntfn_obj_ref ntfn_sc ntfnptr
@@ -2167,7 +2174,7 @@ lemma st_in_waitingntfn:
   done
 
 lemma update_waiting_invs:
-  notes if_split[split del] hoare_pre [wp_pre del]
+  notes if_split[split del]
   shows
   "\<lbrace>\<lambda>s. invs s \<and> (\<exists>ntfn. ko_at (Notification ntfn) ntfnptr s
         \<and> ntfn_obj ntfn = WaitingNtfn q \<and> ntfn_bound_tcb ntfn = bound_tcb \<and> ntfn_sc ntfn = sc)
@@ -2176,41 +2183,34 @@ lemma update_waiting_invs:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: update_waiting_ntfn_def)
   apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                  wp: valid_irq_node_typ sts_only_idle)
-   apply (wpsimp simp: valid_tcb_state_def conj_comms)
-   apply (wpsimp simp: maybe_donate_sc_def
-                   wp: hoare_vcg_conj_lift sym_refs_helper_update_waiting_invs hoare_drop_imps)
+  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def valid_tcb_state_def
+                      valid_ioports_lift conj_comms
+                wp: valid_irq_node_typ sts_only_idle sym_refs_helper_update_waiting_invs
+                    hoare_vcg_all_lift valid_ioports_lift)
+    apply (wpsimp simp: set_simple_ko_def set_object_def wp: get_object_wp)
+   apply wpsimp
   apply (simp add: invs_def valid_state_def valid_pspace_def obj_at_def)
-  apply wpsimp
-        apply (rule hoare_conjI)
-         apply (wpsimp simp: set_simple_ko_def set_object_def get_object_def
-                       split: option.splits)
-         apply (fastforce simp: obj_at_def is_ntfn elim!: ex_cap_to_after_update)
-        apply (wpsimp wp: valid_irq_node_typ)
-                      defer
-                      apply (clarsimp simp: not_idle_tcb_in_waitingntfn)+
-         apply (erule (1) pspace_valid_objsE)
-         apply (clarsimp simp: valid_ntfn_def valid_obj_def valid_bound_obj_def
-                        split: list.splits option.splits;
-                cases q; force)
-        apply (clarsimp simp: ex_nonz_cap_to_tcb_in_waitingntfn)
-       apply (fastforce simp: live_def live_ntfn_def elim!: if_live_then_nonz_capD2)
-      apply (clarsimp simp: ex_nonz_cap_to_tcb_in_waitingntfn)
-     apply clarsimp+
+  apply (clarsimp simp: not_idle_tcb_in_waitingntfn ex_nonz_cap_to_tcb_in_waitingntfn)
+  apply (rule conjI)
    apply (case_tac q; simp)
    apply (fastforce simp: valid_obj_def valid_ntfn_def
-                   elim!: valid_objsE
-                   split: option.splits list.splits)
-  apply (rule valid_objsE, assumption+)
-  apply (clarsimp simp: valid_obj_def valid_ntfn_def)
-  apply (subgoal_tac "st_tcb_at (\<lambda>x. x = BlockedOnNotification ntfnptr) (hd q) s")
-   apply (case_tac q; simp)
-   apply (rule delta_sym_refs, assumption)
-    apply (fastforce simp: state_refs_of_def split: if_splits list.splits)
-   apply (fastforce simp: state_refs_of_def get_refs_def2 st_tcb_at_def obj_at_def
-                   split: if_splits list.splits)
-  apply (clarsimp simp: st_in_waitingntfn)
+      elim!: valid_objsE
+      split: option.splits list.splits)
+  apply (rule conjI, fastforce simp: live_def live_ntfn_def elim!: if_live_then_nonz_capD2)
+  apply (rule conjI)defer
+   apply (rule conjI, fastforce simp: obj_at_def is_ntfn elim!: ex_cap_to_after_update)
+   apply (rule valid_objsE, assumption+)
+   apply (clarsimp simp: valid_obj_def valid_ntfn_def)
+   apply (subgoal_tac "st_tcb_at (\<lambda>x. x = BlockedOnNotification ntfnptr) (hd q) s")
+    apply (case_tac q; simp)
+    apply (rule delta_sym_refs, assumption)
+     apply (fastforce simp: state_refs_of_def split: if_splits list.splits)
+    apply (fastforce simp: state_refs_of_def get_refs_def2 st_tcb_at_def obj_at_def
+                     split: if_splits list.splits)
+   apply (clarsimp simp: st_in_waitingntfn)
+  apply (case_tac q; simp)
+  apply (fastforce simp: valid_obj_def valid_ntfn_def
+                   elim!: valid_objsE split: option.splits list.splits)
   done
 
 lemma not_idle_tcb_in_SendEp:
@@ -2275,8 +2275,6 @@ lemma cancel_ipc_simple2:
   done
 
 lemma cancel_ipc_cte_wp_at_not_reply_state:
-  notes hoare_pre [wp_pre del]
-  shows
   "\<lbrace>\<lambda>s. \<forall>r. st_tcb_at ((\<noteq>) (BlockedOnReply r)) t s \<and> cte_wp_at P p s\<rbrace>
     cancel_ipc t
    \<lbrace>\<lambda>r. cte_wp_at P p\<rbrace>"
@@ -2327,7 +2325,7 @@ lemma maybe_donate_sc_sym_refs:
 lemma maybe_donate_sc_invs [wp]:
   "\<lbrace>\<lambda>s. invs s \<and> ex_nonz_cap_to tcb_ptr s\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                  wp: maybe_donate_sc_sym_refs)
+                  wp: maybe_donate_sc_sym_refs valid_ioports_lift)
   apply safe
    apply (erule (1) valid_objsE)
    apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def is_sc_obj_def)
@@ -2372,7 +2370,7 @@ lemma sai_invs[wp]:
      apply (wpsimp wp: sts_invs_minor2_concise)
       apply (rule hoare_vcg_conj_lift)
        apply (rule hoare_strengthen_post)
-        apply (wpsimp wp: cancel_ipc_invs_st_tcb_at)
+        apply (rule cancel_ipc_invs_st_tcb_at)
        apply (fastforce simp: st_tcb_at_def obj_at_def)
       apply (wpsimp wp: cancel_ipc_ex_nonz_cap_to_tcb)
      apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
@@ -2380,9 +2378,9 @@ lemma sai_invs[wp]:
       apply (fastforce simp: st_tcb_def2 is_tcb idle_no_ex_cap)
      apply (clarsimp simp: pred_tcb_at_def obj_at_def)
      apply (fastforce simp: live_def receive_blocked_def intro!: if_live_then_nonz_capD2)
-    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def)
+    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
     apply (fastforce simp: valid_obj_def valid_ntfn_def state_refs_of_def obj_at_def
-                    elim!: delta_sym_refs valid_objsE
+                    elim!: delta_sym_refs
                     split: if_splits)
    apply (wpsimp simp: obj_at_def invs_def valid_state_def valid_pspace_def
                    wp: update_waiting_invs)
@@ -2391,14 +2389,11 @@ lemma sai_invs[wp]:
    apply (erule (1) if_live_then_nonz_capD2)
    apply (clarsimp simp: live_def live_sc_def
                   dest!: sym_refs_ko_atD[unfolded obj_at_def, simplified])
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def)
+  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
   apply (fastforce simp: valid_obj_def valid_ntfn_def state_refs_of_def obj_at_def
                   elim!: delta_sym_refs
                   split: if_splits)
   done
-
-crunch typ_at[wp]: send_signal "\<lambda>s. P (typ_at T t s)"
-(wp: hoare_drop_imps maybeM_inv)
 
 lemma ncof_invs [wp]:
   "\<lbrace>invs\<rbrace> null_cap_on_failure (lookup_cap t ref) \<lbrace>\<lambda>rv. invs\<rbrace>"

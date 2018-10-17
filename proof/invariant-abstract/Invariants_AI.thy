@@ -2855,7 +2855,7 @@ lemma valid_mdb_def2:
                     untyped_mdb (cdt s) (caps_of_state s) \<and> descendants_inc (cdt s) (caps_of_state s) \<and>
                     no_mloop (cdt s) \<and> untyped_inc (cdt s) (caps_of_state s) \<and>
                     ut_revocable (is_original_cap s) (caps_of_state s) \<and>
-                    irq_revocable (is_original_cap s) (caps_of_state s) (*\<and>
+                    irq_revocable (is_original_cap s) (caps_of_state s) \<and>
                     valid_arch_mdb (is_original_cap s) (caps_of_state s))"
   by (auto simp add: valid_mdb_def swp_cte_at_caps_of)
 

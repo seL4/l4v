@@ -31,7 +31,7 @@ crunch cur_thread[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_saniti
 crunch valid_objs[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "valid_objs"
 crunch cte_wp_at[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (cte_wp_at P' p s)"
 declare arch_get_sanitise_register_info_ex_nonz_cap_to[Syscall_AI_assms]
-        make_fault_message_inv[Syscall_AI_assms]
+(*        make_fault_message_inv[Syscall_AI_assms] *)
 
 
 crunch typ_at[wp, Syscall_AI_assms]: invoke_irq_control "\<lambda>s. P (typ_at T p s)"
@@ -97,6 +97,8 @@ lemma hh_invs[wp, Syscall_AI_assms]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (cases fault; wpsimp simp: valid_fault_def)
 
+crunches make_fault_msg
+for cur_thread[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
 end
 
 global_interpretation Syscall_AI?: Syscall_AI

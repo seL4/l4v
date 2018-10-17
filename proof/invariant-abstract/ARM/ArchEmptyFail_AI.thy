@@ -26,7 +26,7 @@ crunch_ignore (empty_fail)
         writeTTBR0_impl cacheRangeOp setIRQTrigger_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
-  loadWord, load_word_offs, store_word_offs, storeWord, getRestartPC, get_mrs
+  loadWord, load_word_offs, store_word_offs, storeWord, getRestartPC, get_mrs, setRegister
 
 end
 
@@ -38,7 +38,7 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
 
 context Arch begin global_naming ARM
 
-crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: possible_switch_to
+crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: possible_switch_to,set_thread_state_act
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def wp: zipWithM_x_empty_fail)

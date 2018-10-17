@@ -303,7 +303,7 @@ lemma horridly_specific_rewrite:
 
 lemma thread_set_mcp_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to a\<rbrace> thread_set (tcb_mcpriority_update g) t \<lbrace>\<lambda>rv. ex_nonz_cap_to a\<rbrace>"
-  by (wpsimp wp: ex_nonz_cap_to_pres thread_set_cte_wp_at_trivial simp: tcb_cap_cases_def)
+  by (wpsimp wp: ex_nonz_cap_to_pres thread_set_cte_wp_at_trivial simp: tcb_cap_cases_def) auto
 
 lemma thread_set_mcp_sc_tcb_sc_at[wp]:
   "\<lbrace>sc_tcb_sc_at P a\<rbrace> thread_set (tcb_mcpriority_update g) t \<lbrace>\<lambda>rv. sc_tcb_sc_at P a\<rbrace>"
@@ -555,7 +555,7 @@ crunch pred_tcb_at: switch_to_thread "pred_tcb_at proj P t"
 
 crunch typ_at[wp]: set_priority "\<lambda>s. P (typ_at T p s)"
   (wp: maybeM_inv hoare_drop_imps)
-crunch typ_at[wp]: invoke_tcb "\<lambda>s. P (typ_at T p s)"
+crunch typ_at[wp]: invoke_tcb "\<lambda>s::det_state. P (typ_at T p s)"
   (wp: hoare_drop_imps mapM_x_wp' check_cap_inv maybeM_inv
      simp: crunch_simps)
 

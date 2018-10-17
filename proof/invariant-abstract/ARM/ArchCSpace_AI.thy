@@ -505,10 +505,6 @@ lemma cap_insert_simple_arch_caps_no_ap:
   apply (intro conjI impI allI)
   by (auto simp:is_simple_cap_def[simplified is_simple_cap_arch_def] is_cap_simps)
 
-lemma setup_reply_master_ioports[wp, CSpace_AI_assms]:
-  "\<lbrace>valid_ioports\<rbrace> setup_reply_master c \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  by wpsimp
-
 lemma cap_insert_derived_ioports[CSpace_AI_assms]:
   "\<lbrace>valid_ioports and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
      cap_insert cap src dest

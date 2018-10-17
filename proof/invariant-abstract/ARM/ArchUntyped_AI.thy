@@ -139,6 +139,9 @@ proof -
        apply (clarsimp simp: valid_cap_simps cap_aligned_def)+
        apply (frule alignUp_idem[OF is_aligned_weaken,where a = w])
          apply (erule range_cover.sz)
+        apply (clarsimp simp: untyped_max_bits_def)
+       apply (clarsimp simp: valid_sched_context_size_def min_sched_context_bits_def
+                              untyped_max_bits_def obj_bits_api_def)
         apply (simp add:range_cover_def)
        apply (clarsimp simp: get_free_ref_def is_aligned_neg_mask_eq empty_descendants_range_in
                              valid_sched_context_size_def min_sched_context_bits_def word_bits_def
@@ -150,8 +153,10 @@ proof -
      apply (simp add: free_index_of_def)
      apply (frule(1) range_cover_stuff[where sz = sz])
         apply (clarsimp dest!:valid_cap_aligned simp:cap_aligned_def word_bits_def)+
-      apply simp
-     apply (clarsimp simp: get_free_ref_def valid_sched_context_size_def min_sched_context_bits_def)
+      apply simp+
+     apply (clarsimp simp: get_free_ref_def valid_sched_context_size_def min_sched_context_bits_def
+                           untyped_max_bits_def obj_bits_api_def)
+     apply (rule conjI; clarsimp)
     apply (erule disjE, fastforce)
     apply (clarsimp simp: cte_wp_at_caps_of_state ex_cte_cap_wp_to_def)
     apply (rename_tac oref cref cap)

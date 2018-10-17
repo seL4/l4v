@@ -809,8 +809,7 @@ lemma finalise_cap_rvk_prog [CNodeInv_AI_assms]:
    finalise_cap a b
    \<lbrace>\<lambda>_ s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>"
   apply (case_tac a,simp_all add:liftM_def)
-    apply (wp cancel_all_ipc_rvk_prog cancel_all_signals_rvk_prog
-      suspend_rvk_prog deleting_irq_handler_rvk_prog get_simple_ko_wp
+    apply (wp suspend_rvk_prog deleting_irq_handler_rvk_prog get_simple_ko_wp
       | clarsimp simp:is_final_cap_def comp_def)+
   done
 
@@ -954,7 +953,6 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
    apply (wpe cap_move_if_live)
    apply (wpe cap_move_if_unsafe)
    apply (wpe cap_move_irq_handlers)
-   apply (wpe cap_move_replies)
    apply (wpe cap_move_valid_arch_caps)
    apply (wpe cap_move_valid_ioc)
 (*   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_zombies_final)
@@ -975,20 +973,6 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
             | simp del: split_paired_Ex split_paired_All
             | simp add: valid_irq_node_def valid_machine_state_def
                    del: split_paired_All split_paired_Ex)+
-(*
-  apply (clarsimp simp: tcb_cap_valid_def cte_wp_at_caps_of_state)
-  apply (frule(1) valid_global_refsD2[where ptr=ptr])
-  apply (frule(1) cap_refs_in_kernel_windowD[where ptr=ptr])
-  apply (frule weak_derived_cap_range)
-  apply (frule weak_derived_is_reply_master)
-  apply (simp add: cap_range_NullCap valid_ipc_buffer_cap_def[where c=cap.NullCap])
-  apply (simp add: is_cap_simps)
-  apply (subgoal_tac "tcb_cap_valid cap.NullCap ptr s")
-   apply (simp add: tcb_cap_valid_def weak_derived_cap_is_device)
-  apply (rule tcb_cap_valid_NullCapD)
-   apply (erule(1) tcb_cap_valid_caps_of_stateD)
-  apply (simp add: is_cap_simps)
-*)
    apply (clarsimp simp: tcb_cap_valid_def cte_wp_at_caps_of_state)
    apply (frule(1) valid_global_refsD2[where ptr=ptr])
    apply (frule(1) cap_refs_in_kernel_windowD[where ptr=ptr])
@@ -998,8 +982,6 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
     apply (simp add: tcb_cap_valid_def weak_derived_cap_is_device)
    apply (rule tcb_cap_valid_NullCapD)
     apply (erule(1) tcb_cap_valid_caps_of_stateD)
-   apply (simp add: is_cap_simps)
-  apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
 
 lemma arch_derive_is_arch:

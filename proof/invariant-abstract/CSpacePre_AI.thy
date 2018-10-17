@@ -152,7 +152,7 @@ lemmas cap_insert_typ_ats [wp] = abs_typ_at_lifts [OF cap_insert_typ_at]
 definition
   "is_simple_cap cap \<equiv>
     cap \<noteq> cap.NullCap \<and> cap \<noteq> cap.IRQControlCap \<and> \<not>is_untyped_cap cap \<and>
-    \<not>is_master_reply_cap cap \<and> \<not>is_reply_cap cap \<and>
+    \<not>is_sched_context_cap cap \<and> \<not>is_reply_cap cap \<and>
     \<not>is_ep_cap cap \<and> \<not>is_ntfn_cap cap \<and>
     \<not>is_thread_cap cap \<and> \<not>is_cnode_cap cap \<and> \<not>is_zombie cap \<and>
     is_simple_cap_arch cap"
@@ -184,8 +184,7 @@ where
   else
     (cap_master_cap cap = cap_master_cap cap') \<and>
     (cap_badge cap, cap_badge cap') \<in> capBadge_ordering False) \<and>
-    is_derived_arch cap' cap \<and>
-    \<not> is_reply_cap cap" (* RT: FIXME *)
+    is_derived_arch cap' cap" (* RT: FIXME : reply_cap can be drived in rt?*)
 
 
 (* FIXME: remove copy_of and use cap_master_cap with weak_derived directly *)
@@ -193,7 +192,7 @@ definition
   copy_of :: "cap \<Rightarrow> cap \<Rightarrow> bool"
 where
   "copy_of cap' cap \<equiv>
-  if (is_untyped_cap cap \<or> is_reply_cap cap \<or> is_master_reply_cap cap)
+  if (is_untyped_cap cap (*\<or> is_reply_cap cap \<or> is_master_reply_cap cap*))
      then cap = cap' else same_object_as cap cap'"
 
 definition

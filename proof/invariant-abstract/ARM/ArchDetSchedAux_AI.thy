@@ -20,7 +20,7 @@ crunches init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
   and ct[wp]: "\<lambda>s. P (cur_thread s)"
   and st_tcb_at[wp]: "st_tcb_at Q t"
-  (wp: crunch_wps hoare_unless_wp valid_etcbs_lift)
+  (wp: crunch_wps hoare_unless_wp)
 
 crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps dxo_wp_weak preemption_point_inv mapME_x_inv_wp
@@ -241,11 +241,6 @@ crunch scheduler_action[wp, DetSchedAux_AI_assms]:
 
 crunch cur_domain[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s :: det_ext state. P (cur_domain s)"
   (wp: crunch_wps
-   simp: detype_def wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory)
-
-crunch idle_thread[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps dxo_wp_weak hoare_unless_wp
    simp: detype_def wrap_ext_det_ext_ext_def mapM_x_defsym
    ignore: freeMemory)
 

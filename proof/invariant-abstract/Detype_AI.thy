@@ -651,20 +651,6 @@ lemma valid_mdb_detype[detype_invs_lemmas]: "valid_mdb (detype (untyped_range ca
   apply (insert invs, drule invs_mdb)
   apply (simp add: valid_mdb_def)
   apply (rule context_conjI)
-(*
-   apply (safe intro!: mdb_cte_atI elim!: untyped_mdb untyped_inc reply_mdb)
-        apply (drule(1) mdb_cte_atD)
-        apply (clarsimp dest!: non_null_present)
-       apply (drule(1) mdb_cte_atD)
-       apply (clarsimp dest!: non_null_present)
-      apply (erule descendants_inc_empty_slot)
-       apply (clarsimp simp:cte_wp_at_caps_of_state swp_def)
-      apply clarsimp
-     apply (simp add: ut_revocable_def detype_def del: split_paired_All)
-    apply (simp add: irq_revocable_def detype_def del: split_paired_All)
-   apply (simp add: reply_master_revocable_def detype_def del: split_paired_All)
-  apply (simp add: valid_arch_mdb_detype)
-*)
    apply (safe intro!: mdb_cte_atI elim!: untyped_mdb untyped_inc)
       apply (drule(1) mdb_cte_atD)
       apply (clarsimp dest!: non_null_present)
@@ -675,6 +661,7 @@ lemma valid_mdb_detype[detype_invs_lemmas]: "valid_mdb (detype (untyped_range ca
     apply clarsimp
    apply (simp add: ut_revocable_def detype_def del: split_paired_All)
   apply (simp add: irq_revocable_def detype_def del: split_paired_All)
+  apply (simp add: valid_arch_mdb_detype)
   done
 
 lemma valid_ioports_detype[detype_invs_lemmas]:

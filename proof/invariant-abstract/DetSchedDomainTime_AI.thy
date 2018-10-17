@@ -330,7 +330,7 @@ lemma maybe_donate_sc_domain_list_inv[wp]:
 crunch domain_list_inv[wp]: send_signal "\<lambda>s::det_state. P (domain_list s)"
   (wp: hoare_drop_imps mapM_x_wp_inv select_wp maybeM_inv simp: crunch_simps unless_def)
 
-crunch domain_list_inv[wp]: lookup_reply,lookup_cap "\<lambda>s. P (domain_list s)"
+crunch domain_list_inv[wp]: lookup_reply,lookup_cap "\<lambda>s::det_state. P (domain_list s)"
 
 crunch domain_list_inv[wp]: update_time_stamp "\<lambda>s. P (domain_list s)"
 
@@ -355,13 +355,14 @@ crunch domain_list_inv[wp]: perform_invocation "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps syscall_valid maybeM_inv simp: crunch_simps ignore: without_preemption)
 *)
 crunch domain_list_inv[wp]: handle_invocation,receive_ipc,receive_signal "\<lambda>s::det_state. P (domain_list s)"
-  (wp: crunch_wps syscall_valid maybeM_inv simp: crunch_simps ignore: without_preemption)
+  (wp: crunch_wps syscall_valid maybeM_inv simp: crunch_simps ignore: without_preemption syscall)
 
 lemma handle_recv_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>
   handle_recv is_blocking can_reply \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
-  by (wpsimp simp: handle_recv_def Let_def whenE_def get_sk_obj_ref_def
-    split_del: if_split wp: hoare_drop_imps)
+  apply (wpsimp simp: handle_recv_def Let_def whenE_def get_sk_obj_ref_def
+                split_del: if_split wp: hoare_drop_imps)
+  by (rule_tac Q'="\<lambda>_ s. P (domain_list s)" in hoare_post_imps(1))  wpsimp+
 
 crunch domain_list_inv[wp]:
   handle_yield, handle_call, handle_vm_fault, handle_hypervisor_fault
@@ -660,8 +661,10 @@ crunch domain_time_inv[wp]: receive_signal "\<lambda>s::det_state. P (domain_tim
 lemma handle_recv_domain_time_inv[wp]:
   "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace>
   handle_recv is_blocking can_reply \<lbrace>\<lambda>rv s::det_state. P (domain_time s)\<rbrace>"
-  by (wpsimp simp: handle_recv_def Let_def whenE_def get_sk_obj_ref_def
-     split_del: if_split wp: hoare_vcg_if_lift2 hoare_drop_imps)
+  apply (wpsimp simp: handle_recv_def Let_def whenE_def get_sk_obj_ref_def
+                split_del: if_split wp: hoare_drop_imps)
+  by (rule_tac Q'="\<lambda>_ s. P (domain_time s)" in hoare_post_imps(1))  wpsimp+
+
 
 crunch domain_time_inv[wp]: handle_yield, handle_vm_fault, handle_hypervisor_fault
   "\<lambda>s::det_state. P (domain_time s)"

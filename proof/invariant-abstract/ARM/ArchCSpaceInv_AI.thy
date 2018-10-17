@@ -101,8 +101,6 @@ lemma replace_cap_invs:
   apply (erule disjE, auto simp: cap_refs_in_kernel_windowD)
   done
 
-end
-
 definition
   "is_simple_cap_arch cap \<equiv> \<not>is_pt_cap cap \<and> \<not> is_pd_cap cap"
 

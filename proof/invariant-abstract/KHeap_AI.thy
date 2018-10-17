@@ -1409,7 +1409,7 @@ lemma set_ntfn_minor_invs:
      set_notification ptr val
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-          wp: valid_irq_node_typ simp_del: fun_upd_apply)
+          wp: valid_irq_node_typ valid_ioports_lift simp_del: fun_upd_apply)
   apply (clarsimp simp: state_refs_of_def obj_at_def ext elim!: rsubst[where P = sym_refs])
   done
 

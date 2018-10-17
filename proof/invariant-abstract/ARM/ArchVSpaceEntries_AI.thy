@@ -449,13 +449,11 @@ lemma as_user_valid_pdpt_objs[wp]:
   apply simp
   done
 
-crunch valid_pdpt_objs[wp]: send_ipc, send_signal "valid_pdpt_objs"
+crunch valid_pdpt_objs[wp]: send_signal, send_ipc "valid_pdpt_objs"
   (wp: get_sched_context_wp mapM_wp' maybeM_inv hoare_vcg_if_lift2 hoare_drop_imps
+       transfer_caps_loop_pres
   simp: zipWithM_x_mapM
-  ignore: set_object test_reschedule)
-
-crunch valid_pdpt_objs[wp]: send_ipc, send_signal "valid_pdpt_objs"
-  (wp: transfer_caps_loop_pres)
+  ignore: set_thread_state_act set_object test_reschedule)
 
 crunch valid_pdpt_objs[wp]: cancel_all_ipc, cancel_all_signals, unbind_maybe_notification,
   sched_context_maybe_unbind_ntfn, reply_unlink_tcb, sched_context_clear_replies,
@@ -706,7 +704,7 @@ lemma invoke_cnode_valid_pdpt_objs[wp]:
 crunch valid_pdpt_objs[wp]: test_possible_switch_to,set_priority "valid_pdpt_objs"
   (wp: maybeM_inv hoare_drop_imp)
 
-crunch valid_pdpt_objs[wp]: invoke_tcb, invoke_domain "valid_pdpt_objs"
+crunch valid_pdpt_objs[wp]: invoke_tcb, invoke_domain "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: check_cap_inv crunch_wps maybeM_inv simp: crunch_simps
        ignore: check_cap_at set_object tcb_release_enqueue test_possible_switch_to)
 
@@ -723,7 +721,7 @@ lemma refill_unblock_check_valid_pdpt_objs[wp]:
   by (wpsimp simp: refill_unblock_check_def unless_def is_round_robin_def set_refills_def
      wp: get_sched_context_wp hoare_vcg_if_lift2 hoare_drop_imps)
 
-crunch valid_pdpt_objs[wp]: do_reply_transfer "valid_pdpt_objs"
+crunch valid_pdpt_objs[wp]: do_reply_transfer "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps hoare_vcg_if_lift2
    ignore: tcb_release_remove set_object tcb_release_enqueue
    simp: unless_def is_round_robin_def)
@@ -1173,13 +1171,13 @@ lemma perform_page_directory_valid_pdpt[wp]:
    apply (wp | wpc | simp)+
   done
 
-crunch valid_pdpt_objs[wp]: invoke_sched_context "valid_pdpt_objs"
+crunch valid_pdpt_objs[wp]: invoke_sched_context "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: mapM_x_wp' hoare_drop_imps hoare_vcg_if_lift2 simp: is_schedulable_def)
 
 crunch valid_pdpt_objs[wp]: commit_domain_time "valid_pdpt_objs"
-crunch valid_pdpt_objs[wp]: end_timeslice "valid_pdpt_objs"
+crunch valid_pdpt_objs[wp]: end_timeslice "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: crunch_wps hoare_drop_imps hoare_vcg_if_lift2)
-crunch valid_pdpt_objs[wp]: invoke_sched_control_configure "valid_pdpt_objs"
+crunch valid_pdpt_objs[wp]: invoke_sched_control_configure "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_drop_imps hoare_vcg_if_lift2
   simp: Let_def ignore: commit_domain_time tcb_release_remove)
 
@@ -1187,7 +1185,7 @@ lemma perform_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and valid_pdpt_objs
            and invocation_duplicates_valid i\<rbrace>
       perform_invocation blocking call can_donate i
-         \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+         \<lbrace>\<lambda>rv. valid_pdpt_objs::det_state \<Rightarrow> _\<rbrace>"
   apply (cases i, simp_all)
   apply (wp send_signal_interrupt_states | simp)+
   apply (clarsimp simp: invocation_duplicates_valid_def)
@@ -1651,7 +1649,7 @@ lemma decode_invocation_valid_pdpt[wp]:
   apply clarsimp
   done
 
-crunch valid_pdpt_objs[wp]: handle_fault, reply_from_kernel "valid_pdpt_objs"
+crunch valid_pdpt_objs[wp]: handle_fault, reply_from_kernel "valid_pdpt_objs::det_state \<Rightarrow> _"
   (simp: crunch_simps unless_def wp: crunch_wps)
 
 
@@ -1686,7 +1684,7 @@ lemma set_thread_state_duplicates_valid[wp]:
 
 lemma handle_invocation_valid_pdpt[wp]:
   "\<lbrace>valid_pdpt_objs and invs and ct_active\<rbrace>
-        handle_invocation calling blocking can_donate cptr \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+        handle_invocation calling blocking can_donate cptr \<lbrace>\<lambda>rv. valid_pdpt_objs::det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: handle_invocation_def)
   apply (wp syscall_valid set_thread_state_ct_st
                | simp add: split_def | wpc
@@ -1694,12 +1692,12 @@ lemma handle_invocation_valid_pdpt[wp]:
   apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
   done
 
-crunch valid_pdpt[wp]: check_budget_restart,update_time_stamp "valid_pdpt_objs"
+crunch valid_pdpt[wp]: check_budget_restart,update_time_stamp "valid_pdpt_objs::det_state \<Rightarrow> _"
 
 crunch ct_active: set_thread_state_act ct_active
   (wp: ignore: set_object)
 
-crunch valid_pdpt[wp]: sc_and_timer "valid_pdpt_objs"
+crunch valid_pdpt[wp]: sc_and_timer "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_drop_imps hoare_vcg_if_lift2)
 crunch valid_pdpt[wp]: schedule_choose_new_thread "valid_pdpt_objs"
   (simp: Let_def wp: hoare_drop_imp)
@@ -1712,7 +1710,8 @@ crunch valid_pdpt[wp]: activate_thread,switch_to_thread,
 crunch valid_pdpt[wp]: awaken "valid_pdpt_objs"
   (wp: hoare_drop_imp mapM_x_wp')
 
-crunch valid_pdpt[wp]: handle_call, handle_recv, handle_send, handle_yield, handle_interrupt "valid_pdpt_objs"
+crunch valid_pdpt[wp]: handle_call, handle_recv, handle_send, handle_yield, handle_interrupt
+  "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_vcg_if_lift2 hoare_drop_imps crunch_wps
    simp: crunch_simps Let_def whenE_def liftE_def
    ignore: check_budget_restart)
