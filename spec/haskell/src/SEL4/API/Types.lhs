@@ -177,7 +177,7 @@ The maximum number of message registers transferred between threads by an IPC op
 > msgLengthBits = 7
 
 > msgMaxLength :: (Num a, Bits a) => a
-> msgMaxLength = 115
+> msgMaxLength = 119
 
 The maximum number of capabilities passed as arguments to a method invocation. This does not include the capability that specifies the recipient.
 
