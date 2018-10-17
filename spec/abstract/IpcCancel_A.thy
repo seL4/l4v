@@ -536,7 +536,7 @@ definition
 where
   "sched_context_unbind_all_tcbs sc_ptr = do
     sc \<leftarrow> get_sched_context sc_ptr;
-    when (sc_tcb sc \<noteq> None) $ sched_context_unbind_tcb sc_ptr
+    when (sc_tcb sc \<noteq> None \<and> sc_ptr \<noteq> idle_sc_ptr) $ sched_context_unbind_tcb sc_ptr
   od"
 
 text {* The optional IRQ stored in a capability, presented either as an optional
