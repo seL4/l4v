@@ -819,7 +819,6 @@ lemma no_fail_bind [wp]:
   apply simp
   done
 
-
 text {* Empty results implies non-failure *}
 
 lemma empty_fail_modify [simp, wp]:

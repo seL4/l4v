@@ -59,6 +59,10 @@ definition
 definition
   "oassert P \<equiv> if P then oreturn () else ofail"
 
+definition oapply :: "'a \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow> 'b option"
+  where
+  "oapply x \<equiv> \<lambda>s. s x"
+
 text {*
   If the result can be an exception.
   Corresponding bindE would be analogous to lifting in NonDetMonad.

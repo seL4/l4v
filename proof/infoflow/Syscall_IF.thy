@@ -826,9 +826,9 @@ lemma handle_interrupt_globals_equiv:
             hoare_drop_imps
             dxo_wp_weak
             Retype_IF.dmo_mol_globals_equiv
-            NonDetMonadLemmaBucket.no_fail_bind
-            NonDetMonadLemmaBucket.bind_known_operation_eq
-            Retype_IF.dmo_mol_globals_equiv
+            no_fail_bind
+            bind_known_operation_eq
+            dmo_mol_globals_equiv
         | wpc
         | simp add: dmo_bind_valid
                     ackInterrupt_def

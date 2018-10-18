@@ -10,7 +10,6 @@
 
 theory BCorres2_AI
 imports
-  "Lib.BCorres_UL"
   "./$L4V_ARCH/ArchEmptyFail_AI"
 begin
 
@@ -34,8 +33,16 @@ locale BCorres2_AI =
     "bcorres (arch_switch_to_idle_thread :: 'a state \<Rightarrow> _)
         arch_switch_to_idle_thread"
 
+crunch (bcorres)bcorres[wp]: "IpcCancel_A.suspend",deleting_irq_handler truncate_state
+  (simp: gets_the_def swp_def)
+
+lemma finalise_cap_bcorres[wp]: "bcorres (finalise_cap a b) (finalise_cap a b)"
+  apply (cases a)
+  apply (wp | wpc | simp | intro impI allI conjI)+
+  done
+
 definition all_but_exst where
-"all_but_exst P \<equiv> (\<lambda>s. P (kheap s) (cdt s) (is_original_cap s)
+  "all_but_exst P \<equiv> (\<lambda>s. P (kheap s) (cdt s) (is_original_cap s)
                       (cur_thread s) (idle_thread s)
                       (machine_state s) (interrupt_irq_node s)
                       (interrupt_states s) (arch_state s))"

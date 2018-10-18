@@ -1623,7 +1623,7 @@ proof -
   show ?thesis
     apply (simp add: doMachineOp_def split_def bind_assoc)
     apply (simp add: gets_modify_comm2[OF ksMachineState_ksPSpace_update])
-    apply (rule arg_cong2[where f=bind, OF refl], rule ext)
+    apply (rule arg_cong_bind1)
     apply (simp add: empty_fail_def select_f_walk[OF empty_fail_modify]
                      modify_modify updates_independent)
     done
@@ -4708,7 +4708,7 @@ proof -
   show ?thesis
     apply (simp add: doMachineOp_def split_def bind_assoc)
     apply (simp add: gets_modify_comm2[OF ksMachineState_ksPSpace_update])
-    apply (rule arg_cong2[where f=bind, OF refl], rule ext)
+    apply (rule arg_cong_bind1)
     apply (simp add: empty_fail_def select_f_walk[OF empty_fail_modify]
                      modify_modify_bind updates_independent)
     done
@@ -4722,8 +4722,8 @@ lemma dmo'_createObjects'_comm:
                    alignError_def dmo'_when_fail_comm[OF ef]
                    dmo'_gets_ksPSpace_comm
                    dmo'_ksPSpace_update_comm'[OF ef, symmetric])
-  apply (rule arg_cong2[where f=bind, OF refl], rule ext)
-  apply (rule arg_cong2[where f=bind, OF refl], rule ext)
+  apply (rule arg_cong_bind1)
+  apply (rule arg_cong_bind1)
   apply (rename_tac u w)
   apply (case_tac "fst (lookupAround2 (ptr + of_nat (shiftL n (objBitsKO obj +
                                          us) - Suc 0)) w)", clarsimp+)
@@ -4755,7 +4755,7 @@ proof -
   show ?thesis
     apply (simp add: doMachineOp_def split_def bind_assoc)
     apply (simp add: gets_modify_comm2[OF ksMachineState_ksPSpace_update])
-    apply (rule arg_cong2[where f=bind, OF refl], rule ext)
+    apply (rule arg_cong_bind1)
     apply (simp add: empty_fail_def select_f_walk[OF empty_fail_modify]
                      modify_modify_bind updates_independent)
     done
@@ -5164,8 +5164,8 @@ proof -
         apply (subst gsCNodes_update gsCNodes_upd_createObjects'_comm)+
         apply (simp add: modify_modify_bind)
         apply (rule fun_cong[where x=s])
-        apply (rule arg_cong2[where f=bind, OF refl ext])+
-        apply (rule arg_cong2[where f=bind, OF _ refl])
+        apply (rule arg_cong_bind[OF refl ext])+
+        apply (rule arg_cong_bind[OF _ refl])
         apply (rule arg_cong[where f=modify, OF ext], simp)
         apply (rule arg_cong2[where f=gsCNodes_update, OF ext refl])
         apply (rule ext)

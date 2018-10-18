@@ -195,6 +195,9 @@ lemma condition_false: "\<lbrakk> \<not> P s \<rbrakk> \<Longrightarrow> conditi
   apply (clarsimp simp: condition_def)
   done
 
+lemmas arg_cong_bind = arg_cong2[where f=bind]
+lemmas arg_cong_bind1 = arg_cong_bind[OF refl ext]
+
 section "Low-level monadic reasoning"
 
 lemma monad_eqI [intro]:

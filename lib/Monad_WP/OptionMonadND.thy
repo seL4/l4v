@@ -12,8 +12,8 @@
 
 theory OptionMonadND
 imports
-  OptionMonad
   NonDetMonadLemmas
+  OptionMonad
 begin
 
 (* FIXME: remove this syntax, standardise on do {..} instead *)

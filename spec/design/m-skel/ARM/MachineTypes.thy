@@ -12,7 +12,8 @@ chapter "ARM Machine Types"
 
 theory MachineTypes
 imports
-  "Lib.NonDetMonad"
+  "Word_Lib.WordSetup"
+  "Lib.OptionMonadND"
   "../Setup_Locale"
   Platform
 begin

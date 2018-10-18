@@ -77,7 +77,7 @@ lemma L1_fail_propagate_catch [L1opt]:
   apply (clarsimp simp: bindE_def)
   apply (clarsimp simp: handleE'_def handleE_def)
   apply (clarsimp simp: bind_assoc)
-  apply (rule arg_cong [where f="bind L"])
+  apply (rule arg_cong [where f="NonDetMonad.bind L"])
   apply (rule ext)+
   apply (clarsimp split: sum.splits)
   apply (clarsimp simp: throwError_def)

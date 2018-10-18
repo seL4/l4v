@@ -58,7 +58,7 @@ setup {*
 *}
 
 crunch_ignore (no_irq) (add:
-  bind return "when" get gets fail
+  NonDetMonad.bind return "when" get gets fail
   assert put modify unless select
   alternative assert_opt gets_the
   returnOk throwError lift bindE

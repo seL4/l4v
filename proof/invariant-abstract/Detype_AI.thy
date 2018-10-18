@@ -865,7 +865,7 @@ proof -
   show ?thesis
     apply (simp add: do_machine_op_def split_def bind_assoc)
     apply (simp add: gets_modify_comm2[OF machine_state_detype])
-    apply (rule arg_cong2[where f=bind, OF refl], rule ext)
+    apply (rule arg_cong_bind1)
     apply (simp add: empty_fail_def select_f_walk[OF empty_fail_modify]
                      modify_modify detype_msu_independent)
     done
