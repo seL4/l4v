@@ -320,7 +320,7 @@ lemma dom_tcb_cap_cases_lt_ARCH [Finalise_AI_asms]:
 lemma (* unbind_notification_final *) [wp,Finalise_AI_asms]:
   "\<lbrace>is_final_cap' cap\<rbrace> unbind_notification t \<lbrace> \<lambda>rv. is_final_cap' cap\<rbrace>"
   unfolding unbind_notification_def
-  by (wpsimp wp: final_cap_lift thread_set_caps_of_state_trivial hoare_drop_imps 
+  by (wpsimp wp: final_cap_lift thread_set_caps_of_state_trivial hoare_drop_imps
         simp: tcb_cap_cases_def)
 
 lemmas complete_yield_to_final_cap[wp] =
@@ -407,12 +407,10 @@ lemma obj_at_not_live_valid_arch_cap_strg [Finalise_AI_asms]:
               split: arch_cap.split_asm if_splits)
 
 lemma arch_finalise_cap_replaceable[wp]:
-  notes strg = tcb_cap_valid_imp_NullCap
-               obj_at_not_live_valid_arch_cap_strg[where cap=cap]
   notes simps = replaceable_def and_not_not_or_imp
                 vs_lookup_pages_eq_at[THEN fun_cong, symmetric]
                 vs_lookup_pages_eq_ap[THEN fun_cong, symmetric]
-                is_cap_simps vs_cap_ref_def
+                is_cap_simps vs_cap_ref_def tcb_cap_valid_imp_NullCap
                 no_cap_to_obj_with_diff_ref_Null o_def
   notes wps = hoare_drop_imp[where R="%_. is_final_cap' cap" for cap]
               unmap_page_table_unmapped3 valid_cap_typ
@@ -426,8 +424,8 @@ lemma arch_finalise_cap_replaceable[wp]:
   apply (simp add: arch_finalise_cap_def)
   apply (rule hoare_pre)
    apply (simp add: simps split: option.splits vmpage_size.splits)
-(*   apply (wp wps
-          | strengthen strg
+   apply (wp wps
+          | strengthen obj_at_not_live_valid_arch_cap_strg[where cap=cap]
           | simp add: simps reachable_pg_cap_def
           | wpc)+
      (* unmap_page case is a bit unpleasant *)
@@ -438,14 +436,14 @@ lemma arch_finalise_cap_replaceable[wp]:
                unmap_page_tcb_cap_valid unmap_page_page_unmapped
                    unmap_page_section_unmapped)[1]
     apply (wp wps
-           | strengthen strg imp_and_strg tcb_cap_valid_imp_NullCap
+           | strengthen imp_and_strg
            | simp add: simps reachable_pg_cap_def
            | wpc)+
   apply (auto simp: valid_cap_def obj_at_def simps
                     a_type_def data_at_def
              elim!: tcb_cap_valid_imp_NullCap[rule_format, rotated]
              split: cap.splits arch_cap.splits vmpage_size.splits)[1]
-  done*) sorry
+  done
 
 global_naming Arch
 lemma (* deleting_irq_handler_slot_not_irq_node *)[Finalise_AI_asms]:

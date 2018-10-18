@@ -776,9 +776,70 @@ apply (case_tac "reply_tcb reply"; clarsimp)
   apply (rule hoare_assume_pre)
 *)
 
+lemma SCNtfn_in_state_refsD:
+  "\<lbrakk>(y, SCNtfn) \<in> state_refs_of s x\<rbrakk>
+    \<Longrightarrow> obj_at (\<lambda>ko. \<exists>np n. ko = SchedContext np n \<and> sc_ntfn np = Some y) x s"
+  by (clarsimp simp: state_refs_of_def refs_of_rev obj_at_def split: option.splits)
+
+lemma ntfn_sc_sym_refsD:
+  "\<lbrakk>kheap s ptr = Some (Notification ntfn); ntfn_sc ntfn = Some sc;
+    valid_objs s; sym_refs (state_refs_of s)\<rbrakk>
+    \<Longrightarrow> obj_at (\<lambda>ko. \<exists>np n. ko = SchedContext np n \<and> sc_ntfn np = Some ptr) sc s"
+  apply (rule valid_objsE, assumption+)
+  apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def dest!: is_sc_objD)
+  apply (rule_tac x=sc in valid_objsE, assumption+)
+  apply (clarsimp simp: valid_obj_def valid_sched_context_def obj_at_def is_ntfn)
+  apply (frule_tac p=sc in sym_refs_ko_atD[simplified obj_at_def, simplified], assumption)
+  apply (frule_tac p=ptr in sym_refs_ko_atD[simplified obj_at_def, simplified], assumption)
+  apply (clarsimp simp: split_def get_refs_def2)
+  done
+
+lemma not_in_own_refs[simp]:
+  "valid_objs s \<Longrightarrow> (x, ref) \<notin> state_refs_of s x"
+  apply (clarsimp simp: state_refs_of_def split: option.splits)
+  apply (erule (1) valid_objsE)
+  apply (rename_tac ko, case_tac ko; clarsimp simp: valid_obj_def)
+      (* TCB *)
+      apply (fastforce simp: tcb_st_refs_of_def valid_tcb_def get_refs_def2 obj_at_def is_ntfn
+                             valid_tcb_state_def is_ep is_reply
+                      dest!: is_sc_objD
+                      split: thread_state.splits option.splits)
+     (* EP *)
+     apply (fastforce simp: ep_q_refs_of_def valid_ep_def get_refs_def2 obj_at_def is_tcb
+                     split: endpoint.splits)
+    (* NTFN *)
+    apply (fastforce simp: ntfn_q_refs_of_def valid_ntfn_def get_refs_def2 obj_at_def is_tcb
+                    dest!: is_sc_objD
+                    split: ntfn.splits)
+   (* SC *)
+   apply (fastforce simp: valid_sched_context_def get_refs_def2 obj_at_def is_ntfn is_tcb is_reply
+                          list_all_iff)
+  (* Reply *)
+  apply (fastforce simp: get_refs_def2 valid_reply_def obj_at_def is_tcb
+                  dest!: is_sc_objD)
+  done
+
 lemma sched_context_maybe_unbind_ntfn_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_maybe_unbind_ntfn nptr \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp simp: sched_context_maybe_unbind_ntfn_def get_sk_obj_ref_def)
+  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def update_sk_obj_ref_def
+                      sched_context_maybe_unbind_ntfn_def maybeM_def get_sk_obj_ref_def
+                  wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp
+                      get_sched_context_wp)
+  apply (clarsimp simp: obj_at_def)
+  apply (rule valid_objsE, assumption+, clarsimp simp: valid_obj_def)
+  apply (clarsimp simp: valid_ntfn_def obj_at_def dest!: is_sc_objD)
+  apply (rule_tac x=x in valid_objsE, assumption+, clarsimp simp: valid_obj_def valid_sched_context_def)
+  apply (rule conjI, clarsimp simp: valid_obj_def valid_ntfn_def split: ntfn.splits)
+  apply (rule conjI, clarsimp, erule (1) if_live_then_nonz_capD2, clarsimp simp: live_def live_ntfn_def)
+  apply (rule delta_sym_refs, assumption)
+   apply (auto dest: refs_in_ntfn_q_refs refs_in_get_refs
+               simp: state_refs_of_def valid_ntfn_def obj_at_def is_sc_obj_def
+              split: if_split_asm option.split_asm ntfn.splits kernel_object.split_asm)[1]
+  apply (clarsimp split: if_splits)
+   apply (solves \<open>clarsimp simp: state_refs_of_def\<close>
+            | fastforce simp: obj_at_def
+                       dest!: refs_in_get_refs SCNtfn_in_state_refsD ntfn_sc_sym_refsD)+
+  done
 
 lemma (in Finalise_AI_1) sched_context_unbind_yield_from_invs:
   "\<lbrace>invs (*and (\<lambda>s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = (Some tp) \<and> st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) scptr s)*)\<rbrace>
@@ -1044,7 +1105,7 @@ lemma unbind_notification_not_bound:
   done
 
  lemma unbind_maybe_notification_not_bound:
-   "\<lbrace>\<lambda>s. ntfn_at ntfnptr s \<and> valid_objs s \<and> sym_refs (state_refs_of s)\<rbrace>
+   "\<lbrace>\<lambda>s. ntfn_at ntfnptr s\<rbrace>
       unbind_maybe_notification ntfnptr
     \<lbrace>\<lambda>_. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_bound_tcb ntfn = None) ntfnptr\<rbrace>"
   apply (simp add: unbind_maybe_notification_def maybeM_def get_sk_obj_ref_def)

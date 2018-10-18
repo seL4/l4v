@@ -2248,7 +2248,8 @@ lemma sched_context_unbind_ntfn_valid_sched[wp]:
 
 lemma sched_context_maybe_unbind_ntfn_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> sched_context_maybe_unbind_ntfn scptr \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  by (wpsimp simp: sched_context_maybe_unbind_ntfn_def get_sk_obj_ref_def)
+  by (wpsimp simp: sched_context_maybe_unbind_ntfn_def set_sc_obj_ref_def
+                   update_sk_obj_ref_def get_sk_obj_ref_def)
 
 lemma cancel_ipc_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> cancel_ipc tptr \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
@@ -3009,7 +3010,7 @@ and valid_etcbs[wp]: valid_etcbs
 
 context DetSchedSchedule_AI begin
 lemma update_waiting_ntfn_valid_sched[wp]:
-  "\<lbrace> \<lambda>s. valid_sched s \<and> 
+  "\<lbrace> \<lambda>s. valid_sched s \<and>
      hd queue \<noteq> idle_thread s \<and> (scheduler_action s = resume_cur_thread \<longrightarrow> hd queue \<noteq> cur_thread s)\<rbrace>
        update_waiting_ntfn ntfnptr queue bound_tcb sc_ptr badge \<lbrace> \<lambda>_. valid_sched \<rbrace>"
   apply (simp add: update_waiting_ntfn_def)
@@ -3891,10 +3892,14 @@ lemma sched_context_unbind_ntfn_valid_objs[wp]:
                split: option.splits ntfn.splits elim!: obj_at_valid_objsE)
 
 lemma sched_context_maybe_unbind_ntfn_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace>
-   sched_context_maybe_unbind_ntfn ntfn_ptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  by (wpsimp simp: sched_context_maybe_unbind_ntfn_def get_sk_obj_ref_def
-         wp: get_simple_ko_wp)
+  "\<lbrace>valid_objs\<rbrace> sched_context_maybe_unbind_ntfn ntfn_ptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  apply (clarsimp simp: sched_context_maybe_unbind_ntfn_def maybeM_def)
+  apply (wpsimp simp: sched_context_maybe_unbind_ntfn_def get_sk_obj_ref_def
+                      set_sc_obj_ref_def update_sk_obj_ref_def
+                  wp: get_simple_ko_wp)
+  by (clarsimp simp: valid_ntfn_def valid_bound_obj_def valid_obj_def
+              split: option.splits ntfn.splits
+              elim!: obj_at_valid_objsE)
 
 lemma sched_context_unbind_ntfn_sym_refs[wp]:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s\<rbrace>
@@ -3920,10 +3925,30 @@ lemma sched_context_maybe_unbind_ntfn_sym_refs[wp]:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s\<rbrace>
      sched_context_maybe_unbind_ntfn a
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
-  apply (clarsimp simp: sched_context_maybe_unbind_ntfn_def get_sk_obj_ref_def maybeM_def)
-   by (wpsimp simp: update_sk_obj_ref_def wp: get_simple_ko_wp)
+(* FIXME rt: duplicated proof from sched_context_maybe_unbind_ntfn_invs, should cleanup*)
+  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def update_sk_obj_ref_def
+                      sched_context_maybe_unbind_ntfn_def maybeM_def get_sk_obj_ref_def
+                  wp: valid_irq_node_typ set_simple_ko_valid_objs get_simple_ko_wp
+                      get_sched_context_wp)
+  apply (clarsimp simp: obj_at_def)
+  apply (rule conjI, clarsimp)
+   apply (erule (1) valid_objsE)
+   apply (clarsimp simp: valid_obj_def valid_ntfn_def valid_bound_obj_def obj_at_def
+                  dest!: is_sc_objD)
+  apply clarsimp
+  apply (rule delta_sym_refs, assumption)
+   apply (auto dest: refs_in_ntfn_q_refs refs_in_get_refs
+               simp: state_refs_of_def valid_ntfn_def obj_at_def is_sc_obj_def
+              split: if_split_asm option.split_asm ntfn.splits kernel_object.split_asm)[1]
+  apply (clarsimp split: if_splits)
+   apply (solves \<open>clarsimp simp: state_refs_of_def\<close>
+            | fastforce simp: obj_at_def
+                       dest!: refs_in_get_refs SCNtfn_in_state_refsD ntfn_sc_sym_refsD)+
+  done
 
-crunches unbind_maybe_notification, unbind_notification,sched_context_maybe_unbind_ntfn,reply_unlink_sc
+crunches unbind_maybe_notification, unbind_notification,
+         sched_context_maybe_unbind_ntfn, reply_unlink_sc,
+         sched_context_unbind_ntfn
 for  not_queued[wp]: "not_queued t"
 and  scheduler_act_not[wp]: "scheduler_act_not t"
   (wp: crunch_wps maybeM_inv)
@@ -3968,7 +3993,7 @@ lemma cancel_ipc_not_queued[wp]:
   apply (case_tac state; wpsimp)
   done
 
-crunch not_queued[wp]: sched_context_unbind_yield_from,sched_context_clear_replies "not_queued t"
+crunch not_queued[wp]: sched_context_unbind_yield_from, sched_context_clear_replies "not_queued t"
   (wp: hoare_drop_imps maybeM_inv mapM_x_wp')
 
 lemma sched_context_unbind_tcb_not_queued[wp]:
@@ -4726,7 +4751,7 @@ lemma call_kernel_valid_sched_helper:
                                   scheduler_act_sane s \<and> ct_not_queued s))
                             s \<and>
                            invs s \<rbrace>"
-  apply (clarsimp simp: check_budget_def ARM.non_kernel_IRQs_def) (* FIXME RT *) 
+  apply (clarsimp simp: check_budget_def ARM.non_kernel_IRQs_def) (* FIXME RT *)
   by (wpsimp wp: hoare_vcg_conj_lift reschedule_preserves_valid_shed get_sched_context_wp
                  hoare_drop_imps hoare_vcg_all_lift charge_budget_invs)
 

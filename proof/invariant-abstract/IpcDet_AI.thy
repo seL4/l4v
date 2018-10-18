@@ -395,8 +395,6 @@ lemma maybe_return_sc_sym_refs_state_refs_of[wp]:
    apply (fastforce simp: sc_at_typ2 obj_at_def state_refs_of_def get_refs_def2 valid_obj_def
                           valid_ntfn_def valid_bound_obj_def
                    split: option.splits)
-  apply (intro conjI)
-   apply (fastforce dest!: pred_tcb_at_tcb_at tcb_state_refs_no_tcb)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def get_refs_def2)
   done
 

@@ -1164,6 +1164,10 @@ lemma is_ntfn:
   "is_ntfn ko = (\<exists>np. ko = Notification np)"
   unfolding is_ntfn_def by (cases ko) auto
 
+lemma is_sc_objD:
+  "is_sc_obj n ko \<Longrightarrow> (\<exists>np. (ko = SchedContext np n))"
+  unfolding is_sc_obj_def by (cases ko) auto
+
 lemma is_tcb:
   "is_tcb ko = (\<exists>tcb. ko = TCB tcb)"
   unfolding is_tcb_def by (cases ko) auto
