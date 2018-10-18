@@ -30,8 +30,7 @@ definition
 
 instance
   apply (intro_classes)
-     apply (simp add: enum_word_def)
-     apply force
+     apply (force simp: enum_word_def)
     apply (simp add: distinct_map enum_word_def)
     apply (rule subset_inj_on, rule word_unat.Abs_inj_on)
     apply (clarsimp simp add: unats_def)
@@ -41,49 +40,27 @@ instance
 
 end
 
-lemma fromEnum_unat[simp]: "fromEnum (x :: ('a :: len) word) = unat x"
-  apply (subgoal_tac "x \<in> set enum")
-   defer
-   apply simp
-  apply (unfold fromEnum_def enum_word_def)
-  apply (subgoal_tac "\<forall>n. n < 2 ^ len_of TYPE('a) \<longrightarrow> (map of_nat [0..< 2 ^ len_of TYPE('a)] ! n) = x --> n = unat x")
-   apply (subgoal_tac "(map of_nat [0..< 2 ^ len_of TYPE('a)]) ! (the_index (map of_nat [0..< 2 ^ len_of TYPE('a)]) x) = x")
-    apply (subgoal_tac "the_index (map of_nat [0..< 2 ^ len_of TYPE('a)]) x < 2 ^ len_of TYPE('a)")
-     apply simp
-    apply (subgoal_tac "the_index (map of_nat [0..< 2 ^ len_of TYPE('a)]) x < length (map of_nat [0..< 2 ^ len_of TYPE('a)])")
-     apply simp
-    apply (rule the_index_bounded)
-    apply (simp add: enum_word_def)
-   apply (rule nth_the_index)
-   apply (simp add: enum_word_def)
-  apply safe
-  apply (simp add: unat_of_nat)
-  done
+lemma fromEnum_unat[simp]: "fromEnum (x :: 'a::len word) = unat x"
+proof -
+  have "enum ! the_index enum x = x" by (auto intro: nth_the_index)
+  moreover
+  have "the_index enum x < length (enum::'a::len word list)" by (auto intro: the_index_bounded)
+  moreover
+  { fix y assume "of_nat y = x"
+    moreover assume "y < 2 ^ LENGTH('a)"
+    ultimately have "y = unat x" using of_nat_inverse by fastforce
+  }
+  ultimately
+  show ?thesis by (simp add: fromEnum_def enum_word_def)
+qed
 
 lemma length_word_enum: "length (enum :: ('a :: len) word list) = 2 ^ len_of TYPE('a)"
-  apply (simp add: enum_word_def)
-  done
+  by (simp add: enum_word_def)
 
 lemma toEnum_of_nat[simp]: "n < 2 ^ len_of TYPE('a) \<Longrightarrow> ((toEnum n) :: ('a :: len) word) = of_nat n"
-  apply (subst toEnum_def)
-  apply (simp add: length_word_enum)
-  apply (subst enum_word_def)
-  apply simp
-  done
+  by (simp add: toEnum_def length_word_enum enum_word_def)
 
 declare of_nat_diff [simp]
-
-lemma "(maxBound :: ('a :: len) word) = -1"
-  apply (unfold maxBound_def enum_word_def)
-  apply (subst last_map)
-   apply simp
-  apply simp
-  done
-
-lemma "(minBound :: ('a :: len) word) = 0"
-  apply (unfold minBound_def enum_word_def)
-  apply (simp add: hd_conv_nth)
-  done
 
 instantiation word :: (len) enumeration_both
 begin
@@ -95,7 +72,6 @@ instance
   by (intro_classes, simp add: enum_alt_word_def)
 
 end
-
 
 definition
   upto_enum_step :: "('a :: len) word \<Rightarrow> 'a word \<Rightarrow> 'a word \<Rightarrow> 'a word list" ("[_ , _ .e. _]")
@@ -114,10 +90,7 @@ lemma minBound_word:
 
 lemma maxBound_max_word:
   "(maxBound::'a::len word) = max_word"
-  apply (subst maxBound_word)
-  apply (subst max_word_minus [symmetric])
-  apply (rule refl)
-  done
+  by (simp add: maxBound_word max_word_minus [symmetric])
 
 lemma leq_maxBound [simp]:
   "(x::'a::len word) \<le> maxBound"
