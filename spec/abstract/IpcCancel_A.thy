@@ -40,15 +40,31 @@ where
     set_sc_obj_ref sc_ntfn_update sc (Some ntfn)
   od"
 
+text {* Remove the binding between a notification and a scheduling context.
+        This is avoids double reads when calling sched_context_unbind_ntfn
+        from sched_context_maybe_unbind_ntfn (which has infoflow repercussions) *}
+abbreviation
+  do_unbind_ntfn_sc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "do_unbind_ntfn_sc ntfnptr scptr \<equiv> do
+      set_ntfn_obj_ref ntfn_sc_update ntfnptr None;
+      set_sc_obj_ref sc_ntfn_update scptr None
+    od"
+
 definition
   sched_context_unbind_ntfn :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_unbind_ntfn sc_ptr = do
     ntfn_opt \<leftarrow> get_sc_obj_ref sc_ntfn sc_ptr;
-    maybeM (\<lambda>ntfn. do
-      set_ntfn_obj_ref ntfn_sc_update ntfn None;
-      set_sc_obj_ref sc_ntfn_update sc_ptr None
-    od) ntfn_opt
+    maybeM (\<lambda>ntfn. do_unbind_ntfn_sc ntfn sc_ptr) ntfn_opt
+  od"
+
+definition
+  sched_context_maybe_unbind_ntfn :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "sched_context_maybe_unbind_ntfn ntfn_ptr = do
+    sc_opt \<leftarrow> get_ntfn_obj_ref ntfn_sc ntfn_ptr;
+    maybeM (\<lambda>sc. do_unbind_ntfn_sc ntfn_ptr sc) sc_opt
   od"
 
 definition
@@ -60,13 +76,6 @@ where
     set_sc_obj_ref sc_replies_update sc_ptr []
   od"
 
-definition
-  sched_context_maybe_unbind_ntfn :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "sched_context_maybe_unbind_ntfn ntfn_ptr = do
-    sc_opt \<leftarrow> get_ntfn_obj_ref ntfn_sc ntfn_ptr;
-    maybeM sched_context_unbind_ntfn sc_opt
-  od"
 
 text \<open>
   Unbind a TCB from its scheduling context. If the TCB is runnable,
@@ -439,8 +448,9 @@ where
         od
   od"
 
-oo many now)
-text {* Remove the binding between a notification and a TCB. *}
+text {* Remove the binding between a notification and a TCB. This is avoids double reads
+        when calling unbind_notification from unbind_maybe_notification (which has infoflow
+        repercussions *}
 abbreviation
   do_unbind_notification :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
