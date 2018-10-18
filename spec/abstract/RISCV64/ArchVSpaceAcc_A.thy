@@ -40,68 +40,87 @@ lemmas asid_bits_of_defs = asid_high_bits_of_def asid_low_bits_of_def
 section "Kernel Heap Accessors"
 
 text \<open>Manipulate ASID pools, page directories and page tables in the kernel heap.\<close>
-definition get_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref, 'z::state_ext) s_monad"
-  where
-  "get_asid_pool ptr \<equiv> do
-     kobj \<leftarrow> get_object ptr;
-     case kobj of ArchObj (ASIDPool pool) \<Rightarrow> return pool | _ \<Rightarrow> fail
-   od"
 
-definition set_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref) \<Rightarrow> (unit, 'z::state_ext) s_monad"
+abbreviation asid_pools_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> asid_pool"
+  where
+  "asid_pools_of \<equiv> \<lambda>s. kheap s |> aobj_of |> asid_pool_of"
+
+abbreviation get_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref, 'z::state_ext) s_monad"
+  where
+  "get_asid_pool \<equiv> gets_map asid_pools_of"
+
+definition set_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref) \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "set_asid_pool ptr pool \<equiv> do
-     v \<leftarrow> get_object ptr;
-     assert (case v of ArchObj (ASIDPool p) \<Rightarrow> True | _ \<Rightarrow> False);
+     get_asid_pool ptr;
      set_object ptr (ArchObj (ASIDPool pool))
    od"
 
-definition get_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte,'z::state_ext) s_monad"
+abbreviation pts_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pt"
   where
-  "get_pt ptr \<equiv> do
-     kobj \<leftarrow> get_object ptr;
-     case kobj of ArchObj (PageTable pt) \<Rightarrow> return pt | _ \<Rightarrow> fail
-   od"
+  "pts_of \<equiv> \<lambda>s. kheap s |> aobj_of |> pt_of"
+
+abbreviation get_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte,'z::state_ext) s_monad"
+  where
+  "get_pt \<equiv> gets_map pts_of"
 
 definition set_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte) \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "set_pt ptr pt \<equiv> do
-    v \<leftarrow> get_object ptr;
-    assert (case v of ArchObj (PageTable _) \<Rightarrow> True | _ \<Rightarrow> False);
-    set_object ptr (ArchObj (PageTable pt))
-  od"
+     get_pt ptr;
+     set_object ptr (ArchObj (PageTable pt))
+   od"
+
+definition ptes_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pte"
+  where
+  "ptes_of s p \<equiv> do {
+     let base = p && ~~mask pt_bits;
+     let index = (p && mask pt_bits) >> pte_bits;
+     pt \<leftarrow> pts_of s base;
+     Some $ pt (ucast index)
+   }"
 
 text \<open>The following function takes a pointer to a PTE in kernel memory and returns the PTE.\<close>
-definition get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad"
+abbreviation get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad"
   where
-  "get_pte ptr \<equiv> do
-     base \<leftarrow> return $ ptr && ~~mask pt_bits;
-     offset \<leftarrow> return $ (ptr && mask pt_bits) >> pte_bits;
-     pt \<leftarrow> get_pt base;
-     return $ pt (ucast offset)
-   od"
+  "get_pte \<equiv> gets_map ptes_of"
 
 definition store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "store_pte p pte \<equiv> do
     base \<leftarrow> return $ p && ~~mask pt_bits;
-    offset \<leftarrow> return $ (p && mask pt_bits) >> pte_bits;
+    index \<leftarrow> return $ (p && mask pt_bits) >> pte_bits;
     pt \<leftarrow> get_pt base;
-    pt' \<leftarrow> return $ pt (ucast offset := pte);
+    pt' \<leftarrow> return $ pt (ucast index := pte);
     set_pt base pt'
   od"
 
 
 section "Basic Operations"
 
-definition max_pt_level :: nat
-  where
-  "max_pt_level = 2"
+text \<open>
+  The number of levels over all virtual memory tables.
+  For RISC-V, we have three page table levels plus the ASID pool level.
 
-definition pt_bits_left :: "nat \<Rightarrow> nat"
-  where
-  "pt_bits_left level = ptTranslationBits * level + pageBits"
+  The top level (with the highest number) contains ASID pools, the next levels contain the
+  top-level page tables, and level 1 page tables. The bottom-level page tables (level 0)
+  contains only InvalidPTEs or PagePTEs.
+\<close>
+type_synonym vm_level = 4
 
-definition pt_index :: "nat \<Rightarrow> vspace_ref \<Rightarrow> machine_word"
+definition asid_pool_level :: vm_level
+  where
+  "asid_pool_level = maxBound"
+
+definition max_pt_level :: vm_level
+  where
+  "max_pt_level = asid_pool_level - 1"
+
+definition pt_bits_left :: "vm_level \<Rightarrow> nat"
+  where
+  "pt_bits_left level = ptTranslationBits * size level + pageBits"
+
+definition pt_index :: "vm_level \<Rightarrow> vspace_ref \<Rightarrow> machine_word"
   where
   "pt_index level vptr \<equiv> (vptr >> pt_bits_left level) && mask ptTranslationBits"
 
@@ -129,41 +148,53 @@ definition pptr_from_pte :: "pte \<Rightarrow> vspace_ref"
   where
   "pptr_from_pte pte \<equiv> ptrFromPAddr (pte_ppn pte << pt_bits)"
 
-definition pt_slot_index :: "nat \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
+definition pt_slot_index :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
   where
   "pt_slot_index level pt_ptr vptr = pt_ptr + (pt_index level vptr << pte_bits)"
 
-definition pte_at_index :: "nat \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (pte, 'z::state_ext) s_monad"
+definition pte_at_index :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> pte option"
   where
-  "pte_at_index level pt_ptr vptr \<equiv> get_pte (pt_slot_index level pt_ptr vptr)"
+  "pte_at_index level pt_ptr vptr \<equiv> oapply (pt_slot_index level pt_ptr vptr)"
 
+text \<open>
+  This is the base function for looking up a slot in a page table structure.
+  The lookup proceeds from higher-level tables at the provided @{term level} (e.g. 2) to lower
+  level tables, down to @{term bot_level} (e.g. 0). The function returns a level and an object
+  pointer. The pointer is to a slot in a table at the returned level. If the returned level is 0,
+  this slot is either an @{const InvalidPTE} or a @{const PagePTE}. If the returned level is higher
+  the slot may also be a @{const PageTablePTE}.
+\<close>
 fun lookup_pt_slot_from_level ::
-  "nat \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (nat \<times> vspace_ref, 'z::state_ext) s_monad"
+  "vm_level \<Rightarrow> vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
-  "lookup_pt_slot_from_level level pt_ptr vptr = do
-     pte \<leftarrow> pte_at_index level pt_ptr vptr;
-     ptr \<leftarrow> return (pptr_from_pte pte);
-     if is_PageTablePTE pte \<and> level > 0
-       then lookup_pt_slot_from_level (level - 1) ptr vptr
-       else return (pt_bits_left level, ptr)
-   od"
+  "lookup_pt_slot_from_level level bot_level pt_ptr vptr = do {
+     let slot = pt_slot_index level pt_ptr vptr;
+     pte \<leftarrow> oapply slot;
+     if is_PageTablePTE pte \<and> level > bot_level
+       then lookup_pt_slot_from_level (level - 1) bot_level (pptr_from_pte pte) vptr
+       else oreturn (level, slot)
+   }"
 
-definition lookup_pt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (nat \<times> vspace_ref, 'z::state_ext) s_monad"
+declare lookup_pt_slot_from_level.simps[simp del]
+
+definition lookup_pt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
-  "lookup_pt_slot = lookup_pt_slot_from_level max_pt_level"
+  "lookup_pt_slot = lookup_pt_slot_from_level max_pt_level 0"
 
 fun lookup_pt_from_level ::
-  "nat \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (machine_word, 'z::state_ext) lf_monad"
+  "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (machine_word, 'z::state_ext) lf_monad"
   where
   "lookup_pt_from_level level pt_ptr vptr target_pt_ptr = doE
      unlessE (0 < level) $ throwError InvalidRoot;
-     pte <- liftE $ pte_at_index level pt_ptr vptr;
+     pte <- liftE $ gets_the $ pte_at_index level pt_ptr vptr o ptes_of;
      unlessE (is_PageTablePTE pte) $ throwError InvalidRoot;
      ptr <- returnOk (pptr_from_pte pte);
      if ptr = target_pt_ptr
        then returnOk $ pt_slot_index (level - 1) ptr vptr
        else lookup_pt_from_level (level - 1) ptr vptr target_pt_ptr
    odE"
+
+declare lookup_pt_from_level.simps[simp del]
 
 end
 end

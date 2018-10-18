@@ -76,10 +76,22 @@ text \<open>Sanity check:\<close>
 lemma "LENGTH(pt_index_len) = ptTranslationBits"
   by (simp add: ptTranslationBits_def)
 
-datatype arch_kernel_obj =
-    ASIDPool "asid_low_index \<rightharpoonup> obj_ref"
-  | PageTable "pt_index \<Rightarrow> pte"
+type_synonym asid_pool = "asid_low_index \<rightharpoonup> obj_ref"
+type_synonym pt = "pt_index \<Rightarrow> pte"
+
+(* produce discriminators and selectors even though no field names are mentioned *)
+datatype (discs_sels) arch_kernel_obj =
+    ASIDPool asid_pool
+  | PageTable pt
   | DataPage bool vmpage_size
+
+definition asid_pool_of :: "arch_kernel_obj \<rightharpoonup> asid_pool"
+  where
+  "asid_pool_of ko \<equiv> case ko of ASIDPool pool \<Rightarrow> Some pool | _ \<Rightarrow> None"
+
+definition pt_of :: "arch_kernel_obj \<rightharpoonup> pt"
+  where
+  "pt_of ko \<equiv> case ko of PageTable pt \<Rightarrow> Some pt | _ \<Rightarrow> None"
 
 definition pte_bits :: nat
   where

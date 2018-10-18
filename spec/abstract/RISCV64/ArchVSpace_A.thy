@@ -34,33 +34,32 @@ definition lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_r
      | _ \<Rightarrow> return None
    od"
 
+definition pool_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option"
+  where
+  "pool_for_asid asid \<equiv> \<lambda>s. riscv_asid_table (arch_state s) (asid_high_bits_of asid)"
+
+definition vspace_for_pool :: "obj_ref \<Rightarrow> asid \<Rightarrow> (obj_ref \<rightharpoonup> asid_pool) \<Rightarrow> obj_ref option"
+  where
+  "vspace_for_pool pool_ptr asid \<equiv> \<lambda>pools. do {
+     pool \<leftarrow> pools pool_ptr;
+     pool (asid_low_bits_of asid)
+   }"
+
+definition vspace_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option"
+  where
+  "vspace_for_asid asid = do {
+     oassert (0 < asid);
+     pool_ptr \<leftarrow> pool_for_asid asid;
+     vspace_for_pool pool_ptr asid \<circ> asid_pools_of
+   }"
+
 text \<open>Locate the top-level page table associated with a given virtual ASID.\<close>
 definition find_vspace_for_asid :: "asid \<Rightarrow> (obj_ref,'z::state_ext) lf_monad"
   where
   "find_vspace_for_asid asid \<equiv> doE
-    assertE (asid > 0);
-    asid_table \<leftarrow> liftE $ gets (riscv_asid_table o arch_state);
-    pool_ptr \<leftarrow> returnOk $ asid_table (asid_high_bits_of asid);
-    pool \<leftarrow> case pool_ptr of
-              Some ptr \<Rightarrow> liftE $ get_asid_pool ptr
-            | None \<Rightarrow> throwError InvalidRoot;
-    pt \<leftarrow> returnOk $ pool (asid_low_bits_of asid);
-    case pt of
-      Some ptr \<Rightarrow> returnOk ptr
-    | None \<Rightarrow> throwError InvalidRoot
+    vspace_opt \<leftarrow> liftE $ gets $ vspace_for_asid asid;
+    throw_opt InvalidRoot vspace_opt
   odE"
-
-text \<open>
-  Locate the top-level page table and check that this process succeeds and returns a pointer
-  to a real page table.
-\<close>
-definition find_vspace_for_asid_assert :: "asid \<Rightarrow> (obj_ref,'z::state_ext) s_monad"
-  where
-  "find_vspace_for_asid_assert asid \<equiv> do
-     pt \<leftarrow> find_vspace_for_asid asid <catch> K fail;
-     get_pt pt;
-     return pt
-   od"
 
 text \<open>
   Format a VM fault message to be passed to a thread's supervisor after it encounters a page fault.
@@ -158,20 +157,37 @@ definition unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_
      liftE $ do_machine_op sfence
    odE <catch> (K $ return ())"
 
+text \<open>
+  Look up an @{text "asid+vspace_ref"} down to the provided level in the page table.
+  For level @{term bot_level}, return a pointer to a slot in a table at the returned level.
+  The level can be higher than @{term bot_level} if the lookup terminates early because
+  it hit a page or an invalid entry. For @{prop "bot_level = asid_pool_level"}, return the
+  pointer to the ASID pool (not a slot inside it, since there are no slot functions
+  for ASID pools).
+\<close>
+definition vs_lookup :: "vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option"
+  where
+  "vs_lookup bot_level asid vptr \<equiv> do {
+     pool_ptr \<leftarrow> pool_for_asid asid;
+     if bot_level = asid_pool_level
+     then oreturn (asid_pool_level, pool_ptr)
+     else do {
+       top_level_pt \<leftarrow> vspace_for_pool pool_ptr asid \<circ> asid_pools_of;
+       lookup_pt_slot_from_level max_pt_level bot_level top_level_pt vptr \<circ> ptes_of
+     }
+   }"
 
 text \<open>Unmap a mapped page if the given mapping details are still current.\<close>
 definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "unmap_page pgsz asid vptr pptr \<equiv> doE
-     top_level_pt \<leftarrow> find_vspace_for_asid asid;
-     (bits_left, slot) \<leftarrow> liftE $ lookup_pt_slot top_level_pt vptr;
-     unlessE (bits_left = pageBitsForSize pgsz) $ throwError InvalidRoot;
+     (lev, slot) \<leftarrow> liftE $ gets_the $ vs_lookup 0 asid vptr;
+     unlessE (pt_bits_left lev = pageBitsForSize pgsz) $ throwError InvalidRoot;
      pte \<leftarrow> liftE $ get_pte slot;
-     unlessE (is_PagePTE pte \<and> ptrFromPAddr (pte_ppn pte) = pptr) $ throwError InvalidRoot;
+     unlessE (is_PagePTE pte \<and> pptr_from_pte pte = pptr) $ throwError InvalidRoot;
      liftE $ store_pte slot InvalidPTE;
      liftE $ do_machine_op sfence
    odE <catch> (K $ return ())"
-
 
 text \<open>
   Page table structure capabilities cannot be copied until they have an ASID and location

@@ -85,9 +85,9 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
            vtop \<leftarrow> returnOk $ vaddr + mask (pageBitsForSize pgsz);
            whenE (vtop \<ge> user_vtop) $ throwError $ InvalidArgument 0;
            check_vp_alignment pgsz vaddr;
-           (bits_left, slot) \<leftarrow> liftE $ lookup_pt_slot pt vaddr;
-           unlessE (bits_left = pg_bits) $
-             throwError $ FailedLookup False $ MissingCapability bits_left;
+           (level, slot) \<leftarrow> liftE $ gets_the $ lookup_pt_slot pt vaddr \<circ> ptes_of;
+           unlessE (pt_bits_left level = pg_bits) $
+             throwError $ FailedLookup False $ MissingCapability $ pt_bits_left level;
            check_slot slot ((=) InvalidPTE);
            vm_rights \<leftarrow> returnOk $ mask_vm_rights R (data_to_rights rights_mask);
            attribs \<leftarrow> returnOk $ attribs_from_word attr;
@@ -115,10 +115,10 @@ definition decode_fr_inv_remap :: "'z::state_ext arch_decoder"
          pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid';
          whenE (pt' \<noteq> pt \<or> asid \<noteq> asid') $ throwError $ InvalidCapability 1;
          check_vp_alignment pgsz vaddr;
-         (bits_left, slot) \<leftarrow> liftE $ lookup_pt_slot pt vaddr;
-         unlessE (bits_left = pageBitsForSize pgsz) $
-           throwError $ FailedLookup False $ MissingCapability bits_left;
-         check_slot slot (Not o is_PageTablePTE);
+         (level, slot) \<leftarrow> liftE $ gets_the $ lookup_pt_slot pt vaddr \<circ> ptes_of;
+         unlessE (pt_bits_left level = pageBitsForSize pgsz) $
+           throwError $ FailedLookup False $ MissingCapability $ pt_bits_left level;
+         check_slot slot (Not \<circ> is_PageTablePTE);
          vm_rights \<leftarrow> returnOk $ mask_vm_rights R $ data_to_rights rights_mask;
          pte \<leftarrow> returnOk $ make_user_pte (addrFromPPtr p) (attribs_from_word attr) vm_rights;
          returnOk $ InvokePage $ PageRemap (pte, slot)
@@ -155,9 +155,9 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
            whenE (user_vtop \<le> vaddr) $ throwError $ InvalidArgument 0;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
-           (bits_left, slot) \<leftarrow> liftE $ lookup_pt_slot pt vaddr;
+           (level, slot) \<leftarrow> liftE $ gets_the $ lookup_pt_slot pt vaddr \<circ> ptes_of;
            old_pte \<leftarrow> liftE $ get_pte slot;
-           whenE (bits_left = pageBits \<or> old_pte \<noteq> InvalidPTE) $ throwError DeleteFirst;
+           whenE (pt_bits_left level = pageBits \<or> old_pte \<noteq> InvalidPTE) $ throwError DeleteFirst;
            pte \<leftarrow> returnOk $ PageTablePTE (addrFromPPtr p >> pageBits) {};
            cap' <- returnOk $ PageTableCap p $ Some (asid, vaddr);
            returnOk $ InvokePageTable $ PageTableMap cap' cte pte slot
