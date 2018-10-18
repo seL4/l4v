@@ -16,7 +16,7 @@
 theory HaskellLib_H
 imports
   Lib
-  "Word_Lib.WordSetup"
+  "More_Numeral_Type"
   "Monad_WP/NonDetMonadVCG"
 begin
 
