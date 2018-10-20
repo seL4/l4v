@@ -72,7 +72,9 @@ definition
 where
   "sched_context_unbind_reply sc_ptr = do
     replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
-    mapM_x (\<lambda>r. set_reply_obj_ref reply_sc_update r None) replies;
+    \<comment> \<open>Only the head reply will be pointing to this scheduling context,
+        so there is no need to worry about the others.\<close>
+    unless (replies = []) (set_reply_obj_ref reply_sc_update (hd replies) None);
     set_sc_obj_ref sc_replies_update sc_ptr []
   od"
 
@@ -130,20 +132,31 @@ where
   "reply_unlink_sc sc_ptr reply_ptr = do
      sc_replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
      reply \<leftarrow> get_reply reply_ptr;
-     assert (reply_sc reply = Some sc_ptr);
-     set_reply reply_ptr (reply_sc_update (K None) reply);
-     set_sc_obj_ref sc_replies_update sc_ptr (remove1 reply_ptr sc_replies)
+
+     if (hd sc_replies = reply_ptr)
+     then do  (* if it is the head *)
+       assert (reply_sc reply = Some sc_ptr); (* only the head of the list should point to the sc *)
+       set_reply reply_ptr (reply_sc_update (K None) reply); (* set reply_sc to None *)
+       (case (tl sc_replies) of [] \<Rightarrow> return ()
+         | r'#_ \<Rightarrow> set_reply_obj_ref reply_sc_update r' (Some sc_ptr)); (* fix up the refs *)
+       set_sc_obj_ref sc_replies_update sc_ptr (tl sc_replies) (* pop the head *)
+     od
+     else do
+       assert (reply_sc reply = None); (* only the head of the list should point to the sc *)
+       set_sc_obj_ref sc_replies_update sc_ptr (takeWhile (\<lambda>r. r \<noteq> reply_ptr) sc_replies)
+                                     (* take until the (first and only) occurrence of reply_ptr *)
+     od
   od"
 
 text \<open>Unbind a reply from the corresponding TCB.\<close>
-definition
+(*definition
   reply_unbind_caller :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where (* called from reply_remove; in BlockedOnReply *)
   "reply_unbind_caller tcb_ptr reply_ptr = do
      reply \<leftarrow> get_reply reply_ptr;
      set_reply reply_ptr (reply\<lparr>reply_tcb:= None\<rparr>);
      set_thread_state tcb_ptr (BlockedOnReply None) (* does this make sense? *)
-  od"
+  od"*)
 
 definition reply_unlink_tcb :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "reply_unlink_tcb r = do
@@ -155,47 +168,58 @@ definition reply_unlink_tcb :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_mo
      set_thread_state tptr Inactive
    od"
 
-text \<open>Unbind all replies from a scheduling context.\<close>
-definition
-  sched_context_clear_replies :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "sched_context_clear_replies sc_ptr = do
-     replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
-     mapM_x (reply_unlink_sc sc_ptr) replies
-  od"
-
 text {* Remove a reply object from the call stack. *}
+
+definition sc_with_reply :: "obj_ref \<Rightarrow> 'z::state_ext state => obj_ref option"
+  where
+  "sc_with_reply r s \<equiv> the_pred_option (\<lambda>sc_ptr. \<exists>sc n. kheap s sc_ptr = Some (SchedContext sc n)
+                                                         \<and> r \<in> set (sc_replies sc))"
+
+lemmas sc_with_reply_def2 = sc_with_reply_def[unfolded the_pred_option_def]
+
 definition
   reply_remove :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where (* reply_tcb must be in BlockedOnReply *)
   "reply_remove r = do
-
     reply \<leftarrow> get_reply r;
     caller \<leftarrow> assert_opt $ reply_tcb reply;
-    r_sc_opt \<leftarrow> return $ reply_sc reply;
-    case r_sc_opt of None \<Rightarrow> return ()
-      | Some sc_ptr \<Rightarrow> do
-         replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
-         caller_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context caller;
-         reply_unlink_sc sc_ptr r;
-         when (hd replies = r \<and> caller_sc = None) $ sched_context_donate sc_ptr caller
+    r_sc_opt \<leftarrow> gets $ sc_with_reply r;
+    case r_sc_opt of
+      None \<Rightarrow> return ()
+    | Some sc_ptr \<Rightarrow> do
+        replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
+        caller_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context caller;
+        reply_unlink_sc sc_ptr r; (* drop the head or cut off the stack*)
+        when (hd replies = r \<and> caller_sc = None) $ sched_context_donate sc_ptr caller
       od;
     reply_unlink_tcb r  (* FIXME check the c code ! *)
    od" (* the r.caller is in Inactive on return *)
 
-text {* Remove a specific tcb, and the reply it is blocking on, from the call stack. *}
+text {* Remove a specific thread, and the reply it is blocking on, from the call stack.
+        The thread must be BlockedOnReply. *}
 definition
   reply_remove_tcb :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where (* tptr must be in BlockedOnReply *)
+where
   "reply_remove_tcb tptr = do
     ts \<leftarrow> get_thread_state tptr;
     case ts of
       BlockedOnReply r \<Rightarrow> do
         rptr \<leftarrow> assert_opt r;
-        reply_remove rptr
+        sc_ptr_opt \<leftarrow> gets $ sc_with_reply rptr;
+        case sc_ptr_opt of
+          None \<Rightarrow> return ()
+        | Some sc_ptr \<Rightarrow> do
+            sc_replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
+            \<comment> \<open>Drop this reply and all subsequent replies from the call stack.
+                All the associated caller threads become stuck.\<close>
+            set_sc_obj_ref sc_replies_update sc_ptr (takeWhile (\<lambda>r. r \<noteq> rptr) sc_replies);
+            when (hd sc_replies = rptr) (set_reply_obj_ref reply_sc_update rptr None)
+          od;
+        \<comment> \<open>This leaves the caller thread Inactive.\<close>
+        reply_unlink_tcb rptr
       od
     | _ \<Rightarrow> fail
-  od" (* the r.caller is in Inactive on return *)
+  od"
 
 definition
   unbind_from_reply :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -272,9 +296,12 @@ where
       sc_replies \<leftarrow> liftM sc_replies $ get_sched_context (the sc_caller); (* maybe define a function to add a reply to the queue? *)
       case sc_replies of
           [] \<Rightarrow> assert True
-        | (r#_) \<Rightarrow> do reply \<leftarrow> get_reply r; assert (reply_sc reply = sc_caller) od;
+        | (r#_) \<Rightarrow> do reply \<leftarrow> get_reply r;
+                      assert (reply_sc reply = sc_caller);
+                      set_reply_obj_ref reply_sc_update r None (* unlink head reply and sc before pushing *)
+                   od;
       set_sc_obj_ref sc_replies_update (the sc_caller) (reply_ptr#sc_replies);
-      set_reply_obj_ref reply_sc_update reply_ptr sc_caller;
+      set_reply_obj_ref reply_sc_update reply_ptr sc_caller; (* only the head reply is linked to the sc *)
       sched_context_donate (the sc_caller) callee
     od
   od"

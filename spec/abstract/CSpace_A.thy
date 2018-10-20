@@ -319,12 +319,16 @@ where
   "fast_finalise NullCap                 final = return ()"
 | "fast_finalise (ReplyCap r)            final =
       (when final $ do
-          reply \<leftarrow> get_reply r;
-          tptr \<leftarrow> return (reply_tcb reply);
-          scptr \<leftarrow> return (reply_sc reply);
-          if (tptr \<noteq> None)
-            then cancel_ipc (the tptr)
-            else when (scptr \<noteq> None) $ reply_unlink_sc (the scptr) r
+         reply \<leftarrow> get_reply r;
+         tptr \<leftarrow> return (reply_tcb reply);
+         case tptr of
+           None \<Rightarrow> return ()
+         | Some tp \<Rightarrow> do
+             state \<leftarrow> get_thread_state tp;
+             case state of
+               BlockedOnReply (Some r) \<Rightarrow> reply_remove r
+             | _ \<Rightarrow> cancel_ipc tp
+           od
        od)"
 | "fast_finalise (EndpointCap r b R)     final =
       (when final $ cancel_all_ipc r)"
@@ -338,7 +342,7 @@ where
       (when final $ do
           sched_context_unbind_all_tcbs sc;
           sched_context_unbind_ntfn sc;
-          sched_context_clear_replies sc;
+          sched_context_unbind_reply sc;
           sched_context_unbind_yield_from sc
       od)"
 | "fast_finalise _ _ = fail"
@@ -481,10 +485,14 @@ where
       (liftM (K (NullCap, NullCap)) $ when final $ do
          reply \<leftarrow> get_reply r;
          tptr \<leftarrow> return (reply_tcb reply);
-         scptr \<leftarrow> return (reply_sc reply);
-         if (tptr \<noteq> None)
-           then cancel_ipc (the tptr)
-           else when (scptr \<noteq> None) $ reply_unlink_sc (the scptr) r
+         case tptr of
+           None \<Rightarrow> return ()
+         | Some tp \<Rightarrow> do
+             state \<leftarrow> get_thread_state tp;
+             case state of
+               BlockedOnReply (Some r) \<Rightarrow> reply_remove r
+             | _ \<Rightarrow> cancel_ipc tp
+           od
        od)"
 | "finalise_cap (EndpointCap r b R)      final =
       (liftM (K (NullCap, NullCap)) $ when final $ cancel_all_ipc r)"
@@ -509,7 +517,7 @@ where
       do
          when final $ sched_context_unbind_all_tcbs sc;
          when final $ sched_context_unbind_ntfn sc;
-         when final $ sched_context_clear_replies sc;
+         when final $ sched_context_unbind_reply sc;
          when final $ sched_context_unbind_yield_from sc;
          return (NullCap, NullCap)
       od"
