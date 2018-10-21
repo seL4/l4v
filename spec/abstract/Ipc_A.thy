@@ -733,7 +733,7 @@ where
     set_sched_context sc_ptr (sc\<lparr>sc_badge:= badge\<rparr>);
     (period,mrefills) \<leftarrow> return (if budget = period then (0,MIN_REFILLS) else (period,mrefills));
          (* true in the above means we have round robin *)
-    when (sc_tcb sc \<noteq> None) $ do
+    if (sc_tcb sc \<noteq> None) then do
       tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
       tcb_release_remove tcb_ptr;
       tcb_sched_action tcb_sched_dequeue tcb_ptr;
@@ -744,7 +744,8 @@ where
       od;
       st \<leftarrow> get_thread_state tcb_ptr;
       if 0 < sc_refill_max sc then do
-        when (runnable st) $ refill_update sc_ptr period budget mrefills;
+        if (runnable st) then refill_update sc_ptr period budget mrefills
+        else refill_new sc_ptr mrefills budget period;
         sched_context_resume sc_ptr;
         ct \<leftarrow> gets cur_thread;
         if (tcb_ptr = ct) then reschedule_required
@@ -753,6 +754,8 @@ where
       else
         refill_new sc_ptr mrefills budget period
     od
+    else
+      refill_new sc_ptr mrefills budget period
   od"
 
 
