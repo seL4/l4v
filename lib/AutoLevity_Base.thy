@@ -136,43 +136,51 @@ val get_attribute_tests = Symtab.dest o #3 o Data.get;
    member of the multi-thm "foo". We need to do some work to guess if
    such a fact refers to an indexed multi-thm or a real fact named "foo_3" *)
 
-fun get_ref_from_nm' nm =
+fun base_and_index nm =
 let
   val exploded = space_explode "_" nm;
-  val base = List.take (exploded, (length exploded) - 1) |> space_implode "_"
-  val idx = List.last exploded |> Int.fromString;
-in if is_some idx andalso base <> "" then SOME (base, the idx) else NONE end
+  val base =
+    (exploded, (length exploded) - 1)
+      |> try (List.take #> space_implode "_")
+      |> Option.mapPartial (Option.filter (fn nm => nm <> ""))
+  val idx = exploded |> try (List.last #> Int.fromString) |> Option.join;
+in
+  case (base, idx) of
+    (SOME base, SOME idx) => SOME (base, idx)
+  | _ => NONE
+end
 
-fun get_ref_from_nm nm = Option.join (try get_ref_from_nm' nm);
 
-fun maybe_nth l = try (curry List.nth l)
-
-
-
-fun fact_from_derivation ctxt xnm =
+fun fact_from_derivation ctxt prop xnm =
 let
-
   val facts = Proof_Context.facts_of ctxt;
   (* TODO: Check that exported local fact is equivalent to external one *)
 
-  val idx_result =
-    let
-      val (name', idx) = get_ref_from_nm xnm |> the;
-      val entry = try (Facts.retrieve (Context.Proof ctxt) facts) (name', Position.none) |> the;
-      val thm = maybe_nth (#thms entry) (idx - 1) |> the;
-    in SOME thm end handle Option => NONE;
+  fun maybe_nth idx xs = idx |> try (curry List.nth xs)
 
-  fun non_idx_result () =
-    let
-      val entry = try (Facts.retrieve (Context.Proof ctxt) facts) (xnm, Position.none) |> the;
-      val thm = try the_single (#thms entry) |> the;
-    in SOME thm end handle Option => NONE;
+  fun check_prop thm = Thm.full_prop_of thm = prop
 
+  fun entry (name, idx) =
+    (name, Position.none)
+      |> try (Facts.retrieve (Context.Proof ctxt) facts)
+      |> Option.mapPartial (#thms #> maybe_nth (idx - 1))
+      |> Option.mapPartial (Option.filter check_prop)
+      |> Option.map (pair name)
+
+  val idx_result = (base_and_index xnm) |> Option.mapPartial entry
+  val non_idx_result = (xnm, 1) |> entry
+
+  val _ =
+    if is_some idx_result andalso is_some non_idx_result
+    then warning (
+      "Levity: found two possible results for name " ^ quote xnm ^ " with the same prop:\n" ^
+      (@{make_string} (the idx_result)) ^ ",\nand\n" ^
+      (@{make_string} (the non_idx_result)) ^ ".\nUsing the first one.")
+    else ()
 in
-  case idx_result of
-    SOME thm => SOME thm
-  | NONE => non_idx_result ()
+  merge_options (idx_result, non_idx_result)
 end
+
 
 (* Local facts (from locales) aren't marked in proof bodies, we only
    see their external variants. We guess the local name from the external one
@@ -183,12 +191,14 @@ end
 (* TODO: extend_locale breaks this naming scheme by adding the "chunk" qualifier. This can
    probably just be handled as a special case *)
 
-fun most_local_fact_of ctxt xnm =
+fun most_local_fact_of ctxt xnm prop =
 let
-  val local_name = try (fn xnm => Long_Name.explode xnm |> tl |> tl |> Long_Name.implode) xnm |> the;
-in SOME (fact_from_derivation ctxt local_name |> the) end handle Option =>
-  fact_from_derivation ctxt xnm;
-
+  val local_name = xnm |> try (Long_Name.explode #> tl #> tl #> Long_Name.implode)
+  val local_result = local_name |> Option.mapPartial (fact_from_derivation ctxt prop)
+  fun global_result () = fact_from_derivation ctxt prop xnm
+in
+  if is_some local_result then local_result else global_result ()
+end
 
 (* We recursively descend into the proof body to find dependent facts.
    We skip over empty derivations or facts that we fail to find, but recurse
@@ -197,33 +207,39 @@ in SOME (fact_from_derivation ctxt local_name |> the) end handle Option =>
 
 fun thms_of (PBody {thms,...}) = thms
 
-fun proof_body_descend' f get_fact (ident, thm_node) deptab = let
-  val nm = Proofterm.thm_node_name thm_node
+fun proof_body_deps
+  (filter_name: string -> bool)
+  (get_fact: string -> term -> (string * thm) option)
+  (thm_ident, thm_node)
+  (tab: (string * thm) option Inttab.table) =
+let
+  val name = Proofterm.thm_node_name thm_node
   val body = Proofterm.thm_node_body thm_node
+  val prop = Proofterm.thm_node_prop thm_node
+  val result = if filter_name name then NONE else get_fact name prop
+  val is_new_result = not (Inttab.defined tab thm_ident)
+  val insert = if is_new_result then Inttab.update (thm_ident, result) else I
+  val descend =
+    if is_new_result andalso is_none result
+    then fold (proof_body_deps filter_name get_fact) (thms_of (Future.join body))
+    else I
 in
-    (if not (f nm) then
-      (Inttab.update_new (ident, SOME (nm, get_fact nm |> the)) deptab handle Inttab.DUP _ => deptab)
-    else raise Option) handle Option =>
-      ((fold (proof_body_descend' f get_fact) (thms_of (Future.join body))
-        (Inttab.update_new (ident, NONE) deptab)) handle Inttab.DUP _ => deptab)
+  tab |> insert |> descend
 end
 
-fun used_facts' f get_fact thm =
-  let
-    val body = thms_of (Thm.proof_body_of thm);
-
-  in fold (proof_body_descend' f get_fact) body Inttab.empty end
-
 fun used_facts opt_ctxt thm =
-  let
-    val nm = Thm.get_name_hint thm;
-    val get_fact = case opt_ctxt of
+let
+  val nm = Thm.get_name_hint thm;
+  val get_fact =
+    case opt_ctxt of
       SOME ctxt => most_local_fact_of ctxt
-    | NONE => (fn _ => SOME Drule.dummy_thm);
-  in
-    used_facts' (fn nm' => nm' = "" orelse nm' = nm) get_fact thm
+    | NONE => fn name => fn _ => (SOME (name, Drule.dummy_thm));
+  val body = thms_of (Thm.proof_body_of thm);
+  fun filter_name nm' = nm' = "" orelse nm' = nm;
+in
+  fold (proof_body_deps filter_name get_fact) body Inttab.empty
     |> Inttab.dest |> map_filter snd
-  end
+end
 
 fun attribs_of ctxt =
 let
