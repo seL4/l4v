@@ -676,7 +676,7 @@ lemma tcb_cap_valid_pagetable:
   "tcb_cap_valid (ArchObjectCap (PageTableCap word (Some v))) slot
     = tcb_cap_valid (ArchObjectCap (PageTableCap word None)) slot"
   apply (rule ext)
-  apply (simp add: tcb_cap_valid_def tcb_cap_cases_def
+  apply (simp add: tcb_cap_valid_def tcb_cap_cases_def is_valid_vtable_root_def
                    is_cap_simps valid_ipc_buffer_cap_def
             split: Structures_A.thread_state.split)
   done
@@ -685,7 +685,7 @@ lemma tcb_cap_valid_pagedirectory:
   "tcb_cap_valid (ArchObjectCap (PageDirectoryCap word (Some v))) slot
     = tcb_cap_valid (ArchObjectCap (PageDirectoryCap word None)) slot"
   apply (rule ext)
-  apply (simp add: tcb_cap_valid_def tcb_cap_cases_def
+  apply (simp add: tcb_cap_valid_def tcb_cap_cases_def is_valid_vtable_root_def
                    is_cap_simps valid_ipc_buffer_cap_def
             split: Structures_A.thread_state.split)
   done
@@ -694,16 +694,7 @@ lemma tcb_cap_valid_pdpt:
   "tcb_cap_valid (ArchObjectCap (PDPointerTableCap word (Some v))) slot
     = tcb_cap_valid (ArchObjectCap (PDPointerTableCap word None)) slot"
   apply (rule ext)
-  apply (simp add: tcb_cap_valid_def tcb_cap_cases_def
-                   is_cap_simps valid_ipc_buffer_cap_def
-            split: Structures_A.thread_state.split)
-  done
-
-lemma tcb_cap_valid_pml4:
-  "tcb_cap_valid (ArchObjectCap (PML4Cap word (Some v))) slot
-    = tcb_cap_valid (ArchObjectCap (PML4Cap word None)) slot"
-  apply (rule ext)
-  apply (simp add: tcb_cap_valid_def tcb_cap_cases_def
+  apply (simp add: tcb_cap_valid_def tcb_cap_cases_def is_valid_vtable_root_def
                    is_cap_simps valid_ipc_buffer_cap_def
             split: Structures_A.thread_state.split)
   done
@@ -1001,31 +992,6 @@ lemma replaceable_reset_pdpt:
    apply (erule exE)
    apply (drule_tac x="asid" in is_final_cap_pdpt_asid_eq)
    apply (drule final_cap_pdpt_slot_eq)
-     apply simp_all
-  apply (rule_tac
-    cap="ArchObjectCap cap"
-    in  no_cap_to_obj_with_diff_ref_finalI)
-  apply simp_all
-  done
-
-lemma replaceable_reset_pml4:
-  "\<lbrakk>cap = PML4Cap p m \<and>
-   cte_wp_at ((=) (ArchObjectCap cap)) slot s \<and>
-   (\<forall>vs. vs_cap_ref (ArchObjectCap cap) = Some vs \<longrightarrow> \<not> (vs \<unrhd> p) s) \<and>
-   is_final_cap' (ArchObjectCap cap) s \<and>
-   obj_at (empty_table (set (second_level_tables (arch_state s)))) p s\<rbrakk> \<Longrightarrow>
-   replaceable s slot (ArchObjectCap (PML4Cap p None))
-                      (ArchObjectCap cap)"
-  apply (elim conjE)
-  apply (cases m, simp_all add: replaceable_def gen_obj_refs_def cap_range_def is_cap_simps
-                           tcb_cap_valid_pml4)
-  apply (rule conjI)
-   apply (frule is_final_cap_pml4_asid_eq) defer
-   apply clarsimp
-   apply (drule cte_wp_at_obj_refs_singleton_pml4)
-   apply (erule exE)
-   apply (drule_tac x="asid" in is_final_cap_pml4_asid_eq)
-   apply (drule final_cap_pml4_slot_eq)
      apply simp_all
   apply (rule_tac
     cap="ArchObjectCap cap"
@@ -1670,7 +1636,7 @@ lemma safe_ioport_insert_not_ioport:
   "\<not>is_ioport_cap cap \<Longrightarrow> safe_ioport_insert cap cap' s"
   by (clarsimp simp: is_cap_simps safe_ioport_insert_def cap_ioports_def split: cap.splits arch_cap.splits)
 
-lemmas safe_ioport_insert_simps[simp] = safe_ioport_insert_not_ioport[where cap="ReplyCap a False" for a, simplified is_cap_simps, simplified]
+lemmas safe_ioport_insert_simps[simp] = safe_ioport_insert_not_ioport[where cap="ReplyCap a False b" for a b, simplified is_cap_simps, simplified]
 
 lemma cap_insert_ioports_not:
   "\<lbrace>valid_ioports and K (\<not> is_ioport_cap cap \<and> dest \<noteq> src)\<rbrace>
@@ -1685,8 +1651,9 @@ lemma cap_insert_ioports_not:
   done
 
 lemma setup_caller_cap_ioports:
-  "\<lbrace>valid_ioports\<rbrace> setup_caller_cap a b \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  by (wpsimp simp: setup_caller_cap_def is_cap_simps wp: cap_insert_ioports_not)
+  "\<lbrace>valid_ioports\<rbrace> setup_caller_cap a b c \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  by (wpsimp simp: setup_caller_cap_def is_cap_simps wp: cap_insert_ioports_not
+             split_del: if_split)
 
 crunches set_mrs, as_user, set_message_info, copy_mrs, make_arch_fault_msg
   for ioports[wp]: valid_ioports

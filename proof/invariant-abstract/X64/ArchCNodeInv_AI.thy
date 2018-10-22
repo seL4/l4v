@@ -70,7 +70,7 @@ lemma copy_mask [simp, CNodeInv_AI_assms]:
   apply (auto simp: copy_of_def is_cap_simps mask_cap_def
                     cap_rights_update_def same_object_as_def
                     bits_of_def acap_rights_update_def
-         split: cap.splits arch_cap.splits)
+         split: cap.splits arch_cap.splits bool.splits)
   done
 
 lemma update_cap_data_mask_Null [simp, CNodeInv_AI_assms]:
@@ -154,6 +154,16 @@ lemma same_object_as_update_cap_data [CNodeInv_AI_assms]:
               split: if_split_asm cap.splits)
   done
 
+lemma is_reply_update_cap_data[simp]:
+  "is_reply_cap (update_cap_data P x c) = is_reply_cap c"
+  by (simp add:is_reply_cap_def update_cap_data_def arch_update_cap_data_def the_cnode_cap_def
+               is_arch_cap_def badge_update_def split:cap.split)
+
+lemma is_master_reply_update_cap_data[simp]:
+  "is_master_reply_cap (update_cap_data P x c) = is_master_reply_cap c"
+  by (simp add:is_master_reply_cap_def update_cap_data_def arch_update_cap_data_def
+               the_cnode_cap_def is_arch_cap_def badge_update_def split:cap.split)
+
 lemma weak_derived_update_cap_data [CNodeInv_AI_assms]:
   "\<lbrakk>update_cap_data P x c \<noteq> NullCap; weak_derived c c'\<rbrakk>
   \<Longrightarrow> weak_derived (update_cap_data P x c) c'"
@@ -164,14 +174,8 @@ lemma weak_derived_update_cap_data [CNodeInv_AI_assms]:
               split del: if_split cong: if_cong)
   apply (erule disjE)
    apply (clarsimp split: if_split_asm)
-    apply (erule disjE)
      apply (clarsimp simp: is_cap_simps)
      apply (simp add: update_cap_data_def arch_update_cap_data_def is_cap_simps)
-    apply (erule disjE)
-     apply (clarsimp simp: is_cap_simps)
-     apply (simp add: update_cap_data_def arch_update_cap_data_def is_cap_simps)
-    apply (clarsimp simp: is_cap_simps)
-    apply (simp add: update_cap_data_def arch_update_cap_data_def is_cap_simps)
    apply (erule (1) same_object_as_update_cap_data)
   apply clarsimp
   apply (rule conjI, clarsimp simp: is_cap_simps update_cap_data_def split del: if_split)+
@@ -199,7 +203,7 @@ lemma cap_badge_update_cap_data [CNodeInv_AI_assms]:
 lemma cap_vptr_rights_update[simp, CNodeInv_AI_assms]:
   "cap_vptr (cap_rights_update f c) = cap_vptr c"
   by (simp add: cap_vptr_def cap_rights_update_def acap_rights_update_def
-           split: cap.splits arch_cap.splits)
+           split: cap.splits arch_cap.splits bool.splits)
 
 lemma cap_vptr_mask[simp, CNodeInv_AI_assms]:
   "cap_vptr (mask_cap m c) = cap_vptr c"
@@ -207,8 +211,8 @@ lemma cap_vptr_mask[simp, CNodeInv_AI_assms]:
 
 lemma cap_asid_base_rights [simp, CNodeInv_AI_assms]:
   "cap_asid_base (cap_rights_update R c) = cap_asid_base c"
-  by (simp add: cap_rights_update_def acap_rights_update_def
-           split: cap.splits arch_cap.splits)
+  by (auto simp add: cap_rights_update_def acap_rights_update_def
+           split: cap.splits arch_cap.splits bool.splits)
 
 lemma cap_asid_base_mask[simp, CNodeInv_AI_assms]:
   "cap_asid_base (mask_cap m c) = cap_asid_base c"

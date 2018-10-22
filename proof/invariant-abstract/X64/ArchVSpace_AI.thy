@@ -1377,6 +1377,8 @@ lemma arch_update_cap_invs_map:
   apply (frule master_cap_cap_range, simp del: imp_disjL)
   apply (thin_tac "cap_range a = cap_range b" for a b)
   apply (rule conjI)
+   apply (fastforce simp:is_valid_vtable_root_def vs_cap_ref_def split:arch_cap.splits vmpage_size.splits option.splits)
+  apply (rule conjI)
    apply (rule ext)
    apply (simp add: cap_master_cap_def split: cap.splits arch_cap.splits)
   apply (rule context_conjI)
@@ -1449,7 +1451,7 @@ lemma arch_update_cap_invs_unmap_page:
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
                         is_cap_simps cap_master_cap_simps
                         fun_eq_iff appropriate_cte_cap_irqs
-                        is_pt_cap_def
+                        is_pt_cap_def is_valid_vtable_root_def
                  dest!: cap_master_cap_eqDs
               simp del: imp_disjL)
   apply (rule conjI)
@@ -1486,7 +1488,7 @@ lemma arch_update_cap_invs_unmap_page_table:
              set_cap_cap_refs_respects_device_region_spec[where ptr = p])
   apply (simp add: final_cap_at_eq)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
-                        is_cap_simps cap_master_cap_simps
+                        is_cap_simps cap_master_cap_simps is_valid_vtable_root_def
                         appropriate_cte_cap_irqs is_pt_cap_def
                         fun_eq_iff[where f="cte_refs cap" for cap]
                  dest!: cap_master_cap_eqDs
@@ -1530,7 +1532,7 @@ lemma arch_update_cap_invs_unmap_page_directory:
              set_cap_cap_refs_respects_device_region_spec[where ptr = p])
   apply (simp add: final_cap_at_eq)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
-                        is_cap_simps cap_master_cap_simps
+                        is_cap_simps cap_master_cap_simps is_valid_vtable_root_def
                         appropriate_cte_cap_irqs is_pt_cap_def
                         fun_eq_iff[where f="cte_refs cap" for cap]
                  dest!: cap_master_cap_eqDs
@@ -1574,51 +1576,7 @@ lemma arch_update_cap_invs_unmap_pd_pointer_table:
              set_cap_cap_refs_respects_device_region_spec[where ptr = p])
   apply (simp add: final_cap_at_eq)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
-                        is_cap_simps cap_master_cap_simps
-                        appropriate_cte_cap_irqs is_pt_cap_def
-                        fun_eq_iff[where f="cte_refs cap" for cap]
-                 dest!: cap_master_cap_eqDs
-              simp del: imp_disjL)
-  apply (rule conjI)
-   apply (drule(1) if_unsafe_then_capD [OF caps_of_state_cteD])
-    apply (clarsimp simp: cap_master_cap_def)
-   apply (erule ex_cte_cap_wp_to_weakenE)
-   apply (clarsimp simp: appropriate_cte_cap_def)
-  apply (rule conjI)
-   apply (drule valid_global_refsD2, clarsimp)
-   apply (simp add: cap_range_def)
-  apply (frule(1) cap_refs_in_kernel_windowD)
-  apply (simp add: cap_range_def gen_obj_refs_def image_def)
-  apply (intro conjI)
-    apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
-                          cte_wp_at_caps_of_state)
-    apply fastforce
-   apply (clarsimp simp: obj_at_def empty_table_def)
-   apply (clarsimp split: Structures_A.kernel_object.split_asm
-                          arch_kernel_obj.split_asm)
-  apply clarsimp
-  apply fastforce
-  done
-
-lemma arch_update_cap_invs_unmap_page_map_l4:
-  "\<lbrace>cte_wp_at (is_arch_update cap) p
-             and invs and valid_cap cap
-             and (\<lambda>s. cte_wp_at (\<lambda>c. is_final_cap' c s) p s)
-             and obj_at (empty_table {}) (obj_ref_of cap)
-             and (\<lambda>s. cte_wp_at (\<lambda>c. \<forall>r. vs_cap_ref c = Some r
-                                \<longrightarrow> \<not> (r \<unrhd> obj_ref_of cap) s) p s)
-             and K (is_pml4_cap cap \<and> vs_cap_ref cap = None)\<rbrace>
-  set_cap cap p
-  \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: invs_def valid_state_def)
-  apply (rule hoare_pre)
-   apply (wp arch_update_cap_pspace arch_update_cap_valid_mdb set_cap_idle
-             update_cap_ifunsafe valid_irq_node_typ set_cap_typ_at
-             set_cap_irq_handlers set_cap_valid_arch_caps set_cap_ioports_no_new_ioports
-             set_cap_cap_refs_respects_device_region_spec[where ptr = p])
-  apply (simp add: final_cap_at_eq)
-  apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
-                        is_cap_simps cap_master_cap_simps
+                        is_cap_simps cap_master_cap_simps is_valid_vtable_root_def
                         appropriate_cte_cap_irqs is_pt_cap_def
                         fun_eq_iff[where f="cte_refs cap" for cap]
                  dest!: cap_master_cap_eqDs

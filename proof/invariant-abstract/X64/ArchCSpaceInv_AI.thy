@@ -144,7 +144,11 @@ lemma replace_cap_invs:
    apply (rule conjI)
     apply (unfold reply_caps_mdb_def)[1]
     apply (erule allEI, erule allEI)
-    subgoal by (fastforce split: if_split_asm simp: is_cap_simps)
+    apply (clarsimp split: if_split simp add: is_cap_simps
+                 simp del: split_paired_Ex split_paired_All)
+    apply (rename_tac ptra ptrb rights')
+    apply (rule_tac x="(ptra,ptrb)" in exI)
+    apply fastforce
    apply (unfold reply_masters_mdb_def)[1]
    apply (erule allEI, erule allEI)
    subgoal by (fastforce split: if_split_asm simp: is_cap_simps)
@@ -155,16 +159,19 @@ lemma replace_cap_invs:
    apply (clarsimp simp: ioport_revocable_def is_cap_simps)
   apply (rule conjI)
    apply (erule disjE)
-    apply (clarsimp)
+    apply (clarsimp simp add: is_reply_cap_to_def)
     apply (drule caps_of_state_cteD)
-    apply (erule(1) valid_reply_capsD [OF has_reply_cap_cte_wpD])
+    apply (subgoal_tac "cte_wp_at (is_reply_cap_to t) p s")
+     apply (erule(1) valid_reply_capsD [OF has_reply_cap_cte_wpD])
+    apply (erule cte_wp_at_lift)
+    apply (fastforce simp add:is_reply_cap_to_def)
    apply (simp add: is_cap_simps)
   apply (frule(1) valid_global_refsD2)
   apply (frule(1) cap_refs_in_kernel_windowD)
   apply (rule conjI)
    apply (erule disjE)
     apply (clarsimp simp: valid_reply_masters_def cte_wp_at_caps_of_state)
-    apply (cases p, fastforce)
+    apply (cases p, fastforce simp:is_master_reply_cap_to_def)
    apply (simp add: is_cap_simps)
   apply (elim disjE)
    apply simp
