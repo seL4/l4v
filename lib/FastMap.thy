@@ -246,13 +246,6 @@ lemma lookup_tree_to_list_of_distinct:
                    elim: lookup_tree_valid_in_range_None)
   done
 
-lemma distinct_inj:
-  "inj f \<Longrightarrow> distinct xs = distinct (map f xs)"
-  apply (induct xs)
-   apply simp
-  apply (simp add: inj_image_mem_iff)
-  done
-
 (* Top-level rule for converting to lookup list.
    We add a distinctness assertion for inferring the range of values. *)
 lemma lookup_tree_to_list_of_gen:

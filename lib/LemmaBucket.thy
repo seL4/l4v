@@ -348,6 +348,13 @@ lemma map_of_in_set_map: "map_of (map (\<lambda>(n, y). (f n, y)) xs) x = Some z
 lemma pair_in_enum: "(a, b) \<in> set (enumerate x ys) \<Longrightarrow> b \<in> set ys"
   by (metis enumerate_eq_zip in_set_zip2)
 
+lemma distinct_inj:
+  "inj f \<Longrightarrow> distinct xs = distinct (map f xs)"
+  apply (induct xs)
+   apply simp
+  apply (simp add: inj_image_mem_iff)
+  done
+
 lemma distinct_map_via_ran: "distinct (map fst xs) \<Longrightarrow> ran (map_of xs) = set (map snd xs)"
   apply (cut_tac xs="map fst xs" and ys="map snd xs" in ran_map_of_zip[symmetric])
     apply clarsimp+
