@@ -913,7 +913,7 @@ lemma reply_unlink_sc_invs[wp]: "\<lbrace>invs\<rbrace> reply_unlink_sc scptr rp
   apply (clarsimp simp: image_iff get_refs_def2 is_reply split: option.splits)
    by (case_tac "sc_replies sc"; fastforce split: if_split_asm)
 
-lemma  sched_context_clear_replies_invs:
+lemma  sched_context_clear_replies_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_clear_replies scptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: sched_context_clear_replies_def liftM_def)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
