@@ -358,9 +358,13 @@ fun (cv1 then_conv' cv2) ct =
     else Thm.transitive eq1 eq2
   end;
 
-(* Helper that makes it easier to describe where to apply a conv.
+(*
+ * Helper that makes it easier to describe where to apply a conv.
  * This takes a skeleton term and applies the conversion wherever "HERE"
- * appears in the skeleton *)
+ * appears in the skeleton.
+ *
+ * FIXME: use HOL-Library.Rewrite instead
+ *)
 fun conv_at skel conv ctxt ct = let
   fun mismatch current_skel current_ct =
     raise TERM ("conv_at mismatch", [current_skel, Thm.term_of current_ct, skel, Thm.term_of ct])
