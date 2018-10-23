@@ -102,7 +102,7 @@ crunch ct_in_cur_domain_2 [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread
   "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (etcbs_of s)"
   (simp: whenE_def crunch_simps)
 
-crunch valid_blocked[wp]: set_vm_root valid_blocked
+crunch valid_blocked'[wp]: set_vm_root valid_blocked
   (simp: crunch_simps)
 
 crunch ct_in_q[wp]: set_vm_root ct_in_q
@@ -126,7 +126,7 @@ lemma set_vm_root_valid_blocked_ct_in_q [wp]:
   by (wp | wpc | auto)+
 
 lemma arch_switch_to_thread_valid_blocked [wp, DetSchedSchedule_AI_assms]:
-  "\<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
+  "\<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked and ct_in_q::det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
   apply (rule hoare_seq_ext)+
    apply (rule do_machine_op_valid_blocked)
@@ -160,7 +160,7 @@ lemma switch_to_idle_thread_ct_not_queued [wp, DetSchedSchedule_AI_assms]:
   done
 
 crunch valid_blocked_2[wp]: set_vm_root "\<lambda>s.
-           valid_blocked_2 (ready_queues s) (kheap s)
+           valid_blocked_2 (ready_queues s) (release_queue s) (kheap s)
             (scheduler_action s) thread"
   (wp: crunch_wps simp: crunch_simps)
 

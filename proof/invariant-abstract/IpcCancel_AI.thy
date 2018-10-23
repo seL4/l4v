@@ -1429,7 +1429,7 @@ lemma reply_unlink_tcb_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> reply_unlink_tcb rptr \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   by (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def wp: hoare_drop_imp)
 
-crunch bound_tcb_at[wp]: cancel_all_ipc, empty_slot, is_final_cap, get_cap "bound_tcb_at P t"
+crunch bound_tcb_at[wp]: cancel_all_ipc, empty_slot, is_final_cap, get_cap,tcb_release_remove "bound_tcb_at P t"
   (wp: mapM_x_wp_inv crunch_wps)
 
 lemma in_release_queue_ready_queues_update[simp]:
@@ -1442,11 +1442,12 @@ lemma set_tcb_sc_bound_tcb_at [wp]:
   apply (wpsimp simp: set_tcb_obj_ref_def set_object_def)
   by (clarsimp simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
 
+(*
 lemma tcb_release_remove_bound_tcb_at [wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace>
      tcb_release_remove tptr \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   by (wpsimp simp: tcb_release_remove_def)
-
+*)
 lemma sched_context_donate_bound_tcb_at [wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> sched_context_donate scptr tcbptr \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   supply if_cong[cong]
