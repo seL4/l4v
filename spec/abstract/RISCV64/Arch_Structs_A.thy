@@ -201,6 +201,7 @@ section \<open>Architecture-specific state\<close>
 record arch_state =
   riscv_asid_table :: "asid_high_index \<rightharpoonup> obj_ref"
   riscv_global_pt :: obj_ref
+  riscv_kernel_vspace :: "obj_ref \<Rightarrow> RISCV64_H.riscvvspace_region_use"
 
 end_qualify
 
