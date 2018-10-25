@@ -969,13 +969,13 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                          gen_obj_refs_subset vs_cap_ref_def)
   apply (cases cap, simp_all add: replaceable_def reachable_pg_cap_def
                        split del: if_split)
-               -- "NullCap"
+               \<comment> \<open>NullCap\<close>
                apply (rule hoare_pre)
                 apply (wpsimp, clarsimp)
-              -- "untyped"
+              \<comment> \<open>untyped\<close>
               apply (wpsimp)
               apply hammer
-             -- "endpoint"
+             \<comment> \<open>endpoint\<close>
              apply wpsimp
               apply hammer
               apply ((wpsimp
@@ -984,13 +984,13 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                       wp_once reply_unlink_sc_not_live'[unfolded o_def]
                               cancel_all_ipc_unlive[unfolded o_def]
                               cancel_all_signals_unlive[unfolded o_def]))+)[2]
-            -- "ntfn"
+            \<comment> \<open>ntfn\<close>
             apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc
                     | hammer
                     | (wp_once hoare_drop_imps, wp_once reply_unlink_sc_not_live'[unfolded o_def]
                             cancel_all_ipc_unlive[unfolded o_def]
                             cancel_all_signals_unlive[unfolded o_def]))+)[1]
-           -- "reply"
+           \<comment> \<open>reply\<close>
            apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc | hammer)+)[1]
               apply (rule_tac t=y and s= "the (reply_tcb reply)" in subst, simp)
               apply (wp_once hoare_drop_imps, rule hoare_vcg_conj_lift,
@@ -1002,7 +1002,7 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
            apply (auto simp: obj_at_def is_cap_simps ran_tcb_cap_cases valid_ipc_buffer_cap_def
                              live_def live_reply_def vs_cap_ref_def no_cap_to_obj_with_diff_ref_Null
                       intro: valid_NullCapD)[1]
-          --"Cnode"
+          \<comment> \<open>Cnode\<close>
           apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc
                  | hammer)+)[1]
           apply (rule conjI)
@@ -1012,13 +1012,13 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
            apply (erule tcb_cap_valid_imp'[rule_format, rotated -1])
            apply hammer
           apply hammer
-         -- "tcb"
+         \<comment> \<open>tcb\<close>
          apply ((wpsimp wp: suspend_final_cap suspend_unlive'[unfolded o_def] unbind_from_sc_bound_sc_tcb_at
                             unbind_notification_valid_objs
                  | hammer | rule conjI)+)[1]
-        -- "domain"
+        \<comment> \<open>domain\<close>
         apply ((wpsimp | hammer)+)[1]
-       -- "schedcontext"
+       \<comment> \<open>schedcontext\<close>
        apply ((wpsimp wp: sched_context_clear_replies_clears sched_context_unbind_ntfn_unbinds
                           sched_context_unbind_all_tcbs_unbinds
         | hammer
@@ -1026,15 +1026,15 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
           wp_once sched_context_unbind_yield_from_not_live[unfolded o_def])+)[1]
        apply (rule conjI, fastforce simp: obj_at_def)
        subgoal sorry (* need to prove there are no caps to idle_sc_ptr *)
-      -- "schedcontrol"
+      \<comment> \<open>schedcontrol\<close>
       apply ((wpsimp | hammer)+)[1]
-     -- "irqcontrol"
+     \<comment> \<open>irqcontrol\<close>
      apply ((wpsimp | hammer)+)[1]
-    -- "irqhandler"
+    \<comment> \<open>irqhandler\<close>
     apply ((wpsimp | hammer)+)[1]
-   -- "zombie"
+   \<comment> \<open>zombie\<close>
    apply ((wpsimp | hammer)+)[1]
-  -- "arch"
+  \<comment> \<open>arch\<close>
   apply (clarsimp simp: is_cap_simps)
   done
 

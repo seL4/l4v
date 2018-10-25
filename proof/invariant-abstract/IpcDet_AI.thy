@@ -207,7 +207,7 @@ lemma ri_invs':
   notes dxo_wp_weak[wp del]
   shows
   "\<lbrace>invs and Q and st_tcb_at active t and ex_nonz_cap_to t
-         and cte_wp_at (op = cap.NullCap) (t, tcb_cnode_index 3)
+         and cte_wp_at ((=) cap.NullCap) (t, tcb_cnode_index 3)
          and (\<lambda>s. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)\<rbrace>
      receive_ipc t cap is_blocking reply \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>" (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
   sorry
@@ -278,7 +278,7 @@ lemma no_reply_in_ts_inv[wp]:
   by (wpsimp simp: no_reply_in_ts_def get_thread_state_def thread_get_def)
 
 lemma unbind_reply_in_ts_inv:
-  "\<lbrace>P and st_tcb_at (op = Inactive) t\<rbrace> unbind_reply_in_ts t \<lbrace>\<lambda>rv. P\<rbrace>"
+  "\<lbrace>P and st_tcb_at ((=) Inactive) t\<rbrace> unbind_reply_in_ts t \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: unbind_reply_in_ts_def)
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (wpsimp | wpsimp simp: st_tcb_at_def obj_at_def wp: hoare_pre_cont)+
@@ -353,7 +353,7 @@ lemma set_thread_state_reply_sc:
   by (wpsimp simp: set_thread_state_def reply_sc_reply_at_def set_object_def obj_at_def get_tcb_def)
 
 lemma reply_unlink_tcb_sym_refs_BlockedOnReceive:
-  "\<lbrace>\<lambda>s. (\<exists>tptr epptr. st_tcb_at (op = (BlockedOnReceive epptr (Some rptr))) tptr s \<and>
+  "\<lbrace>\<lambda>s. (\<exists>tptr epptr. st_tcb_at ((=) (BlockedOnReceive epptr (Some rptr))) tptr s \<and>
                       sym_refs (\<lambda>x. if x = tptr then
                                       {r \<in> state_refs_of s x. snd r = TCBBound \<or>
                                        snd r = TCBSchedContext \<or> snd r = TCBYieldTo
@@ -393,7 +393,7 @@ lemma reply_unlink_tcb_sym_refs_BlockedOnReceive:
   done
 
 lemma reply_unlink_tcb_invs_BlockedOnReceive:
-  "\<lbrace>\<lambda>s. (\<exists>tptr epptr. st_tcb_at (op = (BlockedOnReceive epptr (Some rptr))) tptr s \<and>
+  "\<lbrace>\<lambda>s. (\<exists>tptr epptr. st_tcb_at ((=) (BlockedOnReceive epptr (Some rptr))) tptr s \<and>
                       sym_refs (\<lambda>x. if x = tptr then
                                       {r \<in> state_refs_of s x. snd r = TCBBound \<or>
                                        snd r = TCBSchedContext \<or> snd r = TCBYieldTo
@@ -673,7 +673,7 @@ lemma do_ipc_transfer_bound_sc:
 (*
 lemma sched_context_donate_sym_refs:
   "\<lbrace>\<lambda>s. valid_objs s \<and> sym_refs (state_refs_of s) \<and> tcb_at tcb_ptr s \<and>
-        bound_sc_tcb_at (op = None) tcb_ptr s\<rbrace>
+        bound_sc_tcb_at ((=) None) tcb_ptr s\<rbrace>
    sched_context_donate sc_ptr tcb_ptr
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: sched_context_donate_def)
@@ -723,7 +723,7 @@ lemma sched_context_donate_sym_refs:
 
 lemma sched_context_donate_invs:
   "\<lbrace>\<lambda>s. invs s \<and> tcb_at tcb_ptr s \<and> ex_nonz_cap_to sc_ptr s \<and> ex_nonz_cap_to tcb_ptr s \<and>
-    bound_sc_tcb_at (op = None) tcb_ptr s \<and> sc_at sc_ptr s\<rbrace>
+    bound_sc_tcb_at ((=) None) tcb_ptr s \<and> sc_at sc_ptr s\<rbrace>
    sched_context_donate sc_ptr tcb_ptr
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
@@ -748,7 +748,7 @@ lemma sched_context_donate_sym_refs_BlockedOnReceive:
                       else state_refs_of s a) \<and>
         sc_tcb_sc_at (\<lambda>t. \<exists>caller. t = Some caller \<and> st_tcb_at active caller s) scptr s \<and>
         st_tcb_at (\<lambda>st. \<exists>epptr. st = BlockedOnReceive epptr None) dest s \<and>
-        bound_sc_tcb_at (op = None) dest s\<rbrace>
+        bound_sc_tcb_at ((=) None) dest s\<rbrace>
    sched_context_donate scptr dest
    \<lbrace>\<lambda>rv s. sym_refs (\<lambda>a. if a = dest
                          then {r \<in> state_refs_of s dest. snd r = TCBBound \<or>
@@ -791,9 +791,9 @@ lemma get_tcb_obj_ref_wp: (* FIXME: move up *)
   by (wpsimp simp: get_tcb_obj_ref_def wp: thread_get_wp')
 
 lemma reply_push_st_tcb_at_Inactive:
-  "\<lbrace>st_tcb_at (op = Inactive) callee and K (callee \<noteq> caller)\<rbrace>
+  "\<lbrace>st_tcb_at ((=) Inactive) callee and K (callee \<noteq> caller)\<rbrace>
    reply_push caller callee reply_ptr can_donate
-   \<lbrace>\<lambda>rv. st_tcb_at (op = Inactive) callee\<rbrace>"
+   \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) callee\<rbrace>"
   unfolding reply_push_def update_sk_obj_ref_def set_sc_obj_ref_def comp_def
   by (wpsimp wp: get_simple_ko_wp get_tcb_obj_ref_wp hoare_vcg_if_lift hoare_vcg_all_lift
                  sts_st_tcb_at_cases unbind_reply_in_ts_inv
@@ -859,7 +859,7 @@ lemma reply_push_invs_helper:
 
 lemma reply_push_invs:
   "\<lbrace>invs and ex_nonz_cap_to callee and ex_nonz_cap_to caller and ex_nonz_cap_to reply_ptr and
-    st_tcb_at active caller and st_tcb_at (op = Inactive) callee and
+    st_tcb_at active caller and st_tcb_at ((=) Inactive) callee and
     reply_sc_reply_at (\<lambda>sc. sc = None) reply_ptr\<rbrace>
    reply_push caller callee reply_ptr can_donate
    \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -986,7 +986,7 @@ lemma reply_push_valid_objs_helper:
   done
 
 lemma reply_push_valid_objs:
-  "\<lbrace>\<lambda>s. valid_objs s \<and> st_tcb_at (op = Inactive) callee s \<and> tcb_at caller s \<and>
+  "\<lbrace>\<lambda>s. valid_objs s \<and> st_tcb_at ((=) Inactive) callee s \<and> tcb_at caller s \<and>
         reply_sc_reply_at (\<lambda>sc. sc = None) reply_ptr s \<and> sym_refs (state_refs_of s) \<and>
         st_tcb_at active caller s\<rbrace>
    reply_push caller callee reply_ptr can_donate
@@ -1133,7 +1133,7 @@ lemma si_invs'_helper_some_reply:
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>a. \<lbrace>Q\<rbrace> reply_unlink_tcb a \<lbrace>\<lambda>_. Q\<rbrace>"
   shows
-  "\<lbrace>\<lambda>s. \<exists>rptr. st_tcb_at active tptr s \<and> st_tcb_at (op = Inactive) dest s \<and> invs s \<and>
+  "\<lbrace>\<lambda>s. \<exists>rptr. st_tcb_at active tptr s \<and> st_tcb_at ((=) Inactive) dest s \<and> invs s \<and>
         ex_nonz_cap_to tptr s \<and> ex_nonz_cap_to dest s \<and> reply = Some rptr \<and> ex_nonz_cap_to rptr s \<and>
         reply_sc_reply_at (\<lambda>sc. sc = None) rptr s \<and> bound_sc_tcb_at bound tptr s \<and> Q s\<rbrace>
    do sc_opt <- get_tcb_obj_ref tcb_sched_context dest;

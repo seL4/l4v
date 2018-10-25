@@ -851,7 +851,7 @@ lemma sched_context_donate_refs_of:
   done
 
 lemma reply_unlink_tcb_invs_BlockedOnReply:
-  "\<lbrace>\<lambda>s. invs s \<and> (\<exists>tptr. st_tcb_at (op = (BlockedOnReply (Some rptr))) tptr s)\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> (\<exists>tptr. st_tcb_at ((=) (BlockedOnReply (Some rptr))) tptr s)\<rbrace>
    reply_unlink_tcb rptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                   wp: reply_unlink_tcb_refs_of valid_ioports_lift)
@@ -900,7 +900,7 @@ lemma sc_tcb_sc_at_scheduler_action_kheap[simp]:
 
 lemma sched_context_donate_sym_refs:
   "\<lbrace>\<lambda>s. valid_objs s \<and> sym_refs (state_refs_of s) \<and> tcb_at tcb_ptr s \<and>
-        bound_sc_tcb_at (op = None) tcb_ptr s\<rbrace>
+        bound_sc_tcb_at ((=) None) tcb_ptr s\<rbrace>
    sched_context_donate sc_ptr tcb_ptr
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: sched_context_donate_def)
@@ -945,7 +945,7 @@ lemma sched_context_donate_sym_refs:
 
 lemma sched_context_donate_invs:
   "\<lbrace>\<lambda>s. invs s \<and> tcb_at tcb_ptr s \<and> ex_nonz_cap_to sc_ptr s \<and> ex_nonz_cap_to tcb_ptr s \<and>
-    bound_sc_tcb_at (op = None) tcb_ptr s \<and> sc_at sc_ptr s\<rbrace>
+    bound_sc_tcb_at ((=) None) tcb_ptr s \<and> sc_at sc_ptr s\<rbrace>
    sched_context_donate sc_ptr tcb_ptr
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
@@ -970,7 +970,7 @@ lemma reply_unlink_sc_pred_tcb_at [wp]:
 lemma reply_remove_invs:
   "\<lbrace>invs and
      (\<lambda>s. reply_tcb_reply_at (\<lambda>p. \<exists>tp. p = Some tp
-                 \<and> st_tcb_at (op = (BlockedOnReply (Some r))) tp s) r s)\<rbrace>
+                 \<and> st_tcb_at ((=) (BlockedOnReply (Some r))) tp s) r s)\<rbrace>
      reply_remove r \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: reply_remove_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
@@ -1161,7 +1161,7 @@ crunch it[wp]: cancel_ipc "\<lambda>(s::'a state). P (idle_thread s)"
 end
 
 lemma sym_refs_bound_yt_tcb_at:
-  "sym_refs (state_refs_of s) \<Longrightarrow> bound_yt_tcb_at (op = (Some sc)) t s \<Longrightarrow>
+  "sym_refs (state_refs_of s) \<Longrightarrow> bound_yt_tcb_at ((=) (Some sc)) t s \<Longrightarrow>
    (t', SCYieldFrom) \<in> state_refs_of s sc \<Longrightarrow>  t' = t"
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   apply (frule sym_refs_ko_atD[unfolded obj_at_def, simplified], assumption)
@@ -1171,7 +1171,7 @@ lemma sym_refs_bound_yt_tcb_at:
   done
 
 lemma suspend_invs_helper:
-  "\<lbrace>invs and st_tcb_at (op = Running or op = Inactive or op = Restart or op = IdleThreadState) t\<rbrace>
+  "\<lbrace>invs and st_tcb_at ((=) Running or (=) Inactive or (=) Restart or (=) IdleThreadState) t\<rbrace>
    do yt_opt <- get_tcb_obj_ref tcb_yield_to t;
       _ <- maybeM (\<lambda>sc_ptr. do y <- set_sc_obj_ref sc_yield_from_update sc_ptr None;
                                set_tcb_obj_ref tcb_yield_to_update t None
@@ -1201,15 +1201,15 @@ lemma suspend_invs_helper:
   done
 
 lemma blocked_cancel_ipc_inactive [wp]:
-  "\<lbrace>\<top>\<rbrace> blocked_cancel_ipc ts t r \<lbrace>\<lambda>rv. st_tcb_at (op = Inactive) t\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> blocked_cancel_ipc ts t r \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) t\<rbrace>"
   by (simp add: blocked_cancel_ipc_def | wp sts_st_tcb_at')+
 
 lemma cancel_signal_inactive [wp]:
-  "\<lbrace>\<top>\<rbrace> cancel_signal t ntfn \<lbrace>\<lambda>rv. st_tcb_at (op = Inactive) t\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> cancel_signal t ntfn \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) t\<rbrace>"
   by (simp add: cancel_signal_def | wp sts_st_tcb_at')+
 
 lemma reply_unlink_tcb_inactive [wp]:
-  "\<lbrace>reply_tcb_reply_at (\<lambda>x. x = Some t) r\<rbrace> reply_unlink_tcb r \<lbrace>\<lambda>rv. st_tcb_at (op = Inactive) t\<rbrace>"
+  "\<lbrace>reply_tcb_reply_at (\<lambda>x. x = Some t) r\<rbrace> reply_unlink_tcb r \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) t\<rbrace>"
   apply (wpsimp simp: reply_unlink_tcb_def set_thread_state_def set_object_def update_sk_obj_ref_def
                       set_simple_ko_def get_object_def get_thread_state_def thread_get_def
                       reply_tcb_reply_at_def
@@ -1218,12 +1218,12 @@ lemma reply_unlink_tcb_inactive [wp]:
   done
 
 lemma reply_remove_inactive [wp]:
-  "\<lbrace>reply_tcb_reply_at (\<lambda>x. x = Some t) r\<rbrace> reply_remove r \<lbrace>\<lambda>rv. st_tcb_at (op = Inactive) t\<rbrace>"
+  "\<lbrace>reply_tcb_reply_at (\<lambda>x. x = Some t) r\<rbrace> reply_remove r \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) t\<rbrace>"
   by (wpsimp simp: reply_remove_def wp: get_simple_ko_wp wp_del: reply_remove_st_tcb_at)
 
 lemma reply_remove_tcb_inactive [wp]:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s\<rbrace> reply_remove_tcb t
-   \<lbrace>\<lambda>rv. st_tcb_at (op = Inactive) t\<rbrace>"
+   \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) t\<rbrace>"
   apply (wpsimp simp: reply_remove_tcb_def get_thread_state_def thread_get_def
                       reply_tcb_reply_at_def)
   apply (frule get_tcb_ko_atD)
@@ -1236,7 +1236,7 @@ lemma reply_remove_tcb_inactive [wp]:
 
 lemma reply_cancel_ipc_inactive [wp]:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s\<rbrace> reply_cancel_ipc t
-   \<lbrace>\<lambda>rv. st_tcb_at (op = Inactive) t\<rbrace>"
+   \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) t\<rbrace>"
   apply (wpsimp simp: reply_cancel_ipc_def)
    apply (rule hoare_vcg_conj_lift)
     apply (wpsimp simp: thread_set_def set_object_def)
@@ -1249,7 +1249,7 @@ lemma reply_cancel_ipc_inactive [wp]:
 
 (* FIXME: move, also this is a duplicate *)
 lemma gts_wp:
-  "\<lbrace>\<lambda>s. \<forall>st. st_tcb_at (op = st) t s \<longrightarrow> P st s\<rbrace> get_thread_state t \<lbrace>P\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>st. st_tcb_at ((=) st) t s \<longrightarrow> P st s\<rbrace> get_thread_state t \<lbrace>P\<rbrace>"
   unfolding get_thread_state_def
   apply (wp thread_get_wp')
   apply clarsimp
@@ -1444,19 +1444,19 @@ lemma cancel_signal_bound_sc_tcb_at:
 
 lemma suspend_unlive_helper:
   shows
-  "\<lbrace>bound_tcb_at (op = None) t and bound_sc_tcb_at (op = None) t and
-    bound_yt_tcb_at (op = yt_opt) t\<rbrace>
+  "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t and
+    bound_yt_tcb_at ((=) yt_opt) t\<rbrace>
    maybeM (\<lambda>sc_ptr. do set_sc_obj_ref sc_yield_from_update sc_ptr None;
                        set_tcb_obj_ref tcb_yield_to_update t None
                     od) yt_opt
-   \<lbrace>\<lambda>rv. bound_tcb_at (op = None) t and bound_sc_tcb_at (op = None) t and
-         bound_yt_tcb_at (op = None) t\<rbrace>"
+   \<lbrace>\<lambda>rv. bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t and
+         bound_yt_tcb_at ((=) None) t\<rbrace>"
   by (wpsimp simp: set_tcb_obj_ref_def set_object_def set_sc_obj_ref_def update_sched_context_def
                    get_object_def pred_tcb_at_def obj_at_def get_tcb_def)
 
 lemma set_thread_state_not_live0:
-  "\<lbrace>bound_tcb_at (op = None) t and bound_sc_tcb_at (op = None) t
-    and bound_yt_tcb_at (op = None) t\<rbrace>
+  "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t
+    and bound_yt_tcb_at ((=) None) t\<rbrace>
    set_thread_state t Inactive
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live0) t\<rbrace>"
   by (wpsimp simp: set_thread_state_def set_object_def obj_at_def pred_tcb_at_def get_tcb_def)
@@ -1464,7 +1464,7 @@ lemma set_thread_state_not_live0:
 crunch obj_at[wp]: tcb_sched_action "\<lambda>s. P (obj_at Q p s)"
 
 lemma obj_at_bound_yt_tcb_at_eq[simp]:
-  "obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> bound_yt_tcb_at (op = (tcb_yield_to tcb)) t s) t s
+  "obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> bound_yt_tcb_at ((=) (tcb_yield_to tcb)) t s) t s
            = tcb_at t s"
   by (auto simp: obj_at_def pred_tcb_at_def is_tcb)
 
@@ -1478,7 +1478,7 @@ crunch typ_at[wp]: cancel_ipc, reply_cancel_ipc "\<lambda>s. P (typ_at T p s)"
      simp: crunch_simps unless_def)
 
 lemma suspend_unlive:
-  "\<lbrace>bound_tcb_at (op = None) t and bound_sc_tcb_at (op = None) t
+  "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t
     and st_tcb_at (Not \<circ> awaiting_reply) t\<rbrace>
    suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live0) t\<rbrace>"
@@ -1596,7 +1596,7 @@ lemma valid_objs_reply_not_tcbD:
   by (fastforce simp: valid_obj_def valid_tcb_def valid_tcb_state_def is_tcb is_reply obj_at_def)
 
 lemma endpoint_reply_irrelevant:
-  "st_tcb_at (op = (BlockedOnReceive epptr (Some rptr))) tptr s
+  "st_tcb_at ((=) (BlockedOnReceive epptr (Some rptr))) tptr s
    \<Longrightarrow> valid_objs s
    \<Longrightarrow> \<exists>tptrs. sym_refs (\<lambda>x. if x = tptr \<or> x \<in> set tptrs
                              then {r \<in> state_refs_of s x. snd r \<noteq> TCBBlockedRecv \<and>
@@ -1866,20 +1866,20 @@ lemma cancel_ipc_simple':
 
 lemma cancel_ipc_simple_except_awaiting_reply:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s\<rbrace> cancel_ipc t
-   \<lbrace>\<lambda>rv. st_tcb_at (op = Running or op = Inactive or op = Restart or op = IdleThreadState) t\<rbrace>"
+   \<lbrace>\<lambda>rv. st_tcb_at ((=) Running or (=) Inactive or (=) Restart or (=) IdleThreadState) t\<rbrace>"
   apply (clarsimp simp: cancel_ipc_def)
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (case_tac state; simp)
          prefer 8
          apply ((wpsimp simp: st_tcb_at_def obj_at_def)+)[4]
-     apply ((rule hoare_strengthen_post[where Q = "\<lambda>s. st_tcb_at (op = Inactive) t"], wpsimp,
+     apply ((rule hoare_strengthen_post[where Q = "\<lambda>s. st_tcb_at ((=) Inactive) t"], wpsimp,
              clarsimp simp: st_tcb_at_def obj_at_def)+)[4]
   done
 
 lemma cancel_ipc_invs_st_tcb_at:
   "\<lbrace>invs\<rbrace> cancel_ipc t
-   \<lbrace>\<lambda>rv. invs and st_tcb_at (op = Running or op = Inactive or op = Restart or
-                             op = IdleThreadState) t\<rbrace>"
+   \<lbrace>\<lambda>rv. invs and st_tcb_at ((=) Running or (=) Inactive or (=) Restart or
+                             (=) IdleThreadState) t\<rbrace>"
   by (wpsimp simp: invs_def valid_state_def valid_pspace_def
                wp: cancel_ipc_simple_except_awaiting_reply)
 
@@ -2237,11 +2237,11 @@ lemma complete_yield_to_invs:
   apply (rule hoare_seq_ext[OF _ assert_opt_inv])
   apply (rule hoare_seq_ext[rotated])
    apply (rule_tac Q="K (yt_opt = Some a) and
-         (bound_yt_tcb_at (op = (Some a)) tcb_ptr and
+         (bound_yt_tcb_at ((=) (Some a)) tcb_ptr and
          (invs and ex_nonz_cap_to tcb_ptr))"
          in hoare_weaken_pre)
     apply (rule hoare_pre, rule hoare_vcg_conj_lift
-      [OF set_consumed_pred_tcb_at[where proj=itcb_yield_to and t=tcb_ptr and P="op = (Some _)"]
+      [OF set_consumed_pred_tcb_at[where proj=itcb_yield_to and t=tcb_ptr and P="(=) (Some _)"]
           hoare_vcg_conj_lift[OF set_consumed_invs
                                   set_consumed_ex_nonz]])
     apply (auto)[2]

@@ -92,7 +92,7 @@ lemma (in Tcb_AI_1) activate_invs:
   apply (rule hoare_seq_ext [OF _ thread_get_sp])
   apply (case_tac yt_opt, simp)
   apply (rule hoare_seq_ext [OF _ gts_sp])
-  apply (rule_tac Q="st_tcb_at (op = x) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
+  apply (rule_tac Q="st_tcb_at ((=) x) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
   apply (rename_tac state)
   apply (case_tac state; simp)
     apply wp
@@ -117,7 +117,7 @@ lemma (in Tcb_AI_1) activate_invs:
   apply (rule hoare_seq_ext)
    apply (rule hoare_K_bind)
    apply (rule hoare_seq_ext [OF _ gts_sp])
-   apply (rule_tac Q="st_tcb_at (op = state) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
+   apply (rule_tac Q="st_tcb_at ((=) state) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
     apply (rename_tac state)
     apply (case_tac state; simp)
       apply wp
@@ -538,18 +538,18 @@ locale Tcb_AI = Tcb_AI_1 state_ext_t is_cnode_or_valid_arch
           future work.*)
         and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) auth s) pr)
         and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp)
-        and (case_option \<top> (case_option \<top> (\<lambda>sc. bound_sc_tcb_at (op = None) a and ex_nonz_cap_to sc
-                                             and sc_tcb_sc_at (op = None) sc)) sc)
-        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at (op = cap) slot) fh
-        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at (op = cap) slot) th
+        and (case_option \<top> (case_option \<top> (\<lambda>sc. bound_sc_tcb_at ((=) None) a and ex_nonz_cap_to sc
+                                             and sc_tcb_sc_at ((=) None) sc)) sc)
+        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
+        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) th
         and K (case_option True (is_cnode_cap o fst) e)
         and K (case_option True (is_valid_vtable_root o fst) f)
         and K (case_option True (\<lambda>v. case_option True
                            ((swp valid_ipc_buffer_cap (fst v)
                               and is_arch_cap and is_cnode_or_valid_arch)
                                  o fst) (snd v)) g)
-        and K (case_option True ((is_ep_cap or (op = NullCap)) o fst) fh)
-        and K (case_option True ((is_ep_cap or (op = NullCap)) o fst) th)\<rbrace>
+        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) fh)
+        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) th)\<rbrace>
       invoke_tcb (ThreadControl a sl fh th mcp pr e f g sc)
     \<lbrace>\<lambda>rv. invs\<rbrace>"  (* need more on sc, fh and th *)
   assumes decode_set_ipc_inv[wp]:
@@ -766,12 +766,12 @@ where
                                     \<longrightarrow> cte_at sl s \<and> ex_cte_cap_to sl s)
                         and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) auth s) pr)
                         and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp)
-                        and K (case_option True ((is_ep_cap or (op = NullCap)) o fst) fh)
-                        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at (op = cap) slot) fh
-                        and K (case_option True ((is_ep_cap or (op = NullCap)) o fst) th)
-                        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at (op = cap) slot) th
-                        and (case_option \<top> (case_option \<top> (\<lambda>sc. bound_sc_tcb_at (op = None) t and ex_nonz_cap_to sc
-                                                             and sc_tcb_sc_at (op = None) sc)) sc)
+                        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) fh)
+                        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
+                        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) th)
+                        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) th
+                        and (case_option \<top> (case_option \<top> (\<lambda>sc. bound_sc_tcb_at ((=) None) t and ex_nonz_cap_to sc
+                                                             and sc_tcb_sc_at ((=) None) sc)) sc)
                         and ex_nonz_cap_to t)"
 | "tcb_inv_wf (tcb_invocation.ReadRegisters src susp n arch)
              = (tcb_at src and ex_nonz_cap_to src)"
@@ -1090,7 +1090,7 @@ begin
 lemma decode_set_sched_params_wf[wp]:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t and
     (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> fst x \<and> real_cte_at (snd x) s
-                          \<and> cte_wp_at (op = (fst x)) (snd x) s
+                          \<and> cte_wp_at ((=) (fst x)) (snd x) s
                           \<and> (\<forall>y \<in> zobj_refs (fst x). ex_nonz_cap_to y s)
                           \<and> ex_cte_cap_to (snd x) s
                           \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
@@ -1204,8 +1204,8 @@ lemma derive_cap_ep_or_Null[wp]:
   by (wpsimp simp: derive_cap_def comp_def) auto
 
 lemma derive_cap_ep_cte_wp_at:
-  "\<lbrace>cte_wp_at (op = cap) slot and K (is_ep_cap cap \<or> cap = NullCap) \<rbrace>
-  derive_cap slot cap  \<lbrace>\<lambda>rv. cte_wp_at (op = rv) slot\<rbrace>, -"
+  "\<lbrace>cte_wp_at ((=) cap) slot and K (is_ep_cap cap \<or> cap = NullCap) \<rbrace>
+  derive_cap slot cap  \<lbrace>\<lambda>rv. cte_wp_at ((=) rv) slot\<rbrace>, -"
   apply (wpsimp simp: derive_cap_def comp_def)
    apply (rule hoare_FalseE_R) (* arch case will not be taken *)
   apply auto
@@ -1262,7 +1262,7 @@ lemma decode_set_space_wf[wp]:
   and tcb_at t and cte_at slot and ex_cte_cap_to slot
           and ex_nonz_cap_to t
           and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> fst x \<and> real_cte_at (snd x) s
-                          \<and> cte_wp_at (op = (fst x)) (snd x) s
+                          \<and> cte_wp_at ((=) (fst x)) (snd x) s
                           \<and> ex_cte_cap_to (snd x) s
                           \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
      decode_set_space args (ThreadCap t) slot extras
@@ -1417,7 +1417,7 @@ lemma decode_set_timeout_ep_tc_inv[wp]:
           and tcb_at t
           and ex_nonz_cap_to t
           and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> fst x \<and> real_cte_at (snd x) s
-                          \<and> cte_wp_at (op = (fst x)) (snd x) s
+                          \<and> cte_wp_at ((=) (fst x)) (snd x) s
                           \<and> ex_cte_cap_to (snd x) s
                           \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
   decode_set_timeout_ep (ThreadCap t) slot extras \<lbrace>tcb_inv_wf\<rbrace>, -"
@@ -1428,7 +1428,7 @@ lemma decode_tcb_inv_wf:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t
          and cte_at slot and ex_cte_cap_to slot
          and (\<lambda>(s::'state_ext state). \<forall>x \<in> set extras. real_cte_at (snd x) s \<and> s \<turnstile> fst x
-                                 \<and> cte_wp_at (op = (fst x)) (snd x) s
+                                 \<and> cte_wp_at ((=) (fst x)) (snd x) s
                                  \<and> ex_cte_cap_to (snd x) s
                                  \<and> (\<forall>y \<in> zobj_refs (fst x). ex_nonz_cap_to y s)
                                  \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>

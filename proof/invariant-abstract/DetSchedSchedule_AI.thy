@@ -26,7 +26,7 @@ lemma rt_assumptions:
                        \<and> bound_sc_tcb_at (\<lambda>sc. sc = Some (cur_sc s)) (cur_thread s) s"
 
   "\<lbrakk>kheap s rp = Some (Reply reply);
-   (\<exists>thread. reply_tcb reply = Some thread \<and> (st_tcb_at (op = (BlockedOnReply (Some rp))) thread s))\<rbrakk>
+   (\<exists>thread. reply_tcb reply = Some thread \<and> (st_tcb_at ((=) (BlockedOnReply (Some rp))) thread s))\<rbrakk>
   \<Longrightarrow> \<forall>scp. reply_sc reply = Some scp \<longrightarrow> sc_tcb_sc_at (\<lambda>t. \<exists>callee. t = Some callee \<and> st_tcb_at inactive callee s) scp s"
 
   "st_tcb_at (\<lambda>st. \<exists>rp. st = (BlockedOnReply (Some rp)) \<longrightarrow>
@@ -2778,7 +2778,7 @@ for simple_sched_action[wp]: simple_sched_action
 
 lemma reply_remove_valid_sched:
   "\<lbrace>valid_sched and simple_sched_action
- and (\<lambda>s. reply_tcb_reply_at (\<lambda>t. \<exists>tp. t = Some tp \<and> st_tcb_at (op = (BlockedOnReply (Some rp))) tp s) rp s)
+ and (\<lambda>s. reply_tcb_reply_at (\<lambda>t. \<exists>tp. t = Some tp \<and> st_tcb_at ((=) (BlockedOnReply (Some rp))) tp s) rp s)
  (*and
     (\<lambda>s. reply_sc_reply_at (\<lambda>p. \<exists>sp. p = Some sp
               \<and> sc_tcb_sc_at (\<lambda>t. \<forall>tp. t = Some tp \<longrightarrow> st_tcb_at inactive tp s) sp s) rp s)*)\<rbrace>
@@ -2799,7 +2799,7 @@ lemma reply_remove_valid_sched:
 
 (* FIXME: Move *)
 lemma st_tcb_reply_state_refs:
-  "\<lbrakk>valid_objs s; sym_refs (state_refs_of s); st_tcb_at (op = (BlockedOnReply (Some rp))) thread s\<rbrakk>
+  "\<lbrakk>valid_objs s; sym_refs (state_refs_of s); st_tcb_at ((=) (BlockedOnReply (Some rp))) thread s\<rbrakk>
   \<Longrightarrow> \<exists>reply. (kheap s rp = Some (Reply reply) \<and> reply_tcb reply = Some thread)"
   apply (frule (1) st_tcb_at_valid_st2)
   apply (drule (1) sym_refs_st_tcb_atD[rotated])
@@ -2937,7 +2937,7 @@ lemma blocked_cancel_ipc_valid_sched_Send:
 lemma blocked_cancel_ipc_valid_sched_Receive:
   "\<lbrace>valid_sched
     and simple_sched_action
-    and (\<lambda>s. st_tcb_at (op = (BlockedOnReceive ep reply_opt)) tptr s)\<rbrace>
+    and (\<lambda>s. st_tcb_at ((=) (BlockedOnReceive ep reply_opt)) tptr s)\<rbrace>
      blocked_cancel_ipc (BlockedOnReceive ep reply_opt) tptr reply_opt
    \<lbrace>\<lambda>rv. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   supply etcbs_of'_non_tcb_update[simp]
@@ -6046,7 +6046,7 @@ context begin
                       hoare_vcg_conj_lift[OF
                         check_budget_restart_valid_sched
                         hoare_vcg_conj_lift[OF
-                          check_budget_restart_sched_action[where P="op = resume_cur_thread"]
+                          check_budget_restart_sched_action[where P="(=) resume_cur_thread"]
                           check_budget_restart_ct_active]]]),
         clarsimp,
        (rename_tac restart),
@@ -6088,7 +6088,7 @@ lemma handle_event_valid_sched:
         hoare_vcg_conj_lift[OF
           check_budget_valid_sched
           hoare_vcg_conj_lift[OF
-            check_budget_true_sched_action[where P="op = resume_cur_thread"]
+            check_budget_true_sched_action[where P="(=) resume_cur_thread"]
             check_budget_ct_active]]])
        apply (clarsimp simp: )
       apply (wpsimp wp: )*)

@@ -94,7 +94,7 @@ lemma replace_cap_invs:
    apply (simp add: valid_global_refsD2)
   apply (intro conjI)
          apply (erule disjE, simp, clarsimp simp: gen_obj_refs_subset subsetD)
-        apply presburger
+        apply (erule disjE, auto simp: cap_refs_in_kernel_windowD)[1]
        apply (fastforce simp: unique_table_refs_no_cap_asidE valid_arch_caps_def)
       apply ((clarsimp simp only: valid_arch_caps_def valid_table_caps_def;
               erule disjE, elim allE, fastforce, simp)+)[4]

@@ -136,9 +136,9 @@ lemma valid_cap_same_type:
       assumption, auto)
 
 lemma typ_at_foldl:
-  "foldl op \<and> True (map (\<lambda>r. typ_at T r s) xs) \<Longrightarrow>
+  "foldl (\<and>) True (map (\<lambda>r. typ_at T r s) xs) \<Longrightarrow>
    a_type k = a_type ko \<Longrightarrow> kheap s p = Some ko \<Longrightarrow>
-   foldl op \<and> True (map (\<lambda>r. typ_at T r (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)) xs)"
+   foldl (\<and>) True (map (\<lambda>r. typ_at T r (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)) xs)"
   apply (induct xs)
    apply (auto simp: foldl_conj_Cons typ_at_same_type
            simp del: foldl_Cons)

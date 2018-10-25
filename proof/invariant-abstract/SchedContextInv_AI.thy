@@ -388,12 +388,12 @@ lemma set_consumed_pred_tcb_at_ct[wp]:
   done
 
 lemma complete_yield_to_bound_yt_tcb_a_ct[wp]:
-  "\<lbrace> (\<lambda>s. bound_yt_tcb_at (op = None) (cur_thread s) s) \<rbrace>
-      complete_yield_to tcb_ptr \<lbrace>\<lambda>rv s. bound_yt_tcb_at (op = None) (cur_thread s) s \<rbrace>"
+  "\<lbrace> (\<lambda>s. bound_yt_tcb_at ((=) None) (cur_thread s) s) \<rbrace>
+      complete_yield_to tcb_ptr \<lbrace>\<lambda>rv s. bound_yt_tcb_at ((=) None) (cur_thread s) s \<rbrace>"
   apply (clarsimp simp: complete_yield_to_def)
   apply (wpsimp simp: obj_at_def set_tcb_obj_ref_def set_object_def fun_upd_idem
       wp: hoare_vcg_ex_lift sbn_st_tcb_at_neq lookup_ipc_buffer_inv hoare_drop_imp)
-       apply (rule_tac Q="\<lambda>_ s. bound_yt_tcb_at (op = None) (cur_thread s) s" in hoare_strengthen_post)
+       apply (rule_tac Q="\<lambda>_ s. bound_yt_tcb_at ((=) None) (cur_thread s) s" in hoare_strengthen_post)
         apply (wpsimp simp: pred_tcb_at_def)
        apply (clarsimp simp: pred_tcb_at_def obj_at_def)
       apply (wpsimp wp: lookup_ipc_buffer_inv hoare_drop_imp)+
@@ -527,7 +527,7 @@ lemma sched_context_yield_to_invs:
   notes refs_of_simps [simp del]
   shows
   "\<lbrace>invs and (\<lambda>s. cur_thread s \<noteq> idle_thread s ) (* cur_thread must be set to Restart *)
-    and (\<lambda>s. bound_yt_tcb_at (op = None) (cur_thread s) s)
+    and (\<lambda>s. bound_yt_tcb_at ((=) None) (cur_thread s) s)
     and (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb.\<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s)
     and (\<lambda>s. ex_nonz_cap_to (cur_thread s) s) and ex_nonz_cap_to scp\<rbrace>
        sched_context_yield_to scp args \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -565,11 +565,11 @@ where
      = (sc_at scptr and ex_nonz_cap_to scptr)"
   | "valid_sched_context_inv (InvokeSchedContextBind scptr cap)
      = ((*sc_at scptr and *)ex_nonz_cap_to scptr and valid_cap cap and
-          (case cap of ThreadCap t \<Rightarrow> bound_sc_tcb_at (op = None) t
-                                      and ex_nonz_cap_to t and sc_tcb_sc_at (op = None) scptr
+          (case cap of ThreadCap t \<Rightarrow> bound_sc_tcb_at ((=) None) t
+                                      and ex_nonz_cap_to t and sc_tcb_sc_at ((=) None) scptr
              | NotificationCap n _ _ \<Rightarrow>
                    obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_sc ntfn = None) n
-                   and ex_nonz_cap_to n  and sc_ntfn_sc_at (op = None) scptr
+                   and ex_nonz_cap_to n  and sc_ntfn_sc_at ((=) None) scptr
              | _ \<Rightarrow> \<lambda>_. False))"
   | "valid_sched_context_inv (InvokeSchedContextUnbindObject scptr cap)
      = ((*sc_at scptr and *)ex_nonz_cap_to scptr and valid_cap cap and
@@ -581,9 +581,9 @@ where
   | "valid_sched_context_inv (InvokeSchedContextUnbind scptr)
      = (sc_at scptr and ex_nonz_cap_to scptr)"
   | "valid_sched_context_inv (InvokeSchedContextYieldTo scptr args)
-     = ((*sc_at scptr and *)ex_nonz_cap_to scptr and (\<lambda>s. st_tcb_at (op = Restart) (cur_thread s) s)(* comes from perform_invocation *)
+     = ((*sc_at scptr and *)ex_nonz_cap_to scptr and (\<lambda>s. st_tcb_at ((=) Restart) (cur_thread s) s)(* comes from perform_invocation *)
           and (\<lambda>s. ex_nonz_cap_to (cur_thread s) s)
-(*          and sc_yf_sc_at (op = None) scptr*) and (\<lambda>s. bound_yt_tcb_at (op = None) (cur_thread s) s)
+(*          and sc_yf_sc_at ((=) None) scptr*) and (\<lambda>s. bound_yt_tcb_at ((=) None) (cur_thread s) s)
           and (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb.\<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s
                  (*  \<and> (mcpriority_tcb_at (\<lambda>mcp. (tcb_priority (the (get_etcb t s))) \<le> mcp)
                                                                       (cur_thread s) s)*)) scptr s))"
@@ -1777,7 +1777,7 @@ lemma decode_sched_control_inv_inv:
 
 lemma decode_sched_context_inv_wf:
   "\<lbrace>invs and sc_at sc_ptr and ex_nonz_cap_to sc_ptr and
-     (\<lambda>s. st_tcb_at (op = Restart) (cur_thread s) s) and
+     (\<lambda>s. st_tcb_at ((=) Restart) (cur_thread s) s) and
      (\<lambda>s. ex_nonz_cap_to (cur_thread s) s) and
      (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x) and
      (\<lambda>s. \<forall>x\<in>set excaps. \<forall>r\<in>zobj_refs x. ex_nonz_cap_to r s)\<rbrace>

@@ -295,10 +295,10 @@ lemma horridly_specific_rewrite:
   "(obj_at (\<lambda>ko. \<exists>tcb. (tcb_sched_context tcb = Some xa \<longrightarrow> ko = TCB tcb) \<and>
                    (tcb_sched_context tcb \<noteq> Some xa \<longrightarrow>
                         ex_nonz_cap_to xa s \<and> ex_nonz_cap_to a s \<and> ko = TCB tcb
-                     \<and> sc_tcb_sc_at (op = None) xa s \<and> bound_sc_tcb_at (op = None) a s)) a s) =
+                     \<and> sc_tcb_sc_at ((=) None) xa s \<and> bound_sc_tcb_at ((=) None) a s)) a s) =
    (tcb_at a s \<and> (bound_sc_tcb_at (\<lambda>sc. sc \<noteq> Some xa) a s \<longrightarrow>
                         (ex_nonz_cap_to xa s \<and> ex_nonz_cap_to a s \<and>
-                         sc_tcb_sc_at (op = None) xa s \<and> bound_sc_tcb_at (op = None) a s)))"
+                         sc_tcb_sc_at ((=) None) xa s \<and> bound_sc_tcb_at ((=) None) a s)))"
   by (auto simp: obj_at_def is_tcb pred_tcb_at_def)
 
 lemma thread_set_mcp_ex_nonz_cap_to[wp]:
@@ -335,7 +335,7 @@ lemma finalise_cap_ep:
   done
 
 lemma cap_delete_ep:
-  "\<lbrace>cte_wp_at (is_ep_cap or op = NullCap) slot and cte_wp_at P p and K (slot \<noteq> p)\<rbrace>
+  "\<lbrace>cte_wp_at (is_ep_cap or (=) NullCap) slot and cte_wp_at P p and K (slot \<noteq> p)\<rbrace>
   cap_delete slot \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>, -"
   apply (simp add: cap_delete_def rec_del_CTEDeleteCall)
   apply (subst rec_del_FinaliseSlot)
@@ -396,17 +396,17 @@ lemma tc_invs[Tcb_AI_asms]:
        and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) auth s) pr)
        (* only set mcp \<le> mcp of authorising thread *)
        and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp)
-       and (case_option \<top> (case_option \<top> (\<lambda>sc. bound_sc_tcb_at (op = None) a and ex_nonz_cap_to sc and sc_tcb_sc_at (op = None) sc)) sc)
-       and case_option \<top> (\<lambda>(cap, slot). cte_wp_at (op = cap) slot) fh
-       and case_option \<top> (\<lambda>(cap, slot). cte_wp_at (op = cap) slot) th
+       and (case_option \<top> (case_option \<top> (\<lambda>sc. bound_sc_tcb_at ((=) None) a and ex_nonz_cap_to sc and sc_tcb_sc_at ((=) None) sc)) sc)
+       and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
+       and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) th
        and K (case_option True (is_cnode_cap o fst) e)
        and K (case_option True (is_valid_vtable_root o fst) f)
        and K (case_option True (\<lambda>v. case_option True
                           ((swp valid_ipc_buffer_cap (fst v)
                              and is_arch_cap and is_cnode_or_valid_arch)
                                 o fst) (snd v)) g)
-       and K (case_option True ((is_ep_cap or (op = NullCap)) o fst) fh)
-       and K (case_option True ((is_ep_cap or (op = NullCap)) o fst) th)\<rbrace>
+       and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) fh)
+       and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) th)\<rbrace>
       invoke_tcb (ThreadControl a sl fh th mcp pr e f g sc)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_gen_asm)+

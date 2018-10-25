@@ -807,8 +807,8 @@ for arch_state[wp]: "\<lambda>s. P (arch_state s)"
 
 lemma sched_context_bind_tcb_invs[wp]:
   "\<lbrace>invs
-    and bound_sc_tcb_at (op = None) tcb and ex_nonz_cap_to tcb
-    and sc_tcb_sc_at (op = None) sc and ex_nonz_cap_to sc\<rbrace>
+    and bound_sc_tcb_at ((=) None) tcb and ex_nonz_cap_to tcb
+    and sc_tcb_sc_at ((=) None) sc and ex_nonz_cap_to sc\<rbrace>
       sched_context_bind_tcb sc tcb \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: sched_context_bind_tcb_def invs_def valid_state_def
       valid_pspace_def set_sc_obj_ref_def
@@ -1116,8 +1116,8 @@ lemma set_sc_obj_ref_tcb_at_ct[wp]:
            hoare_vcg_all_lift get_refills_wp)
 
 lemma refill_unblock_check_sc_tcb_at_ct:
-    "\<lbrace>\<lambda>s. bound_sc_tcb_at (op = None) (cur_thread s) s\<rbrace> refill_unblock_check scp
-       \<lbrace>\<lambda>rv s. bound_sc_tcb_at (op = None) (cur_thread s) s\<rbrace>"
+    "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) None) (cur_thread s) s\<rbrace> refill_unblock_check scp
+       \<lbrace>\<lambda>rv s. bound_sc_tcb_at ((=) None) (cur_thread s) s\<rbrace>"
   by (wpsimp simp: refill_unblock_check_def set_refills_def
       update_sched_context_def is_round_robin_def pred_tcb_at_def obj_at_def
        wp: hoare_vcg_if_lift2 set_object_wp get_object_wp get_sched_context_wp
