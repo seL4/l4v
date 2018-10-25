@@ -566,7 +566,7 @@ datatype a_type =
   | ASchedContext nat
   | AReply
   | ACapTable nat
-  | AGarbage nat -- "number of bytes of garbage"
+  | AGarbage nat \<comment> \<open>number of bytes of garbage\<close>
   | AArch aa_type
 
 definition
@@ -635,10 +635,10 @@ record abstract_state =
   is_original_cap    :: "cslot_ptr \<Rightarrow> bool"
   cur_thread         :: obj_ref
   idle_thread        :: obj_ref
-  consumed_time      :: time     -- "amount of time since kernel time was last updated"
-  cur_time           :: time     -- "current time at kernel entry"
-  cur_sc             :: obj_ref  -- "current scheduling context"
-  reprogram_timer    :: bool     -- "whether we need to reprogram the timer on exit"
+  consumed_time      :: time     \<comment> \<open>amount of time since kernel time was last updated\<close>
+  cur_time           :: time     \<comment> \<open>current time at kernel entry\<close>
+  cur_sc             :: obj_ref  \<comment> \<open>current scheduling context\<close>
+  reprogram_timer    :: bool     \<comment> \<open>whether we need to reprogram the timer on exit\<close>
   scheduler_action   :: scheduler_action
   domain_list        :: "(domain \<times> time) list"
   domain_index       :: nat
