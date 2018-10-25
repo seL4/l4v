@@ -483,7 +483,7 @@ lemma foldl_conj_Cons:
   by (induct xs arbitrary: x, auto)
 
 lemma foldl_conj_list_all:
-  "foldl op \<and> True ps = list_all id ps"
+  "foldl (\<and>) True ps = list_all id ps"
   apply (induct ps)
   apply (simp add: foldl_conj_Cons del: foldl_Cons)+
   done
