@@ -38,6 +38,7 @@ This module uses the C preprocessor to select a target architecture.
 
 \begin{impdetails}
 
+> import Prelude hiding (Word)
 > import SEL4.Machine.Hardware
 > import SEL4.Machine.RegisterSet(PPtr(..), Word)
 > import SEL4.API.Failures(SyscallError(..))

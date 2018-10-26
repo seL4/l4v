@@ -80,6 +80,8 @@ Library
                             SEL4.Object.Interrupt
                             SEL4.Object.Notification
                             SEL4.Object.Untyped
+                            SEL4.Object.Reply
+                            SEL4.Object.SchedContext
                             SEL4.Model
                             SEL4.Model.StateData
                             SEL4.Model.PSpace
