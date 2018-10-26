@@ -377,7 +377,7 @@ lemma shiftr_shiftl_mask_pd_bits:
     apply simp
    apply (simp add: mask_eq_iff)
    apply (cut_tac lt2p_lem[of 32 vptr], simp)
-   apply (cut_tac word_bits_len_of, simp)
+   apply (cut_tac word_bits_len_of, simp+)
   done
 
 lemma lookup_pt_slot_no_fail:

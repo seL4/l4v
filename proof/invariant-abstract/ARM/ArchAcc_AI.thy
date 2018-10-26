@@ -355,21 +355,21 @@ lemma pde_at_aligned_vptr:
                         arch_kernel_obj.split_asm if_split_asm
                  cong: kernel_object.case_cong)
   apply (prove "is_aligned x 2")
-  subgoal
+   subgoal
     apply (clarsimp simp: upto_enum_step_def word_shift_by_2)
     by (rule is_aligned_shiftl_self)
   apply (simp add: aligned_add_aligned word_bits_conv
                    is_aligned_shiftl_self)+
   apply (prove "pd = (x + (pd + (vptr >> 20 << 2)) && ~~ mask pd_bits)")
-  subgoal
+   subgoal
     apply (subst mask_lower_twice[symmetric, where n=6])
      apply (simp add: pd_bits_def pageBits_def)
     apply (subst add.commute, subst add_mask_lower_bits)
       apply (erule aligned_add_aligned)
-        apply (intro is_aligned_shiftl is_aligned_shiftr)
-        apply simp
-       apply (simp add: word_bits_conv)
-      apply simp
+       apply (intro is_aligned_shiftl is_aligned_shiftr)
+       apply simp
+      apply (simp add: word_bits_conv)
+     apply simp
      apply (subst upper_bits_unset_is_l2p_32[unfolded word_bits_conv])
       apply simp
      apply (clarsimp simp: upto_enum_step_def word_shift_by_2)

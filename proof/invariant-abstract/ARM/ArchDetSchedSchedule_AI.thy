@@ -275,7 +275,8 @@ lemma handle_vm_fault_st_tcb_cur_thread [wp, DetSchedSchedule_AI_assms]:
     apply (wp|simp)+
   done
 
-crunch valid_sched [wp, DetSchedSchedule_AI_assms]: arch_invoke_irq_control "valid_sched"
+crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
+  arch_invoke_irq_control "valid_sched :: det_ext state \<Rightarrow> bool"
 
 crunch valid_list [wp, DetSchedSchedule_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread "valid_list"

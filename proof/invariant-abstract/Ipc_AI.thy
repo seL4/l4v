@@ -526,7 +526,7 @@ lemma valid_remove_rights_If[simp]:
 
 declare const_on_failure_wp [wp]
 
-crunch ex_cte_cap_wp_to [wp]: set_extra_badge "ex_cte_cap_wp_to P p"
+crunch ex_cte_cap_wp_to [wp]: set_extra_badge, do_machine_op "ex_cte_cap_wp_to P p"
   (rule: ex_cte_cap_to_pres)
 
 lemma cap_insert_assume_null:
