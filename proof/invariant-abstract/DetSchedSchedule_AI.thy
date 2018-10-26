@@ -491,7 +491,7 @@ lemma reschedule_required_valid_blocked:
 crunch etcb_at[wp]: reschedule_required "etcb_at P t"
 (*
 lemma reschedule_required_valid_sched:
-  "\<lbrace>valid_etcbs and valid_queues and weak_valid_sched_action and valid_blocked and valid_idle_etcb\<rbrace>
+  "\<lbrace>valid_queues and weak_valid_sched_action and valid_blocked and valid_idle_etcb\<rbrace>
     reschedule_required
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   by (simp add: valid_sched_def | wp reschedule_required_valid_blocked)+
@@ -2331,7 +2331,6 @@ crunches is_schedulable
   and choose_new_thread[wp]: "\<lambda>s. scheduler_action s = choose_new_thread"
   and ct_in_q[wp]: ct_in_q
   and valid_idle[wp]: valid_idle
-  and valid_etcbs[wp]: valid_etcbs
   and valid_queues[wp]: valid_queues
   and ct_in_q[wp]: ct_in_q
   and is_activatable[wp]: "is_activatable t"
@@ -3193,7 +3192,7 @@ apply assumption
   sorry
 
 lemma finalise_cap_valid_sched[wp]:
-  "\<lbrace>valid_sched and (valid_etcbs and valid_queues and weak_valid_sched_action and
+  "\<lbrace>valid_sched and (valid_queues and weak_valid_sched_action and
     valid_blocked and valid_idle_etcb and simple_sched_action)\<rbrace>
       finalise_cap cap param_b \<lbrace>\<lambda>_. valid_sched\<rbrace>"  (* check the preconditions *)
   apply (case_tac cap; wpsimp)
