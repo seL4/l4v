@@ -560,7 +560,6 @@ where
   "cap_removeable NullCap slot = True"
 | "cap_removeable (Zombie slot' bits n) slot =
     ((n = 0) \<or> (n = 1 \<and> (slot', replicate (zombie_cte_bits bits) False) = slot))"
-| "cap_removeable _ _ = False"
 
 text {* Checks for Zombie capabilities that refer to the CNode or TCB they are
 stored in. *}
