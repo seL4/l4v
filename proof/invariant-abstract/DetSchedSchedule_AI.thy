@@ -2994,7 +2994,7 @@ crunch valid_sched[wp]: cap_swap_for_delete, empty_slot "valid_sched :: det_stat
 
 lemma update_sc_consumed_valid_sched:
   "\<lbrace>valid_sched\<rbrace> update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed sc + consumed\<rparr>)
-(*(\<lambda>sc. sc_consumed_update f sc)*) \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+      \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   apply (wpsimp wp: get_object_wp simp: update_sched_context_def set_object_def)
   apply (clarsimp simp: valid_sched_def)
   apply (intro conjI)
@@ -4322,7 +4322,7 @@ lemma test_reschedule_valid_sched_except_wk_sched_action:
   notes test_reschedule_valid_sched_action[wp del] if_split[split del]
   shows
   "\<lbrace>valid_sched_except_blocked_except_wk_sched_action and valid_blocked
-     and weak_valid_sched_action_except t and bound_sc_tcb_at (op = None) t\<rbrace>
+     and weak_valid_sched_action_except t and bound_sc_tcb_at ((=) None) t\<rbrace>
       test_reschedule t \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (clarsimp simp: test_reschedule_def scheduler_act_not_def when_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
@@ -5510,7 +5510,7 @@ lemma sched_context_unbind_tcb_valid_sched:
   apply (wpsimp wp: set_tcb_sched_context_valid_sched_except_blocked_None
                    tcb_release_remove_valid_blocked_except_inv
                    tcb_sched_action_dequeue_valid_blocked_except tcb_dequeue_not_queued
-                   reschedule_required_valid_blocked reschedule_required_simple
+                   reschedule_required_valid_blocked
                    tcb_release_remove_not_in_release_q)
   by (clarsimp simp: valid_sched_def sc_tcb_sc_at_def obj_at_def)
   (* need to introduce the notion of idle_sc? *)

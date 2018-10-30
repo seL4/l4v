@@ -634,20 +634,19 @@ lemma perform_asid_control_invocation_active_sc_tcb_at:
     apply (drule(1) caps_of_state_valid[rotated])+
     apply (simp add:valid_cap_simps cap_aligned_def page_bits_def)
    apply (subst delete_objects_rewrite)
-      apply (simp add:page_bits_def word_bits_def pageBits_def word_size_bits_def)+
-    apply (simp add:is_aligned_neg_mask_eq)
+      apply ((simp add:page_bits_def word_bits_def pageBits_def word_size_bits_def)+)[3]
    apply wp
   apply (clarsimp simp: valid_aci_def)
   apply (frule intvl_range_conv)
    apply (simp add:word_bits_def page_bits_def pageBits_def)
-  apply (clarsimp simp:detype_clear_um_independent page_bits_def is_aligned_neg_mask_eq)
+  apply (clarsimp simp:detype_clear_um_independent page_bits_def)
   apply (rule conjI)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
    apply (rule pspace_no_overlap_detype)
      apply (rule caps_of_state_valid_cap)
       apply (simp add:page_bits_def)+
     apply (simp add:invs_valid_objs invs_psp_aligned)+
-  apply (clarsimp simp:obj_bits_api_def arch_kobj_size_def cte_wp_at_caps_of_state
+  apply_trace (clarsimp simp:obj_bits_api_def arch_kobj_size_def cte_wp_at_caps_of_state
     default_arch_object_def empty_descendants_range_in)
   apply (frule_tac cap = "(cap.UntypedCap False word1 pageBits idx)"
     in detype_invariants[rotated 3],clarsimp+)
@@ -658,8 +657,8 @@ lemma perform_asid_control_invocation_active_sc_tcb_at:
   apply (intro conjI)
     apply (clarsimp simp:valid_cap_def cap_aligned_def range_cover_full
      invs_psp_aligned invs_valid_objs page_bits_def)
-   apply (erule pspace_no_overlap_detype)
-  apply (auto simp:page_bits_def detype_clear_um_independent)[3]
+   apply (frule pspace_no_overlap_detype)
+  apply (auto simp:page_bits_def detype_clear_um_independent)[4]
 
    apply (frule st_tcb_ex_cap)
      apply clarsimp
