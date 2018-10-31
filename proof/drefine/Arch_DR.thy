@@ -1605,8 +1605,11 @@ lemma invoke_page_corres:
                            dest!:diminished_page_is_page)
           apply (wp get_cap_cte_wp_at_rv unmap_page_pred_tcb_at |
                  clarsimp simp:valid_idle_def not_idle_thread_def)+
-     apply (rule_tac Q="\<lambda>rv s. valid_etcbs s \<and> idle_tcb_at (\<lambda>p. idle (fst p) \<and> snd p = None) (idle_thread s) s \<and> a \<noteq> idle_thread s \<and> idle_thread s = idle_thread_ptr \<and>
-                   cte_wp_at \<top> (a,b) s \<and> caps_of_state s' = caps_of_state s" in hoare_strengthen_post)
+     apply (rule_tac Q="\<lambda>rv s. valid_etcbs s \<and>
+                               idle_tcb_at (\<lambda>(st, ntfn, arch). idle st \<and> ntfn = None \<and> valid_arch_idle arch)
+                                           (idle_thread s) s \<and>
+                               a \<noteq> idle_thread s \<and> idle_thread s = idle_thread_ptr \<and> cte_wp_at \<top> (a,b) s \<and>
+                               caps_of_state s' = caps_of_state s" in hoare_strengthen_post)
       apply (wps, wp unmap_page_pred_tcb_at, clarsimp simp: invs_def valid_state_def valid_idle_def)
     apply simp
    apply (clarsimp simp:cte_wp_at_def is_arch_diminished_def is_arch_cap_def is_pt_cap_def

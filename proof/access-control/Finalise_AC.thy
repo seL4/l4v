@@ -784,7 +784,9 @@ lemma thread_set_pas_refined_triv_idleT:
   assumes cps: "\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb"
        and st: "\<And>tcb. P (tcb_state tcb) \<longrightarrow> tcb_state (f tcb) = tcb_state tcb"
        and ba: "\<And>tcb. Q (tcb_bound_notification tcb) \<longrightarrow> tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
-     shows "\<lbrace>pas_refined aag and idle_tcb_at (\<lambda>p. P (fst p) \<and> Q (snd p)) t\<rbrace> thread_set f t \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
+     shows "\<lbrace>pas_refined aag and idle_tcb_at (\<lambda>(st, ntfn, arch). P st \<and> Q ntfn \<and> R arch) t\<rbrace>
+            thread_set f t
+            \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: pas_refined_def state_objs_to_policy_def)
   apply (rule hoare_pre)
    apply (wps thread_set_caps_of_state_trivial[OF cps])
