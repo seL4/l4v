@@ -39,6 +39,7 @@ requalify_consts
   valid_asid_map
   valid_vspace_obj
   valid_arch_tcb
+  valid_arch_idle
 
   valid_arch_state
   valid_vspace_objs
@@ -183,6 +184,9 @@ record itcb =
   itcb_mcpriority    :: priority
   itcb_arch          :: iarch_tcb
 
+abbreviation
+  "tcb_iarch tcb \<equiv> arch_tcb_to_iarch_tcb (tcb_arch tcb)"
+
 definition
   tcb_to_itcb :: "tcb \<Rightarrow> itcb"
 where
@@ -193,7 +197,7 @@ where
        itcb_fault              = tcb_fault tcb,
        itcb_bound_notification = tcb_bound_notification tcb,
        itcb_mcpriority         = tcb_mcpriority tcb,
-       itcb_arch               = arch_tcb_to_iarch_tcb (tcb_arch tcb) \<rparr>"
+       itcb_arch               = tcb_iarch tcb \<rparr>"
 
 (*
   The simplification rules below are used to help produce lemmas that talk about
@@ -215,7 +219,7 @@ lemma tcb_to_itcb_simps[simp]:
   "itcb_fault (tcb_to_itcb tcb) = tcb_fault tcb"
   "itcb_bound_notification (tcb_to_itcb tcb) = tcb_bound_notification tcb"
   "itcb_mcpriority (tcb_to_itcb tcb) = tcb_mcpriority tcb"
-  "itcb_arch (tcb_to_itcb tcb) = arch_tcb_to_iarch_tcb (tcb_arch tcb)"
+  "itcb_arch (tcb_to_itcb tcb) = tcb_iarch tcb"
   by (auto simp: tcb_to_itcb_def)
 
 (* This is used to assert whether an itcb projection is affected by a tcb
@@ -875,11 +879,14 @@ definition
                    reply_mdb (cdt s) (caps_of_state s) \<and>
                    valid_arch_mdb (is_original_cap s) (caps_of_state s)"
 
-abbreviation "idle_tcb_at \<equiv> pred_tcb_at (\<lambda>t. (itcb_state t, itcb_bound_notification t))"
+abbreviation
+  "idle_tcb_at \<equiv> pred_tcb_at (\<lambda>t. (itcb_state t, itcb_bound_notification t, itcb_arch t))"
 
 definition
-  "valid_idle \<equiv> \<lambda>s. idle_tcb_at (\<lambda>p. (idle (fst p)) \<and> (snd p = None)) (idle_thread s) s
-                   \<and> idle_thread s = idle_thread_ptr"
+  "valid_idle \<equiv>
+     \<lambda>s. idle_tcb_at (\<lambda>(st, ntfn, arch). idle st \<and> ntfn = None \<and> valid_arch_idle arch)
+                     (idle_thread s) s
+         \<and> idle_thread s = idle_thread_ptr"
 
 definition
   "only_idle \<equiv> \<lambda>s. \<forall>t. st_tcb_at idle t s \<longrightarrow> t = idle_thread s"
@@ -2907,8 +2914,7 @@ lemma valid_idle_lift:
   shows "\<lbrace>valid_idle\<rbrace> f \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   apply (simp add: valid_idle_def)
   apply (rule hoare_lift_Pf [where f="idle_thread"])
-   apply (rule hoare_vcg_conj_lift)
-    apply (rule assms)+
+   apply (rule hoare_vcg_conj_lift | rule assms)+
   done
 
 

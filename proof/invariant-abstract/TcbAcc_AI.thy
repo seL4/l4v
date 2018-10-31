@@ -337,6 +337,7 @@ lemma thread_set_refs_trivial:
 lemma thread_set_valid_idle_trivial:
   assumes "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
   assumes "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
+  assumes "\<And>tcb. tcb_iarch (f tcb) = tcb_iarch tcb"
   shows      "\<lbrace>valid_idle\<rbrace> thread_set f t \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   apply (simp add: thread_set_def set_object_def valid_idle_def)
   apply wp
@@ -493,8 +494,9 @@ context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 lemma thread_set_invs_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
-  assumes z:  "\<And>tcb. tcb_state     (f tcb) = tcb_state tcb"
-  assumes z': "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
+  assumes z:   "\<And>tcb. tcb_state    (f tcb) = tcb_state tcb"
+  assumes z':  "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
+  assumes z'': "\<And>tcb. tcb_iarch (f tcb) = tcb_iarch tcb"
   assumes w: "\<And>tcb. tcb_ipc_buffer (f tcb) = tcb_ipc_buffer tcb
                         \<or> (tcb_ipc_buffer (f tcb) = 0)"
   assumes y: "\<And>tcb. tcb_fault_handler (f tcb) \<noteq> tcb_fault_handler tcb
@@ -525,7 +527,7 @@ lemma thread_set_invs_trivial:
              thread_set_cap_refs_in_kernel_window
              thread_set_cap_refs_respects_device_region
              thread_set_aligned
-             | rule x z z' w y a arch valid_tcb_arch_ref_lift [THEN fun_cong]
+             | rule x z z' z'' w y a arch valid_tcb_arch_ref_lift [THEN fun_cong]
              | erule bspec_split [OF x] | simp add: z')+
   apply (simp add: z)
   done

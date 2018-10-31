@@ -28,7 +28,13 @@ end_qualify
 section "ARM-specific invariant definitions"
 
 qualify ARM_A (in Arch)
-type_synonym iarch_tcb = unit
+(* ARM has no interest for iarch_tcb (introduced for ARM_HYP) ,
+    and we consider no non-trivial predicates of iarch_tcb,
+    so an unspecified typedecl seems appropriate.
+   In contrast to using a unit type, this avoids
+    over-simplification of idle_tcb_at predicates,
+    which would make it hard to use facts that talk about idle_tcb_at. *)
+typedecl iarch_tcb
 end_qualify
 
 context Arch begin global_naming ARM
@@ -36,7 +42,7 @@ context Arch begin global_naming ARM
 definition
   arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb"
 where
-  "arch_tcb_to_iarch_tcb arch_tcb \<equiv> ()"
+  "arch_tcb_to_iarch_tcb arch_tcb \<equiv> undefined"
 
 lemma iarch_tcb_context_set[simp]:
   "arch_tcb_to_iarch_tcb (arch_tcb_context_set p tcb) = arch_tcb_to_iarch_tcb tcb"
@@ -246,6 +252,11 @@ definition
   valid_arch_tcb :: "arch_tcb \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_arch_tcb \<equiv> \<lambda>a. \<top>"
+
+definition
+  valid_arch_idle :: "iarch_tcb \<Rightarrow> bool"
+where
+  "valid_arch_idle \<equiv> \<top>"
 
 primrec
   valid_pte :: "pte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"

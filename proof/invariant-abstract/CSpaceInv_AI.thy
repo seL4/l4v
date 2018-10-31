@@ -251,6 +251,7 @@ lemma tcb_state_same_refs:
 lemma valid_idle_tcb_update:
   "\<lbrakk>valid_idle s; ko_at (TCB t) p s;
     tcb_state t = tcb_state t'; tcb_bound_notification t = tcb_bound_notification t';
+    tcb_iarch t = tcb_iarch t';
     valid_tcb p t' s \<rbrakk>
    \<Longrightarrow> valid_idle (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
   by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
@@ -1275,8 +1276,10 @@ lemma set_object_idle [wp]:
   "\<lbrace>valid_idle and
      (\<lambda>s. ko_at ko p s \<and> (\<not>is_tcb ko \<or>
                    (ko = (TCB t) \<and> ko' = (TCB t') \<and>
-                    tcb_state t = tcb_state t' \<and> tcb_bound_notification t = tcb_bound_notification t')))\<rbrace>
-   set_object p ko'
+                    tcb_state t = tcb_state t' \<and>
+                    tcb_bound_notification t = tcb_bound_notification t' \<and>
+                    tcb_iarch t = tcb_iarch t')))\<rbrace>
+     set_object p ko'
    \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: set_object_def)
   apply wp

@@ -276,11 +276,9 @@ lemma invs_A:
    apply (case_tac obj, simp_all add: cap_of_def)
    apply (clarsimp simp: init_kheap_def split: if_split_asm)
   apply (rule conjI)
-   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def state_defs)
-  apply (rule conjI)
-   apply (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def state_defs)
-  apply (rule conjI)
-   apply (clarsimp simp: if_unsafe_then_cap_def caps_of_state_init_A_st_Null)
+   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def state_defs valid_arch_idle_def)
+  apply (rule conjI, clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def state_defs)
+  apply (rule conjI, clarsimp simp: if_unsafe_then_cap_def caps_of_state_init_A_st_Null)
   apply (clarsimp simp: valid_reply_caps_def unique_reply_caps_def
                         has_reply_cap_def pred_tcb_at_def obj_at_def
                         caps_of_state_init_A_st_Null

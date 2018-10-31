@@ -30,7 +30,13 @@ end_qualify
 section "X64-specific invariant definitions"
 
 qualify X64_A (in Arch)
-type_synonym iarch_tcb = unit
+(* X64 has no interest for iarch_tcb (introduced for ARM_HYP) ,
+    and we consider no non-trivial predicates of iarch_tcb,
+    so an unspecified typedecl seems appropriate.
+   In contrast to using a unit type, this avoids
+    over-simplification of idle_tcb_at predicates,
+    which would make it hard to use facts that talk about idle_tcb_at. *)
+typedecl iarch_tcb
 end_qualify
 
 context Arch begin global_naming X64
@@ -38,7 +44,7 @@ context Arch begin global_naming X64
 definition
   arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb"
 where
-  "arch_tcb_to_iarch_tcb arch_tcb \<equiv> ()"
+  "arch_tcb_to_iarch_tcb arch_tcb \<equiv> undefined"
 
 lemma iarch_tcb_context_set[simp]:
   "arch_tcb_to_iarch_tcb (arch_tcb_context_set p tcb) = arch_tcb_to_iarch_tcb tcb"
@@ -47,7 +53,7 @@ lemma iarch_tcb_context_set[simp]:
 lemma iarch_tcb_set_registers[simp]:
   "arch_tcb_to_iarch_tcb (arch_tcb_set_registers regs arch_tcb)
      = arch_tcb_to_iarch_tcb arch_tcb"
-  by (simp add: arch_tcb_set_registers_def)
+  by (simp add: arch_tcb_to_iarch_tcb_def)
 
 (* These simplifications allows us to keep many arch-specific proofs unchanged. *)
 
@@ -334,6 +340,11 @@ definition
   valid_arch_tcb :: "arch_tcb \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_arch_tcb \<equiv> \<lambda>a. \<top>"
+
+definition
+  valid_arch_idle :: "iarch_tcb \<Rightarrow> bool"
+where
+  "valid_arch_idle \<equiv> \<top>"
 
 (* Validity of vspace table entries, defined shallowly. *)
 

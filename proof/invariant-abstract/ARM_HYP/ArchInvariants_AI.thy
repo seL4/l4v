@@ -266,6 +266,11 @@ definition
 where
   "valid_arch_tcb \<equiv> \<lambda>t s. \<forall>v. tcb_vcpu t = Some v \<longrightarrow> vcpu_at v s"
 
+definition
+  valid_arch_idle :: "iarch_tcb \<Rightarrow> bool"
+where
+  "valid_arch_idle t \<equiv> itcb_vcpu t = None"
+
 primrec
   valid_pte :: "pte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where

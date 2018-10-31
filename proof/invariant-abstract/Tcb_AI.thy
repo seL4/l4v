@@ -191,6 +191,7 @@ lemma out_invs_trivialT:
   assumes r:  "\<And>tcb v. tcb_arch_ref (fn v tcb) = tcb_arch_ref tcb" (* ARMHYP *)
   assumes z: "\<And>tcb v. tcb_state  (fn v tcb) = tcb_state  tcb"
   assumes z': "\<And>tcb v. tcb_bound_notification (fn v tcb) = tcb_bound_notification tcb"
+  assumes z'': "\<And>tcb v. tcb_iarch (fn v tcb) = tcb_iarch tcb"
   assumes w: "\<And>tcb v. tcb_ipc_buffer (fn v tcb) = tcb_ipc_buffer tcb
                           \<or> tcb_ipc_buffer (fn v tcb) = 0"
   assumes y: "\<And>tcb v'. v = Some v' \<Longrightarrow> tcb_fault_handler (fn v' tcb) \<noteq> tcb_fault_handler tcb
@@ -200,7 +201,7 @@ lemma out_invs_trivialT:
                                                    | Some f \<Rightarrow> valid_fault f)"
   shows      "\<lbrace>invs\<rbrace> option_update_thread t fn v \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac v, simp_all add: option_update_thread_def)
-  apply (rule thread_set_invs_trivial [OF x z z' w y a r])
+  apply (rule thread_set_invs_trivial [OF x z z' z'' w y a r])
   apply (auto intro: r)
   done
 

@@ -298,7 +298,7 @@ lemma invs_A:
    apply (case_tac obj, simp_all add: cap_of_def)
    apply (clarsimp simp: init_kheap_def split: if_split_asm)
   apply (rule conjI)
-   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def state_defs)
+   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def state_defs valid_arch_idle_def)
   apply (rule conjI)
    apply (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def state_defs)
   apply (rule conjI)
