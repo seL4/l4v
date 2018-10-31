@@ -28,6 +28,7 @@ definition
   "valid_vcpu_invocation vi \<equiv> case vi of
        VCPUSetTCB vcpu_ptr tcb_ptr \<Rightarrow> vcpu_at vcpu_ptr and tcb_at tcb_ptr and
                                       ex_nonz_cap_to vcpu_ptr and ex_nonz_cap_to tcb_ptr
+                                      and (\<lambda>s. tcb_ptr \<noteq> idle_thread s)
      | VCPUInjectIRQ vcpu_ptr index virq \<Rightarrow> vcpu_at vcpu_ptr
      | VCPUReadRegister vcpu_ptr reg \<Rightarrow> vcpu_at vcpu_ptr
      | VCPUWriteRegister vcpu_ptr reg val \<Rightarrow> vcpu_at vcpu_ptr"
@@ -988,9 +989,10 @@ lemma valid_global_vspace_mappings_vcpu_update_str:
   "valid_global_vspace_mappings s \<Longrightarrow> valid_global_vspace_mappings (s\<lparr>arch_state := arm_current_vcpu_update f (arch_state s)\<rparr>)"
   by (simp add: valid_global_vspace_mappings_def)
 
-
 lemma associate_vcpu_tcb_invs[wp]:
-  "\<lbrace>invs and ex_nonz_cap_to vcpu and ex_nonz_cap_to tcb and vcpu_at vcpu\<rbrace> associate_vcpu_tcb vcpu tcb \<lbrace>\<lambda>_. invs\<rbrace>"
+  "\<lbrace>invs and ex_nonz_cap_to vcpu and ex_nonz_cap_to tcb and vcpu_at vcpu and  (\<lambda>s. tcb \<noteq> idle_thread s)\<rbrace>
+   associate_vcpu_tcb vcpu tcb
+   \<lbrace>\<lambda>_. invs\<rbrace>"
   using valid_global_vspace_mappings_def
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (simp add: pred_conj_def)
@@ -1688,15 +1690,15 @@ lemma arch_decode_inv_wf[wp]:
             apply (clarsimp simp: pageBits_def pde_bits_def pt_bits_def)
            apply (erule impE)
             apply (clarsimp simp: pageBits_def pde_bits_def pt_bits_def split:pde.splits)
-           apply assumption thm find_pd_for_asid_pde
+           apply assumption
           apply ((wp whenE_throwError_wp hoare_vcg_all_lift_R
                      find_pd_for_asid_lookup_slot [unfolded lookup_pd_slot_def Let_def]
                      find_pd_for_asid_ref_offset_voodoo find_pd_for_asid_shifting_voodoo
-                     find_pd_for_asid_inv|
-                  wpc|
-                  simp add: valid_arch_inv_def valid_pti_def unlessE_whenE empty_pde_atI
-                            vs_cap_ref_def pageBits_def pt_bits_def pde_bits_def|
-                  wp_once hoare_drop_imps hoare_vcg_ex_lift_R)+)[6]
+                     find_pd_for_asid_inv
+                  | wpc
+                  | simp add: valid_arch_inv_def valid_pti_def unlessE_whenE empty_pde_atI
+                              vs_cap_ref_def pageBits_def pt_bits_def pde_bits_def
+                  | wp_once hoare_drop_imps hoare_vcg_ex_lift_R)+)[6]
     apply (clarsimp simp: is_cap_simps if_apply_def2)
     apply (rule conjI)
      apply clarsimp
@@ -1765,7 +1767,11 @@ lemma arch_decode_inv_wf[wp]:
      apply (simp add: valid_cap_def)
      apply (cases slot)
      apply (clarsimp simp: ex_nonz_cap_to_def)
-     apply (fastforce elim: cte_wp_at_weakenE)
+     apply (rule conjI, fastforce elim: cte_wp_at_weakenE)
+     apply (rule conjI, fastforce elim: cte_wp_at_weakenE)
+     apply (clarsimp dest!: invs_valid_global_refs simp:  cte_wp_at_caps_of_state)
+     apply (drule_tac ?cap="ThreadCap (idle_thread s)" in valid_global_refsD2, assumption)
+     apply (simp add:global_refs_def cap_range_def)
     apply (simp add: decode_vcpu_inject_irq_def)
     apply (rule hoare_pre, wpsimp simp: whenE_def wp: get_vcpu_wp)
     apply (clarsimp simp: valid_arch_inv_def valid_vcpu_invocation_def obj_at_def)

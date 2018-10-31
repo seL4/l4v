@@ -562,8 +562,11 @@ lemma arch_thread_set_only_idle[wp]:
                  arch_thread_set_pred_tcb_at)
 
 lemma arch_thread_set_valid_idle[wp]:
-  "\<lbrace>valid_idle\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  by (wpsimp wp: valid_idle_lift arch_thread_set_pred_tcb_at)
+  "\<lbrace>valid_idle and (\<lambda> s. t \<noteq> idle_thread s \<or> (\<forall>atcb. tcb_vcpu atcb = None \<longrightarrow> tcb_vcpu (f atcb) = None))\<rbrace>
+    arch_thread_set f t
+   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  by (wpsimp simp: arch_thread_set_def set_object_def valid_idle_def valid_arch_idle_def
+                   get_tcb_def pred_tcb_at_def obj_at_def pred_neg_def)
 
 lemma arch_thread_set_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. valid_ioc\<rbrace>"
@@ -1014,7 +1017,7 @@ lemma dissociate_vcpu_tcb_invs[wp]: "\<lbrace>invs\<rbrace> dissociate_vcpu_tcb 
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (simp add: pred_conj_def)
   apply (rule hoare_vcg_conj_lift[rotated])+
-  apply (wpsimp wp: weak_if_wp get_vcpu_wp arch_thread_get_wp as_user_only_idle
+  apply (wpsimp wp: weak_if_wp get_vcpu_wp arch_thread_get_wp as_user_only_idle arch_thread_set_valid_idle
          | simp add: dissociate_vcpu_tcb_def vcpu_invalidate_active_def arch_get_sanitise_register_info_def
          | strengthen valid_arch_state_vcpu_update_str valid_global_refs_vcpu_update_str
          | simp add: vcpu_disable_def valid_global_vspace_mappings_def valid_global_objs_def

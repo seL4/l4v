@@ -1122,7 +1122,7 @@ lemma set_pt_valid_idle:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
   set_pt p pt
   \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
-  apply (rule valid_idle_lift, wp)
+  apply (rule valid_idle_lift, wp+)
   apply (simp add: set_pt_def)
   apply (wp get_object_wp)
   apply simp
