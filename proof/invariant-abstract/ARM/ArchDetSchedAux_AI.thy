@@ -646,7 +646,7 @@ lemma perform_asid_control_invocation_active_sc_tcb_at:
      apply (rule caps_of_state_valid_cap)
       apply (simp add:page_bits_def)+
     apply (simp add:invs_valid_objs invs_psp_aligned)+
-  apply_trace (clarsimp simp:obj_bits_api_def arch_kobj_size_def cte_wp_at_caps_of_state
+  apply (clarsimp simp:obj_bits_api_def arch_kobj_size_def cte_wp_at_caps_of_state
     default_arch_object_def empty_descendants_range_in)
   apply (frule_tac cap = "(cap.UntypedCap False word1 pageBits idx)"
     in detype_invariants[rotated 3],clarsimp+)
@@ -693,53 +693,208 @@ lemma perform_asid_control_invocation_active_sc_tcb_at:
   apply (erule_tac p=scp in if_live_then_nonz_capD2)
    by (simp add: live_def live_sc_def)+
 
+lemma is_refill_sufficient_detype[simp]:
+  "(is_refill_sufficient scp usage (detype S s))
+    = (is_refill_sufficient scp usage s \<and> scp \<notin> S)"
+  by (clarsimp simp add: is_refill_sufficient_def detype_def obj_at_def)
+
+lemma is_refill_sufficient_clear_um[iff]:
+  "is_refill_sufficient scp usage (clear_um S s) = is_refill_sufficient scp usage s"
+  by (simp add: clear_um_def is_refill_sufficient_def)
+
+lemma budget_sufficient_detype[simp]:
+  "(budget_sufficient t (detype S s))
+    = (budget_sufficient t s \<and> t \<notin> S
+          \<and> bound_sc_tcb_at (\<lambda>p. \<exists>scp.  p = Some scp \<and> scp \<notin> S) t s)"
+  apply (clarsimp simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def)
+  apply (rule iffI; fastforce)
+  done
+
+lemma budget_sufficient_clear_um[iff]:
+  "budget_sufficient t (clear_um S s) = budget_sufficient t s" by simp
+
 lemma perform_asid_control_invocation_budget_sufficient:
   "\<lbrace>st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and
  budget_sufficient t
-(*    and ct_active and invs and valid_aci aci*)\<rbrace>
+    and ct_active and invs and valid_aci aci\<rbrace>
     perform_asid_control_invocation aci
   \<lbrace>\<lambda>_. budget_sufficient t :: det_ext state \<Rightarrow> _\<rbrace>"
   including no_pre
   apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
   apply (rename_tac word1 a b aa ba word2)
-  apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at set_cap_no_overlap|simp)+
-sorry
+  apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at retype_region_budget_sufficient
+            set_cap_no_overlap|simp)+
+  apply (rule_tac Q="\<lambda>rv. invs and budget_sufficient t" in hoare_strengthen_post)
+prefer 2
+  apply fastforce
+    apply (wp max_index_upd_invs_simple get_cap_wp)+
+   apply (rule hoare_name_pre_state)
+   apply (subgoal_tac "is_aligned word1 page_bits")
+   prefer 2
+    apply (clarsimp simp: valid_aci_def cte_wp_at_caps_of_state)
+    apply (drule(1) caps_of_state_valid[rotated])+
+    apply (simp add:valid_cap_simps cap_aligned_def page_bits_def)
+   apply (subst delete_objects_rewrite)
+      apply ((simp add:page_bits_def word_bits_def pageBits_def word_size_bits_def)+)[3]
+   apply wp
+  apply (clarsimp simp: valid_aci_def)
+  apply (frule intvl_range_conv)
+   apply (simp add:word_bits_def page_bits_def pageBits_def)
+  apply (clarsimp simp:detype_clear_um_independent page_bits_def)
+  apply (rule conjI)
+  apply (clarsimp simp:cte_wp_at_caps_of_state)
+   apply (rule pspace_no_overlap_detype)
+     apply (rule caps_of_state_valid_cap)
+      apply (simp add:page_bits_def)+
+    apply (simp add:invs_valid_objs invs_psp_aligned)+
+  apply (clarsimp simp:obj_bits_api_def arch_kobj_size_def cte_wp_at_caps_of_state
+    default_arch_object_def empty_descendants_range_in)
+  apply (frule_tac cap = "(cap.UntypedCap False word1 pageBits idx)"
+    in detype_invariants[rotated 3],clarsimp+)
+    apply (simp add:cte_wp_at_caps_of_state
+      empty_descendants_range_in descendants_range_def2)+
+  apply (thin_tac "x = Some cap.NullCap" for x)+
+  apply (frule(1) caps_of_state_valid_cap[OF _ invs_valid_objs])
+  apply (intro conjI)
+    apply (clarsimp simp:valid_cap_def cap_aligned_def range_cover_full
+     invs_psp_aligned invs_valid_objs page_bits_def)
+   apply (frule pspace_no_overlap_detype)
+  apply (auto simp:page_bits_def detype_clear_um_independent)[4]
+defer
+   apply (frule st_tcb_ex_cap)
+     apply clarsimp
+    apply (clarsimp split: Structures_A.thread_state.splits)
+   apply (clarsimp simp: ex_nonz_cap_to_def)
+   apply (frule invs_untyped_children)
+   apply (clarsimp simp:cte_wp_at_caps_of_state)
+   apply (rotate_tac -3)
+   apply (erule_tac ptr="(aa,ba)" in
+          untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
+       apply (simp add: cte_wp_at_caps_of_state)+
+      apply fastforce
+    apply (clarsimp simp: zobj_refs_to_obj_refs)
+    apply (fastforce simp:page_bits_def)
+   apply simp
+  apply (clarsimp simp: is_refill_sufficient_def pred_tcb_at_def obj_at_def)
+   apply (subgoal_tac "ex_nonz_cap_to scp sa")
+   apply (clarsimp simp: ex_nonz_cap_to_def)
+   apply (frule invs_untyped_children)
+   apply (clarsimp simp:cte_wp_at_caps_of_state)
+   apply (rotate_tac -3)
+   apply (erule_tac ptr="(aa,ba)" in
+          untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
+       apply (simp add: cte_wp_at_caps_of_state)+
+      apply fastforce
+    apply (clarsimp simp: zobj_refs_to_obj_refs)
+    apply (fastforce simp:page_bits_def)
+   apply simp
+  apply (frule invs_iflive)
+  apply (frule invs_sym_refs)
+  apply (drule (2) sym_ref_tcb_sc, clarsimp)
+  apply (erule_tac p=scp in if_live_then_nonz_capD2)
+   by (simp add: live_def live_sc_def)+
+
+lemma is_refill_ready_detype[simp]:
+  "(is_refill_ready scp (detype S s))
+    = (is_refill_ready scp s \<and> scp \<notin> S)"
+  by (clarsimp simp add: is_refill_ready_def detype_def obj_at_def)
+
+lemma is_refill_ready_clear_um[iff]:
+  "is_refill_ready scp (clear_um S s) = is_refill_ready scp s"
+  by (simp add: clear_um_def is_refill_ready_def)
+
+lemma budget_ready_detype[simp]:
+  "(budget_ready t (detype S s))
+    = (budget_ready t s \<and> t \<notin> S
+          \<and> bound_sc_tcb_at (\<lambda>p. \<exists>scp.  p = Some scp \<and> scp \<notin> S) t s)"
+  apply (clarsimp simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def)
+  apply (rule iffI; fastforce)
+  done
+
+lemma budget_ready_clear_um[iff]:
+  "budget_ready t (clear_um S s) = budget_ready t s" by simp
+
 
 lemma perform_asid_control_invocation_budget_ready:
   "\<lbrace>st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and
  budget_ready t
-(*    and ct_active and invs and valid_aci aci*)\<rbrace>
+    and ct_active and invs and valid_aci aci\<rbrace>
     perform_asid_control_invocation aci
   \<lbrace>\<lambda>_. budget_ready t :: det_ext state \<Rightarrow> _\<rbrace>"
   including no_pre
   apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
   apply (rename_tac word1 a b aa ba word2)
-  apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at set_cap_no_overlap|simp)+
-sorry
-
-lemma perform_asid_control_invocation_budget_sufficient_neg:
-  "\<lbrace>st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and
- (\<lambda>s. \<not> budget_sufficient t s)
-(*    and ct_active and invs and valid_aci aci*)\<rbrace>
-    perform_asid_control_invocation aci
-  \<lbrace>\<lambda>_ s:: det_ext state. \<not> budget_sufficient t s\<rbrace>"
-  including no_pre
-  apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
-  apply (rename_tac word1 a b aa ba word2)
-  apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at set_cap_no_overlap|simp)+
-sorry
-
-lemma perform_asid_control_invocation_budget_ready_neg:
-  "\<lbrace>st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and
- (\<lambda>s. \<not> budget_ready t s)
-(*    and ct_active and invs and valid_aci aci*)\<rbrace>
-    perform_asid_control_invocation aci
-  \<lbrace>\<lambda>_ s :: det_ext state. \<not> budget_ready t s\<rbrace>"
-  including no_pre
-  apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
-  apply (rename_tac word1 a b aa ba word2)
-  apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at set_cap_no_overlap|simp)+
-sorry
+  apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at retype_region_budget_ready
+            set_cap_no_overlap|simp)+
+  apply (rule_tac Q="\<lambda>rv. invs and budget_ready t" in hoare_strengthen_post)
+prefer 2
+  apply fastforce
+    apply (wp max_index_upd_invs_simple get_cap_wp)+
+   apply (rule hoare_name_pre_state)
+   apply (subgoal_tac "is_aligned word1 page_bits")
+   prefer 2
+    apply (clarsimp simp: valid_aci_def cte_wp_at_caps_of_state)
+    apply (drule(1) caps_of_state_valid[rotated])+
+    apply (simp add:valid_cap_simps cap_aligned_def page_bits_def)
+   apply (subst delete_objects_rewrite)
+      apply ((simp add:page_bits_def word_bits_def pageBits_def word_size_bits_def)+)[3]
+   apply wp
+  apply (clarsimp simp: valid_aci_def)
+  apply (frule intvl_range_conv)
+   apply (simp add:word_bits_def page_bits_def pageBits_def)
+  apply (clarsimp simp:detype_clear_um_independent page_bits_def)
+  apply (rule conjI)
+  apply (clarsimp simp:cte_wp_at_caps_of_state)
+   apply (rule pspace_no_overlap_detype)
+     apply (rule caps_of_state_valid_cap)
+      apply (simp add:page_bits_def)+
+    apply (simp add:invs_valid_objs invs_psp_aligned)+
+  apply (clarsimp simp:obj_bits_api_def arch_kobj_size_def cte_wp_at_caps_of_state
+    default_arch_object_def empty_descendants_range_in)
+  apply (frule_tac cap = "(cap.UntypedCap False word1 pageBits idx)"
+    in detype_invariants[rotated 3],clarsimp+)
+    apply (simp add:cte_wp_at_caps_of_state
+      empty_descendants_range_in descendants_range_def2)+
+  apply (thin_tac "x = Some cap.NullCap" for x)+
+  apply (frule(1) caps_of_state_valid_cap[OF _ invs_valid_objs])
+  apply (intro conjI)
+    apply (clarsimp simp:valid_cap_def cap_aligned_def range_cover_full
+     invs_psp_aligned invs_valid_objs page_bits_def)
+   apply (frule pspace_no_overlap_detype)
+  apply (auto simp:page_bits_def detype_clear_um_independent)[4]
+defer
+   apply (frule st_tcb_ex_cap)
+     apply clarsimp
+    apply (clarsimp split: Structures_A.thread_state.splits)
+   apply (clarsimp simp: ex_nonz_cap_to_def)
+   apply (frule invs_untyped_children)
+   apply (clarsimp simp:cte_wp_at_caps_of_state)
+   apply (rotate_tac -3)
+   apply (erule_tac ptr="(aa,ba)" in
+          untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
+       apply (simp add: cte_wp_at_caps_of_state)+
+      apply fastforce
+    apply (clarsimp simp: zobj_refs_to_obj_refs)
+    apply (fastforce simp:page_bits_def)
+   apply simp
+  apply (clarsimp simp: is_refill_sufficient_def pred_tcb_at_def obj_at_def)
+   apply (subgoal_tac "ex_nonz_cap_to scp sa")
+   apply (clarsimp simp: ex_nonz_cap_to_def)
+   apply (frule invs_untyped_children)
+   apply (clarsimp simp:cte_wp_at_caps_of_state)
+   apply (rotate_tac -3)
+   apply (erule_tac ptr="(aa,ba)" in
+          untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
+       apply (simp add: cte_wp_at_caps_of_state)+
+      apply fastforce
+    apply (clarsimp simp: zobj_refs_to_obj_refs)
+    apply (fastforce simp:page_bits_def)
+   apply simp
+  apply (frule invs_iflive)
+  apply (frule invs_sym_refs)
+  apply (drule (2) sym_ref_tcb_sc, clarsimp)
+  apply (erule_tac p=scp in if_live_then_nonz_capD2)
+   by (simp add: live_def live_sc_def)+
 
 crunches perform_asid_control_invocation
 for ct[wp]: "\<lambda>s. P (cur_thread s)"
@@ -765,8 +920,6 @@ lemma perform_asid_control_invocation_valid_sched:
          apply (wpsimp wp: perform_asid_control_etcb_at
                            perform_asid_control_invocation_budget_sufficient
                            perform_asid_control_invocation_budget_ready
-                           perform_asid_control_invocation_budget_sufficient_neg
-                           perform_asid_control_invocation_budget_ready_neg
                            perform_asid_control_invocation_active_sc_tcb_at)+
     apply (rule hoare_strengthen_post, rule aci_invs)
     apply (simp add: invs_def valid_state_def)

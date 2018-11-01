@@ -260,7 +260,7 @@ lemma set_cap_is_refill_sufficient[wp]:
   done
 
 lemma set_cap_budget_sufficient[wp]:
- "\<lbrace>\<lambda>s. P (budget_sufficient t s)\<rbrace> set_cap c p \<lbrace>\<lambda>rv s. P (budget_sufficient t s)\<rbrace>"
+ "\<lbrace>\<lambda>s:: det_ext state. P (budget_sufficient t s)\<rbrace> set_cap c p \<lbrace>\<lambda>rv s. P (budget_sufficient t s)\<rbrace>"
   apply (simp add: set_cap_def set_object_def split_def)
   apply (wpsimp wp: get_object_wp)
   apply (intro conjI allI impI; clarsimp elim!: rsubst[where P=P];
@@ -270,7 +270,7 @@ lemma set_cap_budget_sufficient[wp]:
   done
 
 lemma set_cap_budget_ready[wp]:
- "\<lbrace>\<lambda>s. P (budget_ready t s)\<rbrace> set_cap c p \<lbrace>\<lambda>rv s. P (budget_ready t s)\<rbrace>"
+ "\<lbrace>\<lambda>s:: det_ext state. P (budget_ready t s)\<rbrace> set_cap c p \<lbrace>\<lambda>rv s. P (budget_ready t s)\<rbrace>"
   apply (simp add: set_cap_def set_object_def split_def)
   apply (wpsimp wp: get_object_wp)
   apply (intro conjI allI impI; clarsimp elim!: rsubst[where P=P];
