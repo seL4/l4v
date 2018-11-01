@@ -26,9 +26,66 @@ type_synonym paddr = word64
 abbreviation (input) "toPAddr \<equiv> id"
 abbreviation (input) "fromPAddr \<equiv> id"
 
+(* Address space layout:
+
++-----------------------------+ 2^64
+|        Kernel Devices       |
++-------------------PPTR_KDEV-+ 2^64 - 1GiB
+|         Kernel ELF          |
++-----------------KERNEL_BASE-+ --+ 2^64 - 2GiB
+|                             |   |
+|           PSpace            |   |
+|  (direct kernel mappings)   |   +----+
+|                             |   |    |
+|                             |   |    |
++-------------------PPTR_BASE-+ --+    |
+|                             |        |
+|            User             |        |
+|                             |
++-----------------------------+ 2^64 - 2^c       +-------------------------+
+|                             |                  |                         |
+|                             |        |         |                         |
+|          Invalid            |        |         |                         |
+|                             |        |         |           not           |
+|                             |        |         |         kernel          |
+|                             |        |         |       addressable       |
++-----------------------------+  2^c   |         |                         |
+|                             |        |         |                         |
+|                             |        |         |                         |
+|                             |        |      +- --------------------------+  PADDR_TOP =
+|                             |        |      |  |                         |  KERNEL_BASE - PPTR_BASE
+|                             |        |      |  |                         |
+|                             |        |      |  |                         |
+|            User             |        |      |  |                         |
+|                             |        |      |  |                         |
+|                             |        +------+  +-------------------------+  PADDR_LOAD + 1GiB
+|                             |     kernel    |  |        Kernel ELF       |
+|                             |   addressable |  +-------------------------+  PADDR_LOAD
+|                             |               |  |                         |
+|                             |               |  |                         |
++-----------------------------+  0            +- +-------------------------+  0 PADDR_BASE
+
+  virtual address space                          physical address space
+
+
+c = one less than number of bits the page tables can translate
+  = sign extension bit for canonical addresses
+  (= 47 on x64, 38 on RISCV64 sv39, 47 on RISCV64 sv48)
+
+On RISCV, PPTR_BASE is 2^64 - 2^c, i.e. there is no user region at the top.
+
+*)
+
+definition canonical_bit :: nat
+  where
+  "canonical_bit = 38"
+
 definition kernelBase :: word64
   where
-  "kernelBase = 0xFFFFFFFF80000000"
+  "kernelBase = - (1 << 31)" (* 2^64 - 2 GiB *)
+
+lemma "kernelBase = 0xFFFFFFFF80000000" (* Sanity check with C *)
+  by (simp add: kernelBase_def)
 
 definition paddrLoad :: word64
   where
@@ -40,7 +97,10 @@ definition kernelBaseOffset :: word64
 
 definition pptrBase :: word64
   where
-  "pptrBase = 0xFFFFFFC000000000"
+  "pptrBase = - (1 << canonical_bit)"
+
+lemma "pptrBase = 0xFFFFFFC000000000" (* Sanity check with C *)
+  by (simp add: pptrBase_def canonical_bit_def)
 
 definition pptrUserTop :: word64
   where
@@ -48,7 +108,7 @@ definition pptrUserTop :: word64
 
 definition pAddr_base :: word64
   where
-  "pAddr_base \<equiv> 0x80000000"
+  "pAddr_base \<equiv> 0"
 
 definition baseOffset :: word64
   where
