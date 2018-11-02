@@ -309,7 +309,8 @@ lemma length_msg_registers:
   by (simp add: msgRegisters_def upto_enum_def fromEnum_def enum_register)
 
 lemma send_upd_ctxintegrity:
-  "\<lbrakk> direct_send {pasSubject aag} aag ep tcb \<or> indirect_send {pasSubject aag} aag ep recv tcb;
+  "\<lbrakk> direct_send {pasSubject aag} aag ep tcb
+      \<or> indirect_send {pasSubject aag} aag (the (tcb_bound_notification tcb)) ep tcb;
      integrity aag X st s; st_tcb_at ((=) Structures_A.thread_state.Running) thread s;
      get_tcb thread st = Some tcb; get_tcb thread s = Some tcb'\<rbrakk>
      \<Longrightarrow> integrity aag X st (s\<lparr>kheap :=
@@ -563,7 +564,7 @@ lemma as_user_set_register_respects_indirect:
   apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
   apply (simp split: thread_state.split_asm)
   apply (rule send_upd_ctxintegrity [OF disjI2, unfolded fun_upd_def],
-         auto simp: st_tcb_def2 indirect_send_def pred_tcb_def2)
+         auto simp: st_tcb_def2 indirect_send_def pred_tcb_def2 dest: sym)
   done
 
 lemma integrity_receive_blocked_chain':

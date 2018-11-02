@@ -920,19 +920,15 @@ thm converse_rtranclp_induct
         case (troa_ep_unblock ep ep' tcb ntfn)
         thus ?thesis by (fastforce intro: affects_ep_bound_trans)
       next
-        case (troa_tcb_send tcb tcb' ctxt' ep recv)
+        case (troa_tcb_send tcb tcb' ctxt' ep)
         thus ?thesis using hyps
           apply (clarsimp simp: direct_send_def indirect_send_def)
           apply (erule disjE)
            apply (clarsimp simp: receive_blocked_on_def2)
            apply (frule(2) pas_refined_tcb_st_to_auth)
            apply (fastforce intro!: affects_send sym_helper)
-           apply clarsimp
-           apply (rule affects_send[rotated 2])
-              apply (fastforce intro!: affects_send bound_tcb_at_implies_receive pred_tcb_atI)
-          apply (fastforce intro:sym_helper)
-          apply assumption
-          apply blast
+          apply (fastforce intro!: affects_send bound_tcb_at_implies_receive
+                                   pred_tcb_atI sym_helper)
           done
       next
         case (troa_tcb_call tcb tcb' caller R ctxt' ep)
@@ -1068,7 +1064,7 @@ lemma partitionIntegrity_subjectAffects_mem:
                   THEN spec[where x=p], THEN tro_tro_alt]
     show ?thesis
     proof (cases rule: integrity_obj_alt.cases)
-      case (tro_alt_tcb_send tcb tcb' ccap' cap' ntfn' ep recv)
+      case (tro_alt_tcb_send tcb tcb' ccap' cap' ntfn' ep)
       thus ?thesis using hyps
         apply (clarsimp simp: direct_send_def indirect_send_def)
         apply (erule disjE)
@@ -1077,7 +1073,8 @@ lemma partitionIntegrity_subjectAffects_mem:
          apply (fastforce intro!: affects_send auth_ipc_buffers_mem_Write')
         apply clarsimp
         apply (rule affects_send[rotated 2])
-           apply (fastforce intro!: affects_send bound_tcb_at_implies_receive pred_tcb_atI)
+           apply (fastforce intro!: affects_send bound_tcb_at_implies_receive pred_tcb_atI
+                              dest: sym)
           apply (fastforce intro!: auth_ipc_buffers_mem_Write')
          apply assumption
         apply blast

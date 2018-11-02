@@ -1099,7 +1099,7 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko'
 | troa_tcb_send:
     "\<lbrakk>ko = Some (TCB tcb); ko' = Some (TCB tcb');
       tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb), tcb_state := Running\<rparr>;
-      direct_send subjects aag ep tcb \<or> indirect_send subjects aag ep recv tcb\<rbrakk>
+      direct_send subjects aag ep tcb \<or> indirect_send subjects aag (the (tcb_bound_notification tcb)) ep tcb\<rbrakk>
      \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* If a tcb is waiting on an Enpoint that the subjects can Call, they are allowed to do that call,
      Including putting a ReplyCap back towards a subject*)
@@ -1342,7 +1342,7 @@ where
         tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
         reply_cap_deletion_integrity subjects aag (tcb_caller tcb) cap';
         reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap';
-        direct_send subjects aag ep tcb \<or> indirect_send subjects aag ep recv tcb \<rbrakk>
+        direct_send subjects aag ep tcb \<or> indirect_send subjects aag (the (tcb_bound_notification tcb)) ep tcb \<rbrakk>
        \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_call:
       "\<lbrakk>tro_tag TCBCall; ko = Some (TCB tcb); ko' = Some (TCB tcb');

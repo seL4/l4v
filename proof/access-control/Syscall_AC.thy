@@ -824,7 +824,7 @@ lemma as_user_set_register_respects_indirect:
   apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
   apply (simp split: thread_state.split_asm)
   apply (rule send_upd_ctxintegrity [OF disjI2, unfolded fun_upd_def],
-         auto simp: st_tcb_def2 indirect_send_def pred_tcb_def2)
+         auto simp: st_tcb_def2 indirect_send_def pred_tcb_def2 dest: sym)
   done
 
 lemma switch_to_thread_respects_pasMayEditReadyQueues:
