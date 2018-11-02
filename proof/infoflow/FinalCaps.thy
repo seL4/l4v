@@ -83,9 +83,9 @@ where
           pasObjectAbs aag ptr \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
 
 
-abbreviation subject_can_affect_directly_label :: "'a PAS \<Rightarrow> 'a \<Rightarrow> bool"
+abbreviation subject_can_affect_label_directly :: "'a PAS \<Rightarrow> 'a \<Rightarrow> bool"
 where
-  "subject_can_affect_directly_label aag l \<equiv>
+  "subject_can_affect_label_directly aag l \<equiv>
           l \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
 
 
@@ -141,6 +141,9 @@ where
            (pasObjectAbs aag (fst lslot) = SilcLabel))) \<and>
       all_children (\<lambda>x. pasObjectAbs aag (fst x) = SilcLabel) (cdt s) \<and>
       silc_dom_equiv aag st s \<and>
+      \<comment> \<open>We want the following condition to hold on s as well,
+          but stating that here makes proofs more difficult.
+          It is shown below in silc_inv_no_transferable'.\<close>
       (\<forall> slot. pasObjectAbs aag (fst slot) = SilcLabel \<and>
                cte_wp_at (\<lambda>cap. cap \<noteq> NullCap \<and> is_transferable_cap cap) slot st
            \<longrightarrow> False)"
@@ -594,8 +597,8 @@ lemma silc_inv_pres:
     apply(erule (1) hoare_contrapositive[OF ncte, simplified])
    apply(rule hoare_contrapositive[OF intra_label_cap_pres, simplified, OF ncte], assumption+)
   apply (rule conjI)
-  apply (erule use_valid[OF _ c])
-  apply simp
+   apply (erule use_valid[OF _ c])
+   apply simp
   apply(simp add: silc_dom_equiv_def)
   apply(rule equiv_forI)
   apply(erule use_valid[OF _ l])
@@ -1318,7 +1321,7 @@ lemma reply_cancel_ipc_silc_inv:
   apply wps
   apply (wp static_imp_wp hoare_vcg_all_lift hoare_vcg_ball_lift)
   apply clarsimp
-  apply (frule(1) descendants_of_owned, force, force, elim disjE)
+  apply (frule(1) descendants_of_owned_or_transferable, force, force, elim disjE)
   apply (clarsimp simp add:silc_inv_def)
   apply (case_tac "cdt s (aa,ba)")
    apply (fastforce dest: descendants_of_NoneD)
@@ -1850,8 +1853,6 @@ lemma finalise_cap_ret':
   apply(auto simp: valid_def dest!: finalise_cap_ret split: cap.splits simp: is_zombie_def)
   done
 
-
-
 lemma silc_inv_irq_state_independent_A[simp, intro!]:
   "irq_state_independent_A (silc_inv aag st)"
   apply(simp add: silc_inv_def irq_state_independent_A_def silc_dom_equiv_def equiv_for_def)
@@ -1932,7 +1933,6 @@ lemma rec_del_silc_inv':
 
           apply (clarsimp simp: is_cap_simps  gen_obj_refs_eq replaceable_zombie_not_transferable cap_auth_conferred_def clas_no_asid aag_cap_auth_def
                              pas_refined_all_auth_is_owns cli_no_irqs simp del:split_paired_Ex split_paired_All dest!:appropriate_Zombie[symmetric, THEN trans, symmetric])
-          (* FIXME use simp_sym*)
           apply (fastforce dest: sym[where s="{_}"])
           done
        apply(wp finalise_cap_pas_refined finalise_cap_silc_inv finalise_cap_auth' finalise_cap_ret'

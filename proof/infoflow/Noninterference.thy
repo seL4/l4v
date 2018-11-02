@@ -529,11 +529,12 @@ lemma check_active_irq_if_integrity:
 lemma silc_dom_equiv_from_silc_inv_valid':
   assumes "\<And> st. \<lbrace>P and silc_inv aag st\<rbrace> f \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   shows "\<lbrace>P and silc_inv aag st and silc_dom_equiv aag sta\<rbrace> f \<lbrace>\<lambda>_. silc_dom_equiv aag sta\<rbrace>"
-  apply(rule hoare_pre)
-   apply(rule hoare_strengthen_post)
-    apply(rule assms)
-   apply(fastforce simp: silc_inv_def)
-  apply(simp add: silc_inv_def silc_dom_equiv_def  del:split_paired_All)
+  apply (rule hoare_pre)
+   apply (rule hoare_strengthen_post)
+    apply (rule assms)
+   apply (fastforce simp: silc_inv_def)
+  (* we can't use clarsimp below because it splits pairs unconditionally *)
+  apply (simp add: silc_inv_def silc_dom_equiv_def del: split_paired_All)
   apply (elim conjE)
   apply (intro allI impI notI)
   apply (drule(1) equiv_forD)+
@@ -867,13 +868,15 @@ lemma owns_mapping_owns_asidpool:
   apply simp
   done
 
+(* FIXME: MOVE *)
 lemma fun_noteqD:
   "f \<noteq> g \<Longrightarrow> \<exists> a. f a \<noteq> g a"
   by blast
 
 text {*
-  This a very important theorem that ensure that @{term subjectAffects} is
-  coherent with @{term integrity_obj}*}
+  This a very important theorem that ensures that @{const subjectAffects} is
+  coherent with @{const integrity_obj}
+*}
 lemma partitionIntegrity_subjectAffects_obj:
   assumes par_inte: "partitionIntegrity aag s s'"
   assumes pas_ref: "pas_refined aag s"
@@ -886,7 +889,6 @@ lemma partitionIntegrity_subjectAffects_obj:
   shows
    "pasObjectAbs aag x \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
   using inte_obj
-thm converse_rtranclp_induct
   proof (induct "kheap s x" rule: converse_rtranclp_induct)
     case base
     thus ?case using kh_diff by force
@@ -994,19 +996,19 @@ thm converse_rtranclp_induct
       next
         case (troa_asidpool_clear pool pool')
         thus ?thesis (* TODO cleanup that one *)
-        using hyps unfolding asid_pool_integrity_def
-        apply clarsimp
-        apply (drule fun_noteqD)
-        apply (erule exE, rename_tac r)
-        apply (drule_tac x=r in spec)
-        apply (clarsimp dest!:not_sym[where t=None])
-        apply (subgoal_tac "is_subject aag x", force intro:affects_lrefl)
-        apply (frule(1) aag_Control_into_owns)
-        apply (frule(2) asid_pool_into_aag)
-        apply simp
-        apply (frule(1) pas_wellformed_noninterference_control_to_eq)
-        by (fastforce elim!: silc_inv_cnode_onlyE obj_atE
-            simp: is_cap_table_def)
+          using hyps unfolding asid_pool_integrity_def
+          apply clarsimp
+          apply (drule fun_noteqD)
+          apply (erule exE, rename_tac r)
+          apply (drule_tac x=r in spec)
+          apply (clarsimp dest!:not_sym[where t=None])
+          apply (subgoal_tac "is_subject aag x", force intro:affects_lrefl)
+          apply (frule(1) aag_Control_into_owns)
+          apply (frule(2) asid_pool_into_aag)
+          apply simp
+          apply (frule(1) pas_wellformed_noninterference_control_to_eq)
+          by (fastforce elim!: silc_inv_cnode_onlyE obj_atE
+              simp: is_cap_table_def)
       next
         case (troa_cnode n content content')
         thus ?thesis
@@ -1121,8 +1123,6 @@ lemma blocked_onD:
   apply(simp_all)
   done
 
-
-thm cdt_change_allowed_delete_derived
 (* FIXME: cleanup *)
 lemma partitionIntegrity_subjectAffects_cdt:
   "\<lbrakk>partitionIntegrity aag s s'; pas_refined aag s; valid_mdb s; valid_objs s;
@@ -1136,8 +1136,6 @@ lemma partitionIntegrity_subjectAffects_cdt:
   apply (rule affects_delete_derived)
   apply (frule(3) cdt_change_allowed_delete_derived)
   by simp
-
-
 
 lemma partitionIntegrity_subjectAffects_cdt_list:
   "\<lbrakk>partitionIntegrity aag s s'; pas_refined aag s; pas_refined aag s';
@@ -1161,30 +1159,30 @@ lemma partitionIntegrity_subjectAffects_cdt_list:
      apply (rule affects_delete_derived)
      apply (frule(3) cdt_change_allowed_delete_derived[OF invs_valid_objs invs_mdb])
      apply force
-    subgoal by (fastforce simp add: silc_inv_def valid_list_2_def all_children_def simp del: split_paired_All)
+    subgoal by (fastforce simp add: silc_inv_def valid_list_2_def all_children_def
+                          simp del: split_paired_All)
    apply (rule affects_delete_derived2)
     apply (frule(3) cdt_change_allowed_delete_derived[OF invs_valid_objs invs_mdb])
     apply assumption
-   subgoal by (fastforce dest!:aag_cdt_link_DeleteDerived simp add: valid_list_2_def simp del: split_paired_All)
+   subgoal by (fastforce dest!: aag_cdt_link_DeleteDerived
+                         simp add: valid_list_2_def
+                         simp del: split_paired_All)
   apply (rule affects_delete_derived)
   apply (frule(3) cdt_change_allowed_delete_derived[OF invs_valid_objs invs_mdb])
   by simp
-
-
 
 lemma partitionIntegrity_subjectAffects_is_original_cap:
   "\<lbrakk>partitionIntegrity aag s s'; pas_refined aag s; valid_mdb s; valid_objs s;
     is_original_cap s (x,y) \<noteq> is_original_cap s' (x,y)\<rbrakk> \<Longrightarrow>
    pasObjectAbs aag x
      \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
-  apply(drule partitionIntegrity_integrity)
-  apply(drule integrity_subjects_cdt)
-  apply(drule_tac x="(x,y)" in spec)
-  apply(clarsimp simp: integrity_cdt_def)
- apply (rule affects_delete_derived)
+  apply (drule partitionIntegrity_integrity)
+  apply (drule integrity_subjects_cdt)
+  apply (drule_tac x="(x,y)" in spec)
+  apply (clarsimp simp: integrity_cdt_def)
+  apply (rule affects_delete_derived)
   apply (frule(3) cdt_change_allowed_delete_derived)
   by simp
-
 
 lemma partitionIntegrity_subjectAffects_interrupt_states:
   "\<lbrakk>partitionIntegrity aag s s'; pas_refined aag s; valid_objs s;
@@ -1353,8 +1351,8 @@ lemma partitionIntegrity_subjectAffects_asid:
     pas_wellformed_noninterference aag; silc_inv aag st s'; invs s';
     \<not> equiv_asids (\<lambda>x. pasASIDAbs aag x = a) s s'\<rbrakk> \<Longrightarrow>
          a \<in> subjectAffects (pasPolicy aag) (pasSubject aag)"
-  apply(clarsimp simp: equiv_asids_def equiv_asid_def asid_pool_at_kheap)
-  apply(case_tac "arm_asid_table (arch_state s) (asid_high_bits_of asid) =
+  apply (clarsimp simp: equiv_asids_def equiv_asid_def asid_pool_at_kheap)
+  apply (case_tac "arm_asid_table (arch_state s) (asid_high_bits_of asid) =
                   arm_asid_table (arch_state s') (asid_high_bits_of asid)")
    apply (clarsimp simp: valid_arch_state_def valid_asid_table_def)
    apply (drule_tac x=pool_ptr in bspec)
@@ -1362,35 +1360,36 @@ lemma partitionIntegrity_subjectAffects_asid:
    apply (drule_tac x=pool_ptr in bspec)
     apply blast
    apply (clarsimp simp: asid_pool_at_kheap)
-   apply(rule affects_asidpool_map)
-   apply(rule pas_refined_asid_mem)
-    apply(drule partitionIntegrity_integrity)
-    apply(drule integrity_subjects_obj)
-    apply(drule_tac x="pool_ptr" in spec)+
-    apply(drule tro_tro_alt, erule integrity_obj_alt.cases;simp )
-     apply(drule_tac t="pasSubject aag" in sym)
+   apply (rule affects_asidpool_map)
+   apply (rule pas_refined_asid_mem)
+    apply (drule partitionIntegrity_integrity)
+    apply (drule integrity_subjects_obj)
+    apply (drule_tac x="pool_ptr" in spec)+
+    apply (drule tro_tro_alt, erule integrity_obj_alt.cases;simp )
+     apply (drule_tac t="pasSubject aag" in sym)
      apply simp
-     apply(rule sata_asidpool)
+     apply (rule sata_asidpool)
       apply assumption
      apply assumption
     apply (simp add: asid_pool_integrity_def)
     apply (drule_tac x="ucast asid" in spec)+
     apply clarsimp
     apply (drule owns_mapping_owns_asidpool)
-        apply (simp | blast intro: pas_refined_Control[THEN sym]
-      | fastforce intro: pas_wellformed_pasSubject_update[simplified])+
-    apply(drule_tac t="pasSubject aag" in sym)+
+        apply ((simp
+              | blast intro: pas_refined_Control[THEN sym]
+              | fastforce intro: pas_wellformed_pasSubject_update[simplified])+)[4]
+    apply (drule_tac t="pasSubject aag" in sym)+
     apply simp
-    apply(rule sata_asidpool)
+    apply (rule sata_asidpool)
      apply assumption
     apply assumption
    apply assumption
   apply clarsimp
-  apply(drule partitionIntegrity_integrity)
-  apply(clarsimp simp: integrity_def)
-  apply(drule_tac x=asid in spec)+
-  apply(clarsimp simp: integrity_asids_def)
-  apply(fastforce intro: affects_lrefl)
+  apply (drule partitionIntegrity_integrity)
+  apply (clarsimp simp: integrity_def)
+  apply (drule_tac x=asid in spec)+
+  apply (clarsimp simp: integrity_asids_def)
+  apply (fastforce intro: affects_lrefl)
   done
 
 lemma sameFor_subject_def2:
@@ -1857,11 +1856,8 @@ lemma user_small_Step_partitionIntegrity:
 
 lemma silc_inv_refl:
   "silc_inv aag st s \<Longrightarrow> silc_inv aag s s"
-  apply (frule silc_inv_def[THEN meta_eq_to_obj_eq, THEN iffD1])
-  apply (rule silc_inv_def[THEN meta_eq_to_obj_eq, THEN iffD2])
-  apply (clarsimp simp: silc_dom_equiv_def equiv_for_refl)
-  apply (erule(2) silc_inv_no_transferableD')
-  done
+  by (fastforce simp: silc_inv_def silc_dom_equiv_def equiv_for_refl
+                intro!: silc_inv_no_transferableD')
 
 lemma ct_active_cur_thread_not_idle_thread:
   "valid_idle s \<Longrightarrow> ct_active s \<Longrightarrow> cur_thread s \<noteq> idle_thread s"
@@ -2229,11 +2225,12 @@ lemma get_thread_state_reads_respects_g:
     apply(fastforce simp: pred_tcb_at_def obj_at_def reads_equiv_g_def globals_equiv_idle_thread_ptr)
    apply (simp add: pred_tcb_at_def obj_at_def)
   apply(clarsimp simp: spec_equiv_valid_def equiv_valid_2_def)
-  apply(frule get_thread_state_reads_respects_g[simplified equiv_valid_def2 equiv_valid_2_def,
-                                                rule_format, OF conjI, OF _ conjI, simplified,
-                                                OF aag_can_read_self];
+  apply(frule aag_can_read_self)
+  apply(frule get_thread_state_reads_respects_g
+                [simplified equiv_valid_def2 equiv_valid_2_def,
+                 rule_format, OF conjI, simplified];
         fastforce)
-done
+  done
 
 
 lemma activate_thread_reads_respects_g:
