@@ -163,7 +163,7 @@ Wellformedness of the agent authority function with respect to a label
 
 \begin{itemize}
 
-\item for (the current untrusted) @{term "agent"}, large enough
+\item For (the current untrusted) @{term "agent"}, large enough
   authority must be contained within the agent's boundaries.
 
 \item @{term "agent"} has all the self authority it could want.
@@ -172,7 +172,19 @@ Wellformedness of the agent authority function with respect to a label
   authority-equivalent to all agents that can receive on that
   endpoint.
 
+\item Similarly, if an agent can grant through a reply cap, then
+  it is authority-equivalent to the original caller.
+
 \item Anyone can send on any IRQ notification.
+
+\item Call implies a send ability.
+
+\item If an agent could reply to a call, then the caller has the
+  authority to delete the derived reply cap. This can happen if
+  the caller thread is deleted before the reply takes place.
+
+\item Reply caps can be transferred, so the DeleteDerived
+  authority propagates transitively.
 
 \end{itemize}
 
@@ -883,9 +895,6 @@ lemma pas_refined_sita_mem:
 
 
 
-
-
-
 section {* Integrity definition *}
 
 subsection {* How kernel objects can change *}
@@ -1087,7 +1096,7 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko'
       auth \<in> {Receive, SyncSend, Reset}; s \<in> subjects;
       (s, auth, l) \<in> pasPolicy aag\<rbrakk>
      \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
-  (* If it a tcb is waiting on receiving on an Endpoint but could be bound to a notification ntfn.
+  (* If a tcb is waiting on receiving on an Endpoint but could be bound to a notification ntfn.
      Then if we can Notify ntfn, we could modify the endpoint *)
 | troa_ep_unblock:
     "\<lbrakk>ko = Some (Endpoint ep); ko' = Some (Endpoint ep');
@@ -1095,14 +1104,16 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko'
       (tcb, Receive, l) \<in> pasPolicy aag;
       aag_subjects_have_auth_to subjects aag Notify ntfn\<rbrakk>
      \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
-  (* TODO *)
+  (* If the subjects can send to an Endpoint or its bound notification, they can also
+     modify any thread that is waiting on it *)
 | troa_tcb_send:
     "\<lbrakk>ko = Some (TCB tcb); ko' = Some (TCB tcb');
       tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb), tcb_state := Running\<rparr>;
-      direct_send subjects aag ep tcb \<or> indirect_send subjects aag (the (tcb_bound_notification tcb)) ep tcb\<rbrakk>
+      direct_send subjects aag ep tcb
+       \<or> indirect_send subjects aag (the (tcb_bound_notification tcb)) ep tcb\<rbrakk>
      \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
-  (* If a tcb is waiting on an Enpoint that the subjects can Call, they are allowed to do that call,
-     Including putting a ReplyCap back towards a subject*)
+  (* If a tcb is waiting on an Endpoint that the subjects can Call, they are allowed
+     to do that call, and insert a ReplyCap back towards a subject*)
 | troa_tcb_call:
     "\<lbrakk>ko = Some (TCB tcb); ko' = Some (TCB tcb');
       tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb), tcb_state := Running,
@@ -1122,7 +1133,7 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko'
       aag_subjects_have_auth_to_label subjects aag Reply l\<rbrakk>
      \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
   (* Subjects can receive a message from an Endpoint. The sender state will then be set to
-     Running if it is a normal send and to Inactive or BlockedOnReply in case of call
+     Running if it is a normal send and to Inactive or BlockedOnReply if it is a call.
      TODO split that rule *)
 | troa_tcb_receive:
     "\<lbrakk>ko = Some (TCB tcb); ko' = Some (TCB tcb');
@@ -1133,8 +1144,8 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko'
       send_blocked_on ep (tcb_state tcb);
       aag_subjects_have_auth_to subjects aag Receive ep \<rbrakk>
      \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
-  (* Subjects can Reset an Endpoint/Notification they have Reset and thus all TCBs blocked on it
-     need to be restarted *)
+  (* Subjects can Reset an Endpoint/Notification they have Reset authority to, and thus
+     all TCBs blocked on it need to be restarted *)
 | troa_tcb_restart:
     "\<lbrakk>ko = Some (TCB tcb); ko' = Some (TCB tcb');
       tcb' = tcb\<lparr>tcb_state := Restart\<rparr>;
@@ -1147,7 +1158,10 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko'
       tcb' = tcb\<lparr>tcb_bound_notification := None\<rparr>;
       aag_subjects_have_auth_to subjects aag Reset (the (tcb_bound_notification tcb))\<rbrakk>
     \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
-  (* It may happens that a cap the subjects are allowed to delete needs to be deleted *)
+  (* Allow subjects to delete their reply caps in other subjects' threads.
+   * Note that we need to account for the reply cap being in tcb_ctable,
+   * because recursive deletion of the root CNode may temporarily place any
+   * contained cap (in particular, a copied reply cap) in that location. *)
 | troa_tcb_empty_ctable:
     "\<lbrakk>ko = Some (TCB tcb); ko' = Some (TCB tcb');
       tcb' = tcb\<lparr>tcb_ctable := cap'\<rparr>;
@@ -1169,7 +1183,7 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko'
       tcb_state tcb = Restart;
       activate\<rbrakk> \<comment> \<open>Anyone can do this\<close>
      \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
-  (* FIXME: add a meaningful comment *)
+  (* Subjects can clear ASIDs that they control *)
 | troa_asidpool_clear:
     "\<lbrakk>ko = Some (ArchObj (ASIDPool pool)); ko' = Some (ArchObj (ASIDPool pool'));
       asid_pool_integrity subjects aag pool pool' \<rbrakk>
@@ -1559,15 +1573,12 @@ text {*
   \begin{itemize}
   \item owning the memory
   \item being explicitly allowed to write by the policy
-  \item The pointer is in globals ???
+  \item The pointer is in the "globals" set. This is an obsolete concept and will be removed
   \item The thread is receiving an IPC, and we write to its IPC buffer
         We indirectly use the constraints of tro (@{term integrity_obj})
         to decide when to allow that in order to avoid duplicating the definitions.
 
   Inductive for now, we should add something about user memory/transitions.
-
-  This relies on tro to tell us when a tcb state can change to avoid
-  duplicating the defs etc.
 *}
 
 inductive integrity_mem for aag subjects p ts ts' ipcbufs globals w w'
