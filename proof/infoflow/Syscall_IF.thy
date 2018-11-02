@@ -347,38 +347,115 @@ lemma perform_invocation_reads_respects_f_g:
           and authorised_for_globals_inv oper
           and K (authorised_invocation_extra aag oper))
     (perform_invocation blocking calling oper)"
-  apply (subst pi_cases)
-  apply (rule equiv_valid_guard_imp)
-   apply (wpc
-          | simp
-          | wp invoke_domain_reads_respects_f_g
-               reads_respects_f_g'[OF invoke_untyped_reads_respects_g]
-               invoke_untyped_silc_inv
-               reads_respects_f_g'[OF send_ipc_reads_respects_g]
-               send_ipc_silc_inv
-               reads_respects_f_g'[OF send_signal_reads_respects_g, where Q="\<top>"]
-               send_signal_silc_inv
-               do_reply_transfer_reads_respects_f_g
-               invoke_tcb_reads_respects_f_g
-               invoke_cnode_reads_respects_f_g
-               reads_respects_f_g'[OF invoke_irq_control_reads_respects_g]
-               invoke_irq_control_silc_inv
-               invoke_irq_handler_reads_respects_f_g
-               reads_respects_f_g'[OF arch_perform_invocation_reads_respects_g]
-               arch_perform_invocation_silc_inv
-         )+
-  apply (simp add: tcb_at_invs)
-  apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply clarsimp
-  by (intro allI impI conjI;
-      (simp add: authorised_invocation_def authorised_for_globals_inv_def
-                 authorised_invocation_extra_def reads_equiv_g_def requiv_cur_thread_eq
-                 is_cap_simps valid_arch_state_ko_at_arm valid_sched_def
-      | elim exE
-      | rule emptyable_cte_wp_atD
-      | clarsimp
-      | fastforce intro: read_reply_thread_read_thread_rev[OF reads_lrefl]
-                   simp: reads_equiv_f_g_def)+)
+proof (cases oper)
+case InvokeUntyped
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp reads_respects_f_g'[OF invoke_untyped_reads_respects_g]
+                 invoke_untyped_silc_inv
+           )+
+    by (simp add: authorised_invocation_def)
+next
+  case InvokeEndpoint
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp reads_respects_f_g'[OF send_ipc_reads_respects_g]
+                 send_ipc_silc_inv
+           )+
+    by (fastforce intro: read_reply_thread_read_thread_rev[OF reads_lrefl]
+                  simp: authorised_invocation_def reads_equiv_f_g_def)
+next
+  case InvokeNotification
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp reads_respects_f_g'[OF send_signal_reads_respects_g, where Q="\<top>"]
+           )+
+    by (fastforce simp: authorised_invocation_def valid_sched_def)
+next
+  case InvokeReply
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp do_reply_transfer_reads_respects_f_g
+           )+
+    by (fastforce intro: read_reply_thread_read_thread_rev[OF reads_lrefl] emptyable_cte_wp_atD
+                  simp: reads_equiv_f_g_def authorised_invocation_def is_cap_simps
+                  dest: emptyable_cte_wp_atD)
+next
+  case InvokeTCB
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp invoke_tcb_reads_respects_f_g
+           )+
+    by (fastforce simp: authorised_invocation_def authorised_invocation_extra_def)
+next
+  case InvokeDomain
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp invoke_domain_reads_respects_f_g
+           )+
+    by (simp add: authorised_invocation_def)
+next
+  case InvokeCNode
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp invoke_cnode_reads_respects_f_g
+           )+
+    by (fastforce simp: authorised_invocation_def)
+next
+  case InvokeIRQControl
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp reads_respects_f_g'[OF invoke_irq_control_reads_respects_g]
+                 invoke_irq_control_silc_inv
+           )+
+    by (simp add: invs_def valid_state_def
+                  authorised_invocation_def valid_arch_state_ko_at_arm)
+next
+  case InvokeIRQHandler
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp invoke_irq_handler_reads_respects_f_g
+           )+
+    by (fastforce simp: authorised_invocation_def)
+next
+  case InvokeArchObject
+  then show ?thesis
+    apply simp
+    apply (rule equiv_valid_guard_imp)
+     apply (wpc
+            | simp
+            | wp reads_respects_f_g'[OF arch_perform_invocation_reads_respects_g]
+                 arch_perform_invocation_silc_inv
+           )+
+    by (fastforce simp: authorised_invocation_def authorised_for_globals_inv_def)
+qed
 
 crunch valid_ko_at_arm[wp]: reply_from_kernel "valid_ko_at_arm" (simp: crunch_simps)
 
@@ -1101,19 +1178,19 @@ lemma perform_invocation_globals_equiv:
     authorised_for_globals_inv oper \<rbrace>
     perform_invocation blocking calling oper
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (subst pi_cases)
-  apply (rule hoare_pre)
-   apply (wp invoke_untyped_globals_equiv
-             send_ipc_globals_equiv
-             send_signal_globals_equiv
-             do_reply_transfer_globals_equiv
-             invoke_tcb_globals_equiv
-             invoke_cnode_globals_equiv
-             invoke_irq_control_globals_equiv
-             invoke_irq_handler_globals_equiv
-             arch_perform_invocation_globals_equiv
-         | wpc | simp)+
-  apply (auto simp: invs_imps authorised_for_globals_inv_def)
+  apply (cases oper;
+         (rule hoare_pre,
+          (wp invoke_untyped_globals_equiv
+              send_ipc_globals_equiv
+              send_signal_globals_equiv
+              do_reply_transfer_globals_equiv
+              invoke_tcb_globals_equiv
+              invoke_cnode_globals_equiv
+              invoke_irq_control_globals_equiv
+              invoke_irq_handler_globals_equiv
+              arch_perform_invocation_globals_equiv
+          | wpc | simp)+;
+          auto simp: invs_imps authorised_for_globals_inv_def))
   done
 
 lemma handle_invocation_globals_equiv:

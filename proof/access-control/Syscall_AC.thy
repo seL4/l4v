@@ -70,23 +70,6 @@ lemma ntfn_gives_obj_at:
   apply (clarsimp simp: st_tcb_def2 dest!: get_tcb_SomeD)
   done
 
-(* FIXME WTF ? *)
-lemma pi_cases:
-  "perform_invocation block call i =
-    (case i of
-     Invocations_A.InvokeUntyped i \<Rightarrow> perform_invocation block call (Invocations_A.InvokeUntyped i)
-    | Invocations_A.InvokeEndpoint ep badge canGrant canGrantReply
-      \<Rightarrow> perform_invocation block call (Invocations_A.InvokeEndpoint ep badge canGrant canGrantReply)
-    |  Invocations_A.InvokeNotification ep badge \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeNotification ep badge)
-    |  Invocations_A.InvokeTCB i \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeTCB i)
-    |  Invocations_A.InvokeDomain thread slot \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeDomain thread slot)
-    |  Invocations_A.InvokeReply thread slot grant \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeReply thread slot grant)
-    |  Invocations_A.InvokeCNode i \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeCNode i)
-    |  Invocations_A.InvokeIRQControl i \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeIRQControl i)
-    |  Invocations_A.InvokeIRQHandler i \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeIRQHandler i)
-    |  Invocations_A.InvokeArchObject i \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeArchObject i))"
-  by (cases i, simp_all)
-
 (* ((=) st) -- too strong, the thread state of the calling thread changes. *)
 lemma perform_invocation_respects:
   "\<lbrace>pas_refined aag and integrity aag X st
@@ -97,22 +80,36 @@ lemma perform_invocation_respects:
           \<rbrace>
     perform_invocation blocking calling oper
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (subst pi_cases)
-  apply (rule hoare_pre)
-  apply (wpc
-       | simp
-       | wp invoke_untyped_integrity send_ipc_integrity_autarch send_signal_respects
-            do_reply_transfer_respects invoke_tcb_respects invoke_cnode_respects
-            invoke_arch_respects invoke_irq_control_respects invoke_irq_handler_respects
-       | wp_once hoare_pre_cont)+
-  apply (clarsimp simp: authorised_invocation_def split: Invocations_A.invocation.splits)
-  \<comment> \<open>EP case\<close>
-  apply (fastforce simp: obj_at_def is_tcb split: if_split_asm)
-  \<comment> \<open>NTFN case\<close>
-  apply fastforce
-  \<comment> \<open>Reply case\<close>
-  apply (fastforce simp:is_reply_cap_to_def cur_tcb_def dest!:invs_cur)
-  done
+  supply [wp] = invoke_untyped_integrity send_ipc_integrity_autarch send_signal_respects
+                do_reply_transfer_respects invoke_tcb_respects invoke_cnode_respects
+                invoke_arch_respects invoke_irq_control_respects invoke_irq_handler_respects
+  supply [simp] = authorised_invocation_def
+  proof (cases oper)
+  case InvokeEndpoint
+    show ?thesis
+      unfolding InvokeEndpoint
+      apply (rule hoare_pre)
+      apply wpsimp
+      apply (fastforce simp: obj_at_def is_tcb split: if_split_asm)
+      done
+  next
+  case InvokeNotification
+    show ?thesis
+      unfolding InvokeNotification
+      apply (rule hoare_pre)
+      apply wpsimp
+      apply fastforce
+      done
+  next
+  case InvokeReply
+    show ?thesis
+      unfolding InvokeReply
+      apply (rule hoare_pre)
+      apply wpsimp
+      apply clarsimp
+      apply (fastforce simp: is_reply_cap_to_def cur_tcb_def dest!: invs_cur)
+      done
+  qed (simp, rule hoare_pre, wpsimp, fastforce)+
 
 declare AllowSend_def[simp] AllowRecv_def[simp]
 
