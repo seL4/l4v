@@ -141,6 +141,16 @@ abbreviation(input) aag_has_auth_to :: "'a PAS \<Rightarrow> auth \<Rightarrow> 
 where
   "aag_has_auth_to aag auth ptr \<equiv> (pasSubject aag, auth, pasObjectAbs aag ptr) \<in> pasPolicy aag"
 
+abbreviation aag_subjects_have_auth_to_label :: "'a set \<Rightarrow> 'a PAS \<Rightarrow> auth \<Rightarrow> 'a \<Rightarrow> bool"
+where
+ "aag_subjects_have_auth_to_label subs aag auth label
+    \<equiv> \<exists>s \<in> subs. (s, auth, label) \<in> pasPolicy aag"
+
+abbreviation aag_subjects_have_auth_to :: "'a set \<Rightarrow> 'a PAS \<Rightarrow> auth \<Rightarrow> obj_ref \<Rightarrow> bool"
+where
+ "aag_subjects_have_auth_to subs aag auth oref
+    \<equiv> aag_subjects_have_auth_to_label subs aag auth (pasObjectAbs aag oref)"
+
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -725,7 +735,7 @@ lemma is_transferable_null_filter[simp]:
 
 lemma sbta_null_filter:
   "state_bits_to_policy (null_filter cs) sr bar cd vr = state_bits_to_policy cs sr bar cd vr"
-  apply rule
+  apply (rule subset_antisym)
   apply clarsimp
   apply (erule state_bits_to_policy.induct,
         (fastforce intro: state_bits_to_policy.intros
@@ -937,16 +947,6 @@ where
   "send_is_call (Structures_A.BlockedOnSend _ payl) = sender_is_call payl"
 | "send_is_call _ = False"
 
-abbreviation aag_subjects_have_auth_to_label :: "'a set \<Rightarrow> 'a PAS \<Rightarrow> auth \<Rightarrow> 'a \<Rightarrow> bool"
-where
- "aag_subjects_have_auth_to_label subs aag auth label
-    \<equiv> \<exists>s \<in> subs. (s, auth, label) \<in> pasPolicy aag"
-
-abbreviation aag_subjects_have_auth_to :: "'a set \<Rightarrow> 'a PAS \<Rightarrow> auth \<Rightarrow> obj_ref \<Rightarrow> bool"
-where
- "aag_subjects_have_auth_to subs aag auth oref
-    \<equiv> aag_subjects_have_auth_to_label subs aag auth (pasObjectAbs aag oref)"
-
 
 
 definition tcb_bound_notification_reset_integrity
@@ -1018,7 +1018,7 @@ lemmas reply_cap_deletion_integrityI1 =
        reply_cap_deletion_integrity_def[THEN meta_eq_to_obj_eq,THEN iffD2,OF disjI1]
 lemmas reply_cap_deletion_integrityI2 =
        reply_cap_deletion_integrity_def[THEN meta_eq_to_obj_eq,THEN iffD2, OF disjI2, OF exI,
-                                        OF exI,rule_format]
+                                        OF exI, OF conjI [OF _ conjI], rule_format]
 lemmas reply_cap_deletion_integrity_intros =
        reply_cap_deletion_integrityI1 reply_cap_deletion_integrityI2
 
@@ -1127,7 +1127,9 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko'
 | troa_tcb_receive:
     "\<lbrakk>ko = Some (TCB tcb); ko' = Some (TCB tcb');
       tcb' = tcb \<lparr>tcb_state := new_st\<rparr>;
-      new_st = Running \<or> (((new_st = Inactive \<and> call_blocked ep (tcb_state tcb)) \<or> (new_st = BlockedOnReply \<and> (allowed_call_blocked ep (tcb_state tcb)))));
+      new_st = Running
+       \<or> (inactive new_st \<and> call_blocked ep (tcb_state tcb))
+       \<or> (awaiting_reply new_st \<and> allowed_call_blocked ep (tcb_state tcb));
       send_blocked_on ep (tcb_state tcb);
       aag_subjects_have_auth_to subjects aag Receive ep \<rbrakk>
      \<Longrightarrow> integrity_obj_atomic aag activate subjects l ko ko'"
@@ -1433,17 +1435,21 @@ lemmas disj_cong' = arg_cong2[where f="(\<or>)"]
 lemma troa_tro_alt[elim!]:
   "integrity_obj_atomic aag activate subjects l ko ko'
    \<Longrightarrow> integrity_obj_alt aag activate subjects l ko ko'"
-  (* slow, 10s, but I don't think it's possible to do better without exploding the size *)
-  by (erule integrity_obj_atomic.cases;
-       (* TCB handling tactic (filtered by tcb.equality) *)
-      ((erule(1) integrity_obj_alt.intros[OF tro_tagI],
-          (intro exI tcb.equality; solves\<open>simp\<close>));
-        fastforce simp: reply_cap_deletion_integrity_def
-                        tcb_bound_notification_reset_integrity_def direct_reply_def
-       (* non-TCB handling tactic *)
-     | fastforce intro:integrity_obj_alt.intros[OF tro_tagI]))
+  apply (erule integrity_obj_atomic.cases)
 
+  text \<open>Single out TCB cases for special handling. We manually simplify
+        the TCB updates in the tro_alt rules using @{thm tcb.equality}.\<close>
+  (* somewhat slow 10s *)
+  apply (find_goal \<open>match premises in "ko = Some (TCB _)" \<Rightarrow> succeed\<close>,
+         ((erule(1) integrity_obj_alt.intros[OF tro_tagI],
+                  (intro exI tcb.equality; solves \<open>simp\<close>));
+          fastforce simp: reply_cap_deletion_integrity_def
+                          tcb_bound_notification_reset_integrity_def
+                          direct_reply_def))+
 
+  text \<open>Remaining cases.\<close>
+  apply (fastforce intro: integrity_obj_alt.intros[OF tro_tagI])+
+  done
 
 
 
@@ -1477,17 +1483,13 @@ where
 
 subsubsection {* generic stuff : FIXME MOVE *}
 
-thm rtranclp_mono[THEN predicate2D]
-
-thm predicate2I
-
 lemma integrity_obj_activate:
   "integrity_obj aag False subjects l' ko ko' \<Longrightarrow>
    integrity_obj aag activate subjects l' ko ko'"
   unfolding integrity_obj_def
   apply (erule rtranclp_mono[THEN predicate2D, rotated])
   apply (rule predicate2I)
-  by (erule integrity_obj_atomic.cases ; (intro integrity_obj_atomic.intros ; assumption | simp))
+  by (erule integrity_obj_atomic.cases; (intro integrity_obj_atomic.intros; assumption | simp))
 
 abbreviation object_integrity
 where
@@ -1597,9 +1599,6 @@ lemmas integrity_obj_simps [simp] = tro_orefl[OF refl]
     trd_orefl[OF refl]
     tre_lrefl[OF singletonI]
     tre_orefl[OF refl]
-
-
-
 
 
 
@@ -1715,8 +1714,6 @@ lemmas integrity_cdt_direct = cca_direct[THEN  integrity_cdt_change_allowed]
 
 
 
-
-
 text{*
   m is the cdt of the initial state
   tcbsts are tcb_states_of_state of the initial state
@@ -1826,8 +1823,6 @@ where
 
 
 
-
-
 section {* Integrity transitivity *}
 
 subsection {* Object integrity transitivity *}
@@ -1855,7 +1850,7 @@ lemma reply_cap_deletion_integrity_trans[elim]:
   by (auto simp: reply_cap_deletion_integrity_def)
 
 
-lemma cnone_integrity_trans[elim]:
+lemma cnode_integrity_trans[elim]:
   "\<lbrakk> cnode_integrity subjects aag cont cont';
     cnode_integrity subjects aag cont' cont'' \<rbrakk>
     \<Longrightarrow> cnode_integrity subjects aag cont cont''"
@@ -2107,15 +2102,14 @@ lemma tsos_tro:
 lemma can_receive_ipc_backward:
   "\<lbrakk>integrity_obj_state aag activate subjects s s'; tcb_states_of_state s' p = Some a;
     can_receive_ipc a; pasObjectAbs aag p \<notin> subjects \<rbrakk>
-   \<Longrightarrow> case_option False can_receive_ipc (tcb_states_of_state s p)"
+   \<Longrightarrow> case tcb_states_of_state s p of None \<Rightarrow> False | Some x \<Rightarrow> can_receive_ipc x"
   apply (drule_tac x = p in spec)
-  apply (erule integrity_objE)
-  apply(clarsimp simp: tcb_states_of_state_def get_tcb_def call_blocked_def allowed_call_blocked_def
-              split: option.splits kernel_object.splits;
-      cases a;
-      fastforce simp: tcb_states_of_state_def get_tcb_def call_blocked_def allowed_call_blocked_def
-               split: option.splits kernel_object.splits)+
-done
+  apply (erule integrity_objE;
+         (fastforce simp: tcb_states_of_state_def get_tcb_def
+                         call_blocked_def allowed_call_blocked_def
+                   split: option.splits kernel_object.splits
+         | cases a \<comment> \<open>only split when needed\<close>)+)
+  done
 
 
 
@@ -2242,14 +2236,13 @@ proof -
   qed
   thus ?thesis using tro_trans[OF tro1 tro2] t1 t2 intm
     apply (clarsimp simp add: integrity_subjects_def simp del:  split_paired_All)
-    apply (drule(3) trcdtlist_trans) (* needs cdt_integrity before it gets destroyed *)
-    apply (drule(2) trcdt_trans)
-    apply (drule(1) trinterrupts_trans[simplified])
-    apply (drule(1) trasids_trans[simplified])
-    apply (drule(1) tre_trans[simplified])
-    apply (drule(1) trrqs_trans)
-    apply simp
-    done
+    apply (frule(2) trcdt_trans)
+    apply (frule(3) trcdtlist_trans)
+    apply (frule(1) trinterrupts_trans[simplified])
+    apply (frule(1) trasids_trans[simplified])
+    apply (frule(1) tre_trans[simplified])
+    apply (frule(1) trrqs_trans[simplified])
+    by blast
 qed
 
 lemma integrity_refl [simp]:
@@ -2889,29 +2882,29 @@ lemma integrity_mono:
    apply (erule integrity_obj_atomic.cases[OF _ integrity_obj_atomic.intros];
           auto simp: indirect_send_def direct_send_def direct_call_def direct_reply_def
                elim: asid_pool_integrity_mono reply_cap_deletion_integrity_mono
-                     cnode_integrity_mono)[1]
+                     cnode_integrity_mono)
   apply (rule conjI)
    apply clarsimp
    apply (drule_tac x=x in spec)+
-   apply (erule integrity_eobj.cases, auto intro: integrity_eobj.intros)[1]
+   apply (erule integrity_eobj.cases; auto intro: integrity_eobj.intros)
   apply (rule conjI)
    apply clarsimp
-   apply (drule_tac x=x in spec, erule integrity_mem.cases,
-           (blast intro: integrity_mem.intros trm_ipc')+)[1]
+   apply (drule_tac x=x in spec, erule integrity_mem.cases;
+          blast intro: integrity_mem.intros trm_ipc')
   apply (rule conjI)
    apply clarsimp
-   apply (drule_tac x=x in spec, erule integrity_device.cases,
-           (blast intro: integrity_device.intros)+)[1]
+   apply (drule_tac x=x in spec, erule integrity_device.cases;
+          blast intro: integrity_device.intros)
   apply (rule conjI)
   apply (intro allI)
   apply (drule_tac x=x in spec)+
-  apply (erule integrity_cdtE, auto elim: cdt_change_allowed_mono)[1]
+   apply (erule integrity_cdtE; auto elim: cdt_change_allowed_mono)
   apply (rule conjI)
-  apply (intro allI)
-  apply (drule_tac x=x in spec)+
-  apply (erule integrity_cdt_listE,
-         auto elim!: weaken_filter_eq' intro: integrity_cdt_list_intros
-              elim: cdt_change_allowed_mono)[1]
+   apply (intro allI)
+   apply (drule_tac x=x in spec)+
+   apply (erule integrity_cdt_listE;
+          auto elim!: weaken_filter_eq' intro: integrity_cdt_list_intros
+               elim: cdt_change_allowed_mono)
   apply (rule conjI)
    apply (fastforce simp: integrity_interrupts_def)
   apply (rule conjI)

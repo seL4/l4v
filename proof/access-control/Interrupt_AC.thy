@@ -11,7 +11,6 @@
 theory Interrupt_AC
 imports
   Finalise_AC
-  (* cap_delete_one *)
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -94,14 +93,14 @@ lemma invoke_irq_handler_pas_refined:
                      and cte_wp_at can_fast_finalise irq_slot
                      and not cte_wp_at is_transferable_cap slot
                      and K(is_subject aag (fst irq_slot))" in hoare_post_imp)
-     apply (force simp :cte_wp_at_caps_of_state)
-    apply (simp)
+     apply (force simp: cte_wp_at_caps_of_state)
+    apply simp
     apply (wp get_irq_slot_different)
 
-   apply (clarsimp simp:emptyable_irq_node cte_wp_at_caps_of_state )
-   apply (fastforce simp:interrupt_derived_def is_cap_simps cap_master_cap_def split:cap.splits)
+   apply (clarsimp simp: emptyable_irq_node cte_wp_at_caps_of_state)
+   apply (fastforce simp: interrupt_derived_def is_cap_simps cap_master_cap_def split: cap.splits)
   apply (wp delete_one_caps_of_state | simp add: get_irq_slot_def)+
-  apply (fastforce dest:pas_refined_is_subject_irqD)
+  apply (fastforce dest: pas_refined_is_subject_irqD)
   done
 
 
@@ -126,7 +125,7 @@ lemma invoke_irq_control_respects:
 lemma integrity_irq_masks [iff]:
   "integrity aag X st (s\<lparr>machine_state := machine_state s \<lparr>irq_masks := v \<rparr>\<rparr>) = integrity aag X st s"
   unfolding integrity_def
-  by (simp )
+  by simp
 
 lemma invoke_irq_handler_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and

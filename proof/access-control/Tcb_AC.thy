@@ -29,7 +29,7 @@ where
                       pas_cap_cur_auth aag cap \<and> is_subject aag (fst slot))
    | tcb_invocation.NotificationControl t ntfn \<Rightarrow> is_subject aag t \<and>
          case_option True (\<lambda>a. \<forall>auth \<in> {Receive, Reset}.
-                          (pasSubject aag, auth, pasObjectAbs aag a) \<in> pasPolicy aag) ntfn
+                                 (pasSubject aag, auth, pasObjectAbs aag a) \<in> pasPolicy aag) ntfn
    | tcb_invocation.ReadRegisters src susp n arch \<Rightarrow> is_subject aag src
    | tcb_invocation.WriteRegisters dest res values arch \<Rightarrow> is_subject aag dest
    | tcb_invocation.CopyRegisters dest src susp res frame int_regs arch \<Rightarrow>
@@ -60,7 +60,7 @@ lemma restart_integrity_autarch:
   apply (simp add: restart_def)
   apply (wp set_thread_state_integrity_autarch setup_reply_master_respects
             hoare_drop_imps
-               | simp add: if_apply_def2)+
+        | simp add: if_apply_def2)+
   done
 
 crunch integrity_autarch: option_update_thread "integrity aag X st"
@@ -73,6 +73,7 @@ lemma schematic_lift_tuple3_l:
 lemma schematic_lift_tuple3_r:
   "Q \<and> P (fst (a, b, c)) (fst (snd (a, b, c))) (snd (snd (a, b, c))) \<Longrightarrow> P a b c" by simp
 
+(* FIXME: MOVE *)
 lemma invoke_tcb_cases:
   "invoke_tcb ti = (case ti of
      tcb_invocation.Suspend t \<Rightarrow> invoke_tcb (tcb_invocation.Suspend t)
@@ -125,7 +126,7 @@ lemma aag_cap_auth_master_Reply:
 (* FIXME MOVE *)
 lemma cdt_NullCap:
   "valid_mdb s \<Longrightarrow> caps_of_state s src = Some NullCap \<Longrightarrow> cdt s src = None"
-  by (rule classical) (force dest:mdb_cte_atD simp:valid_mdb_def2)
+  by (rule ccontr) (force dest: mdb_cte_atD simp: valid_mdb_def2)
 
 
 lemma setup_reply_master_pas_refined:
@@ -134,7 +135,7 @@ lemma setup_reply_master_pas_refined:
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: setup_reply_master_def)
   apply (wp get_cap_wp set_cap_pas_refined set_original_wp)+
-  by (force dest:cdt_NullCap simp add: aag_cap_auth_master_Reply cte_wp_at_caps_of_state)
+  by (force dest: cdt_NullCap simp: aag_cap_auth_master_Reply cte_wp_at_caps_of_state)
 
 crunches possible_switch_to
   for tcb_domain_map_wellformed[wp]: " tcb_domain_map_wellformed aag"
@@ -278,7 +279,7 @@ lemma cap_insert_cdt_change_allowed[wp]:
   apply (intro allI notI)
   apply (drule(1) mdb_cte_atD[rotated])
   apply (simp add:cte_wp_at_caps_of_state)
-done
+  done
 
 
 lemma invoke_tcb_tc_respects_aag:
@@ -350,7 +351,7 @@ lemma invoke_tcb_tc_respects_aag:
                         clas_no_asid cli_no_irqs
                         emptyable_def
        | rule conjI | erule pas_refined_refl)+
-done
+  done
 
 lemma invoke_tcb_unbind_notification_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and simple_sched_action
@@ -480,13 +481,13 @@ lemma invoke_tcb_pas_refined:
    apply assumption
   apply (rule hoare_gen_asm)
   apply (cases ti, simp_all add: authorised_tcb_inv_def)
-      apply (wp ita_wps hoare_drop_imps mapM_x_wp'
-            | simp add: emptyable_def if_apply_def2 authorised_tcb_inv_def
-                        arch_get_sanitise_register_info_def
-            | rule ball_tcb_cap_casesI
-            | wpc
-            | (fastforce intro: notE[rotated,OF idle_no_ex_cap,simplified]
-                          simp: invs_valid_global_refs invs_valid_objs))+
+        apply (wp ita_wps hoare_drop_imps mapM_x_wp'
+              | simp add: emptyable_def if_apply_def2 authorised_tcb_inv_def
+                          arch_get_sanitise_register_info_def
+              | rule ball_tcb_cap_casesI
+              | wpc
+              | fastforce intro: notE[rotated,OF idle_no_ex_cap,simplified]
+                           simp: invs_valid_global_refs invs_valid_objs)+
   done
 
 subsection{* TCB / decode *}

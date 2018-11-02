@@ -407,10 +407,14 @@ lemma delete_objects_respects[wp]:
    by (fastforce simp: ptr_range_def intro!: detype_integrity)
 
 lemma storeWord_respects:
-  "\<lbrace>\<lambda>ms. integrity aag X st (s\<lparr>machine_state := ms\<rparr>) \<and> (\<forall>p' \<in> ptr_range p 2. aag_has_auth_to aag Write p')\<rbrace> storeWord p v \<lbrace>\<lambda>a b. integrity aag X st (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
+  "\<lbrace>\<lambda>ms. integrity aag X st (s\<lparr>machine_state := ms\<rparr>)
+    \<and> (\<forall>p' \<in> ptr_range p 2. aag_has_auth_to aag Write p')\<rbrace>
+     storeWord p v
+   \<lbrace>\<lambda>a b. integrity aag X st (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
   unfolding storeWord_def
   apply wp
-  apply (auto simp: integrity_def is_aligned_mask [symmetric] intro!: trm_write ptr_range_memI ptr_range_add_memI)
+  apply (auto simp: integrity_def is_aligned_mask [symmetric]
+            intro!: trm_write ptr_range_memI ptr_range_add_memI)
   done
 
 lemma dmo_clearMemory_respects':
@@ -502,15 +506,17 @@ lemma invoke_untyped_integrity:
              retype_region_ret_is_subject retype_region_ret_pd_aligned
              set_cap_integrity_autarch hoare_vcg_if_lift
              hoare_whenE_wp reset_untyped_cap_integrity
-     | clarsimp simp: split_paired_Ball
-     | erule in_set_zipE | blast)+
-  apply(clarsimp simp: is_aligned_neg_mask_eq
-                       ptr_range_def p_assoc_help bits_of_def
-                       cte_wp_at_caps_of_state)
+         | clarsimp simp: split_paired_Ball
+         | erule in_set_zipE
+         | blast)+
+  apply (clarsimp simp: is_aligned_neg_mask_eq
+                        ptr_range_def p_assoc_help bits_of_def
+                        cte_wp_at_caps_of_state)
   apply (frule(1) cap_cur_auth_caps_of_state, simp+)
   apply (clarsimp simp: aag_cap_auth_def pas_refined_all_auth_is_owns)
-  apply (intro conjI impI, (simp add: word_and_le2 field_simps
-    | erule ball_subset[where A="{a && c .. b}" for a b c])+)
+  apply (simp add: word_and_le2 field_simps
+        | erule ball_subset[where A="{a && c .. b}" for a b c]
+        | rule conjI impI)+
   done
 
 lemma clas_default_cap:
@@ -542,16 +548,16 @@ lemma create_cap_pas_refined:
     \<and> is_aligned (snd ref)  (obj_bits_api tp sz))\<rbrace>
      create_cap tp sz p dev ref
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply(simp add: create_cap_def split_def)
-  apply(wps | wp set_cdt_pas_refined set_cap_pas_refined set_original_wp | clarsimp)+
+  apply (simp add: create_cap_def split_def)
+  apply (wps | wp set_cdt_pas_refined set_cap_pas_refined set_original_wp | clarsimp)+
   apply (rule conjI)
    apply (cases "fst ref", clarsimp simp: pas_refined_refl)
   apply (cases "tp = Untyped")
    apply (simp add: cap_links_asid_slot_def pas_refined_refl cap_links_irq_def aag_cap_auth_def ptr_range_def obj_bits_api_def)
   apply (clarsimp simp add:  obj_refs_default_nut clas_default_cap pas_refined_refl cli_default_cap aag_cap_auth_def)
-  apply(drule obj_refs_default')
-  apply(case_tac tp, simp_all)
-  apply(auto intro: pas_refined_refl dest!: subsetD)
+  apply (drule obj_refs_default')
+  apply (case_tac tp, simp_all)
+  apply (auto intro: pas_refined_refl dest!: subsetD)
   done
 
 lemma pd_shifting_dual':
@@ -559,7 +565,7 @@ lemma pd_shifting_dual':
   pd + (vptr >> 20 << 2) && mask pd_bits = vptr >> 20 << 2"
   apply (subst (asm) pd_bits_def)
   apply (subst (asm) pageBits_def)
-  apply( simp add: pd_shifting_dual)
+  apply (simp add: pd_shifting_dual)
   done
 
 
@@ -694,7 +700,7 @@ lemma bas_eq[simp]: "thread_bound_ntfns s' = thread_bound_ntfns s"
 end
 
 lemma invs_mdb_cte':
-  " invs s \<Longrightarrow> mdb_cte_at (\<lambda>p. \<exists>c. caps_of_state s p = Some c \<and> NullCap \<noteq> c) (cdt s)"
+  "invs s \<Longrightarrow> mdb_cte_at (\<lambda>p. \<exists>c. caps_of_state s p = Some c \<and> NullCap \<noteq> c) (cdt s)"
   by (drule invs_mdb) (simp add: valid_mdb_def2)
 
 context retype_region_proofs'
@@ -705,9 +711,9 @@ interpretation Arch . (*FIXME; arch_split*)
 lemma domains_of_state: "domains_of_state s' \<subseteq> domains_of_state s"
   unfolding s'_def by simp
 
-
 (* FIXME MOVE next to cte_at_pres *)
-lemma cte_wp_at_pres: "cte_wp_at P p s \<Longrightarrow> cte_wp_at P p s'"
+lemma cte_wp_at_pres:
+  "cte_wp_at P p s \<Longrightarrow> cte_wp_at P p s'"
   unfolding cte_wp_at_cases s'_def ps_def
   apply (erule disjE)
    apply (clarsimp simp: well_formed_cnode_n_def orthr)+
@@ -716,26 +722,28 @@ lemma cte_wp_at_pres: "cte_wp_at P p s \<Longrightarrow> cte_wp_at P p s'"
 (* FIXME MOVE next to cte_at_pres *)
 lemma caps_of_state_pres:
   "caps_of_state s p = Some cap \<Longrightarrow> caps_of_state s' p = Some cap"
-    using cte_wp_at_pres by (simp add: F)
+  using cte_wp_at_pres by (simp add: F)
 
 lemma pas_refined: "invs s \<Longrightarrow> pas_refined aag s \<Longrightarrow> pas_refined aag s'"
   apply(erule pas_refined_state_objs_to_policy_subset)
      apply(simp add: state_objs_to_policy_def refs_eq vrefs_eq mdb_and_revokable)
      apply(rule subsetI, rename_tac x, case_tac x, simp)
      apply(erule state_bits_to_policy.cases)
-            apply (solves\<open>auto intro!: sbta_caps intro: caps_retype split: cap.split\<close>)
-           apply (solves\<open>auto intro!: sbta_untyped intro: caps_retype split: cap.split\<close>)
+            apply (solves \<open>auto intro!: sbta_caps intro: caps_retype split: cap.split\<close>)
+           apply (solves \<open>auto intro!: sbta_untyped intro: caps_retype split: cap.split\<close>)
           apply (blast intro: state_bits_to_policy.intros)
          apply (blast intro: state_bits_to_policy.intros)
-        apply (force intro!: sbta_cdt dest: caps_of_state_pres invs_mdb_cte'[THEN mdb_cte_atD[rotated]])
-       apply (force intro!: sbta_cdt_transferable dest: caps_of_state_pres invs_mdb_cte'[THEN mdb_cte_atD[rotated]])
+        apply (force intro!: sbta_cdt
+                       dest: caps_of_state_pres invs_mdb_cte'[THEN mdb_cte_atD[rotated]])
+       apply (force intro!: sbta_cdt_transferable
+                      dest: caps_of_state_pres invs_mdb_cte'[THEN mdb_cte_atD[rotated]])
       apply (simp add: vrefs_eq)
-      apply(blast intro: state_bits_to_policy.intros)
+      apply (blast intro: state_bits_to_policy.intros)
      apply (simp add: vrefs_eq)
-     apply(force elim!: state_asids_to_policy_aux.cases
-                intro: state_asids_to_policy_aux.intros caps_retype
-                split: cap.split
-                dest: sata_asid[OF caps_retype, rotated])
+     apply (force elim!: state_asids_to_policy_aux.cases
+                 intro: state_asids_to_policy_aux.intros caps_retype
+                 split: cap.split
+                 dest: sata_asid[OF caps_retype, rotated])
     apply clarsimp
     apply (erule state_irqs_to_policy_aux.cases)
     apply (solves\<open>auto intro!: sita_controlled intro: caps_retype split: cap.split\<close>)
@@ -814,7 +822,6 @@ lemma retype_region_ext_pas_refined:
   apply (force intro: domtcbs)
   done
 
-
 lemma retype_region_pas_refined:
   "\<lbrace>pas_refined aag and invs and pas_cur_domain aag and
     caps_overlap_reserved
@@ -829,11 +836,12 @@ lemma retype_region_pas_refined:
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
-   apply(rule use_retype_region_proofs_ext'[where P = "invs and pas_refined aag"])
-      apply(erule retype_region_proofs'.pas_refined[OF retype_region_proofs'.intro],blast,blast)
-     apply (wp retype_region_ext_pas_refined)
-     apply simp
-    apply auto
+   apply (rule use_retype_region_proofs_ext'[where P = "invs and pas_refined aag"])
+       apply clarsimp
+       apply (erule (2) retype_region_proofs'.pas_refined[OF retype_region_proofs'.intro])
+      apply (wp retype_region_ext_pas_refined)
+      apply simp
+     apply auto
   done
 
 (* FIXME MOVE *)
@@ -1252,10 +1260,11 @@ lemma retype_region_pas_refined':
     K ((type = CapTableObject \<longrightarrow> 0 < o_bits))\<rbrace>
      retype_region ptr num_objects o_bits type dev
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply(rule hoare_gen_asm)+
-  apply(rule hoare_weaken_pre)
-   apply(rule use_retype_region_proofs_ext'[where P="invs and pas_refined aag"])
-       apply(erule retype_region_proofs'.pas_refined[OF retype_region_proofs'.intro],blast,blast)
+  apply (rule hoare_gen_asm)+
+  apply (rule hoare_weaken_pre)
+   apply (rule use_retype_region_proofs_ext'[where P="invs and pas_refined aag"])
+       apply clarsimp
+       apply (erule (2) retype_region_proofs'.pas_refined[OF retype_region_proofs'.intro])
       apply (wp retype_region_ext_pas_refined)
       apply simp
      apply fastforce
@@ -1266,7 +1275,8 @@ lemma retype_region_pas_refined':
    apply (fastforce simp: cte_wp_at_caps_of_state)
   apply (cases slot)
   apply (auto intro: cte_wp_at_caps_no_overlapI descendants_range_caps_no_overlapI
-      cte_wp_at_pspace_no_overlapI simp: cte_wp_at_sym)
+                     cte_wp_at_pspace_no_overlapI
+               simp: cte_wp_at_sym)
   done
 
 
@@ -1316,7 +1326,8 @@ lemma pas_refined_work_units_complete[simp]:
 
 (*FIXME MOVE *)
 lemma set_cap_sets_direct:
-  "P cap \<Longrightarrow>\<lbrace>\<top>\<rbrace>
+  "P cap \<Longrightarrow>
+   \<lbrace>\<top>\<rbrace>
      set_cap cap slot
    \<lbrace>\<lambda>rv. cte_wp_at P slot\<rbrace>"
   apply (rule hoare_strengthen_post)
@@ -1325,16 +1336,11 @@ lemma set_cap_sets_direct:
   by blast
 
 (*FIXME MOVE *)
-lemma hoare_gen_asm0:
-  "(P \<Longrightarrow> \<lbrace>\<top>\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>K P\<rbrace> f \<lbrace>Q\<rbrace>"
-  by (fastforce simp add: valid_def)
-
-(*FIXME MOVE *)
 lemma set_cap_sets_wp:
   "\<lbrace>\<lambda>_. P cap\<rbrace>
      set_cap cap slot
    \<lbrace>\<lambda>rv. cte_wp_at P slot\<rbrace>"
-  by (rule hoare_gen_asm0[simplified]) (erule set_cap_sets_direct)
+  by (rule hoare_gen_asm2[simplified]) (erule set_cap_sets_direct)
 
 lemma reset_untyped_cap_pas_refined[wp]:
   "\<lbrace>pas_refined aag and cte_wp_at is_untyped_cap slot
@@ -1344,23 +1350,22 @@ lemma reset_untyped_cap_pas_refined[wp]:
   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: reset_untyped_cap_def)
-(*
-  apply (simp add:liftE_bindE)
-  apply (rule hoare_seq_ext[OF _ get_cap_sp]) *)
   apply (rule hoare_pre)
    apply (wps | wp set_cap_pas_refined_not_transferable | simp add: unless_def)+
-     apply (rule valid_validE) apply (rule_tac P="is_untyped_cap cap
-       \<and> pas_cap_cur_auth aag cap" in hoare_gen_asm)
-     apply (rule_tac Q= "\<lambda>_.cte_wp_at (\<lambda> c. \<not> is_transferable (Some c)) slot and pas_refined aag" in hoare_strengthen_post)
-     apply (rule validE_valid, rule mapME_x_inv_wp)
-     apply (rule hoare_pre)
-      apply (wps | wp preemption_point_inv' set_cap_pas_refined_not_transferable set_cap_sets_direct | simp)+
-      apply (clarsimp simp:cte_wp_at_caps_of_state)
-
-     apply (fastforce simp: is_cap_simps aag_cap_auth_UntypedCap_idx_dev bits_of_def)
+     apply (rule valid_validE)
+     apply (rule_tac P="is_untyped_cap cap \<and> pas_cap_cur_auth aag cap" in hoare_gen_asm)
+     apply (rule_tac Q= "\<lambda>_.cte_wp_at (\<lambda> c. \<not> is_transferable (Some c)) slot and pas_refined aag"
+                     in hoare_strengthen_post)
+      apply (rule validE_valid, rule mapME_x_inv_wp)
+      apply (rule hoare_pre)
+       apply (wps
+             | wp preemption_point_inv' set_cap_pas_refined_not_transferable set_cap_sets_direct
+             | simp)+
+      apply (fastforce simp: is_cap_simps aag_cap_auth_UntypedCap_idx_dev bits_of_def)
      apply blast
-    apply (wps | wp hoare_vcg_const_imp_lift get_cap_wp
-              delete_objects_pas_refined hoare_drop_imp | simp add: if_apply_def2)+
+    apply (wps
+          | wp hoare_vcg_const_imp_lift get_cap_wp delete_objects_pas_refined hoare_drop_imp
+          | simp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
   apply (auto elim: caps_pas_cap_cur_auth_UntypedCap_idx_dev)
   done
@@ -1377,8 +1382,7 @@ lemma retype_region_post_retype_invs_spec:
   apply (wp retype_region_post_retype_invs)
   apply (clarsimp simp del: split_paired_Ex)
   apply (frule valid_cap_range_untyped[OF invs_valid_objs],simp)
-  apply (intro conjI)
-    apply fastforce+
+  apply fastforce
   done
 
 lemma invoke_untyped_pas_refined:
@@ -1417,23 +1421,27 @@ lemma invoke_untyped_pas_refined:
       apply (rule hoare_pre, wp retype_region_pas_refined)
       apply (clarsimp simp: authorised_untyped_inv_def)
       apply (strengthen range_cover_le[mk_strg I E], simp)
-      apply (intro conjI exI; (erule cte_wp_at_weakenE)?,
-        clarsimp simp: field_simps word_and_le2)
+      apply (intro conjI exI;
+             (erule cte_wp_at_weakenE)?,
+             clarsimp simp: field_simps word_and_le2)
 
      apply (rule hoare_pre, wp set_cap_pas_refined)
      apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
-     apply (cases ui, clarsimp simp: authorised_untyped_inv_def
-         caps_pas_cap_cur_auth_UntypedCap_idx_dev)
+     apply (cases ui,
+            clarsimp simp: authorised_untyped_inv_def caps_pas_cap_cur_auth_UntypedCap_idx_dev)
     apply wp
-   apply (clarsimp)
+   apply clarsimp
   apply (cases ui, clarsimp)
   (* FIXME CLEAN UP ? *)
   apply (intro conjI)
     prefer 2
-    apply (simp add:cte_wp_at_caps_of_state del: untyped_range.simps)
-    apply (rule cte_map_not_null_outside'[where p="(a, b)" and p'="(a, b)" for a b,
-                simplified fst_conv, OF caps_of_state_cteD], assumption)
-        apply(force simp: descendants_range_def cte_wp_at_caps_of_state authorised_untyped_inv_def)+
+    apply (simp add: cte_wp_at_caps_of_state del: untyped_range.simps)
+    apply (rule cte_map_not_null_outside'
+                  [where p="(a, b)" and p'="(a, b)" for a b,
+                   simplified fst_conv, OF caps_of_state_cteD],
+           assumption)
+        apply (force simp: descendants_range_def
+                           cte_wp_at_caps_of_state authorised_untyped_inv_def)+
   done
 
 subsection{* decode *}
