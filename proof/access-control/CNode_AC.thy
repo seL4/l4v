@@ -552,9 +552,6 @@ lemma reply_cap_no_grand_parent:
   done
 
 
-
-
-
 lemma set_cap_integrity_deletion_aux:
   "\<lbrace>integrity aag X st and valid_mdb and valid_objs and pas_refined aag and is_transferable_in slot and
      cdt_change_allowed' aag slot and K(\<not> is_subject aag (fst slot))\<rbrace>
@@ -685,79 +682,222 @@ lemma update_cdt_list_pas_refined[wp]:
    "\<lbrace> pas_refined aag \<rbrace> update_cdt_list f \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   by (wpsimp simp:pas_refined_def state_objs_to_policy_def | wps)+
 
-lemma set_original_set_cap_comm:
-  "(set_original slot' val >>= (\<lambda>_. set_cap cap slot)) =
-   (set_cap cap slot >>= (\<lambda>_. set_original slot' val))"
-  by (rule ext) (simp add: bind_def split_def set_cap_def set_original_def
-                           get_object_def set_object_def get_def put_def
-                           simpler_gets_def simpler_modify_def
-                           assert_def return_def fail_def
-                    split: Structures_A.kernel_object.splits)
+text \<open>
+  For the @{const empty_slot} proof, we need to rearrange the operations
+  so that the CDT is updated after emptying the slot. Here we prove the
+  rearrangement is valid.
+\<close>
 
+(* Flesh out the monad_commute framework.
+ * FIXME: MOVE *)
+lemma monad_commuteI2:
+  "monad_commute P (f :: ('s, unit) nondet_monad) g \<Longrightarrow> (\<And>s. P s) \<Longrightarrow>
+   (do f; g od) = (do g; f od)"
+  by (monad_eq simp: monad_commute_def)
+
+lemmas monad_commute_split2 = monad_commute_split[THEN commute_commute]
+
+lemma modify_modify_commute:
+  "monad_commute (\<lambda>s. f (g s) = g (f s)) (modify f) (modify g)"
+  by (monad_eq simp: monad_commute_def)
+
+lemma modify_gets_commute:
+  "monad_commute (\<lambda>s. g (f s) = g s) (modify f) (gets g)"
+  by (monad_eq simp: monad_commute_def)
+
+lemma set_eq_iff_imp:
+  "(A = B) = ((\<forall>x. x \<in> A \<longrightarrow> x \<in> B) \<and> (\<forall>x. x \<in> B \<longrightarrow> x \<in> A))"
+  by blast
+
+lemma modify_get_commute:
+  "(\<And>s0. \<lbrace>(=) s0\<rbrace> g \<lbrace>\<lambda>r t. s0 = t\<rbrace>) \<Longrightarrow>
+   monad_commute (\<lambda>s. fst ` fst (g (f s)) = fst ` fst (g s)
+                      \<and> snd (g (f s)) = snd (g s)) (modify f) g"
+  (* FIXME: proof cleanup *)
+  apply (monad_eq simp: monad_commute_def valid_def
+                        set_eq_iff_imp[where A="fst ` fst _"] image_iff)
+  apply atomize
+  apply (intro conjI; clarsimp)
+   apply (rename_tac s0 r t)
+   apply (clarsimp split: prod.splits)
+   apply (rule_tac x=s0 in exI)
+   apply (rule conjI)
+    apply (drule_tac x=s0 in spec)
+    apply fastforce
+   apply fastforce
+
+  apply (rename_tac s0 r t)
+  apply (clarsimp split: prod.splits)
+  apply (subgoal_tac "t = s0")
+   apply (drule_tac x="f t" in spec)
+   apply fastforce
+  apply fastforce
+  done
+
+(* We use this version for the automation: the precond that falls out
+ * will look like "\<forall>x. (\<exists>r. r \<in> fst (gets ?foo (?upd s)) \<and> x = fst r) = \<dots>"
+ * which the monad_eq method can easily reduce with in_monad rules. *)
+lemmas modify_get_commute' =
+  modify_get_commute[simplified set_eq_iff image_iff Ball_def Bex_def]
+
+lemma put_as_modify:
+  "put t = modify (\<lambda>_. t)"
+  by monad_eq
+
+lemma put_commuteI:
+  "monad_commute P f (modify (\<lambda>_. t)) \<Longrightarrow> monad_commute P f (put t)"
+  by (simp add: put_as_modify)
+
+lemma get_commuteI:
+  "monad_commute P f (gets (\<lambda>s. s)) \<Longrightarrow> monad_commute P f get"
+  by (simp add: gets_def)
+
+lemma gets_gets_commute:
+  "monad_commute \<top> (gets f) (gets g)"
+  by (monad_eq simp: monad_commute_def)
+
+lemma gets_get_commute:
+  "(\<And>s0. \<lbrace>(=) s0\<rbrace> g \<lbrace>\<lambda>r t. s0 = t\<rbrace>) \<Longrightarrow>
+   monad_commute \<top> (gets f) g"
+  apply (monad_eq simp: monad_commute_def valid_def)
+  by fastforce
+
+lemma assert_commute':
+  "empty_fail f \<Longrightarrow> monad_commute \<top> (assert G) f"
+  apply (monad_eq simp: monad_commute_def empty_fail_def)
+  by fastforce
+
+named_theorems monad_commute_wp
+
+lemmas[monad_commute_wp] =
+  monad_commute_split
+  monad_commute_split2
+  modify_modify_commute
+  gets_gets_commute
+  put_commuteI put_commuteI[THEN commute_commute]
+  get_commuteI get_commuteI[THEN commute_commute]
+  return_commute return_commute[THEN commute_commute]
+  assert_commute' assert_commute'[THEN commute_commute]
+
+(* Sort-of VCG for monad_commute goals *)
+lemma wpc_helper_monad_commute:
+  "monad_commute P f g \<Longrightarrow> wpc_helper (P, P') (Q, Q') (monad_commute P f g)"
+  by (clarsimp simp: wpc_helper_def)
+wpc_setup "\<lambda>m. monad_commute P f m" wpc_helper_monad_commute
+
+method monad_commute_wpc =
+  (match conclusion in "monad_commute _ _ _" \<Rightarrow> succeed),
+  (wpc | (rule commute_commute, wpc))
+
+method monad_commute_step methods more_solver =
+    determ \<open>wp monad_commute_wp\<close>
+  | (* Conditional rules for fully schematic programs fragments:
+     * make sure to solve the first condition before continuing *)
+    (rule modify_get_commute' modify_get_commute'[THEN commute_commute],
+     solves \<open>(changed \<open>wp | more_solver\<close>)+\<close>)
+  | more_solver
+
+method monad_commute methods more_solver =
+    ((monad_commute_wpc; rule monad_commute_guard_imp),
+     (monad_commute more_solver, more_solver)+)
+  | (monad_commute_step more_solver,
+     ((changed \<open>monad_commute more_solver\<close>)+)?)[1]
+
+method monad_commute_default =
+   monad_commute \<open>solves \<open>monad_eq\<close>
+                 | solves \<open>(wpc, (changed \<open>wp | fastforce\<close>)+)\<close>
+                 | solves \<open>(changed \<open>wp | fastforce\<close>)+\<close>
+                 | fastforce\<close>
+
+(* Now the commute steps *)
+lemma set_original_set_cap_comm:
+  "(do set_original slot' val; set_cap cap slot od) =
+   (do set_cap cap slot; set_original slot' val od)"
+  apply (clarsimp simp: set_original_def set_cap_def get_object_def set_object_def
+                  simp del: K_bind_def
+                  split: prod.splits)
+  apply (simp only: gets_modify_def modify_def[symmetric])
+  apply (rule monad_commuteI2)
+   apply monad_commute_default
+  apply (monad_eq; fastforce)
+  done
 
 lemma set_cdt_set_cap_comm:
-  "(set_cdt c >>= (\<lambda>_. set_cap cap slot)) =
-   (set_cap cap slot >>= (\<lambda>_. set_cdt c))"
-  by (rule ext) (simp add: bind_def split_def set_cap_def set_cdt_def
-                           get_object_def set_object_def get_def put_def
-                           simpler_gets_def simpler_modify_def
-                           assert_def return_def fail_def
-                    split: Structures_A.kernel_object.splits)
-
+  "(do set_cdt c; set_cap cap slot od) =
+   (do set_cap cap slot; set_cdt c od)"
+  apply (clarsimp simp: set_cdt_def set_cap_def get_object_def set_object_def
+                  simp del: K_bind_def
+                  split: prod.splits)
+  apply (simp only: modify_def[symmetric] gets_modify_def)
+  apply (rule monad_commuteI2)
+   apply monad_commute_default
+  apply (monad_eq; fastforce)
+  done
 
 lemma set_cdt_set_original_comm:
-  "(set_cdt c >>= (\<lambda>_. set_original slot val)) =
-   (set_original slot val >>= (\<lambda>_. set_cdt c))"
-  by (rule ext) (simp add: bind_def split_def set_original_def set_cdt_def
-                           get_object_def set_object_def get_def put_def
-                           simpler_gets_def simpler_modify_def
-                           assert_def return_def fail_def)
+  "(do set_cdt c; set_original slot val od) =
+   (do set_original slot val; set_cdt c od)"
+  apply (clarsimp simp: set_cdt_def[folded modify_def]
+                        set_original_def[folded gets_modify_def]
+                        get_object_def set_object_def
+                  simp del: K_bind_def)
+  apply (simp only: modify_def[symmetric])
+  apply (rule monad_commuteI2)
+   apply monad_commute_default
+  apply monad_eq
+  done
 
 lemma set_cdt_empty_slot_ext_comm:
-  " (do set_cdt c;
-        empty_slot_ext slot slot_p od) =
-    ((do empty_slot_ext slot slot_p;
-        set_cdt c od) :: (det_ext state \<Rightarrow> _))"
-by simp (simp add: set_cdt_def empty_slot_ext_def update_cdt_list_def set_cdt_list_def
-                   exec_gets exec_get bind_assoc exec_put put_def bind_def get_def simpler_gets_def
-             cong: if_cong option.case_cong)
-
+  "(do set_cdt c; empty_slot_ext slot slot_p od) =
+   ((do empty_slot_ext slot slot_p; set_cdt c od) :: (det_ext state \<Rightarrow> _))"
+  supply K_bind_def[simp del]
+  apply (clarsimp simp: set_cdt_def empty_slot_ext_def
+                        update_cdt_list_def set_cdt_list_def)
+  apply (simp only: modify_def[symmetric])
+  apply (rule monad_commuteI2)
+   apply monad_commute_default
+  apply monad_eq
+  done
 
 lemma set_cap_empty_slot_ext_comm:
-  " (do set_cap cap slot;
-        empty_slot_ext slot' slot_p od) =
-    ((do empty_slot_ext slot' slot_p;
-        set_cap cap slot od) :: (det_ext state \<Rightarrow> _))"
-by (rule ext;
-    simp;
-    cases slot;
-    cases slot_p;
-    clarsimp simp: set_cap_def  empty_slot_ext_def get_object_def set_object_def assert_def
-                   update_cdt_list_def set_cdt_list_def exec_gets exec_get bind_assoc
-                   exec_put return_def fail_def put_def bind_def get_def simpler_gets_def;
-    (intro conjI; clarsimp)? ;
-    rename_tac y, case_tac y;
-    simp add: return_def fail_def)
+  "(do set_cap cap slot; empty_slot_ext slot' slot_p od) =
+   (do empty_slot_ext slot' slot_p; set_cap cap slot od :: (det_ext state \<Rightarrow> _))"
+  apply (clarsimp simp: set_cap_def get_object_def set_object_def
+                        empty_slot_ext_def update_cdt_list_def set_cdt_list_def
+                  simp del: K_bind_def
+                  split: prod.splits)
+  apply (simp only: modify_def[symmetric] gets_modify_def)
+  apply (rule monad_commuteI2)
+   apply monad_commute_default
+  apply (monad_eq split: option.splits; fastforce)
+  done
 
-
-
+(* FIXME: MOVE *)
 lemmas bind_eqI' = NonDetMonadVCG.bind_eqI[OF _ refl]
-lemma empty_slot_commute_ugly:
-  "do  set_cdt c;
-        empty_slot_ext slot slot_p;
-        set_original slot False;
-        set_cap NullCap slot od =
-   ((do  set_cap NullCap slot;
-        empty_slot_ext slot slot_p;
-        set_original slot False;
-        set_cdt c od):: (det_ext state \<Rightarrow> _))"
 
-apply (simp add: set_cdt_empty_slot_ext_comm [THEN bind_eqI',simplified bind_assoc K_bind_def])
-apply (simp add: set_cdt_set_original_comm [THEN bind_eqI',simplified bind_assoc K_bind_def])
-apply (simp add: set_cdt_set_cap_comm)
-apply (simp add: set_original_set_cap_comm [THEN bind_eqI',simplified bind_assoc K_bind_def])
-apply (simp add: set_cap_empty_slot_ext_comm [THEN bind_eqI',simplified bind_assoc K_bind_def])
-done
+lemma K_bind_assoc:
+  "(do (do f; g od); h od) = (do f; g; h od)"
+  by (simp add: bind_assoc)
+lemmas K_bind_eqI = arg_cong2[where f="\<lambda>f g. do f; g od"]
+lemmas K_bind_eqI' = K_bind_eqI[OF _ refl]
+
+(* Putting it all together *)
+lemma empty_slot_shuffle:
+  "(do set_cdt c;
+       empty_slot_ext slot slot_p;
+       set_original slot False;
+       set_cap NullCap slot od)
+    =
+   (do set_cap NullCap slot;
+       empty_slot_ext slot slot_p;
+       set_original slot False;
+       set_cdt c od :: (det_ext state \<Rightarrow> _))"
+  by (simp only:
+            set_cdt_empty_slot_ext_comm[THEN K_bind_eqI', simplified K_bind_assoc]
+            set_cdt_set_original_comm[THEN K_bind_eqI', simplified K_bind_assoc]
+            set_cdt_set_cap_comm
+            set_original_set_cap_comm[THEN K_bind_eqI', simplified K_bind_assoc]
+            set_cap_empty_slot_ext_comm[THEN K_bind_eqI', simplified K_bind_assoc])
 
 lemma empty_slot_integrity_transferable[wp_transferable]:
   "\<lbrace>integrity aag X st and valid_list and valid_objs and valid_mdb and pas_refined aag and
@@ -767,7 +907,7 @@ lemma empty_slot_integrity_transferable[wp_transferable]:
   apply integrity_trans_start
   apply (rule hoare_pre)
    apply (simp add: empty_slot_def)
-   apply (simp add: empty_slot_commute_ugly[simplified])
+   apply (simp add: empty_slot_shuffle[simplified])
    apply (simp add: set_cdt_def)
    apply (wp set_original_wp)
        apply (rename_tac cdtv x)
@@ -783,7 +923,6 @@ lemma empty_slot_integrity_transferable[wp_transferable]:
          apply wp+
       apply (wp set_cap_integrity_deletion gets_wp get_cap_wp)+
   by (fastforce intro: cdt_change_allowed_all_children)
-
 
 
 
