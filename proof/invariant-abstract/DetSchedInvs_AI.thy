@@ -460,8 +460,8 @@ abbreviation valid_blocked_except_set :: "obj_ref set \<Rightarrow> 'z state \<R
 abbreviation valid_blocked_except :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
 "valid_blocked_except t s \<equiv> valid_blocked_except_set_2 {t} (ready_queues s) (release_queue s) (kheap s) (scheduler_action s) (cur_thread s)"
 
+lemmas valid_blocked_except_set_def = valid_blocked_except_set_2_def
 lemmas valid_blocked_except_def = valid_blocked_except_set_2_def
-
 
 definition in_cur_domain_2 where
   "in_cur_domain_2 thread cdom ekh \<equiv> etcb_at' (\<lambda>t. etcb_domain t = cdom) thread ekh"
