@@ -856,8 +856,6 @@ lemma next_slot_eq2:
   apply(simp split: option.splits)
   done
 
-abbreviation "einvs \<equiv> (invs and valid_list and valid_sched)"
-
 lemma set_cap_not_quite_corres':
   assumes cr:
   "pspace_relations (ekheap (a)) (kheap s) (ksPSpace s')"

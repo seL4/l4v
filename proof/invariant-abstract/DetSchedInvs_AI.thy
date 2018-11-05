@@ -208,6 +208,10 @@ abbreviation valid_sched :: "det_ext state \<Rightarrow> bool" where
 lemmas valid_sched_def = valid_sched_2_def
 
 
+abbreviation einvs :: "det_ext state \<Rightarrow> bool" where
+  "einvs \<equiv> invs and valid_list and valid_sched"
+
+
 definition not_cur_thread_2 :: "obj_ref \<Rightarrow> scheduler_action \<Rightarrow> obj_ref \<Rightarrow> bool" where
   "not_cur_thread_2 thread sa ct \<equiv> sa = resume_cur_thread \<longrightarrow> thread \<noteq> ct"
 

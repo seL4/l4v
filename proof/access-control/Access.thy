@@ -1678,8 +1678,6 @@ lemma integrity_mono:
   apply blast
   done
 
-abbreviation "einvs \<equiv> invs and valid_list and valid_sched"
-
 end
 
 end
