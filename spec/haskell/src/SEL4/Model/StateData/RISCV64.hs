@@ -22,6 +22,7 @@ data RISCVVSpaceRegionUse
     = RISCVVSpaceUserRegion
     | RISCVVSpaceInvalidRegion
     | RISCVVSpaceKernelWindow
+    | RISCVVSpaceKernelELFWindow
     | RISCVVSpaceDeviceWindow
 
 data KernelState = RISCVKernelState {
