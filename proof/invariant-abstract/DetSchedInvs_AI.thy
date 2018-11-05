@@ -448,16 +448,20 @@ abbreviation valid_blocked :: "'z state \<Rightarrow> bool" where
 
 lemmas valid_blocked_def = valid_blocked_2_def
 
-definition valid_blocked_except_2 where
-   "valid_blocked_except_2 thread queues rlq kh sa ct \<equiv>
-    (\<forall>t st. t \<noteq> thread \<longrightarrow> not_queued_2 queues t \<longrightarrow> not_in_release_q_2 rlq t \<longrightarrow>
+definition valid_blocked_except_set_2 where
+   "valid_blocked_except_set_2 S queues rlq kh sa ct \<equiv>
+    (\<forall>t st. t \<notin> S \<longrightarrow> not_queued_2 queues t \<longrightarrow> not_in_release_q_2 rlq t \<longrightarrow>
            st_tcb_at_kh ((=) st) t kh \<longrightarrow>
             t \<noteq> ct \<longrightarrow> sa \<noteq> switch_thread t \<longrightarrow> (\<not> active st \<or> \<not> active_sc_tcb_at_kh t kh))"
 
-abbreviation valid_blocked_except :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
- "valid_blocked_except t s \<equiv> valid_blocked_except_2 t (ready_queues s) (release_queue s) (kheap s) (scheduler_action s) (cur_thread s)"
+abbreviation valid_blocked_except_set :: "obj_ref set \<Rightarrow> 'z state \<Rightarrow> bool" where
+ "valid_blocked_except_set S s \<equiv> valid_blocked_except_set_2 S (ready_queues s) (release_queue s) (kheap s) (scheduler_action s) (cur_thread s)"
 
-lemmas valid_blocked_except_def = valid_blocked_except_2_def
+abbreviation valid_blocked_except :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+"valid_blocked_except t s \<equiv> valid_blocked_except_set_2 {t} (ready_queues s) (release_queue s) (kheap s) (scheduler_action s) (cur_thread s)"
+
+lemmas valid_blocked_except_def = valid_blocked_except_set_2_def
+
 
 definition in_cur_domain_2 where
   "in_cur_domain_2 thread cdom ekh \<equiv> etcb_at' (\<lambda>t. etcb_domain t = cdom) thread ekh"
