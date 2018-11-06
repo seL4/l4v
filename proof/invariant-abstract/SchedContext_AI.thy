@@ -480,10 +480,10 @@ lemma cur_tcb_domain_time_update[simp]:
   "cur_tcb (domain_time_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
 
-
 lemma commit_domain_time_valid_replies[wp]:
   "commit_domain_time \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp simp: commit_domain_time_def)
+
 (* FIXME: move *)
 lemma valid_sched_context_domain_time_update[simp]:
   "valid_sched_context p (domain_time_update f s) = valid_sched_context p s"
@@ -495,7 +495,7 @@ lemma refill_split_check_valid_replies[wp]:
 
 lemma commit_time_valid_replies[wp]:
   "commit_time \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: commit_time_def)
+  by (wpsimp simp: commit_time_def wp: hoare_drop_imps)
 
 lemma update_sched_context_valid_objs_same_eq:
   "\<lbrace>\<lambda>s. valid_objs s \<and> (\<forall>sc. valid_sched_context sc s = valid_sched_context (f sc) s)\<rbrace>
@@ -887,13 +887,9 @@ lemma tcb_sched_action_valid_replies[wp]:
   "tcb_sched_action act tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp simp: tcb_sched_action_def)
 
-lemma set_scheduler_action_valid_replies[wp]:
-  "set_scheduler_action action \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: set_scheduler_action_def)
-
 lemma reschedule_required_valid_replies[wp]:
   "reschedule_required \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: reschedule_required_def)
+  by (wpsimp simp: reschedule_required_def wp: hoare_drop_imps)
 
 lemma possible_switch_to_valid_replies[wp]:
   "possible_switch_to tcb_ptr \<lbrace> valid_replies_pred P \<rbrace>"
@@ -913,7 +909,7 @@ lemma postpone_valid_replies[wp]:
 
 lemma sched_context_resume_valid_replies[wp]:
   "sched_context_resume sc_ptr \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: sched_context_resume_def)
+  by (wpsimp simp: sched_context_resume_def wp: hoare_drop_imps)
 
 lemma sched_context_bind_tcb_invs[wp]:
   "\<lbrace>invs

@@ -1483,6 +1483,7 @@ lemma si_invs'_helper_no_reply:
       apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                    wp: sts_only_idle valid_irq_node_typ sts_valid_replies_simple
                        valid_ioports_lift)
+     apply (wpsimp wp: assert_inv)+
    apply (apply_conjunct \<open>erule st_tcb_weakenE, fastforce\<close>)
    apply (subgoal_tac "ex_nonz_cap_to dest s")
     apply (clarsimp simp: idle_no_ex_cap)
@@ -1493,7 +1494,7 @@ lemma si_invs'_helper_no_reply:
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                    wp: sts_only_idle valid_irq_node_typ sts_valid_replies_simple
                        sched_context_donate_sym_refs_BlockedOnReceive
-                       valid_ioports_lift)
+                       valid_ioports_lift hoare_drop_imps)
     apply (wpsimp simp: get_tcb_obj_ref_def thread_get_def)
    apply (clarsimp, intro conjI)
      apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb)
@@ -1530,7 +1531,7 @@ lemma si_invs'_helper_no_reply:
    apply (fastforce simp: st_tcb_at_def live_def elim!: if_live_then_nonz_capD)
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                   wp: valid_irq_node_typ sts_only_idle sts_valid_replies_simple
-                      valid_ioports_lift)
+                      valid_ioports_lift hoare_drop_imps)
   apply (apply_conjunct \<open>erule st_tcb_weakenE, fastforce\<close>)
   apply (subgoal_tac "ex_nonz_cap_to dest s")
    apply (clarsimp simp: idle_no_ex_cap)
