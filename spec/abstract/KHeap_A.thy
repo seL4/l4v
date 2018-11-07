@@ -107,14 +107,6 @@ where
 section "simple kernel objects"
 (* to be used for abstraction unifying kernel objects other than TCB and CNode *)
 
-definition
-  partial_inv :: "('a \<Rightarrow> 'b) \<Rightarrow> ('b \<Rightarrow> 'a option)"
-where
-  "partial_inv f x = (if \<exists>!y. f y = x then Some (THE y. f y = x) else None)"
-
-lemma proj_inj: "inj f \<Longrightarrow> (partial_inv f ko = Some v) = (f v = ko)"
-  by (auto simp: partial_inv_def the_equality injD)
-
 lemma inj_Endpoint: "inj Endpoint" by (auto intro: injI)
 lemma inj_Notification: "inj Notification"  by (auto intro: injI)
 

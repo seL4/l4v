@@ -2490,9 +2490,7 @@ next
     by (simp only: pv) (erule not_prefix_cases, auto intro: r1 r2 ih)
 qed
 
-lemma rsubst:
-  "\<lbrakk> P s; s = t \<rbrakk> \<Longrightarrow> P t"
-  by simp
+lemmas rsubst = back_subst[where a=s and b=t for s t]
 
 lemma rsubst2:
   "\<lbrakk>P s x; s = t; x = y\<rbrakk> \<Longrightarrow> P t y"
@@ -2528,5 +2526,31 @@ lemma bool_to_bool_disj:
 lemma bool_to_boolE:
   "P b \<Longrightarrow> (b \<Longrightarrow> c) \<Longrightarrow> (c \<Longrightarrow> b) \<Longrightarrow> P c"
   by (auto intro: bool_to_bool_cases[of P])
+
+text \<open>Invert a function that might not be surjective.\<close>
+definition
+  partial_inv :: "('a \<Rightarrow> 'b) \<Rightarrow> ('b \<Rightarrow> 'a option)"
+where
+  "partial_inv f x = (if \<exists>!y. f y = x then Some (THE y. f y = x) else None)"
+
+lemma proj_inj: "inj f \<Longrightarrow> (partial_inv f ko = Some v) = (f v = ko)"
+  by (auto simp: partial_inv_def the_equality injD)
+
+text \<open>Obtain the unique thing satisfying a predicate, otherwise @{term None}\<close>
+abbreviation the_pred_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a option"
+  where
+  "the_pred_option P \<equiv> partial_inv P True"
+
+lemma the_pred_option_def:
+  "the_pred_option P \<equiv> if \<exists>!x. P x then Some (THE x. P x) else None"
+  by (rule eq_reflection, simp add: partial_inv_def)
+
+lemma the_pred_option_Some:
+  "\<lbrakk> \<exists>!x. P x; P x \<rbrakk> \<Longrightarrow> the_pred_option P = Some x"
+  by (simp add: the_pred_option_def the1_equality)
+
+lemma the_pred_option_None:
+  "\<nexists>!x. P x \<Longrightarrow> the_pred_option P = None"
+  by (simp add: the_pred_option_def)
 
 end
