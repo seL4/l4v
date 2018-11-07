@@ -934,21 +934,24 @@ lemma perform_asid_control_invocation_valid_sched:
 crunch valid_ready_qs[wp]: init_arch_objects "valid_ready_qs :: det_ext state \<Rightarrow> _"
   (wp: valid_ready_qs_lift crunch_wps)
 
+(* FIXME remove duplication *)
 lemma set_pt_active_sc_tcb_at[wp]:
-  "\<lbrace>active_sc_tcb_at t\<rbrace> set_pt ptr val \<lbrace>\<lambda>_. active_sc_tcb_at t\<rbrace>"
+  "\<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace> set_pt ptr val \<lbrace>\<lambda>_ s. P (active_sc_tcb_at t s)\<rbrace>"
   apply (simp add: set_pt_def set_object_def)
   apply (wpsimp wp: get_object_wp)
   apply (clarsimp simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def test_sc_refill_max_def)
-  apply (case_tac "t=ptr"; clarsimp simp: )
+  apply (case_tac "t=ptr"; clarsimp simp: elim!: rsubst[where P=P])
+  apply (rule iffI; clarsimp)
   apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
   done
 
 lemma set_asid_pool_active_sc_tcb_at[wp]:
-  "\<lbrace>active_sc_tcb_at t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. active_sc_tcb_at t\<rbrace>"
+  "\<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_ s. P (active_sc_tcb_at t s)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wpsimp wp: get_object_wp)
   apply (clarsimp simp: active_sc_tcb_at_def pred_tcb_at_def obj_at_def test_sc_refill_max_def)
-  apply (case_tac "t=ptr"; clarsimp)
+  apply (case_tac "t=ptr"; clarsimp simp: elim!: rsubst[where P=P])
+  apply (rule iffI; clarsimp)
   apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
   done
 
@@ -956,38 +959,42 @@ crunch active_sc_tcb_at[wp]: init_arch_objects "active_sc_tcb_at t"
   (wp: crunch_wps ignore: do_machine_op)
 
 lemma set_pt_budget_ready[wp]:
-  "\<lbrace>budget_ready t\<rbrace> set_pt ptr val \<lbrace>\<lambda>_. budget_ready t\<rbrace>"
+  "\<lbrace>\<lambda>s. P (budget_ready t s)\<rbrace> set_pt ptr val \<lbrace>\<lambda>_ s. P (budget_ready t s)\<rbrace>"
   apply (simp add: set_pt_def set_object_def)
   apply (wpsimp wp: get_object_wp)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_ready_def)
-  apply (case_tac "t=ptr"; clarsimp simp: )
+  apply (case_tac "t=ptr"; clarsimp simp: elim!: rsubst[where P=P])
+  apply (rule iffI; clarsimp)
   apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
   done
 
 lemma set_asid_pool_budget_ready[wp]:
-  "\<lbrace>budget_ready t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. budget_ready t\<rbrace>"
+  "\<lbrace>\<lambda>s. P (budget_ready t s)\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_ s. P (budget_ready t s)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wpsimp wp: get_object_wp)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_ready_def)
-  apply (case_tac "t=ptr"; clarsimp)
+  apply (case_tac "t=ptr"; clarsimp simp: elim!: rsubst[where P=P])
+  apply (rule iffI; clarsimp)
   apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
   done
 
 lemma set_pt_budget_sufficient[wp]:
-  "\<lbrace>budget_sufficient t\<rbrace> set_pt ptr val \<lbrace>\<lambda>_. budget_sufficient t\<rbrace>"
+  "\<lbrace>\<lambda>s. P (budget_sufficient t s)\<rbrace> set_pt ptr val \<lbrace>\<lambda>_ s. P (budget_sufficient t s)\<rbrace>"
   apply (simp add: set_pt_def set_object_def)
   apply (wpsimp wp: get_object_wp)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_sufficient_def)
-  apply (case_tac "t=ptr"; clarsimp simp: )
+  apply (case_tac "t=ptr"; clarsimp simp: elim!: rsubst[where P=P])
+  apply (rule iffI; clarsimp)
   apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
   done
 
 lemma set_asid_pool_budget_sufficient[wp]:
-  "\<lbrace>budget_sufficient t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. budget_sufficient t\<rbrace>"
+  "\<lbrace>\<lambda>s. P (budget_sufficient t s)\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_ s. P (budget_sufficient t s)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wpsimp wp: get_object_wp)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_refill_sufficient_def)
-  apply (case_tac "t=ptr"; clarsimp)
+  apply (case_tac "t=ptr"; clarsimp simp: elim!: rsubst[where P=P])
+  apply (rule iffI; clarsimp)
   apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
   done
 

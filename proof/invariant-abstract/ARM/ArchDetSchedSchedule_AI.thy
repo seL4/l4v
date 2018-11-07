@@ -240,8 +240,9 @@ crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete "valid_sched::det_state \<Rightarrow> _"
   (ignore: set_object as_user wp: crunch_wps subset_refl simp: if_fun_split)
 
-crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
-  arch_tcb_set_ipc_buffer valid_sched
+crunches arch_tcb_set_ipc_buffer
+for valid_sched [wp, DetSchedSchedule_AI_assms]: valid_sched
+and simple_sched_action [wp, DetSchedSchedule_AI_assms]: simple_sched_action
   (ignore: set_object as_user wp: valid_sched_lift crunch_wps subset_refl simp: if_fun_split)
 
 lemma activate_thread_valid_sched [DetSchedSchedule_AI_assms]:
