@@ -192,6 +192,24 @@ definition default_arch_object :: "aobject_type \<Rightarrow> bool \<Rightarrow>
 
 type_synonym riscv_vspace_region_uses = "vspace_ref \<Rightarrow> riscvvspace_region_use"
 
+text \<open>
+  The number of levels over all virtual memory tables.
+  For RISC-V, we have three page table levels plus the ASID pool level.
+
+  The top level (with the highest number) contains ASID pools, the next levels contain the
+  top-level page tables, and level 1 page tables. The bottom-level page tables (level 0)
+  contains only InvalidPTEs or PagePTEs.
+\<close>
+type_synonym vm_level = 4
+
+definition asid_pool_level :: vm_level
+  where
+  "asid_pool_level = maxBound"
+
+definition max_pt_level :: vm_level
+  where
+  "max_pt_level = asid_pool_level - 1"
+
 end
 
 qualify RISCV64_A (in Arch)
@@ -200,8 +218,15 @@ section \<open>Architecture-specific state\<close>
 
 record arch_state =
   riscv_asid_table :: "asid_high_index \<rightharpoonup> obj_ref"
-  riscv_global_pt :: obj_ref
+  riscv_global_pts :: "RISCV64_A.vm_level \<Rightarrow> obj_ref set"
   riscv_kernel_vspace :: "obj_ref \<Rightarrow> RISCV64_H.riscvvspace_region_use"
+
+text \<open>
+  The @{const riscv_global_pts} generalise the concept of global page tables.
+  The invariants will constrain the set of tables for @{term max_pt_level} to a
+  singleton, and for @{term asid_pool_level} to empty. All other levels may contain
+  multiple or no tables, depending on how kernel initialisation sets up the kernel window.
+\<close>
 
 end_qualify
 

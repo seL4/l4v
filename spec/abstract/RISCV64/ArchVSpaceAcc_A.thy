@@ -98,24 +98,6 @@ definition store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state
 
 section "Basic Operations"
 
-text \<open>
-  The number of levels over all virtual memory tables.
-  For RISC-V, we have three page table levels plus the ASID pool level.
-
-  The top level (with the highest number) contains ASID pools, the next levels contain the
-  top-level page tables, and level 1 page tables. The bottom-level page tables (level 0)
-  contains only InvalidPTEs or PagePTEs.
-\<close>
-type_synonym vm_level = 4
-
-definition asid_pool_level :: vm_level
-  where
-  "asid_pool_level = maxBound"
-
-definition max_pt_level :: vm_level
-  where
-  "max_pt_level = asid_pool_level - 1"
-
 definition pt_bits_left :: "vm_level \<Rightarrow> nat"
   where
   "pt_bits_left level = ptTranslationBits * size level + pageBits"
@@ -123,6 +105,11 @@ definition pt_bits_left :: "vm_level \<Rightarrow> nat"
 definition pt_index :: "vm_level \<Rightarrow> vspace_ref \<Rightarrow> machine_word"
   where
   "pt_index level vptr \<equiv> (vptr >> pt_bits_left level) && mask ptTranslationBits"
+
+text \<open>Interface function to extract the single top-level global page table:\<close>
+definition riscv_global_pt :: "arch_state \<Rightarrow> obj_ref"
+  where
+  "riscv_global_pt s = the_elem (riscv_global_pts s max_pt_level)"
 
 text \<open>
   The kernel window is mapped into every virtual address space from the @{term pptr_base}

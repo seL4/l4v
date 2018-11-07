@@ -33,7 +33,7 @@ definition init_arch_state :: arch_state
   where
   "init_arch_state \<equiv> \<lparr>
      riscv_asid_table = Map.empty,
-     riscv_global_pt = riscv_global_pt_ptr,
+     riscv_global_pts = (\<lambda>level. if level = max_pt_level then {riscv_global_pt_ptr} else {}),
      riscv_kernel_vspace = \<lambda>_. RISCVVSpaceKernelWindow  (* FIXME RISCV *)
    \<rparr>"
 
