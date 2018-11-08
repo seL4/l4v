@@ -236,6 +236,7 @@ lemma restart_corres:
   apply (clarsimp simp add: invs'_def valid_state'_def sch_act_wf_weak)
   done
 
+
 lemma setupReplyMaster_sch_act_simple[wp]:
   "\<lbrace>sch_act_simple\<rbrace> setupReplyMaster thread \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
   apply (simp add: setupReplyMaster_def sch_act_simple_def)
@@ -1521,7 +1522,7 @@ proof -
 qed
 
 lemma isReplyCapD:
-  "isReplyCap cap \<Longrightarrow> \<exists>ptr master. cap = capability.ReplyCap ptr master"
+  "isReplyCap cap \<Longrightarrow> \<exists>ptr master grant. cap = capability.ReplyCap ptr master grant"
   by (simp add: isCap_simps)
 
 lemmas threadSet_ipcbuffer_trivial

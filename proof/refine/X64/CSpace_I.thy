@@ -23,12 +23,12 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma capUntypedPtr_simps [simp]:
   "capUntypedPtr (ThreadCap r) = r"
   "capUntypedPtr (NotificationCap r badge a b) = r"
-  "capUntypedPtr (EndpointCap r badge a b c) = r"
+  "capUntypedPtr (EndpointCap r badge a b c d) = r"
   "capUntypedPtr (Zombie r bits n) = r"
   "capUntypedPtr (ArchObjectCap x) = Arch.capUntypedPtr x"
   "capUntypedPtr (UntypedCap d r n f) = r"
   "capUntypedPtr (CNodeCap r n g n2) = r"
-  "capUntypedPtr (ReplyCap r m) = r"
+  "capUntypedPtr (ReplyCap r m a) = r"
   "Arch.capUntypedPtr (X64_H.ASIDPoolCap r asid) = r"
   "Arch.capUntypedPtr (X64_H.PageCap r rghts mt sz d mapdata) = r"
   "Arch.capUntypedPtr (X64_H.PageTableCap r mapdata2) = r"
@@ -620,15 +620,16 @@ lemma isPhysicalCap[simp]:
   by (simp add: isPhysicalCap_def X64_H.isPhysicalCap_def
          split: capability.split arch_capability.split)
 
+(* FIXME instead of a definition and then a simp rule in the simp set, we should use fun *)
 definition
   capMasterCap :: "capability \<Rightarrow> capability"
 where
  "capMasterCap cap \<equiv> case cap of
-   EndpointCap ref bdg s r g \<Rightarrow> EndpointCap ref 0 True True True
+   EndpointCap ref bdg s r g gr \<Rightarrow> EndpointCap ref 0 True True True True
  | NotificationCap ref bdg s r \<Rightarrow> NotificationCap ref 0 True True
  | CNodeCap ref bits gd gs \<Rightarrow> CNodeCap ref bits 0 0
  | ThreadCap ref \<Rightarrow> ThreadCap ref
- | ReplyCap ref master \<Rightarrow> ReplyCap ref True
+ | ReplyCap ref master g \<Rightarrow> ReplyCap ref True True
  | UntypedCap d ref n f \<Rightarrow> UntypedCap d ref n 0
  | ArchObjectCap acap \<Rightarrow> ArchObjectCap (case acap of
       PageCap ref rghts mt sz d mapdata \<Rightarrow>
@@ -647,7 +648,7 @@ where
  | _ \<Rightarrow> cap"
 
 lemma capMasterCap_simps[simp]:
-  "capMasterCap (EndpointCap ref bdg s r g) = EndpointCap ref 0 True True True"
+  "capMasterCap (EndpointCap ref bdg s r g gr) = EndpointCap ref 0 True True True True"
   "capMasterCap (NotificationCap ref bdg s r) = NotificationCap ref 0 True True"
   "capMasterCap (CNodeCap ref bits gd gs) = CNodeCap ref bits 0 0"
   "capMasterCap (ThreadCap ref) = ThreadCap ref"
@@ -674,13 +675,13 @@ lemma capMasterCap_simps[simp]:
   "capMasterCap (ArchObjectCap IOPortControlCap) = ArchObjectCap IOPortControlCap"
   "capMasterCap (UntypedCap d word n f) = UntypedCap d word n 0"
   "capMasterCap IRQControlCap = IRQControlCap"
-  "capMasterCap (ReplyCap word m) = ReplyCap word True"
+  "capMasterCap (ReplyCap word m g) = ReplyCap word True True"
   by (simp_all add: capMasterCap_def)
 
 lemma capMasterCap_eqDs1:
-  "capMasterCap cap = EndpointCap ref bdg s r g
-     \<Longrightarrow> bdg = 0 \<and> s \<and> r \<and> g
-          \<and> (\<exists>bdg s r g. cap = EndpointCap ref bdg s r g)"
+  "capMasterCap cap = EndpointCap ref bdg s r g gr
+     \<Longrightarrow> bdg = 0 \<and> s \<and> r \<and> g \<and> gr
+          \<and> (\<exists>bdg s r g gr. cap = EndpointCap ref bdg s r g gr)"
   "capMasterCap cap = NotificationCap ref bdg s r
      \<Longrightarrow> bdg = 0 \<and> s \<and> r
           \<and> (\<exists>bdg s r. cap = NotificationCap ref bdg s r)"
@@ -700,8 +701,8 @@ lemma capMasterCap_eqDs1:
      \<Longrightarrow> cap = Zombie ref tp n"
   "capMasterCap cap = UntypedCap d ref bits 0
      \<Longrightarrow> \<exists>f. cap = UntypedCap d ref bits f"
-  "capMasterCap cap = ReplyCap ref master
-     \<Longrightarrow> \<exists>master. cap = ReplyCap ref master"
+  "capMasterCap cap = ReplyCap ref master g
+     \<Longrightarrow> master \<and> g \<and> (\<exists>master g. cap = ReplyCap ref master g)"
   "capMasterCap cap = ArchObjectCap (PageCap ref rghts mt sz d mapdata)
      \<Longrightarrow> rghts = VMReadWrite \<and> mapdata = None \<and> mt = VMNoMap
           \<and> (\<exists>rghts mapdata mt. cap = ArchObjectCap (PageCap ref rghts mt sz d mapdata))"
@@ -734,18 +735,18 @@ where
                  else None"
 
 lemma capBadge_simps[simp]:
- "capBadge (UntypedCap d p n f)                 = None"
+ "capBadge (UntypedCap d p n f)               = None"
  "capBadge (NullCap)                          = None"
  "capBadge (DomainCap)                        = None"
- "capBadge (EndpointCap ref badge s r w)      = Some badge"
- "capBadge (NotificationCap ref badge s r)   = Some badge"
+ "capBadge (EndpointCap ref badge s r g gr)   = Some badge"
+ "capBadge (NotificationCap ref badge s r)    = Some badge"
  "capBadge (CNodeCap ref bits gd gs)          = None"
  "capBadge (ThreadCap ref)                    = None"
  "capBadge (Zombie ref b n)                   = None"
  "capBadge (ArchObjectCap cap)                = None"
  "capBadge (IRQControlCap)                    = None"
  "capBadge (IRQHandlerCap irq)                = None"
- "capBadge (ReplyCap tcb master)              = None"
+ "capBadge (ReplyCap tcb master g)            = None"
   by (simp add: capBadge_def isCap_defs)+
 
 lemma capClass_Master:
@@ -912,14 +913,14 @@ lemma isMDBParent_Null [simp]:
 lemma capUntypedSize_simps [simp]:
   "capUntypedSize (ThreadCap r) = 1 << objBits (undefined::tcb)"
   "capUntypedSize (NotificationCap r badge a b) = 1 << objBits (undefined::Structures_H.notification)"
-  "capUntypedSize (EndpointCap r badge a b c) = 1 << objBits (undefined::endpoint)"
+  "capUntypedSize (EndpointCap r badge a b c d) = 1 << objBits (undefined::endpoint)"
   "capUntypedSize (Zombie r zs n) = 1 << (zBits zs)"
   "capUntypedSize NullCap = 0"
   "capUntypedSize DomainCap = 1"
   "capUntypedSize (ArchObjectCap x) = Arch.capUntypedSize x"
   "capUntypedSize (UntypedCap d r n f) = 1 << n"
   "capUntypedSize (CNodeCap r n g n2) = 1 << (objBits (undefined::cte) + n)"
-  "capUntypedSize (ReplyCap r m) = 1 << objBits (undefined :: tcb)"
+  "capUntypedSize (ReplyCap r m a) = 1 << objBits (undefined :: tcb)"
   "capUntypedSize IRQControlCap = 1"
   "capUntypedSize (IRQHandlerCap irq) = 1"
   by (auto simp add: capUntypedSize_def isCap_simps objBits_simps'

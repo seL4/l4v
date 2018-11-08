@@ -166,14 +166,14 @@ where
   "max_ipc_words \<equiv> capTransferDataSize + msgMaxLength + msgMaxExtraCaps + 2"
 
 definition
-  tcb_st_refs_of' :: "Structures_H.thread_state   \<Rightarrow> (machine_word \<times> reftype) set"
+  tcb_st_refs_of' :: "Structures_H.thread_state \<Rightarrow> (machine_word \<times> reftype) set"
 where
   "tcb_st_refs_of' z \<equiv> case z of (Running)                  => {}
   | (Inactive)                 => {}
   | (Restart)                  => {}
-  | (BlockedOnReceive x)     => {(x, TCBBlockedRecv)}
-  | (BlockedOnSend x a b c)    => {(x, TCBBlockedSend)}
-  | (BlockedOnNotification x)    => {(x, TCBSignal)}
+  | (BlockedOnReceive x a)     => {(x, TCBBlockedRecv)}
+  | (BlockedOnSend x a b c d)  => {(x, TCBBlockedSend)}
+  | (BlockedOnNotification x)  => {(x, TCBSignal)}
   | (BlockedOnReply)           => {}
   | (IdleThreadState)          => {}"
 
@@ -246,15 +246,15 @@ where
   "zobj_refs' NullCap                        = {}"
 | "zobj_refs' DomainCap                      = {}"
 | "zobj_refs' (UntypedCap d r n f)           = {}"
-| "zobj_refs' (EndpointCap r badge x y z)    = {r}"
-| "zobj_refs' (NotificationCap r badge x y) = {r}"
+| "zobj_refs' (EndpointCap r badge x y z t)  = {r}"
+| "zobj_refs' (NotificationCap r badge x y)  = {r}"
 | "zobj_refs' (CNodeCap r b g gsz)           = {}"
 | "zobj_refs' (ThreadCap r)                  = {r}"
 | "zobj_refs' (Zombie r b n)                 = {}"
 | "zobj_refs' (ArchObjectCap ac)             = {}"
 | "zobj_refs' (IRQControlCap)                = {}"
 | "zobj_refs' (IRQHandlerCap irq)            = {}"
-| "zobj_refs' (ReplyCap tcb m)               = {}"
+| "zobj_refs' (ReplyCap tcb m x)             = {}"
 
 definition
   ex_nonz_cap_to' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -275,8 +275,8 @@ where
   "cte_refs' (UntypedCap d p n f) x               = {}"
 | "cte_refs' (NullCap) x                          = {}"
 | "cte_refs' (DomainCap) x                        = {}"
-| "cte_refs' (EndpointCap ref badge s r g) x      = {}"
-| "cte_refs' (NotificationCap ref badge s r) x   = {}"
+| "cte_refs' (EndpointCap ref badge s r g gr) x   = {}"
+| "cte_refs' (NotificationCap ref badge s r) x    = {}"
 | "cte_refs' (CNodeCap ref bits g gs) x           =
      (\<lambda>x. ref + (x * 2^cteSizeBits)) ` {0 .. 2 ^ bits - 1}"
 | "cte_refs' (ThreadCap ref) x                    =
@@ -286,7 +286,7 @@ where
 | "cte_refs' (ArchObjectCap cap) x                = {}"
 | "cte_refs' (IRQControlCap) x                    = {}"
 | "cte_refs' (IRQHandlerCap irq) x                = {x + (ucast irq) * 32}"
-| "cte_refs' (ReplyCap tcb m) x                   = {}"
+| "cte_refs' (ReplyCap tcb m g) x                 = {}"
 
 
 abbreviation
@@ -339,14 +339,14 @@ where
   "capBits NullCap = 0"
 | "capBits DomainCap = 0"
 | "capBits (UntypedCap d r b f) = b"
-| "capBits (EndpointCap r b x y z) = objBits (undefined::endpoint)"
+| "capBits (EndpointCap r b x y z t) = objBits (undefined::endpoint)"
 | "capBits (NotificationCap r b x y) = objBits (undefined::Structures_H.notification)"
 | "capBits (CNodeCap r b g gs) = objBits (undefined::cte) + b"
 | "capBits (ThreadCap r) = objBits (undefined::tcb)"
 | "capBits (Zombie r z n) = zBits z"
 | "capBits (IRQControlCap) = 0"
 | "capBits (IRQHandlerCap irq) = 0"
-| "capBits (ReplyCap tcb m) = objBits (undefined :: tcb)"
+| "capBits (ReplyCap tcb m x) = objBits (undefined :: tcb)"
 | "capBits (ArchObjectCap x) = acapBits x"
 
 definition
@@ -422,14 +422,14 @@ where valid_cap'_def:
       valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> minUntypedSizeBits \<le> n \<and> n \<le> maxUntypedSizeBits
         \<and> f \<le> 2^n \<and> is_aligned (of_nat f :: machine_word) minUntypedSizeBits
         \<and> canonical_address r \<and> r \<in> kernel_mappings
-  | Structures_H.EndpointCap r badge x y z \<Rightarrow> ep_at' r s
+  | Structures_H.EndpointCap r badge x y z t \<Rightarrow> ep_at' r s
   | Structures_H.NotificationCap r badge x y \<Rightarrow> ntfn_at' r s
   | Structures_H.CNodeCap r bits guard guard_sz \<Rightarrow>
     bits \<noteq> 0 \<and> bits + guard_sz \<le> word_bits \<and>
     guard && mask guard_sz = guard \<and>
     (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask bits)) s)
   | Structures_H.ThreadCap r \<Rightarrow> tcb_at' r s
-  | Structures_H.ReplyCap r m \<Rightarrow> tcb_at' r s
+  | Structures_H.ReplyCap r m x \<Rightarrow> tcb_at' r s
   | Structures_H.IRQControlCap \<Rightarrow> True
   | Structures_H.IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
   | Structures_H.Zombie r b n \<Rightarrow> n \<le> zombieCTEs b \<and> zBits b < word_bits
@@ -474,8 +474,8 @@ definition
   valid_tcb_state' :: "Structures_H.thread_state \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_tcb_state' ts s \<equiv> case ts of
-    Structures_H.BlockedOnReceive ref \<Rightarrow> ep_at' ref s
-  | Structures_H.BlockedOnSend ref b d c \<Rightarrow> ep_at' ref s
+    Structures_H.BlockedOnReceive ref a \<Rightarrow> ep_at' ref s
+  | Structures_H.BlockedOnSend ref a b d c \<Rightarrow> ep_at' ref s
   | Structures_H.BlockedOnNotification ref \<Rightarrow> ntfn_at' ref s
   | _ \<Rightarrow> True"
 
@@ -714,14 +714,14 @@ where
   "capClass (NullCap)                          = NullClass"
 | "capClass (DomainCap)                        = DomainClass"
 | "capClass (UntypedCap d p n f)               = PhysicalClass"
-| "capClass (EndpointCap ref badge s r g)      = PhysicalClass"
-| "capClass (NotificationCap ref badge s r)   = PhysicalClass"
+| "capClass (EndpointCap ref badge s r g gr)   = PhysicalClass"
+| "capClass (NotificationCap ref badge s r)    = PhysicalClass"
 | "capClass (CNodeCap ref bits g gs)           = PhysicalClass"
 | "capClass (ThreadCap ref)                    = PhysicalClass"
 | "capClass (Zombie r b n)                     = PhysicalClass"
 | "capClass (IRQControlCap)                    = IRQClass"
 | "capClass (IRQHandlerCap irq)                = IRQClass"
-| "capClass (ReplyCap tcb m)                   = ReplyClass tcb"
+| "capClass (ReplyCap tcb m g)                 = ReplyClass tcb"
 | "capClass (ArchObjectCap cap)                = acapClass cap"
 
 definition
@@ -909,10 +909,10 @@ where
 | "runnable' (Structures_H.Inactive)                = False"
 | "runnable' (Structures_H.Restart)                 = True"
 | "runnable' (Structures_H.IdleThreadState)         = False"
-| "runnable' (Structures_H.BlockedOnReceive a)    = False"
+| "runnable' (Structures_H.BlockedOnReceive a b)    = False"
 | "runnable' (Structures_H.BlockedOnReply)          = False"
-| "runnable' (Structures_H.BlockedOnSend a b c d)   = False"
-| "runnable' (Structures_H.BlockedOnNotification x)   = False"
+| "runnable' (Structures_H.BlockedOnSend a b c d e) = False"
+| "runnable' (Structures_H.BlockedOnNotification x) = False"
 
 definition
   inQ :: "domain \<Rightarrow> priority \<Rightarrow> tcb \<Rightarrow> bool"
@@ -1373,11 +1373,11 @@ lemma capability_splits[split]:
      | capability.NullCap \<Rightarrow> f2
      | capability.NotificationCap x xa xb xc \<Rightarrow> f3 x xa xb xc
      | capability.IRQHandlerCap x \<Rightarrow> f4 x
-     | capability.EndpointCap x xa xb xc xd \<Rightarrow> f5 x xa xb xc xd
+     | capability.EndpointCap x xa xb xc xd xe \<Rightarrow> f5 x xa xb xc xd xe
      | capability.DomainCap \<Rightarrow> f6
      | capability.Zombie x xa xb \<Rightarrow> f7 x xa xb
      | capability.ArchObjectCap x \<Rightarrow> f8 x
-     | capability.ReplyCap x xa \<Rightarrow> f9 x xa
+     | capability.ReplyCap x xa xb \<Rightarrow> f9 x xa xb
      | capability.UntypedCap dev x xa xb \<Rightarrow> f10 dev x xa xb
      | capability.CNodeCap x xa xb xc \<Rightarrow> f11 x xa xb xc
      | capability.IRQControlCap \<Rightarrow> f12) =
@@ -1389,19 +1389,19 @@ lemma capability_splits[split]:
        P (f3 x31 x32 x33 x34)) \<and>
    (\<forall>x4. capability = capability.IRQHandlerCap x4 \<longrightarrow>
          P (f4 x4)) \<and>
-   (\<forall>x51 x52 x53 x54 x55.
+   (\<forall>x51 x52 x53 x54 x55 x56.
        capability =
-       capability.EndpointCap x51 x52 x53 x54 x55 \<longrightarrow>
-       P (f5 x51 x52 x53 x54 x55)) \<and>
+       capability.EndpointCap x51 x52 x53 x54 x55 x56 \<longrightarrow>
+       P (f5 x51 x52 x53 x54 x55 x56)) \<and>
    (capability = capability.DomainCap \<longrightarrow> P f6) \<and>
    (\<forall>x71 x72 x73.
        capability = capability.Zombie x71 x72 x73 \<longrightarrow>
        P (f7 x71 x72 x73)) \<and>
    (\<forall>x8. capability = capability.ArchObjectCap x8 \<longrightarrow>
          P (f8 x8)) \<and>
-   (\<forall>x91 x92.
-       capability = capability.ReplyCap x91 x92 \<longrightarrow>
-       P (f9 x91 x92)) \<and>
+   (\<forall>x91 x92 x93.
+       capability = capability.ReplyCap x91 x92 x93 \<longrightarrow>
+       P (f9 x91 x92 x93)) \<and>
    (\<forall>dev x101 x102 x103.
        capability = capability.UntypedCap dev x101 x102 x103 \<longrightarrow>
        P (f10 dev x101 x102 x103)) \<and>
@@ -1413,11 +1413,11 @@ lemma capability_splits[split]:
      | capability.NullCap \<Rightarrow> f2
      | capability.NotificationCap x xa xb xc \<Rightarrow> f3 x xa xb xc
      | capability.IRQHandlerCap x \<Rightarrow> f4 x
-     | capability.EndpointCap x xa xb xc xd \<Rightarrow> f5 x xa xb xc xd
+     | capability.EndpointCap x xa xb xc xd xe \<Rightarrow> f5 x xa xb xc xd xe
      | capability.DomainCap \<Rightarrow> f6
      | capability.Zombie x xa xb \<Rightarrow> f7 x xa xb
      | capability.ArchObjectCap x \<Rightarrow> f8 x
-     | capability.ReplyCap x xa \<Rightarrow> f9 x xa
+     | capability.ReplyCap x xa xb \<Rightarrow> f9 x xa xb
      | capability.UntypedCap dev x xa xb \<Rightarrow> f10 dev x xa xb
      | capability.CNodeCap x xa xb xc \<Rightarrow> f11 x xa xb xc
      | capability.IRQControlCap \<Rightarrow> f12) =
@@ -1430,19 +1430,19 @@ lemma capability_splits[split]:
            \<not> P (f3 x31 x32 x33 x34)) \<or>
        (\<exists>x4. capability = capability.IRQHandlerCap x4 \<and>
              \<not> P (f4 x4)) \<or>
-       (\<exists>x51 x52 x53 x54 x55.
+       (\<exists>x51 x52 x53 x54 x55 x56.
            capability =
-           capability.EndpointCap x51 x52 x53 x54 x55 \<and>
-           \<not> P (f5 x51 x52 x53 x54 x55)) \<or>
+           capability.EndpointCap x51 x52 x53 x54 x55 x56 \<and>
+           \<not> P (f5 x51 x52 x53 x54 x55 x56)) \<or>
        capability = capability.DomainCap \<and> \<not> P f6 \<or>
        (\<exists>x71 x72 x73.
            capability = capability.Zombie x71 x72 x73 \<and>
            \<not> P (f7 x71 x72 x73)) \<or>
        (\<exists>x8. capability = capability.ArchObjectCap x8 \<and>
              \<not> P (f8 x8)) \<or>
-       (\<exists>x91 x92.
-           capability = capability.ReplyCap x91 x92 \<and>
-           \<not> P (f9 x91 x92)) \<or>
+       (\<exists>x91 x92 x93.
+           capability = capability.ReplyCap x91 x92 x93 \<and>
+           \<not> P (f9 x91 x92 x93)) \<or>
        (\<exists>x101 x102 x103 dev.
            capability = capability.UntypedCap dev x101 x102 x103 \<and>
            \<not> P (f10 dev x101 x102 x103)) \<or>
@@ -1455,19 +1455,19 @@ lemma capability_splits[split]:
 
 lemma thread_state_splits[split]:
   " P (case thread_state of
-     Structures_H.thread_state.BlockedOnReceive x \<Rightarrow> f1 x
+     Structures_H.thread_state.BlockedOnReceive x xa \<Rightarrow> f1 x xa
      | Structures_H.thread_state.BlockedOnReply \<Rightarrow> f2
      | Structures_H.thread_state.BlockedOnNotification x \<Rightarrow> f3 x
      | Structures_H.thread_state.Running \<Rightarrow> f4
      | Structures_H.thread_state.Inactive \<Rightarrow> f5
      | Structures_H.thread_state.IdleThreadState \<Rightarrow> f6
-     | Structures_H.thread_state.BlockedOnSend x xa xb xc \<Rightarrow>
-         f7 x xa xb xc
+     | Structures_H.thread_state.BlockedOnSend x xa xb xc xd \<Rightarrow>
+         f7 x xa xb xc xd
      | Structures_H.thread_state.Restart \<Rightarrow> f8) =
-  ((\<forall>x11.
+  ((\<forall>x11 x12.
        thread_state =
-       Structures_H.thread_state.BlockedOnReceive x11 \<longrightarrow>
-       P (f1 x11)) \<and>
+       Structures_H.thread_state.BlockedOnReceive x11 x12 \<longrightarrow>
+       P (f1 x11 x12)) \<and>
    (awaiting_reply' thread_state \<longrightarrow> P f2) \<and>
    (\<forall>x3. thread_state =
          Structures_H.thread_state.BlockedOnNotification x3 \<longrightarrow>
@@ -1477,26 +1477,26 @@ lemma thread_state_splits[split]:
    (thread_state = Structures_H.thread_state.Inactive \<longrightarrow>
     P f5) \<and>
    (idle' thread_state \<longrightarrow> P f6) \<and>
-   (\<forall>x71 x72 x73 x74.
+   (\<forall>x71 x72 x73 x74 x75.
        thread_state =
        Structures_H.thread_state.BlockedOnSend x71 x72 x73
-        x74 \<longrightarrow>
-       P (f7 x71 x72 x73 x74)) \<and>
+        x74 x75 \<longrightarrow>
+       P (f7 x71 x72 x73 x74 x75)) \<and>
    (thread_state = Structures_H.thread_state.Restart \<longrightarrow> P f8))"
   "P (case thread_state of
-     Structures_H.thread_state.BlockedOnReceive x \<Rightarrow> f1 x
+     Structures_H.thread_state.BlockedOnReceive x xa \<Rightarrow> f1 x xa
      | Structures_H.thread_state.BlockedOnReply \<Rightarrow> f2
      | Structures_H.thread_state.BlockedOnNotification x \<Rightarrow> f3 x
      | Structures_H.thread_state.Running \<Rightarrow> f4
      | Structures_H.thread_state.Inactive \<Rightarrow> f5
      | Structures_H.thread_state.IdleThreadState \<Rightarrow> f6
-     | Structures_H.thread_state.BlockedOnSend x xa xb xc \<Rightarrow>
-         f7 x xa xb xc
+     | Structures_H.thread_state.BlockedOnSend x xa xb xc xd \<Rightarrow>
+         f7 x xa xb xc xd
      | Structures_H.thread_state.Restart \<Rightarrow> f8) =
-  (\<not> ((\<exists>x11.
+  (\<not> ((\<exists>x11 x12.
            thread_state =
-           Structures_H.thread_state.BlockedOnReceive x11 \<and>
-           \<not> P (f1 x11)) \<or>
+           Structures_H.thread_state.BlockedOnReceive x11 x12 \<and>
+           \<not> P (f1 x11 x12)) \<or>
        awaiting_reply' thread_state \<and> \<not> P f2 \<or>
        (\<exists>x3. thread_state =
              Structures_H.thread_state.BlockedOnNotification
@@ -1507,11 +1507,11 @@ lemma thread_state_splits[split]:
        thread_state = Structures_H.thread_state.Inactive \<and>
        \<not> P f5 \<or>
        idle' thread_state \<and> \<not> P f6 \<or>
-       (\<exists>x71 x72 x73 x74.
+       (\<exists>x71 x72 x73 x74 x75.
            thread_state =
            Structures_H.thread_state.BlockedOnSend x71 x72 x73
-            x74 \<and>
-           \<not> P (f7 x71 x72 x73 x74)) \<or>
+            x74 x75 \<and>
+           \<not> P (f7 x71 x72 x73 x74 x75)) \<or>
        thread_state = Structures_H.thread_state.Restart \<and>
        \<not> P f8))"
   by (case_tac thread_state; simp)+
@@ -1677,9 +1677,9 @@ lemma tcb_st_refs_of'_simps[simp]:
  "tcb_st_refs_of' (Running)                  = {}"
  "tcb_st_refs_of' (Inactive)                 = {}"
  "tcb_st_refs_of' (Restart)                  = {}"
- "\<And>x. tcb_st_refs_of' (BlockedOnReceive x)     = {(x, TCBBlockedRecv)}"
- "\<And>x c. tcb_st_refs_of' (BlockedOnSend x a b c)  = {(x, TCBBlockedSend)}"
- "\<And>x. tcb_st_refs_of' (BlockedOnNotification x)    = {(x, TCBSignal)}"
+ "tcb_st_refs_of' (BlockedOnReceive x'' a')  = {(x'', TCBBlockedRecv)}"
+ "tcb_st_refs_of' (BlockedOnSend x a b c d)  = {(x, TCBBlockedSend)}"
+ "tcb_st_refs_of' (BlockedOnNotification x') = {(x', TCBSignal)}"
  "tcb_st_refs_of' (BlockedOnReply)           = {}"
  "tcb_st_refs_of' (IdleThreadState)          = {}"
   by (auto simp: tcb_st_refs_of'_def)
@@ -1708,9 +1708,9 @@ lemma tcb_bound_refs'_simps[simp]:
 
 lemma refs_of_rev':
  "(x, TCBBlockedRecv) \<in> refs_of' ko =
-    (\<exists>tcb. ko = KOTCB tcb \<and> tcbState tcb = BlockedOnReceive x)"
+    (\<exists>tcb. ko = KOTCB tcb \<and> (\<exists>a. tcbState tcb = BlockedOnReceive x a))"
  "(x, TCBBlockedSend) \<in> refs_of' ko =
-    (\<exists>tcb. ko = KOTCB tcb \<and> (\<exists>a b c. tcbState tcb = BlockedOnSend x a b c))"
+    (\<exists>tcb. ko = KOTCB tcb \<and> (\<exists>a b c d. tcbState tcb = BlockedOnSend x a b c d))"
  "(x, TCBSignal) \<in> refs_of' ko =
     (\<exists>tcb. ko = KOTCB tcb \<and> tcbState tcb = BlockedOnNotification x)"
  "(x, EPRecv) \<in> refs_of' ko =
@@ -1745,11 +1745,11 @@ lemma projectKO_opt_tcbD:
 
 lemma st_tcb_at_refs_of_rev':
   "ko_wp_at' (\<lambda>ko. (x, TCBBlockedRecv) \<in> refs_of' ko) t s
-     = st_tcb_at' (\<lambda>ts.   ts = BlockedOnReceive x ) t s"
+     = st_tcb_at' (\<lambda>ts. \<exists>a. ts = BlockedOnReceive x a) t s"
   "ko_wp_at' (\<lambda>ko. (x, TCBBlockedSend) \<in> refs_of' ko) t s
-     = st_tcb_at' (\<lambda>ts. \<exists>a b c. ts = BlockedOnSend x a b c) t s"
+     = st_tcb_at' (\<lambda>ts. \<exists>a b c d. ts = BlockedOnSend x a b c d) t s"
   "ko_wp_at' (\<lambda>ko. (x, TCBSignal) \<in> refs_of' ko) t s
-     = st_tcb_at' (\<lambda>ts.      ts = BlockedOnNotification x) t s"
+     = st_tcb_at' (\<lambda>ts. ts = BlockedOnNotification x) t s"
   by (fastforce simp: refs_of_rev' pred_tcb_at'_def obj_at'_real_def
                      projectKO_opt_tcb[where e="KOTCB y" for y]
               elim!: ko_wp_at'_weakenE
@@ -1918,14 +1918,13 @@ lemma next_unfold:
    (case s c of Some cte \<Rightarrow> Some (mdbNext (cteMDBNode cte)) | None \<Rightarrow> None)"
   by (simp add: mdb_next_def split: option.split)
 
-lemma
-  is_physical_cases:
+lemma is_physical_cases:
  "(capClass cap = PhysicalClass) =
   (case cap of NullCap                         \<Rightarrow> False
              | DomainCap                       \<Rightarrow> False
              | IRQControlCap                   \<Rightarrow> False
              | IRQHandlerCap irq               \<Rightarrow> False
-             | ReplyCap r m                    \<Rightarrow> False
+             | ReplyCap r m cr                 \<Rightarrow> False
              | ArchObjectCap ASIDControlCap    \<Rightarrow> False
              | ArchObjectCap (IOPortCap _ _)   \<Rightarrow> False
              | ArchObjectCap IOPortControlCap  \<Rightarrow> False

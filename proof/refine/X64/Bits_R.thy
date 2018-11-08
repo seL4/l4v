@@ -74,9 +74,9 @@ lemma isCap_simps:
   "isThreadCap v = (\<exists>v0. v = ThreadCap v0)"
   "isCNodeCap v = (\<exists>v0 v1 v2 v3. v = CNodeCap v0 v1 v2 v3)"
   "isNotificationCap v = (\<exists>v0 v1 v2 v3. v = NotificationCap v0 v1 v2 v3)"
-  "isEndpointCap v = (\<exists>v0 v1 v2 v3 v4. v = EndpointCap v0 v1 v2 v3 v4)"
+  "isEndpointCap v = (\<exists>v0 v1 v2 v3 v4 v5. v = EndpointCap v0 v1 v2 v3 v4 v5)"
   "isUntypedCap v = (\<exists>d v0 v1 f. v = UntypedCap d v0 v1 f)"
-  "isReplyCap v = (\<exists>v0 v1. v = ReplyCap v0 v1)"
+  "isReplyCap v = (\<exists>v0 v1 v2. v = ReplyCap v0 v1 v2)"
   "isIRQControlCap v = (v = IRQControlCap)"
   "isIRQHandlerCap v = (\<exists>v0. v = IRQHandlerCap v0)"
   "isNullCap v = (v = NullCap)"
@@ -159,7 +159,7 @@ lemmas projectKOs =
   projectKO_eq projectKO_eq2
 
 lemma capAligned_epI:
-  "ep_at' p s \<Longrightarrow> capAligned (EndpointCap p a b c d)"
+  "ep_at' p s \<Longrightarrow> capAligned (EndpointCap p a b c d e)"
   apply (clarsimp simp: obj_at'_real_def capAligned_def
                         objBits_simps word_bits_def)
   apply (drule ko_wp_at_norm)
@@ -185,7 +185,7 @@ lemma capAligned_tcbI:
   done
 
 lemma capAligned_reply_tcbI:
-  "tcb_at' p s \<Longrightarrow> capAligned (ReplyCap p m)"
+  "tcb_at' p s \<Longrightarrow> capAligned (ReplyCap p m r)"
   apply (clarsimp simp: obj_at'_real_def capAligned_def
                         objBits_simps word_bits_def capUntypedPtr_def isCap_simps)
   apply (fastforce dest: ko_wp_at_norm
@@ -539,9 +539,7 @@ proof (rule iffI)
     apply -
     apply (drule (1) is_aligned_addD1 [where y = "x - y", simplified add_diff_eq])
     apply (simp add: tcb_cte_cases_def)
-    apply (auto simp: is_aligned_def dvd_def)
-    apply arith+
-    done
+    by (auto simp: is_aligned_def dvd_def; arith)
 next
   assume "x = y"
   thus "tcb_at' (t + x - y) s" using tat by simp

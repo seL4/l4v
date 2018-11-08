@@ -4187,16 +4187,16 @@ lemma setCTE_work_units_completed[wp]:
   done
 
 lemma create_reply_master_corres:
-  "sl' = cte_map sl \<Longrightarrow>
+  "\<lbrakk> sl' = cte_map sl ; AllowGrant \<in> rights \<rbrakk> \<Longrightarrow>
    corres dc
       (cte_wp_at ((=) cap.NullCap) sl and valid_pspace and valid_mdb and valid_list)
       (cte_wp_at' (\<lambda>c. cteCap c = NullCap \<and> mdbPrev (cteMDBNode c) = 0) sl'
        and valid_mdb' and valid_pspace')
       (do
          y \<leftarrow> set_original sl True;
-         set_cap (cap.ReplyCap thread True) sl
+         set_cap (cap.ReplyCap thread True rights) sl
        od)
-      (setCTE sl' (CTE (capability.ReplyCap thread True) initMDBNode))"
+      (setCTE sl' (CTE (capability.ReplyCap thread True True) initMDBNode))"
   apply clarsimp
   apply (rule corres_caps_decomposition)
                                  defer
@@ -4301,7 +4301,7 @@ lemma valid_nullcaps_next:
   done
 
 defs noReplyCapsFor_def:
-  "noReplyCapsFor \<equiv> \<lambda>t s. \<forall>sl m. \<not> cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m) sl s"
+  "noReplyCapsFor \<equiv> \<lambda>t s. \<forall>sl m r. \<not> cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m r) sl s"
 
 lemma pspace_relation_no_reply_caps:
   assumes pspace: "pspace_relation (kheap s) (ksPSpace s')"
@@ -4328,10 +4328,10 @@ proof -
     apply (clarsimp elim!: cte_wp_at_weakenE simp: m_null)
     done
   have no_reply_caps:
-    "\<forall>sl m. \<not> cte_wp_at (\<lambda>c. c = cap.ReplyCap t m) sl s"
+    "\<forall>sl m r. \<not> cte_wp_at (\<lambda>c. c = cap.ReplyCap t m r) sl s"
     by (rule no_reply_caps_for_thread [OF invs tcb m_cte_null])
   hence noReplyCaps:
-    "\<forall>sl m. \<not> cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m) sl s'"
+    "\<forall>sl m r. \<not> cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m r) sl s'"
     apply (intro allI)
     apply (clarsimp simp: cte_wp_at_neg2 cte_wp_at_ctes_of simp del: split_paired_All)
     apply (frule pspace_relation_cte_wp_atI [OF pspace _ invs_valid_objs [OF invs]])
@@ -4359,8 +4359,7 @@ lemma setup_reply_master_corres:
       apply (rule corres_when)
        apply fastforce
       apply (rule_tac P'="einvs and tcb_at t" in corres_stateAssert_implied)
-       apply (rule create_reply_master_corres)
-       apply simp
+       apply (rule create_reply_master_corres; simp)
       apply (subgoal_tac "\<exists>cte. cte_wp_at' ((=) cte) (cte_map (t, tcb_cnode_index 2)) s'
                               \<and> cteCap cte = capability.NullCap")
        apply (fastforce dest: pspace_relation_no_reply_caps
@@ -4437,7 +4436,7 @@ lemma setupReplyMaster_wps[wp]:
   "\<lbrace>pspace_aligned'\<rbrace> setupReplyMaster t \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   "\<lbrace>pspace_distinct'\<rbrace> setupReplyMaster t \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
   "slot = cte_map (t, tcb_cnode_index 2) \<Longrightarrow>
-   \<lbrace>\<lambda>s. P ((cteCaps_of s)(slot \<mapsto> (capability.ReplyCap t True))) \<and> P (cteCaps_of s)\<rbrace>
+   \<lbrace>\<lambda>s. P ((cteCaps_of s)(slot \<mapsto> (capability.ReplyCap t True True))) \<and> P (cteCaps_of s)\<rbrace>
       setupReplyMaster t
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
     apply (simp_all add: setupReplyMaster_def locateSlot_conv)

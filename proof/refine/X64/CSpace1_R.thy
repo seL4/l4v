@@ -1507,7 +1507,9 @@ definition
   capASID cap = capASID cap' \<and>
   cap_asid_base' cap = cap_asid_base' cap' \<and>
   cap_vptr' cap = cap_vptr' cap' \<and>
-  (isReplyCap cap \<longrightarrow> cap = cap')"
+  (* check all fields of ReplyCap except capReplyCanGrant *)
+  (isReplyCap cap \<longrightarrow> capTCBPtr cap = capTCBPtr cap' \<and>
+                     capReplyMaster cap = capReplyMaster cap')"
 
 lemma capASID_update [simp]:
   "capASID (RetypeDecls_H.updateCapData P x c) = capASID c"
@@ -3139,11 +3141,11 @@ lemma isArchCap_simps[simp]:
   "isArchCap P capability.NullCap = False"
   "isArchCap P capability.DomainCap = False"
   "isArchCap P (capability.NotificationCap xca xba xaa xd) = False"
-  "isArchCap P (capability.EndpointCap xda xcb xbb xab xe) = False"
+  "isArchCap P (capability.EndpointCap xda xcb xbb xab xe xi) = False"
   "isArchCap P (capability.IRQHandlerCap xf) = False"
   "isArchCap P (capability.Zombie xbc xac xg) = False"
   "isArchCap P (capability.ArchObjectCap xh) = P xh"
-  "isArchCap P (capability.ReplyCap xad xi) = False"
+  "isArchCap P (capability.ReplyCap xad xi xia) = False"
   "isArchCap P (capability.UntypedCap d xae xj f) = False"
   "isArchCap P (capability.CNodeCap xfa xea xdb xcc) = False"
   "isArchCap P capability.IRQControlCap = False"
@@ -4266,7 +4268,7 @@ lemma revokable'_fold:
   "isCapRevocable cap srcCap =
   (case cap of capability.NotificationCap _ _ _ _ \<Rightarrow> capNtfnBadge cap \<noteq> capNtfnBadge srcCap
      | capability.IRQHandlerCap _ \<Rightarrow> isIRQControlCap srcCap
-     | capability.EndpointCap _ _ _ _ _ \<Rightarrow> capEPBadge cap \<noteq> capEPBadge srcCap
+     | capability.EndpointCap _ _ _ _ _ _ \<Rightarrow> capEPBadge cap \<noteq> capEPBadge srcCap
      | capability.UntypedCap _ _ _ _ \<Rightarrow> True
      | capability.ArchObjectCap (arch_capability.IOPortCap _ _) \<Rightarrow> isIOPortControlCap' srcCap | _ \<Rightarrow> False)"
   by (simp add: Retype_H.isCapRevocable_def X64_H.isCapRevocable_def isCap_simps
@@ -4524,9 +4526,9 @@ lemma set_untyped_cap_as_full_corres:
 lemma isUntypedCap_simps[simp]:
   "isUntypedCap (capability.UntypedCap uu uv uw ux) = True"
   "isUntypedCap (capability.NullCap) = False"
-  "isUntypedCap (capability.EndpointCap v va vb vc vd) = False"
+  "isUntypedCap (capability.EndpointCap v va vb vc vd ve) = False"
   "isUntypedCap (capability.NotificationCap v va vb vc) = False"
-  "isUntypedCap (capability.ReplyCap v1 v2) = False"
+  "isUntypedCap (capability.ReplyCap v1 v2 v3) = False"
   "isUntypedCap (capability.CNodeCap x1 x2 x3 x4) = False"
   "isUntypedCap (capability.ThreadCap v) = False"
   "isUntypedCap (capability.DomainCap) = False"
