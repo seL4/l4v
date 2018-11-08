@@ -1243,7 +1243,7 @@ crunch no_orphans [wp]: getThreadReplySlot "no_orphans"
 
 lemma setupCallerCap_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<rbrace>
-   setupCallerCap sender receiver
+   setupCallerCap sender receiver gr
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding setupCallerCap_def
   apply (wp setThreadState_not_active_no_orphans
@@ -1259,7 +1259,7 @@ crunch almost_no_orphans [wp]: getThreadReplySlot "almost_no_orphans tcb_ptr"
 
 lemma setupCallerCap_almost_no_orphans [wp]:
   "\<lbrace> \<lambda>s. almost_no_orphans tcb_ptr s \<and> valid_queues' s \<rbrace>
-   setupCallerCap sender receiver
+   setupCallerCap sender receiver gr
    \<lbrace> \<lambda>rv s. almost_no_orphans tcb_ptr s \<rbrace>"
   unfolding setupCallerCap_def
   apply (wp setThreadState_not_active_almost_no_orphans
@@ -1280,7 +1280,7 @@ crunch no_orphans [wp]: setEndpoint "no_orphans"
 
 lemma sendIPC_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s \<rbrace>
-   sendIPC blocking call badge canGrant thread epptr
+   sendIPC blocking call badge canGrant canGrantReply thread epptr
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding sendIPC_def
   apply (wp hoare_drop_imps setThreadState_not_active_no_orphans sts_st_tcb'
@@ -1311,12 +1311,11 @@ lemma sendFaultIPC_no_orphans [wp]:
 
 lemma sendIPC_valid_queues' [wp]:
   "\<lbrace> \<lambda>s. valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s \<rbrace>
-   sendIPC blocking call badge canGrant thread epptr
+   sendIPC blocking call badge canGrant canGrantReply thread epptr
    \<lbrace> \<lambda>rv s. valid_queues' s \<rbrace>"
   unfolding sendIPC_def
-  apply (wp hoare_drop_imps | wpsimp)+
-          apply (wp_once sts_st_tcb', clarsimp)
-         apply (wp)+
+  apply (wpsimp wp: hoare_drop_imps)
+        apply (wpsimp | wp_once sts_st_tcb')+
   apply (rule_tac Q="\<lambda>rv. valid_queues' and valid_objs' and ko_at' rv epptr
                           and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)" in hoare_post_imp)
    apply (clarsimp)
@@ -1951,7 +1950,7 @@ crunch valid_queues' [wp]: handleFaultReply "valid_queues'"
 
 lemma doReplyTransfer_no_orphans[wp]:
   "\<lbrace>no_orphans and invs' and tcb_at' sender and tcb_at' receiver\<rbrace>
-   doReplyTransfer sender receiver slot
+   doReplyTransfer sender receiver slot grant
    \<lbrace>\<lambda>rv. no_orphans\<rbrace>"
   unfolding doReplyTransfer_def
   apply (wp sts_st_tcb' setThreadState_not_active_no_orphans threadSet_no_orphans

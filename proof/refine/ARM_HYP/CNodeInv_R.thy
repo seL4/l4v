@@ -4748,10 +4748,7 @@ lemma isReplyMaster_eq:
   "(isReplyCap new \<and> capReplyMaster new)
       = (isReplyCap old \<and> capReplyMaster old)"
   using derived
-  apply (clarsimp simp: weak_derived'_def)
-  apply (rule iffI)
-   apply (clarsimp simp: isCap_simps)+
-  done
+  by (fastforce simp: weak_derived'_def isCap_simps)
 
 end
 
@@ -8594,9 +8591,9 @@ lemma sameRegion_cap'_src [simp]:
   "sameRegionAs cap' c = sameRegionAs src_cap c"
   using parency unfolding weak_derived'_def
   apply (case_tac "isReplyCap src_cap")
-   apply simp
-  apply (clarsimp simp: capMasterCap_def split: capability.splits arch_capability.splits)
-         apply (auto simp: sameRegionAs_def ARM_HYP_H.sameRegionAs_def isCap_simps split: if_split_asm)
+   apply (clarsimp simp: capMasterCap_def split: capability.splits arch_capability.splits
+          ; fastforce simp: sameRegionAs_def ARM_HYP_H.sameRegionAs_def isCap_simps
+                      split: if_split_asm)+
   done
 
 lemma chunked':

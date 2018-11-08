@@ -1149,11 +1149,11 @@ primrec
   threadCapRefs :: "capability \<Rightarrow> word32 set"
 where
   "threadCapRefs (ThreadCap r)                  = {r}"
-| "threadCapRefs (ReplyCap t m)                 = {}"
+| "threadCapRefs (ReplyCap t m x)               = {}"
 | "threadCapRefs NullCap                        = {}"
-| "threadCapRefs (UntypedCap d r n i)             = {}"
-| "threadCapRefs (EndpointCap r badge x y z)    = {}"
-| "threadCapRefs (NotificationCap r badge x y) = {}"
+| "threadCapRefs (UntypedCap d r n i)           = {}"
+| "threadCapRefs (EndpointCap r badge x y z t)  = {}"
+| "threadCapRefs (NotificationCap r badge x y)  = {}"
 | "threadCapRefs (CNodeCap r b g gsz)           = {}"
 | "threadCapRefs (Zombie r b n)                 = {}"
 | "threadCapRefs (ArchObjectCap ac)             = {}"
@@ -1805,7 +1805,7 @@ definition
   final_matters' :: "capability \<Rightarrow> bool"
 where
  "final_matters' cap \<equiv> case cap of
-    EndpointCap ref bdg s r g \<Rightarrow> True
+    EndpointCap ref bdg s r g gr \<Rightarrow> True
   | NotificationCap ref bdg s r \<Rightarrow> True
   | ThreadCap ref \<Rightarrow> True
   | CNodeCap ref bits gd gs \<Rightarrow> True
@@ -3119,7 +3119,9 @@ crunch bound_tcb_at'[wp]: cancelSignal, cancelAllIPC "bound_tcb_at' P t"
    ignore: getObject setObject threadSet)
 
 lemma finaliseCapTrue_standin_bound_tcb_at':
-  "\<lbrace>\<lambda>s. bound_tcb_at' P t s \<and> (\<exists>tt b. cap = ReplyCap tt b) \<rbrace> finaliseCapTrue_standin cap final \<lbrace>\<lambda>_. bound_tcb_at' P t\<rbrace>"
+  "\<lbrace>\<lambda>s. bound_tcb_at' P t s \<and> (\<exists>tt b r. cap = ReplyCap tt b r) \<rbrace>
+     finaliseCapTrue_standin cap final
+   \<lbrace>\<lambda>_. bound_tcb_at' P t\<rbrace>"
   apply (case_tac cap, simp_all add:finaliseCapTrue_standin_def)
   apply (clarsimp simp: isNotificationCap_def)
   apply (wp, clarsimp)
@@ -3478,7 +3480,7 @@ lemma cteDeleteOne_st_tcb_at[wp]:
   done
 
 lemma cteDeleteOne_reply_pred_tcb_at:
-  "\<lbrace>\<lambda>s. pred_tcb_at' proj P t s \<and> (\<exists>t'. cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t' False) slot s)\<rbrace>
+  "\<lbrace>\<lambda>s. pred_tcb_at' proj P t s \<and> (\<exists>t' r. cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t' False r) slot s)\<rbrace>
     cteDeleteOne slot
    \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_def isFinalCapability_def)

@@ -88,12 +88,12 @@ primrec
 where
   "inv_relation (Invocations_A.InvokeUntyped i) x =
      (\<exists>i'. untypinv_relation i i' \<and> x = InvokeUntyped i')"
-| "inv_relation (Invocations_A.InvokeEndpoint w w2 b) x =
-     (x = InvokeEndpoint w w2 b)"
+| "inv_relation (Invocations_A.InvokeEndpoint w w2 b c) x =
+     (x = InvokeEndpoint w w2 b c)"
 | "inv_relation (Invocations_A.InvokeNotification w w2) x =
      (x = InvokeNotification w w2)"
-| "inv_relation (Invocations_A.InvokeReply w ptr) x =
-     (x = InvokeReply w (cte_map ptr))"
+| "inv_relation (Invocations_A.InvokeReply w ptr grant) x =
+     (x = InvokeReply w (cte_map ptr) grant)"
 | "inv_relation (Invocations_A.InvokeTCB i) x =
      (\<exists>i'. tcbinv_relation i i' \<and> x = InvokeTCB i')"
 | "inv_relation (Invocations_A.InvokeDomain tptr domain) x =
@@ -118,13 +118,13 @@ primrec
   valid_invocation' :: "Invocations_H.invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_invocation' (Invocations_H.InvokeUntyped i) = valid_untyped_inv' i"
-| "valid_invocation' (Invocations_H.InvokeEndpoint w w2 b) = (ep_at' w and ex_nonz_cap_to' w)"
+| "valid_invocation' (Invocations_H.InvokeEndpoint w w2 b c) = (ep_at' w and ex_nonz_cap_to' w)"
 | "valid_invocation' (Invocations_H.InvokeNotification w w2) = (ntfn_at' w and ex_nonz_cap_to' w)"
 | "valid_invocation' (Invocations_H.InvokeTCB i) = tcb_inv_wf' i"
 | "valid_invocation' (Invocations_H.InvokeDomain thread domain) =
    (tcb_at' thread  and K (domain \<le> maxDomain))"
-| "valid_invocation' (Invocations_H.InvokeReply thread slot) =
-       (tcb_at' thread and cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap thread False) slot)"
+| "valid_invocation' (Invocations_H.InvokeReply thread slot grant) =
+       (tcb_at' thread and cte_wp_at' (\<lambda>cte. \<exists>gr. cteCap cte = ReplyCap thread False gr) slot)"
 | "valid_invocation' (Invocations_H.InvokeIRQControl i) = irq_control_inv_valid' i"
 | "valid_invocation' (Invocations_H.InvokeIRQHandler i) = irq_handler_inv_valid' i"
 | "valid_invocation' (Invocations_H.InvokeCNode i) = valid_cnode_inv' i"
@@ -484,14 +484,13 @@ lemma set_domain_setDomain_corres:
                simp: valid_sched_def valid_sched_action_def)
   done
 
-
 lemma pinv_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
    corres (intr \<oplus> (=))
      (einvs and valid_invocation i
             and simple_sched_action
             and ct_active
-            and (\<lambda>s. (\<exists>w w2 b. i = Invocations_A.InvokeEndpoint w w2 b) \<longrightarrow> st_tcb_at simple (cur_thread s) s))
+            and (\<lambda>s. (\<exists>w w2 b c. i = Invocations_A.InvokeEndpoint w w2 b c) \<longrightarrow> st_tcb_at simple (cur_thread s) s))
      (invs' and sch_act_simple and valid_invocation' i' and ct_active' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
      (perform_invocation block call i) (performInvocation block call i')"
   apply (simp add: performInvocation_def)
@@ -527,11 +526,12 @@ lemma pinv_corres:
        apply simp
        apply (rule corres_guard_imp)
          apply (rule corres_split_eqr [OF _ gct_corres])
-           apply (rule corres_split_nor [OF _ do_reply_transfer_corres])
+           apply (rule corres_split_nor [OF _ do_reply_transfer_corres'])
              apply (rule corres_trivial, simp)
             apply wp+
         apply (clarsimp simp: tcb_at_invs)
         apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
+         apply (erule cte_wp_at_weakenE, fastforce simp: is_reply_cap_to_def)
        apply (clarsimp simp: tcb_at_invs')
        apply (fastforce elim!: cte_wp_at_weakenE')
       apply (clarsimp simp: liftME_def)
@@ -714,15 +714,6 @@ lemma diminished_IRQHandler' [simp]:
   apply (simp add: diminished'_def maskCapRights_def isCap_simps Let_def)
   done
 
-lemma diminished_ReplyCap' [simp]:
-  "diminished' (ReplyCap x y) cap = (cap = ReplyCap x y)"
-  apply (rule iffI)
-   apply (clarsimp simp: diminished'_def maskCapRights_def Let_def split del: if_split)
-   apply (cases cap, simp_all add: isCap_simps)[1]
-   apply (simp add: ARM_HYP_H.maskCapRights_def isPageCap_def split: arch_capability.splits)
-  apply (simp add: diminished'_def maskCapRights_def isCap_simps Let_def)
-  done
-
 lemma diminished_IRQControlCap' [simp]:
   "diminished' IRQControlCap cap = (cap = IRQControlCap)"
   apply (rule iffI)
@@ -749,6 +740,14 @@ lemma dec_dom_inv_wf[wp]:
   apply (simp add:numDomains_def maxDomain_def)
   done
 
+lemma diminished_ReplyCap':
+  "diminished' (capability.ReplyCap t False r) cap
+    \<Longrightarrow> \<exists>gr. cap = capability.ReplyCap t False gr"
+  apply (clarsimp simp: diminished'_def maskCapRights_def Let_def split del: if_split)
+  apply (cases cap, simp_all add: isCap_simps)[1]
+  apply (simp add: ARM_HYP_H.maskCapRights_def isPageCap_def split: arch_capability.splits)
+  done
+
 lemma decode_inv_wf'[wp]:
   "\<lbrace>valid_cap' cap and invs' and sch_act_simple
           and cte_wp_at' (diminished' cap \<circ> cteCap) slot and real_cte_at' slot
@@ -767,10 +766,10 @@ lemma decode_inv_wf'[wp]:
   apply (case_tac cap, simp_all add: decodeInvocation_def Let_def isCap_defs uncurry_def split_def
               split del: if_split
               cong: if_cong)
-          apply ((rule hoare_pre,
-                 ((wp_trace decodeTCBInv_wf | simp add: o_def)+)[1],
-                 clarsimp simp: valid_cap'_def cte_wp_at_ctes_of
-                   | (rule exI, rule exI, erule (1) conjI))+)
+             apply ((rule hoare_pre,
+                    ((wp decodeTCBInv_wf | simp add: o_def)+)[1],
+                     clarsimp simp: valid_cap'_def cte_wp_at_ctes_of diminished_ReplyCap'
+                    | (rule exI, rule exI, erule (1) conjI))+)
   done
 
 lemma ct_active_imp_simple'[elim!]:
@@ -897,9 +896,9 @@ lemma isReply_awaiting_reply':
 
 lemma doReply_invs[wp]:
   "\<lbrace>tcb_at' t and tcb_at' t' and
-    cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t False) slot and
+    cte_wp_at' (\<lambda>cte. \<exists>grant. cteCap cte = ReplyCap t False grant) slot and
     invs' and sch_act_simple\<rbrace>
-     doReplyTransfer t' t slot
+     doReplyTransfer t' t slot grant
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: doReplyTransfer_def liftM_def)
   apply (rule hoare_seq_ext [OF _ gts_sp'])
@@ -931,10 +930,9 @@ lemma doReply_invs[wp]:
          apply (wp cteDeleteOne_reply_pred_tcb_at)+
         apply (clarsimp)
         apply (rule_tac Q="\<lambda>_. (\<lambda>s. t \<noteq> ksIdleThread s)
-                          and cte_wp_at' (\<lambda>cte. cteCap cte = capability.ReplyCap t False) slot"
+                          and cte_wp_at' (\<lambda>cte. \<exists>grant. cteCap cte = capability.ReplyCap t False grant) slot"
                 in hoare_strengthen_post [rotated])
-         apply clarsimp
-         apply (rule_tac x=t in exI, clarsimp)
+         apply (fastforce simp: cte_wp_at'_def)
         apply (wp)
         apply (rule hoare_strengthen_post [OF doIPCTransfer_non_null_cte_wp_at'])
          apply (erule conjE)
@@ -989,7 +987,6 @@ lemma doReply_invs[wp]:
   apply (clarsimp simp add: isReply_awaiting_reply' cte_wp_at_ctes_of)
   apply (auto dest!: st_tcb_idle'[rotated] simp:isCap_simps)
   done
-
 
 lemma ct_active_runnable' [simp]:
   "ct_active' s \<Longrightarrow> ct_in_state' runnable' s"
@@ -1954,7 +1951,7 @@ lemma hr_corres:
                    intro!: corres_guard_imp [OF delete_caller_cap_corres]
                            corres_guard_imp [OF do_reply_transfer_corres]
                            corres_fail
-                     simp: valid_cap_def valid_cap'_def is_cap_simps assert_def)[1]
+                     simp: valid_cap_def valid_cap'_def is_cap_simps assert_def is_reply_cap_to_def)[1]
         apply (fastforce simp: invs_def valid_state_def
                               cte_wp_at_caps_of_state st_tcb_def2
                         dest: valid_reply_caps_of_stateD)
@@ -2011,8 +2008,8 @@ lemmas handleReply_ct_in_state_simple[wp] =
 (* FIXME: move *)
 lemma doReplyTransfer_st_tcb_at_active:
   "\<lbrace>st_tcb_at' active' t and tcb_at' t' and K (t \<noteq> t') and
-    cte_wp_at' (\<lambda>cte. cteCap cte = (capability.ReplyCap t' False)) sl\<rbrace>
-    doReplyTransfer t t' sl
+    cte_wp_at' (\<lambda>cte. cteCap cte = (capability.ReplyCap t' False g)) sl\<rbrace>
+    doReplyTransfer t t' sl g
    \<lbrace>\<lambda>rv. st_tcb_at' active' t\<rbrace>"
   apply (simp add: doReplyTransfer_def liftM_def)
   apply (wp setThreadState_st_tcb sts_pred_tcb_neq' cteDeleteOne_reply_pred_tcb_at
@@ -2095,7 +2092,7 @@ crunch sane [wp]: doIPCTransfer sch_act_sane
 
 lemma doReplyTransfer_sane:
   "\<lbrace>\<lambda>s. sch_act_sane s \<and> t' \<noteq> ksCurThread s\<rbrace>
-  doReplyTransfer t t' callerSlot \<lbrace>\<lambda>rv. sch_act_sane\<rbrace>"
+  doReplyTransfer t t' callerSlot g \<lbrace>\<lambda>rv. sch_act_sane\<rbrace>"
   apply (simp add: doReplyTransfer_def liftM_def)
   apply (wp possibleSwitchTo_sane hoare_drop_imps hoare_vcg_all_lift|wpc)+
   apply simp
@@ -2128,7 +2125,7 @@ lemma doReplyTransfer_ct_not_ksQ:
            and ct_in_state' simple'
            and (\<lambda>s. ksCurThread s \<noteq> word)
            and (\<lambda>s. \<forall>p. ksCurThread s \<notin> set(ksReadyQueues s p))\<rbrace>
-   doReplyTransfer thread word callerSlot
+   doReplyTransfer thread word callerSlot g
    \<lbrace>\<lambda>rv s. \<forall>p. ksCurThread s \<notin> set(ksReadyQueues s p)\<rbrace>"
 proof -
   have astct: "\<And>t p.

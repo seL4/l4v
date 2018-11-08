@@ -160,16 +160,17 @@ fun
  where
   "CapabilityMap capability.NullCap = cap.NullCap"
 | "CapabilityMap (capability.UntypedCap d ref n idx) = cap.UntypedCap d ref n idx"
-| "CapabilityMap (capability.EndpointCap ref b sr rr gr) =
+| "CapabilityMap (capability.EndpointCap ref b sr rr gr grr) =
    cap.EndpointCap ref b {x. sr \<and> x = AllowSend \<or> rr \<and> x = AllowRecv \<or>
-                             gr \<and> x = AllowGrant}"
+                             gr \<and> x = AllowGrant \<or> grr \<and> x = AllowGrantReply}"
 | "CapabilityMap (capability.NotificationCap ref b sr rr) =
    cap.NotificationCap ref b {x. sr \<and> x = AllowSend \<or> rr \<and> x = AllowRecv}"
 | "CapabilityMap (capability.CNodeCap ref n L l) =
    cap.CNodeCap ref n (bin_to_bl l (uint L))"
 | "CapabilityMap (capability.ThreadCap ref) = cap.ThreadCap ref"
 | "CapabilityMap capability.DomainCap = cap.DomainCap"
-| "CapabilityMap (capability.ReplyCap ref master) = cap.ReplyCap ref master"
+| "CapabilityMap (capability.ReplyCap ref master gr) =
+   cap.ReplyCap ref master {x. gr \<and> x = AllowGrant \<or> x = AllowWrite}"
 | "CapabilityMap capability.IRQControlCap = cap.IRQControlCap"
 | "CapabilityMap (capability.IRQHandlerCap irq) = cap.IRQHandlerCap irq"
 | "CapabilityMap (capability.Zombie p b n) =
@@ -210,10 +211,13 @@ done
 lemma cap_relation_imp_CapabilityMap:
   "\<lbrakk>wellformed_cap c; cap_relation c c'\<rbrakk> \<Longrightarrow> CapabilityMap c' = c"
   apply (case_tac c; simp add: wellformed_cap_simps)
+       apply (rule set_eqI, clarsimp)
+       apply (case_tac "x", simp_all)
       apply (rule set_eqI, clarsimp)
-      apply (case_tac "x", simp_all)
-     apply (rule set_eqI, clarsimp)
-     apply (case_tac "x", simp_all add: word_bits_def)
+      apply (case_tac "x", simp_all add: word_bits_def)
+     apply clarsimp
+     apply (simp add: set_eq_iff, rule allI)
+     apply (case_tac x; clarsimp)
     apply (simp add: uint_of_bl_is_bl_to_bin bl_bin_bl[simplified])
    apply (simp add: zbits_map_def split: option.splits)
   apply (rename_tac arch_cap)
@@ -234,12 +238,13 @@ where
               Structures_A.thread_state.IdleThreadState"
 | "ThStateMap Structures_H.thread_state.BlockedOnReply =
               Structures_A.thread_state.BlockedOnReply"
-| "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref) =
-              Structures_A.thread_state.BlockedOnReceive oref"
-| "ThStateMap (Structures_H.thread_state.BlockedOnSend oref badge grant call) =
+| "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref grant) =
+              Structures_A.thread_state.BlockedOnReceive oref \<lparr> receiver_can_grant = grant \<rparr>"
+| "ThStateMap (Structures_H.thread_state.BlockedOnSend oref badge grant grant_reply call) =
               Structures_A.thread_state.BlockedOnSend oref
                 \<lparr> sender_badge = badge,
                   sender_can_grant = grant,
+                  sender_can_grant_reply = grant_reply,
                   sender_is_call = call \<rparr>"
 | "ThStateMap (Structures_H.thread_state.BlockedOnNotification oref) =
               Structures_A.thread_state.BlockedOnNotification oref"

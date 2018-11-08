@@ -101,8 +101,8 @@ lemma descendants_range'_def2:
 
 
 defs deletionIsSafe_def:
-  "deletionIsSafe \<equiv> \<lambda>ptr bits s. \<forall>p t m.
-       (cte_wp_at' (\<lambda>cte. cteCap cte = capability.ReplyCap t m) p s \<longrightarrow>
+  "deletionIsSafe \<equiv> \<lambda>ptr bits s. \<forall>p t m r.
+       (cte_wp_at' (\<lambda>cte. cteCap cte = capability.ReplyCap t m r) p s \<longrightarrow>
        t \<notin> {ptr .. ptr + 2 ^ bits - 1}) \<and>
        (\<forall>ko. ksPSpace s p = Some (KOArch ko) \<and> p \<in> {ptr .. ptr + 2 ^ bits - 1}
         \<longrightarrow> 7 \<le> bits)"
@@ -458,17 +458,17 @@ proof -
   note blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
           atLeastAtMost_iff
-  have "\<And>t m. \<exists>ptr. cte_wp_at ((=) (cap.ReplyCap t m)) ptr s
+  have "\<And>t m r. \<exists>ptr. cte_wp_at ((=) (cap.ReplyCap t m r)) ptr s
         \<Longrightarrow> t \<notin> {base .. base + 2 ^ magnitude - 1}"
     by (fastforce dest!: valid_cap2 simp: cap obj_reply_refs_def)
-  hence "\<forall>ptr t m. cte_wp_at ((=) (cap.ReplyCap t m)) ptr s
+  hence "\<forall>ptr t m r. cte_wp_at ((=) (cap.ReplyCap t m r)) ptr s
          \<longrightarrow> t \<notin> {base .. base + 2 ^ magnitude - 1}"
     by (fastforce simp del: split_paired_All)
   hence "\<forall>t. t \<in> {base .. base + 2 ^ magnitude - 1} \<longrightarrow>
-          (\<forall>ptr m. \<not> cte_wp_at ((=) (cap.ReplyCap t m)) ptr s)"
+          (\<forall>ptr m r. \<not> cte_wp_at ((=) (cap.ReplyCap t m r)) ptr s)"
     by fastforce
   hence cte: "\<forall>t. t \<in> {base .. base + 2 ^ magnitude - 1} \<longrightarrow>
-          (\<forall>ptr m. \<not> cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m) ptr s')"
+          (\<forall>ptr m r. \<not> cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m r) ptr s')"
     unfolding deletionIsSafe_def
     apply -
     apply (erule allEI)
@@ -883,7 +883,8 @@ lemma valid_cap_ctes_pre:
   done
 
 lemma replycap_argument:
-  "\<And>p t m. cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m) p s \<Longrightarrow> t \<notin> {base .. base + (2 ^ bits - 1)}"
+  "\<And>p t m r. cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t m r) p s
+   \<Longrightarrow> t \<notin> {base .. base + (2 ^ bits - 1)}"
   using safe
   by (fastforce simp add: deletionIsSafe_def cte_wp_at_ctes_of field_simps)
 

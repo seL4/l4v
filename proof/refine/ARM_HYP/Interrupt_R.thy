@@ -829,20 +829,27 @@ lemma thread_state_relation_frame:
   by (cases st''; cases st'; cases st; fastforce)
 
 lemma thread_state_relation_send_rev_simp:
-  "thread_state_relation st (BlockedOnSend a b c d) =
-  (\<exists>y. (st = (Structures_A.BlockedOnSend a y)) \<and> b = sender_badge y \<and> c = sender_can_grant y \<and> d = sender_is_call y)"
+  "thread_state_relation st (BlockedOnSend a b c d e) =
+   (\<exists>y. (st = (Structures_A.BlockedOnSend a y)) \<and> b = sender_badge y
+        \<and> c = sender_can_grant y \<and> d = sender_can_grant_reply y \<and> e = sender_is_call y)"
+  by (cases st; fastforce)
+
+lemma thread_state_relation_recv_rev_simp:
+  "thread_state_relation st (BlockedOnReceive a cg) =
+   (\<exists>y. (st = (Structures_A.BlockedOnReceive a y)) \<and> cg = receiver_can_grant y
+        )"
   by (cases st; fastforce)
 
 lemmas thread_state_rev_simps'[#\<open>solves \<open>simp\<close>\<close>] =
   thread_state_relation_frame[of Structures_A.thread_state.Running Structures_H.thread_state.Running]
   thread_state_relation_frame[of Structures_A.thread_state.Inactive Structures_H.thread_state.Inactive]
-  thread_state_relation_frame[of "Structures_A.thread_state.BlockedOnReceive x" "Structures_H.thread_state.BlockedOnReceive x" for x]
   thread_state_relation_frame[of Structures_A.thread_state.Restart Structures_H.thread_state.Restart]
   thread_state_relation_frame[of "Structures_A.thread_state.BlockedOnNotification x" "Structures_H.thread_state.BlockedOnNotification x" for x]
   thread_state_relation_frame[of Structures_A.thread_state.IdleThreadState Structures_H.thread_state.IdleThreadState]
   thread_state_relation_frame[of "Structures_A.thread_state.BlockedOnReply" "Structures_H.thread_state.BlockedOnReply"]
 
 lemmas thread_state_rev_simps = thread_state_rev_simps' thread_state_relation_send_rev_simp
+                                 thread_state_relation_recv_rev_simp
 
 crunches vgicUpdateLR
   for sch_act_not[wp]: "sch_act_not t"
@@ -882,17 +889,22 @@ proof -
                              apply (corressimp corres: hf_corres[@lift_corres_args]
                                                wp: dmo_gets_wp dmo'_gets_wp gts_wp gts_wp' wplr wplr'
                                                    hoare_vcg_all_lift hoare_vcg_imp_lift')+
-
+    (* drop unhelpful lemmas *)
+    supply if_split[split del] supply obj_at_typ_at[simp del]
     apply (frule invs_arch_state, drule valid_arch_state_elims(2), frule invs_arch_state')
-    apply (fastforce split: Structures_H.thread_state.splits
-                     simp: valid_fault_def thread_state_rev_simps valid_arch_state'_def
-                           obj_at_typ_at[symmetric]
-                           obj_at_def vcpu_at_is_vcpu' valid_fault_def
-                     simp del: obj_at_typ_at
-                     elim: ct_active_st_tcb_at_weaken
-                             [OF _ iffD1[OF runnable_eq], simplified ct_in_state_def]
-                           st_tcb_ex_cap'[OF _ _ runnable_not_halted]
-                           st_tcb_ex_cap'' pred_tcb'_weakenE ko_wp_at'_weakenE)
+    apply (clarsimp simp: thread_state_rev_simps cong: if_cong split: Structures_H.thread_state.splits)
+    (* clear up everything related to the current thread *)
+    apply (safe
+           ;(clarsimp elim!: ct_active_st_tcb_at_weaken
+                               [OF _ iffD1[OF runnable_eq], simplified ct_in_state_def]
+                             st_tcb_ex_cap'[OF _ _ runnable_not_halted]
+                             pred_tcb'_weakenE ko_wp_at'_weakenE
+                             st_tcb_ex_cap''[OF _ invs_iflive']
+                      simp: valid_fault_def invs_iflive')?)
+      (* now show there's a vcpu where we think there should be one *)
+      apply (fastforce split: option.splits elim!: ko_wp_at'_weakenE obj_at_weakenE
+                       simp: if_apply_def2 valid_arch_state'_def
+                             typ_at'_def is_vcpu'_def obj_at_typ_at[symmetric])+
     done
 qed
 

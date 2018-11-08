@@ -83,7 +83,7 @@ locale delete_one_conc_pre =
   assumes delete_one_sch_act_not:
     "\<And>t. \<lbrace>sch_act_not t\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>rv. sch_act_not t\<rbrace>"
   assumes delete_one_reply_st_tcb_at:
-    "\<And>P t. \<lbrace>\<lambda>s. st_tcb_at' P t s \<and> (\<exists>t'. cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t' False) slot s)\<rbrace>
+    "\<And>P t. \<lbrace>\<lambda>s. st_tcb_at' P t s \<and> (\<exists>t' r. cte_wp_at' (\<lambda>cte. cteCap cte = ReplyCap t' False r) slot s)\<rbrace>
       cteDeleteOne slot
      \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
   assumes delete_one_ksCurDomain:
@@ -160,7 +160,7 @@ crunch tcb_at[wp]: set_endpoint "tcb_at t"
 crunch tcb_at'[wp]: setEndpoint "tcb_at' t"
 
 lemma blocked_cancel_ipc_corres:
-  "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr \<or>
+  "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr p' \<or>
      st = Structures_A.BlockedOnSend epPtr p; thread_state_relation st st' \<rbrakk> \<Longrightarrow>
    corres dc (invs and st_tcb_at ((=) st) t) (invs' and st_tcb_at' ((=) st') t)
            (blocked_cancel_ipc st t)
@@ -359,6 +359,16 @@ lemmas cte_index_repair_sym = cte_index_repair[symmetric]
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+lemma cte_wp_at_master_reply_cap_to_ex_rights:
+  "cte_wp_at (is_master_reply_cap_to t) ptr
+   = (\<lambda>s. \<exists>rights. cte_wp_at ((=) (cap.ReplyCap t True rights)) ptr s)"
+  by (rule ext, rule iffI; clarsimp simp: cte_wp_at_def is_master_reply_cap_to_def)
+
+lemma cte_wp_at_reply_cap_to_ex_rights:
+  "cte_wp_at (is_reply_cap_to t) ptr
+   = (\<lambda>s. \<exists>rights. cte_wp_at ((=) (cap.ReplyCap t False rights)) ptr s)"
+  by (rule ext, rule iffI; clarsimp simp: cte_wp_at_def is_reply_cap_to_def)
+
 lemma reply_no_descendants_mdbNext_null:
   assumes descs: "descendants_of (t, tcb_cnode_index 2) (cdt s) = {}"
   and        sr: "(s, s') \<in> state_relation"
@@ -370,12 +380,15 @@ lemma reply_no_descendants_mdbNext_null:
   shows          "mdbNext (cteMDBNode cte) = nullPointer"
 proof -
   from invs st_tcb_at_reply_cap_valid[OF tcb]
-    have "cte_wp_at ((=) (cap.ReplyCap t True)) (t, tcb_cnode_index 2) s"
-    by (fastforce simp: cte_wp_at_caps_of_state is_cap_simps)
-  hence "cteCap cte = capability.ReplyCap t True"
+    have "cte_wp_at (is_master_reply_cap_to t) (t, tcb_cnode_index 2) s"
+    by (fastforce simp: cte_wp_at_caps_of_state is_cap_simps is_master_reply_cap_to_def)
+
+  hence "\<exists>r. cteCap cte = capability.ReplyCap t True r"
     using invs sr
-    by (fastforce simp: cte_wp_at_ctes_of cte cte_map_def tcb_cnode_index_def
+    by (fastforce simp: cte_wp_at_master_reply_cap_to_ex_rights
+                        cte_wp_at_ctes_of cte cte_map_def tcb_cnode_index_def
                   dest: pspace_relation_cte_wp_at state_relation_pspace_relation)
+
   hence class_link:
     "\<forall>cte'. ctes_of s' (mdbNext (cteMDBNode cte)) = Some cte' \<longrightarrow>
             capClass (cteCap cte') = ReplyClass t"
@@ -387,16 +400,17 @@ proof -
     apply simp
     done
 
-  from invs tcb descs have "\<forall>ptr m.
-      cte_wp_at ((=) (cap.ReplyCap t m)) ptr s \<longrightarrow> ptr = (t, tcb_cnode_index 2)"
-    apply (intro allI)
+  from invs tcb descs have "\<forall>ptr m g.
+      cte_wp_at ((=) (cap.ReplyCap t m g)) ptr s \<longrightarrow> ptr = (t, tcb_cnode_index 2)"
+    apply (intro allI impI)
     apply (case_tac m)
-     apply (clarsimp simp: invs_def valid_state_def valid_reply_masters_def)
-    apply (fastforce simp: has_reply_cap_def
-                    dest: st_tcb_at_tcb_at reply_master_no_descendants_no_reply)
+     apply (fastforce simp: invs_def valid_state_def valid_reply_masters_def
+                            cte_wp_at_master_reply_cap_to_ex_rights)
+    apply (fastforce simp: has_reply_cap_def cte_wp_at_reply_cap_to_ex_rights
+                     dest: reply_master_no_descendants_no_reply elim: st_tcb_at_tcb_at)
     done
-  hence "\<forall>ptr m mdb.
-      ctes_of s' ptr = Some (CTE (capability.ReplyCap t m) mdb) \<longrightarrow> ptr = t + 2*2^cte_level_bits"
+  hence "\<forall>ptr m mdb r.
+      ctes_of s' ptr = Some (CTE (capability.ReplyCap t m r) mdb) \<longrightarrow> ptr = t + 2*2^cte_level_bits"
     using sr invs
     apply (intro allI impI)
     apply (drule(2) pspace_relation_cte_wp_atI
@@ -550,14 +564,15 @@ lemma (in delete_one) reply_cancel_ipc_corres:
    apply (rule hoare_vcg_conj_lift [OF getCTE_inv getCTE_cte_wp_at, simplified])
   apply (rename_tac cte)
   apply (rule corres_symb_exec_l [OF _ _ gets_sp])
-    apply (rule_tac F="cap = cap.ReplyCap t True \<and>
-                       cteCap cte = capability.ReplyCap t True" in corres_req)
+    apply (rule_tac F="\<exists>r. cap = cap.ReplyCap t True r \<and>
+                       cteCap cte = capability.ReplyCap t True (AllowGrant \<in> r)" in corres_req)
      apply (fastforce simp: cte_wp_at_caps_of_state is_cap_simps
-                     dest: st_tcb_at_reply_cap_valid)
+                     dest!: st_tcb_at_reply_cap_valid)
     apply (rule_tac F="(descs = {}) = (mdbNext (cteMDBNode cte) = nullPointer)"
                  in corres_req)
      apply (fastforce simp: st_tcb_at_tcb_at cte_wp_at_ctes_of st_tcb_def2 cte_index_repair
                      dest: reply_descendants_of_mdbNext)
+    apply (elim exE)
     apply (case_tac "descs = {}", simp add: when_def)
     apply (rule_tac F="\<exists>sl. descs = {sl}" in corres_req)
      apply (fastforce intro: st_tcb_at_tcb_at dest: reply_master_one_descendant)
@@ -569,12 +584,12 @@ lemma (in delete_one) reply_cancel_ipc_corres:
     apply (simp add: when_def getSlotCap_def capHasProperty_def
                 del: split_paired_Ex)
     apply (rule corres_guard_imp)
-      apply (rule_tac P'="cte_wp_at ((=) (cap.ReplyCap t False)) sl"
+      apply (rule_tac P'="\<lambda>s. \<exists>r'. cte_wp_at ((=) (cap.ReplyCap t False r')) sl s"
                    in corres_stateAssert_implied [OF delete_one_corres])
       apply (fastforce dest: pspace_relation_cte_wp_at
                             state_relation_pspace_relation
                       simp: cte_wp_at_ctes_of isCap_simps)
-     apply (clarsimp simp: invs_def valid_state_def valid_mdb_def reply_mdb_def
+     apply (fastforce simp: invs_def valid_state_def valid_mdb_def reply_mdb_def
                            reply_masters_mdb_def cte_wp_at_caps_of_state
                            can_fast_finalise_def)
     apply (fastforce simp: valid_mdb'_def valid_mdb_ctes_def
@@ -830,8 +845,8 @@ proof -
      apply (wp, simp)
     done
   have Q:
-    "\<And>epptr. \<lbrace>st_tcb_at' (\<lambda>st. (st = BlockedOnReceive epptr )
-                            \<or> (\<exists>a b c. st = BlockedOnSend epptr a b c)) t
+    "\<And>epptr. \<lbrace>st_tcb_at' (\<lambda>st. \<exists>a. (st = BlockedOnReceive epptr a)
+                            \<or> (\<exists>a b c d. st = BlockedOnSend epptr a b c d)) t
                   and invs'\<rbrace>
       do ep \<leftarrow> getEndpoint epptr;
          y \<leftarrow> assert (\<not> (case ep of IdleEP \<Rightarrow> True | _ \<Rightarrow> False));
@@ -2036,14 +2051,7 @@ lemma (in delete_one_conc_pre) cancelIPC_queues[wp]:
            | rule hoare_drop_imps
            | clarsimp simp: valid_tcb'_def tcb_cte_cases_def
                      elim!: pred_tcb'_weakenE)+
-  apply (safe)
-    apply (drule_tac t=t in valid_queues_not_runnable'_not_ksQ)
-     apply (erule pred_tcb'_weakenE, simp)
-    apply (drule_tac x=xb in spec, simp)
-   apply (erule pred_tcb'_weakenE, simp)
-  apply (drule_tac t=t in valid_queues_not_runnable'_not_ksQ)
-   apply (erule pred_tcb'_weakenE, simp)
-  apply (drule_tac x=xe in spec, simp)
+  apply (fastforce dest: valid_queues_not_runnable'_not_ksQ elim: pred_tcb'_weakenE)
   done
 
 (* FIXME: move to Schedule_R *)
