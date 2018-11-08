@@ -5951,7 +5951,6 @@ lemma awaken_valid_ready_qs:
   apply (wpsimp wp: awaken_ready_qs_helper)
   apply (rule conjI)
    apply (clarsimp simp: valid_release_q_def intro!: distinct_takeWhile)
-  using last_in_set apply fastforce
   apply clarsimp
   apply (drule set_takeWhileD)
   apply (clarsimp simp: valid_release_q_def)
@@ -6016,9 +6015,7 @@ apply (subst set_append, auto)
 
 (* FIXME: Move *)
 lemma valid_rlq_distinct[intro!]: "valid_release_q s \<Longrightarrow> distinct (release_queue s)"
-  apply (clarsimp simp: valid_release_q_def)
-  apply (induct "release_queue s" arbitrary: s, simp)
-  by (drule sym, simp)
+  by (clarsimp simp: valid_release_q_def)
 
 (* FIXME: Move *)
 lemma valid_sched_valid_release_q: "valid_sched s \<Longrightarrow> valid_release_q s"

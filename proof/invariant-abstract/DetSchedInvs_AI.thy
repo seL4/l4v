@@ -424,9 +424,9 @@ lemma valid_ready_qs_def2:
 
 definition valid_release_q_2 where
   "valid_release_q_2 queue kh =
-    (\<forall>t \<in> set queue. is_etcb_at' t (etcbs_of' kh) \<and>
+    ((\<forall>t \<in> set queue. is_etcb_at' t (etcbs_of' kh) \<and>
             (*  (case etcbs_of' kh t of None \<Rightarrow> False | Some x \<Rightarrow> True) \<and> *) (* redundant *)
-              st_tcb_at_kh runnable t kh \<and> active_sc_tcb_at_kh t kh
+              st_tcb_at_kh runnable t kh \<and> active_sc_tcb_at_kh t kh)
 (*              \<and> \<not>(budget_sufficient_kh t kh \<and> budget_ready_kh curtime t kh)*)
               \<and> distinct queue)"
 
