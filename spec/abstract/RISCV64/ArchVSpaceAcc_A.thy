@@ -156,10 +156,14 @@ fun lookup_pt_slot_from_level ::
   where
   "lookup_pt_slot_from_level level bot_level pt_ptr vptr = do {
      let slot = pt_slot_index level pt_ptr vptr;
-     pte \<leftarrow> oapply slot;
-     if is_PageTablePTE pte \<and> level > bot_level
-       then lookup_pt_slot_from_level (level - 1) bot_level (pptr_from_pte pte) vptr
-       else oreturn (level, slot)
+     if \<not>(bot_level < level)
+     then oreturn (level, slot)
+     else do {
+       pte \<leftarrow> oapply slot;
+       if is_PageTablePTE pte
+         then lookup_pt_slot_from_level (level - 1) bot_level (pptr_from_pte pte) vptr
+         else oreturn (level, slot)
+     }
    }"
 
 declare lookup_pt_slot_from_level.simps[simp del]
