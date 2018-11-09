@@ -1828,7 +1828,7 @@ lemma replies_blocked_tcb_st_upd:
 
 lemma replies_with_sc_tcb_st_upd:
   "replies_with_sc (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_state := st\<rparr>))\<rparr>) = replies_with_sc s"
-  by (rule set_eqI; clarsimp simp: kheap_t replies_with_sc_def reply_sc_reply_at_def obj_at_def)
+  by (auto simp: kheap_t replies_with_sc_def sc_replies_sc_at_def obj_at_def)
 
 lemmas valid_replies_tcb_st_upd =
   replies_blocked_tcb_st_upd replies_with_sc_tcb_st_upd

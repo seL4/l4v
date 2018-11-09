@@ -1599,6 +1599,16 @@ lemma set_pt_reply_at_ppred[wp]:
 sublocale set_pt: non_reply_op "set_pt p pt"
   by unfold_locales wp
 
+lemma set_pt_sc_at_pred_n[wp]:
+  "set_pt p pt \<lbrace> \<lambda>s. P (sc_at_pred_n N (\<lambda>sc. sc) P' r s) \<rbrace>"
+  by (wpsimp simp: set_pt_def wp: set_object_wp get_object_wp)
+     (fastforce elim!: bool_to_boolE[of P]
+                 simp: obj_at_def sc_at_pred_n_def
+                split: kernel_object.splits if_splits)
+
+sublocale set_pt: non_sc_op "set_pt p pt"
+  by unfold_locales wp
+
 lemma set_pt_valid_replies[wp]:
   "set_pt p pt \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp wp: valid_replies_lift)
@@ -2096,17 +2106,27 @@ lemma cur_tcb_more_update[iff]:
   by (simp add: cur_tcb_def)
 
 lemma set_asid_pool_reply_at_ppred[wp]:
-  "set_asid_pool p pt \<lbrace> \<lambda>s. P (reply_at_pred P' r s) \<rbrace>"
+  "set_asid_pool p ap \<lbrace> \<lambda>s. P (reply_at_pred P' r s) \<rbrace>"
   by (wpsimp simp: set_asid_pool_def wp: set_object_wp get_object_wp)
      (fastforce elim!: bool_to_boolE[of P]
                  simp: obj_at_def reply_at_ppred_def
                 split: kernel_object.splits if_splits)
 
-sublocale set_asid_pool: non_reply_op "set_asid_pool p pt"
+sublocale set_asid_pool: non_reply_op "set_asid_pool p ap"
+  by unfold_locales wp
+
+lemma set_asid_pool_sc_at_pred_n[wp]:
+  "set_asid_pool p ap \<lbrace> \<lambda>s. P (sc_at_pred_n N (\<lambda>sc. sc) P' r s) \<rbrace>"
+  by (wpsimp simp: set_asid_pool_def wp: set_object_wp get_object_wp)
+     (fastforce elim!: bool_to_boolE[of P]
+                 simp: obj_at_def sc_at_pred_n_def
+                split: kernel_object.splits if_splits)
+
+sublocale set_asid_pool: non_sc_op "set_asid_pool p pt"
   by unfold_locales wp
 
 lemma set_asid_pool_valid_replies[wp]:
-  "set_asid_pool p pt \<lbrace> valid_replies_pred P \<rbrace>"
+  "set_asid_pool p ap \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp wp: valid_replies_lift)
 
 lemma set_asid_pool_invs_restrict:
@@ -3238,6 +3258,16 @@ lemma set_pd_reply_at_ppred[wp]:
                 split: kernel_object.splits if_splits)
 
 sublocale set_pd: non_reply_op "set_pd p pt"
+  by unfold_locales wp
+
+lemma set_pd_sc_at_pred_n[wp]:
+  "set_pd p pd \<lbrace> \<lambda>s. P (sc_at_pred_n N (\<lambda>sc. sc) P' r s) \<rbrace>"
+  by (wpsimp simp: set_pd_def wp: set_object_wp get_object_wp)
+     (fastforce elim!: bool_to_boolE[of P]
+                 simp: obj_at_def sc_at_pred_n_def
+                split: kernel_object.splits if_splits)
+
+sublocale set_pd: non_sc_op "set_pd p pt"
   by unfold_locales wp
 
 lemma set_pd_valid_replies[wp]:

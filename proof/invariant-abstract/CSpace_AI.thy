@@ -4644,7 +4644,13 @@ lemma update_cdt_wp:
 global_interpretation update_cdt: non_reply_op "update_cdt f"
   by unfold_locales (wpsimp wp: update_cdt_wp)
 
+global_interpretation update_cdt: non_sc_op "update_cdt f"
+  by unfold_locales (wpsimp wp: update_cdt_wp)
+
 global_interpretation cap_insert: non_reply_op "cap_insert cap src dest"
+  by unfold_locales (wpsimp simp: cap_insert_def wp: hoare_drop_imps split_del: if_split)
+
+global_interpretation cap_insert: non_sc_op "cap_insert cap src dest"
   by unfold_locales (wpsimp simp: cap_insert_def wp: hoare_drop_imps split_del: if_split)
 
 lemma cap_insert_valid_replies[wp]:

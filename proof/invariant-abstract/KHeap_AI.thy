@@ -1238,7 +1238,7 @@ locale reply_at_pres =
 (* properties of functions which preserve (parts of) all scheduling context objects *)
 locale non_sc_op =
   fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
-  assumes sc_obj_at[wp]: "\<And>P N P' p. f \<lbrace>\<lambda>s. P (sc_at_pred_n N id P' p s)\<rbrace>"
+  assumes sc_obj_at[wp]: "\<And>P N P' p. f \<lbrace>\<lambda>s. P (sc_at_pred_n N (\<lambda>sc. sc) P' p s)\<rbrace>"
 
 locale non_sc_ntfn_op =
   fixes f :: "('state_ext::state_ext state, 'a) nondet_monad"
@@ -1278,7 +1278,7 @@ lemma sk_obj_at_pred_id_lift:
   using h[where P=P and Q="Q \<circ> proj"] by (simp add: sk_obj_at_pred_def)
 
 lemma sc_at_pred_lift:
-  assumes h: "\<And>P Q. f \<lbrace>\<lambda>s. P (sc_at_pred_n N id Q p s)\<rbrace>"
+  assumes h: "\<And>P Q. f \<lbrace>\<lambda>s. P (sc_at_pred_n N (\<lambda>sc. sc) Q p s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (sc_at_pred_n N proj Q p s)\<rbrace>"
   using h[where P=P and Q="Q \<circ> proj"] by (simp add: sc_at_pred_n_def)
 
@@ -1408,16 +1408,23 @@ sublocale non_heap_op < tcb_cnode_op
 lemma update_sk_obj_ref_sk_obj_at_pred:
   assumes "inj C"
   assumes "\<And>obj obj'. C obj \<noteq> C' obj'"
-  shows"update_sk_obj_ref C f ref new \<lbrace> \<lambda>s. P (sk_obj_at_pred C' proj P' p s) \<rbrace>"
+  shows "update_sk_obj_ref C f ref new \<lbrace> \<lambda>s. P (sk_obj_at_pred C' proj P' p s) \<rbrace>"
   by (wp update_sk_obj_ref_wp)
      (clarsimp simp: sk_obj_at_pred_def obj_at_def assms)
 
 lemma set_simple_ko_sk_obj_at_pred:
   assumes "inj C"
   assumes "\<And>obj obj'. C obj \<noteq> C' obj'"
-  shows"set_simple_ko C ptr ep \<lbrace> \<lambda>s. P (sk_obj_at_pred C' proj P' p s) \<rbrace>"
+  shows "set_simple_ko C ptr obj \<lbrace> \<lambda>s. P (sk_obj_at_pred C' proj P' p s) \<rbrace>"
   by (wp set_simple_ko_wp)
      (clarsimp simp: sk_obj_at_pred_def obj_at_def assms)
+
+lemma set_simple_ko_sc_at_pred_n:
+  assumes "inj C"
+  assumes "\<And>obj sc n. C obj \<noteq> SchedContext sc n"
+  shows "set_simple_ko C ptr obj \<lbrace> \<lambda>s. P (sc_at_pred_n N proj P' p s) \<rbrace>"
+  by (wp set_simple_ko_wp)
+     (clarsimp simp: sk_obj_at_pred_def sc_at_pred_n_def obj_at_def assms)
 
 context typ_at_pres begin
 
@@ -1845,6 +1852,9 @@ crunch valid_irq_states[wp]: set_thread_state, set_tcb_obj_ref, set_sc_obj_ref, 
 
 global_interpretation set_notification: non_reply_op "set_notification ptr val"
   by unfold_locales (wpsimp wp: set_simple_ko_sk_obj_at_pred)
+
+global_interpretation set_notification: non_sc_op "set_notification ptr val"
+  by unfold_locales (wpsimp wp: set_simple_ko_sc_at_pred_n)
 
 lemma set_ntfn_valid_replies[wp]:
   "set_notification ptr val \<lbrace> valid_replies_pred P \<rbrace>"
@@ -2321,7 +2331,7 @@ lemma cspace_valid_replies[wp]:
 
 end
 
-lemma (in non_reply_sc_op) replies_with_sc[wp]:
+lemma (in non_sc_replies_op) replies_with_sc[wp]:
   "f \<lbrace> \<lambda>s. P (replies_with_sc s) \<rbrace>"
   by (wp replies_with_sc_lift)
 
@@ -2330,6 +2340,10 @@ context pspace_update_eq begin
 lemma sk_obj_at_pred_update[iff]:
   "sk_obj_at_pred C proj P p (f s) = sk_obj_at_pred C proj P p s"
   by (simp add: sk_obj_at_pred_def)
+
+lemma sc_at_pred_n_update[iff]:
+  "sc_at_pred_n N proj P sc (f s) = sc_at_pred_n N proj P sc s"
+  by (simp add: sc_at_pred_n_def)
 
 lemma replies_with_sc_no_kheap_update[simp]:
   "replies_with_sc (f s) = replies_with_sc s"

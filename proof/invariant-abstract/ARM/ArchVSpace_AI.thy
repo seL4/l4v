@@ -2160,8 +2160,8 @@ lemma set_pd_invs_map:
    apply clarsimp
   apply (rule conjI)
    apply clarsimp
-   apply (clarsimp simp add: obj_at_def glob_vs_refs_def)
-   apply safe[1]
+  apply (clarsimp simp add: obj_at_def glob_vs_refs_def)
+  apply safe[1]
      apply (rule pair_imageI)
      apply (clarsimp simp add: graph_of_def)
      apply (case_tac "ab \<in> kernel_mapping_slots")
@@ -2178,7 +2178,7 @@ lemma set_pd_invs_map:
     apply (case_tac "ab \<in> kernel_mapping_slots")
      apply (clarsimp simp add: graph_of_def)+
     apply (frule (1) pde_graph_ofI[rotated])
-      apply (case_tac "pd ab", simp_all)
+     apply (case_tac "pd ab", simp_all)
     apply (clarsimp simp: vs_refs_def )
     apply (drule_tac x="(ab, bb)" and f="(\<lambda>(r, y). (VSRef (ucast r) (Some APageDirectory), y))"
              in imageI)
@@ -2196,7 +2196,7 @@ lemma set_pd_invs_map:
    apply (simp del:Un_iff)
    apply (drule rev_subsetD[OF _ glob_vs_refs_subset])
    apply (simp add: glob_vs_refs_def)
-  by blast
+  by auto
 
 lemma vs_refs_add_one':
   "p \<notin> kernel_mapping_slots \<Longrightarrow>
