@@ -131,9 +131,13 @@ definition copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s
 
 text \<open>Walk page tables in software.\<close>
 
+(* We store page numbers in the PTE, since the bottom pt_bits are always zero *)
+definition pptr_from_ppn :: "machine_word \<Rightarrow> vspace_ref" where
+  "pptr_from_ppn ptr = ptrFromPAddr ptr << pt_bits"
+
 definition pptr_from_pte :: "pte \<Rightarrow> vspace_ref"
   where
-  "pptr_from_pte pte \<equiv> ptrFromPAddr (pte_ppn pte << pt_bits)"
+  "pptr_from_pte pte \<equiv> pptr_from_ppn (pte_ppn pte)"
 
 definition pt_slot_index :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
   where
