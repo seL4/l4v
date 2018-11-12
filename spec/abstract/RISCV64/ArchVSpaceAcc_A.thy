@@ -71,14 +71,18 @@ definition set_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte) \<Right
      set_object ptr (ArchObj (PageTable pt))
    od"
 
-definition ptes_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pte"
+definition pte_of :: "obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<rightharpoonup> pte"
   where
-  "ptes_of s p \<equiv> do {
+  "pte_of p \<equiv> do {
      let base = p && ~~mask pt_bits;
      let index = (p && mask pt_bits) >> pte_bits;
-     pt \<leftarrow> pts_of s base;
-     Some $ pt (ucast index)
+     pt \<leftarrow> oapply base;
+     oreturn $ pt (ucast index)
    }"
+
+abbreviation ptes_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pte"
+  where
+  "ptes_of s \<equiv> \<lambda>p. pte_of p (pts_of s)"
 
 text \<open>The following function takes a pointer to a PTE in kernel memory and returns the PTE.\<close>
 abbreviation get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad"
