@@ -516,7 +516,7 @@ lemma commit_times_invs_helper:
           y <-
           update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed sc + consumed\<rparr>);
           modify (consumed_time_update (\<lambda>_. 0))
-       od 
+       od
        \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: commit_time_def invs_def valid_state_def valid_pspace_def
       set_refills_def is_round_robin_def consumed_time_update_arch.state_refs_update

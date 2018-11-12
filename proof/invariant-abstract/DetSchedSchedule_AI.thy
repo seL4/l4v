@@ -3714,7 +3714,7 @@ lemma cancel_all_ipc_valid_sched:
   apply (rename_tac queue)
 apply (wpsimp wp: mapM_x_wp' possible_switch_to_valid_sched'
 set_thread_state_runnable_valid_sched_except_blocked
-set_thread_state_valid_blocked_except sts_st_tcb_at' 
+set_thread_state_valid_blocked_except sts_st_tcb_at'
 reply_unlink_tcb_valid_sched reply_unlink_tcb_active_sc_tcb_at)
 
   apply (wpsimp wp: set_thread_state_runnable_valid_ready_qs sts_st_tcb_at'
@@ -4608,7 +4608,7 @@ and (\<lambda>s. sc_tcb_sc_at (\<lambda>t. \<forall>a. t = Some a \<longrightarr
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 *)
-(* why here? 
+(* why here?
 lemma reply_unlink_sc_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> reply_unlink_sc scptr rptr \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: reply_unlink_sc_def liftM_def)
@@ -5044,7 +5044,7 @@ lemma complete_yield_to_valid_sched[wp]:
   apply (wpsimp wp: hoare_drop_imps valid_sched_lift
       simp: complete_yield_to_def get_sk_obj_ref_def)
               apply (wpsimp simp: set_tcb_obj_ref_def wp: hoare_drop_imp)+
-  by (wpsimp wp: hoare_drop_imps valid_sched_lift 
+  by (wpsimp wp: hoare_drop_imps valid_sched_lift
       simp: complete_yield_to_def set_tcb_obj_ref_def)+
 
 (*
@@ -6013,7 +6013,7 @@ lemma fun_of_m_iff: "(\<exists>s'. f s = ({(b, s')}, False)) \<longleftrightarro
 
 lemma awaken_ready_qs_helper:
   "\<lbrace>valid_ready_qs and K (distinct queue) and
-   (\<lambda>s. \<forall>target\<in>set queue. (st_tcb_at runnable target 
+   (\<lambda>s. \<forall>target\<in>set queue. (st_tcb_at runnable target
 and active_sc_tcb_at target and
      budget_ready target and
      budget_sufficient target) s)\<rbrace>
@@ -6200,7 +6200,7 @@ apply (clarsimp simp: valid_sched_def)
 *)
  (* need lemmas for the case where ct is not schedulable? or is this false? *)
 
-        (* switch_thread to candidate 
+        (* switch_thread to candidate
         apply (rename_tac candidate)
         apply (case_tac ct_schedulable; clarsimp)
              (* ct schedulable *)
@@ -6456,7 +6456,7 @@ for not_cur_thread[wp]: "not_cur_thread t"
 and not_in_release_q: "\<lambda>s:: det_state. (not_in_release_q t s)"
 and ct_not_in_q[wp]: ct_not_in_q
 and etcbs[wp]: "\<lambda>s. P (etcbs_of s)"
-  (wp: maybeM_wp hoare_drop_imp hoare_vcg_if_lift2 get_sk_obj_ref_def 
+  (wp: maybeM_wp hoare_drop_imp hoare_vcg_if_lift2 get_sk_obj_ref_def
        hoare_vcg_conj_lift hoare_vcg_all_lift ignore: set_tcb_obj_ref)
 
 lemma maybe_donate_sc_valid_blocked:

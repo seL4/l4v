@@ -1618,7 +1618,7 @@ lemma si_invs'_helper_some_reply:
   apply (frule invs_valid_global_refs)
   apply (drule (1) idle_no_ex_cap)
   by simp
-  
+
   lemma not_sk_obj_at_pred:
   "\<not> sk_obj_at_pred C proj' P' p s \<Longrightarrow> sk_obj_at_pred C proj P p s
     \<Longrightarrow> sk_obj_at_pred C proj' (\<lambda>x. \<not> (P' x)) p s"

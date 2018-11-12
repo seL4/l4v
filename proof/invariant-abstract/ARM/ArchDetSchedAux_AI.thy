@@ -250,7 +250,7 @@ lemma reset_untyped_cap_active_sc_tcb_at:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
-(* do we need something like this? 
+(* do we need something like this?
 lemma obj_ref_ex_cap:
    "\<lbrakk>invs s; tcb_sched_context tcb = Some scp;
     kheap s t  = Some (TCB tcb)\<rbrakk> \<Longrightarrow> ex_nonz_cap_to scp s"
