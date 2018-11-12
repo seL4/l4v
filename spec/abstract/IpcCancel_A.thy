@@ -74,8 +74,10 @@ where
     replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
     \<comment> \<open>Only the head reply will be pointing to this scheduling context,
         so there is no need to worry about the others.\<close>
-    unless (replies = []) (set_reply_obj_ref reply_sc_update (hd replies) None);
-    set_sc_obj_ref sc_replies_update sc_ptr []
+    unless (replies = []) $ do
+      set_reply_obj_ref reply_sc_update (hd replies) None;
+      set_sc_obj_ref sc_replies_update sc_ptr []
+    od
   od"
 
 

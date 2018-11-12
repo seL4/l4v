@@ -9,7 +9,9 @@
  *)
 
 theory SchedContext_AI
-imports RealTime_AI
+imports
+  Lib.MonadicRewrite
+  RealTime_AI
 begin
 
 (* FIXME - move *)
@@ -278,13 +280,90 @@ global_interpretation set_sched_context: non_reply_op "set_sched_context ptr sc"
   by unfold_locales (wpsimp simp: set_sched_context_def reply_at_pred_def obj_at_def
                               wp: set_object_wp get_object_wp)
 
-lemma update_sched_context_valid_replies[wp]:
-  "update_sched_context ptr f \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp wp: valid_replies_lift)
+(* FIXME: move *)
+lemma update_sched_context_wp:
+  "\<lbrace> \<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) sc_ptr s
+                \<longrightarrow> Q (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext (f sc) n)\<rparr>) \<rbrace>
+    update_sched_context sc_ptr f
+   \<lbrace> \<lambda>rv. Q \<rbrace>"
+  by (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
 
-lemma set_sched_context_valid_replies[wp]:
-  "set_sched_context ptr f \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp wp: valid_replies_lift)
+(* FIXME: move *)
+lemma set_sched_context_wp:
+  "\<lbrace> \<lambda>s. \<forall>sc' n. ko_at (SchedContext sc' n) sc_ptr s
+                 \<longrightarrow> Q (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext sc n)\<rparr>) \<rbrace>
+    set_sched_context sc_ptr sc
+   \<lbrace> \<lambda>rv. Q \<rbrace>"
+  by (wpsimp simp: set_sched_context_def wp: set_object_wp get_object_wp)
+
+definition replies_with_sc_upd_replies ::
+  "obj_ref list \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> obj_ref) set \<Rightarrow> (obj_ref \<times> obj_ref) set"
+  where
+  "replies_with_sc_upd_replies rs sc rs_with_sc \<equiv>
+    {p. if snd p = sc then fst p \<in> set rs else p \<in> rs_with_sc}"
+
+lemma replies_with_sc_replies_upd:
+  "replies_with_sc (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext sc n)\<rparr>)
+     = replies_with_sc_upd_replies (sc_replies sc) sc_ptr (replies_with_sc s)"
+  by (auto simp: replies_with_sc_upd_replies_def replies_with_sc_def
+                 sc_replies_sc_at_def obj_at_def)
+
+(* Avoid using this directly. Use one of the following instead:
+   - update_sc_but_not_sc_replies_valid_replies[wp]
+   - update_sc_replies_valid_replies *)
+lemma update_sched_context_valid_replies:
+  "\<lbrace> \<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) sc_ptr s
+                \<longrightarrow> P (replies_with_sc_upd_replies (sc_replies (f sc)) sc_ptr (replies_with_sc s))
+                      (replies_blocked s) \<rbrace>
+    update_sched_context sc_ptr f
+   \<lbrace> \<lambda>rv. valid_replies_pred P \<rbrace>"
+  apply (rule hoare_lift_Pf2[where f=replies_blocked, rotated])
+   apply (wp replies_blocked_lift)
+  apply (wp update_sched_context_wp)
+  by (clarsimp simp: sc_replies_sc_at_def obj_at_def replies_with_sc_replies_upd)
+
+lemma set_sched_context_valid_replies:
+  "\<lbrace> \<lambda>s. P (replies_with_sc_upd_replies (sc_replies sc) sc_ptr (replies_with_sc s))
+           (replies_blocked s) \<rbrace>
+    set_sched_context sc_ptr sc
+   \<lbrace> \<lambda>rv. valid_replies_pred P \<rbrace>"
+  apply (rule hoare_lift_Pf2[where f=replies_blocked, rotated])
+   apply (wp replies_blocked_lift)
+  apply (wp set_sched_context_wp)
+  by (clarsimp simp: sc_replies_sc_at_def obj_at_def replies_with_sc_replies_upd)
+
+lemma update_sc_replies_valid_replies:
+  "\<lbrace> \<lambda>s. \<forall>rs. sc_replies_sc_at (\<lambda>rs'. set rs' = set rs) sc_ptr s
+              \<longrightarrow> P (replies_with_sc_upd_replies (f rs) sc_ptr (replies_with_sc s))
+                    (replies_blocked s) \<rbrace>
+    update_sched_context sc_ptr (sc_replies_update f)
+   \<lbrace> \<lambda>rv. valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: update_sched_context_valid_replies)
+     (fastforce simp: sc_replies_sc_at_def obj_at_def elim!: rsubst2[of P, OF _ _ refl])
+
+(* Avoid using this directly. Use one of the following instead:
+   - update_sc_but_not_sc_replies_valid_replies[wp]
+   - update_sc_replies_valid_replies *)
+lemma update_sc_but_not_sc_replies_valid_replies':
+  assumes "\<And>sc. sc_replies (f sc) = sc_replies sc"
+  shows "update_sched_context sc_ptr f \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: update_sched_context_valid_replies)
+     (fastforce simp: replies_with_sc_upd_replies_def replies_with_sc_def
+                      sc_replies_sc_at_def obj_at_def assms
+               split: if_splits
+               elim!: rsubst2[of P, OF _ _ refl])
+
+lemma update_sc_but_not_sc_replies_valid_replies[wp]:
+  "\<And>f. update_sched_context sc_ptr (sc_period_update f) \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>f. update_sched_context sc_ptr (sc_consumed_update f) \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>f. update_sched_context sc_ptr (sc_tcb_update f) \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>f. update_sched_context sc_ptr (sc_tcb_update f) \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>f. update_sched_context sc_ptr (sc_ntfn_update f) \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>f. update_sched_context sc_ptr (sc_refills_update f) \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>f. update_sched_context sc_ptr (sc_refill_max_update f) \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>f. update_sched_context sc_ptr (sc_badge_update f) \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>f. update_sched_context sc_ptr (sc_yield_from_update f) \<lbrace> valid_replies_pred P \<rbrace>"
+  by (rule update_sc_but_not_sc_replies_valid_replies', simp)+
 
 lemma set_refills_valid_replies[wp]:
   "set_refills ptr refills \<lbrace> valid_replies_pred P \<rbrace>"
@@ -296,8 +375,7 @@ lemma set_refills_invs[wp]:
                 wp: valid_irq_node_typ get_sched_context_wp
                     update_sched_context_valid_objs_same
                     update_sched_context_refs_of_same)
-    apply (clarsimp simp: valid_sched_context_def)
-  done
+  by (clarsimp simp: valid_sched_context_def)
 
 crunches refill_split_check
  for aligned[wp]: pspace_aligned
@@ -335,7 +413,7 @@ crunches refill_split_check
 
 lemma refill_split_check_zombies[wp]:
   "\<lbrace>zombies_final\<rbrace> refill_split_check p u \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
-  by (wpsimp simp: refill_split_check_def Let_def split_del: if_splits wp: hoare_drop_imp)
+  by (wpsimp simp: refill_split_check_def Let_def split_del: if_split wp: hoare_drop_imp)
 
 lemma refill_split_check_ex_cap[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> refill_split_check p u \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
@@ -347,14 +425,14 @@ lemma refill_split_check_mdb [wp]:
 
 lemma refill_split_check_hyp_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> refill_split_check p u \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
-  by (wpsimp simp: refill_split_check_def Let_def split_del: if_splits wp: hoare_drop_imp)
+  by (wpsimp simp: refill_split_check_def Let_def split_del: if_split wp: hoare_drop_imp)
 
 lemma refill_split_check_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace> refill_split_check p u \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  by (wpsimp simp: refill_split_check_def Let_def split_del: if_splits wp: hoare_drop_imp)
+  by (wpsimp simp: refill_split_check_def Let_def split_del: if_split wp: hoare_drop_imp)
 
 lemma refill_split_check_invs[wp]: "\<lbrace>invs\<rbrace> refill_split_check p u \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wpsimp simp: refill_split_check_def Let_def split_del: if_splits
+  apply (wpsimp simp: refill_split_check_def Let_def split_del: if_split
              wp: hoare_drop_imp get_sched_context_wp get_refills_wp)
   apply simp
   done
@@ -362,7 +440,7 @@ lemma refill_split_check_invs[wp]: "\<lbrace>invs\<rbrace> refill_split_check p 
 declare refs_of_defs[simp del]
 lemma refill_split_check_valid_sc[wp]:
    "\<lbrace>valid_sched_context sc\<rbrace> refill_split_check p u \<lbrace>\<lambda>rv. valid_sched_context sc\<rbrace>"
- by (wpsimp simp: refill_split_check_def Let_def split_del: if_splits
+ by (wpsimp simp: refill_split_check_def Let_def split_del: if_split
             wp: hoare_drop_imp)
 
 lemma set_sched_context_valid_irq_node [wp]:
@@ -391,37 +469,102 @@ lemma valid_sc_kheap_update[simp]:
 
 lemma set_sched_context_valid_sched_context[wp]:
   "\<lbrace>sc_at p and valid_sched_context x\<rbrace>
- set_sched_context p sc  \<lbrace>\<lambda>r. valid_sched_context x\<rbrace>"
+    set_sched_context p sc
+   \<lbrace>\<lambda>r. valid_sched_context x\<rbrace>"
   by (wpsimp simp: set_sched_context_def wp: set_object_wp get_object_wp)
+
+lemma set_sched_context_update_sched_context:
+  "set_sched_context p sc = update_sched_context p (\<lambda>_. sc)"
+  by (simp add: set_sched_context_def update_sched_context_def)
+
+(* FIXME: move *)
+lemma monadic_rewrite_sym:
+  "monadic_rewrite False True P f g \<Longrightarrow> monadic_rewrite False True P g f"
+  by (simp add: monadic_rewrite_def)
+
+lemma monadic_rewrite_set_sched_context:
+  "monadic_rewrite False True
+     (\<lambda>s. \<forall>sc' n. ko_at (SchedContext sc' n) p s \<longrightarrow> sc = f sc')
+     (set_sched_context p sc)
+     (update_sched_context p f)"
+  apply (simp add: set_sched_context_def update_sched_context_def)
+  apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_bind[where Q="\<lambda>obj s. \<forall>sc' n. obj = SchedContext sc' n \<longrightarrow> sc = f sc'"
+                                    , OF monadic_rewrite_refl])
+    apply (fastforce simp: monadic_rewrite_def split: kernel_object.splits)
+   apply (wpsimp wp: get_object_wp)
+  by (fastforce simp: obj_at_def)
+
+lemma hoare_rewrite_set_sched_context:
+  assumes upd: "\<lbrace> P' \<rbrace> update_sched_context p f \<lbrace> \<lambda>rv. Q \<rbrace>"
+  assumes sc: "\<And>s sc' n. P s \<Longrightarrow> ko_at (SchedContext sc' n) p s \<Longrightarrow> sc = f sc'"
+  assumes pre: "\<And>s. P s \<Longrightarrow> P' s"
+  shows "\<lbrace> P \<rbrace> set_sched_context p sc \<lbrace> \<lambda>rv. Q \<rbrace>"
+  apply (rule hoare_pre)
+   apply (rule monadic_rewrite_refine_valid[where F=False and P''=\<top>, simplified])
+    apply (rule monadic_rewrite_sym)
+    apply (rule monadic_rewrite_set_sched_context)
+   apply (rule upd)
+  by (clarsimp simp: sc pre)
+
+lemma hoare_rewrite_update_sched_context:
+  assumes upd: "\<lbrace> P' \<rbrace> set_sched_context p sc \<lbrace> \<lambda>rv. Q \<rbrace>"
+  assumes sc: "\<And>s sc' n. P s \<Longrightarrow> ko_at (SchedContext sc' n) p s \<Longrightarrow> sc = f sc'"
+  assumes pre: "\<And>s. P s \<Longrightarrow> P' s"
+  shows "\<lbrace> P \<rbrace> update_sched_context p f \<lbrace> \<lambda>rv. Q \<rbrace>"
+  apply (rule hoare_pre)
+   apply (rule monadic_rewrite_refine_valid[where F=False and P''=\<top>, simplified])
+    apply (rule monadic_rewrite_set_sched_context)
+   apply (rule upd)
+  by (clarsimp simp: sc pre)
+
+(* FIXME: move *)
+lemma subset_union_non_overlapping:
+  "A \<inter> B = {} \<Longrightarrow> A \<subseteq> B \<union> C \<longleftrightarrow> A \<subseteq> C"
+  "A \<inter> C = {} \<Longrightarrow> A \<subseteq> B \<union> C \<longleftrightarrow> A \<subseteq> B"
+  by auto
+
+lemma replies_with_sc_upd_replies_trivial:
+  assumes "kheap s p = Some (SchedContext sc n)"
+  assumes "set rs = set (sc_replies sc)"
+  shows "replies_with_sc_upd_replies rs p (replies_with_sc s) = replies_with_sc s"
+  using assms
+  apply (clarsimp simp: replies_with_sc_upd_replies_def replies_with_sc_def
+                        sc_replies_sc_at_def obj_at_def)
+  apply (intro set_eqI iffI; clarsimp)
+  done
 
 lemma set_sc_consumed_invs:
   "\<lbrace>invs and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
       set_sched_context p (sc\<lparr>sc_consumed := i \<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
-                simp_del: fun_upd_apply wp: valid_ioports_lift)
+                simp_del: fun_upd_apply
+                wp: valid_ioports_lift set_sched_context_valid_replies)
   apply safe
-    apply (fastforce simp: valid_obj_def)
-   apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def live_def)
-  by (clarsimp simp: state_refs_of_def refs_of_def fun_upd_idem)
+     apply (fastforce simp: valid_obj_def)
+    apply (fastforce simp: if_live_then_nonz_cap_def obj_at_def live_def)
+   apply (fastforce simp: replies_with_sc_upd_replies_trivial)
+  by (fastforce simp: state_refs_of_def refs_of_def fun_upd_idem)
 
 lemma update_sched_context_valid_sched_context[wp]:
   "\<lbrace>sc_at p and valid_sched_context x\<rbrace>
- update_sched_context p f  \<lbrace>\<lambda>r. valid_sched_context x\<rbrace>"
+    update_sched_context p f
+   \<lbrace>\<lambda>r. valid_sched_context x\<rbrace>"
   by (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
 
 lemma update_sc_consumed_invs:
   "\<lbrace>invs and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
       update_sched_context p (\<lambda>sc. sc\<lparr>sc_consumed := i \<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
-                simp_del: fun_upd_apply
-                wp: update_sched_context_valid_objs_same
-                    update_sched_context_refs_of_same
-                    valid_irq_node_typ)
+             simp_del: fun_upd_apply
+             wp: update_sched_context_valid_objs_same
+                 update_sched_context_refs_of_same
+                 valid_irq_node_typ)
 
 lemma refill_unblock_check_invs: "\<lbrace>invs\<rbrace> refill_unblock_check r \<lbrace>\<lambda>rv. invs\<rbrace>"
     by (wpsimp simp: refill_unblock_check_def refills_merge_valid[simplified]
-                        is_round_robin_def
-            wp: get_refills_inv hoare_drop_imp get_sched_context_wp)
+                     is_round_robin_def
+               wp: get_refills_inv hoare_drop_imp get_sched_context_wp)
 
 declare domain_time_update.state_refs_update[simp]
 
@@ -465,7 +608,7 @@ lemma refill_split_check_valid_replies[wp]:
 
 lemma commit_time_valid_replies[wp]:
   "commit_time \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: commit_time_def wp: hoare_drop_imps)
+  by (wpsimp simp: commit_time_def wp: hoare_drop_imps cong: sched_context.fold_congs)
 
 lemma update_sched_context_valid_objs_same_eq:
   "\<lbrace>\<lambda>s. valid_objs s \<and> (\<forall>sc. valid_sched_context sc s = valid_sched_context (f sc) s)\<rbrace>
@@ -488,16 +631,16 @@ lemma commit_times_invs_helper:
           modify (consumed_time_update (\<lambda>_. 0))
        od
        \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wpsimp simp: commit_time_def invs_def valid_state_def valid_pspace_def
-      set_refills_def is_round_robin_def consumed_time_update_arch.state_refs_update
-      commit_domain_time_def
-      wp: valid_irq_node_typ update_sched_context_refs_of_same
-          update_sched_context_valid_objs_same_eq update_sched_context_iflive_same)
-  done
+  by (wpsimp simp: commit_time_def invs_def valid_state_def valid_pspace_def
+                   set_refills_def is_round_robin_def consumed_time_update_arch.state_refs_update
+                   commit_domain_time_def
+               wp: valid_irq_node_typ update_sched_context_refs_of_same
+                   update_sched_context_valid_objs_same_eq update_sched_context_iflive_same
+             cong: sched_context.fold_congs)
 
-lemma
-  notes fun_upd_apply[simp del]
-  shows commit_time_invs: "\<lbrace>invs\<rbrace> commit_time \<lbrace>\<lambda>rv. invs\<rbrace>"
+lemma commit_time_invs:
+  "commit_time \<lbrace>invs\<rbrace>"
+  supply fun_upd_apply[simp del]
   apply (clarsimp simp: commit_time_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ gets_sp])
@@ -507,12 +650,12 @@ lemma
    apply (clarsimp simp: obj_at_def is_sc_obj_def)
    apply (frule invs_valid_objs)
    apply (frule (1) valid_sched_context_size_objsI, simp)
-  apply (wpsimp simp: commit_time_def invs_def valid_state_def valid_pspace_def
-      set_refills_def is_round_robin_def consumed_time_update_arch.state_refs_update
-      commit_domain_time_def
-      wp: valid_irq_node_typ update_sched_context_refs_of_same
-          update_sched_context_valid_objs_same_eq update_sched_context_iflive_same)
-  done
+  by (wpsimp simp: commit_time_def invs_def valid_state_def valid_pspace_def
+                   set_refills_def is_round_robin_def consumed_time_update_arch.state_refs_update
+                   commit_domain_time_def
+               wp: valid_irq_node_typ update_sched_context_refs_of_same
+                   update_sched_context_valid_objs_same_eq update_sched_context_iflive_same
+             cong: sched_context.fold_congs)
 
 crunches switch_sched_context
   for consumed_time[wp]: "\<lambda>s. P (consumed_time s)"
@@ -672,15 +815,48 @@ lemma sched_context_update_consumed_invs[wp]:
   by (wpsimp simp: sched_context_update_consumed_def
       wp: set_sc_consumed_invs get_sched_context_wp)
 
+lemma update_sched_context_sc_at_pred:
+  "(r,s') \<in> fst (update_sched_context p f s) \<Longrightarrow> sc_at_pred (\<lambda>sc. sc) \<top> p s"
+  by (clarsimp simp: update_sched_context_def get_object_def set_object_def in_monad
+                     sc_at_pred_def obj_at_def
+              split: kernel_object.splits)
+
+lemma update_sched_context_strengthen_pre':
+  assumes "\<lbrace>P\<rbrace> update_sched_context p f \<lbrace>\<lambda>rv. Q\<rbrace>"
+  shows "\<lbrace>\<lambda>s. sc_at_pred (\<lambda>sc. sc) \<top> p s \<longrightarrow> P s\<rbrace> update_sched_context p f \<lbrace>\<lambda>rv. Q\<rbrace>"
+  by (clarsimp simp: valid_def update_sched_context_sc_at_pred use_valid[OF _ assms])
+
+lemma update_sched_context_strengthen_pre:
+  assumes "\<lbrace>P and sc_at_pred (\<lambda>sc. sc) \<top> p\<rbrace> update_sched_context p f \<lbrace>\<lambda>rv. Q\<rbrace>"
+  shows "\<lbrace>P\<rbrace> update_sched_context p f \<lbrace>\<lambda>rv. Q\<rbrace>"
+  by (wp_pre, rule update_sched_context_strengthen_pre', rule assms, simp)
+
+lemma replies_with_sc_upd_replies_trivial':
+  assumes "kheap s p = Some ko"
+  assumes "sc_at_pred proj P p s"
+  assumes "refs_of ko = refs_of_sc sc"
+  assumes "rs = sc_replies sc"
+  shows "replies_with_sc_upd_replies rs p (replies_with_sc s) = replies_with_sc s"
+  using assms
+  apply (cases ko; clarsimp simp: sc_at_pred_def obj_at_def refs_of_sc_def get_refs_def2)
+  apply (erule replies_with_sc_upd_replies_trivial)
+  apply (clarsimp simp: set_eq_subset)
+  apply (thin_tac "set_option _ \<times> _ \<subseteq> _")+
+  by (simp add: subset_union_non_overlapping Int_Un_distrib cart_singleton_image Int_image_empty
+                inj_image_eq_iff inj_on_convol_ident)
+
 lemma set_sched_context_minor_invs: (* minor? *)
   "\<lbrace>invs and obj_at (\<lambda>ko. refs_of ko = refs_of_sc val) ptr
          and valid_sched_context val
          and (\<lambda>s. live_sc val \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
      set_sched_context ptr val
    \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (rule set_sched_context_strengthen_pre)
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-          wp: valid_irq_node_typ valid_ioports_lift simp_del: fun_upd_apply)
-  apply (clarsimp simp: state_refs_of_def obj_at_def ext elim!: rsubst[where P = sym_refs])
+                  wp: valid_irq_node_typ valid_ioports_lift set_sched_context_valid_replies
+            simp_del: fun_upd_apply)
+  apply (clarsimp simp: state_refs_of_def obj_at_def ext replies_with_sc_upd_replies_trivial'
+                 elim!: rsubst[where P = sym_refs])
   done
 
 lemma ssc_refs_of_Some[wp]:
@@ -726,9 +902,46 @@ global_interpretation set_ntfn_obj_ref: non_reply_op "set_ntfn_obj_ref f ref new
 global_interpretation sched_context_bind_ntfn: non_reply_op "sched_context_bind_ntfn sc ntfn"
   by unfold_locales (wpsimp simp: sched_context_bind_ntfn_def)
 
-lemma set_sc_obj_ref_valid_replie[wp]:
-  "set_sc_obj_ref f ref new \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def)
+(* Avoid using this directly. Use one of the following instead:
+   - set_sc_but_not_sc_replies_valid_replies[wp]
+   - set_sc_replies_valid_replies *)
+lemma set_sc_obj_ref_valid_replies:
+  "\<lbrace> \<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) sc_ptr s
+                \<longrightarrow> P (replies_with_sc_upd_replies (sc_replies (f (K val) sc)) sc_ptr (replies_with_sc s))
+                      (replies_blocked s) \<rbrace>
+    set_sc_obj_ref f sc_ptr val
+   \<lbrace> \<lambda>rv. valid_replies_pred P \<rbrace>"
+  by (wpsimp simp: set_sc_obj_ref_def wp: update_sched_context_valid_replies)
+
+lemma set_sc_replies_valid_replies:
+  "\<lbrace> \<lambda>s. P (replies_with_sc_upd_replies replies sc_ptr (replies_with_sc s)) (replies_blocked s) \<rbrace>
+    set_sc_obj_ref sc_replies_update sc_ptr replies
+   \<lbrace> \<lambda>rv. valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: set_sc_obj_ref_valid_replies)
+
+(* Avoid using this directly. Use one of the following instead:
+   - set_sc_but_not_sc_replies_valid_replies[wp]
+   - set_sc_replies_valid_replies *)
+lemma set_sc_but_not_sc_replies_valid_replies':
+  assumes "\<And>sc. sc_replies (f (\<lambda>_. v) sc) = sc_replies sc"
+  shows "set_sc_obj_ref f sc_ptr v \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: set_sc_obj_ref_valid_replies)
+     (fastforce simp: replies_with_sc_upd_replies_def replies_with_sc_def
+                      sc_replies_sc_at_def obj_at_def assms
+               split: if_splits
+               elim!: rsubst2[of P, OF _ _ refl])
+
+lemma set_sc_but_not_sc_replies_valid_replies[wp]:
+  "\<And>v. set_sc_obj_ref sc_period_update sc_ptr v \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>v. set_sc_obj_ref sc_consumed_update sc_ptr v \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>v. set_sc_obj_ref sc_tcb_update sc_ptr v \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>v. set_sc_obj_ref sc_tcb_update sc_ptr v \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>v. set_sc_obj_ref sc_ntfn_update sc_ptr v \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>v. set_sc_obj_ref sc_refills_update sc_ptr v \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>v. set_sc_obj_ref sc_refill_max_update sc_ptr v \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>v. set_sc_obj_ref sc_badge_update sc_ptr v \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>v. set_sc_obj_ref sc_yield_from_update sc_ptr v \<lbrace> valid_replies_pred P \<rbrace>"
+  by (rule set_sc_but_not_sc_replies_valid_replies', simp)+
 
 lemma sched_context_bind_ntfn_invs[wp]:
   "\<lbrace>invs and ex_nonz_cap_to sc and ex_nonz_cap_to ntfn
@@ -778,9 +991,7 @@ lemma sched_context_unbind_ntfn_invs[wp]:
   by ((fastforce split: if_split_asm ntfn.splits dest!: symreftype_inverse'
         simp: obj_at_def get_refs_def2 refs_of_ntfn_def ntfn_q_refs_of_def image_iff refs_of_simps)+)
 
-
-lemma is_schedulable_inv[wp]: "\<lbrace>P\<rbrace> is_schedulable x inq \<lbrace> \<lambda>_. P\<rbrace>"
-  by (rule is_schedulable_wp)
+lemmas is_schedulable_inv[wp] = is_schedulable_wp[of "\<lambda>_. P" for P]
 
 declare reprogram_timer_update_arch.state_refs_update[simp]
 
@@ -992,67 +1203,46 @@ definition if_Some :: "'a option \<Rightarrow> 'b \<Rightarrow> 'b set"
 
 lemmas if_Some_simps[simp] = if_Some_def [split_simps option.split]
 
-lemma set_reply_valid_replies:
-  "\<lbrace>\<lambda>s. \<forall>sc'. reply_sc_reply_at ((=) sc') r s
-                \<longrightarrow> P (replies_with_sc s - if_Some sc' r \<union> (if_Some (reply_sc reply) r))
-                      (replies_blocked s)\<rbrace>
-    set_reply r reply
-   \<lbrace>\<lambda>rv. valid_replies_pred P \<rbrace>"
-  apply (rule hoare_lift_Pf2[where f=replies_blocked])
-   prefer 2
-   apply (wp replies_blocked_lift)
-  apply (wpsimp wp: set_simple_ko_wps)
-  apply (clarsimp simp: reply_sc_reply_at_def pred_tcb_at_def obj_at_def is_reply)
-  apply (erule_tac P="\<lambda>y. P y x" in rsubst)
-  apply (auto simp: replies_with_sc_def reply_sc_reply_at_def obj_at_def if_Some_def split: option.split)
-  done
+global_interpretation set_reply: non_sc_op "set_reply r reply"
+  by unfold_locales (wpsimp wp: set_simple_ko_wps simp: obj_at_def is_reply sc_at_pred_n_def)
 
-lemma set_reply_sc_valid_replies:
-  "\<lbrace>\<lambda>s. \<forall>sc'. reply_sc_reply_at ((=) sc') r s
-                \<longrightarrow> P (replies_with_sc s - if_Some sc' r \<union> if_Some sc r) (replies_blocked s)\<rbrace>
-    set_reply_obj_ref reply_sc_update r sc
-   \<lbrace> \<lambda>rv. valid_replies_pred P \<rbrace>"
+lemma set_reply_valid_replies[wp]:
+  "set_reply r reply \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wp valid_replies_lift)
+
+lemma set_reply_obj_ref_valid_replies[wp]:
+  "set_reply_obj_ref f r v \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp simp: update_sk_obj_ref_def wp: set_reply_valid_replies)
 
+lemma replies_with_sc_upd_replies_nil_subset:
+  "replies_with_sc_upd_replies [] sc_ptr rs \<subseteq> rs"
+  by (clarsimp simp: replies_with_sc_upd_replies_def)
+
+lemma replies_with_sc_upd_replies_nil_valid_replies:
+  notes subs = replies_with_sc_upd_replies_nil_subset[of sc_ptr "replies_with_sc s"]
+  notes subf = subs[THEN image_mono[where f=fst], THEN subset_trans]
+  assumes "valid_replies (replies_with_sc s) (replies_blocked s)"
+  shows "valid_replies (replies_with_sc_upd_replies [] sc_ptr (replies_with_sc s)) (replies_blocked s)"
+  using assms by (clarsimp simp: valid_replies_def subf inj_on_subset subs)
+
+lemma set_sc_replies_nil_valid_replies[wp]:
+  "set_sc_obj_ref sc_replies_update sc_ptr [] \<lbrace> valid_replies_pred valid_replies \<rbrace>"
+  by (wpsimp wp: set_sc_replies_valid_replies simp: replies_with_sc_upd_replies_nil_valid_replies)
+
 lemma sched_context_unbind_reply_invs[wp]:
-  notes refs_of_simps[simp del] fun_upd_apply[simp del]
-  shows
   "\<lbrace>invs\<rbrace> sched_context_unbind_reply sc_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
+  supply fun_upd_apply[simp del]
   apply (simp add: sched_context_unbind_reply_def)
-  apply (wpsimp wp: mapM_x_set_reply_sc_refs_of valid_irq_node_typ hoare_vcg_conj_lift valid_ioports_lift
-      simp: invs_def valid_state_def valid_pspace_def)
-                      apply (find_goal \<open>match conclusion in \<open>\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>rv s. sym_refs (f s)\<rbrace>\<close> for f \<Rightarrow> \<open>-\<close>\<close>)
-                      apply (rule hoare_strengthen_post)
-                      apply (rule mapM_x_set_reply_sc_refs_of)
-                      apply simp
-                      apply (wpsimp wp: mapM_x_wp' set_reply_sc_iflive valid_irq_node_typ
-                                        set_reply_sc_valid_replies valid_ioports_lift
-                                        get_sched_context_wp get_simple_ko_wp
-                                  simp: subset_eq)+
-  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def subset_eq)
-  apply (frule sym_refs_ko_atD[where p=sc_ptr, rotated])
-   apply (simp add: obj_at_def, elim conjE)
-  apply (simp (no_asm) add: foldl_fun_upd)
-  apply (intro conjI impI)
-    (* sc_ptr \<in> set (sc_replies sc) : False *)
-   apply (clarsimp simp: refs_of_def refs_of_sc_def get_refs_def2 split_def)
-   apply (drule_tac x="(sc_ptr, SCReply)" in bspec, clarsimp)
-   apply (clarsimp simp: obj_at_def refs_of_sc_def get_refs_def2)
-    (* sc_ptr \<notin> set (sc_replies sc) *)
-  apply (clarsimp simp: fun_upd_apply split_def)
-  apply (erule delta_sym_refs)
-   apply (clarsimp simp: fun_upd_apply split: if_split_asm)
-  apply (clarsimp simp: fun_upd_apply split: if_split_asm)
-   apply (clarsimp simp: refs_of_def refs_of_sc_def get_refs_def2)
-  apply (drule_tac x="(x, SCReply)" in bspec)
-   apply (clarsimp simp: refs_of_def refs_of_sc_def)
-  apply (drule state_refs_of_elemD)
-  apply (clarsimp simp: obj_at_def state_refs_of_def dest!: symreftype_inverse')
-  apply (case_tac ko;
-         clarsimp simp: refs_of_simps refs_of_defs get_refs_def2 image_iff
-                        ntfn_q_refs_of_def ep_q_refs_of_def tcb_st_refs_of_def
-                 split: ntfn.split_asm endpoint.split_asm thread_state.split_asm if_split_asm)
-  done
+  apply (wpsimp wp: mapM_x_set_reply_sc_refs_of valid_irq_node_typ hoare_vcg_conj_lift
+                    valid_ioports_lift
+              simp: invs_def valid_state_def valid_pspace_def)
+  apply (erule delta_sym_refs
+         ; clarsimp simp: fun_upd_apply obj_at_def split: if_splits
+         ; clarsimp simp: state_refs_of_def get_refs_def2 image_iff refs_of_rev split: option.splits)
+  apply (rename_tac s sc n asdfasdf tp)
+  apply (case_tac tp; clarsimp simp: refs_of_rev)
+  (* refs_of_sc is broken for sc_replies *)
+  sorry
 
 text {* more invs rules *}
 

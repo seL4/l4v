@@ -1804,49 +1804,25 @@ global_interpretation set_scheduler_action: non_heap_op "set_scheduler_action a"
 global_interpretation set_thread_state_act: non_heap_op "set_thread_state_act t"
   by unfold_locales wp
 
-fun replies_blocked_of_tcb_st :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> (obj_ref \<times> obj_ref) set"
+definition replies_blocked_upd_tcb_st ::
+  "thread_state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> obj_ref) set \<Rightarrow> (obj_ref \<times> obj_ref) set"
   where
-  "replies_blocked_of_tcb_st t (BlockedOnReply (Some r)) = {(r,t)}"
-| "replies_blocked_of_tcb_st t _ = {}"
+  "replies_blocked_upd_tcb_st st t rs_blocked \<equiv>
+    {p. if snd p = t then st = BlockedOnReply (Some (fst p)) else p \<in> rs_blocked}"
 
-context
-  fixes t tcb and s :: "'z::state_ext state"
-  assumes kheap_t: "kheap s t = Some (TCB tcb)"
-begin
-
-abbreviation (input)
-  "replies_blocked_tcb_st_upd st st' \<equiv>
-    replies_blocked_of_tcb_st t st' \<union> (replies_blocked s - replies_blocked_of_tcb_st t st)"
-
-lemma replies_blocked_tcb_st_upd:
+lemma replies_blocked_upd_tcb_st:
   "replies_blocked (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_state := st\<rparr>))\<rparr>)
-    = replies_blocked_tcb_st_upd (tcb_state tcb) st"
-  using kheap_t apply -
-  by (rule replies_blocked_of_tcb_st.cases[of "(t,st)"]
-      ; rule replies_blocked_of_tcb_st.cases[of "(t,tcb_state tcb)"]
-      ; fastforce simp: replies_blocked_def pred_tcb_at_def obj_at_def split: if_splits)
-
-lemma replies_with_sc_tcb_st_upd:
-  "replies_with_sc (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_state := st\<rparr>))\<rparr>) = replies_with_sc s"
-  by (auto simp: kheap_t replies_with_sc_def sc_replies_sc_at_def obj_at_def)
-
-lemmas valid_replies_tcb_st_upd =
-  replies_blocked_tcb_st_upd replies_with_sc_tcb_st_upd
-
-end
+    = replies_blocked_upd_tcb_st st t (replies_blocked s)"
+  by (fastforce simp: replies_blocked_upd_tcb_st_def replies_blocked_def st_tcb_at_def obj_at_def)
 
 lemma sts_valid_replies:
-  "\<lbrace> \<lambda>s. \<forall>st'. st_tcb_at ((=) st') t s
-               \<longrightarrow> P (replies_with_sc s) (replies_blocked_tcb_st_upd t s st' st) \<rbrace>
+  "\<lbrace> \<lambda>s. P (replies_with_sc s) (replies_blocked_upd_tcb_st st t (replies_blocked s)) \<rbrace>
     set_thread_state t st
    \<lbrace> \<lambda>rv. valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: set_thread_state_def wp: set_object_wp)
-     (auto simp: get_tcb_ko_at pred_tcb_at_def obj_at_def valid_replies_tcb_st_upd)
-
-lemma tcb_st_refs_of_eq_imp_blocked_replies_eq:
-  assumes "tcb_st_refs_of st' = tcb_st_refs_of st"
-  shows "replies_blocked_of_tcb_st s st' = replies_blocked_of_tcb_st s st"
-  using assms by (clarsimp simp: tcb_st_refs_of_def split: thread_state.splits if_splits)
+  by (rule hoare_lift_Pf2[where f=replies_with_sc, rotated]
+      ; wpsimp simp: set_thread_state_def replies_blocked_upd_tcb_st
+                 wp: replies_with_sc_lift set_object_wp
+      ; fastforce simp: sc_replies_sc_at_def get_tcb_ko_at obj_at_def)
 
 lemma obj_at_split:
   "obj_at P p s \<Longrightarrow> obj_at Q p s \<Longrightarrow> obj_at (\<lambda>st. P st \<and> Q st) p s"
@@ -1864,14 +1840,27 @@ lemma pred_tcb_at_eq_commute:
   "pred_tcb_at proj ((=) v) p s = pred_tcb_at proj (\<lambda>x. x = v) p s"
   by (auto simp: pred_tcb_at_def obj_at_def)
 
-lemma tcb_st_refs_of_eq:
+lemma tcb_st_refs_of_eq_BlockedOnReply:
+  assumes "tcb_st_refs_of st' = tcb_st_refs_of st"
+  shows "st' = BlockedOnReply (Some reply) \<longleftrightarrow> st = BlockedOnReply (Some reply)"
+  using assms by (cases st'; cases st; clarsimp split: if_splits)
+
+lemma replies_blocked_upd_tcb_st_trivial:
   assumes st: "st_tcb_at P t s"
-  assumes P: "\<And>st'. P st' \<Longrightarrow> tcb_st_refs_of st' = tcb_st_refs_of st"
-  assumes st': "st_tcb_at ((=) st') t s"
-  shows "replies_blocked_of_tcb_st t st' = replies_blocked_of_tcb_st t st"
-  apply (rule tcb_st_refs_of_eq_imp_blocked_replies_eq)
-  apply (rule pred_tcb_at_split[THEN pred_tcb_at_constE, OF st st' P])
-  by auto
+  assumes eq: "\<And>st'. P st' \<Longrightarrow> tcb_st_refs_of st' = tcb_st_refs_of st"
+  shows "replies_blocked_upd_tcb_st st t (replies_blocked s) = replies_blocked s"
+proof -
+  obtain tcb where
+    tcb: "kheap s t = Some (TCB tcb)" and
+    st': "tcb_st_refs_of (tcb_state tcb) = tcb_st_refs_of st"
+    using assms by (clarsimp simp: pred_tcb_at_def obj_at_def)
+  show ?thesis
+    by (rule set_eqI[OF iffI]
+        ; clarsimp simp: tcb tcb_st_refs_of_eq_BlockedOnReply[OF st']
+                         replies_blocked_upd_tcb_st_def replies_blocked_def
+                         pred_tcb_at_def obj_at_def
+                  split: if_splits)
+qed
 
 lemma sts_invs_minor:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st) t
@@ -1884,8 +1873,8 @@ lemma sts_invs_minor:
      set_thread_state t st
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
-   apply (wp valid_irq_node_typ sts_only_idle sts_valid_replies)
-  apply (clarsimp simp: tcb_st_refs_of_eq, clarsimp simp: image_Un le_supI2)
+  apply (wp valid_irq_node_typ sts_only_idle sts_valid_replies)
+  apply (clarsimp simp: replies_blocked_upd_tcb_st_trivial)
   apply (rule conjI, simp add: pred_tcb_at_def, erule(1) obj_at_valid_objsE)
    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_tcb_state_def doubleton_eq_iff
                   split: thread_state.splits if_split_asm)
@@ -1903,7 +1892,7 @@ lemma sts_invs_minor2:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (wp valid_irq_node_typ sts_only_idle sts_valid_replies)
-  apply (clarsimp simp: tcb_st_refs_of_eq, clarsimp simp: image_Un le_supI2)
+  apply (clarsimp simp: replies_blocked_upd_tcb_st_trivial)
   apply (rule conjI, simp add: pred_tcb_at_def, erule(1) obj_at_valid_objsE)
    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_tcb_state_def doubleton_eq_iff
                   split: thread_state.splits if_split_asm)

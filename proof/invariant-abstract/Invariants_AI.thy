@@ -999,45 +999,18 @@ definition replies_with_sc ::
   "replies_with_sc s \<equiv> {(r,sc). sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s}"
 
 text \<open>Many functions will not change either of these sets.\<close>
-abbreviation valid_replies_pred ::
+abbreviation (input) valid_replies_pred ::
   "((obj_ref \<times> obj_ref) set \<Rightarrow> (obj_ref \<times> obj_ref) set \<Rightarrow> bool) \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
   where
   "valid_replies_pred P \<equiv> \<lambda>s. P (replies_with_sc s) (replies_blocked s)"
 
-text \<open>For every Reply object with an associated scheduling context,
-      there must be a thread which is BlockedOnReply with that Reply.\<close>
-abbreviation valid_replies_blocked ::
-  "'z::state_ext state \<Rightarrow> bool"
+text \<open>For every Reply object with an associated scheduling context, there must be
+      a thread which is BlockedOnReply with that Reply.
+      A Reply object can be in at most one scheduling context's reply queue.\<close>
+definition valid_replies ::
+  "(obj_ref \<times> obj_ref) set \<Rightarrow> (obj_ref \<times> obj_ref) set \<Rightarrow> bool"
   where
-  "valid_replies_blocked \<equiv> \<lambda>s. fst ` replies_with_sc s \<subseteq> fst ` replies_blocked s"
-
-text \<open>A Reply object can be in at most one scheduling context's reply queue.\<close>
-abbreviation valid_replies_with_sc ::
-  "'z::state_ext state \<Rightarrow> bool"
-  where
-  "valid_replies_with_sc \<equiv> \<lambda>s. inj_on fst (replies_with_sc s)"
-
-lemmas valid_replies_defs =
-  replies_with_sc_def replies_blocked_def
-
-lemma valid_replies_blocked_def2:
-  "valid_replies_blocked s \<equiv>
-    \<forall>r. (\<exists>sc. sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s)
-         \<longrightarrow> (\<exists>t. st_tcb_at (\<lambda>st. st = BlockedOnReply (Some r)) t s)"
-  by (rule eq_reflection) (fastforce simp: valid_replies_defs image_iff)
-
-lemma valid_replies_with_sc_def2:
-  "valid_replies_with_sc s \<equiv>
-    \<forall>r sc sc'. sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s
-               \<longrightarrow> sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc' s
-               \<longrightarrow> sc' = sc"
-  by (rule eq_reflection) (fastforce simp: replies_with_sc_def inj_on_def)
-
-lemma valid_replies_blockedD:
-  assumes "valid_replies_blocked s"
-  assumes "sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s"
-  shows "\<exists>t. st_tcb_at (\<lambda>st. st = BlockedOnReply (Some r)) t s"
-  using assms by (fastforce simp: valid_replies_blocked_def2)
+  "valid_replies with_sc blocked \<equiv> fst ` with_sc \<subseteq> fst ` blocked \<and> inj_on fst with_sc"
 
 definition
   valid_pspace :: "'z::state_ext state \<Rightarrow> bool"
@@ -1047,7 +1020,7 @@ where
                    and pspace_distinct
                    and if_live_then_nonz_cap
                    and zombies_final
-                   and valid_replies_blocked and valid_replies_with_sc
+                   and valid_replies_pred valid_replies
                    and (\<lambda>s. sym_refs (state_refs_of s))
                    and (\<lambda>s. sym_refs (state_hyp_refs_of s))"
 
@@ -1287,7 +1260,7 @@ abbreviation (input)
        and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
-       and valid_replies_blocked and valid_replies_with_sc
+       and valid_replies_pred valid_replies
        and cur_tcb"
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
@@ -2098,10 +2071,6 @@ lemma replies_with_sc_def2:
                         state_refs_of_def refs_of_rev
                  split: option.splits)
 
-lemma replies_with_sc_state_refs_eq:
-  "state_refs_of s' = state_refs_of s \<Longrightarrow> replies_with_sc s' = replies_with_sc s"
-  by (simp add: replies_with_sc_def2)
-
 text \<open>It's possible to define @{term replies_blocked} in terms of @{term state_refs_of}
       only because @{term BlockedOnReply} can be distinguished from @{term BlockedOnReceive}
       by the presence or absence of an endpoint reference with ref type @{term TCBBlockedRecv}.\<close>
@@ -2113,33 +2082,21 @@ lemma replies_blocked_def2:
                         state_refs_of_def get_refs_def2 refs_of_rev
                  split: option.splits)+
 
+lemma replies_with_sc_state_refs_eq:
+  "state_refs_of s' = state_refs_of s \<Longrightarrow> replies_with_sc s' = replies_with_sc s"
+  by (simp add: replies_with_sc_def2)
+
 lemma replies_blocked_state_refs_eq:
   "state_refs_of s' = state_refs_of s \<Longrightarrow> replies_blocked s' = replies_blocked s"
   by (simp add: replies_blocked_def2)
 
-lemma valid_replies_state_refs_eq:
-  assumes "state_refs_of s' = state_refs_of s"
-  shows "valid_replies_blocked s' = valid_replies_blocked s"
-    and "valid_replies_with_sc s' = valid_replies_with_sc s"
-  using replies_blocked_state_refs_eq[OF assms] replies_with_sc_state_refs_eq[OF assms]
-  by auto
+lemma valid_replies_pred_state_refs_eq:
+  "state_refs_of s' = state_refs_of s \<Longrightarrow> valid_replies_pred P s' = valid_replies_pred P s"
+  by (simp add: replies_with_sc_state_refs_eq[of s' s] replies_blocked_state_refs_eq[of s' s])
 
-lemmas replies_blocked_kheap_eq =
-  replies_blocked_state_refs_eq[OF state_refs_of_kheap_eq]
-
-lemmas replies_with_sc_kheap_eq =
-  replies_with_sc_state_refs_eq[OF state_refs_of_kheap_eq]
-
-lemmas valid_replies_kheap_eq =
-  valid_replies_state_refs_eq[OF state_refs_of_kheap_eq]
-
-lemma valid_replies_blocked_pspaceI:
-  "valid_replies_blocked s \<Longrightarrow> kheap s' = kheap s \<Longrightarrow> valid_replies_blocked s'"
-  by (auto simp: valid_replies_kheap_eq[THEN iffD2])
-
-lemma valid_replies_with_sc_pspaceI:
-  "valid_replies_with_sc s \<Longrightarrow> kheap s' = kheap s \<Longrightarrow> valid_replies_with_sc s'"
-  by (auto simp: valid_replies_kheap_eq[THEN iffD2])
+lemma valid_replies_pred_pspaceI:
+  "\<lbrakk> valid_replies_pred P s; kheap s' = kheap s \<rbrakk> \<Longrightarrow> valid_replies_pred P s'"
+  by (simp add: valid_replies_pred_state_refs_eq[of s' s, OF state_refs_of_kheap_eq])
 
 lemma pspace_pspace_update:
   "kheap (kheap_update (\<lambda>a. ps) s) = ps" by simp
@@ -2149,9 +2106,8 @@ lemma valid_pspace_eqI:
   unfolding valid_pspace_def
   by (auto simp: pspace_aligned_def
           intro: valid_objs_pspaceI state_refs_of_pspaceI state_hyp_refs_of_pspaceI
-                 distinct_pspaceI iflive_pspaceI valid_replies_with_sc_pspaceI
-                 ifunsafe_pspaceI zombies_final_pspaceI
-           elim: valid_replies_blocked_pspaceI[THEN subsetD])
+                 distinct_pspaceI iflive_pspaceI valid_replies_pred_pspaceI
+                 ifunsafe_pspaceI zombies_final_pspaceI)
 
 lemma cte_wp_caps_of_lift:
   assumes c: "\<And>p P. cte_wp_at P p s = cte_wp_at P p s'"
@@ -2209,7 +2165,7 @@ text {* Lemmas about well-formed states *}
 lemma valid_pspaceI [intro]:
   "\<lbrakk> valid_objs s; pspace_aligned s; sym_refs (state_refs_of s); sym_refs (state_hyp_refs_of s);
      pspace_distinct s; if_live_then_nonz_cap s; zombies_final s;
-     valid_replies_blocked s; valid_replies_with_sc s \<rbrakk>
+     valid_replies_pred valid_replies s \<rbrakk>
      \<Longrightarrow> valid_pspace s"
   unfolding valid_pspace_def by simp
 
@@ -2218,7 +2174,7 @@ lemma valid_pspaceE [elim?]:
   and     rl: "\<lbrakk> valid_objs s; pspace_aligned s;
                  sym_refs (state_refs_of s);  sym_refs (state_hyp_refs_of s);
                  pspace_distinct s; if_live_then_nonz_cap s;
-                 zombies_final s; valid_replies_blocked s; valid_replies_with_sc s
+                 zombies_final s; valid_replies_pred valid_replies s
                \<rbrakk> \<Longrightarrow> R"
   shows    R
   using vp
@@ -3803,12 +3759,8 @@ lemma invs_hyp_sym_refs [elim!]: (* ARMHYP move and requalify *)
   "invs s \<Longrightarrow> sym_refs (state_hyp_refs_of s)"
   by (simp add: invs_def valid_state_def valid_pspace_def)
 
-lemma invs_valid_replies_blocked[elim!]:
-  "invs s \<Longrightarrow> valid_replies_blocked s"
-  by (simp add: invs_def valid_state_def valid_pspace_def)
-
-lemma invs_valid_replies_with_sc[elim!]:
-  "invs s \<Longrightarrow> valid_replies_with_sc s"
+lemma invs_valid_replies[elim!]:
+  "invs s \<Longrightarrow> valid_replies_pred valid_replies s"
   by (simp add: invs_def valid_state_def valid_pspace_def)
 
 lemma invs_vobjs_strgs:
