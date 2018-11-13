@@ -266,7 +266,6 @@ proof -
   note cterl = retype_ctes_helper[OF pal pdst pno' al'
     le_refl range_cover_sz'[where 'a=32, folded word_bits_def, OF rc] mko rc,simplified]
   note ht_rl = clift_eq_h_t_valid_eq[OF rl', OF tag_disj_via_td_name, simplified]
-    uinfo_array_tag_n_m_not_le_typ_name
 
   have guard:
     "\<forall>n<2 ^ (pageBits - objBitsKO ko). c_guard (CTypesDefs.ptr_add ?ptr (of_nat n))"
@@ -369,25 +368,6 @@ proof -
               del:replicate_numeral)
   done
 qed
-
-lemma cmap_relation_ccap_relation:
-  "\<lbrakk>cmap_relation (ctes_of s) (cslift s') cte_Ptr ccte_relation;ctes_of s p = Some cte; cteCap cte = cap\<rbrakk>
-    \<Longrightarrow> ccap_relation cap
-    (h_val (hrs_mem (t_hrs_' (globals s'))) (cap_Ptr &(cte_Ptr p\<rightarrow>[''cap_C''])))"
-  apply (erule(1) cmap_relationE1)
-  apply (clarsimp simp add: typ_heap_simps' ccte_relation_ccap_relation)
-  done
-
-lemma ccorres_move_Guard_Seq_strong:
-  "\<lbrakk>\<forall>s s'. (s, s') \<in> sr \<and> P s \<and> P' s' \<longrightarrow> G' s';
-    ccorres_underlying sr \<Gamma> r xf arrel axf A C' hs a (c;;d) \<rbrakk>
-  \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (A and P) {s. P' s \<and> (G' s \<longrightarrow> s \<in> C')} hs a
-    (Guard F (Collect G') c;;
-     d)"
-  apply (rule ccorres_guard_imp2, erule ccorres_move_Guard_Seq)
-   apply assumption
-  apply auto
-  done
 
 lemma ghost_assertion_data_get_gs_clear_region:
   "gs_get_assn proc (gs_clear_region addr n gs) = gs_get_assn proc gs"
@@ -1472,13 +1452,6 @@ lemma valid_pde_slots_lift2:
   apply (wp hoare_vcg_ex_lift hoare_vcg_conj_lift | assumption)+
   done
 
-lemma obj_at_pte_aligned:
-  "obj_at' (\<lambda>a::ARM_H.pte. True) ptr s ==> is_aligned ptr 2"
-  apply (drule obj_at_ko_at')
-  apply (clarsimp dest!:ko_at_is_aligned'
-    simp:objBits_simps archObjSize_def pteBits_def)
-  done
-
 lemma addrFromPPtr_mask_5:
   "addrFromPPtr ptr && mask (5::nat) = ptr && mask (5::nat)"
   apply (simp add:addrFromPPtr_def physMappingOffset_def
@@ -2353,66 +2326,6 @@ lemma flushtype_relation_triv:
     ARM_H.isPDFlushLabel_def
     split: flush_type.splits invocation_label.splits arch_invocation_label.splits)
 
-lemma setVMRootForFlush_ccorres2:
-  "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_'
-       (invs' and (\<lambda>s. asid \<le> mask asid_bits))
-       (UNIV \<inter> {s. pd_' s = pde_Ptr pd} \<inter> {s. asid_' s = asid}) hs
-       (setVMRootForFlush pd asid) (Call setVMRootForFlush_'proc)"
-  apply (cinit lift: pd_' asid_')
-   apply (rule ccorres_pre_getCurThread)
-   apply (simp add: getThreadVSpaceRoot_def locateSlot_conv
-               del: Collect_const)
-   apply (rule ccorres_Guard_Seq)+
-   apply (ctac add: getSlotCap_h_val_ccorres)
-     apply csymbr
-     apply csymbr
-     apply (simp add: cap_get_tag_isCap_ArchObject2 if_1_0_0
-                 del: Collect_const)
-     apply (rule ccorres_if_lhs)
-      apply (rule_tac P="(capPDIsMapped_CL (cap_page_directory_cap_lift threadRoot) = 0)
-                             = (capPDMappedASID (capCap rva) = None)
-                         \<and> capPDBasePtr_CL (cap_page_directory_cap_lift threadRoot)
-                             = capPDBasePtr (capCap rva)" in ccorres_gen_asm2)
-      apply (rule ccorres_rhs_assoc | csymbr | simp add: Collect_True del: Collect_const)+
-      apply (rule ccorres_split_throws)
-       apply (rule ccorres_return_C, simp+)
-      apply vcg
-     apply (rule ccorres_rhs_assoc2,
-            rule ccorres_rhs_assoc2,
-            rule ccorres_symb_exec_r)
-       apply simp
-       apply (ctac (no_vcg) add: armv_contextSwitch_ccorres)
-        apply (ctac add: ccorres_return_C)
-       apply wp
-      apply (simp add: true_def from_bool_def)
-      apply vcg
-     apply (rule conseqPre, vcg)
-     apply (simp add: Collect_const_mem)
-     apply clarsimp
-    apply simp
-    apply (wp hoare_drop_imps)
-   apply vcg
-  apply (clarsimp simp: Collect_const_mem if_1_0_0 word_sle_def
-                        ccap_rights_relation_def cap_rights_to_H_def
-                        mask_def[where n="Suc 0"] true_def to_bool_def
-                        allRights_def size_of_def cte_level_bits_def
-                        tcbVTableSlot_def Kernel_C.tcbVTable_def invs'_invs_no_cicd)
-  apply (clarsimp simp: rf_sr_ksCurThread ptr_val_tcb_ptr_mask' [OF tcb_at_invs'])
-  apply (frule cte_at_tcb_at_16'[OF tcb_at_invs'], clarsimp simp: cte_wp_at_ctes_of)
-  apply (rule cmap_relationE1[OF cmap_relation_cte], assumption+)
-  apply (clarsimp simp: false_def true_def from_bool_def
-                        typ_heap_simps' ptr_add_assertion_positive)
-  apply (clarsimp simp: tcb_cnode_index_defs
-                        rf_sr_tcb_ctes_array_assertion2[OF _ tcb_at_invs',
-                            THEN array_assertion_shrink_right])
-  apply (case_tac "isArchObjectCap rv \<and> isPageDirectoryCap (capCap rv)")
-   apply (clarsimp simp: isCap_simps(2) cap_get_tag_isCap_ArchObject[symmetric])
-   apply (clarsimp simp: cap_page_directory_cap_lift cap_to_H_def
-                  elim!: ccap_relationE)
-   apply (simp add: to_bool_def split: if_split)
-  apply (auto simp: cap_get_tag_isCap_ArchObject2)
-  done
-
 lemma at_least_2_args:
   "\<not>  length args < 2 \<Longrightarrow> \<exists>a b c. args = a#b#c"
   apply (case_tac args)
@@ -3279,24 +3192,6 @@ lemma sts_Restart_ct_active [wp]:
   apply wp
   done
 
-lemma maskCapRights_eq_Untyped [simp]:
-  "(maskCapRights R cap = UntypedCap d p sz idx) = (cap = UntypedCap d p sz idx)"
-  apply (cases cap)
-  apply (auto simp: Let_def isCap_simps maskCapRights_def)
-  apply (simp add: ARM_H.maskCapRights_def isPageCap_def Let_def split: arch_capability.splits)
-  done
-
-
-lemma le_mask_asid_bits_helper:
-  "x \<le> 2 ^ asid_high_bits - 1 \<Longrightarrow> (x::word32) << asid_low_bits \<le> mask asid_bits"
-  apply (simp add: mask_def)
-  apply (drule le2p_bits_unset_32)
-   apply (simp add: asid_high_bits_def word_bits_def)
-  apply (subst upper_bits_unset_is_l2p_32 [symmetric])
-   apply (simp add: asid_bits_def word_bits_def)
-  apply (clarsimp simp: asid_bits_def asid_low_bits_def asid_high_bits_def nth_shiftl)
-  done
-
 declare Word_Lemmas.from_bool_mask_simp [simp]
 
 lemma isPDFlush_fold:
@@ -3963,8 +3858,7 @@ lemma Arch_decodeInvocation_ccorres:
                                 capBlockSize (fst (hd extraCaps)) = objBits (makeObject ::asidpool)
                                 \<and> \<not> capIsDevice (fst (hd extraCaps))))"
                             in ccorres_gen_asm2)
-                  apply (clarsimp simp: if_1_0_0 to_bool_if cond_throw_whenE bindE_assoc
-                    from_bool_neq_0)
+                  apply (clarsimp simp: cond_throw_whenE bindE_assoc)
                   apply (rule ccorres_split_when_throwError_cond[where Q = \<top> and Q' = \<top>])
                      apply clarsimp
                     apply (rule syscall_error_throwError_ccorres_n)

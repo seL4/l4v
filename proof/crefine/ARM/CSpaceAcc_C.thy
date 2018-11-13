@@ -14,12 +14,6 @@ theory CSpaceAcc_C
 imports "Refine.EmptyFail" Ctac_lemmas_C
 begin
 
-(* For resolving schematics *)
-lemma lift_t_cslift:
-  "cslift x p = Some y \<Longrightarrow>
-  lift_t c_guard (hrs_mem (t_hrs_' (globals x)), hrs_htd (t_hrs_' (globals x))) p = Some y"
-  by (simp add: hrs_htd_def hrs_mem_def)
-
 context kernel begin
 
 lemma ccorres_pre_getNotification:
@@ -229,10 +223,6 @@ lemma ccorres_pre_curDomain:
   apply (clarsimp simp: rf_sr_ksCurDomain)
   done
 
-lemma scast_EXCPT_NONE [simp]: "scast EXCEPTION_NONE = EXCEPTION_NONE"
-  unfolding scast_def EXCEPTION_NONE_def
-  by simp
-
 lemma pageBitsForSize_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>pagesize && mask 2 = \<acute>pagesize\<rbrace> Call pageBitsForSize_'proc
    \<lbrace> \<acute>ret__unsigned_long = of_nat (pageBitsForSize (gen_framesize_to_H \<^bsup>s\<^esup>pagesize)) \<rbrace>"
@@ -275,21 +265,6 @@ lemmas ccorres_updateMDB_cte_at = ccorres_guard_from_wp [OF updateMDB_pre_cte_at
 
 lemmas ccorres_getSlotCap_cte_at = ccorres_guard_from_wp [OF getSlotCap_pre_cte_at empty_fail_getSlotCap]
   ccorres_guard_from_wp_bind [OF getSlotCap_pre_cte_at empty_fail_getSlotCap]
-
-lemma wordFromRights_spec:
-  defines "crl s \<equiv> (seL4_CapRights_lift \<^bsup>s\<^esup>seL4_CapRights)"
-  shows "\<forall>s. \<Gamma> \<turnstile> {s} \<acute>ret__unsigned_long :== PROC wordFromRights(\<acute>seL4_CapRights)
-  \<lbrace> \<acute>ret__unsigned_long  =
-        ((capAllowGrant_CL (crl s) << 2)
-     || (capAllowRead_CL (crl s) << 1)
-     || capAllowWrite_CL (crl s)) \<rbrace>"
-  unfolding crl_def
-  apply vcg
-  apply (simp add: word_sle_def word_sless_def)
-  apply (simp add: seL4_CapRights_lift_def shiftr_over_and_dist)
-  apply (simp add: mask_shift_simps)
-  apply (simp add: word_ao_dist2[symmetric])
-  done
 
 lemma array_assertion_abs_cnode_ctes:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> (\<exists>n. gsCNodes s p = Some n \<and> n' \<le> 2 ^ n) \<and> True

@@ -192,23 +192,6 @@ lemma activateThread_ccorres:
   apply (clarsimp simp: typ_heap_simps ThreadState_Running_def mask_def)
   done
 
-lemma ceqv_Guard_UNIV_Skip:
-  "ceqv Gamma xf v s s' (a ;; Guard F UNIV Skip) a"
-  apply (rule ceqvI)
-  apply (safe elim!: exec_Normal_elim_cases)
-   apply (case_tac s'a, auto intro: exec.intros elim!: exec_Normal_elim_cases)[1]
-  apply (cases s', auto intro: exec.intros)
-  done
-
-lemma ceqv_tail_Guard_onto_Skip:
-  "ceqv Gamma xf v s s'
-      (a ;; Guard F G b) ((a ;; Guard F G Skip) ;; b)"
-  apply (rule ceqvI)
-  apply (safe elim!: exec_Normal_elim_cases)
-   apply (case_tac s'a, auto intro: exec.intros elim!: exec_Normal_elim_cases)[1]
-  apply (case_tac s'aa, auto intro: exec.intros elim!: exec_Normal_elim_cases)[1]
-  done
-
 lemma ceqv_remove_tail_Guard_Skip:
   "\<lbrakk> \<And>s. s \<in> G \<rbrakk> \<Longrightarrow> ceqv Gamma xf v s s' (a ;; Guard F G Skip) a"
   apply (rule ceqvI)
@@ -217,17 +200,12 @@ lemma ceqv_remove_tail_Guard_Skip:
   apply (case_tac s', auto intro: exec.intros elim!: exec_Normal_elim_cases)[1]
   done
 
-lemmas ccorres_remove_tail_Guard_Skip
-    = ccorres_abstract[where xf'="\<lambda>_. ()", OF ceqv_remove_tail_Guard_Skip]
-
 lemma queue_in_range_pre:
   "\<lbrakk> (qdom :: word32) \<le> ucast maxDom; prio \<le> ucast maxPrio \<rbrakk>
     \<Longrightarrow> qdom * of_nat numPriorities + prio < of_nat (numDomains * numPriorities)"
   by (clarsimp simp: cready_queues_index_to_C_def word_less_nat_alt
                      word_le_nat_alt unat_ucast maxDom_def seL4_MaxPrio_def
                      numPriorities_def unat_word_ariths numDomains_def)
-
-lemmas queue_in_range' = queue_in_range_pre[unfolded numDomains_def numPriorities_def, simplified]
 
 lemma switchToThread_ccorres':
   "ccorres (\<lambda>_ _. True) xfdc
@@ -246,7 +224,6 @@ lemma chooseThread_ccorres:
 proof -
 
   note prio_and_dom_limit_helpers [simp]
-  note ksReadyQueuesL2Bitmap_nonzeroI [simp]
   note Collect_const_mem [simp]
 
   have invs_no_cicd'_max_CurDomain[intro]:
@@ -316,11 +293,6 @@ proof -
                       simp: pred_conj_def comp_def obj_at'_def st_tcb_at'_def)
   done
 qed
-
-lemma ksDomSched_length_relation[simp]:
-  "\<lbrakk>cstate_relation s s'\<rbrakk> \<Longrightarrow> length (kernel_state.ksDomSchedule s) = unat (ksDomScheduleLength)"
-  apply (auto simp: cstate_relation_def cdom_schedule_relation_def Let_def ksDomScheduleLength_def)
-  done
 
 lemma ksDomSched_length_dom_relation[simp]:
   "\<lbrakk>cdom_schedule_relation (kernel_state.ksDomSchedule s) kernel_all_global_addresses.ksDomSchedule \<rbrakk> \<Longrightarrow> length (kernel_state.ksDomSchedule s) = unat (ksDomScheduleLength)"

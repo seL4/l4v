@@ -497,29 +497,6 @@ lemma cancelAllSignals_ccorres:
   apply clarsimp
   done
 
-lemma tcb_queue_concat:
-  "tcb_queue_relation getNext getPrev mp (xs @ z # ys) qprev qhead
-        \<Longrightarrow> tcb_queue_relation getNext getPrev mp (z # ys)
-                (tcb_ptr_to_ctcb_ptr (last ((ctcb_ptr_to_tcb_ptr qprev) # xs))) (tcb_ptr_to_ctcb_ptr z)"
-  apply (induct xs arbitrary: qprev qhead)
-   apply clarsimp
-  apply clarsimp
-  apply (elim meta_allE, drule(1) meta_mp)
-  apply (clarsimp cong: if_cong)
-  done
-
-lemma tcb_fields_ineq_helper:
-  "\<lbrakk> tcb_at' (ctcb_ptr_to_tcb_ptr x) s; tcb_at' (ctcb_ptr_to_tcb_ptr y) s \<rbrakk> \<Longrightarrow>
-     &(x\<rightarrow>[''tcbSchedPrev_C'']) \<noteq> &(y\<rightarrow>[''tcbSchedNext_C''])"
-  apply (clarsimp dest!: tcb_aligned'[OF obj_at'_weakenE, OF _ TrueI]
-                         ctcb_ptr_to_tcb_ptr_aligned)
-  apply (clarsimp simp: field_lvalue_def ctcb_size_bits_def)
-  apply (subgoal_tac "is_aligned (ptr_val y - ptr_val x) 8")
-   apply (drule sym, fastforce simp: is_aligned_def dvd_def)
-  apply (erule(1) aligned_sub_aligned)
-   apply (simp add: word_bits_conv)
-  done
-
 end
 
 primrec
@@ -557,17 +534,6 @@ lemma tcb_queue_relation2_concat:
   apply (case_tac "hp x")
    apply simp
   apply simp
-  done
-
-lemma tcb_queue_relation2_cong:
-  "\<lbrakk>queue = queue'; before = before'; after = after';
-   \<And>p. p \<in> set queue' \<Longrightarrow> mp p = mp' p\<rbrakk>
-  \<Longrightarrow> tcb_queue_relation2 getNext getPrev mp queue before after =
-     tcb_queue_relation2 getNext getPrev mp' queue' before' after'"
-  using [[hypsubst_thin = true]]
-  apply clarsimp
-  apply (induct queue' arbitrary: before')
-   apply simp+
   done
 
 context kernel_m begin
@@ -631,8 +597,6 @@ lemma cap_to_H_NTFNCap_tag:
     cap_get_tag C_cap = scast cap_notification_cap"
   apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits if_split_asm)
      by (simp_all add: Let_def cap_lift_def split: if_splits)
-
-lemmas ccorres_pre_getBoundNotification = ccorres_pre_threadGet [where f=tcbBoundNotification, folded getBoundNotification_def]
 
 lemma option_to_ptr_not_NULL:
   "option_to_ptr x \<noteq> NULL \<Longrightarrow> x \<noteq> None"
@@ -1265,42 +1229,6 @@ lemma deleteASID_ccorres:
                         plus_one_helper arg_cong[where f="\<lambda>x. 2 ^ x", OF meta_eq_to_obj_eq, OF asid_low_bits_def]
                  split: option.split_asm)
 
-lemma setObject_ccorres_lemma:
-  fixes val :: "'a :: pspace_storable" shows
-  "\<lbrakk> \<And>s. \<Gamma> \<turnstile> (Q s) c {s'. (s \<lparr> ksPSpace := ksPSpace s (ptr \<mapsto> injectKO val) \<rparr>, s') \<in> rf_sr},{};
-     \<And>s s' val (val' :: 'a). \<lbrakk> ko_at' val' ptr s; (s, s') \<in> rf_sr \<rbrakk>
-           \<Longrightarrow> s' \<in> Q s;
-     \<And>val :: 'a. updateObject val = updateObject_default val;
-     \<And>val :: 'a. (1 :: word32) < 2 ^ objBits val;
-     \<And>(val :: 'a) (val' :: 'a). objBits val = objBits val';
-     \<Gamma> \<turnstile> Q' c UNIV \<rbrakk>
-    \<Longrightarrow> ccorres dc xfdc \<top> Q' hs
-             (setObject ptr val) c"
-  apply (rule ccorres_from_vcg_nofail)
-  apply (rule allI)
-  apply (case_tac "obj_at' (\<lambda>x :: 'a. True) ptr \<sigma>")
-   apply (rule_tac P'="Q \<sigma>" in conseqPre, rule conseqPost, assumption)
-     apply clarsimp
-     apply (rule bexI [OF _ setObject_eq], simp+)
-   apply (drule obj_at_ko_at')
-   apply clarsimp
-  apply clarsimp
-  apply (rule conseqPre, erule conseqPost)
-    apply clarsimp
-    apply (subgoal_tac "fst (setObject ptr val \<sigma>) = {}")
-     apply simp
-     apply (erule notE, erule_tac s=\<sigma> in empty_failD[rotated])
-     apply (simp add: setObject_def split_def)
-    apply (rule ccontr)
-    apply (clarsimp elim!: nonemptyE)
-    apply (frule use_valid [OF _ obj_at_setObject3[where P=\<top>]], simp_all)[1]
-    apply (simp add: typ_at_to_obj_at'[symmetric])
-    apply (frule(1) use_valid [OF _ setObject_typ_at'])
-    apply simp
-   apply simp
-  apply clarsimp
-  done
-
 lemma findPDForASID_nonzero:
   "\<lbrace>\<top>\<rbrace> findPDForASID asid \<lbrace>\<lambda>rv s. rv \<noteq> 0\<rbrace>,-"
   apply (simp add: findPDForASID_def cong: option.case_cong)
@@ -1419,16 +1347,6 @@ lemma unmapPageTable_ccorres:
                         Let_def shiftl_t2n field_simps
                         Collect_const_mem pdBits_def pageBits_def)
   apply (simp add: unat_shiftr_le_bound unat_eq_0 pdeBits_def)
-  done
-
-lemma return_Null_ccorres:
-  "ccorres ccap_relation ret__struct_cap_C_'
-   \<top> UNIV (SKIP # hs)
-   (return NullCap) (\<acute>ret__struct_cap_C :== CALL cap_null_cap_new()
-                       ;; return_C ret__struct_cap_C_'_update ret__struct_cap_C_')"
-  apply (rule ccorres_from_vcg_throws)
-  apply (rule allI, rule conseqPre, vcg)
-  apply (clarsimp simp add: ccap_relation_NullCap_iff return_def)
   done
 
 lemma no_0_pd_at'[elim!]:
@@ -2041,8 +1959,6 @@ lemma irq_opt_relation_Some_ucast:
   apply (simp only: unat_arith_simps )
   apply (clarsimp simp: word_le_nat_alt Kernel_C.maxIRQ_def)
   done
-
-lemmas upcast_ucast_id = Word_Lemmas.ucast_up_inj
 
 lemma irq_opt_relation_Some_ucast':
   "\<lbrakk> x && mask 10 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: word32) \<rbrakk>

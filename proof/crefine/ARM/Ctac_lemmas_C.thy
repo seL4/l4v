@@ -148,9 +148,6 @@ lemma array_assertion_abs_pt:
   apply (rule_tac x=0 in exI, simp)
   done
 
-lemmas ccorres_move_array_assertion_pt
-    = ccorres_move_array_assertions[OF array_assertion_abs_pt]
-
 lemma c_guard_abs_pde:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> pde_at' (ptr_val p) s \<and> True
               \<longrightarrow> s' \<Turnstile>\<^sub>c (p :: pde_C ptr)"

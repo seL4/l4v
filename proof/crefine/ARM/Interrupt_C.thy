@@ -130,11 +130,6 @@ lemma ntfn_case_can_send:
                      else v)"
   by (cases cap, simp_all add: isCap_simps)
 
-lemma list_length_geq_helper[simp]:
-  "\<lbrakk>\<not> length args < 2\<rbrakk>
-       \<Longrightarrow> \<exists>y ys. args = y # ys"
-  by (frule length_ineq_not_Nil(3), simp, metis list.exhaust)
-
 lemma decodeIRQHandlerInvocation_ccorres:
   notes if_cong[cong]
   shows
@@ -288,11 +283,6 @@ lemma ucast_maxIRQ_le_eq:
   apply simp
   by (clarsimp simp: ucast_up_ucast is_up Kernel_C.maxIRQ_def)
 
-lemma ucast_maxIRQ_le_eq':
-  "UCAST(10 \<rightarrow> 32) irq \<le> SCAST(32 signed \<rightarrow> 32) Kernel_C.maxIRQ \<Longrightarrow> irq \<le> maxIRQ"
-  apply (clarsimp simp: Kernel_C.maxIRQ_def maxIRQ_def)
-  by word_bitwise
-
 lemma invokeIRQControl_expanded_ccorres:
   "ccorres (\<lambda>_ r. r = scast EXCEPTION_NONE) (ret__unsigned_long_')
       (invs' and cte_at' parent and (\<lambda>_. (ucast irq) \<le> (scast Kernel_C.maxIRQ :: machine_word)))
@@ -317,7 +307,7 @@ lemma invokeIRQControl_expanded_ccorres:
   apply (clarsimp simp: is_simple_cap'_def isCap_simps valid_cap_simps' capAligned_def
                         word_bits_def)
   apply (rule conjI)
-   apply (fastforce simp: word_bits_def intro!: ucast_maxIRQ_le_eq ucast_maxIRQ_le_eq')
+   apply (fastforce simp: word_bits_def intro!: ucast_maxIRQ_le_eq)
   apply (simp add: invs_mdb' invs_valid_objs' invs_pspace_aligned')
   apply (rule conjI)
    apply (clarsimp simp: maxIRQ_def Kernel_C.maxIRQ_def)
@@ -372,14 +362,6 @@ lemma Arch_invokeIRQControl_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: return_def)
       apply (wpsimp simp: guard_is_UNIV_def)+
-  done
-
-lemma unat_ucast_16_32:
-  "unat (ucast (x::(16 word))::32 signed word) = unat x"
-  apply (subst unat_ucast)
-  apply (rule Divides.mod_less, simp)
-  apply (rule less_le_trans[OF unat_lt2p])
-  apply simp
   done
 
 lemma isIRQActive_ccorres:
@@ -458,26 +440,6 @@ lemma checkIRQ_ret_good:
   apply (clarsimp simp: checkIRQ_def rangeCheck_def Platform_maxIRQ minIRQ_def)
   apply (rule hoare_pre,wp)
   by (clarsimp simp: Kernel_C.maxIRQ_def split: if_split)
-
-lemma toEnum_of_ucast:
-  "len_of TYPE('b) \<le> len_of TYPE('a) \<Longrightarrow>
-  (toEnum (unat (b::('b :: len word))):: ('a :: len word)) = of_nat (unat b)"
-  apply (subst toEnum_of_nat)
-   apply (rule less_le_trans[OF unat_lt2p])
-   apply (simp add:power2_nat_le_eq_le)
-  apply simp
-  done
-
-lemma unat_ucast_mask:
-  "len_of TYPE('b) \<le> len_of TYPE('a) \<Longrightarrow> (unat (ucast (a :: ('a :: len) word) :: ('b :: len) word)) = unat (a && mask (len_of TYPE('b)))"
-  apply (subst ucast_mask_drop[symmetric])
-   apply (rule le_refl)
-  apply (simp add:unat_ucast)
-  apply (subst nat_mod_eq')
-   apply (rule less_le_trans[OF word_unat_mask_lt le_refl])
-   apply (simp add: word_size)
-  apply simp
-  done
 
 lemma Arch_decodeIRQControlInvocation_ccorres:
   notes if_cong[cong]

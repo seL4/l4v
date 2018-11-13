@@ -83,31 +83,6 @@ end
 context kernel_m
 begin
 
-lemma getMRs_rel_sched:
-  "\<lbrakk> getMRs_rel args buffer s;
-     (cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer) s \<rbrakk>
-  \<Longrightarrow> getMRs_rel args buffer (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
-  apply (clarsimp simp: getMRs_rel_def)
-  apply (rule exI, rule conjI, assumption)
-  apply (subst det_wp_use, rule det_wp_getMRs)
-   apply (simp add: cur_tcb'_def split: option.splits)
-   apply (simp add: valid_ipc_buffer_ptr'_def)
-  apply (subst (asm) det_wp_use, rule det_wp_getMRs)
-   apply (simp add: cur_tcb'_def)
-  apply (clarsimp simp: getMRs_def in_monad)
-  apply (drule asUser_sched)
-  apply (intro exI)
-  apply (erule conjI)
-  apply (cases buffer)
-   apply (simp add: return_def)
-  apply clarsimp
-  apply (drule mapM_upd [rotated])
-   prefer 2
-   apply fastforce
-  apply (clarsimp simp: loadWordUser_def in_monad stateAssert_def word_size)
-  apply (erule doMachineOp_sched)
-  done
-
 lemma getObject_state:
   " \<lbrakk>(x, s') \<in> fst (getObject t' s); ko_at' ko t s\<rbrakk>
   \<Longrightarrow> (if t = t' then tcbState_update (\<lambda>_. st) x else x,
@@ -352,16 +327,6 @@ lemma getMRs_rel_state:
   apply (erule doMachineOp_state)
   done
 
-(* FIXME: move *)
-lemma setTCB_cur:
-  "\<lbrace>cur_tcb'\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
-  including no_pre
-  apply (wp cur_tcb_lift)
-  apply (simp add: setObject_def split_def updateObject_default_def)
-  apply wp
-  apply simp
-  done
-
 lemma setThreadState_getMRs_rel:
   "\<lbrace>getMRs_rel args buffer and cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer
            and (\<lambda>_. runnable' st)\<rbrace>
@@ -399,19 +364,6 @@ lemma ccorres_abstract_known:
    apply simp
   apply simp
   done
-
-lemma distinct_remove1_filter:
-  "distinct xs \<Longrightarrow> remove1 v xs = [x\<leftarrow>xs. x \<noteq> v]"
-  apply (induct xs)
-   apply simp
-  apply (clarsimp split: if_split)
-  apply (rule sym, simp add: filter_id_conv)
-  apply clarsimp
-  done
-
-lemma hrs_mem_update_cong:
-  "\<lbrakk> \<And>x. f x = f' x \<rbrakk> \<Longrightarrow> hrs_mem_update f = hrs_mem_update f'"
-  by (simp add: hrs_mem_update_def)
 
 lemma setPriority_ccorres:
   "ccorres dc xfdc
@@ -520,27 +472,11 @@ lemma checkCapAt_ccorres:
 lemmas checkCapAt_ccorres2
     = checkCapAt_ccorres[where g=return, simplified bind_return]
 
-lemma invs_psp_aligned_strg':
-  "invs' s \<longrightarrow> pspace_aligned' s"
-  by clarsimp
-
 lemma cte_is_derived_capMasterCap_strg:
   "cte_wp_at' (is_derived' (ctes_of s) ptr cap \<circ> cteCap) ptr s
     \<longrightarrow> cte_wp_at' (\<lambda>scte. capMasterCap (cteCap scte) = capMasterCap cap \<or> P) ptr s"
   by (clarsimp simp: cte_wp_at_ctes_of is_derived'_def
                      badge_derived'_def)
-
-lemma cteInsert_cap_to'2:
-  "\<lbrace>ex_nonz_cap_to' p\<rbrace>
-     cteInsert newCap srcSlot destSlot
-   \<lbrace>\<lambda>_. ex_nonz_cap_to' p\<rbrace>"
-  apply (simp add: cteInsert_def ex_nonz_cap_to'_def setUntypedCapAsFull_def)
-  apply (rule hoare_vcg_ex_lift)
-  apply (wp updateMDB_weak_cte_wp_at
-            updateCap_cte_wp_at_cases getCTE_wp' static_imp_wp)
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply auto
-  done
 
 lemma archSetIPCBuffer_ccorres:
   "ccorres dc xfdc \<top> (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr target} \<inter> {s. bufferAddr_' s = buf}) []
@@ -550,12 +486,6 @@ lemma archSetIPCBuffer_ccorres:
    apply (simp add: setTCBIPCBuffer_def)
    apply (ctac add: setRegister_ccorres[simplified dc_def])
   apply (clarsimp simp:)
-  done
-
-lemma threadSet_ipcbuffer_invs:
-  "is_aligned a msg_align_bits \<Longrightarrow>
-  \<lbrace>invs' and tcb_at' t\<rbrace> threadSet (tcbIPCBuffer_update (\<lambda>_. a)) t \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp threadSet_invs_trivial, simp_all add: inQ_def cong: conj_cong)
   done
 
 lemma invokeTCB_ThreadControl_ccorres:
@@ -1502,14 +1432,6 @@ lemma threadSet_same:
   unfolding threadSet_def
   by (wpsimp wp: setObject_tcb_strongest getObject_tcb_wp) fastforce
 
-lemma asUser_setRegister_ko_at':
-  "\<lbrace>obj_at' (\<lambda>tcb'. tcb = tcbArch_update (\<lambda>_. atcbContextSet ((atcbContextGet (tcbArch tcb'))(r := v)) (tcbArch tcb')) tcb') dst\<rbrace>
-  asUser dst (setRegister r v) \<lbrace>\<lambda>rv. ko_at' (tcb::tcb) dst\<rbrace>"
-  unfolding asUser_def
-  apply (wpsimp wp: threadSet_same threadGet_wp)
-  apply (clarsimp simp: setRegister_def simpler_modify_def obj_at'_def)
-  done
-
 lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
   notes static_imp_wp [wp]
   shows
@@ -1727,10 +1649,6 @@ lemma ccorres_abstract_cong:
         = ccorres_underlying sr G r xf ar axf P P' hs b c"
   by (simp add: ccorres_underlying_def split_paired_Ball imp_conjL
           cong: conj_cong xstate.case_cong)
-
-lemma is_aligned_the_x_strengthen:
-  "x \<noteq> None \<and> case_option \<top> valid_ipc_buffer_ptr' x s \<longrightarrow> is_aligned (the x) msg_align_bits"
-  by (clarsimp simp: valid_ipc_buffer_ptr'_def)
 
 lemma valid_ipc_buffer_ptr_the_strengthen:
   "x \<noteq> None \<and> case_option \<top> valid_ipc_buffer_ptr' x s \<longrightarrow> valid_ipc_buffer_ptr' (the x) s"
@@ -2531,28 +2449,6 @@ lemma decodeCopyRegisters_ccorres:
     word_and_1_shiftl [where n=3,simplified] cap_get_tag_isCap[symmetric] split: if_split_asm)
   done
 
-(* FIXME: move *)
-lemma ccap_relation_gen_framesize_to_H:
-  "\<lbrakk> ccap_relation cap cap'; isArchPageCap cap \<rbrakk>
-       \<Longrightarrow> gen_framesize_to_H (generic_frame_cap_get_capFSize_CL (cap_lift cap'))
-                 = capVPSize (capCap cap)"
-  apply (clarsimp simp: isCap_simps)
-  apply (case_tac "sz = ARM.ARMSmallPage")
-   apply (frule cap_get_tag_PageCap_small_frame)
-   apply (simp add: cap_get_tag_isCap isCap_simps
-                    pageSize_def cap_lift_small_frame_cap
-                    generic_frame_cap_get_capFSize_CL_def
-                    gen_framesize_to_H_def)
-  apply (subgoal_tac "cap_get_tag cap' = scast cap_frame_cap")
-   apply (frule(1) iffD1 [OF cap_get_tag_PageCap_frame])
-   apply (clarsimp simp: cap_frame_cap_lift generic_frame_cap_get_capFSize_CL_def)
-   apply (simp add: gen_framesize_to_H_def framesize_to_H_def
-             split: if_split)
-   apply (clarsimp simp: ccap_relation_def c_valid_cap_def
-                         cl_valid_cap_def)
-  apply (simp add: cap_get_tag_isCap isCap_simps pageSize_def)
-  done
-
 lemma isDevice_PageCap_ccap_relation:
   "ccap_relation (capability.ArchObjectCap (arch_capability.PageCap d ref rghts sz data)) cap
   \<Longrightarrow> (generic_frame_cap_get_capFIsDevice_CL (cap_lift cap) \<noteq> 0)  = d"
@@ -3225,7 +3121,7 @@ lemma decodeTCBConfigure_ccorres:
   apply (frule interpret_excaps_eq[rule_format, where n=2], simp)
   apply (clarsimp simp: mask_def[where n=4] ccap_rights_relation_def
                         rightsFromWord_wordFromRights
-                        capTCBPtr_eq tcb_ptr_to_ctcb_ptr_mask
+                        capTCBPtr_eq
                         tcb_cnode_index_defs size_of_def
                         option_to_0_def rf_sr_ksCurThread
                         StrictC'_thread_state_defs mask_eq_iff_w2p word_size

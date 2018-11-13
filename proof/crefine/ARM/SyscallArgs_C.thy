@@ -534,15 +534,6 @@ lemma ccorres_injection_handler_csum1:
   apply (auto split: sum.split)
   done
 
-lemma ccorres_injection_handler_csum2:
-  "ccorres ((f o injector) \<currency> r) xf P P' hs a c
-    \<Longrightarrow> ccorres (f \<currency> r) xf P P' hs
-            (injection_handler injector a) c"
-  apply (simp add: injection_handler_liftM)
-  apply (erule ccorres_rel_imp)
-  apply (auto split: sum.split)
-  done
-
 definition
   is_nondet_refinement :: "('a, 's) nondet_monad
                               \<Rightarrow> ('a, 's) nondet_monad \<Rightarrow> bool"
@@ -607,26 +598,11 @@ lemma ccorres_defer:
   apply fastforce
   done
 
-lemma no_fail_loadWordUser:
-  "no_fail (pointerInUserData x and K (is_aligned x 2)) (loadWordUser x)"
-  apply (simp add: loadWordUser_def)
-  apply (rule no_fail_pre, wp no_fail_stateAssert)
-  apply simp
-  done
-
 lemma no_fail_getMRs:
   "no_fail (tcb_at' thread and case_option \<top> valid_ipc_buffer_ptr' buffer)
            (getMRs thread buffer info)"
   apply (rule det_wp_no_fail)
   apply (rule det_wp_getMRs)
-  done
-
-lemma msgRegisters_scast:
-  "n < unat (scast n_msgRegisters :: word32) \<Longrightarrow>
-  unat (scast (index msgRegistersC n)::word32) = unat (index msgRegistersC n)"
-  apply (simp add: msgRegisters_def fupdate_def update_def n_msgRegisters_def fcp_beta
-                   Kernel_C.R2_def Kernel_C.R3_def Kernel_C.R4_def Kernel_C.R5_def
-                   Kernel_C.R6_def Kernel_C.R7_def)
   done
 
 lemma msgRegisters_ccorres:
@@ -785,11 +761,6 @@ lemma capFVMRights_range:
 
 lemma dumb_bool_for_all: "(\<forall>x. x) = False"
   by auto
-
-lemma dumb_bool_split_for_vcg:
-  "\<lbrace>d \<longrightarrow> \<acute>ret__unsigned_long \<noteq> 0\<rbrace> \<inter> \<lbrace>\<not> d \<longrightarrow> \<acute>ret__unsigned_long = 0\<rbrace>
-  = \<lbrace>d = to_bool \<acute>ret__unsigned_long \<rbrace>"
-  by (auto simp: to_bool_def)
 
 lemma ccap_relation_page_is_device:
   "ccap_relation (capability.ArchObjectCap (arch_capability.PageCap d v0a v1 v2 v3)) c
@@ -985,11 +956,6 @@ lemma lookupIPCBuffer_ccorres[corres]:
                    tcb_cnode_index_defs tcbSlots cte_level_bits_def
                    size_of_def)
   done
-
-
-lemma doMachineOp_pointerInUserData:
-  "\<lbrace>pointerInUserData p\<rbrace> doMachineOp m \<lbrace>\<lambda>rv. pointerInUserData p\<rbrace>"
-  by (simp add: pointerInUserData_def) wp
 
 lemma loadWordUser_wp:
   "\<lbrace>\<lambda>s. is_aligned p 2 \<and> (\<forall>v. user_word_at v p s \<longrightarrow> P v s)\<rbrace>
@@ -1254,7 +1220,7 @@ lemma getSyscallArg_ccorres_foo:
        apply (rule conseqPre, vcg)
        apply (clarsimp simp: rf_sr_ksCurThread)
        apply (drule (1) obj_at_cslift_tcb)
-       apply (clarsimp simp: typ_heap_simps' msgRegisters_scast)
+       apply (clarsimp simp: typ_heap_simps')
        apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
                              msgRegisters_ccorres atcbContextGet_def
                              carch_tcb_relation_def)

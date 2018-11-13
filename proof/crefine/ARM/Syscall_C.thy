@@ -26,12 +26,6 @@ context kernel_m begin
 (* FIXME: should do this from the beginning *)
 declare true_def [simp] false_def [simp]
 
-lemma ccorres_If_False:
-  "ccorres_underlying sr Gamm r xf arrel axf R R' hs b c
-   \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf
-            (R and (\<lambda>_. \<not> P)) R' hs (If P a b) c"
-  by (rule ccorres_gen_asm, simp)
-
 definition
   one_on_true :: "bool \<Rightarrow> nat"
 where
@@ -339,26 +333,11 @@ lemma decodeInvocation_ccorres:
                           mask_eq_iff_w2p[THEN trans[OF eq_commute]])+
   done
 
-lemma ccorres_Call_Seq:
-  "\<lbrakk> \<Gamma> f = Some v; ccorres r xf P P' hs a (v ;; c) \<rbrakk>
-       \<Longrightarrow> ccorres r xf P P' hs a (Call f ;; c)"
-  apply (erule ccorres_semantic_equivD1)
-  apply (rule semantic_equivI)
-  apply (auto elim!: exec_elim_cases intro: exec.intros)
-  done
-
 lemma wordFromRights_mask_0:
   "wordFromRights rghts && ~~ mask 4 = 0"
   apply (simp add: wordFromRights_def word_ao_dist word_or_zero
             split: cap_rights.split)
   apply (simp add: mask_def split: if_split)
-  done
-
-lemma wordFromRights_mask_eq:
-  "wordFromRights rghts && mask 4 = wordFromRights rghts"
-  apply (cut_tac x="wordFromRights rghts" and y="mask 4" and z="~~ mask 4"
-             in word_bool_alg.conj_disj_distrib)
-  apply (simp add: wordFromRights_mask_0)
   done
 
 lemma loadWordUser_user_word_at:
@@ -369,25 +348,6 @@ lemma loadWordUser_user_word_at:
   apply (clarsimp simp: pointerInUserData_def
                         loadWord_def in_monad
                         is_aligned_mask)
-  done
-
-lemma mapM_loadWordUser_user_words_at:
-  "\<lbrace>\<lambda>s. \<forall>rv. (\<forall>x < length xs. user_word_at (rv ! x) (xs ! x) s)
-              \<and> length rv = length xs \<longrightarrow> Q rv s\<rbrace>
-    mapM loadWordUser xs \<lbrace>Q\<rbrace>"
-  apply (induct xs arbitrary: Q)
-   apply (simp add: mapM_def sequence_def)
-   apply wp
-  apply (simp add: mapM_Cons)
-  apply wp
-   apply assumption
-  apply (wp loadWordUser_user_word_at)
-  apply clarsimp
-  apply (drule spec, erule mp)
-  apply clarsimp
-  apply (case_tac x)
-   apply simp
-  apply simp
   done
 
 lemma getSlotCap_slotcap_in_mem:
@@ -436,27 +396,6 @@ lemma messageInfoFromWord_spec:
                         messageInfoFromWord_def Let_def msgLabelBits_def
                         Types_H.msgLengthBits_def Types_H.msgExtraCapBits_def
                         Types_H.msgMaxExtraCaps_def shiftL_nat)
-  done
-
-lemma threadGet_tcbIpcBuffer_ccorres [corres]:
-  "ccorres (=) w_bufferPtr_' (tcb_at' tptr) UNIV hs
-           (threadGet tcbIPCBuffer tptr)
-           (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t (Ptr &(tcb_ptr_to_ctcb_ptr tptr\<rightarrow>
-                                  [''tcbIPCBuffer_C''])::word32 ptr)\<rbrace>
-               (\<acute>w_bufferPtr :==
-                  h_val (hrs_mem \<acute>t_hrs)
-                   (Ptr &(tcb_ptr_to_ctcb_ptr tptr\<rightarrow>[''tcbIPCBuffer_C''])::word32 ptr)))"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_add_return2)
-   apply (rule ccorres_pre_threadGet)
-   apply (rule_tac P = "obj_at' (\<lambda>tcb. tcbIPCBuffer tcb = x) tptr" and
-                   P'="{s'. \<exists>ctcb.
-          cslift s' (tcb_ptr_to_ctcb_ptr tptr) = Some ctcb \<and>
-                 tcbIPCBuffer_C ctcb = x }" in ccorres_from_vcg)
-   apply (rule allI, rule conseqPre, vcg)
-   apply clarsimp
-   apply (clarsimp simp: return_def typ_heap_simps')
-  apply (clarsimp simp: obj_at'_def ctcb_relation_def)
   done
 
 lemma handleInvocation_def2:
@@ -770,19 +709,6 @@ lemma handleFault_ccorres:
   apply (clarsimp simp: pred_tcb_at')
   done
 
-lemma getMessageInfo_less_4:
-  "\<lbrace>\<top>\<rbrace> getMessageInfo t \<lbrace>\<lambda>rv s. msgExtraCaps rv < 4\<rbrace>"
-  including no_pre
-  apply (simp add: getMessageInfo_def)
-  apply wp
-  apply (rule hoare_strengthen_post, rule hoare_vcg_prop)
-  apply (simp add: messageInfoFromWord_def Let_def
-                   Types_H.msgExtraCapBits_def)
-  apply (rule minus_one_helper5, simp)
-  apply simp
-  apply (rule word_and_le1)
-  done
-
 lemma invs_queues_imp:
   "invs' s \<longrightarrow> valid_queues s"
   by clarsimp
@@ -1021,7 +947,7 @@ lemma handleInvocation_ccorres:
        apply clarsimp
        apply (vcg exspec= lookupCapAndSlot_modifies)
       apply simp
-      apply (wp getMessageInfo_less_4 getMessageInfo_le3 getMessageInfo_msgLength')+
+      apply (wp getMessageInfo_le3 getMessageInfo_msgLength')+
      apply (simp add: msgMaxLength_def, wp getMessageInfo_msgLength')[1]
     apply simp
     apply wp
@@ -1233,54 +1159,13 @@ lemma capFaultOnFailure_if_case_sum:
                  >>= sum.case_sum (handleFault thread) return))"
   by (case_tac c, clarsimp, clarsimp)
 
-
-
-(* FIXME:  MOVE to Corres_C.thy *)
-lemma ccorres_trim_redundant_throw_break:
-  "\<lbrakk>ccorres_underlying rf_sr \<Gamma> arrel axf arrel axf G G' (SKIP # hs) a c;
-          \<And>s f. axf (global_exn_var_'_update f s) = axf s \<rbrakk>
-  \<Longrightarrow> ccorres_underlying rf_sr \<Gamma> r xf arrel axf G G' (SKIP # hs)
-          a (c;; Basic (global_exn_var_'_update (\<lambda>_. Break));; THROW)"
-  apply -
-  apply (rule ccorres_trim_redundant_throw')
-    apply simp
-   apply simp
-  apply simp
-  done
-
 lemma invs_valid_objs_strengthen:
   "invs' s \<longrightarrow> valid_objs' s" by fastforce
-
-lemma ct_not_ksQ_strengthen:
-  "thread = ksCurThread s \<and> ksCurThread s \<notin> set (ksReadyQueues s p) \<longrightarrow> thread \<notin> set (ksReadyQueues s p)" by fastforce
 
 lemma option_to_ctcb_ptr_valid_ntfn:
   "valid_ntfn' ntfn s ==> (option_to_ctcb_ptr (ntfnBoundTCB ntfn) = NULL) = (ntfnBoundTCB ntfn = None)"
   apply (cases "ntfnBoundTCB ntfn", simp_all add: option_to_ctcb_ptr_def)
   apply (clarsimp simp: valid_ntfn'_def tcb_at_not_NULL)
-  done
-
-
-lemma deleteCallerCap_valid_ntfn'[wp]:
-  "\<lbrace>\<lambda>s. valid_ntfn' x s\<rbrace> deleteCallerCap c \<lbrace>\<lambda>rv s. valid_ntfn' x s\<rbrace>"
-  apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift hoare_vcg_ball_lift hoare_vcg_imp_lift
-            | simp add: valid_ntfn'_def split: ntfn.splits)+
-   apply auto
-  done
-
-lemma hoare_vcg_imp_liftE:
-  "\<lbrakk>\<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>, \<lbrace>E\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow>  \<lbrace>\<lambda>s. P' s \<or> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>, \<lbrace>E\<rbrace>"
-  apply (simp add: validE_def valid_def split_def split: sum.splits)
-  done
-
-
-lemma not_obj_at'_ntfn:
-  "(\<not>obj_at' (P::Structures_H.notification \<Rightarrow> bool) t s) = (\<not> typ_at' NotificationT t s \<or> obj_at' (Not \<circ> P) t s)"
-  apply (simp add: obj_at'_real_def projectKOs typ_at'_def ko_wp_at'_def objBits_simps)
-  apply (rule iffI)
-   apply (clarsimp)
-   apply (case_tac ko)
-   apply (clarsimp)+
   done
 
 lemma handleRecv_ccorres:
@@ -1596,21 +1481,6 @@ lemma ccorres_ntfn_cases:
   apply clarsimp
   done
 
-(* FIXME: generalise the one in Interrupt_C *)
-lemma getIRQSlot_ccorres2:
-  "ccorres ((=) \<circ> Ptr) slot_'
-          \<top> UNIV hs
-      (getIRQSlot irq) (\<acute>slot :== CTypesDefs.ptr_add \<acute>intStateIRQNode (uint (ucast irq :: word32)))"
-  apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-  apply (rule allI, rule conseqPre, vcg)
-  apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
-                        locateSlot_conv)
-  apply (simp add: simpler_gets_def bind_def return_def)
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                        cinterrupt_relation_def size_of_def
-                        cte_level_bits_def mult.commute mult.left_commute ucast_nat_def)
-  done
-
 lemma getIRQSlot_ccorres3:
   "(\<And>rv. ccorresG rf_sr \<Gamma> r xf (P rv) (P' rv) hs (f rv) c) \<Longrightarrow>
    ccorresG rf_sr \<Gamma> r xf
@@ -1643,9 +1513,6 @@ lemma scast_maxIRQ_is_less:
         (simp add:  is_up_def target_size source_size  )?)
   apply fastforce
 done
-
-lemma validIRQcastingLess: "Kernel_C.maxIRQ <s (ucast((ucast (b :: irq))::word16)) \<Longrightarrow> ARM.maxIRQ < b"
-  by (simp add: Platform_maxIRQ scast_maxIRQ_is_less is_up_def target_size source_size)
 
 lemma scast_maxIRQ_is_not_less: "(\<not> (Kernel_C.maxIRQ) <s (ucast \<circ> (ucast :: irq \<Rightarrow> 16 word)) b)  \<Longrightarrow> \<not> (scast Kernel_C.maxIRQ < b)"
   apply (subgoal_tac "sint (ucast Kernel_C.maxIRQ :: 32 sword) \<ge> sint (ucast (ucast b))";

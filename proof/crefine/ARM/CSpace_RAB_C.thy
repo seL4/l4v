@@ -51,22 +51,6 @@ lemma not_snd_bindE_I1:
   unfolding bindE_def
   by (erule not_snd_bindI1)
 
-lemma ccorres_remove_bind_returnOk_noguard:
-  assumes ac: "ccorres (f \<currency> r') xf P P' (SKIP # hs) a c"
-  and     rr: "\<And>v s'. r' v (exvalue (xf s')) \<Longrightarrow> r (g v) (exvalue (xf s'))"
-  shows   "ccorres (f \<currency> r) xf P P' (SKIP # hs) (a >>=E (\<lambda>v. returnOk (g v))) c"
-  apply (rule ccorresI')
-  apply clarsimp
-  apply (drule not_snd_bindE_I1)
-  apply (erule (4) ccorresE[OF ac])
-  apply (clarsimp simp add: bindE_def returnOk_def NonDetMonad.lift_def bind_def return_def
-    split_def)
-  apply (rule bexI [rotated], assumption)
-  apply (simp add: throwError_def return_def unif_rrel_def
-            split: sum.splits)
-  apply (auto elim!: rr)
-  done
-
 declare isCNodeCap_CNodeCap[simp]
 
 (* MOVE *)
@@ -118,37 +102,6 @@ lemma rightsFromWord_wordFromRights:
 lemma wordFromRights_inj:
   "inj wordFromRights"
   by (rule inj_on_inverseI, rule rightsFromWord_wordFromRights)
-
-lemmas wordFromRights_eq = inj_eq [OF wordFromRights_inj]
-
-lemma rightsFromWord_and:
-  "rightsFromWord (a && b) = andCapRights (rightsFromWord a) (rightsFromWord b)"
-  by (simp add: rightsFromWord_def andCapRights_def)
-
-lemma andCapRights_ac:
-  "andCapRights (andCapRights a b) c = andCapRights a (andCapRights b c)"
-  "andCapRights a b = andCapRights b a"
-  "andCapRights a (andCapRights b c) = andCapRights b (andCapRights a c)"
-  by (simp add: andCapRights_def conj_comms split: cap_rights.split)+
-
-lemma wordFromRights_rightsFromWord:
-  "wordFromRights (rightsFromWord w) = w && mask 3"
-  apply (simp add: wordFromRights_def rightsFromWord_def
-                   mask_def)
-  apply (auto simp: bin_nth_ops bin_nth_Bit0 bin_nth_Bit1 numeral_2_eq_2
-           intro!: word_eqI)
-  done
-
-
-(* FIXME: move, duplicated in CSpace_C *)
-lemma ccorres_cases:
-  assumes P:    " P \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf ar axf G G' hs a b"
-  assumes notP: "\<not>P \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf ar axf H H' hs a b"
-  shows "ccorres_underlying sr \<Gamma> r xf ar axf (\<lambda>s. (P \<longrightarrow> G s) \<and> (\<not>P \<longrightarrow> H s))
-                      ({s. P \<longrightarrow> s \<in> G'} \<inter> {s. \<not>P \<longrightarrow> s \<in> H'})
-                      hs a b"
-  apply (cases P, auto simp: P notP)
-  done
 
 lemma monadic_rewrite_stateAssert:
   "monadic_rewrite F E P (stateAssert P xs) (return ())"
@@ -605,31 +558,12 @@ lemma cap_rights_to_H_from_word_canon [simp]:
   done
 
 (* MOVE *)
-lemma to_bool_false [simp]:
-  "to_bool false = False"
-  unfolding to_bool_def false_def
-  by simp
-
-(* MOVE *)
 lemma tcb_aligned':
   "tcb_at' t s \<Longrightarrow> is_aligned t tcbBlockSizeBits"
   apply (drule obj_at_aligned')
    apply (simp add: objBits_simps)
   apply (simp add: objBits_simps)
   done
-
-lemma tcb_ptr_to_ctcb_ptr_mask [simp]:
-  assumes tcbat: "tcb_at' thread s"
-  shows   "ptr_val (tcb_ptr_to_ctcb_ptr thread) && ~~mask tcbBlockSizeBits = thread"
-proof -
-  have "thread + ctcb_offset && ~~ mask tcbBlockSizeBits = thread"
-  proof (rule add_mask_lower_bits)
-    show "is_aligned thread tcbBlockSizeBits" using tcbat by (rule tcb_aligned')
-  qed (auto simp: word_bits_def ctcb_offset_defs objBits_defs)
-  thus ?thesis
-    unfolding tcb_ptr_to_ctcb_ptr_def ctcb_offset_def
-    by (simp add: mask_def)
-qed
 
 abbreviation
   "lookupSlot_raw_xf \<equiv>

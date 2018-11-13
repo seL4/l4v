@@ -101,6 +101,8 @@ lemma get_tcb_state_regs_partial_overwrite[simp]:
             split: tcb_state_regs.split)
   done
 
+(* This is currently unused, but might be useful.
+   it might be worth fixing if it breaks, but ask around first. *)
 lemma isolate_thread_actions_bind:
   "inj idx \<Longrightarrow>
    isolate_thread_actions idx a b c >>=
@@ -126,25 +128,13 @@ lemma tcbSchedEnqueue_obj_at_unchangedT:
   apply (wp | simp add: y)+
   done
 
-lemma asUser_obj_at_notQ:
-  "\<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>
-   asUser t (setRegister r v)
-   \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
-  apply (simp add: asUser_def)
-  apply (rule hoare_seq_ext)+
-    apply (simp add: split_def)
-    apply (rule threadSet_obj_at'_really_strongest)
-   apply (wp threadGet_wp |rule gets_inv|wpc|clarsimp)+
-  apply (clarsimp simp: obj_at'_def)
-  done
-
 (* FIXME: Move to Schedule_R.thy. Make Arch_switchToThread_obj_at a specialisation of this *)
 lemma Arch_switchToThread_obj_at_pre:
   "\<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>
    Arch.switchToThread t
    \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
   apply (simp add: ARM_H.switchToThread_def)
-  apply (wp asUser_obj_at_notQ doMachineOp_obj_at setVMRoot_obj_at hoare_drop_imps|wpc)+
+  apply (wp doMachineOp_obj_at setVMRoot_obj_at hoare_drop_imps|wpc)+
   done
 
 lemma rescheduleRequired_obj_at_unchangedT:
@@ -296,18 +286,6 @@ lemma isolate_thread_actions_asUser:
   apply (clarsimp simp: partial_overwrite_get_tcb_state_regs
                         put_tcb_state_regs_ko_at')
   apply (case_tac ko, simp)
-  done
-
-lemma getRegister_simple:
-  "getRegister r = (\<lambda>con. ({(con r, con)}, False))"
-  by (simp add: getRegister_def simpler_gets_def)
-
-lemma mapM_getRegister_simple:
-  "mapM getRegister rs = (\<lambda>con. ({(map con rs, con)}, False))"
-  apply (induct rs)
-   apply (simp add: mapM_Nil return_def)
-  apply (simp add: mapM_Cons getRegister_def simpler_gets_def
-                   bind_def return_def)
   done
 
 lemma setRegister_simple:
@@ -847,23 +825,6 @@ lemma doIPCTransfer_simple_rewrite:
   apply (auto elim!: obj_at'_weakenE)
   done
 
-lemma monadic_rewrite_setSchedulerAction_noop:
-  "monadic_rewrite F E (\<lambda>s. ksSchedulerAction s = act) (setSchedulerAction act) (return ())"
-  unfolding setSchedulerAction_def
-  apply (rule monadic_rewrite_imp, rule monadic_rewrite_modify_noop)
-  apply simp
-  done
-
-lemma rescheduleRequired_simple_rewrite:
-  "monadic_rewrite F E
-     (sch_act_simple)
-     rescheduleRequired
-     (setSchedulerAction ChooseNewThread)"
-  apply (simp add: rescheduleRequired_def getSchedulerAction_def)
-  apply (simp add: monadic_rewrite_def exec_gets sch_act_simple_def)
-  apply auto
-  done
-
 lemma empty_fail_isRunnable:
   "empty_fail (isRunnable t)"
   by (simp add: isRunnable_def isBlocked_def)
@@ -1348,12 +1309,6 @@ lemma threadGet_isolatable:
                 split: tcb_state_regs.split)+
   done
 
-lemma monadic_rewrite_trans_dup:
-  "\<lbrakk> monadic_rewrite F E P f g; monadic_rewrite F E P g h \<rbrakk>
-      \<Longrightarrow> monadic_rewrite F E P f h"
-  by (auto simp add: monadic_rewrite_def)
-
-
 lemma setCurThread_isolatable:
   "thread_actions_isolatable idx (setCurThread t)"
   by (simp add: setCurThread_def modify_isolatable)
@@ -1415,37 +1370,6 @@ definition
      = tsrs (dest := TCBStateRegs (tsrState (tsrs dest))
                        ((tsrContext (tsrs dest)) (r := v)))"
 
-
-lemma set_register_isolate:
-  "\<lbrakk> inj idx; idx y = dest \<rbrakk> \<Longrightarrow>
-  monadic_rewrite False True
-      (\<lambda>s. \<forall>x. tcb_at' (idx x) s)
-           (asUser dest (setRegister r v))
-           (isolate_thread_actions idx (return ())
-                 (set_register_tsrs y r v) id)"
-  apply (simp add: asUser_def split_def bind_assoc
-                   getRegister_def setRegister_def
-                   select_f_returns isolate_thread_actions_def
-                   getSchedulerAction_def)
-  apply (simp add: threadGet_def liftM_def getObject_get_assert
-                   bind_assoc threadSet_def
-                   setObject_modify_assert)
-  apply (clarsimp simp: monadic_rewrite_def exec_gets
-                        exec_modify tcb_at_KOTCB_upd)
-  apply (clarsimp simp: simpler_modify_def
-                intro!: kernel_state.fold_congs[OF refl refl])
-  apply (clarsimp simp: set_register_tsrs_def o_def
-                        partial_overwrite_fun_upd
-                        partial_overwrite_get_tcb_state_regs)
-  apply (drule_tac x=y in spec)
-  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps
-                  cong: if_cong)
-  apply (case_tac obj)
-  apply (simp add: projectKO_opt_tcb put_tcb_state_regs_def
-                   put_tcb_state_regs_tcb_def get_tcb_state_regs_def
-             cong: if_cong)
-  done
-
 lemma copy_register_isolate:
   "\<lbrakk> inj idx; idx x = src; idx y = dest \<rbrakk> \<Longrightarrow>
   monadic_rewrite False True
@@ -1477,10 +1401,6 @@ lemma copy_register_isolate:
              cong: if_cong)
   apply (auto simp: fun_eq_iff split: if_split)
   done
-
-lemmas monadic_rewrite_bind_alt
-    = monadic_rewrite_trans[OF monadic_rewrite_bind_tail monadic_rewrite_bind_head, rotated -1]
-
 
 lemma monadic_rewrite_isolate_final2:
   assumes  mr: "monadic_rewrite F E Q f g"

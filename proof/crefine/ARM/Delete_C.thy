@@ -315,40 +315,6 @@ lemma cteDelete_invs'':
   apply clarsimp
   done
 
-lemma ccorres_Cond_rhs_Seq_ret_int:
-  "\<lbrakk> P \<Longrightarrow> ccorres rvr xf Q S hs absf (f;;h);
-     \<And>rv' t t'. ceqv \<Gamma> ret__int_' rv' t t' (g ;; h) (j rv');
-     \<not> P \<Longrightarrow> ccorres rvr xf R T hs absf (j 0) \<rbrakk>
-     \<Longrightarrow> ccorres rvr xf (\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not> P \<longrightarrow> R s))
-                       {s. (P \<longrightarrow> s \<in> S) \<and> (\<not> P \<longrightarrow> s \<in> {s. s \<in> T \<and> ret__int_' s = 0})}
-            hs absf (Cond {s. P} f g ;; h)"
-  apply (rule ccorres_guard_imp2)
-   apply (erule ccorres_Cond_rhs_Seq)
-   apply (erule ccorres_abstract)
-   apply (rule_tac P="rv' = 0" in ccorres_gen_asm2)
-   apply simp
-  apply simp
-  done
-
-(* it's a little painful to have to do this from first principles *)
-lemma ccorres_cutMon_stateAssert:
-  "\<lbrakk> Q s \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs
-      (cutMon ((=) s) (a ())) c \<rbrakk> \<Longrightarrow>
-   ccorres_underlying sr Gamm r xf arrel axf (\<lambda>s. Q s \<longrightarrow> P s) P' hs
-      (cutMon ((=) s) (stateAssert Q [] >>= a)) c"
-  apply (simp add: cutMon_walk_bind)
-  apply (cases "\<not> Q s")
-   apply (simp add: stateAssert_def cutMon_def exec_get assert_def
-                    ccorres_fail'
-              cong: if_cong[OF eq_commute])
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_drop_cutMon_bind)
-   apply (rule ccorres_symb_exec_l)
-      apply (rule ccorres_cutMon)
-      apply (simp add: stateAssert_def exec_get return_def)
-     apply (wp | simp)+
-  done
-
 lemma valid_Zombie_number_word_bits:
   "valid_cap' cap s \<Longrightarrow> isZombie cap
     \<Longrightarrow> capZombieNumber cap < 2 ^ word_bits"
@@ -653,13 +619,6 @@ lemma reduceZombie_ccorres1:
   apply (clarsimp simp: cte_wp_at_ctes_of size_of_def objBits_defs)
   apply auto
   done
-
-lemma induction_setup_helper:
-  "\<lbrakk> \<And>s slot exposed. P s slot exposed \<Longrightarrow> Q s slot exposed;
-     \<lbrakk> \<And>s slot exposed. P s slot exposed \<Longrightarrow> Q s slot exposed \<rbrakk>
-            \<Longrightarrow> P s slot exposed \<rbrakk>
-        \<Longrightarrow> Q s slot exposed"
-  by auto
 
 schematic_goal finaliseSlot_ccorres_induction_helper:
   "\<And>s slot exposed. ?P s slot exposed

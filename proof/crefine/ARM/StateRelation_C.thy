@@ -202,10 +202,6 @@ where
   "ccte_relation acte ccte \<equiv> Some acte = option_map cte_to_H (cte_lift ccte)
                              \<and> c_valid_cte ccte"
 
-lemma ccte_relation_c_valid_cte: "ccte_relation  c c' \<Longrightarrow> c_valid_cte c'"
-  by (simp add: ccte_relation_def)
-
-
 definition
   tcb_queue_relation' :: "(tcb_C \<Rightarrow> tcb_C ptr) \<Rightarrow> (tcb_C \<Rightarrow> tcb_C ptr) \<Rightarrow> (tcb_C ptr \<Rightarrow> tcb_C option) \<Rightarrow> word32 list \<Rightarrow> tcb_C ptr \<Rightarrow> tcb_C ptr \<Rightarrow> bool"
   where
@@ -280,10 +276,6 @@ where
 definition "is_cap_fault cf \<equiv>
   (case cf of (SeL4_Fault_CapFault _) \<Rightarrow> True
   | _ \<Rightarrow> False)"
-
-lemma is_cap_fault_simp: "is_cap_fault cf = (\<exists> x. cf=SeL4_Fault_CapFault x)"
-  by (simp add: is_cap_fault_def split:seL4_Fault_CL.splits)
-
 
 definition
   message_info_to_H :: "seL4_MessageInfo_C \<Rightarrow> Types_H.message_info"
@@ -493,22 +485,6 @@ where
        B_CL = b_from_cacheable cacheable,
        XN_CL = of_bool xn
      \<rparr>))"
-
-(* Invalid PTEs map to large PTEs with reserved bit 0 *)
-lemma pte_0:
-  "index (pte_C.words_C cpte) 0 = 0 \<Longrightarrow> pte_lift cpte = Some (Pte_pte_large
-     \<lparr> pte_pte_large_CL.address_CL = 0,
-       XN_CL = 0,
-       TEX_CL = 0,
-       nG_CL = 0,
-       S_CL = 0,
-       APX_CL = 0,
-       AP_CL = 0,
-       C_CL = 0,
-       B_CL = 0,
-       reserved_CL = 0
-     \<rparr>)"
-  by (simp add: pte_lift_def pte_get_tag_def pte_pte_large_def)
 
 definition
   casid_pool_relation :: "asidpool \<Rightarrow> asid_pool_C \<Rightarrow> bool"
@@ -877,28 +853,6 @@ definition
 
 definition
   "ccap_rights_relation cr cr' \<equiv> cr = cap_rights_to_H (seL4_CapRights_lift cr')"
-
-lemma (in kernel) syscall_error_to_H_cases_rev:
-  "\<And>n. syscall_error_to_H e lf = Some (InvalidArgument n) \<Longrightarrow>
-        type_C e = scast seL4_InvalidArgument"
-  "\<And>n. syscall_error_to_H e lf = Some (InvalidCapability n) \<Longrightarrow>
-        type_C e = scast seL4_InvalidCapability"
-  "syscall_error_to_H e lf = Some IllegalOperation \<Longrightarrow>
-        type_C e = scast seL4_IllegalOperation"
-  "\<And>w1 w2. syscall_error_to_H e lf = Some (RangeError w1 w2) \<Longrightarrow>
-        type_C e = scast seL4_RangeError"
-  "syscall_error_to_H e lf = Some AlignmentError \<Longrightarrow>
-        type_C e = scast seL4_AlignmentError"
-  "\<And>b lf'. syscall_error_to_H e lf = Some (FailedLookup b lf') \<Longrightarrow>
-        type_C e = scast seL4_FailedLookup"
-  "syscall_error_to_H e lf = Some TruncatedMessage \<Longrightarrow>
-        type_C e = scast seL4_TruncatedMessage"
-  "syscall_error_to_H e lf = Some DeleteFirst \<Longrightarrow>
-        type_C e = scast seL4_DeleteFirst"
-  "syscall_error_to_H e lf = Some RevokeFirst \<Longrightarrow>
-        type_C e = scast seL4_RevokeFirst"
-  by (clarsimp simp: syscall_error_to_H_def syscall_error_type_defs
-              split: if_split_asm)+
 
 definition
   syscall_from_H :: "syscall \<Rightarrow> word32"

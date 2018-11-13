@@ -371,13 +371,6 @@ lemma tcb_cte_cases_proj_eq [simp]:
   unfolding tcb_no_ctes_proj_def tcb_cte_cases_def
   by (auto split: if_split_asm)
 
-lemma map_to_ctes_upd_cte':
-  "\<lbrakk> ksPSpace s p = Some (KOCTE cte'); is_aligned p cte_level_bits; ps_clear p cte_level_bits s \<rbrakk>
-  \<Longrightarrow> map_to_ctes (ksPSpace s(p |-> KOCTE cte)) = (map_to_ctes (ksPSpace s))(p |-> cte)"
-  apply (erule (1) map_to_ctes_upd_cte)
-  apply (simp add: field_simps ps_clear_def3 cte_level_bits_def mask_def)
-  done
-
 lemma map_to_ctes_upd_tcb':
   "[| ksPSpace s p = Some (KOTCB tcb'); is_aligned p tcbBlockSizeBits;
    ps_clear p tcbBlockSizeBits s |]
@@ -391,12 +384,6 @@ lemma map_to_ctes_upd_tcb':
   apply (erule (1) map_to_ctes_upd_tcb)
   apply (simp add: field_simps ps_clear_def3 mask_def objBits_defs)
   done
-
-
-lemma tcb_cte_cases_inv [simp]:
-  "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow> getF (setF (\<lambda>_. v) tcb) = v"
-  unfolding tcb_cte_cases_def
-  by (simp split: if_split_asm)
 
 declare insert_dom [simp]
 
@@ -720,17 +707,6 @@ proof (rule cor_map_relI [OF map_option_eq_dom_eq])
     by auto
 qed fact+
 
-lemma lifth_update:
-  "clift (t_hrs_' s) ptr = clift (t_hrs_' s') ptr
-  \<Longrightarrow> lifth ptr s = lifth ptr s'"
-  unfolding lifth_def
-  by simp
-
-lemma getCTE_exs_valid:
-  "cte_at' dest s \<Longrightarrow> \<lbrace>(=) s\<rbrace> getCTE dest \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
-  unfolding exs_valid_def getCTE_def cte_wp_at'_def
-  by clarsimp
-
 lemma cmap_domE1:
   "\<lbrakk> f ` dom am = dom cm; am x = Some v; \<And>v'. cm (f x) = Some v' \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   apply (drule equalityD1)
@@ -970,9 +946,6 @@ declare is_aligned_0 [simp]
 abbreviation
   "nullCapPointers cte \<equiv> cteCap cte = NullCap \<and> mdbNext (cteMDBNode cte) = nullPointer \<and> mdbPrev (cteMDBNode cte) = nullPointer"
 
-lemma nullCapPointers_def:
-  "is_an_abbreviation" unfolding is_an_abbreviation_def by simp
-
 lemma valid_mdb_ctes_of_next:
   "\<lbrakk> valid_mdb' s; ctes_of s p = Some cte; mdbNext (cteMDBNode cte) \<noteq> 0 \<rbrakk> \<Longrightarrow> cte_at' (mdbNext (cteMDBNode cte)) s"
   unfolding valid_mdb'_def valid_mdb_ctes_def
@@ -1163,43 +1136,6 @@ lemma rf_sr_upd_safe[simp]:
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
   shows "((a, (g y)) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
   using rl rq rqL1 rqL2 sa ct it isn ist arch wu gs dsi cdom dt by - (rule rf_sr_upd)
-
-(* More of a well-formed lemma, but \<dots> *)
-lemma valid_mdb_cslift_next:
-  assumes vmdb: "valid_mdb' s"
-  and       sr: "(s, s') \<in> rf_sr"
-  and      cof: "ctes_of s p = Some cte"
-  and       nz: "mdbNext (cteMDBNode cte) \<noteq> 0"
-  shows "cslift s' (Ptr (mdbNext (cteMDBNode cte)) :: cte_C ptr) \<noteq> None"
-proof -
-  from vmdb cof nz obtain cten where
-    "ctes_of s (mdbNext (cteMDBNode cte)) = Some cten"
-    by (auto simp: cte_wp_at_ctes_of dest!: valid_mdb_ctes_of_next)
-
-  with sr show ?thesis
-    apply -
-    apply (drule (1) rf_sr_ctes_of_clift)
-    apply clarsimp
-    done
-qed
-
-lemma valid_mdb_cslift_prev:
-  assumes vmdb: "valid_mdb' s"
-  and       sr: "(s, s') \<in> rf_sr"
-  and      cof: "ctes_of s p = Some cte"
-  and       nz: "mdbPrev (cteMDBNode cte) \<noteq> 0"
-  shows "cslift s' (Ptr (mdbPrev (cteMDBNode cte)) :: cte_C ptr) \<noteq> None"
-proof -
-  from vmdb cof nz obtain cten where
-    "ctes_of s (mdbPrev (cteMDBNode cte)) = Some cten"
-    by (auto simp: cte_wp_at_ctes_of dest!: valid_mdb_ctes_of_prev)
-
-  with sr show ?thesis
-    apply -
-    apply (drule (1) rf_sr_ctes_of_clift)
-    apply clarsimp
-    done
-qed
 
 lemma rf_sr_cte_at_valid:
   "\<lbrakk> cte_wp_at' P (ptr_val p) s; (s,s') \<in> rf_sr \<rbrakk> \<Longrightarrow> s' \<Turnstile>\<^sub>c (p :: cte_C ptr)"
@@ -1776,15 +1712,6 @@ definition
    to_bool (capAllowRead_CL cr) = wd !! 1 \<and>
    to_bool (capAllowWrite_CL cr) = wd !! 0"
 
-lemma cap_rights_to_H_from_word [simp]:
-  "cap_rights_to_H (cap_rights_from_word wd) = rightsFromWord wd"
-  unfolding cap_rights_from_word_def rightsFromWord_def
-  apply (rule someI2_ex)
-   apply (rule exI [where x = "cap_rights_from_word_canon wd"])
-   apply (simp add: cap_rights_from_word_canon_def)
-  apply (simp add: cap_rights_to_H_def)
-  done
-
 lemma small_frame_cap_is_mapped_alt:
   "cap_get_tag cp = scast cap_small_frame_cap \<Longrightarrow>
    (cap_small_frame_cap_CL.capFMappedASIDHigh_CL (cap_small_frame_cap_lift cp) = 0
@@ -2137,17 +2064,6 @@ lemma gs_set_assn_Delete_cstate_relation:
                     ghost_size_rel_def ghost_assertion_data_get_def
                     cteDeleteOne_'proc_def cap_get_capSizeBits_'proc_def)
   done
-
-lemma update_typ_at:
-  assumes at: "obj_at' P p s"
-      and tp: "\<forall>obj. P obj \<longrightarrow> koTypeOf (injectKOS obj) = koTypeOf ko"
-  shows "typ_at' T p' (s \<lparr>ksPSpace := ksPSpace s(p \<mapsto> ko)\<rparr>) = typ_at' T p' s"
-  using at
-  by (auto elim!: obj_atE' simp: typ_at'_def ko_wp_at'_def
-           dest!: tp[rule_format]
-            simp: project_inject projectKO_eq split: kernel_object.splits if_split_asm,
-      simp_all add: objBits_def objBitsT_koTypeOf[symmetric] ps_clear_upd
-               del: objBitsT_koTypeOf)
 
 lemma ptr_val_tcb_ptr_mask:
   "obj_at' (P :: tcb \<Rightarrow> bool) thread s

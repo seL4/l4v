@@ -15,11 +15,6 @@ begin
 context kernel_m
 begin
 
-lemma isArchPageCap_ArchObjectCap:
-  "isArchPageCap (ArchObjectCap acap)
-       = isPageCap acap"
-  by (simp add: isArchPageCap_def isPageCap_def)
-
 definition
   "replicateHider \<equiv> replicate"
 
@@ -46,7 +41,6 @@ lemma coerce_memset_to_heap_update_user_data:
                    user_context_C_tag_def thread_state_C_tag_def seL4_Fault_C_tag_def
                    lookup_fault_C_tag_def update_ti_t_ptr_0s
                    ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td
-                   ti_typ_combine_empty_ti ti_typ_combine_td
                    align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def
                    align_td_array' size_td_array)
@@ -150,19 +144,6 @@ lemma user_data_at_rf_sr_dom_s:
   apply (simp add: h_t_valid_dom_s pageBits_def)
   done
 
-lemma device_data_at_rf_sr_dom_s:
-  "\<lbrakk> typ_at' UserDataDeviceT x s; (s, s') \<in> rf_sr \<rbrakk>
-    \<Longrightarrow> {x ..+ 2 ^ pageBits} \<times> {SIndexVal, SIndexTyp 0}
-    \<subseteq> dom_s (hrs_htd (t_hrs_' (globals s')))"
-  apply (drule rf_sr_heap_device_data_relation)
-  apply (drule device_data_at_ko)
-  apply (erule_tac x=x in cmap_relationE1)
-   apply (simp only: heap_to_device_data_def Let_def ko_at_projectKO_opt)
-   apply simp
-  apply (drule h_t_valid_clift)
-  apply (simp add: h_t_valid_dom_s pageBits_def)
-  done
-
 lemma intvl_2_power_times_decomp:
   "\<forall>y < 2 ^ (n - m). {x + y * 2 ^ m ..+ 2 ^ m} \<times> S \<subseteq> T
     \<Longrightarrow> m \<le> n \<Longrightarrow> n < word_bits
@@ -219,197 +200,6 @@ lemma power_user_page_foldl_zero_ranges:
   apply clarsimp
   done
 
-lemma heap_to_device_data_disj_mdf':
-  "\<lbrakk>is_aligned ptr (pageBitsForSize sz); ksPSpace \<sigma> a = Some obj; objBitsKO obj = pageBits; pspace_aligned' \<sigma>;
-  pspace_distinct' \<sigma>; pspace_no_overlap' ptr (pageBitsForSize sz) \<sigma>\<rbrakk>
-\<Longrightarrow> heap_to_device_data (ksPSpace \<sigma>)
-     (\<lambda>x. if x \<in> {ptr..+2 ^ (pageBitsForSize sz)} then 0
-          else underlying_memory (ksMachineState \<sigma>) x)
-     a =
-    heap_to_device_data (ksPSpace \<sigma>) (underlying_memory (ksMachineState \<sigma>)) a"
-  apply (cut_tac heap_to_device_data_disj_mdf[where ptr = ptr
-     and gbits = "pageBitsForSize sz - pageBits" and n = 1
-     and sz = "pageBitsForSize sz",simplified])
-  apply (simp add: pbfs_atleast_pageBits pbfs_less_wb' field_simps| intro range_cover_full )+
-  done
-
-lemma range_cover_nca_neg: "\<And>x p (off :: 10 word).
-  \<lbrakk>(x::word32) < 4; {p..+2 ^pageBits } \<inter> {ptr..ptr + (of_nat n * 2 ^ bits - 1)} = {};
-    range_cover ptr sz bits n\<rbrakk>
-   \<Longrightarrow> p + ucast off * 4 + x \<notin> {ptr..+n * 2 ^ bits}"
-  apply (case_tac "n = 0")
-   apply simp
-  apply (subst range_cover_intvl,simp)
-   apply simp
-  apply (subgoal_tac " p + ucast off * 4 + x \<in>  {p..+2 ^ pageBits}")
-   apply blast
-  apply (clarsimp simp: intvl_def)
-  apply (rule_tac x = "unat off * 4 + unat x" in exI)
-  apply (simp add: ucast_nat_def)
-  apply (rule nat_add_offset_less [where n = 2, simplified])
-    apply (simp add: word_less_nat_alt)
-   apply (rule unat_lt2p)
-  apply (simp add: pageBits_def objBits_simps)
-  done
-
-
-
-lemma clearMemory_PageCap_ccorres:
-  "ccorres dc xfdc (invs' and valid_cap' (ArchObjectCap (PageCap False ptr undefined sz None))
-           and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
-           and K ({ptr .. ptr + 2 ^ (pageBitsForSize sz) - 1} \<inter> kernel_data_refs = {})
-           )
-      (UNIV \<inter> {s. bits_' s = of_nat (pageBitsForSize sz)}
-            \<inter> {s. ptr___ptr_to_unsigned_long_' s = Ptr ptr})
-      []
-     (doMachineOp (clearMemory ptr (2 ^ pageBitsForSize sz))) (Call clearMemory_'proc)"
-  (is "ccorres dc xfdc ?P ?P' [] ?m ?c")
-  apply (cinit' lift: bits_' ptr___ptr_to_unsigned_long_')
-   apply (rule_tac P="capAligned (ArchObjectCap (PageCap False ptr undefined sz None))"
-                in ccorres_gen_asm)
-   apply (rule ccorres_Guard_Seq)
-   apply (simp add: clearMemory_def)
-   apply (simp add: doMachineOp_bind ef_storeWord)
-   apply (rule ccorres_split_nothrow_novcg_dc)
-      apply (rule_tac P="?P" in ccorres_from_vcg[where P'=UNIV])
-      apply (rule allI, rule conseqPre, vcg)
-      apply (clarsimp simp: valid_cap'_def capAligned_def
-                            is_aligned_no_wrap'[OF _ word32_power_less_1])
-      apply (subgoal_tac "2 \<le> pageBitsForSize sz")
-       prefer 2
-       apply (simp add: pageBitsForSize_def split: vmpage_size.split)
-      apply (rule conjI)
-       apply (erule is_aligned_weaken)
-       apply (clarsimp simp: pageBitsForSize_def split: vmpage_size.splits)
-      apply (rule conjI)
-       apply (rule is_aligned_power2)
-       apply (clarsimp simp: pageBitsForSize_def split: vmpage_size.splits)
-      apply (clarsimp simp: ghost_assertion_size_logic[unfolded o_def])
-      apply (simp add: flex_user_data_at_rf_sr_dom_s)
-      apply (clarsimp simp: field_simps word_size_def mapM_x_storeWord_step)
-      apply (simp add: doMachineOp_def split_def exec_gets)
-      apply (simp add: select_f_def simpler_modify_def bind_def)
-      apply (fold replicateHider_def)[1]
-      apply (subst coerce_heap_update_to_heap_updates'
-                         [where chunk=4096 and m="2 ^ (pageBitsForSize sz - pageBits)"])
-       apply (simp add: pageBitsForSize_def pageBits_def
-                 split: vmpage_size.split)
-      apply (subst coerce_memset_to_heap_update_user_data)
-      apply (subgoal_tac "\<forall>p<2 ^ (pageBitsForSize sz - pageBits).
-                               x \<Turnstile>\<^sub>c (Ptr (ptr + of_nat p * 0x1000) :: user_data_C ptr)")
-       prefer 2
-       apply (erule allfEI[where f=of_nat])
-       apply clarsimp
-       apply (subst(asm) of_nat_power, assumption)
-        apply simp
-        apply (insert pageBitsForSize_32 [of sz])[1]
-        apply (erule order_le_less_trans [rotated])
-        apply simp
-       apply (simp, drule ko_at_projectKO_opt[OF user_data_at_ko])
-       apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
-       apply (erule cmap_relationE1, simp(no_asm) add: heap_to_user_data_def Let_def)
-        apply fastforce
-       subgoal by (simp add: pageBits_def typ_heap_simps)
-      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-      apply (clarsimp simp: cpspace_relation_def typ_heap_simps
-                            clift_foldl_hrs_mem_update foldl_id
-                            carch_state_relation_def
-                            cmachine_state_relation_def
-                            foldl_fun_upd_const[unfolded fun_upd_def]
-                            power_user_page_foldl_zero_ranges
-                            dom_heap_to_device_data)
-      apply (rule conjI[rotated])
-       apply (simp add:pageBitsForSize_mess_multi)
-       apply (rule cmap_relationI)
-        apply (clarsimp simp: dom_heap_to_device_data cmap_relation_def)
-        apply (simp add:cuser_user_data_device_relation_def)
-      apply (subst help_force_intvl_range_conv, assumption)
-        subgoal by (simp add: pageBitsForSize_def split: vmpage_size.split)
-       apply assumption
-      apply (subst heap_to_user_data_update_region)
-       apply (drule map_to_user_data_aligned, clarsimp)
-       apply (rule aligned_range_offset_mem[where m=pageBits], simp_all)[1]
-       apply (rule pbfs_atleast_pageBits)
-      apply (erule cmap_relation_If_upd)
-        apply (clarsimp simp: cuser_user_data_relation_def fcp_beta
-                              order_less_le_trans[OF unat_lt2p])
-        apply (fold word_rsplit_0, simp add: word_rcat_rsplit)[1]
-       apply (rule image_cong[OF _ refl])
-       apply (rule set_eqI, rule iffI)
-        apply (clarsimp simp del: atLeastAtMost_iff)
-        apply (drule map_to_user_data_aligned, clarsimp)
-        apply (simp only: mask_in_range[symmetric])
-        apply (rule_tac x="unat ((xa && mask (pageBitsForSize sz)) >> pageBits)" in image_eqI)
-         apply (simp add: subtract_mask(2)[symmetric])
-         apply (cut_tac w="xa - ptr" and n=pageBits in and_not_mask[symmetric])
-         apply (simp add: shiftl_t2n field_simps pageBits_def)
-         apply (subst is_aligned_neg_mask_eq, simp_all)[1]
-         apply (erule aligned_sub_aligned, simp_all add: word_bits_def)[1]
-         apply (erule is_aligned_weaken)
-         apply (rule pbfs_atleast_pageBits[unfolded pageBits_def])
-        apply simp
-        apply (rule unat_less_power)
-         apply (fold word_bits_def, simp)
-        apply (rule shiftr_less_t2n)
-        apply (simp add: pbfs_atleast_pageBits)
-        apply (rule and_mask_less_size)
-        apply (simp add: word_bits_def word_size)
-       apply (rule IntI)
-        apply (clarsimp simp del: atLeastAtMost_iff)
-        apply (subst aligned_range_offset_mem, assumption, simp_all)[1]
-        apply (rule order_le_less_trans[rotated], erule shiftl_less_t2n [OF of_nat_power],
-               simp_all add: word_bits_def)[1]
-         apply (insert pageBitsForSize_32 [of sz])[1]
-         apply (erule order_le_less_trans [rotated])
-         subgoal by simp
-        subgoal by (simp add: pageBits_def shiftl_t2n field_simps)
-       apply clarsimp
-       apply (drule_tac x="of_nat n" in spec)
-       apply (simp add: of_nat_power[where 'a=32, folded word_bits_def])
-       apply (rule exI)
-       subgoal by (simp add: pageBits_def ko_at_projectKO_opt[OF user_data_at_ko])
-      subgoal by simp
-     apply csymbr
-     apply (ctac add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
-    apply wp
-   apply (simp add: guard_is_UNIV_def unat_of_nat
-                    word_bits_def capAligned_def word_of_nat_less)
-  apply (clarsimp simp: word_bits_def valid_cap'_def
-                        capAligned_def word_of_nat_less)
-  apply (frule is_aligned_addrFromPPtr_n, simp add: pageBitsForSize_def split: vmpage_size.splits)
-  by (clarsimp simp: is_aligned_no_overflow'[where n=12, simplified]
-                        is_aligned_no_overflow'[where n=16, simplified]
-                        is_aligned_no_overflow'[where n=20, simplified]
-                        is_aligned_no_overflow'[where n=24, simplified] pageBits_def
-                        field_simps is_aligned_mask[symmetric] mask_AND_less_0
-                        pageBitsForSize_def split: vmpage_size.splits)
-
-lemma coerce_memset_to_heap_update_asidpool:
-  "heap_update_list x (replicateHider 4096 0)
-      = heap_update (Ptr x :: asid_pool_C ptr)
-             (asid_pool_C (FCP (\<lambda>x. Ptr 0)))"
-  apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
-  apply (simp add: to_bytes_def size_of_def typ_info_simps asid_pool_C_tag_def)
-  apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
-                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
-  apply (simp add: typ_info_simps
-                   user_context_C_tag_def thread_state_C_tag_def seL4_Fault_C_tag_def
-                   lookup_fault_C_tag_def update_ti_t_ptr_0s
-                   ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td
-                   ti_typ_combine_empty_ti ti_typ_combine_td
-                   align_of_def padup_def
-                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def
-                   align_td_array' size_td_array)
-  apply (simp add: typ_info_array')
-  apply (subst access_ti_list_array)
-     apply simp
-    apply simp
-   apply (simp add: fcp_beta typ_info_word typ_info_ptr word_rsplit_0)
-   apply fastforce
-  apply (simp add: collapse_foldl_replicate)
-  done
-
 declare replicate_numeral [simp]
 
 lemma coerce_memset_to_heap_update_pte:
@@ -419,20 +209,6 @@ lemma coerce_memset_to_heap_update_pte:
   apply (intro ext, simp add: heap_update_def)
   apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps pte_C_tag_def)
-  apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
-                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
-  apply (simp add: typ_info_simps align_td_array' size_td_array)
-  apply (simp add: typ_info_array' typ_info_word word_rsplit_0)
-  apply (simp add: replicateHider_def)
-  done
-
-lemma coerce_memset_to_heap_update_pde:
-  "heap_update_list x (replicateHider 4 0)
-      = heap_update (Ptr x :: pde_C ptr)
-             (pde_C.pde_C (FCP (\<lambda>x. 0)))"
-  apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
-  apply (simp add: to_bytes_def size_of_def typ_info_simps pde_C_tag_def)
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps align_td_array' size_td_array)
@@ -541,16 +317,6 @@ lemma invalidateTLBByASID_ccorres:
   apply (clarsimp simp: pde_stored_asid_def to_bool_def)
   done
 
-(* FIXME: also in VSpace_C *)
-lemma ignoreFailure_liftM:
-  "ignoreFailure = liftM (\<lambda>v. ())"
-  apply (rule ext)+
-  apply (simp add: ignoreFailure_def liftM_def
-                   catch_def)
-  apply (rule bind_apply_cong[OF refl])
-  apply (simp split: sum.split)
-  done
-
 end
 
 lemma option_to_0_user_mem':
@@ -620,25 +386,6 @@ lemma page_table_at_rf_sr_dom_s:
   apply (auto simp add: intvl_def shiftl_t2n)[1]
   done
 
-lemma page_directory_at_rf_sr_dom_s:
-  "\<lbrakk> page_directory_at' x s; (s, s') \<in> rf_sr \<rbrakk>
-    \<Longrightarrow> {x ..+ 2 ^ pdBits} \<times> {SIndexVal, SIndexTyp 0}
-    \<subseteq> dom_s (hrs_htd (t_hrs_' (globals s')))"
-  apply (rule_tac m=2 in intvl_2_power_times_decomp,
-         simp_all add: shiftl_t2n field_simps pdBits_def pageBits_def
-                       word_bits_def pdeBits_def)
-  apply (clarsimp simp: page_directory_at'_def intvl_def)
-  apply (drule spec, drule(1) mp)
-  apply (simp add: typ_at_to_obj_at_arches)
-  apply (drule obj_at_ko_at', clarsimp)
-  apply (erule cmap_relationE1[OF rf_sr_cpde_relation])
-   apply (erule ko_at_projectKO_opt)
-  apply (drule h_t_valid_clift)
-  apply (drule h_t_valid_dom_s[OF _ refl refl])
-  apply (erule subsetD)
-  apply (auto simp add: intvl_def shiftl_t2n)[1]
-  done
-
 lemma clearMemory_setObject_PTE_ccorres:
   "ccorres dc xfdc (page_table_at' ptr
                 and (\<lambda>s. 2 ^ ptBits \<le> gsMaxObjectSize s)
@@ -699,66 +446,6 @@ lemma clearMemory_setObject_PTE_ccorres:
                         field_simps is_aligned_mask[symmetric] mask_AND_less_0)
   done
 
-lemma ccorres_make_xfdc:
-  "ccorresG rf_sr \<Gamma> r xf P P' h a c \<Longrightarrow> ccorresG rf_sr \<Gamma> dc xfdc P P' h a c"
-  apply (erule ccorres_rel_imp)
-  apply simp
-  done
-
-lemma ccorres_if_True_False_simps:
-  "ccorres r xf P P' hs a (IF True THEN c ELSE c' FI) = ccorres r xf P P' hs a c"
-  "ccorres r xf P P' hs a (IF False THEN c ELSE c' FI) = ccorres r xf P P' hs a c'"
-  "ccorres r xf P P' hs a (IF True THEN c ELSE c' FI ;; d) = ccorres r xf P P' hs a (c ;; d)"
-  "ccorres r xf P P' hs a (IF False THEN c ELSE c' FI ;; d) = ccorres r xf P P' hs a (c' ;; d)"
-  by (simp_all add: ccorres_cond_iffs ccorres_seq_simps)
-
-lemmas cap_tag_values =
-  cap_untyped_cap_def
-  cap_endpoint_cap_def
-  cap_notification_cap_def
-  cap_reply_cap_def
-  cap_cnode_cap_def
-  cap_thread_cap_def
-  cap_irq_handler_cap_def
-  cap_null_cap_def
-  cap_irq_control_cap_def
-  cap_zombie_cap_def
-  cap_small_frame_cap_def
-  cap_frame_cap_def
-  cap_page_table_cap_def
-  cap_page_directory_cap_def
-  cap_asid_pool_cap_def
-
-lemma ccorres_return_C_seq:
-  "\<lbrakk>\<And>s f. xf (global_exn_var_'_update f (xfu (\<lambda>_. v s) s)) = v s; \<And>s f. globals (xfu f s) = globals s; wfhandlers hs\<rbrakk>
-  \<Longrightarrow> ccorres_underlying rf_sr \<Gamma> r rvxf arrel xf (\<lambda>_. True) {s. arrel rv (v s)} hs (return rv) (return_C xfu v ;; d)"
-  apply (rule ccorres_guard_imp)
-  apply (rule ccorres_split_throws, rule ccorres_return_C, simp+)
-  apply vcg
-  apply simp_all
-  done
-
-lemma ccap_relation_VPIsDevice:
-  "\<lbrakk>isPageCap cp; ccap_relation (ArchObjectCap cp) cap  \<rbrakk> \<Longrightarrow>
-   (generic_frame_cap_get_capFIsDevice_CL (cap_lift cap) = 0) = (\<not> (capVPIsDevice cp))"
-   by (clarsimp elim!:ccap_relationE
-     simp : isPageCap_def generic_frame_cap_get_capFIsDevice_CL_def cap_to_H_def
-            Let_def to_bool_def
-     split: arch_capability.split_asm cap_CL.split_asm if_split_asm)
-
-
-lemma ccap_relation_get_capZombiePtr_CL:
-  "\<lbrakk> ccap_relation cap cap'; isZombie cap; capAligned cap \<rbrakk>
-      \<Longrightarrow> get_capZombiePtr_CL (cap_zombie_cap_lift cap') = capZombiePtr cap"
-  apply (simp only: cap_get_tag_isCap[symmetric])
-  apply (drule(1) cap_get_tag_to_H)
-  apply (clarsimp simp: get_capZombiePtr_CL_def get_capZombieBits_CL_def Let_def split: if_split)
-  apply (subst less_mask_eq)
-   apply (clarsimp simp add: capAligned_def objBits_simps word_bits_conv)
-   apply unat_arith
-  apply simp
-  done
-
 lemma modify_gets_helper:
   "do y \<leftarrow> modify (ksPSpace_update (\<lambda>_. ps)); ps' \<leftarrow> gets ksPSpace; f ps' od
       = do y \<leftarrow> modify (ksPSpace_update (\<lambda>_. ps)); f ps od"
@@ -787,19 +474,6 @@ lemma double_setEndpoint:
   apply (simp add: lookupAround2_known1 assert_opt_def projectKO_def projectKO_opt_ep
                     alignCheck_assert)
   apply (simp add: bind_def simpler_modify_def)
-  done
-
-lemma filterM_setEndpoint_adjustment:
-  "\<lbrakk> \<And>v. do setEndpoint epptr IdleEP; body v od
-          = do v' \<leftarrow> body v; setEndpoint epptr IdleEP; return v' od \<rbrakk>
-    \<Longrightarrow>
-   (do q' \<leftarrow> filterM body q; setEndpoint epptr (f q') od)
-    = (do setEndpoint epptr IdleEP; q' \<leftarrow> filterM body q; setEndpoint epptr (f q') od)"
-  apply (rule sym)
-  apply (induct q arbitrary: f)
-   apply (simp add: double_setEndpoint)
-  apply (simp add: bind_assoc)
-  apply (subst bind_assoc[symmetric], simp, simp add: bind_assoc)
   done
 
 lemma ccorres_inst_voodoo:
@@ -837,17 +511,6 @@ crunch ep_obj_at'[wp]: setThreadState "obj_at' (P :: endpoint \<Rightarrow> bool
   (ignore: getObject setObject simp: unless_def)
 
 context kernel_m begin
-
-lemma ccorres_abstract_h_val:
-  "(\<And>rv. P rv \<Longrightarrow> ccorres r xf G (G' rv) hs a c) \<Longrightarrow>
-   ccorres r xf G ({s. P (h_val (hrs_mem (t_hrs_' (globals s))) p)
-            \<longrightarrow> s \<in> G' (h_val (hrs_mem (t_hrs_' (globals s)))
-            p)}
-   \<inter> {s. P (h_val (hrs_mem (t_hrs_' (globals s))) p)}) hs a c"
-   apply (rule ccorres_tmp_lift1 [where P = P])
-   apply (clarsimp simp: Collect_conj_eq [symmetric])
-   apply (fastforce intro: ccorres_guard_imp)
-   done
 
 lemma ccorres_subst_basic_helper:
   "\<lbrakk> \<And>s s'. \<lbrakk> P s; s' \<in> P'; (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow> f s' = f' s';
@@ -1214,44 +877,6 @@ lemma cancelBadgedSends_ccorres:
    by (auto simp: obj_at'_def projectKOs state_refs_of'_def pred_tcb_at'_def tcb_bound_refs'_def
               dest!: symreftype_inverse')
 
-
-lemma tcb_ptr_to_ctcb_ptr_force_fold:
-  "x + 2 ^ ctcb_size_bits = ptr_val (tcb_ptr_to_ctcb_ptr x)"
-  by (simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
-
-
-lemma coerce_memset_to_heap_update:
-  "heap_update_list x (replicateHider (size_of (TYPE (tcb_C))) 0)
-      = heap_update (tcb_Ptr x)
-             (tcb_C (arch_tcb_C (user_context_C (FCP (\<lambda>x. 0))))
-                    (thread_state_C (FCP (\<lambda>x. 0)))
-                    (NULL)
-                    (seL4_Fault_C (FCP (\<lambda>x. 0)))
-                    (lookup_fault_C (FCP (\<lambda>x. 0)))
-                      0 0 0 0 0 0 NULL NULL NULL NULL)"
-  apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
-  apply (simp add: to_bytes_def size_of_def typ_info_simps tcb_C_tag_def)
-  apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
-                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
-  apply (simp add: typ_info_simps
-                   user_context_C_tag_def thread_state_C_tag_def seL4_Fault_C_tag_def
-                   lookup_fault_C_tag_def update_ti_t_ptr_0s arch_tcb_C_tag_def
-                   ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td
-                   ti_typ_combine_empty_ti ti_typ_combine_td
-                   align_of_def padup_def
-                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def
-                   align_td_array' size_td_array)
-  apply (simp add: typ_info_array')
-  apply (simp add: typ_info_word word_rsplit_0 upt_conv_Cons)
-  apply (simp add: typ_info_word typ_info_ptr word_rsplit_0
-                   replicateHider_def)
-  done
-
-lemma isArchObjectCap_capBits:
-  "isArchObjectCap cap \<Longrightarrow> capBits cap = acapBits (capCap cap)"
-  by (clarsimp simp: isCap_simps)
-
 declare Kernel_C.tcb_C_size [simp del]
 
 lemma cte_lift_ccte_relation:
@@ -1340,14 +965,6 @@ lemma updateFreeIndex_ccorres:
   done
 
 end
-
-(* FIXME: Move *)
-lemma ccap_relation_isDeviceCap:
- "\<lbrakk>ccap_relation cp cap; isUntypedCap cp
-  \<rbrakk> \<Longrightarrow> to_bool (capIsDevice_CL (cap_untyped_cap_lift cap)) =  (capIsDevice cp)"
-  apply (frule cap_get_tag_UntypedCap)
-  apply (simp add:cap_get_tag_isCap )
-  done
 
 lemma ccap_relation_isDeviceCap2:
  "\<lbrakk>ccap_relation cp cap; isUntypedCap cp

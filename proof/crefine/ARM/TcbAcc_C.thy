@@ -53,24 +53,6 @@ lemma threadGet_eq:
   apply simp
   done
 
-lemma get_tsType_ccorres [corres]:
-  "ccorres (\<lambda>r r'. r' = thread_state_to_tsType r) ret__unsigned_' (tcb_at' thread)
-           (UNIV \<inter> {s. thread_state_ptr_' s = Ptr &(tcb_ptr_to_ctcb_ptr thread\<rightarrow>[''tcbState_C''])}) []
-  (getThreadState thread) (Call thread_state_ptr_get_tsType_'proc)"
-  unfolding getThreadState_def
-  apply (rule ccorres_from_spec_modifies)
-      apply (rule thread_state_ptr_get_tsType_spec)
-     apply (rule thread_state_ptr_get_tsType_modifies)
-    apply simp
-   apply (frule (1) obj_at_cslift_tcb)
-   apply (clarsimp simp: typ_heap_simps)
-  apply (frule (1) obj_at_cslift_tcb)
-  apply (clarsimp simp: typ_heap_simps)
-  apply (rule bexI [rotated, OF threadGet_eq], assumption)
-  apply simp
-  apply (erule ctcb_relation_thread_state_to_tsType)
-  done
-
 lemma threadGet_obj_at2:
   "\<lbrace>\<top>\<rbrace> threadGet f thread \<lbrace>\<lambda>v. obj_at' (\<lambda>t. f t = v) thread\<rbrace>"
   apply (rule hoare_post_imp)
@@ -82,15 +64,6 @@ lemma threadGet_obj_at2:
 lemma register_from_H_less:
   "register_from_H hr < 20"
   by (cases hr, simp_all add: "StrictC'_register_defs")
-
-lemma register_from_H_sless:
-  "register_from_H hr <s 20"
-  by (cases hr, simp_all add: "StrictC'_register_defs" word_sless_def word_sle_def)
-
-lemma register_from_H_0_sle[simp]:
-  "0 <=s register_from_H hr"
-  using word_0_sle_from_less[OF order_less_le_trans] register_from_H_less
-  by fastforce
 
 lemma getRegister_ccorres [corres]:
   "ccorres (=) ret__unsigned_long_' \<top>
@@ -105,7 +78,7 @@ lemma getRegister_ccorres [corres]:
         apply vcg
        apply clarsimp
        apply (drule (1) obj_at_cslift_tcb)
-       apply (clarsimp simp: typ_heap_simps register_from_H_less register_from_H_sless)
+       apply (clarsimp simp: typ_heap_simps register_from_H_less)
        apply (clarsimp simp: getRegister_def typ_heap_simps)
        apply (rule_tac x = "((atcbContextGet o tcbArch) ko reg, \<sigma>)" in bexI [rotated])
         apply (simp add: in_monad' asUser_def select_f_def split_def)
