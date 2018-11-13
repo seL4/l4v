@@ -64,10 +64,12 @@ definition page_only_attrs :: "vm_attributes"
   where
   "page_only_attrs = {Global}"
 
+(* While pte_addr is the base address of the target object, in C this is shifted right by pt_bits
+   and stored as ppn (page number) *)
 datatype pte =
     InvalidPTE
-  | PagePTE (pte_ppn : machine_word) (pte_attr : vm_attributes) (pte_rights : vm_rights)
-  | PageTablePTE (pte_ppn : machine_word) (pte_attr : vm_attributes)
+  | PagePTE (pte_addr : machine_word) (pte_attr : vm_attributes) (pte_rights : vm_rights)
+  | PageTablePTE (pte_addr : machine_word) (pte_attr : vm_attributes)
 
 type_synonym pt_index_len = 9
 type_synonym pt_index = "pt_index_len word"

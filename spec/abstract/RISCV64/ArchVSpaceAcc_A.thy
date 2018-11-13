@@ -41,9 +41,13 @@ section "Kernel Heap Accessors"
 
 text \<open>Manipulate ASID pools, page directories and page tables in the kernel heap.\<close>
 
+abbreviation aobjs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> arch_kernel_obj"
+  where
+  "aobjs_of \<equiv> \<lambda>s. kheap s |> aobj_of"
+
 abbreviation asid_pools_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> asid_pool"
   where
-  "asid_pools_of \<equiv> \<lambda>s. kheap s |> aobj_of |> asid_pool_of"
+  "asid_pools_of \<equiv> \<lambda>s. aobjs_of s |> asid_pool_of"
 
 abbreviation get_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref, 'z::state_ext) s_monad"
   where
@@ -58,7 +62,7 @@ definition set_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoo
 
 abbreviation pts_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pt"
   where
-  "pts_of \<equiv> \<lambda>s. kheap s |> aobj_of |> pt_of"
+  "pts_of \<equiv> \<lambda>s. aobjs_of s |> pt_of"
 
 abbreviation get_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte,'z::state_ext) s_monad"
   where
@@ -71,9 +75,13 @@ definition set_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte) \<Right
      set_object ptr (ArchObj (PageTable pt))
    od"
 
+(* p is the address of the pte,
+   which consists of base (for the pt) and offset (for the index inside the pt).
+   We avoid addresses between ptes. *)
 definition pte_of :: "obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<rightharpoonup> pte"
   where
   "pte_of p \<equiv> do {
+     oassert (is_aligned p pte_bits);
      let base = p && ~~mask pt_bits;
      let index = (p && mask pt_bits) >> pte_bits;
      pt \<leftarrow> oapply base;
@@ -92,12 +100,13 @@ abbreviation get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad"
 definition store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "store_pte p pte \<equiv> do
-    base \<leftarrow> return $ p && ~~mask pt_bits;
-    index \<leftarrow> return $ (p && mask pt_bits) >> pte_bits;
-    pt \<leftarrow> get_pt base;
-    pt' \<leftarrow> return $ pt (ucast index := pte);
-    set_pt base pt'
-  od"
+     assert (is_aligned p pte_bits);
+     base \<leftarrow> return $ p && ~~mask pt_bits;
+     index \<leftarrow> return $ (p && mask pt_bits) >> pte_bits;
+     pt \<leftarrow> get_pt base;
+     pt' \<leftarrow> return $ pt (ucast index := pte);
+     set_pt base pt'
+   od"
 
 
 section "Basic Operations"
@@ -135,21 +144,17 @@ definition copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s
 
 text \<open>Walk page tables in software.\<close>
 
-(* We store page numbers in the PTE, since the bottom pt_bits are always zero *)
-definition pptr_from_ppn :: "machine_word \<Rightarrow> vspace_ref" where
-  "pptr_from_ppn ptr = ptrFromPAddr ptr << pt_bits"
-
 definition pptr_from_pte :: "pte \<Rightarrow> vspace_ref"
   where
-  "pptr_from_pte pte \<equiv> pptr_from_ppn (pte_ppn pte)"
+  "pptr_from_pte pte \<equiv> ptrFromPAddr (pte_addr pte)"
 
-definition pt_slot_index :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
+definition pt_slot_offset :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
   where
-  "pt_slot_index level pt_ptr vptr = pt_ptr + (pt_index level vptr << pte_bits)"
+  "pt_slot_offset level pt_ptr vptr = pt_ptr + (pt_index level vptr << pte_bits)"
 
-definition pte_at_index :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> pte option"
+definition pte_at_offset :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> pte option"
   where
-  "pte_at_index level pt_ptr vptr \<equiv> oapply (pt_slot_index level pt_ptr vptr)"
+  "pte_at_offset level pt_ptr vptr \<equiv> oapply (pt_slot_offset level pt_ptr vptr)"
 
 text \<open>
   This is the base function for looking up a slot in a page table structure.
@@ -163,7 +168,7 @@ fun lookup_pt_slot_from_level ::
   "vm_level \<Rightarrow> vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
   "lookup_pt_slot_from_level level bot_level pt_ptr vptr = do {
-     let slot = pt_slot_index level pt_ptr vptr;
+     let slot = pt_slot_offset level pt_ptr vptr;
      if \<not>(bot_level < level)
      then oreturn (level, slot)
      else do {
@@ -185,11 +190,11 @@ fun lookup_pt_from_level ::
   where
   "lookup_pt_from_level level pt_ptr vptr target_pt_ptr = doE
      unlessE (0 < level) $ throwError InvalidRoot;
-     pte <- liftE $ gets_the $ pte_at_index level pt_ptr vptr o ptes_of;
+     pte <- liftE $ gets_the $ pte_at_offset level pt_ptr vptr o ptes_of;
      unlessE (is_PageTablePTE pte) $ throwError InvalidRoot;
      ptr <- returnOk (pptr_from_pte pte);
      if ptr = target_pt_ptr
-       then returnOk $ pt_slot_index (level - 1) ptr vptr
+       then returnOk $ pt_slot_offset (level - 1) ptr vptr
        else lookup_pt_from_level (level - 1) ptr vptr target_pt_ptr
    odE"
 
