@@ -382,8 +382,10 @@ fun file_of_thy thy =
 
 fun entry_of_thy thy = ({name = Context.theory_name thy, file = file_of_thy thy} : theory_entry)
 
-fun used_facts thy thm = map fst
-  (AutoLevity_Base.used_facts (SOME (Proof_Context.init_global thy)) thm)
+fun used_facts thy thm =
+  AutoLevity_Base.used_named_props_of thm
+    |> map_filter (AutoLevity_Base.disambiguate_indices (Proof_Context.init_global thy))
+    |> List.map fst;
 
 fun get_reports_for_thy thy =
   let
