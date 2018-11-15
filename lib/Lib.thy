@@ -2553,4 +2553,19 @@ lemma the_pred_option_None:
   "\<nexists>!x. P x \<Longrightarrow> the_pred_option P = None"
   by (simp add: the_pred_option_def)
 
+text \<open>Obtain the @{term hd} of a list if present, otherwise @{term None}\<close>
+definition hd_opt :: "'a list \<Rightarrow> 'a option"
+  where
+  "hd_opt \<equiv> case_list None (K \<circ> Some)"
+
+lemma hd_opt_simps[simp]:
+  "hd_opt [] = None"
+  "hd_opt (x # xs) = Some x"
+  by (simp add: hd_opt_def K_def)+
+
+lemma hd_opt_rev_simps[simp]:
+  "hd_opt xs = None \<longleftrightarrow> xs = []"
+  "hd_opt xs = Some x \<longleftrightarrow> (\<exists>xs'. xs = x # xs')"
+  by (cases xs; simp)+
+
 end

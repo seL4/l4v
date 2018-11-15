@@ -815,49 +815,19 @@ lemma sched_context_update_consumed_invs[wp]:
   by (wpsimp simp: sched_context_update_consumed_def
       wp: set_sc_consumed_invs get_sched_context_wp)
 
-lemma update_sched_context_sc_at_pred:
-  "(r,s') \<in> fst (update_sched_context p f s) \<Longrightarrow> sc_at_pred (\<lambda>sc. sc) \<top> p s"
-  by (clarsimp simp: update_sched_context_def get_object_def set_object_def in_monad
-                     sc_at_pred_def obj_at_def
-              split: kernel_object.splits)
-
-lemma update_sched_context_strengthen_pre':
-  assumes "\<lbrace>P\<rbrace> update_sched_context p f \<lbrace>\<lambda>rv. Q\<rbrace>"
-  shows "\<lbrace>\<lambda>s. sc_at_pred (\<lambda>sc. sc) \<top> p s \<longrightarrow> P s\<rbrace> update_sched_context p f \<lbrace>\<lambda>rv. Q\<rbrace>"
-  by (clarsimp simp: valid_def update_sched_context_sc_at_pred use_valid[OF _ assms])
-
-lemma update_sched_context_strengthen_pre:
-  assumes "\<lbrace>P and sc_at_pred (\<lambda>sc. sc) \<top> p\<rbrace> update_sched_context p f \<lbrace>\<lambda>rv. Q\<rbrace>"
-  shows "\<lbrace>P\<rbrace> update_sched_context p f \<lbrace>\<lambda>rv. Q\<rbrace>"
-  by (wp_pre, rule update_sched_context_strengthen_pre', rule assms, simp)
-
-lemma replies_with_sc_upd_replies_trivial':
-  assumes "kheap s p = Some ko"
-  assumes "sc_at_pred proj P p s"
-  assumes "refs_of ko = refs_of_sc sc"
-  assumes "rs = sc_replies sc"
-  shows "replies_with_sc_upd_replies rs p (replies_with_sc s) = replies_with_sc s"
-  using assms
-  apply (cases ko; clarsimp simp: sc_at_pred_def obj_at_def refs_of_sc_def get_refs_def2)
-  apply (erule replies_with_sc_upd_replies_trivial)
-  apply (clarsimp simp: set_eq_subset)
-  apply (thin_tac "set_option _ \<times> _ \<subseteq> _")+
-  by (simp add: subset_union_non_overlapping Int_Un_distrib cart_singleton_image Int_image_empty
-                inj_image_eq_iff inj_on_convol_ident)
-
 lemma set_sched_context_minor_invs: (* minor? *)
-  "\<lbrace>invs and obj_at (\<lambda>ko. refs_of ko = refs_of_sc val) ptr
-         and valid_sched_context val
-         and (\<lambda>s. live_sc val \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
-     set_sched_context ptr val
+  "\<lbrace>invs and sc_at_pred (\<lambda>sc. sc) (\<lambda>sc. refs_of_sc sc = refs_of_sc sc'
+                                         \<and> set (sc_replies sc) = set (sc_replies sc')) ptr
+         and valid_sched_context sc'
+         and (\<lambda>s. live_sc sc' \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
+     set_sched_context ptr sc'
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (rule set_sched_context_strengthen_pre)
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                   wp: valid_irq_node_typ valid_ioports_lift set_sched_context_valid_replies
             simp_del: fun_upd_apply)
-  apply (clarsimp simp: state_refs_of_def obj_at_def ext replies_with_sc_upd_replies_trivial'
-                 elim!: rsubst[where P = sym_refs])
-  done
+  apply (clarsimp simp: sc_at_pred_def obj_at_def replies_with_sc_upd_replies_trivial)
+  apply (erule rsubst[of sym_refs], rule ext)
+  by (clarsimp simp: state_refs_of_def refs_of_sc_def)
 
 lemma ssc_refs_of_Some[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= insert (sc, TCBSchedContext)

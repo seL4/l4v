@@ -3105,4 +3105,26 @@ lemma commute_grab_asm:
   "(F \<Longrightarrow> monad_commute P f g) \<Longrightarrow> (monad_commute (P and (K F)) f g)"
   by (clarsimp simp: monad_commute_def)
 
+text \<open>If a function contains an @{term assert}, or equivalent, then it might be
+      possible to strengthen the precondition of an already-proven hoare triple
+      @{text pos}, by additionally proving a side condition @{text neg}, that
+      violating some condition causes failure. The stronger hoare triple produced
+      by this theorem allows the precondition to assume that the condition is
+      satisfied.\<close>
+lemma hoare_strengthen_pre_via_assert_forward:
+  assumes neg: "\<lbrace> Not \<circ> E \<rbrace> f \<lbrace> \<bottom>\<bottom> \<rbrace>"
+  assumes pos: "\<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
+  shows "\<lbrace> \<lambda>s. E s \<longrightarrow> P s \<rbrace> f \<lbrace> Q \<rbrace>"
+  using neg use_valid[OF _ pos] by (fastforce simp: valid_def)
+
+text \<open>Like @{thm hoare_strengthen_pre_via_assert_forward}, strengthen a precondition
+      by proving a side condition that the negation of that condition would cause
+      failure. This version is intended for backward reasoning. Apply it to a goal to
+      obtain a stronger precondition after proving the side condition.\<close>
+lemma hoare_strengthen_pre_via_assert_backward:
+  assumes "\<lbrace> Not \<circ> E \<rbrace> f \<lbrace> \<bottom>\<bottom> \<rbrace>"
+  assumes "\<lbrace> P and E \<rbrace> f \<lbrace> Q \<rbrace>"
+  shows "\<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
+  by (wp_pre, rule hoare_strengthen_pre_via_assert_forward[OF assms], simp)
+
 end

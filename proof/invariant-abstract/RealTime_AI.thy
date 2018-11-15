@@ -248,16 +248,17 @@ lemma set_sc_yf_refs_of[wp]:
                 split: option.splits if_splits)
 
 lemma set_sc_replies_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= (case replies of [] \<Rightarrow> {}
-                                    | _ \<Rightarrow> set (map (\<lambda>r. (r, SCReply)) replies)) \<union>
-                         (state_refs_of s t - {x \<in> state_refs_of s t. snd x = SCReply})))\<rbrace>
-   set_sc_obj_ref sc_replies_update t replies
+  "\<lbrace>\<lambda>s. P ((state_refs_of s)(sc := {p. if snd p = SCReply
+                                         then hd_opt replies = Some (fst p)
+                                         else p \<in> state_refs_of s sc}))\<rbrace>
+    set_sc_obj_ref sc_replies_update sc replies
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (wpsimp simp: set_sc_obj_ref_def set_object_def update_sched_context_def
-                wp: get_object_wp simp_del: fun_upd_apply)
-  by (fastforce elim!: rsubst[where P=P]
-                dest!: ko_at_state_refs_ofD split: list.splits
-                simp: get_refs_def2 state_refs_of_def image_iff conj_disj_distribR Collect_eq)
+                  wp: get_object_wp
+            simp_del: fun_upd_apply)
+  by (fastforce simp: obj_at_def state_refs_of_def get_refs_def2
+               split: option.splits if_splits
+               elim!: rsubst[of P])
 
 text {* set_reply_obj_ref *}
 

@@ -821,7 +821,7 @@ where
   "refs_of_sc sc \<equiv> get_refs SCNtfn (sc_ntfn sc)
                           \<union> get_refs SCTcb (sc_tcb sc)
                           \<union> get_refs SCYieldFrom (sc_yield_from sc)
-                          \<union> set (map (\<lambda>r. (r, SCReply)) (sc_replies sc))"
+                          \<union> get_refs SCReply (hd_opt (sc_replies sc))"
 
 definition
   refs_of_reply :: "reply \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -1543,12 +1543,11 @@ lemma refs_of_simps[simp]:
  "refs_of (SchedContext sc n)   = get_refs SCNtfn (sc_ntfn sc)
                                 \<union> get_refs SCTcb (sc_tcb sc)
                                 \<union> get_refs SCYieldFrom (sc_yield_from sc)
-                                \<union> set (map (\<lambda>r. (r, SCReply)) (sc_replies sc))"
+                                \<union> get_refs SCReply (hd_opt (sc_replies sc))"
  "refs_of (Reply r)           = get_refs ReplySchedContext (reply_sc r)
                                 \<union> get_refs ReplyTCB (reply_tcb r)"
  "refs_of (ArchObj ao)        = {}"
   by (auto simp: refs_of_def)
-
 
 lemma refs_of_rev:
  "(x, TCBBlockedRecv) \<in> refs_of ko =
@@ -1580,7 +1579,7 @@ lemma refs_of_rev:
  "(x, SCNtfn) \<in>  refs_of ko =
     (\<exists>sc n. ko = SchedContext sc n \<and> (sc_ntfn sc = Some x))"
  "(x, SCReply) \<in>  refs_of ko =
-    (\<exists>sc n. ko = SchedContext sc n \<and> (x \<in> set (sc_replies sc)))"
+    (\<exists>sc n. ko = SchedContext sc n \<and> hd_opt (sc_replies sc) = Some x)"
  "(x, ReplyTCB) \<in>  refs_of ko =
     (\<exists>reply. ko = Reply reply \<and> (reply_tcb reply = Some x))"
  "(x, ReplySchedContext) \<in>  refs_of ko =
@@ -2064,39 +2063,17 @@ lemma zombies_final_pspaceI:
   using x unfolding zombies_final_def is_final_cap'_def2
   by (simp only: cte_wp_at_pspace [OF y])
 
-lemma replies_with_sc_def2:
-  "replies_with_sc s \<equiv> {(r,sc). (r, SCReply) \<in> state_refs_of s sc}"
-  by (intro eq_reflection set_eqI iffI
-      ; fastforce simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def
-                        state_refs_of_def refs_of_rev
-                 split: option.splits)
+lemma replies_with_sc_kheap_eq:
+  "kheap s' = kheap s \<Longrightarrow> replies_with_sc s' = replies_with_sc s"
+  by (simp add: replies_with_sc_def sc_replies_sc_at_def obj_at_def)
 
-text \<open>It's possible to define @{term replies_blocked} in terms of @{term state_refs_of}
-      only because @{term BlockedOnReply} can be distinguished from @{term BlockedOnReceive}
-      by the presence or absence of an endpoint reference with ref type @{term TCBBlockedRecv}.\<close>
-lemma replies_blocked_def2:
-  "replies_blocked s \<equiv> {(r,t). (r, TCBReply) \<in> state_refs_of s t
-                                \<and> (\<forall>ep. (ep, TCBBlockedRecv) \<notin> state_refs_of s t)}"
-  by (intro eq_reflection set_eqI iffI
-      ; fastforce simp: replies_blocked_def pred_tcb_at_def obj_at_def
-                        state_refs_of_def get_refs_def2 refs_of_rev
-                 split: option.splits)+
-
-lemma replies_with_sc_state_refs_eq:
-  "state_refs_of s' = state_refs_of s \<Longrightarrow> replies_with_sc s' = replies_with_sc s"
-  by (simp add: replies_with_sc_def2)
-
-lemma replies_blocked_state_refs_eq:
-  "state_refs_of s' = state_refs_of s \<Longrightarrow> replies_blocked s' = replies_blocked s"
-  by (simp add: replies_blocked_def2)
-
-lemma valid_replies_pred_state_refs_eq:
-  "state_refs_of s' = state_refs_of s \<Longrightarrow> valid_replies_pred P s' = valid_replies_pred P s"
-  by (simp add: replies_with_sc_state_refs_eq[of s' s] replies_blocked_state_refs_eq[of s' s])
+lemma replies_blocked_kheap_eq:
+  "kheap s' = kheap s \<Longrightarrow> replies_blocked s' = replies_blocked s"
+  by (simp add: replies_blocked_def pred_tcb_at_def obj_at_def)
 
 lemma valid_replies_pred_pspaceI:
   "\<lbrakk> valid_replies_pred P s; kheap s' = kheap s \<rbrakk> \<Longrightarrow> valid_replies_pred P s'"
-  by (simp add: valid_replies_pred_state_refs_eq[of s' s, OF state_refs_of_kheap_eq])
+  by (erule rsubst2[of P]; rule replies_with_sc_kheap_eq replies_blocked_kheap_eq; simp)
 
 lemma pspace_pspace_update:
   "kheap (kheap_update (\<lambda>a. ps) s) = ps" by simp
@@ -3998,13 +3975,6 @@ lemma valid_replies_lift:
   assumes [wp]: "\<And>P r t. f \<lbrace> \<lambda>s. P (st_tcb_at (\<lambda>st. st = BlockedOnReply (Some r)) t s) \<rbrace>"
   shows "f \<lbrace> valid_replies_pred P \<rbrace>"
   by (rule hoare_lift_Pf[where f=replies_blocked]; wp replies_with_sc_lift replies_blocked_lift)
-
-(* A weaker statement than valid_replies_lift, but useful since we already
-   prove preservation of state_refs_of for many functions. *)
-lemma valid_replies_state_refs_lift:
-  assumes "\<And>P. f \<lbrace> \<lambda>s. P (state_refs_of s) \<rbrace>"
-  shows "f \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: replies_with_sc_def2 replies_blocked_def2 wp: assms)
 
 context
   fixes P r t s
