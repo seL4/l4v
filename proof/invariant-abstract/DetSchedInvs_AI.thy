@@ -47,6 +47,9 @@ lemma bound_sc_tcb_at_kh_simp[simp]: "bound_sc_tcb_at_kh test t (kheap st) = bou
   apply (simp add: pred_tcb_at_def bound_sc_tcb_at_kh_def)
   done
 
+definition bound_sc_ntfn_at_kh where
+  "bound_sc_ntfn_at_kh test \<equiv> obj_at_kh (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> test (ntfn_sc ntfn))"
+
 (* active_sc_tcb_at ::
       the thread has an initialised (sc_refill_max > 0) scheduling context *)
 definition
@@ -66,6 +69,19 @@ definition
 where
   "active_sc_tcb_at_kh t kh \<equiv>
     bound_sc_tcb_at_kh (\<lambda>ko. \<exists>scp. ko = Some scp \<and> test_sc_refill_max_kh scp kh) t kh"
+
+definition
+  active_sc_ntfn_at_kh :: "32 word \<Rightarrow> (32 word \<Rightarrow> kernel_object option) \<Rightarrow> bool"
+where
+  "active_sc_ntfn_at_kh t kh \<equiv>
+    bound_sc_ntfn_at_kh (\<lambda>ko. \<exists>scp. ko = Some scp \<and> test_sc_refill_max_kh scp kh) t kh"
+
+abbreviation
+  active_sc_ntfn_at :: "32 word \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "active_sc_ntfn_at t s \<equiv>active_sc_ntfn_at_kh t (kheap s)"
+
+lemmas active_sc_ntfn_at_def = active_sc_ntfn_at_kh_def
 
 definition
   active_sc_tcb_at :: "32 word \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
