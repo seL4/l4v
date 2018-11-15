@@ -96,14 +96,6 @@ text {* We introduce a new label. The name 'silc' here stands for 'safe inter-la
 datatype 'a subject_label = OrdinaryLabel 'a | SilcLabel
 
 
-
-(* FIXEME MOVE *)
-(*abbreviation subject_can_affect_not_silc :: "'a subject_label PAS \<Rightarrow> obj_ref \<Rightarrow> bool"
-where
-  "subject_can_affect_not_silc aag ptr \<equiv>
-          pasObjectAbs aag ptr \<in> subjectAffects (pasPolicy aag) (pasSubject aag)
-        \<and> pasObjectAbs aag ptr \<noteq> SilcLabel"*)
-
 abbreviation(input) aag_can_read_not_silc
 where
   "aag_can_read_not_silc aag ptr \<equiv> aag_can_read aag ptr \<and> pasObjectAbs aag ptr \<noteq> SilcLabel"
@@ -1873,7 +1865,7 @@ lemma rec_del_silc_inv':
                                                         is_subject aag (obj_ref_of cap))\<rbrace>
      rec_del call
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>,\<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  proof (induct s arbitrary: rule: rec_del.induct, simp_all only: rec_del_fails hoare_fail_any)
+  proof (induct s rule: rec_del.induct, simp_all only: rec_del_fails hoare_fail_any)
   case (1 slot exposed s) show ?case
     apply(simp add: split_def rec_del.simps)
     apply(rule hoare_pre_spec_validE)
@@ -1897,9 +1889,7 @@ lemma rec_del_silc_inv':
           apply(rule drop_spec_validE, (wp preemption_point_inv'| simp)+)[1]
          apply simp
          apply(rule spec_valid_conj_liftE2)
-          thm valid_validE_R
-          thm final_cap_same_objrefs
-          apply(wp_trace rec_del_ReduceZombie_emptyable preemption_point_inv' rec_del_invs
+          apply(wp rec_del_ReduceZombie_emptyable preemption_point_inv' rec_del_invs
                    valid_validE_R[OF rec_del_respects(2)[simplified]] "2.hyps"
                    drop_spec_validE[OF liftE_wp] set_cap_silc_inv
                    set_cap_pas_refined replace_cap_invs  final_cap_same_objrefs set_cap_cte_cap_wp_to
@@ -1907,45 +1897,48 @@ lemma rec_del_silc_inv':
                |simp add: finalise_cap_not_reply_master_unlifted split del: if_split)+
        (* where the action is *)
        apply(simp cong: conj_cong add: conj_comms)
-             apply (rule hoare_strengthen_post)
- apply(rule_tac Q="\<lambda> fin s. pas_refined aag s \<and>
-                             replaceable s slot (fst fin) rv \<and>
-                             cte_wp_at ((=) rv) slot s \<and>
-                             ex_cte_cap_wp_to (appropriate_cte_cap rv) slot s \<and>
-                             (\<forall>t\<in>Structures_A.obj_refs (fst fin). halted_if_tcb t s) \<and>
-                             einvs s \<and>
-                             silc_inv aag st s \<and>
-                             pasSubject aag \<noteq> SilcLabel \<and>
-                             emptyable slot s \<and> s \<turnstile> (fst fin) \<and>
-                             simple_sched_action s \<and>
-                             pas_cap_cur_auth aag (fst fin) \<and>
-                             is_subject aag (fst slot) \<and>
-                             (is_zombie (fst fin) \<or> fst fin = NullCap) \<and>
-                             (is_zombie (fst fin) \<longrightarrow> is_subject aag (obj_ref_of (fst fin))) \<and>
-                             (\<not> cap_points_to_label aag (fst fin) (pasObjectAbs aag (fst slot)) \<longrightarrow>
-                                (\<exists>slot. slot  \<in> FinalCaps.slots_holding_overlapping_caps (fst fin) s
-                                          \<and> pasObjectAbs aag (fst slot) = SilcLabel))"
-                    in hoare_vcg_conj_lift[OF _ finalise_cap_cases[where slot=slot]])
+       apply(rule hoare_strengthen_post)
+        apply(rule_tac Q="\<lambda> fin s. pas_refined aag s \<and>
+                                   replaceable s slot (fst fin) rv \<and>
+                                   cte_wp_at ((=) rv) slot s \<and>
+                                   ex_cte_cap_wp_to (appropriate_cte_cap rv) slot s \<and>
+                                   (\<forall>t\<in>Structures_A.obj_refs (fst fin). halted_if_tcb t s) \<and>
+                                   einvs s \<and>
+                                   silc_inv aag st s \<and>
+                                   pasSubject aag \<noteq> SilcLabel \<and>
+                                   emptyable slot s \<and> s \<turnstile> (fst fin) \<and>
+                                   simple_sched_action s \<and>
+                                   pas_cap_cur_auth aag (fst fin) \<and>
+                                   is_subject aag (fst slot) \<and>
+                                   (is_zombie (fst fin) \<or> fst fin = NullCap) \<and>
+                                   (is_zombie (fst fin) \<longrightarrow> is_subject aag (obj_ref_of (fst fin))) \<and>
+                                   (\<not> cap_points_to_label aag (fst fin) (pasObjectAbs aag (fst slot)) \<longrightarrow>
+                                      (\<exists>slot. slot  \<in> FinalCaps.slots_holding_overlapping_caps (fst fin) s
+                                                \<and> pasObjectAbs aag (fst slot) = SilcLabel))"
+                          in hoare_vcg_conj_lift[OF _ finalise_cap_cases[where slot=slot]])
         prefer 2
         subgoal for cap s'' isfinal s' fin s0
           apply (clarsimp simp:cte_wp_at_caps_of_state simp del:split_paired_Ex split_paired_All)
           apply (elim disjE;clarsimp simp:cte_wp_at_caps_of_state simp del:split_paired_Ex split_paired_All)
 
-          apply (clarsimp simp: is_cap_simps  gen_obj_refs_eq replaceable_zombie_not_transferable cap_auth_conferred_def clas_no_asid aag_cap_auth_def
-                             pas_refined_all_auth_is_owns cli_no_irqs simp del:split_paired_Ex split_paired_All dest!:appropriate_Zombie[symmetric, THEN trans, symmetric])
+          apply (clarsimp simp: is_cap_simps gen_obj_refs_eq replaceable_zombie_not_transferable
+                                cap_auth_conferred_def clas_no_asid aag_cap_auth_def
+                                pas_refined_all_auth_is_owns cli_no_irqs
+                          simp del: split_paired_Ex split_paired_All
+                          dest!: appropriate_Zombie[symmetric, THEN trans, symmetric])
           apply (fastforce dest: sym[where s="{_}"])
           done
        apply(wp finalise_cap_pas_refined finalise_cap_silc_inv finalise_cap_auth' finalise_cap_ret'
                 finalise_cap_ret_is_subject' finalise_cap_ret_is_silc[where st=st]
                 finalise_cap_invs[where slot=slot]
-                   finalise_cap_replaceable[where sl=slot]
-                   finalise_cap_makes_halted[where slot=slot]
-                   finalise_cap_auth' static_imp_wp)[1]
+                finalise_cap_replaceable[where sl=slot]
+                finalise_cap_makes_halted[where slot=slot]
+                finalise_cap_auth' static_imp_wp)
 
       apply(wp drop_spec_validE[OF liftE_wp] get_cap_auth_wp[where aag=aag]
-           | simp add:is_final_cap_def)+
-    apply (clarsimp simp: conj_comms cong: conj_cong simp: caps_of_state_cteD)
-        apply (frule (1) caps_of_state_valid)
+           | simp add: is_final_cap_def)+
+    apply (clarsimp simp: conj_comms caps_of_state_cteD)
+    apply (frule (1) caps_of_state_valid)
     apply (frule if_unsafe_then_capD [OF caps_of_state_cteD]; clarsimp)
 
     apply (rule conjI, clarsimp simp: silc_inv_def)
@@ -2038,7 +2031,8 @@ lemma rec_del_silc_inv_CTEDelete_transferable':
             del: wp_not_transferable
         | wpc)+
    apply (rule hoare_post_impErr,rule rec_del_Finalise_transferable)
-    apply force apply force
+    apply force
+   apply force
   apply (clarsimp)
   apply (frule(3) cca_to_transferable_or_subject[OF invs_valid_objs invs_mdb])
   apply (frule(4) cdt_change_allowed_not_silc[OF invs_valid_objs invs_mdb])
@@ -2802,43 +2796,6 @@ lemma subject_not_silc: "is_subject aag x \<Longrightarrow> silc_inv aag st s \<
   apply (clarsimp simp add: silc_inv_def)
   done
 
-lemma cap_insert_silc_inv'':
-  "\<lbrace>silc_inv aag st and (\<lambda> s. \<not> cap_points_to_label aag cap (pasObjectAbs aag (fst dest)) \<longrightarrow>
-                              (\<exists> lslot. lslot \<in> slots_holding_overlapping_caps cap s \<and>
-                              pasObjectAbs aag (fst lslot) = SilcLabel)) and
-          K (is_subject aag (fst src) \<and>  is_subject aag (fst dest))\<rbrace>
-      cap_insert cap src dest
-   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  unfolding cap_insert_def
-  apply (wp set_cap_silc_inv hoare_vcg_ex_lift
-            set_untyped_cap_as_full_slots_holding_overlapping_caps_other[where aag=aag]
-            get_cap_wp update_cdt_silc_inv set_cap_caps_of_state2
-            set_untyped_cap_as_full_cdt_is_original_cap static_imp_wp
-        | simp split del: if_split)+
-  apply (intro impI conjI allI)
-     apply clarsimp
-     apply(fastforce simp: silc_inv_def)
-    apply clarsimp
-    apply(drule_tac cap=capa in silc_invD)
-      apply assumption
-     apply(fastforce simp: intra_label_cap_def)
-    apply fastforce
-   apply(fastforce simp: silc_inv_def)
-  apply (elim conjE)
-  apply (drule(1) subject_not_silc)+
-  apply (subgoal_tac "\<forall>b. all_children
-           (\<lambda>x. pasObjectAbs aag (fst x) = SilcLabel)
-           (\<lambda>a. if a = dest
-                then if b
-                     then Some src else cdt s src
-                else cdt s a)")
-   apply simp
-  apply (intro allI)
-  apply (drule silc_inv_all_children)
-  apply (simp add: all_children_def del: split_paired_All)
-  apply fastforce
-  done
-
 lemma cap_insert_silc_inv''':
   "\<lbrace>silc_inv aag st and (\<lambda> s. \<not> cap_points_to_label aag cap (pasObjectAbs aag (fst dest)) \<longrightarrow>
                               (\<exists> lslot. lslot \<in> slots_holding_overlapping_caps cap s \<and>
@@ -2861,19 +2818,23 @@ lemma cap_insert_silc_inv''':
     apply(fastforce simp: intra_label_cap_def)
    apply fastforce
   apply (elim conjE)
-  apply (subgoal_tac "\<forall>b. all_children
-                             (\<lambda>x. pasObjectAbs aag (fst x) = SilcLabel)
-                             (\<lambda>a. if a = dest
-                                  then if b
-                                       then Some src else cdt s src
-                                  else cdt s a)")
-   apply simp
-  apply (intro allI)
   apply (drule silc_inv_all_children)
   apply (simp add: all_children_def del: split_paired_All)
   apply fastforce
   done
 
+(* special case of newer cap_insert_silc_inv''' *)
+lemma cap_insert_silc_inv'':
+  "\<lbrace>silc_inv aag st and (\<lambda> s. \<not> cap_points_to_label aag cap (pasObjectAbs aag (fst dest)) \<longrightarrow>
+                              (\<exists> lslot. lslot \<in> slots_holding_overlapping_caps cap s \<and>
+                              pasObjectAbs aag (fst lslot) = SilcLabel)) and
+          K (is_subject aag (fst src) \<and> is_subject aag (fst dest))\<rbrace>
+      cap_insert cap src dest
+   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  apply (rule hoare_pre_imp[rotated])
+   apply (rule cap_insert_silc_inv''')
+  apply clarsimp
+  by (metis subject_not_silc)
 
 
 lemma cap_delete_one_cte_wp_at_other:
@@ -3119,19 +3080,19 @@ lemma receive_ipc_base_silc_inv:
            | wpc | simp split del: if_split)+
   apply (clarsimp)
   apply (frule tcb_states_of_state_to_auth[rotated])
-   apply (simp add:tcb_states_of_state_def,blast)
+   apply (simp add: tcb_states_of_state_def,blast)
   apply (clarsimp simp: get_tcb_Some)
   apply (frule(2) sym_ref_endpoint_sendD[OF invs_sym_refs _ hd_in_set])
   apply (clarsimp simp:st_tcb_at_tcb_states_of_state dest!:tcb_states_of_state_kheapD)
   apply (frule silc_inv_not_subject)
   by (safe;
-       (clarsimp simp:cap_rights_to_auth_def)?;
+       (clarsimp simp: cap_rights_to_auth_def)?;
        (erule(1) receive_ipc_valid_ep_helper
        | (erule(1) silc_inv_cnode_onlyE,simp add: obj_at_def is_cap_table)
        | (drule(2) aag_wellformed_grant_Control_to_send[OF _ _ pas_refined_wellformed],
-          (simp add:aag_has_auth_to_Control_eq_owns | force dest:pas_refined_Control))
+          (simp add: aag_has_auth_to_Control_eq_owns | force dest: pas_refined_Control))
        | (drule aag_wellformed_grant_Control_to_send_by_reply[OF _ _ _ pas_refined_wellformed],
-          blast, blast, blast, simp add:aag_has_auth_to_Control_eq_owns)))
+          blast, blast, blast, simp add: aag_has_auth_to_Control_eq_owns)))
 
 
 lemma receive_ipc_silc_inv:
@@ -3279,7 +3240,7 @@ crunch silc_inv[wp]: bind_notification "silc_inv aag st"
 
 (* FIXME MOVE to the previous one and replace it: keep things generic please + wps is nice *)
 lemma cap_delete_tcb[wp]:
- "\<lbrace>\<lambda>s. P(tcb_at t s)\<rbrace> cap_delete ptr \<lbrace>\<lambda>rv s. P (tcb_at t s)\<rbrace>"
+ "\<lbrace>\<lambda>s. P (tcb_at t s)\<rbrace> cap_delete ptr \<lbrace>\<lambda>rv s. P (tcb_at t s)\<rbrace>"
   unfolding cap_delete_def tcb_at_typ
   by (simp add: tcb_at_typ | wp rec_del_typ_at)+
 
