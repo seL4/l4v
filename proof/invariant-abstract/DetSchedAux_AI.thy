@@ -464,9 +464,6 @@ lemma valid_sched_tcb_state_preservation:
             f \<lbrace>\<lambda>r s. P (scheduler_action s) (ready_queues s) (cur_domain s) (release_queue s)\<rbrace>"
   shows "\<lbrace>I and ct_active and valid_sched and valid_idle\<rbrace> f \<lbrace>\<lambda>_. valid_sched\<rbrace>"
 proof -
-(*  have budget_sr: "\<And>P t. \<lbrace>\<lambda>s. budget_sufficient t s \<longrightarrow> \<not> budget_ready t s\<rbrace>
-                             f \<lbrace>\<lambda>rv s. budget_sufficient t s \<longrightarrow> \<not> budget_ready t s\<rbrace>"
-  by (wpsimp wp: budget_s budget_r hoare_vcg_imp_lift)*)
   show ?thesis
   apply (clarsimp simp add: valid_sched_def valid_def)
   apply (frule(1) use_valid[OF _ valid_blocked])
@@ -505,13 +502,9 @@ proof -
    apply (drule_tac x=t in bspec)
     apply simp
    apply clarsimp
-(*   apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b
-                  \<and> (budget_sufficient t b \<longrightarrow> \<not> budget_ready t b)")*)
    apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b")
     apply simp
     apply (fastforce simp: st_tcb_at_is_etcb)
-(*   apply (rule_tac conjI[OF use_valid[OF _ st_tcb]
-        conjI[OF use_valid[OF _ bound_sc] use_valid[OF _ budget_sr]]], assumption)*)
    apply (rule_tac conjI[OF use_valid[OF _ st_tcb] use_valid[OF _ bound_sc]], assumption)
      apply clarsimp
      apply (erule pred_tcb_weakenE)
@@ -579,15 +572,10 @@ lemma valid_sched_tcb_state_preservation_gen:
   assumes bound_sc:
             "\<And>t. \<lbrace>I and ct_active and st_tcb_at (Not o inactive and Not o idle) t and active_sc_tcb_at t\<rbrace>
                                  f \<lbrace>\<lambda>_.active_sc_tcb_at t\<rbrace>"  (* is this correct? *)
-(*  assumes bound_sc: "\<And>Q t. \<lbrace>\<lambda>s. bound_sc_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. bound_sc_tcb_at Q t s\<rbrace>" *)
   assumes budget_s: "\<And>t. \<lbrace>I and st_tcb_at (Not o inactive and Not o idle) t
                            and (\<lambda>s. (budget_sufficient t s))\<rbrace> f \<lbrace>\<lambda>r s. (budget_sufficient t s)\<rbrace>"
   assumes budget_r: "\<And>t. \<lbrace>I and st_tcb_at (Not o inactive and Not o idle) t
                            and (\<lambda>s. (budget_ready t s))\<rbrace> f \<lbrace>\<lambda>r s. (budget_ready t s)\<rbrace>"
-(*  assumes budget_s': "\<And>t. \<lbrace>I and st_tcb_at (Not o inactive and Not o idle) t
-                           and (\<lambda>s. \<not>(budget_sufficient t s))\<rbrace> f \<lbrace>\<lambda>r s. \<not>(budget_sufficient t s)\<rbrace>"
-  assumes budget_r': "\<And>t. \<lbrace>I and st_tcb_at (Not o inactive and Not o idle) t
-                         and (\<lambda>s. \<not>(budget_ready t s))\<rbrace> f \<lbrace>\<lambda>r s. \<not>(budget_ready t s)\<rbrace>"*)
   assumes cur_thread: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   assumes idle_thread: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   assumes valid_blocked: "\<lbrace>valid_blocked\<rbrace> f \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
@@ -597,9 +585,6 @@ lemma valid_sched_tcb_state_preservation_gen:
             f \<lbrace>\<lambda>r s. P (scheduler_action s) (ready_queues s) (cur_domain s) (release_queue s)\<rbrace>"
   shows "\<lbrace>I and ct_active and valid_sched and valid_idle\<rbrace> f \<lbrace>\<lambda>_. valid_sched\<rbrace>"
 proof -
-(*  have budget_sr: "\<And>P t. \<lbrace>(\<lambda>s. (I and st_tcb_at (Not o inactive and Not o idle) t) s) and (\<lambda>s. budget_sufficient t s \<longrightarrow> \<not> budget_ready t s)\<rbrace>
-                             f \<lbrace>\<lambda>rv. (\<lambda>s. budget_sufficient t s \<longrightarrow> \<not> budget_ready t s)\<rbrace>"
-  by (wpsimp wp: budget_s' budget_r' hoare_vcg_imp_lift)*)
   show ?thesis
   apply (clarsimp simp add: valid_sched_def valid_def)
   apply (frule(1) use_valid[OF _ valid_blocked])
@@ -633,13 +618,9 @@ proof -
    apply (drule_tac x=t in bspec)
     apply simp
    apply clarsimp
-(*   apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b
-                  \<and> (budget_sufficient t b \<longrightarrow> \<not> budget_ready t b)")*)
    apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b")
     apply simp
     apply (fastforce simp: st_tcb_at_is_etcb)
-(*   apply (rule_tac conjI[OF use_valid[OF _ st_tcb]
-        conjI[OF use_valid[OF _ bound_sc] use_valid[OF _ budget_sr]]], assumption)*)
    apply (rule_tac conjI[OF use_valid[OF _ st_tcb] use_valid[OF _ bound_sc]], assumption)
      apply simp
      apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[3]

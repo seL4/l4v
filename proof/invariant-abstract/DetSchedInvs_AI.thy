@@ -384,7 +384,44 @@ abbreviation valid_idle_etcb :: "'z state \<Rightarrow> bool" where
 
 lemmas valid_idle_etcb_def = valid_idle_etcb_2_def
 
+definition in_queue_2 where
+  "in_queue_2 qs t \<equiv> t \<in> set qs"
 
+abbreviation in_release_q where
+  "in_release_q t s \<equiv> in_queue_2 (release_queue s) t"
+
+abbreviation in_ready_q where
+  "in_ready_q t s \<equiv> \<exists>d p. in_queue_2 (ready_queues s d p) t"
+
+lemmas in_release_q_def = in_queue_2_def
+lemmas in_ready_q_def = in_queue_2_def
+
+definition not_queued_2 where
+  "not_queued_2 qs t \<equiv> \<forall>d p. \<not> in_queue_2 (qs d p) t" (* we could do without this *)
+
+abbreviation not_queued :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "not_queued t s \<equiv> not_queued_2 (ready_queues s) t"
+(* or alternatively:
+  "not_queued t s \<equiv> \<forall>d p. \<not> in_queue_2 ((ready_queues s) d p) t"
+  "not_queued t s \<equiv> \<not> in_ready_q t s"
+*)
+
+definition not_in_release_q_2 where
+  "not_in_release_q_2 qs t \<equiv> \<not> in_queue_2 qs t" (* we could do without this *)
+
+abbreviation not_in_release_q :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "not_in_release_q t s \<equiv> not_in_release_q_2 (release_queue s) t"
+
+lemmas not_queued_def = not_queued_2_def[simplified in_queue_2_def]
+lemmas not_in_release_q_def = not_in_release_q_2_def[simplified in_queue_2_def]
+
+lemma not_in_release_q_simp[iff]: "\<not> in_release_q t s \<longleftrightarrow> not_in_release_q t s"
+  by (clarsimp simp: in_release_q_def not_in_release_q_def)
+
+lemma not_in_ready_q_simp[iff]: "\<not> in_ready_q t s \<longleftrightarrow> not_queued t s"
+  by (clarsimp simp: in_ready_q_def not_queued_def)
+
+(*
 definition not_queued_2 where
   "not_queued_2 qs t \<equiv> \<forall>d p. t \<notin> set (qs d p)"
 
@@ -398,6 +435,7 @@ abbreviation not_in_release_q :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> b
   "not_in_release_q t s \<equiv> not_in_release_q_2 (release_queue s) t"
 
 lemmas not_in_release_q_def = not_in_release_q_2_def
+*)
 
 definition valid_ready_qs_2 where
   "valid_ready_qs_2 queues curtime kh \<equiv> (\<forall>d p.
@@ -616,8 +654,6 @@ lemmas ct_not_in_release_q_lift = hoare_lift_Pf2[where f="cur_thread" and P="not
 
 lemmas sch_act_sane_lift = hoare_lift_Pf2[where f="cur_thread" and P="scheduler_act_not"]
 
-lemmas not_queued_def = not_queued_2_def
-
 lemma valid_ready_qs_lift:
   assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
   assumes a': "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
@@ -637,8 +673,6 @@ lemma valid_release_q_lift:
   assumes a': "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
       and b: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
       and c: "\<And>P. \<lbrace>\<lambda>s. P (release_queue s)\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
-(*  assumes r: "\<And>P t. \<lbrace>\<lambda>s. P (budget_ready t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (budget_ready t s)\<rbrace>"
-  assumes s: "\<And>P t. \<lbrace>\<lambda>s. P (budget_sufficient t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (budget_sufficient t s)\<rbrace>"*)
     shows "\<lbrace>valid_release_q\<rbrace> f \<lbrace>\<lambda>rv. valid_release_q\<rbrace>"
   apply (simp add: valid_release_q_def)
   apply (rule hoare_lift_Pf[where f="\<lambda>s. release_queue s", OF _ c])
