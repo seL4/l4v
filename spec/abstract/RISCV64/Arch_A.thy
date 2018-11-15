@@ -163,7 +163,7 @@ definition perform_page_table_invocation :: "page_table_invocation \<Rightarrow>
      PageTableMap cap ct_slot pte slot \<Rightarrow> perform_pt_inv_map cap ct_slot pte slot
    | PageTableUnmap cap ct_slot \<Rightarrow> perform_pt_inv_unmap cap ct_slot"
 
-abbreviation arch_no_return :: "(unit, 'z::state_ext) s_monad \<Rightarrow> (data list, 'z::state_ext) s_monad"
+locale_abbrev arch_no_return :: "(unit, 'z::state_ext) s_monad \<Rightarrow> (data list, 'z::state_ext) s_monad"
   where
   "arch_no_return oper \<equiv> do oper; return [] od"
 
