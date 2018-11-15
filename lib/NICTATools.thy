@@ -24,6 +24,7 @@ imports
   Insulin
   ShowTypes
   AutoLevity_Hooks
+  Locale_Abbrev
 begin
 
 section "Detect unused meta-forall"
