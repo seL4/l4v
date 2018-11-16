@@ -183,6 +183,83 @@ proof (cases x rule: of_nat_cases)
   with of_nat show ?thesis by simp
 qed
 
+lemma minus1_leq:
+  "\<lbrakk> x - 1 \<le> y; y < x \<rbrakk> \<Longrightarrow> (y::'a) = x-1"
+  by (smt Rep_1 Rep_Abs_mod Rep_less_n less_def diff_def int_mod_ge le_neq_trans)
+
+lemma max_bound_leq[simp,intro!]:
+  "(x::'a) \<le> -1"
+  by (smt Rep_1 Rep_Abs_mod Rep_less_n less_eq_def int_mod_ge' minus_def)
+
+lemma leq_minus1_less:
+  "0 < y \<Longrightarrow> (x \<le> y - 1) = (x < (y::'a))"
+  by (metis le_less less_trans minus1_leq not_less pred)
+
+lemma max_bound_neq_conv[simp]:
+  "(x \<noteq> -1) = ((x::'a) < -1)"
+  using le_neq_trans by auto
+
+lemma max_bound_leq_conv[simp]:
+  "(- 1 \<le> (x::'a)) = (x = - 1)"
+  by (simp add: eq_iff)
+
+lemma minus_1_eq:
+  "(-1::'a) = of_nat (nat n - 1)"
+  unfolding definitions using Rep_Abs_1 of_nat_eq size1 by auto
+
+lemma n_not_less_Rep[simp]:
+  "\<not> n < Rep x"
+  using Rep[of x] by (simp add: not_less)
+
+lemma size_plus:
+  "(x::'a) < x + y \<Longrightarrow> size (x + y) = size x + size y"
+  unfolding definitions Rep_Abs_mod
+  using Rep size0
+  by (simp flip: nat_add_distrib add: eq_nat_nat_iff pos_mod_sign mod_add_if_z split: if_split_asm)
+
+lemma Suc_size[simp]:
+  "(x::'a) < x + 1 \<Longrightarrow> size (x + 1) = Suc (size x)"
+  by (simp add: size_plus)
+
+lemma no_overflow_eq_max_bound:
+  "((x::'a) < x + 1) = (x < -1)"
+  unfolding definitions
+  by (smt Rep_Abs_mod Rep_Abs_1 Rep_less_n int_mod_ge int_mod_ge' size0)
+
+lemma plus_one_leq:
+  "x < y \<Longrightarrow> x + 1 \<le> (y::'a)"
+  by (metis add_diff_cancel_right' leq_minus1_less not_le zero_least)
+
+lemma from_top_induct[case_names top step]:
+  assumes top: "\<And>x. y \<le> x \<Longrightarrow> P (x::'a)"
+  assumes step: "\<And>x. \<lbrakk>P x; 0 < x; x \<le> y\<rbrakk> \<Longrightarrow> P (x - 1)"
+  shows "P x"
+proof -
+  obtain z where x: "x = y - z"
+    by (metis diff_eq_diff_eq diff_right_commute)
+  moreover
+  have "P (y - z)"
+  proof (induct z rule: plus_induct)
+    case 0
+    then show ?case by (simp add: top)
+  next
+    case (plus x)
+    then have [simp]: "y - (x + 1) = (y - x) - 1" by simp
+    show ?case
+    proof (cases "x < y")
+      case True
+      with plus show ?thesis
+       by simp (metis diff_add_cancel eq_iff_diff_eq_0 le_neq_trans local.step plus_one_leq not_le
+                      top zero_less_eq)
+    next
+      case False
+      with plus show ?thesis
+       by (smt top Rep_Abs_mod Rep_le_n less_def less_eq_def diff_def int_mod_ge' size0)
+    qed
+  qed
+  ultimately show ?thesis by simp
+qed
+
 end
 
 interpretation bit0:
@@ -263,12 +340,23 @@ lemma minBound_size_bit1[simp]:
   "(minBound::'a::finite bit1) = 0"
   by (simp add: minBound_def hd_map enum_bit1_def Abs_bit1'_def zero_bit1_def)
 
-lemma maxBound_size_bit0[simp]:
+lemma maxBound_size_bit0:
   "(maxBound::'a::finite bit0) = of_nat (2 * CARD('a) - 1)"
   by (simp add: maxBound_def enum_bit0_def last_map Abs_bit0'_def bit0.of_nat_eq)
 
-lemma maxBound_size_bit1[simp]:
+lemma maxBound_size_bit1:
   "(maxBound::'a::finite bit1) = of_nat (2 * CARD('a))"
   by (simp add: maxBound_def enum_bit1_def last_map Abs_bit1'_def bit1.of_nat_eq)
+
+lemma maxBound_minus_one_bit0:
+  "maxBound = (-1 ::'a::finite bit0)"
+  by (simp add: bit0.definitions bit0.of_nat_eq bit0.Rep_Abs_1 maxBound_size_bit0)
+
+lemma maxBound_minus_one_bit1:
+  "maxBound = (-1 ::'a::finite bit1)"
+  by (simp add: bit1.definitions bit1.of_nat_eq bit1.Rep_Abs_1 zmod_minus1 maxBound_size_bit1)
+
+lemmas maxBound_size_bit = maxBound_size_bit0 maxBound_size_bit1
+lemmas maxBound_minus_one_bit[simp] = maxBound_minus_one_bit1 maxBound_minus_one_bit0
 
 end
