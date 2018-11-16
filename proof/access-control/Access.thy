@@ -1320,11 +1320,21 @@ lemma tro_tag_to_prime:
 
 
 text {*
-  This definition is used for eliminating @{term integrity_obj} more easily.
-  It is the ugly unfolding of the transitive closure.
-  Do not look at it if you want to understand what is integrity
-  integrity_obj = integrity_obj_alt must always hold but is proved
-  in the transitivity section (it obviously requires that integrity_obj_alt is transitive)
+  This is the old definition of @{const integrity_obj}, corresponding
+  to @{const integrity_obj_atomic} but with certain atomic steps
+  combined (notably TCB updates).
+
+  We keep this here because it is used by many of the existing proofs,
+  and having common combinations of steps is sometimes useful.
+
+  The @{const tro_tag}s are used to tag each rule, for use in the
+  transitivity proof. The transitivity property is, in turn, needed to
+  prove that these steps are included in @{const integrity_obj}
+  (which is the transitive closure of @{const integrity_obj_atomic}).
+
+  NB: we do not try to prove the converse, i.e. integrity_obj_alt
+      implying @{const integrity_obj}. It is not quite true, and we
+      do not need it in any case.
 *}
 inductive integrity_obj_alt for aag activate subjects l' ko ko'
 where
@@ -1874,57 +1884,113 @@ lemma tcb_bound_notification_reset_eq_or_none:
   "tcb_bound_notification_reset_integrity ntfn ntfn' subjects aag \<Longrightarrow> ntfn = ntfn' \<or> ntfn' = None"
   by (auto simp: tcb_bound_notification_reset_integrity_def)
 
+
 lemma tro_alt_trans_spec: (* this takes a long time to process *)
   "\<lbrakk>integrity_obj_alt aag activate es subjects ko ko';
     integrity_obj_alt aag activate es subjects ko' ko'' \<rbrakk> \<Longrightarrow>
     integrity_obj_alt aag activate es subjects ko ko''"
-  apply (erule integrity_obj_alt.cases)
+  (* We need to consider nearly 200 cases, one for each possible pair
+     of integrity steps. We use the tro_tags to select subsets of goals
+     that can be solved by the same method. *)
+
+  (* Expand the first integrity step *)
+  apply (erule integrity_obj_alt.cases[where ko=ko and ko'=ko'])
+
+  (* LRefl and ORefl trivially collapse into the second integrity step *)
   apply (find_goal \<open>match premises in "tro_tag LRefl" \<Rightarrow> -\<close>)
-  subgoal by (rule tro_alt_lrefl,simp)
+  subgoal by (rule tro_alt_lrefl, simp)
 
   apply (find_goal \<open>match premises in "tro_tag ORefl" \<Rightarrow> -\<close>)
-  subgoal by (simp)
+  subgoal by simp
 
-  (*apply (find_goal \<open>match premises in "tro_tag RASID" \<Rightarrow> -\<close>)
-  subgoal by ((clarsimp
-             | erule integrity_obj_alt.cases
-             | drule(1) clear_asidpool_trans
-             | fastforce intro: integrity_obj_alt.intros)+)[1]*)
-
+  (* Now re-tag the first step with tro_tag' *)
   apply (all \<open>simp only:tro_tag_to_prime\<close>)
+  (* Expand the second integrity step, which will be tagged with tro_tag *)
   apply (all \<open>erule integrity_obj_alt.cases\<close>)
 
-  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag ORefl"]\<close> |(drule sym[where t="ko''"]; erule integrity_obj_alt.intros[simplified tro_tag_to_prime]; simp;fail)\<close>)
-  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag LRefl"]\<close> |(rule tro_alt_lrefl; force)\<close>)
-  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag RNtfn"]\<close> |(rule tro_alt_ntfn; force)\<close>)
-  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag' RNtfn"]\<close> |(rule tro_alt_ntfn; force)\<close>)
-  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag' REp"]\<close> |(fastforce intro: integrity_obj_alt.intros tcb.equality  simp: indirect_send_def direct_send_def direct_call_def direct_reply_def)\<close>)
-  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag REp"]\<close> |(fastforce intro: integrity_obj_alt.intros tcb.equality  simp: indirect_send_def direct_send_def direct_call_def direct_reply_def)\<close>)
-  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag' RASID"]\<close> |(fastforce intro: integrity_obj_alt.intros tcb.equality  simp: indirect_send_def direct_send_def direct_call_def direct_reply_def)\<close>)
-  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag RASID"]\<close> |(fastforce intro: integrity_obj_alt.intros tcb.equality  simp: indirect_send_def direct_send_def direct_call_def direct_reply_def)\<close>)
-  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag EpUnblock"]\<close> |(fastforce intro: integrity_obj_alt.intros tcb.equality  simp: indirect_send_def direct_send_def direct_call_def direct_reply_def)\<close>)
-  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag' EpUnblock"]\<close> |(fastforce intro: integrity_obj_alt.intros tcb.equality  simp: indirect_send_def direct_send_def direct_call_def direct_reply_def)\<close>)
-  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag' RCNode"]\<close> |(fastforce intro: integrity_obj_alt.intros tcb.equality  simp: indirect_send_def direct_send_def direct_call_def direct_reply_def)\<close>)
-  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag RCNode"]\<close> |(fastforce intro: integrity_obj_alt.intros tcb.equality  simp: indirect_send_def direct_send_def direct_call_def direct_reply_def)\<close>)
-  (* this one takes 20 sec *)
-  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag TCBGeneric"]\<close> |(fastforce elim!: integrity_obj_alt.intros[simplified tro_tag_to_prime] intro: tcb.equality  simp: indirect_send_def direct_send_def direct_call_def direct_reply_def)\<close>)
-
-  (* this one takes 10 sec *)
-  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag' TCBGeneric"]\<close> |(clarsimp,erule integrity_obj_alt.intros, rule refl, rule refl, ((intro exI)?; rule tcb.equality ; simp);
-         fastforce simp: indirect_send_def direct_send_def direct_call_def direct_reply_def dest: tcb_bound_notification_reset_eq_or_none)\<close>)
-
-(* Some of the harder cases that are either too slow or makes an infinite loop in the fastforce *)
-(* Anyone can add some of the slower remaining case with a custom tactic to speed up the proof *)
-
+  (* There are some special cases that would be too slow or unsolvable by the bulk tactics.
+     We move them up here and solve manually *)
   apply (find_goal \<open>match premises in "tro_tag' TCBReply" and "tro_tag TCBActivate" \<Rightarrow> -\<close>)
-  apply (clarsimp ,rule tro_alt_tcb_reply[OF tro_tagI refl refl], (rule exI; rule tcb.equality ; simp add:arch_tcb_context_set_def) ; fastforce)
+  apply (clarsimp, rule tro_alt_tcb_reply[OF tro_tagI refl refl],
+         (rule exI; rule tcb.equality; simp add: arch_tcb_context_set_def); fastforce)
 
   apply (find_goal \<open>match premises in "tro_tag' TCBReceive" and "tro_tag TCBReply" \<Rightarrow> -\<close>)
-  apply (clarsimp ,rule tro_alt_tcb_reply[OF tro_tagI refl refl], (rule exI; rule tcb.equality ;
-         simp add:arch_tcb_context_set_def); fastforce simp: indirect_send_def direct_send_def direct_call_def direct_reply_def send_blocked_on_def3 allowed_call_blocked_def)
+  apply (clarsimp, rule tro_alt_tcb_reply[OF tro_tagI refl refl],
+         (rule exI; rule tcb.equality;
+          simp add: arch_tcb_context_set_def);
+         fastforce simp: indirect_send_def direct_send_def direct_reply_def
+                         allowed_call_blocked_def)
 
+  apply (find_goal \<open>match premises in "tro_tag TCBGeneric" and "tro_tag' TCBRestart" \<Rightarrow> -\<close>)
+  subgoal
+    apply (erule integrity_obj_alt.intros[simplified tro_tag_to_prime])
+            apply (rule refl | assumption
+                  | fastforce intro: tcb.equality
+                  | (erule tcb_bound_notification_reset_integrity_trans
+                           reply_cap_deletion_integrity_trans;
+                     fastforce))+
+    done
 
-by (fastforce intro: integrity_obj_alt.intros tcb.equality  simp: indirect_send_def direct_send_def direct_call_def direct_reply_def send_blocked_on_def3 call_blocked_def allowed_call_blocked_def)+
+  apply (find_goal \<open>match premises in "tro_tag TCBActivate" and "tro_tag' TCBRestart" \<Rightarrow> -\<close>)
+  apply (rule tro_alt_tcb_restart[OF tro_tagI],
+                 rule refl,
+                assumption,
+               (* somehow works better than tcb.equality *)
+               (simp only: tcb.splits; simp),
+              force+)[1]
+
+  apply (find_goal \<open>match premises in "tro_tag REp" and "tro_tag' REp" \<Rightarrow> -\<close>)
+  subgoal by (erule integrity_obj_alt.intros, (rule refl | assumption)+)
+
+  (* Select groups of subgoals by tag, then solve with the given methods *)
+  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag LRefl"]\<close>
+             | time_methods \<open>solves \<open>
+                   fastforce intro: tro_alt_lrefl\<close>\<close>\<close>)
+
+  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag ORefl"]\<close>
+             | time_methods \<open>solves \<open>
+                   drule sym[where t="ko''"];
+                   erule integrity_obj_alt.intros[simplified tro_tag_to_prime];
+                   solves \<open>simp\<close>\<close>\<close>\<close>)
+
+  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag RNtfn"] thin_rl[of "tro_tag' RNtfn"]\<close>
+             | time_methods \<open>solves \<open>
+                   fastforce intro: tro_alt_ntfn\<close>\<close>\<close>)
+
+  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag REp"]
+                    | erule thin_rl[of "tro_tag' REp"]
+                    | erule thin_rl[of "tro_tag RASID"]
+                    | erule thin_rl[of "tro_tag' RASID"]
+                    | erule thin_rl[of "tro_tag EpUnblock"]
+                    | erule thin_rl[of "tro_tag' EpUnblock"]
+                    | erule thin_rl[of "tro_tag RCNode"]
+                    | erule thin_rl[of "tro_tag' RCNode"]\<close>
+             | time_methods \<open>solves \<open>
+                   fastforce intro: integrity_obj_alt.intros tcb.equality
+                             simp: indirect_send_def direct_send_def\<close>\<close>\<close>)
+
+  (* TCB-TCB steps, somewhat slow *)
+  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag TCBGeneric"]\<close>
+             | time_methods \<open>solves \<open>
+                    erule integrity_obj_alt.intros[simplified tro_tag_to_prime],
+                    (assumption | rule refl
+                    | ((erule exE)+)?, (rule exI)?, force intro: tcb.equality)+\<close>\<close>\<close>)
+
+  apply (all \<open>fails \<open>erule thin_rl[of "tro_tag' TCBGeneric"]\<close>
+             | time_methods \<open>solves \<open>
+                    erule integrity_obj_alt.intros,
+                    (assumption | rule refl
+                    | (elim exE)?, (intro exI)?, fastforce intro: tcb.equality
+                    | fastforce simp: indirect_send_def direct_send_def direct_call_def direct_reply_def
+                                dest: tcb_bound_notification_reset_eq_or_none)+\<close>\<close>\<close>)
+
+  apply (time_methods \<open>
+           succeeds \<open>match premises in T: "tro_tag _" and T': "tro_tag' _" \<Rightarrow>
+                                       \<open>print_fact T, print_fact T'\<close>\<close>,
+           fastforce intro: integrity_obj_alt.intros tcb.equality
+                     simp: indirect_send_def direct_send_def direct_call_def direct_reply_def
+                           send_blocked_on_def3 call_blocked_def allowed_call_blocked_def\<close>)+
+  done
 
 lemma tro_alt_reflp[intro!]:
   "reflp (integrity_obj_alt aag activate es subjects)"
