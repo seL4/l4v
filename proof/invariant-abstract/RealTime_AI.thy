@@ -336,6 +336,17 @@ lemma set_reply_tcb_iflive[wp]:
   done
 
 lemma set_reply_sc_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of s)(r := {p. if snd p = ReplySchedContext
+                                        then sc = Some (fst p)
+                                        else p \<in> state_refs_of s r }))\<rbrace>
+    set_reply_obj_ref reply_sc_update r sc
+   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp simp: update_sk_obj_ref_def set_object_def
+                  wp: get_sched_context_wp get_simple_ko_wp)
+  by (fastforce elim!: rsubst[of P] simp: state_refs_of_def obj_at_def get_refs_def2)
+
+(* FIXME: remove
+lemma set_reply_sc_refs_of[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= (case sc of None \<Rightarrow> {} | Some new \<Rightarrow> {(new, ReplySchedContext)}) \<union>
           (state_refs_of s t - {x \<in> state_refs_of s t. snd x = ReplySchedContext})))\<rbrace>
    set_reply_obj_ref reply_sc_update t sc
@@ -346,6 +357,7 @@ lemma set_reply_sc_refs_of[wp]:
                     simp: state_refs_of_def obj_at_def Un_def split_def Collect_eq get_refs_def2
                    split: option.splits if_splits)
   done
+*)
 
 lemma set_reply_tcb_refs_of[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= (case sc of None \<Rightarrow> {} | Some new \<Rightarrow> {(new, ReplyTCB)}) \<union>

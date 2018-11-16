@@ -1143,6 +1143,7 @@ lemma get_sc_replies_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> liftM sc_replies (get_sched_context scp) \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   by (wpsimp simp: obj_at_def)
 
+(* FIXME: remove
 lemma mapM_x_set_reply_sc_refs_of:
   notes refs_of_simps[simp del]
   shows
@@ -1166,6 +1167,7 @@ proof -
   then show "foldl (\<lambda>f w. f (w := state_refs_of s w - {p \<in> state_refs_of s w. snd p = ReplySchedContext})) ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) repliesa = foldl (\<lambda>f w. f (w := ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) w - {p \<in> ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) w. snd p = ReplySchedContext})) ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) repliesa"
     by presburger
 qed
+*)
 
 definition if_Some :: "'a option \<Rightarrow> 'b \<Rightarrow> 'b set"
   where
@@ -1184,35 +1186,69 @@ lemma set_reply_obj_ref_valid_replies[wp]:
   "set_reply_obj_ref f r v \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp simp: update_sk_obj_ref_def wp: set_reply_valid_replies)
 
-lemma replies_with_sc_upd_replies_nil_subset:
-  "replies_with_sc_upd_replies [] sc_ptr rs \<subseteq> rs"
-  by (clarsimp simp: replies_with_sc_upd_replies_def)
+lemma replies_with_sc_upd_replies_subset:
+  assumes "set rs \<subseteq> {r. (r, sc_ptr) \<in> rs_with_sc}"
+  shows "replies_with_sc_upd_replies rs sc_ptr rs_with_sc \<subseteq> rs_with_sc"
+  using assms by (auto simp: replies_with_sc_upd_replies_def)
 
-lemma replies_with_sc_upd_replies_nil_valid_replies:
-  notes subs = replies_with_sc_upd_replies_nil_subset[of sc_ptr "replies_with_sc s"]
-  notes subf = subs[THEN image_mono[where f=fst], THEN subset_trans]
-  assumes "valid_replies (replies_with_sc s) (replies_blocked s)"
-  shows "valid_replies (replies_with_sc_upd_replies [] sc_ptr (replies_with_sc s)) (replies_blocked s)"
-  using assms by (clarsimp simp: valid_replies_def subf inj_on_subset subs)
+lemma replies_with_sc_upd_replies_subset_valid_replies:
+  assumes rep: "valid_replies rs_with_sc rs_blocked"
+  assumes sub: "set rs \<subseteq> {r. (r,sc_ptr) \<in> rs_with_sc}"
+  shows "valid_replies (replies_with_sc_upd_replies rs sc_ptr rs_with_sc) rs_blocked"
+proof -
+  note subs = replies_with_sc_upd_replies_subset[OF sub]
+  note subf = subs[THEN image_mono[where f=fst], THEN subset_trans]
+  show ?thesis using rep by (clarsimp simp: valid_replies_def subf inj_on_subset[OF _ subs])
+qed
+
+lemma sc_replies_sc_at_subset_replies_with_sc:
+  assumes "sc_replies_sc_at (\<lambda>rs'. set rs \<subseteq> set rs') sc_ptr s"
+  shows "set rs \<subseteq> {r. (r, sc_ptr) \<in> replies_with_sc s}"
+  using assms by (auto simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def)
+
+lemmas replies_with_sc_upd_replies_subset' =
+  replies_with_sc_upd_replies_subset[OF sc_replies_sc_at_subset_replies_with_sc]
+
+lemmas replies_with_sc_upd_replies_subset_valid_replies' =
+  replies_with_sc_upd_replies_subset_valid_replies[OF _ sc_replies_sc_at_subset_replies_with_sc]
+
+lemmas replies_with_sc_upd_replies_nil =
+  replies_with_sc_upd_replies_subset[of "[]", simplified]
+
+lemmas replies_with_sc_upd_replies_nil_valid_replies =
+  replies_with_sc_upd_replies_subset_valid_replies[where rs="[]", simplified]
 
 lemma set_sc_replies_nil_valid_replies[wp]:
   "set_sc_obj_ref sc_replies_update sc_ptr [] \<lbrace> valid_replies_pred valid_replies \<rbrace>"
-  by (wpsimp wp: set_sc_replies_valid_replies simp: replies_with_sc_upd_replies_nil_valid_replies)
+  by (wpsimp wp: set_sc_replies_valid_replies
+           simp: replies_with_sc_upd_replies_subset_valid_replies)
+
+(* FIXME: move to Invariants_AI *)
+lemma in_state_refs_of_iff:
+  "r \<in> state_refs_of s p \<longleftrightarrow> obj_at (\<lambda>obj. r \<in> refs_of obj) p s"
+  by (auto simp: state_refs_of_def obj_at_def split: option.splits)
 
 lemma sched_context_unbind_reply_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_unbind_reply sc_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply fun_upd_apply[simp del]
-  apply (simp add: sched_context_unbind_reply_def)
-  apply (wpsimp wp: mapM_x_set_reply_sc_refs_of valid_irq_node_typ hoare_vcg_conj_lift
-                    valid_ioports_lift
-              simp: invs_def valid_state_def valid_pspace_def)
-  apply (erule delta_sym_refs
-         ; clarsimp simp: fun_upd_apply obj_at_def split: if_splits
-         ; clarsimp simp: state_refs_of_def get_refs_def2 image_iff refs_of_rev split: option.splits)
-  apply (rename_tac s sc n asdfasdf tp)
-  apply (case_tac tp; clarsimp simp: refs_of_rev)
-  (* refs_of_sc is broken for sc_replies *)
-  sorry
+  apply (wpsimp wp: valid_irq_node_typ hoare_vcg_conj_lift valid_ioports_lift
+              simp: sched_context_unbind_reply_def invs_def valid_state_def valid_pspace_def)
+  apply (rule_tac V="sc_ptr \<noteq> hd (sc_replies sc)" in revcut_rl)
+   apply (case_tac "sc_replies sc"; clarsimp)
+   apply (clarsimp simp: obj_at_def)
+   apply (erule (1) pspace_valid_objsE)
+   apply (clarsimp simp: valid_obj_def valid_sched_context_def obj_at_def is_reply)
+  supply fun_upd_apply[simp]
+  apply (clarsimp cong: conj_cong)
+  apply (rule_tac rfs'="state_refs_of s" in delta_sym_refs
+         ; clarsimp simp: obj_at_def split: if_splits
+         ; clarsimp simp: in_state_refs_of_iff obj_at_def get_refs_def2 refs_of_rev
+                   split: option.splits)
+  apply (rename_tac s sc n y reply sc' rs' n')
+  apply (case_tac "sc_replies sc"; case_tac "sc_replies sc'"; clarsimp)
+  apply (rename_tac s sc n sc_ptr' reply sc' rs' n' r rs)
+  by (frule_tac x=sc_ptr and y=r and tp=ReplySchedContext in sym_refsE
+      ; clarsimp simp: in_state_refs_of_iff obj_at_def get_refs_def2)
 
 text {* more invs rules *}
 
@@ -1244,12 +1280,14 @@ lemma set_sc_othres_invs:
               sc_refills := r#refills,
               sc_refill_max := max_refills\<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
-      simp_del: fun_upd_apply wp: valid_ioports_lift)
+      simp_del: fun_upd_apply wp: valid_ioports_lift set_sched_context_valid_replies)
   apply safe
-    apply (drule valid_objs_valid_sched_context, fastforce)
-    apply (clarsimp simp: valid_sched_context_def)
-   apply (drule_tac p=p in if_live_then_nonz_capD2, simp)
-    apply (clarsimp simp: live_def live_sc_def, assumption)
+     apply (drule valid_objs_valid_sched_context, fastforce)
+     apply (clarsimp simp: valid_sched_context_def)
+    apply (drule_tac p=p in if_live_then_nonz_capD2, simp)
+     apply (clarsimp simp: live_def live_sc_def, assumption)
+   apply (erule replies_with_sc_upd_replies_subset_valid_replies')
+   apply (clarsimp simp: sc_replies_sc_at_def obj_at_def)
   by (clarsimp simp: state_refs_of_def refs_of_def fun_upd_idem)
 
 lemma update_sc_othres_invs:
@@ -1259,17 +1297,16 @@ lemma update_sc_othres_invs:
               sc_refills := r#refills,
               sc_refill_max := max_refills\<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
-          wp: update_sched_context_valid_objs_same valid_irq_node_typ
-              update_sched_context_iflive_same
-              update_sched_context_refs_of_same
-          simp_del: fun_upd_apply)
+                  wp: update_sched_context_valid_objs_same valid_irq_node_typ
+                      update_sched_context_iflive_same
+                      update_sched_context_refs_of_same
+                      update_sc_but_not_sc_replies_valid_replies'
+            simp_del: fun_upd_apply)
   by (clarsimp simp: valid_sched_context_def live_sc_def)
 
 lemma refill_new_invs[wp]:
   "\<lbrace>invs\<rbrace> refill_new sc_ptr max_refills budget period \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: refill_new_def wp: get_sched_context_wp update_sc_othres_invs)
-
-crunch valid_objs[wp]: tcb_sched_action valid_objs
 
 lemma set_consumed_invs[wp]:
   "\<lbrace>invs\<rbrace> set_consumed scp args \<lbrace>\<lambda>rv. invs\<rbrace>"
