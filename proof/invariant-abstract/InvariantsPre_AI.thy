@@ -107,6 +107,9 @@ lemma a_type_aa_type: "(a_type (ArchObj ako) = AArch T) = (aa_type ako = T)"
 abbreviation
   "typ_at T \<equiv> obj_at (\<lambda>ob. a_type ob = T)"
 
+abbreviation
+  "typs_of \<equiv> \<lambda>s. kheap s ||> a_type"
+
 definition
   pspace_aligned :: "'z::state_ext state \<Rightarrow> bool"
 where
@@ -279,5 +282,9 @@ lemma a_typeE:
                 cte_level_bits \<le> sz \<rbrakk> \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   by (cases ko; clarsimp simp add: a_type_def split: if_split_asm)+
+
+lemma typ_at_typs_of:
+  "typ_at T p s = (typs_of s p = Some T)"
+  by (auto simp: obj_at_def in_opt_map_eq)
 
 end
