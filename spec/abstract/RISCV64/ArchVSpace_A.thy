@@ -40,9 +40,9 @@ definition pool_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow
 
 definition vspace_for_pool :: "obj_ref \<Rightarrow> asid \<Rightarrow> (obj_ref \<rightharpoonup> asid_pool) \<Rightarrow> obj_ref option"
   where
-  "vspace_for_pool pool_ptr asid \<equiv> \<lambda>pools. do {
-     pool \<leftarrow> pools pool_ptr;
-     pool (asid_low_bits_of asid)
+  "vspace_for_pool pool_ptr asid \<equiv> do {
+     pool \<leftarrow> oapply pool_ptr;
+     K $ pool (asid_low_bits_of asid)
    }"
 
 definition vspace_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option"
