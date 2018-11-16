@@ -112,6 +112,7 @@ lemmas omonad_simps [simp] =
   gets_the_return gets_the_fail gets_the_returnOk
   gets_the_throwError gets_the_assert
 
+lemmas in_omonad = bind_eq_Some_conv in_obind_eq in_opt_map_eq Let_def
 
 
 section "Relation between option monad loops and non-deterministic monad loops."

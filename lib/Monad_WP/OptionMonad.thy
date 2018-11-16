@@ -28,6 +28,10 @@ definition
 where
   "f |> g \<equiv> \<lambda>s. case f s of None \<Rightarrow> None | Some x \<Rightarrow> g x"
 
+abbreviation opt_map_Some :: "('s \<rightharpoonup> 'a) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> 's \<rightharpoonup> 'b" (infixl "||>" 54) where
+  "f ||> g \<equiv> f |> (Some \<circ> g)"
+lemmas opt_map_Some_def = opt_map_def
+
 lemma opt_map_cong [fundef_cong]:
   "\<lbrakk> f = f'; \<And>v s. f s = Some v \<Longrightarrow> g v = g' v\<rbrakk> \<Longrightarrow> f |> g = f' |> g'"
   by (rule ext) (simp add: opt_map_def split: option.splits)
@@ -215,6 +219,43 @@ lemma oreturnOkE:
 
 lemmas omonadE [elim!] =
   opt_mapE obindE oreturnE ofailE othrowE oreturnOkE oassertE
+
+lemma in_opt_map_Some_eq:
+  "((f ||> g) x = Some y) = (\<exists>v. f x = Some v \<and> g v = y)"
+  by (simp add: in_opt_map_eq)
+
+lemma in_opt_map_None_eq[simp]:
+  "((f ||> g) x = None) = (f x = None)"
+  by (simp add: opt_map_def split: option.splits)
+
+lemma oreturn_comp[simp]:
+  "oreturn x \<circ> f = oreturn x"
+  by (simp add: oreturn_def K_def o_def)
+
+lemma ofail_comp[simp]:
+  "ofail \<circ> f = ofail"
+  by (auto simp: ofail_def K_def)
+
+lemma oassert_comp[simp]:
+  "oassert P \<circ> f = oassert P"
+  by (simp add: oassert_def)
+
+lemma fail_apply[simp]:
+  "ofail s = None"
+  by (simp add: ofail_def K_def)
+
+lemma oassert_apply[simp]:
+  "oassert P s = (if P then Some () else None)"
+  by (simp add: oassert_def)
+
+lemma oreturn_apply[simp]:
+  "oreturn x s = Some x"
+  by simp
+
+lemma oapply_apply[simp]:
+  "oapply x s = s x"
+  by (simp add: oapply_def)
+
 
 section \<open>"While" loops over option monad.\<close>
 
