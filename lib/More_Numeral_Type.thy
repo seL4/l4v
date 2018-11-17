@@ -138,51 +138,6 @@ lemma pred[simp,intro!]:
   "0 < (x::'a) \<Longrightarrow> x - 1 < x"
   by (auto intro!: minus_less)
 
-lemma of_nat_cases[case_names of_nat]:
-  "(\<And>m. \<lbrakk> (x::'a) = of_nat m; m < nat n \<rbrakk> \<Longrightarrow> P) \<Longrightarrow> P"
-  by (metis mod_type.Rep_less_n mod_type_axioms nat_mono_iff of_nat_size size0 size_def)
-
-lemma minus_induct[case_names 0 minus]:
-  assumes "P (0::'a)"
-  assumes suc: "\<And>x. \<lbrakk> P (x - 1); 0 < x \<rbrakk> \<Longrightarrow> P x"
-  shows "P x"
-proof (cases x rule: of_nat_cases)
-  case (of_nat m)
-  have "P (of_nat m)"
-  proof (induct m)
-    case 0
-    then show ?case using \<open>P 0\<close> by simp
-  next
-    case (Suc m)
-    show ?case
-    proof (cases "1 + of_nat m = (0::'a)")
-      case True
-      then show ?thesis using \<open>P 0\<close> by simp
-    next
-      case False
-      with Suc suc show ?thesis by (metis add_diff_cancel_left' less_eq_0 not_less of_nat_Suc)
-    qed
-  qed
-  with of_nat show ?thesis by simp
-qed
-
-lemma plus_induct[case_names 0 plus]:
-  assumes "P (0::'a)"
-  assumes suc: "\<And>x. \<lbrakk> P x; x < x + 1 \<rbrakk> \<Longrightarrow> P (x + 1)"
-  shows "P x"
-proof (cases x rule: of_nat_cases)
-  case (of_nat m)
-  have "P (of_nat m)"
-  proof (induct m)
-    case 0
-    then show ?case using \<open>P 0\<close> by simp
-  next
-    case (Suc m)
-    with \<open>P 0\<close> suc show ?case by (metis diff_add_cancel minus_induct pred)
-  qed
-  with of_nat show ?thesis by simp
-qed
-
 lemma minus1_leq:
   "\<lbrakk> x - 1 \<le> y; y < x \<rbrakk> \<Longrightarrow> (y::'a) = x-1"
   by (smt Rep_1 Rep_Abs_mod Rep_less_n less_def diff_def int_mod_ge le_neq_trans)
@@ -202,6 +157,10 @@ lemma max_bound_neq_conv[simp]:
 lemma max_bound_leq_conv[simp]:
   "(- 1 \<le> (x::'a)) = (x = - 1)"
   by (simp add: eq_iff)
+
+lemma max_bound_not_less[simp]:
+  "\<not> -1 < (x::'a)"
+  using minus1_leq by fastforce
 
 lemma minus_1_eq:
   "(-1::'a) = of_nat (nat n - 1)"
@@ -230,6 +189,56 @@ lemma plus_one_leq:
   "x < y \<Longrightarrow> x + 1 \<le> (y::'a)"
   by (metis add_diff_cancel_right' leq_minus1_less not_le zero_least)
 
+lemma less_uminus:
+  "\<lbrakk> - x < y; x \<noteq> 0 \<rbrakk> \<Longrightarrow> - y < (x::'a)"
+  unfolding definitions
+  by (smt Rep_inverse Rep_mod Rep_Abs_mod size0 zmod_zminus1_eq_if)
+
+lemma of_nat_cases[case_names of_nat]:
+  "(\<And>m. \<lbrakk> (x::'a) = of_nat m; m < nat n \<rbrakk> \<Longrightarrow> P) \<Longrightarrow> P"
+  by (metis mod_type.Rep_less_n mod_type_axioms nat_mono_iff of_nat_size size0 size_def)
+
+lemma minus_induct[case_names 0 minus]:
+  assumes "P (0::'a)"
+  assumes suc: "\<And>x. \<lbrakk> P (x - 1); 0 < x \<rbrakk> \<Longrightarrow> P x"
+  shows "P x"
+proof (cases x rule: of_nat_cases)
+  case (of_nat m)
+  have "P (of_nat m)"
+  proof (induct m)
+    case 0
+    then show ?case using `P 0` by simp
+  next
+    case (Suc m)
+    show ?case
+    proof (cases "1 + of_nat m = (0::'a)")
+      case True
+      then show ?thesis using `P 0` by simp
+    next
+      case False
+      with Suc suc show ?thesis by (metis add_diff_cancel_left' less_eq_0 not_less of_nat_Suc)
+    qed
+  qed
+  with of_nat show ?thesis by simp
+qed
+
+lemma plus_induct[case_names 0 plus]:
+  assumes "P (0::'a)"
+  assumes suc: "\<And>x. \<lbrakk> P x; x < x + 1 \<rbrakk> \<Longrightarrow> P (x + 1)"
+  shows "P x"
+proof (cases x rule: of_nat_cases)
+  case (of_nat m)
+  have "P (of_nat m)"
+  proof (induct m)
+    case 0
+    then show ?case using `P 0` by simp
+  next
+    case (Suc m)
+    with `P 0` suc show ?case by (metis diff_add_cancel minus_induct pred)
+  qed
+  with of_nat show ?thesis by simp
+qed
+
 lemma from_top_induct[case_names top step]:
   assumes top: "\<And>x. y \<le> x \<Longrightarrow> P (x::'a)"
   assumes step: "\<And>x. \<lbrakk>P x; 0 < x; x \<le> y\<rbrakk> \<Longrightarrow> P (x - 1)"
@@ -249,7 +258,7 @@ proof -
     proof (cases "x < y")
       case True
       with plus show ?thesis
-       by simp (metis diff_add_cancel eq_iff_diff_eq_0 le_neq_trans local.step plus_one_leq not_le
+       by simp (metis diff_add_cancel eq_iff_diff_eq_0 le_neq_trans step plus_one_leq not_le
                       top zero_less_eq)
     next
       case False
@@ -258,6 +267,47 @@ proof -
     qed
   qed
   ultimately show ?thesis by simp
+qed
+
+lemma tranclp_greater: "(>)\<^sup>+\<^sup>+ = ((>) :: 'a \<Rightarrow> 'a \<Rightarrow> bool)"
+  by(auto simp add: fun_eq_iff intro: less_trans elim: tranclp.induct)
+
+lemma card_n:
+  "CARD('a) = nat n"
+  using type by (simp add: type_definition.card)
+
+lemma finite_UNIV[intro!,simp]:
+  "finite (UNIV::'a set)"
+  by (rule card_ge_0_finite) (simp add: card_n size0)
+
+lemma finite_greater[simp]:
+  "finite {(x, y). y < (x::'a)}"
+  by (rule finite_subset[of _ "UNIV \<times> UNIV"], simp)
+     (rule finite_cartesian_product; rule finite_UNIV)
+
+lemma wf_greater[intro!,simp]:
+  "wf {(x,y). x > (y::'a)}"
+  by (auto simp: trancl_def tranclp_greater intro!: finite_acyclic_wf acyclicI)
+
+(* less_induct already instantiated in class well_order *)
+lemma greater_induct[case_names greater]:
+  "(\<And>x. (\<And>z. x < z \<Longrightarrow> P z) \<Longrightarrow> P x) \<Longrightarrow> P (x::'a)"
+  by (rule wf_induct_rule, rule wf_greater) fastforce
+
+lemma from_top_full_induct[case_names top step]:
+  assumes top: "\<And>x. y \<le> x \<Longrightarrow> P (x::'a)"
+  assumes step: "\<And>x. \<lbrakk>\<forall>z > x. P z; x < y\<rbrakk> \<Longrightarrow> P x"
+  shows "P x"
+proof (induct x rule: greater_induct)
+  case (greater x)
+  show ?case
+  proof (cases "x < y")
+    case True
+    then show ?thesis by (blast intro: step greater)
+  next
+    case False
+    then show ?thesis by (auto simp: not_less intro: top)
+  qed
 qed
 
 end
@@ -288,7 +338,6 @@ definition enum_alt_bit1  where "enum_alt \<equiv> alt_from_ord (enum :: 'a :: f
 instance by intro_classes (auto simp: enum_alt_bit0_def enum_alt_bit1_def)
 
 end
-
 
 subsection \<open>Relating @{const enum} and @{const size}\<close>
 
