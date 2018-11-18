@@ -328,38 +328,6 @@ fun ep_queue_invisible where
   "ep_queue_invisible aag l (RecvEP list) = labels_are_invisible aag l ((pasObjectAbs aag) ` (set list))" |
   "ep_queue_invisible aag l IdleEP = True"
 
-(*
-(* unneeded now? *)
-lemma aag_can_affect_ep_queued:
-  "\<lbrakk>(pasSubject aag, Reset, pasObjectAbs aag epptr) \<in> pasPolicy aag;
-    ko_at (Endpoint (SendEP list)) epptr s \<or> ko_at (Endpoint (RecvEP list)) epptr s;
-    t \<in> set list; pas_refined aag s; valid_objs s; sym_refs (state_refs_of s)\<rbrakk> \<Longrightarrow>
-  aag_can_affect aag (pasObjectAbs aag t) t"
-  apply(erule disjE)
-   apply(drule_tac P="send_blocked_on epptr" in ep_queued_st_tcb_at'')
-       apply(fastforce)
-      apply assumption
-     apply assumption
-    apply simp
-   apply(rule conjI)
-    apply(erule_tac auth=SyncSend and l'="pasObjectAbs aag t" in affects_reset)
-      apply(erule pas_refined_mem[rotated])
-      apply(rule sta_ts)
-      apply(clarsimp simp: thread_states_def split: option.split simp: tcb_states_of_state_def st_tcb_def2)
-      apply(case_tac "tcb_state tcb", simp_all)
-  apply(drule_tac P="receive_blocked_on epptr" in ep_queued_st_tcb_at'')
-      apply(fastforce)
-     apply assumption
-    apply assumption
-   apply simp
-  apply(erule_tac auth=Receive and l'="pasObjectAbs aag t" in affects_reset)
-   apply(erule pas_refined_mem[rotated])
-   apply(rule sta_ts)
-   apply(clarsimp simp: thread_states_def split: option.split simp: tcb_states_of_state_def st_tcb_def2)
-   apply(case_tac "tcb_state tcb", simp_all)
-  done
-*)
-
 lemma obj_eq_st_tcb_at:
   "\<lbrakk>kheap s x = kheap s' x; st_tcb_at P x s'\<rbrakk> \<Longrightarrow>
   st_tcb_at P x s"
@@ -693,32 +661,12 @@ lemma gets_apply_ready_queues_reads_respects:
   apply (force elim: reads_equivE simp: equiv_for_def)
   done
 
-(*
-lemma set_tcb_queue_equiv_but_for_labels:
-  "\<lbrace>equiv_but_for_labels aag L st and K (pasDomainAbs aag d \<in> L)\<rbrace>
-   set_tcb_queue d prio queue
-   \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  apply (simp add: set_tcb_queue_def modify_def)
-  apply wp
-  apply (force simp: equiv_but_for_labels_def states_equiv_for_def equiv_for_def equiv_asids_def equiv_asid_def)
-  done
-*)
-
 lemma set_tcb_queue_modifies_at_most:
   "modifies_at_most aag L (\<lambda>s. pasDomainAbs aag d \<inter> L \<noteq> {}) (set_tcb_queue d prio queue)"
   apply (rule modifies_at_mostI)
   apply (simp add: set_tcb_queue_def modify_def, wp)
   apply (force simp: equiv_but_for_labels_def states_equiv_for_def equiv_for_def equiv_asids_def equiv_asid_def)
   done
-
-(*
-lemma set_tcb_queue_modifies_at_most:
-  "modifies_at_most aag {pasObjectAbs aag thread} (\<lambda>s. True) (set_tcb_queue d prio queue)"
-  apply (rule modifies_at_mostI)
-  apply (simp add: set_tcb_queue_def modify_def, wp)
-  apply (force simp: equiv_but_for_labels_def states_equiv_for_def equiv_for_def equiv_asids_def equiv_asid_def)
-  done
-*)
 
 (* FIXME: move *)
 lemma equiv_valid_rv_trivial':
@@ -911,100 +859,6 @@ lemma cancel_all_signals_reads_respects:
      | rule subset_refl
      | wp_once hoare_drop_imps
      | simp)+
-(*
-  apply (wp hoare_vcg_all_lift)
-  apply(case_tac "aag_can_read aag ntfnptr \<or> aag_can_affect aag l ntfnptr")
-   apply((wp mapM_x_ev' set_thread_state_reads_respects set_simple_ko_reads_respects
-             get_simple_ko_reads_respects hoare_vcg_all_lift
-
-         | wpc | simp)+)[1]
-    apply (wp hoare_drop_imps)
-   apply simp
-   apply force
-  apply(clarsimp simp: equiv_valid_def2 simp del: K_def)
-  apply(rule_tac W="\<lambda> ntfn ntfn'. (\<not> ntfn_queue_invisible aag l ntfn \<or> \<not> ntfn_queue_invisible aag l ntfn') \<longrightarrow> ntfn = ntfn'" and Q="\<top>\<top>" in equiv_valid_rv_bind)
-    apply(rule get_notification_revrv)
-   apply(case_tac "rv = rv'")
-    apply(clarsimp)
-    apply(fold equiv_valid_def2)
-    apply(rule equiv_valid_guard_imp)
-     apply((wp mapM_x_ev' set_thread_state_reads_respects set_simple_ko_reads_respects
-               get_simple_ko_reads_respects hoare_vcg_all_lift
-           | wpc | simp)+)[1]
-    apply clarsimp+
-    apply force
-   apply(clarsimp  split: notification.splits)
-   apply(intro allI impI conjI)
-           apply(fastforce intro: return_ev2)
-          apply(subst bind_return_unit[where f="return ()"])
-          apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-               apply(subst bind_return_unit[where f="return ()"])
-               apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-                    apply (simp add: op_eq_unit_taut)
-                    apply (rule equiv_valid_2_unobservable)
-                       apply wp
-                   apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_r_invisible])
-                      apply(rule modifies_at_mostI |
-                            wp set_thread_state_equiv_but_for  | simp add: labels_are_invisible_def)+
-              apply(rule ev2_invisible_ntfn)
-                  apply (simp add: labels_are_invisible_def)+
-                apply(rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp  | wp_once hoare_drop_imps)+
-         apply(fastforce intro: return_ev2)
-        apply(subst bind_return_unit[where f="return ()"])
-        apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-             apply(subst bind_return_unit[where f="return ()"])
-             apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-                  apply (simp add: op_eq_unit_taut)
-                  apply (rule equiv_valid_2_unobservable)
-                     apply wp
-                 apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_l_invisible])
-                    apply(rule modifies_at_mostI |
-                          wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-            apply(rule ev2_invisible_ntfn)
-                apply (simp add: labels_are_invisible_def)+
-              apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+)[7]
-       apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-            apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-                 apply (simp add: op_eq_unit_taut)
-                 apply (rule equiv_valid_2_unobservable)
-                    apply wp
-                apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_invisible])
-                   apply(rule modifies_at_mostI |
-                         wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-           apply(rule ev2_invisible_ntfn)
-               apply (simp add: labels_are_invisible_def)+
-             apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+)[7]
-      apply(subst bind_return_unit[where f="return ()"])
-      apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-           apply(subst bind_return_unit[where f="return ()"])
-           apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-                apply (simp add: op_eq_unit_taut)
-                apply (rule equiv_valid_2_unobservable)
-                   apply wp
-               apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_l_invisible])
-                  apply(rule modifies_at_mostI |
-                        wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-          apply(rule ev2_invisible_ntfn)
-              apply (simp add: labels_are_invisible_def)+
-            apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+)[7]
-     apply(fastforce intro: return_ev2)
-    apply(subst bind_return_unit[where f="return ()"])
-    apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
-         apply(subst bind_return_unit[where f="return ()"])
-         apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="(=)" in equiv_valid_2_bind_pre)
-              apply (simp add: op_eq_unit_taut)
-              apply (rule equiv_valid_2_unobservable)
-                 apply wp
-             apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_r_invisible])
-                apply(rule modifies_at_mostI |
-                      wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-        apply(rule ev2_invisible_ntfn)
-            apply (simp add: labels_are_invisible_def)+
-          apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp  | wp_once hoare_drop_imps)+)[7]
-   apply(fastforce intro: return_ev2)
-  apply wp
-  done
-*)
 
 lemma get_bound_notification_reads_respects':
   "reads_respects aag l (K(is_subject aag thread)) (get_bound_notification thread)"

@@ -1353,54 +1353,6 @@ lemma send_endpoint_reads_affects_queued:
   apply(auto dest: read_sync_ep_read_senders)
   done
 
-(*
-lemma cancel_badged_sends_equiv_but_for_labels:
-  "\<lbrace> pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of and
-     equiv_but_for_labels aag L st and
-      K ({pasObjectAbs aag epptr} \<union> all_with_auth_to aag SyncSend (pasObjectAbs aag epptr) \<subseteq> L) \<rbrace>
-     cancel_badged_sends epptr badge
-   \<lbrace> \<lambda>_. equiv_but_for_labels aag L st \<rbrace>"
-  unfolding cancel_badged_sends_def
-  apply(wp set_endpoint_equiv_but_for_labels  | wpc | simp)+
-     apply(rule_tac Q="\<lambda> r s. equiv_but_for_labels aag L st s \<and>
-               {pasObjectAbs aag epptr} \<union> all_with_auth_to aag SyncSend (pasObjectAbs aag epptr) \<subseteq> L \<and> (\<forall>x\<in>set list. (pasObjectAbs aag x, SyncSend, pasObjectAbs aag epptr) \<in> pasPolicy aag)" in hoare_strengthen_post)
-      apply(wp mapM_wp' set_thread_state_equiv_but_for_labels gts_wp  | simp add: filterM_mapM)+
-      apply(fastforce simp: all_with_auth_to_def)
-     apply simp
-    apply(wp set_endpoint_equiv_but_for_labels get_simple_ko_wp | simp)+
-  apply clarsimp
-  apply(frule send_endpoint_threads_blocked, (simp | assumption)+)
-  apply(drule send_blocked_threads_have_SyncSend_auth, (simp | assumption)+)
-  done
-*)
-
-(*
-lemma cancel_badged_sends_reads_respects:
-  shows
-  "reads_respects aag l (pas_refined aag and valid_objs and (sym_refs \<circ> state_refs_of) and K ((pasSubject aag, Reset, pasObjectAbs aag epptr) \<in> pasPolicy aag)) (cancel_badged_sends epptr badge)"
-  apply (rule gen_asm_ev)+
-  apply(case_tac "aag_can_read aag epptr \<or> aag_can_affect aag l epptr")
-   apply(simp add: cancel_badged_sends_def fun_app_def)
-   apply wp
-      apply (rule_tac Q="\<lambda>s.
-    (case rv of SendEP list \<Rightarrow> \<forall>x\<in>set list. aag_can_read aag x \<or> aag_can_affect aag l x | _ \<Rightarrow> True)" in equiv_valid_guard_imp)
-       apply (case_tac rv)
-         apply ((wp mapM_ev'' get_thread_state_reads_respects set_thread_state_reads_respects set_simple_ko_reads_respects get_simple_ko_reads_respects hoare_vcg_ball_lift  | wpc | simp add: filterM_mapM tcb_at_st_tcb_at[symmetric])+)
-    apply (wp get_simple_ko_wp)
-   apply (intro impI allI conjI)
-    apply simp
-   apply (case_tac ep,simp_all)
-   apply (elim conjE, rule ballI)
-   apply (rule send_endpoint_reads_affects_queued, (simp | assumption)+)
-  apply(simp add: equiv_valid_def2)
-  apply(rule equiv_valid_rv_guard_imp)
-   apply(rule_tac Q="pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of" and L="{pasObjectAbs aag epptr} \<union> all_with_auth_to aag SyncSend (pasObjectAbs aag epptr)" in ev_invisible)
-     apply(auto dest: reads_read_queued_thread_read_ep simp: labels_are_invisible_def aag_can_affect_label_def all_with_auth_to_def)[1]
-    apply(rule modifies_at_mostI)
-    apply(wp cancel_badged_sends_equiv_but_for_labels | simp)+
-  done
-*)
-
 lemma mapM_ev''':
   assumes reads_res: "\<And> x. x \<in> set lst \<Longrightarrow> equiv_valid_inv D A (Q and P x) (m x)"
   assumes inv: "\<And> x. x \<in> set lst \<Longrightarrow> invariant (m x) (\<lambda> s. Q s \<and> (\<forall>x\<in>set lst. P x s))"
