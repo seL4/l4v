@@ -9,8 +9,10 @@
  *)
 
 
-text{* This file contains a bunch of lemmas about updating the "extrenal flag of a PAS.
-  The concerned flags are the current subject, MayEditReadyQueue and MayActivate *}
+text {*
+  Lemmas about updating the external flags of a PAS.
+  These flags are: pasSubject, pasMayEditReadyQueues and pasMayActivate.
+*}
 
 theory PasUpdates
 imports

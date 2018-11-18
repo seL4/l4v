@@ -1922,6 +1922,7 @@ lemma handle_preemption_if_domain_time_sched_action:
 definition user_context_of :: "'k global_sys_state \<Rightarrow> user_context"
 where
   "user_context_of \<equiv> \<lambda>s. fst (fst s)"
+
 lemma user_context_of_simp[simp]:
   "user_context_of ((uc,s),mode) = uc"
   by(simp add: user_context_of_def)

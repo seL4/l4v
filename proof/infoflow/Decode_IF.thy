@@ -543,8 +543,8 @@ lemma lookup_pt_slot_no_fail_is_subject:
     \<Longrightarrow> is_subject aag (lookup_pt_slot_no_fail (ptrFromPAddr p) vptr && ~~ mask pt_bits)"
   apply (clarsimp simp: lookup_pt_slot_no_fail_def)
   apply (drule valid_vspace_objsD)
-     apply (simp add: obj_at_def)
-    apply assumption
+    apply (simp add: obj_at_def)
+   apply assumption
   apply (drule kheap_eq_state_vrefs_pas_refinedD)
     apply (erule vs_refs_no_global_pts_pdI)
     apply (drule(1) less_kernel_base_mapping_slots)

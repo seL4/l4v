@@ -58,7 +58,6 @@ lemma get_cap_rev:
   apply(wp get_object_rev | wpc | simp add: split_def)+
   done
 
-(* declare word_neq_0_conv[simp del] *)
 declare if_weak_cong[cong]
 
 lemma resolve_address_bits_spec_rev:

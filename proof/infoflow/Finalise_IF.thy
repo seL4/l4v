@@ -83,13 +83,7 @@ lemma requiv_the_get_tcb_eq':
   apply(fastforce intro: requiv_get_tcb_eq')
   done
 
-
-
 (* FIXME: move *)
-
-
-
-
 lemma set_object_modifies_at_most:
   "modifies_at_most aag {pasObjectAbs aag ptr} (\<lambda> s. \<not> asid_pool_at ptr s \<and> (\<forall> asid_pool. obj \<noteq> ArchObj (ASIDPool asid_pool))) (set_object ptr obj)"
   apply(rule modifies_at_mostI)
@@ -98,10 +92,8 @@ lemma set_object_modifies_at_most:
   done
 
 
-
-
-(*Not currently considered*)
-lemma scheduler_action_states_equiv[simp]: "states_equiv_for P Q R S st (scheduler_action_update f s) = states_equiv_for P Q R S st s"
+lemma scheduler_action_states_equiv[simp]:
+  "states_equiv_for P Q R S st (scheduler_action_update f s) = states_equiv_for P Q R S st s"
   apply (simp add: states_equiv_for_def equiv_for_def equiv_asids_def equiv_asid_def)
   done
 
@@ -800,7 +792,9 @@ lemma possible_switch_to_reads_respects:
    subgoal
      apply (wp static_imp_wp tcb_sched_action_reads_respects | wpc | simp)+
      apply (clarsimp simp: get_etcb_def)
-     apply (intro conjI impI allI | elim aag_can_read_self reads_equivE affects_equivE equiv_forE conjE disjE | force)+
+     apply (intro conjI impI allI
+           | elim aag_can_read_self reads_equivE affects_equivE equiv_forE conjE disjE
+           | force)+
    done
   apply clarsimp
   apply (wp_once, rename_tac cur_dom)
@@ -808,7 +802,7 @@ lemma possible_switch_to_reads_respects:
      apply (rule_tac W="\<top>\<top>" and Q="\<lambda>tcb. pas_refined aag and K (tcb_domain tcb \<noteq> cur_dom)" in equiv_valid_rv_bind)
        prefer 3
        apply wp
-      apply (clarsimp simp: gets_the_def get_etcb_def equiv_valid_2_def gets_def bind_def assert_opt_def get_def fail_def return_def split: option.splits)
+      apply (monad_eq simp: get_etcb_def equiv_valid_2_def)
      apply (rule gen_asm_ev2')
      apply (simp add: equiv_valid_def2[symmetric])
      apply (wp tcb_sched_action_reads_respects)
@@ -1505,7 +1499,6 @@ lemma finalise_cap_only_timer_irq_inv:
   apply (wp only_timer_irq_pres | force)+
   done
 
-
 lemma rec_del_spec_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del]
@@ -1641,7 +1634,7 @@ next
                get_cap_wp
            | simp)+
     apply(clarsimp cong: conj_cong simp:invs_valid_objs invs_arch_state invs_psp_aligned)
-    apply(intro conjI impI   | clarsimp | assumption | fastforce dest:silc_inv_not_subject)+
+    apply(intro conjI impI | clarsimp | assumption | fastforce dest:silc_inv_not_subject)+
       apply(erule (1) cap_cur_auth_caps_of_state[rotated])
       apply(simp add: cte_wp_at_caps_of_state)
      apply(fastforce dest: cte_wp_at_valid_objs_valid_cap simp: invs_valid_objs)
@@ -1714,7 +1707,7 @@ lemma rec_del_Finalise_transferable_read_respects_f:
       apply (wp is_final_cap_reads_respects hoare_drop_imp get_cap_wp
                 reads_respects_f[OF get_cap_rev, where st=st and Q="\<top>"]
             | simp)+
-  by (fastforce simp:cte_wp_at_caps_of_state)
+  by (fastforce simp: cte_wp_at_caps_of_state)
 
 lemma rec_del_Finalise_transferableE_R:
   "\<lbrace>(\<lambda>s. is_transferable (caps_of_state s slot)) and P\<rbrace>
@@ -1774,9 +1767,11 @@ lemma requiv_arm_asid_table_asid_high_bits_of_asid_eq':
   apply (subgoal_tac "asid_high_bits_of 0 = asid_high_bits_of 1")
    apply(case_tac "base = 0")
     apply(subgoal_tac "is_subject_asid aag 1")
-     apply ((auto intro: requiv_arm_asid_table_asid_high_bits_of_asid_eq
-                       aag_cap_auth_ASIDPoolCap_asid) |
-            (auto simp: asid_high_bits_of_def asid_low_bits_def))+
+     apply ((fastforce intro: requiv_arm_asid_table_asid_high_bits_of_asid_eq
+                              aag_cap_auth_ASIDPoolCap_asid)+)[2]
+   apply (auto intro: requiv_arm_asid_table_asid_high_bits_of_asid_eq
+                      aag_cap_auth_ASIDPoolCap_asid)[1]
+  apply (simp add: asid_high_bits_of_def asid_low_bits_def)
   done
 
 lemma pt_cap_aligned:
@@ -1941,7 +1936,7 @@ lemma tcb_sched_action_dequeue_valid_ko_at_arm[wp]:
 crunch valid_ko_at_arm[wp]: fast_finalise "valid_ko_at_arm"
   (wp: mapM_x_wp' dxo_wp_weak ignore: reschedule_required)
 crunch valid_ko_at_arm[wp]: set_original "valid_ko_at_arm"
-  (simp: valid_ko_at_arm_def wp_del:)
+  (simp: valid_ko_at_arm_def)
 crunch valid_ko_at_arm[wp]: set_cdt "valid_ko_at_arm" (simp: valid_ko_at_arm_def)
 
 crunch valid_ko_at_arm[wp]: cap_insert "valid_ko_at_arm"

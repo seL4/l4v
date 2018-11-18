@@ -658,10 +658,9 @@ lemma BlockedOnReceive_inj:
   "pl = (case (BlockedOnReceive x pl) of BlockedOnReceive x pl \<Rightarrow> pl)"
   by auto
 
-
 lemma receive_blockedD:
   "receive_blocked st \<Longrightarrow> \<exists>epptr pl. st = BlockedOnReceive epptr pl"
-  by (cases st;simp add:receive_blocked_def)
+  by (cases st; simp add: receive_blocked_def)
 
 
 lemma send_signal_reads_respects:
@@ -726,7 +725,7 @@ lemma send_signal_reads_respects:
      apply (frule (1) bound_tcb_at_implies_reset)
      apply (clarsimp simp: pred_tcb_at_def get_tcb_def obj_at_def)
      apply (rule context_conjI)
-      apply (fastforce dest!:receive_blockedD intro: BlockedOnReceive_inj)
+      apply (fastforce dest!: receive_blockedD intro: BlockedOnReceive_inj)
      apply (frule_tac t=x and tcb=tcb and ep = "case (tcb_state tcb) of BlockedOnReceive a pl \<Rightarrow> a"
               in get_tcb_recv_blocked_implies_receive)
        apply (fastforce simp: pred_tcb_at_def get_tcb_def obj_at_def)
@@ -1048,13 +1047,12 @@ lemma reads_equiv_cdt_has_children0:
    apply fastforce
   done
 
-
 lemma reads_equiv_cdt_has_children:
   "\<lbrakk>pas_refined aag s; pas_refined aag s'; is_subject aag (fst slot);
     equiv_for (aag_can_read aag \<circ> fst) cdt s s'\<rbrakk> \<Longrightarrow>
     (\<exists> c. (cdt s) c = Some slot) = (\<exists> c. (cdt s') c = Some slot)"
   apply (rule iff_exI)
-  by (erule reads_equiv_cdt_has_children0;force)
+  by (erule reads_equiv_cdt_has_children0; force)
 
 
 lemma ensure_no_children_rev:
@@ -1063,7 +1061,7 @@ lemma ensure_no_children_rev:
   unfolding ensure_no_children_def fun_app_def equiv_valid_def2
   apply(rule equiv_valid_rv_guard_imp)
    apply(rule_tac Q="\<lambda> rv s. pas_refined aag s \<and> is_subject aag (fst slot) \<and> rv = cdt s"
-               in equiv_valid_rv_liftE_bindE[OF equiv_valid_rv_guard_imp[OF gets_cdt_revrv']])
+                  in equiv_valid_rv_liftE_bindE[OF equiv_valid_rv_guard_imp[OF gets_cdt_revrv']])
      apply(rule TrueI)
     apply(clarsimp simp: equiv_valid_2_def)
     apply(drule reads_equiv_cdt_has_children)
@@ -1071,7 +1069,7 @@ lemma ensure_no_children_rev:
       apply assumption
      apply(fastforce elim: reads_equivE)
     apply(fastforce simp: in_whenE in_throwError)
-   apply(wp ,simp)
+   apply(wp, simp)
   done
 
 lemma arch_derive_cap_reads_respects:
@@ -1093,7 +1091,7 @@ lemma derive_cap_rev':
 lemma derive_cap_rev:
   "reads_equiv_valid_inv A aag (\<lambda> s. pas_refined aag s \<and> is_subject aag (fst slot))
        (derive_cap slot cap)"
-  by(blast intro: equiv_valid_guard_imp[OF derive_cap_rev'])
+  by (blast intro: equiv_valid_guard_imp[OF derive_cap_rev'])
 
 (* FIXME MOVE *)
 lemma ball_subsetE:
@@ -1144,15 +1142,16 @@ lemma transfer_caps_loop_reads_respects':
   apply (strengthen real_cte_tcb_valid)
   apply (clarsimp)
   apply (intro conjI)
-   subgoal by (fastforce simp:masked_as_full_def is_cap_simps cap_master_cap_simps split:if_splits)
+   subgoal
+     by (fastforce simp: masked_as_full_def is_cap_simps cap_master_cap_simps split: if_splits)
   apply clarsimp
   apply (intro conjI)
       apply (fastforce dest: auth_derived_pas_cur_auth)
      apply fastforce
     subgoal
       apply (erule ball_subsetE, fastforce)
-      by (fastforce simp: cte_wp_at_caps_of_state masked_as_full_def is_cap_simps split:if_splits)
-   subgoal by (fastforce simp:neq_Nil_conv cte_wp_at_caps_of_state)
+      by (fastforce simp: cte_wp_at_caps_of_state masked_as_full_def is_cap_simps split: if_splits)
+   subgoal by (fastforce simp: neq_Nil_conv cte_wp_at_caps_of_state)
   by (rule distinct_tl)
 
 lemma transfer_caps_loop_reads_respects:
@@ -1465,9 +1464,9 @@ lemma transfer_caps_reads_respects:
               \<and> ipc_buffer_has_read_auth aag (pasSubject aag) receive_buffer))
      (transfer_caps mi caps endpoint receiver receive_buffer)"
   unfolding transfer_caps_def fun_app_def
-  apply(wp transfer_caps_loop_reads_respects get_receive_slots_rev get_receive_slots_authorised
+  apply (wp transfer_caps_loop_reads_respects get_receive_slots_rev get_receive_slots_authorised
            hoare_vcg_all_lift static_imp_wp
-        | wpc | simp add:ball_conj_distrib)+
+        | wpc | simp add: ball_conj_distrib)+
   done
 
 lemma mrs_in_ipc_buffer:
@@ -1618,8 +1617,7 @@ lemma get_message_info_reads_respects:
   apply (simp add: get_message_info_def)
   apply (wp as_user_reads_respects | clarsimp simp: getRegister_def)+
   done
-term transfer_caps_srcs
-thm lec_valid_cap
+
 lemma do_normal_transfer_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
@@ -1632,16 +1630,16 @@ lemma do_normal_transfer_reads_respects:
   apply(cases grant)
    apply(rule gen_asm_ev)
    apply(simp add: do_normal_transfer_def)
-   apply(wp_trace get_message_info_rev lookup_extra_caps_rev
+   apply(wp get_message_info_rev lookup_extra_caps_rev
             as_user_set_register_reads_respects' set_message_info_reads_respects
             transfer_caps_reads_respects copy_mrs_reads_respects
             lookup_extra_caps_rev lookup_extra_caps_authorised
             lookup_extra_caps_auth get_message_info_rev
             get_mi_length' get_mi_length validE_E_wp_post_taut
-           copy_mrs_cte_wp_at
-           hoare_vcg_ball_lift lec_valid_cap'
-           lookup_extra_caps_srcs[simplified ball_conj_distrib,THEN hoare_conjDR1]
-           lookup_extra_caps_srcs[simplified ball_conj_distrib,THEN hoare_conjDR2]
+            copy_mrs_cte_wp_at
+            hoare_vcg_ball_lift lec_valid_cap'
+            lookup_extra_caps_srcs[simplified ball_conj_distrib,THEN hoare_conjDR1]
+            lookup_extra_caps_srcs[simplified ball_conj_distrib,THEN hoare_conjDR2]
         | wpc
         | simp add: det_setRegister ball_conj_distrib)+
    apply (fastforce intro: aag_has_read_auth_can_read_or_affect_ipc_buffer)
@@ -1926,8 +1924,11 @@ lemma send_ipc_reads_respects:
           and K (can_grant \<longrightarrow> (aag_has_auth_to aag Grant epptr))
           and K (is_subject aag thread \<and> aag_has_auth_to aag SyncSend epptr))
      (send_ipc block call badge can_grant can_grant_reply thread epptr)"
-  apply(rule gen_asm_ev)
-  apply(simp add: send_ipc_def)
+  apply (rule gen_asm_ev)
+  apply (subgoal_tac "aag_can_read aag epptr")
+   prefer 2
+   apply (fastforce intro: reads_ep)
+  apply (simp add: send_ipc_def)
   apply (wp set_simple_ko_reads_respects set_thread_state_reads_respects
             when_ev setup_caller_cap_reads_respects thread_get_reads_respects
             set_thread_state_reads_respects
@@ -1940,29 +1941,17 @@ lemma send_ipc_reads_respects:
             do_ipc_transfer_pas_refined
         | wpc
         | simp add: get_thread_state_def thread_get_def split del: if_split)+
-  subgoal premises prems for s
-  proof -
-    from prems have "aag_can_read aag epptr"
-      by (fastforce intro:reads_ep)
-    thus ?thesis using prems
-      apply clarsimp
-      subgoal premises prems for receiver queue
-      proof -
-        from prems have "aag_can_read aag receiver \<and> (can_grant \<longrightarrow> is_subject aag receiver)"
-          apply -
-          apply (frule(2) pas_refined_ep_recv, rule head_in_set)
-          apply (rule conjI)
-           subgoal by (rule read_sync_ep_read_receivers_strong)
-          by (fastforce dest: aag_wellformed_grant_Control_to_recv[OF _ _ pas_refined_wellformed]
-                                simp: aag_has_auth_to_Control_eq_owns)
-        thus ?thesis using prems
-          by (fastforce elim: send_ipc_valid_ep_helper reads_equivE equiv_forD
-              intro: kheap_get_tcb_eq)
-      qed
-      done
-  qed
-  done
-
+  apply clarsimp
+  apply (rename_tac receiver queue)
+  apply (subgoal_tac "aag_can_read aag receiver \<and> (can_grant \<longrightarrow> is_subject aag receiver)")
+   prefer 2
+   apply (frule(2) pas_refined_ep_recv, rule head_in_set)
+   apply (rule conjI)
+    subgoal by (rule read_sync_ep_read_receivers_strong)
+   apply (fastforce dest: aag_wellformed_grant_Control_to_recv[OF _ _ pas_refined_wellformed]
+                    simp: aag_has_auth_to_Control_eq_owns)
+  by (fastforce elim: send_ipc_valid_ep_helper reads_equivE equiv_forD
+      intro: kheap_get_tcb_eq)
 
 
 subsection "Faults"
@@ -1995,9 +1984,7 @@ lemma send_fault_ipc_reads_respects:
                           \<and> valid_fault fault
                           \<and> is_subject aag (fst (fst rv))"
                in hoare_post_imp_R[rotated])
-       apply (fastforce dest!: cap_auth_caps_of_state
-                         simp: invs_valid_objs invs_sym_refs cte_wp_at_caps_of_state
-                               aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)
+       apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)
       apply (wp get_cap_auth_wp[where aag=aag] lookup_slot_for_thread_authorised
                 thread_get_reads_respects
             | simp add: add: lookup_cap_def split_def)+
@@ -2084,7 +2071,7 @@ lemma do_reply_transfer_reads_respects_f:
                | rule conjI
                | elim conjE
                | assumption)+)[8]
-   by (fastforce dest:silc_inv_not_subject)
+   by (fastforce dest: silc_inv_not_subject)
 
 lemma handle_reply_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"

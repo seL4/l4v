@@ -632,7 +632,6 @@ lemmas thread_get_reads_respects_f = reads_respects_f[OF thread_get_reads_respec
 
 lemmas reschedule_required_reads_respects_f = reads_respects_f[OF reschedule_required_reads_respects, where Q="\<top>", simplified, OF _ reschedule_required_ext_extended.silc_inv]
 crunch pas_refined[wp]: restart "pas_refined aag"
-(* lemmas reschedule_required_reads_respects_f = reads_respects_f[OF reschedule_required_reads_respects, where Q="\<top>", simplified, OF reschedule_required_ext_extended.silc_inv] *)
 
 lemma invoke_tcb_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"

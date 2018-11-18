@@ -837,22 +837,23 @@ lemmas integrity_subjects_ready_queues =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2]
 
 lemma pas_wellformed_pasSubject_update_Control:
-  "\<lbrakk>pas_wellformed (aag\<lparr>pasSubject := pasObjectAbs aag p\<rparr>);
-    (pasObjectAbs aag p, Control, pasObjectAbs aag p') \<in> pasPolicy aag\<rbrakk> \<Longrightarrow>
+  "\<lbrakk> pas_wellformed (aag\<lparr>pasSubject := pasObjectAbs aag p\<rparr>);
+     (pasObjectAbs aag p, Control, pasObjectAbs aag p') \<in> pasPolicy aag \<rbrakk> \<Longrightarrow>
    pasObjectAbs aag p = pasObjectAbs aag p'"
   apply(fastforce simp: policy_wellformed_def)
   done
 
 lemma pas_wellformed_noninterference_policy_refl:
-  "pas_wellformed_noninterference aag \<Longrightarrow> pasObjectAbs aag x \<noteq> SilcLabel \<Longrightarrow>
-  (pasObjectAbs aag x, auth, pasObjectAbs aag x) \<in> pasPolicy aag"
+  "\<lbrakk> pas_wellformed_noninterference aag; pasObjectAbs aag x \<noteq> SilcLabel \<rbrakk> \<Longrightarrow>
+   (pasObjectAbs aag x, auth, pasObjectAbs aag x) \<in> pasPolicy aag"
   unfolding pas_wellformed_noninterference_def
   by (fastforce intro!:aag_wellformed_refl)
 
 lemma pas_wellformed_noninterference_control_to_eq:
-  "pas_wellformed_noninterference aag \<Longrightarrow> (pasObjectAbs aag x, Control, l) \<in> pasPolicy aag
-  \<Longrightarrow> pasObjectAbs aag x \<noteq> SilcLabel
-  \<Longrightarrow> pasObjectAbs aag x = l"
+  "\<lbrakk> pas_wellformed_noninterference aag;
+     (pasObjectAbs aag x, Control, l) \<in> pasPolicy aag;
+     pasObjectAbs aag x \<noteq> SilcLabel \<rbrakk> \<Longrightarrow>
+   pasObjectAbs aag x = l"
   unfolding pas_wellformed_noninterference_def
   by (erule aag_wellformed_Control; fastforce)
 

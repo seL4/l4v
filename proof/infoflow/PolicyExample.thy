@@ -171,8 +171,7 @@ lemma subjectReads_CTR:
   apply(clarsimp)
   apply(rule equalityI)
    apply(rule subsetI)
-   apply(erule subjectReads.induct)
-           apply(auto)[9]
+   apply(erule subjectReads.induct; auto)
   apply(auto simp: subjectReads_CTR'[simplified])
   done
 
@@ -216,8 +215,7 @@ lemma subjectReads_C:
   apply(clarsimp)
   apply(rule equalityI)
    apply(rule subsetI)
-   apply(erule subjectReads.induct)
-           apply(auto)[9]
+   apply(erule subjectReads.induct; auto)
   apply(auto simp: subjectReads_C'[simplified])
   done
 
@@ -264,8 +262,7 @@ lemma subjectReads_EP:
   "subjectReads example_auth_graph (partition_label EP) = {partition_label EP,partition_label CTR,partition_label NTFN1, partition_label C, partition_label RM, partition_label NTFN2}"
   apply(rule equalityI)
    apply(rule subsetI)
-   apply(erule subjectReads.induct)
-           apply(auto)[9]
+   apply(erule subjectReads.induct; auto)
   apply(auto simp: subjectReads_EP'[simplified])
   done
 
@@ -306,8 +303,7 @@ lemma subjectReads_RM:
   "subjectReads example_auth_graph (partition_label RM) = {partition_label RM, partition_label NTFN2,partition_label EP,partition_label CTR, partition_label C, partition_label NTFN1}"
   apply(rule equalityI)
    apply(rule subsetI)
-   apply(erule subjectReads.induct)
-           apply(auto)[9]
+   apply(erule subjectReads.induct; auto)
   apply(auto simp: subjectReads_RM'[simplified])
   done
 
@@ -355,10 +351,7 @@ lemma subjectAffects_T:
   "subjectAffects example_auth_graph (partition_label T) = {partition_label NTFN1,partition_label NTFN2,partition_label T,partition_label C, partition_label CTR, partition_label RM, partition_label EP}"
   apply(rule equalityI)
    apply(rule subsetI)
-   apply(erule subjectAffects.cases)
-           apply(fastforce+)[11]
-    apply clarsimp
-    apply (elim disjE conjE; simp)
+   apply(erule subjectAffects.cases; fastforce)
   apply(auto simp: subjectAffects_T'[simplified])
   done
 
@@ -381,8 +374,7 @@ lemma subjectAffects_NTFN1:
   "subjectAffects example_auth_graph (partition_label NTFN1) = {partition_label NTFN1,partition_label CTR,partition_label C}"
   apply(rule equalityI)
    apply(rule subsetI)
-   apply(erule subjectAffects.cases)
-           apply(auto)[7]
+   apply(erule subjectAffects.cases; fastforce)
   apply(auto simp: subjectAffects_NTFN1'[simplified])
   done
 
@@ -406,10 +398,7 @@ lemma subjectAffects_NTFN2:
   "subjectAffects example_auth_graph (partition_label NTFN2) = {partition_label NTFN2,partition_label RM, partition_label EP}"
   apply(rule equalityI)
    apply(rule subsetI)
-   apply(erule subjectAffects.cases)
-           apply(auto)[9]
-   apply clarsimp
-   apply (elim disjE conjE; simp)
+   apply(erule subjectAffects.cases; fastforce)
   apply(auto simp: subjectAffects_NTFN2'[simplified])
   done
 
@@ -443,8 +432,7 @@ lemma subjectAffects_CTR:
   "subjectAffects example_auth_graph (partition_label CTR) = {partition_label CTR,partition_label C,partition_label EP,partition_label NTFN1, partition_label RM}"
   apply(rule equalityI)
    apply(rule subsetI)
-   apply(erule subjectAffects.cases)
-           apply(fastforce+)[7]
+   apply(erule subjectAffects.cases; auto)
   apply(auto simp: subjectAffects_CTR'[simplified])
   done
 
@@ -461,8 +449,7 @@ lemma subjectAffects_C:
   "subjectAffects example_auth_graph (partition_label C) = {partition_label C,partition_label CTR}"
   apply(rule equalityI)
    apply(rule subsetI)
-   apply(erule subjectAffects.cases)
-           apply(auto)[7]
+   apply(erule subjectAffects.cases; auto)
   apply(auto simp: subjectAffects_C'[simplified])
   done
 
@@ -498,10 +485,7 @@ lemma subjectAffects_EP:
   "subjectAffects example_auth_graph (partition_label EP) = {partition_label EP, partition_label RM, partition_label CTR, partition_label C, partition_label NTFN2}"
   apply(rule equalityI)
    apply(rule subsetI)
-   apply(erule subjectAffects.cases)
-           apply(fastforce+)[11]
-   apply clarsimp
-   apply (elim conjE disjE; simp)
+   apply(erule subjectAffects.cases; fastforce)
   apply(auto simp: subjectAffects_EP'[simplified])
   done
 
@@ -530,8 +514,7 @@ lemma subjectAffects_RM:
   "subjectAffects example_auth_graph (partition_label RM) = {partition_label RM,partition_label EP,partition_label CTR,partition_label NTFN2}"
   apply(rule equalityI)
    apply(rule subsetI)
-   apply(erule subjectAffects.cases)
-           apply(auto)[7]
+   apply(erule subjectAffects.cases; auto)
   apply(auto simp: subjectAffects_RM'[simplified])
   done
 
@@ -594,7 +577,7 @@ lemma "example_policy = policyFlows example_auth_graph"
    apply (rule policy_affects)
    apply (case_tac "k = T")
     apply (clarsimp simp: partsSubjectAffects)
-   apply(case_tac l, (auto simp: partsSubjectAffects | case_tac k)+)[1]
+   apply(case_tac l; (auto simp: partsSubjectAffects | case_tac k)+)
   apply(rule subsetI)
   apply(clarsimp simp: example_policy_def)
   apply(erule policyFlows.cases)
@@ -780,7 +763,7 @@ lemma "policyFlows example_auth_graph2 = example_policy2"
    apply(rule subsetI)
    apply(clarsimp simp: example_policy2_def)
    apply(erule policyFlows.cases)
-    apply(case_tac l, auto simp: partsSubjectAffects2)[1]
+    apply(case_tac l; auto simp: partsSubjectAffects2)
    apply assumption
   apply(rule subsetI)
   apply(clarsimp simp: example_policy2_def)

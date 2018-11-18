@@ -39,8 +39,9 @@ lemma cap_revoke_globals_equiv:
         | (auto simp: emptyable_def dest: reply_slot_not_descendant)[1])+
   done
 
-lemma tcb_context_merge[simp]: "arch_tcb_context_get (tcb_arch (tcb_registers_caps_merge tcb tcb'))
-                              = arch_tcb_context_get (tcb_arch tcb)"
+lemma tcb_context_merge[simp]:
+  "arch_tcb_context_get (tcb_arch (tcb_registers_caps_merge tcb tcb'))
+    = arch_tcb_context_get (tcb_arch tcb)"
   apply (simp add: tcb_registers_caps_merge_def)
   done
 
@@ -780,7 +781,6 @@ lemma delete_caller_cap_valid_ep_cap[wp]:  "\<lbrace>(\<lambda>s. s \<turnstile>
    apply wp
   apply clarsimp
   done
-
 
 
 lemma handle_recv_reads_respects_f:
