@@ -144,6 +144,7 @@ definition copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s
 
 text \<open>Walk page tables in software.\<close>
 
+(* pte_addrs will always be at least page aligned *)
 definition pptr_from_pte :: "pte \<Rightarrow> vspace_ref"
   where
   "pptr_from_pte pte \<equiv> ptrFromPAddr (pte_addr pte)"
@@ -157,29 +158,41 @@ definition pte_at_offset :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace
   "pte_at_offset level pt_ptr vptr \<equiv> oapply (pt_slot_offset level pt_ptr vptr)"
 
 text \<open>
-  This is the base function for looking up a slot in a page table structure.
-  The lookup proceeds from higher-level tables at the provided @{term level} (e.g. 2) to lower
-  level tables, down to @{term bot_level} (e.g. 0). The function returns a level and an object
+  This is the base function for walking a page table structure.
+  The walk proceeds from higher-level tables at the provided @{term level} (e.g. 2) to lower
+  level tables, down to @{term bot_level} (e.g. 0). It returns a pointer to the page table where
+  the walk stopped and the level of that table. The lookup stops when @{term bot_level} or a
+  page is reached.
+\<close>
+fun pt_walk ::
+  "vm_level \<Rightarrow> vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
+  where
+  "pt_walk level bot_level pt_ptr vptr = do {
+     if bot_level < level
+     then do {
+       pte \<leftarrow> oapply (pt_slot_offset level pt_ptr vptr);
+       if is_PageTablePTE pte
+         then pt_walk (level - 1) bot_level (pptr_from_pte pte) vptr
+         else oreturn (level, pt_ptr)
+     }
+     else oreturn (level, pt_ptr)
+   }"
+
+declare pt_walk.simps[simp del]
+
+text \<open>
+  Looking up a slot in a page table structure. The function returns a level and an object
   pointer. The pointer is to a slot in a table at the returned level. If the returned level is 0,
   this slot is either an @{const InvalidPTE} or a @{const PagePTE}. If the returned level is higher
   the slot may also be a @{const PageTablePTE}.
 \<close>
-fun lookup_pt_slot_from_level ::
+definition lookup_pt_slot_from_level ::
   "vm_level \<Rightarrow> vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
   "lookup_pt_slot_from_level level bot_level pt_ptr vptr = do {
-     let slot = pt_slot_offset level pt_ptr vptr;
-     if \<not>(bot_level < level)
-     then oreturn (level, slot)
-     else do {
-       pte \<leftarrow> oapply slot;
-       if is_PageTablePTE pte
-         then lookup_pt_slot_from_level (level - 1) bot_level (pptr_from_pte pte) vptr
-         else oreturn (level, slot)
-     }
+     (level', pt_ptr') \<leftarrow> pt_walk level bot_level pt_ptr vptr;
+     oreturn (level', pt_slot_offset level' pt_ptr' vptr)
    }"
-
-declare lookup_pt_slot_from_level.simps[simp del]
 
 definition lookup_pt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
