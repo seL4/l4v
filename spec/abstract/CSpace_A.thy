@@ -565,21 +565,7 @@ where
 |
  "rec_del (ReduceZombieCall cap slot exposed) s =
   fail s"
-  defer
-   apply (simp_all cong: if_cong)[406]
-  apply (case_tac x)
-  apply (case_tac a)
-    apply (auto)[2]
-  apply (rename_tac cap cslot_ptr bool)
-  apply (case_tac cap, safe)
-             apply auto[10]
-   \<comment> \<open>Zombie\<close>
-   apply (rename_tac obj_ref option nat)
-   apply (case_tac bool)
-    apply (case_tac nat, auto)[1]
-   apply (metis (full_types) nat.exhaust)
-  apply simp
-  done
+  by pat_completeness auto
 
 text {* Delete a capability by calling the recursive delete operation. *}
 definition
