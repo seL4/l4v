@@ -306,6 +306,7 @@ lemma lift_t_retyp_heap_same:
   apply simp
   done
 
+(* FIXME: Move to LemmaBucket_C. Stopped by: simp rules. *)
 lemma lift_t_retyp_heap_same_rep0:
   fixes p :: "'a :: mem_type ptr"
   assumes gp: "g p"
@@ -319,6 +320,7 @@ lemma lift_t_retyp_heap_same_rep0:
   apply simp
   done
 
+(* FIXME: Move to LemmaBucket_C. Stopped by: simp rules. *)
 lemma lift_t_retyp_heap_other2:
   fixes p :: "'a :: mem_type ptr" and p' :: "'b :: mem_type ptr"
   assumes orth: "{ptr_val p..+size_of TYPE('a)} \<inter> {ptr_val p'..+size_of TYPE('b)} = {}"

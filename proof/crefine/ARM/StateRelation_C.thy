@@ -20,6 +20,7 @@ definition
 definition
   "array_relation r n a c \<equiv> \<forall>i \<le> n. r (a i) (index c (unat i))"
 
+(* FIXME: this gets unfolded a lot. Consider adding the obvious simp rules. *)
 definition
   "option_to_ptr \<equiv> Ptr o option_to_0"
 

@@ -598,6 +598,8 @@ lemma cap_to_H_NTFNCap_tag:
   apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits if_split_asm)
      by (simp_all add: Let_def cap_lift_def split: if_splits)
 
+(* FIXME: lots of places end up unfolding option_to_ptr_def and option_to_0_def.
+   Create some suitable simp rules instead. *)
 lemma option_to_ptr_not_NULL:
   "option_to_ptr x \<noteq> NULL \<Longrightarrow> x \<noteq> None"
   by (auto simp: option_to_ptr_def option_to_0_def split: option.splits)
