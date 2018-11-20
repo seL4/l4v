@@ -58,4 +58,7 @@ lemma zip_take2:
 
 lemmas zip_take = zip_take1 zip_take2
 
+lemma replicate_append: "replicate n x @ (x # xs) = replicate (n + 1) x @ xs"
+  by (induct n, simp+)
+
 end

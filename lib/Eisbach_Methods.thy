@@ -462,4 +462,26 @@ lemma assumes A:A shows A by (ruleP "\<And>P. P \<Longrightarrow> P \<Longrighta
 
 end
 
+context begin
+
+private definition "bool_protect (b::bool) \<equiv> b"
+
+lemma bool_protectD:
+  "bool_protect P \<Longrightarrow> P"
+  unfolding bool_protect_def by simp
+
+lemma bool_protectI:
+  "P \<Longrightarrow> bool_protect P"
+  unfolding bool_protect_def by simp
+
+text \<open>
+  When you want to apply a rule/tactic to transform a potentially complex goal into another
+  one manually, but want to indicate that any fresh emerging goals are solved by a more
+  brutal method.
+  E.g. apply (solves_emerging \<open>frule x=... in my_rule\<close>\<open>fastforce simp: ... intro!: ... \<close>
+\<close>
+method solves_emerging methods m1 m2 = (rule bool_protectD, (m1 ; (rule bool_protectI | (m2; fail))))
+
+end
+
 end

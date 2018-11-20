@@ -537,6 +537,14 @@ lemma wpc_helper_monadic_rewrite:
    apply auto
   done
 
+lemma monadic_rewrite_trans_dup:
+  "\<lbrakk> monadic_rewrite F E P f g; monadic_rewrite F E P g h \<rbrakk>
+      \<Longrightarrow> monadic_rewrite F E P f h"
+  by (auto simp add: monadic_rewrite_def)
+
+lemmas monadic_rewrite_bind_alt
+    = monadic_rewrite_trans[OF monadic_rewrite_bind_tail monadic_rewrite_bind_head, rotated -1]
+
 wpc_setup "\<lambda>m. monadic_rewrite F E Q' m m'" wpc_helper_monadic_rewrite
 wpc_setup "\<lambda>m. monadic_rewrite F E Q' (m >>= c) m'" wpc_helper_monadic_rewrite
 
