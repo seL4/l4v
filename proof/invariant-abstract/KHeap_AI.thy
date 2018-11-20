@@ -15,7 +15,6 @@ begin
 context begin interpretation Arch .
 
 requalify_consts
-  valid_ao_at
   obj_is_device
   valid_vso_at
   non_vspace_obj
@@ -144,7 +143,6 @@ lemma valid_cap_same_type:
   by (intro hoare_to_pure_kheap_upd[OF valid_arch_cap_typ, simplified obj_at_def],
       assumption, auto)
 
-
 lemma valid_obj_same_type:
   "\<lbrakk> valid_obj p' obj s; valid_obj p k s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
    \<Longrightarrow> valid_obj p' obj (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
@@ -169,6 +167,7 @@ lemma valid_obj_same_type:
   apply (auto intro: arch_valid_obj_same_type)
   done
 
+(* FIXME RISCV: move to arch (level) *)
 lemma valid_vspace_obj_same_type:
   "\<lbrakk>valid_vspace_obj ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
   \<Longrightarrow> valid_vspace_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)"
@@ -1044,6 +1043,7 @@ lemma valid_kernel_mappings[wp]: "f \<lbrace>valid_kernel_mappings\<rbrace>"
 lemma equal_kernel_mappings[wp]: "f \<lbrace>equal_kernel_mappings\<rbrace>"
   by (rule equal_kernel_mappings_lift, wp vsobj_at)
 
+(* FIXME RISCV: move to arch (level) *)
 lemma valid_vso_at[wp]:"f \<lbrace>valid_vso_at p\<rbrace>"
   by (rule valid_vso_at_lift_aobj_at; wp vsobj_at; simp)
 

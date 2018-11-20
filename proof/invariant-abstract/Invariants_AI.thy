@@ -15,8 +15,6 @@ begin
 context begin interpretation Arch .
 
 requalify_types
-  vs_chain
-  vs_ref
   iarch_tcb
 
 requalify_consts
@@ -53,12 +51,6 @@ requalify_consts
 
   ASIDPoolObj
 
-  vs_lookup1
-  vs_lookup_trans
-  vs_refs
-  vs_lookup_pages1
-  vs_lookup_pages_trans
-  vs_refs_pages
   valid_vs_lookup
   user_mem
   device_mem
@@ -67,6 +59,9 @@ requalify_consts
 
   valid_arch_mdb
   arch_tcb_to_iarch_tcb
+
+  vs_lookup
+  vs_lookup_pages
 
 requalify_facts
   valid_arch_sizes
@@ -85,8 +80,6 @@ requalify_facts
   physical_arch_cap_has_ref
   wellformed_arch_default
   valid_vspace_obj_default'
-  vs_lookup1_stateI2
-  vs_lookup_pages1_stateI2
   typ_at_pg
   state_hyp_refs_of_elemD
   ko_at_state_hyp_refs_ofD
@@ -125,10 +118,6 @@ lemmas [intro!] =  idle_global acap_rights_update_id
 lemmas [simp] =  acap_rights_update_id state_hyp_refs_update
                  tcb_arch_ref_simps hyp_live_tcb_simps hyp_refs_of_simps
 
-(* Checking that vs_lookup notation is installed *)
-
-term "vs_lookup :: 'z::state_ext state \<Rightarrow> vs_chain set"
-term "(a \<rhd> b) :: ('z:: state_ext state) \<Rightarrow> bool"
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Invariant Definitions for Abstract Spec"
@@ -2645,10 +2634,8 @@ lemma valid_reply_masters_update [iff]:
   "valid_reply_masters (f s) = valid_reply_masters s"
   by (simp add: valid_reply_masters_def)
 
-
 lemmas in_user_frame_update[iff] = in_user_frame_update
 lemmas in_device_frame_update[iff] = in_device_frame_update
-lemmas equal_kernel_mappings_update[iff] = equal_kernel_mappings_update
 
 end
 
@@ -2657,13 +2644,15 @@ context p_arch_update_eq begin
 
 interpretation Arch_p_arch_update_eq f ..
 
+declare equal_kernel_mappings_update [iff]
+
 lemma valid_vspace_objs_update [iff]:
   "valid_vspace_objs (f s) = valid_vspace_objs s"
-  by (simp add: valid_vspace_objs_def)
+  by (simp add: valid_vspace_objs_def arch pspace)
 
 lemma valid_arch_cap_update [iff]:
   "valid_arch_caps (f s) = valid_arch_caps s"
-  by (simp add: valid_arch_caps_def)
+  by (simp add: valid_arch_caps_def pspace arch)
 
 lemma valid_global_objs_update [iff]:
   "valid_global_objs (f s) = valid_global_objs s"
@@ -2671,7 +2660,7 @@ lemma valid_global_objs_update [iff]:
 
 lemma valid_global_vspace_mappings_update [iff]:
   "valid_global_vspace_mappings (f s) = valid_global_vspace_mappings s"
-  by (simp add: valid_global_vspace_mappings_def arch)
+  unfolding valid_global_vspace_mappings_def by (simp add: arch Let_def)
 
 lemma pspace_in_kernel_window_update [iff]:
   "pspace_in_kernel_window (f s) = pspace_in_kernel_window s"
@@ -2706,7 +2695,7 @@ lemma valid_asid_map_update [iff]:
 
 lemma valid_arch_state_update [iff]:
   "valid_arch_state (f s) = valid_arch_state s"
-  by (simp add: valid_arch_state_def arch split: option.split)
+  by (simp add: valid_arch_state_def arch pspace split: option.split)
 
 lemma valid_idle_update [iff]:
   "valid_idle (f s) = valid_idle s"
@@ -2963,7 +2952,7 @@ lemmas caps_of_state_valid_cap = cte_wp_valid_cap [OF caps_of_state_cteD]
 
 lemma (in Arch) obj_ref_is_arch:
   "\<lbrakk>aobj_ref c = Some r; valid_arch_cap c s\<rbrakk> \<Longrightarrow> \<exists> ako. kheap s r = Some (ArchObj ako)"
-by (auto simp add: valid_arch_cap_def obj_at_def split: arch_cap.splits if_splits)
+by (auto simp add: valid_arch_cap_def obj_at_def valid_arch_cap_ref_def split: arch_cap.splits if_splits)
 
 
 requalify_facts Arch.obj_ref_is_arch
@@ -3462,25 +3451,6 @@ lemma sym_refs_bound_tcb_atD:
   apply (drule (1)sym_refs_obj_atD)
   apply auto
   done
-
-
-lemma vs_lookup_trans_sub2:
-  assumes ko: "\<And>ko p. \<lbrakk> ko_at ko p s; vs_refs ko \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s'"
-  shows "vs_lookup_trans s \<subseteq> vs_lookup_trans s'"
-proof -
-  have "vs_lookup1 s \<subseteq> vs_lookup1 s'"
-    by (fastforce dest: ko elim: vs_lookup1_stateI2)
-  thus ?thesis by (rule rtrancl_mono)
-qed
-
-lemma vs_lookup_pages_trans_sub2:
-  assumes ko: "\<And>ko p. \<lbrakk> ko_at ko p s; vs_refs_pages ko \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs_pages ko \<subseteq> vs_refs_pages ko') p s'"
-  shows "vs_lookup_pages_trans s \<subseteq> vs_lookup_pages_trans s'"
-proof -
-  have "vs_lookup_pages1 s \<subseteq> vs_lookup_pages1 s'"
-    by (fastforce dest: ko elim: vs_lookup_pages1_stateI2)
-  thus ?thesis by (rule rtrancl_mono)
-qed
 
 lemma max_ipc_length_unfold:
   "max_ipc_length = 128"
