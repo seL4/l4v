@@ -1429,13 +1429,13 @@ lemma fast_finalise_not_idle_thread[wp]:
 lemma block_lift:
   "\<lbrakk>kheap b word = Some (TCB tcb_type); ekheap b word = Some etcb; transform_tcb (machine_state b) word tcb_type etcb = Tcb cdl_tcb_type\<rbrakk>
   \<Longrightarrow> is_thread_blocked_on_endpoint cdl_tcb_type ep = (case tcb_state tcb_type of
-      Structures_A.thread_state.BlockedOnReceive p \<Rightarrow> ep = p
+      Structures_A.thread_state.BlockedOnReceive p _ \<Rightarrow> ep = p
     | Structures_A.thread_state.BlockedOnSend p _ \<Rightarrow> ep = p
     | Structures_A.thread_state.BlockedOnNotification p \<Rightarrow> ep = p
     | _ \<Rightarrow> False)"
   apply (clarsimp simp:is_thread_blocked_on_endpoint_def transform_tcb_def infer_tcb_pending_op_def infer_tcb_bound_notification_def tcb_slots)
   apply (case_tac "tcb_state tcb_type")
-    apply (auto)
+         apply (auto)
   done
 
 (* Before we handle fast_finalise, we need sth form invs that can give us some preconditions of ep and ntfn *)
@@ -1451,18 +1451,22 @@ where "ntfn_waiting_set epptr s \<equiv>
 definition none_is_waiting_ntfn :: "obj_ref \<Rightarrow> 'z::state_ext state\<Rightarrow>bool"
 where "none_is_waiting_ntfn epptr s \<equiv> (ntfn_waiting_set epptr s) = {}"
 
-definition ep_waiting_set_send :: "obj_ref\<Rightarrow> 'z::state_ext state\<Rightarrow>obj_ref set"
+definition ep_waiting_set_send :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref set"
 where "ep_waiting_set_send epptr s \<equiv>
-   {tcb. \<exists>t payload. ((kheap s tcb) = Some (TCB t))
-      \<and> ((tcb_state t) = Structures_A.thread_state.BlockedOnSend epptr payload)}"
+   {tcb. \<exists>t payload can_grant.
+        kheap s tcb = Some (TCB t)
+      \<and> tcb_state t = Structures_A.thread_state.BlockedOnSend epptr payload
+      \<and> can_grant = sender_can_grant payload}"
 
 definition none_is_sending_ep:: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where "none_is_sending_ep epptr s \<equiv> (ep_waiting_set_send epptr s) = {}"
 
-definition ep_waiting_set_recv :: "obj_ref\<Rightarrow> 'z::state_ext state\<Rightarrow>obj_ref set"
+definition ep_waiting_set_recv :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref set"
 where "ep_waiting_set_recv epptr s \<equiv>
-   {tcb. \<exists>t. ((kheap s tcb) = Some (TCB t))
-      \<and> ((tcb_state t) = Structures_A.thread_state.BlockedOnReceive epptr)}"
+   {tcb. \<exists>t payload can_grant.
+        kheap s tcb = Some (TCB t)
+      \<and> tcb_state t = Structures_A.thread_state.BlockedOnReceive epptr payload
+      \<and> can_grant = receiver_can_grant payload}"
 
 definition none_is_receiving_ep:: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where "none_is_receiving_ep epptr s \<equiv> (ep_waiting_set_recv epptr s) = {}"
@@ -1593,25 +1597,27 @@ lemma ntfn_not_waiting_ep_send:
   "\<lbrakk> valid_objs s;kheap s epptr = Some (kernel_object.Notification ntfn) \<rbrakk>
        \<Longrightarrow> ep_waiting_set_send epptr s = {}"
   apply (rule set_eqI)
-  apply (clarsimp simp:ep_waiting_set_send_def)
-  apply (simp add:valid_objs_def)
-  apply (drule_tac x= x in bspec)
-    apply (clarsimp simp:dom_def)
-  apply (clarsimp simp:valid_obj_def valid_tcb_def valid_tcb_state_def obj_at_def is_ep_def
-    split:Structures_A.kernel_object.splits)
-done
+  apply (clarsimp simp: ep_waiting_set_send_def)
+  apply (simp add: valid_objs_def)
+  apply (rename_tac ptr t payload)
+  apply (drule_tac x=ptr in bspec)
+   apply (clarsimp simp: dom_def)
+  apply (clarsimp simp: valid_obj_def valid_tcb_def valid_tcb_state_def obj_at_def is_ep_def
+                 split: Structures_A.kernel_object.splits)
+  done
 
 lemma ntfn_not_waiting_ep_recv:
   "\<lbrakk> valid_objs s;kheap s epptr = Some (kernel_object.Notification ntfn) \<rbrakk>
         \<Longrightarrow> ep_waiting_set_recv epptr s = {}"
-   apply (rule set_eqI)
-   apply (clarsimp simp:ep_waiting_set_recv_def)
-   apply (simp add:valid_objs_def)
-   apply (drule_tac x= x in bspec)
-     apply (clarsimp simp:dom_def)
-   apply (clarsimp simp:valid_obj_def valid_tcb_def valid_tcb_state_def obj_at_def is_ep_def
-     split:Structures_A.kernel_object.splits)
-done
+  apply (rule set_eqI)
+  apply (clarsimp simp: ep_waiting_set_recv_def)
+  apply (simp add: valid_objs_def)
+  apply (rename_tac ptr t payload)
+  apply (drule_tac x=ptr in bspec)
+   apply (clarsimp simp: dom_def)
+  apply (clarsimp simp: valid_obj_def valid_tcb_def valid_tcb_state_def obj_at_def is_ep_def
+                 split: Structures_A.kernel_object.splits)
+  done
 
 lemma ep_not_waiting_ntfn:
   "\<lbrakk> valid_objs s;kheap s epptr = Some (kernel_object.Endpoint ep) \<rbrakk>
@@ -1623,7 +1629,6 @@ lemma ep_not_waiting_ntfn:
    apply (clarsimp simp:dom_def)
   by (clarsimp simp:valid_obj_def valid_tcb_def valid_tcb_state_def obj_at_def is_ntfn_def
               split:Structures_A.kernel_object.splits)
-
 
 (* Following 2 lemmas is useful, it tells us that under certain condition, we can get valid_ep and valid_ntfn,
    which helps us ruling out the idle thread and constract a map between the waiting list and waiting set
@@ -1638,11 +1643,13 @@ lemma get_endpoint_pick:
     apply (rule conjI)
      apply (rule set_eqI)
      apply (clarsimp simp:ep_waiting_set_send_def)
-     apply (drule_tac x=x in spec)
+     apply (rename_tac ptr t payload)
+     apply (drule_tac x=ptr in spec)
      apply (clarsimp simp: state_refs_of_def)
     apply (rule set_eqI)
     apply (clarsimp simp:ep_waiting_set_recv_def)
-    apply (drule_tac x=x in spec)
+    apply (rename_tac ptr t payload)
+    apply (drule_tac x=ptr in spec)
     apply (clarsimp simp:state_refs_of_def)
    apply (clarsimp simp:valid_state_def valid_pspace_def valid_objs_def)
    apply (drule_tac x=epptr in bspec)
@@ -1652,7 +1659,8 @@ lemma get_endpoint_pick:
     apply (rule sym)
     apply (rule antisym)
      apply (clarsimp simp:ep_waiting_set_send_def sym_refs_def)
-     apply (drule_tac x = x in spec)
+     apply (rename_tac ptr t payload)
+     apply (drule_tac x=ptr in spec)
      apply (clarsimp simp:state_refs_of_def)
     apply (clarsimp simp:ep_waiting_set_send_def sym_refs_def)
     apply (drule_tac x= epptr in spec)
@@ -1663,7 +1671,7 @@ lemma get_endpoint_pick:
     apply (case_tac y)
         apply (clarsimp simp:refs_of_def tcb_st_refs_of_def ep_q_refs_of_def ntfn_q_refs_of_def
                split:Structures_A.kernel_object.splits)+
-       apply (clarsimp simp:tcb_bound_refs_def2 split:Structures_A.thread_state.splits)
+       apply (force simp:tcb_bound_refs_def2 split:Structures_A.thread_state.splits)
       apply (clarsimp simp:ep_waiting_set_send_def)
       apply (clarsimp simp:refs_of_def tcb_st_refs_of_def ep_q_refs_of_def ntfn_q_refs_of_def
              split:Structures_A.kernel_object.splits)+
@@ -1677,7 +1685,8 @@ lemma get_endpoint_pick:
     apply (clarsimp simp:none_is_receiving_ep_def)
     apply (rule set_eqI)
     apply (clarsimp simp: ep_waiting_set_recv_def sym_refs_def)
-    apply (drule_tac x = x in spec)
+    apply (rename_tac ptr t payload)
+    apply (drule_tac x = ptr in spec)
     apply (clarsimp simp:state_refs_of_def)
    apply clarsimp
    defer
@@ -1689,7 +1698,8 @@ lemma get_endpoint_pick:
     apply (rule sym)
     apply (rule antisym)
      apply (clarsimp simp:ep_waiting_set_recv_def sym_refs_def)
-     apply (drule_tac x = x in spec)
+     apply (rename_tac ptr t payload)
+     apply (drule_tac x = ptr in spec)
      apply (clarsimp simp:state_refs_of_def)
     apply (clarsimp simp:ep_waiting_set_recv_def sym_refs_def)
     apply (drule_tac x= epptr in spec)
@@ -1700,7 +1710,7 @@ lemma get_endpoint_pick:
     apply (case_tac y)
         apply (clarsimp simp:refs_of_def tcb_st_refs_of_def ep_q_refs_of_def ntfn_q_refs_of_def
                split:Structures_A.kernel_object.splits)+
-       apply (clarsimp simp: tcb_bound_refs_def2 split:Structures_A.thread_state.splits)
+       apply (force simp: tcb_bound_refs_def2 split:Structures_A.thread_state.splits)
       apply (clarsimp simp:ep_waiting_set_recv_def)
       apply (clarsimp simp:refs_of_def tcb_st_refs_of_def ep_q_refs_of_def ntfn_q_refs_of_def
              split:Structures_A.kernel_object.splits)+
@@ -1714,7 +1724,8 @@ lemma get_endpoint_pick:
     apply (clarsimp simp:none_is_sending_ep_def)
     apply (rule set_eqI)
     apply (clarsimp simp: ep_waiting_set_send_def sym_refs_def)
-    apply (drule_tac x = x in spec)
+    apply (rename_tac ptr t payload)
+    apply (drule_tac x = ptr in spec)
     apply (clarsimp simp:state_refs_of_def)
    apply (rename_tac list)
    apply clarsimp
@@ -1937,12 +1948,12 @@ lemma is_thread_blocked_on_sth:
     = (get_waiting_sync_recv_threads ep s) \<union> (get_waiting_sync_send_threads ep s) \<union> (get_waiting_ntfn_recv_threads ep s)"
   apply (rule set_eqI)
   apply (rule iffI)
-    apply (clarsimp simp:is_thread_blocked_on_endpoint_def split:option.splits)
-    apply (case_tac y)
-      apply (simp_all add: get_waiting_sync_recv_threads_def get_waiting_sync_send_threads_def get_waiting_ntfn_recv_threads_def)
-  apply safe
-  apply (clarsimp simp:is_thread_blocked_on_endpoint_def)+
-done
+   apply (clarsimp simp: is_thread_blocked_on_endpoint_def split: option.splits)
+   apply (case_tac y; simp add: get_waiting_sync_recv_threads_def get_waiting_sync_send_threads_def
+                                get_waiting_ntfn_recv_threads_def)
+  apply (fastforce simp: is_thread_blocked_on_endpoint_def get_waiting_sync_recv_threads_def
+                         get_waiting_sync_send_threads_def get_waiting_ntfn_recv_threads_def)
+  done
 
 lemma set_ep_exec_wp: (* generalise? *)
   "\<lbrace>(=) s\<rbrace> set_endpoint epptr ep \<lbrace>\<lambda>r s'. s' = update_kheap ((kheap s)(epptr \<mapsto> Endpoint ep)) s\<rbrace> "

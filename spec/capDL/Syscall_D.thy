@@ -87,7 +87,7 @@ definition ep_related_cap :: "cdl_cap \<Rightarrow> bool"
 where "ep_related_cap cap \<equiv> case cap of
  cdl_cap.EndpointCap o_id badge rights \<Rightarrow> True
 | cdl_cap.NotificationCap o_id badge rights \<Rightarrow> True
-| cdl_cap.ReplyCap o_id \<Rightarrow> True
+| cdl_cap.ReplyCap o_id rights \<Rightarrow> True
 | _ \<Rightarrow> False"
 
 definition "has_restart_cap \<equiv> \<lambda>tcb_id. do
@@ -163,7 +163,7 @@ where
             if Read \<in> rights then
               (liftE $ do
                    delete_cap_simple (tcb_id, tcb_caller_slot);
-                   receive_ipc tcb_id (cap_object ep_cap)
+                   receive_ipc tcb_id (cap_object ep_cap) (Grant \<in> rights)
                 od) \<sqinter> throw
             else
               throw
@@ -189,7 +189,7 @@ where
       caller_cap \<leftarrow> get_cap (tcb_id, tcb_caller_slot);
 
       case caller_cap of
-          ReplyCap target \<Rightarrow> do_reply_transfer tcb_id target (tcb_id, tcb_caller_slot)
+          ReplyCap target rights \<Rightarrow> do_reply_transfer tcb_id target (tcb_id, tcb_caller_slot) (Grant \<in> rights)
         | NullCap \<Rightarrow> return ()
         | _ \<Rightarrow> fail
     od

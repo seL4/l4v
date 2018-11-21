@@ -120,7 +120,7 @@ where
         * regardless of the user's actual intent. *)
          EndpointCap o_id badge rights \<Rightarrow>
            (if Write \<in> rights then
-             returnOk $ InvokeEndpoint (SyncMessage badge (Grant \<in> rights) o_id)
+             returnOk $ InvokeEndpoint (SyncMessage badge (Grant \<in> rights) (GrantReply \<in> rights) o_id)
            else
              throw)
        | NotificationCap o_id badge rights \<Rightarrow>
@@ -128,8 +128,8 @@ where
              returnOk $ InvokeNotification (Signal badge o_id)
            else
              throw)
-       | ReplyCap o_id\<Rightarrow>
-           returnOk $ InvokeReply (ReplyMessage o_id invoked_cap_ref)
+       | ReplyCap o_id rights \<Rightarrow>
+           returnOk $ InvokeReply (ReplyMessage o_id invoked_cap_ref (Grant \<in> rights))
 
        (*
         * For other operations, we only perform the user's intent

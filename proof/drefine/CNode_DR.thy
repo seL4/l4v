@@ -332,20 +332,20 @@ lemma insert_cap_child_corres:
     apply (clarsimp simp: caps_of_state_transform_opt_cap cte_wp_at_caps_of_state
       transform_cap_def)+
   apply (clarsimp simp: valid_mdb_def cte_wp_at_cases dest!:invs_mdb)
-  apply (case_tac "cdt s' child", safe intro!: mdb_cte_atI)
-  (* 121 subgoals *)
-  by (auto dest: mdb_cte_atD is_untyped_cap_eqD
-           simp: valid_mdb_def swp_def cte_wp_at_caps_of_state not_idle_thread_def)
+  apply (case_tac "cdt s' child", safe intro!: mdb_cte_atI;
+         auto dest: mdb_cte_atD is_untyped_cap_eqD
+              simp: valid_mdb_def swp_def cte_wp_at_caps_of_state not_idle_thread_def)
+  done
 
 lemma reply_cap_insert_corres:
   "sid \<noteq> did\<Longrightarrow>dcorres dc \<top>
     (valid_idle and not_idle_thread did and valid_mdb and st_tcb_at (\<lambda>r. \<not> inactive r \<and> \<not> idle r) sid
      and valid_etcbs and tcb_at did and tcb_at sid and valid_objs)
-    (insert_cap_child (cdl_cap.ReplyCap sid)  (sid, tcb_replycap_slot)
+    (insert_cap_child (cdl_cap.ReplyCap sid rights)  (sid, tcb_replycap_slot)
       (did, tcb_caller_slot))
-    (cap_insert (cap.ReplyCap sid False) (sid,tcb_cnode_index 2) (did,tcb_cnode_index 3))"
+    (cap_insert (cap.ReplyCap sid False rights) (sid,tcb_cnode_index 2) (did,tcb_cnode_index 3))"
   apply (rule corres_guard_imp)
-  apply (rule insert_cap_child_corres [where cap = "cap.ReplyCap sid False"
+  apply (rule insert_cap_child_corres [where cap = "cap.ReplyCap sid False rights"
       and src = "(sid, tcb_cnode_index 2)" and child = "(did, tcb_cnode_index 3)",
       unfolded transform_cap_def transform_tcb_slot_simp
       ,simplified])
@@ -493,11 +493,11 @@ crunch idle_thread[wp]: cap_move "\<lambda>s::'a::state_ext state. P (idle_threa
   (wp: dxo_wp_weak)
 
 lemma cap_null_reply_case_If:
-  "(case cap of cap.ReplyCap t b \<Rightarrow> f t b | cap.NullCap \<Rightarrow> g | _ \<Rightarrow> h)
+  "(case cap of cap.ReplyCap t b R \<Rightarrow> f t b R | cap.NullCap \<Rightarrow> g | _ \<Rightarrow> h)
         = (if cap = cap.NullCap then g
            else if is_reply_cap cap \<or> is_master_reply_cap cap
-           then f (obj_ref_of cap) (is_master_reply_cap cap)
-              else h)"
+           then f (obj_ref_of cap) (is_master_reply_cap cap) (cap_rights cap)
+           else h)"
   by (simp add: is_reply_cap_def is_master_reply_cap_def split: cap.split)
 
 (* FIXME: move *)
@@ -2323,7 +2323,7 @@ lemma lsfco_not_idle:
   done
 
 lemma cdl_right_UNIV:
-  "UNIV = {Read, Write, Grant}"
+  "UNIV = {Read, Write, Grant, GrantReply}"
   apply (rule set_eqI)
   apply (case_tac x, auto)
   done

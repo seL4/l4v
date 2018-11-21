@@ -151,12 +151,12 @@ definition
   where "cancel_ipc ptr \<equiv>
   do cap \<leftarrow> KHeap_D.get_cap (ptr,tcb_pending_op_slot);
    (case cap of
-    PendingSyncRecvCap _ is_reply \<Rightarrow> ( do
+    PendingSyncRecvCap _ is_reply _ \<Rightarrow> ( do
      when is_reply $ update_thread_fault ptr (\<lambda>x. False);
      revoke_cap_simple (ptr,tcb_replycap_slot);
      when (\<not> is_reply) $ set_cap (ptr,tcb_pending_op_slot) NullCap
      od )
-   | PendingSyncSendCap _ _ _ _ _ \<Rightarrow> (do
+   | PendingSyncSendCap _ _ _ _ _ _ \<Rightarrow> (do
      revoke_cap_simple (ptr,tcb_replycap_slot);
      set_cap (ptr,tcb_pending_op_slot) NullCap
      od)
@@ -188,7 +188,7 @@ where
          unbind_maybe_notification r;
          cancel_all_ipc r
        od)"
-| "finalise_cap (ReplyCap r)             final = return (NullCap, NullCap)"
+| "finalise_cap (ReplyCap r R)           final = return (NullCap, NullCap)"
 | "finalise_cap (MasterReplyCap r)       final = return (NullCap, NullCap)"
 | "finalise_cap (CNodeCap r bits g sz)   final =
       (return (if final then ZombieCap r else NullCap, NullCap))"
@@ -200,8 +200,8 @@ where
          prepare_thread_delete r od);
          return (if final then (ZombieCap r) else NullCap, NullCap)
        od)"
-| "finalise_cap (PendingSyncSendCap r _ _ _ _) final = return (NullCap, NullCap)"
-| "finalise_cap (PendingSyncRecvCap r _ ) final = return (NullCap, NullCap)"
+| "finalise_cap (PendingSyncSendCap r _ _ _ _ _) final = return (NullCap, NullCap)"
+| "finalise_cap (PendingSyncRecvCap r _ _) final = return (NullCap, NullCap)"
 | "finalise_cap (PendingNtfnRecvCap r)  final = return (NullCap, NullCap)"
 | "finalise_cap IrqControlCap            final = return (NullCap, NullCap)"
 | "finalise_cap (IrqHandlerCap irq)      final = (
@@ -436,7 +436,7 @@ definition
 where
   "get_tcb_ep_badge t \<equiv>
     case (cdl_tcb_caps t tcb_pending_op_slot) of
-      Some (PendingSyncSendCap _ badge _ _ _) \<Rightarrow> Some badge
+      Some (PendingSyncSendCap _ badge _ _ _ _) \<Rightarrow> Some badge
     | _ \<Rightarrow> None"
 
 (*
@@ -658,7 +658,7 @@ definition
 where
   "derive_cap slot cap \<equiv> case cap of
      UntypedCap _ _ _ \<Rightarrow> doE ensure_no_children slot; returnOk cap odE
-   | ReplyCap _ \<Rightarrow> returnOk NullCap
+   | ReplyCap _ _ \<Rightarrow> returnOk NullCap
    | MasterReplyCap oref \<Rightarrow> returnOk NullCap
    | IrqControlCap \<Rightarrow> returnOk NullCap
    | ZombieCap _ \<Rightarrow> returnOk NullCap

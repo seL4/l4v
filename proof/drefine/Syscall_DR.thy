@@ -30,15 +30,15 @@ where
         Invocations_A.InvokeUntyped iu \<Rightarrow>
           Invocations_D.InvokeUntyped $
               translate_untyped_invocation iu
-      | Invocations_A.InvokeEndpoint ep bdg grant \<Rightarrow>
+      | Invocations_A.InvokeEndpoint ep bdg grant grant_reply \<Rightarrow>
           Invocations_D.InvokeEndpoint $
-              SyncMessage bdg grant ep
+              SyncMessage bdg grant grant_reply ep
       | Invocations_A.InvokeNotification ntfn aebdg \<Rightarrow>
           Invocations_D.InvokeNotification $
               Signal aebdg ntfn
-      | Invocations_A.InvokeReply target_tcb reply_slot \<Rightarrow>
+      | Invocations_A.InvokeReply target_tcb reply_slot grant \<Rightarrow>
           Invocations_D.InvokeReply $
-              ReplyMessage target_tcb (transform_cslot_ptr reply_slot)
+              ReplyMessage target_tcb (transform_cslot_ptr reply_slot) grant
       | Invocations_A.InvokeCNode icn \<Rightarrow>
           Invocations_D.InvokeCNode $
               translate_cnode_invocation icn
@@ -150,7 +150,7 @@ lemma decode_invocation_replycap_corres:
      invoked_cap_ref = transform_cslot_ptr invoked_cap_ref';
      invoked_cap = transform_cap invoked_cap';
      excaps = transform_cap_list excaps';
-     invoked_cap' = cap.ReplyCap a b \<rbrakk> \<Longrightarrow>
+     invoked_cap' = cap.ReplyCap a b c \<rbrakk> \<Longrightarrow>
     dcorres (dc \<oplus> cdl_invocation_relation) \<top> (cte_wp_at (Not\<circ> is_master_reply_cap) invoked_cap_ref' and cte_wp_at (diminished invoked_cap') invoked_cap_ref')
         (Decode_D.decode_invocation invoked_cap invoked_cap_ref excaps intent)
         (Decode_A.decode_invocation label' args' cap_index' invoked_cap_ref' invoked_cap' excaps')"
@@ -702,7 +702,7 @@ lemma perform_invocation_corres:
       apply (wp | clarsimp)+
 
 (* invoke_reply *)
-    apply (rename_tac word a b)
+    apply (rename_tac word a b c)
     apply (clarsimp simp:invoke_reply_def)
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF _ get_cur_thread_corres])
@@ -718,7 +718,7 @@ lemma perform_invocation_corres:
        apply clarsimp
        apply (drule (1) valid_reply_capsD)
        apply (clarsimp simp: valid_idle_def not_idle_thread_def pred_tcb_at_def obj_at_def)
-      apply (fastforce simp: has_reply_cap_def)
+      apply (fastforce simp: has_reply_cap_def is_reply_cap_to_def)
 
 (* invoke_tcb *)
     apply (rule corres_guard_imp)
@@ -1355,6 +1355,7 @@ crunch cur_thread[wp]: complete_signal "\<lambda>s. P (cur_thread s)"
 
 lemma receive_ipc_cur_thread:
   notes do_nbrecv_failed_transfer_def[simp]
+        if_split[split del]
   shows
   " \<lbrace>\<lambda>s. valid_objs s \<and>  P (cur_thread (s :: det_ext state))\<rbrace> receive_ipc a b c \<lbrace>\<lambda>xg s. P (cur_thread s)\<rbrace>"
   apply (simp add:receive_ipc_def bind_assoc)
@@ -1362,11 +1363,8 @@ lemma receive_ipc_cur_thread:
                  apply (simp add:setup_caller_cap_def)
                  apply (wp dxo_wp_weak | simp)+
               apply (rule_tac Q="\<lambda>r s. P (cur_thread s)" in hoare_strengthen_post)
-               apply wp
               apply clarsimp
              apply (wp|wpc)+
-           apply (rule_tac Q="\<lambda>r s. P (cur_thread s)" in hoare_strengthen_post)
-            apply wp
            apply clarsimp
           apply (clarsimp simp:neq_Nil_conv)
           apply (rename_tac list queue sender)
@@ -1419,7 +1417,8 @@ lemma handle_recv_corres:
                   apply (rule corres_alternate1)
                   apply clarsimp
                   apply (rule corres_split[where r'=dc])
-                     apply (rule_tac epptr=word1 in recv_sync_ipc_corres)
+                     apply (rule_tac epptr=word1 in recv_sync_ipc_corres
+                                        [where ep_cap="cap.EndpointCap _ _ _", simplified])
                        apply (simp add: cap_ep_ptr_def delete_caller_cap_def)+
                     apply (simp add: transform_tcb_slot_simp[symmetric])
                     apply (rule delete_cap_simple_corres)
@@ -1495,7 +1494,7 @@ lemma handle_reply_corres:
                   in  corres_split [OF _ get_cap_corres])
          apply (simp add: transform_cap_def corres_fail split: cap.split)
          apply (clarsimp simp: corres_fail dc_def[symmetric] split: bool.split)
-         apply (rename_tac word)
+         apply (rename_tac word rights)
          apply (rule corres_guard_imp)
            apply (rule do_reply_transfer_corres)
            apply (simp add: transform_tcb_slot_simp)
@@ -1505,8 +1504,10 @@ lemma handle_reply_corres:
           apply (clarsimp simp:cte_wp_at_caps_of_state)
           apply (simp add:valid_cap_def)+
          apply (clarsimp simp:valid_state_def invs_def valid_reply_caps_def dest!:has_reply_cap_cte_wpD)
-         apply (drule_tac x = word in spec,simp)
-         apply (clarsimp simp:not_idle_thread_def pred_tcb_at_def obj_at_def valid_idle_def)
+         apply (drule_tac x = word in spec, simp add: cte_wp_at_def)
+         apply (clarsimp simp:not_idle_thread_def pred_tcb_at_def obj_at_def valid_idle_def
+                              cte_wp_at_def has_reply_cap_def is_reply_cap_to_def)
+         apply blast
         apply (clarsimp simp: transform_tcb_slot_simp|(wp get_cap_wp)+)+
   apply (clarsimp simp:ct_in_state_def invs_def valid_state_def pred_tcb_at_def tcb_at_def obj_at_def)
   done

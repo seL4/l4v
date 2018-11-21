@@ -52,17 +52,17 @@ datatype cdl_irq_handler_invocation =
   | ClearIrqHandler cdl_irq
 
 datatype cdl_endpoint_invocation =
-    (* badge, grant, ep *)
-    (* Invoking an endpoint is always a blocking, non-call operation,
-     * so we need not track the "block" or "call" bits. *)
-    SyncMessage cdl_badge bool cdl_object_id
+    (* We need not track the "block" or "call" bits because they
+       are handled separately in the top-level syscall interface. *)
+    (* badge, grant, grant reply, ep *)
+    SyncMessage cdl_badge bool bool cdl_object_id
 
 datatype cdl_notification_invocation =
     (* badge (notification word) and notification object *)
     Signal cdl_badge cdl_object_id
 
 datatype cdl_reply_invocation =
-    ReplyMessage cdl_object_id cdl_cap_ref
+    ReplyMessage cdl_object_id cdl_cap_ref bool (* can grant *)
 
 datatype cdl_page_table_invocation =
     (* PageTableMap <real_pt_cap> <pt_cap> <pt_cap_ref> <pd_target_slot> *)

@@ -41,8 +41,8 @@ definition
 where
   "is_thread_blocked_on_endpoint t ep \<equiv>
     case (cdl_tcb_caps t tcb_pending_op_slot) of
-        Some (PendingSyncSendCap p _ _ _ _) \<Rightarrow> p = ep
-      | Some (PendingSyncRecvCap p is_reply ) \<Rightarrow> p = ep \<and> \<not> is_reply
+        Some (PendingSyncSendCap p _ _ _ _ _) \<Rightarrow> p = ep
+      | Some (PendingSyncRecvCap p is_reply _) \<Rightarrow> p = ep \<and> \<not> is_reply
       | Some (PendingNtfnRecvCap p) \<Rightarrow> p = ep
       | _ \<Rightarrow> False"
 
@@ -113,15 +113,15 @@ where
 
 definition
   can_fast_finalise :: "cdl_cap \<Rightarrow> bool" where
- "can_fast_finalise cap \<equiv> case cap of ReplyCap r \<Rightarrow> True
+ "can_fast_finalise cap \<equiv> case cap of ReplyCap r R \<Rightarrow> True
                        | MasterReplyCap r \<Rightarrow> True
                        | EndpointCap r b R \<Rightarrow> True
                        | NotificationCap r b R \<Rightarrow> True
                        | NullCap \<Rightarrow> True
                        | RestartCap \<Rightarrow> True
                        | RunningCap \<Rightarrow> True
-                       | PendingSyncSendCap r _ _ _ _ \<Rightarrow> True
-                       | PendingSyncRecvCap r _ \<Rightarrow> True
+                       | PendingSyncSendCap r _ _ _ _ _ \<Rightarrow> True
+                       | PendingSyncRecvCap r _ _ \<Rightarrow> True
                        | PendingNtfnRecvCap r \<Rightarrow> True
                        | DomainCap \<Rightarrow> True
                        | PageDirectoryCap _ x _ \<Rightarrow> \<not>(x = Real)
@@ -139,7 +139,7 @@ where
   "fast_finalise NullCap                  final = return ()"
 | "fast_finalise (RestartCap)             final = return ()"
 | "fast_finalise (RunningCap)             final = return ()"
-| "fast_finalise (ReplyCap r)             final = return ()"
+| "fast_finalise (ReplyCap r R)           final = return ()"
 | "fast_finalise (MasterReplyCap r)       final = return ()"
 | "fast_finalise (EndpointCap r b R)      final =
       (when final $ cancel_all_ipc r)"
@@ -148,8 +148,8 @@ where
             unbind_maybe_notification r;
             cancel_all_ipc r
           od)"
-| "fast_finalise (PendingSyncSendCap r _ _ _ _) final =  return()"
-| "fast_finalise (PendingSyncRecvCap r _)   final = return()"
+| "fast_finalise (PendingSyncSendCap r _ _ _ _ _) final = return()"
+| "fast_finalise (PendingSyncRecvCap r _ _) final = return()"
 | "fast_finalise  (PendingNtfnRecvCap r) final = return()"
 | "fast_finalise DomainCap final = return ()"
 | "fast_finalise (PageDirectoryCap _ x _) _ = (if x = Real then fail else return())"
@@ -165,12 +165,12 @@ definition
  "cap_counts cap \<equiv> (case cap of
     cdl_cap.NullCap \<Rightarrow> False
   | UntypedCap _ _ _ \<Rightarrow> False
-  | ReplyCap _ \<Rightarrow> False
+  | ReplyCap _ _ \<Rightarrow> False
   | MasterReplyCap _ \<Rightarrow> False
   | RestartCap \<Rightarrow> False
   | RunningCap \<Rightarrow> False
-  | PendingSyncSendCap _ _ _ _ _ \<Rightarrow> False
-  | PendingSyncRecvCap _ _ \<Rightarrow> False
+  | PendingSyncSendCap _ _ _ _ _ _ \<Rightarrow> False
+  | PendingSyncRecvCap _ _ _ \<Rightarrow> False
   | PendingNtfnRecvCap _ \<Rightarrow> False
   | DomainCap \<Rightarrow> False
   | BoundNotificationCap _ \<Rightarrow> False

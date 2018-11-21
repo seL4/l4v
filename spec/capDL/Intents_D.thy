@@ -50,6 +50,9 @@ abbreviation (input) Write::rights
 abbreviation (input) Grant::rights
   where "Grant \<equiv> AllowGrant"
 
+abbreviation (input) GrantReply::rights
+  where "GrantReply \<equiv> AllowGrantReply"
+
 (* Capability data, such as guard information. *)
 type_synonym cdl_raw_capdata = word32
 
@@ -183,6 +186,7 @@ datatype cdl_asid_pool_intent =
 datatype cdl_notification_intent =
     SendSignalIntent word32
 
+(* Also used with reply caps *)
 datatype cdl_endpoint_intent =
     SendMessageIntent "cdl_cptr list"
 

@@ -36,17 +36,19 @@ lemma cte_wp_at_zombie_not_idle:
 lemmas tcb_slots = Types_D.tcb_caller_slot_def Types_D.tcb_cspace_slot_def Types_D.tcb_ipcbuffer_slot_def
   Types_D.tcb_pending_op_slot_def Types_D.tcb_replycap_slot_def Types_D.tcb_vspace_slot_def Types_D.tcb_boundntfn_slot_def
 
+(* FIXME: MOVE *)
 lemma tcb_cap_casesE:
   assumes cs: "tcb_cap_cases p = Some (gf, sf, restr)"
   and  rules: "\<lbrakk> p = tcb_cnode_index 0; gf = tcb_ctable; sf = tcb_ctable_update; restr = (\<lambda>_ _. \<top>) \<rbrakk> \<Longrightarrow> R"
-              "\<lbrakk> p = tcb_cnode_index 1; gf = tcb_vtable; sf = tcb_vtable_update; restr = (\<lambda>_ _. \<top>) \<rbrakk> \<Longrightarrow> R"
-              "\<lbrakk> p = tcb_cnode_index 2; gf = tcb_reply; sf = tcb_reply_update; restr =
-                                     (\<lambda>t st c.
-                                         (is_master_reply_cap c \<and> obj_ref_of c = t)
-                                       \<or> (halted st \<and> (c = cap.NullCap))) \<rbrakk> \<Longrightarrow> R"
-              "\<lbrakk> p = tcb_cnode_index 3; gf = tcb_caller; sf = tcb_caller_update; restr =
-                                     (\<lambda>_ st. case st of
-                                       Structures_A.BlockedOnReceive e \<Rightarrow>
+              "\<lbrakk> p = tcb_cnode_index 1; gf = tcb_vtable; sf = tcb_vtable_update;
+                 restr = (\<lambda>_ _. is_valid_vtable_root or ((=) cap.NullCap)) \<rbrakk> \<Longrightarrow> R"
+              "\<lbrakk> p = tcb_cnode_index 2; gf = tcb_reply; sf = tcb_reply_update;
+                 restr = (\<lambda>t st c. (is_master_reply_cap c \<and> obj_ref_of c = t
+                                        \<and> AllowGrant \<in> cap_rights c)
+                                    \<or> (halted st \<and> (c = cap.NullCap))) \<rbrakk> \<Longrightarrow> R"
+              "\<lbrakk> p = tcb_cnode_index 3; gf = tcb_caller; sf = tcb_caller_update;
+                 restr = (\<lambda>_ st. case st of
+                                       Structures_A.BlockedOnReceive e data \<Rightarrow>
                                          ((=) cap.NullCap)
                                      | _ \<Rightarrow> is_reply_cap or ((=) cap.NullCap)) \<rbrakk> \<Longrightarrow> R"
               "\<lbrakk> p = tcb_cnode_index 4; gf = tcb_ipcframe; sf = tcb_ipcframe_update; restr =
@@ -96,18 +98,20 @@ abbreviation
 
 lemma tcb_cap_cases_slot_simps[simp]:
   "tcb_cap_cases (tcb_cnode_index tcb_cspace_slot) = Some (tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>))"
-  "tcb_cap_cases (tcb_cnode_index tcb_vspace_slot) = Some (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. \<top>))"
-  "tcb_cap_cases (tcb_cnode_index tcb_replycap_slot) = Some (tcb_reply, tcb_reply_update,
-                                     (\<lambda>t st c.
-                                         (is_master_reply_cap c \<and> obj_ref_of c = t)
-                                       \<or> (halted st \<and> (c = cap.NullCap))))"
-  "tcb_cap_cases (tcb_cnode_index tcb_caller_slot) = Some (tcb_caller, tcb_caller_update,
-                                     (\<lambda>_ st. case st of
-                                       Structures_A.BlockedOnReceive e \<Rightarrow>
-                                         ((=) cap.NullCap)
-                                     | _ \<Rightarrow> is_reply_cap or ((=) cap.NullCap)))"
-  "tcb_cap_cases (tcb_cnode_index tcb_ipcbuffer_slot) = Some (tcb_ipcframe, tcb_ipcframe_update,
-                                     (\<lambda>_ _. is_nondevice_page_cap or ((=) cap.NullCap)))"
+  "tcb_cap_cases (tcb_cnode_index tcb_vspace_slot) =
+      Some (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. is_valid_vtable_root or ((=) cap.NullCap)))"
+  "tcb_cap_cases (tcb_cnode_index tcb_replycap_slot) =
+      Some (tcb_reply, tcb_reply_update,
+            (\<lambda>t st c. (is_master_reply_cap c \<and> obj_ref_of c = t \<and> AllowGrant \<in> cap_rights c)
+                       \<or> (halted st \<and> (c = cap.NullCap))))"
+  "tcb_cap_cases (tcb_cnode_index tcb_caller_slot) =
+      Some (tcb_caller, tcb_caller_update,
+             (\<lambda>_ st. case st of
+               Structures_A.BlockedOnReceive e data \<Rightarrow>
+                 ((=) cap.NullCap)
+             | _ \<Rightarrow> is_reply_cap or ((=) cap.NullCap)))"
+  "tcb_cap_cases (tcb_cnode_index tcb_ipcbuffer_slot) =
+      Some (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or ((=) cap.NullCap)))"
   by (simp add: tcb_slots)+
 
 lemma opt_cap_tcb:
@@ -189,7 +193,7 @@ definition
   generates_pending :: "Structures_A.thread_state \<Rightarrow> bool"
 where
   "generates_pending st \<equiv> case st of
-            Structures_A.BlockedOnReceive ptr \<Rightarrow> True
+            Structures_A.BlockedOnReceive ptr payload \<Rightarrow> True
           | Structures_A.BlockedOnSend ptr payload \<Rightarrow> True
           | Structures_A.BlockedOnReply \<Rightarrow> True
           | Structures_A.BlockedOnNotification ptr \<Rightarrow> True
