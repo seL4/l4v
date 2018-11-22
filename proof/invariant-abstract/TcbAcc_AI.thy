@@ -1837,8 +1837,8 @@ lemma pred_tcb_at_constE:
   by (clarsimp simp: pred_tcb_at_def obj_at_def)
 
 lemma pred_tcb_at_eq_commute:
-  "pred_tcb_at proj ((=) v) p s = pred_tcb_at proj (\<lambda>x. x = v) p s"
-  by (auto simp: pred_tcb_at_def obj_at_def)
+  "pred_tcb_at proj ((=) v) = pred_tcb_at proj (\<lambda>x. x = v)"
+  by (intro ext) (auto simp: pred_tcb_at_def obj_at_def)
 
 lemma tcb_st_refs_of_eq_BlockedOnReply:
   assumes "tcb_st_refs_of st' = tcb_st_refs_of st"

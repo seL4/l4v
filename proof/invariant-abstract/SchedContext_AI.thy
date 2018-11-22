@@ -1225,8 +1225,8 @@ lemma set_sc_replies_nil_valid_replies[wp]:
 
 (* FIXME: move to Invariants_AI *)
 lemma in_state_refs_of_iff:
-  "r \<in> state_refs_of s p \<longleftrightarrow> obj_at (\<lambda>obj. r \<in> refs_of obj) p s"
-  by (auto simp: state_refs_of_def obj_at_def split: option.splits)
+  "r \<in> state_refs_of s p \<longleftrightarrow> (\<exists>ko. kheap s p = Some ko \<and> r \<in> refs_of ko)"
+  by (auto simp: state_refs_of_def split: option.splits)
 
 lemma sched_context_unbind_reply_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_unbind_reply sc_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -1242,13 +1242,13 @@ lemma sched_context_unbind_reply_invs[wp]:
   apply (clarsimp cong: conj_cong)
   apply (rule_tac rfs'="state_refs_of s" in delta_sym_refs
          ; clarsimp simp: obj_at_def split: if_splits
-         ; clarsimp simp: in_state_refs_of_iff obj_at_def get_refs_def2 refs_of_rev
+         ; clarsimp simp: in_state_refs_of_iff get_refs_def2 refs_of_rev
                    split: option.splits)
   apply (rename_tac s sc n y reply sc' rs' n')
   apply (case_tac "sc_replies sc"; case_tac "sc_replies sc'"; clarsimp)
   apply (rename_tac s sc n sc_ptr' reply sc' rs' n' r rs)
   by (frule_tac x=sc_ptr and y=r and tp=ReplySchedContext in sym_refsE
-      ; clarsimp simp: in_state_refs_of_iff obj_at_def get_refs_def2)
+      ; clarsimp simp: in_state_refs_of_iff get_refs_def2)
 
 text {* more invs rules *}
 
