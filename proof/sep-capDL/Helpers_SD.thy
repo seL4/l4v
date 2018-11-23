@@ -514,7 +514,21 @@ where
 definition
   bound_irq_list :: "cdl_state \<Rightarrow> cdl_irq list"
 where
-  "bound_irq_list \<equiv> \<lambda>s. sorted_list_of_set (bound_irqs s)"
+  "bound_irq_list \<equiv>
+     \<lambda>s. [irq \<leftarrow> [0 .e. maxBound].
+            case slots_of (cdl_irq_node s irq) s 0 of
+              None \<Rightarrow> False
+            | Some cap \<Rightarrow> cap \<noteq> NullCap]"
+
+lemma bound_irq_list_set[simp]: "set (bound_irq_list s) = bound_irqs s"
+  apply (clarsimp simp: bound_irqs_def bound_irq_list_def image_def)
+  apply (intro set_eqI iffI)
+   apply (fastforce split: option.splits)
+  apply (unat_arith, clarsimp)
+  done
+
+lemma bound_irq_list_distinct[intro]: "distinct (bound_irq_list s)"
+  by (clarsimp simp: bound_irq_list_def)
 
 definition
   used_irqs :: "cdl_state \<Rightarrow> cdl_irq set"

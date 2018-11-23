@@ -192,15 +192,13 @@ lemma init_irqs_bound_irqs_sep:
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: init_irqs_def)
   apply (clarsimp simp: irqs_empty_def irqs_initialised_def)
-   apply (clarsimp simp: bound_irq_list_def)
   apply (rule mapM_x_set_sep' [where
               P="irq_empty spec t" and
               Q="irq_initialised spec t" and
               I="si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
                  si_irq_caps_at irq_caps spec (bound_irqs spec) \<and>*
                  si_objects" and
-              xs="sorted_list_of_set (bound_irqs spec)" and
-              R=R, simplified sep_conj_assoc], simp+)
+              R=R, simplified sep_conj_assoc], fastforce+)
   apply (wp init_irq_sep, simp+)
   done
 
