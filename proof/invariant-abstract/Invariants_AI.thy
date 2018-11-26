@@ -276,6 +276,16 @@ lemmas sc_tcb_sc_at_def = sc_at_pred_def[of sc_tcb]
 lemmas sc_yf_sc_at_def = sc_at_pred_def[of sc_yield_from]
 lemmas sc_replies_sc_at_def = sc_at_pred_def[of sc_replies]
 
+lemma sc_at_pred_ko_atI:
+  "ko_at (SchedContext sc nb) ptr s \<Longrightarrow> P (proj sc)
+    \<Longrightarrow> sc_at_pred proj P ptr s"
+  by (simp add: sc_at_pred_def obj_at_def)
+
+lemmas sc_ntfn_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=sc_ntfn]
+lemmas sc_tcb_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=sc_tcb]
+lemmas sc_yf_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=sc_yield_from]
+lemmas sc_replies_sc_at_ko_atI = sc_at_pred_ko_atI[where proj=sc_replies]
+
 (* for compatibility with existing sc_at predicate *)
 abbreviation "sc_at_pred_v \<equiv> sc_at_pred_n valid_sched_context_size"
 
@@ -1007,10 +1017,14 @@ abbreviation (input) valid_replies_pred ::
 text \<open>For every Reply object with an associated scheduling context, there must be
       a thread which is BlockedOnReply with that Reply.
       A Reply object can be in at most one scheduling context's reply queue.\<close>
-definition valid_replies ::
+definition valid_replies' ::
   "(obj_ref \<times> obj_ref) set \<Rightarrow> (obj_ref \<times> obj_ref) set \<Rightarrow> bool"
   where
-  "valid_replies with_sc blocked \<equiv> fst ` with_sc \<subseteq> fst ` blocked \<and> inj_on fst with_sc"
+  "valid_replies' with_sc blocked \<equiv> fst ` with_sc \<subseteq> fst ` blocked \<and> inj_on fst with_sc"
+
+abbreviation "valid_replies \<equiv> valid_replies_pred valid_replies'"
+
+lemmas valid_replies_defs = valid_replies'_def replies_with_sc_def replies_blocked_def
 
 definition
   valid_pspace :: "'z::state_ext state \<Rightarrow> bool"
@@ -1020,7 +1034,7 @@ where
                    and pspace_distinct
                    and if_live_then_nonz_cap
                    and zombies_final
-                   and valid_replies_pred valid_replies
+                   and valid_replies
                    and (\<lambda>s. sym_refs (state_refs_of s))
                    and (\<lambda>s. sym_refs (state_hyp_refs_of s))"
 
@@ -1260,8 +1274,7 @@ abbreviation (input)
        and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
-       and valid_replies_pred valid_replies
-       and cur_tcb"
+       and valid_replies and cur_tcb"
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Lemmas"
@@ -1496,6 +1509,10 @@ lemma valid_objsE [elim]:
 lemma obj_at_ko_at:
   "obj_at P p s \<Longrightarrow> \<exists>ko. ko_at ko p s \<and> P ko"
   by (auto simp add: obj_at_def)
+
+lemma valid_objs_ko_at:
+  "valid_objs s \<Longrightarrow> ko_at obj ptr s \<Longrightarrow> valid_obj ptr obj s"
+  by (auto simp: valid_objs_def obj_at_def dest: bspec)
 
 lemma tcb_st_refs_of_simps[simp]:
  "tcb_st_refs_of (Running)               = {}"
@@ -2142,7 +2159,7 @@ text {* Lemmas about well-formed states *}
 lemma valid_pspaceI [intro]:
   "\<lbrakk> valid_objs s; pspace_aligned s; sym_refs (state_refs_of s); sym_refs (state_hyp_refs_of s);
      pspace_distinct s; if_live_then_nonz_cap s; zombies_final s;
-     valid_replies_pred valid_replies s \<rbrakk>
+     valid_replies s \<rbrakk>
      \<Longrightarrow> valid_pspace s"
   unfolding valid_pspace_def by simp
 
@@ -2151,7 +2168,7 @@ lemma valid_pspaceE [elim?]:
   and     rl: "\<lbrakk> valid_objs s; pspace_aligned s;
                  sym_refs (state_refs_of s);  sym_refs (state_hyp_refs_of s);
                  pspace_distinct s; if_live_then_nonz_cap s;
-                 zombies_final s; valid_replies_pred valid_replies s
+                 zombies_final s; valid_replies s
                \<rbrakk> \<Longrightarrow> R"
   shows    R
   using vp
@@ -3737,7 +3754,7 @@ lemma invs_hyp_sym_refs [elim!]: (* ARMHYP move and requalify *)
   by (simp add: invs_def valid_state_def valid_pspace_def)
 
 lemma invs_valid_replies[elim!]:
-  "invs s \<Longrightarrow> valid_replies_pred valid_replies s"
+  "invs s \<Longrightarrow> valid_replies s"
   by (simp add: invs_def valid_state_def valid_pspace_def)
 
 lemma invs_vobjs_strgs:

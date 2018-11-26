@@ -866,15 +866,15 @@ lemma sc_at_pred_n_eq_commute:
   by (intro ext) (auto simp: sc_at_pred_n_def obj_at_def)
 
 lemma valid_repliesD2:
-  "valid_replies with_sc blocked \<Longrightarrow> (r,sc) \<in> with_sc \<Longrightarrow> (r,sc') \<in> with_sc \<Longrightarrow> sc = sc'"
-  by (fastforce simp: valid_replies_def inj_on_def)
+  "valid_replies' with_sc blocked \<Longrightarrow> (r,sc) \<in> with_sc \<Longrightarrow> (r,sc') \<in> with_sc \<Longrightarrow> sc = sc'"
+  by (fastforce simp: valid_replies_defs inj_on_def)
 
 text \<open>Describing exactly how @{term reply_unlink_sc} updates @{term state_refs_of}
       is quite cumbersome, so instead we prove that it preserves @{term sym_refs}
       under some additional assumptions. Since @{term reply_unlink_sc} called in
       contexts where these conditions hold, this should be sufficient.\<close>
 lemma reply_unlink_sc_sym_refs:
-  "\<lbrace> \<lambda>s. valid_objs s \<and> valid_replies_pred valid_replies s \<and> sym_refs (state_refs_of s) \<rbrace>
+  "\<lbrace> \<lambda>s. valid_objs s \<and> valid_replies s \<and> sym_refs (state_refs_of s) \<rbrace>
     reply_unlink_sc scp rp
    \<lbrace> \<lambda>rv s. sym_refs (state_refs_of s) \<rbrace>"
   apply (clarsimp simp: reply_unlink_sc_def)
@@ -949,10 +949,10 @@ lemma replies_blocked_inj:
   by (fastforce simp: state_refs_of_def refs_of_rev split: option.splits)
 
 lemma replies_blocked_upd_tcb_st_valid_replies:
-  assumes "valid_replies with_sc blocked"
+  assumes "valid_replies' with_sc blocked"
   assumes "\<forall>r. r \<in> fst ` with_sc \<and> (r,t) \<in> blocked \<longrightarrow> st = BlockedOnReply (Some r)"
-  shows "valid_replies with_sc (replies_blocked_upd_tcb_st st t blocked)"
-  using assms by (fastforce simp: valid_replies_def replies_blocked_upd_tcb_st_def image_def)
+  shows "valid_replies' with_sc (replies_blocked_upd_tcb_st st t blocked)"
+  using assms by (fastforce simp: valid_replies_defs replies_blocked_upd_tcb_st_def image_def)
 
 text \<open>@{term reply_unlink_tcb} does not preserve @{term invs} when the
       associated thread is @{term BlockedOnReceive}, because it drops a
@@ -991,9 +991,9 @@ lemma reply_unlink_tcb_invs_BlockedOnReply:
      (fastforce simp: replies_with_sc_def replies_blocked_def image_iff)
 
 lemma reply_unlink_sc_valid_replies:
-  "\<lbrace> \<lambda>s. valid_replies_pred valid_replies s \<rbrace>
+  "\<lbrace> valid_replies \<rbrace>
     reply_unlink_sc scp rp
-   \<lbrace> \<lambda>rv. valid_replies_pred valid_replies \<rbrace>"
+   \<lbrace> \<lambda>rv. valid_replies \<rbrace>"
   apply (wpsimp simp: reply_unlink_sc_def wp: set_sc_replies_valid_replies get_simple_ko_wp)
   apply (intro conjI impI allI
          ; erule replies_with_sc_upd_replies_subset_valid_replies'
@@ -1115,14 +1115,14 @@ lemma sc_with_reply_NoneD:
 
 (* FIXME: move *)
 lemma valid_replies_sc_replies_unique:
-  assumes "valid_replies_pred valid_replies s"
+  assumes "valid_replies s"
   assumes "\<exists>sc. sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s"
   shows "\<exists>!sc. sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s"
-  using assms by (fastforce simp: valid_replies_def replies_with_sc_def inj_on_def)
+  using assms by (fastforce simp: valid_replies_defs replies_with_sc_def inj_on_def)
 
 (* FIXME: move *)
 lemma valid_replies_sc_with_reply_None:
-  assumes v: "valid_replies_pred valid_replies s"
+  assumes v: "valid_replies s"
   assumes n: "sc_with_reply r s = None"
   shows "\<not> sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s"
   using valid_replies_sc_replies_unique[OF v] sc_with_reply_NoneD[OF n] by auto
@@ -1379,7 +1379,7 @@ lemma suspend_invs_helper:
                   wp: sts_only_idle valid_irq_node_typ maybeM_wp
                       sts_valid_replies hoare_vcg_all_lift hoare_vcg_imp_lift')
   apply (simp cong: if_cong)
-  apply (rule_tac V="valid_replies (replies_with_sc s) (replies_blocked_upd_tcb_st Inactive t (replies_blocked s))" in revcut_rl
+  apply (rule_tac V="valid_replies' (replies_with_sc s) (replies_blocked_upd_tcb_st Inactive t (replies_blocked s))" in revcut_rl
          , clarsimp simp: pred_tcb_at_def obj_at_def)
    subgoal sorry
   apply (rule_tac V="t \<noteq> idle_thread s" in revcut_rl

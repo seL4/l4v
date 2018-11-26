@@ -2553,6 +2553,10 @@ lemma the_pred_option_None:
   "\<nexists>!x. P x \<Longrightarrow> the_pred_option P = None"
   by (simp add: the_pred_option_def)
 
+lemma the_pred_option_SomeD:
+  "the_pred_option P = Some x \<Longrightarrow> P x"
+  by (auto simp: the_pred_option_def theI split: if_splits)
+
 text \<open>Obtain the @{term hd} of a list if present, otherwise @{term None}\<close>
 definition hd_opt :: "'a list \<Rightarrow> 'a option"
   where

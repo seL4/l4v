@@ -875,22 +875,24 @@ lemma reply_remove_arch[wp]:
 
 lemma reply_unlink_sc_valid_objs [wp]:
   "\<lbrace>valid_objs\<rbrace> reply_unlink_sc scp rp \<lbrace>\<lambda>_. valid_objs\<rbrace>"
-  apply (wpsimp simp: reply_unlink_sc_def update_sk_obj_ref_def)
-       apply (wpsimp simp: set_simple_ko_def set_object_def get_simple_ko_def get_object_def
-                           get_sched_context_def)+
-(*
-  apply (fastforce simp: valid_obj_def valid_sched_context_def valid_reply_def valid_bound_obj_def
-                         obj_at_def is_ntfn_def is_tcb_def is_reply_def list_all_iff
-                  split: option.splits)
+  apply (simp add: reply_unlink_sc_def)
+  apply (wpsimp simp: reply_at_typ sc_at_typ
+                  wp: valid_sc_typ_list_all_reply[simplified reply_at_typ]
+                      hoare_vcg_imp_lift hoare_vcg_ex_lift
+                      hoare_vcg_all_lift get_simple_ko_wp)
+  apply (safe;
+         clarsimp elim!: obj_at_valid_objsE
+                  simp: valid_obj_def valid_reply_def typ_at_eq_kheap_obj
+                        valid_sched_context_def reply_at_typ
+                        list_all_iff
+                  dest!: set_takeWhileD)
+  apply (fastforce intro: list.set_sel | fastforce dest: distinct_tl)+
   done
-*) sorry
 
 lemma reply_unlink_sc_tcb_at [wp]:
   "\<lbrace>tcb_at t\<rbrace> reply_unlink_sc scp rp \<lbrace>\<lambda>_. tcb_at t\<rbrace>"
-(*
-  by (wpsimp simp: reply_unlink_sc_def update_sk_obj_ref_def get_simple_ko_def
-                   get_object_def get_sched_context_def)
-*) sorry
+  apply (simp add: reply_unlink_sc_def)
+  by (wpsimp simp: tcb_at_typ wp: get_simple_ko_wp)
 
 lemma reply_unlink_tcb_valid_objs [wp]:
   "\<lbrace>valid_objs\<rbrace>
@@ -974,19 +976,56 @@ lemma reply_remove_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> reply_remove r \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)
 
-lemma reply_unlink_sc_iflive [wp]:
-  "\<lbrace>if_live_then_nonz_cap\<rbrace> reply_unlink_sc sc_ptr reply_ptr \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
-  apply (wpsimp simp: reply_unlink_sc_def set_simple_ko_def set_object_def get_object_def
-                      get_simple_ko_def get_sched_context_def partial_inv_def)
-  apply (intro conjI)
-(*
-   apply (fastforce simp: live_def live_sc_def obj_at_def is_reply
-                   elim!: ex_cap_to_after_update
-                   dest!: if_live_then_nonz_capD2)
-  apply (fastforce simp: if_live_then_nonz_cap_def obj_at_def is_reply live_def live_reply_def
-                  elim!: ex_cap_to_after_update)
+lemma valid_replies_blocked_live:
+  "valid_replies s \<Longrightarrow> sym_refs (state_refs_of s)
+   \<Longrightarrow> ko_at (Reply reply) r s
+   \<Longrightarrow> sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc_ptr s
+   \<Longrightarrow> reply_tcb reply \<noteq> None"
+  apply (clarsimp simp: valid_replies_defs)
+  apply (drule subsetD, force)
+  apply (clarsimp dest!: sym_refs_st_tcb_atD simp: obj_at_def get_refs_def
+                  split:option.splits)
   done
-*) sorry
+
+lemma reply_tcb_live:
+  "reply_tcb reply \<noteq> None \<Longrightarrow> live (Reply reply)"
+  by (simp add: live_def live_reply_def)
+
+lemma valid_sched_object_reply_at:
+  "valid_objs s \<Longrightarrow> ko_at (SchedContext scb nb) sc_ptr s
+    \<Longrightarrow> reply_ptr \<in> set (sc_replies scb)
+    \<Longrightarrow> \<exists>reply. ko_at (Reply reply) reply_ptr s"
+  apply (clarsimp elim!: obj_at_valid_objsE
+                  simp: valid_obj_def typ_at_eq_kheap_obj
+                        valid_sched_context_def reply_at_typ
+                        list_all_iff)
+  apply (fastforce simp: obj_at_def)
+  done
+
+lemma reply_unlink_sc_iflive[wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> valid_replies s \<and> valid_objs s \<and>
+        sym_refs (state_refs_of s)\<rbrace>
+     reply_unlink_sc sc_ptr reply_ptr
+   \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
+  apply (simp add: reply_unlink_sc_def)
+  apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_disj_lift
+                    hoare_vcg_all_lift get_simple_ko_wp)
+  apply (safe; (drule(1) ko_at_obj_congD; clarsimp)+)
+      apply (fastforce simp: live_def live_sc_def obj_at_def
+                      dest!: if_live_then_nonz_capD2)
+     apply (fastforce simp: live_def obj_at_def live_reply_def
+                     dest!: if_live_then_nonz_capD2 valid_objs_ko_at)
+    apply (subgoal_tac "xa \<in> set (sc_replies scb)")
+     apply (fastforce simp: obj_at_def reply_tcb_live
+                     dest!: if_live_then_nonz_capD2 valid_sched_object_reply_at
+                            valid_replies_blocked_live
+                     intro: sc_replies_sc_at_ko_atI)
+    apply (fastforce intro: list.set_sel)
+   apply (fastforce simp: live_def live_reply_def obj_at_def
+                   dest!: if_live_then_nonz_capD2 valid_objs_ko_at)
+  apply (fastforce simp: live_def live_sc_def obj_at_def
+                  dest!: if_live_then_nonz_capD2)
+  done
 
 lemma reply_unlink_tcb_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace> reply_unlink_tcb reply_ptr \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
@@ -998,23 +1037,29 @@ lemma reply_unlink_tcb_iflive[wp]:
 crunch ex_nonz_cap_to[wp]: reply_unlink_tcb, reply_unlink_sc "ex_nonz_cap_to t"
   (wp: hoare_drop_imps)
 
+lemma sc_with_reply_SomeD:
+  "sc_with_reply r s = Some x
+   \<Longrightarrow> \<exists>sc n. kheap s x = Some (SchedContext sc n) \<and> r \<in> set (sc_replies sc)"
+  apply (clarsimp simp: sc_with_reply_def split: if_splits)
+  apply (clarsimp dest!: the_pred_option_SomeD)
+  done
+
 lemma reply_remove_iflive [wp]:
   "\<lbrace>if_live_then_nonz_cap and ex_nonz_cap_to rp
     and (\<lambda>s. reply_tcb_reply_at (\<lambda>p. \<forall>tp. p = (Some tp) \<longrightarrow> ex_nonz_cap_to tp s) rp s)
-    and (\<lambda>s. reply_sc_reply_at (\<lambda>p. \<forall>scp. p = (Some scp) \<longrightarrow> ex_nonz_cap_to scp s) rp s)
-    and valid_objs\<rbrace>
+    and valid_objs and valid_replies and sym_refs o state_refs_of\<rbrace>
    reply_remove rp
    \<lbrace>\<lambda>_ s. if_live_then_nonz_cap s\<rbrace>"
   apply (simp add: reply_remove_def)
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (case_tac "reply_tcb reply = None")
    apply (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2)
-  apply (case_tac "reply_sc reply = None")
-   apply (rule hoare_seq_ext [OF _ assert_opt_inv])
-   apply (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2)
-  apply (wpsimp simp: obj_at_def reply_sc_reply_at_def reply_tcb_reply_at_def
+  apply (wpsimp simp: obj_at_def reply_tcb_reply_at_def
                   wp: hoare_drop_imp hoare_vcg_if_lift2)
-  sorry
+  apply (fastforce simp: live_def live_sc_def
+                  dest!: sc_with_reply_SomeD
+                   elim: if_live_then_nonz_capD2)
+  done
 
 lemma reply_remove_valid_ioc[wp]:
       "\<lbrace>valid_ioc\<rbrace> reply_remove r

@@ -1192,13 +1192,13 @@ lemma replies_with_sc_upd_replies_subset:
   using assms by (auto simp: replies_with_sc_upd_replies_def)
 
 lemma replies_with_sc_upd_replies_subset_valid_replies:
-  assumes rep: "valid_replies rs_with_sc rs_blocked"
+  assumes rep: "valid_replies' rs_with_sc rs_blocked"
   assumes sub: "set rs \<subseteq> {r. (r,sc_ptr) \<in> rs_with_sc}"
-  shows "valid_replies (replies_with_sc_upd_replies rs sc_ptr rs_with_sc) rs_blocked"
+  shows "valid_replies' (replies_with_sc_upd_replies rs sc_ptr rs_with_sc) rs_blocked"
 proof -
   note subs = replies_with_sc_upd_replies_subset[OF sub]
   note subf = subs[THEN image_mono[where f=fst], THEN subset_trans]
-  show ?thesis using rep by (clarsimp simp: valid_replies_def subf inj_on_subset[OF _ subs])
+  show ?thesis using rep by (clarsimp simp: valid_replies_defs subf inj_on_subset[OF _ subs])
 qed
 
 lemma sc_replies_sc_at_subset_replies_with_sc:
@@ -1219,7 +1219,7 @@ lemmas replies_with_sc_upd_replies_nil_valid_replies =
   replies_with_sc_upd_replies_subset_valid_replies[where rs="[]", simplified]
 
 lemma set_sc_replies_nil_valid_replies[wp]:
-  "set_sc_obj_ref sc_replies_update sc_ptr [] \<lbrace> valid_replies_pred valid_replies \<rbrace>"
+  "set_sc_obj_ref sc_replies_update sc_ptr [] \<lbrace> valid_replies \<rbrace>"
   by (wpsimp wp: set_sc_replies_valid_replies
            simp: replies_with_sc_upd_replies_subset_valid_replies)
 
