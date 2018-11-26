@@ -839,6 +839,10 @@ lemma  cap_has_object_default_cap [simp]:
   "type \<noteq> IRQNodeType \<Longrightarrow> cap_has_object (default_cap type ids sz dev)"
   by (clarsimp simp: default_cap_def cap_has_object_def split: cdl_object_type.splits)
 
+lemma all_cdl_rights_UNIV [simp]:
+  "all_cdl_rights = UNIV"
+  by (fastforce intro: rights.exhaust simp: all_cdl_rights_def)
+
 lemma cap_rights_default_cap_cnode [simp]:
   "cap_rights (default_cap CNodeType ids sz dev) = UNIV"
   by (clarsimp simp: cap_rights_def default_cap_def)

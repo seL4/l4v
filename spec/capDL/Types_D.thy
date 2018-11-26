@@ -394,6 +394,9 @@ where
     | EndpointCap f1 _ f3      \<Rightarrow> EndpointCap f1 x f3
     | _ \<Rightarrow> c"
 
+definition all_cdl_rights :: "cdl_right set" where
+  "all_cdl_rights = {Read, Write, Grant}"
+
 definition
   cap_rights :: "cdl_cap \<Rightarrow> cdl_right set"
 where
@@ -401,7 +404,7 @@ where
       FrameCap _ _ x _ _ _ \<Rightarrow> x
     | NotificationCap _ _ x \<Rightarrow> x
     | EndpointCap _ _ x \<Rightarrow> x
-    | _ \<Rightarrow> UNIV"
+    | _ \<Rightarrow> all_cdl_rights"
 
 definition
   update_cap_rights :: "cdl_right set \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"

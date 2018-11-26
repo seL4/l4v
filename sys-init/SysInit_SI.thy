@@ -158,7 +158,7 @@ definition duplicate_cap :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow
                               \<Rightarrow> (cdl_object_id \<times> cdl_cptr) \<Rightarrow> unit u_monad"
 where
   "duplicate_cap spec orig_caps \<equiv> \<lambda>(obj_id, free_slot). do
-    rights     \<leftarrow> return $ UNIV;
+    rights     \<leftarrow> return $ all_cdl_rights;
 
     dest_root  \<leftarrow> return seL4_CapInitThreadCNode;
     dest_index \<leftarrow> return $ free_slot;
