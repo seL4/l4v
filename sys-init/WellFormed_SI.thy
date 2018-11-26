@@ -439,9 +439,8 @@ lemma well_formed_finite_object_slots:
 
 lemma well_formed_distinct_slots_of_list [elim!]:
   "well_formed spec \<Longrightarrow> distinct (slots_of_list spec obj_id)"
-  apply (drule_tac obj_id=obj_id in well_formed_finite)
-  apply (clarsimp simp: slots_of_list_def)
-  done
+  by (clarsimp simp: slots_of_list_def object_slots_list_def
+               split: option.splits cdl_object.splits)
 
 lemma well_formed_object_size_bits:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj\<rbrakk>
@@ -585,9 +584,22 @@ lemma well_formed_cnode_object_size_bits_eq:
   apply (clarsimp simp: is_cnode_def opt_object_def well_formed_cap_to_object_def)
   done
 
+lemma slots_of_set_helper: "\<lbrakk>{0..n :: nat} = dom f; f x \<noteq> None; m = n + 1\<rbrakk> \<Longrightarrow> x < m"
+  by (subgoal_tac "x \<le> n"; fastforce)
+
 lemma slots_of_set [simp]:
-  "well_formed spec \<Longrightarrow> set (slots_of_list spec obj) = dom (slots_of obj spec)"
-  by (clarsimp simp: slots_of_list_def well_formed_finite)
+  "well_formed spec \<Longrightarrow> set (slots_of_list spec obj_id) = dom (slots_of obj_id spec)"
+  apply (clarsimp simp: slots_of_list_def slots_of_def opt_object_def well_formed_def
+                  split: option.splits)
+  apply (rename_tac obj)
+  apply (erule_tac x=obj_id in allE)
+  apply (erule_tac x=obj in allE)
+  apply (intro set_eqI iffI)
+  by (fastforce simp: object_default_state_def2 object_slots_def object_slots_list_def
+                      default_tcb_def empty_cnode_def empty_irq_node_def empty_cap_map_def
+                      pt_size_def pd_size_def tcb_boundntfn_slot_def
+                elim: slots_of_set_helper
+                split: cdl_object.splits)+
 
 lemma well_formed_well_formed_tcb:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj\<rbrakk>

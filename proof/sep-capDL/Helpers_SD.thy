@@ -883,12 +883,27 @@ lemma is_cap_NullCap [simp]:
   "\<not> is_irqhandler_cap NullCap"
   by (clarsimp simp: cap_type_def is_fake_pt_cap_def)+
 
+definition
+  object_slots_list :: "cdl_object \<Rightarrow> cdl_cnode_index list"
+where
+  "object_slots_list obj \<equiv> case obj of
+    PageDirectory _ \<Rightarrow> [0..<2^pd_size]
+  | PageTable _ \<Rightarrow> [0..<2^pt_size]
+  | AsidPool _ \<Rightarrow> [0..<2^asid_low_bits]
+  | CNode cnode \<Rightarrow> [0..<2^(cdl_cnode_size_bits cnode)]
+  | Tcb _ \<Rightarrow> [0..<tcb_boundntfn_slot + 1]
+  | IRQNode _ \<Rightarrow> [0]
+  | _ \<Rightarrow> []"
+
 (* The slots of an object, returns an empty list for non-existing objects
    or objects that do not have caps *)
 definition
   slots_of_list :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow> cdl_cnode_index list"
 where
-  "slots_of_list spec obj_id \<equiv> sorted_list_of_set $ dom $ slots_of obj_id spec"
+  "slots_of_list spec obj_id \<equiv>
+     case cdl_objects spec obj_id of
+       Some obj \<Rightarrow> object_slots_list obj
+     | None \<Rightarrow> []"
 
 (* Encode the guard and guard size for passing to the kernel. *)
 definition guard_as_rawdata :: "cdl_cap \<Rightarrow> cdl_raw_capdata"
