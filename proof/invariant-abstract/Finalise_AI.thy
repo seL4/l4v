@@ -420,8 +420,8 @@ crunch caps_of_state[wp]: tcb_release_remove "\<lambda>s. P (caps_of_state s)"
 
 crunch caps_of_state[wp]:
   unbind_notification, sched_context_unbind_ntfn, sched_context_maybe_unbind_ntfn,
-  unbind_maybe_notification, unbind_from_sc,
-  sched_context_unbind_yield_from, sched_context_clear_replies, update_sk_obj_ref "\<lambda>s. P (caps_of_state s)"
+  unbind_maybe_notification, unbind_from_sc, sched_context_unbind_tcb,
+  sched_context_unbind_yield_from, update_sk_obj_ref "\<lambda>s. P (caps_of_state s)"
   (wp: ARM.set_object_caps_of_state crunch_wps maybeM_inv
    ignore: set_object set_tcb_obj_ref tcb_release_remove)
 
@@ -855,12 +855,7 @@ lemma list_all_remove1: "list_all P ls \<Longrightarrow> list_all P (remove1 x l
 
 declare reply_unlink_sc_invs[wp]
 
-lemma  sched_context_clear_replies_invs[wp]:
-  "\<lbrace>invs\<rbrace> sched_context_clear_replies scptr \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (clarsimp simp: sched_context_clear_replies_def liftM_def)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  by (wpsimp wp: mapM_x_wp' reply_unlink_sc_invs)
-
+(*
 lemma  sched_context_clear_replies_sc_yf[wp]:
   "\<lbrace>sc_yf_sc_at P p\<rbrace> sched_context_clear_replies scptr \<lbrace>\<lambda>rv. sc_yf_sc_at P p\<rbrace>"
   apply (clarsimp simp: sched_context_clear_replies_def liftM_def)
@@ -883,7 +878,7 @@ lemma  sched_context_clear_replies_sc_yf_helper[wp]:
       update_sched_context_def set_object_def)
    apply (clarsimp simp: sc_yf_sc_at_def obj_at_def pred_tcb_at_def split: if_split_asm split del: if_split)
 by (case_tac "p=scptr"; fastforce) clarsimp
-
+*)
 lemma  sched_context_clear_ntfn_sc_yf_helper[wp]:
   "\<lbrace>\<lambda>s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
                             st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>
@@ -963,11 +958,15 @@ lemma sched_context_unbind_all_tcbs_sc_yf_helper[wp]:
 
 lemma (in Finalise_AI_1) fast_finalise_invs[wp]:
   "\<lbrace>invs\<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (cases cap;
+  apply (cases cap;
      wpsimp simp: wp: cancel_all_ipc_invs cancel_all_signals_invs
       unbind_maybe_notification_invs sched_context_maybe_unbind_ntfn_invs
       sched_context_unbind_yield_from_invs get_simple_ko_wp
-      sched_context_clear_replies_invs)
+      reply_remove_invs gts_wp)
+  apply (frule invs_sym_refs)
+  apply (frule (1) sym_refs_ko_atD)
+  by (clarsimp simp: get_refs_def2 obj_at_def pred_tcb_at_def reply_tcb_reply_at_def
+               dest!: sym[where t="tcb_state _"])
 
 lemma cnode_at_unlive[elim!]:
   "s \<turnstile> cap.CNodeCap ptr bits gd \<Longrightarrow> obj_at (\<lambda>ko. \<not> live ko) ptr s"
@@ -1021,7 +1020,8 @@ lemma sched_context_unbind_tcb_irq_node[wp]:
      sched_context_unbind_tcb param_a \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
   by (wpsimp simp: sched_context_unbind_tcb_def wp: get_sched_context_wp)
 
-crunch irq_node[wp]: cancel_all_signals, fast_finalise, unbind_from_sc "\<lambda>s. P (interrupt_irq_node s)"
+crunch irq_node[wp]: cancel_all_signals, fast_finalise, unbind_from_sc,reply_unlink_sc
+   "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps maybeM_inv simp: crunch_simps unless_def)
 
 crunch irq_node[wp]: cap_delete_one "\<lambda>s. P (interrupt_irq_node s)"
@@ -1111,13 +1111,14 @@ lemma fast_finalise_lift:
   and unbind2: "\<And>r. \<lbrace>P\<rbrace> unbind_maybe_notification r \<lbrace> \<lambda>r s. P s\<rbrace>"
   and unbind3:"\<And>r. \<lbrace>P\<rbrace> sched_context_maybe_unbind_ntfn r \<lbrace> \<lambda>r s. P s\<rbrace>"
   and unbind4:"\<And>r. \<lbrace>P\<rbrace> sched_context_unbind_all_tcbs r \<lbrace> \<lambda>r s. P s\<rbrace>"
-  and unbind5:"\<And>r. \<lbrace>P\<rbrace> sched_context_clear_replies r \<lbrace> \<lambda>r s. P s\<rbrace>"
+  and unbind5:"\<And>r. \<lbrace>P\<rbrace> reply_remove r \<lbrace> \<lambda>r s. P s\<rbrace>"
   and unbind6:"\<And>r. \<lbrace>P\<rbrace> sched_context_unbind_ntfn r \<lbrace> \<lambda>r s. P s\<rbrace>"
   and unbind7:"\<And>r. \<lbrace>P\<rbrace> sched_context_unbind_yield_from r \<lbrace> \<lambda>r s. P s\<rbrace>"
+  and unbind8:"\<And>r. \<lbrace>P\<rbrace> sched_context_unbind_reply r \<lbrace> \<lambda>r s. P s\<rbrace>"
   shows "\<lbrace>P\<rbrace> fast_finalise cap final \<lbrace>\<lambda>r s. P s\<rbrace>"
   apply (case_tac cap,simp_all)
   apply (wpsimp wp: ep ntfn reply reply2 unbind unbind2 unbind3 unbind4 unbind5
-                        unbind6 unbind7 hoare_drop_imps get_simple_ko_wp)+
+                        unbind6 unbind7 unbind8 hoare_drop_imps get_simple_ko_wp gts_wp)+
   done
 
 lemma reply_unlink_sc_cte_wp_at:
@@ -1125,7 +1126,7 @@ lemma reply_unlink_sc_cte_wp_at:
   apply (simp add: reply_unlink_sc_def liftM_def)
   apply (wp cap_delete_one_caps_of_state get_sched_context_wp get_simple_ko_wp)
   apply clarsimp
-  done
+  sorry
 
 crunch cte_wp_at[wp]: reply_unlink_tcb,unbind_from_sc "cte_wp_at P p"
   (wp: maybeM_inv hoare_drop_imp ignore: get_simple_ko)
@@ -1157,7 +1158,7 @@ lemma (in Finalise_AI_1) finalise_cap_equal_cap[wp]:
    \<lbrace>\<lambda>rv. cte_wp_at ((=) cap) sl :: 'a state \<Rightarrow> bool\<rbrace>"
   supply if_cong[cong]
   apply (cases cap, simp_all split del: if_split)
-    apply (wp suspend_cte_wp_at_preserved
+    apply (wp suspend_cte_wp_at_preserved gts_wp get_simple_ko_wp
                  deleting_irq_handler_cte_preserved prepare_thread_delete_cte_wp_at
                  hoare_drop_imp thread_set_cte_wp_at_trivial reply_unlink_sc_cte_wp_at
                | clarsimp simp: can_fast_finalise_def unbind_maybe_notification_def
@@ -1281,9 +1282,9 @@ lemmas sched_context_unbind_yield_from_cte_irq_node[wp]
     = hoare_use_eq_irq_node [OF sched_context_unbind_yield_from_irq_node
                                 sched_context_unbind_yield_from_cte_wp_at]
 
-lemmas sched_context_clear_replies_cte_irq_node[wp]
-    = hoare_use_eq_irq_node [OF sched_context_clear_replies_irq_node
-                                sched_context_clear_replies_cte_wp_at]
+lemmas sched_context_unbind_reply_cte_irq_node[wp]
+    = hoare_use_eq_irq_node [OF sched_context_unbind_reply_irq_node
+                                sched_context_unbind_reply_cte_wp_at]
 
 lemmas sched_context_unbind_all_tcbs_cte_irq_node[wp]
     = hoare_use_eq_irq_node [OF sched_context_unbind_all_tcbs_irq_node
@@ -1301,6 +1302,10 @@ lemmas (in Finalise_AI_3) reply_unlink_sc_cte_preserved_irqn
   = hoare_use_eq_irq_node [OF reply_unlink_sc_irq_node
                               reply_unlink_sc_cte_wp_at]
 
+lemmas (in Finalise_AI_3) reply_remove_cte_preserved_irqn
+  = hoare_use_eq_irq_node [OF reply_remove_irq_node
+                              reply_remove_cte_wp_at]
+
 lemmas (in Finalise_AI_3) prepare_thread_delete_cte_preserved_irqn
   = hoare_use_eq_irq_node [OF prepare_thread_delete_irq_node
                               prepare_thread_delete_cte_wp_at]
@@ -1317,11 +1322,12 @@ lemma (in Finalise_AI_3) finalise_cap_cte_cap_to[wp]:
   "\<lbrace>ex_cte_cap_wp_to P sl :: 'a state \<Rightarrow> bool\<rbrace> finalise_cap cap fin \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P sl\<rbrace>"
   supply if_cong[cong]
   apply (cases cap, simp_all add: ex_cte_cap_wp_to_def split del: if_split)
-       apply (wp hoare_vcg_ex_lift hoare_drop_imps
+       apply (wp hoare_vcg_ex_lift hoare_drop_imps gts_wp hoare_vcg_all_lift
                  prepare_thread_delete_cte_preserved_irqn
                  deleting_irq_handler_cte_preserved_irqn
                  reply_unlink_sc_cte_preserved_irqn
                  cancel_ipc_cte_preserved_irqn
+                 reply_remove_cte_preserved_irqn
                  | simp
                  | clarsimp simp: can_fast_finalise_def
                            split: cap.split_asm | wpc)+
@@ -1333,8 +1339,8 @@ lemma (in Finalise_AI_3) finalise_cap_zombie_cap[wp]:
    \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>cp. is_zombie cp \<and> P cp) sl\<rbrace>"
   apply (cases cap, simp_all split del: if_split)
        apply (wp deleting_irq_handler_cte_preserved cancel_ipc_cte_preserved_irqn
-                 reply_unlink_sc_cte_wp_at get_simple_ko_wp
-               | clarsimp simp: is_cap_simps can_fast_finalise_def)+
+                 reply_unlink_sc_cte_wp_at hoare_drop_imps gts_wp get_simple_ko_wp
+               | clarsimp simp: is_cap_simps can_fast_finalise_def | wpc)+
   done
 
 lemma reply_remove_tcb_st_tcb_at_general:
@@ -1348,7 +1354,7 @@ lemma reply_remove_tcb_st_tcb_at_general:
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (case_tac ts; clarsimp simp: assert_opt_def)
   apply (rename_tac reply)
-  apply (wpsimp wp: reply_remove_st_tcb_at)
+  apply (wpsimp wp: reply_remove_st_tcb_at reply_unlink_tcb_st_tcb_at)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_reply)
   apply (clarsimp simp: reply_tcb_reply_at_def obj_at_def pred_tcb_at_def is_reply)
   done
@@ -1391,7 +1397,7 @@ lemma fast_finalise_st_tcb_at:
   apply (rule hoare_gen_asm)
   apply (clarsimp)
   apply (cases cap; (wpsimp wp: cancel_all_ipc_st_tcb_at cancel_all_signals_st_tcb_at
-                                cancel_ipc_st_tcb_at get_simple_ko_wp
+                                cancel_ipc_st_tcb_at get_simple_ko_wp gts_wp
                          simp: is_reply_cap_def cong: if_cong | assumption)+)
   done
 
