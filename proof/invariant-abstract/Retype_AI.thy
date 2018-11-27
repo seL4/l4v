@@ -1731,11 +1731,33 @@ lemma zombies: "zombies_final s'"
   by (clarsimp simp: final_retype is_zombie_def cte_retype not_final_NullCap
               elim!: zombies_finalD [OF _ zombies_s])
 
+lemma replies_with_sc:
+  "replies_with_sc s' \<subseteq> replies_with_sc s"
+  unfolding s'_def ps_def
+  by (auto simp: replies_with_sc_def sc_at_pred_def obj_at_def
+                 default_object_def tyunt default_sched_context_def
+          split: apiobject_type.splits)
+
+lemma fst_replies_with_sc:
+  "fst ` replies_with_sc s' \<subseteq> fst ` replies_with_sc s"
+  unfolding s'_def ps_def
+  by (auto simp: replies_with_sc_def sc_at_pred_def obj_at_def
+                 default_object_def tyunt default_sched_context_def
+          split: apiobject_type.splits)
+
+lemma fst_replies_blocked:
+  "fst ` replies_blocked s \<subseteq> fst ` replies_blocked s'"
+  by (auto intro!: pred_tcb_at_pres simp: replies_blocked_def image_Collect)
+
 lemma valid_replies:
   "valid_replies s'"
-  by (rule valid_replies_state_refs_eq[THEN iffD2]
-      , rule refs_eq
-      , rule valid_pspaceE[OF vp])
+  apply (rule valid_pspaceE[OF vp])
+  apply (clarsimp simp: valid_replies'_def)
+  apply (rule conjI)
+   apply (rule subset_trans[OF fst_replies_with_sc])
+   apply (erule subset_trans[OF _ fst_replies_blocked])
+  apply (clarsimp simp: inj_on_subset[OF _ replies_with_sc])
+  done
 
 end
 

@@ -1306,8 +1306,7 @@ lemma invs_irq_state_independent:
       valid_asid_map_def vspace_at_asid_def
       pspace_in_kernel_window_def cap_refs_in_kernel_window_def
       cur_tcb_def sym_refs_def state_refs_of_def
-      swp_def valid_irq_states_def
-      valid_replies_kheap_eq[of "machine_state_update _ s" s])
+      swp_def valid_irq_states_def valid_replies_pred_pspaceI)
 
 crunch irq_masks_inv[wp]: cleanByVA_PoU, storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
   (ignore: cacheRangeOp wp: crunch_wps)
