@@ -439,19 +439,29 @@ lemma not_in_ready_q_simp[iff]: "\<not> in_ready_q t s \<longleftrightarrow> not
 
 (*
 definition not_queued_2 where
-  "not_queued_2 qs t \<equiv> \<forall>d p. t \<notin> set (qs d p)"
+  "not_queued_2 qs t \<equiv> \<forall>d p. \<not> in_queue_2 (qs d p) t" (* we could do without this *)
 
 abbreviation not_queued :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "not_queued t s \<equiv> not_queued_2 (ready_queues s) t"
+(* or alternatively:
+  "not_queued t s \<equiv> \<forall>d p. \<not> in_queue_2 ((ready_queues s) d p) t"
+  "not_queued t s \<equiv> \<not> in_ready_q t s"
+*)
 
-definition not_in_release_q_2 :: "'c list \<Rightarrow> 'c \<Rightarrow> bool" where
-  "not_in_release_q_2 q t \<equiv> t \<notin> set q"
+definition not_in_release_q_2 where
+  "not_in_release_q_2 qs t \<equiv> \<not> in_queue_2 qs t" (* we could do without this *)
 
 abbreviation not_in_release_q :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "not_in_release_q t s \<equiv> not_in_release_q_2 (release_queue s) t"
 
-lemmas not_in_release_q_def = not_in_release_q_2_def
+lemmas not_queued_def = not_queued_2_def[simplified in_queue_2_def]
 *)
+
+lemma not_in_release_q_simp[iff]: "\<not> in_release_q t s \<longleftrightarrow> not_in_release_q t s"
+  by (clarsimp simp: in_release_q_def not_in_release_q_def)
+
+lemma not_in_ready_q_simp[iff]: "\<not> in_ready_q t s \<longleftrightarrow> not_queued t s"
+  by (clarsimp simp: in_ready_q_def not_queued_def)
 
 definition valid_ready_qs_2 where
   "valid_ready_qs_2 queues curtime kh \<equiv> (\<forall>d p.

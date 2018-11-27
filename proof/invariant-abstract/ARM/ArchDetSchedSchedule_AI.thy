@@ -18,7 +18,7 @@ named_theorems DetSchedSchedule_AI_assms
 
 crunch valid_ready_qs [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers valid_ready_qs
-  (simp: whenE_def ignore: set_tcb_queue tcb_sched_action clearExMonitor wp: hoare_drop_imp)
+  (simp: whenE_def ignore: set_tcb_queue tcb_sched_action clearExMonitor wp: hoare_drop_imp tcb_sched_action_dequeue_valid_ready_qs)
 
 crunch valid_release_q [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers valid_release_q
