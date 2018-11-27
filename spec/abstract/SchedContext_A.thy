@@ -556,7 +556,8 @@ where
        set_tcb_obj_ref tcb_yield_to_update thread None
      od) yt_opt;
      set_thread_state thread Inactive;
-     tcb_sched_action (tcb_sched_dequeue) thread
+     tcb_sched_action (tcb_sched_dequeue) thread;
+     tcb_release_remove thread
    od"
 
 end
