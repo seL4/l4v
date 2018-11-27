@@ -535,6 +535,7 @@ lemma cancel_ipc_bound_sc_tcb_at_None:
              | wp_once )+
   sorry (* FIXME: not actually true *)
 
+crunch obj_at_not_live[wp]: tcb_release_remove "obj_at (Not \<circ> live) t"
 
 lemma suspend_unlive':
   "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t\<rbrace>
@@ -542,7 +543,7 @@ lemma suspend_unlive':
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
   unfolding suspend_def
   apply (wpsimp wp: get_object_wp suspend_unlive_helper set_thread_state_not_live gbyt_bound_tcb
-                    cancel_ipc_bound_sc_tcb_at_None
+                    cancel_ipc_bound_sc_tcb_at_None tcb_release_remove_obj_at_not_live0
             wp_del: maybeM_wp)
   done
 

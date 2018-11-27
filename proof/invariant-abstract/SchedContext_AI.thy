@@ -1153,6 +1153,10 @@ lemma invs_ready_queues_update[simp]:
   "invs (ready_queues_update f s) = invs s"
   by (simp add: invs_def valid_state_def)
 
+lemma invs_release_queue_update[simp]:
+  "invs (release_queue_update f s) = invs s"
+  by (simp add: invs_def valid_state_def)
+
 (* FIXME: move *)
 lemma invs_scheduler_action_update[simp]:
   "invs (scheduler_action_update f s) = invs s"
@@ -1161,6 +1165,11 @@ lemma invs_scheduler_action_update[simp]:
 lemma tcb_sched_action_invs[wp]:
   "\<lbrace>invs\<rbrace> tcb_sched_action action thread \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
+             wp: hoare_drop_imps hoare_vcg_all_lift)
+
+lemma tcb_release_remove_invs[wp]:
+  "\<lbrace>invs\<rbrace> tcb_release_remove thread \<lbrace>\<lambda>rv. invs\<rbrace>"
+  by (wpsimp simp: tcb_release_remove_def tcb_sched_dequeue_def
              wp: hoare_drop_imps hoare_vcg_all_lift)
 
 lemma set_scheduler_action_invs[wp]:

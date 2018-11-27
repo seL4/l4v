@@ -1250,14 +1250,21 @@ lemma sym_refs_bound_yt_tcb_at:
    apply (auto simp: get_refs_def2)
   done
 
+crunches tcb_release_remove
+  for valid_ioports[wp]: valid_ioports
+
+find_theorems tcb_sched_action invs
+
 lemma suspend_invs_helper:
   "\<lbrace>invs and st_tcb_at (\<lambda>st. st \<in> {Running, Inactive, Restart, IdleThreadState}) t\<rbrace>
    do yt_opt <- get_tcb_obj_ref tcb_yield_to t;
-      _ <- maybeM (\<lambda>sc_ptr. do y <- set_sc_obj_ref sc_yield_from_update sc_ptr None;
-                               set_tcb_obj_ref tcb_yield_to_update t None
-                            od) yt_opt;
-      _ <- set_thread_state t Inactive;
-      tcb_sched_action tcb_sched_dequeue t
+      y <- maybeM (\<lambda>sc_ptr. do y <- set_sc_obj_ref sc_yield_from_update sc_ptr None;
+                                set_tcb_obj_ref tcb_yield_to_update t None
+                             od)
+            yt_opt;
+      y <- set_thread_state t Inactive;
+      y <- tcb_sched_action tcb_sched_dequeue t;
+      tcb_release_remove t
    od
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply if_split[split del]
@@ -1348,7 +1355,7 @@ lemma suspend_invs:
   "\<lbrace>invs\<rbrace> suspend t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: suspend_def)
   apply (wp suspend_invs_helper)
-   apply (clarsimp simp: cancel_ipc_def) thm gts_wp
+   apply (clarsimp simp: cancel_ipc_def)
    apply (wpsimp wp: gts_wp
          | (strengthen st_tcb_weakenE[mk_strg I], wp_once))+
   apply (auto elim: st_tcb_weakenE)
@@ -1567,14 +1574,16 @@ crunch typ_at[wp]: cancel_ipc, reply_cancel_ipc "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps hoare_vcg_if_splitE select_wp maybeM_inv
      simp: crunch_simps unless_def)
 
+crunch obj_at_not_live0[wp]: tcb_release_remove "obj_at (Not \<circ> live0) t"
+
 lemma suspend_unlive:
   "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t
     and st_tcb_at (Not \<circ> awaiting_reply) t\<rbrace>
    suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live0) t\<rbrace>"
   unfolding suspend_def
-  apply (wpsimp simp: suspend_def wp: set_thread_state_not_live0 suspend_unlive_helper gbn_wp)
-    apply (simp add: cancel_ipc_def obj_at_pred_tcb_at_peel)
+  apply_trace (wpsimp simp: suspend_def wp: set_thread_state_not_live0 suspend_unlive_helper gbn_wp)
+    apply (simp add: cancel_ipc_def obj_at_pred_tcb_at_peel)                       
    apply (subst obj_at_pred_tcb_at_peel)+
    apply (wpsimp wp: blocked_cancel_ipc_bound_sc_tcb_at)
       apply (rule hoare_pre_cont)
