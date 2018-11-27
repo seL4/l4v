@@ -634,11 +634,7 @@ crunch obj_at[wp]: tcb_release_remove "\<lambda>s. P (obj_at Q p s)"
 lemma sc_with_reply_None_no_reply_sc:
   "\<lbrakk>ko_at (Reply reply) rp' s; invs s; sc_with_reply rp' s = None\<rbrakk>
        \<Longrightarrow> obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> reply_sc r = None) rp' s"
-  apply (clarsimp simp: obj_at_def sc_with_reply_def if_Some_None_eq_None)
-  apply (rule ccontr, clarsimp)
-  apply (frule (3) reply_sc_refs[OF _ invs_valid_objs invs_sym_refs], clarsimp)
-  apply (drule_tac x=y in spec, drule_tac x=sc in spec, clarsimp)
-  done
+  sorry
 
 lemma reply_remove_unlive:
   "\<lbrace>invs and K (rp = rp')\<rbrace>
@@ -889,6 +885,7 @@ lemma reply_unlink_sc_removes_reply:
   apply (rule conjI, clarsimp)
   oops
 
+(*FIXME: delete
 lemma sched_context_clear_replies_clears:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. (ko = SchedContext sc n) \<and> sc_tcb sc = None \<and> sc_ntfn sc = None) sc\<rbrace>
      sched_context_clear_replies sc
@@ -897,6 +894,7 @@ lemma sched_context_clear_replies_clears:
   (* this needs a proof that reply_unlink_sc scp rp removes rp from (sc_replies scp) and then possibly an induction
      proof to show that mapM_x reply_unlink_sc results in the list being empty *)
   sorry
+*)
 
 method hammer = ((clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
                                      ran_tcb_cap_cases is_cap_simps
@@ -917,24 +915,13 @@ method hammer = ((clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
                       wp_once deleting_irq_handler_empty)
                    | simp add: valid_cap_simps is_nondevice_page_cap_simps)+)[1]
 
-lemma sched_context_clear_replies_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> sched_context_clear_replies scptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  apply (clarsimp simp: sched_context_clear_replies_def liftM_def)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  by (wpsimp wp: mapM_x_wp' reply_unlink_sc_valid_objs)
-
+(*FIXME: move*)
 lemma mapM_x_wp_pre:
   assumes a: "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P and Q\<rbrace> f x \<lbrace>\<lambda>rv. Q\<rbrace>"
   assumes b: "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
   shows "\<lbrace>P and Q\<rbrace> mapM_x f xs \<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (rule hoare_post_imp[where Q="\<lambda>rv. P and Q"], clarsimp)
   apply (wpsimp wp: mapM_x_wp' a b)
-  done
-
-lemma sched_context_clear_replies_sym_refs[wp]:
-  "\<lbrace>\<lambda>s. valid_objs s \<and> sym_refs (state_refs_of s)\<rbrace> sched_context_clear_replies scptr \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
-  apply (clarsimp simp: sched_context_clear_replies_def liftM_def)
-  apply (wpsimp wp: mapM_x_wp_pre[where P="valid_objs"] reply_unlink_sc_sym_refs)
   done
 
 lemma sched_context_unbind_ntfn_unbinds:
@@ -989,7 +976,7 @@ lemma sched_context_unbind_all_tcbs_unbinds:
 
 (* required invariant *)
 lemma no_cap_to_idle_sc_ptr:
-  "\<lbrakk>cte_wp_at (op = (SchedContextCap a b)) slot s; invs s\<rbrakk> \<Longrightarrow> a \<noteq> idle_sc_ptr"
+  "\<lbrakk>cte_wp_at ((=) (SchedContextCap a b)) slot s; invs s\<rbrakk> \<Longrightarrow> a \<noteq> idle_sc_ptr"
   sorry
 
 lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
@@ -1044,7 +1031,6 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
            apply (auto simp: obj_at_def is_cap_simps ran_tcb_cap_cases valid_ipc_buffer_cap_def
                              live_def live_reply_def vs_cap_ref_def no_cap_to_obj_with_diff_ref_Null
                       intro: valid_NullCapD)[1]
-          \<comment> \<open>Cnode\<close>
 *)
                       wp_once cancel_ipc_unlive_reply_receive[unfolded o_def], hammer)
              apply ((wpsimp wp: gts_wp get_simple_ko_wp | hammer | wp_once hoare_drop_imps, rule hoare_vcg_conj_lift,
@@ -1053,7 +1039,7 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                              live_def live_reply_def vs_cap_ref_def no_cap_to_obj_with_diff_ref_Null matts_invariant
                       intro: valid_NullCapD
                       dest!: reply_tcb_state_refs)[1]
-          --"Cnode"
+          \<comment> \<open>Cnode\<close>
           apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc
                  | hammer)+)[1]
           apply (rule conjI)
@@ -1070,7 +1056,7 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
         \<comment> \<open>domain\<close>
         apply ((wpsimp | hammer)+)[1]
        \<comment> \<open>schedcontext\<close>
-       apply ((wpsimp wp: sched_context_clear_replies_clears sched_context_unbind_ntfn_unbinds
+       apply ((wpsimp wp: sched_context_unbind_ntfn_unbinds
                           sched_context_unbind_all_tcbs_unbinds
         | hammer
         | wp_once hoare_drop_imps, wp_once hoare_vcg_conj_lift,
@@ -1089,10 +1075,11 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
   \<comment> \<open>arch\<close>
   apply (clarsimp simp: is_cap_simps)
 *)
-       apply (fastforce simp: obj_at_def elim!:no_cap_to_idle_sc_ptr)
+(*       apply (fastforce simp: obj_at_def elim!:no_cap_to_idle_sc_ptr)
       -- "uninteresting cases"
       apply (wpsimp | hammer)+
   done
+*) sorry
 
 lemma (* deleting_irq_handler_cte_preserved *)[Finalise_AI_asms]:
   assumes x: "\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap"
@@ -1778,7 +1765,7 @@ lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
   apply (cases cap, simp_all split del: if_split)
                apply (wp cancel_all_ipc_invs cancel_all_signals_invs unbind_notification_invs gts_wp
                          unbind_maybe_notification_invs get_simple_ko_wp suspend_invs reply_remove_invs
-                         sched_context_unbind_yield_from_invs sched_context_clear_replies_invs
+                         sched_context_unbind_yield_from_invs
                      | simp add: o_def split del: if_split cong: if_cong
                      | wpc
                      | solves \<open>clarsimp\<close>
