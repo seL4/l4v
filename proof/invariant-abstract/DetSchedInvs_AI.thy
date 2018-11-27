@@ -499,7 +499,20 @@ abbreviation valid_release_q :: "'z state \<Rightarrow> bool" where
 
 lemmas valid_release_q_def = valid_release_q_2_def
 
+definition valid_release_q_except_set_2 where
+   "valid_release_q_except_set_2 S queue kh \<equiv>
+    ((\<forall>t \<in> set queue - S. is_etcb_at' t (etcbs_of' kh) \<and>
+              st_tcb_at_kh runnable t kh \<and> active_sc_tcb_at_kh t kh)
+              \<and> distinct queue)"
 
+abbreviation valid_release_q_except_set :: "obj_ref set \<Rightarrow> 'z state \<Rightarrow> bool" where
+ "valid_release_q_except_set S s \<equiv> valid_release_q_except_set_2 S (release_queue s) (kheap s)"
+
+abbreviation valid_release_q_except :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+"valid_release_q_except t s \<equiv> valid_release_q_except_set_2 {t} (release_queue s) (kheap s)"
+
+lemmas valid_release_q_except_set_def = valid_release_q_except_set_2_def
+lemmas valid_release_q_except_def = valid_release_q_except_set_2_def
 
 definition valid_blocked_2 where
    "valid_blocked_2 queues rlq kh sa ct \<equiv>
