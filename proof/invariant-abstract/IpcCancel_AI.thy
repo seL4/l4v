@@ -587,6 +587,17 @@ lemma assert_opt_sp:
   "\<lbrace> P \<rbrace> assert_opt x \<lbrace> \<lambda>rv s. x = Some rv \<and> P s\<rbrace>"
   by (wpsimp wp: assert_opt_wp)
 
+(* FIXME maybe move *)
+lemma replies_blocked_upd_tcb_st_not_BlockedonReply:
+  "\<lbrakk>kheap s t = Some (TCB tcb); \<forall>r. tcb_state tcb \<noteq> BlockedOnReply r;
+  \<forall>r. st \<noteq> BlockedOnReply r\<rbrakk> \<Longrightarrow>
+  replies_blocked_upd_tcb_st st t (replies_blocked s) = replies_blocked s"
+  apply  (rule set_eqI[OF iffI])
+   apply (clarsimp simp: replies_blocked_upd_tcb_st_def split: if_splits)
+  apply (clarsimp simp: replies_blocked_upd_tcb_st_def replies_blocked_def
+      pred_tcb_at_def obj_at_def)
+  done
+
 lemma blocked_cancel_ipc_invs:
   "\<lbrace> \<lambda>s. invs s
          \<and> st_tcb_at ((=) st) t s
@@ -627,9 +638,8 @@ lemma blocked_cancel_ipc_invs:
   apply (cases r; clarsimp)
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def fun_upd_def
                    wp: sts_valid_replies sts_only_idle valid_irq_node_typ)
-   apply (rule conjI)
-    subgoal sorry
-   apply (clarsimp simp: st_tcb_at_tcb_non_st_state_refs_of' cong: if_cong)
+   apply (rule conjI, clarsimp simp: pred_tcb_at_def obj_at_def)
+    apply (subst replies_blocked_upd_tcb_st_not_BlockedonReply, simp, fastforce+)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
    apply (rule_tac V="state_refs_of s epptr
                        = ep_q_refs_of ep - {(t, case ep of SendEP xs \<Rightarrow> EPSend | RecvEP xs \<Rightarrow> EPRecv)}"
@@ -659,10 +669,15 @@ lemma blocked_cancel_ipc_invs:
                       reply_unlink_tcb_iflive valid_ioports_lift)
   apply (case_tac "reply_tcb reply"; clarsimp simp: reply_at_ppred_def obj_at_def)
   apply (rule conjI)
-   subgoal sorry
+   apply (clarsimp simp: sym_refs_def)
+   apply (drule_tac x=t in spec)
+   apply (subgoal_tac "t \<noteq> epptr"; clarsimp simp: pred_tcb_at_def obj_at_def)
+   apply (drule_tac x="(r_ptr, TCBReply)" in bspec)
+    apply (clarsimp simp: state_refs_of_def get_refs_def2)+
+   apply (subst replies_blocked_upd_tcb_st_not_BlockedonReply, simp+)
   apply (rename_tac t', rule_tac V="t'=t" in revcut_rl)
    apply (subgoal_tac "(t, ReplyTCB) \<in> ((state_refs_of s)(epptr := ep_q_refs_of ep)) r_ptr"
-          , clarsimp simp: state_refs_of_def obj_at_def get_refs_def2)
+      , clarsimp simp: state_refs_of_def obj_at_def get_refs_def2)
    apply (erule sym_refsE, clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def)
   apply (clarsimp simp: st_tcb_at_tcb_non_st_state_refs_of' cong: if_cong)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
@@ -701,13 +716,8 @@ lemma cancel_signal_invs:
   apply (rule conjI)
    apply (clarsimp split:option.split)
   apply (rule conjI)
-   subgoal
-(*
-  apply (rule conjI
-         , clarsimp simp: pred_tcb_at_eq_commute
-         , fastforce simp: pred_tcb_at_def obj_at_def)
-*)
-   sorry
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+   apply (subst replies_blocked_upd_tcb_st_not_BlockedonReply, simp, clarsimp+)
   apply (rule conjI, erule delta_sym_refs)
     apply (clarsimp split: if_split_asm)+
    apply (fastforce dest: refs_in_get_refs symreftype_inverse')
@@ -1381,7 +1391,7 @@ lemma suspend_invs_helper:
   apply (simp cong: if_cong)
   apply (rule_tac V="valid_replies' (replies_with_sc s) (replies_blocked_upd_tcb_st Inactive t (replies_blocked s))" in revcut_rl
          , clarsimp simp: pred_tcb_at_def obj_at_def)
-   subgoal sorry
+   apply (subst replies_blocked_upd_tcb_st_not_BlockedonReply, simp, clarsimp+)
   apply (rule_tac V="t \<noteq> idle_thread s" in revcut_rl
          , clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def
          , fastforce simp: live_def dest!: if_live_then_nonz_capD2 idle_no_ex_cap)
@@ -1420,6 +1430,18 @@ lemma reply_unlink_tcb_inactive [wp]:
 lemma reply_remove_inactive [wp]:
   "\<lbrace>reply_tcb_reply_at (\<lambda>x. x = Some t) r\<rbrace> reply_remove r \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) t\<rbrace>"
   by (wpsimp simp: reply_remove_def wp: get_simple_ko_wp wp_del: reply_remove_st_tcb_at)
+
+lemma reply_remove_tcb_inactive [wp]:
+  "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s\<rbrace> reply_remove_tcb t
+   \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) t\<rbrace>"
+   apply (wpsimp simp: reply_remove_tcb_def wp: gts_wp)
+   apply (frule (1) st_tcb_at_valid_st2)
+   apply (clarsimp simp: pred_tcb_at_def reply_tcb_reply_at_def obj_at_def valid_tcb_state_def is_reply_def)
+   apply (case_tac koa; clarsimp)
+   apply (frule_tac p=t in sym_refs_ko_atD[rotated], simp add: obj_at_def)
+   apply (clarsimp simp: get_refs_def2 tcb_st_refs_of_def obj_at_def
+                   split: if_split_asm thread_state.splits)
+  done
 
 (* FIXME: this will be completely different.
 lemma reply_remove_tcb_inactive [wp]:
@@ -1586,7 +1608,7 @@ crunch bound_tcb_at[wp]: cancel_ipc "bound_tcb_at P t"
 lemma fast_finalise_bound_tcb_at:
   "\<lbrace>\<lambda>s. bound_tcb_at P t s \<and> (\<exists>tt. cap = ReplyCap tt) \<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   apply (case_tac cap, simp_all)
-  apply (wpsimp wp: hoare_drop_imps)
+  apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift)
   done
 
 lemma get_cap_reply_cap_helper:
@@ -1709,11 +1731,11 @@ where
 crunches possible_switch_to
   for valid_irq_node[wp]: valid_irq_node
   (wp: crunch_wps simp: crunch_simps)
-
+(* remove?
 lemma replies_blocked_tcb_st_empty:
   "\<not> awaiting_reply st \<Longrightarrow> replies_blocked_of_tcb_st t st = {}"
   by (cases st; simp)
-
+*)
 lemma cancel_all_invs_helper:
   "\<lbrace>all_invs_but_sym_refs
           and (\<lambda>s. (\<forall>x\<in>set q. ex_nonz_cap_to x s)
@@ -1730,9 +1752,18 @@ lemma cancel_all_invs_helper:
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule mapM_x_inv_wp2, fastforce)
   apply (wpsimp wp: valid_ioports_lift hoare_vcg_const_Ball_lift valid_irq_node_typ sts_only_idle sts_st_tcb_at_cases
-                    sts_valid_replies)
-  by (auto simp: valid_tcb_state_def idle_no_ex_cap pred_tcb_at_def obj_at_def
-                 replies_blocked_tcb_st_empty
+                    sts_valid_replies cong: conj_cong)
+apply (clarsimp simp: valid_tcb_state_def, intro conjI)
+apply (fastforce simp: idle_no_ex_cap)
+apply (subgoal_tac "replies_blocked_upd_tcb_st Restart a (replies_blocked s) = replies_blocked s")
+apply clarsimp
+apply (clarsimp simp: replies_blocked_upd_tcb_st_def pred_tcb_at_def obj_at_def replies_blocked_def
+split_def)
+apply (case_tac "tcb_state tcb"; fastforce?)
+apply (clarsimp simp: pred_tcb_at_def obj_at_def replies_blocked_upd_tcb_st
+          elim!: rsubst[where P=sym_refs])
+  by (auto simp:   pred_tcb_at_def obj_at_def
+                 replies_blocked_upd_tcb_st
           elim!: rsubst[where P=sym_refs]
           split: if_splits)
 
@@ -1830,7 +1861,7 @@ lemma endpoint_reply_irrelevant:
   apply (fastforce simp: state_refs_of_def get_refs_def2 split: if_splits)
   done
 
-(* Don't use this if t might be BlockedOnReply. *)
+(* Don't use this if t might be BlockedOnReply. 
 lemma sts_valid_replies_simple:
   "\<lbrace> st_tcb_at (\<lambda>st'. replies_blocked_of_tcb_st t st' = replies_blocked_of_tcb_st t st) t
         and valid_replies_pred P \<rbrace>
@@ -1843,9 +1874,9 @@ lemma sts_valid_replies_simple:
   apply (cases st; case_tac "tcb_state tcb"; simp)
   apply (rename_tac ro ro')
   apply (case_tac ro; case_tac ro'; simp)
-  done
+  done*)
 
-(* Don't use this if r might be linked to a TCB which is BlockedOnReply. *)
+(* Don't use this if r might be linked to a TCB which is BlockedOnReply.
 lemma reply_unlink_tcb_valid_replies_simple:
   "\<lbrace> \<lambda>s. \<forall>t'. reply_tcb_reply_at (\<lambda>to. to = Some t') r s
               \<longrightarrow> st_tcb_at (\<lambda>st. replies_blocked_of_tcb_st t' st = {}) t' s
@@ -1853,8 +1884,8 @@ lemma reply_unlink_tcb_valid_replies_simple:
     reply_unlink_tcb r
    \<lbrace> \<lambda>rv. valid_replies_pred P \<rbrace>"
   by (wpsimp wp: reply_unlink_tcb_valid_replies
-           simp: reply_tcb_reply_at_def pred_tcb_at_def obj_at_def)
-
+           simp: reply_tcb_reply_at_def pred_tcb_at_def obj_at_def)*)
+(*
 lemma reply_unlink_tcb_st_tcb_at_strong:
   "\<lbrace> \<lambda>s. \<forall>t'. reply_tcb_reply_at (\<lambda>to. to = Some t') r s
               \<longrightarrow> (t' = t \<longrightarrow> P (P' Inactive)) \<and> (t' \<noteq> t \<longrightarrow> P (st_tcb_at P' t s)) \<rbrace>
@@ -1863,12 +1894,12 @@ lemma reply_unlink_tcb_st_tcb_at_strong:
   by (wpsimp simp: reply_unlink_tcb_def
                wp: sts_st_tcb_at_cases_strong hoare_vcg_imp_lift' gts_wp get_simple_ko_wp)
      (clarsimp simp: reply_at_ppred_def pred_tcb_at_def obj_at_def is_tcb)
-
+*)
 lemma set_thread_state_valid_irq_node[wp]:
   "set_thread_state t st \<lbrace> valid_irq_node \<rbrace>"
   by (wpsimp simp: valid_irq_node_def cap_table_at_typ wp: hoare_vcg_all_lift | wps)+
 
-(* Don't use this if r might be linked to a TCB which is BlockedOnReply. *)
+(* Don't use this if r might be linked to a TCB which is BlockedOnReply. 
 lemma sts_valid_replies_simple':
   "\<lbrace> \<lambda>s. st_tcb_at (\<lambda>st'. replies_blocked_of_tcb_st t st' \<subseteq> replies_blocked_of_tcb_st t st) t s
           \<and> valid_replies s\<rbrace>
@@ -1876,11 +1907,11 @@ lemma sts_valid_replies_simple':
    \<lbrace> \<lambda>rv. valid_replies \<rbrace>"
   apply (wpsimp wp: sts_valid_replies)
   apply (drule (1) subsetD[rotated], erule subsetD[rotated], rule image_mono)
-  by (fastforce simp: pred_tcb_at_def obj_at_def)
+  by (fastforce simp: pred_tcb_at_def obj_at_def)*)
 
 (* May be useful in limited circumstances:
    - when set_thread_state is the last step in reestablishing invariants.
-   - when the thread is not previously BlockedOnReply. *)
+   - when the thread is not previously BlockedOnReply. 
 lemma set_thread_state_invs:
   shows "\<lbrace> \<lambda>s. valid_tcb_state st s
                \<and> (\<not> halted st \<longrightarrow> ex_nonz_cap_to t s)
@@ -1894,7 +1925,7 @@ lemma set_thread_state_invs:
           set_thread_state t st
          \<lbrace> \<lambda>_. invs \<rbrace>"
   by (wpsimp simp: invs_def valid_state_def valid_pspace_def
-               wp: TcbAcc_AI.sts_only_idle sts_valid_replies_simple')
+               wp: TcbAcc_AI.sts_only_idle sts_valid_replies_simple') *)
 
 lemma sts_st_tcb_at_cases_different_thread:
   "t' \<noteq> t \<Longrightarrow> set_thread_state t ts \<lbrace> \<lambda>s. P (st_tcb_at P' t' s) \<rbrace>"
@@ -1924,15 +1955,17 @@ lemma cancel_all_ipc_invs_helper':
   apply (rule_tac S="distinct (t # q')" in hoare_gen_asm'', simp)
   apply (rule hoare_conjI)
    apply (rule hoare_seq_ext[OF _ gts_sp], rename_tac st)
-   apply (wpsimp wp: valid_ioports_lift sts_only_idle sts_valid_replies_simple'
-                     reply_unlink_tcb_st_tcb_at_strong reply_unlink_tcb_valid_replies_simple
+   apply (wpsimp wp: valid_ioports_lift sts_only_idle sts_valid_replies
+                     reply_unlink_tcb_st_tcb_at_strong reply_unlink_tcb_valid_replies
                simp: valid_tcb_state_def pred_tcb_at_eq_commute)
    apply (rule_tac V="t \<noteq> idle_thread s" in revcut_rl, fastforce simp: idle_no_ex_cap)
    apply (clarsimp simp: reply_at_ppred_def pred_tcb_at_def obj_at_def)
    apply (erule disjE; clarsimp simp: reply_at_ppred_def pred_tcb_at_def obj_at_def)
-   apply (rule_tac V="r \<notin> insert t (set q')" in revcut_rl, fastforce)
-   apply (drule_tac x=t and y=r and tp=ReplyTCB in sym_refsE
-          ; clarsimp simp: state_refs_of_def get_refs_def2 refs_of_rev split: option.splits)
+    apply (rule conjI; clarsimp)
+     apply (rule_tac V="r \<notin> insert t (set q')" in revcut_rl, fastforce)
+     apply (drule_tac x=t and y=r and tp=ReplyTCB in sym_refsE
+      ; clarsimp simp: state_refs_of_def get_refs_def2 refs_of_rev split: option.splits)
+     apply (subst replies_blocked_upd_tcb_st_not_BlockedonReply, simp+)+
   apply (rule hoare_seq_ext[OF _ gts_sp], rename_tac st)
   (* To avoid case-splitting on st in the main proof, we'll isolate the one case
      that is interesting, and prove the remainder by extracting a smaller problem
@@ -2168,9 +2201,14 @@ lemma cancel_ipc_invs_st_tcb_at:
   by (wpsimp simp: invs_def valid_state_def valid_pspace_def
                wp: cancel_ipc_simple_except_awaiting_reply)
 
+(* FIXME maybe move *)
+lemma sched_context_unbind_reply_st_tcb_at[wp]:
+  "sched_context_unbind_reply scptr \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
+  by (wpsimp simp: sched_context_unbind_reply_def)
+
 lemma fast_finalise_misc:
 "\<lbrace>st_tcb_at simple t and invs\<rbrace> fast_finalise a b \<lbrace>\<lambda>_. st_tcb_at simple t\<rbrace>"
-  by (case_tac a; wpsimp wp: cancel_ipc_simple' get_simple_ko_wp)
+  by (case_tac a; wpsimp wp: cancel_ipc_simple' get_simple_ko_wp gts_wp)
 
 lemma ntfn_q_refs_no_NTFNBound:
   "(x, NTFNBound) \<notin> ntfn_q_refs_of ntfn"
@@ -2431,7 +2469,7 @@ lemma cancel_badged_sends_filterM_helper':
   apply (drule spec, erule hoare_seq_ext[rotated])
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (wpsimp wp: valid_irq_node_typ sts_only_idle hoare_vcg_const_Ball_lift
-                    valid_ioports_lift sts_valid_replies_simple)
+                    valid_ioports_lift sts_valid_replies)
   apply (clarsimp simp: valid_tcb_state_def)
   apply (rule conjI[rotated])
    apply blast
@@ -2444,6 +2482,8 @@ lemma cancel_badged_sends_filterM_helper':
   apply (clarsimp simp: st_tcb_at_refs_of_rev)
   apply (clarsimp simp: pred_tcb_def2 valid_idle_def)
   apply (rule conjI, clarsimp)
+  apply (rule conjI, clarsimp dest!: get_tcb_SomeD)
+   apply (subst replies_blocked_upd_tcb_st_not_BlockedonReply, simp+)
   apply (rule conjI, force)
   apply (erule delta_sym_refs)
    apply (simp split: if_split_asm)
