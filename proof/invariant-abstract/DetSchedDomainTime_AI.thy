@@ -16,7 +16,7 @@ text {*
   This theory deals with the preservation of domain_list validity over kernel invocations,
   as well as ensuring preserving that the domain time is never zero at kernel exit.
 *}
- 
+
 (* Note: domains in the domain list should also be \<le> maxDomain, but this is not needed right now *)
 definition
   "valid_domain_list_2 dlist \<equiv> 0 < length dlist \<and> (\<forall>(d,time) \<in> set dlist. 0 < time)"
