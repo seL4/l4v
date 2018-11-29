@@ -254,14 +254,6 @@ where
      return $ f sc
    od"
 
-definition (* set only the schedcontext, keeping the size *)
-  set_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "set_sched_context ptr sc  \<equiv> do
-     obj \<leftarrow> get_object ptr;
-     case obj of SchedContext sc' n \<Rightarrow> set_object ptr (SchedContext sc n) | _ \<Rightarrow> fail
-   od"
-
 definition (* update only the schedcontext in place, keeping the size *)
   update_sched_context :: "obj_ref \<Rightarrow> (sched_context \<Rightarrow> sched_context) \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -269,6 +261,10 @@ where
      obj \<leftarrow> get_object ptr;
      case obj of SchedContext sc n \<Rightarrow> set_object ptr (SchedContext (f sc) n) | _ \<Rightarrow> fail
    od"
+
+abbreviation "set_sched_context ptr sc \<equiv> update_sched_context ptr (\<lambda>_. sc)"
+
+lemmas set_sched_context_def = update_sched_context_def
 
 definition
   set_sc_obj_ref :: "(('a \<Rightarrow> 'a) \<Rightarrow> sched_context \<Rightarrow> sched_context) \<Rightarrow> obj_ref \<Rightarrow> 'a \<Rightarrow> (unit, 'z::state_ext) s_monad"
