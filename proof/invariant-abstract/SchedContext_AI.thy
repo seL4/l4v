@@ -216,36 +216,6 @@ lemma refs_of_sched_context_sc_badge_update[iff]:
   "refs_of (SchedContext (sc_badge_update f sc) n) = refs_of (SchedContext sc n)"
   by simp
 
-lemma sc_consumed_set_iflive [wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (live_sc sc \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
-     set_sched_context ptr (sc_consumed_update f sc) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def)
-
-lemma sc_refills_st_iflive [wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (live_sc sc \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
-     set_sched_context ptr (sc_refills_update f sc) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def)
-
-lemma sc_badge_set_iflive [wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (live_sc sc \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
-     set_sched_context ptr (sc_badge_update f sc) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def)
-
-lemma sc_consumed_update_iflive [wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
-     update_sched_context ptr (sc_consumed_update f) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_same)
-
-lemma sc_refills_update_iflive [wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
-     update_sched_context ptr (sc_refills_update f) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_same)
-
-lemma sc_badge_update_iflive [wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
-     update_sched_context ptr (sc_badge_update f) \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_same)
-
 lemma set_refills_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace> set_refills ptr param_b \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace> "
   by (wpsimp simp: set_refills_def get_sched_context_def wp: hoare_vcg_all_lift get_object_wp)
@@ -701,9 +671,6 @@ lemma sched_context_update_consumed_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: sched_context_update_consumed_def
       wp: set_sc_consumed_invs get_sched_context_wp)
-
-crunch interrupt_states[wp]: set_sched_context "\<lambda>s. P (interrupt_states s)"
-  (wp: crunch_wps simp: crunch_simps)
 
 lemma set_sched_context_minor_invs: (* minor? *)
   "\<lbrace>invs and obj_at (\<lambda>ko. refs_of ko = refs_of_sc val) ptr
