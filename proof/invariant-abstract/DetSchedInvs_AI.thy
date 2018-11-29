@@ -79,7 +79,7 @@ where
 abbreviation
   active_sc_ntfn_at :: "32 word \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "active_sc_ntfn_at t s \<equiv>active_sc_ntfn_at_kh t (kheap s)"
+  "active_sc_ntfn_at t s \<equiv> active_sc_ntfn_at_kh t (kheap s)"
 
 lemmas active_sc_ntfn_at_def = active_sc_ntfn_at_kh_def
 
@@ -150,8 +150,6 @@ lemma is_schedulable_unfold:
                   split: option.splits dest!: get_tcb_SomeD)
 
 (* refill_ready & refill sufficient *)
-
-thm refill_ready_def refill_sufficient_def sufficient_refills_def refills_capacity_def
 
 definition is_refill_sufficient :: "obj_ref \<Rightarrow> time \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -824,5 +822,26 @@ lemma valid_sched_lift:
   apply (wp valid_ready_qs_lift ct_not_in_q_lift ct_in_cur_domain_lift valid_release_q_lift
             valid_sched_action_lift valid_blocked_lift a a' s r c d e f g h i j hoare_vcg_conj_lift)
   done
+
+definition
+  budgeted_sc_ntfn_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "budgeted_sc_ntfn_at p \<equiv> (\<lambda>s. (\<exists>obj x. ko_at (Notification obj) p s \<and>
+                                       ntfn_sc obj = Some x \<and>
+                                       is_refill_ready x s \<and> is_refill_sufficient x 0 s))"
+
+definition
+  active_and_budgeted_tcb_ntfn_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "active_and_budgeted_tcb_ntfn_at p \<equiv> (\<lambda>s. (\<forall>obj y.
+                  ko_at (Notification obj) p s \<longrightarrow>  ntfn_bound_tcb obj = Some y \<longrightarrow>
+                  active_sc_tcb_at y s \<and> budget_ready y s \<and> budget_sufficient y s))"
+
+abbreviation
+  active_sc_ntfn_at' :: "32 word \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "active_sc_ntfn_at' t s \<equiv> active_sc_ntfn_at_kh t (kheap s)"
+
+lemmas active_sc_ntfn_at'_def = active_sc_ntfn_at_kh_def
 
 end

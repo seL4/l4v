@@ -1223,7 +1223,7 @@ lemma derive_cap_ep_cte_wp_at:
   apply auto
   done
 *)
-thm arch_derive_is_arch
+
 lemma derive_cap_cnode[wp]:  (* FIXME arch refactor *)
   "\<lbrace>\<lambda>s. is_cnode_cap cap\<rbrace> derive_cap slot cap  \<lbrace>\<lambda>rv s. is_cnode_cap rv\<rbrace>, -"
   by (wpsimp simp: derive_cap_def comp_def valid_fault_handler_def ARM_A.arch_derive_cap_def) auto

@@ -1253,8 +1253,6 @@ lemma sym_refs_bound_yt_tcb_at:
 crunches tcb_release_remove
   for valid_ioports[wp]: valid_ioports
 
-find_theorems tcb_sched_action invs
-
 lemma suspend_invs_helper:
   "\<lbrace>invs and st_tcb_at (\<lambda>st. st \<in> {Running, Inactive, Restart, IdleThreadState}) t\<rbrace>
    do yt_opt <- get_tcb_obj_ref tcb_yield_to t;
