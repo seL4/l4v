@@ -39,14 +39,13 @@ lemmas ct_assumptions = rt_assumptions(1)
 lemmas callee_must_be_inactive_reply = rt_assumptions(2) (* sym_refs assumed *)
 lemmas callee_must_be_inactive_tcb = rt_assumptions(3)
 lemmas round_robin_refills = rt_assumptions(4)
-*)
 lemmas ready_or_released = rt_assumptions(5)
+*)
 
 (* FIXME move *)
 lemma not_in_release_q_simp[dest!]:
    "\<not> in_release_queue t s \<Longrightarrow> not_in_release_q t s"
   by (simp add: in_release_queue_def not_in_release_q_def)
-
 
 lemma valid_sched_switch_thread_is_schedulable:
   "\<lbrakk>valid_sched s; scheduler_action s = switch_thread thread\<rbrakk> \<Longrightarrow>
@@ -5825,15 +5824,17 @@ lemma is_schedulable_opt_ready_queues_update[simp]:
 
 (* FIXME: move *)
 lemma tcb_sched_action_dequeue_valid_sched_in_release_queue:
-  "\<lbrace>valid_sched and in_release_queue thread\<rbrace>
-     tcb_sched_action tcb_sched_dequeue thread
+  "\<lbrace>valid_sched and in_release_queue thread and ready_or_released\<rbrace>
+   tcb_sched_action tcb_sched_dequeue thread
    \<lbrace>\<lambda>_. valid_sched::det_state\<Rightarrow>_\<rbrace>"
   apply (wpsimp wp: tcb_sched_action_dequeue_valid_sched_not_queued)
-  by (clarsimp simp: in_release_queue_def not_queued_def dest!: ready_or_released[simplified, rule_format])
+  by (simp add: ready_or_released_in_release_queue)
 
 lemma set_priority_valid_sched[wp]:
-  "\<lbrace>valid_sched and not_cur_thread tptr and budget_ready tptr and budget_sufficient tptr\<rbrace>
-      set_priority tptr prio \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
+  "\<lbrace>valid_sched and not_cur_thread tptr and budget_ready tptr
+    and budget_sufficient tptr and ready_or_released\<rbrace>
+   set_priority tptr prio
+   \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: set_priority_def)
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (rule hoare_seq_ext[OF _ gets_sp])
@@ -8900,7 +8901,7 @@ lemma invoke_domain_valid_sched[wp]:
   notes tcb_sched_action_enqueue_valid_sched[wp del]
   shows
   "\<lbrace>valid_sched and tcb_at t and (\<lambda>s. t \<noteq> idle_thread s) and (\<lambda>s. t \<noteq> cur_thread s)
-                and simple_sched_action and valid_idle\<rbrace>
+                and simple_sched_action and valid_idle and ready_or_released\<rbrace>
     invoke_domain t d \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (simp add: invoke_domain_def)
   including no_pre
@@ -8941,10 +8942,7 @@ lemma invoke_domain_valid_sched[wp]:
       tcb_sched_action_dequeue_valid_sched_not_queued)
    apply simp
   by (case_tac "not_queued t s"; case_tac "not_in_release_q t s";
-      clarsimp simp: in_release_queue_def not_in_release_q_def not_queued_def
-      dest!: ready_or_released[simplified, rule_format])
-
-
+      clarsimp simp: in_release_queue_def not_in_release_q_def not_queued_def ready_or_released_def)
 
 (*
 lemma idle_not_reply_cap:

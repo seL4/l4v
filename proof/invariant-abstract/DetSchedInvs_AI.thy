@@ -658,7 +658,18 @@ abbreviation scheduler_act_sane :: "'z state \<Rightarrow> bool" where
 lemmas scheduler_act_sane_def = scheduler_act_not_2_def
 lemmas scheduler_act_not_def = scheduler_act_not_2_def
 
+definition
+  ready_or_released :: "'z state  \<Rightarrow> bool"
+where
+  "ready_or_released s \<equiv> \<forall>t d p. \<not> (t \<in> set (ready_queues s d p) \<and> t \<in> set (release_queue s))"
 
+lemma ready_or_released_in_ready_qs[intro]:
+  "ready_or_released s \<Longrightarrow> in_ready_q t s \<Longrightarrow> not_in_release_q t s"
+  by (clarsimp simp: ready_or_released_def in_ready_q_def not_in_release_q_def)
+
+lemma ready_or_released_in_release_queue[intro]:
+  "ready_or_released s \<Longrightarrow> in_release_queue t s \<Longrightarrow> not_queued t s"
+  by (fastforce simp: ready_or_released_def in_release_queue_def not_queued_def)
 
 lemmas ct_not_queued_lift = hoare_lift_Pf2[where f="cur_thread" and P="not_queued"]
 lemmas ct_not_in_release_q_lift = hoare_lift_Pf2[where f="cur_thread" and P="not_in_release_q"]
