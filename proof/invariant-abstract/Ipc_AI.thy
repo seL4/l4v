@@ -28,7 +28,6 @@ requalify_facts
   make_arch_fault_msg_ioports
   arch_derive_cap_notzombie
   arch_derive_cap_notIRQ
-  set_sched_context_ioports
 
 end
 
