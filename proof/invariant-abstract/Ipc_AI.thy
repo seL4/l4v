@@ -1107,7 +1107,8 @@ lemma transfer_caps_loop_vms[wp]:
     \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
-crunch valid_irq_states[wp]: set_extra_badge "valid_irq_states"
+crunches set_extra_badge
+for valid_irq_states[wp]: "valid_irq_states"
   (ignore: do_machine_op)
 
 lemma transfer_caps_loop_valid_irq_states[wp]:
@@ -1117,11 +1118,21 @@ lemma transfer_caps_loop_valid_irq_states[wp]:
     \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
-
 lemma transfer_caps_respects_device_region[wp]:
   "\<lbrace>\<lambda>s::'state_ext state. pspace_respects_device_region s\<rbrace>
     transfer_caps_loop ep buffer n caps slots mi
    \<lbrace>\<lambda>_. pspace_respects_device_region\<rbrace>"
+  apply (wp transfer_caps_loop_pres)
+  done
+
+crunches do_machine_op, set_extra_badge
+for valid_replies[wp]: valid_replies
+  (ignore: do_machine_op)
+
+lemma transfer_caps_respects_valid_replies[wp]:
+  "\<lbrace>\<lambda>s::'state_ext state. valid_replies s\<rbrace>
+    transfer_caps_loop ep buffer n caps slots mi
+   \<lbrace>\<lambda>_. valid_replies\<rbrace>"
   apply (wp transfer_caps_loop_pres)
   done
 
@@ -1152,8 +1163,7 @@ lemma transfer_caps_loop_invs[wp]:
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
-  by (wpsimp wp: valid_irq_node_typ transfer_caps_loop_valid_vspace_objs
-                 valid_replies_state_refs_lift)
+  by (wpsimp wp: valid_irq_node_typ transfer_caps_loop_valid_vspace_objs)
 
 end
 
@@ -2201,7 +2211,7 @@ lemma update_waiting_invs:
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def valid_tcb_state_def
                       valid_ioports_lift conj_comms
                 wp: valid_irq_node_typ sts_only_idle sym_refs_helper_update_waiting_invs
-                    hoare_vcg_all_lift valid_ioports_lift sts_valid_replies_simple')
+                    hoare_vcg_all_lift valid_ioports_lift sts_valid_replies)
     apply (wpsimp simp: set_simple_ko_def set_object_def wp: get_object_wp)
    apply wpsimp
   apply (simp add: invs_def valid_state_def valid_pspace_def obj_at_def)
@@ -2213,7 +2223,9 @@ lemma update_waiting_invs:
   apply (rule conjI, fastforce simp: obj_at_def is_ntfn elim!: ex_cap_to_after_update)
   apply (rename_tac t q')
   apply (frule_tac x=t in bspec[OF st_in_waitingntfn], assumption+, simp)
-  apply (apply_conjunct \<open>erule st_tcb_weakenE, fastforce\<close>)
+  apply (rule conjI)
+   apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def)
+   apply (subst replies_blocked_upd_tcb_st_not_BlockedonReply, simp+)
   by (erule delta_sym_refs
       ; fastforce simp: state_refs_of_def get_refs_def2 st_tcb_at_def obj_at_def
                  split: if_splits list.splits)
@@ -2346,16 +2358,18 @@ lemma sts_invs_minor2_concise:
    set_thread_state t st
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply (wp valid_irq_node_typ sts_only_idle sts_valid_replies_simple)
+  apply (wp valid_irq_node_typ sts_only_idle sts_valid_replies)
   apply clarsimp
   apply (rule conjI, simp add: pred_tcb_at_def, erule(1) obj_at_valid_objsE)
    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_tcb_state_def doubleton_eq_iff
                   split: thread_state.splits if_split_asm)
-  apply (rule conjI, clarsimp elim!: st_tcb_weakenE simp: replies_blocked_tcb_st_empty)
+  apply (rule conjI)
+   apply (subst replies_blocked_upd_tcb_st_trivial, simp)
+    apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def)+
   apply (clarsimp elim!: rsubst[where P=sym_refs]
-                 intro!: ext
-                  dest!: st_tcb_at_state_refs_ofD)
-  apply (auto simp: get_refs_def split: option.splits)
+      intro!: ext
+      dest!: st_tcb_at_state_refs_ofD)
+  apply (auto simp: state_refs_of_def get_refs_def2)
   done
 
 lemma sai_invs[wp]:

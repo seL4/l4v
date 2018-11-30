@@ -427,12 +427,12 @@ crunches reply_unlink_tcb
  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (simp: Let_def wp: hoare_drop_imps)
 
-lemma sc_at[wp]: "\<lbrace>sc_at sc_ptr\<rbrace> reply_unlink_tcb rp \<lbrace>\<lambda>_. sc_at sc_ptr\<rbrace>"
+lemma reply_unlink_tcb_sc_at[wp]: "\<lbrace>sc_at sc_ptr\<rbrace> reply_unlink_tcb rp \<lbrace>\<lambda>_. sc_at sc_ptr\<rbrace>"
   apply (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def set_simple_ko_def
             wp: set_object_wp hoare_drop_imp get_simple_ko_wp)
   by (clarsimp simp: obj_at_def is_sc_obj_def)
 
-lemma valid_idle[wp]:
+lemma reply_unlink_tcb_valid_idle[wp]:
   "\<lbrace>valid_idle\<rbrace> reply_unlink_tcb rp \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   apply (wpsimp simp: reply_unlink_tcb_def get_thread_state_def thread_get_def get_simple_ko_def
                       get_object_def)
@@ -444,14 +444,14 @@ lemma sts_only_idle:
   unfolding set_thread_state_def
   by (wpsimp simp: only_idle_def pred_tcb_at_def set_object_def obj_at_def)
 
-lemma only_idle[wp]:
+lemma reply_unlink_tcb_only_idle[wp]:
   "\<lbrace>only_idle\<rbrace> reply_unlink_tcb rp \<lbrace>\<lambda>_. only_idle\<rbrace>"
   unfolding reply_unlink_tcb_def
   by (wpsimp wp: sts_only_idle
            simp: thread_get_def only_idle_def pred_tcb_at_def set_simple_ko_def get_object_def
                  get_simple_ko_def get_thread_state_def)
 
-lemma zombie_final[wp]: "\<lbrace>zombies_final\<rbrace> reply_unlink_tcb rp \<lbrace>\<lambda>_. zombies_final\<rbrace>"
+lemma reply_unlink_tcb_zombie_final[wp]: "\<lbrace>zombies_final\<rbrace> reply_unlink_tcb rp \<lbrace>\<lambda>_. zombies_final\<rbrace>"
   apply (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def set_simple_ko_def
             wp: set_object_wp hoare_drop_imp get_simple_ko_wp)
   apply (rule zombies_kheap_update, simp)
@@ -1132,8 +1132,8 @@ lemma valid_replies_sc_replies_unique:
 
 (* FIXME: move *)
 lemma valid_replies_sc_with_reply_None:
-  assumes v: "valid_replies s"
   assumes n: "sc_with_reply r s = None"
+  assumes v: "valid_replies s"
   shows "\<not> sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s"
   using valid_replies_sc_replies_unique[OF v] sc_with_reply_NoneD[OF n] by auto
 
@@ -1201,7 +1201,7 @@ lemma reply_remove_tcb_invs:
   apply (case_tac sc_ptr_opt; simp)
    apply wpsimp
    apply (fastforce simp: replies_with_sc_def replies_blocked_def image_iff
-                          valid_replies_sc_with_reply_None[OF invs_valid_replies])
+                          valid_replies_sc_with_reply_None[OF _ invs_valid_replies])
   apply (rename_tac sc_ptr)
   apply (rule hoare_seq_ext[OF _ gscrpls_sp[simplified]]; clarsimp)
   apply (rename_tac replies)

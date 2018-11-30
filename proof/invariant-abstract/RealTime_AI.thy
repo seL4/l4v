@@ -976,7 +976,7 @@ lemma reply_remove_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> reply_remove r \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)
 
-lemma valid_replies_blocked_live:
+lemma valid_replies_in_replies_sc_reply_tcb:
   "valid_replies s \<Longrightarrow> sym_refs (state_refs_of s)
    \<Longrightarrow> ko_at (Reply reply) r s
    \<Longrightarrow> sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc_ptr s
@@ -984,12 +984,15 @@ lemma valid_replies_blocked_live:
   apply (clarsimp simp: valid_replies_defs)
   apply (drule subsetD, force)
   apply (clarsimp dest!: sym_refs_st_tcb_atD simp: obj_at_def get_refs_def
-                  split:option.splits)
+                  split: option.splits)
   done
 
 lemma reply_tcb_live:
   "reply_tcb reply \<noteq> None \<Longrightarrow> live (Reply reply)"
   by (simp add: live_def live_reply_def)
+
+lemmas valid_replies_in_replies_sc_live =
+  valid_replies_in_replies_sc_reply_tcb[THEN reply_tcb_live]
 
 lemma valid_sched_object_reply_at:
   "valid_objs s \<Longrightarrow> ko_at (SchedContext scb nb) sc_ptr s
@@ -1016,9 +1019,9 @@ lemma reply_unlink_sc_iflive[wp]:
      apply (fastforce simp: live_def obj_at_def live_reply_def
                      dest!: if_live_then_nonz_capD2 valid_objs_ko_at)
     apply (subgoal_tac "xa \<in> set (sc_replies scb)")
-     apply (fastforce simp: obj_at_def reply_tcb_live
+     apply (fastforce simp: obj_at_def
                      dest!: if_live_then_nonz_capD2 valid_sched_object_reply_at
-                            valid_replies_blocked_live
+                            valid_replies_in_replies_sc_live
                      intro: sc_replies_sc_at_ko_atI)
     apply (fastforce intro: list.set_sel)
    apply (fastforce simp: live_def live_reply_def obj_at_def

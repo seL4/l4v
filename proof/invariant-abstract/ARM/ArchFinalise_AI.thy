@@ -585,9 +585,18 @@ lemma set_simple_ko_obj_at_disjoint:
    \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
   by (wpsimp simp: set_simple_ko_def wp: set_object_at_obj get_object_wp)
 
-lemma matts_invariant:
-  "\<lbrakk>invs s; kheap s p = Some (Reply rep); reply_tcb rep = None\<rbrakk> \<Longrightarrow> reply_sc rep = None"
-  sorry
+lemma reply_tcb_None_reply_sc_None:
+  "\<lbrakk>invs s; kheap s p = Some (Reply rep); reply_tcb rep = None\<rbrakk>
+   \<Longrightarrow> reply_sc rep = None"
+  apply (frule invs_valid_replies, frule invs_sym_refs, frule invs_valid_objs)
+  apply (clarsimp simp: valid_replies_defs)
+  apply (drule_tac c=p in contra_subsetD)
+   apply (clarsimp dest!: sym_refs_st_tcb_atD simp: obj_at_def get_refs_def
+                   split: option.splits)+
+  apply (rule ccontr, clarsimp)
+  apply (frule(3) reply_sc_refs)
+  apply (fastforce simp: sc_at_pred_def obj_at_def image_def)
+  done
 
 lemma reply_unlink_sc_not_live:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> reply_tcb r = None) reply and invs\<rbrace>
@@ -597,7 +606,7 @@ lemma reply_unlink_sc_not_live:
                     set_simple_ko_obj_at_disjoint hoare_vcg_all_lift
               simp: reply_unlink_sc_def is_reply update_sk_obj_ref_def
         | wp_once hoare_drop_imps)+
-  apply (clarsimp simp: obj_at_def live_def live_reply_def matts_invariant)
+  apply (clarsimp simp: obj_at_def live_def live_reply_def reply_tcb_None_reply_sc_None)
   done
 
 lemma reply_unlink_tcb_not_live:
@@ -634,7 +643,11 @@ crunch obj_at[wp]: tcb_release_remove "\<lambda>s. P (obj_at Q p s)"
 lemma sc_with_reply_None_no_reply_sc:
   "\<lbrakk>ko_at (Reply reply) rp' s; invs s; sc_with_reply rp' s = None\<rbrakk>
        \<Longrightarrow> obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> reply_sc r = None) rp' s"
-  sorry
+  apply (rule ccontr, clarsimp simp: obj_at_def)
+  apply (drule(3) reply_sc_refs[OF _ invs_valid_objs invs_sym_refs])
+  apply (drule_tac sc=y in valid_replies_sc_with_reply_None[OF _ invs_valid_replies])
+   apply (clarsimp simp: sc_at_pred_def obj_at_def)+
+  done
 
 lemma reply_remove_unlive:
   "\<lbrace>invs and K (rp = rp')\<rbrace>
@@ -791,10 +804,6 @@ lemma sched_context_unbind_tcb_bound_sc_tcb_at_None:
   apply (clarsimp simp: obj_at_def)
   done
 
-lemma sched_context_unbind_tcb_not_ko_at:
-  "\<lbrace>\<lambda>s. \<not> (ko_at ko t s)\<rbrace> sched_context_unbind_tcb sc \<lbrace>\<lambda>rv s. \<not> (ko_at ko t s)\<rbrace>"
-  sorry
-
 lemma bound_sc_tcb_bound_sc_at:
   "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s scptr = Some (SchedContext sc a);
     bound_sc_tcb_at (\<lambda>ptr. ptr = (Some scptr)) tcbptr s \<rbrakk>
@@ -812,16 +821,19 @@ lemma unbind_from_sc_bound_sc_tcb_at:
      unbind_from_sc x
    \<lbrace>\<lambda>rv. bound_sc_tcb_at ((=) None) x\<rbrace>"
   apply (simp add: unbind_from_sc_def)
-  apply (wpsimp wp: sched_context_unbind_tcb_bound_sc_tcb_at_None get_sched_context_wp maybeM_wp
-                    hoare_vcg_all_lift hoare_vcg_const_imp_lift hoare_vcg_imp_lift' sched_context_unbind_tcb_not_ko_at
-                    gbn_wp )
-  by (auto simp: obj_at_def is_tcb pred_tcb_at_def dest!: bound_sc_tcb_bound_sc_at)
+    apply (wpsimp wp: sched_context_unbind_tcb_bound_sc_tcb_at_None
+                      hoare_vcg_all_lift gbn_wp
+           | wp_once hoare_drop_imps)+
+  apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def)
+  apply (erule(1) pspace_valid_objsE)
+  by (auto simp: obj_at_def pred_tcb_at_def valid_obj_def valid_tcb_def
+                 sc_at_typ typ_at_eq_kheap_obj
+          dest!: bound_sc_tcb_bound_sc_at)
 
 lemma complete_yield_to_unbinds:
-  "\<lbrace>tcb_at t and K (t = x)\<rbrace>
+  "\<lbrace>tcb_at t\<rbrace>
      complete_yield_to t
-   \<lbrace>\<lambda>rv. bound_yt_tcb_at ((=) None) x\<rbrace>"
-  apply (rule hoare_gen_asm)
+   \<lbrace>\<lambda>rv. bound_yt_tcb_at ((=) None) t\<rbrace>"
   apply (clarsimp simp: complete_yield_to_def)
   apply (wpsimp simp: complete_yield_to_def wp: syt_bound_tcb_at' maybeM_wp gbn_wp)
   apply (clarsimp simp: obj_at_def pred_tcb_at_def is_tcb)
@@ -847,15 +859,70 @@ lemma unbind_from_sc_no_cap_to_obj_ref[wp]:
   apply (wp)
   done
 
+lemma set_sc_obj_ref_obj_at_trivial:
+  "\<lbrace>obj_at P t' and
+    K (\<forall>sc n. P (SchedContext sc n) \<longrightarrow> P (SchedContext (f (K new) sc) n))\<rbrace>
+     set_sc_obj_ref f t new
+   \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
+  by (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
+                   set_object_def get_sched_context_def obj_at_def
+               wp: get_object_wp)
+
+lemma set_tcb_obj_ref_obj_at_trivial:
+  "\<lbrace>obj_at P t' and
+    K (\<forall>tcb. P (TCB tcb) \<longrightarrow> P (TCB (f (K new) tcb)))\<rbrace>
+     set_tcb_obj_ref f t new
+   \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
+  by (wpsimp simp: set_tcb_obj_ref_def set_object_def obj_at_def get_tcb_SomeD)
+
+lemma sched_context_update_consumed_obj_at_trivial:
+  "\<lbrace>obj_at P t' and
+    K (\<forall>sc n. P (SchedContext sc n) \<longrightarrow> P (SchedContext (sc_consumed_update (K 0) sc) n))\<rbrace>
+     sched_context_update_consumed t
+   \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
+  by (wpsimp simp: sched_context_update_consumed_def set_sched_context_def
+                   set_object_def get_sched_context_def obj_at_def
+               wp: get_object_wp)
+
+lemma set_mrs_obj_at_trivial:
+  "\<lbrace>obj_at P t' and
+    K (\<forall>tcb arch. P (TCB tcb) \<longrightarrow> P (TCB (tcb_arch_update (K arch) tcb)))\<rbrace>
+     set_mrs t buf mrs
+   \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
+  apply (simp add: set_mrs_def zipWithM_x_mapM split_def
+                   store_word_offs_def set_object_def
+              cong: option.case_cong
+              split del: if_split)
+  apply (wpsimp wp: hoare_vcg_split_case_option mapM_wp[where S=UNIV, simplified])
+  apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
+  done
+
+lemma as_user_obj_at_trivial:
+  "\<lbrace>obj_at P t' and
+    K (\<forall>tcb arch. P (TCB tcb) \<longrightarrow> P (TCB (tcb_arch_update (K arch) tcb)))\<rbrace>
+     as_user t f
+   \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
+  by (wpsimp simp: as_user_def set_object_def split_def obj_at_def get_tcb_SomeD)
+
+crunch obj_at_trivial: set_consumed "obj_at P t"
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma complete_yield_to_not_live:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_yield_from sc = Some tcb \<and> sc_tcb sc = None
                                                \<and> sc_ntfn sc = None \<and> sc_replies sc = []) sc
     and valid_objs and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
      complete_yield_to tcb
    \<lbrace>\<lambda>yc a. obj_at (Not \<circ> live) sc a\<rbrace>"
-  apply (clarsimp simp: complete_yield_to_def)
-  apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def set_object_def set_tcb_obj_ref_def
-                  wp: get_object_wp hoare_vcg_all_lift | wp_once hoare_drop_imps)+
+  apply (clarsimp simp: complete_yield_to_def get_tcb_obj_ref_def)
+  apply (wpsimp wp: thread_get_wp' set_sc_obj_ref_obj_at_trivial
+                    set_tcb_obj_ref_obj_at_trivial
+                    set_consumed_obj_at_trivial
+                    get_object_wp hoare_vcg_all_lift
+         | wp_once hoare_drop_imps)+
+  apply (clarsimp simp: obj_at_def live_def live_sc_def)
+
+(*  apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def set_object_def set_tcb_obj_ref_def
+                  wp: get_object_wp hoare_vcg_all_lift | wp_once hoare_drop_imps)+*)
   sorry
 
 lemma sched_context_unbind_yield_from_not_live:
@@ -1036,7 +1103,8 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
              apply ((wpsimp wp: gts_wp get_simple_ko_wp | hammer | wp_once hoare_drop_imps, rule hoare_vcg_conj_lift,
                       wp_once cancel_ipc_unlive_reply_receive[unfolded o_def] reply_remove_unlive[unfolded o_def])+)[9]
            apply (auto simp: obj_at_def is_cap_simps ran_tcb_cap_cases valid_ipc_buffer_cap_def pred_tcb_at_def
-                             live_def live_reply_def vs_cap_ref_def no_cap_to_obj_with_diff_ref_Null matts_invariant
+                             live_def live_reply_def vs_cap_ref_def no_cap_to_obj_with_diff_ref_Null
+                             reply_tcb_None_reply_sc_None
                       intro: valid_NullCapD
                       dest!: reply_tcb_state_refs)[1]
           \<comment> \<open>Cnode\<close>
