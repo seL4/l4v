@@ -557,6 +557,22 @@ lemma refs_of2: "\<And>obj p. kheap s p = Some obj
                      \<Longrightarrow> refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
   by (simp add: refs_of obj_at_def)
 
+lemma valid_replies:
+  "valid_replies s"
+  using invs
+  by (simp add: invs_def valid_state_def valid_pspace_def)
+
+(* FIXME: move *)
+lemma fst_subset:
+  "fst ` A \<subseteq> fst ` B \<Longrightarrow> (r, q) \<in> A \<Longrightarrow> \<exists>t. (r,t) \<in> B"
+  by fastforce
+
+lemma valid_replies_other_refs:
+  "(r, p) \<in> replies_with_sc s \<Longrightarrow> \<exists>t. (r, t) \<in> replies_blocked s"
+  apply (rule fst_subset[rotated], assumption)
+  using valid_replies
+  by (simp add: valid_replies'_def)
+
 lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbrakk>
                              \<Longrightarrow> valid_obj p obj (detype (untyped_range cap) s)"
   apply (clarsimp simp: valid_obj_def
@@ -587,10 +603,28 @@ lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbra
     apply (simp add: valid_sched_context_def)
     apply (intro conjI)
        apply ((simp add: valid_bound_obj_def split: option.splits)+)[3]
-    apply (fastforce simp: foldl_conj_list_all list_all_def)
+    apply (simp only: list_all_def; intro ballI conjI)
+     apply (rule_tac P="live" in live_okE[rotated], simp)
+     apply (clarsimp simp: obj_at_def)
+     apply (drule_tac x=r in bspec)
+      apply assumption
+     apply (elim exE conjE)
+     apply (rule_tac x=ko in exI;
+            clarsimp simp: is_reply)
+     apply (clarsimp simp: is_reply live_def live_reply_def)
+     apply (subgoal_tac "(r, p) \<in> replies_with_sc s")
+      apply (drule_tac valid_replies_other_refs)
+      apply (clarsimp simp: replies_blocked_def)
+      apply (rule_tac x=t in exI)
+      using refsym                                      
+      apply (drule_tac x=t and y="r" and tp=ReplyTCB in sym_refsE;
+             clarsimp simp: state_refs_of_def obj_at_def  st_tcb_at_def get_refs_def
+                     split: option.splits)
+     apply (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def)
+    apply fastforce
    apply (frule refs_of)
    apply (auto simp: valid_reply_def valid_bound_obj_def arch_valid_obj
-              split: option.splits)
+              split: option.splits)[2]
   done
 
 lemma valid_objs_detype[detype_invs_lemmas] : "valid_objs (detype (untyped_range cap) s)"
@@ -612,11 +646,44 @@ lemma sym_refs_detype[detype_invs_lemmas] :
   "sym_refs (state_refs_of (detype (untyped_range cap) s))"
   using refsym by (simp add: state_refs)
 
+lemma replies_with_sc_detype:
+  "replies_with_sc (detype S s) = {(r,sc)\<in>(replies_with_sc s). sc \<notin> S}"
+  unfolding replies_with_sc_def detype_def
+  apply (rule set_eqI; clarsimp simp: sc_replies_sc_at_def obj_at_def)
+  by blast
+
+lemma replies_blocked_detype:
+  "replies_blocked (detype S s) = {(r,sc)\<in>(replies_blocked s). sc \<notin> S}"
+  unfolding replies_blocked_def detype_def
+  apply (rule set_eqI; clarsimp simp: st_tcb_at_def obj_at_def)
+  by blast
+
+lemma replies_blocked_not_untyped_range:
+  "(r,t)\<in>(replies_blocked s) \<Longrightarrow> t \<notin> (untyped_range cap)"
+  apply (rule live_okE)
+  apply (clarsimp simp: replies_blocked_def st_tcb_at_def; assumption)
+  by (clarsimp simp: live_def)
+
+lemma replies_with_sc_not_untyped_range:
+  "(r,t)\<in>(replies_with_sc s) \<Longrightarrow> t \<notin> (untyped_range cap)"
+  apply (rule live_okE)
+  apply (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def; assumption)
+  by (clarsimp simp: live_def live_sc_def)
+
+lemma replies_with_sc_detype_stable:
+  "replies_with_sc (detype (untyped_range cap) s) = replies_with_sc s"
+  using replies_with_sc_not_untyped_range
+  by (clarsimp simp: replies_with_sc_detype; fastforce)+
+
+lemma replies_blocked_detype_stable:
+  "replies_blocked (detype (untyped_range cap) s) = replies_blocked s"
+  using replies_blocked_not_untyped_range
+  by (clarsimp simp: replies_blocked_detype; fastforce)+
+
 lemma valid_replies_detype[detype_invs_lemmas]:
   "valid_replies (detype (untyped_range cap) s)"
-  by (rule valid_replies_state_refs_eq[THEN iffD2]
-      , rule state_refs
-      , rule valid_pspaceE[OF valid_pspace])
+  using valid_replies replies_blocked_detype_stable replies_with_sc_detype_stable
+  by simp
 
 lemmas [detype_invs_lemmas] = sym_hyp_refs_detype
 
