@@ -7125,18 +7125,11 @@ and active_sc_tcb_at[wp]: "active_sc_tcb_at t"
 and sc_tcb_sc_at[wp]: "\<lambda>s::det_ext state. sc_tcb_sc_at P t s"
 and scheduler_act_not[wp]: "scheduler_act_not t"
 and test_sc_refill_max[wp]: "test_sc_refill_max t::det_state \<Rightarrow> _"
-  (ignore: set_object wp: sts_sc_tcb_sc_at set_thread_state_not_queued_valid_ready_qs)
+  (ignore: set_object wp: set_thread_state_not_queued_valid_ready_qs)
 
 crunches update_sk_obj_ref
 for active_sc_tcb_at[wp]: "active_sc_tcb_at t"
   (wp: hoare_drop_imps set_object_wp)
-
-lemma set_reply_obj_ref_sc_tcb_sc_at[wp]:
-  "\<lbrace>sc_tcb_sc_at P t\<rbrace> set_reply_obj_ref f p new \<lbrace>\<lambda>_. sc_tcb_sc_at P t\<rbrace>"
-  apply (clarsimp simp: update_sk_obj_ref_def)
-  apply (wpsimp simp: set_simple_ko_def wp: set_object_wp get_object_wp get_simple_ko_wp)
-  by (clarsimp simp: a_type_def partial_inv_def sc_tcb_sc_at_def obj_at_def the_equality
-                split: kernel_object.splits)
 
 lemma reply_push_scheduler_act_not[wp]:
   "\<lbrace>scheduler_act_not t\<rbrace>

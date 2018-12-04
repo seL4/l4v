@@ -964,6 +964,12 @@ lemma replies_blocked_upd_tcb_st_valid_replies:
   shows "valid_replies' with_sc (replies_blocked_upd_tcb_st st t blocked)"
   using assms by (fastforce simp: valid_replies_defs replies_blocked_upd_tcb_st_def image_def)
 
+lemma replies_blocked_upd_tcb_st_valid_replies_not_blocked:
+  assumes "valid_replies' with_sc blocked"
+  assumes "\<forall>r. (r,t) \<notin> blocked"
+  shows "valid_replies' with_sc (replies_blocked_upd_tcb_st st t blocked)"
+  using assms by (fastforce simp: valid_replies_defs replies_blocked_upd_tcb_st_def image_def)
+
 text \<open>@{term reply_unlink_tcb} does not preserve @{term invs} when the
       associated thread is @{term BlockedOnReceive}, because it drops a
       reference to an endpoint. For that case, rebalancing @{term sym_refs}
@@ -1861,7 +1867,7 @@ lemma endpoint_reply_irrelevant:
   apply (fastforce simp: state_refs_of_def get_refs_def2 split: if_splits)
   done
 
-(* Don't use this if t might be BlockedOnReply. 
+(* Don't use this if t might be BlockedOnReply.
 lemma sts_valid_replies_simple:
   "\<lbrace> st_tcb_at (\<lambda>st'. replies_blocked_of_tcb_st t st' = replies_blocked_of_tcb_st t st) t
         and valid_replies_pred P \<rbrace>
@@ -1899,7 +1905,7 @@ lemma set_thread_state_valid_irq_node[wp]:
   "set_thread_state t st \<lbrace> valid_irq_node \<rbrace>"
   by (wpsimp simp: valid_irq_node_def cap_table_at_typ wp: hoare_vcg_all_lift | wps)+
 
-(* Don't use this if r might be linked to a TCB which is BlockedOnReply. 
+(* Don't use this if r might be linked to a TCB which is BlockedOnReply.
 lemma sts_valid_replies_simple':
   "\<lbrace> \<lambda>s. st_tcb_at (\<lambda>st'. replies_blocked_of_tcb_st t st' \<subseteq> replies_blocked_of_tcb_st t st) t s
           \<and> valid_replies s\<rbrace>
@@ -1911,12 +1917,12 @@ lemma sts_valid_replies_simple':
 
 (* May be useful in limited circumstances:
    - when set_thread_state is the last step in reestablishing invariants.
-   - when the thread is not previously BlockedOnReply. 
+   - when the thread is not previously BlockedOnReply. *)
 lemma set_thread_state_invs:
   shows "\<lbrace> \<lambda>s. valid_tcb_state st s
                \<and> (\<not> halted st \<longrightarrow> ex_nonz_cap_to t s)
                \<and> (idle st \<longleftrightarrow> t = idle_thread s)
-               \<and> st_tcb_at (\<lambda>st'. replies_blocked_of_tcb_st t st' \<subseteq> replies_blocked_of_tcb_st t st) t s
+               \<and> (\<forall>r. (r,t) \<in> replies_blocked s \<longrightarrow> st = BlockedOnReply (Some r))
                \<and> sym_refs (\<lambda>p. if p = t
                                 then tcb_st_refs_of st \<union> tcb_non_st_state_refs_of s t
                                 else state_refs_of s p)
@@ -1924,8 +1930,11 @@ lemma set_thread_state_invs:
                \<and> all_invs_but_sym_refs s \<rbrace>
           set_thread_state t st
          \<lbrace> \<lambda>_. invs \<rbrace>"
-  by (wpsimp simp: invs_def valid_state_def valid_pspace_def
-               wp: TcbAcc_AI.sts_only_idle sts_valid_replies_simple') *)
+  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
+                  wp: TcbAcc_AI.sts_only_idle sts_valid_replies)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def
+                 elim!: replies_blocked_upd_tcb_st_valid_replies)
+  done
 
 lemma sts_st_tcb_at_cases_different_thread:
   "t' \<noteq> t \<Longrightarrow> set_thread_state t ts \<lbrace> \<lambda>s. P (st_tcb_at P' t' s) \<rbrace>"

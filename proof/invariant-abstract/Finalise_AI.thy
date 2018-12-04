@@ -669,6 +669,7 @@ lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
 lemma schedule_tcb_invs[wp]: "\<lbrace>invs\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp simp: schedule_tcb_def)
 
+(* FIXME move *)
 lemma tcb_reftypes:
    "(x, tp) \<in> state_refs_of s p \<Longrightarrow> tcb_at p s \<Longrightarrow>
        tp \<in> {TCBBlockedSend,TCBBlockedRecv,TCBSignal,TCBBound,TCBHypRef,TCBSchedContext,
@@ -678,6 +679,7 @@ lemma tcb_reftypes:
                   split: thread_state.splits if_split_asm)
   done
 
+(* FIXME move *)
 lemma reply_reftypes:
    "(x, tp) \<in> state_refs_of s p \<Longrightarrow> reply_at p s \<Longrightarrow>
        tp \<in> {ReplySchedContext, ReplyTCB}"

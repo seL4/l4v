@@ -247,7 +247,7 @@ locale Ipc_AI =
   assumes make_arch_fault_msg_vms[wp]:
     "\<And> ft t. make_arch_fault_msg ft t \<lbrace>valid_machine_state :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_st_tcb_at'[wp]:
-    "\<And> P p ft t . make_arch_fault_msg ft t \<lbrace>st_tcb_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+    "\<And> P p ft t . make_arch_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. Q (st_tcb_at P p s)\<rbrace>"
   assumes make_arch_fault_msg_cap_to[wp]:
     "\<And> ft t p. make_arch_fault_msg ft t \<lbrace>ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_valid_irq_states[wp]:
@@ -255,7 +255,7 @@ locale Ipc_AI =
   assumes make_arch_fault_msg_cap_refs_respects_device_region[wp]:
     "\<And> ft t. make_arch_fault_msg ft t \<lbrace>cap_refs_respects_device_region :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_pred_tcb[wp]:
-    "\<And> P (proj :: itcb \<Rightarrow> 't) ft t . make_arch_fault_msg ft t \<lbrace>pred_tcb_at proj P t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+    "\<And> P (proj :: itcb \<Rightarrow> 't) ft t . make_arch_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. Q (pred_tcb_at proj P t s)\<rbrace>"
   assumes make_arch_fault_msg_bound_sc[wp]:
     "\<And> P p ft t. make_arch_fault_msg ft t \<lbrace>bound_sc_tcb_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_reply_sc[wp]:
@@ -729,7 +729,7 @@ lemma get_cap_global_refs[wp]:
   apply (clarsimp simp: valid_refs_def2 valid_global_refs_def cte_wp_at_caps_of_state)
   by blast
 
-crunch pred_tcb_at [wp]: set_extra_badge "\<lambda>s. pred_tcb_at proj P p s"
+crunch pred_tcb_at [wp]: set_extra_badge "\<lambda>s. Q (pred_tcb_at proj P p s)"
 crunch idle [wp]: set_extra_badge "\<lambda>s. P (idle_thread s)"
 
 lemma (in Ipc_AI) tcl_idle[wp]:
@@ -1973,7 +1973,7 @@ lemma cte_wp_at_reply_cap_can_fast_finalise:
 
 context Ipc_AI begin
 
-crunch st_tcb_at[wp]: do_ipc_transfer "st_tcb_at  P t :: 'state_ext state \<Rightarrow> bool"
+crunch st_tcb_at[wp]: do_ipc_transfer "(\<lambda>s. Q (st_tcb_at P t s)) :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps transfer_caps_loop_pres simp: zipWithM_x_mapM)
 
 end

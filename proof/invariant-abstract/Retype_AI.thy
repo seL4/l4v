@@ -1738,24 +1738,17 @@ lemma replies_with_sc:
                  default_object_def tyunt default_sched_context_def
           split: apiobject_type.splits)
 
-lemma fst_replies_with_sc:
-  "fst ` replies_with_sc s' \<subseteq> fst ` replies_with_sc s"
-  unfolding s'_def ps_def
-  by (auto simp: replies_with_sc_def sc_at_pred_def obj_at_def
-                 default_object_def tyunt default_sched_context_def
-          split: apiobject_type.splits)
-
-lemma fst_replies_blocked:
-  "fst ` replies_blocked s \<subseteq> fst ` replies_blocked s'"
-  by (auto intro!: pred_tcb_at_pres simp: replies_blocked_def image_Collect)
+lemma replies_blocked:
+  "replies_blocked s \<subseteq> replies_blocked s'"
+  by (auto intro!: pred_tcb_at_pres simp: replies_blocked_def)
 
 lemma valid_replies:
   "valid_replies s'"
   apply (rule valid_pspaceE[OF vp])
   apply (clarsimp simp: valid_replies'_def)
   apply (rule conjI)
-   apply (rule subset_trans[OF fst_replies_with_sc])
-   apply (erule subset_trans[OF _ fst_replies_blocked])
+   apply (rule subset_trans[OF image_mono[OF replies_with_sc]])
+   apply (erule subset_trans[OF _ image_mono[OF replies_blocked]])
   apply (clarsimp simp: inj_on_subset[OF _ replies_with_sc])
   done
 

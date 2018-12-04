@@ -1201,6 +1201,22 @@ proof -
   show ?thesis using rep by (clarsimp simp: valid_replies_defs subf inj_on_subset[OF _ subs])
 qed
 
+lemma replies_with_sc_upd_replies_new_valid_replies:
+  "valid_replies' rs_with_sc rs_blocked
+   \<Longrightarrow> set rs \<subseteq> fst ` rs_blocked
+   \<Longrightarrow> \<forall>x\<in>(set rs). x \<notin> fst ` rs_with_sc
+   \<Longrightarrow> valid_replies' (replies_with_sc_upd_replies rs sc_ptr rs_with_sc) rs_blocked"
+  unfolding valid_replies'_def replies_with_sc_upd_replies_def
+  apply safe
+   apply (clarsimp split: if_splits)
+    apply (clarsimp simp: in_mono)
+   apply (subgoal_tac "a \<in> fst ` rs_with_sc")
+    apply (clarsimp simp: in_mono)
+   apply (clarsimp simp: image_def)
+   apply (rule_tac x="(a,b)" in bexI; simp)
+  apply (clarsimp simp: inj_on_def image_def; safe; force)
+  done
+
 lemma sc_replies_sc_at_subset_replies_with_sc:
   assumes "sc_replies_sc_at (\<lambda>rs'. set rs \<subseteq> set rs') sc_ptr s"
   shows "set rs \<subseteq> {r. (r, sc_ptr) \<in> replies_with_sc s}"

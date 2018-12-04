@@ -456,7 +456,7 @@ crunch valid_pdpt_objs[wp]: send_signal, send_ipc "valid_pdpt_objs"
   ignore: set_thread_state_act set_object test_reschedule)
 
 crunch valid_pdpt_objs[wp]: cancel_all_ipc, cancel_all_signals, unbind_maybe_notification,
-  sched_context_maybe_unbind_ntfn, reply_unlink_tcb, sched_context_clear_replies,
+  sched_context_maybe_unbind_ntfn, reply_unlink_tcb,
   sched_context_unbind_all_tcbs, sched_context_unbind_ntfn "valid_pdpt_objs"
   (wp: maybeM_inv hoare_drop_imp mapM_x_wp' ignore: tcb_release_remove)
 

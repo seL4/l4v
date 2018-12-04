@@ -616,7 +616,7 @@ lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbra
       apply (drule_tac valid_replies_other_refs)
       apply (clarsimp simp: replies_blocked_def)
       apply (rule_tac x=t in exI)
-      using refsym                                      
+      using refsym
       apply (drule_tac x=t and y="r" and tp=ReplyTCB in sym_refsE;
              clarsimp simp: state_refs_of_def obj_at_def  st_tcb_at_def get_refs_def
                      split: option.splits)

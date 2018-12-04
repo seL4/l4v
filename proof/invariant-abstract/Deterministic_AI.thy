@@ -4007,13 +4007,6 @@ lemma unbind_maybe_notification_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> unbind_maybe_notification r \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: unbind_maybe_notification_def get_sk_obj_ref_def wp: maybeM_inv)
 
-lemma ttcb_release_remove_cdt_cdt_list[wp]:
-   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> tcb_release_remove r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp simp: tcb_release_remove_def
-       wp: hoare_drop_imps)
-
-crunch (empty_fail) empty_fail[wp]: tcb_release_remove
-
 lemma sched_context_unbind_tcb_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> sched_context_unbind_tcb r \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: sched_context_unbind_tcb_def wp: get_sched_context_wp)
@@ -4021,10 +4014,6 @@ lemma sched_context_unbind_tcb_valid_list[wp]:
 lemma sched_context_unbind_all_tcbs_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> sched_context_unbind_all_tcbs r \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: sched_context_unbind_all_tcbs_def)
-
-lemma sched_context_clear_replies_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> sched_context_clear_replies r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: sched_context_clear_replies_def wp: mapM_x_wp')
 
 lemma sched_context_unbind_ntfn_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> sched_context_unbind_ntfn r \<lbrace>\<lambda>_.valid_list\<rbrace>"
