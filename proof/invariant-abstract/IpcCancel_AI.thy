@@ -2601,4 +2601,29 @@ lemma complete_yield_to_invs:
   apply (clarsimp dest!: idle_no_ex_cap)
   done
 
+lemma reply_sc_refs:
+  "\<lbrakk>reply_sc reply = Some t; valid_objs s; sym_refs (state_refs_of s);
+    kheap s rptr = Some (Reply reply)\<rbrakk>
+  \<Longrightarrow> \<exists>sc n. kheap s t = Some (SchedContext sc n) \<and>
+     (rptr \<in> set (sc_replies sc))"
+  apply (erule (1) valid_objsE)
+  apply (drule sym_refs_ko_atD[rotated])
+   apply (simp add: obj_at_def)
+  apply (clarsimp simp: get_refs_def2 obj_at_def valid_obj_def valid_reply_def refs_of_rev
+                        valid_bound_obj_def is_sc_obj_def state_refs_of_def image_iff)
+  done
+
+lemma reply_tcb_None_reply_sc_None:
+  "\<lbrakk>invs s; kheap s p = Some (Reply rep); reply_tcb rep = None\<rbrakk>
+   \<Longrightarrow> reply_sc rep = None"
+  apply (frule invs_valid_replies, frule invs_sym_refs, frule invs_valid_objs)
+  apply (clarsimp simp: valid_replies_defs)
+  apply (drule_tac c=p in contra_subsetD)
+   apply (clarsimp dest!: sym_refs_st_tcb_atD simp: obj_at_def get_refs_def
+                   split: option.splits)+
+  apply (rule ccontr, clarsimp)
+  apply (frule(3) reply_sc_refs)
+  apply (fastforce simp: sc_at_pred_def obj_at_def image_def)
+  done
+
 end

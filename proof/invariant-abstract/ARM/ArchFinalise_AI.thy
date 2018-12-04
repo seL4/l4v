@@ -585,19 +585,6 @@ lemma set_simple_ko_obj_at_disjoint:
    \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
   by (wpsimp simp: set_simple_ko_def wp: set_object_at_obj get_object_wp)
 
-lemma reply_tcb_None_reply_sc_None:
-  "\<lbrakk>invs s; kheap s p = Some (Reply rep); reply_tcb rep = None\<rbrakk>
-   \<Longrightarrow> reply_sc rep = None"
-  apply (frule invs_valid_replies, frule invs_sym_refs, frule invs_valid_objs)
-  apply (clarsimp simp: valid_replies_defs)
-  apply (drule_tac c=p in contra_subsetD)
-   apply (clarsimp dest!: sym_refs_st_tcb_atD simp: obj_at_def get_refs_def
-                   split: option.splits)+
-  apply (rule ccontr, clarsimp)
-  apply (frule(3) reply_sc_refs)
-  apply (fastforce simp: sc_at_pred_def obj_at_def image_def)
-  done
-
 lemma reply_unlink_sc_not_live:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> reply_tcb r = None) reply and invs\<rbrace>
      reply_unlink_sc sc_ptr reply
