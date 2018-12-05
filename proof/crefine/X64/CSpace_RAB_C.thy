@@ -136,15 +136,6 @@ lemma andCapRights_ac:
   "andCapRights a (andCapRights b c) = andCapRights b (andCapRights a c)"
   by (simp add: andCapRights_def conj_comms split: cap_rights.split)+
 
-lemma wordFromRights_rightsFromWord:
-  "wordFromRights (rightsFromWord w) = w && mask 3"
-  apply (simp add: wordFromRights_def rightsFromWord_def
-                   mask_def)
-  apply (auto simp: bin_nth_ops bin_nth_Bit0 bin_nth_Bit1 numeral_2_eq_2
-           intro!: word_eqI)
-  done
-
-
 (* FIXME: move, duplicated in CSpace_C *)
 lemma ccorres_cases:
   assumes P:    " P \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf ar axf G G' hs a b"

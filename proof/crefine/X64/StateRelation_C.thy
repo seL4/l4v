@@ -340,14 +340,16 @@ where
      = (tsType_CL (fst ts') = scast ThreadState_IdleThreadState)"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnReply) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReply)"
-| "cthread_state_relation_lifted (Structures_H.BlockedOnReceive oref) ts'
-     = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReceive \<and>
-        oref = blockingObject_CL (fst ts'))"
-| "cthread_state_relation_lifted (Structures_H.BlockedOnSend oref badge cg isc) ts'
+| "cthread_state_relation_lifted (Structures_H.BlockedOnReceive oref cg) ts'
+     = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReceive
+        \<and> oref = blockingObject_CL (fst ts')
+        \<and> cg = to_bool (blockingIPCCanGrant_CL (fst ts')))"
+| "cthread_state_relation_lifted (Structures_H.BlockedOnSend oref badge cg cgr isc) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnSend
         \<and> oref = blockingObject_CL (fst ts')
         \<and> badge = blockingIPCBadge_CL (fst ts')
         \<and> cg    = to_bool (blockingIPCCanGrant_CL (fst ts'))
+        \<and> cgr   = to_bool (blockingIPCCanGrantReply_CL (fst ts'))
         \<and> isc   = to_bool (blockingIPCIsCall_CL (fst ts')))"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnNotification oref) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnNotification
@@ -1067,7 +1069,8 @@ definition
 definition
   "cap_rights_to_H rs \<equiv> CapRights (to_bool (capAllowWrite_CL rs))
                                   (to_bool (capAllowRead_CL rs))
-                                  (to_bool (capAllowGrant_CL rs))"
+                                  (to_bool (capAllowGrant_CL rs))
+                                  (to_bool (capAllowGrantReply_CL rs))"
 
 definition
   "ccap_rights_relation cr cr' \<equiv> cr = cap_rights_to_H (seL4_CapRights_lift cr')"
