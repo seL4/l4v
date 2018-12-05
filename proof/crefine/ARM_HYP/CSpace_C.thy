@@ -20,18 +20,19 @@ lemma maskCapRights_cap_cases:
   "return (maskCapRights R c) =
   (case c of
     ArchObjectCap ac \<Rightarrow> return (Arch.maskCapRights R ac)
-  | EndpointCap _ _ _ _ _ \<Rightarrow>
-    return (capEPCanGrant_update
-       (\<lambda>_. capEPCanGrant c \<and> capAllowGrant R)
-            (capEPCanReceive_update
-               (\<lambda>_. capEPCanReceive c \<and> capAllowRead R)
-                    (capEPCanSend_update
-                          (\<lambda>_. capEPCanSend c \<and> capAllowWrite R) c)))
+  | EndpointCap _ _ _ _ _ _ \<Rightarrow>
+    return (capEPCanGrantReply_update (\<lambda>_. capEPCanGrantReply c \<and> capAllowGrantReply R)
+             (capEPCanGrant_update (\<lambda>_. capEPCanGrant c \<and> capAllowGrant R)
+               (capEPCanReceive_update (\<lambda>_. capEPCanReceive c \<and> capAllowRead R)
+                 (capEPCanSend_update (\<lambda>_. capEPCanSend c \<and> capAllowWrite R) c))))
   | NotificationCap _ _ _ _ \<Rightarrow>
     return (capNtfnCanReceive_update
                         (\<lambda>_. capNtfnCanReceive c \<and> capAllowRead R)
                         (capNtfnCanSend_update
                           (\<lambda>_. capNtfnCanSend c \<and> capAllowWrite R) c))
+  | ReplyCap _ _ _ \<Rightarrow>
+    return (capReplyCanGrant_update
+             (\<lambda>_. capReplyCanGrant c \<and> capAllowGrant R) c)
   | _ \<Rightarrow> return c)"
   apply (simp add: maskCapRights_def Let_def split del: if_split)
   apply (cases c; simp add: isCap_simps split del: if_split)
@@ -179,6 +180,8 @@ lemma to_bool_cap_rights_bf:
    to_bool_bf (capAllowWrite_CL (seL4_CapRights_lift R))"
   "to_bool (capAllowGrant_CL (seL4_CapRights_lift R)) =
    to_bool_bf (capAllowGrant_CL (seL4_CapRights_lift R))"
+  "to_bool (capAllowGrantReply_CL (seL4_CapRights_lift R)) =
+   to_bool_bf (capAllowGrantReply_CL (seL4_CapRights_lift R))"
   by (subst to_bool_bf_to_bool_mask,
       simp add: seL4_CapRights_lift_def mask_def word_bw_assocs, simp)+
 
@@ -192,11 +195,22 @@ lemma to_bool_ntfn_cap_bf:
   apply simp
   done
 
+lemma to_bool_reply_cap_bf:
+  "cap_lift c = Some (Cap_reply_cap cap)
+   \<Longrightarrow> to_bool (capReplyMaster_CL cap) = to_bool_bf (capReplyMaster_CL cap)
+      \<and> to_bool (capReplyCanGrant_CL cap) = to_bool_bf (capReplyCanGrant_CL cap)"
+  apply (simp add: cap_lift_def Let_def split: if_split_asm)
+  apply (subst to_bool_bf_to_bool_mask,
+         clarsimp simp: cap_lift_thread_cap mask_def word_bw_assocs)+
+  apply simp
+  done
+
 lemma to_bool_ep_cap_bf:
   "cap_lift c = Some (Cap_endpoint_cap cap) \<Longrightarrow>
   to_bool (capCanSend_CL cap) = to_bool_bf (capCanSend_CL cap) \<and>
   to_bool (capCanReceive_CL cap) = to_bool_bf (capCanReceive_CL cap) \<and>
-  to_bool (capCanGrant_CL cap) = to_bool_bf (capCanGrant_CL cap)"
+  to_bool (capCanGrant_CL cap) = to_bool_bf (capCanGrant_CL cap) \<and>
+  to_bool (capCanGrantReply_CL cap) = to_bool_bf (capCanGrantReply_CL cap)"
   apply (simp add:cap_lift_def Let_def split: if_split_asm)
   apply (subst to_bool_bf_to_bool_mask,
          clarsimp simp: cap_lift_thread_cap mask_def word_bw_assocs)+
@@ -335,12 +349,23 @@ lemma maskCapRights_ccorres [corres]:
       apply (simp add: Collect_const_mem from_bool_def)
       apply csymbr
       apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
-      apply (simp add: ccorres_cond_iffs)
+      apply ccorres_rewrite
       apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
       apply (rule allI)
       apply (rule conseqPre)
        apply vcg
-      apply (clarsimp simp: return_def)
+      apply (simp add: cap_get_tag_isCap isCap_simps return_def)
+      apply clarsimp
+      apply (unfold ccap_relation_def)[1]
+      apply (simp add: cap_reply_cap_lift [THEN iffD1])
+      apply (clarsimp simp: cap_to_H_def)
+      apply (simp add: map_option_case split: option.splits)
+      apply (clarsimp simp add: cap_to_H_def Let_def
+                      split: cap_CL.splits if_split_asm)
+      apply (simp add: cap_reply_cap_lift_def)
+      apply (simp add: ccap_rights_relation_def cap_rights_to_H_def
+                       to_bool_reply_cap_bf
+                       to_bool_mask_to_bool_bf to_bool_cap_rights_bf)
      apply (simp add: Collect_const_mem from_bool_def)
      apply csymbr
      apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
@@ -3684,7 +3709,7 @@ lemma sameObjectAs_spec:
 
 lemma sameRegionAs_EndpointCap:
   shows "\<lbrakk>ccap_relation capa capc;
-          RetypeDecls_H.sameRegionAs (capability.EndpointCap x y z  u v) capa\<rbrakk>
+          RetypeDecls_H.sameRegionAs (capability.EndpointCap p b cs cr cg cgr) capa\<rbrakk>
          \<Longrightarrow> cap_get_tag capc = scast cap_endpoint_cap"
   apply (simp add: sameRegionAs_def Let_def)
   apply (case_tac capa;
