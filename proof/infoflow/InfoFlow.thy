@@ -844,7 +844,8 @@ where
   affects_recv:
     "\<lbrakk>(l,Receive,ep) \<in> g; (l',SyncSend,ep) \<in> g\<rbrakk> \<Longrightarrow>
      l' \<in> subjectAffects g l" |
-  (* reply back channel TODO: check if needed *)
+  (* a reply right can only exist if l has a call right to l',
+   * so including this case saves us from having to re-derive it *)
   affects_reply_back:
     "\<lbrakk>(l',Reply,l) \<in> g\<rbrakk> \<Longrightarrow>
      l' \<in> subjectAffects g l" |
