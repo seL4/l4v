@@ -221,7 +221,7 @@ where
      (* tcbCTable          = *) (CTE (CNodeCap Low_cnode_ptr 10 2 10)
                                      (MDB (Low_cnode_ptr + 0x20) 0 False False))
      (* tcbVTable          = *) (CTE (ArchObjectCap (PageDirectoryCap Low_pd_ptr (Some Low_asid))) (MDB (Low_cnode_ptr + 0x30) 0 False False))
-     (* tcbReply           = *) (CTE (ReplyCap Low_tcb_ptr True) (MDB 0 0 True True)) (* master reply cap to itself *)
+     (* tcbReply           = *) (CTE (ReplyCap Low_tcb_ptr True True) (MDB 0 0 True True)) (* master reply cap to itself *)
      (* tcbCaller          = *) (CTE NullCap Null_mdb)
      (* tcbIPCBufferFrame  = *) (CTE NullCap Null_mdb)
      (* tcbDomain          = *) Low_domain
@@ -245,7 +245,7 @@ where
      (* tcbCTable          = *) (CTE (CNodeCap High_cnode_ptr 10 2 10)
                                      (MDB (High_cnode_ptr + 0x20) 0 False False))
      (* tcbVTable          = *) (CTE (ArchObjectCap (PageDirectoryCap High_pd_ptr (Some High_asid))) (MDB (High_cnode_ptr + 0x30) 0 False False))
-     (* tcbReply           = *) (CTE (ReplyCap High_tcb_ptr True) (MDB 0 0 True True)) (* master reply cap to itself *)
+     (* tcbReply           = *) (CTE (ReplyCap High_tcb_ptr True True) (MDB 0 0 True True)) (* master reply cap to itself *)
      (* tcbCaller          = *) (CTE NullCap Null_mdb)
      (* tcbIPCBufferFrame  = *) (CTE NullCap Null_mdb)
      (* tcbDomain          = *) High_domain
@@ -1875,12 +1875,12 @@ lemma map_to_ctes_kh0H_SomeD:
         x = idle_tcb_ptr + 0x40 \<and> y = (CTE NullCap Null_mdb) \<or>
         x = Low_tcb_ptr \<and> y = (CTE (CNodeCap Low_cnode_ptr 10 2 10) (MDB (Low_cnode_ptr + 0x20) 0 False False)) \<or>
         x = Low_tcb_ptr + 0x10 \<and> y = (CTE (ArchObjectCap (PageDirectoryCap Low_pd_ptr (Some Low_asid))) (MDB (Low_cnode_ptr + 0x30) 0 False False)) \<or>
-        x = Low_tcb_ptr + 0x20 \<and> y = (CTE (ReplyCap Low_tcb_ptr True) (MDB 0 0 True True)) \<or>
+        x = Low_tcb_ptr + 0x20 \<and> y = (CTE (ReplyCap Low_tcb_ptr True True) (MDB 0 0 True True)) \<or>
         x = Low_tcb_ptr + 0x30 \<and> y = (CTE NullCap Null_mdb) \<or>
         x = Low_tcb_ptr + 0x40 \<and> y = (CTE NullCap Null_mdb) \<or>
         x = High_tcb_ptr \<and> y = (CTE (CNodeCap High_cnode_ptr 10 2 10) (MDB (High_cnode_ptr + 0x20) 0 False False)) \<or>
         x = High_tcb_ptr + 0x10 \<and> y = (CTE (ArchObjectCap (PageDirectoryCap High_pd_ptr (Some High_asid))) (MDB (High_cnode_ptr + 0x30) 0 False False)) \<or>
-        x = High_tcb_ptr + 0x20 \<and> y = (CTE (ReplyCap High_tcb_ptr True) (MDB 0 0 True True)) \<or>
+        x = High_tcb_ptr + 0x20 \<and> y = (CTE (ReplyCap High_tcb_ptr True True) (MDB 0 0 True True)) \<or>
         x = High_tcb_ptr + 0x30 \<and> y = (CTE NullCap Null_mdb) \<or>
         x = High_tcb_ptr + 0x40 \<and> y = (CTE NullCap Null_mdb) \<or>
         x = irq_cnode_ptr \<and> y = (CTE NullCap Null_mdb) \<or>
@@ -2104,8 +2104,8 @@ lemma valid_caps_s0H[simp]:
   "valid_cap' (ArchObjectCap (PageDirectoryCap High_pd_ptr (Some High_asid))) s0H_internal"
   "valid_cap' (NotificationCap ntfn_ptr 0 True False) s0H_internal"
   "valid_cap' (NotificationCap ntfn_ptr 0 False True) s0H_internal"
-  "valid_cap' (ReplyCap Low_tcb_ptr True) s0H_internal"
-  "valid_cap' (ReplyCap High_tcb_ptr True) s0H_internal"
+  "valid_cap' (ReplyCap Low_tcb_ptr True True) s0H_internal"
+  "valid_cap' (ReplyCap High_tcb_ptr True True) s0H_internal"
   apply (simp
         | simp add: valid_cap'_def s0H_internal_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject,
           intro conjI,
