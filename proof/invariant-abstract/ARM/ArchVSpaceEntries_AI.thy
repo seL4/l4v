@@ -1694,9 +1694,6 @@ lemma handle_invocation_valid_pdpt[wp]:
 
 crunch valid_pdpt[wp]: check_budget_restart,update_time_stamp "valid_pdpt_objs::det_state \<Rightarrow> _"
 
-crunch ct_active: set_thread_state_act ct_active
-  (wp: ignore: set_object)
-
 crunch valid_pdpt[wp]: sc_and_timer "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_drop_imps hoare_vcg_if_lift2)
 crunch valid_pdpt[wp]: schedule_choose_new_thread "valid_pdpt_objs"
@@ -1710,7 +1707,8 @@ crunch valid_pdpt[wp]: activate_thread,switch_to_thread,
 crunch valid_pdpt[wp]: awaken "valid_pdpt_objs"
   (wp: hoare_drop_imp mapM_x_wp')
 
-crunch valid_pdpt[wp]: handle_call, handle_recv, handle_send, handle_yield, handle_interrupt
+crunch valid_pdpt[wp]: handle_call, handle_recv, handle_send, handle_yield,
+ handle_interrupt, handle_vm_fault, handle_hypervisor_fault
   "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_vcg_if_lift2 hoare_drop_imps crunch_wps
    simp: crunch_simps Let_def whenE_def liftE_def
@@ -1722,18 +1720,142 @@ lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (u
   apply (wpsimp wp: alternative_wp select_wp hoare_drop_imps)
   done
 
+crunches send_ipc, send_fault_ipc, handle_timeout, end_timeslice
+for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  (wp: crunch_wps transfer_caps_loop_pres simp: crunch_simps)
+
+crunches postpone,reschedule_required
+for st_tcb_at[wp]: "st_tcb_at P t"
+and st_tcb_at_ct[wp]: "\<lambda>s. st_tcb_at P (cur_thread s) s"
+  (wp: crunch_wps simp: crunch_simps)
+
+
+lemma check_budget_true_ts_const:
+   "\<lbrace>st_tcb_at P t\<rbrace> check_budget :: (bool,det_ext) s_monad \<lbrace>\<lambda>rv s. rv \<longrightarrow> st_tcb_at P t s\<rbrace>"
+  apply (clarsimp simp: check_budget_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule hoare_seq_ext[OF _ refill_capacity_sp])
+  apply (rule hoare_if)
+   apply (rule hoare_seq_ext[OF _ gets_sp])
+   apply (rule hoare_if)
+    by (wpsimp wp: reschedule_required_st_tcb_at)+
+
+lemma check_budget_true_ct_ts_const:
+   "\<lbrace>\<lambda>s. ct_in_state P s\<rbrace>
+       check_budget :: (bool,det_ext) s_monad
+              \<lbrace>\<lambda>rv s. rv \<longrightarrow> ct_in_state P s\<rbrace>"
+  apply (clarsimp simp: check_budget_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule hoare_seq_ext[OF _ refill_capacity_sp])
+  apply (rule hoare_if)
+   apply (rule hoare_seq_ext[OF _ gets_sp])
+   apply (rule hoare_if)
+    by (wpsimp wp: reschedule_required_st_tcb_at)+
+
+lemma check_budget_restart_ct_ts_const:
+   "\<lbrace>\<lambda>s. ct_in_state P s\<rbrace>
+      check_budget_restart :: (bool,det_ext) s_monad
+        \<lbrace>\<lambda>rv s. rv \<longrightarrow> ct_in_state P s\<rbrace>"
+  apply (simp add: check_budget_restart_def)
+  apply (rule hoare_seq_ext[rotated])
+  apply (rule check_budget_true_ct_ts_const)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  by (case_tac result; case_tac st; wpsimp)
+
+(* update_time_stamp *)
+lemma getCurrentTime_invs[wp]:
+  "valid invs (do_machine_op getCurrentTime) (\<lambda>_. invs)"
+  apply (simp add: ARM.getCurrentTime_def modify_def)
+  apply (wpsimp wp: dmo_invs simp: modify_def)
+  by (simp add: do_machine_op_def modify_def in_get bind_assoc get_def put_def gets_def in_bind
+                   split_def select_f_returns in_return)
+
+lemma update_time_stamp_invs[wp]:
+  "\<lbrace>invs\<rbrace> update_time_stamp \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (wpsimp simp: update_time_stamp_def)
+
+(* FIXME: move *)
+lemma ct_in_state_machine_op[wp]:
+  "\<lbrace>ct_in_state P\<rbrace> do_machine_op f \<lbrace>\<lambda>_. ct_in_state P::det_state \<Rightarrow> _\<rbrace>"
+  apply (simp add: ct_in_state_def pred_tcb_at_def obj_at_def)
+  apply (rule hoare_lift_Pf [where f=cur_thread])
+  by wp+
+
+crunches update_time_stamp
+for cur_thread: "\<lambda>s::det_state. P (cur_thread s)"
+and ct_in_state[wp]: "ct_in_state P::det_state \<Rightarrow> _"
+and pred_tcb_at[wp]: "pred_tcb_at p P t::det_state \<Rightarrow> _"
+and pred_tcb_at_ct[wp]: "\<lambda>s::det_state. pred_tcb_at p P (cur_thread s) s"
+  (wp: crunch_wps ARM.getCurrentTime_def)
+
 lemma call_kernel_valid_pdpt[wp]:
-  "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_pdpt_objs\<rbrace>
+  "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_pdpt_objs
+     and (\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s)\<rbrace>
       (call_kernel e) :: (unit,det_ext) s_monad
-   \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
+        \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def)
-      apply (rule hoare_pre)
-       apply (wp | simp add: if_apply_def2 whenE_def | wpc
-                 | rule conjI | clarsimp simp: ct_in_state_def
-                 | erule pred_tcb_weakenE
-                 | wp_once hoare_drop_imps)+
-  sorry (* call_kernel_valid_pdpt: needs check_budget_restart preserves valid_pdpt_objs, and possibly ct_active
-               - which may be problematic, not too sure *)
+       apply (rule hoare_seq_ext[rotated])
+        apply (rule validE_valid)
+        apply (rule_tac Q="\<lambda>_. (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in handleE_wp[rotated])
+         apply (rule_tac B="\<lambda>_. invs and ct_running and
+           (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x) and
+           (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s)" in  seqE)
+          apply (rule liftE_wp)
+          apply wpsimp
+         apply (rule_tac B="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and
+           (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in  seqE)
+          apply (rule liftE_wp)
+          apply (wpsimp wp: check_budget_restart_ct_ts_const)
+         apply (rule valid_validE)
+         apply (wpsimp, fastforce simp: ct_in_state_def pred_tcb_weakenE)
+        apply (wpsimp+)[2]
+    (***)
+      apply (rule_tac B="\<lambda>_. (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in hoare_seq_ext[rotated])
+       apply (rule validE_valid)
+       apply (rule liftE_wp)
+       apply (rule_tac B="\<lambda>_. invs and ct_running and
+           (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x) and
+           (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s)" in hoare_seq_ext[rotated])
+        apply wpsimp
+       apply (rule_tac B="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and
+           (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in hoare_seq_ext[rotated])
+        apply (wpsimp wp: check_budget_restart_ct_ts_const)
+       apply (wpsimp+)[2]
+    (***)
+     apply (rule_tac B="\<lambda>_. (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in hoare_seq_ext[rotated])
+      apply (rule validE_valid)
+      apply (rule liftE_wp)
+      apply (rule_tac B="\<lambda>_. invs and ct_running and
+           (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x) and
+           (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s)" in hoare_seq_ext[rotated])
+       apply wpsimp
+      apply (rule_tac B="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and
+           (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in hoare_seq_ext[rotated])
+       apply (wpsimp wp: check_budget_restart_ct_ts_const)
+      apply (wpsimp+)[2]
+    (***)
+    apply wpsimp
+    (***)
+   apply (rule_tac B="\<lambda>_. (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in hoare_seq_ext[rotated])
+    apply (rule validE_valid)
+    apply (rule liftE_wp)
+    apply (rule_tac B="\<lambda>_. invs and ct_running and
+           (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x) and
+           (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s)" in hoare_seq_ext[rotated])
+     apply wpsimp
+    apply (rule_tac B="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and
+           (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in hoare_seq_ext[rotated])
+     apply (wpsimp wp: check_budget_restart_ct_ts_const)
+    apply (wpsimp+)[2]
+    (***)
+  apply wpsimp
+  done
+
 
 end
 
