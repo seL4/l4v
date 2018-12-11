@@ -829,7 +829,7 @@ lemma well_formed_orig_ep_cap_is_default:
     opt_cap (obj_id, slot) spec = Some cap;
     ep_related_cap cap; cap \<noteq> NullCap\<rbrakk>
   \<Longrightarrow> is_default_cap cap"
-  apply (case_tac "\<exists>obj_id. cap = ReplyCap obj_id")
+  apply (case_tac "\<exists>obj_id R. cap = ReplyCap obj_id R")
    apply (frule (1) well_formed_well_formed_cap', simp)
    apply (clarsimp simp: well_formed_cap_def)
   apply (frule (3) well_formed_well_formed_orig_cap)

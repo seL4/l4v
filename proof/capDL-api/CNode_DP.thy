@@ -130,7 +130,7 @@ lemma seL4_CNode_Mint_sep:
      dest_slot = offset dest_index dest_size \<and>
 
      cap' = update_cap_data_det data (update_cap_rights (cap_rights src_cap \<inter> rights) src_cap) \<and>
-     (ep_related_cap src_cap \<longrightarrow> cap_badge src_cap = 0) \<and>
+     (is_ep_cap src_cap \<or> is_ntfn_cap src_cap \<longrightarrow> cap_badge src_cap = 0) \<and>
      cap_has_type src_cap \<and> \<not> is_untyped_cap src_cap
   \<rbrace>
   seL4_CNode_Mint dest_root dest_index dest_depth src_root src_index src_depth rights data

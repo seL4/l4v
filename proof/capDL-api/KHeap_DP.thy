@@ -61,14 +61,14 @@ lemma reset_cap_asid_simps2:
   "reset_cap_asid cap = (UntypedCap dev a ra) \<Longrightarrow> cap = UntypedCap dev a ra"
   "reset_cap_asid cap = (EndpointCap b c d) \<Longrightarrow> cap = EndpointCap b c d"
   "reset_cap_asid cap = (NotificationCap e f g) \<Longrightarrow> cap = NotificationCap e f g"
-  "reset_cap_asid cap = (ReplyCap h) \<Longrightarrow> cap = ReplyCap h"
+  "reset_cap_asid cap = (ReplyCap h R) \<Longrightarrow> cap = ReplyCap h R"
   "reset_cap_asid cap = (MasterReplyCap i) \<Longrightarrow> cap = MasterReplyCap i"
   "reset_cap_asid cap = (CNodeCap j k l sz) \<Longrightarrow> cap = CNodeCap j k l sz"
   "reset_cap_asid cap = (TcbCap m) \<Longrightarrow> cap = TcbCap m"
   "reset_cap_asid cap = DomainCap \<Longrightarrow> cap = DomainCap"
   "reset_cap_asid cap = RestartCap \<Longrightarrow> cap = RestartCap"
-  "reset_cap_asid cap = (PendingSyncSendCap n p q r s) \<Longrightarrow> cap = (PendingSyncSendCap n p q r s)"
-  "reset_cap_asid cap = (PendingSyncRecvCap t isf ) \<Longrightarrow> cap = (PendingSyncRecvCap t isf)"
+  "reset_cap_asid cap = (PendingSyncSendCap n p q r s rp) \<Longrightarrow> cap = (PendingSyncSendCap n p q r s rp)"
+  "reset_cap_asid cap = (PendingSyncRecvCap t isf rp) \<Longrightarrow> cap = (PendingSyncRecvCap t isf rp)"
   "reset_cap_asid cap = (PendingNtfnRecvCap u) \<Longrightarrow> cap = (PendingNtfnRecvCap u)"
   "reset_cap_asid cap = IrqControlCap \<Longrightarrow> cap = IrqControlCap"
   "reset_cap_asid cap = (IrqHandlerCap v) \<Longrightarrow> cap = (IrqHandlerCap v)"
@@ -656,9 +656,10 @@ lemma reset_cap_asid_cap_type:
 
 lemma ep_related_cap_update_cap_rights[simp]:
   "ep_related_cap (update_cap_rights rights cap) = ep_related_cap cap"
-  "ep_related_cap cap \<Longrightarrow> cap_badge (update_cap_rights rights cap) = cap_badge cap"
-  by (auto simp:ep_related_cap_def cap_badge_def
-    update_cap_rights_def split:cdl_cap.splits)
+  "\<lbrakk> is_ep_cap cap \<rbrakk> \<Longrightarrow> cap_badge (update_cap_rights rights cap) = cap_badge cap"
+  "\<lbrakk> is_ntfn_cap cap \<rbrakk> \<Longrightarrow> cap_badge (update_cap_rights rights cap) = cap_badge cap"
+  by (auto simp:ep_related_cap_def cap_badge_def cap_type_def update_cap_rights_def
+          split:cdl_cap.splits)
 
 lemma reset_cap_asid_cap_badge:
   "\<lbrakk>reset_cap_asid cap = reset_cap_asid cap';ep_related_cap cap\<rbrakk>
@@ -672,6 +673,18 @@ lemma reset_cap_asid_ep_related_cap:
   \<Longrightarrow> ep_related_cap cap = ep_related_cap cap'"
   apply (clarsimp simp: ep_related_cap_def)
   apply (case_tac cap, (case_tac cap', simp_all add: reset_cap_asid_def)+)
+  done
+
+lemma reset_cap_asid_ep_cap:
+  "reset_cap_asid cap = reset_cap_asid cap'
+  \<Longrightarrow> is_ep_cap cap = is_ep_cap cap'"
+  apply (case_tac cap; case_tac cap'; simp add: reset_cap_asid_def)
+  done
+
+lemma reset_cap_asid_ntfn_cap:
+  "reset_cap_asid cap = reset_cap_asid cap'
+  \<Longrightarrow> is_ntfn_cap cap = is_ntfn_cap cap'"
+  apply (case_tac cap; case_tac cap'; simp add: reset_cap_asid_def)
   done
 
 lemma cap_rights_reset_cap_asid:
@@ -892,7 +905,7 @@ lemma lookup_cap_and_slot_rvu:
 
 lemma update_cap_data:
   "\<lbrace>\<lambda>s. valid_src_cap cap badge \<and> cap_has_type cap
-   \<and> (ep_related_cap cap \<longrightarrow> \<not> preserve \<and> cap_badge cap = 0)
+   \<and> ((is_ep_cap cap \<or> is_ntfn_cap cap) \<longrightarrow> \<not> preserve \<and> cap_badge cap = 0)
    \<and> Q (update_cap_data_det badge cap) s \<rbrace>
   update_cap_data preserve badge cap
   \<lbrace>\<lambda>rv s. Q rv s\<rbrace>"
@@ -974,11 +987,21 @@ lemma cap_has_type_asid_cong:
   \<Longrightarrow> cap_has_type cap' = cap_has_type src_cap"
   by (drule reset_cap_asid_cap_type, simp)
 
+(* FIXME: MOVE *)
+fun is_reply_cap
+  where "is_reply_cap (ReplyCap _ _) = True"
+      | "is_reply_cap _ = False"
+
+lemma ep_related_capI:
+  "is_ep_cap cap \<Longrightarrow> ep_related_cap cap"
+  "is_ntfn_cap cap \<Longrightarrow> ep_related_cap cap"
+  "is_reply_cap cap \<Longrightarrow> ep_related_cap cap"
+  by (cases cap; simp add: ep_related_cap_def cap_type_def)+
 
 lemma decode_cnode_mint_rvu:
   "\<lbrace>\<lambda>s. caps \<noteq> [] \<and>
     cap_has_type src_cap \<and> valid_src_cap src_cap badge
-    \<and> (ep_related_cap src_cap \<longrightarrow>
+    \<and> ((is_ep_cap src_cap \<or> is_ntfn_cap src_cap) \<longrightarrow>
            cap_badge src_cap = 0)
     \<and> (\<forall>src_cap'. (reset_cap_asid src_cap'
        = reset_cap_asid src_cap) \<longrightarrow>
@@ -1021,8 +1044,13 @@ lemma decode_cnode_mint_rvu:
      simp:conj_comms is_exclusive_cap_update_cap_data
      safe_for_derive_not_non valid_src_cap_def)
    apply (intro conjI impI allI)
-      apply (metis reset_cap_asid_cap_type)
-     apply (metis reset_cap_asid_cap_badge reset_cap_asid_ep_related_cap)
+       apply (metis reset_cap_asid_cap_type)
+      apply (frule (1) reset_cap_asid_ep_cap[THEN iffD1])
+      apply simp
+      apply (metis reset_cap_asid_cap_badge ep_related_capI)
+     apply (frule (1) reset_cap_asid_ntfn_cap[THEN iffD1])
+     apply simp
+     apply (metis reset_cap_asid_cap_badge ep_related_capI)
     apply (metis option.inject reset_cap_asid_cnode_cap)
    apply (metis cap_rights_reset_cap_asid)
   apply sep_solve
@@ -1079,7 +1107,9 @@ lemma decode_cnode_mutate_rvu:
     apply (sep_solve)
    apply (clarsimp dest!: mapu_dest_opt_cap
      simp: conj_comms update_cap_data_non cong:non_cap_cong)
-   apply (metis reset_cap_asid_cap_type reset_cap_asid_ep_related_cap valid_src_cap_asid_cong)
+   apply (subst (asm) reset_cap_asid_ep_related_cap[OF sym], assumption)
+   apply (metis reset_cap_asid_cap_type reset_cap_asid_ep_related_cap valid_src_cap_asid_cong
+                ep_related_capI)
   apply sep_solve
   done
 

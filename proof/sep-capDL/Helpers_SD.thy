@@ -196,12 +196,12 @@ where
   | TcbCap _ \<Rightarrow> TcbCap obj_id
   | CNodeCap _ f2 f3 f4 \<Rightarrow> CNodeCap obj_id f2 f3 f4
   | MasterReplyCap _ \<Rightarrow> MasterReplyCap obj_id
-  | ReplyCap _ \<Rightarrow> ReplyCap obj_id
+  | ReplyCap _ f2 \<Rightarrow> ReplyCap obj_id f2
   | NotificationCap _ f2 f3 \<Rightarrow> NotificationCap obj_id f2 f3
   | EndpointCap _ f2 f3 \<Rightarrow> EndpointCap obj_id f2 f3
   | ZombieCap _ \<Rightarrow> ZombieCap obj_id
-  | PendingSyncSendCap _ f2 f3 f4 f5 \<Rightarrow> PendingSyncSendCap obj_id f2 f3 f4 f5
-  | PendingSyncRecvCap _ f2 \<Rightarrow> PendingSyncRecvCap obj_id f2
+  | PendingSyncSendCap _ f2 f3 f4 f5 f6 \<Rightarrow> PendingSyncSendCap obj_id f2 f3 f4 f5 f6
+  | PendingSyncRecvCap _ f2 f3 \<Rightarrow> PendingSyncRecvCap obj_id f2 f3
   | PendingNtfnRecvCap _ \<Rightarrow> PendingNtfnRecvCap obj_id
   | BoundNotificationCap _ \<Rightarrow> BoundNotificationCap obj_id
   | _ \<Rightarrow> cap"
@@ -686,12 +686,12 @@ lemma is_cnode_cap_simps:
   "is_cnode_cap (FrameCap dev x g h i j) = False"
   "is_cnode_cap (TcbCap x) = False"
   "is_cnode_cap (MasterReplyCap x) = False"
-  "is_cnode_cap (ReplyCap x) = False"
+  "is_cnode_cap (ReplyCap x q) = False"
   "is_cnode_cap (NotificationCap x m n) = False"
   "is_cnode_cap (EndpointCap x p q) = False"
   "is_cnode_cap (ZombieCap x) = False"
-  "is_cnode_cap (PendingSyncSendCap x s t u v) = False"
-  "is_cnode_cap (PendingSyncRecvCap x t) = False"
+  "is_cnode_cap (PendingSyncSendCap x s t u v w) = False"
+  "is_cnode_cap (PendingSyncRecvCap x t w) = False"
   "is_cnode_cap (PendingNtfnRecvCap x) = False"
 
   "is_cnode_cap (CNodeCap x k l sz) = True"
@@ -863,12 +863,12 @@ lemma cap_has_object_simps [simp]:
   "cap_has_object (TcbCap x)"
   "cap_has_object (CNodeCap x k l sz)"
   "cap_has_object (MasterReplyCap x)"
-  "cap_has_object (ReplyCap x)"
+  "cap_has_object (ReplyCap x q)"
   "cap_has_object (NotificationCap x m n)"
   "cap_has_object (EndpointCap x p q)"
   "cap_has_object (ZombieCap x)"
-  "cap_has_object (PendingSyncSendCap x s t u v)"
-  "cap_has_object (PendingSyncRecvCap x t)"
+  "cap_has_object (PendingSyncSendCap x s t u v w)"
+  "cap_has_object (PendingSyncRecvCap x t w)"
   "cap_has_object (PendingNtfnRecvCap x)"
   "cap_has_object (UntypedCap dev ids ids') = True"
   by (simp_all add:cap_has_object_def)
@@ -971,7 +971,7 @@ where
 
 definition derived_cap :: "cdl_cap \<Rightarrow> cdl_cap"
 where "derived_cap cap \<equiv> case cap of
-          ReplyCap _ \<Rightarrow> NullCap
+          ReplyCap _ _ \<Rightarrow> NullCap
         | MasterReplyCap _ \<Rightarrow> NullCap
         | IrqControlCap \<Rightarrow> NullCap
         | FrameCap d p r sz b x \<Rightarrow> FrameCap d p r sz b None
@@ -992,7 +992,7 @@ where "safe_for_derive cap \<equiv> case cap of
   | UntypedCap _ _ _ \<Rightarrow> False
   | PageTableCap _ _ _ \<Rightarrow> False
   | PageDirectoryCap _ _ _ \<Rightarrow> False
-  | ReplyCap _ \<Rightarrow> False
+  | ReplyCap _ _ \<Rightarrow> False
   | MasterReplyCap _ \<Rightarrow> False
   | IrqControlCap \<Rightarrow> False
   | ZombieCap _ \<Rightarrow> False

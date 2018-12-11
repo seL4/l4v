@@ -1349,6 +1349,18 @@ lemma init_cnode_slot_copy_original_sep:
   apply (wp|clarsimp)+
   done
 
+lemma ep_cap_default_cap:
+ "cap_type cap = Some type \<Longrightarrow>
+  is_ep_cap (default_cap type ids sz dev) = is_ep_cap cap"
+  by (fastforce simp: cap_type_def default_cap_def
+               split: cdl_cap.splits cdl_object_type.splits)
+
+lemma ntfn_cap_default_cap:
+ "cap_type cap = Some type \<Longrightarrow>
+  is_ntfn_cap (default_cap type ids sz dev) = is_ntfn_cap cap"
+  by (fastforce simp: cap_type_def default_cap_def
+               split: cdl_cap.splits cdl_object_type.splits)
+
 lemma seL4_CNode_Mint_object_slot_initialised_sep_helper:
   "\<lbrakk>well_formed spec;
     cnode_at obj_id spec;
@@ -1379,6 +1391,7 @@ lemma seL4_CNode_Mint_object_slot_initialised_sep_helper:
         si_cap_at t orig_caps spec dev (cap_object spec_cap) \<and>*
         si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
+  supply ep_related_capI[intro, dest]
   apply (rule hoare_chain)
    apply (cut_tac cnode_cap = si_cspace_cap
               and cnode_cap' = si_cnode_cap
@@ -1389,19 +1402,32 @@ lemma seL4_CNode_Mint_object_slot_initialised_sep_helper:
               and tcb=root_tcb
               and src_cap = "default_cap type {client_object_id} (object_size_bits spec_cap_obj) dev"
                in seL4_CNode_Mint_sep,
-               (assumption|simp add: ep_related_cap_default_cap get_index_def
-                 default_cap_has_type ep_related_cap_badge_of_default)+)
+               (assumption|simp add: ep_cap_default_cap ntfn_cap_default_cap get_index_def
+                 default_cap_has_type
+                 ep_related_cap_badge_of_default[OF ep_related_capI(1)]
+                 ep_related_cap_badge_of_default[OF ep_related_capI(2)])+)
     apply (frule_tac s=s and t=t and dup_caps=dup_caps and orig_caps=orig_caps
                  in mint_pre,(assumption|rule refl|simp)+)
    apply (elim conjE)
+   (* FIXME: need to refactor ep_related_cap rules. For now, discharge these manually *)
+   apply (subgoal_tac
+            "(type = EndpointType \<longrightarrow>
+                cap_badge (default_cap EndpointType {client_object_id}
+                                       (object_size_bits spec_cap_obj) dev) = 0)
+             \<and> (type = NotificationType \<longrightarrow>
+                cap_badge (default_cap NotificationType {client_object_id}
+                                       (object_size_bits spec_cap_obj) dev) = 0)")
+    prefer 2
+    apply (blast intro: ep_related_capI ep_related_cap_badge_of_default)
+   apply clarsimp
    apply (intro conjI,
      simp_all add:has_type_default_not_non ep_related_cap_default_cap
      valid_src_cap_if_cnode)
-       apply ((clarsimp simp: si_cnode_cap_def word_bits_def si_cspace_cap_def
-                       dest!: guard_equal_si_cspace_cap |
-               rule is_cnode_cap_si_cnode_cap | sep_cancel)+)[2]
-   apply (drule_tac s=s and dest_root=dest_root and src_index=src_index and R=R
-                in mint_post, (assumption|simp)+)
+      apply ((clarsimp simp: si_cnode_cap_def word_bits_def si_cspace_cap_def
+                      dest!: guard_equal_si_cspace_cap |
+              rule is_cnode_cap_si_cnode_cap | sep_cancel)+)[2]
+    apply (drule_tac s=s and dest_root=dest_root and src_index=src_index and R=R
+                 in mint_post, (assumption|simp)+)
    apply sep_cancel+
    apply (subst default_cap_data_if_cnode[symmetric],simp+)
   done
