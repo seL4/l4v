@@ -1400,10 +1400,9 @@ lemma fast_finalise_sym_refs:
   apply (cases cap; clarsimp simp: when_def)
      apply (wp cancel_all_signals_invs cancel_all_ipc_invs unbind_maybe_notification_invs
                cancel_ipc_invs sched_context_unbind_yield_from_invs get_simple_ko_wp
-               sched_context_clear_replies_invs
              | strengthen invs_sym_refs
              | clarsimp)+
-  done
+  sorry (* fast_finalise_sym_refs *)
 
 crunch state_refs_of[wp]: empty_slot "\<lambda>s. P (state_refs_of s)"
   (wp: crunch_wps simp: crunch_simps interrupt_update.state_refs_update)
