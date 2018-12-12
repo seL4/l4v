@@ -639,19 +639,23 @@ lemma sts_mcpriority_tcb_at_ct[wp]:
   apply clarsimp
   done
 
+lemma option_None_True: "case_option (\<lambda>_. True) f x = (\<lambda>s. \<forall>y. x = Some y \<longrightarrow> f y s)"
+  by (cases x; simp)
+
+lemma option_None_True_const: "case_option True f x = (\<forall>y. x = Some y \<longrightarrow> f y)"
+  by (cases x; simp)
+
 
 lemma sts_tcb_inv_wf [wp]:
   "\<lbrace>tcb_inv_wf i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. tcb_inv_wf i\<rbrace>"
   apply (case_tac i)
-(*  by (wp set_thread_state_valid_cap hoare_vcg_all_lift hoare_vcg_const_imp_lift
-         | simp add: tcb_at_typ split: option.split
-         | safe
-         | wp sts_obj_at_impossible)+ *) sorry
-
+  by (wpsimp wp: sts_sc_tcb_sc_at set_thread_state_bound_sc_tcb_at
+                 set_thread_state_valid_cap hoare_vcg_all_lift hoare_vcg_const_imp_lift
+             simp: option_None_True option_None_True_const | wp sts_obj_at_impossible)+
 
 lemma sts_valid_inv[wp]:
   "\<lbrace>valid_invocation i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_invocation i\<rbrace>"
-(*  by (cases i;
+    apply (cases i;
       wpsimp simp: sts_valid_untyped_inv sts_valid_arch_inv;
       rename_tac i'; case_tac i'; simp;
       wpsimp wp: set_thread_state_valid_cap sts_nasty_bit
@@ -660,7 +664,7 @@ lemma sts_valid_inv[wp]:
                  hoare_vcg_const_imp_lift hoare_vcg_ex_lift;
       auto)
 *)
-                 hoare_vcg_const_imp_lift hoare_vcg_ex_lift)*) sorry
+                 hoare_vcg_const_imp_lift hoare_vcg_ex_lift) sorry
 
 
 lemma sts_Restart_stay_simple:
@@ -676,10 +680,6 @@ lemma decode_inv_inv[wp]:
   notes if_split [split del]
   shows
   "\<lbrace>P\<rbrace> decode_invocation label args cap_index slot cap excaps \<lbrace>\<lambda>rv. P\<rbrace>"
-(*
-  apply (case_tac cap, simp_all add: decode_invocation_def,
-    (wpsimp wp: decode_tcb_inv_inv decode_domain_inv_inv)+)
-*)
   apply (case_tac cap, simp_all add: decode_invocation_def)
           apply (wp decode_tcb_inv_inv decode_domain_inv_inv
                     decode_sched_context_inv_inv decode_sched_control_inv_inv
