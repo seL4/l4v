@@ -1808,7 +1808,7 @@ definition replies_blocked_upd_tcb_st ::
   "thread_state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> obj_ref) set \<Rightarrow> (obj_ref \<times> obj_ref) set"
   where
   "replies_blocked_upd_tcb_st st t rs_blocked \<equiv>
-    {p. if snd p = t then st = BlockedOnReply (Some (fst p)) else p \<in> rs_blocked}"
+    {(r,t'). if t' = t then st = BlockedOnReply (Some r) else (r,t') \<in> rs_blocked}"
 
 lemma replies_blocked_upd_tcb_st:
   "replies_blocked (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_state := st\<rparr>))\<rparr>)

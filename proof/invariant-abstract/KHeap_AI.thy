@@ -2361,4 +2361,52 @@ lemma get_sc_obj_ref_wp:
    \<lbrace> P \<rbrace>"
   by (wpsimp simp: get_sc_obj_ref_def)
 
+lemma set_sc_obj_ref_obj_at_trivial:
+  "\<lbrace>obj_at P t' and
+    K (\<forall>sc n. P (SchedContext sc n) \<longrightarrow> P (SchedContext (f (K new) sc) n))\<rbrace>
+     set_sc_obj_ref f t new
+   \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
+  by (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
+                   set_object_def get_sched_context_def obj_at_def
+               wp: get_object_wp)
+
+lemma set_tcb_obj_ref_obj_at_trivial:
+  "\<lbrace>obj_at P t' and
+    K (\<forall>tcb. P (TCB tcb) \<longrightarrow> P (TCB (f (K new) tcb)))\<rbrace>
+     set_tcb_obj_ref f t new
+   \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
+  by (wpsimp simp: set_tcb_obj_ref_def set_object_def obj_at_def get_tcb_SomeD)
+
+lemma sched_context_update_consumed_obj_at_trivial:
+  "\<lbrace>obj_at P t' and
+    K (\<forall>sc n. P (SchedContext sc n) \<longrightarrow> P (SchedContext (sc_consumed_update (K 0) sc) n))\<rbrace>
+     sched_context_update_consumed t
+   \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
+  by (wpsimp simp: sched_context_update_consumed_def set_sched_context_def
+                   set_object_def get_sched_context_def obj_at_def
+               wp: get_object_wp)
+
+lemma set_mrs_obj_at_trivial:
+  "\<lbrace>obj_at P t' and
+    K (\<forall>tcb arch. P (TCB tcb) \<longrightarrow> P (TCB (tcb_arch_update (K arch) tcb)))\<rbrace>
+     set_mrs t buf mrs
+   \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
+  apply (simp add: set_mrs_def zipWithM_x_mapM split_def
+                   store_word_offs_def set_object_def
+              cong: option.case_cong
+              split del: if_split)
+  apply (wpsimp wp: hoare_vcg_split_case_option mapM_wp[where S=UNIV, simplified])
+  apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
+  done
+
+lemma as_user_obj_at_trivial:
+  "\<lbrace>obj_at P t' and
+    K (\<forall>tcb arch. P (TCB tcb) \<longrightarrow> P (TCB (tcb_arch_update (K arch) tcb)))\<rbrace>
+     as_user t f
+   \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
+  by (wpsimp simp: as_user_def set_object_def split_def obj_at_def get_tcb_SomeD)
+
+crunch obj_at_trivial: set_consumed "obj_at P t"
+  (wp: crunch_wps simp: crunch_simps)
+
 end

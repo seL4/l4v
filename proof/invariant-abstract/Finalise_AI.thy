@@ -755,19 +755,6 @@ lemma reply_tcb_state_refs:
                   split: thread_state.splits if_splits)
   done
 
-
-(*
-lemma reply_clear_tcb_invs:
-  "\<lbrace>invs\<rbrace> reply_clear_tcb rptr \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (clarsimp simp: reply_clear_tcb_def assert_opt_def)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-apply (case_tac "reply_tcb reply"; clarsimp)
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (rename_tac state)
-  apply (case_tac state; clarsimp)
-  apply (rule hoare_assume_pre)
-*)
-
 lemma SCNtfn_in_state_refsD:
   "\<lbrakk>(y, SCNtfn) \<in> state_refs_of s x\<rbrakk>
     \<Longrightarrow> obj_at (\<lambda>ko. \<exists>np n. ko = SchedContext np n \<and> sc_ntfn np = Some y) x s"

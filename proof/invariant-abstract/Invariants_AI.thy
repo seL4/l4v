@@ -1744,6 +1744,19 @@ lemma sym_ref_tcb_yt: "\<lbrakk> sym_refs (state_refs_of s); kheap s tp = Some (
   apply (case_tac koa; clarsimp simp: get_refs_def2)
   done
 
+lemma sym_ref_sc_yf:
+  "\<lbrakk> sym_refs (state_refs_of s); kheap s scp = Some (SchedContext sc n);
+     sc_yield_from sc = Some tp \<rbrakk> \<Longrightarrow>
+  \<exists>tcb. kheap s tp = Some (TCB tcb) \<and> tcb_yield_to tcb = Some scp"
+  apply (drule sym_refs_obj_atD[rotated, where p=scp])
+   apply (clarsimp simp: obj_at_def, simp)
+  apply (clarsimp simp: state_refs_of_def get_refs_def2 elim!: sym_refsE)
+  apply (drule_tac x="(tp, SCYieldFrom)" in bspec)
+   apply fastforce
+  apply (clarsimp simp: obj_at_def)
+  apply (case_tac koa; clarsimp simp: get_refs_def2)
+  done
+
 lemma pspace_alignedE [elim]:
   "\<lbrakk> pspace_aligned s;
    x \<in> dom (kheap s); is_aligned x (obj_bits (the (kheap s x))) \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
@@ -4039,5 +4052,9 @@ lemma
 lemma not_pred_tcb_at_strengthen:
   "pred_tcb_at proj (Not \<circ> P) p s \<Longrightarrow> \<not> pred_tcb_at proj P p s"
   by (clarsimp simp: pred_tcb_at_def obj_at_def)
+
+lemma sc_obj_at_sc_at[simp]:
+  "sc_obj_at n ptr s \<Longrightarrow> sc_at ptr s"
+  by (auto simp: obj_at_def)
 
 end
