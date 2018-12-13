@@ -58,12 +58,6 @@ text {*
   general programming language. By using only these types in a procedure
   description, the interface can be implemented in any valid target language.
 
-  When fixed width types are required for an interface there are a set of types
-  available that are C-specific. Using these types in a procedure description
-  precludes implementing or using the procedure in a component not written in C.
-  In general the high-level types should be used in preference to the C-specific
-  types.
-
   In high-level languages, arrays may have attached size information, while in
   C this information is passed as an extra parameter to their containing
   method. Arrays are parameterised with the underlying type of
@@ -72,6 +66,11 @@ text {*
   component, while using a C-specific type prevents implementing or using it in
   a component not written in C. Arrays of arrays and multidimensional arrays are
   not supported.
+
+  We also support talking about arbitrary C types. These include fixed-width
+  integers, floats, structs, etc. For these types, our model just passes their
+  names around and they are expected to behave as simple value types
+  (without embedded pointers).
 *}
 
 datatype number =
@@ -80,18 +79,6 @@ datatype number =
   | Integer
   | Real
   | Boolean
-    \<comment> \<open>C-specific types\<close>
-  | uint8_t
-  | uint16_t
-  | uint32_t
-  | uint64_t
-  | int8_t
-  | int16_t
-  | int32_t
-  | int64_t
-  | double
-  | float
-  | uintptr_t
 
 datatype textual =
     \<comment> \<open>High level types\<close>
@@ -111,6 +98,7 @@ datatype array =
 datatype param_type =
     Primitive primitive
   | Array array
+  | CType string
 
 text {*
   Rather than having a single return value per procedure method, each

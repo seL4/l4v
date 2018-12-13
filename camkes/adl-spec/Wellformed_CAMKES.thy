@@ -264,12 +264,33 @@ where
     | Some x \<Rightarrow> wellformed_configuration x)"
 
 (*<*)
-text {* These definitions are executable, and Isabelle can generate code for them: *}
-export_code
-  wellformed_component
-  wellformed_composition
-  wellformed_assembly
-  in SML
-  module_name "Camkes" file "camkes.ML"
+text \<open>
+  Automation for proving wellformedness properties.
+  We want the simplifier to try known wellformedness facts first
+  before unfolding these. Hence we artificially lift the definitions
+  into simp backtracking.
+\<close>
+named_theorems wellformed_CAMKES_simps
 
-end(*>*)
+lemmas [simplified atomize_eq, THEN iffD2, wellformed_CAMKES_simps] =
+  wellformed_assembly_def
+  wellformed_composition_def
+  wellformed_configuration_def
+  wellformed_connector_def
+  wellformed_connection_def
+  wellformed_component_def
+  wellformed_procedure_def
+  wellformed_method_def
+  wellformed_dataport_def
+  wellformed_event_def
+  refs_valid_composition_def
+  refs_valid_components_def
+  refs_valid_connections_def
+  refs_valid_connection_def
+  refs_valid_procedures_def
+
+lemmas [wellformed_CAMKES_simps] =
+  ex_one_def
+
+end
+(*>*)

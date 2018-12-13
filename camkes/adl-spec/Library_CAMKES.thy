@@ -69,6 +69,9 @@ lemmas connector_simps =
   seL4RPCCall_def
   seL4Notification_def
 
+lemmas [wellformed_CAMKES_simps] =
+  connector_simps
+
 (*>*)
 
 (*<*)end(*>*)

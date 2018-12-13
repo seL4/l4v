@@ -160,7 +160,8 @@ text {*
   Since our wellformedness conditions are executable, we can now prove that
   this example is a wellformed assembly by evaluation.
 *}
-lemma "wellformed_assembly system" by eval
+lemma "wellformed_assembly system"
+  by (simp add: wellformed_CAMKES_simps system_def echo_def client_def simple_def)
 
 subsection {* \label{subsec:events}Events *}
 text {*
@@ -244,7 +245,8 @@ where
 text {*
   Again, wellformedness is proved easily by evaluation.
 *}
-lemma "wellformed_assembly event_system" by eval
+lemma "wellformed_assembly event_system"
+  by (simp add: wellformed_CAMKES_simps event_system_def emitter_def consumer_def signal_def)
 
 subsection {* \label{subsec:dataport}Dataport Usage *}
 text {*
@@ -303,7 +305,8 @@ where
   \<rparr>"
 
 text {* The data port example is wellformed: *}
-lemma "wellformed_assembly data_system" by eval
+lemma "wellformed_assembly data_system"
+  by (simp add: wellformed_CAMKES_simps data_system_def data_client_def)
 
 subsection {* \label{subsec:terminal}Secure Terminal *}
 text {*
@@ -329,15 +332,15 @@ definition
   display :: procedure
 where
   "display \<equiv> [
-    \<lparr> m_return_type = Some (Primitive (Numerical uint32_t)), m_name = ''put_char'',
+    \<lparr> m_return_type = Some (CType ''uint32_t''), m_name = ''put_char'',
       m_parameters = [
-        \<lparr> p_type = Primitive (Numerical uint32_t),
+        \<lparr> p_type = CType ''uint32_t'',
           p_direction = InParameter,
           p_name = ''x'' \<rparr>,
-        \<lparr> p_type = Primitive (Numerical uint32_t),
+        \<lparr> p_type = CType ''uint32_t'',
           p_direction = InParameter,
           p_name = ''y'' \<rparr>,
-        \<lparr> p_type = Primitive (Numerical uint32_t),
+        \<lparr> p_type = CType ''uint32_t'',
           p_direction = InParameter,
           p_name = ''data'' \<rparr>
       ] \<rparr> ]"
@@ -434,7 +437,10 @@ where
 text {*
   Wellformedness for this more complex example is easy as well.
 *}
-lemma "wellformed_assembly terminal" by eval
+lemma "wellformed_assembly terminal"
+  by (simp add: wellformed_CAMKES_simps
+                terminal_def comp_def manager_def terminal_client_def display_def
+                channel1_def channel2_def conf_def)
 
 (* An example with an unsatisfied required interface. This should be provable
  * to be not wellformed.
