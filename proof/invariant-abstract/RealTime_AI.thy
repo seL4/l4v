@@ -1136,14 +1136,13 @@ lemma sched_context_donate_st_tcb_at[wp]:
                wp: weak_if_wp hoare_drop_imp)
 
 lemma reply_push_st_tcb_at[wp]:
-  "P (BlockedOnReply (Some reply_ptr)) \<Longrightarrow>
-   \<lbrace>st_tcb_at P t and K (t \<noteq> caller) and K (t \<noteq> callee)\<rbrace>
+  "\<lbrace>st_tcb_at P t and K (t \<noteq> caller) and K (t \<noteq> callee)\<rbrace>
      reply_push caller callee reply_ptr can_donate
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   by (wpsimp simp: reply_push_def update_sk_obj_ref_def set_sc_obj_ref_def get_thread_state_def
                    thread_get_def no_reply_in_ts_def unbind_reply_in_ts_def comp_def
-               wp: weak_if_wp sts_st_tcb_at_cases hoare_drop_imp
-      | wp_once hoare_vcg_all_lift)+
+               wp: weak_if_wp sts_st_tcb_at_cases hoare_vcg_all_lift hoare_vcg_const_imp_lift
+         | wp_once hoare_drop_imp)+
 
 lemma sched_context_update_consumed_if_live[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace>

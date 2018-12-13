@@ -182,9 +182,6 @@ where
 | "valid_invocation (InvokeSchedControl i) = valid_sched_control_inv i"
 | "valid_invocation (InvokeArchObject i) = valid_arch_inv i"
 
-
-crunch inv [wp]: lookup_cap_and_slot P
-
 lemma sts_Restart_invs[wp]:
   "\<lbrace>st_tcb_at active t and invs and ex_nonz_cap_to t\<rbrace>
      set_thread_state t Structures_A.Restart
@@ -1282,8 +1279,6 @@ lemma simple_if_Restart_Inactive:
   "simple (if P then Structures_A.Restart else Structures_A.Inactive)"
   by simp
 
-crunch (in Syscall_AI) nonz_cap_to[wp]: handle_fault_reply "ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> _"
-
 crunch (in Syscall_AI) vo[wp]: handle_fault_reply "valid_objs :: 'state_ext state \<Rightarrow> _"
 
 lemmas handle_fault_reply_typ_ats[wp] =
@@ -1400,8 +1395,6 @@ lemma do_nbrecv_failed_transfer_state_refs_of[wp]:
    apply (wp get_simple_ko_wp | wpc | simp)+
   done
 
-crunch st_tcb_at_runnable[wp]: do_nbrecv_failed_transfer "st_tcb_at runnable t"
-
 lemma fast_finalise_sym_refs:
   "\<lbrace>invs\<rbrace> fast_finalise cap final \<lbrace>\<lambda>y s. sym_refs (state_refs_of s)\<rbrace>"
   apply (cases cap; clarsimp simp: when_def)
@@ -1417,27 +1410,56 @@ crunch state_refs_of[wp]: empty_slot "\<lambda>s. P (state_refs_of s)"
 
 lemmas sts_st_tcb_at_other = sts_st_tcb_at_neq[where proj=itcb_state]
 
-crunch st_tcb_at_runnable[wp]: sort_queue "st_tcb_at runnable t"
-  (wp: mapM_wp')
+lemma runnable_eq:
+  "runnable st = (st = Running \<or> st = Restart)"
+  by (cases st) auto
+
+lemma reply_unlink_runnable[wp]:
+  "\<lbrace>st_tcb_at runnable t\<rbrace> reply_unlink_tcb rptr \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
+  apply (simp add: reply_unlink_tcb_def)
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (case_tac "reply_tcb reply"; clarsimp simp: assert_opt_def)
+  apply (case_tac "a=t", clarsimp)
+   defer
+   apply (wpsimp wp: sts_st_tcb_at_cases assert_inv)
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rename_tac state)
+  apply (case_tac state; clarsimp simp: assert_def)
+   apply (wpsimp simp: set_simple_ko_def set_thread_state_def set_object_def
+                a_type_def partial_inv_def wp: get_object_wp)
+   apply (auto dest!: get_tcb_SomeD split: if_split_asm simp: pred_tcb_at_def obj_at_def runnable_eq)[1]
+  apply (wpsimp simp: set_simple_ko_def set_thread_state_def set_object_def
+       a_type_def partial_inv_def wp: get_object_wp)
+  apply (auto dest!: get_tcb_SomeD split: if_split_asm simp: pred_tcb_at_def obj_at_def runnable_eq)[1]
+  done
+
+(* FIXME: move; this should be much higher up *)
+lemma in_get_refs:
+  "((p', r') \<in> get_refs r p) = (r' = r \<and> p = Some p')"
+  by (auto simp: get_refs_def split: option.splits)
+
+lemma runnable_not_queued:
+  "\<lbrakk> st_tcb_at runnable t s; ko_at (Endpoint (RecvEP qs)) epptr s; t \<in> set qs;
+     sym_refs (state_refs_of s) \<rbrakk>
+  \<Longrightarrow> False"
+  apply (frule st_tcb_at_state_refs_ofD)
+  apply (frule (1) sym_refs_ko_atD)
+  apply (clarsimp simp: obj_at_def)
+  apply (drule (1) bspec)
+  apply (clarsimp simp: state_refs_of_def in_get_refs)
+  apply (auto simp: runnable_eq)
+  done
 
 lemma send_ipc_st_tcb_at_runnable:
   "\<lbrace>st_tcb_at runnable t and (\<lambda>s. sym_refs (state_refs_of s)) and K (thread \<noteq> t) \<rbrace>
    send_ipc block call badge can_grant can_donate thread epptr
    \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
   unfolding send_ipc_def
-  apply (rule hoare_gen_asm)
-  apply (wpc | wp sts_st_tcb_at_other | clarsimp)+
-(*          apply (simp add: setup_caller_cap_def)
-          apply (wpc | wp sts_st_tcb_at_other dxo_wp_weak | clarsimp simp: if_cancel)+
-    apply (wp hoare_drop_imps)[1]
-   apply (wp set_simple_ko_pred_tcb_at)[1]
-  apply (wp get_simple_ko_wp)
-  apply clarsimp
-  apply (drule st_tcb_at_state_refs_ofD)
-  apply (drule (1) sym_refs_ko_atD)
-  apply clarsimp
-  apply (case_tac ts; clarsimp simp: obj_at_def state_refs_of_def dest!:refs_in_tcb_bound_refs)
-  done *) sorry
+  supply if_split[split del]
+  apply (wpsimp wp: sts_st_tcb_at_other get_tcb_obj_ref_wp hoare_vcg_all_lift hoare_vcg_if_lift
+                    reply_unlink_runnable get_simple_ko_wp | wp_once hoare_drop_imp)+
+  apply (auto dest: runnable_not_queued)
+  done
 
 lemma receive_ipc_st_tcb_at_runnable:
   "\<lbrace>st_tcb_at runnable t and (\<lambda>s. sym_refs (state_refs_of s)) and K (thread \<noteq> t) \<rbrace>
@@ -1445,8 +1467,9 @@ lemma receive_ipc_st_tcb_at_runnable:
    \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
   unfolding receive_ipc_def
   apply (rule hoare_gen_asm)
-  apply (wpc | wp sts_st_tcb_at_other
-      | clarsimp simp: do_nbrecv_failed_transfer_def)+
+  apply (wpc | wp sts_st_tcb_at_other get_simple_ko_wp get_tcb_obj_ref_wp hoare_vcg_all_lift
+      | clarsimp simp: do_nbrecv_failed_transfer_def
+      | wp_once hoare_drop_imp)+
 (*
               apply (wp hoare_drop_imps)[1]
              apply clarsimp
