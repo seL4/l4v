@@ -1127,20 +1127,6 @@ lemma sc_replies_update_valid_replies_cons:
   done
 
 (* FIXME move *)
-lemma replies_blocked_imp_TCBReply_ref:
-  "(rp, t) \<in> replies_blocked s \<Longrightarrow> (rp , TCBReply) \<in> (state_refs_of s t)"
-  by (clarsimp simp: replies_blocked_def state_refs_of_def st_tcb_at_def obj_at_def get_refs_def)
-
-(* FIXME move *)
-lemma ReplyTCB_reply_at:
-  "(t, ReplyTCB) \<in> state_refs_of s r_ptr \<Longrightarrow> reply_at r_ptr s"
-  apply (clarsimp simp: state_refs_of_def refs_of_def reply_tcb_reply_at_def obj_at_def
-                 split: option.splits)
-  apply (case_tac x2; clarsimp simp: is_reply_def get_refs_def option.splits, fastforce?)
-  apply (auto, case_tac "sc_replies x51"; simp)
-  done
-
-(* FIXME move *)
 lemma ReplyTCB_bound_reply_tcb_reply_at:
   "(t, ReplyTCB) \<in> state_refs_of s r_ptr \<Longrightarrow> reply_tcb_reply_at bound r_ptr s"
   by (frule ReplyTCB_reply_at,

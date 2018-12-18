@@ -19,6 +19,52 @@ requalify_facts
 
 end
 
+(* FIXME: move *)
+lemma sc_reftypes:
+  "(y, reft) \<in> state_refs_of s sc \<Longrightarrow>
+   sc_at_pred_n N f P sc s \<Longrightarrow>
+   reft \<in> {SCNtfn, SCTcb, SCYieldFrom, SCReply}"
+  by (clarsimp simp: state_refs_of_def refs_of_def sc_at_pred_n_def obj_at_def get_refs_def
+                     refs_of_sc_def
+              split: option.splits)
+
+(* FIXME: move *)
+lemma ntfn_reftypes:
+  "(y, reft) \<in> state_refs_of s sc \<Longrightarrow>
+   ntfn_at_pred P sc s \<Longrightarrow>
+   reft \<in> {NTFNBound, NTFNSchedContext, NTFNSignal}"
+  by (clarsimp simp: state_refs_of_def refs_of_def ntfn_at_pred_def get_refs_def refs_of_ntfn_def
+              split: option.splits)
+
+(* FIXME: move *)
+lemma ep_reftypes:
+  "(y, reft) \<in> state_refs_of s sc \<Longrightarrow>
+   ep_at_pred P sc s \<Longrightarrow>
+   reft \<in> {EPSend, EPRecv}"
+  by (clarsimp simp: state_refs_of_def refs_of_def ep_at_pred_def ep_q_refs_of_def
+              split: option.splits endpoint.splits)
+
+(* FIXME move *)
+lemma ReplyTCB_reply_at:
+  "(t, ReplyTCB) \<in> state_refs_of s r_ptr \<Longrightarrow> reply_at r_ptr s"
+  apply (clarsimp simp: state_refs_of_def refs_of_def reply_tcb_reply_at_def obj_at_def
+                 split: option.splits)
+  apply (case_tac x2;
+         clarsimp simp: is_reply_def get_refs_def refs_of_tcb_def refs_of_ntfn_def refs_of_sc_def
+                 split: option.splits)
+  done
+
+(* FIXME move *)
+lemma reftypes_reply_at_right:
+  "(t, rt) \<in> state_refs_of s r_ptr \<Longrightarrow> rt \<in> {ReplyTCB, ReplySchedContext} \<Longrightarrow> reply_at r_ptr s"
+  apply (clarsimp simp: state_refs_of_def refs_of_def reply_tcb_reply_at_def obj_at_def
+                 split: option.splits)
+  apply (case_tac x2;
+         clarsimp simp: is_reply_def get_refs_def refs_of_tcb_def refs_of_ntfn_def refs_of_sc_def
+                 split: option.splits;
+         fastforce)
+  done
+
 declare arch_post_cap_deletion_pred_tcb_at[wp]
 
 lemma blocked_cancel_ipc_simple:
@@ -1143,13 +1189,93 @@ lemma valid_replies_sc_with_reply_None:
   shows "\<not> sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s"
   using valid_replies_sc_replies_unique[OF v] sc_with_reply_NoneD[OF n] by auto
 
+lemma sc_replies_update_fst_replies_with_sc:
+  "\<lbrace>\<lambda>s. ((r, sc) \<in> replies_with_sc s) \<and> (r \<notin> set k) \<and> valid_replies s\<rbrace>
+   set_sc_obj_ref sc_replies_update sc k
+   \<lbrace>\<lambda>rv s. r \<notin> fst ` replies_with_sc s\<rbrace>"
+  apply (wpsimp simp: set_sc_obj_ref_def
+                  wp: update_sched_context_wp)
+  apply (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def split: if_splits)
+  apply (clarsimp simp: valid_replies'_def inj_on_def)
+  done
+
+(* FIXME move *)
+lemma distinct_hd_not_in_tl:
+  "distinct l \<Longrightarrow> l \<noteq> [] \<Longrightarrow> hd l \<notin> set (tl l)"
+  by (cases l; simp)
+
+lemma reply_unlink_sc_fst_replies_with_sc:
+  "\<lbrace>\<lambda>s. sc_replies_sc_at (\<lambda>l. l\<noteq>[] \<and> distinct l \<and> r \<in> set l) sc s \<and> valid_replies s\<rbrace>
+   reply_unlink_sc sc r
+   \<lbrace>\<lambda>rv s. r \<notin> fst ` replies_with_sc s\<rbrace>"
+  unfolding reply_unlink_sc_def
+  apply (wpsimp wp: sc_replies_update_fst_replies_with_sc
+                    get_simple_ko_wp)
+  apply (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def
+                 split: if_splits)
+  apply (safe; clarsimp?)
+  apply (case_tac "sc_replies sca"; simp)
+  apply (fastforce dest: distinct_hd_not_in_tl)
+  apply (fastforce dest: set_takeWhileD)
+  done
+
+(* FIXME move *)
+lemma obj_at_conj_split:
+  "obj_at (P and Q) p s = (obj_at P p s \<and> obj_at Q p s)"
+  by (fastforce simp: obj_at_def)
+
+(* FIXME move *)
+lemma obj_at_disj_split:
+  "obj_at (P or Q) p s = (obj_at P p s \<or> obj_at Q p s)"
+  by (fastforce simp: obj_at_def)
+
+lemma reply_unlink_sc_not_fst_replies_blocked[wp]:
+  "\<lbrace>(\<lambda>s. r \<notin> fst ` replies_blocked s) \<rbrace>
+   reply_unlink_sc sc r
+   \<lbrace>\<lambda>rv s. r \<notin> fst ` replies_blocked s\<rbrace>"
+  unfolding reply_unlink_sc_def
+  apply (wpsimp simp: set_sc_obj_ref_def
+                  wp: update_sched_context_wp update_sk_obj_ref_wps' set_simple_ko_wp
+                      get_simple_ko_wp)
+  apply (clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def image_def
+                 split: if_splits)
+  done
+
+lemma reply_unlink_sc_fst_replies_blocked[wp]:
+  "\<lbrace>(\<lambda>s. r \<in>  fst ` replies_blocked s) \<rbrace>
+   reply_unlink_sc sc r
+   \<lbrace>\<lambda>rv s. r \<in> fst ` replies_blocked s\<rbrace>"
+  unfolding reply_unlink_sc_def
+  apply (wpsimp simp: set_sc_obj_ref_def
+                  wp: update_sched_context_wp update_sk_obj_ref_wps' set_simple_ko_wp
+                      get_simple_ko_wp)
+  apply (clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def image_def
+                 split: if_splits)
+  apply (safe; rule_tac x=b in exI, fastforce)
+  done
+
+(* FIXME move *)
+lemma replies_blocked_imp_TCBReply_ref:
+  "(rp, t) \<in> replies_blocked s \<Longrightarrow> (rp , TCBReply) \<in> (state_refs_of s t)"
+  by (clarsimp simp: replies_blocked_def state_refs_of_def st_tcb_at_def obj_at_def get_refs_def)
+
+lemma fst_replies_blocked_strengthen:
+  "(reply_tcb_reply_at (\<lambda>p. \<exists>tp. p = Some tp \<and>
+                            st_tcb_at ((=) (BlockedOnReply (Some r))) tp s) r s)
+    \<Longrightarrow> (r \<in> fst ` replies_blocked s)"
+  by (fastforce simp: replies_blocked_def reply_tcb_reply_at_def obj_at_def image_def
+                      pred_tcb_at_eq_commute)
+
 lemma reply_remove_invs:
-  "\<lbrace>\<lambda>s. invs s
-        \<and> reply_tcb_reply_at (\<lambda>p. \<exists>tp. p = Some tp
-                                       \<and> st_tcb_at ((=) (BlockedOnReply (Some r))) tp s) r s\<rbrace>
-    reply_remove r
+  "\<lbrace>\<lambda>s. invs s \<and>
+       reply_tcb_reply_at (\<lambda>p. \<exists>tp. p = Some tp \<and>
+                                    st_tcb_at ((=) (BlockedOnReply (Some r))) tp s) r s\<rbrace>
+   reply_remove r
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply if_split[split del]
+  apply (rule hoare_weaken_pre[where Q="invs and (\<lambda>s. r \<in> fst ` replies_blocked s)"])
+   prefer 2
+   apply (clarsimp, erule fst_replies_blocked_strengthen)
   apply (simp add: reply_remove_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (simp add: assert_opt_def2)
@@ -1157,28 +1283,63 @@ lemma reply_remove_invs:
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF reply_unlink_tcb_invs_BlockedOnReply])
   apply (case_tac r_sc_opt; clarsimp)
-(*
    apply (wpsimp)
-   apply (clarsimp simp: sc_replies_sc_at_def reply_tcb_reply_at_def obj_at_def)
+   apply (fastforce dest: valid_replies_sc_with_reply_None invs_valid_replies
+                    simp: replies_with_sc_def)
   apply (rename_tac sc)
   apply (rule hoare_seq_ext[OF _ gscrpls_sp[unfolded fun_app_def, simplified]])
   apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rename_tac caller_sc)
-  apply (wpsimp wp: sched_context_donate_invs hoare_vcg_ex_lift hoare_vcg_if_lift2
-                    hoare_vcg_imp_lift reply_unlink_sc_invs reply_unlink_sc_reply_sc_reply_at)
+  apply (wpsimp wp: sched_context_donate_invs  hoare_vcg_if_lift2 reply_unlink_sc_fst_replies_with_sc
+                    hoare_vcg_imp_lift reply_unlink_sc_invs)
   apply (clarsimp simp: pred_tcb_at_eq_commute)
   apply (clarsimp simp: pred_tcb_at_def sc_at_pred_def reply_at_ppred_def obj_at_def is_tcb is_sc_obj)
   apply (rename_tac sc_obj n)
-  apply (erule_tac p=sc in pspace_valid_objsE[OF _ invs_valid_objs]; clarsimp simp: valid_obj_def)
-  apply (subgoal_tac "ex_nonz_cap_to sc s \<and> ex_nonz_cap_to tp s", fastforce)
-  apply (subgoal_tac "sc_replies sc_obj \<noteq> []", simp add: if_live_then_nonz_cap_invs live_def live_sc_def)
-  by (auto simp: obj_at_def get_refs_def2 dest: sym_refs_ko_atD[rotated, OF invs_sym_refs])
-*) sorry
-
-(* FIXME: move *)
-lemma the_pred_option_SomeD1:
-  "the_pred_option P = Some x \<Longrightarrow> P x"
-  by (drule sym; cases "\<exists>!x. P x"; simp add: the_pred_option_def theI')
+  apply (subgoal_tac "reply_tcb reply \<noteq> None")
+   prefer 2
+   apply (drule replies_blocked_imp_TCBReply_ref)
+   apply (drule_tac st="state_refs_of s" in sym_refsD)
+    apply (erule invs_sym_refs)
+   apply (clarsimp simp: state_refs_of_def get_refs_def split: option.splits)
+  apply (clarsimp)
+  apply (intro impI conjI)
+   apply (case_tac "tcb_sched_context tcb"; simp)
+   apply (drule sc_with_reply_SomeD)
+   apply (subgoal_tac "sc_replies sc_obj \<noteq> []")
+    apply (rule conjI, fastforce simp: live_def live_sc_def dest: invs_iflive if_live_then_nonz_capD2)
+    apply (rule conjI)
+     apply (rule if_live_then_nonz_capD2)
+       apply (rule invs_iflive, assumption)
+      apply (assumption)
+     apply (clarsimp simp: live_def) (* use symrefs for tcb_sched_context tcb = Some _ *)
+     apply (subgoal_tac "(hd (sc_replies sc_obj), TCBReply) \<in> state_refs_of s y")
+      apply (fastforce simp: state_refs_of_def tcb_st_refs_of_def)
+     apply (erule sym_refsE[OF invs_sym_refs])
+     apply (fastforce simp: state_refs_of_def)
+    apply (rule conjI)
+     apply (drule invs_valid_objs)
+     apply (subgoal_tac "valid_obj sc (SchedContext sc_obj n) s")
+      apply (clarsimp simp: valid_obj_def)
+     apply (fastforce simp: valid_objs_def dom_def)
+    apply (rule conjI, clarsimp)
+    apply (rule conjI)
+     apply (drule invs_valid_objs)
+     apply (subgoal_tac "valid_obj sc (SchedContext sc_obj n) s")
+      apply (clarsimp simp: valid_obj_def valid_sched_context_def)
+     apply (fastforce simp: valid_objs_def dom_def)
+    apply (rule conjI, clarsimp)
+    apply clarsimp
+   apply clarsimp
+  apply (drule sc_with_reply_SomeD)
+  apply (safe; clarsimp?)
+   apply (drule invs_valid_objs)
+   apply (subgoal_tac "valid_obj sc (SchedContext sc_obj n) s")
+    apply (clarsimp simp: valid_obj_def valid_sched_context_def)
+   apply (fastforce simp: valid_objs_def dom_def)
+  apply (drule invs_valid_objs)
+  apply (subgoal_tac "valid_obj sc (SchedContext sc_obj n) s")
+   apply (clarsimp simp: valid_obj_def valid_sched_context_def)
+  apply (fastforce simp: valid_objs_def dom_def)
+  done
 
 (* FIXME: move *)
 lemma sc_with_reply_def':
@@ -1192,7 +1353,111 @@ lemmas sc_with_reply_def'2 = sc_with_reply_def'[unfolded the_pred_option_def]
 
 lemma sc_with_reply_SomeD1:
   "sc_with_reply rptr s = Some sc_ptr \<Longrightarrow> sc_replies_sc_at (\<lambda>rs. rptr \<in> set rs) sc_ptr s"
-  by (auto simp add: sc_with_reply_def' elim: the_pred_option_SomeD1)
+  by (auto simp add: sc_with_reply_def' elim: the_pred_option_SomeD)
+
+lemma reply_sc_update_None_invs:
+  "\<lbrace>all_invs_but_sym_refs and (\<lambda>s. sym_refs
+               (\<lambda>x. if x = r
+                     then {p. (snd p = ReplySchedContext \<longrightarrow> None = Some (fst p)) \<and>
+                              (snd p \<noteq> ReplySchedContext \<longrightarrow> p \<in> state_refs_of s r)}
+                     else state_refs_of s x) \<and>
+              sym_refs (state_hyp_refs_of s))\<rbrace>
+   set_reply_obj_ref reply_sc_update r None
+   \<lbrace>\<lambda>r. invs\<rbrace>"
+  unfolding invs_def valid_state_def valid_pspace_def
+  by (wpsimp wp: valid_ioports_lift)
+
+lemma sc_replies_update_valid_replies_cons:
+  "\<lbrace>valid_replies
+    and (sc_replies_sc_at ((=) sc_replies') sc_ptr)
+    and (\<lambda>s. r_ptr \<in> fst ` replies_blocked s)
+    and (\<lambda>s. r_ptr \<notin> fst ` replies_with_sc s)\<rbrace>
+   set_sc_obj_ref sc_replies_update sc_ptr (r_ptr # sc_replies')
+   \<lbrace>\<lambda>r. valid_replies \<rbrace>"
+  apply (wpsimp wp: set_sc_replies_valid_replies)
+  apply (clarsimp simp: replies_with_sc_upd_replies_def valid_replies'_def)
+  apply (intro conjI, clarsimp simp:)
+   apply safe
+       apply ((fastforce simp: image_def)+)[3]
+    apply (subgoal_tac "a \<in> fst ` replies_with_sc s")
+     apply (fastforce simp: image_def)
+    apply (fastforce simp: image_def sc_replies_sc_at_def obj_at_def replies_with_sc_def)
+   apply (fastforce simp: image_def)
+  apply (clarsimp simp: inj_on_def)
+  apply (case_tac "ba = sc_ptr"; case_tac "bb = sc_ptr"; simp)
+    apply (elim disjE,
+           fastforce simp: image_def,
+           clarsimp simp: image_def sc_replies_sc_at_def obj_at_def replies_with_sc_def)
+   apply (elim disjE,
+          fastforce simp: image_def,
+          clarsimp simp: image_def sc_replies_sc_at_def obj_at_def replies_with_sc_def)
+  apply fastforce
+  done
+
+lemma replies_with_sc_takeWhile_subset:
+  "(sc_replies_sc_at (\<lambda>rs. rs = replies) sc_ptr s) \<Longrightarrow> r' \<in> set replies \<Longrightarrow>
+  replies_with_sc
+             (s\<lparr>kheap := kheap s(sc_ptr \<mapsto>
+                  SchedContext (x\<lparr>sc_replies := takeWhile (\<lambda>r. r \<noteq> r') replies\<rparr>) xa)\<rparr>) \<subseteq> replies_with_sc s"
+   apply (clarsimp simp: image_def replies_with_sc_def sc_replies_sc_at_def obj_at_def
+                         replies_blocked_def st_tcb_at_def)
+   by (fastforce dest: set_takeWhileD)
+
+lemma replies_blocked_takeWhile_eq:
+  "(sc_replies_sc_at (\<lambda>rs. rs = replies) sc_ptr s) \<Longrightarrow>  r' \<in> set replies \<Longrightarrow>
+  replies_blocked
+             (s\<lparr>kheap := kheap s(sc_ptr \<mapsto>
+                  SchedContext (x\<lparr>sc_replies := takeWhile (\<lambda>r. r \<noteq> r') replies\<rparr>) xa)\<rparr>) = replies_blocked s"
+   apply (clarsimp simp: image_def replies_blocked_def st_tcb_at_def obj_at_def)
+   by (fastforce simp: sc_replies_sc_at_def obj_at_def)
+
+(* this is true but precondition could be weaker? *)
+lemma sc_replies_update_take_While_valid_replies:
+  "\<lbrace> valid_replies and (\<lambda>s. sc_replies_sc_at (\<lambda>rs. rs = replies) sc_ptr s \<and> r' \<in> set replies)\<rbrace>
+   set_sc_obj_ref sc_replies_update sc_ptr (takeWhile (\<lambda>r. r \<noteq> r') replies)
+   \<lbrace>\<lambda>rv. valid_replies\<rbrace>"
+  apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
+                  wp: set_object_wp get_object_wp)
+  apply (clarsimp simp: valid_replies'_def)
+  apply (intro conjI)
+   apply (simp add: replies_blocked_takeWhile_eq)
+   apply (rule subset_trans, erule replies_with_sc_takeWhile_subset[THEN image_mono], assumption, assumption)
+  apply (rule inj_on_subset, assumption, rule replies_with_sc_takeWhile_subset, assumption, assumption)
+  done
+
+lemma sc_replies_update_takeWhile_not_fst_replies_with_sc:
+  "\<lbrace>valid_replies and (\<lambda>s. sc_replies_sc_at (\<lambda>rs. r' \<in> set rs) sc_ptr s)\<rbrace>
+   set_sc_obj_ref sc_replies_update sc_ptr (takeWhile (\<lambda>r. r \<noteq> r') replies)
+   \<lbrace>\<lambda>rv s. r' \<notin> fst ` replies_with_sc s\<rbrace>"
+   apply (wpsimp simp: set_sc_obj_ref_def update_sched_context_def
+                   wp: set_object_wp get_object_wp)
+   apply (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def split: option.splits if_splits)
+  apply (fastforce dest: set_takeWhileD)
+  apply (clarsimp simp: valid_replies'_def inj_on_def)
+  done
+
+lemma valid_objs_sc_replies_reply_at:
+  "valid_objs s \<Longrightarrow> sc_replies_sc_at ((=) replies) sc_ptr s \<Longrightarrow> rp \<in> set replies \<Longrightarrow> reply_at rp s"
+  apply (clarsimp simp: sc_at_pred_n_eq_commute
+                        sc_replies_sc_at_def  obj_at_def)
+  apply (subgoal_tac "valid_sched_context sc s")
+   apply (clarsimp simp: valid_sched_context_def list_all_def obj_at_def)
+  apply (fastforce simp: valid_obj_def)
+  done
+
+lemma valid_objs_sc_replies_distinct:
+  "valid_objs s \<Longrightarrow> sc_replies_sc_at ((=) replies) sc_ptr s \<Longrightarrow> distinct replies"
+  apply (clarsimp simp: sc_at_pred_n_eq_commute
+                        sc_replies_sc_at_def  obj_at_def)
+  apply (subgoal_tac "valid_sched_context sc s")
+   apply (clarsimp simp: valid_sched_context_def list_all_def obj_at_def)
+  apply (fastforce simp: valid_obj_def)
+  done
+
+lemma sc_with_reply_replies_with_sc:
+  "sc_with_reply rptr s = Some sc_ptr \<Longrightarrow> (rptr, sc_ptr) \<in> replies_with_sc s"
+  by (auto simp add: sc_with_reply_def' replies_with_sc_def
+               elim: the_pred_option_SomeD)
 
 lemma reply_remove_tcb_invs:
   "\<lbrace>invs\<rbrace> reply_remove_tcb t \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -1214,19 +1479,81 @@ lemma reply_remove_tcb_invs:
   apply (rule_tac S="replies \<noteq> []" in hoare_gen_asm''
          , fastforce simp: sc_replies_sc_at_def obj_at_def dest: sc_with_reply_SomeD1)
   apply (case_tac "hd replies = rptr"; clarsimp)
-(*
-  apply wpsimp
-
-  apply (wpsimp wp: reply_unlink_tcb_invs_BlockedOnReply)
-  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
-  apply (clarsimp simp: pred_tcb_at_def is_tcb reply_tcb_reply_at_def)
-  apply (frule (1) sym_refs_obj_atD)
-  apply (clarsimp simp: obj_at_def)
-  apply (drule sym[where s="BlockedOnReply _"])
-  apply (clarsimp simp: tcb_st_refs_of_def get_refs_def2)
-  apply (case_tac ko; clarsimp simp: get_refs_def2)
+   apply (wpsimp wp: reply_sc_update_None_invs sc_replies_update_take_While_valid_replies
+                     set_sc_replies_valid_replies)
+   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
+   apply (rule conjI, clarsimp simp: list_all_def)
+    apply (subgoal_tac "rp \<in> set (replies)";
+           fastforce dest: valid_objs_sc_replies_reply_at set_takeWhileD)
+   apply (rule conjI, fastforce dest: valid_objs_sc_replies_distinct distinct_takeWhile)
+   apply (rule conjI, fastforce simp: sc_replies_sc_at_def obj_at_def live_def live_sc_def
+                                dest: if_live_then_nonz_capD2)
+   apply (rule conjI, clarsimp simp: sc_at_pred_n_eq_commute)
+   apply (rule conjI, clarsimp simp: sc_at_pred_n_eq_commute)
+    defer (* ? *)
+    apply (rule conjI)
+     apply (clarsimp simp: replies_with_sc_upd_replies_def)
+     apply (case_tac "b = sc_ptr"; simp)
+      apply (fastforce dest: set_takeWhileD)
+     apply (fastforce dest: valid_repliesD2 sc_with_reply_replies_with_sc)
+    apply (subgoal_tac "hd replies \<in> fst ` replies_with_sc s")
+     apply (fastforce simp: valid_replies'_def image_def)
+    apply (fastforce dest!: sc_with_reply_SomeD1
+                      simp: replies_with_sc_def image_def sc_replies_sc_at_def obj_at_def)
+   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
+                   wp: reply_sc_update_None_invs sc_replies_update_take_While_valid_replies
+                     set_sc_replies_valid_replies)
+   apply (rule conjI, clarsimp simp: list_all_def)
+    apply (subgoal_tac "rp \<in> set (replies)";
+           fastforce dest: valid_objs_sc_replies_reply_at set_takeWhileD)
+   apply (rule conjI, fastforce dest: valid_objs_sc_replies_distinct distinct_takeWhile)
+   apply (rule conjI, fastforce simp: sc_replies_sc_at_def obj_at_def live_def live_sc_def
+                                dest: if_live_then_nonz_capD2)
+   apply (rule conjI)
+    apply (clarsimp dest!: sc_with_reply_replies_with_sc
+                     simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def)
+   apply (rule conjI)
+    apply (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def
+                   dest!: sc_with_reply_replies_with_sc)
+   apply (rule conjI)
+    (* symrefs proof *)
+    apply (rule_tac rfs'="state_refs_of s" in delta_sym_refs;
+           clarsimp simp: in_state_refs_of_iff get_refs_def2 split: if_splits;
+           clarsimp simp: sc_replies_sc_at_def obj_at_def get_refs_def split: option.splits)
+   apply (rule conjI)
+    apply (clarsimp simp: replies_with_sc_upd_replies_def)
+    apply (case_tac "b = sc_ptr"; simp)
+     apply (fastforce dest: set_takeWhileD)
+    apply (fastforce dest: valid_repliesD2 sc_with_reply_replies_with_sc)
+   apply (subgoal_tac "rptr \<in> fst ` replies_with_sc s")
+    apply (fastforce simp: valid_replies'_def image_def)
+   apply (fastforce dest!: sc_with_reply_SomeD1
+                     simp: replies_with_sc_def image_def sc_replies_sc_at_def obj_at_def)
+                   (* symrefs proof *)
+  apply (subgoal_tac "reply_at (hd replies) s")
+   prefer 2
+   apply (erule valid_objs_sc_replies_reply_at[simplified sc_at_pred_n_eq_commute], assumption)
+  using list.set_sel(1)
+   apply fastforce
+  apply (rule_tac rfs'="state_refs_of s" in delta_sym_refs;
+         clarsimp simp: in_state_refs_of_iff get_refs_def2 split: if_splits)
+      apply (clarsimp simp: sc_replies_sc_at_def obj_at_def get_refs_def split: option.splits)
+     apply (clarsimp simp: sc_replies_sc_at_def obj_at_def get_refs_def split: option.splits)
+    apply (clarsimp simp: sc_replies_sc_at_def obj_at_def is_reply)
+   apply (safe; clarsimp?)
+     apply (case_tac replies; simp)
+    apply (clarsimp simp: obj_at_def is_reply get_refs_def split: option.splits)
+   apply (subgoal_tac "y = sc_ptr", simp)
+   apply (erule_tac r="hd replies" in valid_repliesD2)
+    apply (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def)
+    apply (case_tac koa;
+           clarsimp simp: refs_of_def obj_at_def is_reply refs_of_tcb_def
+                          get_refs_def refs_of_ntfn_def refs_of_sc_def
+                   split: option.splits)
+    apply (clarsimp simp: refs_of_reply_def get_refs_def split: option.splits)
+   apply (erule sc_with_reply_replies_with_sc)
+  apply (clarsimp simp: sc_replies_sc_at_def obj_at_def get_refs_def split: option.splits)
   done
-*) sorry
 
 lemma reply_cancel_ipc_invs:
   "\<lbrace>invs\<rbrace> reply_cancel_ipc t \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -2634,5 +2961,6 @@ lemma reply_tcb_None_reply_sc_None:
   apply (frule(3) reply_sc_refs)
   apply (fastforce simp: sc_at_pred_def obj_at_def image_def)
   done
+
 
 end
