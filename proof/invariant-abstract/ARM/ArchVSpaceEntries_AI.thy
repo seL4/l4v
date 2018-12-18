@@ -464,16 +464,16 @@ crunch valid_pdpt_objs[wp]:
 sched_context_unbind_yield_from "valid_pdpt_objs"
   (wp: maybeM_inv hoare_drop_imp mapM_x_wp' ignore: set_object)
 
+crunch valid_pdpt_objs[wp]: reply_remove "valid_pdpt_objs"
+  (wp: hoare_drop_imp)
+
+crunch valid_pdpt_objs[wp]: sched_context_unbind_reply "valid_pdpt_objs"
+
 lemma fast_finalise_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> fast_finalise cap final \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-(*
-  by (cases cap; wpsimp simp: set_refills_def
-     wp: get_sched_context_wp hoare_vcg_if_lift2 hoare_drop_imps)
-*) sorry (* fast_finalise_valid_pdpt_objs *)
-
-crunch valid_pdpt_objs[wp]: fast_finalise "valid_pdpt_objs"
-  (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps
-    ignore: tcb_release_remove set_object simp: unless_def if_cancel)
+  by (cases cap;
+      wpsimp simp: set_refills_def
+               wp: get_sched_context_wp hoare_vcg_if_lift2 hoare_drop_imps)
 
 crunch valid_pdpt_objs[wp]: prepare_thread_delete "valid_pdpt_objs"
 
@@ -491,9 +491,7 @@ crunch valid_pdpt_objs[wp]: unbind_from_sc,suspend "valid_pdpt_objs"
 
 lemma finalise_cap_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> finalise_cap c b \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-(*
   by (cases c; wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp)
-*) sorry (* finalise_cap_valid_pdpt_objs *)
 
 lemma preemption_point_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> preemption_point \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
@@ -1718,7 +1716,6 @@ crunch valid_pdpt[wp]: handle_call, handle_recv, handle_send, handle_yield,
    simp: crunch_simps Let_def whenE_def liftE_def
    ignore: check_budget_restart)
 
-
 lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (unit,det_ext) s_monad \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (simp add: schedule_def)
   apply (wpsimp wp: alternative_wp select_wp hoare_drop_imps)
@@ -1859,7 +1856,6 @@ lemma call_kernel_valid_pdpt[wp]:
     (***)
   apply wpsimp
   done
-
 
 end
 
