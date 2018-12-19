@@ -1102,10 +1102,8 @@ lemma fast_finalise_lift:
 
 lemma reply_unlink_sc_cte_wp_at:
   shows "\<lbrace>cte_wp_at P p\<rbrace> reply_unlink_sc ptr ptr' \<lbrace>\<lambda>rv s. cte_wp_at P p s\<rbrace>"
-  apply (simp add: reply_unlink_sc_def liftM_def)
-  apply (wp cap_delete_one_caps_of_state get_sched_context_wp get_simple_ko_wp)
-  apply clarsimp
-  sorry
+  unfolding reply_unlink_sc_def
+  by (wpsimp wp: get_simple_ko_wp hoare_drop_imps)
 
 crunch cte_wp_at[wp]: reply_unlink_tcb,unbind_from_sc "cte_wp_at P p"
   (wp: maybeM_inv hoare_drop_imp ignore: get_simple_ko)
