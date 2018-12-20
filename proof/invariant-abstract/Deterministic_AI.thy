@@ -4240,18 +4240,14 @@ lemma cancel_ipc_valid_list[wp]:
   by (wpsimp simp: cancel_ipc_def
       wp: hoare_drop_imp get_sched_context_wp hoare_vcg_conj_lift hoare_vcg_all_lift)
 
-lemma fast_finalise_valid_list[wp]: "\<lbrace>valid_list\<rbrace> fast_finalise c b \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  unfolding reply_cancel_ipc_def
-(*
-  by (case_tac c; wpsimp wp: select_wp hoare_drop_imps thread_set_mdb)
-*) sorry (* fast_finalise_valid_list *)
+crunch valid_list[wp]: sched_context_unbind_reply valid_list
 
-crunch valid_list[wp]: fast_finalise valid_list
-  (wp: crunch_wps maybeM_inv dxo_wp_weak mapM_x_wp hoare_drop_imp simp: valid_list_2_def set_object_def ignore: set_object)
+lemma fast_finalise_valid_list[wp]:
+  "\<lbrace>valid_list\<rbrace> fast_finalise c b \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  by (cases c; wpsimp wp: gts_wp get_simple_ko_wp)
 
 lemma cap_delete_one_valid_list[wp]: "\<lbrace>valid_list\<rbrace> cap_delete_one a \<lbrace>\<lambda>_.valid_list\<rbrace>"
   unfolding cap_delete_one_def by (wpsimp simp: unless_def)
-
 
 lemma restart_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> restart t \<lbrace>\<lambda>_.valid_list\<rbrace>"
