@@ -859,7 +859,7 @@ lemma set_ntfn_obj_ref_some_state_refs[wp]:
   apply (case_tac "ntfn_obj ntfn"; simp add: state_refs_of_def)
   done
 
-
+(* FIXME: move *)
 lemma set_ntfn_obj_ref_sc_at_pred_n[wp]:
   "set_ntfn_obj_ref update ref new \<lbrace>\<lambda>s. P (sc_at_pred_n f g h sc s)\<rbrace>"
   by (wpsimp wp: update_sk_obj_ref_wp simp: sc_at_pred_n_def obj_at_def)

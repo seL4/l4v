@@ -1350,18 +1350,19 @@ lemma invoke_sched_context_invs[wp]:
 
 lemma update_sc_badge_valid_replies:
   "\<lbrace>valid_replies_pred P and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
-      set_sched_context p (sc\<lparr>sc_badge := i \<rparr>) \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>"
+   set_sched_context p (sc\<lparr>sc_badge := i \<rparr>)
+   \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>"
   by (wpsimp wp: set_sched_context_wp,
       fastforce dest: ko_at_obj_congD)
 
-lemma update_sc_refills_valid_replies:
+lemma update_sc_refills_period_refill_max_valid_replies:
   "\<lbrace>valid_replies_pred P and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
    set_sched_context p (sc\<lparr>sc_period := period, sc_refill_max := m, sc_refills := r\<rparr>)
    \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>"
   by (wpsimp wp: set_sched_context_wp,
       fastforce dest: ko_at_obj_congD)
 
-lemma update_sc_refi2lls_valid_replies[wp]:
+lemma update_sc_refills_valid_replies[wp]:
   "\<lbrace>valid_replies_pred P and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
    set_sched_context p (sc\<lparr>sc_refills := r\<rparr>)
    \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>"
@@ -1370,7 +1371,8 @@ lemma update_sc_refi2lls_valid_replies[wp]:
 
 lemma update_sc_badge_invs:
   "\<lbrace>invs and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
-      set_sched_context p (sc\<lparr>sc_badge := i \<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
+   set_sched_context p (sc\<lparr>sc_badge := i \<rparr>)
+   \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
                 simp_del: fun_upd_apply
                      wp: valid_ioports_lift update_sc_badge_valid_replies)
@@ -1489,10 +1491,10 @@ lemma invs_valid_refills:
 
 lemma sched_context_nonref_update_invs[wp]:
   "\<lbrace> invs and obj_at (\<lambda>ko. \<exists>n. ko = SchedContext sc n) scp \<rbrace>
-    set_sched_context scp (sc\<lparr> sc_period := period, sc_refill_max := m, sc_refills := r0#rs\<rparr>)
-      \<lbrace> \<lambda>_. invs \<rbrace>"
+   set_sched_context scp (sc\<lparr> sc_period := period, sc_refill_max := m, sc_refills := r0 # rs\<rparr>)
+   \<lbrace> \<lambda>_. invs \<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def simp_del: refs_of_defs
-                wp: valid_ioports_lift update_sc_refills_valid_replies)
+                wp: valid_ioports_lift update_sc_refills_period_refill_max_valid_replies)
   apply (intro conjI)
      apply (erule (1) obj_at_valid_objsE)
      apply (clarsimp simp: valid_obj_def valid_sched_context_def)
@@ -1608,7 +1610,7 @@ lemma refill_budget_check_active[wp]:
   by (wpsimp simp: refill_budget_check_def set_refills_def
        wp: hoare_drop_imp get_sched_context_wp split_del: if_split)
 
-(*
+(* FIXME: remove
 lemma charge_budget_invs_helper:
   "\<lbrace>invs \<rbrace> do
      ct <- gets cur_thread;
@@ -1640,7 +1642,7 @@ lemma charge_budget_invs_helper:
   apply (case_tac "tcb_state tcb"; clarsimp)
   done
 
-(*
+(* FIXME remove
 lemma charge_budget_invs:
   "\<lbrace>invs\<rbrace> charge_budget capacity consumed canTimeout \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: charge_budget_def is_round_robin_def)

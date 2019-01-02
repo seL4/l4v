@@ -1731,14 +1731,14 @@ lemma zombies: "zombies_final s'"
   by (clarsimp simp: final_retype is_zombie_def cte_retype not_final_NullCap
               elim!: zombies_finalD [OF _ zombies_s])
 
-lemma replies_with_sc:
+lemma replies_with_sc_subset:
   "replies_with_sc s' \<subseteq> replies_with_sc s"
   unfolding s'_def ps_def
   by (auto simp: replies_with_sc_def sc_at_pred_def obj_at_def
                  default_object_def tyunt default_sched_context_def
           split: apiobject_type.splits)
 
-lemma replies_blocked:
+lemma replies_blocked_subset:
   "replies_blocked s \<subseteq> replies_blocked s'"
   by (auto intro!: pred_tcb_at_pres simp: replies_blocked_def)
 
@@ -1747,9 +1747,9 @@ lemma valid_replies:
   apply (rule valid_pspaceE[OF vp])
   apply (clarsimp simp: valid_replies'_def)
   apply (rule conjI)
-   apply (rule subset_trans[OF image_mono[OF replies_with_sc]])
-   apply (erule subset_trans[OF _ image_mono[OF replies_blocked]])
-  apply (clarsimp simp: inj_on_subset[OF _ replies_with_sc])
+   apply (rule subset_trans[OF image_mono[OF replies_with_sc_subset]])
+   apply (erule subset_trans[OF _ image_mono[OF replies_blocked_subset]])
+  apply (clarsimp simp: inj_on_subset[OF _ replies_with_sc_subset])
   done
 
 end
@@ -1761,19 +1761,20 @@ lemma (in retype_region_proofs_gen) valid_pspace: "valid_pspace s'"
 (* I have the feeling I'm making this unnecessarily hard,
    but I can't put my finger on where. *)
 
+(* FIXME: rename *)
 lemma F: "\<And>x c s. (caps_of_state s x = Some c) = (cte_wp_at ((=) c) x s)"
   apply (simp add: caps_of_state_cte_wp_at)
   apply (fastforce simp: cte_wp_at_def)
   done
 
-
+(* FIXME: rename *)
 lemma F2: "\<And>x c s. (null_filter (caps_of_state s) x = Some c)
              = (cte_wp_at (\<lambda>cap. cap \<noteq> cap.NullCap \<and> cap = c) x s)"
   apply (simp add: null_filter_def F)
   apply (fastforce simp: cte_wp_at_def)
   done
 
-
+(* FIXME: rename *)
 lemma F3: "\<And>x s. (None = null_filter (caps_of_state s) x)
               = (\<forall>c. \<not> cte_wp_at (\<lambda>cap. cap \<noteq> cap.NullCap \<and> cap = c) x s)"
   apply safe

@@ -1397,18 +1397,20 @@ lemma do_nbrecv_failed_transfer_state_refs_of[wp]:
 
 lemma fast_finalise_sym_refs:
   "\<lbrace>invs\<rbrace> fast_finalise cap final \<lbrace>\<lambda>y s. sym_refs (state_refs_of s)\<rbrace>"
-  apply (cases cap; clarsimp simp: when_def)
-     apply (wp cancel_all_signals_invs cancel_all_ipc_invs unbind_maybe_notification_invs
-               cancel_ipc_invs sched_context_unbind_yield_from_invs get_simple_ko_wp
+  apply (cases cap;
+         (solves \<open>simp\<close>)?)
+      apply (wp cancel_all_signals_invs cancel_all_ipc_invs unbind_maybe_notification_invs
+                cancel_ipc_invs sched_context_unbind_yield_from_invs get_simple_ko_wp
              | strengthen invs_sym_refs
              | clarsimp)+
-  sorry (* fast_finalise_sym_refs *)
+  done
 
 crunch state_refs_of[wp]: empty_slot "\<lambda>s. P (state_refs_of s)"
   (wp: crunch_wps simp: crunch_simps interrupt_update.state_refs_update)
 
 lemmas sts_st_tcb_at_other = sts_st_tcb_at_neq[where proj=itcb_state]
 
+(* FIXME: move *)
 lemma runnable_eq:
   "runnable st = (st = Running \<or> st = Restart)"
   by (cases st) auto

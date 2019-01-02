@@ -567,7 +567,7 @@ lemma fst_subset:
   "fst ` A \<subseteq> fst ` B \<Longrightarrow> (r, q) \<in> A \<Longrightarrow> \<exists>t. (r,t) \<in> B"
   by fastforce
 
-lemma valid_replies_other_refs:
+lemma valid_repliesD1_simp:
   "(r, p) \<in> replies_with_sc s \<Longrightarrow> \<exists>t. (r, t) \<in> replies_blocked s"
   apply (rule fst_subset[rotated], assumption)
   using valid_replies
@@ -613,7 +613,7 @@ lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbra
             clarsimp simp: is_reply)
      apply (clarsimp simp: is_reply live_def live_reply_def)
      apply (subgoal_tac "(r, p) \<in> replies_with_sc s")
-      apply (drule_tac valid_replies_other_refs)
+      apply (drule_tac valid_repliesD1_simp)
       apply (clarsimp simp: replies_blocked_def)
       apply (rule_tac x=t in exI)
       using refsym
