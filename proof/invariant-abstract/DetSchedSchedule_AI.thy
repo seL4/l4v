@@ -5206,6 +5206,7 @@ lemma tcb_sched_action_dequeue_strong_valid_sched:
   apply force
   done
 
+(* This is not nearly as strong as it could be *)
 lemma possible_switch_to_simple_sched_action:
   "\<lbrace>simple_sched_action and (\<lambda>s. \<not> in_cur_domain target s)\<rbrace>
        possible_switch_to target \<lbrace>\<lambda>_. simple_sched_action\<rbrace>"
@@ -5507,32 +5508,40 @@ lemma unbind_from_sc_valid_sched:
 crunch simple_sched_action[wp]: unbind_notification simple_sched_action
   (simp: crunch_simps wp: crunch_wps)
 
+lemma sched_context_unbind_reply_valid_sched:
+  "\<lbrace>valid_sched\<rbrace> sched_context_unbind_reply sc_ptr \<lbrace>\<lambda>yb. valid_sched\<rbrace>"
+  unfolding sched_context_unbind_reply_def
+  by wpsimp
+
 (* precondition could be weaker (invs > (sym_refs and valid_objs)) but
    this is much simpler to prove *)
 lemma finalise_cap_valid_sched[wp]:
   "\<lbrace>valid_sched and valid_idle_etcb and simple_sched_action and invs and valid_cap cap\<rbrace>
    finalise_cap cap param_b
    \<lbrace>\<lambda>_. valid_sched:: det_state \<Rightarrow> _\<rbrace>"
-  apply (case_tac cap; wpsimp wp: cancel_all_ipc_valid_sched cancel_ipc_valid_sched get_simple_ko_wp)
-(*
-       apply (intro conjI impI;
-              wpsimp)
-      apply (intro conjI impI;
-             wpsimp wp: suspend_valid_sched ARM.unbind_from_sc_valid_objs unbind_from_sc_valid_sched)
-     apply (intro conjI impI;
-            wpsimp wp: suspend_valid_sched)
-       apply (rule_tac Q="\<lambda>ya. valid_sched and invs and (\<lambda>s. simple_sched_action s \<and> tcb_at x7 s)"
-                       in hoare_strengthen_post)
-        apply (wpsimp wp: unbind_from_sc_valid_sched Arch.unbind_from_sc_invs Arch.unbind_from_sc_tcb_at)
-       apply fastforce
-      apply (wpsimp wp: unbind_notification_invs)
-     apply (clarsimp simp: valid_cap_def)
-    apply (wpsimp wp: sched_context_unbind_all_tcbs_valid_sched)
-   apply clarsimp
+  apply (case_tac cap; (solves \<open>wpsimp\<close>)?; simp)
+       apply (wpsimp wp: cancel_all_ipc_valid_sched cancel_ipc_valid_sched get_simple_ko_wp)
+      apply (wpsimp wp: cancel_ipc_valid_sched reply_remove_valid_sched gts_wp get_simple_ko_wp)
+      apply (safe; clarsimp)
+      apply (clarsimp simp: reply_tcb_reply_at_def obj_at_def pred_tcb_at_eq_commute)
+      apply (subgoal_tac "\<exists>reply. (kheap s xb = Some (Reply reply) \<and> reply_tcb reply = Some x)")
+       apply (clarsimp simp: runnable_def st_tcb_at_def obj_at_def)
+      apply (rule_tac st_tcb_reply_state_refs[OF invs_valid_objs invs_sym_refs];
+             clarsimp simp: pred_tcb_at_eq_commute)
+     apply (intro conjI impI;  wpsimp)
+    apply (intro conjI impI; wpsimp wp: suspend_valid_sched)
+      apply (rule_tac Q="\<lambda>ya. valid_sched and invs and (\<lambda>s. simple_sched_action s \<and> tcb_at x7 s)"
+                      in hoare_strengthen_post)
+       apply (wpsimp wp: unbind_from_sc_valid_sched Arch.unbind_from_sc_invs Arch.unbind_from_sc_tcb_at)
+      apply fastforce
+     apply (wpsimp wp: unbind_notification_invs)
+    apply (clarsimp simp: valid_cap_def)
+   apply (wpsimp wp: sched_context_unbind_all_tcbs_valid_sched
+                     sched_context_unbind_yield_from_valid_sched
+                     sched_context_unbind_reply_valid_sched)
   apply (intro conjI impI; wpsimp wp: deleting_irq_handler_valid_sched)
   apply fastforce
   done
-*)sorry (* finalise_cap_valid_sched *)
 
 end
 
@@ -5542,12 +5551,19 @@ context DetSchedSchedule_AI begin
 
 crunch simple_sched_action[wp]: empty_slot simple_sched_action
 
+lemma finalise_cap_simple_sched_action:
+  "\<lbrace>simple_sched_action\<rbrace> finalise_cap cap fin \<lbrace>\<lambda>rv. simple_sched_action\<rbrace>"
+  apply (cases cap; simp)
+  sorry (* finalise_cap_simple_sched_action *)
+
+(* This depends on finalise_cap_valid_sched and finalise_cap_simple_sched_action
+   Check they are complete first *)
 lemma rec_del_valid_sched'[wp]:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace>
     rec_del call
    \<lbrace>\<lambda>rv. valid_sched and simple_sched_action\<rbrace>"
   apply (rule rec_del_preservation)
-  apply (wpsimp wp: preemption_point_inv' | simp)+
+  apply (wpsimp wp: preemption_point_inv' finalise_cap_simple_sched_action)+
   sorry (* rec_del *)
 
 lemma rec_del_valid_sched[wp]:
@@ -5557,10 +5573,10 @@ lemma rec_del_valid_sched[wp]:
   apply simp
   done
 
+
 lemma rec_del_simple_sched_action[wp]:
   "\<lbrace>simple_sched_action\<rbrace> rec_del call \<lbrace>\<lambda>rv. simple_sched_action\<rbrace>"
-  apply (wp rec_del_preservation preemption_point_inv' | simp)+ (* needs finalise_cap_simple_sched_action *)
-   sorry
+  by (wpsimp wp: rec_del_preservation preemption_point_inv' finalise_cap_simple_sched_action)
 
 crunches cap_delete
 for valid_sched[wp]: "valid_sched::det_state \<Rightarrow> _"
@@ -8519,26 +8535,6 @@ end
 context DetSchedSchedule_AI begin
 crunch valid_sched[wp]: invoke_irq_control "valid_sched::det_state \<Rightarrow> _"
   (wp: maybeM_inv)
-(*
-lemma fast_finalise_valid_sched[wp]:
-  "\<lbrace>valid_sched \<rbrace> fast_finalise cap b \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  apply (cases cap; wpsimp)
-sorry*)
-(*  by (cases cap; wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp get_simple_ko_inv)
-
-crunch valid_sched[wp]: fast_finalise valid_sched
-
-lemma cap_delete_one_valid_sched[wp]:
-  "\<lbrace>valid_sched \<rbrace> cap_delete_one slot \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  apply (clarsimp simp: cap_delete_one_def)
-  apply (wpsimp simp: unless_def hoare_vcg_if_lift2 wp: get_cap_wp)
-  done
-
-*)
-(*
-crunch valid_sched[wp]: cap_delete_one "valid_sched::det_state \<Rightarrow> _"
-  (simp: unless_def wp: maybeM_inv hoare_vcg_if_lift2 hoare_drop_imp
-   ignore: fast_finalise)*)
 
 lemma invoke_irq_handler_valid_sched[wp]:
   "\<lbrace> valid_sched and valid_objs and simple_sched_action and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
