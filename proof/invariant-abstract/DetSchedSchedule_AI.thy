@@ -33,7 +33,8 @@ lemma rt_assumptions:
 
   "sc_period sc = 0 \<Longrightarrow> length (sc_refills sc) = 2" (* more assumptions? *)
   "\<not> (t \<in> set (ready_queues s d p) \<and> t \<in> set (release_queue s))"
-  sorry
+  sorry (* rt_assumptions *)
+
 lemmas ct_assumptions = rt_assumptions(1)
 (*
 lemmas callee_must_be_inactive_reply = rt_assumptions(2) (* sym_refs assumed *)
@@ -2720,7 +2721,8 @@ lemma update_sched_context_valid_ready_qs:
   apply (simp add: update_sched_context_def)
   apply (wpsimp simp: set_object_def wp: get_object_wp)
   by (fastforce simp: valid_ready_qs_def etcb_defs refill_prop_defs
-    active_sc_tcb_at_defs st_tcb_at_kh_if_split split: option.splits)
+                      active_sc_tcb_at_defs st_tcb_at_kh_if_split
+               split: option.splits)
 
 lemma update_sched_context_valid_ready_qs_not_queued:
   "\<lbrace>valid_ready_qs
@@ -3204,12 +3206,31 @@ lemma set_refills_valid_sched:
   apply (wpsimp wp: update_sched_context_valid_sched)
   by (fastforce simp: obj_at_def valid_sched_def test_sc_refill_max_def)
 
+crunches commit_domain_time
+  for valid_ready_qs[wp]: valid_ready_qs
+  and valid_release_q[wp]: valid_release_q
+  and ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
+  and release_queue[wp]: "\<lambda>s. P (release_queue s)"
+  and ko_at[wp]: "\<lambda>s. ko_at P t s"
+  and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+  and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  and kheap[wp]: "\<lambda>s. P (kheap s)"
+  and ct_not_in_q[wp]: "\<lambda>s. ct_not_in_q s"
+  and valid_sched_action[wp]: "\<lambda>s. valid_sched_action s"
+  and valid_blocked[wp]: "\<lambda>s. valid_blocked s"
+  and ct_in_cur_domain[wp]: "\<lambda>s. ct_in_cur_domain s"
+
 lemma switch_sched_context_valid_sched:
-  "\<lbrace>valid_sched\<rbrace> switch_sched_context \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+  "\<lbrace>valid_sched\<rbrace>
+   switch_sched_context
+   \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: switch_sched_context_def)
-(*  apply (wpsimp split_del: if_split wp: hoare_drop_imps commit_time_valid_sched
- rollback_time_valid_sched refill_unblock_check_valid_sched simp: get_sc_obj_ref_def)
-  done *) sorry
+(*
+  apply (wpsimp simp: refill_ready_def refill_sufficient_def
+                  wp: hoare_drop_imps commit_time_valid_sched rollback_time_valid_sched
+                      refill_unblock_check_valid_sched) *)
+  sorry (* switch_sched_context_valid_sched *)
 
 lemma set_next_timer_interrupt_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> set_next_timer_interrupt thread_time \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
@@ -3774,7 +3795,8 @@ reply_unlink_tcb_valid_sched reply_unlink_tcb_active_sc_tcb_at)
   apply (wpsimp wp: mapM_x_wp'
                     reply_unlink_tcb_valid_sched set_thread_state_st_tcb_at
               simp: set_object_def)+
-*)    sorry (* cancel_all_ipc *)
+*)
+sorry (* cancel_all_ipc *)
 
 lemma cancel_all_signals_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> cancel_all_signals ntfnptr \<lbrace>\<lambda>rv. valid_sched::det_state \<Rightarrow> _\<rbrace>"
@@ -5477,7 +5499,7 @@ lemma fast_finalise_valid_sched:
   "\<lbrace>valid_sched and valid_objs and simple_sched_action and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
    fast_finalise cap final
    \<lbrace>\<lambda>y. valid_sched:: det_state \<Rightarrow> _\<rbrace>"
-sorry(* fast_finalise_valid_sched
+sorry (* fast_finalise_valid_sched
   by (cases cap;
       clarsimp;
       wpsimp wp: cancel_all_ipc_valid_sched cancel_ipc_valid_sched get_simple_ko_wp
@@ -6428,7 +6450,8 @@ apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_ac
                                    valid_sched_action_def weak_valid_sched_action_def
                                    switch_in_cur_domain_def ct_in_q_def ct_not_in_q_def
                                    st_tcb_at_def obj_at_def)?)+*)
-*)  sorry (* schedule_valid_sched *)
+*)
+sorry (* schedule_valid_sched *)
 
 crunches cancel_ipc
 for not_cur_thread[wp]: "not_cur_thread thread"
@@ -6468,7 +6491,8 @@ lemma restart_valid_sched[wp]:
    apply (simp only: st_tcb_at_not)
    apply simp
   apply (simp add: get_thread_state_def | wp hoare_drop_imps)+
-  done*) sorry (* restart *)
+  done*)
+sorry (* restart *)
 
 end
 
@@ -6855,7 +6879,7 @@ set_thread_state_runnable_valid_ready_qs hoare_vcg_all_lift hoare_vcg_conj_lift
 static_imp_wp
    cong: conj_cong imp_cong)
 (*  apply (clarsimp) *)
-  sorry  (* needs more work: cancel_badge_sends *)
+  sorry (* needs more work: cancel_badge_sends *)
 
 lemma cancel_badged_sends_filterM_valid_release_q[wp]:
    "\<lbrace>valid_release_q\<rbrace>
@@ -7226,7 +7250,8 @@ apply (wpsimp wp: )
    apply (simp add: get_thread_state_def thread_get_def | wp)+
   apply (clarsimp simp: ct_in_state_def cte_wp_at_caps_of_state not_cur_thread_def)
   apply (fastforce simp: st_tcb_def2)
-  done*) sorry (* do_reply_transfer *)
+  done*)
+sorry (* do_reply_transfer *)
 
 end
 
@@ -7414,7 +7439,8 @@ apply (wpsimp wp: reply_push_valid_sched reply_push_valid_etcbs reply_push_valid
     apply (case_tac "recvr = cur_thread s")
      subgoal by (fastforce simp: ct_in_state_def st_tcb_at_def2 obj_at_def)
     apply (clarsimp simp: is_activatable_def)
-  done*) sorry (* send_ipc *)
+  done*)
+sorry (* send_ipc *)
 end
 
 lemma thread_set_tcb_fault_set_invs:
@@ -7585,7 +7611,7 @@ lemma update_waiting_ntfn_valid_sched[wp]:
             maybe_donate_sc_valid_release_q
             maybe_donate_sc_valid_blocked
             maybe_donate_sc_active_sc_tcb_at_eq)
-sorry
+sorry (* update_waiting_ntfn_valid_sched *)
 
 lemma set_thread_state_st_tcb_at:
   " P ts \<Longrightarrow>
@@ -8181,7 +8207,8 @@ lemma receive_ipc_valid_sched:
   apply (clarsimp simp: valid_obj_def valid_ntfn_def)
   apply (drule hd_in_set)
   apply simp
-  done*) sorry
+  done*)
+sorry (* receive_ipc_valid_sched *)
 
 end
 
@@ -8252,7 +8279,7 @@ apply (wpsimp wp: maybe_donate_sc_valid_sched)
    set_simple_ko_test_sc_refill_max set_simple_ko_valid_sched hoare_vcg_conj_lift
    hoare_vcg_all_lift hoare_drop_imp
 simp: obj_at_def set_object_def)
-sorry
+sorry (* receive_signal_valid_sched *)
 
 
 (*
@@ -8499,7 +8526,7 @@ lemma lookup_reply_valid_fault[wp]:
   "\<lbrace>\<top>\<rbrace> lookup_reply -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
   apply (clarsimp simp: lookup_reply_def)
   apply (wpsimp simp: valid_fault_def lookup_cap_def lookup_slot_for_thread_def)
-  sorry
+  sorry (* lookup_reply_valid_fault *)
 
 context DetSchedSchedule_AI begin
 
@@ -8882,7 +8909,9 @@ lemma perform_invocation_valid_sched[wp]:
         apply (wp invoke_cnode_valid_sched send_ipc_valid_sched invoke_domain_valid_sched
              | simp add: invs_valid_objs invs_valid_idle invs_valid_reply_caps
              | clarsimp simp: ct_in_state_def)+
-  done*) sorry
+  done*)
+sorry (* perform_invocation_valid_sched *)
+
 end
 
 context DetSchedSchedule_AI begin
@@ -9125,8 +9154,7 @@ lemma handle_interrupt_valid_sched[wp]:
   handle_interrupt irq \<lbrace>\<lambda>rv. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   unfolding handle_interrupt_def
   apply (wpsimp wp: get_cap_wp hoare_drop_imps hoare_vcg_all_lift send_signal_valid_sched | rule conjI)+
-  sorry (* sorry was previously at send_signal_valid_sched. Now here because we need to
-           know things about budgets *)
+  sorry (* handle_interrupt_valid_sched *)
 
 lemma set_scheduler_action_switch_not_cur_thread [wp]:
   "\<lbrace>\<lambda>s. True\<rbrace> set_scheduler_action (switch_thread target) \<lbrace>\<lambda>rv. not_cur_thread t\<rbrace>"
@@ -9360,7 +9388,7 @@ apply fastforce
 defer
 apply fastforce
 apply (clarsimp simp: sufficient_refills_def refills_capacity_def)*)
-sorry (* MIN_BUDGET *)
+sorry (* charge_budget_valid_sched *)
 
 lemma check_budget_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> check_budget \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
@@ -9679,7 +9707,7 @@ lemma handle_event_valid_sched:
             check_budget_ct_active]]])
        apply (clarsimp simp: )
       apply (wpsimp wp: )*)
-  sorry
+  sorry (* handle_event_valid_sched *)
 (*
 end
 *)

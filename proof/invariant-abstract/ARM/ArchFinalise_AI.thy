@@ -593,7 +593,7 @@ lemma reply_unlink_sc_not_live:
                     set_simple_ko_obj_at_disjoint hoare_vcg_all_lift
               simp: reply_unlink_sc_def is_reply update_sk_obj_ref_def
         | wp_once hoare_drop_imps)+
-  apply (clarsimp simp: obj_at_def live_def live_reply_def reply_tcb_None_reply_sc_None)
+  apply (clarsimp simp: obj_at_def live_def live_reply_def invs_reply_tcb_None_reply_sc_None)
   done
 
 lemma reply_unlink_tcb_not_live:
@@ -1031,7 +1031,7 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                              wp_once cancel_ipc_unlive_reply_receive[unfolded o_def] reply_remove_unlive[unfolded o_def])+)[9]
            apply (auto simp: obj_at_def is_cap_simps ran_tcb_cap_cases valid_ipc_buffer_cap_def pred_tcb_at_def
                              live_def live_reply_def vs_cap_ref_def no_cap_to_obj_with_diff_ref_Null
-                             reply_tcb_None_reply_sc_None
+                             invs_reply_tcb_None_reply_sc_None
                       intro: valid_NullCapD
                       dest!: reply_tcb_state_refs)[1]
           \<comment> \<open>Cnode\<close>

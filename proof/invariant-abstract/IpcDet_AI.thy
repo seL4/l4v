@@ -1014,7 +1014,7 @@ lemma reply_tcb_reply_at_None_imp_reply_sc_reply_at_None':
   "invs s \<Longrightarrow>
    reply_tcb_reply_at (\<lambda>f. f = None) reply_ptr s \<Longrightarrow>
    reply_sc_reply_at (\<lambda>sc. sc = None) reply_ptr s"
-   using reply_tcb_None_reply_sc_None
+   using invs_reply_tcb_None_reply_sc_None
    by (fastforce simp: reply_sc_reply_at_def reply_tcb_reply_at_def obj_at_def
                 split: option.splits)
 
@@ -1137,6 +1137,7 @@ lemma ReplyTCB_bound_reply_tcb_reply_at:
                      obj_at_def get_refs_def
               split: option.splits)
 
+(* FIXME move *)
 lemma replies_blocked_list_all_reply_at:
   "valid_objs s \<Longrightarrow>
    (set list \<subseteq> fst ` replies_blocked s) \<Longrightarrow>

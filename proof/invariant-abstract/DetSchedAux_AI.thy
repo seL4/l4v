@@ -709,6 +709,7 @@ lemma invoke_untyped_valid_sched:
 
 end
 
+(* FIXME: remove *)
 lemmas hoare_imp_lift_something = hoare_convert_imp
 
 crunch valid_sched_action[wp]: create_cap,cap_insert "valid_sched_action :: det_ext state \<Rightarrow> bool"
