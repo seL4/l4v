@@ -1352,21 +1352,21 @@ lemma update_sc_badge_valid_replies:
   "\<lbrace>valid_replies_pred P and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
    set_sched_context p (sc\<lparr>sc_badge := i \<rparr>)
    \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>"
-  by (wpsimp wp: set_sched_context_wp,
+  by (wpsimp wp: update_sched_context_wp,
       fastforce dest: ko_at_obj_congD)
 
 lemma update_sc_refills_period_refill_max_valid_replies:
   "\<lbrace>valid_replies_pred P and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
    set_sched_context p (sc\<lparr>sc_period := period, sc_refill_max := m, sc_refills := r\<rparr>)
    \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>"
-  by (wpsimp wp: set_sched_context_wp,
+  by (wpsimp wp: update_sched_context_wp,
       fastforce dest: ko_at_obj_congD)
 
 lemma update_sc_refills_valid_replies[wp]:
   "\<lbrace>valid_replies_pred P and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
    set_sched_context p (sc\<lparr>sc_refills := r\<rparr>)
    \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>"
-  by (wpsimp wp: set_sched_context_wp,
+  by (wpsimp wp: update_sched_context_wp,
       fastforce dest: ko_at_obj_congD)
 
 lemma update_sc_badge_invs:

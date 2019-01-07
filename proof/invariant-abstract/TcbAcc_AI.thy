@@ -805,13 +805,12 @@ lemma set_thread_state_act_valid_objs[wp]:
   by wpsimp
 
 lemma set_thread_state_valid_objs[wp]:
- "\<lbrace>valid_objs and valid_tcb_state st and
-   (\<lambda>s. (st_tcb_at (\<lambda>st. \<not> halted st) thread s \<or> halted st \<or> st = Restart))\<rbrace>
+ "\<lbrace>valid_objs and valid_tcb_state st\<rbrace>
   set_thread_state thread st
   \<lbrace>\<lambda>r. valid_objs\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (wp set_object_valid_objs)
-  apply (clarsimp simp: obj_at_def get_tcb_def is_tcb
+  apply (wpsimp wp: set_object_valid_objs)
+  apply (clarsimp simp: obj_at_def get_tcb_def
                  split: Structures_A.kernel_object.splits option.splits)
   apply (simp add: valid_objs_def dom_def)
   apply (erule allE, erule impE, blast)
@@ -2491,5 +2490,15 @@ lemma gts_wp:
   "\<lbrace>\<lambda>s. \<forall>st. st_tcb_at ((=) st) t s \<longrightarrow> P st s\<rbrace> get_thread_state t \<lbrace>P\<rbrace>"
   unfolding get_thread_state_def
   by (wpsimp wp: thread_get_wp' simp: pred_tcb_at_def obj_at_def)
+
+lemma replies_blocked_upd_tcb_st_not_BlockedonReply:
+  "\<lbrakk>kheap s t = Some (TCB tcb); \<forall>r. tcb_state tcb \<noteq> BlockedOnReply r;
+  \<forall>r. st \<noteq> BlockedOnReply r\<rbrakk> \<Longrightarrow>
+  replies_blocked_upd_tcb_st st t (replies_blocked s) = replies_blocked s"
+  apply  (rule set_eqI[OF iffI])
+   apply (clarsimp simp: replies_blocked_upd_tcb_st_def split: if_splits)
+  apply (clarsimp simp: replies_blocked_upd_tcb_st_def replies_blocked_def
+      pred_tcb_at_def obj_at_def)
+  done
 
 end

@@ -2572,4 +2572,25 @@ lemma hd_opt_rev_simps[simp]:
   "hd_opt xs = Some x \<longleftrightarrow> (\<exists>xs'. xs = x # xs')"
   by (cases xs; simp)+
 
+lemma distinct_hd_not_in_tl:
+  "distinct xs \<Longrightarrow> hd xs \<notin> set (tl xs)"
+  by (case_tac xs; clarsimp)
+
+lemma set_difference_not_P:
+  "S - {x \<in> S. P x} = {x \<in> S. \<not>P x}"
+  by blast
+
+lemma in_image_fst:
+  "(\<exists>b. (a,b) \<in> S) \<Longrightarrow> a \<in> fst ` S"
+ unfolding image_def
+ by (clarsimp; rule_tac x="(a,b)" in bexI; simp)
+
+lemma remove1_hd_is_tl[simp]:
+  "remove1 (hd xs) xs = tl xs"
+  by (case_tac xs; clarsimp)
+
+lemma fst_subset:
+  "fst ` A \<subseteq> fst ` B \<Longrightarrow> (r, q) \<in> A \<Longrightarrow> \<exists>t. (r,t) \<in> B"
+  by fastforce
+
 end

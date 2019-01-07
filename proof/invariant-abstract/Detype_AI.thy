@@ -562,11 +562,6 @@ lemma valid_replies:
   using invs
   by (simp add: invs_def valid_state_def valid_pspace_def)
 
-(* FIXME: move *)
-lemma fst_subset:
-  "fst ` A \<subseteq> fst ` B \<Longrightarrow> (r, q) \<in> A \<Longrightarrow> \<exists>t. (r,t) \<in> B"
-  by fastforce
-
 lemma valid_repliesD1_simp:
   "(r, p) \<in> replies_with_sc s \<Longrightarrow> \<exists>t. (r, t) \<in> replies_blocked s"
   apply (rule fst_subset[rotated], assumption)
@@ -647,25 +642,25 @@ lemma sym_refs_detype[detype_invs_lemmas] :
   using refsym by (simp add: state_refs)
 
 lemma replies_with_sc_detype:
-  "replies_with_sc (detype S s) = {(r,sc)\<in>(replies_with_sc s). sc \<notin> S}"
+  "replies_with_sc (detype S s) = {(r,sc) \<in> replies_with_sc s. sc \<notin> S}"
   unfolding replies_with_sc_def detype_def
   apply (rule set_eqI; clarsimp simp: sc_replies_sc_at_def obj_at_def)
   by blast
 
 lemma replies_blocked_detype:
-  "replies_blocked (detype S s) = {(r,sc)\<in>(replies_blocked s). sc \<notin> S}"
+  "replies_blocked (detype S s) = {(r,t) \<in> replies_blocked s. t \<notin> S}"
   unfolding replies_blocked_def detype_def
   apply (rule set_eqI; clarsimp simp: st_tcb_at_def obj_at_def)
   by blast
 
 lemma replies_blocked_not_untyped_range:
-  "(r,t)\<in>(replies_blocked s) \<Longrightarrow> t \<notin> (untyped_range cap)"
+  "(r,t) \<in> replies_blocked s \<Longrightarrow> t \<notin> untyped_range cap"
   apply (rule live_okE)
   apply (clarsimp simp: replies_blocked_def st_tcb_at_def; assumption)
   by (clarsimp simp: live_def)
 
 lemma replies_with_sc_not_untyped_range:
-  "(r,t)\<in>(replies_with_sc s) \<Longrightarrow> t \<notin> (untyped_range cap)"
+  "(r,t) \<in> replies_with_sc s \<Longrightarrow> t \<notin> untyped_range cap"
   apply (rule live_okE)
   apply (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def; assumption)
   by (clarsimp simp: live_def live_sc_def)

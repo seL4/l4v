@@ -4057,4 +4057,175 @@ lemma sc_obj_at_sc_at[simp]:
   "sc_obj_at n ptr s \<Longrightarrow> sc_at ptr s"
   by (auto simp: obj_at_def)
 
+lemma sc_with_reply_SomeD:
+  "sc_with_reply r s = Some x
+   \<Longrightarrow> \<exists>sc n. kheap s x = Some (SchedContext sc n) \<and> r \<in> set (sc_replies sc)"
+  by (clarsimp simp: sc_with_reply_def dest!: the_pred_option_SomeD split: if_splits)
+
+lemma in_state_refs_of_iff:
+  "r \<in> state_refs_of s p \<longleftrightarrow> (\<exists>ko. kheap s p = Some ko \<and> r \<in> refs_of ko)"
+  by (auto simp: state_refs_of_def split: option.splits)
+
+lemma valid_replies'D1:
+  "valid_replies' S T \<Longrightarrow> (fst ` S  \<subseteq> fst ` T)"
+  by (clarsimp simp: valid_replies'_def)
+
+lemma sc_reftypes:
+  "(y, reft) \<in> state_refs_of s sc \<Longrightarrow>
+   sc_at_pred_n N f P sc s \<Longrightarrow>
+   reft \<in> {SCNtfn, SCTcb, SCYieldFrom, SCReply}"
+  by (clarsimp simp: state_refs_of_def refs_of_def sc_at_pred_n_def obj_at_def get_refs_def
+              split: option.splits)
+
+lemma ntfn_reftypes:
+  "(y, reft) \<in> state_refs_of s sc \<Longrightarrow>
+   ntfn_at_pred P sc s \<Longrightarrow>
+   reft \<in> {NTFNBound, NTFNSchedContext, NTFNSignal}"
+  by (clarsimp simp: state_refs_of_def refs_of_def ntfn_at_pred_def get_refs_def
+              split: option.splits)
+
+lemma ep_reftypes:
+  "(y, reft) \<in> state_refs_of s sc \<Longrightarrow>
+   ep_at_pred P sc s \<Longrightarrow>
+   reft \<in> {EPSend, EPRecv}"
+  by (clarsimp simp: state_refs_of_def refs_of_def ep_at_pred_def ep_q_refs_of_def
+              split: option.splits endpoint.splits)
+
+lemma tcb_reftypes:
+   "(x, tp) \<in> state_refs_of s p \<Longrightarrow> tcb_at p s \<Longrightarrow>
+       tp \<in> {TCBBlockedSend,TCBBlockedRecv,TCBSignal,TCBBound,TCBHypRef,TCBSchedContext,
+             TCBReply,TCBYieldTo}"
+  apply (drule state_refs_of_elemD)
+  apply (clarsimp simp: obj_at_def is_tcb get_refs_def2 tcb_st_refs_of_def
+                  split: thread_state.splits if_split_asm)
+  done
+
+lemma reply_reftypes:
+   "(x, tp) \<in> state_refs_of s p \<Longrightarrow> reply_at p s \<Longrightarrow>
+       tp \<in> {ReplySchedContext, ReplyTCB}"
+  apply (drule state_refs_of_elemD)
+  apply (clarsimp simp: obj_at_def is_reply get_refs_def2)
+  done
+
+lemma reftypes_reply_at:
+  "(t, rt) \<in> state_refs_of s r_ptr \<Longrightarrow> rt \<in> {ReplyTCB, ReplySchedContext} \<Longrightarrow> reply_at r_ptr s"
+  apply (clarsimp simp: state_refs_of_def refs_of_def reply_tcb_reply_at_def obj_at_def
+                 split: option.splits)
+  apply (case_tac x2;
+         clarsimp simp: is_reply_def get_refs_def
+                 split: option.splits;
+         fastforce)
+  done
+
+lemma valid_repliesD2:
+  "valid_replies' with_sc blocked \<Longrightarrow> (r,sc) \<in> with_sc \<Longrightarrow> (r,sc') \<in> with_sc \<Longrightarrow> sc = sc'"
+  by (fastforce simp: valid_replies_defs inj_on_def)
+
+lemma sc_at_pred_n_eq_commute:
+  "sc_at_pred_n N proj ((=) f) = sc_at_pred_n N proj (\<lambda>f'. f' = f)"
+  by (intro ext) (auto simp: sc_at_pred_n_def obj_at_def)
+
+lemma sc_with_reply_def':
+  "sc_with_reply r s \<equiv> the_pred_option (\<lambda>sc_ptr. sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc_ptr s)"
+  apply (simp add: sc_with_reply_def sc_replies_sc_at_def obj_at_def)
+  apply (intro eq_reflection arg_cong[where f=the_pred_option] ext)
+  by fastforce
+
+lemmas sc_with_reply_def'2 = sc_with_reply_def'[unfolded the_pred_option_def]
+
+lemma valid_objs_sc_replies_reply_at:
+  "valid_objs s \<Longrightarrow> sc_replies_sc_at ((=) replies) sc_ptr s \<Longrightarrow> rp \<in> set replies \<Longrightarrow> reply_at rp s"
+  apply (clarsimp simp: sc_at_pred_n_eq_commute
+                        sc_replies_sc_at_def  obj_at_def)
+  apply (subgoal_tac "valid_sched_context sc s")
+   apply (clarsimp simp: valid_sched_context_def list_all_def obj_at_def)
+  apply (fastforce simp: valid_obj_def)
+  done
+
+lemma valid_objs_sc_replies_distinct:
+  "valid_objs s \<Longrightarrow> sc_replies_sc_at ((=) replies) sc_ptr s \<Longrightarrow> distinct replies"
+  apply (clarsimp simp: sc_at_pred_n_eq_commute
+                        sc_replies_sc_at_def  obj_at_def)
+  apply (subgoal_tac "valid_sched_context sc s")
+   apply (clarsimp simp: valid_sched_context_def list_all_def obj_at_def)
+  apply (fastforce simp: valid_obj_def)
+  done
+
+lemma sc_with_reply_replies_with_sc:
+  "sc_with_reply rptr s = Some sc_ptr \<Longrightarrow> (rptr, sc_ptr) \<in> replies_with_sc s"
+  by (auto simp add: sc_with_reply_def' replies_with_sc_def
+               elim: the_pred_option_SomeD)
+
+lemma valid_repliesD1_simp:
+  "valid_replies' T S \<Longrightarrow> (r, p) \<in> T \<Longrightarrow> \<exists>t. (r, t) \<in> S"
+  by (rule fst_subset[rotated], assumption, simp add: valid_replies'_def)
+
+lemma valid_repliesE1:
+  "valid_replies s
+   \<Longrightarrow> \<exists>sc. sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s
+   \<Longrightarrow> \<exists>t. st_tcb_at (\<lambda>st. st = BlockedOnReply (Some r)) t s"
+  by (fastforce dest: valid_repliesD1_simp
+                simp: replies_with_sc_def replies_blocked_def)
+
+lemma reply_sc_refs:
+  "\<lbrakk>reply_sc reply = Some t; valid_objs s; sym_refs (state_refs_of s);
+    kheap s rptr = Some (Reply reply)\<rbrakk>
+  \<Longrightarrow> \<exists>sc n. kheap s t = Some (SchedContext sc n) \<and>
+     (rptr \<in> set (sc_replies sc))"
+  apply (erule (1) valid_objsE)
+  apply (drule sym_refs_ko_atD[rotated])
+   apply (simp add: obj_at_def)
+  apply (clarsimp simp: get_refs_def2 obj_at_def valid_obj_def valid_reply_def refs_of_rev
+                        valid_bound_obj_def is_sc_obj_def state_refs_of_def image_iff)
+  done
+
+lemma invs_reply_tcb_None_reply_sc_None:
+  "\<lbrakk>invs s; kheap s p = Some (Reply rep); reply_tcb rep = None\<rbrakk>
+   \<Longrightarrow> reply_sc rep = None"
+  apply (frule invs_valid_replies, frule invs_sym_refs, frule invs_valid_objs)
+  apply (clarsimp simp: valid_replies_defs)
+  apply (drule_tac c=p in contra_subsetD)
+   apply (clarsimp dest!: sym_refs_st_tcb_atD simp: obj_at_def get_refs_def
+                   split: option.splits)+
+  apply (rule ccontr, clarsimp)
+  apply (frule(3) reply_sc_refs)
+  apply (fastforce simp: sc_at_pred_def obj_at_def image_def)
+  done
+
+lemma the_pred_option_None_iff:
+  "the_pred_option P = None \<longleftrightarrow> (\<nexists>!x. P x)"
+  by (simp add: the_pred_option_def)
+
+lemma sc_with_reply_NoneD:
+  assumes "sc_with_reply r s = None"
+  shows "\<nexists>!sc. sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s"
+  using assms by (auto simp: sc_with_reply_def2 sc_replies_sc_at_def obj_at_def split: if_splits)
+
+lemma valid_replies_sc_replies_unique:
+  assumes "valid_replies s"
+  assumes "\<exists>sc. sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s"
+  shows "\<exists>!sc. sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s"
+  using assms by (fastforce simp: valid_replies_defs inj_on_def)
+
+lemma valid_replies_sc_with_reply_None:
+  assumes n: "sc_with_reply r s = None"
+  assumes v: "valid_replies s"
+  shows "\<not> sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s"
+  using valid_replies_sc_replies_unique[OF v] sc_with_reply_NoneD[OF n] by auto
+
+lemma replies_blocked_imp_TCBReply_ref:
+  "(rp, t) \<in> replies_blocked s \<Longrightarrow> (rp , TCBReply) \<in> (state_refs_of s t)"
+  by (clarsimp simp: replies_blocked_def state_refs_of_def st_tcb_at_def obj_at_def get_refs_def)
+
+lemma pred_tcb_at_ko_atD:
+  "pred_tcb_at proj P p s \<Longrightarrow> \<exists>tcb. ko_at (TCB tcb) p s \<and> P (proj (tcb_to_itcb tcb))"
+  by (clarsimp simp: pred_tcb_at_def obj_at_def)
+
+lemmas st_tcb_at_ko_atD =
+  pred_tcb_at_ko_atD[where proj=itcb_state, simplified]
+
+lemma not_BlockedOnReply_not_in_replies_blocked:
+  "st_tcb_at (\<lambda>st. st \<noteq> BlockedOnReply (Some r)) tptr s \<Longrightarrow> (r, tptr) \<notin> replies_blocked s"
+  by ( clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def)
+
 end

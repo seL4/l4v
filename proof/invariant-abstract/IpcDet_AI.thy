@@ -432,29 +432,6 @@ lemma ko_at_Endpoint_ep_at:
   "ko_at (Endpoint ep) ep_ptr s \<Longrightarrow> ep_at ep_ptr s"
   by (fastforce elim!: obj_at_weakenE simp: is_ep_def)
 
-lemma pred_tcb_at_ko_atD:
-  "pred_tcb_at proj P p s \<Longrightarrow> \<exists>tcb. ko_at (TCB tcb) p s \<and> P (proj (tcb_to_itcb tcb))"
-  by (simp add: pred_tcb_at_def2)
-
-lemmas st_tcb_at_ko_atD =
-  pred_tcb_at_ko_atD[where proj=itcb_state, simplified]
-
-(* FIXME move *)
-lemma set_difference_not_P:
-  "S - {x \<in> S. P x} = {x \<in> S. \<not>P x}"
-  by blast
-
-(* FIXME move *)
-lemma in_image_fst:
-  "(\<exists>b. (a,b) \<in> S) \<Longrightarrow> a \<in> fst ` S"
- unfolding image_def
- by (clarsimp; rule_tac x="(a,b)" in bexI; simp)
-
-(* FIXME move *)
-lemma not_BlockedOnReply_not_in_replies_blocked:
-  "st_tcb_at (\<lambda>st. st \<noteq> BlockedOnReply (Some r)) tptr s \<Longrightarrow> (r, tptr) \<notin> replies_blocked s"
-  by ( clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def)
-
 lemma reply_tcb_reply_at_ReplyTCB_in_state_refs_of:
   "reply_tcb_reply_at P r_ptr s \<Longrightarrow> (t, ReplyTCB) \<in> state_refs_of s r_ptr \<Longrightarrow> P (Some t)"
   by (clarsimp simp: reply_tcb_reply_at_def obj_at_def state_refs_of_def get_refs_def
@@ -992,24 +969,6 @@ lemma reply_sc_reply_at_ReplySchedContext_in_state_refs_of:
   by (clarsimp simp: reply_sc_reply_at_def obj_at_def state_refs_of_def get_refs_def
               split: option.splits)
 
-(* FIXME: move *)
-lemma fst_subset:
-  "fst ` A \<subseteq> fst ` B \<Longrightarrow> (r, q) \<in> A \<Longrightarrow> \<exists>t. (r,t) \<in> B"
-  by fastforce
-
-(* FIXME: move *)
-lemma valid_repliesD1_simp:
-  "valid_replies' T S \<Longrightarrow> (r, p) \<in> T \<Longrightarrow> \<exists>t. (r, t) \<in> S"
-  by (rule fst_subset[rotated], assumption, simp add: valid_replies'_def)
-
-(* FIXME: move *)
-lemma valid_repliesE1:
-  "valid_replies s
-   \<Longrightarrow> \<exists>sc. sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s
-   \<Longrightarrow> \<exists>t. st_tcb_at (\<lambda>st. st = BlockedOnReply (Some r)) t s"
-  by (fastforce dest: valid_repliesD1_simp
-                simp: replies_with_sc_def replies_blocked_def)
-
 lemma reply_tcb_reply_at_None_imp_reply_sc_reply_at_None':
   "invs s \<Longrightarrow>
    reply_tcb_reply_at (\<lambda>f. f = None) reply_ptr s \<Longrightarrow>
@@ -1057,7 +1016,7 @@ lemma set_mrs_valid_replies[wp]:
 lemma sched_context_update_consumed_valid_replies[wp]:
   "sched_context_update_consumed p \<lbrace> valid_replies_pred P \<rbrace>"
   unfolding sched_context_update_consumed_def
-  by (wpsimp wp: set_sched_context_wp,
+  by (wpsimp wp: update_sched_context_wp,
       fastforce dest: ko_at_obj_congD)
 
 crunch valid_replies[wp]: do_ipc_transfer "valid_replies_pred P"
@@ -1166,11 +1125,6 @@ lemma replies_with_sc_upd_replies_valid_replies_add_one:
            clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def)+
   apply fastforce
   done
-
-(* FIXME move *)
-lemma valid_replies'D1:
-  "valid_replies' S T \<Longrightarrow> (fst ` S  \<subseteq> fst ` T)"
-  by (clarsimp simp: valid_replies'_def)
 
 lemma sc_replies_sc_at_subset_fst_replies_with_sc:
   "sc_replies_sc_at ((=) w) sc_caller s \<Longrightarrow> set w \<subseteq> fst ` replies_with_sc s"

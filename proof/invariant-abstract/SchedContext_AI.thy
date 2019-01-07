@@ -280,22 +280,6 @@ global_interpretation set_sched_context: non_reply_op "set_sched_context ptr sc"
   by unfold_locales (wpsimp simp: set_sched_context_def reply_at_pred_def obj_at_def
                               wp: set_object_wp get_object_wp)
 
-(* FIXME: move *)
-lemma update_sched_context_wp:
-  "\<lbrace> \<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) sc_ptr s
-                \<longrightarrow> Q (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext (f sc) n)\<rparr>) \<rbrace>
-    update_sched_context sc_ptr f
-   \<lbrace> \<lambda>rv. Q \<rbrace>"
-  by (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
-
-(* FIXME: move *)
-lemma set_sched_context_wp:
-  "\<lbrace> \<lambda>s. \<forall>sc' n. ko_at (SchedContext sc' n) sc_ptr s
-                 \<longrightarrow> Q (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext sc n)\<rparr>) \<rbrace>
-    set_sched_context sc_ptr sc
-   \<lbrace> \<lambda>rv. Q \<rbrace>"
-  by (wpsimp simp: set_sched_context_def wp: set_object_wp get_object_wp)
-
 definition replies_with_sc_upd_replies ::
   "obj_ref list \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> obj_ref) set \<Rightarrow> (obj_ref \<times> obj_ref) set"
   where
@@ -329,7 +313,7 @@ lemma set_sched_context_valid_replies:
    \<lbrace> \<lambda>rv. valid_replies_pred P \<rbrace>"
   apply (rule hoare_lift_Pf2[where f=replies_blocked, rotated])
    apply (wp replies_blocked_lift)
-  apply (wp set_sched_context_wp)
+  apply (wp update_sched_context_wp)
   by (clarsimp simp: sc_replies_sc_at_def obj_at_def replies_with_sc_replies_upd)
 
 lemma update_sc_replies_valid_replies:
@@ -472,51 +456,6 @@ lemma set_sched_context_valid_sched_context[wp]:
     set_sched_context p sc
    \<lbrace>\<lambda>r. valid_sched_context x\<rbrace>"
   by (wpsimp simp: set_sched_context_def wp: set_object_wp get_object_wp)
-
-lemma set_sched_context_update_sched_context:
-  "set_sched_context p sc = update_sched_context p (\<lambda>_. sc)"
-  by (simp add: set_sched_context_def update_sched_context_def)
-
-(* FIXME: move *)
-lemma monadic_rewrite_sym:
-  "monadic_rewrite False True P f g \<Longrightarrow> monadic_rewrite False True P g f"
-  by (simp add: monadic_rewrite_def)
-
-lemma monadic_rewrite_set_sched_context:
-  "monadic_rewrite False True
-     (\<lambda>s. \<forall>sc' n. ko_at (SchedContext sc' n) p s \<longrightarrow> sc = f sc')
-     (set_sched_context p sc)
-     (update_sched_context p f)"
-  apply (simp add: set_sched_context_def update_sched_context_def)
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_bind[where Q="\<lambda>obj s. \<forall>sc' n. obj = SchedContext sc' n \<longrightarrow> sc = f sc'"
-                                    , OF monadic_rewrite_refl])
-    apply (fastforce simp: monadic_rewrite_def split: kernel_object.splits)
-   apply (wpsimp wp: get_object_wp)
-  by (fastforce simp: obj_at_def)
-
-lemma hoare_rewrite_set_sched_context:
-  assumes upd: "\<lbrace> P' \<rbrace> update_sched_context p f \<lbrace> \<lambda>rv. Q \<rbrace>"
-  assumes sc: "\<And>s sc' n. P s \<Longrightarrow> ko_at (SchedContext sc' n) p s \<Longrightarrow> sc = f sc'"
-  assumes pre: "\<And>s. P s \<Longrightarrow> P' s"
-  shows "\<lbrace> P \<rbrace> set_sched_context p sc \<lbrace> \<lambda>rv. Q \<rbrace>"
-  apply (rule hoare_pre)
-   apply (rule monadic_rewrite_refine_valid[where F=False and P''=\<top>, simplified])
-    apply (rule monadic_rewrite_sym)
-    apply (rule monadic_rewrite_set_sched_context)
-   apply (rule upd)
-  by (clarsimp simp: sc pre)
-
-lemma hoare_rewrite_update_sched_context:
-  assumes upd: "\<lbrace> P' \<rbrace> set_sched_context p sc \<lbrace> \<lambda>rv. Q \<rbrace>"
-  assumes sc: "\<And>s sc' n. P s \<Longrightarrow> ko_at (SchedContext sc' n) p s \<Longrightarrow> sc = f sc'"
-  assumes pre: "\<And>s. P s \<Longrightarrow> P' s"
-  shows "\<lbrace> P \<rbrace> update_sched_context p f \<lbrace> \<lambda>rv. Q \<rbrace>"
-  apply (rule hoare_pre)
-   apply (rule monadic_rewrite_refine_valid[where F=False and P''=\<top>, simplified])
-    apply (rule monadic_rewrite_set_sched_context)
-   apply (rule upd)
-  by (clarsimp simp: sc pre)
 
 (* FIXME: move *)
 lemma subset_union_non_overlapping:
@@ -1143,32 +1082,6 @@ lemma get_sc_replies_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> liftM sc_replies (get_sched_context scp) \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   by (wpsimp simp: obj_at_def)
 
-(* FIXME: remove
-lemma mapM_x_set_reply_sc_refs_of:
-  notes refs_of_simps[simp del]
-  shows
-  "\<lbrace>\<lambda>s. P (foldl (\<lambda>f r. f(r:= (state_refs_of s r - {x \<in> state_refs_of s r. snd x = ReplySchedContext}))) (state_refs_of s) replies)\<rbrace>
-       mapM_x (\<lambda>r. set_reply_obj_ref reply_sc_update r None) replies
-   \<lbrace>\<lambda>rv s. P ((state_refs_of s))\<rbrace>"
-  apply (induct replies)
-   apply (clarsimp simp: mapM_x_def sequence_x_def)
-  apply (clarsimp simp: mapM_x_Cons simp del: fun_upd_apply)
-  apply (rule hoare_seq_ext)
-   apply assumption
-  apply (wp set_reply_sc_refs_of)
-  apply (clarsimp elim!: rsubst[where P=P] split del: if_split simp del: fun_upd_apply)
-proof -
-  fix a :: "32 word" and repliesa :: "32 word list" and s :: "'a state"
-  have "\<forall>f w. f(w := ((state_refs_of s)
-                    (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) w
-           - {p \<in> ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) w.
-            snd p = ReplySchedContext}) = f(w := state_refs_of s w - {p \<in> state_refs_of s w. snd p = ReplySchedContext})"
-    by (simp add: Collect_Diff_restrict_simp)
-  then show "foldl (\<lambda>f w. f (w := state_refs_of s w - {p \<in> state_refs_of s w. snd p = ReplySchedContext})) ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) repliesa = foldl (\<lambda>f w. f (w := ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) w - {p \<in> ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) w. snd p = ReplySchedContext})) ((state_refs_of s) (a := state_refs_of s a - {p \<in> state_refs_of s a. snd p = ReplySchedContext})) repliesa"
-    by presburger
-qed
-*)
-
 definition if_Some :: "'a option \<Rightarrow> 'b \<Rightarrow> 'b set"
   where
   "if_Some opt r \<equiv> case opt of None \<Rightarrow> {} | _ \<Rightarrow> {r}"
@@ -1238,11 +1151,6 @@ lemma set_sc_replies_nil_valid_replies[wp]:
   "set_sc_obj_ref sc_replies_update sc_ptr [] \<lbrace> valid_replies \<rbrace>"
   by (wpsimp wp: set_sc_replies_valid_replies
            simp: replies_with_sc_upd_replies_subset_valid_replies)
-
-(* FIXME: move to Invariants_AI *)
-lemma in_state_refs_of_iff:
-  "r \<in> state_refs_of s p \<longleftrightarrow> (\<exists>ko. kheap s p = Some ko \<and> r \<in> refs_of ko)"
-  by (auto simp: state_refs_of_def split: option.splits)
 
 lemma sched_context_unbind_reply_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_unbind_reply sc_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"

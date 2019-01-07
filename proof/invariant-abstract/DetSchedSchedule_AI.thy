@@ -4686,15 +4686,6 @@ lemma sts_sc_tcb_sc_at_inactive:
   apply (wp dxo_wp_weak | simp add: set_object_def sc_tcb_sc_at_def)+
   by (clarsimp simp: obj_at_def is_tcb get_tcb_def pred_tcb_at_def)
 
-(*lemma sts_sc_tcb_sc_at:
-  "\<lbrace>sc_tcb_sc_at P scp\<rbrace> set_thread_state t' st \<lbrace>\<lambda>_. sc_tcb_sc_at P scp\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def sc_tcb_sc_at_def)
-  apply (wp|simp)+
-  apply (clarsimp cong: if_cong)
-  apply (drule get_tcb_SomeD)
-  apply (fastforce simp add: pred_tcb_at_def obj_at_def)
-  done
-*)
 lemma reply_unlink_sc_tcb_tcb_inactive:
   "\<lbrace>\<lambda>s. sc_tcb_sc_at (\<lambda>t. \<forall>a. t = Some a \<longrightarrow> st_tcb_at inactive a s) scp' s\<rbrace>
    reply_unlink_tcb rp

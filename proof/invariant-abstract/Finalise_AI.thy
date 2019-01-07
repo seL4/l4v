@@ -669,24 +669,6 @@ lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
 lemma schedule_tcb_invs[wp]: "\<lbrace>invs\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp simp: schedule_tcb_def)
 
-(* FIXME move *)
-lemma tcb_reftypes:
-   "(x, tp) \<in> state_refs_of s p \<Longrightarrow> tcb_at p s \<Longrightarrow>
-       tp \<in> {TCBBlockedSend,TCBBlockedRecv,TCBSignal,TCBBound,TCBHypRef,TCBSchedContext,
-             TCBReply,TCBYieldTo}"
-  apply (drule state_refs_of_elemD)
-  apply (clarsimp simp: obj_at_def is_tcb get_refs_def2 tcb_st_refs_of_def
-                  split: thread_state.splits if_split_asm)
-  done
-
-(* FIXME move *)
-lemma reply_reftypes:
-   "(x, tp) \<in> state_refs_of s p \<Longrightarrow> reply_at p s \<Longrightarrow>
-       tp \<in> {ReplySchedContext, ReplyTCB}"
-  apply (drule state_refs_of_elemD)
-  apply (clarsimp simp: obj_at_def is_reply get_refs_def2)
-  done
-
 lemma symreftype_neq:
     "(x,tp) \<in> state_refs_of s ptr \<Longrightarrow> (x, symreftype tp) \<notin> state_refs_of s ptr"
   apply (drule state_refs_of_elemD)
@@ -834,30 +816,6 @@ lemma list_all_remove1: "list_all P ls \<Longrightarrow> list_all P (remove1 x l
 
 declare reply_unlink_sc_invs[wp]
 
-(*
-lemma  sched_context_clear_replies_sc_yf[wp]:
-  "\<lbrace>sc_yf_sc_at P p\<rbrace> sched_context_clear_replies scptr \<lbrace>\<lambda>rv. sc_yf_sc_at P p\<rbrace>"
-  apply (clarsimp simp: sched_context_clear_replies_def liftM_def)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (wpsimp wp: mapM_x_wp' hoare_drop_imp get_object_wp get_simple_ko_wp get_sched_context_wp
-      simp: reply_unlink_sc_def set_sc_obj_ref_def update_sk_obj_ref_def set_simple_ko_def
-      update_sched_context_def set_object_def)
-   apply (fastforce simp: sc_yf_sc_at_def obj_at_def split: if_split_asm)+
-  done
-
-lemma  sched_context_clear_replies_sc_yf_helper[wp]:
-  "\<lbrace>\<lambda>s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
-                            st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>
-      sched_context_clear_replies scptr \<lbrace>\<lambda>rv s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
-                            st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>"
-  apply (clarsimp simp: sched_context_clear_replies_def liftM_def)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (wpsimp wp: mapM_x_wp' hoare_drop_imp get_object_wp get_simple_ko_wp get_sched_context_wp
-      simp: reply_unlink_sc_def set_sc_obj_ref_def update_sk_obj_ref_def set_simple_ko_def
-      update_sched_context_def set_object_def)
-   apply (clarsimp simp: sc_yf_sc_at_def obj_at_def pred_tcb_at_def split: if_split_asm split del: if_split)
-by (case_tac "p=scptr"; fastforce) clarsimp
-*)
 lemma  sched_context_clear_ntfn_sc_yf_helper[wp]:
   "\<lbrace>\<lambda>s. sc_yf_sc_at (\<lambda>t. \<exists>tp. t = Some tp \<and>
                             st_tcb_at (\<lambda>st. tcb_st_refs_of st = {}) tp s) p s\<rbrace>

@@ -519,10 +519,12 @@ lemma get_simple_ko_valid_simple_obj[wp]:
   done
 
 lemma get_ntfn_valid_ntfn[wp]:
-  "\<lbrace> valid_objs and ntfn_at ntfn \<rbrace>
+  "\<lbrace> valid_objs \<rbrace>
    get_notification ntfn
    \<lbrace> valid_ntfn \<rbrace>"
-  by (wpsimp simp: ntfn_at_def2 valid_ntfn_def2 simp_del: valid_simple_obj_def)
+  apply (wpsimp simp: get_simple_ko_def get_object_def)
+  apply (auto simp: valid_obj_def)
+  done
 
 lemma get_ep_valid_ep[wp]:
   "\<lbrace> invs and ep_at ep \<rbrace>
@@ -2408,5 +2410,26 @@ lemma as_user_obj_at_trivial:
 
 crunch obj_at_trivial: set_consumed "obj_at P t"
   (wp: crunch_wps simp: crunch_simps)
+
+lemma update_sched_context_wp:
+  "\<lbrace> \<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) sc_ptr s
+                \<longrightarrow> Q (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext (f sc) n)\<rparr>) \<rbrace>
+    update_sched_context sc_ptr f
+   \<lbrace> \<lambda>rv. Q \<rbrace>"
+  by (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
+
+lemma set_simple_ko_obj_at_disjoint:
+  "\<lbrace>obj_at P p and K (p \<noteq> p')\<rbrace>
+     set_simple_ko f p' v
+   \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
+  by (wpsimp simp: set_simple_ko_def wp: set_object_at_obj get_object_wp)
+
+global_interpretation set_reply_sc: non_reply_tcb_op "set_reply_obj_ref reply_sc_update r sc"
+  apply unfold_locales
+  apply (wpsimp wp: update_sk_obj_ref_wp)
+  by (clarsimp simp: reply_tcb_reply_at_def obj_at_def)
+
+crunches set_sc_obj_ref, update_sk_obj_ref
+  for pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj P' t s)"
 
 end

@@ -604,9 +604,7 @@ lemma reply_unlink_tcb_not_live:
               simp: reply_unlink_tcb_def is_reply)
   by (clarsimp simp: obj_at_def live_def live_reply_def)
 
-lemma distinct_hd_not_in_tl:
-  "distinct xs \<Longrightarrow> hd xs \<notin> set (tl xs)"
-  by (case_tac xs; clarsimp)
+
 
 lemma reply_unlink_sc_None:
   "\<lbrace>reply_at reply and valid_objs\<rbrace>
@@ -622,8 +620,6 @@ lemma reply_unlink_sc_None:
    apply (clarsimp simp: valid_obj_def valid_sched_context_def dest!:distinct_hd_not_in_tl)
   apply (clarsimp simp: obj_at_def)
   done
-
-lemmas reply_unlink_tcb_no_sc = reply_unlink_tcb_not_live
 
 crunch obj_at[wp]: tcb_release_remove "\<lambda>s. P (obj_at Q p s)"
 
@@ -648,7 +644,7 @@ lemma reply_remove_unlive:
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (case_tac "x"; clarsimp simp: bind_assoc)
    apply (rule_tac Q="\<lambda>rv s. obj_at (\<lambda>ko. \<not>live ko \<and> is_reply ko) rp s" in hoare_strengthen_post)
-    apply (wpsimp wp: reply_unlink_tcb_no_sc)
+    apply (wpsimp wp: reply_unlink_tcb_not_live)
     apply (erule (2) sc_with_reply_None_no_reply_sc)
    apply (clarsimp simp: obj_at_def is_reply)
   apply (rule hoare_seq_ext[OF _ gscrpls_sp[simplified]])
@@ -669,30 +665,14 @@ lemma reply_remove_unlive:
   apply (clarsimp simp:  obj_at_def is_reply)
   done
 
-(*
-lemma reply_cancel_ipc_unlive:
-  "\<lbrace>st_tcb_at ((=) (BlockedOnReply (Some reply))) thread\<rbrace>
-     reply_cancel_ipc thread
-   \<lbrace>\<lambda> rv. obj_at (Not \<circ> live) reply\<rbrace>"
-  apply (simp add: reply_cancel_ipc_def)
-  apply (simp add: reply_cancel_ipc_def reply_remove_tcb_def
-                   sched_context_donate_def
-             cong: thread_state.case_cong)
-  apply (wpsimp wp: reply_remove_unlive gts_wp hoare_vcg_all_lift hoare_vcg_imp_lift'
-                    thread_set_no_change_tcb_state_converse)
-  by (auto simp: pred_tcb_at_def obj_at_def dest!: sym[where s="BlockedOnReply (Some reply)"])
-*)
-
 lemma reply_unlink_tcb_not_live':
   "\<lbrace>obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> reply_sc r = None) reply and K (reply = reply')\<rbrace>
-     reply_unlink_tcb reply'
+   reply_unlink_tcb reply'
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) reply\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (rule_tac Q="\<lambda>rv. obj_at (\<lambda>ko. \<not> live ko \<and> is_reply ko) reply" in hoare_strengthen_post)
-   apply (wpsimp wp: sts_obj_at_impossible simple_obj_set_prop_at gts_wp get_simple_ko_wp
-              simp: reply_unlink_tcb_def is_reply)
-   apply (clarsimp simp: obj_at_def live_def live_reply_def)
-  by (clarsimp simp: obj_at_def is_reply)
+  apply (rule_tac Q="\<lambda>rv. obj_at (\<lambda>ko. \<not> live ko \<and> is_reply ko) reply" in hoare_strengthen_post;
+         wpsimp wp: reply_unlink_tcb_not_live simp: obj_at_def)
+  done
 
 lemma st_tcb_recv_reply_state_refs:
   "\<lbrakk>valid_objs s; sym_refs (state_refs_of s); st_tcb_at ((=) (BlockedOnReceive ep (Some reply))) thread s\<rbrakk>
@@ -711,7 +691,7 @@ lemma blocked_cancel_ipc_unlive:
   apply (rule hoare_gen_asm, clarsimp)
   apply (rule_tac Q="\<lambda>rv. obj_at (\<lambda>ko. \<not>live ko \<and> is_reply ko) reply" in hoare_strengthen_post)
   apply (simp add: blocked_cancel_ipc_def)
-  apply (wpsimp wp: sts_obj_at_impossible reply_unlink_tcb_no_sc set_endpoint_obj_at_impossible
+  apply (wpsimp wp: sts_obj_at_impossible reply_unlink_tcb_not_live set_endpoint_obj_at_impossible
                     get_simple_ko_wp hoare_vcg_all_lift
               simp: is_reply)
   by (wpsimp simp: obj_at_def)+
@@ -882,10 +862,6 @@ lemma sched_context_unbind_yield_from_not_live:
   apply (auto simp: obj_at_def live_def live_sc_def)
   done
 
-lemma remove1_hd_is_tl[simp]:
-  "remove1 (hd xs) xs = tl xs"
-  by (case_tac xs; clarsimp)
-
 method hammer = ((clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
                                      ran_tcb_cap_cases is_cap_simps
                                      cap_range_def prepare_thread_delete_def
@@ -950,10 +926,10 @@ lemma sched_context_unbind_ntfn_sym_refs[wp]:
   apply (frule sym_refs_ko_atD[where p=sc, rotated], fastforce simp: obj_at_def)
   apply (frule sym_refs_ko_atD[where ko="Notification x" for x, rotated], fastforce simp: obj_at_def)
   apply (erule delta_sym_refs)
-   apply (fastforce simp: obj_at_def refs_of_ntfn_def refs_of_simps split: if_splits)
+   apply (fastforce simp: obj_at_def refs_of_simps split: if_splits)
   by (fastforce split: if_split_asm ntfn.splits
                 dest!: symreftype_inverse'
-                 simp: obj_at_def get_refs_def2 refs_of_ntfn_def ntfn_q_refs_of_def image_iff refs_of_simps)
+                 simp: obj_at_def get_refs_def2  ntfn_q_refs_of_def image_iff refs_of_simps)
 
 lemma sched_context_unbind_all_tcbs_unbinds:
   "\<lbrace>sc_at sc and K (sc \<noteq> idle_sc_ptr)\<rbrace>
@@ -964,7 +940,7 @@ lemma sched_context_unbind_all_tcbs_unbinds:
                   wp: set_object_at_obj3)
   by (auto simp: obj_at_def)
 
-lemma sched_context_unbind_reply_unbinds:
+lemma finalise_cap_replaceable_helper:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_tcb sc = None \<and> sc_ntfn sc = None) sc \<rbrace>
       sched_context_unbind_reply sc
    \<lbrace>\<lambda>rv. obj_at (\<lambda>ko. \<exists>sc. (\<exists>n. ko = SchedContext sc n) \<and> sc_tcb sc = None
@@ -1053,7 +1029,7 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
        \<comment> \<open>schedcontext\<close>
        apply ((wpsimp wp: sched_context_unbind_ntfn_unbinds
                           sched_context_unbind_all_tcbs_unbinds
-                          sched_context_unbind_reply_unbinds
+                          finalise_cap_replaceable_helper
                     simp: no_cap_to_idle_sc_ptr
         | hammer
         | wp_once hoare_drop_imps, wp_once hoare_vcg_conj_lift,

@@ -345,20 +345,6 @@ lemma set_reply_sc_refs_of[wp]:
                   wp: get_sched_context_wp get_simple_ko_wp)
   by (fastforce elim!: rsubst[of P] simp: state_refs_of_def obj_at_def get_refs_def2)
 
-(* FIXME: remove
-lemma set_reply_sc_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= (case sc of None \<Rightarrow> {} | Some new \<Rightarrow> {(new, ReplySchedContext)}) \<union>
-          (state_refs_of s t - {x \<in> state_refs_of s t. snd x = ReplySchedContext})))\<rbrace>
-   set_reply_obj_ref reply_sc_update t sc
-   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: update_sk_obj_ref_def set_object_def
-           wp: get_sched_context_wp get_simple_ko_wp)
-  apply (fastforce elim!: rsubst[where P=P]
-                    simp: state_refs_of_def obj_at_def Un_def split_def Collect_eq get_refs_def2
-                   split: option.splits if_splits)
-  done
-*)
-
 lemma set_reply_tcb_refs_of[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s)(t:= (case sc of None \<Rightarrow> {} | Some new \<Rightarrow> {(new, ReplyTCB)}) \<union>
           (state_refs_of s t - {x \<in> state_refs_of s t. snd x = ReplyTCB})))\<rbrace>
@@ -1039,13 +1025,6 @@ lemma reply_unlink_tcb_iflive[wp]:
 
 crunch ex_nonz_cap_to[wp]: reply_unlink_tcb, reply_unlink_sc "ex_nonz_cap_to t"
   (wp: hoare_drop_imps)
-
-lemma sc_with_reply_SomeD:
-  "sc_with_reply r s = Some x
-   \<Longrightarrow> \<exists>sc n. kheap s x = Some (SchedContext sc n) \<and> r \<in> set (sc_replies sc)"
-  apply (clarsimp simp: sc_with_reply_def split: if_splits)
-  apply (clarsimp dest!: the_pred_option_SomeD)
-  done
 
 lemma reply_remove_iflive [wp]:
   "\<lbrace>if_live_then_nonz_cap and ex_nonz_cap_to rp

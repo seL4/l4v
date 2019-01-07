@@ -642,11 +642,10 @@ lemma option_None_True: "case_option (\<lambda>_. True) f x = (\<lambda>s. \<for
 lemma option_None_True_const: "case_option True f x = (\<forall>y. x = Some y \<longrightarrow> f y)"
   by (cases x; simp)
 
-
 lemma sts_tcb_inv_wf [wp]:
   "\<lbrace>tcb_inv_wf i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. tcb_inv_wf i\<rbrace>"
   apply (case_tac i)
-  by (wpsimp wp: sts_sc_tcb_sc_at set_thread_state_bound_sc_tcb_at
+  by (wpsimp wp: set_thread_state_sc_at_pred_n set_thread_state_bound_sc_tcb_at
                  set_thread_state_valid_cap hoare_vcg_all_lift hoare_vcg_const_imp_lift
              simp: option_None_True option_None_True_const | wp sts_obj_at_impossible)+
 

@@ -540,4 +540,8 @@ lemma wpc_helper_monadic_rewrite:
 wpc_setup "\<lambda>m. monadic_rewrite F E Q' m m'" wpc_helper_monadic_rewrite
 wpc_setup "\<lambda>m. monadic_rewrite F E Q' (m >>= c) m'" wpc_helper_monadic_rewrite
 
+lemma monadic_rewrite_sym:
+  "monadic_rewrite False True P f g \<Longrightarrow> monadic_rewrite False True P g f"
+  by (simp add: monadic_rewrite_def)
+
 end
