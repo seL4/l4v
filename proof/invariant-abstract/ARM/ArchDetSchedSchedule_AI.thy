@@ -245,15 +245,37 @@ for valid_sched [wp, DetSchedSchedule_AI_assms]: valid_sched
 and simple_sched_action [wp, DetSchedSchedule_AI_assms]: simple_sched_action
   (ignore: set_object as_user wp: valid_sched_lift crunch_wps subset_refl simp: if_fun_split)
 
+lemma set_thread_state_cur_thread_valid_blocked:
+  "\<lbrace>valid_blocked and (\<lambda>s. ref = cur_thread s)\<rbrace> set_thread_state ref ts
+  \<lbrace>\<lambda>_. valid_blocked :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding set_thread_state_def
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp simp: valid_blocked_def
+                 dest!: get_tcb_SomeD)
+  apply (drule_tac x=t in spec,
+         clarsimp simp: get_tcb_rev active_sc_tcb_at_defs st_tcb_at_kh_if_split
+                 split: option.splits if_splits)
+  done
+
+lemma set_thread_state_cur_thread_runnable_valid_sched:
+  "\<lbrace>valid_sched and (\<lambda>s. ref = cur_thread s) and K (runnable ts)\<rbrace>
+   set_thread_state ref ts
+   \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding valid_sched_def
+  apply (wpsimp wp: set_thread_state_runnable_valid_ready_qs
+                    set_thread_state_runnable_valid_release_q
+                    set_thread_state_runnable_valid_sched_action
+                    set_thread_state_cur_thread_valid_blocked)
+  done
+
 lemma activate_thread_valid_sched [DetSchedSchedule_AI_assms]:
-  "\<lbrace>valid_sched\<rbrace> activate_thread \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
-  apply (simp add: activate_thread_def)
-  apply (wp set_thread_state_runnable_valid_sched gts_wp hoare_vcg_all_lift get_tcb_obj_ref_wp |
-         wpc | simp add: arch_activate_idle_thread_def | wp_once hoare_drop_imps)+
-  (*
-  apply clarsimp
-  apply (force elim: st_tcb_weakenE)
-  done*) sorry
+  "\<lbrace>valid_sched\<rbrace>
+   activate_thread
+   \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding activate_thread_def
+  by (wpsimp wp: set_thread_state_cur_thread_runnable_valid_sched gts_wp hoare_vcg_all_lift
+                 get_tcb_obj_ref_wp hoare_drop_imps
+           simp: arch_activate_idle_thread_def)
 
 crunch valid_sched[wp]:
   perform_page_invocation, perform_page_table_invocation, perform_asid_pool_invocation,
