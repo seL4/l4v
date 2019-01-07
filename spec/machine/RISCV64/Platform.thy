@@ -34,19 +34,19 @@ abbreviation (input) "fromPAddr \<equiv> id"
 |         Kernel ELF          |
 +-----------------KERNEL_BASE-+ --+ 2^64 - 2GiB
 |                             |   |
+|                             |   |
+|                             |   |
 |           PSpace            |   |
 |  (direct kernel mappings)   |   +----+
 |                             |   |    |
 |                             |   |    |
-+-------------------PPTR_BASE-+ --+    |
-|                             |        |
-|            User             |        |
-|                             |
-+-----------------------------+ 2^64 - 2^c       +-------------------------+
-|                             |                  |                         |
+|                             |   |    |
+|                             |   |
++-------------------PPTR_BASE-+ --+ 2^64 - 2^c
+|                             |                  +-------------------------+
 |                             |        |         |                         |
 |          Invalid            |        |         |                         |
-|                             |        |         |           not           |
+|      (not canonical)        |        |         |           not           |
 |                             |        |         |         kernel          |
 |                             |        |         |       addressable       |
 +-----------------------------+  2^c   |         |                         |
@@ -71,8 +71,6 @@ abbreviation (input) "fromPAddr \<equiv> id"
 c = one less than number of bits the page tables can translate
   = sign extension bit for canonical addresses
   (= 47 on x64, 38 on RISCV64 sv39, 47 on RISCV64 sv48)
-
-On RISCV, PPTR_BASE is 2^64 - 2^c, i.e. there is no user region at the top.
 
 *)
 
