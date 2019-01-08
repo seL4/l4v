@@ -15,6 +15,7 @@ imports
   "ASpec.Syscall_A"
   "Lib.LemmaBucket"
   "Lib.ListLibLemmas"
+  "Rights_AI"
 begin
 
 no_notation bind_drop (infixl ">>" 60)

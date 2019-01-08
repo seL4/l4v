@@ -179,6 +179,8 @@ session SepDSpec = DSpec +
     "sep-capDL/Frame_SD"
 
 session DSpecProofs in "capDL-api" = SepDSpec +
+  sessions
+    AInvs
   theories
     "API_DP"
 

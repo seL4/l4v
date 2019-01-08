@@ -2115,46 +2115,6 @@ lemma vs_cap_ref_eq_imp_table_cap_ref_eq:
                   arch_cap_fun_lift_def
           split: cap.splits arch_cap.splits vmpage_size.splits option.splits)
 
-
-lemma valid_validate_vm_rights[simp]:
-  "validate_vm_rights rs \<in> valid_vm_rights"
-and validate_vm_rights_subseteq[simp]:
-  "validate_vm_rights rs \<subseteq> rs"
-and validate_vm_rights_simps[simp]:
-  "validate_vm_rights vm_read_write = vm_read_write"
-  "validate_vm_rights vm_read_only = vm_read_only"
-  "validate_vm_rights vm_kernel_only = vm_kernel_only"
-  by (simp_all add: validate_vm_rights_def valid_vm_rights_def
-                    vm_read_write_def vm_read_only_def vm_kernel_only_def)
-
-lemma validate_vm_rights_inter: (* NOTE: unused *)
-  "validate_vm_rights (validate_vm_rights fun \<inter> msk) =
-   validate_vm_rights (fun \<inter> msk)"
-  by (simp add: validate_vm_rights_def vm_read_write_def vm_read_only_def
-              vm_kernel_only_def)
-
-lemma validate_vm_rights_def':
-  "validate_vm_rights rs =
-   (THE rs'. rs' \<subseteq> rs \<and> rs' : valid_vm_rights \<and>
-     (\<forall>rs''. rs'' \<subseteq> rs \<longrightarrow> rs'' : valid_vm_rights \<longrightarrow> rs'' \<subseteq> rs'))"
-  apply (rule the_equality[symmetric])
-   apply  (auto simp add: validate_vm_rights_def valid_vm_rights_def
-                       vm_read_write_def vm_read_only_def vm_kernel_only_def)[1]
-  apply (simp add: validate_vm_rights_def valid_vm_rights_def
-                 vm_read_write_def vm_read_only_def vm_kernel_only_def)
-  apply safe
-            apply simp+
-       apply (drule_tac x="{AllowRead, AllowWrite}" in spec, simp+)
-    apply (drule_tac x="{AllowRead, AllowWrite}" in spec, simp+)
-   apply (drule_tac x="{AllowRead, AllowWrite}" in spec, simp+)
-  apply (drule_tac x="{AllowRead}" in spec, simp)
-  done
-
-lemma validate_vm_rights_eq[simp]:
-  "rs : valid_vm_rights \<Longrightarrow> validate_vm_rights rs = rs"
-  by (auto simp add: validate_vm_rights_def valid_vm_rights_def
-                     vm_read_write_def vm_read_only_def vm_kernel_only_def)
-
 lemma acap_rights_update_id [intro!, simp]:
   "\<lbrakk>wellformed_acap cap\<rbrakk> \<Longrightarrow> acap_rights_update (acap_rights cap) cap = cap"
   unfolding wellformed_acap_def acap_rights_update_def
