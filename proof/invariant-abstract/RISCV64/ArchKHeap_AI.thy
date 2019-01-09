@@ -33,6 +33,23 @@ lemma hoare_liftP_ext:
   apply simp
   done
 
+(* FIXME: move *)
+context mod_size_order
+begin
+
+interpretation greater_wellorder: wellorder "(\<ge>) :: 'a \<Rightarrow> 'a \<Rightarrow> bool" "(>) :: 'a \<Rightarrow> 'a \<Rightarrow> bool"
+  by unfold_locales (auto intro: greater_induct)
+
+lemma greater_least_fold[simp]: "greater_wellorder.Least = Greatest"
+  by (auto simp: greater_wellorder.Least_def Greatest_def)
+
+lemmas GreatestI = greater_wellorder.LeastI[simplified greater_least_fold]
+lemmas Greatest_le = greater_wellorder.Least_le[simplified greater_least_fold]
+lemmas exists_greatest_iff = greater_wellorder.exists_least_iff
+lemmas GreatestI2_wellorder = greater_wellorder.LeastI2_wellorder[simplified greater_least_fold]
+
+end
+
 
 context Arch begin global_naming RISCV64
 
@@ -313,16 +330,37 @@ lemma vspace_for_pool_not_pte:
    \<Longrightarrow> False"
   by (fastforce simp: in_omonad ptes_of_def bit_simps vspace_for_pool_def dest: pspace_alignedD)
 
-lemma vs_lookup_slot_pte_level:
-  "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, p);
-     ptes_of s p = Some pte; pspace_aligned s \<rbrakk>
-   \<Longrightarrow> level \<le> max_pt_level"
-  sorry
-
 definition level_of_slot :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> vm_level"
   where
   "level_of_slot asid vref p s \<equiv>
-     SOME level'. vs_lookup_slot level' asid vref s = Some (level', p)"
+     GREATEST level. vs_lookup_slot level asid vref s = Some (level, p)"
+
+lemma level_of_slotI:
+  "\<lbrakk> vs_lookup_slot level' asid vref s = Some (level', p); level < level'\<rbrakk>
+   \<Longrightarrow> vs_lookup_slot (level_of_slot asid vref p s) asid vref s = Some (level_of_slot asid vref p s, p)
+       \<and> level < level_of_slot asid vref p s"
+  by (auto simp: level_of_slot_def dest: bit0.GreatestI bit0.Greatest_le)
+
+lemma pool_for_asid_no_pte:
+  "\<lbrakk> pool_for_asid asid s = Some p; ptes_of s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
+   \<Longrightarrow> False"
+  unfolding pool_for_asid_def
+  by (fastforce dest: pspace_alignedD dest!: valid_asid_tableD
+                simp: bit_simps obj_at_def ptes_of_Some in_omonad)
+
+lemma vs_lookup_table_no_asid:
+  "\<lbrakk> vs_lookup_table asid_pool_level asid vref s = Some (asid_pool_level, p);
+     ptes_of s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
+  \<Longrightarrow> False"
+  unfolding vs_lookup_table_def
+  by (fastforce dest: pool_for_asid_no_pte simp: in_omonad)
+
+lemma vs_lookup_slot_no_asid:
+  "\<lbrakk> vs_lookup_slot asid_pool_level asid vref s = Some (asid_pool_level, p);
+     ptes_of s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
+  \<Longrightarrow> False"
+  unfolding vs_lookup_slot_def vs_lookup_table_def
+  by (fastforce dest: pool_for_asid_no_pte simp: in_omonad)
 
 (* Invalidating an entry at p will cause lookups to stop at higher levels than requested.
    If performing a shallower lookup than the one requested results in p, then any deeper lookup
@@ -331,7 +369,7 @@ lemma vs_lookup_InvalidPTE:
   "\<lbrakk> ptes_of s p \<noteq> None; ptes_of s' = ptes_of s (p \<mapsto> InvalidPTE);
      asid_pools_of s' = asid_pools_of s;
      asid_table s' = asid_table s;
-     pspace_aligned s \<rbrakk> \<Longrightarrow>
+     valid_asid_table s; pspace_aligned s \<rbrakk> \<Longrightarrow>
    vs_lookup_table level asid vref s' =
      (if \<exists>level'. vs_lookup_slot level' asid vref s = Some (level', p) \<and> level < level'
       then vs_lookup_table (level_of_slot asid vref p s) asid vref s
@@ -340,28 +378,45 @@ lemma vs_lookup_InvalidPTE:
    apply (clarsimp simp: geq_max_pt_level)
    apply (erule disjE; clarsimp)
     apply (rule conjI; clarsimp)
-     apply (clarsimp simp: vs_lookup_slot_def vs_lookup_table_def obind_def pool_for_asid_def in_omonad
-                    split: option.splits)
-  sorry (*
-     apply (fastforce dest!: vspace_for_pool_not_pte)
-    apply (fastforce dest: vs_lookup_max_pt_level_eq)
-   apply (fastforce dest: vs_lookup_asid_pool_level_eq)
-  apply (rename_tac level)
+     apply (fastforce dest!: vs_lookup_slot_no_asid)
+    apply (simp add: vs_lookup_table_def pool_for_asid_def obind_def split: option.splits)
+   apply (simp add: vs_lookup_table_def pool_for_asid_def obind_def split: option.splits)
   apply clarsimp
-  apply (rename_tac pte)
   apply (rule conjI; clarsimp)
-   apply (frule (2) vs_lookup_slot_pte_level)
-   apply (subst (asm) (2) vs_lookup_slot_def)
-   apply (clarsimp simp: in_omonad split: if_split_asm)
-
-   apply (subst vs_lookup_split, erule less_imp_le, assumption)
-   apply (clarsimp simp: obind_def split: option.splits)
-   apply (rule conjI; clarsimp)
-    apply (subst (asm) (2) vs_lookup_slot_def)
-    apply (clarsimp simp: in_omonad split: if_split_asm)
-    apply (subst pt_walk.simps)
-    apply (simp add: obind_def)
-  oops *)
+   apply (drule (1) level_of_slotI, clarsimp)
+   apply (subst vs_lookup_split[where level'="level_of_slot asid vref p s"], simp)
+    apply (rule ccontr)
+    apply (fastforce dest!: vs_lookup_slot_no_asid simp: not_le)
+   apply (clarsimp simp: vs_lookup_slot_def in_obind_eq)
+   apply (simp split: if_split_asm)
+    apply (fastforce dest!: vs_lookup_table_no_asid)
+   apply (subst pt_walk.simps)
+   apply (simp add: in_obind_eq)
+  subgoal for x y
+  apply (subst vs_lookup_split[where level'="x+1"])
+    apply (simp add: less_imp_le)
+   apply (simp add: bit0.plus_one_leq)
+  apply (subst (2) vs_lookup_split[where level'="x+1"])
+    apply (simp add: less_imp_le)
+   apply (simp add: bit0.plus_one_leq)
+  apply (erule_tac x="x+1" in allE)
+  apply (simp add: less_imp_le)
+  apply (simp  split: if_split_asm)
+   apply (erule_tac x="level'" in allE, simp)
+   apply (meson max_pt_level_less_Suc less_imp_le less_trans)
+  apply (clarsimp simp: obind_def split: option.splits)
+  apply (subst pt_walk.simps)
+  apply (subst (2) pt_walk.simps)
+  apply (simp add: less_imp_le cong: if_cong)
+  apply (subgoal_tac "(ptes_of s(p \<mapsto> InvalidPTE)) (pt_slot_offset (x + 1) b vref)
+                      = ptes_of s (pt_slot_offset (x + 1) b vref)")
+   apply (simp add: obind_def split: option.splits)
+  apply clarsimp
+  apply (subgoal_tac "vs_lookup_slot (x+1) asid vref s = Some (x+1, p)")
+   apply fastforce
+  apply (clarsimp simp: vs_lookup_slot_def in_obind_eq)
+  using bit0.plus_one_leq by fastforce
+  done
 
 lemma set_pt_typ_at[wp]:
   "set_pt p pt \<lbrace>\<lambda>s. P (typ_at T p' s)\<rbrace>"
@@ -377,7 +432,7 @@ lemma store_pte_InvalidPTE_vs_lookup[wp]:
   "\<lbrace>\<lambda>s. (ptes_of s p \<noteq> None \<longrightarrow>
          P (if \<exists>level'. vs_lookup_slot level' asid vref s = Some (level', p) \<and> level < level'
             then vs_lookup_table (level_of_slot asid vref p s) asid vref s
-            else vs_lookup_table level asid vref s)) \<and> pspace_aligned s \<rbrace>
+            else vs_lookup_table level asid vref s)) \<and> pspace_aligned s \<and> valid_asid_table s \<rbrace>
    store_pte p InvalidPTE
    \<lbrace>\<lambda>_ s. P (vs_lookup_table level asid vref s)\<rbrace>"
   unfolding store_pte_def set_pt_def
@@ -405,21 +460,15 @@ lemma valid_vspace_obj_PT_invalidate:
    valid_vspace_obj level (PageTable (pt(i := InvalidPTE))) s"
   by clarsimp
 
-lemma level_of_slot_eq:
-  "\<lbrakk> vs_lookup_slot level' vref asid s = Some (level', p);
-     vs_lookup_table (level_of_slot vref asid p s) vref asid s = Some (level, slot) \<rbrakk>
-  \<Longrightarrow> level_of_slot vref asid p s = level'"
-  apply (clarsimp simp: vs_lookup_slot_def in_omonad split: if_split_asm)
-  apply (erule disjE; clarsimp)
-  sorry (* FIXME RISCV: not really true with just "SOME" *)
-
 lemma store_pte_InvalidPTE_valid_vspace_objs[wp]:
-  "\<lbrace>valid_vspace_objs and pspace_aligned\<rbrace> store_pte p InvalidPTE \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
+  "\<lbrace>valid_vspace_objs and pspace_aligned and valid_asid_table\<rbrace>
+   store_pte p InvalidPTE
+   \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   unfolding valid_vspace_objs_def
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' valid_vspace_obj_lift)
   apply (rule conjI; clarsimp)
    apply (rename_tac s bot_level vref asid level' level slot pte ao pt)
-   apply (frule (1) level_of_slot_eq)
+   apply (drule (1) level_of_slotI)
    apply (case_tac "slot = p && ~~ mask pt_bits"; clarsimp simp del: valid_vspace_obj.simps)
    apply (fastforce intro!: valid_vspace_obj_PT_invalidate)
   apply (rename_tac s bot_level vref asid level slot pte ao pt)
