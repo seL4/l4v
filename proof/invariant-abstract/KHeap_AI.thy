@@ -2432,4 +2432,8 @@ global_interpretation set_reply_sc: non_reply_tcb_op "set_reply_obj_ref reply_sc
 crunches set_sc_obj_ref, update_sk_obj_ref
   for pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj P' t s)"
 
+lemma set_ntfn_obj_ref_sc_at_pred_n[wp]:
+  "set_ntfn_obj_ref update ref new \<lbrace>\<lambda>s. P (sc_at_pred_n f g h sc s)\<rbrace>"
+  by (wpsimp wp: update_sk_obj_ref_wp simp: sc_at_pred_n_def obj_at_def)
+
 end

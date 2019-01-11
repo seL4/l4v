@@ -5479,23 +5479,29 @@ lemma sched_context_unbind_tcb_valid_sched:
   apply (clarsimp simp: valid_sched_def)
   done
 
-lemma sched_context_unbind_all_tcbs_valid_sched:
+lemma sched_context_unbind_all_tcbs_valid_sched[wp]:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace>
    sched_context_unbind_all_tcbs sc_ptr
    \<lbrace>\<lambda>y. valid_sched:: det_state \<Rightarrow> _\<rbrace>"
   unfolding sched_context_unbind_all_tcbs_def
   by (wpsimp wp: sched_context_unbind_tcb_valid_sched)
 
+lemma sched_context_unbind_reply_valid_sched[wp]:
+  "\<lbrace>valid_sched\<rbrace> sched_context_unbind_reply sc_ptr \<lbrace>\<lambda>yb. valid_sched\<rbrace>"
+  unfolding sched_context_unbind_reply_def
+  by wpsimp
+
 lemma fast_finalise_valid_sched:
   "\<lbrace>valid_sched and valid_objs and simple_sched_action and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
    fast_finalise cap final
    \<lbrace>\<lambda>y. valid_sched:: det_state \<Rightarrow> _\<rbrace>"
-sorry (* fast_finalise_valid_sched
-  by (cases cap;
+  apply (cases cap;
       clarsimp;
       wpsimp wp: cancel_all_ipc_valid_sched cancel_ipc_valid_sched get_simple_ko_wp
-                 sched_context_unbind_all_tcbs_valid_sched reply_remove_valid_sched gts_wp)
-*)
+                 reply_remove_valid_sched gts_wp)
+  apply (frule(2) st_tcb_reply_state_refs; clarsimp simp: pred_tcb_at_eq_commute)
+  apply (clarsimp simp: pred_tcb_at_def reply_tcb_reply_at_def obj_at_def)
+  done
 
 lemma cap_delete_one_valid_sched:
   "\<lbrace>valid_sched and valid_objs and simple_sched_action and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
@@ -5521,11 +5527,6 @@ lemma unbind_from_sc_valid_sched:
 crunch simple_sched_action[wp]: unbind_notification simple_sched_action
   (simp: crunch_simps wp: crunch_wps)
 
-lemma sched_context_unbind_reply_valid_sched:
-  "\<lbrace>valid_sched\<rbrace> sched_context_unbind_reply sc_ptr \<lbrace>\<lambda>yb. valid_sched\<rbrace>"
-  unfolding sched_context_unbind_reply_def
-  by wpsimp
-
 (* precondition could be weaker (invs > (sym_refs and valid_objs)) but
    this is much simpler to prove *)
 lemma finalise_cap_valid_sched[wp]:
@@ -5549,9 +5550,6 @@ lemma finalise_cap_valid_sched[wp]:
       apply fastforce
      apply (wpsimp wp: unbind_notification_invs)
     apply (clarsimp simp: valid_cap_def)
-   apply (wpsimp wp: sched_context_unbind_all_tcbs_valid_sched
-                     sched_context_unbind_yield_from_valid_sched
-                     sched_context_unbind_reply_valid_sched)
   apply (intro conjI impI; wpsimp wp: deleting_irq_handler_valid_sched)
   apply fastforce
   done
@@ -7789,8 +7787,6 @@ lemma cancel_signal_valid_sched:
   using valid_sched_not_runnable_scheduler_act_not
   apply (fastforce simp: st_tcb_at_def obj_at_def)
   done
-
-find_theorems BlockedOnReceive
 
 lemma blocked_cancel_ipc_BOR_valid_sched':
   "\<lbrace>valid_sched and st_tcb_at (\<lambda>ts. \<not> runnable ts) tcbptr\<rbrace>

@@ -980,17 +980,6 @@ lemma reply_tcb_live:
 lemmas valid_replies_in_replies_sc_live =
   valid_replies_in_replies_sc_reply_tcb[THEN reply_tcb_live]
 
-lemma valid_sched_object_reply_at:
-  "valid_objs s \<Longrightarrow> ko_at (SchedContext scb nb) sc_ptr s
-    \<Longrightarrow> reply_ptr \<in> set (sc_replies scb)
-    \<Longrightarrow> \<exists>reply. ko_at (Reply reply) reply_ptr s"
-  apply (clarsimp elim!: obj_at_valid_objsE
-                  simp: valid_obj_def typ_at_eq_kheap_obj
-                        valid_sched_context_def reply_at_typ
-                        list_all_iff)
-  apply (fastforce simp: obj_at_def)
-  done
-
 lemma reply_unlink_sc_iflive[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> valid_replies s \<and> valid_objs s \<and>
         sym_refs (state_refs_of s)\<rbrace>

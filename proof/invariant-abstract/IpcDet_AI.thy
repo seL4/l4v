@@ -1147,30 +1147,6 @@ lemma sc_at_pred_id_top_weaken:
   "sc_at_pred proj P sc s \<Longrightarrow> sc_at_pred id \<top> sc s"
   by (clarsimp simp: sc_at_pred_def obj_at_def)
 
-(* FIXME: move *)
-lemma sc_reftypes:
-  "(y, reft) \<in> state_refs_of s sc \<Longrightarrow>
-   sc_at_pred_n N f P sc s \<Longrightarrow>
-   reft \<in> {SCNtfn, SCTcb, SCYieldFrom, SCReply}"
-  by (clarsimp simp: state_refs_of_def refs_of_def sc_at_pred_n_def obj_at_def get_refs_def
-              split: option.splits)
-
-(* FIXME: move *)
-lemma ntfn_reftypes:
-  "(y, reft) \<in> state_refs_of s sc \<Longrightarrow>
-   ntfn_at_pred P sc s \<Longrightarrow>
-   reft \<in> {NTFNBound, NTFNSchedContext, NTFNSignal}"
-  by (clarsimp simp: state_refs_of_def refs_of_def ntfn_at_pred_def get_refs_def
-              split: option.splits)
-
-(* FIXME: move *)
-lemma ep_reftypes:
-  "(y, reft) \<in> state_refs_of s sc \<Longrightarrow>
-   ep_at_pred P sc s \<Longrightarrow>
-   reft \<in> {EPSend, EPRecv}"
-  by (clarsimp simp: state_refs_of_def refs_of_def ep_at_pred_def ep_q_refs_of_def
-              split: option.splits endpoint.splits)
-
 lemma SCReply_ref_fst_replies_with_sc:
   "(reply_ptr, SCReply) \<in> state_refs_of s y \<Longrightarrow> reply_ptr \<in> fst ` replies_with_sc s"
   by (fastforce simp: state_refs_of_def refs_of_rev replies_with_sc_def image_def
@@ -1182,10 +1158,6 @@ lemma SCReply_ref_replies_with_sc:
   by (fastforce simp: state_refs_of_def refs_of_rev replies_with_sc_def image_def
                       sc_replies_sc_at_def obj_at_def
                split: option.splits)
-
-lemma valid_objs_valid_reply:
-  "valid_objs s \<Longrightarrow> kheap s p = Some (Reply reply) \<Longrightarrow> valid_reply reply s"
-  by (fastforce simp: valid_objs_def valid_obj_def dom_def)
 
 lemma reply_push_sender_sc_Some_invs:
   "\<lbrace>bound_sc_tcb_at ((=) sender_sc) sender and
@@ -1836,15 +1808,6 @@ lemma reply_push_invs:
 
 lemmas reply_push_ex_nonz_cap_to = reply_push_cap_to
 
-(* FIXME move, perhaps should replace valid_sc_typ_list_all_reply *)
-lemma list_all_obj_at_lift:
-  assumes r: "\<And>p. \<lbrace>obj_at d p\<rbrace> f \<lbrace>\<lambda>rv. obj_at d p\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. list_all (\<lambda>r. obj_at d r s) xs\<rbrace> f
-              \<lbrace>\<lambda>rv s. list_all (\<lambda>r. obj_at d r s) xs\<rbrace>"
-  by (induct xs)
-     (auto simp: wp_post_taut hoare_vcg_conj_lift r[simplified reply_at_typ[symmetric]])
-
-
 lemma reply_push_valid_objs_helper:
   "\<lbrace>\<lambda>s. valid_objs s \<and> reply_at reply_ptr s \<and> sc_replies_sc_at (\<lambda>sc_reps. reply_ptr \<notin> set sc_reps) sc_ptr s \<and> sc_at sc_ptr s \<and>
     reply_sc_reply_at (\<lambda>sc_ptr'. sc_ptr' = None) reply_ptr s \<and>
@@ -2144,7 +2107,7 @@ lemma si_invs'_helper_some_reply:
     \<Longrightarrow> sk_obj_at_pred C proj' (\<lambda>x. \<not> (P' x)) p s"
   by (fastforce simp: sk_obj_at_pred_def obj_at_def)
 
-lemma valid_repliesD:
+lemma valid_replies_st_tcb_at_BlockedOnReply:
   assumes invs: "invs s"
   assumes valid_replies: "valid_replies s"
   assumes P: "\<And>sc. P sc \<longleftrightarrow> sc \<noteq> None"
@@ -2170,18 +2133,6 @@ lemma sym_refs_ignore_update:
   apply (drule_tac x=x in spec)
   apply (drule_tac x="(y,symreftype tp)" in bspec; clarsimp)
   done
-
-(* FIXME move *)
-lemma sc_atD1:
-  "sc_at t s \<Longrightarrow> (\<exists>sc n. kheap s t = Some (SchedContext sc n))"
-  by (clarsimp simp:obj_at_def is_sc_obj_def; case_tac ko; simp)
-
-(* FIXME move *)
-lemma valid_objs_Some_reply_sc:
-  "\<lbrakk>kheap s rptr = Some (Reply reply); reply_sc reply = Some t; valid_objs s\<rbrakk>
-    \<Longrightarrow> \<exists>sc n. kheap s t = Some (SchedContext sc n)"
-  apply (frule valid_objs_valid_reply, assumption)
-  by (clarsimp simp: valid_reply_def sc_atD1)
 
 lemma si_invs'_helper:
   assumes possible_switch_to_Q[wp]: "\<And>a. \<lbrace>Q and valid_objs\<rbrace> possible_switch_to a \<lbrace>\<lambda>_. Q\<rbrace>"
@@ -2499,13 +2450,6 @@ lemma maybe_return_sc_sym_refs_state_refs_of[wp]:
                    split: option.splits)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def get_refs_def2)
   done
-
-(* FIXME: remove
-lemma valid_replies_state_refs_lift:
-  assumes "\<And>P. \<lbrace> \<lambda>s. P (state_refs_of s) \<and> Q s \<rbrace> f \<lbrace> \<lambda>rv s. P (state_refs_of s) \<rbrace>"
-  shows "\<lbrace> valid_replies_pred P and Q \<rbrace> f \<lbrace> \<lambda>rv. valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: replies_with_sc_def2 replies_blocked_def2 wp: assms)
-*)
 
 lemma maybe_return_sc_sym_refs_state_hyp_refs_of[wp]:
   "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr

@@ -1610,23 +1610,6 @@ lemma refill_budget_check_active[wp]:
   by (wpsimp simp: refill_budget_check_def set_refills_def
        wp: hoare_drop_imp get_sched_context_wp split_del: if_split)
 
-(* FIXME: remove
-lemma charge_budget_invs_helper:
-  "\<lbrace>invs \<rbrace> do
-     ct <- gets cur_thread;
-     st <- get_thread_state ct;
-     when (runnable st) (do y <- end_timeslice canTimeout;
-                            y <- reschedule_required;
-                            modify (reprogram_timer_update (\<lambda>_. True))
-                          od) od \<lbrace> \<lambda>_. invs \<rbrace>"
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (wpsimp wp: end_timeslice_invs)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def ct_in_state_def)
-  apply (case_tac "tcb_state tcb"; clarsimp)
-  done
-*)
-
 lemma charge_budget_invs_helper:
   "\<lbrace>\<lambda>s. invs s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace> do
      ct <- gets cur_thread;
@@ -1641,16 +1624,6 @@ lemma charge_budget_invs_helper:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def ct_in_state_def)
   apply (case_tac "tcb_state tcb"; clarsimp)
   done
-
-(* FIXME remove
-lemma charge_budget_invs:
-  "\<lbrace>invs\<rbrace> charge_budget capacity consumed canTimeout \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (clarsimp simp: charge_budget_def is_round_robin_def)
-  by (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp hoare_vcg_all_lift refill_budget_check_invs
-                 sc_consumed_add_invs update_sched_context_sc_refills_update_invs
-                 charge_budget_invs_helper
-            split_del: if_split simp: set_object_def Let_def set_refills_def)
-*)
 
 lemma update_sched_context_bound_sc:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>

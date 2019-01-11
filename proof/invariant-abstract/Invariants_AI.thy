@@ -2749,6 +2749,21 @@ lemma valid_ntfn_typ:
   apply (rule hoare_vcg_conj_lift; simp add: P hoare_ex_wp Q)
   done
 
+lemma hoare_list_all_lift:
+  "(\<And>r. r \<in> set xs \<Longrightarrow> \<lbrace>Q r\<rbrace> f \<lbrace>\<lambda>rv. Q r\<rbrace>)
+   \<Longrightarrow> \<lbrace>\<lambda>s. list_all (\<lambda>r. Q r s) xs\<rbrace> f \<lbrace>\<lambda>rv s. list_all (\<lambda>r. Q r s) xs\<rbrace>"
+  apply (induct xs; simp)
+  apply wpsimp
+  apply (rule hoare_vcg_conj_lift; simp)
+  done
+
+lemma list_all_obj_at_lift:
+  assumes r: "\<And>p. \<lbrace>obj_at d p\<rbrace> f \<lbrace>\<lambda>rv. obj_at d p\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. list_all (\<lambda>r. obj_at d r s) xs\<rbrace> f
+              \<lbrace>\<lambda>rv s. list_all (\<lambda>r. obj_at d r s) xs\<rbrace>"
+  by (induct xs)
+     (auto simp: wp_post_taut hoare_vcg_conj_lift r[simplified reply_at_typ[symmetric]])
+
 lemma valid_sc_typ_list_all_reply:
   assumes r: "\<And>p. \<lbrace>typ_at AReply p\<rbrace> f \<lbrace>\<lambda>rv. typ_at AReply p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. list_all (\<lambda>r. reply_at r s) xs\<rbrace> f
@@ -4227,5 +4242,34 @@ lemmas st_tcb_at_ko_atD =
 lemma not_BlockedOnReply_not_in_replies_blocked:
   "st_tcb_at (\<lambda>st. st \<noteq> BlockedOnReply (Some r)) tptr s \<Longrightarrow> (r, tptr) \<notin> replies_blocked s"
   by ( clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def)
+
+lemma runnable_eq:
+  "runnable st = (st = Running \<or> st = Restart)"
+  by (cases st) auto
+
+lemma sc_atD1:
+  "sc_at t s \<Longrightarrow> (\<exists>sc n. kheap s t = Some (SchedContext sc n))"
+  by (clarsimp simp:obj_at_def is_sc_obj_def; case_tac ko; simp)
+
+lemma valid_objs_valid_reply:
+  "valid_objs s \<Longrightarrow> kheap s p = Some (Reply reply) \<Longrightarrow> valid_reply reply s"
+  by (fastforce simp: valid_objs_def valid_obj_def dom_def)
+
+lemma valid_objs_Some_reply_sc:
+  "\<lbrakk>kheap s rptr = Some (Reply reply); reply_sc reply = Some t; valid_objs s\<rbrakk>
+    \<Longrightarrow> \<exists>sc n. kheap s t = Some (SchedContext sc n)"
+  apply (frule valid_objs_valid_reply, assumption)
+  by (clarsimp simp: valid_reply_def sc_atD1)
+
+lemma valid_sched_object_reply_at:
+  "valid_objs s \<Longrightarrow> ko_at (SchedContext scb nb) sc_ptr s
+    \<Longrightarrow> reply_ptr \<in> set (sc_replies scb)
+    \<Longrightarrow> \<exists>reply. ko_at (Reply reply) reply_ptr s"
+  apply (clarsimp elim!: obj_at_valid_objsE
+                  simp: valid_obj_def typ_at_eq_kheap_obj
+                        valid_sched_context_def reply_at_typ
+                        list_all_iff)
+  apply (fastforce simp: obj_at_def)
+  done
 
 end

@@ -1409,11 +1409,6 @@ crunch state_refs_of[wp]: empty_slot "\<lambda>s. P (state_refs_of s)"
 
 lemmas sts_st_tcb_at_other = sts_st_tcb_at_neq[where proj=itcb_state]
 
-(* FIXME: move *)
-lemma runnable_eq:
-  "runnable st = (st = Running \<or> st = Restart)"
-  by (cases st) auto
-
 lemma reply_unlink_runnable[wp]:
   "\<lbrace>st_tcb_at runnable t\<rbrace> reply_unlink_tcb rptr \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
   apply (simp add: reply_unlink_tcb_def)
