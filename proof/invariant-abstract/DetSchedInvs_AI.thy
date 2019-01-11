@@ -519,6 +519,29 @@ abbreviation valid_ep_q :: "'z::state_ext state \<Rightarrow> bool" where
 
 lemmas valid_ep_q_def = valid_ep_q_2_def[simplified schedulable_ep_thread_2_def]
 
+(*** valid_ntfn_q ***)
+
+abbreviation has_budget_kh where
+  "has_budget_kh t curtime kh \<equiv>
+   bound_sc_tcb_at_kh ((=) None) t kh \<or>
+   (active_sc_tcb_at_kh t kh \<and> budget_sufficient_kh t kh \<and> budget_ready_kh curtime t kh)"
+
+primrec ntfn_queue :: "ntfn \<Rightarrow> obj_ref list" where
+  "ntfn_queue IdleNtfn = []"
+| "ntfn_queue (WaitingNtfn list) = list"
+| "ntfn_queue (ActiveNtfn _) = []"
+
+definition valid_ntfn_q_2 where
+  "valid_ntfn_q_2 curtime kh =
+   (\<forall>p. case kh p of
+        Some (Notification n) \<Rightarrow> (\<forall>t \<in> set (ntfn_queue (ntfn_obj n)). has_budget_kh t curtime kh)
+        | _ \<Rightarrow> True)"
+
+abbreviation valid_ntfn_q :: "'z state \<Rightarrow> bool" where
+  "valid_ntfn_q s \<equiv> valid_ntfn_q_2 (cur_time s) (kheap s)"
+
+lemmas valid_ntfn_q_def = valid_ntfn_q_2_def
+
 lemma bound_sc_maybe_active[simp]:
   "bound_sc_tcb_at bound t s \<Longrightarrow>
     (bound_sc_tcb_at ((=) None) t s \<or>
