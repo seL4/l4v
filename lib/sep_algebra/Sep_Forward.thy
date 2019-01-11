@@ -117,6 +117,11 @@ method sep_forward = (sep_cancel | septract_cancel |  sep_lift |
 
 method sep_forward_solve = (solves \<open>sep_invert; (sep_forward) +\<close>)
 
-method sep_cancel = (Sep_Cancel.sep_cancel | sep_lift)
+method sep_cancel uses add = (Sep_Cancel.sep_cancel add: add | sep_lift)
+
+lemma septract_mp: "\<lbrakk>(R' \<and>* (R' -* R)) s; \<And>s. R s \<Longrightarrow> (R' \<and>* (R' \<longrightarrow>* R)) s; precise R'\<rbrakk> \<Longrightarrow> R s"
+  apply (sep_invert)
+  apply (atomize, erule allE, drule (1) mp)
+  using precise_conj_coimpl by blast
 
 end

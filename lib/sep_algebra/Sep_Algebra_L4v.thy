@@ -14,7 +14,7 @@
 *)
 
 theory Sep_Algebra_L4v
-imports "Sep_Tactics"
+imports "Sep_Tactics" "Sep_Fold"
 begin
 
 text {*
@@ -25,7 +25,5 @@ no_notation pred_and (infixr "and" 35)
 no_notation pred_or (infixr "or" 30)
 no_notation pred_not ("not _" [40] 40)
 no_notation pred_imp (infixr "imp" 25)
-
-thm sep_cancel
 
 end

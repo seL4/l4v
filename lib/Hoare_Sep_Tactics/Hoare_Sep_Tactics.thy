@@ -390,4 +390,38 @@ method_setup sep_wp = {*
   Attrib.thms >> (fn thms => fn ctxt => Method.SIMPLE_METHOD' (sep_wp thms ctxt))
 *}
 
+
+
+lemma shift_inside_left:
+  "\<lbrace>\<lambda>s. (P \<and>* R) (sep_lift s) \<and> A\<rbrace> f \<lbrace>R'\<rbrace> \<longleftrightarrow> \<lbrace>\<lambda>s. ((P and K A) \<and>* R) (sep_lift s)\<rbrace> f \<lbrace>R'\<rbrace>"
+  apply (clarsimp simp: pred_conj_def conj_commute)
+  done
+
+lemma shift_inside_right:
+  "\<lbrace>\<lambda>s. A \<and> (P \<and>* R) (sep_lift s)\<rbrace> f \<lbrace>R'\<rbrace> \<longleftrightarrow> \<lbrace>\<lambda>s. ((P and K A) \<and>* R) (sep_lift s)\<rbrace> f \<lbrace>R'\<rbrace>"
+  apply (clarsimp simp: pred_conj_def conj_commute)
+  done
+
+(* FIXME: Make nicer alias for doing this *)
+lemmas sep_wp_simp = pred_conj_def K_def shift_inside_left shift_inside_right sep_conj_assoc[symmetric]
+
+lemma sep_hoare_fold_mapM_x:
+  "(\<And>R x. x \<in> set xs \<Longrightarrow> \<lbrace>\<lambda>s. (P x \<and>* R) (sep_lift s)\<rbrace> f x \<lbrace>\<lambda>_ s. (Q x \<and>* R) (sep_lift s)\<rbrace>)
+    \<Longrightarrow> \<lbrace>\<lambda>s. (sep_fold P Q R xs) (sep_lift s)\<rbrace> mapM_x f xs \<lbrace>\<lambda>_ s. R (sep_lift s)\<rbrace>"
+  apply (clarsimp simp: sep_fold_def)
+  apply (induct xs arbitrary: R)
+   apply (clarsimp simp: mapM_x_def sequence_x_def)+
+  apply wp
+    apply assumption+
+   apply atomize
+   apply (erule allE)
+   apply (erule allE)
+   apply (erule_tac x=a in allE)
+   apply clarsimp
+   apply (rule hoare_chain)
+     apply assumption+
+   apply (sep_erule (direct) sep_mp)
+  apply clarsimp
+  done
+
 end

@@ -74,6 +74,67 @@ lemma mapM_x_set_sep:
  \<Longrightarrow> \<lbrace><(\<And>* x \<in> set xs. P x) \<and>* I \<and>* R>\<rbrace> mapM_x f xs \<lbrace>\<lambda>_. <(\<And>* x \<in> set xs. Q x) \<and>* I \<and>* R>\<rbrace>"
   by (erule mapM_x_set_sep', simp+)
 
+(* NOTE: unused *)
+lemma foldM_Cons:
+  "foldM f (x # xs) acc =
+    do acc' \<leftarrow> foldM f xs acc;
+       f x acc'
+    od"
+  by (clarsimp simp: foldM_def)
+
+lemma foldM_sep_inv':
+  includes no_pre
+  assumes f:
+   "\<And>R x acc. x \<in> S \<Longrightarrow>
+     \<lbrace>\<lambda>s. <P x \<and>* I \<and>* R> s \<and> I' s\<rbrace>
+      f x acc
+     \<lbrace>\<lambda>acc' s. <Q x \<and>* I \<and>* R> s \<and> I' s\<rbrace>"
+  shows
+   "set xs \<subseteq> S \<Longrightarrow>
+     \<lbrace>\<lambda>s. <\<And>* map P xs \<and>* I \<and>* R> s \<and> I' s\<rbrace>
+      foldM f xs acc
+     \<lbrace>\<lambda>acc' s. <\<And>* map Q xs \<and>* I \<and>* R> s \<and> I' s\<rbrace>"
+proof (induct xs arbitrary: R acc)
+  case Nil
+  thus ?case
+    by (simp add: foldM_def)
+next
+  case (Cons x xs)
+  thus ?case
+    apply (simp add: sep_conj_assoc foldM_Cons)
+    apply wp
+     apply (insert f[where R1="R ** \<And>* map Q xs" and x1=x])[1]
+     apply (fastforce simp: sep_conj_ac)
+    apply (insert Cons.hyps [where R1="P x ** R"])[1]
+    apply (clarsimp simp: sep_conj_ac)
+    done
+qed
+
+lemmas foldM_sep_inv = foldM_sep_inv' [OF _ subset_refl]
+lemmas foldM_sep = foldM_sep_inv [where I' = \<top>, simplified]
+lemmas foldM_sep' = foldM_sep [where I=\<box>, simplified]
+
+lemma foldM_set_sep_inv:
+  "\<lbrakk>distinct xs;
+    set xs = X;
+    \<And>R x acc. x \<in> X \<Longrightarrow> \<lbrace><P x \<and>* I \<and>* R> and I'\<rbrace> f x acc \<lbrace>\<lambda>_. <Q x \<and>* I \<and>* R> and I'\<rbrace>\<rbrakk> \<Longrightarrow>
+  \<lbrace><(\<And>* x \<in> X. P x) \<and>* I \<and>* R> and I'\<rbrace>
+   foldM f xs acc
+  \<lbrace>\<lambda>_. <(\<And>* x \<in> X. Q x) \<and>* I \<and>* R> and I'\<rbrace>"
+  apply (clarsimp simp: pred_conj_def)
+  apply (drule foldM_sep_inv [where R=R])
+  apply (subst (asm) sep_list_conj_sep_map_set_conj, assumption)+
+  apply assumption
+  done
+
+lemmas foldM_set_sep' = foldM_set_sep_inv [where I' = \<top>, simplified]
+
+lemma foldM_set_sep:
+  "\<lbrakk>distinct xs;
+    \<And>R x acc. x \<in> set xs \<Longrightarrow> \<lbrace><P x \<and>* I \<and>* R>\<rbrace> f x acc \<lbrace>\<lambda>_. <Q x \<and>* I \<and>* R>\<rbrace>\<rbrakk>
+   \<Longrightarrow> \<lbrace><(\<And>* x \<in> set xs. P x) \<and>* I \<and>* R>\<rbrace> foldM f xs acc \<lbrace>\<lambda>_. <(\<And>* x \<in> set xs. Q x) \<and>* I \<and>* R>\<rbrace>"
+  by (erule foldM_set_sep', simp+)
+
 lemma sep_list_conj_map_singleton_wp:
   "\<lbrakk>x \<in> set xs; \<And>R. \<lbrace><P \<and>* I x \<and>* R>\<rbrace> f \<lbrace>\<lambda>_. <Q \<and>* I x \<and>* R>\<rbrace>\<rbrakk>
   \<Longrightarrow> \<lbrace><P \<and>* \<And>* map I xs \<and>* R>\<rbrace> f \<lbrace>\<lambda>_. <Q \<and>* \<And>* map I xs \<and>* R>\<rbrace>"

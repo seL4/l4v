@@ -21,6 +21,7 @@ session Sep_Algebra (lib) = Word_Lib +
     "MonadSep"
     "Sep_Forward"
     "Sep_Cancel_Example"
+    "Sep_Fold"
     "Sep_Eq"
     "Sep_Heap_Instance"
     "Sep_MP_Example"
