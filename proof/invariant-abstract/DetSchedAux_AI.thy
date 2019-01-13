@@ -504,7 +504,6 @@ proof -
    apply clarsimp
    apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b")
     apply simp
-    apply (fastforce simp: st_tcb_at_is_etcb)
    apply (rule_tac conjI[OF use_valid[OF _ st_tcb] use_valid[OF _ bound_sc]], assumption)
      apply clarsimp
      apply (erule pred_tcb_weakenE)
@@ -620,7 +619,6 @@ proof -
    apply clarsimp
    apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b")
     apply simp
-    apply (fastforce simp: st_tcb_at_is_etcb)
    apply (rule_tac conjI[OF use_valid[OF _ st_tcb] use_valid[OF _ bound_sc]], assumption)
      apply simp
      apply ((erule pred_tcb_weakenE, simp, case_tac "itcb_state tcb", simp+)+)[3]

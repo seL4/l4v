@@ -2783,7 +2783,6 @@ lemma update_sched_context_valid_release_q_not_bound:
               split: option.splits)
   apply (drule_tac x=t in spec)
   apply (drule_tac x=t in bspec, simp, clarsimp)
-  apply (case_tac y; clarsimp)
   apply (fastforce simp: valid_ready_qs_def etcb_defs refill_prop_defs
       active_sc_tcb_at_defs st_tcb_at_kh_if_split split: option.splits)
   done
@@ -2820,11 +2819,9 @@ lemma update_sched_context_weak_valid_sched_action:
   done
 
 lemma update_sched_context_weak_valid_sched_action_act_not:
-  "\<lbrace>weak_valid_sched_action
-and (\<lambda>s. \<forall>t tcb. scheduler_act_not t s \<and> ko_at (TCB tcb) t s
-                                    \<and> tcb_sched_context tcb = Some ref)
-(* and (\<lambda>s. sc_tcb_sc_at (\<lambda>to. \<forall>tp. to = Some tp \<and> scheduler_act_not tp s) ref s)*)\<rbrace>
-      update_sched_context ref f
+  "\<lbrace>weak_valid_sched_action and
+    (\<lambda>s. \<forall>t tcb. scheduler_act_not t s \<and> ko_at (TCB tcb) t s \<and> tcb_sched_context tcb = Some ref)\<rbrace>
+   update_sched_context ref f
    \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
   apply (simp add: update_sched_context_def)
   apply (wpsimp simp: set_object_def wp: get_object_wp)
@@ -4075,7 +4072,6 @@ lemma set_sc_tcb_sched_context_valid_sched[wp]:
       dest!: get_tcb_SomeD split: option.splits)
   apply (clarsimp simp: valid_release_q_def etcb_defs)
   apply (drule_tac x=t in bspec, simp, clarsimp)
-  apply (case_tac y; clarsimp)
   by (fastforce simp: st_tcb_at_kh_if_split active_sc_tcb_at_defs
                dest!: get_tcb_SomeD split: option.splits)
 
@@ -4092,7 +4088,6 @@ lemma set_sc_ntfn_sched_context_valid_sched[wp]:
       dest!: get_tcb_SomeD split: option.splits)
   apply (clarsimp simp: valid_release_q_def etcb_defs)
   apply (drule_tac x=t in bspec, simp, clarsimp)
-  apply (case_tac y; clarsimp)
   by (fastforce simp: st_tcb_at_kh_if_split active_sc_tcb_at_defs
                dest!: get_tcb_SomeD split: option.splits)
 
@@ -6348,7 +6343,7 @@ lemma awaken_valid_sched:
    apply (clarsimp dest!: set_takeWhileD
       simp: valid_release_q_def is_refill_ready_def active_sc_tcb_at_defs)
    apply (drule_tac x="cur_thread s" in bspec, simp)
-   apply (clarsimp simp: etcb_defs split: option.splits, case_tac ya; clarsimp)
+   apply (clarsimp simp: etcb_defs split: option.splits, case_tac y; clarsimp)
   apply (clarsimp simp: not_in_release_q_def dest!: set_takeWhileD)
   done
 

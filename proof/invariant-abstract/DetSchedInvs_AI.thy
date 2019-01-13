@@ -450,21 +450,18 @@ lemmas valid_ready_qs_def = valid_ready_qs_2_def
 
 lemma valid_ready_qs_def2:
   "valid_ready_qs_2 queues curtime kh =
-     (\<forall>d p. (\<forall>t \<in> set (queues d p).
-              is_etcb_at' t (etcbs_of' kh) \<and>
-              (case etcbs_of' kh t of None \<Rightarrow> False | Some x \<Rightarrow> etcb_priority x = p \<and> etcb_domain x = d) \<and>
-              st_tcb_at_kh runnable t kh \<and> active_sc_tcb_at_kh t kh
-              \<and> budget_sufficient_kh t kh \<and> budget_ready_kh curtime t kh)
-              \<and> distinct (queues d p))"
+   (\<forall>d p. (\<forall>t \<in> set (queues d p).
+           is_etcb_at' t (etcbs_of' kh) \<and>
+           (case etcbs_of' kh t of None \<Rightarrow> False | Some x \<Rightarrow> etcb_priority x = p \<and> etcb_domain x = d) \<and>
+           st_tcb_at_kh runnable t kh \<and>
+           active_sc_tcb_at_kh t kh \<and> budget_sufficient_kh t kh \<and> budget_ready_kh curtime t kh)
+          \<and> distinct (queues d p))"
   by (clarsimp simp: valid_ready_qs_def etcb_at_conj_is_etcb_at[symmetric])
 
 definition valid_release_q_2 where
   "valid_release_q_2 queue kh =
-    ((\<forall>t \<in> set queue. is_etcb_at' t (etcbs_of' kh) \<and>
-            (*  (case etcbs_of' kh t of None \<Rightarrow> False | Some x \<Rightarrow> True) \<and> *) (* redundant *)
-              st_tcb_at_kh runnable t kh \<and> active_sc_tcb_at_kh t kh)
-(*              \<and> \<not>(budget_sufficient_kh t kh \<and> budget_ready_kh curtime t kh)*)
-              \<and> distinct queue)"
+   ((\<forall>t \<in> set queue. st_tcb_at_kh runnable t kh \<and> active_sc_tcb_at_kh t kh)
+    \<and> distinct queue)"
 
 abbreviation valid_release_q :: "'z state \<Rightarrow> bool" where
 "valid_release_q s \<equiv> valid_release_q_2 (release_queue s) (kheap s)"
@@ -473,7 +470,7 @@ lemmas valid_release_q_def = valid_release_q_2_def
 
 definition valid_release_q_except_set_2 where
    "valid_release_q_except_set_2 S queue kh \<equiv>
-    ((\<forall>t \<in> set queue - S. is_etcb_at' t (etcbs_of' kh) \<and>
+    ((\<forall>t \<in> set queue - S.
               st_tcb_at_kh runnable t kh \<and> active_sc_tcb_at_kh t kh)
               \<and> distinct queue)"
 
