@@ -306,16 +306,6 @@ lemma update_sched_context_valid_replies:
   apply (wp update_sched_context_wp)
   by (clarsimp simp: sc_replies_sc_at_def obj_at_def replies_with_sc_replies_upd)
 
-lemma set_sched_context_valid_replies:
-  "\<lbrace> \<lambda>s. P (replies_with_sc_upd_replies (sc_replies sc) sc_ptr (replies_with_sc s))
-           (replies_blocked s) \<rbrace>
-    set_sched_context sc_ptr sc
-   \<lbrace> \<lambda>rv. valid_replies_pred P \<rbrace>"
-  apply (rule hoare_lift_Pf2[where f=replies_blocked, rotated])
-   apply (wp replies_blocked_lift)
-  apply (wp update_sched_context_wp)
-  by (clarsimp simp: sc_replies_sc_at_def obj_at_def replies_with_sc_replies_upd)
-
 lemma update_sc_replies_valid_replies:
   "\<lbrace> \<lambda>s. \<forall>rs. sc_replies_sc_at (\<lambda>rs'. set rs' = set rs) sc_ptr s
               \<longrightarrow> P (replies_with_sc_upd_replies (f rs) sc_ptr (replies_with_sc s))
@@ -478,7 +468,7 @@ lemma set_sc_consumed_invs:
       set_sched_context p (sc\<lparr>sc_consumed := i \<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
                 simp_del: fun_upd_apply
-                wp: valid_ioports_lift set_sched_context_valid_replies)
+                wp: valid_ioports_lift update_sched_context_valid_replies)
   apply safe
      apply (fastforce simp: valid_obj_def)
     apply (fastforce simp: if_live_then_nonz_cap_def obj_at_def live_def)
@@ -762,7 +752,7 @@ lemma set_sched_context_minor_invs: (* minor? *)
      set_sched_context ptr sc'
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                  wp: valid_irq_node_typ valid_ioports_lift set_sched_context_valid_replies
+                  wp: valid_irq_node_typ valid_ioports_lift update_sched_context_valid_replies
             simp_del: fun_upd_apply)
   apply (clarsimp simp: sc_at_pred_def obj_at_def replies_with_sc_upd_replies_trivial)
   apply (erule rsubst[of sym_refs], rule ext)
@@ -1204,7 +1194,7 @@ lemma set_sc_othres_invs:
               sc_refills := r#refills,
               sc_refill_max := max_refills\<rparr>) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
-      simp_del: fun_upd_apply wp: valid_ioports_lift set_sched_context_valid_replies)
+      simp_del: fun_upd_apply wp: valid_ioports_lift update_sched_context_valid_replies)
   apply safe
      apply (drule valid_objs_valid_sched_context, fastforce)
      apply (clarsimp simp: valid_sched_context_def)
