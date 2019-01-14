@@ -1249,7 +1249,7 @@ lemma reply_push_sender_sc_Some_invs:
   apply (rule hoare_seq_ext[OF _ gbn_inv])
   apply (rule hoare_seq_ext[OF _ assert_inv])
   apply (rule hoare_seq_ext[OF _ gscrpls_sp[simplified]])
-  apply_trace (wpsimp wp: sched_context_donate_invs reply_sc_update_Some_invs
+  apply (wpsimp wp: sched_context_donate_invs reply_sc_update_Some_invs
                      sc_replies_update_valid_replies_cons valid_sc_typ_list_all_reply
                      valid_ioports_lift get_simple_ko_wp)
   apply (rule conjI, clarsimp simp: invs_def valid_state_def valid_pspace_def)
