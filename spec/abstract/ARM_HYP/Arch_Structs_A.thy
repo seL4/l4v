@@ -315,8 +315,7 @@ type_synonym arm_vspace_region_uses = "vspace_ref \<Rightarrow> arm_vspace_regio
 section {* Architecture-specific state *}
 
 text {* The architecture-specific state for the ARM model
-consists of a reference to the globals page (@{text "arm_globals_frame"}),
-the first level of the ASID table (@{text "arm_asid_table"}), a
+consists of the first level of the ASID table (@{text "arm_asid_table"}), a
 map from hardware ASIDs to seL4 ASIDs (@{text "arm_hwasid_table"}),
 the next hardware ASID to preempt (@{text "arm_next_asid"}), the
 inverse map from seL4 ASIDs to hardware ASIDs (first component of
