@@ -120,9 +120,6 @@ lemma get_blocking_object_inv[wp]:
   "\<lbrace>P\<rbrace> get_blocking_object st \<lbrace>\<lambda>_. P\<rbrace>"
   by (cases st, simp_all add: get_blocking_object_def ep_blocked_def assert_opt_def)
 
-crunches set_sc_obj_ref, update_sk_obj_ref
-  for pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj P' t s)"
-
 lemma reply_unlink_sc_st_tcb_at [wp]:
   "reply_unlink_sc scp rp \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
   by (wpsimp simp: reply_unlink_sc_def wp: hoare_drop_imps)

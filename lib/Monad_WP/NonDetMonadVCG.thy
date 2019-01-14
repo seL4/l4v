@@ -2292,4 +2292,12 @@ end
 lemmas nondet_wpfix_strgs[wp_fix_strgs]
     = strengthen_implementation.nondet_wpfix_strgs
 
+lemma hoare_list_all_lift:
+  "(\<And>r. r \<in> set xs \<Longrightarrow> \<lbrace>Q r\<rbrace> f \<lbrace>\<lambda>rv. Q r\<rbrace>)
+   \<Longrightarrow> \<lbrace>\<lambda>s. list_all (\<lambda>r. Q r s) xs\<rbrace> f \<lbrace>\<lambda>rv s. list_all (\<lambda>r. Q r s) xs\<rbrace>"
+  apply (induct xs; simp)
+  apply wpsimp
+  apply (rule hoare_vcg_conj_lift; simp)
+  done
+
 end

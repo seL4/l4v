@@ -1758,39 +1758,33 @@ lemma (in retype_region_proofs_gen) valid_pspace: "valid_pspace s'"
   using vp by (simp add: valid_pspace_def valid_objs psp_al psp_dist
                          iflive zombies refs_eq hyp_refs_eq valid_replies)
 
-(* I have the feeling I'm making this unnecessarily hard,
-   but I can't put my finger on where. *)
-
-(* FIXME: rename *)
-lemma F: "\<And>x c s. (caps_of_state s x = Some c) = (cte_wp_at ((=) c) x s)"
+lemma caps_of_state_Some_simp: "\<And>x c s. (caps_of_state s x = Some c) = (cte_wp_at ((=) c) x s)"
   apply (simp add: caps_of_state_cte_wp_at)
   apply (fastforce simp: cte_wp_at_def)
   done
 
-(* FIXME: rename *)
-lemma F2: "\<And>x c s. (null_filter (caps_of_state s) x = Some c)
+lemma null_filter_Some_simp: "\<And>x c s. (null_filter (caps_of_state s) x = Some c)
              = (cte_wp_at (\<lambda>cap. cap \<noteq> cap.NullCap \<and> cap = c) x s)"
-  apply (simp add: null_filter_def F)
+  apply (simp add: null_filter_def caps_of_state_Some_simp)
   apply (fastforce simp: cte_wp_at_def)
   done
 
-(* FIXME: rename *)
-lemma F3: "\<And>x s. (None = null_filter (caps_of_state s) x)
-              = (\<forall>c. \<not> cte_wp_at (\<lambda>cap. cap \<noteq> cap.NullCap \<and> cap = c) x s)"
+lemma None_null_filter_simp:
+  "\<And>x s. (None = null_filter (caps_of_state s) x)
+          = (\<forall>c. \<not> cte_wp_at (\<lambda>cap. cap \<noteq> cap.NullCap \<and> cap = c) x s)"
   apply safe
-   apply (simp add: F2[symmetric])
-  apply (rule sym, rule ccontr, clarsimp simp: F2)
+   apply (simp add: null_filter_Some_simp[symmetric])
+  apply (rule sym, rule ccontr, clarsimp simp: null_filter_Some_simp)
   done
-
 
 lemma (in retype_region_proofs) null_filter:
   "null_filter (caps_of_state s') = null_filter (caps_of_state s)"
   apply (rule ext)
   apply (case_tac "null_filter (caps_of_state s) x")
    apply (simp add: eq_commute)
-   apply (simp add: F3 cte_retype)
+   apply (simp add: None_null_filter_simp cte_retype)
   apply simp
-  apply (simp add: F2 cte_retype)
+  apply (simp add: null_filter_Some_simp cte_retype)
   done
 
 context retype_region_proofs begin

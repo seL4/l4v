@@ -579,12 +579,6 @@ lemma sc_unbind_not_live_helper:
                                  ntfn_sc ntfn = None) ptr\<rbrace>"
   by (wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc)
 
-lemma set_simple_ko_obj_at_disjoint:
-  "\<lbrace>obj_at P p and K (p \<noteq> p')\<rbrace>
-     set_simple_ko f p' v
-   \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
-  by (wpsimp simp: set_simple_ko_def wp: set_object_at_obj get_object_wp)
-
 lemma reply_unlink_sc_not_live:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> reply_tcb r = None) reply and invs\<rbrace>
      reply_unlink_sc sc_ptr reply
@@ -880,15 +874,6 @@ method hammer = ((clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
                       (wp_once hoare_drop_imps)?,
                       wp_once deleting_irq_handler_empty)
                    | simp add: valid_cap_simps is_nondevice_page_cap_simps)+)[1]
-
-(*FIXME: move*)
-lemma mapM_x_wp_pre:
-  assumes a: "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P and Q\<rbrace> f x \<lbrace>\<lambda>rv. Q\<rbrace>"
-  assumes b: "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
-  shows "\<lbrace>P and Q\<rbrace> mapM_x f xs \<lbrace>\<lambda>rv. Q\<rbrace>"
-  apply (rule hoare_post_imp[where Q="\<lambda>rv. P and Q"], clarsimp)
-  apply (wpsimp wp: mapM_x_wp' a b)
-  done
 
 lemma sched_context_unbind_ntfn_unbinds:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_tcb sc = None) sc \<rbrace>

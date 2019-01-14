@@ -151,14 +151,6 @@ where
   od"
 
 text \<open>Unbind a reply from the corresponding TCB.\<close>
-(*definition
-  reply_unbind_caller :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where (* called from reply_remove; in BlockedOnReply *)
-  "reply_unbind_caller tcb_ptr reply_ptr = do
-     reply \<leftarrow> get_reply reply_ptr;
-     set_reply reply_ptr (reply\<lparr>reply_tcb:= None\<rparr>);
-     set_thread_state tcb_ptr (BlockedOnReply None) (* does this make sense? *)
-  od"*)
 
 definition reply_unlink_tcb :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "reply_unlink_tcb r = do
