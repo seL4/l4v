@@ -436,10 +436,12 @@ where
          ntfn_obj = (case rest of [] \<Rightarrow> IdleNtfn | _ \<Rightarrow> WaitingNtfn rest),
          ntfn_bound_tcb = bound_tcb,
          ntfn_sc = sc_ptr \<rparr>;
-     maybe_donate_sc dest ntfnptr;
      set_thread_state dest Running;
      as_user dest $ setRegister badge_register badge;
-     possible_switch_to dest
+     maybe_donate_sc dest ntfnptr;
+     in_release_q <- gets $ in_release_queue dest;
+     schedulable <- is_schedulable dest in_release_q;
+     when (schedulable) $ possible_switch_to dest
    od"
 
 text {* Handle a message send operation performed on a notification object.
@@ -465,10 +467,12 @@ where
                   if (receive_blocked st)
                   then do
                       cancel_ipc tcb;
-                      maybe_donate_sc tcb ntfnptr;
                       set_thread_state tcb Running;
                       as_user tcb $ setRegister badge_register badge;
-                      possible_switch_to tcb
+                      maybe_donate_sc tcb ntfnptr;
+                      in_release_q <- gets $ in_release_queue tcb;
+                      schedulable <- is_schedulable tcb in_release_q;
+                      when (schedulable) $ possible_switch_to tcb
                     od
                   else set_notification ntfnptr $ ntfn_obj_update (K (ActiveNtfn badge)) ntfn
             od
