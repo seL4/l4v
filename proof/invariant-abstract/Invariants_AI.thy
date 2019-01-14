@@ -876,8 +876,8 @@ where
 
 definition live_sc :: "sched_context \<Rightarrow> bool"
 where
-  "live_sc sc \<equiv> (bound (sc_tcb sc) \<or> bound (sc_yield_from sc) \<or> bound (sc_ntfn sc)
-                                \<or> (sc_replies sc \<noteq> []))"
+  "live_sc sc \<equiv> (bound (sc_tcb sc) \<and> (sc_tcb sc) \<noteq> Some idle_thread_ptr
+                 \<or> bound (sc_yield_from sc) \<or> bound (sc_ntfn sc) \<or> (sc_replies sc \<noteq> []))"
 
 definition live_ntfn :: "notification \<Rightarrow> bool"
 where
@@ -892,7 +892,9 @@ primrec
   live0 :: "kernel_object \<Rightarrow> bool"
 where
   "live0 (CNode sz fun)      = False"
-| "live0 (TCB tcb)           = (bound (tcb_bound_notification tcb) \<or> bound (tcb_sched_context tcb)
+| "live0 (TCB tcb)           = (bound (tcb_bound_notification tcb)
+                                \<or> bound (tcb_sched_context tcb) \<and>
+                                  (tcb_sched_context tcb) \<noteq> Some idle_sc_ptr
                                 \<or> bound (tcb_yield_to tcb)
                                 \<or> tcb_state tcb \<noteq> Inactive \<and> tcb_state tcb \<noteq> IdleThreadState)"
 | "live0 (Endpoint ep)       = (ep \<noteq> IdleEP)"
@@ -1111,10 +1113,21 @@ abbreviation
   "idle_tcb_at \<equiv> pred_tcb_at (\<lambda>t. (itcb_state t, itcb_bound_notification t,
                                     itcb_sched_context t, itcb_yield_to t))"
 
+abbreviation (* could consider introducing projection like pred_tcb_at? maybe? *)
+  "idle_sc_at \<equiv> obj_at (\<lambda>ko. \<exists>sc. ko = SchedContext sc min_sched_context_bits
+                                  \<and> sc_period sc = 0
+                                  \<and> sc_tcb sc = Some idle_thread_ptr
+                                  \<and> sc_ntfn sc = None
+                                  \<and> sc_refill_max sc = MIN_REFILLS
+                                  \<and> sc_badge sc = 0
+                                  \<and> sc_yield_from sc = None
+                                  \<and> sc_replies sc = [])"
+
 definition
   "valid_idle \<equiv> \<lambda>s. idle_tcb_at (\<lambda>(st, ntfn, sc, yt).
        (idle st) \<and> (ntfn  = None) \<and> (sc = Some idle_sc_ptr) \<and> (yt = None)) (idle_thread s) s
-         \<and> idle_thread s = idle_thread_ptr"
+         \<and> idle_thread s = idle_thread_ptr
+         \<and> idle_sc_at idle_sc_ptr s"
 
 definition
   "only_idle \<equiv> \<lambda>s. \<forall>t. st_tcb_at idle t s \<longrightarrow> t = idle_thread s"
@@ -1208,8 +1221,12 @@ definition
   "cur_tcb s \<equiv> tcb_at (cur_thread s) s"
 
 definition
+  "cur_sc_tcb s \<equiv> sc_tcb_sc_at (\<lambda>t.
+     scheduler_action s = resume_cur_thread \<longrightarrow> t = Some (cur_thread s)) (cur_sc s) s"
+
+definition
   invs :: "'z::state_ext state \<Rightarrow> bool" where
-  "invs \<equiv> valid_state and cur_tcb"
+  "invs \<equiv> valid_state and cur_tcb and cur_sc_tcb"
 
 
 subsection "Derived concepts"
