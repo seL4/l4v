@@ -39,6 +39,10 @@ locale Detype_AI =
   assumes valid_ioports_detype:
     "valid_ioports (s::'a state) \<Longrightarrow> valid_ioports (detype (untyped_range cap) s)"
 
+lemma kheap_detype:
+  "kheap (detype S s) = kheap s |` (-S)"
+  by (auto simp: detype_def)
+
 lemma obj_at_detype[simp]:
   "obj_at P p (detype S s) = (p \<notin> S \<and> obj_at P p s)"
   by (clarsimp simp: obj_at_def detype_def)
@@ -78,6 +82,10 @@ lemma caps_of_state_detype[simp]:
 lemma state_refs_of_detype:
   "state_refs_of (detype S s) = (\<lambda>x. if x \<in> S then {} else state_refs_of s x)"
   by (rule ext, simp add: state_refs_of_def detype_def)
+
+lemma sc_at_pred_n_detype[simp]:
+  "sc_at_pred_n N proj P p (detype S s) = (sc_at_pred_n N proj P p s \<and> p \<notin> S)"
+  by (fastforce simp: sc_at_pred_n_def)
 
 
 definition
