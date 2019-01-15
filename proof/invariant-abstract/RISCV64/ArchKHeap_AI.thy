@@ -932,5 +932,12 @@ lemma arch_valid_obj_same_type:
    \<Longrightarrow> arch_valid_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
   by simp
 
+(* FIXME RISCV: arch split/move to arch (level) *)
+lemma valid_vspace_obj_same_type:
+  "\<lbrakk>valid_vspace_obj l ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
+  \<Longrightarrow> valid_vspace_obj l ao (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)"
+    apply (rule hoare_to_pure_kheap_upd[OF valid_vspace_obj_typ])
+    by (auto simp: obj_at_def)
+
 end
 end
