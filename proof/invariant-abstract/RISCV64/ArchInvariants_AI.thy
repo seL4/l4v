@@ -909,8 +909,9 @@ lemma valid_arch_cap_ref_lift:
   unfolding valid_arch_cap_ref_def
   by (cases acap; wpsimp wp: P hoare_vcg_const_imp_lift)
 
+(* In eta-extended form, so typ_at can be unfolded when needed *)
 lemma valid_arch_cap_typ:
-  assumes P: "\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>"
+  assumes P: "\<And>T p. f \<lbrace>\<lambda>s. typ_at (AArch T) p s\<rbrace>"
   shows      "f \<lbrace>valid_arch_cap c\<rbrace>"
   unfolding valid_arch_cap_def
   by (case_tac c; wpsimp wp: P valid_arch_cap_ref_lift)
