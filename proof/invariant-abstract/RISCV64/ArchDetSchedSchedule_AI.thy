@@ -10,8 +10,7 @@
 
 theory ArchDetSchedSchedule_AI
 imports
-  "ArchInvariants_AI"
-  (* "../Invariants_AI" *)
+  "ArchAcc_AI"
 begin
 
 (* FIXME RISCV: TODO *)
