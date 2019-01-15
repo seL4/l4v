@@ -187,7 +187,8 @@ crunch domain_list_inv[wp]: sc_and_timer "\<lambda>s::det_state. P (domain_list 
 crunch domain_list_inv[wp]: schedule "\<lambda>s::det_state. P (domain_list s)"
   (wp: hoare_drop_imp dxo_wp_weak simp: Let_def)
 
-crunch domain_list_inv[wp]: send_signal "\<lambda>s::det_state. P (domain_list s)" (wp: maybeM_inv)
+crunch domain_list_inv[wp]: send_signal "\<lambda>s::det_state. P (domain_list s)"
+  (wp: maybeM_inv crunch_wps)
 
 end
 
@@ -426,8 +427,8 @@ crunch domain_time_inv[wp]: guarded_switch_to "\<lambda>s::det_state. P (domain_
 crunch domain_time_inv[wp]: choose_thread "\<lambda>s::det_state. P (domain_time s)"
 crunch domain_time_inv[wp]: sched_context_donate "\<lambda>s::det_state. P (domain_time s)"
 
-crunch domain_time_inv[wp]: reply_remove,maybe_donate_sc "\<lambda>s::det_state. P (domain_time s)"
-  (wp: hoare_drop_imps maybeM_inv)
+crunch domain_time_inv[wp]: reply_remove, maybe_donate_sc "\<lambda>s::det_state. P (domain_time s)"
+  (wp: hoare_drop_imps crunch_wps)
 
 crunch domain_time_inv[wp]: send_signal "\<lambda>s::det_state. P (domain_time s)"
   (wp: hoare_drop_imps mapM_x_wp_inv maybeM_inv select_wp simp: crunch_simps unless_def)

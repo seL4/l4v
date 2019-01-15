@@ -718,11 +718,6 @@ crunch valid_pdpt_objs[wp]: sched_context_donate "valid_pdpt_objs"
   (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps
     ignore: tcb_release_remove set_object simp: unless_def)
 
-lemma refill_unblock_check_valid_pdpt_objs[wp]:
-  "\<lbrace>valid_pdpt_objs\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  by (wpsimp simp: refill_unblock_check_def unless_def is_round_robin_def set_refills_def
-     wp: get_sched_context_wp hoare_vcg_if_lift2 hoare_drop_imps)
-
 crunch valid_pdpt_objs[wp]: do_reply_transfer "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: maybeM_inv mapM_x_wp' get_simple_ko_wp hoare_drop_imps hoare_vcg_if_lift2
    ignore: tcb_release_remove set_object tcb_release_enqueue
