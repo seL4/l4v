@@ -579,47 +579,47 @@ where
     recv_opt \<leftarrow> get_reply_tcb reply;
     swp maybeM recv_opt (\<lambda>receiver. do
       state \<leftarrow> get_thread_state receiver;
-      case state of BlockedOnReply r \<Rightarrow>
-      if r =(Some reply) then do
-        reply_remove reply;
-        fault \<leftarrow> thread_get tcb_fault receiver;
-        case fault of
-          None \<Rightarrow> do
-             do_ipc_transfer sender None 0 True receiver;
-             set_thread_state receiver Running
-          od
-        | Some f \<Rightarrow> do
-             mi \<leftarrow> get_message_info sender;
-             buf \<leftarrow> lookup_ipc_buffer False sender;
-             mrs \<leftarrow> get_mrs sender buf mi;
-             restart \<leftarrow> handle_fault_reply f receiver (mi_label mi) mrs;
-             thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := None \<rparr>) receiver;
-             set_thread_state receiver (if restart then Restart else Inactive);
+      case state of
+        BlockedOnReply r \<Rightarrow> do
+          assert (r = Some reply);
+          reply_remove reply;
+          fault \<leftarrow> thread_get tcb_fault receiver;
+          case fault of
+            None \<Rightarrow> do
+              do_ipc_transfer sender None 0 True receiver;
+              set_thread_state receiver Running
+            od
+          | Some f \<Rightarrow> do
+              mi \<leftarrow> get_message_info sender;
+              buf \<leftarrow> lookup_ipc_buffer False sender;
+              mrs \<leftarrow> get_mrs sender buf mi;
+              restart \<leftarrow> handle_fault_reply f receiver (mi_label mi) mrs;
+              thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := None \<rparr>) receiver;
+              set_thread_state receiver (if restart then Restart else Inactive);
 
-            sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
-            state2 \<leftarrow> get_thread_state receiver;
-            when (sc_opt \<noteq> None \<and> runnable state2) $ do
-              sc_ptr \<leftarrow> assert_opt sc_opt;
-              refill_unblock_check sc_ptr;
-              sc \<leftarrow> get_sched_context sc_ptr;
+              sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
+              when (sc_opt \<noteq> None \<and> restart) $ do
+                sc_ptr \<leftarrow> assert_opt sc_opt;
+                refill_unblock_check sc_ptr;
+                sc \<leftarrow> get_sched_context sc_ptr;
 
-              cur_time \<leftarrow> gets cur_time;
-              ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr *)
+                cur_time \<leftarrow> gets cur_time;
+                ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr *)
 
-              sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
+                sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
 
-              if (ready \<and> sufficient) then possible_switch_to receiver
-              else do
-                tcb \<leftarrow> gets_the $ get_tcb receiver;
-                if (is_ep_cap (tcb_timeout_handler tcb) \<and> \<not> is_timeout_fault f) then
-                  handle_timeout receiver (Timeout (sc_badge sc))
-                else postpone sc_ptr
+                if ready \<and> sufficient
+                then possible_switch_to receiver
+                else do
+                  tcb \<leftarrow> gets_the $ get_tcb receiver;
+                  if is_ep_cap (tcb_timeout_handler tcb) \<and> \<not> is_timeout_fault f
+                  then handle_timeout receiver (Timeout (sc_badge sc))
+                  else postpone sc_ptr
+                od
               od
             od
-         od
-       od
-       else fail
-    | _ \<Rightarrow> return ()
+        od
+      | _ \<Rightarrow> return ()
     od)
   od"
 
