@@ -399,14 +399,18 @@ definition wellformed_vspace_obj :: "arch_kernel_obj \<Rightarrow> bool" where
 
 lemmas wellformed_aobj_simps[simp] = wellformed_aobj_def[split_simps arch_kernel_obj.split]
 
+definition has_kernel_mappings :: "pt \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "has_kernel_mappings pt \<equiv> \<lambda>s.
+     \<forall>pt'. pts_of s (riscv_global_pt (arch_state s)) = Some pt' \<longrightarrow>
+           (\<forall>i \<in> kernel_mapping_slots. pt i = pt' i)"
+
 (* To find the top-level page tables, we need to start with ASIDs *)
 definition equal_kernel_mappings :: "'z::state_ext state \<Rightarrow> bool" where
   "equal_kernel_mappings \<equiv> \<lambda>s.
-     \<forall>asid pt_ptr pt pt'.
+     \<forall>asid pt_ptr pt.
        vspace_for_asid asid s = Some pt_ptr
-       \<longrightarrow> aobjs_of s pt_ptr = Some (PageTable pt)
-       \<longrightarrow> aobjs_of s (riscv_global_pt (arch_state s)) = Some (PageTable pt')
-       \<longrightarrow> (\<forall>i \<in> kernel_mapping_slots. pt i = pt' i)"
+      \<longrightarrow> pts_of s pt_ptr = Some pt
+      \<longrightarrow> has_kernel_mappings pt s"
 
 definition pte_ref :: "pte \<Rightarrow> obj_ref option" where
   "pte_ref pte \<equiv> case pte of
@@ -1885,7 +1889,7 @@ lemma equal_mappings_pt_slot_offset:
      pspace_aligned s \<rbrakk>
    \<Longrightarrow> ptes_of s (pt_slot_offset max_pt_level root_pt vref) =
        ptes_of s (pt_slot_offset max_pt_level (riscv_global_pt (arch_state s)) vref)"
-  apply (simp add: equal_kernel_mappings_def)
+  apply (simp add: equal_kernel_mappings_def has_kernel_mappings_def)
   apply ((erule allE)+, erule (1) impE)
   apply (drule (3) vspace_for_asid_valid_pt)
   apply (drule (1) valid_mappings_pt_at)
@@ -2051,9 +2055,13 @@ lemma valid_asid_table_update [iff]:
   "valid_asid_table (f s) = valid_asid_table s"
   by (simp add: valid_asid_table_def arch pspace)
 
+lemma has_kernel_mappings_update [iff]:
+  "has_kernel_mappings pt (f s) = has_kernel_mappings pt s"
+  by (simp add: has_kernel_mappings_def arch pspace)
+
 lemma equal_kernel_mappings_update [iff]:
   "equal_kernel_mappings (f s) = equal_kernel_mappings s"
-  by (simp add: equal_kernel_mappings_def arch pspace)
+  by (simp add: equal_kernel_mappings_def pspace)
 
 end
 
