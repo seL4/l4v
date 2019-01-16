@@ -630,7 +630,8 @@ definition valid_global_objs :: "'z::state_ext state \<Rightarrow> bool" where
 definition valid_global_arch_objs :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_global_arch_objs \<equiv> \<lambda>s.
      riscv_global_pts (arch_state s) asid_pool_level = {} \<and>
-     (\<exists>pt. riscv_global_pts (arch_state s) max_pt_level = {pt})"
+     (\<exists>pt. riscv_global_pts (arch_state s) max_pt_level = {pt}) \<and>
+     (\<forall>level. \<forall>pt \<in> riscv_global_pts (arch_state s) level. pt_at pt s)"
 
 definition valid_global_vspace_mappings :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_global_vspace_mappings \<equiv> \<lambda>s.
@@ -1028,7 +1029,7 @@ lemma valid_arch_state_lift:
   apply (simp add: pred_conj_def valid_arch_state_def valid_asid_table_def valid_global_arch_objs_def)
   apply (rule hoare_lift_Pf[where f="arch_state"]; wp dom_asid_pools_of_lift)
     apply fastforce
-   apply wpsimp+
+   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift)+
   done
 
 lemma aobj_at_default_arch_cap_valid:
