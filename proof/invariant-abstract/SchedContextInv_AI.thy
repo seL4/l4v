@@ -358,6 +358,7 @@ lemma set_mrs_pred_tcb_at_ct[wp]:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def tcb_to_itcb_def dest!: get_tcb_SomeD)
   done
 
+(* FIXME: replace this with as_user_pred_tcb_at which is stronger *)
 lemma as_user_pred_tcb_at_ct[wp]:
   "\<lbrace>(\<lambda>s. pred_tcb_at proj P (cur_thread s) s)\<rbrace>
     as_user tptr f \<lbrace>\<lambda>_ s. pred_tcb_at proj P (cur_thread s) s\<rbrace>"
@@ -1387,7 +1388,7 @@ lemmas si_invs = si_invs'[where Q=\<top>,OF hoare_TrueI hoare_TrueI hoare_TrueI 
 lemma send_ipc_invs_for_timeout:
   "\<lbrace>invs and st_tcb_at active tptr and ex_nonz_cap_to tptr
    and (\<lambda>s. caps_of_state s (tptr, tcb_cnode_index 4) = Some cap)
-   and K (is_ep_cap cap) and bound_sc_tcb_at bound tptr\<rbrace>
+   and K (is_ep_cap cap) and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at bound tptr s)\<rbrace>
       send_ipc True False (cap_ep_badge cap) True
                  canDonate tptr (cap_ep_ptr cap) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp wp: si_invs simp: obj_at_def pred_tcb_at_def)
@@ -1447,13 +1448,19 @@ lemma thread_set_timeout_fault_invs[wp]:
 lemma send_fault_ipc_invs_timeout:
   "\<lbrace>invs and st_tcb_at active tptr and ex_nonz_cap_to tptr
     and (\<lambda>s. caps_of_state s (tptr, tcb_cnode_index 4) = Some cap)
-    and K (is_ep_cap cap) and bound_sc_tcb_at bound tptr\<rbrace>
+    and K (is_ep_cap cap) and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at bound tptr s)\<rbrace>
       send_fault_ipc tptr cap (Timeout badge) canDonate \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: send_fault_ipc_def)
   apply (wpsimp wp: send_ipc_invs_for_timeout hoare_vcg_conj_lift)
                 apply (wpsimp simp: thread_set_def set_object_def)+
   apply safe
-     apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_rev)
+        apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_rev)
+       apply (rule ex_cap_to_after_update, assumption)
+       apply (clarsimp simp: obj_at_def get_tcb_SomeD ran_tcb_cap_cases)
+      apply (subst caps_of_state_after_update[simplified fun_upd_apply])
+       apply (clarsimp simp: obj_at_def get_tcb_SomeD ran_tcb_cap_cases)
+      apply (clarsimp simp: caps_of_state_tcb_index_trans tcb_cnode_map_def)
+     apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
     apply (rule ex_cap_to_after_update, assumption)
     apply (clarsimp simp: obj_at_def get_tcb_SomeD ran_tcb_cap_cases)
    apply (subst caps_of_state_after_update[simplified fun_upd_apply])
@@ -1463,7 +1470,7 @@ lemma send_fault_ipc_invs_timeout:
   done
 
 lemma handle_timeout_Timeout_invs:
-  "\<lbrace>invs and st_tcb_at active tptr and bound_sc_tcb_at bound tptr\<rbrace>
+  "\<lbrace>invs and st_tcb_at active tptr\<rbrace>
      handle_timeout tptr (Timeout badge)  \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: handle_timeout_def)
   apply (wpsimp simp: handle_timeout_def ran_tcb_cap_cases
@@ -1479,7 +1486,7 @@ lemma handle_timeout_Timeout_invs:
   done
 
 lemma end_timeslice_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> ct_active s\<rbrace>
       end_timeslice t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: end_timeslice_def ct_in_state_def get_tcb_queue_def
           wp: handle_timeout_Timeout_invs hoare_drop_imp)
@@ -1611,7 +1618,7 @@ lemma refill_budget_check_active[wp]:
        wp: hoare_drop_imp get_sched_context_wp split_del: if_split)
 
 lemma charge_budget_invs_helper:
-  "\<lbrace>\<lambda>s. invs s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace> do
+  "\<lbrace>\<lambda>s. invs s\<rbrace> do
      ct <- gets cur_thread;
      st <- get_thread_state ct;
      when (runnable st) (do y <- end_timeslice canTimeout;
@@ -1663,7 +1670,7 @@ lemma refill_budget_check_bound_sc:
                    refill_split_check_bound_sc set_refills_bound_sc)
 
 lemma charge_budget_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
+  "\<lbrace>invs\<rbrace>
    charge_budget capacity consumed canTimeout
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: charge_budget_def Let_def set_refills_def is_round_robin_def
@@ -1673,7 +1680,7 @@ lemma charge_budget_invs:
                    refill_budget_check_invs refill_budget_check_bound_sc)
 
 lemma check_budget_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace> check_budget \<lbrace>\<lambda>rv. invs \<rbrace>"
+  "\<lbrace>\<lambda>s. invs s\<rbrace> check_budget \<lbrace>\<lambda>rv. invs \<rbrace>"
   by (wpsimp simp: check_budget_def refill_full_def refill_size_def
                wp: get_refills_inv hoare_drop_imp get_sched_context_wp charge_budget_invs)
 
@@ -1684,7 +1691,7 @@ lemma invs_release_queue_update[simp]:
 
 crunch invs[wp]: tcb_release_remove invs
 
-lemma tcb_sched_action_bound_sc:
+lemma tcb_sched_action_bound_sc[wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
    tcb_sched_action action thread
    \<lbrace>\<lambda>rv s. bound_sc_tcb_at bound (cur_thread s) s\<rbrace>"

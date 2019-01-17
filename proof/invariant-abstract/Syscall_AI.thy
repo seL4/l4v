@@ -193,10 +193,10 @@ lemma sts_Restart_invs[wp]:
   done
 
 lemma check_budget_restart_invs[wp]:
-  "\<lbrace>\<lambda>s. invs s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace> check_budget_restart \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>\<lambda>s. invs s\<rbrace> check_budget_restart \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: check_budget_restart_def)
   apply (rule hoare_seq_ext[rotated])
-   apply (rule check_budget_invs[simplified])
+   apply (rule check_budget_invs)
   apply (wpsimp wp: gts_wp)
   apply (case_tac st; wpsimp)
    apply (drule invs_iflive,

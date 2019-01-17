@@ -1937,7 +1937,7 @@ lemma si_invs'_helper_no_reply:
                       then {r \<in> state_refs_of s dest. snd r = TCBBound \<or>
                             snd r = TCBSchedContext \<or> snd r = TCBYieldTo}
                       else state_refs_of s x) \<and>
-        sym_refs (state_hyp_refs_of s) \<and> bound_sc_tcb_at bound tptr s \<and> Q s\<rbrace>
+        sym_refs (state_hyp_refs_of s) \<and> (can_donate \<longrightarrow> bound_sc_tcb_at bound tptr s) \<and> Q s\<rbrace>
    do
      sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
      fault <- thread_get tcb_fault tptr;
@@ -2033,7 +2033,7 @@ lemma si_invs'_helper_some_reply:
   shows
   "\<lbrace>\<lambda>s. \<exists>rptr. st_tcb_at active tptr s \<and> st_tcb_at ((=) Inactive) dest s \<and> invs s \<and>
         ex_nonz_cap_to tptr s \<and> ex_nonz_cap_to dest s \<and> reply = Some rptr \<and> ex_nonz_cap_to rptr s \<and>
-        reply_sc_reply_at (\<lambda>sc. sc = None) rptr s \<and> bound_sc_tcb_at bound tptr s \<and> Q s\<rbrace>
+        reply_sc_reply_at (\<lambda>sc. sc = None) rptr s \<and> (can_donate \<longrightarrow> bound_sc_tcb_at bound tptr s) \<and> Q s\<rbrace>
    do sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
       fault <- thread_get tcb_fault tptr;
       y <- if call \<or> (\<exists>y. fault = Some y)
@@ -2144,7 +2144,7 @@ lemma si_invs'_helper:
   assumes reply_unlink_tcb_Q[wp]: "\<And>a. \<lbrace>Q\<rbrace> reply_unlink_tcb a \<lbrace>\<lambda>_. Q\<rbrace>"
   shows
   "\<lbrace>\<lambda>s. all_invs_but_sym_refs s \<and> Q s \<and> st_tcb_at active tptr s \<and>
-        ex_nonz_cap_to tptr s \<and> bound_sc_tcb_at bound tptr s \<and> ep_at epptr s \<and>
+        ex_nonz_cap_to tptr s \<and> (can_donate \<longrightarrow> bound_sc_tcb_at bound tptr s) \<and> ep_at epptr s \<and>
         (\<forall>x. (dest, x) \<notin> state_refs_of s epptr) \<and>
         st_tcb_at (\<lambda>st. \<exists>r. st = BlockedOnReceive epptr r) dest s \<and> ex_nonz_cap_to epptr s \<and>
         valid_replies s \<and>
@@ -2185,7 +2185,7 @@ lemma si_invs'_helper:
   apply (rename_tac r)
   apply (case_tac r, simp)
    apply (wpsimp wp: si_invs'_helper_no_reply wp_del: maybeM_inv)
-    apply (wpsimp wp: valid_irq_node_typ do_ipc_transfer_bound_sc)
+    apply (wpsimp wp: valid_irq_node_typ do_ipc_transfer_bound_sc hoare_vcg_imp_lift)
    apply clarsimp
    apply (intro conjI)
      apply (clarsimp simp: st_tcb_at_def obj_at_def)
@@ -2206,8 +2206,8 @@ lemma si_invs'_helper:
     apply (rule hoare_vcg_conj_lift)
      apply (wpsimp wp: reply_unlink_tcb_st_tcb_at')
     apply (wpsimp wp: reply_unlink_tcb_invs_BlockedOnReceive
-                      reply_unlink_tcb_bound_sc_tcb_at)
-   apply (wpsimp wp: hoare_ex_wp valid_irq_node_typ do_ipc_transfer_bound_sc)
+                      reply_unlink_tcb_bound_sc_tcb_at hoare_vcg_imp_lift)
+   apply (wpsimp wp: hoare_ex_wp valid_irq_node_typ do_ipc_transfer_bound_sc hoare_vcg_imp_lift)
   apply clarsimp
   apply (subgoal_tac "reply_tcb_reply_at (\<lambda>b. b = Some dest) rptr s")
    apply (intro conjI)
@@ -2255,7 +2255,7 @@ lemma si_invs':
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>a. \<lbrace>Q\<rbrace> reply_unlink_tcb a \<lbrace>\<lambda>_. Q\<rbrace>"
   shows
-  "\<lbrace>invs and Q and st_tcb_at active tptr and ex_nonz_cap_to tptr and bound_sc_tcb_at bound tptr
+  "\<lbrace>invs and Q and st_tcb_at active tptr and ex_nonz_cap_to tptr and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at bound tptr s)
     and ex_nonz_cap_to epptr\<rbrace>
    send_ipc bl call ba cg can_donate tptr epptr
    \<lbrace>\<lambda>r. invs and Q\<rbrace>"
@@ -2391,7 +2391,7 @@ lemma hf_invs':
                     apply (rule thread_set_no_change_tcb_state, simp)
                    apply (rule ex_nonz_cap_to_pres)
                    apply (rule thread_set_cte_wp_at_trivial, simp add: tcb_cap_cases_def)
-                  apply (rule thread_set_no_change_tcb_sched_context, simp)
+                  apply (simp, rule thread_set_no_change_tcb_sched_context, simp)
                  apply (rule ex_nonz_cap_to_pres)
                  apply (rule thread_set_cte_wp_at_trivial, simp add: tcb_cap_cases_def)
                 apply clarsimp
