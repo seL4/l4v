@@ -249,6 +249,34 @@ lemma cap_refs_respects_device_region_init[simp]:
    apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_respects_device_region_def)
    done
 
+lemma replies_with_sc_init_A_st:
+  "replies_with_sc init_A_st = {}"
+  by (clarsimp simp: state_defs replies_with_sc_def sc_at_pred_n_def obj_at_def idle_sc_ptr_def
+                     default_sched_context_def)
+
+(* There is an update to the definition of liveness coming that will make the following
+   lemma provable. When that update occurs the following lemma should be split in two,
+   proved, and named as indictated below. The proofs of these lemmas should be almost
+   trivial. *)
+lemma pending_liveness_updates:
+  "tcb_bound_notification tcb = None \<Longrightarrow>
+   tcb_yield_to tcb = None \<Longrightarrow>
+   (tcb_state tcb = Inactive \<or> tcb_state tcb = IdleThreadState)  \<Longrightarrow>
+   tcb_sched_context tcb = Some idle_sc_ptr \<Longrightarrow>
+   (live (TCB tcb) = False)"
+  "sc_yield_from sc = None \<Longrightarrow>
+   sc_ntfn sc = None \<Longrightarrow>
+   sc_replies sc = [] \<Longrightarrow>
+   sc_tcb sc = Some idle_thread_ptr \<Longrightarrow>
+   (live_sc sc = False)"
+   sorry
+
+(* As mentioned just above, these should become lemmas in their own right, with almost
+   trivial proofs. Whoever does that work should feel free to rename them as they like.
+   (Strictly speaking, the lemmas are stronger than what their name indicates.) *)
+lemmas starting_cur_thread_not_live = pending_liveness_updates(1)
+lemmas starting_cur_sc_not_live = pending_liveness_updates(2)
+
 lemma invs_A:
   "invs init_A_st"
   apply (simp add: invs_def)
@@ -279,13 +307,11 @@ lemma invs_A:
      apply (rule impI)
      apply (erule exE)
      apply (rule conjI)
-
       apply (rule impI)
       apply (subgoal_tac "kernel_base + 0x8000 + (UCAST(10 \<rightarrow> 32) irq << 4) \<noteq> ptr")
        apply (clarsimp simp: cte_level_bits_def)
       apply (rule init_irq_ptrs_all_ineqs(10))
       apply (clarsimp simp: kernel_base_def)
-
      apply (rule impI)
      apply (rule conjI)
       apply (rule impI)
@@ -293,7 +319,6 @@ lemma invs_A:
        apply (clarsimp simp: cte_level_bits_def)
       apply (rule init_irq_ptrs_all_ineqs(10))
       apply (clarsimp simp: kernel_base_def)
-
      apply (rule impI)
      apply (rule conjI)
       apply (rule impI)
@@ -301,7 +326,6 @@ lemma invs_A:
        apply (clarsimp simp: cte_level_bits_def)
       apply (rule init_irq_ptrs_all_ineqs(9))
       apply (clarsimp simp: kernel_base_def)
-
      apply (rule impI)
      apply (rule conjI)
       apply (rule impI)
@@ -310,28 +334,120 @@ lemma invs_A:
       apply (rule init_irq_ptrs_all_ineqs(10))
       apply (clarsimp simp: idle_sc_ptr_def kernel_base_def)
      apply (clarsimp simp: live_def)
-
     apply (rule impI, rule conjI)+
       apply (clarsimp simp: idle_sc_ptr_def)
-     apply clarsimp
-
-(*
-According to the current definition of "live", at the initial kernel state, the kernel objects
-represented by cur_thread and cur_sc are live, which is not supposed to be. One of the assumptions
-of this subgoal, "live (TCB blah blah)", is True as per the current definition of "live". This
-makes proving this subgoal impossible or at least difficult.
-
-A possible solution is to modify live_sc and live0 as follows,
-
-live_sc sc \<equiv> (bound (sc_tcb sc) \<and> (sc_tcb sc) \<noteq> Some idle_thread_ptr
-\<or> bound (sc_yield_from sc) \<or> bound (sc_ntfn sc) \<or> (sc_replies sc \<noteq> []))
-
-live0 (TCB tcb) = (bound (tcb_bound_notification tcb)
-                   \<or> tcb_state tcb \<noteq> IdleThreadState \<and> bound (tcb_sched_context tcb)
-                   \<or> bound (tcb_yield_to tcb)
-                   \<or> tcb_state tcb \<noteq> Inactive \<and> tcb_state tcb \<noteq> IdleThreadState)"
-*)
-  sorry
+     apply (clarsimp simp: starting_cur_thread_not_live)
+    apply (clarsimp simp: idle_sc_ptr_def live_def hyp_live_def default_sched_context_def
+                          starting_cur_sc_not_live[simplified idle_thread_ptr_def])
+   apply (rule conjI)
+    apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs
+                          tcb_cap_cases_def is_zombie_def)
+   apply (rule conjI)
+    apply (clarsimp simp: valid_replies'_def replies_with_sc_init_A_st)
+   apply (rule conjI)
+    apply (clarsimp simp: sym_refs_def state_refs_of_def state_defs idle_sc_ptr_def default_sched_context_def)
+   apply (clarsimp simp: sym_refs_def state_hyp_refs_of_def state_defs idle_sc_ptr_def default_sched_context_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_mdb_def init_cdt_def no_mloop_def
+                         mdb_cte_at_def untyped_mdb_def caps_of_state_init_A_st_Null
+                         untyped_inc_def ut_revocable_def
+                         irq_revocable_def descendants_inc_def)
+  apply (rule conjI)
+   apply (simp add: valid_ioc_def init_A_st_def init_ioc_def cte_wp_at_cases2)
+   apply (intro allI impI, elim exE conjE)
+   apply (case_tac obj, simp_all add: cap_of_def)
+   apply (clarsimp simp: init_kheap_def split: if_split_asm)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def state_defs idle_sc_ptr_def)
+  apply (rule conjI)
+   apply (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def state_defs)
+  apply (rule conjI)
+   apply (clarsimp simp: if_unsafe_then_cap_def caps_of_state_init_A_st_Null)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_global_refs_def valid_refs_def[unfolded cte_wp_at_caps_of_state]
+                         caps_of_state_init_A_st_Null)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_arch_state_def)
+   apply (rule conjI)
+    apply (clarsimp simp: valid_asid_table_def state_defs)
+   apply (rule conjI)
+    apply (clarsimp simp: valid_arch_state_def obj_at_def state_defs
+                          a_type_def idle_sc_ptr_def)
+   apply (rule conjI)
+    apply (simp add: valid_global_pts_def state_defs)
+   apply (simp add: state_defs is_inv_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_irq_node_def obj_at_def state_defs
+                         is_cap_table_def wf_empty_bits
+                         init_irq_ptrs_all_ineqs cte_level_bits_def
+                         init_irq_ptrs_eq[unfolded cte_level_bits_def])
+   apply (intro conjI)
+    apply (rule inj_onI)
+    apply (simp add: init_irq_ptrs_eq[unfolded cte_level_bits_def])
+   apply (clarsimp simp: idle_sc_ptr_def)
+   apply word_bitwise
+  apply (simp add: valid_irq_handlers_def caps_of_state_init_A_st_Null ran_def
+             cong: rev_conj_cong)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_irq_states_def init_A_st_def init_machine_state_def
+                         valid_irq_masks_def init_irq_masks_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_machine_state_def init_A_st_def
+                         init_machine_state_def init_underlying_memory_def)
+  apply (rule conjI)
+   apply (clarsimp simp: obj_at_def state_defs valid_vspace_objs_def)
+   apply (clarsimp simp: vs_lookup_def vs_asid_refs_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_arch_caps_def)
+   apply (rule conjI)
+    apply (clarsimp simp: valid_vs_lookup_def)
+    apply (clarsimp simp: vs_lookup_pages_def state_defs vs_asid_refs_def)
+   apply (clarsimp simp: valid_table_caps_def caps_of_state_init_A_st_Null
+                         unique_table_caps_def unique_table_refs_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_global_objs_def state_defs)
+   apply (clarsimp simp: valid_ao_at_def obj_at_def empty_table_def pde_ref_def
+                         valid_pde_mappings_def valid_vso_at_def)
+   apply (simp add: kernel_base_def kernel_mapping_slots_def idle_sc_ptr_def
+                    Platform.ARM.addrFromPPtr_def physMappingOffset_def
+                    kernelBase_addr_def physBase_def pageBits_def is_aligned_def)
+  apply (rule conjI)
+   apply (simp add: valid_kernel_mappings_def state_defs
+                         valid_kernel_mappings_if_pd_def pde_ref_def
+                         ran_def)
+   apply (auto simp: pde_ref_def split: if_split_asm)[1]
+  apply (rule conjI)
+   apply (clarsimp simp: equal_kernel_mappings_def state_defs obj_at_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_asid_map_def state_defs)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_global_vspace_mappings_def obj_at_def state_defs
+                         valid_pd_kernel_mappings_def mask_pde_mapping_bits idle_sc_ptr_def)
+   apply (simp add: valid_pde_kernel_mappings_def kernel_base_def)
+   apply (rule conjI)
+    apply (fastforce simp:pde_mapping_bits_def)
+   apply (intro ballI impI)
+   apply (clarsimp simp:pde_mapping_bits_def)
+   apply word_bitwise
+   apply clarsimp
+  apply (rule conjI)
+   apply (clarsimp simp: pspace_in_kernel_window_def state_defs mask_def idle_sc_ptr_def
+                         min_sched_context_bits_def)
+   apply (intro conjI impI; (rule in_kernel_base; simp)?)
+   apply (erule exE,drule sym,simp add:field_simps)
+   apply (rule in_kernel_base[simplified add.commute])
+    apply (rule word_less_add_right, simp add: cte_level_bits_def)
+     apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
+    apply simp
+   apply (simp add:cte_level_bits_def field_simps)
+   apply (subst add.commute)
+   apply (rule le_plus')
+    apply simp+
+   apply (rule less_imp_le)
+   apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
+  apply (simp add: cap_refs_in_kernel_window_def caps_of_state_init_A_st_Null
+                  valid_refs_def[unfolded cte_wp_at_caps_of_state])
+  done
 
 end
 
