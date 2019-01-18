@@ -1246,8 +1246,6 @@ lemma reply_push_sender_sc_Some_invs:
   apply (rule hoare_when_cases; clarsimp split: if_splits)
   (* reset *)
   apply (rename_tac sc_caller)
-  apply (rule hoare_seq_ext[OF _ gbn_inv])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
   apply (rule hoare_seq_ext[OF _ gscrpls_sp[simplified]])
   apply (wpsimp wp: sched_context_donate_invs reply_sc_update_Some_invs
                      sc_replies_update_valid_replies_cons valid_sc_typ_list_all_reply
@@ -1587,6 +1585,7 @@ lemma sym_refs_reply_sc_reply_at:
 lemma reply_push_invs_helper:
   "\<lbrace> \<lambda>s. invs s
          \<and> reply_at reply_ptr s
+         \<and> bound_sc_tcb_at ((=) None) callee s
          \<and> sc_at sc_ptr s
          \<and> ex_nonz_cap_to reply_ptr s
          \<and> ex_nonz_cap_to callee s
@@ -1595,8 +1594,6 @@ lemma reply_push_invs_helper:
          \<and> reply_ptr \<in> fst ` replies_blocked s
          \<and> reply_ptr \<notin> fst ` replies_with_sc s \<rbrace>
     when donate (do
-      sc_callee <- get_tcb_obj_ref tcb_sched_context callee;
-      y <- assert (sc_callee = None);
       sc_replies <- liftM sc_replies (get_sched_context sc_ptr);
       y <- case sc_replies of [] \<Rightarrow> assert True
               | r # x \<Rightarrow> do reply <- get_reply r;
@@ -1610,8 +1607,6 @@ lemma reply_push_invs_helper:
    \<lbrace> \<lambda>rv. invs \<rbrace>"
   supply if_weak_cong[cong del] if_split[split del]
   apply (rule hoare_when_cases, simp)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp])
   apply (rule hoare_seq_ext[OF _ gscrpls_sp[unfolded fun_app_def, simplified]])
   apply (rename_tac sc_replies')
   apply (case_tac sc_replies'; simp)
@@ -1744,7 +1739,7 @@ lemma reply_push_invs:
    apply (wpsimp wp: reply_push_invs_helper)
         apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                         wp: sts_only_idle valid_irq_node_typ sts_valid_replies
-                            sts_in_replies_blocked valid_ioports_lift)
+                            sts_in_replies_blocked valid_ioports_lift set_thread_state_bound_sc_tcb_at)
        apply (wpsimp wp: set_reply_tcb_valid_tcb_state valid_irq_node_typ valid_ioports_lift)
       apply (wpsimp wp: unbind_reply_in_ts_inv hoare_drop_imps)+
    apply (intro conjI)
@@ -1810,11 +1805,9 @@ lemmas reply_push_ex_nonz_cap_to = reply_push_cap_to
 
 lemma reply_push_valid_objs_helper:
   "\<lbrace>\<lambda>s. valid_objs s \<and> reply_at reply_ptr s \<and> sc_replies_sc_at (\<lambda>sc_reps. reply_ptr \<notin> set sc_reps) sc_ptr s \<and> sc_at sc_ptr s \<and>
-    reply_sc_reply_at (\<lambda>sc_ptr'. sc_ptr' = None) reply_ptr s \<and>
+    reply_sc_reply_at (\<lambda>sc_ptr'. sc_ptr' = None) reply_ptr s \<and> bound_sc_tcb_at ((=) None) callee s \<and>
     sym_refs (state_refs_of s)\<rbrace>
    when donate (do
-     sc_callee <- get_tcb_obj_ref tcb_sched_context callee;
-     y <- assert (sc_callee = None);
      sc_replies <- liftM sc_replies (get_sched_context sc_ptr);
      y <- case sc_replies of [] \<Rightarrow> assert True
              | r # x \<Rightarrow> do reply <- get_reply r;
@@ -1829,8 +1822,6 @@ lemma reply_push_valid_objs_helper:
   apply (simp add: when_def)
   apply (intro conjI)
    apply clarsimp
-   apply (rule hoare_seq_ext[OF _ gsc_sp])
-   apply (rule hoare_seq_ext[OF _ assert_sp])
    apply (rule hoare_seq_ext[OF _ gscrpls_sp[unfolded fun_app_def, simplified]])
    apply (rename_tac sc_replies')
    apply (case_tac sc_replies'; simp)
@@ -1897,7 +1888,7 @@ lemma reply_push_valid_objs:
     apply (wpsimp wp: hoare_drop_imp)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb reply_tcb_reply_at_def is_reply)
   apply (intro conjI)
-   apply (wpsimp wp: reply_push_valid_objs_helper)
+   apply (wpsimp wp: reply_push_valid_objs_helper set_thread_state_bound_sc_tcb_at)
        apply (wpsimp wp: set_reply_tcb_valid_tcb_state)
       apply (wpsimp wp: unbind_reply_in_ts_inv)
      apply wpsimp
