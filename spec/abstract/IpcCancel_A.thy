@@ -274,7 +274,7 @@ where
     assert (reply_tcb_opt = None);
 
     sc_callee \<leftarrow> get_tcb_obj_ref tcb_sched_context callee;
-    can_donate \<leftarrow> return (if (sc_callee = None) then can_donate else False);
+    can_donate' \<leftarrow> return (if (sc_callee = None) then can_donate else False);
 
     ts_reply \<leftarrow> no_reply_in_ts caller;
     assert (ts_reply);
@@ -284,8 +284,7 @@ where
     set_reply_obj_ref reply_tcb_update reply_ptr (Some caller);
     set_thread_state caller (BlockedOnReply (Some reply_ptr));
 
-    when (sc_caller \<noteq> None \<and> can_donate) $ do
-      sc_callee \<leftarrow> get_tcb_obj_ref tcb_sched_context callee;
+    when (sc_caller \<noteq> None \<and> can_donate') $ do
       assert (sc_callee = None);
       sc_replies \<leftarrow> liftM sc_replies $ get_sched_context (the sc_caller); (* maybe define a function to add a reply to the queue? *)
       case sc_replies of
