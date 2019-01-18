@@ -483,6 +483,56 @@ abbreviation valid_release_q_except :: "obj_ref \<Rightarrow> 'z state \<Rightar
 lemmas valid_release_q_except_set_def = valid_release_q_except_set_2_def
 lemmas valid_release_q_except_def = valid_release_q_except_set_2_def
 
+definition schedulable_ep_thread_2 where
+  "schedulable_ep_thread_2 ep t ct it curtime kh =
+       (st_tcb_at_kh (\<lambda>ts. case ep of RecvEP _ \<Rightarrow> \<exists>eptr r_opt. ts = BlockedOnReceive eptr r_opt
+                                     | _ \<Rightarrow> \<exists>eptr pl. ts = BlockedOnSend eptr pl) t kh \<and>
+          t \<noteq> ct \<and> t \<noteq> it \<and>
+         (bound_sc_tcb_at_kh ((=) None) t kh \<or>
+        active_sc_tcb_at_kh t kh \<and> budget_sufficient_kh t kh \<and> budget_ready_kh curtime t kh))"
+
+primrec ep_queue :: "endpoint \<Rightarrow> obj_ref list" where
+  "ep_queue IdleEP = []"
+| "ep_queue (SendEP list) = list"
+| "ep_queue (RecvEP list) = list"
+
+definition schedulable_ep_q_2 where
+  "schedulable_ep_q_2 epptr ct it curtime kh =
+       (case kh epptr of Some (Endpoint ep) \<Rightarrow>
+              (\<forall>t\<in>set (ep_queue ep). schedulable_ep_thread_2 ep t ct it curtime kh)
+           | _ \<Rightarrow> True)"
+
+abbreviation schedulable_ep_q :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "schedulable_ep_q eptr s \<equiv> schedulable_ep_q_2 eptr (cur_thread s) (idle_thread s) (cur_time s) (kheap s)"
+(* do we really want to add this to valid_sched? do we want to talk about all the endpointers? *)
+
+(* does this work? *)
+definition valid_ep_q_2 where
+  "valid_ep_q_2  ct it curtime kh =
+       (\<forall>p. case kh p of Some (Endpoint ep) \<Rightarrow>
+              (\<forall>t\<in>set (ep_queue ep). schedulable_ep_thread_2 ep t ct it curtime kh)
+           | _ \<Rightarrow> True)"
+
+abbreviation valid_ep_q :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_ep_q s \<equiv> valid_ep_q_2 (cur_thread s) (idle_thread s) (cur_time s) (kheap s)"
+(* do we really want to add this to valid_sched? do we want to talk about all the endpointers? *)
+
+lemmas valid_ep_q_def = valid_ep_q_2_def[simplified schedulable_ep_thread_2_def]
+
+lemma bound_sc_maybe_active[simp]:
+  "bound_sc_tcb_at bound t s \<Longrightarrow>
+    (bound_sc_tcb_at ((=) None) t s \<or>
+        active_sc_tcb_at t s \<and> budget_sufficient t s \<and> budget_ready t s)
+     = (active_sc_tcb_at t s \<and> budget_sufficient t s \<and> budget_ready t s)"
+  by (auto simp: pred_tcb_at_def obj_at_def)
+
+lemma no_sc_no_active[simp]:
+  "bound_sc_tcb_at ((=) None) t s \<Longrightarrow>
+    (bound_sc_tcb_at ((=) None) t s \<or>
+        active_sc_tcb_at t s \<and> budget_sufficient t s \<and> budget_ready t s)
+     = True"
+  by auto
+
 definition valid_blocked_2 where
    "valid_blocked_2 queues rlq kh sa ct \<equiv>
     (\<forall>t st. not_queued_2 queues t \<longrightarrow> not_in_release_q_2 rlq t \<longrightarrow> st_tcb_at_kh ((=) st) t kh \<longrightarrow>
