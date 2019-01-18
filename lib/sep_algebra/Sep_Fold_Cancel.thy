@@ -14,8 +14,8 @@
 
 theory Sep_Fold_Cancel
 imports
-  Sep_Algebra.Sep_Algebra_L4v
-  Sep_Algebra.Sep_Forward
+  Sep_Algebra_L4v
+  Sep_Forward
 begin
 
 lemma sep_fold_cong1: "(\<And>x s. P x s = P' x s) \<Longrightarrow> sep_fold P Q R xs s \<Longrightarrow> sep_fold P' Q R xs s"

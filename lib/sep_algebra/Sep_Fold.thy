@@ -31,6 +31,7 @@
 theory Sep_Fold
 imports
   Separation_Algebra
+  Sep_ImpI
 begin
 
 definition
@@ -52,8 +53,16 @@ lemma sep_map_sep_foldI: "(\<And>* map P xs \<and>* ((\<And>* map Q xs) \<longri
   apply (erule (1) sep_conj_impl)
   apply (erule sep_conj_sep_impl)
   apply (clarsimp simp: sep_conj_ac)
-  by (smt abel_semigroup.commute sep.mult.abel_semigroup_axioms sep.mult.left_commute sep_conj_impl
-          sep_conj_sep_impl sep_conj_sep_impl2)
+  apply (drule meta_spec)
+   apply (erule meta_mp)
+  apply (subst (asm) sep_conj_assoc[symmetric])
+  apply (erule sep_conj_sep_impl2)
+  apply (erule sep_conj_sep_impl2)
+  apply (rule sep_wand_collapse)
+  apply (rule sep_wand_match, assumption)
+  apply (erule sep_curry[rotated])
+  apply (metis (no_types) sep_conj_sep_impl2 sep_conj_commute sep_wand_collapse)
+  done
 
 lemma sep_factor_foldI:
   "(R' \<and>* (sep_fold P Q R xs)) s \<Longrightarrow>

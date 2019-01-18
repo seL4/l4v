@@ -11,6 +11,7 @@
 theory Sep_Forward
 imports
   Extended_Separation_Algebra
+  Sep_Util
 begin
 
 lemma sep_conj_sep_impl_spec:

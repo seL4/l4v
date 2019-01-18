@@ -17,12 +17,12 @@ imports
   RootTask_SI
   SysInit_SI
   DuplicateCaps_SI
-  "../lib/sep_algebra/Sep_Fold_Cancel"
-  "../lib/sep_algebra/Sep_Util"
+  Sep_Algebra.Sep_Fold_Cancel
+  Sep_Algebra.Sep_Util
   "HOL-Library.Multiset"
   Mapped_Separating_Conjunction
   AInvs.Rights_AI
-  "../lib/Guess_ExI"
+  Lib.Guess_ExI
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

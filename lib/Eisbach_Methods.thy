@@ -64,7 +64,24 @@ method_setup determ =
      fun tac st' = method_evaluate m ctxt facts st'
 
    in SIMPLE_METHOD (DETERM tac) facts end)
+\<close> \<open>Run the given method, but only yield the first result\<close>
+
+ML \<open>
+fun require_determ (method : Method.method) facts st =
+  case method facts st |> Seq.filter_results |> Seq.pull of
+    NONE => Seq.empty
+  | SOME (r1, rs) =>
+      (case Seq.pull rs of
+         NONE => Seq.single r1 |> Seq.make_results
+       | _ => Method.fail facts st);
+
+fun require_determ_method text ctxt =
+  require_determ (Method.evaluate_runtime text ctxt);
 \<close>
+
+method_setup require_determ =
+  \<open>Method.text_closure >> require_determ_method\<close>
+  \<open>Run the given method, but fail if it returns more than one result\<close>
 
 method_setup changed =
  \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>

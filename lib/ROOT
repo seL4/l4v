@@ -73,6 +73,7 @@ session Lib (lib) = Word_Lib +
     Corres_Method
     Conjuncts
     DetWPLib
+    Guess_ExI
 
     (* should really be a separate session, but too entangled atm: *)
     NonDetMonadLemmaBucket

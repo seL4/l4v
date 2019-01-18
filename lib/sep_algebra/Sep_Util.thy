@@ -9,7 +9,9 @@
  *)
 
 theory Sep_Util
-imports Sep_Algebra.Sep_Algebra_L4v "HOL-Eisbach.Eisbach"
+imports
+  Sep_Algebra_L4v
+  "HOL-Eisbach.Eisbach"
 begin
 
 (* The sep_simp, sep_flatten, and sep_map tactics. *)
@@ -39,18 +41,21 @@ fun sep_simp thms ctxt =
        val clarsimp' = CHANGED_PROP o clarsimp_tac ctxt'
  in REPEAT_ALL_NEW (sep_all clarsimp' ctxt)
 end
+
 fun sep_simp_method (thms : thm list) ctxt = SIMPLE_METHOD' (sep_simp thms ctxt)
 *}
 
 method_setup sep_flatten = {*
   Scan.succeed (SIMPLE_METHOD' o sep_flatten)
 *}
+
 (* sep_flatten is a tactic to apply the associativity rule for separating conjunction,
    and nothing else. *)
 
 method_setup sep_simp = {*
  Attrib.thms >> sep_simp_method
 *}
+
 (* sep_simp repeatedly applies clarsimp, rotating the premises in-between invocations,
    until it cannot apply. *)
 
