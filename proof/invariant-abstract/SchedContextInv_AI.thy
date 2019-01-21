@@ -563,14 +563,13 @@ lemma sched_context_yield_to_invs:
 done
 
 text {* valid invocation definitions *}
-
 primrec
   valid_sched_context_inv :: "sched_context_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
     "valid_sched_context_inv (InvokeSchedContextConsumed scptr args)
      = (sc_at scptr and ex_nonz_cap_to scptr)"
   | "valid_sched_context_inv (InvokeSchedContextBind scptr cap)
-     = ((*sc_at scptr and *)ex_nonz_cap_to scptr and valid_cap cap and
+     = (ex_nonz_cap_to scptr and valid_cap cap and
           (case cap of ThreadCap t \<Rightarrow> bound_sc_tcb_at ((=) None) t
                                       and ex_nonz_cap_to t and sc_tcb_sc_at ((=) None) scptr
              | NotificationCap n _ _ \<Rightarrow>
@@ -578,7 +577,7 @@ where
                    and ex_nonz_cap_to n  and sc_ntfn_sc_at ((=) None) scptr
              | _ \<Rightarrow> \<lambda>_. False))"
   | "valid_sched_context_inv (InvokeSchedContextUnbindObject scptr cap)
-     = ((*sc_at scptr and *)ex_nonz_cap_to scptr and valid_cap cap and
+     = (ex_nonz_cap_to scptr and valid_cap cap and
           (case cap of ThreadCap t \<Rightarrow>
                    ex_nonz_cap_to t and sc_tcb_sc_at (\<lambda>tcb. tcb = (Some t)) scptr
              | NotificationCap n _ _ \<Rightarrow>
@@ -587,12 +586,9 @@ where
   | "valid_sched_context_inv (InvokeSchedContextUnbind scptr)
      = (sc_at scptr and ex_nonz_cap_to scptr)"
   | "valid_sched_context_inv (InvokeSchedContextYieldTo scptr args)
-     = ((*sc_at scptr and *)ex_nonz_cap_to scptr and (\<lambda>s. st_tcb_at ((=) Restart) (cur_thread s) s)(* comes from perform_invocation *)
-          and (\<lambda>s. ex_nonz_cap_to (cur_thread s) s)
-(*          and sc_yf_sc_at ((=) None) scptr*) and (\<lambda>s. bound_yt_tcb_at ((=) None) (cur_thread s) s)
-          and (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb.\<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s
-                 (*  \<and> (mcpriority_tcb_at (\<lambda>mcp. (tcb_priority (the (get_etcb t s))) \<le> mcp)
-                                                                      (cur_thread s) s)*)) scptr s))"
+     = (\<lambda>s. ex_nonz_cap_to scptr s
+            \<and> bound_yt_tcb_at ((=) None) (cur_thread s) s
+            \<and> sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scptr s)"
 
 
 definition
@@ -1338,15 +1334,16 @@ lemma invoke_sched_control_tcb[wp]:
   by (simp add: tcb_at_typ invoke_sched_control_typ_at [where P=id, simplified])
 
 lemma invoke_sched_context_invs[wp]:
-  "\<lbrace>invs and valid_sched_context_inv i\<rbrace> invoke_sched_context i \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs and valid_sched_context_inv i and ct_active\<rbrace> invoke_sched_context i \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (cases i;
          wpsimp simp: invoke_sched_context_def set_consumed_def valid_sched_context_inv_def
                   wp: sched_context_yield_to_invs)
    apply (clarsimp simp: obj_at_def sc_tcb_sc_at_def sc_ntfn_sc_at_def is_sc_obj_def is_tcb
-                         valid_cap_def idle_no_ex_cap
+                         valid_cap_def idle_no_ex_cap ct_in_state_def
                   split: cap.split_asm)+
-  apply (frule invs_valid_global_refs)
-  apply (frule invs_valid_objs, clarsimp simp: idle_no_ex_cap)
+  apply (frule invs_iflive, frule invs_valid_global_refs, frule invs_valid_objs)
+  apply (frule (1) st_tcb_ex_cap, fastforce)
+  apply (clarsimp simp: idle_no_ex_cap)
   done
 
 lemma update_sc_badge_valid_replies:
@@ -1756,7 +1753,7 @@ lemma sts_valid_sched_context_inv:
 
 end
 
-lemma sts_valid_sched_control_inv:
+lemma sts_valid_sched_control_inv[wp]:
   "\<lbrace>valid_sched_control_inv sci\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_sched_control_inv sci\<rbrace>"
   by (cases sci; wpsimp wp: sts_obj_at_impossible)
 

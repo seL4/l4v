@@ -3846,10 +3846,6 @@ lemma invoked_untyp_tcb[wp]:
 
 end
 
-lemma sts_mdb[wp]:
-  "\<lbrace>\<lambda>s. P (cdt s)\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"
-  by (simp add: set_thread_state_def | wp)+
-
 lemma sts_ex_cap[wp]:
   "\<lbrace>ex_cte_cap_wp_to P p\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
   by (wp ex_cte_cap_to_pres)
@@ -3857,7 +3853,7 @@ lemma sts_ex_cap[wp]:
 lemmas sts_real_cte_at[wp] =
     cap_table_at_lift_valid [OF set_thread_state_typ_at]
 
-lemma sts_valid_untyped_inv:
+lemma sts_valid_untyped_inv[wp]:
   "\<lbrace>valid_untyped_inv ui\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_untyped_inv ui\<rbrace>"
   apply (cases ui, simp add: descendants_range_in_def)
   apply (wp hoare_vcg_const_Ball_lift hoare_vcg_ex_lift hoare_vcg_imp_lift | wps)+

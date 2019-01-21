@@ -509,8 +509,9 @@ lemma do_reply_invs[wp]:
 lemma pinv_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> valid_invocation i s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
     perform_invocation blocking call can_donate i \<lbrace>\<lambda>rv. invs :: det_ext state \<Rightarrow> _\<rbrace>"
-  apply (cases i; wpsimp wp: tcbinv_invs send_signal_interrupt_states invoke_domain_invs)
-  apply (clarsimp simp: ct_in_state_def)
+  apply (cases i
+         ; wpsimp wp: tcbinv_invs send_signal_interrupt_states invoke_domain_invs
+                simp: ct_in_state_def)
   apply (erule st_tcb_ex_cap; fastforce)
   done
 
@@ -649,18 +650,34 @@ lemma sts_tcb_inv_wf [wp]:
                  set_thread_state_valid_cap hoare_vcg_all_lift hoare_vcg_const_imp_lift
              simp: option_None_True option_None_True_const | wp sts_obj_at_impossible)+
 
+lemma sts_valid_sched_context_inv[wp]:
+  "\<lbrace>valid_sched_context_inv i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_sched_context_inv i\<rbrace>"
+  by (cases i
+      ; wpsimp split: cap.splits
+      ; intro conjI
+      ; wpsimp wp: sts_obj_at_impossible set_thread_state_bound_sc_tcb_at)
+
+lemma sts_valid_cnode_inv[wp]:
+  "\<lbrace>valid_cnode_inv i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_cnode_inv i\<rbrace>"
+  by (cases i
+      ; wpsimp wp: sts_nasty_bit[where ptr'="(p_a, p_b)" for p_a p_b, simplified]
+                   hoare_vcg_const_imp_lift)
+
+declare sts_arch_irq_control_inv_valid[wp]
+
+lemma sts_irq_control_inv_valid[wp]:
+  "\<lbrace>irq_control_inv_valid i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. irq_control_inv_valid i\<rbrace>"
+  by (cases i; wpsimp)
+
+lemma sts_irq_handler_inv_valid[wp]:
+  "\<lbrace>irq_handler_inv_valid i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. irq_handler_inv_valid i\<rbrace>"
+  by (cases i; wpsimp wp: hoare_vcg_ex_lift)
+
+declare sts_valid_arch_inv[wp]
+
 lemma sts_valid_inv[wp]:
   "\<lbrace>valid_invocation i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_invocation i\<rbrace>"
-    apply (cases i;
-      wpsimp simp: sts_valid_untyped_inv sts_valid_arch_inv;
-      rename_tac i'; case_tac i'; simp;
-      wpsimp wp: set_thread_state_valid_cap sts_nasty_bit
-(*
-                 sts_nasty_bit[where ptr'="(p_a, p_b)" for p_a p_b, simplified]
-                 hoare_vcg_const_imp_lift hoare_vcg_ex_lift;
-      auto)
-*)
-                 hoare_vcg_const_imp_lift hoare_vcg_ex_lift) sorry
+  by (cases i; wpsimp)
 
 
 lemma sts_Restart_stay_simple:
