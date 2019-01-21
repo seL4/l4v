@@ -1743,11 +1743,11 @@ lemma descendants_of_nullcap:
    apply (clarsimp simp: valid_mdb_def2)+
   done
 
-lemma set_thread_state_bound_sc_tcb_at:
+lemma set_thread_state_bound_sc_tcb_at[wp]:
   "\<lbrace>bound_sc_tcb_at P t'\<rbrace> set_thread_state t ts \<lbrace>\<lambda>rv. bound_sc_tcb_at P t'\<rbrace>"
   by (wpsimp simp: set_thread_state_def set_object_def pred_tcb_at_def obj_at_def get_tcb_def)
 
-lemma reply_unlink_tcb_bound_sc_tcb_at:
+lemma reply_unlink_tcb_bound_sc_tcb_at[wp]:
   "\<lbrace>bound_sc_tcb_at P t'\<rbrace> reply_unlink_tcb r \<lbrace>\<lambda>rv. bound_sc_tcb_at P t'\<rbrace>"
   apply (wpsimp simp: reply_unlink_tcb_def set_thread_state_def set_object_def
                       update_sk_obj_ref_def set_simple_ko_def get_object_def get_simple_ko_def
@@ -1755,13 +1755,13 @@ lemma reply_unlink_tcb_bound_sc_tcb_at:
   apply (auto simp: pred_tcb_at_def obj_at_def get_tcb_def)
   done
 
-lemma blocked_cancel_ipc_bound_sc_tcb_at:
+lemma blocked_cancel_ipc_bound_sc_tcb_at[wp]:
   "\<lbrace>bound_sc_tcb_at P t'\<rbrace> blocked_cancel_ipc ts t r \<lbrace>\<lambda>rv. bound_sc_tcb_at P t'\<rbrace>"
   by (wpsimp simp: blocked_cancel_ipc_def
                wp: set_thread_state_bound_sc_tcb_at reply_unlink_tcb_bound_sc_tcb_at
                    assert_inv get_simple_ko_inv hoare_drop_imps)
 
-lemma cancel_signal_bound_sc_tcb_at:
+lemma cancel_signal_bound_sc_tcb_at[wp]:
   "\<lbrace>bound_sc_tcb_at P t'\<rbrace> cancel_signal r ntfn \<lbrace>\<lambda>rv. bound_sc_tcb_at P t'\<rbrace>"
   by (wpsimp simp: cancel_signal_def get_simple_ko_def get_object_def
                wp: set_thread_state_bound_sc_tcb_at)
