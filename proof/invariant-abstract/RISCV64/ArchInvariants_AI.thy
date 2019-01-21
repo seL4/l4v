@@ -432,6 +432,10 @@ definition valid_vspace_objs :: "'z::state_ext state \<Rightarrow> bool" where
 definition vref_for_level :: "vspace_ref \<Rightarrow> vm_level \<Rightarrow> vspace_ref" where
   "vref_for_level vref level = vref && ~~mask (pt_bits_left level)"
 
+(* Mask out asid_low_bits if a lookup only goes to asid_pool_level *)
+definition asid_for_level :: "asid \<Rightarrow> vm_level \<Rightarrow> asid" where
+  "asid_for_level asid level \<equiv>
+     if level = asid_pool_level then asid && ~~mask asid_low_bits else asid"
 
 locale_abbrev pte_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
   "pte_refs_of \<equiv> \<lambda>s. ptes_of s |> pte_ref"
@@ -443,15 +447,10 @@ definition vs_lookup_target ::
   where
   "vs_lookup_target bot_level asid vref \<equiv> do {
      (level, slot) \<leftarrow> vs_lookup_slot bot_level asid vref;
-     if level = asid_pool_level then do {
-       asid_pool \<leftarrow> swp asid_pools_of slot;
-       pt \<leftarrow> K $ asid_pool (asid_low_bits_of asid);
-       oreturn (level, pt)
-     }
-     else do {
-       ptr \<leftarrow> swp pte_refs_of slot;
-       oreturn (level, ptr)
-     }
+     ptr \<leftarrow> if level = asid_pool_level
+            then vspace_for_pool slot asid \<circ> asid_pools_of
+            else swp pte_refs_of slot;
+     oreturn (level, ptr)
   }"
 
 (* compatibility with other architectures, input only *)
@@ -487,7 +486,8 @@ definition valid_vs_lookup :: "'z::state_ext state \<Rightarrow> bool" where
      vref \<in> user_region s \<longrightarrow>
        asid \<noteq> 0 \<and>
        (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
-                 p \<in> obj_refs cap \<and> vs_cap_ref cap = Some (asid, vref))"
+                 obj_refs cap = {p} \<and>
+                 vs_cap_ref cap = Some (asid_for_level asid level, vref_for_level vref level))"
 
 (* covered by existing invariants in RISCV *)
 definition
@@ -1649,43 +1649,48 @@ lemma lookup_pt_slot_from_level_same[simp]:
   by (auto simp: lookup_pt_slot_from_level_def)
 
 lemma pt_walk_split:
-  "\<lbrakk> level \<le> level'; level' < top_level \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> level \<le> level'; level' \<le> top_level \<rbrakk> \<Longrightarrow>
    pt_walk top_level level pt vref = do {
      (level'', pt) \<leftarrow> pt_walk top_level level' pt vref;
      if level'' = level'
      then pt_walk level' level pt vref
      else oreturn (level'', pt)
    }"
+  apply (cases "level' = top_level")
+   apply simp
   apply (induct top_level arbitrary: pt; clarsimp)
   apply (subst pt_walk.simps)
   apply (subst (2) pt_walk.simps)
   apply (case_tac "level' = top_level - 1")
+   apply (simp add: less_le)
    apply (fastforce simp: obind_assoc intro: opt_bind_cong)
   apply (subgoal_tac "level' < top_level -1")
    apply (fastforce simp: obind_assoc intro: opt_bind_cong)
-  apply (meson bit0.minus1_leq not_le)
+  apply (meson bit0.minus1_leq not_le less_le)
   done
 
 lemma pt_walk_split_short:
-  "\<lbrakk> level \<le> level'; level' < top_level \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> level \<le> level'; level' \<le> top_level \<rbrakk> \<Longrightarrow>
    pt_walk top_level level pt vref = do {
      (level'', pt) \<leftarrow> pt_walk top_level level' pt vref;
      pt_walk level'' level pt vref
    }"
+  apply (cases "level' = top_level")
+   apply simp
   apply (induct top_level arbitrary: pt; clarsimp)
   apply (subst pt_walk.simps)
   apply (subst (2) pt_walk.simps)
   apply (case_tac "level' = top_level - 1")
-   apply (clarsimp simp: obind_assoc)
+   apply (clarsimp simp: obind_assoc less_le)
    apply (fastforce simp: obind_def pt_walk.simps intro: opt_bind_cong)
   apply (subgoal_tac "level' < top_level -1")
    apply (clarsimp simp: obind_assoc)
    apply (fastforce simp: obind_def pt_walk.simps intro!: opt_bind_cong)
-  apply (meson bit0.minus1_leq not_le)
+  apply (meson bit0.minus1_leq not_le less_le)
   done
 
 lemma pt_walk_split_Some:
-  "\<lbrakk> level \<le> level'; level' < top_level \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> level \<le> level'; level' \<le> top_level \<rbrakk> \<Longrightarrow>
    (pt_walk top_level level pt vref ptes = Some (level, pt')) =
    (\<exists>pt''. pt_walk top_level level' pt vref ptes = Some (level', pt'') \<and>
            pt_walk level' level pt'' vref ptes = Some (level, pt'))"
