@@ -1378,45 +1378,6 @@ lemma send_ipc_st_tcb_at_runnable:
   apply (auto dest: runnable_not_queued)
   done
 
-lemma receive_ipc_st_tcb_at_runnable:
-  "\<lbrace>st_tcb_at runnable t and (\<lambda>s. sym_refs (state_refs_of s)) and K (thread \<noteq> t) \<rbrace>
-   receive_ipc thread cap is_blocking reply_cap
-   \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
-  unfolding receive_ipc_def
-  apply (rule hoare_gen_asm)
-  apply (wpc | wp sts_st_tcb_at_other get_simple_ko_wp get_tcb_obj_ref_wp hoare_vcg_all_lift
-      | clarsimp simp: do_nbrecv_failed_transfer_def
-      | wp_once hoare_drop_imp)+
-(*
-              apply (wp hoare_drop_imps)[1]
-             apply clarsimp
-             apply (wp hoare_drop_imps)[1]
-            apply wpc
-                   apply ((wp gts_wp gbn_wp  hoare_vcg_all_lift sts_st_tcb_at_other | wpc
-                           | simp add: do_nbrecv_failed_transfer_def | wp_once hoare_drop_imps)+)[8]
-           apply (wp gts_wp)
-          apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
-         apply ((wp sts_st_tcb_at_other get_simple_ko_wp gbn_wp get_simple_ko_wp | wpc)+)[8]
-  apply clarsimp
-  apply (rule conjI)
-   apply clarsimp
-   apply (rename_tac sendq)
-   apply (frule list.collapse[symmetric])
-   apply (drule st_tcb_at_state_refs_ofD)
-   apply (frule (1) sym_refs_ko_atD)
-   apply clarsimp
-   apply (drule_tac x="hd sendq" in bspec, clarsimp)
-   apply (case_tac ts; clarsimp simp: obj_at_def state_refs_of_def dest!: refs_in_tcb_bound_refs)
-  apply clarsimp
-  apply (rename_tac sendq)
-  apply (frule list.collapse[symmetric])
-  apply (drule st_tcb_at_state_refs_ofD)
-  apply (frule (1) sym_refs_ko_atD)
-  apply clarsimp
-  apply (drule_tac x="hd sendq" in bspec, clarsimp)
-  apply (case_tac ts; clarsimp simp: obj_at_def state_refs_of_def dest!: refs_in_tcb_bound_refs)
-  done*) sorry
-
 lemma send_fault_ipc_st_tcb_at_runnable:
   "\<lbrace>st_tcb_at runnable t and (\<lambda>s. sym_refs (state_refs_of s)) and tcb_at t' and K (t' \<noteq> t)\<rbrace>
    send_fault_ipc t' handler_cap fault can_donate \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
@@ -1437,20 +1398,6 @@ lemma handle_fault_st_tcb_at_runnable:
   apply (wpsimp simp: unless_when wp: sts_st_tcb_at_other send_fault_ipc_st_tcb_at_runnable)
   apply (clarsimp dest!: get_tcb_SomeD simp: obj_at_def is_tcb)
   done
-
-lemma handle_recv_st_tcb_at:
-  "\<lbrace>invs and st_tcb_at runnable t and (\<lambda>s. cur_thread s \<noteq> t)\<rbrace> handle_recv True can_reply
-  \<lbrace>\<lambda>rv s. st_tcb_at runnable t s\<rbrace>"
-  apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper
-             cong: if_cong split del: if_split)
-  apply (rule hoare_pre) (*
-   apply (wp handle_fault_st_tcb_at_runnable receive_ipc_st_tcb_at_runnable
-             delete_caller_cap_sym_refs rai_pred_tcb_neq
-             get_simple_ko_wp hoare_drop_imps hoare_vcg_all_lift_R)
-    apply clarsimp
-    apply wp+
-  apply fastforce
-  done *) sorry
 
 end (* Lemmas related to preservation of runnability over handle_recv for woken threads *)
 
