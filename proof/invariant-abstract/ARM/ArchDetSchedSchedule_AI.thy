@@ -338,7 +338,8 @@ crunch ct_not_in_release_q   [wp, DetSchedSchedule_AI_assms]: make_arch_fault_ms
 
 crunch scheduler_action [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, arch_post_modify_registers "\<lambda>s. P (scheduler_action s)"
 declare make_arch_fault_msg_inv[DetSchedSchedule_AI_assms]
-crunch active_sc_tcb_at [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, arch_post_modify_registers "active_sc_tcb_at t"
+crunch budget_ready [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, arch_post_modify_registers "budget_ready t"
+crunch budget_sufficient [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, arch_post_modify_registers "budget_sufficient t"
 
 lemma arch_post_modify_registers_not_idle_thread[DetSchedSchedule_AI_assms]:
   "\<lbrace>\<lambda>s::det_ext state. t \<noteq> idle_thread s\<rbrace> arch_post_modify_registers c t \<lbrace>\<lambda>_ s. t \<noteq> idle_thread s\<rbrace>"
