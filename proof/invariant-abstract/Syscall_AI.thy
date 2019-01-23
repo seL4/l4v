@@ -869,9 +869,9 @@ lemma lookup_cap_and_slot_valid_fault:
   done
 
 lemma lookup_cap_and_slot_valid_fault2[wp]:
-  "\<lbrace>invs\<rbrace> lookup_cap_and_slot thread (to_bl p)
-   -,\<lbrace>\<lambda>ft s. valid_fault (ExceptionTypes_A.CapFault p rp ft)\<rbrace>"
-  using lookup_cap_and_slot_valid_fault[of thread "to_bl p"]
+  "\<lbrace>invs\<rbrace> lookup_cap_and_slot thread p
+   -,\<lbrace>\<lambda>ft s. valid_fault (ExceptionTypes_A.CapFault (of_bl p) rp ft)\<rbrace>"
+  using lookup_cap_and_slot_valid_fault
   apply (clarsimp simp add: validE_E_def validE_def valid_def
                   split: sum.splits)
   apply (drule invs_valid_objs)
@@ -1001,6 +1001,14 @@ lemma hoare_vcg_const_imp_lift_E[wp]:
 
 context Syscall_AI begin
 
+(* This lemma will probably be proved as part of the update to liveness coming.
+   When that update comes this can either be deleted or proven and moved to
+   Invariants_AI.*)
+lemma cur_sc_tcb_invs:
+  "invs s \<and> scheduler_action s = resume_cur_thread
+   \<Longrightarrow> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s"
+  sorry
+
 lemma hinv_invs':
   fixes Q :: "'state_ext state \<Rightarrow> bool" and calling blocking
   assumes perform_invocation_Q[wp]:
@@ -1018,30 +1026,30 @@ lemma hinv_invs':
   assumes sts_Q[wp]:
     "\<And>a b. \<lbrace>invs and Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   shows
-    "\<lbrace>invs and Q and ct_active\<rbrace> handle_invocation calling blocking can_donate cptr \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>"
+    "\<lbrace>invs and Q and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+       handle_invocation calling blocking can_donate cptr
+     \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>"
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
                    liftE_liftM_liftME liftME_def bindE_assoc)
-
-  apply (wp syscall_valid sts_invs_minor2 rfk_invs
-            hoare_vcg_all_lift hoare_vcg_disj_lift | simp split del: if_split)+
-  apply (rule_tac Q = "\<lambda>st. st_tcb_at ((=) st) thread and (invs and Q)" in
-         hoare_post_imp)
-  apply (auto elim!: pred_tcb_weakenE st_tcb_ex_cap
-              dest: st_tcb_at_idle_thread
-              simp: st_tcb_at_tcb_at)[1]
-  apply (rule gts_sp)
-(*  apply wp
-  apply (simp add: ct_in_state_def conj_commute conj_left_commute)
-  apply wp
-  apply (rule_tac Q = "\<lambda>rv s. st_tcb_at active thread s \<and> cur_thread s = thread" in
-         hoare_post_imp)
-  apply simp
-  apply (wp sts_st_tcb_at')
-  apply (simp only: simp_thms K_def if_apply_def2)
-  apply (rule hoare_vcg_E_elim)
-  apply (wp | simp add: if_apply_def2)+
-  apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
-  done*) sorry
+  apply (wpsimp wp: syscall_valid sts_invs_minor2 rfk_invs split_del: if_split)+
+         apply (rule_tac Q = "\<lambda>st. st_tcb_at ((=) st) thread and (invs and Q)" in
+                hoare_post_imp)
+          apply (auto elim!: pred_tcb_weakenE st_tcb_ex_cap
+                      dest: st_tcb_at_idle_thread
+                      simp: st_tcb_at_tcb_at)[1]
+         apply (wpsimp wp: gts_sp)+
+       apply (simp add: ct_in_state_def conj_commute conj_left_commute)
+       apply wpsimp
+       apply (rule_tac Q = "\<lambda>rv s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) thread s
+                                   \<and> st_tcb_at active thread s \<and> cur_thread s = thread" in
+              hoare_post_imp)
+        apply simp
+       apply (wpsimp wp: sts_st_tcb_at')
+      apply (simp only: simp_thms K_def if_apply_def2)
+      apply (rule hoare_vcg_E_elim)
+       apply (wpsimp wp: decode_inv_inv simp: if_apply_def2)+
+  apply (auto simp: ct_in_state_def cur_sc_tcb_invs elim: st_tcb_ex_cap)
+  done
 
 lemmas hinv_invs[wp] = hinv_invs'
   [where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI,simplified]
@@ -1074,7 +1082,10 @@ lemma hs_tcb_on_err:
   apply (wpsimp | rule hoare_strengthen_post [OF hinv_tcb])+
   done
 
-lemma hs_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_send blocking \<lbrace>\<lambda>r. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+lemma hs_invs[wp]:
+  "\<lbrace>invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+     handle_send blocking
+   \<lbrace>\<lambda>r. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (rule validE_valid)
   apply (simp add: handle_send_def whenE_def)
   apply (wp | simp add: ct_in_state_def tcb_at_invs)+
@@ -1249,7 +1260,9 @@ lemma do_reply_transfer_nonz_cap:
       | rule conjI)+
 
 lemma hc_invs[wp]:
-  "\<lbrace>invs and ct_active\<rbrace> handle_call \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  "\<lbrace>invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+     handle_call
+   \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   by (simp add: handle_call_def) wpsimp
 
 end

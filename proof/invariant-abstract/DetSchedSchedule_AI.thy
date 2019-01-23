@@ -9485,10 +9485,6 @@ lemma handle_invocation_valid_sched:
          apply ((clarsimp simp: st_tcb_at_def obj_at_def)+)[2]
        apply (wp ct_in_state_set set_thread_state_runnable_valid_sched set_thread_state_ct_valid_ep_q_inv
             hoare_vcg_E_conj | simp add: split_def if_apply_def2 split del: if_split)+
-      apply (simp add: validE_E_def)
-      apply (rule hoare_post_impErr)
-        apply (rule lookup_cap_and_slot_valid_fault, simp+)
-       apply wpsimp+
   apply (auto simp: ct_in_state_def valid_sched_def ct_not_in_q_def valid_ready_qs_def not_queued_def runnable_eq_active elim: st_tcb_ex_cap)
   done
 end
