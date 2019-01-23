@@ -657,6 +657,13 @@ lemma diminished_IRQHandler [simp]:
          auto simp: diminished_def cap_rights_update_def mask_cap_def)
   done
 
+lemma ex_cte_cap_wp_to_cnode_real_cte:
+  "ex_cte_cap_wp_to is_cnode_cap slot s \<Longrightarrow> valid_objs s \<Longrightarrow> real_cte_at slot s"
+  apply (clarsimp simp add: ex_cte_cap_wp_to_def cte_wp_at_caps_of_state)
+  apply (frule (1) caps_of_state_valid_cap)
+  apply (case_tac cap; clarsimp simp: valid_cap_simps)
+  done
+
 lemma cnode_diminished_strg:
   "(\<exists>ptr. cte_wp_at (diminished cap) ptr s)
     \<longrightarrow> (is_cnode_cap cap \<longrightarrow> (\<forall>ref \<in> cte_refs cap (interrupt_irq_node s).
@@ -666,10 +673,7 @@ lemma cnode_diminished_strg:
   apply (clarsimp simp: diminished_def)
   done
 
-
-lemma invs_valid_arch_caps[elim!]:
-  "invs s \<Longrightarrow> valid_arch_caps s"
-  by (clarsimp simp: invs_def valid_state_def)
+declare invs_valid_arch_capsI[elim!]
 
 context Syscall_AI begin
 
@@ -677,54 +681,30 @@ lemma decode_inv_wf[wp]:
   "\<lbrace>valid_cap cap and invs and cte_wp_at (diminished cap) slot
            and ex_cte_cap_to slot
            and (\<lambda>s::det_ext state. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)
-           and (\<lambda>s. \<forall>r\<in>cte_refs cap (interrupt_irq_node s). ex_cte_cap_to r s)
            and (\<lambda>s. \<forall>cap \<in> set excaps. \<forall>r\<in>cte_refs (fst cap) (interrupt_irq_node s). ex_cte_cap_to r s)
            and (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> (fst x))
            and (\<lambda>s. \<forall>x \<in> set excaps. \<forall>r\<in>zobj_refs (fst x). ex_nonz_cap_to r s)
-           and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (diminished (fst x)) (snd x) s)
-           and (\<lambda>s. \<forall>x \<in> set excaps. real_cte_at (snd x) s)
-           and (\<lambda>s. \<forall>x \<in> set excaps. ex_cte_cap_wp_to is_cnode_cap (snd x) s)
-           and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at (interrupt_derived (fst x)) (snd x) s)\<rbrace>
+           and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s)
+           and (\<lambda>s. \<forall>x \<in> set excaps. ex_cte_cap_wp_to is_cnode_cap (snd x) s)\<rbrace>
      decode_invocation label args cap_index slot cap excaps
    \<lbrace>valid_invocation\<rbrace>,-"
-  apply (simp add: decode_invocation_def
-             cong: cap.case_cong if_cong
-                split del: if_split)
-  apply (rule hoare_pre)
-   apply (wp Tcb_AI.decode_tcb_inv_wf decode_domain_inv_wf[simplified split_def]
-             decode_sched_context_inv_wf decode_sched_control_inv_wf | wpc |
-          simp add: o_def uncurry_def split_def del: is_cnode_cap.simps cte_refs.simps)+
+  apply (simp add: decode_invocation_def cong: cap.case_cong if_cong)
+  apply (wpsimp wp: decode_tcb_inv_wf decode_domain_inv_wf[simplified split_def]
+                    decode_sched_context_inv_wf decode_sched_control_inv_wf
+              simp: o_def uncurry_def split_def invs_valid_objs invs_valid_global_refs
+          simp_del: is_cnode_cap.simps cte_refs.simps)
   apply (strengthen cnode_diminished_strg)
-  apply (clarsimp simp: valid_cap_def cte_wp_at_eq_simp is_cap_simps
-             cap_rights_update_def ex_cte_cap_wp_to_weakenE[OF _ TrueI]
-             cte_wp_at_caps_of_state
-           split: cap.splits)
-       apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
-       apply (drule (1) bspec)+
-       apply (subst split_paired_Ex[symmetric], rule exI, simp)
-      apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
-      apply (rule conjI)
-       apply (subst split_paired_Ex[symmetric], rule_tac x=slot in exI, simp)
-      apply clarsimp
-      apply (drule (1) bspec)+
-      apply (subst split_paired_Ex[symmetric], rule exI, simp)
-     apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
-     apply (drule (1) bspec)+
-     apply (clarsimp simp add: ex_cte_cap_wp_to_weakenE[OF _ TrueI])
-(*     apply (rule diminished_no_cap_to_obj_with_diff_ref)
-      apply (fastforce simp add: cte_wp_at_caps_of_state)
-     apply (simp add: invs_valid_arch_caps)
-    apply (simp add: invs_valid_objs invs_valid_global_refs)
-   apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
-   apply (rule conjI)
-    apply clarsimp
-    apply (drule (1) bspec)+
-    apply (subst split_paired_Ex[symmetric], rule exI, simp)
-   apply (clarsimp simp add: diminished_def mask_cap_def cap_rights_update_def
-                   split: cap.splits)
-  apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
-  apply (subst split_paired_Ex[symmetric], rule exI, simp)
-  done*) sorry
+  apply (cases slot)
+  apply (rule_tac V="\<forall>x \<in> set excaps. real_cte_at (snd x) s
+                                      \<and> cte_wp_at (diminished (fst x)) (snd x) s"
+           in revcut_rl
+         , fastforce elim: cte_wp_at_eq_diminishedE valid_cap_wellformed
+                           ex_cte_cap_wp_to_cnode_real_cte)
+  apply (intro conjI allI impI ballI
+         ; clarsimp simp: cte_wp_at_eq_simp valid_cap_def[of cap] valid_cap_simps
+         ; fastforce elim: cte_wp_at_weakenE ex_cte_cap_wp_to_weakenE
+                   intro!: diminished_no_cap_to_obj_with_diff_ref)
+  done
 
 end
 
@@ -943,28 +923,35 @@ lemma lec_derived[wp]:
       apply (wp | simp)+
   done
 
-lemma lookup_cap_and_slot_dimished [wp]:
-  "\<lbrace>valid_objs\<rbrace>
-    lookup_cap_and_slot thread cptr
-   \<lbrace>\<lambda>x. cte_wp_at (diminished (fst x)) (snd x)\<rbrace>, -"
+lemma lookup_cap_and_slot_cte_wp_at_P:
+  assumes P: "\<And>s ref cap. P s \<Longrightarrow> caps_of_state s ref = Some cap \<Longrightarrow> Q cap cap"
+  shows "\<lbrace>P\<rbrace> lookup_cap_and_slot thread cptr \<lbrace>\<lambda>x. cte_wp_at (Q (fst x)) (snd x)\<rbrace>, -"
   apply (simp add: lookup_cap_and_slot_def split_def)
   apply (wp get_cap_wp)
-   apply (rule hoare_post_imp_R [where Q'="\<lambda>_. valid_objs"])
-    apply wp
-   apply simp
-   apply (clarsimp simp: cte_wp_at_caps_of_state diminished_def)
-   apply (rule exI, rule cap_mask_UNIV[symmetric])
-   apply (drule (1) caps_of_state_valid_cap, simp add: valid_cap_def2)
+   apply (rule hoare_post_imp_R [where Q'="\<lambda>_. P"], wp)
+   apply (clarsimp simp: cte_wp_at_caps_of_state P)
   apply simp
   done
 
-lemma lookup_extra_caps_diminished [wp]:
-  "\<lbrace>valid_objs\<rbrace> lookup_extra_caps thread xb info
-  \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. cte_wp_at (diminished (fst x)) (snd x) s)\<rbrace>,-"
-  apply (simp add: lookup_extra_caps_def)
-  apply (wp mapME_set|simp)+
-  done
+lemma lookup_cap_and_slot_eq [wp]:
+  "\<lbrace>\<top>\<rbrace> lookup_cap_and_slot thread cptr \<lbrace>\<lambda>rv. cte_wp_at ((=) (fst rv)) (snd rv)\<rbrace>, -"
+  by (simp add: lookup_cap_and_slot_cte_wp_at_P)
 
+lemma lookup_cap_and_slot_diminished [wp]:
+  "\<lbrace>valid_objs\<rbrace> lookup_cap_and_slot thread cptr \<lbrace>\<lambda>x. cte_wp_at (diminished (fst x)) (snd x)\<rbrace>, -"
+  by (intro lookup_cap_and_slot_cte_wp_at_P
+            wellformed_cap_eq_diminished valid_cap_wellformed
+            caps_of_state_valid_cap)
+
+lemma lookup_extra_caps_eq [wp]:
+  "\<lbrace>\<top>\<rbrace> lookup_extra_caps thread xb info \<lbrace>\<lambda>rv s. \<forall>x\<in>set rv. cte_wp_at ((=) (fst x)) (snd x) s\<rbrace>,-"
+  by (wpsimp simp: lookup_extra_caps_def wp: mapME_set)
+
+lemma lookup_extra_caps_diminished [wp]:
+  "\<lbrace>valid_objs\<rbrace>
+    lookup_extra_caps thread xb info
+   \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. cte_wp_at (diminished (fst x)) (snd x) s)\<rbrace>,-"
+  by (wpsimp simp: lookup_extra_caps_def wp: mapME_set)
 
 (*FIXME: move to NonDetMonadVCG.valid_validE_R *)
 lemma valid_validE_R_gen:

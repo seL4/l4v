@@ -31,6 +31,10 @@ where
  "interrupt_derived cap cap' \<equiv> \<not> is_untyped_cap cap \<longrightarrow> cap_master_cap cap = cap_master_cap cap'
                                     \<and> (cap_badge cap', cap_badge cap) \<in> capBadge_ordering False"
 
+lemma interrupt_derived_trivial[simp]:
+  "interrupt_derived cap cap"
+  by (simp add: interrupt_derived_def)
+
 primrec
   irq_handler_inv_valid :: "irq_handler_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where

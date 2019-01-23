@@ -4264,4 +4264,25 @@ lemma valid_sched_object_reply_at:
   apply (fastforce simp: obj_at_def)
   done
 
+lemma valid_cap_wellformed:
+  "s \<turnstile> cap \<Longrightarrow> wellformed_cap cap"
+  by (simp add: valid_cap_def2)
+
+lemma wellformed_cap_eq_diminished:
+  "wellformed_cap cap \<Longrightarrow> diminished cap cap"
+  by (auto simp: diminished_def mask_cap_def intro: exI[of _ UNIV])
+
+lemma cte_wp_at_eq_diminishedE:
+  "cte_wp_at ((=) cap) slot s \<Longrightarrow> wellformed_cap cap \<Longrightarrow> cte_wp_at (diminished cap) slot s"
+  by (auto elim: cte_wp_at_weakenE wellformed_cap_eq_diminished)
+
+lemma diminished_cap_simps[simp]:
+  "diminished IRQControlCap = (=) IRQControlCap"
+  "diminished (CNodeCap r sz guard) = (=) (CNodeCap r sz guard)"
+  "diminished (ThreadCap ref) = (=) (ThreadCap ref)"
+  by (intro ext iffI
+      ; rename_tac cap
+      ; case_tac cap
+      ; clarsimp simp: diminished_def mask_cap_def cap_rights_update_def)+
+
 end

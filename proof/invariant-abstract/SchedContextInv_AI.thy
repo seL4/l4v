@@ -1777,8 +1777,6 @@ lemma decode_sched_control_inv_inv:
 
 lemma decode_sched_context_inv_wf:
   "\<lbrace>invs and sc_at sc_ptr and ex_nonz_cap_to sc_ptr and
-     (\<lambda>s. st_tcb_at ((=) Restart) (cur_thread s) s) and
-     (\<lambda>s. ex_nonz_cap_to (cur_thread s) s) and
      (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x) and
      (\<lambda>s. \<forall>x\<in>set excaps. \<forall>r\<in>zobj_refs x. ex_nonz_cap_to r s)\<rbrace>
      decode_sched_context_invocation label sc_ptr excaps args
