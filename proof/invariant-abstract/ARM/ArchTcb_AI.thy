@@ -555,7 +555,7 @@ crunch pred_tcb_at: switch_to_thread "pred_tcb_at proj P t"
 
 crunch typ_at[wp]: set_priority "\<lambda>s. P (typ_at T p s)"
   (wp: maybeM_inv hoare_drop_imps)
-crunch typ_at[wp]: invoke_tcb "\<lambda>s::det_state. P (typ_at T p s)"
+crunch typ_at[wp]: invoke_tcb "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imps mapM_x_wp' check_cap_inv maybeM_inv
      simp: crunch_simps)
 
