@@ -237,8 +237,6 @@ where
   "handle_invocation calling blocking can_donate cptr \<equiv> doE
     thread \<leftarrow> liftE $ gets cur_thread;
     info \<leftarrow> without_preemption $ get_message_info thread;
-    ptr \<leftarrow> without_preemption $ liftM data_to_cptr $
-          as_user thread $ getRegister cap_register;
     syscall
       (doE
          (cap, slot) \<leftarrow> cap_fault_on_failure (of_bl cptr) False $
