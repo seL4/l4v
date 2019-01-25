@@ -57,8 +57,9 @@ val _ =
     (Parse.syntax_mode -- Scan.option Parse_Spec.constdecl -- Parse.prop -- Parse.for_fixes
       >> (fn (((mode, decl), spec), params) => fn restricted => fn lthy =>
            lthy
+           |> Local_Theory.open_target |> snd
            |> Specification.abbreviation_cmd mode decl params spec restricted
-           |> Local_Theory.reset (* commit new abbrev. name into theory context *)
+           |> Local_Theory.close_target (* commit new abbrev. name *)
            |> revert_abbrev (mode, name_of spec lthy)));
 
 end
