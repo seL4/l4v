@@ -545,7 +545,6 @@ lemma reset_cap_asid_cap_has_object:
 lemma cap_object_reset_cap_asid:
   "\<lbrakk>reset_cap_asid cap = reset_cap_asid cap'\<rbrakk> \<Longrightarrow> cap_object cap = cap_object cap'"
   apply (case_tac cap',simp_all add:reset_cap_asid_def split:cdl_cap.split_asm)
-  apply (simp add:cap_object_def cap_has_object_def)+
   done
 
 lemma cap_type_reset_cap_asid[simp]:

@@ -146,6 +146,23 @@ where
   "object_empty_slots_empty spec t spec_object_id \<equiv>
   object_initialised_general spec t object_default_state sep_map_E spec_object_id"
 
+definition slots_in_object_empty ::
+  "(cdl_cap \<Rightarrow> bool) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow>
+   (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> sep_pred" where
+  "slots_in_object_empty P obj_id spec t \<equiv>
+     sep_map_set_conj (object_empty spec t)
+                      {obj. \<exists>slot. slot \<in> dom (slots_of obj_id spec)
+                                   \<and> cap_at P (obj_id, slot) spec
+                                   \<and> obj = cap_ref_object (obj_id, slot) spec}"
+
+definition slots_in_object_init ::
+  "(cdl_cap \<Rightarrow> bool) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow>
+   (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> sep_pred" where
+  "slots_in_object_init P obj_id spec t \<equiv>
+     sep_map_set_conj (object_initialised spec t)
+                      {obj. \<exists>slot. slot \<in> dom (slots_of obj_id spec)
+                                   \<and> cap_at P (obj_id, slot) spec
+                                   \<and> obj = cap_ref_object (obj_id, slot) spec}"
 
 (**********************************************
  * Predicates about CNodes being initialised. *
@@ -435,6 +452,16 @@ lemma cap_transform_nullcap [simp]:
   "cap_transform t NullCap = NullCap"
   by (clarsimp simp: cap_transform_def cap_has_object_def
                      update_cap_object_def)
+
+lemma cap_transform_pt_simp [simp]:
+  "cap_transform t (PageTableCap x y z) = PageTableCap (the (t x)) y z"
+  by (clarsimp simp: option.the_def cap_transform_def update_cap_object_def cap_object_def
+               split: option.splits)
+
+lemma cap_transform_frame [simp]:
+  "cap_transform t (FrameCap x ptr rights n y z) = FrameCap x (the (t ptr)) rights n y z"
+  by (clarsimp simp: option.the_def cap_transform_def update_cap_object_def cap_object_def
+               split: option.splits)
 
 lemma cap_type_cap_transform [simp]:
   "cap_type (cap_transform t cap) = cap_type cap"
@@ -1374,5 +1401,11 @@ lemma object_fields_empty_half_initialised:
   "cnode_at obj_id spec
   \<Longrightarrow> cnode_fields_half_initialised spec t obj_id = object_fields_empty spec t obj_id"
   by (clarsimp simp: cnode_fields_half_initialised_object_fields_initialised cnode_fields_empty_initialised)
+
+lemma object_default_state_frame [simp]:
+  "is_frame object \<Longrightarrow> object_default_state object = object"
+  by (clarsimp simp: object_default_state_def default_object_def
+                     object_type_is_object object_type_def
+              split: cdl_object.splits)
 
 end

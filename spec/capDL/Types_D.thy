@@ -354,7 +354,7 @@ where
      then (THE c. c \<in> cap_objects cap)
      else undefined"
 
-lemma cap_object_simps:
+lemma cap_object_simps[simp]:
   "cap_object (IOPageTableCap x) = x"
   "cap_object (IOSpaceCap x) = x"
   "cap_object (IOPortsCap x a) = x"

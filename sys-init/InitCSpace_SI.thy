@@ -14,6 +14,7 @@ imports
   ObjectInitialised_SI
   RootTask_SI
   SysInit_SI
+  Mapped_Separating_Conjunction
 begin
 
 (****************************
@@ -1740,10 +1741,6 @@ lemma set_take_add:
    set (take i zs) \<union> set (take j (drop i zs)) = set (take k zs)"
   by (metis set_append take_add)
 
-lemma sep_map_set_conj_set_cong:
-  "\<lbrakk>sep_map_set_conj f xs s; xs = ys\<rbrakk> \<Longrightarrow> sep_map_set_conj f ys s"
-  by simp
-
 lemma wellformed_no_dev:
   "well_formed spec \<Longrightarrow>(\<forall>obj_id. cnode_at obj_id spec \<longrightarrow>
                        (\<forall>slot\<in>dom (slots_of obj_id spec). cap_at (\<lambda>c. is_device_cap c = False) (obj_id, slot) spec))"
@@ -1800,7 +1797,7 @@ lemma init_cspace_sep:
                    and irqs="used_irq_list spec"], simp+)
   apply (subst (asm) sep.prod.union_disjoint [symmetric], simp+)
    apply (metis (no_types) distinct_append distinct_take_strg inf_sup_aci(1) take_add)
-  apply (erule sep_map_set_conj_set_cong)
+  apply (erule sep_map_set_conj_set_cong[THEN fun_cong, THEN iffD1, rotated])
   apply clarsimp
   apply (subst Un_commute, subst set_take_add, (simp add: add.commute)+)
   done

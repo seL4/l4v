@@ -432,7 +432,6 @@ lemma tcb_configure_post:
   apply (clarsimp simp: si_objects_def)
   apply (clarsimp simp: sep_conj_exists sep_conj_assoc)
   apply (clarsimp simp: si_cap_at_def sep_conj_assoc sep_conj_exists)
-  apply (clarsimp simp: object_at_def)
   apply (subst tcb_half_decomp' [where obj_id=obj_id and k_obj_id=k_obj_id],
          (assumption|simp)+)
   apply (subst (asm) sep_map_f_eq_tcb_fault_endpoint, assumption+)

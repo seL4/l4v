@@ -27,15 +27,6 @@ where
     return (untyped_list, free_slots)
   od"
 
-(* Currently, objects are created in any order.
-   Later versions could create untypes before their children and use the untyped_covers.
-   A refinement will create bigger ones first to remove internal fragmentation. *)
-definition
-  parse_spec :: "cdl_state \<Rightarrow> cdl_object_id list \<Rightarrow> unit u_monad"
-where
-  "parse_spec spec obj_ids \<equiv>
-     assert (set obj_ids = dom (cdl_objects spec) \<and> distinct obj_ids)"
-
 (* Create a new object in the next free cnode slot using a given untyped.
    Return whether or not the operation fails. *)
 definition
@@ -185,7 +176,7 @@ definition duplicate_caps :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarro
                                         \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) u_monad"
 where
   "duplicate_caps spec orig_caps obj_ids free_slots \<equiv> do
-    obj_ids' \<leftarrow> return [obj_id \<leftarrow> obj_ids. cnode_at obj_id spec \<or> tcb_at obj_id spec];
+    obj_ids' \<leftarrow> return [obj_id \<leftarrow> obj_ids. cnode_or_tcb_at obj_id spec];
     assert (length obj_ids' \<le> length free_slots);
     mapM_x (duplicate_cap spec orig_caps) (zip obj_ids' free_slots);
     return $ map_of $ zip obj_ids' free_slots
@@ -266,58 +257,44 @@ where
     mapM_x (set_asid spec orig_caps) pd_ids
   od"
 
-(* Map the right cap into the slot of a page directory or page table. *)
-definition map_page :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
-                             \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> word32 \<Rightarrow> unit u_monad"
-where
-  "map_page spec orig_caps page_id pd_id rights vaddr \<equiv> do
+(* Map a page into a page table or page directory *)
+definition map_page ::
+  "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
+   \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> word32 \<Rightarrow> cdl_cptr \<Rightarrow> unit u_monad"
+  where
+  "map_page spec orig_caps page_id pd_id rights vaddr free_cptr \<equiv> do
     cdl_page  \<leftarrow> assert_opt $ opt_object page_id spec;
     sel4_page \<leftarrow> assert_opt $ orig_caps page_id;
     sel4_pd   \<leftarrow> assert_opt $ orig_caps pd_id;
-
     vmattribs \<leftarrow> assert_opt $ opt_vmattribs cdl_page;
-
-    if (pt_at page_id spec) then
-      seL4_PageTable_Map sel4_page sel4_pd vaddr vmattribs
-    else if (frame_at page_id spec) then
-      seL4_Page_Map sel4_page sel4_pd vaddr rights vmattribs
-    else
-      fail;
-     return ()
+    assert (frame_at page_id spec);
+    \<comment> \<open>Copy the frame cap into a new slot for mapping, this enables shared frames\<close>
+    duplicate_cap spec orig_caps (page_id, free_cptr);
+    seL4_Page_Map free_cptr sel4_pd vaddr rights vmattribs;
+    return ()
   od"
 
-(* Maps a page directory slot (and all its contents if it's a page table). *)
-definition map_page_directory_slot :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option)
-                                    \<Rightarrow> cdl_object_id\<Rightarrow> cdl_cnode_index \<Rightarrow> unit u_monad"
-where
-  "map_page_directory_slot spec orig_caps pd_id pd_slot \<equiv> do
-    page_cap    \<leftarrow> assert_opt $ opt_cap (pd_id, pd_slot) spec;
-    page_id     \<leftarrow> return $ cap_object page_cap;
-
-    (* The page table's virtual address is given by the number of slots and how much memory each maps.
-       Each page directory slot maps 10+12 bits of memory (by the page table and page respectively). *)
-    page_vaddr  \<leftarrow> return $ of_nat pd_slot << (pt_size + small_frame_size);
-    page_rights \<leftarrow> return (cap_rights page_cap);
-
-    when (page_cap \<noteq> NullCap)
-         (map_page spec orig_caps page_id pd_id page_rights page_vaddr)
-
+(* Map a page table into a page directory *)
+definition map_page_table ::
+  "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
+   \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> word32 \<Rightarrow> unit u_monad"
+  where
+  "map_page_table spec orig_caps page_id pd_id rights vaddr \<equiv> do
+    cdl_page  \<leftarrow> assert_opt $ opt_object page_id spec;
+    sel4_page \<leftarrow> assert_opt $ orig_caps page_id;
+    sel4_pd   \<leftarrow> assert_opt $ orig_caps pd_id;
+    vmattribs \<leftarrow> assert_opt $ opt_vmattribs cdl_page;
+    assert (pt_at page_id spec);
+    seL4_PageTable_Map sel4_page sel4_pd vaddr vmattribs;
+    return ()
   od"
 
-(* Maps a page directory and all its contents. *)
-definition map_page_directory :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
-                                                                                   \<Rightarrow> unit u_monad"
-where
-  "map_page_directory spec orig_caps pd_id \<equiv> do
-    pd_slots \<leftarrow> return $ slots_of_list spec pd_id;
-    mapM_x (map_page_directory_slot spec orig_caps pd_id) pd_slots
-  od"
-
-(* Maps a page directory slot. *)
-definition map_page_table_slot :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
-                                      \<Rightarrow> cdl_object_id \<Rightarrow> word32 \<Rightarrow> cdl_cnode_index \<Rightarrow> unit u_monad"
-where
-  "map_page_table_slot spec orig_caps pd_id pt_id pt_vaddr pt_slot \<equiv> do
+(* Map a page table slot *)
+definition map_page_table_slot ::
+  "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
+   \<Rightarrow> cdl_object_id \<Rightarrow> word32 \<Rightarrow> (cdl_cap_ref \<Rightarrow> cdl_cptr) \<Rightarrow> cdl_cnode_index \<Rightarrow> unit u_monad"
+  where
+  "map_page_table_slot spec orig_caps pd_id pt_id pt_vaddr free_cptr pt_slot  \<equiv> do
     frame_cap  \<leftarrow> assert_opt $ opt_cap (pt_id, pt_slot) spec;
     page       \<leftarrow> return $ cap_object frame_cap;
 
@@ -326,43 +303,94 @@ where
        Each page stores 12 bits of memory. *)
     page_vaddr   \<leftarrow> return $ pt_vaddr + (of_nat pt_slot << small_frame_size);
     page_rights  \<leftarrow> return (cap_rights frame_cap);
-    when (frame_cap \<noteq> NullCap)
-      (map_page spec orig_caps page pd_id page_rights page_vaddr)
+    if frame_cap \<noteq> NullCap then
+      do cptr  \<leftarrow> return $ free_cptr (pt_id, pt_slot);
+         map_page spec orig_caps page pd_id page_rights page_vaddr cptr
+      od
+    else
+      return ()
   od"
 
-(* Maps a page table's slots. *)
-definition map_page_table_slots :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
-                                                                  \<Rightarrow> cdl_cnode_index \<Rightarrow> unit u_monad"
-where
-  "map_page_table_slots spec orig_caps pd_id pd_slot \<equiv> do
+(* Map a page directory slot (and all its contents if it points to a page table) *)
+definition map_page_directory_slot ::
+  "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option)
+   \<Rightarrow> cdl_object_id \<Rightarrow> (cdl_cap_ref \<Rightarrow> cdl_cptr) \<Rightarrow> cdl_cnode_index \<Rightarrow> unit u_monad"
+  where
+  "map_page_directory_slot spec orig_caps pd_id free_cptrs pd_slot \<equiv> do
     page_cap    \<leftarrow> assert_opt $ opt_cap (pd_id, pd_slot) spec;
-    page        \<leftarrow> return $ cap_object page_cap;
-    page_slots  \<leftarrow> return $ slots_of_list spec page;
+    page_id     \<leftarrow> return $ cap_object page_cap;
 
-    (* The page's virtual address is given by the number of slots and how much memory each maps.
+    (* The page table's virtual address is given by the number of slots and how much memory each maps.
        Each page directory slot maps 10+12 bits of memory (by the page table and page respectively). *)
     page_vaddr  \<leftarrow> return $ of_nat pd_slot << (pt_size + small_frame_size);
+    page_rights \<leftarrow> return (cap_rights page_cap);
 
-    when (fake_pt_cap_at (pd_id, pd_slot) spec)
-      (mapM_x (map_page_table_slot spec orig_caps pd_id page page_vaddr) page_slots)
+    if pt_at page_id spec then
+      do
+        map_page_table spec orig_caps page_id pd_id page_rights page_vaddr;
+        page_slots \<leftarrow> return $ slots_of_list spec page_id;
+        mapM_x (map_page_table_slot spec orig_caps pd_id page_id page_vaddr free_cptrs)
+               [slot <- page_slots. cap_at ((\<noteq>) NullCap) (page_id, slot) spec]
+      od
+    else if frame_at page_id spec then
+      do
+        cptr \<leftarrow> return $ free_cptrs (pd_id, pd_slot);
+        map_page spec orig_caps page_id pd_id page_rights page_vaddr cptr
+      od
+    else
+      return ()
   od"
 
-(* Maps a page directory and all its contents. *)
-definition map_page_directory_page_tables :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
-                                                                                               \<Rightarrow> unit u_monad"
-where
-  "map_page_directory_page_tables spec orig_caps pd_id \<equiv> do
+(* Map a page directory and all its contents *)
+definition map_page_directory ::
+  "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option)
+   \<Rightarrow> (cdl_cap_ref \<Rightarrow> cdl_cptr) \<Rightarrow> cdl_object_id \<Rightarrow> unit u_monad"
+  where
+  "map_page_directory spec orig_caps free_cptrs pd_id \<equiv> do
     pd_slots \<leftarrow> return $ slots_of_list spec pd_id;
-    mapM_x (map_page_table_slots spec orig_caps pd_id) pd_slots
+    mapM_x (map_page_directory_slot spec orig_caps pd_id free_cptrs)
+           [pd_slot <- pd_slots. cap_at (\<lambda>cap. cap \<noteq> NullCap
+                                 \<and> frame_at (cap_object cap) spec) (pd_id, pd_slot) spec];
+    mapM_x (map_page_directory_slot spec orig_caps pd_id free_cptrs)
+           [pd_slot <- pd_slots. cap_at (\<lambda>cap. cap \<noteq> NullCap
+                                 \<and> pt_at (cap_object cap) spec) (pd_id, pd_slot) spec]
   od"
+
+(* Get a list of all the (object_id, slot) pairs contained within a page directory
+   and its child page tables which contain frame caps *)
+definition get_frame_caps :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow> (cdl_object_id \<times> nat) list" where
+ "get_frame_caps spec pd_id \<equiv> do {
+    pd_slot <- slots_of_list spec pd_id;
+    obj_cap <- case_option [] (\<lambda>x. [x]) $ opt_cap (pd_id, pd_slot) spec;
+    let obj_id = cap_object obj_cap;
+    if frame_at obj_id spec then
+      [(pd_id, pd_slot)]
+    else
+      \<comment> \<open>If the slot contains a page table cap, collect all its slots that contain frames\<close>
+      map (Pair obj_id) o filter (\<lambda>slot. cap_at ((\<noteq>) NullCap) (obj_id, slot) spec) $
+        slots_of_list spec obj_id
+  }"
+
+(* Construct a function to assign each frame cap a free cptr, mapping all other slots to 0 *)
+definition make_frame_cap_map ::
+  "cdl_object_id list \<Rightarrow> word32 list \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id \<times> nat \<Rightarrow> word32"
+  where
+  "make_frame_cap_map obj_ids free_cptrs spec ref \<equiv>
+     case_option 0 id
+       (map_of (zip ([obj_id \<leftarrow> obj_ids. pd_at obj_id spec] \<bind> get_frame_caps spec) free_cptrs) ref)"
 
 (* Maps page directories and all their contents. *)
-definition init_vspace :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id list \<Rightarrow> unit u_monad"
+definition init_vspace ::
+  "cdl_state \<Rightarrow>
+  (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow>
+  cdl_object_id list \<Rightarrow>
+  cdl_cptr list \<Rightarrow>
+  unit u_monad"
 where
-  "init_vspace spec orig_caps obj_ids \<equiv> do
+  "init_vspace spec orig_caps obj_ids free_cptrs \<equiv> do
     pd_ids \<leftarrow> return [obj_id \<leftarrow> obj_ids. pd_at obj_id spec];
-    mapM_x (map_page_directory spec orig_caps) pd_ids;
-    mapM_x (map_page_directory_page_tables spec orig_caps) pd_ids
+    cptr_map \<leftarrow> return $ make_frame_cap_map obj_ids free_cptrs spec;
+    mapM_x (map_page_directory spec orig_caps cptr_map) pd_ids
   od"
 
 (**************************
@@ -480,7 +508,7 @@ where
 
     init_irqs     spec orig_caps irq_caps;
     init_pd_asids spec orig_caps obj_ids;
-    init_vspace   spec orig_caps obj_ids;
+    init_vspace   spec orig_caps obj_ids free_cptrs;
     init_tcbs     spec orig_caps obj_ids;
     init_cspace   spec orig_caps dup_caps irq_caps obj_ids;
     start_threads spec dup_caps obj_ids

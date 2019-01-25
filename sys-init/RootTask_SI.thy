@@ -12,7 +12,7 @@
  * The layout of the capability space and other parts of the system-initialiser.
  *)
 theory RootTask_SI
-imports WellFormed_SI
+imports WellFormed_SI SysInit_SI
 begin
 
 (******************************************************************
@@ -506,6 +506,60 @@ lemma valid_si_caps_at_si_cap_at:
     apply (clarsimp simp: sep_conj_ac)+
   done
 
+(*******************************************************
+ * Frames have been duplicated. *
+ *******************************************************)
+
+abbreviation (input)
+  "lookup_obj obj_id slot P s \<equiv> \<exists>cap. opt_cap (obj_id, slot) s = Some cap
+                                      \<and> cap \<noteq> NullCap
+                                      \<and> P (cap_object cap) s"
+abbreviation "get_obj obj_id slot spec \<equiv> (cap_object o the) (opt_cap (obj_id, slot) spec)"
+abbreviation "ref_obj spec obj_id slot \<equiv> cap_ref_object (obj_id, slot) spec"
+abbreviation "real_frame_cap_of dev ptr rights n t \<equiv> FrameCap dev ((the o t) ptr) rights n Real None"
+abbreviation (input) "the_cap spec pt_id pt_slot \<equiv> the (opt_cap (pt_id, pt_slot) spec)"
+
+definition conjure_real_frame_cap ::
+  "cdl_cap \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_cap"
+  where
+  "conjure_real_frame_cap cap t \<equiv>
+    case cap of FrameCap _ ptr _ n _ _ \<Rightarrow> real_frame_cap_of False ptr vm_read_write n t | _ \<Rightarrow> cap"
+
+definition frame_duplicates_empty ::
+  "(cdl_object_id \<times> nat \<Rightarrow> word32) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> (sep_state \<Rightarrow> bool)"
+  where
+  "frame_duplicates_empty cptr_map pd_id spec \<equiv>
+   sep_map_set_conj
+    (\<lambda>x. let pt_id = get_obj pd_id x spec in
+         sep_map_set_conj (\<lambda>y. (si_cnode_id, unat $ cptr_map (pt_id, y)) \<mapsto>c NullCap)
+         {slot \<in> dom (slots_of pt_id spec). cap_at ((\<noteq>) NullCap) (pt_id, slot) spec})
+    {slot \<in> dom (slots_of pd_id spec). cap_at (\<lambda>cap. cap \<noteq> NullCap \<and> pt_at (cap_object cap) spec)
+                                              (pd_id, slot) spec} \<and>*
+   sep_map_set_conj
+     (\<lambda>x. let frame_id = get_obj pd_id x spec in
+          (si_cnode_id, unat $ cptr_map (pd_id, x)) \<mapsto>c NullCap)
+     {slot \<in> dom (slots_of pd_id spec). cap_at (\<lambda>cap. cap \<noteq> NullCap \<and> frame_at (cap_object cap) spec)
+                                               (pd_id, slot) spec}"
+
+definition frame_duplicates_copied ::
+  "(cdl_object_id \<times> nat \<Rightarrow> word32) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state
+   \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> (sep_state \<Rightarrow> bool)"
+  where
+  "frame_duplicates_copied cptr_map pd_id spec t \<equiv>
+   sep_map_set_conj
+    (\<lambda>x. let pt_id = get_obj pd_id x spec in
+         sep_map_set_conj (\<lambda>y. (si_cnode_id, unat $ cptr_map (pt_id, y)) \<mapsto>c
+                                 conjure_real_frame_cap (the_cap spec pt_id y) t)
+         {slot \<in> dom (slots_of pt_id spec). cap_at ((\<noteq>) NullCap) (pt_id, slot) spec})
+    {slot \<in> dom (slots_of pd_id spec). cap_at (\<lambda>cap. cap \<noteq> NullCap \<and> pt_at (cap_object cap) spec)
+                                              (pd_id, slot) spec} \<and>*
+   sep_map_set_conj
+     (\<lambda>x. let frame_id = get_obj pd_id x spec in
+          (si_cnode_id, unat $ cptr_map (pd_id, x)) \<mapsto>c
+            conjure_real_frame_cap (the_cap spec pd_id x) t)
+     {slot \<in> dom (slots_of pd_id spec). cap_at (\<lambda>cap. cap \<noteq> NullCap \<and> frame_at (cap_object cap) spec)
+                                               (pd_id, slot) spec}"
+
 (**********************************************************
  * The pre and post conditions of the system initialiser. *
  **********************************************************)
@@ -515,13 +569,20 @@ definition
   valid_boot_info
 where
   "valid_boot_info bootinfo spec \<equiv> \<lambda>s.
-  \<exists>untyped_caps fstart fend ustart uend.
+  \<exists>untyped_caps fstart fend ustart uend obj_ids.
   ((\<And>*(cptr, cap) \<in> set (zip [ustart .e. uend - 1] untyped_caps). (si_cnode_id, unat cptr) \<mapsto>c cap)  \<and>*
    (\<And>* cptr \<in> set [fstart .e. fend - 1]. (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
    (\<And>* obj_id\<in>(\<Union>cap\<in>set untyped_caps. cap_free_ids cap). obj_id \<mapsto>o Untyped) \<and>*
-    si_objects \<and>* si_irq_nodes spec) s \<and>
+   (SETSEPCONJ pd_id | pd_at pd_id spec.
+     frame_duplicates_empty (make_frame_cap_map obj_ids
+                              (drop (card (dom (cdl_objects spec))) [fstart .e. fend - 1]) spec)
+                            pd_id spec) \<and>*
+   si_objects \<and>*
+   si_irq_nodes spec) s \<and>
+   obj_ids = sorted_list_of_set (dom (cdl_objects spec)) \<and>
    card (dom (cdl_objects spec)) +
-   card {obj_id. cnode_or_tcb_at obj_id spec} \<le> unat fend - unat fstart \<and>
+   card {obj_id. cnode_or_tcb_at obj_id spec} +
+   card (\<Union>(set ` get_frame_caps spec ` {obj. pd_at obj spec})) \<le> unat fend - unat fstart \<and>
    length untyped_caps = unat uend - unat ustart \<and>
    distinct_sets (map cap_free_ids untyped_caps) \<and>
    list_all is_full_untyped_cap untyped_caps \<and>
