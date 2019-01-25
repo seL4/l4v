@@ -270,12 +270,17 @@ lemma invs_A:
                           valid_obj_def valid_vm_rights_def vm_kernel_only_def
                           dom_if_Some cte_level_bits_def)
     apply (rule conjI)
+     apply (simp add: vmsz_aligned_def, rule is_aligned_addrFromPPtr_n;
+            clarsimp simp: is_aligned_def)
+    apply (rule conjI)
      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def
                            valid_cap_def obj_at_def valid_tcb_state_def valid_arch_tcb_def
                            cap_aligned_def word_bits_def valid_ipc_buffer_cap_simps)+
     apply (clarsimp simp: valid_cs_def word_bits_def cte_level_bits_def
                           init_irq_ptrs_all_ineqs valid_tcb_def
                    split: if_split_asm)
+    apply (simp add: vmsz_aligned_def, rule is_aligned_addrFromPPtr_n;
+           clarsimp simp: is_aligned_def)
    apply (rule conjI)
     apply (clarsimp simp: pspace_aligned_def state_defs wf_obj_bits [OF wf_empty_bits]
                           dom_if_Some cte_level_bits_def)

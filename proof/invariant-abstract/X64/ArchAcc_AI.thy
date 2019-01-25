@@ -954,6 +954,10 @@ lemma is_aligned_global_pdpt:
   by (metis valid_arch_state_def valid_global_pdpts_def
             is_aligned_pdpt)
 
+lemma data_at_aligned:
+  "\<lbrakk> data_at sz p s; pspace_aligned s \<rbrakk> \<Longrightarrow> is_aligned p (pageBitsForSize sz)"
+  by (erule pspace_alignedE[where x=p]; fastforce simp: data_at_def obj_at_def)
+
 lemma page_table_pte_at_diffE:
   "\<lbrakk> page_table_at p s; q - p = x << word_size_bits;
     x < 2^(pt_bits - word_size_bits); pspace_aligned s \<rbrakk> \<Longrightarrow> pte_at q s"

@@ -160,7 +160,8 @@ lemma some_get_page_info_umapsD:
       apply (drule_tac x = "(ptrFromPAddr b)" in  bspec )
        apply (fastforce simp: obj_at_def)
       apply (clarsimp dest!: is_aligned_ptrFromPAddrD)
-     apply (intro exI conjI, simp_all add: pageBits_def)[1]
+     apply (frule (1) data_at_aligned)
+     apply (intro exI conjI, simp_all add: pageBits_def is_aligned_ptrFromPAddrD)[1]
     apply (simp add: get_pt_info_def get_pt_entry_def)
    apply clarsimp
    apply (frule obj_bits_data_at)

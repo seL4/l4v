@@ -1450,9 +1450,11 @@ lemma decode_page_table_invocation_wf[wp]:
   apply (thin_tac "Ball S P" for S P)
   apply (clarsimp simp: cte_wp_at_caps_of_state diminished_table_cap_simps valid_vm_rights_def
                            is_arch_update_def cap_master_cap_def is_cap_simps)
+  apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce)
   apply (rule conjI)
-   apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce,
-          clarsimp simp: valid_cap_simps cap_aligned_def order_le_less_trans[OF word_and_le2])
+   apply (clarsimp simp: valid_cap_simps cap_aligned_def is_aligned_addrFromPPtr_n table_size)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_cap_simps cap_aligned_def order_le_less_trans[OF word_and_le2])
   apply (frule empty_table_pt_capI; clarsimp)
   apply (clarsimp simp: vspace_at_asid_def; drule (2) vs_lookup_invs_ref_is_unique; clarsimp)
   apply (clarsimp simp: get_pd_index_def get_pdpt_index_def get_pml4_index_def)
@@ -1485,9 +1487,11 @@ lemma decode_page_directory_invocation_wf[wp]:
   apply (thin_tac "Ball S P" for S P)
   apply (clarsimp simp: cte_wp_at_caps_of_state diminished_table_cap_simps valid_vm_rights_def
                           is_arch_update_def cap_master_cap_def is_cap_simps)
+  apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce)
   apply (rule conjI)
-   apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce,
-            clarsimp simp: wellformed_mapdata_def vmsz_aligned_def valid_cap_def cap_aligned_def
+   apply (clarsimp simp: valid_cap_simps cap_aligned_def is_aligned_addrFromPPtr_n table_size)
+  apply (rule conjI)
+   apply (clarsimp simp:  wellformed_mapdata_def vmsz_aligned_def valid_cap_def cap_aligned_def
                            order_le_less_trans[OF word_and_le2])
   apply (frule valid_table_caps_pdD; clarsimp)
   apply (clarsimp simp: vspace_at_asid_def; drule (2) vs_lookup_invs_ref_is_unique; clarsimp)
@@ -1520,9 +1524,11 @@ lemma decode_pdpt_invocation_wf[wp]:
   apply (thin_tac "Ball S P" for S P)
   apply (clarsimp simp: cte_wp_at_caps_of_state diminished_table_cap_simps valid_vm_rights_def
                          is_arch_update_def cap_master_cap_def is_cap_simps)
+  apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce)
   apply (rule conjI)
-   apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce,
-          clarsimp simp: valid_cap_simps cap_aligned_def order_le_less_trans[OF word_and_le2])
+   apply (clarsimp simp: valid_cap_simps cap_aligned_def is_aligned_addrFromPPtr_n table_size)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_cap_simps cap_aligned_def order_le_less_trans[OF word_and_le2])
   apply (frule valid_table_caps_pdptD; clarsimp)
   apply (clarsimp simp: vspace_at_asid_def; drule (2) vs_lookup_invs_ref_is_unique; clarsimp)
   apply (rule conjI, fastforce simp: pml4e_at_shifting_magic)

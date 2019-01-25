@@ -353,32 +353,32 @@ primrec
 where
   "valid_pte (InvalidPTE) = \<top>"
 | "valid_pte (SmallPagePTE ptr x y) =
-   (\<lambda>s. vmsz_aligned ptr X64SmallPage \<and> data_at X64SmallPage (ptrFromPAddr ptr) s)"
+       data_at X64SmallPage (ptrFromPAddr ptr)"
 
 primrec
   valid_pde :: "pde \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_pde (InvalidPDE) = \<top>"
 | "valid_pde (LargePagePDE ptr x y) =
-   (\<lambda>s. vmsz_aligned ptr X64LargePage \<and> data_at X64LargePage (ptrFromPAddr ptr) s)"
+       data_at X64LargePage (ptrFromPAddr ptr)"
 | "valid_pde (PageTablePDE ptr x z) =
-   (typ_at (AArch APageTable) (ptrFromPAddr ptr))"
+       typ_at (AArch APageTable) (ptrFromPAddr ptr)"
 
 primrec
   valid_pdpte :: "pdpte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_pdpte (InvalidPDPTE) = \<top>"
 | "valid_pdpte (HugePagePDPTE ptr x y) =
-   (\<lambda>s. vmsz_aligned ptr X64HugePage \<and> data_at X64HugePage (ptrFromPAddr ptr) s)"
+       data_at X64HugePage (ptrFromPAddr ptr)"
 | "valid_pdpte (PageDirectoryPDPTE ptr x z) =
-   (typ_at (AArch APageDirectory) (ptrFromPAddr ptr))"
+       typ_at (AArch APageDirectory) (ptrFromPAddr ptr)"
 
 primrec
   valid_pml4e :: "pml4e \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_pml4e (InvalidPML4E) = \<top>"
 | "valid_pml4e (PDPointerTablePML4E ptr x y) =
-   (typ_at (AArch APDPointerTable) (ptrFromPAddr ptr))"
+       typ_at (AArch APDPointerTable) (ptrFromPAddr ptr)"
 
 (* Validity of vspace table entries, defined deeply. *)
 
@@ -387,25 +387,25 @@ primrec
 where
   "valid_pde_rec (InvalidPDE) = \<top>"
 | "valid_pde_rec (LargePagePDE p _ _) =
-   (\<lambda>s. vmsz_aligned p X64LargePage \<and> data_at X64LargePage (ptrFromPAddr p) s)"
+       data_at X64LargePage (ptrFromPAddr p)"
 | "valid_pde_rec (PageTablePDE p _ _) =
-   (\<lambda>s. \<exists>pt. ako_at (PageTable pt) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pte (pt i) s))"
+       (\<lambda>s. \<exists>pt. ako_at (PageTable pt) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pte (pt i) s))"
 
 primrec
   valid_pdpte_rec :: "pdpte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_pdpte_rec (InvalidPDPTE) = \<top>"
 | "valid_pdpte_rec (HugePagePDPTE p _ _) =
-   (\<lambda>s. vmsz_aligned p X64HugePage \<and> data_at X64HugePage (ptrFromPAddr p) s)"
+       data_at X64HugePage (ptrFromPAddr p)"
 | "valid_pdpte_rec (PageDirectoryPDPTE p _ _) =
-   (\<lambda>s. \<exists>pd. ako_at (PageDirectory pd) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pde_rec (pd i) s))"
+       (\<lambda>s. \<exists>pd. ako_at (PageDirectory pd) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pde_rec (pd i) s))"
 
 primrec
   valid_pml4e_rec :: "pml4e \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_pml4e_rec (InvalidPML4E) = \<top>"
 | "valid_pml4e_rec (PDPointerTablePML4E p _ _) =
-   (\<lambda>s. \<exists>pdpt. ako_at (PDPointerTable pdpt) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pdpte_rec (pdpt i) s))"
+       (\<lambda>s. \<exists>pdpt. ako_at (PDPointerTable pdpt) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pdpte_rec (pdpt i) s))"
 
 (* Kernel mappings in x64 go from pptr base to the top of memory
    but weird x64 conventions to do with having only 48 bits
@@ -432,7 +432,7 @@ definition
 where
   "wellformed_pte pte \<equiv> case pte of
    SmallPagePTE p attr r \<Rightarrow>
-       r \<in> valid_vm_rights
+       r \<in> valid_vm_rights \<and> vmsz_aligned p X64SmallPage
    | _ \<Rightarrow> True"
 
 (* FIXME x64: check hardware to see if any bits are forbidden *)
@@ -440,8 +440,8 @@ definition
   wellformed_pde :: "pde \<Rightarrow> bool"
 where
   "wellformed_pde pde \<equiv> case pde of
-   pde.LargePagePDE p attr r \<Rightarrow> r \<in> valid_vm_rights
- | pde.PageTablePDE p attr r \<Rightarrow> r \<in> valid_vm_rights
+   pde.LargePagePDE p attr r \<Rightarrow> r \<in> valid_vm_rights \<and> vmsz_aligned p X64LargePage
+ | pde.PageTablePDE p attr r \<Rightarrow> r \<in> valid_vm_rights \<and> is_aligned p table_size
  | _ \<Rightarrow> True"
 
 (* FIXME x64: check hardware to see if any bits are forbidden *)
@@ -449,8 +449,8 @@ definition
   wellformed_pdpte :: "pdpte \<Rightarrow> bool"
 where
   "wellformed_pdpte pdpte \<equiv> case pdpte of
-   pdpte.HugePagePDPTE p attr r \<Rightarrow> r \<in> valid_vm_rights
- | pdpte.PageDirectoryPDPTE p attr r \<Rightarrow> r \<in> valid_vm_rights
+   pdpte.HugePagePDPTE p attr r \<Rightarrow> r \<in> valid_vm_rights \<and> vmsz_aligned p X64HugePage
+ | pdpte.PageDirectoryPDPTE p attr r \<Rightarrow> r \<in> valid_vm_rights \<and> is_aligned p table_size
  | _ \<Rightarrow> True"
 
 (* FIXME x64: check hardware to see if any bits are forbidden *)
@@ -458,7 +458,7 @@ definition
   wellformed_pml4e :: "pml4e \<Rightarrow> bool"
 where
   "wellformed_pml4e pml4e \<equiv> case pml4e of
-  pml4e.PDPointerTablePML4E p attr r \<Rightarrow> r \<in> valid_vm_rights
+  pml4e.PDPointerTablePML4E p attr r \<Rightarrow> r \<in> valid_vm_rights \<and> is_aligned p table_size
  | _ \<Rightarrow> True"
 
 definition

@@ -242,6 +242,7 @@ done
 
 lemma invs_A:
   "invs init_A_st" (is "invs ?st")
+  supply is_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD2, simp]
   apply (simp add: invs_def)
   apply (rule conjI)
    prefer 2
@@ -254,12 +255,21 @@ lemma invs_A:
                           valid_obj_def valid_vm_rights_def vm_kernel_only_def
                           dom_if_Some cte_level_bits_def)
     apply (rule conjI)
+     apply (simp add: vmsz_aligned_def pageBits_def ptTranslationBits_def is_aligned_shift)
+    apply (rule conjI)
+     apply (simp add: vmsz_aligned_def pageBits_def ptTranslationBits_def is_aligned_shift
+                      is_aligned_addrFromPPtr_n table_size)
+    apply (rule conjI)
+     apply (simp add: is_aligned_addrFromPPtr_n table_size)
+    apply (rule conjI)
      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def
                            valid_cap_def obj_at_def valid_tcb_state_def valid_arch_tcb_def
                            cap_aligned_def word_bits_def valid_ipc_buffer_cap_simps)+
     apply (clarsimp simp: valid_cs_def word_bits_def cte_level_bits_def
                           init_irq_ptrs_all_ineqs valid_tcb_def
                    split: if_split_asm)
+     apply (clarsimp simp: vmsz_aligned_def is_aligned_addrFromPPtr_n table_size is_aligned_shift
+                           pageBits_def ptTranslationBits_def)
    apply (simp add: pspace_aligned_init_A pspace_distinct_init_A)
    apply (rule conjI)
     apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs live_def hyp_live_def)

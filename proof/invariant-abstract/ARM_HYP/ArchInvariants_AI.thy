@@ -276,25 +276,20 @@ primrec
 where
   "valid_pte (InvalidPTE) = \<top>"
 | "valid_pte (LargePagePTE ptr x y) =
-   (\<lambda>s. is_aligned ptr pageBits \<and>
-        data_at ARMLargePage (ptrFromPAddr ptr) s)"
+       data_at ARMLargePage (ptrFromPAddr ptr)"
 | "valid_pte (SmallPagePTE ptr x y) =
-   (\<lambda>s. is_aligned ptr pageBits \<and>
-        data_at ARMSmallPage (ptrFromPAddr ptr) s)"
+       data_at ARMSmallPage (ptrFromPAddr ptr)"
 
 primrec
   valid_pde :: "pde \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_pde (InvalidPDE) = \<top>"
 | "valid_pde (SectionPDE ptr x y) =
-   (\<lambda>s. is_aligned ptr pageBits \<and>
-        data_at ARMSection (ptrFromPAddr ptr) s)"
+       data_at ARMSection (ptrFromPAddr ptr)"
 | "valid_pde (SuperSectionPDE ptr x z) =
-   (\<lambda>s. is_aligned ptr pageBits \<and>
-        data_at ARMSuperSection
-               (ptrFromPAddr ptr) s)"
+       data_at ARMSuperSection (ptrFromPAddr ptr)"
 | "valid_pde (PageTablePDE ptr) =
-   (typ_at (AArch APageTable) (ptrFromPAddr ptr))"
+       typ_at (AArch APageTable) (ptrFromPAddr ptr)"
 
 definition
   valid_vcpu :: "vcpu \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -319,18 +314,22 @@ definition
 where
   "wellformed_pte pte \<equiv> case pte of
      LargePagePTE p attr r \<Rightarrow>
-       r \<in> valid_vm_rights
+       r \<in> valid_vm_rights \<and> vmsz_aligned p ARMLargePage
    | SmallPagePTE p attr r \<Rightarrow>
-       r \<in> valid_vm_rights
+       r \<in> valid_vm_rights \<and> vmsz_aligned p ARMSmallPage
    | _ \<Rightarrow> True"
 
 definition
   wellformed_pde :: "pde \<Rightarrow> bool"
 where
   "wellformed_pde pde \<equiv> case pde of
-     pde.PageTablePDE p \<Rightarrow> True
-   | pde.SectionPDE p attr r \<Rightarrow> r \<in> valid_vm_rights
-   | pde.SuperSectionPDE p attr r \<Rightarrow> r \<in> valid_vm_rights
+     pde.PageTablePDE p \<Rightarrow>
+       \<comment> \<open>We don't have a variant of this alignment check that takes an @{const APageTable}. Yuck.\<close>
+       is_aligned p (arch_obj_size (PageTableCap undefined undefined))
+   | pde.SectionPDE p attr r \<Rightarrow>
+       r \<in> valid_vm_rights \<and> vmsz_aligned p ARMSection
+   | pde.SuperSectionPDE p attr r \<Rightarrow>
+       r \<in> valid_vm_rights \<and> vmsz_aligned p ARMSuperSection
    | _ \<Rightarrow> True"
 
 definition

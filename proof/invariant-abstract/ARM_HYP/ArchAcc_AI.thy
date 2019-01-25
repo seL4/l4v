@@ -528,6 +528,10 @@ lemma is_aligned_pt:
   apply (simp add: pt_bits_def pageBits_def)
   done
 
+lemma data_at_aligned:
+  "\<lbrakk> data_at sz p s; pspace_aligned s \<rbrakk> \<Longrightarrow> is_aligned p (pageBitsForSize sz)"
+  by (erule pspace_alignedE[where x=p]; fastforce simp: data_at_def obj_at_def)
+
 lemma page_table_pte_at_diffE:
   "\<lbrakk> page_table_at p s; q - p = x << pte_bits;
     x < 2^(pt_bits - pte_bits); pspace_aligned s \<rbrakk> \<Longrightarrow> pte_at q s"
@@ -2502,26 +2506,26 @@ lemma create_mapping_entries_valid_slots [wp]: (* ARMHYP *)
   "\<lbrace>valid_arch_state and valid_vspace_objs and equal_kernel_mappings
    and pspace_aligned and valid_global_objs
    and \<exists>\<rhd> pd and page_directory_at pd and data_at sz (ptrFromPAddr base) and
-    K (is_aligned base pageBits \<and> vmsz_aligned vptr sz \<and> vptr < kernel_base \<and>
-       vm_rights \<in> valid_vm_rights)\<rbrace>
+    K (vmsz_aligned base sz \<and> vmsz_aligned vptr sz \<and> vptr < kernel_base
+       \<and> vm_rights \<in> valid_vm_rights)\<rbrace>
   create_mapping_entries base vptr sz vm_rights attrib pd
   \<lbrace>\<lambda>m. valid_slots m\<rbrace>, -"
   apply (cases sz)
      apply (rule hoare_pre)
       apply (wp lookup_pt_slot_inv | simp add: valid_slots_def)+
-     apply (clarsimp simp: pd_aligned)
+     apply (clarsimp simp: vmsz_aligned_def pd_aligned pageBits_def)
     apply (rule hoare_pre)
      apply (simp add: valid_slots_def largePagePTE_offsets_def vspace_bits_defs)
-     apply (wp lookup_pt_slot_inv; simp add: )
+     apply (wp lookup_pt_slot_inv)
      apply (simp add: valid_slots_def ball_conj_distrib add.commute
-                largePagePTE_offsets_def)+
+                largePagePTE_offsets_def)
      apply (wp lookup_pt_slot_non_empty)
      apply (wp lookup_pt_slot_inv)
-    apply (clarsimp simp: pd_aligned vmsz_aligned_def)
+    apply (clarsimp simp: pd_aligned pageBits_def vmsz_aligned_def is_aligned_weaken)
    apply (clarsimp simp add: valid_slots_def)
    apply (rule hoare_pre)
     apply wp
-   apply (clarsimp simp: valid_slots_def )
+   apply (clarsimp simp: valid_slots_def)
    apply (rule conjI)
     apply (simp add: lookup_pd_slot_def Let_def)
     apply (fastforce simp: pd_shifting pd_aligned)
@@ -2532,7 +2536,7 @@ lemma create_mapping_entries_valid_slots [wp]: (* ARMHYP *)
    apply wp
   apply simp
   apply (elim conjE)
-  apply (thin_tac "is_aligned base b" for b)
+  apply (thin_tac "vmsz_aligned base b" for b)
   apply (subgoal_tac "is_aligned pd 14")
    prefer 2
    apply (clarsimp simp: pd_aligned)
@@ -2549,7 +2553,7 @@ lemma create_mapping_entries_valid_slots [wp]: (* ARMHYP *)
   apply (frule (1) is_aligned_lookup_pd_slot
                    [OF _ is_aligned_weaken[of _ 14 7, simplified]])
   apply (subgoal_tac "(p<<3) + lookup_pd_slot pd vptr && ~~ mask 14 = pd")
-  prefer 2
+   prefer 2
    apply (subst add.commute add.left_commute)
    apply (subst and_not_mask_twice[where n=7 and m=14, simplified, symmetric])
    apply (subst is_aligned_add_helper[THEN conjunct2], simp)
@@ -2589,6 +2593,10 @@ lemma is_aligned_ptrFromPAddr_n:
 lemma is_aligned_ptrFromPAddr:
   "is_aligned p pageBits \<Longrightarrow> is_aligned (ptrFromPAddr p) pageBits"
   by (simp add: is_aligned_ptrFromPAddr_n pageBits_def)
+
+lemma pbfs_le_28[simp]:
+  "pageBitsForSize sz \<le> 28"
+  by (cases sz; simp)
 
 lemma store_pde_lookup_pd: (* ARMHYP *)
   "\<lbrace>\<exists>\<rhd> pd and page_directory_at pd and valid_vspace_objs
