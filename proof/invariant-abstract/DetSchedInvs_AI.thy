@@ -240,6 +240,9 @@ lemmas budget_sufficient_defs
     obj_at_kh_def pred_tcb_at_def obj_at_def
 *)
 
+lemmas refill_prop_defs = refill_sufficient_kh_def refill_ready_kh_def
+                          is_refill_ready_def is_refill_sufficient_def
+
 lemma is_refill_sufficient_machine_state_update[simp]:
   "is_refill_sufficient t u(s\<lparr>machine_state := param_a\<rparr>) = is_refill_sufficient t u s"
   by (clarsimp simp: is_refill_sufficient_def)
@@ -378,6 +381,7 @@ definition
   "is_etcb_at' t ekh \<equiv> ekh t \<noteq> None"
 
 lemmas is_etcb_at_def = is_etcb_at'_def
+lemmas etcb_defs = etcbs_of'_def is_etcb_at'_def etcb_at'_def
 
 lemma etcb_at_taut[simp]: "etcb_at' \<top> ref ekh"
   apply (simp add: etcb_at'_def split: option.split)
@@ -610,27 +614,12 @@ lemmas is_activatable_def = is_activatable_2_def
 definition weak_valid_sched_action_2' where
   "weak_valid_sched_action_2' sa ekh kh \<equiv>
     \<forall>t. sa = switch_thread t \<longrightarrow> st_tcb_at_kh runnable t kh"
-(*
-definition
-  active_sc_tcb_at_kh :: "32 word \<Rightarrow> (32 word \<Rightarrow> kernel_object option) \<Rightarrow> bool"
-where
-  "active_sc_tcb_at_kh t kh \<equiv>
-   obj_at_kh (\<lambda>ko. \<exists>tcb. ko = TCB tcb
-              \<and> (\<exists>scp. tcb_sched_context tcb = Some scp
-                 \<and> obj_at_kh (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n
-                                    \<and> sc_refill_max sc > 0) scp kh)) t kh"
-*)
 
 definition weak_valid_sched_action_2 where
   "weak_valid_sched_action_2 sa kh release_q\<equiv>
     \<forall>t. sa = switch_thread t \<longrightarrow>
-    st_tcb_at_kh runnable t kh \<and> (*bound_sc_tcb_at_kh bound t kh*)
+    st_tcb_at_kh runnable t kh \<and>
     active_sc_tcb_at_kh t kh \<and> \<not> t \<in> set release_q"
-(*
-obj_at_kh (\<lambda>ko. \<exists>tcb. ko = TCB tcb
-                      \<and> (\<exists>scp. tcb_sched_context tcb = Some scp
-                             \<and> obj_at_kh (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n
-                                             \<and> sc_refill_max sc > 0) scp kh)) t kh*)
 
 abbreviation weak_valid_sched_action:: "'z state \<Rightarrow> bool" where
   "weak_valid_sched_action s \<equiv> weak_valid_sched_action_2 (scheduler_action s) (kheap s) (release_queue s)"
@@ -740,6 +729,120 @@ lemma ready_or_released_in_ready_qs[intro]:
 lemma ready_or_released_in_release_queue[intro]:
   "ready_or_released s \<Longrightarrow> in_release_queue t s \<Longrightarrow> not_queued t s"
   by (fastforce simp: ready_or_released_def in_release_queue_def not_queued_def)
+
+
+(* simple_ko update *)
+
+lemma st_tcb_at_simple_type_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+      st_tcb_at_kh P t (kheap s(epptr \<mapsto> ko)) = st_tcb_at_kh P t (kheap s)"
+  by (rule iffI;
+      clarsimp simp: pred_tcb_at_def obj_at_def st_tcb_at_kh_def obj_at_kh_def
+      split: option.splits if_splits)
+
+lemma active_sc_tcb_at_simple_type_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+      active_sc_tcb_at_kh t (kheap s(epptr \<mapsto> ko)) = active_sc_tcb_at t s"
+  by (fastforce simp: active_sc_tcb_at_defs split: option.splits if_splits)
+
+lemma budget_sufficient_simple_type_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+      budget_sufficient_kh t (kheap s(epptr \<mapsto> ko)) = budget_sufficient t s"
+ by (clarsimp simp: obj_at_def a_type_def; rename_tac ko2; case_tac ko2; cases ko;
+        fastforce split: option.splits if_splits kernel_object.splits
+                   simp: refill_prop_defs active_sc_tcb_at_defs)+
+
+lemma budget_ready_simple_type_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+      budget_ready_kh (cur_time s) t (kheap s(epptr \<mapsto> ko)) = budget_ready t s"
+ by (clarsimp simp: obj_at_def a_type_def; rename_tac ko2; case_tac ko2; cases ko;
+        fastforce split: option.splits if_splits kernel_object.splits
+                   simp: refill_prop_defs active_sc_tcb_at_defs)+
+
+lemma etcbs_of'_simple_type_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+      etcbs_of' (kheap s(epptr \<mapsto> ko)) = etcbs_of' (kheap s)"
+  by (rule ext; fastforce simp: obj_at_def etcbs_of'_def split: option.splits if_splits)
+
+
+lemma valid_ready_qs_simple_type_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+     valid_ready_qs_2 (ready_queues s) (cur_time s) (kheap s(epptr \<mapsto> ko)) = valid_ready_qs s"
+  by (clarsimp simp: valid_ready_qs_def)
+   (* I would prefer to write the LHS as
+      "valid_ready_qs (s\<lparr>kheap := kheap s(epptr \<mapsto> Endpoint ep)\<rparr>)"
+      but that makes the lemma less usable *)
+
+lemma valid_release_q_simple_ko_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+     valid_release_q_2 (release_queue s) (kheap s(epptr \<mapsto> ko)) = valid_release_q s"
+  by (clarsimp simp: valid_release_q_def)
+
+lemma is_activatable_simple_ko_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+     is_activatable_2 (cur_thread s) (scheduler_action s)
+      (kheap s(epptr \<mapsto> ko)) = is_activatable (cur_thread s) s"
+  by (clarsimp simp: is_activatable_def)
+
+lemma weak_valid_sched_action_simple_ko_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+     weak_valid_sched_action_2 (scheduler_action s)
+      (kheap s(epptr \<mapsto> ko)) (release_queue s) = weak_valid_sched_action s"
+  by (clarsimp simp: weak_valid_sched_action_def)
+
+lemma in_cur_domain_simple_ko_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+     in_cur_domain_2 t (cur_domain s) (etcbs_of' (kheap s(epptr \<mapsto> ko))) = in_cur_domain t s"
+  by (clarsimp simp: in_cur_domain_def)
+
+lemma switch_in_cur_domain_simple_ko_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+     switch_in_cur_domain_2 (scheduler_action s) (etcbs_of' (kheap s(epptr \<mapsto> ko))) (cur_domain s)
+             = switch_in_cur_domain s"
+  by (clarsimp simp: switch_in_cur_domain_def)
+
+lemma valid_sched_action_simple_ko_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+     valid_sched_action_2 (scheduler_action s)
+      (kheap s(epptr \<mapsto> ko)) (cur_thread s) (cur_domain s)
+      (release_queue s) = valid_sched_action s"
+  by (clarsimp simp: valid_sched_action_def)
+
+lemma valid_blocked_simple_ko_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+     valid_blocked_2 (ready_queues s) (release_queue s)
+      (kheap s(epptr \<mapsto> ko)) (scheduler_action s)
+      (cur_thread s) = valid_blocked s"
+  by (clarsimp simp: valid_blocked_def)
+
+lemma ct_in_cur_domain_simple_ko_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+     ct_in_cur_domain_2 (cur_thread s) (idle_thread s)
+      (scheduler_action s) (cur_domain s)
+      (etcbs_of' (kheap s(epptr \<mapsto> ko))) = ct_in_cur_domain s"
+  by (clarsimp simp: ct_in_cur_domain_def)
+
+lemma valid_idle_etcb_simple_ko_update[iff]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+     valid_idle_etcb_2 (etcbs_of' (kheap s(epptr \<mapsto> ko))) = valid_idle_etcb s"
+  by (clarsimp simp: valid_idle_etcb_def)
+
+lemma simple_ko_update_cong[simp]:
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+    valid_sched (s\<lparr>kheap := kheap s(epptr \<mapsto> ko)\<rparr>) = valid_sched s"
+  by (clarsimp simp: valid_sched_def)
+
+lemma simple_ko_update_cong':
+  "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+      valid_sched_2  (ready_queues s) (scheduler_action s) (cur_domain s) (cur_time s)
+                 (kheap s(epptr \<mapsto> ko)) (cur_thread s) (idle_thread s) (release_queue s)
+    = valid_sched_2 (ready_queues s) (scheduler_action s) (cur_domain s) (cur_time s)
+                 (kheap s)(cur_thread s) (idle_thread s) (release_queue s)"
+  by (clarsimp simp: valid_sched_def)
+  (* this lemma will change if we add endpoint queue scheduling validity to valid_sched *)
+
+
+(* lifting lemmas *)
 
 lemmas ct_not_queued_lift = hoare_lift_Pf2[where f="cur_thread" and P="not_queued"]
 lemmas ct_not_in_release_q_lift = hoare_lift_Pf2[where f="cur_thread" and P="not_in_release_q"]
