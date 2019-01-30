@@ -2067,7 +2067,7 @@ lemma ccorres_handleReservedIRQ:
   supply dc_simp[simp del]
   apply (cinit lift: irq_')
    apply (rule ccorres_when[where R=\<top>])
-    apply (clarsimp simp: irqVGICMaintenance_def INTERRUPT_PPI_9_def ucast_up_ucast is_up)
+    apply (clarsimp simp: irqVGICMaintenance_def ucast_up_ucast is_up)
     apply (rule iffI, simp)
     apply (rule upcast_ucast_id[where 'b="32 signed"]; simp)
    apply (rule ccorres_add_return2)
