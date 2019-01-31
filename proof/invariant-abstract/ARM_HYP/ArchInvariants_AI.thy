@@ -324,8 +324,7 @@ definition
 where
   "wellformed_pde pde \<equiv> case pde of
      pde.PageTablePDE p \<Rightarrow>
-       \<comment> \<open>We don't have a variant of this alignment check that takes an @{const APageTable}. Yuck.\<close>
-       is_aligned p (arch_obj_size (PageTableCap undefined undefined))
+       is_aligned p pt_bits
    | pde.SectionPDE p attr r \<Rightarrow>
        r \<in> valid_vm_rights \<and> vmsz_aligned p ARMSection
    | pde.SuperSectionPDE p attr r \<Rightarrow>

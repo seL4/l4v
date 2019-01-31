@@ -1507,7 +1507,8 @@ lemma arch_decode_inv_wf[wp]:
     apply (clarsimp simp: neq_Nil_conv)
     apply (thin_tac "Ball S P" for S P)
     apply (rule conjI)
-     apply (clarsimp simp: valid_cap_def cap_aligned_def is_aligned_addrFromPPtr_n)
+     apply (clarsimp simp: valid_cap_def cap_aligned_def
+                           pt_bits_def pageBits_def is_aligned_addrFromPPtr_n)
     apply (rule conjI)
      apply (clarsimp simp: valid_cap_def cap_aligned_def)
     apply (rule conjI)

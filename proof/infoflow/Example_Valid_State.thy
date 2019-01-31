@@ -1268,7 +1268,7 @@ lemma valid_obj_s0[simp]:
                                 Low_pt_ptr_def High_pt_ptr_def
                                 shared_page_ptr_def
                                 valid_vm_rights_def vm_kernel_only_def
-                                kernel_base_def pageBits_def vmsz_aligned_def
+                                kernel_base_def pageBits_def pt_bits_def vmsz_aligned_def
                                 is_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD2]
                                 is_aligned_addrFromPPtr_n)+
      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def
