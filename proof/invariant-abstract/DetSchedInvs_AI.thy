@@ -526,19 +526,19 @@ abbreviation has_budget_kh where
    bound_sc_tcb_at_kh ((=) None) t kh \<or>
    (active_sc_tcb_at_kh t kh \<and> budget_sufficient_kh t kh \<and> budget_ready_kh curtime t kh)"
 
-primrec ntfn_queue :: "ntfn \<Rightarrow> obj_ref list" where
-  "ntfn_queue IdleNtfn = []"
-| "ntfn_queue (WaitingNtfn list) = list"
-| "ntfn_queue (ActiveNtfn _) = []"
+primrec ntfn_waiting_queue :: "ntfn \<Rightarrow> obj_ref list" where
+  "ntfn_waiting_queue IdleNtfn = []"
+| "ntfn_waiting_queue (WaitingNtfn list) = list"
+| "ntfn_waiting_queue (ActiveNtfn _) = []"
 
 definition valid_ntfn_q_2 where
-  "valid_ntfn_q_2 curtime kh =
+  "valid_ntfn_q_2 ct it curtime kh =
    (\<forall>p. case kh p of
-        Some (Notification n) \<Rightarrow> (\<forall>t \<in> set (ntfn_queue (ntfn_obj n)). has_budget_kh t curtime kh)
+        Some (Notification n) \<Rightarrow> (\<forall>t \<in> set (ntfn_waiting_queue (ntfn_obj n)). t \<noteq> ct \<and> t \<noteq> it \<and> has_budget_kh t curtime kh)
         | _ \<Rightarrow> True)"
 
 abbreviation valid_ntfn_q :: "'z state \<Rightarrow> bool" where
-  "valid_ntfn_q s \<equiv> valid_ntfn_q_2 (cur_time s) (kheap s)"
+  "valid_ntfn_q s \<equiv> valid_ntfn_q_2 (cur_thread s) (idle_thread s) (cur_time s) (kheap s)"
 
 lemmas valid_ntfn_q_def = valid_ntfn_q_2_def
 
