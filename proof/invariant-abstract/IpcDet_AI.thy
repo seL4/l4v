@@ -657,18 +657,13 @@ lemma sfi_makes_simple:
 lemma hf_makes_simple:
   notes hoare_pre [wp_pre del]
   shows
-  "\<lbrace>st_tcb_at simple t' and K (t \<noteq> t')\<rbrace> handle_fault t ft
+  "\<lbrace>st_tcb_at simple t' and K (t \<noteq> t')\<rbrace>
+     handle_fault t ft
    \<lbrace>\<lambda>rv. st_tcb_at simple t'\<rbrace>"
-  apply (simp add: handle_fault_def)
-  apply (rule hoare_seq_ext[OF _ assert_get_tcb])
-  apply (wpsimp simp: unless_def handle_no_fault_def send_fault_ipc_def wp: sts_st_tcb_at_cases)
-  apply (case_tac "tcb_fault_handler tcb"; simp)
-   apply (rule hoare_pre)
-    apply wpsimp
-   apply clarsimp
-  apply (wpsimp wp: si_blk_makes_simple)
+  apply (simp add: handle_fault_def handle_no_fault_def send_fault_ipc_def)
   apply (rule hoare_pre)
-   apply (wpsimp simp: wp: thread_set_no_change_tcb_state)
+   apply (wpsimp wp: sts_st_tcb_at_cases si_blk_makes_simple
+                     thread_set_no_change_tcb_state)
   apply clarsimp
   done
 
@@ -2249,7 +2244,7 @@ lemma si_invs':
   "\<lbrace>invs and Q and st_tcb_at active tptr and ex_nonz_cap_to tptr and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at bound tptr s)
     and ex_nonz_cap_to epptr\<rbrace>
    send_ipc bl call ba cg can_donate tptr epptr
-   \<lbrace>\<lambda>r. invs and Q\<rbrace>"
+   \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>"
   supply if_weak_cong[cong del]
   apply (simp add: send_ipc_def)
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
@@ -2347,50 +2342,31 @@ lemma hf_invs':
   assumes reply_unlink_tcb_Q[wp]: "\<And>a. \<lbrace>Q\<rbrace> reply_unlink_tcb a \<lbrace>\<lambda>_. Q\<rbrace>"
   notes si_invs''[wp] = si_invs'[where Q=Q]
   shows
-  "\<lbrace>invs and Q and st_tcb_at active t and ex_nonz_cap_to t and bound_sc_tcb_at bound t and
-    (\<lambda>_. valid_fault f)\<rbrace>
+  "\<lbrace>invs and Q and st_tcb_at active t and ex_nonz_cap_to t and (\<lambda>_. valid_fault f)\<rbrace>
    handle_fault t f
    \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>" including no_pre
   apply (cases "valid_fault f"; simp)
-  apply (simp add: handle_fault_def)
-  apply (rule hoare_seq_ext[OF _ assert_get_tcb_sp])
-   apply (wpsimp simp: handle_no_fault_def unless_def)
-    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                    wp: sts_only_idle valid_irq_node_typ sts_valid_replies)
-   apply (simp add: send_fault_ipc_def)
-   apply (case_tac "tcb_fault_handler tcb"; simp)
-                apply (wpsimp simp: invs_def valid_state_def valid_pspace_def)
-                apply (rule hoare_pre, wpsimp, clarsimp)
-                apply (intro conjI)
-                 apply (rule replies_blocked_upd_tcb_st_valid_replies_not_blocked;
-                        clarsimp intro!: not_BlockedOnReply_not_in_replies_blocked
-                                  elim!: st_tcb_weakenE)
-                 apply (subst tcb_non_st_state_refs_of_state_refs_of, assumption)
-                  apply (case_tac "tcb_state tcb"; clarsimp simp: st_tcb_at_def obj_at_def)
-                 apply fastforce
-                apply (clarsimp simp: idle_no_ex_cap)
-               defer
-               apply (intro conjI)
-                apply wpsimp
-                 apply (rule hoare_strengthen_post)
-                  apply (rule si_invs'; wpsimp)
-                 apply clarsimp
-                apply (rule hoare_pre)
-                apply (wpsimp simp: tcb_cap_cases_def wp: thread_set_invs_trivial hoare_vcg_conj_lift)
-                  apply auto[8]
-                     apply wpsimp
-                    apply (rule thread_set_no_change_tcb_state, simp)
-                   apply (rule ex_nonz_cap_to_pres)
-                   apply (rule thread_set_cte_wp_at_trivial, simp add: tcb_cap_cases_def)
-                  apply (simp, rule thread_set_no_change_tcb_sched_context, simp)
-                 apply (rule ex_nonz_cap_to_pres)
-                 apply (rule thread_set_cte_wp_at_trivial, simp add: tcb_cap_cases_def)
-                apply clarsimp
-                     apply (simp (no_asm) add: ex_nonz_cap_to_def cte_wp_at_cases2)
-                     apply (rule_tac x = t in exI)
-                     apply (rule_tac x = "tcb_cnode_index 3" in exI)
-                     apply (clarsimp simp: obj_at_def tcb_cnode_map_def)
-                    apply wpsimp+
+  apply (rule hoare_pre)
+  apply (simp add: handle_fault_def handle_no_fault_def)
+   apply (wpsimp wp: sts_invs_minor)
+     apply (simp add: send_fault_ipc_def)
+     apply (wpsimp wp: thread_set_invs_trivial
+                       thread_set_no_change_tcb_state ex_nonz_cap_to_pres
+                       thread_set_cte_wp_at_trivial
+                       thread_set_no_change_tcb_sched_context
+                       hoare_vcg_imp_lift gbn_wp
+            | clarsimp simp: tcb_cap_cases_def
+            | erule disjE)+
+  apply (rule conjI)
+   apply (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def
+                    dest: invs_valid_idle)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_ko_at)
+  apply (rule conjI)
+   apply fastforce
+  apply (simp (no_asm) add: ex_nonz_cap_to_def cte_wp_at_cases2)
+  apply (rule_tac x = t in exI)
+  apply (rule_tac x = "tcb_cnode_index 3" in exI)
+  apply (clarsimp simp: obj_at_def tcb_cnode_map_def)
   done
 
 lemmas hf_invs[wp] = hf_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI TrueI,simplified]
