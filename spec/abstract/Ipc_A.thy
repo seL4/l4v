@@ -561,7 +561,8 @@ definition
 where
   "handle_fault thread ex \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb thread;
-     has_fh \<leftarrow> send_fault_ipc thread (tcb_fault_handler tcb) ex True
+     thread_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context thread;
+     has_fh \<leftarrow> send_fault_ipc thread (tcb_fault_handler tcb) ex (thread_sc \<noteq> None)
                     <catch> K (return False);
      unless has_fh $ (handle_no_fault thread);
      return ()
