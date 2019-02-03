@@ -481,8 +481,6 @@ proof -
    apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b
                           \<and> budget_sufficient t b \<and> budget_ready t b")
     apply simp
-    apply (rule conjI)
-     apply (fastforce simp: st_tcb_at_is_etcb)
     apply (frule_tac P1="\<lambda>t. etcb_priority t = p \<and> etcb_domain t = d" and t1=t in use_valid[OF _ stuff])
      apply simp
     apply (simp add: pred_tcb_at_def obj_at_def)
@@ -601,8 +599,6 @@ proof -
    apply (subgoal_tac "st_tcb_at runnable t b \<and> active_sc_tcb_at t b
                           \<and> budget_sufficient t b \<and> budget_ready t b")
     apply simp
-    apply (rule conjI)
-     apply (fastforce simp: st_tcb_at_is_etcb)
     apply (frule_tac P1="\<lambda>t. etcb_priority t = p \<and> etcb_domain t = d" and t1=t in use_valid[OF _ stuff])
      apply simp
     apply (simp add: pred_tcb_at_def obj_at_def)

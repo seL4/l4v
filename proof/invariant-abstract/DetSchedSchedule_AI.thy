@@ -2868,7 +2868,6 @@ lemma update_sched_context_valid_ready_qs_not_bound:
   apply (drule_tac x=d and y=p in spec2, clarsimp)
   apply (drule_tac x=t in spec)
   apply (drule_tac x=t in bspec, simp, clarsimp)
-  apply (case_tac y; clarsimp)
   apply (fastforce simp: valid_ready_qs_def etcb_defs refill_prop_defs
       active_sc_tcb_at_defs st_tcb_at_kh_if_split split: option.splits)
   done
@@ -4304,7 +4303,6 @@ lemma sched_context_donate_valid_ready_qs_helper:
   apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def valid_ready_qs_def is_etcb_at'_def etcbs_of'_def etcb_at'_def)
   apply (drule_tac x=d and y=p in spec2, clarsimp)
   apply (drule_tac x=t in bspec, simp, clarsimp)
-  apply (case_tac y; clarsimp)
   by (fastforce simp: valid_ready_qs_def st_tcb_at_kh_if_split active_sc_tcb_at_defs
       refill_sufficient_kh_def refill_ready_kh_def
                 is_refill_sufficient_def is_refill_ready_def
@@ -4409,7 +4407,6 @@ lemma set_sc_tcb_sched_context_valid_sched[wp]:
    apply (clarsimp simp: valid_ready_qs_def etcb_defs)
    apply (drule_tac x=d and y=p in spec2, clarsimp)
    apply (drule_tac x=t in bspec, simp, clarsimp)
-   apply (case_tac y; clarsimp)
    apply (fastforce simp: st_tcb_at_kh_if_split active_sc_tcb_at_defs refill_prop_defs
       dest!: get_tcb_SomeD split: option.splits)
   apply (clarsimp simp: valid_release_q_def etcb_defs)
@@ -4427,7 +4424,6 @@ lemma set_sc_ntfn_sched_context_valid_sched[wp]:
    apply (clarsimp simp: valid_ready_qs_def etcb_defs)
    apply (drule_tac x=d and y=p in spec2, clarsimp)
    apply (drule_tac x=t in bspec, simp, clarsimp)
-   apply (case_tac y; clarsimp)
    apply (fastforce simp: st_tcb_at_kh_if_split active_sc_tcb_at_defs refill_prop_defs
       dest!: get_tcb_SomeD split: option.splits)
   apply (clarsimp simp: valid_release_q_def etcb_defs)
@@ -7938,8 +7934,9 @@ lemma set_sc_replies_valid_ready_qs[wp]:
                   wp: get_object_wp simp_del: fun_upd_apply)
   apply (clarsimp simp: valid_ready_qs_def)
   apply (drule_tac x=d and y=p in spec2, clarsimp)
-  apply (drule_tac x=t in bspec, simp, clarsimp simp: etcb_defs split: option.splits)
-  by (fastforce simp: active_sc_tcb_at_defs refill_prop_defs st_tcb_at_kh_def)
+  apply (drule_tac x=t in bspec)
+  apply (simp)
+  by (fastforce simp: etcb_defs active_sc_tcb_at_defs refill_prop_defs st_tcb_at_kh_def)
 
 lemma set_sc_replies_valid_release_q[wp]:
   "\<lbrace>valid_release_q\<rbrace> set_sc_obj_ref sc_replies_update ref list \<lbrace>\<lambda>_. valid_release_q\<rbrace>"

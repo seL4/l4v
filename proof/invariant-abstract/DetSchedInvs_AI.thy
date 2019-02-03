@@ -441,8 +441,7 @@ lemma not_in_ready_q_simp[iff]: "\<not> in_ready_q t s \<longleftrightarrow> not
 
 definition valid_ready_qs_2 where
   "valid_ready_qs_2 queues curtime kh \<equiv> (\<forall>d p.
-     (\<forall>t \<in> set (queues d p). is_etcb_at' t (etcbs_of' kh)
-                           \<and> etcb_at' (\<lambda>t. etcb_priority t = p \<and> etcb_domain t = d) t (etcbs_of' kh)
+     (\<forall>t \<in> set (queues d p). etcb_at' (\<lambda>t. etcb_priority t = p \<and> etcb_domain t = d) t (etcbs_of' kh)
                            \<and> st_tcb_at_kh runnable t kh \<and> active_sc_tcb_at_kh t kh
                            \<and> budget_sufficient_kh t kh \<and> budget_ready_kh curtime t kh)
    \<and> distinct (queues d p))"
@@ -455,12 +454,13 @@ lemmas valid_ready_qs_def = valid_ready_qs_2_def
 lemma valid_ready_qs_def2:
   "valid_ready_qs_2 queues curtime kh =
    (\<forall>d p. (\<forall>t \<in> set (queues d p).
-           is_etcb_at' t (etcbs_of' kh) \<and>
            (case etcbs_of' kh t of None \<Rightarrow> False | Some x \<Rightarrow> etcb_priority x = p \<and> etcb_domain x = d) \<and>
            st_tcb_at_kh runnable t kh \<and>
            active_sc_tcb_at_kh t kh \<and> budget_sufficient_kh t kh \<and> budget_ready_kh curtime t kh)
           \<and> distinct (queues d p))"
-  by (clarsimp simp: valid_ready_qs_def etcb_at_conj_is_etcb_at[symmetric])
+  apply (clarsimp simp: valid_ready_qs_def etcb_at_conj_is_etcb_at[symmetric])
+  apply (fastforce simp: is_etcb_at'_def etcbs_of'_def st_tcb_at_kh_def obj_at_kh_def)
+  done
 
 definition valid_release_q_2 where
   "valid_release_q_2 queue kh =
