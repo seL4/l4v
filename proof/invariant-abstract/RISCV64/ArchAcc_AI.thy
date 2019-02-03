@@ -583,7 +583,7 @@ lemma valid_objs_caps:
 lemma set_pt_table_caps[wp]:
   "\<lbrace>valid_table_caps and (\<lambda>s. valid_caps (caps_of_state s) s) and
     (\<lambda>s. ((\<exists>slot. caps_of_state s slot = Some (ArchObjectCap (PageTableCap p None))) \<longrightarrow>
-                  pt = empty_table) \<or>
+                  pt = empty_pt) \<or>
          (\<forall>slot. \<exists>asid. caps_of_state s slot = Some (ArchObjectCap (PageTableCap p (Some asid)))))\<rbrace>
    set_pt p pt
    \<lbrace>\<lambda>rv. valid_table_caps\<rbrace>"
@@ -701,7 +701,7 @@ lemma set_pt_arch_caps [wp]:
   "\<lbrace>valid_arch_caps and valid_arch_state and valid_vspace_objs and
     (\<lambda>s. valid_caps (caps_of_state s) s \<and>
          ((\<exists>slot. caps_of_state s slot = Some (ArchObjectCap (PageTableCap p None))) \<longrightarrow>
-          pt = empty_table \<or>
+          pt = empty_pt \<or>
          (\<forall>slot. \<exists>asid. caps_of_state s slot =
            Some (ArchObjectCap (PageTableCap p (Some asid))))) \<and>
          (\<forall>level. (\<exists>\<rhd> (level,p)) s \<longrightarrow> (\<forall>x. valid_pte level (pt x) s)) \<and>
@@ -1358,7 +1358,7 @@ lemma set_pt_invs:
   "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pte (pt i)) and
     (\<lambda>s. (\<exists>level. (\<exists>\<rhd> (level,p)) s \<longrightarrow> valid_vspace_obj level (PageTable pt) s) \<and>
          (\<exists>slot asid. caps_of_state s slot = Some (ArchObjectCap (PageTableCap p asid)) \<and>
-                      pt = empty_table \<or> asid \<noteq> None) \<and>
+                      pt = empty_pt \<or> asid \<noteq> None) \<and>
          (\<forall>level' asid vref. vs_lookup_target level' asid vref s = Some (level', p) \<longrightarrow>
             (\<forall>x p. pte_ref (pt x) = Some p \<longrightarrow>
                     (\<exists>p' cap. caps_of_state s p' = Some cap \<and>

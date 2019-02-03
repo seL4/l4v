@@ -351,12 +351,6 @@ definition
   "data_at \<equiv> \<lambda>sz p s. typ_at (AArch (AUserData sz)) p s
                        \<or> typ_at (AArch (ADeviceData sz)) p s"
 
-definition valid_arch_tcb :: "arch_tcb \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "valid_arch_tcb \<equiv> \<lambda>_. \<top>"
-
-definition valid_arch_idle :: "iarch_tcb \<Rightarrow> bool" where
-  "valid_arch_idle \<equiv> \<top>"
-
 definition vmpage_size_of_level :: "vm_level \<Rightarrow> vmpage_size" where
   "vmpage_size_of_level level \<equiv>
      if level = 0 then RISCVSmallPage
@@ -383,6 +377,9 @@ primrec valid_vspace_obj :: "vm_level \<Rightarrow> arch_kernel_obj \<Rightarrow
 | "valid_vspace_obj level (PageTable pt) =
    (\<lambda>s. \<forall>x \<in> (if level = max_pt_level then -kernel_mapping_slots else UNIV). valid_pte level (pt x) s)"
 | "valid_vspace_obj _ (DataPage _ _) = \<top>" (* already covered by valid_pte *)
+
+definition valid_vso_at :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "valid_vso_at level p \<equiv> \<lambda>s. \<exists>ao. aobjs_of s p = Some ao \<and> valid_vspace_obj level ao s"
 
 definition wellformed_pte :: "pte \<Rightarrow> bool" where
   "wellformed_pte pte \<equiv> is_PagePTE pte \<longrightarrow> pte_rights pte \<in> valid_vm_rights"
@@ -506,13 +503,13 @@ locale_abbrev valid_asid_pool_caps :: "'z::state_ext state \<Rightarrow> bool" w
 
 lemmas valid_asid_pool_caps_def = valid_asid_pool_caps_2_def
 
-locale_abbrev empty_table :: pt where
-  "empty_table \<equiv> \<lambda>_. InvalidPTE"
+locale_abbrev empty_pt :: pt where
+  "empty_pt \<equiv> \<lambda>_. InvalidPTE"
 
 definition valid_table_caps_2 :: "(cslot_ptr \<rightharpoonup> cap) \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<Rightarrow> bool" where
   "valid_table_caps_2 caps pts \<equiv>
    \<forall>r p. caps p = Some (ArchObjectCap (PageTableCap r None)) \<longrightarrow>
-         pts r = Some empty_table"
+         pts r = Some empty_pt"
 
 locale_abbrev valid_table_caps :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_table_caps \<equiv> \<lambda>s. valid_table_caps_2 (caps_of_state s) (pts_of s)"
@@ -594,42 +591,12 @@ locale_abbrev valid_asid_table :: "'z::state_ext state \<Rightarrow> bool" where
 
 lemmas valid_asid_table_def = valid_asid_table_2_def
 
-definition
-  "valid_arch_mdb r cs \<equiv> True"
-
 definition arch_obj_bits_type :: "aa_type \<Rightarrow> nat" where
  "arch_obj_bits_type T \<equiv> case T of
                            AASIDPool      \<Rightarrow> arch_kobj_size (ASIDPool undefined)
                          | APageTable     \<Rightarrow> arch_kobj_size (PageTable undefined)
                          | AUserData sz   \<Rightarrow> arch_kobj_size (DataPage False sz)
                          | ADeviceData sz \<Rightarrow> arch_kobj_size (DataPage True sz)"
-
-definition tcb_hyp_refs :: "arch_tcb \<Rightarrow> (obj_ref \<times> reftype) set" where
-  "tcb_hyp_refs atcb \<equiv> {}"
-
-definition refs_of_ao :: "arch_kernel_obj \<Rightarrow> (obj_ref \<times> reftype) set" where
-  "refs_of_ao x \<equiv> {}"
-
-(* FIXME: move to generic *)
-definition hyp_refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype) set" where
-  "hyp_refs_of x \<equiv> case x of
-                     CNode sz fun      \<Rightarrow> {}
-                   | TCB tcb           \<Rightarrow> tcb_hyp_refs (tcb_arch tcb)
-                   | Endpoint ep       \<Rightarrow> {}
-                   | Notification ntfn \<Rightarrow> {}
-                   | ArchObj ao        \<Rightarrow> refs_of_ao ao"
-
-definition state_hyp_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set" where
-  "state_hyp_refs_of \<equiv> \<lambda>s p. case_option {} (hyp_refs_of) (kheap s p)"
-
-definition valid_asid_map :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_asid_map \<equiv> \<lambda>s. True"
-
-definition valid_vso_at :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "valid_vso_at level p \<equiv> \<lambda>s. \<exists>ao. aobjs_of s p = Some ao \<and> valid_vspace_obj level ao s"
-
-definition valid_global_objs :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_global_objs \<equiv> \<top>"
 
 definition valid_global_arch_objs :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_global_arch_objs \<equiv> \<lambda>s.
@@ -644,9 +611,6 @@ definition valid_global_vspace_mappings :: "'z::state_ext state \<Rightarrow> bo
        (\<forall>vref \<in> kernel_window s. translate_address root vref s = Some (addrFromPPtr vref)) \<and>
        (\<forall>vref \<in> kernel_elf_window s. translate_address root vref s = Some (addrFromKPPtr vref))"
 
-definition valid_ioports :: "'z::state_ext state \<Rightarrow> bool" where
-  [simp]: "valid_ioports \<equiv> \<top>"
-
 locale_abbrev obj_addrs :: "kernel_object \<Rightarrow> obj_ref \<Rightarrow> obj_ref set" where
   "obj_addrs ko p \<equiv> {p .. p + 2 ^ obj_bits ko - 1}"
 
@@ -654,13 +618,8 @@ locale_abbrev obj_addrs :: "kernel_object \<Rightarrow> obj_ref \<Rightarrow> ob
 definition pspace_in_kernel_window :: "'z::state_ext state \<Rightarrow> bool" where
   "pspace_in_kernel_window \<equiv> \<lambda>s. \<forall>p ko. kheap s p = Some ko \<longrightarrow> obj_addrs ko p \<subseteq> kernel_window s"
 
-(* tcb_arch_ref extracts the obj_refs in tcb_arch: currently there is no vcpu ref in RISCV *)
-definition tcb_arch_ref :: "tcb \<Rightarrow> obj_ref option" where
-  "tcb_arch_ref t \<equiv> None"
-
 definition vspace_at_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "vspace_at_asid asid pt \<equiv> \<lambda>s. vspace_for_asid asid s = Some pt"
-
 
 definition valid_uses_2 :: "(obj_ref \<Rightarrow> riscvvspace_region_use) \<Rightarrow> bool" where
   "valid_uses_2 uses \<equiv>
@@ -684,6 +643,74 @@ definition valid_arch_state :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_arch_state \<equiv> valid_asid_table and valid_uses and valid_global_arch_objs"
 
 
+(* ---------------------------------------------------------------------------------------------- *)
+
+(* Interface definitions, needed to define concepts needed in generic theories, but not
+   necessarily in RISC-V *)
+
+definition valid_arch_tcb :: "arch_tcb \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "valid_arch_tcb \<equiv> \<lambda>_. \<top>"
+
+definition valid_arch_idle :: "iarch_tcb \<Rightarrow> bool" where
+  "valid_arch_idle \<equiv> \<top>"
+
+definition
+  "valid_arch_mdb r cs \<equiv> True"
+
+(* tcb_arch_ref extracts the obj_refs in tcb_arch: currently there is no vcpu ref in RISCV *)
+definition tcb_arch_ref :: "tcb \<Rightarrow> obj_ref option" where
+  "tcb_arch_ref t \<equiv> None"
+
+definition tcb_hyp_refs :: "arch_tcb \<Rightarrow> (obj_ref \<times> reftype) set" where
+  "tcb_hyp_refs atcb \<equiv> {}"
+
+definition refs_of_ao :: "arch_kernel_obj \<Rightarrow> (obj_ref \<times> reftype) set" where
+  "refs_of_ao x \<equiv> {}"
+
+(* FIXME: move to generic *)
+definition hyp_refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype) set" where
+  "hyp_refs_of x \<equiv> case x of
+                     CNode sz fun      \<Rightarrow> {}
+                   | TCB tcb           \<Rightarrow> tcb_hyp_refs (tcb_arch tcb)
+                   | Endpoint ep       \<Rightarrow> {}
+                   | Notification ntfn \<Rightarrow> {}
+                   | ArchObj ao        \<Rightarrow> refs_of_ao ao"
+
+definition state_hyp_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set" where
+  "state_hyp_refs_of \<equiv> \<lambda>s p. case_option {} (hyp_refs_of) (kheap s p)"
+
+definition valid_asid_map :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_asid_map \<equiv> \<lambda>s. True"
+
+definition valid_global_objs :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_global_objs \<equiv> \<top>"
+
+definition valid_ioports :: "'z::state_ext state \<Rightarrow> bool" where
+  [simp]: "valid_ioports \<equiv> \<top>"
+
+
+(* This definition is needed as interface for other architectures only.
+   In other architectures, S is a set of object references (to global tables) that
+   top-level tables may contain. In RISC-V, these table are fully empty *)
+definition empty_table_arch :: "obj_ref set \<Rightarrow> arch_kernel_obj \<Rightarrow> bool" where
+  "empty_table_arch S \<equiv> \<lambda>ko. case ko of PageTable pt \<Rightarrow> pt = empty_pt | _ \<Rightarrow> False"
+
+declare empty_table_arch_def[simp]
+
+(* Interface definition, see above *)
+definition empty_table :: "obj_ref set \<Rightarrow> kernel_object \<Rightarrow> bool" where
+  "empty_table S \<equiv> arch_obj_fun_lift (empty_table_arch S) False"
+
+definition
+  "cap_asid_arch cap \<equiv> case cap of
+    FrameCap _ _ _ _ (Some (asid, _)) \<Rightarrow> Some asid
+  | PageTableCap _ (Some (asid, _)) \<Rightarrow> Some asid
+  | _ \<Rightarrow> None"
+
+declare cap_asid_arch_def[abs_def, simp]
+
+definition
+  "cap_asid cap = arch_cap_fun_lift cap_asid_arch None cap"
 
 (* ---------------------------------------------------------------------------------------------- *)
 
@@ -818,7 +845,7 @@ section \<open>Basic Properties\<close>
 
 lemma valid_table_caps_pdD:
   "\<lbrakk> caps_of_state s p = Some (ArchObjectCap (PageTableCap pt None)); valid_table_caps s \<rbrakk>
-  \<Longrightarrow> pts_of s pt = Some empty_table"
+  \<Longrightarrow> pts_of s pt = Some empty_pt"
   by (auto simp add: valid_table_caps_def simp del: split_paired_Ex)
 
 lemma addrFromPPtr_ptrFromPAddr_id[simp]:
