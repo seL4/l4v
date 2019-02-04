@@ -468,7 +468,7 @@ definition translate_address :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> 
 
 definition vs_cap_ref_arch :: "arch_cap \<Rightarrow> (asid \<times> vspace_ref) option" where
   "vs_cap_ref_arch acap \<equiv> case acap of
-                            ASIDPoolCap _ _ \<Rightarrow> None
+                            ASIDPoolCap _ asid \<Rightarrow> Some (asid, 0)
                           | ASIDControlCap \<Rightarrow> None
                           | _ \<Rightarrow> acap_map_data acap"
 
@@ -710,7 +710,7 @@ definition
 declare cap_asid_arch_def[abs_def, simp]
 
 definition
-  "cap_asid cap = arch_cap_fun_lift cap_asid_arch None cap"
+  "cap_asid = arch_cap_fun_lift cap_asid_arch None"
 
 (* ---------------------------------------------------------------------------------------------- *)
 
