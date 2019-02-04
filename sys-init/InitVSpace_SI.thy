@@ -1176,6 +1176,7 @@ lemma init_pd_asids_sep:
   apply (rule mapM_x_wp', clarsimp)
   apply (wp sep_wp: set_asid_wp [where t=t], simp+, sep_solve)
   done
+
 end
 
 end

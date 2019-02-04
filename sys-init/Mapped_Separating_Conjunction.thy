@@ -12,7 +12,7 @@
 
 theory Mapped_Separating_Conjunction
 imports
-  Sep_Algebra.Sep_Algebra_L4v
+  Sep_Algebra.Extended_Separation_Algebra
   "HOL-Library.Multiset"
 begin
 
@@ -212,5 +212,55 @@ lemma sep_map_zip_snd:
 
 declare sep_map_zip_fst[THEN iffD1, sep_cancel] sep_map_zip_fst[THEN iffD2, sep_cancel]
         sep_map_zip_snd[THEN iffD1, sep_cancel] sep_map_zip_snd[THEN iffD2, sep_cancel]
+
+lemma precise_non_dup: "precise P \<Longrightarrow> \<not>P 0  \<Longrightarrow> \<not> (P \<and>* P) (s :: ('a :: cancellative_sep_algebra))"
+  apply (rule ccontr, simp)
+  apply (clarsimp simp: sep_conj_def)
+  apply (clarsimp simp: precise_def)
+  apply (erule_tac x="x+y" in allE)
+  apply (erule_tac x=x in allE)
+  apply (erule_tac x=y in allE)
+  apply (clarsimp)
+  apply (drule mp)
+  using sep_disj_commuteI sep_substate_disj_add sep_substate_disj_add' apply blast
+  apply (clarsimp)
+  by (metis disjoint_zero_sym sep_add_cancel sep_add_zero_sym sep_disj_positive)
+
+lemma duplicate_inj: "finite S \<Longrightarrow> sep_map_set_conj f S s \<Longrightarrow> (\<And>s. \<forall>x\<in>(f ` S). \<not>(x \<and>* x) s) \<Longrightarrow> inj_on f S"
+ apply (clarsimp simp: inj_on_def)
+ apply (erule contrapos_pp[where Q="f _ = f _"])
+ apply (clarsimp simp: sep.prod.remove)
+ apply (subst (asm) sep.prod.remove[where x=y])
+ apply (clarsimp)+
+ by (metis sep_conj_assoc sep_conj_false_left sep_globalise)
+
+lemma inj_on_sep_set_conj: "inj_on f S \<Longrightarrow> sep_map_set_conj f S = sep_set_conj (f ` S)"
+  by (simp add: sep.prod.reindex_cong sep_set_conj_def)
+
+lemma image_remove: "(f ` (S - {x. f x = \<box>})) = (f ` S - {\<box>})"
+ apply (intro set_eqI iffI; clarsimp )
+done
+
+lemma sep_prod_setdiff_sep_empty: "finite S \<Longrightarrow> sep.Prod (f ` (S - {x. f x = \<box>})) s \<Longrightarrow> sep.Prod (f ` S) s"
+ apply (subst sep.prod.setdiff_irrelevant[symmetric]; clarsimp simp: image_remove)
+done
+
+lemma "sep_map_set_conj f S s \<Longrightarrow> finite S \<Longrightarrow> (\<forall>P\<in>(f ` S) - {\<box>}. precise P) \<Longrightarrow> sep_set_conj (f ` S) s"
+  apply (subst (asm)  sep.prod.setdiff_irrelevant[symmetric])
+   apply (clarsimp)
+  apply (frule duplicate_inj[rotated])
+    apply (clarsimp)
+    apply (erule_tac x="f x" in ballE)
+     apply (frule precise_non_dup)
+      apply (clarsimp simp: sep_empty_def)
+  apply (metis (mono_tags, hide_lams) disjoint_zero_sym precise_def sep_add_zero 
+                                      sep_disj_zero sep_substate_disj_add')
+     apply (fastforce)
+    apply (blast)
+   apply (blast)
+  apply (clarsimp simp: inj_on_sep_set_conj)
+  apply (clarsimp simp: sep_set_conj_def)
+  apply (erule (1) sep_prod_setdiff_sep_empty)
+done
 
 end

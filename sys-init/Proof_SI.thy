@@ -137,6 +137,13 @@ lemma objects_empty_objects_initialised_capless:
   apply (clarsimp simp: object_empty_object_initialised_capless)
   done
 
+find_theorems inj_on sep_conj
+
+lemma sep_empty_sep_impl[simp]: "(\<box> \<longrightarrow>* P) = P"
+ apply (intro ext iffI)
+ apply (clarsimp simp: sep_empty_def sep_impl_def)+
+done
+
 lemma valid_case_prod':
   "(\<And>x y. \<lbrace>P x y\<rbrace> f x y \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P (fst v) (snd v)\<rbrace> case v of (x, y) \<Rightarrow> f x y \<lbrace>Q\<rbrace>"
   by (clarsimp split: prod.splits)
