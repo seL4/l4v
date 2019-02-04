@@ -205,7 +205,7 @@ definition
  "fromEnumAlt x \<equiv> THE n. enum_alt n = Some x"
 
 definition
-  upto_enum :: "('a :: enumeration_alt) \<Rightarrow> 'a \<Rightarrow> 'a list" ("(1[_.e._])") where
+  upto_enum :: "('a :: enumeration_alt) \<Rightarrow> 'a \<Rightarrow> 'a list" ("(1[_ .e. _])") where
  "upto_enum n m \<equiv> map toEnumAlt [fromEnumAlt n ..< Suc (fromEnumAlt m)]"
 
 lemma fromEnum_alt_red[simp]:
