@@ -2013,8 +2013,9 @@ crunches sched_context_resume
 
 lemma set_refills_wp:
   "\<lbrace>\<lambda>s. \<forall>sc n. obj_at ((=) (SchedContext sc n)) sc_ptr s
-       \<longrightarrow> P (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext (sc\<lparr>sc_refills := refills\<rparr>) n)\<rparr>)\<rbrace>
-       set_refills sc_ptr refills \<lbrace>\<lambda>r. P\<rbrace>"
+               \<longrightarrow> P (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext (sc\<lparr>sc_refills := refills\<rparr>) n)\<rparr>)\<rbrace>
+     set_refills sc_ptr refills
+   \<lbrace>\<lambda>r. P\<rbrace>"
   unfolding set_refills_def
   by (wpsimp wp: update_sched_context_wp)
 
@@ -2201,7 +2202,8 @@ lemma sc_at_no_tcb_sc:
           split: thread_state.splits option.splits if_splits)
 
 lemma maybe_donate_sc_sym_refs:
-  "\<lbrace>\<lambda>s. sym_refs (state_refs_of s)\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr
+  "\<lbrace>\<lambda>s. sym_refs (state_refs_of s)\<rbrace>
+     maybe_donate_sc tcb_ptr ntfn_ptr
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: maybe_donate_sc_def)
   apply (rule hoare_seq_ext[OF _ gsc_sp])

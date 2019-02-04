@@ -143,9 +143,9 @@ lemma active_sc_tcb_at_thread_set_no_change:
     apply (rule hoare_seq_ext[OF _ assert_get_tcb_ko'])
     by (fastforce intro: active_sc_tcb_at_set_object_no_change_tcb)
 
-lemma is_schedulable_unfold:
-  "is_schedulable_opt t (in_release_queue t s) s = Some True \<Longrightarrow>
-          st_tcb_at runnable t s \<and> active_sc_tcb_at t s \<and> \<not> in_release_queue t s"
+lemma is_schedulable_opt_Some:
+  "is_schedulable_opt t in_q s = Some X \<Longrightarrow>
+          ((st_tcb_at runnable t s \<and> active_sc_tcb_at t s \<and> \<not> in_q) = X)"
   by (clarsimp simp: is_schedulable_opt_def pred_tcb_at_def active_sc_tcb_at_def obj_at_def
                   split: option.splits dest!: get_tcb_SomeD)
 
