@@ -5942,7 +5942,7 @@ crunch simple_sched_action[wp]: unbind_notification simple_sched_action
 (* precondition could be weaker (invs > (sym_refs and valid_objs)) but
    this is much simpler to prove *)
 lemma finalise_cap_valid_sched[wp]:
-  "\<lbrace>valid_sched and valid_idle_etcb and simple_sched_action and invs and valid_cap cap
+  "\<lbrace>valid_sched and simple_sched_action and invs and valid_cap cap
     and valid_ep_q and valid_ntfn_q\<rbrace>
    finalise_cap cap param_b
    \<lbrace>\<lambda>_. valid_sched:: det_state \<Rightarrow> _\<rbrace>"
@@ -5975,10 +5975,14 @@ context DetSchedSchedule_AI begin
 
 crunch simple_sched_action[wp]: empty_slot simple_sched_action
 
-lemma finalise_cap_simple_sched_action:
-  "\<lbrace>simple_sched_action\<rbrace> finalise_cap cap fin \<lbrace>\<lambda>rv. simple_sched_action\<rbrace>"
-  apply (cases cap; simp)
-  sorry (* finalise_cap_simple_sched_action *)
+crunches unbind_maybe_notification, sched_context_maybe_unbind_ntfn,
+  sched_context_unbind_yield_from, sched_context_unbind_reply
+for simple_sched_action[wp]: simple_sched_action
+  (wp: crunch_wps simp: crunch_simps)
+
+crunches finalise_cap
+for simple_sched_action: simple_sched_action
+  (wp: crunch_wps reschedule_simple possible_switch_to_simple_sched_action)
 
 (* This depends on finalise_cap_valid_sched and finalise_cap_simple_sched_action
    Check they are complete first *)
