@@ -540,6 +540,8 @@ definition table_cap_ref_arch :: "arch_cap \<Rightarrow> (asid \<times> vspace_r
      | PageTableCap _ mapdata \<Rightarrow> mapdata
      | _ \<Rightarrow> None"
 
+lemmas table_cap_ref_arch_simps[simp] = table_cap_ref_arch_def[split_simps arch_cap.split]
+
 definition table_cap_ref :: "cap \<Rightarrow> (asid \<times> vspace_ref) option" where
   "table_cap_ref cap = arch_cap_fun_lift table_cap_ref_arch None cap"
 
@@ -1974,6 +1976,10 @@ lemma arch_tcb_context_absorbs[simp]:
 lemma arch_tcb_context_get_set[simp]:
   "arch_tcb_context_get (arch_tcb_context_set uc a_tcb) = uc"
   by (simp add: arch_tcb_context_get_def arch_tcb_context_set_def)
+
+lemmas is_nondevice_page_cap_simps = is_nondevice_page_cap_def[split_simps arch_cap.split cap.split]
+
+lemmas abs_atyp_at_lifts = valid_pte_lift
 
 end
 
