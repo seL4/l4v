@@ -1502,22 +1502,6 @@ lemma final_NullCap:
   "is_final_cap' NullCap = \<bottom>"
   by (rule ext, simp add: is_final_cap'_def)
 
-lemma unique_table_refs_no_cap_asidE:
-  "\<lbrakk>caps_of_state s p = Some cap;
-    unique_table_refs (caps_of_state s)\<rbrakk>
-   \<Longrightarrow> no_cap_to_obj_with_diff_ref cap S s"
-  apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
-                        cte_wp_at_caps_of_state)
-  apply (unfold unique_table_refs_def)
-  apply (drule_tac x=p in spec, drule_tac x="(a,b)" in spec)
-  apply (drule spec)+
-  apply (erule impE, assumption)+
-  apply (clarsimp simp: is_cap_simps)
-  done
-
-lemmas unique_table_refs_no_cap_asidD
-     = unique_table_refs_no_cap_asidE[where S="{}"]
-
 lemma set_cap_only_idle [wp]:
   "set_cap cap p \<lbrace>only_idle\<rbrace>"
   by (wp only_idle_lift set_cap_typ_at)
