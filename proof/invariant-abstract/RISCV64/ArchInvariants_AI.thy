@@ -875,6 +875,10 @@ lemmas is_pt_cap_simps [simp] =
          is_pt_cap_def [simplified arch_cap_fun_lift_def[abs_def],
                         split_simps cap.split arch_cap.split]
 
+lemma is_pt_cap_eq:
+  "is_pt_cap cap = (\<exists>p m. cap = ArchObjectCap (PageTableCap p m))"
+  by (auto simp: is_pt_cap_def is_PageTableCap_def)
+
 lemma vs_cap_ref_table_cap_ref_eq:
   "is_pt_cap cap \<Longrightarrow> vs_cap_ref cap = table_cap_ref cap"
   by (cases cap; simp) (rename_tac acap, case_tac acap; simp)

@@ -54,14 +54,6 @@ lemma cap_master_arch_inv[simp]:
   by (cases ac; simp add: cap_master_arch_cap_def)
 
 definition
-  "is_ap_cap cap \<equiv> case cap of ArchObjectCap (ASIDPoolCap _ _) \<Rightarrow> True | _ \<Rightarrow> False"
-
-lemmas is_ap_cap_simps [simp] = is_ap_cap_def [split_simps cap.split arch_cap.split]
-
-definition is_frame_cap :: "cap \<Rightarrow> bool" where
-  "is_frame_cap cap \<equiv> arch_cap_fun_lift is_FrameCap False cap"
-
-definition
   "reachable_target \<equiv> \<lambda>(asid, vref) p s.
      \<exists>level. vs_lookup_target level asid vref s = Some (level, p)"
 

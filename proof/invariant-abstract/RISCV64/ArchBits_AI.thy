@@ -39,6 +39,30 @@ lemmas valid_cap_def = valid_cap_def[simplified valid_arch_cap_def]
 lemmas valid_cap_simps =
   valid_cap_def[split_simps cap.split arch_cap.split, simplified wellformed_mapdata_def]
 
+definition is_ap_cap :: "cap \<Rightarrow> bool" where
+  "is_ap_cap cap \<equiv> arch_cap_fun_lift is_ASIDPoolCap False cap"
+
+lemmas is_ap_cap_simps[simp] =
+  is_ap_cap_def[unfolded arch_cap_fun_lift_def, split_simps cap.split arch_cap.split]
+
+lemma is_ap_cap_eq:
+  "is_ap_cap cap = (\<exists>p m. cap = ArchObjectCap (ASIDPoolCap p m))"
+  by (auto simp: is_ap_cap_def is_ASIDPoolCap_def)
+
+definition is_frame_cap :: "cap \<Rightarrow> bool" where
+  "is_frame_cap cap \<equiv> arch_cap_fun_lift is_FrameCap False cap"
+
+lemmas is_frame_cap_simps[simp] =
+  is_frame_cap_def[unfolded arch_cap_fun_lift_def, split_simps cap.split arch_cap.split]
+
+lemma is_frame_cap_eq:
+  "is_frame_cap cap = (\<exists>p R sz dev m. cap = ArchObjectCap (FrameCap p R sz dev m))"
+  by (auto simp: is_frame_cap_def is_FrameCap_def)
+
+lemmas is_arch_cap_simps = is_pt_cap_eq is_ap_cap_eq is_frame_cap_eq
+
+lemmas is_cap_simps = is_cap_simps is_arch_cap_simps
+
 end
 
 end
