@@ -918,12 +918,19 @@ lemma valid_arch_tcb_same_type:
    \<Longrightarrow> valid_arch_tcb t (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
   by (auto simp: valid_arch_tcb_def obj_at_def)
 
-lemma valid_ioports_lift[wp]:
-  "f \<lbrace>valid_ioports\<rbrace>"
+
+(* interface lemma *)
+lemma valid_ioports_lift:
+  assumes x: "\<And>P. f \<lbrace>\<lambda>rv. P (caps_of_state s)\<rbrace>"
+  assumes y: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
+  shows      "f \<lbrace>valid_ioports\<rbrace>"
   by wpsimp
 
-lemma valid_arch_mdb_lift[wp]:
-  "f \<lbrace>\<lambda>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>"
+(* interface lemma *)
+lemma valid_arch_mdb_lift:
+  assumes c: "\<And>P. f \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
+  assumes r: "\<And>P. f \<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>"
   by (wpsimp simp: valid_arch_mdb_def)
 
 (* interface lemma *)
