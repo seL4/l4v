@@ -1299,10 +1299,15 @@ lemma vs_lookup_slot_arch_update[simp]:
    vs_lookup_slot level asid vref (arch_state_update f s) = vs_lookup_slot level asid vref s"
   by (simp add: vs_lookup_slot_def obind_def split: option.splits)
 
+lemma vs_lookup_target_arch_update[simp]:
+  "riscv_asid_table (f (arch_state s)) = riscv_asid_table (arch_state s) \<Longrightarrow>
+   vs_lookup_target level asid vref (arch_state_update f s) = vs_lookup_target level asid vref  s"
+  by (simp add: vs_lookup_target_def obind_def split: option.splits)
+
 lemma vs_lookup_pages_arch_update[simp]:
   "riscv_asid_table (f (arch_state s)) = riscv_asid_table (arch_state s) \<Longrightarrow>
    vs_lookup_pages (arch_state_update f s) = vs_lookup_pages s"
-  by (rule ext)+ (simp add: vs_lookup_target_def obind_def split: option.splits)
+  by (rule ext)+ simp
 
 lemma store_pte_valid_vspace_objs[wp]:
   "\<lbrace>valid_vspace_objs and (\<lambda>s. \<forall>level. \<exists>\<rhd> (level, p && ~~mask pt_bits) s \<longrightarrow> valid_pte level pte s)\<rbrace>
