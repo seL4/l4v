@@ -299,10 +299,12 @@ definition
   is_schedulable_bool :: "obj_ref \<Rightarrow> bool \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "is_schedulable_bool tcb_ptr in_release_q \<equiv> \<lambda>s.
-    case tcb_sched_context (the (get_tcb tcb_ptr s)) of None => False
-      | Some sc_ptr =>
-           (runnable (tcb_state (the (get_tcb tcb_ptr s))) \<and> (test_sc_refill_max sc_ptr s)
-           \<and> \<not>in_release_q)"
+     case get_tcb tcb_ptr s of None \<Rightarrow> False
+     | Some tcb \<Rightarrow>
+       (case tcb_sched_context tcb of None => False
+         | Some sc_ptr =>
+            (runnable (tcb_state tcb) \<and> (test_sc_refill_max sc_ptr s)
+              \<and> \<not>in_release_q))"
 
 (* refill checks *)
 

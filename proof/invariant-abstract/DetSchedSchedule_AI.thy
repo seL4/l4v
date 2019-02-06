@@ -6070,7 +6070,6 @@ lemma rec_del_simple_sched_action[wp]:
 crunches cap_delete
 for valid_sched[wp]: "valid_sched::det_state \<Rightarrow> _"
 and simple_sched_action[wp]: simple_sched_action
-
 end
 
 crunches tcb_sched_action
@@ -6080,7 +6079,7 @@ and not_pred_tcb[wp]: "\<lambda>s. \<not> pred_tcb_at proj P t s"
 lemma ct_in_state_def2: "ct_in_state test s = st_tcb_at test (cur_thread s) s"
    by (simp add: ct_in_state_def)
 
-crunches reorder_ntfn,reorder_ep
+crunches reorder_ntfn, reorder_ep
   for valid_sched[wp]:"valid_sched::det_state \<Rightarrow> _"
   and simple_sched_action[wp]: simple_sched_action
   (wp: mapM_wp' get_simple_ko_wp)

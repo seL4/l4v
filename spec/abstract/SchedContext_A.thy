@@ -435,7 +435,12 @@ where
     set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
     set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr);
     sched_context_resume sc_ptr;
-    test_possible_switch_to tcb_ptr
+    inq <- gets $ in_release_queue tcb_ptr;
+    sched <- is_schedulable tcb_ptr inq;
+    when sched $ do
+      tcb_sched_action tcb_sched_enqueue tcb_ptr;
+      reschedule_required
+      od
   od"
 
 text \<open> Unbind TCB from its scheduling context, if there is one bound. \<close>
