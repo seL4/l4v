@@ -1809,7 +1809,7 @@ lemma suspend_unlive:
    suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live0) t\<rbrace>"
   unfolding suspend_def
-  apply_trace (wpsimp simp: suspend_def wp: set_thread_state_not_live0 suspend_unlive_helper gbn_wp)
+  apply (wpsimp simp: suspend_def wp: set_thread_state_not_live0 suspend_unlive_helper gbn_wp)
     apply (simp add: cancel_ipc_def obj_at_pred_tcb_at_peel)
    apply (subst obj_at_pred_tcb_at_peel)+
    apply (wpsimp wp: blocked_cancel_ipc_bound_sc_tcb_at)

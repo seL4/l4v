@@ -1536,13 +1536,24 @@ lemma set_mcpriority_no_cap_to_obj_with_diff_ref[wp]:
   "\<lbrace>no_cap_to_obj_with_diff_ref c S\<rbrace> set_mcpriority t mcp \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref c S\<rbrace>"
   by (simp add: set_mcpriority_def thread_set_no_cap_to_trivial tcb_cap_cases_tcb_mcpriority)
 
-crunch caps_of_state[wp]: set_priority "\<lambda>s. P (caps_of_state s)"
-  (wp: crunch_wps maybeM_inv)
+crunch caps_of_state[wp]: reorder_ntfn, reorder_ep "\<lambda>s. P (caps_of_state s)"
+  (wp: crunch_wps)
 
-crunches set_priority
-  for typ_at[wp]:  "\<lambda>s. P (typ_at T p s)"
-  and no_cap_to[wp]: "no_cap_to_obj_with_diff_ref a S"
-  (wp: crunch_wps no_cap_to_obj_with_diff_ref_lift maybeM_inv)
+lemma set_priority_caps_of_state[wp]:
+  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_priority tptr prio \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
+  unfolding set_priority_def
+  by (wpsimp wp: hoare_drop_imps simp: get_thread_state_def thread_get_def)
+
+crunch typ_at[wp]: reorder_ntfn, reorder_ep "\<lambda>s. P (typ_at T p s)"
+  (wp: crunch_wps)
+
+lemma set_priority_typ_at[wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_priority tptr prio \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  unfolding set_priority_def
+  by (wpsimp wp: hoare_drop_imps simp: get_thread_state_def thread_get_def)
+
+crunch no_cap_to_obj_with_diff_ref[wp]: set_priority "no_cap_to_obj_with_diff_ref a S"
+  (wp: crunch_wps no_cap_to_obj_with_diff_ref_lift)
 
 lemma sc_tcb_sc_at_ready_queues_update[simp]:
   "sc_tcb_sc_at P t s \<Longrightarrow> sc_tcb_sc_at P t (ready_queues_update f s)"
@@ -1551,7 +1562,6 @@ lemma sc_tcb_sc_at_ready_queues_update[simp]:
 lemma sc_tcb_sc_at_sch_act_update[simp]:
   "sc_tcb_sc_at P t s \<Longrightarrow> sc_tcb_sc_at P t (scheduler_action_update f s)"
   by (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
-
 
 (* FIXME move: KHeap_AI *)
 lemma set_notification_obj_at_impossible:
@@ -1592,15 +1602,21 @@ lemma thread_set_priority_sc_tcb_sc_at[wp]:
 
 crunches set_priority
   for valid_cap[wp]: "valid_cap cap"
-  and no_cap_to_diff_ref[wp]: "no_cap_to_obj_with_diff_ref a S"
-  and cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   and ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
   and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   and pred_tcb_at[wp]: "pred_tcb_at proj P t"
   and sc_tcb_sc_at[wp]: "sc_tcb_sc_at P t"
   (wp: valid_cap_typ crunch_wps no_cap_to_obj_with_diff_ref_lift reschedule_required_pred_tcb_at
    simp: crunch_simps cte_wp_at_caps_of_state ignore: set_simple_ko
- wp_del: sort_queue_rv_wf')
+   wp_del: sort_queue_rv_wf')
+
+crunch cte_wp_at'[wp]: reorder_ntfn, reorder_ep, reschedule_required "\<lambda>s. P (cte_wp_at P' p s)"
+  (wp: crunch_wps)
+
+lemma set_priority_cte_wp_at'[wp]:
+  "\<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace> set_priority tptr prio \<lbrace>\<lambda>r s. P (cte_wp_at P' p s)\<rbrace>"
+  unfolding set_priority_def
+  by (wpsimp wp: hoare_drop_imps simp: get_thread_state_def thread_get_def)
 
 lemma mapM_priorities:
   "\<lbrace>\<lambda>s. (\<forall>t \<in> set qs. tcb_at t s) \<longrightarrow> P (map (tcb_priority o un_TCB o the o kheap s) qs) s\<rbrace>
@@ -1672,6 +1688,7 @@ lemma reorder_ep_invs[wp]:
 lemma set_priority_invs[wp]:
   "\<lbrace>invs and ex_nonz_cap_to t\<rbrace> set_priority t p \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding set_priority_def
-  by (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift)
+  by (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift
+           simp: get_thread_state_def thread_get_def)
 
 end

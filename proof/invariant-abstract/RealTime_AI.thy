@@ -564,7 +564,7 @@ crunches tcb_sched_action,reschedule_required,possible_switch_to,tcb_release_enq
  and it[wp]: "\<lambda>s. P (idle_thread s)"
  and distinct[wp]: pspace_distinct
  and sc_at[wp]: "sc_at sc_ptr"
- and tcb_at[wp]: "tcb_at tptr"
+ and tcb_at[wp]: "\<lambda>s. P (tcb_at tptr s)"
  and st_tcb_at[wp]: "\<lambda>s. Q (st_tcb_at P tptr s)"
  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
  and no_cdt[wp]: "\<lambda>s. P (cdt s)"

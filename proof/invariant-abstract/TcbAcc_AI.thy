@@ -1207,7 +1207,7 @@ lemma ssc_iflive[wp]:
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
   apply wpsimp
-  apply_trace (fastforce dest: get_tcb_SomeD if_live_then_nonz_capD2
+  apply (fastforce dest: get_tcb_SomeD if_live_then_nonz_capD2
                    simp: tcb_cap_cases_def live_def
                   split: Structures_A.thread_state.splits)
   done

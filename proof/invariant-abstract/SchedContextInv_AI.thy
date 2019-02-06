@@ -303,7 +303,6 @@ scp := (state_refs_of s scp - {x \<in> state_refs_of s scp. snd x = SCYieldFrom}
   apply (case_tac yt_opt; simp add: pred_tcb_at_def)
   apply (rule hoare_assume_pre)
   apply (clarsimp simp: obj_at_def)
-find_theorems state_refs_of fun_upd
   apply (wpsimp simp: reply_unlink_tcb_def get_thread_state_def
                       get_object_def update_sched_context_def set_object_def
 wp: set_consumed_refs_of hoare_drop_imp hoare_vcg_all_lift set_sc_yf_refs_of

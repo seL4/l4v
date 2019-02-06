@@ -573,7 +573,7 @@ lemma set_simple_ko_typ_at [wp]:
   by (set_simple_ko_method wp_thm: set_object_typ_at)
 
 lemma set_simple_ko_cte_wp_at [wp]:
-  "\<lbrace>cte_wp_at P p\<rbrace> set_simple_ko f p' ep \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
+  "\<lbrace>\<lambda>s. Q (cte_wp_at P p s)\<rbrace> set_simple_ko f p' ep \<lbrace>\<lambda>rv s. Q (cte_wp_at P p s)\<rbrace>"
   by (set_simple_ko_method simp_thm: set_object_def cte_wp_at_cases; fastforce)
 
 lemma get_simple_ko_ko_at:
