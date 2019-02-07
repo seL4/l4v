@@ -87,7 +87,7 @@ lemma vs_cap_ref_to_table_cap_ref:
          split: cap.splits arch_cap.splits)
 
 
-lemma cap_master_cap_pg_cap:
+lemma cap_master_cap_frame_cap:
  "\<lbrakk>cap_master_cap cap = cap_master_cap cap'\<rbrakk>
   \<Longrightarrow> is_frame_cap cap = is_frame_cap cap'"
   by (clarsimp simp: cap_master_cap_def is_cap_simps
