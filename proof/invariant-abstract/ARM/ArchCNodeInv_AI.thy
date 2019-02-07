@@ -581,7 +581,7 @@ lemma rec_del_invs'':
                              (\<not> x \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) sl s)
                           | _ \<Rightarrow> True)\<rbrace>,
        \<lbrace>\<lambda>rv. Q and invs\<rbrace>"
-(*proof (induct rule: rec_del.induct,
+proof (induct rule: rec_del.induct,
        simp_all only: rec_del_fails)
   case (1 slot exposed s)
   show ?case
@@ -605,14 +605,14 @@ next
      apply (rule drop_spec_validE, simp)
      apply (rule get_cap_sp)
     apply (rule hoare_pre_spec_validE)
-     apply (wp replace_cap_invs | simp)+
-        apply (erule finalise_cap_not_reply_master)
+     apply (wp replace_cap_invs | simp)
+     apply ((wp replace_cap_invs | simp)+)[1]
        apply (wp "2.hyps")
          apply (wp preemption_point_Q | simp)+
          apply (wp preemption_point_inv, simp+)
          apply (wp preemption_point_Q)
          apply ((wp preemption_point_inv irq_state_independent_A_conjI irq_state_independent_AI
-                    emptyable_irq_state_independent invs_irq_state_independent
+                    invs_irq_state_independent
                | simp add: valid_rec_del_call_def irq_state_independent_A_def)+)[1]
         apply (simp(no_asm))
         apply (rule spec_strengthen_postE)
@@ -620,13 +620,12 @@ next
        apply (simp add: cte_wp_at_eq_simp
                 | wp replace_cap_invs set_cap_sets final_cap_same_objrefs
                      set_cap_cte_cap_wp_to static_imp_wp
-                | erule finalise_cap_not_reply_master)+
+                | erule)+
        apply (wp hoare_vcg_const_Ball_lift)+
       apply (rule hoare_strengthen_post)
        apply (rule_tac Q="\<lambda>fin s. Q s \<and> invs s \<and> replaceable s slot (fst fin) rv
                                  \<and> cte_wp_at ((=) rv) slot s \<and> s \<turnstile> (fst fin)
                                  \<and> ex_cte_cap_wp_to (appropriate_cte_cap rv) slot s
-                                 \<and> emptyable slot s
                                  \<and> (\<forall>t\<in>obj_refs (fst fin). halted_if_tcb t s)"
                   in hoare_vcg_conj_lift)
         apply (wp finalise_cap_invs[where slot=slot]
@@ -683,7 +682,6 @@ next
       apply (rule conjI)
        apply (erule zombie_is_cap_toE2)
         apply simp+
-      apply (clarsimp simp: halted_emptyable)
       apply (rule conjI, clarsimp simp: cte_wp_at_caps_of_state)
        apply (erule tcb_valid_nonspecial_cap)
          apply fastforce
@@ -693,12 +691,9 @@ next
       apply (rule conjI)
        apply (drule cte_wp_valid_cap, clarsimp)
        apply (frule cte_at_nat_to_cref_zbits [where m=0], simp)
-       apply (rule cte_wp_at_not_reply_master)
-          apply (simp add: replicate_helper tcb_cnode_index_def)
          apply (subst(asm) nat_to_cref_0_replicate)
           apply (simp add: zombie_cte_bits_less)
          apply assumption
-        apply clarsimp
        apply (simp add: invs_def valid_state_def)
       apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
      apply (erule cte_wp_at_weakenE | clarsimp)+
@@ -722,8 +717,6 @@ next
                   in hoare_post_imp)
        apply (thin_tac "(a, b) \<in> fst c" for a b c)
        apply clarsimp
-       apply (frule cte_wp_at_emptyableD, clarsimp, assumption)
-       apply (rule conjI[rotated], (clarsimp simp: is_cap_simps)+)
        apply (frule cte_wp_at_valid_objs_valid_cap, clarsimp+)
        apply (frule if_unsafe_then_capD, clarsimp+)
        apply (rule conjI)
@@ -778,12 +771,12 @@ next
       apply (rule "4.hyps"[simplified rec_del_call.simps slot_rdcall.simps simp_thms pred_conj_def])
       apply (simp add: in_monad)
      apply simp
-    apply (clarsimp simp: halted_emptyable)
+    apply clarsimp
     apply (erule(1) zombie_is_cap_toE)
      apply simp
     apply simp
     done
-qed *) sorry
+qed
 
 
 lemmas rec_del_invs'[CNodeInv_AI_assms] = rec_del_invs'' [where Q=\<top>,

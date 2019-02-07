@@ -1693,7 +1693,8 @@ lemma cap_swap_fd_invs[wp]:
   \<lbrace>invs and ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) a
         and ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) b
         and (\<lambda>s. \<forall>c. tcb_cap_valid c a s)
-        and (\<lambda>s. \<forall>c. tcb_cap_valid c b s)\<rbrace>
+        and (\<lambda>s. \<forall>c. tcb_cap_valid c b s)
+        and cte_at a and cte_at b\<rbrace>
    cap_swap_for_delete a b \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: cap_swap_for_delete_def)
   apply (wp get_cap_wp)
