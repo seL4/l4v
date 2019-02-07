@@ -363,6 +363,25 @@ lemma set_pt_distinct [wp]:
                 split: kernel_object.splits arch_kernel_obj.splits)
   done
 
+crunches store_pte
+  for arch[wp]: "\<lambda>s. P (arch_state s)"
+  and "distinct"[wp]: pspace_distinct
+
+lemma store_pt_asid_pools_of[wp]:
+  "set_pt p pt \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  unfolding set_pt_def
+  apply (wpsimp wp: set_object_wp)
+  apply (auto simp: obj_at_def opt_map_def elim!: rsubst[where P=P])
+  done
+
+lemma store_pte_asid_pools_of[wp]:
+  "store_pte p pte \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  unfolding store_pte_def by wpsimp
+
+lemma store_pte_vspace_at_asid:
+  "store_pte p pte \<lbrace>vspace_at_asid asid pt\<rbrace>"
+  unfolding vspace_at_asid_def by (wp vspace_for_asid_lift)
+
 lemma store_pte_valid_objs [wp]:
   "\<lbrace>(\<lambda>s. wellformed_pte pte) and valid_objs\<rbrace> store_pte p pte \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (simp add: store_pte_def set_pt_def bind_assoc set_object_def get_object_def)
