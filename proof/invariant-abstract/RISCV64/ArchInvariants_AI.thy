@@ -1985,6 +1985,17 @@ lemmas is_nondevice_page_cap_simps = is_nondevice_page_cap_def[split_simps arch_
 
 lemmas abs_atyp_at_lifts = valid_pte_lift
 
+lemma vspace_for_asid_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (vspace_for_asid asid s)\<rbrace>"
+  unfolding vspace_for_asid_def
+  apply (simp add: obind_def pool_for_asid_def o_def split del: if_split)
+  apply (rule hoare_lift_Pf[where f=asid_table])
+   apply (rule hoare_lift_Pf[where f=asid_pools_of])
+    apply (wpsimp wp: assms)+
+  done
+
 end
 
 context Arch_pspace_update_eq begin
