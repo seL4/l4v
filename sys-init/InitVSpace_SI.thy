@@ -594,16 +594,6 @@ lemma pd_NullCap_empty_init:
   apply (clarsimp simp: cap_at_def)
   done
 
-(* FIXME: Auto-generate these kind of lemmas *)
-lemma rewrite_pt[simp]:
-  "is_pt object \<Longrightarrow>
-    (case object of Endpoint \<Rightarrow> f1 |
-                    Notification \<Rightarrow> f2 | Tcb x \<Rightarrow> f3 x | CNode x \<Rightarrow> f4 x |
-                    AsidPool x \<Rightarrow> f5 x | PageTable x \<Rightarrow> P  | PageDirectory x \<Rightarrow> f7 x |
-                    Frame x \<Rightarrow> f8 x | Untyped \<Rightarrow> f9 | IRQNode x \<Rightarrow> f10 x) = P"
-  apply (cases object; simp add: is_pt_def)
-  done
-
 lemma map_page_directory_slot_pt_wp:
   "pt_at pt_id spec \<Longrightarrow>
    \<lbrace>\<guillemotleft>object_slot_empty spec t pd_id slot \<and>*
@@ -656,7 +646,7 @@ lemma map_page_directory_slot_pt_wp:
        apply clarsimp
        apply (erule wf_cap_in_pt_is_frame; fastforce simp: cap_at_def)
       apply (frule well_formed_slot_object_size_bits_pt[where obj_id=pt_id,
-                                                        simplified object_size_bits_def])
+                                                        simplified is_pt_pt_size])
   by (fastforce simp: cap_at_def opt_cap_def pt_size_def small_frame_size_def)+
 
 lemma map_page_directory_wp_expanded:

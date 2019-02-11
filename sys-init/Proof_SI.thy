@@ -177,10 +177,8 @@ lemma length_filter_card:
    \<Longrightarrow> length (filter P s_list) = card {x \<in> s. P x}"
   by (fastforce intro: card_eq_lengthI)
 
-(* Dirty hack that is sadly needed to make the below proof work. *)
-declare [[unify_search_bound = 1000]]
 
-lemma small_one:
+lemma sys_init_explicit:
   "\<lbrakk>well_formed spec;
    set obj_ids = dom (cdl_objects spec); distinct obj_ids;
    real_ids = [obj_id \<leftarrow> obj_ids. real_object_at obj_id spec];
@@ -226,6 +224,7 @@ lemma small_one:
                               pd_id spec t) \<and>*
     R\<guillemotright> s \<and>
     inj_on t (dom (cdl_objects spec)) \<and> dom t = set obj_ids\<rbrace>"
+  supply [[unify_search_bound = 1000]]
   apply clarsimp
   apply (frule (1) le_list_all [where start = ustart])
   apply (frule (1) le_list_all [where start = fstart])
@@ -308,7 +307,7 @@ lemma sys_init:
   apply (rule hoare_ex_pre)+
   apply (rule hoare_grab_asm)+
   apply (rule hoare_chain)
-    apply (rule small_one[where obj_ids="sorted_list_of_set (dom (cdl_objects spec))" and R=R],
+    apply (rule sys_init_explicit[where obj_ids="sorted_list_of_set (dom (cdl_objects spec))" and R=R],
           (assumption|simp add: unat_less_2_si_cnode_size' length_filter_card)+)
    apply sep_solve
   apply clarsimp
