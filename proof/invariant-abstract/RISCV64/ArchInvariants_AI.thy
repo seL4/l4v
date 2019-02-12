@@ -454,12 +454,24 @@ definition vs_lookup_target ::
 abbreviation
   "vs_lookup_pages s \<equiv> \<lambda>level asid vref. vs_lookup_target level asid vref s"
 
-(* Translate virtual into physical address by walking page tables *)
+(* Walk page table until we get to a slot or run out of levels; return obj_ref in slot. *)
+(* FIXME RISCV: to consider: returning the type of ref along with the ref, so that translate_address
+   can assert that it's not getting a PTE ref *)
+definition lookup_pt_target ::
+  "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option"
+  where
+  "lookup_pt_target bot_level pt_root vref \<equiv> do {
+     (level, slot) \<leftarrow> lookup_pt_slot_from_level max_pt_level bot_level pt_root vref \<circ> ptes_of;
+     p \<leftarrow> swp pte_refs_of slot;
+     oreturn (level, p)
+   }"
+
+(* Translate virtual into physical address by walking page tables.
+   Relies on last level being a PagePTE, otherwise returns garbage. *)
 definition translate_address :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> paddr option"
   where
   "translate_address pt_root vref = do {
-     (level, slot) \<leftarrow> lookup_pt_slot_from_level max_pt_level 0 pt_root vref \<circ> ptes_of;
-     p \<leftarrow> swp pte_refs_of slot;
+     (level, p) \<leftarrow> lookup_pt_target 0 pt_root vref;
      oassert (is_aligned p (pt_bits_left level));
      let base = addrFromPPtr p;
      let offset = vref && mask (pt_bits_left level);
@@ -571,9 +583,9 @@ definition hyp_live :: "kernel_object \<Rightarrow> bool" where
 
 definition valid_global_tables :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_global_tables \<equiv> \<lambda>s.
-    \<forall>asid bot_level vref level pt_ptr.
+    \<forall>bot_level vref level pt_ptr.
        vref \<in> kernel_regions s \<longrightarrow>
-       vs_lookup_target bot_level asid vref s = Some (level, pt_ptr) \<longrightarrow>
+       lookup_pt_target bot_level (riscv_global_pt (arch_state s)) vref s = Some (level, pt_ptr) \<longrightarrow>
        pts_of s pt_ptr \<noteq> None \<longrightarrow>
          0 < level \<and>
          pt_ptr \<in> riscv_global_pts (arch_state s) (level - 1)"
@@ -1352,7 +1364,8 @@ lemma translate_address_equal_top_slot:
   "ptes_of s (pt_slot_offset max_pt_level pt_ptr vptr) =
      ptes_of s (pt_slot_offset max_pt_level pt_ptr' vptr)
    \<Longrightarrow> translate_address pt_ptr vptr s = translate_address pt_ptr' vptr s"
-  apply (simp add: translate_address_def obind_def oassert_def ofail_def oreturn_def lookup_pt_slot_from_level_def
+  apply (simp add: translate_address_def obind_def oassert_def ofail_def oreturn_def
+                   lookup_pt_slot_from_level_def lookup_pt_target_def
             split: option.splits)
   apply (rule conjI; clarsimp)
    apply (drule (1) pt_walk_equal_top_slot_None)
@@ -1360,6 +1373,10 @@ lemma translate_address_equal_top_slot:
   apply (rule conjI; clarsimp)
    apply (frule (1) pt_walk_equal_top_slot_Some)
    apply (fastforce simp: opt_map_def split: if_split_asm option.splits)
+  apply (rule conjI; clarsimp)
+   apply (drule sym)
+   apply (frule (1) pt_walk_equal_top_slot_Some)
+   apply (fastforce simp: opt_map_def split: if_split_asm)
   apply (rule conjI; clarsimp)
    apply (drule sym)
    apply (frule (1) pt_walk_equal_top_slot_Some)
@@ -1475,7 +1492,8 @@ lemma valid_mappings_pt_at:
   apply (clarsimp simp: pt_at_eq Let_def)
   apply (frule valid_global_vspace_mappings_kwD)
    apply (fastforce simp: valid_uses_def window_defs)
-  apply (clarsimp simp: translate_address_def lookup_pt_slot_from_level_def in_omonad)
+  apply (clarsimp simp: translate_address_def lookup_pt_slot_from_level_def lookup_pt_target_def
+                        in_omonad)
   apply (subst (asm) pt_walk.simps)
   by (auto simp: in_omonad dest!: ptes_of_pt_slot_offset split: if_split_asm)
 
@@ -2087,6 +2105,10 @@ lemma vs_lookup_slot_update[iff]:
 lemma vs_lookup_target_update[iff]:
   "vs_lookup_target bot_level asid vref (f s) = vs_lookup_target bot_level asid vref s"
   by (simp add: vs_lookup_target_def obind_def pspace split: option.splits)
+
+lemma lookup_pt_target_update[iff]:
+  "lookup_pt_target bot_level pt_root vref (f s) = lookup_pt_target bot_level pt_root vref s"
+  by (simp add: lookup_pt_target_def obind_def oassert_def oreturn_def split: option.splits)
 
 lemma translate_address_update[iff]:
   "translate_address pt_root vref (f s) = translate_address pt_root vref s"

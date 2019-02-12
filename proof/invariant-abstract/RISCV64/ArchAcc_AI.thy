@@ -1158,12 +1158,13 @@ lemma set_asid_pool_equal_mappings[wp]:
 
 lemma set_asid_pool_valid_global_vspace_mappings[wp]:
   "\<lbrace>valid_global_vspace_mappings\<rbrace>
-      set_asid_pool p ap \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
+   set_asid_pool p ap
+   \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   apply (simp add: set_asid_pool_def)
+  sorry (* FIXME RISCV
   apply (wp set_object_global_vspace_mappings get_object_wp)
   including unfold_objects
-  by (clarsimp simp: a_type_def)
-
+  by (clarsimp simp: a_type_def) *)
 
 lemma set_asid_pool_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
