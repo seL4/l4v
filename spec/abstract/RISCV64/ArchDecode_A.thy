@@ -85,7 +85,7 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
            vtop \<leftarrow> returnOk $ vaddr + mask (pageBitsForSize pgsz);
            whenE (vtop \<ge> user_vtop) $ throwError $ InvalidArgument 0;
            check_vp_alignment pgsz vaddr;
-           (level, slot) \<leftarrow> liftE $ gets_the $ lookup_pt_slot pt vaddr \<circ> ptes_of;
+           (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
            unlessE (pt_bits_left level = pg_bits) $
              throwError $ FailedLookup False $ MissingCapability $ pt_bits_left level;
            check_slot slot ((=) InvalidPTE);
@@ -115,7 +115,7 @@ definition decode_fr_inv_remap :: "'z::state_ext arch_decoder"
          pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid';
          whenE (pt' \<noteq> pt \<or> asid \<noteq> asid') $ throwError $ InvalidCapability 1;
          check_vp_alignment pgsz vaddr;
-         (level, slot) \<leftarrow> liftE $ gets_the $ lookup_pt_slot pt vaddr \<circ> ptes_of;
+         (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
          unlessE (pt_bits_left level = pageBitsForSize pgsz) $
            throwError $ FailedLookup False $ MissingCapability $ pt_bits_left level;
          check_slot slot (Not \<circ> is_PageTablePTE);
@@ -155,7 +155,7 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
            whenE (user_vtop \<le> vaddr) $ throwError $ InvalidArgument 0;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
-           (level, slot) \<leftarrow> liftE $ gets_the $ lookup_pt_slot pt vaddr \<circ> ptes_of;
+           (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
            old_pte \<leftarrow> liftE $ get_pte slot;
            whenE (pt_bits_left level = pageBits \<or> old_pte \<noteq> InvalidPTE) $ throwError DeleteFirst;
            pte \<leftarrow> returnOk $ PageTablePTE (addrFromPPtr p >> pageBits) {};

@@ -152,7 +152,7 @@ definition unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_
   where
   "unmap_page_table asid vaddr pt \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
-     pt_slot \<leftarrow> lookup_pt_from_level max_pt_level top_level_pt vaddr pt;
+     pt_slot \<leftarrow> pt_lookup_from_level max_pt_level top_level_pt vaddr pt;
      liftE $ store_pte pt_slot InvalidPTE;
      liftE $ do_machine_op sfence
    odE <catch> (K $ return ())"

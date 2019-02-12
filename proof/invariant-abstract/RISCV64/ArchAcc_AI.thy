@@ -347,8 +347,8 @@ lemma pt_walk_pt_at:
   \<Longrightarrow> pt_at p s"
   sorry (* FIXME RISCV *) (* should follow from valid_vspace_objs_strongD *)
 
-lemma lookup_pt_slot_from_level_pte_at:
-  "\<lbrakk> lookup_pt_slot_from_level level bot_level pt_ptr vptr (ptes_of s) = Some (level', p);
+lemma pt_lookup_slot_from_level_pte_at:
+  "\<lbrakk> pt_lookup_slot_from_level level bot_level pt_ptr vptr (ptes_of s) = Some (level', p);
      vs_lookup_table level asid vptr s = Some (level, pt_ptr); level \<le> max_pt_level;
      vref \<in> user_region s; valid_uses s; valid_asid_table s; pspace_aligned s \<rbrakk>
   \<Longrightarrow> pte_at p s"

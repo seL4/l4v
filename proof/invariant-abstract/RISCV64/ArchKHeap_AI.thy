@@ -303,7 +303,7 @@ lemma valid_vspace_objs_lift_weak:
 lemma translate_address_lift_weak:
   assumes aobj_at: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (translate_address pt_root vref s) \<rbrace>"
-  unfolding translate_address_def lookup_pt_target_def
+  unfolding translate_address_def pt_lookup_target_def
   apply (clarsimp simp: comp_def obind_def)
   apply (rule hoare_lift_Pf2[where f=ptes_of, OF _ ptes_of_lift[OF aobj_at]]; simp)
    apply (clarsimp split: option.splits)
@@ -650,7 +650,7 @@ lemma valid_vso_at_lift_aobj_at:
 
 lemma translate_address_pte_update:
   "ptes_of (f s) = ptes_of s \<Longrightarrow> translate_address pt vref (f s) = translate_address pt vref s"
-  by (fastforce simp: translate_address_def lookup_pt_target_def obind_def split: option.split)
+  by (fastforce simp: translate_address_def pt_lookup_target_def obind_def split: option.split)
 
 lemma valid_global_vspace_mappings_arch_update[simp]:
   "\<lbrakk> riscv_global_pt (arch_state (f s)) = riscv_global_pt (arch_state s);

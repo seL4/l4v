@@ -186,32 +186,32 @@ text \<open>
   this slot is either an @{const InvalidPTE} or a @{const PagePTE}. If the returned level is higher
   the slot may also be a @{const PageTablePTE}.
 \<close>
-definition lookup_pt_slot_from_level ::
+definition pt_lookup_slot_from_level ::
   "vm_level \<Rightarrow> vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
-  "lookup_pt_slot_from_level level bot_level pt_ptr vptr = do {
+  "pt_lookup_slot_from_level level bot_level pt_ptr vptr = do {
      (level', pt_ptr') \<leftarrow> pt_walk level bot_level pt_ptr vptr;
      oreturn (level', pt_slot_offset level' pt_ptr' vptr)
    }"
 
-definition lookup_pt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
+definition pt_lookup_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
-  "lookup_pt_slot = lookup_pt_slot_from_level max_pt_level 0"
+  "pt_lookup_slot = pt_lookup_slot_from_level max_pt_level 0"
 
-fun lookup_pt_from_level ::
+fun pt_lookup_from_level ::
   "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (machine_word, 'z::state_ext) lf_monad"
   where
-  "lookup_pt_from_level level pt_ptr vptr target_pt_ptr = doE
+  "pt_lookup_from_level level pt_ptr vptr target_pt_ptr = doE
      unlessE (0 < level) $ throwError InvalidRoot;
      pte <- liftE $ gets_the $ pte_at_offset level pt_ptr vptr o ptes_of;
      unlessE (is_PageTablePTE pte) $ throwError InvalidRoot;
      ptr <- returnOk (pptr_from_pte pte);
      if ptr = target_pt_ptr
        then returnOk $ pt_slot_offset (level - 1) ptr vptr
-       else lookup_pt_from_level (level - 1) ptr vptr target_pt_ptr
+       else pt_lookup_from_level (level - 1) ptr vptr target_pt_ptr
    odE"
 
-declare lookup_pt_from_level.simps[simp del]
+declare pt_lookup_from_level.simps[simp del]
 
 end
 end

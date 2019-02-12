@@ -32,9 +32,9 @@ lemma vs_lookup_slot_truncate[simp]:
   "vs_lookup_slot l asid vptr (truncate_state s) = vs_lookup_slot l asid vptr s"
   by (simp add: vs_lookup_slot_def obind_def oreturn_def split: option.splits)
 
-lemma lookup_pt_from_level_bcorres[wp]:
-  "bcorres (lookup_pt_from_level l r b c) (lookup_pt_from_level l r b c)"
-  by (induct l arbitrary: r b c rule: bit0.minus_induct; wpsimp simp: lookup_pt_from_level.simps)
+lemma pt_lookup_from_level_bcorres[wp]:
+  "bcorres (pt_lookup_from_level l r b c) (pt_lookup_from_level l r b c)"
+  by (induct l arbitrary: r b c rule: bit0.minus_induct; wpsimp simp: pt_lookup_from_level.simps)
 
 crunch (bcorres) bcorres[wp]: arch_finalise_cap truncate_state
 crunch (bcorres) bcorres[wp]: prepare_thread_delete truncate_state

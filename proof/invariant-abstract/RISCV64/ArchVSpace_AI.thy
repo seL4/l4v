@@ -301,8 +301,8 @@ definition
   "pt_walks top_level pt_ptr vptr target_pt_ptr ptes \<equiv>
      map (\<lambda>level. pt_walk top_level level pt_ptr vptr ptes) [0 .e. top_level]"
 
-lemma lookup_pt_from_level_def:
-  "lookup_pt_from_level level pt_ptr vptr target_pt_ptr = doE
+lemma pt_lookup_from_level_def:
+  "pt_lookup_from_level level pt_ptr vptr target_pt_ptr = doE
      unlessE (0 < level) $ throwError InvalidRoot;
      lookups_opt \<leftarrow> liftE $ gets $ pt_walks level pt_ptr vptr target_pt_ptr o ptes_of;
      target_lookups \<leftarrow> returnOk $ filter (\<lambda>(l,p). p = target_pt_ptr) (map the (rev lookups_opt));
@@ -313,9 +313,9 @@ lemma lookup_pt_from_level_def:
   sorry (* FIXME RISCV: this one will be fun. Maybe not necessary, and better to work on
                         the recursive version directly. *)
 
-lemma lookup_pt_from_level_inv[wp]:
-  "\<lbrace>Q and E\<rbrace> lookup_pt_from_level level pt_ptr vptr target_pt_ptr \<lbrace>\<lambda>_. Q\<rbrace>,\<lbrace>\<lambda>_. E\<rbrace>"
-  unfolding lookup_pt_from_level_def by wpsimp
+lemma pt_lookup_from_level_inv[wp]:
+  "\<lbrace>Q and E\<rbrace> pt_lookup_from_level level pt_ptr vptr target_pt_ptr \<lbrace>\<lambda>_. Q\<rbrace>,\<lbrace>\<lambda>_. E\<rbrace>"
+  unfolding pt_lookup_from_level_def by wpsimp
 
 crunches unmap_page_table
   for aligned[wp]: pspace_aligned
@@ -323,7 +323,7 @@ crunches unmap_page_table
   and "distinct"[wp]: pspace_distinct
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-  (wp: crunch_wps ignore: lookup_pt_from_level)
+  (wp: crunch_wps ignore: pt_lookup_from_level)
 
 
 definition
@@ -1446,9 +1446,9 @@ crunch typ_at [wp]: unmap_page "\<lambda>s. P (typ_at T p s)"
 
 lemmas unmap_page_typ_ats [wp] = abs_typ_at_lifts [OF unmap_page_typ_at]
 
-lemma lookup_pt_slot_cap_to:
+lemma pt_lookup_slot_cap_to:
   shows "\<lbrace>invs and \<exists>\<rhd>pd and K (is_aligned pd pd_bits)
-                  and K (vptr < kernel_base)\<rbrace> lookup_pt_slot pd vptr
+                  and K (vptr < kernel_base)\<rbrace> pt_lookup_slot pd vptr
    \<lbrace>\<lambda>rv s.  \<exists>a b cap. caps_of_state s (a, b) = Some cap \<and> is_pt_cap cap
                                 \<and> rv && ~~ mask pt_bits \<in> obj_refs cap
                                 \<and>  s \<turnstile> cap \<and> cap_asid cap \<noteq> None
@@ -1457,7 +1457,7 @@ lemma lookup_pt_slot_cap_to:
     have shift: "(2::word32) ^ pt_bits = 2 ^ 8 << 2"
       by (simp add:pt_bits_def pageBits_def )
   show ?thesis
-  apply (simp add: lookup_pt_slot_def)
+  apply (simp add: pt_lookup_slot_def)
   apply (wp get_pde_wp | wpc)+
   apply (clarsimp simp: lookup_pd_slot_pd)
   apply (frule(1) valid_vspace_objsD)
@@ -1499,26 +1499,26 @@ lemma lookup_pt_slot_cap_to:
   done
 qed
 
-lemma lookup_pt_slot_cap_to1[wp]:
+lemma pt_lookup_slot_cap_to1[wp]:
   "\<lbrace>invs and \<exists>\<rhd>pd and K (is_aligned pd pd_bits)
-                  and K (vptr < kernel_base)\<rbrace> lookup_pt_slot pd vptr
+                  and K (vptr < kernel_base)\<rbrace> pt_lookup_slot pd vptr
    \<lbrace>\<lambda>rv s.  \<exists>a b cap. caps_of_state s (a, b) = Some cap \<and> is_pt_cap cap \<and> rv && ~~ mask pt_bits \<in> obj_refs cap\<rbrace>,-"
   apply (rule hoare_post_imp_R)
-   apply (rule lookup_pt_slot_cap_to)
+   apply (rule pt_lookup_slot_cap_to)
   apply auto
   done
 
-lemma lookup_pt_slot_cap_to_multiple1:
+lemma pt_lookup_slot_cap_to_multiple1:
   "\<lbrace>invs and \<exists>\<rhd>pd and K (is_aligned pd pd_bits)
                   and K (vptr < kernel_base)
                   and K (is_aligned vptr 16)\<rbrace>
-     lookup_pt_slot pd vptr
+     pt_lookup_slot pd vptr
    \<lbrace>\<lambda>rv s. is_aligned rv 6 \<and>
              (\<exists>a b. cte_wp_at (\<lambda>c. is_pt_cap c \<and> cap_asid c \<noteq> None
                                   \<and> (\<lambda>x. x && ~~ mask pt_bits) ` set [rv , rv + 4 .e. rv + 0x3C] \<subseteq> obj_refs c) (a, b) s)\<rbrace>, -"
   apply (rule hoare_gen_asmE)
   apply (rule hoare_post_imp_R)
-   apply (rule lookup_pt_slot_cap_to)
+   apply (rule pt_lookup_slot_cap_to)
   apply (rule conjI, clarsimp)
   apply (elim exEI)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_pt_cap_def
@@ -1539,13 +1539,13 @@ lemma lookup_pt_slot_cap_to_multiple1:
   apply (simp add: shiftl_shiftr2 shiftr_shiftr)
   done
 
-lemma lookup_pt_slot_cap_to_multiple[wp]:
+lemma pt_lookup_slot_cap_to_multiple[wp]:
   "\<lbrace>invs and \<exists>\<rhd>pd and K (is_aligned pd pd_bits)
                   and K (vptr < kernel_base)
                   and K (is_aligned vptr 16)\<rbrace>
-     lookup_pt_slot pd vptr
+     pt_lookup_slot pd vptr
    \<lbrace>\<lambda>rv s. \<exists>a b. cte_wp_at (\<lambda>c. (\<lambda>x. x && ~~ mask pt_bits) ` (\<lambda>x. x + rv) ` set [0 , 4 .e. 0x3C] \<subseteq> obj_refs c) (a, b) s\<rbrace>, -"
-  apply (rule hoare_post_imp_R, rule lookup_pt_slot_cap_to_multiple1)
+  apply (rule hoare_post_imp_R, rule pt_lookup_slot_cap_to_multiple1)
   apply (elim conjE exEI cte_wp_at_weakenE)
   apply (simp add: subset_eq p_0x3C_shift)
   done
@@ -1595,12 +1595,12 @@ lemma find_vspace_for_asid_cap_to2[wp]:
   apply auto
   done
 
-lemma lookup_pt_slot_cap_to2:
+lemma pt_lookup_slot_cap_to2:
   "\<lbrace>invs and \<exists>\<rhd> pd and K (is_aligned pd pd_bits) and K (vptr < kernel_base)\<rbrace>
-     lookup_pt_slot pd vptr
+     pt_lookup_slot pd vptr
    \<lbrace>\<lambda>rv s. \<exists>oref cref cap. caps_of_state s (oref, cref) = Some cap
          \<and> rv && ~~ mask pt_bits \<in> obj_refs cap \<and> is_pt_cap cap\<rbrace>, -"
-  apply (rule hoare_post_imp_R, rule lookup_pt_slot_cap_to)
+  apply (rule hoare_post_imp_R, rule pt_lookup_slot_cap_to)
   apply fastforce
   done
 
@@ -1621,8 +1621,8 @@ lemma unmap_page_invs:
    apply (wp flush_page_invs hoare_vcg_const_imp_lift)
     apply (wp hoare_drop_imp[where f="check_mapping_pptr a b c" for a b c]
               hoare_drop_impE_R[where R="\<lambda>x y. x && mask b = c" for b c]
-              lookup_pt_slot_inv lookup_pt_slot_cap_to2'
-              lookup_pt_slot_cap_to_multiple2
+              pt_lookup_slot_inv pt_lookup_slot_cap_to2'
+              pt_lookup_slot_cap_to_multiple2
               store_pde_invs_unmap mapM_swp_store_pde_invs_unmap
               mapM_swp_store_pte_invs
            | wpc | simp)+
@@ -1663,7 +1663,7 @@ lemma unmap_page_no_lookup_pages:
    unmap_page sz asid vaddr pptr
    \<lbrace>\<lambda>_ s. \<not> (ref \<unrhd> p) s\<rbrace>"
   apply (rule hoare_pre)
-  apply (wp store_pte_no_lookup_pages hoare_drop_imps lookup_pt_slot_inv_validE
+  apply (wp store_pte_no_lookup_pages hoare_drop_imps pt_lookup_slot_inv_validE
          mapM_UNIV_wp store_pde_no_lookup_pages
       | wpc | simp add: unmap_page_def swp_def | strengthen imp_consequent)+
   done
@@ -1704,7 +1704,7 @@ lemma unmap_page_unmapped:
   apply (subgoal_tac "\<exists>xs. [0 :: word32, 4 .e. 0x3C] = 0 # xs")
    prefer 2
    apply (simp add: upto_enum_step_def upto_enum_word upt_rec)
-  apply (clarsimp simp: unmap_page_def lookup_pd_slot_def lookup_pt_slot_def Let_def
+  apply (clarsimp simp: unmap_page_def lookup_pd_slot_def pt_lookup_slot_def Let_def
                         mapM_Cons
                   cong: option.case_cong vmpage_size.case_cong)
 
