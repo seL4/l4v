@@ -389,18 +389,18 @@ lemma set_cap_valid_pte_stronger:
   "set_cap cap p \<lbrace>\<lambda>s. P (valid_pte level pte s)\<rbrace>"
   by (wp valid_pte_lift3 set_cap_typ_at)
 
-
-lemma set_pd_vspace_objs_map:
+lemma store_pte_vspace_objs_map:
   notes valid_vspace_obj.simps[simp del] and a_type_elims[rule del]
   shows
   "\<lbrace>valid_vspace_objs and
-   obj_at (\<lambda>ko. vs_refs (ArchObj (PageTable pt)) = vs_refs ko - T \<union> S) p and
-   (\<lambda>s. \<forall>x \<in> S. pt_at (snd x) s) and
-   (\<lambda>s. \<forall>(r,p') \<in> S. \<forall>ao. (\<exists>\<rhd>p) s \<longrightarrow> ko_at (ArchObj ao) p' s \<longrightarrow> valid_vspace_obj ao s) and
-   (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_vspace_obj (PageTable pt) s)\<rbrace>
-  set_pt p pt \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
-  apply (simp add: set_pd_def set_object_def)
-  apply (wp get_object_wp)
+   (\<lambda>s. \<forall>ref. pte_ref pte = Some ref \<longrightarrow>
+          (\<forall>level. \<exists>\<rhd>(level,table_base p) s \<longrightarrow>
+                 (pt_at ref s \<or> data_at (vmpage_size_of_level level) ref s) \<and>
+                 (\<forall>ao. aobjs_of s ref = Some ao \<longrightarrow> valid_vspace_obj level ao s)))\<rbrace>
+  store_pte p pte \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
+  unfolding store_pte_def set_pt_def
+  apply (wpsimp wp: set_object_wp)
+  sorry (* FIXME RISCV
   apply (clarsimp simp: obj_at_def valid_vspace_objs_def
            simp del: fun_upd_apply
            split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -424,85 +424,24 @@ lemma set_pd_vspace_objs_map:
   apply (erule(1) valid_vspace_obj_same_type)
   apply (simp add: a_type_def)
   done
+  *)
 
-lemma set_pd_valid_vs_lookup_map:
+lemma store_pte_valid_vs_lookup_map:
   "\<lbrace>valid_vs_lookup and valid_arch_state and valid_vspace_objs and
-    obj_at (\<lambda>ko. vs_refs (ArchObj (PageDirectory pd)) =
-                 vs_refs ko - T \<union> S) p and
-    (\<lambda>s. \<forall>x\<in>S. page_table_at (snd x) s) and
-    obj_at (\<lambda>ko. vs_refs_pages (ArchObj (PageDirectory pd)) =
-                 vs_refs_pages ko - T' \<union> S') p and
-    (\<lambda>s. \<forall>(r, p')\<in>S. \<forall>ao. (\<exists>\<rhd> p) s \<longrightarrow>
-                           ko_at (ArchObj ao) p' s \<longrightarrow> valid_vspace_obj ao s) and
-    (\<lambda>s. (\<exists>\<rhd> p) s \<longrightarrow> valid_vspace_obj (PageDirectory pd) s) and
-    (\<lambda>s. \<forall>r. (r \<unrhd> p) s \<longrightarrow>
-             (\<forall>c\<in>- kernel_mapping_slots. \<forall>q.
-                 pde_ref_pages (pd c) = Some q \<longrightarrow>
-                    (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
-                         q \<in> obj_refs cap \<and> vs_cap_ref cap =
-         Some (VSRef (ucast c) (Some APageDirectory) # r)))) and
-    (\<lambda>s. \<forall>r. (r \<unrhd> p) s \<longrightarrow>
-             (\<forall>c\<in>- kernel_mapping_slots. \<forall>q.
-                 pde_ref (pd c) = Some q \<longrightarrow>
-                    (\<forall>q' pt d. ko_at (ArchObj (PageTable pt)) q s \<longrightarrow>
-                        pte_ref_pages (pt d) = Some q' \<longrightarrow>
-                        (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
-                                  q' \<in> obj_refs cap \<and> vs_cap_ref cap =
-         Some (VSRef (ucast d) (Some APageTable) #
-               VSRef (ucast c) (Some APageDirectory) # r)))))\<rbrace>
-   set_pd p pd
+    (\<lambda>s. \<forall>ref. pte_ref pte = Some ref \<longrightarrow>
+           (\<forall>level. \<exists>\<rhd>(level, table_base p) s \<longrightarrow>
+               (pt_at ref s \<or> data_at (vmpage_size_of_level level) ref s) \<and>
+               (\<forall>ao. aobjs_of s ref = Some ao \<longrightarrow> valid_vspace_obj level ao s))) and
+    (\<lambda>s. \<forall>level asid vref. vs_lookup_slot level asid vref s = Some (level, p) \<longrightarrow>
+           (\<forall>ref. pte_ref pte = Some ref \<longrightarrow>
+              (\<exists>cslot cap.
+                 caps_of_state s cslot = Some cap \<and>
+                 obj_refs cap = {r} \<and>
+                 vs_cap_ref cap = Some (asid_for_level asid level, vref_for_level vref level)))) and
+    (\<lambda>s. is_PageTablePTE pte \<longrightarrow> (\<forall>ref. pte_ref pte = Some ref \<longrightarrow> pts_of s ref = Some empty_pt))\<rbrace>
+   store_pte p pte
    \<lbrace>\<lambda>rv. valid_vs_lookup\<rbrace>"
-  using set_pd_vspace_objs_map[where p=p and pd=pd and T=T and S=S]
-        set_pd_valid_arch[of p pd]
-  apply (clarsimp simp: valid_def simpler_set_pd_def)
-  apply (drule_tac x=s in spec)+
-  apply (clarsimp simp: valid_vs_lookup_def  split: if_split_asm)
-  apply (subst caps_of_state_after_update[folded fun_upd_apply],
-         simp add: obj_at_def)
-  apply (erule (1) vs_lookup_pagesE_alt)
-      apply (clarsimp simp: valid_arch_state_def valid_asid_table_def
-                            fun_upd_def)
-     apply (drule_tac x=pa in spec)
-     apply simp
-     apply (drule vs_lookup_pages_atI)
-     apply simp
-    apply (drule_tac x=pa in spec)
-    apply (drule_tac x="[VSRef (ucast b) (Some AASIDPool),
-                         VSRef (ucast a) None]" in spec)+
-    apply simp
-    apply (drule vs_lookup_pages_apI)
-      apply (simp split: if_split_asm)
-     apply (simp+)[2]
-   apply (frule_tac s="s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageDirectory pd))\<rparr>"
-                 in vs_lookup_pages_pdI[rotated -1])
-        apply (simp del: fun_upd_apply)+
-   apply (frule vs_lookup_pages_apI)
-     apply (simp split: if_split_asm)+
-   apply (thin_tac "\<forall>r. (r \<unrhd> p) s \<longrightarrow> Q r" for Q)+
-   apply (thin_tac "P \<longrightarrow> Q" for P Q)+
-   apply (drule_tac x=pa in spec)
-   apply (drule_tac x="[VSRef (ucast c) (Some APageDirectory),
-                        VSRef (ucast b) (Some AASIDPool),
-                        VSRef (ucast a) None]" in spec)
-   apply (erule impE)
-   apply (erule vs_lookup_pages_pdI)
-     apply simp+
-  apply (thin_tac "\<forall>r. (r \<unrhd> p) s \<longrightarrow> Q r" for Q)
-  apply (thin_tac "P \<longrightarrow> Q" for P Q)+
-  apply (case_tac "p=p\<^sub>2")
-   apply (thin_tac "\<forall>p ref. P p ref" for P)
-   apply (frule vs_lookup_pages_apI)
-     apply (simp split: if_split_asm)
-    apply simp+
-   apply (drule spec, erule impE, assumption)
-   apply (clarsimp split: if_split_asm)
-   apply (drule bspec, fastforce)
-   apply (simp add: pde_ref_def obj_at_def)
-  apply (thin_tac "\<forall>r. (r \<unrhd> p) s \<longrightarrow> Q r" for Q)
-  apply (clarsimp split: if_split_asm)
-  apply (drule (7) vs_lookup_pages_ptI)
-  apply simp
-  done
+  sorry (* FIXME RISCV *)
 
 
 lemma set_pd_valid_arch_caps:
