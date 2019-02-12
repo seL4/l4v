@@ -568,22 +568,6 @@ lemma set_pt_aligned [wp]:
 crunch interrupt_states[wp]: set_pt "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
-lemma set_pt_vspace_objs [wp]:
-  "\<lbrace>valid_vspace_objs and (\<lambda>s. \<forall>level. (\<exists>\<rhd>(level,p)) s \<longrightarrow> valid_vspace_obj level (PageTable pt) s)\<rbrace>
-  set_pt p pt
-  \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
-  apply (simp add: set_pt_def)
-  sorry (* FIXME RISCV
-  apply (wp set_object_vspace_objs get_object_wp)
-  apply (clarsimp simp: obj_at_def)
-  apply (rule conjI)
-   apply (clarsimp simp: a_type_def
-                  split: kernel_object.splits arch_kernel_obj.splits)
-  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
-  apply (simp add: vs_refs_def)
-  done *)
-
-
 lemma unique_table_caps_ptD:
   "\<lbrakk> cs p = Some cap; vs_cap_ref cap = None;
      cs p' = Some cap'; is_pt_cap cap; is_pt_cap cap';
@@ -774,17 +758,31 @@ lemma set_pt_only_idle [wp]:
   "\<lbrace>only_idle\<rbrace> set_pt p pt \<lbrace>\<lambda>_. only_idle\<rbrace>"
   by (wp only_idle_lift)
 
+lemma translate_address_upd_unrelated:
+  "\<lbrakk> \<not> pt_at p s ; a_type ko \<noteq> AArch APageTable \<rbrakk>
+   \<Longrightarrow> translate_address pt vref (s\<lparr>kheap := kheap s(p \<mapsto> ko)\<rparr>) = translate_address pt vref s"
+  unfolding translate_address_def
+  apply (clarsimp simp: obind_def split: option.splits)
+  apply (safe ; clarsimp?)
+  sorry (* FIXME RISCV *)
+
 lemma set_pt_valid_global_vspace_mappings:
-  "\<lbrace>\<lambda>s. valid_global_vspace_mappings s \<and> valid_global_objs s \<and> p \<notin> global_refs s\<rbrace>
-      set_pt p pt
+  "\<lbrace>\<lambda>s. valid_global_vspace_mappings s \<and> valid_global_tables s \<and> p \<notin> global_refs s\<rbrace>
+   set_pt p pt
    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   apply (simp add: set_pt_def)
+  apply (wpsimp wp: set_object_wp)
+  unfolding valid_global_vspace_mappings_def Let_def
+  apply (safe ; clarsimp ; drule (1) bspec)
+   sorry
+  (* RISCV TODO
+   apply (clarsimp simp: translate_address_def in_omonad)
+
   apply (wp set_object_global_vspace_mappings get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def
                  split: kernel_object.split_asm
                         arch_kernel_obj.split_asm)
-  done
-
+  done *)
 
 lemma set_pt_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_pt p pt \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
