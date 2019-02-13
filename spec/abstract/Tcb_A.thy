@@ -40,8 +40,7 @@ definition
     when (\<not> runnable state \<and> \<not> idle state) $ do
       cancel_ipc thread;
       set_thread_state thread Restart;
-      sc_ptr \<leftarrow> assert_opt sc_opt;
-      sched_context_resume sc_ptr;
+      sched_context_resume sc_opt;
       test_possible_switch_to thread
     od
   od"

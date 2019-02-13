@@ -344,9 +344,9 @@ text \<open>
   is runnable and add it to the scheduling queue if required
 \<close>
 definition
-  sched_context_resume :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  sched_context_resume :: "obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "sched_context_resume sc_ptr \<equiv> do
+  "sched_context_resume sc_opt \<equiv> maybeM (\<lambda>sc_ptr. do
      sc \<leftarrow> get_sched_context sc_ptr;
      tptr \<leftarrow> assert_opt $ sc_tcb sc;
      in_release_q \<leftarrow> gets $ in_release_queue tptr;
@@ -355,12 +355,12 @@ where
        ts \<leftarrow> thread_get tcb_state tptr;
 
        cur_time \<leftarrow> gets cur_time;
-       ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr *)
+       ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; \<comment> \<open>refill_ready sc_ptr\<close>
 
-       sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
+       sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); \<comment> \<open>refill_sufficient sc_ptr 0\<close>
        when (runnable ts \<and> 0 < sc_refill_max sc \<and> \<not>(ready \<and> sufficient)) $ do
 
-       (* C code also asserts that tptr is not in ready q *)
+         \<comment> \<open>C code also asserts that tptr is not in ready q\<close>
          d \<leftarrow> thread_get tcb_domain tptr;
          prio \<leftarrow> thread_get tcb_priority tptr;
          queue \<leftarrow> get_tcb_queue d prio;
@@ -369,7 +369,7 @@ where
          postpone sc_ptr
        od
      od
-   od"
+   od) sc_opt"
 
 
 text {* consumed related functions *}
@@ -434,7 +434,7 @@ where
   "sched_context_bind_tcb sc_ptr tcb_ptr = do
     set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
     set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr);
-    sched_context_resume sc_ptr;
+    sched_context_resume (Some sc_ptr);
     inq <- gets $ in_release_queue tcb_ptr;
     sched <- is_schedulable tcb_ptr inq;
     when sched $ do
@@ -465,8 +465,8 @@ where
          sc_tcb \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
          when (sc_tcb = None) $ do
            sched_context_donate sc_ptr tcb_ptr;
-           refill_unblock_check(sc_ptr);
-           sched_context_resume(sc_ptr)
+           refill_unblock_check (sc_ptr);
+           sched_context_resume (Some sc_ptr)
          od
        od)
    od"

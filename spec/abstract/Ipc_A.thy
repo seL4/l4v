@@ -765,7 +765,7 @@ where
       if 0 < sc_refill_max sc then do
         if (runnable st) then refill_update sc_ptr period budget mrefills
         else refill_new sc_ptr mrefills budget period;
-        sched_context_resume sc_ptr;
+        sched_context_resume (Some sc_ptr);
         ct \<leftarrow> gets cur_thread;
         if (tcb_ptr = ct) then reschedule_required
         else when (runnable st) $ possible_switch_to tcb_ptr
