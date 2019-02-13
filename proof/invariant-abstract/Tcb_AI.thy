@@ -1536,21 +1536,11 @@ lemma set_mcpriority_no_cap_to_obj_with_diff_ref[wp]:
   "\<lbrace>no_cap_to_obj_with_diff_ref c S\<rbrace> set_mcpriority t mcp \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref c S\<rbrace>"
   by (simp add: set_mcpriority_def thread_set_no_cap_to_trivial tcb_cap_cases_tcb_mcpriority)
 
-crunch caps_of_state[wp]: reorder_ntfn, reorder_ep "\<lambda>s. P (caps_of_state s)"
-  (wp: crunch_wps)
+crunch caps_of_state[wp]: reorder_ntfn, reorder_ep, set_priority "\<lambda>s. P (caps_of_state s)"
+  (wp: crunch_wps simp: crunch_simps)
 
-lemma set_priority_caps_of_state[wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_priority tptr prio \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  unfolding set_priority_def
-  by (wpsimp wp: hoare_drop_imps simp: get_thread_state_def thread_get_def)
-
-crunch typ_at[wp]: reorder_ntfn, reorder_ep "\<lambda>s. P (typ_at T p s)"
-  (wp: crunch_wps)
-
-lemma set_priority_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_priority tptr prio \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  unfolding set_priority_def
-  by (wpsimp wp: hoare_drop_imps simp: get_thread_state_def thread_get_def)
+crunch typ_at[wp]: reorder_ntfn, reorder_ep, set_priority "\<lambda>s. P (typ_at T p s)"
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch no_cap_to_obj_with_diff_ref[wp]: set_priority "no_cap_to_obj_with_diff_ref a S"
   (wp: crunch_wps no_cap_to_obj_with_diff_ref_lift)

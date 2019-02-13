@@ -4228,7 +4228,7 @@ lemma test_possible_switch_to_valid_list[wp]:
   by (wpsimp simp: test_possible_switch_to_def)
 
 lemma sched_context_resume_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> sched_context_resume scp \<lbrace>\<lambda>_.valid_list\<rbrace>"
+  "\<lbrace>valid_list\<rbrace> sched_context_resume sc_opt \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: sched_context_resume_def get_tcb_queue_def thread_get_def
           wp: get_sched_context_wp hoare_drop_imp hoare_vcg_if_lift2)
 

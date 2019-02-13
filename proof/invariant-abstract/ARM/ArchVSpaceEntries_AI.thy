@@ -706,15 +706,9 @@ lemma invoke_cnode_valid_pdpt_objs[wp]:
 crunch valid_pdpt_objs[wp]: test_possible_switch_to "valid_pdpt_objs"
   (wp: maybeM_inv hoare_drop_imp)
 
-crunch valid_pdpt_objs[wp]: reorder_ntfn, reorder_ep, thread_set_priority "valid_pdpt_objs"
-  (wp: crunch_wps)
 
-lemma set_priority_valid_pdpt_objs[wp]:
-  "\<lbrace>valid_pdpt_objs\<rbrace>
-    set_priority tptr prio
-   \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace> "
-  unfolding set_priority_def
-  by (wpsimp wp: hoare_drop_imps simp: get_thread_state_def thread_get_def)
+crunch valid_pdpt_objs[wp]: reorder_ntfn, reorder_ep, thread_set_priority, set_priority "valid_pdpt_objs"
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch valid_pdpt_objs[wp]: invoke_tcb, invoke_domain "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: check_cap_inv crunch_wps maybeM_inv simp: crunch_simps
