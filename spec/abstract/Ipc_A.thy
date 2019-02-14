@@ -600,31 +600,29 @@ where
               mrs \<leftarrow> get_mrs sender buf mi;
               restart \<leftarrow> handle_fault_reply f receiver (mi_label mi) mrs;
               thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := None \<rparr>) receiver;
-              set_thread_state receiver (if restart then Restart else Inactive);
+              set_thread_state receiver (if restart then Restart else Inactive)
+            od;
 
-              sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
-              when (sc_opt \<noteq> None \<and> restart) $ do
-                sc_ptr \<leftarrow> assert_opt sc_opt;
-                refill_unblock_check sc_ptr;
-                sc \<leftarrow> get_sched_context sc_ptr;
-
-                cur_time \<leftarrow> gets cur_time;
-                \<comment> \<open>refill_ready sc_ptr\<close>
-                ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks;
-
-                \<comment> \<open>refill_sufficient sc_ptr 0\<close>
+          state \<leftarrow> get_thread_state receiver;
+          sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
+          when (sc_opt \<noteq> None \<and> runnable (state)) $ do
+            sc_ptr \<leftarrow> assert_opt sc_opt;
+            refill_unblock_check sc_ptr;
+            sc \<leftarrow> get_sched_context sc_ptr;
+            cur_time \<leftarrow> gets cur_time;
+            ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; \<comment> \<open> refill_ready sc_ptr \<close>
+            sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); \<comment> \<open> refill_sufficient sc_ptr 0 \<close>
                 sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc);
-
-                if ready \<and> sufficient
-                then possible_switch_to receiver
-                else do
-                  tcb \<leftarrow> gets_the $ get_tcb receiver;
-                  if is_ep_cap (tcb_timeout_handler tcb) \<and> \<not> is_timeout_fault f
-                  then handle_timeout receiver (Timeout (sc_badge sc))
-                  else postpone sc_ptr
-                od
-              od
+            if ready \<and> sufficient
+            then possible_switch_to receiver
+            else do
+              tcb \<leftarrow> gets_the $ get_tcb receiver;
+              if is_ep_cap (tcb_timeout_handler tcb) \<and>
+                 ~ (case_option False is_timeout_fault fault)
+              then handle_timeout receiver (Timeout (sc_badge sc))
+              else postpone sc_ptr
             od
+          od
         od
       | _ \<Rightarrow> return ()
     od)
