@@ -612,7 +612,6 @@ where
             cur_time \<leftarrow> gets cur_time;
             ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; \<comment> \<open> refill_ready sc_ptr \<close>
             sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); \<comment> \<open> refill_sufficient sc_ptr 0 \<close>
-                sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc);
             if ready \<and> sufficient
             then possible_switch_to receiver
             else do
