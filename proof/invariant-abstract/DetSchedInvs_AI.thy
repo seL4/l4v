@@ -921,6 +921,25 @@ lemma valid_blocked_lift:
   apply (simp add: valid_blocked_def)
   done
 
+lemma valid_blocked_except_set_lift:
+  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
+  assumes t: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T t s)\<rbrace>"
+      and c: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
+      and e: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
+      and d: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
+      and f: "\<And>Q. \<lbrace>\<lambda>s. Q (release_queue s)\<rbrace> f \<lbrace>\<lambda>rv s. Q (release_queue s)\<rbrace>"
+  assumes b: "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
+    shows "\<lbrace>valid_blocked_except_set S\<rbrace> f \<lbrace>\<lambda>rv. valid_blocked_except_set S\<rbrace>"
+  apply (rule hoare_pre)
+   apply (wps c e d f)
+   apply (simp add: valid_blocked_except_set_def)
+   apply (wp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift static_imp_wp a)
+   apply (rule hoare_convert_imp)
+    apply (rule typ_at_st_tcb_at_lift)
+     apply (wp a t static_imp_wp hoare_vcg_disj_lift b)+
+  apply (simp add: valid_blocked_except_set_def)
+  done
+
 lemma ct_not_in_q_lift:
   assumes a: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
       and b: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
@@ -988,6 +1007,11 @@ lemma valid_sched_action_lift:
    apply (wp weak_valid_sched_action_lift switch_in_cur_domain_lift static_imp_wp a a' b c d e f)+
   done
 
+lemma valid_idle_etcb_lift:
+  assumes d: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
+    shows "\<lbrace>valid_idle_etcb\<rbrace> f \<lbrace>\<lambda>rv. valid_idle_etcb\<rbrace>"
+  by (wp d)
+
 lemma valid_sched_lift:
   assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
   assumes a': "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
@@ -1004,28 +1028,49 @@ lemma valid_sched_lift:
     shows "\<lbrace>valid_sched\<rbrace> f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: valid_sched_def)
   apply (wp valid_ready_qs_lift ct_not_in_q_lift ct_in_cur_domain_lift valid_release_q_lift
-            valid_sched_action_lift valid_blocked_lift a a' s r c d e f g h i j hoare_vcg_conj_lift)
+            valid_sched_action_lift valid_idle_etcb_lift valid_blocked_lift
+            a a' s r c d e f g h i j)
   done
 
-definition
-  budgeted_sc_ntfn_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "budgeted_sc_ntfn_at p \<equiv> (\<lambda>s. (\<exists>obj x. ko_at (Notification obj) p s \<and>
-                                       ntfn_sc obj = Some x \<and>
-                                       is_refill_ready x s \<and> is_refill_sufficient x 0 s))"
+lemmas valid_sched_except_blocked_lift =
+       valid_release_q_lift valid_ready_qs_lift ct_not_in_q_lift valid_sched_action_lift
+       ct_in_cur_domain_lift valid_idle_etcb_lift
 
-definition
-  active_and_budgeted_tcb_ntfn_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "active_and_budgeted_tcb_ntfn_at p \<equiv> (\<lambda>s. (\<forall>obj y.
-                  ko_at (Notification obj) p s \<longrightarrow>  ntfn_bound_tcb obj = Some y \<longrightarrow>
-                  active_sc_tcb_at y s \<and> budget_ready y s \<and> budget_sufficient y s))"
+lemma valid_ntfn_q_lift:
+  assumes A: "\<And>x2 p. f \<lbrace>\<lambda>s. ~ ko_at (Notification x2) p s\<rbrace>"
+  assumes C: "\<And>t. f \<lbrace>\<lambda>s. t \<noteq> cur_thread s \<and>
+                          t \<noteq> idle_thread s \<and>
+                          (bound_sc_tcb_at ((=) None) t s \<or>
+                           active_sc_tcb_at t s \<and> budget_sufficient t s \<and> budget_ready t s)\<rbrace>"
+  shows "f \<lbrace>valid_ntfn_q\<rbrace>"
+  unfolding valid_ntfn_q_def
+  apply (wpsimp wp: hoare_vcg_all_lift)
+   apply (clarsimp simp: ko_at_fold split: kernel_object.splits option.splits)
+   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_ball_lift A C)
+  apply (fastforce simp: ko_at_fold[symmetric] split: option.splits)
+  done
 
-abbreviation
-  active_sc_ntfn_at' :: "32 word \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "active_sc_ntfn_at' t s \<equiv> active_sc_ntfn_at_kh t (kheap s)"
+lemma valid_ep_q_lift:
+  assumes A: "\<And>x2 p. f \<lbrace>\<lambda>s. ~ ko_at (Endpoint x2) p s\<rbrace>"
+  assumes B: "\<And>P t. f \<lbrace>st_tcb_at P t\<rbrace>"
+  assumes C: "\<And>t. f \<lbrace>\<lambda>s. t \<noteq> cur_thread s \<and>
+                          t \<noteq> idle_thread s \<and>
+                          (bound_sc_tcb_at ((=) None) t s \<or>
+                           active_sc_tcb_at t s \<and> budget_sufficient t s \<and> budget_ready t s)\<rbrace>"
+  shows "f \<lbrace>valid_ep_q\<rbrace>"
+  unfolding valid_ep_q_def
+  apply (wpsimp wp: hoare_vcg_all_lift)
+   apply (clarsimp simp: ko_at_fold split: kernel_object.splits option.splits)
+   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_ball_lift A B C)
+  apply (fastforce simp: ko_at_fold[symmetric] split: option.splits)
+  done
 
-lemmas active_sc_ntfn_at'_def = active_sc_ntfn_at_kh_def
+(* FIXME: move *)
+definition valid_reply_scs where
+  "valid_reply_scs \<equiv> \<lambda>s. (\<forall>a r. reply_tcb_reply_at (\<lambda>ropt. ropt = Some a) r s
+                               \<longrightarrow> (bound_sc_tcb_at (\<lambda>a. a = None) a s \<or> active_sc_tcb_at a s)) \<and>
+                         (\<forall>scptr r. reply_sc_reply_at (\<lambda>scopt. scopt = Some scptr) r s
+                               \<longrightarrow> test_sc_refill_max scptr s)"
+
 
 end

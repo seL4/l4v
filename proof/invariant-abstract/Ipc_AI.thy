@@ -259,7 +259,7 @@ locale Ipc_AI =
   assumes make_arch_fault_msg_pred_tcb[wp]:
     "\<And> P (proj :: itcb \<Rightarrow> 't) ft t . make_arch_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. Q (pred_tcb_at proj P t s)\<rbrace>"
   assumes make_arch_fault_msg_bound_sc[wp]:
-    "\<And> P p ft t. make_arch_fault_msg ft t \<lbrace>bound_sc_tcb_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+    "\<And> P p ft t. make_arch_fault_msg ft t \<lbrace>(\<lambda>s. Q (bound_sc_tcb_at P p s)) :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_reply_sc[wp]:
     "\<And> P p ft t. make_arch_fault_msg ft t \<lbrace>reply_sc_reply_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_reply_tcb[wp]:

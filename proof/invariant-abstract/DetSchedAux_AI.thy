@@ -404,9 +404,57 @@ for st_tcb_at[wp]: "\<lambda>s. P (st_tcb_at t ts s)"
 and typ_at[wp]: "\<lambda>s. P (typ_at T t s)"
 and active_sc_tcb_at'[wp]: "\<lambda>s. P (active_sc_tcb_at t s)"
 
-
-crunch valid_blocked[wp]: create_cap,cap_insert,set_cap "valid_blocked::det_state \<Rightarrow> _"
+crunch valid_blocked[wp]: create_cap, cap_insert, set_cap "valid_blocked::det_state \<Rightarrow> _"
   (wp: crunch_wps valid_blocked_lift set_cap_typ_at hoare_drop_imps simp: crunch_simps)
+
+crunch valid_blocked_except_set[wp]: create_cap, cap_insert, set_cap "valid_blocked_except_set S::det_state \<Rightarrow> _"
+  (wp: crunch_wps valid_blocked_except_set_lift set_cap_typ_at hoare_drop_imps simp: crunch_simps)
+
+lemma set_cap_ko_at_Endpoint_at[wp]:
+  "\<lbrace>\<lambda>s. Q (ko_at (Endpoint ep) p s)\<rbrace>
+    set_cap param_a param_b
+   \<lbrace>\<lambda>_ s. Q (ko_at (Endpoint ep) p s)\<rbrace>"
+  unfolding set_cap_def
+  apply (wpsimp wp: set_object_wp get_object_wp)
+  apply (fastforce simp: obj_at_def)
+  done
+
+lemma set_cdt_list_wp:
+  "\<lbrace>\<lambda>s. P (cdt_list_update (\<lambda>_. cdtl) s)\<rbrace> set_cdt_list cdtl \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding set_cdt_list_def
+  by wpsimp
+
+lemma create_cap_ext_ko_at_Endpoint_at[wp]:
+  "\<lbrace>\<lambda>s. Q (ko_at (Endpoint ep) p s)\<rbrace>
+    create_cap_ext a b c
+   \<lbrace>\<lambda>_ s::det_state. Q (ko_at (Endpoint ep) p s)\<rbrace>"
+  unfolding create_cap_ext_def update_cdt_list_def
+  by (wpsimp wp: set_cdt_list_wp)
+
+lemma cap_insert_ext_ko_at_Endpoint_at[wp]:
+  "\<lbrace>\<lambda>s. Q (ko_at (Endpoint ep) p s)\<rbrace>
+    cap_insert_ext src_parent src_slot dest_slot src_p dest_p
+   \<lbrace>\<lambda>_ s::det_state. Q (ko_at (Endpoint ep) p s)\<rbrace>"
+  unfolding cap_insert_ext_def update_cdt_list_def
+  by (wpsimp wp: set_cdt_list_wp)
+
+lemma create_cap_ko_at_Endpoint_at[wp]:
+  "\<lbrace>\<lambda>s. Q (ko_at (Endpoint ep) p s)\<rbrace>
+    create_cap type bits untyped is_device param_b
+   \<lbrace>\<lambda>_ s::det_state. Q (ko_at (Endpoint ep) p s)\<rbrace>"
+  unfolding create_cap_def
+  by wpsimp
+
+lemma cap_insert_ko_at_Endpoint_at[wp]:
+  "\<lbrace>\<lambda>s. Q (ko_at (Endpoint ep) p s)\<rbrace>
+    cap_insert new_cap src_slot dest_slot
+   \<lbrace>\<lambda>_ s::det_state. Q (ko_at (Endpoint ep) p s)\<rbrace>"
+  unfolding cap_insert_def
+  by (wpsimp wp: hoare_vcg_if_lift2 get_cap_wp simp: set_untyped_cap_as_full_def | safe)+
+
+crunches set_cdt, set_cap, create_cap, cap_insert
+  for valid_ep_q[wp]: "valid_ep_q::det_state \<Rightarrow> _"
+  (wp: valid_ep_q_lift crunch_wps hoare_vcg_disj_lift simp: crunch_simps)
 
 lemma valid_blocked_fold_update:
   "\<lbrakk> valid_blocked_2 queues rlq kh sa ct; type \<noteq> apiobject_type.Untyped \<rbrakk> \<Longrightarrow>

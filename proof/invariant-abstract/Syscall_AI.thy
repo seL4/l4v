@@ -1301,13 +1301,22 @@ end
 crunch tcb_at[wp]: lookup_reply, handle_recv "tcb_at t"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma sts_st_tcb_at'':
-  "\<lbrace>K (t = t' \<and> P st)\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. st_tcb_at P t'\<rbrace>"
-  apply (cases "t = t'")
-   apply (simp only: simp_thms)
-   apply (rule sts_st_tcb_at')
-  apply simp
+lemma sts_st_tcb_at_pred:
+  "\<lbrace>K (t = t' \<and> Q (P ts)) \<rbrace> set_thread_state t ts \<lbrace>\<lambda>rv s. Q (st_tcb_at P t' s)\<rbrace>"
+  apply (rule hoare_assume_pre)
+  apply (rule hoare_chain)
+    apply (rule sts_st_tcb_at)
+   apply simp
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
+
+lemma sts_st_tcb_at_pred_True:
+  "\<lbrace>K (t = t' \<and> P st)\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. st_tcb_at P t'\<rbrace>"
+  by (rule sts_st_tcb_at_pred)
+
+lemma sts_st_tcb_at_pred_False:
+  "\<lbrace>K (t = t' \<and> ~ P ts) \<rbrace> set_thread_state t ts \<lbrace>\<lambda>rv s. ~ st_tcb_at P t' s\<rbrace>"
+  by (rule sts_st_tcb_at_pred)
 
 lemma null_cap_on_failure_wp[wp]:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv. Q cap.NullCap\<rbrace>"
@@ -1557,7 +1566,8 @@ lemma send_ipc_not_cur_ct_active[wp]:
    apply (wpsimp wp: set_thread_state_ct_st)
   apply (rename_tac list)
   apply (case_tac list; simp)
-  apply (wpsimp wp: set_thread_state_ct_st hoare_drop_imps | rule conjI)+
+  apply (wpsimp wp: set_thread_state_ct_st hoare_drop_imps hoare_vcg_all_lift
+         | rule conjI)+
   done
 
 lemma send_fault_ipc_ct_active_for_timeout[wp]:
@@ -1601,6 +1611,7 @@ lemma send_ipc_not_blocking_not_calling_ct_active[wp]:
   apply (rename_tac list)
   apply (case_tac list; simp)
   apply (wpsimp wp: set_thread_state_ct_st hoare_drop_imp wp_del: reply_push_ct_active)+
+            apply (rule hoare_pre_cont)
            apply (rule hoare_pre_cont)
           apply wpsimp
          apply (wpsimp wp: thread_get_wp')
@@ -1767,8 +1778,6 @@ lemma fast_finalise_sym_refs:
 
 crunch state_refs_of[wp]: empty_slot "\<lambda>s. P (state_refs_of s)"
   (wp: crunch_wps simp: crunch_simps interrupt_update.state_refs_update)
-
-lemmas sts_st_tcb_at_other = sts_st_tcb_at_neq[where proj=itcb_state]
 
 lemma reply_unlink_runnable[wp]:
   "\<lbrace>st_tcb_at runnable t'\<rbrace> reply_unlink_tcb t rptr \<lbrace>\<lambda>rv. st_tcb_at runnable t'\<rbrace>"

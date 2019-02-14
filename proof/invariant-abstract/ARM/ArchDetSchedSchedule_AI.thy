@@ -29,7 +29,7 @@ crunch weak_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
   (simp: whenE_def ignore: clearExMonitor wp: hoare_drop_imp)
 
 crunch active_sc_tcb_at [wp, DetSchedSchedule_AI_assms]:
-   set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers "active_sc_tcb_at t"
+   set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers, handle_arch_fault_reply "active_sc_tcb_at t"
   (simp: whenE_def active_sc_tcb_at_defs ignore: clearExMonitor)
 (*
 crunch active_sc_tcb_at [wp, DetSchedSchedule_AI_assms]:
@@ -308,6 +308,12 @@ crunch not_in_release_q [wp, DetSchedSchedule_AI_assms]:
 crunch sched_act_not [wp, DetSchedSchedule_AI_assms]:
   handle_arch_fault_reply, handle_vm_fault "scheduler_act_not t"
   (ignore: getFAR getDFSR getIFSR)
+
+crunches handle_arch_fault_reply
+ for simple_sched_action [wp, DetSchedSchedule_AI_assms]: simple_sched_action
+
+crunches handle_arch_fault_reply, arch_get_sanitise_register_info
+ for valid_ep_q [wp, DetSchedSchedule_AI_assms]: valid_ep_q
 
 lemma hvmf_st_tcb_at [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>st_tcb_at P t' \<rbrace> handle_vm_fault t w \<lbrace>\<lambda>rv. st_tcb_at P t' \<rbrace>"

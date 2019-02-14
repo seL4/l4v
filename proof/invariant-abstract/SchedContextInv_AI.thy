@@ -40,15 +40,6 @@ lemma set_consumed_refs_of:
         set_consumed scptr args \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   by (wpsimp simp: set_consumed_def)
 
-lemma sched_context_update_consumed_wp:
-  "\<lbrace>P and obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext (sc\<lparr>sc_consumed := 0\<rparr>) n) scptr\<rbrace>
-        sched_context_update_consumed scptr \<lbrace>\<lambda>rv s. P s\<rbrace>"
-  apply (clarsimp simp: sched_context_update_consumed_def)
-  apply (wpsimp simp: set_sched_context_def set_object_def wp: get_sched_context_wp get_object_wp
-                simp_del: fun_upd_apply)
-  by (clarsimp elim!: rsubst[where P=P] intro!: ext simp: obj_at_def fun_upd_idem)
-
-
 lemma set_mrs_ct[wp]:
   "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_mrs  thread buf msgs \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
   by (wpsimp simp: set_mrs_def zipWithM_x_mapM store_word_offs_def

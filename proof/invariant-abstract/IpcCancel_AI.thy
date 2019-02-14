@@ -1921,6 +1921,8 @@ lemma sts_st_tcb_at_cases_different_thread:
   "t' \<noteq> t \<Longrightarrow> set_thread_state t ts \<lbrace> \<lambda>s. P (st_tcb_at P' t' s) \<rbrace>"
   by (wpsimp wp: sts_st_tcb_at_cases_strong)
 
+lemmas sts_st_tcb_at_other = sts_st_tcb_at_neq[where proj=itcb_state]
+
 lemma cancel_all_ipc_invs_helper':
   "\<lbrace>all_invs_but_sym_refs and valid_replies and
      (\<lambda>s. (\<forall>x\<in>set q. ex_nonz_cap_to x s \<and> tcb_at x s
@@ -2448,7 +2450,7 @@ lemma set_tcb_yield_to_ex_nonz_cap_to[wp]:
 crunch st_tcb_at[wp]: set_consumed "st_tcb_at P t"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch pred_tcb_at[wp]: set_consumed "pred_tcb_at proj P t"
+crunch pred_tcb_at[wp]: set_consumed "\<lambda>s. Q (pred_tcb_at proj P t s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma complete_yield_to_invs:

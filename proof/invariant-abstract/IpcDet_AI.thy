@@ -713,39 +713,8 @@ lemma store_word_offs_reply_sc:
   "\<lbrace>reply_sc_reply_at P r\<rbrace> store_word_offs ptr offs v \<lbrace>\<lambda>rv. reply_sc_reply_at P r\<rbrace>"
   by (wpsimp simp: store_word_offs_def do_machine_op_def reply_sc_reply_at_def)
 
-lemma transfer_caps_bound_sc:
-  "\<lbrace>bound_sc_tcb_at P t\<rbrace>
-   transfer_caps info caps endpoint receiver recv_buffer
-   \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
-  by (wpsimp simp: transfer_caps_def)
-
-lemma copy_mrs_bound_sc:
-  "\<lbrace>bound_sc_tcb_at P t\<rbrace> copy_mrs sender sbuf receiver rbuf n \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
-  apply (wpsimp simp: copy_mrs_def)
-    apply (intro conjI)
-     apply (wpsimp wp: mapM_wp | fastforce)+
-  done
-
-lemma do_normal_transfer_bound_sc:
-  "\<lbrace>bound_sc_tcb_at P t\<rbrace>
-   do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
-   \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
-  by (wpsimp simp: do_normal_transfer_def
-               wp: transfer_caps_bound_sc copy_mrs_bound_sc)
-
-lemma do_fault_transfer_bound_sc:
-  "\<lbrace>bound_sc_tcb_at P t\<rbrace> do_fault_transfer badge sender receiver buf \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
-  apply (wpsimp simp: do_fault_transfer_def)
-     apply (case_tac f)
-         apply (intro conjI | wpsimp)+
-   apply (wpsimp simp: thread_get_def)
-  apply (clarsimp simp: get_tcb_def)
-  done
-
-lemma do_ipc_transfer_bound_sc:
-  "\<lbrace>bound_sc_tcb_at P t\<rbrace> do_ipc_transfer sender ep badge grant receiver \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
-  by (wpsimp simp: do_ipc_transfer_def
-               wp: do_normal_transfer_bound_sc do_fault_transfer_bound_sc)
+crunch bound_sc_tcb_at[wp]: do_ipc_transfer "\<lambda>s. Q (bound_sc_tcb_at P t s)"
+  (wp: crunch_wps)
 
 lemma set_reply_tcb_rv[wp]:
   "\<lbrace> \<lambda>s. P t \<rbrace> set_reply_obj_ref reply_tcb_update r t \<lbrace> \<lambda>rv s. reply_tcb_reply_at P r s \<rbrace>"
@@ -1653,22 +1622,18 @@ lemma reply_tcb_None_imp_not_in_sc_replies:
                  split: option.splits)
   done
 
-lemma helper1:
+lemma si_invs'_helper_no_reply_sts_helper:
   "\<lbrace>\<lambda>s. valid_replies' (replies_with_sc s)
          (replies_blocked_upd_tcb_st Running dest (replies_blocked s)) \<and> st_tcb_at active tptr s\<rbrace>
     set_thread_state tptr Inactive
    \<lbrace>\<lambda>rv s. valid_replies' (replies_with_sc s)
          (replies_blocked_upd_tcb_st Running dest (replies_blocked s))\<rbrace>"
   apply (wpsimp wp: sts_valid_replies)
-  apply (clarsimp simp: replies_blocked_upd_tcb_st_def pred_tcb_at_def obj_at_def)
-  apply (subgoal_tac "{(r, t').
-              t' \<noteq> tptr \<and>
-              (t' \<noteq> tptr \<longrightarrow>
-               t' \<noteq> dest \<and> (t' \<noteq> dest \<longrightarrow> (r, t') \<in> replies_blocked s))} =
-{(r, t').
-          if t' = dest then Running = BlockedOnReply r
-          else (r, t') \<in> replies_blocked s}")
-   apply (simp)
+  apply (clarsimp simp: replies_blocked_upd_tcb_st_def pred_tcb_at_def obj_at_def cong: conj_cong)
+  apply (subgoal_tac "{(r, t'). t' \<noteq> tptr \<and> t' \<noteq> dest \<and> (r, t') \<in> replies_blocked s} =
+                      {(r, t'). if t' = dest
+                                then Running = BlockedOnReply r
+                                else (r, t') \<in> replies_blocked s}", simp)
   apply (clarsimp simp:  pred_tcb_at_def obj_at_def replies_blocked_def)
   apply (fastforce)
   done
@@ -1734,7 +1699,8 @@ lemma si_invs'_helper_no_reply:
         apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                      wp: sts_only_idle valid_irq_node_typ sts_valid_replies
                          valid_ioports_lift)
-       apply (wpsimp wp: assert_inv sts_only_idle helper1 sts_refs_of_no_state_refs wp_del: sts_refs_of)+
+       apply (wpsimp wp: assert_inv sts_only_idle si_invs'_helper_no_reply_sts_helper
+                         sts_refs_of_no_state_refs wp_del: sts_refs_of)+
    apply (intro conjI)
        apply (fastforce simp: st_tcb_at_def live_def elim!: if_live_then_nonz_capD)
       apply (rule replies_blocked_upd_tcb_st_valid_replies;
@@ -1798,11 +1764,6 @@ lemma si_invs'_helper_no_reply:
   apply (fastforce simp: live_def elim!: if_live_then_nonz_capD2)
   done
 
-(* FIXME: move *)
-lemma sts_st_tcb_at_cases_different_thread':
-  "\<lbrace> \<lambda>s. P (st_tcb_at P' t' s) \<and> t' \<noteq> t\<rbrace> set_thread_state t ts \<lbrace> \<lambda>r s. P (st_tcb_at P' t' s) \<rbrace>"
-  by (wpsimp wp: sts_st_tcb_at_cases_strong)
-
 lemma si_invs'_helper_some_reply:
   assumes possible_switch_to_Q[wp]: "\<And>a. \<lbrace>Q and valid_objs\<rbrace> possible_switch_to a \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
@@ -1850,7 +1811,7 @@ lemma si_invs'_helper_some_reply:
       apply (wpsimp wp: reply_push_st_tcb_at_Inactive)
      apply (clarsimp simp: pred_tcb_at_def obj_at_def)
      apply (rule_tac Q="\<lambda>_. st_tcb_at ((=) Inactive) dest" in hoare_strengthen_post)
-      apply (wpsimp wp: sts_st_tcb_at_cases_different_thread')
+      apply (wpsimp wp: sts_st_tcb_at_other)
      apply (clarsimp simp: pred_tcb_at_def obj_at_def)
     apply (wpsimp wp: reply_push_invs sts_invs_minor2_concise)
    apply (rule conjI; clarsimp simp: pred_tcb_at_def obj_at_def)
@@ -1982,8 +1943,6 @@ lemma si_invs'_helper:
   apply (rename_tac r)
   apply (case_tac r, simp split del: if_split)
    apply (wpsimp wp: si_invs'_helper_no_reply wp_del: maybeM_inv)
-    apply (wpsimp wp: valid_irq_node_typ do_ipc_transfer_bound_sc hoare_vcg_imp_lift)
-   apply clarsimp
    apply (intro conjI)
        apply (clarsimp simp: st_tcb_at_def obj_at_def)
       apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb)
@@ -2006,7 +1965,7 @@ lemma si_invs'_helper:
      apply (wpsimp wp: reply_unlink_tcb_st_tcb_at')
     apply (wpsimp wp: reply_unlink_tcb_invs_BlockedOnReceive
                       reply_unlink_tcb_bound_sc_tcb_at hoare_vcg_imp_lift)
-   apply (wpsimp wp: hoare_ex_wp valid_irq_node_typ do_ipc_transfer_bound_sc hoare_vcg_imp_lift)
+   apply (wpsimp wp: hoare_ex_wp valid_irq_node_typ hoare_vcg_imp_lift)
   apply clarsimp
   apply (subgoal_tac "reply_tcb_reply_at (\<lambda>b. b = Some dest) rptr s")
    apply (intro conjI)

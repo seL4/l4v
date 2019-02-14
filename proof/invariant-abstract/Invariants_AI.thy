@@ -250,6 +250,7 @@ abbreviation "bound_tcb_at \<equiv> pred_tcb_at itcb_bound_notification"
 abbreviation "bound_sc_tcb_at \<equiv> pred_tcb_at itcb_sched_context"
 abbreviation "bound_yt_tcb_at \<equiv> pred_tcb_at itcb_yield_to"
 abbreviation "mcpriority_tcb_at \<equiv> pred_tcb_at itcb_mcpriority"
+abbreviation "fault_tcb_at \<equiv> pred_tcb_at itcb_fault"
 
 (* sseefried: 'st_tcb_at_def' only exists to make existing proofs go through. Use 'pred_tcb_at_def' from now on. *)
 lemma st_tcb_at_def: "st_tcb_at test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
@@ -4354,5 +4355,9 @@ lemma diminished_cap_simps[simp]:
       ; rename_tac cap
       ; case_tac cap
       ; clarsimp simp: diminished_def mask_cap_def cap_rights_update_def)+
+
+lemma ko_at_fold:
+  "(kheap s p = Some ko) = (ko_at ko p s)"
+  by (clarsimp simp: obj_at_def)
 
 end
