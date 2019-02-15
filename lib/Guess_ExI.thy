@@ -14,11 +14,11 @@ imports
   Apply_Debug
 begin
 
-(* 
+(*
 This file contains the experimental methods guess_exI and guess_spec. Each, as the name suggests,
 attempts to guess an instantiation for their respective rules. It does so by looking
 for a matching premise for the quantifying binder, checking that
-this could be the only match for safety. 
+this could be the only match for safety.
 *)
 
 method abs_used for P = (match (P) in "\<lambda>s. ?P" \<Rightarrow> \<open>fail\<close> \<bar> _ \<Rightarrow> \<open>-\<close>)
@@ -35,8 +35,8 @@ method guess_exI =
                             \<open>match premises in "P y" for P y \<Rightarrow>
                              \<open>abs_used P, in_conj P Q, rule exI[where x=y]\<close>\<close>)\<close>)
 
-lemma fun_uncurry: 
-  "(P \<longrightarrow> Q \<longrightarrow> R) \<longleftrightarrow> (P \<and> Q) \<longrightarrow> R" 
+lemma fun_uncurry:
+  "(P \<longrightarrow> Q \<longrightarrow> R) \<longleftrightarrow> (P \<and> Q) \<longrightarrow> R"
   by auto
 
 method guess_spec_inner for P uses I =
@@ -50,7 +50,7 @@ method guess_spec =
 
 text \<open>Tests and examples\<close>
 experiment begin
- 
+
  lemma
     assumes Q: "Q x"
     shows  "P x \<Longrightarrow> \<forall>x. Q x \<longrightarrow> P x \<longrightarrow> R  \<Longrightarrow> R"

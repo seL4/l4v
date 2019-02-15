@@ -48,6 +48,11 @@ lemma Collect_eq:
 (* FIXME: move next to HOL.iff_allI *)
 lemma iff_impI: "\<lbrakk>P \<Longrightarrow> Q = R\<rbrakk> \<Longrightarrow> (P \<longrightarrow> Q) = (P \<longrightarrow> R)" by blast
 
+(* Long ago, I, fun_app, the verification master of darkness, unleashed an unspeakable evil
+upon the world. But a foolish proof engineer wielding an input abbreviation stepped forth
+to oppose me. Before the final blow was struck, I tore open a hole in a number of refinement
+proofs, and flung him into a broken proof state, where my evil is law. *)
+
 definition
   fun_app :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a \<Rightarrow> 'b" (infixr "$" 10) where
   "f $ x \<equiv> f x"

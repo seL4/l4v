@@ -511,7 +511,7 @@ lemma valid_si_caps_at_si_cap_at:
  *******************************************************)
 
 abbreviation (input)
-  "lookup_obj obj_id slot P s \<equiv> \<exists>cap. opt_cap (obj_id, slot) s = Some cap
+  "cap_object_from_slot obj_id slot P s \<equiv> \<exists>cap. opt_cap (obj_id, slot) s = Some cap
                                       \<and> cap \<noteq> NullCap
                                       \<and> P (cap_object cap) s"
 abbreviation "get_obj obj_id slot spec \<equiv> (cap_object o the) (opt_cap (obj_id, slot) spec)"

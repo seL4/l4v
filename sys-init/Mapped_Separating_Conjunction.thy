@@ -253,7 +253,7 @@ lemma "sep_map_set_conj f S s \<Longrightarrow> finite S \<Longrightarrow> (\<fo
     apply (erule_tac x="f x" in ballE)
      apply (frule precise_non_dup)
       apply (clarsimp simp: sep_empty_def)
-  apply (metis (mono_tags, hide_lams) disjoint_zero_sym precise_def sep_add_zero 
+  apply (metis (mono_tags, hide_lams) disjoint_zero_sym precise_def sep_add_zero
                                       sep_disj_zero sep_substate_disj_add')
      apply (fastforce)
     apply (blast)

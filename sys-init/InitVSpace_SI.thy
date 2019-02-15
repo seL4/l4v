@@ -251,12 +251,11 @@ lemma si_caps_at_take_2':
             si_caps_at t orig_caps spec dev ({obj_id. real_object_at obj_id spec} -
                                                       {spec_pd_ptr} - {spec_pt_section_ptr}))"
   apply (frule (1) object_at_real_object_at)
-  apply  (frule (1) object_at_real_object_at[where obj_id=spec_pt_section_ptr],
-          clarsimp simp: object_at_def is_pd_def is_frame_def is_pt_def,
-          simp split: cdl_object.split_asm,
-          subst sep_caps_at_split[where a="spec_pd_ptr"], fastforce,
-          subst sep_caps_at_split[where a="spec_pt_section_ptr"]; fastforce)
-  done
+  apply (frule (1) object_at_real_object_at[where obj_id=spec_pt_section_ptr])
+  apply (clarsimp simp: object_at_def is_pd_def is_frame_def is_pt_def split: cdl_object.split_asm)
+  by (metis sep_caps_at_split[where a="spec_pd_ptr"]
+            sep_caps_at_split[where a="spec_pt_section_ptr"]
+            cdl_object.exhaust mem_Collect_eq member_remove option.inject remove_def)
 
 lemma frame_at_default_cap[simp]:
   "well_formed spec \<Longrightarrow>
@@ -409,6 +408,9 @@ lemma map_page_wp:
                          intro: object_slots_object_default_state_NullCap')+
   by (sep_map thms: translate_exists, fastforce simp: unat_less_2_si_cnode_size')+
 
+(***********************************************************
+         * Mapping a frame inside a page directory *
+************************************************************)
 lemma map_page_in_pd_wp:
   "\<lbrakk>well_formed spec; pd_at pd_id spec\<rbrakk> \<Longrightarrow>
     \<lbrace>\<guillemotleft>object_slot_empty spec t pd_id pd_slot \<and>*
@@ -459,6 +461,10 @@ lemma map_page_in_pd_wp:
                           validate_vm_rights_inter_rw)
   by (fastforce simp: unat_less_2_si_cnode_size')
 
+(***********************************************************
+      * Mapping a page table inside a page directory *
+************************************************************)
+
 lemma map_page_table_in_pd_wp:
   "\<lbrakk>well_formed spec; pd_at pd_id spec\<rbrakk> \<Longrightarrow>
     \<lbrace>\<guillemotleft>object_slot_empty spec t pd_id pd_slot \<and>*
@@ -489,6 +495,10 @@ lemma map_page_table_in_pd_wp:
                si_caps_at_less_si_cnode_size[rotated 2, OF pd_at_is_real]
                si_caps_at_less_translate_exists[rotated, OF pt_at_is_real]
                si_caps_at_less_translate_exists[rotated, OF pd_at_is_real])+
+
+(***********************************************************
+              * Mapping a page table slot *
+************************************************************)
 
 lemma map_page_table_slot_wp:
   "\<lbrakk>well_formed spec; pd_at pd_id spec\<rbrakk> \<Longrightarrow>
@@ -526,6 +536,10 @@ lemma map_page_table_slot_wp:
   apply (wp, clarsimp simp: conjure_real_frame_cap_def)
   apply sep_cancel+
   by (fastforce simp: object_slot_empty_initialised_NullCap object_at_def is_tcb_def)
+
+(***********************************************************
+  * Mapping a page directory slot that contains a frame *
+************************************************************)
 
 lemma map_page_directory_slot_page_wp:
  "frame_at page_id spec \<Longrightarrow>
@@ -594,6 +608,10 @@ lemma pd_NullCap_empty_init:
   apply (clarsimp simp: cap_at_def)
   done
 
+(***********************************************************
+* Mapping a page directory slot that contains a page table *
+************************************************************)
+
 lemma map_page_directory_slot_pt_wp:
   "pt_at pt_id spec \<Longrightarrow>
    \<lbrace>\<guillemotleft>object_slot_empty spec t pd_id slot \<and>*
@@ -649,6 +667,10 @@ lemma map_page_directory_slot_pt_wp:
                                                         simplified is_pt_pt_size])
   by (fastforce simp: cap_at_def opt_cap_def pt_size_def small_frame_size_def)+
 
+(***********************************************************
+              * Mapping a page directory *
+************************************************************)
+
 lemma map_page_directory_wp_expanded:
   "\<lbrakk>well_formed spec; pd_at pd_id spec; pd_slots = slots_of_list spec pd_id;
     list_all (\<lambda>n. n < 2 ^ 12) pd_slots; \<forall>ptr. cptr_map ptr < 2 ^ si_cnode_size;
@@ -662,12 +684,12 @@ lemma map_page_directory_wp_expanded:
           sep_map_set_conj (\<lambda>y. (si_cnode_id, unat (cptr_map (pt_id, y))) \<mapsto>c NullCap)
                            {slot \<in> dom (slots_of pt_id spec).
                              cap_at ((\<noteq>) NullCap) (pt_id, slot) spec})
-        [slot <- pd_slots. lookup_obj pd_id slot pt_at spec] \<and>*
+        [slot <- pd_slots. cap_object_from_slot pd_id slot pt_at spec] \<and>*
       \<And>* map (\<lambda>x.
           let frame_id = get_obj pd_id x spec in
           (si_cnode_id, unat (cptr_map (pd_id, x))) \<mapsto>c NullCap \<and>*
           object_slot_empty spec t pd_id x)
-        [slot <- pd_slots. lookup_obj pd_id slot frame_at spec] \<and>*
+        [slot <- pd_slots. cap_object_from_slot pd_id slot frame_at spec] \<and>*
       R\<guillemotright>\<rbrace>
       map_page_directory spec orig_caps cptr_map pd_id
     \<lbrace>\<lambda>_. \<guillemotleft>si_objects \<and>*
@@ -680,13 +702,13 @@ lemma map_page_directory_wp_expanded:
                                     \<mapsto>c conjure_real_frame_cap (the_cap spec pt_id y) t)
                                {slot \<in> dom (slots_of pt_id spec).
                                  cap_at ((\<noteq>) NullCap) (pt_id, slot) spec})
-             [slot <- pd_slots. lookup_obj pd_id slot pt_at spec] \<and>*
+             [slot <- pd_slots. cap_object_from_slot pd_id slot pt_at spec] \<and>*
           \<And>* map (\<lambda>x.
               let frame_id = get_obj pd_id x spec in
               (si_cnode_id, unat (cptr_map (pd_id, x)))
                 \<mapsto>c conjure_real_frame_cap (the_cap spec pd_id x) t \<and>*
               object_slot_initialised spec t pd_id x)
-             [slot <- pd_slots. lookup_obj pd_id slot frame_at spec] \<and>*
+             [slot <- pd_slots. cap_object_from_slot pd_id slot frame_at spec] \<and>*
           R\<guillemotright>\<rbrace>"
   apply (clarsimp simp: map_page_directory_def Let_unfold)
   apply wp
@@ -770,7 +792,7 @@ lemma wf_split_slots_of_pd:
 lemma wf_pd_pt_obj_inj:
   "\<lbrakk>well_formed spec; pd_at pd_id spec\<rbrakk>
    \<Longrightarrow> inj_on (ref_obj spec pd_id)
-             {slot \<in> dom (slots_of pd_id spec). lookup_obj pd_id slot pt_at spec}"
+             {slot \<in> dom (slots_of pd_id spec). cap_object_from_slot pd_id slot pt_at spec}"
   supply object_type_is_object[simp]
   apply (clarsimp simp: inj_on_def cap_ref_object_def object_at_def)
   apply (frule_tac obj_id=pd_id and slot=y in well_formed_types_match)
@@ -790,17 +812,17 @@ lemma wf_pd_pt_obj_inj:
 lemma sep_map_pd_slots_inj[simp]:
   "well_formed spec \<Longrightarrow>
    pd_at pd_id spec \<Longrightarrow>
-   (SETSEPCONJ x | x \<in> dom (slots_of pd_id spec) \<and> lookup_obj pd_id x pt_at spec.
+   (SETSEPCONJ x | x \<in> dom (slots_of pd_id spec) \<and> cap_object_from_slot pd_id x pt_at spec.
       P (cap_object (the_cap spec pd_id x))) =
    sep_map_set_conj P
      {obj. \<exists>slot. slot \<in> dom (slots_of pd_id spec) \<and>
-                  lookup_obj pd_id slot pt_at spec \<and>
+                  cap_object_from_slot pd_id slot pt_at spec \<and>
                   obj = cap_object (the_cap spec pd_id slot)}"
   apply (subgoal_tac "{obj. \<exists>slot. slot \<in> dom (slots_of pd_id spec) \<and>
-                                   lookup_obj pd_id slot pt_at spec \<and>
+                                   cap_object_from_slot pd_id slot pt_at spec \<and>
                                    obj = cap_object (the_cap spec pd_id slot)} =
                       ref_obj spec pd_id ` {slot \<in> dom (slots_of pd_id spec).
-                                              lookup_obj pd_id slot pt_at spec}")
+                                              cap_object_from_slot pd_id slot pt_at spec}")
    prefer 2
    apply (clarsimp simp: cap_ref_object_def)
    apply blast
@@ -812,6 +834,10 @@ lemma sep_map_pd_slots_inj[simp]:
 
 lemma opt_cap_cap_at_simp: "(opt_cap ref spec = Some cap) = cap_at (\<lambda>x. x = cap) ref spec"
   by (clarsimp simp: cap_at_def)
+
+(***********************************************************
+* Mapping a page directory, with cleaner pre/postcondition *
+************************************************************)
 
 lemma map_page_directory_wp:
   "\<lbrakk>well_formed spec; pd_at pd_id spec; pd_slots = slots_of_list spec pd_id;
@@ -1116,6 +1142,10 @@ lemma pt_parents_pd_pts_init:
    apply (metis (mono_tags, lifting) cap_at_def domI option.sel)
   apply blast
   done
+
+(***********************************************************
+              * Initialising all page directories *
+************************************************************)
 
 lemma init_vspace_sep:
   "\<lbrace>\<guillemotleft>si_objects \<and>*
