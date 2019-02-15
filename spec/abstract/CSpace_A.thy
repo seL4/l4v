@@ -326,7 +326,7 @@ where
          | Some tp \<Rightarrow> do
              state \<leftarrow> get_thread_state tp;
              case state of
-               BlockedOnReply (Some r) \<Rightarrow> reply_remove r
+               BlockedOnReply r \<Rightarrow> reply_remove r
              | _ \<Rightarrow> cancel_ipc tp
            od
        od)"
@@ -490,7 +490,7 @@ where
          | Some tp \<Rightarrow> do
              state \<leftarrow> get_thread_state tp;
              case state of
-               BlockedOnReply (Some r) \<Rightarrow> reply_remove r
+               BlockedOnReply r \<Rightarrow> reply_remove r
              | _ \<Rightarrow> cancel_ipc tp
            od
        od)"

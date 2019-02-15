@@ -586,7 +586,7 @@ where
       state \<leftarrow> get_thread_state receiver;
       case state of
         BlockedOnReply r \<Rightarrow> do
-          assert (r = Some reply);
+          assert (r = reply);
           reply_remove reply;
           fault \<leftarrow> thread_get tcb_fault receiver;
           case fault of

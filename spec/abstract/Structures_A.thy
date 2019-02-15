@@ -377,7 +377,7 @@ datatype thread_state
 (*  | YieldTo obj_ref (* sc ref *)*)
   | BlockedOnReceive obj_ref "obj_ref option"
   | BlockedOnSend obj_ref sender_payload
-  | BlockedOnReply "obj_ref option"
+  | BlockedOnReply obj_ref
   | BlockedOnNotification obj_ref
   | IdleThreadState
 
