@@ -473,18 +473,23 @@ lemma do_reply_invs[wp]:
      do_reply_transfer t r
    \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: do_reply_transfer_def)
-  apply (wpsimp wp: sts_invs_minor2_concise handle_timeout_Timeout_invs hoare_drop_imps
-                    hoare_vcg_all_lift refill_unblock_check_invs)
-                apply (wpsimp wp: get_tcb_obj_ref_wp)
-               apply (rule_tac
-                        Q = "\<lambda>_ s. invs s \<and> (restart \<longrightarrow> st_tcb_at active x s)"
-                      in hoare_strengthen_post[rotated])
-                apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-               apply (wpsimp wp: sts_st_tcb_at' sts_invs_minor | rule conjI)+
+  apply (wpsimp wp: handle_timeout_Timeout_invs hoare_vcg_all_lift hoare_drop_imps
+                    refill_unblock_check_invs get_tcb_obj_ref_wp)
+           apply (wpsimp wp: gts_wp)
+          apply (rule_tac Q = "\<lambda>_ s. invs s" in hoare_strengthen_post[rotated])
+           apply (clarsimp simp: pred_tcb_at_def obj_at_def runnable_eq)
+          apply (wpsimp wp: sts_invs_minor2_concise)+
+              apply (intro conjI impI)
                apply (wpsimp wp: thread_set_cap_to thread_set_invs_trivial
                                  thread_set_no_change_tcb_state gts_wp
-                                 hoare_drop_imps reply_remove_invs get_simple_ko_wp
+                                 reply_remove_invs get_simple_ko_wp
                            simp: ran_tcb_cap_cases)+
+         apply (wpsimp wp: hoare_drop_imps)
+        apply (clarsimp cong: conj_cong)
+       apply (wpsimp wp: reply_remove_invs thread_set_cap_to thread_set_invs_trivial
+                         thread_set_no_change_tcb_state gts_wp
+                         reply_remove_invs get_simple_ko_wp
+                   simp: ran_tcb_cap_cases)+
   apply (clarsimp simp: pred_tcb_at_eq_commute)
   apply (clarsimp simp: reply_tcb_reply_at_def obj_at_def pred_tcb_at_def is_tcb is_reply)
   apply (frule invs_valid_idle)
@@ -1339,7 +1344,7 @@ lemma do_reply_transfer_nonz_cap:
    \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   by (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift get_tcb_obj_ref_wp
-                 thread_set_cap_to
+                 thread_set_cap_to gts_wp
            simp: ran_tcb_cap_cases
       | rule conjI)+
 
