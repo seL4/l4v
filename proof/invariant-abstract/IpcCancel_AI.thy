@@ -1950,7 +1950,7 @@ crunches reply_unlink_tcb
   (wp: crunch_wps set_thread_state_pred_tcb_at' simp: crunch_simps)
 
 lemma cancel_all_ipc_invs_helper':
-  "\<lbrace>all_invs_but_sym_refs and valid_replies and
+  "\<lbrace>all_invs_but_sym_refs and
      (\<lambda>s. (\<forall>x\<in>set q. ex_nonz_cap_to x s \<and> tcb_at x s
                      \<and> st_tcb_at (\<lambda>st. (\<exists>epptr ro. st = BlockedOnReceive epptr ro) \<or>
                                        (\<exists>epptr pl. st = BlockedOnSend epptr pl)) x s)

@@ -416,6 +416,14 @@ lemma not_in_release_q_simp[iff]: "\<not> in_release_q t s \<longleftrightarrow>
 lemma not_in_ready_q_simp[iff]: "\<not> in_ready_q t s \<longleftrightarrow> not_queued t s"
   by (clarsimp simp: in_ready_q_def not_queued_def)
 
+lemma not_in_release_q_simp'[dest!]:
+   "\<not> in_release_queue t s \<Longrightarrow> not_in_release_q t s"
+  by (simp add: in_release_queue_def not_in_release_q_def)
+
+lemma not_not_in_release_q_simp'[dest]:
+   "\<not> not_in_release_q t s \<Longrightarrow> in_release_q t s"
+  by (simp add: in_release_q_def not_in_release_q_def)
+
 definition valid_ready_qs_2 where
   "valid_ready_qs_2 queues curtime kh \<equiv> (\<forall>d p.
      (\<forall>t \<in> set (queues d p). etcb_at' (\<lambda>t. etcb_priority t = p \<and> etcb_domain t = d) t (etcbs_of' kh)
@@ -566,6 +574,10 @@ abbreviation valid_blocked_except :: "obj_ref \<Rightarrow> 'z state \<Rightarro
 lemmas valid_blocked_except_set_def = valid_blocked_except_set_2_def
 lemmas valid_blocked_except_def = valid_blocked_except_set_2_def
 
+lemma valid_blocked_except_set_empty:
+  "valid_blocked_except_set {} = valid_blocked"
+  by (clarsimp simp: valid_blocked_except_set_def valid_blocked_def)
+
 definition in_cur_domain_2 where
   "in_cur_domain_2 thread cdom ekh \<equiv> etcb_at' (\<lambda>t. etcb_domain t = cdom) thread ekh"
 
@@ -673,6 +685,47 @@ lemma valid_sched_ct_in_cur_domain:
   "valid_sched s \<Longrightarrow> ct_in_cur_domain s" by (simp add: valid_sched_def)
 
 
+abbreviation valid_sched_except_blocked_2 where
+  "valid_sched_except_blocked_2 queues sa cdom ctime kh ct it rq \<equiv>
+    valid_ready_qs_2 queues ctime kh \<and> valid_release_q_2 rq kh \<and> ct_not_in_q_2 queues sa ct \<and>
+    valid_sched_action_2 sa kh ct cdom ctime rq \<and>
+    ct_in_cur_domain_2 ct it sa cdom (etcbs_of' kh) \<and> valid_idle_etcb_2 (etcbs_of' kh)"
+
+abbreviation valid_sched_except_blocked :: "det_ext state \<Rightarrow> bool" where
+  "valid_sched_except_blocked s \<equiv>
+   valid_sched_except_blocked_2 (ready_queues s) (scheduler_action s) (cur_domain s) (cur_time s) (kheap s)
+                                (cur_thread s) (idle_thread s) (release_queue s)"
+
+
+abbreviation valid_sched_action_except_wk_sched_action_2 where
+  "valid_sched_action_except_wk_sched_action_2 sa kh ct cdom rq\<equiv>
+     is_activatable_2 ct sa kh \<and> switch_in_cur_domain_2 sa (etcbs_of' kh) cdom"
+
+abbreviation valid_sched_action_except_wk_sched_action :: "'z state \<Rightarrow> bool" where
+  "valid_sched_action_except_wk_sched_action s \<equiv> valid_sched_action_except_wk_sched_action_2 (scheduler_action s) (kheap s) (cur_thread s) (cur_domain s) (release_queue s)"
+
+abbreviation valid_sched_except_blocked_except_wk_sched_action_2 where
+  "valid_sched_except_blocked_except_wk_sched_action_2 queues sa cdom ctime kh ct it rq \<equiv>
+    valid_ready_qs_2 queues ctime kh \<and> valid_release_q_2 rq kh \<and> ct_not_in_q_2 queues sa ct \<and> valid_sched_action_except_wk_sched_action_2 sa kh ct cdom rq \<and>
+    ct_in_cur_domain_2 ct it sa cdom (etcbs_of' kh) \<and> valid_idle_etcb_2 (etcbs_of' kh)"
+
+abbreviation valid_sched_except_blocked_except_wk_sched_action :: "det_ext state \<Rightarrow> bool" where
+  "valid_sched_except_blocked_except_wk_sched_action s \<equiv>
+   valid_sched_except_blocked_except_wk_sched_action_2 (ready_queues s) (scheduler_action s) (cur_domain s) (cur_time s) (kheap s)
+                                (cur_thread s) (idle_thread s) (release_queue s)"
+
+definition weak_valid_sched_action_except_2 where
+  "weak_valid_sched_action_except_2 thread sa kh curtime release_q\<equiv>
+    \<forall>t. t \<noteq> thread \<longrightarrow> sa = switch_thread t \<longrightarrow>
+    st_tcb_at_kh runnable t kh \<and> (*bound_sc_tcb_at_kh bound t kh*)
+    budget_ready_kh curtime t kh \<and> budget_sufficient_kh t kh \<and>
+    active_sc_tcb_at_kh t kh \<and> \<not> t \<in> set release_q"
+
+abbreviation weak_valid_sched_action_except :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+ "weak_valid_sched_action_except t s \<equiv>
+     weak_valid_sched_action_except_2 t (scheduler_action s) (kheap s) (cur_time s) (release_queue s)"
+
+
 definition not_cur_thread_2 :: "obj_ref \<Rightarrow> scheduler_action \<Rightarrow> obj_ref \<Rightarrow> bool" where
   "not_cur_thread_2 thread sa ct \<equiv> sa = resume_cur_thread \<longrightarrow> thread \<noteq> ct"
 
@@ -721,6 +774,16 @@ definition valid_reply_scs where
                          (\<forall>scptr r. reply_sc_reply_at (\<lambda>scopt. scopt = Some scptr) r s
                                \<longrightarrow> test_sc_refill_max scptr s)"
 
+(* ct_in_q, either in a ready_queue or the release_queue *)
+definition ct_in_q where
+  "ct_in_q s \<equiv> st_tcb_at runnable (cur_thread s) s
+     \<longrightarrow> (\<exists>d p. cur_thread s \<in> set (ready_queues s d p) \<or> cur_thread s \<in> set (release_queue s))"
+
+
+(* next_thread *)
+definition next_thread where
+  "next_thread queues \<equiv> (hd (max_non_empty_queue queues))"
+
 definition
   ready_or_released :: "'z state  \<Rightarrow> bool"
 where
@@ -733,10 +796,6 @@ lemma ready_or_released_in_ready_qs[intro]:
 lemma ready_or_released_in_release_queue[intro]:
   "ready_or_released s \<Longrightarrow> in_release_queue t s \<Longrightarrow> not_queued t s"
   by (fastforce simp: ready_or_released_def in_release_queue_def not_queued_def)
-
-lemma valid_blocked_except_set_empty:
-  "valid_blocked_except_set {} = valid_blocked"
-  by (clarsimp simp: valid_blocked_except_set_def valid_blocked_def)
 
 lemma BlockedOnReceive_reply_tcb_reply_at:
   "st_tcb_at ((=) (BlockedOnReceive epptr (Some rptr))) tptr s
@@ -885,6 +944,81 @@ lemma simple_ko_update_cong':
                  (kheap s)(cur_thread s) (idle_thread s) (release_queue s)"
   by (clarsimp simp: valid_sched_def)
   (* this lemma will change if we add endpoint queue scheduling validity to valid_sched *)
+
+(* kh_if_split rules *)
+
+lemma obj_at_kh_if_split:
+  "obj_at_kh P ptr (\<lambda>t. if t = ref then x else kh t)
+     = (if ptr = ref then (\<exists>ko. x = (Some ko) \<and> P ko)
+        else obj_at_kh P ptr kh)"
+  by (fastforce simp: obj_at_kh_def obj_at_def)
+
+lemma st_tcb_at_kh_if_split:
+  "st_tcb_at_kh P ptr (\<lambda>t. if t = ref then x else kh t)
+     = (if ptr = ref then (\<exists>tcb. x = Some (TCB tcb) \<and> P (tcb_state tcb))
+        else st_tcb_at_kh P ptr kh)"
+  by (fastforce simp: st_tcb_at_kh_def obj_at_kh_def obj_at_def)
+
+lemma bound_sc_tcb_at_kh_if_split:
+  "bound_sc_tcb_at_kh P ptr (\<lambda>t. if t = ref then x else kh t)
+     = (if ptr = ref then (\<exists>tcb. x = Some (TCB tcb) \<and> P (tcb_sched_context tcb))
+        else bound_sc_tcb_at_kh P ptr kh)"
+  by (fastforce simp: bound_sc_tcb_at_kh_def obj_at_kh_def obj_at_def)
+
+lemma test_sc_refill_max_kh_if_split:
+  "test_sc_refill_max_kh ptr (\<lambda>p. if p = ref then x else kh p)
+     = (if ptr = ref then (\<exists>sc n. x = Some (SchedContext sc n) \<and> (sc_refill_max sc > 0))
+        else test_sc_refill_max_kh ptr kh)"
+  by (clarsimp simp: test_sc_refill_max_kh_def split: option.splits)
+     (rename_tac ko; case_tac ko; clarsimp)
+
+lemma refill_ready_kh_if_split:
+  "refill_ready_kh curtime ptr (\<lambda>p. if p = ref then x else kh p)
+     = (if ptr = ref then (\<exists>sc n. x = Some (SchedContext sc n)
+              \<and> (r_time (refill_hd sc)) \<le> curtime + kernelWCET_ticks)
+        else refill_ready_kh curtime ptr kh)"
+  by (clarsimp simp: refill_ready_kh_def split: option.splits)
+     (rename_tac ko; case_tac ko; clarsimp)
+
+lemma refill_sufficient_kh_if_split:
+  "refill_sufficient_kh ptr (\<lambda>p. if p = ref then x else kh p)
+     = (if ptr = ref then (\<exists>sc n. x = Some (SchedContext sc n)
+              \<and> (sufficient_refills 0 (sc_refills sc)))
+        else refill_sufficient_kh ptr kh)"
+  by (clarsimp simp: refill_sufficient_kh_def split: option.splits)
+     (rename_tac ko; case_tac ko; clarsimp)
+
+lemma active_sc_tcb_at_kh_if_split:
+  "active_sc_tcb_at_kh ptr (\<lambda>t. if t = ref then x else kh t)
+     = (\<exists>tcb. (if ptr = ref then x else kh ptr) = Some (TCB tcb)
+                 \<and> (\<exists>scp. tcb_sched_context tcb = Some scp
+                     \<and> test_sc_refill_max_kh scp (\<lambda>t. if t = ref then x else kh t)))"
+  by (fastforce simp: active_sc_tcb_at_kh_def bound_sc_tcb_at_kh_if_split obj_at_kh_def
+                      bound_sc_tcb_at_kh_def test_sc_refill_max_kh_if_split)
+
+lemma active_sc_tcb_at_kh_if_split':
+  "active_sc_tcb_at_kh ptr (\<lambda>t. if t = ref then x else kh t)
+    = bound_sc_tcb_at_kh (\<lambda>ko. \<exists>scp. ko = Some scp
+                     \<and> test_sc_refill_max_kh scp (\<lambda>t. if t = ref then x else kh t))
+                                                             ptr (\<lambda>t. if t = ref then x else kh t)"
+  by (fastforce simp: active_sc_tcb_at_kh_def bound_sc_tcb_at_kh_if_split obj_at_kh_def
+                      bound_sc_tcb_at_kh_def test_sc_refill_max_kh_if_split)
+
+lemma budget_ready_kh_if_split:
+  "budget_ready_kh curtime ptr (\<lambda>t. if t = ref then x else kh t)
+     = (\<exists>tcb. (if ptr = ref then x else kh ptr) = Some (TCB tcb)
+                 \<and> (\<exists>scp. tcb_sched_context tcb = Some scp
+                      \<and> refill_ready_kh curtime scp (\<lambda>t. if t = ref then x else kh t)))"
+  by (fastforce simp: bound_sc_tcb_at_kh_if_split obj_at_kh_def
+                      bound_sc_tcb_at_kh_def refill_ready_kh_if_split)
+
+lemma budget_sufficient_kh_if_split:
+  "budget_sufficient_kh ptr (\<lambda>t. if t = ref then x else kh t)
+     = (\<exists>tcb. (if ptr = ref then x else kh ptr) = Some (TCB tcb)
+                 \<and> (\<exists>scp. tcb_sched_context tcb = Some scp
+                      \<and> refill_sufficient_kh scp (\<lambda>t. if t = ref then x else kh t)))"
+  by (fastforce simp: bound_sc_tcb_at_kh_if_split obj_at_kh_def
+                      bound_sc_tcb_at_kh_def refill_sufficient_kh_if_split)
 
 (* lifting lemmas *)
 

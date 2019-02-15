@@ -931,22 +931,12 @@ lemma global_refs_kheap [simp]:
   "global_refs (kheap_update f s) = global_refs s"
   by (simp add: global_refs_def)
 
-
-crunch global_ref [wp]: set_pd "\<lambda>s. P (global_refs s)"
+crunches set_pd
+for global_ref [wp]: "\<lambda>s. P (global_refs s)"
+and arch [wp]: "\<lambda>s. P (arch_state s)"
+and idle [wp]: "\<lambda>s. P (idle_thread s)"
+and irq [wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
-
-
-crunch arch [wp]: set_pd "\<lambda>s. P (arch_state s)"
-  (wp: crunch_wps)
-
-
-crunch idle [wp]: set_pd "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps)
-
-
-crunch irq [wp]: set_pd "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps)
-
 
 lemma set_pd_valid_global:
   "\<lbrace>\<lambda>s. valid_global_refs s\<rbrace>
@@ -1073,22 +1063,12 @@ lemma set_pt_ifunsafe:
   "\<lbrace>\<lambda>s. if_unsafe_then_cap s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. if_unsafe_then_cap s\<rbrace>"
   including unfold_objects by (wpsimp simp: set_pt_def)
 
-
-crunch global_ref [wp]: set_pt "\<lambda>s. P (global_refs s)"
+crunches set_pt
+for global_ref [wp]: "\<lambda>s. P (global_refs s)"
+and arch [wp]: "\<lambda>s. P (arch_state s)"
+and idle [wp]: "\<lambda>s. P (idle_thread s)"
+and irq [wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
-
-
-crunch arch [wp]: set_pt "\<lambda>s. P (arch_state s)"
-  (wp: crunch_wps)
-
-
-crunch idle [wp]: set_pt "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps)
-
-
-crunch irq [wp]: set_pt "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps)
-
 
 lemma set_pt_valid_global:
   "\<lbrace>\<lambda>s. valid_global_refs s\<rbrace>
