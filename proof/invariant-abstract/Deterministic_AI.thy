@@ -4130,9 +4130,6 @@ lemma invoke_cnode_valid_list[wp]:
 
 end
 
-crunch valid_list[wp]: sort_queue valid_list
-   (wp: mapM_wp)
-
 lemma (in Deterministic_AI_1) set_priority_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> set_priority a b \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: set_priority_def reorder_ntfn_def reorder_ep_def thread_set_priority_def thread_set_def

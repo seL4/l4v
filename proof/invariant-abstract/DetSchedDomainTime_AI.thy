@@ -196,20 +196,12 @@ lemma (in DetSchedDomainTime_AI_2) handle_interrupt_domain_list[wp]:
   "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> handle_interrupt irq \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
   by (wpsimp simp: handle_interrupt_def wp: hoare_vcg_if_lift2 hoare_drop_imp split_del: if_split)
 
-crunch domain_list_inv[wp]: cap_insert_ext "\<lambda>s. P (domain_list s)"
-  (wp: hoare_drop_imps)
-
 crunch domain_list_inv[wp]: cap_insert "\<lambda>s::det_state. P (domain_list s)"
   (wp: hoare_drop_imps)
 
 crunch domain_list_inv[wp]:
   lookup_cap_and_slot,set_extra_badge "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps)
-
-crunch domain_list_inv[wp]: unbind_reply_in_ts,no_reply_in_ts "\<lambda>s. P (domain_list s)"
-
-crunch domain_list_inv[wp]: sort_queue "\<lambda>s. P (domain_list s)"
-  (wp: mapM_wp)
 
 crunch domain_list_inv[wp]: postpone "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps mapM_wp)

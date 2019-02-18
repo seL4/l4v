@@ -272,9 +272,6 @@ global_interpretation set_tcb_obj_ref: non_reply_op "set_tcb_obj_ref f ref new"
   by (clarsimp simp: reply_at_ppred_def obj_at_def get_tcb_def
               split: option.splits kernel_object.splits)
 
-global_interpretation set_endpoint: non_sc_op "set_endpoint p ep"
-  by unfold_locales (clarsimp simp add: sc_at_pred_n_def set_endpoint_obj_at_impossible)
-
 global_interpretation reply_unlink_tcb: non_reply_sc_op "reply_unlink_tcb r"
   apply unfold_locales
   apply (wpsimp simp: reply_unlink_tcb_def
@@ -689,10 +686,6 @@ global_interpretation set_reply_tcb:
   non_sc_op "set_reply_obj_ref f reply_ptr t"
   by unfold_locales (wpsimp wp: update_sk_obj_ref_wps simp: sc_at_pred_n_def obj_at_def)
 
-lemma set_sc_replies_bound_sc[wp]:
-  "set_sc_obj_ref sc_replies_update sc replies \<lbrace> bound_sc_tcb_at P t \<rbrace>"
-  by (wpsimp simp: set_sc_obj_ref_def)
-
 lemma reply_unlink_tcb_sym_refs_BlockedOnReceive:
   "\<lbrace>\<lambda>s. (\<exists>tptr epptr. st_tcb_at ((=) (BlockedOnReceive epptr (Some rptr))) tptr s \<and>
                       sym_refs (\<lambda>x. if x = tptr then
@@ -934,18 +927,6 @@ lemma reply_sc_update_None_reply_sc_reply_at_None[wp]:
   apply (clarsimp simp: reply_sc_reply_at_def obj_at_def)
   done
 
-lemma reply_sc_update_invs:
-  "\<lbrace>all_invs_but_sym_refs
-    and (\<lambda>s. sym_refs (\<lambda>x. if x = t
-                           then {p. (snd p = ReplySchedContext \<longrightarrow> None = Some (fst p)) \<and>
-                                    (snd p \<noteq> ReplySchedContext \<longrightarrow> p \<in> state_refs_of s t)}
-                           else state_refs_of s x)
-             \<and> sym_refs (state_hyp_refs_of s))\<rbrace>
-   set_reply_obj_ref reply_sc_update t None
-   \<lbrace>\<lambda>r. invs\<rbrace>"
-  unfolding invs_def valid_state_def valid_pspace_def
-  by (wpsimp wp: valid_ioports_lift)
-
 lemma reply_sc_update_Some_invs:
   "\<lbrace>all_invs_but_sym_refs
     and (\<lambda>s. sym_refs (\<lambda>x. if x = reply_ptr
@@ -959,33 +940,6 @@ lemma reply_sc_update_Some_invs:
    \<lbrace>\<lambda>r. invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   by (wpsimp wp: valid_ioports_lift)
-
-lemma sc_replies_update_valid_replies_cons:
-  "\<lbrace>valid_replies
-    and (sc_replies_sc_at ((=) sc_replies') sc_ptr)
-    and (\<lambda>s. r_ptr \<in> fst ` replies_blocked s)
-    and (\<lambda>s. r_ptr \<notin> fst ` replies_with_sc s)\<rbrace>
-   set_sc_obj_ref sc_replies_update sc_ptr (r_ptr # sc_replies')
-   \<lbrace>\<lambda>r. valid_replies \<rbrace>"
-  apply (wpsimp wp: set_sc_replies_valid_replies)
-  apply (clarsimp simp: replies_with_sc_upd_replies_def valid_replies'_def)
-  apply (intro conjI, clarsimp simp:)
-   apply safe
-       apply ((fastforce simp: image_def)+)[3]
-    apply (subgoal_tac "a \<in> fst ` replies_with_sc s")
-     apply (fastforce simp: image_def)
-    apply (fastforce simp: image_def sc_replies_sc_at_def obj_at_def replies_with_sc_def)
-   apply (fastforce simp: image_def)
-  apply (clarsimp simp: inj_on_def)
-  apply (case_tac "ba = sc_ptr"; case_tac "bb = sc_ptr"; simp)
-    apply (elim disjE,
-           fastforce simp: image_def,
-           clarsimp simp: image_def sc_replies_sc_at_def obj_at_def replies_with_sc_def)
-   apply (elim disjE,
-          fastforce simp: image_def,
-          clarsimp simp: image_def sc_replies_sc_at_def obj_at_def replies_with_sc_def)
-  apply fastforce
-  done
 
 (* FIXME move *)
 lemma ReplyTCB_bound_reply_tcb_reply_at:
