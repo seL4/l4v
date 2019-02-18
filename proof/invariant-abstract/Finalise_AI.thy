@@ -727,7 +727,7 @@ lemma reply_tcb_state_refs:
   "\<lbrakk>reply_tcb reply = Some t; valid_objs s; sym_refs (state_refs_of s);
     kheap s rptr = Some (Reply reply)\<rbrakk>
   \<Longrightarrow> \<exists>tcb. kheap s t = Some (TCB tcb) \<and>
-     st_tcb_at (\<lambda>st. st = BlockedOnReply (Some rptr)
+     st_tcb_at (\<lambda>st. st = BlockedOnReply rptr
                     \<or> (\<exists>ep. st = BlockedOnReceive ep (Some rptr))) t s"
   apply (erule (1) valid_objsE)
   apply (drule sym_refs_ko_atD[rotated])
@@ -1281,7 +1281,7 @@ lemma (in Finalise_AI_3) finalise_cap_zombie_cap[wp]:
 lemma reply_remove_tcb_st_tcb_at_general:
   "\<lbrace>st_tcb_at P t' and K (t = t' \<longrightarrow> (P Structures_A.Inactive))
      and
-   (\<lambda>s. st_tcb_at (\<lambda>st. \<exists>rptr. (st = BlockedOnReply (Some rptr))
+   (\<lambda>s. st_tcb_at (\<lambda>st. \<exists>rptr. (st = BlockedOnReply rptr)
                        \<and> reply_tcb_reply_at (\<lambda>p. p = Some t) rptr s) t s)\<rbrace>
    reply_remove_tcb t
    \<lbrace>\<lambda>rv. st_tcb_at P t'\<rbrace>"
@@ -1296,7 +1296,7 @@ lemma reply_remove_tcb_st_tcb_at_general:
 
 lemma reply_ipc_st_tcb_at_general:
   "\<lbrace>st_tcb_at P t' and K (t = t' \<longrightarrow> (P Structures_A.Inactive))
-    and (\<lambda>s. st_tcb_at (\<lambda>st. \<exists>r. st = BlockedOnReply (Some r)
+    and (\<lambda>s. st_tcb_at (\<lambda>st. \<exists>r. st = BlockedOnReply r
                        \<and> reply_tcb_reply_at (\<lambda>p. p = Some t) r s) t s)\<rbrace>
      reply_cancel_ipc t \<lbrace>\<lambda>rv. st_tcb_at P t'\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)

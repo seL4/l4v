@@ -1807,7 +1807,7 @@ definition replies_blocked_upd_tcb_st ::
   "thread_state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> obj_ref) set \<Rightarrow> (obj_ref \<times> obj_ref) set"
   where
   "replies_blocked_upd_tcb_st st t rs_blocked \<equiv>
-    {(r,t'). if t' = t then st = BlockedOnReply (Some r) else (r,t') \<in> rs_blocked}"
+    {(r,t'). if t' = t then st = BlockedOnReply r else (r,t') \<in> rs_blocked}"
 
 lemma replies_blocked_upd_tcb_st:
   "replies_blocked (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_state := st\<rparr>))\<rparr>)
@@ -1841,7 +1841,7 @@ lemma pred_tcb_at_eq_commute:
 
 lemma tcb_st_refs_of_eq_BlockedOnReply:
   assumes "tcb_st_refs_of st' = tcb_st_refs_of st"
-  shows "st' = BlockedOnReply (Some reply) \<longleftrightarrow> st = BlockedOnReply (Some reply)"
+  shows "st' = BlockedOnReply reply \<longleftrightarrow> st = BlockedOnReply reply"
   using assms by (cases st'; cases st; clarsimp split: if_splits)
 
 lemma replies_blocked_upd_tcb_st_trivial:

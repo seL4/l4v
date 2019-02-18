@@ -1140,8 +1140,7 @@ lemma sched_context_donate_valid_refills[wp]:
 lemma reply_push_valid_refills[wp]:
   "\<lbrace>valid_refills scptr budget\<rbrace>
       reply_push caller callee reply_ptr can_donate \<lbrace>\<lambda>_. valid_refills scptr budget\<rbrace>"
-  apply (wpsimp simp: reply_push_def set_object_def partial_inv_def a_type_def
-              unbind_reply_in_ts_def no_reply_in_ts_def
+  apply (wpsimp simp: reply_push_def set_object_def partial_inv_def a_type_def no_reply_in_ts_def
          wp: get_object_wp set_sched_context_valid_refills_no_budget_update get_sched_context_wp
              hoare_drop_imp hoare_vcg_if_lift2 hoare_vcg_all_lift
          simp_del: fun_upd_apply split: kernel_object.splits)

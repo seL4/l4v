@@ -1175,7 +1175,7 @@ lemma reply_push_st_tcb_at[wp]:
      reply_push caller callee reply_ptr can_donate
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   by (wpsimp simp: reply_push_def update_sk_obj_ref_def set_sc_obj_ref_def get_thread_state_def
-                   thread_get_def no_reply_in_ts_def unbind_reply_in_ts_def comp_def
+                   thread_get_def no_reply_in_ts_def comp_def
                wp: weak_if_wp sts_st_tcb_at_cases hoare_vcg_all_lift hoare_vcg_const_imp_lift
          | wp_once hoare_drop_imp)+
 

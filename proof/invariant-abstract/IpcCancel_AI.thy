@@ -76,7 +76,7 @@ lemma reply_unlink_tcb_st_tcb_at:
 
 lemma reply_unlink_tcb_st_tcb_at_tcb:
   "\<lbrace>st_tcb_at P t and
-   (st_tcb_at (\<lambda>st. ((\<exists>ep. st = BlockedOnReceive ep (Some rptr)) \<or> st = BlockedOnReply (Some rptr)) \<longrightarrow>  P Inactive) t)\<rbrace>
+   (st_tcb_at (\<lambda>st. ((\<exists>ep. st = BlockedOnReceive ep (Some rptr)) \<or> st = BlockedOnReply rptr) \<longrightarrow>  P Inactive) t)\<rbrace>
    reply_unlink_tcb rptr \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (simp add: reply_unlink_tcb_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
@@ -235,17 +235,11 @@ lemma cancel_ipc_simple [wp]:
   apply (clarsimp simp: cancel_ipc_def)
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (case_tac state, simp_all)
-         defer 6
          apply (wp hoare_strengthen_post [OF blocked_cancel_ipc_simple]
-      hoare_strengthen_post [OF cancel_signal_simple]
-      sts_st_tcb_at_cases hoare_drop_imps
-    | (rule pred_tcb_weakenE, fastforce)
-    | clarsimp elim!: pred_tcb_weakenE pred_tcb_at_tcb_at)+
-  apply wpc
-    apply wpsimp
-   apply (rule reply_cancel_ipc_st_tcb_at_simple)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (case_tac "tcb_state tcb"; clarsimp)
+                   hoare_strengthen_post [OF cancel_signal_simple]
+                   sts_st_tcb_at_cases hoare_drop_imps
+                | (rule pred_tcb_weakenE, fastforce)
+                | clarsimp elim!: pred_tcb_weakenE pred_tcb_at_tcb_at)+
   done
 
 lemma reply_remove_typ_at[wp]:
@@ -894,7 +888,7 @@ lemma replies_blocked_inj:
 
 lemma replies_blocked_upd_tcb_st_valid_replies:
   assumes "valid_replies' with_sc blocked"
-  assumes "\<forall>r. r \<in> fst ` with_sc \<and> (r,t) \<in> blocked \<longrightarrow> st = BlockedOnReply (Some r)"
+  assumes "\<forall>r. r \<in> fst ` with_sc \<and> (r,t) \<in> blocked \<longrightarrow> st = BlockedOnReply r"
   shows "valid_replies' with_sc (replies_blocked_upd_tcb_st st t blocked)"
   using assms by (fastforce simp: valid_replies_defs replies_blocked_upd_tcb_st_def image_def)
 
@@ -911,7 +905,7 @@ text \<open>@{term reply_unlink_tcb} does not preserve @{term invs} when the
 lemma reply_unlink_tcb_invs_BlockedOnReply':
   "\<lbrace> \<lambda>s. invs s
          \<and> (\<nexists>sc_ptr. sc_replies_sc_at (\<lambda>rs. rptr \<in> set rs) sc_ptr s)
-         \<and> (\<exists>tptr. st_tcb_at ((=) (BlockedOnReply (Some rptr))) tptr s) \<rbrace>
+         \<and> (\<exists>tptr. st_tcb_at ((=) (BlockedOnReply rptr)) tptr s) \<rbrace>
     reply_unlink_tcb rptr
    \<lbrace> \<lambda>rv. invs \<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def pred_tcb_at_eq_commute
@@ -1096,7 +1090,7 @@ lemma reply_unlink_sc_fst_replies_blocked[wp]:
 
 lemma fst_replies_blocked_strengthen:
   "(reply_tcb_reply_at (\<lambda>p. \<exists>tp. p = Some tp \<and>
-                            st_tcb_at ((=) (BlockedOnReply (Some r))) tp s) r s)
+                            st_tcb_at ((=) (BlockedOnReply r)) tp s) r s)
     \<Longrightarrow> (r \<in> fst ` replies_blocked s)"
   by (fastforce simp: replies_blocked_def reply_tcb_reply_at_def obj_at_def image_def
                       pred_tcb_at_eq_commute)
@@ -1104,7 +1098,7 @@ lemma fst_replies_blocked_strengthen:
 lemma reply_remove_invs:
   "\<lbrace>\<lambda>s. invs s \<and>
        reply_tcb_reply_at (\<lambda>p. \<exists>tp. p = Some tp \<and>
-                                    st_tcb_at ((=) (BlockedOnReply (Some r))) tp s) r s\<rbrace>
+                                    st_tcb_at ((=) (BlockedOnReply r)) tp s) r s\<rbrace>
    reply_remove r
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply if_split[split del]
@@ -1266,9 +1260,7 @@ lemma reply_remove_tcb_invs:
   apply (simp add: reply_remove_tcb_def)
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (case_tac ts; clarsimp simp: pred_tcb_at_eq_commute)
-  apply (rename_tac r_opt)
-  apply (rule hoare_seq_ext[OF _ assert_opt_sp])
-  apply (rule_tac S="r_opt = Some rptr" in hoare_gen_asm''; clarsimp)
+  apply (rename_tac rptr)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF reply_unlink_tcb_invs_BlockedOnReply])
   apply (case_tac sc_ptr_opt; simp)
@@ -1964,7 +1956,7 @@ lemma set_thread_state_invs:
   shows "\<lbrace> \<lambda>s. valid_tcb_state st s
                \<and> (\<not> halted st \<longrightarrow> ex_nonz_cap_to t s)
                \<and> (idle st \<longleftrightarrow> t = idle_thread s)
-               \<and> (\<forall>r. (r,t) \<in> replies_blocked s \<longrightarrow> st = BlockedOnReply (Some r))
+               \<and> (\<forall>r. (r,t) \<in> replies_blocked s \<longrightarrow> st = BlockedOnReply r)
                \<and> sym_refs (\<lambda>p. if p = t
                                 then tcb_st_refs_of st \<union> tcb_non_st_state_refs_of s t
                                 else state_refs_of s p)

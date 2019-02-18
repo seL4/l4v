@@ -2245,7 +2245,7 @@ lemma maybe_donate_sc_invs[wp]:
   done
 
 lemma set_thread_state_not_BOReply_valid_replies:
-  "\<lbrace>valid_replies and st_tcb_at (\<lambda>st. \<forall>a. st \<noteq> BlockedOnReply (Some a)) t\<rbrace>
+  "\<lbrace>valid_replies and st_tcb_at (\<lambda>st. \<forall>r. st \<noteq> BlockedOnReply r) t\<rbrace>
    set_thread_state t st
    \<lbrace>\<lambda>r. valid_replies\<rbrace>"
   apply (wpsimp wp: sts_valid_replies)

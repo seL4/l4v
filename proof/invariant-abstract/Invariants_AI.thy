@@ -560,7 +560,7 @@ where
     BlockedOnReceive ref r \<Rightarrow> ep_at ref s \<and> (case r of Some r' \<Rightarrow> reply_at r' s | _ \<Rightarrow> True)
   | BlockedOnSend ref sp \<Rightarrow> ep_at ref s
   | BlockedOnNotification ref \<Rightarrow> ntfn_at ref s
-  | BlockedOnReply r \<Rightarrow> (case r of Some r' \<Rightarrow> reply_at r' s | _ \<Rightarrow> True)
+  | BlockedOnReply r \<Rightarrow> reply_at r s
   | _ \<Rightarrow> True"
 
 abbreviation
@@ -778,7 +778,7 @@ where
   "tcb_st_refs_of z \<equiv> case z of (Running)               => {}
   | (Inactive)              => {}
   | (Restart)               => {}
-  | (BlockedOnReply r)        => if bound r then {(the r, TCBReply)} else {}
+  | (BlockedOnReply r)        => {(r, TCBReply)}
   | (IdleThreadState)       => {}
   | (BlockedOnReceive x r)  => if bound r then {(x, TCBBlockedRecv), (the r, TCBReply)}
                                else {(x, TCBBlockedRecv)}
@@ -1000,7 +1000,7 @@ text \<open>Pointers to Reply objects r and threads t which are BlockedOnReply.\
 definition replies_blocked ::
   "'z::state_ext state \<Rightarrow> (obj_ref \<times> obj_ref) set"
   where
-  "replies_blocked s \<equiv> {(r,t). st_tcb_at (\<lambda>st. st = BlockedOnReply (Some r)) t s}"
+  "replies_blocked s \<equiv> {(r,t). st_tcb_at (\<lambda>st. st = BlockedOnReply r) t s}"
 
 text \<open>Pointers to Reply objects r and their associated scheduling contexts sc.\<close>
 definition replies_with_sc ::
@@ -1519,7 +1519,7 @@ lemma tcb_st_refs_of_simps[simp]:
  "tcb_st_refs_of (Inactive)              = {}"
  "tcb_st_refs_of (Restart)               = {}"
 (* "tcb_st_refs_of (YieldTo t)             = {(t, TCBYieldTo)}"*)
- "tcb_st_refs_of (BlockedOnReply r)      = (if bound r then {(the r, TCBReply)} else {})"
+ "tcb_st_refs_of (BlockedOnReply r')      = {(r', TCBReply)}"
  "tcb_st_refs_of (IdleThreadState)       = {}"
  "\<And>x. tcb_st_refs_of (BlockedOnReceive x r)  = (if bound r then {(x, TCBBlockedRecv), (the r, TCBReply)} else {(x, TCBBlockedRecv)})"
  "\<And>x. tcb_st_refs_of (BlockedOnSend x payl)  = {(x, TCBBlockedSend)}"
@@ -1590,7 +1590,7 @@ lemma refs_of_rev:
  "(x, NTFNSchedContext) \<in> refs_of ko =
     (\<exists>ntfn. ko = Notification ntfn \<and> (ntfn_sc ntfn = Some x))"
  "(x, TCBReply) \<in>  refs_of ko =
-    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = BlockedOnReply (Some x) \<or> (\<exists>n. tcb_state tcb = BlockedOnReceive n (Some x))))"
+    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = BlockedOnReply x \<or> (\<exists>n. tcb_state tcb = BlockedOnReceive n (Some x))))"
  "(x, SCTcb) \<in>  refs_of ko =
     (\<exists>sc n. ko = SchedContext sc n \<and> (sc_tcb sc = Some x))"
  "(x, SCNtfn) \<in>  refs_of ko =
@@ -1620,7 +1620,7 @@ lemma st_tcb_at_refs_of_rev:
   "obj_at (\<lambda>ko. (x, TCBBlockedRecv) \<in> refs_of ko) t s
      = st_tcb_at (\<lambda>ts. \<exists>r. ts = BlockedOnReceive x r) t s"
   "obj_at (\<lambda>ko. (x, TCBReply) \<in> refs_of ko) t s
-     = st_tcb_at (\<lambda>ts. ts = BlockedOnReply (Some x) \<or> (\<exists>n. ts = BlockedOnReceive n (Some x))) t s"
+     = st_tcb_at (\<lambda>ts. ts = BlockedOnReply x \<or> (\<exists>n. ts = BlockedOnReceive n (Some x))) t s"
   "obj_at (\<lambda>ko. (x, TCBBlockedSend) \<in> refs_of ko) t s
      = st_tcb_at (\<lambda>ts. \<exists>pl. ts = BlockedOnSend x pl   ) t s"
   "obj_at (\<lambda>ko. (x, TCBSignal) \<in> refs_of ko) t s
@@ -4000,7 +4000,7 @@ lemma replies_with_sc_lift:
   done
 
 lemma replies_blocked_lift:
-  assumes "\<And>P r t. f \<lbrace>\<lambda>s. P (st_tcb_at (\<lambda>st. st = BlockedOnReply (Some r)) t s)\<rbrace>"
+  assumes "\<And>P r t. f \<lbrace>\<lambda>s. P (st_tcb_at (\<lambda>st. st = BlockedOnReply r) t s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (replies_blocked s)\<rbrace>"
   unfolding replies_blocked_def
   apply (rule hoare_vcg_set_pred_lift)
@@ -4009,13 +4009,13 @@ lemma replies_blocked_lift:
 
 lemma valid_replies_lift:
   assumes [wp]: "\<And>P r sc. f \<lbrace>\<lambda>s. P (sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s)\<rbrace>"
-  assumes [wp]: "\<And>P r t. f \<lbrace> \<lambda>s. P (st_tcb_at (\<lambda>st. st = BlockedOnReply (Some r)) t s) \<rbrace>"
+  assumes [wp]: "\<And>P r t. f \<lbrace> \<lambda>s. P (st_tcb_at (\<lambda>st. st = BlockedOnReply r) t s) \<rbrace>"
   shows "f \<lbrace> valid_replies_pred P \<rbrace>"
   by (rule hoare_lift_Pf[where f=replies_blocked]; wp replies_with_sc_lift replies_blocked_lift)
 
 context
   fixes P r t s
-  assumes eq: "\<And>st. P st \<longleftrightarrow> st = BlockedOnReply (Some r)"
+  assumes eq: "\<And>st. P st \<longleftrightarrow> st = BlockedOnReply r"
   assumes tcb: "st_tcb_at P t s"
 begin
 
@@ -4170,7 +4170,7 @@ lemma valid_repliesD1_simp:
 lemma valid_repliesE1:
   "valid_replies s
    \<Longrightarrow> \<exists>sc. sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s
-   \<Longrightarrow> \<exists>t. st_tcb_at (\<lambda>st. st = BlockedOnReply (Some r)) t s"
+   \<Longrightarrow> \<exists>t. st_tcb_at (\<lambda>st. st = BlockedOnReply r) t s"
   by (fastforce dest: valid_repliesD1_simp
                 simp: replies_with_sc_def replies_blocked_def)
 
@@ -4232,8 +4232,8 @@ lemmas st_tcb_at_ko_atD =
   pred_tcb_at_ko_atD[where proj=itcb_state, simplified]
 
 lemma not_BlockedOnReply_not_in_replies_blocked:
-  "st_tcb_at (\<lambda>st. st \<noteq> BlockedOnReply (Some r)) tptr s \<Longrightarrow> (r, tptr) \<notin> replies_blocked s"
-  by ( clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def)
+  "st_tcb_at (\<lambda>st. st \<noteq> BlockedOnReply r) tptr s \<Longrightarrow> (r, tptr) \<notin> replies_blocked s"
+  by (clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def)
 
 lemma runnable_eq:
   "runnable st = (st = Running \<or> st = Restart)"
