@@ -326,7 +326,7 @@ where
          | Some tp \<Rightarrow> do
              state \<leftarrow> get_thread_state tp;
              case state of
-               BlockedOnReply r \<Rightarrow> reply_remove r
+               BlockedOnReply r \<Rightarrow> reply_remove tp r
              | _ \<Rightarrow> cancel_ipc tp
            od
        od)"
@@ -490,7 +490,7 @@ where
          | Some tp \<Rightarrow> do
              state \<leftarrow> get_thread_state tp;
              case state of
-               BlockedOnReply r \<Rightarrow> reply_remove r
+               BlockedOnReply r \<Rightarrow> reply_remove tp r
              | _ \<Rightarrow> cancel_ipc tp
            od
        od)"
@@ -505,10 +505,11 @@ where
 | "finalise_cap (CNodeCap r bits g)  final =
       return (if final then Zombie r (Some bits) (2 ^ bits) else NullCap, NullCap)"
 | "finalise_cap (ThreadCap r)            final =
-      do (* can be in any thread state *)
+      do \<comment> \<open>can be in any thread state\<close>
          when final $ unbind_notification r;
          when final $ unbind_from_sc r;
-         when final $ suspend r; (* suspend sets the TS to Inactive *)
+         \<comment> \<open>suspend sets the TS to Inactive\<close>
+         when final $ suspend r;
          when final $ prepare_thread_delete r;
          return (if final then (Zombie r None 5) else NullCap, NullCap)
       od"

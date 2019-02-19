@@ -295,7 +295,7 @@ where
                   of (BlockedOnReceive _ reply) \<Rightarrow> return reply
                   | _ \<Rightarrow> fail;
                 do_ipc_transfer thread (Some epptr) badge can_grant dest;
-                maybeM reply_unlink_tcb reply;
+                maybeM (reply_unlink_tcb dest) reply;
                 sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
 
                 fault \<leftarrow> thread_get tcb_fault thread;
@@ -311,7 +311,7 @@ where
                             ready \<leftarrow> refill_ready scp;
                             return (sufficient \<and> ready)
                         od
-                        | _ \<Rightarrow> return True;  (* why does C allow dest to have no sc? *)
+                        | _ \<Rightarrow> return True; \<comment> \<open>why does C allow dest to have no sc?\<close>
                 assert test;
                 set_thread_state dest Running;
                 possible_switch_to dest
@@ -587,7 +587,7 @@ where
       case state of
         BlockedOnReply r \<Rightarrow> do
           assert (r = reply);
-          reply_remove reply;
+          reply_remove receiver reply;
           fault \<leftarrow> thread_get tcb_fault receiver;
           case fault of
             None \<Rightarrow> do
@@ -609,9 +609,11 @@ where
                 sc \<leftarrow> get_sched_context sc_ptr;
 
                 cur_time \<leftarrow> gets cur_time;
-                ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr *)
+                \<comment> \<open>refill_ready sc_ptr\<close>
+                ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks;
 
-                sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
+                \<comment> \<open>refill_sufficient sc_ptr 0\<close>
+                sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc);
 
                 if ready \<and> sufficient
                 then possible_switch_to receiver
