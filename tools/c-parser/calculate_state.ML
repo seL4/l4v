@@ -219,7 +219,7 @@ fun translate_vi csenv = let
                   NSGlobal
               end
       in
-        SOME (vi_nm_info vi, isaty, var_sort)
+        SOME (get_vi_nm_info csenv vi, isaty, var_sort)
       end
   end
 in
@@ -571,7 +571,7 @@ in
   (thy, List.rev rcdinfo0)
 end
 
-fun simple s = {isa_name = MString.mk s, src_name = s}
+fun simple s = {isa_name = MString.mk s, src_name = s, alias = false}
 
 fun pretty_recdef thy nm vars =
     Pretty.big_list
@@ -642,6 +642,66 @@ fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
     val lvars = (simple global_exn_var_name,
                  c_exntype_ty, NONE,
                  Local "cparser'internal") :: lvars
+
+    (* In the past, the first variable named `x` got its own field named
+       `x_'` in the local variables record. If there was another local later in
+       the source in another function, also named `x` but of a different type
+       `T`, then it would be put in a record field named `x___T_'`. Since this
+       was source-order-dependent, we changed the record to only contain the
+       full, type-qualified names.
+
+       Of course, a lot of proofs were written under the "some names short,
+       other names long" convention, and it's a very useful shorthand for e.g.
+       all the `int i` loop index variables, so we recreate those aliases here.
+
+       This works because of how record syntax is implemented. It looks up the
+       access/update functions *by string* instead of by checking the context,
+       so as long as appropriately named definitions are in scope it'll "just
+       work". *)
+    fun mk_locals_aliases thy =
+        let
+          (* Returns a list of `(name, target)` pairs. We want to use the
+             `definition` command to alias `target` with `name`. For example, if
+             `unsigned x` and `int x` appear in the source (in that order), the
+             output should include
+
+             - `(x_', x___unsigned_')`, and
+             - `(x_'_update, x___unsigned_'_update)`
+
+             but shouldn't include anything for the `int` case. *)
+          fun map_aliases seen vs =
+              case vs of
+                [] => []
+              | ({src_name, isa_name = mangled_name, alias}, _, _, _) :: rest =>
+                  let
+                    val acc = HoarePackage.varname (MString.dest mangled_name)
+                    val acc_alias = HoarePackage.varname src_name
+
+                    val upd = acc ^ Record.updateN
+                    val upd_alias = acc_alias ^ Record.updateN
+
+                    val pairs = [(acc_alias, acc), (upd_alias, upd)]
+                  in
+                    if not alias orelse member (op =) seen src_name
+                    then map_aliases seen rest
+                    else pairs @ map_aliases (src_name :: seen) rest
+                  end
+          val aliases = map_aliases [] lvars
+          fun define_alias (alias, target) thy =
+              let
+                val target =
+                    Long_Name.qualify NameGeneration.local_rcd_name target
+                    |> Proof_Context.read_const {proper = false, strict = false}
+                        (Proof_Context.init_global thy)
+                val alias =
+                    Binding.qualify false NameGeneration.local_rcd_name
+                      (Binding.make (alias, @{here}))
+              in
+                Sign.add_abbrev "" (alias, target) thy |> snd
+              end
+        in
+          thy |> fold define_alias aliases
+        end
     fun mk_locals_rcd thy =
         let
             (* the state information accumulated so far allows for local
@@ -667,6 +727,7 @@ fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
           (thy, Sign.intern_type thy NameGeneration.local_rcd_name)
         end
     val (thy, _) = mk_locals_rcd thy
+    val thy = mk_locals_aliases thy
     val (thy, globs) = mk_globals_rcd thy
   in
     (thy, lvars @ gvars, globs)

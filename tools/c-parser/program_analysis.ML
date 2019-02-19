@@ -22,9 +22,14 @@ sig
   type senv = int ctype rcd_env
 
 
-  (* the "isa_name" is the munged name, but in the form without trailing
-     _' suffixes *)
-  type nm_info = {src_name : string, isa_name : MString.t}
+  (* Information necessary for name and definition generation.
+     - `src_name` is the name as it appears in the original source file, or a
+       synthetic name for return variables.
+     - `isa_name` is the munged name without the trailing `_'` suffixes (e.g.
+       `x___int` for a source variable called `x`).
+     - `alias` indicates if we should generate an abbreviation that aliases the
+        source name to the munged name. *)
+  type nm_info = {src_name : string, isa_name : MString.t, alias: bool}
 
   type var_info
   val is_global : var_info -> bool
@@ -37,7 +42,6 @@ sig
   val get_vi_attrs : var_info -> StmtDecl.gcc_attribute list
   val declpos : var_info -> Region.t
   val vi_compare : var_info * var_info -> order
-  val vi_nm_info : var_info -> nm_info
 
   datatype modify_var = M of var_info | TheHeap | PhantomState
     | GhostState | AllGlobals
@@ -64,9 +68,11 @@ sig
   val get_vars      : csenv -> var_info list Symtab.table
   val get_globals   : csenv -> var_info list
   val get_globinits : csenv -> Absyn.expr MSymTab.table
+  val get_mangled_vars : csenv -> var_info list Symtab.table
   val get_params : string -> csenv -> var_info list option
   val get_embedded_fncalls : csenv -> fncall_type Binaryset.set
   val get_addressed_vis : csenv -> var_info list
+  val get_vi_nm_info : csenv -> var_info -> nm_info
   val get_modifies : csenv -> string -> modify_var Binaryset.set option
   val get_functions : csenv -> string list
   val get_fninfo : csenv -> (int ctype * bool * var_info list) Symtab.table
@@ -139,9 +145,8 @@ datatype var_info =
                 declared_at : Region.t,
                 attrs : gcc_attribute list}
 
-type nm_info = {src_name : string, isa_name : MString.t}
-fun vi_nm_info (VI {name, munged_name, ...}) : nm_info =
-  {src_name = name, isa_name = munged_name}
+type nm_info = {src_name : string, isa_name : MString.t, alias: bool}
+
 fun viToString (VI {name, fname,...}) =
     case fname of
       NONE => "global "^name
@@ -188,8 +193,9 @@ fun is_global (VI r) = case #fname r of NONE => true | _ => false
 fun fnToString NONE = "at global level"
   | fnToString (SOME s) = "in function "^s
 
-fun types_compatible globp ty1 ty2 =
-    if not globp then ty1 = ty2
+fun types_compatible global ty1 ty2 =
+    (* All locals need to be fully specified, but global arrays are special. *)
+    if not global then ty1 = ty2
     else
       case (ty1, ty2) of
         (Array(ty1', sz1), Array(ty2', sz2)) =>
@@ -276,6 +282,19 @@ datatype csenv (* CalculateState environment *) =
                  fninfo : (int ctype * bool * var_info list) Symtab.table,
                  hpfninfo : Absyn.ext_decl Symtab.table,
                  vars : var_info list Symtab.table,
+
+                 (* A mapping from declared (source) variable name to a mangled
+                    name. `local_aliases[src] = mn` implies that `src` should become
+                    an abbreviation for `mn`. *)
+                 local_aliases : MString.t Symtab.table,
+
+                 (* A mapping from mangled variable names to the matching variable
+                    declarations. `demangle_table[long_name][5]` is a variable which
+                    received the mangled name `long_name`.
+
+                    Excludes global vars, anonymous local vars, and return vars. *)
+                 mangled_vars : var_info list Symtab.table,
+
                  scope : var_info Symtab.table list,
                  array_mentions : (int ctype * int) Binaryset.set,
                  enumenv : string wrap list *
@@ -296,6 +315,7 @@ datatype csenv (* CalculateState environment *) =
                  owners : string list,
                  munge_info_fname : string option}
 fun get_vars (CSE {vars,...}) = vars
+fun get_mangled_vars (CSE {mangled_vars, ...}) = mangled_vars
 fun get_senv (CSE {senv,...}) = senv
 fun get_scope (CSE {scope,...}) = scope
 fun get_fulleenv (CSE {enumenv,...}) = enumenv
@@ -346,7 +366,8 @@ fun get_modified_global_locns (CSE {modify_locs,...}) = modify_locs
 
 fun emptycse ({anon_vars,owners,allow_underscore_idents = aui,munge_info_fname,...} : s2s_config)=
     CSE {senv = [], anon_vars = anon_vars, allow_underscore_idents = aui,
-         vars = Symtab.empty, scope = [Symtab.empty],
+         vars = Symtab.empty, local_aliases = Symtab.empty, mangled_vars = Symtab.empty,
+         scope = [Symtab.empty],
          fninfo = Symtab.empty, hpfninfo = Symtab.empty,
          enumenv = ([],Symtab.empty),
          heaptypes = Binaryset.empty (ctype_compare Int.compare),
@@ -380,14 +401,15 @@ end
 local
   open FunctionalRecordUpdate
   (* see http://mlton.org/FunctionalRecordUpdate *)
-  fun cse_makeUpdate z = makeUpdate24 z
+  fun cse_makeUpdate z = makeUpdate26 z
   fun update_CSE z = let
-    fun from senv aui anon_vars fninfo hpfninfo vars scope enumenv array_mentions
+    fun from senv aui anon_vars fninfo hpfninfo vars local_aliases mangled_vars scope enumenv
+             array_mentions
              heaptypes call_info addressed embedded_fncalls modifies
              defined_functions recursive_functions caller_info
              modify_locs typedefs fnspecs read_globals globinits owners munge_info_fname =
         {senv = senv, anon_vars = anon_vars, fninfo = fninfo, vars = vars,
-         hpfninfo = hpfninfo,
+         local_aliases = local_aliases, mangled_vars = mangled_vars, hpfninfo = hpfninfo,
          scope = scope, enumenv = enumenv, array_mentions = array_mentions,
          heaptypes = heaptypes, call_info = call_info, addressed = addressed,
          embedded_fncalls = embedded_fncalls, modifies = modifies,
@@ -399,10 +421,11 @@ local
     (* fields in reverse order to above *)
     fun from' munge_info_fname owners globinits read_globals fnspecs typedefs modify_locs caller_info
               recursive_functions defined_functions modifies embedded_fncalls
-              addressed call_info heaptypes array_mentions enumenv scope vars
+              addressed call_info heaptypes array_mentions enumenv scope mangled_vars
+              local_aliases vars
               hpfninfo fninfo anon_vars aui senv =
         {senv = senv, anon_vars = anon_vars, fninfo = fninfo, vars = vars, scope = scope,
-         hpfninfo = hpfninfo,
+         hpfninfo = hpfninfo, local_aliases = local_aliases, mangled_vars = mangled_vars,
          allow_underscore_idents = aui,
          enumenv = enumenv, array_mentions = array_mentions,
          heaptypes = heaptypes, call_info = call_info, addressed = addressed,
@@ -413,13 +436,15 @@ local
          read_globals = read_globals, globinits = globinits, owners = owners,
          munge_info_fname = munge_info_fname}
 
-    fun to f {senv, anon_vars, fninfo, vars, scope, enumenv, array_mentions, heaptypes,
-              hpfninfo, munge_info_fname,
+    fun to f {senv, anon_vars, fninfo, vars, local_aliases, mangled_vars, scope,
+              enumenv, array_mentions,
+              heaptypes, hpfninfo, munge_info_fname,
               call_info, addressed, embedded_fncalls, modifies,
               defined_functions, recursive_functions, caller_info,
               modify_locs, typedefs, fnspecs, read_globals, globinits,owners,
               allow_underscore_idents = aui} =
-        f senv aui anon_vars fninfo hpfninfo vars scope enumenv array_mentions
+        f senv aui anon_vars fninfo hpfninfo vars local_aliases mangled_vars scope enumenv
+          array_mentions
           heaptypes call_info addressed embedded_fncalls modifies
           defined_functions recursive_functions caller_info
           modify_locs typedefs fnspecs read_globals globinits owners munge_info_fname
@@ -452,6 +477,10 @@ local
 in
 fun cse_fupdvars f (CSE cse) =
     CSE (update_CSE cse (U #vars (f (#vars cse))) $$)
+fun cse_fupdlocal_aliases f (CSE cse) =
+    CSE (update_CSE cse (U #local_aliases (f (#local_aliases cse))) $$)
+fun cse_fupdmangled_vars f (CSE cse) =
+    CSE (update_CSE cse (U #mangled_vars (f (#mangled_vars cse))) $$)
 fun cse_fupdfninfo f (CSE cse) =
     CSE (update_CSE cse (U #fninfo (f (#fninfo cse))) $$)
 fun cse_fupdhpfninfo f (CSE cse) =
@@ -681,6 +710,16 @@ in
       |> remove_addressed
 end
 
+fun get_vi_nm_info (CSE cse) (VI {name, munged_name, ...}) : nm_info =
+    let
+      val alias =
+          case Symtab.lookup (#local_aliases cse) name of
+            SOME mn => mn = munged_name
+          | NONE => false
+    in
+      {src_name = name, isa_name = munged_name, alias = alias}
+    end
+
 (* ML computation of alignment and type sizes *)
 val ti  = IntInf.toInt
 fun ialignof ity = let
@@ -896,48 +935,75 @@ fun pluck _ [] = NONE
                             NONE => NONE
                           | SOME (e,rest) => SOME (e, h::rest)
 
-(* munge_insert adds a newly declared variable to the list of
-   all seen variables, and to the current scope.  It is there that
-   the all seen variables list is consulted to see if a name-change is
-   going to be necessary *)
+(* `munge_insert` adds a newly declared variable to the map of all seen variables,
+   and to the current scope. If a global of the same name and incompatible type
+   is encountered, we show an error.
+
+   Every local variable gets appended with its type. We generate convenient aliases for the
+   first occurences later.*)
 fun munge_insert (v as VI vrec) cse = let
   val v_table = get_vars cse
-  fun merge_insert (n,vi) tab = Symtab.map_default (n,[]) (fn t => vi::t) tab
+  fun prepend_insert (n,vi) = Symtab.map_default (n,[]) (fn t => vi::t)
   val name = #name vrec
-  fun merge_vis v1 v2 = let
+  fun merge_global_vis v1 v2 = let
     val ty1 = get_vi_type v1
     val ty2 = get_vi_type v2
   in
     vi_upd_type (max_type ty1 ty2) v1
   end
   fun same_global v' =
-    is_global v' andalso srcname v' = name andalso get_mname v' = get_mname v
-
+      is_global v' andalso srcname v' = name andalso get_mname v' = get_mname v
   fun vars_add v1 vlist =
-      if not (is_global v1) then merge_insert(name,v1)
+      if not (is_global v1) then prepend_insert(name,v1)
       else
         case pluck same_global vlist of
           NONE => Symtab.update(name, v::vlist)
-        | SOME (v2, rest) => Symtab.update(name, merge_vis v1 v2::rest)
+        | SOME (v2, rest) => Symtab.update(name, merge_global_vis v1 v2::rest)
   fun scope_add v1 tab =
       if not (is_global v1) then Symtab.update(name, v1) tab
       else
         case Symtab.lookup tab name of
           NONE => Symtab.update(name, v1) tab
-        | SOME v2 => Symtab.update(name, merge_vis v1 v2) tab
+        | SOME v2 => Symtab.update(name, merge_global_vis v1 v2) tab
   val scope = fupd_hd
+  val full_name =
+      (* - Return vars have their own name mangling, so we don't do more here.
+         - If the use of a global array `int ga[]` comes after the declaration
+           but before the definition, that use site would see the (eventually
+           incorrect) fully qualified name `ga___int_array[incomplete]`. Since
+           globals have unique names and get put in their own record anyway, we
+           don't mangle their names. *)
+      (if #return_var vrec orelse is_global v
+      then name
+      else tag_name_with_type {
+          name = name, typname = tyname (get_vi_type v)
+      }) |> MString.mk
+  val v = upd_mname full_name v
+  val update_local_aliases =
+      if is_global v orelse #return_var vrec
+      (* We don't munge globals or return vars, so we don't alias them either. *)
+      then I
+      (* Keep the first alias we see. *)
+      else cse_fupdlocal_aliases (Symtab.map_default (name, full_name) I)
+  val update_mangled_vars =
+      (* Similar logic: we don't munge these names, so we don't bother reverse-tracking
+         their mangled names. *)
+      if is_global v orelse #return_var vrec
+      then I
+      else cse_fupdmangled_vars (prepend_insert (MString.dest full_name, v))
+  val update_names = update_local_aliases o update_mangled_vars
 in
   if not (get_anon_vars cse) orelse is_global v orelse #return_var vrec then
     case Symtab.lookup v_table name of
-      NONE => (v, (cse_fupdvars (Symtab.update(name, [v])) o
-                   cse_fupdscope (scope (Symtab.update(name, v)))) cse)
+      NONE => (v, (update_names o cse_fupdvars (Symtab.update(name, [v])) o
+                      cse_fupdscope (scope (Symtab.update(name, v)))) cse)
     | SOME vlist => let
         val _ = Feedback.informStr(10,  "Found vlist for "^name^" of length "^
                                         Int.toString (length vlist))
       in
         case List.find (fn v' => not (vars_compatible v v')) vlist of
-          NONE => (v, (cse_fupdvars (vars_add v vlist) o
-                       cse_fupdscope (scope (scope_add v))) cse)
+          NONE => (v, (update_names o cse_fupdvars (vars_add v vlist) o
+                            cse_fupdscope (scope (scope_add v))) cse)
         | SOME badv => let
             open Feedback
             val _ = if is_global v andalso is_global badv then
@@ -946,19 +1012,19 @@ in
                                " not compatible with previous declaration at "^
                                Region.toString (declpos badv))
                     else
-                      informStr(4, Region.toString (declpos v)^ ": variable "^
-                                   viToString v^ " not compatible with previous "^
-                                   viToString badv^ " ("^
-                                   Region.toString (declpos badv) ^
-                                   ") -- renaming")
-            val newname =
-                tag_name_with_type {name = name,
-                                    typname = tyname (get_vi_type v)}
-                  |> MString.mk
-            val new_vi = upd_mname newname v
+                      ()
           in
-            (new_vi, (cse_fupdvars (merge_insert(name, new_vi)) o
-                      cse_fupdscope (scope (Symtab.update(name, new_vi)))) cse)
+            (* In this case:
+               - There are previously added variables with the source name
+                 `name`.
+               - At least one of them is a non-global variable with a different
+                 type (which we know from `not vars_compatible`).
+               - So we don't bother adding an alias for the new variable.
+
+               FIXME: should this *error* if there isn't an existing alias for
+               `name`? *)
+            (v, (update_names o cse_fupdvars (prepend_insert(name, v)) o
+                      cse_fupdscope (scope (Symtab.update(name, v)))) cse)
           end
       end
   else (* "anonymous" local variables *) let
@@ -969,7 +1035,7 @@ in
       val numdups = List.foldl foldthis 0 allvars_in_scope
       val new_vi = upd_mname (MString.mk (varprefix ^ Int.toString numdups)) v
     in
-      (new_vi, (cse_fupdvars (merge_insert(name, new_vi)) o
+      (new_vi, (cse_fupdvars (prepend_insert(name, new_vi)) o
                 cse_fupdscope (fupd_hd (Symtab.update(name, new_vi)))) cse)
     end
 end

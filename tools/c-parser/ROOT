@@ -20,5 +20,6 @@ session CParser = "Simpl-VCG" +
   sessions
     "HOL-Library"
     "HOL-Word"
+    "Lib"
   theories
     "CTranslation"
