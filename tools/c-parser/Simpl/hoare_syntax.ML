@@ -176,9 +176,12 @@ fun statespace_update_tr ctxt ps id n v s =
   end;
 
 local
-  fun is_record_sel ctxt =
-    let val consts = Proof_Context.consts_of ctxt;
-    in can (Consts.the_const consts) o intern_const_syntax consts end;
+  fun is_record_sel ctxt nm =
+    let
+      val consts = Proof_Context.consts_of ctxt;
+      val exists_const = can (Consts.the_const consts) o intern_const_syntax consts;
+      val exists_abbrev = can (Consts.the_abbreviation consts) o intern_const_syntax consts;
+    in (exists_const nm) orelse (exists_abbrev nm) end;
 in
 
 fun lookup_comp ctxt ps name =

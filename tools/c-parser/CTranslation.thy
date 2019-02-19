@@ -15,6 +15,8 @@ imports
   "StaticFun"
   "IndirectCalls"
   "ModifiesProofs"
+  "Lib.MLUtils"
+  "HOL-Eisbach.Eisbach"
 keywords
   "cond_sorry_modifies_proofs"
   "install_C_file"
@@ -88,6 +90,24 @@ ML_file "modifies_proofs.ML"
 ML_file "HPInter.ML"
 ML_file "stmt_translation.ML"
 ML_file "isar_install.ML"
+ML_file "shorten_names.ML"
+
+method_setup shorten_names = \<open>Shorten_Names.shorten_names\<close>
+    "shorten munged C parser names in bound variables"
+
+method_setup shorten_names_preserve_new = \<open>Shorten_Names.shorten_names_preserve_new\<close>
+    "shorten munged C parser names in bound variables, preserving newer names in case of collisions"
+
+ML \<open>
+  fun then_shorten_names mp =
+      mp -- Shorten_Names.shorten_names >> MethodUtils.then_all_new;
+\<close>
+
+method_setup vcg = \<open>Hoare.vcg |> then_shorten_names\<close>
+    "Simpl 'vcg' followed by C parser 'shorten_names'"
+
+method_setup vcg_step = \<open>Hoare.vcg_step |> then_shorten_names\<close>
+    "Simpl 'vcg_step' followed by C parser 'shorten_names'"
 
 declare typ_info_word [simp del]
 declare typ_info_ptr [simp del]
