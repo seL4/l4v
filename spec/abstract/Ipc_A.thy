@@ -299,11 +299,14 @@ where
                 sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
 
                 fault \<leftarrow> thread_get tcb_fault thread;
-                if call \<or> fault \<noteq> None then
-                  when (can_grant \<and> reply \<noteq> None) $ reply_push thread dest (the reply) can_donate
+                if (call \<or> fault \<noteq> None) then
+                  if (can_grant \<and> reply \<noteq> None) then
+                    reply_push thread dest (the reply) can_donate
+                  else
+                    set_thread_state thread Inactive
                 else when (can_donate \<and> sc_opt = None) $ do
-                   thread_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context thread;
-                   sched_context_donate (the thread_sc) dest
+                  thread_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context thread;
+                  sched_context_donate (the thread_sc) dest
                 od;
                 new_sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
                 test \<leftarrow> case new_sc_opt of Some scp \<Rightarrow> do
