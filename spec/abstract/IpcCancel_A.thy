@@ -411,10 +411,14 @@ where
            do st \<leftarrow> get_thread_state t;
               reply_opt \<leftarrow> case st of BlockedOnReceive _ r_opt \<Rightarrow> return r_opt
                                     | _ \<Rightarrow> return None;
-              when (reply_opt \<noteq> None) $
-                   reply_unlink_tcb t (the reply_opt);
-              set_thread_state t Restart;
-              possible_switch_to t
+              when (reply_opt \<noteq> None) $ reply_unlink_tcb t (the reply_opt);
+              fault \<leftarrow> thread_get tcb_fault t;
+              if fault = None
+              then do
+                 set_thread_state t Restart;
+                 possible_switch_to t
+              od
+              else set_thread_state t Inactive
             od) $ queue;
          reschedule_required
       od
