@@ -2441,4 +2441,26 @@ lemma set_ntfn_obj_ref_sc_at_pred_n[wp]:
   "set_ntfn_obj_ref update ref new \<lbrace>\<lambda>s. P (sc_at_pred_n f g h sc s)\<rbrace>"
   by (wpsimp wp: update_sk_obj_ref_wp simp: sc_at_pred_n_def obj_at_def)
 
+global_interpretation set_reply_obj_ref: non_sc_op "set_reply_obj_ref f r v"
+  apply unfold_locales
+  apply (wpsimp wp: update_sk_obj_ref_wp)
+  apply (erule_tac P=P in rsubst)
+  apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  done
+
+lemma set_sc_obj_ref_wp:
+  "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) sc_ptr s
+                \<longrightarrow> Q (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext (f (K v) sc) n)\<rparr>)\<rbrace>
+    set_sc_obj_ref f sc_ptr v
+   \<lbrace>\<lambda>rv. Q\<rbrace>"
+  by (wpsimp simp: set_sc_obj_ref_def wp: update_sched_context_wp)
+
+lemma set_tcb_obj_ref_wp:
+  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at (TCB tcb) t s
+                \<longrightarrow> Q (s\<lparr>kheap := kheap s(t \<mapsto> TCB (f (K v) tcb))\<rparr>)\<rbrace>
+    set_tcb_obj_ref f t v
+   \<lbrace>\<lambda>rv. Q\<rbrace>"
+  by (wpsimp simp: set_tcb_obj_ref_def wp: set_object_wp)
+     (clarsimp simp: get_tcb_ko_at)
+
 end

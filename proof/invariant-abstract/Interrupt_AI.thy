@@ -266,6 +266,7 @@ crunch interrupt_states[wp]: update_waiting_ntfn "\<lambda>s. P (interrupt_state
    simp: crunch_simps)
 
 crunch interrupt_states[wp]: cancel_ipc "\<lambda>s. P (interrupt_states s)"
+  (wp: hoare_drop_imps)
 
 lemma cancel_ipc_noreply_interrupt_states:
   "\<lbrace>\<lambda>s. st_tcb_at (\<lambda>st. \<forall>r. st \<noteq> BlockedOnReply r) t s \<and> P (interrupt_states s) \<rbrace>

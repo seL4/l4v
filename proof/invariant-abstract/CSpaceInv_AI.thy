@@ -57,20 +57,20 @@ lemma remove_rights_cap_valid[simp]:
   by fastforce
 
 
-lemma get_thread_state_inv [simp]:
+lemma get_thread_state_inv [wp,simp]:
   "\<lbrace> P \<rbrace> get_thread_state t \<lbrace> \<lambda>r. P \<rbrace>"
   apply (simp add: get_thread_state_def thread_get_def gets_the_def)
   apply wp
   apply simp
   done
 
-lemma get_tcb_obj_ref_inv[simp]:
+lemma get_tcb_obj_ref_inv[wp,simp]:
   "\<lbrace>P\<rbrace> get_tcb_obj_ref f t \<lbrace>\<lambda>r. P\<rbrace>"
   apply (simp add: get_tcb_obj_ref_def thread_get_def gets_the_def)
   apply (wp, simp)
   done
 
-lemma get_sk_obj_ref_inv[simp]:
+lemma get_sk_obj_ref_inv[wp,simp]:
   "\<lbrace>P\<rbrace> get_sk_obj_ref f update t \<lbrace>\<lambda>r. P\<rbrace>"
   apply (simp add: get_sk_obj_ref_def get_simple_ko_def get_object_def)
   apply wpsimp

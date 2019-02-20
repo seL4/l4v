@@ -204,10 +204,15 @@ where
       None \<Rightarrow> return ()
     | Some sc_ptr \<Rightarrow> do
         sc_replies \<leftarrow> liftM sc_replies $ get_sched_context sc_ptr;
+        \<comment> \<open>The reply only has a reference to the scheduling context if it is
+            at the head of the reply queue.\<close>
+        reply_sc \<leftarrow> get_reply_obj_ref reply_sc rptr;
+        assert (if hd sc_replies = rptr then reply_sc = Some sc_ptr else reply_sc = None);
         \<comment> \<open>Drop this reply and all subsequent replies from the call stack.
             All the associated caller threads become stuck.\<close>
         set_sc_obj_ref sc_replies_update sc_ptr (takeWhile (\<lambda>r. r \<noteq> rptr) sc_replies);
-        when (hd sc_replies = rptr) (set_reply_obj_ref reply_sc_update rptr None)
+        \<comment> \<open>This will be a no-op if the reply is not at the head of the queue.\<close>
+        set_reply_obj_ref reply_sc_update rptr None
       od;
     \<comment> \<open>This leaves the caller thread Inactive.\<close>
     reply_unlink_tcb tptr rptr

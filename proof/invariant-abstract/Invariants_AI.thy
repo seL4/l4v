@@ -4258,6 +4258,12 @@ lemma valid_replies_sc_with_reply_None:
   shows "\<not> sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc s"
   using valid_replies_sc_replies_unique[OF v] sc_with_reply_NoneD[OF n] by auto
 
+lemma valid_replies_sc_with_reply_None':
+  assumes "sc_with_reply r s = None"
+  assumes "valid_replies s"
+  shows "r \<notin> fst ` replies_with_sc s"
+  by (clarsimp simp: replies_with_sc_def valid_replies_sc_with_reply_None[OF assms])
+
 lemma replies_blocked_imp_TCBReply_ref:
   "(rp, t) \<in> replies_blocked s \<Longrightarrow> (rp , TCBReply) \<in> (state_refs_of s t)"
   by (clarsimp simp: replies_blocked_def state_refs_of_def st_tcb_at_def obj_at_def get_refs_def)

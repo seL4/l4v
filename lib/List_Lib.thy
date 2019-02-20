@@ -58,4 +58,12 @@ lemma zip_take2:
 
 lemmas zip_take = zip_take1 zip_take2
 
+lemma list_all_takeWhile:
+  "list_all P xs \<Longrightarrow> list_all P (takeWhile Q xs)"
+  by (induct xs) auto
+
+lemma takeWhile_eq_Cons_iff:
+  "takeWhile P xs = x # xs' \<longleftrightarrow> (\<exists>xs''. xs = x # xs'' \<and> takeWhile P xs'' = xs' \<and> P x)"
+  by (cases xs) auto
+
 end

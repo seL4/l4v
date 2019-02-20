@@ -3887,7 +3887,7 @@ lemma set_sc_obj_ref_valid_list[wp]:
   by (wpsimp simp: set_sc_obj_ref_def wp: hoare_drop_imp)
 
 lemma reply_unlink_tcb_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> reply_unlink_tcb r \<lbrace>\<lambda>_.valid_list\<rbrace>"
+  "\<lbrace>valid_list\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: reply_unlink_tcb_def wp: hoare_drop_imp)
 
 lemma reply_unlink_sc_valid_list[wp]:
@@ -3972,7 +3972,7 @@ lemma update_sched_context_cdt_cdt_list[wp]:
   by (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
 
 lemma reply_unlink_tcb_cdt_cdt_list[wp]:
-  "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reply_unlink_tcb r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
   by (wpsimp simp: reply_unlink_tcb_def set_simple_ko_def wp: hoare_drop_imp set_object_wp)
 
 lemma reply_unlink_sc_cdt_cdt_list[wp]:
@@ -3987,12 +3987,12 @@ lemma sched_context_donate_cdt_cdt_list[wp]:
        wp: set_object_wp hoare_drop_imp)
 
 lemma reply_remove_cdt_cdt_list[wp]:
-   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reply_remove r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
+   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reply_remove t r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
   by (wpsimp simp: reply_remove_def
        wp: hoare_drop_imps hoare_vcg_all_lift)
 
 lemma reply_remove_tcb_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> reply_remove_tcb r \<lbrace>\<lambda>_.valid_list\<rbrace>"
+  "\<lbrace>valid_list\<rbrace> reply_remove_tcb t r \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: reply_remove_tcb_def wp: gts_inv hoare_vcg_all_lift hoare_drop_imp)
 
 lemma possible_switch_to_valid_list[wp]:
@@ -4052,7 +4052,7 @@ lemma cancel_all_ipc_valid_list[wp]:
 
 crunch valid_list[wp]: thread_set valid_list
 
-lemma reply_cancel_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_cancel_ipc tptr \<lbrace>\<lambda>_. valid_list\<rbrace>"
+lemma reply_cancel_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_cancel_ipc tptr rptr \<lbrace>\<lambda>_. valid_list\<rbrace>"
   unfolding reply_cancel_ipc_def
   by (wp select_wp hoare_drop_imps thread_set_mdb | simp)+
 

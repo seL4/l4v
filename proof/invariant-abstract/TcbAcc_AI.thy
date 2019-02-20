@@ -872,11 +872,11 @@ crunch typ_at[wp]: set_tcb_obj_ref "\<lambda>s. P (typ_at T p s)"
 
 
 lemma set_thread_state_tcb[wp]:
-  "\<lbrace>tcb_at t\<rbrace> set_thread_state ts t' \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
+  "set_thread_state ts t' \<lbrace>\<lambda>s. P (tcb_at t s)\<rbrace>"
   by (simp add: tcb_at_typ, wp)
 
 lemma set_tcb_obj_ref_tcb_at[wp]:
-  "\<lbrace>tcb_at t\<rbrace> set_tcb_obj_ref f t' obj \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
+  "set_tcb_obj_ref f t' obj \<lbrace>\<lambda>s. P (tcb_at t s)\<rbrace>"
   by (wpsimp simp: tcb_at_typ)
 
 lemma set_thread_state_cte_wp_at [wp]:
@@ -2509,5 +2509,8 @@ lemma replies_blocked_upd_tcb_st_not_BlockedonReply:
   apply (clarsimp simp: replies_blocked_upd_tcb_st_def replies_blocked_def
       pred_tcb_at_def obj_at_def)
   done
+
+global_interpretation set_thread_state: non_sc_op "set_thread_state t st"
+  by unfold_locales (wpsimp simp: sc_at_pred_n_def wp: sts_obj_at_impossible')
 
 end

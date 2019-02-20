@@ -2481,15 +2481,6 @@ lemma cancel_ipc_cte_wp_at_not_reply_state:
   apply (case_tac state; wpsimp split: option.splits)
   done
 
-crunch idle[wp]: cancel_ipc "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps select_wp simp: crunch_simps unless_def)
-
-lemma maybe_donate_sc_not_idle_thread [wp]:
-  "\<lbrace>\<lambda>s. tcb_ptr' \<noteq> idle_thread s\<rbrace>
-   maybe_donate_sc tcb_ptr ntfn_ptr
-   \<lbrace>\<lambda>rv s. tcb_ptr' \<noteq> idle_thread s\<rbrace>"
-  by (wpsimp simp: maybe_donate_sc_def wp: hoare_drop_imps cong: if_cong)
-
 (* TODO: sts_invs_minor2 and sts_invs_minor2_concise: just preserve one version? *)
 lemma sts_invs_minor2_concise:
   "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st \<and> \<not> awaiting_reply st') t

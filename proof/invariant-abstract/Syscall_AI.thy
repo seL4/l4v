@@ -458,8 +458,7 @@ lemma (in Systemcall_AI_Pre) handle_fault_reply_has_no_reply_cap:
   done
 
 crunches refill_unblock_check
-  for st_tcb_at[wp]: "\<lambda>s. P (st_tcb_at Q t s)"
-  and pred_tcb[wp]: "\<lambda>s. P (pred_tcb_at f Q t s)"
+  for pred_tcb[wp]: "\<lambda>s. P (pred_tcb_at f Q t s)"
   (wp: crunch_wps hoare_vcg_if_lift2)
 
 lemmas si_invs[wp] = si_invs'[where Q=\<top>,OF hoare_TrueI hoare_TrueI hoare_TrueI hoare_TrueI,simplified]
@@ -1450,23 +1449,16 @@ crunch state_refs_of[wp]: empty_slot "\<lambda>s. P (state_refs_of s)"
 lemmas sts_st_tcb_at_other = sts_st_tcb_at_neq[where proj=itcb_state]
 
 lemma reply_unlink_runnable[wp]:
-  "\<lbrace>st_tcb_at runnable t\<rbrace> reply_unlink_tcb rptr \<lbrace>\<lambda>rv. st_tcb_at runnable t\<rbrace>"
-  apply (simp add: reply_unlink_tcb_def)
+  "\<lbrace>st_tcb_at runnable t'\<rbrace> reply_unlink_tcb t rptr \<lbrace>\<lambda>rv. st_tcb_at runnable t'\<rbrace>"
+  apply (rule hoare_strengthen_pre_via_assert_backward[of "st_tcb_at (Not \<circ> runnable) t", rotated]
+         , wpsimp wp: reply_unlink_tcb_st_tcb_at simp: pred_tcb_at_def obj_at_def)
+  apply (clarsimp simp: reply_unlink_tcb_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (case_tac "reply_tcb reply"; clarsimp simp: assert_opt_def)
-  apply (case_tac "a=t", clarsimp)
-   defer
-   apply (wpsimp wp: sts_st_tcb_at_cases assert_inv)
+  apply (rule hoare_seq_ext[OF _ assert_inv])
   apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (rename_tac state)
-  apply (case_tac state; clarsimp simp: assert_def)
-   apply (wpsimp simp: set_simple_ko_def set_thread_state_def set_object_def
-                a_type_def partial_inv_def wp: get_object_wp)
-   apply (auto dest!: get_tcb_SomeD split: if_split_asm simp: pred_tcb_at_def obj_at_def runnable_eq)[1]
-  apply (wpsimp simp: set_simple_ko_def set_thread_state_def set_object_def
-       a_type_def partial_inv_def wp: get_object_wp)
-  apply (auto dest!: get_tcb_SomeD split: if_split_asm simp: pred_tcb_at_def obj_at_def runnable_eq)[1]
-  done
+  apply (rule hoare_seq_ext[OF _ assert_sp, OF hoare_gen_asm_conj])
+  apply (rule hoare_weaken_pre[where Q=\<bottom>])
+  by (auto simp: pred_tcb_at_def obj_at_def)
 
 (* FIXME: move; this should be much higher up *)
 lemma in_get_refs:
