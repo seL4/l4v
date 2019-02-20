@@ -232,9 +232,9 @@ where
   od"
 
 definition
-  handle_invocation :: "bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> cap_ref \<Rightarrow> (unit, 'z::state_ext) p_monad"
+  handle_invocation :: "bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> cap_ref \<Rightarrow> (unit, 'z::state_ext) p_monad"
 where
-  "handle_invocation calling blocking can_donate cptr \<equiv> doE
+  "handle_invocation calling blocking can_donate first_phase cptr \<equiv> doE
     thread \<leftarrow> liftE $ gets cur_thread;
     info \<leftarrow> without_preemption $ get_message_info thread;
     syscall
@@ -248,7 +248,7 @@ where
       (\<lambda>fault. when blocking $ handle_fault thread fault)
       (\<lambda>(slot,cap,extracaps,buffer). doE
             args \<leftarrow> liftE $ get_mrs thread buffer info;
-            decode_invocation (mi_label info) args cptr slot cap extracaps
+            decode_invocation first_phase (mi_label info) args cptr slot cap extracaps
        odE)
       (\<lambda>err. when calling $
             reply_from_kernel thread $ msg_from_syscall_error err)
@@ -281,14 +281,14 @@ definition
   handle_send :: "bool \<Rightarrow> (unit, 'z::state_ext) p_monad" where
   "handle_send bl \<equiv> doE
     cptr \<leftarrow> liftE $ get_cap_reg cap_register;
-    handle_invocation False bl False cptr
+    handle_invocation False bl False False cptr
   odE"
 
 definition
   handle_call :: "(unit, 'z::state_ext) p_monad" where
  "handle_call \<equiv>  doE
     cptr \<leftarrow> liftE $ get_cap_reg cap_register;
-    handle_invocation True True True cptr
+    handle_invocation True True True False cptr
   odE"
 
 definition
@@ -336,7 +336,6 @@ definition
       <catch> handle_fault thread
    od"
 
-
 section {* Top-level event handling  *}
 
 fun
@@ -351,19 +350,19 @@ where
         | SysCall \<Rightarrow> handle_call
         | SysRecv \<Rightarrow> without_preemption $ handle_recv True True
         | SysYield \<Rightarrow> without_preemption handle_yield
-        | SysReplyRecv \<Rightarrow> without_preemption $ do
-            reply_cptr \<leftarrow> get_cap_reg replyRegister;
-            handle_invocation False False True reply_cptr;
-            handle_recv True True
-          od
+        | SysReplyRecv \<Rightarrow> doE
+            reply_cptr \<leftarrow> without_preemption $ get_cap_reg replyRegister;
+            handle_invocation False False True True reply_cptr;
+            without_preemption $ handle_recv True True
+          odE
         | SysNBSendRecv \<Rightarrow> doE
             dest \<leftarrow> without_preemption $ get_cap_reg nbsendRecvDest;
-            handle_invocation False False True dest;
+            handle_invocation False False True True dest;
             without_preemption $ handle_recv True True
           odE
         | SysNBSendWait \<Rightarrow> doE
             reply_cptr \<leftarrow> without_preemption $ get_cap_reg replyRegister;
-            handle_invocation False False True reply_cptr;
+            handle_invocation False False True True reply_cptr;
             without_preemption $ handle_recv True False
           odE
         | SysWait \<Rightarrow> without_preemption $ handle_recv True False

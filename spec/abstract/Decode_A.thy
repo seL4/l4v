@@ -738,9 +738,10 @@ invocation is allowed.
 
 definition
   decode_invocation ::
-  "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (invocation, 'z::state_ext) se_monad"
+  "bool \<Rightarrow> data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow>
+   (cap \<times> cslot_ptr) list \<Rightarrow> (invocation, 'z::state_ext) se_monad"
 where
-  "decode_invocation label args cap_index slot cap excaps \<equiv>
+  "decode_invocation first_phase label args cap_index slot cap excaps \<equiv>
   case cap of
     EndpointCap ptr badge rights \<Rightarrow>
       if AllowSend \<in> rights then
@@ -759,15 +760,21 @@ where
       liftME InvokeIRQHandler
         $ decode_irq_handler_invocation label irq excaps
   | ThreadCap ptr \<Rightarrow>
-      liftME InvokeTCB $ decode_tcb_invocation label args cap slot excaps
+      if first_phase
+      then throwError $ InvalidCapability 0
+      else liftME InvokeTCB $ decode_tcb_invocation label args cap slot excaps
   | DomainCap \<Rightarrow>
       liftME (case_prod InvokeDomain) $ decode_domain_invocation label args excaps
   | SchedContextCap sc sz \<Rightarrow>
       liftME InvokeSchedContext $ decode_sched_context_invocation label sc (map fst excaps) args
   | SchedControlCap \<Rightarrow>
-      liftME InvokeSchedControl $ decode_sched_control_invocation label args (map fst excaps)
+      if first_phase
+      then throwError $ InvalidCapability 0
+      else liftME InvokeSchedControl $ decode_sched_control_invocation label args (map fst excaps)
   | CNodeCap ptr bits _ \<Rightarrow>
-      liftME InvokeCNode $ decode_cnode_invocation label args cap (map fst excaps)
+      if first_phase
+      then throwError $ InvalidCapability 0
+      else liftME InvokeCNode $ decode_cnode_invocation label args cap (map fst excaps)
   | UntypedCap dev ptr sz fi \<Rightarrow>
       liftME InvokeUntyped $ decode_untyped_invocation label args slot cap (map fst excaps)
   | ArchObjectCap arch_cap \<Rightarrow>
