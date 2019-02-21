@@ -9156,7 +9156,8 @@ lemma send_ipc_valid_sched_helper0:
   done
 
 lemma send_ipc_valid_sched_helper_no_reply:
-  "\<lbrace>st_tcb_at ((=) (BlockedOnReceive ep None)) dest and valid_sched
+  "\<lbrace>st_tcb_at ((=) (BlockedOnReceive ep None)) dest and valid_sched and st_tcb_at active tptr
+    and (\<lambda>s. not_in_release_q tptr s \<and> scheduler_act_not tptr s \<and> not_queued tptr s)
     and (\<lambda>s. bound_sc_tcb_at ((=) None) dest s \<or>
             (active_sc_tcb_at dest s \<and> budget_ready dest s \<and> budget_sufficient dest s))
     and not_cur_thread dest and (\<lambda>s. dest \<noteq> idle_thread s)
@@ -9165,7 +9166,7 @@ lemma send_ipc_valid_sched_helper_no_reply:
      sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
      fault <- thread_get tcb_fault tptr;
      y <- if call \<or> (\<exists>y. fault = Some y)
-          then return ()
+          then set_thread_state tptr Inactive
           else when (can_donate \<and> sc_opt = None)
                  (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
                      sched_context_donate (the caller_sc_opt) dest
@@ -9186,7 +9187,8 @@ lemma send_ipc_valid_sched_helper_no_reply:
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (case_tac "call \<or> (\<exists>y. fault = Some y)"; simp split del: if_split)
    (* true for the first if *)
-   apply (wpsimp wp: send_ipc_valid_sched_helper0)
+   apply (wpsimp wp: send_ipc_valid_sched_helper0 set_thread_state_not_queued_valid_sched
+                     hoare_vcg_disj_lift)
   (* false for the first if *)
   apply (case_tac sc_opt; clarsimp simp: bind_assoc split del: if_split)
    apply (rule_tac Q="obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_fault tcb = None) tptr and
@@ -9303,8 +9305,9 @@ lemma send_ipc_valid_sched_helper_some_reply:
   do sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
      fault <- thread_get tcb_fault tptr;
      y <- if call \<or> (\<exists>y. fault = Some y)
-          then when (cg \<and> (\<exists>y. reply = Some y))
-                  (reply_push tptr dest (the reply) can_donate)
+          then if cg \<and> (\<exists>y. reply = Some y)
+               then reply_push tptr dest (the reply) can_donate
+               else set_thread_state tptr Inactive
           else when (can_donate \<and> sc_opt = None)
                   (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
                       sched_context_donate (the caller_sc_opt) dest
@@ -9350,6 +9353,8 @@ lemma send_ipc_valid_sched_helper_some_reply:
       apply (clarsimp simp: pred_tcb_at_def active_sc_tcb_at_def obj_at_def)
     (* no reply push *)
      apply (wpsimp wp: send_ipc_valid_sched_helper0)
+     apply (wpsimp wp: hoare_vcg_disj_lift set_thread_state_not_queued_valid_sched)
+     apply clarsimp
     (* false for the first if *)
     apply (clarsimp simp: bind_assoc)
     apply (rule conjI; clarsimp)
@@ -9365,10 +9370,13 @@ lemma send_ipc_valid_sched_helper_some_reply:
     apply (wpsimp wp: send_ipc_valid_sched_helper0)
    apply clarsimp
   apply (wpsimp wp: send_ipc_valid_sched_helper0 reply_push_st_tcb_at_Inactive wp_del: reply_push_st_tcb_at)
-  by (wpsimp wp: set_thread_state_break_valid_sched reply_push_valid_sched
+
+  apply (wpsimp wp: set_thread_state_break_valid_sched reply_push_valid_sched set_thread_state_not_queued_valid_sched
                  possible_switch_to_valid_sched' sts_st_tcb_at' hoare_drop_imp
                  reply_push_active_sc_tcb_at
            cong: conj_cong)+
+  apply (wpsimp wp: hoare_vcg_disj_lift)+
+  done
 
 crunches do_ipc_transfer
 for active_sc_tcb_at[wp]: "\<lambda>s:: det_ext state. P (active_sc_tcb_at t s)"
@@ -9400,8 +9408,9 @@ lemma send_ipc_valid_sched_helper:
       sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
       fault <- thread_get tcb_fault tptr;
       y <- if call \<or> (\<exists>y. fault = Some y)
-           then when (cg \<and> (\<exists>y. reply = Some y))
-                  (reply_push tptr dest (the reply) can_donate)
+           then if (cg \<and> (\<exists>y. reply = Some y))
+                    then reply_push tptr dest (the reply) can_donate
+                    else set_thread_state tptr Inactive
            else when (can_donate \<and> sc_opt = None)
                   (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
                       sched_context_donate (the caller_sc_opt) dest
@@ -9418,7 +9427,7 @@ lemma send_ipc_valid_sched_helper:
    od
    \<lbrace>\<lambda>rv. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (case_tac recv_state; simp)
+  apply (case_tac recv_state; simp split del: if_split)
   apply (rename_tac r)
   apply (case_tac r, simp)
    apply (wpsimp wp: send_ipc_valid_sched_helper_no_reply
