@@ -282,7 +282,8 @@ lemma invs_A:
   apply (simp add: invs_def)
   apply (rule conjI)
    prefer 2
-   apply (simp add: cur_tcb_def state_defs obj_at_def idle_sc_ptr_def)
+   apply (simp add: cur_tcb_def cur_sc_tcb_def sc_tcb_sc_at_def state_defs obj_at_def
+                    idle_sc_ptr_def)
   apply (simp add: valid_state_def)
   apply (rule conjI)
    apply (simp add: valid_pspace_def)
@@ -345,8 +346,10 @@ lemma invs_A:
    apply (rule conjI)
     apply (clarsimp simp: valid_replies'_def replies_with_sc_init_A_st)
    apply (rule conjI)
-    apply (clarsimp simp: sym_refs_def state_refs_of_def state_defs idle_sc_ptr_def default_sched_context_def)
-   apply (clarsimp simp: sym_refs_def state_hyp_refs_of_def state_defs idle_sc_ptr_def default_sched_context_def)
+    apply (clarsimp simp: sym_refs_def state_refs_of_def state_defs idle_sc_ptr_def
+                          default_sched_context_def)
+   apply (clarsimp simp: sym_refs_def state_hyp_refs_of_def state_defs idle_sc_ptr_def
+                         default_sched_context_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_mdb_def init_cdt_def no_mloop_def
                          mdb_cte_at_def untyped_mdb_def caps_of_state_init_A_st_Null
@@ -358,7 +361,8 @@ lemma invs_A:
    apply (case_tac obj, simp_all add: cap_of_def)
    apply (clarsimp simp: init_kheap_def split: if_split_asm)
   apply (rule conjI)
-   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def state_defs idle_sc_ptr_def)
+   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def state_defs idle_sc_ptr_def
+                         default_sched_context_def)
   apply (rule conjI)
    apply (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def state_defs)
   apply (rule conjI)
@@ -412,9 +416,8 @@ lemma invs_A:
                     Platform.ARM.addrFromPPtr_def physMappingOffset_def
                     kernelBase_addr_def physBase_def pageBits_def is_aligned_def)
   apply (rule conjI)
-   apply (simp add: valid_kernel_mappings_def state_defs
-                         valid_kernel_mappings_if_pd_def pde_ref_def
-                         ran_def)
+   apply (simp add: valid_kernel_mappings_def state_defs valid_kernel_mappings_if_pd_def pde_ref_def
+                    ran_def)
    apply (auto simp: pde_ref_def split: if_split_asm)[1]
   apply (rule conjI)
    apply (clarsimp simp: equal_kernel_mappings_def state_defs obj_at_def)
@@ -446,7 +449,7 @@ lemma invs_A:
    apply (rule less_imp_le)
    apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
   apply (simp add: cap_refs_in_kernel_window_def caps_of_state_init_A_st_Null
-                  valid_refs_def[unfolded cte_wp_at_caps_of_state])
+                   valid_refs_def[unfolded cte_wp_at_caps_of_state])
   done
 
 end

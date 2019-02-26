@@ -297,6 +297,11 @@ lemma horridly_specific_rewrite:
                          sc_tcb_sc_at ((=) None) xa s \<and> bound_sc_tcb_at ((=) None) a s)))"
   by (auto simp: obj_at_def is_tcb pred_tcb_at_def)
 
+lemma horridly_specific_rewrite':
+  "(obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> (tcb_sched_context tcb = Some xa \<longrightarrow> xa \<noteq> idle_sc_ptr)) a s)
+     = (tcb_at a s \<and> (bound_sc_tcb_at (\<lambda>sc. sc = Some xa) a s \<longrightarrow> (xa \<noteq> idle_sc_ptr)))"
+  by (auto simp: obj_at_def pred_tcb_at_def is_tcb)
+
 lemma thread_set_mcp_ex_nonz_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to a\<rbrace> thread_set (tcb_mcpriority_update g) t \<lbrace>\<lambda>rv. ex_nonz_cap_to a\<rbrace>"
   by (wpsimp wp: ex_nonz_cap_to_pres thread_set_cte_wp_at_trivial simp: tcb_cap_cases_def) auto
@@ -411,53 +416,60 @@ lemma tc_invs[Tcb_AI_asms]:
   apply (rule hoare_gen_asm)+
   apply (simp add: split_def set_mcpriority_def install_tcb_cap_def cong: option.case_cong)
   apply wp
-  apply (((simp only: simp_thms
-        | (simp add: conj_comms del: hoare_True_E_R,
-                  strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
-        | rule wp_split_const_if wp_split_const_if_R
-                   hoare_vcg_all_lift_R
-                   hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
-                   hoare_vcg_R_conj allI hoare_vcg_imp_lift'
-        | (wp out_invs_trivial case_option_wpE cap_delete_deletes
-             cap_delete_valid_cap cap_insert_valid_cap out_cte_at
-             cap_insert_cte_at cap_delete_cte_at out_valid_cap
-             hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
-             thread_set_tcb_ipc_buffer_cap_cleared_invs
-             thread_set_invs_trivial[OF ball_tcb_cap_casesI]
-             hoare_vcg_all_lift thread_set_valid_cap
-             check_cap_inv [where P="valid_cap c" for c]
-             check_cap_inv [where P="tcb_cap_valid c p" for c p]
-             check_cap_inv[where P="cte_at p0" for p0]
-             check_cap_inv[where P="tcb_at p0" for p0]
-             thread_set_cte_at tcb_at_typ_at
-             thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
-             thread_set_no_cap_to_trivial[OF ball_tcb_cap_casesI]
-             thread_set_no_change_tcb_sched_context
-             checked_insert_no_cap_to
-             checked_insert_ep_tcb_invs[where ref="tcb_cnode_index 4"]
-             checked_insert_ep_tcb_invs[where ref="tcb_cnode_index 3"]
-             checked_insert_cte_wp_at_weak[where ref="tcb_cnode_index 3"]
-             cap_delete_ep[where p="snd x" and slot="(r,tcb_cnode_index 3)" for r x]
-             cap_delete_ep[where p="(a,tcb_cnode_index 4)" and slot="(a,tcb_cnode_index 3)"]
-             cap_delete_ep[where p="snd x" and slot="(r,tcb_cnode_index 4)" for r x]
-             checked_insert_tcb_invs[where ref="tcb_cnode_index 2"]
-             checked_insert_tcb_invs[where ref="tcb_cnode_index 0"]
-             checked_insert_tcb_invs[where ref="tcb_cnode_index (Suc 0)"]
-             out_no_cap_to_trivial[OF ball_tcb_cap_casesI]
-             thread_set_ipc_tcb_cap_valid
-             static_imp_wp static_imp_conj_wp
-             sched_context_unbind_tcb_invs
-             TcbAcc_AI.gbn_wp)[1]
-        | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
-                    horridly_specific_rewrite not_pred_tcb tcb_at_typ
-               del: hoare_True_E_R
-        | wpc
-        | strengthen use_no_cap_to_obj_asid_strg
-                     tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
-                     tcb_cap_valid_ep_strgs
-                     tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])))+
+          apply ((((simp only: simp_thms
+                  | (simp add: conj_comms del: hoare_True_E_R,
+                     strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
+                  | rule wp_split_const_if wp_split_const_if_R
+                             hoare_vcg_all_lift_R
+                             hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
+                             hoare_vcg_R_conj allI hoare_vcg_imp_lift'
+                  | (wp out_invs_trivial case_option_wpE cap_delete_deletes
+                       cap_delete_valid_cap cap_insert_valid_cap out_cte_at
+                       cap_insert_cte_at cap_delete_cte_at out_valid_cap
+                       hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+                       thread_set_tcb_ipc_buffer_cap_cleared_invs
+                       thread_set_invs_trivial[OF ball_tcb_cap_casesI]
+                       hoare_vcg_all_lift thread_set_valid_cap
+                       check_cap_inv [where P="valid_cap c" for c]
+                       check_cap_inv [where P="tcb_cap_valid c p" for c p]
+                       check_cap_inv[where P="cte_at p0" for p0]
+                       check_cap_inv[where P="tcb_at p0" for p0]
+                       thread_set_cte_at tcb_at_typ_at
+                       thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
+                       thread_set_no_cap_to_trivial[OF ball_tcb_cap_casesI]
+                       thread_set_no_change_tcb_sched_context
+                       checked_insert_no_cap_to
+                       checked_insert_ep_tcb_invs[where ref="tcb_cnode_index 4"]
+                       checked_insert_ep_tcb_invs[where ref="tcb_cnode_index 3"]
+                       checked_insert_cte_wp_at_weak[where ref="tcb_cnode_index 3"]
+                       cap_delete_ep[where p="snd x" and slot="(r,tcb_cnode_index 3)" for r x]
+                       cap_delete_ep[where p="(a,tcb_cnode_index 4)" and
+                                           slot="(a,tcb_cnode_index 3)"]
+                       cap_delete_ep[where p="snd x" and slot="(r,tcb_cnode_index 4)" for r x]
+                       checked_insert_tcb_invs[where ref="tcb_cnode_index 2"]
+                       checked_insert_tcb_invs[where ref="tcb_cnode_index 0"]
+                       checked_insert_tcb_invs[where ref="tcb_cnode_index (Suc 0)"]
+                       out_no_cap_to_trivial[OF ball_tcb_cap_casesI]
+                       thread_set_ipc_tcb_cap_valid
+                       static_imp_wp static_imp_conj_wp
+                       sched_context_unbind_tcb_invs
+                       TcbAcc_AI.gbn_wp
+                       )[1]
+                  | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
+                              horridly_specific_rewrite horridly_specific_rewrite' not_pred_tcb
+                              tcb_at_typ
+                         del: hoare_True_E_R
+                  | wpc
+                  | strengthen use_no_cap_to_obj_asid_strg
+                               tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
+                               tcb_cap_valid_ep_strgs
+                               tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])))+)
+  apply (clarsimp cong: conj_cong)
   apply (intro conjI impI;
-          clarsimp simp: is_cnode_or_valid_arch_def is_valid_vtable_root_def tcb_ep_slot_cte_wp_ats)
+         clarsimp simp: is_cnode_or_valid_arch_def is_valid_vtable_root_def tcb_ep_slot_cte_wp_ats)
+             apply (fastforce simp: invs_def valid_state_def valid_pspace_def sc_at_pred_n_def
+                                    obj_at_def valid_idle_def sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at
+                             dest!: idle_no_ex_cap)
             apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state\<close>)
      apply (all \<open>clarsimp simp: typ_at_eq_kheap_obj cap_table_at_typ\<close>)
   by (fastforce simp: valid_ipc_buffer_cap)

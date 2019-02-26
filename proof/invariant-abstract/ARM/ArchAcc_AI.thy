@@ -330,6 +330,11 @@ lemma set_asid_pool_cur_tcb [wp]:
   unfolding cur_tcb_def
   by (rule hoare_lift_Pf [where f=cur_thread]; wpsimp simp: set_object_def)
 
+lemma set_asid_pool_cur_sc_tcb [wp]:
+  "\<lbrace>\<lambda>s. cur_sc_tcb s\<rbrace> (set_asid_pool p a) \<lbrace>\<lambda>_ s. cur_sc_tcb s\<rbrace>"
+  by (wpsimp simp: set_asid_pool_def set_object_def get_object_def cur_sc_tcb_def sc_tcb_sc_at_def
+                   obj_at_def)
+
 crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
   (wp: get_object_wp)
 
@@ -912,7 +917,7 @@ lemma set_pd_valid_mdb:
 
 lemma set_pd_valid_idle:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace> set_pd p pd \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
- by (wpsimp wp: valid_idle_lift get_object_wp simp: set_pd_def)
+  by (wpsimp simp: set_pd_def set_object_def get_object_def obj_at_def wp: valid_idle_lift)
 
 lemma set_pd_ifunsafe:
   "\<lbrace>\<lambda>s. if_unsafe_then_cap s\<rbrace>
@@ -967,6 +972,10 @@ lemma set_pd_cur:
   apply (clarsimp simp: obj_at_def is_tcb_def)
   done
 
+lemma set_pd_cur_sc_tcb:
+  "\<lbrace>\<lambda>s. cur_sc_tcb s\<rbrace> set_pd p pd \<lbrace>\<lambda>_ s. cur_sc_tcb s\<rbrace>"
+  by (wpsimp simp: set_pd_def set_object_def get_object_def cur_sc_tcb_def sc_tcb_sc_at_def
+                   obj_at_def)
 
 crunch interrupt_states[wp]: set_pd "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
@@ -1058,8 +1067,7 @@ lemma set_pt_valid_mdb:
 
 lemma set_pt_valid_idle:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
-  including unfold_objects
-  by (wpsimp wp: valid_idle_lift simp: set_pt_def)
+  by (wpsimp simp: set_pt_def set_object_def get_object_def obj_at_def wp: valid_idle_lift)
 
 lemma set_pt_ifunsafe:
   "\<lbrace>\<lambda>s. if_unsafe_then_cap s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. if_unsafe_then_cap s\<rbrace>"
@@ -1107,6 +1115,10 @@ lemma set_pt_cur:
   apply (clarsimp simp: obj_at_def is_tcb_def)
   done
 
+lemma set_pt_cur_sc_tcb:
+  "\<lbrace>\<lambda>s. cur_sc_tcb s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. cur_sc_tcb s\<rbrace>"
+  by (wpsimp simp: set_pt_def set_object_def get_object_def cur_sc_tcb_def sc_tcb_sc_at_def
+                   obj_at_def)
 
 lemma set_pt_aligned [wp]:
   "\<lbrace>pspace_aligned\<rbrace> set_pt p pt \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
@@ -1410,7 +1422,6 @@ lemma valid_global_refsD:
   apply fastforce
   done
 
-
 lemma set_pt_global_objs [wp]:
   "\<lbrace>valid_global_objs and valid_arch_state and
     (\<lambda>s. p \<in> set (arm_global_pts (arch_state s)) \<longrightarrow>
@@ -1632,7 +1643,7 @@ lemma set_pt_invs:
    apply (wp set_pt_valid_objs set_pt_iflive set_pt_zombies
              set_pt_zombies_state_refs set_pt_zombies_state_hyp_refs set_pt_valid_mdb
              set_pt_valid_idle set_pt_ifunsafe
-             set_pt_valid_arch_state set_pt_valid_global set_pt_cur
+             set_pt_valid_arch_state set_pt_valid_global set_pt_cur set_pt_cur_sc_tcb
              valid_irq_node_typ
              valid_irq_handlers_lift
              set_pt_valid_global_vspace_mappings)
@@ -1824,11 +1835,8 @@ lemma set_asid_pool_valid_mdb [wp]:
 
 
 lemma set_asid_pool_valid_idle [wp]:
-  "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
-  set_asid_pool p ap
-  \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
-  including unfold_objects
-  by (wpsimp wp: valid_idle_lift simp: set_asid_pool_def)
+  "\<lbrace>\<lambda>s. valid_idle s\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
+  by (wpsimp simp: set_asid_pool_def set_object_def get_object_def obj_at_def wp: valid_idle_lift)
 
 
 lemma set_asid_pool_ifunsafe [wp]:
@@ -3291,13 +3299,12 @@ lemma set_pd_invs_unmap:
    apply (wp set_pd_valid_objs set_pd_iflive set_pd_zombies
              set_pd_zombies_state_refs set_pd_valid_mdb
              set_pd_valid_idle set_pd_ifunsafe
-             set_pd_valid_arch set_pd_valid_global set_pd_cur
+             set_pd_valid_arch set_pd_valid_global set_pd_cur set_pd_cur_sc_tcb
              valid_irq_node_typ set_pd_zombies_state_hyp_refs
              set_pd_vspace_objs_unmap set_pd_vs_lookup_unmap
              valid_irq_handlers_lift
              set_pd_unmap_mappings set_pd_equal_kernel_mappings_triv)
-  apply (clarsimp simp: cte_wp_at_caps_of_state valid_arch_caps_def
-                   del: disjCI)
+  apply simp
   done
 
 

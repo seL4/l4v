@@ -2114,7 +2114,7 @@ locale invoke_untyped_proofs =
  fixes s cref reset ptr_base ptr tp us slots ptr' sz idx dev
   assumes vui: "valid_untyped_inv_wcap (Retype cref reset ptr_base ptr tp us slots dev)
       (Some (UntypedCap dev (ptr && ~~ mask sz) sz idx)) s"
-  and misc: "ct_active s" "invs s"
+  and misc: "ct_active s" "invs s" "scheduler_action s = resume_cur_thread"
   notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
 begin
@@ -2694,17 +2694,24 @@ lemma set_untyped_cap_invs_simple:
   apply (clarsimp intro!: safe_ioport_insert_triv simp: is_cap_simps)
   done
 
+lemma set_cap_scheduler_action [wp]:
+  "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> set_cap cap p
+   \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+  by (wpsimp simp: set_cap_def set_object_def get_object_def)
+
 lemma reset_untyped_cap_invs_etc:
   "\<lbrace>invs and valid_untyped_inv_wcap ui
       (Some (UntypedCap dev ptr sz idx))
-         and ct_active
+         and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)
          and K (\<exists>ptr_base ptr' ty us slots. ui = Retype slot True ptr_base ptr' ty us slots dev)\<rbrace>
     reset_untyped_cap slot
   \<lbrace>\<lambda>_. invs and valid_untyped_inv_wcap ui (Some (UntypedCap dev ptr sz 0))
-      and ct_active
+      and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)
       and pspace_no_overlap {ptr .. ptr + 2 ^ sz - 1}\<rbrace>, \<lbrace>\<lambda>_. invs\<rbrace>"
-  (is "\<lbrace>invs and valid_untyped_inv_wcap ?ui (Some ?cap) and ct_active and _\<rbrace>
-    ?f \<lbrace>\<lambda>_. invs and ?vu2 and ct_active and ?psp\<rbrace>, \<lbrace>\<lambda>_. invs\<rbrace>")
+  (is "\<lbrace>invs and valid_untyped_inv_wcap ?ui (Some ?cap) and ct_active and
+        (\<lambda>s. scheduler_action s = resume_cur_thread) and _\<rbrace>
+    ?f \<lbrace>\<lambda>_. invs and ?vu2 and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and ?psp\<rbrace>,
+    \<lbrace>\<lambda>_. invs\<rbrace>")
   apply (simp add: reset_untyped_cap_def)
   apply (rule hoare_vcg_seqE[rotated])
    apply ((wp_once get_cap_sp)+)[1]
@@ -2722,7 +2729,7 @@ lemma reset_untyped_cap_invs_etc:
    apply (simp add: word_bw_assocs field_simps)
   apply (clarsimp simp: free_index_of_def split del: if_split)
   apply (rule_tac B="\<lambda>_. invs and valid_untyped_inv_wcap ?ui (Some ?cap)
-        and ct_active and ?psp" in hoare_vcg_seqE[rotated])
+        and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and ?psp" in hoare_vcg_seqE[rotated])
    apply clarsimp
    apply (rule hoare_pre)
     apply (wp hoare_vcg_ex_lift hoare_vcg_const_Ball_lift
@@ -2731,7 +2738,7 @@ lemma reset_untyped_cap_invs_etc:
    apply (clarsimp simp: cte_wp_at_caps_of_state ct_in_state_def)
    apply (frule if_unsafe_then_capD[OF caps_of_state_cteD], clarsimp+)
    apply (drule(1) ex_cte_cap_protects[OF _ caps_of_state_cteD _ _ order_refl])
-      apply (simp add: empty_descendants_range_in)
+       apply (simp add: empty_descendants_range_in)
      apply clarsimp+
    apply (strengthen ballEI[mk_strg I E] refl)
    apply (strengthen exI[where x="fst slot"], strengthen exI[where x="snd slot"])
@@ -2763,8 +2770,9 @@ lemma reset_untyped_cap_invs_etc:
    apply simp
   apply (clarsimp simp: bits_of_def free_index_of_def)
   apply (rule hoare_pre, rule hoare_post_impErr,
-    rule_tac P="\<lambda>i. invs and ?psp and ct_active and valid_untyped_inv_wcap ?ui
-        (Some (UntypedCap dev ptr sz (if i = 0 then idx else (bd - i) * 2 ^ reset_chunk_bits)))"
+    rule_tac P="\<lambda>i. invs and ?psp and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)
+                    and valid_untyped_inv_wcap ?ui
+                          (Some (UntypedCap dev ptr sz (if i = 0 then idx else (bd - i) * 2 ^ reset_chunk_bits)))"
       and E="\<lambda>_. invs"
       in mapME_x_validE_nth)
      apply (rule hoare_pre)
@@ -2891,6 +2899,10 @@ lemma create_cap_zombies[wp]:
 
 lemma create_cap_cur_tcb[wp]:
   "\<lbrace>cur_tcb\<rbrace> create_cap tp sz p dev tup \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
+  unfolding create_cap_def split_def set_cdt_def by wpsimp
+
+lemma create_cap_cur_sc_tcb[wp]:
+  "\<lbrace>cur_sc_tcb\<rbrace> create_cap tp sz p dev tup \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
   unfolding create_cap_def split_def set_cdt_def by wpsimp
 
 lemma create_cap_valid_idle[wp]:
@@ -3045,6 +3057,7 @@ lemma create_cap_refs_respects_device:
 
 global_interpretation create_cap: cspace_non_astate_non_mem_op "create_cap tp sz p dev refs"
   by unfold_locales (wpsimp simp: create_cap_def wp: set_cap.cspace_agnostic_obj_at set_cdt_wp)
+
 lemma (in Untyped_AI_nonempty_table) create_cap_invs[wp]:
   "\<lbrace>invs
       and cte_wp_at (\<lambda>c. is_untyped_cap c \<and> cap_is_device (default_cap tp oref sz dev)  = cap_is_device c
@@ -3606,7 +3619,8 @@ lemma invoke_untyp_invs':
  shows
   "\<lbrace>(invs ::'state_ext state \<Rightarrow> bool)
         and (\<lambda>s. (case ui of Retype _ reset _ _ _ _ _ _ \<Rightarrow> reset) \<longrightarrow> Q' s)
-        and Q and valid_untyped_inv ui and ct_active\<rbrace>
+        and Q and valid_untyped_inv ui and ct_active
+        and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
     invoke_untyped ui \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>, \<lbrace>\<lambda>_ s. invs s \<and> Q s\<rbrace>"
   apply (cases ui)
   apply (rule hoare_name_pre_stateE)
@@ -3615,7 +3629,7 @@ lemma invoke_untyp_invs':
     fix cref oref reset ptr_base ptr tp us slots s sz idx dev
     assume ui: "ui = Retype (cref, oref) reset ptr_base ptr tp us slots dev"
     assume Q: "Q s" and Q': "reset \<longrightarrow> Q' s"
-    assume invs: "invs s" "ct_active s"
+    assume invs: "invs s" "ct_active s" "scheduler_action s = resume_cur_thread"
     assume vui: "valid_untyped_inv_wcap (Retype (cref, oref) reset ptr_base ptr tp us slots dev)
         (Some (UntypedCap dev (ptr && ~~ mask sz) sz idx)) s"
       (is "valid_untyped_inv_wcap _ (Some ?orig_cap) s")
@@ -3664,6 +3678,7 @@ lemma invoke_untyp_invs':
       using cover
       apply (simp add:mapM_x_def[symmetric] invoke_untyped_def)
       apply (rule_tac B="\<lambda>_ s. invs s \<and> Q s \<and> ct_active s
+          \<and> scheduler_action s = resume_cur_thread
           \<and> valid_untyped_inv_wcap ?ui
             (Some (UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1} s)
@@ -3677,7 +3692,6 @@ lemma invoke_untyp_invs':
        apply (cut_tac vui Q Q' invs)
        apply (clarsimp simp: cte_wp_at_caps_of_state slot_not_in)
        apply blast
-
       apply (simp add: cte_wp_at_conj ball_conj_distrib
                        split del: if_split
               | wp hoare_vcg_const_Ball_lift set_tuple_pick
@@ -3816,7 +3830,7 @@ lemmas invoke_untyped_Q
 
 lemma invoke_untyped_st_tcb_at[wp]:
   "\<lbrace>invs and st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t
-         and ct_active and valid_untyped_inv ui\<rbrace>
+         and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_untyped_inv ui\<rbrace>
      invoke_untyped ui
    \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. st_tcb_at P t s\<rbrace>"
   apply (rule hoare_pre, rule invoke_untyped_Q,
@@ -3836,7 +3850,7 @@ lemma invoke_untyped_st_tcb_at[wp]:
 
 lemma invoked_untyp_tcb[wp]:
   "\<lbrace>invs and st_tcb_at active tptr
-        and valid_untyped_inv ui and ct_active\<rbrace>
+        and valid_untyped_inv ui and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      invoke_untyped ui \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. tcb_at tptr s\<rbrace>"
   apply (simp add: tcb_at_st_tcb_at)
   apply (rule hoare_pre, wp invoke_untyped_st_tcb_at)

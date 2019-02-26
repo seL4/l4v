@@ -291,6 +291,11 @@ lemma thread_set_cur_tcb:
   apply (clarsimp dest!: get_tcb_SomeD simp: obj_at_def is_tcb)
   done
 
+lemma thread_set_cur_sc_tcb:
+  "\<lbrace>\<lambda>s. cur_sc_tcb s\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. cur_sc_tcb s\<rbrace>"
+  by (wpsimp simp: thread_set_def set_object_def cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def
+                   get_tcb_def)
+
 lemma thread_set_iflive_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
@@ -549,6 +554,7 @@ lemma thread_set_invs_trivial:
              thread_set_mdb
              thread_set_ifunsafe_trivial
              thread_set_cur_tcb
+             thread_set_cur_sc_tcb
              thread_set_zombies_trivial
              thread_set_valid_idle_trivial
              thread_set_global_refs_triv
@@ -660,11 +666,8 @@ end
 
 lemma as_user_idle[wp]:
   "\<lbrace>valid_idle\<rbrace> as_user t f \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-  apply (simp add: as_user_def set_object_def split_def)
-  apply wp
-  apply (clarsimp cong: if_cong)
-  apply (clarsimp simp: obj_at_def get_tcb_def valid_idle_def pred_tcb_at_def
-                  split: option.splits Structures_A.kernel_object.splits)
+  apply (wpsimp simp: as_user_def set_object_def)
+  apply (auto simp: obj_at_def get_tcb_def valid_idle_def pred_tcb_at_def)
   done
 
 lemma as_user_arch[wp]:
@@ -1116,7 +1119,7 @@ lemma sts_valid_idle [wp]:
   apply (simp add: set_thread_state_def set_object_def)
   apply (wp|simp)+
   apply (clarsimp cong: if_cong)
-  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def get_tcb_def)
+  apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def get_tcb_def)
   done
 
 lemma sbn_valid_idle [wp]:
@@ -1127,7 +1130,7 @@ lemma sbn_valid_idle [wp]:
   apply (simp add: set_tcb_obj_ref_def set_object_def)
   apply (wp, simp)
   apply (clarsimp cong: if_cong)
-  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def get_tcb_def)
+  apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def get_tcb_def)
   done
 
 lemma ssc_valid_idle [wp]:
@@ -1159,6 +1162,11 @@ lemma cur_tcb_scheduler_action[simp]:
 
 crunch cur_tcb[wp]: set_thread_state_act cur_tcb
 
+lemma set_thread_state_act_cur_sc_tcb [wp]:
+  "\<lbrace>cur_sc_tcb\<rbrace> set_thread_state_act tcb_ptr \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
+  by (wpsimp simp: set_thread_state_act_def set_scheduler_action_def is_schedulable_def
+                   cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
+
 lemma sts_cur_tcb [wp]:
   "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. cur_tcb s\<rbrace>"
   unfolding set_thread_state_def set_object_def
@@ -1167,6 +1175,11 @@ lemma sts_cur_tcb [wp]:
   apply (clarsimp simp: cur_tcb_def obj_at_def is_tcb_def)
   done
 
+lemma sts_cur_sc_tcb [wp]:
+  "\<lbrace>\<lambda>s. cur_sc_tcb s\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. cur_sc_tcb s\<rbrace>"
+  unfolding set_thread_state_def set_object_def
+  by (wpsimp simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def get_tcb_def)
+
 lemma sbn_cur_tcb [wp]:
   "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> set_tcb_obj_ref f t ntfn \<lbrace>\<lambda>rv s. cur_tcb s\<rbrace>"
   apply (clarsimp simp: set_tcb_obj_ref_def set_object_def gets_the_def
@@ -1174,6 +1187,11 @@ lemma sbn_cur_tcb [wp]:
   apply (drule get_tcb_SomeD)
   apply (clarsimp simp: cur_tcb_def obj_at_def is_tcb_def)
   done
+
+lemma sbn_cur_sc_tcb [wp]:
+  "\<lbrace>\<lambda>s. cur_sc_tcb s\<rbrace> set_tcb_obj_ref f t ntfn \<lbrace>\<lambda>rv s. cur_sc_tcb s\<rbrace>"
+  by (wpsimp simp: set_tcb_obj_ref_def set_object_def cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def
+                   get_tcb_def)
 
 crunch iflive[wp]: set_thread_state_act if_live_then_nonz_cap
 
@@ -2254,6 +2272,7 @@ crunches thread_set_domain, thread_set_priority
   and pspace_in_kernel_window[wp]: pspace_in_kernel_window
   and pspace_respects_device_region[wp]: pspace_respects_device_region
   and cur_tcb[wp]: cur_tcb
+  and cur_sc_tcb[wp]: cur_sc_tcb
   and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
   and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
@@ -2330,12 +2349,7 @@ lemma thread_set_domain_valid_idle[wp]:
   "thread_set_domain t d \<lbrace>valid_idle\<rbrace>"
   unfolding thread_set_domain_def thread_set_def
   apply wpsimp
-  apply (drule get_tcb_SomeD)
-  apply (rule conjI, fastforce simp: obj_at_def)
-  apply clarsimp
-  apply (rule conjI, rule refl)
-  apply (rule conjI, rule refl)
-  apply simp
+  apply (auto simp: obj_at_def dest!: get_tcb_SomeD)
   done
 
 lemma thread_set_domain_if_unsafe_then_cap[wp]:
@@ -2437,12 +2451,7 @@ lemma thread_set_priority_valid_idle[wp]:
   "thread_set_priority t d \<lbrace>valid_idle\<rbrace>"
   unfolding thread_set_priority_def thread_set_def
   apply wpsimp
-  apply (drule get_tcb_SomeD)
-  apply (rule conjI, fastforce simp: obj_at_def)
-  apply clarsimp
-  apply (rule conjI, rule refl)
-  apply (rule conjI, rule refl)
-  apply simp
+  apply (auto simp: obj_at_def dest!: get_tcb_SomeD)
   done
 
 lemma thread_set_priority_if_unsafe_then_cap[wp]:

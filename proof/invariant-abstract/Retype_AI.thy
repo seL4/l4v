@@ -895,7 +895,7 @@ abbreviation(input)
        and valid_asid_map and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
-       and cur_tcb and valid_ioc and valid_machine_state and valid_ioports"
+       and cur_tcb and cur_sc_tcb and valid_ioc and valid_machine_state and valid_ioports"
 
 
 lemma all_invs_but_equal_kernel_mappings_restricted_eq:
@@ -1795,8 +1795,7 @@ lemma idle_s':
 
 lemma valid_idle:
   "valid_idle s \<Longrightarrow> valid_idle s'"
-  by (clarsimp simp add: valid_idle_def idle_s' refs_eq
-                         pred_tcb_at_pres)
+  by (clarsimp simp add: valid_idle_def s'_def ps_def pred_tcb_at_def obj_at_def orthr)
 
 lemma arch_state [simp]:
   "arch_state s' = arch_state s"
@@ -1877,6 +1876,12 @@ lemma mdb_and_revokable:
 lemma cur_tcb:
   "cur_tcb s \<Longrightarrow> cur_tcb s'"
   apply (simp add: cur_tcb_def, rule obj_at_pres)
+  apply (simp add: s'_def)
+  done
+
+lemma cur_sc_tcb:
+  "cur_sc_tcb s \<Longrightarrow> cur_sc_tcb s'"
+  apply (simp add: cur_sc_tcb_def sc_tcb_sc_at_def, rule obj_at_pres)
   apply (simp add: s'_def)
   done
 

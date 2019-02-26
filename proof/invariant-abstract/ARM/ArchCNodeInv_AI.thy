@@ -234,17 +234,7 @@ lemma in_preempt[simp, intro, CNodeInv_AI_assms]:
 lemma invs_irq_state_independent[intro!, simp, CNodeInv_AI_assms]:
   "invs (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
    = invs s"
-  by (clarsimp simp: irq_state_independent_A_def invs_def
-      valid_state_def valid_pspace_def valid_mdb_def valid_ioc_def valid_idle_def
-      only_idle_def if_unsafe_then_cap_def valid_global_refs_def valid_arch_state_def
-      valid_irq_node_def valid_irq_handlers_def valid_machine_state_def
-      valid_arch_caps_def valid_global_objs_def
-      valid_kernel_mappings_def equal_kernel_mappings_def
-      valid_asid_map_def valid_global_vspace_mappings_def
-      pspace_in_kernel_window_def cap_refs_in_kernel_window_def
-      cur_tcb_def sym_refs_def state_refs_of_def vspace_at_asid_def
-      swp_def valid_irq_states_def)
-
+  by auto
 
 lemma cte_at_nat_to_cref_zbits [CNodeInv_AI_assms]:
   "\<lbrakk> s \<turnstile> Zombie oref zb n; m < n \<rbrakk>

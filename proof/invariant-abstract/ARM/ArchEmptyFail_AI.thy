@@ -109,6 +109,7 @@ lemma arch_decode_invocation_empty_fail[wp]:
   including no_pre
   by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits
      | (wp+) | intro conjI impI allI)+)
+
 end
 
 global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap

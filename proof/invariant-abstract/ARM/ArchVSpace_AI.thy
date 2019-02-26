@@ -1609,7 +1609,7 @@ lemma find_free_hw_asid_invs [wp]:
               cong: option.case_cong)
   apply (wp|wpc)+
   apply (clarsimp simp: invs_def valid_state_def split del: if_split)
-  apply (simp add: valid_global_refs_def global_refs_def cur_tcb_def
+  apply (simp add: valid_global_refs_def global_refs_def cur_tcb_def cur_sc_tcb_def
                    valid_irq_node_def valid_vspace_objs_arch_update
                    valid_global_objs_def valid_arch_caps_def second_level_tables_def
                    valid_table_caps_def valid_kernel_mappings_def
@@ -2113,7 +2113,7 @@ lemma set_pd_invs_map:
    apply (wp set_pd_valid_objs set_pd_iflive set_pd_zombies
              set_pd_zombies_state_refs set_pd_valid_mdb set_pd_zombies_state_hyp_refs
              set_pd_valid_idle set_pd_ifunsafe
-             set_pd_valid_arch set_pd_valid_global set_pd_cur
+             set_pd_valid_arch set_pd_valid_global set_pd_cur set_pd_cur_sc_tcb
              valid_irq_node_typ
              set_pd_vspace_objs_map[where S=S and T="{}"]
              set_pd_valid_arch_caps[where S=S and T="{}" and S'=S' and T'=T']
@@ -2569,19 +2569,14 @@ done
 
 lemma valid_idle_store_pte[wp]:
   "\<lbrace>valid_idle\<rbrace> store_pte y pte \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  apply (simp add:store_pte_def)
+  apply (simp add: store_pte_def)
   apply wp
-  apply (rule hoare_vcg_precond_imp[where Q="valid_idle"])
-  apply (simp add:set_pt_def)
-  apply wp
-  apply (simp add:get_object_def)
-  apply wp
-  apply (clarsimp simp:obj_at_def
-    split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (fastforce simp:is_tcb_def)
-  apply (assumption)
-  apply (wp|simp)+
-done
+    apply (rule hoare_vcg_precond_imp[where Q="valid_idle"])
+     apply (simp add: set_pt_def)
+     apply (wpsimp wp: get_object_wp)
+     apply (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def)
+    apply (wp|simp)+
+  done
 
 lemma mapM_swp_store_pte_invs[wp]:
   "\<lbrace>invs and (\<lambda>s. (\<exists>p\<in>set slots. (\<exists>\<rhd> (p && ~~ mask pt_bits)) s) \<longrightarrow>
@@ -2663,7 +2658,7 @@ lemma set_pd_invs_unmap':
              set_pd_zombies_state_refs set_pd_valid_mdb
              set_pd_zombies_state_hyp_refs
              set_pd_valid_idle set_pd_ifunsafe
-             set_pd_valid_arch set_pd_valid_global set_pd_cur
+             set_pd_valid_arch set_pd_valid_global set_pd_cur set_pd_cur_sc_tcb
              valid_irq_node_typ
              set_pd_vspace_objs_unmap set_pd_valid_vs_lookup_map[where T=T and S="{}" and T'=T' and S'=S']
              valid_irq_handlers_lift

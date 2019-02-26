@@ -202,6 +202,8 @@ locale Ipc_AI =
     "\<And>P ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s:: 'state_ext state. P (state_refs_of s)\<rbrace>"
   assumes make_arch_fault_msg_ct[wp]:
     "\<And>ft t.   make_arch_fault_msg ft t \<lbrace>cur_tcb :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_arch_fault_msg_cst[wp]:
+    "\<And>ft t.   make_arch_fault_msg ft t \<lbrace>cur_sc_tcb :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_zombies[wp]:
     "\<And>ft t.   make_arch_fault_msg ft t \<lbrace>zombies_final :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_it[wp]:
@@ -737,15 +739,30 @@ lemma (in Ipc_AI) tcl_idle[wp]:
     \<lbrace>valid_idle::'state_ext state \<Rightarrow> bool\<rbrace>
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-  by (wp transfer_caps_loop_pres cap_insert_idle valid_idle_lift)
+  by (wpsimp simp: set_extra_badge_def wp: transfer_caps_loop_pres valid_idle_lift)
 
 crunch cur_tcb [wp]: set_extra_badge cur_tcb
+
+lemma dmo_storeWord_cur_sc_tcb [wp]:
+  "\<lbrace>cur_sc_tcb\<rbrace> do_machine_op (storeWord x y) \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
+  by (wpsimp simp: do_machine_op_def cur_sc_tcb_def)
+
+lemma set_extra_badge_cur_sc_tcb [wp]:
+  "\<lbrace>cur_sc_tcb\<rbrace> set_extra_badge buffer badge n \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
+  by (wpsimp simp: set_extra_badge_def store_word_offs_def)
 
 lemma (in Ipc_AI) tcl_ct[wp]:
   "\<And>ep buffer n caps slots mi.
     \<lbrace>cur_tcb::'state_ext state \<Rightarrow> bool\<rbrace>
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
+  by (wp transfer_caps_loop_pres)
+
+lemma (in Ipc_AI) tcl_cst[wp]:
+  "\<And>ep buffer n caps slots mi.
+    \<lbrace>cur_sc_tcb::'state_ext state \<Rightarrow> bool\<rbrace>
+      transfer_caps_loop ep buffer n caps slots mi
+    \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
 crunch it[wp]: cap_insert "\<lambda>s. P (idle_thread s)"
@@ -1638,9 +1655,6 @@ lemma set_mrs_idle[wp]:
 
 context Ipc_AI begin
 
-crunch valid_idle[wp]: do_ipc_transfer "valid_idle :: 'state_ext state \<Rightarrow> bool"
-  (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
-
 crunch arch[wp]: do_ipc_transfer "\<lambda>s::'state_ext state. P (arch_state s)"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
@@ -1860,6 +1874,93 @@ lemma set_mrs_vms[wp]:
 
 crunch vms[wp]: do_ipc_transfer "valid_machine_state :: 'state_ext state \<Rightarrow> bool"
   (wp: mapM_UNIV_wp)
+
+crunch valid_idle[wp]: set_message_info valid_idle
+
+lemma copy_mrs_valid_idle [wp]:
+  "\<lbrace>valid_idle :: 'state_ext state \<Rightarrow> bool\<rbrace>
+   copy_mrs sender sbuf receiver rbuf n
+   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  apply (simp add: copy_mrs_redux)
+  apply (wp mapM_wp' | wpc | simp add: store_word_offs_def load_word_offs_def)+
+  done
+
+lemma sched_context_update_consumed_valid_idle [wp]:
+  "\<lbrace>valid_idle\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  apply (simp add: sched_context_update_consumed_def)
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (wpsimp simp: sched_context_update_consumed_def set_sched_context_def set_object_def
+                      get_object_def valid_idle_def obj_at_def pred_tcb_at_def)
+  done
+
+lemma make_fault_msg_valid_idle [wp]:
+  "\<lbrace>valid_idle :: 'state_ext state \<Rightarrow> bool\<rbrace>
+   make_fault_msg f sender
+   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  apply (case_tac f)
+      apply (intro conjI | wpsimp)+
+  done
+
+lemma do_fault_transfer_valid_idle [wp]:
+  "\<lbrace>valid_idle :: 'state_ext state \<Rightarrow> bool\<rbrace>
+   do_fault_transfer badge sender receiver buf
+   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  by (wpsimp simp: do_fault_transfer_def set_message_info_def thread_get_def)
+
+lemma do_ipc_transfer_valid_idle [wp]:
+  "\<lbrace>valid_idle :: 'state_ext state \<Rightarrow> bool\<rbrace> do_ipc_transfer s ep bg grt r \<lbrace>\<lambda>_. valid_idle\<rbrace>"
+  unfolding do_ipc_transfer_def
+  by (wpsimp simp: do_normal_transfer_def transfer_caps_def)
+
+lemma as_user_cur_sc_tcb[wp]:
+  "\<lbrace>cur_sc_tcb:: 'state_ext state \<Rightarrow> bool\<rbrace> as_user t m \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
+  by (wpsimp wp: as_user_wp_thread_set_helper thread_set_cur_sc_tcb)
+
+lemma set_message_info_cur_sc_tcb [wp]:
+  "\<lbrace>cur_sc_tcb :: 'state_ext state \<Rightarrow> bool\<rbrace> set_message_info thread info \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
+  by (wpsimp simp: set_message_info_def)
+
+lemma copy_mrs_cur_sc_tcb [wp]:
+  "\<lbrace>cur_sc_tcb :: 'state_ext state \<Rightarrow> bool\<rbrace>
+   copy_mrs sender sbuf receiver rbuf n
+   \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
+  apply (simp add: copy_mrs_redux)
+  apply (wp mapM_wp' | wpc
+       | simp add: store_word_offs_def load_word_offs_def)+
+  done
+
+lemma set_mrs_cur_sc_tcb[wp]:
+  "\<lbrace>cur_sc_tcb\<rbrace> set_mrs param_a param_b param_c \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
+  by (wpsimp wp: set_mrs_thread_set_dmo thread_set_cur_sc_tcb)
+
+lemma sched_context_update_consumed_cur_sc_tcb [wp]:
+  "\<lbrace>cur_sc_tcb\<rbrace> sched_context_update_consumed scp \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
+  apply (simp add: sched_context_update_consumed_def)
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (wpsimp simp: sched_context_update_consumed_def set_sched_context_def set_object_def
+                      get_object_def cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
+  done
+
+lemma make_fault_msg_cur_sc_tcb [wp]:
+  "\<lbrace>cur_sc_tcb :: 'state_ext state \<Rightarrow> bool\<rbrace>
+   make_fault_msg f sender
+   \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
+  apply (case_tac f)
+      apply (intro conjI | wpsimp)+
+  done
+
+lemma do_fault_transfer_cur_sc_tcb [wp]:
+  "\<lbrace>cur_sc_tcb :: 'state_ext state \<Rightarrow> bool\<rbrace>
+   do_fault_transfer badge sender receiver buf
+   \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
+  by (wpsimp simp: do_fault_transfer_def thread_get_def)
+
+lemma do_ipc_transfer_cur_sc_tcb[wp]:
+  "\<lbrace>cur_sc_tcb and tcb_at r and tcb_at s :: 'state_ext state \<Rightarrow> bool\<rbrace>
+   do_ipc_transfer s ep bg grt r
+   \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
+  unfolding do_ipc_transfer_def
+  by (wpsimp simp: do_normal_transfer_def transfer_caps_def)
 
 lemma do_ipc_transfer_invs[wp]:
   "\<lbrace>invs and tcb_at r and tcb_at s :: 'state_ext state \<Rightarrow> bool\<rbrace>
@@ -2230,17 +2331,27 @@ lemma maybe_donate_sc_sym_refs:
   apply wpsimp
   done
 
+lemma refill_unblock_check_cur_sc_tcb [wp]:
+  "\<lbrace>cur_sc_tcb\<rbrace> refill_unblock_check sc_ptr \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
+  by (wpsimp simp: refill_unblock_check_def get_refills_def is_round_robin_def)
+
+lemma maybe_donate_sc_cur_sc_tcb [wp]:
+  "\<lbrace>cur_sc_tcb\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
+  by (wpsimp simp: maybe_donate_sc_def get_sk_obj_ref_def get_simple_ko_def get_object_def
+                   get_tcb_obj_ref_def thread_get_def)
+
 lemma maybe_donate_sc_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> ex_nonz_cap_to tcb_ptr s\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                   wp: maybe_donate_sc_sym_refs valid_ioports_lift)
   apply safe
+   apply (clarsimp simp: sym_refs_def)
+   apply (erule_tac x = ntfn_ptr in allE)
    apply (erule (1) valid_objsE)
-   apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def is_sc_obj_def)
+   apply (clarsimp simp: valid_obj_def valid_ntfn_def is_sc_obj_def obj_at_def)
    apply (erule (1) if_live_then_nonz_capD2)
    apply (case_tac ko; simp)
-   apply (clarsimp simp: live_def live_sc_def
-                  dest!: sym_refs_ko_atD[unfolded obj_at_def, simplified])
+   apply (clarsimp simp: state_refs_of_def get_refs_def2 live_def live_sc_def)
   apply (clarsimp simp: idle_no_ex_cap)
   done
 
@@ -2401,6 +2512,19 @@ lemma sts_invs_minor2_concise:
   apply (auto simp: state_refs_of_def get_refs_def2)
   done
 
+lemma cancel_ipc_simpler:
+  "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s \<and> t \<noteq> idle_thread s \<and>
+        only_idle s\<rbrace>
+   cancel_ipc t
+   \<lbrace>\<lambda>_. st_tcb_at (\<lambda>st. st \<in> {Running, Inactive, Restart}) t\<rbrace>"
+  apply (clarsimp simp: cancel_ipc_def)
+  apply (rule hoare_seq_ext [OF _ gts_sp])
+  apply (wpsimp wp: hoare_strengthen_post [OF blocked_cancel_ipc_inactive]
+                    hoare_strengthen_post [OF reply_cancel_ipc_inactive]
+                    hoare_strengthen_post [OF cancel_signal_inactive] |
+         clarsimp simp: only_idle_def st_tcb_at_def obj_at_def)+
+  done
+
 lemma sai_invs[wp]:
   "\<lbrace>invs and ex_nonz_cap_to ntfnptr\<rbrace> send_signal ntfnptr bdg \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: send_signal_def)
@@ -2413,12 +2537,14 @@ lemma sai_invs[wp]:
     apply (rename_tac tptr)
     apply (rule hoare_seq_ext[OF _ gts_sp])
     apply (case_tac "receive_blocked st"; simp)
+     apply (clarsimp simp: receive_blocked_def)
+     apply (case_tac st; simp)
      apply (wpsimp wp: sts_invs_minor2_concise)
       apply (rule hoare_vcg_conj_lift)
-       apply (rule hoare_strengthen_post)
-        apply (rule cancel_ipc_invs_st_tcb_at)
-       apply (fastforce simp: st_tcb_at_def obj_at_def)
-      apply (wpsimp wp: cancel_ipc_ex_nonz_cap_to_tcb)
+       apply (rule hoare_strengthen_post[OF cancel_ipc_simpler])
+       apply (clarsimp simp: st_tcb_at_def obj_at_def)
+       apply (case_tac "tcb_state tcb"; simp)
+      apply (wpsimp wp: cancel_ipc_cap_to)
      apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
      apply (subgoal_tac "ex_nonz_cap_to tptr s")
       apply (fastforce simp: st_tcb_def2 is_tcb idle_no_ex_cap)
@@ -2437,6 +2563,7 @@ lemma sai_invs[wp]:
    apply (erule (1) if_live_then_nonz_capD2)
    apply (clarsimp simp: live_def live_sc_def
                   dest!: sym_refs_ko_atD[unfolded obj_at_def, simplified])
+   apply fastforce
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
   apply (fastforce simp: valid_obj_def valid_ntfn_def state_refs_of_def obj_at_def
                   elim!: delta_sym_refs

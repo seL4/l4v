@@ -2235,7 +2235,8 @@ locale DetSchedSchedule_AI =
     "\<lbrace>valid_sched\<rbrace> activate_thread \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   assumes arch_perform_invocation_valid_sched[wp]:
     "\<And>i.
-      \<lbrace>invs and valid_sched and ct_active and valid_arch_inv i\<rbrace>
+      \<lbrace>invs and valid_sched and ct_active and valid_arch_inv i and
+       (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
         arch_perform_invocation i
       \<lbrace>\<lambda>_.valid_sched::det_state \<Rightarrow> _\<rbrace>"
   assumes arch_invoke_irq_control_valid_sched'[wp]:
@@ -5055,9 +5056,8 @@ lemma sched_context_donate_valid_sched_action:
       apply (rule_tac Q="\<lambda>_ s. \<not> active_sc_tcb_at a s" in hoare_strengthen_post)
        apply (wpsimp wp: set_tcb_sc_update_active_sc_tcb_at_None)
       apply clarsimp
-     apply (wpsimp wp: set_tcb_obj_ref_scheduler_act_not)
-    apply clarsimp
-    apply (wpsimp wp: test_reschedule_sched_act_not)+
+     apply clarsimp
+     apply (wpsimp wp: test_reschedule_sched_act_not)+
   apply (clarsimp simp: valid_sched_action_def)
   done
 
@@ -6617,26 +6617,27 @@ crunch simple_sched_action[wp]: unbind_notification simple_sched_action
    this is much simpler to prove *)
 lemma finalise_cap_valid_sched[wp]:
   "\<lbrace>valid_sched and invs and simple_sched_action and valid_cap cap
-    and valid_ep_q and valid_ntfn_q\<rbrace>
+    and valid_ep_q and valid_ntfn_q and (\<lambda>s. cap \<noteq> ThreadCap idle_thread_ptr)\<rbrace>
    finalise_cap cap param_b
    \<lbrace>\<lambda>_. valid_sched:: det_state \<Rightarrow> _\<rbrace>"
   apply (case_tac cap; (solves \<open>wpsimp\<close>)?; simp)
-       apply (wpsimp wp: cancel_all_ipc_valid_sched cancel_ipc_valid_sched get_simple_ko_wp)
-      apply (wpsimp wp: cancel_ipc_valid_sched reply_remove_valid_sched gts_wp get_simple_ko_wp)
-      apply (safe; clarsimp)
-      apply (clarsimp simp: reply_tcb_reply_at_def obj_at_def pred_tcb_at_eq_commute)
-      apply (subgoal_tac "\<exists>reply. (kheap s xa = Some (Reply reply) \<and> reply_tcb reply = Some x)")
-       apply (clarsimp simp: runnable_def st_tcb_at_def obj_at_def)
-      apply (rule_tac st_tcb_reply_state_refs[OF invs_valid_objs invs_sym_refs];
-             clarsimp simp: pred_tcb_at_eq_commute)
-     apply (intro conjI impI;  wpsimp)
-    apply (intro conjI impI; wpsimp wp: suspend_valid_sched)
-      apply (rule_tac Q="\<lambda>ya. valid_sched and invs and scheduler_act_not x7 and tcb_at x7"
-                      in hoare_strengthen_post)
-       apply (wpsimp wp: unbind_from_sc_valid_sched Arch.unbind_from_sc_invs Arch.unbind_from_sc_tcb_at)
-      apply fastforce
-     apply (wpsimp wp: unbind_notification_invs)
-    apply (clarsimp simp: valid_cap_def)
+      apply (wpsimp wp: cancel_all_ipc_valid_sched cancel_ipc_valid_sched get_simple_ko_wp)
+     apply (wpsimp wp: cancel_ipc_valid_sched reply_remove_valid_sched gts_wp get_simple_ko_wp)
+     apply (safe; clarsimp)
+     apply (clarsimp simp: reply_tcb_reply_at_def obj_at_def pred_tcb_at_eq_commute)
+     apply (subgoal_tac "\<exists>reply. (kheap s xa = Some (Reply reply) \<and> reply_tcb reply = Some x)")
+      apply (clarsimp simp: runnable_def st_tcb_at_def obj_at_def)
+     apply (rule_tac st_tcb_reply_state_refs[OF invs_valid_objs invs_sym_refs];
+            clarsimp simp: pred_tcb_at_eq_commute)
+    apply (intro conjI impI;  wpsimp)
+   apply (intro conjI impI; wpsimp wp: suspend_valid_sched)
+     apply (rule_tac Q="\<lambda>ya. valid_sched and invs and scheduler_act_not x7 and tcb_at x7"
+                     in hoare_strengthen_post)
+      apply (wpsimp wp: unbind_from_sc_valid_sched Arch.unbind_from_sc_invs
+                        Arch.unbind_from_sc_tcb_at)
+     apply fastforce
+    apply (wpsimp wp: unbind_notification_invs)
+   apply (clarsimp simp: valid_cap_def)
   apply (intro conjI impI; wpsimp wp: deleting_irq_handler_valid_sched)
   apply fastforce
   done
@@ -7546,10 +7547,6 @@ lemma awaken_valid_sched:
   apply (clarsimp simp: not_in_release_q_def dest!: set_takeWhileD)
   done
 
-crunches sc_and_timer
-for valid_idle[wp]: "valid_idle::det_ext state \<Rightarrow> bool"
-  (wp: hoare_drop_imps)
-
 crunches awaken
 for cur_tcb[wp]: cur_tcb
 and budget_ready: "\<lambda>s. P (budget_ready t s)"
@@ -7730,8 +7727,6 @@ lemma strenthen_post_invs_valid_objs:
   "\<lbrace>invs\<rbrace> f \<lbrace>\<lambda>rv. invs\<rbrace> \<Longrightarrow> \<lbrace>invs\<rbrace> f \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   by (erule hoare_strengthen_post; clarsimp)
 
-thm strenthen_post_invs_valid_objs[OF suspend_invs]
-
 lemma invoke_tcb_valid_sched:
   "\<lbrace>invs
     and valid_sched
@@ -7749,7 +7744,7 @@ lemma invoke_tcb_valid_sched:
               apply (wpsimp wp: suspend_invs)+
          apply (clarsimp simp: invs_valid_objs invs_valid_global_refs idle_no_ex_cap)
         apply (wpsimp wp: suspend_valid_sched;
-               clarsimp simp: invs_valid_objs invs_valid_global_refs )
+               clarsimp simp: invs_valid_objs invs_valid_global_refs)
        apply ((wp mapM_x_wp suspend_valid_sched restart_valid_sched
               | simp
               | rule subset_refl
@@ -7757,8 +7752,7 @@ lemma invoke_tcb_valid_sched:
          apply (rule_tac Q="\<lambda>rv s. invs s \<and> simple_sched_action s" in hoare_strengthen_post[rotated])
           apply fastforce
          apply (wpsimp wp: suspend_invs suspend_valid_sched)+
-       apply (intro impI conjI;
-              clarsimp simp: invs_valid_objs invs_valid_global_refs idle_no_ex_cap)
+       apply (fastforce simp: invs_def valid_state_def valid_idle_def dest!: idle_no_ex_cap)
       apply (wp tc_valid_sched)
       apply (rename_tac sc_opt_opt s, case_tac sc_opt_opt; simp)
       apply (rename_tac sc_opt, case_tac sc_opt; simp)
@@ -8657,7 +8651,7 @@ lemma thread_set_not_idle_valid_idle:
   "\<lbrace>valid_idle and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
      thread_set f tptr \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   apply (simp add: thread_set_def set_object_def, wp)
-  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
+  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def get_tcb_def)
   done
 
 lemma thread_set_st_tcb_at:
@@ -11933,7 +11927,9 @@ lemma call_kernel_valid_sched_helper:
 
 lemma call_kernel_valid_sched:
   "\<lbrace>\<lambda>s. invs s \<and> valid_sched s \<and> (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) s \<and> (ct_active or ct_idle) s
-        \<and> (\<lambda>s. scheduler_action s = resume_cur_thread) s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
+        \<and> scheduler_action s = resume_cur_thread
+        \<and> is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s
+        \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
    call_kernel e
    \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: call_kernel_def)
@@ -11969,4 +11965,3 @@ lemma call_kernel_valid_sched:
 end
 
 end
-

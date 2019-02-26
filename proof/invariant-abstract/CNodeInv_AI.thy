@@ -1483,6 +1483,7 @@ crunch hyp_refs_of[wp]: cap_swap "\<lambda>s. P (state_hyp_refs_of s)"
 
 crunch cur_tcb[wp]: cap_swap "cur_tcb"
 
+crunch cur_sc_tcb[wp]: cap_swap "cur_sc_tcb"
 
 lemma copy_of_cte_refs:
   "copy_of cap cap' \<Longrightarrow> cte_refs cap = cte_refs cap'"

@@ -936,14 +936,6 @@ lemma finalise_cap_replaceable_helper:
                   wp: get_object_wp get_simple_ko_wp )
   by (auto simp: obj_at_def)
 
-(* required invariant *)
-lemma no_cap_to_idle_sc_ptr:
-  "\<lbrakk>cte_wp_at ((=) (SchedContextCap a b)) slot s; invs s\<rbrakk> \<Longrightarrow> a \<noteq> idle_sc_ptr"
-  apply clarsimp
-  apply (drule invs_valid_global_refs)
-  apply (drule_tac r=idle_sc_ptr in valid_global_refsD)
-  sorry
-
 lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s
         \<and> cte_wp_at ((=) cap) sl s \<and> invs s
@@ -1707,19 +1699,31 @@ global_naming Arch
 crunch invs[wp]: prepare_thread_delete invs
 
 lemma unbind_from_sc_invs[wp]:
-  "\<lbrace>invs\<rbrace> unbind_from_sc t \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp wp: complete_yield_to_invs hoare_vcg_all_lift hoare_drop_imps simp: unbind_from_sc_def)
+  "\<lbrace>invs and K (t \<noteq> idle_thread_ptr)\<rbrace> unbind_from_sc t \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (wpsimp simp: unbind_from_sc_def
+                  wp: complete_yield_to_invs)
+    apply (wpsimp wp: hoare_vcg_all_lift hoare_drop_imp)
+   apply (wpsimp simp: get_tcb_obj_ref_def thread_get_def)
+  apply clarsimp
+  apply (fastforce dest!: get_tcb_SomeD thread_not_idle_implies_sc_not_idle)
+  done
 
 lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
   shows "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv (s(*::det_ext state*)). invs s\<rbrace>"
   apply (cases cap, simp_all split del: if_split)
-               apply (wp cancel_all_ipc_invs cancel_all_signals_invs unbind_notification_invs gts_wp
-                         unbind_maybe_notification_invs get_simple_ko_wp suspend_invs reply_remove_invs
-                         sched_context_unbind_yield_from_invs
-                     | simp add: o_def split del: if_split cong: if_cong
-                     | wpc
-                     | solves \<open>clarsimp\<close>
-                     | solves \<open> clarsimp, (frule (2) reply_tcb_state_refs[OF _ invs_valid_objs invs_sym_refs], fastforce simp: obj_at_def, clarsimp),
+               prefer 7
+               apply (wpsimp wp: suspend_invs unbind_notification_invs)
+               apply (fastforce simp: invs_def valid_state_def valid_idle_def cap_range_def
+                               dest!: valid_global_refsD)
+              apply (wp cancel_all_ipc_invs cancel_all_signals_invs gts_wp
+                        unbind_maybe_notification_invs get_simple_ko_wp  reply_remove_invs
+                        sched_context_unbind_yield_from_invs
+                    | simp add: o_def split del: if_split cong: if_cong
+                    | wpc
+                    | solves \<open>clarsimp\<close>
+                    | solves \<open> clarsimp,
+                               (frule (2) reply_tcb_state_refs[OF _ invs_valid_objs invs_sym_refs],
+                                fastforce simp: obj_at_def, clarsimp),
                                 (auto simp: reply_tcb_reply_at_def pred_tcb_at_def obj_at_def)\<close>)+
   apply clarsimp
   apply (frule cte_wp_at_valid_objs_valid_cap, clarsimp)
@@ -2154,7 +2158,7 @@ lemma valid_idle_has_null_cap_ARCH[Finalise_AI_asms]:
   apply (case_tac capa, simp_all add: cap_range_def global_refs_def)[1]
   apply (clarsimp simp: valid_irq_node_def valid_idle_def pred_tcb_at_def
                         obj_at_def is_cap_table_def)
-  apply (rename_tac word tcb)
+  apply (rename_tac word tcb sc)
   apply (drule_tac x=word in spec, simp)
   done
 

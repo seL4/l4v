@@ -799,7 +799,7 @@ definition
   global_refs :: "'z::state_ext state \<Rightarrow> obj_ref set"
 where
   "global_refs \<equiv> \<lambda>s.
-  {idle_thread s, arm_global_pd (arch_state s)} \<union>
+  {idle_thread s, arm_global_pd (arch_state s), idle_sc_ptr} \<union>
    range (interrupt_irq_node s) \<union>
    set (arm_global_pts (arch_state s))"
 
@@ -1150,6 +1150,14 @@ lemma aobj_bits_T:
 lemma idle_global:
   "idle_thread s \<in> global_refs s"
   by (simp add: global_refs_def)
+
+lemma idle_sc_global:
+  "idle_sc_ptr \<in> global_refs s"
+  by (simp add: global_refs_def)
+
+lemma idle_ptrs_neq:
+  "idle_thread_ptr \<noteq> idle_sc_ptr"
+  by (clarsimp simp: idle_thread_ptr_def idle_sc_ptr_def)
 
 lemma valid_ipc_buffer_cap_null:
   "valid_ipc_buffer_cap NullCap buf"

@@ -41,23 +41,73 @@ lemma next_domain_invs[wp]:
   "next_domain \<lbrace> invs \<rbrace>"
   unfolding next_domain_def
   apply (wpsimp simp: Let_def)
-  apply (simp add: invs_def cur_tcb_def valid_state_def valid_mdb_def mdb_cte_at_def valid_ioc_def
-                   valid_irq_states_def valid_machine_state_def)
+  apply (simp add: invs_def cur_tcb_def cur_sc_tcb_def sc_tcb_sc_at_def valid_state_def
+                   valid_mdb_def mdb_cte_at_def valid_ioc_def valid_irq_states_def
+                   valid_machine_state_def)
   done
+
+lemma next_domain_scheduler_action[wp]:
+  "next_domain \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+  unfolding next_domain_def
+  by (wpsimp simp: Let_def)
 
 lemma awaken_invs[wp]:
   "awaken \<lbrace> invs \<rbrace>"
   unfolding awaken_def by (wpsimp wp: mapM_x_wp')
 
+lemma set_scheduler_action_valid_state_cur_tcb [wp]:
+  "\<lbrace>invs\<rbrace> set_scheduler_action action \<lbrace>\<lambda>_ s. valid_state s \<and> cur_tcb s\<rbrace>"
+  apply (wpsimp simp: set_scheduler_action_def)
+  apply (clarsimp simp: invs_def valid_state_def cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
+  done
+
+lemma cur_thread_update_invs:
+  "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s \<noteq> resume_cur_thread \<and> tcb_at tptr s\<rbrace>
+   modify (cur_thread_update (\<lambda>_. tptr))
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (wpsimp simp: invs_def valid_state_def valid_pspace_def valid_machine_state_def
+                   state_refs_of_def cur_tcb_def cur_sc_tcb_def)
+
+lemma switch_to_idle_thread_invs:
+  "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s \<noteq> resume_cur_thread\<rbrace>
+   switch_to_idle_thread
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (wpsimp simp: switch_to_idle_thread_def
+                  wp: cur_thread_update_invs arch_stit_scheduler_action)
+  apply (clarsimp simp: invs_def valid_state_def valid_idle_def pred_tcb_at_def obj_at_def is_tcb)
+  done
+
+lemma switch_to_thread_invs:
+  "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s \<noteq> resume_cur_thread\<rbrace>
+   switch_to_thread tptr
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (wpsimp simp: switch_to_thread_def get_tcb_obj_ref_def thread_get_def is_tcb
+               wp: cur_thread_update_invs arch_stt_scheduler_action)
+
+lemma guarded_switch_to_invs:
+  "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s \<noteq> resume_cur_thread\<rbrace>
+   guarded_switch_to thread
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (wpsimp simp: guarded_switch_to_def
+               wp: switch_to_thread_invs hoare_drop_imps)
+
+(* still true without scheduler_action s \<noteq> resume_cur_thread, but the proof for schedule_invs
+   will be simpler with it *)
+lemma schedule_choose_new_thread_valid_state_cur_tcb [wp]:
+  "\<lbrace>\<lambda>s. invs s \<and> scheduler_action s \<noteq> resume_cur_thread\<rbrace>
+   schedule_choose_new_thread
+   \<lbrace>\<lambda>_ s. valid_state s \<and> cur_tcb s\<rbrace>"
+  by (wpsimp simp: schedule_choose_new_thread_def choose_thread_def
+               wp: set_scheduler_action_valid_state_cur_tcb switch_to_idle_thread_invs
+                   guarded_switch_to_invs hoare_drop_imps)
+
 lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> Schedule_A.schedule \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply if_split[split del]
   apply (simp add: Schedule_A.schedule_def)
-  apply (wp dmo_invs thread_get_inv gts_wp sc_and_timer_invs
-            do_machine_op_tcb when_def hoare_vcg_all_lift
-          | wpc
-          | clarsimp simp: guarded_switch_to_def get_tcb_def choose_thread_def thread_get_def
-          | wp_once hoare_drop_imps
-          | simp add: schedule_choose_new_thread_def if_apply_def2)+
+  apply (wp guarded_switch_to_invs hoare_drop_imps
+            hoare_strengthen_post[OF awaken_invs] sc_and_timer_invs
+         | simp add: if_apply_def2 set_scheduler_action_def invs_def
+         | wpc)+
   done
 
 (* FIXME: replace the one in KHeap_AI! *)
@@ -72,17 +122,17 @@ lemma is_schedulable_wp:
 
 lemma invs_domain_time_update[simp]:
   "invs (domain_time_update f s) = invs s"
-  by (simp add: invs_def valid_state_def)
+  by (simp add: invs_def valid_state_def cur_sc_tcb_def)
 
 lemma invs_domain_index_update[simp]:
   "invs (domain_index_update f s) = invs s"
   by (simp add: invs_def valid_state_def valid_mdb_def mdb_cte_at_def valid_ioc_def
-                valid_irq_states_def valid_machine_state_def cur_tcb_def)
+                valid_irq_states_def valid_machine_state_def cur_tcb_def cur_sc_tcb_def)
 
 lemma invs_cur_domain_update[simp]:
   "invs (cur_domain_update f s) = invs s"
   by (simp add: invs_def valid_state_def valid_mdb_def mdb_cte_at_def valid_ioc_def
-                valid_irq_states_def valid_machine_state_def cur_tcb_def)
+                valid_irq_states_def valid_machine_state_def cur_tcb_def cur_sc_tcb_def)
 
 lemma choose_thread_ct_activatable[wp]:
   "\<lbrace> invs \<rbrace> choose_thread \<lbrace>\<lambda>_. ct_in_state activatable \<rbrace>"
@@ -443,12 +493,14 @@ lemma do_reply_invs[wp]:
   done
 
 lemma pinv_invs[wp]:
-  "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> valid_invocation i s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> valid_invocation i s \<and> scheduler_action s = resume_cur_thread\<rbrace>
     perform_invocation blocking call can_donate i \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (cases i
          ; wpsimp wp: tcbinv_invs send_signal_interrupt_states invoke_domain_invs
                 simp: ct_in_state_def)
-  apply (erule st_tcb_ex_cap; fastforce)
+   apply (auto simp: invs_def valid_state_def valid_pspace_def cur_sc_tcb_def pred_tcb_at_def
+                     obj_at_def sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[symmetric]
+                     if_live_then_nonz_capD2 live_def)
   done
 
 end
@@ -501,8 +553,9 @@ context Syscall_AI begin
 
 lemma pinv_tcb[wp]:
   "\<And>tptr blocking call can_donate i.
-    \<lbrace>invs and st_tcb_at active tptr and ct_active and valid_invocation i\<rbrace>
-      perform_invocation blocking call can_donate i
+    \<lbrace>\<lambda>s. invs s \<and> st_tcb_at active tptr s \<and> ct_active s \<and> valid_invocation i s \<and>
+         scheduler_action s = resume_cur_thread\<rbrace>
+    perform_invocation blocking call can_donate i
     \<lbrace>\<lambda>rv. tcb_at tptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (case_tac i, simp_all split:option.splits)
              apply (wpsimp simp: st_tcb_at_tcb_at)+
@@ -1007,13 +1060,40 @@ context Syscall_AI begin
 lemma cur_sc_tcb_invs:
   "invs s \<and> scheduler_action s = resume_cur_thread
    \<Longrightarrow> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s"
-  sorry
+  by (clarsimp simp: invs_def valid_state_def valid_pspace_def cur_sc_tcb_def pred_tcb_at_def
+                     obj_at_def sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[symmetric])
+
+lemma stsa_schedulable_scheduler_action:
+  "\<lbrace>\<lambda>s. P (scheduler_action s) \<and>
+        is_schedulable_bool thread (in_release_queue thread s) s\<rbrace>
+   set_thread_state_act thread
+   \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+  apply (simp add: set_thread_state_act_def)
+  apply (rule hoare_seq_ext[OF _ hoare_gets_sp])+
+  apply (rule hoare_seq_ext[OF _ is_schedulable_sp'])
+  apply (simp add: when_def)
+  apply (intro conjI)
+   apply (wpsimp wp: hoare_pre_cont)
+  apply wpsimp
+  done
+
+lemma sts_schedulable_scheduler_action:
+  "\<lbrace>\<lambda>s. P (scheduler_action s) \<and>
+        is_schedulable_bool thread (in_release_queue thread s) s\<rbrace>
+   set_thread_state thread Restart
+  \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+  apply (wpsimp wp: stsa_schedulable_scheduler_action simp: set_thread_state_def set_object_def)
+  apply (fastforce simp: is_schedulable_bool_def test_sc_refill_max_def get_tcb_def
+                         in_release_queue_def
+                  split: option.splits kernel_object.splits)
+  done
 
 lemma hinv_invs':
   fixes Q :: "'state_ext state \<Rightarrow> bool" and calling blocking
   assumes perform_invocation_Q[wp]:
     "\<And>block class can_donate i.
-      \<lbrace>invs and Q and ct_active and valid_invocation i\<rbrace>
+      \<lbrace>invs and Q and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)
+       and valid_invocation i\<rbrace>
         perform_invocation block class can_donate i
       \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes handle_fault_Q[wp]:
@@ -1040,9 +1120,8 @@ lemma hinv_invs':
                       simp: st_tcb_at_tcb_at)[1]
          apply (wpsimp wp: gts_sp)+
        apply (simp add: ct_in_state_def conj_commute conj_left_commute)
-       apply wpsimp
-       apply (rule_tac Q = "\<lambda>rv s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) thread s
-                                   \<and> st_tcb_at active thread s \<and> cur_thread s = thread" in
+       apply (wpsimp wp: sts_schedulable_scheduler_action)
+       apply (rule_tac Q = "\<lambda>rv s. st_tcb_at active thread s \<and> cur_thread s = thread" in
               hoare_post_imp)
         apply simp
        apply (wpsimp wp: sts_st_tcb_at')
@@ -1066,19 +1145,20 @@ lemma hinv_tcb[wp]:
   apply (simp add: handle_invocation_def split_def
                    ts_Restart_case_helper
                    liftE_liftM_liftME liftME_def bindE_assoc)
-  apply (wp syscall_valid sts_st_tcb_at_cases
-            ct_in_state_set lec_caps_to
-            | simp)+
-  apply (clarsimp simp: st_tcb_at_tcb_at invs_valid_objs
-                        ct_in_state_def)
-  apply (fastforce elim!: st_tcb_ex_cap)
+  apply (wp syscall_valid sts_st_tcb_at_cases ct_in_state_set lec_caps_to
+            sts_schedulable_scheduler_action
+         | simp cong: conj_cong)+
+  apply (fastforce simp: is_tcb ct_in_state_def st_tcb_at_def obj_at_def
+                 intro!: st_tcb_ex_cap)
   done
 
 lemma get_cap_reg_inv[wp]: "\<lbrace>P\<rbrace> get_cap_reg r \<lbrace>\<lambda>_. P\<rbrace>"
   by (wpsimp simp: get_cap_reg_def)
 
 lemma hs_tcb_on_err:
-  "\<lbrace>st_tcb_at active t and invs and ct_active\<rbrace>
+  "\<lbrace>st_tcb_at active t and invs and ct_active and
+    (\<lambda>s. scheduler_action s = resume_cur_thread) and
+    (\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)\<rbrace>
      handle_send blocking
    -,\<lbrace>\<lambda>e. tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (unfold handle_send_def whenE_def fun_app_def)
@@ -1086,7 +1166,8 @@ lemma hs_tcb_on_err:
   done
 
 lemma hs_invs[wp]:
-  "\<lbrace>invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+  "\<lbrace>invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
+    (\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)\<rbrace>
      handle_send blocking
    \<lbrace>\<lambda>r. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (rule validE_valid)
@@ -1263,7 +1344,8 @@ lemma do_reply_transfer_nonz_cap:
       | rule conjI)+
 
 lemma hc_invs[wp]:
-  "\<lbrace>invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+  "\<lbrace>invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
+    (\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)\<rbrace>
      handle_call
    \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   by (simp add: handle_call_def) wpsimp
@@ -1274,17 +1356,45 @@ lemma select_insert:
   "select (insert x X) = (return x \<sqinter> select X)"
   by (simp add: alternative_def select_def return_def)
 
+(* when check_budget returns True, it has not called reschedule_required. Hence the
+scheduler_action remains unchanged *)
+lemma check_budget_true_sched_action:
+  "\<lbrace> \<lambda>s. P (scheduler_action s) \<rbrace>
+     check_budget
+   \<lbrace> \<lambda>rv s. rv \<longrightarrow> P (scheduler_action s)\<rbrace>"
+  apply (clarsimp simp: check_budget_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule hoare_seq_ext[OF _ refill_capacity_sp])
+  apply (rule hoare_if)
+   apply (rule hoare_seq_ext[OF _ gets_sp])
+   apply (rule hoare_if)
+    by wpsimp+
+
+lemma check_budget_restart_true_sched_action[wp]:
+  "\<lbrace> \<lambda>s. P (scheduler_action s) \<rbrace>
+     check_budget_restart
+   \<lbrace> \<lambda>rv s. rv \<longrightarrow> P (scheduler_action s)\<rbrace>"
+  apply (clarsimp simp: check_budget_restart_def)
+  apply (rule hoare_seq_ext[OF _ check_budget_true_sched_action])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (wpsimp wp: hoare_vcg_if_lift)
+  done
 
 context Syscall_AI begin
 
 lemma he_invs[wp]:
   "\<And>e.
-    \<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
+    \<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_active s) \<and> scheduler_action s = resume_cur_thread \<and>
+         is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
       handle_event e
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (case_tac e, simp_all)
       apply (rename_tac syscall)
-      apply (case_tac syscall, simp_all)
+       apply (case_tac syscall, simp_all)
+
   sorry (*
       apply (((rule hoare_pre, wp hvmf_active) |
                  wpc | wp hoare_drop_imps hoare_vcg_all_lift |

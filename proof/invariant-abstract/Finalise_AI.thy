@@ -792,14 +792,18 @@ lemma sched_context_maybe_unbind_ntfn_invs[wp]:
   apply (rule_tac x=x in valid_objsE, assumption+, clarsimp simp: valid_obj_def valid_sched_context_def)
   apply (rule conjI, clarsimp simp: valid_obj_def valid_ntfn_def split: ntfn.splits)
   apply (rule conjI, clarsimp, erule (1) if_live_then_nonz_capD2, clarsimp simp: live_def live_ntfn_def)
-  apply (rule delta_sym_refs, assumption)
-   apply (auto dest: refs_in_ntfn_q_refs refs_in_get_refs
-               simp: state_refs_of_def valid_ntfn_def obj_at_def is_sc_obj_def
-              split: if_split_asm option.split_asm ntfn.splits kernel_object.split_asm)[1]
-  apply (clarsimp split: if_splits)
-   apply (solves \<open>clarsimp simp: state_refs_of_def\<close>
+  apply (rule conjI)
+   apply (rule delta_sym_refs, assumption)
+    apply (auto dest: refs_in_ntfn_q_refs refs_in_get_refs
+                simp: state_refs_of_def valid_ntfn_def obj_at_def is_sc_obj_def
+               split: if_split_asm option.split_asm ntfn.splits kernel_object.split_asm)[1]
+   apply (clarsimp split: if_splits)
+    apply ((solves \<open>clarsimp simp: state_refs_of_def\<close>
             | fastforce simp: obj_at_def
-                       dest!: refs_in_get_refs SCNtfn_in_state_refsD ntfn_sc_sym_refsD)+
+                       dest!: refs_in_get_refs SCNtfn_in_state_refsD ntfn_sc_sym_refsD)+)[2]
+  apply (clarsimp simp: sym_refs_def)
+  apply (erule_tac x = nptr in allE)
+  apply (auto simp: state_refs_of_def valid_idle_def obj_at_def)
   done
 
 lemma (in Finalise_AI_1) sched_context_unbind_yield_from_invs:

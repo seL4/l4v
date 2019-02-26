@@ -24,10 +24,10 @@ lemma dmo_maskInterrupt_invs [InterruptAcc_AI_assms]:
   "\<lbrace>all_invs_but_valid_irq_states_for irq and (\<lambda>s. state = interrupt_states s irq)\<rbrace>
    do_machine_op (maskInterrupt (state = IRQInactive) irq)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-   apply (simp add: do_machine_op_def split_def maskInterrupt_def)
-   apply wp
-   apply (clarsimp simp: in_monad invs_def valid_state_def all_invs_but_valid_irq_states_for_def valid_irq_states_but_def valid_irq_masks_but_def valid_machine_state_def cur_tcb_def valid_irq_states_def valid_irq_masks_def)
-  done
+  by (wpsimp simp: do_machine_op_def maskInterrupt_def in_monad invs_def valid_state_def
+                   all_invs_but_valid_irq_states_for_def valid_irq_states_but_def
+                   valid_irq_masks_but_def valid_machine_state_def cur_tcb_def cur_sc_tcb_def
+                   valid_irq_states_def valid_irq_masks_def)
 
 end
 

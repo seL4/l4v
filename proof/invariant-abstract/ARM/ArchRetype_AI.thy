@@ -333,6 +333,7 @@ lemma store_pde_valid_kernel_mappings_map_global:
 crunch valid_asid_map[wp]: store_pde "valid_asid_map"
 
 crunch cur[wp]: store_pde "cur_tcb"
+crunch cur_sc_tcb[wp]: store_pde "cur_sc_tcb"
 
 lemma mapM_x_store_pde_eq_kernel_mappings_restr:
   "pd \<in> S \<and> is_aligned pd pd_bits \<and> is_aligned pd' pd_bits
@@ -1195,7 +1196,7 @@ lemma post_retype_invs:
                      valid_arch_caps valid_global_objs
                      valid_vspace_objs' valid_irq_handlers
                      valid_mdb_rep2 mdb_and_revokable
-                     valid_pspace cur_tcb only_idle
+                     valid_pspace cur_tcb cur_sc_tcb only_idle
                      valid_kernel_mappings valid_asid_map
                      valid_global_vspace_mappings valid_ioc vms
                      pspace_in_kernel_window pspace_respects_device_region
@@ -1305,7 +1306,7 @@ lemma invs_irq_state_independent:
       valid_kernel_mappings_def equal_kernel_mappings_def
       valid_asid_map_def vspace_at_asid_def
       pspace_in_kernel_window_def cap_refs_in_kernel_window_def
-      cur_tcb_def sym_refs_def state_refs_of_def
+      cur_tcb_def cur_sc_tcb_def sym_refs_def state_refs_of_def
       swp_def valid_irq_states_def valid_replies_pred_pspaceI)
 
 crunch irq_masks_inv[wp]: cleanByVA_PoU, storeWord, clearMemory "\<lambda>s. P (irq_masks s)"

@@ -649,6 +649,9 @@ lemma set_simple_ko_cur_tcb[wp]:
   "\<lbrace>cur_tcb\<rbrace> set_simple_ko f ep v \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
   by (set_simple_ko_method simp_thm: set_object_def cur_tcb_def is_tcb is_ep; fastforce)
 
+lemma set_simple_ko_cur_sc_tcb[wp]:
+  "\<lbrace>cur_sc_tcb\<rbrace> set_simple_ko f ep v \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
+  by (set_simple_ko_method simp_thm: set_object_def cur_sc_tcb_def sc_tcb_sc_at_def; fastforce)
 
 lemma assert_pre:
   "\<lbrace>P\<rbrace> do s <- get; assert (P s); f od \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
@@ -938,27 +941,20 @@ lemma dmo_invs1:
   assumes valid_mf: "\<And>P. \<lbrace>\<lambda>ms.  P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms.  P (device_state ms)\<rbrace>"
   shows "\<lbrace>(\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). m = machine_state s \<longrightarrow> (\<forall>p.
        in_user_frame p s  \<or> underlying_memory m' p = underlying_memory m p) \<and>
-         ((\<forall>irq. (interrupt_states s irq = IRQInactive \<longrightarrow> irq_masks m' irq) \<or> (irq_masks m' irq = irq_masks m irq))))
+         ((\<forall>irq. (interrupt_states s irq = IRQInactive \<longrightarrow> irq_masks m' irq) \<or>
+                 (irq_masks m' irq = irq_masks m irq))))
     and invs\<rbrace>
    do_machine_op f
    \<lbrace>\<lambda>_. invs\<rbrace>"
-   apply (simp add: do_machine_op_def split_def)
-   apply wp
-
-   apply (clarsimp simp: invs_def cur_tcb_def valid_state_def
-                         valid_machine_state_def
-                   intro!: valid_irq_states_machine_state_updateI
+  apply (simp add: do_machine_op_def split_def)
+  apply wp
+  apply (clarsimp simp: invs_def  cur_sc_tcb_def sc_tcb_sc_at_def)
+  apply (frule_tac P1 = "(=) (device_state (machine_state s))" in use_valid[OF _ valid_mf])
+   apply simp
+  apply (fastforce simp: cur_tcb_def valid_state_def valid_machine_state_def
+                  intro: valid_irq_states_machine_state_updateI
                    elim: valid_irq_statesE)
-   apply (frule_tac P1 = "(=) (device_state (machine_state s))" in use_valid[OF _ valid_mf])
-    apply simp
-   apply clarsimp
-   apply (intro conjI)
-    apply (fastforce simp: invs_def cur_tcb_def valid_state_def
-                           valid_machine_state_def
-                    intro: valid_irq_states_machine_state_updateI
-                     elim: valid_irq_statesE)
-   apply fastforce
-   done
+  done
 
 lemma dmo_invs:
   assumes valid_mf: "\<And>P. \<lbrace>\<lambda>ms.  P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms.  P (device_state ms)\<rbrace>"
@@ -1064,10 +1060,9 @@ crunch it[wp]: set_simple_ko "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_simple_ko_idle[wp]:
-  "\<lbrace>valid_idle\<rbrace>
-   set_simple_ko f ptr ep \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-  by (wpsimp simp: set_simple_ko_def set_object_def get_object_def valid_idle_def
-                   pred_tcb_at_def obj_at_def)
+  "\<lbrace>valid_idle\<rbrace> set_simple_ko f ptr ep \<lbrace>\<lambda>_. valid_idle\<rbrace>"
+  by (wpsimp simp: set_simple_ko_def set_object_def valid_idle_def pred_tcb_at_def obj_at_def
+                   a_type_def)
 
 lemma ep_redux_simps:
   "valid_ep (case xs of [] \<Rightarrow> Structures_A.IdleEP | y # ys \<Rightarrow> Structures_A.SendEP (y # ys))
@@ -2282,6 +2277,16 @@ lemma is_schedulable_sp:
   apply(rule conjI)
    apply (clarsimp simp: Option.is_none_def is_schedulable_opt_def get_tcb_def)
   by (clarsimp simp: is_schedulable_opt_def get_tcb_def test_sc_refill_max_def split: option.splits)
+
+lemma is_schedulable_sp':
+  "\<lbrace>P\<rbrace> is_schedulable tp b \<lbrace>\<lambda>rv. (\<lambda>s. rv = is_schedulable_bool tp b s) and P\<rbrace>"
+  apply (clarsimp simp: is_schedulable_def)
+  apply (rule hoare_seq_ext[OF _ assert_get_tcb_ko'])
+  apply (wpsimp simp: hoare_vcg_if_lift2 obj_at_def is_tcb wp: get_sched_context_wp)
+  apply(rule conjI)
+   apply (clarsimp simp: Option.is_none_def is_schedulable_bool_def get_tcb_def)
+  by (clarsimp simp: is_schedulable_bool_def get_tcb_def test_sc_refill_max_def
+              split: option.splits)
 
 lemma schedulable_unfold: "tcb_at tp s \<Longrightarrow> (the (is_schedulable_opt tp b s))
   = (st_tcb_at runnable tp s \<and>

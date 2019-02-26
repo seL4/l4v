@@ -3545,6 +3545,13 @@ crunches cap_insert
   and it [wp]: "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps)
 
+lemma set_cap_idle_sc_at[wp]:
+  "\<lbrace>idle_sc_at p'\<rbrace> set_cap cap p \<lbrace>\<lambda>_. idle_sc_at p'\<rbrace>"
+  by (wpsimp simp: set_cap_def set_object_def obj_at_def get_object_def, auto)
+
+crunch idle_sc_at[wp]: cap_insert "idle_sc_at t"
+  (wp: hoare_drop_imps)
+
 lemma cap_insert_idle [wp]:
   "\<lbrace>valid_idle\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   by (rule valid_idle_lift; wp)

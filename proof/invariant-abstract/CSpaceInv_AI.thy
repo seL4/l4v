@@ -262,7 +262,7 @@ lemma valid_idle_tcb_update:
     tcb_yield_to t = tcb_yield_to t';
     valid_tcb p t' s \<rbrakk>
    \<Longrightarrow> valid_idle (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
-  by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
+  by (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def)
 
 
 lemma tcb_state_same_cte_wp_at:
@@ -612,6 +612,13 @@ lemma set_cap_cur [wp]:
   apply (simp add: set_cap_def set_object_def split_def)
   apply (wp get_object_wp | wpc)+
   apply (clarsimp simp: cur_tcb_def obj_at_def is_tcb)
+  done
+
+lemma set_cap_cur_sc_tcb [wp]:
+  "\<lbrace>cur_sc_tcb\<rbrace> set_cap c p \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
+  apply (simp add: set_cap_def set_object_def )
+  apply (wp get_object_wp | wpc)+
+  apply (fastforce simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
   done
 
 lemma set_cap_live[wp]:
@@ -1265,16 +1272,17 @@ lemma set_cap_valid_pspace:
 
 lemma set_object_idle [wp]:
   "\<lbrace>valid_idle and
-     (\<lambda>s. ko_at ko p s \<and> (\<not>is_tcb ko \<or>
+     (\<lambda>s. \<exists>ko t t' sc n. ko_at ko p s \<and> (p \<noteq> idle_thread_ptr \<and> p \<noteq> idle_sc_ptr \<or>
                    (ko = (TCB t) \<and> ko' = (TCB t') \<and>
-                    tcb_state t = tcb_state t' \<and> tcb_bound_notification t = tcb_bound_notification t'
-                    \<and> tcb_sched_context t = tcb_sched_context t'
-                    \<and> tcb_yield_to t = tcb_yield_to t')))\<rbrace>
+                    tcb_state t = tcb_state t' \<and>
+                    tcb_bound_notification t = tcb_bound_notification t' \<and>
+                    tcb_sched_context t = tcb_sched_context t' \<and>
+                    tcb_yield_to t = tcb_yield_to t') \<or>
+                   (ko = (SchedContext sc n) \<and> ko' = (SchedContext sc n))))\<rbrace>
    set_object p ko'
    \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def is_tcb_def)
+  apply (wpsimp simp: set_object_def)
+  apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
 lemma set_cap_idle[wp]:
@@ -1699,8 +1707,17 @@ lemma cur_mdb [simp]:
   "cur_tcb (cdt_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
 
-crunch cur[wp]: cap_insert cur_tcb (wp: hoare_drop_imps)
+lemma cur_sc_tcb_mdb [simp]:
+  "cur_sc_tcb (cdt_update f s) = cur_sc_tcb s"
+  by (simp add: cur_sc_tcb_def)
 
+lemma cur_sc_tcb_more_update[iff]:
+  "cur_sc_tcb (trans_state f s) = cur_sc_tcb s"
+  by (simp add: cur_sc_tcb_def)
+
+crunch cur[wp]: cap_insert cur_tcb (wp: hoare_drop_imps)
+crunch cur_sc_tcb[wp]: update_cdt cur_sc_tcb (simp: cur_sc_tcb_def)
+crunch cur_sc_tcb[wp]: cap_insert cur_sc_tcb (wp: hoare_drop_imps)
 
 lemma update_cdt_ifunsafe[wp]:
   "\<lbrace>if_unsafe_then_cap\<rbrace> update_cdt f \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"

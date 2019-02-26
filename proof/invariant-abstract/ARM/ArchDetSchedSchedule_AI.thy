@@ -284,12 +284,13 @@ crunch valid_sched[wp]:
   (wp: mapM_x_wp' mapM_wp')
 
 lemma arch_perform_invocation_valid_sched [wp, DetSchedSchedule_AI_assms]:
-  "\<lbrace>invs and valid_sched and ct_active and valid_arch_inv a\<rbrace>
+  "\<lbrace>invs and valid_sched and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
+    valid_arch_inv a\<rbrace>
      arch_perform_invocation a
    \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   apply (cases a, simp_all add: arch_perform_invocation_def)
-     apply (wp perform_asid_control_invocation_valid_sched | wpc |
-            simp add: valid_arch_inv_def invs_valid_idle)+
+      apply (wpsimp simp: valid_arch_inv_def invs_valid_idle
+                      wp: perform_asid_control_invocation_valid_sched)+
   done
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
@@ -368,7 +369,9 @@ end
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?)
+  case 1 show ?case
+    apply (unfold_locales)
+    by ((fact DetSchedSchedule_AI_assms)+ | wpsimp)+
   qed
 
 context Arch begin global_naming ARM

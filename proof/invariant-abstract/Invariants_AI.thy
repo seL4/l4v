@@ -72,6 +72,8 @@ requalify_facts
   aobj_bits_T
   valid_arch_cap_def2
   idle_global
+  idle_sc_global
+  idle_ptrs_neq
   valid_ipc_buffer_cap_null
   valid_arch_cap_typ
   valid_vspace_obj_typ
@@ -120,9 +122,9 @@ lemmas [simp] =
 
 end
 
-lemmas [intro!] =  idle_global acap_rights_update_id
+lemmas [intro!] =  idle_global idle_sc_global acap_rights_update_id
 
-lemmas [simp] =  acap_rights_update_id state_hyp_refs_update
+lemmas [simp] =  acap_rights_update_id state_hyp_refs_update idle_ptrs_neq
                  tcb_arch_ref_simps hyp_live_tcb_simps hyp_refs_of_simps
 
 (* Checking that vs_lookup notation is installed *)
@@ -1221,8 +1223,10 @@ definition
   "cur_tcb s \<equiv> tcb_at (cur_thread s) s"
 
 definition
-  "cur_sc_tcb s \<equiv> sc_tcb_sc_at (\<lambda>t.
-     scheduler_action s = resume_cur_thread \<longrightarrow> t = Some (cur_thread s)) (cur_sc s) s"
+  "cur_sc_tcb s \<equiv>
+     sc_tcb_sc_at
+       (\<lambda>t. scheduler_action s = resume_cur_thread \<longrightarrow> t = Some (cur_thread s))
+       (cur_sc s) s"
 
 definition
   invs :: "'z::state_ext state \<Rightarrow> bool" where
@@ -1291,7 +1295,7 @@ abbreviation (input)
        and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
-       and valid_replies and cur_tcb"
+       and valid_replies and cur_tcb and cur_sc_tcb"
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Lemmas"
@@ -1785,14 +1789,14 @@ lemma ex_nonz_cap_toE:
   by (fastforce simp: ex_nonz_cap_to_def)
 
 lemma refs_of_live:
-  "refs_of ko \<noteq> {} \<Longrightarrow> live ko"
-  apply (cases ko, simp_all)
-    apply (rename_tac tcb_ext)
-     apply (case_tac "tcb_state tcb_ext", simp_all add: live_def)
-    apply (fastforce simp: get_refs_def)+
-  apply (rename_tac notification)
-  apply (case_tac "ntfn_obj notification", simp_all add: live_ntfn_def)
-   apply (fastforce simp: get_refs_def live_sc_def live_reply_def)+
+  "refs_of ko - {(idle_sc_ptr, TCBSchedContext), (idle_thread_ptr, SCTcb)} \<noteq> {}  \<Longrightarrow> live ko"
+  apply (cases ko;
+         clarsimp simp: get_refs_def live_def live_sc_def live_reply_def live_ntfn_def
+                 split: option.splits)
+    apply fastforce
+   apply fastforce
+  apply (rename_tac notif)
+  apply (case_tac "ntfn_obj notif"; simp)
   done
 
 lemma hyp_refs_of_live:
@@ -1800,7 +1804,10 @@ lemma hyp_refs_of_live:
   by (cases ko, simp_all add: live_def hyp_refs_of_hyp_live)
 
 lemma refs_of_live_obj:
-  "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; refs_of ko = {} \<rbrakk> \<Longrightarrow> False \<rbrakk> \<Longrightarrow> obj_at live p s"
+  "\<lbrakk> obj_at P p s;
+     \<And>ko. \<lbrakk> P ko; refs_of ko - {(idle_sc_ptr, TCBSchedContext), (idle_thread_ptr, SCTcb)} = {} \<rbrakk>
+           \<Longrightarrow> False \<rbrakk>
+   \<Longrightarrow> obj_at live p s"
   by (fastforce simp: obj_at_def intro!: refs_of_live)
 
 lemma hyp_refs_of_live_obj:
@@ -1951,6 +1958,12 @@ lemma idle_no_ex_cap:
   apply (drule bspec, blast)
   apply (clarsimp simp: cap_range_def zobj_refs_to_obj_refs)
   by blast
+
+lemma idle_sc_no_ex_cap:
+  "\<lbrakk>valid_global_refs s; valid_objs s\<rbrakk> \<Longrightarrow>
+   \<not> ex_nonz_cap_to idle_sc_ptr s"
+  by (auto simp: ex_nonz_cap_to_def valid_global_refs_def valid_refs_def2 cte_wp_at_caps_of_state
+                 cap_range_def zobj_refs_to_obj_refs)
 
 lemma caps_of_state_cteD:
   "caps_of_state s p = Some cap \<Longrightarrow> cte_wp_at ((=) cap) p s"
@@ -3463,12 +3476,12 @@ lemmas abs_typ_at_lifts  =
 
 lemma valid_idle_lift:
   assumes "\<And>P t. \<lbrace>idle_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. idle_tcb_at P t\<rbrace>"
+  assumes "\<And>t. \<lbrace>idle_sc_at t\<rbrace> f \<lbrace>\<lambda>_. idle_sc_at t\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
   shows "\<lbrace>valid_idle\<rbrace> f \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   apply (simp add: valid_idle_def)
   apply (rule hoare_lift_Pf [where f="idle_thread"])
-   apply (rule hoare_vcg_conj_lift)
-    apply (rule assms)+
+   apply (rule hoare_vcg_conj_lift | rule assms)+
   done
 
 
@@ -3846,9 +3859,17 @@ lemma cur_tcb_revokable [iff]:
   "cur_tcb (is_original_cap_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
 
+lemma cur_sc_tcb_revokable [iff]:
+  "cur_sc_tcb (is_original_cap_update f s) = cur_sc_tcb s"
+  by (simp add: cur_sc_tcb_def sc_tcb_sc_at_def)
+
 lemma cur_tcb_arch [iff]:
   "cur_tcb (arch_state_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
+
+lemma cur_sc_tcb_arch [iff]:
+  "cur_sc_tcb (arch_state_update f s) = cur_sc_tcb s"
+  by (simp add: cur_sc_tcb_def sc_tcb_sc_at_def)
 
 lemma invs_valid_global_objs[elim!]:
   "invs s \<Longrightarrow> valid_global_objs s"

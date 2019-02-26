@@ -148,8 +148,9 @@ lemma invoke_untyped_etcb_at [DetSchedAux_AI_assms]:
 
 lemma invoke_untyped_bound_sc_tcb_at[wp,DetSchedAux_AI_assms]:
   "\<lbrace>invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
-and bound_sc_tcb_at Q t
-         and ct_active and valid_untyped_inv ui\<rbrace>
+    and bound_sc_tcb_at Q t
+    and ct_active and valid_untyped_inv ui
+    and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      invoke_untyped ui
    \<lbrace>\<lambda>rv. \<lambda>s . bound_sc_tcb_at Q t s\<rbrace>"
   apply (rule hoare_pre, rule invoke_untyped_Q,
@@ -272,8 +273,8 @@ lemma sym_ref_tcb_sc: "\<lbrakk> sym_refs (state_refs_of s); kheap s tp = Some (
 
 lemma invoke_untyped_active_sc_tcb_at[wp,DetSchedAux_AI_assms]:
   "\<lbrace>invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
-and active_sc_tcb_at t
-         and ct_active and valid_untyped_inv ui\<rbrace>
+    and active_sc_tcb_at t
+    and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_untyped_inv ui\<rbrace>
      invoke_untyped ui
    \<lbrace>\<lambda>rv. \<lambda>s :: det_ext state . active_sc_tcb_at t s\<rbrace>"
   apply (rule hoare_pre, rule invoke_untyped_Q, (wp init_arch_objects_wps | simp)+)
@@ -300,7 +301,8 @@ and active_sc_tcb_at t
   apply clarsimp
   apply (frule invs_iflive)
   apply (erule (1) if_live_then_nonz_capD2)
-  apply (clarsimp simp: live_def live_sc_def)
+  apply (clarsimp simp: live_def live_sc_def valid_idle_def pred_tcb_at_def obj_at_def
+                 dest!: invs_valid_idle)
   done
 
 lemma retype_region_budget_sufficient:
@@ -332,7 +334,8 @@ lemma reset_untyped_cap_budget_sufficient:
 
 lemma invoke_untyped_budget_sufficient[wp,DetSchedAux_AI_assms]:
   "\<lbrace>invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and
-       budget_sufficient t and ct_active and valid_untyped_inv ui\<rbrace>
+    budget_sufficient t and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
+    valid_untyped_inv ui\<rbrace>
      invoke_untyped ui
    \<lbrace>\<lambda>rv. \<lambda>s :: det_ext state . budget_sufficient t s\<rbrace>"
   apply (rule hoare_pre, rule invoke_untyped_Q,
@@ -358,7 +361,8 @@ lemma invoke_untyped_budget_sufficient[wp,DetSchedAux_AI_assms]:
   apply clarsimp
   apply (frule invs_iflive)
   apply (erule (1) if_live_then_nonz_capD2)
-  apply (clarsimp simp: live_def live_sc_def)
+  apply (clarsimp simp: live_def live_sc_def valid_idle_def pred_tcb_at_def obj_at_def
+                 dest!: invs_valid_idle)
   done
 
 lemma set_cap_obj_at_impossible_cur_time:
@@ -456,8 +460,8 @@ lemma reset_untyped_cap_budget_ready:
 
 lemma invoke_untyped_budget_ready[wp,DetSchedAux_AI_assms]:
   "\<lbrace>invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and
-budget_ready t
-         and ct_active and valid_untyped_inv ui\<rbrace>
+    budget_ready t and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
+    valid_untyped_inv ui\<rbrace>
      invoke_untyped ui
    \<lbrace>\<lambda>rv. \<lambda>s :: det_ext state . budget_ready t s\<rbrace>"
   apply (rule hoare_pre, rule invoke_untyped_Q,
@@ -483,7 +487,8 @@ budget_ready t
   apply clarsimp
   apply (frule invs_iflive)
   apply (erule (1) if_live_then_nonz_capD2)
-  apply (clarsimp simp: live_def live_sc_def)
+  apply (clarsimp simp: live_def live_sc_def valid_idle_def pred_tcb_at_def obj_at_def
+                 dest!: invs_valid_idle)
   done
 
 crunch valid_blocked[wp, DetSchedAux_AI_assms]:
@@ -531,7 +536,7 @@ lemma perform_asid_control_etcb_at:"\<lbrace>etcb_at P t::det_ext state \<Righta
 
 lemma perform_asid_control_invocation_bound_sc_tcb_at:
   "\<lbrace>st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and bound_sc_tcb_at P t
-    and ct_active and invs and valid_aci aci\<rbrace>
+    and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci\<rbrace>
     perform_asid_control_invocation aci
   \<lbrace>\<lambda>_. bound_sc_tcb_at P t::det_ext state \<Rightarrow> _\<rbrace>"
   including no_pre
@@ -616,7 +621,7 @@ lemma active_sc_tcb_at_clear_um[iff]:
 
 lemma perform_asid_control_invocation_active_sc_tcb_at:
   "\<lbrace>st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and active_sc_tcb_at t
-    and ct_active and invs and valid_aci aci\<rbrace>
+    and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci\<rbrace>
     perform_asid_control_invocation aci
   \<lbrace>\<lambda>_. active_sc_tcb_at t :: det_ext state \<Rightarrow> _\<rbrace>"
   including no_pre
@@ -690,8 +695,10 @@ lemma perform_asid_control_invocation_active_sc_tcb_at:
   apply (frule invs_iflive)
   apply (frule invs_sym_refs)
   apply (drule (2) sym_ref_tcb_sc, clarsimp)
-  apply (erule_tac p=scp in if_live_then_nonz_capD2)
-   by (simp add: live_def live_sc_def)+
+  apply (erule_tac p=scp in if_live_then_nonz_capD2, fastforce)
+  apply (clarsimp simp: live_def live_sc_def valid_idle_def pred_tcb_at_def obj_at_def
+                 dest!: invs_valid_idle)
+  done
 
 lemma is_refill_sufficient_detype[simp]:
   "(is_refill_sufficient scp usage (detype S s))
@@ -714,9 +721,8 @@ lemma budget_sufficient_clear_um[iff]:
   "budget_sufficient t (clear_um S s) = budget_sufficient t s" by simp
 
 lemma perform_asid_control_invocation_budget_sufficient:
-  "\<lbrace>st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and
- budget_sufficient t
-    and ct_active and invs and valid_aci aci\<rbrace>
+  "\<lbrace>st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and budget_sufficient t
+    and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci\<rbrace>
     perform_asid_control_invocation aci
   \<lbrace>\<lambda>_. budget_sufficient t :: det_ext state \<Rightarrow> _\<rbrace>"
   including no_pre
@@ -791,8 +797,10 @@ defer
   apply (frule invs_iflive)
   apply (frule invs_sym_refs)
   apply (drule (2) sym_ref_tcb_sc, clarsimp)
-  apply (erule_tac p=scp in if_live_then_nonz_capD2)
-   by (simp add: live_def live_sc_def)+
+  apply (erule_tac p=scp in if_live_then_nonz_capD2, fastforce)
+  apply (clarsimp simp: live_def live_sc_def valid_idle_def pred_tcb_at_def obj_at_def
+                 dest!: invs_valid_idle)
+  done
 
 lemma is_refill_ready_detype[simp]:
   "(is_refill_ready scp (detype S s))
@@ -816,9 +824,8 @@ lemma budget_ready_clear_um[iff]:
 
 
 lemma perform_asid_control_invocation_budget_ready:
-  "\<lbrace>st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and
- budget_ready t
-    and ct_active and invs and valid_aci aci\<rbrace>
+  "\<lbrace>st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t and budget_ready t
+    and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci\<rbrace>
     perform_asid_control_invocation aci
   \<lbrace>\<lambda>_. budget_ready t :: det_ext state \<Rightarrow> _\<rbrace>"
   including no_pre
@@ -893,8 +900,10 @@ defer
   apply (frule invs_iflive)
   apply (frule invs_sym_refs)
   apply (drule (2) sym_ref_tcb_sc, clarsimp)
-  apply (erule_tac p=scp in if_live_then_nonz_capD2)
-   by (simp add: live_def live_sc_def)+
+  apply (erule_tac p=scp in if_live_then_nonz_capD2, fastforce)
+  apply (clarsimp simp: live_def live_sc_def valid_idle_def pred_tcb_at_def obj_at_def
+                 dest!: invs_valid_idle)
+  done
 
 crunches perform_asid_control_invocation
 for ct[wp]: "\<lambda>s. P (cur_thread s)"
@@ -910,25 +919,28 @@ and release_queue[wp]: "\<lambda>s :: det_ext state. P (release_queue s)"
  (wp: crunch_wps simp: detype_def wrap_ext_det_ext_ext_def cap_insert_ext_def ignore: freeMemory)
 
 lemma perform_asid_control_invocation_valid_sched:
-  "\<lbrace>ct_active and invs and valid_aci aci and valid_sched and valid_idle\<rbrace>
+  "\<lbrace>ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci and
+    valid_sched and valid_idle\<rbrace>
      perform_asid_control_invocation aci
    \<lbrace>\<lambda>_. valid_sched::det_ext state \<Rightarrow> _\<rbrace>"
   apply (rule hoare_pre)
-   apply (rule_tac I="invs and ct_active and valid_aci aci" in valid_sched_tcb_state_preservation_gen)
-          apply (wp perform_asid_control_invocation_st_tcb_at)
-          apply simp
-         apply (wpsimp wp: perform_asid_control_etcb_at
-                           perform_asid_control_invocation_budget_sufficient
-                           perform_asid_control_invocation_budget_ready
-                           perform_asid_control_invocation_active_sc_tcb_at)+
+   apply (rule_tac I="invs and ct_active and
+                      (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_aci aci"
+          in valid_sched_tcb_state_preservation_gen)
+            apply (wp perform_asid_control_invocation_st_tcb_at)
+            apply simp
+           apply (wpsimp wp: perform_asid_control_etcb_at
+                             perform_asid_control_invocation_budget_sufficient
+                             perform_asid_control_invocation_budget_ready
+                             perform_asid_control_invocation_active_sc_tcb_at)+
     apply (rule hoare_strengthen_post, rule aci_invs)
     apply (simp add: invs_def valid_state_def)
    apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s"])
     apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_domain s"])
      apply (rule hoare_lift_Pf[where f="\<lambda>s. idle_thread s"])
-     apply (rule hoare_lift_Pf[where f="\<lambda>s. release_queue s"])
-      apply wp+
-  apply simp
+      apply (rule hoare_lift_Pf[where f="\<lambda>s. release_queue s"])
+       apply wp+
+  apply auto
   done
 
 crunch valid_ready_qs[wp]: init_arch_objects "valid_ready_qs :: det_ext state \<Rightarrow> _"
@@ -1010,15 +1022,18 @@ lemmas tcb_sched_action_valid_idle_etcb
     = ARM.tcb_sched_action_valid_idle_etcb
 
 global_interpretation DetSchedAux_AI_det_ext?: DetSchedAux_AI_det_ext
-  proof goal_cases
+proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedAux_AI_assms)?)
+  case 1 show ?case
+    apply (unfold_locales)
+                apply (fact DetSchedAux_AI_assms | wpsimp)+
+    done
   qed
 
 global_interpretation DetSchedAux_AI?: DetSchedAux_AI
   proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedAux_AI_assms)?)
+    interpret Arch .
+    case 1 show ?case by (unfold_locales; (fact DetSchedAux_AI_assms)?)
   qed
 
 end

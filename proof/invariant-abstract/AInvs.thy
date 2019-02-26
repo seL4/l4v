@@ -26,11 +26,26 @@ lemma pred_tcb_at_upd_apply:
   pred_tcb_at proj P t (s\<lparr>kheap := (kheap s)(t := p' t)\<rparr>)"
   by (simp add: pred_tcb_at_def obj_at_def)
 
+crunches thread_set
+for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+
+lemma thread_set_tcb_arch_is_schedulable_bool:
+  "\<lbrace>\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
+   thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set us (tcb_arch tcb)\<rparr>) t
+   \<lbrace>\<lambda>rv s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>"
+  apply (simp add: thread_set_def)
+  apply (rule hoare_seq_ext[OF _ assert_get_tcb_ko'])
+  apply (wpsimp simp: set_object_def)
+  apply (fastforce simp: is_schedulable_bool_def test_sc_refill_max_def get_tcb_def ko_atD
+                         in_release_queue_def
+                  split: option.splits )
+  done
 
 text {* The top-level invariance *}
 
 lemma akernel_invs:
-  "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
+  "\<lbrace>invs and (\<lambda>s. (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and> scheduler_action s = resume_cur_thread \<and>
+    is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)\<rbrace>
   (call_kernel e)
   \<lbrace>\<lambda>rv s. (invs s \<and> (ct_running s \<or> ct_idle s))\<rbrace>"
   unfolding call_kernel_def
@@ -58,13 +73,14 @@ lemma thread_set_ct_in_state:
   done
 
 lemma kernel_entry_invs:
-  "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
+  "\<lbrace>invs and (\<lambda>s. (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and> scheduler_action s = resume_cur_thread \<and>
+    is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)\<rbrace>
   (kernel_entry e us) :: (user_context,unit) s_monad
-  \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
+  \<lbrace>\<lambda>rv s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   apply (simp add: kernel_entry_def)
   apply (wp akernel_invs thread_set_invs_trivial thread_set_ct_in_state select_wp
-         ct_running_machine_op static_imp_wp hoare_vcg_disj_lift
-      | clarsimp simp add: tcb_cap_cases_def)+
+            static_imp_wp hoare_vcg_disj_lift thread_set_tcb_arch_is_schedulable_bool
+         | clarsimp simp add: tcb_cap_cases_def)+
   done
 
 (* FIXME: move to Lib.thy *)
@@ -84,14 +100,16 @@ lemma device_update_invs:
   apply (clarsimp cong: device_mem_dom_cong simp:cap_range_respects_device_region_def
               simp del: split_paired_All split_paired_Ex)
   apply (intro conjI)
+     apply fastforce
     apply fastforce
-   apply fastforce
-  apply (clarsimp simp del: split_paired_All split_paired_Ex)
-  apply (drule_tac x = "(a,b)" in spec)
-  apply (erule notE)
-  apply (erule cte_wp_at_weakenE)
-  apply clarsimp
-  by (fastforce split: if_splits) (* takes 20 secs *)
+   apply (clarsimp simp del: split_paired_All split_paired_Ex)
+   apply (drule_tac x = "(a,b)" in spec)
+   apply (erule notE)
+   apply (erule cte_wp_at_weakenE)
+   apply clarsimp
+   apply (fastforce split: if_splits) (* takes 20 secs *)
+  apply (clarsimp simp: cur_sc_tcb_def)
+  done
 
 crunch device_state_inv[wp]: user_memory_update "\<lambda>ms. P (device_state ms)"
 

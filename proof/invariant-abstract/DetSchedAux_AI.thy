@@ -353,7 +353,9 @@ locale DetSchedAux_AI =
     "\<And>P i. \<lbrace>\<lambda>s::'state_ext state. P (cur_thread s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
   assumes invoke_untyped_bound_sc[wp]:
     "\<And>P i t. \<lbrace>\<lambda>s::'state_ext state. (invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
-       and bound_sc_tcb_at P t and ct_active and valid_untyped_inv i) s\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. bound_sc_tcb_at P t s\<rbrace>"
+       and bound_sc_tcb_at P t and ct_active and valid_untyped_inv i
+       and (\<lambda>s::'state_ext state. scheduler_action s = resume_cur_thread)) s\<rbrace>
+       invoke_untyped i \<lbrace>\<lambda>_ s. bound_sc_tcb_at P t s\<rbrace>"
 
 locale DetSchedAux_AI_det_ext = DetSchedAux_AI "TYPE(det_ext)" +
   assumes delete_objects_etcb_at[wp]:
@@ -365,14 +367,18 @@ locale DetSchedAux_AI_det_ext = DetSchedAux_AI "TYPE(det_ext)" +
       \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
   assumes invoke_untyped_active_sc_tcb_at:  (* are the preconditions correct? *)
     "\<And>i t. \<lbrace>\<lambda>s :: det_ext state. (invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
-       and active_sc_tcb_at t and ct_active and valid_untyped_inv i) s\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. active_sc_tcb_at t s\<rbrace>"
+       and active_sc_tcb_at t and ct_active and valid_untyped_inv i
+       and (\<lambda>s. scheduler_action s = resume_cur_thread)) s\<rbrace> invoke_untyped i
+       \<lbrace>\<lambda>_ s. active_sc_tcb_at t s\<rbrace>"
   assumes invoke_untyped_budget_sufficient: (* check precondition *)
     "\<And>t i. \<lbrace>\<lambda>s::det_ext state. (invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
-       and (\<lambda>s. (budget_sufficient t s)) and ct_active and valid_untyped_inv i)s\<rbrace>
+       and (\<lambda>s. (budget_sufficient t s)) and ct_active and valid_untyped_inv i
+       and (\<lambda>s. scheduler_action s = resume_cur_thread)) s\<rbrace>
                  invoke_untyped i \<lbrace>\<lambda>_ s. (budget_sufficient t s)\<rbrace>"
   assumes invoke_untyped_budget_ready: (* check precondition *)
     "\<And>t i. \<lbrace>\<lambda>s::det_ext state. (invs and st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t
-       and (\<lambda>s. (budget_ready t s)) and ct_active and valid_untyped_inv i) s\<rbrace>
+       and (\<lambda>s. (budget_ready t s)) and ct_active and valid_untyped_inv i
+       and (\<lambda>s. scheduler_action s = resume_cur_thread)) s\<rbrace>
                   invoke_untyped i \<lbrace>\<lambda>_ s. (budget_ready t s)\<rbrace>"
   assumes invoke_untyped_cur_domain[wp]:
     "\<And>P i. \<lbrace>\<lambda>s::det_ext state. P (cur_domain s)\<rbrace> invoke_untyped i \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
@@ -681,13 +687,15 @@ lemma valid_idle_etcb_lift:
 context DetSchedAux_AI_det_ext begin
 
 lemma invoke_untyped_valid_sched:
-  "\<lbrace>invs and valid_untyped_inv ui and ct_active and valid_sched and valid_idle \<rbrace>
+  "\<lbrace>invs and valid_untyped_inv ui and ct_active and valid_sched and valid_idle and
+    (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      invoke_untyped ui
    \<lbrace> \<lambda>_ . valid_sched :: det_ext state \<Rightarrow> _ \<rbrace>"
   including no_pre
   apply (rule hoare_pre)
-   apply (rule_tac I="invs and valid_untyped_inv ui and ct_active"
-     in valid_sched_tcb_state_preservation_gen)
+   apply (rule_tac I="invs and valid_untyped_inv ui and ct_active and
+                      (\<lambda>s. scheduler_action s = resume_cur_thread)"
+          in valid_sched_tcb_state_preservation_gen)
             apply (wp invoke_untyped_st_tcb_at)
             apply simp
            apply (wpsimp wp: invoke_untyped_etcb_at invoke_untyped_active_sc_tcb_at
@@ -698,7 +706,7 @@ lemma invoke_untyped_valid_sched:
     apply (rule_tac f="\<lambda>s. x (ready_queues s)" in hoare_lift_Pf)
      apply (rule_tac f="\<lambda>s. xa (cur_domain s)" in hoare_lift_Pf)
       apply wp+
-  apply simp+
+  apply auto
   done
 
 end

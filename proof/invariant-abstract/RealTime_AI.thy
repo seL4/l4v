@@ -23,10 +23,10 @@ lemma set_sched_context_idle_thread[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> set_sched_context ref sc \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
   by (wpsimp simp: set_sched_context_def get_object_def)
 
-lemma set_sched_context_valid_idle[wp]:
-  "\<lbrace>valid_idle\<rbrace> set_sched_context ref sc \<lbrace>\<lambda>_. valid_idle\<rbrace>"
+lemma set_sched_context_valid_idle:
+  "\<lbrace>\<lambda>s. valid_idle s \<and> ref \<noteq> idle_sc_ptr\<rbrace> set_sched_context ref sc \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   apply (wpsimp simp: set_sched_context_def get_object_def)
-  apply (auto simp: obj_at_def is_tcb_def)
+  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
 lemma set_sched_context_valid_irq_handlers[wp]:
@@ -48,10 +48,10 @@ lemma update_sched_context_idle_thread[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> update_sched_context ref f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
   by (wpsimp simp: update_sched_context_def get_object_def)
 
-lemma update_sched_context_valid_idle[wp]:
-  "\<lbrace>valid_idle\<rbrace> update_sched_context ref f \<lbrace>\<lambda>_. valid_idle\<rbrace>"
+lemma update_sched_context_valid_idle:
+  "\<lbrace>\<lambda>s. valid_idle s \<and> ref \<noteq> idle_sc_ptr\<rbrace> update_sched_context ref f \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   apply (wpsimp simp: update_sched_context_def get_object_def)
-  apply (auto simp: obj_at_def is_tcb_def)
+  apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
 lemma update_sched_context_valid_irq_handlers[wp]:
@@ -514,6 +514,10 @@ lemma valid_irq_states_release_queue_update[simp]:
 lemma cur_tcb_ready_queues_update[simp]:
   "cur_tcb (ready_queues_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
+
+lemma cur_sc_tcb_ready_queues_update[simp]:
+  "cur_sc_tcb (ready_queues_update f s) = cur_sc_tcb s"
+  by (simp add: cur_sc_tcb_def)
 
 (* FIXME: move to Invariants_AI *)
 lemma cur_tcb_release_queue_update[simp]:

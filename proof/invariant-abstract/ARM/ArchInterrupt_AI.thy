@@ -77,11 +77,9 @@ lemma maskInterrupt_invs_ARCH[Interrupt_AI_asms]:
   "\<lbrace>invs and (\<lambda>s. \<not>b \<longrightarrow> interrupt_states s irq \<noteq> IRQInactive)\<rbrace>
    do_machine_op (maskInterrupt b irq)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-   apply (simp add: do_machine_op_def split_def maskInterrupt_def)
-   apply wp
-   apply (clarsimp simp: in_monad invs_def valid_state_def all_invs_but_valid_irq_states_for_def
-     valid_irq_states_but_def valid_irq_masks_but_def valid_machine_state_def cur_tcb_def valid_irq_states_def valid_irq_masks_def)
-  done
+  by (wpsimp simp: do_machine_op_def maskInterrupt_def in_monad invs_def valid_state_def
+                   valid_machine_state_def cur_tcb_def cur_sc_tcb_def valid_irq_states_def
+                   valid_irq_masks_def)
 
 lemma no_cap_to_obj_with_diff_IRQHandler_ARCH[Interrupt_AI_asms]:
   "no_cap_to_obj_with_diff_ref (IRQHandlerCap irq) S = \<top>"

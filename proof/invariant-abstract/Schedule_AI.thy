@@ -15,7 +15,6 @@ begin
 abbreviation
   "activatable \<equiv> \<lambda>st. runnable st \<or> idle st"
 
-
 locale Schedule_AI =
     fixes state_ext :: "('a::state_ext) itself"
     assumes dmo_mapM_storeWord_0_invs[wp]:
@@ -25,9 +24,18 @@ locale Schedule_AI =
     assumes arch_stt_tcb [wp]:
       "\<And>t'. \<lbrace>tcb_at t'\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. (tcb_at t' :: 'a state \<Rightarrow> bool)\<rbrace>"
     assumes arch_stt_runnable:
-      "\<And>t. \<lbrace>st_tcb_at runnable t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>r . (st_tcb_at runnable t :: 'a state \<Rightarrow> bool)\<rbrace>"
-    assumes stit_invs [wp]:
-      "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. (invs :: 'a state \<Rightarrow> bool)\<rbrace>"
+      "\<And>t. \<lbrace>st_tcb_at runnable t\<rbrace> arch_switch_to_thread t
+            \<lbrace>\<lambda>r . (st_tcb_at runnable t :: 'a state \<Rightarrow> bool)\<rbrace>"
+    assumes arch_stt_scheduler_action:
+      "\<And>t'. \<lbrace>\<lambda>s::'a state. P (scheduler_action s)\<rbrace>
+             arch_switch_to_thread t' \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+    assumes arch_stit_invs [wp]:
+      "\<And>t'. \<lbrace>invs\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. (invs :: 'a state \<Rightarrow> bool)\<rbrace>"
+    assumes arch_stit_tcb [wp]:
+      "\<And>t'. \<lbrace>tcb_at t\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. (tcb_at t :: 'a state \<Rightarrow> bool)\<rbrace>"
+    assumes arch_stit_scheduler_action:
+      "\<And>t'. \<lbrace>\<lambda>s::'a state. P (scheduler_action s)\<rbrace>
+             arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
     assumes stit_activatable:
       "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . (ct_in_state activatable :: 'a state \<Rightarrow> bool)\<rbrace>"
 
@@ -92,11 +100,6 @@ lemma valid_irq_states_cur_thread_update[simp]:
   "valid_irq_states (cur_thread_update f s) = valid_irq_states s"
   by(simp add: valid_irq_states_def)
 
-lemma sct_invs:
-  "\<lbrace>invs and tcb_at t\<rbrace> modify (cur_thread_update (%_. t)) \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by wp (clarsimp simp add: invs_def cur_tcb_def valid_state_def valid_idle_def
-                            valid_irq_node_def valid_machine_state_def)
-
 lemma storeWord_valid_irq_states:
   "\<lbrace>\<lambda>m. valid_irq_states (s\<lparr>machine_state := m\<rparr>)\<rbrace> storeWord x y
    \<lbrace>\<lambda>a b. valid_irq_states (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
@@ -126,23 +129,6 @@ lemma (in Schedule_AI) stt_tcb [wp]:
   apply (wp hoare_drop_imps | simp)+
    done
 
-lemma (in Schedule_AI) stt_invs [wp]:
-  "\<lbrace>invs :: 'a state \<Rightarrow> bool\<rbrace> switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: switch_to_thread_def)
-  apply wp
-     apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-    apply (rule_tac Q="\<lambda>_. invs and tcb_at t'" in hoare_strengthen_post, wp)
-    apply (clarsimp simp: invs_def valid_state_def valid_idle_def
-                          valid_irq_node_def valid_machine_state_def)
-              apply (fastforce simp: cur_tcb_def obj_at_def
-                               elim: valid_pspace_eqI ifunsafe_pspaceI)
-             apply wp+
-     apply (wp hoare_drop_imp hoare_vcg_all_lift)
-    apply wp+
-  apply clarsimp
-  apply (simp add: is_tcb_def)
-  done
-
 lemma (in Schedule_AI) stt_activatable:
   "\<lbrace>st_tcb_at runnable t\<rbrace> switch_to_thread t \<lbrace>\<lambda>rv . (ct_in_state activatable :: 'a state \<Rightarrow> bool) \<rbrace>"
   apply (simp add: switch_to_thread_def)
@@ -153,13 +139,6 @@ lemma (in Schedule_AI) stt_activatable:
    apply (wp hoare_drop_imp)+
   apply assumption
   done
-
-
-lemma invs_upd_cur_valid:
-  "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. invs\<rbrace>; \<lbrace>Q\<rbrace> f \<lbrace>\<lambda>rv. tcb_at thread\<rbrace>\<rbrakk>
-    \<Longrightarrow> \<lbrace>P and Q\<rbrace> f \<lbrace>\<lambda>rv s. invs (s\<lparr>cur_thread := thread\<rparr>)\<rbrace>"
-  by (fastforce simp: valid_def invs_def valid_state_def cur_tcb_def valid_machine_state_def)
-
 
 (* FIXME move *)
 lemma pred_tcb_weaken_strongerE:

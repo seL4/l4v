@@ -640,7 +640,7 @@ lemma max_index_upd_no_cap_to:
 
 lemma perform_asid_control_invocation_st_tcb_at:
   "\<lbrace>st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t
-    and ct_active and invs and valid_aci aci\<rbrace>
+    and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci\<rbrace>
     perform_asid_control_invocation aci
   \<lbrace>\<lambda>y. st_tcb_at P t\<rbrace>"
   including no_pre
@@ -729,7 +729,8 @@ lemma aci_invs':
   assumes retype_region_Q[wp]:"\<And>a b c d e. \<lbrace>Q\<rbrace> retype_region a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes set_cap_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_cap a b \<lbrace>\<lambda>_.Q\<rbrace>"
   shows
-  "\<lbrace>invs and Q and ct_active and valid_aci aci\<rbrace> perform_asid_control_invocation aci \<lbrace>\<lambda>y s. invs s \<and> Q s\<rbrace>"
+  "\<lbrace>invs and Q and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_aci aci\<rbrace>
+   perform_asid_control_invocation aci \<lbrace>\<lambda>y s. invs s \<and> Q s\<rbrace>"
   proof -
   have cap_insert_invsQ:
        "\<And>cap src dest ap asid.
@@ -867,7 +868,7 @@ qed
 lemmas aci_invs[wp] = aci_invs'[where Q=\<top>,simplified hoare_post_taut, OF refl refl refl TrueI TrueI TrueI,simplified]
 
 lemma invoke_arch_invs[wp]:
-  "\<lbrace>invs and ct_active and valid_arch_inv ai\<rbrace>
+  "\<lbrace>invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_arch_inv ai\<rbrace>
    arch_perform_invocation ai
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv_def arch_perform_invocation_def)
@@ -1568,7 +1569,7 @@ crunch pred_tcb_at: perform_page_table_invocation, perform_page_invocation,
 
 
 lemma arch_pinv_st_tcb_at:
-  "\<lbrace>invs and valid_arch_inv ai and ct_active and
+  "\<lbrace>invs and valid_arch_inv ai and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
     st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t\<rbrace>
      arch_perform_invocation ai
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"

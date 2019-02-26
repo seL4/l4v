@@ -9,7 +9,7 @@
  *)
 
 theory Detype_AI
-imports "./$L4V_ARCH/ArchRetype_AI"
+imports "./$L4V_ARCH/ArchRetype_AI" IpcCancel_AI
 begin
 
 context begin interpretation Arch .
@@ -300,6 +300,8 @@ lemma valid_ioc_clear_um[iff]:
 lemma cur_tcb_clear_um[iff]: "cur_tcb (clear_um S s) = cur_tcb s"
   by (simp add: clear_um_def cur_tcb_def)
 
+lemma cur_sc_tcb_clear_um[iff]: "cur_sc_tcb (clear_um S s) = cur_sc_tcb s"
+  by (simp add: clear_um_def cur_sc_tcb_def)
 
 lemma untyped_children_in_mdb_clear_um[iff]:
   "untyped_children_in_mdb (clear_um S s) = untyped_children_in_mdb s"
@@ -384,13 +386,39 @@ lemma ifunsafe: "if_unsafe_then_cap s"
 lemma globals: "valid_global_refs s"
   using invs by (simp add: invs_def valid_state_def)
 
+lemma live_idle_untyped_range:
+  "obj_at live p s \<or> p = idle_sc_ptr \<or> p = idle_thread_ptr \<Longrightarrow> p \<notin> untyped_range cap"
+  apply (elim disjE)
+    apply (clarsimp simp: live_okE)
+   apply (insert invs_valid_global_refs[OF invs])
+   apply (drule valid_global_refsD[where r=idle_sc_ptr, OF _ cap])
+    apply (simp add: idle_sc_global)
+   apply (clarsimp simp: cap_range_def)
+  apply (drule valid_global_refsD[where r=idle_thread_ptr, OF _ cap])
+   apply (insert invs_valid_idle[OF invs])
+   apply (clarsimp simp: valid_idle_def)
+   apply (insert idle_global[where s = s])
+   apply (auto simp: cap_range_def)
+  done
 
-(* this is should be true *)
-lemma state_refs: "state_refs_of (detype (untyped_range cap) s) = state_refs_of s"
-  apply (rule ext, clarsimp simp add: state_refs_of_detype)
-  apply (rule sym, rule equals0I, drule state_refs_of_elemD)
-  apply (drule live_okE, rule refs_of_live, clarsimp)
-  apply simp
+lemma untyped_range_live_idle:
+  "p \<in> untyped_range cap \<Longrightarrow> \<not> (obj_at live p s \<or> p = idle_sc_ptr \<or> p = idle_thread_ptr)"
+  by (fastforce simp: live_idle_untyped_range)
+
+lemma state_refs: "(state_refs_of (detype (untyped_range cap) s)) = (state_refs_of s)"
+  apply (rule ext)
+  apply (clarsimp simp: state_refs_of_detype)
+  apply (drule untyped_range_live_idle)
+  apply (clarsimp simp: state_refs_of_def split: option.splits)
+  apply (insert invs)
+  apply (rename_tac ko)
+  apply (case_tac ko; simp)
+      apply (fastforce simp: live_def obj_at_def invs_def valid_state_def valid_pspace_def
+                             thread_not_idle_implies_sc_not_idle)
+     apply (auto simp: invs_def valid_state_def valid_pspace_def valid_idle_def obj_at_def
+                       ntfn_q_refs_of_def live_sc_def live_def live_reply_def live_ntfn_def
+                split: ntfn.splits
+                dest!: sc_tcb_not_idle_thread)
   done
 
 lemma idle: "idle_thread (detype (untyped_range cap) s) = idle_thread s"
@@ -449,12 +477,13 @@ end
 locale Detype_AI_2 =
   fixes cap ptr s
   assumes detype_invariants:
-    "\<lbrakk> cte_wp_at ((=) cap) ptr s
-     ; is_untyped_cap cap
-     ; descendants_range cap ptr s
-     ; invs s
-     ; untyped_children_in_mdb s
-     ; ct_active s
+    "\<lbrakk> cte_wp_at ((=) cap) ptr s;
+       is_untyped_cap cap;
+       descendants_range cap ptr s;
+       invs s;
+       untyped_children_in_mdb s;
+       ct_active s;
+       scheduler_action s = resume_cur_thread
       \<rbrakk>
      \<Longrightarrow> (invs and untyped_children_in_mdb)
                (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
@@ -559,7 +588,12 @@ lemma hyprefsym : "sym_refs (state_hyp_refs_of s)"
   using invs by (simp add: invs_def valid_state_def valid_pspace_def)
 
 lemma refs_of: "\<And>obj p. \<lbrakk> ko_at obj p s \<rbrakk> \<Longrightarrow> refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
- by (fastforce intro: refs_of_live dest!: sym_refs_ko_atD[OF _ refsym] live_okE)
+  apply (case_tac "p = idle_sc_ptr \<or> p = idle_thread_ptr")
+   apply (insert invs_valid_idle[OF invs])
+   apply (fastforce simp: valid_idle_def obj_at_def default_sched_context_def
+                          live_idle_untyped_range pred_tcb_at_def)
+  apply (fastforce intro: refs_of_live dest!: sym_refs_ko_atD[OF _ refsym] live_okE)
+  done
 
 lemma refs_of2: "\<And>obj p. kheap s p = Some obj
                      \<Longrightarrow> refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
@@ -698,12 +732,25 @@ lemma pspace_distinct_detype[detype_invs_lemmas]: "pspace_distinct (detype (unty
 lemma cut_tcb_detype[detype_invs_lemmas]:
   assumes ct_act: "ct_active s"
   shows "cur_tcb (detype (untyped_range cap) s)" (* CT_ACT *)
-    apply (insert ct_act invs)
-    apply (drule tcb_at_invs)
-    apply (simp add: cur_tcb_def ct_in_state_def)
-    apply (clarsimp simp: detype_def pred_tcb_at_def)
-    apply (fastforce simp: live_def dest: live_okE)
-    done
+  apply (insert ct_act invs)
+  apply (drule tcb_at_invs)
+  apply (simp add: cur_tcb_def ct_in_state_def)
+  apply (clarsimp simp: detype_def pred_tcb_at_def)
+  apply (fastforce simp: live_def dest: live_okE)
+  done
+
+lemma cut_sc_tcb_detype[detype_invs_lemmas]:
+  assumes ct_act: "ct_active s \<and> scheduler_action s = resume_cur_thread"
+  shows "cur_sc_tcb (detype (untyped_range cap) s)" (* CT_ACT *)
+  apply (insert ct_act invs)
+  apply (clarsimp simp: detype_def)
+  apply (clarsimp simp: invs_def cur_sc_tcb_def)
+  apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
+  apply (subgoal_tac "obj_at live (cur_sc s) s")
+   apply (fastforce dest!: untyped_range_live_idle)
+  apply (clarsimp simp: obj_at_def live_def live_sc_def ct_in_state_def pred_tcb_at_def
+                        valid_state_def valid_idle_def)
+  done
 
 lemma live_okE2: "\<And>obj p. \<lbrakk> kheap s p = Some obj; live obj \<rbrakk>
                       \<Longrightarrow> p \<notin> untyped_range cap"
@@ -858,7 +905,7 @@ end
 
 context detype_locale_gen_2 begin
 lemma invariants:
-  assumes ct_act: "ct_active s"
+  assumes ct_act: "ct_active s \<and> scheduler_action s = resume_cur_thread"
   shows "(invs and untyped_children_in_mdb)
          (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
   using detype_invs_lemmas detype_invs_assms ct_act

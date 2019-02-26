@@ -57,7 +57,7 @@ definition all_invs_but_valid_irq_states_for where
   pspace_in_kernel_window and
   cap_refs_in_kernel_window and
   pspace_respects_device_region and
-  cap_refs_respects_device_region and cur_tcb"
+  cap_refs_respects_device_region and cur_tcb and cur_sc_tcb"
 
 
 locale InterruptAcc_AI =
@@ -78,13 +78,13 @@ lemma set_irq_state_invs[wp]:
     \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: set_irq_state_def)
   apply (wp dmo_maskInterrupt_invs)
-  apply (clarsimp simp: invs_def valid_state_def cur_tcb_def valid_mdb_def all_invs_but_valid_irq_states_for_def)
-  apply (simp add: mdb_cte_at_def valid_irq_node_def
-                   valid_irq_handlers_def irq_issued_def)
+  apply (clarsimp simp: invs_def valid_state_def cur_tcb_def cur_sc_tcb_def sc_tcb_sc_at_def
+                        valid_mdb_def all_invs_but_valid_irq_states_for_def mdb_cte_at_def
+                        valid_irq_node_def valid_irq_handlers_def irq_issued_def)
   apply (rule conjI)
-   apply (clarsimp simp: cap_irqs_def cap_irq_opt_def
-              split: cap.split_asm)
-  apply(clarsimp simp: valid_machine_state_def valid_irq_states_but_def valid_irq_masks_but_def, blast elim: valid_irq_statesE)
+   apply (clarsimp simp: cap_irqs_def cap_irq_opt_def split: cap.split_asm)
+  apply (clarsimp simp: valid_machine_state_def valid_irq_states_but_def valid_irq_masks_but_def,
+            blast elim: valid_irq_statesE)
   done
 
 end

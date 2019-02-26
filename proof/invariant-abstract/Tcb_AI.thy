@@ -181,8 +181,11 @@ lemma suspend_nonz_cap_to_tcb:
 lemma readreg_invs:
   "\<lbrace>invs and tcb_at src and ex_nonz_cap_to src\<rbrace>
      invoke_tcb (tcb_invocation.ReadRegisters src susp n arch)
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp wp: suspend_invs)
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (wpsimp wp: suspend_invs)
+  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_idle_def
+                 dest!: idle_no_ex_cap)
+  done
 
 lemma (in Tcb_AI_1) writereg_invs:
   "\<lbrace>(invs::'state_ext state \<Rightarrow> bool) and tcb_at dest and ex_nonz_cap_to dest\<rbrace>
@@ -195,8 +198,11 @@ lemma (in Tcb_AI_1) copyreg_invs:
     ex_nonz_cap_to src\<rbrace>
      invoke_tcb (tcb_invocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp simp: if_apply_def2
-               wp: mapM_x_wp' suspend_invs suspend_nonz_cap_to_tcb static_imp_wp)
+  apply (wpsimp simp: if_apply_def2
+                  wp: mapM_x_wp' suspend_invs suspend_nonz_cap_to_tcb static_imp_wp)
+  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_idle_def
+                 dest!: idle_no_ex_cap)
+  done
 
 lemma out_invs_trivialT:
   assumes x: "\<And>tcb v. \<forall>(getF, setF)\<in>ran tcb_cap_cases. getF (fn v tcb) = getF tcb"
@@ -629,6 +635,7 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
             thread_set_mdb
             thread_set_ifunsafe_trivial
             thread_set_cur_tcb
+            thread_set_cur_sc_tcb
             thread_set_zombies_trivial
             thread_set_valid_idle_trivial
             thread_set_global_refs_triv
@@ -717,6 +724,7 @@ lemma set_mcpriority_invs[wp]:
          thread_set_mdb
          thread_set_ifunsafe_trivial
          thread_set_cur_tcb
+         thread_set_cur_sc_tcb
          thread_set_zombies_trivial
          thread_set_valid_idle_trivial
          thread_set_global_refs_triv
@@ -732,7 +740,6 @@ lemma set_mcpriority_invs[wp]:
       | simp add: ran_tcb_cap_cases invs_def valid_state_def valid_pspace_def
       | rule conjI
       | erule disjE)+
-
 
 context Tcb_AI begin
 
@@ -863,6 +870,10 @@ lemma set_ntfn_obj_ref_valid_replies[wp]:
   "set_ntfn_obj_ref update ref new \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp wp: valid_replies_lift)
 
+lemma set_ntfn_obj_ref_cur_sc_tcb[wp]:
+  "set_ntfn_obj_ref update ref new \<lbrace>cur_sc_tcb\<rbrace>"
+  by (wpsimp simp: update_sk_obj_ref_def)
+
 lemma bind_notification_invs:
   "\<lbrace>bound_tcb_at ((=) None) tcbptr
     and obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_bound_tcb ntfn = None
@@ -891,13 +902,12 @@ lemma (in Tcb_AI) tcbinv_invs:
      invoke_tcb ti
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac ti, simp_all only:)
-(*
-         apply ((wp writereg_invs readreg_invs copyreg_invs tc_invs
-              | simp
-              | clarsimp simp: invs_def valid_state_def valid_pspace_def
-                        dest!: idle_no_ex_cap
-                        split: option.split
-              | rule conjI)+)[6]
+         apply ((wp writereg_invs readreg_invs copyreg_invs tc_invs suspend_invs
+                | simp add: valid_idle_def
+                | clarsimp simp: invs_def valid_state_def valid_pspace_def
+                          dest!: idle_no_ex_cap
+                          split: option.split
+                | rule conjI)+)[6]
    apply (rename_tac option)
    apply (case_tac option, simp_all)
     apply (rule hoare_pre)
@@ -906,23 +916,6 @@ lemma (in Tcb_AI) tcbinv_invs:
    apply clarsimp
   apply wpsimp
   done
-*)
-        apply ((wp writereg_invs readreg_invs copyreg_invs tc_invs suspend_invs
-             | simp
-             | clarsimp simp: invs_def valid_state_def valid_pspace_def
-                       dest!: idle_no_ex_cap
-                       split: option.split
-             | rule conjI)+)[6]
-  apply (rename_tac option)
-  apply (case_tac option, simp_all)
-   apply (rule hoare_pre)
-    apply ((wp unbind_notification_invs get_simple_ko_wp | simp)+)[2]
-  apply (wp bind_notification_invs)
-  apply clarsimp
-  apply wpsimp
-  done
-
-
 
 lemma range_check_inv[wp]:
   "\<lbrace>P\<rbrace> range_check a b c \<lbrace>\<lambda>rv. P\<rbrace>"
