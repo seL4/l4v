@@ -628,7 +628,8 @@ where
   | "valid_sched_context_inv (InvokeSchedContextYieldTo scptr args)
      = (\<lambda>s. ex_nonz_cap_to scptr s
             \<and> bound_yt_tcb_at ((=) None) (cur_thread s) s
-            \<and> sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scptr s)"
+            \<and> sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scptr s
+(*            \<and> (\<forall>t\<in>set (release_queue s). bound_sc_tcb_at (\<lambda>p. p \<noteq> Some scptr) t s)*))"
 
 definition
   valid_refills_number :: "nat \<Rightarrow> nat \<Rightarrow> bool"
@@ -1779,6 +1780,8 @@ crunches set_thread_state_act
   for st_tcb_at_tc[wp]: "\<lambda>s. st_tcb_at P (cur_thread s) s"
   and bound_yt_tcb_at_ct[wp]: "\<lambda>s. bound_yt_tcb_at P (cur_thread s) s"
   and sc_tcb_sc_at_ct[wp]: "\<lambda>s. sc_tcb_sc_at (P (cur_thread s)) t s"
+  and release_queue[wp]: "\<lambda>s. P (release_queue s)"
+  and not_linked[wp]: "\<lambda>s. \<forall>t\<in> set (release_queue s). bound_sc_tcb_at P t s"
 
 context begin
 

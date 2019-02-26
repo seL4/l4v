@@ -38,13 +38,20 @@ lemma set_pd_budget_ready[wp]:
   apply (intro conjI impI allI; clarsimp elim!: rsubst[where P=P])
   by (intro iffI; fastforce simp: is_refill_ready_def obj_at_def split: option.splits if_split_asm)
 
+lemma set_pd_tcb_ready_time[wp]:
+  "\<lbrace>\<lambda>s. P (tcb_ready_time t s)\<rbrace> set_pd param_a param_b \<lbrace>\<lambda>_ s. P (tcb_ready_time t s)\<rbrace>"
+  apply (clarsimp simp: set_pd_def)
+  apply (wpsimp simp: set_object_def  pred_tcb_at_def obj_at_def wp: get_object_wp)
+  apply (clarsimp elim!: rsubst[where P=P])
+  by (clarsimp simp: tcb_ready_time_def get_tcb_def
+              split: option.splits if_split_asm kernel_object.splits)
+
 crunches init_arch_objects
 for exst[wp]: "\<lambda>s. P (exst s)"
-and ct[wp]:  "\<lambda>s. P (cur_thread s)"
-and st_tcb_at[wp]:  "st_tcb_at Q t"
 and active_sc_tcb_at[wp]:  "\<lambda>s. P (active_sc_tcb_at t s)"
 and budget_sufficient[wp]:  "\<lambda>s. P (budget_sufficient t s)"
 and budget_ready[wp]:  "\<lambda>s. P (budget_ready t s)"
+and tcb_ready_time[wp]:  "\<lambda>s. P (tcb_ready_time t s)"
  (wp: mapM_x_wp' crunch_wps hoare_unless_wp)
 
 crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s)"
@@ -68,11 +75,6 @@ crunch scheduler_action[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s::d
     ignore: freeMemory)
 
 crunch cur_domain[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s::det_ext state. P (cur_domain s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
-      simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym
-    ignore: freeMemory)
-
-crunch release_queue[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s::det_ext state. P (release_queue s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
       simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym
     ignore: freeMemory)
@@ -495,33 +497,6 @@ crunch valid_blocked[wp, DetSchedAux_AI_assms]:
   init_arch_objects "valid_blocked::det_ext state \<Rightarrow> _"
   (wp: valid_blocked_lift set_cap_typ_at)
 
-crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s)"
-  (wp: crunch_wps dxo_wp_weak simp: crunch_simps do_machine_op_def detype_def mapM_x_defsym
-   ignore: freeMemory)
-
-crunch ready_queues[wp, DetSchedAux_AI_assms]:
-  invoke_untyped "\<lambda>s :: det_ext state. P (ready_queues s)"
-  (wp: crunch_wps
-   simp: detype_def wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory)
-
-crunch release_queue[wp, DetSchedAux_AI_assms]:
-  invoke_untyped "\<lambda>s :: det_ext state. P (release_queue s)"
-  (wp: crunch_wps
-   simp: detype_def wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory)
-
-crunch scheduler_action[wp, DetSchedAux_AI_assms]:
-  invoke_untyped "\<lambda>s :: det_ext state. P (scheduler_action s)"
-  (wp: crunch_wps
-   simp: detype_def wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory)
-
-crunch cur_domain[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s :: det_ext state. P (cur_domain s)"
-  (wp: crunch_wps
-   simp: detype_def wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory)
-
 lemma perform_asid_control_etcb_at:"\<lbrace>etcb_at P t::det_ext state \<Rightarrow> _\<rbrace>
           perform_asid_control_invocation aci
           \<lbrace>\<lambda>r s. st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
@@ -906,8 +881,7 @@ defer
   done
 
 crunches perform_asid_control_invocation
-for ct[wp]: "\<lambda>s. P (cur_thread s)"
-and idle_thread[wp]: "\<lambda>s::det_ext state. P (idle_thread s)"
+for idle_thread[wp]: "\<lambda>s::det_ext state. P (idle_thread s)"
 and valid_blocked[wp]: "valid_blocked::det_state \<Rightarrow> _"
  (wp: static_imp_wp)
 
@@ -916,7 +890,51 @@ for rqueues[wp]: "\<lambda>s :: det_ext state. P (ready_queues s)"
 and schedact[wp]: "\<lambda>s :: det_ext state. P (scheduler_action s)"
 and cur_domain[wp]: "\<lambda>s :: det_ext state. P (cur_domain s)"
 and release_queue[wp]: "\<lambda>s :: det_ext state. P (release_queue s)"
- (wp: crunch_wps simp: detype_def wrap_ext_det_ext_ext_def cap_insert_ext_def ignore: freeMemory)
+ (wp: crunch_wps simp: crunch_simps detype_def wrap_ext_det_ext_ext_def cap_insert_ext_def
+  ignore: freeMemory)
+(*
+lemma retype_region_budget_ready:
+  "\<lbrace>(\<lambda>s. pspace_no_overlap (up_aligned_area ptr' sz) s \<and>
+      range_cover ptr' sz (obj_bits_api ty us) n \<and>
+      valid_objs s \<and> pspace_aligned s)
+     and (\<lambda>s. P (tcb_ready_time t s))\<rbrace>
+     retype_region ptr' n us ty dev
+   \<lbrace>\<lambda>rv s. P (tcb_ready_time t s)\<rbrace>"
+  apply (simp add: retype_region_def)
+  apply wp
+  apply (clarsimp simp del: fun_upd_apply)
+  apply (blast intro: valid_blocked_fold_update)
+  done
+
+  apply (clarsimp simp: tcb_ready_time_def)
+  apply (wpsimp wp: retype_region_obj_at_other hoare_vcg_ex_lift
+                    retype_region_st_tcb_at)
+  by auto
+
+
+crunches retype_region,delete_objects
+for tcb_ready_time[wp]:  "\<lambda>s::det_state. P (tcb_ready_time t s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma invoke_untyped_tcb_ready_time:
+  "\<lbrace>\<lambda>s::det_state. P (tcb_ready_time t s)\<rbrace>
+    invoke_untyped i
+        \<lbrace>\<lambda>rv s. P (tcb_ready_time t s)\<rbrace>"
+  by wpsimp
+  
+*)
+crunches invoke_untyped
+for tcb_ready_time[wp]:  "\<lambda>s::det_state. P (tcb_ready_time t s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+
+lemma perform_asid_control_invocation_tcb_ready_time[wp]:
+  "\<lbrace>\<lambda>s::det_state. P (tcb_ready_time t s)\<rbrace>
+     perform_asid_control_invocation i
+        \<lbrace>\<lambda>rv s. P (tcb_ready_time t s)\<rbrace>"
+  apply (clarsimp simp: perform_asid_control_invocation_def)
+  apply (wpsimp wp: hoare_drop_imp)
+  done
 
 lemma perform_asid_control_invocation_valid_sched:
   "\<lbrace>ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci and
@@ -932,7 +950,8 @@ lemma perform_asid_control_invocation_valid_sched:
            apply (wpsimp wp: perform_asid_control_etcb_at
                              perform_asid_control_invocation_budget_sufficient
                              perform_asid_control_invocation_budget_ready
-                             perform_asid_control_invocation_active_sc_tcb_at)+
+                             perform_asid_control_invocation_active_sc_tcb_at
+                 | rule release_queue_cmp_lift)+
     apply (rule hoare_strengthen_post, rule aci_invs)
     apply (simp add: invs_def valid_state_def)
    apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s"])
@@ -943,7 +962,8 @@ lemma perform_asid_control_invocation_valid_sched:
   apply auto
   done
 
-crunch valid_ready_qs[wp]: init_arch_objects "valid_ready_qs :: det_ext state \<Rightarrow> _"
+crunches init_arch_objects
+for valid_ready_qs[wp]: "valid_ready_qs :: det_ext state \<Rightarrow> _"
   (wp: valid_ready_qs_lift crunch_wps)
 
 (* FIXME remove duplication *)
@@ -966,9 +986,6 @@ lemma set_asid_pool_active_sc_tcb_at[wp]:
   apply (rule iffI; clarsimp)
   apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
   done
-
-crunch active_sc_tcb_at[wp]: init_arch_objects "active_sc_tcb_at t"
-  (wp: crunch_wps ignore: do_machine_op)
 
 lemma set_pt_budget_ready[wp]:
   "\<lbrace>\<lambda>s. P (budget_ready t s)\<rbrace> set_pt ptr val \<lbrace>\<lambda>_ s. P (budget_ready t s)\<rbrace>"
@@ -1009,6 +1026,9 @@ lemma set_asid_pool_budget_sufficient[wp]:
   apply (rule iffI; clarsimp)
   apply (rule_tac x=scp in exI, clarsimp split: kernel_object.splits)
   done
+
+lemmas invoke_untyped_tcb_ready_time'[wp,DetSchedAux_AI_assms]
+   = release_queue_cmp_lift[OF invoke_untyped_tcb_ready_time]
 
 crunch valid_sched_action[wp]: init_arch_objects "valid_sched_action :: det_ext state \<Rightarrow> _"
   (wp: valid_sched_action_lift)

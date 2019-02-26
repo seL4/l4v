@@ -447,10 +447,205 @@ lemma valid_ready_qs_def2:
   apply (fastforce simp: is_etcb_at'_def etcbs_of'_def st_tcb_at_kh_def obj_at_kh_def)
   done
 
+(* release_queue *)
+
+lemma get_tcb_release_queue_update[simp]: "get_tcb t (release_queue_update f s) = get_tcb t s"
+  by (clarsimp simp: get_tcb_def)
+
+lemma get_tcb_scheduler_action_update[simp]: "get_tcb t (scheduler_action_update f s) = get_tcb t s"
+  by (clarsimp simp: get_tcb_def)
+
+lemma get_tcb_cdt_update[simp]: "get_tcb t (cdt_update f s) = get_tcb t s"
+  by (clarsimp simp: get_tcb_def)
+
+lemma refill_ready_tcb_simp0:
+    "refill_ready_tcb t s = ({(True, s)}, False) \<longleftrightarrow>
+       (\<exists>tcb scp sc n.
+        r_time (refill_hd sc) \<le> cur_time s + kernelWCET_ticks \<and>
+        sufficient_refills 0 (sc_refills sc) \<and>
+        tcb_sched_context tcb = Some scp \<and> kheap s t = Some (TCB tcb) \<and>
+        kheap s scp = Some (SchedContext sc n))"
+  apply (rule iffI)
+   apply (clarsimp simp: refill_ready_tcb_def get_tcb_obj_ref_def assert_opt_def thread_get_def
+      gets_the_conv bind_assoc get_def split_def bind_def return_def refill_ready_def get_refills_def
+      simpler_gets_def get_sched_context_def get_object_def assert_def refill_sufficient_def
+      split: if_splits option.splits dest!: get_tcb_SomeD)
+   apply (case_tac y; clarsimp simp: return_def)
+  apply (clarsimp simp: refill_ready_tcb_def get_tcb_obj_ref_def assert_opt_def thread_get_def
+      gets_the_conv bind_assoc get_def split_def bind_def return_def refill_ready_def get_refills_def
+      simpler_gets_def get_sched_context_def get_object_def assert_def refill_sufficient_def
+      split: if_splits option.splits dest!: get_tcb_SomeD)
+  by (intro conjI allI impI; (fastforce simp: get_tcb_rev return_def dest!: get_tcb_SomeD))
+
+lemma refill_ready_tcb_simp0':
+    "refill_ready_tcb t s = ({(False, s)}, False) \<longleftrightarrow>
+       (\<exists>tcb scp sc n.
+        \<not>(r_time (refill_hd sc) \<le> cur_time s + kernelWCET_ticks \<and>
+        sufficient_refills 0 (sc_refills sc)) \<and>
+        tcb_sched_context tcb = Some scp \<and> kheap s t = Some (TCB tcb) \<and>
+        kheap s scp = Some (SchedContext sc n))"
+  apply (rule iffI)
+   apply (clarsimp simp: refill_ready_tcb_def get_tcb_obj_ref_def assert_opt_def thread_get_def
+      gets_the_conv bind_assoc get_def split_def bind_def return_def refill_ready_def get_refills_def
+      simpler_gets_def get_sched_context_def get_object_def assert_def refill_sufficient_def
+      split: if_splits option.splits dest!: get_tcb_SomeD)
+   apply (case_tac y; clarsimp simp: return_def)
+  apply (clarsimp simp: refill_ready_tcb_def get_tcb_obj_ref_def assert_opt_def thread_get_def
+      gets_the_conv bind_assoc get_def split_def bind_def return_def refill_ready_def get_refills_def
+      simpler_gets_def get_sched_context_def get_object_def assert_def refill_sufficient_def
+      split: if_splits option.splits dest!: get_tcb_SomeD)
+  apply (intro conjI allI impI; (fastforce simp: get_tcb_rev return_def dest!: get_tcb_SomeD))
+  done
+
+lemma refill_ready_tcb_simp[simp]:
+    "\<lbrakk> tcb_sched_context tcb = Some scp; kheap s t = Some (TCB tcb);
+        kheap s scp = Some (SchedContext sc n)\<rbrakk> \<Longrightarrow>
+     refill_ready_tcb t s
+      = ({(r_time (refill_hd sc) \<le> cur_time s + kernelWCET_ticks \<and>
+           sufficient_refills 0 (sc_refills sc), s)}, False)"
+  apply (case_tac "r_time (refill_hd sc) \<le> cur_time s + kernelWCET_ticks \<and>
+                   sufficient_refills 0 (sc_refills sc)")
+  apply (clarsimp simp: refill_ready_tcb_simp0 refill_ready_tcb_simp0')
+  apply (simp only:)
+  by (fastforce simp: refill_ready_tcb_simp0')+
+
+definition tcb_ready_time :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> time"
+where
+  "tcb_ready_time t \<equiv>
+     (\<lambda>s. case (get_tcb t s) of
+           Some tcb \<Rightarrow> (case tcb_sched_context tcb of
+                   Some scp \<Rightarrow>  (case kheap s scp of
+                  Some (SchedContext sc x) \<Rightarrow> (r_time (refill_hd sc)))))"
+
+definition scp_ready_time :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> time"
+where
+  "scp_ready_time scp \<equiv>
+     (\<lambda>s. case kheap s scp of
+                  Some (SchedContext sc x) \<Rightarrow> (r_time (refill_hd sc)))"
+
+lemma tcb_ready_time_release_queue_update[simp]:
+  "tcb_ready_time t (s\<lparr>release_queue:=qs\<rparr>) = tcb_ready_time t s"
+  by (clarsimp simp: tcb_ready_time_def split: option.splits)
+
+lemma refill_ready_tcb_simp2:
+  "active_sc_tcb_at t s \<Longrightarrow> budget_sufficient t s \<Longrightarrow>
+         (the (fun_of_m (refill_ready_tcb t) s)) =
+                (tcb_ready_time t s \<le> (cur_time s) + kernelWCET_ticks)"
+  by (auto simp: tcb_ready_time_def fun_of_m_def active_sc_tcb_at_defs get_tcb_rev refill_prop_defs
+          split: option.splits)
+
+lemma refill_ready_tcb_simp3:
+  "\<lbrakk>kheap s t = Some (TCB tcb); tcb_sched_context tcb = Some scp;
+        kheap s scp = Some (SchedContext sc n)\<rbrakk> \<Longrightarrow>
+         (the (fun_of_m (refill_ready_tcb t) s)) =
+                (tcb_ready_time t s \<le> (cur_time s) + kernelWCET_ticks
+                \<and> sufficient_refills 0 (sc_refills sc))"
+  by (auto simp: tcb_ready_time_def fun_of_m_def active_sc_tcb_at_defs
+                 get_tcb_rev refill_prop_defs
+          split: option.splits)
+
+(* tentatively, should be included in valid_release_q
+definition sorted_release_q:: "'z::state_ext state \<Rightarrow> bool"
+where "sorted_release_q \<equiv> (\<lambda>s.  sorted_wrt (\<lambda>t t'. tcb_ready_time t s \<le> tcb_ready_time t' s) (release_queue s))"
+*)
+
+definition tcb_ready_time_kh :: "obj_ref \<Rightarrow> (32 word \<Rightarrow> kernel_object option) \<Rightarrow> time"
+where
+  "tcb_ready_time_kh t kh \<equiv>
+     case kh t of
+       Some (TCB tcb) \<Rightarrow> (case tcb_sched_context tcb of
+                   Some scp \<Rightarrow>  (case kh scp of
+                                    Some (SchedContext sc x) \<Rightarrow> (r_time (refill_hd sc))))"
+
+lemma tcb_ready_time_kh_simp[simp]:
+  "tcb_ready_time_kh t (kheap s) = tcb_ready_time t s"
+  by (fastforce simp: tcb_ready_time_kh_def tcb_ready_time_def obj_at_def get_tcb_rev
+               split: option.splits kernel_object.splits dest!: get_tcb_SomeD)
+
+definition sorted_release_q_2
+where "sorted_release_q_2 queue kh \<equiv>
+     sorted_wrt (\<lambda>t t'. tcb_ready_time_kh t kh \<le> tcb_ready_time_kh t' kh) queue"
+
+abbreviation sorted_release_q :: "'z state \<Rightarrow> bool" where
+  "sorted_release_q s \<equiv> sorted_release_q_2 (release_queue s) (kheap s)"
+
+lemmas sorted_release_q_def = sorted_release_q_2_def
+
+lemma f_sort_snd_zip:
+  "sorted_wrt (\<lambda>x y. f x \<le> f y) ls \<longleftrightarrow> sorted_wrt (\<lambda>x y. snd x \<le> snd y) (zip ls (map f ls))"
+  apply (induction ls; clarsimp)
+  apply (rule iffI; clarsimp simp: zip_map2 split_def)
+  apply (drule_tac x=aa in bspec, simp add: in_set_zip1)
+  apply (simp add: zip_same)
+  apply (drule_tac x="(x,x)" in bspec, simp add: zip_same)
+  by simp
+
+(* FIXME move *)
+definition
+  get_sc :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> sched_context option"
+where
+  "get_sc sc_ref state \<equiv>
+   case kheap state sc_ref of
+      None      \<Rightarrow> None
+    | Some kobj \<Rightarrow> (case kobj of
+        SchedContext sc n \<Rightarrow> Some sc
+      | _       \<Rightarrow> None)"
+
+(* FIXME move *)
+lemma get_sc_rev:
+  "kheap s p = Some (SchedContext sc n)\<Longrightarrow> get_sc p s = Some sc"
+  by (clarsimp simp:get_sc_def)
+
+
+(* FIXME move *)
+lemma get_sc_time_sp:
+  "\<lbrace>P\<rbrace> get_sc_time tp \<lbrace>\<lambda>rv s. P s \<and>
+        rv = (\<lambda>t. tcb_ready_time t s) tp\<rbrace>"
+  apply (simp add: get_sc_time_def get_tcb_sc_def bind_assoc)
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rename_tac scp_opt, case_tac scp_opt; clarsimp simp: assert_opt_def)
+  apply (rename_tac scp)
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (wp return_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_rev get_sc_rev tcb_ready_time_def)
+  apply (drule sym[where s="Some _"])
+  apply (clarsimp simp: get_sc_rev)
+  done
+
+
+(* FIXME move *)
+lemma mapM_get_sc_time_sp:
+  "\<lbrace>P\<rbrace> mapM get_sc_time xs \<lbrace>\<lambda>rv s. P s \<and> rv = map (\<lambda>t. tcb_ready_time t s) xs \<rbrace>"
+  apply (induction xs, wpsimp simp: mapM_Nil)
+  apply (clarsimp simp: mapM_Cons)
+  apply (rule hoare_seq_ext[OF _ get_sc_time_sp])
+  apply wp
+  apply (rule_tac Q="\<lambda>rv s. (P s \<and> rv = map (\<lambda>t. tcb_ready_time t s) xs)
+                              \<and> x = tcb_ready_time a s" in hoare_strengthen_post)
+  apply (rule hoare_vcg_conj_lift, simp)
+  by (wpsimp wp: mapM_wp')+
+
+(* FIXME move *)
+lemma filter_zip_split:
+ "map fst (filter (\<lambda>x. P (snd x)) (zip ls (map f ls)))
+    = filter (\<lambda>x. P (f x)) ls"
+  by (induction ls; clarsimp)
+
+(* FIXME move *)
+lemma sorted_dropWhile_mono:
+  "\<lbrakk>sorted ls; t \<in> set (dropWhile P ls); \<forall>x y. x \<le> y \<longrightarrow> P y \<longrightarrow> P x\<rbrakk> \<Longrightarrow> \<not> P t "
+  by (induction ls; fastforce)
+
+(* FIXME move *)
+lemma sorted_wrt_dropWhile_mono:
+  "\<lbrakk>sorted_wrt (\<lambda>x y. f x \<le> f y) ls;
+    t \<in> set (dropWhile P ls); \<forall>x y. f x \<le> f y \<longrightarrow> P y \<longrightarrow> P x\<rbrakk> \<Longrightarrow> \<not> P t "
+  by (induction ls; auto split: if_split_asm)
+
 definition valid_release_q_2 where
   "valid_release_q_2 queue kh =
    ((\<forall>t \<in> set queue. st_tcb_at_kh runnable t kh \<and> active_sc_tcb_at_kh t kh)
-    \<and> distinct queue)"
+    \<and> distinct queue \<and> sorted_release_q_2 queue kh)"
 
 abbreviation valid_release_q :: "'z state \<Rightarrow> bool" where
 "valid_release_q s \<equiv> valid_release_q_2 (release_queue s) (kheap s)"
@@ -461,13 +656,15 @@ definition valid_release_q_except_set_2 where
    "valid_release_q_except_set_2 S queue kh \<equiv>
     ((\<forall>t \<in> set queue - S.
               st_tcb_at_kh runnable t kh \<and> active_sc_tcb_at_kh t kh)
-              \<and> distinct queue)"
+              \<and> distinct queue \<and> sorted_release_q_2 queue kh)"
 
 abbreviation valid_release_q_except_set :: "obj_ref set \<Rightarrow> 'z state \<Rightarrow> bool" where
- "valid_release_q_except_set S s \<equiv> valid_release_q_except_set_2 S (release_queue s) (kheap s)"
+ "valid_release_q_except_set S s \<equiv>
+    valid_release_q_except_set_2 S(release_queue s) (kheap s)"
 
 abbreviation valid_release_q_except :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
-"valid_release_q_except t s \<equiv> valid_release_q_except_set_2 {t} (release_queue s) (kheap s)"
+"valid_release_q_except t s \<equiv>
+    valid_release_q_except_set_2 {t} (release_queue s) (kheap s)"
 
 lemmas valid_release_q_except_set_def = valid_release_q_except_set_2_def
 lemmas valid_release_q_except_def = valid_release_q_except_set_2_def
@@ -835,6 +1032,165 @@ lemma valid_blocked_except_set_not_runnable:
    apply (drule_tac x=ta in spec; simp)+
    done
 
+(*********)
+(* FIXME move maybe *)
+lemma tcb_ready_time_scheduler_action_update[simp]:
+  "tcb_ready_time t (s\<lparr>scheduler_action := param_a\<rparr>) = tcb_ready_time t s"
+  by (clarsimp simp: tcb_ready_time_def split: option.splits)
+
+lemma tcb_ready_time_cdt_update[simp]:
+  "tcb_ready_time t (s\<lparr>cdt := param_a\<rparr>) = tcb_ready_time t s"
+  by (clarsimp simp: tcb_ready_time_def split: option.splits)
+
+lemma tcb_ready_time_ready_queues_update[simp]:
+  "tcb_ready_time t (s\<lparr>ready_queues := param_a\<rparr>) = tcb_ready_time t s"
+  by (fastforce simp: tcb_ready_time_def get_tcb_rev dest!: get_tcb_SomeD split: option.splits)
+
+lemma tcb_ready_time_reprogram_timer_update[simp]:
+  "tcb_ready_time t (s\<lparr>reprogram_timer := param_a\<rparr>) = tcb_ready_time t s"
+  by (fastforce simp: tcb_ready_time_def get_tcb_rev dest!: get_tcb_SomeD split: option.splits)
+
+lemma tcb_ready_time_consumed_time_update[simp]:
+  "tcb_ready_time t (s\<lparr>consumed_time := param_a\<rparr>) = tcb_ready_time t s"
+  by (fastforce simp: tcb_ready_time_def get_tcb_rev dest!: get_tcb_SomeD split: option.splits)
+
+lemma tcb_ready_time_arch_state_update[simp]:
+  "tcb_ready_time t (s\<lparr>arch_state := param_a\<rparr>) = tcb_ready_time t s"
+  by (fastforce simp: tcb_ready_time_def get_tcb_rev dest!: get_tcb_SomeD split: option.splits)
+
+lemma tcb_ready_time_machine_state_update[simp]:
+  "tcb_ready_time t (s\<lparr>machine_state := param_a\<rparr>) = tcb_ready_time t s"
+  by (fastforce simp: tcb_ready_time_def get_tcb_rev dest!: get_tcb_SomeD split: option.splits)
+
+lemma tcb_ready_time_ep_update[simp]:
+  "\<lbrakk> ep_at ref s; a_type new = AEndpoint\<rbrakk> \<Longrightarrow>
+   tcb_ready_time t (s\<lparr>kheap := kheap s(ref \<mapsto> new)\<rparr>) = tcb_ready_time t s"
+  apply (clarsimp simp: tcb_ready_time_def get_tcb_rev active_sc_tcb_at_defs is_ep
+                 split: option.splits)
+  by (fastforce simp: get_tcb_def a_type_def split: if_splits)
+
+lemma tcb_ready_time_reply_update[simp]:
+  "\<lbrakk> reply_at ref s; a_type new = AReply\<rbrakk> \<Longrightarrow>
+   tcb_ready_time t (s\<lparr>kheap := kheap s(ref \<mapsto> new)\<rparr>) = tcb_ready_time t s"
+  apply (clarsimp simp: tcb_ready_time_def get_tcb_rev active_sc_tcb_at_defs is_reply
+                 split: option.splits)
+  by (fastforce simp: get_tcb_def a_type_def split: if_splits)
+
+lemma tcb_ready_time_ntfn_update[simp]:
+  "\<lbrakk> ntfn_at ref s; a_type new = ANTFN\<rbrakk> \<Longrightarrow>
+   tcb_ready_time t (s\<lparr>kheap := kheap s(ref \<mapsto> new)\<rparr>) = tcb_ready_time t s"
+  apply (clarsimp simp: tcb_ready_time_def get_tcb_rev active_sc_tcb_at_defs is_ntfn
+                 split: option.splits)
+  by (fastforce simp: get_tcb_def a_type_def split: if_splits)
+
+lemma tcb_ready_time_kh_ep_update[simp]:
+  "\<lbrakk> ep_at ref s; a_type new = AEndpoint\<rbrakk> \<Longrightarrow>
+   tcb_ready_time_kh t (kheap s(ref \<mapsto> new)) = tcb_ready_time_kh t (kheap s)"
+  by (fastforce simp: tcb_ready_time_kh_def get_tcb_rev active_sc_tcb_at_defs is_ep
+                 split: option.splits kernel_object.splits)
+
+lemma tcb_ready_time_kh_reply_update[simp]:
+  "\<lbrakk> reply_at ref s; a_type new = AReply\<rbrakk> \<Longrightarrow>
+   tcb_ready_time_kh t (kheap s(ref \<mapsto> new))= tcb_ready_time_kh t (kheap s)"
+  by (fastforce simp: tcb_ready_time_kh_def get_tcb_rev active_sc_tcb_at_defs is_reply
+                 split: option.splits  kernel_object.splits)
+
+lemma tcb_ready_time_kh_ntfn_update[simp]:
+  "\<lbrakk> ntfn_at ref s; a_type new = ANTFN\<rbrakk> \<Longrightarrow>
+   tcb_ready_time_kh t (kheap s(ref \<mapsto> new)) = tcb_ready_time_kh t (kheap s)"
+  by (fastforce simp: tcb_ready_time_kh_def get_tcb_rev active_sc_tcb_at_defs is_ntfn
+                 split: option.splits  kernel_object.splits)
+
+lemma tcb_ready_time_trans_state_update[simp]:
+  "tcb_ready_time t (trans_state f s) = tcb_ready_time t s"
+  by (fastforce simp: tcb_ready_time_def get_tcb_rev dest!: get_tcb_SomeD split: option.splits)
+
+lemma tcb_ready_time_thread_state_update[simp]:
+  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
+     tcb_ready_time x
+            (s\<lparr>kheap := \<lambda>a. if a = tp then Some (TCB (tcb\<lparr>tcb_state := st\<rparr>)) else kheap s a\<rparr>)
+        = tcb_ready_time x s"
+  by (fastforce simp: tcb_ready_time_def active_sc_tcb_at_defs get_tcb_rev get_tcb_def
+                  split: option.splits if_splits kernel_object.splits)
+
+lemma tcb_ready_time_tcb_bn_update[simp]:
+  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
+     tcb_ready_time x
+            (s\<lparr>kheap := \<lambda>a. if a = tp then Some (TCB (tcb\<lparr>tcb_bound_notification := st\<rparr>)) else kheap s a\<rparr>)
+        = tcb_ready_time x s"
+  by (fastforce simp: tcb_ready_time_def active_sc_tcb_at_defs get_tcb_rev get_tcb_def
+                  split: option.splits if_splits kernel_object.splits)
+
+lemma tcb_ready_time_thread_ctable_update[simp]:
+  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
+     tcb_ready_time x
+            (s\<lparr>kheap := \<lambda>a. if a = tp then Some (TCB (tcb\<lparr>tcb_ctable := st\<rparr>)) else kheap s a\<rparr>)
+        = tcb_ready_time x s"
+  by (fastforce simp: tcb_ready_time_def active_sc_tcb_at_defs get_tcb_rev get_tcb_def
+                  split: option.splits if_splits kernel_object.splits)
+
+lemma tcb_ready_time_thread_vtable_update[simp]:
+  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
+     tcb_ready_time x
+            (s\<lparr>kheap := \<lambda>a. if a = tp then Some (TCB (tcb\<lparr>tcb_vtable := st\<rparr>)) else kheap s a\<rparr>)
+        = tcb_ready_time x s"
+  by (fastforce simp: tcb_ready_time_def active_sc_tcb_at_defs get_tcb_rev get_tcb_def
+                  split: option.splits if_splits kernel_object.splits)
+
+lemma tcb_ready_time_thread_fh_update[simp]:
+  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
+     tcb_ready_time x
+            (s\<lparr>kheap := \<lambda>a. if a = tp then Some (TCB (tcb\<lparr>tcb_fault_handler := st\<rparr>)) else kheap s a\<rparr>)
+        = tcb_ready_time x s"
+  by (fastforce simp: tcb_ready_time_def active_sc_tcb_at_defs get_tcb_rev get_tcb_def
+                  split: option.splits if_splits kernel_object.splits)
+
+lemma tcb_ready_time_thread_th_update[simp]:
+  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
+     tcb_ready_time x
+            (s\<lparr>kheap := \<lambda>a. if a = tp then Some (TCB (tcb\<lparr>tcb_timeout_handler := st\<rparr>)) else kheap s a\<rparr>)
+        = tcb_ready_time x s"
+  by (fastforce simp: tcb_ready_time_def active_sc_tcb_at_defs get_tcb_rev get_tcb_def
+                  split: option.splits if_splits kernel_object.splits)
+
+lemma tcb_ready_time_thread_ipcframe_update[simp]:
+  "\<lbrakk>active_sc_tcb_at x s; kheap s tp = Some (TCB tcb)\<rbrakk> \<Longrightarrow>
+     tcb_ready_time x
+            (s\<lparr>kheap := \<lambda>a. if a = tp then Some (TCB (tcb\<lparr>tcb_ipcframe := st\<rparr>)) else kheap s a\<rparr>)
+        = tcb_ready_time x s"
+  by (fastforce simp: tcb_ready_time_def active_sc_tcb_at_defs get_tcb_rev get_tcb_def
+                  split: option.splits if_splits kernel_object.splits)
+
+
+(* FIXME move maybe *)
+lemma sorted_release_q_scheduler_action_update[simp]:
+  "sorted_release_q (s\<lparr>scheduler_action := param_a\<rparr>) = sorted_release_q s"
+  by (clarsimp simp: sorted_release_q_def)
+
+lemma sorted_release_q_ready_queues_update[simp]:
+  "sorted_release_q (s\<lparr>ready_queues := param_a\<rparr>) = sorted_release_q s"
+  by (clarsimp simp: sorted_release_q_def)
+
+lemma sorted_release_q_reprogram_timer_update[simp]:
+  "sorted_release_q (s\<lparr>reprogram_timer := param_a\<rparr>) = sorted_release_q s"
+  by (clarsimp simp: sorted_release_q_def)
+
+lemma sorted_release_q_consumed_time_update[simp]:
+  "sorted_release_q (s\<lparr>consumed_time := param_a\<rparr>) = sorted_release_q s"
+  by (clarsimp simp: sorted_release_q_def)
+
+lemma sorted_release_q_arch_state_update[simp]:
+  "sorted_release_q (s\<lparr>arch_state := param_a\<rparr>) = sorted_release_q s"
+  by (clarsimp simp: sorted_release_q_def)
+
+lemma sorted_release_q_machine_state_update[simp]:
+  "sorted_release_q (s\<lparr>machine_state := param_a\<rparr>) = sorted_release_q s"
+  by (clarsimp simp: sorted_release_q_def)
+
+lemma sorted_release_q_trans_state_update[simp]:
+  "sorted_release_q (trans_state f s) = sorted_release_q s"
+  by (clarsimp simp: sorted_release_q_def)
+
 (* simple_ko update *)
 
 lemma st_tcb_at_simple_type_update[iff]:
@@ -877,10 +1233,28 @@ lemma valid_ready_qs_simple_type_update[iff]:
       "valid_ready_qs (s\<lparr>kheap := kheap s(epptr \<mapsto> Endpoint ep)\<rparr>)"
       but that makes the lemma less usable *)
 
+lemma sorted_release_q_simple_ko_update[iff]:
+  "\<lbrakk>\<forall>t\<in>set (release_queue s). active_sc_tcb_at t s;
+    obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
+     sorted_release_q_2 (release_queue s) (kheap s(epptr \<mapsto> ko)) = sorted_release_q s"
+  apply (clarsimp simp: sorted_release_q_2_def obj_at_def)
+  apply rule
+   apply (erule sorted_wrt_mono_rel[rotated])
+   apply (frule_tac x=x in bspec, simp)
+   apply (drule_tac x=y in bspec, simp)
+   apply (clarsimp simp: active_sc_tcb_at_defs tcb_ready_time_kh_def tcb_ready_time_def)
+   apply (cases ko; case_tac koa; clarsimp simp: a_type_def get_tcb_def split: if_splits)
+  apply (erule sorted_wrt_mono_rel[rotated])
+  apply (frule_tac x=x in bspec, simp)
+  apply (drule_tac x=y in bspec, simp)
+  apply (clarsimp simp: active_sc_tcb_at_defs tcb_ready_time_kh_def tcb_ready_time_def)
+  by (cases ko; case_tac koa; fastforce simp: a_type_def get_tcb_def split: if_splits option.splits)
+
+
 lemma valid_release_q_simple_ko_update[iff]:
   "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
      valid_release_q_2 (release_queue s) (kheap s(epptr \<mapsto> ko)) = valid_release_q s"
-  by (clarsimp simp: valid_release_q_def)
+  by (fastforce simp: valid_release_q_def)
 
 lemma is_activatable_simple_ko_update[iff]:
   "\<lbrakk>obj_at (\<lambda>ko. is_simple_type ko) epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
@@ -1020,7 +1394,37 @@ lemma budget_sufficient_kh_if_split:
   by (fastforce simp: bound_sc_tcb_at_kh_if_split obj_at_kh_def
                       bound_sc_tcb_at_kh_def refill_sufficient_kh_if_split)
 
+(* hammers for sorted_release_q & valid_release_q *)
+
+method solve_sorted_release_q uses csimp fsimp =
+  (clarsimp simp: csimp sorted_release_q_def elim!: sorted_wrt_mono_rel[rotated];
+      rename_tac x y, frule_tac x=x in bspec, simp, drule_tac x=y in bspec, simp;
+      fastforce simp: fsimp active_sc_tcb_at_defs tcb_ready_time_def tcb_ready_time_kh_def get_tcb_def
+      split: option.splits)
+
+method solve_valid_release_q uses csimp fsimp csimp_s fsimp_s =
+     (clarsimp simp: csimp valid_release_q_def dest!: get_tcb_SomeD,
+      rule conjI, clarsimp, rename_tac t,
+      drule_tac x=t in bspec, simp,
+      fastforce simp: fsimp st_tcb_at_kh_if_split
+      active_sc_tcb_at_defs split: option.splits,
+      solve_sorted_release_q csimp: csimp_s fsimp: fsimp_s)
+
+
 (* lifting lemmas *)
+
+(* FIXME move *)
+lemma sorted_wrt_cmp_lift[wp]:
+  "\<forall>t t'. \<lbrace>\<lambda>s. P t t' s \<and> R s \<rbrace> f \<lbrace>\<lambda>rv s. P t t' s \<rbrace> \<Longrightarrow>
+    \<lbrace>\<lambda>s. sorted_wrt (\<lambda>t t'. P t t' s) x \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. sorted_wrt (\<lambda>t t'. P t t' s) x\<rbrace>"
+  apply (induct x, wpsimp)
+  apply simp
+  apply (rule_tac Q="\<lambda>s. (\<forall>x\<in>set x. P a x s \<and> R s) \<and> sorted_wrt (\<lambda>t t'. P t t' s) x \<and> R s" in hoare_weaken_pre)
+  apply (rule hoare_vcg_conj_lift)
+   apply (rule hoare_vcg_ball_lift, simp)
+   apply wpsimp
+  apply (wpsimp wp:  hoare_vcg_ball_lift)
+  done
 
 lemmas ct_not_queued_lift = hoare_lift_Pf2[where f="cur_thread" and P="not_queued"]
 lemmas ct_not_in_release_q_lift = hoare_lift_Pf2[where f="cur_thread" and P="not_in_release_q"]
@@ -1042,18 +1446,32 @@ lemma valid_ready_qs_lift_pre_conj:
 
 lemmas valid_ready_qs_lift = valid_ready_qs_lift_pre_conj[where R = \<top>, simplified]
 
+(* FIXME maybe move *)
+lemma release_queue_cmp_lift_pred_conj:
+  "\<lbrakk>\<And>P' t. \<lbrace>\<lambda>s. P' (tcb_ready_time t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>_ s. P' (tcb_ready_time t s)\<rbrace>\<rbrakk>
+    \<Longrightarrow> \<lbrace>\<lambda>s. P (tcb_ready_time t s)(tcb_ready_time t' s) \<and> R s\<rbrace>
+           f \<lbrace>\<lambda>_ s. P (tcb_ready_time t s)(tcb_ready_time t' s)\<rbrace>"
+  by (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. tcb_ready_time t' s"]; assumption)
+
+lemmas release_queue_cmp_lift = release_queue_cmp_lift_pred_conj[where R = \<top>, simplified]
+
+lemma sorted_release_q_lift:
+  assumes c: "\<And>P. \<lbrace>\<lambda>s. P (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
+  assumes r: "\<And>P t. \<lbrace>\<lambda>s. P (tcb_ready_time t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (tcb_ready_time t s)\<rbrace>"
+    shows "\<lbrace>\<lambda>s. sorted_release_q s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. sorted_release_q\<rbrace>"
+  apply (simp add: sorted_release_q_def)
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. release_queue s", OF _ c])
+  by (wpsimp wp: release_queue_cmp_lift_pred_conj[OF r])
+
 lemma valid_release_q_lift_pre_conj:
   assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
   assumes a': "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
-      and b: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
       and c: "\<And>P. \<lbrace>\<lambda>s. P (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
+      and f: "\<And>P t. \<lbrace>\<lambda>s. P (tcb_ready_time t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (tcb_ready_time t s)\<rbrace>"
     shows "\<lbrace>\<lambda>s. (valid_release_q s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_release_q\<rbrace>"
-  apply (simp only: valid_release_q_def)
+  apply (simp only: valid_release_q_def sorted_release_q_def)
   apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. release_queue s", OF _ c])
-  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. etcbs_of s", OF _ b])
-  apply (wpsimp wp: hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift
-                    hoare_vcg_imp_lift a a')
-  done
+  by (wpsimp wp: hoare_vcg_ball_lift a a' release_queue_cmp_lift_pred_conj[OF f])
 
 lemmas valid_release_q_lift = valid_release_q_lift_pre_conj[where R = \<top>, simplified]
 
@@ -1229,11 +1647,13 @@ lemma valid_sched_lift_pre_conj:
   assumes h: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
   assumes i: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
   assumes j: "\<And>Q. \<lbrace>\<lambda>s. Q (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. Q (release_queue s)\<rbrace>"
+  assumes t: "\<And>P t. \<lbrace>\<lambda>s. P (tcb_ready_time t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (tcb_ready_time t s)\<rbrace>"
     shows "\<lbrace>\<lambda>s. valid_sched s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: valid_sched_def)
-  apply (wpsimp wp: valid_ready_qs_lift_pre_conj ct_not_in_q_lift_pre_conj ct_in_cur_domain_lift_pre_conj valid_release_q_lift_pre_conj
+  apply (wpsimp wp: valid_ready_qs_lift_pre_conj ct_not_in_q_lift_pre_conj ct_in_cur_domain_lift_pre_conj
+                    valid_release_q_lift_pre_conj
             valid_sched_action_lift_pre_conj  valid_blocked_lift_pre_conj
-            a a' s r c d e f g h i j)
+            a a' s r c d e f g h i j t)
   done
 
 lemmas valid_sched_lift = valid_sched_lift_pre_conj[where R = \<top>, simplified]

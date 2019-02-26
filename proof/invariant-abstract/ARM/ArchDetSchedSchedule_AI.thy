@@ -136,6 +136,9 @@ lemma arch_switch_to_thread_valid_blocked [wp, DetSchedSchedule_AI_assms]:
   apply wp
   done
 
+lemma ct_in_q_release: "in_release_queue (cur_thread s) s \<Longrightarrow> ct_in_q s"
+   by (clarsimp simp: ct_in_q_def in_release_queue_def)
+
 crunch not_queued[wp]: set_vm_root "not_queued t"
   (simp: crunch_simps)
 
@@ -197,6 +200,7 @@ lemma stit_activatable' [DetSchedSchedule_AI_assms]:
 
 crunches set_vm_root
 for it[wp]: "\<lambda>s. P (idle_thread s)"
+and ready_time[wp]: "\<lambda>s. P (tcb_ready_time t s)"
   (simp: crunch_simps)
 
 lemma switch_to_idle_thread_cur_thread_idle_thread [wp, DetSchedSchedule_AI_assms]:
@@ -208,6 +212,14 @@ lemma set_pt_etcbs[wp]:
   unfolding set_pt_def
   apply (wpsimp wp: set_object_wp get_object_wp)
   apply (auto elim!: rsubst[where P=P] simp: obj_at_def etcbs_of'_def split: kernel_object.splits)
+  done
+
+lemma set_pt_tcb_ready_time[wp]:
+  "set_pt ptr pt \<lbrace>\<lambda>s. P (tcb_ready_time t s)\<rbrace>"
+  unfolding set_pt_def
+  apply (wpsimp wp: set_object_wp get_object_wp)
+  apply (auto elim!: rsubst[where P=P] simp: obj_at_def tcb_ready_time_def get_tcb_def
+              dest!: get_tcb_SomeD split: option.splits kernel_object.splits)
   done
 
 lemma set_pt_valid_sched[wp]:
@@ -223,6 +235,14 @@ lemma set_asid_pool_etcbs[wp]:
   unfolding set_asid_pool_def
   apply (wpsimp wp: set_object_wp get_object_wp)
   apply (auto elim!: rsubst[where P=P] simp: obj_at_def etcbs_of'_def split: kernel_object.splits)
+  done
+
+lemma set_asid_pool_tcb_ready_time[wp]:
+  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (tcb_ready_time t s)\<rbrace>"
+  unfolding set_asid_pool_def
+  apply (wpsimp wp: set_object_wp get_object_wp)
+  apply (auto elim!: rsubst[where P=P] simp: obj_at_def tcb_ready_time_def get_tcb_def
+              dest!: get_tcb_SomeD split: option.splits kernel_object.splits)
   done
 
 lemma set_asid_pool_valid_sched[wp]:
@@ -342,7 +362,7 @@ crunch not_cur_thread [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch
 crunch ready_queues   [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, arch_post_modify_registers "\<lambda>s. P (ready_queues s)"
 crunch ct_not_queued   [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, handle_arch_fault_reply "ct_not_queued"
 crunch release_queue   [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, arch_post_modify_registers "\<lambda>s. P (release_queue s)"
-crunch ct_not_in_release_q   [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, handle_arch_fault_reply "ct_not_in_release_q"
+crunch ct_not_in_release_q   [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_switch_to_idle_thread, make_arch_fault_msg, arch_get_sanitise_register_info, handle_arch_fault_reply "ct_not_in_release_q"
 
 crunch scheduler_action [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_get_sanitise_register_info, arch_post_modify_registers "\<lambda>s. P (scheduler_action s)"
 declare make_arch_fault_msg_inv[DetSchedSchedule_AI_assms]
@@ -365,10 +385,10 @@ crunches arch_post_cap_deletion
   and sched_act_not[wp, DetSchedSchedule_AI_assms]: "scheduler_act_not t"
   and weak_valid_sched_action[wp, DetSchedSchedule_AI_assms]: weak_valid_sched_action
 
-crunches arch_switch_to_thread
+crunches arch_switch_to_thread, arch_switch_to_idle_thread
   for etcbs[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (etcbs_of s)"
   and cur_domain[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (cur_domain s)"
-  and scheduler_action[wp, DetSchedSchedule_AI_assms]: "\<lambda>s. P (scheduler_action s)"
+  and not_in_release_q[wp, DetSchedSchedule_AI_assms]: "not_in_release_q t"
   (simp: crunch_simps)
 
 lemma handle_vm_fault_valid_machine_time[DetSchedSchedule_AI_assms]:
@@ -556,7 +576,7 @@ global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
   interpret Arch .
   case 1 show ?case
     apply (unfold_locales)
-    by ((fact DetSchedSchedule_AI_assms)+ | wpsimp)+
+    by ((fact DetSchedSchedule_AI_assms)+ | wpsimp | rule ct_in_q_release)+
   qed
 
 context Arch begin global_naming ARM
