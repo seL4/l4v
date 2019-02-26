@@ -1052,14 +1052,17 @@ val ceqv_options =
 fun apply [] x = x
   | apply (f :: fs) x = apply fs (f x);
 
+fun shorten_names mp =
+    mp -- Shorten_Names.shorten_names_preserve_new >> MethodUtils.then_all_new
+
 val corres_ctac_tactic = let
     fun tac upds ctxt = Method.SIMPLE_METHOD' (corres_ctac (apply upds default_ctac_opts) ctxt);
 
     val option_args = Args.parens (P.list (Scan.first ctac_options))
     val opt_option_args = Scan.lift (Scan.optional option_args [])
 in
-    opt_option_args --| Method.sections ctac_modifiers
-      >> tac
+    (opt_option_args --| Method.sections ctac_modifiers
+      >> tac) |> shorten_names
 end;
 
 fun corres_pre_abstract_args lift_fn =
@@ -1067,7 +1070,8 @@ fun corres_pre_abstract_args lift_fn =
         fun tac (xfs : string list) (ctxt : Proof.context)
           = Method.SIMPLE_METHOD' (EVERY' (map (lift_fn ctxt) (rev xfs)))
     in
-        Args.context |-- Scan.lift (Scan.repeat1 Args.name) >> tac
+        (Args.context |-- Scan.lift (Scan.repeat1 Args.name) >> tac)
+        |> shorten_names
     end;
 
 (* These differ only in the behaviour wrt the concrete guards --- the first abstracts the new variable, the second just drops it *)
@@ -1080,7 +1084,8 @@ val corres_symb_rhs = let
     val option_args = Args.parens (P.list (Scan.first csymbr_options))
     val opt_option_args = Scan.lift (Scan.optional option_args [])
 in
-    opt_option_args --| Method.sections csymbr_modifiers >> tac
+    (opt_option_args --| Method.sections csymbr_modifiers >> tac)
+    |> shorten_names
 end;
 
 val corres_ceqv = let
@@ -1089,7 +1094,8 @@ val corres_ceqv = let
     val option_args = Args.parens (P.list (Scan.first ceqv_options))
     val opt_option_args = Scan.lift (Scan.optional option_args [])
 in
-    opt_option_args --| Method.sections [] >> tac
+    (opt_option_args --| Method.sections [] >> tac)
+    |> shorten_names
 end;
 
 (* Does all the annoying boilerplate stuff at the start of a ccorres rule.
@@ -1103,7 +1109,8 @@ fun corres_boilerplate unfold_haskell_p = let
     val option_args = Args.parens (P.list (Scan.first cinit_options))
     val opt_var_lift_args = Scan.lift (Scan.optional option_args [] -- Scan.optional var_lift_args [])
 in
-    opt_var_lift_args --| Method.sections boilerplate_modifiers >> tac
+    (opt_var_lift_args --| Method.sections boilerplate_modifiers >> tac)
+    |> shorten_names
 end;
 
 (* Debugging *)
