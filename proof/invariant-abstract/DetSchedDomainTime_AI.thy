@@ -641,7 +641,8 @@ lemma perform_invocation_domain_time_inv:
 
 lemma handle_invocation_domain_time_inv[wp]:
   "\<lbrace>valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace>
-      handle_invocation calling blocking can_donate cptr \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
+      handle_invocation calling blocking can_donate first_phase cptr
+   \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s\<rbrace>"
   by (wpsimp simp: handle_invocation_def
       wp: syscall_valid crunch_wps perform_invocation_domain_time_inv)
      (clarsimp simp: word_gt_0)

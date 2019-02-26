@@ -4311,7 +4311,8 @@ locale Deterministic_AI_2 = Deterministic_AI_1 +
   assumes handle_hypervisor_fault_valid_list[wp]:
     "\<And>thread fault. \<lbrace>valid_list\<rbrace> handle_hypervisor_fault thread fault \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes handle_invocation_valid_list[wp]:
-    "\<And>calling blocking can_donate cptr. \<lbrace>valid_list\<rbrace> handle_invocation calling blocking can_donate cptr \<lbrace>\<lambda>_. valid_list\<rbrace>"
+    "\<And>calling blocking can_donate first_phase cptr.
+       \<lbrace>valid_list\<rbrace> handle_invocation calling blocking can_donate first_phase cptr \<lbrace>\<lambda>_. valid_list\<rbrace>"
 
 
 context Deterministic_AI_2 begin

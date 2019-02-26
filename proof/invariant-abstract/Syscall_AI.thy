@@ -628,7 +628,7 @@ lemma sts_Restart_stay_simple:
 lemma decode_inv_inv[wp]:
   notes if_split [split del]
   shows
-  "\<lbrace>P\<rbrace> decode_invocation label args cap_index slot cap excaps \<lbrace>\<lambda>rv. P\<rbrace>"
+  "\<lbrace>P\<rbrace> decode_invocation first_phase label args cap_index slot cap excaps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (case_tac cap, simp_all add: decode_invocation_def)
           apply (wp decode_tcb_inv_inv decode_domain_inv_inv
                     decode_sched_context_inv_inv decode_sched_control_inv_inv
@@ -686,9 +686,9 @@ lemma decode_inv_wf[wp]:
            and (\<lambda>s. \<forall>x \<in> set excaps. \<forall>r\<in>zobj_refs (fst x). ex_nonz_cap_to r s)
            and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s)
            and (\<lambda>s. \<forall>x \<in> set excaps. ex_cte_cap_wp_to is_cnode_cap (snd x) s)\<rbrace>
-     decode_invocation label args cap_index slot cap excaps
+     decode_invocation first_phase label args cap_index slot cap excaps
    \<lbrace>valid_invocation\<rbrace>,-"
-  apply (simp add: decode_invocation_def cong: cap.case_cong if_cong)
+  apply (simp add: decode_invocation_def cong: cap.case_cong if_cong split del: if_splits)
   apply (wpsimp wp: decode_tcb_inv_wf decode_domain_inv_wf[simplified split_def]
                     decode_sched_context_inv_wf decode_sched_control_inv_wf
               simp: o_def uncurry_def split_def invs_valid_objs invs_valid_global_refs
@@ -1026,8 +1026,9 @@ lemma hinv_invs':
   assumes sts_Q[wp]:
     "\<And>a b. \<lbrace>invs and Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   shows
-    "\<lbrace>invs and Q and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
-       handle_invocation calling blocking can_donate cptr
+    "\<lbrace>invs and Q and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
+      (\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)\<rbrace>
+       handle_invocation calling blocking can_donate first_phase cptr
      \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>"
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
                    liftE_liftM_liftME liftME_def bindE_assoc)
@@ -1056,9 +1057,11 @@ lemmas hinv_invs[wp] = hinv_invs'
 
 (* FIXME: move *)
 lemma hinv_tcb[wp]:
-  "\<And>t calling blocking can_donate cptr.
-    \<lbrace>st_tcb_at active t and invs and ct_active\<rbrace>
-      handle_invocation calling blocking can_donate cptr
+  "\<And>t calling blocking can_donate first_phase cptr.
+    \<lbrace>st_tcb_at active t and invs and ct_active and
+     (\<lambda>s. scheduler_action s = resume_cur_thread) and
+     (\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)\<rbrace>
+    handle_invocation calling blocking can_donate first_phase cptr
     \<lbrace>\<lambda>rv. tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: handle_invocation_def split_def
                    ts_Restart_case_helper

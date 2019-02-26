@@ -1640,7 +1640,8 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
 qed
 
 lemma decode_invocation_valid_pdpt[wp]:
-  "\<lbrace>invs and valid_cap cap and valid_pdpt_objs\<rbrace> decode_invocation label args cap_index slot cap excaps
+  "\<lbrace>invs and valid_cap cap and valid_pdpt_objs\<rbrace>
+   decode_invocation first_phase label args cap_index slot cap excaps
    \<lbrace>invocation_duplicates_valid\<rbrace>,-"
   apply (simp add: decode_invocation_def split del: if_split)
   apply (rule hoare_pre)
@@ -1684,8 +1685,11 @@ lemma set_thread_state_duplicates_valid[wp]:
   done
 
 lemma handle_invocation_valid_pdpt[wp]:
-  "\<lbrace>valid_pdpt_objs and invs and ct_active\<rbrace>
-        handle_invocation calling blocking can_donate cptr \<lbrace>\<lambda>rv. valid_pdpt_objs::det_state \<Rightarrow> _\<rbrace>"
+  "\<lbrace>valid_pdpt_objs and invs and ct_active and
+    (\<lambda>s. scheduler_action s = resume_cur_thread) and
+    (\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)\<rbrace>
+   handle_invocation calling blocking can_donate first_phase cptr
+   \<lbrace>\<lambda>rv. valid_pdpt_objs::det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: handle_invocation_def)
   apply (wp syscall_valid set_thread_state_ct_st
                | simp add: split_def | wpc

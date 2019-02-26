@@ -11104,7 +11104,7 @@ context DetSchedSchedule_AI begin
 lemma handle_invocation_valid_sched:
   "\<lbrace>invs and valid_sched and ct_active and valid_ep_q and ct_not_queued and ct_not_in_release_q and
     (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_schedulable\<rbrace>
-     handle_invocation calling blocking can_donate cptr
+     handle_invocation calling blocking can_donate first_phase cptr
    \<lbrace>\<lambda>rv. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: handle_invocation_def)
   apply (wp syscall_valid handle_fault_valid_sched | wpc)+
