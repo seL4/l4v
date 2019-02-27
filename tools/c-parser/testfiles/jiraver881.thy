@@ -47,7 +47,7 @@ end
 
 (* Should always work, since these are trivial assignments *)
 ML \<open>
-check_ret "baseline1" @{const_name x_'_update};
+check_ret "baseline1" @{const_name x___int_'_update};
 check_ret "baseline2" @{const_name ret__int_'_update};
 \<close>
 
