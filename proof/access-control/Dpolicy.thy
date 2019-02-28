@@ -791,7 +791,7 @@ lemma cdl_transform_null_cap:
      opt_cap (transform_cslot_ptr (ptr, slot)) (transform s) = Some cdl_cap.NullCap \<rbrakk> \<Longrightarrow>
    cap = cap.NullCap"
   apply (case_tac "ptr = idle_thread s")
-   apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def
+   apply (clarsimp simp: opt_cap_def slots_of_def
                          transform_def transform_cslot_ptr_def transform_objects_def
                          map_add_def)
   apply (subst (asm) caps_of_state_transform_opt_cap, assumption)
@@ -805,7 +805,7 @@ lemma cdl_transform_reply_cap:
      opt_cap (transform_cslot_ptr (ptr, slot)) (transform s) = Some (cdl_cap.ReplyCap t R) \<rbrakk> \<Longrightarrow>
    cap = cap.ReplyCap t False R"
   apply (case_tac "ptr = idle_thread s")
-   apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def
+   apply (clarsimp simp: opt_cap_def slots_of_def
                          transform_def transform_cslot_ptr_def transform_objects_def
                          map_add_def)
   apply (subst (asm) caps_of_state_transform_opt_cap, assumption)
@@ -899,7 +899,7 @@ lemma state_objs_transform_rev:
      apply simp
      apply (rule sta_ts)
      apply (rule thread_states_transform_rev, simp+)
-     apply (clarsimp simp:opt_cap_def transform_def transform_objects_def slots_of_def opt_object_def)
+     apply (clarsimp simp:opt_cap_def transform_def transform_objects_def slots_of_def)
      apply (clarsimp simp: map_add_def object_slots_def)
     apply (rule_tac P="is_real_cap cap" in case_split[rotated])
      apply (drule state_vrefs_transform_rev, simp+)
@@ -913,7 +913,7 @@ lemma state_objs_transform_rev:
      apply simp
      apply (rule sta_bas)
       apply (rule thread_bound_ntfns_transform_rev, simp+)
-      apply (clarsimp simp: opt_cap_def transform_def transform_objects_def slots_of_def opt_object_def)
+      apply (clarsimp simp: opt_cap_def transform_def transform_objects_def slots_of_def)
       apply (clarsimp simp: map_add_def object_slots_def)
      apply (clarsimp simp: cdl_cap_auth_conferred_def is_bound_ntfn_cap_def split: cdl_cap.splits)
     apply (frule caps_of_state_transform_opt_cap_rev, simp+)
