@@ -1702,5 +1702,20 @@ lemma invs_aligned_pdD:
   apply (simp add: bit_simps)
   done *)
 
+lemma do_machine_op_valid_kernel_mappings:
+  "do_machine_op f \<lbrace>valid_kernel_mappings\<rbrace>"
+  unfolding valid_kernel_mappings_def by wp
+
+lemma valid_vspace_obj_default:
+  assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
+  shows "ArchObj ao = default_object ty dev us \<Longrightarrow> valid_vspace_obj level ao s'"
+  by (cases ty; simp add: default_object_def tyunt)
+
 end
+
+context begin interpretation Arch .
+requalify_facts
+  do_machine_op_valid_kernel_mappings
+end
+
 end
