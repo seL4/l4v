@@ -22,7 +22,7 @@ type_synonym 'a u_monad = "(user_state, 'a) nondet_monad"
 abbreviation
   get_spec_object :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow> cdl_object u_monad"
 where
-  "get_spec_object spec p \<equiv> assert_opt (opt_object p spec)"
+  "get_spec_object spec p \<equiv> assert_opt (cdl_objects spec p)"
 
 (* End of helper funtions *)
 

@@ -90,8 +90,8 @@ lemma transform_objects_tcb:
 
 lemma opt_object_tcb:
   "\<lbrakk> get_tcb ptr s = Some tcb; get_etcb ptr s = Some etcb; ptr \<noteq> idle_thread s \<rbrakk> \<Longrightarrow>
-  opt_object ptr (transform s) = Some (transform_tcb (machine_state s) ptr tcb etcb)"
-  by (clarsimp simp: opt_object_def transform_def transform_objects_tcb dest!: get_tcb_SomeD)
+  cdl_objects (transform s) ptr = Some (transform_tcb (machine_state s) ptr tcb etcb)"
+  by (clarsimp simp: transform_def transform_objects_tcb dest!: get_tcb_SomeD)
 
 abbreviation
   "tcb_abstract_slots \<equiv> {tcb_caller_slot, tcb_cspace_slot, tcb_ipcbuffer_slot, tcb_replycap_slot, tcb_vspace_slot}"
@@ -259,13 +259,13 @@ lemma duplicate_corrupt_tcb_intent:
    apply clarsimp
    apply (auto simp:corrupt_tcb_intent_def update_thread_def select_def gets_the_def
           return_def fail_def gets_def get_def assert_opt_def bind_def
-          put_def modify_def KHeap_D.set_object_def opt_object_def split_def
+          put_def modify_def KHeap_D.set_object_def split_def
           split:option.splits cdl_object.splits)[1]
   apply clarsimp
   apply (rule iffI)
    by (auto simp: corrupt_tcb_intent_def update_thread_def select_def gets_the_def
                   return_def fail_def gets_def get_def assert_opt_def bind_def
-                  put_def modify_def KHeap_D.set_object_def opt_object_def split_def
+                  put_def modify_def KHeap_D.set_object_def split_def
            split: option.splits cdl_object.splits)
 
 (* Corrupting a register several times is the same as corrupting it once. *)
@@ -284,7 +284,7 @@ lemma corres_corrupt_tcb_intent_return:
   apply (clarsimp simp: return_def corrupt_tcb_intent_def)
   apply (clarsimp simp:corrupt_tcb_intent_def update_thread_def select_def gets_the_def
          return_def fail_def gets_def get_def assert_opt_def bind_def
-         put_def modify_def KHeap_D.set_object_def opt_object_def)
+         put_def modify_def KHeap_D.set_object_def)
   apply (clarsimp split:option.splits
     simp:transform_def tcb_at_def
     transform_objects_def not_idle_thread_def
@@ -317,7 +317,7 @@ lemma set_cxt_none_det_intent_corres:
          \<Longrightarrow> dcorres dc ((=) (transform s')) ((=) s')
              (corrupt_tcb_intent y)
              (KHeap_A.set_object y (TCB (tcb_arch_update (arch_tcb_context_set cxt) obj')))"
-  apply (clarsimp simp:bind_assoc opt_object_def corrupt_tcb_intent_def get_thread_def gets_def gets_the_def)
+  apply (clarsimp simp:bind_assoc corrupt_tcb_intent_def get_thread_def gets_def gets_the_def)
   apply (rule corres_guard_imp)
     apply (rule_tac P="(=)(transform s')" and Q="(=) s'"
        and x="transform_full_intent (machine_state (update_kheap ((kheap s')(y\<mapsto>(TCB (tcb_arch_update (arch_tcb_context_set cxt) obj')))) s'))
@@ -327,7 +327,7 @@ lemma set_cxt_none_det_intent_corres:
        gets_the_def gets_def bind_assoc)
     apply (rule dcorres_absorb_get_l)
     apply (subgoal_tac "\<exists>t f. cdl_objects (transform s') y = Some (Tcb t)")
-     apply (clarsimp simp:assert_opt_def opt_object_def)
+     apply (clarsimp simp:assert_opt_def)
      apply (rule dcorres_set_object_tcb)
        apply (clarsimp simp:transform_tcb_def
          transform_def transform_objects_def not_idle_thread_def)
@@ -346,14 +346,14 @@ lemma set_message_info_corres:
   apply (clarsimp simp:set_message_info_def)
   apply (clarsimp simp:as_user_def setRegister_def)
   apply (rule dcorres_absorb_gets_the)
-  apply (clarsimp simp:get_tcb_def opt_object_def split:option.splits Structures_A.kernel_object.splits)
+  apply (clarsimp simp:get_tcb_def split:option.splits Structures_A.kernel_object.splits)
   apply (subst modify_def[unfolded bind_def]|clarsimp simp:get_def put_def)+
   apply (frule_tac ptr=y and tcb=obj' in valid_etcbs_tcb_etcb, clarsimp, clarsimp)
   apply (clarsimp simp:select_f_def bind_def arch_tcb_update_aux3)
   apply (rule corres_guard_imp)
   apply (erule set_cxt_none_det_intent_corres)
-   apply (clarsimp simp :opt_object_def valid_def get_tcb_def lift_simp not_idle_thread_def transform_tcb_def
-                        split:option.splits Structures_A.kernel_object.splits)+
+   apply (clarsimp simp: valid_def get_tcb_def lift_simp not_idle_thread_def transform_tcb_def
+                   split: option.splits Structures_A.kernel_object.splits)+
 done
 
 lemma corrupt_tcb_intent_as_user_corres:
@@ -361,7 +361,7 @@ lemma corrupt_tcb_intent_as_user_corres:
       (as_user y t)"
   apply (clarsimp simp:as_user_def)
   apply (rule dcorres_absorb_gets_the)
-  apply (clarsimp simp:get_tcb_def opt_object_def arch_tcb_update_aux3
+  apply (clarsimp simp:get_tcb_def arch_tcb_update_aux3
                   split:option.splits Structures_A.kernel_object.splits)
   apply (rule corres_symb_exec_r)
     apply clarsimp
@@ -445,7 +445,7 @@ lemma set_mrs_corres_no_recv_buffer:
   apply (rule corres_dummy_return_l)
   apply (rule corres_underlying_split [where P'="%x. \<top>" and P="%x. \<top>"])
      apply (rule set_cxt_none_det_intent_corres)
-        apply (simp add:get_tcb_def opt_object_def get_etcb_def
+        apply (simp add:get_tcb_def get_etcb_def
                   split:option.splits Structures_A.kernel_object.splits
                | wp)+
   done
@@ -2124,7 +2124,7 @@ shows "dcorres dc \<top> P (corrupt_frame buf) g"
     fail_def simpler_modify_def split:option.splits)
   apply (rule_tac x = "\<lambda>t. if t = y then T else x t" for T in exI)
   apply (clarsimp simp:corrupt_intents_def transform_def not_idle_thread_def
-                       restrict_map_def map_add_def opt_object_def ipc_frame_wp_at_def obj_at_def
+                       restrict_map_def map_add_def ipc_frame_wp_at_def obj_at_def
                   split:option.split_asm cdl_object.split_asm)
    apply (rule ext)
    apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def tcb_ipcframe_id_def tcb_pending_op_slot_def
@@ -2132,7 +2132,7 @@ shows "dcorres dc \<top> P (corrupt_frame buf) g"
    apply (clarsimp simp: transform_objects_def)
    apply (clarsimp split:cap.splits arch_cap.splits)
    apply (drule(1) valid_etcbs_tcb_etcb)
-  by (fastforce simp: opt_object_def transform_tcb_def tcb_ipcframe_id_def tcb_pending_op_slot_def
+  by (fastforce simp: transform_tcb_def tcb_ipcframe_id_def tcb_pending_op_slot_def
                       tcb_ipcbuffer_slot_def tcb_boundntfn_slot_def)+
 
 lemma dcorres_set_mrs:

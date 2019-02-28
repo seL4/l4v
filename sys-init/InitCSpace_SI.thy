@@ -278,7 +278,7 @@ lemma object_slots_spec2s_cnode_half_object_default_state:
       object_slots (object_default_state spec_object) slot"
   apply (clarsimp simp: well_formed_def)
   apply (erule_tac x=obj_id in allE)
-  apply (clarsimp simp: opt_object_def split: option.splits)
+  apply (clarsimp split: option.splits)
   apply (clarsimp simp: object_default_state_def2 is_cnode_def
                  split: cdl_object.splits)
   apply (rename_tac cnode)
@@ -612,7 +612,7 @@ lemma mint_post:
   apply (frule_tac obj_id=dest_id in empty_cnode_object_size_bits, clarsimp)
   apply (cut_tac slot=slot in offset_slot, assumption, simp, simp)
   apply (subst sep_map_s_sep_map_c_eq [where cap="update_cap_object client_object_id spec_cap"])
-   apply (rule object_slots_spec2s, (clarsimp simp: opt_cap_def slots_of_def opt_object_def)+)
+   apply (rule object_slots_spec2s, (clarsimp simp: opt_cap_def slots_of_def)+)
   apply (frule (2) well_formed_well_formed_cap, clarsimp simp: cap_has_object_def)
   apply (frule (2) well_formed_vm_cap_has_asid)
   apply (frule (1) well_formed_is_fake_vm_cap,
@@ -671,14 +671,14 @@ lemma mutate_post:
   apply (frule_tac obj_id=dest_id in empty_cnode_object_size_bits, clarsimp)
   apply (cut_tac slot=slot in offset_slot, assumption, simp, simp)
   apply (subst sep_map_s_sep_map_c_eq [where cap="update_cap_object client_object_id spec_cap"])
-   apply (rule object_slots_spec2s, (clarsimp simp: opt_cap_def slots_of_def opt_object_def)+)
+   apply (rule object_slots_spec2s, (clarsimp simp: opt_cap_def slots_of_def)+)
   apply (frule (2) well_formed_well_formed_cap, clarsimp simp: cap_has_object_def)
   apply (frule (2) well_formed_vm_cap_has_asid)
   apply (frule (1) well_formed_is_fake_vm_cap,
          (assumption|simp add: object_type_is_object)+)
   apply (subst update_cap_data [symmetric], simp+)
     apply (clarsimp simp: cap_has_object_not_irqhandler_cap)
-   apply (erule well_formed_orig_caps, (simp add: slots_of_def opt_object_def)+)
+   apply (erule well_formed_orig_caps, (simp add: slots_of_def)+)
   apply (subst (asm) offset_slot', assumption)+
   apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
@@ -728,7 +728,7 @@ lemma move_post:
   apply (frule_tac obj_id=dest_id in empty_cnode_object_size_bits, clarsimp)
   apply (cut_tac slot=slot in offset_slot, assumption, simp, simp)
   apply (subst sep_map_s_sep_map_c_eq [where cap="update_cap_object client_object_id spec_cap"])
-   apply (rule object_slots_spec2s, (clarsimp simp: opt_cap_def slots_of_def opt_object_def)+)
+   apply (rule object_slots_spec2s, (clarsimp simp: opt_cap_def slots_of_def)+)
   apply (subst (asm) offset_slot', assumption)+
   apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
@@ -773,7 +773,7 @@ lemma move_post_irq_handler:
   apply (frule_tac obj_id=dest_id in empty_cnode_object_size_bits, clarsimp)
   apply (cut_tac slot=slot in offset_slot, assumption, simp, simp)
   apply (subst sep_map_s_sep_map_c_eq [where cap=spec_cap],
-         (clarsimp simp: opt_cap_def slots_of_def opt_object_def)+)
+         (clarsimp simp: opt_cap_def slots_of_def)+)
   apply (subst (asm) offset_slot', assumption)+
   apply (clarsimp simp: default_cap_cnode_dev)
   apply sep_solve
@@ -1124,7 +1124,7 @@ lemma init_cnode_slot_move_original_sep:
 
   (* Case: opt_cap (obj_id, slot) spec = Some NullCap *)
   apply (case_tac "opt_cap (obj_id, slot) spec = Some NullCap")
-   apply (clarsimp simp: init_cnode_slot_def sep_conj_exists opt_object_def cap_at_def
+   apply (clarsimp simp: init_cnode_slot_def sep_conj_exists cap_at_def
                          si_obj_cap_at_def si_spec_irq_cap_at_def
                          si_spec_obj_null_cap_at_def si_spec_irq_null_cap_at_def)
    apply (frule opt_cap_cdl_objects)
@@ -1149,9 +1149,9 @@ lemma init_cnode_slot_move_original_sep:
                          si_spec_irq_null_cap_at_def si_spec_irq_null_cap_at'_def)
    apply (wp seL4_CNode_Mutate_object_slot_initialised_sep seL4_CNode_Move_object_slot_initialised_cap_has_object_sep |
           clarsimp)+
-   apply (intro impI conjI,simp_all add:opt_object_def)
+   apply (intro impI conjI,simp_all add:)
           apply (drule(1) well_formed_well_formed_cap[where obj_id = obj_id])
-            apply (simp add:opt_cap_def opt_object_def slots_of_def)
+            apply (simp add:opt_cap_def slots_of_def)
            apply (simp add:cap_type_null)
           apply simp
          apply (metis cap_has_object_not_NullCap well_formed_cap_valid_src_cap well_formed_well_formed_cap')
@@ -1172,7 +1172,6 @@ lemma init_cnode_slot_move_original_sep:
                         si_spec_irq_cap_at_def si_spec_irq_cap_at'_def
                         si_spec_irq_null_cap_at_def si_spec_irq_null_cap_at'_def)
   apply (wp seL4_CNode_Move_object_slot_initialised_irqhandler_cap_sep | clarsimp)+
-  apply (clarsimp simp: opt_object_def)
   done
 
 lemma init_cnode_slot_move_not_original_inv:
@@ -1498,12 +1497,12 @@ lemma init_cnode_slot_copy_not_original_sep_helper:
   apply (clarsimp simp: init_cnode_slot_def cap_at_def)
   apply (wp seL4_CNode_Mint_object_slot_initialised_sep)+
   apply (wp seL4_CNode_Mint_object_slot_initialised_sep | clarsimp)+
-  apply (intro impI conjI,simp_all add:opt_object_def)
+  apply (intro impI conjI, simp_all)
      apply (erule (2) well_formed_is_untyped_cap)
     apply (metis cap_has_object_NullCap well_formed_cap_valid_src_cap well_formed_well_formed_cap')
    apply (metis well_formed_types_match)
   apply (erule well_formed_cnode_object_size_bits_eq)
-   apply (simp add:opt_object_def)+
+   apply simp+
   done
 
 lemma init_cnode_slot_copy_not_original_sep:
@@ -1524,8 +1523,7 @@ lemma init_cnode_slot_copy_not_original_sep:
   (* Case: opt_cap (obj_id, slot) spec = Some NullCap *)
   apply (case_tac "opt_cap (obj_id, slot) spec = Some NullCap")
    apply (clarsimp simp: init_cnode_slot_def si_obj_cap_at_def
-                         si_obj_cap_at'_def
-                         sep_conj_exists opt_object_def)
+                         si_obj_cap_at'_def sep_conj_exists)
    apply (frule opt_cap_cdl_objects)
    apply (wp | clarsimp)+
    apply (frule cnode_at_not_tcb_at)

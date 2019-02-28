@@ -288,7 +288,7 @@ lemma caps_of_state_transform_opt_cap:
   apply (cases p)
   apply (erule cte_wp_atE)
    apply (clarsimp simp: opt_cap_def transform_cslot_ptr_def
-                         slots_of_def opt_object_def transform_objects_def
+                         slots_of_def transform_objects_def
                          transform_def object_slots_def
                          transform_cnode_contents_def well_formed_cnode_n_def
                   split: nat.splits)
@@ -296,8 +296,7 @@ lemma caps_of_state_transform_opt_cap:
    apply (simp add: option_map_join_def nat_to_bl_dest)
    apply (fastforce simp: nat_to_bl_def split: nat.splits)
   apply (frule(1) valid_etcbs_tcb_etcb)
-  apply (clarsimp simp: opt_cap_def transform_cslot_ptr_def
-                        slots_of_def opt_object_def
+  apply (clarsimp simp: opt_cap_def transform_cslot_ptr_def slots_of_def
                         transform_def transform_objects_def object_slots_def
                         valid_irq_node_def obj_at_def is_cap_table_def
                         transform_tcb_def tcb_slots tcb_cap_cases_def
@@ -390,7 +389,7 @@ shows "\<lbrakk>opt_cap_wp_at P slot (transform s);valid_objs s; valid_etcbs s\<
   apply (clarsimp simp:opt_cap_wp_at_def' split:option.splits)
   apply (case_tac slot)
   apply (rename_tac ptr offset)
-  apply (clarsimp simp:slots_of_def KHeap_D.opt_cap_def transform_def opt_object_def split:option.splits)
+  apply (clarsimp simp:slots_of_def KHeap_D.opt_cap_def transform_def split:option.splits)
   apply (rule_tac x = ptr in exI)
   apply (clarsimp simp:transform_objects_def restrict_map_Some_iff object_slots_def split:cdl_object.splits)
        apply (frule assms)
@@ -585,7 +584,7 @@ lemma get_object_corres:
   apply (clarsimp simp: assert_def corres_free_fail split: if_split)
   apply (rule_tac F="rv = Some (transform_object undefined 0 etcb' y)" in corres_req)
    apply (simp_all add: assert_opt_def)
-  apply (clarsimp simp: opt_object_def transform_def transform_objects_def
+  apply (clarsimp simp: transform_def transform_objects_def
                         not_idle_thread_def obj_at_def)
   apply (clarsimp simp: transform_object_def
                  split: Structures_A.kernel_object.splits)
@@ -728,7 +727,6 @@ proof -
    apply (clarsimp simp: corres_free_fail split: if_split)
    apply (rename_tac sz cn ocap)
    apply (clarsimp simp: corres_underlying_def in_monad set_object_def cte_wp_at_cases caps_of_state_cte_wp_at)
-   apply (clarsimp simp: opt_object_def)
    apply (case_tac sz, simp)
     apply (frule (1) cdl_objects_irq_node)
     apply (clarsimp simp: assert_opt_def has_slots_def)
@@ -750,8 +748,7 @@ proof -
    apply (simp add: option_map_def restrict_map_def map_add_def split: option.splits)
   \<comment> \<open>tcb case\<close>
   apply (drule(1) valid_etcbs_tcb_etcb)
-  apply (clarsimp simp: cdl_objects_tcb opt_object_def
-                        assert_opt_def has_slots_def object_slots_def
+  apply (clarsimp simp: cdl_objects_tcb assert_opt_def has_slots_def object_slots_def
                         update_slots_def
                   split del: if_split)
   apply (case_tac "nat (bl_to_bin sl') = tcb_ipcbuffer_slot")
@@ -2118,7 +2115,7 @@ lemma fast_finalise_no_effect:
    not_idle_thread y s;tcb_at y s; valid_etcbs s \<rbrakk>
   \<Longrightarrow> PageTableUnmap_D.fast_finalise cap (PageTableUnmap_D.is_final_cap' cap x) = return ()"
   apply (clarsimp simp:opt_cap_def transform_def tcb_at_def dest!:get_tcb_SomeD)
-  apply (clarsimp simp:slots_of_def opt_object_def transform_objects_def
+  apply (clarsimp simp:slots_of_def transform_objects_def
     not_idle_thread_def restrict_map_def
     split:option.splits if_splits)
   apply (drule(1) valid_etcbs_tcb_etcb, clarsimp)
@@ -2828,14 +2825,14 @@ lemma set_cap_is_noop_opt_cap:
                    KHeap_D.set_object_def)
   apply (simp add: object_slots_def update_slots_def fun_upd_idem
             split: cdl_object.split_asm)
-  apply (simp_all add: opt_object_def simpler_modify_def
+  apply (simp_all add: simpler_modify_def
                        return_def fun_upd_idem)
   done
 
 lemma opt_cap_objects_cong:
   "cdl_objects s = cdl_objects s' \<Longrightarrow> opt_cap slot s = opt_cap slot s'"
   apply (cases slot)
-  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def)
+  apply (clarsimp simp: opt_cap_def slots_of_def)
   done
 
 lemma always_empty_slot_NullCap_corres:
@@ -3122,7 +3119,7 @@ lemma resolve_address_bits_error_corres:
      apply (drule (1) transform_objects_cnode, simp,
             clarsimp simp:transform_objects_cnode gets_the_def gets_def get_def
                           cap_object_simps bind_def return_def valid_def exs_valid_def
-                          assert_opt_def opt_object_def transform_def
+                          assert_opt_def transform_def
                      split: nat.splits)+
   apply (clarsimp simp: get_cnode_def bind_assoc liftE_bindE)
   apply (clarsimp simp: valid_cap_def obj_at_def is_cap_table_def)
@@ -3136,7 +3133,7 @@ lemma resolve_address_bits_error_corres:
      apply (drule (1) transform_objects_cnode, simp,
             clarsimp simp: transform_objects_cnode gets_the_def gets_def get_def
                            bind_def return_def valid_def exs_valid_def cap_object_simps
-                           assert_opt_def opt_object_def transform_def
+                           assert_opt_def transform_def
                      split: nat.splits)+
   done
 
@@ -3169,7 +3166,7 @@ lemma resolve_address_bits_terminate_corres:
                simp,
                clarsimp simp: gets_the_def gets_def get_def cap_object_simps
                               bind_def return_def valid_def exs_valid_def assert_opt_def
-                              opt_object_def transform_def
+                              transform_def
                        split: nat.splits)+)[3]
     apply fastforce
    apply (frule_tac cref1=ref and cref'1="of_bl ref::word32" in iffD2[OF guard_mask_shift,rotated])
@@ -3337,7 +3334,7 @@ next
     apply (drule (1) transform_objects_cnode, simp,
              clarsimp simp: transform_objects_cnode gets_the_def gets_def get_def
                              bind_def return_def valid_def exs_valid_def assert_opt_def
-                             cap_object_simps opt_object_def transform_def nat_case_split)+
+                             cap_object_simps transform_def nat_case_split)+
   done
 qed
 

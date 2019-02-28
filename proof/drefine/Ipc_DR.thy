@@ -304,9 +304,9 @@ lemma monadic_rewrite_gets_the_bind:
 
 lemma mr_opt_cap_into_object:
   assumes mr: "\<And>obj. monadic_rewrite F E (Q obj) m m'"
-  shows   "monadic_rewrite F E ((\<lambda>s. \<forall>obj. opt_object (fst p) s = Some obj \<and> object_slots obj (snd p) \<noteq> None \<longrightarrow> Q obj s) and (\<lambda>s. opt_cap p s \<noteq> None)) m m'"
+  shows   "monadic_rewrite F E ((\<lambda>s. \<forall>obj. cdl_objects s (fst p) = Some obj \<and> object_slots obj (snd p) \<noteq> None \<longrightarrow> Q obj s) and (\<lambda>s. opt_cap p s \<noteq> None)) m m'"
   apply (rule monadic_rewrite_imp)
-  apply (rule monadic_rewrite_exists [where P = "\<lambda>obj s. opt_object (fst p) s = Some obj \<and> object_slots obj (snd p) \<noteq> None", OF mr])
+  apply (rule monadic_rewrite_exists [where P = "\<lambda>obj s. cdl_objects s (fst p) = Some obj \<and> object_slots obj (snd p) \<noteq> None", OF mr])
   apply clarsimp
   apply (rule conjI)
   apply simp
@@ -324,10 +324,6 @@ lemma object_slots_has_slots [simp]:
   "object_slots obj p = Some v \<Longrightarrow> has_slots obj"
   unfolding object_slots_def has_slots_def
   by (simp split: cdl_object.splits)
-
-lemma opt_object_cdl_cdt_update [simp]:
-  "opt_object p (cdl_cdt_update f s) = opt_object p s"
-  unfolding opt_object_def by simp
 
 lemma meqv_sym:
   "meqv P a a' \<Longrightarrow> meqv P a' a"
@@ -2086,19 +2082,14 @@ lemma alternative_distrib2:
   done
 
 lemma set_cap_overlap:
-  "opt_object recv s = Some (Tcb tcb)
+  "cdl_objects s recv = Some (Tcb tcb)
     \<Longrightarrow> (KHeap_D.set_cap (recv,tcb_pending_op_slot) a >>= K (KHeap_D.set_cap (recv,tcb_pending_op_slot) b)) s
-    = (KHeap_D.set_cap (recv,tcb_pending_op_slot) b) s"
-  apply rule
-    apply (clarsimp simp: KHeap_D.set_cap_def in_monad has_slots_def opt_object_def
-         KHeap_D.set_object_def update_slots_def object_slots_def )
-   apply (clarsimp simp: KHeap_D.set_cap_def in_monad has_slots_def opt_object_def
-        KHeap_D.set_object_def update_slots_def object_slots_def )
-  apply (fastforce simp: in_monad has_slots_def opt_object_def KHeap_D.set_object_def
-        KHeap_D.set_cap_def update_slots_def simpler_modify_def snd_bind
-       snd_return gets_the_def snd_gets assert_opt_def object_slots_def
-        valid_def cong: cdl_object.case_cong split: option.splits)
-  done
+        = (KHeap_D.set_cap (recv,tcb_pending_op_slot) b) s"
+  apply (rule monad_state_eqI)
+  by (auto simp: KHeap_D.set_cap_def KHeap_D.set_object_def in_monad has_slots_def
+                 update_slots_def simpler_modify_def snd_bind valid_def
+                 snd_return gets_the_def snd_gets assert_opt_def object_slots_def
+           cong: cdl_object.case_cong split: option.splits)
 
 lemma remove_parent_dummy_when_pending_wp:
   "\<lbrakk>mdb_cte_at (swp (cte_wp_at ((\<noteq>)cap.NullCap) ) s) (cdt s); tcb_at y s\<rbrakk>
@@ -2589,7 +2580,7 @@ lemma dcorres_dummy_set_pending_cap_Restart:
   apply (simp add:transform_def)
   apply (rule ext,clarsimp)
   apply (fastforce dest!: get_tcb_SomeD
-    simp add:opt_object_def not_idle_thread_def
+    simp add: not_idle_thread_def
     transform_objects_def transform_tcb_def
     infer_tcb_pending_op_def runnable_def tcb_slots
     split : Structures_A.thread_state.splits)
@@ -2608,7 +2599,7 @@ lemma dcorres_get_thread_state:
         seem to work, because it expects to have concrete tcbs\<close>
   apply (simp add: get_thread_state_def)
   apply (monad_eq simp: corres_underlying_def Bex_def
-                        get_thread_def opt_object_def
+                        get_thread_def
                         thread_get_def get_tcb_def
                    split: option.splits)
   apply (rename_tac s ko tcb)

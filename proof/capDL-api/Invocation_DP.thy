@@ -35,10 +35,10 @@ lemma all_scheduable_tcbs_corrupt[simp]:
 
 lemma single_scheduable_tcb:
   "all_scheduable_tcbs (cdl_objects s) = {cur_thread}
-  \<Longrightarrow> \<exists>tcb. opt_object cur_thread s = Some tcb \<and> (
+  \<Longrightarrow> \<exists>tcb. cdl_objects s cur_thread = Some tcb \<and> (
     (object_slots tcb) tcb_pending_op_slot = Some RunningCap
     \<or> (object_slots tcb) tcb_pending_op_slot = Some RestartCap)"
-  by (fastforce simp: all_scheduable_tcbs_def slots_of_def opt_object_def
+  by (fastforce simp: all_scheduable_tcbs_def slots_of_def
                       tcb_scheduable_def object_slots_def opt_cap_def
                       object_at_heap_def
                dest!: singleton_eqD)
@@ -94,13 +94,13 @@ lemma sep_nonimpact_valid_lift:
    apply (clarsimp split:option.splits)
    apply (intro conjI impI allI)
     apply (drule_tac P1 ="\<lambda>x. True" and A1 = "\<lambda>x. \<not>x" in use_valid[OF _ non_intent_impact])
-     apply (simp add:object_at_def opt_object_def)+
+     apply (simp add:object_at_def)+
     apply (drule_tac P1 ="\<lambda>x. True" and A1 = "\<lambda>x. x" in use_valid[OF _ non_intent_impact])
-    apply (fastforce simp:object_at_def opt_object_def)+
+    apply (fastforce simp:object_at_def)+
    apply (drule_tac P1 ="\<lambda>x. object_clean x = object_clean x2" and
                     A1 = "\<lambda>x. x" in use_valid[OF _ non_intent_impact])
-    apply (fastforce simp:object_at_def opt_object_def)
-   apply (clarsimp simp: object_at_def opt_object_def object_slots_object_clean
+    apply (fastforce simp:object_at_def)
+   apply (clarsimp simp: object_at_def object_slots_object_clean
                          object_project_def
                   split: cdl_component_id.splits)
   apply (rule ext)+
@@ -118,7 +118,7 @@ lemma mark_tcb_intent_error_sep_inv[wp]:
    apply (simp add:mark_tcb_intent_error_def update_thread_def
      set_object_def)
    apply (wp | wpc | simp add:set_object_def)+
-   apply (clarsimp simp: object_at_def opt_object_def object_clean_def intent_reset_def
+   apply (clarsimp simp: object_at_def object_clean_def intent_reset_def
                          object_slots_def asid_reset_def update_slots_def)
   apply wp
   done
@@ -129,7 +129,7 @@ lemma corrupt_tcb_intent_sep_helper[wp]:
    apply (simp add:corrupt_tcb_intent_def update_thread_def
      set_object_def)
    apply (wp select_wp | wpc | simp add:set_object_def)+
-   apply (clarsimp simp:object_at_def opt_object_def)
+   apply (clarsimp simp:object_at_def)
    apply (simp add:object_clean_def intent_reset_def
      object_slots_def asid_reset_def update_slots_def)
   done
@@ -147,7 +147,7 @@ lemma corrupt_frame_sep_helper[wp]:
   apply (simp add:corrupt_frame_def)
   apply (wp select_wp)
   apply (clarsimp simp:corrupt_intents_def object_at_def
-    opt_object_def map_add_def split:option.splits cdl_object.splits)
+    map_add_def split:option.splits cdl_object.splits)
   apply (simp add:object_clean_def intent_reset_def
      object_slots_def asid_reset_def update_slots_def)
   done
@@ -170,7 +170,7 @@ lemma update_thread_intent_update:
    \<lbrace>\<lambda>rv s. < P > s\<rbrace>"
   apply (rule sep_nonimpact_valid_lift)
    apply (simp add:update_thread_def set_object_def get_thread_def)
-   apply (wp  | wpc | simp add:object_at_def opt_object_def
+   apply (wp  | wpc | simp add:object_at_def
      intent_reset_def set_object_def)+
    apply (simp add:object_clean_def intent_reset_def
      object_slots_def asid_reset_def update_slots_def)
@@ -468,7 +468,7 @@ lemma update_thread_wp:
   apply (simp add:update_thread_def)
   apply (wp|wpc | simp add:set_object_def)+
    apply (simp add:object_at_def)
-  apply (clarsimp simp:object_at_def opt_object_def)
+  apply (clarsimp simp:object_at_def)
   done
 
 crunch inv[wp]: thread_has_error P
@@ -496,9 +496,9 @@ lemma send_signal_no_pending:
                         no_pending_def opt_cap_def)
   apply (intro allI impI conjI)
    apply (drule_tac x = x in spec)
-   apply (clarsimp simp: slots_of_def opt_object_def object_slots_def is_pending_cap_def)
+   apply (clarsimp simp: slots_of_def object_slots_def is_pending_cap_def)
   apply (drule_tac x = x in spec)
-  apply (clarsimp simp: slots_of_def opt_object_def object_slots_def is_pending_cap_def)
+  apply (clarsimp simp: slots_of_def object_slots_def is_pending_cap_def)
   done
 
 crunch invs[wp]: get_active_irq P
@@ -681,7 +681,7 @@ lemma update_thread_cnode_at:
   update_thread cur_thread content
   \<lbrace>\<lambda>rv. object_at (\<lambda>x. x = CNode cnode) ptr \<rbrace>"
   apply (simp add:update_thread_def get_thread_def set_object_def)
-  apply (wp|wpc|simp add:opt_object_def object_at_def set_object_def)+
+  apply (wp|wpc|simp add: object_at_def set_object_def)+
   apply auto
   done
 
@@ -839,8 +839,7 @@ lemma mark_tcb_intent_error_no_error':
   apply (simp add:mark_tcb_intent_error_def update_thread_def
     gets_the_def set_object_def)
   apply (wp|wpc|simp add:set_object_def)+
-  apply (clarsimp simp:opt_object_def
-    tcb_has_error_def object_at_def)
+  apply (clarsimp simp: tcb_has_error_def object_at_def)
   done
 
 lemma syscall_valid_helper_allow_error:
@@ -893,7 +892,7 @@ lemma tcb_has_error_set_cap:
     object_at_def,simp split:cdl_object.split_asm)
   apply (intro conjI impI)
    apply (simp add:update_slots_def
-     has_slots_def opt_object_def
+     has_slots_def
      object_slots_def
      split:cdl_object.splits)+
   done
@@ -1002,7 +1001,7 @@ lemma thread_has_error_wp:
   apply (clarsimp simp:thread_has_error_def get_thread_def
     gets_the_def tcb_has_error_def)
   apply (wp|wpc)+
-  apply (clarsimp simp:opt_object_def object_at_def)
+  apply (clarsimp simp: object_at_def)
   done
 
 lemma call_kernel_with_intent_allow_error_helper:

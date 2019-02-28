@@ -161,7 +161,7 @@ where
     cap_has_object cap \<longrightarrow>
     (\<exists>orig_obj_id orig_slot orig_cap.
     cnode_at orig_obj_id spec \<and>
-    (\<exists>obj. opt_object (cap_object cap) spec = Some obj) \<and>
+    (\<exists>obj. cdl_objects spec (cap_object cap) = Some obj) \<and>
     original_cap_at (orig_obj_id, orig_slot) spec \<and>
     opt_cap (orig_obj_id, orig_slot) spec = Some orig_cap \<and>
     cap_has_object orig_cap \<and> cap_object orig_cap = cap_object cap)"
@@ -404,7 +404,7 @@ lemma well_formed_finite [elim!]:
   "well_formed spec \<Longrightarrow> finite (dom (slots_of obj_id spec))"
   apply (clarsimp simp: well_formed_def)
   apply (erule_tac x=obj_id in allE)
-  apply (clarsimp simp: opt_object_def slots_of_def split: option.splits)
+  apply (clarsimp simp: slots_of_def split: option.splits)
   apply (rename_tac obj)
   apply (drule_tac t="dom (object_slots obj)" in sym) (* Makes rewriting work. *)
   apply (clarsimp simp: object_default_state_def2 object_slots_def
@@ -416,7 +416,7 @@ lemma well_formed_finite [elim!]:
 lemma well_formed_finite_object_slots:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj\<rbrakk> \<Longrightarrow> finite (dom (object_slots obj))"
   apply (drule well_formed_finite [where obj_id=obj_id])
-  apply (clarsimp simp: slots_of_def opt_object_def)
+  apply (clarsimp simp: slots_of_def)
   done
 
 lemma well_formed_distinct_slots_of_list [elim!]:
@@ -510,7 +510,7 @@ lemma well_formed_types_match:
   apply (frule cap_has_object_not_NullCap)
   apply (clarsimp simp: well_formed_def)
   apply (erule_tac x=obj_id in allE)
-  apply (clarsimp simp: opt_cap_def opt_object_def slots_of_def)
+  apply (clarsimp simp: opt_cap_def slots_of_def)
   apply (clarsimp split: option.splits)
   apply (rename_tac obj)
   apply (clarsimp simp: well_formed_caps_def well_formed_cap_types_match_def)
@@ -533,7 +533,7 @@ lemma well_formed_slot_object_size_bits:
   apply (clarsimp simp: well_formed_def object_at_def is_cnode_def)
   apply (erule_tac x=obj_id in allE)
   apply clarsimp
-  apply (clarsimp simp: opt_cap_def opt_object_def)
+  apply (clarsimp simp: opt_cap_def)
   apply (subgoal_tac "slot \<in> dom (object_slots (object_default_state obj))")
    apply (thin_tac "dom P = dom Q" for P Q)
    apply (clarsimp simp: well_formed_caps_def)
@@ -579,7 +579,7 @@ lemma well_formed_cnode_object_size_bits_eq:
   apply (clarsimp simp: well_formed_def split_def split:option.splits)
   apply (erule_tac x="cap_object cap" in allE)
   apply (case_tac slot)
-  apply (clarsimp simp: is_cnode_def opt_object_def well_formed_cap_to_object_def)
+  apply (clarsimp simp: is_cnode_def  well_formed_cap_to_object_def)
   done
 
 lemma slots_of_set_helper: "\<lbrakk>{0..n :: nat} = dom f; f x \<noteq> None; m = n + 1\<rbrakk> \<Longrightarrow> x < m"
@@ -587,7 +587,7 @@ lemma slots_of_set_helper: "\<lbrakk>{0..n :: nat} = dom f; f x \<noteq> None; m
 
 lemma slots_of_set [simp]:
   "well_formed spec \<Longrightarrow> set (slots_of_list spec obj_id) = dom (slots_of obj_id spec)"
-  apply (clarsimp simp: slots_of_list_def slots_of_def opt_object_def well_formed_def
+  apply (clarsimp simp: slots_of_list_def slots_of_def  well_formed_def
                   split: option.splits)
   apply (rename_tac obj)
   apply (erule_tac x=obj_id in allE)
@@ -696,7 +696,7 @@ lemma well_formed_is_untyped_cap:
   apply (erule_tac x=obj_id in allE)
   apply (clarsimp simp: opt_cap_def well_formed_caps_def)
   apply (erule_tac x=slot in allE)
-  apply (clarsimp simp: slots_of_def opt_object_def well_formed_cap_def
+  apply (clarsimp simp: slots_of_def well_formed_cap_def
                         cap_type_def
                  split: cdl_cap.splits)
   done
@@ -705,7 +705,7 @@ lemma well_formed_cap_has_object:
   "\<lbrakk>well_formed spec; opt_cap (obj_id, slot) spec = Some spec_cap;
    spec_cap \<noteq> NullCap; \<not> is_untyped_cap spec_cap; \<not> is_irqhandler_cap spec_cap\<rbrakk>
    \<Longrightarrow> cap_has_object spec_cap"
-  apply (clarsimp simp: opt_cap_def opt_object_def slots_of_def)
+  apply (clarsimp simp: opt_cap_def slots_of_def)
   apply (clarsimp simp: well_formed_def)
   apply (clarsimp split: option.splits)
   apply (rename_tac obj)
@@ -727,7 +727,7 @@ lemma well_formed_cap_object:
     apply clarsimp
    apply (clarsimp simp: well_formed_cap_def cap_type_def split: cdl_cap.splits)
   apply simp
-  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def split: option.splits)
+  apply (clarsimp simp: opt_cap_def slots_of_def split: option.splits)
   apply (frule (1) well_formed_well_formed_caps)
   apply (clarsimp simp: well_formed_caps_def well_formed_cap_types_match_def)
   apply (erule allE [where x=slot])
@@ -946,12 +946,12 @@ lemma well_formed_tcb_cspace_cap:
   apply (erule_tac x=tcb_cspace_slot in allE)+
   apply (clarsimp simp: is_tcb_def object_default_state_def2 split: cdl_object.splits)
   apply (rename_tac cdl_tcb)
-  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def split: option.splits)
+  apply (clarsimp simp: opt_cap_def slots_of_def split: option.splits)
   apply (subgoal_tac "\<exists>cspace_cap. object_slots (Tcb cdl_tcb) tcb_cspace_slot =
                                    Some cspace_cap")
    apply (clarsimp simp: dom_def well_formed_tcb_def real_object_at_def)
    apply (erule well_formed_cap_object [where obj_id=obj_id and slot=tcb_cspace_slot])
-    apply (simp add: opt_cap_def slots_of_def opt_object_def)
+    apply (simp add: opt_cap_def slots_of_def)
    apply (clarsimp simp: cap_has_object_def cap_type_def split: cdl_cap.splits)
   apply (auto simp: dom_def tcb_pending_op_slot_def tcb_cspace_slot_def)
   done
@@ -990,7 +990,7 @@ lemma well_formed_tcb_opt_cap:
   apply (clarsimp simp: object_at_def)
   apply (drule (1) well_formed_object_slots)
   apply (fastforce simp: object_default_state_def2 is_tcb_def
-                         opt_cap_def slots_of_def opt_object_def object_slots_def
+                         opt_cap_def slots_of_def object_slots_def
                          default_tcb_def dom_def tcb_pending_op_slot_def
                   split: cdl_object.splits if_split_asm)
   done
@@ -1004,7 +1004,7 @@ lemma well_formed_tcb_vspace_cap:
   apply (frule (1) well_formed_tcb_opt_cap [where slot=tcb_vspace_slot], simp add: tcb_slot_defs)
   apply (clarsimp simp: object_at_def)
   apply (frule (1) well_formed_well_formed_tcb)
-  apply (auto simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def )
+  apply (auto simp: well_formed_tcb_def opt_cap_def slots_of_def)
   done
 
 lemma well_formed_tcb_ipcbuffer_cap:
@@ -1016,7 +1016,7 @@ lemma well_formed_tcb_ipcbuffer_cap:
   apply (frule (1) well_formed_tcb_opt_cap [where slot=tcb_ipcbuffer_slot], simp add: tcb_slot_defs)
   apply (clarsimp simp: object_at_def)
   apply (frule (1) well_formed_well_formed_tcb)
-  apply (auto simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def)
+  apply (auto simp: well_formed_tcb_def opt_cap_def slots_of_def)
   done
 
 lemma well_formed_tcb_caller_cap:
@@ -1025,7 +1025,7 @@ lemma well_formed_tcb_caller_cap:
   apply (frule (1) well_formed_tcb_opt_cap [where slot=tcb_caller_slot], simp add: tcb_slot_defs)
   apply (clarsimp simp: object_at_def)
   apply (frule (1) well_formed_well_formed_tcb)
-  apply (auto simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def)
+  apply (auto simp: well_formed_tcb_def opt_cap_def slots_of_def)
   done
 
 lemma well_formed_tcb_replycap_cap:
@@ -1035,7 +1035,7 @@ lemma well_formed_tcb_replycap_cap:
   apply (frule (1) well_formed_tcb_opt_cap [where slot=tcb_replycap_slot], simp add: tcb_slot_defs)
   apply (clarsimp simp: object_at_def)
   apply (frule (1) well_formed_well_formed_tcb)
-  apply (auto simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def)
+  apply (auto simp: well_formed_tcb_def opt_cap_def slots_of_def)
   done
 
 
@@ -1046,7 +1046,7 @@ lemma well_formed_tcb_pending_op_cap:
   apply (frule (1) well_formed_tcb_opt_cap [where slot=tcb_pending_op_slot], simp add: tcb_slot_defs)
   apply (clarsimp simp: object_at_def)
   apply (frule (1) well_formed_well_formed_tcb)
-  apply (auto simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def)
+  apply (auto simp: well_formed_tcb_def opt_cap_def slots_of_def)
   done
 
 lemma well_formed_tcb_pending_op_replycap:
@@ -1055,7 +1055,7 @@ lemma well_formed_tcb_pending_op_replycap:
     = (opt_cap (obj_id, tcb_pending_op_slot) spec = Some RestartCap)"
   apply (clarsimp simp: object_at_def)
   apply (drule (1) well_formed_well_formed_tcb)
-  apply (clarsimp simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def)
+  apply (clarsimp simp: well_formed_tcb_def opt_cap_def slots_of_def)
   done
 
 lemma well_formed_tcb_boundntfn_cap:
@@ -1065,7 +1065,7 @@ lemma well_formed_tcb_boundntfn_cap:
   apply (elim exE)
   apply (clarsimp simp: object_at_def)
   apply (drule (1) well_formed_well_formed_tcb)
-  by (auto simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def)
+  by (auto simp: well_formed_tcb_def opt_cap_def slots_of_def)
 
 lemma well_formed_orig_caps_unique:
   "\<lbrakk>well_formed spec; original_cap_at (obj_id, slot) spec; original_cap_at (obj_id', slot') spec;
@@ -1118,7 +1118,7 @@ lemma well_formed_child_cap_not_copyable:
    \<Longrightarrow> is_copyable_cap cap"
   apply (clarsimp simp: well_formed_def)
   apply (erule_tac x=obj_id in allE)
-  apply (clarsimp simp: opt_cap_def opt_object_def slots_of_def)
+  apply (clarsimp simp: opt_cap_def slots_of_def)
   apply (clarsimp split: option.splits)
   apply (rename_tac obj)
   apply (clarsimp simp: well_formed_caps_def)
@@ -1139,7 +1139,7 @@ lemma well_formed_pd:
   apply (clarsimp simp: well_formed_vspace_def)
   apply (erule allE [where x=slot])
   apply (erule allE [where x=cap])
-  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def split: option.splits)
+  apply (clarsimp simp: opt_cap_def slots_of_def split: option.splits)
   done
 
 lemma well_formed_pt:
@@ -1151,7 +1151,7 @@ lemma well_formed_pt:
   apply (clarsimp simp: well_formed_vspace_def)
   apply (erule allE [where x=slot])
   apply (erule allE [where x=cap])
-  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def split: option.splits)
+  apply (clarsimp simp: opt_cap_def slots_of_def split: option.splits)
   done
 
 lemma well_formed_pt_cap_is_fake_pt_cap:
@@ -1168,7 +1168,7 @@ lemma wf_frame_cap_frame_size_bits:
     opt_cap (pt_ptr, slot) spec = Some (FrameCap dev frame_ptr rights n Fake None);
     cdl_objects spec frame_ptr = Some (Frame frame)\<rbrakk>
    \<Longrightarrow> cdl_frame_size_bits frame = n"
-  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def split: option.splits)
+  apply (clarsimp simp: opt_cap_def slots_of_def split: option.splits)
   apply (frule (2) well_formed_well_formed_cap_types_match, fastforce)
   apply (fastforce simp: well_formed_cap_types_match_def cap_object_def object_type_def)
   done
@@ -1192,9 +1192,9 @@ lemma well_formed_irq_nodes_object_type:
    \<Longrightarrow> object_type object = IRQNodeType"
   apply (frule (1) well_formed_well_formed_irq_node)
   apply (frule (2) well_formed_cap_to_irq_object)
-  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def split: option.splits)
+  apply (clarsimp simp: opt_cap_def slots_of_def split: option.splits)
   apply (frule (2) well_formed_well_formed_cap_types_match, simp)
-  apply (clarsimp simp:  well_formed_cap_types_match_def)
+  apply (clarsimp simp: well_formed_cap_types_match_def)
   done
 
 lemma well_formed_object_at_irq_node_irq_node_at:
@@ -1275,7 +1275,7 @@ lemma well_formed_irq_ntfn_cap:
   apply (clarsimp simp: well_formed_irq_node_def)
   apply (erule allE [where x=0])
   apply (erule allE [where x=ntfn_cap])
-  apply (fastforce simp: bound_irqs_def opt_cap_def slots_of_def opt_object_def
+  apply (fastforce simp: bound_irqs_def opt_cap_def slots_of_def
                          is_default_cap_def default_cap_def cap_object_def
                          cap_has_object_def
                   split: cdl_cap.splits)
@@ -1290,7 +1290,7 @@ lemma well_formed_bound_irqs_are_used_irqs:
 lemma well_formed_slots_of_used_irq_node:
   "\<lbrakk>well_formed spec; irq \<in> used_irqs spec\<rbrakk>
    \<Longrightarrow> dom (slots_of (cdl_irq_node spec irq) spec) = {0}"
-  apply (clarsimp simp: used_irqs_def slots_of_def opt_object_def split: option.splits)
+  apply (clarsimp simp: used_irqs_def slots_of_def split: option.splits)
   apply (frule (2) well_formed_all_caps_cap_irq, clarsimp)
   apply (erule (1) well_formed_object_slots_irq_node)
   done
@@ -1351,7 +1351,7 @@ lemma well_formed_irq_node_is_bound:
   apply (frule (1) well_formed_object_slots_default_irq_node)
   apply (frule (1) well_formed_object_slots)
   apply (clarsimp simp: well_formed_irqhandler_caps_def bound_irqs_def
-                        dom_eq_singleton_conv slots_of_def opt_object_def)
+                        dom_eq_singleton_conv slots_of_def)
   done
 
 lemma well_formed_cap_object_cdl_irq_node:
@@ -1417,7 +1417,7 @@ lemma well_formed_no_asidpools:
 lemma well_formed_fake_pt_cap_in_pd:
   "\<lbrakk>well_formed spec; slots_of obj_id spec slot = Some cap; is_fake_pt_cap cap\<rbrakk>
    \<Longrightarrow> pd_at obj_id spec"
-  apply (clarsimp simp: slots_of_def opt_object_def split: option.splits)
+  apply (clarsimp simp: slots_of_def split: option.splits)
   apply (rename_tac obj)
   apply (frule well_formed_asidpool_at [where obj_id=obj_id])
   apply (frule (1) well_formed_well_formed_vspace)
@@ -1567,7 +1567,7 @@ lemma well_formed_objects_real_or_irq:
    apply clarsimp
    apply (rule conjI)
     apply (clarsimp simp: real_object_at_def object_at_def)
-   apply (clarsimp simp: used_irqs_def all_caps_def opt_cap_def slots_of_def opt_object_def
+   apply (clarsimp simp: used_irqs_def all_caps_def opt_cap_def slots_of_def
                   split: option.splits)
    apply (frule (2) well_formed_well_formed_cap_types_match, simp)
    apply (clarsimp simp: well_formed_cap_types_match_def)
@@ -1700,7 +1700,7 @@ lemma well_formed_frame_in_pt:
            is_fake_vm_cap frame_cap"
   apply (clarsimp simp: well_formed_def object_at_def)
   apply (drule_tac x = pt in spec)
-  apply (clarsimp simp: well_formed_vspace_def opt_cap_def slots_of_def opt_object_def
+  apply (clarsimp simp: well_formed_vspace_def opt_cap_def slots_of_def
                  split: option.split_asm)
   done
 
@@ -1714,13 +1714,13 @@ lemma well_formed_frame_in_pd:
       \<not> is_device_cap frame_cap"
   apply (clarsimp simp: well_formed_def object_at_def)
   apply (drule_tac x = pd in spec)
-  apply (clarsimp simp: well_formed_vspace_def opt_cap_def slots_of_def opt_object_def
+  apply (clarsimp simp: well_formed_vspace_def opt_cap_def slots_of_def
                  split: option.split_asm)
   apply (drule_tac x = pt_slot in spec)
   apply (drule_tac x = frame_cap in spec)
   apply (clarsimp simp: is_fake_pt_cap_def cap_type_def
                  split: cdl_cap.splits)
-  apply (clarsimp simp: cap_at_def opt_cap_def slots_of_def opt_object_def
+  apply (clarsimp simp: cap_at_def opt_cap_def slots_of_def
               simp del: split_paired_All)
   apply (drule_tac x = pd in spec)
   apply (drule_tac x = pt_slot in spec)
@@ -1795,7 +1795,7 @@ lemma wf_pt_in_pd_fake_and_none:
     apply (clarsimp simp: object_at_def)
     apply (clarsimp simp: object_type_is_object)
    apply (frule (1) well_formed_well_formed_cap[where obj_id=pd_id and slot=slot])
-     apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def split: option.splits)
+     apply (clarsimp simp: opt_cap_def slots_of_def split: option.splits)
      apply fastforce+
   apply (clarsimp simp: cap_type_def is_fake_pt_cap_pt_cap split: cdl_cap.splits)
   using well_formed_well_formed_cap' wf_cap_pt_cap by blast
@@ -1814,7 +1814,7 @@ lemma well_formed_pd_slot_limited:
   apply (clarsimp simp:well_formed_def object_at_def)
   apply (drule_tac x = obj_id in spec)
   apply (clarsimp simp: is_pd_def object_type_simps object_default_state_def slots_of_def,
-              simp add: default_object_def object_type_simps opt_object_def object_slots_def empty_cap_map_def
+              simp add: default_object_def object_type_simps object_slots_def empty_cap_map_def
                  split: cdl_object.split_asm option.split_asm)
   apply fastforce
   done

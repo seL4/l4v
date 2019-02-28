@@ -897,7 +897,7 @@ lemma update_thread_no_pending:
   apply (simp add: update_thread_def set_object_def | (wp modify_wp)+ | wpc)+
   apply (clarsimp simp: no_pending_def)
   apply (drule_tac x = oid in spec)
-  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def
+  apply (clarsimp simp: opt_cap_def slots_of_def
                         object_slots_def
                  split: if_splits option.splits)
   done
@@ -914,9 +914,8 @@ lemma corrupt_intents_no_pending:
   "no_pending s \<Longrightarrow> no_pending (corrupt_intents a b s)"
   apply (clarsimp simp: no_pending_def corrupt_intents_def opt_cap_def slots_of_def)
   apply (drule_tac x = oid in spec)
-  apply (clarsimp simp: opt_object_def split: option.splits)
   apply (auto split: option.splits cdl_object.splits if_splits
-              simp: object_slots_def)
+              simp: object_slots_def option.splits)
   done
 
 crunch no_pending[wp]: corrupt_ipc_buffer no_pending
@@ -1065,8 +1064,8 @@ lemma set_object_no_pending:
   "\<lbrace>no_pending and K(\<forall>cap. object_slots x tcb_pending_op_slot = Some cap \<longrightarrow> \<not> is_pending_cap cap)\<rbrace> set_object a x \<lbrace>\<lambda>rv. no_pending\<rbrace>"
   apply (clarsimp simp: set_object_def simpler_modify_def valid_def no_pending_def)
   apply (drule_tac x=oid in spec)
-  apply (fastforce simp: opt_cap_def slots_of_def opt_object_def ran_def
-                 split: option.split_asm if_splits)
+  apply (fastforce simp: opt_cap_def slots_of_def ran_def
+                   split: option.split_asm if_splits)
   done
 
 lemma object_slots_upd_intent[simp]:
@@ -1075,7 +1074,7 @@ lemma object_slots_upd_intent[simp]:
 
 lemma no_pending_cong[cong]:
   "cdl_objects s = cdl_objects b \<Longrightarrow> no_pending s = no_pending b"
-  by (clarsimp simp: no_pending_def opt_cap_def slots_of_def opt_object_def)
+  by (clarsimp simp: no_pending_def opt_cap_def slots_of_def)
 
 lemma default_cap_not_pending[simp]:
   "\<not> is_pending_cap (default_cap a b c d)"
@@ -1113,8 +1112,7 @@ lemma create_objects_no_pending[wp]:
   apply (simp add: create_objects_def, wp)
   apply (clarsimp simp: no_pending_def)
   apply (drule_tac x = oid in spec)
-  apply (clarsimp simp: opt_cap_def default_object_no_pending_cap
-                        slots_of_def opt_object_def
+  apply (clarsimp simp: opt_cap_def default_object_no_pending_cap slots_of_def
                  split: if_splits option.split_asm)
   done
 
@@ -1126,7 +1124,7 @@ lemma detype_no_pending:
   "no_pending s \<Longrightarrow> no_pending (detype S s)"
   apply (clarsimp simp: detype_def no_pending_def)
   apply (drule_tac x = oid in spec)
-  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def object_slots_def split: if_splits option.splits)
+  apply (clarsimp simp: opt_cap_def slots_of_def object_slots_def split: if_splits option.splits)
   done
 
 lemma is_pending_cap_set_available_range[simp]:
@@ -1156,7 +1154,7 @@ lemma set_cap_opt_cap:
            apply (simp_all add: set_object_def simpler_modify_def opt_cap_def
                                  slots_of_def has_slots_def update_slots_def
                          split: cdl_object.split_asm)+
-       apply (clarsimp simp: opt_object_def select_def return_def bind_def
+       apply (clarsimp simp: select_def return_def bind_def
                              object_slots_def update_slots_def
                       split: if_splits)+
   done
@@ -1197,7 +1195,7 @@ lemma reset_untyped_cap_not_pending_cap[wp]:
     apply (wp select_wp)+
   apply (clarsimp simp: detype_no_pending)
   apply (cases cref)
-  apply (clarsimp simp: detype_def opt_cap_def slots_of_def opt_object_def object_slots_def
+  apply (clarsimp simp: detype_def opt_cap_def slots_of_def object_slots_def
                  split: option.split_asm if_splits)
   done
 

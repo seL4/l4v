@@ -329,7 +329,7 @@ lemma caps_of_state_transform_opt_cap_rev:
   apply (drule invs_valid_objs)
   apply (case_tac ptr)
   apply (clarsimp simp:opt_cap_def transform_def transform_objects_def
-                       transform_cslot_ptr_def slots_of_def opt_object_def)
+                       transform_cslot_ptr_def slots_of_def)
   apply (rule_tac P="a=idle_thread s" in case_split)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s a")
@@ -385,7 +385,7 @@ abbreviation
 lemma opt_cap_None_word_bits:
   "\<lbrakk> einvs s; snd ptr \<ge> 2 ^ word_bits \<rbrakk> \<Longrightarrow> opt_cap ptr (transform s) = None"
   apply (case_tac ptr)
-  apply (clarsimp simp:opt_cap_def transform_def transform_objects_def slots_of_def opt_object_def)
+  apply (clarsimp simp:opt_cap_def transform_def transform_objects_def slots_of_def)
   apply (rule_tac P="a=idle_thread s" in case_split)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s a")
@@ -489,7 +489,7 @@ lemma thread_state_cap_transform_tcb:
   "\<lbrakk> opt_cap ptr (transform s) = Some cap; is_thread_state_cap cap \<rbrakk> \<Longrightarrow>
      \<exists>tcb. get_tcb (fst ptr) s = Some tcb"
   apply (case_tac ptr)
-  apply (simp add:opt_cap_def slots_of_def opt_object_def transform_def transform_objects_def)
+  apply (simp add:opt_cap_def slots_of_def transform_def transform_objects_def)
   apply (rule_tac P="a = idle_thread s" in case_split)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s (fst ptr)")
@@ -526,7 +526,7 @@ lemma thread_bound_ntfn_cap_transform_tcb:
   "\<lbrakk> opt_cap ptr (transform s) = Some cap; is_bound_ntfn_cap cap \<rbrakk> \<Longrightarrow>
      \<exists>tcb. get_tcb (fst ptr) s = Some tcb"
   apply (case_tac ptr)
-  apply (simp add:opt_cap_def slots_of_def opt_object_def transform_def transform_objects_def)
+  apply (simp add:opt_cap_def slots_of_def transform_def transform_objects_def)
   apply (rule_tac P="a = idle_thread s" in case_split)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s (fst ptr)")
@@ -615,7 +615,7 @@ lemma fst':
 lemma opt_cap_pt_Some':
   "\<lbrakk> valid_idle s; kheap s a = Some (ArchObj (arch_kernel_obj.PageTable fun)) \<rbrakk>
          \<Longrightarrow>  (opt_cap (a, unat slot) (transform s)) = Some (transform_pte (fun slot))"
-  apply (clarsimp simp:opt_cap_def transform_def slots_of_def opt_object_def object_slots_def
+  apply (clarsimp simp:opt_cap_def transform_def slots_of_def object_slots_def
                        transform_objects_def map_add_def restrict_map_def not_idle_thread_def)
   apply (frule arch_obj_not_idle,simp)
   apply (clarsimp simp:transform_page_table_contents_def unat_map_def not_idle_thread_def)
@@ -638,7 +638,7 @@ lemma opt_cap_pd_Some':
   "\<lbrakk> valid_idle s; kheap s a = Some (ArchObj (arch_kernel_obj.PageDirectory fun));
      slot < ucast (kernel_base >> 20) \<rbrakk> \<Longrightarrow>
      (opt_cap (a, unat slot) (transform s)) = Some (transform_pde (fun slot))"
-  apply (clarsimp simp:opt_cap_def transform_def slots_of_def opt_object_def object_slots_def
+  apply (clarsimp simp:opt_cap_def transform_def slots_of_def object_slots_def
                        transform_objects_def restrict_map_def map_add_def not_idle_thread_def)
   apply (frule arch_obj_not_idle,simp)
   apply (clarsimp simp:transform_page_directory_contents_def unat_map_def not_idle_thread_def
@@ -721,14 +721,14 @@ lemma state_vrefs_transform_rev:
   apply (subgoal_tac "a \<noteq> idle_thread s")
    prefer 2
    apply (clarsimp simp:state_vrefs_def transform_def transform_objects_def
-                        opt_cap_def slots_of_def opt_object_def)
+                        opt_cap_def slots_of_def)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s a")
    apply (clarsimp simp: state_vrefs_def transform_def transform_objects_def
-                         opt_cap_def slots_of_def opt_object_def)
+                         opt_cap_def slots_of_def)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (clarsimp simp:state_vrefs_def transform_def transform_objects_def
-                       opt_cap_def slots_of_def opt_object_def)
+                       opt_cap_def slots_of_def)
   apply (case_tac aa, simp_all add: transform_object_def object_slots_def nat_split_conv_to_if
                              split: if_split_asm)
      apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
@@ -1058,7 +1058,7 @@ lemma state_asids_transform:
 lemma opt_cap_Some_asid_real:
   "\<lbrakk> opt_cap ref (transform s) = Some cap; asid \<in> cdl_cap_asid' cap; einvs s \<rbrakk> \<Longrightarrow> is_real_cap cap"
   apply (case_tac ref)
-  apply (clarsimp simp:opt_cap_def transform_def transform_objects_def slots_of_def opt_object_def)
+  apply (clarsimp simp:opt_cap_def transform_def transform_objects_def slots_of_def)
   apply (rule_tac P="a=idle_thread s" in case_split)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s a")
@@ -1090,17 +1090,17 @@ lemma state_vrefs_asid_pool_transform_rev:
   apply (subgoal_tac "cap_object poolcap \<noteq> idle_thread s")
    prefer 2
    apply (clarsimp simp:state_vrefs_def transform_def transform_objects_def
-                        opt_cap_def slots_of_def opt_object_def)
+                        opt_cap_def slots_of_def)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s (cap_object poolcap)")
    apply (clarsimp simp:state_vrefs_def transform_def transform_objects_def
-                        opt_cap_def slots_of_def opt_object_def)
+                        opt_cap_def slots_of_def)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (clarsimp simp:transform_asid_high_bits_of')
   apply (simp add:asid_table_transform transform_asid_table_entry_def is_null_cap_def
               split:option.splits)
   apply (clarsimp simp:state_vrefs_def transform_def transform_objects_def
-                       opt_cap_def slots_of_def opt_object_def)
+                       opt_cap_def slots_of_def)
   apply (drule invs_valid_asid_table)
   apply (clarsimp simp:valid_asid_table_def)
   apply (drule bspec)

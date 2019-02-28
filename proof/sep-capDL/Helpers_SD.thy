@@ -214,7 +214,7 @@ where
 
 lemma slots_of_cdl_objects:
   "slots_of obj_id s slot = Some cap \<Longrightarrow> \<exists>obj. cdl_objects s obj_id = Some obj"
-  by (clarsimp simp: slots_of_def opt_object_def split: option.splits)
+  by (clarsimp simp: slots_of_def split: option.splits)
 
 lemma opt_cap_cdl_objects:
   "opt_cap (obj_id, slot) s = Some cap \<Longrightarrow> \<exists>obj. cdl_objects s obj_id = Some obj"
@@ -223,7 +223,7 @@ lemma opt_cap_cdl_objects:
 lemma object_slots_slots_of:
   "\<lbrakk>slots_of obj_id spec slot = Some cap; cdl_objects spec obj_id = Some obj\<rbrakk>
   \<Longrightarrow> object_slots obj slot = Some cap"
-  by (clarsimp simp: slots_of_def opt_object_def)
+  by (clarsimp simp: slots_of_def)
 
 lemma object_slots_opt_cap:
   "\<lbrakk>opt_cap cap_ref spec = Some cap; cdl_objects spec obj_id = Some obj; cap_ref = (obj_id, slot)\<rbrakk>
@@ -243,11 +243,6 @@ lemma object_slots_opt_capD:
 lemma object_slots_has_slots:
   "object_slots obj \<noteq> Map.empty \<Longrightarrow> has_slots obj"
   by (clarsimp simp: has_slots_def object_slots_def split: cdl_object.splits)
-
-lemma opt_object_dom_cdl_objects [elim!]:
-  "opt_object obj_id spec = Some obj \<Longrightarrow> obj_id \<in> dom (cdl_objects spec)"
-  "opt_object obj_id spec = Some obj \<Longrightarrow> \<exists>slot. cdl_objects spec obj_id = Some slot"
-  by (clarsimp simp: opt_object_def)+
 
 lemma slots_of_dom_cdl_objects [elim!]:
   "slots_of obj_id spec slot = Some cap \<Longrightarrow> obj_id \<in> dom (cdl_objects spec)"
@@ -1028,7 +1023,7 @@ definition
   opt_thread :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_tcb option"
 where
   "opt_thread p s \<equiv>
-      case opt_object p s of
+      case cdl_objects s p of
           Some (Tcb tcb) \<Rightarrow> (Some tcb)
         | _ \<Rightarrow> None"
 
@@ -1201,7 +1196,7 @@ lemma opt_cap_object_slot:
   "cdl_objects spec obj_id = Some obj \<Longrightarrow>
    P (object_slots obj slot) \<Longrightarrow>
    P (opt_cap (obj_id, slot) spec)"
-  by (fastforce simp: object_at_def opt_cap_def slots_of_def opt_object_def)
+  by (fastforce simp: object_at_def opt_cap_def slots_of_def)
 
 lemma opt_cap_object_slotE:
   "cdl_objects spec obj_id = Some obj \<Longrightarrow>
@@ -1213,13 +1208,13 @@ lemma slots_of_object_slot:
   "cdl_objects spec obj_id = Some obj \<Longrightarrow>
    P (object_slots obj slot) \<Longrightarrow>
    P (slots_of obj_id spec slot)"
-   by (fastforce simp: object_at_def opt_cap_def slots_of_def opt_object_def)
+   by (fastforce simp: object_at_def opt_cap_def slots_of_def)
 
 lemma slots_of_object_slotE:
   "cdl_objects spec obj_id = Some obj \<Longrightarrow>
    object_slots obj slot = Some cap \<Longrightarrow>
    slots_of obj_id spec slot = Some cap"
-   by (fastforce simp: object_at_def opt_cap_def slots_of_def opt_object_def)
+   by (fastforce simp: object_at_def opt_cap_def slots_of_def)
 
 lemma object_at_cdl_objects:
   "cdl_objects spec obj_id = Some obj \<Longrightarrow>
@@ -1230,12 +1225,12 @@ lemma object_at_cdl_objects:
 lemma opt_cap_object_slot_simp:
   "cdl_objects spec obj_id = Some obj \<Longrightarrow>
    opt_cap (obj_id, slot) spec = object_slots obj slot"
-   by (fastforce simp: object_at_def opt_cap_def slots_of_def opt_object_def)
+   by (fastforce simp: object_at_def opt_cap_def slots_of_def)
 
 lemma slots_of_object_slot_simp:
   "cdl_objects spec obj_id = Some obj \<Longrightarrow>
    slots_of obj_id spec slot = object_slots obj slot"
-   by (fastforce simp: object_at_def opt_cap_def slots_of_def opt_object_def)
+   by (fastforce simp: object_at_def opt_cap_def slots_of_def)
 
 lemma is_fake_pt_cap_cap_has_object:
   "is_fake_pt_cap cap \<Longrightarrow> cap_has_object cap"

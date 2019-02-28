@@ -73,7 +73,7 @@ lemma empty_cap_map_shiftr_NullCap:
 lemma object_slot_initialised_lookup:
   "\<lbrakk>t spec_ptr = Some ptr; opt_cap (spec_ptr,slot) spec = Some cap\<rbrakk>
    \<Longrightarrow> object_slot_initialised spec t spec_ptr slot = (ptr, slot) \<mapsto>c cap_transform t cap"
-  apply (clarsimp simp: object_slot_initialised_def opt_object_def
+  apply (clarsimp simp: object_slot_initialised_def
                         object_initialised_general_def opt_cap_def slots_of_def
                  split: option.splits)
   apply (intro ext iffI)
@@ -482,7 +482,7 @@ lemma map_page_table_in_pd_wp:
   apply (clarsimp simp: map_page_table_def dest!: domE)
   apply (intro assert_opt_validI)
   apply wp
-    apply (clarsimp simp: opt_object_def object_at_def)
+    apply (clarsimp simp: object_at_def)
     apply (wp sep_wp:
               seL4_PageTable_Map_object_initialised_sep[where pt_ptr ="the (t spec_pt_section_ptr)"
                                                         and   pd_ptr ="the (t pd_id)"])+
@@ -759,7 +759,7 @@ lemma slots_of_pd_split:
                                               (pd_id, slot) spec} \<union>
     {slot \<in> dom (slots_of pd_id spec). cap_at (\<lambda>c. c = NullCap) (pd_id, slot) spec}"
   apply (intro set_eqI iffI; clarsimp)
-   apply (clarsimp simp: slots_of_def opt_object_def cap_at_def opt_cap_object_slot_simp
+   apply (clarsimp simp: slots_of_def cap_at_def opt_cap_object_slot_simp
                    split: option.splits)
    apply (fastforce dest: well_formed_pd_frame_or_pt)+
   done

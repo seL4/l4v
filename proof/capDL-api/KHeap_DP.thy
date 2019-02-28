@@ -159,9 +159,9 @@ lemma sep_any_map_c_imp: "(dest \<mapsto>c cap) s \<Longrightarrow> (dest \<maps
   by (fastforce simp: sep_any_def)
 
 lemma obj_exists_map_i:
-  "<obj_id \<mapsto>o obj \<and>* R> s \<Longrightarrow> \<exists>obj'. (opt_object obj_id s = Some obj'
-  \<and> object_clean obj = object_clean obj')"
-  apply (clarsimp simp: opt_object_def sep_map_o_conj)
+  "<obj_id \<mapsto>o obj \<and>* R> s \<Longrightarrow> \<exists>obj'. (cdl_objects s obj_id = Some obj'
+                                       \<and> object_clean obj = object_clean obj')"
+  apply (clarsimp simp: sep_map_o_conj)
   apply (case_tac "cdl_objects s obj_id")
    apply (drule_tac x = "(obj_id,Fields)" in fun_cong)
     apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
@@ -182,8 +182,8 @@ lemma obj_exists_map_i:
 
 lemma obj_exists_map_f:
   "<obj_id \<mapsto>f obj \<and>* R> s \<Longrightarrow>
-  \<exists>obj'. (opt_object obj_id s = Some obj' \<and> object_type obj = object_type obj')"
-  apply (clarsimp simp: opt_object_def sep_map_f_conj Let_def)
+  \<exists>obj'. (cdl_objects s obj_id = Some obj' \<and> object_type obj = object_type obj')"
+  apply (clarsimp simp: sep_map_f_conj Let_def)
   apply (case_tac "cdl_objects s obj_id")
    apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
       object_at_heap_def sep_state_projection_def
@@ -210,7 +210,7 @@ lemma opt_cap_sep_imp:
   \<Longrightarrow> \<exists>cap'. opt_cap p s = Some cap' \<and> reset_cap_asid cap' = reset_cap_asid cap"
   apply (clarsimp simp: opt_cap_def sep_map_c_conj Let_def)
   apply (clarsimp simp:  sep_map_c_def lift_def
-    opt_object_def split_def
+    split_def
     sep_any_def sep_map_general_def slots_of_def
     sep_state_projection_def object_project_def
     object_slots_object_clean
@@ -222,7 +222,7 @@ lemma opt_cap_sep_any_imp:
   apply (clarsimp simp: sep_any_exist
     opt_cap_def sep_map_c_conj Let_def)
   apply (clarsimp simp:  sep_map_c_def lift_def
-    opt_object_def split_def object_slots_object_clean
+    split_def object_slots_object_clean
     sep_any_def sep_map_general_def slots_of_def
     sep_state_projection_def object_project_def
     Let_unfold split:sep_state.splits option.splits)
@@ -236,7 +236,7 @@ lemma sep_f_size_opt_cnode:
   apply (case_tac obj)
   apply (auto simp: intent_reset_def empty_cnode_def
     opt_cnode_def update_slots_def sep_state_projection_def
-    opt_object_def object_wipe_slots_def
+    object_wipe_slots_def
     object_project_def object_clean_def asid_reset_def
     split:cdl_cap.splits cdl_object.splits)
   done
@@ -418,7 +418,7 @@ lemma get_cnode_wp [wp]:
    \<lbrace> P \<rbrace>"
   apply (clarsimp simp: get_cnode_def)
   apply (wp | wpc)+
-  apply (clarsimp simp: opt_object_def split: cdl_object.splits)
+  apply (clarsimp split: cdl_object.splits)
   done
 
 lemma resolve_address_bits_wp:
@@ -1129,7 +1129,7 @@ lemma get_thread_sep_wp:
     get_thread thread
    \<lbrace>\<lambda>rv s. Q rv\<rbrace>"
   apply (simp add: get_thread_def | wp | wpc)+
-  apply (auto simp: object_at_def opt_object_def)
+  apply (auto simp: object_at_def)
   done
 
 lemma get_thread_inv:
@@ -1142,7 +1142,7 @@ lemma get_thread_sep_wp_precise:
     get_thread thread
    \<lbrace>\<lambda>rv. Q rv\<rbrace>"
   apply (simp add:get_thread_def | wp | wpc)+
-  apply (auto simp: object_at_def opt_object_def)
+  apply (auto simp: object_at_def)
   done
 
 (* We are not interested in ep related invocation *)
@@ -1162,7 +1162,7 @@ lemma has_restart_cap_sep_wp:
   apply (simp add: object_at_def get_thread_def has_restart_cap_def
        | wp+ | wpc | intro conjI)+
   apply (clarsimp dest!: opt_cap_sep_imp
-                   simp: opt_object_def opt_cap_def slots_of_def)
+                   simp: opt_cap_def slots_of_def)
   apply (clarsimp simp: object_slots_def)
   apply (erule rsubst)
   apply (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)

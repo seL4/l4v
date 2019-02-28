@@ -263,7 +263,7 @@ definition map_page ::
    \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> word32 \<Rightarrow> cdl_cptr \<Rightarrow> unit u_monad"
   where
   "map_page spec orig_caps page_id pd_id rights vaddr free_cptr \<equiv> do
-    cdl_page  \<leftarrow> assert_opt $ opt_object page_id spec;
+    cdl_page  \<leftarrow> assert_opt $ cdl_objects spec page_id;
     sel4_page \<leftarrow> assert_opt $ orig_caps page_id;
     sel4_pd   \<leftarrow> assert_opt $ orig_caps pd_id;
     vmattribs \<leftarrow> assert_opt $ opt_vmattribs cdl_page;
@@ -280,7 +280,7 @@ definition map_page_table ::
    \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> word32 \<Rightarrow> unit u_monad"
   where
   "map_page_table spec orig_caps page_id pd_id rights vaddr \<equiv> do
-    cdl_page  \<leftarrow> assert_opt $ opt_object page_id spec;
+    cdl_page  \<leftarrow> assert_opt $ cdl_objects spec page_id;
     sel4_page \<leftarrow> assert_opt $ orig_caps page_id;
     sel4_pd   \<leftarrow> assert_opt $ orig_caps pd_id;
     vmattribs \<leftarrow> assert_opt $ opt_vmattribs cdl_page;

@@ -735,9 +735,8 @@ lemma monad_commute_set_cap_cdt:
   apply (subst oblivious_modify_swap)
    apply (simp add: KHeap_D.set_cap_def split_def gets_the_def
      KHeap_D.set_object_def)
-   apply (intro oblivious_bind oblivious_assert impI conjI allI
-               oblivious_select |
-         simp add: opt_object_def split: cdl_object.split)+
+   apply (intro oblivious_bind oblivious_assert impI conjI allI oblivious_select |
+          simp split: cdl_object.split)+
   apply (clarsimp simp:bind_assoc)
   done
 

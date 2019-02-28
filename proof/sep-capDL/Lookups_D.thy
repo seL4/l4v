@@ -20,7 +20,7 @@ definition
   opt_cnode :: "cdl_object_id \<Rightarrow> cdl_cnode lookup"
 where
   "opt_cnode p \<equiv> DO
-      t \<leftarrow> opt_object p;
+      t \<leftarrow> \<lambda>s. cdl_objects s p;
       case t of
         CNode cnode \<Rightarrow> oreturn cnode
       | _ \<Rightarrow> ofail

@@ -209,7 +209,7 @@ lemma irq_slot_empty_initialised_NullCap:
   apply (frule (1) well_formed_irq_is_irq_node)
   apply (frule (1) well_formed_object_slots)
   apply (rule ext)
-  apply (clarsimp simp: irq_slot_empty_def irq_slot_initialised_def irq_initialised_general_def slots_of_def opt_object_def
+  apply (clarsimp simp: irq_slot_empty_def irq_slot_initialised_def irq_initialised_general_def slots_of_def
                  split: option.splits)
   apply (subgoal_tac "object_slots (object_default_state obj) slot = object_slots (spec2s t obj) slot")
    apply (subst sep_map_s_object_slots_equal, assumption, simp)
@@ -218,7 +218,7 @@ lemma irq_slot_empty_initialised_NullCap:
   apply (erule object_slots_object_default_state_NullCap
           [where obj_id = "cdl_irq_node spec irq" and cap = NullCap])
     apply (clarsimp simp: object_at_def object_type_is_object)
-   apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def)
+   apply (clarsimp simp: opt_cap_def slots_of_def)
   apply simp
   done
 

@@ -378,7 +378,7 @@ proof -
           apply (wp select_wp | simp)+
         apply (simp add: returnOk_def in_monad select_def, wp)
         apply (clarsimp simp: transform_pt_slot_ref_def all_pd_pt_slots_def
-                              opt_object_page_directory[unfolded opt_object_def]
+                              opt_object_page_directory
                               obj_at_def object_slots_def transform_page_directory_contents_def
                               unat_map_def kernel_pde_mask_def lookup_pd_slot_pd
                               pd_aligned
@@ -434,7 +434,7 @@ proof -
         apply (frule_tac p="ptrFromPAddr v" for v in pspace_alignedD, simp+)
         apply (rule map_includedI)
          apply (clarsimp simp: transform_pt_slot_ref_def all_pd_pt_slots_def
-                               opt_object_page_directory[unfolded opt_object_def]
+                               opt_object_page_directory
                                object_slots_def transform_page_directory_contents_def
                                unat_map_def kernel_pde_mask_def
                           del: disjCI UnCI)
@@ -473,7 +473,7 @@ proof -
           apply (wp select_wp | simp)+
         apply (simp add: returnOk_def in_monad select_def, wp)
         apply (clarsimp simp: transform_pde_def obj_at_def
-                              opt_object_page_directory[unfolded opt_object_def]
+                              opt_object_page_directory
                        dest!: a_type_pdD)
         apply (simp add: transform_pd_slot_ref_def lookup_pd_slot_def
                          all_pd_pt_slots_def object_slots_def
@@ -492,7 +492,7 @@ proof -
           apply (wp select_wp | simp)+
         apply (simp add: returnOk_def in_monad select_def, wp)
         apply (clarsimp simp: transform_pde_def obj_at_def
-                              opt_object_page_directory[unfolded opt_object_def]
+                              opt_object_page_directory
                        dest!: a_type_pdD)
         apply (rule map_includedI)
          apply clarsimp
@@ -838,7 +838,7 @@ next
                                         pd_bits_def pageBits_def)
                  apply (simp add: vmsz_aligned_def)
                 apply simp
-               apply (fastforce simp: opt_object_def)
+               apply fastforce
               apply (clarsimp simp: neq_Nil_conv valid_cap_simps)
               apply auto[1]
              apply (rule corres_from_rdonly[where P=\<top> and P'=\<top>], simp_all)[1]
@@ -1083,7 +1083,7 @@ lemma pde_opt_cap_eq:
        \<Longrightarrow> opt_cap (transform_pd_slot_ref x) (transform s)
          = Some (transform_pde ((kernel_pde_mask pd) (ucast (x && mask pd_bits >> 2))))"
   apply (simp add: opt_cap_def transform_pd_slot_ref_def
-                   slots_of_def transform_def opt_object_def
+                   slots_of_def transform_def
                    obj_at_def object_slots_def restrict_map_def map_add_def
                    transform_page_directory_contents_def transform_objects_def
                    unat_map_def ucast_nat_def
@@ -1102,7 +1102,7 @@ lemma gets_the_noop_dcorres:
                      assert_opt_def return_def)
 
 lemma dget_object_sp:
-  "\<lbrace>P\<rbrace> KHeap_D.get_object p \<lbrace>\<lambda>r s. P s \<and> opt_object p s = Some r\<rbrace>"
+  "\<lbrace>P\<rbrace> KHeap_D.get_object p \<lbrace>\<lambda>r s. P s \<and> cdl_objects s p = Some r\<rbrace>"
   apply wp
   apply auto
   done
@@ -1115,7 +1115,7 @@ lemma set_cap_opt_cap':
   apply (case_tac obj; simp add: KHeap_D.set_object_def has_slots_def update_slots_def object_slots_def
                             split del: if_split cong: if_cong bind_cong;
                        wpsimp wp: select_wp)
-       by (auto elim!:rsubst[where P=P] simp: opt_cap_def slots_of_def opt_object_def object_slots_def)
+       by (auto elim!:rsubst[where P=P] simp: opt_cap_def slots_of_def object_slots_def)
 
 lemma set_cap_opt_cap:
   "\<lbrace>\<lambda>s. if slot = slot' then P (Some cap) else P (opt_cap slot s)\<rbrace>

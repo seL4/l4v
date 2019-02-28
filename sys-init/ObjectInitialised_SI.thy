@@ -665,7 +665,7 @@ lemma object_slots_object_default_state_NullCap:
                  split: cdl_object.splits,
        (fastforce simp: object_at_def is_cnode_def object_size_bits_def object_slots_def
                         empty_cnode_def empty_irq_node_def empty_cap_map_def
-                        opt_cap_def slots_of_def opt_object_def
+                        opt_cap_def slots_of_def
                  dest!: dom_range_upper)+)
   done
 
@@ -1001,12 +1001,12 @@ lemma empty_slots_object_slots_initialised_object_empty_slots_initialised:
   apply (clarsimp simp: object_slots_initialised_def object_empty_slots_initialised_def object_initialised_general_def)
   apply (rule iffI)
    apply clarsimp
-   apply (clarsimp simp: sep_map_S_def sep_map_S'_def sep_map_E_def slots_of_def opt_object_def
+   apply (clarsimp simp: sep_map_S_def sep_map_S'_def sep_map_E_def slots_of_def
                   split: option.splits)
    apply (fastforce simp: intent_reset_def spec2s_def object_slots_def cdl_tcb.splits
                    split: cdl_object.splits)
   apply clarsimp
-  apply (clarsimp simp: sep_map_S_def sep_map_S'_def sep_map_E_def slots_of_def opt_object_def
+  apply (clarsimp simp: sep_map_S_def sep_map_S'_def sep_map_E_def slots_of_def
                  split: option.splits)
   apply (fastforce simp: intent_reset_def spec2s_def object_slots_def cdl_tcb.splits
                   split: cdl_object.splits)
@@ -1016,7 +1016,7 @@ lemma object_empty_slots_initialised_def2:
   "object_empty_slots_initialised spec t obj_id =
    object_initialised_general spec t (spec2s t) (\<lambda>obj_id'. sep_map_S' (obj_id', UNIV - dom (slots_of obj_id spec))) obj_id"
   apply (clarsimp simp: object_empty_slots_initialised_def object_initialised_general_def sep_map_E_def)
-  apply (fastforce simp: slots_of_def opt_object_def
+  apply (fastforce simp: slots_of_def
                   split: option.splits)
   done
 
@@ -1080,11 +1080,11 @@ lemma object_empty_slots_empty_initialised:
    apply (frule (1) well_formed_object_slots)
    apply (clarsimp simp: well_formed_def)
    apply (erule_tac x=spec_object_id in allE)
-   apply (clarsimp simp: opt_object_def sep_map_E_object_default_state
+   apply (clarsimp simp: sep_map_E_object_default_state
                   split: option.splits)
   apply (clarsimp simp: well_formed_def)
   apply (erule_tac x=spec_object_id in allE)
-  apply (clarsimp simp: opt_object_def split: option.splits)
+  apply (clarsimp split: option.splits)
   apply (drule_tac obj=spec_object and p=kernel_object_id in sep_map_E_object_default_state, simp)
   done
 
@@ -1095,11 +1095,11 @@ lemma cnode_empty_slots_half_initialised_object_empty_slots_initialised:
                         object_initialised_general_def)
   apply (rule ext)
   apply (rule iffI)
-   apply (clarsimp simp: opt_object_def split: option.splits)
+   apply (clarsimp split: option.splits)
    apply (cut_tac p=kernel_object_id and obj=spec_object and
                   obj'="cnode_half spec spec_object_id spec_object" in
                   sep_map_E_eq [OF sym], simp+)
-  apply (clarsimp simp: opt_object_def split: option.splits)
+  apply (clarsimp split: option.splits)
   apply (cut_tac p=kernel_object_id and obj="cnode_half spec spec_object_id spec_object" and
                  obj'="spec_object" in
                  sep_map_E_eq [OF sym], simp+)
@@ -1118,7 +1118,7 @@ lemma well_formed_has_slots:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; object_slots obj = Map.empty; has_slots obj \<rbrakk> \<Longrightarrow> False"
   apply (clarsimp simp: well_formed_def)
   apply (erule_tac x=obj_id in allE)
-  apply (clarsimp simp: opt_object_def split: option.splits)
+  apply (clarsimp split: option.splits)
   apply (drule object_default_state_has_slots_not_empty, simp)
   done
 
@@ -1149,7 +1149,7 @@ lemma sep_map_s_object_default_state_no_slots:
 lemma object_slots_empty_initialised_no_slots:
   "\<lbrakk>well_formed spec; slots_of obj_id spec = Map.empty\<rbrakk>
   \<Longrightarrow> object_slots_empty spec t obj_id = object_slots_initialised spec t obj_id"
-  apply (clarsimp simp: slots_of_def opt_object_def split: option.splits)
+  apply (clarsimp simp: slots_of_def split: option.splits)
    apply (clarsimp simp: object_slots_empty_def object_slots_initialised_def object_initialised_general_def)
   apply (rename_tac obj)
   apply (case_tac "has_slots obj")
@@ -1173,12 +1173,12 @@ lemma object_empty_slots_empty_def2:
   apply (rule iffI)
    apply (clarsimp simp: well_formed_def)
    apply (erule_tac x=obj_id in allE)
-   apply (clarsimp simp: opt_object_def split: option.splits)
-   apply (fastforce simp: slots_of_def opt_object_def split: option.splits)
+   apply (clarsimp split: option.splits)
+   apply (fastforce simp: slots_of_def split: option.splits)
   apply (clarsimp simp: well_formed_def)
   apply (erule_tac x=obj_id in allE)
-  apply (clarsimp simp: opt_object_def split: option.splits)
-  apply (fastforce simp: slots_of_def opt_object_def split: option.splits)
+  apply (clarsimp split: option.splits)
+  apply (fastforce simp: slots_of_def split: option.splits)
   done
 
 lemma cnode_empty_slots_half_initialised_def2:
@@ -1189,18 +1189,18 @@ lemma cnode_empty_slots_half_initialised_def2:
                         object_initialised_general_def)
   apply (rule ext)
   apply (rule iffI)
-   apply (clarsimp simp: opt_object_def split: option.splits)
+   apply (clarsimp split: option.splits)
    apply (cut_tac p=kernel_object_id and
                   obj="cnode_half spec obj_id spec_object" and
                   obj'="spec2s t (cnode_half spec obj_id spec_object)" in
           sep_map_E_eq, simp, simp)
-   apply (clarsimp simp: sep_map_E_def slots_of_def opt_object_def split: option.splits)
+   apply (clarsimp simp: sep_map_E_def slots_of_def split: option.splits)
   apply clarsimp
   apply (cut_tac p=kernel_object_id and
                  obj="spec2s t (cnode_half spec obj_id spec_object)" and
                  obj'="cnode_half spec obj_id spec_object" in
          sep_map_E_eq, simp, simp)
-  apply (clarsimp simp: sep_map_E_def slots_of_def opt_object_def)
+  apply (clarsimp simp: sep_map_E_def slots_of_def)
   done
 
 lemma object_slots_empty_decomp:
@@ -1223,7 +1223,7 @@ lemma object_slots_empty_decomp:
 
 lemma well_formed_cnode_not_empty:
   "\<lbrakk>well_formed spec; slots_of obj_id spec = Map.empty; cnode_at obj_id spec\<rbrakk> \<Longrightarrow> P"
-  apply (clarsimp simp: slots_of_def opt_object_def object_at_def
+  apply (clarsimp simp: slots_of_def object_at_def
                  split: option.splits)
   apply (rename_tac obj)
   apply (case_tac "has_slots obj")
@@ -1264,7 +1264,7 @@ lemma irq_slots_initialised_decomp_helper:
   apply (clarsimp simp: irq_slots_initialised_def irq_slot_initialised_def [abs_def]
                         irq_initialised_general_def [abs_def]
                         object_empty_slots_initialised_def object_initialised_general_def
-                        sep_conj_exists slots_of_def opt_object_def
+                        sep_conj_exists slots_of_def
                  split: option.splits)
   apply (subst sep_map_S_decomp, simp+)
    apply (erule (1) well_formed_finite_object_slots)
@@ -1280,7 +1280,7 @@ lemma irq_slots_empty_decomp_helper:
   apply (clarsimp simp: irq_slots_empty_def irq_slot_empty_def [abs_def]
                         irq_initialised_general_def [abs_def]
                         object_empty_slots_empty_def object_initialised_general_def
-                        sep_conj_exists slots_of_def opt_object_def
+                        sep_conj_exists slots_of_def
                  split: option.splits)
   apply (frule (1) well_formed_object_slots_default_irq_node)
   apply (subst sep_map_S_decomp, simp+)

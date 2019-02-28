@@ -280,7 +280,7 @@ lemma caps_of_state_transform_opt_cap_no_idle:
   apply (cases p)
   apply (erule cte_wp_atE)
    apply (clarsimp simp: opt_cap_def transform_cslot_ptr_def object_slots_def
-                         slots_of_def opt_object_def transform_def transform_objects_def
+                         slots_of_def transform_def transform_objects_def
                          transform_cnode_contents_def well_formed_cnode_n_def
                          restrict_map_def
                    split: option.splits if_split_asm nat.splits)
@@ -295,7 +295,7 @@ lemma caps_of_state_transform_opt_cap_no_idle:
                          object_slots_def nat_bl_to_bin_lt2p)
   apply (frule(1) valid_etcbs_tcb_etcb)
   by (clarsimp simp: opt_cap_def transform_cslot_ptr_def
-                        slots_of_def opt_object_def restrict_map_def
+                        slots_of_def restrict_map_def
                         transform_def object_slots_def transform_objects_def
                         valid_irq_node_def obj_at_def is_cap_table_def tcb_cap_cases_def
                         transform_tcb_def tcb_slot_defs infer_tcb_bound_notification_def
@@ -641,12 +641,11 @@ lemma asid_pool_not_idle:
 
 lemma opt_object_asid_pool:
   "\<lbrakk> valid_idle s; kheap s a = Some (ArchObj (arch_kernel_obj.ASIDPool fun)) \<rbrakk> \<Longrightarrow>
-     opt_object a (transform s) = Some (cdl_object.AsidPool \<lparr>cdl_asid_pool_caps = transform_asid_pool_contents fun\<rparr>)"
+     cdl_objects (transform s) a = Some (cdl_object.AsidPool \<lparr>cdl_asid_pool_caps = transform_asid_pool_contents fun\<rparr>)"
   apply (frule asid_pool_at_rev)
   apply (frule(1) asid_pool_not_idle)
-  apply (clarsimp simp:transform_objects_def opt_object_def transform_def
-    not_idle_thread_def restrict_map_def)
-done
+  apply (clarsimp simp: transform_objects_def transform_def not_idle_thread_def restrict_map_def)
+  done
 
 lemma transform_asid_pool_contents_upd:
   "transform_asid_pool_contents (pool(ucast asid := pd)) =
@@ -995,7 +994,7 @@ done
 lemma opt_cap_page_table:"\<lbrakk>valid_idle s;pd_pt_relation a pt_id x s;ucast (x && mask pd_bits >> 2) \<notin> kernel_mapping_slots\<rbrakk>\<Longrightarrow>
 (opt_cap (a, unat (x && mask pd_bits >> 2) ) (transform s))
   = Some (cdl_cap.PageTableCap pt_id Fake None)"
-  apply (clarsimp simp:pd_pt_relation_def opt_cap_def transform_def unat_def slots_of_def opt_object_def)
+  apply (clarsimp simp:pd_pt_relation_def opt_cap_def transform_def unat_def slots_of_def)
   apply (frule page_directory_at_rev)
   apply (frule(1) page_directory_not_idle)
   apply (clarsimp simp:transform_objects_def not_idle_thread_def page_directory_not_idle
@@ -1010,7 +1009,7 @@ done
 lemma opt_cap_page:"\<lbrakk>valid_idle s;pt_page_relation a pg x S s \<rbrakk>\<Longrightarrow>
 \<exists>f sz. (opt_cap (a, unat (x && mask pt_bits >> 2) ) (transform s))
   = Some (cdl_cap.FrameCap False pg f sz Fake None)"
-  apply (clarsimp simp:pt_page_relation_def unat_def opt_cap_def transform_def slots_of_def opt_object_def)
+  apply (clarsimp simp:pt_page_relation_def unat_def opt_cap_def transform_def slots_of_def)
   apply (frule page_table_at_rev)
   apply (frule(1) page_table_not_idle)
   apply (clarsimp simp:transform_objects_def not_idle_thread_def page_directory_not_idle
@@ -1029,7 +1028,7 @@ lemma opt_cap_section:
   unfolding unat_def
   apply (erule disjE)
 
-    apply (clarsimp simp: pd_section_relation_def opt_cap_def transform_def slots_of_def opt_object_def)
+    apply (clarsimp simp: pd_section_relation_def opt_cap_def transform_def slots_of_def)
     apply (frule page_directory_at_rev)
     apply (frule(1) page_directory_not_idle)
     apply (clarsimp simp:transform_objects_def not_idle_thread_def page_directory_not_idle
@@ -1038,7 +1037,7 @@ lemma opt_cap_section:
       apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def unat_def[symmetric] below_kernel_base_int)
       apply (simp add:word_of_int ucast_def unat_def mask_pt_bits_less)+
     apply (simp add:mask_pd_bits_less)
-  apply (clarsimp simp:pd_super_section_relation_def opt_cap_def transform_def slots_of_def opt_object_def)
+  apply (clarsimp simp:pd_super_section_relation_def opt_cap_def transform_def slots_of_def)
   apply (frule page_directory_at_rev)
   apply (frule(1) page_directory_not_idle)
   apply (clarsimp simp:transform_objects_def not_idle_thread_def page_directory_not_idle
@@ -1049,23 +1048,23 @@ lemma opt_cap_section:
   apply (simp add:mask_pd_bits_less)
 done
 
-lemma opt_object_page_table:"\<lbrakk>valid_idle s;kheap s a = Some (ArchObj (arch_kernel_obj.PageTable fun))\<rbrakk>
-\<Longrightarrow>opt_object a (transform s) =
-  Some (cdl_object.PageTable \<lparr>cdl_page_table_caps = transform_page_table_contents fun\<rparr>)"
+lemma opt_object_page_table:
+  "\<lbrakk>valid_idle s; kheap s a = Some (ArchObj (arch_kernel_obj.PageTable fun))\<rbrakk>
+  \<Longrightarrow> cdl_objects (transform s) a =
+        Some (cdl_object.PageTable \<lparr>cdl_page_table_caps = transform_page_table_contents fun\<rparr>)"
   apply (frule page_table_at_rev)
   apply (frule(1) page_table_not_idle)
-  apply (clarsimp simp:transform_objects_def opt_object_def transform_def
-    not_idle_thread_def restrict_map_def)
-done
+  apply (clarsimp simp: transform_objects_def transform_def not_idle_thread_def restrict_map_def)
+  done
 
-lemma opt_object_page_directory:"\<lbrakk>valid_idle s;kheap s a = Some (ArchObj (arch_kernel_obj.PageDirectory fun))\<rbrakk>
-\<Longrightarrow>opt_object a (transform s) =
-  Some (cdl_object.PageDirectory \<lparr>cdl_page_directory_caps = transform_page_directory_contents fun\<rparr>)"
+lemma opt_object_page_directory:
+  "\<lbrakk>valid_idle s; kheap s a = Some (ArchObj (arch_kernel_obj.PageDirectory fun))\<rbrakk>
+  \<Longrightarrow> cdl_objects (transform s) a =
+        Some (cdl_object.PageDirectory \<lparr>cdl_page_directory_caps = transform_page_directory_contents fun\<rparr>)"
   apply (frule page_directory_at_rev)
   apply (frule(1) page_directory_not_idle)
-  apply (clarsimp simp:transform_objects_def opt_object_def transform_def
-    not_idle_thread_def restrict_map_def)
-done
+  apply (clarsimp simp:transform_objects_def transform_def not_idle_thread_def restrict_map_def)
+  done
 
 lemma remove_cdt_pt_slot_exec:
   "\<lbrakk>dcorres dc \<top> Q (g ()) f;
@@ -2146,7 +2145,7 @@ lemma pd_at_cdl_pd_at:
   \<Longrightarrow> opt_cap (transform_pd_slot_ref ptr) (transform s) =
   Some (transform_pde (fun (of_nat (unat (ptr && mask pd_bits >> 2)))))"
   apply (clarsimp simp:opt_cap_def transform_pd_slot_ref_def transform_def
-    slots_of_def opt_object_def transform_objects_def pred_tcb_def2
+    slots_of_def transform_objects_def pred_tcb_def2
     valid_idle_def restrict_map_def object_slots_def
     transform_page_directory_contents_def unat_map_def
      dest!:get_tcb_SomeD split:option.splits)
@@ -3421,7 +3420,7 @@ lemma opt_cap_cnode:
            = (\<exists>v cap'. transform_cslot_ptr (y, v) = (y, node)
                    \<and> cn v = Some cap' \<and> cap = transform_cap cap')"
   apply clarsimp
-  apply (simp add: opt_cap_def slots_of_def opt_object_def
+  apply (simp add: opt_cap_def slots_of_def
                    transform_def transform_objects_def restrict_map_def
                    transform_cnode_contents_def option_map_join_def
                    transform_cslot_ptr_def object_slots_def
