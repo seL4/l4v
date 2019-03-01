@@ -19,8 +19,8 @@ imports
 begin
 
 (* Wrap up the standard usage pattern of wp/wpc/simp into its own command: *)
-method wpsimp uses wp wp_del simp simp_del split split_del cong =
-  ((determ \<open>wpfix | wp add: wp del: wp_del | wpc |
+method wpsimp uses wp wp_del simp simp_del split split_del cong comb =
+  ((determ \<open>wpfix | wp add: wp del: wp_del comb: comb| wpc |
             clarsimp_no_cond simp: simp simp del: simp_del split: split split del: split_del cong: cong |
             clarsimp simp: simp simp del: simp_del split: split split del: split_del cong: cong\<close>)+)[1]
 
@@ -1252,6 +1252,13 @@ lemma hoare_vcg_imp_lift':
   apply (erule (1) hoare_vcg_imp_lift)
   done
 
+lemma hoare_vcg_imp_conj_lift[wp_comb]:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s\<rbrace> \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q'' rv s) \<and> Q''' rv s\<rbrace>
+   \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q' rv s \<and> Q'' rv s) \<and> Q''' rv s\<rbrace>"
+  by (auto simp: valid_def)
+
+lemmas hoare_vcg_imp_conj_lift'[wp_unsafe] = hoare_vcg_imp_conj_lift[where Q'''="\<top>\<top>", simplified]
+
 lemma hoare_absorb_imp:
   "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> R rv s  \<rbrace> \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> R rv s \<rbrace>"
   by (erule hoare_post_imp[rotated], blast)
@@ -1730,6 +1737,14 @@ lemma hoare_drop_impE_E:
   by (auto simp: validE_E_def validE_def valid_def split_def split: sum.splits)
 
 lemmas hoare_drop_imps = hoare_drop_imp hoare_drop_impE_R hoare_drop_impE_E
+
+(*This is unsafe, but can be very useful when supplied as a comb rule.*)
+lemma hoare_drop_imp_conj[wp_unsafe]:
+  "\<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace> \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q'' rv s) \<and> Q''' rv s\<rbrace>
+   \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q' rv s \<and> Q'' rv s) \<and> Q''' rv s\<rbrace>"
+  by (auto simp: valid_def)
+
+lemmas hoare_drop_imp_conj'[wp_unsafe] = hoare_drop_imp_conj[where Q'''="\<top>\<top>", simplified]
 
 lemma bind_det_exec:
   "fst (a s) = {(r,s')} \<Longrightarrow> fst ((a >>= b) s) = fst (b r s')"
