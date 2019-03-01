@@ -416,16 +416,6 @@ lemma no_obj_refs:
   apply blast
   done
 
-lemma unique_table_refs:
-    "\<And>cps P. unique_table_refs cps
-             \<Longrightarrow> unique_table_refs (\<lambda>x. if P x then None else cps x)"
-    apply (simp only: unique_table_refs_def option.simps
-                      simp_thms
-               split: if_split)
-    apply blast
-    done
-
-
 lemma valid_pspace: "valid_pspace s" using invs
   by (simp add: invs_def valid_state_def)
 
