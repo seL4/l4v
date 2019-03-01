@@ -16,7 +16,19 @@ theory ArchVSpace_AI
 imports "../VSpacePre_AI"
 begin
 
+(* FIXME RISCV: move to lib *)
+lemma throw_opt_wp[wp]:
+  "\<lbrace>if v = None then E ex else Q (the v)\<rbrace> throw_opt ex v \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  unfolding throw_opt_def by wpsimp auto
+
 context Arch begin global_naming RISCV64
+
+lemma find_vspace_for_asid_wp[wp]:
+  "\<lbrace>\<lambda>s. (vspace_for_asid asid s = None \<longrightarrow> E InvalidRoot s) \<and>
+        (\<forall>pt. vspace_for_asid asid s = Some pt \<longrightarrow> Q pt s) \<rbrace>
+   find_vspace_for_asid asid \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  unfolding find_vspace_for_asid_def
+  by (wpsimp wp: throw_opt_wp)
 
 crunch pspace_in_kernel_window[wp]: perform_page_invocation "pspace_in_kernel_window"
   (simp: crunch_simps wp: crunch_wps)
@@ -291,11 +303,6 @@ lemma set_cap_valid_slots[wp]:
   apply (clarsimp simp:valid_slots_def)
   apply (wp hoare_vcg_ball_lift)
   done *)
-
-(* FIXME RISCV: move to lib *)
-lemma throw_opt_wp[wp]:
-  "\<lbrace>if v = None then E ex else Q (the v)\<rbrace> throw_opt ex v \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  unfolding throw_opt_def by wpsimp auto
 
 definition
   "pt_walks top_level pt_ptr vptr target_pt_ptr ptes \<equiv>
@@ -782,6 +789,25 @@ lemma store_pte_no_lookup_target:
   by (fastforce simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def
                      graph_of_def image_def
               split: if_split_asm) *)
+
+lemma mapM_swp_store_pte_invs_unmap:
+  "\<lbrace>invs and (\<lambda>s. \<forall>sl\<in>set slots. table_base sl \<notin> global_refs s) and
+    K (pte = InvalidPTE)\<rbrace>
+  mapM (swp store_pte pte) slots \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (rule hoare_post_imp)
+   prefer 2
+   apply (rule mapM_wp')
+   apply simp
+   apply (rule hoare_pre, wp store_pte_invs hoare_vcg_const_Ball_lift
+                             hoare_vcg_ex_lift)
+    apply (clarsimp)+
+  sorry (* FIXME RISCV *)
+
+lemma mapM_x_swp_store_pte_invs_unmap:
+  "\<lbrace>invs and (\<lambda>s. \<forall>sl \<in> set slots. table_base sl \<notin> global_refs s) and
+    K (pte = InvalidPTE)\<rbrace>
+  mapM_x (swp store_pte pte) slots \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (simp add: mapM_x_mapM | wp mapM_swp_store_pte_invs_unmap)+
 
 lemma unmap_page_table_unmapped[wp]:
   "\<lbrace>pspace_aligned and valid_vspace_objs\<rbrace>
