@@ -640,9 +640,10 @@ lemma max_index_upd_no_cap_to:
 
 lemma perform_asid_control_invocation_st_tcb_at:
   "\<lbrace>st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t
-    and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci\<rbrace>
-    perform_asid_control_invocation aci
-  \<lbrace>\<lambda>y. st_tcb_at P t\<rbrace>"
+    and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)
+    and invs and valid_aci aci\<rbrace>
+     perform_asid_control_invocation aci
+   \<lbrace>\<lambda>y. st_tcb_at P t\<rbrace>"
   including no_pre
   supply
     is_aligned_neg_mask_eq[simp del]
@@ -1567,7 +1568,6 @@ crunch pred_tcb_at: perform_page_table_invocation, perform_page_invocation,
            perform_asid_pool_invocation, perform_page_directory_invocation "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
-
 lemma arch_pinv_st_tcb_at:
   "\<lbrace>invs and valid_arch_inv ai and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
     st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t\<rbrace>
@@ -1584,6 +1584,17 @@ lemma arch_pinv_st_tcb_at:
          fastforce elim!: pred_tcb_weakenE)
   done
 
+crunches arch_perform_invocation
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma arch_pinv_ct_active:
+  "\<lbrace>invs and valid_arch_inv ai and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+     arch_perform_invocation ai
+   \<lbrace>\<lambda>rv. ct_active\<rbrace>" (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
+  apply (wpsimp wp: ct_in_state_thread_state_lift'[where Pre="?P"]
+                    arch_pinv_st_tcb_at)
+   by (fastforce simp: pred_tcb_at_def obj_at_def)+
 
 lemma get_cap_diminished:
   "\<lbrace>valid_objs\<rbrace> get_cap slot \<lbrace>\<lambda>cap. cte_wp_at (diminished cap) slot\<rbrace>"
@@ -1616,11 +1627,11 @@ requalify_facts
   sts_valid_arch_inv
   arch_decode_inv_wf
   arch_pinv_st_tcb_at
+  arch_pinv_ct_active
   get_cap_diminished
 
 end
 
-declare invoke_arch_invs[wp]
-declare arch_decode_inv_wf[wp]
+declare invoke_arch_invs[wp] arch_decode_inv_wf[wp] arch_pinv_ct_active[wp]
 
 end

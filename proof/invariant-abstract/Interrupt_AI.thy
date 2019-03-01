@@ -108,8 +108,12 @@ locale Interrupt_AI =
        \<And>cap. \<lbrace>ex_inv and invs\<rbrace> cap_delete_one cap \<lbrace>\<lambda>_.ex_inv\<rbrace>
      \<rbrakk> \<Longrightarrow>
      \<lbrace>invs and ex_inv and irq_handler_inv_valid i\<rbrace> invoke_irq_handler i \<lbrace>\<lambda>rv s. invs s \<and> ex_inv s\<rbrace>"
+  assumes invoke_irq_handler_ct_active[wp]:
+    "\<And> i. \<lbrace>ct_active\<rbrace> invoke_irq_handler i \<lbrace>\<lambda>rv. ct_active :: 'a state \<Rightarrow> bool\<rbrace>"
   assumes invoke_irq_control_invs[wp]:
     "\<And> i. \<lbrace>invs and irq_control_inv_valid i\<rbrace> invoke_irq_control i \<lbrace>\<lambda>rv. invs :: 'a state \<Rightarrow> bool\<rbrace>"
+  assumes invoke_irq_control_ct_in_state[wp]:
+    "\<And> i P. \<lbrace>ct_in_state P\<rbrace> invoke_irq_control i \<lbrace>\<lambda>rv. ct_in_state P :: 'a state \<Rightarrow> bool\<rbrace>"
   assumes resetTimer_invs[wp]:
     "\<lbrace>invs :: 'a state \<Rightarrow> bool\<rbrace> do_machine_op resetTimer \<lbrace>\<lambda>_. invs\<rbrace>"
   assumes empty_fail_ackInterrupt[simp, intro!]:

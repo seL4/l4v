@@ -1337,8 +1337,12 @@ lemma caps_region_kernel_window_imp:
   apply blast
   done
 
-crunch irq_node[wp]: init_arch_objects "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps)
+crunches init_arch_objects
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
+  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and ct_in_state[wp]: "ct_in_state P"
+  (wp: crunch_wps ct_in_state_thread_state_lift)
 
 lemma init_arch_objects_excap:
   "\<lbrace>ex_cte_cap_wp_to P p\<rbrace>
@@ -1346,17 +1350,11 @@ lemma init_arch_objects_excap:
    \<lbrace>\<lambda>rv s. ex_cte_cap_wp_to P p s\<rbrace>"
   by (wp ex_cte_cap_to_pres)
 
-crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at P t"
-  (wp: crunch_wps)
-
 lemma valid_arch_mdb_detype:
   "valid_arch_mdb (is_original_cap s) (caps_of_state s) \<Longrightarrow>
             valid_arch_mdb (is_original_cap (detype (untyped_range cap) s))
          (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
   by auto
-
-crunch bound_sc_tcb_at[wp]: init_arch_objects "bound_sc_tcb_at P t"
-  (wp: crunch_wps)
 
 end
 
@@ -1376,6 +1374,8 @@ lemmas init_arch_objects_wps
       ARM.init_arch_objects_valid_cap
       ARM.init_arch_objects_cap_table
       ARM.init_arch_objects_excap
-      ARM.init_arch_objects_st_tcb_at
+      ARM.init_arch_objects_pred_tcb_at
+      ARM.init_arch_objects_cur_thread
+      ARM.init_arch_objects_ct_in_state
 
 end

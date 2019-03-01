@@ -98,7 +98,9 @@ lemma hh_invs[wp, Syscall_AI_assms]:
   by (cases fault; wpsimp simp: valid_fault_def)
 
 crunches make_fault_msg
-for cur_thread[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
+  for cur_thread[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
+  and fault_tcb_at[wp, Syscall_AI_assms]: "pred_tcb_at itcb_fault P t"
+
 end
 
 global_interpretation Syscall_AI?: Syscall_AI

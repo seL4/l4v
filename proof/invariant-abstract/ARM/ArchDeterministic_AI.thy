@@ -93,9 +93,8 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
        | wpc | simp add: get_irq_slot_def handle_reserved_irq_def
        | wp_once hoare_drop_imps)+
 
-crunch valid_list[wp, Deterministic_AI_assms]: handle_send valid_list
-
-crunch valid_list[wp, Deterministic_AI_assms]: handle_hypervisor_fault valid_list
+crunches handle_send, handle_hypervisor_fault
+  for valid_list[wp, Deterministic_AI_assms]: valid_list
 
 end
 

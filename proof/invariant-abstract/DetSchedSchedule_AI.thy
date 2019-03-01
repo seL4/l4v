@@ -8724,11 +8724,6 @@ lemma reply_push_not_queued[wp]:
 
 context DetSchedSchedule_AI begin
 
-lemma thread_set_fault_ct_active_wp:
-  "\<lbrace> ct_active \<rbrace> thread_set (tcb_fault_update u) t \<lbrace>\<lambda>rv. ct_active::det_state \<Rightarrow> _ \<rbrace>"
-  by (wpsimp wp: ct_in_state_thread_state_lift thread_set_no_change_tcb_state
-            simp: thread_set_def)
-
 crunch scheduler_act[wp]: do_ipc_transfer "\<lambda>s :: det_state. P (scheduler_action s)"
   (wp: crunch_wps transfer_caps_loop_pres ignore: const_on_failure)
 
@@ -11379,10 +11374,6 @@ and not_queued[wp]: "not_queued t"
 *)
 
 
-crunches transfer_caps_loop,check_budget_restart
-for cur_thread[wp]: "\<lambda>s::det_state. P (cur_thread s)"
-  (wp: transfer_caps_loop_pres mapM_wp' maybeM_wp hoare_drop_imps simp: Let_def)
-
 crunches tcb_release_enqueue
 for not_queued[wp]: "not_queued t"
 and simple_sched_action[wp]: simple_sched_action
@@ -11414,44 +11405,8 @@ lemma end_timeslice_not_queued[wp]:
   apply wpsimp
   done
 
-(* FIXME: move *)
-lemma ct_active_machine_op[wp]:
-  "\<lbrace>ct_active\<rbrace> do_machine_op f \<lbrace>\<lambda>_. ct_active::det_state \<Rightarrow> _\<rbrace>"
-  apply (simp add: ct_in_state_def pred_tcb_at_def obj_at_def)
-  apply (rule hoare_lift_Pf [where f=cur_thread])
-  by wp+
-
-(* FIXME: Move to Arch *)
-lemma getCurrentTime_valid_sched[wp]:
-  "valid valid_sched (do_machine_op getCurrentTime) (\<lambda>_. valid_sched::det_state \<Rightarrow> _)"
-  apply (simp add: ARM.getCurrentTime_def modify_def)
-  by (wpsimp wp: do_machine_op_valid_sched simp: modify_def)
-
-crunches update_time_stamp
-for scheduler_action[wp]: "\<lambda>s::det_state. P (scheduler_action s)"
-and cur_thread[wp]: "\<lambda>s::det_state. P (cur_thread s)"
-and ct_active[wp]: "ct_active::det_state \<Rightarrow> _"
-and pred_tcb_at[wp]: "pred_tcb_at p P t::det_state \<Rightarrow> _"
-and pred_tcb_at_ct[wp]: "\<lambda>s::det_state. pred_tcb_at p P (cur_thread s) s"
-  (wp: crunch_wps ARM.getCurrentTime_def)
-
-lemma ct_active_is_original_cap_update[simp]:
-  "ct_active(s\<lparr>is_original_cap := param_a\<rparr>) = ct_active s"
-  by (clarsimp simp: ct_in_state_def)
-
-lemma ct_active_cdt_update[simp]:
-  "ct_active(s\<lparr>cdt := param_a\<rparr>) = ct_active s"
-  by (clarsimp simp: ct_in_state_def)
-
-lemma set_cap_ct_active[wp]:
-  "\<lbrace>ct_active\<rbrace>
-     set_cap cap slot
-       \<lbrace>\<lambda>_.  ct_active::det_state \<Rightarrow> _\<rbrace>"
-  apply (wpsimp simp: ct_in_state_def)
-  by (rule hoare_lift_Pf[where f=cur_thread]; wp)
-
-crunches cap_insert,set_extra_badge
-for ct_active[wp]: "ct_active::det_state \<Rightarrow> _"
+crunches set_extra_badge
+  for ct_active[wp]: "ct_active::det_state \<Rightarrow> _"
   (wp: crunch_wps hoare_drop_imps dxo_wp_weak simp: cap_insert_ext_def)
 
 lemma set_mrs_ct_active[wp]:
@@ -11467,35 +11422,9 @@ lemma set_message_info_ct_active[wp]:
     set_message_info tptr f \<lbrace>\<lambda>_. ct_active\<rbrace>"
   by (wpsimp split_del: if_split simp: set_message_info_def ct_in_state_def split_def set_object_def)
 
-crunches lookup_ipc_buffer,do_normal_transfer,do_fault_transfer
-for ct_active[wp]: "ct_active::det_state \<Rightarrow> _"
- (simp: zipWithM_x_mapM wp: mapM_wp' transfer_caps_loop_pres as_user_ct_in_state)
-
-lemma sts_not_cur:
-  "\<lbrace>\<lambda>s. st_tcb_at active (cur_thread s) s \<and> tptr \<noteq> cur_thread s\<rbrace>
-     set_thread_state tptr Inactive
-       \<lbrace>\<lambda>_ s. st_tcb_at active (cur_thread s) s\<rbrace>"
-  apply (rule hoare_lift_Pf2[where f=cur_thread])
-  by (wp sts_st_tcb_at_other, clarsimp) wp
-
-lemma reply_unlink_tcb_ct_active[wp]:
-  "\<lbrace>ct_active and (\<lambda>s. reply_tcb_reply_at (\<lambda>p. \<forall>rp. p = Some rp \<and> rp \<noteq> cur_thread s) r s)\<rbrace>
-     reply_unlink_tcb t r
-       \<lbrace>\<lambda>_.  ct_active::det_state \<Rightarrow> _\<rbrace>"
-  apply (clarsimp simp: reply_unlink_tcb_def assert_def assert_opt_def)
-  apply (wpsimp simp: ct_in_state_def wp: sts_not_cur)
-       apply (rule hoare_lift_Pf2[where f=cur_thread])
-        apply (wp set_simple_ko_pred_tcb_at, wp)
-      apply wpsimp
-     apply (wpsimp wp: gts_wp get_simple_ko_wp)+
-  by (clarsimp simp: pred_tcb_at_def obj_at_def reply_tcb_reply_at_def ct_in_state_def)
-
-
-lemma do_ipc_transfer_ct_active[wp]:
-  "\<lbrace>ct_active\<rbrace>
-     do_ipc_transfer sender ep badge grant receiver
-       \<lbrace>\<lambda>_.  ct_active::det_state \<Rightarrow> _\<rbrace>"
-  by (wpsimp simp: do_ipc_transfer_def)
+crunches do_normal_transfer, do_fault_transfer
+  for ct_active[wp]: "ct_active::det_state \<Rightarrow> _"
+  (simp: zipWithM_x_mapM wp: mapM_wp' transfer_caps_loop_pres)
 
 (* do we need these?
 lemma send_ipc_ct_active[wp]:
@@ -11506,36 +11435,9 @@ lemma send_ipc_ct_active[wp]:
   by (wpsimp simp: send_ipc_def set_simple_ko_def a_type_def partial_inv_def
       wp: set_object_wp get_object_wp sts_st_tcb_at' hoare_vcg_all_lift hoare_drop_imp)
 
-lemma send_fault_ipc_ct_active_for_timeout[wp]:
-  "\<lbrace>ct_active\<rbrace>
-     send_fault_ipc tptr ep f False \<lbrace>\<lambda>_.  ct_active::det_state \<Rightarrow> _\<rbrace>"
-   apply (clarsimp simp: send_fault_ipc_def)
-  by (wpsimp simp: send_fault_ipc_def wp: thread_set_fault_ct_active_wp)
-thm handle_timeout_def end_timeslice_def postpone_def
-lemma handle_timeout_ct_active[wp]:
-  "\<lbrace>ct_active\<rbrace>
-     handle_timeout tptr f \<lbrace>\<lambda>_.  ct_active::det_state \<Rightarrow> _\<rbrace>"
-  by (wpsimp simp: handle_timeout_def)
-
-lemma postpone_ct_active[wp]:
-  "\<lbrace>ct_active\<rbrace>
-     postpone scp \<lbrace>\<lambda>_.  ct_active::det_state \<Rightarrow> _\<rbrace>"
-  by (wpsimp simp: postpone_def wp: hoare_drop_imp)
-
 lemma end_timeslice_ct_active:
   "\<lbrace>ct_active\<rbrace> end_timeslice canTimeout \<lbrace>\<lambda>_. ct_active::det_state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: end_timeslice_def)
-
-lemma charge_budget_ct_active[wp]:
-  "\<lbrace>ct_active\<rbrace> charge_budget capacity consumed canTimeout \<lbrace>\<lambda>_. ct_active::det_state \<Rightarrow> _\<rbrace>"
-  apply (clarsimp simp: charge_budget_def)
-  by (wpsimp simp: charge_budget_def Let_def)
-
-lemma check_budget_ct_active:
-  "\<lbrace>ct_active\<rbrace> check_budget \<lbrace>\<lambda>_. ct_active::det_state \<Rightarrow> _\<rbrace>"
-  apply (clarsimp simp: check_budget_def)
-  by (wpsimp wp: hoare_vcg_if_lift2 get_sched_context_wp hoare_vcg_all_lift hoare_drop_imp)
-
 *)
 
 lemma charge_budget_valid_sched[wp]:
@@ -11708,72 +11610,11 @@ lemma check_budget_active_sc_tcb_at[wp]:
 *)
 
 
-(* when check_budget returns True, it has not called charge_budget. Hence the
-thread_state remains unchanged *)
-
-lemma check_budget_true_st_tcb_at:
-  "\<lbrace> \<lambda>s. st_tcb_at P t s \<rbrace> check_budget \<lbrace> \<lambda>rv s. rv \<longrightarrow>  st_tcb_at P t s\<rbrace>"
-  apply (clarsimp simp: check_budget_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (rule hoare_seq_ext[OF _ refill_capacity_sp])
-  apply (rule hoare_if)
-   apply (rule hoare_seq_ext[OF _ gets_sp])
-   apply (rule hoare_if)
-    by wpsimp+
-
-lemma check_budget_restart_st_tcb_at:
-  "\<lbrace> \<lambda>s. st_tcb_at P t s \<rbrace> check_budget_restart \<lbrace> \<lambda>rv s. rv \<longrightarrow> st_tcb_at P t s\<rbrace>"
-  apply (clarsimp simp: check_budget_restart_def)
-  apply (rule hoare_seq_ext[OF _ check_budget_true_st_tcb_at])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (wpsimp wp: hoare_vcg_if_lift)
-  done
-
-
 lemma check_budget_restart_valid_sched:
   "\<lbrace>valid_sched\<rbrace> check_budget_restart \<lbrace>\<lambda>rv s::det_state. rv \<longrightarrow> valid_sched s\<rbrace>"
   apply (clarsimp simp: check_budget_restart_def)
   apply (wpsimp wp: gts_wp hoare_vcg_all_lift)
   by (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2) simp
-
-(* not quite true
-lemma check_budget_restart_ct_active[wp]:
-  "\<lbrace>ct_active\<rbrace> check_budget_restart \<lbrace>\<lambda>_. ct_active::det_state \<Rightarrow> _\<rbrace>"
-  apply (clarsimp simp: check_budget_restart_def)
-  by (wpsi mp simp: check_budget_restart_def set_thread_state_def set_object_def
-                 wp: hoare_drop_imp hoare_vcg_if_lift2
-        | rule hoare_strengthen_post[where Q="\<lambda>_. ct_active"]
-        | simp add: ct_in_state_def pred_tcb_at_def obj_at_def)+
-
-*)
-
-(* when check_budget returns True, it has not called reschedule_required. Hence the
-scheduler_action remains unchanged *)
-
-lemma check_budget_true_sched_action:
-  "\<lbrace> \<lambda>s. P (scheduler_action s) \<rbrace> check_budget \<lbrace> \<lambda>rv s. rv \<longrightarrow> P (scheduler_action s)\<rbrace>"
-  apply (clarsimp simp: check_budget_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (rule hoare_seq_ext[OF _ refill_capacity_sp])
-  apply (rule hoare_if)
-   apply (rule hoare_seq_ext[OF _ gets_sp])
-   apply (rule hoare_if)
-    by wpsimp+
-
-lemma check_budget_restart_sched_action:
-  "\<lbrace> \<lambda>s. P (scheduler_action s) \<rbrace> check_budget_restart \<lbrace> \<lambda>rv s. rv \<longrightarrow> P (scheduler_action s)\<rbrace>"
-  apply (clarsimp simp: check_budget_restart_def)
-  apply (rule hoare_seq_ext[OF _ check_budget_true_sched_action])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (wpsimp wp: hoare_vcg_if_lift)
-  done
-
 
 (* FIXME: Move to Arch *)
 lemma getCurrentTime_invs[wp]:
@@ -11783,17 +11624,11 @@ lemma getCurrentTime_invs[wp]:
   by (simp add: do_machine_op_def modify_def in_get bind_assoc get_def put_def gets_def in_bind
                    split_def select_f_returns in_return)
 
-lemma update_time_stamp_invs[wp]:
-  "\<lbrace>invs\<rbrace> update_time_stamp \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (wpsimp simp: update_time_stamp_def)
-
 lemma handle_yield_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> handle_yield \<lbrace>\<lambda>rv. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: handle_yield_def)
 
 
-(* when check_budget returns True, it has not called reschedule_required. Hence the
-scheduler_action remains unchanged *)
 (*
 context begin
  private method handle_event_valid_sched_cases =

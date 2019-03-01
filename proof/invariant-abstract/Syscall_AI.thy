@@ -497,8 +497,10 @@ lemma do_reply_invs[wp]:
   done
 
 lemma pinv_invs[wp]:
-  "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> valid_invocation i s \<and> scheduler_action s = resume_cur_thread\<rbrace>
-    perform_invocation blocking call can_donate i \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> valid_invocation i s \<and>
+        scheduler_action s = resume_cur_thread\<rbrace>
+     perform_invocation blocking call can_donate i
+   \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (cases i
          ; wpsimp wp: tcbinv_invs send_signal_interrupt_states invoke_domain_invs
                 simp: ct_in_state_def)
@@ -548,9 +550,9 @@ locale Syscall_AI = Systemcall_AI_Pre:Systemcall_AI_Pre _ state_ext_t
       handle_hypervisor_fault thread fault
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_fault_msg_cur_thread[wp]:
-    "\<And>ft t. make_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. P (cur_thread s)\<rbrace>"
-
-
+    "\<And>ft t P. make_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. P (cur_thread s)\<rbrace>"
+  assumes make_fault_msg_fault_tcb_at[wp]:
+    "\<And>ft t t' P. make_fault_msg ft t \<lbrace>pred_tcb_at itcb_fault P t' :: 'state_ext state \<Rightarrow> _\<rbrace>"
 
 
 context Syscall_AI begin
@@ -1141,10 +1143,10 @@ lemmas hinv_invs[wp] = hinv_invs'
 (* FIXME: move *)
 lemma hinv_tcb[wp]:
   "\<And>t calling blocking can_donate first_phase cptr.
-    \<lbrace>st_tcb_at active t and invs and ct_active and
-     (\<lambda>s. scheduler_action s = resume_cur_thread) and
-     (\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s)\<rbrace>
-    handle_invocation calling blocking can_donate first_phase cptr
+    \<lbrace>\<lambda>s. st_tcb_at active t s \<and> invs s \<and> ct_active s \<and>
+         scheduler_action s = resume_cur_thread \<and>
+         is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
+      handle_invocation calling blocking can_donate first_phase cptr
     \<lbrace>\<lambda>rv. tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: handle_invocation_def split_def
                    ts_Restart_case_helper
@@ -1251,11 +1253,35 @@ lemma invs_valid_tcb_ctable_strengthen:
                invs s \<and> s \<turnstile> tcb_ctable (the (get_tcb thread s)))"
   by (clarsimp simp: invs_valid_tcb_ctable)
 
-lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_recv is_blocking can_reply \<lbrace>\<lambda>r. invs\<rbrace>"
-  apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper split del: if_split
-    cong: if_cong)
-  apply (wpsimp wp: get_simple_ko_wp)
-(*  apply (wp get_simple_ko_wp hoare_vcg_ball_lift | simp)+
+context Syscall_AI begin
+
+crunches lookup_reply
+  for invs[wp]: invs
+  and pred_tcb_at[wp]: "pred_tcb_at proj' P t"
+  and ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
+
+lemma lookup_reply_valid_fault[wp]:
+  "\<lbrace>invs\<rbrace> lookup_reply -, \<lbrace>\<lambda>rv _. valid_fault rv\<rbrace>"
+  apply (simp add: lookup_reply_def lookup_cap_def lookup_slot_for_thread_def)
+  apply (wpsimp wp: hoare_drop_imps resolve_address_bits_valid_fault2
+              simp: valid_fault_def)+
+  apply (frule invs_cur)
+  apply (auto simp: cur_tcb_def tcb_at_def invs_valid_tcb_ctable)
+  done
+
+lemma lookup_reply_ex_cap[wp]:
+  "\<lbrace>\<top>\<rbrace> lookup_reply \<lbrace>\<lambda>rv s. \<forall>r\<in>zobj_refs rv. ex_nonz_cap_to r s\<rbrace>,-"
+  apply (simp add: lookup_reply_def )
+  apply (wpsimp wp: hoare_drop_imps)
+  done
+
+lemma hw_invs[wp]:
+  "\<lbrace>invs and ct_active\<rbrace>
+     handle_recv is_blocking can_reply
+   \<lbrace>\<lambda>r. invs\<rbrace>"
+  apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper
+             cong: if_cong split del: if_split)
+  apply (wpsimp wp: get_sk_obj_ref_wp hoare_vcg_ball_lift)
      apply (rule hoare_vcg_E_elim)
       apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
       apply wp
@@ -1266,10 +1292,11 @@ lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_recv is_blocking
           | simp add: obj_at_def
           | simp add: conj_disj_distribL ball_conj_distrib
           | wp_once hoare_drop_imps)+)
-  apply (simp add: ct_in_state_def)
-  apply (fold obj_at_def)
+  apply (simp add: ct_in_state_def cur_sc_tcb_invs)
   apply (fastforce elim!: invs_valid_tcb_ctable st_tcb_ex_cap)
-  done*) sorry
+  done
+
+end
 
 crunch tcb_at[wp]: lookup_reply, handle_recv "tcb_at t"
   (wp: crunch_wps simp: crunch_simps)
@@ -1289,6 +1316,11 @@ lemma null_cap_on_failure_wp[wp]:
   by (wp x)
 
 crunch_ignore (add:null_cap_on_failure)
+
+lemma hy_invs[wp]: "handle_yield \<lbrace>invs\<rbrace>"
+  apply (simp add: handle_yield_def)
+  apply (wpsimp wp: charge_budget_invs)
+  done
 
 declare hoare_seq_ext[wp] hoare_vcg_precond_imp [wp_comb]
 
@@ -1332,10 +1364,10 @@ lemma drop_when_dxo_wp: "(\<And>f s. P (trans_state f s) = P s ) \<Longrightarro
   apply (wp | simp)+
   done
 
-context Syscall_AI begin
-
 crunch ex_nonz_cap_to[wp]: handle_timeout "ex_nonz_cap_to p"
-(wp: crunch_wps thread_set_cap_to simp: crunch_simps ran_tcb_cap_cases)
+  (wp: crunch_wps thread_set_cap_to simp: crunch_simps ran_tcb_cap_cases)
+
+context Syscall_AI begin
 
 lemma do_reply_transfer_nonz_cap:
   "\<lbrace>\<lambda>s :: 'state_ext state. ex_nonz_cap_to p s\<rbrace>
@@ -1387,25 +1419,315 @@ lemma check_budget_restart_true_sched_action[wp]:
   apply (wpsimp wp: hoare_vcg_if_lift)
   done
 
+(* when check_budget returns True, it has not called charge_budget. Hence the
+thread_state remains unchanged *)
+lemma check_budget_true_st_tcb_at[wp]:
+  "\<lbrace> \<lambda>s. st_tcb_at P t s \<rbrace> check_budget \<lbrace> \<lambda>rv s. rv \<longrightarrow>  st_tcb_at P t s\<rbrace>"
+  apply (clarsimp simp: check_budget_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule hoare_seq_ext[OF _ refill_capacity_sp])
+  apply (rule hoare_if)
+   apply (rule hoare_seq_ext[OF _ gets_sp])
+   apply (rule hoare_if)
+    by wpsimp+
+
+lemma check_budget_restart_true_st_tcb_at[wp]:
+  "\<lbrace> \<lambda>s. st_tcb_at P t s \<rbrace> check_budget_restart \<lbrace> \<lambda>rv s. rv \<longrightarrow> st_tcb_at P t s\<rbrace>"
+  apply (clarsimp simp: check_budget_restart_def)
+  apply (rule hoare_seq_ext[OF _ check_budget_true_st_tcb_at])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (wpsimp wp: hoare_vcg_if_lift)
+  done
+
+lemma check_budget_true_ct_in_state[wp]:
+  "\<lbrace>ct_in_state P\<rbrace> check_budget \<lbrace>\<lambda>rv s. rv \<longrightarrow> ct_in_state P s\<rbrace>"
+  apply (clarsimp simp: check_budget_def)
+  by (wpsimp | wp_once hoare_drop_imps)+
+
+lemma check_budget_restart_true_ct_in_state[wp]:
+  "\<lbrace>ct_in_state P\<rbrace> check_budget_restart \<lbrace>\<lambda>rv s. rv \<longrightarrow> ct_in_state P s\<rbrace>"
+  apply (clarsimp simp: check_budget_restart_def)
+  by (wpsimp wp: ct_in_state_set gts_wp hoare_vcg_all_lift hoare_vcg_if_lift2
+      | wp_once hoare_drop_imps)+
+
+lemma update_time_stamp_is_schedulable_bool [wp]:
+  "\<lbrace>\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
+     update_time_stamp
+   \<lbrace>\<lambda>rv s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>"
+  by (wpsimp simp: update_time_stamp_def do_machine_op_def is_schedulable_bool_def
+                   test_sc_refill_max_def get_tcb_def in_release_queue_def
+            split: option.splits)
+
+lemma check_budget_true_is_schedulable_bool[wp]:
+  "\<lbrace>\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
+     check_budget
+   \<lbrace>\<lambda>rv s. rv \<longrightarrow> is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>"
+  apply (clarsimp simp: check_budget_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule hoare_seq_ext[OF _ refill_capacity_sp])
+  apply (rule hoare_if)
+   apply (rule hoare_seq_ext[OF _ gets_sp])
+   apply (rule hoare_if)
+  by wpsimp+
+
+lemma check_budget_restart_true_is_schedulable_bool[wp]:
+  "\<lbrace>\<lambda>s. is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
+     check_budget_restart
+   \<lbrace>\<lambda>rv s. rv \<longrightarrow> is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>"
+  apply (clarsimp simp: check_budget_restart_def)
+  apply (rule hoare_seq_ext[OF _ check_budget_true_is_schedulable_bool])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (wpsimp wp: hoare_vcg_if_lift)
+  done
+
+lemma getCurrentTime_invs[wp]:
+  "do_machine_op getCurrentTime \<lbrace>invs\<rbrace>"
+  apply (simp add: ARM.getCurrentTime_def modify_def)
+  apply (wpsimp wp: dmo_invs simp: modify_def)
+  by (simp add: do_machine_op_def modify_def in_get bind_assoc get_def put_def gets_def in_bind
+                   split_def select_f_returns in_return)
+
+lemma update_time_stamp_invs[wp]:
+  "update_time_stamp \<lbrace>invs\<rbrace>"
+  by (wpsimp simp: update_time_stamp_def)
+
+crunches update_time_stamp
+  for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  and ct_in_state[wp]: "ct_in_state P"
+  and pred_tcb_at[wp]: "pred_tcb_at p P t"
+  and pred_tcb_at_ct[wp]: "\<lambda>s. pred_tcb_at p P (cur_thread s) s"
+
+crunches thread_set
+  for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+
+crunches reply_from_kernel
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  and ct_in_state[wp]: "ct_in_state P"
+  (rule: ct_in_state_thread_state_lift)
+
+crunches update_time_stamp, check_budget_restart
+  for ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
+  (wp: hoare_drop_imps simp: crunch_simps)
+
 context Syscall_AI begin
+
+crunches check_budget_restart, handle_fault_reply, reply_remove
+  for cur_thread[wp]: "\<lambda>s :: 'state_ext state. P (cur_thread s)"
+  (wp: transfer_caps_loop_pres mapM_wp' hoare_drop_imps
+   simp: crunch_simps)
+
+crunches
+  possible_switch_to, do_ipc_transfer, maybe_donate_sc, handle_fault_reply
+  for ct_in_state[wp]: "ct_in_state P :: 'state_ext state \<Rightarrow> _"
+  (rule: ct_in_state_thread_state_lift wp: crunch_wps simp: crunch_simps)
+
+lemma update_waiting_ntfn_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace>
+     update_waiting_ntfn ntfnptr queue bound_tcb sc_ptr badge
+   \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (simp add: update_waiting_ntfn_def)
+  by (wpsimp wp: set_thread_state_ct_in_state hoare_drop_imps)
+
+lemma send_signal_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace>
+     send_signal ntfnptr badge
+   \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (simp add: send_signal_def)
+  by (wpsimp wp: set_thread_state_ct_in_state hoare_drop_imps)
+
+crunches reply_push
+  for ct_active[wp]: "ct_active :: 'state_ext state \<Rightarrow> _"
+  (wp: sts_ctis_neq crunch_wps simp: crunch_simps)
+
+lemma send_ipc_not_cur_ct_active[wp]:
+  "\<lbrace>\<lambda>s. ct_active s \<and> thread \<noteq> cur_thread s\<rbrace>
+     send_ipc block call badge can_grant can_donate thread epptr
+   \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (simp add: send_ipc_def)
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
+  apply (case_tac ep; simp)
+    apply (wpsimp wp: set_thread_state_ct_st)
+   apply (wpsimp wp: set_thread_state_ct_st)
+  apply (rename_tac list)
+  apply (case_tac list; simp)
+  apply (wpsimp wp: set_thread_state_ct_st hoare_drop_imps | rule conjI)+
+  done
+
+lemma send_fault_ipc_ct_active_for_timeout[wp]:
+  "\<lbrace>\<lambda>s. ct_active s \<and> tptr \<noteq> cur_thread s\<rbrace>
+     send_fault_ipc tptr ep f can_donate
+   \<lbrace>\<lambda>_.  ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
+   apply (clarsimp simp: send_fault_ipc_def)
+  by (wpsimp simp: send_fault_ipc_def wp: thread_set_ct_in_state)
+
+lemma handle_timeout_ct_active[wp]:
+  "\<lbrace>\<lambda>s. ct_active s \<and> tptr \<noteq> cur_thread s\<rbrace>
+     handle_timeout tptr f
+   \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  by (wpsimp simp: handle_timeout_def)
+
+lemma do_reply_transfer_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace>
+     do_reply_transfer sender reply
+   \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (simp add: do_reply_transfer_def)
+  apply (wpsimp wp: set_thread_state_ct_st hoare_vcg_all_lift hoare_drop_imps
+                    get_tcb_obj_ref_wp gts_wp | rule conjI)+
+              apply (wpsimp wp: thread_set_ct_in_state hoare_vcg_all_lift gts_wp
+                                get_simple_ko_wp)+
+  apply (auto simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  done
+
+crunches reply_unlink_tcb, do_ipc_transfer
+  for fault_tcb_at[wp]: "pred_tcb_at itcb_fault P t :: 'state_ext state \<Rightarrow> _"
+  (wp: crunch_wps set_thread_state_pred_tcb_at)
+
+lemma send_ipc_not_blocking_not_calling_ct_active[wp]:
+  "\<lbrace>ct_active and pred_tcb_at itcb_fault ((=) None) t\<rbrace>
+     send_ipc False False bdg x can_donate t epptr
+   \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (simp add: send_ipc_def)
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
+  apply (case_tac ep; simp)
+    apply wpsimp
+   apply wpsimp
+  apply (rename_tac list)
+  apply (case_tac list; simp)
+  apply (wpsimp wp: set_thread_state_ct_st hoare_drop_imp wp_del: reply_push_ct_active)+
+           apply (rule hoare_pre_cont)
+          apply wpsimp
+         apply (wpsimp wp: thread_get_wp')
+        apply (rule_tac Q="\<lambda>_. ct_active and pred_tcb_at itcb_fault ((=) None) t"
+               in hoare_post_imp)
+         apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+        apply (wpsimp wp: hoare_drop_imps)+
+  done
+
+crunches retype_region, create_cap, reset_untyped_cap
+  for cur_thread[wp]: "\<lambda>s :: 'state_ext state. P (cur_thread s)"
+  (simp: crunch_simps wp: mapME_x_inv_wp preemption_point_inv crunch_wps)
+
+crunches create_cap, set_cap
+  for ct_in_state[wp]: "ct_in_state P :: 'state_ext state \<Rightarrow> _"
+  (wp: ct_in_state_thread_state_lift mapME_x_inv_wp preemption_point_inv crunch_wps)
+
+lemma reset_untyped_cap_ct_in_state[wp]:
+  "\<lbrace>\<lambda>s. ct_in_state P s \<and>
+     cte_wp_at (\<lambda>cp. cur_thread s \<notin> cap_range cp \<and> is_untyped_cap cp) src_slot s\<rbrace>
+     reset_untyped_cap src_slot
+   \<lbrace>\<lambda>_. ct_in_state P :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  apply (simp add: reset_untyped_cap_def)
+  by (wpsimp wp: mapME_x_inv_wp preemption_point_inv hoare_drop_imps get_cap_wp
+         | fastforce simp: ct_in_state_def cte_wp_at_caps_of_state bits_of_def is_cap_simps)+
+
+lemma retype_region_ct_in_state:
+  "\<lbrace>\<lambda>(s::'state_ext::state_ext state). pspace_no_overlap_range_cover ptr' sz s
+          \<and> ct_in_state P s \<and> range_cover ptr' sz (obj_bits_api ty us) n
+          \<and> valid_objs s \<and> pspace_aligned s\<rbrace>
+     retype_region ptr' n us ty dev \<lbrace>\<lambda>rv. ct_in_state P\<rbrace>"
+  apply (wpsimp wp: ct_in_state_thread_state_lift' retype_region_st_tcb_at[where sz=sz])
+   apply assumption
+  apply clarsimp
+  done
+
+lemma invoke_untyped_ct_active[wp]:
+  "\<lbrace>invs and valid_untyped_inv ui and ct_active and
+    (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+     invoke_untyped ui
+   \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  apply (rule hoare_pre, rule invoke_untyped_Q,
+    (wp init_arch_objects_wps | simp)+)
+     apply (rule hoare_name_pre_state, clarsimp)
+     apply (wp retype_region_ct_in_state; auto)
+    apply wpsimp+
+  apply (cases ui, clarsimp simp: ct_in_state_def)
+  apply (frule(1) st_tcb_ex_cap[OF _ invs_iflive])
+   apply fastforce
+  apply (drule ex_nonz_cap_to_overlap,
+    ((simp add:cte_wp_at_caps_of_state descendants_range_def2
+            empty_descendants_range_in)+))
+  done
+
+crunches test_possible_switch_to, sched_context_resume
+  for cur_thread[wp]: "\<lambda>s :: 'state_ext state. P (cur_thread s)"
+  and pred_tcb_at[wp]: "\<lambda>s :: 'state_ext state. pred_tcb_at proj' P t s"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunches
+  sched_context_bind_tcb, sched_context_unbind_tcb, sched_context_yield_to
+  for ct_in_state: "ct_in_state P :: 'state_ext state \<Rightarrow> _"
+  (wp: crunch_wps ct_in_state_thread_state_lift ignore: set_tcb_obj_ref
+   simp: crunch_simps)
+
+crunches invoke_domain, invoke_sched_context
+  for ct_in_state[wp]: "ct_in_state P :: 'state_ext state \<Rightarrow> _"
+  (wp: crunch_wps simp: crunch_simps)
+
+fun
+  safe_invocation :: "invocation \<Rightarrow> bool"
+where
+  "safe_invocation (InvokeCNode cnode_inv)     = False"
+| "safe_invocation (InvokeTCB tcb_inv)         = False"
+| "safe_invocation (InvokeSchedControl sc_inv) = False"
+| "safe_invocation _ = True"
+
+lemma perform_invocation_not_blocking_not_calling_ct_active[wp]:
+  "\<lbrace>invs and ct_active and valid_invocation i and
+    (\<lambda>s. pred_tcb_at itcb_fault ((=) None) (cur_thread s) s \<and>
+         scheduler_action s = resume_cur_thread) and
+    K (safe_invocation i)\<rbrace>
+     perform_invocation False False can_donate i
+   \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  apply (rule hoare_gen_asm)
+  by (cases i; wpsimp)
+
+lemma decode_invocation_safe_invocation[wp]:
+  "\<lbrace>\<top>\<rbrace>
+     decode_invocation True label args cap_index slot cap excaps
+   \<lbrace>\<lambda>i _. safe_invocation i\<rbrace>,-"
+  apply (simp add: decode_invocation_def)
+  by (wpsimp simp: o_def split_def)
+
+lemma new_fault_inv:
+  "invs s \<Longrightarrow>
+     \<forall>t. st_tcb_at active t s \<longrightarrow> pred_tcb_at itcb_fault ((=) None) t s"
+  sorry
+
+lemma handle_invocation_not_blocking_not_calling_first_phase_ct_active[wp]:
+  "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> scheduler_action s = resume_cur_thread \<and>
+        is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
+     handle_invocation False False can_donate True cptr
+   \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  apply (simp add: handle_invocation_def split_def ts_Restart_case_helper)
+  apply (wpsimp wp: syscall_valid set_thread_state_ct_st hoare_drop_imps
+                    set_thread_state_pred_tcb_at sts_schedulable_scheduler_action
+         | wps)+
+  apply (auto simp: ct_in_state_def new_fault_inv elim: st_tcb_ex_cap)
+  done
 
 lemma he_invs[wp]:
   "\<And>e.
-    \<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_active s) \<and> scheduler_action s = resume_cur_thread \<and>
+    \<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_active s) \<and>
+         scheduler_action s = resume_cur_thread \<and>
          is_schedulable_bool (cur_thread s) (in_release_queue (cur_thread s) s) s\<rbrace>
       handle_event e
-    \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+    \<lbrace>\<lambda>_. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (case_tac e, simp_all)
-      apply (rename_tac syscall)
+       apply (rename_tac syscall)
        apply (case_tac syscall, simp_all)
-
-  sorry (*
-      apply (((rule hoare_pre, wp hvmf_active) |
-                 wpc | wp hoare_drop_imps hoare_vcg_all_lift |
-                 simp add: if_apply_def2 |
-                 fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
-                         elim!: st_tcb_ex_cap)+)
- *)
+                 by (wpsimp wp: hvmf_active hoare_vcg_imp_conj_lift'
+                          comb: hoare_drop_imps hoare_drop_imp_conj'
+                          simp: if_apply_def2 valid_fault_def
+                     | wps
+                     | fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
+                                elim!: st_tcb_ex_cap)+
 
 end
 

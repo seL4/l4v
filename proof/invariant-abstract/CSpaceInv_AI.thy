@@ -57,20 +57,20 @@ lemma remove_rights_cap_valid[simp]:
   by fastforce
 
 
-lemma get_thread_state_inv [wp,simp]:
+lemma get_thread_state_inv[wp]:
   "\<lbrace> P \<rbrace> get_thread_state t \<lbrace> \<lambda>r. P \<rbrace>"
   apply (simp add: get_thread_state_def thread_get_def gets_the_def)
   apply wp
   apply simp
   done
 
-lemma get_tcb_obj_ref_inv[wp,simp]:
+lemma get_tcb_obj_ref_inv[wp]:
   "\<lbrace>P\<rbrace> get_tcb_obj_ref f t \<lbrace>\<lambda>r. P\<rbrace>"
   apply (simp add: get_tcb_obj_ref_def thread_get_def gets_the_def)
   apply (wp, simp)
   done
 
-lemma get_sk_obj_ref_inv[wp,simp]:
+lemma get_sk_obj_ref_inv[wp]:
   "\<lbrace>P\<rbrace> get_sk_obj_ref f update t \<lbrace>\<lambda>r. P\<rbrace>"
   apply (simp add: get_sk_obj_ref_def get_simple_ko_def get_object_def)
   apply wpsimp
@@ -2042,18 +2042,13 @@ lemma cap_insert_objs [wp]:
     | simp split del: if_split)+
   done
 
-crunch pred_tcb_at[wp]: cap_insert, set_cdt "\<lambda>s. Q (pred_tcb_at proj P t s)"
-  (wp: hoare_drop_imps)
-
-
-crunch ct [wp]: cap_insert "\<lambda>s. P (cur_thread s)"
-  (wp: crunch_wps simp: crunch_simps)
-
-
-lemma cap_insert_valid_cap[wp]:
-  "\<lbrace>valid_cap c\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>rv. valid_cap c\<rbrace>"
-  by (wp valid_cap_typ)
-
+crunches cap_insert, set_cdt
+  for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
+  and ct [wp]: "\<lambda>s. P (cur_thread s)"
+  and ct_in_state[wp]: "ct_in_state P"
+  and valid_cap[wp]: "valid_cap c"
+  (wp: ct_in_state_thread_state_lift hoare_drop_imps crunch_wps valid_cap_typ
+   simp: crunch_simps)
 
 lemma cap_rights_update_idem [simp]:
   "cap_rights_update R (cap_rights_update R' cap) = cap_rights_update R cap"

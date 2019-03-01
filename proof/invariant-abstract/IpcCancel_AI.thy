@@ -16,6 +16,7 @@ context begin interpretation Arch .
 
 requalify_facts
   arch_post_cap_deletion_pred_tcb_at
+  arch_post_cap_deletion_cur_thread
 
 end
 
@@ -1594,6 +1595,8 @@ lemma suspend_cte_wp_at_preserved:
 
 end
 
+crunch pred_tcb_at[wp]: empty_slot "pred_tcb_at proj P t"
+
 lemma set_thread_state_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   unfolding set_thread_state_def set_object_def
@@ -1603,7 +1606,7 @@ lemma reply_unlink_tcb_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t'\<rbrace> reply_unlink_tcb t rptr \<lbrace>\<lambda>_. bound_tcb_at P t'\<rbrace>"
   by (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def wp: hoare_drop_imp)
 
-crunch bound_tcb_at[wp]: cancel_all_ipc, empty_slot, is_final_cap, get_cap, tcb_release_remove "bound_tcb_at P t"
+crunch bound_tcb_at[wp]: cancel_all_ipc, is_final_cap, get_cap, tcb_release_remove "bound_tcb_at P t"
   (wp: mapM_x_wp_inv crunch_wps simp: crunch_simps)
 
 lemma in_release_queue_ready_queues_update[simp]:
@@ -2492,6 +2495,62 @@ lemma complete_yield_to_invs:
   apply (erule_tac x = "(idle_sc_ptr, TCBYieldTo)" in ballE)
    apply (auto simp: state_refs_of_def valid_idle_def obj_at_def get_refs_def2
                      default_sched_context_def)
+  done
+
+crunches
+  unbind_maybe_notification, sched_context_maybe_unbind_ntfn, sched_context_donate,
+  sched_context_unbind_yield_from, sched_context_unbind_all_tcbs, empty_slot
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunches
+  unbind_maybe_notification, sched_context_maybe_unbind_ntfn, sched_context_donate,
+  sched_context_unbind_yield_from, sched_context_unbind_all_tcbs, empty_slot
+  for ct_in_state[wp]: "ct_in_state P"
+  (wp: ct_in_state_thread_state_lift crunch_wps ignore: set_object set_tcb_obj_ref)
+
+lemma reply_unlink_tcb_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace>
+     reply_unlink_tcb t r
+   \<lbrace>\<lambda>_. ct_active\<rbrace>"
+  apply (simp add: reply_unlink_tcb_def)
+  apply (wpsimp wp: sts_ctis_neq gts_wp get_simple_ko_wp)
+  apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  done
+
+crunches
+  tcb_sched_action, reschedule_required, tcb_sched_action, tcb_release_remove,
+  test_reschedule, tcb_release_enqueue, sort_queue, sched_context_unbind_reply,
+  sched_context_unbind_ntfn
+  for ct_in_state[wp]: "ct_in_state P"
+  (wp: crunch_wps)
+
+crunches cancel_all_signals, is_final_cap, cancel_all_ipc, reply_remove, reply_cancel_ipc
+  for ct_active[wp]: "ct_active"
+  (wp: thread_set_ct_in_state crunch_wps set_thread_state_ct_in_state simp: crunch_simps
+   ignore: set_tcb_obj_ref)
+
+lemma blocked_cancel_ipc_ct_active[wp]:
+  "\<lbrace>\<lambda>s. ct_active s \<and> tptr \<noteq> cur_thread s\<rbrace>
+     blocked_cancel_ipc state tptr reply_opt
+   \<lbrace>\<lambda>_. ct_active\<rbrace>"
+  apply (simp add: blocked_cancel_ipc_def)
+  by (wpsimp wp: sts_ctis_neq hoare_drop_imps)
+
+lemma cancel_signal_ct_active[wp]:
+  "\<lbrace>\<lambda>s. ct_active s \<and> tptr \<noteq> cur_thread s\<rbrace>
+     cancel_signal tptr ntfnptr
+   \<lbrace>\<lambda>_. ct_active\<rbrace>"
+  apply (simp add: cancel_signal_def)
+  by (wpsimp wp: sts_ctis_neq hoare_drop_imps)
+
+lemma cancel_ipc_ct_active[wp]:
+  "\<lbrace>ct_active\<rbrace>
+     cancel_ipc tptr
+   \<lbrace>\<lambda>_. ct_active\<rbrace>"
+  apply (simp add: cancel_ipc_def)
+  apply (wpsimp wp: gts_wp)
+  apply (auto simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
 end

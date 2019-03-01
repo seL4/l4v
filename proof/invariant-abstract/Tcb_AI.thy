@@ -55,25 +55,6 @@ locale Tcb_AI_1 =
   assumes table_cap_ref_max_free_index_upd[simp]: (* reordered to resolve dependency in tc_invs *)
   "\<And>cap. table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
 
-lemma ct_in_state_weaken:
-  "\<lbrakk> ct_in_state Q s; \<And>st. Q st \<Longrightarrow> P st \<rbrakk> \<Longrightarrow> ct_in_state P s"
-  by (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-
-lemma set_thread_state_ct_st:
-  "\<lbrace>\<lambda>s. if thread = cur_thread s then P st else ct_in_state P s\<rbrace>
-        set_thread_state thread st
-   \<lbrace>\<lambda>rv. ct_in_state P\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def)
-  apply (wp|simp)+
-  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-  done
-
-(*
-lemma as_user_ct_in_state:
-  "\<lbrace>ct_in_state x\<rbrace> as_user t f \<lbrace>\<lambda>_. ct_in_state x\<rbrace>"
-  by (rule ct_in_state_thread_state_lift) (wp as_user_ct)+
-*)
-
 lemma set_consumed_ct_in_state[wp]: "\<lbrace>\<lambda>s. ct_in_state P s\<rbrace> set_consumed a buf \<lbrace>\<lambda>_ s. ct_in_state P s\<rbrace>"
   by (rule ct_in_state_thread_state_lift) wpsimp+
 

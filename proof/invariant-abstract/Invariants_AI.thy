@@ -3691,6 +3691,32 @@ lemma valid_machine_state_more_update[iff]:
   "valid_machine_state (trans_state f s) = valid_machine_state s"
   by (simp add: valid_machine_state_def)
 
+lemma ct_in_state_ready_queues_update[simp]:
+  "ct_in_state P (ready_queues_update f s) = ct_in_state P s"
+  by (simp add: ct_in_state_def)
+
+lemma ct_in_state_release_queue_update[simp]:
+  "ct_in_state P (release_queue_update f s) = ct_in_state P s"
+  by (simp add: ct_in_state_def)
+
+lemma ct_in_state_is_original_cap_update[simp]:
+  "ct_in_state P (is_original_cap_update f s) = ct_in_state P s"
+  by (clarsimp simp: ct_in_state_def)
+
+lemma ct_in_state_cdt_update[simp]:
+  "ct_in_state P (cdt_update f s) = ct_in_state P s"
+  by (clarsimp simp: ct_in_state_def)
+
+lemma ct_in_state_thread_state_lift':
+  assumes ct: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  assumes st: "\<And>t. \<lbrace>Pre and st_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  shows      "\<lbrace>Pre and ct_in_state P\<rbrace> f \<lbrace>\<lambda>rv. ct_in_state P\<rbrace>"
+  apply (clarsimp simp: ct_in_state_def valid_def)
+  apply (frule (1) use_valid [OF _ ct], erule use_valid [OF _ st], fastforce)
+  done
+
+lemmas ct_in_state_thread_state_lift = ct_in_state_thread_state_lift'[where Pre = \<top>, simplified]
+
 lemma only_idle_lift_weak:
   assumes "\<And>Q P t. \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace> f \<lbrace>\<lambda>_ s. Q (st_tcb_at P t s)\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"

@@ -803,11 +803,6 @@ lemma ct_in_state_cur_sc_update[iff]:
 crunch pred_tcb_at[wp]: commit_time "\<lambda>s. P (pred_tcb_at proj f t s)"
   (simp: crunch_simps wp: crunch_wps)
 
-lemma set_sched_context_ct_in_state[wp]:
-  "\<lbrace> ct_in_state t \<rbrace> set_sched_context p sc \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
-  by (wpsimp simp: set_sched_context_def set_object_def get_object_def obj_at_def
-                      pred_tcb_at_def ct_in_state_def simp_del: fun_upd_apply) fastforce
-
 lemma update_sched_context_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> update_sched_context p f \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
   by (wpsimp simp: update_sched_context_def set_object_def get_object_def obj_at_def

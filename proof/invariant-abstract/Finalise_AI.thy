@@ -365,8 +365,6 @@ lemma empty_slot_final_cap_at:
   apply (fastforce simp: )?
   done
 
-crunch pred_tcb_at[wp]: empty_slot "pred_tcb_at proj P t"
-
 lemma set_cap_revokable_update:
   "((),s') \<in> fst (set_cap c p s) \<Longrightarrow>
   ((),is_original_cap_update f s') \<in> fst (set_cap c p (is_original_cap_update f s))"

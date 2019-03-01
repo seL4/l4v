@@ -1615,26 +1615,6 @@ lemma refill_budget_check_ex_nonz_cap_to_ct[wp]:
                wp: get_sched_context_wp get_refills_wp hoare_drop_imp hoare_vcg_if_lift2
         split_del: if_split)
 
-(* FIXME: move *)
-lemma ct_in_state_ready_queues_update[simp]:
-  "ct_in_state P (ready_queues_update f s) = ct_in_state P s"
-  by (simp add: ct_in_state_def)
-
-(* FIXME: move *)
-lemma ct_in_state_release_queue_update[simp]:
-  "ct_in_state P (release_queue_update f s) = ct_in_state P s"
-  by (simp add: ct_in_state_def)
-
-crunch ct_active[wp]: tcb_sched_action ct_active
-
-crunch ct_active[wp]: reschedule_required ct_active
-  (wp: crunch_wps)
-
-crunch ct_active[wp]: tcb_sched_action, tcb_release_remove,test_reschedule ct_active
-
-crunch ct_active[wp]: tcb_release_enqueue,sort_queue ct_active
-  (ignore: set_object wp: hoare_drop_imps mapM_wp')
-
 lemma refill_budget_check_active[wp]:
   "\<lbrace>ct_active\<rbrace> refill_budget_check csc_ptr consumed capacity \<lbrace> \<lambda>_ . ct_active\<rbrace>"
   by (wpsimp simp: refill_budget_check_def set_refills_def
@@ -1703,19 +1683,10 @@ lemma charge_budget_invs:
                    update_sched_context_sc_refills_update_invs update_sched_context_bound_sc
                    refill_budget_check_invs refill_budget_check_bound_sc)
 
-lemma check_budget_invs:
-  "\<lbrace>\<lambda>s. invs s\<rbrace>
-   check_budget
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
+lemma check_budget_invs[wp]:
+  "\<lbrace>\<lambda>s. invs s\<rbrace> check_budget \<lbrace>\<lambda>rv. invs \<rbrace>"
   by (wpsimp simp: check_budget_def refill_full_def refill_size_def
                wp: get_refills_inv hoare_drop_imp get_sched_context_wp charge_budget_invs)
-
-(* FIXME: move *)
-lemma invs_release_queue_update[simp]:
-  "invs (release_queue_update f s) = invs s"
-  by (simp add: invs_def valid_state_def)
-
-crunch invs[wp]: tcb_release_remove invs
 
 lemma tcb_sched_action_bound_sc[wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
@@ -1730,13 +1701,6 @@ lemma tcb_release_remove_bound_sc:
    \<lbrace>\<lambda>rv s. bound_sc_tcb_at bound (cur_thread s) s\<rbrace>"
   by (wpsimp simp: tcb_release_remove_def)
 
-lemma set_sched_context_bound_sc:
-  "\<lbrace>\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
-   set_sched_context ptr sc
-   \<lbrace>\<lambda>rv s. bound_sc_tcb_at bound (cur_thread s) s\<rbrace>"
-  by (wpsimp simp: set_sched_context_def set_object_def get_object_def pred_tcb_at_def
-                   obj_at_def)
-
 lemma invoke_sched_control_configure_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> valid_sched_control_inv i s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
    invoke_sched_control_configure i
@@ -1748,7 +1712,7 @@ lemma invoke_sched_control_configure_invs[wp]:
   apply (wpsimp simp: get_sched_context_def get_object_def obj_at_def
                   wp: refill_update_invs hoare_drop_imp commit_time_invs check_budget_invs
                       hoare_vcg_if_lift2 tcb_sched_action_bound_sc tcb_release_remove_bound_sc
-                      update_sc_badge_invs set_sched_context_bound_sc)
+                      update_sc_badge_invs)
   apply (auto simp: invs_def valid_state_def valid_pspace_def idle_sc_no_ex_cap)
   done
 

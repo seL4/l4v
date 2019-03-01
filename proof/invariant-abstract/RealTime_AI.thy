@@ -1151,9 +1151,20 @@ lemma reply_push_st_tcb_at[wp]:
 
 lemma sched_context_update_consumed_if_live[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace>
-  sched_context_update_consumed param_a \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
+     sched_context_update_consumed param_a
+   \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
   apply (wpsimp simp: sched_context_update_consumed_def set_sched_context_def
      wp: get_sched_context_wp get_object_wp)
   by (clarsimp simp: if_live_then_nonz_cap_def obj_at_def live_def live_sc_def)
+
+crunches
+  set_irq_state, set_simple_ko
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunches
+  set_tcb_queue, set_irq_state, set_simple_ko, update_sk_obj_ref, do_machine_op
+  for ct_in_state[wp]: "ct_in_state P"
+  (wp: ct_in_state_thread_state_lift)
 
 end

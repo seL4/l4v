@@ -357,9 +357,9 @@ lemma handle_recv_domain_list_inv[wp]:
                 split_del: if_split wp: hoare_drop_imps)
   by (rule_tac Q'="\<lambda>_ s. P (domain_list s)" in hoare_post_imps(1))  wpsimp+
 
-crunch domain_list_inv[wp]:
+crunches
   handle_yield, handle_call, handle_vm_fault, handle_hypervisor_fault
-    "\<lambda>s::det_state. P (domain_list s)"
+  for domain_list_inv[wp]: "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch domain_list_inv[wp]: check_budget_restart "\<lambda>s::det_state. P (domain_list s)"
@@ -641,8 +641,8 @@ lemma perform_invocation_domain_time_inv:
 
 lemma handle_invocation_domain_time_inv[wp]:
   "\<lbrace>valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace>
-      handle_invocation calling blocking can_donate first_phase cptr
-   \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s\<rbrace>"
+     handle_invocation calling blocking can_donate first_phase cptr
+   \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
   by (wpsimp simp: handle_invocation_def
       wp: syscall_valid crunch_wps perform_invocation_domain_time_inv)
      (clarsimp simp: word_gt_0)

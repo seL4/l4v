@@ -764,17 +764,7 @@ lemma as_user_pred_tcb_at [wp]:
   by (wp as_user_wp_thread_set_helper thread_set_no_change_tcb_pred_gen
       | simp add: tcb_to_itcb_def)+
 
-lemma ct_in_state_thread_state_lift:
-  assumes ct: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
-  assumes st: "\<And>t. \<lbrace>st_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
-  shows "\<lbrace>ct_in_state P\<rbrace> f \<lbrace>\<lambda>_. ct_in_state P\<rbrace>"
-  apply (clarsimp simp: ct_in_state_def)
-  apply (clarsimp simp: valid_def)
-  apply (frule (1) use_valid [OF _ ct])
-  apply (drule (1) use_valid [OF _ st], assumption)
-  done
-
-lemma as_user_ct_in_state:
+lemma as_user_ct_in_state[wp]:
   "\<lbrace>ct_in_state x\<rbrace> as_user t f \<lbrace>\<lambda>_. ct_in_state x\<rbrace>"
   by (rule ct_in_state_thread_state_lift) (wpsimp wp: as_user_ct)+
 
@@ -1040,7 +1030,6 @@ lemma ct_active_st_tcb_at_weaken:
   apply auto
   done
 
-
 lemma ct_in_state_decomp:
   assumes x: "\<lbrace>\<lambda>s. t = (cur_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. t = (cur_thread s)\<rbrace>"
   assumes y: "\<lbrace>Pre\<rbrace> f \<lbrace>\<lambda>rv. st_tcb_at Prop t\<rbrace>"
@@ -1051,7 +1040,6 @@ lemma ct_in_state_decomp:
    apply (wp x y)
   apply simp
   done
-
 
 (**********************************************************
   !@!@!@!@!@!@!@! UNINTERLEAVE SBA STUFF !@!@!@!@!@!@!@!@!
@@ -1081,6 +1069,12 @@ lemma sts_st_tcb_at':
    apply simp
   apply (clarsimp elim!: pred_tcb_weakenE)
   done
+
+lemma set_thread_state_pred_tcb_at:
+  "\<forall>tcb ts. proj (tcb_to_itcb tcb) = proj (tcb_to_itcb (tcb\<lparr>tcb_state := ts\<rparr>))
+   \<Longrightarrow> \<lbrace>pred_tcb_at proj P t\<rbrace> set_thread_state ref ts \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  unfolding set_thread_state_def set_object_def
+  by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
 
 lemma sbn_bound_tcb_at':
   "\<lbrace>K (P ntfn)\<rbrace> set_tcb_obj_ref tcb_bound_notification_update t ntfn \<lbrace>\<lambda>rv. bound_tcb_at P t\<rbrace>"
@@ -2099,11 +2093,32 @@ lemma ct_in_state_set:
   apply (simp add: set_thread_state_def set_object_def)
   by (wp|simp add: ct_in_state_def pred_tcb_at_def obj_at_def)+
 
-
 lemma sts_ctis_neq:
   "\<lbrace>\<lambda>s. cur_thread s \<noteq> t \<and> ct_in_state P s\<rbrace> set_thread_state t st \<lbrace>\<lambda>_. ct_in_state P\<rbrace>"
   apply (simp add: set_thread_state_def set_object_def)
   apply (wp|simp add: pred_tcb_at_def obj_at_def ct_in_state_def)+
+  done
+
+lemma ct_in_state_weaken:
+  "\<lbrakk> ct_in_state Q s; \<And>st. Q st \<Longrightarrow> P st \<rbrakk> \<Longrightarrow> ct_in_state P s"
+  by (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+
+lemma set_thread_state_ct_st:
+  "\<lbrace>\<lambda>s. if thread = cur_thread s then P st else ct_in_state P s\<rbrace>
+        set_thread_state thread st
+   \<lbrace>\<lambda>rv. ct_in_state P\<rbrace>"
+  apply (simp add: set_thread_state_def set_object_def)
+  apply (wp|simp)+
+  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  done
+
+lemma set_thread_state_ct_in_state:
+  "\<lbrace>\<lambda>s. ct_in_state P s \<and> P st\<rbrace>
+     set_thread_state thread st
+   \<lbrace>\<lambda>rv. ct_in_state P\<rbrace>"
+  apply (simp add: set_thread_state_def set_object_def)
+  apply (wp|simp)+
+  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
 lemma valid_running [simp]:
@@ -2139,9 +2154,9 @@ lemma ep_queued_st_tcb_at:
   done
 
 
-lemma thread_set_ct_running:
+lemma thread_set_ct_in_state:
   "(\<And>tcb. tcb_state (f tcb) = tcb_state tcb) \<Longrightarrow>
-  \<lbrace>ct_running\<rbrace> thread_set f t \<lbrace>\<lambda>rv. ct_running\<rbrace>"
+  \<lbrace>ct_in_state P\<rbrace> thread_set f t \<lbrace>\<lambda>rv. ct_in_state P\<rbrace>"
   apply (simp add: ct_in_state_def)
   apply (rule hoare_lift_Pf [where f=cur_thread])
    apply (wp thread_set_no_change_tcb_state; simp)
