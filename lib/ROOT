@@ -52,6 +52,7 @@ session Lib (lib) = Word_Lib +
     HaskellLemmaBucket
     "ml-helpers/TermPatternAntiquote"
     "ml-helpers/TacticAntiquotation"
+    "ml-helpers/MLUtils"
     "subgoal_focus/Subgoal_Methods"
     Insulin
     ExtraCorres
