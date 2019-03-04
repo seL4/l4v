@@ -1719,6 +1719,11 @@ lemma vs_lookup_pages_pt_eq:
           split: pml4e.splits pdpte.splits pde.splits pte.splits
            elim: vs_lookup_pdI)
 
+lemma valid_vspace_obj_same_type:
+  "\<lbrakk>valid_vspace_obj ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
+  \<Longrightarrow> valid_vspace_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)"
+    apply (rule hoare_to_pure_kheap_upd[OF valid_vspace_obj_typ])
+    by (auto simp: obj_at_def)
 
 lemmas invs_ran_asid_table = invs_valid_asid_table[THEN valid_asid_table_ran]
 

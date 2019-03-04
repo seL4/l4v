@@ -438,6 +438,14 @@ lemma valid_table_caps:
   apply (metis no_obj_refs)
   done
 
+lemma unique_table_refs:
+    "\<And>cps P. unique_table_refs cps
+             \<Longrightarrow> unique_table_refs (\<lambda>x. if P x then None else cps x)"
+    apply (simp only: unique_table_refs_def option.simps
+                      simp_thms
+               split: if_split)
+    apply blast
+    done
 
 lemma valid_arch_caps_detype[detype_invs_proofs]: "valid_arch_caps (detype (untyped_range cap) s)"
   using valid_arch_caps  by (simp add: valid_arch_caps_def

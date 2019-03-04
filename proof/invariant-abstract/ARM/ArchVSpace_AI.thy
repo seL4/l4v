@@ -5058,5 +5058,12 @@ lemma invs_aligned_pdD:
   apply (simp add: pd_bits_def pageBits_def)
   done
 
+lemma valid_vspace_obj_default:
+  assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
+  shows "ArchObj ao = default_object ty dev us \<Longrightarrow> valid_vspace_obj ao s'"
+  apply (cases ty, simp_all add: default_object_def tyunt)
+  apply (simp add: valid_vspace_obj_default')
+  done
+
 end
 end

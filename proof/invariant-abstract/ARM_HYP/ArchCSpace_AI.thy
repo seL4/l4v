@@ -126,6 +126,48 @@ lemma set_free_index_invs [CSpace_AI_assms]:
   apply (simp)
   done
 
+lemma unique_table_refs_upd_eqD:
+  "\<lbrakk>ms a = Some b; obj_refs b = obj_refs b'; table_cap_ref b = table_cap_ref b'\<rbrakk>
+   \<Longrightarrow> unique_table_refs (ms (a \<mapsto> b')) = unique_table_refs ms"
+  unfolding unique_table_refs_def
+  apply (rule iffI)
+   apply (intro allI impI)
+   apply (case_tac "p=p'")
+    apply simp
+   apply (case_tac "a=p")
+    apply (erule_tac x=p in allE)
+    apply (erule_tac x=p' in allE)
+    apply (erule_tac x=b' in allE)
+    apply simp
+   apply (case_tac "a=p'")
+    apply (erule_tac x=p in allE)
+    apply (erule_tac x=p' in allE)
+    apply (erule_tac x=cap in allE)
+    apply simp
+   apply (erule_tac x=p in allE)
+   apply (erule_tac x=p' in allE)
+   apply (erule_tac x=cap in allE)
+   apply simp
+  apply (intro allI impI)
+  apply (case_tac "p=p'")
+   apply (thin_tac " \<forall>p. P p" for P)
+   apply simp
+  apply (case_tac "a=p")
+   apply (erule_tac x=p in allE)
+   apply (erule_tac x=p' in allE)
+   apply (erule_tac x=b in allE)
+   apply simp
+  apply (case_tac "a=p'")
+   apply (erule_tac x=p in allE)
+   apply (erule_tac x=p' in allE)
+   apply (erule_tac x=cap in allE)
+   apply simp
+  apply (erule_tac x=p in allE)
+  apply (erule_tac x=p' in allE)
+  apply (erule_tac x=cap in allE)
+  apply simp
+  done
+
 lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
   "\<lbrace>valid_arch_caps and cte_wp_at ((=) src_cap) src\<rbrace>
    set_untyped_cap_as_full src_cap cap src
