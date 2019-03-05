@@ -99,7 +99,7 @@ lemma hh_invs[wp, Syscall_AI_assms]:
 
 crunches make_fault_msg
   for cur_thread[wp, Syscall_AI_assms]: "\<lambda>s. P (cur_thread s)"
-  and fault_tcb_at[wp, Syscall_AI_assms]: "pred_tcb_at itcb_fault P t"
+  and fault_tcb_at[wp, Syscall_AI_assms]: "fault_tcb_at P t"
 
 end
 

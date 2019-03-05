@@ -552,7 +552,7 @@ locale Syscall_AI = Systemcall_AI_Pre:Systemcall_AI_Pre _ state_ext_t
   assumes make_fault_msg_cur_thread[wp]:
     "\<And>ft t P. make_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. P (cur_thread s)\<rbrace>"
   assumes make_fault_msg_fault_tcb_at[wp]:
-    "\<And>ft t t' P. make_fault_msg ft t \<lbrace>pred_tcb_at itcb_fault P t' :: 'state_ext state \<Rightarrow> _\<rbrace>"
+    "\<And>ft t t' P. make_fault_msg ft t \<lbrace>fault_tcb_at P t' :: 'state_ext state \<Rightarrow> _\<rbrace>"
 
 
 context Syscall_AI begin
@@ -1596,11 +1596,11 @@ lemma do_reply_transfer_ct_active[wp]:
   done
 
 crunches reply_unlink_tcb, do_ipc_transfer
-  for fault_tcb_at[wp]: "pred_tcb_at itcb_fault P t :: 'state_ext state \<Rightarrow> _"
+  for fault_tcb_at[wp]: "fault_tcb_at P t :: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps set_thread_state_pred_tcb_at)
 
 lemma send_ipc_not_blocking_not_calling_ct_active[wp]:
-  "\<lbrace>ct_active and pred_tcb_at itcb_fault ((=) None) t\<rbrace>
+  "\<lbrace>ct_active and fault_tcb_at ((=) None) t\<rbrace>
      send_ipc False False bdg x can_donate t epptr
    \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: send_ipc_def)
@@ -1615,7 +1615,7 @@ lemma send_ipc_not_blocking_not_calling_ct_active[wp]:
            apply (rule hoare_pre_cont)
           apply wpsimp
          apply (wpsimp wp: thread_get_wp')
-        apply (rule_tac Q="\<lambda>_. ct_active and pred_tcb_at itcb_fault ((=) None) t"
+        apply (rule_tac Q="\<lambda>_. ct_active and fault_tcb_at ((=) None) t"
                in hoare_post_imp)
          apply (clarsimp simp: pred_tcb_at_def obj_at_def)
         apply (wpsimp wp: hoare_drop_imps)+
@@ -1691,7 +1691,7 @@ where
 
 lemma perform_invocation_not_blocking_not_calling_ct_active[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and
-    (\<lambda>s. pred_tcb_at itcb_fault ((=) None) (cur_thread s) s \<and>
+    (\<lambda>s. fault_tcb_at ((=) None) (cur_thread s) s \<and>
          scheduler_action s = resume_cur_thread) and
     K (safe_invocation i)\<rbrace>
      perform_invocation False False can_donate i
@@ -1705,11 +1705,6 @@ lemma decode_invocation_safe_invocation[wp]:
    \<lbrace>\<lambda>i _. safe_invocation i\<rbrace>,-"
   apply (simp add: decode_invocation_def)
   by (wpsimp simp: o_def split_def)
-
-lemma new_fault_inv:
-  "invs s \<Longrightarrow>
-     \<forall>t. st_tcb_at active t s \<longrightarrow> pred_tcb_at itcb_fault ((=) None) t s"
-  sorry
 
 lemma handle_invocation_not_blocking_not_calling_first_phase_ct_active[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> scheduler_action s = resume_cur_thread \<and>

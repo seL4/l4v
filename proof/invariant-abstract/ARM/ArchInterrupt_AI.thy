@@ -235,7 +235,7 @@ crunches invoke_irq_control
 
 crunches invoke_irq_handler
   for ct_active[wp, Interrupt_AI_asms]: "ct_active"
-  (wp: gts_wp get_simple_ko_wp simp: crunch_simps)
+  (wp: gts_wp get_simple_ko_wp crunch_wps simp: crunch_simps)
 
 end
 

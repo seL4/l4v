@@ -109,7 +109,7 @@ locale Interrupt_AI =
      \<rbrakk> \<Longrightarrow>
      \<lbrace>invs and ex_inv and irq_handler_inv_valid i\<rbrace> invoke_irq_handler i \<lbrace>\<lambda>rv s. invs s \<and> ex_inv s\<rbrace>"
   assumes invoke_irq_handler_ct_active[wp]:
-    "\<And> i. \<lbrace>ct_active\<rbrace> invoke_irq_handler i \<lbrace>\<lambda>rv. ct_active :: 'a state \<Rightarrow> bool\<rbrace>"
+    "\<And> i. \<lbrace>ct_active and invs\<rbrace> invoke_irq_handler i \<lbrace>\<lambda>rv. ct_active :: 'a state \<Rightarrow> bool\<rbrace>"
   assumes invoke_irq_control_invs[wp]:
     "\<And> i. \<lbrace>invs and irq_control_inv_valid i\<rbrace> invoke_irq_control i \<lbrace>\<lambda>rv. invs :: 'a state \<Rightarrow> bool\<rbrace>"
   assumes invoke_irq_control_ct_in_state[wp]:
@@ -179,18 +179,9 @@ lemma cap_delete_one_still_derived:
    \<lbrace>\<lambda>rv s. cte_wp_at (is_derived (cdt s) p' cap) p' s\<rbrace>"
   apply (simp add: cap_delete_one_def empty_slot_def unless_def
                    cte_wp_at_caps_of_state set_cdt_def)
-  apply (wp hoare_vcg_ex_lift)
-  apply (simp split del:if_split)
-  apply (wp hoare_vcg_ex_lift get_cap_wp hoare_vcg_all_lift
-            hoare_vcg_disj_lift
-               | simp only: cte_wp_at_caps_of_state imp_conv_disj
-                            cdt_update.caps_of_state_update
-                            revokable_update.caps_of_state_update
-               | simp)+
-     apply (simp add: is_final_cap_def | wp)+
-   apply (rule get_cap_wp)
-  apply (clarsimp simp: cte_wp_at_caps_of_state if_apply_def2
-             split del: if_split)
+  apply (wpsimp wp: hoare_vcg_ex_lift get_cap_wp hoare_vcg_all_lift
+                    hoare_vcg_imp_lift'
+              simp: cte_wp_at_caps_of_state)
   apply (rule_tac x=capa in exI)
   apply (clarsimp simp only: is_derived_def simp_thms
                       split: if_split_asm)
@@ -202,7 +193,6 @@ lemma cap_delete_one_still_derived:
    apply simp
   apply auto
   done
-
 
 lemma cap_delete_one_cte_cap_to[wp]:
   "\<lbrace>ex_cte_cap_wp_to P ptr\<rbrace> cap_delete_one ptr' \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P ptr\<rbrace>"

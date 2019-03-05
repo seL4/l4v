@@ -988,6 +988,11 @@ lemma thread_get_wp:
                  dest!: get_tcb_SomeD)
   done
 
+lemma thread_get_wp'':
+  "\<lbrace>\<lambda>s. obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> P (f tcb)) ptr s\<rbrace>
+    thread_get f ptr
+   \<lbrace>\<lambda>rv _. P rv\<rbrace>"
+  by (wpsimp wp: thread_get_wp)
 
 lemma thread_get_sp:
   "\<lbrace>P\<rbrace> thread_get f ptr
@@ -1072,9 +1077,20 @@ lemma sts_st_tcb_at':
 
 lemma set_thread_state_pred_tcb_at:
   "\<forall>tcb ts. proj (tcb_to_itcb tcb) = proj (tcb_to_itcb (tcb\<lparr>tcb_state := ts\<rparr>))
-   \<Longrightarrow> \<lbrace>pred_tcb_at proj P t\<rbrace> set_thread_state ref ts \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+   \<Longrightarrow> set_thread_state ref ts \<lbrace>\<lambda>s. pred_tcb_at proj P t s\<rbrace>"
   unfolding set_thread_state_def set_object_def
-  by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
+  apply (wpsimp simp: pred_tcb_at_def)
+  by (clarsimp simp: obj_at_def get_tcb_def)
+
+(* This rule can cause problems with the simplifier if rule unification chooses a
+   P' that does not specify proj. If necessary, this can be worked around by
+   manually specifying proj. *)
+lemma set_thread_state_pred_tcb_at':
+  "\<forall>tcb ts. proj (tcb_to_itcb tcb) = proj (tcb_to_itcb (tcb\<lparr>tcb_state := ts\<rparr>))
+   \<Longrightarrow> set_thread_state ref ts \<lbrace>\<lambda>s. P' (pred_tcb_at proj P t s)\<rbrace>"
+  unfolding set_thread_state_def set_object_def
+  apply (wpsimp simp: pred_tcb_at_def)
+  by (clarsimp simp: obj_at_def get_tcb_def split: option.splits kernel_object.splits)
 
 lemma sbn_bound_tcb_at':
   "\<lbrace>K (P ntfn)\<rbrace> set_tcb_obj_ref tcb_bound_notification_update t ntfn \<lbrace>\<lambda>rv. bound_tcb_at P t\<rbrace>"
@@ -2125,9 +2141,12 @@ lemma valid_running [simp]:
   "valid_tcb_state Structures_A.Running = \<top>"
   by (rule ext, simp add: valid_tcb_state_def)
 
-
 lemma valid_inactive [simp]:
   "valid_tcb_state Structures_A.Inactive = \<top>"
+  by (rule ext, simp add: valid_tcb_state_def)
+
+lemma valid_restart [simp]:
+  "valid_tcb_state Structures_A.Restart = \<top>"
   by (rule ext, simp add: valid_tcb_state_def)
 
 lemma ntfn_queued_st_tcb_at:
