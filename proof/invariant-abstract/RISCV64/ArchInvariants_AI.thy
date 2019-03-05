@@ -498,10 +498,6 @@ definition valid_vs_lookup :: "'z::state_ext state \<Rightarrow> bool" where
                  obj_refs cap = {p} \<and>
                  vs_cap_ref cap = Some (asid_for_level asid level, vref_for_level vref level))"
 
-(* covered by existing invariants in RISCV *)
-definition
-  "valid_kernel_mappings \<equiv> \<top>"
-
 definition valid_asid_pool_caps_2 :: "(cslot_ptr \<rightharpoonup> cap) \<Rightarrow> (asid_high_index \<rightharpoonup> obj_ref) \<Rightarrow> bool"
   where
   "valid_asid_pool_caps_2 caps table \<equiv>
@@ -671,6 +667,10 @@ definition valid_arch_idle :: "iarch_tcb \<Rightarrow> bool" where
 definition
   "valid_arch_mdb r cs \<equiv> True"
 
+(* covered by existing invariants in RISCV *)
+definition
+  "valid_kernel_mappings \<equiv> \<top>"
+
 (* tcb_arch_ref extracts the obj_refs in tcb_arch: currently there is no vcpu ref in RISCV *)
 definition tcb_arch_ref :: "tcb \<Rightarrow> obj_ref option" where
   "tcb_arch_ref t \<equiv> None"
@@ -714,6 +714,14 @@ declare empty_table_arch_def[simp]
 (* Interface definition, see above *)
 definition empty_table :: "obj_ref set \<Rightarrow> kernel_object \<Rightarrow> bool" where
   "empty_table S \<equiv> arch_obj_fun_lift (empty_table_arch S) False"
+
+
+(* Interface definition, it provides the set (in form of a list) that is
+   plugged into empty_table for other architectures, but is unused in RISC-V.
+   We could make this equal to riscv_global_tables (max_pt_level - 1), but
+   since it is unused in empty_table anyway, we leave it empty. *)
+definition second_level_tables :: "arch_state \<Rightarrow> obj_ref list" where
+  "second_level_tables s = []"
 
 definition
   "cap_asid_arch cap \<equiv> case cap of
