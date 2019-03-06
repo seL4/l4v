@@ -1412,14 +1412,6 @@ lemma set_pt_invs:
   apply (clarsimp simp: is_pt_cap_def cap_asid_def)
   done *)
 
-(* FIXME RISCV: move to ASpec/ArchVSpaceAcc *)
-locale_abbrev table_base :: "obj_ref \<Rightarrow> obj_ref" where
-  "table_base p \<equiv> p && ~~mask pt_bits"
-
-(* FIXME RISCV: move to ASpec/ArchVSpaceAcc *)
-locale_abbrev table_index :: "obj_ref \<Rightarrow> pt_index" where
-  "table_index p \<equiv> ucast (p && mask pt_bits >> pte_bits)"
-
 lemma store_pte_invs:
   "\<lbrace>invs and (\<lambda>s. (\<forall>level. \<exists>\<rhd>(level, table_base p) s \<longrightarrow> valid_pte level pte s)) and (* potential off-by-one in level *)
     K (wellformed_pte pte) and

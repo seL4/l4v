@@ -120,10 +120,6 @@ end_qualify
 
 context Arch begin global_naming RISCV64
 
-(* FIXME RISCV: move to ASpec *)
-locale_abbrev
-  "asid_table \<equiv> \<lambda>s. riscv_asid_table (arch_state s)"
-
 (* compatibility with other architectures, input only *)
 abbreviation
   "vs_lookup s \<equiv> \<lambda>level asid vref. vs_lookup_table level asid vref s"

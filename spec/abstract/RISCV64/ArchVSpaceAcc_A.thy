@@ -37,6 +37,9 @@ definition asid_low_bits_of :: "asid \<Rightarrow> asid_low_index"
 
 lemmas asid_bits_of_defs = asid_high_bits_of_def asid_low_bits_of_def
 
+locale_abbrev
+  "asid_table \<equiv> \<lambda>s. riscv_asid_table (arch_state s)"
+
 section "Kernel Heap Accessors"
 
 text \<open>Manipulate ASID pools, page directories and page tables in the kernel heap.\<close>
@@ -75,17 +78,23 @@ definition set_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte) \<Right
      set_object ptr (ArchObj (PageTable pt))
    od"
 
+(* The base address of the table a page table entry at p is in (assuming alignment) *)
+locale_abbrev table_base :: "obj_ref \<Rightarrow> obj_ref" where
+  "table_base p \<equiv> p && ~~mask pt_bits"
+
+(* The index within the page table that a page table entry at p addresses *)
+locale_abbrev table_index :: "obj_ref \<Rightarrow> pt_index" where
+  "table_index p \<equiv> ucast (p && mask pt_bits >> pte_bits)"
+
 (* p is the address of the pte,
    which consists of base (for the pt) and offset (for the index inside the pt).
-   We avoid addresses between ptes. *)
+   We assert that we avoid addresses between ptes. *)
 definition pte_of :: "obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<rightharpoonup> pte"
   where
   "pte_of p \<equiv> do {
      oassert (is_aligned p pte_bits);
-     let base = p && ~~mask pt_bits;
-     let index = (p && mask pt_bits) >> pte_bits;
-     pt \<leftarrow> oapply base;
-     oreturn $ pt (ucast index)
+     pt \<leftarrow> oapply (table_base p);
+     oreturn $ pt (table_index p)
    }"
 
 locale_abbrev ptes_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pte"
@@ -101,10 +110,10 @@ definition store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state
   where
   "store_pte p pte \<equiv> do
      assert (is_aligned p pte_bits);
-     base \<leftarrow> return $ p && ~~mask pt_bits;
-     index \<leftarrow> return $ (p && mask pt_bits) >> pte_bits;
-     pt \<leftarrow> get_pt base;
-     pt' \<leftarrow> return $ pt (ucast index := pte);
+     base \<leftarrow> return $ table_base p;
+     index \<leftarrow> return $ table_index p;
+     pt \<leftarrow> get_pt (table_base p);
+     pt' \<leftarrow> return $ pt (index := pte);
      set_pt base pt'
    od"
 
