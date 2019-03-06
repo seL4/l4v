@@ -118,24 +118,21 @@ end
 (*
  * Demangle a name mangled by the C parser.
  *)
-fun demangle_name m =
-  if NameGeneration.rmUScoreSafety m <> m
-  then (* ignore the "StrictC'" prefix when decoding, but we need to re-mangle it in
-        * so that the resulting name is legal in Isabelle *)
-       NameGeneration.mkIdentUScoreSafe (demangle_name (NameGeneration.rmUScoreSafety m))
-  else case NameGeneration.dest_embret (MString.mk m) of
-           (* Return variable for function f *)
-           SOME (_, n) => "ret" ^ (if n > 1 then string_of_int n else "")
-           (* Ordinary variable. Split the type suffix off if there is one. *)
-         | NONE => let
-             val delim = "___" (* NameGeneration.tag_name_with_type *)
-             val (prefix, _) = apply2 Substring.string (Utils.positionr delim (Substring.full m))
-             in prefix end
-
-val _ = assert (demangle_name "c___ret_int" = "c") ""
-val _ = assert (demangle_name "ret_eret_2" = "ret2") ""
-val _ = assert (demangle_name "StrictC'__reserved___int" = "StrictC'__reserved") ""
-
+fun demangle_name (prog_info: prog_info) m =
+    case m |> NameGeneration.rmUScoreSafety |> MString.mk |> NameGeneration.dest_embret of
+      (* Return variable for function f *)
+      SOME (_, n) => "ret" ^ (if n > 1 then string_of_int n else "")
+      (* Ordinary variable. Look up the original name in csenv. *)
+    | NONE =>
+        let
+          fun lookup k v = Symtab.lookup v k
+        in
+          (* Don't bother checking if we're asked to demangle an unmangled name
+             (e.g. a global), just default to the input. *)
+          ProgramAnalysis.get_mangled_vars (#csenv prog_info)
+            |> lookup m |> Option.map (hd #> ProgramAnalysis.srcname)
+            |> the_default m
+        end
 
 (*
  * Extract details from the c-parser about the given program.
