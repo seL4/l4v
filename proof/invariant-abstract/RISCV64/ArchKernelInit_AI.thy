@@ -10,12 +10,9 @@
 
 theory ArchKernelInit_AI
 imports
-  "../Invariants_AI"
-(*
   "../ADT_AI"
   "../Tcb_AI"
   "../Arch_AI"
-*)
 begin
 
 context Arch begin global_naming RISCV64
