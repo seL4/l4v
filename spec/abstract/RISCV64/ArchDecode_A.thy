@@ -94,7 +94,8 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
            pte \<leftarrow> returnOk $ make_user_pte (addrFromPPtr p) attribs vm_rights;
            returnOk $ InvokePage $ PageMap (FrameCap p R pgsz dev (Some (asid,vaddr))) cte (pte,slot)
          odE
-       else throwError TruncatedMessage"
+       else throwError TruncatedMessage
+     | _ \<Rightarrow> fail"
 
 definition decode_fr_inv_remap :: "'z::state_ext arch_decoder"
   where
@@ -123,7 +124,8 @@ definition decode_fr_inv_remap :: "'z::state_ext arch_decoder"
          pte \<leftarrow> returnOk $ make_user_pte (addrFromPPtr p) (attribs_from_word attr) vm_rights;
          returnOk $ InvokePage $ PageRemap (pte, slot)
        odE
-     else throwError TruncatedMessage"
+       else throwError TruncatedMessage
+     | _ \<Rightarrow> fail"
 
 definition decode_frame_invocation :: "'z::state_ext arch_decoder"
   where
@@ -162,7 +164,8 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
            cap' <- returnOk $ PageTableCap p $ Some (asid, vaddr);
            returnOk $ InvokePageTable $ PageTableMap cap' cte pte slot
          odE
-       else throwError TruncatedMessage"
+       else throwError TruncatedMessage
+     | _ \<Rightarrow> fail"
 
 definition decode_page_table_invocation :: "'z::state_ext arch_decoder"
   where
