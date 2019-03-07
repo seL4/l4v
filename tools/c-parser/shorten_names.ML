@@ -96,7 +96,7 @@ fun find_short_name ctxt (long_name, typ) =
                    and the discovered constant *should* have some type
                    `record_scheme => c_int`, so we check that the codomain of
                    the constant is indeed `c_int`. *)
-            val short_name = String.split "___" long_name |> hd;
+            val short_name = StringExtras.split "___" long_name |> hd;
             val abbreviation =
                 (HoarePackage.varname short_name) |>
                 Long_Name.qualify NameGeneration.local_rcd_name

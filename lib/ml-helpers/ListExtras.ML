@@ -10,10 +10,8 @@
  * @TAG(DATA61_BSD)
  *)
 
-signature LIST =
+signature LIST_EXTRAS =
 sig
-  include LIST
-
   (*
     `map_find_first f xs` applies `f` to each element of `xs`, returning
     the first result that is `SOME _`, or `NONE` otherwise. For example:
@@ -25,9 +23,8 @@ sig
   val map_find_first: ('a -> 'b option) -> 'a list -> 'b option;
 end
 
-structure List: LIST =
+structure ListExtras: LIST_EXTRAS =
 struct
-open List
 
 fun map_find_first (f: 'a -> 'b option) (xs: 'a list): 'b option =
     case xs of

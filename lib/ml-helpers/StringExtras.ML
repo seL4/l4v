@@ -16,10 +16,8 @@
  * Includes code under BSD license, copyright 2001 John Hurd.
  *)
 
-signature STRING =
+signature STRING_EXTRAS =
 sig
-  include STRING
-
   (*
     `split sep s` returns the list of substrings of `s` that are
     separated by `sep`. For example:
@@ -30,9 +28,8 @@ sig
   val split: string -> string -> string list
 end
 
-structure String: STRING =
+structure StringExtras: STRING_EXTRAS =
 struct
-open String
 
 \<comment>\<open>
   Copied from @{file "~~/src/Tools/Metis/src/Useful.sml"}.

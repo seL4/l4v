@@ -20,20 +20,12 @@
       - Something that's "missing" from the general pattern of an Isabelle ML
         library,
   consider adding it here.
-
-  When appropriate, you should consider *extending* an existing signature,
-  rather than creating a new one: `String.whatever` is more meaningful than
-  `TSStringLib.whatever`, and it doesn't damage the bindings to the "original"
-  signature in any way. Look at `String.ML` in this directory for an example.
-
-  Some structures (like `Method`) can't be overridden this way. In these cases
-  name the new structure with a `Utils` suffix.
 \<close>
 
 theory MLUtils
 imports Main
 begin
-ML_file "String.ML"
-ML_file "List.ML"
-ML_file "Method.ML"
+ML_file "StringExtras.ML"
+ML_file "ListExtras.ML"
+ML_file "MethodExtras.ML"
 end

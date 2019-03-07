@@ -100,7 +100,7 @@ method_setup shorten_names_preserve_new = \<open>Shorten_Names.shorten_names_pre
 
 ML \<open>
   fun then_shorten_names mp =
-      mp -- Shorten_Names.shorten_names >> MethodUtils.then_all_new;
+      mp -- Shorten_Names.shorten_names >> MethodExtras.then_all_new;
 \<close>
 
 method_setup vcg = \<open>Hoare.vcg |> then_shorten_names\<close>
