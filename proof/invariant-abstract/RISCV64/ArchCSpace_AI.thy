@@ -9,7 +9,7 @@
  *)
 
 (*
-ARM-specific CSpace invariants
+Architecture-specific CSpace invariants
 *)
 
 theory ArchCSpace_AI
