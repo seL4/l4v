@@ -42,7 +42,9 @@ text {*
 definition
   get_vspace_of_thread :: "kheap \<Rightarrow> arch_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref"
 where
-  get_vspace_of_thread_def:
+  get_vspace_of_thread_def: (* FIXME RISCV: define this whole thing in terms of the lookup/walk
+                                            functions we already have. We'll need to prove that
+                                            they are the same later. *)
   "get_vspace_of_thread khp astate tcb_ref \<equiv>
    case khp tcb_ref of Some (TCB tcb) \<Rightarrow>
      (case tcb_vtable tcb of
