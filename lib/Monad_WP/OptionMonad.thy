@@ -188,12 +188,24 @@ lemma in_oassert_eq [simp]:
   "(oassert P s = Some v) = P"
   by (simp add: oassert_def)
 
+lemma oassert_True [simp]:
+  "oassert True = oreturn ()"
+  by (simp add: oassert_def)
+
+lemma oassert_False [simp]:
+  "oassert False = ofail"
+  by (simp add: oassert_def)
+
 lemma oassertE:
   "\<lbrakk> oassert P s = Some v; P \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   by simp
 
 lemma in_obind_eq:
   "((f |>> g) s = Some v) = (\<exists>v'. f s = Some v' \<and> g v' s = Some v)"
+  by (simp add: obind_def split: option.splits)
+
+lemma obind_eqI:
+  "\<lbrakk> f s = f s' ; \<And>x. f s = Some x \<Longrightarrow> g x s = g' x s' \<rbrakk> \<Longrightarrow> obind f g s = obind f g' s'"
   by (simp add: obind_def split: option.splits)
 
 lemma obindE:
