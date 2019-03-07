@@ -1053,7 +1053,7 @@ fun apply [] x = x
   | apply (f :: fs) x = apply fs (f x);
 
 fun shorten_names mp =
-    mp -- Shorten_Names.shorten_names_preserve_new >> MethodUtils.then_all_new
+    mp -- Shorten_Names.shorten_names_preserve_new >> MethodExtras.then_all_new
 
 val corres_ctac_tactic = let
     fun tac upds ctxt = Method.SIMPLE_METHOD' (corres_ctac (apply upds default_ctac_opts) ctxt);

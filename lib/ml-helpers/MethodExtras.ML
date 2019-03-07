@@ -10,19 +10,19 @@
  * @TAG(DATA61_BSD)
  *)
 
-signature METHOD_UTILS =
+signature METHOD_EXTRAS =
 sig
-  include METHOD
-
   (* `then_all_new m1 m2` is equivalent to `(m1; m2)`. *)
   val then_all_new:
-      (Proof.context -> method) * (Proof.context -> method) -> Proof.context -> method;
+      (Proof.context -> Method.method) * (Proof.context -> Method.method)
+      -> Proof.context -> Method.method;
 end
 
-structure MethodUtils: METHOD_UTILS =
+structure MethodExtras: METHOD_EXTRAS =
 struct
 open Method
 
 fun then_all_new (m1, m2) =
     Combinator (no_combinator_info, Then_All_New, [Basic m1, Basic m2]) |> evaluate
+
 end
