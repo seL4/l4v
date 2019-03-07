@@ -16,8 +16,6 @@ context Arch begin global_naming RISCV64
 
 named_theorems DetSchedDomainTime_AI_assms
 
-crunch_ignore (add: pt_lookup_from_level)
-
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 

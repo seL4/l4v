@@ -330,7 +330,7 @@ crunches unmap_page_table
   and "distinct"[wp]: pspace_distinct
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-  (wp: crunch_wps ignore: pt_lookup_from_level)
+  (wp: crunch_wps)
 
 
 definition

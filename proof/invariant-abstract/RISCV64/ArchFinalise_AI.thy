@@ -924,7 +924,7 @@ crunch cte_wp_at[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (cte
 
 crunch cte_wp_at[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at
-   ignore: arch_thread_set pt_lookup_from_level)
+   ignore: arch_thread_set)
 end
 
 interpretation Finalise_AI_1?: Finalise_AI_1
@@ -977,12 +977,12 @@ context Arch begin global_naming RISCV64
 crunch irq_node[Finalise_AI_asms,wp]: prepare_thread_delete "\<lambda>s. P (interrupt_irq_node s)"
 
 crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"
-  (simp: crunch_simps wp: crunch_wps ignore: pt_lookup_from_level)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch pred_tcb_at[wp]:
   delete_asid_pool, delete_asid, unmap_page_table, unmap_page
   "pred_tcb_at proj P t"
-  (simp: crunch_simps wp: crunch_wps test ignore: pt_lookup_from_level)
+  (simp: crunch_simps wp: crunch_wps test)
 
 crunch pred_tcb_at[wp_unsafe]: arch_finalise_cap "pred_tcb_at proj P t"
   (simp: crunch_simps wp: crunch_wps)
@@ -1542,7 +1542,7 @@ lemma delete_asid_pool_unmapped2:
 
 crunches unmap_page_table, store_pte, delete_asid_pool, copy_global_mappings
   for valid_cap[wp]: "valid_cap c"
-  (wp: mapM_wp_inv mapM_x_wp' simp: crunch_simps ignore: pt_lookup_from_level)
+  (wp: mapM_wp_inv mapM_x_wp' simp: crunch_simps)
 
 lemmas delete_asid_typ_ats[wp] = abs_typ_at_lifts [OF delete_asid_typ_at]
 
@@ -1581,7 +1581,7 @@ lemma (* zombie_cap_two_nonidles *)[Finalise_AI_asms]:
 
 crunches empty_slot, finalise_cap, send_ipc, receive_ipc
   for ioports[wp]: valid_ioports
-  (wp: crunch_wps valid_ioports_lift simp: crunch_simps ignore: set_object pt_lookup_from_level)
+  (wp: crunch_wps valid_ioports_lift simp: crunch_simps ignore: set_object)
 
 lemma arch_derive_cap_notzombie[wp]:
   "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv s. \<not> is_zombie rv\<rbrace>, -"

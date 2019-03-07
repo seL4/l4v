@@ -16,7 +16,7 @@ begin
 
 context Arch begin global_naming RISCV64
 
-crunch_ignore (add: debugPrint clearMemory) (* FIXME RISCV: add further machine ops *)
+crunch_ignore (add: debugPrint clearMemory pt_lookup_from_level) (* FIXME RISCV: add further machine ops *)
 
 end
 
