@@ -273,8 +273,11 @@ definition
   handle_yield :: "(unit, 'z::state_ext) s_monad" where
   "handle_yield \<equiv> do
      cur_sc \<leftarrow> gets cur_sc;
+     sc \<leftarrow> get_sched_context cur_sc;
+     sc_consumed \<leftarrow> return (sc_consumed sc);
      refills \<leftarrow> get_refills cur_sc;
-     charge_budget 0 (r_amount (hd refills)) False
+     charge_budget 0 (r_amount (hd refills)) False;
+     set_sc_obj_ref sc_consumed_update cur_sc sc_consumed
  od"
 
 definition

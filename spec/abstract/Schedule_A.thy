@@ -331,22 +331,22 @@ definition
 where
   "sched_context_yield_to sc_ptr args \<equiv> do
     sc_yf_opt \<leftarrow> get_sc_obj_ref sc_yield_from sc_ptr;
-    when (sc_yf_opt \<noteq> None) $ complete_yield_to (the sc_yf_opt); (* sc_yield_from = None *)
-    sc_yf_opt \<leftarrow> get_sc_obj_ref sc_yield_from sc_ptr;
-    assert (sc_yf_opt = None);
+    when (sc_yf_opt \<noteq> None) $ do
+      complete_yield_to (the sc_yf_opt); \<comment> \<open> sc_yield_from = None \<close>
+      sc_yf_opt \<leftarrow> get_sc_obj_ref sc_yield_from sc_ptr;
+      assert (sc_yf_opt = None)
+    od;
     flag \<leftarrow> return True;
     refill_unblock_check sc_ptr;
     sc_tcb_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
     tcb_ptr \<leftarrow> assert_opt sc_tcb_opt;
-    schedulable \<leftarrow> is_schedulable tcb_ptr False;
+    in_release_q <- gets $ in_release_queue tcb_ptr;
+    schedulable <- is_schedulable tcb_ptr in_release_q;
     when (schedulable) $ do
-
       sc \<leftarrow> get_sched_context sc_ptr;
       cur_time \<leftarrow> gets cur_time;
-      ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; (* refill_ready sc_ptr *)
-
-      sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); (* refill_sufficient sc_ptr 0 *)
-
+      ready \<leftarrow> return $ (r_time (refill_hd sc)) \<le> cur_time + kernelWCET_ticks; \<comment> \<open> refill_ready sc_ptr \<close>
+      sufficient \<leftarrow> return $ sufficient_refills 0 (sc_refills sc); \<comment> \<open> refill_sufficient sc_ptr 0 \<close>
       assert (sufficient \<and> ready);
       ct_ptr \<leftarrow> gets cur_thread;
       prios \<leftarrow> thread_get tcb_priority tcb_ptr;
@@ -354,13 +354,16 @@ where
       if (prios < ct_prios)
       then do
         tcb_sched_action tcb_sched_dequeue tcb_ptr;
-        tcb_sched_action tcb_sched_enqueue tcb_ptr (* schedulable & dequeud & sufficient & ready *)
+        tcb_sched_action tcb_sched_enqueue tcb_ptr \<comment> \<open> schedulable & dequeud & sufficient & ready \<close>
       od
       else do
         flag \<leftarrow> return False;
         set_sc_obj_ref sc_yield_from_update sc_ptr (Some ct_ptr);
         set_tcb_obj_ref tcb_yield_to_update ct_ptr (Some sc_ptr);
-        possible_switch_to tcb_ptr
+        tcb_sched_action tcb_sched_dequeue tcb_ptr;
+        tcb_sched_action tcb_sched_enqueue tcb_ptr;
+        tcb_sched_action tcb_sched_enqueue ct_ptr;
+        reschedule_required
       od
     od;
     when flag $ set_consumed sc_ptr args
