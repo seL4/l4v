@@ -44,10 +44,6 @@ section "Kernel Heap Accessors"
 
 text \<open>Manipulate ASID pools, page directories and page tables in the kernel heap.\<close>
 
-locale_abbrev aobjs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> arch_kernel_obj"
-  where
-  "aobjs_of \<equiv> \<lambda>s. kheap s |> aobj_of"
-
 locale_abbrev asid_pools_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> asid_pool"
   where
   "asid_pools_of \<equiv> \<lambda>s. aobjs_of s |> asid_pool_of"

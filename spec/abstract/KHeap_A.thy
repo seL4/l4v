@@ -21,6 +21,12 @@ begin
 text \<open>This theory gives auxiliary getter and setter methods
 for kernel objects.\<close>
 
+section "Projections of the Kernel Heap"
+
+abbreviation aobjs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> arch_kernel_obj"
+  where
+  "aobjs_of \<equiv> \<lambda>s. kheap s |> aobj_of"
+
 section "General Object Access"
 
 definition
