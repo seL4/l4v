@@ -664,8 +664,8 @@ locale_abbrev valid_uses :: "'z::state_ext state \<Rightarrow> bool" where
 lemmas valid_uses_def = valid_uses_2_def
 
 definition valid_arch_state :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_arch_state \<equiv> valid_asid_table and valid_uses and valid_global_arch_objs"
-
+  "valid_arch_state \<equiv> valid_asid_table and valid_uses and valid_global_arch_objs
+                      and valid_global_tables"
 
 (* ---------------------------------------------------------------------------------------------- *)
 
@@ -1092,16 +1092,6 @@ lemma dom_asid_pools_of_lift:
   assumes "\<And>A B. A \<subseteq> B \<Longrightarrow> P A \<Longrightarrow> P B"
   shows "f \<lbrace>\<lambda>s. P (dom (asid_pools_of s))\<rbrace>"
   by (wpsimp wp: hoare_vcg_set_pred_lift_mono assms simp: dom_asid_pools_of_typ)
-
-lemma valid_arch_state_lift:
-  assumes [wp]: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>_. typ_at (AArch T) p\<rbrace>"
-  assumes [wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
-  shows "f \<lbrace>valid_arch_state\<rbrace>"
-  apply (simp add: pred_conj_def valid_arch_state_def valid_asid_table_def valid_global_arch_objs_def)
-  apply (rule hoare_lift_Pf[where f="arch_state"]; wp dom_asid_pools_of_lift)
-    apply fastforce
-   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift)+
-  done
 
 lemma aobj_at_default_arch_cap_valid:
   assumes "ty \<noteq> ASIDPoolObj"
@@ -2050,6 +2040,26 @@ lemma vspace_for_asid_lift:
    apply (rule hoare_lift_Pf[where f=asid_pools_of])
     apply (wpsimp wp: assms)+
   done
+
+lemma valid_arch_state_lift_arch:
+  assumes atyp[wp]: "\<And>T p. f \<lbrace> typ_at (AArch T) p\<rbrace>"
+  assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (pts_of s) \<rbrace>"
+  assumes [wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
+  shows "f \<lbrace>valid_arch_state\<rbrace>"
+  apply (simp add: pred_conj_def valid_arch_state_def valid_asid_table_def valid_global_arch_objs_def)
+  apply (rule hoare_lift_Pf[where f="arch_state"]; wp dom_asid_pools_of_lift)
+    apply fastforce
+   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift)+
+  done
+
+(* the pt_of projection is not available in generic spec, so we limit what we export
+   to a dependency on arch objects *)
+lemma valid_arch_state_lift:
+  assumes atyp[wp]: "\<And>T p. f \<lbrace> typ_at (AArch T) p\<rbrace>"
+  assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s) \<rbrace>"
+  assumes [wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
+  shows "f \<lbrace>valid_arch_state\<rbrace>"
+  by (rule valid_arch_state_lift_arch; wp)
 
 end
 

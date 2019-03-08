@@ -1409,11 +1409,12 @@ lemma do_machine_op_arch [wp]:
   apply simp
   done
 
+crunches do_machine_op
+  for aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
 
 lemma do_machine_op_valid_arch [wp]:
   "do_machine_op f \<lbrace>valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) wp+
-
+  by (rule valid_arch_state_lift; wpsimp)
 
 lemma do_machine_op_vs_lookup [wp]:
   "do_machine_op f \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace>"

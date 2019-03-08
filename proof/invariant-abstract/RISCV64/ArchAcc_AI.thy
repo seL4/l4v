@@ -286,11 +286,18 @@ lemma set_asid_pool_cur_tcb [wp]:
 crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
   (wp: get_object_wp)
 
+lemma set_asid_pool_pts_of [wp]:
+  "set_asid_pool p a \<lbrace>\<lambda>s. P (pts_of s)\<rbrace>"
+  unfolding set_asid_pool_def
+  apply (wpsimp wp: set_object_wp)
+  apply (erule_tac P=P in subst[rotated])
+  apply (rule ext)
+  apply (clarsimp simp: opt_map_def obj_at_def split: option.splits)
+  done
 
 lemma set_asid_pool_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) (wp set_asid_pool_typ_at)+
-
+  by (rule valid_arch_state_lift_arch; wp set_asid_pool_typ_at)
 
 lemma set_asid_pool_valid_objs [wp]:
   "\<lbrace>valid_objs\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_. valid_objs\<rbrace>"
@@ -539,14 +546,6 @@ lemma set_pt_valid_global:
   set_pt p pt
   \<lbrace>\<lambda>_ s. valid_global_refs s\<rbrace>"
   by (wp valid_global_refs_cte_lift)
-
-
-lemma set_pt_valid_arch_state[wp]:
-  "\<lbrace>\<lambda>s. valid_arch_state s\<rbrace>
-  set_pt p pt
-  \<lbrace>\<lambda>_ s. valid_arch_state s\<rbrace>"
-  by (wp valid_arch_state_lift)
-
 
 lemma set_pt_cur:
   "\<lbrace>\<lambda>s. cur_tcb s\<rbrace>
@@ -1238,11 +1237,6 @@ lemma set_asid_pool_vspace_objs_unmap:
   apply simp
   by (auto simp: obj_at_def dest!: ran_restrictD)
 
-lemma set_asid_pool_pts_of[wp]:
-  "set_asid_pool p ap \<lbrace>\<lambda>s. P (pts_of s)\<rbrace>"
-  unfolding set_asid_pool_def
-  by (wp set_object_wp) (fastforce simp: opt_map_def obj_at_def intro: rsubst[where P=P])
-
 lemma set_asid_pool_table_caps[wp]:
   "\<lbrace>valid_table_caps\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>_. valid_table_caps\<rbrace>"
   apply (simp add: valid_table_caps_def)
@@ -1495,9 +1489,6 @@ lemma store_pte_valid_vspace_objs[wp]:
   apply fastforce
   done
 
-crunch valid_arch [wp]: store_pte valid_arch_state
-
-
 lemma unique_table_caps_ptE:
   "\<lbrakk> unique_table_caps_2 cs; cs p = Some cap; vs_cap_ref cap = None;
      cs p' = Some cap'; vs_cap_ref cap' = Some v; is_pt_cap cap;
@@ -1565,14 +1556,15 @@ lemma set_pt_invs:
          p \<notin> global_refs s)\<rbrace>
    set_pt p pt
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply (wp set_pt_valid_objs set_pt_iflive set_pt_zombies
-            set_pt_zombies_state_refs set_pt_zombies_state_hyp_refs set_pt_valid_mdb
-            set_pt_valid_idle set_pt_ifunsafe set_pt_reply_caps
-            set_pt_valid_arch_state set_pt_valid_global set_pt_cur
-            set_pt_reply_masters valid_irq_node_typ
-            valid_irq_handlers_lift
-            set_pt_valid_global_vspace_mappings)
+  apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_state_def)
+  apply (wpsimp wp: set_pt_valid_objs set_pt_iflive set_pt_zombies
+                    set_pt_zombies_state_refs set_pt_zombies_state_hyp_refs set_pt_valid_mdb
+                    set_pt_valid_idle set_pt_ifunsafe set_pt_reply_caps
+                    set_pt_valid_global set_pt_cur
+                    set_pt_reply_masters valid_irq_node_typ
+                    valid_irq_handlers_lift
+                    set_pt_valid_global_vspace_mappings
+                    set_pt_equal_kernel_mappings)
   sorry (* FIXME RISCV
   apply (clarsimp dest!: valid_objs_caps)
   apply (rule conjI[rotated])
