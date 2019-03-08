@@ -397,39 +397,26 @@ lemma store_pte_vspace_at_asid:
   "store_pte p pte \<lbrace>vspace_at_asid asid pt\<rbrace>"
   unfolding vspace_at_asid_def by (wp vspace_for_asid_lift)
 
+(* FIXME MOVE *)
+lemma ko_at_kheap:
+  "ko_at ko p s \<Longrightarrow> kheap s p = Some ko"
+  unfolding obj_at_def by simp
+
 lemma store_pte_valid_objs [wp]:
   "\<lbrace>(\<lambda>s. wellformed_pte pte) and valid_objs\<rbrace> store_pte p pte \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (simp add: store_pte_def set_pt_def bind_assoc set_object_def get_object_def)
-  sorry (* FIXME RISCV
-  apply (rule hoare_pre)
-   apply (wp|wpc)+
+  apply (wpsimp simp_del: fun_upd_apply)
   apply (clarsimp simp: valid_objs_def dom_def simp del: fun_upd_apply)
-  subgoal for \<dots> ptr _
-  apply (rule valid_obj_same_type)
-     apply (cases "ptr = p && ~~ mask pt_bits")
-      apply (erule allE, erule impE, blast)
-      apply (clarsimp simp: valid_obj_def arch_valid_obj_def)
-     apply clarsimp
-     apply fastforce
-    apply (erule allE, erule impE, blast)
-    apply (clarsimp simp: valid_obj_def arch_valid_obj_def)
-   apply assumption
-  by (simp add: a_type_def)
-  done *)
-
+  apply (frule ko_at_kheap)
+  apply (fastforce intro!: valid_obj_same_type simp: valid_obj_def split: if_split_asm)
+  done
 
 lemma set_pt_caps_of_state [wp]:
   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   apply (simp add: set_pt_def get_object_def bind_assoc set_object_def)
-  sorry (* FIXME RISCV
-  apply wp
-  apply clarsimp
-  apply (subst cte_wp_caps_of_lift)
-   prefer 2
-   apply assumption
-  subgoal for _ y
-  by (cases y, auto simp: cte_wp_at_cases)
-  done *)
+  apply (wpsimp)
+  apply (subst caps_of_state_after_update, auto elim: obj_at_weakenE)
+  done
 
 lemma store_pte_aligned [wp]:
   "\<lbrace>pspace_aligned\<rbrace> store_pte pt p \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
@@ -1524,13 +1511,28 @@ lemma set_pt_mappings[wp]:
   "\<lbrace>\<top>\<rbrace> set_pt p pt \<lbrace>\<lambda>_. valid_kernel_mappings\<rbrace>"
   by (simp add: valid_kernel_mappings_def) wp
 
-lemma set_pt_equal_kernel_mappings:
-  "\<lbrace>equal_kernel_mappings and
-    (\<lambda>s. (\<exists>asid. vspace_for_asid asid s = Some p) \<longrightarrow> has_kernel_mappings pt s)\<rbrace>
-     set_pt p pt
-   \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
-  sorry (* FIXME RISCV *)
+lemma set_pt_has_kernel_mappings:
+  "\<lbrace>\<lambda>s. p \<noteq> riscv_global_pt (arch_state s) \<and> has_kernel_mappings pt s \<rbrace>
+   set_pt p pt'
+   \<lbrace>\<lambda>_. has_kernel_mappings pt \<rbrace>"
+  unfolding has_kernel_mappings_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
+    apply (rule hoare_lift_Pf2[where f="\<lambda>s. riscv_global_pt (arch_state s)"])
+     apply (wpsimp wp: set_pt_pts_of)+
+  done
 
+(* FIXME RISCV currently unused
+   FIXME RISCV the not-global-pt requirement is a bit left field, we don't have a convenient
+     way to go from vspace_for_asid to "not a global pt" *)
+lemma set_pt_equal_kernel_mappings:
+  "\<lbrace>\<lambda>s. equal_kernel_mappings s
+        \<and> ((\<exists>asid. vspace_for_asid asid s = Some p) \<longrightarrow> has_kernel_mappings pt s)
+        \<and> p \<noteq> riscv_global_pt (arch_state s) \<rbrace>
+   set_pt p pt
+   \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
+  unfolding equal_kernel_mappings_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' vspace_for_asid_lift set_pt_pts_of
+                 set_pt_has_kernel_mappings)
 
 lemma store_pte_state_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace> store_pte ptr val \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
