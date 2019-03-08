@@ -890,7 +890,7 @@ lemma valid_global_tablesD:
      pt_walk max_pt_level bot_level (riscv_global_pt (arch_state s)) vref (ptes_of s)
      = Some (level, pt_ptr) \<rbrakk>
    \<Longrightarrow> vref \<in> kernel_regions s \<longrightarrow> pt_ptr \<in> riscv_global_pts (arch_state s) level"
-  unfolding valid_global_tables_def by blast
+  unfolding valid_global_tables_def by (simp add: Let_def riscv_global_pt_def)
 
 lemma riscv_global_pt_aligned[simp]:
   "\<lbrakk> pspace_aligned s ; valid_global_arch_objs s \<rbrakk>

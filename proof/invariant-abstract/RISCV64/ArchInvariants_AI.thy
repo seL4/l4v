@@ -578,15 +578,27 @@ definition hyp_live :: "kernel_object \<Rightarrow> bool" where
    tables for the right level. The final level must not contain further page table references.
    We do not consider frame mappings here.
    See valid_global_vspace_mappings for the restrictions on frame mappings. *)
-definition valid_global_tables :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_global_tables \<equiv> \<lambda>s.
-    (\<forall>bot_level vref level pt_ptr.
-       vref \<in> kernel_regions s \<longrightarrow>
-       pt_walk max_pt_level bot_level (riscv_global_pt (arch_state s)) vref (ptes_of s) =
-         Some (level, pt_ptr) \<longrightarrow>
-           pt_ptr \<in> riscv_global_pts (arch_state s) level) \<and>
-     (\<forall>pt_ptr \<in> riscv_global_pts (arch_state s) 0.
-        \<forall>pt. pts_of s pt_ptr = Some pt \<longrightarrow> (\<forall>i. \<not> is_PageTablePTE (pt i)))"
+definition valid_global_tables_2 ::
+  "obj_ref set \<Rightarrow> (RISCV64_A.vm_level \<Rightarrow> obj_ref set) \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<Rightarrow> bool"
+  where
+  "valid_global_tables_2 kernel_regs global_pts pts \<equiv>
+    let ptes = (\<lambda>p. pte_of p pts);
+        global_pt = the_elem (global_pts max_pt_level)
+    in
+      (\<forall>bot_level vref level pt_ptr.
+         vref \<in> kernel_regs \<longrightarrow>
+         pt_walk max_pt_level bot_level global_pt vref ptes =
+           Some (level, pt_ptr) \<longrightarrow>
+             pt_ptr \<in> global_pts level) \<and>
+       (\<forall>pt_ptr \<in> global_pts 0.
+          \<forall>pt. pts pt_ptr = Some pt \<longrightarrow> (\<forall>i. \<not> is_PageTablePTE (pt i)))"
+
+locale_abbrev valid_global_tables :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_global_tables \<equiv>
+    \<lambda>s. valid_global_tables_2 (kernel_regions s) (riscv_global_pts (arch_state s))
+                              (pts_of s)"
+
+lemmas valid_global_tables_def = valid_global_tables_2_def
 
 definition global_refs :: "'z::state_ext state \<Rightarrow> obj_ref set" where
   "global_refs \<equiv> \<lambda>s.
