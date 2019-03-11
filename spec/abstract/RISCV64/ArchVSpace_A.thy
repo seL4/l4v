@@ -90,6 +90,7 @@ fun handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit,'
             liftE set_pc;
             instrf addr
           odE
+		| _ \<Rightarrow> fail (* FIXME RISCV: SELFOUR-1955 *)
   odE"
 
 text \<open>
