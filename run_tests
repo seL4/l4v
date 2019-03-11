@@ -64,15 +64,17 @@ EXCLUDE["X64"]=[
 ]
 
 EXCLUDE["RISCV64"]=[
-    "AInvs",
-    "ASepSpec",
+    "Access",
+    "AutoCorresSEL4",
+    "Bisim",
+    "BaseRefine",
     "DSpec",
-    "c-kernel",
-    "CKernel",
-    "CSpec",
+    "DBaseRefine",
+    "CBaseRefine",
     "CamkesDarpaReport",
     "CamkesGlueProofs",
     "RefineOrphanage",
+    "SimplExportAndRefine",
     "AsmRefine"
 ]
 
