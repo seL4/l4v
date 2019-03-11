@@ -379,8 +379,7 @@ crunch valid_vspace_objs'[wp]: activate_thread,switch_to_thread, handle_hypervis
 lemma handle_event_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and invs and ct_active\<rbrace> handle_event e \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (case_tac e; simp)
-  sorry (* FIXME RISCV: SELFOUR-1955
-   by (wpsimp simp: Let_def | wp_once hoare_drop_imps)+ *)
+   by (wpsimp simp: Let_def | wp_once hoare_drop_imps)+
 
 lemma schedule_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
@@ -399,8 +398,7 @@ lemma call_kernel_valid_vspace_objs'[wp]:
                  | rule conjI | clarsimp simp: ct_in_state_def
                  | erule pred_tcb_weakenE
                  | wp_once hoare_drop_imps)+
-  sorry (* FIXME RISCV: SELFOUR-1955
-  done *)
+  done
 
 end
 

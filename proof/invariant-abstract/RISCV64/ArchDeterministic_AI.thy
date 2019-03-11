@@ -63,10 +63,8 @@ crunch valid_list[wp, Deterministic_AI_assms]: handle_recv, handle_yield, handle
   (wp: crunch_wps simp: crunch_simps)
 
 lemma handle_vm_fault_valid_list[wp, Deterministic_AI_assms]:
-"\<lbrace>valid_list\<rbrace> handle_vm_fault thread fault \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  apply (cases fault,simp_all)
-  apply (wp|simp)+
-  sorry (* FIXME RISCV: SELFOUR-1955 *)
+  "handle_vm_fault thread fault \<lbrace>valid_list\<rbrace>"
+  by (cases fault; wpsimp)
 
 lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
   "\<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"

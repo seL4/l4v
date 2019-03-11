@@ -130,9 +130,7 @@ crunch (bcorres) bcorres[wp]: handle_invocation truncate_state
 crunch (bcorres)bcorres[wp]: receive_ipc,receive_signal,delete_caller_cap truncate_state
 
 lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fault a b)"
-  apply (cases b)
-  apply (simp | wp)+
-  sorry (* FIXME RISCV: SELFOUR-1955 *)
+  by (cases b; wpsimp)
 
 lemma handle_hypervisor_fault_bcorres[wp]: "bcorres (handle_hypervisor_fault a b) (handle_hypervisor_fault a b)"
   by (cases b) wpsimp

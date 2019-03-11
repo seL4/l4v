@@ -1712,6 +1712,10 @@ lemma user_getreg_inv[wp]:
   apply (simp add: getRegister_def)
   done
 
+lemma dmo_read_sbadaddr_inv[wp]:
+  "do_machine_op read_sbadaddr \<lbrace>P\<rbrace>"
+  by (rule dmo_inv) (simp add: read_sbadaddr_def)
+
 end
 
 end

@@ -54,11 +54,9 @@ lemma diminished_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
   done
 
 lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
-  apply (cases flt, simp_all)
-  apply (wp|simp)+
-  sorry (* FIXME RISCV: SELFOUR-1955 *)
+  by (cases flt; wpsimp)
 
-crunch inv[wp]: getRegister "P"
+crunch inv[wp]: getRegister, read_sbadaddr "P"
 
 lemma hv_inv_ex [Syscall_AI_assms]:
   "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
@@ -66,27 +64,22 @@ lemma hv_inv_ex [Syscall_AI_assms]:
   apply (wp dmo_inv  getRestartPC_inv
             det_getRestartPC as_user_inv
          | wpcw | simp)+
-  sorry (* FIXME RISCV: SELFOUR-1955 *)
+  sorry (* FIXME RISCV: handle_vm_fault changes the state *)
 
 lemma handle_vm_fault_valid_fault[wp, Syscall_AI_assms]:
   "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
   apply (cases ft, simp_all)
    apply (wp | simp add: valid_fault_def)+
-  sorry (* FIXME RISCV: SELFOUR-1955 *)
+  done
 
 
 lemma hvmf_active [Syscall_AI_assms]:
   "\<lbrace>st_tcb_at active t\<rbrace> handle_vm_fault t w \<lbrace>\<lambda>rv. st_tcb_at active t\<rbrace>"
-  apply (cases w, simp_all)
-   apply (wp | simp)+
-  sorry (* FIXME RISCV: SELFOUR-1955 *)
+  by (cases w; wpsimp)
 
 lemma hvmf_ex_cap[wp, Syscall_AI_assms]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> handle_vm_fault t b \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
-  apply (cases b, simp_all)
-   apply (wp | simp)+
-  sorry (* FIXME RISCV: SELFOUR-1955 *)
-
+  by (cases b; wpsimp)
 
 declare arch_get_sanitise_register_info_ex_nonz_cap_to[Syscall_AI_assms]
 

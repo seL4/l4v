@@ -19,32 +19,26 @@ named_theorems DetSchedDomainTime_AI_assms
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
-lemma handle_vm_fault_domain_list_inv[wp, DetSchedDomainTime_AI_assms]:
-  "handle_vm_fault t f \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
-  sorry (* FIXME: SELFOUR-1955 *)
-
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, arch_tcb_set_ipc_buffer,
   arch_invoke_irq_control, arch_get_sanitise_register_info,
   prepare_thread_delete, handle_hypervisor_fault, make_arch_fault_msg,
-  arch_post_modify_registers, arch_post_cap_deletion
+  arch_post_modify_registers, arch_post_cap_deletion, handle_vm_fault
   "\<lambda>s. P (domain_list s)"
+  (simp: crunch_simps)
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
-
-lemma handle_vm_fault_domain_time_inv[wp, DetSchedDomainTime_AI_assms]:
-  "handle_vm_fault t f \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
-  sorry (* FIXME: SELFOUR-1955 *)
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects, arch_tcb_set_ipc_buffer,
   arch_invoke_irq_control, arch_get_sanitise_register_info,
-  prepare_thread_delete, handle_hypervisor_fault,
+  prepare_thread_delete, handle_hypervisor_fault, handle_vm_fault,
   arch_post_modify_registers, arch_post_cap_deletion, make_arch_fault_msg
   "\<lambda>s. P (domain_time s)"
+  (simp: crunch_simps)
 
 crunches do_machine_op
   for exst[wp]: "\<lambda>s. P (exst s)"

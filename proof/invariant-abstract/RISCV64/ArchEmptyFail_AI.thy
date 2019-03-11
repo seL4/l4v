@@ -172,12 +172,6 @@ context Arch begin global_naming RISCV64
 
 crunch (empty_fail) empty_fail[wp]: read_sbadaddr
 
-lemma empty_fail_handle_vm_fault[wp]: (* FIXME RISCV: currently false, SELFOUR-1955 *)
-  "empty_fail (handle_vm_fault thread fault)"
-  sorry (* FIXME RISCV: should work in crunch below once fixed *)
-
-declare handle_vm_fault.simps[simp del] (* FIXME RISCV: remove after SELFOUR-1955 *)
-
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_thread
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pte.splits
@@ -185,8 +179,6 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_t
          thread_state.splits endpoint.splits catch_def sum.splits cnode_invocation.splits
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
          asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits)
-
-declare handle_vm_fault.simps[simp] (* FIXME RISCV: remove after SELFOUR-1955 *)
 
 end
 
