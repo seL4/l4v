@@ -242,26 +242,6 @@ lemma set_simple_ko_valid_cap:
   by (wp valid_cap_typ)
 
 
-lemma sts_cte_at[wp]:
-  "\<lbrace>\<lambda>s. cte_at p s\<rbrace> set_thread_state t st \<lbrace>\<lambda>_ s. cte_at p s\<rbrace>"
-  by (wp valid_cte_at_typ)
-
-
-lemma as_user_cte_at[wp]:
-  "\<lbrace>\<lambda>s. cte_at p s\<rbrace> as_user t m \<lbrace>\<lambda>_ s. cte_at p s\<rbrace>"
-  by (wp valid_cte_at_typ)
-
-
-lemma cap_insert_cte_at:
-  "\<lbrace>cte_at p\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>_. cte_at p\<rbrace>"
-  by (wp valid_cte_at_typ)
-
-
-lemma smrs_cte_at[wp]:
-  "\<lbrace>cte_at p\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_. cte_at p\<rbrace>"
-  by (wp valid_cte_at_typ)
-
-
 lemma si_cte_at[wp]:
   "\<lbrace>cte_at p\<rbrace> send_ipc bl c ba cg t ep r \<lbrace>\<lambda>_. cte_at p\<rbrace>"
   by (wp valid_cte_at_typ)
