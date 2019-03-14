@@ -102,7 +102,10 @@ lemma "pptrBase = 0xFFFFFFC000000000" (* Sanity check with C *)
 
 definition pptrUserTop :: word64
   where
-  "pptrUserTop \<equiv> pptrBase"
+  "pptrUserTop \<equiv> mask canonical_bit && ~~mask 12" (* for page boundary alignment *)
+
+lemma "pptrUserTop = 0x0000003ffffff000" (* Sanity check with C *)
+  by (simp add: pptrUserTop_def canonical_bit_def mask_def)
 
 definition pAddr_base :: word64
   where
