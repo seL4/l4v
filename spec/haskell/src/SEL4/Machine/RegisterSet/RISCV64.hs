@@ -43,10 +43,10 @@ badgeRegister :: Register
 badgeRegister = A0
 
 frameRegisters :: [Register]
-frameRegisters = FaultIP : [LR .. A6]
+frameRegisters = FaultIP : [LR .. T5]
 
 gpRegisters :: [Register]
-gpRegisters = []
+gpRegisters = [T6]
 
 exceptionMessage :: [Register]
 exceptionMessage = [FaultIP, SP, A7]
