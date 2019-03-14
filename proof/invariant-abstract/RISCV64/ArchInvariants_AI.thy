@@ -1533,7 +1533,7 @@ lemma pt_slot_offset_id[simp]:
 lemma ptes_of_pt_slot_offset:
   "\<lbrakk> ptes_of s (pt_slot_offset level pt_ptr vref) = Some pte; is_aligned pt_ptr pt_bits \<rbrakk>
    \<Longrightarrow> pts_of s pt_ptr \<noteq> None"
-  by (auto dest!: ptes_of_pts_of simp: pt_slot_offset_id in_opt_map_eq)
+  by (auto dest!: ptes_of_pts_of simp: in_opt_map_eq)
 
 lemma valid_global_vspace_mappings_pt_at:
   "\<lbrakk> valid_global_vspace_mappings s; valid_uses s \<rbrakk>
@@ -1957,7 +1957,7 @@ lemma valid_vspace_objs_strongD:
   apply (clarsimp simp: in_omonad split: if_split_asm)
   apply (subst (asm) valid_vspace_obj.simps)
   apply (frule (1) pspace_alignedD)
-  apply (clarsimp simp: ptes_of_def in_omonad pt_slot_offset_id pt_slot_offset_offset
+  apply (clarsimp simp: ptes_of_def in_omonad pt_slot_offset_offset
                   simp flip: pt_bits_def)
   apply (drule_tac x="ucast (pt_index level vref)" in bspec)
    apply (clarsimp simp: user_region_slots)
@@ -2002,7 +2002,7 @@ lemma equal_mappings_pt_slot_offset:
   apply (frule_tac p=root_pt in pspace_alignedD, assumption)
   apply (drule (1) kernel_window_slots[where vref=vref])
   apply (simp add: pt_bits_def[symmetric])
-  apply (simp add: ptes_of_def pt_slot_offset_id pt_slot_offset_offset obind_def in_opt_map_eq
+  apply (simp add: ptes_of_def pt_slot_offset_offset obind_def in_opt_map_eq
                    is_aligned_pt_slot_offset_pte
             split: option.splits)
   done
