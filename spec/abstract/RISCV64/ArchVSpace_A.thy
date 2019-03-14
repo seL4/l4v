@@ -71,26 +71,15 @@ fun handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit,'
     let
       loadf = (\<lambda>a. throwError $ ArchFault $ VMFault a [0, vmFaultTypeFSR RISCVLoadAccessFault]);
       storef = (\<lambda>a. throwError $ ArchFault $ VMFault a [0, vmFaultTypeFSR RISCVStoreAccessFault]);
-      instrf = (\<lambda>a. throwError $ ArchFault $ VMFault a [1, vmFaultTypeFSR RISCVInstructionAccessFault]);
-      set_pc = do
-                 faultip \<leftarrow> as_user thread $ getRegister FaultIP;
-                 as_user thread $ setRegister NextIP faultip
-               od
+      instrf = (\<lambda>a. throwError $ ArchFault $ VMFault a [1, vmFaultTypeFSR RISCVInstructionAccessFault])
     in
       case fault_type of
-          RISCVLoadPageFault \<Rightarrow> loadf addr
-        | RISCVLoadAccessFault \<Rightarrow> loadf addr
-        | RISCVStorePageFault \<Rightarrow> storef addr
-        | RISCVStoreAccessFault \<Rightarrow> storef addr
-        | RISCVInstructionPageFault \<Rightarrow> doE
-            liftE set_pc;
-            instrf addr
-          odE
-        | RISCVInstructionAccessFault \<Rightarrow> doE
-            liftE set_pc;
-            instrf addr
-          odE
-		| _ \<Rightarrow> fail (* FIXME RISCV: SELFOUR-1955 *)
+        RISCVLoadPageFault \<Rightarrow> loadf addr
+      | RISCVLoadAccessFault \<Rightarrow> loadf addr
+      | RISCVStorePageFault \<Rightarrow> storef addr
+      | RISCVStoreAccessFault \<Rightarrow> storef addr
+      | RISCVInstructionPageFault \<Rightarrow> instrf addr
+      | RISCVInstructionAccessFault \<Rightarrow> instrf addr
   odE"
 
 text \<open>
