@@ -650,11 +650,12 @@ definition valid_uses_2 :: "(obj_ref \<Rightarrow> riscvvspace_region_use) \<Rig
      \<forall>p. (\<not>canonical_address p \<longrightarrow> uses p = RISCVVSpaceInvalidRegion)
           \<and> (p \<in> {pptr_base ..< kernel_base}
              \<longrightarrow> uses p \<in> {RISCVVSpaceKernelWindow, RISCVVSpaceInvalidRegion})
+          \<and> (uses p = RISCVVSpaceKernelWindow \<longrightarrow> p \<in> {pptr_base ..< kernel_base})
           \<comment> \<open>Ordinarily there would be another region on top of the RISCVVSpaceKernelELFWindow
              for devices, but Spike does not have any.\<close>
           \<and> (kernel_base \<le> p \<longrightarrow> uses p \<in> {RISCVVSpaceKernelELFWindow, RISCVVSpaceInvalidRegion})
-          \<comment> \<open>We allow all unreserved canonical virtual addresses as the user window:\<close>
-          \<and> (p < user_vtop \<longrightarrow> canonical_address p \<longrightarrow> uses p = RISCVVSpaceUserRegion)
+          \<comment> \<open>We allow precisely all canonical virtual addresses below user_vtop as the user window:\<close>
+          \<and> (p \<le> user_vtop \<and> canonical_address p \<longleftrightarrow> uses p = RISCVVSpaceUserRegion)
       \<comment> \<open>We want the kernel window to be non-empty, and to contain at least @{const pptr_base}\<close>
       \<and> uses pptr_base = RISCVVSpaceKernelWindow"
 
@@ -1300,6 +1301,29 @@ lemma valid_arch_tcb_typ_at:
   "\<lbrakk> valid_arch_tcb t s; \<And>T p. typ_at T p s \<Longrightarrow> typ_at T p s' \<rbrakk> \<Longrightarrow> valid_arch_tcb t s'"
   by (simp add: valid_arch_tcb_def)
 
+lemma user_vtop_ge0[intro!,simp]:
+  "0 < user_vtop"
+  by (simp add: user_vtop_def pptrUserTop_def pptrBase_def canonical_bit_def mask_def)
+
+lemma user_vtop_pptr_base[intro!,simp]:
+  "user_vtop < pptr_base"
+  by (simp add: user_vtop_def pptrUserTop_def pptr_base_def pptrBase_def canonical_bit_def mask_def)
+
+lemma pptr_base_kernel_base:
+  "pptr_base < kernel_base"
+  by (simp add: pptr_base_def pptrBase_def canonical_bit_def kernel_base_def)
+
+lemma above_pptr_base_canonical:
+  "pptr_base \<le> p \<Longrightarrow> canonical_address p"
+  by (simp add: canonical_address_range pptr_base_def pptrBase_def NOT_mask)
+
+lemma below_user_vtop_canonical:
+  "p \<le> user_vtop \<Longrightarrow> canonical_address p"
+  apply (simp add: user_vtop_def pptrUserTop_def canonical_address_range)
+  apply (rule disjI1, drule order_trans, rule word_and_le2)
+  apply simp
+  done
+
 lemmas window_defs =
   kernel_window_def not_kernel_window_def kernel_elf_window_def kernel_regions_def
   kernel_device_window_def user_region_def
@@ -1307,7 +1331,7 @@ lemmas window_defs =
 lemma valid_uses_kernel_window:
   "\<lbrakk> valid_uses s; p \<in> kernel_window s \<rbrakk> \<Longrightarrow> p \<in> {pptr_base ..< kernel_base} \<and> canonical_address p"
   unfolding valid_uses_def window_defs
-  by (erule_tac x=p in allE) (auto simp: user_vtop_def pptrUserTop_def pptr_base_def)
+  by (erule_tac x=p in allE) auto
 
 lemma valid_uses_user_region:
   "\<lbrakk> valid_uses s; p \<in> user_region s \<rbrakk> \<Longrightarrow> p < pptr_base"
@@ -1618,13 +1642,9 @@ lemma canonical_address_0[intro!,simp]:
   "canonical_address 0"
   by (simp add: canonical_address_def canonical_address_of_def)
 
-lemma user_vtop_ge0[intro!,simp]:
-  "0 < user_vtop"
-  by (simp add: user_vtop_def pptrUserTop_def pptrBase_def canonical_bit_def)
-
 lemma user_region0[intro!,simp]:
   "valid_uses s \<Longrightarrow> 0 \<in> user_region s"
-  by (simp add: valid_uses_def user_region_def)
+  by (force simp: valid_uses_def user_region_def)
 
 lemma pool_for_asid_valid_vspace_objs:
   "\<lbrakk> pool_for_asid asid s = Some p;
@@ -1841,10 +1861,6 @@ lemma valid_vspace_objsD:
    valid_vspace_obj level ao s"
   by (simp add: valid_vspace_objs_def)
 
-lemma user_vtop[simp]:
-  "user_vtop = pptr_base"
-  by (simp add: user_vtop_def pptrUserTop_def pptr_base_def)
-
 lemma pptr_base_mask:
   "pptr_base = ~~mask canonical_bit"
   by (simp add: pptr_base_def pptrBase_def mul_not_mask_eq_neg_shiftl flip: minus_one_shift)
@@ -1854,9 +1870,11 @@ lemma pptr_base_nth[simp]:
   by (simp add: pptr_base_mask neg_mask_bang word_bits_def)
 
 lemma valid_uses_user_region_eq:
-  "valid_uses s \<Longrightarrow> (p \<in> user_region s) = (p < pptr_base \<and> canonical_address p)"
+  "valid_uses s \<Longrightarrow> (p \<in> user_region s) = (p \<le> user_vtop)"
+  using below_user_vtop_canonical[of p]
   unfolding valid_uses_def user_region_def
-  by (erule_tac x=p in allE) (auto simp: not_le)
+  apply clarsimp
+  by (erule_tac x=p in allE) auto
 
 lemma pt_bits_left_bound:
   "pt_bits_left level \<le> canonical_bit + 1"
@@ -1884,22 +1902,26 @@ lemma pt_bits_left_le_max_pt_level:
 lemma canonical_vref_for_levelI:
   "\<lbrakk> canonical_address vref; vref < pptr_base \<rbrakk> \<Longrightarrow> canonical_address (vref_for_level vref level)"
   using pt_bits_left_bound[of level]
-  apply (simp add: canonical_address_def canonical_address_of_def vref_for_level_def pptr_base_mask bit_simps)
+  apply (simp add: canonical_address_def canonical_address_of_def vref_for_level_def pptr_base_mask
+                   bit_simps)
   apply word_bitwise
   by (clarsimp simp: canonical_bit_def word_size not_less)
 
 
+lemma vref_for_level_le:
+  "vref_for_level vref level \<le> vref"
+  by (simp add: vref_for_level_def word_and_le2)
+
 lemma vref_for_level_user_region:
   "\<lbrakk> vref \<in> user_region s; valid_uses s \<rbrakk> \<Longrightarrow> vref_for_level vref level \<in> user_region s"
-  by (clarsimp simp: valid_uses_user_region_eq vref_for_level_pptr_baseI canonical_vref_for_levelI)
+  using vref_for_level_le[of vref level]
+  by (force simp: valid_uses_user_region_eq vref_for_level_pptr_baseI canonical_vref_for_levelI)
 
 lemma aligned_canonical_max_is_0:
   "\<lbrakk> canonical_address p; is_aligned p (pt_bits_left (max_pt_level + 1)) \<rbrakk> \<Longrightarrow> p = 0"
   apply (simp add: canonical_address_def canonical_address_of_def level_defs pt_bits_left_def
                    bit_simps is_aligned_nth)
-  apply word_bitwise
-  apply clarsimp
-  done
+  by word_bitwise clarsimp
 
 lemma aligned_vref_for_level[simp]:
   "is_aligned (vref_for_level vref level) (pt_bits_left level)"
@@ -1911,7 +1933,7 @@ lemma user_region_slots:
   apply (clarsimp simp: valid_uses_user_region_eq kernel_mapping_slots_def pt_index_def level_defs)
   apply (simp add: pt_bits_left_def bit_simps canonical_address_def canonical_address_of_def)
   apply word_bitwise
-  by (clarsimp simp: word_bits_def canonical_bit_def word_size)
+  by (clarsimp simp: word_bits_def canonical_bit_def word_size user_vtop_def pptrUserTop_def)
 
 lemma valid_vspace_objs_strongD:
   "\<lbrakk> valid_vspace_objs s;
