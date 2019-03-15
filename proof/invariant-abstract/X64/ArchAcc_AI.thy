@@ -719,63 +719,6 @@ lemma page_table_pte_at_diffE:
   apply (erule page_table_pte_atI; simp add: word_size_bits_def)
   done
 
-
-context
-  fixes w :: "'a::len word"
-begin
-
-private lemma sbintrunc_uint_ucast:
-  assumes "Suc n = len_of TYPE('b::len)"
-  shows "sbintrunc n (uint (ucast w :: 'b word)) = sbintrunc n (uint w)"
-  by (metis assms sbintrunc_bintrunc ucast_def word_ubin.eq_norm)
-
-private lemma test_bit_sbintrunc:
-  assumes "i < len_of TYPE('a)"
-  shows "(word_of_int (sbintrunc n (uint w)) :: 'a word) !! i
-           = (if n < i then w !! n else w !! i)"
-  using assms by (simp add: nth_sbintr)
-                 (simp add: test_bit_bin)
-
-private lemma test_bit_sbintrunc_ucast:
-  assumes len_a: "i < len_of TYPE('a)"
-  shows "(word_of_int (sbintrunc (len_of TYPE('b) - 1) (uint (ucast w :: 'b word))) :: 'a word) !! i
-          = (if len_of TYPE('b::len) \<le> i then w !! (len_of TYPE('b) - 1) else w !! i)"
-  apply (subst sbintrunc_uint_ucast)
-   apply simp
-  apply (subst test_bit_sbintrunc)
-   apply (rule len_a)
-  apply (rule if_cong[OF _ refl refl])
-  by (metis leD le_imp_diff_le le_neq_implies_less lens_not_0(2)
-            minus_eq nat_le_linear nat_less_cases' zero_neq_one)
-
-lemma scast_ucast_high_bits:
-  shows "scast (ucast w :: 'b::len word) = w
-           \<longleftrightarrow> (\<forall> i \<in> {len_of TYPE('b) ..< size w}. w !! i = w !! (len_of TYPE('b) - 1))"
-  unfolding scast_def sint_uint word_size
-  apply (subst word_eq_iff)
-  apply (rule iffI)
-   apply (rule ballI)
-   apply (drule_tac x=i in spec)
-   apply (subst (asm) test_bit_sbintrunc_ucast; simp)
-  apply (rule allI)
-  apply (case_tac "n < len_of TYPE('a)")
-   apply (subst test_bit_sbintrunc_ucast)
-    apply simp
-   apply (case_tac "n \<ge> len_of TYPE('b)")
-    apply (drule_tac x=n in bspec)
-     by auto
-
-lemma scast_ucast_mask_compare:
-  shows "scast (ucast w :: 'b::len word) = w
-          \<longleftrightarrow> (w \<le> mask (len_of TYPE('b) - 1) \<or> ~~ mask (len_of TYPE('b) - 1) \<le> w)"
-  apply (clarsimp simp: le_mask_high_bits neg_mask_le_high_bits scast_ucast_high_bits word_size)
-  apply (rule iffI; clarsimp)
-  apply (rename_tac i j; case_tac "i = len_of TYPE('b) - 1"; case_tac "j = len_of TYPE('b) - 1")
-  by auto
-
-end
-
-
 lemma canonical_address_range:
   "canonical_address x = (x \<le> mask 47 \<or> ~~ mask 47 \<le> x)"
   by (simp add: canonical_address_def canonical_address_of_def scast_ucast_mask_compare)

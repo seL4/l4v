@@ -112,6 +112,9 @@ where
 definition
  "swp f \<equiv> \<lambda>x y. f y x"
 
+lemma swp_apply[simp]: "swp f y x = f x y"
+  by (simp add: swp_def)
+
 primrec (nonexhaustive)
   theRight :: "'a + 'b \<Rightarrow> 'b" where
   "theRight (Inr x) = x"

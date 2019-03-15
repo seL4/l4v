@@ -12,99 +12,9 @@ theory ArchInvariants_AI
 imports "../InvariantsPre_AI" "Lib.Apply_Trace_Cmd"
 begin
 
-
-(* FIXME RISCV: move to NonDetMonadVCG *)
-lemma hoare_vcg_set_pred_lift:
-  assumes "\<And>P x. m \<lbrace> \<lambda>s. P (f x s) \<rbrace>"
-  shows "m \<lbrace> \<lambda>s. P {x. f x s} \<rbrace>"
-  using assms[where P="\<lambda>x . x"] assms[where P=Not] use_valid
-  by (fastforce simp: valid_def elim!: rsubst[where P=P])
-
-(* FIXME RISCV: move to NonDetMonadVCG *)
-lemma hoare_vcg_set_pred_lift_mono:
-  assumes f: "\<And>x. m \<lbrace> f x \<rbrace>"
-  assumes mono: "\<And>A B. A \<subseteq> B \<Longrightarrow> P A \<Longrightarrow> P B"
-  shows "m \<lbrace> \<lambda>s. P {x. f x s} \<rbrace>"
-  by (fastforce simp: valid_def elim!: mono[rotated] dest: use_valid[OF _ f])
-
-(* FIXME RISCV: move *)
-lemma obind_comp_dist:
-  "obind f g o h = obind (f o h) (\<lambda>x. g x o h)"
-  by (auto simp: obind_def split: option.splits)
-
-(* FIXME RISCV: move *)
-lemma if_comp_dist:
-  "(if P then f else g) o h = (if P then f o h else g o h)"
-  by auto
-
-(* FIXME: move *)
-lemma swp_apply[simp]:
-  "swp f y x = f x y"
-  by (simp add: swp_def)
+(* setup *)
 
 declare opt_mapE[rule del]
-
-(* FIXME: move to Word *)
-lemma minus_one_shift:
-  "- (1 << n) = (-1 << n :: 'a::len word)"
-  by (simp add: mul_not_mask_eq_neg_shiftl[symmetric] mask_def NOT_eq)
-
-(* FIXME: move to Word, remove from X64 *)
-context
-  fixes w :: "'a::len word"
-begin
-
-private lemma sbintrunc_uint_ucast:
-  assumes "Suc n = len_of TYPE('b::len)"
-  shows "sbintrunc n (uint (ucast w :: 'b word)) = sbintrunc n (uint w)"
-  by (metis assms sbintrunc_bintrunc ucast_def word_ubin.eq_norm)
-
-private lemma test_bit_sbintrunc:
-  assumes "i < len_of TYPE('a)"
-  shows "(word_of_int (sbintrunc n (uint w)) :: 'a word) !! i
-           = (if n < i then w !! n else w !! i)"
-  using assms by (simp add: nth_sbintr)
-                 (simp add: test_bit_bin)
-
-private lemma test_bit_sbintrunc_ucast:
-  assumes len_a: "i < len_of TYPE('a)"
-  shows "(word_of_int (sbintrunc (len_of TYPE('b) - 1) (uint (ucast w :: 'b word))) :: 'a word) !! i
-          = (if len_of TYPE('b::len) \<le> i then w !! (len_of TYPE('b) - 1) else w !! i)"
-  apply (subst sbintrunc_uint_ucast)
-   apply simp
-  apply (subst test_bit_sbintrunc)
-   apply (rule len_a)
-  apply (rule if_cong[OF _ refl refl])
-  by (metis leD le_imp_diff_le le_neq_implies_less lens_not_0(2)
-            minus_eq nat_le_linear nat_less_cases' zero_neq_one)
-
-lemma scast_ucast_high_bits:
-  shows "scast (ucast w :: 'b::len word) = w
-           \<longleftrightarrow> (\<forall> i \<in> {len_of TYPE('b) ..< size w}. w !! i = w !! (len_of TYPE('b) - 1))"
-  unfolding scast_def sint_uint word_size
-  apply (subst word_eq_iff)
-  apply (rule iffI)
-   apply (rule ballI)
-   apply (drule_tac x=i in spec)
-   apply (subst (asm) test_bit_sbintrunc_ucast; simp)
-  apply (rule allI)
-  apply (case_tac "n < len_of TYPE('a)")
-   apply (subst test_bit_sbintrunc_ucast)
-    apply simp
-   apply (case_tac "n \<ge> len_of TYPE('b)")
-    apply (drule_tac x=n in bspec)
-     by auto
-
-lemma scast_ucast_mask_compare:
-  shows "scast (ucast w :: 'b::len word) = w
-          \<longleftrightarrow> (w \<le> mask (len_of TYPE('b) - 1) \<or> ~~ mask (len_of TYPE('b) - 1) \<le> w)"
-  apply (clarsimp simp: le_mask_high_bits neg_mask_le_high_bits scast_ucast_high_bits word_size)
-  apply (rule iffI; clarsimp)
-  apply (rename_tac i j; case_tac "i = len_of TYPE('b) - 1"; case_tac "j = len_of TYPE('b) - 1")
-  by auto
-
-end
-
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 
@@ -2204,16 +2114,6 @@ end
 
 (* FIXME RISCV: leftovers; need to move further down
 context Arch begin global_naming RISCV64
-
-(* missing link of x to vref *)
-lemma
-  "\<lbrakk> vs_lookup 2 asid vref s = Some (2, pt_ptr);
-     kheap s pt_ptr = Some (ArchObj (PageTable pt)); pte_ref (pt x) = Some r;
-     is_PageTablePTE (pt x) \<rbrakk> \<Longrightarrow>
-   vs_lookup 1 asid vref s = Some (1, r)"
-   apply (clarsimp simp add: vs_lookup_def level_defs in_omonad)
-   apply (subst pt_walk.simps)
-   apply (clarsimp simp add: level_defs in_omonad)
 
 (* This is what valid_kernel_mappings used to say; we should now be able to derive it from
    existing invariants: we will find the second-level tables if and only if we look in the

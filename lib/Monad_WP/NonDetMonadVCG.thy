@@ -1308,6 +1308,17 @@ lemma hoare_vcg_ex_lift_R1:
   "(\<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q\<rbrace>, -) \<Longrightarrow> \<lbrace>\<lambda>s. \<exists>x. P x s\<rbrace> f \<lbrace>Q\<rbrace>, -"
   by (fastforce simp: valid_def validE_R_def validE_def split: sum.splits)
 
+lemma hoare_liftP_ext:
+  assumes "\<And>P x. m \<lbrace>\<lambda>s. P (f s x)\<rbrace>"
+  shows "m \<lbrace>\<lambda>s. P (f s)\<rbrace>"
+  unfolding valid_def
+  apply clarsimp
+  apply (erule rsubst[where P=P])
+  apply (rule ext)
+  apply (drule use_valid, rule assms, rule refl)
+  apply simp
+  done
+
 (* for instantiations *)
 lemma hoare_triv:    "\<lbrace>P\<rbrace>f\<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>f\<lbrace>Q\<rbrace>" .
 lemma hoare_trivE:   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>" .
@@ -1874,6 +1885,18 @@ lemma gets_map_wp'[wp]:
 lemma no_fail_gets_map[wp]:
   "no_fail (\<lambda>s. f s p \<noteq> None) (gets_map f p)"
   unfolding gets_map_def by wpsimp
+
+lemma hoare_vcg_set_pred_lift:
+  assumes "\<And>P x. m \<lbrace> \<lambda>s. P (f x s) \<rbrace>"
+  shows "m \<lbrace> \<lambda>s. P {x. f x s} \<rbrace>"
+  using assms[where P="\<lambda>x . x"] assms[where P=Not] use_valid
+  by (fastforce simp: valid_def elim!: rsubst[where P=P])
+
+lemma hoare_vcg_set_pred_lift_mono:
+  assumes f: "\<And>x. m \<lbrace> f x \<rbrace>"
+  assumes mono: "\<And>A B. A \<subseteq> B \<Longrightarrow> P A \<Longrightarrow> P B"
+  shows "m \<lbrace> \<lambda>s. P {x. f x s} \<rbrace>"
+  by (fastforce simp: valid_def elim!: mono[rotated] dest: use_valid[OF _ f])
 
 
 section "validNF Rules"

@@ -268,6 +268,14 @@ lemma oapply_apply[simp]:
   "oapply x s = s x"
   by (simp add: oapply_def)
 
+lemma obind_comp_dist:
+  "obind f g o h = obind (f o h) (\<lambda>x. g x o h)"
+  by (auto simp: obind_def split: option.splits)
+
+lemma if_comp_dist:
+  "(if P then f else g) o h = (if P then f o h else g o h)"
+  by auto
+
 
 section \<open>"While" loops over option monad.\<close>
 

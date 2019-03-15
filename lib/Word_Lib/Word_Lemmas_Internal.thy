@@ -1546,4 +1546,70 @@ lemma aligned_sub_aligned_simple:
 declare is_aligned_neg_mask_eq[simp]
 declare is_aligned_neg_mask_weaken[simp]
 
+lemma minus_one_shift:
+  "- (1 << n) = (-1 << n :: 'a::len word)"
+  by (simp add: mul_not_mask_eq_neg_shiftl[symmetric] mask_def NOT_eq)
+
+lemma ucast_eq_mask:
+  "(UCAST('a::len \<rightarrow> 'b::len) x = UCAST('a \<rightarrow> 'b) y) =
+   (x && mask LENGTH('b) = y && mask LENGTH('b))"
+  apply (cases "LENGTH('b) < LENGTH('a)")
+   apply (auto simp: nth_ucast word_size intro!: word_eqI dest: word_eqD)[1]
+  apply (auto simp: shiftr_eq_0 and_mask_eq_iff_shiftr_0[THEN iffD2] dest: ucast_up_inj)
+  done
+
+context
+  fixes w :: "'a::len word"
+begin
+
+private lemma sbintrunc_uint_ucast:
+  assumes "Suc n = len_of TYPE('b::len)"
+  shows "sbintrunc n (uint (ucast w :: 'b word)) = sbintrunc n (uint w)"
+  by (metis assms sbintrunc_bintrunc ucast_def word_ubin.eq_norm)
+
+private lemma test_bit_sbintrunc:
+  assumes "i < len_of TYPE('a)"
+  shows "(word_of_int (sbintrunc n (uint w)) :: 'a word) !! i
+           = (if n < i then w !! n else w !! i)"
+  using assms by (simp add: nth_sbintr)
+                 (simp add: test_bit_bin)
+
+private lemma test_bit_sbintrunc_ucast:
+  assumes len_a: "i < len_of TYPE('a)"
+  shows "(word_of_int (sbintrunc (len_of TYPE('b) - 1) (uint (ucast w :: 'b word))) :: 'a word) !! i
+          = (if len_of TYPE('b::len) \<le> i then w !! (len_of TYPE('b) - 1) else w !! i)"
+  apply (subst sbintrunc_uint_ucast)
+   apply simp
+  apply (subst test_bit_sbintrunc)
+   apply (rule len_a)
+  apply (rule if_cong[OF _ refl refl])
+  using leD less_linear by fastforce
+
+lemma scast_ucast_high_bits:
+  shows "scast (ucast w :: 'b::len word) = w
+           \<longleftrightarrow> (\<forall> i \<in> {len_of TYPE('b) ..< size w}. w !! i = w !! (len_of TYPE('b) - 1))"
+  unfolding scast_def sint_uint word_size
+  apply (subst word_eq_iff)
+  apply (rule iffI)
+   apply (rule ballI)
+   apply (drule_tac x=i in spec)
+   apply (subst (asm) test_bit_sbintrunc_ucast; simp)
+  apply (rule allI)
+  apply (case_tac "n < len_of TYPE('a)")
+   apply (subst test_bit_sbintrunc_ucast)
+    apply simp
+   apply (case_tac "n \<ge> len_of TYPE('b)")
+    apply (drule_tac x=n in bspec)
+     by auto
+
+lemma scast_ucast_mask_compare:
+  shows "scast (ucast w :: 'b::len word) = w
+          \<longleftrightarrow> (w \<le> mask (len_of TYPE('b) - 1) \<or> ~~ mask (len_of TYPE('b) - 1) \<le> w)"
+  apply (clarsimp simp: le_mask_high_bits neg_mask_le_high_bits scast_ucast_high_bits word_size)
+  apply (rule iffI; clarsimp)
+  apply (rename_tac i j; case_tac "i = len_of TYPE('b) - 1"; case_tac "j = len_of TYPE('b) - 1")
+  by auto
+
+end
+
 end

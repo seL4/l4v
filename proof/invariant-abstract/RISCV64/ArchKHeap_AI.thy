@@ -12,45 +12,6 @@ theory ArchKHeap_AI
 imports "../KHeapPre_AI"
 begin
 
-(* FIXME: move to Word *)
-lemma ucast_eq_mask:
-  "(UCAST('a::len \<rightarrow> 'b::len) x = UCAST('a \<rightarrow> 'b) y) =
-   (x && mask LENGTH('b) = y && mask LENGTH('b))"
-  apply (cases "LENGTH('b) < LENGTH('a)")
-   apply (auto simp: nth_ucast word_size intro!: word_eqI dest: word_eqD)[1]
-  apply (auto simp: shiftr_eq_0 and_mask_eq_iff_shiftr_0[THEN iffD2] dest: ucast_up_inj)
-  done
-
-(* FIXME RISCV: move *)
-lemma hoare_liftP_ext:
-  assumes "\<And>P x. m \<lbrace>\<lambda>s. P (f s x)\<rbrace>"
-  shows "m \<lbrace>\<lambda>s. P (f s)\<rbrace>"
-  unfolding valid_def
-  apply clarsimp
-  apply (erule rsubst[where P=P])
-  apply (rule ext)
-  apply (drule use_valid, rule assms, rule refl)
-  apply simp
-  done
-
-(* FIXME: move *)
-context mod_size_order
-begin
-
-interpretation greater_wellorder: wellorder "(\<ge>) :: 'a \<Rightarrow> 'a \<Rightarrow> bool" "(>) :: 'a \<Rightarrow> 'a \<Rightarrow> bool"
-  by unfold_locales (auto intro: greater_induct)
-
-lemma greater_least_fold[simp]: "greater_wellorder.Least = Greatest"
-  by (auto simp: greater_wellorder.Least_def Greatest_def)
-
-lemmas GreatestI = greater_wellorder.LeastI[simplified greater_least_fold]
-lemmas Greatest_le = greater_wellorder.Least_le[simplified greater_least_fold]
-lemmas exists_greatest_iff = greater_wellorder.exists_least_iff
-lemmas GreatestI2_wellorder = greater_wellorder.LeastI2_wellorder[simplified greater_least_fold]
-
-end
-
-
 context Arch begin global_naming RISCV64
 
 definition "non_vspace_obj \<equiv> non_arch_obj"

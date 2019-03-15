@@ -310,6 +310,17 @@ proof (induct x rule: greater_induct)
   qed
 qed
 
+interpretation greater_wellorder: wellorder "(\<ge>) :: 'a \<Rightarrow> 'a \<Rightarrow> bool" "(>) :: 'a \<Rightarrow> 'a \<Rightarrow> bool"
+  by unfold_locales (auto intro: greater_induct)
+
+lemma greater_least_fold[simp]: "greater_wellorder.Least = Greatest"
+  by (auto simp: greater_wellorder.Least_def Greatest_def)
+
+lemmas GreatestI = greater_wellorder.LeastI[simplified greater_least_fold]
+lemmas Greatest_le = greater_wellorder.Least_le[simplified greater_least_fold]
+lemmas exists_greatest_iff = greater_wellorder.exists_least_iff
+lemmas GreatestI2_wellorder = greater_wellorder.LeastI2_wellorder[simplified greater_least_fold]
+
 end
 
 interpretation bit0:
