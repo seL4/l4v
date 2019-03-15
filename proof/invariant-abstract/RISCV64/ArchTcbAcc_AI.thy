@@ -60,28 +60,28 @@ lemma storeWord_invs[wp, TcbAcc_AI_assms]:
   "\<lbrace>in_user_frame p and invs\<rbrace> do_machine_op (storeWord p w) \<lbrace>\<lambda>rv. invs\<rbrace>"
 proof -
   have aligned_offset_ignore:
-    "\<And>l sz. \<lbrakk> l<2^pte_bits; p && mask pte_bits = 0 \<rbrakk> \<Longrightarrow>
+    "\<And>l sz. l<8 \<Longrightarrow> p && mask 3 = 0 \<Longrightarrow>
        p+l && ~~ mask (pageBitsForSize sz) = p && ~~ mask (pageBitsForSize sz)"
   proof -
-    fix l::machine_word and sz
-    assume al: "p && mask pte_bits = 0"
-    assume less: "l<2^pte_bits"
-    have le: "pte_bits \<le> pageBitsForSize sz" by (case_tac sz, simp_all add: bit_simps)
+    fix l sz
+    assume al: "p && mask 3 = 0"
+    assume "(l::machine_word) < 8" hence less: "l<2^3" by simp
+    have le: "3 \<le> pageBitsForSize sz"
+      by (case_tac sz, simp_all add: pageBits_def ptTranslationBits_def)
     show "?thesis l sz"
       by (rule is_aligned_add_helper[simplified is_aligned_mask,
           THEN conjunct2, THEN mask_out_first_mask_some,
-          where n=pte_bits, OF al less le])
+          where n=3, OF al less le])
   qed
 
   show ?thesis
     apply (wp dmo_invs)
-    apply (clarsimp simp: storeWord_def invs_def valid_state_def)
-    sorry (* FIXME RISCV
+    apply (clarsimp simp: storeWord_def invs_def valid_state_def upto0_7_def)
     apply (fastforce simp: valid_machine_state_def in_user_frame_def
                assert_def simpler_modify_def fail_def bind_def return_def
                pageBits_def aligned_offset_ignore
              split: if_split_asm)
-    done *)
+    done
 qed
 
 lemma valid_ipc_buffer_cap_0[simp, TcbAcc_AI_assms]:
