@@ -72,7 +72,7 @@ lemma switch_to_idle_thread_ct_in_cur_domain [wp, DetSchedSchedule_AI_assms]:
       | simp add: ct_in_cur_domain_def)+
 
 crunch ct_not_in_q [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers ct_not_in_q
-  (simp: crunch_simps)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunch is_activatable [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers "is_activatable t"
   (simp: crunch_simps)
@@ -85,10 +85,6 @@ crunch valid_sched [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_
 
 crunch exst[wp]: set_vm_root "\<lambda>s. P (exst s)"
   (wp: crunch_wps hoare_whenE_wp simp: crunch_simps)
-
-crunch ct_in_cur_domain_2[wp]: set_vm_root
-  "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)"
-  (simp: crunch_simps)
 
 crunch ct_in_cur_domain_2 [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread
   "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)"
@@ -116,14 +112,16 @@ lemma set_vm_root_valid_blocked_ct_in_q [wp]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> set_vm_root p \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
   by (wp | wpc | auto)+
 
+
+lemma as_user_ct_in_q[wp]:
+  "as_user tp S \<lbrace>ct_in_q\<rbrace>"
+  apply (wpsimp simp: as_user_def set_object_def get_object_def)
+  apply (clarsimp simp: ct_in_q_def st_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
+  done
+
 lemma arch_switch_to_thread_valid_blocked [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
-  apply (simp add: arch_switch_to_thread_def)
-  apply (rule hoare_seq_ext)+
-  sorry (* FIXME RISCV
-   apply (rule do_machine_op_valid_blocked)
-  apply wp
-  done *)
+  by (wpsimp simp: arch_switch_to_thread_def)
 
 lemma switch_to_idle_thread_ct_not_queued [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_queues and valid_etcbs and valid_idle\<rbrace>
