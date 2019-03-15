@@ -997,7 +997,7 @@ lemma valid_pte_lift2:
 lemmas valid_pte_lift = valid_pte_lift2[where Q=\<top>, simplified]
 
 lemma valid_vspace_obj_typ2:
-  assumes P: "\<And>P p T. \<lbrace>\<lambda>s. Q s \<and> P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
+  assumes P: "\<And>p T. \<lbrace>\<lambda>s. Q s \<and> typ_at (AArch T) p s\<rbrace> f \<lbrace>\<lambda>rv s. typ_at (AArch T) p s\<rbrace>"
   shows "\<lbrace>\<lambda>s. Q s \<and> valid_vspace_obj level obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_vspace_obj level obj s\<rbrace>"
   by (cases obj)
      (wpsimp wp: P hoare_vcg_all_lift hoare_vcg_ball_lift valid_pte_lift2|rule conjI|assumption)+

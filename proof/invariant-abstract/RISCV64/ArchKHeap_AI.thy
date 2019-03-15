@@ -514,7 +514,6 @@ lemma valid_vs_lookup_lift:
      apply (wpsimp wp: lookup cap archvspace)+
   done
 
-(* FIXME RISCV: do we need to be so detailed, or can we go to arch_state directly? *)
 lemma valid_arch_caps_lift:
   assumes lookup: "\<And>P. \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
   assumes cap: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
@@ -541,12 +540,14 @@ begin
 lemma valid_global_vspace_mappings_lift:
   "f \<lbrace>valid_global_vspace_mappings\<rbrace>"
   unfolding valid_global_vspace_mappings_def
+  supply validNF_prop[wp_unsafe del]
   by (rule hoare_lift_Pf2[where f=arch_state, OF _ arch])
      (wpsimp simp: Let_def wp: hoare_vcg_ball_lift translate_address_lift_weak aobj_at)
 
 lemma valid_arch_caps_lift_weak:
   assumes cap: "(\<And>P. f \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>)"
   shows "f \<lbrace>valid_arch_caps\<rbrace>"
+  supply validNF_prop[wp_unsafe del]
   by (rule valid_arch_caps_lift)
      (wpsimp wp: vs_lookup_pages_vspace_obj_at_lift[OF aobj_at] pts_of_lift[OF aobj_at]
                  arch cap)+
@@ -566,36 +567,55 @@ lemma valid_kernel_mappings_lift:
 end
 
 context
-  assumes aobj_at:
-    "\<And>P P' pd. arch_obj_pred P' \<Longrightarrow> \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
+  assumes aobj_at: "\<And>P P' pd. arch_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace>"
 begin
 
+lemma aobjs_of_lift_aobj_at:
+  "f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  apply (clarsimp simp: valid_def)
+  apply (erule_tac P=P in rsubst)
+  apply (rule ext, rename_tac s' p)
+  apply (case_tac "aobjs_of s p")
+   apply (simp add: aobjs_of_ako_at_None)
+   apply (drule use_valid)
+     prefer 2
+     apply assumption
+    apply (rule aobj_at)
+    apply (clarsimp simp: arch_obj_pred_def non_arch_obj_def)
+   apply (simp flip: aobjs_of_ako_at_None)
+  apply (simp add: aobjs_of_ako_at_Some)
+  apply (drule use_valid)
+    prefer 2
+    apply assumption
+   apply (rule aobj_at)
+   apply simp
+  apply (simp flip: aobjs_of_ako_at_Some)
+  done
+
 lemma valid_arch_state_lift_aobj_at:
-    "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
-  sorry (* FIXME RISCV: TODO
-  apply (simp add: valid_arch_state_def valid_asid_table_def)
-  apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch])
-  apply (wp hoare_vcg_conj_lift hoare_vcg_ball_lift
-            valid_global_pts_lift valid_global_pds_lift valid_global_pdpts_lift
-        | (rule aobj_at, clarsimp))+
+  "f \<lbrace>valid_arch_state\<rbrace>"
+  unfolding valid_arch_state_def valid_asid_table_def valid_global_arch_objs_def pt_at_eq
+  apply (wp_pre, wps arch aobjs_of_lift_aobj_at)
+   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift)
   apply simp
-  done *)
+  done
 
 end
 end
 
 lemma equal_kernel_mappings_lift:
-  assumes aobj_at:
-    "\<And>P P' pd. vspace_obj_pred P' \<Longrightarrow> \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
-  shows "\<lbrace>equal_kernel_mappings\<rbrace> f \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
-  sorry (* FIXME RISCV: TODO
-  apply (simp add: equal_kernel_mappings_def)
-  apply (rule hoare_vcg_all_lift)+
-  apply (rule hoare_convert_imp)
-   apply simp
-   apply (rule hoare_convert_imp)
-    apply (wp aobj_at[OF vspace_obj_pred_arch_obj_l])+
-  done *)
+  assumes aobj_at: "\<And>P P' pd. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace>"
+  assumes [wp]: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
+  shows "f \<lbrace>equal_kernel_mappings\<rbrace>"
+proof -
+  have [wp]: "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+    by (rule vspace_obj_pred_aobjs[OF aobj_at])
+  show ?thesis
+    unfolding equal_kernel_mappings_def has_kernel_mappings_def
+    apply (wp_pre, wps, wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' vspace_for_asid_lift)
+    apply simp
+    done
+qed
 
 lemma valid_machine_state_lift:
   assumes memory: "\<And>P. \<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (underlying_memory (machine_state s))\<rbrace>"
@@ -609,44 +629,18 @@ lemma valid_machine_state_lift:
   apply (wp aobj_at; simp)
   done
 
-(* FIXME RISCV: TODO
-lemma valid_ao_at_lift:
-  assumes z: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
-      and y: "\<And>ao. \<lbrace>\<lambda>s. ko_at (ArchObj ao) p s\<rbrace> f \<lbrace>\<lambda>rv s. ko_at (ArchObj ao) p s\<rbrace>"
-  shows      "\<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>rv. valid_ao_at p\<rbrace>"
-  unfolding valid_ao_at_def
-  by (wp hoare_vcg_ex_lift y valid_vspace_obj_typ z)
-*)
-
-(* FIXME RISCV: TODO
-lemma valid_ao_at_lift_aobj_at:
-  assumes aobj_at: "\<And>P' pd. arch_obj_pred P' \<Longrightarrow> \<lbrace>obj_at P' pd\<rbrace> f \<lbrace>\<lambda>r s. obj_at P' pd s\<rbrace>"
-  shows      "\<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>rv. valid_ao_at p\<rbrace>"
-  unfolding valid_ao_at_def
-  by (wp hoare_vcg_ex_lift valid_vspace_obj_typ aobj_at | clarsimp)+
-*)
-
 lemma valid_vso_at_lift:
   assumes z: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
       and y: "\<And>ao. \<lbrace>\<lambda>s. ko_at (ArchObj ao) p s\<rbrace> f \<lbrace>\<lambda>rv s. ko_at (ArchObj ao) p s\<rbrace>"
   shows      "\<lbrace>valid_vso_at level p\<rbrace> f \<lbrace>\<lambda>rv. valid_vso_at level p\<rbrace>"
   unfolding valid_vso_at_def
-  sorry (* FIXME RISCV: TODO
-  by (wpsimp wp: hoare_vcg_ex_lift y valid_vspace_obj_typ z)+
-  *)
+  by (wpsimp wp: hoare_vcg_ex_lift y valid_vspace_obj_typ z simp: aobjs_of_ako_at_Some)
 
 lemma valid_vso_at_lift_aobj_at:
-  assumes aobj_at: "\<And>P' pd. vspace_obj_pred P' \<Longrightarrow> \<lbrace>obj_at P' pd\<rbrace> f \<lbrace>\<lambda>r s. obj_at P' pd s\<rbrace>"
-  shows      "\<lbrace>valid_vso_at level p\<rbrace> f \<lbrace>\<lambda>rv. valid_vso_at level p\<rbrace>"
-  sorry (* FIXME RISCV: TODO
+  assumes [wp]: "\<And>P' pd. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>obj_at P' pd\<rbrace>"
+  shows "f \<lbrace>valid_vso_at level p\<rbrace>"
   unfolding valid_vso_at_def
-  apply (rule hoare_vcg_ex_lift)
-  apply (rule hoare_vcg_conj_lift aobj_at)+
-   apply (clarsimp simp: vspace_obj_pred_def)
-  apply (wpsimp wp: valid_vspace_obj_typ)
-   apply (wpsimp wp: aobj_at)
-  apply assumption
-  done *)
+  by (wpsimp wp: hoare_vcg_ex_lift valid_vspace_obj_typ simp: aobjs_of_ako_at_Some)
 
 lemma valid_global_vspace_mappings_arch_update[simp]:
   "\<lbrakk> riscv_global_pt (arch_state (f s)) = riscv_global_pt (arch_state s);
@@ -798,7 +792,6 @@ lemma arch_valid_obj_same_type:
    \<Longrightarrow> arch_valid_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
   by simp
 
-(* FIXME RISCV: arch split/move to arch (level) *)
 lemma valid_vspace_obj_same_type:
   "\<lbrakk>valid_vspace_obj l ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
   \<Longrightarrow> valid_vspace_obj l ao (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)"
