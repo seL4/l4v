@@ -60,11 +60,7 @@ crunch inv[wp]: getRegister, read_sbadaddr "P"
 
 lemma hv_inv_ex [Syscall_AI_assms]:
   "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (cases vp, simp_all)
-  apply (wp dmo_inv  getRestartPC_inv
-            det_getRestartPC as_user_inv
-         | wpcw | simp)+
-  sorry (* FIXME RISCV: handle_vm_fault changes the state *)
+  by (cases vp; wpsimp wp: dmo_inv getRestartPC_inv det_getRestartPC as_user_inv)
 
 lemma handle_vm_fault_valid_fault[wp, Syscall_AI_assms]:
   "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
