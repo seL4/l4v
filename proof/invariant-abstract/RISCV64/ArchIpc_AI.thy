@@ -68,11 +68,11 @@ lemma arch_derive_cap_is_derived:
              | clarsimp simp: is_derived_def
                               is_cap_simps cap_master_cap_def
                               cap_aligned_def is_aligned_no_overflow is_pt_cap_def
-                              cap_asid_def vs_cap_ref_def
+                              cap_asid_def vs_cap_ref_def vs_cap_ref_arch_def
              | erule cte_wp_at_weakenE
              | simp split: arch_cap.split_asm cap.split_asm option.splits
              | rule conjI)+)
-  sorry (* FIXME RISCV *)
+  done
 
 lemma derive_cap_is_derived [Ipc_AI_assms]:
   "\<lbrace>\<lambda>s. c'\<noteq> cap.NullCap \<longrightarrow> cte_wp_at (\<lambda>cap. cap_master_cap cap = cap_master_cap c'
