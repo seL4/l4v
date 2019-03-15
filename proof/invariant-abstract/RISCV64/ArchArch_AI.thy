@@ -1006,13 +1006,9 @@ lemma aligned_sum_less_kernel_base:
 
 lemma le_user_vtop_less_pptr_base[simp]:
   "x \<le> user_vtop \<Longrightarrow> x < pptr_base"
-  sorry (* FIXME RISCV: change user_vtop
-  by (clarsimp simp: user_vtop_def pptrUserTop_def pptr_base_def pptrBase_def canonical_bit_def) *)
+  using dual_order.strict_trans2 by blast
 
-lemma le_user_vtop_canonical_address[simp]:
-  "x \<le> user_vtop \<Longrightarrow> canonical_address x"
-  sorry (* FIXME RISCV: change user_vtop
-  by (clarsimp simp: user_vtop_def pptrUserTop_def canonical_address_range mask_def) *)
+lemmas le_user_vtop_canonical_address = below_user_vtop_canonical[simp]
 
 lemma decode_page_invocation_wf[wp]:
   "arch_cap = FrameCap word rights vmpage_size dev option \<Longrightarrow>
