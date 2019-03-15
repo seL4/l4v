@@ -117,10 +117,8 @@ lemma decode_tcb_invocation_bcorres[wp]:
            (decode_tcb_invocation a b (ThreadCap c) d e)"
   unfolding decode_tcb_invocation_def by wpsimp
 
-lemma arch_decode_invocation_bcorres[wp]:
-  "bcorres (arch_decode_invocation label args x_slot cte cap extra_cap)
-           (arch_decode_invocation label args x_slot cte cap extra_cap)"
-  sorry (* FIXME RISCV *)
+crunch (bcorres)bcorres[wp]: arch_decode_invocation truncate_state
+  (simp: crunch_simps)
 
 crunch (bcorres) bcorres[wp]: handle_invocation truncate_state
   (simp: syscall_def Let_def gets_the_def

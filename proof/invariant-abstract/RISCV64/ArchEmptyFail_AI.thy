@@ -48,59 +48,53 @@ lemma decode_tcb_invocation_empty_fail[wp]:
   "empty_fail (decode_tcb_invocation a b (ThreadCap p) d e)"
   by (simp add: decode_tcb_invocation_def split: invocation_label.splits | wp | intro conjI impI)+
 
-crunch (empty_fail) empty_fail[wp]: find_vspace_for_asid, check_vp_alignment
+crunch (empty_fail) empty_fail[wp]: find_vspace_for_asid, check_vp_alignment, check_slot
 
 lemma arch_decode_RISCVASIDControlMakePool_empty_fail:
   "invocation_type label = ArchInvocationLabel RISCVASIDControlMakePool
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
-  apply (wpsimp simp: arch_decode_invocation_def)
-  sorry (* FIXME RISCV
-  apply (intro impI conjI allI)
-   apply (simp split: arch_cap.splits)
-   apply (intro conjI impI)
-   apply (simp add: split_def)
-   apply wp
-    apply simp
-   apply (subst bindE_assoc[symmetric])
-   apply (rule empty_fail_bindE)
-    subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def
-                                returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: if_split_asm)
-  apply (simp add: Let_def split: cap.splits arch_cap.splits option.splits bool.splits | wp | intro conjI impI allI)+
-  by (clarsimp simp add: decode_page_invocation_def decode_page_table_invocation_def
-                         decode_page_directory_invocation_def decode_pdpt_invocation_def
-                  split: arch_cap.splits | wp | intro conjI)+
-  *)
-
+  apply (wpsimp simp: arch_decode_invocation_def decode_asid_pool_invocation_def)
+    apply (simp add: decode_asid_control_invocation_def)
+    apply (intro impI conjI allI)
+    apply (simp add: split_def)
+    apply wp
+     apply simp
+    apply (subst bindE_assoc[symmetric])
+    apply (rule empty_fail_bindE)
+     subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def
+                                 bind_def return_def returnOk_def lift_def liftE_def fail_def
+                                 gets_def get_def assert_def select_def
+                          split: if_split_asm)
+    apply wpsimp
+   apply (wpsimp simp: decode_frame_invocation_def)
+  apply (wpsimp simp: decode_page_table_invocation_def)
+  done
 
 lemma arch_decode_RISCVASIDPoolAssign_empty_fail:
   "invocation_type label = ArchInvocationLabel RISCVASIDPoolAssign
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
-  apply (simp add: arch_decode_invocation_def Let_def split: arch_cap.splits)
+  unfolding arch_decode_invocation_def decode_page_table_invocation_def decode_frame_invocation_def
+            decode_asid_control_invocation_def
+  apply (wpsimp; wpsimp?)
+  apply (simp add: decode_asid_pool_invocation_def)
   apply (intro impI allI conjI)
-  sorry (* FIXME RISCV
   apply (simp add: arch_decode_invocation_def split_def Let_def
             split: arch_cap.splits cap.splits option.splits | intro impI allI)+
   apply clarsimp
-  apply (rule empty_fail_bindE)
-   apply simp
-  apply (rule empty_fail_bindE)
-   apply ((simp | wp)+)[1]
-  apply (rule empty_fail_bindE)
-   apply ((simp | wp)+)[1]
-  apply (rule empty_fail_bindE)
-   apply ((simp | wp)+)[1]
+  apply (rule empty_fail_bindE, simp)
+  apply (rule empty_fail_bindE, wpsimp)
+  apply (rule empty_fail_bindE, wpsimp)
+  apply (rule empty_fail_bindE, wpsimp)
   apply (subst bindE_assoc[symmetric])
   apply (rule empty_fail_bindE)
    subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_def bindE_def
                                bind_def return_def returnOk_def lift_def liftE_def select_ext_def
                                gets_def get_def assert_def fail_def)
-  apply (clarsimp simp: decode_page_invocation_def decode_page_table_invocation_def
-                         decode_page_directory_invocation_def decode_pdpt_invocation_def | wp | intro conjI)+
-  done *)
+  apply wpsimp
+  done
 
 lemma arch_decode_invocation_empty_fail[wp]:
   "empty_fail (arch_decode_invocation label b c d e f)"
-  sorry (* FIXME RISCV
   apply (case_tac "invocation_type label")
   apply (find_goal \<open>match premises in "_ = ArchInvocationLabel _" \<Rightarrow> \<open>-\<close>\<close>)
   apply (rename_tac alabel)
@@ -108,10 +102,11 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply (find_goal \<open>succeeds \<open>erule arch_decode_RISCVASIDControlMakePool_empty_fail\<close>\<close>)
   apply (find_goal \<open>succeeds \<open>erule arch_decode_RISCVASIDPoolAssign_empty_fail\<close>\<close>)
   apply ((simp add: arch_decode_RISCVASIDControlMakePool_empty_fail arch_decode_RISCVASIDPoolAssign_empty_fail)+)[2]
-  by ((simp add: arch_decode_invocation_def decode_page_invocation_def Let_def decode_page_table_invocation_def
-                         decode_page_directory_invocation_def decode_pdpt_invocation_def
-             split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
-  *)
+  by (all \<open>(wpsimp simp: arch_decode_invocation_def decode_asid_pool_invocation_def
+                         decode_asid_control_invocation_def decode_frame_invocation_def
+                         decode_page_table_invocation_def decode_pt_inv_map_def
+                         decode_fr_inv_map_def decode_fr_inv_remap_def
+                         Let_def)\<close>) (* takes some time *)
 
 end
 
@@ -125,7 +120,11 @@ context Arch begin global_naming RISCV64
 
 lemma empty_fail_pt_lookup_from_level[wp]:
   "empty_fail (pt_lookup_from_level level pt_ptr vptr target_pt_ptr)"
-  sorry (* FIXME RISCV *)
+  apply (induct level arbitrary: pt_ptr)
+   apply (subst pt_lookup_from_level.simps, simp)
+  apply (subst pt_lookup_from_level.simps)
+  apply wpsimp
+  done
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
     finalise_cap, preemption_point,
