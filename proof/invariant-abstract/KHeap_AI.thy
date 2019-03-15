@@ -1034,7 +1034,7 @@ lemma valid_kernel_mappings[wp]: "f \<lbrace>valid_kernel_mappings\<rbrace>"
   by (rule valid_kernel_mappings_lift, (wp vsobj_at)+)
 
 lemma equal_kernel_mappings[wp]: "f \<lbrace>equal_kernel_mappings\<rbrace>"
-  by (rule equal_kernel_mappings_lift, wp vsobj_at)
+  by (rule equal_kernel_mappings_lift; wp vsobj_at)
 
 lemma in_user_frame[wp]:"f \<lbrace>in_user_frame p\<rbrace>"
   by (rule in_user_frame_obj_pred_lift; wp vsobj_at; simp)
