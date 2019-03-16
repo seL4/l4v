@@ -19,6 +19,13 @@ context Arch begin global_naming RISCV64
 
 subsection {* Constructing a virtual-memory view *}
 
+text \<open>
+  This function is used below for helpers that expect a full state, but depend
+  only on the heap and arch state.
+\<close>
+definition state_from_arch :: "kheap \<Rightarrow> arch_state \<Rightarrow> det_ext state" where
+  "state_from_arch kh as \<equiv> undefined \<lparr> kheap := kh, arch_state := as \<rparr>"
+
 text {*
   Function @{text get_vspace_of_thread} takes three parameters:
   the kernel heap, the architecture-specific state, and
@@ -42,149 +49,47 @@ text {*
 definition
   get_vspace_of_thread :: "kheap \<Rightarrow> arch_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref"
 where
-  get_vspace_of_thread_def: (* FIXME RISCV: define this whole thing in terms of the lookup/walk
-                                            functions we already have. We'll need to prove that
-                                            they are the same later. *)
+  get_vspace_of_thread_def:
   "get_vspace_of_thread khp astate tcb_ref \<equiv>
    case khp tcb_ref of Some (TCB tcb) \<Rightarrow>
      (case tcb_vtable tcb of
-        ArchObjectCap (PageTableCap pt (Some (asid, vref)))
-          \<Rightarrow> (case riscv_asid_table astate (asid_high_bits_of asid) of
-                None \<Rightarrow> riscv_global_pt astate
-              | Some pool \<Rightarrow> (case vspace_for_pool pool asid (khp |> aobj_of |> asid_pool_of) of
-                               Some pt' \<Rightarrow> if pt' = pt then pt else riscv_global_pt astate
-                             | _ \<Rightarrow> riscv_global_pt astate))
-      | _ \<Rightarrow>  riscv_global_pt astate)
+        ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow>
+          (case vspace_for_asid asid (state_from_arch khp astate) of
+             Some pt' \<Rightarrow> if pt' = pt then pt else riscv_global_pt astate
+           | _ \<Rightarrow> riscv_global_pt astate)
+        | _ \<Rightarrow>  riscv_global_pt astate)
    | _ \<Rightarrow>  riscv_global_pt astate"
 
-(* FIXME RISCV: probably remove
-lemma VSRef_AASIDPool_in_vs_refs:
-  "(VSRef (ucast (asid_low_bits_of asid)) (Some AASIDPool), r) \<in> vs_refs_arch ko =
-   (\<exists>apool. ko = ASIDPool apool \<and> apool (asid_low_bits_of asid) = Some r)"
-  by (case_tac ko; simp add: image_def graph_of_def up_ucast_inj_eq)
-*)
-
-context
-(* notes vs_refs_arch_def[simp del] *)
-begin
-
-(*
-lemma get_vspace_of_thread_def2:
-  "get_vspace_of_thread khp astate tcb_ref \<equiv>
-        case khp tcb_ref of Some (TCB tcb) \<Rightarrow>
-          (case tcb_vtable tcb of
-             ArchObjectCap (PML4Cap pm_ref (Some asid))
-               \<Rightarrow> if (\<exists>p apool.
-                        x64_asid_table astate (asid_high_bits_of asid) = Some p \<and>
-                        khp p = Some (ArchObj (ASIDPool apool)) \<and>
-                        apool (asid_low_bits_of asid) = Some pm_ref)
-                    then pm_ref
-                    else x64_global_pml4 astate
-           | _ \<Rightarrow>  x64_global_pml4 astate)
-        | _ \<Rightarrow>  x64_global_pml4 astate"
-  apply (rule eq_reflection)
-  apply (clarsimp simp: get_vspace_of_thread_def
-                 split: kernel_object.splits option.splits)
-  apply (rename_tac tcb)
-  apply (case_tac "tcb_vtable tcb",
-         simp_all split: cap.splits arch_cap.splits kernel_object.splits
-                         arch_kernel_obj.splits option.splits)
-  apply (auto simp: VSRef_AASIDPool_in_vs_refs)
-  done
 
 lemma the_arch_cap_simp[simp]: "the_arch_cap (ArchObjectCap x) = x"
   by (simp add: the_arch_cap_def)
 
-lemma get_vspace_of_thread_vs_lookup:
-  "get_vspace_of_thread (kheap s) (arch_state s) tcb_ref =
-   (case kheap s tcb_ref of
-      Some (TCB tcb) \<Rightarrow>
-        (case tcb_vtable tcb of
-           ArchObjectCap (PML4Cap pm_ref (Some asid)) \<Rightarrow>
-             if (the (vs_cap_ref (tcb_vtable tcb)) \<rhd> pm_ref) s then pm_ref
-             else x64_global_pml4 (arch_state s)
-         | _ \<Rightarrow> x64_global_pml4 (arch_state s))
-    | _ \<Rightarrow> x64_global_pml4 (arch_state s))"
-  apply (clarsimp simp: get_vspace_of_thread_def split: option.splits)
-  apply (case_tac "the (kheap s tcb_ref)", simp_all, clarsimp)
-  apply (rename_tac tcb)
-  apply (case_tac "\<not> is_pml4_cap (tcb_vtable tcb)")
-   apply (clarsimp simp: is_pml4_cap_def split: cap.split arch_cap.split)
-  apply (clarsimp simp: is_pml4_cap_def vs_cap_ref_def)
-  apply (case_tac asid, simp_all, clarsimp)
-  apply (intro conjI impI)
-
-   apply (erule vs_lookupE)
-   apply (clarsimp simp: vs_asid_refs_def split_def image_def graph_of_def)
-   apply (erule rtranclE, simp)
-   apply (clarsimp dest!: vs_lookup1D)
-   apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
-                  split: kernel_object.split_asm arch_kernel_obj.split_asm)
-   apply (erule rtranclE)
-    apply (clarsimp simp: up_ucast_inj_eq obj_at_def vs_refs_def vs_refs_arch_def graph_of_def
-                          image_def
-                   split: arch_kernel_obj.split_asm)
-   apply (clarsimp dest!: vs_lookup1D)
-   apply (clarsimp simp: vs_refs_def vs_refs_arch_def graph_of_def
-                   split: kernel_object.split_asm arch_kernel_obj.split_asm)
-
-  apply (erule swap)
-  apply (clarsimp split: kernel_object.split_asm arch_kernel_obj.split_asm
-                         option.split_asm if_split_asm)
-  apply (rule vs_lookupI)
-   apply (fastforce simp: vs_asid_refs_def image_def graph_of_def)
-  apply (rule rtrancl_into_rtrancl)
-   apply (rule rtrancl_refl)
-  apply (rule vs_lookup1I, (simp add: obj_at_def vs_refs_def vs_refs_arch_def)+)
-  done
-*)
-
-end
+lemma vspace_for_asid_state_from_arch[simp]:
+  "vspace_for_asid a (state_from_arch (kheap s) (arch_state s)) = vspace_for_asid a s"
+  by (simp add: vspace_for_asid_def pool_for_asid_def obind_def state_from_arch_def
+         split: option.splits)
 
 (* NOTE: This statement would clearly be nicer for a partial function
          but later on, we really want the function to be total. *)
-(*
-lemma get_vspace_of_thread_eq: FIXME RISCV: probably needed somewhere
-  "pm_ref \<noteq> x64_global_pml4 (arch_state s) \<Longrightarrow>
-   get_vspace_of_thread (kheap s) (arch_state s) tcb_ref = pm_ref \<longleftrightarrow>
+lemma get_vspace_of_thread_eq:
+  "pt_ref \<noteq> riscv_global_pt (arch_state s) \<Longrightarrow>
+   get_vspace_of_thread (kheap s) (arch_state s) tcb_ref = pt_ref \<longleftrightarrow>
    (\<exists>tcb. kheap s tcb_ref = Some (TCB tcb) \<and>
-          (\<exists>asid. tcb_vtable tcb =
-                  cap.ArchObjectCap (PML4Cap
-                                       pm_ref (Some asid)) \<and>
-                  (the (vs_cap_ref_arch (the_arch_cap (tcb_vtable tcb))) \<rhd> pm_ref) s))"
-  by (auto simp: get_vspace_of_thread_vs_lookup vs_cap_ref_def
-          split: option.splits Structures_A.kernel_object.splits
-                 cap.splits arch_cap.splits)
-*)
+          (\<exists>asid vref. tcb_vtable tcb = ArchObjectCap (PageTableCap pt_ref (Some (asid,vref))) \<and>
+                       vspace_for_asid asid s = Some pt_ref))"
+  unfolding get_vspace_of_thread_def
+  by (auto split: option.splits kernel_object.splits cap.splits arch_cap.splits)
 
-(* FIXME RISCV: hopefully can be removed, use projections instead
-text {* The following function is used to extract the
-  architecture-specific objects from the kernel heap  *}
-definition
-  "get_arch_obj ==
-   case_option None (\<lambda>x. case x of ArchObj a \<Rightarrow> Some a | _ \<Rightarrow> None)"
 
-(* Auxilliary definitions for get_page_info *)
-definition
-  "get_pt_info ahp pt_ref vptr \<equiv>
-   case get_pt_entry ahp pt_ref vptr of
-     Some (SmallPagePTE base attrs rights) \<Rightarrow> Some (base, pageBitsForSize RISCVSmallPage, attrs, rights)
-   | _ \<Rightarrow> None"
+text {*
+  The following function is used to extract the architecture-specific objects from the kernel heap.
+*}
 
-definition
-  "get_pd_info ahp pd_ref vptr \<equiv>
-   case get_pd_entry ahp pd_ref vptr of
-     Some (PageTablePDE p _ _) \<Rightarrow> get_pt_info ahp (ptrFromPAddr p) vptr
-   | Some (LargePagePDE base attrs rights) \<Rightarrow> Some (base, pageBitsForSize X64LargePage, attrs, rights)
-   | _ \<Rightarrow> None"
-
-definition
-  "get_pdpt_info ahp pdpt_ref vptr \<equiv>
-   case get_pdpt_entry ahp pdpt_ref vptr of
-     Some (PageDirectoryPDPTE p _ _) \<Rightarrow> get_pd_info ahp (ptrFromPAddr p) vptr
-   | Some (HugePagePDPTE base attrs rights) \<Rightarrow> Some (base, pageBitsForSize X64HugePage, attrs, rights)
-   | _ \<Rightarrow> None"
-*)
+definition pte_info :: "vm_level \<Rightarrow> pte \<rightharpoonup> (machine_word \<times> nat \<times> vm_attributes \<times> vm_rights)" where
+  "pte_info level pte \<equiv>
+    case pte of
+      PagePTE base attrs rights \<Rightarrow> Some (base, pt_bits_left level, attrs, rights)
+    | _ \<Rightarrow> None"
 
 text {*
   @{text get_page_info} takes the architecture-specific part of the kernel heap,
@@ -196,43 +101,35 @@ text {*
   (d) the access rights (a subset of @{term "{AllowRead, AllowWrite}"}).
 *}
 definition
-  get_page_info :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> obj_ref \<Rightarrow>
-                    machine_word \<rightharpoonup> (machine_word \<times> nat \<times> vm_attributes \<times> vm_rights)"
+  get_page_info :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<rightharpoonup>
+                    (machine_word \<times> nat \<times> vm_attributes \<times> vm_rights)"
 where
-  "get_page_info ahp pm_ref vptr \<equiv> undefined" (* FIXME RISCV: define *)
-   (*
-     if canonical_address vptr then
-       case get_pml4_entry ahp pm_ref vptr of
-           Some (PDPointerTablePML4E p _ _) \<Rightarrow> get_pdpt_info ahp (ptrFromPAddr p) vptr
-         | _ \<Rightarrow> None
-     else None" *)
+  "get_page_info aobjs pt_ref vptr \<equiv> (do {
+      oassert (canonical_address vptr);
+      (level, slot) \<leftarrow> pt_lookup_slot pt_ref vptr;
+      pte \<leftarrow> oapply slot;
+      K $ pte_info level pte
+    }) (\<lambda>p. pte_of p (aobjs |> pt_of))"
 
 text {*
   Both functions, @{text ptable_lift} and @{text vm_rights},
   take a kernel state and a virtual address.
   The former returns the physical address, the latter the associated rights.
 *}
-definition
-  ptable_lift :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> machine_word \<rightharpoonup> machine_word" where
-  "ptable_lift tcb s \<equiv> undefined" (* FIXME RISCV: define *)
-  (* \<lambda>addr.
+definition ptable_lift :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> machine_word \<rightharpoonup> machine_word" where
+  "ptable_lift tcb s \<equiv> \<lambda>addr.
    case_option None (\<lambda>(base, bits, rights). Some (base + (addr && mask bits)))
-     (get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
-        (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)" *)
+     (get_page_info (aobjs_of s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)"
 
-definition
-  ptable_rights :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> machine_word \<Rightarrow> vm_rights" where
- "ptable_rights tcb s \<equiv> undefined" (* FIXME RISCV: define *)
-  (* \<lambda>addr.
-  case_option {} (snd o snd o snd)
-     (get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
-        (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)" *)
+definition ptable_rights :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> machine_word \<Rightarrow> vm_rights" where
+  "ptable_rights tcb s \<equiv> \<lambda>addr.
+   case_option {} (snd o snd o snd)
+      (get_page_info (aobjs_of s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)"
 
-(* FIXME RISCV: probably remove
 lemma ptable_lift_Some_canonical_addressD:
   "ptable_lift t s vptr = Some p \<Longrightarrow> canonical_address vptr"
-  by (clarsimp simp: ptable_lift_def get_page_info_def split: if_splits)
-*)
+  by (clarsimp simp: ptable_lift_def get_page_info_def below_user_vtop_canonical
+              split: if_splits option.splits)
 
 end
 end

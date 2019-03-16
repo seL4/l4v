@@ -16,145 +16,135 @@ context Arch begin
 
 global_naming RISCV64
 
+(* FIXME RISCV: move up *)
+lemma canonical_below_pptr_base_user:
+  "\<lbrakk> v < pptr_base; canonical_address v; valid_uses s \<rbrakk> \<Longrightarrow> v \<in> user_region s"
+  sorry (* FIXME RISCV: need to adjust user_region to cover all potential user addresses *)
+
+(* FIXME RISCV: move up *)
+lemma pt_bits_left_le_canoncial:
+  "level \<le> max_pt_level \<Longrightarrow> pt_bits_left level \<le> canonical_bit"
+  by (drule pt_bits_left_le_max_pt_level) (simp add: canonical_bit_def bit_simps)
+
+(* FIXME RISCV: move up *)
+lemma table_index_offset_max_pt_level:
+  "is_aligned pt_ref pt_bits \<Longrightarrow>
+  table_index (pt_slot_offset max_pt_level pt_ref vref) = ucast (vref >> pt_bits_left max_pt_level)"
+  apply (simp add: pt_slot_offset_def ucast_eq_mask pt_index_def pt_bits_left_def bit_simps level_defs
+                   is_aligned_mask)
+  by (subst word_plus_and_or_coroll; word_bitwise, simp add: word_size)
+
 definition
   "kernel_mappings \<equiv> {x. x \<ge> pptr_base}"
 
-lemma kernel_mappings_slots_eq: (* FIXME RISCV: check if needed *)
-  "canonical_address p \<Longrightarrow> p \<in> kernel_mappings \<longleftrightarrow> ucast (p >> pt_bits_left max_pt_level) \<in> kernel_mapping_slots"
-  apply (simp add: kernel_mappings_def kernel_mapping_slots_def word_le_nat_alt
-                   ucast_mask_drop)
-  sorry (*
-  apply (fold word_le_nat_alt)
-  apply (rule iffI)
-   apply (simp add: bit_simps pptr_base_def pptrBase_def)
-   apply (word_bitwise, simp)
-  apply (simp add: pptr_base_def pptrBase_def bit_simps canonical_address_range mask_def)
-  apply word_bitwise
-  apply simp
-  done *)
+lemma canonical_not_kernel_is_user:
+  "\<lbrakk> v \<notin> kernel_mappings; canonical_address v; valid_uses s \<rbrakk> \<Longrightarrow> v \<in> user_region s"
+  by (simp add: kernel_mappings_def not_le canonical_below_pptr_base_user)
 
-lemma ucast_ucast_mask9: "(ucast (x && mask asid_low_bits) :: asid_low_index) = ucast x"
+lemma no_user_region_kernel_mappings:
+  "\<lbrakk> p \<in> user_region s; p \<in> kernel_mappings; valid_uses s \<rbrakk> \<Longrightarrow> False"
+  apply (simp add: valid_uses_user_region_eq kernel_mappings_def)
+  apply (drule (1) order_trans)
+  apply (simp flip: not_less)
+  done
+
+lemma kernel_mappings_slots_eq:
+  "canonical_address p \<Longrightarrow>
+   ucast (p >> pt_bits_left max_pt_level) \<in> kernel_mapping_slots \<longleftrightarrow> p \<in> kernel_mappings"
+  apply (simp add: kernel_mappings_def kernel_mapping_slots_def ucast_mask_drop canonical_address_range)
+  apply word_bitwise
+  by (auto simp: canonical_bit_def word_bits_def pt_bits_left_def bit_simps level_defs word_size
+                 rev_bl_order_simps)
+
+lemma ucast_ucast_mask_low: "(ucast (x && mask asid_low_bits) :: asid_low_index) = ucast x"
   by (rule ucast_mask_drop, simp add: asid_low_bits_def)
 
 lemma some_get_page_info_kmapsD:
   "\<lbrakk>get_page_info (aobjs_of s) pt_ref p = Some (b, a, attr, r);
     p \<in> kernel_mappings; canonical_address p; valid_global_vspace_mappings s; equal_kernel_mappings s\<rbrakk>
    \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a) \<and> r = {}"
-  sorry (* FIXME RISCV
-   apply (clarsimp simp: get_pdpt_info_def get_pml4_entry_def get_arch_obj_def
-                         kernel_mappings_slots_eq get_page_info_def get_pdpt_entry_def get_pd_info_def
-                         get_pd_entry_def get_pt_info_def get_pt_entry_def
-                  split: option.splits Structures_A.kernel_object.splits
-                         arch_kernel_obj.splits)
-   apply (erule valid_global_pml4_mappingsE)
-   apply (clarsimp simp: equal_kernel_mappings_def obj_at_def)
-   apply (drule_tac x=pd_ref in spec,
-          drule_tac x="riscv_global_pt (arch_state s)" in spec, simp)
-   apply (drule bspec, assumption)
-   apply (clarsimp simp: valid_pml4_kernel_mappings_def pml4e_mapping_bits_def)
-   apply (drule_tac x="ucast (p >> pml4_shift_bits)" in spec)
-   apply (clarsimp simp: get_page_info_def get_pml4_entry_def get_arch_obj_def
-                         get_pdpt_info_def get_pdpt_entry_def get_pd_info_def get_pd_entry_def
-                         get_pt_info_def get_pt_entry_def bit_simps
-                         kernel_mappings_slots_eq
-                  split: option.splits Structures_A.kernel_object.splits
-                         arch_kernel_obj.splits
-                         pml4e.splits pdpte.splits pde.splits pte.splits)
-      apply (rule conjI, rule_tac x=X64SmallPage in exI, simp add: bit_simps)
-      apply (simp add: valid_pml4e_kernel_mappings_def obj_at_def ucast_ucast_mask9
-                       valid_pdpt_kernel_mappings_def bit_simps pml4e_mapping_bits_def
-                 split: pml4e.splits)
-      apply (drule_tac x="ucast ((p >> 30))" in spec)
-      apply (clarsimp simp: valid_pdpte_kernel_mappings_def)
-      apply (simp add: valid_pd_kernel_mappings_def obj_at_def ucast_ucast_mask9
-                       valid_pdpt_kernel_mappings_def bit_simps pml4e_mapping_bits_def
-                 split: pml4e.splits)
-      apply (drule_tac x="ucast ((p >> 21))" in spec)
-      apply (clarsimp simp: valid_pde_kernel_mappings_def)
-      apply (simp add: valid_pt_kernel_mappings_def obj_at_def ucast_ucast_mask9
-                       valid_pdpt_kernel_mappings_def bit_simps pml4e_mapping_bits_def
-                 split: pml4e.splits)
-      apply (drule_tac x="ucast ((p >> 12))" in spec)
-      apply (clarsimp simp: valid_pte_kernel_mappings_def)
-      apply (rule conjI, rule_tac x=X64LargePage in exI, simp add: bit_simps)
-      apply (simp add: valid_pml4e_kernel_mappings_def obj_at_def ucast_ucast_mask9
-                       valid_pdpt_kernel_mappings_def bit_simps pml4e_mapping_bits_def
-                 split: pml4e.splits)
-      apply (drule_tac x="ucast ((p >> 30))" in spec)
-      apply (clarsimp simp: valid_pdpte_kernel_mappings_def)
-      apply (simp add: valid_pd_kernel_mappings_def obj_at_def ucast_ucast_mask9
-                       valid_pdpt_kernel_mappings_def bit_simps pml4e_mapping_bits_def
-                 split: pml4e.splits)
-      apply (drule_tac x="ucast ((p >> 21))" in spec)
-      apply (clarsimp simp: valid_pde_kernel_mappings_def)
-      apply (simp add: valid_pt_kernel_mappings_def obj_at_def ucast_ucast_mask9
-                       valid_pdpt_kernel_mappings_def bit_simps pml4e_mapping_bits_def
-                 split: pml4e.splits)
-      apply (rule conjI, rule_tac x=X64HugePage in exI, simp add: bit_simps)
-      apply (simp add: valid_pml4e_kernel_mappings_def obj_at_def ucast_ucast_mask9
-                       valid_pdpt_kernel_mappings_def bit_simps pml4e_mapping_bits_def
-                 split: pml4e.splits)
-      apply (drule_tac x="ucast ((p >> 30))" in spec)
-      apply (clarsimp simp: valid_pdpte_kernel_mappings_def)
-   done *)
+  apply (clarsimp simp: get_page_info_def in_omonad kernel_mappings_def)
+  sorry (* FIXME RISCV: insufficient invariants to prove that kernel mappings have no user rights *)
 
 lemma get_page_info_gpd_kmaps:
-  "\<lbrakk>valid_global_objs s; valid_arch_state s; canonical_address p;
+  "\<lbrakk>valid_global_vspace_mappings s; valid_arch_state s; canonical_address p;
     get_page_info (aobjs_of s) (riscv_global_pt (arch_state s)) p = Some (b, a, attr, r)\<rbrakk>
    \<Longrightarrow> p \<in> kernel_mappings"
-  sorry (* FIXME RISCV
+  apply (simp add: get_page_info_def)
+  sorry (* FIXME RISCV: insufficient invariants to prove that global PT does not have user mappings
   apply (clarsimp simp: valid_global_objs_def valid_arch_state_def
                         obj_at_def
                         empty_table_def kernel_mappings_slots_eq)
   apply (drule_tac x="ucast (p >> pml4_shift_bits)" in spec; clarsimp)
   apply (rule ccontr)
   apply (clarsimp simp: get_page_info_def get_pml4_entry_def get_arch_obj_def
-                        bit_simps ucast_ucast_mask9
+                        bit_simps ucast_ucast_mask_low
                  split: option.splits pml4e.splits arch_kernel_obj.splits)
   done *)
 
 lemma get_vspace_of_thread_reachable:
-  "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq> riscv_global_pt (arch_state s)
-   \<Longrightarrow> \<exists>level. (\<exists>\<rhd> (level, get_vspace_of_thread (kheap s) (arch_state s) t)) s"
-  sorry (* FIXME RISCV: adjust def of get_vspace_of_thread first
-  by (auto simp: get_vspace_of_thread_vs_lookup
-          split: Structures_A.kernel_object.splits if_split_asm option.splits
-                 cap.splits arch_cap.splits) *)
+  "\<lbrakk> get_vspace_of_thread (kheap s) (arch_state s) t \<noteq> riscv_global_pt (arch_state s);
+     valid_uses s \<rbrakk>
+   \<Longrightarrow> (\<exists>\<rhd> (max_pt_level, get_vspace_of_thread (kheap s) (arch_state s) t)) s"
+  by (auto simp: get_vspace_of_thread_def
+          split: option.splits cap.splits kernel_object.splits arch_cap.splits if_split_asm
+          intro: vspace_for_asid_vs_lookup)
 
-lemma is_aligned_ptrFromPAddrD:
-  "\<lbrakk>is_aligned (ptrFromPAddr b) a; a \<le> 30\<rbrakk> \<Longrightarrow> is_aligned b a"
-  apply (clarsimp simp:ptrFromPAddr_def pptrBase_def baseOffset_def pAddr_base_def canonical_bit_def)
-  apply (erule is_aligned_addD2)
-  apply (rule is_aligned_weaken[where x = 30])
-   apply (simp add:is_aligned_def)
-  apply simp
+lemma pageBitsForSize_vmpage_size_of_level[simp]:
+  "level \<le> max_pt_level \<Longrightarrow>
+   pageBitsForSize (vmpage_size_of_level level) = pt_bits_left level"
+  apply (clarsimp simp: pageBitsForSize_def vmpage_size_of_level_def pt_bits_left_def)
+  apply (simp add: level_defs)
+  apply (cases level rule: bit0.of_nat_cases)
+  apply ((case_tac m; clarsimp), (rename_tac m)?)+
+  done
+
+lemma data_at_aligned:
+  "\<lbrakk> data_at sz p s; pspace_aligned s\<rbrakk> \<Longrightarrow> is_aligned p (pageBitsForSize sz)"
+  unfolding data_at_def by (auto simp: obj_at_def dest: pspace_alignedD)
+
+lemma is_aligned_ptrFromPAddr_n_eq:
+  "sz \<le> canonical_bit \<Longrightarrow> is_aligned (ptrFromPAddr x) sz = is_aligned x sz"
+  apply (rule iffI)
+   apply (simp add: ptrFromPAddr_def baseOffset_def pptrBase_def pAddr_base_def canonical_bit_def)
+   apply (drule is_aligned_addD2)
+    apply (erule is_aligned_weaken[rotated])
+    apply (simp add: is_aligned_def)
+   apply assumption
+  apply (erule (1) is_aligned_ptrFromPAddr_n)
   done
 
 lemma some_get_page_info_umapsD:
   "\<lbrakk>get_page_info (aobjs_of s) pt_ref p = Some (b, a, attr, r);
-    \<exists>\<rhd> (level, pt_ref) s; p \<notin> kernel_mappings; valid_vspace_objs s; pspace_aligned s;
+    \<exists>\<rhd> (max_pt_level, pt_ref) s; p \<in> user_region s; valid_vspace_objs s; pspace_aligned s;
     canonical_address p;
-    valid_asid_table s; valid_objs s\<rbrakk>
+    valid_asid_table s; valid_objs s; valid_uses s\<rbrakk>
    \<Longrightarrow> \<exists>sz. pageBitsForSize sz = a \<and> is_aligned b a \<and> data_at sz (ptrFromPAddr b) s"
-  sorry (* FIXME RISCV
-  apply (clarsimp simp: get_page_info_def  get_pd_info_def get_pt_info_def
-                        get_pml4_entry_def get_pdpt_entry_def get_pd_entry_def get_pt_entry_def
-                        get_arch_obj_def valid_asid_table_def bit_simps
-                        kernel_mappings_slots_eq
-                 split: option.splits kernel_object.splits arch_kernel_obj.splits
-                        pml4e.splits pdpte.splits pde.splits pte.splits)
-    apply (all \<open>drule (2) vs_lookup_step_alt[OF _ _ vs_refs_pml4I],
-                simp add: ucast_ucast_mask9, fastforce\<close>)
-    prefer 3 subgoal
-      by (rule exI[of _ X64HugePage]; frule (3) valid_vspace_objs_entryD;
-          clarsimp simp: bit_simps vmsz_aligned_def)
-   apply (all \<open>drule (2) vs_lookup_step_alt[OF _ _ vs_refs_pdptI], fastforce\<close>)
-   prefer 2 subgoal
-     by (rule exI[of _ X64LargePage]; frule (3) valid_vspace_objs_entryD;
-         clarsimp simp: bit_simps vmsz_aligned_def)
-  apply (drule (2) vs_lookup_step_alt[OF _ _ vs_refs_pdI], fastforce)
-  by (rule exI[of _ X64SmallPage]; frule (3) valid_vspace_objs_entryD;
-      clarsimp simp: bit_simps vmsz_aligned_def) *)
+  apply (clarsimp simp: get_page_info_def vs_lookup_table_def)
+  apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
+  apply (frule pt_walk_max_level)
+  apply (drule pt_walk_level)
+  apply (rename_tac pte asid pool_ptr vref level pt_ptr')
+  apply (subgoal_tac "vs_lookup_table level asid p s = Some (level, pt_ptr')")
+   prefer 2
+   apply (clarsimp simp: vs_lookup_table_def in_omonad)
+   apply (drule (2) valid_vspace_objs_strongD; assumption?)
+   apply (clarsimp simp: pte_info_def split: pte.splits)
+   apply (frule pspace_aligned_pts_ofD, fastforce)
+   apply (drule_tac x="table_index (pt_slot_offset level pt_ptr' p)" in bspec)
+   apply (clarsimp simp: table_index_offset_max_pt_level simp: kernel_mappings_slots_eq)
+   apply (erule (2) no_user_region_kernel_mappings)
+  apply (clarsimp simp: pte_of_def)
+  apply (subgoal_tac "valid_pte level (PagePTE b attr r) s")
+   prefer 2
+   apply simp
+  apply (subst (asm) valid_pte.simps)
+  apply clarsimp
+  apply (rule_tac x="vmpage_size_of_level level" in exI)
+  apply (clarsimp simp: obj_at_def)
+  apply (drule (1) data_at_aligned)
+  apply (simp add: pt_bits_left_le_canoncial is_aligned_ptrFromPAddr_n_eq)
+  done
 
 lemma user_mem_dom_cong:
   "kheap s = kheap s' \<Longrightarrow> dom (user_mem s) = dom (user_mem s')"
@@ -174,41 +164,39 @@ named_theorems AInvsPre_asms
 
 lemma ptable_rights_imp_frame[AInvsPre_asms]:
   assumes "valid_state s"
-  shows "ptable_rights t s x \<noteq> {} \<Longrightarrow>
-         ptable_lift t s x = Some (addrFromPPtr y) \<Longrightarrow>
+  shows "\<lbrakk> ptable_rights t s x \<noteq> {}; ptable_lift t s x = Some (addrFromPPtr y) \<rbrakk> \<Longrightarrow>
          in_user_frame y s \<or> in_device_frame y s"
-  sorry (* FIXME RISCV
   apply (rule ccontr, frule ptable_lift_Some_canonical_addressD)
   using assms
-  apply (clarsimp simp: ptable_lift_def ptable_rights_def
-                        in_user_frame_def in_device_frame_def
+  apply (clarsimp simp: ptable_lift_def ptable_rights_def in_user_frame_def in_device_frame_def
                  split: option.splits)
   apply (case_tac "x \<in> kernel_mappings")
-   apply (frule (2) some_get_page_info_kmapsD; fastforce simp: valid_state_def)
+   apply (drule (2) some_get_page_info_kmapsD; fastforce simp: valid_state_def)
   apply (frule some_get_page_info_umapsD)
-        apply (rule get_vspace_of_thread_reachable)
-        apply clarsimp
-        apply (frule get_page_info_gpd_kmaps[rotated 2])
-           apply (simp_all add: valid_state_def valid_pspace_def
-                                valid_arch_state_def)
-    apply (clarsimp simp: data_at_def)+
+          apply (rule get_vspace_of_thread_reachable)
+           apply clarsimp
+           apply (frule get_page_info_gpd_kmaps[rotated 2])
+              apply (simp_all add: valid_state_def valid_pspace_def valid_arch_state_def)
+     apply ((clarsimp simp: data_at_def canonical_not_kernel_is_user)+)[3]
+  apply clarsimp
   apply (drule_tac x=sz in spec)+
   apply (rename_tac p_addr attr rghts sz)
   apply (frule is_aligned_add_helper[OF _ and_mask_less', THEN conjunct2, of _ _ x])
    apply (simp only: pbfs_less_wb'[simplified word_bits_def])
   apply (clarsimp simp: data_at_def ptrFromPAddr_def addrFromPPtr_def field_simps)
-  apply (subgoal_tac "p_addr + (pptrBase + (x && mask (pageBitsForSize sz)))
-                        && ~~ mask (pageBitsForSize sz) = p_addr + pptrBase")
+  apply (subgoal_tac "p_addr + (baseOffset + (x && mask (pageBitsForSize sz)))
+                        && ~~ mask (pageBitsForSize sz) = p_addr + baseOffset")
    apply simp
   apply (subst add.assoc[symmetric])
   apply (subst is_aligned_add_helper)
     apply (erule aligned_add_aligned)
-     apply (case_tac sz; simp add: is_aligned_def pptrBase_def bit_simps)
+     apply (case_tac sz; simp add: is_aligned_def baseOffset_def pptrBase_def pAddr_base_def
+                                   canonical_bit_def bit_simps)
     apply simp
    apply (rule and_mask_less')
    apply (case_tac sz; simp add: bit_simps)
   apply simp
-  done *)
+  done
 
 end
 
