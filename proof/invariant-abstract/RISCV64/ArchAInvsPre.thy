@@ -16,24 +16,6 @@ context Arch begin
 
 global_naming RISCV64
 
-(* FIXME RISCV: move up *)
-lemma canonical_below_pptr_base_user:
-  "\<lbrakk> v < pptr_base; canonical_address v; valid_uses s \<rbrakk> \<Longrightarrow> v \<in> user_region s"
-  sorry (* FIXME RISCV: need to adjust user_region to cover all potential user addresses *)
-
-(* FIXME RISCV: move up *)
-lemma pt_bits_left_le_canoncial:
-  "level \<le> max_pt_level \<Longrightarrow> pt_bits_left level \<le> canonical_bit"
-  by (drule pt_bits_left_le_max_pt_level) (simp add: canonical_bit_def bit_simps)
-
-(* FIXME RISCV: move up *)
-lemma table_index_offset_max_pt_level:
-  "is_aligned pt_ref pt_bits \<Longrightarrow>
-  table_index (pt_slot_offset max_pt_level pt_ref vref) = ucast (vref >> pt_bits_left max_pt_level)"
-  apply (simp add: pt_slot_offset_def ucast_eq_mask pt_index_def pt_bits_left_def bit_simps level_defs
-                   is_aligned_mask)
-  by (subst word_plus_and_or_coroll; word_bitwise, simp add: word_size)
-
 definition
   "kernel_mappings \<equiv> {x. x \<ge> pptr_base}"
 
@@ -43,10 +25,8 @@ lemma canonical_not_kernel_is_user:
 
 lemma no_user_region_kernel_mappings:
   "\<lbrakk> p \<in> user_region s; p \<in> kernel_mappings; valid_uses s \<rbrakk> \<Longrightarrow> False"
-  apply (simp add: valid_uses_user_region_eq kernel_mappings_def)
-  apply (drule (1) order_trans)
-  apply (simp flip: not_less)
-  done
+  using canonical_user_pptr_base
+  by (simp add: valid_uses_user_region_eq kernel_mappings_def)
 
 lemma kernel_mappings_slots_eq:
   "canonical_address p \<Longrightarrow>
