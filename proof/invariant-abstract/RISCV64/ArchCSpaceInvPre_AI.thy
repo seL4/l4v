@@ -16,6 +16,7 @@ theory ArchCSpaceInvPre_AI
 imports "../CSpaceInvPre_AI"
 begin
 
+
 context Arch begin global_naming RISCV64
 
 lemma aobj_ref_acap_rights_update[simp]:
@@ -55,7 +56,8 @@ lemma cap_master_arch_inv[simp]:
 
 definition
   "reachable_target \<equiv> \<lambda>(asid, vref) p s.
-     \<exists>level. vs_lookup_target level asid vref s = Some (level, p)"
+     \<exists>level. vs_lookup_target level asid vref s = Some (level, p) \<or>
+             pool_for_asid asid s = Some p"
 
 definition
   "reachable_frame_cap cap \<equiv> \<lambda>s.
@@ -123,7 +125,42 @@ lemma table_cap_ref_vs_cap_ref_Some:
 
 lemma set_cap_aobjs_of[wp]:
   "set_cap cap ptr \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
-  sorry (* FIXME RISCV *)
+  unfolding set_cap_def
+  apply (wpsimp wp: set_object_wp get_object_wp)
+  apply (auto simp: opt_map_def obj_at_def split: option.splits elim!: rsubst[where P=P])
+  done
+
+lemma set_cap_pool_for_asid[wp]:
+  "set_cap cap ptr \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
+  unfolding pool_for_asid_def by wpsimp
+
+(* FIXME RISCV: move to ArchInvariants *)
+lemmas vs_lookup_slot_vref_for_level_eq[simp] = vs_lookup_slot_vref_for_level[OF order_refl]
+
+(* FIXME RISCV: move to ArchInvariants *)
+lemmas vs_lookup_target_vref_for_level_eq[simp] = vs_lookup_target_vref_for_level[OF order_refl]
+
+(* FIXME RISCV: move to ArchInvariants *)
+lemma pool_for_asid_asid_for_level[simp]:
+  "pool_for_asid (asid_for_level asid level) = pool_for_asid asid"
+  by (clarsimp simp: pool_for_asid_def asid_for_level_def asid_high_bits_of_def mask_shift)
+
+(* FIXME RISCV: move to ArchInvariants *)
+lemma vs_lookup_asid_for_level[simp]:
+  "vs_lookup_table level (asid_for_level asid level) vref = vs_lookup_table level asid vref"
+  apply (simp add: vs_lookup_table_def)
+  apply (rule ext, rule obind_eqI, rule refl)
+  apply (clarsimp simp: asid_for_level_def)
+  done
+
+(* FIXME RISCV: move to ArchInvariants *)
+lemma vs_lookup_slot_asid_for_level[simp]:
+  "vs_lookup_slot level (asid_for_level asid level) vref = vs_lookup_slot level asid vref"
+  by (simp add: vs_lookup_slot_def)
+
+lemma vs_lookup_target_asid_for_level[simp]:
+  "vs_lookup_target level (asid_for_level asid level) vref = vs_lookup_target level asid vref"
+  sorry (* FIXME RISCV: not true, but not necessary after Raf's invariant change; remove *)
 
 lemma set_cap_valid_vs_lookup:
   "\<lbrace>\<lambda>s. valid_vs_lookup s
@@ -135,48 +172,59 @@ lemma set_cap_valid_vs_lookup:
       \<and> unique_table_refs s\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_vs_lookup\<rbrace>"
-  apply (simp add: valid_vs_lookup_def
-              del: split_paired_All split_paired_Ex)
-  sorry (* FIXME RISCV
-  apply (rule hoare_pre)
-   apply (wp hoare_vcg_all_lift hoare_convert_imp[OF set_cap.vs_lookup_pages]
-             hoare_vcg_disj_lift)
-  apply (elim conjE allEI, rule impI, drule(1) mp)
-  apply (simp only: simp_thms)
+  supply split_paired_All[simp del] split_paired_Ex[simp del]
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_convert_imp vs_lookup_target_lift hoare_vcg_disj_lift
+              simp: valid_vs_lookup_def)
+  apply (drule vs_lookup_target_level)
+  apply (rename_tac level' level asid vref p)
+  apply (erule allE, erule allE, erule allE, erule allE, erule allE, erule (1) impE)
+  apply (erule (1) impE)
   apply (elim exE conjE)
   apply (case_tac "p' = ptr")
-   apply (clarsimp simp: cte_wp_at_caps_of_state)
+   apply clarsimp
    apply (elim disjE impCE)
      apply fastforce
     apply clarsimp
     apply (drule (1) not_final_another_caps)
-     apply (erule obj_ref_is_gen_obj_ref)
+     apply (rule obj_ref_is_gen_obj_ref)
+     apply simp
     apply (simp, elim exEI, clarsimp simp: gen_obj_refs_eq)
-    apply (rule conjI, clarsimp)
-    apply (drule(3) unique_table_refsD)
-    apply (clarsimp simp: reachable_pg_cap_def is_pg_cap_def)
-    apply (case_tac cap, simp_all add: vs_cap_ref_simps)[1]
+    apply (drule_tac cap=cap' and cap'=cap in unique_table_refsD; simp?)
+    apply (clarsimp simp: reachable_frame_cap_def)
+    apply (case_tac cap, simp_all)[1]
     apply (rename_tac arch_cap)
-    apply (case_tac arch_cap,
-           simp_all add: vs_cap_ref_simps table_cap_ref_simps)[1]
-       apply (clarsimp dest!: table_cap_ref_vs_cap_ref_Some)
-      apply fastforce
-     apply (clarsimp dest!: table_cap_ref_vs_cap_ref_Some)+
-  apply (auto simp: cte_wp_at_caps_of_state)[1]
-  done *)
+    apply (case_tac arch_cap, simp_all)[1]
+      apply (clarsimp dest!: table_cap_ref_vs_cap_ref_Some)
+     apply (clarsimp simp: reachable_target_def)
+     apply (erule_tac x=level in allE)
+     apply (clarsimp)
+    apply (clarsimp dest!: table_cap_ref_vs_cap_ref_Some)
+   apply (clarsimp simp: reachable_target_def)
+   apply (erule_tac x=level in allE)
+   apply (clarsimp)
+  apply fastforce
+  done
 
 lemma set_cap_valid_table_caps:
   "\<lbrace>\<lambda>s. valid_table_caps s \<and>
         (is_pt_cap cap \<longrightarrow> cap_asid cap = None \<longrightarrow> (\<forall>r \<in> obj_refs cap. pts_of s r = Some empty_pt))\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_table_caps\<rbrace>"
+  supply split_paired_All[simp del] split_paired_Ex[simp del]
   apply (simp add: valid_table_caps_def)
   apply (wp hoare_vcg_all_lift
             hoare_vcg_disj_lift hoare_convert_imp[OF set_cap_caps_of_state]
             hoare_use_eq[OF set_cap_arch set_cap_obj_at_impossible])
-  sorry (* FIXME: RISCV
-  apply (simp add: empty_table_caps_of)
-  done *)
+  apply (fastforce simp: cap_asid_def split: if_split_asm)
+  done
+
+lemma cap_asid_vs_cap_ref_None:
+  "is_pt_cap cap \<Longrightarrow> (cap_asid cap = None) = (vs_cap_ref cap = None)"
+  by (clarsimp simp: is_pt_cap_def is_PageTableCap_def cap_asid_def split: option.splits)
+
+lemma cap_asid_vs_cap_ref_Some:
+  "is_pt_cap cap \<Longrightarrow> (cap_asid cap = Some asid) = (\<exists>vref. vs_cap_ref cap = Some (asid, vref))"
+  by (clarsimp simp: is_pt_cap_def is_PageTableCap_def cap_asid_def split: option.splits)
 
 lemma set_cap_unique_table_caps:
   "\<lbrace>\<lambda>s. unique_table_caps s
@@ -190,34 +238,32 @@ lemma set_cap_unique_table_caps:
                                               \<and> (cap_asid cap = None \<or> cap_asid cap' = None)) ptr' s \<longrightarrow> ptr' = ptr))\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>_. unique_table_caps\<rbrace>"
+  supply split_paired_All[simp del] split_paired_Ex[simp del]
+  supply cap_asid_vs_cap_ref_None[simp] cap_asid_vs_cap_ref_Some[simp]
   apply wp
-  sorry (* FIXME RISCV
-  apply (simp only: unique_table_caps_def)
+  apply (simp only: unique_table_caps_def cte_wp_at_caps_of_state)
   apply (elim conjE)
-  apply (erule impCE)
-   apply clarsimp
+  apply (erule impCE, clarsimp)
   apply (erule impCE)
    prefer 2
    apply (simp del: imp_disjL)
    apply (thin_tac "\<forall>a b. P a b" for P)
-   apply (auto simp: cte_wp_at_caps_of_state)[1]
+   subgoal by fastforce
   apply (clarsimp simp del: imp_disjL del: allI)
   apply (case_tac "cap_asid cap \<noteq> None")
    apply (clarsimp del: allI)
    apply (elim allEI | rule impI)+
-   subgoal by (auto simp: is_pt_cap_def is_pd_cap_def is_pdpt_cap_def is_pml4_cap_def)
+   subgoal by auto
   apply (elim allEI)
   apply (intro conjI impI)
    apply (elim allEI)
-   subgoal by (auto simp: is_pt_cap_def is_pd_cap_def is_pdpt_cap_def is_pml4_cap_def)
-  apply (elim allEI)
-  subgoal by (auto simp: is_pt_cap_def is_pd_cap_def is_pdpt_cap_def is_pml4_cap_def)
-  done *)
+   subgoal by auto
+  apply auto
+  done
 
-lemma set_cap_unique_table_refs:
-  "\<lbrace>\<lambda>s. unique_table_refs s
-      \<and> no_cap_to_obj_with_diff_ref cap {ptr} s\<rbrace>
-     set_cap cap ptr
+lemma set_cap_unique_table_refs[wp]:
+  "\<lbrace> unique_table_refs and no_cap_to_obj_with_diff_ref cap {ptr} \<rbrace>
+   set_cap cap ptr
    \<lbrace>\<lambda>rv. unique_table_refs\<rbrace>"
   apply wp
   apply clarsimp
@@ -228,6 +274,52 @@ lemma set_cap_unique_table_refs:
   apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
                         cte_wp_at_caps_of_state
                  split: if_split_asm)
+  done
+
+lemma table_cap_ref_vs_ref_or_frame:
+  "\<lbrakk> table_cap_ref cap = table_cap_ref cap'; vs_cap_ref cap = Some x \<rbrakk>
+   \<Longrightarrow> vs_cap_ref cap' = Some x \<or> is_frame_cap cap"
+  by (simp add: vs_cap_ref_def table_cap_ref_def arch_cap_fun_lift_def vs_cap_ref_arch_def
+                table_cap_ref_arch_def
+         split: cap.splits arch_cap.splits)
+
+lemma obj_refs_obj_ref_of:
+  "obj_refs cap = {p} \<Longrightarrow> obj_ref_of cap = p"
+  by (cases cap; simp) (rename_tac acap, case_tac acap; simp)
+
+lemma set_cap_valid_asid_pool_caps[wp]:
+  "\<lbrace>\<lambda>s. valid_asid_pool_caps s
+      \<and> (\<forall>vref cap'. caps_of_state s ptr = Some cap'
+                \<longrightarrow> vs_cap_ref cap' = Some vref
+                \<longrightarrow> (vs_cap_ref cap = Some vref \<and> obj_refs cap = obj_refs cap')
+                 \<or> (\<not> is_final_cap' cap' s \<and> \<not> reachable_frame_cap cap' s)
+                 \<or> (\<forall>oref. oref \<in> obj_refs cap' \<longrightarrow> \<not> reachable_target vref oref s))
+      \<and> unique_table_refs s\<rbrace>
+   set_cap cap ptr
+   \<lbrace>\<lambda>_. valid_asid_pool_caps\<rbrace>"
+  apply (wp_pre, wps, wp)
+  supply split_paired_Ex[simp del] split_paired_All[simp del]
+  apply (clarsimp simp: valid_asid_pool_caps_def simp del: fun_upd_apply)
+  apply (erule allE, erule allE, erule (1) impE)
+  apply (elim exE conjE)
+  apply (case_tac "ptr \<noteq> cptr", fastforce)
+  apply simp
+  apply (erule disjE, rule_tac x=cptr in exI, fastforce)
+  apply (erule disjE)
+   apply (erule conjE)
+   apply (drule (1) not_final_another_caps)
+    apply (rule obj_ref_is_gen_obj_ref, simp)
+   apply (simp add: gen_obj_refs_eq)
+   apply (elim exE conjE)
+   apply (rule_tac x=p' in exI)
+   apply simp
+   apply (drule_tac cap=cap and cap'=cap' in unique_table_refsD; simp?)
+   apply (drule (1) table_cap_ref_vs_ref_or_frame)
+   apply (erule disjE, simp)
+   apply (simp add: reachable_frame_cap_def)
+   apply (clarsimp simp: reachable_target_def pool_for_asid_def obj_refs_obj_ref_of)
+  apply (rule_tac x=cptr in exI)
+  apply (clarsimp simp: reachable_target_def pool_for_asid_def)
   done
 
 lemma set_cap_valid_arch_caps:
@@ -250,11 +342,9 @@ lemma set_cap_valid_arch_caps:
                      \<and> (cap_asid cap = None \<or> cap_asid cap' = None)) ptr' s \<longrightarrow> ptr' = ptr))\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
-  sorry (* FIXME RISCV
-  by (simp add: valid_arch_caps_def pred_conj_def;
-      wp set_cap_valid_vs_lookup set_cap_valid_table_caps
-         set_cap_unique_table_caps set_cap_unique_table_refs;
-      clarsimp simp: cte_wp_at_def) *)
+  unfolding valid_arch_caps_def
+  by (wpsimp wp: set_cap_valid_vs_lookup set_cap_valid_table_caps set_cap_unique_table_caps
+           simp: cte_wp_at_caps_of_state)
 
 lemma valid_table_capsD:
   "\<lbrakk> cte_wp_at ((=) cap) ptr s; valid_table_caps s; is_pt_cap cap; cap_asid cap = None \<rbrakk>
@@ -287,23 +377,19 @@ lemma set_cap_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window and (\<lambda>s. \<forall>ref \<in> cap_range cap. ref \<in> kernel_window s)\<rbrace>
      set_cap cap p
    \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
-  apply (simp add: cap_refs_in_kernel_window_def valid_refs_def2
-                   pred_conj_def)
-  apply (rule hoare_lift_Pf2[where f=arch_state])
-   apply wp
-  sorry (* FIXME RISCV
-   apply (fastforce elim!: ranE split: if_split_asm)
-  apply wp
-  done *)
+  apply (simp add: cap_refs_in_kernel_window_def valid_refs_def2 pred_conj_def)
+  apply (wp_pre, wps, wp)
+  apply (clarsimp simp: not_kernel_window_def)
+  apply fastforce
+  done
 
 lemma cap_refs_in_kernel_windowD:
   "\<lbrakk> caps_of_state s ptr = Some cap; cap_refs_in_kernel_window s \<rbrakk>
    \<Longrightarrow> \<forall>ref \<in> cap_range cap. ref \<in> kernel_window s"
-  apply (clarsimp simp: cap_refs_in_kernel_window_def valid_refs_def
-                        cte_wp_at_caps_of_state)
-  sorry (* FIXME RISCV
+  apply (clarsimp simp: cap_refs_in_kernel_window_def valid_refs_def cte_wp_at_caps_of_state
+                        not_kernel_window_def)
   apply (cases ptr, fastforce)
-  done *)
+  done
 
 lemma valid_cap_imp_valid_vm_rights:
   "valid_cap (ArchObjectCap (FrameCap p rs sz dev m)) s \<Longrightarrow> rs \<in> valid_vm_rights"
@@ -326,8 +412,8 @@ lemma acap_rights_update_id [intro!, simp]:
 lemma obj_ref_none_no_asid:
   "{} = obj_refs new_cap \<longrightarrow> None = table_cap_ref new_cap"
   "obj_refs new_cap = {} \<longrightarrow> table_cap_ref new_cap = None"
-  sorry (* FIXME RISCV
-  by (simp add: table_cap_ref_def split: cap.split arch_cap.split)+ *)
+  by (simp add: table_cap_ref_def table_cap_ref_arch_def arch_cap_fun_lift_def
+         split: cap.split arch_cap.split)+
 
 lemma set_cap_hyp_refs_of [wp]:
  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>

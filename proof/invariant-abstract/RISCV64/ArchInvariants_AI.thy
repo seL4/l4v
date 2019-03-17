@@ -408,9 +408,10 @@ definition valid_vs_lookup :: "'z::state_ext state \<Rightarrow> bool" where
 definition valid_asid_pool_caps_2 :: "(cslot_ptr \<rightharpoonup> cap) \<Rightarrow> (asid_high_index \<rightharpoonup> obj_ref) \<Rightarrow> bool"
   where
   "valid_asid_pool_caps_2 caps table \<equiv>
-     \<forall>asid p. table asid = Some p \<longrightarrow>
-                asid \<noteq> 0 \<and>
-                (\<exists>p'. caps p' = Some (ArchObjectCap (ASIDPoolCap p (ucast asid))))"
+     \<forall>asid p. table (asid_high_bits_of asid) = Some p \<longrightarrow>
+                asid_high_bits_of asid \<noteq> 0 \<and>
+                (\<exists>cptr cap. caps cptr = Some cap \<and>
+                            obj_refs cap = {p} \<and> vs_cap_ref cap = Some (asid, 0))"
 
 locale_abbrev valid_asid_pool_caps :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_asid_pool_caps \<equiv> \<lambda>s.
@@ -1665,6 +1666,35 @@ lemma table_index_offset_max_pt_level:
   unfolding pt_slot_offset_def ucast_eq_mask pt_index_def pt_bits_left_def bit_simps
             level_defs is_aligned_mask
   by (subst word_plus_and_or_coroll; word_bitwise, simp add: word_size)
+
+lemma vs_lookup_slot_level:
+  "vs_lookup_slot bot_level asid vref s = Some (level, p) \<Longrightarrow>
+   vs_lookup_slot level asid vref s = Some (level, p)"
+  apply (clarsimp simp: vs_lookup_slot_def in_omonad)
+  apply (drule vs_lookup_level)
+  apply (force split: if_splits)
+  done
+
+lemma vs_lookup_target_level:
+  "vs_lookup_target bot_level asid vref s = Some (level, p) \<Longrightarrow>
+   vs_lookup_target level asid vref s = Some (level, p)"
+  apply (clarsimp simp: vs_lookup_target_def in_omonad)
+  apply (drule vs_lookup_slot_level)
+  apply (auto split: if_splits simp: in_omonad)
+  done
+
+lemma vs_lookup_slot_vref_for_level:
+  "level \<le> bot_level \<Longrightarrow>
+   vs_lookup_slot bot_level asid (vref_for_level vref level) = vs_lookup_slot bot_level asid vref"
+  apply (simp add: vs_lookup_slot_def vs_lookup_vref_for_level)
+  apply (rule ext, rule obind_eqI, rule refl)
+  apply (clarsimp dest!: vs_lookup_min_level)
+  done
+
+lemma vs_lookup_target_vref_for_level:
+  "level \<le> bot_level \<Longrightarrow>
+   vs_lookup_target bot_level asid (vref_for_level vref level) = vs_lookup_target bot_level asid vref"
+  by (simp add: vs_lookup_target_def vs_lookup_slot_vref_for_level)
 
 lemma pts_of_ko_at:
   "(pts_of s p = Some pt) = ako_at (PageTable pt) p s"

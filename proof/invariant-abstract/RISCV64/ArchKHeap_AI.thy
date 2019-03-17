@@ -131,6 +131,38 @@ lemma pool_for_asid_lift:
   shows "f \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
   by (wpsimp simp: pool_for_asid_def wp: assms)
 
+lemma vs_lookup_table_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (riscv_asid_table (arch_state s))\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (vs_lookup_table level asid vref s)\<rbrace>"
+  apply (simp add: vs_lookup_table_def obind_def split: option.splits)
+  apply (wpsimp wp: assms hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift' pool_for_asid_lift
+                simp: not_le)
+  done
+
+lemma vs_lookup_slot_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (riscv_asid_table (arch_state s))\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (vs_lookup_slot level asid vref s)\<rbrace>"
+  apply (simp add: vs_lookup_slot_def obind_def split: option.splits)
+  apply (wpsimp wp: assms hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift' pool_for_asid_lift
+                    vs_lookup_table_lift
+                simp: not_le)
+  done
+
+lemma vs_lookup_target_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (riscv_asid_table (arch_state s))\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (vs_lookup_target level asid vref s)\<rbrace>"
+  apply (simp add: vs_lookup_target_def obind_def split: option.splits)
+  apply (wpsimp wp: assms hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift' pool_for_asid_lift
+                    vs_lookup_slot_lift
+                simp: not_le)
+  done
+
 lemma vs_lookup_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of s)\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
@@ -139,10 +171,7 @@ lemma vs_lookup_lift:
   apply (rule_tac P=P in hoare_liftP_ext)+
   apply (rename_tac P asid)
   apply (rule_tac P=P in hoare_liftP_ext)
-  apply (simp add: vs_lookup_table_def obind_def split: option.splits)
-  apply (wpsimp wp: assms hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift' pool_for_asid_lift
-                simp: not_le)
-  done
+  by (rule vs_lookup_table_lift; rule assms)
 
 lemma vs_lookup_vspace_aobjs_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
@@ -216,16 +245,6 @@ lemma vs_lookup_arch_obj_at_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace>"
   by (intro vs_lookup_vspace_obj_at_lift assms vspace_pred_imp)
-
-lemma vs_lookup_target_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (riscv_asid_table (arch_state s))\<rbrace>"
-  shows "f \<lbrace>\<lambda>s. P (vs_lookup_target level asid vref s)\<rbrace>"
-  apply (simp add: vs_lookup_target_def vs_lookup_slot_def obind_def split: option.splits)
-  apply (wpsimp wp: assms hoare_vcg_all_lift hoare_vcg_imp_lift' pool_for_asid_lift vs_lookup_lift
-                simp: not_le)
-  done
 
 lemma vs_lookup_pages_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of s)\<rbrace>"

@@ -463,8 +463,11 @@ lemma vs_asid_ref_eq:
 
 lemma set_cap_reachable_pg_cap:
   "\<lbrace>\<lambda>s. P (reachable_frame_cap cap s)\<rbrace> set_cap x y \<lbrace>\<lambda>_ s. P (reachable_frame_cap cap s)\<rbrace>"
-  unfolding reachable_frame_cap_def reachable_target_def
-  by (wpsimp wp: hoare_vcg_ex_lift set_cap.vs_lookup_pages)
+  unfolding reachable_frame_cap_def reachable_target_def vs_lookup_target_def
+  apply (clarsimp simp: in_omonad vs_lookup_slot_def vs_lookup_table_def)
+  apply (wp_pre, wps, wp)
+  apply simp
+  done
 
 lemma cap_insert_simple_arch_caps_ap:
   "\<lbrace>valid_arch_caps and (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src cap) src s)
