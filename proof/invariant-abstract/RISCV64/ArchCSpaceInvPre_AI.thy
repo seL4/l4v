@@ -63,11 +63,6 @@ definition
   "reachable_frame_cap cap \<equiv> \<lambda>s.
      is_frame_cap cap \<and> (\<exists>ref. vs_cap_ref cap = Some ref \<and> reachable_target ref (obj_ref_of cap) s)"
 
-abbreviation
-  "same_vspace_table_cap_type c c' \<equiv>
-      is_pt_cap c \<and> is_pt_cap c'
-    \<or> is_frame_cap c \<and> is_frame_cap c'"
-
 (* The conditions under which it is legal to immediately replace an arch_cap
    cap with newcap at slot sl, assuming cap is final. *)
 definition
@@ -76,11 +71,11 @@ where
  "replaceable_final_arch_cap s sl newcap \<equiv> \<lambda>cap.
     (* Don't leave dangling vspace references. That is, if cap points to a mapped vspace object, *)
     (\<forall>ref. vs_cap_ref cap = Some ref
-             (* then either newcap maintains the same chain of vs_refs, *)
+             (* then either newcap maintains the same vs_refs *)
             \<longrightarrow> (vs_cap_ref newcap = Some ref \<and> obj_refs newcap = obj_refs cap)
              (* or the object pointed to by cap is not currently mapped. *)
-              \<or> (\<forall>oref \<in> obj_refs cap. \<not> reachable_target ref oref s)
-    (* Don't introduce duplicate caps to vspace table objects with different vs_ref chains. *)
+              \<or> (\<forall>oref \<in> obj_refs cap. \<not> reachable_target ref oref s))
+    (* Don't introduce duplicate caps to vspace table objects with different vs_refs. *)
   \<and> no_cap_to_obj_with_diff_ref newcap {sl} s
     (* Don't introduce non-empty unmapped table objects. *)
   \<and> (is_pt_cap newcap
@@ -90,17 +85,17 @@ where
          - newcap and cap have different types or different obj_refs, or
          - newcap is unmapped while cap is mapped, *)
   \<and> (is_pt_cap newcap
-         \<longrightarrow> (is_pt_cap newcap
+         \<longrightarrow> (is_pt_cap cap
                   \<longrightarrow> (cap_asid newcap = None \<longrightarrow> cap_asid cap = None)
                   \<longrightarrow> obj_refs cap \<noteq> obj_refs newcap)
     (* then, aside from sl, there is no other slot with a cap that
          - has the same obj_refs and type as newcap, and
          - is unmapped if newcap is mapped. *)
          \<longrightarrow> (\<forall>sl'. cte_wp_at (\<lambda>cap'. obj_refs cap' = obj_refs newcap
-                     \<and> (same_vspace_table_cap_type newcap cap')
+                     \<and> is_pt_cap cap'
                      \<and> (cap_asid newcap = None \<or> cap_asid cap' = None)) sl' s \<longrightarrow> sl' = sl))
   (* Don't replace with an ASID pool. *)
-  \<and> \<not>is_ap_cap newcap)"
+  \<and> \<not>is_ap_cap newcap"
 
 definition
   replaceable_non_final_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"

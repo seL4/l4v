@@ -93,12 +93,8 @@ lemma replace_cap_invs:
    apply (erule disjE)
     apply (simp add: fun_upd_def[symmetric] fun_upd_idem)
    apply (clarsimp simp add: reply_mdb_def)
-  sorry (* FIXME RISCV
    apply (thin_tac "\<forall>a b. (a, b) \<in> cte_refs cp nd \<and> Q a b\<longrightarrow> R a b" for cp nd Q R)
    apply (thin_tac "is_pt_cap cap \<longrightarrow> P" for cap P)+
-   apply (thin_tac "is_pd_cap cap \<longrightarrow> P" for cap P)+
-   apply (thin_tac "is_pdpt_cap cap \<longrightarrow> P" for cap P)+
-   apply (thin_tac "is_pml4_cap cap \<longrightarrow> P" for cap P)+
    apply (rule conjI)
     apply (unfold reply_caps_mdb_def)[1]
     apply (erule allEI, erule allEI)
@@ -110,11 +106,6 @@ lemma replace_cap_invs:
    apply (unfold reply_masters_mdb_def)[1]
    apply (erule allEI, erule allEI)
    subgoal by (fastforce split: if_split_asm simp: is_cap_simps)
-  apply (rule conjI)
-   apply (erule disjE)
-    apply (simp add: fun_upd_def[symmetric] fun_upd_idem)
-   apply clarsimp
-   apply (clarsimp simp: ioport_revocable_def is_cap_simps)
   apply (rule conjI)
    apply (erule disjE)
     apply (clarsimp simp add: is_reply_cap_to_def)
@@ -135,10 +126,9 @@ lemma replace_cap_invs:
    apply simp
    apply (clarsimp simp: valid_table_capsD[OF caps_of_state_cteD]
                     valid_arch_caps_def unique_table_refs_no_cap_asidE)
-  apply clarsimp
+  apply (rule conjI, clarsimp)
   apply (rule conjI, rule Ball_emptyI, simp add: gen_obj_refs_subset)
-  by clarsimp *)
-
+  by clarsimp
 
 definition
   "is_simple_cap_arch cap \<equiv> \<not>is_pt_cap cap"
