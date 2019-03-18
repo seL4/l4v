@@ -693,8 +693,8 @@ next
       apply (rule conjI, clarsimp simp: cte_wp_at_caps_of_state)
        apply (erule tcb_valid_nonspecial_cap)
          apply fastforce
-        apply (clarsimp simp: ran_tcb_cap_cases is_cap_simps is_nondevice_page_cap
-                       split: Structures_A.thread_state.splits) sorry (* FIXME RISCV
+        apply (clarsimp simp: ran_tcb_cap_cases is_cap_simps
+                       split: Structures_A.thread_state.splits)
        apply (clarsimp simp: is_cap_simps)
       apply (rule conjI)
        apply (drule cte_wp_valid_cap, clarsimp)
@@ -708,7 +708,7 @@ next
        apply (simp add: invs_def valid_state_def)
       apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
      apply (erule cte_wp_at_weakenE | clarsimp)+
-    done *)
+    done
 next
   have nat_helper:
     "\<And>x n. \<lbrakk> x < Suc n; x \<noteq> n \<rbrakk> \<Longrightarrow> x < n"
@@ -738,7 +738,6 @@ next
         apply (erule disjE[where P="val = cap.NullCap" for val])
          apply (clarsimp simp: replaceable_def cap_range_def is_cap_simps
                                gen_obj_refs_subset vs_cap_ref_def)
-         sorry (* FIXME RISCV
          apply (rule conjI[rotated])
           apply (rule conjI)
            apply (rule mp [OF tcb_cap_valid_imp'])
@@ -788,7 +787,7 @@ next
     apply (erule(1) zombie_is_cap_toE)
      apply simp
     apply simp
-    done *)
+    done
 qed
 
 
