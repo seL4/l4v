@@ -894,10 +894,10 @@ lemma sched_context_resume_typ_at[wp]:
 
 
 crunch invs[wp]: set_message_info invs
-crunches set_message_info,sched_context_update_consumed
+crunches set_message_info, sched_context_update_consumed, unbind_from_sc
  for tcb_at[wp]: "tcb_at t"
  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
-  (wp: get_object_wp)
+  (wp: crunch_wps get_object_wp maybeM_inv hoare_drop_imps simp: crunch_simps)
 
 lemma set_sched_context_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. tcb_at (cur_thread s) s\<rbrace> set_sched_context p sc \<lbrace>\<lambda>rv s. tcb_at (cur_thread s) s\<rbrace>"

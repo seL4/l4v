@@ -569,7 +569,7 @@ crunches tcb_sched_action,reschedule_required,possible_switch_to,tcb_release_enq
  and distinct[wp]: pspace_distinct
  and sc_at[wp]: "sc_at sc_ptr"
  and tcb_at[wp]: "\<lambda>s. P (tcb_at tptr s)"
- and st_tcb_at[wp]: "\<lambda>s. Q (st_tcb_at P tptr s)"
+ and pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P tptr s)"
  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
  and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"

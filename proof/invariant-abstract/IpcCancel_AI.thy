@@ -35,6 +35,10 @@ lemma cancel_signal_simple:
 
 crunch typ_at[wp]: cancel_all_ipc "\<lambda>s. P (typ_at T p s)" (wp: crunch_wps mapM_x_wp)
 
+crunches restart_thread_if_no_fault
+  for valid_objs[wp]: valid_objs
+  (wp: crunch_wps)
+
 lemma cancel_all_ipc_valid_objs:
   "\<lbrace>valid_objs and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
    cancel_all_ipc ptr \<lbrace>\<lambda>_. valid_objs\<rbrace>"
@@ -693,7 +697,7 @@ lemma sched_context_donate_valid_irq_node [wp]:
   "\<lbrace>valid_irq_node\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. valid_irq_node\<rbrace>"
   by (wp valid_irq_node_typ)
 
-crunches reply_unlink_sc
+crunches reply_unlink_sc, restart_thread_if_no_fault
   for cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
   and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
   and cur_tcb[wp]: cur_tcb
@@ -722,11 +726,8 @@ crunches reply_unlink_sc
   and zombies_final[wp]: zombies_final
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and arch_state[wp]: "\<lambda>s. P (arch_state s)"
-  (wp: get_simple_ko_wp valid_irq_node_typ)
-
-lemma reply_unlink_sc_it [wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> reply_unlink_sc scp rp \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
-  by (wpsimp simp: reply_unlink_sc_def wp: get_simple_ko_wp)
+  and it[wp]: "\<lambda>s. P (idle_thread s)"
+  (wp: get_simple_ko_wp valid_irq_node_typ crunch_wps sts_only_idle)
 
 lemma reply_unlink_sc_sc_at [wp]:
   "\<lbrace>sc_at scp'\<rbrace> reply_unlink_sc scp rp \<lbrace>\<lambda>rv. sc_at scp'\<rbrace>"
@@ -1425,13 +1426,10 @@ lemma schedule_tcb_it[wp]:
       \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
   by (wpsimp simp: schedule_tcb_def)
 
-crunch it[wp]: set_thread_state "\<lambda>(s::det_ext state). P (idle_thread s)"
-  (wp: crunch_wps select_wp simp: unless_def crunch_simps)
-
-
 lemma cancel_all_ipc_it[wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> cancel_all_ipc tcb_ptr
-      \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace>
+   cancel_all_ipc tcb_ptr
+   \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
   by (wpsimp simp: cancel_all_ipc_def set_thread_state_def reply_unlink_tcb_def
                wp: mapM_x_wp' hoare_drop_imp)
 
@@ -1708,16 +1706,9 @@ lemma reply_unlink_tcb_bound_sc_tcb_at[wp]:
   apply (auto simp: pred_tcb_at_def obj_at_def get_tcb_def)
   done
 
-lemma blocked_cancel_ipc_bound_sc_tcb_at[wp]:
-  "\<lbrace>bound_sc_tcb_at P t'\<rbrace> blocked_cancel_ipc ts t r \<lbrace>\<lambda>rv. bound_sc_tcb_at P t'\<rbrace>"
-  by (wpsimp simp: blocked_cancel_ipc_def
-               wp: set_thread_state_bound_sc_tcb_at reply_unlink_tcb_bound_sc_tcb_at
-                   assert_inv get_simple_ko_inv hoare_drop_imps)
-
-lemma cancel_signal_bound_sc_tcb_at[wp]:
-  "\<lbrace>bound_sc_tcb_at P t'\<rbrace> cancel_signal r ntfn \<lbrace>\<lambda>rv. bound_sc_tcb_at P t'\<rbrace>"
-  by (wpsimp simp: cancel_signal_def get_simple_ko_def get_object_def
-               wp: set_thread_state_bound_sc_tcb_at)
+crunches blocked_cancel_ipc, cancel_signal, test_reschedule
+  for bound_sc_tcb_at[wp]:  "bound_sc_tcb_at P t"
+  (wp: crunch_wps)
 
 lemma suspend_unlive_helper:
   shows
@@ -1906,10 +1897,6 @@ lemma endpoint_reply_irrelevant:
   apply (fastforce simp: state_refs_of_def get_refs_def2 split: if_splits)
   done
 
-lemma set_thread_state_valid_irq_node[wp]:
-  "set_thread_state t st \<lbrace> valid_irq_node \<rbrace>"
-  by (wpsimp simp: valid_irq_node_def cap_table_at_typ wp: hoare_vcg_all_lift | wps)+
-
 (* May be useful in limited circumstances:
    - when set_thread_state is the last step in reestablishing invariants.
    - when the thread is not previously BlockedOnReply. *)
@@ -1931,15 +1918,51 @@ lemma set_thread_state_invs:
                  elim!: replies_blocked_upd_tcb_st_valid_replies)
   done
 
-lemma sts_st_tcb_at_cases_different_thread:
-  "t' \<noteq> t \<Longrightarrow> set_thread_state t ts \<lbrace> \<lambda>s. P (st_tcb_at P' t' s) \<rbrace>"
-  by (wpsimp wp: sts_st_tcb_at_cases_strong)
-
 lemmas sts_st_tcb_at_other = sts_st_tcb_at_neq[where proj=itcb_state]
+
+lemma restart_thread_if_no_fault_other:
+  "\<lbrace>\<lambda>s. Q (st_tcb_at P t s) \<and> t \<noteq> t'\<rbrace>
+   restart_thread_if_no_fault t'
+   \<lbrace>\<lambda>_ s. Q (st_tcb_at P t s)\<rbrace>"
+  apply (simp add: restart_thread_if_no_fault_def)
+  by (wpsimp wp: sts_st_tcb_at_other hoare_drop_imps)
 
 lemma replies_blocked_upd_tcb_st_helper:
   "replies_blocked_upd_tcb_st Inactive t rs = replies_blocked_upd_tcb_st Restart t rs"
   by (simp add: replies_blocked_upd_tcb_st_def)
+
+crunches restart_thread_if_no_fault
+  for cte_wp_at[wp]: "cte_wp_at P c"
+  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
+  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
+  and hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+  and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
+  and cur_sc_tcb[wp]: "cur_sc_tcb"
+  and if_live_then_nonz_cap[wp]: if_live_then_nonz_cap
+  and valid_replies[wp]: valid_replies
+  and valid_ioports[wp]: valid_ioports
+  and ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
+  and tcb_at[wp]: "tcb_at p"
+  and ep_at[wp]: "ep_at p"
+  (simp: crunch_simps wp: crunch_wps sts_valid_replies)
+
+lemma restart_thread_if_no_fault_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of s) (t := tcb_non_st_state_refs_of s t))\<rbrace>
+   restart_thread_if_no_fault t
+   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  apply (simp add: restart_thread_if_no_fault_def)
+  by (wpsimp wp: hoare_drop_imps simp: fun_upd_def)
+
+(* This rule can cause problems with the simplifier if rule unification chooses a
+   P' that does not specify proj. If necessary, this can be worked around by
+   manually specifying proj. *)
+lemma restart_thread_if_no_fault_pred_tcb_at':
+  "\<forall>tcb ts. proj (tcb_to_itcb tcb) = proj (tcb_to_itcb (tcb\<lparr>tcb_state := ts\<rparr>))
+   \<Longrightarrow> restart_thread_if_no_fault ref \<lbrace>\<lambda>s. P' (pred_tcb_at proj P t s)\<rbrace>"
+  apply (simp add: restart_thread_if_no_fault_def)
+  by (wpsimp wp: set_thread_state_pred_tcb_at' hoare_drop_imps)
 
 lemma cancel_all_ipc_invs_helper':
   "\<lbrace>all_invs_but_sym_refs and valid_replies and
@@ -1955,11 +1978,7 @@ lemma cancel_all_ipc_invs_helper':
     mapM_x (\<lambda>t. do st <- get_thread_state t;
                    reply_opt <- case st of BlockedOnReceive _ ro \<Rightarrow> return ro | _ \<Rightarrow> return None;
                    _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb t (the reply_opt));
-                   fault <- thread_get tcb_fault t;
-                   if fault = None
-                   then do set_thread_state t Restart;
-                           possible_switch_to t od
-                   else set_thread_state t Inactive
+                   restart_thread_if_no_fault t
                 od) q
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply if_cong[cong]
@@ -1968,10 +1987,8 @@ lemma cancel_all_ipc_invs_helper':
   apply (rule_tac S="distinct (t # q')" in hoare_gen_asm'', simp)
   apply (rule hoare_conjI)
    apply (rule hoare_seq_ext[OF _ gts_sp], rename_tac st)
-   apply (wpsimp wp: valid_ioports_lift sts_only_idle sts_valid_replies
-                     reply_unlink_tcb_st_tcb_at reply_unlink_tcb_valid_replies
-                     hoare_drop_imps
-               simp: pred_tcb_at_eq_commute)
+   apply (wpsimp wp: valid_ioports_lift
+                     reply_unlink_tcb_st_tcb_at reply_unlink_tcb_valid_replies)
    apply (rule_tac V="t \<noteq> idle_thread s" in revcut_rl, fastforce simp: idle_no_ex_cap)
    apply (clarsimp simp: reply_at_ppred_def pred_tcb_at_def obj_at_def
                          replies_blocked_upd_tcb_st_helper)
@@ -1986,20 +2003,17 @@ lemma cancel_all_ipc_invs_helper':
      which is much easier to solve by cases on st. First, the simpler cases. *)
   apply (case_tac "\<forall>ep r. st \<noteq> BlockedOnReceive ep (Some r)"; clarsimp)
    apply (subst bind_assoc[symmetric])
-   apply (rule_tac s="return ()" in ssubst[where P="\<lambda>a. \<lbrace>P\<rbrace> do _ <- a; x <- b; c x od \<lbrace>Q\<rbrace>" for P a b c Q])
+   apply (rule_tac s="return ()" in ssubst[where P="\<lambda>a. \<lbrace>P\<rbrace> do _ <- a; b od \<lbrace>Q\<rbrace>" for P a b Q])
     apply (case_tac st; fastforce)
-   apply (wpsimp wp: hoare_vcg_ball_lift sts_st_tcb_at_cases_different_thread
-                     reply_unlink_tcb_st_tcb_at reply_unlink_tcb_refs_of
-                     hoare_drop_imps
-               simp: pred_tcb_at_eq_commute)
+   apply (wpsimp wp: hoare_vcg_ball_lift restart_thread_if_no_fault_other)
+   apply (rule conjI, clarsimp)
    apply (erule delta_sym_refs
           ; fastforce simp: pred_tcb_at_def obj_at_def state_refs_of_def get_refs_def2
                      split: if_splits)
   (* now the interesting case *)
-  apply (wpsimp wp: hoare_vcg_ball_lift sts_st_tcb_at_cases_different_thread
+  apply (wpsimp wp: hoare_vcg_ball_lift restart_thread_if_no_fault_other
                     reply_unlink_tcb_st_tcb_at reply_unlink_tcb_refs_of
-                    hoare_drop_imps
-              simp: pred_tcb_at_eq_commute)
+                    hoare_drop_imps)
   apply (intro conjI impI allI ballI
          ; clarsimp simp: reply_at_ppred_def pred_tcb_at_def obj_at_def is_tcb)
   by (erule delta_sym_refs
@@ -2020,11 +2034,7 @@ lemma cancel_all_ipc_invs_helper:
                           reply_opt <- case st of BlockedOnReceive _ ro \<Rightarrow> return ro
                                                                     | _ \<Rightarrow> return None;
                           _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb t (the reply_opt));
-                          fault <- thread_get tcb_fault t;
-                          if fault = None
-                          then do set_thread_state t Restart;
-                                  possible_switch_to t od
-                          else set_thread_state t Inactive
+                          restart_thread_if_no_fault t
                        od) q;
       reschedule_required
    od
@@ -2082,6 +2092,17 @@ lemmas thread_get_fault_wp =
   thread_get_wp''[where f=tcb_fault,
                   folded pred_tcb_at_def[where proj=itcb_fault, simplified]]
 
+lemma restart_thread_if_no_fault_st_tcb_at_cases_strong:
+  "\<lbrace>\<lambda>s. tcb_at t s \<longrightarrow> (t = t' \<longrightarrow> (if fault_tcb_at ((=) None) t s
+                                    then P (P' Restart)
+                                    else P (P' Inactive)))
+                        \<and> (t \<noteq> t' \<longrightarrow> P (st_tcb_at P' t' s))\<rbrace>
+   restart_thread_if_no_fault t
+   \<lbrace>\<lambda>rv s. P (st_tcb_at P' t' s) \<rbrace>"
+  by (wpsimp simp: restart_thread_if_no_fault_def
+               wp: sts_st_tcb_at_cases_strong thread_get_wp')
+     (auto simp: pred_tcb_at_def obj_at_def)
+
 lemma cancel_all_ipc_st_tcb_at_helper:
   fixes P P' t
   defines "V \<equiv> \<lambda>q s. if t \<in> set q
@@ -2093,18 +2114,12 @@ lemma cancel_all_ipc_st_tcb_at_helper:
           mapM_x (\<lambda>t. do st <- get_thread_state t;
                          reply_opt <- case st of BlockedOnReceive _ ro \<Rightarrow> return ro | _ \<Rightarrow> return None;
                          _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb t (the reply_opt));
-                         fault <- thread_get tcb_fault t;
-                         if fault = None
-                         then do set_thread_state t Restart;
-                                 possible_switch_to t od
-                         else set_thread_state t Inactive
+                         restart_thread_if_no_fault t
                       od) q
          \<lbrace>\<lambda>rv s. P (st_tcb_at P' t s)\<rbrace>"
   apply (rule mapM_x_inv_wp2[of \<top> V, simplified]; simp add: V_def split del: if_splits)
-  by (wpsimp wp: sts_st_tcb_at_cases_strong reply_unlink_tcb_st_tcb_at gts_wp
-                    set_thread_state_pred_tcb_at' hoare_vcg_imp_lift'
-                    thread_get_fault_wp)
-     (auto simp: pred_tcb_at_def obj_at_def)
+  by (wpsimp wp: restart_thread_if_no_fault_st_tcb_at_cases_strong reply_unlink_tcb_st_tcb_at
+                 restart_thread_if_no_fault_pred_tcb_at' gts_wp hoare_vcg_imp_lift')
 
 lemma cancel_all_ipc_st_tcb_at':
   "\<lbrace>\<lambda>s. if ep_at_pred (\<lambda>ep. t \<in> fst ` ep_q_refs_of ep) epptr s
@@ -2328,21 +2343,28 @@ lemma cancel_all_unlive_helper':
 crunch obj_at[wp]: possible_switch_to "\<lambda>s. P (obj_at Q p s)"
   (wp: crunch_wps simp: crunch_simps)
 
+lemma restart_thread_if_no_fault_obj_at_impossible':
+  "(\<And>tcb. \<not> P' (TCB tcb)) \<Longrightarrow> restart_thread_if_no_fault t \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  unfolding restart_thread_if_no_fault_def
+  by (wpsimp wp: sts_obj_at_impossible' hoare_drop_imps)
+
+lemmas
+  restart_thread_if_no_fault_obj_at_impossible =
+    restart_thread_if_no_fault_obj_at_impossible'[where P= id, simplified]
+
 lemma cancel_all_unlive_helper:
   "\<lbrace>obj_at (\<lambda>obj. \<not> live obj \<and> is_ep obj) ptr\<rbrace>
      mapM_x (\<lambda>t. do st <- get_thread_state t;
                     reply_opt <- case st of BlockedOnReceive _ ro \<Rightarrow> return ro | _ \<Rightarrow> return None;
                     _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb t (the reply_opt));
-                    fault <- thread_get tcb_fault t;
-                    if fault = None
-                    then do set_thread_state t Restart;
-                            possible_switch_to t od
-                    else set_thread_state t Inactive
+                    restart_thread_if_no_fault t
                  od) q
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) ptr\<rbrace>"
   apply (rule hoare_strengthen_post [OF mapM_x_wp'])
    apply (rule hoare_seq_ext[OF _ gts_sp])
-   apply (wpsimp simp: is_ep wp: hoare_drop_imp sts_obj_at_impossible cancel_all_unlive_helper')
+   apply (wpsimp wp: hoare_drop_imp restart_thread_if_no_fault_obj_at_impossible
+                     cancel_all_unlive_helper'
+               simp: is_ep)
   apply (clarsimp simp: obj_at_def)
   done
 
@@ -2407,8 +2429,7 @@ lemma cancel_badged_sends_filterM_helper':
               = {(epptr, TCBBlockedSend)})\<rbrace>
       filterM (\<lambda>t. do st \<leftarrow> get_thread_state t;
                       if blocking_ipc_badge st = badge
-                      then do y \<leftarrow> set_thread_state t Structures_A.thread_state.Restart;
-                              y \<leftarrow> possible_switch_to t;
+                      then do _ <- restart_thread_if_no_fault t;
                               return False
                       od
                       else return True
@@ -2438,7 +2459,7 @@ lemma cancel_badged_sends_filterM_helper':
                     valid_ioports_lift sts_valid_replies)
   apply (rule conjI[rotated])
    apply blast
-  apply clarsimp
+  apply (clarsimp simp: replies_blocked_upd_tcb_st_helper)
   apply (thin_tac "obj_at f epptr s" for f s)
   apply (thin_tac "tcb_at x s" for x s)
   apply (thin_tac "sym_refs (state_hyp_refs_of s)" for s)

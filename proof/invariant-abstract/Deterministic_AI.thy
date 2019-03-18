@@ -3991,70 +3991,21 @@ lemma reply_remove_cdt_cdt_list[wp]:
   by (wpsimp simp: reply_remove_def
        wp: hoare_drop_imps hoare_vcg_all_lift)
 
-lemma reply_remove_tcb_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> reply_remove_tcb t r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: reply_remove_tcb_def wp: gts_inv hoare_vcg_all_lift hoare_drop_imp)
-
 lemma possible_switch_to_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> possible_switch_to r \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: possible_switch_to_def)
-
-lemma cancel_all_signals_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> cancel_all_signals np \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: cancel_all_signals_def wp: mapM_x_wp' get_simple_ko_wp)
-
-lemma unbind_maybe_notification_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> unbind_maybe_notification r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: unbind_maybe_notification_def get_sk_obj_ref_def wp: maybeM_inv)
-
-lemma sched_context_unbind_tcb_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> sched_context_unbind_tcb r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: sched_context_unbind_tcb_def wp: get_sched_context_wp)
-
-lemma sched_context_unbind_all_tcbs_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> sched_context_unbind_all_tcbs r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: sched_context_unbind_all_tcbs_def)
-
-lemma sched_context_unbind_ntfn_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> sched_context_unbind_ntfn r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: sched_context_unbind_ntfn_def get_sc_obj_ref_def)
-
-lemma sched_context_maybe_unbind_ntfn_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> sched_context_maybe_unbind_ntfn r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: sched_context_maybe_unbind_ntfn_def get_sk_obj_ref_def wp: maybeM_inv)
-
-crunch valid_list[wp]: set_message_info valid_list
 
 lemma set_mrs_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> set_mrs ptr buf msgs \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: set_mrs_def zipWithM_x_mapM_x split_del: if_split
         wp: hoare_drop_imp set_object_wp hoare_vcg_if_lift2 mapM_x_wp')
 
-lemma sched_context_update_consumed_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> sched_context_update_consumed ptr\<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: sched_context_update_consumed_def)
-
-lemma set_consumed_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> set_consumed ptr args \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: set_consumed_def)
-
-lemma complete_yield_to_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> complete_yield_to r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: complete_yield_to_def wp: hoare_drop_imp)
-
-lemma sched_context_unbind_yield_from_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> sched_context_unbind_yield_from r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: sched_context_unbind_yield_from_def)
-
-lemma cancel_all_ipc_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> cancel_all_ipc r \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  by (wpsimp simp: cancel_all_ipc_def wp: mapM_x_wp' hoare_drop_imp)
-
-crunch valid_list[wp]: thread_set valid_list
-
-lemma reply_cancel_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_cancel_ipc tptr rptr \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  unfolding reply_cancel_ipc_def
-  by (wp select_wp hoare_drop_imps thread_set_mdb | simp)+
+crunches
+  cancel_all_signals, unbind_maybe_notification, sched_context_unbind_all_tcbs,
+  sched_context_unbind_ntfn, sched_context_maybe_unbind_ntfn,
+  sched_context_unbind_yield_from, cancel_all_ipc, thread_set, reply_cancel_ipc
+  for valid_list[wp]: valid_list
+  (wp: mapM_x_wp' hoare_drop_imp)
 
 crunch all_but_exst[wp]: update_work_units "all_but_exst P"
 

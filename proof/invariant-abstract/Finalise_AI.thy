@@ -1064,6 +1064,16 @@ lemma reply_unlink_sc_cte_wp_at:
 crunch cte_wp_at[wp]: reply_unlink_tcb,unbind_from_sc "cte_wp_at P p"
   (wp: maybeM_inv hoare_drop_imp ignore: get_simple_ko)
 
+lemma unbind_from_sc_invs[wp]:
+  "\<lbrace>invs and K (t \<noteq> idle_thread_ptr)\<rbrace> unbind_from_sc t \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (wpsimp simp: unbind_from_sc_def
+                  wp: complete_yield_to_invs)
+    apply (wpsimp wp: hoare_vcg_all_lift hoare_drop_imp)
+   apply (wpsimp simp: get_tcb_obj_ref_def thread_get_def)
+  apply clarsimp
+  apply (fastforce dest!: get_tcb_SomeD thread_not_idle_implies_sc_not_idle)
+  done
+
 lemma cap_delete_one_cte_wp_at_preserved:
   assumes x: "\<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap"
   shows "\<lbrace>cte_wp_at P p\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv s. cte_wp_at P p s\<rbrace>"

@@ -370,9 +370,6 @@ crunch typ_at_arch[wp,Finalise_AI_asms]: arch_finalise_cap,prepare_thread_delete
         ignore: maskInterrupt )
 
 crunch tcb_at[wp]: prepare_thread_delete "\<lambda>s. tcb_at p s"
-crunch tcb_at[wp]: tcb_release_remove "\<lambda>s. tcb_at p s"
-crunch tcb_at[wp]: unbind_from_sc "\<lambda>s. tcb_at p s"
-  (ignore: tcb_release_remove wp: maybeM_inv hoare_drop_imps)
 
 lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
   "\<lbrace>valid_cap cap\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>"
@@ -499,10 +496,6 @@ lemma (* suspend_no_cap_to_obj_ref *)[wp,Finalise_AI_asms]:
   apply (clarsimp simp: table_cap_ref_simps
                  dest!: obj_ref_none_no_asid[rule_format])
   done
-
-crunches blocked_cancel_ipc, cancel_signal, test_reschedule, tcb_release_remove
-  for bound_sc_tcb_at[wp]:  "bound_sc_tcb_at P t"
-(ignore: set_object thread_set wp: mapM_x_wp_inv maybeM_inv get_simple_ko_wp crunch_wps)
 
 lemma sched_context_donate_bound_sc_tcb_at_None:
   "\<lbrace>bound_sc_tcb_at ((=) None) t and K (caller_tcb \<noteq> t)\<rbrace>
@@ -1682,16 +1675,6 @@ lemma mapM_x_swp_store_invalid_pde_invs:
 global_naming Arch
 
 crunch invs[wp]: prepare_thread_delete invs
-
-lemma unbind_from_sc_invs[wp]:
-  "\<lbrace>invs and K (t \<noteq> idle_thread_ptr)\<rbrace> unbind_from_sc t \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wpsimp simp: unbind_from_sc_def
-                  wp: complete_yield_to_invs)
-    apply (wpsimp wp: hoare_vcg_all_lift hoare_drop_imp)
-   apply (wpsimp simp: get_tcb_obj_ref_def thread_get_def)
-  apply clarsimp
-  apply (fastforce dest!: get_tcb_SomeD thread_not_idle_implies_sc_not_idle)
-  done
 
 lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
   shows "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv (s(*::det_ext state*)). invs s\<rbrace>"
