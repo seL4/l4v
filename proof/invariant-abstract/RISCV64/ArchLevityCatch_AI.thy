@@ -17,7 +17,7 @@ begin
 
 context Arch begin global_naming RISCV64
 
-lemma asid_high_bits_of_shift :
+lemma asid_high_bits_of_shift[simp]:
   "asid_high_bits_of (ucast x << asid_low_bits) = x"
   apply (simp add: asid_high_bits_of_def)
   apply (rule word_eqI)

@@ -355,6 +355,16 @@ lemma weak_derived_ASIDPool2:
 lemmas weak_derived_ASIDPool [simp] =
   weak_derived_ASIDPool1 weak_derived_ASIDPool2
 
+lemmas cap_asid_simps[simp] =
+  cap_asid_def[THEN fun_cong,
+               unfolded arch_cap_fun_lift_def cap_asid_arch_def,
+               split_simps cap.split arch_cap.split]
+
+lemma weak_derived_Page1[simp]:
+  "weak_derived (ArchObjectCap (PageTableCap p ref)) cap = (cap = ArchObjectCap (PageTableCap p ref))"
+  by (auto simp: weak_derived_def copy_of_def is_cap_simps cap_master_cap_simps
+           dest!: same_object_as_cap_master cap_master_cap_eqDs split: option.splits)
+
 
 lemma swap_of_caps_valid_arch_caps [CNodeInv_AI_assms]:
   "\<lbrace>valid_arch_caps and
@@ -365,44 +375,51 @@ lemma swap_of_caps_valid_arch_caps [CNodeInv_AI_assms]:
      set_cap c' a
    od
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
+  supply split_paired_Ex[simp del] split_paired_All[simp del] imp_disjL[simp del]
   apply (rule hoare_pre)
-   apply (simp add: valid_arch_caps_def
-                    valid_vs_lookup_def valid_table_caps_def pred_conj_def
-               del: split_paired_Ex split_paired_All imp_disjL)
+   apply (simp add: valid_arch_caps_def valid_asid_pool_caps_def
+                    valid_vs_lookup_def valid_table_caps_def pred_conj_def)
    apply (wp hoare_vcg_all_lift hoare_convert_imp[OF set_cap.vs_lookup_pages]
              hoare_vcg_disj_lift hoare_convert_imp[OF set_cap_caps_of_state]
              hoare_use_eq[OF set_cap_arch set_cap_obj_at_impossible[where P="\<lambda>x. x"]]
              hoare_vcg_imp_lift')
-  sorry (* FIXME RISCV
-  apply (clarsimp simp: valid_arch_caps_def cte_wp_at_caps_of_state
-              simp del: split_paired_Ex split_paired_All imp_disjL)
+  apply (clarsimp simp: valid_arch_caps_def cte_wp_at_caps_of_state)
   apply (frule weak_derived_obj_refs[where dcap=c])
   apply (frule weak_derived_obj_refs[where dcap=c'])
   apply (frule weak_derived_vspace_asid[where c=c])
   apply (frule weak_derived_vspace_asid[where c=c'])
+  apply (frule weak_derived_vspace_asid[where c=c])
+  apply (frule weak_derived_vs_cap_ref[where c=c])
+  apply (frule weak_derived_vs_cap_ref[where c=c'])
   apply (intro conjI)
-     apply (simp add: valid_vs_lookup_def del: split_paired_Ex split_paired_All)
-     apply (elim allEI)
-     apply (intro impI disjCI2)
-     apply (simp del: split_paired_Ex split_paired_All)
-     apply (elim conjE)
+      apply (simp add: valid_vs_lookup_def)
+      apply (elim allEI)
+      apply (intro impI disjCI2)
+      apply simp
+      apply (elim conjE)
+      apply (erule exfEI[where f="id (a := b, b := a)"])
+      subgoal by (clarsimp dest!: weak_derived_vs_cap_ref, intro conjI; clarsimp)
+     apply (clarsimp simp: valid_asid_pool_caps_def)
+     apply (elim allE, erule (1) impE)
      apply (erule exfEI[where f="id (a := b, b := a)"])
-     subgoal by (clarsimp dest!: weak_derived_vs_cap_ref, intro conjI; clarsimp)
-    apply (simp add: valid_table_caps_def empty_table_caps_of
-                del: split_paired_Ex split_paired_All imp_disjL)
-   apply (simp add: unique_table_caps_def
-               del: split_paired_Ex split_paired_All imp_disjL
-                    split del: if_split)
+     apply (erule exE, elim conjE)
+     apply simp
+     apply (rule conjI; clarsimp)
+    apply (intro allI impI)
+    apply (elim exE conjE)
+    subgoal for _ _ _ _ p
+      by (case_tac "p=b"; case_tac "p=a";
+            fastforce simp add: valid_table_caps_def empty_table_caps_of)
+   apply (simp add: unique_table_caps_def split del: if_split)
    apply (erule allfEI[where f="id (a := b, b := a)"])
    apply (erule allfEI[where f="id (a := b, b := a)"])
    apply (clarsimp split del: if_split split: if_split_asm)
-  apply (simp add: unique_table_refs_def
-              del: split_paired_All split del: if_split)
+  apply (simp add: unique_table_refs_def split del: if_split)
   apply (erule allfEI[where f="id (a := b, b := a)"])
   apply (erule allfEI[where f="id (a := b, b := a)"])
   apply (clarsimp split del: if_split split: if_split_asm dest!:vs_cap_ref_to_table_cap_ref
                       dest!: weak_derived_table_cap_ref)
-  done *)
+  done
 
 
 lemma cap_swap_asid_map[wp, CNodeInv_AI_assms]:

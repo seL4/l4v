@@ -412,10 +412,10 @@ definition valid_vs_lookup :: "'z::state_ext state \<Rightarrow> bool" where
 definition valid_asid_pool_caps_2 :: "(cslot_ptr \<rightharpoonup> cap) \<Rightarrow> (asid_high_index \<rightharpoonup> obj_ref) \<Rightarrow> bool"
   where
   "valid_asid_pool_caps_2 caps table \<equiv>
-     \<forall>asid p. table (asid_high_bits_of asid) = Some p \<longrightarrow>
-                asid_high_bits_of asid \<noteq> 0 \<and>
+     \<forall>asid p. table asid = Some p \<longrightarrow>
                 (\<exists>cptr cap. caps cptr = Some cap \<and>
-                            obj_refs cap = {p} \<and> vs_cap_ref cap = Some (asid, 0))"
+                            obj_refs cap = {p} \<and>
+                            vs_cap_ref cap = Some (ucast asid << asid_low_bits, 0))"
 
 locale_abbrev valid_asid_pool_caps :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_asid_pool_caps \<equiv> \<lambda>s.
