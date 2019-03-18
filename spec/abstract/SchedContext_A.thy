@@ -209,12 +209,15 @@ where
   "refill_unblock_check sc_ptr = do
     robin \<leftarrow> is_round_robin sc_ptr;
     when (\<not> robin ) $ do
-      ct \<leftarrow> gets cur_time; (* do we need to check refill_ready here? *)
+      ct \<leftarrow> gets cur_time;
       modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
       refills \<leftarrow> get_refills sc_ptr;
-      refills' \<leftarrow> return $ refills_merge_prefix ((hd refills)\<lparr>r_time := ct\<rparr> # tl refills);
-      assert (sufficient_refills 0 refills'); (* do we need this assert? *)
-      set_refills sc_ptr refills'
+      ready \<leftarrow> return $ (r_time (hd refills)) \<le> ct + kernelWCET_ticks; (* refill_ready sc_ptr *)
+      when ready $ do
+        refills' \<leftarrow> return $ refills_merge_prefix ((hd refills)\<lparr>r_time := ct\<rparr> # tl refills);
+        assert (sufficient_refills 0 refills'); (* do we need this assert? *)
+        set_refills sc_ptr refills'
+      od
     od
   od"
 
