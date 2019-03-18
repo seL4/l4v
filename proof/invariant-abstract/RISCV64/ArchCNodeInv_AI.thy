@@ -306,20 +306,22 @@ lemma weak_derived_vs_cap_ref [CNodeInv_AI_assms]:
                  same_object_as_def2
           split: if_split_asm elim: vs_cap_ref_master[OF sym])
 
+lemma vs_cap_ref_eq_imp_table_cap_ref_eq':
+  "\<lbrakk> vs_cap_ref cap = vs_cap_ref cap'; cap_master_cap cap = cap_master_cap cap' \<rbrakk>
+   \<Longrightarrow> table_cap_ref cap = table_cap_ref cap'"
+  by (simp add: vs_cap_ref_def vs_cap_ref_arch_def arch_cap_fun_lift_def cap_master_cap_def
+           split: cap.splits arch_cap.splits option.splits prod.splits)
+
 lemma weak_derived_table_cap_ref [CNodeInv_AI_assms]:
   "weak_derived c c' \<Longrightarrow> table_cap_ref c = table_cap_ref c'"
-  apply (clarsimp simp: weak_derived_def copy_of_def
-                 same_object_as_def2
-          split: if_split_asm)
+  apply (clarsimp simp: weak_derived_def copy_of_def same_object_as_def2
+                  split: if_split_asm)
    apply (elim disjE,simp_all add:is_cap_simps)
   apply (elim disjE,simp_all)
   apply clarsimp
   apply (frule vs_cap_ref_master[OF sym],simp+)
-  sorry (* FIXME RISCV
-  apply (drule vs_cap_ref_eq_imp_table_cap_ref_eq')
-   apply simp
-  apply simp
-  done *)
+  apply (drule vs_cap_ref_eq_imp_table_cap_ref_eq'; simp)
+  done
 
 
 lemma weak_derived_vspace_asid:
@@ -691,7 +693,7 @@ next
       apply (rule conjI, clarsimp simp: cte_wp_at_caps_of_state)
        apply (erule tcb_valid_nonspecial_cap)
          apply fastforce
-        apply (clarsimp simp: ran_tcb_cap_cases is_cap_simps
+        apply (clarsimp simp: ran_tcb_cap_cases is_cap_simps is_nondevice_page_cap
                        split: Structures_A.thread_state.splits) sorry (* FIXME RISCV
        apply (clarsimp simp: is_cap_simps)
       apply (rule conjI)

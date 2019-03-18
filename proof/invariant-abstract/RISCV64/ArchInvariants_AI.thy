@@ -228,11 +228,15 @@ definition
   [simp]: "is_nondevice_page_cap_arch \<equiv> \<lambda>cap. is_FrameCap cap \<and> \<not> acap_is_device cap"
 
 definition
-  "is_nondevice_page_cap \<equiv> \<lambda>c. arch_cap_fun_lift is_nondevice_page_cap_arch False c"
+  "is_nondevice_page_cap c \<equiv> arch_cap_fun_lift is_nondevice_page_cap_arch False c"
 
 lemma is_nondevice_page_cap:
   "is_nondevice_page_cap c = (\<exists>p q r s t. c = ArchObjectCap (FrameCap p q s False t))"
   by (auto simp: is_nondevice_page_cap_def is_FrameCap_def split: cap.splits arch_cap.splits)
+
+lemmas is_nondevice_page_cap_simps[simp] =
+  is_nondevice_page_cap_def[unfolded arch_cap_fun_lift_def is_nondevice_page_cap_arch_def,
+                            split_simps arch_cap.split cap.split]
 
 primrec acap_class :: "arch_cap \<Rightarrow> capclass" where
   "acap_class (ASIDPoolCap _ _)     = PhysicalClass"
