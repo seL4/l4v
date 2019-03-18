@@ -25,7 +25,7 @@ ifeq ($(findstring ARM, ${L4V_ARCH}),ARM)
 endif
 
 ifeq (${L4V_ARCH},RISCV64)
-    TOOLPREFIX ?= riscv64-unknown-elf-
+    TOOLPREFIX ?= riscv64-unknown-linux-gnu-
 endif
 
 SORRY_BITFIELD_PROOFS?=FALSE
