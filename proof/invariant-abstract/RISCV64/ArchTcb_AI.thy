@@ -76,12 +76,11 @@ lemma checked_insert_is_derived: (* arch specific *)
   apply (frule same_master_cap_same_types)
   apply (simp add: is_derived_def)
   apply clarsimp
-  sorry (* FIXME RISCV
   by (auto simp: is_cap_simps cap_master_cap_def
-                    is_cnode_or_valid_arch_def vs_cap_ref_def
-                    table_cap_ref_def vspace_asid_def up_ucast_inj_eq
-             split: cap.split_asm arch_cap.split_asm
-                    option.split_asm)[1] *)
+                 is_cnode_or_valid_arch_def vs_cap_ref_def
+                 table_cap_ref_def vspace_asid_def up_ucast_inj_eq
+          split: cap.split_asm arch_cap.split_asm
+                 option.split_asm)[1]
 
 lemma is_cnode_or_valid_arch_cap_asid: (* arch specific *)
   "is_cnode_or_valid_arch cap \<Longrightarrow> (is_pt_cap cap \<longrightarrow> cap_asid cap \<noteq> None)"
@@ -168,17 +167,16 @@ context Arch begin global_naming RISVB64
 lemma use_no_cap_to_obj_asid_strg: (* arch specific *)
   "(cte_at p s \<and> no_cap_to_obj_dr_emp cap s \<and> valid_cap cap s \<and> invs s)
          \<longrightarrow> cte_wp_at (\<lambda>c. obj_refs c = obj_refs cap
-                \<longrightarrow> table_cap_ref c = table_cap_ref cap \<and> vspace_asid c = vspace_asid cap) p s"
+                              \<longrightarrow> table_cap_ref c = table_cap_ref cap \<and>
+                                  vspace_asid c = vspace_asid cap) p s"
   apply (clarsimp simp: cte_wp_at_caps_of_state
                      no_cap_to_obj_with_diff_ref_def
            simp del: split_paired_All)
   apply (frule caps_of_state_valid_cap, fastforce)
   apply (erule allE)+
   apply (erule (1) impE)+
-  apply (simp add: table_cap_ref_def vspace_asid_def split: cap.splits arch_cap.splits option.splits prod.splits)
-  sorry (* FIXME RISCV
-  by (fastforce simp: table_cap_ref_def valid_cap_simps wellformed_mapdata_def elim!: asid_low_high_bits)
-  *)
+  by (fastforce simp: table_cap_ref_def vspace_asid_def valid_cap_simps obj_at_def
+                split: cap.splits arch_cap.splits option.splits prod.splits)
 
 lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
   "\<lbrace>no_cap_to_obj_dr_emp cap\<rbrace>
@@ -190,9 +188,26 @@ lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
   apply simp
   apply (rule use_spec)
   apply (rule rec_del_all_caps_in_range)
-     apply (simp add: table_cap_ref_def[simplified, split_simps cap.split]
-              | rule obj_ref_none_no_asid)+
-  sorry (* FIXME RISCV *)
+     apply (simp | rule obj_ref_none_no_asid)+
+  done
+
+lemma as_user_valid_cap[wp]:
+  "as_user t f \<lbrace>valid_cap cap\<rbrace>"
+  by (wp valid_cap_typ)
+
+lemma as_user_ipc_tcb_cap_valid4[wp]:
+  "as_user t f \<lbrace>tcb_cap_valid cap (t, tcb_cnode_index 4)\<rbrace>"
+  apply (simp add: as_user_def set_object_def)
+  apply (wp assert_inv | wpc | simp)+
+  apply (clarsimp simp: tcb_cap_valid_def obj_at_def
+                        pred_tcb_at_def is_tcb
+                 dest!: get_tcb_SomeD)
+  apply (clarsimp simp: get_tcb_def)
+  done
+
+lemma is_nondevice_page_cap_simp[simp]:
+  "is_nondevice_page_cap (ArchObjectCap (FrameCap p q s False t))"
+  by (subst is_nondevice_page_cap) simp
 
 lemma tc_invs[Tcb_AI_asms]:
   "\<lbrace>invs and tcb_at a
@@ -251,19 +266,16 @@ lemma tc_invs[Tcb_AI_asms]:
                     emptyable_def
                del: hoare_True_E_R
         | wpc
-        | strengthen use_no_cap_to_obj_asid_strg
+        | strengthen use_no_cap_to_obj_asid_strg use_no_cap_to_obj_asid_strg[simplified conj_comms]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])+)
-  sorry (* FIXME RISCV
-  apply (intro conjI impI; clarsimp?;
-    (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
+  by (intro conjI impI; clarsimp?;
+     (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
                         is_cap_simps is_valid_vtable_root_def
                         is_cnode_or_valid_arch_def tcb_cap_valid_def
                         invs_valid_objs cap_asid_def vs_cap_ref_def
                         case_bool_If valid_ipc_buffer_cap_def
-                       | split arch_cap.splits if_splits)+
-  )
-  done *)
+                       | split cap.splits arch_cap.splits if_splits)+)
 
 lemma check_valid_ipc_buffer_inv: (* arch_specific *)
   "\<lbrace>P\<rbrace> check_valid_ipc_buffer vptr cap \<lbrace>\<lambda>rv. P\<rbrace>"
