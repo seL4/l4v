@@ -394,6 +394,19 @@ definition
    od
    od"
 
+definition
+  restart_thread_if_no_fault :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "restart_thread_if_no_fault t \<equiv> do
+     fault \<leftarrow> thread_get tcb_fault t;
+     if fault = None
+     then do
+       set_thread_state t Restart;
+       possible_switch_to t
+     od
+     else set_thread_state t Inactive
+   od"
+
 text {* Cancel all message operations on threads currently queued within this
 synchronous message endpoint. Threads so queued are placed in the Restart state.
 Once scheduled they will reattempt the operation that previously caused them
@@ -412,13 +425,7 @@ where
               reply_opt \<leftarrow> case st of BlockedOnReceive _ r_opt \<Rightarrow> return r_opt
                                     | _ \<Rightarrow> return None;
               when (reply_opt \<noteq> None) $ reply_unlink_tcb t (the reply_opt);
-              fault \<leftarrow> thread_get tcb_fault t;
-              if fault = None
-              then do
-                 set_thread_state t Restart;
-                 possible_switch_to t
-              od
-              else set_thread_state t Inactive
+              restart_thread_if_no_fault t
             od) $ queue;
          reschedule_required
       od
@@ -445,8 +452,7 @@ where
             queue' \<leftarrow> (swp filterM queue) (\<lambda> t. do
                 st \<leftarrow> get_thread_state t;
                 if blocking_ipc_badge st = badge then do
-                  set_thread_state t Restart;
-                  possible_switch_to t;
+                  restart_thread_if_no_fault t;
                   return False
                 od
                 else return True
