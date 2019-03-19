@@ -1429,7 +1429,7 @@ lemma vref_for_level_eq_mono:
   by (metis (no_types, hide_lams) pt_bits_left_mono mask_lower_twice)
 
 lemma pt_walk_vref_for_level_eq:
-  "\<lbrakk> vref_for_level vref bot_level = vref_for_level vref' bot_level; bot_level \<le> top_level \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> vref_for_level vref (bot_level+1) = vref_for_level vref' (bot_level+1); bot_level \<le> top_level \<rbrakk> \<Longrightarrow>
    pt_walk top_level bot_level pt vref =
    pt_walk top_level bot_level pt vref'"
   apply (rule ext, rename_tac ptes)
@@ -1437,19 +1437,34 @@ lemma pt_walk_vref_for_level_eq:
    apply (drule_tac pt=pt in vref_for_level_pt_slot_offset)
    apply (simp add: pt_walk.simps Let_def oapply_def)
    apply (simp add: obind_def oreturn_def split: option.splits)
+  apply (case_tac "top_level=bot_level")
+   apply (simp add: pt_walk.simps)
   apply (subst pt_walk.simps)
   apply (subst (2) pt_walk.simps)
   apply (simp add: Let_def bit0.leq_minus1_less)
-  apply (drule (1) vref_for_level_eq_mono)
+  apply (drule_tac level'=top_level in vref_for_level_eq_mono)
+   apply (simp add: bit0.plus_one_leq)
   apply (drule_tac pt=pt in vref_for_level_pt_slot_offset)
   apply (clarsimp simp: obind_def oapply_def split: option.splits)
   done
 
 lemma pt_walk_vref_for_level:
-  "\<lbrakk> level \<le> bot_level; bot_level \<le> top_level \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> level \<le> bot_level; bot_level \<le> top_level; top_level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
    pt_walk top_level bot_level pt (vref_for_level vref level) =
    pt_walk top_level bot_level pt vref"
-  by (blast intro: pt_walk_vref_for_level_eq vref_for_level_idem)
+  by (meson max_pt_level_less_Suc le_less order_trans vref_for_level_idem pt_walk_vref_for_level_eq)
+
+lemma pt_walk_vref_for_level1:
+  "\<lbrakk> level \<le> bot_level; bot_level \<le> top_level; top_level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
+   pt_walk top_level bot_level pt (vref_for_level vref (level+1)) =
+   pt_walk top_level bot_level pt vref"
+  by (meson max_pt_level_less_Suc bit0.plus_one_leq leD leI order.trans vref_for_level_idem
+            pt_walk_vref_for_level_eq)
+
+lemma vs_lookup_vref_for_level1:
+  "level \<le> bot_level \<Longrightarrow>
+   vs_lookup_table bot_level asid (vref_for_level vref (level+1)) = vs_lookup_table bot_level asid vref"
+  by (force simp: vs_lookup_table_def pt_walk_vref_for_level1 obind_def split: option.splits)
 
 lemma vs_lookup_vref_for_level:
   "level \<le> bot_level \<Longrightarrow>
@@ -1531,6 +1546,11 @@ lemma vs_lookup_level:
   apply (fastforce intro: pt_walk_level)
   done
 
+lemma vs_lookup_level_vref1:
+  "vs_lookup_table bot_level asid vref s = Some (level, p)
+   \<Longrightarrow> vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p)"
+  by (simp add: vs_lookup_level vs_lookup_vref_for_level1)
+
 lemma vs_lookup_level_vref:
   "vs_lookup_table bot_level asid vref s = Some (level, p)
    \<Longrightarrow> vs_lookup_table level asid (vref_for_level vref level) s = Some (level, p)"
@@ -1581,12 +1601,12 @@ qed
 
 lemma valid_vspace_objsI [intro?]:
   "(\<And>p ao asid vref level.
-       \<lbrakk> vs_lookup_table level asid (vref_for_level vref level) s = Some (level, p);
+       \<lbrakk> vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p);
          vref \<in> user_region s;
          aobjs_of s p = Some ao \<rbrakk>
        \<Longrightarrow> valid_vspace_obj level ao s)
   \<Longrightarrow> valid_vspace_objs s"
-  by (fastforce simp: valid_vspace_objs_def dest: vs_lookup_level_vref)
+  by (fastforce simp: valid_vspace_objs_def dest: vs_lookup_level_vref1)
 
 lemma canonical_address_0[intro!,simp]:
   "canonical_address 0"

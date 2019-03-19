@@ -14,6 +14,158 @@ begin
 
 context Arch begin global_naming RISCV64
 
+(* FIXME RISCV: move up *)
+lemma invs_valid_uses[elim!]:
+  "invs s \<Longrightarrow> valid_uses s"
+  by (simp add: invs_def valid_state_def valid_arch_state_def)
+
+(* FIXME RISCV: move up *)
+lemma asid_high_bits_of_and_mask[simp]:
+  "asid_high_bits_of (asid && ~~ mask asid_low_bits || UCAST(10 \<rightarrow> 64) asid_low) =
+   asid_high_bits_of asid"
+  apply (simp add: asid_high_bits_of_def asid_low_bits_def)
+  apply word_bitwise
+  apply (simp add: word_size)
+  done
+
+(* FIXME RISCV: move up *)
+lemma asid_low_bits_of_and_mask[simp]:
+  "asid_low_bits_of (asid && ~~ mask asid_low_bits || ucast (asid_low::asid_low_index)) = asid_low"
+  apply (simp add: asid_low_bits_of_def asid_low_bits_def)
+  apply word_bitwise
+  apply (simp add: word_size)
+  done
+
+(* FIXME RISCV: move up *)
+lemma pool_for_asid_and_mask[simp]:
+  "pool_for_asid (asid && ~~ mask asid_low_bits || ucast (asid_low::asid_low_index)) s =
+   pool_for_asid asid s"
+  by (simp add: pool_for_asid_def)
+
+(* FIXME RISCV: move up *)
+lemma vs_lookup_table_ap_step:
+  "\<lbrakk> vs_lookup_table asid_pool_level asid vref s = Some (asid_pool_level, p); vref \<in> user_region s;
+     asid_pools_of s p = Some ap; pt \<in> ran ap \<rbrakk> \<Longrightarrow>
+   \<exists>asid'. vs_lookup_target asid_pool_level asid' vref s = Some (asid_pool_level, pt)"
+  apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def in_omonad ran_def)
+  apply (rename_tac asid_low)
+  apply (rule_tac x="asid && ~~mask asid_low_bits || ucast asid_low" in exI)
+  apply (fastforce simp: vs_lookup_table_def vspace_for_pool_def in_omonad)
+  done
+
+(* FIXME RISCV: move up *)
+locale_abbrev vref_for_index :: "pt_index \<Rightarrow> vm_level \<Rightarrow> vspace_ref" where
+  "vref_for_index idx level \<equiv> ucast (idx::pt_index) << pt_bits_left level"
+
+(* FIXME RISCV: move up *)
+locale_abbrev vref_for_level_idx :: "vspace_ref \<Rightarrow> pt_index \<Rightarrow> vm_level \<Rightarrow> vspace_ref" where
+  "vref_for_level_idx vref idx level \<equiv> vref_for_level vref (level+1) || vref_for_index idx level"
+
+(* FIXME RISCV: move up *)
+lemma table_index_pt_slot_offset:
+  "\<lbrakk> is_aligned p pt_bits; level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
+   table_index (pt_slot_offset level p (vref_for_level_idx vref idx level)) = idx"
+  using pt_bits_left_bound[of "level"]
+  using pt_bits_left_bound[of "level+1"]
+  apply (simp add: pt_slot_offset_def pt_index_def vref_for_level_def)
+  apply (subst word_plus_and_or_coroll)
+   apply (rule word_eqI)
+   apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bit_simps neg_mask_bang)
+   apply (clarsimp simp: pt_bits_left_def bit_simps is_aligned_nth)
+  apply (rule word_eqI)
+  apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bit_simps neg_mask_bang)
+  apply (clarsimp simp: bit_simps is_aligned_nth canonical_bit_def pt_bits_left_def)
+  done
+
+(* FIXME RISCV: move up *)
+lemma vs_lookup_vref_for_level_eq1:
+  "vref_for_level vref' (bot_level+1) = vref_for_level vref (bot_level+1) \<Longrightarrow>
+   vs_lookup_table bot_level asid vref' = vs_lookup_table bot_level asid vref"
+  apply (rule ext)
+  apply (clarsimp simp: vs_lookup_table_def obind_def split: option.splits)
+  apply (rule conjI; clarsimp)+
+  apply (erule pt_walk_vref_for_level_eq[THEN fun_cong])
+  apply simp
+  done
+
+(* FIXME RISCV: move up *)
+lemma vref_for_level_idx[simp]:
+  "level \<le> max_pt_level \<Longrightarrow>
+   vref_for_level (vref_for_level_idx vref idx level) (level + 1) =
+   vref_for_level vref (level + 1)"
+  apply (simp add: vref_for_level_def pt_bits_left_def)
+  apply (rule word_eqI)
+  apply (clarsimp simp: word_eqI_solve_simps bit_simps)
+  apply (rule iffI; clarsimp)
+  apply (drule test_bit_size)
+  apply (clarsimp simp: word_size)
+  apply (simp flip: bit0.size_less_eq)
+  done
+
+(* FIXME RISCV: move up *)
+lemma vref_for_level_nth[simp]:
+  "vref_for_level vref level !! n = (vref !! n \<and> pt_bits_left level \<le> n \<and> n < size vref)"
+  by (simp add: vref_for_level_def word_eqI_solve_simps)
+
+(* FIXME RISCV: move up *)
+lemma pt_bits_left_max:
+  "pt_bits_left max_pt_level = canonical_bit - (LENGTH(pt_index_len)-1)"
+  by (simp add: pt_bits_left_def level_defs bit_simps canonical_bit_def)
+
+(* FIXME RISCV: move up *)
+lemma kernel_mapping_slots_top_bit:
+  "(idx \<in> kernel_mapping_slots) = (idx !! (LENGTH(pt_index_len)-1))"
+  apply (simp add: kernel_mapping_slots_def pptr_base_mask pt_bits_left_max)
+  apply word_bitwise
+  apply (simp add: canonical_bit_def word_size rev_bl_order_simps)
+  done
+
+(* FIXME RISCV: move up *)
+lemma vref_for_level_idx_canonical_user:
+  "\<lbrakk> vref \<le> canonical_user; level \<le> max_pt_level; level = max_pt_level \<longrightarrow> idx \<notin> kernel_mapping_slots \<rbrakk> \<Longrightarrow>
+   vref_for_level_idx vref idx level \<le> canonical_user"
+  apply (simp add: canonical_user_def le_mask_high_bits)
+  apply (clarsimp simp: word_size)
+  apply (cases "level < max_pt_level")
+   apply (clarsimp simp: word_eqI_solve_simps canonical_bit_def)
+   apply (simp add: pt_bits_left_def bit_simps)
+   apply (frule test_bit_size)
+   apply (simp add: word_size level_defs flip: bit0.size_less)
+  apply (simp add: not_less)
+  apply (clarsimp simp: word_eqI_solve_simps canonical_bit_def kernel_mapping_slots_top_bit)
+  apply (simp add: pt_bits_left_def bit_simps level_defs)
+  apply (frule test_bit_size)
+  apply (simp add: word_size)
+  apply (subgoal_tac "i \<noteq> canonical_bit"; fastforce simp: canonical_bit_def)
+  done
+
+(* FIXME RISCV: move up *)
+lemma vs_lookup_table_pt_step:
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); vref \<in> user_region s;
+     pts_of s p = Some pt; is_aligned p pt_bits; level \<le> max_pt_level; pte_ref (pt idx) = Some x;
+     level = max_pt_level \<longrightarrow> idx \<notin> kernel_mapping_slots;
+     valid_uses s \<rbrakk> \<Longrightarrow>
+   \<exists>vref'. vs_lookup_target level asid vref' s = Some (level, x) \<and>
+           vref' \<in> user_region s"
+  apply (rule_tac x="vref_for_level vref (level+1) ||
+                     (ucast (idx::pt_index) << pt_bits_left level)" in exI)
+  apply (simp add: vs_lookup_target_def vs_lookup_slot_def in_omonad)
+  apply (rule conjI)
+   apply (rule_tac x="pt_slot_offset level p (vref_for_level_idx vref idx level)" in exI)
+   apply (rule conjI, clarsimp)
+   apply (rule conjI)
+    apply (rule_tac x=level in exI)
+    apply (rule_tac x=p in exI)
+    apply clarsimp
+    apply (rule conjI, clarsimp)
+    apply (subst vs_lookup_vref_for_level_eq1)
+     prefer 2
+     apply assumption
+    apply simp
+   apply (simp add: pte_of_def in_omonad is_aligned_pt_slot_offset_pte table_index_pt_slot_offset)
+  apply (simp add: valid_uses_user_region_eq vref_for_level_idx_canonical_user)
+  done
+
 named_theorems Detype_AI_asms
 
 lemma valid_globals_irq_node[Detype_AI_asms]:
@@ -185,11 +337,89 @@ lemma tcb_arch_detype[detype_invs_proofs]:
   apply (clarsimp simp: valid_arch_tcb_def)
   done
 
+declare arch_state_det[simp]
+
+lemma aobjs_of_detype[simp]:
+  "(aobjs_of (detype S s) p = Some aobj) = (p \<notin> S \<and> aobjs_of s p = Some aobj)"
+  by (simp add: in_omonad detype_def)
+
+lemma pts_of_detype[simp]:
+  "(pts_of (detype S s) p = Some pt) = (p \<notin> S \<and> pts_of s p = Some pt)"
+  by (simp add: in_omonad detype_def)
+
+lemma ptes_of_detype_Some[simp]:
+  "(ptes_of (detype S s) p = Some pte) = (table_base p \<notin> S \<and> ptes_of s p = Some pte)"
+  by (simp add: in_omonad ptes_of_def detype_def)
+
+lemma asid_pools_of_detype:
+  "asid_pools_of (detype S s) = (\<lambda>p. if p\<in>S then None else asid_pools_of s p)"
+  by (rule ext) (simp add: detype_def opt_map_def)
+
+lemma asid_pools_of_detype_Some[simp]:
+  "(asid_pools_of (detype S s) p = Some ap) = (p \<notin> S \<and> asid_pools_of s p = Some ap)"
+  by (simp add: in_omonad detype_def)
+
+lemma pool_for_asid_detype_Some[simp]:
+  "(pool_for_asid asid (detype S s) = Some p) = (pool_for_asid asid s = Some p)"
+  by (simp add: pool_for_asid_def)
+
+lemma vspace_for_pool_detype_Some[simp]:
+  "(vspace_for_pool ap asid (\<lambda>p. if p \<in> S then None else pools p) = Some p) =
+   (ap \<notin> S \<and> vspace_for_pool ap asid pools = Some p)"
+  by (simp add: vspace_for_pool_def obind_def split: option.splits)
+
+lemma vspace_for_asid_detype_Some[simp]:
+  "(vspace_for_asid asid (detype S s) = Some p) =
+   ((\<exists>ap. pool_for_asid asid s = Some ap \<and> ap \<notin> S) \<and> vspace_for_asid asid s = Some p)"
+  apply (simp add: vspace_for_asid_def obind_def asid_pools_of_detype split: option.splits)
+  apply (auto simp: pool_for_asid_def)
+  done
+
+lemma pt_walk_detype:
+  "pt_walk level bot_level pt_ptr vref (ptes_of (detype S s)) = Some (bot_level, p) \<Longrightarrow>
+   pt_walk level bot_level pt_ptr vref (ptes_of s) = Some (bot_level, p)"
+  apply (induct level arbitrary: pt_ptr)
+   apply (simp add: pt_walk.simps)
+  apply (subst pt_walk.simps)
+  apply (subst (asm) (3) pt_walk.simps)
+  apply (clarsimp simp: in_omonad split: if_split_asm)
+  apply (erule disjE; clarsimp)
+  apply (drule meta_spec, drule (1) meta_mp)
+  apply fastforce
+  done
+
+lemma vs_lookup_table:
+  "vs_lookup_table level asid vref (detype (untyped_range cap) s) = Some (level, p) \<Longrightarrow>
+   vs_lookup_table level asid vref s = Some (level, p)"
+  by (fastforce simp: vs_lookup_table_def in_omonad asid_pools_of_detype pt_walk_detype
+               split: if_split_asm)
+
+lemma vs_lookup_slot:
+  "(vs_lookup_slot level asid vref (detype (untyped_range cap) s) = Some (level, p)) ==>
+   (vs_lookup_slot level asid vref s = Some (level, p))"
+  by (fastforce simp: vs_lookup_slot_def in_omonad asid_pools_of_detype
+                split: if_split_asm
+                dest!: vs_lookup_table)
+
+lemma vs_lookup_target:
+  "(vs_lookup_target level asid vref (detype (untyped_range cap) s) = Some (level, p)) ==>
+   (vs_lookup_target level asid vref s = Some (level, p))"
+  by (fastforce simp: vs_lookup_target_def in_omonad asid_pools_of_detype
+                split: if_split_asm
+                dest!: vs_lookup_slot)
+
+lemma vs_lookup_target_preserved:
+  "\<lbrakk> x \<in> untyped_range cap; vs_lookup_target level asid vref s = Some (level', x);
+     vref \<in> user_region s \<rbrakk> \<Longrightarrow> False"
+  apply (drule (1) valid_vs_lookupD[OF _ _ valid_vs_lookup])
+  apply (fastforce intro: no_obj_refs)
+  done
+
 lemma valid_arch_state_detype[detype_invs_proofs]:
   "valid_arch_state (detype (untyped_range cap) s)"
   using valid_vs_lookup valid_arch_state ut_mdb valid_global_refsD [OF globals cap] cap
-  apply (simp add: valid_arch_state_def valid_asid_table_def
-                   global_refs_def cap_range_def)
+  apply (simp add: valid_arch_state_def valid_asid_table_def valid_global_arch_objs_def
+                   global_refs_def cap_range_def valid_global_tables_def)
   sorry (* FIXME RISCV
   apply (clarsimp simp: ran_def arch_state_det)
   apply (drule vs_lookup_atI)
@@ -204,112 +434,78 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
   apply blast
   done *)
 
-lemma vs_lookup:
-  "vs_lookup (detype (untyped_range cap) s) = vs_lookup s"
-  sorry (* FIXME RISCV
-  apply (rule set_eqI)
-  apply clarsimp
-  apply (rule iffI)
-   apply (erule vs_lookup_induct)
-    apply (simp add: arch_state_det)
-    apply (erule vs_lookup_atI)
-   apply (erule vs_lookup_step)
-   apply (clarsimp simp: vs_lookup1_def)
-  apply (erule vs_lookup_induct)
-   apply (rule vs_lookup_atI)
-   apply (simp add: arch_state_det)
-  apply (erule vs_lookup_step)
-  apply (clarsimp simp: vs_lookup1_def)
-  apply (drule valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI], rule valid_vs_lookup)
-  apply (elim conjE exE)
-  apply (insert cap)
-  apply (simp add: cte_wp_at_caps_of_state)
-  apply (drule untyped_mdbD, rule untyped, assumption)
-    apply blast
-   apply (rule ut_mdb)
-  apply (drule descendants_range_inD[OF drange])
-    apply (simp add:cte_wp_at_caps_of_state)
-  apply (simp add:cap_range_def)
-  apply blast
-  done *)
+lemma vs_lookup_asid_pool_level:
+  assumes lookup: "vs_lookup_table level asid vref s = Some (level, p)" "vref \<in> user_region s"
+  assumes ap: "asid_pools_of s p = Some ap"
+  shows "level = asid_pool_level"
+proof (rule ccontr)
+  have "valid_vspace_objs s" using invs by fastforce
+  moreover
+  note lookup
+  moreover
+  assume "level \<noteq> asid_pool_level"
+  then have "level \<le> max_pt_level" by simp
+  moreover
+  have "valid_uses s" "valid_asid_table s" "pspace_aligned s"
+    using invs by (auto simp: invs_def valid_state_def valid_arch_state_def)
+  ultimately
+  have "\<exists>pt. pts_of s p = Some pt \<and> valid_vspace_obj level (PageTable pt) s"
+    by (rule valid_vspace_objs_strongD)
+  with ap
+  show False by (clarsimp simp: in_omonad)
+qed
 
+lemma vs_lookup_pt_level:
+  assumes lookup: "vs_lookup_table level asid vref s = Some (level, p)" "vref \<in> user_region s"
+  assumes pt: "pts_of s p = Some pt"
+  shows "level \<le> max_pt_level"
+proof (rule ccontr)
+  assume "\<not>level \<le> max_pt_level"
+  then
+  have "level = asid_pool_level" by (simp add: not_le)
+  with lookup
+  have "pool_for_asid asid s = Some p" by (auto simp: vs_lookup_table_def)
+  moreover
+  have "valid_asid_table s" using invs by (fastforce)
+  ultimately
+  have "asid_pools_of s p \<noteq> None" by (fastforce simp: pool_for_asid_def valid_asid_table_def)
+  with pt
+  show False by (simp add: in_omonad)
+qed
 
-lemma vs_lookup_pages:
-  "vs_lookup_pages (detype (untyped_range cap) s) = vs_lookup_pages s"
-  sorry (* FIXME RISCV
-  apply (rule set_eqI)
-  apply clarsimp
-  apply (rule iffI)
-   apply (erule vs_lookup_pages_induct)
-    apply (simp add: arch_state_det)
-    apply (erule vs_lookup_pages_atI)
-   apply (erule vs_lookup_pages_step)
-   apply (clarsimp simp: vs_lookup_pages1_def)
-  apply (erule vs_lookup_pages_induct)
-   apply (rule vs_lookup_pages_atI)
-   apply (simp add: arch_state_det)
-  apply (erule vs_lookup_pages_step)
-  apply (clarsimp simp: vs_lookup_pages1_def)
-  apply (drule valid_vs_lookupD, rule valid_vs_lookup)
-  apply (elim conjE exE)
-  apply (insert cap)
-  apply (simp add: cte_wp_at_caps_of_state)
-  apply (drule untyped_mdbD, rule untyped, assumption)
-    apply blast
-   apply (rule ut_mdb)
-  apply (drule descendants_range_inD[OF drange])
-    apply (simp add:cte_wp_at_caps_of_state)
-  apply (simp add:cap_range_def)
-  apply blast
-  done *)
-
-lemma vs_lookup_preserved:
-  "\<lbrakk> x \<in> untyped_range cap; vs_lookup_table level asid vref s = Some (level', x);
-     vref \<in> user_region s \<rbrakk> \<Longrightarrow> False"
-  sorry (* FIXME RISCV
-  apply (drule valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI valid_vs_lookup])
-  apply (fastforce intro: global_pts no_obj_refs)
-  done *)
-
-lemma vs_lookup_pages_preserved:
-  "\<lbrakk> x \<in> untyped_range cap; vs_lookup_target level asid vref s = Some (level', x);
-     vref \<in> user_region s \<rbrakk> \<Longrightarrow> False"
-  sorry (* FIXME RISCV
-  apply (drule valid_vs_lookupD[OF _ valid_vs_lookup])
-  apply (fastforce intro: global_pts no_obj_refs)
-  done *)
-
-context begin
-
-private method crush for i = (* FIXME RISCV *)
-  (simp add: data_at_def obj_at_def;
-   elim disjE exE conjE;
-   clarsimp;
-   erule vs_lookup_pages_preserved;
-   (* erule vs_lookup_pages_step; *)
-   clarsimp simp: (* vs_lookup_pages1_def *) obj_at_def (* vs_refs_pages_def *);
-   strengthen image_eqI;
-   clarsimp simp: graph_of_def pte_ref_def;
-   rule exI;
-   strengthen refl;
-   simp;
-   rule exI[of _ i];
-   fastforce)
+lemma data_at_detype[simp]:
+  "data_at sz p (detype S s) = (p \<notin> S \<and> data_at sz p s)"
+  by (auto simp: data_at_def)
 
 lemma valid_vspace_obj:
-  "\<lbrakk> valid_vspace_obj level ao s; ko_at (ArchObj ao) p s; \<exists>\<rhd>(level,p) s \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> valid_vspace_obj level ao s; aobjs_of s p = Some ao; \<exists>\<rhd>(level,p) s \<rbrakk> \<Longrightarrow>
      valid_vspace_obj level ao (detype (untyped_range cap) s)"
-  sorry (* FIXME RISCV
-  apply (case_tac ao; simp; erule allEI ballEI; clarsimp simp: ran_def;
-         drule vs_lookup_pages_vs_lookupI)
-  subgoal for p t r ref i by (crush i)
-  subgoal for p t i ref by (cases "t i"; crush i)
-  subgoal for p t i ref by (cases "t i"; crush i)
-  subgoal for p t i ref by (cases "t i"; crush i)
-  subgoal for p t i ref by (cases "t i"; crush i)
-  done *)
-
-end
+  using invs
+  apply (cases ao; clarsimp split del: if_split)
+   apply (frule (1) vs_lookup_asid_pool_level, simp add: in_omonad)
+   apply simp
+   apply (drule (1) vs_lookup_table_ap_step, simp add: in_omonad, assumption)
+   apply clarsimp
+   apply (erule (2) vs_lookup_target_preserved)
+  apply (rename_tac pt idx asid vref)
+  apply (case_tac "pt idx"; simp)
+   apply (frule_tac idx=idx in vs_lookup_table_pt_step; simp add: in_omonad)
+        apply (frule pspace_alignedD, fastforce)
+        apply (simp add: bit_simps)
+       apply (erule (1) vs_lookup_pt_level, simp add: in_omonad)
+      apply simp
+     apply fastforce
+    apply fastforce
+   apply (fastforce elim: vs_lookup_target_preserved)
+  apply (frule_tac idx=idx in vs_lookup_table_pt_step; simp add: in_omonad)
+       apply (frule pspace_alignedD, fastforce)
+       apply (simp add: bit_simps)
+      apply (erule (1) vs_lookup_pt_level, simp add: in_omonad)
+     apply simp
+    apply fastforce
+   apply fastforce
+  apply (fastforce elim: vs_lookup_target_preserved)
+  done
 
 lemma valid_vspace_obj_detype[detype_invs_proofs]: "valid_vspace_objs (detype (untyped_range cap) s)"
 proof -
@@ -317,13 +513,14 @@ proof -
     using invs by fastforce
   thus ?thesis
     unfolding valid_vspace_objs_def
-    apply (simp add: vs_lookup)
-    apply (auto intro: valid_vspace_obj)
-    sorry (* FIXME RISCV *)
+    apply clarsimp
+    apply (drule vs_lookup_level, drule vs_lookup_table)
+    apply (fastforce intro: valid_vspace_obj)
+    done
 qed
 
 lemma unique_table_caps:
-  "unique_table_caps_2 cps \<Longrightarrow> unique_table_caps_2 (\<lambda>x. if P x then None else cps x)"
+  "unique_table_caps s \<Longrightarrow> unique_table_caps (detype (untyped_range cap) s)"
   by (simp add: unique_table_caps_def)
 
 end
@@ -340,43 +537,42 @@ context detype_locale_arch begin
 
 lemma valid_vs_lookup':
   "valid_vs_lookup s \<Longrightarrow> valid_vs_lookup (detype (untyped_range cap) s)"
-  sorry (* FIXME RISCV
-  apply (simp add: valid_vs_lookup_def vs_lookup_pages del: split_paired_Ex)
-  apply (elim allEI)
-  apply (intro disjCI2 impI)
-  apply (drule(1) mp)+
-  apply (elim conjE)
-  apply (erule exEI)
-  apply clarsimp
-  apply (drule non_null_caps)
-   apply clarsimp+
-  done *)
+  apply (simp add: valid_vs_lookup_def del: split_paired_Ex)
+  apply (intro allI impI)
+  apply (drule vs_lookup_target_level, drule vs_lookup_target)
+  apply (elim allE, (erule (1) impE)+)
+  apply (elim conjE exE)
+  apply (frule non_null_caps, clarsimp)
+  apply fastforce
+  done
 
 lemma valid_table_caps:
   "valid_table_caps s \<Longrightarrow> valid_table_caps (detype (untyped_range cap) s)"
   apply (simp add: valid_table_caps_def del: imp_disjL)
   apply (elim allEI | rule impI)+
-  apply clarsimp
-  sorry (* FIXME RISCV
-  apply (metis detype_arch_state no_obj_refs)
-  done *)
+  apply (fastforce dest: no_obj_refs)
+  done
 
 lemma unique_table_refs:
-  "unique_table_refs_2 cs \<Longrightarrow> unique_table_refs_2 (\<lambda>x. if P x then None else cs x)"
-  apply (simp only: unique_table_refs_def option.simps simp_thms split: if_split)
+  "unique_table_refs s \<Longrightarrow> unique_table_refs (detype (untyped_range cap) s)"
+  apply (simp only: unique_table_refs_def option.simps simp_thms caps_of_state_detype split: if_split)
   apply blast
   done
 
+lemma valid_asid_pools_caps:
+  "valid_asid_pool_caps s \<Longrightarrow> valid_asid_pool_caps (detype (untyped_range cap) s)"
+  by (fastforce simp: valid_asid_pool_caps_def dest: non_null_caps)
+
 lemma valid_arch_caps_detype[detype_invs_proofs]: "valid_arch_caps (detype (untyped_range cap) s)"
   using valid_arch_caps
-  sorry (* FIXME RISCV
   by (simp add: valid_arch_caps_def unique_table_caps valid_vs_lookup' unique_table_refs
-                valid_table_caps) *)
+                valid_table_caps valid_asid_pools_caps
+           del: caps_of_state_detype arch_state_det)
 
 lemma valid_global_objs_detype[detype_invs_proofs]:
   "valid_global_objs (detype (untyped_range cap) s)"
   using valid_global_objs valid_global_refsD [OF globals cap]
-  by (simp add: valid_global_objs_def valid_vso_at_def arch_state_det)
+  by (simp add: valid_global_objs_def valid_vso_at_def)
 
 lemma valid_kernel_mappings_detype[detype_invs_proofs]:
   "valid_kernel_mappings (detype (untyped_range cap) s)"
@@ -389,16 +585,23 @@ qed
 lemma valid_asid_map_detype[detype_invs_proofs]: "valid_asid_map (detype (untyped_range cap) s)"
   by (simp add: valid_asid_map_def)
 
+lemma has_kernel_mappings:
+  "valid_global_arch_objs s \<Longrightarrow>
+   has_kernel_mappings pt (detype (untyped_range cap) s) = has_kernel_mappings pt s"
+  by (auto dest!: riscv_global_pt_in_global_refs valid_global_refsD [OF globals cap]
+           simp: cap_range_def has_kernel_mappings_def )
+
 lemma equal_kernel_mappings_detype[detype_invs_proofs]:
   "equal_kernel_mappings (detype (untyped_range cap) s)"
 proof -
   have "equal_kernel_mappings s"
     using invs by (simp add: invs_def valid_state_def)
-  thus ?thesis
-    apply (simp add: equal_kernel_mappings_def)
-    sorry (* FIXME RISCV
-    apply blast
-    done *)
+  moreover
+  have "valid_global_arch_objs s"
+    using invs by (simp add: invs_def valid_state_def valid_arch_state_def)
+  ultimately
+  show ?thesis
+    by (clarsimp simp: equal_kernel_mappings_def has_kernel_mappings)
 qed
 
 lemma valid_global_mappings_detype[detype_invs_proofs]:
@@ -407,7 +610,9 @@ proof -
   have "valid_global_vspace_mappings s"
     using invs by (simp add: invs_def valid_state_def)
   thus ?thesis
-    using valid_global_refsD [OF globals cap] valid_global_objs
+    using valid_global_refsD [OF globals cap]
+    unfolding valid_global_vspace_mappings_def
+    apply (simp add: Let_def)
     sorry (* FIXME RISCV, needs different argument now
     apply -
     apply (erule valid_global_vspace_mappings_pres, simp_all)
@@ -421,7 +626,7 @@ proof -
   have "pspace_in_kernel_window s"
     using invs by (simp add: invs_def valid_state_def)
   thus ?thesis
-    by (simp add: pspace_in_kernel_window_def arch_state_det)
+    by (simp add: pspace_in_kernel_window_def)
 qed
 
 lemma in_user_frame_eq:
@@ -499,7 +704,7 @@ lemma cap_refs_respects_device_region_detype[detype_invs_proofs]:
   have "cap_refs_respects_device_region s"
     using invs by (simp add: invs_def valid_state_def)
   thus ?thesis
-    apply (clarsimp simp: clear_um_def cap_refs_respects_device_region_def cte_wp_at_detype
+    apply (clarsimp simp: clear_um_def cap_refs_respects_device_region_def
                 simp del: split_paired_All split_paired_Ex)
     apply (drule_tac x = "(a,b)" in spec)
     apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_respects_device_region_def detype_def)
@@ -544,8 +749,7 @@ lemma delete_objects_invs[wp]:
     invs and ct_active\<rbrace>
     delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: delete_objects_def)
-  apply (simp add: freeMemory_def word_size_def bind_assoc
-                   empty_fail_mapM_x ef_storeWord)
+  apply (simp add: freeMemory_def word_size_def bind_assoc ef_storeWord)
    apply (rule hoare_pre)
    apply (rule_tac G="is_aligned ptr bits \<and> word_size_bits \<le> bits \<and> bits \<le> word_bits"
                 in hoare_grab_asm)
