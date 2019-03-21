@@ -415,24 +415,43 @@ lemma vs_lookup_target_preserved:
   apply (fastforce intro: no_obj_refs)
   done
 
+lemma valid_asid_table:
+  "valid_asid_table (detype (untyped_range cap) s)"
+  using valid_arch_state
+  apply (clarsimp simp: valid_asid_table_def valid_arch_state_def)
+  apply (drule (1) subsetD)
+  apply (clarsimp simp: ran_def)
+  apply (subgoal_tac "valid_asid_pool_caps s")
+   prefer 2
+   using invs
+   apply (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)
+  apply (simp add: valid_asid_pool_caps_def)
+  apply (erule allE, erule allE, erule (1) impE)
+  apply clarsimp
+  apply (drule no_obj_refs; simp)
+  done
+
+lemma riscv_global_pts_global_ref:
+  "pt \<in> riscv_global_pts (arch_state s) level \<Longrightarrow> pt \<in> global_refs s"
+  by (auto simp: global_refs_def)
+
+lemma valid_global_arch_objs:
+  "valid_global_arch_objs (detype (untyped_range cap) s)"
+  using valid_arch_state
+  by (fastforce dest!: riscv_global_pts_global_ref valid_global_refsD[OF globals cap]
+                simp: cap_range_def valid_global_arch_objs_def valid_arch_state_def)
+
+lemma valid_global_tables:
+  "valid_global_tables (detype (untyped_range cap) s)"
+  using valid_arch_state
+  by (fastforce dest: pt_walk_level pt_walk_detype
+                simp: valid_global_tables_def valid_arch_state_def)
+
 lemma valid_arch_state_detype[detype_invs_proofs]:
   "valid_arch_state (detype (untyped_range cap) s)"
   using valid_vs_lookup valid_arch_state ut_mdb valid_global_refsD [OF globals cap] cap
-  apply (simp add: valid_arch_state_def valid_asid_table_def valid_global_arch_objs_def
-                   global_refs_def cap_range_def valid_global_tables_def)
-  sorry (* FIXME RISCV
-  apply (clarsimp simp: ran_def arch_state_det)
-  apply (drule vs_lookup_atI)
-  apply (drule (1) valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI])
-  apply (clarsimp simp: cte_wp_at_caps_of_state)
-  apply (drule untyped_mdbD, rule untyped, assumption)
-    apply blast
-   apply assumption
-  apply (drule descendants_range_inD[OF drange])
-    apply (simp add: cte_wp_at_caps_of_state)
-  apply (simp add: cap_range_def)
-  apply blast
-  done *)
+  unfolding valid_arch_state_def pred_conj_def
+  by (simp only: valid_asid_table valid_global_arch_objs valid_global_tables) simp
 
 lemma vs_lookup_asid_pool_level:
   assumes lookup: "vs_lookup_table level asid vref s = Some (level, p)" "vref \<in> user_region s"
