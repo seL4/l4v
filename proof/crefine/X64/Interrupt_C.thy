@@ -326,8 +326,9 @@ lemma invokeIRQControl_expanded_ccorres:
    apply (rule le_m1_iff_lt[THEN iffD1,THEN iffD1])
     apply simp
    apply (erule order.trans, simp)
-  apply (rule word_eqI)
-  apply (simp add: nth_ucast word_size)
+  apply simp
+  apply (simp add: mask_def)
+  apply word_bitwise
   done
 
 lemma invokeIRQControl_ccorres:
