@@ -627,16 +627,25 @@ lemma valid_global_mappings_detype[detype_invs_proofs]:
   "valid_global_vspace_mappings (detype (untyped_range cap) s)"
 proof -
   have "valid_global_vspace_mappings s"
-    using invs by (simp add: invs_def valid_state_def)
-  thus ?thesis
-    using valid_global_refsD [OF globals cap]
+       "valid_global_tables s"
+       "valid_global_arch_objs s"
+       "pspace_aligned s"
+    using invs by (auto simp: invs_def valid_state_def valid_arch_state_def)
+  then show ?thesis
     unfolding valid_global_vspace_mappings_def
-    apply (simp add: Let_def)
-    sorry (* FIXME RISCV, needs different argument now
-    apply -
-    apply (erule valid_global_vspace_mappings_pres, simp_all)
-    apply (simp add: cap_range_def global_refs_def arch_state_det)+
-    done *)
+    apply (clarsimp simp: Let_def)
+    apply (safe; drule (1) bspec; thin_tac "Ball _ _")
+     apply (all \<open>drule kernel_regionsI, erule option_Some_value_independent\<close>)
+     apply (distinct_subgoals)
+    apply (subst pt_lookup_target_translate_address_upd_eq; assumption?)
+    apply (rule pt_lookup_target_pt_eqI; clarsimp)
+    apply (drule (1) valid_global_tablesD, simp)
+    apply (rule conjI)
+     apply (drule riscv_global_pts_global_ref)
+     apply (drule valid_global_refsD[OF globals cap])
+     apply (clarsimp simp: cap_range_def opt_map_def detype_def split: option.splits)
+    apply (erule (2) riscv_global_pts_aligned)
+    done
 qed
 
 lemma pspace_in_kernel_window_detype[detype_invs_proofs]:
