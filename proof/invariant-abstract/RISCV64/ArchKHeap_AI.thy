@@ -778,5 +778,9 @@ lemma valid_vspace_obj_same_type:
     apply (rule hoare_to_pure_kheap_upd[OF valid_vspace_obj_typ])
     by (auto simp: obj_at_def)
 
+lemma invs_valid_uses[elim!]:
+  "invs s \<Longrightarrow> valid_uses s"
+  by (simp add: invs_def valid_state_def valid_arch_state_def)
+
 end
 end
