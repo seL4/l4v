@@ -293,7 +293,7 @@ lemma valid_global_tables:
   "valid_global_tables (detype (untyped_range cap) s)"
   using valid_arch_state
   by (fastforce dest: pt_walk_level pt_walk_detype
-                simp: valid_global_tables_def valid_arch_state_def)
+                simp: valid_global_tables_def valid_arch_state_def Let_def)
 
 lemma valid_arch_state_detype[detype_invs_proofs]:
   "valid_arch_state (detype (untyped_range cap) s)"
@@ -478,6 +478,7 @@ proof -
        "valid_global_tables s"
        "valid_global_arch_objs s"
        "pspace_aligned s"
+       "valid_uses s"
     using invs by (auto simp: invs_def valid_state_def valid_arch_state_def)
   then show ?thesis
     unfolding valid_global_vspace_mappings_def
@@ -487,7 +488,7 @@ proof -
      apply (distinct_subgoals)
     apply (subst pt_lookup_target_translate_address_upd_eq; assumption?)
     apply (rule pt_lookup_target_pt_eqI; clarsimp)
-    apply (drule (1) valid_global_tablesD, simp)
+    apply (drule (1) valid_global_tablesD, simp add: kernel_regions_in_mappings)
     apply (rule conjI)
      apply (drule riscv_global_pts_global_ref)
      apply (drule valid_global_refsD[OF globals cap])

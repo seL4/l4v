@@ -489,29 +489,36 @@ definition arch_live :: "arch_kernel_obj \<Rightarrow> bool" where
 definition hyp_live :: "kernel_object \<Rightarrow> bool" where
   "hyp_live ko \<equiv> False"
 
+definition pte_rights_of :: "pte \<Rightarrow> rights set" where
+  "pte_rights_of pte \<equiv> if is_PagePTE pte then pte_rights pte else {}"
+
+(* All kernel addresses, including those potentially not mapped. *)
+definition kernel_mappings :: "vspace_ref set" where
+  "kernel_mappings \<equiv> {vref. pptr_base \<le> vref}"
+
 (* All page table walks starting from the global page table may only end up at global
    tables for the right level. The final level must not contain further page table references.
    We do not consider frame mappings here.
    See valid_global_vspace_mappings for the restrictions on frame mappings. *)
-definition valid_global_tables_2 ::
-  "obj_ref set \<Rightarrow> (RISCV64_A.vm_level \<Rightarrow> obj_ref set) \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<Rightarrow> bool"
+definition valid_global_tables_2 :: "(RISCV64_A.vm_level \<Rightarrow> obj_ref set) \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<Rightarrow> bool"
   where
-  "valid_global_tables_2 kernel_regs global_pts pts \<equiv>
+  "valid_global_tables_2 global_pts pts \<equiv>
     let ptes = (\<lambda>p. pte_of p pts);
         global_pt = the_elem (global_pts max_pt_level)
     in
       (\<forall>bot_level vref level pt_ptr.
-         vref \<in> kernel_regs \<longrightarrow>
-         pt_walk max_pt_level bot_level global_pt vref ptes =
-           Some (level, pt_ptr) \<longrightarrow>
-             pt_ptr \<in> global_pts level) \<and>
+         vref \<in> kernel_mappings \<longrightarrow>
+         pt_walk max_pt_level bot_level global_pt vref ptes = Some (level, pt_ptr) \<longrightarrow>
+           pt_ptr \<in> global_pts level) \<and>
        (\<forall>pt_ptr \<in> global_pts 0.
-          \<forall>pt. pts pt_ptr = Some pt \<longrightarrow> (\<forall>i. \<not> is_PageTablePTE (pt i)))"
+          \<forall>pt. pts pt_ptr = Some pt \<longrightarrow> (\<forall>i. \<not> is_PageTablePTE (pt i))) \<and>
+       (\<forall>pt. pts global_pt = Some pt \<longrightarrow> (\<forall>idx \<in> -kernel_mapping_slots. pt idx = InvalidPTE)) \<and>
+       (\<forall>level. \<forall>pt_ptr \<in> global_pts level. \<forall>pt idx. pts pt_ptr = Some pt \<longrightarrow>
+                                                       pte_rights_of (pt idx) = vm_kernel_only)"
 
 locale_abbrev valid_global_tables :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_global_tables \<equiv>
-    \<lambda>s. valid_global_tables_2 (kernel_regions s) (riscv_global_pts (arch_state s))
-                              (pts_of s)"
+    \<lambda>s. valid_global_tables_2 (riscv_global_pts (arch_state s)) (pts_of s)"
 
 lemmas valid_global_tables_def = valid_global_tables_2_def
 
@@ -742,6 +749,15 @@ lemma max_pt_level_def2: "max_pt_level = 2"
   by (simp add: max_pt_level_def asid_pool_level_def)
 
 lemmas level_defs = asid_pool_level_def max_pt_level_def2
+
+lemma max_pt_level_gt0[simp]:
+  "0 < max_pt_level"
+  by (simp add: level_defs)
+
+lemma max_pt_level_enum:
+  "level \<le> max_pt_level \<Longrightarrow> level \<in> {0,1,2}"
+  unfolding level_defs
+  by (cases level rule: bit0.of_nat_cases) (case_tac m; simp; rename_tac m)+
 
 lemma asid_pool_level_neq[simp]:
   "(x \<noteq> asid_pool_level) = (x \<le> max_pt_level)"
@@ -1969,11 +1985,9 @@ lemma valid_vspace_objs_strongD:
   apply assumption
   done
 
-lemma kernel_window_slots:
-  "\<lbrakk> vref \<in> kernel_window s; valid_uses s \<rbrakk>
-   \<Longrightarrow> ucast (pt_index max_pt_level vref) \<in> kernel_mapping_slots"
-  apply (drule (1) valid_uses_kernel_window)
-  apply (clarsimp simp: kernel_mapping_slots_def pt_index_def)
+lemma kernel_mapping_slots:
+  "vref \<in> kernel_mappings \<Longrightarrow> ucast (pt_index max_pt_level vref) \<in> kernel_mapping_slots"
+  apply (clarsimp simp: kernel_mapping_slots_def pt_index_def kernel_mappings_def)
   apply (simp add: bit_simps pptr_base_def pptrBase_def canonical_bit level_defs pt_bits_left_def)
   by word_bitwise (clarsimp simp: word_size)
 
@@ -1989,7 +2003,7 @@ lemma is_aligned_pt_slot_offset_pte:
 (* valid_uses is in here, because we need to know that the asid pools are valid objects,
    which means that the top-level root_pt actually exists *)
 lemma equal_mappings_pt_slot_offset:
-  "\<lbrakk> vspace_for_asid asid s = Some root_pt; vref \<in> kernel_window s;
+  "\<lbrakk> vspace_for_asid asid s = Some root_pt; vref \<in> kernel_mappings;
      equal_kernel_mappings s; valid_global_vspace_mappings s;
      valid_vspace_objs s; valid_asid_table s; valid_uses s;
      pspace_aligned s \<rbrakk>
@@ -2002,7 +2016,7 @@ lemma equal_mappings_pt_slot_offset:
   apply (clarsimp simp: in_omonad pt_at_eq)
   apply (frule_tac p="riscv_global_pt (arch_state s)" in pspace_alignedD, assumption)
   apply (frule_tac p=root_pt in pspace_alignedD, assumption)
-  apply (drule (1) kernel_window_slots[where vref=vref])
+  apply (drule kernel_mapping_slots[where vref=vref])
   apply (simp add: pt_bits_def[symmetric])
   apply (simp add: ptes_of_def pt_slot_offset_offset obind_def in_opt_map_eq
                    is_aligned_pt_slot_offset_pte
@@ -2010,7 +2024,7 @@ lemma equal_mappings_pt_slot_offset:
   done
 
 lemma equal_mappings_translate_address:
-  "\<lbrakk> vspace_for_asid asid s = Some root_pt; vref \<in> kernel_window s;
+  "\<lbrakk> vspace_for_asid asid s = Some root_pt; vref \<in> kernel_mappings;
      equal_kernel_mappings s; valid_global_vspace_mappings s;
      valid_vspace_objs s; valid_asid_table s; valid_uses s;
      pspace_aligned s \<rbrakk>
@@ -2218,6 +2232,23 @@ lemma vs_lookup_table_pt_step:
    apply (simp add: pte_of_def in_omonad is_aligned_pt_slot_offset_pte table_index_pt_slot_offset)
   apply (simp add: valid_uses_user_region_eq vref_for_level_idx_canonical_user)
   done
+
+lemma pte_rights_PagePTE[simp]:
+  "pte_rights_of (PagePTE b attr r) = r"
+  by (simp add: pte_rights_of_def)
+
+lemma pt_lookup_slot_max_pt_level:
+  "pt_lookup_slot pt_ptr vref ptes = Some (level, slot) \<Longrightarrow> level \<le> max_pt_level"
+  by (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def dest!: pt_walk_max_level)
+
+lemma pageBitsForSize_vmpage_size_of_level[simp]:
+  "level \<le> max_pt_level \<Longrightarrow> pageBitsForSize (vmpage_size_of_level level) = pt_bits_left level"
+  by (auto dest!: max_pt_level_enum simp add: vmpage_size_of_level_def pt_bits_left_def)
+
+lemma global_pts_ofD:
+  "\<lbrakk> pt_ptr \<in> riscv_global_pts (arch_state s) level; valid_global_arch_objs s \<rbrakk> \<Longrightarrow>
+   pts_of s pt_ptr \<noteq> None"
+  by (simp add: valid_global_arch_objs_def pt_at_eq)
 
 end
 

@@ -16,9 +16,6 @@ context Arch begin
 
 global_naming RISCV64
 
-definition
-  "kernel_mappings \<equiv> {x. x \<ge> pptr_base}"
-
 lemma canonical_not_kernel_is_user:
   "\<lbrakk> v \<notin> kernel_mappings; canonical_address v; valid_uses s \<rbrakk> \<Longrightarrow> v \<in> user_region s"
   by (simp add: kernel_mappings_def not_le canonical_below_pptr_base_user)
@@ -39,28 +36,116 @@ lemma kernel_mappings_slots_eq:
 lemma ucast_ucast_mask_low: "(ucast (x && mask asid_low_bits) :: asid_low_index) = ucast x"
   by (rule ucast_mask_drop, simp add: asid_low_bits_def)
 
+lemma valid_global_table_rights:
+  "\<lbrakk> pt_ptr \<in> riscv_global_pts (arch_state s) level;
+     valid_global_tables s; valid_global_arch_objs s \<rbrakk> \<Longrightarrow>
+   \<exists>pt. pts_of s pt_ptr = Some pt \<and> (\<forall>idx. pte_rights_of (pt idx) = vm_kernel_only)"
+  by (frule (1) global_pts_ofD) (clarsimp simp: valid_global_tables_def Let_def)
+
+lemma ptes_of_idx:
+  "\<lbrakk> ptes_of s (pt_slot_offset level pt_ptr p) = Some pte;
+     pts_of s pt_ptr = Some pt; pspace_aligned s \<rbrakk> \<Longrightarrow>
+   \<exists>idx. pt idx = pte"
+  apply (drule_tac pt_ptr=pt_ptr in pspace_aligned_pts_ofD, simp)
+  apply (fastforce simp: pte_of_def)
+  done
+
+lemma valid_global_arch_objs_global_ptD:
+  "valid_global_arch_objs s \<Longrightarrow>
+   riscv_global_pt (arch_state s) \<in> riscv_global_pts (arch_state s) max_pt_level"
+  by (auto simp: valid_global_arch_objs_def Let_def riscv_global_pt_def)
+
+lemma equal_kernel_mappingsD:
+  "\<lbrakk> vspace_for_asid asid s = Some pt_ptr; pts_of s pt_ptr = Some pt;
+     equal_kernel_mappings s \<rbrakk> \<Longrightarrow> has_kernel_mappings pt s"
+  by (simp add: equal_kernel_mappings_def)
+
+lemma has_kernel_mappingsD:
+  "\<lbrakk> has_kernel_mappings pt s; valid_global_arch_objs s; idx \<in> kernel_mapping_slots;
+     pte = pt idx \<rbrakk> \<Longrightarrow>
+   \<exists>pt'. pts_of s (riscv_global_pt (arch_state s)) = Some pt' \<and> pte = pt' idx"
+  unfolding has_kernel_mappings_def
+  by (fastforce simp: pt_at_eq dest: valid_global_arch_objs_pt_at)
+
+lemma pte_rights_of_kernel:
+  "\<lbrakk> p \<in> kernel_mappings; canonical_address p; valid_global_vspace_mappings s;
+     equal_kernel_mappings s; valid_global_tables s; valid_global_arch_objs s; valid_vspace_objs s;
+     valid_asid_table s; valid_uses s; pspace_aligned s;
+     (\<exists>asid. vspace_for_asid asid s = Some pt_ref) \<or> pt_ref = riscv_global_pt (arch_state s);
+     pt_lookup_slot pt_ref p (ptes_of s) = Some (level, slot); ptes_of s slot = Some pte \<rbrakk>
+   \<Longrightarrow> pte_rights_of pte = vm_kernel_only"
+  apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
+  apply (rename_tac pt_ptr)
+  apply (erule disjE; clarsimp)
+   apply (subgoal_tac "is_aligned pt_ref pt_bits")
+    prefer 2
+    apply (drule (3) vspace_for_asid_valid_pt)
+    apply clarsimp
+    apply (erule pspace_aligned_pts_ofD)
+    apply simp
+   apply (cases "level = max_pt_level")
+    apply (drule pt_walk_level)
+    apply (clarsimp simp flip: kernel_mappings_slots_eq)
+    apply (clarsimp simp: ptes_of_def table_index_offset_max_pt_level)
+    apply (drule (2) equal_kernel_mappingsD)
+    apply (drule (3) has_kernel_mappingsD)
+    apply clarsimp
+    apply (frule valid_global_arch_objs_global_ptD)
+    apply (drule (2) valid_global_table_rights)
+    apply fastforce
+   apply (drule pt_walk_equal_top_slot_Some[where pt_ptr'="riscv_global_pt (arch_state s)", rotated])
+    apply (erule (7) equal_mappings_pt_slot_offset)
+   apply clarsimp
+   apply (frule (1) valid_global_tablesD, simp)
+   apply (fastforce dest!: ptes_of_idx valid_global_table_rights)
+  apply (frule (1) valid_global_tablesD, simp)
+  apply (fastforce dest!: ptes_of_idx valid_global_table_rights)
+  done
+
+
 lemma some_get_page_info_kmapsD:
-  "\<lbrakk>get_page_info (aobjs_of s) pt_ref p = Some (b, a, attr, r);
-    p \<in> kernel_mappings; canonical_address p; valid_global_vspace_mappings s; equal_kernel_mappings s\<rbrakk>
+  "\<lbrakk> get_page_info (aobjs_of s) pt_ref p = Some (b, a, attr, r);
+     p \<in> kernel_mappings; canonical_address p; valid_global_vspace_mappings s;
+     equal_kernel_mappings s; valid_global_tables s; valid_global_arch_objs s;
+     valid_vspace_objs s; valid_asid_table s; valid_uses s; pspace_aligned s;
+     (\<exists>asid. vspace_for_asid asid s = Some pt_ref) \<or> pt_ref = riscv_global_pt (arch_state s) \<rbrakk>
    \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a) \<and> r = {}"
-  apply (clarsimp simp: get_page_info_def in_omonad kernel_mappings_def)
-  sorry (* FIXME RISCV: insufficient invariants to prove that kernel mappings have no user rights *)
+  apply (clarsimp simp: get_page_info_def in_omonad)
+  apply (rename_tac level slot pte)
+  apply (frule (12) pte_rights_of_kernel, simp add: vm_kernel_only_def)
+  apply (clarsimp simp: pte_info_def split: pte.splits)
+  apply (drule pt_lookup_slot_max_pt_level)
+  apply (rule_tac x="vmpage_size_of_level level" in exI)
+  apply simp
+  done
+
+lemma pte_info_not_InvalidPTE:
+  "pte_info level pte = Some (b, a, attr, r) \<Longrightarrow> pte \<noteq> InvalidPTE"
+  by (simp add: pte_info_def split: pte.splits)
+
+lemma valid_global_tables_toplevel_pt:
+  "\<lbrakk> pts_of s (riscv_global_pt (arch_state s)) = Some pt; valid_global_tables s \<rbrakk> \<Longrightarrow>
+   \<forall>idx\<in>- kernel_mapping_slots. pt idx = InvalidPTE"
+  by (simp add: valid_global_tables_def Let_def riscv_global_pt_def)
+
+lemma global_pt_not_invalid_kernel:
+  "\<lbrakk> ptes_of s (pt_slot_offset max_pt_level (riscv_global_pt (arch_state s)) p) = Some pte;
+     pte \<noteq> InvalidPTE; canonical_address p; valid_global_tables s;
+     is_aligned (riscv_global_pt (arch_state s)) pt_bits\<rbrakk>
+   \<Longrightarrow> p \<in> kernel_mappings"
+  apply (clarsimp simp: pte_of_def table_index_offset_max_pt_level)
+  apply (fastforce simp flip: kernel_mappings_slots_eq dest: valid_global_tables_toplevel_pt)
+  done
 
 lemma get_page_info_gpd_kmaps:
   "\<lbrakk>valid_global_vspace_mappings s; valid_arch_state s; canonical_address p;
     get_page_info (aobjs_of s) (riscv_global_pt (arch_state s)) p = Some (b, a, attr, r)\<rbrakk>
    \<Longrightarrow> p \<in> kernel_mappings"
-  apply (simp add: get_page_info_def)
-  sorry (* FIXME RISCV: insufficient invariants to prove that global PT does not have user mappings
-  apply (clarsimp simp: valid_global_objs_def valid_arch_state_def
-                        obj_at_def
-                        empty_table_def kernel_mappings_slots_eq)
-  apply (drule_tac x="ucast (p >> pml4_shift_bits)" in spec; clarsimp)
-  apply (rule ccontr)
-  apply (clarsimp simp: get_page_info_def get_pml4_entry_def get_arch_obj_def
-                        bit_simps ucast_ucast_mask_low
-                 split: option.splits pml4e.splits arch_kernel_obj.splits)
-  done *)
+  apply (clarsimp simp: get_page_info_def in_omonad pt_lookup_slot_def pt_lookup_slot_from_level_def)
+  apply (subst (asm) pt_walk.simps)
+  apply (fastforce dest: pte_info_not_InvalidPTE global_pt_not_invalid_kernel
+                   simp: valid_arch_state_def in_omonad)
+  done
 
 lemma get_vspace_of_thread_reachable:
   "\<lbrakk> get_vspace_of_thread (kheap s) (arch_state s) t \<noteq> riscv_global_pt (arch_state s);
@@ -69,15 +154,6 @@ lemma get_vspace_of_thread_reachable:
   by (auto simp: get_vspace_of_thread_def
           split: option.splits cap.splits kernel_object.splits arch_cap.splits if_split_asm
           intro: vspace_for_asid_vs_lookup)
-
-lemma pageBitsForSize_vmpage_size_of_level[simp]:
-  "level \<le> max_pt_level \<Longrightarrow>
-   pageBitsForSize (vmpage_size_of_level level) = pt_bits_left level"
-  apply (clarsimp simp: pageBitsForSize_def vmpage_size_of_level_def pt_bits_left_def)
-  apply (simp add: level_defs)
-  apply (cases level rule: bit0.of_nat_cases)
-  apply ((case_tac m; clarsimp), (rename_tac m)?)+
-  done
 
 lemma data_at_aligned:
   "\<lbrakk> data_at sz p s; pspace_aligned s\<rbrakk> \<Longrightarrow> is_aligned p (pageBitsForSize sz)"
@@ -142,16 +218,23 @@ lemma device_frame_in_device_region:
 global_naming Arch
 named_theorems AInvsPre_asms
 
+lemma get_vspace_of_thread_asid_or_global_pt:
+  "(\<exists>asid. vspace_for_asid asid s = Some (get_vspace_of_thread (kheap s) (arch_state s) t))
+    \<or> get_vspace_of_thread (kheap s) (arch_state s) t = riscv_global_pt (arch_state s)"
+  by (auto simp: get_vspace_of_thread_def
+           split: option.split kernel_object.split cap.split arch_cap.split)
+
 lemma ptable_rights_imp_frame[AInvsPre_asms]:
   assumes "valid_state s"
   shows "\<lbrakk> ptable_rights t s x \<noteq> {}; ptable_lift t s x = Some (addrFromPPtr y) \<rbrakk> \<Longrightarrow>
          in_user_frame y s \<or> in_device_frame y s"
   apply (rule ccontr, frule ptable_lift_Some_canonical_addressD)
-  using assms
+  using assms get_vspace_of_thread_asid_or_global_pt[of s t]
   apply (clarsimp simp: ptable_lift_def ptable_rights_def in_user_frame_def in_device_frame_def
                  split: option.splits)
   apply (case_tac "x \<in> kernel_mappings")
-   apply (drule (2) some_get_page_info_kmapsD; fastforce simp: valid_state_def)
+   apply (frule (2) some_get_page_info_kmapsD;
+            fastforce simp: valid_state_def valid_arch_state_def valid_pspace_def)
   apply (frule some_get_page_info_umapsD)
           apply (rule get_vspace_of_thread_reachable)
            apply clarsimp

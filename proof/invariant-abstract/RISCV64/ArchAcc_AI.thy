@@ -885,7 +885,7 @@ lemma valid_global_tablesD:
   "\<lbrakk> valid_global_tables s;
      pt_walk max_pt_level bot_level (riscv_global_pt (arch_state s)) vref (ptes_of s)
      = Some (level, pt_ptr) \<rbrakk>
-   \<Longrightarrow> vref \<in> kernel_regions s \<longrightarrow> pt_ptr \<in> riscv_global_pts (arch_state s) level"
+   \<Longrightarrow> vref \<in> kernel_mappings \<longrightarrow> pt_ptr \<in> riscv_global_pts (arch_state s) level"
   unfolding valid_global_tables_def by (simp add: Let_def riscv_global_pt_def)
 
 lemma riscv_global_pt_aligned[simp]:
@@ -923,9 +923,15 @@ lemma if_Some_Some[simp]:
   "((if P then Some v else None) = Some v) = P"
   by simp
 
+lemma kernel_regions_in_mappings:
+  "\<lbrakk> p \<in> kernel_regions s; valid_uses s \<rbrakk> \<Longrightarrow> p \<in> kernel_mappings"
+  unfolding kernel_regions_def kernel_elf_window_def valid_uses_def kernel_device_window_def
+            kernel_mappings_def kernel_window_def
+  by (erule_tac x=p in allE) (auto simp: not_le canonical_below_pptr_base_canonical_user)
+
 lemma set_pt_valid_global_vspace_mappings:
   "\<lbrace>\<lambda>s. valid_global_vspace_mappings s \<and> valid_global_tables s \<and> p \<notin> global_refs s
-        \<and> pspace_aligned s \<and> valid_global_arch_objs s \<rbrace>
+        \<and> pspace_aligned s \<and> valid_global_arch_objs s \<and> valid_uses s \<rbrace>
    set_pt p pt
    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   apply (simp add: set_pt_def)
@@ -942,7 +948,7 @@ lemma set_pt_valid_global_vspace_mappings:
      apply clarsimp
      apply (frule valid_global_tablesD)
       apply assumption
-     apply (clarsimp simp: kernel_regions_def)
+     apply (clarsimp simp: kernel_regions_in_mappings)
      apply (clarsimp simp: global_refs_def)
      apply (fastforce dest: riscv_global_pts_aligned)
     apply fastforce
