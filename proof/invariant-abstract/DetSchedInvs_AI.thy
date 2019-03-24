@@ -1065,6 +1065,11 @@ lemma valid_ep_q_lift:
   apply (fastforce simp: ko_at_fold[symmetric] split: option.splits)
   done
 
+abbreviation ct_schedulable where
+  "ct_schedulable s \<equiv> active_sc_tcb_at (cur_thread s) s
+      \<and> budget_ready (cur_thread s) s
+      \<and> budget_sufficient (cur_thread s) s"
+
 (* FIXME: move *)
 definition valid_reply_scs where
   "valid_reply_scs \<equiv> \<lambda>s. (\<forall>a r. reply_tcb_reply_at (\<lambda>ropt. ropt = Some a) r s
