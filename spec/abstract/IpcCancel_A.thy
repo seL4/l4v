@@ -355,11 +355,12 @@ definition
   set_priority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "set_priority tptr prio \<equiv> do
      ts \<leftarrow> get_thread_state tptr;
-     when (runnable ts) $ do
+     if (runnable ts) then do
        d \<leftarrow> thread_get tcb_domain tptr;
        prio \<leftarrow> thread_get tcb_priority tptr;
        queue \<leftarrow> get_tcb_queue d prio;
-       if (tptr \<in> set queue) then do
+       cur \<leftarrow> gets cur_thread;
+       if (tptr \<in> set queue \<or> tptr = cur) then do
          tcb_sched_action tcb_sched_dequeue tptr;
          thread_set_priority tptr prio;
          tcb_sched_action tcb_sched_enqueue tptr;
@@ -367,9 +368,12 @@ definition
          od
        else
          thread_set_priority tptr prio
-       od;
-     maybeM (reorder_ep) (ep_blocked ts);
-     maybeM (reorder_ntfn) (ntfn_blocked ts)
+       od
+     else do
+       thread_set_priority tptr prio;
+       maybeM (reorder_ep) (ep_blocked ts);
+       maybeM (reorder_ntfn) (ntfn_blocked ts)
+     od
    od"
 
 definition
