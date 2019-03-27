@@ -209,13 +209,6 @@ lemma valid_objs_tcb_update:
   apply (clarsimp simp add: a_type_def is_tcb)
   done
 
-
-lemma obj_at_update:
-  "obj_at P t' (s \<lparr>kheap := kheap s (t \<mapsto> v)\<rparr>) =
-  (if t = t' then P v else obj_at P t' s)"
-  by (simp add: obj_at_def)
-
-
 lemma iflive_tcb_update:
   "\<lbrakk> if_live_then_nonz_cap s; live (TCB tcb) \<longrightarrow> ex_nonz_cap_to t s;
            obj_at (same_caps (TCB tcb)) t s \<rbrakk>

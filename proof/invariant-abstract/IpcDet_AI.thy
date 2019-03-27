@@ -274,6 +274,13 @@ lemma reply_tcb_reply_at_kheap_update:
     (if p = r then \<exists>r. v = Reply r \<and> P (reply_tcb r) else reply_tcb_reply_at P r s)"
   by (simp add: reply_tcb_reply_at_def obj_at_update)
 
+lemma reply_tcb_reply_at_kheap_update':
+  "p \<noteq> q \<Longrightarrow> reply_tcb_reply_at P r (s\<lparr>kheap := kheap s(p \<mapsto> v, q \<mapsto> w)\<rparr>) =
+    (if p = r then \<exists>r. v = Reply r \<and> P (reply_tcb r)
+     else if q = r then \<exists>r. w = Reply r \<and> P (reply_tcb r) 
+     else reply_tcb_reply_at P r s)"
+  by (clarsimp simp: reply_tcb_reply_at_def obj_at_update')
+
 abbreviation reply_at_tcb_in ::
   "obj_ref set \<Rightarrow> obj_ref \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
   where
@@ -285,21 +292,22 @@ lemma cancel_ipc_reply_at_tcb_in:
    \<lbrace>\<lambda>rv. reply_at_tcb_in tcbs r\<rbrace>"
   supply fun_upd_apply[simp del]
   apply (wpsimp simp: cancel_ipc_def blocked_cancel_ipc_def cancel_signal_def
-                      reply_cancel_ipc_def reply_remove_tcb_def
+                      reply_remove_tcb_def
                   wp: get_simple_ko_wp set_simple_ko_wps gts_wp get_ep_queue_wp get_sk_obj_ref_wp
                       get_blocking_object_wp reply_unlink_tcb_reply_tcb_reply_at thread_set_wp)
   apply (frule invs_valid_objs, drule invs_sym_refs)
   apply (intro conjI impI allI)
-  (* 13 subgoals *)
+  (* 14 subgoals *)
   apply (all \<open>clarsimp simp: obj_at_update reply_tcb_reply_at_kheap_update pred_tcb_upd_apply
+                             reply_tcb_reply_at_kheap_update'
                        cong: conj_cong
                       split: if_splits\<close>)
   apply (all \<open>(intro conjI)?\<close>)
-  (* 22 subgoals *)
+  (* 21 subgoals *)
   apply (all \<open>clarsimp simp: reply_tcb_reply_at_def obj_at_def get_tcb_def
                              is_ep_def is_ntfn_def
                       split: option.splits kernel_object.splits\<close>)
-  (* 13 subgoals *)
+  (* 14 subgoals *)
   apply (all \<open>frule (3) reply_tcb_state_refs\<close>)
   apply (all \<open>clarsimp simp: pred_tcb_at_def obj_at_def
                       dest!: sym[where t="tcb_state t" for t]\<close>)

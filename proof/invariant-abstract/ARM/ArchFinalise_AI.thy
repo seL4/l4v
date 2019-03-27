@@ -517,14 +517,10 @@ lemma reply_remove_tcb_bound_sc_tcb_at_None[wp]:
   "\<lbrace>bound_sc_tcb_at ((=) None) t'\<rbrace> reply_remove_tcb t r \<lbrace>\<lambda>rv. bound_sc_tcb_at ((=) None) t'\<rbrace>"
   by (wpsimp simp: reply_remove_tcb_def wp: get_sk_obj_ref_wp gts_wp)
 
-lemma reply_cancel_ipc_bound_sc_tcb_at_None[wp]:
-  "\<lbrace>bound_sc_tcb_at ((=) None) t'\<rbrace> reply_cancel_ipc t r \<lbrace>\<lambda>rv. bound_sc_tcb_at ((=) None) t'\<rbrace>"
-  by (wpsimp simp: reply_cancel_ipc_def wp: thread_set_wp)
-     (clarsimp simp: get_tcb_ko_at pred_tcb_at_def obj_at_def)
-
 lemma cancel_ipc_bound_sc_tcb_at_None:
   "\<lbrace>bound_sc_tcb_at ((=) None) t'\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. bound_sc_tcb_at ((=) None) t'\<rbrace>"
-  by (wpsimp simp: cancel_ipc_def wp: get_sk_obj_ref_wp gts_wp)
+  by (wpsimp simp: cancel_ipc_def
+               wp: get_sk_obj_ref_wp gts_wp thread_set_no_change_tcb_pred hoare_drop_imps)
 
 crunch obj_at_not_live[wp]: tcb_release_remove "obj_at (Not \<circ> live) t"
 
@@ -674,13 +670,12 @@ lemma cancel_ipc_unlive_reply_receive:
    \<lbrace>\<lambda> rv. obj_at (Not \<circ> live) reply\<rbrace>"
   apply (clarsimp simp: cancel_ipc_def)
   apply wpsimp
-        apply (rule blocked_cancel_ipc_unlive)
+         apply (rule blocked_cancel_ipc_unlive)
+        apply (rule hoare_pre_cont)
        apply (rule hoare_pre_cont)
       apply (rule hoare_pre_cont)
-     apply (rule hoare_pre_cont)
-    apply wpsimp
-   apply (wp gts_wp)
-  by (auto simp: pred_tcb_at_def obj_at_def)
+     apply (wpsimp wp: thread_set_wp gts_wp)+
+  by (auto simp: get_tcb_ko_at pred_tcb_at_def obj_at_def)
 
 lemma reply_unlink_sc_not_live':
  "\<lbrace>obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> reply_tcb r = None) reply and invs\<rbrace>

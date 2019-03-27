@@ -330,9 +330,16 @@ lemma set_object_cte_at:
   apply (erule(2) cte_at_same_type)
   done
 
+lemma obj_at_update:
+  "obj_at P t' (s \<lparr>kheap := kheap s (t \<mapsto> v)\<rparr>) =
+  (if t = t' then P v else obj_at P t' s)"
+  by (simp add: obj_at_def)
 
-lemma obj_at_ko_atD:
-  "obj_at P x s \<Longrightarrow> \<exists>k. ko_at k x s \<and> P k"
+lemma obj_at_update':
+  "p \<noteq> q \<Longrightarrow> obj_at P t (s \<lparr>kheap := kheap s (p \<mapsto> v, q \<mapsto> w)\<rparr>) =
+  (if p = t then P v
+   else if q = t then P w
+   else obj_at P t s)"
   by (clarsimp simp: obj_at_def)
 
 lemma set_object_ko:

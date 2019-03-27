@@ -4003,7 +4003,7 @@ lemma set_mrs_valid_list[wp]:
 crunches
   cancel_all_signals, unbind_maybe_notification, sched_context_unbind_all_tcbs,
   sched_context_unbind_ntfn, sched_context_maybe_unbind_ntfn,
-  sched_context_unbind_yield_from, cancel_all_ipc, thread_set, reply_cancel_ipc
+  sched_context_unbind_yield_from, cancel_all_ipc, thread_set, reply_remove_tcb
   for valid_list[wp]: valid_list
   (wp: mapM_x_wp' hoare_drop_imp)
 

@@ -2477,8 +2477,7 @@ lemma cancel_ipc_cte_wp_at_not_reply_state:
     cancel_ipc t
    \<lbrace>\<lambda>r. cte_wp_at P p\<rbrace>"
   apply (simp add: cancel_ipc_def)
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (case_tac state; wpsimp split: option.splits)
+  apply (wpsimp wp: thread_set_cte_wp_at_trivial ball_tcb_cap_casesI gts_wp)
   done
 
 (* TODO: sts_invs_minor2 and sts_invs_minor2_concise: just preserve one version? *)
@@ -2511,8 +2510,9 @@ lemma cancel_ipc_simpler:
   apply (clarsimp simp: cancel_ipc_def)
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (wpsimp wp: hoare_strengthen_post [OF blocked_cancel_ipc_inactive]
-                    hoare_strengthen_post [OF reply_cancel_ipc_inactive]
-                    hoare_strengthen_post [OF cancel_signal_inactive] |
+                    hoare_strengthen_post [OF reply_remove_tcb_inactive]
+                    hoare_strengthen_post [OF cancel_signal_inactive]
+                    thread_set_no_change_tcb_pred hoare_vcg_imp_lift |
          clarsimp simp: only_idle_def st_tcb_at_def obj_at_def)+
   done
 

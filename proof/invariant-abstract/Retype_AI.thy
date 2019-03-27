@@ -995,7 +995,7 @@ lemma set_object_no_overlap:
   apply simp
   apply wp
   apply (clarsimp simp del: fun_upd_apply)
-  apply (drule obj_at_ko_atD, erule exE)
+  apply (drule obj_at_ko_at, erule exE)
   apply (rule pspace_no_overlap_same_type)
   apply auto
   done

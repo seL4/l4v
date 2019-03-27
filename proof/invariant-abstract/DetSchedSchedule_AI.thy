@@ -4076,6 +4076,16 @@ lemma set_thread_state_has_budget[wp]:
    \<lbrace>\<lambda>rv. has_budget x :: det_state \<Rightarrow> _\<rbrace>"
   by (wpsimp simp: has_budget_equiv2 wp: hoare_vcg_disj_lift)
 
+lemma thread_set_has_budget[wp]:
+  assumes "\<And>tcb. tcb_sched_context (f tcb) = tcb_sched_context tcb"
+  assumes "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
+  shows "thread_set f tptr \<lbrace>has_budget x :: det_state \<Rightarrow> _\<rbrace>"
+  by (wpsimp simp: has_budget_equiv2 assms
+               wp: hoare_vcg_disj_lift thread_set_no_change_tcb_pred_gen
+                   active_sc_tcb_at_thread_set_no_change
+                   budget_sufficient_thread_set_no_change
+                   budget_ready_thread_set_no_change)
+
 lemma possible_switch_to_valid_sched':
   "\<lbrace>valid_sched_except_blocked and valid_blocked_except target
     and not_cur_thread target and (\<lambda>s. target \<noteq> idle_thread s)
@@ -5756,19 +5766,6 @@ crunch valid_sched[wp]: sched_context_unbind_all_tcbs,sched_context_clear_replie
   (wp: valid_sched_lift ignore: tcb_release_remove set_tcb_queue)
 *)
 
-lemma thread_set_fault_simple_sched_action[wp]:
-  "\<lbrace> simple_sched_action \<rbrace> thread_set (tcb_fault_update u) t \<lbrace>\<lambda>rv. simple_sched_action \<rbrace>"
-  by (wpsimp wp: ct_in_state_thread_state_lift thread_set_no_change_tcb_state
-            simp: thread_set_def)
-
-lemma reply_cancel_ipc_valid_sched:
-  "\<lbrace>valid_sched and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
-     reply_cancel_ipc tptr rptr
-   \<lbrace>\<lambda>rv. valid_sched::det_state \<Rightarrow> _\<rbrace>"
-  apply (simp add: reply_cancel_ipc_def)
-  apply (wpsimp wp: thread_set_not_state_valid_sched reply_remove_tcb_valid_sched)
-  done
-
 lemma cancel_signal_valid_sched[wp]:
   "\<lbrace>valid_sched and (\<lambda>s. st_tcb_at (\<lambda>ts. \<not> runnable ts) tptr s)\<rbrace>
      cancel_signal tptr ntfnptr
@@ -5779,7 +5776,7 @@ lemma cancel_signal_valid_sched[wp]:
                     simp: pred_tcb_at_def obj_at_def)
   done
 
-crunch st_tcb_at_not_runnable[wp]: reply_cancel_ipc "st_tcb_at (\<lambda>st. \<not>runnable st) t::det_state \<Rightarrow> _"
+crunch st_tcb_at_not_runnable[wp]: reply_remove_tcb "st_tcb_at (\<lambda>st. \<not>runnable st) t::det_state \<Rightarrow> _"
   (wp: crunch_wps select_wp sts_st_tcb_at_cases thread_set_no_change_tcb_state maybeM_inv
    simp: crunch_simps unless_def fast_finalise.simps wp_del: reply_remove_st_tcb_at)
 
@@ -5900,10 +5897,12 @@ lemma cancel_ipc_valid_sched:
   "\<lbrace>valid_objs and (\<lambda>s. sym_refs (state_refs_of s)) and valid_sched\<rbrace>
       cancel_ipc tptr \<lbrace>\<lambda>rv. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: cancel_ipc_def)
-  apply (rule hoare_seq_ext[OF _ gts_sp])
-  apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift reply_cancel_ipc_valid_sched
-      blocked_cancel_ipc_valid_sched_Receive blocked_cancel_ipc_valid_sched_Send)
-   by (fastforce elim!: st_tcb_weakenE)+
+  apply (wpsimp wp: hoare_vcg_all_lift reply_remove_tcb_valid_sched
+                    blocked_cancel_ipc_valid_sched_Receive
+                    blocked_cancel_ipc_valid_sched_Send
+                    thread_set_not_state_valid_sched thread_set_no_change_tcb_pred
+                    hoare_vcg_imp_lift gts_wp)
+  by (fastforce elim!: st_tcb_weakenE)+
 
 end
 
@@ -6017,13 +6016,9 @@ and  scheduler_act_not[wp]: "scheduler_act_not t"
   (wp: crunch_wps maybeM_inv simp: get_sc_obj_ref_def)
 
 crunches blocked_cancel_ipc,cancel_signal
-for not_queued[wp]: "not_queued t"
-and not_in_release_q[wp]: "not_in_release_q t:: det_state \<Rightarrow> _"
-  (wp: hoare_drop_imp simp: )
-
-lemma reply_cancel_ipc_not_queued[wp]:
-  "\<lbrace>not_queued t and scheduler_act_not t\<rbrace> reply_cancel_ipc tptr rptr \<lbrace>\<lambda>_. not_queued t:: det_state \<Rightarrow> _\<rbrace>"
-  by (wpsimp simp: reply_cancel_ipc_def)
+  for not_queued[wp]: "not_queued t"
+  and not_in_release_q[wp]: "not_in_release_q t:: det_state \<Rightarrow> _"
+  (wp: hoare_drop_imp)
 
 lemma cancel_ipc_not_queued[wp]:
   "\<lbrace>not_queued t and scheduler_act_not t\<rbrace> cancel_ipc tptr \<lbrace>\<lambda>_. not_queued t:: det_state \<Rightarrow> _\<rbrace>"
@@ -7818,14 +7813,14 @@ for not_cur_thread[wp]: "not_cur_thread thread"
 lemma cancel_ipc_sc_tcb_sc_at_eq[wp]:
   "cancel_ipc thread \<lbrace>sc_tcb_sc_at ((=) tcb_opt) x\<rbrace>"
   unfolding cancel_ipc_def
-  by (wpsimp simp: blocked_cancel_ipc_def get_blocking_object_def reply_cancel_ipc_def
+  by (wpsimp simp: blocked_cancel_ipc_def get_blocking_object_def
                    reply_remove_tcb_def cancel_signal_def
                wp: get_simple_ko_wp get_ep_queue_wp hoare_vcg_all_lift hoare_drop_imps)
 
 lemma cancel_ipc_bound_sc_tcb_at[wp]:
   "cancel_ipc thread \<lbrace>bound_sc_tcb_at P thread\<rbrace>"
   unfolding cancel_ipc_def
-  apply (wpsimp simp: reply_cancel_ipc_def reply_remove_tcb_def
+  apply (wpsimp simp: reply_remove_tcb_def
                   wp: gts_wp thread_set_wp get_sk_obj_ref_wp)
   apply (clarsimp dest!: get_tcb_SomeD
                    simp: pred_tcb_at_def obj_at_def)
@@ -10828,8 +10823,8 @@ lemma cancel_ipc_BOR_valid_sched:
   unfolding cancel_ipc_def
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (case_tac state; clarsimp)
-         apply (wpsimp+)[3]
-      apply (wpsimp wp: blocked_cancel_ipc_BOR_valid_sched')
+         apply ((wpsimp wp: thread_set_not_state_valid_sched)+)[3]
+      apply (wpsimp wp: blocked_cancel_ipc_BOR_valid_sched' thread_set_not_state_valid_sched)
      apply (clarsimp simp: st_tcb_at_def obj_at_def
             | rule_tac Q="\<bottom>" in hoare_weaken_pre
             | case_tac "tcb_state tcb")+
@@ -10841,13 +10836,6 @@ lemma blocked_cancel_ipc_BOR_st_tcb_at_not_runnable[wp]:
    \<lbrace>\<lambda>rv s. st_tcb_at (\<lambda>ts. \<not> runnable ts) tcbptr s\<rbrace>"
   unfolding blocked_cancel_ipc_def
   by (wpsimp wp: hoare_drop_imps)
-
-lemma blocked_cancel_ipc_BOR_active_sc_tcb_at:
-  "\<lbrace>active_sc_tcb_at tcbptr\<rbrace>
-      blocked_cancel_ipc (BlockedOnReceive ep r1) tcbptr r2
-   \<lbrace>\<lambda>rv. active_sc_tcb_at tcbptr :: det_state \<Rightarrow> _\<rbrace>"
-  unfolding blocked_cancel_ipc_def
-  by (wpsimp wp: reply_unlink_tcb_active_sc_tcb_at hoare_drop_imps)
 
 lemma valid_ep_remove1_SendEP:
   "valid_ep (SendEP q) s \<Longrightarrow> valid_ep (case remove1 tp q of
@@ -10984,8 +10972,9 @@ lemma cancel_ipc_BOR_other:
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (case_tac state; clarsimp)
          prefer 4
-         apply (wpsimp wp:
-                           blocked_cancel_ipc_BOR_has_budget)
+         apply (wpsimp wp: thread_set_valid_objs
+                           blocked_cancel_ipc_BOR_has_budget
+                     simp: valid_tcb_def ran_tcb_cap_cases)
         apply (rule hoare_weaken_pre,
                rule hoare_pre_cont
                | clarsimp simp: st_tcb_at_def obj_at_def
@@ -11960,7 +11949,7 @@ context DetSchedSchedule_AI begin
 (*
 crunch weak_valid_sched_action[wp]: blocked_cancel_ipc,cancel_signal weak_valid_sched_action
 
-crunch weak_valid_sched_action[wp]: reply_cancel_ipc weak_valid_sched_action
+crunch weak_valid_sched_action[wp]: reply_remove_tcb weak_valid_sched_action
   (wp: hoare_drop_imps crunch_wps set_bound_notification_weak_valid_sched_action
    ignore: set_scheduler_action set_object)
 
