@@ -651,16 +651,6 @@ where
       od
   od"
 
-text {* Cancel the message receive operation of a thread waiting for a Reply
-capability it has issued to be invoked. *}
-definition
-  reply_cancel_ipc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where (* called when tptr is in BlockedOnReply *)
- "reply_cancel_ipc tptr reply \<equiv> do
-    thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := None \<rparr>) tptr;
-    reply_remove_tcb tptr reply
-  od"
-
 text {* Cancel the message receive operation of a thread queued in an
 notification object. *}
 definition
@@ -683,12 +673,13 @@ definition
 where
   "cancel_ipc tptr \<equiv> do
      state \<leftarrow> get_thread_state tptr;
+     thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := None \<rparr>) tptr;
      case state
        of
           BlockedOnSend x y \<Rightarrow> blocked_cancel_ipc state tptr None
         | BlockedOnReceive x reply \<Rightarrow> blocked_cancel_ipc state tptr reply
         | BlockedOnNotification event \<Rightarrow> cancel_signal tptr event
-        | BlockedOnReply reply \<Rightarrow> reply_cancel_ipc tptr reply
+        | BlockedOnReply reply \<Rightarrow> reply_remove_tcb tptr reply
         | _ \<Rightarrow> return ()
    od"
 
