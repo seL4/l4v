@@ -11398,13 +11398,6 @@ lemma test:
 apply (simp add: invs_valid_tcb_ctable_strengthen)
 done
 
-lemma lookup_reply_valid_fault[wp]:
-  "\<lbrace>\<top>\<rbrace> lookup_reply -,\<lbrace>\<lambda>rv s::det_state. valid_fault rv\<rbrace>"
-  apply (clarsimp simp: lookup_reply_def)
-  apply (wpsimp simp: valid_fault_def lookup_cap_def lookup_slot_for_thread_def
- wp: hoare_vcg_conj_lift hoare_vcg_all_lift)
-  sorry (* lookup_reply_valid_fault *)
-
 abbreviation ct_schedulable where
   "ct_schedulable s \<equiv> active_sc_tcb_at (cur_thread s) s
       \<and> budget_ready (cur_thread s) s
