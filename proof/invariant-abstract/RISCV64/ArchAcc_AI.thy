@@ -73,7 +73,7 @@ lemma valid_vs_lookupD:
      vref \<in> user_region s ; valid_vs_lookup s \<rbrakk>
    \<Longrightarrow>  asid \<noteq> 0
         \<and> (\<exists>p' cap. caps_of_state s p' = Some cap \<and> obj_refs cap = {p}
-                    \<and> vs_cap_ref cap = Some (asid_for_level asid level, vref_for_level vref level))"
+                    \<and> vs_cap_ref cap = Some (asid, vref_for_level vref level))"
   unfolding valid_vs_lookup_def
   by auto
 

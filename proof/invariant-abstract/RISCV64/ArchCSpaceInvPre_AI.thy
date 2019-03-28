@@ -153,10 +153,6 @@ lemma vs_lookup_slot_asid_for_level[simp]:
   "vs_lookup_slot level (asid_for_level asid level) vref = vs_lookup_slot level asid vref"
   by (simp add: vs_lookup_slot_def)
 
-lemma vs_lookup_target_asid_for_level[simp]:
-  "vs_lookup_target level (asid_for_level asid level) vref = vs_lookup_target level asid vref"
-  sorry (* FIXME RISCV: not true, but not necessary after Raf's invariant change; remove *)
-
 lemma set_cap_valid_vs_lookup:
   "\<lbrace>\<lambda>s. valid_vs_lookup s
       \<and> (\<forall>vref cap'. caps_of_state s ptr = Some cap'

@@ -340,6 +340,7 @@ definition vref_for_level :: "vspace_ref \<Rightarrow> vm_level \<Rightarrow> vs
   "vref_for_level vref level = vref && ~~mask (pt_bits_left level)"
 
 (* Mask out asid_low_bits if a lookup only goes to asid_pool_level *)
+(* FIXME RISCV: currently unused *)
 definition asid_for_level :: "asid \<Rightarrow> vm_level \<Rightarrow> asid" where
   "asid_for_level asid level \<equiv>
      if level = asid_pool_level then asid && ~~mask asid_low_bits else asid"
@@ -407,7 +408,7 @@ definition valid_vs_lookup :: "'z::state_ext state \<Rightarrow> bool" where
        asid \<noteq> 0 \<and>
        (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
                  obj_refs cap = {p} \<and>
-                 vs_cap_ref cap = Some (asid_for_level asid level, vref_for_level vref level))"
+                 vs_cap_ref cap = Some (asid, vref_for_level vref level))"
 
 definition valid_asid_pool_caps_2 :: "(cslot_ptr \<rightharpoonup> cap) \<Rightarrow> (asid_high_index \<rightharpoonup> obj_ref) \<Rightarrow> bool"
   where

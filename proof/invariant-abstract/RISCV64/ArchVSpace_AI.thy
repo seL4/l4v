@@ -442,7 +442,7 @@ lemma store_pte_valid_vs_lookup_map:
               (\<exists>cslot cap.
                  caps_of_state s cslot = Some cap \<and>
                  obj_refs cap = {r} \<and>
-                 vs_cap_ref cap = Some (asid_for_level asid level, vref_for_level vref level)))) and
+                 vs_cap_ref cap = Some (asid, vref_for_level vref level)))) and
     (\<lambda>s. is_PageTablePTE pte \<longrightarrow> (\<forall>ref. pte_ref pte = Some ref \<longrightarrow> pts_of s ref = Some empty_pt))\<rbrace>
    store_pte p pte
    \<lbrace>\<lambda>rv. valid_vs_lookup\<rbrace>"
@@ -459,7 +459,7 @@ lemma store_pte_invs_map: (* FIXME RISCV: probably missing some preconditions *)
               (\<exists>cslot cap.
                  caps_of_state s cslot = Some cap \<and>
                  obj_refs cap = {r} \<and>
-                 vs_cap_ref cap = Some (asid_for_level asid level, vref_for_level vref level)))) \<and>
+                 vs_cap_ref cap = Some (asid, vref_for_level vref level)))) \<and>
     (is_PageTablePTE pte \<longrightarrow> (\<forall>ref. pte_ref pte = Some ref \<longrightarrow> pts_of s ref = Some empty_pt)) \<and>
     (\<exists>p' cap. caps_of_state s p' = Some cap \<and> is_pt_cap cap \<and> p \<in> obj_refs cap \<and>
               cap_asid cap \<noteq> None) \<rbrace>
