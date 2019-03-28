@@ -173,20 +173,13 @@ lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
   "\<lbrace>valid_arch_caps and cte_wp_at ((=) src_cap) src\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>ya. valid_arch_caps\<rbrace>"
-  apply (clarsimp simp:valid_arch_caps_def set_untyped_cap_as_full_def)
-  apply (intro conjI impI)
-    apply (wp set_cap_valid_vs_lookup set_cap_valid_table_caps)
-  sorry (* FIXME RISCV
-    apply (clarsimp simp del:fun_upd_apply simp:cte_wp_at_caps_of_state)
-    apply (subst unique_table_refs_upd_eqD)
-         apply ((simp add: is_cap_simps table_cap_ref_def)+)
-      apply clarsimp
-    apply (subst unique_table_caps_upd_eqD)
-      apply simp+
-    apply (clarsimp simp:is_cap_simps cte_wp_at_caps_of_state)+
-  apply wp
-  apply clarsimp
-  done *)
+  supply if_split[split del]
+  apply (clarsimp simp: valid_arch_caps_def set_untyped_cap_as_full_def)
+  apply (wpsimp wp: set_cap_valid_vs_lookup set_cap_valid_table_caps
+                simp_del: fun_upd_apply simp: cte_wp_at_caps_of_state)
+  apply (fastforce simp: unique_table_refs_upd_eqD unique_table_caps_upd_eqD
+                         is_cap_simps cte_wp_at_caps_of_state)
+  done
 
 lemma set_untyped_cap_as_full[wp, CSpace_AI_assms]:
   "\<lbrace>\<lambda>s. no_cap_to_obj_with_diff_ref a b s \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
@@ -217,18 +210,48 @@ lemma is_derived_is_cap:
   by (clarsimp simp: cap_master_cap_def is_cap_simps
               split: cap.splits arch_cap.splits)+
 
+(* FIXME RISCV: move up *)
+lemma vs_lookup_table_eq_lift:
+  "\<lbrakk> pts_of s' = pts_of s;
+    asid_pools_of s' = asid_pools_of s;
+    pool_for_asid asid s' = pool_for_asid asid s \<rbrakk>
+   \<Longrightarrow> vs_lookup_table level asid vref s' = vs_lookup_table level asid vref s"
+  unfolding vs_lookup_table_def
+  by (auto simp: obind_def split: option.splits)
 
-(* FIXME: move to CSpace_I near lemma vs_lookup_tcb_update *)
-lemma vs_lookup_pages_tcb_update:
-  "kheap s p = Some (TCB t) \<Longrightarrow>
-   vs_lookup_pages (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>) = vs_lookup_pages s"
-  sorry (* FIXME RISCV *)
+(* FIXME RISCV: move up *)
+lemma aobjs_of_non_aobj_upd:
+  "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
+   \<Longrightarrow> kheap s(p \<mapsto> ko') |> aobj_of = aobjs_of s"
+  by (rule ext)
+     (auto simp: opt_map_def is_ArchObj_def aobj_of_def split: kernel_object.splits if_split_asm)
 
-(* FIXME: move to CSpace_I near lemma vs_lookup_cnode_update *)
-lemma vs_lookup_pages_cnode_update:
-  "kheap s p = Some (CNode n cs) \<Longrightarrow>
-   vs_lookup_pages (s\<lparr>kheap := kheap s(p \<mapsto> CNode n cs')\<rparr>) = vs_lookup_pages s"
-  sorry (* FIXME RISCV *)
+(* FIXME RISCV: move up *)
+lemma pool_for_asid_kheap_upd[simp]:
+  "pool_for_asid asid (s\<lparr>kheap := kheap'\<rparr>) = pool_for_asid asid s"
+  by (simp add: pool_for_asid_def)
+
+lemma vs_lookup_pages_non_aobj_upd:
+  "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
+   \<Longrightarrow> vs_lookup_pages (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>) = vs_lookup_pages s"
+  unfolding vs_lookup_target_def vs_lookup_slot_def
+  apply (frule aobjs_of_non_aobj_upd[where ko'=ko'], simp+)
+  apply (rule ext)+
+  apply (simp add: obind_assoc)
+  apply (rule obind_eqI)
+   apply (rule vs_lookup_table_eq_lift; simp)
+  apply (clarsimp split del: if_split)
+  apply (rule obind_eqI, clarsimp)
+  apply (clarsimp split del: if_split)
+  apply (rule obind_eqI; clarsimp)
+  done
+
+(* FIXME RISCV: which do we want, the lookup_target or lookup_pages version? *)
+lemma vs_lookup_target_non_aobj_upd:
+  "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
+   \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)
+      = vs_lookup_target level asid vref s"
+  by (drule vs_lookup_pages_non_aobj_upd[where ko'=ko'], auto dest: fun_cong)
 
 lemma set_untyped_cap_as_full_not_reachable_pg_cap[wp]:
   "\<lbrace>\<lambda>s. \<not> reachable_frame_cap cap' s\<rbrace>
@@ -236,12 +259,10 @@ lemma set_untyped_cap_as_full_not_reachable_pg_cap[wp]:
    \<lbrace>\<lambda>rv s. \<not> reachable_frame_cap cap' s\<rbrace>"
   apply (clarsimp simp: set_untyped_cap_as_full_def set_cap_def split_def
                         set_object_def)
-  apply (wp get_object_wp | wpc)+
-  apply (clarsimp simp: obj_at_def simp del: fun_upd_apply)
-  sorry (* FIXME RISCV
+  apply (wpsimp wp: get_object_wp simp_del: fun_upd_apply)
   apply (auto simp: obj_at_def reachable_frame_cap_def is_cap_simps
-                    vs_lookup_pages_cnode_update vs_lookup_pages_tcb_update)
-  done *)
+                    reachable_target_def vs_lookup_target_non_aobj_upd)
+  done
 
 lemma table_cap_ref_eq_rewrite:
   "\<lbrakk>cap_master_cap cap = cap_master_cap capa; (is_frame_cap cap \<or> vs_cap_ref cap = vs_cap_ref capa)\<rbrakk>
@@ -261,6 +282,26 @@ lemma is_derived_cap_asid_issues:
    apply (clarsimp split: if_split_asm)+
   done
 
+lemma set_untyped_cap_as_full_reachable_target[wp]:
+  "\<lbrace>\<lambda>s. P (reachable_target avref p s)\<rbrace>
+   set_untyped_cap_as_full src_cap cap src
+   \<lbrace>\<lambda>r s. P (reachable_target avref p s)\<rbrace>"
+  unfolding reachable_target_def
+  apply (cases avref, clarsimp)
+  apply (rule hoare_lift_Pf[where f="pool_for_asid asid" for asid])
+  apply (clarsimp simp: set_untyped_cap_as_full_def, wp)+
+  done
+
+(* FIXME this is generic *)
+crunches set_untyped_cap_as_full
+  for aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
+
+lemma is_derived_is_pt:
+  "is_derived m p cap cap' \<Longrightarrow> (is_pt_cap cap = is_pt_cap cap')"
+  apply (clarsimp simp: is_derived_def split: if_split_asm)
+  apply (clarsimp simp: cap_master_cap_def is_pt_cap_def split: cap.splits arch_cap.splits)+
+  done
+
 lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
   "\<lbrace>valid_arch_caps and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
      cap_insert cap src dest
@@ -272,85 +313,49 @@ lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
       apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift set_untyped_cap_as_full_cte_wp_at_neg
                 set_untyped_cap_as_full_is_final_cap'_neg set_untyped_cap_as_full_cte_wp_at hoare_vcg_ball_lift
                 hoare_vcg_ex_lift hoare_vcg_disj_lift | wps)+
-  sorry (* FIXME RISCV
-  apply (wp set_untyped_cap_as_full_obj_at_impossible)
-  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift set_untyped_cap_as_full_cte_wp_at_neg
-    set_untyped_cap_as_full_is_final_cap'_neg hoare_vcg_ball_lift
-    hoare_vcg_ex_lift | wps)+
-  apply (wp set_untyped_cap_as_full_obj_at_impossible)
-  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift set_untyped_cap_as_full_cte_wp_at_neg
-    set_untyped_cap_as_full_is_final_cap'_neg hoare_vcg_ball_lift
-    hoare_vcg_ex_lift | wps)+
-  apply (rule hoare_strengthen_post)
-    prefer 2
-    apply (erule iffD2[OF caps_of_state_cteD'])
-  apply (wp set_untyped_cap_as_full_cte_wp_at hoare_vcg_all_lift hoare_vcg_imp_lift
-            set_untyped_cap_as_full_cte_wp_at_neg hoare_vcg_ex_lift | clarsimp)+
-  apply (rule hoare_strengthen_post)
-    prefer 2
-    apply (erule iffD2[OF caps_of_state_cteD'])
-  apply (wp set_untyped_cap_as_full_cte_wp_at hoare_vcg_all_lift hoare_vcg_imp_lift
-         set_untyped_cap_as_full_cte_wp_at_neg hoare_vcg_ex_lift | clarsimp)+
-  apply (wp get_cap_wp)+
+       apply (rule hoare_strengthen_post)
+        prefer 2
+        apply (erule iffD2[OF caps_of_state_cteD'])
+       apply (wp set_untyped_cap_as_full_cte_wp_at hoare_vcg_all_lift hoare_vcg_imp_lift
+                 set_untyped_cap_as_full_cte_wp_at_neg hoare_vcg_ex_lift | clarsimp)+
+     apply (wp get_cap_wp)+
   apply (intro conjI allI impI disj_subst)
-          apply simp
-         apply clarsimp
-         defer
-        apply (clarsimp simp:valid_arch_caps_def cte_wp_at_caps_of_state)
-        apply (drule(1) unique_table_refs_no_cap_asidD)
-        apply (frule is_derived_obj_refs)
-        apply (frule is_derived_cap_asid_issues)
-        apply (frule is_derived_is_cap)
-        apply (clarsimp simp:no_cap_to_obj_with_diff_ref_def  Ball_def
-          del:disjCI dest!: derived_cap_master_cap_eq)
-        apply (drule table_cap_ref_eq_rewrite)
-         apply clarsimp
-        apply (erule_tac x=a in allE, erule_tac x=b in allE)
-        apply simp
        apply simp
-      apply (clarsimp simp:obj_at_def is_cap_simps valid_arch_caps_def)
-      apply (frule(1) valid_table_capsD)
-        apply (clarsimp simp:cte_wp_at_caps_of_state)
-        apply (drule is_derived_is_pt_pd)
-        apply (clarsimp simp:is_derived_def is_cap_simps)
-       apply (clarsimp simp:cte_wp_at_caps_of_state)
-       apply (frule is_derived_cap_asid_issues)
-       apply (clarsimp simp:is_cap_simps)
-      apply (clarsimp simp:cte_wp_at_caps_of_state)
+      apply clarsimp
+      defer
+      apply (clarsimp simp: valid_arch_caps_def cte_wp_at_caps_of_state)
+      apply (drule(1) unique_table_refs_no_cap_asidD)
       apply (frule is_derived_obj_refs)
-      apply (drule_tac x = p in bspec)
-        apply fastforce
-      apply (clarsimp simp:obj_at_def empty_table_caps_of)
-     apply (clarsimp simp:empty_table_caps_of valid_arch_caps_def)
-     apply (frule(1) valid_table_capsD)
-       apply (clarsimp simp:cte_wp_at_caps_of_state is_derived_is_pt_pd)
-      apply (clarsimp simp:cte_wp_at_caps_of_state)
       apply (frule is_derived_cap_asid_issues)
-      apply (clarsimp simp:is_cap_simps)
-     apply (clarsimp simp:cte_wp_at_caps_of_state)
-     apply (frule is_derived_obj_refs)
-     apply (drule_tac x = x in bspec)
-       apply fastforce
-     subgoal by (clarsimp simp:obj_at_def empty_table_caps_of)
-    apply (clarsimp simp:is_cap_simps cte_wp_at_caps_of_state)
-    apply (frule is_derived_is_pt_pd)
+      apply (frule is_derived_is_cap)
+      apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def Ball_def
+                      del: disjCI dest!: derived_cap_master_cap_eq)
+      apply (drule table_cap_ref_eq_rewrite)
+       apply clarsimp
+      apply (erule_tac x=a in allE, erule_tac x=b in allE)
+      apply simp+
+    apply (clarsimp simp: obj_at_def is_cap_simps valid_arch_caps_def)
+    apply (frule(1) valid_table_capsD)
+      apply (clarsimp simp: cte_wp_at_caps_of_state)
+      apply (drule is_derived_is_pt)
+      apply (clarsimp simp: is_derived_def is_cap_simps)
+     apply (clarsimp simp: cte_wp_at_caps_of_state)
+     apply (frule is_derived_cap_asid_issues)
+     apply (clarsimp simp: is_cap_simps)
+    apply (clarsimp simp: cte_wp_at_caps_of_state)
     apply (frule is_derived_obj_refs)
-    apply (frule is_derived_cap_asid_issues)
-       apply (clarsimp simp:is_cap_simps valid_arch_caps_def cap_master_cap_def
-                            is_derived_def is_derived_arch_def)
-       apply (drule_tac ptr = src and ptr' = "(x,xa)" in unique_table_capsD)
-    apply (simp add:is_cap_simps)+
-   apply (clarsimp simp:is_cap_simps cte_wp_at_caps_of_state)
-   apply (frule is_derived_is_pt_pd)
+    apply (drule_tac x=p in bspec)
+     apply fastforce
+    apply (clarsimp simp: obj_at_def empty_table_caps_of)
+   apply (clarsimp simp: is_cap_simps cte_wp_at_caps_of_state)
+   apply (frule is_derived_is_pt)
    apply (frule is_derived_obj_refs)
    apply (frule is_derived_cap_asid_issues)
-   apply (clarsimp simp:is_cap_simps valid_arch_caps_def
-                        cap_master_cap_def cap_master_arch_cap_def
-                        is_derived_def is_derived_arch_def)
-   apply (drule_tac ptr = src and ptr' = "(x,xa)" in unique_table_capsD)
-   apply (simp add:is_cap_simps)+
-  apply (auto simp:cte_wp_at_caps_of_state)
-done *)
+   apply (clarsimp simp: is_cap_simps is_derived_def valid_arch_caps_def cap_master_cap_def)
+   apply (drule_tac ptr=src and ptr'="(x,xa)" in unique_table_capsD)
+         apply (fastforce simp: cap_asid_def is_cap_simps)+
+  apply (auto simp: cte_wp_at_caps_of_state)
+  done
 
 end
 
@@ -436,12 +441,11 @@ lemma tcb_cnode_index_def2 [CSpace_AI_assms]:
   apply (rule nth_equalityI)
    apply (simp add: word_bits_def)
   apply (clarsimp simp: to_bl_nth word_size word_bits_def)
-  apply (subst of_nat_ucast[where 'a=32 and 'b=3])
+  apply (subst of_nat_ucast[where 'a=machine_word_len and 'b=3])
    apply (simp add: is_down_def target_size_def source_size_def word_size)
   apply (simp add: nth_ucast)
-  sorry (* FIXME RISCV
   apply fastforce
-  done *)
+  done
 
 
 lemma ex_nonz_tcb_cte_caps [CSpace_AI_assms]:
@@ -531,11 +535,10 @@ lemma cap_insert_simple_arch_caps_no_ap:
     set_untyped_cap_as_full_empty_table_at hoare_vcg_ex_lift
     set_untyped_cap_as_full_caps_of_state_diff[where dest=dest]
     | wps)+
-  sorry (* FIXME RISCV
       apply (wp get_cap_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (intro conjI impI allI)
-  by (auto simp:is_simple_cap_def[simplified is_simple_cap_arch_def] is_cap_simps) *)
+  by (auto simp:is_simple_cap_def[simplified is_simple_cap_arch_def] is_cap_simps)
 
 lemma setup_reply_master_ioports[wp, CSpace_AI_assms]:
   "\<lbrace>valid_ioports\<rbrace> setup_reply_master c \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
