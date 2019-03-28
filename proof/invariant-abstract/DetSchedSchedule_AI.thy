@@ -9483,6 +9483,98 @@ lemma send_fault_ipc_error_not_queued[wp]:
 
 context DetSchedSchedule_AI begin
 
+lemma send_ipc_not_queued:
+  "\<lbrace>not_queued t and scheduler_act_not t and (\<lambda>s. \<forall>xb. \<not>ko_at (Endpoint (RecvEP (t # xb))) x31 s)\<rbrace>
+   send_ipc True False x32 True can_donate tptr x31
+   \<lbrace>\<lambda>rv. not_queued t::det_state \<Rightarrow> _\<rbrace>"
+  apply (clarsimp simp: send_ipc_def )
+  apply (wpsimp wp: hoare_drop_imp get_simple_ko_wp
+         split_del: if_split
+              simp: do_ipc_transfer_def do_normal_transfer_def)
+  done
+
+crunches reply_push
+  for not_in_release_q'[wp]: "\<lambda>s::det_state. not_in_release_q t s"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma send_ipc_not_in_release_q:
+  "\<lbrace>not_in_release_q t\<rbrace> send_ipc True False x32 True can_donate tptr x31  \<lbrace>\<lambda>rv. not_in_release_q t::det_state \<Rightarrow> _\<rbrace>"
+  apply (clarsimp simp: send_ipc_def )
+  by (wpsimp wp: hoare_drop_imp get_simple_ko_wp
+      split_del: if_split
+           simp: do_ipc_transfer_def do_normal_transfer_def)
+
+crunches set_extra_badge, copy_mrs
+  for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+  (wp: crunch_wps)
+
+lemma transfer_caps_loop_scheduler_action:
+  "transfer_caps_loop h x2 m xd dest_slots mi'
+       \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+  apply (induction rule: transfer_caps_loop.induct; simp)
+  apply safe
+  apply (wpsimp | assumption)+
+  done
+
+lemma transfer_caps_scheduler_action[wp]:
+  "transfer_caps xc xd (Some x31) x21 x \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+  unfolding transfer_caps_def
+  by (wpsimp wp: transfer_caps_loop_scheduler_action)
+
+lemma transfer_caps_scheduler_act_not:
+  "\<lbrace>scheduler_act_not t and (\<lambda>s. \<forall>xb. \<not>ko_at (Endpoint (RecvEP (t # xb))) x31 s)\<rbrace>
+   send_ipc True False x32 True can_donate tptr x31
+   \<lbrace>\<lambda>rv. scheduler_act_not t::det_state \<Rightarrow> _\<rbrace>"
+  apply (clarsimp simp: send_ipc_def )
+  apply (wpsimp wp: hoare_drop_imps
+         split_del: if_split
+              simp: do_ipc_transfer_def do_normal_transfer_def do_fault_transfer_def)
+     apply (wpsimp wp: hoare_vcg_all_lift hoare_drop_imps)
+    apply clarsimp
+    apply (wpsimp wp: get_simple_ko_wp)+
+  done
+
+lemma send_fault_ipc_not_queued:
+  "\<lbrace>invs and not_queued t and st_tcb_at active t and scheduler_act_not t\<rbrace>
+   send_fault_ipc tptr handler_cap fault can_donate
+   \<lbrace>\<lambda>rv. not_queued t::det_state \<Rightarrow> _\<rbrace>"
+  unfolding send_fault_ipc_def
+  apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift_R send_ipc_not_queued)
+               apply (wpsimp wp: thread_set_wp)+
+  apply (subgoal_tac "st_tcb_at (not active) t s")
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def pred_neg_def)
+  apply (subgoal_tac "ko_at (Endpoint (RecvEP (t # xba))) x s")
+   apply (rule ep_queued_st_tcb_at; clarsimp?)
+     apply assumption
+    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+    apply (rule refl)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def pred_neg_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def pred_neg_def split: if_splits)
+  done
+
+lemma send_fault_ipc_not_in_release_q:
+  "\<lbrace>not_in_release_q t\<rbrace> send_fault_ipc tptr handler_cap fault can_donate \<lbrace>\<lambda>rv. not_in_release_q t::det_state \<Rightarrow> _\<rbrace>"
+  by (simp add: send_fault_ipc_def Let_def |
+      (wp hoare_drop_imps hoare_vcg_all_lift_R send_ipc_not_in_release_q)+ | wpc)+
+
+lemma send_fault_ipc_scheduler_act_not:
+  "\<lbrace>invs and st_tcb_at active t and scheduler_act_not t\<rbrace>
+   send_fault_ipc tptr handler_cap fault can_donate
+   \<lbrace>\<lambda>rv. scheduler_act_not t::det_state \<Rightarrow> _\<rbrace>"
+  unfolding send_fault_ipc_def
+  apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift_R transfer_caps_scheduler_act_not)
+               apply (wpsimp wp: thread_set_wp)+
+  apply (subgoal_tac "st_tcb_at (not active) t s")
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def pred_neg_def)
+  apply (subgoal_tac "ko_at (Endpoint (RecvEP (t # xba))) x s")
+   apply (rule ep_queued_st_tcb_at; clarsimp?)
+     apply assumption
+    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+    apply (rule refl)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def pred_neg_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def pred_neg_def split: if_splits)
+  done
+
 crunches update_sk_obj_ref
   for valid_sched_action[wp]: "valid_sched_action:: det_state \<Rightarrow> _"
   and ct_in_cur_domain[wp]: "ct_in_cur_domain:: det_state \<Rightarrow> _"
@@ -9493,7 +9585,7 @@ crunches update_sk_obj_ref
 lemma reply_push_valid_sched_no_donation:
   "\<lbrace> valid_sched_except_blocked and valid_blocked_except thread and not_in_release_q thread and
      scheduler_act_not thread and not_queued thread\<rbrace>
-  reply_push thread dest ya False
+   reply_push thread dest ya False
    \<lbrace>\<lambda>rv. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   unfolding reply_push_def
   apply clarsimp
@@ -10305,9 +10397,9 @@ lemma handle_fault_valid_sched:
       and active_sc_tcb_at thread and budget_ready thread and budget_sufficient thread\<rbrace>
    handle_fault thread ex \<lbrace>\<lambda>rv. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   unfolding handle_fault_def unless_def
-  apply (wpsimp wp: handle_no_fault_valid_sched send_fault_ipc_valid_sched hoare_vcg_if_lift2
-                    hoare_drop_imps hoare_vcg_conj_lift)
-sorry (* ? handle_fault *)
+  by (wpsimp wp: handle_no_fault_valid_sched send_fault_ipc_valid_sched hoare_vcg_if_lift2
+                 send_fault_ipc_not_queued send_fault_ipc_not_in_release_q
+                 send_fault_ipc_scheduler_act_not hoare_drop_imps hoare_vcg_conj_lift)
 
 end
 
