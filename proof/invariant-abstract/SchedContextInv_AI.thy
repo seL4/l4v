@@ -1386,26 +1386,6 @@ lemma update_sc_badge_invs:
   done
 
 (* FIXME copied from Syscall_AI *)
-lemmas si_invs = si_invs'[where Q=\<top>,OF hoare_TrueI hoare_TrueI hoare_TrueI hoare_TrueI,simplified]
-
-lemma send_ipc_invs_for_timeout:
-  "\<lbrace>invs and st_tcb_at active tptr and ex_nonz_cap_to tptr
-   and (\<lambda>s. caps_of_state s (tptr, tcb_cnode_index 4) = Some cap)
-   and K (is_ep_cap cap) and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at bound tptr s)\<rbrace>
-      send_ipc True False (cap_ep_badge cap) True
-                 canDonate tptr (cap_ep_ptr cap) \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wpsimp wp: si_invs simp: obj_at_def pred_tcb_at_def)
-  apply (clarsimp simp: ex_nonz_cap_to_def pred_tcb_at_def obj_at_def)
-  apply (simp (no_asm) add: cte_wp_at_cases2)
-  apply (rule_tac x="tptr" in exI)
-  apply (rule_tac x="tcb_cnode_index 4" in exI)
-  apply (clarsimp simp: tcb_cnode_map_def)
-  apply (clarsimp simp: caps_of_state_tcb_index_trans[OF get_tcb_rev])
-  apply (cases cap; simp)
-  apply (clarsimp simp: tcb_cnode_map_def cte_wp_at_caps_of_state)
-  done
-
-(* FIXME copied from Syscall_AI *)
 lemma thread_set_cap_to:
   "(\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb)
   \<Longrightarrow> \<lbrace>ex_nonz_cap_to p\<rbrace> thread_set f tptr \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
@@ -1438,55 +1418,59 @@ lemma thread_set_timeout_fault_valid_irq_handlers[wp]:
    apply (wp | simp)+
   done
 
-lemma thread_set_timeout_fault_invs[wp]:
- "\<lbrace>invs\<rbrace> thread_set (tcb_fault_update (\<lambda>_. Some (Timeout badge))) tptr \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp simp: invs_def valid_pspace_def valid_state_def ran_tcb_cap_cases valid_fault_def
-               wp: thread_set_refs_trivial thread_set_hyp_refs_trivial thread_set_valid_objs_triv
-                   thread_set_iflive_trivial thread_set_zombies_trivial thread_set_valid_ioc_trivial
-                   thread_set_valid_idle_trivial thread_set_only_idle thread_set_ifunsafe_trivial
-                   thread_set_global_refs_triv valid_irq_node_typ thread_set_arch_caps_trivial
-                   thread_set_cap_refs_in_kernel_window thread_set_cap_refs_respects_device_region
-                   valid_ioports_lift thread_set_caps_of_state_trivial
-                   thread_set_valid_replies_trivial thread_set_cur_sc_tcb)
-
-lemma send_fault_ipc_invs_timeout:
-  "\<lbrace>invs and st_tcb_at active tptr and ex_nonz_cap_to tptr
-    and (\<lambda>s. caps_of_state s (tptr, tcb_cnode_index 4) = Some cap)
+lemma send_fault_ipc_invs':
+  assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes ext_Q[wp]: "\<And>a. \<lbrace>Q and valid_objs\<rbrace> possible_switch_to a \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes do_ipc_transfer_Q[wp]: "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace>
+                                               do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes thread_set_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> thread_set a b \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
+  notes si_invs''[wp] = si_invs'_fault[where Q=Q]
+  shows
+  "\<lbrace>invs and Q
+    and st_tcb_at active tptr and ex_nonz_cap_to tptr and K (valid_fault fault)
+    and (\<lambda>s. \<exists>n. caps_of_state s (tptr, tcb_cnode_index n) = Some cap)
     and K (is_ep_cap cap) and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at bound tptr s)\<rbrace>
-      send_fault_ipc tptr cap (Timeout badge) canDonate \<lbrace>\<lambda>rv. invs\<rbrace>"
+   send_fault_ipc tptr cap fault canDonate
+   \<lbrace>\<lambda>rv. invs and Q\<rbrace>"
+  apply (cases "valid_fault fault"; simp)
   apply (clarsimp simp: send_fault_ipc_def)
-  apply (wpsimp wp: send_ipc_invs_for_timeout hoare_vcg_conj_lift)
-                apply (wpsimp simp: thread_set_def set_object_def)+
-  apply safe
-        apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_rev)
-       apply (rule ex_cap_to_after_update, assumption)
-       apply (clarsimp simp: obj_at_def get_tcb_SomeD ran_tcb_cap_cases)
-      apply (subst caps_of_state_after_update[simplified fun_upd_apply])
-       apply (clarsimp simp: obj_at_def get_tcb_SomeD ran_tcb_cap_cases)
-      apply (clarsimp simp: caps_of_state_tcb_index_trans tcb_cnode_map_def)
-     apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
-    apply (rule ex_cap_to_after_update, assumption)
-    apply (clarsimp simp: obj_at_def get_tcb_SomeD ran_tcb_cap_cases)
-   apply (subst caps_of_state_after_update[simplified fun_upd_apply])
-    apply (clarsimp simp: obj_at_def get_tcb_SomeD ran_tcb_cap_cases)
-   apply (clarsimp simp: caps_of_state_tcb_index_trans tcb_cnode_map_def)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
+  apply (wpsimp wp: test thread_set_invs_but_fault_tcbs
+                    thread_set_no_change_tcb_state ex_nonz_cap_to_pres
+                    thread_set_cte_wp_at_trivial
+                    thread_set_no_change_tcb_sched_context
+                    hoare_vcg_imp_lift gbn_wp
+         | clarsimp simp: tcb_cap_cases_def
+         | erule disjE)+
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_ko_at)
+  apply (subst (asm) caps_of_state_tcb_index_trans, erule get_tcb_rev)
+  apply (simp (no_asm) add: ex_nonz_cap_to_def cte_wp_at_cases2)
+  apply (rule_tac x = tptr in exI)
+  apply (rule_tac x = "tcb_cnode_index n" in exI)
+  apply (clarsimp simp: obj_at_def tcb_cnode_map_def)
   done
+
+lemmas send_fault_ipc_invs[wp] = send_fault_ipc_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI TrueI,simplified]
 
 lemma handle_timeout_Timeout_invs:
   "\<lbrace>invs and st_tcb_at active tptr\<rbrace>
      handle_timeout tptr (Timeout badge)  \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (clarsimp simp: handle_timeout_def)
-  apply (wpsimp simp: handle_timeout_def ran_tcb_cap_cases
-      thread_set_def valid_fault_def
-      wp: thread_set_invs_trivial send_fault_ipc_invs_timeout)
+  apply (wpsimp wp: thread_set_invs_trivial send_fault_ipc_invs
+              simp: handle_timeout_def ran_tcb_cap_cases
+                    thread_set_def valid_fault_def)
   apply (case_tac "tcb_timeout_handler y"; clarsimp)
+  apply (rule conjI)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
+   apply (drule invs_iflive)
+   apply (drule (1) if_live_then_nonz_capD2)
+    apply (fastforce simp: live_def split: )
+   apply clarsimp
+  apply (rule_tac x=4 in exI)
   apply (auto simp: tcb_cnode_map_def caps_of_state_tcb_index_trans)
-  apply (drule invs_iflive)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
-  apply (drule (1) if_live_then_nonz_capD2)
-    apply (fastforce simp: live_def split: thread_state.splits)
-  apply clarsimp
   done
 
 lemma end_timeslice_invs:

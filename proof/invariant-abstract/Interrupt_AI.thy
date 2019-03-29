@@ -109,7 +109,7 @@ locale Interrupt_AI =
      \<rbrakk> \<Longrightarrow>
      \<lbrace>invs and ex_inv and irq_handler_inv_valid i\<rbrace> invoke_irq_handler i \<lbrace>\<lambda>rv s. invs s \<and> ex_inv s\<rbrace>"
   assumes invoke_irq_handler_ct_active[wp]:
-    "\<And> i. \<lbrace>ct_active and invs\<rbrace> invoke_irq_handler i \<lbrace>\<lambda>rv. ct_active :: 'a state \<Rightarrow> bool\<rbrace>"
+    "\<And> i. \<lbrace>ct_active and fault_tcbs_valid_states\<rbrace> invoke_irq_handler i \<lbrace>\<lambda>rv. ct_active :: 'a state \<Rightarrow> bool\<rbrace>"
   assumes invoke_irq_control_invs[wp]:
     "\<And> i. \<lbrace>invs and irq_control_inv_valid i\<rbrace> invoke_irq_control i \<lbrace>\<lambda>rv. invs :: 'a state \<Rightarrow> bool\<rbrace>"
   assumes invoke_irq_control_ct_in_state[wp]:

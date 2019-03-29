@@ -319,40 +319,41 @@ lemma get_epq_sp:
   done
 
 crunches reply_unlink_tcb
- for aligned[wp]: pspace_aligned
- and distinct[wp]: pspace_distinct
- and cte_wp_at[wp]: "cte_wp_at P c"
- and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
- and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
- and no_cdt[wp]: "\<lambda>s. P (cdt s)"
- and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
- and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
- and arch_state[wp]: "\<lambda>s. P (arch_state s)"
- and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
- and hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
- and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
- and valid_irq_handlers[wp]: valid_irq_handlers
- and valid_global_objs[wp]: "valid_global_objs"
- and valid_global_vspace_mappings[wp]: "valid_global_vspace_mappings"
- and valid_arch_caps[wp]: "valid_arch_caps"
- and ifunsafe[wp]: "if_unsafe_then_cap"
- and valid_arch[wp]: "valid_arch_state"
- and valid_irq_states[wp]: "valid_irq_states"
- and vms[wp]: "valid_machine_state"
- and valid_vspace_objs[wp]: "valid_vspace_objs"
- and valid_global_refs[wp]: "valid_global_refs"
- and v_ker_map[wp]: "valid_kernel_mappings"
- and equal_mappings[wp]: "equal_kernel_mappings"
- and valid_asid_map[wp]: "valid_asid_map"
- and pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
- and cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
- and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
- and pspace_respects_device_region[wp]: "pspace_respects_device_region"
- and cur_tcb[wp]: "cur_tcb"
- and cur_sc_tcb[wp]: "cur_sc_tcb"
- and valid_mdb[wp]: "valid_mdb"
- and valid_ioc[wp]: "valid_ioc"
-  (simp: Let_def wp: hoare_drop_imps)
+  for aligned[wp]: pspace_aligned
+  and distinct[wp]: pspace_distinct
+  and cte_wp_at[wp]: "cte_wp_at P c"
+  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
+  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
+  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
+  and arch_state[wp]: "\<lambda>s. P (arch_state s)"
+  and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  and hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+  and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
+  and valid_irq_handlers[wp]: valid_irq_handlers
+  and valid_global_objs[wp]: "valid_global_objs"
+  and valid_global_vspace_mappings[wp]: "valid_global_vspace_mappings"
+  and valid_arch_caps[wp]: "valid_arch_caps"
+  and ifunsafe[wp]: "if_unsafe_then_cap"
+  and valid_arch[wp]: "valid_arch_state"
+  and valid_irq_states[wp]: "valid_irq_states"
+  and vms[wp]: "valid_machine_state"
+  and valid_vspace_objs[wp]: "valid_vspace_objs"
+  and valid_global_refs[wp]: "valid_global_refs"
+  and v_ker_map[wp]: "valid_kernel_mappings"
+  and equal_mappings[wp]: "equal_kernel_mappings"
+  and valid_asid_map[wp]: "valid_asid_map"
+  and pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
+  and cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
+  and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
+  and pspace_respects_device_region[wp]: "pspace_respects_device_region"
+  and cur_tcb[wp]: "cur_tcb"
+  and cur_sc_tcb[wp]: "cur_sc_tcb"
+  and valid_mdb[wp]: "valid_mdb"
+  and valid_ioc[wp]: "valid_ioc"
+  and valid_ioports[wp]: "valid_ioports"
+  (simp: Let_def wp: hoare_drop_imps valid_ioports_lift)
 
 lemma reply_unlink_tcb_sc_at[wp]: "\<lbrace>sc_at sc_ptr\<rbrace> reply_unlink_tcb t rp \<lbrace>\<lambda>_. sc_at sc_ptr\<rbrace>"
   apply (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def set_simple_ko_def
@@ -364,6 +365,13 @@ lemma reply_unlink_tcb_valid_idle[wp]:
   apply (wpsimp simp: reply_unlink_tcb_def get_thread_state_def thread_get_def get_simple_ko_def
                       get_object_def)
   apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def get_tcb_rev)
+  done
+
+lemma reply_unlink_tcb_fault_tcbs_valid_states[wp]:
+  "reply_unlink_tcb tp rp \<lbrace>fault_tcbs_valid_states_except_set TS\<rbrace>"
+  apply (wpsimp simp: reply_unlink_tcb_def get_thread_state_def thread_get_def
+                      get_simple_ko_def get_object_def
+                  wp: sts_fault_tcbs_valid_states)
   done
 
 lemma sts_only_idle:
@@ -552,7 +560,7 @@ lemma blocked_cancel_ipc_invs:
    apply (clarsimp split: if_splits simp: obj_at_def state_refs_of_def)
   apply (cases r; clarsimp)
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def fun_upd_def
-                   wp: sts_valid_replies sts_only_idle valid_irq_node_typ)
+                   wp: sts_valid_replies sts_only_idle valid_irq_node_typ sts_fault_tcbs_valid_states)
    apply (rule conjI, clarsimp simp: pred_tcb_at_def obj_at_def)
     apply (subst replies_blocked_upd_tcb_st_not_BlockedonReply, simp, fastforce+)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
@@ -596,15 +604,15 @@ lemma blocked_cancel_ipc_invs:
 
 lemma cancel_signal_invs:
   "\<lbrace>invs and st_tcb_at ((=) (Structures_A.BlockedOnNotification ntfn)) t\<rbrace>
-  cancel_signal t ntfn
-  \<lbrace>\<lambda>rv. invs\<rbrace>"
+     cancel_signal t ntfn
+   \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cancel_signal_def
                    invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj ntfna", simp_all)[1]
   apply (rule hoare_pre)
    apply (wp set_simple_ko_valid_objs valid_irq_node_typ sts_only_idle valid_ioports_lift
-             sts_valid_replies hoare_vcg_all_lift hoare_vcg_imp_lift
+             sts_valid_replies hoare_vcg_all_lift hoare_vcg_imp_lift sts_fault_tcbs_valid_states
            | simp add: refs_of_ntfn_def
            | wpc)+
   apply (clarsimp simp: refs_of_ntfn_def ep_redux_simps cong: list.case_cong if_cong)
@@ -670,6 +678,7 @@ lemma sched_context_donate_valid_idle [wp]:
 
 crunches sched_context_donate
   for only_idle[wp]: only_idle
+  and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
   and valid_arch_state[wp]: valid_arch_state
   and valid_irq_states[wp]: valid_irq_states
   and valid_machine_state[wp]: valid_machine_state
@@ -686,6 +695,15 @@ crunches sched_context_donate
 lemma sched_context_donate_valid_irq_node [wp]:
   "\<lbrace>valid_irq_node\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>s. valid_irq_node\<rbrace>"
   by (wp valid_irq_node_typ)
+
+lemma restart_thread_if_no_fault_fault_tcbs_valid_states[wp]:
+  "\<lbrace>fault_tcbs_valid_states\<rbrace>
+   restart_thread_if_no_fault t
+   \<lbrace>\<lambda>_. fault_tcbs_valid_states\<rbrace>"
+  apply (simp add: restart_thread_if_no_fault_def)
+  apply (wpsimp wp: sts_fault_tcbs_valid_states thread_get_wp')+
+  apply (auto simp: pred_tcb_at_def obj_at_def)
+  done
 
 crunches reply_unlink_sc, restart_thread_if_no_fault
   for cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
@@ -706,6 +724,7 @@ crunches reply_unlink_sc, restart_thread_if_no_fault
   and valid_global_vspace_mappings[wp]: valid_global_vspace_mappings
   and valid_idle[wp]: valid_idle
   and valid_ioc[wp]: valid_ioc
+  and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
   and valid_irq_handlers[wp]: valid_irq_handlers
   and valid_irq_node[wp]: valid_irq_node
   and valid_irq_states[wp]: valid_irq_states
@@ -1334,7 +1353,7 @@ lemma cancel_ipc_invs[wp]:
   "\<lbrace>invs\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cancel_ipc_def)
   by (wpsimp wp: blocked_cancel_ipc_invs cancel_signal_invs reply_remove_tcb_invs
-                 thread_set_invs_trivial thread_set_no_change_tcb_state gts_wp
+                 thread_set_no_change_tcb_state gts_wp
                  hoare_vcg_imp_lift hoare_vcg_all_lift ball_tcb_cap_casesI)
 
 context IpcCancel_AI begin
@@ -1463,7 +1482,7 @@ lemma suspend_invs_helper:
   supply if_split[split del]
   apply (rule hoare_seq_ext[OF _ gyt_sp])
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                  wp: sts_only_idle valid_irq_node_typ maybeM_wp
+                  wp: sts_only_idle valid_irq_node_typ maybeM_wp sts_fault_tcbs_valid_states
                       sts_valid_replies hoare_vcg_all_lift hoare_vcg_imp_lift')
   apply (simp cong: if_cong)
   apply (rule_tac V="valid_replies' (replies_with_sc s)
@@ -1724,9 +1743,15 @@ where
 
 crunches possible_switch_to
   for valid_irq_node[wp]: valid_irq_node
+  and fault_tcb_at[wp]: "\<lambda>s. P (fault_tcb_at P' t s)"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma cancel_all_invs_helper:
+lemma set_thread_state_fault_tcb_at[wp]:
+  "\<lbrace>fault_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>_. fault_tcb_at P t\<rbrace>"
+  unfolding set_thread_state_def set_object_def
+  by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
+
+lemma cancel_all_signals_invs_helper:
   "\<lbrace>all_invs_but_sym_refs
           and (\<lambda>s. (\<forall>x\<in>set q. ex_nonz_cap_to x s)
                   \<and> sym_refs (\<lambda>x. if x \<in> set q then
@@ -1735,14 +1760,15 @@ lemma cancel_all_invs_helper:
                                   else state_refs_of s x)
                   \<and> sym_refs (\<lambda>x. state_hyp_refs_of s x)
                   \<and> valid_replies s
-                  \<and> (\<forall>x\<in>set q. st_tcb_at (Not \<circ> (halted or awaiting_reply)) x s))\<rbrace>
+                  \<and> (\<forall>x\<in>set q. st_tcb_at (Not \<circ> (halted or awaiting_reply)) x s
+                                \<and> fault_tcb_at ((=) None) x s))\<rbrace>
      mapM_x (\<lambda>t. do y \<leftarrow> set_thread_state t Structures_A.thread_state.Restart;
                     possible_switch_to t od) q
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule mapM_x_inv_wp2, fastforce)
   apply (wpsimp wp: valid_ioports_lift hoare_vcg_const_Ball_lift valid_irq_node_typ sts_only_idle
-                    sts_st_tcb_at_cases sts_valid_replies
+                    sts_st_tcb_at_cases sts_valid_replies sts_fault_tcbs_valid_states
               cong: conj_cong)
   apply (intro conjI)
     apply (fastforce simp: idle_no_ex_cap)
@@ -1863,11 +1889,12 @@ lemma set_thread_state_invs:
                                 then tcb_st_refs_of st \<union> tcb_non_st_state_refs_of s t
                                 else state_refs_of s p)
                \<and> sym_refs (state_hyp_refs_of s)
+               \<and> (\<not> fault_tcb_states st \<longrightarrow> fault_tcb_at ((=) None) t s)
                \<and> all_invs_but_sym_refs s \<rbrace>
           set_thread_state t st
          \<lbrace> \<lambda>_. invs \<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                  wp: TcbAcc_AI.sts_only_idle sts_valid_replies)
+                  wp: TcbAcc_AI.sts_only_idle sts_valid_replies sts_fault_tcbs_valid_states)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def
                  elim!: replies_blocked_upd_tcb_st_valid_replies)
   done
@@ -1918,6 +1945,10 @@ lemma restart_thread_if_no_fault_pred_tcb_at':
   apply (simp add: restart_thread_if_no_fault_def)
   by (wpsimp wp: set_thread_state_pred_tcb_at' hoare_drop_imps)
 
+crunches reply_unlink_tcb
+  for fault_tcb_at[wp]: "\<lambda>s. P (fault_tcb_at P' t s)"
+  (wp: crunch_wps set_thread_state_pred_tcb_at' simp: crunch_simps)
+
 lemma cancel_all_ipc_invs_helper':
   "\<lbrace>all_invs_but_sym_refs and valid_replies and
      (\<lambda>s. (\<forall>x\<in>set q. ex_nonz_cap_to x s \<and> tcb_at x s
@@ -1929,11 +1960,11 @@ lemma cancel_all_ipc_invs_helper':
                                                        snd r \<noteq> TCBBlockedSend}
                           else state_refs_of s x)
           \<and> sym_refs (\<lambda>x. state_hyp_refs_of s x))\<rbrace>
-    mapM_x (\<lambda>t. do st <- get_thread_state t;
-                   reply_opt <- case st of BlockedOnReceive _ ro \<Rightarrow> return ro | _ \<Rightarrow> return None;
-                   _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb t (the reply_opt));
-                   restart_thread_if_no_fault t
-                od) q
+   mapM_x (\<lambda>t. do st <- get_thread_state t;
+                  reply_opt <- case st of BlockedOnReceive _ ro \<Rightarrow> return ro | _ \<Rightarrow> return None;
+                  _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb t (the reply_opt));
+                  restart_thread_if_no_fault t
+               od) q
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply if_cong[cong]
   apply (simp add: invs_def valid_state_def valid_pspace_def)
@@ -1942,7 +1973,11 @@ lemma cancel_all_ipc_invs_helper':
   apply (rule hoare_conjI)
    apply (rule hoare_seq_ext[OF _ gts_sp], rename_tac st)
    apply (wpsimp wp: valid_ioports_lift
-                     reply_unlink_tcb_st_tcb_at reply_unlink_tcb_valid_replies)
+                     reply_unlink_tcb_st_tcb_at reply_unlink_tcb_valid_replies
+                     thread_get_wp'
+               simp: pred_tcb_at_eq_commute
+          | clarsimp simp: pred_tcb_at_def obj_at_def
+          | wp_once hoare_vcg_all_lift hoare_drop_imps)+
    apply (rule_tac V="t \<noteq> idle_thread s" in revcut_rl, fastforce simp: idle_no_ex_cap)
    apply (clarsimp simp: reply_at_ppred_def pred_tcb_at_def obj_at_def
                          replies_blocked_upd_tcb_st_helper)
@@ -2037,14 +2072,6 @@ lemma cancel_all_ipc_invs:
 lemma get_ep_queue_wp:
   "\<lbrace> \<lambda>s. \<forall>q. ep \<in> {SendEP q, RecvEP q} \<longrightarrow> Q q s \<rbrace> get_ep_queue ep \<lbrace> Q \<rbrace>"
   by (wpsimp simp: get_ep_queue_def)
-
-crunches possible_switch_to, reply_unlink_tcb
-  for fault_tcb_at[wp]: "\<lambda>s. P (fault_tcb_at P' t s)"
-  (wp: crunch_wps set_thread_state_pred_tcb_at' simp: crunch_simps)
-
-lemmas thread_get_fault_wp =
-  thread_get_wp''[where f=tcb_fault,
-                  folded pred_tcb_at_def[where proj=itcb_fault, simplified]]
 
 lemma restart_thread_if_no_fault_st_tcb_at_cases_strong:
   "\<lbrace>\<lambda>s. tcb_at t s \<longrightarrow> (t = t' \<longrightarrow> (if fault_tcb_at ((=) None) t s
@@ -2256,7 +2283,7 @@ lemma cancel_all_signals_invs:
   apply (simp add: cancel_all_signals_def)
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
-   apply (wp cancel_all_invs_helper set_simple_ko_valid_objs valid_irq_node_typ
+   apply (wp cancel_all_signals_invs_helper set_simple_ko_valid_objs valid_irq_node_typ
              hoare_vcg_const_Ball_lift valid_ioports_lift
         | wpc
         | simp add: live_def)+
@@ -2283,7 +2310,11 @@ lemma cancel_all_signals_invs:
     apply (fastforce simp: get_refs_def2 st_tcb_at_refs_of_rev
                     dest!: bspec sym_refs_ko_atD st_tcb_at_state_refs_ofD)
    apply (clarsimp simp: refs_of_ntfn_def dest!: ko_at_state_refs_ofD)
-  apply (fastforce elim!: ntfn_queued_st_tcb_at)
+  apply clarsimp
+  apply (subgoal_tac "st_tcb_at (\<lambda>st. \<exists>ref. st = BlockedOnNotification ref) xa s")
+   apply (auto elim!: fault_tcbs_valid_states_not_fault_tcb_states pred_tcb_weakenE
+                      ntfn_queued_st_tcb_at
+                simp: pred_neg_def)
   done
 
 lemma cancel_all_unlive_helper':
@@ -2582,19 +2613,11 @@ crunches cancel_all_signals, is_final_cap, reply_remove, reply_remove_tcb
   (wp: thread_set_ct_in_state crunch_wps set_thread_state_ct_in_state simp: crunch_simps
    ignore: set_tcb_obj_ref)
 
-lemma new_fault_inv:
-  "invs s \<Longrightarrow>
-     \<forall>t. st_tcb_at active t s \<longrightarrow> fault_tcb_at ((=) None) t s"
-  sorry
-
-(*fixme: The invs precondition can be weakend once the new invariant is defined.
-         If this is changed then the precondition of invoke_irq_handler_ct_active
-         in Interrupt_AI also needs to be changes*)
 lemma cancel_all_ipc_ct_active[wp]:
-  "\<lbrace>ct_active and invs\<rbrace> cancel_all_ipc epptr \<lbrace>\<lambda>_. ct_active\<rbrace>"
-  by (wpsimp wp: ct_in_state_thread_state_lift'[where Pre=invs]
+  "\<lbrace>ct_active and fault_tcbs_valid_states\<rbrace> cancel_all_ipc epptr \<lbrace>\<lambda>_. ct_active\<rbrace>"
+  by (wpsimp wp: ct_in_state_thread_state_lift'
                  cancel_all_ipc_no_fault_st_tcb_at
-           simp: new_fault_inv)
+           simp: fault_tcbs_valid_states_active ct_in_state_def)
 
 lemma blocked_cancel_ipc_ct_active[wp]:
   "\<lbrace>\<lambda>s. ct_active s \<and> tptr \<noteq> cur_thread s\<rbrace>

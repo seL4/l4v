@@ -2999,23 +2999,15 @@ locale Untyped_AI_nonempty_table =
   "\<And>tp oref sz dev cref p. \<lbrace>valid_ioports and cte_wp_at (\<lambda>_. True) cref\<rbrace>
         create_cap tp sz p dev (cref,oref) \<lbrace>\<lambda>rv (s::'state_ext state). valid_ioports s\<rbrace>"
 
-
-crunch v_ker_map[wp]: create_cap "valid_kernel_mappings"
-  (simp: crunch_simps)
-
-
-crunch eq_ker_map[wp]: create_cap "equal_kernel_mappings"
-  (simp: crunch_simps)
-
-lemma create_cap_asid_map[wp]:
-  "\<lbrace>valid_asid_map\<rbrace> create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
-  unfolding create_cap_def set_cdt_def by wpsimp
-
-crunch only_idle[wp]: create_cap only_idle
-  (simp: crunch_simps)
-
-crunch pspace_in_kernel_window[wp]: create_cap "pspace_in_kernel_window"
-  (simp: crunch_simps)
+crunches create_cap
+  for valid_kernel_mappings[wp]: valid_kernel_mappings
+  and equal_kernel_mappings[wp]: equal_kernel_mappings
+  and valid_asid_map[wp]: valid_asid_map
+  and only_idle[wp]: only_idle
+  and pspace_in_kernel_window[wp]: pspace_in_kernel_window
+  and valid_irq_states[wp]: valid_irq_states
+  and pspace_respects_device_region[wp]: pspace_respects_device_region
+  and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
 
 lemma set_original_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> create_cap tp sz p dev slot \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
@@ -3033,9 +3025,6 @@ interpretation create_cap: non_vspace_non_astate_non_mem_op "create_cap tp sz p 
   done
 
 (*  by (wp set_cap.vsobj_at | simp)+ *) (* ARMHYP might need this *)
-
-crunch valid_irq_states[wp]: create_cap "valid_irq_states"
-crunch pspace_respects_device_region[wp]: create_cap pspace_respects_device_region
 
 lemma cap_range_subseteq_weaken:
  "\<lbrakk>obj_refs c \<subseteq> untyped_range cap; untyped_range c \<subseteq> untyped_range cap\<rbrakk>

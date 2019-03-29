@@ -1695,7 +1695,8 @@ lemma handle_invocation_valid_pdpt[wp]:
   apply (wp syscall_valid set_thread_state_ct_st sts_schedulable_scheduler_action
          | simp add: split_def cong: conj_cong | wpc
          | wp_once hoare_drop_imps)+
-  apply (fastforce simp: is_tcb ct_in_state_def st_tcb_at_def obj_at_def
+  apply (fastforce simp: ct_in_state_def fault_tcbs_valid_states_active
+                   dest: invs_fault_tcbs_valid_states
                  intro!: st_tcb_ex_cap)
   done
 

@@ -1533,18 +1533,18 @@ lemma cap_swap_global_refs[wp]:
   apply (wp set_cap_globals | simp)+
   done
 
-
-crunch arch[wp]: cap_swap "\<lambda>s. P (arch_state s)"
-
-crunch irq_node[wp]: cap_swap "\<lambda>s. P (interrupt_irq_node s)"
-
-crunch interrupt_states[wp]: cap_swap "\<lambda>s. P (interrupt_states s)"
-
+crunches cap_swap
+  for arch_state[wp]: "\<lambda>s. P (arch_state s)"
+  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
+  and valid_vspace_objs[wp]: valid_vspace_objs
+  and valid_global_objs[wp]: valid_global_objs
+  and valid_global_vspace_mappings[wp]: valid_global_vspace_mappings
+  and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
 
 lemma weak_derived_cap_irqs:
   "weak_derived c c' \<Longrightarrow> cap_irqs c = cap_irqs c'"
   by (auto simp add: weak_derived_def copy_of_cap_irqs)
-
 
 lemma cap_swap_irq_handlers[wp]:
   "\<lbrace>valid_irq_handlers and
@@ -1560,13 +1560,6 @@ lemma cap_swap_irq_handlers[wp]:
                  dest!: weak_derived_cap_irqs)
     apply auto
   done
-
-
-crunch vspace_objs [wp]: cap_swap "valid_vspace_objs"
-
-crunch valid_global_objs [wp]: cap_swap "valid_global_objs"
-
-crunch valid_global_vspace_mappings [wp]: cap_swap "valid_global_vspace_mappings"
 
 context CNodeInv_AI begin
 
@@ -1585,15 +1578,14 @@ lemma cap_swap_valid_arch_caps[wp]:
 
 end
 
-
-crunch v_ker_map[wp]: cap_swap "valid_kernel_mappings"
-
-crunch eq_ker_map[wp]: cap_swap "equal_kernel_mappings"
-
-crunch only_idle [wp]: cap_swap only_idle
-
-crunch pspace_in_kernel_window[wp]: cap_swap "pspace_in_kernel_window"
-
+crunches cap_swap
+  for valid_kernel_mappings[wp]: valid_kernel_mappings
+  and equal_kernel_mappings[wp]: equal_kernel_mappings
+  and only_idle[wp]: only_idle
+  and pspace_in_kernel_window[wp]: pspace_in_kernel_window
+  and machine_state[wp]: "\<lambda>s. P(machine_state s)"
+  and valid_irq_states[wp]: valid_irq_states
+  and pspace_respects_device_region[wp]: pspace_respects_device_region
 
 lemma cap_swap_valid_ioc[wp]:
   "\<lbrace>\<lambda>s. valid_ioc s \<and>
@@ -1606,13 +1598,6 @@ lemma cap_swap_valid_ioc[wp]:
   apply (cases p, cases p')
   apply fastforce
   done
-
-
-crunch machine_state[wp]: cap_swap "\<lambda>s. P(machine_state s)"
-
-crunch valid_irq_states[wp]: cap_swap "valid_irq_states"
-
-crunch pspace_respects_device_region[wp]: cap_swap pspace_respects_device_region
 
 lemma cap_refs_respects_device_region_original_cap[wp]:
   "cap_refs_respects_device_region

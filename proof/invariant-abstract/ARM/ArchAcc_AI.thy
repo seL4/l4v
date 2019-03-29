@@ -1624,6 +1624,10 @@ lemma set_pt_valid_replies[wp]:
   "set_pt p pt \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp wp: valid_replies_lift)
 
+lemma set_pt_fault_tcbs_valid_states[wp]:
+  "set_pt p pt \<lbrace> fault_tcbs_valid_states \<rbrace>"
+  by (wpsimp wp: fault_tcbs_valid_states_lift)
+
 lemma set_pt_invs:
   "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pte (pt i)) and
     (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_vspace_obj (PageTable pt) s) and
@@ -2136,6 +2140,10 @@ sublocale set_asid_pool: non_sc_op "set_asid_pool p pt"
 lemma set_asid_pool_valid_replies[wp]:
   "set_asid_pool p ap \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp wp: valid_replies_lift)
+
+lemma set_asid_pool_fault_tcbs_valid_states[wp]:
+  "set_asid_pool p ap \<lbrace> fault_tcbs_valid_states \<rbrace>"
+  by (wpsimp wp: fault_tcbs_valid_states_lift)
 
 lemma set_asid_pool_invs_restrict:
   "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and
@@ -3281,6 +3289,10 @@ sublocale set_pd: non_sc_op "set_pd p pt"
 lemma set_pd_valid_replies[wp]:
   "set_pd p pt \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp wp: valid_replies_lift)
+
+lemma set_pd_fault_tcbs_valid_states[wp]:
+  "set_pd p pt \<lbrace> fault_tcbs_valid_states \<rbrace>"
+  by (wpsimp wp: fault_tcbs_valid_states_lift)
 
 lemma set_pd_invs_unmap:
   "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pde (pd i)) and

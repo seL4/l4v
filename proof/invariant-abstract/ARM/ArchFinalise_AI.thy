@@ -738,18 +738,6 @@ lemma sched_context_unbind_tcb_bound_sc_tcb_at_None:
   apply (clarsimp simp: obj_at_def)
   done
 
-lemma bound_sc_tcb_bound_sc_at:
-  "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s scptr = Some (SchedContext sc a);
-    bound_sc_tcb_at (\<lambda>ptr. ptr = (Some scptr)) tcbptr s \<rbrakk>
-  \<Longrightarrow> sc_tcb sc = Some tcbptr"
-  apply (drule_tac x=tcbptr in sym_refsD[rotated])
-   apply (fastforce simp: state_refs_of_def pred_tcb_at_def obj_at_def)
-  apply (auto simp: pred_tcb_at_def obj_at_def valid_obj_def valid_sched_context_def is_tcb
-                    state_refs_of_def refs_of_rev
-          simp del: refs_of_simps
-             elim!: valid_objsE)
-  done
-
 lemma unbind_from_sc_bound_sc_tcb_at:
   "\<lbrace>tcb_at x and valid_objs and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
      unbind_from_sc x

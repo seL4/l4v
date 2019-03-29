@@ -1592,7 +1592,7 @@ lemma arch_pinv_ct_active:
   "\<lbrace>invs and valid_arch_inv ai and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      arch_perform_invocation ai
    \<lbrace>\<lambda>rv. ct_active\<rbrace>" (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
-  apply (wpsimp wp: ct_in_state_thread_state_lift'[where Pre="?P"]
+  apply (wpsimp wp: ct_in_state_thread_state_lift'[where Pre="\<lambda>_. ?P"]
                     arch_pinv_st_tcb_at)
    by (fastforce simp: pred_tcb_at_def obj_at_def)+
 

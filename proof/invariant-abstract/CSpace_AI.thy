@@ -3494,15 +3494,18 @@ lemma set_untyped_cap_as_full_cap_zombies_final:
 global_interpretation set_untyped_cap_as_full: cspace_op "set_untyped_cap_as_full src_cap cap src"
   by (simp add: set_untyped_cap_as_full_def set_cap.cspace_op_axioms return.cspace_op_axioms)
 
+crunches set_untyped_cap_as_full
+  for fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
+
 (* FIXME: MOVE *)
 lemma set_untyped_cap_as_full_valid_pspace:
   "\<lbrace>valid_pspace and cte_wp_at ((=) src_cap) src\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. valid_pspace s \<rbrace>"
-  apply (clarsimp simp:valid_pspace_def)
-    apply (clarsimp | wp set_untyped_cap_full_valid_objs
-      set_untyped_cap_as_full_cap_to set_untyped_cap_as_full_cap_zombies_final )+
-done
+  apply (clarsimp simp: valid_pspace_def)
+  apply (wpsimp wp: set_untyped_cap_full_valid_objs set_untyped_cap_as_full_cap_to
+                    set_untyped_cap_as_full_cap_zombies_final)
+  done
 
 
 lemma cap_insert_valid_pspace:
@@ -3555,6 +3558,10 @@ crunch idle_sc_at[wp]: cap_insert "idle_sc_at t"
 lemma cap_insert_idle [wp]:
   "\<lbrace>valid_idle\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   by (rule valid_idle_lift; wp)
+
+lemma cap_insert_fault_tcbs_valid_states [wp]:
+  "cap_insert cap src dest \<lbrace>fault_tcbs_valid_states\<rbrace>"
+  by (rule fault_tcbs_valid_states_lift; wp)
 
 lemma set_untyped_cap_as_full_has_reply_cap:
   "\<lbrace>\<lambda>s. (has_reply_cap t s) \<and> cte_wp_at ((=) src_cap) src s\<rbrace>

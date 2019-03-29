@@ -865,6 +865,16 @@ lemma only_idle_detype[detype_invs_lemmas]: "only_idle (detype (untyped_range ca
     done
   qed
 
+lemma fault_tcbs_valid_states_detype[detype_invs_lemmas]:
+  "fault_tcbs_valid_states (detype (untyped_range cap) s)"
+  proof -
+    have "fault_tcbs_valid_states s"
+      using invs by (simp add: invs_def valid_state_def valid_pspace_def)
+    thus ?thesis
+    apply (clarsimp simp: fault_tcbs_valid_states_def)
+    done
+  qed
+
 lemma cap_refs_in_kernel_detype[detype_invs_lemmas]:
   "cap_refs_in_kernel_window (detype (untyped_range cap) s)"
 proof -

@@ -445,6 +445,7 @@ lemma store_pde_vms[wp]:
 crunches store_pde
   for valid_irq_states[wp]: "valid_irq_states"
   and valid_replies[wp]: "valid_replies_pred P"
+  and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
 
 lemma copy_global_invs_mappings_restricted:
   "\<lbrace>(\<lambda>s. all_invs_but_equal_kernel_mappings_restricted (insert pd S) s)

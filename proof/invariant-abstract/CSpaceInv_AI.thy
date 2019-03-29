@@ -999,6 +999,12 @@ lemma new_cap_zombies:
   apply (clarsimp elim!: cte_wp_at_weakenE)
   done
 
+lemma set_cap_fault_tcbs_valid_states[wp]:
+  "\<lbrace>\<lambda>s. fault_tcbs_valid_states_except_set TS s\<rbrace>
+   set_cap cap p
+  \<lbrace>\<lambda>rv. fault_tcbs_valid_states_except_set TS\<rbrace>"
+  apply (wpsimp wp: fault_tcbs_valid_states_lift)
+  done
 
 lemma new_cap_valid_pspace:
   "\<lbrace>cte_wp_at ((=) cap.NullCap) p and valid_cap cap
@@ -1011,9 +1017,6 @@ lemma new_cap_valid_pspace:
   apply (wpx set_cap_valid_objs new_cap_iflive new_cap_ifunsafe new_cap_zombies)
   apply (auto simp: cte_wp_at_caps_of_state)
   done
-
-
-
 
 lemma gen_obj_refs_distinct_or_equal_corl:
   "\<lbrakk> x \<in> gen_obj_refs cap; x \<in> gen_obj_refs cap' \<rbrakk>
@@ -1276,6 +1279,20 @@ lemma set_object_idle [wp]:
    \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (wpsimp simp: set_object_def)
   apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def)
+  done
+
+lemma set_object_fault_tcbs_valid_states[wp]:
+  "\<lbrace>\<lambda>s. fault_tcbs_valid_states s \<and>
+        (\<forall>t. ko' = TCB t
+             \<longrightarrow> (\<exists>t'. ko_at (TCB t') p s \<and>
+                       tcb_state t' = tcb_state t \<and>
+                       tcb_fault t' = tcb_fault t))\<rbrace>
+   set_object p ko'
+   \<lbrace>\<lambda>rv. fault_tcbs_valid_states\<rbrace>"
+  apply (wpsimp simp: set_object_def)
+  apply (clarsimp simp: fault_tcbs_valid_states_def pred_tcb_at_def obj_at_def)
+  apply (drule_tac x=p in spec)
+  apply clarsimp
   done
 
 lemma set_cap_idle[wp]:

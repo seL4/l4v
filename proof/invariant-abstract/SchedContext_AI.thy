@@ -387,6 +387,10 @@ lemma set_refills_cur_sc_tcb [wp]:
   by (wpsimp simp: set_refills_def update_sched_context_def set_object_def get_object_def
                    cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
 
+lemma set_refills_fault_tcbs_valid_states[wp]:
+  "set_refills ptr refills \<lbrace>fault_tcbs_valid_states\<rbrace>"
+  by (wpsimp simp: set_refills_def)
+
 lemma set_refills_invs[wp]:
   "\<lbrace>invs and K (length refills \<ge> 1)\<rbrace> set_refills ptr refills \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp simp: invs_def)
@@ -424,6 +428,7 @@ crunches refill_split_check
  and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
  and pspace_respects_device_region[wp]: "pspace_respects_device_region"
  and cur_tcb[wp]: "cur_tcb"
+ and fault_tcbs_valid_states [wp]: fault_tcbs_valid_states
  and valid_ioc[wp]: "valid_ioc"
  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (simp: Let_def wp: hoare_drop_imps)
@@ -681,7 +686,8 @@ crunches switch_sched_context
 crunch inv[wp]: refill_capacity,refill_sufficient,refill_ready "\<lambda>s. P s"
 
 lemma cur_sc_update_invs:
-  "\<lbrace>\<lambda>s. valid_state s \<and> cur_tcb s \<and> bound_sc_tcb_at ((=) (Some sc_ptr)) (cur_thread s) s\<rbrace>
+  "\<lbrace>\<lambda>s. valid_state s \<and> cur_tcb s \<and>
+        bound_sc_tcb_at ((=) (Some sc_ptr)) (cur_thread s) s\<rbrace>
    modify (\<lambda>s. s\<lparr> cur_sc:= sc_ptr \<rparr>)
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def)
@@ -706,6 +712,7 @@ lemma sc_consumed_update_bound_sc_tcb_at [wp]:
 crunches commit_domain_time
   for valid_state [wp]: valid_state
   and cur_tcb [wp]: cur_tcb
+  and fault_tcbs_valid_states [wp]: fault_tcbs_valid_states
   and bound_sc_tcb_at [wp]: "\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s"
   (simp: valid_state_def)
 
@@ -734,6 +741,7 @@ crunches rollback_time
   for invs [wp]: invs
   and valid_state [wp]: valid_state
   and cur_tcb [wp]: cur_tcb
+  and fault_tcbs_valid_states [wp]: fault_tcbs_valid_states
   and bound_sc_tcb_at [wp]: "\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s"
   (simp: rollback_time_def valid_state_def)
 
@@ -773,6 +781,14 @@ lemma commit_time_cur_tcb [wp]:
   "\<lbrace>cur_tcb\<rbrace> commit_time \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
   by (wpsimp simp: commit_time_def wp: hoare_drop_imps)
 
+lemma commit_time_fault_tcbs_valid_states[wp]:
+  "commit_time \<lbrace>fault_tcbs_valid_states\<rbrace>"
+  by (wpsimp simp: commit_time_def wp: hoare_drop_imps)
+
+crunches switch_sched_context
+  for fault_tcbs_valid_states [wp]: fault_tcbs_valid_states
+  (wp: crunch_wps hoare_vcg_if_lift2 simp: Let_def ignore: commit_domain_time)
+
 lemma switch_sched_context_invs [wp]:
   "\<lbrace>valid_state and cur_tcb\<rbrace> switch_sched_context \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: switch_sched_context_def)
@@ -783,7 +799,8 @@ lemma switch_sched_context_invs [wp]:
   apply (clarsimp simp: valid_state_def)
   done
 
-lemma sc_and_timer_invs: "\<lbrace>valid_state and cur_tcb\<rbrace> sc_and_timer \<lbrace>\<lambda>rv. invs\<rbrace>"
+lemma sc_and_timer_invs:
+  "\<lbrace>valid_state and cur_tcb\<rbrace> sc_and_timer \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp simp: sc_and_timer_def)
 
 (* move to Invariants_AI *)
@@ -1108,7 +1125,8 @@ crunches sched_context_resume, test_possible_switch_to, tcb_release_remove, post
   and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and ex_cap[wp]: "ex_nonz_cap_to p"
-  (wp: crunch_wps)
+  and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma ssc_sc_tcb_update_bound_sc_tcb_at[wp]:
   "\<lbrace>bound_sc_tcb_at P t\<rbrace> set_sc_obj_ref sc_tcb_update scp tcb \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"

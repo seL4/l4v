@@ -179,9 +179,11 @@ lemma checked_insert_ep_tcb_invs:
   apply (auto simp: is_derived_def is_cap_simps)[1]
   done
 
-crunch tcb_at[wp, Tcb_AI_asms]: arch_get_sanitise_register_info, arch_post_modify_registers "tcb_at a"
-crunch invs[wp, Tcb_AI_asms]: arch_get_sanitise_register_info, arch_post_modify_registers "invs"
-crunch ex_nonz_cap_to[wp, Tcb_AI_asms]: arch_get_sanitise_register_info, arch_post_modify_registers "ex_nonz_cap_to a"
+crunches arch_get_sanitise_register_info, arch_post_modify_registers
+  for tcb_at[wp, Tcb_AI_asms]: "tcb_at a"
+  and invs[wp, Tcb_AI_asms]: invs
+  and ex_nonz_cap_to[wp, Tcb_AI_asms]: "ex_nonz_cap_to a"
+  and fault_tcb_at[wp, Tcb_AI_asms]: "fault_tcb_at P a"
 
 lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
   assumes x: "P cap.NullCap"
@@ -564,9 +566,6 @@ lemma update_cap_valid[Tcb_AI_asms]:
 
 crunch pred_tcb_at: switch_to_thread "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
-
-crunch typ_at[wp]: set_priority "\<lambda>s. P (typ_at T p s)"
-  (wp: maybeM_inv hoare_drop_imps)
 crunch typ_at[wp]: invoke_tcb "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imps mapM_x_wp' check_cap_inv maybeM_inv
      simp: crunch_simps)

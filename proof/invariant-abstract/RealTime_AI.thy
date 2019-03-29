@@ -54,6 +54,11 @@ lemma update_sched_context_valid_idle:
   apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
+lemma update_sched_context_fault_tcbs_valid_states[wp]:
+  "update_sched_context ref f \<lbrace>fault_tcbs_valid_states\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def get_object_def)
+  done
+
 lemma update_sched_context_valid_irq_handlers[wp]:
   "\<lbrace>valid_irq_handlers\<rbrace> update_sched_context ref f \<lbrace>\<lambda>_. valid_irq_handlers\<rbrace>"
   apply (wpsimp simp: update_sched_context_def set_object_def get_object_def valid_irq_handlers_def
@@ -131,6 +136,7 @@ crunches set_sc_obj_ref,get_sc_obj_ref
  and valid_mdb[wp]: valid_mdb
  and valid_idle[wp]: valid_idle
  and zombies[wp]: zombies_final
+ and fault_tcbs_valid_states[wp]: "fault_tcbs_valid_states"
   (simp: Let_def wp: hoare_drop_imps)
 
 lemma set_sc_ntfn_iflive[wp]:
@@ -296,8 +302,10 @@ crunches update_sk_obj_ref
  and valid_irq_handlers[wp]: "valid_irq_handlers"
  and valid_mdb[wp]: valid_mdb
  and valid_idle[wp]: valid_idle
+ and fault_tcbs_valid_states_except_set[wp]: "fault_tcbs_valid_states_except_set TS"
  and zombies[wp]: zombies_final
  and ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma set_reply_sc_valid_objs[wp]:
   "\<lbrace>valid_objs and valid_bound_sc sc\<rbrace> set_reply_obj_ref reply_sc_update rptr sc \<lbrace>\<lambda>_. valid_objs\<rbrace>"
@@ -1135,10 +1143,11 @@ lemma sort_queue_notin_inv: "\<lbrace>K (t \<notin> set ls) and P t\<rbrace> sor
   apply auto
   done
 
-lemma sched_context_donate_st_tcb_at[wp]:
-  "sched_context_donate sc_ptr tcb_ptr \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
-  by (wpsimp simp: sched_context_donate_def set_sc_obj_ref_def get_sc_obj_ref_def test_reschedule_def
-               wp: weak_if_wp hoare_drop_imp)
+crunches sched_context_donate
+  for st_tcb_at[wp]: "\<lambda>s. Q (st_tcb_at P t s)"
+  and fault_tcb_at[wp]: "\<lambda>s. Q (fault_tcb_at P t s)"
+  and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
+  (wp: crunch_wps simp: crunch_simps ignore: set_tcb_obj_ref)
 
 lemma reply_push_st_tcb_at[wp]:
   "\<lbrace>st_tcb_at P t and K (t \<noteq> caller) and K (t \<noteq> callee)\<rbrace>

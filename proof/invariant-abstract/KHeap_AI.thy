@@ -1071,6 +1071,13 @@ lemma set_simple_ko_idle[wp]:
   by (wpsimp simp: set_simple_ko_def set_object_def valid_idle_def pred_tcb_at_def obj_at_def
                    a_type_def)
 
+lemma set_simple_ko_fault_tcbs_valid_states_except_set[wp]:
+  "set_simple_ko f ptr ep \<lbrace>fault_tcbs_valid_states_except_set TS\<rbrace>"
+  by (wpsimp simp: set_simple_ko_def set_object_def get_object_def
+                   fault_tcbs_valid_states_except_set_def
+                   pred_tcb_at_def obj_at_def partial_inv_def)
+     (case_tac "f ep"; clarsimp)
+
 lemma ep_redux_simps:
   "valid_ep (case xs of [] \<Rightarrow> Structures_A.IdleEP | y # ys \<Rightarrow> Structures_A.SendEP (y # ys))
         = (\<lambda>s. distinct xs \<and> (\<forall>t\<in>set xs. tcb_at t s))"

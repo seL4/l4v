@@ -897,7 +897,6 @@ abbreviation(input)
        and pspace_respects_device_region and cap_refs_respects_device_region
        and cur_tcb and cur_sc_tcb and valid_ioc and valid_machine_state and valid_ioports"
 
-
 lemma all_invs_but_equal_kernel_mappings_restricted_eq:
   "all_invs_but_equal_kernel_mappings_restricted {}
         = invs"
@@ -1752,11 +1751,20 @@ lemma valid_replies:
   apply (clarsimp simp: inj_on_subset[OF _ replies_with_sc_subset])
   done
 
+lemma fault_tcbs_valid_states:
+  "fault_tcbs_valid_states s \<Longrightarrow> fault_tcbs_valid_states s'"
+  apply (clarsimp simp: fault_tcbs_valid_states_def)
+  apply (clarsimp simp: s'_def pred_tcb_at_def obj_at_def ps_def split: if_split_asm)
+  apply (simp add: default_object_def tyunt split: Structures_A.apiobject_type.splits)
+  apply (clarsimp simp: default_tcb_def)
+  done
+
 end
 
 lemma (in retype_region_proofs_gen) valid_pspace: "valid_pspace s'"
   using vp by (simp add: valid_pspace_def valid_objs psp_al psp_dist
-                         iflive zombies refs_eq hyp_refs_eq valid_replies)
+                         iflive zombies refs_eq hyp_refs_eq valid_replies
+                         fault_tcbs_valid_states)
 
 lemma caps_of_state_Some_simp: "\<And>x c s. (caps_of_state s x = Some c) = (cte_wp_at ((=) c) x s)"
   apply (simp add: caps_of_state_cte_wp_at)

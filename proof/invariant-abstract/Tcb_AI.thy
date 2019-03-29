@@ -40,6 +40,9 @@ locale Tcb_AI_1 =
   assumes arch_get_sanitise_register_info_ex_nonz_cap_to[wp]:
   "\<And>t a. \<lbrace>\<lambda>(s::'state_ext state). ex_nonz_cap_to a s\<rbrace> arch_get_sanitise_register_info t
        \<lbrace>\<lambda>b s. ex_nonz_cap_to a s\<rbrace>"
+  assumes arch_get_sanitise_register_info_fault_tcb_at[wp]:
+  "\<And>t P a. \<lbrace>\<lambda>(s::'state_ext state). fault_tcb_at P a s\<rbrace> arch_get_sanitise_register_info t
+       \<lbrace>\<lambda>b s. fault_tcb_at P a s\<rbrace>"
   assumes arch_post_modify_registers_invs[wp]:
   "\<And>c t. \<lbrace>\<lambda>(s::'state_ext state). invs s\<rbrace> arch_post_modify_registers c t
        \<lbrace>\<lambda>b s. invs s\<rbrace>"
@@ -49,6 +52,9 @@ locale Tcb_AI_1 =
   assumes arch_post_modify_registers_ex_nonz_cap_to[wp]:
   "\<And>c t a. \<lbrace>\<lambda>(s::'state_ext state). ex_nonz_cap_to a s\<rbrace> arch_post_modify_registers c t
        \<lbrace>\<lambda>b s. ex_nonz_cap_to a s\<rbrace>"
+  assumes arch_post_modify_registers_fault_tcb_at[wp]:
+  "\<And>c t P a. \<lbrace>\<lambda>(s::'state_ext state). fault_tcb_at P a s\<rbrace> arch_post_modify_registers c t
+       \<lbrace>\<lambda>b s. fault_tcb_at P a s\<rbrace>"
   assumes finalise_cap_not_cte_wp_at:
   "\<And>P cap fin. P cap.NullCap \<Longrightarrow> \<lbrace>\<lambda>s::'state_ext state. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>
                 finalise_cap cap fin \<lbrace>\<lambda>rv s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>"
@@ -62,35 +68,31 @@ lemma complete_yield_to_ct_in_state[wp]:
   "\<lbrace>\<lambda>s. ct_in_state P s\<rbrace> complete_yield_to tptr \<lbrace>\<lambda>_ s. ct_in_state P s\<rbrace>"
   by (rule ct_in_state_thread_state_lift) wpsimp+
 
-crunches complete_yield_to
- for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
-  (wp: maybeM_inv hoare_drop_imp mapM_wp' simp: zipWithM_x_mapM)
-
 lemma (in Tcb_AI_1) activate_invs:
   "\<lbrace>(invs::'state_ext state \<Rightarrow> bool)\<rbrace> activate_thread \<lbrace>\<lambda>rv s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   apply (unfold activate_thread_def get_tcb_obj_ref_def)
   apply (rule hoare_seq_ext [OF _ gets_sp])
   apply (rule hoare_seq_ext [OF _ thread_get_sp])
   apply (case_tac yt_opt, simp)
-  apply (rule hoare_seq_ext [OF _ gts_sp])
-  apply (rule_tac Q="st_tcb_at ((=) x) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
-  apply (rename_tac state)
-  apply (case_tac state; simp)
-    apply wp
-    apply (clarsimp elim!: pred_tcb_weakenE
-                     simp: ct_in_state_def)
-   apply (rule_tac Q="\<lambda>rv. invs and ct_running" in hoare_post_imp, simp)
-   apply (rule hoare_pre)
-    apply (wp sts_invs_minor ct_in_state_set)
-      apply simp
-     apply (simp)+
-     apply (wp as_user_ct hoare_post_imp [OF disjI1]
-          | assumption
-          | clarsimp elim!: st_tcb_weakenE)+
-   apply (auto simp: invs_def valid_state_def
-                         valid_idle_def valid_pspace_def
-               elim: st_tcb_ex_cap pred_tcb_weakenE,
-          auto simp: st_tcb_def2 pred_tcb_at_def obj_at_def)[1]
+   apply (rule hoare_seq_ext [OF _ gts_sp])
+   apply (rule_tac Q="st_tcb_at ((=) x) thread and invs and (\<lambda>s. cur_thread s = thread)" in hoare_weaken_pre)
+    apply (rename_tac state)
+    apply (case_tac state; simp)
+      apply wp
+      apply (clarsimp elim!: pred_tcb_weakenE
+                       simp: ct_in_state_def)
+     apply (rule_tac Q="\<lambda>rv. invs and ct_running" in hoare_post_imp, simp)
+     apply (rule hoare_pre)
+      apply (wp sts_invs_minor ct_in_state_set)
+        apply simp
+       apply (simp)+
+       apply (wp hoare_post_imp [OF disjI1]
+            | assumption
+            | clarsimp elim!: st_tcb_weakenE)+
+     apply (auto simp: invs_def valid_state_def valid_idle_def valid_pspace_def
+                elim!: st_tcb_ex_cap pred_tcb_weakenE
+                       fault_tcbs_valid_states_active,
+            auto simp: st_tcb_def2 pred_tcb_at_def obj_at_def)[1]
     apply (rule_tac Q="\<lambda>rv. invs and ct_idle" in hoare_post_imp, simp)
     apply (wp activate_idle_invs hoare_post_imp [OF disjI2])
     apply (clarsimp simp: ct_in_state_def elim!: pred_tcb_weakenE)
@@ -109,12 +111,12 @@ lemma (in Tcb_AI_1) activate_invs:
       apply (wp sts_invs_minor ct_in_state_set)
         apply simp
        apply (simp)+
-       apply (wp as_user_ct hoare_post_imp [OF disjI1] | assumption
+       apply (wp  hoare_post_imp [OF disjI1] | assumption
                | clarsimp elim!: st_tcb_weakenE)+
-     apply (auto simp: invs_def valid_state_def
-      valid_idle_def valid_pspace_def
-      elim: st_tcb_ex_cap pred_tcb_weakenE,
-      auto simp: st_tcb_def2 pred_tcb_at_def obj_at_def)[1]
+     apply (auto simp: invs_def valid_state_def valid_idle_def valid_pspace_def
+                elim!: st_tcb_ex_cap pred_tcb_weakenE
+                       fault_tcbs_valid_states_active,
+            auto simp: st_tcb_def2 pred_tcb_at_def obj_at_def)[1]
     apply (rule_tac Q="\<lambda>rv. invs and ct_idle" in hoare_post_imp, simp)
     apply (wp activate_idle_invs hoare_post_imp [OF disjI2])
     apply (clarsimp simp: ct_in_state_def elim!: pred_tcb_weakenE)
@@ -134,11 +136,13 @@ lemma cancel_ipc_no_refs:
 crunch invs[wp]: test_possible_switch_to invs
 
 lemma restart_invs[wp]:
-  "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace> restart t \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace>
+   restart t
+   \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding restart_def
   apply (wpsimp wp: hoare_drop_imp sts_invs_minor cancel_ipc_no_refs
                     cancel_ipc_ex_nonz_cap_to_tcb gts_wp)
-  apply (auto dest!: idle_no_ex_cap simp: invs_def valid_state_def valid_pspace_def)[1]
+  apply (auto dest!: idle_no_ex_cap simp: invs_def valid_state_def valid_pspace_def)
   done
 
 lemma restart_typ_at[wp]:
@@ -194,9 +198,7 @@ lemma out_invs_trivialT:
   assumes y': "\<And>tcb v. tcb_yield_to (fn v tcb) = tcb_yield_to tcb"
   assumes w: "\<And>tcb v. tcb_ipc_buffer (fn v tcb) = tcb_ipc_buffer tcb
                           \<or> tcb_ipc_buffer (fn v tcb) = 0"
-  assumes a: "\<And>tcb v. tcb_fault (fn v tcb) \<noteq> tcb_fault tcb
-                       \<longrightarrow> (case tcb_fault (fn v tcb) of None \<Rightarrow> True
-                                                   | Some f \<Rightarrow> valid_fault f)"
+  assumes a: "\<And>tcb v. tcb_fault (fn v tcb) = tcb_fault tcb"
   shows      "\<lbrace>invs\<rbrace> option_update_thread t fn v \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac v, simp_all add: option_update_thread_def)
   apply (rule thread_set_invs_trivial [OF x z z' y y' w a r])
@@ -609,6 +611,7 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
             thread_set_valid_ioc_trivial
             thread_set_cap_refs_respects_device_region
             thread_set_valid_replies_trivial
+            thread_set_fault_tcbs_valid_states_trivial
          | simp add: ran_tcb_cap_cases
          | rule conjI
          | erule disjE)+
@@ -698,6 +701,7 @@ lemma set_mcpriority_invs[wp]:
          valid_ioports_lift
          thread_set_cap_refs_respects_device_region
          thread_set_valid_replies_trivial
+         thread_set_fault_tcbs_valid_states_trivial
       | simp add: ran_tcb_cap_cases invs_def valid_state_def valid_pspace_def
       | rule conjI
       | erule disjE)+
@@ -972,32 +976,13 @@ lemma OR_choiceE_E_weak_wp: "\<lbrace>P\<rbrace> f \<sqinter> g \<lbrace>Q\<rbra
   apply (simp add: validE_R_def validE_def OR_choiceE_weak_wp)
   done
 
-lemma thread_get_pred_tcb_at_wp:
-  "\<lbrace>\<lambda>s. \<forall>f. pred_tcb_at proj ((=) f) t s \<longrightarrow> P f s \<rbrace> thread_get (proj \<circ> tcb_to_itcb) t \<lbrace>P\<rbrace>"
-  apply (wp thread_get_wp')
-  apply clarsimp
-  apply (drule spec, erule mp)
-  by (simp add: pred_tcb_at_def obj_at_def)
-
-lemma thread_get_ret:
-  "\<lbrace>\<top>\<rbrace> thread_get (proj \<circ> tcb_to_itcb) t \<lbrace>\<lambda>rv. pred_tcb_at proj ((=) rv) t\<rbrace>"
-  apply (simp add: thread_get_def)
-  apply wp
-  by (clarsimp simp: pred_tcb_at_def)
-
-lemmas get_mcpriority_wp =
-  thread_get_pred_tcb_at_wp[where proj=itcb_mcpriority, simplified comp_def, simplified]
-
-lemmas get_mcpriority_get =
-  thread_get_ret[where proj=itcb_mcpriority, simplified comp_def, simplified]
-
 crunch inv: check_prio "P"
   (simp: crunch_simps)
 
 lemma check_prio_wp:
   "\<lbrace>\<lambda>s. mcpriority_tcb_at (\<lambda>mcp. prio \<le> ucast mcp) auth s \<longrightarrow> Q s\<rbrace> check_prio prio auth \<lbrace>\<lambda>_. Q\<rbrace>, -"
   apply (clarsimp simp: check_prio_def)
-  apply (wp get_mcpriority_wp whenE_throwError_wp)
+  apply (wp thread_get_mcpriority_wp whenE_throwError_wp)
   apply (intro allI impI, elim mp pred_tcb_weakenE)
   apply fastforce
   done

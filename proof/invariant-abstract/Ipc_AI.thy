@@ -132,7 +132,6 @@ definition
 (* FIXME: can some of these assumptions be proved with lifting lemmas? *)
 locale Ipc_AI =
   fixes state_ext_t :: "'state_ext::state_ext itself"
-  fixes some_t :: "'t itself"
   assumes derive_cap_is_derived:
     "\<And>c' slot.
       \<lbrace>\<lambda>s::'state_ext state. c'\<noteq> cap.NullCap \<longrightarrow>
@@ -249,17 +248,17 @@ locale Ipc_AI =
   assumes make_arch_fault_msg_vms[wp]:
     "\<And> ft t. make_arch_fault_msg ft t \<lbrace>valid_machine_state :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_st_tcb_at'[wp]:
-    "\<And> P p ft t . make_arch_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. Q (st_tcb_at P p s)\<rbrace>"
+    "\<And> Q P p ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. Q (st_tcb_at P p s)\<rbrace>"
+  assumes make_arch_fault_msg_fault_tcb_at[wp]:
+    "\<And> Q P p ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. Q (fault_tcb_at P p s)\<rbrace>"
+  assumes make_arch_fault_msg_bound_sc[wp]:
+    "\<And> Q P p ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. Q (bound_sc_tcb_at P p s)\<rbrace>"
   assumes make_arch_fault_msg_cap_to[wp]:
     "\<And> ft t p. make_arch_fault_msg ft t \<lbrace>ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_valid_irq_states[wp]:
     "\<And> ft t. make_arch_fault_msg ft t \<lbrace>valid_irq_states :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_cap_refs_respects_device_region[wp]:
     "\<And> ft t. make_arch_fault_msg ft t \<lbrace>cap_refs_respects_device_region :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  assumes make_arch_fault_msg_pred_tcb[wp]:
-    "\<And> P (proj :: itcb \<Rightarrow> 't) ft t . make_arch_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. Q (pred_tcb_at proj P t s)\<rbrace>"
-  assumes make_arch_fault_msg_bound_sc[wp]:
-    "\<And> P p ft t. make_arch_fault_msg ft t \<lbrace>(\<lambda>s. Q (bound_sc_tcb_at P p s)) :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_reply_sc[wp]:
     "\<And> P p ft t. make_arch_fault_msg ft t \<lbrace>reply_sc_reply_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes make_arch_fault_msg_reply_tcb[wp]:
@@ -1171,6 +1170,10 @@ lemma transfer_caps_refs_respects_device_region[wp]:
   apply clarsimp+
   done
 
+crunches transfer_caps_loop
+  for fault_tcbs_valid_states_except_set[wp]: "fault_tcbs_valid_states_except_set TS :: 'state_ext state \<Rightarrow> _"
+  (rule: transfer_caps_loop_pres wp: crunch_wps)
+
 lemma transfer_caps_loop_invs[wp]:
   "\<And>slots.
     \<lbrace>\<lambda>s::'state_ext state. invs s
@@ -2074,8 +2077,11 @@ lemma cte_wp_at_reply_cap_can_fast_finalise:
 
 context Ipc_AI begin
 
-crunch st_tcb_at[wp]: do_ipc_transfer "(\<lambda>s. Q (st_tcb_at P t s)) :: 'state_ext state \<Rightarrow> bool"
-  (wp: crunch_wps transfer_caps_loop_pres simp: zipWithM_x_mapM)
+crunches do_ipc_transfer
+  for st_tcb_at[wp]: "\<lambda>s :: 'state_ext state. Q (st_tcb_at P t s)"
+  and fault_tcb_at[wp]: "\<lambda>s :: 'state_ext state. Q (fault_tcb_at P t s)"
+  and fault_tcbs_valid_states_except_set[wp]: "fault_tcbs_valid_states_except_set TS :: 'state_ext state \<Rightarrow> bool"
+  (wp: crunch_wps transfer_caps_loop_pres rule: fault_tcbs_valid_states_lift)
 
 end
 
@@ -2331,14 +2337,10 @@ lemma maybe_donate_sc_sym_refs:
   apply wpsimp
   done
 
-lemma refill_unblock_check_cur_sc_tcb [wp]:
-  "\<lbrace>cur_sc_tcb\<rbrace> refill_unblock_check sc_ptr \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
-  by (wpsimp simp: refill_unblock_check_def get_refills_def is_round_robin_def)
-
-lemma maybe_donate_sc_cur_sc_tcb [wp]:
-  "\<lbrace>cur_sc_tcb\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
-  by (wpsimp simp: maybe_donate_sc_def get_sk_obj_ref_def get_simple_ko_def get_object_def
-                   get_tcb_obj_ref_def thread_get_def)
+crunches maybe_donate_sc
+  for cur_sc_tcb[wp]: cur_sc_tcb
+  and fault_tcbs_valid_states[wp]: fault_tcbs_valid_states
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma maybe_donate_sc_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> ex_nonz_cap_to tcb_ptr s\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -2378,7 +2380,7 @@ lemma update_waiting_invs:
   apply (rule hoare_seq_ext[OF _ assert_sp])
   apply wpsimp
     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                    wp: sts_valid_replies sts_only_idle)
+                    wp: sts_valid_replies sts_only_idle sts_fault_tcbs_valid_states)
    apply (wpsimp wp: valid_ioports_lift)
   apply (simp add: invs_def valid_state_def valid_pspace_def obj_at_def)
   apply (clarsimp simp: not_idle_tcb_in_waitingntfn ex_nonz_cap_to_tcb_in_waitingntfn cong: conj_cong)
@@ -2391,6 +2393,11 @@ lemma update_waiting_invs:
    apply (frule_tac x=t in bspec[OF st_in_waitingntfn], assumption+, simp)
    apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def)
    apply (subst replies_blocked_upd_tcb_st_not_BlockedonReply, simp+)
+  apply (rule conjI)
+   apply (frule (3) st_in_waitingntfn)
+   apply (clarsimp elim!: fault_tcbs_valid_states_not_fault_tcb_states
+                          pred_tcb_weakenE
+                    simp: pred_neg_def)
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: state_refs_of_def get_refs_def2 st_tcb_at_def obj_at_def
                    split: if_splits list.splits)
@@ -2480,28 +2487,6 @@ lemma cancel_ipc_cte_wp_at_not_reply_state:
   apply (wpsimp wp: thread_set_cte_wp_at_trivial ball_tcb_cap_casesI gts_wp)
   done
 
-(* TODO: sts_invs_minor2 and sts_invs_minor2_concise: just preserve one version? *)
-lemma sts_invs_minor2_concise:
-  "\<lbrace>st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = tcb_st_refs_of st \<and> \<not> awaiting_reply st') t
-    and invs and ex_nonz_cap_to t and (\<lambda>s. t \<noteq> idle_thread s)
-    and K (\<not> awaiting_reply st \<and> \<not>idle st)\<rbrace>
-   set_thread_state t st
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply (wp valid_irq_node_typ sts_only_idle sts_valid_replies)
-  apply clarsimp
-  apply (rule conjI, simp add: pred_tcb_at_def, erule(1) obj_at_valid_objsE)
-   apply (clarsimp simp: valid_obj_def valid_tcb_def valid_tcb_state_def doubleton_eq_iff
-                  split: thread_state.splits if_split_asm)
-  apply (rule conjI)
-   apply (subst replies_blocked_upd_tcb_st_trivial, simp)
-    apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def)+
-  apply (clarsimp elim!: rsubst[where P=sym_refs]
-      intro!: ext
-      dest!: st_tcb_at_state_refs_ofD)
-  apply (auto simp: state_refs_of_def get_refs_def2)
-  done
-
 lemma cancel_ipc_simpler:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s \<and> t \<noteq> idle_thread s \<and>
         only_idle s\<rbrace>
@@ -2515,6 +2500,17 @@ lemma cancel_ipc_simpler:
                     thread_set_no_change_tcb_pred hoare_vcg_imp_lift |
          clarsimp simp: only_idle_def st_tcb_at_def obj_at_def)+
   done
+
+crunches blocked_cancel_ipc, reply_remove_tcb, cancel_signal
+  for fault_tcb_at[wp]: "fault_tcb_at P t"
+  (wp: thread_set_pred_tcb_at_sets_true crunch_wps)
+
+lemma cancel_ipc_fault_tcb_at_None[wp]:
+  "\<lbrace>\<lambda>s. t \<noteq> t' \<longrightarrow> fault_tcb_at ((=) None) t s\<rbrace>
+   cancel_ipc t'
+   \<lbrace>\<lambda>_. fault_tcb_at ((=) None) t\<rbrace>"
+  apply (simp add: cancel_ipc_def)
+  by (wpsimp wp: hoare_vcg_imp_lift thread_set_pred_tcb_at_sets_true gts_wp)
 
 lemma sai_invs[wp]:
   "\<lbrace>invs and ex_nonz_cap_to ntfnptr\<rbrace> send_signal ntfnptr bdg \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -2530,7 +2526,7 @@ lemma sai_invs[wp]:
     apply (case_tac "receive_blocked st"; simp)
      apply (clarsimp simp: receive_blocked_def)
      apply (case_tac st; simp)
-     apply (wpsimp wp: sts_invs_minor2_concise)
+     apply (wpsimp wp: sts_invs_minor2)
       apply (rule hoare_vcg_conj_lift)
        apply (rule hoare_strengthen_post[OF cancel_ipc_simpler])
        apply (clarsimp simp: st_tcb_at_def obj_at_def)
@@ -2538,7 +2534,9 @@ lemma sai_invs[wp]:
       apply (wpsimp wp: cancel_ipc_cap_to)
      apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
      apply (subgoal_tac "ex_nonz_cap_to tptr s")
-      apply (fastforce simp: st_tcb_def2 is_tcb idle_no_ex_cap)
+      apply (fastforce simp: st_tcb_def2 is_tcb idle_no_ex_cap pred_neg_def
+                      elim!: fault_tcbs_valid_states_not_fault_tcb_states
+                             pred_tcb_weakenE)
      apply (clarsimp simp: pred_tcb_at_def obj_at_def)
      apply (fastforce simp: live_def receive_blocked_def intro!: if_live_then_nonz_capD2)
     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
@@ -2706,22 +2704,22 @@ lemma invs_respects_device_region:
 
 end
 
-locale Ipc_AI_cont = Ipc_AI state_ext_t some_t
-  for state_ext_t :: "'state_ext::state_ext itself" and some_t :: "'t itself" +
+locale Ipc_AI_cont = Ipc_AI state_ext_t
+  for state_ext_t :: "'state_ext::state_ext itself" +
   assumes do_ipc_transfer_pspace_respects_device_region[wp]:
     "\<And> t ep bg grt r.
       \<lbrace>pspace_respects_device_region :: 'state_ext state \<Rightarrow> bool\<rbrace>
-        do_ipc_transfer t ep bg grt r
+      do_ipc_transfer t ep bg grt r
       \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
   assumes do_ipc_transfer_cap_refs_respects_device_region[wp]:
     "\<And> t ep bg grt r.
       \<lbrace>cap_refs_respects_device_region and tcb_at t and  valid_objs and valid_mdb\<rbrace>
-        do_ipc_transfer t ep bg grt r
+      do_ipc_transfer t ep bg grt r
       \<lbrace>\<lambda>rv. cap_refs_respects_device_region :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes do_ipc_transfer_state_hyp_refs_of[wp]:
    "\<lbrace>\<lambda>s::'state_ext state. P (state_hyp_refs_of s)\<rbrace>
-     do_ipc_transfer t ep bg grt r
-      \<lbrace>\<lambda>_ s::'state_ext state. P (state_hyp_refs_of s)\<rbrace>"
+    do_ipc_transfer t ep bg grt r
+    \<lbrace>\<lambda>_ s::'state_ext state. P (state_hyp_refs_of s)\<rbrace>"
 
 
 lemma complete_signal_invs:

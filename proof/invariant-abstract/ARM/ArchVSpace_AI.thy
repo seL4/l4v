@@ -1573,11 +1573,11 @@ definition
 
 lemma store_hw_asid_invs:
   "\<lbrace>invs and
-   (\<lambda>s. arm_asid_map (arch_state s) asid = None \<and>
-        arm_hwasid_table (arch_state s) hw_asid = None \<and>
-        asid \<le> mask asid_bits)\<rbrace>
-  store_hw_asid asid hw_asid
-  \<lbrace>\<lambda>x. invs\<rbrace>"
+    (\<lambda>s. arm_asid_map (arch_state s) asid = None \<and>
+         arm_hwasid_table (arch_state s) hw_asid = None \<and>
+         asid \<le> mask asid_bits)\<rbrace>
+   store_hw_asid asid hw_asid
+   \<lbrace>\<lambda>x. invs\<rbrace>"
   apply (rule hoare_add_post)
     apply (rule store_hw_asid_valid_arch)
    apply fastforce

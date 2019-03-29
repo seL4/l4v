@@ -233,8 +233,8 @@ where
 | "valid_invocation (InvokeArchObject i) = valid_arch_inv i"
 
 lemma sts_Restart_invs[wp]:
-  "\<lbrace>st_tcb_at active t and invs and ex_nonz_cap_to t\<rbrace>
-     set_thread_state t Structures_A.Restart
+  "\<lbrace>st_tcb_at active t and invs and ex_nonz_cap_to t and fault_tcb_at ((=) None) t\<rbrace>
+   set_thread_state t Structures_A.Restart
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wp sts_invs_minor2)
   apply (auto elim!: pred_tcb_weakenE
@@ -248,8 +248,11 @@ lemma check_budget_restart_invs[wp]:
   apply (rule hoare_seq_ext[rotated])
    apply (rule check_budget_invs)
   apply (wpsimp wp: gts_wp)
-  apply (case_tac st; wpsimp)
-   apply (drule invs_iflive,
+  apply (frule invs_fault_tcbs_valid_states)
+  apply (frule_tac t="cur_thread s" in fault_tcbs_valid_states_not_fault_tcb_states)
+   apply (fastforce simp: pred_neg_def elim: pred_tcb_weakenE)
+  apply (case_tac st; clarsimp)
+   apply (frule invs_iflive,
           clarsimp simp: if_live_then_nonz_cap_def pred_tcb_at_def obj_at_def live_def)+
   done
 
@@ -362,7 +365,7 @@ locale Systemcall_AI_Pre =
 
 begin
 
-crunch pred_tcb_at[wp]: handle_fault_reply "pred_tcb_at proj (P :: 'a \<Rightarrow> _) t :: 'state_ext state \<Rightarrow> _"
+crunch pred_tcb_at[wp]: handle_fault_reply "pred_tcb_at proj P t :: 'state_ext state \<Rightarrow> _"
 crunch invs[wp]: handle_fault_reply "invs :: 'state_ext state \<Rightarrow> _"
 crunch cap_to[wp]: handle_fault_reply "ex_nonz_cap_to c :: 'state_ext state \<Rightarrow> _"
 crunch it[wp]: handle_fault_reply "\<lambda>s :: 'state_ext state. P (idle_thread s) "
@@ -463,13 +466,14 @@ crunches refill_unblock_check
 
 lemmas si_invs[wp] = si_invs'[where Q=\<top>,OF hoare_TrueI hoare_TrueI hoare_TrueI hoare_TrueI,simplified]
 
-locale Systemcall_AI_Pre2 = Systemcall_AI_Pre itcb_state state_ext_t
+locale Systemcall_AI_Pre2 = Systemcall_AI_Pre itcb_state state_ext_t +
+                            Systemcall_AI_Pre itcb_fault state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself"
 begin
 
 lemma do_reply_invs[wp]:
   "\<lbrace>tcb_at t and reply_at r and invs\<rbrace>
-     do_reply_transfer t r
+   do_reply_transfer t r
    \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wpsimp wp: handle_timeout_Timeout_invs hoare_vcg_all_lift hoare_drop_imps
@@ -477,19 +481,18 @@ lemma do_reply_invs[wp]:
            apply (wpsimp wp: gts_wp)
           apply (rule_tac Q = "\<lambda>_ s. invs s" in hoare_strengthen_post[rotated])
            apply (clarsimp simp: pred_tcb_at_def obj_at_def runnable_eq)
-          apply (wpsimp wp: sts_invs_minor2_concise)+
+          apply (wpsimp wp: sts_invs_minor2)+
               apply (intro conjI impI)
-               apply (wpsimp wp: thread_set_cap_to thread_set_invs_trivial
-                                 thread_set_no_change_tcb_state gts_wp
-                                 reply_remove_invs get_simple_ko_wp
+               apply (wpsimp wp: thread_set_cap_to
+                                 thread_set_no_change_tcb_state
+                                 thread_set_pred_tcb_at_sets_true gts_wp
+                                 get_simple_ko_wp thread_get_fault_wp
+                                 hoare_vcg_all_lift
                            simp: ran_tcb_cap_cases)+
-         apply (wpsimp wp: hoare_drop_imps)
+        apply (simp flip: cases_imp_eq imp_conjL not_None_eq)
+        apply (wpsimp wp: hoare_drop_imps reply_remove_invs)
         apply (clarsimp cong: conj_cong)
-       apply (wpsimp wp: reply_remove_invs thread_set_cap_to thread_set_invs_trivial
-                         thread_set_no_change_tcb_state gts_wp
-                         reply_remove_invs get_simple_ko_wp
-                   simp: ran_tcb_cap_cases)+
-  apply (clarsimp simp: pred_tcb_at_eq_commute)
+       apply (wpsimp wp: gts_wp get_simple_ko_wp)+
   apply (clarsimp simp: reply_tcb_reply_at_def obj_at_def pred_tcb_at_def is_tcb is_reply)
   apply (frule invs_valid_idle)
   apply (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def live_def
@@ -1122,8 +1125,9 @@ lemma hinv_invs':
          apply (rule_tac Q = "\<lambda>st. st_tcb_at ((=) st) thread and (invs and Q)" in
                 hoare_post_imp)
           apply (auto elim!: pred_tcb_weakenE st_tcb_ex_cap
-                      dest: st_tcb_at_idle_thread
-                      simp: st_tcb_at_tcb_at)[1]
+                            fault_tcbs_valid_states_not_fault_tcb_states
+                      dest: st_tcb_at_idle_thread invs_fault_tcbs_valid_states
+                      simp: st_tcb_at_tcb_at pred_neg_def)[1]
          apply (wpsimp wp: gts_sp)+
        apply (simp add: ct_in_state_def conj_commute conj_left_commute)
        apply (wpsimp wp: sts_schedulable_scheduler_action)
@@ -1134,7 +1138,9 @@ lemma hinv_invs':
       apply (simp only: simp_thms K_def if_apply_def2)
       apply (rule hoare_vcg_E_elim)
        apply (wpsimp wp: decode_inv_inv simp: if_apply_def2)+
-  apply (auto simp: ct_in_state_def cur_sc_tcb_invs elim: st_tcb_ex_cap)
+  apply (auto simp: ct_in_state_def cur_sc_tcb_invs fault_tcbs_valid_states_active
+              dest: invs_fault_tcbs_valid_states
+              elim: st_tcb_ex_cap)
   done
 
 lemmas hinv_invs[wp] = hinv_invs'
@@ -1154,8 +1160,9 @@ lemma hinv_tcb[wp]:
   apply (wp syscall_valid sts_st_tcb_at_cases ct_in_state_set lec_caps_to
             sts_schedulable_scheduler_action
          | simp cong: conj_cong)+
-  apply (fastforce simp: is_tcb ct_in_state_def st_tcb_at_def obj_at_def
-                 intro!: st_tcb_ex_cap)
+  apply (auto simp: ct_in_state_def fault_tcbs_valid_states_active
+              dest: invs_fault_tcbs_valid_states
+              elim: st_tcb_ex_cap st_tcb_at_tcb_at)
   done
 
 lemma get_cap_reg_inv[wp]: "\<lbrace>P\<rbrace> get_cap_reg r \<lbrace>\<lambda>_. P\<rbrace>"
@@ -1715,7 +1722,9 @@ lemma handle_invocation_not_blocking_not_calling_first_phase_ct_active[wp]:
   apply (wpsimp wp: syscall_valid set_thread_state_ct_st hoare_drop_imps
                     set_thread_state_pred_tcb_at sts_schedulable_scheduler_action
          | wps)+
-  apply (auto simp: ct_in_state_def new_fault_inv elim: st_tcb_ex_cap)
+  apply (auto simp: ct_in_state_def fault_tcbs_valid_states_active
+              dest: invs_fault_tcbs_valid_states
+              elim: st_tcb_ex_cap)
   done
 
 lemma he_invs[wp]:

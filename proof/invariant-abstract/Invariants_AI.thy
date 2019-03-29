@@ -1031,6 +1031,20 @@ abbreviation "valid_replies \<equiv> valid_replies_pred valid_replies'"
 
 lemmas valid_replies_defs = valid_replies'_def replies_with_sc_def replies_blocked_def
 
+abbreviation
+  "fault_tcb_states st \<equiv>
+     (\<exists>ep data. st = BlockedOnSend ep data) \<or> (\<exists>ep. st = BlockedOnReply ep) \<or>
+     st = Inactive"
+
+definition
+  "fault_tcbs_valid_states_except_set TS \<equiv>
+     \<lambda>s. \<forall>t. t \<notin> TS \<longrightarrow> fault_tcb_at (\<lambda>f. \<exists>f'. f = Some f') t s \<longrightarrow> st_tcb_at fault_tcb_states t s"
+
+abbreviation
+  "fault_tcbs_valid_states \<equiv> fault_tcbs_valid_states_except_set {}"
+
+lemmas fault_tcbs_valid_states_def = fault_tcbs_valid_states_except_set_def[where TS="{}", simplified]
+
 definition
   valid_pspace :: "'z::state_ext state \<Rightarrow> bool"
 where
@@ -1040,6 +1054,7 @@ where
                    and if_live_then_nonz_cap
                    and zombies_final
                    and valid_replies
+                   and fault_tcbs_valid_states
                    and (\<lambda>s. sym_refs (state_refs_of s))
                    and (\<lambda>s. sym_refs (state_hyp_refs_of s))"
 
@@ -1218,7 +1233,7 @@ where
                   and cap_refs_respects_device_region"
 
 definition
- "ct_in_state test \<equiv> \<lambda>s. st_tcb_at test (cur_thread s) s"
+  "ct_in_state test \<equiv> \<lambda>s. st_tcb_at test (cur_thread s) s"
 
 definition
   "cur_tcb s \<equiv> tcb_at (cur_thread s) s"
@@ -1266,13 +1281,13 @@ definition
 definition
   "typ_range p T \<equiv> {p .. p + 2^obj_bits_type T - 1}"
 
-abbreviation (* RT: should YieldTo be added here? *)
+abbreviation
   "active st \<equiv> st = Running \<or> st = Restart"
 
-abbreviation (* RT: should YieldTo be added here? probably no *)
+abbreviation
   "simple st \<equiv> st = Inactive \<or>
                  st = Running \<or>
-                 st = Restart \<or> (* (\<exists>t. st = YieldTo t) \<or>*)
+                 st = Restart \<or>
                  idle st \<or> awaiting_reply st"
 abbreviation
   "ct_active \<equiv> ct_in_state active"
@@ -1284,7 +1299,7 @@ abbreviation
   "ct_idle \<equiv> ct_in_state idle"
 
 abbreviation (input)
- "all_invs_but_sym_refs
+ "all_invs_but_sym_refs_and_fault_tcbs
     \<equiv> valid_objs and pspace_aligned and pspace_distinct and valid_ioc
        and if_live_then_nonz_cap and zombies_final
        and valid_mdb and valid_idle and only_idle and if_unsafe_then_cap
@@ -1297,6 +1312,15 @@ abbreviation (input)
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
        and valid_replies and cur_tcb and cur_sc_tcb"
+
+abbreviation (input)
+ "all_invs_but_sym_refs
+    \<equiv> all_invs_but_sym_refs_and_fault_tcbs and fault_tcbs_valid_states"
+ 
+abbreviation (input)
+ "all_invs_but_fault_tcbs
+    \<equiv> all_invs_but_sym_refs_and_fault_tcbs and (\<lambda>s. sym_refs (state_refs_of s))
+        and (\<lambda>s. sym_refs (state_hyp_refs_of s))"
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Lemmas"
@@ -2106,7 +2130,7 @@ lemma gen_obj_refs_Int:
             \<and> cap_irqs cap \<inter> cap_irqs cap' = {}
             \<and> arch_gen_refs cap \<inter> arch_gen_refs cap' = {})"
   by (simp add: gen_obj_refs_def Int_Un_distrib Int_Un_distrib2
-                image_Int[symmetric] Int_image_empty image_Int[symmetric])
+                image_Int[symmetric] Int_image_empty)
 
 lemma is_final_cap'_def2:
   "is_final_cap' cap =
@@ -2136,6 +2160,11 @@ lemma valid_replies_pred_pspaceI:
   "\<lbrakk> valid_replies_pred P s; kheap s' = kheap s \<rbrakk> \<Longrightarrow> valid_replies_pred P s'"
   by (erule rsubst2[of P]; rule replies_with_sc_kheap_eq replies_blocked_kheap_eq; simp)
 
+lemma fault_tcbs_valid_states_pspaceI:
+  "\<lbrakk> fault_tcbs_valid_states_except_set TS s; kheap s' = kheap s \<rbrakk>
+   \<Longrightarrow> fault_tcbs_valid_states_except_set TS s'"
+  by (simp add: fault_tcbs_valid_states_except_set_def pred_tcb_at_def obj_at_def)
+
 lemma pspace_pspace_update:
   "kheap (kheap_update (\<lambda>a. ps) s) = ps" by simp
 
@@ -2145,7 +2174,7 @@ lemma valid_pspace_eqI:
   by (auto simp: pspace_aligned_def
           intro: valid_objs_pspaceI state_refs_of_pspaceI state_hyp_refs_of_pspaceI
                  distinct_pspaceI iflive_pspaceI valid_replies_pred_pspaceI
-                 ifunsafe_pspaceI zombies_final_pspaceI)
+                 ifunsafe_pspaceI zombies_final_pspaceI fault_tcbs_valid_states_pspaceI)
 
 lemma cte_wp_caps_of_lift:
   assumes c: "\<And>p P. cte_wp_at P p s = cte_wp_at P p s'"
@@ -2203,7 +2232,7 @@ text {* Lemmas about well-formed states *}
 lemma valid_pspaceI [intro]:
   "\<lbrakk> valid_objs s; pspace_aligned s; sym_refs (state_refs_of s); sym_refs (state_hyp_refs_of s);
      pspace_distinct s; if_live_then_nonz_cap s; zombies_final s;
-     valid_replies s \<rbrakk>
+     valid_replies s; fault_tcbs_valid_states s \<rbrakk>
      \<Longrightarrow> valid_pspace s"
   unfolding valid_pspace_def by simp
 
@@ -2212,7 +2241,7 @@ lemma valid_pspaceE [elim?]:
   and     rl: "\<lbrakk> valid_objs s; pspace_aligned s;
                  sym_refs (state_refs_of s);  sym_refs (state_hyp_refs_of s);
                  pspace_distinct s; if_live_then_nonz_cap s;
-                 zombies_final s; valid_replies s
+                 zombies_final s; valid_replies s; fault_tcbs_valid_states s
                \<rbrakk> \<Longrightarrow> R"
   shows    R
   using vp
@@ -3126,6 +3155,10 @@ lemma zombies_final_update[iff]:
   "zombies_final (f s) = zombies_final s"
   by (simp add: zombies_final_def is_final_cap'_def)
 
+lemma fault_tcbs_valid_states_update[iff]:
+  "fault_tcbs_valid_states_except_set TS (f s) = fault_tcbs_valid_states_except_set TS s"
+  by (simp add: fault_tcbs_valid_states_except_set_def)
+
 end
 
 
@@ -3710,13 +3743,16 @@ lemma ct_in_state_cdt_update[simp]:
 
 lemma ct_in_state_thread_state_lift':
   assumes ct: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
-  assumes st: "\<And>t. \<lbrace>Pre and st_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
-  shows      "\<lbrace>Pre and ct_in_state P\<rbrace> f \<lbrace>\<lambda>rv. ct_in_state P\<rbrace>"
+  assumes st: "\<And>t. \<lbrace>st_tcb_at P t and Pre t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. ct_in_state P s \<and> Pre (cur_thread s) s\<rbrace> f \<lbrace>\<lambda>rv. ct_in_state P\<rbrace>"
   apply (clarsimp simp: ct_in_state_def valid_def)
-  apply (frule (1) use_valid [OF _ ct], erule use_valid [OF _ st], fastforce)
+  apply (drule (1) use_valid [OF _ ct, rotated])
+  apply (drule (1) use_valid [OF _ ct, rotated])
+  apply (erule use_valid [OF _ st])
+  apply fastforce
   done
 
-lemmas ct_in_state_thread_state_lift = ct_in_state_thread_state_lift'[where Pre = \<top>, simplified]
+lemmas ct_in_state_thread_state_lift = ct_in_state_thread_state_lift'[where Pre = "\<top>\<top>", simplified]
 
 lemma only_idle_lift_weak:
   assumes "\<And>Q P t. \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace> f \<lbrace>\<lambda>_ s. Q (st_tcb_at P t s)\<rbrace>"
@@ -3743,6 +3779,54 @@ lemma only_idle_lift:
   apply (rule hoare_lift_Pf [where f="idle_thread"])
    apply (rule assms)+
   done
+
+lemma fault_tcbs_valid_states_lift:
+  assumes T: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+  assumes f: "\<And>P t. \<lbrace>fault_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. fault_tcb_at P t\<rbrace>"
+  assumes s: "\<And>P t. \<lbrace>st_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  shows "f \<lbrace>fault_tcbs_valid_states_except_set TS\<rbrace>"
+  apply (simp add: fault_tcbs_valid_states_except_set_def)
+  apply (rule hoare_vcg_all_lift)
+  apply (subst imp_conv_disj not_pred_tcb)+
+  apply (rule hoare_vcg_disj_lift, wp)
+  apply (rule hoare_vcg_disj_lift)+
+    apply (simp add: tcb_at_typ)
+    apply (rule T)
+   apply (rule f)
+  apply (rule s)
+  done
+
+lemma fault_tcbs_valid_states_to_except_set[intro]:
+  "fault_tcbs_valid_states s \<Longrightarrow> fault_tcbs_valid_states_except_set TS s"
+  by (simp add: fault_tcbs_valid_states_except_set_def)
+
+lemma fault_tcbs_valid_states_from_except_set:
+  "fault_tcbs_valid_states_except_set TS s
+    \<Longrightarrow> \<forall>t \<in> TS. fault_tcb_at (\<lambda>f. \<exists>f'. f = Some f') t s
+                   \<longrightarrow> st_tcb_at fault_tcb_states t s
+    \<Longrightarrow> fault_tcbs_valid_states s"
+  by (fastforce simp: fault_tcbs_valid_states_except_set_def)
+
+lemma fault_tcbs_valid_states_except_set_not_fault_tcb_states:
+  "\<lbrakk>fault_tcbs_valid_states_except_set TS s; st_tcb_at (not fault_tcb_states) t s;
+    t \<notin> TS\<rbrakk>
+   \<Longrightarrow> fault_tcb_at ((=) None) t s"
+  apply (simp add: fault_tcbs_valid_states_except_set_def)
+  apply (drule_tac x=t in spec)
+  apply (auto simp: pred_tcb_at_def obj_at_def pred_neg_def)
+  done
+
+lemmas fault_tcbs_valid_states_not_fault_tcb_states
+  = fault_tcbs_valid_states_except_set_not_fault_tcb_states[where TS="{}", simplified]
+
+lemma fault_tcbs_valid_states_except_set_active:
+  "fault_tcbs_valid_states_except_set TS s \<Longrightarrow> st_tcb_at active t s \<Longrightarrow> t \<notin> TS
+    \<Longrightarrow> fault_tcb_at ((=) None) t s"
+  by (auto elim!: fault_tcbs_valid_states_except_set_not_fault_tcb_states pred_tcb_weakenE
+            simp: pred_neg_def)
+
+lemmas fault_tcbs_valid_states_active
+  = fault_tcbs_valid_states_except_set_active[where TS="{}", simplified]
 
 lemma maybeM_inv:
   "\<forall>a. \<lbrace>P\<rbrace> f a \<lbrace>\<lambda>_. P\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> maybeM f opt \<lbrace>\<lambda>_. P\<rbrace>"
@@ -3924,6 +4008,10 @@ lemma invs_valid_asid_map[elim!]:
 lemma invs_valid_ioports[elim!]:
   "invs s \<Longrightarrow> valid_ioports s"
   by (simp add: invs_def valid_state_def)
+
+lemma invs_fault_tcbs_valid_states[elim!]:
+  "invs s \<Longrightarrow> fault_tcbs_valid_states s"
+  by (simp add: invs_def valid_state_def valid_pspace_def)
 
 lemma invs_equal_kernel_mappings[elim!]:
   "invs s \<Longrightarrow> equal_kernel_mappings s"
