@@ -90,6 +90,27 @@ lemma table_cap_ref_vs_cap_ref:
   apply (clarsimp simp: vs_cap_ref_arch_def table_cap_ref_arch_def split: arch_cap.splits)
   done
 
+lemma max_inc_pt_level[simp]:
+  "level \<le> max_pt_level \<Longrightarrow> max (level + 1) level = level + 1"
+  by (simp add: dual_order.strict_implies_order max.commute max_def)
+
+(* FIXME MOVE, these should be abbreviations *)
+lemma is_ko_to_discs:
+  "is_ep = is_Endpoint"
+  "is_ntfn = is_Notification"
+  "is_tcb = is_TCB"
+  apply (all \<open>rule ext, simp add: is_ep_def is_ntfn_def is_tcb_def split: kernel_object.splits\<close>)
+  done
+
+lemma cap_to_pt_is_pt_cap:
+  "\<lbrakk> obj_refs cap = {p}; caps_of_state s cptr = Some cap; pts_of s p \<noteq> None;
+     valid_caps (caps_of_state s) s \<rbrakk>
+   \<Longrightarrow> is_pt_cap cap"
+  by (drule (1) valid_capsD)
+     (auto simp: pts_of_ko_at is_pt_cap_def arch_cap_fun_lift_def arch_cap.disc_eq_case(4)
+                 valid_cap_def obj_at_def is_ko_to_discs is_cap_table_def
+           split: if_splits arch_cap.split cap.splits option.splits)
+
 (* FIXME RISCV: probably need extra lemma for asid_pool_level *)
 lemma unique_vs_lookup_table:
   "\<lbrakk> unique_table_refs s; valid_vs_lookup s; valid_uses s;
@@ -592,9 +613,17 @@ lemma set_pt_table_caps[wp]:
    set_pt p pt
    \<lbrace>\<lambda>rv. valid_table_caps\<rbrace>"
   unfolding valid_table_caps_def set_pt_def
-  apply (wp set_object_wp)
-  sorry (* FIXME RISCV *)
-
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: set_object_wp)
+  apply (rename_tac ref slot)
+  apply (subst (asm) caps_of_state_after_update[simplified fun_upd_apply[symmetric]])
+   apply (clarsimp simp: obj_at_def)
+  apply (drule_tac x=r in spec, erule impE, fastforce)
+  apply (clarsimp simp: opt_map_def fun_upd_apply split: option.splits)
+  apply (erule impE, fastforce)
+  apply clarsimp
+  apply (erule_tac x=ref in allE, erule_tac x=slot in allE, fastforce)
+  done
 
 lemma set_object_caps_of_state:
   "\<lbrace>(\<lambda>s. \<not>tcb_at p s \<and> \<not>(\<exists>n. cap_table_at n p s)) and
@@ -1096,8 +1125,7 @@ lemma invs_valid_asid_table [elim!]:
 lemma valid_asid_table_ran:
   "valid_asid_table s \<Longrightarrow> \<forall>p\<in>ran (asid_table s). asid_pool_at p s"
   unfolding invs_def valid_state_def valid_arch_state_def valid_asid_table_def
-  sorry (* FIXME RISCV *)
-
+  by (fastforce simp: opt_map_def obj_at_def split: option.splits)
 
 lemma vs_lookup_pages_pt_eq:
   "\<lbrakk>valid_vspace_objs s;
@@ -1313,23 +1341,77 @@ lemma set_asid_pool_only_idle [wp]:
   "\<lbrace>only_idle\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>_. only_idle\<rbrace>"
   by (wp only_idle_lift set_asid_pool_typ_at)
 
+(* FIXME RISCV move up *)
+lemma vspace_for_asid_SomeD:
+  "vspace_for_asid asid s = Some pt_ptr
+   \<Longrightarrow> \<exists>pool_ptr pool. asid_table s (asid_high_bits_of asid) = Some pool_ptr
+                      \<and> asid_pools_of s pool_ptr = Some pool
+                      \<and> pool (asid_low_bits_of asid) = Some pt_ptr
+                      \<and> asid > 0"
+  unfolding vspace_for_asid_def
+  by (clarsimp simp: pool_for_asid_def vspace_for_pool_def)
+
+(* FIXME RISCV move up *)
+lemma vspace_for_asid_SomeI:
+  "\<lbrakk> asid_table s (asid_high_bits_of asid) = Some pool_ptr;
+     asid_pools_of s pool_ptr = Some pool;
+     pool (asid_low_bits_of asid) = Some pt_ptr;
+     asid > 0 \<rbrakk>
+   \<Longrightarrow> vspace_for_asid asid s = Some pt_ptr"
+  by (clarsimp simp: vspace_for_asid_def vspace_for_pool_def pool_for_asid_def obind_def)
 
 lemma set_asid_pool_equal_mappings[wp]:
   "\<lbrace>equal_kernel_mappings and
     (\<lambda>s. \<forall>p pt. p \<in> ran ap \<longrightarrow> pts_of s p = Some pt \<longrightarrow> has_kernel_mappings pt s)\<rbrace>
     set_asid_pool p ap
    \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
-  sorry (* FIXME RISCV *)
+  unfolding set_asid_pool_def
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp simp: equal_kernel_mappings_def)
+  apply (drule vspace_for_asid_SomeD)
+  apply clarsimp
+  apply (case_tac "p = pool_ptr")
+  apply (clarsimp simp: equal_kernel_mappings_def has_kernel_mappings_def obj_at_def  opt_map_def
+                  split: option.splits if_splits)
+   apply (subgoal_tac "pt_ptr \<in> ran ap")
+    apply fastforce+
+  (* p \<noteq> pool_ptr *)
+  apply (clarsimp simp: equal_kernel_mappings_def has_kernel_mappings_def obj_at_def  opt_map_def
+                  split: option.splits if_splits)
+  apply (subgoal_tac "vspace_for_asid asid s = Some pt_ptr")
+   apply (fastforce elim: vspace_for_asid_SomeI simp: opt_map_def)+
+  done
+
+(* FIXME RISCV RAF: this expansion is ugly but is in simp normal form *)
+lemma ptes_of_asid_pool_upd:
+  "pts_of s p = None
+   \<Longrightarrow> (\<lambda>pa. pte_of pa (kheap s(p \<mapsto> ArchObj (ASIDPool ap)) |> aobj_of |> pt_of)) = ptes_of s"
+  apply (rule ext)
+  apply (rule_tac f="pte_of pa" in arg_cong)
+  apply (rule ext, fastforce simp: opt_map_def split: option.splits)
+  done
+
+lemma translate_address_asid_pool_upd:
+  "pts_of s p = None
+   \<Longrightarrow> translate_address pt_ptr vref
+        (\<lambda>pa. pte_of pa (kheap s(p \<mapsto> ArchObj (ASIDPool ap)) |> aobj_of |> pt_of))
+      = translate_address pt_ptr vref (ptes_of s)"
+  by (subst ptes_of_asid_pool_upd, simp+)
+
+(* FIXME RISCV move up and generalise to others, should be useful *)
+lemma ko_atasid_pool_pts_None:
+  "ako_at (ASIDPool pool) p s \<Longrightarrow> pts_of s p = None"
+  by (clarsimp simp: opt_map_def obj_at_def split: option.splits)
 
 lemma set_asid_pool_valid_global_vspace_mappings[wp]:
   "\<lbrace>valid_global_vspace_mappings\<rbrace>
    set_asid_pool p ap
    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
-  apply (simp add: set_asid_pool_def)
-  sorry (* FIXME RISCV
-  apply (wp set_object_global_vspace_mappings get_object_wp)
-  including unfold_objects
-  by (clarsimp simp: a_type_def) *)
+  unfolding set_asid_pool_def
+  apply (wpsimp wp: set_object_wp)
+  apply (simp only: valid_global_vspace_mappings_def Let_def) (* prevent simp loop *)
+  apply (clarsimp simp: translate_address_asid_pool_upd ko_atasid_pool_pts_None)
+  done
 
 lemma set_asid_pool_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
