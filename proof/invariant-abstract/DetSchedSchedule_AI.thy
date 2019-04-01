@@ -11245,26 +11245,31 @@ lemma as_user_test_sc_refill_max[wp]:
   apply (wpsimp simp: as_user_def set_object_def wp: get_object_def)
   by (clarsimp simp: test_sc_refill_max_def dest!: get_tcb_SomeD split: option.splits)
 
+lemma maybe_donate_sc_bound_sc_trivial:
+  "\<lbrace>bound_sc_tcb_at bound thread and P\<rbrace>
+   maybe_donate_sc thread ntfn_ptr
+   \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (clarsimp simp: maybe_donate_sc_def)
+  apply (wpsimp)
+  apply (rule hoare_pre_cont)
+  apply (wpsimp simp: get_sc_obj_ref_def get_sk_obj_ref_def get_tcb_obj_ref_def
+                  wp: thread_get_wp get_simple_ko_wp)+
+  apply (fastforce simp: obj_at_def pred_tcb_at_def)
+  done
+
 lemma receive_signal_valid_sched:
-  "\<lbrace>valid_sched and scheduler_act_not thread and not_queued thread and not_in_release_q thread\<rbrace>
+  "\<lbrace>valid_sched and scheduler_act_not thread and not_queued thread and not_in_release_q thread
+                and (\<lambda>s. thread = cur_thread s) and bound_sc_tcb_at bound thread\<rbrace>
      receive_signal thread cap is_blocking \<lbrace>\<lambda>_. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: receive_signal_def)
   apply (cases cap; clarsimp)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rename_tac ntfn)
   apply (case_tac "ntfn_obj ntfn"; clarsimp)
-(*
-  apply (wpsimp wp: maybe_donate_sc_valid_sched
-                  set_thread_state_not_queued_valid_sched)
-  apply (wpsimp wp: maybe_donate_sc_valid_sched
-                  set_thread_state_not_queued_valid_sched)
-apply (wpsimp wp: maybe_donate_sc_valid_sched)
-  apply (wpsimp wp: maybe_donate_sc_valid_sched get_object_wp
-   set_simple_ko_test_sc_refill_max set_simple_ko_valid_sched hoare_vcg_conj_lift
-   hoare_vcg_all_lift hoare_drop_imp
-simp: obj_at_def set_object_def) *)
-sorry (* receive_signal_valid_sched *)
-
+    apply (wpsimp wp: set_thread_state_not_queued_valid_sched)
+   apply (wpsimp wp: set_thread_state_not_queued_valid_sched)
+  apply (wpsimp wp: maybe_donate_sc_bound_sc_trivial)
+  done
 
 (*
 crunch valid_sched: schedule_tcb,maybe_return_sc,maybe_donate_sc valid_sched
@@ -11518,22 +11523,28 @@ done
 
 context DetSchedSchedule_AI begin
 
+lemma budget_sufficient_bound_sc:
+  "budget_sufficient t s \<Longrightarrow> bound_sc_tcb_at bound t s"
+  by (clarsimp simp: pred_tcb_at_def obj_at_def)
+
 lemma handle_recv_valid_sched:
   "\<lbrace>valid_sched and invs and ct_active and ct_not_in_release_q and valid_ep_q
       and ct_not_queued and scheduler_act_sane and ct_schedulable\<rbrace>
    handle_recv is_blocking can_reply \<lbrace>\<lambda>rv. valid_sched::det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper
-              cong: if_cong split del: if_split)
+             cong: if_cong split del: if_split)
   apply (wpsimp wp: get_simple_ko_wp handle_fault_valid_sched
-            receive_ipc_valid_sched receive_signal_valid_sched simp: whenE_def get_sk_obj_ref_def
-             split_del: if_split)+
+                    receive_ipc_valid_sched receive_signal_valid_sched
+              simp: whenE_def get_sk_obj_ref_def
+         split_del: if_split)+
      apply (rule hoare_vcg_E_elim)
       apply (wpsimp simp: lookup_cap_def lookup_slot_for_thread_def)
        apply (wp resolve_address_bits_valid_fault2)+
      apply (simp add: valid_fault_def)
      apply (wp hoare_drop_imps hoare_vcg_all_lift_R)
     apply (wpsimp cong: conj_cong | strengthen invs_valid_tcb_ctable_strengthen)+
-  apply (auto simp: ct_in_state_def tcb_at_invs objs_valid_tcb_ctable invs_valid_objs)
+  apply (auto simp: ct_in_state_def tcb_at_invs objs_valid_tcb_ctable invs_valid_objs
+              dest: budget_sufficient_bound_sc)
   done
 (*
 lemma handle_recv_valid_sched':
