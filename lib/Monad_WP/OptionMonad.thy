@@ -44,6 +44,21 @@ lemma opt_mapE:
   "\<lbrakk> (f |> g) s = Some v; \<And>v'. \<lbrakk>f s = Some v'; g v' = Some v \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (auto simp: in_opt_map_eq)
 
+lemma opt_map_upd_None:
+  "f(x := None) |> g = (f |> g)(x := None)"
+  by (auto simp: opt_map_def)
+
+lemma opt_map_upd_Some:
+  "f(x \<mapsto> v) |> g = (f |> g)(x := g v)"
+  by (auto simp: opt_map_def)
+
+lemmas opt_map_upd[simp] = opt_map_upd_None opt_map_upd_Some
+
+declare None_upd_eq[simp]
+
+(* None_upd_eq[simp] so that this pattern is by simp. Hopefully not too much slowdown. *)
+lemma "\<lbrakk> (f |> g) x = None; g v = None \<rbrakk> \<Longrightarrow> f(x \<mapsto> v) |> g = f |> g"
+  by simp
 
 definition
   obind :: "('s,'a) lookup \<Rightarrow> ('a \<Rightarrow> ('s,'b) lookup) \<Rightarrow> ('s,'b) lookup" (infixl "|>>" 53)
