@@ -73,33 +73,30 @@ lemma hoare_vcg_if_lift:
   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv. if P then X rv else Y rv\<rbrace>"
   by (auto simp: valid_def split_def)
 
-lemma hoare_lift_Pf2:
-  assumes P: "\<And>x. \<lbrace>Q x\<rbrace> m \<lbrace>\<lambda>_. P x\<rbrace>"
-  assumes f: "\<And>P. \<lbrace>\<lambda>s. P (f s)\<rbrace> m \<lbrace>\<lambda>_ s. P (f s)\<rbrace>"
-  shows "\<lbrace>\<lambda>s. Q (f s) s\<rbrace> m \<lbrace>\<lambda>_ s. P (f s) s\<rbrace>"
-  apply (clarsimp simp add: valid_def)
-  apply (frule (1) use_valid [OF _ P], drule (2) use_valid [OF _ f])
+lemma hoare_vcg_if_lift_strong:
+  "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>P\<rbrace>; \<lbrace>\<lambda>s. \<not> P' s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>R'\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow>
+  \<lbrace>\<lambda>s. if P' s then Q' s else R' s\<rbrace> f \<lbrace>\<lambda>rv s. if P rv s then Q rv s else R rv s\<rbrace>"
+
+  "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>P\<rbrace>; \<lbrace>\<lambda>s. \<not> P' s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>R'\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow>
+  \<lbrace>\<lambda>s. if P' s then Q' s else R' s\<rbrace> f \<lbrace>\<lambda>rv s. (if P rv s then Q rv else R rv) s\<rbrace>"
+  by (wpsimp wp: hoare_vcg_imp_lift' | assumption | fastforce)+
+
+lemma hoare_lift_Pf_pre_conj:
+  assumes P: "\<And>x. \<lbrace>\<lambda>s. Q x s \<and> R s\<rbrace> m \<lbrace>P x\<rbrace>"
+  assumes f: "\<And>P. \<lbrace>\<lambda>s. P (g s) \<and> R s\<rbrace> m \<lbrace>\<lambda>_ s. P (f s)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. Q (g s) s \<and> R s\<rbrace> m \<lbrace>\<lambda>rv s. P (f s) rv s\<rbrace>"
+  apply (clarsimp simp: valid_def)
+  apply (rule use_valid [OF _ P], simp, simp)
+  apply (rule use_valid [OF _ f], simp, simp)
   done
 
-lemma hoare_lift_Pf3:
-  assumes P: "\<And>x. \<lbrace>Q x\<rbrace> m \<lbrace>P x\<rbrace>"
-  assumes f: "\<And>P. \<lbrace>\<lambda>s. P (f s)\<rbrace> m \<lbrace>\<lambda>_ s. P (f s)\<rbrace>"
-  shows "\<lbrace>\<lambda>s. Q (f s) s\<rbrace> m \<lbrace>\<lambda>rv s. P (f s) rv s\<rbrace>"
-  apply (clarsimp simp add: valid_def)
-  apply (frule (1) use_valid [OF _ P], drule (2) use_valid [OF _ f])
-  done
+lemmas hoare_lift_Pf3 = hoare_lift_Pf_pre_conj[where R=\<top> and f=f and g=f for f, simplified]
+lemmas hoare_lift_Pf2 = hoare_lift_Pf3[where P="\<lambda>f _. P f" for P]
+lemmas hoare_lift_Pf = hoare_lift_Pf2[where Q=P and P=P for P]
 
 lemma no_fail_select_f [wp]:
   "no_fail (\<lambda>s. \<not>snd S) (select_f S)"
   by (simp add: select_f_def no_fail_def)
-
-lemma hoare_lift_Pf:
-  assumes P: "\<And>x. \<lbrace>P x\<rbrace> m \<lbrace>\<lambda>_. P x\<rbrace>"
-  assumes f: "\<And>P. \<lbrace>\<lambda>s. P (f s)\<rbrace> m \<lbrace>\<lambda>_ s. P (f s)\<rbrace>"
-  shows "\<lbrace>\<lambda>s. P (f s) s\<rbrace> m \<lbrace>\<lambda>_ s. P (f s) s\<rbrace>"
-  apply (clarsimp simp add: valid_def)
-  apply (frule (1) use_valid [OF _ P], drule (2) use_valid [OF _ f])
-  done
 
 lemma assert_def2: "assert v = assert_opt (if v then Some () else None)"
   by (cases v, simp_all add: assert_def assert_opt_def)
