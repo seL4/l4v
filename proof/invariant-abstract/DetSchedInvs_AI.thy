@@ -713,9 +713,14 @@ abbreviation scheduler_act_not :: "obj_ref \<Rightarrow> 'z state  \<Rightarrow>
 abbreviation scheduler_act_sane :: "'z state \<Rightarrow> bool" where
 "scheduler_act_sane s \<equiv> scheduler_act_not_2 (scheduler_action s) (cur_thread s)"
 
-
 lemmas scheduler_act_sane_def = scheduler_act_not_2_def
 lemmas scheduler_act_not_def = scheduler_act_not_2_def
+
+definition valid_reply_scs where
+  "valid_reply_scs \<equiv> \<lambda>s. (\<forall>a r. reply_tcb_reply_at (\<lambda>ropt. ropt = Some a) r s
+                               \<longrightarrow> (bound_sc_tcb_at (\<lambda>a. a = None) a s \<or> active_sc_tcb_at a s)) \<and>
+                         (\<forall>scptr r. reply_sc_reply_at (\<lambda>scopt. scopt = Some scptr) r s
+                               \<longrightarrow> test_sc_refill_max scptr s)"
 
 definition
   ready_or_released :: "'z state  \<Rightarrow> bool"
@@ -730,6 +735,47 @@ lemma ready_or_released_in_release_queue[intro]:
   "ready_or_released s \<Longrightarrow> in_release_queue t s \<Longrightarrow> not_queued t s"
   by (fastforce simp: ready_or_released_def in_release_queue_def not_queued_def)
 
+lemma valid_blocked_except_set_empty:
+  "valid_blocked_except_set {} = valid_blocked"
+  by (clarsimp simp: valid_blocked_except_set_def valid_blocked_def)
+
+lemma BlockedOnReceive_reply_tcb_reply_at:
+  "st_tcb_at ((=) (BlockedOnReceive epptr (Some rptr))) tptr s
+   \<Longrightarrow> sym_refs (state_refs_of s) \<Longrightarrow> valid_objs s
+   \<Longrightarrow> reply_tcb_reply_at (\<lambda>x. x = Some tptr) rptr s"
+  apply (subgoal_tac "reply_at rptr s")
+  apply (clarsimp simp: pred_tcb_at_eq_commute)
+  apply (subgoal_tac "(tptr, ReplyTCB) \<in> (state_refs_of s) rptr")
+  apply (clarsimp simp: state_refs_of_def  get_refs_def reply_tcb_reply_at_def
+                        pred_tcb_at_def obj_at_def refs_of_def is_reply
+                 split: option.splits)
+  apply (erule sym_refsE)
+  apply (clarsimp simp: state_refs_of_def pred_tcb_at_def obj_at_def)
+  apply (clarsimp dest!: st_tcb_at_valid_st2 simp: valid_tcb_state_def)
+  done
+
+lemma valid_blocked_except_set_subset:
+  "T \<subseteq> S \<Longrightarrow>
+   valid_blocked_except_set T s \<Longrightarrow>
+   valid_blocked_except_set S s"
+  by (fastforce simp: valid_blocked_except_set_def)
+
+lemma valid_blocked_except_set_weaken:
+  "valid_blocked s \<Longrightarrow>
+   valid_blocked_except_set S s"
+  by (rule valid_blocked_except_set_subset[where T="{}"];
+      clarsimp simp: fun_cong[OF valid_blocked_except_set_empty])
+
+lemma valid_blocked_except_set_cur_thread:
+  "valid_blocked_except_set {cur_thread s} s = valid_blocked s"
+   by (auto simp: valid_blocked_except_set_def valid_blocked_def)
+
+lemma valid_blocked_except_set_not_runnable:
+  "valid_blocked_except_set {t} s \<Longrightarrow> st_tcb_at (\<lambda>st. \<not> runnable st) t s  \<Longrightarrow> valid_blocked s"
+   apply (auto simp: valid_blocked_except_set_def valid_blocked_def pred_tcb_at_def obj_at_def)
+   apply (case_tac "ta=t")
+   apply (drule_tac x=ta in spec; simp)+
+   done
 
 (* simple_ko update *)
 
@@ -841,46 +887,47 @@ lemma simple_ko_update_cong':
   by (clarsimp simp: valid_sched_def)
   (* this lemma will change if we add endpoint queue scheduling validity to valid_sched *)
 
-
 (* lifting lemmas *)
 
 lemmas ct_not_queued_lift = hoare_lift_Pf2[where f="cur_thread" and P="not_queued"]
 lemmas ct_not_in_release_q_lift = hoare_lift_Pf2[where f="cur_thread" and P="not_in_release_q"]
-
 lemmas sch_act_sane_lift = hoare_lift_Pf2[where f="cur_thread" and P="scheduler_act_not"]
 
-lemma valid_ready_qs_lift:
-  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
-  assumes a': "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
-  assumes r: "\<And>t. \<lbrace>\<lambda>s. budget_ready t s\<rbrace> f \<lbrace>\<lambda>rv s. budget_ready t s\<rbrace>"
-  assumes s: "\<And>t. \<lbrace>\<lambda>s. budget_sufficient t s\<rbrace> f \<lbrace>\<lambda>rv s. budget_sufficient t s\<rbrace>"
-      and b: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
-      and c: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
-    shows "\<lbrace>valid_ready_qs\<rbrace> f \<lbrace>\<lambda>rv. valid_ready_qs\<rbrace>"
+lemma valid_ready_qs_lift_pre_conj:
+  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
+  assumes a': "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
+  assumes r: "\<And>t. \<lbrace>\<lambda>s. budget_ready t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_ready t s\<rbrace>"
+  assumes s: "\<And>t. \<lbrace>\<lambda>s. budget_sufficient t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_sufficient t s\<rbrace>"
+      and b: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
+      and c: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
+    shows "\<lbrace>\<lambda>s. valid_ready_qs s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_ready_qs\<rbrace>"
   apply (simp add: valid_ready_qs_def)
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. ready_queues s", OF _ c])
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. etcbs_of s", OF _ b])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. ready_queues s", OF _ c])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. etcbs_of s", OF _ b])
   apply (wpsimp wp: hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift a a' s r)
   done
 
-lemma valid_release_q_lift:
-  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
-  assumes a': "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
-      and b: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
-      and c: "\<And>P. \<lbrace>\<lambda>s. P (release_queue s)\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
-    shows "\<lbrace>valid_release_q\<rbrace> f \<lbrace>\<lambda>rv. valid_release_q\<rbrace>"
-  apply (simp add: valid_release_q_def)
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. release_queue s", OF _ c])
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. etcbs_of s", OF _ b])
+lemmas valid_ready_qs_lift = valid_ready_qs_lift_pre_conj[where R = \<top>, simplified]
+
+lemma valid_release_q_lift_pre_conj:
+  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
+  assumes a': "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
+      and b: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
+      and c: "\<And>P. \<lbrace>\<lambda>s. P (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
+    shows "\<lbrace>\<lambda>s. (valid_release_q s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_release_q\<rbrace>"
+  apply (simp only: valid_release_q_def)
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. release_queue s", OF _ c])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. etcbs_of s", OF _ b])
   apply (wpsimp wp: hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift
                     hoare_vcg_imp_lift a a')
   done
 
-lemma typ_at_st_tcb_at_lift:
-  assumes typ_lift: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>r s. P (typ_at T p s)\<rbrace>"
-  assumes st_lift: "\<And>P. \<lbrace>st_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
-  shows "\<lbrace>\<lambda>s. \<not> st_tcb_at P t s\<rbrace> f \<lbrace>\<lambda>r s. \<not> st_tcb_at P t s\<rbrace>"
+lemmas valid_release_q_lift = valid_release_q_lift_pre_conj[where R = \<top>, simplified]
 
+lemma typ_at_st_tcb_at_lift:
+  assumes typ_lift: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s) \<and> R s\<rbrace> f \<lbrace>\<lambda>r s. P (typ_at T p s)\<rbrace>"
+  assumes st_lift: "\<And>P. \<lbrace>\<lambda>s. st_tcb_at P t s \<and> R s\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  shows "\<lbrace>\<lambda>s. \<not> st_tcb_at P t s \<and> R s\<rbrace> f \<lbrace>\<lambda>r s. \<not> st_tcb_at P t s\<rbrace>"
   apply (simp add: valid_def obj_at_def st_tcb_at_def)
   apply clarsimp
   apply (case_tac "kheap s t")
@@ -902,135 +949,156 @@ lemma typ_at_st_tcb_at_lift:
   apply simp
   done
 
-lemma valid_blocked_lift:
-  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
-  assumes t: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T t s)\<rbrace>"
-      and c: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
-      and e: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
-      and d: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
-      and f: "\<And>Q. \<lbrace>\<lambda>s. Q (release_queue s)\<rbrace> f \<lbrace>\<lambda>rv s. Q (release_queue s)\<rbrace>"
-  assumes b: "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
-    shows "\<lbrace>valid_blocked\<rbrace> f \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
-  apply (rule hoare_pre)
-   apply (wps c e d f)
-   apply (simp add: valid_blocked_def)
-   apply (wp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift static_imp_wp a)
-   apply (rule hoare_convert_imp)
-    apply (rule typ_at_st_tcb_at_lift)
-     apply (wp a t static_imp_wp hoare_vcg_disj_lift b)+
-  apply (simp add: valid_blocked_def)
+lemma valid_blocked_lift_pre_conj:
+  assumes a: "\<And>P Q t. \<lbrace>\<lambda>s. (st_tcb_at Q t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. (st_tcb_at Q t s)\<rbrace>"
+  assumes t: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T t s)\<rbrace>"
+      and c: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
+      and e: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
+      and d: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
+      and f: "\<And>Q. \<lbrace>\<lambda>s. Q (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. Q (release_queue s)\<rbrace>"
+  assumes b: "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
+    shows "\<lbrace>\<lambda>s. valid_blocked s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. scheduler_action s", OF _ c])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. ready_queues s", OF _ d])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. cur_thread s", OF _ e])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. release_queue s", OF _ f])
+  apply (clarsimp simp add: valid_blocked_def imp_conv_disj conj_disj_distribR all_simps[symmetric]
+                  simp del: disj_not1 all_simps)
+  apply(rule hoare_vcg_all_lift)+
+  apply (rule hoare_vcg_disj_lift typ_at_st_tcb_at_lift | wp a b t | fastforce)+
   done
 
-lemma valid_blocked_except_set_lift:
-  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
-  assumes t: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T t s)\<rbrace>"
-      and c: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
-      and e: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
-      and d: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
-      and f: "\<And>Q. \<lbrace>\<lambda>s. Q (release_queue s)\<rbrace> f \<lbrace>\<lambda>rv s. Q (release_queue s)\<rbrace>"
-  assumes b: "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
-    shows "\<lbrace>valid_blocked_except_set S\<rbrace> f \<lbrace>\<lambda>rv. valid_blocked_except_set S\<rbrace>"
-  apply (rule hoare_pre)
-   apply (wps c e d f)
-   apply (simp add: valid_blocked_except_set_def)
-   apply (wp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift static_imp_wp a)
-   apply (rule hoare_convert_imp)
-    apply (rule typ_at_st_tcb_at_lift)
-     apply (wp a t static_imp_wp hoare_vcg_disj_lift b)+
-  apply (simp add: valid_blocked_except_set_def)
+lemmas valid_blocked_lift = valid_blocked_lift_pre_conj[where R = \<top>, simplified]
+
+lemma valid_blocked_except_set_lift_pre_conj:
+  assumes a: "\<And>P Q t. \<lbrace>\<lambda>s. (st_tcb_at Q t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. (st_tcb_at Q t s)\<rbrace>"
+  assumes t: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T t s)\<rbrace>"
+      and c: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
+      and e: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
+      and d: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
+      and f: "\<And>Q. \<lbrace>\<lambda>s. Q (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. Q (release_queue s)\<rbrace>"
+  assumes b: "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
+    shows "\<lbrace>\<lambda>s. valid_blocked_except_set S s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_blocked_except_set S\<rbrace>"
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. scheduler_action s", OF _ c])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. ready_queues s", OF _ d])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. cur_thread s", OF _ e])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. release_queue s", OF _ f])
+  apply (clarsimp simp add: valid_blocked_except_set_def imp_conv_disj conj_disj_distribR
+                            all_simps[symmetric]
+                  simp del: disj_not1 all_simps)
+  apply(rule hoare_vcg_all_lift)+
+  apply (rule hoare_vcg_disj_lift typ_at_st_tcb_at_lift | wp a b t | fastforce)+
   done
 
-lemma ct_not_in_q_lift:
-  assumes a: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
-      and b: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
-      and c: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
+lemmas valid_blocked_except_set_lift = valid_blocked_except_set_lift_pre_conj[where R=\<top>, simplified]
 
-    shows "\<lbrace>ct_not_in_q\<rbrace> f \<lbrace>\<lambda>rv. ct_not_in_q\<rbrace>"
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s", OF _ a])
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. ready_queues s", OF _ b])
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_thread s", OF _ c])
-  apply wp
+lemma ct_not_in_q_lift_pre_conj:
+  assumes a: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
+      and b: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
+      and c: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
+    shows "\<lbrace>\<lambda>s. ct_not_in_q s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. ct_not_in_q\<rbrace>"
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. scheduler_action s", OF _ a])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. ready_queues s", OF _ b])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. cur_thread s", OF _ c])
+  apply wpsimp
   done
 
-lemma ct_in_cur_domain_lift:
-  assumes a: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
-      and b: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
-      and c: "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
-      and d: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
-      and e: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
-    shows "\<lbrace>ct_in_cur_domain\<rbrace> f \<lbrace>\<lambda>rv. ct_in_cur_domain\<rbrace>"
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. etcbs_of s", OF _ a])
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s", OF _ b])
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_domain s", OF _ c])
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_thread s", OF _ d])
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. idle_thread s", OF _ e])
-  apply wp
+lemmas ct_not_in_q_lift = ct_not_in_q_lift_pre_conj[where R=\<top>, simplified]
+
+lemma ct_in_cur_domain_lift_pre_conj:
+  assumes a: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
+      and b: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
+      and c: "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
+      and d: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
+      and e: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
+    shows "\<lbrace>\<lambda>s. ct_in_cur_domain s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. ct_in_cur_domain\<rbrace>"
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. etcbs_of s", OF _ a])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. scheduler_action s", OF _ b])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. cur_domain s", OF _ c])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. cur_thread s", OF _ d])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. idle_thread s", OF _ e])
+  apply wpsimp
   done
 
-lemma weak_valid_sched_action_lift:
-  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
-  assumes b: "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
-  assumes c: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
-  assumes d: "\<And>P. \<lbrace>\<lambda>s. P (release_queue s)\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
-    shows "\<lbrace>weak_valid_sched_action\<rbrace> f \<lbrace>\<lambda>rv. weak_valid_sched_action\<rbrace>"
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. release_queue s", OF _ d])
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s", OF _ c])
+lemmas ct_in_cur_domain_lift = ct_in_cur_domain_lift_pre_conj[where R=\<top>, simplified]
+
+lemma weak_valid_sched_action_lift_pre_conj:
+  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
+  assumes b: "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
+  assumes c: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
+  assumes d: "\<And>P. \<lbrace>\<lambda>s. P (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
+    shows "\<lbrace>\<lambda>s. weak_valid_sched_action s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. weak_valid_sched_action\<rbrace>"
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. release_queue s", OF _ d])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. scheduler_action s", OF _ c])
   apply (simp add: weak_valid_sched_action_def)
-  apply (wp hoare_vcg_all_lift static_imp_wp a b)
+  apply (wpsimp wp: hoare_vcg_all_lift static_imp_wp a b)
   done
 
-lemma switch_in_cur_domain_lift:
-  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. etcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. etcb_at Q t s\<rbrace>"
-  assumes b: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
-  assumes c: "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
-    shows "\<lbrace>switch_in_cur_domain\<rbrace> f \<lbrace>\<lambda>rv. switch_in_cur_domain\<rbrace>"
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s", OF _ b])
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_domain s", OF _ c])
+lemmas weak_valid_sched_action_lift = weak_valid_sched_action_lift_pre_conj[where R = \<top>, simplified]
+
+lemma switch_in_cur_domain_lift_pre_conj:
+  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. etcb_at Q t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. etcb_at Q t s\<rbrace>"
+  assumes b: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
+  assumes c: "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
+    shows "\<lbrace>\<lambda>s. switch_in_cur_domain s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. switch_in_cur_domain\<rbrace>"
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. scheduler_action s", OF _ b])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. cur_domain s", OF _ c])
   apply (simp add: switch_in_cur_domain_def in_cur_domain_def)
-  apply (wp hoare_vcg_all_lift static_imp_wp a c)
+  apply (wpsimp wp: hoare_vcg_all_lift static_imp_wp a c)
   done
 
-lemma valid_sched_action_lift:
-  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
-  assumes a': "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
-  assumes b: "\<And>Q t. \<lbrace>\<lambda>s. etcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. etcb_at Q t s\<rbrace>"
-  assumes c: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
-  assumes d: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
-  assumes e: "\<And>Q. \<lbrace>\<lambda>s. Q (cur_domain s)\<rbrace> f \<lbrace>\<lambda>rv s. Q (cur_domain s)\<rbrace>"
-  assumes f: "\<And>Q. \<lbrace>\<lambda>s. Q (release_queue s)\<rbrace> f \<lbrace>\<lambda>rv s. Q (release_queue s)\<rbrace>"
-    shows "\<lbrace>valid_sched_action\<rbrace> f \<lbrace>\<lambda>rv. valid_sched_action\<rbrace>"
-  apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_thread s", OF _ d])
+lemmas switch_in_cur_domain_lift = switch_in_cur_domain_lift_pre_conj[where R = \<top>, simplified]
+
+lemma valid_sched_action_lift_pre_conj:
+  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
+  assumes a': "\<And>t. \<lbrace>\<lambda>s. active_sc_tcb_at t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. active_sc_tcb_at t s\<rbrace>"
+  assumes b: "\<And>Q t. \<lbrace>\<lambda>s. etcb_at Q t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. etcb_at Q t s\<rbrace>"
+  assumes c: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
+  assumes d: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
+  assumes e: "\<And>Q. \<lbrace>\<lambda>s. Q (cur_domain s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. Q (cur_domain s)\<rbrace>"
+  assumes f: "\<And>Q. \<lbrace>\<lambda>s. Q (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. Q (release_queue s)\<rbrace>"
+    shows "\<lbrace>\<lambda>s. valid_sched_action s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_sched_action\<rbrace>"
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. cur_thread s" , OF _ d])
   apply (simp add: valid_sched_action_def)
+  apply (rule_tac Q="\<lambda>s. (is_activatable x s \<and> R s) \<and>
+              weak_valid_sched_action s \<and> switch_in_cur_domain s \<and> R s" in hoare_weaken_pre[rotated],
+         clarsimp)
   apply (rule hoare_vcg_conj_lift)
-   apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s", OF _ c])
+   apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. scheduler_action s", OF _ c])
    apply (simp add: is_activatable_def)
-   apply (wp weak_valid_sched_action_lift switch_in_cur_domain_lift static_imp_wp a a' b c d e f)+
+   apply (wp weak_valid_sched_action_lift_pre_conj switch_in_cur_domain_lift_pre_conj static_imp_wp a a' b c d e f | simp)+
   done
 
-lemma valid_idle_etcb_lift:
-  assumes d: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
-    shows "\<lbrace>valid_idle_etcb\<rbrace> f \<lbrace>\<lambda>rv. valid_idle_etcb\<rbrace>"
-  by (wp d)
+lemmas valid_sched_action_lift = valid_sched_action_lift_pre_conj[where R = \<top>, simplified]
 
-lemma valid_sched_lift:
-  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
-  assumes a': "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
-  assumes r: "\<And>P t. \<lbrace>\<lambda>s. P (budget_ready t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (budget_ready t s)\<rbrace>"
-  assumes s: "\<And>P t. \<lbrace>\<lambda>s. P (budget_sufficient t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (budget_sufficient t s)\<rbrace>"
-  assumes c: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T t s)\<rbrace>"
-  assumes d: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
-  assumes e: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
-  assumes f: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
-  assumes g: "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
-  assumes h: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
-  assumes i: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
-  assumes j: "\<And>Q. \<lbrace>\<lambda>s. Q (release_queue s)\<rbrace> f \<lbrace>\<lambda>rv s. Q (release_queue s)\<rbrace>"
-    shows "\<lbrace>valid_sched\<rbrace> f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+lemma valid_idle_etcb_lift_pre_conj:
+  assumes d: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
+    shows "\<lbrace>\<lambda>s. valid_idle_etcb s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_idle_etcb\<rbrace>"
+  by (wpsimp wp: d)
+
+lemmas valid_idle_etcb_lift = valid_idle_etcb_lift_pre_conj[where R = \<top>, simplified]
+
+lemma valid_sched_lift_pre_conj:
+  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. (st_tcb_at Q t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. (st_tcb_at Q t s)\<rbrace>"
+  assumes a': "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
+  assumes r: "\<And>P t. \<lbrace>\<lambda>s. P (budget_ready t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (budget_ready t s)\<rbrace>"
+  assumes s: "\<And>P t. \<lbrace>\<lambda>s. P (budget_sufficient t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (budget_sufficient t s)\<rbrace>"
+  assumes c: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T t s)\<rbrace>"
+  assumes d: "\<And>P. \<lbrace>\<lambda>s. P (etcbs_of s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (etcbs_of s)\<rbrace>"
+  assumes e: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
+  assumes f: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
+  assumes g: "\<And>P. \<lbrace>\<lambda>s. P (cur_domain s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
+  assumes h: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
+  assumes i: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
+  assumes j: "\<And>Q. \<lbrace>\<lambda>s. Q (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. Q (release_queue s)\<rbrace>"
+    shows "\<lbrace>\<lambda>s. valid_sched s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: valid_sched_def)
-  apply (wp valid_ready_qs_lift ct_not_in_q_lift ct_in_cur_domain_lift valid_release_q_lift
-            valid_sched_action_lift valid_idle_etcb_lift valid_blocked_lift
+  apply (wpsimp wp: valid_ready_qs_lift_pre_conj ct_not_in_q_lift_pre_conj ct_in_cur_domain_lift_pre_conj valid_release_q_lift_pre_conj
+            valid_sched_action_lift_pre_conj  valid_blocked_lift_pre_conj
             a a' s r c d e f g h i j)
   done
+
+lemmas valid_sched_lift = valid_sched_lift_pre_conj[where R = \<top>, simplified]
 
 lemmas valid_sched_except_blocked_lift =
        valid_release_q_lift valid_ready_qs_lift ct_not_in_q_lift valid_sched_action_lift
@@ -1065,17 +1133,40 @@ lemma valid_ep_q_lift:
   apply (fastforce simp: ko_at_fold[symmetric] split: option.splits)
   done
 
+lemma valid_blocked_except_lift_pre_conj:
+  assumes a: "\<And>Q t. \<lbrace>\<lambda>s. st_tcb_at Q t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. st_tcb_at Q t s\<rbrace>"
+  assumes b: "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
+  assumes t: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T t s)\<rbrace>"
+      and c: "\<And>P. \<lbrace>\<lambda>s. P (scheduler_action s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
+      and e: "\<And>P. \<lbrace>\<lambda>s. P (cur_thread s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
+      and d: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
+      and f: "\<And>P. \<lbrace>\<lambda>s. P (release_queue s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
+    shows "\<lbrace>\<lambda>s. valid_blocked_except thread s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. valid_blocked_except thread\<rbrace>"
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. scheduler_action s", OF _ c])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. ready_queues s", OF _ d])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. cur_thread s", OF _ e])
+  apply (rule hoare_lift_Pf_pre_conj[where f="\<lambda>s. release_queue s", OF _ f])
+  apply (clarsimp simp add: valid_blocked_except_def imp_conv_disj conj_disj_distribR all_simps[symmetric]
+                  simp del: disj_not1 all_simps)
+  apply(rule hoare_vcg_all_lift)+
+  apply (rule hoare_vcg_disj_lift typ_at_st_tcb_at_lift | wp a b t | fastforce)+
+  done
+
+lemmas valid_blocked_except_lift = valid_blocked_except_lift_pre_conj[where R=\<top>, simplified]
+
+lemma valid_reply_scs_lift:
+  assumes A: "\<And>b c. f \<lbrace>\<lambda>s. ~ reply_at_ppred reply_tcb b c s\<rbrace>"
+  assumes D: "\<And>b c. f \<lbrace>\<lambda>s. ~ reply_at_ppred reply_sc b c s\<rbrace>"
+  assumes B: "\<And>P t. f \<lbrace>bound_sc_tcb_at P t\<rbrace>"
+  assumes C: "\<And>t. f \<lbrace>active_sc_tcb_at t\<rbrace>"
+  assumes E: "\<And>c. f \<lbrace>\<lambda>s. test_sc_refill_max c s\<rbrace>"
+  shows "f \<lbrace>valid_reply_scs\<rbrace>"
+  unfolding valid_reply_scs_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_disj_lift A B C D E)
+
 abbreviation ct_schedulable where
   "ct_schedulable s \<equiv> active_sc_tcb_at (cur_thread s) s
       \<and> budget_ready (cur_thread s) s
       \<and> budget_sufficient (cur_thread s) s"
-
-(* FIXME: move *)
-definition valid_reply_scs where
-  "valid_reply_scs \<equiv> \<lambda>s. (\<forall>a r. reply_tcb_reply_at (\<lambda>ropt. ropt = Some a) r s
-                               \<longrightarrow> (bound_sc_tcb_at (\<lambda>a. a = None) a s \<or> active_sc_tcb_at a s)) \<and>
-                         (\<forall>scptr r. reply_sc_reply_at (\<lambda>scopt. scopt = Some scptr) r s
-                               \<longrightarrow> test_sc_refill_max scptr s)"
-
 
 end

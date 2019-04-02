@@ -269,6 +269,7 @@ abbreviation "sc_ntfn_sc_at \<equiv> sc_at_pred sc_ntfn"
 abbreviation "sc_tcb_sc_at \<equiv> sc_at_pred sc_tcb"
 abbreviation "sc_yf_sc_at \<equiv> sc_at_pred sc_yield_from"
 abbreviation "sc_replies_sc_at \<equiv> sc_at_pred sc_replies"
+abbreviation "sc_refills_sc_at \<equiv> sc_at_pred sc_refills"
 
 lemma sc_at_pred_def:
   "sc_at_pred proj P \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P (proj sc))"
@@ -278,6 +279,7 @@ lemmas sc_ntfn_sc_at_def = sc_at_pred_def[of sc_ntfn]
 lemmas sc_tcb_sc_at_def = sc_at_pred_def[of sc_tcb]
 lemmas sc_yf_sc_at_def = sc_at_pred_def[of sc_yield_from]
 lemmas sc_replies_sc_at_def = sc_at_pred_def[of sc_replies]
+lemmas sc_refills_sc_at_def = sc_at_pred_def[of sc_refills]
 
 lemma sc_at_pred_ko_atI:
   "ko_at (SchedContext sc nb) ptr s \<Longrightarrow> P (proj sc)

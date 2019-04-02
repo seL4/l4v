@@ -525,39 +525,74 @@ crunches refill_unblock_check
 crunch valid_replies[wp]: refill_unblock_check "valid_replies_pred P"
   (simp: crunch_simps wp: crunch_wps)
 
+lemma set_yf_sc_yf_sc_at:
+  "\<lbrace>K (scp'= scp)\<rbrace>
+   set_sc_obj_ref sc_yield_from_update scp' k
+   \<lbrace>\<lambda>rv. sc_yf_sc_at (\<lambda>b. b = k) scp\<rbrace>"
+  unfolding set_sc_obj_ref_def
+  apply (wpsimp wp: update_sched_context_wp)
+  apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  done
+
+lemma complete_yield_to_sc_yf_sc_at_None:
+  "\<lbrace>sc_yf_sc_at ((=) (Some tptr)) scp and invs\<rbrace>
+   complete_yield_to tptr
+   \<lbrace>\<lambda>rv. sc_yf_sc_at ((=) None) scp\<rbrace>"
+  unfolding complete_yield_to_def
+  apply (clarsimp simp: sc_at_pred_n_eq_commute)
+  apply (wpsimp wp: set_yf_sc_yf_sc_at thread_get_wp simp: get_tcb_obj_ref_def)
+  apply (clarsimp simp: obj_at_def sc_at_pred_n_def)
+  apply (subgoal_tac "bound_yt_tcb_at (\<lambda>b. b = (Some scp)) tptr s")
+   apply (clarsimp simp: obj_at_def sc_at_pred_n_def pred_tcb_at_def)
+  apply (subgoal_tac "(scp, TCBYieldTo) \<in> state_refs_of s tptr")
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def refs_of_def
+                  split: option.splits)
+   apply (case_tac x2; clarsimp simp: get_refs_def split: option.splits)
+  apply (rule sym_refsE; clarsimp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def refs_of_def
+                 split: option.splits)
+  done
+
 lemma sched_context_yield_to_invs:
   notes refs_of_simps [simp del]
   shows
-  "\<lbrace>invs and (\<lambda>s. cur_thread s \<noteq> idle_thread s ) (* cur_thread must be set to Restart *)
+  "\<lbrace>invs and (\<lambda>s. cur_thread s \<noteq> idle_thread s ) \<comment> \<open> cur_thread must be set to Restart \<close>
     and (\<lambda>s. bound_yt_tcb_at ((=) None) (cur_thread s) s)
     and (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb.\<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s)
     and (\<lambda>s. ex_nonz_cap_to (cur_thread s) s) and ex_nonz_cap_to scp\<rbrace>
        sched_context_yield_to scp args \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (unfold sched_context_yield_to_def get_sc_obj_ref_def bind_assoc)
-  apply (rule hoare_seq_ext[OF _ get_sched_context_inv])
-  apply clarsimp
-  apply (rule hoare_seq_ext[rotated])
-   apply (rule hoare_when_weak_wp)
-   apply (wpsimp wp: complete_yield_to_invs)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply clarsimp
+  apply (rule hoare_seq_ext[where B=
+          "\<lambda>_. invs and (\<lambda>s. cur_thread s \<noteq> idle_thread s) and
+               (\<lambda>s. bound_yt_tcb_at ((=) None) (cur_thread s) s) and
+               (\<lambda>s. sc_yf_sc_at ((=) None) scp s) and
+               (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s) and
+               (\<lambda>s. ex_nonz_cap_to (cur_thread s) s) and
+               ex_nonz_cap_to scp", rotated])
+   apply (wpsimp wp: complete_yield_to_invs hoare_drop_imps complete_yield_to_sc_yf_sc_at_None)
+   apply (clarsimp simp: obj_at_def sc_at_pred_n_def)
+  apply (clarsimp simp: sc_at_pred_n_eq_commute)
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def get_sc_obj_ref_def
            split_del: if_split
                   wp: valid_irq_node_typ hoare_vcg_if_lift2 thread_get_inv hoare_drop_imp
                       valid_ioports_lift)
   apply (intro conjI)
      apply (clarsimp simp: cur_tcb_def)
-    apply (clarsimp simp: sc_yf_sc_at_def obj_at_def is_sc_obj_def split del: if_split)
-    apply (drule (2) valid_sched_context_size_objsI)
-   apply (case_tac "cur_thread s = scp")
-    apply (clarsimp simp: sc_yf_sc_at_def cur_tcb_def obj_at_def is_tcb_def)
-   apply (clarsimp simp: sc_yf_sc_at_def pred_tcb_at_def)
-   apply (drule obj_at_state_refs_ofD)
-   apply clarsimp
-   apply (erule_tac rfs'="state_refs_of s" in delta_sym_refs)
-    apply (clarsimp split: if_split_asm dest!: symreftype_inverse' split del: if_split)
-   apply (clarsimp split: if_split_asm thread_state.splits dest!: symreftype_inverse'
-                    simp: state_refs_of_def refs_of_def get_refs_def2 tcb_st_refs_of_def obj_at_def)
-  apply (clarsimp simp: idle_sc_no_ex_cap)
+    apply (clarsimp simp: sc_at_pred_n_def obj_at_def is_sc_obj_def)
+    apply (fastforce dest!: valid_objs_valid_sched_context_size)
+   apply (erule delta_sym_refs)
+    apply (clarsimp split: if_splits)
+    apply (clarsimp simp: sc_at_pred_n_def obj_at_def pred_tcb_at_def is_sc_obj_def)
+   apply (clarsimp split: if_splits)
+     apply (clarsimp simp: sc_at_pred_n_def obj_at_def pred_tcb_at_def is_sc_obj_def)
+    apply (clarsimp simp: obj_at_def pred_tcb_at_def state_refs_of_def refs_of_def get_refs_def
+                   split: option.splits)
+   apply (clarsimp simp: sc_at_pred_n_def obj_at_def state_refs_of_def refs_of_def get_refs_def
+                  split: option.splits)
+  apply (clarsimp simp: sc_at_pred_n_def obj_at_def valid_idle_def pred_tcb_at_def)
+  apply (clarsimp dest!: idle_sc_no_ex_cap)
   done
 
 text {* valid invocation definitions *}
@@ -1272,6 +1307,7 @@ lemma
          wpsimp simp: invoke_sched_control_configure_def split_def
              wp: hoare_vcg_if_lift2 get_sched_context_wp commit_time_valid_refills hoare_gets_sp
                  hoare_drop_imp set_sched_context_valid_refills_no_budget_update hoare_when_wp
+                 hoare_vcg_all_lift
             cong: if_cong conj_cong split_del: if_split)
   by (clarsimp simp: valid_refills_def sc_valid_refills_def obj_at_def MIN_REFILLS_def refills_sum_def)+
 

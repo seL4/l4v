@@ -1627,6 +1627,19 @@ interpretation
   by ((fastforce simp: obj_at_def[abs_def] a_type_def
                split: Structures_A.kernel_object.splits option.splits)+)
 
+interpretation
+  set_sc_yf: non_aobj_non_cap_non_mem_op "set_sc_obj_ref sc_yield_from_update sc p"
+  apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
+  unfolding set_simple_ko_def set_thread_state_def set_sc_obj_ref_def
+            set_tcb_obj_ref_def thread_set_def set_cap_def[simplified split_def]
+            as_user_def set_mrs_def set_sched_context_def update_sched_context_def
+  apply -
+  supply validNF_prop[wp_unsafe del]
+  apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp split del: if_split)+\<close>)
+  apply (auto simp: obj_at_def[abs_def] partial_inv_def the_equality
+               split: Structures_A.kernel_object.splits)[1]
+  done
+
 lemma cnode_agnostic_predE:
   assumes P: "P (CNode bits ct)"
   assumes pred: "cnode_agnostic_pred P"

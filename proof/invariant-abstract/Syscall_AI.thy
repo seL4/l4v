@@ -1335,7 +1335,8 @@ crunch_ignore (add:null_cap_on_failure)
 
 lemma hy_invs[wp]: "handle_yield \<lbrace>invs\<rbrace>"
   apply (simp add: handle_yield_def)
-  apply (wpsimp wp: charge_budget_invs)
+  apply (wpsimp wp: charge_budget_invs update_sched_context_sc_consumed_update_invs
+              simp: set_sc_obj_ref_def)
   done
 
 declare hoare_seq_ext[wp] hoare_vcg_precond_imp [wp_comb]

@@ -254,28 +254,21 @@ lemma replies_with_sc_init_A_st:
   by (clarsimp simp: state_defs replies_with_sc_def sc_at_pred_n_def obj_at_def idle_sc_ptr_def
                      default_sched_context_def)
 
-(* There is an update to the definition of liveness coming that will make the following
-   lemma provable. When that update occurs the following lemma should be split in two,
-   proved, and named as indictated below. The proofs of these lemmas should be almost
-   trivial. *)
-lemma pending_liveness_updates:
+lemma starting_cur_thread_not_live:
   "tcb_bound_notification tcb = None \<Longrightarrow>
    tcb_yield_to tcb = None \<Longrightarrow>
    (tcb_state tcb = Inactive \<or> tcb_state tcb = IdleThreadState)  \<Longrightarrow>
    tcb_sched_context tcb = Some idle_sc_ptr \<Longrightarrow>
    (live (TCB tcb) = False)"
+  by (clarsimp simp: live_def hyp_live_def)
+
+lemma starting_cur_sc_not_live:
   "sc_yield_from sc = None \<Longrightarrow>
    sc_ntfn sc = None \<Longrightarrow>
    sc_replies sc = [] \<Longrightarrow>
    sc_tcb sc = Some idle_thread_ptr \<Longrightarrow>
    (live_sc sc = False)"
-   sorry
-
-(* As mentioned just above, these should become lemmas in their own right, with almost
-   trivial proofs. Whoever does that work should feel free to rename them as they like.
-   (Strictly speaking, the lemmas are stronger than what their name indicates.) *)
-lemmas starting_cur_thread_not_live = pending_liveness_updates(1)
-lemmas starting_cur_sc_not_live = pending_liveness_updates(2)
+  by (clarsimp simp: live_sc_def)
 
 lemma invs_A:
   "invs init_A_st"
