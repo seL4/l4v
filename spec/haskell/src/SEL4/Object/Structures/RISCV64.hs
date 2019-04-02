@@ -78,10 +78,10 @@ newtype ASID = ASID { fromASID :: Word64 }
     deriving (Show, Eq, Ord, Enum, Real, Integral, Num, Bits, Ix, Bounded)
 
 asidHighBits :: Int
-asidHighBits = 6
+asidHighBits = 7
 
 asidLowBits :: Int
-asidLowBits = 10
+asidLowBits = 9
 
 asidBits :: Int
 asidBits = asidHighBits + asidLowBits
