@@ -23,44 +23,51 @@ CUSTOM_BOOT_FILES = src/SEL4/Object/Structures.lhs-boot
 # GHC_PACKAGE_PATH first.
 CABAL=stack exec -- ./stack-path cabal
 
+CABAL_CONFIGURE=$(CABAL) v1-configure
+CABAL_BUILD=$(CABAL) v1-build
+CABAL_SANDBOX=$(CABAL) v1-sandbox
+CABAL_UPDATE=$(CABAL) v1-update
+CABAL_INSTALL=$(CABAL) v1-install
+
 # warnings that are useless during large Haskell updates
 GHC_DEV_OPTS=--ghc-options=""
 
 all: build-riscv build-arm build-arm-hyp-nosmmu build-x64
 
 sandbox: .stack-work
-	$(CABAL) sandbox init
-	$(CABAL) install --dependencies-only
+	$(CABAL_SANDBOX) init
+	$(CABAL_UPDATE)
+	$(CABAL_INSTALL) --dependencies-only
 
 build-arm: sandbox $(BOOT_FILES)
-	$(CABAL) configure --configure-option="arm-kzm" \
+	$(CABAL_CONFIGURE) --configure-option="arm-kzm" \
 	    --flags="ArchArm" \
 	    --builddir="dist/arm"
-	$(CABAL) build --builddir="dist/arm"
+	$(CABAL_BUILD) --builddir="dist/arm"
 
 build-arm-hyp: sandbox $(BOOT_FILES) $(CUSTOM_BOOT_FILES)
-	$(CABAL) configure --configure-option="arm-tk1" \
+	$(CABAL_CONFIGURE) --configure-option="arm-tk1" \
 	    --flags="ArchArmHyp -FFI" \
 	    --builddir="dist/arm-hyp"
-	$(CABAL) build --builddir="dist/arm-hyp"
+	$(CABAL_BUILD) --builddir="dist/arm-hyp"
 
 build-arm-hyp-nosmmu: sandbox $(BOOT_FILES) $(CUSTOM_BOOT_FILES)
-	$(CABAL) configure --configure-option="arm-tk1-nosmmu" \
+	$(CABAL_CONFIGURE) --configure-option="arm-tk1-nosmmu" \
 	    --flags="ArchArmHyp -FFI" \
 	    --builddir="dist/arm-hyp-nosmmu"
-	$(CABAL) build --builddir="dist/arm-hyp-nosmmu"
+	$(CABAL_BUILD) --builddir="dist/arm-hyp-nosmmu"
 
 build-x64: sandbox $(BOOT_FILES)
-	$(CABAL) configure --configure-option="x64-pc99" \
+	$(CABAL_CONFIGURE) --configure-option="x64-pc99" \
 	    --flags="ArchX64 -FFI" \
 	    --builddir="dist/x64"
-	$(CABAL) build --builddir="dist/x64"
+	$(CABAL_BUILD) --builddir="dist/x64"
 
 build-riscv: sandbox $(BOOT_FILES)
-	$(CABAL) configure --configure-option="riscv-spike" \
+	$(CABAL_CONFIGURE) --configure-option="riscv-spike" \
 	    --flags="ArchRiscV -FFI" \
 	    --builddir="dist/riscv"
-	$(CABAL) build --builddir="dist/riscv"
+	$(CABAL_BUILD) --builddir="dist/riscv"
 
 # We assume that if the .stack-work directory exists,
 # we don't need to install ghc, cabal, nor fetch the cabal
@@ -72,7 +79,6 @@ build-riscv: sandbox $(BOOT_FILES)
 
 .stack-work:
 	stack --install-ghc build cabal-install
-	$(CABAL) update
 
 $(CUSTOM_BOOT_FILES):
 	echo "never run mkhsboot for hand-crafted lhs-boot files"

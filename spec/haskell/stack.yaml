@@ -6,7 +6,7 @@
 #
 # @TAG(DATA61_GPL)
 
-resolver: lts-12.7
+resolver: lts-13.15
 
 packages: []
 extra-deps: []
