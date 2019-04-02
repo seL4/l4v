@@ -31,10 +31,10 @@ type_synonym data            = machine_word
 type_synonym cap_ref         = "bool list"
 type_synonym length_type     = machine_word
 
-type_synonym asid_low_len    = 10
+type_synonym asid_low_len    = 9
 type_synonym asid_low_index  = "asid_low_len word"
 
-type_synonym asid_high_len   = 6
+type_synonym asid_high_len   = 7
 type_synonym asid_high_index = "asid_high_len word"
 
 type_synonym asid_len        = 16
