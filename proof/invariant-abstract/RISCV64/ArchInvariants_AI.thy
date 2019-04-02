@@ -2101,7 +2101,7 @@ lemma valid_arch_state_lift:
   by (rule valid_arch_state_lift_arch; wp)
 
 lemma asid_high_bits_of_and_mask[simp]:
-  "asid_high_bits_of (asid && ~~ mask asid_low_bits || UCAST(10 \<rightarrow> 64) asid_low) =
+  "asid_high_bits_of (asid && ~~ mask asid_low_bits || ucast (asid_low::asid_low_index)) =
    asid_high_bits_of asid"
   apply (simp add: asid_high_bits_of_def asid_low_bits_def)
   apply word_bitwise

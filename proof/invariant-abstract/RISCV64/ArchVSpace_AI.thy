@@ -46,18 +46,18 @@ lemma asid_low_high_bits:
   apply (clarsimp simp: asid_high_bits_of_def nth_ucast nth_shiftr)
   apply (simp add: asid_high_bits_def asid_bits_def asid_low_bits_def word_bits_def)
   subgoal premises prems[rule_format] for n
-  apply (cases "n < 10")
+  apply (cases "n < asid_low_bits")
    using prems(1)
-   apply fastforce
-  apply (cases "n < 16")
-   using prems(2)[where n="n - 10"]
-   apply fastforce
+   apply (fastforce simp: asid_low_bits_def)
+  apply (cases "n < asid_bits")
+   using prems(2)[where n="n - asid_low_bits"]
+   apply (fastforce simp: asid_bits_def asid_low_bits_def)
   using prems(3-)
-  by (simp add: linorder_not_less)
+  by (simp add: linorder_not_less asid_bits_def asid_low_bits_def)
   done
 
 lemma asid_low_high_bits':
-  "\<lbrakk> ucast x = (ucast y :: 10 word);
+  "\<lbrakk> ucast x = (ucast y :: asid_low_index);
     asid_high_bits_of x = asid_high_bits_of y;
     x \<le> 2 ^ asid_bits - 1; y \<le> 2 ^ asid_bits - 1 \<rbrakk>
   \<Longrightarrow> x = y"
