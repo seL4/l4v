@@ -270,10 +270,11 @@ definition vmpage_size_of_level :: "vm_level \<Rightarrow> vmpage_size" where
 (* Validity of vspace table entries, defined shallowly. *)
 primrec valid_pte :: "vm_level \<Rightarrow> pte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_pte _ (InvalidPTE) = \<top>"
-| "valid_pte level (PagePTE ptr _ _) =
-     (\<lambda>s. data_at (vmpage_size_of_level level) (ptrFromPAddr ptr) s \<and> level \<le> max_pt_level)"
-| "valid_pte level (PageTablePTE ptr _) =
-     (\<lambda>s. typ_at (AArch APageTable) (ptrFromPAddr ptr) s \<and> 0 < level)"
+| "valid_pte level (PagePTE ppn _ _) =
+     (\<lambda>s. data_at (vmpage_size_of_level level) (ptrFromPAddr (addr_from_ppn ppn)) s
+          \<and> level \<le> max_pt_level)"
+| "valid_pte level (PageTablePTE ppn _) =
+     (\<lambda>s. typ_at (AArch APageTable) (ptrFromPAddr (addr_from_ppn ppn)) s \<and> 0 < level)"
 
 (* Kernel mappings go from pptr base to top of virtual memory. This definition encompasses
    the kernel window, kernel ELF window, and kernel device window.
@@ -321,8 +322,8 @@ definition equal_kernel_mappings :: "'z::state_ext state \<Rightarrow> bool" whe
 
 definition pte_ref :: "pte \<Rightarrow> obj_ref option" where
   "pte_ref pte \<equiv> case pte of
-                   PageTablePTE ptr _  \<Rightarrow> Some (ptrFromPAddr ptr)
-                 | PagePTE ptr _ _ \<Rightarrow> Some (ptrFromPAddr ptr)
+                   PageTablePTE ppn _  \<Rightarrow> Some (ptrFromPAddr (addr_from_ppn ppn))
+                 | PagePTE ppn _ _ \<Rightarrow> Some (ptrFromPAddr (addr_from_ppn ppn))
                  | _ \<Rightarrow> None"
 
 lemmas pte_ref_simps[simp] = pte_ref_def[split_simps pte.split]

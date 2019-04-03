@@ -186,12 +186,13 @@ lemma some_get_page_info_umapsD:
    apply (clarsimp simp: vs_lookup_table_def in_omonad)
    apply (drule (2) valid_vspace_objs_strongD; assumption?)
    apply (clarsimp simp: pte_info_def split: pte.splits)
+   apply (rename_tac ppn pt)
    apply (frule pspace_aligned_pts_ofD, fastforce)
    apply (drule_tac x="table_index (pt_slot_offset level pt_ptr' p)" in bspec)
    apply (clarsimp simp: table_index_offset_max_pt_level simp: kernel_mappings_slots_eq)
    apply (erule (2) no_user_region_kernel_mappings)
   apply (clarsimp simp: pte_of_def)
-  apply (subgoal_tac "valid_pte level (PagePTE b attr r) s")
+  apply (subgoal_tac "valid_pte level (PagePTE ppn attr r) s")
    prefer 2
    apply simp
   apply (subst (asm) valid_pte.simps)

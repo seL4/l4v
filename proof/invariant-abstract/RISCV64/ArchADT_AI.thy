@@ -88,7 +88,7 @@ text {*
 definition pte_info :: "vm_level \<Rightarrow> pte \<rightharpoonup> (machine_word \<times> nat \<times> vm_attributes \<times> vm_rights)" where
   "pte_info level pte \<equiv>
     case pte of
-      PagePTE base attrs rights \<Rightarrow> Some (base, pt_bits_left level, attrs, rights)
+      PagePTE ppn attrs rights \<Rightarrow> Some (addr_from_ppn ppn, pt_bits_left level, attrs, rights)
     | _ \<Rightarrow> None"
 
 text {*
