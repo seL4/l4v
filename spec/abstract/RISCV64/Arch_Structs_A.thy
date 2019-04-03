@@ -64,12 +64,16 @@ definition page_only_attrs :: "vm_attributes"
   where
   "page_only_attrs = {Global}"
 
-(* While pte_addr is the base address of the target object, in C this is shifted right by pt_bits
-   and stored as ppn (page number) *)
+
+(* The address of the target object is stored shifted right by pt_bits and stored as a ppn (page
+   number). To get the address, use addr_from_pte *)
+type_synonym pte_ppn_len = 52 (* machine_word_len - pt_bits *)
+type_synonym pte_ppn = "pte_ppn_len word"
+
 datatype pte =
     InvalidPTE
-  | PagePTE (pte_addr : machine_word) (pte_attr : vm_attributes) (pte_rights : vm_rights)
-  | PageTablePTE (pte_addr : machine_word) (pte_attr : vm_attributes)
+  | PagePTE (pte_ppn : pte_ppn) (pte_attr : vm_attributes) (pte_rights : vm_rights)
+  | PageTablePTE (pte_ppn : pte_ppn) (pte_attr : vm_attributes)
 
 type_synonym pt_index_len = 9
 type_synonym pt_index = "pt_index_len word"
@@ -106,6 +110,14 @@ definition table_size :: nat
 definition pt_bits :: "nat"
   where
   "pt_bits \<equiv> table_size"
+
+definition addr_from_ppn :: "pte_ppn \<Rightarrow> paddr"
+  where
+  "addr_from_ppn ppn = ucast ppn << pt_bits"
+
+abbreviation addr_from_pte :: "pte \<Rightarrow> paddr"
+  where
+  "addr_from_pte pte \<equiv> addr_from_ppn (pte_ppn pte)"
 
 primrec arch_obj_size :: "arch_cap \<Rightarrow> nat"
   where
@@ -160,6 +172,11 @@ definition acap_rights_update :: "cap_rights \<Rightarrow> arch_cap \<Rightarrow
     case acap of
       FrameCap ref cR sz dev as \<Rightarrow> FrameCap ref (validate_vm_rights R) sz dev as
     | _ \<Rightarrow> acap"
+
+text \<open>Sanity check:\<close>
+lemma "LENGTH(pte_ppn_len) = word_bits - pt_bits"
+  by (simp add: pte_bits_def ptTranslationBits_def word_size_bits_def word_bits_def
+                pt_bits_def table_size_def)
 
 section \<open>Architecture-specific object types and default objects\<close>
 

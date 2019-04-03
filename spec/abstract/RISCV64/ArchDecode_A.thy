@@ -51,7 +51,7 @@ definition user_attr :: "vm_rights \<Rightarrow> vm_attributes"
 definition make_user_pte :: "vspace_ref \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> pte"
   where
   "make_user_pte addr attr rights =
-     PagePTE (addr >> pageBits) (attr \<union> user_attr rights) rights"
+     PagePTE (ucast (addr >> pageBits)) (attr \<union> user_attr rights) rights"
 
 definition check_slot :: "obj_ref \<Rightarrow> (pte \<Rightarrow> bool) \<Rightarrow> (unit,'z::state_ext) se_monad"
   where
@@ -160,7 +160,7 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
            old_pte \<leftarrow> liftE $ get_pte slot;
            whenE (pt_bits_left level = pageBits \<or> old_pte \<noteq> InvalidPTE) $ throwError DeleteFirst;
-           pte \<leftarrow> returnOk $ PageTablePTE (addrFromPPtr p >> pageBits) {};
+           pte \<leftarrow> returnOk $ PageTablePTE (ucast (addrFromPPtr p >> pageBits)) {};
            cap' <- returnOk $ PageTableCap p $ Some (asid, vaddr);
            returnOk $ InvokePageTable $ PageTableMap cap' cte pte slot
          odE
