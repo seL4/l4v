@@ -359,7 +359,7 @@ lemma vs_lookup_slot_no_asid:
 
 (* Invalidating an entry at p will cause lookups to stop at higher levels than requested.
    If performing a shallower lookup than the one requested results in p, then any deeper lookup
-   in the updated state will return None. *)
+   in the updated state will return a higher level result along the original path. *)
 lemma vs_lookup_InvalidPTE:
   "\<lbrakk> ptes_of s p \<noteq> None; ptes_of s' = ptes_of s (p \<mapsto> InvalidPTE);
      asid_pools_of s' = asid_pools_of s;
