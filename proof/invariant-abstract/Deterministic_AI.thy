@@ -957,7 +957,6 @@ lemma valid_list_post_no_parent:
   "\<lbrakk>m src = None\<rbrakk> \<Longrightarrow> valid_list_2 t n"
   apply (insert valid_list dest)
   apply (simp add: valid_list_2_def n_def)
-  apply fastforce
   done
 
 
