@@ -1318,7 +1318,7 @@ abbreviation (input)
 abbreviation (input)
  "all_invs_but_sym_refs
     \<equiv> all_invs_but_sym_refs_and_fault_tcbs and fault_tcbs_valid_states"
- 
+
 abbreviation (input)
  "all_invs_but_fault_tcbs
     \<equiv> all_invs_but_sym_refs_and_fault_tcbs and (\<lambda>s. sym_refs (state_refs_of s))

@@ -226,19 +226,11 @@ lemma refill_sufficient_kh_simp[simp]:
   "refill_sufficient_kh scp (kheap s) = is_refill_sufficient scp 0 s"
   by (clarsimp simp: refill_sufficient_kh_def is_refill_sufficient_def obj_at_def
                split: option.splits kernel_object.splits)
-(*
-lemmas refill_sufficient_defs
-  = refill_sufficient_kh_def is_refill_sufficient_def (*sufficient_refills_def*)
-    refills_capacity_def
-*)
+
 lemma budget_sufficient_kh_simp[simp]:
   "budget_sufficient_kh tptr (kheap s) = budget_sufficient tptr s"
   by (clarsimp simp: )
-(*
-lemmas budget_sufficient_defs
-  =  bound_sc_tcb_at_kh_def
-    obj_at_kh_def pred_tcb_at_def obj_at_def
-*)
+
 
 lemmas refill_prop_defs = refill_sufficient_kh_def refill_ready_kh_def
                           is_refill_ready_def is_refill_sufficient_def
@@ -325,21 +317,6 @@ lemma budget_sufficient_thread_set_no_change:
     apply (rule hoare_seq_ext[OF _ assert_get_tcb_ko'])
     by (fastforce intro: budget_sufficient_set_object_no_change_tcb)
 
-(*
-lemma budget_sufficient_set_object_no_change_tcb:
-  "\<lbrakk>\<And>x. tcb_sched_context (f x) = tcb_sched_context x\<rbrakk>
-     \<Longrightarrow> \<lbrace>budget_sufficient t and ko_at (TCB tcb) tptr\<rbrace> set_object tptr (TCB (f tcb)) \<lbrace>\<lambda>rv. budget_sufficient t\<rbrace>"
-  apply (wpsimp simp: budget_sufficient_defs refill_sufficient_defs set_object_def)
-  by (rule conjI; clarsimp split: option.splits; rule_tac x=scp in exI; fastforce)
-
-lemma budget_sufficient_set_object_no_change_sc:
-  "\<lbrakk>\<And>x. sc_refills (f x) = sc_refills x\<rbrakk>
-     \<Longrightarrow> \<lbrace>budget_sufficient t and ko_at (SchedContext sc n) tptr\<rbrace> set_object tptr (SchedContext (f sc) n) \<lbrace>\<lambda>rv. budget_sufficient t\<rbrace>"
-  apply (wpsimp simp:  pred_tcb_at_def set_object_def)
-  apply (clarsimp simp: budget_sufficient_defs refill_sufficient_defs split: option.splits)
-  apply (intro conjI impI; clarsimp?)
-  by (rule_tac x=scp in exI; intro conjI impI; clarsimp)
-*)
 lemma budget_sufficient_update_sched_context_no_change:
   "\<lbrakk>\<And>x. sc_refills (f x) = sc_refills x\<rbrakk>
      \<Longrightarrow> \<lbrace>\<lambda>s. P (budget_sufficient t s)\<rbrace> update_sched_context scp f \<lbrace>\<lambda>rv s. P (budget_sufficient t s)\<rbrace>"

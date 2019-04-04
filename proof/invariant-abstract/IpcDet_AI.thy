@@ -277,7 +277,7 @@ lemma reply_tcb_reply_at_kheap_update:
 lemma reply_tcb_reply_at_kheap_update':
   "p \<noteq> q \<Longrightarrow> reply_tcb_reply_at P r (s\<lparr>kheap := kheap s(p \<mapsto> v, q \<mapsto> w)\<rparr>) =
     (if p = r then \<exists>r. v = Reply r \<and> P (reply_tcb r)
-     else if q = r then \<exists>r. w = Reply r \<and> P (reply_tcb r) 
+     else if q = r then \<exists>r. w = Reply r \<and> P (reply_tcb r)
      else reply_tcb_reply_at P r s)"
   by (clarsimp simp: reply_tcb_reply_at_def obj_at_update')
 
@@ -1625,7 +1625,7 @@ lemma si_invs'_helper_no_reply:
   "\<lbrace>\<lambda>s. st_tcb_at active tptr s \<and>
         st_tcb_at (\<lambda>st. \<exists>epptr. st = BlockedOnReceive epptr None) dest s \<and>
         all_invs_but_sym_refs_and_fault_tcbs s \<and>
-        fault_tcbs_valid_states_except_set {tptr} s \<and> 
+        fault_tcbs_valid_states_except_set {tptr} s \<and>
         sym_refs (\<lambda>x. if x = dest
                       then {r \<in> state_refs_of s dest. snd r = TCBBound \<or>
                             snd r = TCBSchedContext \<or> snd r = TCBYieldTo}
