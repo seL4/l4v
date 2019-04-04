@@ -69,21 +69,25 @@ crunch mdb_inv[wp]: store_pte "\<lambda>s. P (cdt s)"
 
 lemma valid_vspace_objs_pte:
   "\<lbrakk> ptes_of s p = Some pte; valid_vspace_objs s; \<exists>\<rhd> (level, table_base p) s \<rbrakk>
-   \<Longrightarrow> valid_pte level pte s"
-  sorry (* FIXME RISCV *)
+   \<Longrightarrow> valid_pte level pte s \<or> level = max_pt_level \<and> table_index p \<in> kernel_mapping_slots"
+  apply (clarsimp simp: ptes_of_def in_opt_map_eq)
+  apply (drule (2) valid_vspace_objsD)
+   apply (fastforce simp: in_opt_map_eq)
+  apply simp
+  done
 
 lemma get_pte_valid[wp]:
-  "\<lbrace>valid_vspace_objs and \<exists>\<rhd> (level, table_base p)\<rbrace>
+  "\<lbrace>valid_vspace_objs and \<exists>\<rhd> (level, table_base p) and
+    K (level = max_pt_level \<longrightarrow> table_index p \<notin> kernel_mapping_slots)\<rbrace>
    get_pte p
    \<lbrace>valid_pte level\<rbrace>"
-  by wpsimp (fastforce intro: valid_vspace_objs_pte)
+  by wpsimp (fastforce dest: valid_vspace_objs_pte)
 
 lemma get_pte_wellformed[wp]:
   "\<lbrace>valid_objs\<rbrace> get_pte p \<lbrace>\<lambda>rv _. wellformed_pte rv\<rbrace>"
   apply wpsimp
-  sorry (* FIXME RISCV
-  apply (fastforce simp add: valid_objs_def dom_def obj_at_def valid_obj_def)
-  done *)
+  apply (fastforce simp: valid_objs_def dom_def valid_obj_def ptes_of_def in_opt_map_eq)
+  done
 
 crunch valid_objs[wp]: init_arch_objects "valid_objs"
   (ignore: clearMemory wp: crunch_wps)
