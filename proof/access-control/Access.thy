@@ -2354,8 +2354,7 @@ lemma set_object_integrity_autarch:
   "\<lbrace>integrity aag X st and K (is_subject aag ptr)\<rbrace>
      set_object ptr obj
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: set_object_def)
-  apply (wp gets_the_wp)
+  apply (wpsimp wp: set_object_wp)
   apply (rule integrity_update_autarch, simp_all)
   done
 
@@ -2646,8 +2645,8 @@ done
 
 lemma as_user_state_vrefs[wp]:
   "\<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace> as_user t f \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
-  apply (simp add: as_user_def set_object_def split_def)
-  apply wp
+  apply (simp add: as_user_def)
+  apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: state_vrefs_def vs_refs_no_global_pts_def get_tcb_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: option.split_asm Structures_A.kernel_object.split)
@@ -2655,9 +2654,9 @@ lemma as_user_state_vrefs[wp]:
 
 lemma as_user_tcb_states[wp]:
   "\<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace> as_user t f \<lbrace>\<lambda>rv s. P (tcb_states_of_state s)\<rbrace>"
-  apply (simp add: as_user_def set_object_def split_def tcb_states_of_state_def)
-  apply wp
-  apply (clarsimp simp: thread_states_def get_tcb_def
+  apply (simp add: as_user_def)
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp simp: thread_states_def get_tcb_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext] split: option.split)
   done
 

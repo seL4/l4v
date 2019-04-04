@@ -331,9 +331,7 @@ lemma set_object_caps_of_state:
     (\<lambda>s. P (caps_of_state s))\<rbrace>
    set_object p obj
    \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  apply (clarsimp simp: set_object_def)
-  apply wp
-  apply clarify
+  apply (wpsimp wp: set_object_wp)
   apply (erule rsubst[where P=P])
   apply (rule ext)
   apply (simp add: caps_of_state_cte_wp_at obj_at_def is_cap_table_def
@@ -343,12 +341,7 @@ lemma set_object_caps_of_state:
 
 lemma set_object_domains_of_state[wp]:
   "\<lbrace> \<lambda>s. P (domains_of_state s) \<rbrace> set_object a b \<lbrace> \<lambda>_ s. P (domains_of_state s) \<rbrace>"
-  unfolding set_object_def
-  apply wp
-  apply (rule rsubst[where P=P])
-   apply assumption
-  apply (clarsimp simp: get_etcb_def)
-  done
+  by (wpsimp wp: set_object_wp)
 
 lemma set_cap_pas_refined:
   "\<lbrace>pas_refined aag and (\<lambda>s. (is_transferable_in ptr s \<and> (\<not> Option.is_none (cdt s ptr)))
@@ -809,30 +802,32 @@ method monad_commute_default =
                  | solves \<open>(changed \<open>wp | fastforce\<close>)+\<close>
                  | fastforce\<close>
 
+
 (* Now the commute steps *)
+(* FIXME: remove and generalise version in ainvs *)
 lemma set_original_set_cap_comm:
   "(do set_original slot' val; set_cap cap slot od) =
    (do set_cap cap slot; set_original slot' val od)"
-  apply (clarsimp simp: set_original_def set_cap_def get_object_def set_object_def
-                  simp del: K_bind_def
-                  split: prod.splits)
-  apply (simp only: gets_modify_def modify_def[symmetric])
-  apply (rule monad_commuteI2)
-   apply monad_commute_default
-  apply (monad_eq; fastforce)
+  apply (rule ext)
+  apply (clarsimp simp: bind_def split_def set_cap_def set_original_def
+                        get_object_def set_object_def get_def put_def
+                        simpler_gets_def simpler_modify_def
+                        assert_def fail_def)
+  apply (case_tac y; simp add: return_def fail_def)
   done
+
 
 lemma set_cdt_set_cap_comm:
   "(do set_cdt c; set_cap cap slot od) =
    (do set_cap cap slot; set_cdt c od)"
-  apply (clarsimp simp: set_cdt_def set_cap_def get_object_def set_object_def
-                  simp del: K_bind_def
-                  split: prod.splits)
-  apply (simp only: modify_def[symmetric] gets_modify_def)
-  apply (rule monad_commuteI2)
-   apply monad_commute_default
-  apply (monad_eq; fastforce)
+  apply (rule ext)
+  apply (clarsimp simp: bind_def split_def set_cap_def set_cdt_def
+                        get_object_def set_object_def get_def put_def
+                        simpler_gets_def simpler_modify_def
+                        assert_def fail_def)
+  apply (case_tac y; simp add: return_def fail_def)
   done
+
 
 lemma set_cdt_set_original_comm:
   "(do set_cdt c; set_original slot val od) =
@@ -862,14 +857,13 @@ lemma set_cdt_empty_slot_ext_comm:
 lemma set_cap_empty_slot_ext_comm:
   "(do set_cap cap slot; empty_slot_ext slot' slot_p od) =
    (do empty_slot_ext slot' slot_p; set_cap cap slot od :: (det_ext state \<Rightarrow> _))"
-  apply (clarsimp simp: set_cap_def get_object_def set_object_def
-                        empty_slot_ext_def update_cdt_list_def set_cdt_list_def
-                  simp del: K_bind_def
-                  split: prod.splits)
-  apply (simp only: modify_def[symmetric] gets_modify_def)
-  apply (rule monad_commuteI2)
-   apply monad_commute_default
-  apply (monad_eq split: option.splits; fastforce)
+  apply (rule ext)
+  apply (clarsimp simp: bind_def split_def set_cap_def empty_slot_ext_def
+                        update_cdt_list_def set_cdt_list_def
+                        get_object_def set_object_def get_def put_def
+                        simpler_gets_def simpler_modify_def
+                        assert_def fail_def)
+  apply (case_tac y; simp add: return_def fail_def split: option.splits)
   done
 
 (* FIXME: MOVE *)
@@ -1247,9 +1241,8 @@ lemma sts_respects_restart_ep:
      and (\<lambda>s. \<exists>ep. aag_has_auth_to aag Reset ep \<and> st_tcb_at (blocked_on ep) thread s)\<rbrace>
         set_thread_state thread Structures_A.Restart
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def)
-  apply wp
-  apply clarsimp
+  apply (simp add: set_thread_state_def)
+  apply (wpsimp wp: set_object_wp)
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def get_tcb_def)
   apply (rule_tac tro_tcb_restart [OF refl refl])
@@ -1277,8 +1270,8 @@ lemma mapM_mapM_x_valid:
 
 lemma sts_st_vrefs[wp]:
   "\<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def)
-  apply (wp dxo_wp_weak |simp)+
+  apply (simp add: set_thread_state_def)
+  apply (wpsimp wp: set_object_wp dxo_wp_weak)
   apply (clarsimp simp: state_vrefs_def vs_refs_no_global_pts_def
                  elim!: rsubst[where P=P, OF _ ext]
                  dest!: get_tcb_SomeD)
@@ -1286,8 +1279,8 @@ lemma sts_st_vrefs[wp]:
 
 lemma sts_thread_bound_ntfns[wp]:
   "\<lbrace>\<lambda>s. P (thread_bound_ntfns s)\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. P (thread_bound_ntfns s)\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def)
-  apply (wp dxo_wp_weak |simp)+
+  apply (simp add: set_thread_state_def)
+  apply (wpsimp wp: set_object_wp dxo_wp_weak)
   apply (clarsimp simp: thread_bound_ntfns_def get_tcb_def
                  split: if_split option.splits kernel_object.splits
                  elim!: rsubst[where P=P, OF _ ext])
@@ -1295,8 +1288,8 @@ lemma sts_thread_bound_ntfns[wp]:
 
 lemma sts_thread_states[wp]:
   "\<lbrace>\<lambda>s. P ((thread_states s)(t := tcb_st_to_auth st))\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. P (thread_states s)\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def)
-  apply (wp dxo_wp_weak |simp)+
+  apply (simp add: set_thread_state_def)
+  apply (wpsimp wp: set_object_wp dxo_wp_weak)
   apply (clarsimp simp: get_tcb_def thread_states_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext])
   done
@@ -1305,8 +1298,8 @@ lemma sbn_thread_bound_ntfns[wp]:
   "\<lbrace>\<lambda>s. P ((thread_bound_ntfns s)(t := ntfn))\<rbrace>
      set_bound_notification t ntfn
    \<lbrace>\<lambda>rv s. P (thread_bound_ntfns s)\<rbrace>"
-  apply (simp add: set_bound_notification_def set_object_def)
-  apply (wp dxo_wp_weak |simp)+
+  apply (simp add: set_bound_notification_def)
+  apply (wpsimp wp: set_object_wp dxo_wp_weak)
   apply (clarsimp simp: get_tcb_def thread_bound_ntfns_def
                  elim!: rsubst[where P=P, OF _ ext])
   done
@@ -1393,8 +1386,8 @@ lemma set_simple_ko_pas_refined[wp]:
 
 lemma thread_set_st_vrefs[wp]:
   "\<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
-  apply (wp | simp)+
+  apply (simp add: thread_set_def)
+  apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: state_vrefs_def vs_refs_no_global_pts_def
                  elim!: rsubst[where P=P, OF _ ext] dest!: get_tcb_SomeD)
   done
@@ -1402,9 +1395,9 @@ lemma thread_set_st_vrefs[wp]:
 lemma thread_set_thread_states_trivT:
   assumes st: "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
   shows "\<lbrace>\<lambda>s. P (thread_states s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (thread_states s)\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
-  apply (wp | simp)+
-  apply (clarsimp simp: st get_tcb_def thread_states_def tcb_states_of_state_def split: option.split
+  apply (simp add: thread_set_def)
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp simp: st get_tcb_def thread_states_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: Structures_A.kernel_object.split_asm)
   done
@@ -1412,9 +1405,9 @@ lemma thread_set_thread_states_trivT:
 lemma thread_set_thread_bound_ntfns_trivT:
   assumes ntfn: "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
   shows "\<lbrace>\<lambda>s. P (thread_bound_ntfns s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (thread_bound_ntfns s)\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
-  apply (wp | simp)+
-  apply (clarsimp simp: ntfn get_tcb_def thread_bound_ntfns_def tcb_states_of_state_def split: option.split
+  apply (simp add: thread_set_def)
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp simp: ntfn get_tcb_def thread_bound_ntfns_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: Structures_A.kernel_object.split_asm)
   done
@@ -1612,8 +1605,8 @@ lemma set_asid_pool_st_vrefs[wp]:
 
 lemma set_asid_pool_thread_states[wp]:
   "\<lbrace>\<lambda>s. P (thread_states s)\<rbrace> set_asid_pool p pool \<lbrace>\<lambda>rv s. P (thread_states s)\<rbrace>"
-  apply (simp add: set_asid_pool_def set_object_def)
-  apply (wp get_object_wp)
+  apply (simp add: set_asid_pool_def)
+  apply (wpsimp wp: set_object_wp_strong)
   apply (clarsimp simp: thread_states_def obj_at_def get_tcb_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: Structures_A.kernel_object.split_asm option.split)
@@ -1621,8 +1614,8 @@ lemma set_asid_pool_thread_states[wp]:
 
 lemma set_asid_pool_thread_bound_ntfns[wp]:
   "\<lbrace>\<lambda>s. P (thread_bound_ntfns s)\<rbrace> set_asid_pool p pool \<lbrace>\<lambda>rv s. P (thread_bound_ntfns s)\<rbrace>"
-  apply (simp add: set_asid_pool_def set_object_def)
-  apply (wp get_object_wp)
+  apply (simp add: set_asid_pool_def)
+  apply (wpsimp wp: set_object_wp_strong)
   apply (clarsimp simp: thread_bound_ntfns_def obj_at_def get_tcb_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: Structures_A.kernel_object.split_asm option.split)

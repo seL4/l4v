@@ -238,10 +238,8 @@ lemma sts_first_restart:
      set_thread_state thread Structures_A.thread_state.Restart
    \<lbrace>\<lambda>rv s. \<forall>p ko. kheap s p = Some ko \<longrightarrow>
            (is_tcb ko \<longrightarrow> p \<noteq> cur_thread st) \<longrightarrow> kheap st p = Some ko\<rbrace>"
-  unfolding set_thread_state_def set_object_def
-  apply (wp dxo_wp_weak |simp)+
-  apply (clarsimp simp: is_tcb)
-  done
+  unfolding set_thread_state_def
+  by (wpsimp wp: set_object_wp dxo_wp_weak simp: is_tcb)
 
 lemma lcs_reply_owns:
   "\<lbrace>pas_refined aag and K (is_subject aag thread)\<rbrace>
@@ -687,9 +685,9 @@ lemma set_thread_state_restart_to_running_respects:
                  set_thread_state thread Structures_A.thread_state.Running
               od
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def as_user_def split_def setNextPC_def
-    getRestartPC_def setRegister_def bind_assoc getRegister_def)
-  apply wp
+  apply (simp add: set_thread_state_def as_user_def split_def setNextPC_def
+                   getRestartPC_def setRegister_def bind_assoc getRegister_def)
+  apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: in_monad fun_upd_def[symmetric] cong: if_cong)
   apply (cases "is_subject aag thread")
    apply (cut_tac aag=aag in integrity_update_autarch, simp+)
@@ -806,7 +804,7 @@ lemma as_user_set_register_respects_indirect:
         \<and> (aag_has_auth_to aag Notify ntfnptr)) \<rbrace>
    as_user thread (setRegister r v)
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: as_user_def split_def set_object_def)
+  apply (simp add: as_user_def split_def set_object_def get_object_def)
   apply wp
   apply (clarsimp simp: in_monad setRegister_def)
   apply (cases "is_subject aag thread")
@@ -1106,16 +1104,11 @@ lemma set_thread_state_current_ipc_buffer_register[wp]:
 
 lemma set_simple_ko_current_ipc_buffer_register[wp]:
   "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_simple_ko f t ep  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
-  apply (clarsimp simp: set_simple_ko_def  )
-  apply (wp dxo_wp_weak | wpc)+
-     apply (clarsimp simp: set_thread_state_def get_object_def set_object_def valid_def put_def
-                           gets_def assert_def bind_def get_def return_def fail_def gets_the_def
-                           assert_opt_def
-                    split: option.splits kernel_object.splits)
-     apply simp
-    apply (wp get_object_wp | simp add: get_simple_ko_def | wpc)+
-  apply (auto simp: a_type_def partial_inv_def obj_at_def current_ipc_buffer_register_def get_tcb_def
-             split: kernel_object.split_asm)
+  apply (simp add: set_simple_ko_def)
+  including unfold_objects
+  apply (wpsimp wp: set_object_wp_strong)
+  apply (auto simp: a_type_def partial_inv_def current_ipc_buffer_register_def get_tcb_def
+             split: kernel_object.split_asm if_splits)
   done
 
 lemma update_tcb_current_ipc_buffer_register:
@@ -1156,28 +1149,18 @@ lemma set_bounded_notification_current_ipc_buffer_register[wp]:
 
 lemma set_pd_current_ipc_buffer_register[wp]:
   "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_pd ptr pd \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
-  apply (clarsimp simp: set_pd_def  )
-  apply (wp | wpc)+
-     apply (clarsimp simp: set_thread_state_def get_object_def set_object_def valid_def put_def
-                           gets_def assert_def bind_def get_def return_def fail_def gets_the_def
-                           assert_opt_def
-                    split: option.splits kernel_object.splits)
-     apply simp
-    apply (wp get_object_wp | simp add: get_simple_ko_def | wpc)+
-  apply (auto simp: obj_at_def current_ipc_buffer_register_def get_tcb_def split: kernel_object.split_asm)
+  apply (clarsimp simp: set_pd_def)
+  apply (wpsimp wp: set_object_wp_strong)
+  apply (auto simp: obj_at_def current_ipc_buffer_register_def get_tcb_def
+             split: kernel_object.split_asm)
   done
 
 lemma set_pt_current_ipc_buffer_register[wp]:
   "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_pt ptr pt \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
-  apply (clarsimp simp: set_pt_def  )
-  apply (wp | wpc)+
-     apply (clarsimp simp: set_thread_state_def get_object_def set_object_def valid_def put_def
-                           gets_def assert_def bind_def get_def return_def fail_def gets_the_def
-                           assert_opt_def
-                    split: option.splits kernel_object.splits)
-     apply simp
-    apply (wp get_object_wp | simp add: get_simple_ko_def | wpc)+
-  apply (auto simp: obj_at_def current_ipc_buffer_register_def get_tcb_def split: kernel_object.split_asm)
+  apply (clarsimp simp: set_pt_def)
+  apply (wpsimp wp: set_object_wp_strong)
+  apply (auto simp: obj_at_def current_ipc_buffer_register_def get_tcb_def
+             split: kernel_object.split_asm)
   done
 
 crunch current_ipc_buffer_register [wp]: post_cap_deletion, cap_delete_one "\<lambda>s. P (current_ipc_buffer_register s)"
@@ -1290,15 +1273,10 @@ lemma reply_cancel_ipc_current_ipc_buffer_register[wp]:
 
 lemma set_asid_pool_current_ipc_buffer_register[wp]:
   "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> set_asid_pool a b \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
-  apply (clarsimp simp: set_asid_pool_def)
-  apply (rule_tac Q = "\<lambda>r s. P (current_ipc_buffer_register s)" in hoare_post_imp)
-   apply simp
-  apply (clarsimp simp: get_object_def set_object_def valid_def put_def
-                        gets_def assert_def bind_def get_def return_def
-                        fail_def gets_the_def
-                        thread_set_def assert_opt_def get_tcb_def
-                 split: option.splits kernel_object.splits)
-  apply (clarsimp simp: current_ipc_buffer_register_def get_tcb_def)
+  apply (simp add: set_asid_pool_def)
+  apply (wpsimp wp: set_object_wp_strong
+              simp: current_ipc_buffer_register_def get_tcb_def obj_at_def
+             split: kernel_object.splits)
   done
 
 crunch current_ipc_buffer_register [wp]: finalise_cap "\<lambda>s. P (current_ipc_buffer_register s)"
@@ -1352,7 +1330,8 @@ lemma set_tcb_context_current_ipc_buffer_register:
         obj_at (\<lambda>obj. obj = TCB tcb) f s)) \<and> P (current_ipc_buffer_register s)\<rbrace>
      set_object f (TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set cxt (tcb_arch tcb)\<rparr>))
    \<lbrace>\<lambda>_ s. P (current_ipc_buffer_register s)\<rbrace>"
-  by (auto simp: current_ipc_buffer_register_def get_tcb_def set_object_def get_def put_def bind_def valid_def return_def obj_at_def)
+  apply (wpsimp wp: set_object_wp)
+  by (auto simp: current_ipc_buffer_register_def get_tcb_def obj_at_def)
 
 lemma as_user_current_ipc_buffer_register[wp]:
   assumes uc: "\<And>P. \<lbrace>\<lambda>s. P (s TPIDRURW)\<rbrace> a \<lbrace>\<lambda>r s. P (s TPIDRURW)\<rbrace>"

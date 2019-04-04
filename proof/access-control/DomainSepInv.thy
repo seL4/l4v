@@ -112,9 +112,7 @@ lemma set_object_wp:
   "\<lbrace> \<lambda> s. P (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>) \<rbrace>
    set_object ptr obj
    \<lbrace> \<lambda>_. P \<rbrace>"
-  unfolding set_object_def
-  apply (wp)
-  done
+  by (wpsimp wp: set_object_wp)
 
 (* FIXME: following 3 lemmas clagged from FinalCaps *)
 lemma set_cap_neg_cte_wp_at_other_helper':
@@ -328,7 +326,7 @@ lemma empty_slot_domain_sep_inv:
 lemma set_simple_ko_neg_cte_wp_at[wp]:
   "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace> set_simple_ko f a b \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
   apply(simp add: set_simple_ko_def)
-  apply(wp set_object_wp get_object_wp
+  apply(wp set_object_wp_strong get_object_wp
      | simp add: partial_inv_def a_type_def split: kernel_object.splits)+
   apply(case_tac "a = fst slot")
    apply(clarsimp split: kernel_object.splits)
@@ -654,9 +652,10 @@ lemma invoke_cnode_domain_sep_inv:
   unfolding invoke_cnode_def
   apply(case_tac ci)
         apply(wp cap_insert_domain_sep_inv cap_move_domain_sep_inv | simp split del: if_split)+
-    apply(rule hoare_pre)
-    (* this tactic takes 2 min *)
-     apply(wp cap_move_domain_sep_inv cap_move_cte_wp_at_other get_cap_wp | simp | blast dest: cte_wp_at_weak_derived_domain_sep_inv_cap | wpc)+
+     apply(rule hoare_pre)
+      apply (wpsimp wp: cap_move_domain_sep_inv cap_move_cte_wp_at_other get_cap_wp,
+            blast dest: cte_wp_at_weak_derived_domain_sep_inv_cap)+
+   apply (wpsimp wp: cap_move_domain_sep_inv get_cap_wp)
    apply(fastforce dest:  cte_wp_at_weak_derived_ReplyCap)
   apply(wp | simp | wpc | rule hoare_pre)+
   done

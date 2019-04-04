@@ -373,9 +373,8 @@ lemma sbn_bind_respects:
     and K ((pasSubject aag, Receive, pasObjectAbs aag ntfn) \<in> pasPolicy aag \<and> is_subject aag t)\<rbrace>
        set_bound_notification t (Some ntfn)
    \<lbrace>\<lambda>rv. integrity aag X st \<rbrace>"
-  apply (simp add: set_bound_notification_def set_object_def)
-  apply wp
-  apply clarsimp
+  apply (simp add: set_bound_notification_def)
+  apply (wpsimp wp: set_object_wp)
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def obj_at_def pred_tcb_at_def)
   done

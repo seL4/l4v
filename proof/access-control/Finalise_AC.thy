@@ -195,16 +195,16 @@ lemma set_bound_notification_ekheap[wp]:
 
 lemma sbn_thread_states[wp]:
   "\<lbrace>\<lambda>s. P (thread_states s)\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>rv s. P (thread_states s)\<rbrace>"
-  apply (simp add: set_bound_notification_def set_object_def)
-  apply (wp dxo_wp_weak |simp)+
+  apply (simp add: set_bound_notification_def)
+  apply (wpsimp wp: set_object_wp dxo_wp_weak)
   apply (clarsimp simp: get_tcb_def thread_states_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext])
   done
 
 lemma sbn_st_vrefs[wp]:
   "\<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace> set_bound_notification t st \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
-  apply (simp add: set_bound_notification_def set_object_def)
-  apply (wp dxo_wp_weak |simp)+
+  apply (simp add: set_bound_notification_def)
+  apply (wpsimp wp: set_object_wp dxo_wp_weak)
   apply (clarsimp simp: state_vrefs_def vs_refs_no_global_pts_def
                  elim!: rsubst[where P=P, OF _ ext]
                  dest!: get_tcb_SomeD)
@@ -354,9 +354,8 @@ lemma sbn_unbind_respects[wp]:
            (pasSubject aag, Reset, pasObjectAbs aag ntfn) \<in> pasPolicy aag))\<rbrace>
      set_bound_notification t None
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-    apply (simp add: set_bound_notification_def set_object_def)
-  apply wp
-  apply clarsimp
+  apply (simp add: set_bound_notification_def)
+  apply (wpsimp wp: set_object_wp)
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def obj_at_def pred_tcb_at_def)
   apply (rule tro_tcb_unbind)
@@ -482,8 +481,8 @@ lemma cap_delete_one_respects_transferable[wp_transferable]:
 lemma thread_set_tcb_state_trivial:
   "(\<And> tcb. tcb_state (f tcb) = tcb_state tcb) \<Longrightarrow>
    \<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace> thread_set f t \<lbrace>\<lambda>_ s. P (tcb_states_of_state s)\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
-  apply wp
+  apply (simp add: thread_set_def)
+  apply (wpsimp wp: set_object_wp)
   apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD)
   by (auto simp: tcb_states_of_state_def get_tcb_def)
 
@@ -975,8 +974,8 @@ lemma thread_set_pas_refined_triv_idleT:
   apply (simp add: pas_refined_def state_objs_to_policy_def)
   apply (rule hoare_pre)
    apply (wps thread_set_caps_of_state_trivial[OF cps])
-   apply (simp add: thread_set_def set_object_def)
-   apply wp
+   apply (simp add: thread_set_def)
+   apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: pred_tcb_def2 fun_upd_def[symmetric]
                    del: subsetI)
   apply (erule_tac P="\<lambda> ts ba. auth_graph_map a (state_bits_to_policy cps ts ba cd vr) \<subseteq> ag"

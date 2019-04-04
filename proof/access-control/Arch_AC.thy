@@ -533,7 +533,7 @@ crunch thread_states[wp]: do_machine_op "\<lambda>s. P (thread_states s)"
 (* FIXME: move *)
 lemma set_mrs_state_vrefs[wp]:
   "\<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
-  apply (simp add: set_mrs_def split_def set_object_def)
+  apply (simp add: set_mrs_def split_def set_object_def get_object_def)
   apply (wp gets_the_wp get_wp put_wp mapM_x_wp'
        | wpc
        | simp split del: if_split add: zipWithM_x_mapM_x split_def store_word_offs_def)+
@@ -545,7 +545,7 @@ lemma set_mrs_state_vrefs[wp]:
 (* FIXME: move *)
 lemma set_mrs_thread_states[wp]:
   "\<lbrace>\<lambda>s. P (thread_states s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>rv s. P (thread_states s)\<rbrace>"
-  apply (simp add: set_mrs_def split_def set_object_def)
+  apply (simp add: set_mrs_def split_def set_object_def get_object_def)
   apply (wp gets_the_wp get_wp put_wp mapM_x_wp'
        | wpc
        | simp split del: if_split add: zipWithM_x_mapM_x split_def store_word_offs_def)+
@@ -554,7 +554,7 @@ lemma set_mrs_thread_states[wp]:
 
 lemma set_mrs_thread_bound_ntfns[wp]:
   "\<lbrace>\<lambda>s. P (thread_bound_ntfns s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>rv s. P (thread_bound_ntfns s)\<rbrace>"
-  apply (simp add: set_mrs_def split_def set_object_def)
+  apply (simp add: set_mrs_def split_def set_object_def get_object_def)
   apply (wp gets_the_wp get_wp put_wp mapM_x_wp' dmo_wp
        | wpc
        | simp split del: if_split add: zipWithM_x_mapM_x split_def store_word_offs_def no_irq_storeWord)+
@@ -1315,10 +1315,10 @@ lemma set_asid_pool_respects_clear:
               \<longrightarrow> asid_pool_integrity {pasSubject aag} aag pool' pool)
             and integrity aag X st\<rbrace>
      set_asid_pool ptr pool \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: set_asid_pool_def set_object_def)
-  apply (wp get_object_wp)
-  apply (clarsimp simp: obj_at_def
-             split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm)
+  apply (simp add: set_asid_pool_def)
+  apply (wpsimp wp: set_object_wp_strong
+              simp: obj_at_def a_type_def
+             split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_splits)
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def)
   apply (rule tro_asidpool_clear; simp add: asid_pool_integrity_def)
