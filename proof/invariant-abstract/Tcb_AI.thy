@@ -66,7 +66,7 @@ lemma set_thread_state_ct_st:
   "\<lbrace>\<lambda>s. if thread = cur_thread s then P st else ct_in_state P s\<rbrace>
         set_thread_state thread st
    \<lbrace>\<lambda>rv. ct_in_state P\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def)
+  apply (simp add: set_thread_state_def set_object_def get_object_def)
   apply (wp|simp)+
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
@@ -300,8 +300,6 @@ lemma thread_set_valid_objs':
   thread_set f t
   \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (simp add: thread_set_def)
-  apply wp
-   apply (rule set_object_valid_objs)
   apply wp
   apply clarsimp
   apply (clarsimp dest!: get_tcb_SomeD simp: obj_at_def)
@@ -601,7 +599,7 @@ lemma thread_set_valid_objs'':
         \<longrightarrow> valid_tcb t tcb s \<longrightarrow> valid_tcb t (f tcb) s)\<rbrace>
      thread_set f t
    \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
+  apply (simp add: thread_set_def set_object_def get_object_def)
   apply wp
   apply (clarsimp simp: fun_upd_def[symmetric])
   apply (frule(1) valid_tcb_objs)
@@ -647,15 +645,16 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
   done
 
 lemma thread_set_tcb_valid:
-  assumes x: "\<And>tcb. tcb_state (fn tcb) = tcb_state  tcb"
+  assumes x: "\<And>tcb. tcb_state (fn tcb) = tcb_state tcb"
   assumes w: "\<And>tcb. tcb_ipc_buffer (fn tcb) = tcb_ipc_buffer tcb
-                          \<or> tcb_ipc_buffer (fn tcb) = 0"
-  shows      "\<lbrace>tcb_cap_valid c p\<rbrace> thread_set fn t
+                     \<or> tcb_ipc_buffer (fn tcb) = 0"
+  shows      "\<lbrace>tcb_cap_valid c p\<rbrace>
+              thread_set fn t
               \<lbrace>\<lambda>rv. tcb_cap_valid c p\<rbrace>"
-  apply (simp add: thread_set_def set_object_def, wp)
+  apply (wpsimp wp: set_object_wp_strong simp: thread_set_def)
   apply (clarsimp simp: tcb_cap_valid_def
                  dest!: get_tcb_SomeD)
-  apply (simp add: obj_at_def pred_tcb_at_def is_tcb x get_tcb_def
+  apply (simp add: obj_at_def pred_tcb_at_def is_tcb x
             split: if_split_asm cong: option.case_cong prod.case_cong)
   apply (cut_tac tcb=y in w)
   apply auto
@@ -677,7 +676,7 @@ lemma thread_set_ipc_tcb_cap_valid:
            \<and> (\<forall>ptr. valid_ipc_buffer_cap cap (f ptr))\<rbrace>
      thread_set (tcb_ipc_buffer_update f) t
    \<lbrace>\<lambda>rv. tcb_cap_valid cap (t, tcb_cnode_index 4)\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
+  apply (simp add: thread_set_def set_object_def get_object_def)
   apply wp
   apply (clarsimp simp: tcb_cap_valid_def obj_at_def
                         pred_tcb_at_def is_tcb

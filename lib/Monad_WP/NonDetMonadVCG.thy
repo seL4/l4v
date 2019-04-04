@@ -556,6 +556,20 @@ lemma hoare_gen_asm_lk:
   "(P \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>K P and P'\<rbrace> f \<lbrace>Q\<rbrace>"
   by (fastforce simp add: valid_def)
 
+\<comment> \<open>Useful for forward reasoning, when P is known.
+    The first version allows weakening the precondition.\<close>
+lemma hoare_gen_asm_spec':
+  "(\<And>s. P s \<Longrightarrow> S \<and> R s)
+    \<Longrightarrow> (S \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>Q\<rbrace>)
+    \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
+  by (fastforce simp: valid_def)
+
+lemma hoare_gen_asm_spec:
+  "(\<And>s. P s \<Longrightarrow> S)
+    \<Longrightarrow> (S \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>)
+    \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
+  by (rule hoare_gen_asm_spec'[where S=S and R=P]) simp
+
 lemma hoare_conjI:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> R r s\<rbrace>"
   unfolding valid_def by blast

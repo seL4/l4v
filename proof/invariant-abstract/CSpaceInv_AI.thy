@@ -84,17 +84,23 @@ lemma get_bound_notification_inv[simp]:
   apply (wp, simp)
   done
 
+lemma gets_the_sp:
+  "\<lbrace> Q \<rbrace> gets_the f \<lbrace>\<lambda>rv s. f s = Some rv \<and> Q s\<rbrace>"
+  by wpsimp
+
+lemma gets_the_get_tcb_sp:
+  "\<lbrace> Q \<rbrace> gets_the (get_tcb thread) \<lbrace>\<lambda>t. Q and ko_at (TCB t) thread\<rbrace>"
+  by wpsimp
+
 lemma assert_get_tcb_sp:
   assumes "\<And>s. Q s \<Longrightarrow> valid_objs s"
   shows "\<lbrace> Q \<rbrace> gets_the (get_tcb thread)
          \<lbrace>\<lambda>t. Q and ko_at (TCB t) thread and valid_tcb thread t \<rbrace>"
-  apply wp
-  apply (clarsimp dest!: assms)
-  apply (clarsimp dest!: get_tcb_SomeD simp: obj_at_def)
-  apply (erule(1) valid_objsE)
-  apply (simp add: valid_obj_def)
+  apply (rule hoare_strengthen_post[OF gets_the_get_tcb_sp])
+  apply (clarsimp simp: obj_at_def)
+  apply (erule (1) valid_objsE[where x=thread, OF assms])
+  apply (clarsimp simp: valid_obj_def)
   done
-
 
 crunch inv[wp]: get_cap "P"
   (simp: crunch_simps)
@@ -253,13 +259,6 @@ lemma zombies_tcb_update:
   apply (clarsimp simp: cte_wp_at_after_update fun_upd_def)
   done
 
-
-lemma tcb_state_same_refs:
-  "\<lbrakk> ko_at (TCB t) p s; tcb_state t = tcb_state t' \<rbrakk>
-     \<Longrightarrow> state_refs_of (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>) = state_refs_of s" (*
-  by (clarsimp simp add: state_refs_of_def obj_at_def
-                 intro!: ext) *)
-  oops
 
 
 lemma valid_idle_tcb_update:
@@ -492,10 +491,7 @@ lemma set_object_cte_wp_at:
   "\<lbrace>\<lambda>s. cte_wp_at P p (kheap_update (\<lambda>ps. (kheap s)(ptr \<mapsto> ko)) s)\<rbrace>
   set_object ptr ko
   \<lbrace>\<lambda>uu. cte_wp_at P p\<rbrace>"
-  unfolding set_object_def
-  apply simp
-  apply wp
-  done
+  by (wpsimp wp: set_object_wp_strong)
 
 
 
@@ -523,14 +519,7 @@ lemma set_cap_typ_at:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
    set_cap cap p'
    \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: set_cap_def split_def set_object_def)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
-  apply (case_tac obj, simp_all)
-   prefer 2
-   apply (auto simp: valid_def in_monad obj_at_def a_type_def)[1]
-  apply (clarsimp simp add: valid_def in_monad obj_at_def a_type_def)
-  apply (clarsimp simp: wf_cs_upd)
-  done
+  by (wpsimp wp: set_object_typ_at get_object_wp simp: set_cap_def)
 
 
 lemma set_cap_a_type_inv:
@@ -763,13 +752,10 @@ lemma set_cap_globals [wp]:
 lemma set_cap_pspace:
   assumes x: "\<And>s f'. f (kheap_update f' s) = f s"
   shows      "\<lbrace>\<lambda>s. P (f s)\<rbrace> set_cap p cap \<lbrace>\<lambda>rv s. P (f s)\<rbrace>"
-  apply (simp add: set_cap_def split_def set_object_def)
+  apply (simp add: set_cap_def split_def)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
   apply (case_tac obj, simp_all split del: if_split cong: if_cong)
-   apply (rule hoare_pre, wp)
-   apply (simp add: x)
-  apply (rule hoare_pre, wp)
-  apply (simp add: x)
+   apply (wpsimp wp: set_object_wp simp: x)+
   done
 
 
@@ -982,13 +968,10 @@ lemma set_cap_zombies:
 
 lemma set_cap_obj_at_other:
   "\<lbrace>\<lambda>s. P (obj_at P' p s) \<and> p \<noteq> fst p'\<rbrace> set_cap cap p' \<lbrace>\<lambda>rv s. P (obj_at P' p s)\<rbrace>"
-  apply (simp add: set_cap_def split_def set_object_def)
+  apply (simp add: set_cap_def split_def)
   apply (rule hoare_seq_ext [OF _ get_object_inv])
   apply (case_tac obj, simp_all split del: if_split)
-   apply (rule hoare_pre, wp)
-   apply (clarsimp simp: obj_at_def)
-  apply (rule hoare_pre, wp)
-  apply (clarsimp simp: obj_at_def)
+   apply (wpsimp wp: set_object_wp simp: obj_at_def)+
   done
 
 
@@ -1286,18 +1269,18 @@ lemma set_cap_valid_pspace:
 
 
 lemma set_object_idle [wp]:
-  "\<lbrace>valid_idle and
-     (\<lambda>s. ko_at ko p s \<and> (\<not>is_tcb ko \<or>
-                   (ko = (TCB t) \<and> ko' = (TCB t') \<and>
-                    tcb_state t = tcb_state t' \<and>
-                    tcb_bound_notification t = tcb_bound_notification t' \<and>
-                    tcb_iarch t = tcb_iarch t')))\<rbrace>
-     set_object p ko'
+  "\<lbrace>\<lambda>s. valid_idle s \<and>
+     (\<forall>t t'. ko_at (TCB t) p s
+             \<and> ko = (TCB t')
+             \<and> idle (tcb_state t)
+             \<and> tcb_bound_notification t = None
+             \<and> valid_arch_idle (tcb_iarch t)
+             \<longrightarrow> idle (tcb_state t')
+                 \<and> tcb_bound_notification t' = None
+                 \<and> valid_arch_idle (tcb_iarch t'))\<rbrace>
+     set_object p ko
    \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def is_tcb_def)
-  done
+  by (wpsimp wp: set_object_wp_strong simp: obj_at_def valid_idle_def pred_tcb_at_def)
 
 lemma set_cap_idle[wp]:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
@@ -1485,7 +1468,7 @@ lemma thread_set_mdb:
   assumes c: "\<And>t getF v. (getF, v) \<in> ran tcb_cap_cases
                     \<Longrightarrow> getF (f t) = getF t"
   shows "\<lbrace>valid_mdb\<rbrace> thread_set f p \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
+  apply (simp add: thread_set_def set_object_def get_object_def)
   apply (rule valid_mdb_lift)
     apply wp
     apply clarsimp
@@ -1536,25 +1519,21 @@ lemmas unique_table_refs_no_cap_asidD
      = unique_table_refs_no_cap_asidE[where S="{}"]
 
 lemma set_cap_only_idle [wp]:
-  "\<lbrace>only_idle\<rbrace> set_cap cap p \<lbrace>\<lambda>_. only_idle\<rbrace>"
+  "set_cap cap p \<lbrace>only_idle\<rbrace>"
   by (wp only_idle_lift set_cap_typ_at)
 
 lemma set_cap_kernel_window[wp]:
-  "\<lbrace>pspace_in_kernel_window\<rbrace> set_cap cap p \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
+  "set_cap cap p \<lbrace>pspace_in_kernel_window\<rbrace>"
   apply (simp add: set_cap_def split_def)
   apply (wp set_object_pspace_in_kernel_window get_object_wp | wpc)+
   apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: fun_upd_def[symmetric]
-                        a_type_def wf_cs_upd)
   done
 
 lemma set_cap_pspace_respects_device[wp]:
-  "\<lbrace>pspace_respects_device_region\<rbrace> set_cap cap p \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
+  "set_cap cap p \<lbrace>pspace_respects_device_region\<rbrace>"
   apply (simp add: set_cap_def split_def)
   apply (wp set_object_pspace_respects_device_region get_object_wp | wpc)+
   apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: fun_upd_def[symmetric]
-                        a_type_def wf_cs_upd)
   done
 
 lemma set_cap_cap_refs_respects_device_region:
@@ -2123,14 +2102,13 @@ lemma only_idle_tcb_update:
 
 lemma as_user_only_idle :
   "\<lbrace>only_idle\<rbrace> as_user t m \<lbrace>\<lambda>_. only_idle\<rbrace>"
-  apply (simp add: as_user_def set_object_def split_def)
+  apply (simp add: as_user_def set_object_def get_object_def split_def)
   apply wp
   apply (clarsimp simp del: fun_upd_apply)
   apply (erule only_idle_tcb_update)
    apply (drule get_tcb_SomeD)
    apply (fastforce simp: obj_at_def)
-  apply simp
-  done
+  by (simp add: get_tcb_rev)
 
 lemma cap_rights_update_id [intro!, simp]:
   "valid_cap c s \<Longrightarrow> cap_rights_update (cap_rights c) c = c"

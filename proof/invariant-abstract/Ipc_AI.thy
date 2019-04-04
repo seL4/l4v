@@ -1747,7 +1747,7 @@ crunch only_idle [wp]: store_word_offs only_idle
 lemma set_mrs_only_idle [wp]:
   "\<lbrace>only_idle\<rbrace> set_mrs t b m \<lbrace>\<lambda>_. only_idle\<rbrace>"
   apply (simp add: set_mrs_def split_def zipWithM_x_mapM
-                   set_object_def
+                   set_object_def get_object_def
               cong: option.case_cong
                del: upt.simps)
   apply (wp mapM_wp'|wpc)+
@@ -1755,8 +1755,7 @@ lemma set_mrs_only_idle [wp]:
    apply (erule only_idle_tcb_update)
     apply (drule get_tcb_SomeD)
     apply (fastforce simp: obj_at_def)
-   apply simp
-  done
+  by (simp add: get_tcb_rev)
 
 context Ipc_AI begin
 

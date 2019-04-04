@@ -316,12 +316,6 @@ lemma thread_set_has_no_reply_cap:
     | fast)+
   done
 
-
-lemma set_object_cte_wp_at2:
-  "\<lbrace>\<lambda>s. P (cte_wp_at P' p (s\<lparr>kheap := kheap s(ptr \<mapsto> ko)\<rparr>))\<rbrace> set_object ptr ko \<lbrace>\<lambda>_ s. P (cte_wp_at P' p s)\<rbrace>"
-  unfolding set_object_def by wp
-
-
 lemma (in Systemcall_AI_Pre) handle_fault_reply_cte_wp_at:
   "\<lbrace>\<lambda>s :: 'state_ext state. P (cte_wp_at P' p s)\<rbrace>
      handle_fault_reply f t d dl
@@ -347,7 +341,7 @@ lemma (in Systemcall_AI_Pre) handle_fault_reply_cte_wp_at:
       done
     show ?thesis
       apply (case_tac f; clarsimp simp: as_user_def)
-       apply (wp set_object_cte_wp_at2 thread_get_wp' | simp add: split_def NC | wp_once hoare_drop_imps)+
+       apply (wp set_object_wp thread_get_wp' | simp add: split_def NC | wp_once hoare_drop_imps)+
       done
   qed
 
@@ -564,7 +558,7 @@ lemma sts_no_cap_asid[wp]:
 
 lemma sts_mcpriority_tcb_at[wp]:
   "\<lbrace>mcpriority_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>rv. mcpriority_tcb_at P t\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def)
+  apply (simp add: set_thread_state_def set_object_def get_object_def)
   apply (wp | simp)+
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   apply (drule get_tcb_SomeD)
@@ -573,7 +567,7 @@ lemma sts_mcpriority_tcb_at[wp]:
 
 lemma sts_mcpriority_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. mcpriority_tcb_at P (cur_thread s) s\<rbrace> set_thread_state p ts \<lbrace>\<lambda>rv s. mcpriority_tcb_at P (cur_thread s) s\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def)
+  apply (simp add: set_thread_state_def set_object_def get_object_def)
   apply (wp | simp)+
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   apply (drule get_tcb_SomeD)

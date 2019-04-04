@@ -664,7 +664,7 @@ lemma obj_at_exst_update:
 
 lemma set_thread_state_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
-  unfolding set_thread_state_def set_object_def
+  unfolding set_thread_state_def set_object_def get_object_def
   by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
 
 crunch bound_tcb_at[wp]: cancel_all_ipc, empty_slot, is_final_cap, get_cap "bound_tcb_at P t"
@@ -762,7 +762,7 @@ lemma suspend_unlive:
   "\<lbrace>bound_tcb_at ((=) None) t and valid_mdb and valid_objs and tcb_at t \<rbrace>
       suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live0) t\<rbrace>"
-  apply (simp add: suspend_def set_thread_state_def set_object_def)
+  apply (simp add: suspend_def set_thread_state_def set_object_def get_object_def)
   apply (wp | simp only: obj_at_exst_update)+
   apply (simp add: obj_at_def)
   apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
@@ -1054,7 +1054,7 @@ lemma cancel_all_unlive_helper:
                     do_extended_op (tcb_sched_enqueue_ext t) od) q
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) ptr\<rbrace>"
   apply (rule hoare_strengthen_post [OF mapM_x_wp'])
-   apply (simp add: set_thread_state_def set_object_def)
+   apply (simp add: set_thread_state_def set_object_def get_object_def)
    apply (wp | simp only: obj_at_exst_update)+
    apply (clarsimp dest!: get_tcb_SomeD)
    apply (clarsimp simp: obj_at_def)

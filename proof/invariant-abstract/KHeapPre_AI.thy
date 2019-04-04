@@ -111,10 +111,10 @@ locale arch_only_obj_pred =
   fixes P :: "kernel_object \<Rightarrow> bool"
   assumes arch_only: "arch_obj_pred P"
 
-lemma set_object_typ_at:
-  "\<lbrace>\<lambda>s. typ_at (a_type ko) p s \<and> P (typ_at T p' s)\<rbrace>
+lemma set_object_typ_at [wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p' s)\<rbrace>
   set_object p ko \<lbrace>\<lambda>rv s. P (typ_at T p' s)\<rbrace>"
-  apply (simp add: set_object_def)
+  apply (simp add: set_object_def get_object_def)
   apply wp
   apply clarsimp
   apply (erule rsubst [where P=P])
@@ -125,7 +125,7 @@ lemma set_object_neg_ko:
   "\<lbrace>not ko_at ko' p' and K (p = p' \<longrightarrow> ko \<noteq> ko')\<rbrace>
   set_object p ko
   \<lbrace>\<lambda>_ s. \<not> ko_at ko' p' s\<rbrace>"
-  apply (simp add: set_object_def)
+  apply (simp add: set_object_def get_object_def)
   apply wp
   apply (simp add: pred_neg_def obj_at_def)
   done
@@ -170,8 +170,9 @@ lemma hoare_to_pure_kheap_upd:
 
 lemma set_object_wp:
   "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> v)\<rparr>) \<rbrace> set_object p v \<lbrace>\<lambda>_. Q\<rbrace>"
-  apply (simp add: set_object_def)
+  apply (simp add: set_object_def get_object_def)
   apply wp
+  apply blast
   done
 
 lemma get_object_wp:
@@ -180,5 +181,34 @@ lemma get_object_wp:
   apply wp
   apply (clarsimp simp: obj_at_def)
   done
+
+(* FIXME: move *)
+lemma hoare_strengthen_pre_via_assert_forward:
+  assumes pos: "\<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
+  assumes rel: "\<And>s. S s \<Longrightarrow> P s \<or> N s"
+  assumes neg: "\<lbrace> N \<rbrace> f \<lbrace> \<bottom>\<bottom> \<rbrace>"
+  shows "\<lbrace> S \<rbrace> f \<lbrace> Q \<rbrace>"
+  apply (rule hoare_weaken_pre)
+   apply (rule hoare_strengthen_post)
+    apply (rule hoare_vcg_disj_lift[OF pos neg])
+   apply simp
+  apply (erule rel)
+  done
+
+lemma hoare_set_object_weaken_pre:
+  assumes "\<lbrace>P\<rbrace> set_object p v \<lbrace>\<lambda>_. Q\<rbrace>"
+  shows "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> (a_type v = a_type ko) \<longrightarrow> P s\<rbrace>
+         set_object p v
+         \<lbrace>\<lambda>_. Q\<rbrace>"
+  apply (rule hoare_strengthen_pre_via_assert_forward
+                [OF assms, where N="\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> a_type ko \<noteq> a_type v"])
+  apply fastforce
+  apply (simp add: set_object_def)
+  apply (rule hoare_seq_ext[OF _ get_object_sp])
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (fastforce intro: hoare_weaken_pre[OF hoare_pre_cont])
+  done
+
+lemmas set_object_wp_strong = hoare_set_object_weaken_pre[OF set_object_wp]
 
 end

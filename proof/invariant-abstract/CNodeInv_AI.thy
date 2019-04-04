@@ -723,7 +723,7 @@ lemma cap_swap_fd_not_recursive:
 
 lemma set_mrs_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_mrs p' b m \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: set_mrs_def bind_assoc set_object_def)
+  apply (simp add: set_mrs_def bind_assoc set_object_def get_object_def)
   apply (cases b)
    apply simp
    apply wp
@@ -2759,6 +2759,9 @@ lemma cap_delete_rvk_prog:
 end
 
 
+lemma get_object_some: "kheap s ptr = Some ko \<Longrightarrow> get_object ptr s = ({(ko, s)}, False)"
+  by (clarsimp simp: get_object_def gets_def get_def bind_def assert_def return_def)
+
 lemma set_cap_id:
   "cte_wp_at ((=) c) p s \<Longrightarrow> set_cap c p s = ({((),s)}, False)"
   apply (clarsimp simp: cte_wp_at_cases)
@@ -2767,12 +2770,14 @@ lemma set_cap_id:
    apply clarsimp
    apply (simp add: set_cap_def get_object_def bind_assoc exec_gets)
    apply (rule conjI)
-    apply (clarsimp simp: set_object_def exec_get put_def)
+    apply (clarsimp simp: set_object_def)
+    apply (frule get_object_some)
+    apply (drule_tac t="fun" in map_upd_triv)
+    apply (clarsimp simp: bind_def get_def return_def put_def a_type_def)
     apply (cases s)
     apply simp
-    apply (rule ext)
-    apply auto[1]
-   apply clarsimp
+    apply (rule ext, simp)
+   apply (clarsimp simp: get_object_def gets_def get_def bind_def assert_def return_def)
   apply clarsimp
   apply (simp add: set_cap_def get_object_def bind_assoc
                    exec_gets set_object_def exec_get put_def)

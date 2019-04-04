@@ -422,7 +422,7 @@ lemma set_cap_revokable_update:
   apply (cases p)
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
   apply (case_tac y)
-  apply (auto simp add: in_monad set_object_def split: if_split_asm)
+  apply (auto simp add: in_monad set_object_def get_object_def split: if_split_asm)
   done
 
 
@@ -431,7 +431,7 @@ lemma set_cap_cdt_update:
   apply (cases p)
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
   apply (case_tac y)
-  apply (auto simp add: in_monad set_object_def split: if_split_asm)
+  apply (auto simp add: in_monad set_object_def get_object_def split: if_split_asm)
   done
 
 lemma tcb_cap_cases_lt:

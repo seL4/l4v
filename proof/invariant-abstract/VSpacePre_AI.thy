@@ -221,7 +221,7 @@ lemma set_cap_arch_obj:
 lemma set_mrs_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_mrs t buf mrs \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   apply (simp add: set_mrs_def zipWithM_x_mapM split_def
-                   store_word_offs_def set_object_def
+                   store_word_offs_def set_object_def get_object_def
               cong: option.case_cong
               split del: if_split)
   apply (wp hoare_vcg_split_case_option)

@@ -4315,11 +4315,8 @@ lemma set_cap_ups_of_heap[wp]:
   \<lbrace>\<lambda>_ s. P (ups_of_heap (kheap s))\<rbrace>"
   apply (simp add: set_cap_def split_def set_object_def)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
-  apply (case_tac obj, simp_all)
-   prefer 2
-   apply (auto simp: valid_def in_monad obj_at_def)[1]
-  apply (clarsimp simp add: valid_def in_monad obj_at_def)
-  done
+  apply (case_tac obj)
+  by (auto simp: valid_def in_monad obj_at_def get_object_def)
 
 
 lemma cns_of_heap_TCB_upd[simp]:
@@ -4344,12 +4341,9 @@ lemma set_cap_cns_of_heap[wp]:
   \<lbrace>\<lambda>_ s. P (cns_of_heap (kheap s))\<rbrace>"
   apply (simp add: set_cap_def split_def set_object_def)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
-  apply (case_tac obj, simp_all)
-   prefer 2
-   apply (auto simp: valid_def in_monad obj_at_def)[1]
-  apply (clarsimp simp add: valid_def in_monad obj_at_def)
+  apply (case_tac obj)
+   apply (auto simp: valid_def in_monad obj_at_def get_object_def)
   done
-
 
 lemma of_nat_ucast:
   "is_down (ucast :: ('a :: len) word \<Rightarrow> ('b :: len) word)
@@ -4527,11 +4521,14 @@ lemma setup_reply_master_cap_refs_respects_device_region[wp]:
 lemma set_original_set_cap_comm:
   "(set_original slot val >>= (\<lambda>_. set_cap cap slot)) =
    (set_cap cap slot >>= (\<lambda>_. set_original slot val))"
-by (rule ext) (simp add: bind_def split_def set_cap_def set_original_def
-                   get_object_def set_object_def get_def put_def
-                   simpler_gets_def simpler_modify_def
-                   assert_def return_def fail_def
-                 split: Structures_A.kernel_object.splits)
+  apply (rule ext)
+  apply (clarsimp simp: bind_def split_def set_cap_def set_original_def
+                        get_object_def set_object_def get_def put_def
+                        simpler_gets_def simpler_modify_def
+                        assert_def return_def fail_def)
+  apply (case_tac y;
+         simp add: return_def fail_def)
+  done
 
 lemma setup_reply_master_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> setup_reply_master t \<lbrace>\<lambda>_. valid_ioc\<rbrace>"

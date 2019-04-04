@@ -1690,11 +1690,6 @@ defines "m' \<equiv>
          else (m(dest := m src, src := None)) r"
 begin
 
-lemma "{c. m c = Some ab} - {dest} \<union> {c. m c = Some dest} =
-          {c. c \<noteq> dest \<and>
-              (c \<noteq> dest \<longrightarrow> c \<noteq> ab \<and> (c \<noteq> ab \<longrightarrow> m c \<noteq> Some ab \<longrightarrow> m c = Some dest))}"
-  oops
-
 lemma valid_list_post_no_parents:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   notes replace_distinct[simplified list_replace_def,simp]
@@ -3119,6 +3114,7 @@ lemma (in mdb_empty_abs') next_slot:
   done
 
 crunch valid_list[wp]: post_cap_deletion,set_cap valid_list
+  (wp: crunch_wps)
 
 crunch all_but_exst[wp]: empty_slot_ext "all_but_exst P"
 
@@ -3155,7 +3151,7 @@ lemma set_cap_exst_update:
   apply (cases p)
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
   apply (case_tac y)
-      apply (auto simp add: in_monad set_object_def split: if_split_asm)
+      apply (auto simp add: in_monad set_object_def get_object_def split: if_split_asm)
   done
 
 lemma no_parent_not_next_slot:

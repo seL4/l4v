@@ -994,7 +994,7 @@ lemma pspace_no_overlap_same_type:
 lemma set_object_no_overlap:
   "\<lbrace>pspace_no_overlap S and obj_at (\<lambda>k. a_type ko = a_type k) p\<rbrace>
   set_object p ko \<lbrace>\<lambda>r. pspace_no_overlap S\<rbrace>"
-  unfolding set_object_def
+  unfolding set_object_def get_object_def
   apply simp
   apply wp
   apply (clarsimp simp del: fun_upd_apply)
