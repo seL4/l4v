@@ -209,39 +209,24 @@ lemma set_asid_pool_corres:
   "a = inv ASIDPool a' o ucast \<Longrightarrow>
   corres dc (asid_pool_at p and valid_etcbs) (asid_pool_at' p)
             (set_asid_pool p a) (setObject p a')"
-  apply (simp add: set_asid_pool_def update_object_def)
-  apply (rule corres_symb_exec_l)
-     apply (rule corres_symb_exec_l)
-        apply (rule corres_guard_imp)
-          apply (rule set_other_obj_corres [where P="\<lambda>ko::asidpool. True"])
-                apply simp
-               apply (clarsimp simp: obj_at'_def projectKOs)
-               apply (erule map_to_ctes_upd_other, simp, simp)
-              apply (simp add: a_type_def is_other_obj_relation_type_def)
-             apply (simp add: objBits_simps archObjSize_def)
-            apply simp
-           apply (simp add: objBits_simps archObjSize_def pageBits_def)
-          apply (simp add: other_obj_relation_def asid_pool_relation_def)
-         apply assumption
-        apply (simp add: typ_at'_def obj_at'_def ko_wp_at'_def projectKOs)
-        apply clarsimp
-        apply (case_tac ko; simp)
-        apply (rename_tac arch_kernel_object)
-        apply (case_tac arch_kernel_object; simp)
-       prefer 5
-       apply (rule get_object_sp)
-      apply (clarsimp simp: obj_at_def exs_valid_def assert_def a_type_def return_def fail_def)
-      apply (auto split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)[1]
-     apply wp
-     apply (clarsimp simp: obj_at_def a_type_def)
-     apply (auto split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)[1]
-    apply (rule no_fail_pre, wp)
-    apply (clarsimp simp: simp: obj_at_def a_type_def)
-    apply (auto split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)[1]
-   apply (clarsimp simp: obj_at_def exs_valid_def get_object_def exec_gets)
-   apply (simp add: return_def)
-  apply (rule no_fail_pre, wp)
-  apply (clarsimp simp add: obj_at_def)
+  apply (simp add: set_asid_pool_def)
+  apply (rule corres_guard_imp)
+    apply (rule set_other_obj_corres [where P="\<lambda>ko::asidpool. True"])
+          apply simp
+         apply (clarsimp simp: obj_at'_def projectKOs)
+         apply (erule map_to_ctes_upd_other, simp, simp)
+        apply (simp add: a_type_def is_other_obj_relation_type_def)
+       apply (simp add: objBits_simps archObjSize_def)
+      apply simp
+     apply (simp add: objBits_simps archObjSize_def pageBits_def)
+    apply (simp add: other_obj_relation_def asid_pool_relation_def)
+   apply (simp add: typ_at'_def obj_at'_def ko_wp_at'_def projectKOs)
+   apply clarsimp
+   apply (rename_tac arch_kernel_object)
+   apply (case_tac arch_kernel_object; simp)
+   apply (clarsimp simp: obj_at_def exs_valid_def assert_def a_type_def return_def fail_def)
+   apply (auto split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)[1]
+  apply (simp add: typ_at_to_obj_at_arches)
   done
 
 lemma set_asid_pool_corres':
@@ -650,7 +635,7 @@ lemma set_pd_corres:
                     (pde_at' p)
           (set_pd (p && ~~ mask pd_bits) (pd(ucast (p && mask pd_bits >> word_size_bits) := pde)))
           (setObject p pde')"
-  apply (simp add: set_pd_def get_object_def bind_assoc update_object_def)
+  apply (simp add: set_pd_def get_object_def bind_assoc set_object_def)
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
     apply simp
@@ -688,21 +673,21 @@ lemma set_pd_corres:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
+         apply simp
+        apply simp
+       apply clarsimp
+       apply (frule (1) pspace_alignedD)
+       apply (drule_tac p=x in pspace_alignedD, assumption)
        apply simp
-      apply simp
-     apply clarsimp
-     apply (frule (1) pspace_alignedD)
-     apply (drule_tac p=x in pspace_alignedD, assumption)
-     apply simp
-     apply (drule mask_alignment_ugliness)
-        apply (simp add: pd_bits_def pageBits_def)
-       apply (simp add: pd_bits_def pageBits_def)
-      apply clarsimp
-      apply (clarsimp simp: nth_ucast nth_shiftl)
-      apply (drule test_bit_size)
-      apply (clarsimp simp: word_size bit_simps)
-      apply arith
-     apply ((simp split: if_split_asm)+)[4]
+       apply (drule mask_alignment_ugliness)
+          apply (simp add: pd_bits_def pageBits_def)
+         apply (simp add: pd_bits_def pageBits_def)
+        apply clarsimp
+        apply (clarsimp simp: nth_ucast nth_shiftl)
+        apply (drule test_bit_size)
+        apply (clarsimp simp: word_size bit_simps)
+        apply arith
+       apply ((simp split: if_split_asm)+)[4]
    apply (simp add: other_obj_relation_def
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (rule conjI)
@@ -736,7 +721,7 @@ lemma set_pt_corres:
                     (pte_at' p)
           (set_pt (p && ~~ mask pt_bits) (pt(ucast (p && mask pt_bits >> word_size_bits) := pte)))
           (setObject p pte')"
-  apply (simp add: set_pt_def get_object_def bind_assoc update_object_def)
+  apply (simp add: set_pt_def get_object_def bind_assoc set_object_def)
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
     apply simp
@@ -822,7 +807,7 @@ lemma set_pdpt_corres:
                     (pdpte_at' p)
           (set_pdpt (p && ~~ mask pdpt_bits) (pt(ucast (p && mask pdpt_bits >> word_size_bits) := pdpte)))
           (setObject p pdpte')"
-  apply (simp add: set_pdpt_def get_object_def bind_assoc update_object_def)
+  apply (simp add: set_pdpt_def get_object_def bind_assoc set_object_def)
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
     apply simp
@@ -908,7 +893,7 @@ lemma set_pml4_corres:
                     (pml4e_at' p)
           (set_pml4 (p && ~~ mask pml4_bits) (pt(ucast (p && mask pml4_bits >> word_size_bits) := pml4e)))
           (setObject p pml4e')"
-  apply (simp add: set_pml4_def get_object_def bind_assoc update_object_def)
+  apply (simp add: set_pml4_def get_object_def bind_assoc set_object_def)
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
     apply simp

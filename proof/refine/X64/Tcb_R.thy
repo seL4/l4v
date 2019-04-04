@@ -1145,9 +1145,9 @@ lemma threadcontrol_corres_helper1:
      thread_set (tcb_ipc_buffer_update f) a
            \<lbrace>\<lambda>x. tcb_at a and (weak_valid_sched_action and valid_etcbs)\<rbrace>"
   apply (rule hoare_pre)
-   apply (simp add: thread_set_def set_object_def)
-   apply wp
-  apply (simp add: not_None_eq | intro impI | elim exE conjE)+
+   apply (simp add: thread_set_def)
+   apply (wp set_object_wp)
+  apply (simp | intro impI | elim exE conjE)+
   apply (frule get_tcb_SomeD)
   apply (erule ssubst)
   apply (clarsimp simp add: weak_valid_sched_action_def valid_etcbs_2_def st_tcb_at_kh_def

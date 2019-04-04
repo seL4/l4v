@@ -471,7 +471,7 @@ crunch valid_global_objs[wp]: hw_asid_invalidate "valid_global_objs"
 
 lemma delete_asid_corres [corres]:
   assumes "asid' = asid" "pm' = pm"
-  notes set_asid_pool_simpler_def[simp del]
+  notes set_asid_pool_def[simp del]
   shows "corres dc
           (invs and valid_etcbs and K (asid_wf asid \<and> asid \<noteq> 0))
           (pspace_aligned' and pspace_distinct' and no_0_obj'
@@ -934,8 +934,8 @@ crunch inv[wp]: checkMappingPPtr "P"
 
 lemma set_pt_vs_lookup [wp]:
   "\<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace> set_pt p pt \<lbrace>\<lambda>x s. P (vs_lookup s)\<rbrace>"
-  apply (simp add: update_object_def)
-  apply (wpsimp wp: get_object_wp set_object_wp simp: a_type_simps obj_at_def)
+  apply (simp add: set_object_def set_arch_obj_simps)
+  apply (wpsimp wp: get_object_wp simp: a_type_simps obj_at_def)
   apply (erule rsubst [where P=P])
   by (rule order_antisym; rule vs_lookup_sub;
       clarsimp simp: obj_at_def vs_refs_def split: if_splits)
