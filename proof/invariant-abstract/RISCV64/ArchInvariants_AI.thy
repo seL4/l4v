@@ -1653,14 +1653,17 @@ lemma vspace_for_asid_valid_pt:
   by (fastforce simp: in_opt_map_eq valid_vspace_objs_def pt_at_eq vspace_for_pool_def)
 
 lemma pt_slot_offset_vref:
-  "\<lbrakk> is_aligned vref (pt_bits_left (level + 1)); level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> level < level'; is_aligned vref (pt_bits_left level') \<rbrakk> \<Longrightarrow>
    pt_slot_offset level pt_ptr vref = pt_ptr"
   apply (simp add: pt_slot_offset_def pt_index_def pt_bits_left_def)
-  by (metis (no_types, hide_lams) add.commute add.left_commute is_aligned_shiftr
-            is_aligned_shiftr_shiftl shiftl_0 shiftl_mask_is_0)
+  apply (rule word_eqI, clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth bit_simps)
+  apply (erule_tac x="(9 + (n + 9 * size level))" in allE)
+  apply (erule impE; clarsimp)
+  apply (simp flip: bit0.size_less)
+  done
 
 lemma pt_slot_offset_vref_for_level_eq:
-  "level \<le> max_pt_level \<Longrightarrow> pt_slot_offset level pt_ptr (vref_for_level vref (level + 1)) = pt_ptr"
+  "level < level' \<Longrightarrow> pt_slot_offset level pt_ptr (vref_for_level vref level') = pt_ptr"
   by (simp add: vref_for_level_def pt_slot_offset_vref)
 
 lemma vs_lookup_max_pt_levelD:
