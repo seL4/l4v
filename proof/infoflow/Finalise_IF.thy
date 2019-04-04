@@ -1131,9 +1131,9 @@ lemma thread_set_tcb_at:
    \<lbrace>\<lambda>s. tcb_at ptr s \<longrightarrow> Q s\<rbrace> thread_set x ptr \<lbrace>\<lambda>_ s. P s\<rbrace>"
   apply (rule use_spec(1))
   apply (case_tac "tcb_at ptr s")
-  apply (clarsimp simp add: spec_valid_def valid_def)
+   apply (clarsimp simp add: spec_valid_def valid_def)
   apply (simp add: spec_valid_def thread_set_def set_object_def[abs_def])
-  apply wp
+  apply (wp get_object_wp)
   apply (force simp: get_tcb_def obj_at_def is_tcb_def
               split: option.splits Structures_A.kernel_object.splits)
   done
@@ -1821,9 +1821,9 @@ crunch valid_ko_at_arm[wp]: thread_set "valid_ko_at_arm" (simp: arm_global_pd_no
 lemma set_asid_pool_valid_ko_at_arm[wp]:
   "\<lbrace>valid_ko_at_arm\<rbrace> set_asid_pool a b\<lbrace>\<lambda>_.valid_ko_at_arm\<rbrace>"
   unfolding set_asid_pool_def
-  apply (wp get_object_wp | wpc)+
+  apply (wpsimp wp: set_object_wp_strong simp: a_type_def)
   apply(fastforce simp: valid_ko_at_arm_def get_tcb_ko_at obj_at_def)
-done
+  done
 
 crunch valid_ko_at_arm[wp]: finalise_cap "valid_ko_at_arm"
   (wp: hoare_vcg_if_lift2 hoare_drop_imps select_wp modify_wp mapM_wp' dxo_wp_weak

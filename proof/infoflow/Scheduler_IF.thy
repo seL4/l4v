@@ -2498,9 +2498,8 @@ lemma thread_set_context_globals_equiv:
   "\<lbrace>(\<lambda>s. t = idle_thread s \<longrightarrow> tc = idle_context s) and invs and globals_equiv st\<rbrace>
      thread_set (tcb_arch_update (arch_tcb_context_set tc)) t
    \<lbrace>\<lambda>rv. globals_equiv st\<rbrace>"
-  apply (clarsimp simp: thread_set_def set_object_def)
-  apply wp
-  apply clarsimp
+  apply (clarsimp simp: thread_set_def)
+  apply (wpsimp wp: set_object_wp)
   apply (subgoal_tac "t \<noteq> arm_global_pd (arch_state s)")
    apply (clarsimp simp: idle_equiv_def globals_equiv_def tcb_at_def2 get_tcb_def idle_context_def)
    apply (clarsimp split: option.splits kernel_object.splits)
@@ -2583,6 +2582,7 @@ lemma set_object_reads_respects_scheduler[wp]:
   "reads_respects_scheduler aag l \<top> (set_object ptr obj)"
   unfolding equiv_valid_def2 equiv_valid_2_def
   apply(clarsimp simp: set_object_def bind_def get_def put_def return_def
+                       get_object_def assert_def fail_def gets_def
                        scheduler_equiv_def domain_fields_equiv_def
                        globals_equiv_scheduler_def silc_dom_equiv_def)
   apply (clarsimp simp: equiv_for_def scheduler_affects_equiv_def

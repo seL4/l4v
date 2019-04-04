@@ -608,10 +608,13 @@ lemma sts_schact_is_rct_runnable:
       set_thread_state a b
    \<lbrace>\<lambda>_. schact_is_rct\<rbrace>"
   apply (simp add: set_thread_state_def
-                   set_scheduler_action_def set_object_def)
-  apply (simp add: set_thread_state_ext_def)
-  apply (wp modify_wp set_scheduler_action_wp gts_wp)
-  apply (clarsimp simp: schact_is_rct_def st_tcb_at_def obj_at_def)
+                   set_scheduler_action_def)
+  apply (wpsimp wp: set_object_wp)
+     apply (simp add: set_thread_state_ext_def)
+     apply (wp modify_wp set_scheduler_action_wp gts_wp)
+    apply (wpsimp wp: set_object_wp)
+   apply wp
+  apply (clarsimp simp: schact_is_rct_def st_tcb_at_def obj_at_def gets_the_def gets_def)
   done
 
 lemma set_thread_state_only_timer_irq_inv:

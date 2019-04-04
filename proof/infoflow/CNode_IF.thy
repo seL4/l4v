@@ -337,12 +337,11 @@ lemma set_object_globals_equiv:
              \<and> (\<forall>tcb'. obj = (TCB tcb') \<longrightarrow> tcb_at (idle_thread t) t)) \<rbrace>
    set_object ptr obj
    \<lbrace> \<lambda>_. globals_equiv s \<rbrace>"
-  unfolding set_object_def
-  apply(wp)
+  apply (wpsimp wp: set_object_wp)
   apply (case_tac "ptr = idle_thread sa")
-   apply(clarsimp simp: globals_equiv_def idle_equiv_def tcb_at_def2)
+   apply (clarsimp simp: globals_equiv_def idle_equiv_def tcb_at_def2)
    apply (intro impI conjI allI notI iffI | clarsimp)+
-  apply(clarsimp simp: globals_equiv_def idle_equiv_def tcb_at_def2)
+  apply (clarsimp simp: globals_equiv_def idle_equiv_def tcb_at_def2)
   done
 
 lemma set_object_globals_equiv'':

@@ -184,17 +184,7 @@ lemma get_pt_revrv:
 lemma set_pt_reads_respects:
   "reads_respects aag l \<top> (set_pt ptr pt)"
   unfolding set_pt_def
-  apply(subst equiv_valid_def2)
-  apply(rule equiv_valid_rv_bind)
-    apply(rule equiv_valid_rv_guard_imp)
-     apply(rule get_object_revrv)
-    apply(simp, simp)
-   apply(rule equiv_valid_2_bind)
-      apply(subst equiv_valid_def2[symmetric])
-      apply(rule set_object_reads_respects)
-     apply(rule assert_ev2, simp)
-    apply(wp wp_post_taut | simp)+
-  done
+  by (rule set_object_reads_respects)
 
 lemma get_pt_reads_respects:
   "reads_respects aag l (K (is_subject aag ptr)) (get_pt ptr)"
@@ -931,8 +921,7 @@ lemma set_object_equiv_but_for_labels:
     K ((\<forall> asid_pool. obj \<noteq> ArchObj (ASIDPool asid_pool)) \<and> pasObjectAbs aag ptr \<in> L)\<rbrace>
    set_object ptr obj
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  unfolding set_object_def
-  apply wp
+  apply (wpsimp wp: set_object_wp)
   apply(clarsimp simp: equiv_but_for_labels_def)
   apply(subst dummy_kheap_update[where st=st])
   apply(rule states_equiv_for_non_asid_pool_kheap_update)
@@ -1148,16 +1137,7 @@ lemma perform_asid_control_invocation_reads_respects:
 lemma set_asid_pool_reads_respects:
   "reads_respects aag l \<top> (set_asid_pool ptr pool)"
   unfolding set_asid_pool_def
-  apply(simp add: equiv_valid_def2)
-  apply(rule equiv_valid_rv_bind)
-    apply(rule equiv_valid_rv_trivial, wp)
-   apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" in equiv_valid_2_bind)
-      apply(fold equiv_valid_def2)
-      apply(rule set_object_reads_respects)
-     apply(rule assert_ev2, rule refl)
-    apply (wp get_object_wp)+
-  apply clarsimp
-  done
+  by (rule set_object_reads_respects)
 
 lemma perform_asid_pool_invocation_reads_respects:
   "reads_respects aag l (pas_refined aag and K (authorised_asid_pool_inv aag api))  (perform_asid_pool_invocation api)"
@@ -1305,12 +1285,10 @@ lemma set_asid_pool_state_equal_except_kheap:
             kheap s pool_ptr = Some (ArchObj (ASIDPool asid_pool)) \<and>
             kheap s' pool_ptr = Some (ArchObj (ASIDPool asid_pool')) \<longrightarrow>
               asid_pool (ucast asid) = asid_pool' (ucast asid))))"
-  apply(clarsimp simp: set_asid_pool_def put_def bind_def get_object_def gets_def get_def return_def assert_def fail_def set_object_def split: if_split_asm)
-  apply(clarsimp simp: states_equal_except_kheap_asid_def equiv_for_def obj_at_def)
-  apply(case_tac "pool_ptr = ptr")
-   apply(clarsimp simp: a_type_def split: kernel_object.splits arch_kernel_obj.splits)
-  apply(clarsimp)
-  done
+  by (clarsimp simp: set_asid_pool_def put_def bind_def set_object_def get_object_def gets_def
+                     get_def return_def assert_def fail_def states_equal_except_kheap_asid_def
+                     equiv_for_def obj_at_def
+              split: if_split_asm)
 
 lemma set_asid_pool_delete_ev2:
   "equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l)
@@ -1422,7 +1400,7 @@ subsection "globals_equiv"
 lemma set_simple_ko_globals_equiv:
   "\<lbrace>globals_equiv s and valid_ko_at_arm\<rbrace> set_simple_ko f ptr ep \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding set_simple_ko_def
-  apply(wpsimp wp: set_object_globals_equiv get_object_wp
+  apply(wpsimp wp: set_object_globals_equiv[THEN hoare_set_object_weaken_pre] get_object_wp
              simp: partial_inv_def)+
   apply(fastforce simp: obj_at_def valid_ko_at_arm_def)
   done
@@ -1457,9 +1435,9 @@ lemma set_object_valid_ko_at_arm[wp]:
   "\<lbrace>valid_ko_at_arm and (\<lambda>s. ptr = arm_global_pd (arch_state s) \<longrightarrow>
    a_type obj = AArch APageDirectory)\<rbrace>
      set_object ptr obj \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
-  unfolding set_object_def
-  apply(wp, fastforce simp: valid_ko_at_arm_def obj_at_def dest: a_type_pdD)
-  done
+  by (wpsimp wp: set_object_wp
+           simp: a_type_def valid_ko_at_arm_def obj_at_def
+          split: kernel_object.splits arch_kernel_obj.splits if_splits)
 
 lemma valid_ko_at_arm_exst_update[simp]: "valid_ko_at_arm (trans_state f s) = valid_ko_at_arm s"
   apply (simp add: valid_ko_at_arm_def)
@@ -1496,8 +1474,9 @@ lemma thread_set_globals_equiv:
 lemma set_asid_pool_globals_equiv:
   "\<lbrace>globals_equiv s and valid_ko_at_arm\<rbrace> set_asid_pool ptr pool \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding set_asid_pool_def
-  apply(wp set_object_globals_equiv get_object_wp)
-  apply(fastforce simp: valid_ko_at_arm_def obj_at_def)
+  apply (wpsimp wp: set_object_globals_equiv[THEN hoare_set_object_weaken_pre]
+              simp: a_type_def)
+  apply (fastforce simp: valid_ko_at_arm_def obj_at_def)
   done
 
 lemma idle_equiv_arch_state_update[simp]: "idle_equiv st (s\<lparr>arch_state := x\<rparr>) = idle_equiv st s"
@@ -1590,9 +1569,10 @@ crunch globals_equiv[wp]: invalidate_tlb_by_asid "globals_equiv s"
 
 lemma set_pt_globals_equiv:
   "\<lbrace>globals_equiv s and valid_ko_at_arm\<rbrace> set_pt ptr pt \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding  set_pt_def
-  apply(wp set_object_globals_equiv get_object_wp)
-  apply(fastforce simp: valid_ko_at_arm_def obj_at_def)
+  unfolding set_pt_def
+  apply (wpsimp wp: set_object_globals_equiv[THEN hoare_set_object_weaken_pre]
+              simp: a_type_def)
+  apply (fastforce simp: valid_ko_at_arm_def obj_at_def)
   done
 
 crunch globals_equiv: store_pte "globals_equiv s"
@@ -1698,9 +1678,7 @@ lemma unmap_page_table_globals_equiv:
 lemma set_pt_valid_ko_at_arm[wp]:
   "\<lbrace>valid_ko_at_arm\<rbrace> set_pt ptr pt \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
   unfolding set_pt_def
-  apply(wp get_object_wp)
-  apply(clarsimp simp: valid_ko_at_arm_def obj_at_def)
-  done
+  by (wpsimp wp: set_object_wp_strong simp: valid_ko_at_arm_def obj_at_def a_type_def)
 
 crunch valid_ko_at_arm[wp]: store_pte "valid_ko_at_arm"
 

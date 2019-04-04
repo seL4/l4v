@@ -409,19 +409,12 @@ lemma prop_of_two_valid:
   "\<lbrace>\<lambda>s. P (f s) (g s)\<rbrace> m \<lbrace>\<lambda>_ s. P (f s) (g s)\<rbrace>"
   by (rule hoare_pre, wps f g, wp, simp)
 
-
-
 lemma integrity_update_reference_state:
   "is_subject aag t \<Longrightarrow> integrity aag X st s \<Longrightarrow>
    st = st'\<lparr> kheap := kheap st'( t \<mapsto> blah)\<rparr> \<Longrightarrow>
    integrity aag X st' s"
   apply(erule integrity_trans[rotated])
-  apply(subgoal_tac "\<lbrace>(=) st'\<rbrace> set_object t blah \<lbrace>\<lambda>_. integrity aag X st'\<rbrace>")
-   apply(simp add: valid_def)
-   apply(drule_tac x="((),st)" in bspec)
-    apply(simp add: set_object_def bind_def get_def put_def return_def)
-   apply simp
-  apply(wp set_object_integrity_autarch | simp)+
+  apply (clarsimp simp: integrity_def)
   done
 
 lemma thread_set_tcb_context_update_wp:
@@ -1542,7 +1535,7 @@ where
 
 
 crunch schact_is_rct[wp]: thread_set "schact_is_rct"
-  (simp: schact_is_rct_def)
+  (wp: get_object_wp simp: schact_is_rct_def)
 
 end
 

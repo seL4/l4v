@@ -232,8 +232,9 @@ lemma set_thread_state_runnable_equiv_but_for_labels:
     set_thread_state thread tst
     \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   unfolding set_thread_state_def
-  apply (wp set_object_equiv_but_for_labels set_thread_state_ext_runnable_equiv_but_for_labels | simp add: split_def)+
-   apply (simp add: set_object_def, wp+)
+  apply (wpsimp wp: set_object_equiv_but_for_labels[THEN hoare_set_object_weaken_pre]
+                    set_thread_state_ext_runnable_equiv_but_for_labels)
+    apply (wpsimp wp: set_object_wp)+
   apply (fastforce dest: get_tcb_not_asid_pool_at simp: st_tcb_at_def obj_at_def)
   done
 
@@ -457,10 +458,10 @@ lemma sts_to_modify':
      apply (simp only: bind_assoc[symmetric])
      apply (rule monadic_rewrite_bind_tail)
       apply (rule sts_noop)
-     apply wp
-    apply simp
-    apply (rule_tac x="the (get_tcb tcb x)" in monadic_rewrite_symb_exec,(wp | simp)+)
-    apply (rule_tac x="x" in  monadic_rewrite_symb_exec,(wp | simp)+)
+     apply (wpsimp wp: get_object_wp, simp)
+    apply (rule_tac x="the (get_tcb tcb x)" in monadic_rewrite_symb_exec, (wp | simp)+)
+    apply (rule_tac x="x" in  monadic_rewrite_symb_exec, (wp | simp)+)
+        apply (wpsimp wp: get_object_wp simp: a_type_def)+
     apply (rule_tac P="(=) x" in monadic_rewrite_refl3)
     apply (clarsimp simp add: put_def modify_def get_def bind_def)
    apply assumption
@@ -481,8 +482,9 @@ lemma
   apply (simp add: set_thread_state_def set_object_def)
   apply (simp add: set_thread_state_ext_def get_thread_state_def thread_get_def set_scheduler_action_def)
   apply (rule no_fail_pre)
-   apply wp
-  by (clarsimp simp: get_tcb_def tcb_at_def)
+   apply (wpsimp wp: get_object_wp)+
+  apply (clarsimp simp: get_tcb_def tcb_at_def obj_at_def a_type_def is_tcb_def split: kernel_object.splits option.splits)
+  by (metis kernel_object.exhaust option.inject)
 
 lemmas sts_to_modify = monadic_rewrite_weaken_failure[OF sts_to_modify' sts_no_fail no_fail_modify,simplified]
 
@@ -2392,19 +2394,19 @@ lemma receive_signal_globals_equiv:
   done
 
 lemma set_object_valid_global_refs:
-  "\<lbrace>valid_global_refs and (\<lambda>s. \<forall>b. (\<forall>sz fun. obj=CNode sz fun \<longrightarrow> well_formed_cnode_n sz fun \<longrightarrow> (\<forall>cap. fun b = Some cap \<longrightarrow> global_refs s \<inter> cap_range cap = {})) \<and> (\<forall>tcb. obj = (TCB tcb) \<longrightarrow> (\<forall>get. (\<forall>set restr. tcb_cap_cases b \<noteq> Some (get, set, restr) \<or> global_refs s \<inter> cap_range(get tcb) = {}))))\<rbrace> set_object ptr obj
+  "\<lbrace>valid_global_refs and
+      (\<lambda>s. \<forall>b. (\<forall>sz fun. obj=CNode sz fun \<longrightarrow> well_formed_cnode_n sz fun \<longrightarrow>
+        (\<forall>cap. fun b = Some cap \<longrightarrow> global_refs s \<inter> cap_range cap = {})) \<and>
+      (\<forall>tcb. obj = (TCB tcb) \<longrightarrow> (\<forall>get. (\<forall>set restr. tcb_cap_cases b \<noteq> Some (get, set, restr) \<or>
+        global_refs s \<inter> cap_range(get tcb) = {}))))\<rbrace>
+    set_object ptr obj
     \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
-   unfolding set_object_def valid_global_refs_def valid_refs_def
-   apply(clarsimp simp: cte_wp_at_cases)
-   apply(wp)
-   apply(clarify)
-   apply(rule conjI)
-    apply(clarsimp)
-   apply(clarsimp)
-   apply(erule_tac x=b in allE)
-   apply(erule_tac x=get in allE)
-   apply(simp)
-   done
+  unfolding valid_global_refs_def valid_refs_def
+  apply (wpsimp wp: set_object_wp simp: cte_wp_at_cases)
+  apply (erule_tac x=b in allE)
+  apply (erule_tac x=get in allE)
+  apply (simp)
+  done
 
 
 lemma send_fault_ipc_globals_equiv:

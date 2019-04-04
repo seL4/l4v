@@ -225,12 +225,11 @@ lemma dmo_freeMemory_reads_respects:
   apply wp
   done
 
-lemma set_pd_globals_equiv: "\<lbrace>globals_equiv st and (\<lambda>s. a \<noteq> arm_global_pd (arch_state s))\<rbrace> set_pd a b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (rule hoare_pre)
-   apply (simp add: set_pd_def get_object_def)
-   apply (wp set_object_globals_equiv)
-  apply clarsimp
-  done
+lemma set_pd_globals_equiv:
+  "\<lbrace>globals_equiv st and (\<lambda>s. a \<noteq> arm_global_pd (arch_state s))\<rbrace> set_pd a b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding set_pd_def
+  by (wpsimp wp: set_object_globals_equiv[THEN hoare_set_object_weaken_pre]
+           simp: obj_at_def)
 
 lemma globals_equiv_cdt_update[simp]:
   "globals_equiv s (s'\<lparr> cdt := x \<rparr>) = globals_equiv s s'"
@@ -249,11 +248,15 @@ lemma create_cap_globals_equiv:
   done
 
 (* could remove the precondition here and replace with \<top> if we wanted the trouble *)
+lemma equiv_valid_inv_pre_weaken:
+  "\<lbrakk> \<And>s. P' s \<Longrightarrow> P s; equiv_valid_inv I A P f \<rbrakk> \<Longrightarrow> equiv_valid_inv I A P' f"
+  oops
+
 lemma set_pd_reads_respects:
   "reads_respects aag l (K (is_subject aag a)) (set_pd a b)"
   unfolding set_pd_def
-  apply(wp set_object_reads_respects get_object_rev get_object_wp | clarsimp split: kernel_object.splits arch_kernel_obj.splits simp: asid_pool_at_kheap obj_at_def)+
-  done
+  by (blast intro: equiv_valid_guard_imp set_object_reads_respects)
+
 
 lemma set_pd_reads_respects_g:
   "reads_respects_g aag l (\<lambda> s. is_subject aag ptr \<and> ptr \<noteq> arm_global_pd (arch_state s)) (set_pd ptr pd)"

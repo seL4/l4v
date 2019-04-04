@@ -1264,10 +1264,16 @@ lemma requiv_wuc_eq[intro]:
 
 lemma set_object_reads_respects:
   "reads_respects aag l \<top> (set_object ptr obj)"
-  unfolding equiv_valid_def2 equiv_valid_2_def
-  apply(clarsimp simp: set_object_def bind_def get_def put_def return_def)
-  apply(fastforce intro: reads_equiv_identical_kheap_updates affects_equiv_identical_kheap_updates
-                   simp: identical_kheap_updates_def)
+  unfolding set_object_def
+  apply(clarsimp simp: set_object_def bind_def' get_def gets_def put_def return_def fail_def assert_def
+                       get_object_def identical_kheap_updates_def
+                 cong del: if_weak_cong)
+  apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def)
+  apply (rule conjI)
+   apply (erule reads_equiv_identical_kheap_updates)
+   apply (clarsimp simp: identical_kheap_updates_def)
+  apply (erule affects_equiv_identical_kheap_updates)
+  apply (clarsimp simp: identical_kheap_updates_def)
   done
 
 lemma update_object_noop:
@@ -1280,7 +1286,7 @@ lemma update_object_noop:
 lemma set_object_rev:
   "reads_equiv_valid_inv A aag (\<lambda> s. kheap s ptr = Some obj \<and> is_subject aag ptr) (set_object ptr obj)"
   unfolding equiv_valid_def2 equiv_valid_2_def
-  apply(clarsimp simp: set_object_def bind_def get_def put_def return_def)
+  apply(clarsimp simp: set_object_def bind_def get_def gets_def put_def return_def assert_def get_object_def)
   apply(fastforce dest: update_object_noop)
   done
 

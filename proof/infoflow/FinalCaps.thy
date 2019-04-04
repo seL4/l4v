@@ -649,9 +649,7 @@ lemma set_object_wp:
   "\<lbrace> \<lambda> s. P (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>) \<rbrace>
    set_object ptr obj
    \<lbrace> \<lambda>_. P \<rbrace>"
-  unfolding set_object_def
-  apply (wp)
-  done
+  by (wpsimp wp: set_object_wp)
 
 
 
@@ -1121,14 +1119,12 @@ lemma set_simple_ko_silc_inv[wp]:
     set_simple_ko f ptr ep
     \<lbrace> \<lambda> _. silc_inv aag st \<rbrace>"
   unfolding set_simple_ko_def
-  apply(rule silc_inv_pres)
-    apply(wp set_object_wp get_object_wp)
-    apply (simp split: kernel_object.splits)
-    apply(rule impI | simp)+
-    apply(fastforce simp: silc_inv_def obj_at_def is_cap_table_def)
-   apply(wp set_object_wp get_object_wp | simp)+
-  apply(case_tac "ptr = fst slot")
-   apply(clarsimp simp: a_type_def partial_inv_def split: kernel_object.splits)
+  apply (rule silc_inv_pres)
+    apply (wpsimp wp: set_object_wp_strong get_object_wp simp: obj_at_def)
+    apply (fastforce simp: silc_inv_def obj_at_def is_cap_table_def)
+   apply (wpsimp wp: set_object_wp get_object_wp)
+  apply (wpsimp wp: set_object_wp_strong get_object_wp simp: obj_at_def)
+  apply (case_tac "ptr = fst (a,b)")
    apply(fastforce elim: cte_wp_atE simp: obj_at_def)
   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
@@ -1389,11 +1385,9 @@ lemma set_pt_silc_inv[wp]:
     \<lbrace> \<lambda> _. silc_inv aag st \<rbrace>"
   unfolding set_pt_def
   apply(rule silc_inv_pres)
-   apply(wp set_object_wp get_object_wp)
-   apply (simp split: kernel_object.splits)
-   apply(rule impI | simp)+
-   apply(fastforce simp: silc_inv_def obj_at_def is_cap_table_def)
-  apply(wp set_object_wp get_object_wp | simp)+
+    apply(wpsimp wp: set_object_wp_strong simp: a_type_def split: kernel_object.splits)
+    apply(fastforce simp: silc_inv_def obj_at_def is_cap_table_def)
+   apply(wp set_object_wp get_object_wp | simp)+
   apply(case_tac "ptr = fst slot")
    apply(clarsimp split: kernel_object.splits)
    apply(fastforce elim: cte_wp_atE simp: obj_at_def)
@@ -1406,11 +1400,9 @@ lemma set_pd_silc_inv[wp]:
     \<lbrace> \<lambda> _. silc_inv aag st \<rbrace>"
   unfolding set_pd_def
   apply(rule silc_inv_pres)
-   apply(wp set_object_wp get_object_wp)
-   apply (simp split: kernel_object.splits)
-   apply(rule impI | simp)+
-   apply(fastforce simp: silc_inv_def obj_at_def is_cap_table_def)
-  apply(wp set_object_wp get_object_wp | simp)+
+    apply(wpsimp wp: set_object_wp_strong simp: a_type_def split: kernel_object.splits)
+    apply(fastforce simp: silc_inv_def obj_at_def is_cap_table_def)
+   apply(wp set_object_wp get_object_wp | simp)+
   apply(case_tac "ptr = fst slot")
    apply(clarsimp split: kernel_object.splits)
    apply(fastforce elim: cte_wp_atE simp: obj_at_def)
@@ -1423,11 +1415,9 @@ lemma set_asid_pool_silc_inv[wp]:
     \<lbrace> \<lambda> _. silc_inv aag st \<rbrace>"
   unfolding set_asid_pool_def
   apply(rule silc_inv_pres)
-   apply(wp set_object_wp get_object_wp)
-   apply (simp split: kernel_object.splits)
-   apply(rule impI | simp)+
-   apply(fastforce simp: silc_inv_def obj_at_def is_cap_table_def)
-  apply(wp set_object_wp get_object_wp | simp)+
+    apply(wpsimp wp: set_object_wp_strong simp: a_type_def split: kernel_object.splits)
+    apply(fastforce simp: silc_inv_def obj_at_def is_cap_table_def)
+   apply(wp set_object_wp get_object_wp | simp)+
   apply(case_tac "ptr = fst slot")
    apply(clarsimp split: kernel_object.splits)
    apply(fastforce elim: cte_wp_atE simp: obj_at_def)
