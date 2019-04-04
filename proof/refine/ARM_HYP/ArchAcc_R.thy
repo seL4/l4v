@@ -943,7 +943,7 @@ lemma set_pd_corres [corres]:
                     (pde_at' p)
           (set_pd (p && ~~ mask pd_bits) (pd(ucast (p && mask pd_bits >> pde_bits) := pde)))
           (setObject p pde')"
-  apply (simp add: set_pd_def get_object_def bind_assoc)
+  apply (simp add: set_pd_def set_object_def get_object_def a_type_def bind_assoc)
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
     apply simp
@@ -1023,7 +1023,7 @@ lemma set_pt_corres [corres]:
                     (pte_at' p)
           (set_pt (p && ~~ mask pt_bits) (pt(ucast (p && mask pt_bits >> pte_bits) := pte)))
           (setObject p pte')"
-  apply (simp add: set_pt_def get_object_def bind_assoc)
+  apply (simp add: set_pt_def set_object_def get_object_def a_type_def bind_assoc)
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
     apply simp

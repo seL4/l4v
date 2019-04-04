@@ -839,34 +839,19 @@ lemma set_vcpu_corres:
                   (set_vcpu vcpu vcpuObj)
                   (setObject vcpu vcpuObj')"
   apply (simp add: set_vcpu_def)
-  apply (rule corres_symb_exec_l)
-     apply (rule corres_symb_exec_l)
-        apply (rule corres_guard_imp)
-          apply (rule set_other_obj_corres [where P="\<lambda>ko::vcpu. True"])
-                apply simp
-               apply (clarsimp simp: obj_at'_def projectKOs)
-               apply (erule map_to_ctes_upd_other, simp, simp)
-              apply (simp add: a_type_def is_other_obj_relation_type_def)
-             apply (simp add: objBits_simps archObjSize_def)
-            apply simp
-           apply (simp add: objBits_simps archObjSize_def vcpu_bits_def pageBits_def)
-          apply (simp add: other_obj_relation_def asid_pool_relation_def)
-         apply assumption
-        apply (clarsimp simp add: typ_at_to_obj_at'[symmetric])
-       prefer 5
-       apply (rule get_object_sp)
-      apply (clarsimp simp: obj_at_def exs_valid_def assert_def a_type_def return_def fail_def)
-      apply (auto split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)[1]
-     apply wp
-     apply (clarsimp simp: obj_at_def a_type_def)
-     apply (auto split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)[1]
-    apply (rule no_fail_pre, wp)
-    apply (clarsimp simp: simp: obj_at_def a_type_def)
-    apply (auto split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)[1]
-   apply (clarsimp simp: obj_at_def exs_valid_def get_object_def exec_gets)
-   apply (simp add: return_def)
-  apply (rule no_fail_pre, wp)
-  apply (clarsimp simp add: obj_at_def)
+  apply (rule corres_guard_imp)
+    apply (rule set_other_obj_corres [where P="\<lambda>ko::vcpu. True"], simp)
+         apply (clarsimp simp: obj_at'_def projectKOs)
+         apply (erule map_to_ctes_upd_other, simp, simp)
+        apply (simp add: a_type_def is_other_obj_relation_type_def)
+       apply (simp add: objBits_simps archObjSize_def)
+      apply simp
+     apply (simp add: objBits_simps archObjSize_def vcpu_bits_def pageBits_def)
+    apply (simp add: other_obj_relation_def asid_pool_relation_def)
+   apply (clarsimp simp: typ_at_to_obj_at'[symmetric] obj_at_def exs_valid_def
+                         assert_def a_type_def return_def fail_def)
+   apply (fastforce split: Structures_A.kernel_object.split_asm if_split_asm)
+  apply (simp add: typ_at_to_obj_at_arches)
   done
 
 lemma map_nat_upto_int: "map nat [0 .. int n - 1] = [0 ..< n]"

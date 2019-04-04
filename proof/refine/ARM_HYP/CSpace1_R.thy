@@ -2027,27 +2027,29 @@ lemma set_cap_not_quite_corres_prequel:
   apply (frule(5) cte_map_pulls_cte_to_abstract[OF p])
   apply (clarsimp simp: set_cap_def split_def bind_def get_object_def
                         simpler_gets_def assert_def fail_def return_def
-                        set_object_def get_def put_def domI)
-  apply (erule(1) valid_objsE)
-  apply (clarsimp simp: valid_obj_def valid_cs_def valid_cs_size_def exI)
+                        set_object_def get_def put_def domI a_type_def)
   apply (rule conjI)
-   apply (erule(1) pspace_relation_update_ctes[where cap=c])
-    apply clarsimp
-    apply (intro conjI impI)
-     apply (rule ext, clarsimp simp add: domI p)
+   apply (erule(1) valid_objsE)
+   apply (clarsimp simp: valid_obj_def valid_cs_def valid_cs_size_def exI)
+   apply (rule conjI)
+    apply (erule(1) pspace_relation_update_ctes[where cap=c])
+     apply clarsimp
+     apply (intro conjI impI)
+      apply (rule ext, clarsimp simp add: domI p)
+      apply (drule cte_map_inj_eq [OF _ _ cr(6) cr(3-5)])
+       apply (simp add: cte_at_cases domI)
+      apply (simp add: prod_eq_iff)
+     apply (insert p)[1]
+     apply (clarsimp split: option.split Structures_A.kernel_object.split
+                    intro!: ext)
      apply (drule cte_map_inj_eq [OF _ _ cr(6) cr(3-5)])
-      apply (simp add: cte_at_cases domI)
-     apply (simp add: prod_eq_iff)
-    apply (insert p)[1]
-    apply (clarsimp split: option.split Structures_A.kernel_object.split
-                   intro!: ext)
-    apply (drule cte_map_inj_eq [OF _ _ cr(6) cr(3-5)])
-     apply (simp add: cte_at_cases domI well_formed_cnode_invsI[OF cr(3)])
-    apply clarsimp
-   apply (simp add: c)
-  apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
-  apply (drule bspec, erule domI)
-  apply (clarsimp simp: etcb_relation_def tcb_cte_cases_def split: if_split_asm)
+      apply (simp add: cte_at_cases domI well_formed_cnode_invsI[OF cr(3)])
+     apply clarsimp
+    apply (simp add: c)
+   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
+   apply (drule bspec, erule domI)
+   apply (clarsimp simp: etcb_relation_def tcb_cte_cases_def split: if_split_asm)
+  apply (simp add: well_formed_cnode_invsI wf_cs_upd)
   done
 
 lemma setCTE_pspace_only:

@@ -2355,9 +2355,8 @@ crunch tcb_in_cur_domain'[wp]: archThreadGet, handleFaultReply "tcb_in_cur_domai
 
 lemma as_user_valid_etcbs[wp]:
   "\<lbrace>valid_etcbs\<rbrace> as_user tptr f \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
-  apply (simp add: as_user_def set_object_def)
-  apply (wp | wpc)+
-  apply clarsimp
+  apply (simp add: as_user_def)
+  apply (wpsimp wp: set_object_wp)
   apply (fastforce simp: valid_sched_def valid_etcbs_def valid_queues_def
                          valid_sched_action_def is_activatable_def
                          weak_valid_sched_action_def

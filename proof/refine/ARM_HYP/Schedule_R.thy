@@ -1012,12 +1012,10 @@ lemma vs_lookup_pages_vcpu_update':
 
 lemma set_vcpu_valid_vs_lookup[wp]:
   "\<lbrace>valid_vs_lookup\<rbrace> set_vcpu x v \<lbrace>\<lambda>rv. valid_vs_lookup\<rbrace>"
-  apply (wpsimp simp: set_vcpu_def set_object_def wp: get_object_wp)
-  apply (fold fun_upd_def)
-  apply (case_tac ko; simp)
-  apply (case_tac x5; simp)
+  apply (wpsimp wp: set_object_wp_strong simp: set_vcpu_def obj_at_def)
+  apply (case_tac ko; clarsimp simp: a_type_def split: if_splits)
+  apply (case_tac x5; clarsimp split: if_splits)
   apply (erule valid_vs_lookupE)
-  apply (simp add: obj_at_def vs_lookup_pages_vcpu_update')
   apply (subst vs_lookup_pages_vcpu_update', assumption, assumption)
   apply simp
   by (rule caps_of_state_VCPU_update[symmetric], simp add: obj_at_def)

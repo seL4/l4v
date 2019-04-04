@@ -1524,7 +1524,7 @@ lemma set_cap_trans_state:
   apply (cases p)
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
   apply (case_tac y)
-  apply (auto simp add: in_monad set_object_def split: if_split_asm)
+      apply (auto simp: in_monad set_object_def get_object_def split: if_split_asm)
   done
 
 lemma clearUntypedFreeIndex_corres_noop:
@@ -4430,7 +4430,13 @@ definition thread_set_all :: "(Structures_A.tcb \<Rightarrow> Structures_A.tcb) 
 lemma thread_set_ethread_set_all:
   "do thread_set f t; ethread_set g t od
    = thread_set_all f g t"
-  by (rule ext) (clarsimp simp: thread_set_def ethread_set_def gets_the_def set_object_def set_object_def fail_def assert_opt_def split_def do_extended_op_def thread_set_all_def set_thread_all_def set_eobject_def thread_gets_the_all_def bind_def gets_def get_def return_def put_def get_etcb_def split: option.splits)
+  apply (rule ext)
+  apply (clarsimp simp: thread_set_def ethread_set_def gets_the_def set_object_def get_object_def
+                        fail_def assert_opt_def split_def do_extended_op_def thread_set_all_def
+                        set_thread_all_def set_eobject_def thread_gets_the_all_def bind_def gets_def
+                        get_def return_def put_def get_etcb_def assert_def get_tcb_SomeD
+                 split: option.splits)
+  done
 
 lemma set_thread_all_corres:
   fixes ob' :: "'a :: pspace_storable"
@@ -4594,10 +4600,11 @@ lemma thread_get_thread_get:
 lemma thread_set_gets_futz:
   "thread_set F t >>= (\<lambda>_. gets cur_domain >>= g)
  = gets cur_domain >>= (\<lambda>cdom. thread_set F t >>= K (g cdom))"
-apply (rule ext)
-apply (simp add: assert_opt_def bind_def fail_def get_def gets_def gets_the_def put_def return_def set_object_def thread_set_def split_def
-          split: option.splits)
-done
+  apply (rule ext)
+  apply (simp add: assert_opt_def bind_def fail_def get_def gets_def gets_the_def put_def return_def
+                   set_object_def get_object_def thread_set_def split_def assert_def
+            split: option.splits)
+  done
 
 lemma tcb_relation_convert_for_recycle_assert:
   "\<lbrakk>tcb_relation tcb rv'; inactive (tcb_state tcb); tcb_bound_notification tcb = None\<rbrakk> \<Longrightarrow>

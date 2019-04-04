@@ -338,9 +338,7 @@ lemma do_user_op_invs2:
 lemma thread_set_ct_idle:
   "(\<And>tcb. tcb_state (f tcb) = tcb_state tcb) \<Longrightarrow>
   \<lbrace>ct_idle\<rbrace> thread_set f t \<lbrace>\<lambda>rv. ct_idle\<rbrace>"
-  by (clarsimp simp: thread_set_def set_object_def get_tcb_def
-                     ct_in_state_def st_tcb_at_def obj_at_def
-    | wp)+
+  by (simp add: thread_set_ct_in_state)
 
 lemma ct_running_irq_state_independent[intro!, simp]:
   "ct_running (s \<lparr>machine_state := machine_state s \<lparr>irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)

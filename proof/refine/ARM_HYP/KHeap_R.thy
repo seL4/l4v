@@ -1088,7 +1088,7 @@ lemma set_other_obj_corres:
   apply (unfold set_object_def setObject_def)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
                         put_def return_def modify_def get_object_def x
-                        projectKOs
+                        projectKOs obj_at_def
                         updateObject_default_def in_magnitude_check [OF _ P])
   apply (clarsimp simp add: state_relation_def z)
   apply (clarsimp simp add: caps_of_state_after_update cte_wp_at_after_update
@@ -1110,7 +1110,7 @@ lemma set_other_obj_corres:
    apply (clarsimp simp: is_other_obj_relation_type t)
    apply (drule(1) bspec)
    apply clarsimp
-   apply (frule_tac ko'=ko and x'=ptr in obj_relation_cut_same_type,
+   apply (frule_tac ko'=koa and x'=ptr in obj_relation_cut_same_type,
            (fastforce simp add: is_other_obj_relation_type t)+)
    apply (erule disjE)
     apply (simp add: is_other_obj_relation_type t)
