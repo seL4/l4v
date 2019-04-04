@@ -478,4 +478,12 @@ lemma foldl_fun_or_alt:
   apply clarsimp
   by (simp add: foldl_map)
 
+lemma sorted_filter:
+  "sorted xs \<Longrightarrow> sorted (filter P xs)"
+  by (metis filter_sort sorted_sort sorted_sort_id)
+
+lemma sorted_list_of_set_already_sorted:
+  "\<lbrakk> distinct xs; sorted xs \<rbrakk> \<Longrightarrow> sorted_list_of_set (set xs) = xs"
+  by (simp add: sorted_list_of_set_sort_remdups distinct_remdups_id sorted_sort_id)
+
 end
