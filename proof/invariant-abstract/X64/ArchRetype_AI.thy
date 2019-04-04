@@ -63,13 +63,17 @@ lemmas [wp] =  hoare_unless_wp
 crunch pspace_aligned[wp]: init_arch_objects "pspace_aligned"
   (ignore: clearMemory wp: crunch_wps simp: crunch_simps unless_def)
 crunch pspace_distinct[wp]: init_arch_objects "pspace_distinct"
-  (ignore: clearMemory update_object set_pml4 wp: crunch_wps update_obj_pspace_distinct simp: crunch_simps unless_def)
+  (ignore: clearMemory set_object set_pml4
+       wp: crunch_wps set_object_distinct
+     simp: crunch_simps unless_def set_arch_obj_simps)
 crunch mdb_inv[wp]: init_arch_objects "\<lambda>s. P (cdt s)"
-  (ignore: clearMemory set_pml4 wp: crunch_wps simp: crunch_simps unless_def)
+  (ignore: clearMemory set_pml4 wp: crunch_wps simp: crunch_simps unless_def set_arch_obj_simps)
 crunch valid_mdb[wp]: init_arch_objects "valid_mdb"
-  (ignore: clearMemory set_pml4 wp: crunch_wps simp: crunch_simps unless_def)
+  (ignore: clearMemory set_pml4 wp: crunch_wps simp: crunch_simps unless_def set_arch_obj_simps)
 crunch cte_wp_at[wp]: init_arch_objects "\<lambda>s. P (cte_wp_at P' p s)"
-  (ignore: clearMemory set_pml4 wp: crunch_wps update_aobj_cte_wp_at simp: crunch_simps unless_def)
+  (ignore: clearMemory set_pml4
+       wp: crunch_wps set_aobject_cte_wp_at
+     simp: crunch_simps unless_def set_arch_obj_simps)
 crunch typ_at[wp]: init_arch_objects "\<lambda>s. P (typ_at T p s)"
   (ignore: clearMemory wp: crunch_wps simp: crunch_simps unless_def)
 
@@ -107,15 +111,15 @@ lemma store_pml4e_wellformed[wp]:
   by (wpsimp simp: store_pml4e_def)
 
 lemma store_pml4e_valid_objs[wp]:
-  "\<lbrace>valid_objs and K ( wellformed_pml4e p)\<rbrace> store_pml4e x p \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  apply (wpsimp simp: store_pml4e_def)
+  "\<lbrace>valid_objs and K (wellformed_pml4e p)\<rbrace> store_pml4e x p \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  apply (wpsimp simp: store_pml4e_def set_arch_obj_simps)
   by (fastforce simp: valid_objs_def obj_at_def dom_def valid_obj_def)
 
 crunch valid_objs[wp]: init_arch_objects "valid_objs"
   (ignore: clearMemory wp: crunch_wps simp: unless_def)
 
 crunch valid_arch_state[wp]: init_arch_objects "valid_arch_state"
-  (ignore: clearMemory set_pml4 set_object wp: crunch_wps simp: unless_def crunch_simps)
+  (ignore: clearMemory set_pml4 set_object wp: crunch_wps simp: unless_def crunch_simps set_arch_obj_simps)
 
 lemmas init_arch_objects_valid_cap[wp] = valid_cap_typ [OF init_arch_objects_typ_at]
 
@@ -130,31 +134,31 @@ crunch cap_refs_respects_device_region[wp]: reserve_region cap_refs_respects_dev
 crunch invs [wp]: reserve_region "invs"
 
 crunch iflive[wp]: copy_global_mappings "if_live_then_nonz_cap"
-  (wp: crunch_wps ignore: set_pml4)
+  (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps)
 
 crunch zombies[wp]: copy_global_mappings "zombies_final"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: set_arch_obj_simps)
 
 crunch state_refs_of[wp]: copy_global_mappings "\<lambda>s. P (state_refs_of s)"
-  (wp: crunch_wps ignore: set_pml4)
+  (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps)
 
 crunch valid_idle[wp]: copy_global_mappings "valid_idle"
-  (wp: crunch_wps ignore: set_pml4)
+  (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps is_tcb_def)
 
 crunch only_idle[wp]: copy_global_mappings "only_idle"
-  (wp: crunch_wps ignore: set_pml4)
+  (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps)
 
 crunch ifunsafe[wp]: copy_global_mappings "if_unsafe_then_cap"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: set_arch_obj_simps)
 
 crunch reply_caps[wp]: copy_global_mappings "valid_reply_caps"
-  (wp: crunch_wps ignore: set_pml4)
+  (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps)
 
 crunch reply_masters[wp]: copy_global_mappings "valid_reply_masters"
-  (wp: crunch_wps ignore: set_pml4)
+  (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps)
 
 crunch valid_global[wp]: copy_global_mappings "valid_global_refs"
-  (wp: crunch_wps ignore: set_pml4)
+  (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps)
 
 crunch irq_node[wp]: copy_global_mappings "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
@@ -169,13 +173,13 @@ crunch pspace_in_kernel_window[wp]: copy_global_mappings "pspace_in_kernel_windo
   (wp: crunch_wps)
 
 crunch cap_refs_in_kernel_window[wp]: copy_global_mappings "cap_refs_in_kernel_window"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: set_arch_obj_simps)
 
 crunch pspace_respects_device_region[wp]: copy_global_mappings "pspace_respects_device_region"
-  (wp: crunch_wps ignore: set_pml4)
+  (wp: crunch_wps ignore: set_pml4 simp: set_arch_obj_simps)
 
 crunch cap_refs_respects_device_region[wp]: copy_global_mappings "cap_refs_respects_device_region"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: set_arch_obj_simps)
 
 (* FIXME: move to VSpace_R *)
 lemma vs_refs_add_one'':
@@ -225,7 +229,7 @@ lemma mapM_x_store_pml4e_eq_kernel_mappings_restr:
                       \<and> pmv (ucast x) = pmv' (ucast x)))\<rbrace>"
   apply (induct xs rule: rev_induct, simp_all add: mapM_x_Nil mapM_x_append mapM_x_singleton)
   apply (erule hoare_seq_ext[rotated])
-  apply (simp add: store_pml4e_def set_object_def update_object_def cong: bind_cong)
+  apply (simp add: store_pml4e_def set_object_def set_arch_obj_simps cong: bind_cong)
   apply (wp get_object_wp get_pml4e_wp)
   apply (clarsimp simp: obj_at_def split del: if_split)
   apply (frule shiftl_less_t2n)
@@ -318,18 +322,18 @@ lemma store_pde_valid_global_pd_mappings[wp]:
      store_pml4e p pml4e
    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   apply (simp add: store_pml4e_def set_pml4_def)
-  apply (wp update_aobj_valid_global_vspace_mappings)
+  apply (wp set_aobj_valid_global_vspace_mappings)
   apply simp
   done
 
 lemma store_pde_valid_ioc[wp]:
  "\<lbrace>valid_ioc\<rbrace> store_pml4e ptr pml4e \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
-  by (wpsimp simp: store_pml4e_def)
+  by (wpsimp simp: store_pml4e_def set_arch_obj_simps)
 
 
 lemma store_pde_vms[wp]:
  "\<lbrace>valid_machine_state\<rbrace> store_pml4e ptr pml4e \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
-  by (wpsimp simp: store_pml4e_def)
+  by (wpsimp simp: store_pml4e_def set_arch_obj_simps)
 
 lemma valid_arch_caps_table_caps:
   "valid_arch_caps s \<Longrightarrow> valid_table_caps s"
@@ -374,15 +378,15 @@ lemma in_kernel_mapping_slotsI:
 
 lemma set_object_ioports[wp]:
   "\<lbrace>valid_ioports and obj_at (same_caps obj) ptr\<rbrace> set_object ptr obj \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  by (wpsimp simp: set_object_def valid_ioports_def caps_of_state_after_update)
+  by (wpsimp simp: set_object_def get_object_def valid_ioports_def caps_of_state_after_update)
 
 lemma update_aobj_ioports[wp]:
-  "\<lbrace>valid_ioports\<rbrace> update_object ptr (ArchObj obj) \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  apply (clarsimp simp: update_object_def)
+  "\<lbrace>valid_ioports\<rbrace> set_object ptr (ArchObj obj) \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
+  apply (subst set_object_def)
   apply (wpsimp wp: get_object_wp)
-  by (clarsimp simp: obj_at_def a_type_def
-              split: kernel_object.split_asm if_splits
-                     arch_kernel_obj.split_asm)
+  apply (clarsimp simp: obj_at_def a_type_def valid_ioports_def caps_of_state_after_update
+                 split: kernel_object.split_asm if_splits arch_kernel_obj.split_asm)
+  done
 
 lemma copy_global_invs_mappings_restricted:
   "\<lbrace>(\<lambda>s. all_invs_but_equal_kernel_mappings_restricted (insert pm S) s)
@@ -390,6 +394,7 @@ lemma copy_global_invs_mappings_restricted:
           and K (is_aligned pm pml4_bits)\<rbrace>
      copy_global_mappings pm
    \<lbrace>\<lambda>rv. all_invs_but_equal_kernel_mappings_restricted S\<rbrace>"
+  supply set_arch_obj_simps[simp]
   apply (rule hoare_gen_asm)
   apply (simp add: valid_pspace_def pred_conj_def)
   apply (rule hoare_conjI, wp copy_global_equal_kernel_mappings_restricted)
@@ -1271,7 +1276,7 @@ lemma init_arch_objects_excap[wp]:
   by (wp ex_cte_cap_to_pres )
 
 crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at P t"
-  (wp: crunch_wps ignore: update_object set_pml4)
+  (wp: crunch_wps ignore: set_object set_pml4 simp: set_arch_obj_simps)
 
 lemma valid_arch_mdb_detype:
   "valid_arch_mdb (is_original_cap s) (caps_of_state s) \<Longrightarrow>

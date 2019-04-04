@@ -237,7 +237,7 @@ lemma init_arch_objects_descendants_range[wp,Untyped_AI_assms]:
   apply (simp add:descendants_range_def)
   apply (rule hoare_pre)
    apply (wp retype_region_mdb init_arch_objects_hoare_lift)
-    apply (simp add: store_pml4e_def)
+    apply (simp add: store_pml4e_def set_arch_obj_simps)
     apply (wp hoare_vcg_ball_lift | wps)+
    apply simp
   apply fastforce
@@ -426,9 +426,10 @@ lemma simpler_store_pml4e_def:
             ({((), s\<lparr>kheap := (kheap s((p && ~~ mask pml4_bits) \<mapsto>
                                        (ArchObj (PageMapL4 (pml4(ucast (p && mask pml4_bits >> word_size_bits) := pde))))))\<rparr>)}, False)
         | _ => ({}, True))"
-  apply     (auto simp: store_pml4e_def update_object_def get_object_def simpler_gets_def assert_def a_type_simps
+  apply     (auto simp: store_pml4e_def set_object_def get_object_def simpler_gets_def assert_def a_type_simps
                         return_def fail_def set_object_def get_def put_def bind_def get_pml4_def aa_type_simps
-                  split: Structures_A.kernel_object.splits option.splits arch_kernel_obj.splits if_split_asm)
+                        set_arch_obj_simps
+                 split: Structures_A.kernel_object.splits option.splits arch_kernel_obj.splits if_split_asm)
   done
 
 lemma neg_mask_pml4_bits_3_aligned[simp]:
@@ -448,7 +449,7 @@ lemma store_pml4e_weaken:
   apply (erule allEI)
   apply clarsimp
   apply (rule use_valid, assumption)
-   apply (simp add: update_object_def store_pml4e_def set_object_def)
+   apply (simp add: store_pml4e_def set_arch_obj_simps set_object_def)
    apply (wp get_object_wp)
   apply (clarsimp simp: pml4e_at_def obj_at_def a_type_simps)
   apply (drule bspec, assumption)
@@ -463,7 +464,7 @@ lemma store_pml4e_nonempty_table:
            \<and> ucast (pml4e_ptr && mask pml4_bits >> 3) \<in> kernel_mapping_slots\<rbrace>
      store_pml4e pml4e_ptr pml4e
    \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
-  apply (simp add: store_pml4e_def update_object_def set_object_def)
+  apply (simp add: store_pml4e_def set_arch_obj_simps set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def nonempty_table_def a_type_def word_size_bits_def empty_table_def)
   done
@@ -476,7 +477,7 @@ lemma store_pml4e_global_global_objs:
    \<rbrace>
    store_pml4e pml4e_ptr pml4e
    \<lbrace>\<lambda>rv s. valid_global_objs s\<rbrace>"
-  apply (simp add: store_pml4e_def set_pd_def set_object_def)
+  apply (simp add: store_pml4e_def set_arch_obj_simps set_pd_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def fun_upd_def[symmetric] bit_simps
                         valid_global_objs_upd_def empty_table_def valid_global_objs_def)
@@ -592,9 +593,9 @@ lemma set_pml4e_cte_wp_at_iin[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at (P' (interrupt_irq_node s)) p s)\<rbrace>
    store_pml4e q pml4
    \<lbrace>\<lambda>_ s. P (cte_wp_at (P' (interrupt_irq_node s)) p s)\<rbrace>"
-  apply (clarsimp simp: store_pml4e_def)
+  apply (clarsimp simp: store_pml4e_def set_arch_obj_simps)
   apply (rule hoare_pre)
-  apply (wp update_aobj_cte_wp_at | wps | simp)+
+  apply (wp set_aobject_cte_wp_at | wps | simp)+
   done
 
 crunch cte_wp_at_iin[wp]: init_arch_objects

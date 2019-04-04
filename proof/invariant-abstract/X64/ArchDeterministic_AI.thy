@@ -19,7 +19,7 @@ named_theorems Deterministic_AI_assms
 lemma flush_table_valid_list[wp]: "\<lbrace>valid_list\<rbrace> flush_table a b c d \<lbrace>\<lambda>rv. valid_list\<rbrace>"
   by (wp mapM_x_wp' | wpc | simp add: flush_table_def | rule hoare_pre)+
 
-crunch valid_list[wp]: update_object valid_list
+crunch valid_list[wp]: set_object valid_list
   (wp: get_object_wp)
 
 crunch valid_list[wp, Deterministic_AI_assms]:

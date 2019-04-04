@@ -138,7 +138,7 @@ lemma set_asid_pool_unmap:
      set_asid_pool poolptr (pool(lowbits := None))
    \<lbrace>\<lambda>rv s. \<not> ([VSRef (ucast lowbits) (Some AASIDPool),
                    VSRef highbits None] \<rhd> x) s\<rbrace>"
-  apply (simp add: set_asid_pool_def set_object_def update_object_def)
+  apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: vs_lookup_def vs_asid_refs_def
                  dest!: graph_ofD vs_lookup1_rtrancl_iterations)
@@ -173,23 +173,23 @@ lemma delete_asid_unmapped[wp]:
 
 lemma set_pt_tcb_at_arch[simplified, wp]:
   "\<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace> set_pt a b \<lbrace>\<lambda>_ s. P (ko_at (TCB tcb) t s)\<rbrace>"
-  by (clarsimp simp: valid_def obj_at_def update_object_def get_object_def
-                     set_object_def in_monad a_type_simps)
+  by (clarsimp simp: valid_def obj_at_def set_object_def get_object_def
+                     in_monad a_type_simps set_arch_obj_simps)
 
 lemma set_pd_tcb_at_arch[simplified, wp]:
   "\<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace> set_pd a b \<lbrace>\<lambda>_ s. P (ko_at (TCB tcb) t s)\<rbrace>"
-  by (clarsimp simp: valid_def obj_at_def update_object_def get_object_def
-                     set_object_def in_monad a_type_simps)
+  by (clarsimp simp: valid_def obj_at_def set_object_def get_object_def
+                     in_monad a_type_simps set_arch_obj_simps)
 
 lemma set_pdpt_tcb_at_arch[simplified, wp]:
   "\<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace> set_pdpt a b \<lbrace>\<lambda>_ s. P (ko_at (TCB tcb) t s)\<rbrace>"
-  by (clarsimp simp: valid_def obj_at_def update_object_def get_object_def
-                     set_object_def in_monad a_type_simps)
+  by (clarsimp simp: valid_def obj_at_def set_object_def get_object_def
+                     in_monad a_type_simps set_arch_obj_simps)
 
 lemma set_pml4_tcb_at_arch[simplified, wp]:
   "\<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace> set_pml4 a b \<lbrace>\<lambda>_ s. P (ko_at (TCB tcb) t s)\<rbrace>"
-  by (clarsimp simp: valid_def obj_at_def update_object_def get_object_def
-                     set_object_def in_monad a_type_simps)
+  by (clarsimp simp: valid_def obj_at_def set_object_def get_object_def
+                     in_monad a_type_simps set_arch_obj_simps)
 
 crunch tcb_at_arch: unmap_page "\<lambda>s. P (ko_at (TCB tcb) t s)"
     (simp: crunch_simps wp: crunch_wps ignore: set_pt set_pd set_pdpt)
@@ -513,12 +513,12 @@ lemma suspend_unlive':
   "\<lbrace>bound_tcb_at ((=) None) t and valid_mdb and valid_objs and tcb_at t \<rbrace>
       suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
-  apply (simp add: suspend_def set_thread_state_def set_object_def)
-  apply (wp | simp only: obj_at_exst_update)+
-  apply (simp add: obj_at_def)
-  apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
-  apply wp
-  apply (auto simp: pred_tcb_def2 live_def hyp_live_def dest: refs_of_live)
+  apply (simp add: suspend_def set_thread_state_def)
+  apply (wpsimp wp: set_object_wp | simp only: obj_at_exst_update)+
+   apply (simp add: obj_at_def)
+   apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
+    apply wp
+   apply (auto simp: pred_tcb_def2 live_def hyp_live_def dest: refs_of_live)
   done
 
 crunch obj_at[wp]: fpu_thread_delete
@@ -594,7 +594,7 @@ lemma set_asid_pool_cte_wp_at:
   "\<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>
      set_asid_pool ptr val
    \<lbrace>\<lambda>rv s. P (cte_wp_at P' p s)\<rbrace>"
-  apply (simp add: set_asid_pool_def set_object_def get_object_def update_object_def)
+  apply (simp add: set_asid_pool_def set_object_def get_object_def)
   apply wp
   including unfold_objects_asm
   by (clarsimp elim!: rsubst[where P=P]
@@ -602,9 +602,9 @@ lemma set_asid_pool_cte_wp_at:
 
 
 crunch cte_wp_at[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (cte_wp_at P' p s)"
-  (simp: crunch_simps assertE_def
-     wp: update_aobj_cte_wp_at crunch_wps set_object_cte_at
-   ignore: update_object set_pt set_pd set_pdpt)
+  (simp: crunch_simps assertE_def set_arch_obj_simps
+     wp: set_aobject_cte_wp_at crunch_wps set_object_cte_at
+   ignore: set_object)
 
 end
 
@@ -669,8 +669,8 @@ crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps select_wp simp: crunch_simps)
 
 crunch pred_tcb_at[wp]: arch_finalise_cap "pred_tcb_at proj P t"
-  (simp: crunch_simps wp: crunch_wps update_aobj_pred_tcb_at
-   ignore: update_object set_object set_pt set_pd set_pdpt set_pml4)
+  (simp: crunch_simps set_arch_obj_simps wp: crunch_wps set_aobject_pred_tcb_at
+   ignore: set_object)
 
 lemma tcb_cap_valid_pagetable:
   "tcb_cap_valid (ArchObjectCap (PageTableCap word (Some v))) slot
@@ -703,7 +703,7 @@ lemma store_pde_unmap_empty:
   "\<lbrace>\<lambda>s. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) word s\<rbrace>
     store_pde pd_slot InvalidPDE
    \<lbrace>\<lambda>rv s. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) word s\<rbrace>"
-  apply (clarsimp simp: store_pde_def set_pd_def set_object_def update_object_def)
+  apply (clarsimp simp: store_pde_def set_pd_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def empty_table_def pde_ref_def)
   done
@@ -712,7 +712,7 @@ lemma store_pte_unmap_empty:
   "\<lbrace>\<lambda>s. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) word s\<rbrace>
     store_pte xa InvalidPTE
    \<lbrace>\<lambda>rv s. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) word s\<rbrace>"
-  apply (wp get_object_wp | simp add: store_pte_def set_pt_def set_object_def update_object_def)+
+  apply (wp get_object_wp | simp add: store_pte_def set_pt_def set_object_def)+
   apply (clarsimp simp: obj_at_def empty_table_def)
   done
 
@@ -720,7 +720,7 @@ lemma store_pdpte_unmap_empty:
   "\<lbrace>\<lambda>s. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) word s\<rbrace>
     store_pdpte pd_slot InvalidPDPTE
    \<lbrace>\<lambda>rv s. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) word s\<rbrace>"
-  apply (clarsimp simp: store_pdpte_def set_pd_def set_object_def update_object_def)
+  apply (clarsimp simp: store_pdpte_def set_arch_obj_simps set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def empty_table_def pdpte_ref_def)
   done
@@ -729,7 +729,7 @@ lemma store_pml4e_unmap_empty:
   "\<lbrace>\<lambda>s. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) word s\<rbrace>
     store_pml4e pd_slot InvalidPML4E
    \<lbrace>\<lambda>rv s. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) word s\<rbrace>"
-  apply (clarsimp simp: store_pml4e_def set_pd_def set_object_def update_object_def)
+  apply (clarsimp simp: store_pml4e_def set_arch_obj_simps set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def empty_table_def pml4e_ref_def)
   done
@@ -1016,7 +1016,7 @@ lemma delete_asid_empty_table_pml4:
     delete_asid a word
    \<lbrace>\<lambda>_ s. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) word s\<rbrace>"
   apply (simp add: delete_asid_def)
-  apply (wp set_object_at_obj get_object_wp | wpc | simp add: update_object_def | wps)+
+  apply (wpsimp wp: set_object_at_obj simp: set_arch_obj_simps | wps)+
   apply (clarsimp simp: obj_at_def empty_table_def)
   done
 
@@ -1053,7 +1053,7 @@ lemma store_pml4e_pml4e_wp_at:
    \<lbrace>\<lambda>_. pml4e_wp_at
          (\<lambda>pde. pde = x) (p && ~~ mask pml4_bits) (ucast (p && mask pml4_bits >> word_size_bits))\<rbrace>"
   apply (wp
-    | simp add: store_pml4e_def set_pml4_def set_object_def get_object_def update_object_def
+    | simp add: store_pml4e_def set_pml4_def set_object_def get_object_def
                 obj_at_def pml4e_wp_at_def a_type_simps aa_type_simps)+
   done
 
@@ -1062,7 +1062,7 @@ lemma store_pml4e_pml4e_wp_at2:
    store_pml4e p' InvalidPML4E
    \<lbrace>\<lambda>_. pml4e_wp_at (\<lambda>pde. pde = InvalidPML4E) ptr slot\<rbrace>"
   apply (wp
-    | simp add: store_pml4e_def set_pml4_def set_object_def get_object_def update_object_def
+    | simp add: store_pml4e_def set_pml4_def set_object_def get_object_def
                 obj_at_def pml4e_wp_at_def
     | clarsimp)+
   done
@@ -1372,7 +1372,7 @@ lemma set_asid_pool_obj_at_ptr:
   "\<lbrace>\<lambda>s. P (ArchObj (arch_kernel_obj.ASIDPool mp))\<rbrace>
      set_asid_pool ptr mp
    \<lbrace>\<lambda>rv s. obj_at P ptr s\<rbrace>"
-  apply (simp add: set_asid_pool_def set_object_def update_object_def)
+  apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def)
   done
@@ -1483,7 +1483,7 @@ lemma set_asid_pool_empty_table_objs:
    \<lbrace>\<lambda>rv s. valid_vspace_objs
              (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
                 x64_asid_table (arch_state s)(asid_high_bits_of word2 \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
-  apply (simp add: set_asid_pool_def set_object_def update_object_def)
+  apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def valid_vspace_objs_def
                   simp del: fun_upd_apply
@@ -1508,7 +1508,7 @@ lemma set_asid_pool_empty_table_lookup:
    \<lbrace>\<lambda>rv s. valid_vs_lookup
              (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
                 x64_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
-  apply (simp add: set_asid_pool_def set_object_def update_object_def)
+  apply (simp add: set_asid_pool_def set_object_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def valid_vs_lookup_def
                   simp del: fun_upd_apply)
@@ -1539,7 +1539,7 @@ lemma set_asid_pool_invs_table:
   \<lbrace>\<lambda>x s. invs (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
                  x64_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def valid_asid_map_def
-              del: set_asid_pool_simpler_def)
+              del: set_asid_pool_def)
   apply (wp valid_irq_node_typ set_asid_pool_typ_at
             set_asid_pool_empty_table_objs valid_ioports_lift
             valid_irq_handlers_lift set_asid_pool_empty_table_lookup
@@ -1603,8 +1603,8 @@ crunch valid_cap [wp]: unmap_page_table,
   store_pte, delete_asid_pool, copy_global_mappings,
   arch_finalise_cap
   "valid_cap c"
-  (wp: mapM_wp_inv mapM_x_wp' crunch_wps simp: crunch_simps
-   ignore: set_pd set_pt set_pdpt set_pml4 update_object)
+  (wp: mapM_wp_inv mapM_x_wp' crunch_wps simp: crunch_simps set_arch_obj_simps
+   ignore: set_object)
 
 lemmas clearMemory_invs[wp, Finalise_AI_asms] = clearMemory_invs
 

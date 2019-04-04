@@ -89,7 +89,7 @@ lemmas schedule_bcorres[wp] = schedule_bcorres1[OF BCorres2_AI_axioms]
 context Arch begin global_naming X64
 
 crunch (bcorres)bcorres[wp]: send_ipc,send_signal,do_reply_transfer,arch_perform_invocation truncate_state
-  (simp: gets_the_def swp_def update_object_def
+  (simp: gets_the_def swp_def set_object_def
  ignore: freeMemory clearMemory loadWord cap_fault_on_failure
          storeWord lookup_error_on_failure getRestartPC getRegister mapME )
 

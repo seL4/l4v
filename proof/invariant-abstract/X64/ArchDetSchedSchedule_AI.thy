@@ -215,7 +215,7 @@ lemma set_asid_pool_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> set_asid_pool ptr pool \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   by (wp hoare_drop_imps valid_sched_lift | simp add: set_asid_pool_def)+
 
-crunch ct_not_in_q[wp]: update_object ct_not_in_q
+crunch ct_not_in_q[wp]: set_object ct_not_in_q
   (wp: crunch_wps hoare_drop_imps hoare_unless_wp select_inv mapM_wp
        subset_refl if_fun_split simp: crunch_simps ignore: tcb_sched_action)
 
@@ -230,14 +230,14 @@ crunch ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
 lemma flush_table_valid_etcbs[wp]: "\<lbrace>valid_etcbs\<rbrace> flush_table a b c d \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
   by (wp mapM_x_wp' | wpc | simp add: flush_table_def | rule hoare_pre)+
 
-lemma update_object_valid_etcbs[wp]:
-  "\<lbrace>valid_etcbs\<rbrace> update_object f tptr \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
-  by (wp hoare_drop_imps valid_etcbs_lift | simp add: update_object_def)+
+lemma set_object_valid_etcbs[wp]:
+  "\<lbrace>valid_etcbs\<rbrace> set_object f tptr \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
+  by (wp hoare_drop_imps valid_etcbs_lift | simp add: set_object_def)+
 
 crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete valid_etcbs
   (wp: hoare_drop_imps hoare_unless_wp select_inv mapM_x_wp mapM_wp subset_refl
-       if_fun_split simp: crunch_simps ignore: update_object set_object thread_set)
+       if_fun_split simp: crunch_simps ignore: set_object set_object thread_set)
 
 lemma flush_table_simple_sched_action[wp]: "\<lbrace>simple_sched_action\<rbrace> flush_table a b c d \<lbrace>\<lambda>rv. simple_sched_action\<rbrace>"
   by (wp mapM_x_wp' | wpc | simp add: flush_table_def | rule hoare_pre)+
@@ -252,7 +252,7 @@ lemma flush_table_valid_sched[wp]: "\<lbrace>valid_sched\<rbrace> flush_table a 
 
 lemma store_pte_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> store_pte pter pte \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  by (wp hoare_drop_imps valid_sched_lift | simp add: store_pte_def)+
+  by (wp hoare_drop_imps valid_sched_lift | simp add: store_pte_def set_arch_obj_simps)+
 
 lemma store_pm_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> store_pml4e pter pm \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
@@ -260,15 +260,17 @@ lemma store_pm_valid_sched[wp]:
 
 lemma store_pdepte_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> store_pdpte pter pd \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  by (wp add: hoare_drop_imps valid_sched_lift del: store_pdpte_typ_at | simp add: store_pdpte_def)+
+  by (wp add: hoare_drop_imps valid_sched_lift del: store_pdpte_typ_at
+      | simp add: store_pdpte_def set_arch_obj_simps)+
 
 lemma store_pde_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> store_pde pter pd \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  by (wp add: hoare_drop_imps valid_sched_lift del: store_pde_typ_at | simp add: store_pde_def)+
+  by (wp add: hoare_drop_imps valid_sched_lift del: store_pde_typ_at
+      | simp add: store_pde_def set_arch_obj_simps)+
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
   arch_tcb_set_ipc_buffer, arch_finalise_cap, prepare_thread_delete valid_sched
-  (ignore: set_object update_object wp: crunch_wps subset_refl simp: if_fun_split crunch_simps)
+  (ignore: set_object set_object wp: crunch_wps subset_refl simp: if_fun_split crunch_simps)
 
 lemma activate_thread_valid_sched [DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_sched\<rbrace> activate_thread \<lbrace>\<lambda>_. valid_sched\<rbrace>"
@@ -279,7 +281,7 @@ lemma activate_thread_valid_sched [DetSchedSchedule_AI_assms]:
 
 lemma store_asid_pool_entry_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> store_asid_pool_entry ptr pool a \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  by (wp hoare_drop_imps valid_sched_lift | simp add: store_asid_pool_entry_def)+
+  by (wp hoare_drop_imps valid_sched_lift | simp add: store_asid_pool_entry_def set_arch_obj_simps)+
 
 crunch valid_sched[wp]:
   perform_page_invocation, perform_page_table_invocation, perform_asid_pool_invocation,

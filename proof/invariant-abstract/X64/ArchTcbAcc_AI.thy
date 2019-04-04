@@ -101,8 +101,8 @@ lemma thread_set_hyp_refs_trivial [TcbAcc_AI_assms]:
   assumes x: "\<And>tcb. tcb_state  (f tcb) = tcb_state  tcb"
   assumes y: "\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb"
   shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
-  apply wp
+  apply (simp add: thread_set_def)
+  apply (wpsimp wp: set_object_wp)
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (clarsimp elim!: rsubst[where P=P])
   apply (rule all_ext;

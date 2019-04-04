@@ -16,7 +16,7 @@ context Arch begin global_naming X64
 
 named_theorems DetSchedAux_AI_assms
 
-crunch exst[wp]: update_object, init_arch_objects "\<lambda>s. P (exst s)" (wp: crunch_wps hoare_unless_wp)
+crunch exst[wp]: set_object, init_arch_objects "\<lambda>s. P (exst s)" (wp: crunch_wps hoare_unless_wp)
 crunch ct[wp]: init_arch_objects "\<lambda>s. P (cur_thread s)" (wp: crunch_wps hoare_unless_wp)
 crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at Q t" (wp: mapM_x_wp' hoare_unless_wp)
 crunch valid_etcbs[wp, DetSchedAux_AI_assms]: init_arch_objects valid_etcbs (wp: valid_etcbs_lift)

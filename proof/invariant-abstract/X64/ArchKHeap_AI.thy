@@ -215,9 +215,7 @@ lemma set_object_neg_lookup:
   "\<lbrace>\<lambda>s. \<not> (\<exists>rs. (rs \<rhd> p') s) \<and> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s \<rbrace>
   set_object p ko
   \<lbrace>\<lambda>_ s. \<not> (\<exists>rs. (rs \<rhd> p') s)\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  apply clarsimp
+  apply (wpsimp wp: set_object_wp)
   apply (erule_tac x=rs in allE)
   apply (erule notE)
   apply (erule vs_lookup_stateI)
@@ -229,9 +227,7 @@ lemma set_object_vs_lookup:
   "\<lbrace>\<lambda>s. obj_at (\<lambda>ko'. vs_refs ko = vs_refs ko') p s \<and> P (vs_lookup s) \<rbrace>
   set_object p ko
   \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  apply clarsimp
+  apply (wpsimp wp: set_object_wp)
   apply (erule rsubst [where P=P])
   apply (rule order_antisym)
    apply (rule vs_lookup_sub)
@@ -251,9 +247,7 @@ lemma set_object_pt_not_vs_lookup_pages:
             | None \<Rightarrow> True))\<rbrace>
    set_object p (ArchObj (PageTable pt))
    \<lbrace>\<lambda>_ s. \<not>(ref \<unrhd> p') s\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  apply (clarsimp simp: obj_at_def)
+  apply (wpsimp wp: set_object_wp)
    apply (case_tac "(\<exists>\<unrhd>p) s")
    apply (erule notE)
    apply clarsimp
@@ -300,9 +294,7 @@ lemma set_object_vs_lookup_pages:
   "\<lbrace>\<lambda>s. obj_at (\<lambda>ko'. vs_refs_pages ko = vs_refs_pages ko') p s \<and> P (vs_lookup_pages s) \<rbrace>
   set_object p ko
   \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  apply clarsimp
+  apply (wpsimp wp: set_object_wp)
   apply (erule rsubst [where P=P])
   apply (rule order_antisym)
    apply (rule vs_lookup_pages_sub)
@@ -313,14 +305,15 @@ lemma set_object_vs_lookup_pages:
   apply simp
   done
 
+lemma set_aobject_valid_arch [wp]:
+  "set_object ptr (ArchObj obj) \<lbrace>valid_arch_state\<rbrace>"
+  by (wpsimp wp: valid_arch_state_lift set_object_wp)
 
 lemma set_object_atyp_at:
   "\<lbrace>\<lambda>s. typ_at (AArch (aa_type ako)) p s \<and> P (typ_at (AArch T) p' s)\<rbrace>
     set_object p (ArchObj ako)
    \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p' s)\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  apply clarsimp
+  apply (wpsimp wp: set_object_wp)
   apply (erule rsubst [where P=P])
   apply (clarsimp simp: obj_at_def a_type_aa_type)
   done
@@ -350,9 +343,8 @@ lemma set_object_valid_kernel_mappings:
                     ko\<rbrace>
      set_object ptr ko
    \<lbrace>\<lambda>rv. valid_kernel_mappings\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  apply_trace (clarsimp simp: valid_kernel_mappings_def second_level_tables_def
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp simp: valid_kernel_mappings_def second_level_tables_def
                  elim!: ranE split: if_split_asm)
   apply fastforce
   done
@@ -621,7 +613,7 @@ lemma set_object_equal_mappings:
                          \<longrightarrow> (\<forall>w \<in> kernel_mapping_slots. pml4 w = pml4' w)))\<rbrace>
      set_object p ko
    \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
-  apply (simp add: set_object_def, wp)
+  apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: equal_kernel_mappings_def obj_at_def
              split del: if_split)
   apply (simp split: if_split_asm)
@@ -735,8 +727,7 @@ lemma set_object_global_vspace_mappings:
                        \<longrightarrow> valid_global_objs s \<and> p \<notin> global_refs s)\<rbrace>
      set_object p ko
    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
-  apply (simp add: set_object_def, wp)
-  apply clarsimp
+  apply (wpsimp wp: set_object_wp)
   apply (erule valid_global_vspace_mappings_pres)
        apply (clarsimp simp: obj_at_def a_type_def global_refs_def)+
   done
