@@ -953,9 +953,9 @@ lemma set_pd_corres [corres]:
    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
    apply (simp add: objBits_simps archObjSize_def word_bits_def)
   apply (clarsimp simp: setObject_def in_monad split_def updateObject_default_def projectKOs)
-   apply (frule_tac s'=s'' in in_magnitude_check)
-   apply (simp add: in_magnitude_check objBits_simps archObjSize_def pde_bits_def, assumption)
-   apply (clarsimp simp: objBits_simps archObjSize_def pageBits_def)
+  apply (frule_tac s'=s'' in in_magnitude_check)
+    apply (simp add: in_magnitude_check objBits_simps archObjSize_def pde_bits_def, assumption)
+  apply (clarsimp simp: objBits_simps archObjSize_def pageBits_def)
   apply (clarsimp simp: obj_at_def exec_gets)
   apply (clarsimp simp: set_object_def bind_assoc exec_get)
   apply (clarsimp simp: put_def)
@@ -970,8 +970,8 @@ lemma set_pd_corres [corres]:
     apply (drule bspec, blast)
     apply clarsimp
     apply (drule_tac x = x in spec)
-      apply (clarsimp simp: pde_relation_def mask_pd_bits_inner_beauty pde_relation_aligned_simp
-                      dest!: more_pd_inner_beauty[simplified pde_bits_def[symmetric]])
+    apply (clarsimp simp: pde_relation_def mask_pd_bits_inner_beauty pde_relation_aligned_simp
+                   dest!: more_pd_inner_beauty[simplified pde_bits_def[symmetric]])
    apply (rule ballI)
    apply (drule (1) bspec)
    apply clarsimp

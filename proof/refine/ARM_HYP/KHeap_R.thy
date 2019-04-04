@@ -1135,9 +1135,9 @@ lemma set_other_obj_corres:
   apply (case_tac ob;
          simp_all add: a_type_def other_obj_relation_def etcb_relation_def
                        is_other_obj_relation_type t exst_same_def)
-    by (clarsimp simp: is_other_obj_relation_type t exst_same_def
-                   split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits
-                          ARM_A.arch_kernel_obj.splits)+
+  by (clarsimp simp: is_other_obj_relation_type t exst_same_def
+              split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits
+                     ARM_A.arch_kernel_obj.splits)+
 
 lemmas obj_at_simps = obj_at_def obj_at'_def projectKOs map_to_ctes_upd_other
                       is_other_obj_relation_type_def

@@ -2179,7 +2179,7 @@ lemma unmap_page_vs_lookup_pages_pre:
     apply wp
           apply (rule update_aobj_not_reachable[where b = "[b,c,d,e,f]" for b c d e f,simplified])
     apply (strengthen lookup_refs_pt_shrink_strg valid_arch_state_asid_table_strg not_in_vs_refs_pages_strg
-           | clarsimp )+
+           | clarsimp)+
        apply (wpsimp simp: unlessE_def split_del: if_split)+
       apply (wpc | wp get_pte_wp get_pml4e_wp get_pde_wp get_pdpte_wp)+
     apply ((simp add: lookup_pt_slot_def lookup_pd_slot_def lookup_pdpt_slot_def | wp get_pdpte_wp get_pml4e_wp get_pde_wp | wpc)+)[1]

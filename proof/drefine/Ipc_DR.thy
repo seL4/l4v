@@ -26,7 +26,7 @@ lemma set_object_cur_thread_idle_thread:
 
 lemma set_thread_state_cur_thread_idle_thread:
   "\<lbrace>\<lambda>s. P (cur_thread s) (idle_thread s) \<rbrace> set_thread_state thread x \<lbrace>\<lambda>rv s. P (cur_thread s)  (idle_thread s)\<rbrace>"
-  apply (simp add:set_thread_state_def)
+  apply (simp add: set_thread_state_def)
   apply (wp set_object_cur_thread_idle_thread dxo_wp_weak | simp)+
   done
 

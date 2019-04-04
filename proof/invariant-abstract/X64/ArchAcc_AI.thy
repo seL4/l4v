@@ -100,7 +100,7 @@ lemma get_pde_inv [wp]: "\<lbrace>P\<rbrace> get_pde p \<lbrace>\<lambda>_. P\<r
 
 lemma set_asid_pool_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_asid_pool ptr pool \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: set_asid_pool_def set_object_def get_object_def set_object_def)
+  apply (simp add: set_asid_pool_def get_object_def set_object_def)
   apply wp
   including unfold_objects
   by clarsimp
@@ -1606,7 +1606,7 @@ lemma set_object_state_hyp_refs[wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
     set_object ptr obj
    \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wpsimp simp: set_object_def set_object_def wp: get_object_wp)
+  apply (wpsimp simp: set_object_def wp: get_object_wp)
   including unfold_objects
   apply clarsimp
   apply (erule rsubst [where P=P])

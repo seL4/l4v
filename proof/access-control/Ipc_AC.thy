@@ -344,12 +344,12 @@ lemma set_mrs_respects_in_signalling':
        | wpc
        | simp split del: if_split
                     add: zipWithM_x_mapM_x split_def store_word_offs_def fun_upd_def[symmetric])+
-  apply (rule hoare_post_imp [where Q = "\<lambda>rv. st_tcb_at ((=) Structures_A.Running) thread and integrity aag X st"])
-   apply simp
-  apply (wp mapM_x_wp' dmo_storeWord_respects_ipc [where thread = thread and ep = ep])
-   apply (fastforce simp add: set_zip nth_append simp: msg_align_bits msg_max_length_def
-                       split: if_split_asm)
-   apply wp+
+     apply (rule hoare_post_imp [where Q = "\<lambda>rv. st_tcb_at ((=) Structures_A.Running) thread and integrity aag X st"])
+      apply simp
+     apply (wp mapM_x_wp' dmo_storeWord_respects_ipc [where thread = thread and ep = ep])
+     apply (fastforce simp add: set_zip nth_append simp: msg_align_bits msg_max_length_def
+                         split: if_split_asm)
+    apply wp+
   apply (rule impI)
   apply (subgoal_tac "\<forall>c'. integrity aag X st
           (s\<lparr>kheap := kheap s(thread \<mapsto>

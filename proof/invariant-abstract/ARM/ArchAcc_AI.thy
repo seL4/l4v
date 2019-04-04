@@ -46,7 +46,7 @@ lemma get_asid_pool_wp [wp]:
 
 
 lemma set_asid_pool_typ_at [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_asid_pool ptr pool \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+  "set_asid_pool ptr pool \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def get_object_def)
   apply wp
   including unfold_objects
@@ -69,7 +69,7 @@ lemma get_pde_wp:
   by (simp add: get_pde_def) wp
 
 
-lemma get_pde_inv [wp]: "\<lbrace>P\<rbrace> get_pde p \<lbrace>\<lambda>_. P\<rbrace>"
+lemma get_pde_inv [wp]: "get_pde p \<lbrace>P\<rbrace>"
   by (wpsimp wp: get_pde_wp)
 
 bundle pagebits =
@@ -92,7 +92,7 @@ lemma get_master_pde_wp:
   by auto
 
 lemma store_pde_typ_at [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> store_pde ptr pde \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+  "store_pde ptr pde \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
   apply (simp add: store_pde_def set_pd_def set_object_def get_object_def)
   apply (wpsimp simp: obj_at_def a_type_def)
   done
@@ -135,7 +135,7 @@ lemma get_master_pte_wp:
   by auto
 
 lemma store_pte_typ_at:
-    "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> store_pte ptr pte \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+    "store_pte ptr pte \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
   apply (simp add: store_pte_def set_pt_def set_object_def get_object_def)
   apply (wpsimp simp: obj_at_def a_type_def)
   done
@@ -145,7 +145,7 @@ lemmas store_pte_typ_ats [wp] = abs_typ_at_lifts [OF store_pte_typ_at]
 
 
 lemma lookup_pt_slot_inv:
-  "\<lbrace>P\<rbrace> lookup_pt_slot pd vptr \<lbrace>\<lambda>_. P\<rbrace>"
+  "lookup_pt_slot pd vptr \<lbrace>P\<rbrace>"
   apply (simp add: lookup_pt_slot_def)
   apply (wp get_pde_wp|wpc)+
   apply clarsimp
@@ -161,9 +161,7 @@ lemma lookup_pt_slot_inv_any:
 crunch cte_wp_at[wp]: set_irq_state "\<lambda>s. P (cte_wp_at P' p s)"
 
 lemma set_pt_cte_wp_at:
-  "\<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>
-     set_pt ptr val
-   \<lbrace>\<lambda>rv s. P (cte_wp_at P' p s)\<rbrace>"
+  "set_pt ptr val \<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>"
   apply (simp add: set_pt_def)
   apply (wpsimp wp: set_object_wp_strong)
   apply (subst cte_wp_at_after_update')
@@ -172,9 +170,7 @@ lemma set_pt_cte_wp_at:
 
 
 lemma set_pd_cte_wp_at:
-  "\<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>
-     set_pd ptr val
-   \<lbrace>\<lambda>rv s. P (cte_wp_at P' p s)\<rbrace>"
+  "set_pd ptr val \<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>"
   apply (simp add: set_pd_def)
   apply (wpsimp wp: set_object_wp_strong)
   apply (subst cte_wp_at_after_update')
@@ -184,9 +180,7 @@ lemma set_pd_cte_wp_at:
 
 
 lemma set_asid_pool_cte_wp_at:
-  "\<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>
-     set_asid_pool ptr val
-   \<lbrace>\<lambda>rv s. P (cte_wp_at P' p s)\<rbrace>"
+  "set_asid_pool ptr val \<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>"
   apply (simp add: set_asid_pool_def)
   including unfold_objects_asm
   by (wpsimp wp: set_object_wp_strong
@@ -194,14 +188,14 @@ lemma set_asid_pool_cte_wp_at:
           split: if_splits)
 
 lemma set_pt_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pt ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  "set_pt ptr val \<lbrace>pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_pt_def)
   apply (wpsimp wp: set_object_wp_strong)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
 lemma set_pd_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pd ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  "set_pd ptr val \<lbrace>pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_pd_def)
   apply (wpsimp wp: set_object_wp_strong)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
@@ -209,7 +203,7 @@ lemma set_pd_pred_tcb_at[wp]:
 
 
 lemma set_asid_pool_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  "set_asid_pool ptr val \<lbrace>pred_tcb_at proj P t\<rbrace>"
   apply (subst set_asid_pool_def)
   by (wpsimp wp: set_object_wp_strong
            simp: pred_tcb_at_def obj_at_def)
@@ -264,7 +258,7 @@ lemma arch_derive_cap_valid_cap:
 
 
 lemma arch_derive_cap_inv:
-  "\<lbrace>P\<rbrace> arch_derive_cap arch_cap \<lbrace>\<lambda>rv. P\<rbrace>"
+  "arch_derive_cap arch_cap \<lbrace>P\<rbrace>"
   apply(simp add: arch_derive_cap_def, cases arch_cap, simp_all)
       apply(rule hoare_pre, wpc?, wp+; simp)+
   done
@@ -316,12 +310,12 @@ lemma mask_asid_low_bits_ucast_ucast:
 
 
 lemma set_asid_pool_cur [wp]:
-  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  "set_asid_pool p a \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>"
   unfolding set_asid_pool_def by (wpsimp wp: get_object_wp)
 
 
 lemma set_asid_pool_cur_tcb [wp]:
-  "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
+  "set_asid_pool p a \<lbrace>\<lambda>s. cur_tcb s\<rbrace>"
   unfolding cur_tcb_def
   by (rule hoare_lift_Pf [where f=cur_thread]; wp)
 
@@ -331,12 +325,12 @@ crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
 
 
 lemma set_asid_pool_valid_arch [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  "set_asid_pool p a \<lbrace>valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift) (wp set_asid_pool_typ_at)+
 
 
 lemma set_asid_pool_valid_objs [wp]:
-  "\<lbrace>valid_objs\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  "set_asid_pool p a \<lbrace>valid_objs\<rbrace>"
   apply (simp add: set_asid_pool_def)
   apply (wp set_object_valid_objs get_object_wp)
   including unfold_objects
@@ -710,7 +704,7 @@ lemma create_mapping_entries_valid [wp]:
 
 
 lemma set_pt_distinct [wp]:
-  "\<lbrace>pspace_distinct\<rbrace> set_pt p pt \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
+  "set_pt p pt \<lbrace>pspace_distinct\<rbrace>"
   apply (simp add: set_pt_def)
   apply (wpsimp wp: set_object_wp_strong)
   apply (clarsimp simp: obj_at_def a_type_def pspace_distinct_same_type
@@ -719,7 +713,7 @@ lemma set_pt_distinct [wp]:
 
 
 lemma set_pd_distinct [wp]:
-  "\<lbrace>pspace_distinct\<rbrace> set_pd p pd \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
+  "set_pd p pd \<lbrace>pspace_distinct\<rbrace>"
   apply (simp add: set_pd_def)
   apply (wp set_object_distinct[THEN hoare_set_object_weaken_pre] get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def
@@ -748,7 +742,7 @@ lemma store_pte_valid_objs [wp]:
 
 
 lemma set_pt_caps_of_state [wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  "set_pt p pt \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
   apply (simp add: set_pt_def)
   apply (wpsimp wp: set_object_wp_strong simp: obj_at_def a_type_simps)
   apply (subst cte_wp_caps_of_lift)
@@ -759,7 +753,7 @@ lemma set_pt_caps_of_state [wp]:
 
 
 lemma set_pd_caps_of_state [wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_pd p pd \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  "set_pd p pd \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
   apply (simp add: set_pd_def bind_assoc)
   apply (wpsimp wp: set_object_wp_strong simp: obj_at_def)
   apply (subst cte_wp_caps_of_lift)
@@ -769,7 +763,7 @@ lemma set_pd_caps_of_state [wp]:
 
 
 lemma store_pte_aligned [wp]:
-  "\<lbrace>pspace_aligned\<rbrace> store_pte pt p \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
+  "store_pte pt p \<lbrace>pspace_aligned\<rbrace>"
   apply (simp add: store_pte_def set_pt_def)
   apply (wp set_object_aligned)
   including unfold_objects
@@ -797,7 +791,7 @@ lemma store_pde_valid_objs [wp]:
 
 
 lemma set_asid_pool_aligned [wp]:
-  "\<lbrace>pspace_aligned\<rbrace> set_asid_pool p ptr \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
+  "set_asid_pool p ptr \<lbrace>pspace_aligned\<rbrace>"
   apply (simp add: set_asid_pool_def)
   including unfold_objects
   apply (wpsimp wp: set_object_wp_strong pspace_aligned_obj_update[rotated])
@@ -805,7 +799,7 @@ lemma set_asid_pool_aligned [wp]:
 
 
 lemma set_asid_pool_distinct [wp]:
-  "\<lbrace>pspace_distinct\<rbrace> set_asid_pool p ptr \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
+  "set_asid_pool p ptr \<lbrace>pspace_distinct\<rbrace>"
   apply (simp add: set_asid_pool_def)
   including unfold_objects
   by (wpsimp wp: set_object_wp_strong pspace_distinct_same_type)

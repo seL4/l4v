@@ -159,7 +159,7 @@ lemma not_empty_thread_get [wp]:
   unfolding thread_get_def
   apply (rule not_empty_guard_imp)
   apply (simp add: gets_the_def bind_assoc)
-  apply (wp )
+  apply wp
   apply (simp add: tcb_at_def)
   done
 

@@ -759,21 +759,21 @@ lemma set_pt_corres:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
-       apply simp
-      apply simp
-     apply clarsimp
-     apply (frule (1) pspace_alignedD)
-     apply (drule_tac p=x in pspace_alignedD, assumption)
-     apply simp
-     apply (drule mask_alignment_ugliness)
-        apply (simp add: pt_bits_def pageBits_def)
-       apply (simp add: pt_bits_def pageBits_def)
-      apply clarsimp
-      apply (clarsimp simp: nth_ucast nth_shiftl)
-      apply (drule test_bit_size)
-      apply (clarsimp simp: word_size bit_simps)
-      apply arith
-     apply ((simp split: if_split_asm)+)[5]
+         apply simp
+        apply simp
+        apply clarsimp
+        apply (frule (1) pspace_alignedD)
+        apply (drule_tac p=x in pspace_alignedD, assumption)
+        apply simp
+        apply (drule mask_alignment_ugliness)
+           apply (simp add: pt_bits_def pageBits_def)
+          apply (simp add: pt_bits_def pageBits_def)
+         apply clarsimp
+         apply (clarsimp simp: nth_ucast nth_shiftl)
+         apply (drule test_bit_size)
+         apply (clarsimp simp: word_size bit_simps)
+         apply arith
+        apply ((simp split: if_split_asm)+)[5]
    apply (simp add: other_obj_relation_def
                split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (rule conjI)

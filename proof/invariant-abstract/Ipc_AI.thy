@@ -1752,9 +1752,9 @@ lemma set_mrs_only_idle [wp]:
                del: upt.simps)
   apply (wp mapM_wp'|wpc)+
   apply (clarsimp simp del: fun_upd_apply)
-   apply (erule only_idle_tcb_update)
-    apply (drule get_tcb_SomeD)
-    apply (fastforce simp: obj_at_def)
+  apply (erule only_idle_tcb_update)
+   apply (drule get_tcb_SomeD)
+   apply (fastforce simp: obj_at_def)
   by (simp add: get_tcb_rev)
 
 context Ipc_AI begin
@@ -2029,10 +2029,9 @@ lemma update_waiting_invs:
     apply (wp valid_irq_node_typ sts_only_idle)
    apply (simp add: valid_tcb_state_def conj_comms)
    apply (simp add: cte_wp_at_caps_of_state)
-
    apply (wp set_simple_ko_valid_objs hoare_post_imp [OF disjI1]
-             valid_irq_node_typ valid_ioports_lift | assumption | simp |
-             strengthen reply_cap_doesnt_exist_strg)+
+            valid_irq_node_typ valid_ioports_lift | assumption | simp |
+            strengthen reply_cap_doesnt_exist_strg)+
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                         ep_redux_simps neq_Nil_conv
                   cong: list.case_cong if_cong)
@@ -2671,13 +2670,13 @@ lemma ri_invs':
    apply (rule_tac R="ko_at (Endpoint x) ep and ?pre" in hoare_vcg_if_split)
     apply (wp complete_signal_invs)
    apply (case_tac x)
-    apply (wp | rule hoare_pre, wpc | simp)+
-     apply (simp add: invs_def valid_state_def valid_pspace_def)
-     apply (rule hoare_pre, wp valid_irq_node_typ valid_ioports_lift)
-      apply (simp add: valid_ep_def)
-      apply (wp valid_irq_node_typ sts_only_idle sts_ep_at_inv[simplified ep_at_def2, simplified]
-                failed_transfer_Q[simplified do_nbrecv_failed_transfer_def, simplified]
-            | simp add: live_def do_nbrecv_failed_transfer_def)+
+     apply (wp | rule hoare_pre, wpc | simp)+
+           apply (simp add: invs_def valid_state_def valid_pspace_def)
+           apply (rule hoare_pre, wp valid_irq_node_typ valid_ioports_lift)
+           apply (simp add: valid_ep_def)
+          apply (wp valid_irq_node_typ sts_only_idle sts_ep_at_inv[simplified ep_at_def2, simplified]
+                    failed_transfer_Q[simplified do_nbrecv_failed_transfer_def, simplified]
+                 | simp add: live_def do_nbrecv_failed_transfer_def)+
      apply (clarsimp simp: st_tcb_at_tcb_at valid_tcb_state_def invs_def valid_state_def valid_pspace_def)
      apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ep_def)
      apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)

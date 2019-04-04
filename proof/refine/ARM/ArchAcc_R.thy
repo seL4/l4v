@@ -932,6 +932,8 @@ lemma set_pt_corres [@lift_corres_args, corres]:
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
+
+
 lemma store_pde_corres [@lift_corres_args, corres]:
   "pde_relation_aligned (p >> 2) pde pde' \<Longrightarrow>
   corres dc (pde_at p and pspace_aligned and valid_etcbs) (pde_at' p) (store_pde p pde) (storePDE p pde')"

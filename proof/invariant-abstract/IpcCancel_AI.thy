@@ -99,7 +99,7 @@ lemma cancel_all_signals_valid_objs:
         | wpc)+
   apply (clarsimp split: option.splits)
   apply (erule (1) valid_objsE)
-  apply (simp add:valid_obj_def valid_ntfn_def)
+  apply (simp add: valid_obj_def valid_ntfn_def)
   done
 
 
@@ -498,7 +498,7 @@ lemma cancel_signal_valid_objs[wp]:
   apply (erule(1) obj_at_valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_ntfn_def)
   apply (auto split: option.splits list.splits)
-done
+  done
 
 
 lemma tcb_in_valid_state:
@@ -868,7 +868,7 @@ lemma cancel_all_ipc_invs_helper:
    apply (rule refs_of_live, clarsimp)
   apply (rule conjI[rotated])
    apply (subgoal_tac "\<exists>ep. ko_at (Endpoint ep) p s", clarsimp)
-  apply (subgoal_tac "\<exists>rt. (x, rt) \<in> ep_q_refs_of ep", clarsimp)
+    apply (subgoal_tac "\<exists>rt. (x, rt) \<in> ep_q_refs_of ep", clarsimp)
      apply (fastforce elim!: ep_queued_st_tcb_at)
     apply (clarsimp simp: obj_at_def is_ep_def)+
    apply (case_tac ko, simp_all)
@@ -959,7 +959,7 @@ lemma unbind_notification_invs:
   apply clarsimp
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (wp valid_irq_node_typ set_simple_ko_valid_objs valid_ioports_lift
-       | clarsimp split del: if_split)+
+         | clarsimp split del: if_split)+
   apply (intro conjI impI;
     (match conclusion in "sym_refs r" for r \<Rightarrow> \<open>-\<close>
         | auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2

@@ -1025,19 +1025,19 @@ lemma sbn_valid_idle [wp]:
   done
 
 lemma sts_distinct [wp]:
-  "\<lbrace>pspace_distinct\<rbrace> set_thread_state t st \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
+  "set_thread_state t st \<lbrace>pspace_distinct\<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (wp set_object_distinct|clarsimp)+
   done
 
 lemma sbn_distinct [wp]:
-  "\<lbrace>pspace_distinct\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
+  "set_bound_notification t ntfn \<lbrace>pspace_distinct\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (wp set_object_distinct, simp)
   done
 
 lemma sts_cur_tcb [wp]:
-  "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. cur_tcb s\<rbrace>"
+  "set_thread_state t st \<lbrace>\<lambda>s. cur_tcb s\<rbrace>"
   apply (clarsimp simp: set_thread_state_def set_object_def get_object_def
                         gets_the_def valid_def in_monad)
   apply (drule get_tcb_SomeD)
@@ -1047,7 +1047,7 @@ lemma sts_cur_tcb [wp]:
   done
 
 lemma sbn_cur_tcb [wp]:
-  "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>rv s. cur_tcb s\<rbrace>"
+  "set_bound_notification t ntfn \<lbrace>\<lambda>s. cur_tcb s\<rbrace>"
   apply (clarsimp simp: set_bound_notification_def set_object_def get_object_def
                         gets_the_def valid_def in_monad)
   apply (drule get_tcb_SomeD)

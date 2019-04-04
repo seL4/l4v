@@ -406,7 +406,7 @@ lemma unmap_page_table_valid_pdpt_objs[wp]:
 lemma set_simple_ko_valid_pdpt_objs[wp]:
    "\<lbrace>\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x\<rbrace>
        set_simple_ko param_a param_b param_c \<lbrace>\<lambda>_ s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x\<rbrace>"
-  apply (subst set_simple_ko_def)
+  unfolding set_simple_ko_def
   by (wpsimp wp: set_object_valid_pdpt[THEN hoare_set_object_weaken_pre] get_object_wp
            simp: a_type_def obj_valid_pdpt_def obj_at_def
           split: kernel_object.splits)

@@ -2662,7 +2662,7 @@ lemma as_user_tcb_states[wp]:
 
 lemma as_user_thread_state[wp]:
   "\<lbrace>\<lambda>s. P (thread_states s)\<rbrace> as_user t f \<lbrace>\<lambda>rv s. P (thread_states s)\<rbrace>"
-  apply (simp add: thread_states_def )
+  apply (simp add: thread_states_def)
   apply wp
   done
 

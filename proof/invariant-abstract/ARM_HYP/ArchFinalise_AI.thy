@@ -485,7 +485,7 @@ lemma arch_thread_set_cap_refs_respects_device_region[wp]:
    apply (subst arch_tcb_update_aux3)
    apply (rule_tac cte_wp_at_update_some_tcb, assumption)
    apply (simp add: tcb_cnode_map_def)+
-     done
+  done
 
 lemma arch_thread_set_pspace_respects_device_region[wp]:
   "\<lbrace>pspace_respects_device_region\<rbrace>

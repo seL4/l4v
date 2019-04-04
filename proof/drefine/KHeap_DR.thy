@@ -1936,12 +1936,12 @@ lemma tcb_type_set_obj_ep:
 
 lemma tcb_type_at_set_ep:
   "\<lbrace>(=) s'a\<rbrace> set_endpoint word1 Structures_A.endpoint.IdleEP \<lbrace>\<lambda>r s. \<forall>x. tcb_at x s \<longrightarrow> tcb_at x s'a\<rbrace>"
-  apply (clarsimp simp:set_simple_ko_def)
+  apply (clarsimp simp: set_simple_ko_def)
   apply (wp tcb_type_set_obj_ep)
-  apply (clarsimp simp:get_object_def)
-  apply wp
+   apply (clarsimp simp: get_object_def)
+   apply wp
   apply (clarsimp)
-done
+  done
 
 (* The following filter function is infact a combinition of 3 sets *)
 lemma is_thread_blocked_on_sth:

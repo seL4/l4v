@@ -1146,7 +1146,7 @@ lemma dcorres_delete_cap_simple_set_pt:
   apply (simp add: delete_cap_simple_def set_pt_def gets_the_def gets_def bind_assoc get_object_def)
   apply (rule dcorres_absorb_get_l)
   apply (clarsimp simp: assert_def corres_free_fail
-    split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
+                 split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
   apply (frule opt_cap_page)
     apply simp+
   apply (clarsimp simp:gets_def assert_opt_def PageTableUnmap_D.is_final_cap_def PageTableUnmap_D.is_final_cap'_def)

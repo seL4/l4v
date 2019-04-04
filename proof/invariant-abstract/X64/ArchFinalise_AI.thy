@@ -1508,7 +1508,7 @@ lemma set_asid_pool_empty_table_lookup:
    \<lbrace>\<lambda>rv s. valid_vs_lookup
              (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
                 x64_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
-  apply (simp add: set_asid_pool_def set_object_def set_object_def)
+  apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def valid_vs_lookup_def
                   simp del: fun_upd_apply)

@@ -411,16 +411,16 @@ method set_simple_ko_method uses wp_thm simp_thm =
         split: kernel_object.splits)
 
 lemma set_simple_ko_aligned[wp]:
- "\<lbrace>pspace_aligned\<rbrace> set_simple_ko f ptr v \<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
+ "set_simple_ko f ptr v \<lbrace>pspace_aligned\<rbrace>"
   by (set_simple_ko_method wp_thm: set_object_aligned[THEN hoare_set_object_weaken_pre])
 
 
 lemma set_simple_ko_typ_at [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_simple_ko f p' ep \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  "set_simple_ko f p' ep \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
   by (set_simple_ko_method wp_thm: set_object_typ_at)
 
 lemma set_simple_ko_cte_wp_at [wp]:
-  "\<lbrace>cte_wp_at P p\<rbrace> set_simple_ko f p' ep \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
+  "set_simple_ko f p' ep \<lbrace>cte_wp_at P p\<rbrace>"
   by (set_simple_ko_method wp_thm: set_object_wp simp_thm: cte_wp_at_cases; fastforce)
 
 lemma get_simple_ko_ko_at:
@@ -452,9 +452,7 @@ lemma set_ep_refs_of[wp]:
   by (wp; fastforce simp: state_refs_of_def elim!: rsubst[where P=P])
 
 lemma set_simple_ko_hyp_refs_of[wp]:
- "\<lbrace>\<lambda>s. P ((state_hyp_refs_of s))\<rbrace>
-    set_simple_ko f ep val
-  \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
+ "set_simple_ko f ep val \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
   apply (set_simple_ko_method wp_thm: set_object_wp_strong)
   apply (rule conjI; clarsimp elim!: rsubst[where P=P])
    apply (subst state_hyp_refs_of_ep_update[of ep, symmetric])
@@ -484,12 +482,12 @@ lemma set_object_distinct[wp]:
   by (wpsimp wp: set_object_wp_strong simp: obj_at_def pspace_distinct_same_type)
 
 lemma set_simple_ko_distinct[wp]:
-  "\<lbrace>pspace_distinct\<rbrace> set_simple_ko f ep v \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
+  "set_simple_ko f ep v \<lbrace>pspace_distinct\<rbrace>"
   by (set_simple_ko_method wp_thm: set_object_distinct[THEN hoare_set_object_weaken_pre])
 
 
 lemma set_simple_ko_cur_tcb[wp]:
-  "\<lbrace>cur_tcb\<rbrace> set_simple_ko f ep v \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
+  "set_simple_ko f ep v \<lbrace>cur_tcb\<rbrace>"
   by (set_simple_ko_method wp_thm: set_object_wp simp_thm: cur_tcb_def is_tcb is_ep; fastforce)
 
 lemma assert_pre:
@@ -497,9 +495,7 @@ lemma assert_pre:
   by (simp add: valid_def assert_def get_def bind_def return_def)
 
 lemma set_object_pspace_in_kernel_window:
-  "\<lbrace>pspace_in_kernel_window and obj_at (\<lambda>ko. a_type k = a_type ko) p\<rbrace>
-  set_object p k
-  \<lbrace>\<lambda>r. pspace_in_kernel_window\<rbrace>"
+  "set_object p k \<lbrace>pspace_in_kernel_window\<rbrace>"
   unfolding set_object_def
   apply (rule assert_pre)
   apply (rule hoare_pre)
@@ -509,9 +505,7 @@ lemma set_object_pspace_in_kernel_window:
 
 
 lemma set_object_pspace_respects_device_region:
-  "\<lbrace>pspace_respects_device_region and obj_at (\<lambda>ko. a_type k = a_type ko) p\<rbrace>
-  set_object p k
-  \<lbrace>\<lambda>r. pspace_respects_device_region\<rbrace>"
+  "set_object p k \<lbrace>pspace_respects_device_region\<rbrace>"
   apply (simp add: set_object_def, wp)
   apply (clarsimp simp: pspace_respects_device_region_def
                         device_mem_obj_upd_dom user_mem_obj_upd_dom
@@ -520,12 +514,12 @@ lemma set_object_pspace_respects_device_region:
   done
 
 lemma set_simple_ko_kernel_window[wp]:
-  "\<lbrace>pspace_in_kernel_window\<rbrace> set_simple_ko f ptr val \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
+  "set_simple_ko f ptr val \<lbrace>pspace_in_kernel_window\<rbrace>"
   by (set_simple_ko_method
         wp_thm: set_object_pspace_in_kernel_window[THEN hoare_set_object_weaken_pre])
 
 lemma set_simple_ko_respect_device_region[wp]:
-  "\<lbrace>pspace_respects_device_region\<rbrace> set_simple_ko f ptr val \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
+  "set_simple_ko f ptr val \<lbrace>pspace_respects_device_region\<rbrace>"
   by (set_simple_ko_method
         wp_thm: set_object_pspace_respects_device_region[THEN hoare_set_object_weaken_pre])
 
@@ -566,19 +560,19 @@ crunch no_cdt[wp]: set_simple_ko "\<lambda>s. P (cdt s)"
 
 
 lemma set_simple_ko_caps_of_state [wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_simple_ko f p ep \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
+  "set_simple_ko f p ep \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
   apply (set_simple_ko_method simp_thm: bind_assoc wp_thm: set_object_wp_strong)
   apply (rule conjI; clarsimp split: if_splits; subst cte_wp_caps_of_lift; assumption?)
    apply (auto simp: cte_wp_at_cases)
   done
 
 lemma set_simple_ko_revokable [wp]:
-  "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> set_simple_ko f p ep \<lbrace>\<lambda>r s. P (is_original_cap s)\<rbrace>"
+  "set_simple_ko f p ep \<lbrace>\<lambda> s. P (is_original_cap s)\<rbrace>"
   by (set_simple_ko_method wp_thm: set_object_wp)
 
 
 lemma set_ep_mdb [wp]:
-  "\<lbrace>valid_mdb\<rbrace> set_simple_ko f p ep \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
+  "set_simple_ko f p ep \<lbrace>valid_mdb\<rbrace>"
   by (wp valid_mdb_lift)
 
 
@@ -820,25 +814,21 @@ lemma as_user_no_del_ep[wp]:
   by (simp add: ep_at_typ, rule as_user_typ_at)
 
 lemma set_simple_ko_tcb[wp]:
-  "\<lbrace> tcb_at t \<rbrace>
-   set_simple_ko f ep v
-   \<lbrace> \<lambda>rv. tcb_at t \<rbrace>"
+  "set_simple_ko f ep v \<lbrace> tcb_at t \<rbrace>"
   by (simp add: tcb_at_typ) wp
 
 
 lemma set_simple_ko_pred_tcb_at [wp]:
-  "\<lbrace> pred_tcb_at proj f t \<rbrace>
-   set_simple_ko g ep v
-   \<lbrace> \<lambda>rv. pred_tcb_at proj f t \<rbrace>"
+  "set_simple_ko g ep v \<lbrace> pred_tcb_at proj f t \<rbrace>"
   by(set_simple_ko_method wp_thm: set_object_at_obj2 simp_thm: pred_tcb_at_def)
 
 
 lemma set_endpoint_ep_at[wp]:
-  "\<lbrace>ep_at ptr'\<rbrace> set_endpoint ptr val \<lbrace>\<lambda>rv. ep_at ptr'\<rbrace>"
+  "set_endpoint ptr val \<lbrace>ep_at ptr'\<rbrace>"
   by (simp add: ep_at_typ, wp)
 
 lemma set_notification_ntfn_at[wp]:
-  "\<lbrace>ntfn_at ptr'\<rbrace> set_notification ptr val \<lbrace>\<lambda>rv. ntfn_at ptr'\<rbrace>"
+  "set_notification ptr val \<lbrace>ntfn_at ptr'\<rbrace>"
   by (simp add: ntfn_at_typ, wp)
 
 
@@ -873,7 +863,7 @@ lemma ex_nonz_cap_to_pres:
 
 
 lemma set_simple_ko_ex_cap[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> set_simple_ko f p' v \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
+  "set_simple_ko f p' v \<lbrace>ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)
 
 
@@ -915,18 +905,16 @@ crunch irq_node_inv[wp]: set_simple_ko "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
 lemma set_simple_ko_global_refs [wp]:
-  "\<lbrace>valid_global_refs\<rbrace> set_simple_ko f ntfn p \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
+  "set_simple_ko f ntfn p \<lbrace>valid_global_refs\<rbrace>"
   by (rule valid_global_refs_cte_lift; wpsimp)
 
 
 lemma set_simple_ko_reply[wp]:
-  "\<lbrace>valid_reply_caps\<rbrace>
-   set_simple_ko f p ep
-   \<lbrace>\<lambda>_. valid_reply_caps\<rbrace>"
+  "set_simple_ko f p ep \<lbrace>valid_reply_caps\<rbrace>"
   by (wp valid_reply_caps_st_cte_lift)
 
 lemma set_simple_ko_reply_masters[wp]:
-  "\<lbrace>valid_reply_masters\<rbrace> set_simple_ko f p ep \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
+  "set_simple_ko f p ep \<lbrace>valid_reply_masters\<rbrace>"
   by (wp valid_reply_masters_cte_lift)
 
 lemma obj_at_ko_atE:
@@ -995,42 +983,42 @@ sublocale non_aobj_op < non_vspace_op
 
 context non_vspace_op begin
 
-lemma valid_vspace_obj[wp]:"\<lbrace>valid_vspace_objs\<rbrace> f \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
+lemma valid_vspace_obj[wp]:"f \<lbrace>valid_vspace_objs\<rbrace>"
   by (rule valid_vspace_objs_lift_weak; wp vsobj_at; simp)
 
-lemma vs_lookup[wp]: "\<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
+lemma vs_lookup[wp]: "f \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace>"
   by (rule vs_lookup_vspace_obj_at_lift; wp vsobj_at; simp)
 
-lemma vs_lookup_pages[wp]: "\<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
+lemma vs_lookup_pages[wp]: "f \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace>"
   by (rule vs_lookup_pages_vspace_obj_at_lift; wp vsobj_at; simp)
 
-lemma valid_global_objs[wp]: "\<lbrace>valid_global_objs\<rbrace> f \<lbrace>\<lambda>_. valid_global_objs\<rbrace>"
+lemma valid_global_objs[wp]: "f \<lbrace>valid_global_objs\<rbrace>"
   by (rule valid_global_objs_lift_weak, (wp vsobj_at)+)
 
 lemma valid_global_vspace_mappings[wp]:
-  "\<lbrace>valid_global_vspace_mappings\<rbrace> f \<lbrace>\<lambda>_. valid_global_vspace_mappings\<rbrace>"
+  "f \<lbrace>valid_global_vspace_mappings\<rbrace>"
   by (rule valid_global_vspace_mappings_lift, (wp vsobj_at)+)
 
-lemma valid_asid_map[wp]: "\<lbrace>valid_asid_map\<rbrace> f \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
+lemma valid_asid_map[wp]: "f \<lbrace>valid_asid_map\<rbrace>"
   by (rule valid_asid_map_lift, (wp vsobj_at)+)
 
-lemma valid_kernel_mappings[wp]: "\<lbrace>valid_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. valid_kernel_mappings\<rbrace>"
+lemma valid_kernel_mappings[wp]: "f \<lbrace>valid_kernel_mappings\<rbrace>"
   by (rule valid_kernel_mappings_lift, (wp vsobj_at)+)
 
-lemma equal_kernel_mappings[wp]: "\<lbrace>equal_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. equal_kernel_mappings\<rbrace>"
+lemma equal_kernel_mappings[wp]: "f \<lbrace>equal_kernel_mappings\<rbrace>"
   by (rule equal_kernel_mappings_lift, wp vsobj_at)
 
-lemma valid_vso_at[wp]:"\<lbrace>valid_vso_at p\<rbrace> f \<lbrace>\<lambda>_. valid_vso_at p\<rbrace>"
+lemma valid_vso_at[wp]:"f \<lbrace>valid_vso_at p\<rbrace>"
   by (rule valid_vso_at_lift_aobj_at; wp vsobj_at; simp)
 
-lemma in_user_frame[wp]:"\<lbrace>in_user_frame p\<rbrace> f \<lbrace>\<lambda>_. in_user_frame p\<rbrace>"
+lemma in_user_frame[wp]:"f \<lbrace>in_user_frame p\<rbrace>"
   by (rule in_user_frame_obj_pred_lift; wp vsobj_at; simp)
 
 end
 
 locale non_mem_op =
   fixes f
-  assumes memory[wp]: "\<And>P. \<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (underlying_memory (machine_state s))\<rbrace>"
+  assumes memory[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace>"
 
 (* non_vspace_op version *)
 locale non_vspace_non_mem_op = non_vspace_op f + non_mem_op f for f
@@ -1051,7 +1039,7 @@ sublocale non_aobj_non_mem_op < non_vspace_non_mem_op ..
 
 locale non_cap_op =
   fixes f
-  assumes caps[wp]: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  assumes caps[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
 
 locale non_vspace_non_cap_op = non_vspace_op f + non_cap_op f for f
 begin
@@ -1073,11 +1061,11 @@ sublocale non_aobj_non_cap_non_mem_op < non_vspace_non_cap_non_mem_op ..
 
 lemma shows
   sts_caps_of_state[wp]:
-    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_thread_state t st \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
+    "set_thread_state t st \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>" and
   set_bound_caps_of_state[wp]:
-    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_bound_notification t e \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
+    "set_bound_notification t e \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>" and
   as_user_caps_of_state[wp]:
-    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> as_user p f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+    "as_user p f \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
 
   unfolding set_thread_state_def set_bound_notification_def as_user_def set_object_def get_object_def
             set_mrs_def
@@ -1086,13 +1074,13 @@ lemma shows
 
 lemma
   store_word_offs_caps_of_state[wp]:
-   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> store_word_offs a b c \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+   "store_word_offs a b c \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
   unfolding store_word_offs_def do_machine_op_def[abs_def]
   by wpsimp
 
 lemma
   set_mrs_caps_of_state[wp]:
-   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+   "set_mrs thread buf msgs \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
   unfolding set_mrs_def set_object_def[abs_def] get_object_def
   apply (wp mapM_x_inv_wp | wpc | simp add: zipWithM_x_mapM_x split del: if_split | clarsimp)+
   apply (safe; erule rsubst[where P=P], rule cte_wp_caps_of_lift)
@@ -1126,7 +1114,7 @@ interpretation
   by wpsimp+
 
 lemma store_word_offs_obj_at_P[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> store_word_offs a b c \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>"
+  "store_word_offs a b c \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
   unfolding store_word_offs_def
   by (wp | fastforce)+
 
@@ -1142,9 +1130,9 @@ interpretation
   done
 
 lemma valid_irq_handlers_lift:
-  assumes x: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  assumes y: "\<And>P. \<lbrace>\<lambda>s. P (interrupt_states s)\<rbrace> f \<lbrace>\<lambda>rv s. P (interrupt_states s)\<rbrace>"
-  shows      "\<lbrace>valid_irq_handlers\<rbrace> f \<lbrace>\<lambda>rv. valid_irq_handlers\<rbrace>"
+  assumes x: "\<And>P. f \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
+  assumes y: "\<And>P. f \<lbrace>\<lambda>s. P (interrupt_states s)\<rbrace>"
+  shows      "f \<lbrace>valid_irq_handlers\<rbrace>"
   apply (simp add: valid_irq_handlers_def irq_issued_def)
   apply (rule hoare_use_eq [where f=caps_of_state, OF x y])
   done
@@ -1159,8 +1147,8 @@ lemmas hoare_use_eq_irq_node = hoare_use_eq[where f=interrupt_irq_node]
 
 
 lemma cap_table_at_lift_valid:
-  "\<lbrakk> \<And>T. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace> \<rbrakk>
-       \<Longrightarrow> \<lbrace>cap_table_at n p\<rbrace> f \<lbrace>\<lambda>rv. cap_table_at n p\<rbrace>"
+  "\<lbrakk> \<And>T. f \<lbrace>typ_at T p\<rbrace> \<rbrakk>
+       \<Longrightarrow> f \<lbrace>cap_table_at n p\<rbrace>"
   by (simp add: cap_table_at_typ)
 
 
@@ -1172,18 +1160,18 @@ crunch interrupt_states[wp]: set_notification "\<lambda>s. P (interrupt_states s
   (wp: crunch_wps)
 
 lemma set_simple_ko_only_idle [wp]:
-  "\<lbrace>only_idle\<rbrace> set_simple_ko f p ntfn \<lbrace>\<lambda>_. only_idle\<rbrace>"
+  "set_simple_ko f p ntfn \<lbrace>only_idle\<rbrace>"
   by (wp only_idle_lift)
 
 lemma set_simple_ko_cap_refs_kernel_window[wp]:
-  "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_simple_ko f p ep \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
+  "set_simple_ko f p ep \<lbrace>cap_refs_in_kernel_window\<rbrace>"
   by (set_simple_ko_method
         wp_thm: set_object_cap_refs_in_kernel_window[THEN hoare_set_object_weaken_pre]
                 get_object_wp
       simp_thm: is_ep_def is_ntfn_def)
 
 lemma set_simple_ko_cap_refs_respects_device_region[wp]:
-  "\<lbrace>cap_refs_respects_device_region\<rbrace> set_simple_ko f p ep \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  "set_simple_ko f p ep \<lbrace>cap_refs_respects_device_region\<rbrace>"
   by (set_simple_ko_method
         wp_thm: set_object_cap_refs_respects_device_region[THEN hoare_set_object_weaken_pre]
                 get_object_wp
@@ -1238,13 +1226,13 @@ lemma set_object_valid_ioc_no_caps:
 
 
 lemma set_simple_ko_valid_ioc[wp]:
-  "\<lbrace>valid_ioc\<rbrace> set_simple_ko f ptr val \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
+  "set_simple_ko f ptr val \<lbrace>valid_ioc\<rbrace>"
   by (set_simple_ko_method wp_thm: set_object_valid_ioc_no_caps[THEN hoare_set_object_weaken_pre]
                                    get_object_wp
            simp_thm: is_tcb_def is_cap_table_def)
 
 lemma set_object_machine_state[wp]:
-  "\<lbrace>\<lambda>s. P (machine_state s)\<rbrace> set_object p ko \<lbrace>\<lambda>_ s. P (machine_state s)\<rbrace>"
+  "set_object p ko \<lbrace>\<lambda>s. P (machine_state s)\<rbrace>"
   by (wpsimp wp: set_object_wp_strong)
 
 lemma valid_irq_states_triv:
@@ -1292,7 +1280,7 @@ lemma set_ntfn_minor_invs:
 crunch asid_map[wp]: set_bound_notification "valid_asid_map"
 
 lemma dmo_aligned[wp]:
-  "\<lbrace>pspace_aligned\<rbrace> do_machine_op f \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
+  "do_machine_op f \<lbrace>pspace_aligned\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply (wp select_wp)
   apply (clarsimp simp: pspace_aligned_def)
@@ -1310,7 +1298,7 @@ lemma do_machine_op_result[wp]:
 
 
 lemma dmo_zombies[wp]:
-  "\<lbrace>zombies_final\<rbrace> do_machine_op oper \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
+  "do_machine_op oper \<lbrace>zombies_final\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply wp
   apply (clarsimp elim!: zombies_final_pspaceI)
@@ -1318,7 +1306,7 @@ lemma dmo_zombies[wp]:
 
 
 lemma dmo_iflive[wp]:
-  "\<lbrace>if_live_then_nonz_cap\<rbrace> do_machine_op oper \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
+  "do_machine_op oper \<lbrace>if_live_then_nonz_cap\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply wp
   apply (clarsimp elim!: iflive_pspaceI)
@@ -1326,7 +1314,7 @@ lemma dmo_iflive[wp]:
 
 
 lemma dmo_ifunsafe[wp]:
-  "\<lbrace>if_unsafe_then_cap\<rbrace> do_machine_op oper \<lbrace>\<lambda>_. if_unsafe_then_cap\<rbrace>"
+  "do_machine_op oper \<lbrace>if_unsafe_then_cap\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply wp
   apply (clarsimp elim!: ifunsafe_pspaceI)
@@ -1334,9 +1322,7 @@ lemma dmo_ifunsafe[wp]:
 
 
 lemma dmo_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>
-     do_machine_op oper
-   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  "do_machine_op oper \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply wp
   apply (clarsimp elim!: state_refs_of_pspaceI)
@@ -1344,9 +1330,7 @@ lemma dmo_refs_of[wp]:
 
 
 lemma dmo_hyp_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
-     do_machine_op oper
-   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
+  "do_machine_op oper \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply wp
   apply (clarsimp elim!: state_hyp_refs_of_pspaceI)
@@ -1379,11 +1363,11 @@ crunch valid_arch_caps[wp]: do_machine_op "valid_arch_caps"
 
 
 lemma dmo_cap_to[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> do_machine_op mop \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
+  "do_machine_op mop \<lbrace>ex_nonz_cap_to p\<rbrace>"
   by (simp add: ex_nonz_cap_to_def, wp hoare_vcg_ex_lift)
 
 lemma dmo_st_tcb [wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> do_machine_op f \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  "do_machine_op f \<lbrace>pred_tcb_at proj P t\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply (wp select_wp)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
@@ -1394,7 +1378,7 @@ crunch ct[wp]: do_machine_op "\<lambda>s. P (cur_thread s)" (wp: select_wp)
 
 
 lemma do_machine_op_arch [wp]:
-  "\<lbrace>\<lambda>s. P (arch_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
+  "do_machine_op f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply wp
   apply simp
@@ -1402,12 +1386,12 @@ lemma do_machine_op_arch [wp]:
 
 
 lemma do_machine_op_valid_arch [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  "do_machine_op f \<lbrace>valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift) wp+
 
 
 lemma do_machine_op_vs_lookup [wp]:
-  "\<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace> do_machine_op f \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
+  "do_machine_op f \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace>"
   apply (rule vs_lookup_vspace_obj_at_lift)
   apply (simp add: do_machine_op_def split_def)
   apply (wp | simp)+
@@ -1426,7 +1410,7 @@ lemma dmo_inv:
 
 
 lemma dom_objs [wp]:
-  "\<lbrace>valid_objs\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  "do_machine_op f \<lbrace>valid_objs\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply (wp select_wp)
   apply (fastforce intro: valid_objs_pspaceI)

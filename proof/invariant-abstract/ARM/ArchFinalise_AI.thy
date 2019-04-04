@@ -879,11 +879,11 @@ lemma delete_asid_empty_table_pd:
           apply wps
           apply wp+
         apply (simp add: set_asid_pool_def)
-          apply (case_tac "x2 = word")
-           defer
-           apply wps
-           apply (rule set_object_at_obj)
-          apply (wp get_object_ret | wps)+
+        apply (case_tac "x2 = word")
+         defer
+         apply wps
+         apply (rule set_object_at_obj)
+        apply (wp get_object_ret | wps)+
    apply (clarsimp simp: obj_at_def empty_table_def)+
   done
 

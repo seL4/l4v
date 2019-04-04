@@ -1640,9 +1640,9 @@ lemma select_f_get_register:
                    return_def bind_def)
   apply (rule ext)
   apply (case_tac "get_tcb thread s")
-    apply (clarsimp simp:fail_def return_def)+
-  apply (clarsimp simp:get_tcb_def split:option.splits Structures_A.kernel_object.splits)
-done
+   apply (clarsimp simp: fail_def return_def)+
+  apply (clarsimp simp: get_tcb_def split: option.splits Structures_A.kernel_object.splits)
+  done
 
 lemma select_f_evalMonad:
   "\<lbrakk>empty_fail g; empty_when_fail g; \<And>P. weak_det_spec P g; \<And>ms. \<lbrace>(=) ms\<rbrace>g\<lbrace>\<lambda>r. (=) ms\<rbrace>\<rbrakk>

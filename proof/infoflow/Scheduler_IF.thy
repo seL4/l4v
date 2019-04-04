@@ -2488,7 +2488,7 @@ lemma dmo_getActive_IRQ_reads_respect_scheduler:
    apply wp
   apply clarsimp
   apply (simp add: scheduler_equiv_def)
-   done
+  done
 
 definition idle_context
 where
@@ -2593,7 +2593,7 @@ lemma set_object_reads_respects_scheduler[wp]:
       apply (clarsimp simp: equiv_for_def scheduler_affects_equiv_def
                             scheduler_globals_frame_equiv_def identical_kheap_updates_def
             | rule states_equiv_for_identical_kheap_updates idle_equiv_identical_kheap_updates)+
-      done
+  done
 
 lemma sts_reads_respects_scheduler:
   "reads_respects_scheduler aag l
