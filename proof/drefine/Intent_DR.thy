@@ -303,7 +303,7 @@ lemma dcorres_set_object_tcb:
   dcorres dc ((=) (transform s')) ((=) s')
            (KHeap_D.set_object p' (Tcb tcb ))
            (KHeap_A.set_object p' (TCB tcb'))"
-  apply (clarsimp simp: corres_underlying_def set_object_def in_monad)
+  apply (clarsimp simp: corres_underlying_def set_object_def get_object_def in_monad)
   apply (clarsimp simp: KHeap_D.set_object_def simpler_modify_def)
   apply (clarsimp simp: transform_def transform_current_thread_def)
   apply (clarsimp simp: transform_objects_def)
@@ -1635,8 +1635,9 @@ lemma select_f_store_word:
 lemma select_f_get_register:
   "(as_user thread (getRegister register)) =
     (do tcb\<leftarrow>gets_the (get_tcb thread);return (arch_tcb_context_get (tcb_arch tcb) register) od)"
-  apply (simp add: assert_opt_def as_user_def set_object_def gets_the_def
-                   put_def select_f_def getRegister_def gets_def get_def return_def bind_def)
+  apply (simp add: assert_opt_def as_user_def set_object_def get_object_def gets_the_def
+                   a_type_def assert_def put_def select_f_def getRegister_def gets_def get_def
+                   return_def bind_def)
   apply (rule ext)
   apply (case_tac "get_tcb thread s")
     apply (clarsimp simp:fail_def return_def)+
@@ -1939,22 +1940,22 @@ lemma ipc_frame_set_cxt_mrs[wp]:
   "\<lbrace>ko_at (TCB tcb) thread and ipc_frame_wp_at P a\<rbrace>
      KHeap_A.set_object thread (TCB (tcb_arch_update (arch_tcb_context_set t) tcb))
    \<lbrace>\<lambda>rv. ipc_frame_wp_at P a\<rbrace>"
-  by (clarsimp simp: KHeap_A.set_object_def get_def put_def bind_def valid_def
-                       return_def obj_at_def ipc_frame_wp_at_def)
+  by (clarsimp simp: KHeap_A.set_object_def get_object_def get_def put_def bind_def valid_def
+                       return_def obj_at_def ipc_frame_wp_at_def in_monad)
 
 lemma ipc_buffer_set_cxt_mrs[wp]:
   "\<lbrace>ko_at (TCB tcb) thread and ipc_buffer_wp_at P a\<rbrace>
      KHeap_A.set_object thread (TCB (tcb_arch_update (arch_tcb_context_set t) tcb))
    \<lbrace>\<lambda>rv. ipc_buffer_wp_at P a\<rbrace>"
-  by (clarsimp simp: KHeap_A.set_object_def get_def put_def bind_def valid_def
-                       return_def obj_at_def ipc_buffer_wp_at_def)
+  by (clarsimp simp: KHeap_A.set_object_def get_object_def get_def put_def bind_def valid_def
+                       return_def obj_at_def ipc_buffer_wp_at_def in_monad)
 
 lemmas [wp] =  abs_typ_at_lifts[OF do_machine_op_obj_at]
 
 lemma set_object_valid_etcbs: "\<lbrace>valid_etcbs and (\<lambda>s. kheap s ptr = Some (TCB tcba))\<rbrace>
                 KHeap_A.set_object ptr (TCB tcbb)
               \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
-  apply (clarsimp simp: set_object_def)
+  apply (clarsimp simp: set_object_def get_object_def)
   apply wp
   apply (auto simp: valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def st_tcb_at_kh_def obj_at_kh_def)
   done

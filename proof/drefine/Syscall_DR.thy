@@ -1064,7 +1064,7 @@ lemma reply_from_kernel_error:
   apply (clarsimp simp:reply_from_kernel_def guess_error_def split_def set_message_info_def)
   apply (rule hoare_pre)
    apply (wp)
-      apply (simp add:as_user_def split_def set_object_def)
+      apply (simp add:as_user_def split_def set_object_def get_object_def)
       apply (wp set_object_at_obj)
      apply (rule hoare_strengthen_post[where Q = "\<lambda>x s. x \<le> mask 12"])
       apply (simp add:set_mrs_def)
@@ -1240,9 +1240,10 @@ lemma not_master_reply_cap_lcs'[wp]:
 lemma set_thread_state_ct_active:
   "\<lbrace>\<lambda>s. cur_thread s = cur_thread s'\<rbrace>
    set_thread_state (cur_thread s') Structures_A.thread_state.Restart \<lbrace>\<lambda>rv. ct_active\<rbrace>"
-  apply (simp add:set_thread_state_def)
+  apply (simp add: set_thread_state_def)
   apply (wp dxo_wp_weak
-       | clarsimp simp: set_object_def trans_state_def ct_in_state_def st_tcb_at_def obj_at_def)+
+       | clarsimp simp: set_object_def get_object_def trans_state_def
+                        ct_in_state_def st_tcb_at_def obj_at_def)+
   done
 
 lemma invoke_cnode_valid_etcbs[wp]:

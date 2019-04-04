@@ -673,14 +673,15 @@ lemma dcorres_set_asid_pool:
   apply (simp add:KHeap_D.set_cap_def set_asid_pool_def get_object_def gets_the_def
                   gets_def bind_assoc)
   apply (rule dcorres_absorb_get_l)
-  apply (clarsimp simp:obj_at_def opt_object_asid_pool assert_opt_def has_slots_def)
-  apply (clarsimp simp:KHeap_D.set_object_def simpler_modify_def put_def bind_def
+  apply (clarsimp simp: obj_at_def opt_object_asid_pool assert_opt_def has_slots_def)
+  apply (clarsimp simp: KHeap_D.set_object_def simpler_modify_def put_def bind_def
                        corres_underlying_def update_slots_def return_def object_slots_def)
-  apply (clarsimp simp:KHeap_A.set_object_def get_def put_def bind_def return_def)
-  apply (clarsimp simp:transform_def transform_current_thread_def)
+  apply (clarsimp simp: KHeap_A.set_object_def get_object_def in_monad get_def
+                        put_def bind_def return_def)
+  apply (clarsimp simp: transform_def transform_current_thread_def)
   apply (drule(1) arch_obj_not_idle)
   apply (rule ext)
-  apply (clarsimp simp:not_idle_thread_def transform_objects_def restrict_map_def map_add_def)
+  apply (clarsimp simp: not_idle_thread_def transform_objects_def restrict_map_def map_add_def)
   apply (rule transform_asid_pool_contents_upd)
   done
 
@@ -1113,11 +1114,11 @@ lemma dcorres_set_pte_cap:
     (KHeap_D.set_cap (a, unat (ptr && mask pt_bits >> 2)) pte_cap)
     (KHeap_A.set_object a
       (ArchObj (arch_kernel_obj.PageTable (fun(ucast (ptr && mask pt_bits >> 2) := a_pte)))))"
-  apply (simp add:KHeap_D.set_cap_def KHeap_A.set_object_def gets_the_def gets_def bind_assoc unat_def)
+  apply (simp add:KHeap_D.set_cap_def KHeap_A.set_object_def get_object_def gets_the_def gets_def bind_assoc unat_def)
   apply (rule dcorres_absorb_get_r)
   apply (rule dcorres_absorb_get_l)
   apply (clarsimp simp:obj_at_def opt_object_page_table assert_opt_def has_slots_def object_slots_def)
-  apply (clarsimp simp:KHeap_D.set_object_def simpler_modify_def put_def bind_def
+  apply (clarsimp simp:KHeap_D.set_object_def get_object_def in_monad simpler_modify_def put_def bind_def
                        corres_underlying_def update_slots_def return_def object_slots_def)
   apply (rule sym)
   apply (clarsimp simp:transform_def transform_current_thread_def)
@@ -1142,13 +1143,12 @@ lemma dcorres_delete_cap_simple_set_pt:
        and valid_idle and ko_at (ArchObj (arch_kernel_obj.PageTable fun)) (ptr && ~~ mask pt_bits))
     (delete_cap_simple (ptr && ~~ mask pt_bits, unat (ptr && mask pt_bits >> 2)))
     (set_pt (ptr && ~~ mask pt_bits) (fun(ucast (ptr && mask pt_bits >> 2) := ARM_A.pte.InvalidPTE)))"
-  apply (simp add:delete_cap_simple_def set_pt_def gets_the_def gets_def bind_assoc get_object_def)
+  apply (simp add: delete_cap_simple_def set_pt_def gets_the_def gets_def bind_assoc get_object_def)
   apply (rule dcorres_absorb_get_l)
-  apply (rule dcorres_absorb_get_r)
-  apply (clarsimp simp:assert_def corres_free_fail
-    split:Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
+  apply (clarsimp simp: assert_def corres_free_fail
+    split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
   apply (frule opt_cap_page)
-    apply (simp add:)+
+    apply simp+
   apply (clarsimp simp:gets_def assert_opt_def PageTableUnmap_D.is_final_cap_def PageTableUnmap_D.is_final_cap'_def)
   apply (rule dcorres_absorb_get_l)
   apply (clarsimp simp: always_empty_slot_def gets_the_def gets_def bind_assoc)
@@ -1208,17 +1208,17 @@ lemma dcorres_set_pde_cap:
       (KHeap_D.set_cap (a, unat x) pde_cap)
       (KHeap_A.set_object a (ArchObj
                  (arch_kernel_obj.PageDirectory (fun(ucast x := a_pde)))))"
-  apply (simp add:KHeap_D.set_cap_def KHeap_A.set_object_def gets_the_def gets_def bind_assoc)
-  apply (rule dcorres_absorb_get_r)
+  apply (simp add: KHeap_D.set_cap_def KHeap_A.set_object_def gets_the_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_l)
-  apply (clarsimp simp:obj_at_def opt_object_page_directory assert_opt_def has_slots_def object_slots_def)
-  apply (clarsimp simp:KHeap_D.set_object_def simpler_modify_def put_def bind_def corres_underlying_def update_slots_def object_slots_def return_def)
-  apply (clarsimp simp:transform_def transform_current_thread_def)
+  apply (clarsimp simp: obj_at_def opt_object_page_directory assert_opt_def has_slots_def object_slots_def)
+  apply (clarsimp simp: KHeap_D.set_object_def get_object_def in_monad simpler_modify_def put_def
+                        bind_def corres_underlying_def update_slots_def object_slots_def return_def)
+  apply (clarsimp simp: transform_def transform_current_thread_def)
     apply (rule ext)
     apply (clarsimp | rule conjI)+
       apply (frule page_directory_at_rev)
       apply (frule(1) page_directory_not_idle)
-      apply (clarsimp simp:transform_objects_def not_idle_thread_def)
+      apply (clarsimp simp: transform_objects_def not_idle_thread_def)
       apply (rule sym)
       apply (erule transform_page_directory_contents_upd)
    apply (clarsimp simp: transform_objects_def restrict_map_def map_add_def)
@@ -1233,35 +1233,32 @@ lemma dcorres_delete_cap_simple_set_pde:
     and valid_idle and ko_at (ArchObj (arch_kernel_obj.PageDirectory fun)) (ptr && ~~ mask pd_bits))
              (delete_cap_simple (ptr && ~~ mask pd_bits, unat (ptr && mask pd_bits >> 2)))
              (set_pd (ptr && ~~ mask pd_bits) (fun(ucast (ptr && mask pd_bits >> 2) := ARM_A.pde.InvalidPDE)))"
-  apply (simp add:delete_cap_simple_def set_pd_def gets_the_def gets_def bind_assoc get_object_def)
+  apply (simp add: delete_cap_simple_def set_pd_def gets_the_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_l)
-  apply (rule dcorres_absorb_get_r)
-  apply (clarsimp simp:assert_def corres_free_fail
-    split:Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
+  apply (clarsimp simp: assert_def corres_free_fail
+                 split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
   apply (erule disjE)
-    apply (frule opt_cap_page_table,simp+)
-    apply (clarsimp simp:gets_def assert_opt_def PageTableUnmap_D.is_final_cap_def PageTableUnmap_D.is_final_cap'_def)
-    apply (rule dcorres_absorb_get_l)
-    apply (clarsimp simp:always_empty_slot_def gets_the_def gets_def bind_assoc)
-    apply (rule remove_cdt_pd_slot_exec)
-      apply (rule corres_guard_imp)
+   apply (frule opt_cap_page_table, simp+)
+   apply (clarsimp simp: gets_def assert_opt_def PageTableUnmap_D.is_final_cap_def PageTableUnmap_D.is_final_cap'_def)
+   apply (rule dcorres_absorb_get_l)
+   apply (clarsimp simp: always_empty_slot_def gets_the_def gets_def bind_assoc)
+   apply (rule remove_cdt_pd_slot_exec)
+    apply (rule corres_guard_imp)
       apply (rule dcorres_set_pde_cap)
-    apply (simp add:transform_pte_def)+
-    apply (clarsimp simp:pd_pt_relation_def transform_pde_def)+
-    apply (rule page_directory_at_rev)
-    apply simp
+        apply (simp add: transform_pte_def)+
+       apply (clarsimp simp: pd_pt_relation_def transform_pde_def)+
+   apply (rule page_directory_at_rev)
+   apply simp
   apply (frule opt_cap_section,simp+)
-    apply (clarsimp simp:gets_def assert_opt_def PageTableUnmap_D.is_final_cap_def PageTableUnmap_D.is_final_cap'_def)
-    apply (rule dcorres_absorb_get_l)
-    apply (clarsimp simp:always_empty_slot_def gets_the_def gets_def bind_assoc)
-    apply (rule remove_cdt_pd_slot_exec)
-      apply (rule corres_guard_imp)
-      apply (rule dcorres_set_pde_cap)
-    apply simp+
-    apply (clarsimp simp:pd_pt_relation_def transform_pde_def)+
-    apply (rule page_directory_at_rev)
-    apply simp
-done
+  apply (clarsimp simp: gets_def assert_opt_def PageTableUnmap_D.is_final_cap_def PageTableUnmap_D.is_final_cap'_def)
+  apply (rule dcorres_absorb_get_l)
+  apply (clarsimp simp: always_empty_slot_def gets_the_def gets_def bind_assoc)
+  apply (rule remove_cdt_pd_slot_exec)
+   apply (rule corres_guard_imp)
+     apply (rule dcorres_set_pde_cap)
+       apply simp+
+      apply (clarsimp simp: pd_pt_relation_def transform_pde_def obj_at_def a_type_def)+
+  done
 
 lemma dcorres_lookup_pd_slot:
   "is_aligned pd 14
@@ -1429,83 +1426,68 @@ lemma remain_pt_pd_relation:
    \<lbrace>\<lambda>r s. \<forall>y\<in>ys. pt_page_relation (y && ~~ mask pt_bits) pg_id y S s\<rbrace>"
   apply (rule hoare_vcg_const_Ball_lift)
   apply (subgoal_tac "ptr\<noteq> y")
-   apply (simp add:store_pte_def)
+   apply (simp add: store_pte_def)
    apply wp
      apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable x)) (ptr && ~~ mask pt_bits)
                 and  pt_page_relation (y && ~~ mask pt_bits) pg_id y S" in hoare_vcg_precond_imp)
-      apply (clarsimp simp:set_pt_def)
-      apply wp
-        apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable x)) (ptr && ~~ mask pt_bits)
-                     and  pt_page_relation (y && ~~ mask pt_bits) pg_id y S" in hoare_vcg_precond_imp)
-         apply (clarsimp simp:valid_def set_object_def in_monad)
-         apply (drule_tac x= y in bspec,simp)
-         apply (clarsimp simp:pt_page_relation_def dest!: ucast_inj_mask| rule conjI)+
-          apply (drule mask_compare_imply)
-              apply ((simp add:word_size pt_bits_def pageBits_def is_aligned_mask)+)
+      apply (clarsimp simp: set_pt_def)
+      apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageTable x)) (ptr && ~~ mask pt_bits)
+                   and  pt_page_relation (y && ~~ mask pt_bits) pg_id y S" in hoare_vcg_precond_imp)
+       apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
+       apply (drule_tac x= y in bspec,simp)
+       apply (clarsimp simp: pt_page_relation_def dest!: ucast_inj_mask| rule conjI)+
+        apply (drule mask_compare_imply)
+            apply ((simp add: word_size pt_bits_def pageBits_def is_aligned_mask)+)
 
-         apply (clarsimp simp:pt_page_relation_def obj_at_def)
-        apply (assumption)
-       apply wp
-      apply (simp add:get_object_def)
-      apply wp
-      apply (clarsimp simp:obj_at_def)+
-     apply (assumption)
+       apply (clarsimp simp: pt_page_relation_def obj_at_def)
+      apply (assumption)
+     apply (simp add: get_object_def)
     apply wp
-   apply (clarsimp simp:obj_at_def pt_page_relation_def)+
+   apply (clarsimp simp: obj_at_def)+
   done
 
 lemma remain_pd_section_relation:
   "\<lbrakk>is_aligned ptr 2; is_aligned y 2; ptr \<noteq> y\<rbrakk>
    \<Longrightarrow> \<lbrace>\<lambda>s. pd_section_relation ( y && ~~ mask pd_bits) sid y s\<rbrace> store_pde ptr sp
        \<lbrace>\<lambda>r s. pd_section_relation (y && ~~ mask pd_bits) sid y s\<rbrace>"
-  apply (simp add:store_pde_def)
+  apply (simp add: store_pde_def)
   apply wp
     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
                   and pd_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
-     apply (clarsimp simp:set_pd_def)
-     apply wp
-       apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
-                  and pd_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
-        apply (clarsimp simp:valid_def set_object_def in_monad)
-        apply (clarsimp simp:pd_section_relation_def dest!:ucast_inj_mask | rule conjI)+
-         apply (drule mask_compare_imply)
-             apply (simp add:word_size pd_bits_def pt_bits_def pageBits_def is_aligned_mask)+
-        apply (clarsimp simp:pt_page_relation_def obj_at_def)
-       apply (assumption)
-      apply wp
-     apply (simp add:get_object_def)
-     apply wp
-     apply (clarsimp simp:obj_at_def)+
-    apply (assumption)
+     apply (clarsimp simp: set_pd_def)
+     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
+                and pd_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
+      apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
+      apply (clarsimp simp: pd_section_relation_def dest!: ucast_inj_mask | rule conjI)+
+       apply (drule mask_compare_imply)
+           apply (simp add: word_size pd_bits_def pt_bits_def pageBits_def is_aligned_mask)+
+      apply (clarsimp simp: pt_page_relation_def obj_at_def)
+     apply (assumption)
+    apply (simp add: get_object_def)
    apply wp
-  apply (clarsimp simp:obj_at_def pt_page_relation_def)+
-done
+  apply (clarsimp simp: obj_at_def)+
+  done
 
 lemma remain_pd_super_section_relation:
   "\<lbrakk>is_aligned ptr 2; is_aligned y 2; ptr \<noteq> y\<rbrakk>
    \<Longrightarrow> \<lbrace>\<lambda>s. pd_super_section_relation ( y && ~~ mask pd_bits) sid y s\<rbrace> store_pde ptr sp
        \<lbrace>\<lambda>r s. pd_super_section_relation (y && ~~ mask pd_bits) sid y s\<rbrace>"
-  apply (simp add:store_pde_def)
+  apply (simp add: store_pde_def)
   apply wp
     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
                and pd_super_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
-     apply (clarsimp simp:set_pd_def)
-     apply wp
-       apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
-                 and pd_super_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
-        apply (clarsimp simp:valid_def set_object_def in_monad)
-        apply (clarsimp simp:pd_super_section_relation_def dest!:ucast_inj_mask | rule conjI)+
-         apply (drule mask_compare_imply)
-             apply (simp add:word_size pd_bits_def pt_bits_def pageBits_def is_aligned_mask)+
-        apply (clarsimp simp:pt_page_relation_def obj_at_def)
-       apply (assumption)
-      apply wp
-     apply (simp add:get_object_def)
-     apply wp
-     apply (clarsimp simp:obj_at_def)+
-    apply (assumption)
+     apply (clarsimp simp: set_pd_def)
+     apply (rule_tac Q = "ko_at (ArchObj (arch_kernel_obj.PageDirectory x)) (ptr && ~~ mask pd_bits)
+               and pd_super_section_relation (y && ~~ mask pd_bits) sid y " in hoare_vcg_precond_imp)
+      apply (clarsimp simp: valid_def set_object_def get_object_def in_monad)
+      apply (clarsimp simp: pd_super_section_relation_def dest!: ucast_inj_mask | rule conjI)+
+       apply (drule mask_compare_imply)
+           apply (simp add: word_size pd_bits_def pt_bits_def pageBits_def is_aligned_mask)+
+      apply (clarsimp simp: pt_page_relation_def obj_at_def)
+     apply (assumption)
+    apply (simp add: get_object_def)
    apply wp
-  apply (clarsimp simp:obj_at_def pt_page_relation_def)
+  apply (clarsimp simp: obj_at_def)+
   done
 
 lemma remain_pd_either_section_relation:
@@ -1599,7 +1581,7 @@ lemma dcorres_store_pde_non_sense:
      \<and> (f (ucast (slot && mask pd_bits >> 2)) = pde)))
   (return a) (store_pde slot pde)"
   apply (simp add:store_pde_def)
-  apply (simp add:get_pd_def bind_assoc get_object_def set_pd_def gets_def)
+  apply (simp add:get_pd_def bind_assoc set_object_def get_object_def set_pd_def gets_def)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp add:assert_def corres_free_fail
                   split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -1621,7 +1603,7 @@ lemma dcorres_store_pte_non_sense:
       \<and> (f (ucast (slot && mask pt_bits >> 2)) = pte)))
   (return a) (store_pte slot pte)"
   apply (simp add:store_pte_def)
-  apply (simp add:get_pt_def bind_assoc get_object_def set_pt_def gets_def)
+  apply (simp add:get_pt_def bind_assoc set_object_def get_object_def set_pt_def gets_def)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp add:assert_def corres_free_fail
                   split:Structures_A.kernel_object.splits arch_kernel_obj.splits)

@@ -22,7 +22,7 @@ lemmas [wp] = abs_typ_at_lifts[OF set_simple_ko_typ_at]
 lemma set_object_cur_thread_idle_thread:
   "\<lbrace>\<lambda>s. P (cur_thread s) (idle_thread s)\<rbrace> KHeap_A.set_object word x
          \<lbrace>\<lambda>yb s. P (cur_thread s) (idle_thread s)\<rbrace>"
-  by (fastforce simp:set_object_def valid_def get_def put_def return_def bind_def)
+  by (wpsimp wp: set_object_wp)
 
 lemma set_thread_state_cur_thread_idle_thread:
   "\<lbrace>\<lambda>s. P (cur_thread s) (idle_thread s) \<rbrace> set_thread_state thread x \<lbrace>\<lambda>rv s. P (cur_thread s)  (idle_thread s)\<rbrace>"
@@ -409,7 +409,7 @@ lemma block_thread_on_send_corres:
    apply (clarsimp simp: obj_at_def not_idle_thread_def opt_object_tcb assert_def
                          transform_tcb_def has_slots_def split: option.splits)
    apply (clarsimp simp:update_slots_def object_slots_def)
-   apply (clarsimp simp:set_object_def simpler_modify_def KHeap_D.set_object_def
+   apply (clarsimp simp:set_object_def get_object_def in_monad simpler_modify_def KHeap_D.set_object_def
                         get_def put_def bind_def corres_underlying_def return_def)
    apply (clarsimp simp:transform_def transform_objects_def transform_current_thread_def)
    apply (rule ext)
@@ -434,7 +434,7 @@ lemma block_thread_on_recv_corres:
    apply (clarsimp simp:not_idle_thread_def opt_object_tcb assert_def
                         transform_tcb_def has_slots_def)
    apply (clarsimp simp:update_slots_def object_slots_def)
-   apply (clarsimp simp:set_object_def simpler_modify_def KHeap_D.set_object_def
+   apply (clarsimp simp:set_object_def get_object_def in_monad simpler_modify_def KHeap_D.set_object_def
                         get_def put_def bind_def corres_underlying_def return_def)
    apply (clarsimp simp:transform_def transform_objects_def transform_current_thread_def)
    apply (rule ext)
@@ -457,7 +457,7 @@ lemma block_thread_on_ntfn_recv_corres:
    apply (clarsimp simp:not_idle_thread_def opt_object_tcb assert_def
                         transform_tcb_def has_slots_def)
    apply (clarsimp simp:update_slots_def object_slots_def)
-   apply (clarsimp simp:set_object_def simpler_modify_def KHeap_D.set_object_def
+   apply (clarsimp simp:set_object_def get_object_def in_monad simpler_modify_def KHeap_D.set_object_def
                         get_def put_def bind_def corres_underlying_def return_def)
    apply (clarsimp simp:transform_def transform_objects_def transform_current_thread_def)
    apply (rule ext)
@@ -472,7 +472,7 @@ lemma corres_ignore_ret_lhs: "dcorres rv P P' (do f;g od) f' \<Longrightarrow> d
  by (clarsimp simp:corres_underlying_def)
 
 crunch not_idle[wp]: set_thread_state "not_idle_thread y :: 'a::state_ext state \<Rightarrow> bool"
-(simp: not_idle_thread_def wp: dxo_wp_weak)
+(simp: not_idle_thread_def get_object_def wp: dxo_wp_weak)
 
 lemma set_scheduler_action_dcorres:
   "dcorres dc P P' (return ()) (set_scheduler_action sa)"
@@ -560,7 +560,7 @@ lemma set_thread_state_block_on_notification_corres:
    apply (clarsimp, frule(1) valid_etcbs_get_tcb_get_etcb, clarsimp)
    apply (clarsimp simp: not_idle_thread_def opt_object_tcb assert_def transform_tcb_def has_slots_def)
    apply (clarsimp simp: update_slots_def object_slots_def)
-   apply (clarsimp simp: set_object_def simpler_modify_def KHeap_D.set_object_def
+   apply (clarsimp simp: set_object_def get_object_def in_monad simpler_modify_def KHeap_D.set_object_def
                          get_def put_def bind_def corres_underlying_def return_def)
    apply (clarsimp simp: transform_def transform_current_thread_def)
    apply (intro ext conjI)
@@ -651,7 +651,8 @@ lemma receive_blocked_waiting_syncs:
    \<Longrightarrow> get_waiting_sync_bound_ntfn_threads ntfnptr (transform s) = {a}"
   apply (clarsimp simp: get_waiting_sync_bound_ntfn_threads_def)
   apply (frule get_notification_pick, simp)
-  apply (clarsimp simp: valid_ntfn_abstract_def ntfn_bound_set_def get_tcb_def split: Structures_A.kernel_object.splits option.splits)
+  apply (clarsimp simp: valid_ntfn_abstract_def ntfn_bound_set_def get_tcb_def
+                 split: Structures_A.kernel_object.splits option.splits)
   apply (rule set_eqI)
   apply clarsimp
   apply (rule iffI)
@@ -660,13 +661,18 @@ lemma receive_blocked_waiting_syncs:
    apply (clarsimp simp: valid_state_def valid_pspace_def)
    apply (frule (3) ntfn_bound_tcb_at[where P="\<lambda>a. a = Some ntfnptr"], simp)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-   apply (clarsimp simp: transform_def transform_objects_def restrict_map_def map_add_def split: option.splits)
+   apply (clarsimp simp: transform_def transform_objects_def restrict_map_def map_add_def
+                  split: option.splits)
     apply (subst (asm) handy_if_lemma)+
     apply clarsimp
    apply (case_tac "x \<noteq> idle_thread s")
-    apply (clarsimp simp: transform_object_def split: Structures_A.kernel_object.splits ARM_A.arch_kernel_obj.splits option.splits nat.splits)
+    apply (clarsimp simp: transform_object_def
+                   split: Structures_A.kernel_object.splits ARM_A.arch_kernel_obj.splits
+                          option.splits nat.splits)
      apply (frule_tac ptr=x in valid_etcbs_tcb_etcb, simp+)
-    apply (clarsimp simp add: transform_tcb_def tcb_pending_op_slot_def tcb_boundntfn_slot_def infer_tcb_bound_notification_def split: option.splits)
+    apply (clarsimp simp add: transform_tcb_def tcb_pending_op_slot_def
+                              tcb_boundntfn_slot_def infer_tcb_bound_notification_def
+                       split: option.splits)
     apply (frule_tac tcb="x2a" in  bound_tcb_fold, simp)
     apply (frule (3) bound_tcb_bound_notification_at)
     apply clarsimp
@@ -681,7 +687,9 @@ lemma receive_blocked_waiting_syncs:
   apply (clarsimp simp: transform_def)
   apply (frule (1) transform_objects_tcb)
    apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
-  apply (clarsimp simp: transform_tcb_def tcb_pending_op_slot_def tcb_boundntfn_slot_def infer_tcb_pending_op_def infer_tcb_bound_notification_def receive_blocked_def split: Structures_A.thread_state.splits)
+  apply (clarsimp simp: transform_tcb_def tcb_pending_op_slot_def tcb_boundntfn_slot_def
+                        infer_tcb_pending_op_def infer_tcb_bound_notification_def receive_blocked_def
+                 split: Structures_A.thread_state.splits)
   done
 
 lemma dcorres_dat:
@@ -728,12 +736,12 @@ lemma not_idle_after_blocked_cancel_ipc:
 
 lemma valid_idle_set_thread_state:
   "\<lbrace>not_idle_thread xa and valid_idle :: det_state \<Rightarrow> bool\<rbrace> set_thread_state xa Structures_A.thread_state.Restart \<lbrace>\<lambda>xa. valid_idle\<rbrace>"
-  apply (simp add:set_thread_state_def not_idle_thread_def)
-  apply (simp add:set_object_def)
+  apply (simp add: set_thread_state_def not_idle_thread_def)
+  apply (simp add: set_object_def get_object_def)
   apply wp
-  apply (clarsimp simp:not_idle_thread_def)
-  apply (clarsimp simp:obj_at_def dest!:get_tcb_SomeD)
-  apply (auto simp:valid_idle_def pred_tcb_at_def obj_at_def)
+  apply (clarsimp simp: not_idle_thread_def)
+  apply (clarsimp simp: obj_at_def dest!:get_tcb_SomeD)
+  apply (auto simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
 crunch not_idle_thread[wp]: tcb_sched_action "not_idle_thread a"
@@ -998,19 +1006,19 @@ lemma corres_setup_caller_cap:
     apply (simp add: inject_reply_cap_def setup_caller_cap_def split del: if_split)
     apply (rule corres_split[OF _ set_thread_state_corres])
       apply (rule reply_cap_insert_corres)
-      apply (simp add:not_idle_thread_def)+
+      apply (simp add: not_idle_thread_def)+
     apply (wp set_thread_state_it|simp )+
     apply (rule hoare_vcg_conj_lift)
-     apply (clarsimp simp:not_idle_thread_def set_thread_state_def)
+     apply (clarsimp simp: not_idle_thread_def set_thread_state_def)
      apply wp
-      apply (simp add:set_object_def)
+      apply (simp add: set_object_def get_object_def)
       apply wp+
    apply simp
-  apply (clarsimp simp:not_idle_thread_def tcb_at_def obj_at_def st_tcb_at_def)
-  apply (rule conjI|clarsimp simp:is_tcb_def)+
+  apply (clarsimp simp: not_idle_thread_def tcb_at_def obj_at_def st_tcb_at_def)
+  apply (rule conjI|clarsimp simp: is_tcb_def)+
   apply (drule valid_tcb_objs)
    apply (erule get_tcb_rev)
-  apply (simp add:valid_tcb_state_def)
+  apply (simp add: valid_tcb_state_def)
   done
 
 lemma seq_alt_when:"(do a \<leftarrow> when c (f \<sqinter> g); h a od) = ((do a\<leftarrow>when c f ; h a od)\<sqinter> (do a\<leftarrow>when c g; h a od))"
@@ -1235,9 +1243,8 @@ lemma ipc_buffer_wp_at_exst_update[simp]:
 
 lemma ipc_buffer_wp_set_cap[wp]:
   "\<lbrace>ipc_buffer_wp_at buf t\<rbrace> CSpaceAcc_A.set_cap cap' a \<lbrace>\<lambda>ya. ipc_buffer_wp_at buf t\<rbrace>"
-  apply (clarsimp simp:set_cap_def split_def)
-  apply (simp add:get_object_def gets_def get_def bind_def return_def assert_def fail_def valid_def)
-  apply (clarsimp split:Structures_A.kernel_object.splits simp:return_def set_object_def fail_def get_def put_def bind_def)
+  apply (clarsimp simp: set_cap_def split_def)
+  apply (wpsimp wp: set_object_wp get_object_wp)
   apply (rule conjI|clarsimp simp:ipc_buffer_wp_at_def obj_at_def)+
   done
 
@@ -2154,15 +2161,18 @@ lemma dcorres_set_thread_state_Restart:
                  apply (simp add:transform_tcb_def)
                 apply (frule opt_object_tcb, assumption)
                  apply simp
-                apply (simp add:set_object_def bind_def in_monad gets_the_def simpler_gets_def
+                apply (clarsimp simp: set_object_def bind_def in_monad gets_the_def simpler_gets_def
                 get_def return_def put_def KHeap_D.set_cap_def assert_opt_def transform_tcb_def
+                get_object_def
                 has_slots_def object_slots_def update_slots_def KHeap_D.set_object_def simpler_modify_def)
-                apply (clarsimp simp:transform_def transform_current_thread_def)
+                apply (clarsimp simp: transform_def transform_current_thread_def)
                 apply (intro conjI ext)
-                apply (frule(1) valid_etcbs_get_tcb_get_etcb, clarsimp simp: get_etcb_def)
-                apply (clarsimp simp:transform_objects_def transform_tcb_def
-                 infer_tcb_pending_op_def restrict_map_def map_add_def tcb_slots)
-               apply (clarsimp simp:restrict_map_def map_add_def dest!:get_tcb_SomeD get_etcb_SomeD)
+                 apply (frule(1) valid_etcbs_get_tcb_get_etcb, clarsimp simp: get_etcb_def)
+                 apply (clarsimp simp:transform_objects_def transform_tcb_def
+                  infer_tcb_pending_op_def restrict_map_def map_add_def tcb_slots)
+                apply (solves \<open>clarsimp simp: transform_objects_def transform_tcb_def not_idle_thread_def
+                                              tcb_slots restrict_map_def map_add_def
+                                       dest!: get_tcb_SomeD get_etcb_SomeD\<close>)
                prefer 2
                apply (wp remove_parent_dummy_when_pending_wp)
                 apply (clarsimp simp:valid_mdb_def)
@@ -2205,19 +2215,22 @@ lemma dcorres_set_thread_state_Restart:
      apply (simp add: tcb_pending_op_slot_def)
     apply ((wp | clarsimp | simp)+)[2]
   apply (frule(1) valid_etcbs_get_tcb_get_etcb, clarsimp simp: get_etcb_def)
-  apply (simp add:KHeap_D.set_cap_def set_object_def gets_the_def gets_def bind_assoc)
+  apply (simp add:KHeap_D.set_cap_def set_object_def get_object_def gets_the_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_l)
+  apply (rule dcorres_absorb_get_r)
+  apply (rule corres_assert_assume[rotated], clarsimp dest!: get_tcb_SomeD)
+  apply (rule corres_assert_assume[rotated], clarsimp dest!: get_tcb_SomeD)
   apply (rule dcorres_absorb_get_r)
   apply (frule opt_object_tcb)
     apply (simp add: get_etcb_def)
-   apply (simp add:not_idle_thread_def)
-  apply (clarsimp simp:assert_opt_def has_slots_def transform_tcb_def object_slots_def
+   apply (simp add: not_idle_thread_def)
+  apply (clarsimp simp: assert_opt_def has_slots_def transform_tcb_def object_slots_def
     update_slots_def tcb_ipcbuffer_slot_def KHeap_D.set_object_def simpler_modify_def)
-  apply (clarsimp simp:corres_underlying_def put_def transform_def transform_current_thread_def
+  apply (clarsimp simp: corres_underlying_def put_def transform_def transform_current_thread_def
     not_idle_thread_def)
   apply (intro ext conjI)
   apply (fastforce simp: transform_objects_def transform_tcb_def restrict_map_def map_add_def
-                         infer_tcb_pending_op_def  not_idle_thread_def tcb_slots)
+                         assert_def infer_tcb_pending_op_def  not_idle_thread_def tcb_slots)
   done
 
 
@@ -2309,13 +2322,13 @@ lemma set_endpoint_valid_irq_node[wp]:
    apply (simp add:set_simple_ko_def)
    apply (wp hoare_vcg_all_lift)
       apply (rule_tac Q="\<lambda>s. \<forall>irq. cap_table_at 0 (interrupt_irq_node s irq) s \<and> ep_at w s" in hoare_vcg_precond_imp)
-       apply (clarsimp simp:set_object_def get_def put_def bind_def return_def valid_def obj_at_def)
+       apply (clarsimp simp: set_object_def get_object_def in_monad get_def put_def bind_def
+                             return_def valid_def obj_at_def)
        apply (drule_tac x = irq in spec)
-       apply (clarsimp simp:is_cap_table_def is_ep_def)
-       apply (simp split:Structures_A.kernel_object.splits)
-      apply assumption
+       apply (clarsimp simp: is_cap_table_def is_ep_def)
+      apply (simp split: Structures_A.kernel_object.splits)
      apply wp+
-   apply (clarsimp simp:get_object_def|wp)+
+   apply (clarsimp simp: get_object_def|wp)+
   done
 
 lemma dcorres_if_rhs:
@@ -2759,23 +2772,19 @@ lemma tcb_fault_update_valid_state[wp]:
 lemma thread_set_fault_obj_at:
  "\<lbrace>tcb_at thread\<rbrace> thread_set (tcb_fault_update (\<lambda>_. Some ft')) thread
   \<lbrace>\<lambda>rv s. obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> (False \<or> (\<exists>y. tcb_fault tcb = Some y)) = True) thread s\<rbrace>"
-  apply (clarsimp simp:thread_set_def)
-  apply wp
-    apply (simp add:set_object_def)
-    apply wp+
-  apply (clarsimp simp:obj_at_def)
-done
+  apply (simp add: thread_set_def)
+  apply (wpsimp wp: set_object_wp simp: obj_at_def)
+  done
 
 lemma thread_set_fault_st_tcb_at:
   "\<lbrace>st_tcb_at P  a\<rbrace> thread_set (tcb_fault_update (\<lambda>_. Some ft')) thread
             \<lbrace>\<lambda>rv. st_tcb_at P a\<rbrace>"
-  apply (clarsimp simp:thread_set_def)
-  apply wp
-    apply (simp add:set_object_def)
-    apply wp+
-    apply (clarsimp simp:st_tcb_at_def obj_at_def dest!:get_tcb_SomeD split:if_splits)
-  apply (simp add:get_tcb_def)
-done
+  apply (clarsimp simp: thread_set_def)
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp simp: st_tcb_at_def obj_at_def
+                 dest!: get_tcb_SomeD
+                 split: if_splits)
+  done
 
 lemma tcb_fault_handler_length:
   "\<lbrakk>valid_state s;ko_at (TCB tcb) thread s\<rbrakk>
@@ -2801,9 +2810,8 @@ lemma send_fault_ipc_corres_conj_helper:
 
 lemma set_object_valid_etcbs_2:
   "\<lbrace>\<lambda>s. valid_etcbs_2 a (kheap s) \<and>  kheap s ptr = Some (TCB tcba)\<rbrace> KHeap_A.set_object ptr (TCB tcbb) \<lbrace>\<lambda>rv s. valid_etcbs_2 a (kheap s)\<rbrace>"
-  apply (clarsimp simp: set_object_def)
-  apply wp
-  apply (auto simp: valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def st_tcb_at_kh_def obj_at_kh_def)
+  apply (wpsimp wp: set_object_wp)
+  apply (fastforce simp: valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def st_tcb_at_kh_def obj_at_kh_def)
   done
 
 lemma valid_etcbs_2_lift:

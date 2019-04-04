@@ -635,7 +635,7 @@ lemma as_user_setNextPC_corres:
                    as_user_def setNextPC_def get_tcb_def
                    setRegister_def simpler_modify_def
                    select_f_def return_def in_monad
-                   set_object_def
+                   set_object_def get_object_def
                   split: option.splits Structures_A.kernel_object.splits)
   apply (subst tcb_context_update_aux)
   apply (simp add: transform_def transform_current_thread_def)
@@ -652,7 +652,7 @@ lemma dcorres_dummy_set_thread_state_runnable:
   (return ())
   (set_thread_state ptr st)"
   apply (rule wp_to_dcorres)
-  apply (clarsimp simp:set_thread_state_def not_idle_thread_def set_object_def | wp)+
+  apply (clarsimp simp:set_thread_state_def not_idle_thread_def set_object_def get_object_def | wp)+
   apply (clarsimp simp:transform_def transform_current_thread_def st_tcb_at_def obj_at_def
        | rule ext)+
   apply (clarsimp simp:transform_objects_def not_idle_thread_def dest!:get_tcb_SomeD)

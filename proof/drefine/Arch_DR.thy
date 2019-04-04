@@ -1009,16 +1009,21 @@ lemma set_object_simple_corres:
    dcorres dc \<top> (not_idle_thread ptr
              and obj_at (\<lambda>obj. \<not> is_tcb obj \<and> same_caps obj' obj \<and> obj_bits obj = obj_bits obj') ptr)
       (KHeap_D.set_object ptr obj) (KHeap_A.set_object ptr obj')"
-  apply (clarsimp simp: KHeap_D.set_object_def set_object_is_modify)
-  apply (rule corres_modify)
-  apply (clarsimp simp: transform_def transform_objects_def
-                        not_idle_thread_def obj_at_def
-                        transform_current_thread_def)
-  apply (rule ext, simp split: if_split)
-  apply (intro conjI impI allI)
-   apply (clarsimp simp: transform_object_def
-                  split: Structures_A.kernel_object.split)
-  apply (clarsimp simp: restrict_map_def map_add_def)
+  apply (clarsimp simp: KHeap_D.set_object_def set_object_def)
+  apply (rule dcorres_symb_exec_r)
+    apply (rule corres_assert_rhs[where P'="not_idle_thread ptr and
+           obj_at (\<lambda>obj. \<not> is_tcb obj \<and> same_caps obj' obj \<and> obj_bits obj = obj_bits obj') ptr"])
+    apply (fold modify_def)
+    apply (rule corres_modify)
+    apply (clarsimp simp: transform_def transform_objects_def
+                          not_idle_thread_def obj_at_def
+                          transform_current_thread_def)
+    apply (rule ext, simp split: if_split)
+    apply (intro conjI impI allI)
+     apply (clarsimp simp: transform_object_def
+                    split: Structures_A.kernel_object.split)
+    apply (clarsimp simp: restrict_map_def map_add_def)
+   apply (wpsimp wp: get_object_wp)+
   done
 
 lemma pde_unat_less_helper[simplified]:
@@ -1036,11 +1041,10 @@ lemma store_pte_set_cap_corres:
   apply (clarsimp simp:store_pte_def get_pt_def set_pt_def get_object_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:corres_free_fail assert_def split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:transform_pt_slot_ref_def)
   apply (rule corres_guard_imp[OF dcorres_set_pte_cap])
-  apply (simp add:obj_at_def)+
-done
+     apply (simp add: obj_at_def)+
+  done
 
 lemma store_pde_set_cap_corres:
   "\<lbrakk> slot = transform_pd_slot_ref ptr; cap = transform_pde pde ; ucast (ptr && mask pd_bits >> 2) \<notin> kernel_mapping_slots\<rbrakk> \<Longrightarrow>
@@ -1049,11 +1053,10 @@ lemma store_pde_set_cap_corres:
   apply (clarsimp simp:store_pde_def get_pd_def set_pd_def get_object_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:corres_free_fail assert_def split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:transform_pd_slot_ref_def)
   apply (rule corres_guard_imp[OF dcorres_set_pde_cap])
-  apply (simp add:obj_at_def)+
-done
+      apply (simp add: obj_at_def)+
+  done
 
 lemma is_aligned_shiftr_add:
  "\<lbrakk>is_aligned (a::word32) n; is_aligned b m; b < 2 ^n; m \<le> n; n < 32\<rbrakk>

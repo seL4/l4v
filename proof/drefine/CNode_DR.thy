@@ -982,8 +982,8 @@ lemma dcorres_ep_cancel_badge_sends:
                       apply (rule dcorres_rhs_noop_above_True[OF set_thread_state_ext_dcorres])
                       apply (rule dcorres_rhs_noop_above_True[OF tcb_sched_action_dcorres])
                       apply simp
-                     apply (clarsimp simp:set_object_def simpler_modify_def get_def return_def
-                     bind_def put_def corres_underlying_def)
+                     apply (clarsimp simp: set_object_def get_object_def in_monad simpler_modify_def
+                                           get_def return_def bind_def put_def corres_underlying_def)
                      apply (clarsimp simp:transform_def transform_current_thread_def)
                      apply (rule ext)
                      apply (frule(1) valid_etcbs_get_tcb_get_etcb)
@@ -1119,7 +1119,8 @@ lemmas dcorres_list_all2_mapM_
 lemma set_get_set_asid_pool:
   "do _ \<leftarrow> set_asid_pool a x; ap \<leftarrow> get_asid_pool a; set_asid_pool a (y ap) od = set_asid_pool a (y x)"
   apply (rule ext)
-  apply (simp add: get_asid_pool_def set_asid_pool_def get_object_def bind_assoc exec_gets)
+  apply (simp add: get_asid_pool_def set_asid_pool_def get_object_def set_object_def
+                   a_type_def bind_assoc exec_gets)
   apply (case_tac "kheap xa a", simp_all)
   apply (case_tac aa, simp_all)
   apply (rename_tac arch_kernel_obj)
@@ -1168,7 +1169,8 @@ lemma empty_pool:
 lemma get_set_asid_pool:
   "do ap \<leftarrow> get_asid_pool a; set_asid_pool a x od = set_asid_pool a x"
   apply (rule ext)
-  apply (simp add: get_asid_pool_def set_asid_pool_def get_object_def bind_assoc exec_gets)
+  apply (simp add: get_asid_pool_def set_asid_pool_def set_object_def get_object_def
+                   a_type_def bind_assoc exec_gets)
   apply (case_tac "kheap xa a", simp_all)
   apply (case_tac aa, simp_all)
   apply (rename_tac arch_kernel_obj)
@@ -1204,7 +1206,7 @@ lemma dcorres_set_asid_pool_none_trivial:
   apply (simp add:set_asid_pool_def get_object_def gets_def bind_assoc)
   apply (clarsimp simp:KHeap_D.set_object_def simpler_modify_def put_def bind_def obj_at_def
                        corres_underlying_def update_slots_def return_def object_slots_def)
-  apply (clarsimp simp:KHeap_A.set_object_def get_def put_def bind_def return_def)
+  apply (clarsimp simp:KHeap_A.set_object_def get_object_def in_monad get_def put_def bind_def return_def)
   apply (clarsimp simp:transform_def transform_current_thread_def
                        opt_cap_def slots_of_def)
   apply (drule(1) arch_obj_not_idle)
@@ -1424,7 +1426,7 @@ ucast (y && mask pd_bits >> 2) \<notin> kernel_mapping_slots
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp:PageTableUnmap_D.empty_slot_def)
-  apply (clarsimp simp:set_pd_def get_object_def gets_def bind_assoc)
+  apply (clarsimp simp:set_pd_def set_object_def get_object_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (simp add:PageTableUnmap_D.empty_slot_def gets_the_def gets_def bind_assoc)
@@ -1475,7 +1477,7 @@ lemma dcorres_empty_pte_slot:
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp:PageTableUnmap_D.empty_slot_def)
-  apply (clarsimp simp:set_pt_def get_object_def gets_def bind_assoc)
+  apply (clarsimp simp:set_pt_def set_object_def get_object_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (simp add:PageTableUnmap_D.empty_slot_def gets_the_def gets_def bind_assoc)
@@ -1546,7 +1548,7 @@ lemma store_pde_set_cap_corres:
   "\<lbrakk>ucast (ptr && mask pd_bits >> 2) \<in> kernel_mapping_slots \<rbrakk> \<Longrightarrow>
    dcorres dc \<top> valid_idle (return a)
       (store_pde ptr pde)"
-  apply (clarsimp simp:store_pde_def get_pd_def set_pd_def get_object_def gets_def bind_assoc)
+  apply (clarsimp simp:store_pde_def get_pd_def set_pd_def set_object_def get_object_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp:corres_free_fail assert_def split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (rule dcorres_absorb_get_r)
@@ -1777,14 +1779,14 @@ lemma opt_object_cnode:
 
 lemma thread_set_valid_idle:
   "\<lbrace>not_idle_thread thread and valid_idle\<rbrace> thread_set f thread \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  apply (simp add:thread_set_def not_idle_thread_def )
-  apply (simp add:gets_the_def valid_idle_def)
+  apply (simp add: thread_set_def not_idle_thread_def)
+  apply (simp add: gets_the_def valid_idle_def)
   apply wp
-    apply (rule_tac Q="not_idle_thread thread and valid_idle" in hoare_vcg_precond_imp)
-     apply (fastforce simp: KHeap_A.set_object_def get_def put_def bind_def obj_at_def
-                            return_def valid_def not_idle_thread_def valid_idle_def pred_tcb_at_def)
-    apply simp+
-   apply wp
+  apply (rule_tac Q="not_idle_thread thread and valid_idle" in hoare_vcg_precond_imp)
+  apply (clarsimp simp: KHeap_A.set_object_def get_object_def in_monad get_def put_def bind_def obj_at_def
+                        return_def valid_def not_idle_thread_def valid_idle_def pred_tcb_at_def)
+  apply simp+
+  apply wp
   apply (clarsimp simp:not_idle_thread_def valid_idle_def)
   done
 
