@@ -81,18 +81,16 @@ lemma valid_vspace_objs'_ptD:
    \<Longrightarrow> valid_pt_entries pt"
   by (fastforce simp:ran_def)
 
-lemma store_pte_valid_vspace_objs':
+lemma store_pte_valid_vspace_objs'[wp]:
   "store_pte p pte \<lbrace>valid_vspace_objs'\<rbrace>"
   apply (simp add: store_pte_def set_pt_def, wp get_object_wp)
   apply (clarsimp simp: obj_at_def)
-   apply (rule valid_entries_overwrite_0)
-    apply (fastforce simp:ran_def)
-   apply (drule bspec)
-    apply fastforce
-   apply (case_tac "pt pa")
-     apply simp
-    apply (case_tac pte,simp_all)
-  sorry (* FIXME RISCV *)
+  apply (rule valid_entries_overwrite_0)
+   apply (fastforce simp:ran_def)
+  apply (drule bspec)
+   apply fastforce
+  apply (case_tac "pt pa"; case_tac pte; simp)
+  done
 
 lemma unmap_page_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> unmap_page sz asid vptr pptr \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
@@ -132,60 +130,8 @@ lemma copy_global_mappings_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and valid_arch_state and pspace_aligned
             and K (is_aligned p pt_bits)\<rbrace>
        copy_global_mappings p \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  sorry (* FIXME RISCV
-  apply (rule hoare_gen_asm)
-  apply (simp add: copy_global_mappings_def)
-  apply wp
-   apply (rule_tac P="is_aligned global_pm pml4_bits" in hoare_gen_asm)
-   apply (rule mapM_x_copy_pml4e_updates; simp)
-   apply (clarsimp simp: mask_eq_x_eq_0[symmetric])
-   apply (rule less_mask_eq, rule shiftl_less_t2n,
-          simp_all add: bit_simps)[1]
-   apply (drule plus_one_helper2, simp+)
-  apply wp
-  apply (clarsimp simp: invs_aligned_pml4D ranI
-                 elim!: ranE split: if_split_asm)
-  apply (rule_tac S="{x. ucast x \<ge> (get_pml4_index pptr_base)}"
-                 in valid_entries_partial_copy)
-     apply (fastforce simp: obj_at_def ran_def)
-    apply (fastforce simp: obj_at_def ran_def)
-   apply (clarsimp simp:image_def)
-   apply (subst (asm) less_mask_eq)
-    apply (rule shiftl_less_t2n)
-     apply (simp add:pd_bits_def pageBits_def word_le_make_less bit_simps)
-    apply (simp add:pd_bits_def pageBits_def bit_simps)
-   apply (subst (asm) shiftl_shiftr1)
-    apply (simp add: word_size_bits_def)
-   apply (simp add:word_size)
-   apply (subst (asm) less_mask_eq)
-    apply (simp add:pd_bits_def pageBits_def le_less_trans bit_simps)
-   apply (case_tac v)
-    apply ((simp add:ucast_ucast_len pd_bits_def pageBits_def le_less_trans bit_simps)+)[2]
-  apply (clarsimp simp:image_def)
-  apply (rule disjointI)
-  apply clarsimp
-  apply (drule_tac x = "ucast x" in spec)
-  apply (erule impE)
-   apply (simp add: bit_simps)
-   apply word_bitwise
-  apply (subgoal_tac "get_pml4_index pptr_base \<le> ucast x")
-   apply simp
-   apply (subst (asm) less_mask_eq)
-    apply (rule shiftl_less_t2n)
-     apply (simp add: word_le_make_less bit_simps)
-     apply word_bitwise
-    apply (simp add: bit_simps)
-   apply (subst (asm) shiftl_shiftr1)
-    apply (simp add: word_size_bits_def)
-   apply (simp add:word_size)
-   apply (subst (asm) less_mask_eq)
-    apply (rule less_le_trans[OF ucast_less])
-     apply simp
-    apply (simp add: word_size_bits_def)
-   apply (simp add: word_size_bits_def get_pml4_index_def bit_simps)
-   apply word_bitwise
-  apply (case_tac v;simp)
-  done *)
+  unfolding copy_global_mappings_def
+  by (wpsimp wp: mapM_x_wp')
 
 lemma in_pte_rangeD:
   "x \<in> pte_range v y \<Longrightarrow> x = y"
@@ -206,13 +152,6 @@ lemma invoke_cnode_valid_vspace_objs'[wp]:
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
    apply (wp get_cap_wp | wpc | simp split del: if_split)+
-  done
-
-lemma as_user_valid_vspace_objs'[wp]:
-  "\<lbrace>valid_vspace_objs'\<rbrace> as_user t m \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  apply (simp add: as_user_def split_def)
-  apply wp
-  apply simp
   done
 
 crunch valid_vspace_objs'[wp]: invoke_tcb "valid_vspace_objs'"
@@ -279,9 +218,21 @@ lemma invoke_untyped_valid_vspace_objs'[wp]:
     apply (wp | simp)+
   done
 
+crunches store_asid_pool_entry
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
+
 lemma perform_asid_pool_invocation_valid_vspace_objs'[wp]:
-  "perform_asid_pool_invocation iv \<lbrace>valid_vspace_objs'\<rbrace>"
-  sorry (* FIXME RISCV: this used to crunch below *)
+  "\<lbrace> valid_vspace_objs' and valid_arch_state and pspace_aligned and
+     (\<lambda>s. valid_caps (caps_of_state s) s) \<rbrace>
+   perform_asid_pool_invocation iv
+   \<lbrace> \<lambda>_. valid_vspace_objs' \<rbrace>"
+  apply (simp add: perform_asid_pool_invocation_def)
+  apply (wpsimp wp: get_cap_wp)
+  apply (simp add: cte_wp_at_caps_of_state)
+  apply (drule (1) valid_capsD)
+  apply (clarsimp simp: is_ArchObjectCap_def is_PageTableCap_def valid_cap_def)
+  apply (erule (1) is_aligned_pt)
+  done
 
 crunch valid_vspace_objs'[wp]: perform_asid_pool_invocation,
      perform_asid_control_invocation "valid_vspace_objs'"
@@ -352,7 +303,7 @@ lemma perform_invocation_valid_vspace_objs'[wp]:
   apply (wp | wpc | simp)+
   apply (simp add: arch_perform_invocation_def)
   apply (wp | wpc | simp)+
-  apply (auto simp: valid_arch_inv_def )
+  apply (auto simp: valid_arch_inv_def intro: valid_objs_caps)
   done
 
 crunch valid_vspace_objs'[wp]: handle_fault, reply_from_kernel "valid_vspace_objs'"
