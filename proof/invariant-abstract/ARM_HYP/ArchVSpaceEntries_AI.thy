@@ -81,7 +81,7 @@ lemma set_object_valid_pdpt[wp]:
   "\<lbrace>valid_pdpt_objs and K (obj_valid_pdpt obj)\<rbrace>
       set_object ptr obj
    \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  apply (simp add: set_object_def, wp)
+  apply (simp add: set_object_def get_object_def, wp)
   apply (auto simp: fun_upd_def[symmetric] del: ballI elim: ball_ran_updI)
   done
 
@@ -430,8 +430,15 @@ lemma unmap_page_table_valid_pdpt_objs[wp]:
 
 lemma set_simple_ko_valid_pdpt_objs[wp]:
    "\<lbrace>\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x\<rbrace>
-       set_simple_ko param_a param_b param_c \<lbrace>\<lambda>_ s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x\<rbrace> "
-  by (set_simple_ko_method wp_thm: set_object_valid_pdpt simp_thm: get_object_def)
+       set_simple_ko param_a param_b param_c \<lbrace>\<lambda>_ s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x\<rbrace>"
+  unfolding set_simple_ko_def
+  apply (subst option.disc_eq_case(2))
+  apply (wpsimp wp: set_object_valid_pdpt[THEN hoare_set_object_weaken_pre]
+                    get_object_wp
+              simp: a_type_simps obj_at_def)
+  apply (clarsimp simp: a_type_def
+                 split: kernel_object.splits)
+  done
 
 crunch valid_pdpt_objs[wp]: finalise_cap, cap_swap_for_delete, empty_slot "valid_pdpt_objs"
   (wp: crunch_wps select_wp preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
@@ -1570,7 +1577,7 @@ lemma invocation_duplicates_valid_exst_update[simp]:
 
 lemma set_thread_state_duplicates_valid[wp]:
   "\<lbrace>invocation_duplicates_valid i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. invocation_duplicates_valid i\<rbrace>"
-  apply (simp add: set_thread_state_def set_object_def)
+  apply (simp add: set_thread_state_def set_object_def get_object_def)
   apply (wp|simp)+
   apply (clarsimp simp: invocation_duplicates_valid_def pti_duplicates_valid_def
                         page_inv_duplicates_valid_def page_inv_entries_safe_def

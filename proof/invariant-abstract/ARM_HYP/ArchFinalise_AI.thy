@@ -474,7 +474,7 @@ lemma arch_thread_set_cap_refs_respects_device_region[wp]:
   "\<lbrace>cap_refs_respects_device_region\<rbrace>
      arch_thread_set p v
    \<lbrace>\<lambda>s. cap_refs_respects_device_region\<rbrace>"
-  apply (simp add: arch_thread_set_def set_object_def)
+  apply (simp add: arch_thread_set_def set_object_def get_object_def)
   apply wp
   apply (clarsimp dest!: get_tcb_SomeD simp del: fun_upd_apply)
   apply (subst get_tcb_rev, assumption, subst option.sel)+
@@ -532,7 +532,7 @@ lemma arch_thread_set_pred_tcb_at[wp_unsafe]:
   "\<lbrace>pred_tcb_at proj P t and K (proj_not_field proj tcb_arch_update)\<rbrace>
      arch_thread_set p v
    \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
-  apply (simp add: arch_thread_set_def set_object_def)
+  apply (simp add: arch_thread_set_def set_object_def get_object_def)
   apply wp
   apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_rev
                   dest!: get_tcb_SomeD)
@@ -565,12 +565,12 @@ lemma arch_thread_set_valid_idle[wp]:
   "\<lbrace>valid_idle and (\<lambda> s. t \<noteq> idle_thread s \<or> (\<forall>atcb. tcb_vcpu atcb = None \<longrightarrow> tcb_vcpu (f atcb) = None))\<rbrace>
     arch_thread_set f t
    \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  by (wpsimp simp: arch_thread_set_def set_object_def valid_idle_def valid_arch_idle_def
-                   get_tcb_def pred_tcb_at_def obj_at_def pred_neg_def)
+  by (wpsimp simp: arch_thread_set_def set_object_def get_object_def valid_idle_def
+                   valid_arch_idle_def get_tcb_def pred_tcb_at_def obj_at_def pred_neg_def)
 
 lemma arch_thread_set_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. valid_ioc\<rbrace>"
-  apply (simp add: arch_thread_set_def set_object_def)
+  apply (simp add: arch_thread_set_def set_object_def get_object_def)
   apply (wp set_object_valid_ioc_caps)
   apply (clarsimp simp add: valid_ioc_def
                   simp del: fun_upd_apply
@@ -669,7 +669,7 @@ lemma sym_refs_update_some_tcb:
 
 lemma arch_thread_sym_refs[wp]:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of s)\<rbrace> arch_thread_set f p \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
-  apply (simp add: arch_thread_set_def set_object_def)
+  apply (simp add: arch_thread_set_def set_object_def get_object_def)
   apply wp
   apply (clarsimp simp del: fun_upd_apply dest!: get_tcb_SomeD)
   apply (subst get_tcb_rev, assumption, subst option.sel)+
@@ -850,12 +850,12 @@ lemma set_vcpu_if_live_then_nonz_cap_same_refs:
   "\<lbrace>if_live_then_nonz_cap and obj_at (\<lambda>ko'. hyp_refs_of ko' = hyp_refs_of (ArchObj (VCPU v))) p\<rbrace>
      set_vcpu p v \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: set_vcpu_def)
-  apply (wp get_object_wp set_object_iflive)
-  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits, rule conjI, clarsimp)
-   apply (rule if_live_then_nonz_capD; simp add: obj_at_def)
-   apply (clarsimp simp: live_def hyp_live_def arch_live_def, rule_tac x=y in exI,
-          clarsimp simp: vcpu_tcb_refs_def split: option.splits)
-  apply (clarsimp simp: obj_at_def)
+  including unfold_objects
+  apply (wpsimp wp: set_object_iflive[THEN hoare_set_object_weaken_pre]
+              simp: a_type_def live_def hyp_live_def arch_live_def)
+  apply (rule if_live_then_nonz_capD; simp)
+  apply (clarsimp simp: live_def hyp_live_def arch_live_def,
+         clarsimp simp: vcpu_tcb_refs_def split: option.splits)
   done
 
 lemma vgic_update_if_live_then_nonz_cap[wp]:
@@ -1649,13 +1649,9 @@ crunch obj_at[wp]: invalidate_tlb_by_asid "\<lambda>s. P' (obj_at P p s)"
 lemma set_asid_pool_empty[wp]:
   "\<lbrace>obj_at (empty_table {}) word\<rbrace> set_asid_pool x2 pool' \<lbrace>\<lambda>xb. obj_at (empty_table {}) word\<rbrace>"
   apply (simp add: set_asid_pool_def)
-  apply (wp set_object_wp)
-  apply (rule_tac Q="\<lambda>r. obj_at (empty_table {}) word and  ko_at r x2" in hoare_post_imp)
-   apply (rule impI)
-   apply (case_tac r ; simp)
-   apply (case_tac x5; simp)
-   apply (clarsimp simp: obj_at_def empty_table_def)
-  apply (wp get_object_sp, simp)
+  including unfold_objects
+  apply (wpsimp wp: set_object_wp_strong simp: a_type_def)
+  apply (clarsimp simp: empty_table_def)
   done
 
 lemma delete_asid_empty_table_pd:

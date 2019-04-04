@@ -498,7 +498,7 @@ lemma set_pd_cte_wp_at_iin[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at (P' (interrupt_irq_node s)) p s)\<rbrace>
    set_pd q pd
    \<lbrace>\<lambda>_ s. P (cte_wp_at (P' (interrupt_irq_node s)) p s)\<rbrace>"
-  apply (simp add: set_pd_def set_object_def)
+  apply (simp add: set_pd_def set_object_def a_type_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def cte_wp_at_caps_of_state
            split: Structures_A.kernel_object.splits arch_kernel_obj.splits)

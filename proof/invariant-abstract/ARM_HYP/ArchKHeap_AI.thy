@@ -254,9 +254,7 @@ lemma set_object_neg_lookup:
   "\<lbrace>\<lambda>s. \<not> (\<exists>rs. (rs \<rhd> p') s) \<and> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s \<rbrace>
   set_object p ko
   \<lbrace>\<lambda>_ s. \<not> (\<exists>rs. (rs \<rhd> p') s)\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  apply clarsimp
+  apply (wpsimp wp: set_object_wp)
   apply (erule_tac x=rs in allE)
   apply (erule notE)
   apply (erule vs_lookup_stateI)
@@ -264,14 +262,11 @@ lemma set_object_neg_lookup:
   apply simp
   done
 
-
 lemma set_object_vs_lookup:
   "\<lbrace>\<lambda>s. obj_at (\<lambda>ko'. vs_refs ko = vs_refs ko') p s \<and> P (vs_lookup s) \<rbrace>
   set_object p ko
   \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  apply clarsimp
+  apply (wpsimp wp: set_object_wp)
   apply (erule rsubst [where P=P])
   apply (rule order_antisym)
    apply (rule vs_lookup_sub)
@@ -292,9 +287,7 @@ lemma set_object_pt_not_vs_lookup_pages:
             | None \<Rightarrow> True))\<rbrace>
    set_object p (ArchObj (PageTable pt))
    \<lbrace>\<lambda>_ s. \<not>(ref \<unrhd> p') s\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  apply (clarsimp simp: obj_at_def)
+  apply (wpsimp wp: set_object_wp)
    apply (case_tac "(\<exists>\<unrhd>p) s")
    apply (erule notE)
    apply clarsimp
@@ -341,9 +334,7 @@ lemma set_object_vs_lookup_pages:
   "\<lbrace>\<lambda>s. obj_at (\<lambda>ko'. vs_refs_pages ko = vs_refs_pages ko') p s \<and> P (vs_lookup_pages s) \<rbrace>
   set_object p ko
   \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  apply clarsimp
+  apply (wpsimp wp: set_object_wp)
   apply (erule rsubst [where P=P])
   apply (rule order_antisym)
    apply (rule vs_lookup_pages_sub)
@@ -359,9 +350,7 @@ lemma set_object_atyp_at:
   "\<lbrace>\<lambda>s. typ_at (AArch (aa_type ako)) p s \<and> P (typ_at (AArch T) p' s)\<rbrace>
     set_object p (ArchObj ako)
    \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p' s)\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  apply clarsimp
+  apply (wpsimp wp: set_object_wp)
   apply (erule rsubst [where P=P])
   apply (clarsimp simp: obj_at_def a_type_aa_type)
   done
@@ -391,8 +380,7 @@ lemma set_object_valid_kernel_mappings:
   "\<lbrace>\<lambda>s. valid_kernel_mappings s\<rbrace>
      set_object ptr ko
    \<lbrace>\<lambda>rv. valid_kernel_mappings\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
+  apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: valid_kernel_mappings_def
                  elim!: ranE split: if_split_asm)
   done
@@ -542,8 +530,7 @@ lemma set_object_asid_map:
     obj_at (\<lambda>ko'. vs_refs ko' \<subseteq> vs_refs ko) p\<rbrace>
   set_object p ko
   \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-  apply (simp add: valid_asid_map_def set_object_def)
-  apply wp
+  apply (wpsimp wp: set_object_wp simp: valid_asid_map_def)
   apply (clarsimp simp: vspace_at_asid_def simp del: fun_upd_apply)
   apply (drule bspec, blast)
   apply clarsimp
@@ -559,7 +546,7 @@ lemma set_object_equal_mappings:
                 \<longrightarrow> (\<forall>x pd'. ko_at (ArchObj (PageDirectory pd')) x s))\<rbrace>
      set_object p ko
    \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
-  apply (simp add: set_object_def, wp)
+  apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: equal_kernel_mappings_def obj_at_def
              split del: if_split)
   done
@@ -578,15 +565,10 @@ lemma valid_table_caps_ptD:
 
 lemma store_pde_pred_tcb_at:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> store_pde ptr val \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
-  apply (simp add: store_pde_def set_pd_def set_object_def
-                   get_pd_def bind_assoc)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
-  apply (case_tac x, simp_all)
-  apply (rename_tac arch_kernel_obj)
-  apply (case_tac arch_kernel_obj, simp_all)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
-  apply wp
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (simp add: store_pde_def get_pd_def set_pd_def bind_assoc)
+  apply (wpsimp wp: set_object_wp_strong get_object_wp
+              simp: a_type_def obj_at_def pred_tcb_at_def
+             split: kernel_object.split)
   done
 
 lemma empty_table_lift:
