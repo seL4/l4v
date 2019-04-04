@@ -49,11 +49,7 @@ definition
 
 definition
   set_asid_pool :: "obj_ref \<Rightarrow> (10 word \<rightharpoonup> obj_ref) \<Rightarrow> (unit,'z::state_ext) s_monad" where
- "set_asid_pool ptr pool \<equiv> do
-    v \<leftarrow> get_object ptr;
-    assert (case v of ArchObj (arch_kernel_obj.ASIDPool p) \<Rightarrow> True | _ \<Rightarrow> False);
-    set_object ptr (ArchObj (arch_kernel_obj.ASIDPool pool))
-  od"
+ "set_asid_pool ptr pool \<equiv> set_object ptr (ArchObj (arch_kernel_obj.ASIDPool pool))"
 
 definition
   get_vcpu :: "obj_ref \<Rightarrow> (vcpu,'z::state_ext) s_monad" where
@@ -66,11 +62,7 @@ definition
 definition
   set_vcpu :: "obj_ref \<Rightarrow> vcpu \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "set_vcpu ptr vcpu \<equiv> do
-     kobj \<leftarrow> get_object ptr;
-     assert (case kobj of ArchObj (VCPU _) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (VCPU vcpu))
-   od"
+  "set_vcpu ptr vcpu \<equiv> set_object ptr (ArchObj (VCPU vcpu))"
 
 definition
   get_pd :: "obj_ref \<Rightarrow> (11 word \<Rightarrow> pde,'z::state_ext) s_monad" where
@@ -82,11 +74,7 @@ definition
 
 definition
   set_pd :: "obj_ref \<Rightarrow> (11 word \<Rightarrow> pde) \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "set_pd ptr pd \<equiv> do
-     kobj \<leftarrow> get_object ptr;
-     assert (case kobj of ArchObj (PageDirectory pd) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (PageDirectory pd))
-   od"
+  "set_pd ptr pd \<equiv> set_object ptr (ArchObj (PageDirectory pd))"
 
 definition
   set_current_pd :: "paddr \<Rightarrow> unit machine_monad"
@@ -125,11 +113,7 @@ definition
 
 definition
   set_pt :: "obj_ref \<Rightarrow> (9 word \<Rightarrow> pte) \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "set_pt ptr pt \<equiv> do
-     kobj \<leftarrow> get_object ptr;
-     assert (case kobj of ArchObj (PageTable _) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (PageTable pt))
-   od"
+  "set_pt ptr pt \<equiv> set_object ptr (ArchObj (PageTable pt))"
 
 text {* The following function takes a pointer to a PTE in kernel memory
   and returns the actual PTE. *}
