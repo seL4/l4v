@@ -1761,6 +1761,10 @@ lemma ucast_ucast_len:
   apply (erule less_mask_eq)
   done
 
+lemma ucast_ucast_id:
+  "len_of TYPE('a) < len_of TYPE('b) \<Longrightarrow> ucast (ucast (x::'a::len word)::'b::len word) = x"
+  by (auto intro: ucast_up_ucast_id simp: is_up_def source_size_def target_size_def word_size)
+
 lemma unat_ucast:
   "unat (ucast x :: ('a :: len0) word) = unat x mod 2 ^ (LENGTH('a))"
   apply (simp add: unat_def ucast_def)
@@ -4076,6 +4080,11 @@ lemma mask_subsume:
    apply simp
   by (metis (no_types, hide_lams) is_aligned_mask is_aligned_weaken word_and_not
             word_bool_alg.conj_zero_right word_bw_comms(1) word_bw_lcs(1))
+
+lemma and_mask_0_iff_le_mask:
+  fixes w :: "'a::len word"
+  shows "(w && ~~ mask n = 0) = (w \<le> mask n)"
+  by (simp add: mask_eq_0_eq_x le_mask_imp_and_mask and_mask_eq_iff_le_mask)
 
 lemma mask_twice2:
   "n \<le> m \<Longrightarrow> ((x::'a::len word) && mask m) && mask n = x && mask n"

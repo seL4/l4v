@@ -1250,6 +1250,15 @@ lemma unat_ucast_mask_shift:
   by (metis linear ucast_ucast_mask_shift unat_ucast_up_simp)
 
 lemma mask_overlap_zero:
+  "a \<le> b \<Longrightarrow> (p && mask a) && ~~ mask b = 0"
+  by (metis NOT_mask_AND_mask mask_lower_twice2 max_def)
+
+lemma mask_shifl_overlap_zero:
+  "a + c \<le> b \<Longrightarrow> (p && mask a << c) && ~~ mask b = 0"
+  by (metis and_not_mask le_mask_iff mask_shiftl_decompose shiftl_0 shiftl_over_and_dist
+            shiftr_mask_le word_and_le' word_bool_alg.conj_commute)
+
+lemma mask_overlap_zero':
   "a \<ge> b \<Longrightarrow> (p && ~~ mask a) && mask b = 0"
   using mask_AND_NOT_mask mask_AND_less_0 by blast
 
