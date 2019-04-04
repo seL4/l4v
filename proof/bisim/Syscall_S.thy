@@ -232,13 +232,23 @@ lemma not_empty_put [wp]:
   "not_empty \<top> (put s)"
   unfolding not_empty_def put_def by simp
 
-lemma not_empty_set_object [wp]:
-  "not_empty \<top> (set_object p v)"
-  unfolding set_object_def
-  apply simp
+lemma not_empty_assert [wp]:
+  "not_empty (\<lambda>s. C) (assert C)"
+  by (clarsimp simp: assert_def not_empty_def return_def)
+
+lemma not_empty_get_object [wp]:
+  "not_empty (\<lambda>s. kheap s p \<noteq> None) (get_object p)"
+  unfolding get_object_def
   apply (rule not_empty_guard_imp)
-  apply wp
-  apply simp
+   apply wpsimp+
+  done
+
+lemma not_empty_set_object [wp]:
+  "not_empty (\<lambda>s. typ_at (a_type v) p s) (set_object p v)"
+  unfolding set_object_def
+  apply (rule not_empty_guard_imp)
+   apply (wpsimp wp: get_object_wp)
+  apply (clarsimp simp: obj_at_def)
   done
 
 lemma not_empty_assert_opt [wp]:
@@ -251,8 +261,8 @@ lemma not_empty_thread_set [wp]:
   unfolding thread_set_def
   apply (simp add: gets_the_def bind_assoc)
   apply (rule not_empty_guard_imp)
-  apply wp
-  apply (simp add: tcb_at_def)
+   apply wp
+  apply (clarsimp simp: tcb_at_def)
   done
 
 lemma not_empty_False:
