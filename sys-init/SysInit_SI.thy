@@ -106,11 +106,19 @@ where
     assert (\<not>fail)
   od"
 
+definition
+  used_irq_list_compute :: "cdl_state \<Rightarrow> cdl_irq list"
+where
+  "used_irq_list_compute \<equiv>
+   \<lambda>s. filter
+         (HOL.Not o Option.is_none o cdl_objects s o cdl_irq_node s)
+         [0 .e. maxBound]"
+
 definition create_irq_caps :: "cdl_state \<Rightarrow> cdl_cptr list \<Rightarrow>
                               ((cdl_irq \<Rightarrow> cdl_cptr option) \<times> cdl_cptr list) u_monad"
 where
   "create_irq_caps spec free_cptrs \<equiv> do
-    irqs \<leftarrow> return $ used_irq_list spec;
+    irqs \<leftarrow> return $ used_irq_list_compute spec;
     mapM_x (create_irq_cap spec) (zip irqs free_cptrs);
     si_irq_caps \<leftarrow> return $ map_of (zip irqs free_cptrs);
     return (si_irq_caps, drop (length irqs) free_cptrs)
