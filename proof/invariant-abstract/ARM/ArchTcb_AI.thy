@@ -206,7 +206,7 @@ lemma as_user_ipc_tcb_cap_valid4[wp]:
   "\<lbrace>\<lambda>s. tcb_cap_valid cap (t, tcb_cnode_index 4) s\<rbrace>
     as_user a b
    \<lbrace>\<lambda>rv. tcb_cap_valid cap (t, tcb_cnode_index 4)\<rbrace>"
-  apply (simp add: as_user_def set_object_def)
+  apply (simp add: as_user_def set_object_def get_object_def)
   apply (wp | wpc | simp)+
   apply (clarsimp simp: tcb_cap_valid_def obj_at_def
                         pred_tcb_at_def is_tcb

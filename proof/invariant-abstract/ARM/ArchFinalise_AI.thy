@@ -513,7 +513,7 @@ lemma suspend_unlive':
   "\<lbrace>bound_tcb_at ((=) None) t and valid_mdb and valid_objs and tcb_at t \<rbrace>
       suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
-  apply (simp add: suspend_def set_thread_state_def set_object_def)
+  apply (simp add: suspend_def set_thread_state_def set_object_def get_object_def)
   apply (wp | simp only: obj_at_exst_update)+
   apply (simp add: obj_at_def)
   apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
@@ -879,7 +879,6 @@ lemma delete_asid_empty_table_pd:
           apply wps
           apply wp+
         apply (simp add: set_asid_pool_def)
-        apply wp
           apply (case_tac "x2 = word")
            defer
            apply wps
