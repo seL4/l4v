@@ -1031,8 +1031,9 @@ lemma set_other_obj_corres:
   apply (unfold set_object_def setObject_def)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
                         put_def return_def modify_def get_object_def x
-                        projectKOs
+                        projectKOs obj_at_def
                         updateObject_default_def in_magnitude_check [OF _ P])
+  apply (rename_tac ko)
   apply (clarsimp simp add: state_relation_def z)
   apply (clarsimp simp add: caps_of_state_after_update cte_wp_at_after_update
                             swp_def fun_upd_def obj_at_def)

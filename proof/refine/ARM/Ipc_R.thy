@@ -2270,7 +2270,7 @@ crunch tcb_in_cur_domain'[wp]: handleFaultReply "tcb_in_cur_domain' t"
 
 lemma as_user_valid_etcbs[wp]:
   "\<lbrace>valid_etcbs\<rbrace> as_user tptr f \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
-  apply (simp add: as_user_def set_object_def)
+  apply (simp add: as_user_def set_object_def get_object_def)
   apply (wp | wpc)+
   apply clarsimp
   apply (fastforce simp: valid_sched_def valid_etcbs_def valid_queues_def

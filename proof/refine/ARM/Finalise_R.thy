@@ -1512,7 +1512,7 @@ lemma exec_update_cdt_list:
 lemma set_cap_trans_state:
   "((),s') \<in> fst (set_cap c p s) \<Longrightarrow> ((),trans_state f s') \<in> fst (set_cap c p (trans_state f s))"
   apply (cases p)
-  apply (clarsimp simp add: set_cap_def in_monad get_object_def)
+  apply (clarsimp simp add: set_cap_def in_monad set_object_def get_object_def)
   apply (case_tac y)
   apply (auto simp add: in_monad set_object_def split: if_split_asm)
   done
@@ -3928,7 +3928,15 @@ definition thread_set_all :: "(Structures_A.tcb \<Rightarrow> Structures_A.tcb) 
 lemma thread_set_ethread_set_all:
   "do thread_set f t; ethread_set g t od
    = thread_set_all f g t"
-  by (rule ext) (clarsimp simp: thread_set_def ethread_set_def gets_the_def set_object_def set_object_def fail_def assert_opt_def split_def do_extended_op_def thread_set_all_def set_thread_all_def set_eobject_def thread_gets_the_all_def bind_def gets_def get_def return_def put_def get_etcb_def split: option.splits)
+  apply (rule ext)
+  apply (clarsimp simp: thread_set_def ethread_set_def gets_the_def set_object_def fail_def
+                        assert_opt_def split_def do_extended_op_def thread_set_all_def
+                        set_thread_all_def set_eobject_def thread_gets_the_all_def bind_def gets_def
+                        get_def return_def put_def get_etcb_def
+                        get_object_def assert_def
+                 split: option.splits)
+  apply (metis Some_to_the a_type_TCB get_tcb_SomeD option.exhaust option.inject option.simps(3))
+  done
 
 lemma set_thread_all_corres:
   fixes ob' :: "'a :: pspace_storable"
@@ -4093,7 +4101,8 @@ lemma thread_set_gets_futz:
   "thread_set F t >>= (\<lambda>_. gets cur_domain >>= g)
  = gets cur_domain >>= (\<lambda>cdom. thread_set F t >>= K (g cdom))"
 apply (rule ext)
-apply (simp add: assert_opt_def bind_def fail_def get_def gets_def gets_the_def put_def return_def set_object_def thread_set_def split_def
+apply (simp add: assert_opt_def bind_def fail_def get_def gets_def gets_the_def put_def return_def
+                 set_object_def get_object_def thread_set_def split_def assert_def
           split: option.splits)
 done
 
@@ -4145,12 +4154,12 @@ lemma cancelAllIPC_ct_not_ksQ:
   apply (wp, wpc, wp)
         apply (wps rescheduleRequired_ct')
         apply (wp rescheduleRequired_ksQ')
-       apply (clarsimp simp: forM_x_def)
+       apply clarsimp
        apply (wp cancelAll_ct_not_ksQ_helper mapM_x_wp_inv)
       apply (wp hoare_lift_Pf2 [OF setEndpoint_ksQ setEndpoint_ct'])+
       apply (wps rescheduleRequired_ct')
       apply (wp rescheduleRequired_ksQ')
-     apply (clarsimp simp: forM_x_def)
+     apply clarsimp
      apply (wp cancelAll_ct_not_ksQ_helper mapM_x_wp_inv)
     apply (wp hoare_lift_Pf2 [OF setEndpoint_ksQ setEndpoint_ct'])+
    prefer 2

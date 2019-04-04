@@ -2020,10 +2020,10 @@ lemma set_cap_not_quite_corres_prequel:
   apply (frule(5) cte_map_pulls_cte_to_abstract[OF p])
   apply (clarsimp simp: set_cap_def split_def bind_def get_object_def
                         simpler_gets_def assert_def fail_def return_def
-                        set_object_def get_def put_def domI)
+                        set_object_def get_def put_def domI a_type_def[split_simps kernel_object.split arch_kernel_obj.split])
   apply (erule(1) valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_cs_def valid_cs_size_def exI)
-  apply (rule conjI)
+  apply (intro conjI impI)
    apply (erule(1) pspace_relation_update_ctes[where cap=c])
     apply clarsimp
     apply (intro conjI impI)
@@ -2041,6 +2041,7 @@ lemma set_cap_not_quite_corres_prequel:
   apply (clarsimp simp: ekheap_relation_def pspace_relation_def)
   apply (drule bspec, erule domI)
   apply (clarsimp simp: etcb_relation_def tcb_cte_cases_def split: if_split_asm)
+  apply (simp add: wf_cs_insert)
   done
 
 lemma setCTE_pspace_only:
