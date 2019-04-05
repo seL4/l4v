@@ -761,6 +761,23 @@ lemma max_pt_level_enum:
   unfolding level_defs
   by (cases level rule: bit0.of_nat_cases) (case_tac m; simp; rename_tac m)+
 
+lemma asid_pool_level_size:
+  "size asid_pool_level = 3"
+proof -
+  have m1: "-1 = (3::vm_level)" by simp
+  show ?thesis unfolding asid_pool_level_def
+   by (simp add: m1)
+qed
+
+lemma asid_pool_level_not_0[simp]:
+  "asid_pool_level \<noteq> 0"
+  by (simp add: asid_pool_level_def)
+
+lemma vm_level_not_less_zero:
+  fixes level :: vm_level
+  shows "level \<noteq> 0 \<Longrightarrow> level > 0"
+  using bit0.not_less_zero_bit0 neqE by blast
+
 lemma asid_pool_level_neq[simp]:
   "(x \<noteq> asid_pool_level) = (x \<le> max_pt_level)"
 proof
@@ -776,9 +793,29 @@ next
     unfolding level_defs by (auto simp: maxBound_size_bit)
 qed
 
+lemma asid_pool_level_eq:
+  "(x = asid_pool_level) = (\<not> (x \<le> max_pt_level))"
+  by (simp flip: asid_pool_level_neq)
+
+lemma max_pt_level_not_0[simp]:
+  "max_pt_level \<noteq> 0"
+  by (simp add: max_pt_level_def asid_pool_level_def)
+
 lemma asid_pool_level_max[simp,intro!]:
   "level \<le> asid_pool_level"
   unfolding asid_pool_level_def by simp
+
+lemma asid_pool_level_not_less[simp]:
+  "\<not> asid_pool_level < level"
+  by (simp add: not_less)
+
+lemma vm_level_less_max_pt_level:
+  "((level' :: vm_level) < level) \<Longrightarrow> level' \<le> max_pt_level"
+  using asid_pool_level_neq asid_pool_level_not_less by blast
+
+lemma vm_level_less_le_1:
+  "\<lbrakk> (level' :: vm_level) < level \<rbrakk> \<Longrightarrow> level' \<le> level' + 1"
+  by (fastforce dest: max_pt_level_enum vm_level_less_max_pt_level)
 
 lemma asid_pool_level_leq_conv[iff]:
   "(asid_pool_level \<le> level) = (level = asid_pool_level)"
@@ -805,6 +842,18 @@ lemma max_pt_level_less_Suc[iff]:
   apply (simp add: bit0.no_overflow_eq_max_bound max_pt_level_def flip: asid_pool_level_minus)
   by (metis asid_pool_level_max asid_pool_level_neq max_pt_level_def antisym_conv2)
 
+lemma max_inc_pt_level[simp]:
+  "level \<le> max_pt_level \<Longrightarrow> max (level + 1) level = level + 1"
+  by (simp add: dual_order.strict_implies_order max.commute max_def)
+
+lemma vm_level_le_plus_1_mono:
+  "\<lbrakk>level' \<le> level; level \<le> max_pt_level \<rbrakk> \<Longrightarrow> level' + 1 \<le> level + 1"
+  by (simp add: bit0.plus_one_leq le_less_trans)
+
+lemma vm_level_less_plus_1_mono:
+  "\<lbrakk> level' < level; level \<le> max_pt_level \<rbrakk> \<Longrightarrow> level' + 1 < level + 1"
+  by (simp add: vm_level_le_plus_1_mono dual_order.strict_iff_order)
+
 lemma level_minus_one_max_pt_level[iff]:
   "(level - 1 \<le> max_pt_level) = (0 < level)"
   by (metis max_pt_level_less_Suc bit0.not_less_zero_bit0 bit0.pred diff_add_cancel
@@ -813,7 +862,6 @@ lemma level_minus_one_max_pt_level[iff]:
 lemma canonical_bit:
   "canonical_bit = ptTranslationBits * Suc (size max_pt_level) + pageBits - 1"
   by (simp add: bit_simps level_defs canonical_bit_def)
-
 
 (* ---------------------------------------------------------------------------------------------- *)
 
@@ -1513,6 +1561,22 @@ lemma pt_slot_offset_id[simp]:
   "is_aligned pt_ptr pt_bits \<Longrightarrow> pt_slot_offset level pt_ptr vref && ~~ mask pt_bits = pt_ptr"
   by (simp add: pt_slot_offset_def is_aligned_mask_out_add_eq mask_eq_x_eq_0[symmetric])
 
+lemma pt_slot_offset_0[simp]:
+  "pt_slot_offset level p 0 = p"
+  by (clarsimp simp: pt_slot_offset_def pt_index_def)
+
+lemma pt_slot_offset_or_def:
+  "is_aligned pt_ptr pt_bits
+   \<Longrightarrow> pt_slot_offset level pt_ptr vptr = pt_ptr || (pt_index level vptr << pte_bits)"
+  unfolding pt_slot_offset_def
+  apply (rule is_aligned_add_or, assumption)
+  apply (subgoal_tac "pt_index level vptr < 2 ^ ptTranslationBits")
+   prefer 2
+   apply (simp add: pt_index_def)
+   apply (rule and_mask_less', simp add: bit_simps and_mask_less')
+  apply (drule shiftl_less_t2n'[where n=pte_bits], auto simp: bit_simps)
+  done
+
 lemma ptes_of_pt_slot_offset:
   "\<lbrakk> ptes_of s (pt_slot_offset level pt_ptr vref) = Some pte; is_aligned pt_ptr pt_bits \<rbrakk>
    \<Longrightarrow> pts_of s pt_ptr \<noteq> None"
@@ -1634,6 +1698,10 @@ lemma user_region0[intro!,simp]:
   "valid_uses s \<Longrightarrow> 0 \<in> user_region s"
   by (force simp: valid_uses_def user_region_def)
 
+lemma ptpte_level_0_valid_pte:
+  "is_PageTablePTE pte \<Longrightarrow> \<not> valid_pte 0 pte s"
+  by (cases pte; simp)
+
 lemma pool_for_asid_valid_vspace_objs:
   "\<lbrakk> pool_for_asid asid s = Some p;
      valid_vspace_objs s; valid_uses s; valid_asid_table s \<rbrakk>
@@ -1681,10 +1749,6 @@ lemma vs_lookup_max_pt_valid:
   apply clarsimp
   apply (frule (3) pool_for_asid_valid_vspace_objs)
   by (fastforce simp: in_opt_map_eq valid_vspace_objs_def pt_at_eq vspace_for_pool_def)
-
-lemma asid_pool_level_not_less[simp]:
-  "\<not> asid_pool_level < level"
-  by (simp add: not_less)
 
 lemma aligned_vref_for_level_eq:
   "is_aligned vref (pt_bits_left level) = (vref_for_level vref level = vref)"
@@ -1919,6 +1983,13 @@ lemma pt_bits_left_le_max_pt_level:
   apply simp
   done
 
+lemma vref_for_level_asid_pool:
+  "vref \<le> canonical_user \<Longrightarrow> vref_for_level vref asid_pool_level = 0"
+  apply (clarsimp simp: vref_for_level_def pt_bits_left_def asid_pool_level_size bit_simps
+                        canonical_user_def canonical_bit_def and_mask_0_iff_le_mask)
+  apply (fastforce simp add: mask_def elim: order.trans)
+  done
+
 lemma pt_bits_left_le_canoncial:
   "level \<le> max_pt_level \<Longrightarrow> pt_bits_left level \<le> canonical_bit"
   by (drule pt_bits_left_le_max_pt_level) (simp add: canonical_bit_def bit_simps)
@@ -1940,6 +2011,16 @@ lemma vref_for_level_user_region:
   using vref_for_level_le[of vref level]
   by (force simp: valid_uses_user_region_eq vref_for_level_pptr_baseI canonical_vref_for_levelI)
 
+lemma canonical_vref_for_levelD:
+  "\<lbrakk> canonical_address (vref_for_level vref level); vref < pptr_base; level \<le> max_pt_level \<rbrakk>
+   \<Longrightarrow> canonical_address vref"
+  using pt_bits_left_bound[of level]
+  apply (simp add: canonical_address_def canonical_address_of_def vref_for_level_def pptr_base_mask
+                    bit_simps)
+  apply (drule pt_bits_left_le_canoncial)
+  apply word_bitwise
+  by (clarsimp simp: canonical_bit_def word_size not_less)
+
 lemma aligned_canonical_max_is_0:
   "\<lbrakk> canonical_address p; is_aligned p (pt_bits_left (max_pt_level + 1)) \<rbrakk> \<Longrightarrow> p = 0"
   apply (simp add: canonical_address_def canonical_address_of_def level_defs pt_bits_left_def
@@ -1949,6 +2030,48 @@ lemma aligned_canonical_max_is_0:
 lemma aligned_vref_for_level[simp]:
   "is_aligned (vref_for_level vref level) (pt_bits_left level)"
   unfolding vref_for_level_def by simp
+
+lemmas pt_walk_0[simp] = pt_walk.simps[where level=0, simplified]
+
+lemma is_aligned_addrFromPPtr_n:
+  "\<lbrakk> is_aligned p n; n \<le> canonical_bit \<rbrakk> \<Longrightarrow> is_aligned (addrFromPPtr p) n"
+  apply (simp add: addrFromPPtr_def)
+  apply (erule aligned_sub_aligned; simp add: canonical_bit_def)
+  apply (simp add: baseOffset_def pptrBase_def pAddr_base_def canonical_bit_def)
+  apply (erule is_aligned_weaken[rotated])
+  apply (simp add: is_aligned_def)
+  done
+
+lemma is_aligned_addrFromPPtr[intro!]:
+  "is_aligned p pageBits \<Longrightarrow> is_aligned (addrFromPPtr p) pageBits"
+  by (simp add: is_aligned_addrFromPPtr_n pageBits_def canonical_bit_def)
+
+lemma is_aligned_ptrFromPAddr_n:
+  "\<lbrakk>is_aligned x sz; sz \<le> canonical_bit\<rbrakk>
+   \<Longrightarrow> is_aligned (ptrFromPAddr x) sz"
+  apply (simp add: ptrFromPAddr_def baseOffset_def pptrBase_def pAddr_base_def canonical_bit_def)
+  apply (erule aligned_add_aligned)
+   apply (erule is_aligned_weaken[rotated])
+   apply (simp add: is_aligned_def)
+  apply (rule order.refl)
+  done
+
+lemma is_aligned_ptrFromPAddr:
+  "is_aligned p pageBits \<Longrightarrow> is_aligned (ptrFromPAddr p) pageBits"
+  by (simp add: is_aligned_ptrFromPAddr_n pageBits_def canonical_bit_def)
+
+lemma is_aligned_ptrFromPAddr_pt_bits[intro!]:
+  "is_aligned p pt_bits \<Longrightarrow> is_aligned (ptrFromPAddr p) pt_bits"
+  by (simp add: is_aligned_ptrFromPAddr_n canonical_bit_def bit_simps)
+
+lemma ptr_from_pte_aligned[simp,intro!]:
+  "is_aligned (pptr_from_pte pte) pt_bits"
+  unfolding pptr_from_pte_def
+  by (auto intro!: is_aligned_ptrFromPAddr_pt_bits simp: addr_from_ppn_def is_aligned_shift)
+
+lemma pspace_aligned_pts_ofD:
+  "\<lbrakk> pspace_aligned s; pts_of s pt_ptr \<noteq> None \<rbrakk> \<Longrightarrow> is_aligned pt_ptr pt_bits"
+  by (fastforce dest: pspace_alignedD simp: in_omonad bit_simps)
 
 lemma user_region_slots:
   "\<lbrakk> vref \<in> user_region s; valid_uses s \<rbrakk>
@@ -1988,6 +2111,35 @@ lemma valid_vspace_objs_strongD:
   apply (drule (2) valid_vspace_objsD)
    apply (simp add: in_omonad)
   apply assumption
+  done
+
+lemma pt_walk_is_aligned:
+  "\<lbrakk> pt_walk level bot_level p vref' ptes = Some (level', p');
+     is_aligned p pt_bits \<rbrakk>
+   \<Longrightarrow> is_aligned p' pt_bits"
+  apply (induct level arbitrary: p, simp)
+  apply (subst (asm) (2) pt_walk.simps)
+  apply (fastforce simp: in_omonad split: if_splits)
+  done
+
+lemma vspace_for_pool_is_aligned:
+  "\<lbrakk> vspace_for_pool pool_ptr asid (asid_pools_of s) = Some pt_ptr;
+     pool_for_asid asid s = Some pool_ptr;
+     vref \<in> user_region s; valid_vspace_objs s; valid_asid_table s; valid_uses s;
+     pspace_aligned s \<rbrakk>
+   \<Longrightarrow> is_aligned pt_ptr pt_bits"
+  by (drule valid_vspace_objs_strongD[where bot_level=max_pt_level and asid=asid]
+      ; fastforce simp: vs_lookup_table_def in_omonad elim: pspace_aligned_pts_ofD)
+
+lemma vs_lookup_table_is_aligned:
+  "\<lbrakk> vs_lookup_table bot_level asid vref s = Some (level', pt_ptr);
+    level' \<le> max_pt_level; vref \<in> user_region s; pspace_aligned s; valid_uses s; valid_asid_table s;
+    valid_vspace_objs s \<rbrakk>
+   \<Longrightarrow> is_aligned pt_ptr pt_bits"
+  apply (clarsimp simp: vs_lookup_table_def in_omonad split: if_splits)
+  apply (erule disjE; clarsimp?)
+  apply (erule pt_walk_is_aligned)
+  apply (erule vspace_for_pool_is_aligned; simp)
   done
 
 lemma kernel_mapping_slots:
@@ -2192,6 +2344,15 @@ lemma kernel_mapping_slots_top_bit:
   apply word_bitwise
   apply (simp add: canonical_bit_def word_size rev_bl_order_simps)
   done
+
+lemma vref_for_level_user_regionD:
+  "\<lbrakk> vref_for_level vref level \<in> user_region s; valid_uses s; level \<le> max_pt_level \<rbrakk>
+   \<Longrightarrow> vref \<in> user_region s"
+  using vref_for_level_le[of vref level]
+  apply (clarsimp simp: valid_uses_user_region_eq)
+  apply (drule pt_bits_left_le_canoncial)
+  apply word_bitwise
+  by (clarsimp simp: canonical_bit_def word_size not_less bit_simps canonical_user_def)
 
 lemma vref_for_level_idx_canonical_user:
   "\<lbrakk> vref \<le> canonical_user; level \<le> max_pt_level;

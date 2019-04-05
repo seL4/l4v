@@ -90,10 +90,6 @@ lemma table_cap_ref_vs_cap_ref:
   apply (clarsimp simp: vs_cap_ref_arch_def table_cap_ref_arch_def split: arch_cap.splits)
   done
 
-lemma max_inc_pt_level[simp]:
-  "level \<le> max_pt_level \<Longrightarrow> max (level + 1) level = level + 1"
-  by (simp add: dual_order.strict_implies_order max.commute max_def)
-
 (* FIXME MOVE, these should be abbreviations *)
 lemma is_ko_to_discs:
   "is_ep = is_Endpoint"
@@ -937,10 +933,6 @@ lemma kernel_regionsI:
   unfolding kernel_regions_def
   by auto
 
-lemma pspace_aligned_pts_ofD:
-  "\<lbrakk> pspace_aligned s; pts_of s pt_ptr \<noteq> None \<rbrakk> \<Longrightarrow> is_aligned pt_ptr pt_bits"
-  by (fastforce dest: pspace_alignedD simp: in_omonad bit_simps)
-
 lemma riscv_global_pts_aligned:
   "\<lbrakk> pt_ptr \<in> riscv_global_pts (arch_state s) level; pspace_aligned s; valid_global_arch_objs s \<rbrakk>
    \<Longrightarrow> is_aligned pt_ptr pt_bits"
@@ -1509,42 +1501,6 @@ lemma valid_slots_typ_at:
   apply (cases m; clarsimp)
   apply (wp hoare_vcg_ex_lift assms)
   sorry (* FIXME RISCV *)
-
-lemma ucast_ucast_id:
-  "len_of TYPE('a) < len_of TYPE('b) \<Longrightarrow> ucast (ucast (x::'a::len word)::'b::len word) = x"
-  by (auto intro: ucast_up_ucast_id simp: is_up_def source_size_def target_size_def word_size)
-
-lemma word_shift_by_n:
-  "x * (2^n) = (x::'a::len word) << n"
-  by (simp add: shiftl_t2n)
-
-lemma is_aligned_addrFromPPtr_n:
-  "\<lbrakk> is_aligned p n; n \<le> canonical_bit \<rbrakk> \<Longrightarrow> is_aligned (addrFromPPtr p) n"
-  apply (simp add: addrFromPPtr_def)
-  apply (erule aligned_sub_aligned; simp add: canonical_bit_def)
-  apply (simp add: baseOffset_def pptrBase_def pAddr_base_def canonical_bit_def)
-  apply (erule is_aligned_weaken[rotated])
-  apply (simp add: is_aligned_def)
-  done
-
-lemma is_aligned_addrFromPPtr:
-  "is_aligned p pageBits \<Longrightarrow> is_aligned (addrFromPPtr p) pageBits"
-  by (simp add: is_aligned_addrFromPPtr_n pageBits_def canonical_bit_def)
-
-lemma is_aligned_ptrFromPAddr_n:
-  "\<lbrakk>is_aligned x sz; sz \<le> canonical_bit\<rbrakk>
-  \<Longrightarrow> is_aligned (ptrFromPAddr x) sz"
-  apply (simp add: ptrFromPAddr_def baseOffset_def pptrBase_def pAddr_base_def canonical_bit_def)
-  apply (erule aligned_add_aligned)
-   apply (erule is_aligned_weaken[rotated])
-   apply (simp add:is_aligned_def)
-  apply (rule order.refl)
-  done
-
-lemma is_aligned_ptrFromPAddr:
-  "is_aligned p pageBits \<Longrightarrow> is_aligned (ptrFromPAddr p) pageBits"
-  by (simp add: is_aligned_ptrFromPAddr_n pageBits_def canonical_bit_def)
-
 
 lemma pool_for_asid_arch_update[simp]:
   "riscv_asid_table (f (arch_state s)) = riscv_asid_table (arch_state s) \<Longrightarrow>
