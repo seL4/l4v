@@ -478,7 +478,7 @@ lemma foldl_fun_or_alt:
   apply clarsimp
   by (simp add: foldl_map)
 
-lemma sorted_filter:
+lemma sorted_imp_sorted_filter:
   "sorted xs \<Longrightarrow> sorted (filter P xs)"
   by (metis filter_sort sorted_sort sorted_sort_id)
 
