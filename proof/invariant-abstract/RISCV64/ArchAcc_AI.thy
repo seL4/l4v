@@ -796,8 +796,7 @@ lemma pt_walk_eqI:
        \<longrightarrow> pts' pt_ptr' = pts pt_ptr' \<and> is_aligned pt_ptr' pt_bits \<rbrakk>
    \<Longrightarrow> pt_walk top_level level pt_ptr vptr (\<lambda>p. pte_of p pts')
       = pt_walk top_level level pt_ptr vptr (\<lambda>p. pte_of p pts)"
-  apply (induct top_level arbitrary: pt_ptr; clarsimp?)
-   apply (simp add: pt_walk.simps)
+  apply (induct top_level arbitrary: pt_ptr; clarsimp)
   apply (subst pt_walk.simps)
   apply (subst (2) pt_walk.simps)
   apply clarsimp
