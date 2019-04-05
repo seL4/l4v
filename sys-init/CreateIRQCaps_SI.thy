@@ -196,7 +196,7 @@ lemma sorted_list_of_set_eq_filter:
         (is "_ = ?rhs")
 proof -
   have rhs_sorted: "sorted ?rhs"
-    by (intro sorted_filter word_upto_enum_sorted)
+    by (intro sorted_imp_sorted_filter word_upto_enum_sorted)
   moreover have rhs_distinct: "distinct ?rhs"
     by (intro distinct_filter distinct_enum_upto')
   moreover have enum_UNIV: "set [(minBound::'a word) .e. maxBound] = UNIV"
