@@ -336,6 +336,13 @@ lemma level_of_slotI:
        \<and> level < level_of_slot asid vref p s"
   by (auto simp: level_of_slot_def dest: bit0.GreatestI bit0.Greatest_le)
 
+lemma pool_for_asid_no_pt:
+  "\<lbrakk> pool_for_asid asid s = Some p; pts_of s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
+   \<Longrightarrow> False"
+  unfolding pool_for_asid_def
+  by (fastforce dest: pspace_alignedD dest!: valid_asid_tableD
+                simp: bit_simps obj_at_def ptes_of_Some in_omonad)
+
 lemma pool_for_asid_no_pte:
   "\<lbrakk> pool_for_asid asid s = Some p; ptes_of s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
    \<Longrightarrow> False"
@@ -349,6 +356,13 @@ lemma vs_lookup_table_no_asid:
   \<Longrightarrow> False"
   unfolding vs_lookup_table_def
   by (fastforce dest: pool_for_asid_no_pte simp: in_omonad)
+
+lemma vs_lookup_table_no_asid_pt:
+  "\<lbrakk> vs_lookup_table asid_pool_level asid vref s = Some (asid_pool_level, p);
+     pts_of s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
+  \<Longrightarrow> False"
+  unfolding vs_lookup_table_def
+  by (fastforce dest: pool_for_asid_no_pt simp: in_omonad)
 
 lemma vs_lookup_slot_no_asid:
   "\<lbrakk> vs_lookup_slot asid_pool_level asid vref s = Some (asid_pool_level, p);

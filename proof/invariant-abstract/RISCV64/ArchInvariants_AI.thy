@@ -1494,6 +1494,12 @@ lemma vref_for_level_eq_mono:
   unfolding vref_for_level_def
   by (metis (no_types, hide_lams) pt_bits_left_mono mask_lower_twice)
 
+lemma vref_for_level_eq_max_mono:
+  "\<lbrakk> vref_for_level vref level = vref_for_level vref' level' \<rbrakk> \<Longrightarrow>
+  vref_for_level vref (max level level') = vref_for_level vref' (max level level')"
+  unfolding vref_for_level_def
+  by (metis vref_for_level_def vref_for_level_max max.commute max.idem)
+
 lemma pt_walk_vref_for_level_eq:
   "\<lbrakk> vref_for_level vref (bot_level+1) = vref_for_level vref' (bot_level+1); bot_level \<le> top_level \<rbrakk> \<Longrightarrow>
    pt_walk top_level bot_level pt vref =

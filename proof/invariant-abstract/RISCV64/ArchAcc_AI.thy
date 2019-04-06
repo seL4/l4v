@@ -109,12 +109,13 @@ lemma cap_to_pt_is_pt_cap:
 
 (* FIXME RISCV: probably need extra lemma for asid_pool_level *)
 lemma unique_vs_lookup_table:
-  "\<lbrakk> unique_table_refs s; valid_vs_lookup s; valid_uses s;
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
+     vs_lookup_table level' asid' vref' s = Some (level', p');
+     p' = p; level \<le> max_pt_level; level' \<le> max_pt_level;
+     vref \<in> user_region s; vref' \<in> user_region s;
+     unique_table_refs s; valid_vs_lookup s; valid_uses s;
      valid_vspace_objs s; valid_asid_table s; pspace_aligned s;
-     valid_caps (caps_of_state s) s;
-     vs_lookup_table level asid vref s = Some (level, p); vref \<in> user_region s;
-     vs_lookup_table level' asid' vref' s = Some (level', p'); vref' \<in> user_region s;
-     p' = p; level \<le> max_pt_level; level' \<le> max_pt_level \<rbrakk>
+     valid_caps (caps_of_state s) s \<rbrakk>
    \<Longrightarrow> asid' = asid \<and>
       vref_for_level vref' (level'+1) = vref_for_level vref (level+1)"
   supply valid_vspace_obj.simps[simp del]
@@ -273,8 +274,8 @@ lemma pt_walk_loop_last_level_ptpte:
          vref_for_level bits of vref are used, for the level before we stopped.
    *)
 lemma pt_walk_same_for_different_levels:
-  "\<lbrakk> pt_walk top_level level' ptptr (vref_for_level vref (level' + 1)) ptes = Some (level', p);
-     pt_walk top_level level ptptr (vref_for_level vref (level + 1)) ptes = Some (level, p);
+  "\<lbrakk> pt_walk top_level level' ptptr vref ptes = Some (level', p);
+     pt_walk top_level level ptptr vref ptes = Some (level, p);
      level' < level; top_level \<le> max_pt_level; is_aligned ptptr pt_bits \<rbrakk>
    \<Longrightarrow> \<exists>vref'' ptptr'. pt_walk top_level 0 ptptr vref'' ptes = Some (0, ptptr') \<and>
                       (\<exists>pte. ptes (pt_slot_offset 0 ptptr' vref'') = Some pte \<and> is_PageTablePTE pte) \<and>
@@ -283,7 +284,6 @@ lemma pt_walk_same_for_different_levels:
    prefer 2
    apply (fastforce simp: pt_walk_max_level)
   apply (subst (asm) pt_walk_split_Some[where level'=level], simp+)
-  apply (simp add: pt_walk_vref_for_level1)
   apply (drule pt_walk_loop_last_level_ptpte; (simp add: pt_walk_is_aligned)?)
   apply clarsimp
   apply (subst pt_walk_split_Some[where level'=level], simp+)
@@ -297,29 +297,33 @@ lemma pt_walk_same_for_different_levels:
   apply fastforce
   done
 
+find_theorems pt_walk "_ + _" vref_for_level
+
 lemma vs_lookup_table_same_for_different_levels:
-  "\<lbrakk> vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p);
-     vs_lookup_table level' asid (vref_for_level vref' (level'+1)) s = Some (level', p);
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
+     vs_lookup_table level' asid vref' s = Some (level', p);
      vref_for_level vref (level+1) = vref_for_level vref' (level+1);
      vref \<in> user_region s; level' < level; level \<le> max_pt_level;
      valid_vspace_objs s; valid_asid_table s; valid_uses s; pspace_aligned s \<rbrakk>
    \<Longrightarrow> \<exists>vref'' p' pte. vs_lookup_slot 0 asid vref'' s = Some (0, p') \<and> ptes_of s p' = Some pte \<and>
                       is_PageTablePTE pte \<and>
                       vref_for_level vref'' (level' + 1) = vref_for_level vref' (level' + 1)"
+  apply (subst (asm) vs_lookup_vref_for_level1[where level=level, symmetric], blast)
+  apply (subst (asm) vs_lookup_vref_for_level1[where level=level', symmetric], blast)
   apply (clarsimp simp: vs_lookup_table_def in_omonad asid_pool_level_eq)
   apply (subgoal_tac "level' \<le> max_pt_level")
    prefer 2
    apply simp
-  apply (simp add: in_omonad)
+  apply (simp add: in_omonad pt_walk_vref_for_level1)
   apply (simp add: vs_lookup_slot_def in_omonad vs_lookup_table_def cong: conj_cong)
-  apply (drule pt_walk_same_for_different_levels; simp?)
+  apply (drule pt_walk_same_for_different_levels; simp?) 
   apply (erule vspace_for_pool_is_aligned; simp)
   apply force
   done
 
 lemma no_loop_vs_lookup_table_helper:
-  "\<lbrakk> vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p);
-     vs_lookup_table level' asid (vref_for_level vref' (level'+1)) s = Some (level', p);
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
+     vs_lookup_table level' asid vref' s = Some (level', p);
      vref_for_level vref' (max (level+1) (level'+1)) = vref_for_level vref (max (level+1) (level'+1));
      vref \<in> user_region s; vref' \<in> user_region s;
      level \<le> max_pt_level; level' \<le> max_pt_level; level' < level;
@@ -351,8 +355,8 @@ lemma no_loop_vs_lookup_table_helper:
   done
 
 lemma no_loop_vs_lookup_table:
-  "\<lbrakk> vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p);
-     vs_lookup_table level' asid (vref_for_level vref' (level'+1)) s = Some (level', p);
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
+     vs_lookup_table level' asid vref' s = Some (level', p);
      vref_for_level vref' (max (level+1) (level'+1)) = vref_for_level vref (max (level+1) (level'+1));
      vref \<in> user_region s; vref' \<in> user_region s; level \<le> max_pt_level; level' \<le> max_pt_level;
      unique_table_refs s; valid_vs_lookup s; valid_uses s;
@@ -369,6 +373,9 @@ lemma no_loop_vs_lookup_table:
    apply (simp add: max.commute)+
   done
 
+(* We can never find the same table/pool object at different levels.
+   When combined with unique_vs_lookup_table, shows there exists
+   only one path from the ASID table to any asid_pool / page table in the system *)
 lemma ex_vs_lookup_level:
   "\<lbrakk> \<exists>\<rhd> (level, p) s;  \<exists>\<rhd> (level', p) s;
      unique_table_refs s; valid_vs_lookup s; valid_uses s;
@@ -376,12 +383,20 @@ lemma ex_vs_lookup_level:
      valid_caps (caps_of_state s) s \<rbrakk>
    \<Longrightarrow> level' = level"
   apply clarsimp
+  (* FIXME RISCV no_loop_vs_lookup_table can deal with asid_pool_level, but unique_vs_lookup_table
+     can't, else we could get rid of this whole preamble *)
   apply (rename_tac asid' vref vref')
-  apply (case_tac "asid' = asid")
-   (* we will depend on there being no loops *)
-   apply simp
-  (* for differing asid, we depend on the lookup paths never joining up *)
-  sorry (* FIXME RISCV: add assumptions, use previous lemmas *)
+  apply (case_tac "level = asid_pool_level"; simp)
+   apply (case_tac "level' = asid_pool_level"; simp)
+   apply (frule (6) valid_vspace_objs_strongD[where bot_level=level' and level=level'])
+   apply (fastforce dest!: vs_lookup_table_no_asid_pt)
+  apply (case_tac "level' = asid_pool_level"; simp)
+   apply (frule (6) valid_vspace_objs_strongD[where bot_level=level and level=level])
+   apply (fastforce dest!: vs_lookup_table_no_asid_pt)
+  apply (frule_tac asid=asid and asid'=asid' in unique_vs_lookup_table, assumption; simp)
+  apply (drule_tac level=level and level'=level' and vref'=vref' in no_loop_vs_lookup_table
+         ; fastforce dest: vref_for_level_eq_max_mono simp: max.commute)
+  done
 
 lemma get_asid_pool_wp [wp]:
   "\<lbrace>\<lambda>s. \<forall>pool. ko_at (ArchObj (ASIDPool pool)) p s \<longrightarrow> Q pool s\<rbrace>
