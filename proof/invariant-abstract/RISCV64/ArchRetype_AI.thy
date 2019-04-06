@@ -217,12 +217,8 @@ lemma dmo_eq_kernel_restricted [wp, Retype_AI_assms]:
   "\<lbrace>\<lambda>s. equal_kernel_mappings (kheap_update (f (kheap s)) s)\<rbrace>
        do_machine_op m
    \<lbrace>\<lambda>rv s. equal_kernel_mappings (kheap_update (f (kheap s)) s)\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply wp
-  apply (simp add: equal_kernel_mappings_def has_kernel_mappings_def in_omonad)
-  apply clarsimp
-  sorry (* FIXME RISCV *)
-
+  unfolding do_machine_op_def equal_kernel_mappings_def has_kernel_mappings_def
+  by (wpsimp simp: in_omonad vspace_for_asid_def pool_for_asid_def)
 
 definition
   "post_retype_invs_check tp \<equiv> False"
@@ -395,28 +391,22 @@ lemma valid_cap:
     using cover tyunt
     by (clarsimp simp: obj_bits_dev_irr)
   show ?thesis
-  using cap
-  apply (case_tac cap)
     unfolding valid_cap_def
-    apply (simp_all add: valid_cap_def obj_at_pres cte_at_pres
-                              split: option.split_asm arch_cap.split_asm
-                                     option.splits)
-     apply (clarsimp simp add: valid_untyped_def ps_def s'_def)
-     apply (intro conjI)
-       apply clarsimp
-       apply (drule disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt]])
-        apply (simp add:Int_ac p_assoc_help[symmetric])
-       apply simp
-      apply clarsimp
+    using cap
+    apply (case_tac cap)
+               apply (simp_all add: valid_cap_def obj_at_pres cte_at_pres valid_arch_cap_ref_def
+                               split: option.split_asm arch_cap.split_asm option.splits)
+    apply (clarsimp simp add: valid_untyped_def ps_def s'_def)
+    apply (rule conjI)
+     apply clarsimp
      apply (drule disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt]])
-      apply (simp add:Int_ac  p_assoc_help[symmetric])
+      apply (simp add: Int_ac p_assoc_help[symmetric])
      apply simp
-     using cover tyunt
-     apply (simp add: obj_bits_api_def2 split:Structures_A.apiobject_type.splits)
-  sorry (* FIXME RISCV
-     apply clarsimp+
-    apply (fastforce elim!: obj_at_pres)+
-  done *)
+    apply clarsimp
+    apply (drule disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt]])
+     apply (simp add: Int_ac p_assoc_help[symmetric])
+    apply simp
+    done
   qed
 
 lemma valid_global_refs:
