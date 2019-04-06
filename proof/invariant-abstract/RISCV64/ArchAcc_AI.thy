@@ -49,7 +49,7 @@ bundle unfold_objects_asm =
 
 lemma vs_lookup_table_target:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
-   vs_lookup_target (level + 1) asid (vref_for_level vref (level + 1)) s = Some (level + 1, p)"
+   vs_lookup_target (level + 1) asid (vref_for_level vref level) s = Some (level + 1, p)"
   apply (simp add: vs_lookup_target_def vs_lookup_slot_def vs_lookup_table_def obind_assoc)
   apply (subgoal_tac "level \<noteq> asid_pool_level"; clarsimp)
   apply (cases "level = max_pt_level", clarsimp simp: max_pt_level_plus_one in_omonad)
@@ -71,8 +71,8 @@ lemma vs_lookup_table_target:
 lemma valid_vs_lookupD:
   "\<lbrakk> vs_lookup_target bot_level asid vref s = Some (level, p) ;
      vref \<in> user_region s ; valid_vs_lookup s \<rbrakk>
-   \<Longrightarrow>  asid \<noteq> 0
-        \<and> (\<exists>p' cap. caps_of_state s p' = Some cap \<and> obj_refs cap = {p}
+   \<Longrightarrow> asid \<noteq> 0
+      \<and> (\<exists>cptr cap. caps_of_state s cptr = Some cap \<and> obj_refs cap = {p}
                     \<and> vs_cap_ref cap = Some (asid, vref_for_level vref level))"
   unfolding valid_vs_lookup_def
   by auto
@@ -115,44 +115,273 @@ lemma unique_vs_lookup_table:
      vs_lookup_table level asid vref s = Some (level, p); vref \<in> user_region s;
      vs_lookup_table level' asid' vref' s = Some (level', p'); vref' \<in> user_region s;
      p' = p; level \<le> max_pt_level; level' \<le> max_pt_level \<rbrakk>
-   \<Longrightarrow> asid_for_level asid' (level'+1) = asid_for_level asid (level+1) \<and>
-       vref_for_level vref' (level'+1) = vref_for_level vref (level+1)"
+   \<Longrightarrow> asid' = asid \<and>
+      vref_for_level vref' (level'+1) = vref_for_level vref (level+1)"
+  supply valid_vspace_obj.simps[simp del]
   apply (frule (6) valid_vspace_objs_strongD)
   apply (frule (6) valid_vspace_objs_strongD[where pt_ptr=p'])
   apply (drule (1) vs_lookup_table_target)+
   apply (drule valid_vs_lookupD, erule (1) vref_for_level_user_region, assumption)+
   apply (elim conjE exE)
   apply (rename_tac pt pt' cptr cptr' cap cap')
-  apply (drule (2) unique_table_refsD, simp)
+  apply simp
   apply (subgoal_tac "is_pt_cap cap \<and> is_pt_cap cap'")
-   apply (drule table_cap_ref_vs_cap_ref; simp)
-   apply clarsimp
-  sorry
+   prefer 2
+   apply (simp add: cap_to_pt_is_pt_cap)
+  apply (drule (2) unique_table_refsD, simp)
+  apply (drule table_cap_ref_vs_cap_ref; simp)
+  done
 
-lemma
+lemma vref_for_level_pt_index_idem:
+  assumes "level' \<le> max_pt_level" and "level'' \<le> level'"
+  shows "vref_for_level
+           (vref_for_level vref (level'' + 1) || (pt_index level vref << pt_bits_left level''))
+           (level' + 1)
+         = vref_for_level vref (level' + 1)"
+proof -
+  have dist_zero_right':
+    "\<And>w x y. \<lbrakk> (w::('a::len) word) = y; x = 0\<rbrakk> \<Longrightarrow> w || x = y"
+    by auto
+  show ?thesis using assms
+    unfolding vref_for_level_def pt_index_def
+    apply (subst word_ao_dist)
+    apply (rule dist_zero_right')
+    apply (subst mask_lower_twice)
+   apply (rule pt_bits_left_mono, erule (1) vm_level_le_plus_1_mono, rule refl)
+  apply (simp add: mask_shifl_overlap_zero pt_bits_left_def)
+  done
+qed
+
+lemma pt_slot_offset_vref_for_level_idem:
+  "\<lbrakk> is_aligned p pt_bits; level' \<le> max_pt_level \<rbrakk>
+   \<Longrightarrow> pt_slot_offset level' p
+            (vref_for_level vref (level' + 1) || (pt_index level vref << pt_bits_left level'))
+   = pt_slot_offset level p vref"
+  apply (simp add: pt_slot_offset_or_def)
+  apply (rule arg_cong[where f="\<lambda>x. p || x"])
+  apply (rule arg_cong[where f="\<lambda>x. x << pte_bits"])
+  apply (simp add: pt_index_def pt_bits_left_def)
+  apply (drule max_pt_level_enum)
+  apply (rule word_eqI)
+  apply (auto simp: bit_simps word_eqI_solve_simps pt_bits_left_def)
+  done
+
+lemma pt_walk_loop_last_level_ptpte_helper:
+  "\<lbrakk> pt_walk level level' p vref ptes = Some (level', p); level \<le> max_pt_level; level > level';
+     is_aligned p pt_bits \<rbrakk>
+   \<Longrightarrow> \<exists>p' vref'. (pt_walk level 0 p vref' ptes = Some (0, p'))
+                 \<and> (\<exists>pte level. ptes (pt_slot_offset level p' vref') = Some pte \<and> is_PageTablePTE pte)
+                 \<and> vref_for_level vref' (level' + 1) = vref_for_level vref (level' + 1)"
+  supply vm_level_less_le_1[simp]
+  apply (induct level arbitrary: p level' vref; clarsimp)
+  apply (subst (asm) (3) pt_walk.simps)
+  apply (clarsimp simp: in_omonad split: if_split_asm)
+  apply (erule disjE; clarsimp)
+  apply (rename_tac pte)
+  apply (case_tac "level' = 0")
+   apply clarsimp
+   apply (subst pt_walk.simps)
+   apply (clarsimp simp: in_omonad)
+   apply (rule_tac x=p in exI)
+   apply (clarsimp simp: in_omonad)
+   apply (rule_tac x=vref in exI)
+   apply (clarsimp simp: in_omonad)
+   apply (rule conjI)
+    apply fastforce
+   apply blast
+  (* set up assumption of IH *)
+  apply (subgoal_tac
+           "pt_walk (level - 1) (level' - 1) (pptr_from_pte pte)
+                    (vref_for_level vref (level'+1) || (pt_index level vref << pt_bits_left level'))
+                    ptes
+            = Some (level' - 1, pptr_from_pte pte)")
+   apply (drule meta_spec, drule meta_spec, drule meta_spec, drule (1) meta_mp, drule meta_mp)
+    using pt_walk_max_level less_linear
+    apply fastforce
+   apply clarsimp
+   apply (subst pt_walk.simps)
+   apply (clarsimp simp: in_omonad)
+   apply (rule_tac x=p' in exI)
+   apply (rule_tac x=vref' in exI)
+   apply (rule conjI)
+    (* walk to level 0 *)
+    apply (rule_tac x=pte in exI)
+    apply clarsimp
+    apply (subgoal_tac "pt_slot_offset level p vref' = pt_slot_offset level p vref")
+     prefer 2
+     apply (rule vref_for_level_pt_slot_offset)
+     apply (rule_tac level="level'+1" in  vref_for_level_eq_mono)
+      apply (drule_tac level'="level'+1" in  vref_for_level_eq_mono
+             ; fastforce intro: vref_for_level_pt_index_idem)
+     apply (erule bit0.plus_one_leq)
+    apply simp
+   apply (rule conjI, blast)
+   apply (drule_tac level'="level'+1" in  vref_for_level_eq_mono
+          ; fastforce intro: vref_for_level_pt_index_idem)
+  (* show assumption used for IH earlier *)
+  apply (rule_tac pt_walk_split_Some[where level'="level" and level="level - 1" for level,
+                                     THEN iffD2])
+    apply (fastforce dest!: vm_level_not_less_zero intro: less_imp_le)
+   apply (meson bit0.leq_minus1_less bit0.not_less_zero_bit0 le_less less_linear less_trans)
+  apply (subgoal_tac
+           "pt_walk (level - 1) level' (pptr_from_pte pte)
+                    (vref_for_level vref (level' + 1) || (pt_index level vref << pt_bits_left level'))
+            = pt_walk (level - 1) level' (pptr_from_pte pte) vref")
+   prefer 2
+   apply (rule pt_walk_vref_for_level_eq)
+    apply (subst vref_for_level_pt_index_idem, simp+)
+   apply (meson bit0.leq_minus1_less bit0.not_less_zero_bit0 le_less less_linear less_trans)
+  apply clarsimp
+  apply (subst pt_walk.simps)
+  apply clarsimp
+  apply (frule vm_level_not_less_zero)
+  apply (clarsimp simp: in_omonad)
+  apply (rule_tac x=pte in exI)
+  apply (clarsimp simp add: pt_slot_offset_vref_for_level_idem)
+  done
+
+(* if you can walk the page tables and get back to a page table you have already visited,
+   then you can create a lookup path such that you end up with a PT PTE at the bottom-most level *)
+lemma pt_walk_loop_last_level_ptpte:
+  "\<lbrakk> pt_walk level level' p vref ptes = Some (level', p); level \<le> max_pt_level; level > level';
+     is_aligned p pt_bits \<rbrakk>
+   \<Longrightarrow> \<exists>p' vref'. (pt_walk level 0 p vref' ptes = Some (0, p'))
+                 \<and> (\<exists>pte. ptes (pt_slot_offset 0 p' vref') = Some pte \<and> is_PageTablePTE pte)
+                 \<and> vref_for_level vref' (level' + 1) = vref_for_level vref (level' + 1)"
+  apply (drule pt_walk_loop_last_level_ptpte_helper; simp)
+  apply clarsimp
+  apply (rule_tac x=p' in exI)
+  apply (rule_tac x="vref_for_level vref' 1 || (pt_index levela vref' << pt_bits_left 0)" in exI)
+  apply (rule conjI)
+   apply (subst pt_walk_vref_for_level_eq; assumption?)
+    apply simp
+    apply (rule vref_for_level_pt_index_idem[where level''=0 and level'=0, simplified])
+   apply simp
+  apply (rule conjI)
+   apply (rule_tac x=pte in exI)
+   apply clarsimp
+   apply (subst pt_slot_offset_vref_for_level_idem[where level'=0, simplified])
+    apply (erule (2) pt_walk_is_aligned)
+  apply (subst vref_for_level_pt_index_idem[where level''=0, simplified]; simp)
+  done
+
+(* If when performing page table walks to two different depths we arrive at the same page table,
+   then we can construct a complete walk ending on a PT PTE at the bottom level.
+   This is significant, because validity of PTEs requires that only pages are mapped at the
+   deepest PT level.
+   Note: we are looking up vref in both cases, but as we stop early we observe that only
+         vref_for_level bits of vref are used, for the level before we stopped.
+   *)
+lemma pt_walk_same_for_different_levels:
+  "\<lbrakk> pt_walk top_level level' ptptr (vref_for_level vref (level' + 1)) ptes = Some (level', p);
+     pt_walk top_level level ptptr (vref_for_level vref (level + 1)) ptes = Some (level, p);
+     level' < level; top_level \<le> max_pt_level; is_aligned ptptr pt_bits \<rbrakk>
+   \<Longrightarrow> \<exists>vref'' ptptr'. pt_walk top_level 0 ptptr vref'' ptes = Some (0, ptptr') \<and>
+                      (\<exists>pte. ptes (pt_slot_offset 0 ptptr' vref'') = Some pte \<and> is_PageTablePTE pte) \<and>
+                      vref_for_level vref'' (level' + 1) = vref_for_level vref (level' + 1)"
+  apply (subgoal_tac "level \<le> top_level")
+   prefer 2
+   apply (fastforce simp: pt_walk_max_level)
+  apply (subst (asm) pt_walk_split_Some[where level'=level], simp+)
+  apply (simp add: pt_walk_vref_for_level1)
+  apply (drule pt_walk_loop_last_level_ptpte; (simp add: pt_walk_is_aligned)?)
+  apply clarsimp
+  apply (subst pt_walk_split_Some[where level'=level], simp+)
+  apply (rule_tac x="vref'" in exI)
+  apply (rule_tac x="p'" in exI)
+  apply (rule conjI)
+   apply (rule_tac x="p" in exI)
+   apply simp
+   apply (subst pt_walk_vref_for_level_eq; assumption?)
+   apply (fastforce elim: vref_for_level_eq_mono  simp: vm_level_le_plus_1_mono)
+  apply fastforce
+  done
+
+lemma vs_lookup_table_same_for_different_levels:
   "\<lbrakk> vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p);
      vs_lookup_table level' asid (vref_for_level vref' (level'+1)) s = Some (level', p);
-     vref_for_level vref' (level'+1) = vref_for_level vref (level+1);
-     vref \<in> user_region s; level' < level; level \<le> max_pt_level \<rbrakk>
+     vref_for_level vref (level+1) = vref_for_level vref' (level+1);
+     vref \<in> user_region s; level' < level; level \<le> max_pt_level;
+     valid_vspace_objs s; valid_asid_table s; valid_uses s; pspace_aligned s \<rbrakk>
    \<Longrightarrow> \<exists>vref'' p' pte. vs_lookup_slot 0 asid vref'' s = Some (0, p') \<and> ptes_of s p' = Some pte \<and>
-                       is_PageTablePTE pte"
-  oops
+                      is_PageTablePTE pte \<and>
+                      vref_for_level vref'' (level' + 1) = vref_for_level vref' (level' + 1)"
+  apply (clarsimp simp: vs_lookup_table_def in_omonad asid_pool_level_eq)
+  apply (subgoal_tac "level' \<le> max_pt_level")
+   prefer 2
+   apply simp
+  apply (simp add: in_omonad)
+  apply (simp add: vs_lookup_slot_def in_omonad vs_lookup_table_def cong: conj_cong)
+  apply (drule pt_walk_same_for_different_levels; simp?)
+  apply (erule vspace_for_pool_is_aligned; simp)
+  apply force
+  done
 
-lemma no_loop_vs_lookup_table: (* FIXME RISCV *)
-  "\<lbrakk> unique_table_refs s; valid_vs_lookup s; valid_uses s;
-     valid_vspace_objs s; valid_asid_table s; pspace_aligned s;
-     valid_caps (caps_of_state s) s;
-     vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p);
+lemma no_loop_vs_lookup_table_helper:
+  "\<lbrakk> vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p);
      vs_lookup_table level' asid (vref_for_level vref' (level'+1)) s = Some (level', p);
-     vref_for_level vref' (level'+1) = vref_for_level vref (level+1);
-     vref \<in> user_region s; level \<le> max_pt_level; level' \<le> max_pt_level \<rbrakk>
+     vref_for_level vref' (max (level+1) (level'+1)) = vref_for_level vref (max (level+1) (level'+1));
+     vref \<in> user_region s; vref' \<in> user_region s;
+     level \<le> max_pt_level; level' \<le> max_pt_level; level' < level;
+     unique_table_refs s; valid_vs_lookup s; valid_uses s;
+     valid_vspace_objs s; valid_asid_table s; pspace_aligned s;
+     valid_caps (caps_of_state s) s \<rbrakk>
     \<Longrightarrow> level' = level"
-  sorry
+   apply (drule (1) vs_lookup_table_same_for_different_levels; simp?)
+    apply (frule (1) vm_level_less_plus_1_mono)
+    apply (simp add: max_absorb1)
+   apply (frule (1) vm_level_less_plus_1_mono)
+   apply (simp add: max_absorb1)
+   apply (clarsimp simp: vs_lookup_slot_def in_omonad, clarsimp split: if_splits)
+   apply (rename_tac pt_ptr)
+   (* the goal is to derive a contradiction: we have a walk down to the last level;
+      if we can show the pte we found is valid, it can't be a PT pte *)
+   apply (subgoal_tac "valid_pte 0 pte s")
+    apply (blast dest: ptpte_level_0_valid_pte)
+   apply (subgoal_tac "vref'' \<in> user_region s")
+    prefer 2
+    apply (frule_tac vref=vref' and level="level'+1" in vref_for_level_user_region, assumption)
+    apply (rule vref_for_level_user_regionD[where level="level'+1"]; simp?)
+    apply (erule vm_level_less_max_pt_level)
+   apply (subgoal_tac "is_aligned pt_ptr pt_bits")
+    prefer 2
+    apply (fastforce elim!: vs_lookup_table_is_aligned)
+   apply (drule_tac pt_ptr=pt_ptr in valid_vspace_objs_strongD, assumption; simp?)
+   apply (fastforce simp: max_pt_level_not_0 pte_of_def in_omonad is_aligned_pt_slot_offset_pte)
+  done
+
+lemma no_loop_vs_lookup_table:
+  "\<lbrakk> vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p);
+     vs_lookup_table level' asid (vref_for_level vref' (level'+1)) s = Some (level', p);
+     vref_for_level vref' (max (level+1) (level'+1)) = vref_for_level vref (max (level+1) (level'+1));
+     vref \<in> user_region s; vref' \<in> user_region s; level \<le> max_pt_level; level' \<le> max_pt_level;
+     unique_table_refs s; valid_vs_lookup s; valid_uses s;
+     valid_vspace_objs s; valid_asid_table s; pspace_aligned s;
+     valid_caps (caps_of_state s) s \<rbrakk>
+    \<Longrightarrow> level' = level"
+  apply (case_tac "level' = level"; clarsimp)
+  (* reduce to two cases with identical proofs, either level' < level or vice-versa *)
+  apply (case_tac "level' < level"; (clarsimp dest!: leI dual_order.not_eq_order_implies_strict)?)
+   apply (drule no_loop_vs_lookup_table_helper[where level'=level' and level=level])
+                 apply assumption+
+   apply simp
+  apply (drule no_loop_vs_lookup_table_helper[where level'=level and level=level']; assumption?)
+   apply (simp add: max.commute)+
+  done
 
 lemma ex_vs_lookup_level:
-  "\<lbrakk> \<exists>\<rhd> (level, p) s;  \<exists>\<rhd> (level', p) s \<rbrakk> \<Longrightarrow> level' = level"
+  "\<lbrakk> \<exists>\<rhd> (level, p) s;  \<exists>\<rhd> (level', p) s;
+     unique_table_refs s; valid_vs_lookup s; valid_uses s;
+     valid_vspace_objs s; valid_asid_table s; pspace_aligned s;
+     valid_caps (caps_of_state s) s \<rbrakk>
+   \<Longrightarrow> level' = level"
   apply clarsimp
-  oops (* FIXME RISCV: add assumptions, use previous lemmas *)
+  apply (rename_tac asid' vref vref')
+  apply (case_tac "asid' = asid")
+   (* we will depend on there being no loops *)
+   apply simp
+  (* for differing asid, we depend on the lookup paths never joining up *)
+  sorry (* FIXME RISCV: add assumptions, use previous lemmas *)
 
 lemma get_asid_pool_wp [wp]:
   "\<lbrace>\<lambda>s. \<forall>pool. ko_at (ArchObj (ASIDPool pool)) p s \<longrightarrow> Q pool s\<rbrace>
@@ -387,12 +616,14 @@ lemma pt_walk_pt_at:
 lemma pt_lookup_slot_from_level_pte_at:
   "\<lbrakk> pt_lookup_slot_from_level level bot_level pt_ptr vptr (ptes_of s) = Some (level', p);
      vs_lookup_table level asid vptr s = Some (level, pt_ptr); level \<le> max_pt_level;
-     vref \<in> user_region s; valid_uses s; valid_asid_table s; pspace_aligned s \<rbrakk>
+     vptr \<in> user_region s; valid_vspace_objs s; valid_uses s; valid_asid_table s; pspace_aligned s \<rbrakk>
   \<Longrightarrow> pte_at p s"
   unfolding pt_lookup_slot_from_level_def
-  apply (simp add: oreturn_def obind_def split: option.splits)
-
-  sorry (* FIXME RISCV *)  (* should follow from above + offset calculation *)
+  apply (clarsimp simp add: oreturn_def obind_def split: option.splits)
+  apply (rename_tac pt_ptr')
+  apply (frule pt_walk_pt_at; assumption?)
+  apply (fastforce simp: pte_at_def is_aligned_pt_slot_offset_pte is_aligned_pt)
+  done
 
 lemma set_pt_distinct [wp]:
   "\<lbrace>pspace_distinct\<rbrace> set_pt p pt \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
