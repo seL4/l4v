@@ -192,6 +192,45 @@ notepad begin
 
 end
 
+text \<open>
+  Literally a copy of the parser for @{method subgoal_tac} composed with an analogue of
+  @{command prefer}.
+
+  Useful if you find yourself introducing many new facts via `subgoal_tac`, but prefer to prove
+  them immediately rather than after they're used.
+\<close>
+setup \<open>
+  Method.setup \<^binding>\<open>prop_tac\<close>
+    (Args.goal_spec -- Scan.lift (Scan.repeat1 Args.embedded_inner_syntax -- Parse.for_fixes) >>
+      (fn (quant, (props, fixes)) => fn ctxt =>
+        (SIMPLE_METHOD'' quant
+          (EVERY' (map (fn prop => Rule_Insts.subgoal_tac ctxt prop fixes) props)
+            THEN'
+            (K (prefer_tac 2))))))
+    "insert prop (dynamic instantiation), introducing prop subgoal first";
+\<close>
+
+notepad begin {
+  fix xs
+  assume assms: "list_all even (xs :: nat list)"
+
+  from assms have "even (sum_list xs)"
+    apply (induct xs)
+     apply simp
+    text \<open>Inserts the desired proposition as the current subgoal.\<close>
+    apply (prop_tac "list_all even xs")
+     subgoal by simp
+    text \<open>
+      The prop @{term "list_all even xs"} is now available as an assumption.
+      Let's add another one.\<close>
+    apply (prop_tac "even (sum_list xs)")
+     subgoal by simp
+    text \<open>Now that we've proven our introduced props, use them!\<close>
+    apply clarsimp
+    done
+}
+end
+
 section \<open>Advanced combinators\<close>
 
 subsection \<open>Protecting goal elements (assumptions or conclusion) from methods\<close>
