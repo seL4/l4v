@@ -200,7 +200,7 @@ lemma some_get_page_info_umapsD:
   apply (rule_tac x="vmpage_size_of_level level" in exI)
   apply (clarsimp simp: obj_at_def)
   apply (drule (1) data_at_aligned)
-  apply (simp add: pt_bits_left_le_canoncial is_aligned_ptrFromPAddr_n_eq)
+  apply (simp add: pt_bits_left_le_canonical is_aligned_ptrFromPAddr_n_eq)
   done
 
 lemma user_mem_dom_cong:

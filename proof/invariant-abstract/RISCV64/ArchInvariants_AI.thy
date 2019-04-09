@@ -1996,7 +1996,7 @@ lemma vref_for_level_asid_pool:
   apply (fastforce simp add: mask_def elim: order.trans)
   done
 
-lemma pt_bits_left_le_canoncial:
+lemma pt_bits_left_le_canonical:
   "level \<le> max_pt_level \<Longrightarrow> pt_bits_left level \<le> canonical_bit"
   by (drule pt_bits_left_le_max_pt_level) (simp add: canonical_bit_def bit_simps)
 
@@ -2023,7 +2023,7 @@ lemma canonical_vref_for_levelD:
   using pt_bits_left_bound[of level]
   apply (simp add: canonical_address_def canonical_address_of_def vref_for_level_def pptr_base_mask
                     bit_simps)
-  apply (drule pt_bits_left_le_canoncial)
+  apply (drule pt_bits_left_le_canonical)
   apply word_bitwise
   by (clarsimp simp: canonical_bit_def word_size not_less)
 
@@ -2356,7 +2356,7 @@ lemma vref_for_level_user_regionD:
    \<Longrightarrow> vref \<in> user_region s"
   using vref_for_level_le[of vref level]
   apply (clarsimp simp: valid_uses_user_region_eq)
-  apply (drule pt_bits_left_le_canoncial)
+  apply (drule pt_bits_left_le_canonical)
   apply word_bitwise
   by (clarsimp simp: canonical_bit_def word_size not_less bit_simps canonical_user_def)
 
