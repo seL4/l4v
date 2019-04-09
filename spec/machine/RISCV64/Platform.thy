@@ -80,14 +80,14 @@ definition canonical_bit :: nat
 
 definition kernelBase :: word64
   where
-  "kernelBase = - (1 << 31)" (* 2^64 - 2 GiB *)
+  "kernelBase = - (1 << 31) + 0x4000000" (* 2^64 - 2 GiB + 2^26 *)
 
-lemma "kernelBase = 0xFFFFFFFF80000000" (* Sanity check with C *)
+lemma "kernelBase = 0xFFFFFFFF84000000" (* Sanity check with C *)
   by (simp add: kernelBase_def)
 
 definition paddrLoad :: word64
   where
-  "paddrLoad = 0xC0000000"
+  "paddrLoad = 0x84000000"
 
 definition kernelBaseOffset :: word64
   where

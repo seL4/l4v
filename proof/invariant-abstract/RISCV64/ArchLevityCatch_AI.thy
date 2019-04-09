@@ -75,19 +75,6 @@ lemma preemption_point_success [simp,intro]:
 lemma pageBits_less_word_bits [simp]:
   "pageBits < word_bits" by (simp add: pageBits_def word_bits_conv)
 
-lemma mask_out_8_le_kernel_base:
-  "(x && ~~ mask 8 \<ge> kernel_base >> 20) = (x \<ge> kernel_base >> 20)"
-  apply (rule iffI)
-   apply (erule order_trans, rule word_and_le2)
-  apply (drule_tac n=8 in neg_mask_mono_le)
-  apply (simp add: kernel_base_def mask_def)
-  done
-
-lemma mask_out_8_less_kernel_base:
-  "(x && ~~ mask 8 < kernel_base >> 20) = (x < kernel_base >> 20)"
-  using mask_out_8_le_kernel_base[where x=x]
-  by (simp add: linorder_not_less[symmetric])
-
 lemma aobj_ref_arch_cap[simp]:
   "aobj_ref (arch_default_cap aty ptr us dev) = Some ptr"
   by (case_tac aty; simp add: arch_default_cap_def)

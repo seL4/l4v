@@ -126,7 +126,7 @@ text \<open>
 \<close>
 definition kernel_base :: "vspace_ref"
   where
-  "kernel_base \<equiv> 0xFFFFFFFF80000000" \<comment> \<open>for Spike platform\<close>
+  "kernel_base \<equiv> 0xFFFFFFFF84000000" \<comment> \<open>for Spike platform\<close>
 
 definition idle_thread_ptr :: vspace_ref
   where

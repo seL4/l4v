@@ -993,7 +993,7 @@ lemma cte_wp_at_page_cap_weaken:
   apply (clarsimp simp: acap_rights_update_def split: cap.splits arch_cap.splits)
   done
 
-
+(* FIXME RISCV: no longer the case for huge pages after kernel_base update
 lemma aligned_sum_less_kernel_base:
   "vmsz_aligned p sz \<Longrightarrow> (p + 2 ^ pageBitsForSize sz - 1 < kernel_base) = (p < kernel_base)"
   apply (rule iffI)
@@ -1004,8 +1004,9 @@ lemma aligned_sum_less_kernel_base:
   apply (simp add:field_simps[symmetric])
   apply (erule gap_between_aligned)
     apply (simp add: vmsz_aligned_def)+
-   apply (case_tac sz; simp add: kernel_base_def bit_simps is_aligned_def)+
+   apply (case_tac sz; simp add: kernel_base_def bit_simps is_aligned_def)
   done
+*)
 
 lemma le_user_vtop_less_pptr_base[simp]:
   "x \<le> user_vtop \<Longrightarrow> x < pptr_base"
