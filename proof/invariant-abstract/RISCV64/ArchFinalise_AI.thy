@@ -66,6 +66,24 @@ lemma nat_to_cref_unat_of_bl':
 
 lemmas nat_to_cref_unat_of_bl = nat_to_cref_unat_of_bl' [OF _ refl]
 
+lemma riscv_global_pt_asid_table_update[simp]:
+  "riscv_global_pt (arch_state s\<lparr>riscv_asid_table := atable\<rparr>) = riscv_global_pt (arch_state s)"
+  by (simp add: riscv_global_pt_def)
+
+lemma equal_kernel_mappings_asid_table_unmap:
+  "equal_kernel_mappings s
+   \<Longrightarrow> equal_kernel_mappings (s\<lparr>arch_state := arch_state s
+                                \<lparr>riscv_asid_table := (asid_table s)(i := None)\<rparr>\<rparr>)"
+  unfolding equal_kernel_mappings_def
+  apply clarsimp
+  apply (erule_tac x=asid in allE)
+  apply (erule_tac x=pt_ptr in allE)
+  apply (clarsimp simp: fun_upd_def)
+  apply (erule impE)
+   subgoal by (clarsimp simp: vspace_for_asid_def in_omonad pool_for_asid_def split: if_splits)
+  apply (clarsimp simp: has_kernel_mappings_def)
+  done
+
 lemma invs_riscv_asid_table_unmap:
   "invs s \<and> is_aligned base asid_low_bits \<and> base \<le> mask asid_bits
        \<and> tab = riscv_asid_table (arch_state s)
@@ -74,8 +92,9 @@ lemma invs_riscv_asid_table_unmap:
   apply (strengthen valid_asid_map_unmap valid_vspace_objs_unmap_strg
                     valid_vs_lookup_unmap_strg valid_arch_state_unmap_strg)
   apply (simp add: valid_irq_node_def valid_kernel_mappings_def)
-  apply (simp add: valid_table_caps_def valid_machine_state_def valid_global_objs_def)
-  sorry (* FIXME RISCV *)
+  apply (simp add: valid_table_caps_def valid_machine_state_def valid_global_objs_def
+                   valid_asid_pool_caps_def equal_kernel_mappings_asid_table_unmap)
+  done
 
 lemma delete_asid_pool_invs[wp]:
   "\<lbrace>invs and K (base \<le> mask asid_bits)\<rbrace>
@@ -88,17 +107,29 @@ lemma delete_asid_pool_invs[wp]:
   apply (simp add: asid_low_bits_of_def asid_low_bits_def ucast_zero_is_aligned)
   done
 
+lemma do_machine_op_pool_for_asid[wp]:
+  "do_machine_op f \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
+  by (wpsimp simp: pool_for_asid_def)
+
+lemma do_machine_op_vspace_for_asid[wp]:
+  "do_machine_op f \<lbrace>\<lambda>s. P (vspace_for_asid asid s)\<rbrace>"
+  by (wpsimp simp: vspace_for_asid_def obind_def
+             wp: conjI hoare_vcg_all_lift hoare_vcg_imp_lift'
+             split: option.splits)
+
 lemma set_vm_root_pool_for_asid[wp]:
   "set_vm_root pt \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
-  sorry (* FIXME RISCV *)
+  by (wpsimp simp: set_vm_root_def wp: get_cap_wp)
 
 lemma set_vm_root_vspace_for_asid[wp]:
   "set_vm_root pt \<lbrace> \<lambda>s. P (vspace_for_asid asid s) \<rbrace>"
-  sorry (* FIXME RISCV *)
+  by (wpsimp simp: set_vm_root_def wp: get_cap_wp)
 
-lemma do_machine_op_pool_for_asid[wp]:
-  "do_machine_op f \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
-  sorry (* FIXME RISCV *)
+lemma clearExMonitor_invs[wp]:
+  "\<lbrace>invs\<rbrace> do_machine_op (hwASIDFlush a) \<lbrace>\<lambda>_. invs\<rbrace>"
+  by (wpsimp wp: dmo_invs
+             simp: hwASIDFlush_def machine_op_lift_def
+                   machine_rest_lift_def in_monad select_f_def)
 
 lemma delete_asid_invs[wp]:
   "\<lbrace>invs and K (asid \<le> mask asid_bits)\<rbrace>
@@ -106,32 +137,8 @@ lemma delete_asid_invs[wp]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: delete_asid_def cong: option.case_cong)
   apply (wpsimp wp: set_asid_pool_invs_unmap)
-  sorry (* FIXME RISCV
-     apply (wp load_hw_asid_wp)+
-    apply (simp add: flush_space_def)
-    apply (wpsimp wp: load_hw_asid_wp)+
-  apply (subgoal_tac "valid_asid_table s")
-   prefer 2
-   apply fastforce
-  apply (clarsimp simp: valid_asid_table_def)
-  apply (rule conjI)
-   apply clarsimp
-   apply (subgoal_tac "asid_high_bits_of asid = asid_high_bits_of asida")
-    prefer 2
-    apply (fastforce elim!: inj_onD)
-   apply (drule asid_low_high_bits', simp)
-     apply (simp add: mask_def)
-    apply (simp add: mask_def)
-   apply blast
-  apply clarsimp
-  apply (subgoal_tac "asid_high_bits_of asid = asid_high_bits_of asida")
-   prefer 2
-   apply (fastforce elim!: inj_onD)
-  apply (drule asid_low_high_bits', simp)
-    apply (simp add: mask_def)
-   apply (simp add: mask_def)
   apply blast
-  done *)
+  done
 
 lemma delete_asid_pool_unmapped[wp]:
   "\<lbrace>\<lambda>s. pool_for_asid asid s = Some poolptr \<rbrace>
@@ -294,10 +301,17 @@ lemma (* unbind_notification_final *) [wp,Finalise_AI_asms]:
        | wpc | simp add: tcb_cap_cases_def)+
   done
 
+lemma arch_thread_set_caps_of_state[wp]:
+  "arch_thread_set v t \<lbrace>\<lambda>s. P (caps_of_state s) \<rbrace>"
+  apply (wpsimp simp: arch_thread_set_def wp: set_object_wp)
+  apply (clarsimp simp: fun_upd_def)
+  apply (frule get_tcb_ko_atD)
+  apply (auto simp: caps_of_state_after_update obj_at_def tcb_cap_cases_def)
+  done
+
 lemma arch_thread_set_final_cap[wp]:
   "\<lbrace>is_final_cap' cap\<rbrace> arch_thread_set v t \<lbrace>\<lambda>rv. is_final_cap' cap\<rbrace>"
-  sorry (* FIXME RISCV
-  by (wpsimp simp: is_final_cap'_def2 cte_wp_at_caps_of_state) *)
+  by (wpsimp simp: is_final_cap'_def2 cte_wp_at_caps_of_state)
 
 lemma arch_thread_get_final_cap[wp]:
   "\<lbrace>is_final_cap' cap\<rbrace> arch_thread_get v t \<lbrace>\<lambda>rv. is_final_cap' cap\<rbrace>"
@@ -358,27 +372,22 @@ crunch tcb_at[wp]: prepare_thread_delete "\<lambda>s. tcb_at p s"
 
 lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
   "\<lbrace>valid_cap cap\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>"
-  sorry (* FIXME RISCV
-  apply (cases cap, simp_all)
+  apply (cases cap; simp)
             apply (wp suspend_valid_cap prepare_thread_delete_typ_at
                      | simp add: o_def valid_cap_def cap_aligned_def
                                  valid_cap_Null_ext
                            split del: if_split
                      | clarsimp | rule conjI)+
-  apply (simp add: arch_finalise_cap_def)
-  apply (rule hoare_pre)
-  apply (wp|simp add: o_def valid_cap_def cap_aligned_def
-                 split del: if_split|clarsimp|wpc)+
-  done *)
+  (* ArchObjectCap *)
+  apply (wpsimp wp: o_def valid_cap_def cap_aligned_def
+                 split_del: if_split
+         | clarsimp simp: arch_finalise_cap_def)+
+  done
 
 crunch inv[wp]: arch_thread_get "P"
 
 lemma hoare_split: "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r. Q r and Q' r\<rbrace>"
   by (auto simp: valid_def)
-
-lemma arch_thread_set_caps_of_state[wp]:
-  "arch_thread_set f v \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
-  sorry
 
 sublocale
   arch_thread_set: non_aobj_non_cap_non_mem_op "arch_thread_set f v"
@@ -998,17 +1007,17 @@ lemma tcb_cap_valid_pagetable:
 
 
 lemma store_pte_unmap_empty: (* FIXME RISCV: check usage *)
-  "\<lbrace>\<lambda>s. obj_at (empty_table {}) word s\<rbrace>
+  "\<lbrace>\<lambda>s. obj_at (empty_table S) word s\<rbrace>
     store_pte xa InvalidPTE
-   \<lbrace>\<lambda>rv s. obj_at (empty_table {}) word s\<rbrace>"
+   \<lbrace>\<lambda>rv s. obj_at (empty_table S) word s\<rbrace>"
   apply (wp get_object_wp | simp add: store_pte_def set_pt_def set_object_def)+
   apply (clarsimp simp: obj_at_def empty_table_def)
   done
 
 lemma unmap_page_table_empty: (* FIXME RISCV: check usage *)
-  "\<lbrace>\<lambda>s. obj_at (empty_table {}) word s\<rbrace>
+  "\<lbrace>\<lambda>s. obj_at (empty_table S) word s\<rbrace>
     unmap_page_table aa b word
-   \<lbrace>\<lambda>rv s. obj_at (empty_table {}) word s\<rbrace>"
+   \<lbrace>\<lambda>rv s. obj_at (empty_table S) word s\<rbrace>"
   apply (simp add: unmap_page_table_def)
   apply (wp store_pte_unmap_empty | simp | wpc)+
   done
@@ -1126,26 +1135,17 @@ crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
    (wp: crunch_wps simp: crunch_simps)
 
 lemma set_vm_root_empty[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at (empty_table {}) p s)\<rbrace> set_vm_root v \<lbrace>\<lambda>_ s. P (obj_at (empty_table {}) p s) \<rbrace>"
+  "\<lbrace>\<lambda>s. P (obj_at (empty_table S) p s)\<rbrace> set_vm_root v \<lbrace>\<lambda>_ s. P (obj_at (empty_table S) p s) \<rbrace>"
   apply (simp add: set_vm_root_def)
   apply (wpsimp wp: get_cap_wp)
   done
 
 lemma set_asid_pool_empty[wp]:
-  "\<lbrace>obj_at (empty_table {}) word\<rbrace> set_asid_pool x2 pool' \<lbrace>\<lambda>xb. obj_at (empty_table {}) word\<rbrace>"
-  sorry (* FIXME RISCV
-  apply (simp add: set_asid_pool_def)
-  apply (wp set_object_wp)
-  apply (rule_tac Q="\<lambda>r. obj_at (empty_table {}) word and  ko_at r x2" in hoare_post_imp)
-   apply (rule impI)
-   apply (case_tac r ; simp)
-   apply (case_tac x5; simp)
-   apply (clarsimp simp: obj_at_def empty_table_def)
-  apply (wp get_object_sp, simp)
-  done *)
+  "\<lbrace>obj_at (empty_table S) word\<rbrace> set_asid_pool x2 pool' \<lbrace>\<lambda>xb. obj_at (empty_table S) word\<rbrace>"
+  by (wpsimp wp: set_object_wp simp: set_asid_pool_def obj_at_def empty_table_def)
 
-lemma delete_asid_empty_table_pd:
-  "delete_asid a word \<lbrace>\<lambda>s. obj_at (empty_table {}) word s\<rbrace>"
+lemma delete_asid_empty_table_pt[wp]:
+  "delete_asid a word \<lbrace>\<lambda>s. obj_at (empty_table S) word s\<rbrace>"
    apply (simp add: delete_asid_def)
    apply wpsimp
    done
@@ -1208,19 +1208,8 @@ lemma arch_finalise_pt_empty:
     K (is_pt_cap (ArchObjectCap acap) \<and> aobj_ref acap = Some ptr)\<rbrace>
   arch_finalise_cap acap final
   \<lbrace>\<lambda>rv s. obj_at (empty_table {}) ptr s\<rbrace>"
-  sorry (* FIXME RISCV
-  apply (rule hoare_gen_asm)
-  apply clarsimp
-  apply (erule disjE)
-   apply (clarsimp simp: is_cap_simps arch_finalise_cap_def)
-   apply (rule hoare_pre)
-   apply (wp unmap_page_table_empty | wpc)+
-   apply clarsimp
-  apply (clarsimp simp: is_cap_simps arch_finalise_cap_def)
-  apply (rule hoare_pre)
-  apply (wp unmap_page_table_empty delete_asid_empty_table_pd | wpc)+
-  apply (clarsimp simp: valid_cap_def)
-  done *)
+  by (rule hoare_gen_asm)
+     (wpsimp simp: is_cap_simps arch_finalise_cap_def wp: unmap_page_table_empty)
 
 lemma do_machine_op_reachable_pg_cap[wp]:
   "\<lbrace>\<lambda>s. P (reachable_frame_cap cap s)\<rbrace>
