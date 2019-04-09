@@ -351,7 +351,7 @@ lemma no_loop_vs_lookup_table_helper:
     prefer 2
     apply (fastforce elim!: vs_lookup_table_is_aligned)
    apply (drule_tac pt_ptr=pt_ptr in valid_vspace_objs_strongD, assumption; simp?)
-   apply (fastforce simp: max_pt_level_not_0 pte_of_def in_omonad is_aligned_pt_slot_offset_pte)
+   apply (fastforce simp: pte_of_def in_omonad is_aligned_pt_slot_offset_pte)
   done
 
 lemma no_loop_vs_lookup_table:
@@ -1513,7 +1513,6 @@ lemma set_asid_pool_vspace_objs_unmap:
   apply (wp set_asid_pool_vspace_objs_unmap')
   apply (clarsimp simp: obj_at_def graph_of_restrict_map)
   apply (drule valid_vspace_objsD, assumption, assumption, simp add: obj_at_def in_opt_map_eq)
-  apply simp
   by (auto simp: obj_at_def dest!: ran_restrictD)
 
 lemma set_asid_pool_table_caps[wp]:
@@ -1620,20 +1619,18 @@ lemma set_asid_pool_equal_mappings[wp]:
   done
 
 (* FIXME RISCV RAF: this expansion is ugly but is in simp normal form *)
-lemma ptes_of_asid_pool_upd:
+
+lemma pts_of_asid_pool_upd:
   "pts_of s p = None
-   \<Longrightarrow> (\<lambda>pa. pte_of pa (kheap s(p \<mapsto> ArchObj (ASIDPool ap)) |> aobj_of |> pt_of)) = ptes_of s"
-  apply (rule ext)
-  apply (rule_tac f="pte_of pa" in arg_cong)
-  apply (rule ext, fastforce simp: opt_map_def split: option.splits)
-  done
+   \<Longrightarrow> ((kheap s(p \<mapsto> ArchObj (ASIDPool ap)) |> aobj_of |> pt_of)) = pts_of s"
+  by (rule ext, fastforce simp: opt_map_def split: option.splits)
 
 lemma translate_address_asid_pool_upd:
   "pts_of s p = None
    \<Longrightarrow> translate_address pt_ptr vref
         (\<lambda>pa. pte_of pa (kheap s(p \<mapsto> ArchObj (ASIDPool ap)) |> aobj_of |> pt_of))
       = translate_address pt_ptr vref (ptes_of s)"
-  by (subst ptes_of_asid_pool_upd, simp+)
+  by (subst pts_of_asid_pool_upd, simp+)
 
 (* FIXME RISCV move up and generalise to others, should be useful *)
 lemma ko_atasid_pool_pts_None:
@@ -1700,11 +1697,11 @@ lemma set_asid_pool_vms[wp]:
                   split: kernel_object.splits arch_kernel_obj.splits)+
   done
 
-
+(* FIXME: example of crunch not being helpful *)
 lemma set_asid_pool_valid_asid_pool_caps[wp]:
   "set_asid_pool p ap \<lbrace>valid_asid_pool_caps\<rbrace>"
   unfolding valid_asid_pool_caps_def
-  sorry (* FIXME RISCV *)
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
 
 lemma set_asid_pool_invs_restrict:
   "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and (\<lambda>s. \<exists>a. asid_table s a = Some p) \<rbrace>
@@ -1737,6 +1734,12 @@ lemma set_asid_pool_invs_unmap:
   using set_asid_pool_invs_restrict[where S="- {x}"]
   by (simp add: restrict_map_def fun_upd_def if_flip)
 
+lemma pte_at_typ_at_lift:
+  assumes aa_type: "\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>"
+  shows "f \<lbrace>pte_at p\<rbrace>"
+  unfolding pte_at_def
+  by (wpsimp wp: aa_type)
+
 lemma valid_slots_typ_at:
   assumes x: "\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>"
   assumes y: "\<And>P. f \<lbrace> \<lambda>s. P (vs_lookup s) \<rbrace>"
@@ -1744,8 +1747,10 @@ lemma valid_slots_typ_at:
   shows "\<lbrace>valid_slots m\<rbrace> f \<lbrace>\<lambda>rv. valid_slots m\<rbrace>"
   unfolding valid_slots_def
   apply (cases m; clarsimp)
-  apply (wp hoare_vcg_ex_lift assms)
-  sorry (* FIXME RISCV *)
+  apply (wpsimp wp: hoare_vcg_ex_lift hoare_vcg_all_lift hoare_vcg_imp_lift' assms
+                    valid_pte_lift pte_at_typ_at_lift)
+  apply fastforce
+  done
 
 lemma pool_for_asid_arch_update[simp]:
   "riscv_asid_table (f (arch_state s)) = riscv_asid_table (arch_state s) \<Longrightarrow>
