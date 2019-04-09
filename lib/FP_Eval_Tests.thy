@@ -6,6 +6,62 @@ begin
 
 section \<open>Controlling evaluation\<close>
 
+subsection \<open>Skeletons\<close>
+
+text \<open>
+  A "skeleton" is a subterm of a given term. For example,
+    "map (\<lambda>x. x + 1) [1, 2, 3]"
+  could have the following skeleton (among others):
+    "map (\<lambda>x. x + _) _"
+
+  The "_" stand for schematic variables with arbitrary names,
+  or dummy patterns (which are implemented as unnamed schematics).
+
+  FP_Eval uses skeletons internally to keep track of which parts of
+  a term it has already evaluated. In other words, schematic variables
+  indicate already-normalised subterms.
+
+  There are two useful predefined skeletons:
+\<close>
+ML_val \<open> FP_Eval.skel0 \<close>
+text \<open>
+  which is a special directive to evaluate all subterms; and
+\<close>
+ML_val \<open> FP_Eval.skel_skip \<close>
+text \<open>
+  which tells FP_Eval to skip evaluation.
+\<close>
+
+text \<open>
+  If we use the full FP_Eval interface, we can input a skeleton manually
+  and get the final skeleton as output.
+
+  It's useful to input a nontrivial skeleton for the following reasons:
+   \<bullet> if most of the term is known to be normalised, this can
+      save unnecessary computation.
+   \<bullet> if a tool runs FP_Eval on behalf of an end user, it may
+      want to avoid evaluating function calls in the user's input terms.
+      Alternatively, use explicit quotation terms
+      (see "Preventing evaluation", below) if finer control is needed.
+
+  The partial skeleton should match the structure of the input term.
+  If there is any mismatch, FP_Eval tries to be conservative and
+  evaluates the whole subterm (as if "skel0" had been given).
+  However, this should not be relied upon.
+  (FIXME: maybe stricter check in eval')
+
+  By default, FP_Eval attempts full evaluation of the input, so it
+  usually returns "skel_skip".
+
+  However, evaluation is not complete when:
+   \<bullet> the input skeleton skips some subterms;
+   \<bullet> FP_Eval doesn't descend into un-applied lambdas;
+   \<bullet> evaluation delayed due to cong rules.
+  In these cases, FP_Eval would return a partial skeleton.
+\<close>
+
+(* TODO: add examples *)
+
 subsection \<open>Congruence rules\<close>
 
 text \<open>
@@ -16,15 +72,12 @@ thm if_weak_cong option.case_cong_weak
 
 text \<open>
   Note that @{thm let_weak_cong} contains a hidden eta expansion, which FP_Eval
-  currently doesn't understand. Use this alternative:
+  currently doesn't understand. Use our alternative:
 \<close>
-lemma let_weak_cong':
-  "a = b \<Longrightarrow> Let a t = Let b t"
-  by simp
+thm FP_Eval.let_weak_cong'
 
-thm let_weak_cong let_weak_cong'
 ML_val {*
-  @{assert} (not (Thm.eq_thm_prop (@{thm let_weak_cong}, @{thm let_weak_cong'})));
+  @{assert} (not (Thm.eq_thm_prop (@{thm let_weak_cong}, @{thm FP_Eval.let_weak_cong'})));
 *}
 
 text \<open>

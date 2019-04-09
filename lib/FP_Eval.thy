@@ -6,6 +6,10 @@ begin
 text \<open>
   FP_Eval: efficient evaluator for functional programs.
 
+  The algorithm is similar to @{method simp}, but streamlined somewhat.
+  Poorly-scaling simplifier features are omitted, e.g.:
+  conditional rules, eta normalisation, rewriting under lambdas, etc.
+
   See FP_Eval_Tests for examples and tests. Currently, only
   ML conversions and tactics are provided.
 
@@ -14,16 +18,20 @@ text \<open>
     \<bullet> Applicative-order evaluation to WHNF (doesn't rewrite under lambdas)
     \<bullet> Manual specification of rewrite rules, no global context
     \<bullet> Cong rules supported for controlling evaluation (if, let, case, etc.)
+    \<bullet> Finer control than simp: explicit skeletons, debugging callbacks,
+       perf counters (see signature for FP_Eval.eval')
 
   Major TODOs:
     \<bullet> Preprocess rewrite rules for speed
     \<bullet> Optimize eval_rec more
+    \<bullet> Support for simprocs (ideally with static checks)
     \<bullet> Simple tactical and Isar method wrappers
     \<bullet> Automatic ruleset builders
     \<bullet> Static analysis for rules:
       \<bullet> Confluence, termination
       \<bullet> Completeness
       \<bullet> Running time?
+    \<bullet> Dynamic analysis e.g. unused rules
 
   Work in progress.
 \<close>
@@ -77,7 +85,8 @@ fun maybe_convert_eqn thm =
              SOME (bool_conv_True thm)
          | _ => NONE);
 
-(* FIXME: turn into Config *)
+(* FIXME: turn into Config.
+   NB: low-level eval' ignores this global setting *)
 (* 0: none; 1: summary details; 2+: everything *)
 val trace = Unsynchronized.ref 0;
 
@@ -87,6 +96,7 @@ val trace = Unsynchronized.ref 0;
 (* TODOs:
      - cond rules?
      - simprocs?
+     - skeleton optimisation?
 *)
 type eqns_for_const =
   int * (* arity of const (we require it to be equal in all rules) *)
@@ -240,7 +250,7 @@ val skel_skip = Var (("", 0), dummyT); (* always skip *)
 
 (* Full interface *)
 fun eval' (ctxt: Proof.context)
-          (debug_trace: int -> (unit -> string) -> unit) (* debug callback *)
+          (debug_trace: int -> (unit -> string) -> unit) (* debug callback: level, message *)
           (breakpoint: cterm -> bool) (* if true, stop rewriting and return *)
           (eval_under_var: bool) (* if true, expand partially applied funcs under Var skeletons *)
           (rules: rules)
@@ -549,5 +559,10 @@ fun eval_tac ctxt rules n: tactic =
 
 end;
 \<close>
+
+text \<open>See FP_Eval_Tests for explanation\<close>
+lemma (in FP_Eval) let_weak_cong':
+  "a = b \<Longrightarrow> Let a t = Let b t"
+  by simp
 
 end
