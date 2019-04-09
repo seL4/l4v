@@ -53,6 +53,7 @@ session Lib (lib) = Word_Lib +
     "ml-helpers/TermPatternAntiquote"
     "ml-helpers/TacticAntiquotation"
     "ml-helpers/MLUtils"
+    FP_Eval
     "subgoal_focus/Subgoal_Methods"
     Insulin
     ExtraCorres
@@ -148,6 +149,7 @@ session LibTest (lib) = Refine +
     ShowTypes_Test
     Time_Methods_Cmd_Test
     FastMap_Test
+    FP_Eval_Tests
     Trace_Schematic_Insts_Test
     Local_Method_Tests
     Qualify_Test
