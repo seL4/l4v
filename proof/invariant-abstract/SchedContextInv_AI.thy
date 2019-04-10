@@ -1306,7 +1306,7 @@ lemma
   apply (rule conjI;
          wpsimp simp: invoke_sched_control_configure_def split_def
              wp: hoare_vcg_if_lift2 get_sched_context_wp commit_time_valid_refills hoare_gets_sp
-                 hoare_drop_imp set_sched_context_valid_refills_no_budget_update hoare_when_wp
+                 hoare_drop_imp update_sched_context_valid_refills_no_budget_update hoare_when_wp
                  hoare_vcg_all_lift
             cong: if_cong conj_cong split_del: if_split)
   by (clarsimp simp: valid_refills_def sc_valid_refills_def obj_at_def MIN_REFILLS_def refills_sum_def)+
@@ -1712,6 +1712,24 @@ lemma tcb_release_remove_bound_sc:
    \<lbrace>\<lambda>rv s. bound_sc_tcb_at bound (cur_thread s) s\<rbrace>"
   by (wpsimp simp: tcb_release_remove_def)
 
+lemma update_sc_badge_cur_sc_tcb':
+  "\<lbrace>cur_sc_tcb\<rbrace> update_sched_context p (sc_badge_update (\<lambda>_. badge)) \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
+  by (wpsimp simp: update_sched_context_def set_object_def get_object_def
+                   cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
+
+lemma update_sc_badge_invs':
+  "\<lbrace>invs and K (p \<noteq> idle_sc_ptr)\<rbrace>
+      update_sched_context p (sc_badge_update (\<lambda>_. badge)) \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
+                  wp: update_sched_context_valid_objs_same valid_irq_node_typ
+                      update_sched_context_iflive_same
+                      update_sched_context_refs_of_same
+                      update_sc_but_not_sc_replies_valid_replies'
+                      update_sched_context_valid_idle
+                      update_sc_badge_cur_sc_tcb'
+            simp_del: fun_upd_apply)
+  done
+
 lemma invoke_sched_control_configure_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> valid_sched_control_inv i s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
    invoke_sched_control_configure i
@@ -1723,7 +1741,7 @@ lemma invoke_sched_control_configure_invs[wp]:
   apply (wpsimp simp: get_sched_context_def get_object_def obj_at_def
                   wp: refill_update_invs hoare_drop_imp commit_time_invs check_budget_invs
                       hoare_vcg_if_lift2 tcb_sched_action_bound_sc tcb_release_remove_bound_sc
-                      update_sc_badge_invs)
+                      update_sc_badge_invs')
   apply (auto simp: invs_def valid_state_def valid_pspace_def idle_sc_no_ex_cap)
   done
 
