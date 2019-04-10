@@ -598,15 +598,11 @@ lemma pt_lookup_slot_from_level:
    (pt_lookup_slot_from_level max_pt_level 0 (riscv_global_pt (arch_state s)) vref (ptes_of s)
     = Some (level, p))"
   apply (simp add: pt_lookup_slot_from_level_def in_omonad)
-  apply (subst pt_walk_eqI)
-   prefer 2
-   apply simp
+  apply (subst pt_walk_eqI; simp)
   apply clarsimp
   apply (drule (1) valid_global_tablesD, simp)
   apply (frule (1) global_pts_no_retype)
-  apply (rule conjI)
-   apply (simp add: opt_map_def s'_def ps_def split: option.splits)
-  apply (erule (2) riscv_global_pts_aligned)
+  apply (simp add: opt_map_def s'_def ps_def split: option.splits)
   done
 
 lemma translate_address:

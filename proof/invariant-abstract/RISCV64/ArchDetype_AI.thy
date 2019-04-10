@@ -483,11 +483,9 @@ proof -
     apply (subst pt_lookup_target_translate_address_upd_eq; assumption?)
     apply (rule pt_lookup_target_pt_eqI; clarsimp)
     apply (drule (1) valid_global_tablesD, simp add: kernel_regions_in_mappings)
-    apply (rule conjI)
-     apply (drule riscv_global_pts_global_ref)
-     apply (drule valid_global_refsD[OF globals cap])
-     apply (clarsimp simp: cap_range_def opt_map_def detype_def split: option.splits)
-    apply (erule (2) riscv_global_pts_aligned)
+    apply (drule riscv_global_pts_global_ref)
+    apply (drule valid_global_refsD[OF globals cap])
+    apply (clarsimp simp: cap_range_def opt_map_def detype_def split: option.splits)
     done
 qed
 

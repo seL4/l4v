@@ -1036,7 +1036,8 @@ lemma pt_walk_eqI:
   "\<lbrakk> \<forall>level' pt_ptr'.
        level < level'
        \<longrightarrow> pt_walk top_level level' pt_ptr vptr (\<lambda>p. pte_of p pts) = Some (level', pt_ptr')
-       \<longrightarrow> pts' pt_ptr' = pts pt_ptr' \<and> is_aligned pt_ptr' pt_bits \<rbrakk>
+       \<longrightarrow> pts' pt_ptr' = pts pt_ptr';
+     is_aligned pt_ptr pt_bits \<rbrakk>
    \<Longrightarrow> pt_walk top_level level pt_ptr vptr (\<lambda>p. pte_of p pts')
       = pt_walk top_level level pt_ptr vptr (\<lambda>p. pte_of p pts)"
   apply (induct top_level arbitrary: pt_ptr; clarsimp)
@@ -1049,7 +1050,7 @@ lemma pt_walk_eqI:
   apply clarsimp
   apply (rename_tac pte)
   apply (drule_tac x="pptr_from_pte pte" in meta_spec)
-  apply (erule meta_impE; assumption?)
+  apply (erule meta_impE; simp?)
   apply clarsimp
   apply (subgoal_tac "is_aligned pt_ptr pt_bits \<and> pts' pt_ptr = pts pt_ptr")
    prefer 2
@@ -1068,7 +1069,8 @@ lemma pt_walk_pt_upd_id:
   "\<lbrakk> \<forall>level' pt_ptr'.
        level < level'
        \<longrightarrow> pt_walk top_level level' pt_ptr vptr (\<lambda>p. pte_of p pts) = Some (level', pt_ptr')
-       \<longrightarrow> pt_ptr' \<noteq> obj_ref \<and> is_aligned pt_ptr' pt_bits \<rbrakk>
+       \<longrightarrow> pt_ptr' \<noteq> obj_ref;
+     is_aligned pt_ptr pt_bits \<rbrakk>
    \<Longrightarrow> pt_walk top_level level pt_ptr vptr (\<lambda>p. pte_of p (pts(obj_ref := pt)))
       = pt_walk top_level level pt_ptr vptr (\<lambda>p. pte_of p pts)"
   by (rule pt_walk_eqI; auto)
@@ -1107,7 +1109,7 @@ lemma pte_of_pt_slot_offset_upd_id:
 lemma pt_lookup_target_pt_eqI:
   "\<lbrakk> \<forall>level' pt_ptr'.
        pt_walk max_pt_level level' pt_ptr vptr (\<lambda>p. pte_of p pts) = Some (level', pt_ptr')
-       \<longrightarrow> pts' pt_ptr' = pts pt_ptr' \<and> is_aligned pt_ptr' pt_bits;
+       \<longrightarrow> pts' pt_ptr' = pts pt_ptr';
      is_aligned pt_ptr pt_bits; level \<le> max_pt_level \<rbrakk>
    \<Longrightarrow> pt_lookup_target level pt_ptr vptr (\<lambda>p. pte_of p pts')
       = pt_lookup_target level pt_ptr vptr (\<lambda>p. pte_of p pts)"
@@ -1115,7 +1117,7 @@ lemma pt_lookup_target_pt_eqI:
   apply (subgoal_tac "pt_walk max_pt_level level pt_ptr vptr (\<lambda>p. pte_of p pts')
                       = pt_walk max_pt_level level pt_ptr vptr (\<lambda>p. pte_of p pts)")
    prefer 2
-   apply (rule pt_walk_eqI)
+   apply (rule pt_walk_eqI; assumption?)
    apply (intro allI impI)
    apply (erule_tac x=level' in allE)
    apply fastforce
@@ -1129,14 +1131,14 @@ lemma pt_lookup_target_pt_eqI:
    apply (erule_tac x=pt_ptr'' in allE)
    apply clarsimp
    apply (subst pte_of_def)+
-   apply (clarsimp simp: obind_def split: option.splits)
+   apply (clarsimp simp: obind_def pt_walk_is_aligned split: option.splits)
   apply (rule obind_eqI; clarsimp)
   done
 
 lemma pt_lookup_target_pt_upd_eq:
   "\<lbrakk> \<forall>level' pt_ptr'.
        pt_walk max_pt_level level' pt_ptr vptr (\<lambda>p. pte_of p pts) = Some (level', pt_ptr')
-       \<longrightarrow> pt_ptr' \<noteq> obj_ref \<and> is_aligned pt_ptr' pt_bits;
+       \<longrightarrow> pt_ptr' \<noteq> obj_ref;
      is_aligned pt_ptr pt_bits; level \<le> max_pt_level \<rbrakk>
    \<Longrightarrow> pt_lookup_target level pt_ptr vptr (\<lambda>p. pte_of p (pts(obj_ref := pt')))
       = pt_lookup_target level pt_ptr vptr (\<lambda>p. pte_of p pts)"
@@ -1230,8 +1232,7 @@ lemma set_pt_valid_global_vspace_mappings:
       apply assumption
      apply (clarsimp simp: kernel_regions_in_mappings)
      apply (clarsimp simp: global_refs_def)
-     apply (fastforce dest: riscv_global_pts_aligned)
-    apply fastforce
+    apply (fastforce dest: riscv_global_pts_aligned)
    apply fastforce
   apply fastforce
   done
