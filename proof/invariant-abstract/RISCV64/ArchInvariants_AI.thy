@@ -2540,33 +2540,6 @@ lemma equal_kernel_mappings_update [iff]:
 
 end
 
-
-(* FIXME RISCV: leftovers; need to move further down
-context Arch begin global_naming RISCV64
-
-(* This is what valid_kernel_mappings used to say; we should now be able to derive it from
-   existing invariants: we will find the second-level tables if and only if we look in the
-   kernel mapping slots of top-level tables. *)
-lemma valid_kernel_mappings:
-  "\<lbrakk> vs_lookup max_pt_level asid vref s = Some (max_pt_level, pt_ptr);
-     pts_of s pt_ptr = Some pt;
-     valid_global_vspace_mappings s;
-     valid_vs_lookup s;
-     valid_uses s;
-     valid_global_refs s \<rbrakk> \<Longrightarrow>
-    \<forall>i p. pte_ref (pt x) = Some p \<longrightarrow> is_PageTablePTE (pt i) \<longrightarrow>
-          (p \<in> global_tables 1 s) = (i \<in> kernel_mapping_slots)"
-  apply clarsimp
-  apply (cases "vref \<in> kernel_window s")
-   apply (rule iffI)
-    apply (clarsimp simp: kernel_mapping_slots_def)
-    apply (drule valid_uses_kernel_window, simp)
-    apply (simp add: pt_bits_left_def level_defs bit_simps pptr_base_def pptrBase_def)
-    apply clarsimp
-
-end
-*)
-
 declare RISCV64.arch_tcb_context_absorbs[simp]
 declare RISCV64.arch_tcb_context_get_set[simp]
 
