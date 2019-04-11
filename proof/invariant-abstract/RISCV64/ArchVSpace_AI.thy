@@ -1722,11 +1722,7 @@ lemma perform_asid_pool_invs [wp]:
 
 lemma invs_aligned_pdD:
   "\<lbrakk> pspace_aligned s; valid_arch_state s \<rbrakk> \<Longrightarrow> is_aligned (riscv_global_pt (arch_state s)) pt_bits"
-  apply (clarsimp simp: valid_arch_state_def)
-  sorry (* FIXME RISCV; this has probably been proved already at this point
-  apply (drule (1) pt_aligned)
-  apply (simp add: bit_simps)
-  done *)
+  by (clarsimp simp: valid_arch_state_def)
 
 lemma do_machine_op_valid_kernel_mappings:
   "do_machine_op f \<lbrace>valid_kernel_mappings\<rbrace>"
