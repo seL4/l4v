@@ -18,6 +18,11 @@ begin
 
 context Arch begin global_naming RISCV64
 
+(* FIXME RISCV: move up *)
+lemma riscv_global_pts_global_ref:
+  "pt \<in> riscv_global_pts (arch_state s) level \<Longrightarrow> pt \<in> global_refs s"
+  by (auto simp: global_refs_def)
+
 named_theorems Retype_AI_assms
 
 lemma arch_kobj_size_cong[Retype_AI_assms]:
@@ -305,54 +310,52 @@ lemma valid_untyped_helper [Retype_AI_assms]:
 
   show ?thesis
   using cover valid_c range usable_range_emptyD[where cap = c] cte_at
-  sorry (* FIXME RISCV
-  apply (clarsimp simp: valid_cap_def elim!: obj_at_pres
+  apply (clarsimp simp: valid_cap_def valid_arch_cap_ref_def elim!: obj_at_pres
                  split: cap.splits option.splits arch_cap.splits)
-      defer
-     apply (fastforce elim!: obj_at_pres)
+    defer
     apply (fastforce elim!: obj_at_pres)
    apply (fastforce elim!: obj_at_pres)
   apply (rename_tac word nat1 nat2)
   apply (clarsimp simp:valid_untyped_def is_cap_simps obj_at_def split:if_split_asm)
-    apply (thin_tac "\<forall>x. Q x" for Q)
-     apply (frule retype_addrs_obj_range_subset_strong[where dev=dev, OF _ _ tyunt])
-      apply (simp add: obj_bits_dev_irr tyunt)
-     apply (frule usable_range_subseteq)
-       apply (simp add:is_cap_simps)
-     apply (clarsimp simp:cap_aligned_def split:if_split_asm)
-      apply (frule aligned_ranges_subset_or_disjoint)
-      apply (erule retype_addrs_aligned[where sz = sz])
-         apply (simp add: range_cover_def)
-        apply (simp add: range_cover_def word_bits_def)
-       apply (simp add: range_cover_def)
-      apply (clarsimp simp: default_obj_range Int_ac tyunt
-                     split: if_split_asm)
-     apply (elim disjE)
-      apply (drule(2) subset_trans[THEN disjoint_subset2])
-      apply (drule Int_absorb2)+
-       apply (simp add:is_cap_simps free_index_of_def)
-    apply simp
-    apply (drule(1) disjoint_subset2[rotated])
-    apply (simp add:Int_ac)
    apply (thin_tac "\<forall>x. Q x" for Q)
-   apply (frule retype_addrs_obj_range_subset[OF _ cover' tyunt])
-   apply (clarsimp simp:cap_aligned_def)
-    apply (frule aligned_ranges_subset_or_disjoint)
-     apply (erule retype_addrs_aligned[where sz = sz])
-          apply (simp add: range_cover_def)
-        apply (simp add: range_cover_def word_bits_def)
-       apply (simp add: range_cover_def)
-      apply (clarsimp simp: default_obj_range Int_ac tyunt
-                     split: if_split_asm)
-   apply (erule disjE)
-    apply (simp add: cte_wp_at_caps_of_state)
-    apply (drule cn[unfolded caps_no_overlap_def,THEN bspec,OF ranI])
+   apply (frule retype_addrs_obj_range_subset_strong[where dev=dev, OF _ _ tyunt])
+    apply (simp add: obj_bits_dev_irr tyunt)
+   apply (frule usable_range_subseteq)
+    apply (simp add:is_cap_simps)
+   apply (clarsimp simp:cap_aligned_def split:if_split_asm)
+   apply (frule aligned_ranges_subset_or_disjoint)
+    apply (erule retype_addrs_aligned[where sz = sz])
+      apply (simp add: range_cover_def)
+     apply (simp add: range_cover_def word_bits_def)
+    apply (simp add: range_cover_def)
+   apply (clarsimp simp: default_obj_range Int_ac tyunt
+                  split: if_split_asm)
+   apply (elim disjE)
+    apply (drule(2) subset_trans[THEN disjoint_subset2])
+    apply (drule Int_absorb2)+
+    apply (simp add:is_cap_simps free_index_of_def)
+   apply simp
+   apply (drule(1) disjoint_subset2[rotated])
+   apply (simp add:Int_ac)
+  apply (thin_tac "\<forall>x. Q x" for Q)
+  apply (frule retype_addrs_obj_range_subset[OF _ cover' tyunt])
+  apply (clarsimp simp:cap_aligned_def)
+  apply (frule aligned_ranges_subset_or_disjoint)
+   apply (erule retype_addrs_aligned[where sz = sz])
+     apply (simp add: range_cover_def)
+    apply (simp add: range_cover_def word_bits_def)
+   apply (simp add: range_cover_def)
+  apply (clarsimp simp: default_obj_range Int_ac tyunt
+                 split: if_split_asm)
+  apply (erule disjE)
+   apply (simp add: cte_wp_at_caps_of_state)
+   apply (drule cn[unfolded caps_no_overlap_def,THEN bspec,OF ranI])
    apply (simp add: p_assoc_help[symmetric])
-    apply (erule impE)
-     apply blast (* set arith *)
+   apply (erule impE)
     apply blast (* set arith *)
+   apply blast (* set arith *)
   apply blast (* set arith  *)
-  done *)
+  done
   qed
 
 lemma valid_default_arch_tcb:
@@ -415,35 +418,151 @@ lemma valid_global_refs:
   apply (simp add: cte_retype cap_range_def)
   done
 
+lemma asid_pools:
+  "asid_pools_of s p = Some pool \<Longrightarrow> asid_pools_of s' p = Some pool"
+  by (clarsimp simp: in_opt_map_eq s'_def ps_def)
+     (erule pspace_no_overlapC [OF orth _ _ cover vp])
+
+lemma pts_of:
+  "pts_of s p = Some pt \<Longrightarrow> pts_of s' p = Some pt"
+  by (clarsimp simp: in_opt_map_eq s'_def ps_def)
+     (erule pspace_no_overlapC [OF orth _ _ cover vp])
+
+lemma pts_of':
+  "pts_of s' p = Some pt \<Longrightarrow>
+   pts_of s p = Some pt \<or> pt = empty_pt \<and> p \<in> set (retype_addrs ptr ty n us)"
+  apply (clarsimp simp: in_opt_map_eq s'_def ps_def split: if_split_asm)
+  apply (simp add: default_object_def default_arch_object_def tyunt
+              split: apiobject_type.splits aobject_type.splits)
+  done
+
+lemma valid_asid_table:
+  "valid_asid_table s \<Longrightarrow> valid_asid_table s'"
+  unfolding valid_asid_table_def by (auto simp: asid_pools)
+
+lemma valid_global_arch_objs:
+  "valid_global_arch_objs s \<Longrightarrow> valid_global_arch_objs s'"
+  by (fastforce simp: valid_global_arch_objs_def pt_at_eq pts_of)
+
+lemma ptes_of:
+  "ptes_of s p = Some pte \<Longrightarrow> ptes_of s' p = Some pte"
+  by (simp add: pte_of_def obind_def pts_of split: option.splits)
+
+lemma default_empty:
+  "default_object ty dev us = ArchObj (PageTable pt) \<Longrightarrow> pt = empty_pt"
+  by (simp add: default_object_def default_arch_object_def tyunt
+           split: apiobject_type.splits aobject_type.splits)
+
+lemma ptes_of':
+  "ptes_of s' p = Some pte \<Longrightarrow> ptes_of s p = Some pte \<or> pte = InvalidPTE"
+  by (fastforce simp: ptes_of_def in_omonad s'_def ps_def split: if_splits dest: default_empty)
+
+lemma pt_walk:
+  "pt_walk top_level bot_level pt vref (ptes_of s) = Some (level, p) \<Longrightarrow>
+   pt_walk top_level bot_level pt vref (ptes_of s') = Some (level, p)"
+  apply (induct top_level arbitrary: pt)
+   apply simp
+  apply (subst (asm) (3) pt_walk.simps)
+  apply (clarsimp simp: in_omonad split: if_splits)
+   prefer 2
+   apply (subst pt_walk.simps)
+   apply (simp add: in_omonad)
+  apply (erule disjE; clarsimp)
+   prefer 2
+   apply (subst pt_walk.simps)
+   apply (simp add: in_omonad)
+   apply (rule_tac x=v' in exI)
+   apply (simp add: ptes_of)
+  apply (drule ptes_of)
+  apply (subst pt_walk.simps)
+  apply (simp add: in_omonad)
+  done
+
+lemma pt_walk':
+  "pt_walk top_level level pt vref (ptes_of s') = Some (level, p) \<Longrightarrow>
+   pt_walk top_level level pt vref (ptes_of s) = Some (level, p)"
+  apply (induct top_level arbitrary: pt)
+   apply simp
+  apply (subst (asm) (3) pt_walk.simps)
+  apply (clarsimp simp: in_omonad split: if_splits)
+  apply (erule disjE; clarsimp)
+  apply (drule ptes_of')
+  apply (subst pt_walk.simps)
+  apply (fastforce simp add: in_omonad)
+  done
+
+lemma pt_walk_eq[simp]:
+  "(pt_walk top_level level pt_ptr vptr (ptes_of s') = Some (level, p)) =
+   (pt_walk top_level level pt_ptr vptr (ptes_of s) = Some (level, p))"
+  apply (rule iffI)
+   apply (erule pt_walk')
+  apply (erule pt_walk)
+  done
+
+lemma global_no_retype:
+  "\<lbrakk> pt_ptr \<in> global_refs s; valid_global_refs s \<rbrakk> \<Longrightarrow> pt_ptr \<notin> set (retype_addrs ptr ty n us)"
+  using dev retype_addrs_subset_ptr_bits[OF cover]
+  by (fastforce simp: valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
+
+lemma global_pts_no_retype:
+  "\<lbrakk> pt_ptr \<in> riscv_global_pts (arch_state s) level; valid_global_refs s \<rbrakk> \<Longrightarrow>
+   pt_ptr \<notin> set (retype_addrs ptr ty n us)"
+  by (drule riscv_global_pts_global_ref, erule global_no_retype)
+
+lemma valid_global_tables:
+  "valid_global_tables s \<Longrightarrow> valid_global_tables s'"
+  apply (clarsimp simp: valid_global_tables_def Let_def)
+  apply (fold riscv_global_pt_def)
+  apply (intro conjI; clarsimp)
+     apply (drule pt_walk_level)
+     apply fastforce
+    apply (drule pts_of', fastforce)
+   apply (drule pts_of', fastforce)
+  apply (drule pts_of', fastforce simp: vm_kernel_only_def pte_rights_of_def)
+  done
+
 lemma valid_arch_state:
   "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
-  sorry (* FIXME RISCV
-  by (clarsimp simp: valid_arch_state_def obj_at_pres
-                     valid_asid_table_def split: option.split) *)
+  apply (simp add: valid_arch_state_def valid_asid_table valid_global_arch_objs valid_global_tables
+              del: arch_state)
+  apply simp
+  done
+
+lemma vspace_for_pool1:
+  "(vspace_for_pool asid p (asid_pools_of s) = Some pt) \<Longrightarrow>
+   vspace_for_pool asid p (asid_pools_of s') = Some pt"
+  by (simp add: vspace_for_pool_def asid_pools obind_def split: option.splits)
+
+lemma vspace_for_pool2:
+  "vspace_for_pool asid p (asid_pools_of s') = Some pt \<Longrightarrow>
+   vspace_for_pool asid p (asid_pools_of s) = Some pt"
+  apply (clarsimp simp: vspace_for_pool_def in_omonad s'_def ps_def split: if_split_asm)
+  apply (clarsimp simp: default_object_def default_arch_object_def tyunt
+                  split: apiobject_type.splits aobject_type.splits)
+  done
+
+lemma vspace_for_pool[simp]:
+  "(vspace_for_pool asid p (asid_pools_of s') = Some pt) =
+   (vspace_for_pool asid p (asid_pools_of s) = Some pt)"
+  by (rule iffI, erule vspace_for_pool2, erule vspace_for_pool1)
 
 lemma vs_lookup_table':
-  "vs_lookup_table level asid vref s' = vs_lookup_table level asid vref s"
-  sorry (* FIXME RISCV
-  apply (rule order_antisym)
-   apply (rule vs_lookup_sub2)
-    apply (clarsimp simp: obj_at_def s'_def ps_def split: if_split_asm)
-   apply simp
-  apply (rule vs_lookup_sub)
-   apply (clarsimp simp: obj_at_def s'_def ps_def split: if_split_asm dest!: orthr)
-  apply simp
-  done *)
+  "(vs_lookup_table level asid vref s' = Some (level, p)) =
+   (vs_lookup_table level asid vref s = Some (level, p))"
+  by (fastforce simp: vs_lookup_table_def in_omonad pool_for_asid_def split: if_split_asm)
 
 lemma vs_lookup_target':
-  "vs_lookup_target level asid vref s' = vs_lookup_target level asid vref s"
-  sorry (* FIXME RISCV
-  apply (rule order_antisym)
-   apply (rule vs_lookup_pages_sub2)
-    apply (clarsimp simp: obj_at_def s'_def ps_def split: if_split_asm)
-   apply simp
-  apply (rule vs_lookup_pages_sub)
-   apply (clarsimp simp: obj_at_def s'_def ps_def split: if_split_asm dest!: orthr)
-  apply simp
-  done *)
+  "(vs_lookup_target level asid vref s' = Some (level,p)) =
+   (vs_lookup_target level asid vref s = Some (level,p))"
+  unfolding vs_lookup_target_def vs_lookup_slot_def
+  supply vs_lookup_table'[simp]
+  apply (clarsimp simp: in_omonad)
+  apply (cases "level = asid_pool_level"; clarsimp)
+   apply fastforce
+  apply (rule iffI; clarsimp simp: asid_pool_level_eq)
+   apply (fastforce dest: ptes_of')
+  apply (fastforce dest: ptes_of)
+  done
 
 lemma wellformed_default_obj[Retype_AI_assms]:
    "\<lbrakk> ptra \<notin> set (retype_addrs ptr ty n us);
@@ -471,10 +590,49 @@ lemma obj_at_valid_pte:
   apply (clarsimp | elim disjE)+
   done
 
+lemma pt_lookup_slot_from_level:
+  "\<lbrakk> vref \<in> kernel_mappings; valid_global_tables s; valid_global_arch_objs s; pspace_aligned s;
+     valid_global_refs s \<rbrakk> \<Longrightarrow>
+   (pt_lookup_slot_from_level max_pt_level 0 (riscv_global_pt (arch_state s)) vref (ptes_of s')
+    = Some (level, p)) =
+   (pt_lookup_slot_from_level max_pt_level 0 (riscv_global_pt (arch_state s)) vref (ptes_of s)
+    = Some (level, p))"
+  apply (simp add: pt_lookup_slot_from_level_def in_omonad)
+  apply (subst pt_walk_eqI)
+   prefer 2
+   apply simp
+  apply clarsimp
+  apply (drule (1) valid_global_tablesD, simp)
+  apply (frule (1) global_pts_no_retype)
+  apply (rule conjI)
+   apply (simp add: opt_map_def s'_def ps_def split: option.splits)
+  apply (erule (2) riscv_global_pts_aligned)
+  done
+
+lemma translate_address:
+  "\<lbrakk> vref \<in> kernel_mappings; valid_global_tables s; valid_global_arch_objs s; pspace_aligned s;
+     valid_global_refs s \<rbrakk> \<Longrightarrow>
+   (translate_address (riscv_global_pt (arch_state s)) vref (ptes_of s') = Some p) =
+   (translate_address (riscv_global_pt (arch_state s)) vref (ptes_of s) = Some p)"
+  apply (simp add: translate_address_def in_omonad)
+  apply (simp add: pt_lookup_target_def in_omonad)
+  apply (auto simp: pt_lookup_slot_from_level dest: ptes_of' ptes_of)
+  done
 
 lemma valid_global_vspace_mappings:
-  "valid_global_vspace_mappings s \<Longrightarrow> valid_global_vspace_mappings s'"
-  sorry (* FIXME RISCV *)
+  "\<lbrakk> valid_global_vspace_mappings s; valid_global_tables s; valid_global_arch_objs s;
+     pspace_aligned s; valid_global_refs s; valid_uses s \<rbrakk>
+   \<Longrightarrow> valid_global_vspace_mappings s'"
+  unfolding valid_global_vspace_mappings_def Let_def
+  apply simp
+  apply (rule conjI; clarsimp)
+   apply (subst translate_address; assumption?)
+    apply (fastforce simp: kernel_regions_def translate_address intro!: kernel_regions_in_mappings)
+   apply simp
+  apply (subst translate_address; assumption?)
+   apply (fastforce simp: kernel_regions_def intro!: kernel_regions_in_mappings)
+  apply simp
+  done
 
 end
 
@@ -644,39 +802,67 @@ lemmas unique_table_refs_eq
 
 lemma valid_table_caps:
   "valid_table_caps s \<Longrightarrow> valid_table_caps s'"
-  sorry (* FIXME RISCV
-  apply (simp add: valid_table_caps_def
-              del: imp_disjL)
-  apply (elim allEI, intro impI, simp)
-  apply (frule caps_retype[rotated])
-   apply clarsimp
-  apply (rule obj_at_pres)
-  apply simp
-  done *)
+  unfolding valid_table_caps_def
+  by (fastforce dest: caps_retype[rotated] intro: pts_of)
+
+lemma caps_of_state':
+  "caps_of_state s p = Some cap \<Longrightarrow> caps_of_state s' p = Some cap"
+  by (fastforce simp: F cte_wp_at_cases s'_def ps_def orthr) (* FIXME RISCV: F? *)
+
+lemma valid_vs_lookup:
+  "valid_vs_lookup s \<Longrightarrow> valid_vs_lookup s'"
+  unfolding valid_vs_lookup_def
+  apply clarsimp
+  apply (drule vs_lookup_target_level)
+  by (fastforce simp: vs_lookup_target' intro: caps_of_state')
+
+lemma valid_asid_pool_caps:
+  "valid_asid_pool_caps s \<Longrightarrow> valid_asid_pool_caps s'"
+  by (fastforce intro: caps_of_state' simp: valid_asid_pool_caps_def)
 
 lemma valid_arch_caps:
   "valid_arch_caps s \<Longrightarrow> valid_arch_caps s'"
-  sorry (* FIXME RISCV
-  by (clarsimp simp add: valid_arch_caps_def null_filter
-                         vs_lookup_target'
-                         unique_table_caps_eq
-                         unique_table_refs_eq
-                         valid_table_caps) *)
+  by (clarsimp simp add: valid_arch_caps_def null_filter valid_table_caps valid_vs_lookup
+                         vs_lookup_target' unique_table_caps_eq unique_table_refs_eq
+                         valid_asid_pool_caps
+               simp del: arch_state)
 
 lemma valid_kernel_mappings:
   "valid_kernel_mappings s \<Longrightarrow> valid_kernel_mappings s'"
-  apply (simp add: valid_kernel_mappings_def s'_def
-                   ball_ran_eq ps_def)
-  done
+  by (simp add: valid_kernel_mappings_def s'_def ball_ran_eq ps_def)
 
 lemma valid_asid_map:
   "valid_asid_map s \<Longrightarrow> valid_asid_map s'"
   by (clarsimp simp: valid_asid_map_def)
 
+lemma vspace_for_asid:
+  "vspace_for_asid asid s' = Some pt \<Longrightarrow> vspace_for_asid asid s = Some pt"
+  by (clarsimp simp: vspace_for_asid_def in_omonad pool_for_asid_def)
+
+lemma has_kernel_mappings:
+  "\<lbrakk> has_kernel_mappings pt s; valid_global_arch_objs s; valid_global_refs s \<rbrakk> \<Longrightarrow> has_kernel_mappings pt s'"
+  unfolding has_kernel_mappings_def
+  apply clarsimp
+  apply (drule pts_of')
+  apply (erule disjE; clarsimp)
+  apply (drule riscv_global_pt_in_global_refs)
+  apply (drule (1) global_no_retype)
+  apply simp
+  done
+
 lemma equal_kernel_mappings:
-  "equal_kernel_mappings s \<Longrightarrow> equal_kernel_mappings s'"
+  "\<lbrakk> equal_kernel_mappings s; valid_vspace_objs s; valid_asid_table s; valid_global_arch_objs s;
+     valid_global_refs s \<rbrakk> \<Longrightarrow> equal_kernel_mappings s'"
   apply (simp add: equal_kernel_mappings_def)
-  sorry (* FIXME RISCV *)
+  apply clarsimp
+  apply (drule vspace_for_asid)
+  apply (rule has_kernel_mappings; assumption?)
+  apply (frule (2) vspace_for_asid_valid_pt)
+  apply clarsimp
+  apply (elim allE, erule (1) impE)+
+  apply (drule pts_of)
+  apply simp
+  done
 
 lemma pspace_in_kernel_window:
   "\<lbrakk> pspace_in_kernel_window (s :: 'state_ext state);
@@ -767,8 +953,8 @@ interpretation retype_region_proofs_arch ..
 lemma post_retype_invs:
   "\<lbrakk> invs s; region_in_kernel_window {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} s \<rbrakk>
         \<Longrightarrow> post_retype_invs ty (retype_addrs ptr ty n us) s'"
-  using equal_kernel_mappings
-  by (clarsimp simp: invs_def post_retype_invs_def valid_state_def
+  using equal_kernel_mappings valid_global_vspace_mappings
+  apply (clarsimp simp: invs_def post_retype_invs_def valid_state_def
                      unsafe_rep2 null_filter valid_idle
                      valid_reply_caps valid_reply_masters
                      valid_global_refs valid_arch_state
@@ -783,8 +969,9 @@ lemma post_retype_invs:
                      pspace_respects_device_region
                      cap_refs_respects_device_region
                      cap_refs_in_kernel_window valid_irq_states
-                     valid_global_vspace_mappings
                split: if_split_asm)
+  apply (simp add: valid_arch_state_def valid_pspace_def)
+  done
 
 (* ML \<open>val pre_ctxt_1 = @{context}\<close> *)
 

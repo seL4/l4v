@@ -279,10 +279,6 @@ lemma valid_asid_table:
   apply (drule no_obj_refs; simp)
   done
 
-lemma riscv_global_pts_global_ref:
-  "pt \<in> riscv_global_pts (arch_state s) level \<Longrightarrow> pt \<in> global_refs s"
-  by (auto simp: global_refs_def)
-
 lemma valid_global_arch_objs:
   "valid_global_arch_objs (detype (untyped_range cap) s)"
   using valid_arch_state
