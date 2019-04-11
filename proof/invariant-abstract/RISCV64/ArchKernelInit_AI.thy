@@ -30,7 +30,7 @@ definition
 
 lemma "valid_uses_2 init_vspace_uses"
   using canonical_user_pptr_base pptr_base_kernel_base
-  unfolding valid_uses_2_def init_vspace_uses_def
+  unfolding valid_uses_2_def init_vspace_uses_def window_defs
   by (auto intro: canonical_user_canonical above_pptr_base_canonical)
 
 (* FIXME RISCV: TODO *)
