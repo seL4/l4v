@@ -258,7 +258,7 @@ lemma vs_lookup_target:
 
 lemma vs_lookup_target_preserved:
   "\<lbrakk> x \<in> untyped_range cap; vs_lookup_target level asid vref s = Some (level', x);
-     vref \<in> user_region s \<rbrakk> \<Longrightarrow> False"
+     vref \<in> user_region \<rbrakk> \<Longrightarrow> False"
   apply (drule (1) valid_vs_lookupD[OF _ _ valid_vs_lookup])
   apply (fastforce intro: no_obj_refs)
   done
@@ -302,7 +302,7 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
   by (simp only: valid_asid_table valid_global_arch_objs valid_global_tables) simp
 
 lemma vs_lookup_asid_pool_level:
-  assumes lookup: "vs_lookup_table level asid vref s = Some (level, p)" "vref \<in> user_region s"
+  assumes lookup: "vs_lookup_table level asid vref s = Some (level, p)" "vref \<in> user_region"
   assumes ap: "asid_pools_of s p = Some ap"
   shows "level = asid_pool_level"
 proof (rule ccontr)
@@ -313,7 +313,7 @@ proof (rule ccontr)
   assume "level \<noteq> asid_pool_level"
   then have "level \<le> max_pt_level" by simp
   moreover
-  have "valid_uses s" "valid_asid_table s" "pspace_aligned s"
+  have "valid_asid_table s" "pspace_aligned s"
     using invs by (auto simp: invs_def valid_state_def valid_arch_state_def)
   ultimately
   have "\<exists>pt. pts_of s p = Some pt \<and> valid_vspace_obj level (PageTable pt) s"
@@ -323,7 +323,7 @@ proof (rule ccontr)
 qed
 
 lemma vs_lookup_pt_level:
-  assumes lookup: "vs_lookup_table level asid vref s = Some (level, p)" "vref \<in> user_region s"
+  assumes lookup: "vs_lookup_table level asid vref s = Some (level, p)" "vref \<in> user_region"
   assumes pt: "pts_of s p = Some pt"
   shows "level \<le> max_pt_level"
 proof (rule ccontr)
@@ -357,19 +357,17 @@ lemma valid_vspace_obj:
   apply (rename_tac pt idx asid vref)
   apply (case_tac "pt idx"; simp)
    apply (frule_tac idx=idx in vs_lookup_table_pt_step; simp add: in_omonad)
-        apply (frule pspace_alignedD, fastforce)
-        apply (simp add: bit_simps)
-       apply (erule (1) vs_lookup_pt_level, simp add: in_omonad)
-      apply simp
-     apply fastforce
-    apply fastforce
-   apply (fastforce elim: vs_lookup_target_preserved)
-  apply (frule_tac idx=idx in vs_lookup_table_pt_step; simp add: in_omonad)
        apply (frule pspace_alignedD, fastforce)
        apply (simp add: bit_simps)
       apply (erule (1) vs_lookup_pt_level, simp add: in_omonad)
      apply simp
     apply fastforce
+   apply (fastforce elim: vs_lookup_target_preserved)
+  apply (frule_tac idx=idx in vs_lookup_table_pt_step; simp add: in_omonad)
+      apply (frule pspace_alignedD, fastforce)
+      apply (simp add: bit_simps)
+     apply (erule (1) vs_lookup_pt_level, simp add: in_omonad)
+    apply simp
    apply fastforce
   apply (fastforce elim: vs_lookup_target_preserved)
   done

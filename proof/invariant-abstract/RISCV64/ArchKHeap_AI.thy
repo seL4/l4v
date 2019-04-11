@@ -476,14 +476,14 @@ lemma store_pte_InvalidPTE_valid_vspace_objs[wp]:
   unfolding valid_vspace_objs_def
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' valid_vspace_obj_lift)
   apply (rule conjI; clarsimp)
-   apply (rename_tac s bot_level vref asid level' level slot pte ao pt)
+   apply (rename_tac bot_level vref asid level' level slot pte ao pt pt')
    apply (drule (1) level_of_slotI)
-   apply (case_tac "slot = p && ~~ mask pt_bits"; clarsimp simp del: valid_vspace_obj.simps)
+   apply (case_tac "slot = table_base p"; clarsimp simp del: valid_vspace_obj.simps)
    apply (fastforce intro!: valid_vspace_obj_PT_invalidate)
   apply (rename_tac s bot_level vref asid level slot pte ao pt)
   apply (clarsimp simp: vs_lookup_slot_def)
-  apply (rename_tac s bot_level vref asid level slot pte ao pt)
-  apply (case_tac "slot = p && ~~ mask pt_bits"; clarsimp simp del: valid_vspace_obj.simps)
+  apply (rename_tac s bot_level vref asid level slot pte ao pt pt')
+  apply (case_tac "slot = table_base p"; clarsimp simp del: valid_vspace_obj.simps)
   apply (fastforce intro!: valid_vspace_obj_PT_invalidate)
   done
 

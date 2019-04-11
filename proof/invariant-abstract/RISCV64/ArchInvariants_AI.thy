@@ -99,6 +99,7 @@ definition asid_wf :: "asid \<Rightarrow> bool" where
   "asid_wf a \<equiv> a \<le> 2 ^ asid_bits - 1"
 
 (* Note: no alignment check as in other architectures, because we would need to know the PT level. *)
+(* FIXME RISCV: should simplify to vref \<le> canonical_user; also could demand is_aligned pt_bits (real alignment might be higher) *)
 definition wellformed_mapdata :: "asid \<times> vspace_ref \<Rightarrow> bool" where
   "wellformed_mapdata \<equiv> \<lambda>(asid, vref).
      0 < asid \<and> asid_wf asid \<and> vref < pptr_base \<and> canonical_address vref"
@@ -127,6 +128,20 @@ lemmas wellformed_acap_simps[simp] = wellformed_acap_def[split_simps arch_cap.sp
 
 
 section "Virtual Memory Regions"
+
+(* All virtual kernel addresses, including those potentially not mapped. *)
+definition kernel_mappings :: "vspace_ref set" where
+  "kernel_mappings \<equiv> {vref. pptr_base \<le> vref}"
+
+(* The highest user-level virtual address that is still canonical.
+   It can be larger than user_vtop, which is the highest address we allow to be mapped.
+   We need canonical_user, because the page tables have to have valid mappings there. *)
+definition canonical_user :: "vspace_ref" where
+  "canonical_user \<equiv> mask canonical_bit"
+
+(* All virtual user addresses *)
+definition user_region :: "vspace_ref set" where
+  "user_region = {vref. vref \<le> canonical_user}"
 
 definition
   "in_device_frame p \<equiv> \<lambda>s.
@@ -187,13 +202,13 @@ locale_abbrev kernel_regions :: "'z::state_ext state \<Rightarrow> obj_ref set" 
 
 lemmas kernel_regions_def = kernel_regions_2_def
 
-definition user_region_2 :: "(obj_ref \<Rightarrow> riscvvspace_region_use) \<Rightarrow> obj_ref set" where
-  "user_region_2 uses \<equiv> {x. uses x = RISCVVSpaceUserRegion}"
+definition user_window_2 :: "(obj_ref \<Rightarrow> riscvvspace_region_use) \<Rightarrow> obj_ref set" where
+  "user_window_2 uses \<equiv> {x. uses x = RISCVVSpaceUserRegion}"
 
-locale_abbrev user_region :: "'z::state_ext state \<Rightarrow> obj_ref set" where
-  "user_region s \<equiv> user_region_2 (riscv_kernel_vspace (arch_state s))"
+locale_abbrev user_window :: "'z::state_ext state \<Rightarrow> obj_ref set" where
+  "user_window s \<equiv> user_window_2 (riscv_kernel_vspace (arch_state s))"
 
-lemmas user_region_def = user_region_2_def
+lemmas user_window_def = user_window_2_def
 
 section "Virtual Memory"
 
@@ -332,7 +347,7 @@ definition valid_vspace_objs :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_vspace_objs \<equiv> \<lambda>s.
      \<forall>bot_level asid vref level p ao.
        vs_lookup_table bot_level asid vref s = Some (level, p)
-       \<longrightarrow> vref \<in> user_region s
+       \<longrightarrow> vref \<in> user_region
        \<longrightarrow> aobjs_of s p = Some ao
        \<longrightarrow> valid_vspace_obj level ao s"
 
@@ -405,7 +420,7 @@ definition vs_cap_ref :: "cap \<Rightarrow> (asid \<times> vspace_ref) option" w
 definition valid_vs_lookup :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_vs_lookup \<equiv> \<lambda>s. \<forall>bot_level level asid vref p.
      vs_lookup_target bot_level asid vref s = Some (level, p) \<longrightarrow>
-     vref \<in> user_region s \<longrightarrow>
+     vref \<in> user_region \<longrightarrow>
        asid \<noteq> 0 \<and>
        (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
                  obj_refs cap = {p} \<and>
@@ -494,10 +509,6 @@ definition hyp_live :: "kernel_object \<Rightarrow> bool" where
 definition pte_rights_of :: "pte \<Rightarrow> rights set" where
   "pte_rights_of pte \<equiv> if is_PagePTE pte then pte_rights pte else {}"
 
-(* All kernel addresses, including those potentially not mapped. *)
-definition kernel_mappings :: "vspace_ref set" where
-  "kernel_mappings \<equiv> {vref. pptr_base \<le> vref}"
-
 (* All page table walks starting from the global page table may only end up at global
    tables for the right level. The final level must not contain further page table references.
    We do not consider frame mappings here.
@@ -569,12 +580,6 @@ definition pspace_in_kernel_window :: "'z::state_ext state \<Rightarrow> bool" w
 definition vspace_at_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "vspace_at_asid asid pt \<equiv> \<lambda>s. vspace_for_asid asid s = Some pt"
 
-(* The highest user-level virtual address that is still canonical.
-   It can be larger than user_vtop, which is the highest address we allow to be mapped.
-   We need canonical_user, because the page tables have to have valid mappings there. *)
-definition canonical_user :: "vspace_ref" where
-  "canonical_user \<equiv> mask canonical_bit"
-
 definition valid_uses_2 :: "(obj_ref \<Rightarrow> riscvvspace_region_use) \<Rightarrow> bool" where
   "valid_uses_2 uses \<equiv>
      \<forall>p. (\<not>canonical_address p \<longrightarrow> uses p = RISCVVSpaceInvalidRegion)
@@ -585,7 +590,7 @@ definition valid_uses_2 :: "(obj_ref \<Rightarrow> riscvvspace_region_use) \<Rig
              for devices, but Spike does not have any.\<close>
           \<and> (kernel_base \<le> p \<longrightarrow> uses p \<in> {RISCVVSpaceKernelELFWindow, RISCVVSpaceInvalidRegion})
           \<comment> \<open>We allow precisely all virtual addresses up to canonical_user as the user window:\<close>
-          \<and> (p \<le> canonical_user \<and> canonical_address p \<longleftrightarrow> uses p = RISCVVSpaceUserRegion)
+          \<and> (user_region = user_window_2 uses)
       \<comment> \<open>We want the kernel window to be non-empty, and to contain at least @{const pptr_base}\<close>
       \<and> uses pptr_base = RISCVVSpaceKernelWindow"
 
@@ -1326,7 +1331,7 @@ lemma below_user_vtop_canonical:
 
 lemmas window_defs =
   kernel_window_def not_kernel_window_def kernel_elf_window_def kernel_regions_def
-  kernel_device_window_def user_region_def
+  kernel_device_window_def user_region_def user_window_def
 
 lemma valid_uses_kernel_window:
   "\<lbrakk> valid_uses s; p \<in> kernel_window s \<rbrakk> \<Longrightarrow> p \<in> {pptr_base ..< kernel_base} \<and> canonical_address p"
@@ -1340,18 +1345,29 @@ lemma canonical_below_pptr_base_canonical_user:
   "\<lbrakk> p < pptr_base; canonical_address p \<rbrakk> \<Longrightarrow> p \<le> canonical_user"
   by (auto simp: canonical_address_range canonical_user_def pptr_base_def pptrBase_def NOT_mask)
 
+lemma canonical_user_below_pptr_base:
+  "p \<le> canonical_user \<Longrightarrow> p < pptr_base"
+  apply (simp add: canonical_user_def pptr_base_def pptrBase_def flip: NOT_mask)
+  apply word_bitwise
+  apply (simp add: word_size canonical_bit_def)
+  done
+
+lemma canonical_below_pptr_base_user:
+  "\<lbrakk> v < pptr_base; canonical_address v \<rbrakk> \<Longrightarrow> v \<in> user_region"
+  by (simp add: user_region_def canonical_below_pptr_base_canonical_user)
+
 lemma valid_uses_user_region_eq:
-  "valid_uses s \<Longrightarrow> (v \<in> user_region s) = (v \<le> canonical_user)"
+  "valid_uses s \<Longrightarrow> (v \<in> user_window s) = (v \<in> user_region)"
   unfolding valid_uses_def window_defs
   by (erule_tac x=v in allE) (auto simp: canonical_user_canonical)
 
-lemma canonical_below_pptr_base_user:
-  "\<lbrakk> v < pptr_base; canonical_address v; valid_uses s \<rbrakk> \<Longrightarrow> v \<in> user_region s"
-  by (simp add: valid_uses_user_region_eq canonical_below_pptr_base_canonical_user)
+lemma user_region_canonical[elim!]:
+  "p \<in> user_region \<Longrightarrow> canonical_address p"
+  unfolding user_region_def by (simp add: canonical_user_canonical)
 
-lemma valid_uses_user_region:
-  "\<lbrakk> valid_uses s; p \<in> user_region s \<rbrakk> \<Longrightarrow> p < pptr_base"
-  unfolding valid_uses_def window_defs by (erule_tac x=p in allE) auto
+lemma user_region_pptr_base[elim!]:
+  "p \<in> user_region \<Longrightarrow> p < pptr_base"
+  unfolding user_region_def by (simp add: canonical_user_below_pptr_base)
 
 lemma pt_walk_max_level:
   "pt_walk top_level bot_level pt_ptr vptr ptes = Some (level, p)
@@ -1690,7 +1706,7 @@ qed
 lemma valid_vspace_objsI [intro?]:
   "(\<And>p ao asid vref level.
        \<lbrakk> vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p);
-         vref \<in> user_region s;
+         vref \<in> user_region;
          aobjs_of s p = Some ao \<rbrakk>
        \<Longrightarrow> valid_vspace_obj level ao s)
   \<Longrightarrow> valid_vspace_objs s"
@@ -1701,8 +1717,8 @@ lemma canonical_address_0[intro!,simp]:
   by (simp add: canonical_address_def canonical_address_of_def)
 
 lemma user_region0[intro!,simp]:
-  "valid_uses s \<Longrightarrow> 0 \<in> user_region s"
-  by (force simp: valid_uses_def user_region_def)
+  "0 \<in> user_region"
+  by (force simp: user_region_def)
 
 lemma ptpte_level_0_valid_pte:
   "is_PageTablePTE pte \<Longrightarrow> \<not> valid_pte 0 pte s"
@@ -1710,7 +1726,7 @@ lemma ptpte_level_0_valid_pte:
 
 lemma pool_for_asid_valid_vspace_objs:
   "\<lbrakk> pool_for_asid asid s = Some p;
-     valid_vspace_objs s; valid_uses s; valid_asid_table s \<rbrakk>
+     valid_vspace_objs s; valid_asid_table s \<rbrakk>
    \<Longrightarrow> \<exists>pool. asid_pools_of s p = Some pool \<and> valid_vspace_obj asid_pool_level (ASIDPool pool) s"
   unfolding valid_vspace_objs_def
   by (fastforce intro: pool_for_asid_vs_lookup[THEN iffD2]
@@ -1719,11 +1735,11 @@ lemma pool_for_asid_valid_vspace_objs:
 
 lemma vspace_for_asid_valid_pt:
   "\<lbrakk> vspace_for_asid asid s = Some root_pt;
-     valid_vspace_objs s; valid_uses s; valid_asid_table s \<rbrakk>
+     valid_vspace_objs s; valid_asid_table s \<rbrakk>
    \<Longrightarrow> \<exists>pt. pts_of s root_pt = Some pt \<and> valid_vspace_obj max_pt_level (PageTable pt) s"
   apply (frule vspace_for_asid_vs_lookup)
   apply (clarsimp simp: vspace_for_asid_def)
-  apply (frule (3) pool_for_asid_valid_vspace_objs)
+  apply (frule (2) pool_for_asid_valid_vspace_objs)
   by (fastforce simp: in_opt_map_eq valid_vspace_objs_def pt_at_eq vspace_for_pool_def)
 
 lemma pt_slot_offset_vref:
@@ -1748,12 +1764,12 @@ lemma vs_lookup_max_pt_levelD:
 
 lemma vs_lookup_max_pt_valid:
   "\<lbrakk> vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, root_pt);
-     vref \<in> user_region s;
-     valid_vspace_objs s; valid_uses s; valid_asid_table s \<rbrakk>
+     vref \<in> user_region;
+     valid_vspace_objs s; valid_asid_table s \<rbrakk>
    \<Longrightarrow> \<exists>pt. pts_of s root_pt = Some pt \<and> valid_vspace_obj max_pt_level (PageTable pt) s"
   apply (frule vs_lookup_max_pt_levelD)
   apply clarsimp
-  apply (frule (3) pool_for_asid_valid_vspace_objs)
+  apply (frule (2) pool_for_asid_valid_vspace_objs)
   by (fastforce simp: in_opt_map_eq valid_vspace_objs_def pt_at_eq vspace_for_pool_def)
 
 lemma aligned_vref_for_level_eq:
@@ -1954,7 +1970,7 @@ lemmas vs_lookup_splitD = vs_lookup_split_Some[rotated, THEN iffD1, rotated -1]
 lemma valid_vspace_objsD:
   "\<lbrakk> valid_vspace_objs s;
      vs_lookup_table bot_level asid vref s = Some (level, p);
-     vref \<in> user_region s; aobjs_of s p = Some ao \<rbrakk> \<Longrightarrow>
+     vref \<in> user_region; aobjs_of s p = Some ao \<rbrakk> \<Longrightarrow>
    valid_vspace_obj level ao s"
   by (simp add: valid_vspace_objs_def)
 
@@ -2013,9 +2029,9 @@ lemma vref_for_level_le:
   by (simp add: vref_for_level_def word_and_le2)
 
 lemma vref_for_level_user_region:
-  "\<lbrakk> vref \<in> user_region s; valid_uses s \<rbrakk> \<Longrightarrow> vref_for_level vref level \<in> user_region s"
+  "vref \<in> user_region \<Longrightarrow> vref_for_level vref level \<in> user_region"
   using vref_for_level_le[of vref level]
-  by (force simp: valid_uses_user_region_eq vref_for_level_pptr_baseI canonical_vref_for_levelI)
+  by (force simp: user_region_def vref_for_level_pptr_baseI canonical_vref_for_levelI)
 
 lemma canonical_vref_for_levelD:
   "\<lbrakk> canonical_address (vref_for_level vref level); vref < pptr_base; level \<le> max_pt_level \<rbrakk>
@@ -2073,16 +2089,15 @@ lemma is_aligned_ptrFromPAddr_pt_bits[intro!]:
 lemma ptr_from_pte_aligned[simp,intro!]:
   "is_aligned (pptr_from_pte pte) pt_bits"
   unfolding pptr_from_pte_def
-  by (auto intro!: is_aligned_ptrFromPAddr_pt_bits simp: addr_from_ppn_def is_aligned_shift)
+  by (auto simp: addr_from_ppn_def is_aligned_shift)
 
 lemma pspace_aligned_pts_ofD:
   "\<lbrakk> pspace_aligned s; pts_of s pt_ptr \<noteq> None \<rbrakk> \<Longrightarrow> is_aligned pt_ptr pt_bits"
   by (fastforce dest: pspace_alignedD simp: in_omonad bit_simps)
 
 lemma user_region_slots:
-  "\<lbrakk> vref \<in> user_region s; valid_uses s \<rbrakk>
-   \<Longrightarrow> ucast (pt_index max_pt_level vref) \<notin> kernel_mapping_slots"
-  apply (clarsimp simp: valid_uses_user_region_eq kernel_mapping_slots_def pt_index_def level_defs)
+  "vref \<in> user_region \<Longrightarrow> ucast (pt_index max_pt_level vref) \<notin> kernel_mapping_slots"
+  apply (clarsimp simp: user_region_def kernel_mapping_slots_def pt_index_def level_defs)
   apply (simp add: pt_bits_left_def bit_simps canonical_address_def canonical_address_of_def)
   apply word_bitwise
   by (clarsimp simp: word_bits_def canonical_bit_def word_size canonical_user_def)
@@ -2090,15 +2105,15 @@ lemma user_region_slots:
 lemma valid_vspace_objs_strongD:
   "\<lbrakk> valid_vspace_objs s;
      vs_lookup_table bot_level asid vref s = Some (level, pt_ptr);
-     vref \<in> user_region s;
+     vref \<in> user_region;
      level \<le> max_pt_level;
-     valid_uses s; valid_asid_table s; pspace_aligned s \<rbrakk> \<Longrightarrow>
+     valid_asid_table s; pspace_aligned s \<rbrakk> \<Longrightarrow>
    \<exists>pt. pts_of s pt_ptr = Some pt \<and> valid_vspace_obj level (PageTable pt) s"
   supply valid_vspace_obj.simps[simp del]
   apply (drule vs_lookup_level)
   apply (induct level arbitrary: pt_ptr rule: bit0.from_top_induct[where y="max_pt_level"])
    apply simp
-   apply (erule (4) vs_lookup_max_pt_valid)
+   apply (erule (3) vs_lookup_max_pt_valid)
   apply (rename_tac level pt_ptr)
   apply (frule vs_lookup_splitD, assumption)
    apply (simp add: less_imp_le)
@@ -2131,15 +2146,14 @@ lemma pt_walk_is_aligned:
 lemma vspace_for_pool_is_aligned:
   "\<lbrakk> vspace_for_pool pool_ptr asid (asid_pools_of s) = Some pt_ptr;
      pool_for_asid asid s = Some pool_ptr;
-     vref \<in> user_region s; valid_vspace_objs s; valid_asid_table s; valid_uses s;
-     pspace_aligned s \<rbrakk>
+     vref \<in> user_region; valid_vspace_objs s; valid_asid_table s; pspace_aligned s \<rbrakk>
    \<Longrightarrow> is_aligned pt_ptr pt_bits"
   by (drule valid_vspace_objs_strongD[where bot_level=max_pt_level and asid=asid]
       ; fastforce simp: vs_lookup_table_def in_omonad elim: pspace_aligned_pts_ofD)
 
 lemma vs_lookup_table_is_aligned:
   "\<lbrakk> vs_lookup_table bot_level asid vref s = Some (level', pt_ptr);
-    level' \<le> max_pt_level; vref \<in> user_region s; pspace_aligned s; valid_uses s; valid_asid_table s;
+    level' \<le> max_pt_level; vref \<in> user_region; pspace_aligned s; valid_asid_table s;
     valid_vspace_objs s \<rbrakk>
    \<Longrightarrow> is_aligned pt_ptr pt_bits"
   apply (clarsimp simp: vs_lookup_table_def in_omonad split: if_splits)
@@ -2155,8 +2169,13 @@ lemma kernel_mapping_slots:
   by word_bitwise (clarsimp simp: word_size)
 
 lemma kernel_window_user_region_sane:
-  "valid_uses s \<Longrightarrow> kernel_window s \<inter> user_region s = {}"
+  "valid_uses s \<Longrightarrow> kernel_window s \<inter> user_window s = {}"
   unfolding window_defs by auto
+
+lemma kernel_mappings_user_region:
+  "kernel_mappings \<inter> user_region = {}"
+  unfolding kernel_mappings_def user_region_def
+  by (auto dest!: canonical_user_below_pptr_base)
 
 lemma is_aligned_pt_slot_offset_pte:
   "is_aligned pt pt_bits \<Longrightarrow> is_aligned (pt_slot_offset level pt vref) pte_bits"
@@ -2174,7 +2193,7 @@ lemma equal_mappings_pt_slot_offset:
        ptes_of s (pt_slot_offset max_pt_level (riscv_global_pt (arch_state s)) vref)"
   apply (simp add: equal_kernel_mappings_def has_kernel_mappings_def)
   apply ((erule allE)+, erule (1) impE)
-  apply (drule (3) vspace_for_asid_valid_pt)
+  apply (drule (2) vspace_for_asid_valid_pt)
   apply (drule (1) valid_global_vspace_mappings_pt_at)
   apply (clarsimp simp: in_omonad pt_at_eq)
   apply (frule_tac p="riscv_global_pt (arch_state s)" in pspace_alignedD, assumption)
@@ -2352,10 +2371,10 @@ lemma kernel_mapping_slots_top_bit:
   done
 
 lemma vref_for_level_user_regionD:
-  "\<lbrakk> vref_for_level vref level \<in> user_region s; valid_uses s; level \<le> max_pt_level \<rbrakk>
-   \<Longrightarrow> vref \<in> user_region s"
+  "\<lbrakk> vref_for_level vref level \<in> user_region; level \<le> max_pt_level \<rbrakk>
+   \<Longrightarrow> vref \<in> user_region"
   using vref_for_level_le[of vref level]
-  apply (clarsimp simp: valid_uses_user_region_eq)
+  apply (clarsimp simp: user_region_def)
   apply (drule pt_bits_left_le_canonical)
   apply word_bitwise
   by (clarsimp simp: canonical_bit_def word_size not_less bit_simps canonical_user_def)
@@ -2380,12 +2399,11 @@ lemma vref_for_level_idx_canonical_user:
   done
 
 lemma vs_lookup_table_pt_step:
-  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); vref \<in> user_region s;
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); vref \<in> user_region;
      pts_of s p = Some pt; is_aligned p pt_bits; level \<le> max_pt_level; pte_ref (pt idx) = Some p';
-     level = max_pt_level \<longrightarrow> idx \<notin> kernel_mapping_slots;
-     valid_uses s \<rbrakk> \<Longrightarrow>
+     level = max_pt_level \<longrightarrow> idx \<notin> kernel_mapping_slots \<rbrakk> \<Longrightarrow>
    \<exists>vref'. vs_lookup_target level asid vref' s = Some (level, p') \<and>
-           vref' \<in> user_region s"
+           vref' \<in> user_region"
   apply (rule_tac x="vref_for_level vref (level+1) ||
                      (ucast (idx::pt_index) << pt_bits_left level)" in exI)
   apply (simp add: vs_lookup_target_def vs_lookup_slot_def in_omonad)
@@ -2402,7 +2420,7 @@ lemma vs_lookup_table_pt_step:
      apply assumption
     apply simp
    apply (simp add: pte_of_def in_omonad is_aligned_pt_slot_offset_pte table_index_pt_slot_offset)
-  apply (simp add: valid_uses_user_region_eq vref_for_level_idx_canonical_user)
+  apply (simp add: user_region_def vref_for_level_idx_canonical_user)
   done
 
 lemma pte_rights_PagePTE[simp]:

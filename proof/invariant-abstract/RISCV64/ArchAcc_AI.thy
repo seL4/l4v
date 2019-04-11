@@ -34,7 +34,7 @@ locale_abbrev ex_vs_lookup_table ::
   "vm_level \<times> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" ("\<exists>\<rhd>") where
   "ex_vs_lookup_table \<equiv>
      \<lambda>(level,p) s. \<exists>asid vref.
-       vs_lookup_table level asid vref s = Some (level, p) \<and> vref \<in> user_region s"
+       vs_lookup_table level asid vref s = Some (level, p) \<and> vref \<in> user_region"
 
 bundle unfold_objects =
   obj_at_def[simp]
@@ -70,7 +70,7 @@ lemma vs_lookup_table_target:
 
 lemma valid_vs_lookupD:
   "\<lbrakk> vs_lookup_target bot_level asid vref s = Some (level, p) ;
-     vref \<in> user_region s ; valid_vs_lookup s \<rbrakk>
+     vref \<in> user_region; valid_vs_lookup s \<rbrakk>
    \<Longrightarrow> asid \<noteq> 0
       \<and> (\<exists>cptr cap. caps_of_state s cptr = Some cap \<and> obj_refs cap = {p}
                     \<and> vs_cap_ref cap = Some (asid, vref_for_level vref level))"
@@ -112,17 +112,17 @@ lemma unique_vs_lookup_table:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
      vs_lookup_table level' asid' vref' s = Some (level', p');
      p' = p; level \<le> max_pt_level; level' \<le> max_pt_level;
-     vref \<in> user_region s; vref' \<in> user_region s;
-     unique_table_refs s; valid_vs_lookup s; valid_uses s;
+     vref \<in> user_region; vref' \<in> user_region;
+     unique_table_refs s; valid_vs_lookup s;
      valid_vspace_objs s; valid_asid_table s; pspace_aligned s;
      valid_caps (caps_of_state s) s \<rbrakk>
    \<Longrightarrow> asid' = asid \<and>
-      vref_for_level vref' (level'+1) = vref_for_level vref (level+1)"
+       vref_for_level vref' (level'+1) = vref_for_level vref (level+1)"
   supply valid_vspace_obj.simps[simp del]
-  apply (frule (6) valid_vspace_objs_strongD)
-  apply (frule (6) valid_vspace_objs_strongD[where pt_ptr=p'])
+  apply (frule (5) valid_vspace_objs_strongD)
+  apply (frule (5) valid_vspace_objs_strongD[where pt_ptr=p'])
   apply (drule (1) vs_lookup_table_target)+
-  apply (drule valid_vs_lookupD, erule (1) vref_for_level_user_region, assumption)+
+  apply (drule valid_vs_lookupD, erule vref_for_level_user_region, assumption)+
   apply (elim conjE exE)
   apply (rename_tac pt pt' cptr cptr' cap cap')
   apply simp
@@ -297,14 +297,12 @@ lemma pt_walk_same_for_different_levels:
   apply fastforce
   done
 
-find_theorems pt_walk "_ + _" vref_for_level
-
 lemma vs_lookup_table_same_for_different_levels:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
      vs_lookup_table level' asid vref' s = Some (level', p);
      vref_for_level vref (level+1) = vref_for_level vref' (level+1);
-     vref \<in> user_region s; level' < level; level \<le> max_pt_level;
-     valid_vspace_objs s; valid_asid_table s; valid_uses s; pspace_aligned s \<rbrakk>
+     vref \<in> user_region; level' < level; level \<le> max_pt_level;
+     valid_vspace_objs s; valid_asid_table s; pspace_aligned s \<rbrakk>
    \<Longrightarrow> \<exists>vref'' p' pte. vs_lookup_slot 0 asid vref'' s = Some (0, p') \<and> ptes_of s p' = Some pte \<and>
                       is_PageTablePTE pte \<and>
                       vref_for_level vref'' (level' + 1) = vref_for_level vref' (level' + 1)"
@@ -316,18 +314,17 @@ lemma vs_lookup_table_same_for_different_levels:
    apply simp
   apply (simp add: in_omonad pt_walk_vref_for_level1)
   apply (simp add: vs_lookup_slot_def in_omonad vs_lookup_table_def cong: conj_cong)
-  apply (drule pt_walk_same_for_different_levels; simp?) 
+  apply (drule pt_walk_same_for_different_levels; simp?)
   apply (erule vspace_for_pool_is_aligned; simp)
-  apply force
-  done
+  by force
 
 lemma no_loop_vs_lookup_table_helper:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
      vs_lookup_table level' asid vref' s = Some (level', p);
      vref_for_level vref' (max (level+1) (level'+1)) = vref_for_level vref (max (level+1) (level'+1));
-     vref \<in> user_region s; vref' \<in> user_region s;
+     vref \<in> user_region; vref' \<in> user_region;
      level \<le> max_pt_level; level' \<le> max_pt_level; level' < level;
-     unique_table_refs s; valid_vs_lookup s; valid_uses s;
+     unique_table_refs s; valid_vs_lookup s;
      valid_vspace_objs s; valid_asid_table s; pspace_aligned s;
      valid_caps (caps_of_state s) s \<rbrakk>
     \<Longrightarrow> level' = level"
@@ -342,9 +339,9 @@ lemma no_loop_vs_lookup_table_helper:
       if we can show the pte we found is valid, it can't be a PT pte *)
    apply (subgoal_tac "valid_pte 0 pte s")
     apply (blast dest: ptpte_level_0_valid_pte)
-   apply (subgoal_tac "vref'' \<in> user_region s")
+   apply (subgoal_tac "vref'' \<in> user_region")
     prefer 2
-    apply (frule_tac vref=vref' and level="level'+1" in vref_for_level_user_region, assumption)
+    apply (frule_tac vref=vref' and level="level'+1" in vref_for_level_user_region)
     apply (rule vref_for_level_user_regionD[where level="level'+1"]; simp?)
     apply (erule vm_level_less_max_pt_level)
    apply (subgoal_tac "is_aligned pt_ptr pt_bits")
@@ -358,8 +355,8 @@ lemma no_loop_vs_lookup_table:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
      vs_lookup_table level' asid vref' s = Some (level', p);
      vref_for_level vref' (max (level+1) (level'+1)) = vref_for_level vref (max (level+1) (level'+1));
-     vref \<in> user_region s; vref' \<in> user_region s; level \<le> max_pt_level; level' \<le> max_pt_level;
-     unique_table_refs s; valid_vs_lookup s; valid_uses s;
+     vref \<in> user_region; vref' \<in> user_region; level \<le> max_pt_level; level' \<le> max_pt_level;
+     unique_table_refs s; valid_vs_lookup s;
      valid_vspace_objs s; valid_asid_table s; pspace_aligned s;
      valid_caps (caps_of_state s) s \<rbrakk>
     \<Longrightarrow> level' = level"
@@ -378,7 +375,7 @@ lemma no_loop_vs_lookup_table:
    only one path from the ASID table to any asid_pool / page table in the system *)
 lemma ex_vs_lookup_level:
   "\<lbrakk> \<exists>\<rhd> (level, p) s;  \<exists>\<rhd> (level', p) s;
-     unique_table_refs s; valid_vs_lookup s; valid_uses s;
+     unique_table_refs s; valid_vs_lookup s;
      valid_vspace_objs s; valid_asid_table s; pspace_aligned s;
      valid_caps (caps_of_state s) s \<rbrakk>
    \<Longrightarrow> level' = level"
@@ -388,10 +385,10 @@ lemma ex_vs_lookup_level:
   apply (rename_tac asid' vref vref')
   apply (case_tac "level = asid_pool_level"; simp)
    apply (case_tac "level' = asid_pool_level"; simp)
-   apply (frule (6) valid_vspace_objs_strongD[where bot_level=level' and level=level'])
+   apply (frule (5) valid_vspace_objs_strongD[where bot_level=level' and level=level'])
    apply (fastforce dest!: vs_lookup_table_no_asid_pt)
   apply (case_tac "level' = asid_pool_level"; simp)
-   apply (frule (6) valid_vspace_objs_strongD[where bot_level=level and level=level])
+   apply (frule (5) valid_vspace_objs_strongD[where bot_level=level and level=level])
    apply (fastforce dest!: vs_lookup_table_no_asid_pt)
   apply (frule_tac asid=asid and asid'=asid' in unique_vs_lookup_table, assumption; simp)
   apply (drule_tac level=level and level'=level' and vref'=vref' in no_loop_vs_lookup_table
@@ -620,7 +617,7 @@ lemma vs_lookup_table_extend:
 lemma pt_walk_pt_at:
   "\<lbrakk> pt_walk level bot_level pt_ptr vptr (ptes_of s) = Some (level', p);
      vs_lookup_table level asid vptr s = Some (level, pt_ptr); level \<le> max_pt_level;
-     vptr \<in> user_region s; valid_vspace_objs s; valid_uses s; valid_asid_table s; pspace_aligned s \<rbrakk>
+     vptr \<in> user_region; valid_vspace_objs s; valid_asid_table s; pspace_aligned s \<rbrakk>
    \<Longrightarrow> pt_at p s"
   apply (drule pt_walk_level)
   apply (frule pt_walk_max_level)
@@ -631,7 +628,7 @@ lemma pt_walk_pt_at:
 lemma pt_lookup_slot_from_level_pte_at:
   "\<lbrakk> pt_lookup_slot_from_level level bot_level pt_ptr vptr (ptes_of s) = Some (level', p);
      vs_lookup_table level asid vptr s = Some (level, pt_ptr); level \<le> max_pt_level;
-     vptr \<in> user_region s; valid_vspace_objs s; valid_uses s; valid_asid_table s; pspace_aligned s \<rbrakk>
+     vptr \<in> user_region; valid_vspace_objs s; valid_asid_table s; pspace_aligned s \<rbrakk>
   \<Longrightarrow> pte_at p s"
   unfolding pt_lookup_slot_from_level_def
   apply (clarsimp simp add: oreturn_def obind_def split: option.splits)
@@ -1189,8 +1186,25 @@ lemma if_Some_Some[simp]:
   "((if P then Some v else None) = Some v) = P"
   by simp
 
+lemma user_region_canonical_pptr_base:
+  "\<lbrakk> p \<notin> user_region; canonical_address p \<rbrakk> \<Longrightarrow> pptr_base \<le> p"
+  using canonical_below_pptr_base_canonical_user word_le_not_less
+  by (auto simp add: user_region_def not_le)
+
+lemma kernel_regions_pptr_base:
+  "\<lbrakk> p \<in> kernel_regions s; valid_uses s \<rbrakk> \<Longrightarrow> pptr_base \<le> p"
+  apply (rule user_region_canonical_pptr_base)
+   apply (simp add: valid_uses_def window_defs)
+   apply (erule_tac x=p in allE)
+   apply auto[1]
+  apply (simp add: valid_uses_def window_defs)
+  apply (erule_tac x=p in allE)
+  apply auto[1]
+  done
+
 lemma kernel_regions_in_mappings:
   "\<lbrakk> p \<in> kernel_regions s; valid_uses s \<rbrakk> \<Longrightarrow> p \<in> kernel_mappings"
+  apply (frule (1) kernel_regions_pptr_base)
   unfolding kernel_regions_def kernel_elf_window_def valid_uses_def kernel_device_window_def
             kernel_mappings_def kernel_window_def
   by (erule_tac x=p in allE) (auto simp: not_le canonical_below_pptr_base_canonical_user)
@@ -1743,7 +1757,6 @@ lemma pte_at_typ_at_lift:
 lemma valid_slots_typ_at:
   assumes x: "\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>"
   assumes y: "\<And>P. f \<lbrace> \<lambda>s. P (vs_lookup s) \<rbrace>"
-  assumes z: "\<And>P. f \<lbrace> \<lambda>s. P (user_region s) \<rbrace>"
   shows "\<lbrace>valid_slots m\<rbrace> f \<lbrace>\<lambda>rv. valid_slots m\<rbrace>"
   unfolding valid_slots_def
   apply (cases m; clarsimp)

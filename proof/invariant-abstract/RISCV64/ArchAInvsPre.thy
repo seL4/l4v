@@ -17,13 +17,12 @@ context Arch begin
 global_naming RISCV64
 
 lemma canonical_not_kernel_is_user:
-  "\<lbrakk> v \<notin> kernel_mappings; canonical_address v; valid_uses s \<rbrakk> \<Longrightarrow> v \<in> user_region s"
+  "\<lbrakk> v \<notin> kernel_mappings; canonical_address v \<rbrakk> \<Longrightarrow> v \<in> user_region "
   by (simp add: kernel_mappings_def not_le canonical_below_pptr_base_user)
 
 lemma no_user_region_kernel_mappings:
-  "\<lbrakk> p \<in> user_region s; p \<in> kernel_mappings; valid_uses s \<rbrakk> \<Longrightarrow> False"
-  using canonical_user_pptr_base
-  by (simp add: valid_uses_user_region_eq kernel_mappings_def)
+  "\<lbrakk> p \<in> user_region; p \<in> kernel_mappings \<rbrakk> \<Longrightarrow> False"
+  using kernel_mappings_user_region by blast
 
 lemma kernel_mappings_slots_eq:
   "canonical_address p \<Longrightarrow>
@@ -79,7 +78,7 @@ lemma pte_rights_of_kernel:
   apply (erule disjE; clarsimp)
    apply (subgoal_tac "is_aligned pt_ref pt_bits")
     prefer 2
-    apply (drule (3) vspace_for_asid_valid_pt)
+    apply (drule (2) vspace_for_asid_valid_pt)
     apply clarsimp
     apply (erule pspace_aligned_pts_ofD)
     apply simp
@@ -172,9 +171,9 @@ lemma is_aligned_ptrFromPAddr_n_eq:
 
 lemma some_get_page_info_umapsD:
   "\<lbrakk>get_page_info (aobjs_of s) pt_ref p = Some (b, a, attr, r);
-    \<exists>\<rhd> (max_pt_level, pt_ref) s; p \<in> user_region s; valid_vspace_objs s; pspace_aligned s;
+    \<exists>\<rhd> (max_pt_level, pt_ref) s; p \<in> user_region; valid_vspace_objs s; pspace_aligned s;
     canonical_address p;
-    valid_asid_table s; valid_objs s; valid_uses s\<rbrakk>
+    valid_asid_table s; valid_objs s\<rbrakk>
    \<Longrightarrow> \<exists>sz. pageBitsForSize sz = a \<and> is_aligned b a \<and> data_at sz (ptrFromPAddr b) s"
   apply (clarsimp simp: get_page_info_def vs_lookup_table_def)
   apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
@@ -190,7 +189,7 @@ lemma some_get_page_info_umapsD:
    apply (frule pspace_aligned_pts_ofD, fastforce)
    apply (drule_tac x="table_index (pt_slot_offset level pt_ptr' p)" in bspec)
    apply (clarsimp simp: table_index_offset_max_pt_level simp: kernel_mappings_slots_eq)
-   apply (erule (2) no_user_region_kernel_mappings)
+   apply (erule (1) no_user_region_kernel_mappings)
   apply (clarsimp simp: pte_of_def)
   apply (subgoal_tac "valid_pte level (PagePTE ppn attr r) s")
    prefer 2

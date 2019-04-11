@@ -280,7 +280,7 @@ definition
                 \<and> valid_pte level pte s
                 \<and> pte_ref pte = Some p' \<and> obj_refs (ArchObjectCap acap) = {p'}
                 \<and> (\<exists>ao. ko_at (ArchObj ao) p' s \<and> valid_vspace_obj (level-1) ao s)
-                \<and> vref \<in> user_region s) and
+                \<and> vref \<in> user_region) and
        K (is_PageTableCap acap \<and> cap_asid_arch acap \<noteq> None)
    | PageTableUnmap acap cslot \<Rightarrow>
        cte_wp_at (\<lambda>c. is_arch_diminished (ArchObjectCap acap) c) cslot and valid_arch_cap acap
@@ -1123,7 +1123,7 @@ crunch cte_wp_at [wp]: unmap_page "\<lambda>s. P (cte_wp_at P' p s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma reachable_page_table_not_global:
-  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); vref \<in> user_region s;
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); vref \<in> user_region;
       valid_kernel_mappings s; valid_vspace_objs s; valid_asid_table s\<rbrakk>
    \<Longrightarrow> p \<notin> (\<Union>level. riscv_global_pts (arch_state s) level)"
   apply clarsimp
@@ -1535,7 +1535,7 @@ lemma arch_state[simp]:
 (* FIXME RISCV: since empty_pt is wrong, this is only true for vref in user region;
                 we might also need something about kernel mappings, but maybe not for vs_lookup *)
 lemma vs_lookup_table:
-  "vref \<in> user_region s \<Longrightarrow>
+  "vref \<in> user_region \<Longrightarrow>
    vs_lookup_table level asid' vref s' =
      (if asid' = asid \<and> level = max_pt_level
       then Some (level, ptp)
@@ -1544,7 +1544,7 @@ lemma vs_lookup_table:
 
 (* FIXME RISCV: see above, statement might need tweak *)
 lemma vs_lookup_target:
-  "vref \<in> user_region s \<Longrightarrow>
+  "vref \<in> user_region \<Longrightarrow>
    vs_lookup_target level asid' vref s' =
      (if asid' = asid \<and> level = asid_pool_level
       then Some (level, ptp)
