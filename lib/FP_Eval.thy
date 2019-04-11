@@ -13,6 +13,7 @@
 theory FP_Eval
 imports
   HOL.HOL
+  "ml-helpers/TermPatternAntiquote"
 begin
 
 text \<open>
@@ -88,12 +89,12 @@ fun maybe_convert_eqn thm =
                as the default result of "?t \<equiv> ?t" isn't what we want *)
       if Thm.eq_thm_prop (thm, @{thm refl}) then SOME (bool_conv_True thm) else
       (case Thm.prop_of thm of
-           @{const Trueprop} $ (Const ("HOL.eq", _) $ _ $ _) =>
+           @{term_pat "Trueprop (_ = _)"} =>
              SOME (then_eq_reflection thm)
-         | @{const Trueprop} $ (Const ("HOL.Not", _) $ _) =>
+         | @{term_pat "Trueprop (\<not> _)"} =>
              SOME (bool_conv_False thm)
-         | Const ("Pure.eq", _) $ _ $ _ => SOME thm
-         | @{const Trueprop} $ _ =>
+         | @{term_pat "_ \<equiv> _"} => SOME thm
+         | @{term_pat "Trueprop _"} =>
              SOME (bool_conv_True thm)
          | _ => NONE);
 
@@ -129,9 +130,7 @@ val empty_rules : rules = Symtab.empty;
 (* Must be simple Pure.eq equations *)
 val net_from_eqns : thm list -> thm Net.net = fn eqns =>
       let fun lift_eqn eqn = (case Thm.prop_of eqn of
-                                  @{const Trueprop} $ (Const ("HOL.eq", _) $ _ $ _) =>
-                                    then_eq_reflection eqn
-                                | Const ("Pure.eq", _) $ _ $ _ => eqn
+                                  @{term_pat "_ \<equiv> _"} => eqn
                                 | _ => raise THM ("net_from_eqns: not a simple equation", 0, [eqn]));
            val eqns' = map lift_eqn eqns;
            fun insert eqn = Net.insert_term (K false) (Thm.term_of (Thm.lhs_of eqn), eqn);
@@ -178,8 +177,8 @@ fun process_cong cong_thm : string * int * int list =
       (* check concl and get LHS argument list *)
       val (concl_lhs, concl_rhs) =
         case Logic.strip_imp_concl (Thm.prop_of cong_thm) of
-            Const (@{const_name Pure.eq}, _) $ lhs $ rhs => (lhs, rhs)
-          | @{const Trueprop} $ (Const (@{const_name HOL.eq}, _) $ lhs $ rhs) => (lhs, rhs)
+            @{term_pat "?lhs \<equiv> ?rhs"} => (lhs, rhs)
+          | @{term_pat "Trueprop (?lhs = ?rhs)"} => (lhs, rhs)
           | concl => die "concl not a simple equality" [concl];
       val (cname, arg_pairs) = case apply2 strip_comb (concl_lhs, concl_rhs) of
               ((head as Const (cname, _), args1), (head' as Const (cname', _), args2)) =>
