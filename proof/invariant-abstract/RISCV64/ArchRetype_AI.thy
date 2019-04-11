@@ -491,28 +491,28 @@ lemma valid_vspace_obj_pres:
 lemma valid_vspace_objs':
   assumes va: "valid_vspace_objs s"
   shows "valid_vspace_objs s'"
-  sorry (* FIXME RISCV
 proof
-  fix level p ao
-  assume p: "\<exists>\<rhd> (level,p) s'"
-  assume "ko_at (ArchObj ao) p s'"
-  hence "ko_at (ArchObj ao) p s \<or> ArchObj ao = default_object ty dev us"
-    by (simp add: ps_def obj_at_def s'_def split: if_split_asm)
+  fix level p ao asid vref
+  assume p: "vs_lookup_table level asid (vref_for_level vref (level + 1)) s' = Some (level, p)"
+  assume vref: "vref \<in> user_region"
+  assume "aobjs_of s' p = Some ao"
+  hence "aobjs_of s p = Some ao \<or> ArchObj ao = default_object ty dev us"
+    by (simp add: ps_def obj_at_def s'_def in_opt_map_eq split: if_split_asm)
   moreover
   { assume "ArchObj ao = default_object ty dev us" with tyunt
     have "valid_vspace_obj level ao s'" by (rule valid_vspace_obj_default)
   }
   moreover
-  { assume "ko_at (ArchObj ao) p s"
-    with va p
+  { assume "aobjs_of s p = Some ao"
+    with va p vref
     have "valid_vspace_obj level ao s"
-      by (auto simp: vs_lookup_table' elim: valid_vspace_objsD)
+      by (auto simp: vs_lookup_table' vref_for_level_user_region elim: valid_vspace_objsD)
     hence "valid_vspace_obj level ao s'"
       by (rule valid_vspace_obj_pres)
   }
   ultimately
   show "valid_vspace_obj level ao s'" by blast
-qed *)
+qed
 
 
 sublocale retype_region_proofs_gen?: retype_region_proofs_gen
