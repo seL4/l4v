@@ -1392,6 +1392,10 @@ lemma pred_tcb_def2:
 (* sseefried: 'st_tcb_def2' only exists to make existing proofs go through. Can use 'pred_tcb_at_def2' instead *)
 lemmas st_tcb_def2 = pred_tcb_def2[where proj=itcb_state,simplified]
 
+lemma fold_is_tcb_obj_at[simp]:
+  "obj_at (\<lambda>ko. \<exists>t. ko = TCB t) p s = tcb_at p s"
+  by (clarsimp simp: is_tcb obj_at_def)
+
 lemma tcb_at_typ:
   "tcb_at = typ_at ATCB"
   apply (rule obj_at_eq_helper)
@@ -2561,8 +2565,6 @@ lemma tcb_at_st_tcb_at:
   "tcb_at = st_tcb_at (\<lambda>_. True)"
   apply (rule ext)+
   apply (simp add: tcb_at_def pred_tcb_at_def obj_at_def is_tcb_def)
-  apply (rule arg_cong [where f=Ex], rule ext)
-  apply (case_tac ko, simp_all)
   done
 
 lemma pred_tcb_at_tcb_at:
@@ -3490,18 +3492,20 @@ lemma ctable_vtable_neq [simp]:
   unfolding get_tcb_ctable_ptr_def get_tcb_vtable_ptr_def
   by simp
 
-lemma ep_at_typ_at:
-  "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>ep_at c\<rbrace> f \<lbrace>\<lambda>rv. ep_at c\<rbrace>"
+lemma ep_at_typ_at':
+  "f \<lbrace>\<lambda>s. P (typ_at AEndpoint p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (ep_at p s)\<rbrace>"
   by (simp add: ep_at_typ)
+lemmas ep_at_typ_at = ep_at_typ_at'[where P=id, simplified]
 
-lemma tcb_at_typ_at:
-  "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>tcb_at c\<rbrace> f \<lbrace>\<lambda>rv. tcb_at c\<rbrace>"
+lemma tcb_at_typ_at':
+  "f \<lbrace>\<lambda>s. P (typ_at ATCB p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (tcb_at p s)\<rbrace>"
   by (simp add: tcb_at_typ)
+lemmas tcb_at_typ_at = tcb_at_typ_at'[where P=id, simplified]
 
-lemma cap_table_at_typ_at:
-  "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>cap_table_at n c\<rbrace> f \<lbrace>\<lambda>rv. cap_table_at n c\<rbrace>"
+lemma cap_table_at_typ_at':
+  "f \<lbrace>\<lambda>s. P (typ_at (ACapTable n) p s)\<rbrace> \<Longrightarrow> f \<lbrace>\<lambda>s. P (cap_table_at n p s)\<rbrace>"
   by (simp add: cap_table_at_typ)
-
+lemmas cap_table_at_typ_at = cap_table_at_typ_at'[where P=id, simplified]
 
 lemmas abs_typ_at_lifts  =
   ep_at_typ_at ntfn_at_typ_at tcb_at_typ_at
@@ -3509,6 +3513,13 @@ lemmas abs_typ_at_lifts  =
   valid_tcb_state_typ valid_cte_at_typ valid_ntfn_typ valid_sc_typ
   valid_ep_typ valid_cs_typ valid_untyped_typ valid_reply_typ
   valid_tcb_typ valid_obj_typ valid_cap_typ valid_vspace_obj_typ
+
+lemma valid_bound_tcb_typ_at:
+  "\<forall>p. \<lbrace>\<lambda>s. typ_at ATCB p s\<rbrace> f \<lbrace>\<lambda>_ s. typ_at ATCB p s\<rbrace>
+   \<Longrightarrow> \<lbrace>\<lambda>s. valid_bound_tcb tcb s\<rbrace> f \<lbrace>\<lambda>_ s. valid_bound_tcb tcb s\<rbrace>"
+  apply (clarsimp simp: valid_bound_obj_def split: option.splits)
+  apply (wpsimp wp: hoare_vcg_all_lift tcb_at_typ_at static_imp_wp)
+  done
 
 lemma valid_idle_lift:
   assumes "\<And>P t. \<lbrace>idle_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. idle_tcb_at P t\<rbrace>"
@@ -4209,6 +4220,11 @@ lemma reply_sc_reply_atI:
 lemma
   shows ko_atI: "kheap s p = Some ko \<Longrightarrow> ko_at ko p s"
   and   ko_atD: "ko_at ko p s \<Longrightarrow> kheap s p = Some ko"
+  by (auto simp: obj_at_def)
+
+lemma
+  shows obj_atI: "kheap s p = Some ko \<and> P ko \<Longrightarrow> obj_at P p s"
+  and   obj_atD: "obj_at P p s \<Longrightarrow> \<exists>ko. kheap s p = Some ko \<and> P ko"
   by (auto simp: obj_at_def)
 
 lemma not_pred_tcb_at_strengthen:

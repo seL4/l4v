@@ -141,7 +141,7 @@ crunch valid_arch_state[wp]: init_arch_objects "valid_arch_state"
 
 lemmas init_arch_objects_valid_cap[wp] = valid_cap_typ [OF init_arch_objects_typ_at]
 
-lemmas init_arch_objects_cap_table[wp] = cap_table_at_lift_valid [OF init_arch_objects_typ_at]
+lemmas init_arch_objects_cap_table[wp] = cap_table_at_typ_at [OF init_arch_objects_typ_at]
 
 crunch device_state_inv[wp]: clearMemory "\<lambda>ms. P (device_state ms)"
   (wp: mapM_x_wp)

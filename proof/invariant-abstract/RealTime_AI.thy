@@ -1057,18 +1057,6 @@ lemma do_extended_op_empty_fail [simp]: (* move it elsewhere? *)
   by (fastforce simp: do_extended_op_def empty_fail_get mk_ef_def
                intro: empty_fail_bind empty_fail_select_f)
 
-(* FIXME: move *)
-lemma tcb_at_typ_at:
-  "\<lbrace>typ_at ATCB t\<rbrace> f \<lbrace>\<lambda>_. typ_at ATCB t\<rbrace> \<Longrightarrow> \<lbrace>tcb_at t\<rbrace> f \<lbrace>\<lambda>_. tcb_at t\<rbrace>"
-  by (simp add: tcb_at_typ)
-
-lemma valid_bound_tcb_typ_at:
-  "\<forall>p. \<lbrace>\<lambda>s. typ_at ATCB p s\<rbrace> f \<lbrace>\<lambda>_ s. typ_at ATCB p s\<rbrace>
-   \<Longrightarrow> \<lbrace>\<lambda>s. valid_bound_tcb tcb s\<rbrace> f \<lbrace>\<lambda>_ s. valid_bound_tcb tcb s\<rbrace>"
-  apply (clarsimp simp: valid_bound_obj_def split: option.splits)
-  apply (wpsimp wp: hoare_vcg_all_lift tcb_at_typ_at static_imp_wp)
-  done
-
 crunch typ_at[wp]: sched_context_unbind_yield_from, sched_context_unbind_tcb "\<lambda>s. P (typ_at T p s)"
   (wp: maybeM_inv crunch_wps ignore: get_ntfn_obj_ref)
 

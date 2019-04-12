@@ -1036,30 +1036,18 @@ lemma cap_swap_cte_at:
 
 context CNodeInv_AI begin
 
-crunch typ_at: rec_del "\<lambda>s::'state_ext state. P (typ_at T p s)"
+crunch typ_at[wp]: rec_del "\<lambda>s::'state_ext state. P (typ_at T p s)"
   (ignore: preemption_point wp: preemption_point_inv)
 
-lemma rec_del_cte_at:
-  "\<And>c call. \<lbrace>cte_at c :: 'state_ext state \<Rightarrow> bool\<rbrace> rec_del call \<lbrace>\<lambda>_. cte_at c\<rbrace>"
-  by (wp valid_cte_at_typ rec_del_typ_at)
+lemma rec_del_cte_at[wp]:
+  "rec_del call \<lbrace>cte_at c :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  by (wp valid_cte_at_typ)
+
+lemma rec_del_cap_table_at[wp]:
+  "rec_del call \<lbrace>cap_table_at bits c :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  by (wp cap_table_at_typ_at)
 
 end
-
-
-lemma dom_valid_cap[wp]:
-  "\<lbrace>valid_cap c\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_cap c\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
-  apply simp
-  done
-
-
-lemma dom_cte_at:
-  "\<lbrace>cte_at c\<rbrace> do_machine_op f \<lbrace>\<lambda>_. cte_at c\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
-  apply (simp add: cte_at_cases)
-  done
 
 
 lemma cnode_to_zombie_valid:
@@ -1075,9 +1063,6 @@ lemma tcb_to_zombie_valid:
   apply (simp add: valid_cap_def)
   apply (simp add: cap_aligned_def)
   done
-
-
-lemmas do_machine_op_cte_at [wp] = dom_cte_at
 
 
 declare set_cap_cte_at[wp]
@@ -2135,18 +2120,22 @@ lemma cap_delete_tcb[wp]:
   unfolding cap_delete_def
   by (simp add: tcb_at_typ | wp rec_del_typ_at)+
 
-lemma cap_delete_valid_cap:
+lemma cap_delete_valid_cap[wp]:
   "\<And>c p. \<lbrace>valid_cap c :: 'state_ext state \<Rightarrow> bool\<rbrace> cap_delete p \<lbrace>\<lambda>_. valid_cap c\<rbrace>"
   unfolding cap_delete_def
-  by (wp valid_cap_typ rec_del_typ_at | simp)+
+  by (wp valid_cap_typ | simp)+
 
-lemma cap_delete_cte_at:
+lemma cap_delete_cte_at[wp]:
   "\<And>c p. \<lbrace>cte_at c :: 'state_ext state \<Rightarrow> bool\<rbrace> cap_delete p \<lbrace>\<lambda>_. cte_at c\<rbrace>"
-  unfolding cap_delete_def by (wp rec_del_cte_at | simp)+
+  unfolding cap_delete_def by wpsimp
 
-lemma cap_delete_typ_at:
+lemma cap_delete_cap_table_at[wp]:
+  "cap_delete p \<lbrace>cap_table_at bits c :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  unfolding cap_delete_def by wpsimp
+
+lemma cap_delete_typ_at[wp]:
   "\<And>P T p cref. \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace> cap_delete cref \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  unfolding cap_delete_def by (wp rec_del_typ_at | simp)+
+  unfolding cap_delete_def by wpsimp
 
 end
 
@@ -2982,7 +2971,7 @@ lemma cap_move_src_slot_Null:
 crunch pred_tcb_at[wp]: cap_move "pred_tcb_at proj P t"
 
 lemmas (in CNodeInv_AI_5) cap_revoke_cap_table[wp]
-  = cap_table_at_lift_valid [OF cap_revoke_typ_at]
+  = cap_table_at_typ_at [OF cap_revoke_typ_at]
 
 lemmas appropriate_cte_cap_simps = appropriate_cte_cap_def [split_simps cap.split]
 

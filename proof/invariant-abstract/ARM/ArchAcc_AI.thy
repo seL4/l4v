@@ -328,7 +328,7 @@ lemma set_asid_pool_cur [wp]:
 lemma set_asid_pool_cur_tcb [wp]:
   "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> (set_asid_pool p a) \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
   unfolding cur_tcb_def
-  by (rule hoare_lift_Pf [where f=cur_thread]; wpsimp simp: set_object_def)
+  by (rule hoare_lift_Pf [where f=cur_thread]; wpsimp wp: tcb_at_typ_at)
 
 lemma set_asid_pool_cur_sc_tcb [wp]:
   "\<lbrace>\<lambda>s. cur_sc_tcb s\<rbrace> (set_asid_pool p a) \<lbrace>\<lambda>_ s. cur_sc_tcb s\<rbrace>"

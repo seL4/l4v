@@ -460,11 +460,10 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
    \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
   apply (wpsimp simp: do_ipc_transfer_def do_normal_transfer_def transfer_caps_def bind_assoc
                   wp: hoare_vcg_all_lift hoare_drop_imps)+
-         apply (subst ball_conj_distrib)
-         apply (wpsimp wp: get_rs_cte_at2 thread_get_wp static_imp_wp grs_distinct
-                           hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift
-                     simp: obj_at_def is_tcb_def)+
-  apply (simp split: kernel_object.split_asm)
+          apply (subst ball_conj_distrib)
+          apply (wpsimp wp: get_rs_cte_at2 thread_get_wp static_imp_wp grs_distinct
+                            hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift
+                      simp: obj_at_def is_tcb_def)+
   done
 
 crunch state_hyp_refs_of[wp, Ipc_AI_cont_assms]: do_ipc_transfer "\<lambda> s. P (state_hyp_refs_of s)"

@@ -547,7 +547,7 @@ lemma rec_del_invs'':
   notes Inr_in_liftE_simp[simp del]
   assumes set_cap_Q[wp]: "\<And>cap p. \<lbrace>Q and invs\<rbrace> set_cap cap p \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes empty_slot_Q[wp]: "\<And>slot free_irq. \<lbrace>Q and invs\<rbrace> empty_slot slot free_irq\<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes finalise_cap_Q[wp]: "\<And>cap final. \<lbrace>Q and invs\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_.Q\<rbrace>"
+  assumes finalise_cap_Q[wp]: "\<And>cap final. \<lbrace>Q and (\<lambda>s. \<exists>slot. cte_wp_at ((=) cap) slot s) and invs\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes cap_swap_for_delete_Q[wp]: "\<And>a b. \<lbrace>Q and invs and cte_at a and cte_at b and K (a \<noteq> b)\<rbrace>
                                               cap_swap_for_delete a b
                                              \<lbrace>\<lambda>_.Q\<rbrace>"
@@ -651,6 +651,9 @@ next
     apply (clarsimp simp: cte_wp_at_eq_simp)
     apply (rule conjI)
      apply (clarsimp simp: cte_wp_at_caps_of_state replaceable_def)
+    apply clarsimp
+    apply (rule conjI)
+     apply (metis prod.exhaust)
     apply (frule cte_wp_at_valid_objs_valid_cap, clarsimp+)
     apply (frule invs_valid_asid_table)
     apply (frule invs_sym_refs)

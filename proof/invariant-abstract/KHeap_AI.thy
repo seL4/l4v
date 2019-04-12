@@ -1758,14 +1758,8 @@ crunch irq_node[wp]: set_simple_ko "\<lambda>s. P (interrupt_irq_node s)"
 lemmas hoare_use_eq_irq_node = hoare_use_eq[where f=interrupt_irq_node]
 
 
-lemma cap_table_at_lift_valid:
-  "\<lbrakk> \<And>T. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace> \<rbrakk>
-       \<Longrightarrow> \<lbrace>cap_table_at n p\<rbrace> f \<lbrace>\<lambda>rv. cap_table_at n p\<rbrace>"
-  by (simp add: cap_table_at_typ)
-
-
 lemmas cap_table_at_lift_irq =
-  hoare_use_eq_irq_node [OF _ cap_table_at_lift_valid]
+  hoare_use_eq_irq_node [OF _ cap_table_at_typ_at]
 
 
 crunch interrupt_states[wp]: set_notification "\<lambda>s. P (interrupt_states s)"

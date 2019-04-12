@@ -909,12 +909,12 @@ lemma sched_context_resume_typ_at[wp]:
   by (wpsimp simp: sched_context_resume_def
       wp: get_sched_context_wp hoare_vcg_if_lift2 hoare_drop_imp)
 
-
 crunch invs[wp]: set_message_info invs
+
 crunches set_message_info, sched_context_update_consumed, unbind_from_sc
- for tcb_at[wp]: "tcb_at t"
- and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
-  (wp: crunch_wps get_object_wp maybeM_inv hoare_drop_imps simp: crunch_simps)
+  for tcb_at[wp]: "\<lambda>s. P (tcb_at p s)"
+  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  (wp: crunch_wps tcb_at_typ_at' maybeM_inv simp: crunch_simps)
 
 lemma set_sched_context_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. tcb_at (cur_thread s) s\<rbrace> set_sched_context p sc \<lbrace>\<lambda>rv s. tcb_at (cur_thread s) s\<rbrace>"
@@ -1490,7 +1490,7 @@ lemma postpone_invs[wp]:
 
 lemma sched_context_resume_invs[wp]:
   "\<lbrace>invs\<rbrace> sched_context_resume scptr \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (wpsimp simp: sched_context_resume_def get_tcb_queue_def get_sc_obj_ref_def is_schedulable_def
+  by (wpsimp simp: sched_context_resume_def get_tcb_queue_def get_sc_obj_ref_def is_schedulable_def is_tcb
        wp: hoare_vcg_if_lift2 get_refills_wp hoare_vcg_all_lift get_sched_context_wp thread_get_wp)
 
 lemma refill_add_tail_invs[wp]:

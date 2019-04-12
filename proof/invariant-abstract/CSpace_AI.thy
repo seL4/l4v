@@ -4298,34 +4298,6 @@ lemma set_cap_cns_of_heap[wp]:
   apply (clarsimp simp add: valid_def in_monad obj_at_def)
   done
 
-
-lemma of_nat_ucast:
-  "is_down (ucast :: ('a :: len) word \<Rightarrow> ('b :: len) word)
-    \<Longrightarrow> (of_nat n :: 'b word) = ucast (of_nat n :: 'a word)"
-  apply (subst word_unat.inverse_norm)
-  apply (simp add: ucast_def word_of_int[symmetric]
-                   of_nat_nat[symmetric] unat_def[symmetric])
-  apply (simp add: unat_of_nat)
-  apply (rule nat_int.Rep_eqD)
-  apply (simp only: zmod_int)
-  apply (rule mod_mod_cancel)
-  apply (simp add: dvd_power_same)
-  apply (rule le_imp_power_dvd)
-  apply (simp add: is_down_def target_size_def source_size_def word_size)
-  done
-
-
-crunch idle[wp]: set_cap "valid_idle"
-
-
-lemma tcb_at_st_tcb_at: "tcb_at = st_tcb_at \<top>"
-  apply (rule ext)+
-  apply (simp add: tcb_at_def pred_tcb_at_def obj_at_def is_tcb_def)
-  apply (rule arg_cong[where f=Ex], rule ext)
-  apply (case_tac ko, simp_all)
-  done
-
-
 lemma appropriate_cte_cap_def2:
   "appropriate_cte_cap cap cte_cap =
     (cap = NullCap
@@ -4341,10 +4313,6 @@ by (rule ext) (simp add: bind_def split_def set_cap_def set_original_def
                    simpler_gets_def simpler_modify_def
                    assert_def return_def fail_def
                  split: Structures_A.kernel_object.splits)
-
-
-
-
 
 context CSpace_AI begin
 

@@ -2112,13 +2112,13 @@ lemma syt_invs_minor:
             dest!: state_refs_of_elemD)
   done
 
-lemma thread_set_valid_cap:
-  shows "\<lbrace>valid_cap c\<rbrace> thread_set t p \<lbrace>\<lambda>rv. valid_cap c\<rbrace>"
+lemma thread_set_valid_cap[wp]:
+  "\<lbrace>valid_cap c\<rbrace> thread_set t p \<lbrace>\<lambda>rv. valid_cap c\<rbrace>"
   by (wp valid_cap_typ)
 
 
-lemma thread_set_cte_at:
-  shows "\<lbrace>cte_at c\<rbrace> thread_set t p \<lbrace>\<lambda>rv. cte_at c\<rbrace>"
+lemma thread_set_cte_at[wp]:
+  "\<lbrace>cte_at c\<rbrace> thread_set t p \<lbrace>\<lambda>rv. cte_at c\<rbrace>"
   by (wp valid_cte_at_typ)
 
 
@@ -2497,7 +2497,7 @@ lemma thread_set_domain_if_unsafe_then_cap[wp]:
 lemma thread_set_domain_valid_irq_node[wp]:
   "thread_set_domain t d \<lbrace>valid_irq_node\<rbrace>"
   apply (wpsimp simp: valid_irq_node_def wp: hoare_vcg_all_lift)
-   apply (rule hoare_lift_Pf[where f="interrupt_irq_node"]; wp)
+   apply (rule hoare_lift_Pf[where f="interrupt_irq_node"]; wp cap_table_at_typ_at)
   apply simp
   done
 
@@ -2603,7 +2603,7 @@ lemma thread_set_priority_if_unsafe_then_cap[wp]:
 lemma thread_set_priority_valid_irq_node[wp]:
   "thread_set_priority t d \<lbrace>valid_irq_node\<rbrace>"
   apply (wpsimp simp: valid_irq_node_def wp: hoare_vcg_all_lift)
-   apply (rule hoare_lift_Pf[where f="interrupt_irq_node"]; wp)
+   apply (rule hoare_lift_Pf[where f="interrupt_irq_node"]; wp cap_table_at_typ_at)
   apply simp
   done
 

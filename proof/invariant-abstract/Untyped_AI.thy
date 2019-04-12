@@ -1264,7 +1264,7 @@ crunch typ_at[wp]: create_cap "\<lambda>s. P (typ_at T p s)"
   (simp: crunch_simps)
 
 lemmas create_cap_cap_table_at[wp] =
-    cap_table_at_lift_valid [OF create_cap_typ_at]
+    cap_table_at_typ_at [OF create_cap_typ_at]
 
 lemma retype_region_invs_extras:
   "\<lbrace>invs and pspace_no_overlap_range_cover ptr sz and caps_no_overlap ptr sz
@@ -2675,7 +2675,7 @@ lemma set_untyped_cap_invs_simple:
    apply (simp add:valid_irq_node_def)
    apply wps
    apply (wp hoare_vcg_all_lift set_cap_irq_handlers
-     set_cap_irq_handlers cap_table_at_lift_valid set_cap_ioports'
+     set_cap_irq_handlers cap_table_at_typ_at set_cap_ioports'
      set_cap_typ_at set_cap_valid_arch_caps_simple set_cap_kernel_window_simple
      set_cap_cap_refs_respects_device_region)
   apply (clarsimp simp del: split_paired_Ex)
@@ -3854,7 +3854,7 @@ lemma sts_ex_cap[wp]:
   by (wp ex_cte_cap_to_pres)
 
 lemmas sts_real_cte_at[wp] =
-    cap_table_at_lift_valid [OF set_thread_state_typ_at]
+    cap_table_at_typ_at [OF set_thread_state_typ_at]
 
 lemma sts_valid_untyped_inv[wp]:
   "\<lbrace>valid_untyped_inv ui\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_untyped_inv ui\<rbrace>"

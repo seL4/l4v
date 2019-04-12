@@ -15,7 +15,7 @@ begin
 context begin interpretation Arch .
 
 requalify_facts
-  arch_derive_is_arch
+  arch_derive_is_arch rec_del_invs''
 
 end
 
@@ -469,6 +469,90 @@ lemma no_cap_to_obj_with_diff_ref_ran_caps_form:
   apply auto
   done
 
+context Tcb_AI_1 begin
+
+primrec
+  tcb_inv_wf'  :: "tcb_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "tcb_inv_wf' (tcb_invocation.Suspend t)
+             = (tcb_at t and ex_nonz_cap_to t)"
+| "tcb_inv_wf' (tcb_invocation.Resume t)
+             = (tcb_at t and ex_nonz_cap_to t)"
+| "tcb_inv_wf' (tcb_invocation.ThreadControl t sl fh th mcp pr croot vroot buf sc)
+             = (tcb_at t and case_option \<top> (valid_cap \<circ> fst) croot
+                        and K (case_option True (is_cnode_cap \<circ> fst) croot)
+                        and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) croot
+                        and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) croot
+                        and case_option \<top> (valid_cap \<circ> fst) vroot
+                        and K (case_option True (is_valid_vtable_root \<circ> fst) vroot)
+                        and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) vroot
+                        and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) vroot
+                        and case_option \<top> (valid_cap \<circ> fst) fh
+                        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) fh)
+                        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
+                        and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) fh
+                        and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) fh
+                        and case_option \<top> (valid_cap \<circ> fst) th
+                        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) th)
+                        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) th
+                        and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) th
+                        and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) th
+                        and (case_option \<top> (case_option \<top> (valid_cap o fst) o snd) buf)
+                        and (case_option \<top> (case_option \<top>
+                              (no_cap_to_obj_dr_emp o fst) o snd) buf)
+                        and K (case_option True ((\<lambda>v. is_aligned v msg_align_bits) o fst) buf)
+                        and K (case_option True (\<lambda>v. case_option True
+                               ((swp valid_ipc_buffer_cap (fst v)
+                                    and is_arch_cap and is_cnode_or_valid_arch)
+                                              o fst) (snd v)) buf)
+                        and (case_option \<top> (case_option \<top> ((cte_at And ex_cte_cap_to) o snd) o snd) buf)
+                        and (\<lambda>s. {croot, vroot, option_map undefined buf} \<noteq> {None}
+                                    \<longrightarrow> cte_at sl s \<and> ex_cte_cap_to sl s)
+                        and (case_option \<top> (case_option \<top> (\<lambda>sc. bound_sc_tcb_at ((=) None) t and ex_nonz_cap_to sc
+                                                             and sc_tcb_sc_at ((=) None) sc)) sc)
+                        and ex_nonz_cap_to t)"
+| "tcb_inv_wf' (tcb_invocation.ReadRegisters src susp n arch)
+             = (tcb_at src and ex_nonz_cap_to src)"
+| "tcb_inv_wf' (tcb_invocation.WriteRegisters dest resume values arch)
+             = (tcb_at dest and ex_nonz_cap_to dest)"
+| "tcb_inv_wf' (tcb_invocation.CopyRegisters dest src suspend_source resume_target
+                 trans_frame trans_int trans_arch)
+             = (tcb_at dest and tcb_at src and ex_nonz_cap_to src and
+                ex_nonz_cap_to dest)"
+| "tcb_inv_wf' (NotificationControl t ntfn)
+             = (tcb_at t and ex_nonz_cap_to t
+                  and (case ntfn of None \<Rightarrow> \<top>
+                          | Some ntfnptr \<Rightarrow> (obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn
+                                                \<and> (ntfn_bound_tcb ntfn = None)
+                                                \<and> (\<forall>q. ntfn_obj ntfn \<noteq> WaitingNtfn q)) ntfnptr
+                                          and ex_nonz_cap_to ntfnptr
+                                          and bound_tcb_at ((=) None) t) ))"
+| "tcb_inv_wf' (SetTLSBase t tls_base) = (tcb_at t and ex_nonz_cap_to t)"
+
+fun
+  tcb_inv_wf  :: "tcb_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "tcb_inv_wf (tcb_invocation.ThreadControl t sl fh th mcp pr croot vroot buf sc)
+             = (tcb_inv_wf' (tcb_invocation.ThreadControl t sl fh th mcp pr croot vroot buf sc) 
+                        \<comment> \<open>NOTE: The auth TCB does not really belong in the tcb_invocation
+                        type, and is only included so that we can assert here that the
+                        priority we are setting is bounded by the MCP of some auth TCB.
+                        Unfortunately, current proofs about the decode functions throw
+                        away the knowledge that the auth TCB actually came from the
+                        current thread's c-space, so this is not as strong an assertion as
+                        we would like. Ideally, we would assert that there is some cap in
+                        the current thread's c-space that is to a TCB whose MCP validates
+                        the priority we are setting. We don't care which TCB is used as
+                        the auth TCB; we only care that there exists some auth TCB
+                        accessible from the current thread's c-space. Phrased that way, we
+                        could drop the auth TCB from tcb_invocation. For now, we leave
+                        this as future work.\<close>
+                        and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) auth s) pr)
+                        and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp))"
+| "tcb_inv_wf invocation = (tcb_inv_wf' invocation)"
+
+end
+
 locale Tcb_AI = Tcb_AI_1 state_ext_t is_cnode_or_valid_arch
   for state_ext_t :: "'state_ext::state_ext itself"
   and is_cnode_or_valid_arch :: "cap \<Rightarrow> bool" +
@@ -476,50 +560,18 @@ locale Tcb_AI = Tcb_AI_1 state_ext_t is_cnode_or_valid_arch
   "\<And>cap slot. \<lbrace>(no_cap_to_obj_dr_emp cap::'state_ext state \<Rightarrow> bool)\<rbrace>
      cap_delete slot
    \<lbrace>\<lambda>rv. no_cap_to_obj_dr_emp cap\<rbrace>"
+  assumes install_tcb_cap_no_cap_to_obj_dr_emp[wp]:
+  "\<And>cap target slot n slot_opt.
+    \<lbrace>no_cap_to_obj_dr_emp cap and
+     (\<lambda>s. \<forall>new_cap src_slot. slot_opt = Some (new_cap, src_slot)
+                           \<longrightarrow> no_cap_to_obj_dr_emp new_cap s)\<rbrace>
+    install_tcb_cap target slot n slot_opt
+    \<lbrace>\<lambda>_. no_cap_to_obj_dr_emp cap\<rbrace>"
   assumes tc_invs:
-  "\<And>a e f g fh th mcp sl pr sc.
-    \<lbrace>(invs::'state_ext state \<Rightarrow> bool) and tcb_at a and ex_nonz_cap_to a
-        and (case_option \<top> (valid_cap o fst) e)
-        and (case_option \<top> (valid_cap o fst) f)
-        and (case_option \<top> (valid_cap o fst) fh)
-        and (case_option \<top> (valid_cap o fst) th)
-        and (case_option \<top> (case_option \<top> (valid_cap o fst) o snd) g)
-        and (case_option \<top> (cte_at o snd) e)
-        and (case_option \<top> (cte_at o snd) f)
-        and (case_option \<top> (real_cte_at o snd) fh)
-        and (case_option \<top> (real_cte_at o snd) th)
-        and (case_option \<top> (case_option \<top> (cte_at o snd) o snd) g)
-        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) e)
-        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) f)
-        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) fh)
-        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) th)
-        and (case_option \<top> (case_option \<top> (no_cap_to_obj_dr_emp o fst) o snd) g)
-        (* NOTE: The auth TCB does not really belong in the tcb_invocation type, and
-          is only included so that we can assert here that the priority we are setting is
-          bounded by the MCP of some auth TCB. Unfortunately, current proofs about the
-          decode functions throw away the knowledge that the auth TCB actually came from
-          the current thread's c-space, so this is not as strong an assertion as we would
-          like. Ideally, we would assert that there is some cap in the current thread's
-          c-space that is to a TCB whose MCP validates the priority we are setting. We
-          don't care which TCB is used as the auth TCB; we only care that there exists
-          some auth TCB accessible from the current thread's c-space. Phrased that way,
-          we could drop the auth TCB from tcb_invocation. For now, we leave this as
-          future work.*)
-        and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) auth s) pr)
-        and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp)
-        and (case_option \<top> (case_option \<top> (\<lambda>sc. bound_sc_tcb_at ((=) None) a and ex_nonz_cap_to sc
-                                             and sc_tcb_sc_at ((=) None) sc)) sc)
-        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
-        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) th
-        and K (case_option True (is_cnode_cap o fst) e)
-        and K (case_option True (is_valid_vtable_root o fst) f)
-        and K (case_option True (\<lambda>v. case_option True
-                           ((swp valid_ipc_buffer_cap (fst v)
-                              and is_arch_cap and is_cnode_or_valid_arch)
-                                 o fst) (snd v)) g)
-        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) fh)
-        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) th)\<rbrace>
-      invoke_tcb (ThreadControl a sl fh th mcp pr e f g sc)
+  "\<And>t croot vroot buf fh th mcp sl pr sc.
+    \<lbrace>(invs::'state_ext state \<Rightarrow> bool)
+      and tcb_inv_wf (ThreadControl t sl fh th mcp pr croot vroot buf sc)\<rbrace>
+      invoke_tcb (ThreadControl t sl fh th mcp pr croot vroot buf sc)
     \<lbrace>\<lambda>rv. invs\<rbrace>"  (* need more on sc, fh and th *)
   assumes decode_set_ipc_inv[wp]:
   "\<And>P args cap slot excaps.
@@ -671,7 +723,7 @@ lemma update_mcpriority_valid_tcb[simp]:
 lemma set_mcpriority_valid_objs[wp]:
   "\<lbrace>invs\<rbrace> set_mcpriority t x \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   unfolding set_mcpriority_def
-  apply (wp thread_set_cte_at thread_set_valid_objs')
+  apply (wp thread_set_valid_objs')
   apply (simp add: Invariants_AI.invs_valid_objs)
   done
 
@@ -706,69 +758,99 @@ lemma set_mcpriority_invs[wp]:
       | rule conjI
       | erule disjE)+
 
-context Tcb_AI begin
+lemma as_user_valid_cap[wp]:
+  "\<lbrace>valid_cap c\<rbrace> as_user a b \<lbrace>\<lambda>rv. valid_cap c\<rbrace>"
+  by (wp valid_cap_typ)
 
-primrec
-  tcb_inv_wf  :: "tcb_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "tcb_inv_wf (tcb_invocation.Suspend t)
-             = (tcb_at t and ex_nonz_cap_to t)"
-| "tcb_inv_wf (tcb_invocation.Resume t)
-             = (tcb_at t and ex_nonz_cap_to t)"
-| "tcb_inv_wf (tcb_invocation.ThreadControl t sl fh th mcp pr croot vroot buf sc)
-             = (tcb_at t and case_option \<top> (valid_cap \<circ> fst) croot
-                        and K (case_option True (is_cnode_cap \<circ> fst) croot)
-                        and case_option \<top> ((cte_at And ex_cte_cap_to) \<circ> snd) croot
-                        and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) croot
-                        and K (case_option True (is_valid_vtable_root \<circ> fst) vroot)
-                        and case_option \<top> (valid_cap \<circ> fst) vroot
-                        and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) vroot
-                        and case_option \<top> ((cte_at And ex_cte_cap_to) \<circ> snd) vroot
-                        and case_option \<top> (valid_cap \<circ> fst) fh
-                        and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) fh
-                        and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) fh
-                        and case_option \<top> (valid_cap \<circ> fst) th
-                        and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) th
-                        and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) th
-                        and (case_option \<top> (case_option \<top> (valid_cap o fst) o snd) buf)
-                        and (case_option \<top> (case_option \<top>
-                              (no_cap_to_obj_dr_emp o fst) o snd) buf)
-                        and K (case_option True ((\<lambda>v. is_aligned v msg_align_bits) o fst) buf)
-                        and K (case_option True (\<lambda>v. case_option True
-                               ((swp valid_ipc_buffer_cap (fst v)
-                                    and is_arch_cap and is_cnode_or_valid_arch)
-                                              o fst) (snd v)) buf)
-                        and (case_option \<top> (case_option \<top> ((cte_at And ex_cte_cap_to) o snd) o snd) buf)
-                        and (\<lambda>s. {croot, vroot, option_map undefined buf} \<noteq> {None}
-                                    \<longrightarrow> cte_at sl s \<and> ex_cte_cap_to sl s)
-                        and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) auth s) pr)
-                        and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp)
-                        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) fh)
-                        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
-                        and K (case_option True ((is_ep_cap or ((=) NullCap)) o fst) th)
-                        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) th
-                        and (case_option \<top> (case_option \<top> (\<lambda>sc. bound_sc_tcb_at ((=) None) t and ex_nonz_cap_to sc
-                                                             and sc_tcb_sc_at ((=) None) sc)) sc)
-                        and ex_nonz_cap_to t)"
-| "tcb_inv_wf (tcb_invocation.ReadRegisters src susp n arch)
-             = (tcb_at src and ex_nonz_cap_to src)"
-| "tcb_inv_wf (tcb_invocation.WriteRegisters dest resume values arch)
-             = (tcb_at dest and ex_nonz_cap_to dest)"
-| "tcb_inv_wf (tcb_invocation.CopyRegisters dest src suspend_source resume_target
-                 trans_frame trans_int trans_arch)
-             = (tcb_at dest and tcb_at src and ex_nonz_cap_to src and
-                ex_nonz_cap_to dest)"
-| "tcb_inv_wf (NotificationControl t ntfn)
-             = (tcb_at t and ex_nonz_cap_to t
-                  and (case ntfn of None \<Rightarrow> \<top>
-                          | Some ntfnptr \<Rightarrow> (obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn
-                                                \<and> (ntfn_bound_tcb ntfn = None)
-                                                \<and> (\<forall>q. ntfn_obj ntfn \<noteq> WaitingNtfn q)) ntfnptr
-                                          and ex_nonz_cap_to ntfnptr
-                                          and bound_tcb_at ((=) None) t) ))"
-| "tcb_inv_wf (SetTLSBase t tls_base) = (tcb_at t and ex_nonz_cap_to t)"
+crunches sched_context_unbind_tcb, sched_context_bind_tcb
+  for valid_cap[wp]: "valid_cap c"
+  and cte_wp_at[wp]: "cte_wp_at P p"
+  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
+  and no_cap_to_obj_with_diff_ref[wp]: "no_cap_to_obj_with_diff_ref c S"
+  (rule: abs_typ_at_lifts no_cap_to_obj_with_diff_ref_lift
+   ignore: set_tcb_obj_ref)
 
-end
+schematic_goal rec_del_CTEDeleteCall:
+  "rec_del (CTEDeleteCall slot True) = ?X"
+  by (rule ext) simp
+
+schematic_goal rec_del_FinaliseSlot:
+  "rec_del (FinaliseSlotCall slot True) = ?X"
+  by (rule ext) simp
+
+lemma finalise_cap_ep:
+  "\<lbrace>cte_wp_at P p and K (slot \<noteq> p \<and> is_ep_cap cap)\<rbrace>
+  finalise_cap cap is_final \<lbrace>\<lambda>rv s. cte_wp_at P p s \<and> fst rv = NullCap \<and> slot \<noteq> p\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (clarsimp simp: is_cap_simps)
+  apply (wpsimp simp: comp_def)
+  done
+
+lemma cap_delete_ep:
+  "\<lbrace>cte_wp_at (\<lambda>c. is_ep_cap c \<or> c = NullCap) slot and cte_wp_at P p and K (slot \<noteq> p)\<rbrace>
+    cap_delete slot
+   \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>, -"
+  apply (simp add: cap_delete_def rec_del_CTEDeleteCall)
+  apply (subst rec_del_FinaliseSlot)
+  apply (simp cong: if_cong)
+  apply (wp empty_slot_cte_wp_elsewhere|wpc)+
+       apply (rule hoare_FalseE_R) (* `else` case will not be taken *)
+      apply wpsimp+
+     apply (rule hoare_strengthen_post, rule finalise_cap_ep[where P=P and p=p and slot=slot], clarsimp)
+    apply (wpsimp wp: get_cap_wp)+
+  apply (simp add: cte_wp_at_caps_of_state)
+  done
+
+lemma checked_insert_cte_wp_at_weak:
+  "\<lbrace>cte_wp_at P p and K (p \<noteq> (target, ref) \<and> (\<forall>c. P c \<longrightarrow> \<not>is_untyped_cap c))\<rbrace>
+     check_cap_at new_cap src_slot
+      (check_cap_at (cap.ThreadCap target) slot
+       (cap_insert new_cap src_slot (target, ref))) \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (wpsimp wp: get_cap_wp cap_insert_weak_cte_wp_at2 simp: check_cap_at_def)
+  done
+
+lemma install_tcb_cap_cte_wp_at_ep:
+  "\<lbrace>cte_wp_at (\<lambda>c. is_ep_cap c \<or> c = NullCap) (target, tcb_cnode_index n) and cte_wp_at P p and
+    K (p \<noteq> (target, tcb_cnode_index n) \<and> (\<forall>c. P c \<longrightarrow> \<not>is_untyped_cap c))\<rbrace>
+   install_tcb_cap target slot n slot_opt
+   \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>, -"
+  apply (simp add: install_tcb_cap_def)
+  by (wpsimp wp: checked_insert_cte_wp_at_weak cap_delete_ep)
+
+lemma tcb_ep_slot_cte_wp_at:
+  "\<lbrakk> invs s; tcb_at t s; slot = 3 \<or> slot = 4 \<rbrakk> \<Longrightarrow>
+  cte_wp_at (\<lambda>c. is_ep_cap c \<or> c = NullCap) (t, tcb_cnode_index slot) s"
+  apply (rule pred_tcb_cap_wp_at)
+     apply (fastforce simp: tcb_at_st_tcb_at tcb_at_typ[symmetric])
+    apply fastforce
+   apply (fastforce simp: tcb_cap_cases_def)
+  apply (fastforce simp: tcb_cap_valid_def st_tcb_at_def obj_at_def is_tcb)
+  done
+
+lemmas tcb_ep_slot_cte_wp_ats =
+  tcb_ep_slot_cte_wp_at[where slot=3, simplified]
+  tcb_ep_slot_cte_wp_at[where slot=4, simplified]
+
+lemma tcb_cap_valid_ep_strgs:
+  "is_ep_cap cap \<or> NullCap = cap \<longrightarrow> tcb_cap_valid cap (t, tcb_cnode_index 3) s"
+  "is_ep_cap cap \<or> NullCap = cap \<longrightarrow> tcb_cap_valid cap (t, tcb_cnode_index 4) s"
+  by (auto simp: tcb_cap_valid_def st_tcb_at_def obj_at_def is_tcb)
+
+crunches install_tcb_cap
+  for valid_cap[wp]: "valid_cap cap"
+  and cte_at[wp]: "cte_at p"
+  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  (wp: check_cap_inv)
+
+crunch typ_at[wp]: reorder_ntfn, reorder_ep, set_priority "\<lambda>s. P (typ_at T p s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunches
+  install_tcb_cap, sched_context_unbind_tcb, sched_context_bind_tcb, set_priority, thread_set
+  for cap_table_at[wp]: "cap_table_at bits p"
+  and tcb_at[wp]: "\<lambda>s. P (tcb_at p s)"
+  (wp: cap_table_at_typ_at tcb_at_typ_at' crunch_wps)
 
 crunch ex_nonz_cap_to[wp]: unbind_notification "ex_nonz_cap_to t"
  (wp: maybeM_inv ignore: set_tcb_obj_ref)
@@ -1186,7 +1268,7 @@ lemma (in Tcb_AI) decode_cv_space_wf[wp]:
   "\<lbrace>(invs::'state_ext state\<Rightarrow>bool)
           and tcb_at t and cte_at slot and ex_cte_cap_to slot
           and ex_nonz_cap_to t
-          and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> fst x \<and> cte_at (snd x) s
+          and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> fst x \<and> real_cte_at (snd x) s
                           \<and> ex_cte_cap_to (snd x) s
                           \<and> no_cap_to_obj_dr_emp (fst x) s)
           and K (2 \<le> length args \<and> 2 \<le> length extras)\<rbrace>
@@ -1267,7 +1349,7 @@ lemma decode_tcb_conf_wf[wp]:
   "\<lbrace>(invs::'state_ext state\<Rightarrow>bool)
          and tcb_at t and cte_at slot and ex_cte_cap_to slot
          and ex_nonz_cap_to t
-         and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> fst x \<and> cte_at (snd x) s
+         and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> fst x \<and> real_cte_at (snd x) s
                                  \<and> ex_cte_cap_to (snd x) s
                                  \<and> t \<noteq> fst (snd x)
                                  \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
@@ -1280,7 +1362,7 @@ lemma decode_tcb_conf_wf[wp]:
                                \<and> thread_control_target set_space = t
                                \<and> cte_at slot s \<and> ex_cte_cap_to slot s"
                   in hoare_post_imp_R)
-       apply (wpsimp simp: is_thread_control_def2)+
+       apply (wpsimp simp: is_thread_control_def2 real_cte_at_cte)+
   done
 
 lemma decode_tcb_conf_inv[wp]:
@@ -1464,21 +1546,41 @@ lemma tcb_not_in_state_refs_of_tcb:
   apply (simp split: option.splits)
   done
 
+lemma set_mcpriority_mc_priority_tcb_at_cases:
+  "\<lbrace>\<lambda>s. (t = t' \<longrightarrow> P a) \<and> (t \<noteq> t' \<longrightarrow> mcpriority_tcb_at P t' s)\<rbrace>
+   set_mcpriority t a
+   \<lbrace>\<lambda>rv. mcpriority_tcb_at P t'\<rbrace>"
+  by (wpsimp simp: set_mcpriority_def thread_set_def wp: set_object_wp)
+     (fastforce simp: get_tcb_ko_at pred_tcb_at_def obj_at_def is_tcb)
+
 lemma tcb_cap_cases_tcb_mcpriority:
   "\<forall>(getF, v)\<in>ran tcb_cap_cases.
          getF (tcb_mcpriority_update F tcb) = getF tcb"
   by (rule ball_tcb_cap_casesI, simp+)
 
-crunch tcb_at[wp]: set_mcpriority "tcb_at r"
+crunches set_mcpriority
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  and tcb_at[wp]: "\<lambda>s. P (tcb_at p s)"
+  and cap_table_at[wp]: "cap_table_at bits p"
+  and cte_wp_at[wp]: "cte_wp_at P p"
+  and ex_nonz_cap_to[wp]: "ex_nonz_cap_to ref"
+  and ct_in_state[wp]: "ct_in_state P"
+  and sc_tcb_sc_at[wp]: "sc_tcb_sc_at P scptr"
+  (wp: thread_set_cte_wp_at_trivial thread_set_cap_to tcb_at_typ_at
+   simp: ran_tcb_cap_cases)
+
+lemma set_mcpriority_st_tcb_at[wp]:
+  "\<lbrace>st_tcb_at P t\<rbrace> set_mcpriority target a \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+  unfolding set_mcpriority_def
+  apply (wpsimp wp: thread_set_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
+  done
 
 lemma set_mcpriority_no_cap_to_obj_with_diff_ref[wp]:
   "\<lbrace>no_cap_to_obj_with_diff_ref c S\<rbrace> set_mcpriority t mcp \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref c S\<rbrace>"
   by (simp add: set_mcpriority_def thread_set_no_cap_to_trivial tcb_cap_cases_tcb_mcpriority)
 
 crunch caps_of_state[wp]: reorder_ntfn, reorder_ep, set_priority "\<lambda>s. P (caps_of_state s)"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch typ_at[wp]: reorder_ntfn, reorder_ep, set_priority "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch no_cap_to_obj_with_diff_ref[wp]: set_priority "no_cap_to_obj_with_diff_ref a S"
