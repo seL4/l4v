@@ -56,7 +56,7 @@ definition
 
 definition
   set_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref) \<Rightarrow> (unit, 'z::state_ext) s_monad" where
- "set_asid_pool ptr pool \<equiv> set_object ptr (ArchObj (arch_kernel_obj.ASIDPool pool))"
+ "set_asid_pool ptr pool \<equiv> set_object ptr (ArchObj (ASIDPool pool))"
 
 definition
   get_pd :: "obj_ref \<Rightarrow> (9 word \<Rightarrow> pde,'z::state_ext) s_monad" where
