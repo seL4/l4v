@@ -412,6 +412,8 @@ definition vs_cap_ref_arch :: "arch_cap \<Rightarrow> (asid \<times> vspace_ref)
                           | ASIDControlCap \<Rightarrow> None
                           | _ \<Rightarrow> acap_map_data acap"
 
+lemmas vs_cap_ref_arch_simps[simp] = vs_cap_ref_arch_def [split_simps arch_cap.split]
+
 definition vs_cap_ref :: "cap \<Rightarrow> (asid \<times> vspace_ref) option" where
   "vs_cap_ref cap \<equiv> arch_cap_fun_lift vs_cap_ref_arch None cap"
 
@@ -2246,9 +2248,14 @@ lemma arch_tcb_context_get_set[simp]:
   "arch_tcb_context_get (arch_tcb_context_set uc a_tcb) = uc"
   by (simp add: arch_tcb_context_get_def arch_tcb_context_set_def)
 
-lemmas is_nondevice_page_cap_simps = is_nondevice_page_cap_def[split_simps arch_cap.split cap.split]
+lemma pte_at_typ_lift:
+  assumes "(\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>)"
+  shows "f \<lbrace>pte_at t\<rbrace>"
+  unfolding pte_at_def by (wpsimp wp: assms)
 
-lemmas abs_atyp_at_lifts = valid_pte_lift
+lemmas abs_atyp_at_lifts =
+  valid_pte_lift valid_vspace_obj_typ valid_arch_cap_ref_lift in_user_frame_lift
+  valid_arch_cap_typ pte_at_typ_lift
 
 lemma vspace_for_asid_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
