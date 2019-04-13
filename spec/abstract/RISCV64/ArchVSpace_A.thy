@@ -243,7 +243,7 @@ text \<open>
 definition is_valid_vtable_root :: "cap \<Rightarrow> bool"
   where
   "is_valid_vtable_root c \<equiv>
-     case c of ArchObjectCap (FrameCap _ _ _ _ (Some _)) \<Rightarrow> True | _ \<Rightarrow> False"
+     case c of ArchObjectCap (PageTableCap _ (Some _)) \<Rightarrow> True | _ \<Rightarrow> False"
 
 text \<open>Make numeric value of @{const msg_align_bits} visible.\<close>
 lemmas msg_align_bits = msg_align_bits'[unfolded word_size_bits_def, simplified]
