@@ -756,6 +756,82 @@ lemma not_in_global_refs_vs_lookup:
 lemma no_irq_sfence[wp,intro!]: "no_irq sfence"
   by (wpsimp simp: sfence_def no_irq_def machine_op_lift_def machine_rest_lift_def)
 
+lemma pt_lookup_from_level_wp[wp]:
+  "\<lbrace>\<lambda>s. (\<forall>level. pt_walk top_level level top_level_pt vref (ptes_of s) = Some (level, pt) \<longrightarrow>
+                 Q (pt_slot_offset level pt vref) s) \<and>
+        ((\<forall>level < top_level. pt_walk top_level level top_level_pt vref (ptes_of s) \<noteq> Some (level, pt)) \<longrightarrow>
+                 E InvalidRoot s)\<rbrace>
+  pt_lookup_from_level top_level top_level_pt vref pt
+  \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+proof (induct top_level arbitrary: top_level_pt)
+  case 0
+  then show ?case
+    by (wpsimp simp: pt_lookup_from_level.simps)
+next
+  case (minus top_level)
+  note IH=minus(1)
+  from `0 < top_level`
+  show ?case
+    apply (subst pt_lookup_from_level.simps)
+    apply (wpsimp wp: IH)
+    apply (rule conjI; clarsimp)
+     prefer 2
+     apply (clarsimp simp: pte_at_offset_def)
+     apply (subst (asm) (2) pt_walk.simps)
+     apply (clarsimp)
+    apply (rule conjI; clarsimp)
+     apply (clarsimp simp: pte_at_offset_def)
+     apply (erule_tac x="top_level - 1" in allE)
+     apply (simp add: in_omonad pt_walk.simps)
+    apply (rule conjI; clarsimp)
+     apply (frule pt_walk_max_level)
+     apply (erule_tac x=level in allE)
+     apply (erule mp)
+     apply (subst pt_walk.simps)
+     apply (simp add: in_omonad bit0.leq_minus1_less pte_at_offset_def)
+    apply (clarsimp simp: pte_at_offset_def)
+    apply (subst (asm) (3) pt_walk.simps)
+    apply (case_tac "level = top_level - 1"; clarsimp)
+    apply (subgoal_tac "level < top_level - 1", fastforce)
+    apply (frule bit0.zero_least)
+    apply (subst (asm) bit0.leq_minus1_less[symmetric], assumption)
+    apply simp
+    done
+qed
+
+(* weaker than pspace_aligned_pts_ofD, but still sometimes useful because it matches better *)
+lemma pts_of_Some_alignedD:
+  "\<lbrakk> pts_of s p = Some pt; pspace_aligned s \<rbrakk> \<Longrightarrow> is_aligned p pt_bits"
+  by (drule pspace_aligned_pts_ofD; simp)
+
+(* FIXME RISCV: move *)
+lemma table_index_max_level_slots:
+  "\<lbrakk> vref \<in> user_region; is_aligned pt pt_bits \<rbrakk>
+   \<Longrightarrow> table_index (pt_slot_offset max_pt_level pt vref) \<notin> kernel_mapping_slots"
+  apply (simp add: kernel_mapping_slots_def table_index_offset_max_pt_level not_le user_region_def)
+  apply (simp add: pt_bits_left_def level_defs bit_simps canonical_user_def)
+  apply word_bitwise
+  apply (simp add: word_size canonical_bit_def word_bits_def)
+  done
+
+lemma vs_lookup_target_not_global:
+  "\<lbrakk> vs_lookup_target level asid vref s = Some (level, pt); vref \<in> user_region; invs s \<rbrakk>
+   \<Longrightarrow> pt \<notin> global_refs s"
+  apply (drule (1) valid_vs_lookupD; clarsimp)
+  apply (drule valid_global_refsD2; clarsimp)
+  apply (simp add: cap_range_def)
+  done
+
+lemma reachable_page_table_not_global:
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); level \<le> max_pt_level;
+     vref \<in> user_region; invs s\<rbrakk>
+   \<Longrightarrow> p \<notin> global_refs s"
+  apply (drule (1) vs_lookup_table_target)
+  apply (erule vs_lookup_target_not_global)
+   apply (erule vref_for_level_user_region)
+  apply assumption
+  done
+
 lemma unmap_page_table_invs[wp]:
   "\<lbrace>invs and K (asid \<le> mask asid_bits \<and> vaddr \<in> user_region)\<rbrace>
      unmap_page_table asid vaddr pt
@@ -769,13 +845,30 @@ lemma unmap_page_table_invs[wp]:
                                   underlying_memory m p" in use_valid)
          apply ((wp | simp)+)[3]
       apply(erule use_valid, wp no_irq, assumption)
-     apply (wp store_pte_invs_unmap | wpc | simp)+
-  sorry (*
-  apply (simp add: lookup_pd_slot_pd pde_ref_def)
-  apply (strengthen lookup_pd_slot_kernel_mappings_strg
-                    not_in_global_refs_vs_lookup)
-  apply (auto simp: vspace_at_asid_def)
-  done *)
+     apply (wpsimp wp: store_pte_invs_unmap)+
+  apply (frule pt_walk_max_level)
+  apply (drule (2) pt_lookup_vs_lookupI)
+  apply (frule (2) valid_vspace_objs_strongD[rotated]; clarsimp)
+  apply (frule pts_of_Some_alignedD; clarsimp)
+  apply (rule conjI)
+   apply (drule (1) vs_lookup_table_target)
+   apply (drule valid_vs_lookupD, erule vref_for_level_user_region, clarsimp)
+   apply clarsimp
+   apply (frule (1) cap_to_pt_is_pt_cap; clarsimp?)
+    apply (fastforce intro: valid_objs_caps)
+   apply (fastforce simp: is_cap_simps)
+  apply (rule conjI; clarsimp)
+   apply (drule vspace_for_asid_vs_lookup)
+   apply (frule_tac level=level and level'=max_pt_level in unique_vs_lookup_table, assumption;
+          clarsimp?)
+    apply (fastforce intro: valid_objs_caps)
+   apply (drule (1) no_loop_vs_lookup_table; clarsimp?)
+     apply (rule vref_for_level_eq_max_mono[symmetric], simp)
+    apply (fastforce intro: valid_objs_caps)
+   apply (simp add: table_index_max_level_slots)
+  apply (drule (1) vs_lookup_table_target)
+  apply (drule vs_lookup_target_not_global, erule vref_for_level_user_region; simp)
+  done
 
 lemma final_cap_lift:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
@@ -823,9 +916,16 @@ lemma mapM_x_swp_store_pte_invs_unmap:
   by (simp add: mapM_x_mapM | wp mapM_swp_store_pte_invs_unmap)+
 
 lemma unmap_page_table_unmapped[wp]:
-  "\<lbrace>pspace_aligned and valid_vspace_objs\<rbrace>
+  "\<lbrace>pspace_aligned and valid_vspace_objs and valid_asid_table and
+    K (level \<le> max_pt_level \<and> asid \<noteq> 0)\<rbrace>
      unmap_page_table asid vaddr pt
    \<lbrace>\<lambda>rv s. vs_lookup_table level asid vaddr s \<noteq> Some (level', pt) \<rbrace>"
+  unfolding unmap_page_table_def
+  apply wpsimp
+  apply (rule conjI; clarsimp)
+   apply (clarsimp simp: vs_lookup_table_def in_omonad split: if_split_asm)
+   apply (simp add: obind_def vspace_for_asid_def less_le split: option.splits if_split_asm)
+  apply (rule conjI; clarsimp)
   sorry (* FIXME RISCV
   apply (simp add: unmap_page_table_def lookup_pd_slot_def Let_def
              cong: option.case_cong)
@@ -897,9 +997,9 @@ lemma perform_page_table_invocation_invs[wp]:
   "\<lbrace>invs and valid_pti pti\<rbrace>
    perform_page_table_invocation pti
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  sorry (* FIXME RISCV
-  apply (cases pti)
-   apply (clarsimp simp: valid_pti_def perform_page_table_invocation_def)
+  apply (cases pti; simp add: perform_page_table_invocation_def)
+  sorry (*
+   apply (clarsimp simp: valid_pti_def perform_pt_inv_map_def)
    apply (wp dmo_invs)
     apply (rule_tac Q="\<lambda>_. invs" in hoare_post_imp)
      apply safe
@@ -907,13 +1007,13 @@ lemma perform_page_table_invocation_invs[wp]:
                                 underlying_memory m p" in use_valid)
        apply ((clarsimp simp: machine_op_lift_def
                              machine_rest_lift_def split_def | wp)+)[3]
-     apply(erule use_valid, wp no_irq_cleanByVA_PoU no_irq, assumption)
-    apply (wp store_pde_map_invs)[1]
+     apply(erule use_valid, wp no_irq, assumption)
+    apply (wp store_pte_map_invs)[1]
    apply simp
    apply (rule hoare_pre, wp arch_update_cap_invs_map arch_update_cap_pspace
              arch_update_cap_valid_mdb set_cap_idle update_cap_ifunsafe
-             valid_irq_node_typ valid_pde_lift set_cap_typ_at
-             set_cap_irq_handlers set_cap_empty_pde
+             valid_irq_node_typ valid_pte_lift set_cap_typ_at
+             set_cap_irq_handlers set_cap_empty_pte
              hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift
              set_cap_arch_obj set_cap_obj_at_impossible set_cap_valid_arch_caps)
    apply (simp; intro conjI; clarsimp simp: cte_wp_at_caps_of_state)
@@ -1023,93 +1123,53 @@ crunch typ_at [wp]: unmap_page "\<lambda>s. P (typ_at T p s)"
 lemmas unmap_page_typ_ats [wp] = abs_typ_at_lifts [OF unmap_page_typ_at]
 
 lemma pt_lookup_slot_cap_to:
-  "\<lbrakk> invs s; \<exists>\<rhd>(max_pt_level, pt) s; is_aligned pt pt_bits; vptr < kernel_base;
+  "\<lbrakk> invs s; \<exists>\<rhd>(max_pt_level, pt) s; is_aligned pt pt_bits; vptr \<in> user_region;
      pt_lookup_slot pt vptr (ptes_of s) = Some (level, slot) \<rbrakk>
    \<Longrightarrow> \<exists>p cap. caps_of_state s p = Some cap \<and> is_pt_cap cap \<and> obj_refs cap = {table_base slot} \<and>
                s \<turnstile> cap \<and> cap_asid cap \<noteq> None"
-  sorry (* FIXME RISCV
-  apply (simp add: pt_lookup_slot_def)
-  apply (wp get_pde_wp | wpc)+
-  apply (clarsimp simp: lookup_pd_slot_pd)
-  apply (frule(1) valid_vspace_objsD)
-   apply fastforce
-  apply (drule vs_lookup_step)
-   apply (erule vs_lookup1I[OF _ _ refl])
-   apply (simp add: vs_refs_def image_def)
-   apply (rule rev_bexI)
-    apply (erule pde_graph_ofI)
-     apply (erule (1) less_kernel_base_mapping_slots)
-    apply (simp add: pde_ref_def)
-   apply fastforce
-  apply (drule valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI], clarsimp)
-  apply simp
-  apply (elim exEI, clarsimp)
-  apply (subst is_aligned_add_helper[THEN conjunct2])
-    apply (drule caps_of_state_valid)
-     apply fastforce
-    apply (clarsimp dest!:valid_cap_aligned simp:cap_aligned_def vs_cap_ref_def
-      obj_refs_def obj_ref_of_def pageBitsForSize_def pt_bits_def pageBits_def
-      elim!:is_aligned_weaken
-      split:arch_cap.split_asm cap.splits option.split_asm vmpage_size.split_asm)
-   apply (rule less_le_trans[OF shiftl_less_t2n[where m = 10]])
-     apply (rule le_less_trans[OF word_and_le1])
-     apply simp
-    apply simp
-   apply (simp add:pt_bits_def pageBits_def)
-  apply (drule caps_of_state_valid)
-   apply fastforce
-  apply (drule bspec)
-   apply (drule(1) less_kernel_base_mapping_slots)
-   apply simp
-  apply (clarsimp simp: valid_pde_def obj_at_def
-                        vs_cap_ref_def is_pt_cap_def valid_cap_simps cap_aligned_def
-                 split: cap.split_asm arch_cap.split_asm vmpage_size.splits
-                        option.split_asm if_splits)
-    apply (erule is_aligned_add[OF is_aligned_weaken],simp
-      ,rule is_aligned_shiftl[OF is_aligned_andI1,OF is_aligned_shiftr],simp)+
+  apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
+  apply (frule pt_walk_max_level)
+  apply (rename_tac pt_ptr asid vref)
+  apply (subgoal_tac "vs_lookup_table level asid vptr s = Some (level, pt_ptr)")
+   prefer 2
+   apply (drule pt_walk_level)
+   apply (clarsimp simp: vs_lookup_table_def in_omonad)
+  apply (frule_tac level=level in valid_vspace_objs_strongD[rotated]; clarsimp)
+  apply (drule vs_lookup_table_target[where level=level], simp)
+  apply (drule valid_vs_lookupD, erule vref_for_level_user_region; clarsimp)
+  apply (frule (1) cap_to_pt_is_pt_cap, simp)
+   apply (fastforce intro: valid_objs_caps)
+  apply (frule pts_of_Some_alignedD, fastforce)
+  apply (frule caps_of_state_valid, fastforce)
+  apply (fastforce simp: cap_asid_def is_cap_simps)
   done
-  *)
 
 lemma find_vspace_for_asid_cap_to:
-   "\<lbrace>invs\<rbrace> find_vspace_for_asid asid
-   \<lbrace>\<lambda>rv s.  \<exists>a b cap. caps_of_state s (a, b) = Some cap \<and> rv \<in> obj_refs cap
-                                \<and> is_pt_cap cap \<and> s \<turnstile> cap
-                                \<and> is_aligned rv pt_bits\<rbrace>, -"
-  sorry (* FIXME RISCV
-  apply (simp add: find_vspace_for_asid_def assertE_def split del: if_split)
-  apply (rule hoare_pre)
-   apply (wp | wpc)+
-  apply clarsimp
-  apply (drule vs_lookup_atI)
-  apply (frule(1) valid_vspace_objsD, clarsimp)
-  apply (drule vs_lookup_step)
-   apply (erule vs_lookup1I [OF _ _ refl])
-   apply (simp add: vs_refs_def image_def)
-   apply (rule rev_bexI)
-    apply (erule graph_ofI)
-   apply fastforce
-  apply (drule valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI], clarsimp)
-  apply (simp, elim exEI)
-  apply clarsimp
-  apply (frule caps_of_state_valid_cap, clarsimp+)
-  apply (clarsimp simp: table_cap_ref_ap_eq[symmetric] table_cap_ref_def
-                        is_pd_cap_def valid_cap_def cap_aligned_def
-                        pd_bits_def pageBits_def
-                 split: cap.split_asm arch_cap.split_asm option.split_asm)
-  done *)
+  "\<lbrace>invs\<rbrace>
+   find_vspace_for_asid asid
+   \<lbrace>\<lambda>rv s.  \<exists>a b cap. caps_of_state s (a, b) = Some cap \<and> obj_refs cap = {rv} \<and>
+                      is_pt_cap cap \<and> s \<turnstile> cap \<and> is_aligned rv pt_bits\<rbrace>, -"
+  apply wpsimp
+  apply (drule vspace_for_asid_vs_lookup)
+  apply (frule valid_vspace_objs_strongD[rotated]; clarsimp)
+  apply (frule pts_of_Some_alignedD, fastforce)
+  apply simp
+  apply (drule vs_lookup_table_target, simp)
+  apply (drule valid_vs_lookupD; clarsimp simp: vref_for_level_def)
+  apply (frule (1) cap_to_pt_is_pt_cap, simp)
+   apply (fastforce intro: valid_objs_caps)
+  apply (fastforce intro: caps_of_state_valid cap_to_pt_is_pt_cap)
+  done
 
 lemma ex_pt_cap_eq:
-  "(\<exists>ref cap. caps_of_state s ref = Some cap \<and>
-              p \<in> obj_refs cap \<and> is_pt_cap cap) =
-   (\<exists>ref asid. caps_of_state s ref =
-               Some (cap.ArchObjectCap (arch_cap.PageTableCap p asid)))"
+  "(\<exists>ref cap. caps_of_state s ref = Some cap \<and> obj_refs cap = {p} \<and> is_pt_cap cap) =
+   (\<exists>ref asid. caps_of_state s ref = Some (ArchObjectCap (PageTableCap p asid)))"
   by (fastforce simp add: is_pt_cap_def obj_refs_def is_PageTableCap_def)
 
 lemma unmap_page_invs:
-  "\<lbrace>invs and K (asid \<le> mask asid_bits \<and> vptr < kernel_base \<and>
-                vmsz_aligned vptr sz)\<rbrace>
-      unmap_page sz asid vptr pptr
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs and K (asid \<le> mask asid_bits \<and> vptr < kernel_base \<and> vmsz_aligned vptr sz)\<rbrace>
+   unmap_page sz asid vptr pptr
+   \<lbrace>\<lambda>_. invs\<rbrace>"
   sorry (* FIXME RISCV
   apply (simp add: unmap_page_def)
   apply (rule hoare_pre)
@@ -1132,24 +1192,6 @@ lemma unmap_page_invs:
   apply (auto simp: vmsz_aligned_def)
   done *)
 
-lemma reachable_page_table_not_global:
-  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); vref \<in> user_region;
-      valid_kernel_mappings s; valid_vspace_objs s; valid_asid_table s\<rbrakk>
-   \<Longrightarrow> p \<notin> (\<Union>level. riscv_global_pts (arch_state s) level)"
-  apply clarsimp
-  sorry (* FIXME RISCV
-  apply (erule (2) vs_lookupE_alt[OF _ _ valid_asid_table_ran])
-    apply (clarsimp simp: valid_global_pts_def)
-    apply (drule (1) bspec)
-    apply (clarsimp simp: obj_at_def a_type_def)
-   apply (clarsimp simp: valid_global_pts_def)
-   apply (drule (1) bspec)
-   apply (clarsimp simp: obj_at_def a_type_def)
-  apply (clarsimp simp: valid_kernel_mappings_def valid_kernel_mappings_if_pd_def ran_def)
-  apply (drule_tac x="ArchObj (PageDirectory pd)" in spec)
-  apply (drule mp, erule_tac x=p\<^sub>2 in exI)
-  apply clarsimp
-  done *)
 
 lemma unmap_page_no_lookup_target:
   "unmap_page sz asid vaddr pptr \<lbrace>\<lambda>s. vs_lookup_target level asid vaddr s \<noteq> Some (level', p)\<rbrace>"
