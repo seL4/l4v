@@ -996,16 +996,6 @@ crunch pred_tcb_at[wp]:
 crunch pred_tcb_at[wp_unsafe]: arch_finalise_cap "pred_tcb_at proj P t"
   (simp: crunch_simps wp: crunch_wps)
 
-lemma tcb_cap_valid_pagetable:
-  "tcb_cap_valid (ArchObjectCap (PageTableCap word (Some v))) slot
-    = tcb_cap_valid (ArchObjectCap (PageTableCap word None)) slot"
-  apply (rule ext)
-  apply (simp add: tcb_cap_valid_def tcb_cap_cases_def is_valid_vtable_root_def
-                   is_cap_simps valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
-            split: Structures_A.thread_state.split)
-  done
-
-
 lemma store_pte_unmap_empty: (* FIXME RISCV: check usage *)
   "\<lbrace>\<lambda>s. obj_at (empty_table S) word s\<rbrace>
     store_pte xa InvalidPTE
@@ -1115,7 +1105,7 @@ lemma replaceable_reset_pt:
                       (ArchObjectCap cap)"
   apply (elim conjE)
   apply (cases m, simp_all add: replaceable_def gen_obj_refs_def cap_range_def
-                                is_cap_simps tcb_cap_valid_pagetable)
+                                is_cap_simps (* tcb_cap_valid_pagetable *))
   sorry (* FIXME RISCV
   apply (rule conjI)
    apply (frule is_final_cap_pt_asid_eq) defer

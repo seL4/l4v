@@ -209,6 +209,10 @@ lemma is_nondevice_page_cap_simp[simp]:
   "is_nondevice_page_cap (ArchObjectCap (FrameCap p q s False t))"
   by (subst is_nondevice_page_cap) simp
 
+lemma option_case_eq_None:
+  "((case m of None \<Rightarrow> None | Some (a,b) \<Rightarrow> Some a) = None) = (m = None)"
+  by (clarsimp split: option.splits)
+
 lemma tc_invs[Tcb_AI_asms]:
   "\<lbrace>invs and tcb_at a
        and (case_option \<top> (valid_cap o fst) e)
@@ -269,13 +273,15 @@ lemma tc_invs[Tcb_AI_asms]:
         | strengthen use_no_cap_to_obj_asid_strg use_no_cap_to_obj_asid_strg[simplified conj_comms]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])+)
-  by (intro conjI impI; clarsimp?;
+  apply (intro conjI impI; clarsimp?;
      (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
                         is_cap_simps is_valid_vtable_root_def
                         is_cnode_or_valid_arch_def tcb_cap_valid_def
                         invs_valid_objs cap_asid_def vs_cap_ref_def
-                        case_bool_If valid_ipc_buffer_cap_def
+                        case_bool_If valid_ipc_buffer_cap_def option_case_eq_None
                        | split cap.splits arch_cap.splits if_splits)+)
+  apply (simp split: option.splits)
+  done
 
 lemma check_valid_ipc_buffer_inv: (* arch_specific *)
   "\<lbrace>P\<rbrace> check_valid_ipc_buffer vptr cap \<lbrace>\<lambda>rv. P\<rbrace>"
