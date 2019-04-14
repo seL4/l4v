@@ -306,12 +306,6 @@ lemma weak_derived_vs_cap_ref [CNodeInv_AI_assms]:
                  same_object_as_def2
           split: if_split_asm elim: vs_cap_ref_master[OF sym])
 
-lemma vs_cap_ref_eq_imp_table_cap_ref_eq':
-  "\<lbrakk> vs_cap_ref cap = vs_cap_ref cap'; cap_master_cap cap = cap_master_cap cap' \<rbrakk>
-   \<Longrightarrow> table_cap_ref cap = table_cap_ref cap'"
-  by (simp add: vs_cap_ref_def vs_cap_ref_arch_def arch_cap_fun_lift_def cap_master_cap_def
-           split: cap.splits arch_cap.splits option.splits prod.splits)
-
 lemma weak_derived_table_cap_ref [CNodeInv_AI_assms]:
   "weak_derived c c' \<Longrightarrow> table_cap_ref c = table_cap_ref c'"
   apply (clarsimp simp: weak_derived_def copy_of_def same_object_as_def2
