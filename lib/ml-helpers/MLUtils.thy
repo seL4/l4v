@@ -28,4 +28,5 @@ begin
 ML_file "StringExtras.ML"
 ML_file "ListExtras.ML"
 ML_file "MethodExtras.ML"
+ML_file "Sum.ML"
 end
