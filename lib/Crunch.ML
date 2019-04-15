@@ -11,7 +11,8 @@
 structure CrunchTheoryData = Theory_Data
   (struct
      type T =
-       ((Token.src list -> string -> string -> (string * xstring) list
+       ((Token.src list -> string -> string
+         -> (string * ((Facts.ref * Token.src list), xstring) sum) list
          -> string list -> local_theory -> local_theory)
         * (string list -> string list -> theory -> theory)) Symtab.table
      val empty = Symtab.empty
@@ -32,21 +33,22 @@ struct
 local structure P = Parse and K = Keyword in
 
 (* Read a list of names, up to the next section identifier *)
-fun read_thm_list sections =
-    let val match_section_name = Scan.first (map P.reserved sections)
+fun read_thm_list section sections =
+    let val match_section_name = Scan.first (map (P.reserved o #1) sections)
 in
-    Scan.repeat (Scan.unless match_section_name (P.name || P.long_ident))
+    Scan.repeat (Scan.unless match_section_name (#2 section))
 end
 
 fun read_section all_sections section =
-    (P.reserved section -- P.$$$ ":") |-- read_thm_list all_sections >> map (fn n => (section, n))
+    (P.reserved (#1 section) -- P.$$$ ":") |-- read_thm_list section all_sections
+    >> map (fn n => (#1 section, n))
 
 fun read_sections sections =
     Scan.repeat (Scan.first (map (read_section sections) sections)) >> List.concat
 
 val crunch_parser =
     (((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
-     -- Parse.opt_attribs --| P.$$$ ":") -- P.list1 P.name -- Scan.optional P.term ""
+     -- Parse.opt_attribs --| P.$$$ ":") -- P.list1 P.const -- Scan.optional P.term ""
      -- Scan.optional
        (P.$$$ "(" |-- read_sections [wp_sect,wp_del_sect,ignore_sect,simp_sect,simp_del_sect,rule_sect,rule_del_sect,ignore_del_sect] --| P.$$$ ")")
        []
@@ -59,7 +61,7 @@ val crunch_parser =
                    crunch_x att_srcs extra prp_name wpigs consts lthy))));
 
 val crunches_parser =
-    (((P.list1 P.name --| P.$$$ "for")
+    (((P.list1 P.const --| P.$$$ "for")
      -- P.and_list1 ((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
          -- Parse.opt_attribs) -- Scan.optional (P.$$$ ":" |-- P.term) "")
      -- Scan.optional
@@ -109,8 +111,8 @@ val crunchesP =
         "crunch through monadic definitions with multiple properties"
         crunches_parser
 
-val add_sect = "add";
-val del_sect = "del";
+val add_sect = ("add", Parse.const >> Constant);
+val del_sect = ("del", Parse.const >> Constant);
 
 val crunch_ignoreP =
     Outer_Syntax.local_theory
@@ -122,10 +124,10 @@ val crunch_ignoreP =
         )
         >> (fn (crunch_instance, wpigs) => fn lthy =>
                let fun const_name const = dest_Const (read_const lthy const) |> #1;
-                   val add = wpigs |> filter (fn (s,_) => s = add_sect)
-                                   |> map (const_name o #2);
-                   val del = wpigs |> filter (fn (s,_) => s = del_sect)
-                                   |> map (const_name o #2);
+                   val add = wpigs |> filter (fn (s,_) => s = #1 add_sect) |> map #2 |> constants
+                                   |> map const_name;
+                   val del = wpigs |> filter (fn (s,_) => s = #1 del_sect) |> map #2 |> constants
+                                   |> map const_name;
                    val crunch_ignore_add_del = (case get_crunch_instance crunch_instance (Proof_Context.theory_of lthy) of
                      NONE => error ("Crunch has not been defined for " ^ crunch_instance)
                    | SOME x => snd x);

@@ -31,7 +31,7 @@ definition
   od"
 
 crunch (empty_fail) empty_fail: crunch_foo2
-(ignore: modify bind)
+  (ignore: modify bind)
 
 crunch_ignore (add: crunch_foo1)
 
@@ -45,7 +45,7 @@ definition
 
 lemma crunch_foo1_at_2:
   "True \<Longrightarrow> \<lbrace>crunch_always_true 3 and crunch_always_true 2\<rbrace>
-      crunch_foo1 x \<lbrace>\<lambda>rv. crunch_always_true 2\<rbrace>"
+      crunch_foo1 x \<lbrace>\<lambda>rv. crunch_always_true 2 and K True\<rbrace>"
   by (simp add: crunch_always_true_def, wp)
 
 lemma crunch_foo1_at_2':
@@ -65,10 +65,10 @@ lemma crunch_foo1_no_fail:
   done
 
 crunch (no_fail) no_fail: crunch_foo2
-  (ignore: modify bind wp: crunch_foo1_at_2)
+  (ignore: modify bind wp: crunch_foo1_at_2[simplified])
 
 crunch (valid) at_2': crunch_foo2 "crunch_always_true 2"
-  (ignore: modify bind wp: crunch_foo1_at_2)
+  (ignore: modify bind wp: crunch_foo1_at_2[simplified])
 
 fun crunch_foo3 :: "nat => nat => 'a => (nat,unit) nondet_monad" where
   "crunch_foo3 0 x _ = crunch_foo1 x"

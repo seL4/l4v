@@ -77,14 +77,19 @@ fun real_base_name name = name |> Long_Name.explode |> funkysplit |> Long_Name.i
 
 fun handle_int exn func = if Exn.is_interrupt exn then Exn.reraise exn else func
 
-val wp_sect = "wp";
-val wp_del_sect = "wp_del";
-val ignore_sect = "ignore";
-val ignore_del_sect = "ignore_del";
-val simp_sect = "simp";
-val simp_del_sect = "simp_del";
-val rule_sect = "rule";
-val rule_del_sect = "rule_del";
+val Thm : (Facts.ref * Token.src list) -> ((Facts.ref * Token.src list), xstring) sum = Inl
+val Constant : xstring -> ((Facts.ref * Token.src list), xstring) sum = Inr
+val thms = lefts
+val constants = rights
+
+val wp_sect = ("wp", Parse.thm >> Thm);
+val wp_del_sect = ("wp_del", Parse.thm >> Thm);
+val ignore_sect = ("ignore", Parse.const >> Constant);
+val ignore_del_sect = ("ignore_del", Parse.const >> Constant);
+val simp_sect = ("simp", Parse.thm >> Thm);
+val simp_del_sect = ("simp_del", Parse.thm >> Thm);
+val rule_sect = ("rule", Parse.thm >> Thm);
+val rule_del_sect = ("rule_del", Parse.thm >> Thm);
 
 fun read_const ctxt = Proof_Context.read_const {proper = true, strict = false} ctxt;
 
@@ -153,7 +158,8 @@ sig
        crunch_cfg -> term -> extra -> string list -> string
          -> (string * thm) list -> (thm option * (string * thm) list);
 
-    val crunch_x : Token.src list -> string -> string -> (string * xstring) list
+    val crunch_x : Token.src list -> string -> string
+         -> (string * ((Facts.ref * Token.src list), xstring) sum) list
          -> string list -> local_theory -> local_theory;
 
     val crunch_ignore_add_del : string list -> string list -> theory -> theory
@@ -239,6 +245,8 @@ fun monads_of ctxt t = case strip_comb t of
 val get_thm = Proof_Context.get_thm
 
 val get_thms = Proof_Context.get_thms
+
+val get_thms_from_facts = Attrib.eval_thms
 
 fun maybe_thms thy name = get_thms thy name handle ERROR _ => []
 fun thy_maybe_thms thy name = Global_Theory.get_thms thy name handle ERROR _ => []
@@ -761,25 +769,25 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
     let
         fun const_name const = dest_Const (read_const ctxt const) |> #1
 
-        val wps' = wpigs |> filter (fn (s,_) => s = wp_sect) |> map #2
+        val wps' = wpigs |> filter (fn (s,_) => s = #1 wp_sect) |> map #2 |> thms
 
-        val wp_dels' = wpigs |> filter (fn (s,_) => s = wp_del_sect) |> map #2
+        val wp_dels' = wpigs |> filter (fn (s,_) => s = #1 wp_del_sect) |> map #2 |> thms
 
-        val simps = wpigs |> filter (fn (s,_) => s = simp_sect) |> map #2
-                    |> maps (get_thms ctxt)
+        val simps = wpigs |> filter (fn (s,_) => s = #1 simp_sect) |> map #2 |> thms
+                    |> get_thms_from_facts ctxt
 
-        val simp_dels = wpigs |> filter (fn (s,_) => s = simp_del_sect) |> map #2
-                    |> maps (get_thms ctxt)
+        val simp_dels = wpigs |> filter (fn (s,_) => s = #1 simp_del_sect) |> map #2 |> thms
+                    |> get_thms_from_facts ctxt
 
-        val igs = wpigs |> filter (fn (s,_) => s = ignore_sect)
-                        |> map (const_name o #2)
+        val igs = wpigs |> filter (fn (s,_) => s = #1 ignore_sect) |> map #2 |> constants
+                        |> map const_name
 
-        val rules = wpigs |> filter (fn (s,_) => s = rule_sect) |> map #2
-                          |> maps (get_thms ctxt)
+        val ig_dels = wpigs |> filter (fn (s,_) => s = #1 ignore_del_sect) |> map #2 |> constants
+                            |> map const_name
+
+        val rules = wpigs |> filter (fn (s,_) => s = #1 rule_sect) |> map #2 |> thms
+                          |> get_thms_from_facts ctxt
         val rules = rules @ Named_Theorems.get ctxt @{named_theorems crunch_rules}
-
-        val ig_dels = wpigs |> filter (fn (s,_) => s = ignore_del_sect)
-                            |> map (const_name o #2)
 
         fun mk_wp thm =
            let val ms = Thm.prop_of thm |> monads_of ctxt;
@@ -790,7 +798,7 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
                             dummy_monad_name;
             in (m, thm) end;
 
-        val wps = maps (get_thms ctxt) wps' |> map mk_wp;
+        val wps = get_thms_from_facts ctxt wps' |> map mk_wp;
         val full_const_names = map const_name consts;
 
         val nmspce = get_locale_origins full_const_names ctxt;
@@ -802,7 +810,7 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
         val _ = map (fn (const_term, const) => make_goal const_term const pre' extra' ctxt)
                     (const_terms ~~ full_const_names)
 
-        val wp_dels = maps (get_thms ctxt) wp_dels';
+        val wp_dels = get_thms_from_facts ctxt wp_dels';
         val ctxt' = fold (fn thm => fn ctxt => Thm.proof_attributes [WeakestPre.wp_del] thm ctxt |> snd)
                           wp_dels ctxt;
 
