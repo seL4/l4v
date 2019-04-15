@@ -28,6 +28,30 @@ lemma arch_cap_fun_lift_Some[simp]:
 
 context Arch begin global_naming RISCV64
 
+(* FIXME RISCV: move up? *)
+(* this is what copy_global_mappings needs to establish from an empty_pt *)
+definition
+  "kernel_mappings_only pt s \<equiv>
+     has_kernel_mappings pt s \<and> (\<forall>idx. idx \<notin> kernel_mapping_slots \<longrightarrow> pt idx = InvalidPTE)"
+
+(* FIXME RISCV: move *)
+lemma vs_lookup_table_vspace:
+  "\<lbrakk> vs_lookup_table level asid vptr s = Some (level, pt_ptr);
+     vspace_for_asid asid' s = Some pt_ptr; vptr \<in> user_region; invs s \<rbrakk>
+   \<Longrightarrow> asid' = asid \<and> level = max_pt_level"
+  apply (cases "level = asid_pool_level"; clarsimp)
+   apply (clarsimp simp: vs_lookup_table_def)
+   apply (drule pool_for_asid_validD; clarsimp)
+   apply (drule vspace_for_asid_valid_pt; clarsimp)
+   apply (fastforce simp: in_omonad)
+  apply (drule vspace_for_asid_vs_lookup)
+  apply (frule_tac level=level and level'=max_pt_level in unique_vs_lookup_table, assumption; clarsimp?)
+   apply (fastforce intro: valid_objs_caps)
+  apply (drule (1) no_loop_vs_lookup_table; clarsimp?)
+   apply (rule vref_for_level_eq_max_mono[symmetric], simp)
+  apply (fastforce intro: valid_objs_caps)
+  done
+
 lemma find_vspace_for_asid_wp[wp]:
   "\<lbrace>\<lambda>s. (vspace_for_asid asid s = None \<longrightarrow> E InvalidRoot s) \<and>
         (\<forall>pt. vspace_for_asid asid s = Some pt \<longrightarrow> Q pt s) \<rbrace>
@@ -360,6 +384,12 @@ lemma dmo_setVMRoot[wp]:
   "do_machine_op (setVSpaceRoot pt asid) \<lbrace>invs\<rbrace>"
   apply (wp dmo_invs)
   apply (auto simp: setVSpaceRoot_def machine_op_lift_def machine_rest_lift_def in_monad select_f_def)
+  done
+
+lemma dmo_sfence[wp]:
+  "do_machine_op sfence \<lbrace>invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply (auto simp: sfence_def machine_op_lift_def machine_rest_lift_def in_monad select_f_def)
   done
 
 lemma find_vspace_for_asid_inv[wp]:
@@ -845,13 +875,7 @@ lemma unmap_page_table_invs[wp]:
     apply (fastforce intro: valid_objs_caps)
    apply (fastforce simp: is_cap_simps)
   apply (rule conjI; clarsimp)
-   apply (drule vspace_for_asid_vs_lookup)
-   apply (frule_tac level=level and level'=max_pt_level in unique_vs_lookup_table, assumption;
-          clarsimp?)
-    apply (fastforce intro: valid_objs_caps)
-   apply (drule (1) no_loop_vs_lookup_table; clarsimp?)
-     apply (rule vref_for_level_eq_max_mono[symmetric], simp)
-    apply (fastforce intro: valid_objs_caps)
+   apply (drule (3) vs_lookup_table_vspace)
    apply (simp add: table_index_max_level_slots)
   apply (drule (1) vs_lookup_table_target)
   apply (drule vs_lookup_target_not_global, erule vref_for_level_user_region; simp)
@@ -902,16 +926,19 @@ lemma mapM_x_swp_store_pte_invs_unmap:
   mapM_x (swp store_pte pte) slots \<lbrace>\<lambda>_. invs\<rbrace>"
   by (simp add: mapM_x_mapM | wp mapM_swp_store_pte_invs_unmap)+
 
-lemma unmap_page_table_unmapped[wp]:
+lemma unmap_page_table_unmapped:
   "\<lbrace>pspace_aligned and valid_vspace_objs and valid_asid_table and
-    K (level \<le> max_pt_level \<and> asid \<noteq> 0)\<rbrace>
+    K (level < max_pt_level \<and> asid \<noteq> 0)\<rbrace>
      unmap_page_table asid vaddr pt
-   \<lbrace>\<lambda>rv s. vs_lookup_table level asid vaddr s \<noteq> Some (level', pt) \<rbrace>"
+   \<lbrace>\<lambda>rv s. vs_lookup_table level asid vaddr s \<noteq> Some (level, pt) \<rbrace>"
   unfolding unmap_page_table_def
   apply wpsimp
   apply (rule conjI; clarsimp)
    apply (clarsimp simp: vs_lookup_table_def in_omonad split: if_split_asm)
    apply (simp add: obind_def vspace_for_asid_def less_le split: option.splits if_split_asm)
+  apply (rule conjI; clarsimp)
+   prefer 2
+   apply (clarsimp simp: vs_lookup_table_def vspace_for_asid_def split: if_split_asm)
   apply (rule conjI; clarsimp)
   sorry (* FIXME RISCV
   apply (simp add: unmap_page_table_def lookup_pd_slot_def Let_def
@@ -1153,35 +1180,40 @@ lemma ex_pt_cap_eq:
    (\<exists>ref asid. caps_of_state s ref = Some (ArchObjectCap (PageTableCap p asid)))"
   by (fastforce simp add: is_pt_cap_def obj_refs_def is_PageTableCap_def)
 
+lemma pt_bits_left_not_asid_pool_size:
+  "pt_bits_left asid_pool_level \<noteq> pageBitsForSize sz"
+  by (cases sz; simp add: pt_bits_left_def bit_simps asid_pool_level_size)
+
 lemma unmap_page_invs:
-  "\<lbrace>invs and K (asid \<le> mask asid_bits \<and> vptr < kernel_base \<and> vmsz_aligned vptr sz)\<rbrace>
+  "\<lbrace>invs and K (vptr \<in> user_region \<and> vmsz_aligned vptr sz)\<rbrace>
    unmap_page sz asid vptr pptr
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  sorry (* FIXME RISCV
-  apply (simp add: unmap_page_def)
-  apply (rule hoare_pre)
-   apply (wp flush_page_invs hoare_vcg_const_imp_lift)
-    apply (wp hoare_drop_imp[where f="check_mapping_pptr a b c" for a b c]
-              hoare_drop_impE_R[where R="\<lambda>x y. x && mask b = c" for b c]
-              pt_lookup_slot_inv pt_lookup_slot_cap_to2'
-              pt_lookup_slot_cap_to_multiple2
-              store_pde_invs_unmap mapM_swp_store_pde_invs_unmap
-              mapM_swp_store_pte_invs
-           | wpc | simp)+
-   apply (strengthen lookup_pd_slot_kernel_mappings_strg
-                     lookup_pd_slot_kernel_mappings_set_strg
-                     not_in_global_refs_vs_lookup
-                     page_directory_at_lookup_mask_aligned_strg
-                     page_directory_at_lookup_mask_add_aligned_strg)+
-   apply (wp find_vspace_for_asid_page_directory
-             hoare_vcg_const_imp_lift_R hoare_vcg_const_Ball_lift_R
-          | wp_once hoare_drop_imps)+
-  apply (auto simp: vmsz_aligned_def)
-  done *)
-
+  unfolding unmap_page_def
+  apply (wpsimp wp: store_pte_invs_unmap)
+  apply (rule conjI; clarsimp)
+  apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
+   apply (clarsimp simp: pt_bits_left_not_asid_pool_size vs_lookup_slot_def vs_lookup_table_def
+                   split: if_split_asm)
+  apply clarsimp
+  apply (rename_tac level pte pt_ptr)
+  apply (drule vs_lookup_level)
+  apply (frule (2) valid_vspace_objs_strongD[rotated]; clarsimp)
+  apply (frule vs_lookup_table_target, simp)
+  apply (frule pts_of_Some_alignedD, clarsimp)
+  apply (frule vref_for_level_user_region)
+  apply (frule (2) vs_lookup_target_not_global)
+  apply simp
+  apply (frule (1) valid_vs_lookupD; clarsimp)
+  apply (frule (1) cap_to_pt_is_pt_cap; (clarsimp intro!: valid_objs_caps)?)
+  apply (rule conjI, fastforce simp: is_cap_simps)
+  apply clarsimp
+  apply (drule (3) vs_lookup_table_vspace)
+  apply (simp add: table_index_max_level_slots)
+  done
 
 lemma unmap_page_no_lookup_target:
   "unmap_page sz asid vaddr pptr \<lbrace>\<lambda>s. vs_lookup_target level asid vaddr s \<noteq> Some (level', p)\<rbrace>"
+  unfolding unmap_page_def
   sorry (* FIXME RISCV
   apply (rule hoare_pre)
   apply (wp store_pte_no_lookup_pages hoare_drop_imps pt_lookup_slot_inv_validE
@@ -1372,9 +1404,20 @@ lemma data_at_frame_cap:
   by (cases cap; clarsimp simp: is_frame_cap_def valid_cap_def valid_arch_cap_ref_def data_at_orth
                          split: option.splits arch_cap.splits)
 
+lemma perform_pg_inv_get_addr[wp]:
+  "\<lbrace>invs and valid_page_inv (PageGetAddr ptr)\<rbrace> perform_pg_inv_get_addr ptr \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding perform_pg_inv_get_addr_def by wpsimp
+
+lemma perform_pg_inv_unmap[wp]:
+  "\<lbrace>invs and valid_page_inv (PageUnmap cap ct_slot)\<rbrace> perform_pg_inv_unmap cap ct_slot \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding perform_pg_inv_unmap_def
+  apply wpsimp
+  oops
+
 lemma perform_page_invs [wp]:
   "\<lbrace>invs and valid_page_inv pg_inv\<rbrace> perform_page_invocation pg_inv \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: perform_page_invocation_def)
+  unfolding perform_page_invocation_def
+  apply (cases pg_inv; simp; wpsimp)
   sorry (* FIXME RISCV
   apply (cases pg_inv, simp_all)
      \<comment> \<open>PageMap\<close>
@@ -1556,36 +1599,103 @@ lemma perform_page_invs [wp]:
 end
 
 locale asid_pool_map = Arch +
-  fixes s ap pool asid ptp and s' :: "'a::state_ext state"
+  fixes s ap pool asid ptp pt and s' :: "'a::state_ext state"
   defines "s' \<equiv> s\<lparr>kheap := kheap s(ap \<mapsto> ArchObj (ASIDPool (pool(asid_low_bits_of asid \<mapsto> ptp))))\<rparr>"
   assumes ap:  "asid_pools_of s ap = Some pool"
   assumes new: "pool (asid_low_bits_of asid) = None"
-  assumes pt:  "pts_of s ptp = Some empty_pt"
-  (* FIXME RISCV: empty_pt is wrong, need to capture kernel mappings, which should be present at
-                  this stage *)
+  assumes pt:  "pts_of s ptp = Some pt"
+  assumes empty: "kernel_mappings_only pt s"
   assumes lookup: "pool_for_asid asid s = Some ap"
+  assumes valid_asids: "valid_asid_table s"
+  assumes aligned: "is_aligned ptp pt_bits"
 begin
 
 lemma arch_state[simp]:
   "arch_state s' = arch_state s"
   by (simp add: s'_def)
 
+lemma pool_for_asid[simp]:
+  "pool_for_asid a s' = pool_for_asid a s"
+  by (simp add: pool_for_asid_def)
 
-(* FIXME RISCV: since empty_pt is wrong, this is only true for vref in user region;
-                we might also need something about kernel mappings, but maybe not for vs_lookup *)
+lemma asid_pools_of[simp]:
+  "asid_pools_of s' = (asid_pools_of s)(ap \<mapsto> pool(asid_low_bits_of asid \<mapsto> ptp))"
+  by (simp add: s'_def)
+
+lemma pts_of[simp]:
+  "pts_of s' = pts_of s"
+proof -
+  from ap
+  have "pts_of s ap = None" by (simp add: opt_map_def split: option.splits)
+  thus ?thesis by (simp add: s'_def)
+qed
+
+lemma empty_for_user:
+  "vref \<in> user_region \<Longrightarrow>
+   pt (table_index (pt_slot_offset max_pt_level ptp vref)) = InvalidPTE"
+  using empty aligned
+  by (clarsimp simp: kernel_mappings_only_def table_index_max_level_slots)
+
 lemma vs_lookup_table:
   "vref \<in> user_region \<Longrightarrow>
    vs_lookup_table level asid' vref s' =
-     (if asid' = asid \<and> level = max_pt_level
-      then Some (level, ptp)
+     (if asid_high_bits_of asid' = asid_high_bits_of asid \<and>
+         asid_low_bits_of asid' = asid_low_bits_of asid \<and>
+         level \<le> max_pt_level
+      then Some (max_pt_level, ptp)
       else vs_lookup_table level asid' vref s)"
-  sorry
+  apply clarsimp
+  apply (rule conjI; clarsimp)
+   using lookup
+   apply (clarsimp simp: vs_lookup_table_def vspace_for_pool_def in_omonad pool_for_asid_def)
+   apply (rule conjI, clarsimp)
+   apply (subst pt_walk.simps)
+   using pt aligned
+   apply (clarsimp simp: obind_def ptes_of_def empty_for_user)
+   apply (simp add: pt_slot_offset_def)
+   apply (erule notE)
+   apply (rule is_aligned_add)
+    apply (erule is_aligned_weaken)
+    apply (simp add: bit_simps)
+   apply (rule is_aligned_shift)
+  apply (clarsimp simp: vs_lookup_table_def)
+  apply (rule obind_eqI, simp)
+  apply clarsimp
+  using ap lookup new
+  apply (clarsimp simp: obind_def split: option.splits)
+  apply (rule conjI; clarsimp)
+   apply (clarsimp simp: vspace_for_pool_def obind_def split: option.splits if_split_asm)
+  apply (rule conjI; clarsimp)
+   apply (clarsimp simp: vspace_for_pool_def obind_def split: option.splits if_split_asm)
+   apply (clarsimp simp: pool_for_asid_def)
+   using valid_asids
+   apply (clarsimp simp: valid_asid_table_def)
+   apply (drule (2) inj_on_domD[rotated])
+   apply clarsimp
+  apply (clarsimp simp: vspace_for_pool_def split: if_split_asm)
+  done
+
+lemma vs_lookup_slot:
+  "vref \<in> user_region \<Longrightarrow>
+   vs_lookup_slot level asid' vref s' =
+     (if asid_high_bits_of asid' = asid_high_bits_of asid \<and>
+         asid_low_bits_of asid' = asid_low_bits_of asid \<and>
+         level \<le> max_pt_level
+      then Some (max_pt_level, pt_slot_offset max_pt_level ptp vref)
+      else vs_lookup_slot level asid' vref s)"
+  apply (simp add: vs_lookup_slot_def)
+  apply (rule conjI; clarsimp)
+   apply (clarsimp simp: in_omonad vs_lookup_table)
+  apply (rule obind_eqI; clarsimp simp: vs_lookup_table)
+  done
 
 (* FIXME RISCV: see above, statement might need tweak *)
 lemma vs_lookup_target:
   "vref \<in> user_region \<Longrightarrow>
    vs_lookup_target level asid' vref s' =
-     (if asid' = asid \<and> level = asid_pool_level
+     (if asid_high_bits_of asid' = asid_high_bits_of asid \<and>
+         asid_low_bits_of asid' = asid_low_bits_of asid \<and>
+         level \<le> asid_pool_level
       then Some (level, ptp)
       else vs_lookup_target level asid' vref s)"
   sorry
