@@ -1542,8 +1542,7 @@ lemma set_sc_refills_cur_sc_tcb[wp]:
 
 lemma update_sc_refills_cur_sc_tcb[wp]:
   "\<lbrace>cur_sc_tcb\<rbrace> update_sched_context scp (sc_refills_update f) \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
-  by (wpsimp simp: set_sched_context_def cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def
-               wp: set_object_wp get_object_wp)
+  by (wpsimp wp: update_sched_context_cur_sc_tcb_no_change)
 
 lemma set_sc_refills_valid_idle:
   "\<lbrace>valid_idle and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>

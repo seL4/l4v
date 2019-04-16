@@ -39,6 +39,10 @@ lemma st_tcb_at_kh_simp[simp]: "st_tcb_at_kh test t (kheap st) = st_tcb_at test 
   apply (simp add: pred_tcb_at_def st_tcb_at_kh_def)
   done
 
+lemma st_tcb_at_kh_eq_commute:
+  "st_tcb_at_kh ((=) x) a b = st_tcb_at_kh (\<lambda>y. y = x) a b"
+  by (fastforce simp: st_tcb_at_kh_def obj_at_kh_def)
+
 (* RT: extend obj_at_kh for tcb_sched_context *)
 definition bound_sc_tcb_at_kh where
   "bound_sc_tcb_at_kh test \<equiv> obj_at_kh (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_sched_context tcb))"
@@ -90,9 +94,9 @@ where
     bound_sc_tcb_at (\<lambda>ko. \<exists>scp. ko = Some scp \<and> test_sc_refill_max scp s) t s)"
 
 lemmas active_sc_tcb_at_defs
-            = active_sc_tcb_at_def active_sc_tcb_at_kh_def test_sc_refill_max_kh_def
-                        test_sc_refill_max_def pred_tcb_at_def bound_sc_tcb_at_kh_def obj_at_kh_def
-                        obj_at_def
+       = active_sc_tcb_at_def active_sc_tcb_at_kh_def test_sc_refill_max_kh_def
+         test_sc_refill_max_def pred_tcb_at_def bound_sc_tcb_at_kh_def obj_at_kh_def
+         obj_at_def
 
 lemma active_sc_tcb_at_kh_simp[simp]:
   "active_sc_tcb_at_kh t (kheap s) = active_sc_tcb_at t s"
@@ -192,20 +196,10 @@ lemma refill_ready_kh_simp[simp]:
   "refill_ready_kh (cur_time s) scp (kheap s) = is_refill_ready  scp s"
   by (clarsimp simp: refill_ready_kh_def is_refill_ready_def obj_at_def
                split: option.splits kernel_object.splits)
-(*
-lemmas refill_ready_defs
-  = refill_ready_kh_def is_refill_ready_def (*ready_refills_def*)
-    refills_capacity_def
-*)
+
 lemma budget_ready_kh_simp[simp]:
   "budget_ready_kh (cur_time s) tptr (kheap s) = budget_ready tptr s"
   by (clarsimp simp: )
-(*
-lemmas budget_ready_defs
-  =  bound_sc_tcb_at_kh_def
-    obj_at_kh_def pred_tcb_at_def obj_at_def
-*)
-
 
 definition refill_sufficient_kh :: "obj_ref \<Rightarrow> (32 word \<Rightarrow> kernel_object option) \<Rightarrow> bool"
 where
@@ -221,7 +215,6 @@ where
     bound_sc_tcb_at_kh (\<lambda>ko. \<exists>scp. ko = Some scp
                                 \<and> refill_sufficient_kh scp kh) t kh"
 
-
 lemma refill_sufficient_kh_simp[simp]:
   "refill_sufficient_kh scp (kheap s) = is_refill_sufficient scp 0 s"
   by (clarsimp simp: refill_sufficient_kh_def is_refill_sufficient_def obj_at_def
@@ -231,6 +224,13 @@ lemma budget_sufficient_kh_simp[simp]:
   "budget_sufficient_kh tptr (kheap s) = budget_sufficient tptr s"
   by (clarsimp simp: )
 
+lemmas budget_ready_defs
+       = pred_tcb_at_def obj_at_def bound_sc_tcb_at_kh_def obj_at_kh_def
+         refill_ready_kh_def is_refill_ready_def
+
+lemmas budget_sufficient_defs
+       = bound_sc_tcb_at_kh_def obj_at_kh_def pred_tcb_at_def obj_at_def
+         refill_sufficient_kh_def is_refill_sufficient_def
 
 lemmas refill_prop_defs = refill_sufficient_kh_def refill_ready_kh_def
                           is_refill_ready_def is_refill_sufficient_def

@@ -1091,4 +1091,8 @@ lemma after_in_list_None_last:
   "\<lbrakk>after_in_list list x = None; x \<in> set list\<rbrakk> \<Longrightarrow> x = last list"
   by (induct list x rule: after_in_list.induct,(simp split: if_split_asm)+)
 
+lemma hd_middle_last:
+  "length l > 1 \<Longrightarrow> l = hd l # (butlast (tl l) @ [last l])"
+  by (case_tac l; simp)
+
 end

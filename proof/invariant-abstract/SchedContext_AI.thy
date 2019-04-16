@@ -555,10 +555,15 @@ lemma sc_consumed_update_valid_idle [wp]:
   by (wpsimp simp: update_sched_context_def set_object_def get_object_def valid_idle_def
                    obj_at_def pred_tcb_at_def)
 
-lemma sc_consumed_update_cur_sc_tcb [wp]:
-  "\<lbrace>cur_sc_tcb\<rbrace> update_sched_context p (sc_consumed_update f) \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
-  by (wpsimp simp: update_sched_context_def set_object_def get_object_def
-                   obj_at_def cur_sc_tcb_def sc_tcb_sc_at_def)
+lemma update_sched_context_cur_sc_tcb_no_change:
+  "\<lbrace>cur_sc_tcb and K (\<forall>x. sc_tcb (f x) = sc_tcb x)\<rbrace>
+   update_sched_context sc f
+   \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
+  by (wpsimp simp: update_sched_context_def set_object_def get_object_def cur_sc_tcb_def
+                   sc_tcb_sc_at_def obj_at_def)
+
+lemmas sc_consumed_update_cur_sc_tcb [wp] =
+  update_sched_context_cur_sc_tcb_no_change [where f = "(sc_consumed_update f)" for f, simplified]
 
 lemma sc_consumed_update_invs:
   "\<lbrace>invs and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
@@ -1534,8 +1539,7 @@ lemma update_sc_others_cur_sc_tcb:
                   (\<lambda>sc. sc\<lparr>sc_period := period,
                            sc_refills := r # refills,
                            sc_refill_max := max_refills\<rparr>) \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
-  by (wpsimp simp: update_sched_context_def set_object_def get_object_def
-                   cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
+  by (wpsimp wp: update_sched_context_cur_sc_tcb_no_change)
 
 lemma update_sc_others_invs:
   "\<lbrace>invs and K (p \<noteq> idle_sc_ptr)\<rbrace>
@@ -1724,7 +1728,6 @@ lemma refill_capacity_sp:
   apply (rule hoare_seq_ext[OF _ get_refills_sp])
   apply wpsimp
   by (clarsimp simp: obj_at_def refills_capacity_def)
-
 
 (* sched_context_yield_to is moved to the start of SchedContextInv_AI
 because it needs to be after Ipc_AI *)
