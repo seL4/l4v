@@ -355,11 +355,18 @@ lemma no_loop_vs_lookup_table:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
      vs_lookup_table level' asid vref' s = Some (level', p);
      vref_for_level vref' (max (level+1) (level'+1)) = vref_for_level vref (max (level+1) (level'+1));
-     vref \<in> user_region; vref' \<in> user_region; level \<le> max_pt_level; level' \<le> max_pt_level;
+     vref \<in> user_region; vref' \<in> user_region;
      unique_table_refs s; valid_vs_lookup s;
      valid_vspace_objs s; valid_asid_table s; pspace_aligned s;
      valid_caps (caps_of_state s) s \<rbrakk>
     \<Longrightarrow> level' = level"
+  apply (case_tac "level = asid_pool_level"; simp)
+   apply (case_tac "level' = asid_pool_level"; simp)
+   apply (frule (5) valid_vspace_objs_strongD[where bot_level=level' and level=level'])
+   apply (fastforce dest!: vs_lookup_table_no_asid_pt)
+  apply (case_tac "level' = asid_pool_level"; simp)
+   apply (frule (5) valid_vspace_objs_strongD[where bot_level=level and level=level])
+   apply (fastforce dest!: vs_lookup_table_no_asid_pt)
   apply (case_tac "level' = level"; clarsimp)
   (* reduce to two cases with identical proofs, either level' < level or vice-versa *)
   apply (case_tac "level' < level"; (clarsimp dest!: leI dual_order.not_eq_order_implies_strict)?)
@@ -1027,7 +1034,7 @@ lemma set_pt_only_idle [wp]:
   "\<lbrace>only_idle\<rbrace> set_pt p pt \<lbrace>\<lambda>_. only_idle\<rbrace>"
   by (wp only_idle_lift)
 
-lemma pts_of_upd_id:
+lemma pts_of_upd_idem:
   "obj_ref \<noteq> pt_ptr \<Longrightarrow> pts_of (s\<lparr> kheap := (kheap s)(obj_ref := Some ko)\<rparr>) pt_ptr = pts_of s pt_ptr"
   unfolding pt_of_def
   by (clarsimp simp: opt_map_def split: option.splits)
@@ -1065,7 +1072,7 @@ lemma pt_walk_eqI:
   apply (fastforce simp: pte_of_def in_omonad)
   done
 
-lemma pt_walk_pt_upd_id:
+lemma pt_walk_pt_upd_idem:
   "\<lbrakk> \<forall>level' pt_ptr'.
        level < level'
        \<longrightarrow> pt_walk top_level level' pt_ptr vptr (\<lambda>p. pte_of p pts) = Some (level', pt_ptr')
@@ -1074,6 +1081,80 @@ lemma pt_walk_pt_upd_id:
    \<Longrightarrow> pt_walk top_level level pt_ptr vptr (\<lambda>p. pte_of p (pts(obj_ref := pt)))
       = pt_walk top_level level pt_ptr vptr (\<lambda>p. pte_of p pts)"
   by (rule pt_walk_eqI; auto)
+
+lemma pt_walk_upd_idem:
+  "\<lbrakk> \<forall>level' pt_ptr'.
+       level < level'
+       \<longrightarrow> pt_walk top_level level' pt_ptr vptr (ptes_of s) = Some (level', pt_ptr')
+       \<longrightarrow> pt_ptr' \<noteq> obj_ref;
+     is_aligned pt_ptr pt_bits \<rbrakk>
+   \<Longrightarrow> pt_walk top_level level pt_ptr vptr (ptes_of (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>))
+      = pt_walk top_level level pt_ptr vptr (ptes_of s)"
+  by (rule pt_walk_eqI; simp split del: if_split)
+     (clarsimp simp: opt_map_def split: option.splits)
+
+lemma vs_lookup_table_eqI:
+  fixes s :: "'z::state_ext state"
+  fixes s' :: "'z::state_ext state"
+  shows
+  "\<lbrakk> \<forall>level p. bot_level < level
+               \<longrightarrow> vs_lookup_table level asid vref s = Some (level, p)
+               \<longrightarrow> (if level \<le> max_pt_level
+                   then pts_of s' p = pts_of s p
+                   else asid_pools_of s' p = asid_pools_of s p);
+     asid_table s' (asid_high_bits_of asid) = asid_table s (asid_high_bits_of asid);
+     pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
+   \<Longrightarrow> vs_lookup_table bot_level asid vref s' = vs_lookup_table bot_level asid vref s"
+  apply (case_tac "bot_level \<le> max_pt_level")
+   prefer 2
+   apply (clarsimp simp: asid_pool_level_eq[symmetric] vs_lookup_table_def in_omonad
+                         pool_for_asid_def)
+   apply (rule obind_eqI; fastforce simp: pool_for_asid_def)
+  apply (simp (no_asm) add: vs_lookup_table_def in_omonad)
+  apply (rule obind_eqI_full; simp add: pool_for_asid_def)
+  apply (rename_tac pool_ptr)
+  apply (rule obind_eqI_full; clarsimp)
+   apply (erule_tac x=asid_pool_level in allE)
+   apply (fastforce simp: pool_for_asid_vs_lookup pool_for_asid_def vspace_for_pool_def obind_def
+                          order.not_eq_order_implies_strict)
+  apply (rename_tac root)
+  apply (rule pt_walk_eqI)
+   apply clarsimp
+   apply (frule pt_walk_max_level)
+   apply (fastforce simp add: vs_lookup_table_def in_omonad asid_pool_level_eq pool_for_asid_def)
+  apply (rule vspace_for_pool_is_aligned; fastforce simp add: pool_for_asid_def)
+  done
+
+lemma vs_lookup_table_upd_idem:
+  "\<lbrakk> \<forall>level' p'.
+       level < level'
+       \<longrightarrow> vs_lookup_table  level' asid vref s = Some (level', p')
+       \<longrightarrow> p' \<noteq> obj_ref;
+     pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
+   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+      = vs_lookup_table level asid vref s"
+  by (rule vs_lookup_table_eqI; simp split del: if_split)
+     (clarsimp simp: opt_map_def split: option.splits)
+
+lemma vs_lookup_table_Some_upd_idem:
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, obj_ref);
+     vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s;
+     unique_table_refs s; valid_vs_lookup s; valid_caps (caps_of_state s) s \<rbrakk>
+   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+      = vs_lookup_table level asid vref s"
+  by (subst vs_lookup_table_upd_idem; simp?)
+     (fastforce dest: no_loop_vs_lookup_table)
+
+lemma ex_vs_lookup_upd_idem:
+  "\<lbrakk> \<exists>\<rhd> (level, p) s;
+     pspace_aligned s; valid_vspace_objs s; valid_asid_table s; unique_table_refs s;
+     valid_vs_lookup s; valid_caps (caps_of_state s) s \<rbrakk>
+   \<Longrightarrow> \<exists>\<rhd> (level, p) (s\<lparr>kheap := kheap s(p \<mapsto> ko)\<rparr>) = \<exists>\<rhd> (level, p) s"
+  apply (rule iffI; clarsimp)
+  apply (rule_tac x=asid in exI)
+  apply (rule_tac x=vref in exI)
+  apply (subst vs_lookup_table_Some_upd_idem; fastforce)
+  done
 
 lemma pt_lookup_target_translate_address_upd_eq:
   "\<lbrakk> pt_lookup_target 0 pt_ptr vref ptes' = pt_lookup_target 0 pt_ptr vref ptes \<rbrakk>
@@ -1099,7 +1180,7 @@ lemma pt_walk_Some_finds_pt:
   apply (fastforce simp: is_PageTablePTE_def pte_of_def in_omonad split: if_splits)
   done
 
-lemma pte_of_pt_slot_offset_upd_id:
+lemma pte_of_pt_slot_offset_upd_idem:
   "\<lbrakk> is_aligned pt_ptr pt_bits; obj_ref \<noteq> pt_ptr \<rbrakk>
    \<Longrightarrow> pte_of (pt_slot_offset level pt_ptr vptr) (pts(obj_ref := pt'))
       = pte_of (pt_slot_offset level pt_ptr vptr) pts"
