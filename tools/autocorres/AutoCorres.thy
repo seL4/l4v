@@ -28,6 +28,7 @@ imports
   "Lib.OptionMonadWP"
   "Lib.Apply_Trace"
   AutoCorresSimpset
+  "Lib.MkTermAntiquote"
   "Lib.TermPatternAntiquote"
   keywords "autocorres" :: thy_decl
 begin
@@ -132,7 +133,6 @@ lemmas ac_statistics_rewrites =
 (* Utils *)
 ML_file "../../lib/set.ML"
 ML_file "trace_antiquote.ML"
-ML_file "mkterm_antiquote.ML"
 ML_file "utils.ML"
 
 (* Common data structures *)

@@ -14,6 +14,7 @@ theory RangeMap
 imports
   FastMap
   FP_Eval
+  "ml-helpers/MkTermAntiquote"
 begin
 
 text \<open>
@@ -676,9 +677,6 @@ lemma lookup_range_tree_simps':
 end
 
 declare RangeMap.lookup_range_tree_simps'[simp]
-
-(* FIXME: move to ml-helpers *)
-ML_file "../tools/autocorres/mkterm_antiquote.ML"
 
 ML \<open>
 structure RangeMap = struct

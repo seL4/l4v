@@ -50,6 +50,7 @@ session Lib (lib) = Word_Lib +
     Apply_Debug
     MonadicRewrite
     HaskellLemmaBucket
+    "ml-helpers/MkTermAntiquote"
     "ml-helpers/TermPatternAntiquote"
     "ml-helpers/TacticAntiquotation"
     "ml-helpers/MLUtils"
@@ -157,6 +158,7 @@ session LibTest (lib) = Refine +
     Qualify_Test
     Locale_Abbrev_Test
     "ml-helpers/TacticTutorial"
+    "ml-helpers/MkTermAntiquote_Tests"
     "ml-helpers/TacticAntiquotation_Test"
     "ml-helpers/TermPatternAntiquote_Tests"
   (* use virtual memory function as an example, only makes sense on ARM: *)
