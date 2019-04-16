@@ -1886,6 +1886,11 @@ lemma weak_if_wp:
   \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>r. if C r then Q r else Q' r\<rbrace>"
   by (auto simp add: valid_def split_def)
 
+lemma weak_if_wp':
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r. Q r and Q' r\<rbrace> \<Longrightarrow>
+   \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r. if C r then Q r else Q' r\<rbrace>"
+  by (auto simp add: valid_def split_def)
+
 lemma zipWithM_x_modify:
   "zipWithM_x (\<lambda>a b. modify (f a b)) as bs
    = modify (\<lambda>s. foldl (\<lambda>s (a, b). f a b s) s (zip as bs))"
