@@ -223,6 +223,14 @@ lemma obind_eqI:
   "\<lbrakk> f s = f s' ; \<And>x. f s = Some x \<Longrightarrow> g x s = g' x s' \<rbrakk> \<Longrightarrow> obind f g s = obind f g' s'"
   by (simp add: obind_def split: option.splits)
 
+(* full form of obind_eqI; the second equality makes more sense flipped here, as we end up
+   with "f s = Some x ; f s' = f s" preventing "Some x = ..." *)
+lemma obind_eqI_full:
+  "\<lbrakk> f s = f s' ; \<And>x. \<lbrakk> f s = Some x; f s' = f s \<rbrakk> \<Longrightarrow> g x s = g' x s' \<rbrakk>
+   \<Longrightarrow> obind f g s = obind f g' s'"
+  by (drule sym[where s="f s"]) (* prevent looping *)
+     (clarsimp simp: obind_def split: option.splits)
+
 lemma obindE:
   "\<lbrakk> (f |>> g) s = Some v;
      \<And>v'. \<lbrakk>f s = Some v'; g v' s = Some v\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
