@@ -1596,7 +1596,7 @@ crunch idle_thread[wp]: throwError "\<lambda>s. P (idle_thread s)"
 lemma preemption_point_idle_thread[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s) \<rbrace> preemption_point \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
   apply (clarsimp simp: preemption_point_def)
-  by (wp OR_choiceE_weak_wp | wpc | simp)+
+  by (wpsimp wp: OR_choiceE_weak_wp simp: irq_state_independent_def)
 
 (* following idle_thread and cur_domain proofs clagged from infoflow/PasUpdates.thy *)
 crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cancel_badged_sends
